@@ -51,7 +51,7 @@ internal fun RepeatButton(
         modifier
             .height(Layout.MIN_HIT_TARGET.dp)
             .background(scheme.field.tape, RoundedCornerShape(6.dp))
-            .border(1.dp, scheme.grayEdge.tape, RoundedCornerShape(6.dp))
+            .border(1.dp, scheme.edge.tape, RoundedCornerShape(6.dp))
             .semantics {
                 contentDescription = description
                 onClick { step(); true }

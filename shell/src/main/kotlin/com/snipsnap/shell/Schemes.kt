@@ -98,6 +98,29 @@ data class Scheme(
      * chrome is dark.
      */
     val binLcd: Int = bin,
+    /**
+     * The boundary of an interactive control - a button's or a field's
+     * outline - which WCAG 1.4.11 holds to 3 : 1 against what the control sits
+     * on. [grayEdge] is the hairline for things that are not controls (a
+     * group box, a rule between rows) and stays quiet at 1.2 to 1.4 : 1; a
+     * control's line is this one. `ContrastTest` holds it at 3 : 1 on the
+     * window, the raised fill, the field and the LCD in every scheme.
+     */
+    val edge: Int,
+    /**
+     * Ink for text laid on an [accent] fill (a selected chip, an engaged
+     * button). The accent is light on a dark scheme and deep on a paper one,
+     * so the ink is the LCD there and the paper here; `ContrastTest` holds it
+     * at AA on the accent.
+     */
+    val onAccent: Int = lcd,
+    /**
+     * [warn] as text on chrome. A paper scheme's [warn] is tuned for the dock
+     * and the needle (2.1 to 2.9 : 1 on paper), so its chrome text is this
+     * deeper step of the same orange; a dark scheme's [warn] reads on both
+     * and this is the same value.
+     */
+    val warnInk: Int = warn,
 ) {
     /** Rec.601 luma 0..255 — used by the two-surface test and ink fallbacks. */
     companion object {
@@ -195,6 +218,7 @@ object Schemes {
         // the floor of SchemesTest's "selection is visible" law, and the
         // frame needs the margin.
         raised = 0x232420, win = 0x1D1E1B, winFrame = 0x55564B, deskGlow = 0x2A1E18,
+        edge = 0x6F6F66,
     )
 
     /**
@@ -219,9 +243,11 @@ object Schemes {
         title1 = 0xF8F3E9, title2 = 0xF8F3E9, titleInk = 0x292820,
         desk1 = 0xEFE8DA, desk2 = 0xF3EDDF,
         lcd = 0x22211A, lcdInk = 0xF8F3E9, amber = 0xFF8C00, field = 0xFFFAF1,
-        warn = 0xFF8C00, ink3 = 0x817A6B, accent = 0xA74C00,
+        warn = 0xFF8C00, ink3 = 0x726F61, accent = 0xA74C00,
         raised = 0xFFFAF1, win = 0xF8F3E9, winFrame = 0xB4AD9E, deskGlow = 0xFFD350,
         bin = 0x813600, binLcd = 0xFF8C00,
+        edge = 0x8F8B80,
+        onAccent = 0xF8F3E9, warnInk = 0xA65B00,
     )
 
     // The colourways of 2026-10-27 - DUSK, PHOSPHOR, TIDE, MEMO, RISO and
@@ -244,6 +270,7 @@ object Schemes {
         lcd = 0x0E1117, lcdInk = 0xE7E9EE, amber = 0xF2A25C, field = 0x222731,
         warn = 0xF2A25C, ink3 = 0x8E95A3, accent = 0xF2A25C,
         raised = 0x222731, win = 0x1B1F27, winFrame = 0x4F5767, deskGlow = 0x2E2320,
+        edge = 0x6C717A,
     )
 
     /**
@@ -260,6 +287,7 @@ object Schemes {
         lcd = 0x080B08, lcdInk = 0xB6F2BE, amber = 0x7BE38A, field = 0x1E221D,
         warn = 0xE9A23B, ink3 = 0x889685, accent = 0x7BE38A,
         raised = 0x1E221D, win = 0x161916, winFrame = 0x4A5448, deskGlow = 0x16261A,
+        edge = 0x686E66,
     )
 
     /** TIDE: cool paper, a deep teal on chrome and a teal glow in the dock. */
@@ -273,6 +301,8 @@ object Schemes {
         warn = 0xE07A2E, ink3 = 0x5E6E70, accent = 0x00676B,
         raised = 0xF8FBFA, win = 0xEEF3F2, winFrame = 0xA3B2B0, deskGlow = 0xBFE6DF,
         bin = 0x9E2B1E, binLcd = 0xFF8F7A,
+        edge = 0x818D8C,
+        onAccent = 0xEEF3F2, warnInk = 0xA65A22,
     )
 
     /** MEMO: a yellow legal pad written in blue pen, over a navy dock. */
@@ -286,6 +316,8 @@ object Schemes {
         warn = 0xE0701E, ink3 = 0x5C5E70, accent = 0x1F4FA8,
         raised = 0xFFFCEB, win = 0xFBF5D6, winFrame = 0xBDB27F, deskGlow = 0xFFE68A,
         bin = 0xA0281C, binLcd = 0xFF8F7A,
+        edge = 0x918C74,
+        onAccent = 0xFBF5D6, warnInk = 0xAF5717,
     )
 
     /**
@@ -303,6 +335,8 @@ object Schemes {
         warn = 0xE8752A, ink3 = 0x6B5E70, accent = 0xB0245F,
         raised = 0xFFF8F7, win = 0xFAF0EE, winFrame = 0xC4A9A5, deskGlow = 0xFFC7DB,
         bin = 0x7A2E12, binLcd = 0xFF9A6E,
+        edge = 0x96878B,
+        onAccent = 0xFAF0EE, warnInk = 0xAB561F,
     )
 
     /** SAGE: green-gray paper, a forest green on chrome and a leaf green in the dock. */
@@ -316,6 +350,8 @@ object Schemes {
         warn = 0xDD7A2A, ink3 = 0x5A685B, accent = 0x2F6B3A,
         raised = 0xF7F9F4, win = 0xEBEFE6, winFrame = 0xA2AE9B, deskGlow = 0xF3E7A8,
         bin = 0x9E2B1E, binLcd = 0xFF8F7A,
+        edge = 0x808A7D,
+        onAccent = 0xEBEFE6, warnInk = 0xA0581E,
     )
 
     /**

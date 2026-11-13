@@ -46,6 +46,7 @@ import com.snipsnap.app.PREFS
 import com.snipsnap.kit.KitStore
 import com.snipsnap.loop.Session
 import com.snipsnap.app.theme.BinRedGlow
+import com.snipsnap.app.theme.BinRedOnLcd
 import androidx.compose.ui.platform.LocalContext
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
@@ -970,7 +971,7 @@ private fun RoomRow(room: Rooms.Room, busy: Boolean, onForget: (Rooms.Room) -> U
                     .width(124.dp)
                     .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                     .raisedBevel(scheme)
-                    .border(2.dp, Brush.linearGradient(listOf(BinRedGlow, BIN_RED_BORDER)), RoundedCornerShape(4.dp))
+                    .border(2.dp, BinRedGlow, RoundedCornerShape(4.dp))
                     // Always clickable, `!busy` forwarded rather than
                     // dropped (accessibility audit finding 12).
                     .tapeClick(label = "FORGET ${room.name.uppercase()}", enabled = !busy) { onForget(room) },
@@ -1046,7 +1047,7 @@ private fun EmptyRoomsBinButton(scheme: Scheme, enabled: Boolean, armed: Boolean
             .fillMaxWidth()
             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
             .background(scheme.lcd.tape, RoundedCornerShape(5.dp))
-            .border(2.dp, BIN_RED_BORDER, RoundedCornerShape(5.dp))
+            .border(2.dp, scheme.binLcd.tape, RoundedCornerShape(5.dp))
             // Always clickable, `enabled` forwarded rather than dropped: a
             // screen reader is told this control is temporarily unavailable
             // instead of it silently vanishing from the tree (accessibility
@@ -1062,7 +1063,7 @@ private fun EmptyRoomsBinButton(scheme: Scheme, enabled: Boolean, armed: Boolean
             // the artboard, which shows no confirm affordance to match).
             label,
             TapeType.pixel,
-            if (enabled) BinRedGlow else scheme.ink3.tape,
+            if (enabled) BinRedOnLcd else scheme.ink3.tape,
             maxLines = 1,
         )
     }
@@ -1172,13 +1173,13 @@ private fun KitRow(
                         .padding(horizontal = 10.dp),
                     contentAlignment = Alignment.Center,
                 ) {
-                    TapeText("RENAME", TapeType.pixel, if (busy) scheme.ink3.tape else scheme.amber.tape)
+                    TapeText("RENAME", TapeType.pixel, if (busy) scheme.ink3.tape else scheme.accent.tape)
                 }
                 Box(
                     Modifier
                         .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                         .raisedBevel(scheme)
-                        .border(2.dp, Brush.linearGradient(listOf(BinRedGlow, BIN_RED_BORDER)), RoundedCornerShape(4.dp))
+                        .border(2.dp, BinRedGlow, RoundedCornerShape(4.dp))
                         // Always clickable, `!busy` forwarded rather than
                         // dropped (accessibility audit finding 12).
                         .tapeClick(label = "DELETE ${kit.name.uppercase()}", enabled = !busy) { onRequestDelete(entry) }
@@ -1196,7 +1197,7 @@ private fun KitRow(
                             .padding(horizontal = 10.dp),
                         contentAlignment = Alignment.Center,
                     ) {
-                        TapeText(Copy.EXPANSION_DOOR, TapeType.pixel, if (busy) scheme.ink3.tape else scheme.amber.tape)
+                        TapeText(Copy.EXPANSION_DOOR, TapeType.pixel, if (busy) scheme.ink3.tape else scheme.accent.tape)
                     }
                 }
             }
@@ -1270,12 +1271,12 @@ private fun KitDeleteConfirmDialog(onCancel: () -> Unit, onConfirm: () -> Unit) 
                         .weight(1f)
                         .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                         .background(scheme.lcd.tape, RoundedCornerShape(4.dp))
-                        .border(2.dp, BIN_RED_BORDER, RoundedCornerShape(4.dp))
+                        .border(2.dp, scheme.binLcd.tape, RoundedCornerShape(4.dp))
                         .tapeClick(label = "DELETE", onClick = onConfirm)
                         .padding(horizontal = 10.dp),
                     contentAlignment = Alignment.Center,
                 ) {
-                    TapeText("DELETE", TapeType.pixel, BinRedGlow)
+                    TapeText("DELETE", TapeType.pixel, BinRedOnLcd)
                 }
             }
         }
@@ -1589,13 +1590,3 @@ private fun ToolsMenu(
         SheetRow(Places.TOOL_DOUBLES, Places.TOOL_DOUBLES_DESC, onDoubles, enabled = canDoubles)
     }
 }
-
-// Duplicated, not hoisted — TakesBinScreen.kt's own BIN_RED_BORDER
-// comment states the house convention explicitly: do it if a clean
-// one-liner, else duplicate with a comment. BIN red is deliberately
-// constant across every scheme so a session-ending action (FORGET → BIN here,
-// EMPTY THE BIN there) reads as "red" regardless of the active scheme.
-// The glow half moved to Schemes.BIN_RED_GLOW / theme.BinRedGlow
-// (accessibility audit finding 5) — a single tuned token, not a duplicated
-// literal.
-private val BIN_RED_BORDER = Color(0xFF6A2020)

@@ -660,7 +660,7 @@ private fun SplitDesk(
         }
         SlotChooserOverlay(
             kit = entry?.kit,
-            previewColor = scheme.amber.tape,
+            previewColor = scheme.accent.tape,
             scheme = scheme,
             busy = landing,
             onPick = ::landOnPad,

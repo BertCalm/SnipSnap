@@ -121,7 +121,7 @@ private fun PatternRow(label: String, place: Int, total: Int, now: Boolean, onTa
             // Selected is the app's border-plus-word: a 2 dp accent line and
             // OPEN NOW under the name, reserved blank on every other row so
             // choosing one does not grow only its own.
-            .border(if (now) 2.dp else 1.dp, if (now) scheme.accent.tape else scheme.grayEdge.tape, RoundedCornerShape(4.dp))
+            .border(if (now) 2.dp else 1.dp, if (now) scheme.accent.tape else scheme.edge.tape, RoundedCornerShape(4.dp))
             .semantics { selected = now }
             .tapeClick(label = Copy.patternRow(label, place, total, now), onClick = onTap)
             .padding(horizontal = 10.dp, vertical = 8.dp),
@@ -168,7 +168,7 @@ internal fun PatternNameDialog(
     val caption = when (verdict) {
         is GrooveEdit.NameCheck.Ok -> Copy.PATTERN_NAME_NOTE to scheme.ink2.tape
         GrooveEdit.NameCheck.Default -> Copy.patternNameEmpty(default) to scheme.ink2.tape
-        GrooveEdit.NameCheck.Taken -> Copy.PATTERN_NAME_TAKEN to scheme.warn.tape
+        GrooveEdit.NameCheck.Taken -> Copy.PATTERN_NAME_TAKEN to scheme.warnInk.tape
     }
     val canSave = verdict != GrooveEdit.NameCheck.Taken && !busy
     val focus = remember { FocusRequester() }

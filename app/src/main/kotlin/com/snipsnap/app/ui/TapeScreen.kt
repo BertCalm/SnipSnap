@@ -1365,10 +1365,10 @@ private fun DeckButton(
             label,
             TapeType.pixel,
             when {
-                // `scheme.lcd` — "dark in every scheme" per Schemes.kt — is
-                // the same dark-on-accent ink the selection markers' flag
-                // labels use below, so "lit" reads the same everywhere.
-                engaged -> scheme.lcd.tape
+                // `scheme.onAccent` is the ink made for sitting on the accent fill; it is
+                // also what the selection markers' flag labels use below, so "lit"
+                // reads the same everywhere.
+                engaged -> scheme.onAccent.tape
                 enabled -> scheme.ink.tape
                 else -> scheme.ink2.tape
             },            maxLines = 2,
@@ -1818,7 +1818,7 @@ private fun WaveformLcd(
                 // Field assignments only (no allocation) — refreshed per
                 // draw so the flags track the live scheme.
                 markerLabelPaint.textSize = flagHeight * 0.62f
-                markerLabelPaint.color = (0xFF shl 24) or scheme.lcd
+                markerLabelPaint.color = (0xFF shl 24) or scheme.onAccent
             }
             if (hasIn) {
                 // Flag to the RIGHT of the IN line: it reads into the

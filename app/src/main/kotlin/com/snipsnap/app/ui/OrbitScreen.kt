@@ -1534,7 +1534,7 @@ private fun RingDetailPanel(
             TapeText(
                 "WRAPS ${content.sampleFile.uppercase()}${if (seconds != null) " ($seconds S)" else ""} ROUND ${Copy.countOf(ring.steps, "STEP", "STEPS")} · $what",
                 TapeType.pixelSmall,
-                if (report?.fit == com.snipsnap.loop.LoopFit.SLICED) scheme.amber.tape else scheme.ink2.tape,
+                if (report?.fit == com.snipsnap.loop.LoopFit.SLICED) scheme.accent.tape else scheme.ink2.tape,
                 maxLines = 3,
             )
         }
@@ -1680,7 +1680,7 @@ private fun OutPanel(
     // bounce's, so when a length is what refuses them both
     // it is literally the same sentence twice.
     val why = listOfNotNull(bounceWhy, clipWhy).distinct()
-    why.forEach { TapeText(it, TapeType.pixelSmall, scheme.warn.tape, Modifier.fillMaxWidth(), maxLines = 2) }
+    why.forEach { TapeText(it, TapeType.pixelSmall, scheme.warnInk.tape, Modifier.fillMaxWidth(), maxLines = 2) }
     if (why.isEmpty()) {
         TapeText(
             "SAMPLE: what you hear, as a sample in the LIBRARY — trim it, chop it, make a kit of it. KIT: the pattern as a clip in the kit's grooves, so it rides to the MPC.",
@@ -2168,7 +2168,7 @@ private fun OrbitRingRail(
     // The offer a snip makes on landing: its own tempo, once.
     tempoOffer?.takeIf { !it.accepted }?.let { offer ->
         Column(
-            Modifier.fillMaxWidth().sunkenField(scheme).border(1.dp, scheme.amber.tape, RoundedCornerShape(4.dp)).padding(8.dp),
+            Modifier.fillMaxWidth().sunkenField(scheme).border(1.dp, scheme.accent.tape, RoundedCornerShape(4.dp)).padding(8.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             TapeText(
@@ -2620,9 +2620,9 @@ private fun StripEditor(
                             val mark = hit?.let { OrbitBrushes.mark(it) }.orEmpty()
                             val edge = when {
                                 step == playheadStep -> inkColor
-                                mark.isNotEmpty() -> scheme.amber.tape
+                                mark.isNotEmpty() -> scheme.accent.tape
                                 accent -> color
-                                else -> scheme.grayEdge.tape
+                                else -> scheme.edge.tape
                             }
                             StripCell(
                                 width = cellW,
@@ -2885,7 +2885,7 @@ internal fun SmallChip(
         Modifier
             .heightIn(min = 36.dp)
             .background(scheme.field.tape, RoundedCornerShape(4.dp))
-            .border(1.dp, if (accent && enabled) scheme.accent.tape else scheme.grayEdge.tape, RoundedCornerShape(4.dp))
+            .border(1.dp, if (accent && enabled) scheme.accent.tape else scheme.edge.tape, RoundedCornerShape(4.dp))
             .tapeClick(label = description ?: label, enabled = enabled, onClick = onClick)
             .padding(horizontal = 8.dp),
         contentAlignment = Alignment.Center,
@@ -2906,7 +2906,7 @@ private fun SpanChip(span: OrbitSpan, scheme: Scheme, onPick: () -> Unit) {
         Modifier
             .heightIn(min = 36.dp)
             .background(scheme.field.tape, RoundedCornerShape(4.dp))
-            .border(1.dp, if (spanned) scheme.accent.tape else scheme.grayEdge.tape, RoundedCornerShape(4.dp))
+            .border(1.dp, if (spanned) scheme.accent.tape else scheme.edge.tape, RoundedCornerShape(4.dp))
             .semantics { contentDescription = "SPAN: ${span.label}" }
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
@@ -2927,7 +2927,7 @@ private fun PadChip(label: String, color: Color, chosen: Boolean, used: Boolean,
         Modifier
             .heightIn(min = 36.dp)
             .background(if (chosen) color else scheme.field.tape, RoundedCornerShape(4.dp))
-            .border(if (used) 2.dp else 1.dp, if (chosen || used) color else scheme.grayEdge.tape, RoundedCornerShape(4.dp))
+            .border(if (used) 2.dp else 1.dp, if (chosen || used) color else scheme.edge.tape, RoundedCornerShape(4.dp))
             .tapeClick(label = "PAD $label", onClick = onClick)
             .padding(horizontal = 8.dp),
         contentAlignment = Alignment.Center,
@@ -2951,7 +2951,7 @@ private fun ActionButton(
         modifier
             .minHeight(Layout.MIN_HIT_TARGET.dp)
             .background(scheme.field.tape, RoundedCornerShape(6.dp))
-            .border(1.dp, if (accent) scheme.accent.tape else scheme.grayEdge.tape, RoundedCornerShape(6.dp))
+            .border(1.dp, if (accent) scheme.accent.tape else scheme.edge.tape, RoundedCornerShape(6.dp))
             // Falls back to label itself (matches HeaderChip/SmallChip in
             // this file) rather than to a descendant merge that Compose's
             // clickable semantics do not actually perform.

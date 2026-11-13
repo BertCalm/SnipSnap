@@ -69,10 +69,10 @@ internal fun AquariumPerformancePanel(
                 settings.settings.isBypass -> "DRY · ALL SIX EFFECT MIXES ARE ZERO"
                 settings.outputGain == 0f -> "LIVE WET MIX MUTED"
                 else -> "LIVE · ${if (bpm == 0.0) "FREE TIME" else String.format(Locale.ROOT, "%.1f BPM", bpm)}"
-            }, TapeType.pixelSmall, scheme.amber.tape,
+            }, TapeType.pixelSmall, scheme.accent.tape,
             Modifier.testTag("performance-state"), maxLines = Int.MAX_VALUE,
         )
-        if (warning != null) TapeText(warning, TapeType.pixelSmall, scheme.warn.tape, maxLines = Int.MAX_VALUE)
+        if (warning != null) TapeText(warning, TapeType.pixelSmall, scheme.warnInk.tape, maxLines = Int.MAX_VALUE)
         if (status != null) TapeText(status, TapeType.pixelSmall, scheme.ink2.tape,
             Modifier.testTag("performance-status"), maxLines = Int.MAX_VALUE)
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {

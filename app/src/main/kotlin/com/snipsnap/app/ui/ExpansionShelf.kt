@@ -120,7 +120,7 @@ internal fun ExpansionRow(
         }
         if (armed) {
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                Door("RENAME", "RENAME ${e.title.uppercase()}", busy, scheme.amber.tape) { onRequestRename(e) }
+                Door("RENAME", "RENAME ${e.title.uppercase()}", busy, scheme.accent.tape) { onRequestRename(e) }
                 Door("DELETE", "DELETE ${e.title.uppercase()}", busy, BinRedGlow) { onRequestDelete(e) }
             }
         } else {
