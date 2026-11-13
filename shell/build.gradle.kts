@@ -531,12 +531,22 @@ tasks.register<JavaExec>("generateBackwashAcousticKits") {
 
 tasks.register<JavaExec>("generateBreakerKit") {
     group = "distribution"
-    description = "Build the BREAKER kit, prove its velocity and round-robin grid through save, playback and MPC 3 export, and write the listening pack."
+    description = "Build BREAKER's three kits, prove each velocity and round-robin grid through save, playback and MPC 3 export, and write the listening pack."
     classpath = sourceSets["test"].runtimeClasspath
     mainClass.set("com.snipsnap.shell.BreakerKitGenerator")
     workingDir = rootProject.projectDir
     maxHeapSize = "2g"
     args(providers.gradleProperty("breakerOutput").orNull ?: "${rootDir}/testkit/breaker-kit")
+}
+
+tasks.register<JavaExec>("generateBreakerAudition") {
+    group = "distribution"
+    description = "Render BREAKER's final audition: every voice, soft to hard, every control swept, corners, edges, presets and the three kits' grooves."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.BreakerAuditionGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "2g"
+    args(providers.gradleProperty("breakerAuditionOutput").orNull ?: "${rootDir}/testkit/breaker-audition")
 }
 
 tasks.register<JavaExec>("generateSootGenreKits") {

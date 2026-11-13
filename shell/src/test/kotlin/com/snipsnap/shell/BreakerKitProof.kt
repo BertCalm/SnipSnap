@@ -28,7 +28,10 @@ object BreakerKitProof {
         val takes: Int,
         /** The most alike two takes of one zone are: 1 is a copy. */
         val closestTakes: Double,
-        /** The softer zone whose spectrum's shape moved least from the hard zone's, in dB: 0 is a level change only. */
+        /**
+         * The softer zone that changed least from the hard zone, in dB: the larger of its spectrum's shape
+         * moving and its decay moving. 0 is a level change only.
+         */
         val leastZoneMoveDb: Double,
     ) {
         /**
@@ -52,10 +55,14 @@ object BreakerKitProof {
             val takes = List(zone.cycle) { slice(whole, pad, zone.baseSlice + it) }
             for (i in takes.indices) for (j in i + 1 until takes.size) closest = max(closest, likeness(takes[i], takes[j]))
         }
-        val hard = shape(slice(whole, pad, zones.last().baseSlice))
+        val hardTake = slice(whole, pad, zones.last().baseSlice)
+        val hard = shape(hardTake)
         val moved = zones.dropLast(1).minOf { zone ->
-            val soft = shape(slice(whole, pad, zone.baseSlice))
-            hard.indices.maxOf { abs(hard[it] - soft[it]) }
+            val softTake = slice(whole, pad, zone.baseSlice)
+            val soft = shape(softTake)
+            // A softer hit can change in colour or in how long it rings (a kicked tank rings shorter); a
+            // copy turned down does neither.
+            max(hard.indices.maxOf { abs(hard[it] - soft[it]) }, abs(decay(hardTake) - decay(softTake)))
         }
         PadGrid(pad.slot, pad.displayName ?: "A%02d".format(pad.slot), zones.size, zones.first().cycle, closest, moved)
     }
@@ -82,6 +89,13 @@ object BreakerKitProof {
             y = out
         }
         return y
+    }
+
+    /** The hit's ring: its level from .3 to 1.2 s against its first 300 ms, in dB. */
+    fun decay(x: FloatArray): Double {
+        val head = x.copyOf(minOf(x.size, (.3 * RATE).toInt()))
+        val tail = if (x.size > head.size) x.copyOfRange(head.size, minOf(x.size, (1.2 * RATE).toInt())) else FloatArray(0)
+        return 20 * log10(rms(tail) + 1e-12) - 20 * log10(rms(head) + 1e-12)
     }
 
     /** Each octave band's level against the whole hit's, over its first 300 ms: the spectrum's shape, not its loudness. */
@@ -113,6 +127,6 @@ object BreakerKitProof {
     /** A copy correlates at 1 within rounding; anything under this is another strike. */
     const val COPY_LIKENESS = .99995
 
-    /** A zone that is the hard take turned down moves the shape by 0; anything over this is another strike. */
+    /** A zone that is the hard take turned down moves the shape and the decay by 0; anything over this is another strike. */
     const val LEVEL_ONLY_DB = .5
 }
