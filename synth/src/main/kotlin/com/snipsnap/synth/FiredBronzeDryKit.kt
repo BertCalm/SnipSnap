@@ -47,10 +47,15 @@ object FiredBronzeDryKit {
             }
         }
     }
-    fun render(r: Recipe): Snip {
+    /**
+     * [r] rendered. [strike] is FIRED BRONZE model 2's round robin: a later take is a fresh strike, so the
+     * constructed sources (the moving bass, the clay pots, the kettles and the gong) land with a new mode
+     * balance ([FiredBronzeR2.render]). The other pads' takes already re-seed their contact and rattle.
+     */
+    fun render(r: Recipe, strike: Boolean = false): Snip {
         r.pad.source?.let { source ->
             val tune=if(r.pad==Pad.KETTLE_HIGH) (r.tune+.25f).coerceAtMost(1f) else r.tune
-            return FiredBronzeR2.Recipe(source,tune,r.touch,r.damp,velocity=r.velocity,take=r.take).render()
+            return FiredBronzeR2.render(FiredBronzeR2.Recipe(source,tune,r.touch,r.damp,velocity=r.velocity,take=r.take), strike)
         }
         val rate=Dsp.RATE*Dsp.OVERSAMPLE
         val touch=r.touch*(.35f+.65f*r.velocity)

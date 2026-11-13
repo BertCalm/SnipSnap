@@ -861,7 +861,7 @@ private fun ExportContent(
             Box(
                 Modifier
                     .fillMaxWidth()
-                    .height(Layout.LCD_HEADER_H.dp)
+                    .minHeight(Layout.LCD_HEADER_H.dp)
                     .lcdPanel(scheme)
                     .padding(horizontal = 10.dp),
                 contentAlignment = Alignment.CenterStart,
@@ -1059,7 +1059,7 @@ private fun OutCard(heading: String, scheme: Scheme, content: @Composable Column
         Modifier.fillMaxWidth().etchedBox(scheme).padding(8.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        TapeText(heading, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
+        TapeText(heading, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
         content()
     }
 }
@@ -1241,7 +1241,7 @@ private fun ProjectCard(
 @Composable
 private fun AlsoList(scheme: Scheme, canShare: Boolean, onShareKit: () -> Unit, onBeatWriters: () -> Unit) {
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        TapeText("ALSO", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
+        TapeText("ALSO", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
         ActionButton(
             "SHARE KIT · THIS KIT AS ONE FILE",
             scheme,
@@ -1486,7 +1486,7 @@ private fun CardRow(
         // either and the legend advertises an action that cannot run - the
         // same "furniture describing nothing" this gate exists to prevent.
         if (tree != null && enabled) {
-            TapeText(Copy.EXPORT_CARD_LEGEND, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
+            TapeText(Copy.EXPORT_CARD_LEGEND, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
         }
     }
 }

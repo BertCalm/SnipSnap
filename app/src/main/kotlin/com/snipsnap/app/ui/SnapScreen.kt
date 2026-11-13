@@ -887,7 +887,7 @@ fun SnapScreen(
             Row(
                 Modifier
                     .fillMaxWidth()
-                    .height(Layout.LCD_HEADER_H.dp)
+                    .minHeight(Layout.LCD_HEADER_H.dp)
                     .lcdPanel(scheme)
                     .padding(horizontal = 10.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -1386,7 +1386,7 @@ private fun TelephonePortrait(index: Int, bitmap: ImageBitmap, picked: Boolean, 
 /** A heading over a group of SNAP's buttons: a quiet label, its own composable so [SnapScreen] grows by a call. */
 @Composable
 private fun SnapGroupHeading(text: String, scheme: Scheme) {
-    TapeText(text, TapeType.pixelSmall, scheme.ink2.tape, Modifier.padding(top = 4.dp), maxLines = 1)
+    TapeText(text, TapeType.pixelSmall, scheme.ink2.tape, Modifier.padding(top = 4.dp), maxLines = 2)
 }
 
 /**
@@ -1520,7 +1520,7 @@ private fun LinePicker(current: SnapVoice, scheme: Scheme, onSelect: (SnapVoice)
                     .padding(horizontal = 2.dp, vertical = 3.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                TapeText(label, TapeType.pixelSmall, color, maxLines = 1)
+                TapeText(label, TapeType.pixelSmall, color, maxLines = 2)
                 TapeText(
                     when (v) {
                         SnapVoice.HORIZON -> "ACROSS"
