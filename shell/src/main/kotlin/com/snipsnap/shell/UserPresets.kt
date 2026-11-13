@@ -13,6 +13,7 @@ import com.snipsnap.synth.AlloyPatch
 import com.snipsnap.synth.MeridianPatch
 import com.snipsnap.synth.CisternPatch
 import com.snipsnap.synth.ChamberPatch
+import com.snipsnap.synth.TempestPatch
 import com.snipsnap.synth.TidalPatch
 import com.snipsnap.synth.ContourConfig
 import com.snipsnap.synth.ContourPatch
@@ -465,6 +466,10 @@ object UserPresets {
             // Native touch is outside the macro map; promotion must retain it.
             val recipe = Json.write(JsonValue.Str(patch.toJsonText())).replace("$", "\\$")
             return "ErosionPatch.fromJsonText($recipe),"
+        }
+        if (patch is TempestPatch) {
+            val recipe = Json.write(JsonValue.Str(patch.toJsonText())).replace("$", "\\$")
+            return "TempestPatch.fromJsonText($recipe),"
         }
         if (patch is WickPatch) {
             // Save the selected body as well as note, velocity and controls.

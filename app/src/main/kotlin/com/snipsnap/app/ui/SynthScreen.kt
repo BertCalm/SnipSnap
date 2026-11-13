@@ -183,6 +183,9 @@ import com.snipsnap.synth.Rivet
 import com.snipsnap.synth.RivetPatch
 import com.snipsnap.synth.RivetPresets
 import com.snipsnap.synth.RivetVoice
+import com.snipsnap.synth.Tempest
+import com.snipsnap.synth.TempestPatch
+import com.snipsnap.synth.TempestVoice
 import com.snipsnap.synth.Wick
 import com.snipsnap.synth.WickPatch
 import com.snipsnap.synth.WickVoice
@@ -918,7 +921,7 @@ fun SynthScreen(
                                 it.name == settings[presetSettingsKey(e, v)]
                             } as? OrphicaPatch)
                     } else null
-                    val nativeFactory = if (e == Engine.HALOBAR || e == Engine.EROSION || e == Engine.CHITIN || e == Engine.CAUSTIC || e == Engine.ACCORD || e == Engine.RIME || e == Engine.FILAMENT || e == Engine.CHAMBER || e == Engine.TREMOR || e == Engine.RELAY || e == Engine.NACRE || e == Engine.MERIDIAN || e == Engine.OTIS || e == Engine.OHM || e == Engine.WICK || e == Engine.RIVET || e == Engine.MURMUR) {
+                    val nativeFactory = if (e == Engine.TEMPEST || e == Engine.HALOBAR || e == Engine.EROSION || e == Engine.CHITIN || e == Engine.CAUSTIC || e == Engine.ACCORD || e == Engine.RIME || e == Engine.FILAMENT || e == Engine.CHAMBER || e == Engine.TREMOR || e == Engine.RELAY || e == Engine.NACRE || e == Engine.MERIDIAN || e == Engine.OTIS || e == Engine.OHM || e == Engine.WICK || e == Engine.RIVET || e == Engine.MURMUR) {
                         factoryPresets(e, v).firstOrNull {
                             it.name == settings[presetSettingsKey(e, v)]
                         }
@@ -944,6 +947,7 @@ fun SynthScreen(
                         else if (e == Engine.HALOBAR) seed.seededDrafts.firstOrNull { it is HalobarPatch && it.voice == v }
                         else if (e == Engine.EROSION) seed.seededDrafts.firstOrNull { it is ErosionPatch && it.voice == v }
                         else if (e == Engine.RIVET) seed.seededDrafts.firstOrNull { it is RivetPatch && it.voice == v }
+                        else if (e == Engine.TEMPEST) seed.seededDrafts.filterIsInstance<TempestPatch>().firstOrNull { it.voice == v }
                         else if (e == Engine.WICK) seed.seededDrafts.firstOrNull { it is WickPatch && it.voice == v }
                         else if (e == Engine.MURMUR) seed.seededDrafts.firstOrNull { it is MurmurPatch && it.voice == v }
                         else if (e == Engine.TIDAL) seed.seededDrafts.firstOrNull { it is TidalPatch && it.voice == v }
@@ -991,7 +995,7 @@ fun SynthScreen(
                         else -> embouchureRestore.macrosFor(e, v, settings) ?: defaults.mapValues { (name, fallback) ->
                             // Finite voices reserve HOLD: a stale
                             // navigation value must not leave the voice stuck.
-                            if ((e == Engine.ACCORD || e == Engine.CHAMBER || e == Engine.NACRE || e == Engine.LIBRATION || e == Engine.RIVET) && name == "HOLD") fallback
+                            if ((e == Engine.ACCORD || e == Engine.CHAMBER || e == Engine.NACRE || e == Engine.LIBRATION || e == Engine.RIVET || e == Engine.TEMPEST) && name == "HOLD") fallback
                             else if (e == Engine.TIDAL && name == "HOLD") {
                                 if (settings[macroSettingsKey(e, v, name)]?.toFloatOrNull() == 1f) 1f else 0f
                             } else settings[macroSettingsKey(e, v, name)]?.toFloatOrNull()
@@ -1146,7 +1150,7 @@ fun SynthScreen(
         // existing draft format, including a last-frame macro edit before navigation.
         if (patch is CausticPatch) CausticEditing.edited(patch, macros = macrosByVoice.getValue(pair))
         else if (patch is SkinPatch) patch.withMacros(macrosByVoice.getValue(pair))
-        else if (patch is BackwashPatch || patch is HalobarPatch || patch is ErosionPatch || patch is OnsetPatch || patch is AccordPatch || patch is LibrationPatch || patch is RimePatch || patch is OtisPatch || patch is RivetPatch || patch is WickPatch || patch is FilamentPatch || patch is TidalPatch || patch is TremorPatch || patch is ChamberPatch ||
+        else if (patch is TempestPatch || patch is BackwashPatch || patch is HalobarPatch || patch is ErosionPatch || patch is OnsetPatch || patch is AccordPatch || patch is LibrationPatch || patch is RimePatch || patch is OtisPatch || patch is RivetPatch || patch is WickPatch || patch is FilamentPatch || patch is TidalPatch || patch is TremorPatch || patch is ChamberPatch ||
             patch is PrismPatch || patch is NacrePatch || patch is OverlapPatch || patch is ObbligatoPatch || patch is RelayPatch || patch is MurmurPatch ||
             patch is PluckPatch && patch.voice == PluckVoice.UPRIGHT)
             patch.withMacros(macrosByVoice.getValue(pair)) else patch
@@ -1230,6 +1234,13 @@ fun SynthScreen(
             val controls = macrosByVoice.getValue(engine to voice)
             return current?.let { Patches.edited(it, name, controls) }
                 ?: OhmPatch(name, controls)
+        }
+        if (engine == Engine.TEMPEST) {
+            // A recalled legacy drum must retain its renderer through same-frame edits and SAVE.
+            val current = loadedPatchesByVoice[engine to voice] as? TempestPatch
+            val controls = macrosByVoice.getValue(engine to voice)
+            return current?.let { Patches.edited(it, name, controls) }
+                ?: TempestPatch(name, voice as TempestVoice, controls)
         }
         if (engine == Engine.RIVET) {
             // Read live controls and strike so a last-frame edit reaches SAVE/SEND.
@@ -1515,6 +1526,8 @@ fun SynthScreen(
                     engine.patchDisplayName(voice), voice as OtisVoice, macrosByVoice.getValue(pair))
                 Engine.RIVET -> loadedPatchesByVoice[pair] = RivetPatch(
                     engine.patchDisplayName(voice), voice as RivetVoice, macrosByVoice.getValue(pair))
+                Engine.TEMPEST -> loadedPatchesByVoice[pair] = TempestPatch(
+                    engine.patchDisplayName(voice), voice as TempestVoice, macrosByVoice.getValue(pair))
                 Engine.WICK -> loadedPatchesByVoice[pair] = WickPatch(
                     engine.patchDisplayName(voice), voice as WickVoice, macrosByVoice.getValue(pair))
                 Engine.FILAMENT -> loadedPatchesByVoice[pair] = FilamentPatch(
@@ -1586,7 +1599,7 @@ fun SynthScreen(
             if (old != null) loadedPatchesByVoice[engine to voice] = old.copy(model = Rime.MODEL_VERSION, macros = values)
         }
         ensureNativeDraft()
-        if (engine == Engine.WICK || engine == Engine.RIVET) SynthDrafts.write(settings, currentDrafts())
+        if (engine == Engine.WICK || engine == Engine.RIVET || engine == Engine.TEMPEST) SynthDrafts.write(settings, currentDrafts())
         if (engine == Engine.MURMUR) {
             settings.remove(presetSettingsKey(engine, voice))
             SynthDrafts.write(settings, currentDrafts())
@@ -2110,7 +2123,7 @@ fun SynthScreen(
             shimmerDelayMillis = RENDER_SHIMMER_DELAY_MS,
             onRendering = { rendering = it },
             render = {
-                val sourcePatch = if (loadedPatch != null || engine == Engine.ACCORD || engine == Engine.WICK || engine == Engine.RIME || engine == Engine.PRISM || engine == Engine.ORIGAMI || engine == Engine.OPENSKY || engine == Engine.FILAMENT || engine == Engine.TIDAL || engine == Engine.TREMOR || engine == Engine.RELAY || engine == Engine.CHAMBER || engine == Engine.NACRE || engine == Engine.LIBRATION)
+                val sourcePatch = if (loadedPatch != null || engine == Engine.TEMPEST || engine == Engine.ACCORD || engine == Engine.WICK || engine == Engine.RIME || engine == Engine.PRISM || engine == Engine.ORIGAMI || engine == Engine.OPENSKY || engine == Engine.FILAMENT || engine == Engine.TIDAL || engine == Engine.TREMOR || engine == Engine.RELAY || engine == Engine.CHAMBER || engine == Engine.NACRE || engine == Engine.LIBRATION)
                     buildCurrentPatch(engine.patchDisplayName(voice)) else null
                 // The bench's hit strength is audition-only. Saving, SEND and
                 // the instrument maker all keep the patch's authored velocity.
@@ -2250,6 +2263,7 @@ fun SynthScreen(
                     else Presets.landingFor(engine.name, voice.name, macros)
                 val meridianLanding = (patch as? MeridianPatch)?.let { MeridianSynth.padLanding(it, activeRecipe) }
                 val cls = meridianLanding?.drumClass ?: when (patch) {
+                    is TempestPatch -> Tempest.drumClassFor(patch.voice, patch.macros, patch.model)
                     is AccordPatch -> Accord.drumClassFor(patch)
                     is RimePatch -> Rime.drumClassFor(patch.voice, patch.macros, patch.gateSeconds, patch.model)
                     is OtisPatch -> Otis.drumClassFor(patch)
@@ -3004,6 +3018,7 @@ fun SynthScreen(
         val patch = buildCurrentPatch(engine.patchDisplayName(voice))
         val cls = if (patch is MeridianPatch) MeridianSynth.padLanding(patch).drumClass
             else when (patch) {
+                is TempestPatch -> Tempest.drumClassFor(patch.voice, patch.macros, patch.model)
                 is AccordPatch -> Accord.drumClassFor(patch)
                 is RimePatch -> Rime.drumClassFor(patch.voice, patch.macros, patch.gateSeconds, patch.model)
                 is OtisPatch -> Otis.drumClassFor(patch)
@@ -3103,7 +3118,7 @@ fun SynthScreen(
         }
     }
 
-    val classColor = Schemes.classColor(engine.drumClass(voice)).tape
+    val classColor = Schemes.classColor(uiPaletteClass(engine, voice)).tape
 
     // The engine list's sheet and the engines picked from it lately, in one holder: this
     // composable is at the limit of what the toolchain verifies (see `embouchureRestore`).
@@ -3531,12 +3546,16 @@ fun SynthScreen(
                         keepOhmMacros(values)
                         keepMeridianMacros(values)
                         ensureNativeDraft()
-                        if (engine == Engine.WICK || engine == Engine.RIVET || engine == Engine.OBBLIGATO) SynthDrafts.write(settings, currentDrafts())
+                        if (engine == Engine.WICK || engine == Engine.RIVET || engine == Engine.OBBLIGATO || engine == Engine.TEMPEST) SynthDrafts.write(settings, currentDrafts())
                     }
                 }
 
                 if (hasPlayingExtras(engine, voice, loadedPatch)) {
                     SynthSectionHeading(Copy.SYNTH_HEADING_PLAYING, scheme)
+                }
+                if (engine == Engine.TEMPEST) {
+                    TapeText("FINITE DRUM · 1.20 SECONDS · HOLD IS RESERVED",
+                        TapeType.pixelSmall, scheme.ink2.tape)
                 }
                 if (engine == Engine.RIVET) {
                     RivetPerformanceControls(
@@ -4262,7 +4281,7 @@ private fun hasPlayingExtras(engine: Engine, voice: Enum<*>, loadedPatch: Patch?
         Engine.NACRE, Engine.RIME, Engine.CAUSTIC, Engine.CREASE, Engine.MURMUR, Engine.ACCORD,
         Engine.APSIS, Engine.OVEN, Engine.FILAMENT, Engine.RELAY, Engine.VENT, Engine.OSPREY,
         Engine.OPENSKY, Engine.REGISTERS, Engine.TRIO, Engine.TREFOIL, Engine.OBBLIGATO,
-        Engine.MERIDIAN, Engine.WICK, Engine.RIVET -> true
+        Engine.MERIDIAN, Engine.WICK, Engine.RIVET, Engine.TEMPEST -> true
         else -> loadedPatch is EmbouchurePatch && loadedPatch.model == Embouchure.BRASS_GROW_MODEL
     }
 
@@ -6050,7 +6069,7 @@ private enum class ObbligatoVoice { AIR_REED }
  */
 private enum class Engine {
     LATTICE, ACCORD,
-    THUMP, SCANNED_CHAIN, SKIN, ONSET, TINES, VELVET, VOX, PLUCK, ORPHICA, TONEWHEEL, OTIS, REGISTERS, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, HALOBAR, FLOTILLA, AEROSTAT, TREMOR, BALLAST, CISTERN, CIRCUIT, OBBLIGATO, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVERLAP, OVEN, FLOCK, VENT, CREASE, TRIO, NACRE, ORIGAMI, TREFOIL, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS, TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME, BORE, ARCO, SCOUR, KEEL, CHITIN, WICK, EROSION, RIVET, FIRED_BRONZE, BACKWASH;
+    THUMP, SCANNED_CHAIN, SKIN, ONSET, TINES, VELVET, VOX, PLUCK, ORPHICA, TONEWHEEL, OTIS, REGISTERS, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, HALOBAR, FLOTILLA, AEROSTAT, TREMOR, BALLAST, CISTERN, CIRCUIT, OBBLIGATO, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVERLAP, OVEN, FLOCK, VENT, CREASE, TRIO, NACRE, ORIGAMI, TREFOIL, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS, TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME, BORE, ARCO, SCOUR, KEEL, CHITIN, WICK, EROSION, RIVET, FIRED_BRONZE, BACKWASH, TEMPEST;
     val displayName: String get() = name.replace('_', ' ')
 
     /** The engine after this one in the enum's order, wrapping from the last back to the first. */
@@ -6077,6 +6096,7 @@ private enum class Engine {
         ORPHICA -> OrphicaMaterial.entries
         TONEWHEEL -> TonewheelVoice.entries
         RIVET -> RivetVoice.entries
+        TEMPEST -> TempestVoice.entries
         WICK -> WickVoice.entries
         OTIS -> OtisVoice.entries
         REGISTERS -> RegistersVoice.entries
@@ -6163,6 +6183,7 @@ private enum class Engine {
         ORPHICA -> Orphica.macrosFor(voice as OrphicaMaterial)
         TONEWHEEL -> Tonewheel.macrosFor(voice as TonewheelVoice)
         RIVET -> Rivet.macrosFor(voice as RivetVoice).filterNot { it.name == "HOLD" }
+        TEMPEST -> Tempest.macrosFor(voice as TempestVoice).filterNot { it.name == "HOLD" }
         WICK -> Wick.macrosFor(voice as WickVoice)
         OTIS -> Otis.macrosFor(voice as OtisVoice)
         REGISTERS -> Registers.macrosFor(voice as RegistersVoice)
@@ -6247,6 +6268,7 @@ private enum class Engine {
         ORPHICA -> Orphica.defaults(voice as OrphicaMaterial)
         TONEWHEEL -> Tonewheel.defaults(voice as TonewheelVoice)
         RIVET -> RivetPresets.forVoice(voice as RivetVoice).first().macros
+        TEMPEST -> Tempest.defaults(voice as TempestVoice)
         WICK -> Wick.defaults(voice as WickVoice)
         OTIS -> Otis.defaults(voice as OtisVoice)
         REGISTERS -> Registers.defaults(voice as RegistersVoice)
@@ -6333,6 +6355,7 @@ private enum class Engine {
         }
         TONEWHEEL -> Tonewheel.scramble(voice as TonewheelVoice, random)
         RIVET -> Rivet.scramble(voice as RivetVoice, random)
+        TEMPEST -> Tempest.scramble(voice as TempestVoice, random)
         WICK -> Wick.scramble(voice as WickVoice, random)
         OTIS -> Otis.scramble(voice as OtisVoice, random)
         REGISTERS -> Registers.scramble(voice as RegistersVoice, random)
@@ -6429,6 +6452,7 @@ private enum class Engine {
         ORPHICA -> buildPatch(patchDisplayName(voice), voice, macros).render()
         TONEWHEEL -> Tonewheel.render(voice as TonewheelVoice, macros)
         RIVET -> Rivet.render(voice as RivetVoice, macros)
+        TEMPEST -> Tempest.render(voice as TempestVoice, macros)
         WICK -> Wick.render(voice as WickVoice, macros)
         OTIS -> Otis.render(voice as OtisVoice, macros)
         REGISTERS -> Registers.render(voice as RegistersVoice, macros)
@@ -6517,6 +6541,7 @@ private enum class Engine {
         ORPHICA -> if (Orphica.isLoop(macros["HOLD"] ?: 0f)) DrumClass.LOOP else DrumClass.TONAL
         TONEWHEEL -> Tonewheel.drumClassFor(voice as TonewheelVoice, macros)
         RIVET -> Rivet.drumClassFor(voice as RivetVoice, macros)
+        TEMPEST -> Tempest.drumClassFor(voice as TempestVoice, macros)
         WICK -> Wick.drumClassFor(voice as WickVoice, macros)
         OTIS -> Otis.drumClassFor(voice as OtisVoice, macros)
         REGISTERS -> Registers.drumClassFor(voice as RegistersVoice, macros)
@@ -6604,6 +6629,7 @@ private enum class Engine {
         ORPHICA -> OrphicaPatch(name, OrphicaConfig(material = voice as OrphicaMaterial), macros)
         TONEWHEEL -> TonewheelPatch(name, voice as TonewheelVoice, macros)
         RIVET -> RivetPatch(name, voice as RivetVoice, macros)
+        TEMPEST -> TempestPatch(name, voice as TempestVoice, macros)
         WICK -> WickPatch(name, voice as WickVoice, macros)
         OTIS -> OtisPatch(name, voice as OtisVoice, macros)
         REGISTERS -> RegistersPatch(name, voice as RegistersVoice, macros)
@@ -6689,6 +6715,20 @@ private fun factoryPresets(engine: Engine, voice: Enum<*>): List<Patch> =
     else if (engine == Engine.CHITIN) ChitinPresets.forVoice(voice as ChitinVoice)
     else if (engine == Engine.NACRE) NacrePresets.forVoice(voice as NacreVoice)
     else Presets.forVoice(engine.name, voice.name)
+
+/** TEMPEST's voice roles choose UI colors without rendering six drums on the
+ * composition thread. These colors are not capture classification: its accepted
+ * dark default HAT can classify SNARE. SEND and SPREAD still measure the actual
+ * patch with its saved model, while other engines retain their existing palette. */
+private fun uiPaletteClass(engine: Engine, voice: Enum<*>): DrumClass =
+    if (engine == Engine.TEMPEST) when (voice as TempestVoice) {
+        TempestVoice.KICK -> DrumClass.KICK
+        TempestVoice.METAL -> DrumClass.PERC
+        TempestVoice.SNARE -> DrumClass.SNARE
+        TempestVoice.CLAP -> DrumClass.CLAP
+        TempestVoice.TOM -> DrumClass.TOM
+        TempestVoice.HAT -> DrumClass.HAT_CLOSED
+    } else engine.drumClass(voice)
 
 // ---------- voice ↔ drum class ----------
 //
@@ -6904,7 +6944,7 @@ private fun VoicePicker(engine: Engine, current: Enum<*>, scheme: Scheme, onSele
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 for (v in row) {
                     val selected = v == current
-                    val color = Schemes.classColor(engine.drumClass(v)).tape
+                    val color = Schemes.classColor(uiPaletteClass(engine, v)).tape
                     key(v) {
                         Column(
                             Modifier

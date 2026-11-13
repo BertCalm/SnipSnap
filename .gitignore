@@ -752,3 +752,13 @@ testkit/soot-genres/
 testkit/soot-genre-kits/
 testkit/soot-dub-candidates/
 /testkit/murmur-rr-v2-audition/
+
+# TEMPEST listening packs, diagnostics and generated kits.
+testkit/tempest-audition/
+testkit/tempest-r1-retained/
+testkit/SnipSnap Tempest Kit/
+.tempest-kit-building-*/
+testkit/tempest-expansion/
+testkit/tempest-full-kit/
+testkit/SnipSnap Tempest Full Kit/
+testkit/SnipSnap Tempest Tuned Kit/

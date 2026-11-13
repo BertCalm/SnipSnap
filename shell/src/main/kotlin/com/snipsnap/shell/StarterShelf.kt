@@ -18,9 +18,9 @@ object StarterShelf {
     val GROUPS: List<Group> = listOf(
         Group(
             Copy.STARTER_HEADING_START_HERE,
-            listOf("blank", "factory", "velocity", "lucky-dip", "lucky-dip-ab", "strike-fx", "chip", "vent"),
+            listOf("blank", "factory", "velocity", "lucky-dip", "lucky-dip-ab", "strike-fx", "chip", "vent", "tempest"),
         ),
-        Group(Copy.STARTER_HEADING_BASS, listOf("keel", "upright", "contour", "ballast", "tangle")),
+        Group(Copy.STARTER_HEADING_BASS, listOf("tempest-tuned", "keel", "upright", "contour", "ballast", "tangle")),
         Group(
             Copy.STARTER_HEADING_KEYS,
             listOf(
