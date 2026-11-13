@@ -139,14 +139,18 @@ def spectro_db(x, ms=5, total=0.15):
     rows = []
     for i in range(0, max(1, len(x) - w), n):
         X = np.abs(np.fft.rfft(x[i:i + w] * win)) ** 2
-        rows.append([10 * math.log10(X[(f >= c / 2 ** (1 / 6)) & (f < c * 2 ** (1 / 6))].sum() + 1e-9) for c in THIRD_OCT])
-    return np.array(rows)
+        rows.append([10 * math.log10(X[(f >= c / 2 ** (1 / 6)) & (f < c * 2 ** (1 / 6))].sum() + 1e-12) for c in THIRD_OCT])
+    rows = np.array(rows)
+    # Floor 80 dB under the loudest band: round 1 found the measure reading a 16-bit copy of a clip as 12 dB
+    # from its float original, because near-silent bands and tail frames sat on the numerical floor.
+    return np.maximum(rows, rows.max() - 80.0)
 
 
 def take_distance_db(a, b):
     """RMS difference of two strikes' level-matched third-octave spectrograms over their
-    first 150 ms, dB. ETCH's measure, with 5 ms frames because drums are short. Takes the
-    owner heard as one strike (ETCH round 1) measured 0.5 to 0.8 dB on the 10 ms version."""
+    first 150 ms, dB, every band floored 80 dB under the loudest. ETCH's measure, with 5 ms
+    frames because drums are short. Takes the owner heard as one strike (ETCH round 1)
+    measured 0.5 to 0.8 dB on the 10 ms, unfloored version."""
     A, B = spectro_db(a), spectro_db(b)
     m = min(len(A), len(B))
     return round(float(np.sqrt(np.mean((A[:m] - B[:m]) ** 2))), 2)
@@ -216,7 +220,8 @@ def voice_metrics(v, y):
         m.update({"below_4k_db": round(band_db(y, 20, 4000), 1), "ring_hz": round(dominant_hz(y, 5000, 14000))})
     elif v == "BELL":
         fc = e.expmap(e.macros_for("BELL")["TUNE"], 300.0, 1200.0)
-        hz_end = window_hz(y, 0.55, 0.72, fc * 0.9, fc * 1.1)
+        end_s = len(y) / RATE
+        hz_end = window_hz(y, end_s - 0.15, end_s, fc * 0.9, fc * 1.1)
         m.update({"hz_at_end": hz_end, "drift_cents": round(1200 * math.log2(hz_end / fc), 1)})
     elif v == "ZAP":
         m.update({"hz_at_5ms": window_hz(y, 0.0, 0.012, 60, 3000), "hz_at_90ms": window_hz(y, 0.085, 0.105, 60, 3000)})
