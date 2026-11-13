@@ -50,7 +50,7 @@ object StarterShelf {
                 "tessera", "pitchwheel", "chamber", "alloy", "caustic", "cistern", "filament", "erosion",
             ),
         ),
-        Group(Copy.STARTER_HEADING_SKINS, listOf("skin", "tremor", "revel", "triad-techno", "triad-house", "triad-minimal", "rivet-workshop", "rivet-factory", "rivet-warehouse", "velour", "velour-bloom", "backwash-soul", "backwash-psych", "fired-bronze", "cosmic-breaks", "cosmic-jungle", "cosmic-dubstep", "spore-jungle", "spore-dub", "spore-electro", "gatecrash-stone", "gatecrash-machine", "gatecrash-electro")),
+        Group(Copy.STARTER_HEADING_SKINS, listOf("skin", "tremor", "revel", "triad-techno", "triad-house", "triad-minimal", "rivet-workshop", "rivet-factory", "rivet-warehouse", "velour", "velour-bloom", "backwash-soul", "backwash-psych", "fired-bronze", "cosmic-breaks", "cosmic-jungle", "cosmic-dubstep", "spore-jungle", "spore-dub", "spore-electro", "gatecrash-stone", "gatecrash-machine", "gatecrash-electro", "cypher-trap", "cypher-drill", "cypher-backroom", "cypher-lowrider", "cypher-dust", "cypher-flint", "breaker", "mirrorball-philly", "mirrorball-loft", "mirrorball-munich")),
         Group(
             Copy.STARTER_HEADING_MOVING,
             listOf("cloud", "osprey", "osprey-curated", "skitter", "flock", "relay", "wick"),

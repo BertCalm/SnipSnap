@@ -1,3 +1,13 @@
+> CYPHER kits (round 2 heard 2026-11-12; all six kits approved): six hip-hop drum kits in
+> the GATECRASH shape over THUMP's new SUB voice, a sub drum whose pitch holds its root and then slides to
+> another note. Velocity × round robin is proven through save, playback and MPC 3, SFZ and DecentSampler
+> export in software. No phone or MPC hardware audition; MPC 2 keeps one take per zone. See [CYPHER](CYPHER.md).
+> MIRRORBALL kits (sound approved 2026-11-12, round 2): three 1970s disco kits on the shelf, Philly Strings, Loft
+> Party and Munich Machine. A treatment stage prints each pad (console EQ, hot tape), compresses it in parallel,
+> sends it to a multi-head tape echo and then an amp, the owner's order. Velocity × round robin is proven through
+> save, playback and MPC 3 export in software. No phone or MPC hardware audition; MPC 2 keeps one take per zone.
+> See [MIRRORBALL](MIRRORBALL.md).
+
 > GATECRASH kits (sound approved 2026-11-11, round 4): three 1980s gated drum kits on the shelf, Stone Room,
 > Machine Pop and Electro Funk. A treatment stage holds each pad's room level behind the drum and rounds it
 > off on the drum's own timing. Velocity × round robin is proven through save, playback and MPC 3 export in
@@ -512,6 +522,7 @@ range. First-generation voices:
 | Clap | burst train + noise tail | SPREAD · DECAY · TONE |
 | Tom / Conga | swept tone, tunable family | TUNE · SWEEP · DECAY |
 | Cowbell / Rim / Clave | two-tone square pair / damped tick | TUNE · DECAY |
+| SUB (round 2; its eight presets are the approved CYPHER sub recipes) | a sliding sub drum: a sine whose pitch settles onto its root, holds, then glides to SLIDE semitones from WHEN, with a click and a tanh DRIVE at 4×; reads velocity and deals four takes without moving the root ([CYPHER](CYPHER.md)) | TUNE · DECAY · SLIDE · WHEN · DRIVE · CLICK |
 | SPARK (prototype; awaiting audition) | sine body + phase/ring-modulated edge, separate low-pass responses; related hit snapshots, with MOVE deferred ([design and validation](THUMP_SPARK.md)) | TUNE · DECAY · PUNCH · METAL · COLOR |
 
 Every voice has since grown PUNCH (U3), and SNARE a membrane body with
@@ -3437,4 +3448,32 @@ Round 3 (renderer model 3, 2026-11-11) re-voices the ride and adds the crash and
 - **Velocity:** measured from soft and hard recordings. It changes the spectrum's shape, and it is
   not simply darker.
 - **Saves:** model-2 saves keep round 2's ride.
-- **Status:** the Kotlin renders wait for the owner's confirming listen; the kit is next.
+- **Status:** heard on 2026-11-11. The owner confirmed the app's renders as their picks and asked for the kit.
+
+The BREAKER kit (2026-11-12) is the first of three shelf kits:
+- **The pads:** sixteen BREAKER patches in the agreed layout, at 92 BPM.
+- **The grid:** the shared robin deals each pad from its recipe.
+  - 3 velocity zones × 3 re-struck takes;
+  - the recorded tambourine gets 2 × 2.
+- **Verified in software** (`BreakerKitTest`): saving, regenerating, the pad resolver and the MPC 3
+  export.
+- **Open:**
+  - MPC 2 plays each zone's first take only.
+  - The kick's takes are distinct but close (34 dB apart). The owner heard them as "one kick played
+    again: fine".
+  - Accepted on the open tone (2026-11-12): the balance, the pushed row, the kick and the soft-to-hard grid.
+
+The kit's tone (renderer model 4, 2026-11-12):
+- **Heard:** the owner heard the kit as mid heavy, "like listening through dollar tree headphones".
+- **Measured:** DUST's crunch low-passed the drums near 4 kHz, and the amp's speaker took more off the top.
+- **Picked by ear:** both opened. DUST's filter goes to about 9 kHz and the speaker goes, on every drum
+  but the cymbals and riser. Model-3 saves keep their tone.
+
+### ETCH, Kotlin round K1 (2026-11-13)
+
+Owner-requested step-line bass: an accented, sliding sixteen-step line → BITE (a clean/drive blend after a bass
+overdrive) → SPACE (a dotted-eighth delay into a reverb, after a delay and reverb pedal). Rounds 1 to 3 were a
+Python audition the owner accepted on 2026-11-12; K1 ports it to Kotlin with six voices, velocity as the accent,
+the line loop at HOLD's top and round-robin takes through `Restrike`, as a prototype outside the factory presets
+and the picker. Kotlin measures within 0.4 to 2.8 dB of the accepted renders. The kit, the roster, keygroups, the
+picker and the saving, playback and export evidence follow. See [ETCH](ETCH.md).

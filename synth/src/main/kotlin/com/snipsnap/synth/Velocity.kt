@@ -304,6 +304,7 @@ object Velocity {
         is NacrePatch -> NacreModels.macrosFor(patch.voice, patch.model)
         is OvenPatch -> Oven.macrosFor(patch.voice)
         is KeelPatch -> Keel.macrosFor(patch.voice)
+        is EtchPatch -> Etch.macrosFor(patch.voice)
         is CreasePatch -> Crease.macrosFor(patch.voice, patch.model)
         is TrioPatch -> Trio.macrosFor(patch.voice)
         is OhmPatch -> Ohm.macrosFor(patch.model)
@@ -481,6 +482,8 @@ object Velocity {
         is FerryPatch -> patch.copy(velocity = v).render()
         is OvenPatch -> patch.copy(velocity = v).render()
         is KeelPatch -> patch.copy(velocity = v).render()
+        // ETCH: velocity is the accent, so a harder hit opens the filter further and decays faster.
+        is EtchPatch -> patch.render(v)
         is CreasePatch -> patch.copy(velocity = v).render()
         is TrioPatch -> patch.copy(velocity = v).render()
         is OhmPatch -> patch.copy(velocity = v).render()
@@ -499,7 +502,7 @@ object Velocity {
         // THUMP's and ONSET's kicks take the same contact law (a shallower
         // pitch drop, a quieter and duller click); their other voices keep
         // their brightness macro or soften().
-        is ThumpPatch -> if (patch.voice == ThumpVoice.KICK) Thump.render(patch.voice, patch.macros, velocity = v) else null
+        is ThumpPatch -> if (patch.voice == ThumpVoice.KICK || patch.voice == ThumpVoice.SUB) Thump.render(patch.voice, patch.macros, velocity = v) else null
         is OnsetPatch -> if (patch.voice == OnsetVoice.KICK) Onset.render(patch.voice, patch.macros, patch.modelVersion, velocity = v) else null
         is SpoolPatch -> patch.copy(velocity = v).render()
         // Velocity moves a brightness macro (brightnessSpec) or softens the render.

@@ -62,7 +62,25 @@ object ThumpPresets {
         // SPARK stays editable through defaults and SCRAMBLE while its
         // character is auditioned. Factory names follow a listening verdict.
         ThumpVoice.SPARK -> emptyList()
+        ThumpVoice.SUB -> subPresets
     }
+
+    /**
+     * SUB's eight factory presets are the sub recipes of the CYPHER TRAP and DRILL kits, which the owner
+     * heard and accepted on 2026-11-12 ("Ok, sounds good", round 1b). Nothing here was authored blind: a
+     * preset that was not heard is disposable (SILK), so there are eight and not twenty. Each carries every
+     * SUB control, as the kits do, so a later default edit cannot recolour it.
+     */
+    private val subPresets = listOf(
+        p(ThumpVoice.SUB, "TRAP ROOT", "TUNE" to .50f, "DECAY" to .70f, "SLIDE" to .5f, "WHEN" to .5f, "DRIVE" to .45f, "CLICK" to .60f),
+        p(ThumpVoice.SUB, "TRAP LOW", "TUNE" to .08f, "DECAY" to .70f, "SLIDE" to .5f, "WHEN" to .5f, "DRIVE" to .62f, "CLICK" to .60f),
+        p(ThumpVoice.SUB, "TRAP DOWN", "TUNE" to .50f, "DECAY" to .70f, "SLIDE" to .5f - 5f / 24f, "WHEN" to .45f, "DRIVE" to .45f, "CLICK" to .60f),
+        p(ThumpVoice.SUB, "TRAP UP", "TUNE" to .50f, "DECAY" to .70f, "SLIDE" to 1f, "WHEN" to .35f, "DRIVE" to .45f, "CLICK" to .60f),
+        p(ThumpVoice.SUB, "DRILL ROOT", "TUNE" to .62f, "DECAY" to .80f, "SLIDE" to .5f, "WHEN" to .5f, "DRIVE" to .40f, "CLICK" to .50f),
+        p(ThumpVoice.SUB, "DRILL DOWN", "TUNE" to .62f, "DECAY" to .80f, "SLIDE" to .5f - 7f / 24f, "WHEN" to .60f, "DRIVE" to .40f, "CLICK" to .50f),
+        p(ThumpVoice.SUB, "DRILL UP", "TUNE" to .62f, "DECAY" to .80f, "SLIDE" to 1f, "WHEN" to .35f, "DRIVE" to .40f, "CLICK" to .50f),
+        p(ThumpVoice.SUB, "DRILL LATE", "TUNE" to .62f, "DECAY" to .90f, "SLIDE" to .5f - 5f / 24f, "WHEN" to .75f, "DRIVE" to .40f, "CLICK" to .50f),
+    )
 
     fun all(): List<ThumpPatch> = ThumpVoice.entries.flatMap { forVoice(it) }
 

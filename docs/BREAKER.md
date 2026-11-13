@@ -9,7 +9,7 @@ The characteristic gesture is **dusty crack → spring drip → crushed swell �
 
 ## Status
 
-Round 3 (renderer model 3), a prototype outside the factory presets (`PatchTypes.PROTOTYPES`).
+Renderer model 4 (the kit's tone), a prototype outside the factory presets (`PatchTypes.PROTOTYPES`).
 Fourteen voices; the kick and snare are built from the owner's round-0 picks.
 
 At round 1 the owner heard:
@@ -39,24 +39,102 @@ for the recorded cymbals to be replicated with synthesis instead. On 2026-11-11 
 - **A13:** this ride. **A14:** this crash, ringing about 3 s.
 - **A15:** the tamed riser.
 
-Model-2 saves keep round 2's ride.
+Model-2 saves keep round 2's ride. On 2026-11-11 the owner heard the app's own renders of the
+ride, crash and riser as their picks, the repeat and 40% hits as the same cymbal played softer, the
+presets as bringing the rig back the way they want, and said to build the kit.
 
-Not in the phone picker yet; the picker entry waits for a session with an Android SDK, as the house
-rule says. Still to come:
-- the 16 pads assembled into a kit, with velocity and round robin through saving, playback and
-  export;
-- two more genre kits, Dub Tank and Trip hop (the owner's picks);
+The kit is on the shelf as the BREAKER starter (below, "The kit"). On 2026-11-12 the owner heard it
+in a groove as "very mid heavy, like listening through dollar tree headphones". Measured, nearly
+everything sat between about 100 Hz and 4 kHz. Of four versions of the same groove, they picked the
+open rig (below, "Model 4: the open rig"), and heard their snare, hat and kick through it as
+"better".
+
+ Not in the synth picker yet; that
+entry waits for a session with an Android SDK, as the house rule says.
+
+On the open tone (model 4) the owner accepted the kit (2026-11-12):
+- **The balance:** "sounds right now".
+- **The pushed row:** keep all three.
+- **The kick hit again:** "one kick played again: fine".
+- **Every pad, soft to hard:** softer in character, with a fresh hit each time.
+
+Still to come:
+- two more genre kits, Dub Tank and Trip hop (the owner's picks), each laid out for the owner
+  first;
 - the surf tom fill;
 - the audition page.
 
-The kit, as agreed:
+## The kit
+
+The BREAKER starter (`BreakerKits`, `StarterKits` id `breaker`, under SKINS on the shelf), at
+92 BPM, the tempo every BREAKER beat was heard at. A01 is bottom left.
 
 | | | | |
 |---|---|---|---|
-| A13 Ride | A14 Crash (rings about 3 s) | A15 Snare riser | A16 Shaker |
+| A13 Ride | A14 Crash (rings 3.2 s) | A15 Snare Riser | A16 Shaker |
 | A09 Floor Tom | A10 Rack Tom | A11 High Tom | A12 Crushed Snare |
 | A05 Crushed Boom | A06 Drip Snare | A07 Cross Stick | A08 Tambourine |
 | A01 Boom | A02 Bap | A03 Closed Hat | A04 Open Hat (chokes A03) |
+
+- **Every pad is a BREAKER patch** at its drum's defaults, so each pad keeps its recipe and stays
+  editable.
+- **The pushed pads** are authored and not yet heard:
+  - A05 Crushed Boom: the kick at CRUSH 1, DUST .5, AMP .55;
+  - A06 Drip Snare: the snare at DRIP .9, SLAP .35;
+  - A12 Crushed Snare: the snare at CRUSH 1, DUST .5, AMP .55, DRIP .35.
+- **Levels** come from the balance the owner heard in the round-3 beats: Boom .90, Bap .80, the
+  hats and shaker .35, the toms .70, the ride .27 and the crash .32.
+- **Chokes:** only the open hat chokes the closed one. The cymbals never choke.
+
+**Velocity and round robin.** The shared robin (`Robin.apply`, as the BACKWASH kits) deals each pad
+from its recipe:
+- **Every synth drum: 3 zones × 3 takes.**
+  - A softer zone is the drum re-rendered at velocity .3 or .6.
+  - Every take after a zone's first is the drum struck again (`Restrike`).
+- **The tambourine: 2 zones × 2 takes,** exactly its recordings.
+  - A third zone would land on a dynamic layer already used, so it would differ only in level.
+  - A third take would repeat the first.
+  - With 3 × 3 it measured both: one zone was another only turned down, and two takes were the same
+    recording, −119 dB apart.
+
+Measured on the saved grid (`BreakerKitProof`), on model 4:
+
+| Pad | Closest two takes, apart by | Least-changed soft zone |
+|---|---:|---:|
+| Boom | 33.6 dB | 0.6 dB |
+| Crushed Boom | 32.9 dB | 0.8 dB |
+| High Tom | 29.0 dB | 3.8 dB |
+| Cross Stick | 28.7 dB | 2.3 dB |
+| Snare Riser | 25.3 dB | 4.7 dB |
+| Floor Tom | 24.3 dB | 4.7 dB |
+| Rack Tom | 24.0 dB | 4.2 dB |
+| Crushed Snare | 15.6 dB | 3.1 dB |
+| Drip Snare | 15.2 dB | 7.0 dB |
+| Bap | 14.4 dB | 6.7 dB |
+| Ride, crash, hats, shaker, tambourine | about 0 dB (uncorrelated) | 1.5 to 6.6 dB |
+
+How to read the two columns:
+- **"Apart by"** is what differs between two takes against what they share. A copy, dealt with a
+  level nudge and a shave off its front, is apart by more than 40 dB.
+- **"Least-changed soft zone"** is the most an octave band's level moves between a soft zone and
+  the hard zone, at matched loudness. A zone that is the hard one turned down moves 0.
+- **The weak spot is the kick.** The crush evens out the small force differences between strikes.
+  So the two kicks' takes are distinct strikes, but close: 34 dB apart, against more than 40 for a
+  copy. Their soft zones move only 0.6 to 0.8 dB in shape. GATECRASH's stone kick was disclosed
+  the same way. The owner's listen decides whether the kick needs more variation per strike.
+
+**Through saving, playback and export** (`BreakerKitTest`; the full kit and listening pack:
+`./gradlew :shell:generateBreakerKit`):
+- **Saving:** the kit reloads equal. Rendered again from its recipes, it is the same, byte for byte.
+- **Playback:** `PadHit.resolve`, the resolver the app's pads use, picks the zone by velocity, deals
+  the takes in order and repeats them. The preview mixer cycles them too.
+- **MPC 3:** the exported track's velocity ranges, slice anchors, cycle lengths and slice windows
+  match the kit, and its samples are the saved ones.
+- **MPC 2** plays each zone's first take only, so it does not pass the round-robin export gate.
+- **Not yet tested on hardware:** no phone or MPC has played the kit.
+
+**Cost:** 139 slices in 34 MB of 24-bit audio. The kit takes about 15 s to deal on a desktop JVM; a
+phone has not been timed.
 
 ## How a hit is made
 
@@ -81,7 +159,9 @@ The kit, as agreed:
    - the tambourine picks a recorded dynamic layer;
    - SKIN does not strike the hats, shaker and stick, so a softer hit darkens their finished
      sound after the rig (step 9).
-2. **DUST:** the rack's own CRUNCH and VINYL: the record and the sampler.
+2. **DUST:** the rack's own CRUNCH and VINYL: the record and the sampler. On model 4, CRUNCH's
+   output filter sits at about 8.9 kHz at DUST .35, where model 3 put it near 4.2 kHz (5.5 kHz on
+   the snare).
 3. **Saturation:** an asymmetric tube curve at 4x. The cymbals and the riser skip it: on noisy
    metal and a dense roll, it was the fizz the owner heard as harsh.
 4. **CRUSH, first half:** an FET-style compressor gluing the hit.
@@ -95,8 +175,9 @@ The kit, as agreed:
    lows instead of partly cancelling them, and the tail gets 5 dB more boom at 63 Hz.
 7. **CRUSH, second half:** the same compressor after the spring, so each hit ducks the drip and it
    swells back up.
-8. **AMP:** the rack's VALVE as a bright open-back combo. On the cymbals, AMP is how much of the
-   combo you hear, so at 0 there is no amp at all.
+8. **AMP:** the rack's VALVE. On model 4 every drum gets its tube without the speaker. The cymbals
+   and the riser keep the bright open-back combo (CAB .25) they were heard with. On the cymbals, AMP
+   is how much of the combo you hear, so at 0 there is no amp at all.
 
 9. **Soft hits on the unstruck drums** (hats, shaker, stick, and model 2's ride): the finished
    hit's top is rolled off, near 4.8 kHz at 40%. Darkening their source does not survive the rig;
@@ -108,6 +189,91 @@ The kit, as agreed:
 A hit is capped at 1.49 s with a fade, so it stays a one-shot. Two voices are longer and are
 declared PERC, never classified: the crash rings 3.2 s (the owner's call), and the riser lasts
 3.4 s, the build and the spring after it.
+
+## Model 4: the open rig
+
+The owner heard the model-3 kit as mid heavy. Measured on the kit, almost everything sat between
+about 100 Hz and 4 kHz:
+- **DUST's filter:** CRUNCH low-passed every drum near 4.2 kHz at DUST .35 (5.5 kHz on the snare).
+  That is Backroom's crunch, accepted in its own kit.
+- **The speaker:** the combo's open-back cab rolled off the top further and added breakup peaks at
+  2.6 and 3.75 kHz.
+- **The cymbals:** the only full-band sounds, and quiet in the mix.
+
+The owner heard the same groove four ways at one loudness (2026-11-12):
+- as it was;
+- DUST's filter opened;
+- the speaker taken out;
+- both.
+
+They picked both, and heard their snare, hat and kick through it as "better".
+
+Model 4 renders exactly that:
+- **DUST's filter at DUST .35 opens to about 8.9 kHz**, CRUNCH's own default. Its bits, rate, grit
+  and record stay.
+- **The amp keeps its tube and drops its speaker** (CAB 0).
+- **The cymbals and the riser keep the rig they were heard with.** That includes the cymbals'
+  dialled presets, which the owner approved at round 3.
+- **The app's model-4 renders are the clips the owner picked,** every pad at every velocity, to
+  within 6 × 10⁻⁸.
+
+The top octave against the whole hit, model 3 to model 4:
+
+| Drum | 8 kHz octave, model 3 → 4 |
+|---|---|
+| Snare | −25.9 → −16.3 dB |
+| Closed hat | −17.5 → −8.8 dB |
+| Open hat | −19.1 → −9.1 dB |
+| Kick | −40.7 → −34.4 dB |
+
+The crush's swell past halfway is still there. Below 2 kHz, where the spring's tail is, CRUSH .5 to
+.9 lifts the snare's tail 1.3 dB (1.5 on model 3) and the kick's 1.2 dB (1.9). Measured broadband,
+the opened crack of the hit hides it (0.4 and 0.9 dB), so `BreakerTest` measures it below 2 kHz.
+
+Model-3 saves keep the speaker and the darker filter.
+
+## Model 5: DAMP and Bump
+
+The owner approved both on 2026-11-12, so that the genre kits differ in damping as well as tuning,
+roles and layout, and so that Dub Tank can have Bump. At DAMP .5, every model-4 voice renders on model
+5 exactly as it did on model 4 (`BreakerTest`). Model-4 saves have no DAMP and no Bump.
+
+**DAMP** is each drum's damping. At .5 nothing changes; above it the drum dies sooner, and below it
+the drum rings longer:
+- **SKIN's drums** (kick, snare, toms, hats, stick, shaker, and the riser's strikes): their own
+  DECAY moves by up to .3 either way. Above .5 the drum is also damped as tape on a head damps it:
+  an exponential fade on the drum before the rig, about 12 dB in the first 100 ms at DAMP 1.
+- **The cymbals:** every fitted mode decays up to twice as fast, or half as fast.
+- **Bump:** the kicked tank rings up to twice as short, or twice as long.
+- **The tambourine:** a recording cannot ring longer than it was played. Below .5 it is unchanged;
+  above .5 it is BACKWASH's own DAMP, which shortens it.
+
+**Where DAMP is heard.** It always damps the drum itself. In a wet rig, the spring and the crush
+rebuild a drum's tail. The table below is the body (.05 to .3 s) against the hit's first 50 ms. In
+the full rig, DAMP is clear on the kick, the open hat, the shaker, the cymbals and Bump, and nearly
+lost on the snare, the closed hat, the stick and the drippy toms. A kit that wants a damped snare or
+toms also dries their spring.
+
+| Drum | Rig's tail off, DAMP .15 / .5 / .85 | In its rig |
+|---|---|---|
+| Kick | −7.9 / −11.7 / −21.1 dB | −4.4 / −7.7 / −10.6 dB |
+| Snare | −16.8 / −21.3 / −31.5 dB | −3.0 / −2.9 / −2.8 dB |
+| Open hat | −7.4 / −9.6 / −16.2 dB | −3.7 / −5.4 / −9.6 dB |
+| Floor tom | −5.4 / −7.7 / −14.4 dB | −1.6 / −1.4 / −2.1 dB |
+
+The ride's and crash's tail (.3 to 1.2 s) moves 3 to 4 dB either way of .5.
+
+**Bump** is the spring tank kicked. The jolt moves the transducer all at once, so the springs get a
+broadband slap:
+- **The jolt:** a 2 ms click and 25 ms of noise, re-seeded per take, into tank B with no dry signal.
+  The tank's mechanical knock (a 60 Hz thud) is kept under the springs.
+- **DRIP** is how hard it is kicked, so a harder kick clangs and rings longer.
+- **TUNE** is the springs' tension, half an octave either way.
+- **The rig:** it skips the tube, like the cymbals, and uses the open rig. It lasts 2.5 s and is
+  declared PERC.
+- **A softer pad** kicks it softer, so it rings shorter: at 40%, 1.4 to 2.2 s in, it sits 8.6 dB
+  under a full kick's, each hit levelled.
+- **Presets:** Kicked, Booted (DRIP 1, CRUSH .8) and Nudged (DRIP .35, DAMP .75).
 
 ## The cymbals
 
@@ -146,8 +312,10 @@ their hashes. Only the fitted numbers ship; no recording does.
 | SLAP | .20 unless below | the echo: level and repeats, and past halfway its time |
 | CRUSH | .90 unless below | the compressor: glue up to halfway, then also crushing after the spring |
 | AMP | .35 unless below | the combo's drive and sag (on the cymbals, how much of the combo) |
+| DAMP | .50 | model 5: the drum's damping; .5 changes nothing (below, "Model 5") |
 
-On the shaker, which has no tuning of its own, TUNE moves its band.
+On the shaker, which has no tuning of its own, TUNE moves its band. On Bump, DRIP is how hard the
+tank is kicked and TUNE is the springs' tension.
 
 Per-drum defaults:
 
@@ -165,6 +333,7 @@ Per-drum defaults:
 | TOM_HIGH | .35 | .40 | .20 | .80 | .35 | B |
 | RIDE, CRASH | 0 | 0 | 0 | 0 | 0 | B |
 | RISER | .20 | .60 | .20 | .50 | .20 | B |
+| BUMP | .20 | .70 (the kick) | .20 | .50 | .30 | B itself |
 
 The cymbals are dry by default, and every control at 0 is a true bypass. Their presets are Dry,
 Through the rig, and In the spring; the riser's are Tamed, Pumping, and Short spring.
@@ -207,3 +376,10 @@ Model 2's ride: DUST .30, DRIP .45, SLAP 0, CRUSH .60, AMP .35.
 unasked (every other engine), a take changes nothing.
 
 `DeterminismTest` replays every voice and a take, byte for byte, and through a JSON round trip.
+
+`BreakerKitTest` checks the kit:
+- the sixteen pads, their grids, recipes, levels and chokes;
+- that no two takes are copies and no soft zone is the hard one turned down;
+- saving, reloading and regenerating from the recipes, byte for byte;
+- zone selection and take cycling in the pad resolver and the preview mixer;
+- the MPC 3 track and its samples.
