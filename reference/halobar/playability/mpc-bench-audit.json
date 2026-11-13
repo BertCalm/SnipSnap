@@ -1,0 +1,26 @@
+{
+  "state": "passed",
+  "archiveSha256": "7dd049bb308cbc8276b756020d3f332b61a6907abc35eb49608bd2c149ded36a",
+  "programs": [
+    {
+      "native": "HALOBAR MPC Bench/01-Velocity-Control/HALO Bench VEL.xty",
+      "xpm": "HALOBAR MPC Bench/01-Velocity-Control/HALO Bench VEL_[TrackData]/HALO Bench VEL.xpm",
+      "activeLayers": 2,
+      "zonePlayTime": 1
+    },
+    {
+      "native": "HALOBAR MPC Bench/02-Cycle-Control/HALO Bench RR.xty",
+      "xpm": "HALOBAR MPC Bench/02-Cycle-Control/HALO Bench RR_[TrackData]/HALO Bench RR.xpm",
+      "activeLayers": 3,
+      "zonePlayTime": 0
+    },
+    {
+      "native": "HALOBAR MPC Bench/03-Velocity-Cycle-Candidate/HALO Bench VEL RR.xty",
+      "xpm": "HALOBAR MPC Bench/03-Velocity-Cycle-Candidate/HALO Bench VEL RR_[TrackData]/HALO Bench VEL RR.xpm",
+      "activeLayers": 6,
+      "zonePlayTime": 0
+    }
+  ],
+  "hardwareVerified": false,
+  "productionCombinedModeEnabled": false
+}

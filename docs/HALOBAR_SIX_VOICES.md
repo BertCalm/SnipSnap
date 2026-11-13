@@ -191,3 +191,11 @@ acceptance is in progress.
 model-1 optimization, exact-audio checks, complete CI gate and paired desktop
 timings. Fresh rendering remains above the 50 ms target; device and MPC gates
 remain open. The original build measurements above retain their provenance.
+
+## Control-edit playability and performance review
+
+[The playability report](HALOBAR_PLAYABILITY.md) records bounded source/return
+reuse, paired control-edit timings, exact audio replay and the full build gate.
+[Review the kit, chords, note releases, rolls and risers](https://halobar-native-audition.bertcalm.chatgpt.site/tubular-bells/performance/review/).
+Voice-bank approval remains complete. Fresh 50 ms rendering and physical phone/MPC
+verification remain open; combined MPC keygroup velocity/round robin is not enabled.
