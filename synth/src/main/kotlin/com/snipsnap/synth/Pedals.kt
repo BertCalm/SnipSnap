@@ -41,7 +41,7 @@ enum class PedalSide(val id: String) {
  * volume swell, gated on 2026-11-02; VIBRATO, the pitch vibrato, gated on 2026-11-04; DIVE, the
  * whammy dive, gated on 2026-11-07; HUSH, the gate, gated on 2026-11-07; SUB, the octave down,
  * gated on 2026-11-09; REWIND, the reverse delay, gated on 2026-11-11; TREM, the tremolo, and FLANGE, the
- * flanger, gated together on 2026-11-12.
+ * flanger, gated together on 2026-11-12; ROTARY, the spinning speaker, gated on 2026-11-13.
  * Seven pedals already did not fit row seven's six chips, so the sheet draws a slate: five of the gated pedals on the row,
  * the user's choice and the same everywhere, and every gated pedal behind
  * MORE (`PedalSlate`, docs/superpowers/specs/2026-10-28-pedal-slate-design.md).
@@ -190,6 +190,12 @@ object Pedals {
         // since the owner heard it only there. For drums and held sounds both. Gated on 2026-11-12
         // (docs/superpowers/specs/2026-10-04-pedal-board-design.md, Stage 4). Behind MORE.
         Entry("FLANGE", "flanged", character("flanged"), PedalSide.POST, movable = false, gated = true),
+        // A spinning speaker: the `spun` character, the ROTARY section, whose tap (AMT 0.7) starts at the slow chorale and
+        // spins up to the fast tremolo, the top end circling with its pitch and level, the low end swaying under it. After
+        // the amp, where the rack puts it and a rotary cabinet sits; not movable, since the owner heard it only there. For
+        // held sounds only. Gated on 2026-11-13 (docs/superpowers/specs/2026-10-19-pedal-board-brainstorm.md, idea 8).
+        // Behind MORE.
+        Entry("ROTARY", "spun", character("spun"), PedalSide.POST, movable = false, gated = true),
     )
 
     init {
