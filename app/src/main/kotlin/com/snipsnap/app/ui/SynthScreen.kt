@@ -314,6 +314,7 @@ import com.snipsnap.synth.TrefoilVoice
 import com.snipsnap.synth.TrefoilHeld
 import com.snipsnap.synth.TrefoilPlayback
 import com.snipsnap.shell.TrefoilPadMaker
+import com.snipsnap.shell.WickPadMaker
 import com.snipsnap.synth.TrioVoice
 import com.snipsnap.synth.OpenSky
 import com.snipsnap.synth.OpenSkyPatch
@@ -2476,7 +2477,7 @@ fun SynthScreen(
     val heldSheet = remember { HeldSheetState() }
     // The name MAKE will land under, read off the shelf when the sheet opens
     // so the sheet can say it; MAKE asks the shelf again at write time.
-    val supportsHeldInstrument = engine == Engine.HALOBAR || engine == Engine.CAUSTIC || engine == Engine.LIBRATION || engine == Engine.RIME || (engine == Engine.TIDAL && !embouchureRestore.pending.containsKey(engine to voice)) || engine == Engine.CREASE || engine == Engine.ORPHICA || engine == Engine.RESIN || engine == Engine.SIREN || engine == Engine.GLINT || engine == Engine.REGISTERS || engine == Engine.BELLOWS || engine == Engine.CONTOUR || engine == Engine.BALLAST || engine == Engine.MERIDIAN || engine == Engine.MERCURY || engine == Engine.KEEL || engine == Engine.ARCO ||
+    val supportsHeldInstrument = engine == Engine.WICK || engine == Engine.HALOBAR || engine == Engine.CAUSTIC || engine == Engine.LIBRATION || engine == Engine.RIME || (engine == Engine.TIDAL && !embouchureRestore.pending.containsKey(engine to voice)) || engine == Engine.CREASE || engine == Engine.ORPHICA || engine == Engine.RESIN || engine == Engine.SIREN || engine == Engine.GLINT || engine == Engine.REGISTERS || engine == Engine.BELLOWS || engine == Engine.CONTOUR || engine == Engine.BALLAST || engine == Engine.MERIDIAN || engine == Engine.MERCURY || engine == Engine.KEEL || engine == Engine.ARCO ||
         (engine == Engine.OPENSKY && OpenSkyPadMaker.supports(voice as OpenSkyVoice)) ||
         (engine == Engine.ORIGAMI && OrigamiPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as OrigamiPatch)) ||
         (engine == Engine.FLOCK && FlockPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as FlockPatch)) ||
@@ -2495,6 +2496,7 @@ fun SynthScreen(
         Engine.MURMUR -> (buildCurrentPatch(engine.patchDisplayName(voice)) as MurmurPatch).let {
             !revisedMurmur(it) || MurmurSelectedInstrumentMaker.supports(it)
         }
+        Engine.WICK -> WickPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as WickPatch)
         Engine.LIBRATION -> LibrationPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as LibrationPatch)
         Engine.MERIDIAN -> MeridianPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as MeridianPatch)
         Engine.CREASE -> CreasePadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as CreasePatch)
@@ -2527,6 +2529,11 @@ fun SynthScreen(
     // periodic sustain. CONTOUR starts directly from its settled tone.
     // These specs expose only a release control.
     fun heldSpec(): HeldSpec? = when (engine) {
+        Engine.WICK -> {
+            val patch = buildCurrentPatch(loadedPatchesByVoice[engine to voice]?.name
+                ?: currentPresetByVoice[engine to voice] ?: engine.patchDisplayName(voice)) as WickPatch
+            if (WickPadMaker.supports(patch)) HeldSpec.Wick(WickPadMaker.Spec(patch)) else null
+        }
         Engine.HALOBAR -> HeldSpec.Halobar(HalobarPadMaker.spec(
             buildCurrentPatch(engine.patchDisplayName(voice)) as HalobarPatch, heldSheet.holdRelease))
         Engine.LATTICE -> {
@@ -2736,7 +2743,7 @@ fun SynthScreen(
         heldSheet.holdJob = appScope.launch {
             try {
                 // CANCEL cancels this job; the render asks and stops.
-                val heard = if (spec is HeldSpec.Libration || spec is HeldSpec.Ohm || spec is HeldSpec.Tidal || spec is HeldSpec.Flock || spec is HeldSpec.Overlap || spec is HeldSpec.Trefoil || spec is HeldSpec.Filament || spec is HeldSpec.Lattice || spec is HeldSpec.Meridian || spec is PrismHeldSpec || spec is ObbligatoHeldSpec) {
+                val heard = if (spec is HeldSpec.Libration || spec is HeldSpec.Ohm || spec is HeldSpec.Tidal || spec is HeldSpec.Flock || spec is HeldSpec.Overlap || spec is HeldSpec.Wick || spec is HeldSpec.Trefoil || spec is HeldSpec.Filament || spec is HeldSpec.Lattice || spec is HeldSpec.Meridian || spec is PrismHeldSpec || spec is ObbligatoHeldSpec) {
                     val renderJob = coroutineContext[Job]
                     offMainInterruptible(Dispatchers.Default) {
                         spec.previewPlayback { renderJob?.isActive == false || Thread.currentThread().isInterrupted }
@@ -2779,7 +2786,7 @@ fun SynthScreen(
                 // throws must surface here as an exception this catch sees,
                 // not fail the app's own scope.
                 val notes = coroutineScope {
-                    if (spec is HeldSpec.OpenSky || spec is HeldSpec.Bellows || spec is HeldSpec.Crease || spec is HeldSpec.Contour || spec is HeldSpec.Origami || spec is HeldSpec.Flock || spec is HeldSpec.Caustic || spec is HeldSpec.Libration || spec is HeldSpec.Ohm || spec is HeldSpec.Filament || spec is HeldSpec.Lattice || spec is HeldSpec.Tidal || spec is HeldSpec.Ballast || spec is HeldSpec.Overlap || spec is HeldSpec.Trefoil || spec is HeldSpec.Meridian || spec is HeldSpec.Mercury || spec is HeldSpec.Keel || spec is HeldSpec.Arco || spec is HeldSpec.Bore || spec is HeldSpec.Loop || spec is PrismHeldSpec || spec is ObbligatoHeldSpec) {
+                    if (spec is HeldSpec.OpenSky || spec is HeldSpec.Bellows || spec is HeldSpec.Crease || spec is HeldSpec.Contour || spec is HeldSpec.Origami || spec is HeldSpec.Flock || spec is HeldSpec.Caustic || spec is HeldSpec.Libration || spec is HeldSpec.Ohm || spec is HeldSpec.Filament || spec is HeldSpec.Lattice || spec is HeldSpec.Tidal || spec is HeldSpec.Ballast || spec is HeldSpec.Overlap || spec is HeldSpec.Wick || spec is HeldSpec.Trefoil || spec is HeldSpec.Meridian || spec is HeldSpec.Mercury || spec is HeldSpec.Keel || spec is HeldSpec.Arco || spec is HeldSpec.Bore || spec is HeldSpec.Loop || spec is PrismHeldSpec || spec is ObbligatoHeldSpec) {
                         // OPENSKY has larger wet state, BELLOWS has three
                         // velocity layers, CREASE evolves its attack and
                         // held control history, CONTOUR spans seventeen zones,
@@ -2796,7 +2803,7 @@ fun SynthScreen(
                         // independent oversampled states at once. CANCEL stays live;
                         // the counter advances after each note's samples finish.
                         midis.map { midi ->
-                            val note = if (spec is HeldSpec.Caustic || spec is HeldSpec.Libration || spec is HeldSpec.Ohm || spec is HeldSpec.Tidal || spec is HeldSpec.Flock || spec is HeldSpec.Overlap || spec is HeldSpec.Trefoil || spec is HeldSpec.Filament || spec is HeldSpec.Lattice || spec is HeldSpec.Meridian || spec is HeldSpec.Mercury || spec is HeldSpec.Keel || spec is HeldSpec.Arco || spec is HeldSpec.Bore || spec is HeldSpec.Loop || spec is PrismHeldSpec || spec is ObbligatoHeldSpec) {
+                            val note = if (spec is HeldSpec.Caustic || spec is HeldSpec.Libration || spec is HeldSpec.Ohm || spec is HeldSpec.Tidal || spec is HeldSpec.Flock || spec is HeldSpec.Overlap || spec is HeldSpec.Wick || spec is HeldSpec.Trefoil || spec is HeldSpec.Filament || spec is HeldSpec.Lattice || spec is HeldSpec.Meridian || spec is HeldSpec.Mercury || spec is HeldSpec.Keel || spec is HeldSpec.Arco || spec is HeldSpec.Bore || spec is HeldSpec.Loop || spec is PrismHeldSpec || spec is ObbligatoHeldSpec) {
                                 val renderJob = coroutineContext[Job]
                                 offMainInterruptible(Dispatchers.Default) {
                                     spec.renderZone(midi) { renderJob?.isActive == false || Thread.currentThread().isInterrupted }
@@ -4007,6 +4014,7 @@ fun SynthScreen(
                         TapeText(
                             when (engine) {
                                 Engine.MURMUR -> murmurInstrumentUnavailable(buildCurrentPatch(engine.patchDisplayName(voice)) as MurmurPatch)
+                                Engine.WICK -> WickPadMaker.UNSUPPORTED_NOTE
                                 Engine.MERIDIAN -> meridianInstrumentReadiness(buildCurrentPatch(engine.patchDisplayName(voice)) as MeridianPatch)
                                 Engine.CREASE -> "MAKE INSTRUMENT needs model 3. The saved original still plays as before."
                                 Engine.BELLOWS -> "MAKE INSTRUMENT needs a current bellows sound. The saved original still plays as before."
@@ -4160,8 +4168,9 @@ fun SynthScreen(
             } else heldSpec()?.let { spec ->
                 HeldInstrumentSheet(
                     heading = "${engine.name} · ${chipLabel(engine, voice)}",
-                    nameNote = if (heldSheet.holdName.isEmpty()) "" else Copy.heldInstrumentNote(heldSheet.holdName),
+                    nameNote = spec.shelfNote(heldSheet.holdName),
                     hasAttack = spec.hasAttack,
+                    hasRelease = spec.hasRelease,
                     attack = heldSheet.holdAttack,
                     release = spec.releaseFraction ?: heldSheet.holdRelease,
                     knobLabel = spec.knobLabel,
@@ -5133,6 +5142,10 @@ private fun contourMacroGroup(name: String): String = when (name) {
 internal sealed interface HeldSpec {
     val zoneMidis: List<Int>
     val hasAttack: Boolean
+    /** False for finite sources that keep their own envelope: the sheet hides RELEASE. */
+    val hasRelease: Boolean get() = true
+    /** The sheet's LIBRARY line for [name]; finite instruments drop the held-key promise. */
+    fun shelfNote(name: String): String = if (name.isEmpty()) "" else Copy.heldInstrumentNote(name)
     val instrumentNote: String? get() = null
     val releaseFraction: Float? get() = null
     val touchLayers: Boolean? get() = null
@@ -5430,6 +5443,21 @@ internal sealed interface HeldSpec {
             OverlapPadMaker.export(name, spec, notes.map { it.single() }, destRoot)
     }
 
+    /** Finite WICK notes keep their saved envelope, so this sheet has no replacement release knob. */
+    class Wick(private val spec: WickPadMaker.Spec) : HeldSpec {
+        override val zoneMidis get() = WickPadMaker.zoneMidis(spec)
+        override val hasAttack get() = false
+        override val hasRelease get() = false
+        override fun shelfNote(name: String) = if (name.isEmpty()) "" else "Lands in the LIBRARY as $name, playable on keyboard."
+        override val progressPerZone get() = 3
+        override val knobLabel get() = "FINITE SOURCE GESTURE · THREE TOUCH LAYERS"
+        override val instrumentNote get() = WickPadMaker.instrumentNote(spec)
+        override fun renderZone(midi: Int, cancelled: () -> Boolean) = WickPadMaker.renderZone(spec, midi, cancelled)
+        override fun preview(cancelled: () -> Boolean) = WickPadMaker.preview(spec, cancelled)
+        override fun export(name: String, notes: List<List<KeyNote>>, destRoot: File) =
+            WickPadMaker.export(name, spec, notes, destRoot)
+    }
+
     class Trefoil(private val spec: TrefoilPadMaker.Spec) : HeldSpec {
         override val zoneMidis get() = TrefoilPadMaker.zoneMidis(spec)
         override val hasAttack get() = false
@@ -5512,7 +5540,7 @@ private fun MurmurSelectedInstrumentSheet(
         heading = "MURMUR · ${if (spec.held) "HELD" else "FINITE"} PLUCK",
         nameNote = if (state.holdName.isEmpty()) "" else
             "LANDS ON THE SHELF AS ${state.holdName.uppercase(Locale.ROOT)}, PLAYABLE ON KEYS.",
-        hasAttack = false, attack = 0f, release = delivery.releaseFraction,
+        hasAttack = false, hasRelease = true, attack = 0f, release = delivery.releaseFraction,
         knobLabel = String.format(Locale.ROOT, "KEY RELEASE %.2f SECONDS", spec.releaseSeconds),
         instrumentNote = "$range · SOFT, MEDIUM AND HARD TOUCH. " +
             if (spec.held) "SOFTENED START; THE SOUND HOLDS UNTIL KEY RELEASE."
@@ -5530,8 +5558,8 @@ private fun MurmurSelectedInstrumentSheet(
  * MAKE INSTRUMENT ▸'s sheet (RESIN, SIREN, GLINT, REGISTERS, CREASE, BELLOWS, CONTOUR, BALLAST, MERCURY, KEEL, OPENSKY HALO or ORIGAMI FAN/STILL): [PresetNameDialog]'s frame -
  * scrim, raised bevel, CANCEL beside the real buttons - over the knobs a
  * held note has that a one-shot never needed. [hasAttack] hides ATTACK's
- * slider for an engine with none to dial (SIREN, GLINT, REGISTERS, OPENSKY HALO); RELEASE always shows,
- * and [knobLabel] spells out whichever of the two apply in seconds. The
+ * slider for an engine with none to dial (SIREN, GLINT, REGISTERS, OPENSKY HALO); [hasRelease] hides
+ * RELEASE for a finite source that keeps its own envelope (WICK), and [knobLabel] spells out whichever of the two apply in seconds. The
  * optional touch-layer button leaves the saved recipe alone. While
  * MAKE runs the knobs give way to [HeldProgress], a bar that fills as each
  * zone lands and the line counting them; PREVIEW's one zone says
@@ -5543,6 +5571,7 @@ private fun HeldInstrumentSheet(
     heading: String,
     nameNote: String,
     hasAttack: Boolean,
+    hasRelease: Boolean,
     attack: Float,
     release: Float,
     knobLabel: String,
@@ -5602,7 +5631,7 @@ private fun HeldInstrumentSheet(
                 HeldProgress(done, total, fillColor, scheme)
             } else {
                 if (hasAttack) MacroSlider("ATTACK", attack, fillColor, scheme, onAttack)
-                MacroSlider("RELEASE", release, fillColor, scheme, onRelease)
+                if (hasRelease) MacroSlider("RELEASE", release, fillColor, scheme, onRelease)
                 TapeText(knobLabel, TapeType.pixelSmall, scheme.ink2.tape)
                 if (wideKeys != null) {
                     ActionButton(

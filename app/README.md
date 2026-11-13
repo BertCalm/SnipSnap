@@ -106,8 +106,10 @@ macro edits and SEND TO PAD. Warm wire is the new RATTLE default; Hollow reed
 and Rubbed glass are saved alternatives. Older saved RATTLE bodies remain
 reproducible. HOLD's top step previews a genuine repeating cycle; a normal
 kit pad plays its buffer. FRESH TAPE → WICK supplies the dry named sixteen-pad
-kit with all three RATTLE bodies at C4. Physical phone timing and MPC loading
-remain separate acceptance checks.
+kit with all three RATTLE bodies at C4. MAKE INSTRUMENT turns a finite recipe
+with nonzero velocity into keys: native roots every minor third from C1 to C6,
+three touch layers, no loop. HOLD-loop recipes explain why it is unavailable.
+Physical phone timing and MPC loading remain separate acceptance checks.
 
 OBBLIGATO offers PHRASE and HELD playback. New phrases render native C3–C6;
 older saved finite recipes keep their original register and sound. HELD keeps
