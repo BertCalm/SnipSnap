@@ -60,10 +60,16 @@ See [implementation and evidence](HALOBAR_SIX_VOICES.md). Software validation
 for this build is recorded with the delivered artifacts; this table keeps
 unverified completion gates explicit.
 
+On 2026-11-12 the owner confirmed hearing and approving the glockenspiel,
+crotales and tubular-bell banks. Together with the previously accepted original
+three voices, this closes bank listening approval for all six voices. Separate
+performance-example reviews and physical playback/export checks retain their
+own status.
+
 | Gate | Implemented behavior | Remaining acceptance |
 |---|---|---|
-| Six melodic voices | Original five plus tubular bells, with different spectral/decay/contact shapes. | Owner listening for the new bell voices. |
-| Presets | Four starting recipes per voice are available in MAKE and CLI. Original twelve accepted presets retain their factory identity. | New bell banks remain provisional. |
+| Six melodic voices | Original five plus tubular bells, with different spectral/decay/contact shapes. | Bank listening passed: owner approval, 2026-11-12. |
+| Presets | Four starting recipes per voice are available in MAKE and CLI. Original twelve accepted presets retain their factory identity. | Three bell banks approved by ear, 2026-11-12; the factory registry is unchanged. |
 | Playable keygroups | Six finite instruments, sampled roots, two touch levels and three strikes per touch. Saved phone sidecars retain all captures. | On-device playability and MPC loading. |
 | Premade kit | Separate HALOBAR SIX STUDY shelf kit, six dry/dub pairs and four tubular answers. | Owner listening. |
 | Chord tools | Existing diatonic, modal and borrowed voicings can be mapped into every voice's range. Polyphonic keygroups and exported-sample chord auditions. | Owner listening and device playback. |
