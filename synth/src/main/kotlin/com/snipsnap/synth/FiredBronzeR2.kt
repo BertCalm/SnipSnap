@@ -57,9 +57,14 @@ object FiredBronzeR2 {
     }
     private fun tilt(hz: Double, touch: Float): Double = 2.0.pow((touch - .5) * ln((hz / 600).coerceIn(.25, 8.0)) / ln(2.0))
 
-    fun render(r: Recipe): Snip {
+    /**
+     * [r] rendered. [strike] is FIRED BRONZE model 2's round robin (`FiredBronzeInstrument`): a later take
+     * ([Recipe.take] > 0) is a fresh strike, so a constructed voice's modes land with a new balance
+     * ([STRIKE_SCATTER_DB]). Off, as every saved study recipe renders, a take only re-seeds the noise.
+     */
+    fun render(r: Recipe, strike: Boolean = false): Snip {
         val rate = Dsp.RATE * Dsp.OVERSAMPLE
-        val raw = raw(r.copy(touch = r.touch * (.35f + .65f * r.velocity)), rate)
+        val raw = raw(r.copy(touch = r.touch * (.35f + .65f * r.velocity)), rate, strike)
         Tide.bandLimit(raw, rate)
         val out = Dsp.decimate(raw, Dsp.RATE)
         val mean = out.average().toFloat()
@@ -73,10 +78,37 @@ object FiredBronzeR2 {
         return Snip(out, 1, Dsp.RATE)
     }
 
-    internal fun raw(r: Recipe, rate: Int): FloatArray {
+    internal fun raw(r: Recipe, rate: Int, strike: Boolean = false): FloatArray {
         require(rate >= Dsp.RATE)
         val profile = profiles[r.voice]
-        return if (profile != null) fitted(r, profile, rate) else constructed(r, rate)
+        return if (profile != null) fitted(r, profile, rate) else constructed(r, rate, strike)
+    }
+
+    /**
+     * Shape: how far, in dB rms, a fresh strike moves each constructed mode's level. The mallet lands a
+     * little off its last spot, so each mode is excited a little more or less. The pitch, the decays and the
+     * gesture stay the voice's own. After BREAKER's cymbal takes (1.6 dB rms), heard and accepted
+     * (docs/BREAKER.md, "The cymbals").
+     */
+    internal const val STRIKE_SCATTER_DB = 1.5
+
+    /**
+     * Shape: how far, as a fraction, a fresh strike moves the moving bass's press (`pressure`), either way
+     * (one standard deviation). Its sound is one low mode under the press's bend, so a new mode balance alone
+     * left its soft strikes copies (42 dB apart); a player's press is never quite the same twice. 8% is
+     * about a third of a semitone at the top of the default bend.
+     */
+    internal const val PRESS_SCATTER = .08
+
+    /** Each of [n] modes' level factor for [take] of [voice]: 1 at take 0, the reference strike. */
+    private fun strikeLanding(voice: Voice, take: Int, n: Int): DoubleArray {
+        if (take == 0) return DoubleArray(n) { 1.0 }
+        val rng = kotlin.random.Random(Dsp.seedFor("FIRED_BRONZE_STRIKE", voice.name, take))
+        return DoubleArray(n) {
+            // A normal draw (Box-Muller), so the level spread is in dB rms.
+            val u = rng.nextDouble().coerceAtLeast(1e-12); val w = rng.nextDouble()
+            10.0.pow(sqrt(-2 * ln(u)) * cos(2 * PI * w) * STRIKE_SCATTER_DB / 20)
+        }
     }
 
     private fun fitted(r: Recipe, p: Profile, rate: Int): FloatArray {
@@ -120,7 +152,7 @@ object FiredBronzeR2 {
             t < .32 -> 1.0; t < .85 -> .5+.5*cos(PI*(t-.32)/.53); else -> 0.0 }
         return p * motion
     }
-    private fun constructed(r: Recipe, rate: Int): FloatArray {
+    private fun constructed(r: Recipe, rate: Int, strike: Boolean): FloatArray {
         val pot = r.voice == Voice.CLAY_OPEN || r.voice == Voice.CLAY_CLOSED
         val seconds = when(r.voice) { Voice.GONG -> 8.0; Voice.KETTLE -> 3.5; Voice.PRESSURE -> 1.8; else -> 1.0 }
         val hz = when(r.voice) { Voice.GONG -> gongHz; Voice.KETTLE -> kettleHz
@@ -137,13 +169,19 @@ object FiredBronzeR2 {
             else -> doubleArrayOf(.40,.25,.14,.09,.05) }
         val out = FloatArray((seconds * rate).toInt())
         val pitch = 2.0.pow((r.tune-.5)*2)
+        val landing = if (strike) strikeLanding(r.voice, r.take, hz.size) else null
+        val motion = if (!strike || r.take == 0 || r.voice != Voice.PRESSURE) r.motion else {
+            val rng = kotlin.random.Random(Dsp.seedFor("FIRED_BRONZE_PRESS", r.take))
+            val u = rng.nextDouble().coerceAtLeast(1e-12); val w = rng.nextDouble()
+            (r.motion * (1 + PRESS_SCATTER * sqrt(-2 * ln(u)) * cos(2 * PI * w))).toFloat().coerceIn(0f, 1f)
+        }
         for (j in hz.indices) {
             var phase = 0.0; var envelope = 1.0
             val loss = exp(-(6.907755/t60[j]+12*r.damp)/rate)
-            val gain = gains[j] * tilt(hz[j],r.touch) / gains.sum()
+            val gain = gains[j] * (landing?.get(j) ?: 1.0) * tilt(hz[j],r.touch) / gains.sum()
             for (i in out.indices) {
                 val t = i.toDouble()/rate
-                val press = if(r.voice == Voice.PRESSURE) pressure(t,r.motion) else 0.0
+                val press = if(r.voice == Voice.PRESSURE) pressure(t,motion) else 0.0
                 val ratio = when {
                     r.voice == Voice.PRESSURE -> 2.0.pow(press * 6 / 12)
                     r.voice == Voice.GONG -> 1 - .022*r.motion*exp(-t/.22)
