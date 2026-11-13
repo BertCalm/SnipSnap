@@ -700,3 +700,67 @@ Checked against what was heard:
     1.2 dB (1.9).
   - **Broadband,** the opened crack of the hit hides it (0.4 and 0.9 dB).
   - **So `BreakerTest` measures it below 2 kHz,** with its 1 dB bound unchanged.
+
+## Heard: the kit on the open tone (2026-11-12)
+
+| Question | Owner's answer |
+|---|---|
+| The kit in a groove, on the open tone: is this BREAKER, balanced the way you want? | **Sounds right now** |
+| The pushed row (A05, A06, A12): keep them? | **Keep all three** |
+| Your kick hit again: one kick played again, or one sample repeated? | **One kick played again: fine** |
+| Every pad, soft to hard: softer in character, and a fresh hit each time? | **Yes** |
+
+The page kept the first answer from the model-3 listen, word for word. Asked directly, the owner said
+the open tone "sounds right now".
+
+The BREAKER kit is accepted by ear on model 4. Next come the two genre kits, Dub Tank and Trip hop,
+each laid out for the owner before it is built.
+
+## Decided: the genre kits' layouts (2026-11-12)
+
+The owner approved both layouts as proposed ("Build it").
+
+**Dub Tank, 74 BPM, one-drop.** The backbeat moves to a rimshot on beat 3, with the kick. A snare is
+thrown into a 375 ms echo, and the toms are tuned up like timbales.
+
+| | | | |
+|---|---|---|---|
+| A13 Ride (bell, up 2) | A14 Crash (dry) | A15 Bump (the tank kicked) | A16 Snare Riser |
+| A09 Low Tom (long) | A10 Mid Tom | A11 High Timbale (up 5) | A12 Shaker |
+| A05 Thrown Snare (375 ms echo) | A06 Steppers Kick (tight) | A07 Dry Snare | A08 Tambourine |
+| A01 Drop Kick (low, round) | A02 Rimshot (beat 3, 300 ms echo) | A03 Closed Hat (echoed) | A04 Open Hat |
+
+**Trip hop, 92 BPM, heavy break.** The kick and snare are down a semitone and fatter, with a ghost
+snare and a second kick for the break. The ride and crash are dialled into the rig.
+
+| | | | |
+|---|---|---|---|
+| A13 Dusty Ride (rig in) | A14 Crash (in the spring) | A15 Crushed Riser | A16 Shaker |
+| A09 Low Tom (down 3) | A10 Mid Tom | A11 Cross Stick (dark) | A12 Break Snare (crushed, amp) |
+| A05 Ghost Snare (short) | A06 Second Kick (short, lower) | A07 Tambourine | A08 Open Hat (long, crushed) |
+| A01 Heavy Kick (down 1) | A02 Fat Snare (down 1, wide spring) | A03 Closed Hat (dusty) | A04 Half-open Hat |
+
+**Engine additions, approved ("Add both"):**
+- **DAMP:** each drum's damping, so that the kits differ in damping, not only in effects.
+- **Bump:** the tank kicked, for Dub Tank's A15.
+
+Both arrive as renderer model 5, and each is heard before a kit uses it.
+
+## As built: model 5 (2026-11-12)
+
+DAMP and Bump are described in docs/BREAKER.md, "Model 5". At DAMP .5 every model-4 voice renders
+byte for byte as on model 4, including soft hits and later takes.
+
+**Found while building DAMP.** In a wet rig, a drum's own DECAY barely moves what is heard: the
+spring (normalised to the hit's peak) and the crush rebuild the tail. With DECAY alone:
+- the kick's tail past .3 s measured the same at every DAMP;
+- the snare's body did too.
+
+So above .5 DAMP also fades the drum itself, as tape on a head does, before the rig. Even so, at the
+snare's own DRIP .6 and CRUSH .9 its body measures the same at every DAMP. The kits therefore dry the
+spring wherever they want a damped drum to be heard. `BreakerTest` measures DAMP on the drum with
+the rig's tail stages off, and prints its measure in the rig beside it.
+
+**Found while testing Bump.** A softer kick of the tank barely changes its tone, since the tank's send
+is normalised and its 3 kHz corner hides a duller jolt. It does ring shorter: at 40%, 1.4 to 2.2 s in,
+it sits 8.6 dB under a full kick, so that is the soft-hit claim.

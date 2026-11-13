@@ -50,8 +50,15 @@ open rig (below, "Model 4: the open rig"), and heard their snare, hat and kick t
 "better".
 
  Not in the synth picker yet; that
-entry waits for a session with an Android SDK, as the house rule says. Still to come:
-- the owner's listen to the kit's three pushed pads, the kick's takes and the soft-to-hard grid;
+entry waits for a session with an Android SDK, as the house rule says.
+
+On the open tone (model 4) the owner accepted the kit (2026-11-12):
+- **The balance:** "sounds right now".
+- **The pushed row:** keep all three.
+- **The kick hit again:** "one kick played again: fine".
+- **Every pad, soft to hard:** softer in character, with a fresh hit each time.
+
+Still to come:
 - two more genre kits, Dub Tank and Trip hop (the owner's picks), each laid out for the owner
   first;
 - the surf tom fill;
@@ -225,6 +232,49 @@ the opened crack of the hit hides it (0.4 and 0.9 dB), so `BreakerTest` measures
 
 Model-3 saves keep the speaker and the darker filter.
 
+## Model 5: DAMP and Bump
+
+The owner approved both on 2026-11-12, so that the genre kits differ in damping as well as tuning,
+roles and layout, and so that Dub Tank can have Bump. At DAMP .5, every model-4 voice renders on model
+5 exactly as it did on model 4 (`BreakerTest`). Model-4 saves have no DAMP and no Bump.
+
+**DAMP** is each drum's damping. At .5 nothing changes; above it the drum dies sooner, and below it
+the drum rings longer:
+- **SKIN's drums** (kick, snare, toms, hats, stick, shaker, and the riser's strikes): their own
+  DECAY moves by up to .3 either way. Above .5 the drum is also damped as tape on a head damps it:
+  an exponential fade on the drum before the rig, about 12 dB in the first 100 ms at DAMP 1.
+- **The cymbals:** every fitted mode decays up to twice as fast, or half as fast.
+- **Bump:** the kicked tank rings up to twice as short, or twice as long.
+- **The tambourine:** a recording cannot ring longer than it was played. Below .5 it is unchanged;
+  above .5 it is BACKWASH's own DAMP, which shortens it.
+
+**Where DAMP is heard.** It always damps the drum itself. In a wet rig, the spring and the crush
+rebuild a drum's tail. The table below is the body (.05 to .3 s) against the hit's first 50 ms. In
+the full rig, DAMP is clear on the kick, the open hat, the shaker, the cymbals and Bump, and nearly
+lost on the snare, the closed hat, the stick and the drippy toms. A kit that wants a damped snare or
+toms also dries their spring.
+
+| Drum | Rig's tail off, DAMP .15 / .5 / .85 | In its rig |
+|---|---|---|
+| Kick | −7.9 / −11.7 / −21.1 dB | −4.4 / −7.7 / −10.6 dB |
+| Snare | −16.8 / −21.3 / −31.5 dB | −3.0 / −2.9 / −2.8 dB |
+| Open hat | −7.4 / −9.6 / −16.2 dB | −3.7 / −5.4 / −9.6 dB |
+| Floor tom | −5.4 / −7.7 / −14.4 dB | −1.6 / −1.4 / −2.1 dB |
+
+The ride's and crash's tail (.3 to 1.2 s) moves 3 to 4 dB either way of .5.
+
+**Bump** is the spring tank kicked. The jolt moves the transducer all at once, so the springs get a
+broadband slap:
+- **The jolt:** a 2 ms click and 25 ms of noise, re-seeded per take, into tank B with no dry signal.
+  The tank's mechanical knock (a 60 Hz thud) is kept under the springs.
+- **DRIP** is how hard it is kicked, so a harder kick clangs and rings longer.
+- **TUNE** is the springs' tension, half an octave either way.
+- **The rig:** it skips the tube, like the cymbals, and uses the open rig. It lasts 2.5 s and is
+  declared PERC.
+- **A softer pad** kicks it softer, so it rings shorter: at 40%, 1.4 to 2.2 s in, it sits 8.6 dB
+  under a full kick's, each hit levelled.
+- **Presets:** Kicked, Booted (DRIP 1, CRUSH .8) and Nudged (DRIP .35, DAMP .75).
+
 ## The cymbals
 
 A cymbal is several hundred resonances beating against each other. Noise in bands gets each band's
@@ -262,8 +312,10 @@ their hashes. Only the fitted numbers ship; no recording does.
 | SLAP | .20 unless below | the echo: level and repeats, and past halfway its time |
 | CRUSH | .90 unless below | the compressor: glue up to halfway, then also crushing after the spring |
 | AMP | .35 unless below | the combo's drive and sag (on the cymbals, how much of the combo) |
+| DAMP | .50 | model 5: the drum's damping; .5 changes nothing (below, "Model 5") |
 
-On the shaker, which has no tuning of its own, TUNE moves its band.
+On the shaker, which has no tuning of its own, TUNE moves its band. On Bump, DRIP is how hard the
+tank is kicked and TUNE is the springs' tension.
 
 Per-drum defaults:
 
@@ -281,6 +333,7 @@ Per-drum defaults:
 | TOM_HIGH | .35 | .40 | .20 | .80 | .35 | B |
 | RIDE, CRASH | 0 | 0 | 0 | 0 | 0 | B |
 | RISER | .20 | .60 | .20 | .50 | .20 | B |
+| BUMP | .20 | .70 (the kick) | .20 | .50 | .30 | B itself |
 
 The cymbals are dry by default, and every control at 0 is a true bypass. Their presets are Dry,
 Through the rig, and In the spring; the riser's are Tamed, Pumping, and Short spring.

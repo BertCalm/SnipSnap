@@ -440,8 +440,8 @@ The owner's brief (2026-11-12) is the research text and names the machines: the 
 | SLIDE renders under 10 ms warm in Kotlin | proposed | none; measure in the generator |
 | Every control value in §8 | proposed (shape) | none; round 1 listen |
 | Swing .14, 18 ms behind the beat, ±22 ms unquantized, ±6 ms scatter | proposed (shape) | the accepted Backroom groove's "slightly late" is the only prior |
-| Each kit is heard as its genre | not heard | the owner's round 1 listen |
-| 1.49 dB between takes is heard as two strikes | not heard | the owner's round 1 listen |
+| Each kit is heard as its genre | heard | round 1b (TRAP, DRILL) and round 2 (the other four), both approved 2026-11-12 |
+| 1.49 dB between takes is heard as two strikes | heard, not objected to | no take was called a copy in rounds 1, 1b or 2 |
 
 ## Build rounds and gates
 
@@ -500,6 +500,14 @@ its onsets by a few milliseconds; the kit's timing is sample-accurate.
 
 Not built: BACKROOM, LOWRIDER, DUST, FLINT (round 2), the riser, SFZ and DecentSampler exports. Not heard:
 everything. The [listening page](https://claude.ai/artifact/ARC6e7nxteRTuAmiocntHG) is private to the owner.
+
+## Round 2 heard (2026-11-12)
+
+"All four pass." BACKROOM, LOWRIDER, DUST and FLINT are approved at kit version 3, from the listening page's
+MP3 renders. With round 1b that closes the listening gate for all six kits; the R3 listen-and-fix round was
+not needed. Preserve version 3 as the accepted baseline. Still open: playback on a phone or an MPC, which
+only the owner's devices can close, and MPC 2's one-take-per-zone projection, which is a format limit. The
+owner also kept SCUFF (a dry Michigan kit merged the same day) beside CYPHER FLINT: "I'll keep all kits."
 
 ## Round 1b heard, round 2 (2026-11-12)
 

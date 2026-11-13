@@ -740,4 +740,5 @@ testkit/backwash-acoustic-integration/
 # CYPHER kits: regenerate with :shell:generateCypherKits
 /testkit/cypher-kits/
 /testkit/breaker-kit/
+/testkit/mirrorball-kits/
 /testkit/cosmic-family/

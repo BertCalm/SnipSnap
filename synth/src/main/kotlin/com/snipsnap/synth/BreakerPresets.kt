@@ -14,6 +14,11 @@ object BreakerPresets {
             BreakerPatch("Through the rig", voice, Breaker.defaults(voice) + mapOf("DUST" to .3f, "CRUSH" to .4f, "AMP" to .35f)),
             BreakerPatch("In the spring", voice, Breaker.defaults(voice) + mapOf("DRIP" to .45f, "CRUSH" to .3f)),
         )
+        BreakerVoice.BUMP -> listOf(
+            BreakerPatch("Kicked", voice, Breaker.defaults(voice)),
+            BreakerPatch("Booted", voice, Breaker.defaults(voice) + mapOf("DRIP" to 1f, "CRUSH" to .8f)),
+            BreakerPatch("Nudged", voice, Breaker.defaults(voice) + mapOf("DRIP" to .35f, "DAMP" to .75f)),
+        )
         BreakerVoice.RISER -> listOf(
             BreakerPatch("Tamed", voice, Breaker.defaults(voice)),
             BreakerPatch("Pumping", voice, Breaker.defaults(voice) + mapOf("CRUSH" to .9f, "AMP" to .35f)),
