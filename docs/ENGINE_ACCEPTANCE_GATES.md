@@ -180,7 +180,8 @@ accepted C2 pluck. The other gates keep the scope earlier MURMUR work recorded.
     player is not ported yet.
   - **Export: partial.** Each take exports as a fixed-take MPC program; an MPC does not
     rotate them.
-- **Sound character:** waits for the owner. Round `murmur-rr-1` is on the Listening Desk.
-  REVISIT ("Didn't hear any variation") stands for V1 until V2 is heard.
-- **Overall: incomplete.** Owner listening, the app and native player port, phone playback
-  and MPC rotation remain open.
+- **Sound character: KEEP for V2 (2026-11-13).** On the Listening Desk (round `murmur-rr-1`)
+  the owner kept V2's repeated C2s and its four takes heard one at a time. V1's REVISIT
+  stays on record for V1. This is a listen to saved-player renders, not to a phone or an MPC.
+- **Overall: incomplete.** The app and native player port, phone playback and MPC rotation
+  remain open.

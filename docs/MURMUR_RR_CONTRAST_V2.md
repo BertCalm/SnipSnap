@@ -64,9 +64,11 @@ regression criteria, not an audibility threshold.
 
 ### Still open
 
-- **Owner listening:** the round-robin-only audition is on the private Listening Desk as round
-  `murmur-rr-1`. M2 and M4 are V2; M1 and M3 are the V1 reference. Until it is heard, the
-  owner's REVISIT ("Didn't hear any variation") stands.
+- **Owner listening: KEEP (2026-11-13).** Round `murmur-rr-1` on the private Listening Desk
+  put V2 against the V1 reference, both played from saved banks by the saved-sample player.
+  The owner marked KEEP on M2 (eight repeated C2s) and M4 (the four takes one at a time),
+  with no notes. That replaces V1's REVISIT ("Didn't hear any variation") for the V2 policy.
+  It is a listen to saved-player renders, not to a phone or an MPC.
 - **App and phone:** the Android screens and the native round-robin player from the recovery
   snapshot are not ported yet. That is the next MURMUR change. No phone has played a V2 bank.
 - **MPC export:** each take exports as its own fixed-take program. An MPC does not rotate
