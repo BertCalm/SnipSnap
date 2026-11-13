@@ -9,7 +9,7 @@ The characteristic gesture is **dusty crack → spring drip → crushed swell �
 
 ## Status
 
-Round 3 (renderer model 3), a prototype outside the factory presets (`PatchTypes.PROTOTYPES`).
+Renderer model 4 (the kit's tone), a prototype outside the factory presets (`PatchTypes.PROTOTYPES`).
 Fourteen voices; the kick and snare are built from the owner's round-0 picks.
 
 At round 1 the owner heard:
@@ -43,9 +43,15 @@ Model-2 saves keep round 2's ride. On 2026-11-11 the owner heard the app's own r
 ride, crash and riser as their picks, the repeat and 40% hits as the same cymbal played softer, the
 presets as bringing the rig back the way they want, and said to build the kit.
 
-The kit is on the shelf as the BREAKER starter (below, "The kit"). Not in the synth picker yet; that
+The kit is on the shelf as the BREAKER starter (below, "The kit"). On 2026-11-12 the owner heard it
+in a groove as "very mid heavy, like listening through dollar tree headphones". Measured, nearly
+everything sat between about 100 Hz and 4 kHz. Of four versions of the same groove, they picked the
+open rig (below, "Model 4: the open rig"), and heard their snare, hat and kick through it as
+"better".
+
+ Not in the synth picker yet; that
 entry waits for a session with an Android SDK, as the house rule says. Still to come:
-- the owner's listen to the kit, including the three pushed pads and the kick's takes;
+- the owner's listen to the kit's three pushed pads, the kick's takes and the soft-to-hard grid;
 - two more genre kits, Dub Tank and Trip hop (the owner's picks), each laid out for the owner
   first;
 - the surf tom fill;
@@ -84,21 +90,21 @@ from its recipe:
   - With 3 × 3 it measured both: one zone was another only turned down, and two takes were the same
     recording, −119 dB apart.
 
-Measured on the saved grid (`BreakerKitProof`):
+Measured on the saved grid (`BreakerKitProof`), on model 4:
 
 | Pad | Closest two takes, apart by | Least-changed soft zone |
 |---|---:|---:|
-| Boom | 34.1 dB | 0.9 dB |
-| Crushed Boom | 33.8 dB | 1.0 dB |
-| High Tom | 30.1 dB | 3.2 dB |
-| Floor Tom | 27.4 dB | 3.4 dB |
-| Rack Tom | 26.6 dB | 3.8 dB |
+| Boom | 33.6 dB | 0.6 dB |
+| Crushed Boom | 32.9 dB | 0.8 dB |
+| High Tom | 29.0 dB | 3.8 dB |
+| Cross Stick | 28.7 dB | 2.3 dB |
 | Snare Riser | 25.3 dB | 4.7 dB |
-| Cross Stick | 25.1 dB | 1.5 dB |
-| Drip Snare | 17.0 dB | 6.5 dB |
-| Crushed Snare | 17.0 dB | 3.4 dB |
-| Bap | 16.0 dB | 6.3 dB |
-| Ride, crash, hats, shaker, tambourine | about 0 dB (uncorrelated) | 1.7 to 6.6 dB |
+| Floor Tom | 24.3 dB | 4.7 dB |
+| Rack Tom | 24.0 dB | 4.2 dB |
+| Crushed Snare | 15.6 dB | 3.1 dB |
+| Drip Snare | 15.2 dB | 7.0 dB |
+| Bap | 14.4 dB | 6.7 dB |
+| Ride, crash, hats, shaker, tambourine | about 0 dB (uncorrelated) | 1.5 to 6.6 dB |
 
 How to read the two columns:
 - **"Apart by"** is what differs between two takes against what they share. A copy, dealt with a
@@ -107,8 +113,8 @@ How to read the two columns:
   the hard zone, at matched loudness. A zone that is the hard one turned down moves 0.
 - **The weak spot is the kick.** The crush evens out the small force differences between strikes.
   So the two kicks' takes are distinct strikes, but close: 34 dB apart, against more than 40 for a
-  copy. Their soft zones move about 1 dB in shape. GATECRASH's stone kick was disclosed the same
-  way. The owner's listen decides whether the kick needs more variation per strike.
+  copy. Their soft zones move only 0.6 to 0.8 dB in shape. GATECRASH's stone kick was disclosed
+  the same way. The owner's listen decides whether the kick needs more variation per strike.
 
 **Through saving, playback and export** (`BreakerKitTest`; the full kit and listening pack:
 `./gradlew :shell:generateBreakerKit`):
@@ -146,7 +152,9 @@ phone has not been timed.
    - the tambourine picks a recorded dynamic layer;
    - SKIN does not strike the hats, shaker and stick, so a softer hit darkens their finished
      sound after the rig (step 9).
-2. **DUST:** the rack's own CRUNCH and VINYL: the record and the sampler.
+2. **DUST:** the rack's own CRUNCH and VINYL: the record and the sampler. On model 4, CRUNCH's
+   output filter sits at about 8.9 kHz at DUST .35, where model 3 put it near 4.2 kHz (5.5 kHz on
+   the snare).
 3. **Saturation:** an asymmetric tube curve at 4x. The cymbals and the riser skip it: on noisy
    metal and a dense roll, it was the fizz the owner heard as harsh.
 4. **CRUSH, first half:** an FET-style compressor gluing the hit.
@@ -160,8 +168,9 @@ phone has not been timed.
    lows instead of partly cancelling them, and the tail gets 5 dB more boom at 63 Hz.
 7. **CRUSH, second half:** the same compressor after the spring, so each hit ducks the drip and it
    swells back up.
-8. **AMP:** the rack's VALVE as a bright open-back combo. On the cymbals, AMP is how much of the
-   combo you hear, so at 0 there is no amp at all.
+8. **AMP:** the rack's VALVE. On model 4 every drum gets its tube without the speaker. The cymbals
+   and the riser keep the bright open-back combo (CAB .25) they were heard with. On the cymbals, AMP
+   is how much of the combo you hear, so at 0 there is no amp at all.
 
 9. **Soft hits on the unstruck drums** (hats, shaker, stick, and model 2's ride): the finished
    hit's top is rolled off, near 4.8 kHz at 40%. Darkening their source does not survive the rig;
@@ -173,6 +182,48 @@ phone has not been timed.
 A hit is capped at 1.49 s with a fade, so it stays a one-shot. Two voices are longer and are
 declared PERC, never classified: the crash rings 3.2 s (the owner's call), and the riser lasts
 3.4 s, the build and the spring after it.
+
+## Model 4: the open rig
+
+The owner heard the model-3 kit as mid heavy. Measured on the kit, almost everything sat between
+about 100 Hz and 4 kHz:
+- **DUST's filter:** CRUNCH low-passed every drum near 4.2 kHz at DUST .35 (5.5 kHz on the snare).
+  That is Backroom's crunch, accepted in its own kit.
+- **The speaker:** the combo's open-back cab rolled off the top further and added breakup peaks at
+  2.6 and 3.75 kHz.
+- **The cymbals:** the only full-band sounds, and quiet in the mix.
+
+The owner heard the same groove four ways at one loudness (2026-11-12):
+- as it was;
+- DUST's filter opened;
+- the speaker taken out;
+- both.
+
+They picked both, and heard their snare, hat and kick through it as "better".
+
+Model 4 renders exactly that:
+- **DUST's filter at DUST .35 opens to about 8.9 kHz**, CRUNCH's own default. Its bits, rate, grit
+  and record stay.
+- **The amp keeps its tube and drops its speaker** (CAB 0).
+- **The cymbals and the riser keep the rig they were heard with.** That includes the cymbals'
+  dialled presets, which the owner approved at round 3.
+- **The app's model-4 renders are the clips the owner picked,** every pad at every velocity, to
+  within 6 × 10⁻⁸.
+
+The top octave against the whole hit, model 3 to model 4:
+
+| Drum | 8 kHz octave, model 3 → 4 |
+|---|---|
+| Snare | −25.9 → −16.3 dB |
+| Closed hat | −17.5 → −8.8 dB |
+| Open hat | −19.1 → −9.1 dB |
+| Kick | −40.7 → −34.4 dB |
+
+The crush's swell past halfway is still there. Below 2 kHz, where the spring's tail is, CRUSH .5 to
+.9 lifts the snare's tail 1.3 dB (1.5 on model 3) and the kick's 1.2 dB (1.9). Measured broadband,
+the opened crack of the hit hides it (0.4 and 0.9 dB), so `BreakerTest` measures it below 2 kHz.
+
+Model-3 saves keep the speaker and the darker filter.
 
 ## The cymbals
 

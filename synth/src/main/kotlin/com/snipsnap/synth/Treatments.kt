@@ -178,6 +178,19 @@ object Treatments {
         // tap MIX 0.7: a macro tops out at 1, so a tap cannot reach the heard MIX while AMT still walks the level
         // (RewindTest measures how far under the heard clip the tap's copy lands). AMT 0 is no copy at all.
         "rewound" to FxChain(rewind = mapOf("MIX" to 1.0f, "REPEAT" to 0.5f / 0.7f)),
+        // TREM: a level throb, the TREMOLO section. The owner heard it at its gate (2026-11-12) on ONSET's snare, JANGLE and
+        // the choir: it throbs like an amp's tremolo, the square chop is clean, the spring order made no difference, the ends
+        // are extreme enough, and it is for held sounds (FLANGE, not TREM, was the one they wanted on drums too). They chose
+        // Gentle for the tap: DEPTH 0.5, a smooth throb at RATE 0.5 (about 3.5 Hz). DEPTH fades linearly toward 0, so
+        // DEPTH 0.5 / 0.7 makes a tap (AMT 0.7) DEPTH 0.5; AMT 1 dips about 0.71, AMT 0 not at all. RATE and SHAPE are left at
+        // their defaults: RATE's is its own neutral, and SHAPE's, 0 (the sine), is also its neutral, so AMT moves neither.
+        "tremoloed" to FxChain(tremolo = mapOf("DEPTH" to 0.5f / 0.7f)),
+        // FLANGE: the jet, the FLANGER section. The owner heard it at the same gate: it sounds like a flanger, it is different
+        // enough from PHASE to keep both, the ends are extreme enough, and it is for drums and held sounds both. They chose
+        // Plain for the tap: DEPTH 0.7, RATE 0.4, no feedback. DEPTH fades linearly toward 0, so DEPTH 1 makes a tap DEPTH 0.7
+        // and AMT 1 the deepest sweep. RATE and FEEDBACK are left at their defaults, 0.4 and 0.5 (none), each its own
+        // neutral, so AMT moves neither; FEEDBACK's default moved to 0.5 at this gate so that Plain needs no setting.
+        "flanged" to FxChain(flanger = mapOf("DEPTH" to 1.0f)),
     )
 
     private val ALL: List<Pair<String, FxChain>> get() = Shuffle.TREATMENTS + EXTRA

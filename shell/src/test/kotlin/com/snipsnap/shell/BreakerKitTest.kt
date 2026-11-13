@@ -84,7 +84,7 @@ class BreakerKitTest {
         // What a copy measures, against what a re-strike does: the robin's dealing of one strike (a shave off
         // its front and a level nudge) correlates at 1 within rounding, and a zone that was the hard take
         // turned down moves the spectrum's shape by 0. The weakest pads are the crushed kicks, whose takes
-        // sit 34 dB apart and whose soft zones move about 1 dB (docs/BREAKER.md, "The kit").
+        // sit 33 to 34 dB apart and whose soft zones move 0.6 to 0.8 dB (docs/BREAKER.md, "The kit").
         for (g in grids) {
             assertTrue(g.closestTakes < BreakerKitProof.COPY_LIKENESS, "${g.name}: two takes are copies of one strike ($g)")
             assertTrue(g.leastZoneMoveDb > BreakerKitProof.LEVEL_ONLY_DB, "${g.name}: a softer zone is the hard one turned down ($g)")

@@ -59,13 +59,16 @@ enum class BreakerVoice(val drumClass: DrumClass) {
 object Breaker {
     /**
      * Renderer models. A save keeps the model it was made with.
+     * - **4 (the kit's tone, 2026-11-12):** the owner heard the kit as mid heavy, "like listening
+     *   through dollar tree headphones", and picked the open rig: DUST's filter opens and the amp
+     *   loses its speaker ([open]). The cymbals and the riser keep the rig they were heard with.
      * - **3 (round 3):** the ride is the fitted modal ride, dry by default. The crash and the riser
      *   arrive.
      * - **2 (round 1b):** the kick rings through tank A, the tank its round-0 pick was heard through,
      *   and the slap is the round-0 95 ms. The ride is round 2's SKIN ride through the rig.
      * - **1 (round 1):** every voice through tank B, a 90 ms slap.
      */
-    const val MODEL_VERSION = 3
+    const val MODEL_VERSION = 4
 
     /** A hit's length: tails are capped here, with a [FADE_SECONDS] raised-cosine fade, so a hit never files as a LOOP (1.5 s). */
     const val SECONDS = 1.49f
@@ -88,6 +91,20 @@ object Breaker {
     private val MODEL_3 = setOf(BreakerVoice.CRASH, BreakerVoice.RISER)
 
     private fun modal(voice: BreakerVoice, model: Int) = voice == BreakerVoice.CRASH || (voice == BreakerVoice.RIDE && model >= 3)
+
+    /**
+     * Model 4's open rig, on every drum but the cymbals and the riser, which keep the rig the owner
+     * heard them with at round 3. Measured on the kit (model 3), almost everything sat between about
+     * 100 Hz and 4 kHz. DUST's crunch low-passed every drum near 4.2 kHz (5.5 kHz on the snare), and
+     * the combo's speaker rolled off the top further and added a nasal bump near 3 kHz. The owner
+     * heard four versions of the same groove and picked this one: the filter opened, the speaker gone,
+     * and their snare, hat and kick heard as "better" (2026-11-12).
+     */
+    private fun open(voice: BreakerVoice, model: Int) =
+        model >= 4 && voice != BreakerVoice.RIDE && voice != BreakerVoice.CRASH && voice != BreakerVoice.RISER
+
+    /** DUST's crunch output filter at DUST .35 on the open rig: about 8.9 kHz, CRUNCH's own default. */
+    private const val OPEN_DUST_TONE = .75f
 
     // The owner's round-0 picks (2026-11-09): the kick at high crush and a little spring, the snare
     // into tank B at high crush ("Swells, I like it"). The rest are the round-0 defaults.
@@ -218,11 +235,15 @@ object Breaker {
      * DUST (shape): 0 transparent; .35 Backroom's accepted crunch with a light record; 1 a sampler
      * under 12 bits at about 18 kHz on a busy record. Piecewise linear between the three.
      */
-    internal fun dustChain(d: Float, voice: BreakerVoice): FxChain? {
+    internal fun dustChain(d: Float, voice: BreakerVoice, model: Int = MODEL_VERSION): FxChain? {
         if (d <= 0f) return null
         fun seg(a: Float, b: Float, c: Float): Float = if (d <= .35f) a + (b - a) * (d / .35f) else b + (c - b) * ((d - .35f) / .65f)
-        // The riser is a snare roll, and the owner picked it with the snare's tone (round 3).
-        val tone = if (voice == BreakerVoice.SNARE || voice == BreakerVoice.RISER) .55f else .43f
+        val tone = when {
+            open(voice, model) -> OPEN_DUST_TONE
+            // The riser is a snare roll, and the owner picked it with the snare's tone (round 3).
+            voice == BreakerVoice.SNARE || voice == BreakerVoice.RISER -> .55f
+            else -> .43f
+        }
         return FxChain(
             crunch = mapOf("BITS" to seg(0f, .16f, .5f), "RATE" to seg(0f, .29f, .62f), "TONE" to seg(1f, tone, .35f), "GRIT" to seg(0f, .34f, .5f)),
             vinyl = mapOf("CRACKLE" to seg(0f, .15f, .5f), "RUMBLE" to seg(0f, .1f, .25f), "HISS" to seg(0f, .1f, .3f)),
@@ -285,7 +306,7 @@ object Breaker {
             riser -> riserRoll(m, v, take, rate)
             else -> source(voice, m, v, take)
         }
-        val dusted = dustChain(m.getValue("DUST"), voice)?.process(dry) ?: dry
+        val dusted = dustChain(m.getValue("DUST"), voice, model)?.process(dry) ?: dry
         val crush = m.getValue("CRUSH").toDouble()
         var x = DoubleArray(dusted.samples.size) { dusted.samples[it].toDouble() }
         // The tube: the drums' character. The cymbals and the riser skip it: on noisy metal and a dense
@@ -297,7 +318,8 @@ object Breaker {
         x = BreakerChain.crush(x, maxOf(0.0, (crush - .5) / .5), rate)
         val amp = m.getValue("AMP")
         val pre = FloatArray(frames) { x.getOrElse(it) { 0.0 }.toFloat() }
-        val amped = Valve.process(Snip(pre, 1, rate), mapOf("DRIVE" to .3f + .45f * amp, "SAG" to .35f, "TONE" to .6f, "CAB" to .25f))
+        // The combo: its tube always, its speaker (CAB .25, a bright open-back cab) except on the open rig.
+        val amped = Valve.process(Snip(pre, 1, rate), mapOf("DRIVE" to .3f + .45f * amp, "SAG" to .35f, "TONE" to .6f, "CAB" to if (open(voice, model)) 0f else .25f))
         // On the cymbals AMP is how much of the combo you hear, so 0 is no amp at all; elsewhere the
         // combo is always there and AMP drives it.
         val out = if (cymbal) FloatArray(frames) { (1 - amp) * pre[it] + amp * amped.samples.getOrElse(it) { 0f } }

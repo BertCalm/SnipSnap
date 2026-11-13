@@ -35,6 +35,7 @@ import java.io.File
  * per zone, including finite bus phrases, with source provenance on every pad.
  * GATECRASH starters are the same kind of bank: three zones of four takes, each pad printed
  * through its own gated space, with two finite phrases and source provenance on every pad.
+ * CYPHER starters follow GATECRASH's shape: dry or printed hits, two phrases, provenance on every pad.
  * MIRRORBALL starters are built the same way, each pad printed through an FET compressor,
  * a multi-head tape echo and an amp.
  * CLOUD's GRAINS clouds (A07-A16) carry no recipe;
@@ -645,6 +646,36 @@ object StarterKits {
             "A long dry boom kick with a snappy snare and clap in a small, short-gated room. Three touch zones, four takes; a tom break and a build.",
             seeded = false, tempoBpm = com.snipsnap.synth.GatecrashKits.Kit.ELECTRO_FUNK.bpm.toFloat(),
         ) { com.snipsnap.synth.GatecrashKits.build(com.snipsnap.synth.GatecrashKits.Kit.ELECTRO_FUNK) },
+        Starter(
+            "cypher-trap", "CYPHER TRAP",
+            "A short punch over subs that hold and slide, a piercing snare, hats that roll in triplets and sixty-fourths, a bell and a zap. Dry. Three touch zones, four takes; a hat roll and a sub line.",
+            seeded = false, tempoBpm = com.snipsnap.synth.CypherKits.Kit.TRAP.bpm.toFloat(),
+        ) { com.snipsnap.synth.CypherKits.build(com.snipsnap.synth.CypherKits.Kit.TRAP) },
+        Starter(
+            "cypher-drill", "CYPHER DRILL",
+            "Subs that land then slide down on the off-beat, a snare and clap in a dark big room on the triplet grid, hats ticking under, metal hits. Three touch zones, four takes; a triplet snare bar and a sub call.",
+            seeded = false, tempoBpm = com.snipsnap.synth.CypherKits.Kit.DRILL.bpm.toFloat(),
+        ) { com.snipsnap.synth.CypherKits.build(com.snipsnap.synth.CypherKits.Kit.DRILL) },
+        Starter(
+            "cypher-backroom", "CYPHER BACKROOM",
+            "Boom bap: the accepted Backroom six through their rack, completed to sixteen pads. Three touch zones, four takes; swung hats and a break drop.",
+            seeded = false, tempoBpm = com.snipsnap.synth.CypherKits.Kit.BACKROOM.bpm.toFloat(),
+        ) { com.snipsnap.synth.CypherKits.build(com.snipsnap.synth.CypherKits.Kit.BACKROOM) },
+        Starter(
+            "cypher-lowrider", "CYPHER LOWRIDER",
+            "G-funk: a hybrid thump, a fat snare and clap that bloom into a long room, hats and a shaker behind the beat, a bell. Three touch zones, four takes; a laid-back groove and a big fill.",
+            seeded = false, tempoBpm = com.snipsnap.synth.CypherKits.Kit.LOWRIDER.bpm.toFloat(),
+        ) { com.snipsnap.synth.CypherKits.build(com.snipsnap.synth.CypherKits.Kit.LOWRIDER) },
+        Starter(
+            "cypher-dust", "CYPHER DUST",
+            "Underground cinematic boom bap: raw tape thuds, a high wooden crack, a crash, no compressor anywhere. Three touch zones, four takes; an unquantized break with and without the crash.",
+            seeded = false, tempoBpm = com.snipsnap.synth.CypherKits.Kit.DUST.bpm.toFloat(),
+        ) { com.snipsnap.synth.CypherKits.build(com.snipsnap.synth.CypherKits.Kit.DUST) },
+        Starter(
+            "cypher-flint", "CYPHER FLINT",
+            "Michigan scat: a fast kick and an early-sliding sub, a high piercing snare, wooden clicks and high rims off the grid, an off-beat bell. Three touch zones, four takes; a click scatter and a slide stack.",
+            seeded = false, tempoBpm = com.snipsnap.synth.CypherKits.Kit.FLINT.bpm.toFloat(),
+        ) { com.snipsnap.synth.CypherKits.build(com.snipsnap.synth.CypherKits.Kit.FLINT) },
         Starter(
             com.snipsnap.synth.BreakerKits.ID, "BREAKER",
             "Surf rock by way of boom bap: dusty drums through a spring tank, a crush and a surf amp. Three touch zones, three takes; a snare riser.",

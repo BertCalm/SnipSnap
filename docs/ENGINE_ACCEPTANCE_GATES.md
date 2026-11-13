@@ -106,13 +106,13 @@ presence do not close the outstanding gates above.
 - **The kit (2026-11-12): velocity and round robin through rendering, saving, playback and MPC 3 export, verified in software** (`BreakerKitTest`, `:shell:generateBreakerKit`).
   - **Rendering:** the shared robin deals every pad from its recipe. Each synth drum gets 3 zones of 3 takes: softer zones are re-rendered at velocity .3 and .6, and each later take is re-struck. The tambourine gets its recordings, 2 dynamic layers × 2 takes.
     - No two takes are copies. A copy measures more than 40 dB apart; the closest pair here, the kick's, is 34 dB apart.
-    - No soft zone is the hard one turned down. The least change in spectral shape is 0.9 dB, on the kick.
+    - No soft zone is the hard one turned down. The least change in spectral shape is 0.6 dB, on the kick (model 4).
     - **The kick is weak.** Its takes are distinct strikes but close, because the crush evens out the force difference. This is disclosed and waits for the owner's listen.
     - The tambourine at 3 × 3 measured as copies, and as one zone that was another turned down. It is fixed by giving it exactly its recordings.
   - **Saving: verified.** The kit reloads equal and regenerates from its saved recipes byte for byte.
   - **Playback: verified in software.** `PadHit.resolve` picks the zone by velocity and deals each zone's takes in order, then repeats them. The preview mixer cycles them too. No phone has played the kit.
   - **Export: MPC 3 verified by read-back.** The velocity ranges, slice anchors, cycle lengths and slice windows match, and the exported samples are the saved ones. **MPC 2 does not pass:** it plays each zone's first take. No MPC has loaded the kit.
-  - **Sound character:** the drums, cymbals and riser are each accepted by ear. The three pushed pads (A05, A06, A12), the levels and the kit as a whole wait for the owner's listen.
+  - **Sound character:** the drums, cymbals and riser are each accepted by ear. On 2026-11-12 the owner heard the kit as mid heavy. They picked model 4's open rig by ear, with DUST's filter opened and no amp speaker, and heard their snare, hat and kick through it as "better". The three pushed pads (A05, A06, A12), the kick's takes and the soft-to-hard grid wait for the owner's listen on model 4.
 - **Overall: incomplete.** One of three genre kits is on the shelf. Dub Tank and Trip hop are still to be authored, MPC 2 round robin and hardware playback are open, and the surf tom fill is not built.
 
 ## GATECRASH kits (sound approved 2026-11-11, hardware open)
@@ -139,10 +139,32 @@ Round 1 is a Python prototype audition; no Kotlin exists.
 - **Articulation:** HOLD open (proposed: held note up to a seamless sustain loop, top step plays the line as a LOOP). STRUM not applicable: not a picked or thumbed string.
 - **Percussion and drum kits:** not applicable. A bass engine.
 - **Velocity and round robin:**
-  - **Rendering: Python harness only.** Velocity changes the tone on all six voices, not only the level: level-matched attack centroid rises from soft to hard hits on every voice (GRIT 876 → 1,102 Hz, the smallest; WHISTLE 622 → 1,734 Hz, the largest). Round robin **failed by ear** on 2026-11-12: the owner heard the four takes as the same strike (they measured 0.5 to 0.8 dB apart by take distance). Rebuilt with five audible dimensions dealt out so no two takes share a setting: after the round-3 tone the closest two takes are 1.8 to 3.1 dB apart at velocity 0.6, and no pair exceeds a 0.6 to 0.8 velocity step. Not heard yet.
+  - **Rendering: Python harness only.** Velocity changes the tone on all six voices, not only the level: level-matched attack centroid rises from soft to hard hits on every voice (GRIT 876 → 1,102 Hz, the smallest; WHISTLE 622 → 1,734 Hz, the largest). Round robin **failed by ear** on 2026-11-12: the owner heard the four takes as the same strike (they measured 0.5 to 0.8 dB apart by take distance). Rebuilt with five audible dimensions dealt out so no two takes share a setting: after the round-3 tone the closest two takes are 1.8 to 3.1 dB apart at velocity 0.6, and no pair exceeds a 0.6 to 0.8 velocity step. Accepted by ear with the round-3 audition on 2026-11-12, in Python rendering only.
   - **Saving, playback and export:** not yet verified.
-- **Sound character: direction accepted at round 1b.** On 2026-11-12 the owner heard the corrected square ("That's better") and then the whole round-1b audition: "It all seems fine from the audition." Preserve round 1b as the baseline. This is a listen to Python renders, not evidence of Kotlin, phone or MPC playback. After round 2 the owner heard the engine as "a bit mid heavy, like dollar store headphones"; round 3 restores the top end (line B 8 kHz from -30.4 to -18.6 dB against the 500 Hz band; reference B -16.0). Round 3 is not heard.
+- **Sound character: direction accepted at round 1b.** On 2026-11-12 the owner heard the corrected square ("That's better") and then the whole round-1b audition: "It all seems fine from the audition." Preserve round 1b as the baseline. This is a listen to Python renders, not evidence of Kotlin, phone or MPC playback. After round 2 the owner heard the engine as "a bit mid heavy, like dollar store headphones"; round 3 restores the top end (line B 8 kHz from -30.4 to -18.6 dB against the 500 Hz band; reference B -16.0). The owner then accepted the round-3 audition: "I'm good with evening in audition" (read as "everything"). Preserve round 3 as the baseline; this is a listen to Python renders, not evidence of Kotlin, phone or MPC playback.
 - **Overall: incomplete.** The sound direction is accepted; the six voices, presets, keygroups, kit, HOLD and every saving, playback and export stage remain open, and no Kotlin exists.
+
+## CYPHER kits and THUMP SUB (round 2, 2026-11-12)
+
+Hip-hop drum kits in the GATECRASH shape, six built: TRAP, DRILL, BACKROOM, LOWRIDER, DUST, FLINT. See [CYPHER](CYPHER.md). The owner heard round 1 ("The triple snare thing is messy"), then round 1b ("Ok, sounds good. Make sure we clear the approval gates"), and that approval covers TRAP and DRILL. Evidence at kit version 3, `CypherTest`, `CypherKitTest`, `ThumpSubTest`, `ThumpSubRobinTest` and `:shell:generateCypherKits`.
+
+| Gate | Status | Evidence |
+|---|---|---|
+| Melodic voices, keygroups, premade kit, chord tools | Not applicable | Drum kits; SUB is a drum voice. |
+| Articulation: HOLD, STRUM | Not applicable | Finite hits, no strings. |
+| Percussion: authored roll or riser | Pass | Twelve authored phrases: a hat roll to 1/64 and a sub line (TRAP); the drill snare bar and a sub call (DRILL); swung hats and a break drop (BACKROOM); a laid-back groove and a big fill (LOWRIDER); two unquantized breaks (DUST); a click scatter and a slide stack (FLINT). |
+| Drums: multiple distinct genre kits on the shelf | Pass in software; two of six heard | Six kits under SKINS. `CypherTest` holds every pair to at least six different pads and a different kick and snare dry, and the prints differ (dry, a dark room, the Backroom rack, tape, a long room). Not "different effect strengths on the same kit". TRAP and DRILL approved; the other four not heard. |
+| Velocity: rendering | Pass | Every hit is a different strike at the soft zone, duller (a sub: cleaner), not a quieter copy. THUMP's KICK and SUB, SKIN's struck voices, ONSET's kick, TERRA and RIVET strike at the velocity; the rest are touched. |
+| Round robin: rendering | Pass | Four different takes in every zone of every pad; SUB deals five dimensions out and keeps its root within 10 cents; SKIN drums on the new kits re-strike with a force spread and a small decay and contact move. |
+| Velocity and round robin: saving | Pass | Each kit reloads equal and all 1152 saved slices match their renders. A lone SUB pad's chain and recipe survive a save and regenerate the drum (`ThumpSubRobinTest`). |
+| Velocity and round robin: playback | Pass in software | `PadHit.resolve` picks the zone by velocity and deals the takes in order, then repeats; chokes survive. No phone has played these kits. |
+| Velocity and round robin: export | Pass for MPC 3, SFZ and DecentSampler; **fail for MPC 2** | MPC 3 read back: velocity ranges, base slices, cycle lengths, frame windows and slices match. SFZ and DecentSampler written by the generator, both cycling takes. MPC 2 keeps only each zone's first take: a format limit, stated. |
+| Hardware playback (phone, MPC) | Not verified | Only the owner's devices can close this. |
+| Sound character | TRAP and DRILL approved; four not heard | Round 1b approved 2026-11-12. BACKROOM opens with the six accepted Backroom pads byte for byte through their rack (`CypherTest`). |
+| SUB presets | Pass | Eight factory presets, the sub recipes of the approved TRAP and DRILL (`ThumpPresets`); none authored blind. |
+
+- **THUMP SUB as a voice:** six macros, velocity and takes through `Thump.render`, `Velocity` and `Restrike`. The classifier reads a long sub as TONAL; the default reads KICK; no setting makes a LOOP (`ThumpSubTest`). Round 2 made its length its DECAY alone (velocity moves drive, click and settle), so the robin's windows never change with the touch.
+- **Overall:** every software gate passes; the four new kits wait for the owner's ear; phone and MPC playback wait for the owner's devices; MPC 2 cannot carry the round robin.
 
 ## SCUFF (rounds 0 and 0b, 2026-11-12)
 

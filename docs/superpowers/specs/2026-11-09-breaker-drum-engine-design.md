@@ -626,7 +626,7 @@ It has two dynamic layers of two recorded takes, so it now gets exactly that: 2 
 - **Their takes are distinct strikes, but close.** Each is struck again up to 15% softer with fresh
   click noise. The crush at CRUSH .9 to 1 evens out the force difference, so the takes are
   34 dB apart. A copy measures more than 40 dB apart.
-- **Their soft zones move only 0.9 to 1.2 dB in spectral shape.**
+- **Their soft zones move only 0.9 to 1.2 dB in spectral shape** (0.6 to 0.8 dB on model 4).
 - **The owner has accepted the kick as is.** They heard it at round 1b as "the same drum, a softer
   hand".
 - **If more variation is wanted,** a later model can vary the beater per strike, as a drummer does,
@@ -646,3 +646,57 @@ export through `PadHit.resolve`, and the groove plays through `KitPreview`. It a
 - the pushed row: keep it?
 - the kick hit again: one kick played again, or one sample repeated?
 - every pad soft to hard: softer in character, with a fresh hit each time?
+
+## Heard: the kit (2026-11-12)
+
+| Question | Owner's answer |
+|---|---|
+| The kit in a groove: is this BREAKER, balanced the way you want? | **The balance is off: "Feels very mid heavy like listening through dollar tree headphones"** |
+| The pushed row (A05, A06, A12): keep them? | (not answered) |
+| Your kick hit again: one kick played again, or one sample repeated? | (not answered) |
+| Every pad, soft to hard: softer in character, and a fresh hit each time? | (not answered) |
+
+**Measured:** the groove's octave levels fell 9 dB from 2 to 8 kHz and 17 dB to 16 kHz. Each drum's
+top fell harder:
+- the snare: −28 dB at 8 kHz;
+- the closed hat: −35 dB at 8 kHz;
+- the kick: −28 dB at 4 kHz.
+
+**Stage by stage**, rendering each drum with one stage bypassed at a time:
+- DUST's CRUNCH low-passes near 4.2 kHz at DUST .35 (5.5 kHz on the snare). That costs 10 to 20 dB
+  in the top two octaves.
+- The combo's speaker costs another 4 to 8 dB above 8 kHz, and adds breakup peaks at 2.6 and
+  3.75 kHz.
+
+Page: https://claude.ai/artifact/L7Tf8Zdvy4TSzV9RfFfw2i. It played the same five bars four ways at one
+loudness: as built, DUST opened (TONE .75 at DUST .35), no speaker (CAB 0), and both.
+
+## Heard: the kit's tone (2026-11-12)
+
+| Question | Owner's answer |
+|---|---|
+| Which groove sounds right? | **D (both)** |
+| Your snare, hat and kick opened up (D): still your BREAKER drums? | **Yes, better** |
+
+## As built: model 4, the open rig (2026-11-12)
+
+What changes on every drum except the cymbals and the riser:
+- **DUST:** CRUNCH's output filter at DUST .35 goes from TONE .43 (.55 on the snare) to .75: about
+  8.9 kHz, CRUNCH's own default.
+- **The amp:** VALVE's speaker goes (CAB 0); its drive and sag stay.
+
+What stays:
+- **The cymbals and the riser** keep the rig they were heard with: in the D groove, and the cymbals'
+  dialled presets approved at round 3.
+- **Model-3 saves** keep their tone.
+
+Checked against what was heard:
+- **The app's model-4 render of every kit pad at velocities 1, .65 and .3 is the D clip,** to
+  within 6 × 10⁻⁸.
+- **The top octave rises:** the snare by 9.6 dB, the hats by 8.7 to 10 dB, the kick by 6.3 dB
+  (`BreakerTest`).
+- **The crush's swell past halfway holds** where the spring's tail is:
+  - **Below 2 kHz,** CRUSH .5 to .9 lifts the snare's tail 1.3 dB (1.5 on model 3) and the kick's
+    1.2 dB (1.9).
+  - **Broadband,** the opened crack of the hit hides it (0.4 and 0.9 dB).
+  - **So `BreakerTest` measures it below 2 kHz,** with its 1 dB bound unchanged.
