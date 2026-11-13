@@ -312,7 +312,7 @@ class BreakerTest {
         for (voice in BreakerVoice.entries - BreakerVoice.BUMP) {
             assertContentEquals(Breaker.render(voice, model = 4).samples, Breaker.render(voice).samples, "$voice at DAMP .5")
             assertContentEquals(Breaker.render(voice, velocity = .4f, take = 2, model = 4).samples,
-                Breaker.render(voice, velocity = .4f, take = 2).samples, "$voice soft, take 2, at DAMP .5")
+                Breaker.render(voice, velocity = .4f, take = 2, model = 5).samples, "$voice soft, take 2, at DAMP .5")
         }
         assertFalse(Breaker.macrosFor(BreakerVoice.SNARE, model = 4).any { it.name == "DAMP" })
         kotlin.test.assertFailsWith<IllegalArgumentException> { BreakerPatch("Old", BreakerVoice.BUMP, emptyMap(), model = 4) }
@@ -363,6 +363,51 @@ class BreakerTest {
         val full = late(x); val soft = late(Breaker.render(BreakerVoice.BUMP, velocity = .4f).samples)
         println("BREAKER Bump 1.4-2.2 s re its first 100 ms, full / 40%: ${"%.1f".format(full)} / ${"%.1f".format(soft)} dB")
         assertTrue(soft < full - 3.0, "a softer kick of the tank rings shorter ($full, $soft dB)")
+    }
+
+    @Test
+    fun `model 6 lands each later kick and tom strike with another beater, so no two takes are copies`() {
+        // The genre kits' finding. On model 5 a kick's later take differed from the first only in how hard it
+        // landed and in its click. The round robin trims up to 2 ms off a later take's front as timing jitter,
+        // which can cut that click (it peaks 0.4 ms in), and a damped, crushed kick's body was then the same
+        // strike: Dub Tank's Steppers Kick had takes more than 40 dB apart, a copy. Measured as the kit test
+        // measures (best alignment within 3 ms, the first half second), with 2 ms cut off every take.
+        val lag = (.003 * rate).toInt(); val cut = (.002 * rate).toInt()
+        fun apart(a: FloatArray, b: FloatArray): Double {
+            val n = minOf(a.size, b.size, (.5 * rate).toInt())
+            var best = 0.0
+            for (d in -lag..lag) {
+                var ab = 0.0; var aa = 0.0; var bb = 0.0
+                for (i in maxOf(0, -d) until minOf(n, n - d)) {
+                    val x = a[i].toDouble(); val y = b[i + d].toDouble()
+                    ab += x * y; aa += x * x; bb += y * y
+                }
+                best = maxOf(best, ab / sqrt(aa * bb + 1e-30))
+            }
+            return -10 * log10(2 * (1 - best) + 1e-12)
+        }
+        // Each zone's three takes, dealt as the shared robin deals a kit pad (`Robin`, seed 0): the zone's own
+        // strike, then two re-strikes, every one with the click cut. The closest pair over the three zones.
+        fun closest(patch: BreakerPatch, slot: Int): Double = listOf(.3f, .6f, 1f).withIndex().maxOf { (z, v) ->
+            val takes = (0..2).map { t ->
+                requireNotNull(Restrike.take(patch, v, slot, if (t == 0) 0 else z * 3 + t)).samples.let { it.copyOfRange(cut, it.size) }
+            }
+            maxOf(apart(takes[0], takes[1]), apart(takes[0], takes[2]), apart(takes[1], takes[2]))
+        }
+        val struck = setOf(BreakerVoice.KICK, BreakerVoice.TOM_FLOOR, BreakerVoice.TOM_RACK, BreakerVoice.TOM_HIGH)
+        for (kit in listOf(BreakerKits.Kit.DUB_TANK, BreakerKits.Kit.TRIP_HOP)) {
+            for ((i, patch) in BreakerKits.patches(kit).withIndex()) {
+                if (patch.voice !in struck) continue
+                assertEquals(6, patch.model)
+                val now = closest(patch, i + 1)
+                val before = closest(patch.copy(model = 5), i + 1)
+                println("BREAKER $kit ${patch.name}, click cut: closest takes ${"%.1f".format(now)} dB apart (model 5: ${"%.1f".format(before)})")
+                assertTrue(now < 40.0, "$kit ${patch.name}: every take is another strike ($now dB apart)")
+                if (patch.name == "Steppers Kick") assertTrue(before > 40.0, "the finding: on model 5 its takes were copies ($before dB)")
+                // The first take, each zone's reference, is model 5's.
+                assertContentEquals(patch.copy(model = 5).render(.6f).samples, patch.render(.6f).samples)
+            }
+        }
     }
 
     @Test

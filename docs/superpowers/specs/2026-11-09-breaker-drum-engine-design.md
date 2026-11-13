@@ -764,3 +764,35 @@ the rig's tail stages off, and prints its measure in the rig beside it.
 **Found while testing Bump.** A softer kick of the tank barely changes its tone, since the tank's send
 is normalised and its 3 kHz corner hides a duller jolt. It does ring shorter: at 40%, 1.4 to 2.2 s in,
 it sits 8.6 dB under a full kick, so that is the soft-hit claim.
+
+## As built: the genre kits and model 6 (2026-11-13)
+
+Dub Tank (`breaker-dub`, 74 BPM) and Trip hop (`breaker-triphop`, 92 BPM) are on the shelf after
+BREAKER, built to the approved layouts. docs/BREAKER.md, "The genre kits" and "Model 6", has the
+pads, settings and measurements. Neither kit has been heard yet.
+
+**Departures from the layouts**, each for a measured reason:
+- **High Timbale:** about three semitones over the high tom, not five. 220 Hz is the top of SKIN's
+  tom.
+- **Steppers Kick:** DAMP .7 and CRUSH .6, not .8 and .8. Harder, its strikes measured as copies.
+- **Second Kick:** DRIP .1, not fully dry. Dry, its soft strikes measured as copies once the click
+  was cut.
+
+**Found while building the kits.** BreakerKitTest's copy check failed on two kicks: the Steppers Kick
+(42.4 dB apart) and the Second Kick (45.8). In each zone, one take's peak was about 15 dB under the
+others. The engine was not at fault. Every render peaks at a 0.4 ms click, and the shared robin
+trims up to 2 ms off a later take's front as timing jitter. Where the trim passes the click, the take
+loses its attack, and what is left of a damped, crushed kick is the same body every time:
+- Model 5's later takes differ only in force, which the crush evens out, and in the click.
+- **Model 6** gives each later kick or tom take another beater: CLICK, PUNCH, DROP and TONE move up
+  to .1 either way, seeded per take. Take 0 stays model 5's. The Steppers Kick moved to 33.9 dB.
+- The Second Kick also needed a touch of spring. With the click cut, it measured 43.9 dB on model 5
+  with DRIP .1, 43.8 on model 6 dry, and 35.2 with both.
+
+The BREAKER kit stays on model 5, so it renders exactly as the owner accepted it.
+
+**Not changed, and open:** the trim itself. It belongs to the shared `Robin` and applies to every
+re-struck kit, including kits already accepted. A trimmed take of the Second Kick plays about 2.5 to
+3 dB quieter over its first 300 ms, without its click. Whether the trim should spare a synth
+strike's attack is the owner's call.
+

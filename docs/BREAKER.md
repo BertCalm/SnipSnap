@@ -9,7 +9,9 @@ The characteristic gesture is **dusty crack → spring drip → crushed swell �
 
 ## Status
 
-Renderer model 4 (the kit's tone), a prototype outside the factory presets (`PatchTypes.PROTOTYPES`).
+Renderer model 6 (the genre kits' takes), a prototype outside the factory presets
+(`PatchTypes.PROTOTYPES`). The BREAKER kit stays on model 5, which renders it exactly as the owner
+accepted it on model 4.
 Fourteen voices; the kick and snare are built from the owner's round-0 picks.
 
 At round 1 the owner heard:
@@ -58,9 +60,11 @@ On the open tone (model 4) the owner accepted the kit (2026-11-12):
 - **The kick hit again:** "one kick played again: fine".
 - **Every pad, soft to hard:** softer in character, with a fresh hit each time.
 
+The two genre kits, Dub Tank and Trip hop, are built to the layouts the owner approved (below, "The
+genre kits") and wait for the owner's listen.
+
 Still to come:
-- two more genre kits, Dub Tank and Trip hop (the owner's picks), each laid out for the owner
-  first;
+- the owner's listen of the genre kits;
 - the surf tom fill;
 - the audition page.
 
@@ -135,6 +139,80 @@ How to read the two columns:
 
 **Cost:** 139 slices in 34 MB of 24-bit audio. The kit takes about 15 s to deal on a desktop JVM; a
 phone has not been timed.
+
+## The genre kits
+
+Two more starters, each laid out for the owner and approved before it was built ("Build it",
+2026-11-12). Both are on renderer model 6 (below), and neither has been heard yet. Like the BREAKER
+kit, every pad is a BREAKER patch with its recipe, dealt by the shared robin: 3 zones × 3 re-struck
+takes, and 2 × 2 on the recorded tambourine.
+
+**Dub Tank** (`breaker-dub`, 74 BPM, one-drop). The drop is the kick and the rimshot together on
+three. The space is echo more than spring. The toms are left open to ring, and the steppers kick and
+the dry snare are damped tight.
+
+| | | | |
+|---|---|---|---|
+| A13 Ride (two semitones up, echoed) | A14 Crash | A15 Bump (Kicked) | A16 Snare Riser |
+| A09 Low Tom (open) | A10 Mid Tom (open) | A11 High Timbale | A12 Shaker |
+| A05 Thrown Snare (375 ms echo) | A06 Steppers Kick (damped) | A07 Dry Snare (damped) | A08 Tambourine |
+| A01 Drop Kick (low, round) | A02 Rimshot (300 ms echo) | A03 Closed Hat (echoed) | A04 Open Hat (chokes A03) |
+
+**Trip hop** (`breaker-triphop`, 92 BPM, a heavy break). The kick and snare sit a semitone down and
+fatter: less damped, with more dust and crush. The ghost snare and the second kick are damped short
+and nearly dry, so they stay out of the way. The ride and crash are dialled into the rig.
+
+| | | | |
+|---|---|---|---|
+| A13 Dusty Ride (rig in) | A14 Crash (in the spring) | A15 Crushed Riser | A16 Shaker |
+| A09 Low Tom (three semitones down) | A10 Mid Tom (two down) | A11 Cross Stick (dark) | A12 Break Snare (crushed, amp) |
+| A05 Ghost Snare (damped short) | A06 Second Kick (two down, short) | A07 Tambourine | A08 Open Hat (long, crushed; chokes A03) |
+| A01 Heavy Kick (one down) | A02 Fat Snare (one down, wide spring) | A03 Closed Hat (dusty) | A04 Half-open Hat (chokes A03) |
+
+**How the tunings are set.** BREAKER's TUNE moves SKIN's own tuning a quarter of its range either
+way. SKIN's kick spans 45 to 75 Hz (8.8 semitones), its snare 170 to 260 Hz (7.4) and its tom 90 to
+220 Hz (15.5), so one semitone is TUNE .113 on the kick, .136 on the snare and .065 on a tom. The
+cymbals move three semitones either way. SLAP is a 95 ms slap up to .5 and grows to 375 ms at 1, so
+300 ms is SLAP .87.
+
+**Where the kits depart from their layouts:**
+- **Dub Tank's High Timbale** reaches about three semitones over the high tom, not the five the
+  layout asked for: 220 Hz is the top of SKIN's tom.
+- **Dub Tank's Steppers Kick** is damped at .7 and crushed at .6, not .8 and .8. Damped and crushed
+  harder, its strikes measured as copies (43 dB apart).
+- **Trip hop's Second Kick** keeps a touch of spring (DRIP .1, as on the ghost snare). Fully dry,
+  its soft strikes were one body: everything that differed between them was a 0.4 ms click, which
+  the round robin's start trim (up to 2 ms) can cut. Two takes then measured 44 dB apart.
+
+**Not BREAKER at other settings** (`BreakerKitTest`, pad by pad against the BREAKER kit):
+
+| | Dub Tank | Trip hop |
+|---|---:|---:|
+| Pads that are another drum | 7 | 5 |
+| Same drum, retuned | 4 | 6 |
+| Damped or opened (DAMP off .5) | 7 | 11 |
+| Same drum and tuning, only the rig moved | 3 | 3 |
+
+**The grid**, measured on the saved kits as for BREAKER above:
+
+| Pad | Closest two takes, apart by | Least-changed soft zone |
+|---|---:|---:|
+| Trip hop Second Kick | 35.6 dB | 1.0 dB |
+| Dub Tank Steppers Kick | 33.9 dB | 0.5 dB |
+| Dub Tank Drop Kick | 29.6 dB | 0.9 dB |
+| Dub Tank Rimshot | 27.2 dB | 2.4 dB |
+| Trip hop Heavy Kick | 26.8 dB | 1.8 dB |
+| Trip hop Cross Stick | 26.9 dB | 2.3 dB |
+| Trip hop Crushed Riser | 26.2 dB | 4.4 dB |
+| Dub Tank Snare Riser | 25.1 dB | 4.7 dB |
+| The toms and the timbale | 21.0 to 23.5 dB | 4.0 to 5.0 dB |
+| The snares | 14.2 to 16.5 dB | 3.9 to 6.2 dB |
+| Bump | 1.3 dB | 0.6 dB (it rings shorter) |
+| Cymbals, hats, shaker, tambourine | about 0 dB (uncorrelated) | 1.6 to 7.0 dB |
+
+The kicks are again the weak spot: their crush evens out how hard each strike lands, and their soft
+zones move least. Bump's soft zone barely changes colour, since the tank's send is normalised. It
+rings shorter instead, which the decay half of the measure hears.
 
 ## How a hit is made
 
@@ -275,6 +353,42 @@ broadband slap:
   under a full kick's, each hit levelled.
 - **Presets:** Kicked, Booted (DRIP 1, CRUSH .8) and Nudged (DRIP .35, DAMP .75).
 
+## Model 6: another beater per take
+
+On model 5, a later take of a kick or tom differed from the first only in how hard it landed (up to
+15% softer, `Restrike`) and in its click, which peaks 0.4 ms in. The round robin trims up to 2 ms
+off a later take's front as timing jitter, and that can cut the click. What is left of a damped,
+crushed kick is then nearly the same strike every time: the crush evens out the force, and the
+damping leaves little body for it to show in. Dub Tank's Steppers Kick had two takes 42.4 dB apart,
+past the 40 dB that marks a copy.
+
+A real beater meets the head a little differently each time. So on model 6 each later take of a
+kick or tom moves SKIN's CLICK, PUNCH, DROP (how far the pitch bends) and TONE by up to .1 either
+way, seeded per take. The drum's root and its decay stay its own, and its first take, the reference,
+is model 5's exactly. At the same settings, the Steppers Kick's closest takes moved to 33.9 dB apart.
+Trip hop's Second Kick needed a touch of spring as well (above, "The genre kits"): with the click
+cut, its takes measure 43.9 dB apart on model 5 even with DRIP .1, 43.8 on model 6 fully dry, and
+35.2 with both.
+
+| Kick or tom, 2 ms cut off every take | Model 5 | Model 6 |
+|---|---:|---:|
+| Trip hop Second Kick | 43.9 dB | 35.2 dB |
+| Dub Tank Steppers Kick | 42.4 dB | 33.5 dB |
+| Dub Tank Drop Kick | 33.5 dB | 29.6 dB |
+| Trip hop Heavy Kick | 30.7 dB | 26.7 dB |
+| Dub Tank High Timbale | 28.1 dB | 21.5 dB |
+| The other toms | 24.3 to 25.4 dB | 21.0 to 23.5 dB |
+
+**The start trim cuts the click on every re-struck kit.** The round robin's trim was made for
+recordings, as timing jitter. On a synth drum whose strike starts at its first sample, a trim past
+the click's peak takes the attack with it. On the Second Kick (click at 0.4 ms) such a take loses its
+click and plays about 2.5 to 3 dB quieter over its first 300 ms. This is the shared `Robin`, so it
+applies to every kit whose takes are re-struck (`Restrike`: SKIN, TERRA, HALOBAR, BREAKER and
+others), including kits already heard and accepted. It is left as it is here, since changing it
+would change those kits too.
+
+Model-5 saves keep their takes, and the BREAKER kit stays on model 5.
+
 ## The cymbals
 
 A cymbal is several hundred resonances beating against each other. Noise in bands gets each band's
@@ -377,9 +491,18 @@ unasked (every other engine), a take changes nothing.
 
 `DeterminismTest` replays every voice and a take, byte for byte, and through a JSON round trip.
 
-`BreakerKitTest` checks the kit:
-- the sixteen pads, their grids, recipes, levels and chokes;
+`BreakerTest` also checks model 6 on every kick and tom in the genre kits, dealt as the robin deals
+them, with 2 ms cut off every take: no two takes are copies (under 40 dB apart), the Steppers Kick's
+were on model 5, and each zone's first take is model 5's.
+
+`BreakerKitTest` checks the three kits:
+- each kit's sixteen pads, their grids, recipes, models, levels and chokes;
+- that the genre kits are authored kits: pad by pad against BREAKER, enough of their pads are
+  another drum, retuned or damped, at most four differ only in the rig, and their signature pads
+  (the rimshot backbeat, Bump, the thrown snare, the ghost snare and second kick) are where the
+  layouts put them;
 - that no two takes are copies and no soft zone is the hard one turned down;
 - saving, reloading and regenerating from the recipes, byte for byte;
 - zone selection and take cycling in the pad resolver and the preview mixer;
-- the MPC 3 track and its samples.
+- the MPC 3 track and its samples;
+- each kit on the shelf once, at its tempo.

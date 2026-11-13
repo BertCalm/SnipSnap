@@ -531,7 +531,7 @@ tasks.register<JavaExec>("generateBackwashAcousticKits") {
 
 tasks.register<JavaExec>("generateBreakerKit") {
     group = "distribution"
-    description = "Build the BREAKER kit, prove its velocity and round-robin grid through save, playback and MPC 3 export, and write the listening pack."
+    description = "Build BREAKER's three kits, prove each velocity and round-robin grid through save, playback and MPC 3 export, and write the listening pack."
     classpath = sourceSets["test"].runtimeClasspath
     mainClass.set("com.snipsnap.shell.BreakerKitGenerator")
     workingDir = rootProject.projectDir
