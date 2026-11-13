@@ -52,6 +52,9 @@ import java.io.File
  */
 object StarterKits {
     const val CONFLUENCE_ID = "confluence-wordless"
+
+    /** FIRED BRONZE's starter: model 2's round-robin grid, four strike layers of fresh strikes each. */
+    const val FIRED_BRONZE_ID = "fired-bronze"
     const val CONFLUENCE_BANK_DIR = "confluence-voice-bank"
     const val CONFLUENCE_VOICES_ID = "confluence-voices"
 
@@ -80,10 +83,11 @@ object StarterKits {
             require(Names.isMpcSafe(name)) { "kit name isn't MPC-safe: '$name'" }
             prepare?.invoke(dir)
             val kit = KitAssembler.assembleArranged(name, build(seed), dir, key, tempoBpm = tempoBpm)
-            // BACKWASH and BREAKER pads carry their recipes; the shared robin deals each pad's velocity
-            // zones and re-struck takes from it, then the pad keeps its recipe.
+            // BACKWASH, BREAKER and FIRED BRONZE pads carry their recipes; the shared robin deals each pad's
+            // velocity zones and re-struck takes from it (FIRED BRONZE model 2 its own four strike layers), then
+            // the pad keeps its recipe.
             val breaker = com.snipsnap.synth.BreakerKits.byId(id)
-            if (id.startsWith("backwash-") || breaker != null) {
+            if (id.startsWith("backwash-") || breaker != null || id == FIRED_BRONZE_ID) {
                 val model = KitBuilderModel.open(dir)
                 for (pad in kit.pads) {
                     val (zones, takes) = if (breaker != null) com.snipsnap.synth.BreakerKits.gridFor(pad.slot, breaker) else 3 to 3
@@ -611,8 +615,8 @@ object StarterKits {
             com.snipsnap.synth.BackwashKits.build(com.snipsnap.synth.BackwashKits.Genre.PSYCH_ROCK)
         },
         Starter(
-            "fired-bronze", "FIRED BRONZE",
-            "Skin, clay and bronze through a driven processor and amp. Sixteen pads, four strike layers.",
+            FIRED_BRONZE_ID, "FIRED BRONZE",
+            "Skin, clay and bronze through a driven processor and amp. Sixteen pads, four strike layers, three fresh strikes each.",
             seeded = false, tempoBpm = 96f,
         ) { com.snipsnap.synth.FiredBronzeInstrument.kit() },
         Starter(

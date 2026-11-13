@@ -791,10 +791,10 @@ loses its attack, and what is left of a damped, crushed kick is the same body ev
 
 The BREAKER kit stays on model 5, so it renders exactly as the owner accepted it.
 
-**Not changed, and open:** the trim itself. It belongs to the shared `Robin` and applies to every
-re-struck kit, including kits already accepted. A trimmed take of the Second Kick plays about 2.5 to
-3 dB quieter over its first 300 ms, without its click. Whether the trim should spare a synth
-strike's attack is the owner's call.
+**Not changed:** the trim itself. It belongs to the shared `Robin` and applies to every re-struck
+kit, including kits already accepted. A trimmed take of the Second Kick plays about 2.5 to 3 dB
+quieter over its first 300 ms, without its click. Asked whether the trim should spare a synth
+strike's attack, the owner chose to leave it as it is (2026-11-13).
 
 ## Heard: the genre kits (2026-11-13)
 
@@ -827,4 +827,19 @@ one pad. Trip hop's Second Kick keeps DRIP .1: at a quarter (.025), its closest 
 for the owner's closing listen, as docs/BREAKER.md, "The audition", lists. It sits in `:shell` rather
 than `:synth`, so its kits section plays the three kits as the shelf deals them, through the app's own
 preview mixer. The page template is the strike gate's, with its title, badge and section lines taken
-from the manifest. Published 2026-11-13; the owner's answers are not in yet.
+from the manifest. Published 2026-11-13.
+
+## Heard: the final audition (2026-11-13)
+
+The owner signed off the engine's sound on the final audition:
+- **Every voice as it ships:** "Yes", this is BREAKER. The page came back with this question blank,
+  so it was asked again directly.
+- **Every control from 0 to 1:** "Yes", each does what its name says, all the way along.
+- **The edges, every control at 0 and then at 1:** "Nothing breaks".
+- **The presets, three per voice:** "Keep them all".
+- **The three kits side by side:** "Yes", the shelf is right.
+
+Asked about the round robin's start trim (above, "As built: the genre kits and model 6"), the owner
+chose to leave it as it is.
+
+Still open: the surf tom fill, MPC 2's round robin, and a phone and an MPC playing the kits.

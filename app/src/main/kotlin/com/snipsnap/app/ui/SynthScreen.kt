@@ -2195,7 +2195,9 @@ fun SynthScreen(
     val reopenablePads = kit?.pads.orEmpty().filter { pad ->
         val patch = Breed.recipeOf(pad)?.patch
         val sourceEngine = Engine.entries.firstOrNull { it.name == patch?.engine }
-        (pad.velocityLayers.isEmpty() || FiredBronzePads.canEdit(pad)) && !(pad.chain != null && !pad.isRobinChain) &&
+        // A native FIRED BRONZE bank reopens whole: model 1's four layer files, or model 2's strike grid.
+        (pad.velocityLayers.isEmpty() || FiredBronzePads.canEdit(pad)) &&
+            (!(pad.chain != null && !pad.isRobinChain) || FiredBronzePads.canEdit(pad)) &&
             patch != null && sourceEngine?.voices()?.any { it.name == patch.voiceName } == true
     }
     fun reopenPad(slot: Int) {
