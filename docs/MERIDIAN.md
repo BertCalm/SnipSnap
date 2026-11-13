@@ -570,8 +570,14 @@ schema: nine earlier finite recipes, the four DRAW/LIFT recipes and three octave
 Neither changes the original MERIDIAN starter. Both carry every layer's recipe and WAV hash,
 checked by `MeridianMaterialsKitFiles` and `MeridianSixKitFiles`. On 2026-11-13 the owner
 heard all sixteen MERIDIAN SIX pads at hard touch (two seconds each) and kept the bank (KEEP,
-no notes). Its soft and medium layers and the held DRAW/LIFT loops are still awaiting a
-verdict.
+no notes). The owner also kept the four held DRAW/LIFT presets (OPEN LINE, WIDE THREAD,
+AFTER PRESS, SOFT RETURN: the real opening, then the loop cycle three times).
+
+The bank's soft and medium layers came back REVISIT: "No change between soft, medium and
+hard." Measured on pads 1, 6 and 11, the three layers sit within 0.1 dB of each other (each
+layer is level-matched; the player applies velocity gain once) and their brightness differs by
+at most 13 % (2 % on WIDE THREAD). Touch has to change the strike itself, not only its level;
+the hard layers stay as kept.
 
 The held keyboard's manifest now states the program's real range (MIDI 36–72) instead of
 0–127 (`MeridianKeyboardDescriptionTest`).
