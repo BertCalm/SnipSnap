@@ -366,8 +366,16 @@ object Halobar {
             val damping=if(i>=end-fade) cosineFall(i-(end-fade),fade) else 1.0
             dry[i]=(body*amplitude*tremolo*damping).toFloat()
             if(send!=null) send[i]=(feed*amplitude*tremolo*(1-closed)*damping).toFloat()
-            closed*=openDecay
-            val nc=c*cr-s*sr;s=s*cr+c*sr;c=nc
+            // Once subtraction has rounded to unity, this envelope can no
+            // longer change the send. Stop its otherwise subnormal tail;
+            // the factor (1-closed) stays exactly the same Double value.
+            if(closed!=0.0) {
+                closed*=openDecay
+                if(1-closed==1.0)closed=0.0
+            }
+            if(depth!=0.0) {
+                val nc=c*cr-s*sr;s=s*cr+c*sr;c=nc
+            }
         }
         val noise=Dsp.Noise(if (landing == null) Dsp.seedFor("HALOBAR_SOURCE_V1",voice.name,p.midi)
             else Dsp.seedFor("HALOBAR_SOURCE_TAKE_V1",voice.name,p.midi,landing))
@@ -399,9 +407,32 @@ object Halobar {
         }
     }
 
+    /**
+     * The small-signal Taylor remainder is below 9e-15*abs(x) at abs(x)<=1/16.
+     * The wider 2e-12 bound includes coefficient/evaluation roundoff, the
+     * reference tanh's error and the final gain/division/addition. Accept a
+     * candidate only when both bounds round to the same stored Float and the
+     * existing Double peak cannot move. Ambiguous cases retain the reference.
+     */
+    private fun quantizedFeedback(fed: Double,gain: Double,drive: Double,x: Double,peak: Double): Double {
+        val ax=abs(x)
+        if(ax>=1e-100 && ax<=.0625 && gain>=0.0 && gain<=1.0 && drive>=1.0 && drive<=4.0) {
+            val z=x*x
+            val approximate=x*(1+z*(-1.0/3+z*(2.0/15+z*(-17.0/315+z*(62.0/2835)))))
+            val q=fed+gain*approximate/drive
+            val error=2e-12*(abs(fed)+ax)
+            val lower=q-error;val upper=q+error
+            if(lower.toFloat().toRawBits()==upper.toFloat().toRawBits() && max(abs(lower),abs(upper))<=peak) return q
+        }
+        return fed+gain*tanh(x)/drive
+    }
+
+    internal fun feedbackSampleProbe(fed: Double,gain: Double,drive: Double,x: Double,peak: Double): Double =
+        quantizedFeedback(fed,gain,drive,x,peak)
+
     private fun echoes(bus: FloatArray,m: Map<String,Float>,p: Plan,rate: Int,oversample: Int,
         gainOverride: Double? = null, energyTrace: MutableList<Double>? = null): Double {
-        val heads=p.headFrames.map { it*oversample }
+        val heads=IntArray(p.headFrames.size) { p.headFrames[it]*oversample }
         val delay=p.delayFrames*oversample
         val history=FloatArray(heads.max()+1)
         val low=LowPass(p.loopCutoffHz,rate)
@@ -417,12 +448,20 @@ object Halobar {
             if(i and 16383==0) cancelCheck()
             val input=bus[i]
             val fed=if(i<feedEnd) sendLow.step((input-hp.lp(input)).toDouble()) else 0.0
-            val delayed=if(i>=delay)history[(index-delay+history.size)%history.size].toDouble() else 0.0
-            val q=fed+gain*tanh(drive*low.step(delayed))/drive
+            // Each offset is smaller than the ring. One wrap preserves the
+            // exact read position without integer division for every sample.
+            val delayedIndex=index-delay
+            val delayed=if(i>=delay)history[if(delayedIndex<0)delayedIndex+history.size else delayedIndex].toDouble() else 0.0
+            val x=drive*low.step(delayed)
+            // Energy traces retain the full reference Double calculation.
+            val q=if(energyTrace==null) quantizedFeedback(fed,gain,drive,x,peak) else fed+gain*tanh(x)/drive
             history[index]=q.toFloat();peak=max(peak,abs(q))
             if(energyTrace!=null) { passEnergy+=q*q; if((i+1)%delay==0) { energyTrace.add(passEnergy);passEnergy=0.0 } }
             var out=0.0
-            for(k in heads.indices) if(i>=heads[k]) out+=history[(index-heads[k]+history.size)%history.size]*(if(k==0).62 else if(k==1).25 else .13)
+            for(k in heads.indices) if(i>=heads[k]) {
+                val read=index-heads[k]
+                out+=history[if(read<0)read+history.size else read]*(if(k==0).62 else if(k==1).25 else .13)
+            }
             bus[i]=out.toFloat()
             index++;if(index==history.size)index=0
         }

@@ -288,7 +288,7 @@ fun PlaceRow(current: Place, onSelect: (Place) -> Unit, modifier: Modifier = Mod
                     .tapeClick(label = place.label) { onSelect(place) },
                 contentAlignment = Alignment.Center,
             ) {
-                TapeText(place.label, TapeType.pixel, if (isSelected) scheme.ink.tape else scheme.ink2.tape)
+                TapeText(place.label, TapeType.pixel, if (isSelected) scheme.ink.tape else scheme.ink2.tape, maxLines = 2)
             }
         }
     }
@@ -330,7 +330,7 @@ fun DoorChip(label: String, onClick: () -> Unit, modifier: Modifier = Modifier) 
             .padding(horizontal = 10.dp),
         contentAlignment = Alignment.Center,
     ) {
-        TapeText(label, TapeType.pixel, scheme.accent.tape)
+        TapeText(label, TapeType.pixel, scheme.accent.tape, maxLines = 2)
     }
 }
 
@@ -596,7 +596,7 @@ private fun DockChip(text: String, ink: Color, onClick: () -> Unit, border: Colo
             .padding(horizontal = 6.dp),
         contentAlignment = Alignment.Center,
     ) {
-        TapeText(text, TapeType.pixelSmall, ink)
+        TapeText(text, TapeType.pixelSmall, ink, maxLines = 2)
     }
 }
 

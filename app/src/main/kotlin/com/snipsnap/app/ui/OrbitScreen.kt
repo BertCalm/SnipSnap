@@ -58,7 +58,6 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -2061,7 +2060,7 @@ private fun OrbitHeaderRow(
     onToggleSetPanel: () -> Unit,
 ) {
     Row(
-        Modifier.fillMaxWidth().height(Layout.LCD_HEADER_H.dp).lcdPanel(scheme).padding(horizontal = 12.dp),
+        Modifier.fillMaxWidth().minHeight(Layout.LCD_HEADER_H.dp).lcdPanel(scheme).padding(horizontal = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
@@ -2206,8 +2205,8 @@ private fun OrbitFooterRow(
         // Read-only: the tempo is the project's, set from BEAT. Said where the
         // BPM buttons used to be, so the row does not move under a thumb that
         // learned it.
-        Box(Modifier.weight(2f).height(Layout.MIN_HIT_TARGET.dp), contentAlignment = Alignment.Center) {
-            TapeText("${bpm.roundToInt()} BPM · SET IN BEAT", TapeType.pixel, scheme.ink2.tape, maxLines = 1)
+        Box(Modifier.weight(2f).minHeight(Layout.MIN_HIT_TARGET.dp), contentAlignment = Alignment.Center) {
+            TapeText("${bpm.roundToInt()} BPM · SET IN BEAT", TapeType.pixel, scheme.ink2.tape, maxLines = 2)
         }
         ActionButton("+ PAD", scheme, Modifier.weight(1f)) { onAddPatternRing() }
         ActionButton(Places.opener("+ SAMPLE"), scheme, Modifier.weight(1f), enabled = snips.isNotEmpty(), accent = snipPickerOpen, description = "+ SAMPLE") {
@@ -2277,7 +2276,7 @@ private fun RingsCanvas(
         }
     }
     val textMeasurer = rememberTextMeasurer()
-    val labelStyle = TapeType.pixelSmall.copy(fontSize = 7.sp)
+    val labelStyle = TapeType.eyebrow
     val inkColor = scheme.lcdInk.tape
     val amber = scheme.amber.tape
     val dim = scheme.ink3.tape.copy(alpha = 0.6f)
@@ -2587,7 +2586,7 @@ private fun StripEditor(
                 // GrooveScreen.kt).
                 SmallChip("HOLD · ${brush.label}", scheme, accent = brush != OrbitBrush.WEIGHT, onClick = onBrush)
                 TapWritesChip(tapWrites, brush, scheme) { tapWrites = !tapWrites }
-                TapeText(BRUSH_SAYS[brush].orEmpty(), TapeType.pixelSmall, scheme.lcdInk2, Modifier.weight(1f), maxLines = 1)
+                TapeText(BRUSH_SAYS[brush].orEmpty(), TapeType.pixelSmall, scheme.lcdInk2, Modifier.weight(1f), maxLines = 2)
             }
             for (slot in rows) {
                 val color = padColor(kit, slot, inkColor)
@@ -2891,7 +2890,7 @@ internal fun SmallChip(
             .padding(horizontal = 8.dp),
         contentAlignment = Alignment.Center,
     ) {
-        TapeText(label, TapeType.pixel, if (!enabled) scheme.ink3.tape else if (accent) scheme.accent.tape else scheme.ink2.tape)
+        TapeText(label, TapeType.pixel, if (!enabled) scheme.ink3.tape else if (accent) scheme.accent.tape else scheme.ink2.tape, maxLines = 2)
     }
 }
 
@@ -2950,7 +2949,7 @@ private fun ActionButton(
 ) {
     Box(
         modifier
-            .height(Layout.MIN_HIT_TARGET.dp)
+            .minHeight(Layout.MIN_HIT_TARGET.dp)
             .background(scheme.field.tape, RoundedCornerShape(6.dp))
             .border(1.dp, if (accent) scheme.accent.tape else scheme.grayEdge.tape, RoundedCornerShape(6.dp))
             // Falls back to label itself (matches HeaderChip/SmallChip in
@@ -2959,7 +2958,7 @@ private fun ActionButton(
             .tapeClick(label = description ?: label, enabled = enabled, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        TapeText(label, TapeType.pixel, if (!enabled) scheme.ink3.tape else if (accent) scheme.accent.tape else scheme.ink2.tape)
+        TapeText(label, TapeType.pixel, if (!enabled) scheme.ink3.tape else if (accent) scheme.accent.tape else scheme.ink2.tape, maxLines = 2)
     }
 }
 
