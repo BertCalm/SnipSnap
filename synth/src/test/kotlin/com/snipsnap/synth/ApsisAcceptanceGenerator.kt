@@ -31,7 +31,7 @@ internal data class ApsisAcceptanceEntry(val slot: Int, val preset: String, val 
         ApsisBankLayer(42, 84, patch.copy(velocity = .65f)), ApsisBankLayer(85, 127, patch.copy(velocity = 1f)))
 }
 
-/** Download-only acceptance bank. Factory recipes and the original PASSAGE bank stay frozen. */
+/** Download-only acceptance bank follows current GRAIN/ANCHOR presets; PASSAGE remains separate. */
 internal object ApsisAcceptanceBank {
     fun entries(): List<ApsisAcceptanceEntry> {
         fun pad(slot: Int, voice: ApsisVoice, preset: Int, midi: Int, role: String): ApsisAcceptanceEntry {

@@ -390,6 +390,41 @@ unchanged.
 - **Overall: incomplete.** The voice count, chord tools, round robin and held hardware listening
   remain open.
 
+## APSIS (GRAIN Lower texture ported from the recovery backup, 2026-11-13)
+
+An orbital modal instrument with three voices: PASSAGE, GRAIN and ANCHOR. See [APSIS](APSIS.md),
+[GRAIN and ANCHOR](APSIS-POPULATIONS.md) and [the acceptance bank](APSIS-ACCEPTANCE.md).
+
+This port brings back GRAIN model 4, the owner-selected Lower texture balance: material excitation
+is halved before the modal bank, and root forcing, contact timing and leveling are unchanged. New
+GRAIN patches and GRAIN's three factory presets now use model 4. Saved model-3 GRAIN recipes, and
+recipes with no saved model, keep model 3 and their original audio. PASSAGE and ANCHOR stay on
+model 3. `ApsisLowerTextureTest` matches native PCM24 hashes against twelve frozen audition
+references (six model 3, six Lower texture), now a text fixture in
+`synth/src/test/resources/apsis-lower-texture`.
+
+| Gate | Status | Evidence |
+|---|---|---|
+| Six melodic voices | **Fail: three of six** | PASSAGE, GRAIN and ANCHOR. TETHER, VESSEL and CORONA remain Python listening prototypes. |
+| Presets | Pass | Twelve: six PASSAGE recipes and three each for GRAIN and ANCHOR (`ApsisPresets`). |
+| Playable keygroups | Not yet verified | Dedicated keygroup export is recorded as later work in [APSIS](APSIS.md); this port adds none. |
+| Premade kit | Partial | A sixteen-pad PASSAGE musical bank (`SynthKits.apsis`, exported by `:synth:generateApsisKit`) and the download-only GRAIN/ANCHOR acceptance bank exist. Neither is on the starter shelf. |
+| Chord-tool compatibility | Not yet verified | No chord-tool evidence is recorded for APSIS. |
+| Articulation: HOLD | Partial | HOLD ≥ .99 renders a settled loop; held pads are gated full-sample loops and held previews repeat until STOP. Physical phone/MPC listening of the joins is open. STRUM: not applicable, not a picked or thumbed string. |
+| Percussion, drum kits | Not applicable | A melodic engine. |
+| Velocity: rendering | Pass | Native velocity changes the excitation spectrum before output leveling. Model 4 replays identically through native touch, edits and pad recipes at .35, .65 and 1 (`ApsisLowerTextureTest`). The hardware's velocity-to-amplitude curve is unmeasured. |
+| Saved audio | Pass in software | Explicit models replay their original sound; GRAIN accepts 3 and 4, ANCHOR 3, PASSAGE 1 to 3 (`ApsisLowerTextureTest`, `ApsisIntegrationTest`). |
+| Round robin | Not yet verified | APSIS has no re-strike (`Restrike.canRestrike` is false), so no round robin exists through rendering, saving, playback or export. |
+| Hardware playback | Not verified | The acceptance bank's MPC checklist has not been reported back; phone render latency is unmeasured. |
+
+- **Sound character, as recorded in [GRAIN and ANCHOR](APSIS-POPULATIONS.md):** "the owner selected
+  the Python GRAIN/ANCHOR identities". "On 8 November the owner selected Lower texture for Grain
+  Passage, Scattered Grains and Held Grains." The soft, hard and C3 engineering cards "have no
+  separate owner verdict". [APSIS](APSIS.md) records that "The owner found model 2 more
+  distinctive; the musical bank still awaits the owner's listening decision."
+- **Overall: incomplete.** The voice count, keygroups, chord tools, round robin and hardware
+  playback remain open.
+
 ## SPLAY (from the recovery backup, 2026-11-13)
 
 SPLAY came back from the owner's recovery snapshot onto this branch, SPLAY files only: the

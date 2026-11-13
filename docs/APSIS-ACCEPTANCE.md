@@ -2,7 +2,9 @@
 
 `SnipSnap Apsis Duo` is a download-only acceptance bank for the six existing
 GRAIN and ANCHOR presets. It uses their current native Kotlin renderer without
-changing the engine, factory presets or original PASSAGE bank.
+altering recipes during export. Regeneration now follows the approved model-4
+GRAIN factory presets; ANCHOR and the original PASSAGE bank retain model 3.
+Previously downloaded model-3 banks remain valid and keep their original audio.
 
 | Pads | Contents |
 | --- | --- |
