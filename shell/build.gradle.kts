@@ -597,3 +597,13 @@ tasks.register<JavaExec>("generateTriadKits") {
     maxHeapSize = "2g"
     args("${rootDir}/testkit/triad-kits")
 }
+
+tasks.register<JavaExec>("generateScuffKits") {
+    group = "distribution"
+    description = "Build the SCUFF kit, prove the velocity and round-robin grid through save, playback and MPC 3 export, and write the listening pack."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.ScuffKitGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "2g"
+    args(providers.gradleProperty("scuffKitsOutput").orNull ?: "${rootDir}/testkit/scuff-kits")
+}

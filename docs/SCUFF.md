@@ -1,6 +1,6 @@
 # SCUFF: design brief and round-0 audition
 
-Status: **round 1, Kotlin engine; sound direction (round 0b) accepted by the owner 2026-11-12; the Kotlin port measured as the same drum, not yet heard.** No Kotlin exists. The engine stays in
+Status: **round 2, the kit on the shelf; sound direction (round 0b) accepted by the owner 2026-11-12; the Kotlin port and the kit not yet heard.** No Kotlin exists. The engine stays in
 progress until every applicable owner gate has evidence (see "Gates" below).
 
 Prototype: [`prototype/scuff/`](../prototype/scuff/) (`scuff_proto.py` is the model,
@@ -395,3 +395,83 @@ open (none). Sound character: round 0b accepted; the Kotlin not heard. Overall: 
 **Round 2, proposed.** A 16-pad SCUFF kit on the shelf with three velocity zones of four takes per pad
 in the GATECRASH mould, two loop pads (the two-bar pattern through one bus, and a snare-roll riser)
 and MPC 3 export read back; then a second genre kit.
+
+## As built, round 2: the kit on the shelf (2026-11-13)
+
+The owner said "Start round 2 when the PR is green" and the round-1 PR went green on 2026-11-13. Round 2 is
+the first SCUFF kit on the shelf, in the GATECRASH shape, with the velocity and round-robin grid proved
+through saving, playback and MPC 3 export in software.
+
+**What exists.** `synth/.../ScuffKits.kt` (`ScuffKits.Kit.DETROIT`, id `scuff-detroit`, 118 BPM, kit version 1):
+sixteen pads, fourteen hits and two phrases. The starter `SCUFF DETROIT` in `StarterKits.ALL`, listed once
+under SKINS in `StarterShelf.GROUPS`, and the three `StarterKitsTest` lists it must join. `ScuffKitsTest` in
+`:synth` (eight probes) and `ScuffKitTest` in `:shell` (the grid through save, reload, the pad resolver and the
+MPC 3 track, read back from the files each step wrote). `ScuffKitGenerator` behind
+`./gradlew :shell:generateScuffKits`, which builds the kit, exports it, proves every slice twice (the saved
+PCM and the exported PCM against the renders through two playback cycles a zone) and writes the listening
+pack under `testkit/scuff-kits/` (gitignored). Run on 2026-11-13: "Verified Detroit: 16 pads, 192 slices, saved PCM + playback
++ MPC 3 track, built in 12069 ms" (the JVM here; about 63 ms per slice, chain and bus included).
+
+**The pads.** The engine's own defaults carry the accepted sound; only TUNE and DECAY move between pads.
+
+| Pad | Voice | Setting | Class | Choke |
+|---|---|---|---|---|
+| A01 Kick | KICK | defaults | KICK | |
+| A02 Clap | CLAP | defaults | CLAP | |
+| A03 Hat | HAT | defaults | HAT_CLOSED | 1 |
+| A04 Hat Open | HAT | DECAY .95 | HAT_OPEN | 1 |
+| A05 Boom Low | BOOM | TUNE .3 (about 54 Hz) | PERC | |
+| A06 Boom | BOOM | defaults (60 Hz) | PERC | |
+| A07 Boom High | BOOM | TUNE .9 (about 76 Hz) | PERC | |
+| A08 Rim | RIM | defaults | PERC | |
+| A09 Rim High | RIM | TUNE .75 | PERC | |
+| A10 Pluck | PLUCK | defaults | PERC | |
+| A11 Inhale | INHALE | defaults | PERC | |
+| A12 Bell | BELL | defaults | PERC | |
+| A13 Zap | ZAP | defaults | PERC | |
+| A14 Tick | TICK | defaults | PERC | |
+| A15 Two Bars | the round-0b pattern through one bus | | LOOP | 2 |
+| A16 Clap Riser | the clap from eighths to thirty-seconds over one bar, through one bus | | LOOP | 2 |
+
+The three bass hits are not an octave apart: BOOM's TUNE spans 45 to 80 Hz, 0.83 of an octave, so "Boom High"
+is a fifth-and-a-bit above "Boom". The brief's octave jumps need either a second BOOM voice an octave up or a
+wider TUNE; proposed for the owner's call.
+
+**Velocity and takes.** Every hit is `Scuff.renderPad(voice, macros, velocity, take + 1)`: the engine strikes
+at the zone's velocity (.30, .65, 1) and deals the take itself, so a zone is a different strike and a take
+another strike, not a control move. Grid take t is engine take t + 1 (takes 1 to 4 are the dealt set; take 0,
+the plain strike, is what the audition pages play). Level follows GATECRASH's law: every zone's first take
+peaks at .92, its takes share that gain (a take may land a little harder or softer, within .6 to .98), and a
+softer zone is a different strike rather than a quieter one. The engine's DC block runs before the kit's
+shared finish because the bass hit's asymmetric shaper leaves an offset a 20 Hz one-pole alone does not settle
+inside a 220 ms note (measured: the mean fell from .0052 to .0016 of a .92 peak). The crash gets 6 ms of
+silence after its zero-crossing cut, because the shared finish fades the last 4 ms and the crash's reverse
+envelope peaks there; without it the zone-gain law and the .98 ceiling fought (measured .86 and .88 against .92).
+
+**The bus.** On the two phrases every note is rendered through GRIT, LOCKER and BARK only, the notes are
+summed, and SLAM runs once on the sum (`Scuff.slamBus`, at the engine's default .65). This is the place the
+brief's defining move is real: the kick and the bass hit fuse into one growl. `ScuffKitsTest` holds that the
+bus changes both phrases and lowers their crest factor. The round-0b pattern's tape-stopped hat is left out:
+DROP is DIVE's move in the rack, not the engine's.
+
+**Proved in software** (`ScuffKitTest`, `StarterKitsTest`, `ScuffKitGenerator`):
+- Rendering: every pad renders the same bytes twice; finite, bounded, centred, ends in silence; every zone's
+  first take at .92; a soft hit is a different strike (shape distance over .05 on every pad); every zone holds
+  four different strikes (over .005); the phrases are longer than 1.5 s and the hits shorter, so the classifier's
+  own threshold agrees with the LOOP filing; no pad or kit name is on the trademark blocklist.
+- Saving: the kit reloads equal, and all 192 saved slices match their renders within 3/2^23 through the pad
+  resolver, two cycles a zone.
+- Playback: `PadHit.resolve` picks the zone by velocity and deals the four takes in order, then repeats; a soft
+  and a hard hit never share a slice.
+- Export: the MPC 3 track's velocity ranges, base slices, cycle lengths and frame windows match, and the
+  exported PCM matches the renders. **MPC 2 does not pass:** as on every kit in this repository, its projection
+  keeps one take per zone. No MPC has loaded the kit and no phone has played it.
+
+**Gates after round 2.** Drum shelf: one of the multiple kits the gate asks for; a second genre kit (Flint, faster
+and brighter) is proposed. Roll or riser: pass in software, "Clap Riser" is on A16 and "Two Bars" on A15.
+Velocity and round robin through rendering, saving, playback and MPC 3 export: pass in software; MPC 2 and
+hardware open. Sound character: round 0b accepted; the Kotlin engine and the kit not heard.
+
+**Published.** The listening page's version 4 (2026-11-13, <https://claude.ai/artifact/Vh9vx4ezAScNhiLp9KFJd8>) adds the kit at the top: every pad's hard first take cut from the
+exported MPC 3 track through the pad resolver, a soft-to-hard strip of all twelve strikes for every hit, and the
+two phrases. Not heard.

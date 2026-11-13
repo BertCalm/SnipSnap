@@ -668,7 +668,7 @@ object Scuff {
     }
 
     /** Subtract the mean, then a one-pole high-pass at 20 Hz: the house order. */
-    private fun dcBlock(x: FloatArray): FloatArray {
+    internal fun dcBlock(x: FloatArray): FloatArray {
         var mean = 0.0
         for (v in x) mean += v
         mean /= x.size.coerceAtLeast(1)

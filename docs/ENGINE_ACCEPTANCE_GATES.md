@@ -168,22 +168,23 @@ Hip-hop drum kits in the GATECRASH shape, six built: TRAP, DRILL, BACKROOM, LOWR
 - **THUMP SUB as a voice:** six macros, velocity and takes through `Thump.render`, `Velocity` and `Restrike`. The classifier reads a long sub as TONAL; the default reads KICK; no setting makes a LOOP (`ThumpSubTest`). Round 2 made its length its DECAY alone (velocity moves drive, click and settle), so the robin's windows never change with the touch.
 - **Overall:** every software gate passes and all six kits are approved by ear; phone and MPC playback wait for the owner's devices; MPC 2 cannot carry the round robin.
 
-## SCUFF (rounds 0 and 0b, 2026-11-12; round 1 Kotlin, 2026-11-13)
+## SCUFF (rounds 0 and 0b, 2026-11-12; round 1 Kotlin and round 2 kit, 2026-11-13)
 
 A dry Michigan drum kit and its chain (GRIT, LOCKER, BARK, SLAM). See [SCUFF](SCUFF.md).
 Rounds 0 and 0b are Python prototype auditions; no Kotlin exists. Round 0b answered the owner's note "more character in general" (written before listening): every voice gained a mechanism, BARK went from under 1 dB of effect to 3 to 5 dB, and every pad ends at a tail gate.
 
 - **Melodic, keygroup and chord-tool gates:** not applicable. A drum engine.
 - **Articulation:** finite hits, no HOLD. Not a picked or thumbed string.
-- **Percussion:** open. The two-bar pattern carries a 32nd hat burst, a tape-stopped hat and a suck-back crash; no roll or riser pad is authored.
-- **Drum shelf:** open. One kit's worth of voices in Python; a second genre kit is proposed, not built.
+- **Percussion: pass in software (round 2).** The kit's A16 is "Clap Riser", the clap tightening from eighths to thirty-seconds over one bar through the bus, and A15 "Two Bars" is the round-0b pattern through one bus. Not heard.
+- **Drum shelf: one of several (round 2).** SCUFF DETROIT is on the shelf under SKINS: sixteen pads, three zones of four takes each, two bus phrases, 118 BPM. A second genre kit (Flint) is proposed, not built. A copy of this kit at other settings would not pass this gate.
 - **Velocity and round robin:**
   - **Rendering: verified in Kotlin by test (round 1).** `ScuffTest` holds that a soft and a hard hit differ in spectral shape at matched level on every core voice, that the kick clicks and drops harder and the clap loses a tap, and that four takes per voice are distinct strikes that each replay byte for byte. Python, re-measured with the corrected distance: soft against hard 2.8 to 9.7 dB; closest takes 1.9 (tick) to 4.6 dB (clap).
-  - **Saving: verified for a patch.** A SCUFF patch saves velocity, take and model version and replays byte for byte through JSON (`DeterminismTest`). No kit has been saved.
-  - **Playback and export:** not yet verified. No kit, no phone, no MPC.
+  - **Saving: verified (round 2).** A SCUFF patch saves velocity, take and model version and replays byte for byte through JSON (`DeterminismTest`). The kit reloads equal and all 192 saved slices match their renders through the pad resolver (`ScuffKitTest`, `:shell:generateScuffKits`).
+  - **Playback: verified in software.** `PadHit.resolve` picks the zone by velocity and deals the four takes in order, then repeats. No phone has played the kit.
+  - **Export: MPC 3 verified by read-back.** Velocity ranges, base slices, cycle lengths and frame windows match, and the exported PCM matches the renders. **MPC 2 does not pass:** it keeps one take per zone. No MPC has loaded the kit.
 - **Sound character:** direction accepted. On 2026-11-12 the owner responded to the published round-0b audition, "Sounds good, please merge." Preserve round 0b as the accepted baseline; this is a listen to Python renders. The round-1 Kotlin port measures as the same waveform on the five deterministic voices (0.05 to 0.17 dB, correlation 0.997 to 1.000) and as another take on the four noise voices; it has not been heard.
 - **Classifier:** the Kotlin kick reads PERC (its click and knock lift the 93 ms centroid past the sub-kick rule) and the crushed hat reads SNARE; `drumClassFor` files them KICK and HAT_CLOSED. Disclosed in [SCUFF](SCUFF.md), held by `ScuffTest`.
-- **Overall: incomplete.** Round 1 has the engine, the patch and the tests; kits, roll/riser, playback and export remain open, and the Kotlin has not been heard.
+- **Overall: incomplete.** Round 2 has the engine, the patch, one kit on the shelf with its roll/riser, and velocity and round robin proved through rendering, saving, playback and MPC 3 export in software. A second genre kit, MPC 2 round robin, hardware playback and the owner's listen to the Kotlin and the kit remain open.
 
 ## MIRRORBALL kits (sound approved 2026-11-12, hardware open)
 

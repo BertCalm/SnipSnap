@@ -3534,3 +3534,11 @@ Measured against the Python: the deterministic voices are the same waveform (0.0
 correlation 0.997 to 1.000 after a 1 ms resampler lag), the noise voices another take. The
 classifier reads the kick as PERC and the crushed hat as SNARE, disclosed. See [SCUFF](SCUFF.md)
 and the gates entry. The picker entry waits for a session with an SDK.
+
+### SCUFF, round 2 (2026-11-13)
+
+The first SCUFF kit on the shelf: SCUFF DETROIT (`ScuffKits`, id `scuff-detroit`, 118 BPM), sixteen pads in
+the GATECRASH shape, every strike rendered by the engine at a velocity and a take (three zones of four), two
+phrases through one bus clipper ("Two Bars", the accepted pattern, and "Clap Riser"). The grid is proved
+through save, playback and MPC 3 export in software; MPC 2 keeps one take per zone; nothing heard. See
+[SCUFF](SCUFF.md) and the gates entry.

@@ -62,7 +62,7 @@ def chips(metrics: dict) -> str:
 def clip_html(c: dict) -> str:
     return f"""
       <li class="clip">
-        <div class="clip-head"><span class="clip-id">{ESC(c['name'])}</span><span class="clip-len">{c['seconds']:.1f} s</span></div>
+        <div class="clip-head"><span class="clip-id">{ESC(c['name'])}</span><span class="clip-len">{(f"{c['seconds']:.1f} s" if c['seconds'] else "")}</span></div>
         <p class="clip-note">{ESC(c['note'])}</p>
         <audio controls preload="none" src="{ESC(c['file'])}"></audio>
         <div class="chips">{chips(c['metrics'])}</div>
@@ -132,6 +132,40 @@ def kotlin_section():
       <div class="table-wrap"><table><thead><tr><th>Also compared</th><th>Pairs</th><th>Python to Kotlin</th></tr></thead><tbody>{other}</tbody></table></div>
       <ol class="clips">{pair_clips(by("kit"))}{pair_clips(by("fuse"))}{pair_clips(by("chain-rim"))}</ol>
     </section>"""
+
+
+# The kit on the shelf (round 2), when the shell generator's pack has been copied in under shelf/.
+SHELF = None
+try:
+    SHELF = json.load(open(os.path.join(OUT, "shelf", "manifest.json")))
+except FileNotFoundError:
+    pass
+
+
+def shelf_section():
+    if SHELF is None:
+        return ""
+    out = []
+    for kit in SHELF["kits"]:
+        clips = []
+        for p in kit["pads"]:
+            n = f"{p['slot']:02d}"
+            clips.append(clip_html({"name": f"A{n} {p['name']}", "seconds": p["seconds"], "file": f"shelf/{kit['id']}/pad-{n}.wav",
+                                    "note": f"{p['class']}: the hard first take, as the saved kit plays it.", "metrics": {}}))
+            if p["touch"]:
+                clips.append(clip_html({"name": f"A{n} {p['name']} · touch", "seconds": 0.0, "file": f"shelf/{kit['id']}/touch-{n}.wav",
+                                        "note": "Twelve strikes in the order the pad deals them: four soft takes, four medium, four hard.", "metrics": {}}))
+        out.append(f"""
+    <section class="card" id="shelf-{kit['id']}">
+      <h2>Round 2: SCUFF {kit['title'].upper()} on the shelf</h2>
+      <p class="intro">The sixteen-pad kit the app lists under SKINS, at {kit['bpm']} BPM: fourteen hits with three velocity zones of four takes each, rendered by the engine
+      itself, and two phrases through one bus clipper, "Two Bars" (the round-0b pattern) and "Clap Riser" (eighths tightening to thirty-seconds).
+      Every clip here is cut from the exported MPC 3 track's own audio through the app's pad resolver, so what you hear is what the kit plays.
+      The grid is proved in software: the saved kit reloads equal, every slice matches its render, playback deals the takes in order, and the MPC 3 track reads back.</p>
+      <p class="ask"><span class="tag">LISTEN FOR</span> Is this a kit you would load? Do the hats choke right, do the three bass hits sit as one instrument, and does "Two Bars" fuse the kick and the bass the way the one-shots cannot?</p>
+      <ol class="clips">{''.join(clips)}</ol>
+    </section>""")
+    return "".join(out)
 
 
 sections = []
@@ -340,8 +374,9 @@ RACK    DROP (tape stop, DIVE's move) and CHOKE (gated burst, GATECRASH's room) 
     <div class="table-wrap"><table><thead><tr><th>Target</th><th>Measured</th></tr></thead><tbody>{target_rows}</tbody></table></div>
   </section>
 
-  <nav aria-label="Sections">{'<a href="#kotlin">Kotlin</a>' if KOTLIN else ''}{nav}<a href="#gates">Gates</a><a href="#next">Your answers</a></nav>
+  <nav aria-label="Sections">{''.join(f'<a href="#shelf-{k["id"]}">Shelf</a>' for k in (SHELF or {}).get("kits", []))}{'<a href="#kotlin">Kotlin</a>' if KOTLIN else ''}{nav}<a href="#gates">Gates</a><a href="#next">Your answers</a></nav>
 
+  {shelf_section()}
   {kotlin_section()}
   {''.join(sections)}
 
