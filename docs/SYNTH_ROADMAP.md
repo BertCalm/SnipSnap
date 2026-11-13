@@ -3587,4 +3587,5 @@ Presets and the roster, the round the owner chose after the listen: `ScuffPreset
 twenty-eight hits as patches (the kit's chain and the pad's macros, struck full, the first take), named after
 their kit, served by `Presets`; SCUFF leaves `PatchTypes.ROSTERLESS`. A saved SCUFF strike promotes with its
 velocity, take and model through the JSON constructor, as RIVET's does. Open: hardware playback, MPC 2's one
-take per zone, the app picker. See [SCUFF](SCUFF.md).
+take per zone, the app picker (a round of its own now that the convention no longer defers it to an SDK
+session). See [SCUFF](SCUFF.md).
