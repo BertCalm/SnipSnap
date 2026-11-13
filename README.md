@@ -1365,7 +1365,7 @@ SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVE
 OVEN, FLOCK, VENT, CREASE, TRIO, NACRE, ORIGAMI, TREFOIL, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS,
 TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME, BORE, ARCO, SCOUR, KEEL, CHITIN, WICK, EROSION, RIVET, FIRED BRONZE, BACKWASH, plus GRAINS, SNAP and DRAW,
 which sit beside the picker. `:synth` also holds engines that picker does not show.
-LORENTZ has a preset roster, so `snipsnap synth` renders it.
+LORENTZ and SCUFF have preset rosters, so `snipsnap synth` renders them.
 
 EROSION has a [native ARC/CRATER proof](docs/EROSION.md), saved touch and a
 regenerable audition. Its current contrast bank has eight playing roles, three touch
