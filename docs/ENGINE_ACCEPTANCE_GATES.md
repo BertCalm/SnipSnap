@@ -83,7 +83,7 @@ own status.
 The engine remains in progress. Voice count, green tests and export file
 presence do not close the outstanding gates above.
 
-## BREAKER (rounds 1 to 3, the kit and the genre kits, 2026-11-09 to 11-13)
+## BREAKER (sound signed off 2026-11-13; three kits on the shelf; the surf tom fill and hardware open)
 
 - **Melodic, keygroup and chord-tool gates:** not applicable. BREAKER is a drum engine.
 - **Articulation:** finite hits, with no HOLD.
@@ -126,9 +126,9 @@ presence do not close the outstanding gates above.
   - **Playback: verified in software.** No phone has played them.
   - **Export: MPC 3 verified by read-back.** MPC 2 does not pass, as for the BREAKER kit. No MPC has loaded them.
   - **Sound character, heard 2026-11-13:** the kicks hit again ("one kick played again: fine"), the High Timbale at about three semitones up (high enough, where the layout asked five), and every pad soft to hard were accepted. Both grooves were heard as too wet, and the owner picked how much echo and spring each keeps from four versions. The kits are built from the picks; only Trip hop's Second Kick keeps its touch of spring, since at a quarter its takes measured as near-copies.
-  - **Open, for the owner:** the shared robin's start trim cuts a synth strike's click on any re-struck kit (docs/BREAKER.md, "Model 6").
-- **The final audition (2026-11-13):** `:shell:generateBreakerAudition` renders every voice, soft to hard, every control swept, corners, edges, presets and the three kits' grooves (68 clips). It is published for the owner's closing listen ([BREAKER audition](https://claude.ai/artifact/TyimBbsBAwNeVRzxsSx3En)); the answers are not in yet. Every edge render is finite and within full scale.
-- **Overall: incomplete.** The three kits are on the shelf and heard, and the final audition waits for the owner's answers. MPC 2 round robin and hardware playback are open, and the surf tom fill is not built.
+  - **Decided by the owner (2026-11-13):** the shared robin's start trim, which can cut a synth strike's click on any re-struck kit, stays as it is (docs/BREAKER.md, "Model 6").
+- **The final audition (2026-11-13):** `:shell:generateBreakerAudition` renders every voice, soft to hard, every control swept, corners, edges, presets and the three kits' grooves (68 clips). Every edge render is finite and within full scale. **Sound character: signed off.** On 2026-11-13 the owner answered the published page ([BREAKER audition](https://claude.ai/artifact/TyimBbsBAwNeVRzxsSx3En)): every voice as it ships is BREAKER, every control does what its name says all the way along, nothing breaks at the edges, all the presets stay, and the shelf of three kits is right. Preserve renderer model 6 (the BREAKER kit on model 5) as the accepted baseline. This is not evidence of a phone or MPC audition.
+- **Overall: incomplete.** The sound is signed off and the three kits are on the shelf. MPC 2 round robin and hardware playback are open, and the surf tom fill is not built.
 
 ## GATECRASH kits (sound approved 2026-11-11, hardware open)
 

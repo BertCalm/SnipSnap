@@ -3480,8 +3480,8 @@ The genre kits (renderer models 5 and 6, 2026-11-12 to 11-13):
   MPC 3 export. The BREAKER kit stays on model 5.
 - **Heard (2026-11-13):** the kicks, the High Timbale and the soft-to-hard grid were accepted. Both
   grooves were too wet, and the owner picked their echo and spring from four versions each.
-- **The final audition** (`:shell:generateBreakerAudition`, 68 clips) is published for the owner's
-  closing listen.
+- **The final audition** (`:shell:generateBreakerAudition`, 68 clips): the owner signed off the
+  sound on 2026-11-13 (every voice, every control, the edges, the presets and the three kits).
 
 ### ETCH, Kotlin round K1 (2026-11-13)
 
