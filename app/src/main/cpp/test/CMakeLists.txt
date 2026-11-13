@@ -131,3 +131,43 @@ target_include_directories(crease_study_tests PRIVATE "${ENGINE_DIR}" "${CMAKE_C
 target_compile_options(crease_study_tests PRIVATE -Wall -Wextra -include cstring)
 target_link_libraries(crease_study_tests PRIVATE Threads::Threads)
 add_test(NAME crease_study_tests COMMAND crease_study_tests)
+
+# New per-note RR transaction and its JNI boundary, independently selectable.
+add_executable(round_robin_admission_tests
+    round_robin_admission_tests.cpp
+    oboe_stubs.cpp
+    "${ENGINE_DIR}/PadEngine.cpp"
+    "${ENGINE_DIR}/SurfaceEngine.cpp"
+    "${ENGINE_DIR}/LiveSnapEngine.cpp"
+    "${ENGINE_DIR}/aquarium/AquariumProcessor.cpp"
+    "${ENGINE_DIR}/aquarium/PerformanceBus.cpp"
+    "${ENGINE_DIR}/aquarium/OfflineRender.cpp"
+    "${ENGINE_DIR}/aquarium/AquariumJni.cpp"
+    "${ENGINE_DIR}/jni.cpp"
+    "${ENGINE_DIR}/crease/CreaseStudyEngine.cpp"
+    "${ENGINE_DIR}/crease/CreaseStudyJni.cpp"
+)
+target_include_directories(round_robin_admission_tests PRIVATE "${ENGINE_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}/stub" "${OBOE_INCLUDE_DIR}")
+target_compile_options(round_robin_admission_tests PRIVATE -Wall -Wextra -include cstring)
+target_link_libraries(round_robin_admission_tests PRIVATE Threads::Threads)
+add_test(NAME round_robin_admission_tests COMMAND round_robin_admission_tests)
+
+# Only new owned-bank loading tests; prior RR admission target retains its own credit.
+add_executable(round_robin_loading_tests
+    round_robin_loading_tests.cpp
+    oboe_stubs.cpp
+    "${ENGINE_DIR}/PadEngine.cpp"
+    "${ENGINE_DIR}/SurfaceEngine.cpp"
+    "${ENGINE_DIR}/LiveSnapEngine.cpp"
+    "${ENGINE_DIR}/aquarium/AquariumProcessor.cpp"
+    "${ENGINE_DIR}/aquarium/PerformanceBus.cpp"
+    "${ENGINE_DIR}/aquarium/OfflineRender.cpp"
+    "${ENGINE_DIR}/aquarium/AquariumJni.cpp"
+    "${ENGINE_DIR}/jni.cpp"
+    "${ENGINE_DIR}/crease/CreaseStudyEngine.cpp"
+    "${ENGINE_DIR}/crease/CreaseStudyJni.cpp"
+)
+target_include_directories(round_robin_loading_tests PRIVATE "${ENGINE_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}/stub" "${OBOE_INCLUDE_DIR}")
+target_compile_options(round_robin_loading_tests PRIVATE -Wall -Wextra -include cstring)
+target_link_libraries(round_robin_loading_tests PRIVATE Threads::Threads)
+add_test(NAME round_robin_loading_tests COMMAND round_robin_loading_tests)

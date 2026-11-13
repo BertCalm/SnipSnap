@@ -67,7 +67,7 @@ class NacrePatchTest {
                 NacrePatch.fromJsonValue(changed("velocity", JsonValue.Num(velocity)))
             }
         }
-        for (model in listOf(0.0, 1.5, Nacre.MODEL_VERSION + 1.0)) {
+        for (model in listOf(0.0, 1.5, NacreModels.CONTACT_MODEL_VERSION + 1.0)) {
             assertFailsWith<JsonException>("model $model") { NacrePatch.fromJsonValue(changed("model", JsonValue.Num(model))) }
         }
         for (seed in listOf("9223372036854775808", "1.5", "-01", "+1", " 1", "-0")) {
@@ -84,7 +84,7 @@ class NacrePatchTest {
             assertFailsWith<IllegalArgumentException> { original.copy(macros = mapOf("TOUCH" to value)) }
         }
         assertFailsWith<IllegalArgumentException> { original.copy(midi = Nacre.MIN_MIDI - 1) }
-        assertFailsWith<IllegalArgumentException> { original.copy(model = Nacre.MODEL_VERSION + 1) }
+        assertFailsWith<IllegalArgumentException> { original.copy(model = NacreModels.CONTACT_MODEL_VERSION + 1) }
         assertFailsWith<IllegalArgumentException> { original.copy(name = " ") }
         assertFailsWith<IllegalArgumentException> { original.copy(macros = mapOf("TUNE" to .5f)) }
     }

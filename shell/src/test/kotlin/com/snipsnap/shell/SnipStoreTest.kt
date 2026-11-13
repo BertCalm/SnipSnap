@@ -101,9 +101,9 @@ class SnipStoreTest {
                 SnipStore.import(com.snipsnap.audio.Snip(FloatArray(0), 1, 44_100), root, 7_000L)
             }
             assertTrue(e.message!!.contains("no audio"))
-            assertEquals("IMPORTED. 3 MIN KEPT.", Copy.imported(180f, false))
-            assertEquals("IMPORTED. FIRST 3 MIN KEPT - A SAMPLE IS ONLY SO LONG.", Copy.imported(180f, true))
-            assertEquals("IMPORTED. 8s KEPT.", Copy.imported(8.2f, false))
+            assertEquals("Imported. 3 min kept.", Copy.imported(180f, false))
+            assertEquals("Imported. First 3 min kept - a sample is only so long.", Copy.imported(180f, true))
+            assertEquals("Imported. 8s kept.", Copy.imported(8.2f, false))
             assertNull(got.resampledFrom, "this one arrived at the rate, so there is nothing to report")
         } finally { root.deleteRecursively() }
     }
@@ -126,15 +126,15 @@ class SnipStoreTest {
         assertEquals("40 KHZ", Copy.rateLabel(40_000))
 
         assertEquals(
-            "IMPORTED. 8s KEPT. CAME IN AT 48 KHZ, KEPT AT 44.1 KHZ.",
+            "Imported. 8s kept. Came in at 48 kHz, kept at 44.1 kHz.",
             Copy.imported(8.2f, false, 48_000),
         )
         assertEquals(
-            "IMPORTED. FIRST 8s KEPT - A SAMPLE IS ONLY SO LONG. CAME IN AT 22.05 KHZ, KEPT AT 44.1 KHZ.",
+            "Imported. First 8s kept - a sample is only so long. Came in at 22.05 kHz, kept at 44.1 kHz.",
             Copy.imported(8.2f, true, 22_050),
         )
         assertEquals(
-            "IMPORTED. 8s KEPT.", Copy.imported(8.2f, false, null),
+            "Imported. 8s kept.", Copy.imported(8.2f, false, null),
             "a file already at the rate is not told about a conversion that did not happen",
         )
 

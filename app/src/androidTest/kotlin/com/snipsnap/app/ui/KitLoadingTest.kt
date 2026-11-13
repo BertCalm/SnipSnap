@@ -71,8 +71,8 @@ class KitLoadingTest : ComposeScreenTest() {
         }
     }
 
-    /** Any node that says LOADING, by its words or its description. */
-    private fun loadingWords() = hasText("LOADING", substring = true) or hasContentDescription("LOADING", substring = true)
+    /** Any node that says Loading, by its words or its description. */
+    private fun loadingWords() = hasText("Loading", substring = true) or hasContentDescription("Loading", substring = true)
 
     private fun noneInProgress() =
         compose.onAllNodes(SemanticsMatcher.keyIsDefined(SemanticsProperties.ProgressBarRangeInfo)).assertCountEquals(0)
@@ -90,7 +90,7 @@ class KitLoadingTest : ComposeScreenTest() {
         pending = "TIDAL"
         pump(150)
 
-        // The skeleton is there, drawn and silent, and nothing says LOADING.
+        // The skeleton is there, drawn and silent, and nothing says Loading.
         compose.onNodeWithTag(LANDED).assertDoesNotExist()
         assertSkeletonDrawn()
         compose.onNode(loadingWords()).assertDoesNotExist()

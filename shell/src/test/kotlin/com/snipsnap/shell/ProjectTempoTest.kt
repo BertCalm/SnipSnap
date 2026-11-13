@@ -128,6 +128,6 @@ class ProjectTempoTest {
 
     @Test
     fun `the adopted line says the number and where it came from`() {
-        assertEquals("PROJECT TEMPO IS NOW 96 BPM, TAKEN FROM YOUR ORBIT SET.", Copy.projectTempoAdopted(96))
+        assertEquals("Project tempo is now 96 BPM, taken from your ORBIT SET.", Copy.projectTempoAdopted(96))
     }
 }

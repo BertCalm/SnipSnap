@@ -42,7 +42,7 @@ internal fun PrintBarsOpener(
         modifier = modifier,
     ) { open = true }
     if (open && bpm != null) {
-        SheetMenu("HOW LONG IS A PRINT?", onDismiss = { open = false }) {
+        SheetMenu("How long is a print?", onDismiss = { open = false }) {
             for ((index, bars) in PrintLength.BARS.withIndex()) {
                 val label = PrintLength.label(bars)
                 SheetRow(

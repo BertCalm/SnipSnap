@@ -279,7 +279,7 @@ internal fun PrismMotionPanel(
                         modifier = Modifier.weight(1f), accessibilityLabel = "PREVIEW PRISM $kind") { preview(kind) }
                 }
             }
-            if (source == null) TapeText("CHOOSE A SOURCE TO HEAR ITS ORIGINAL.", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
+            if (source == null) TapeText("Choose a source to hear its original.", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             LabButton("RESET", scheme, enabled = true, modifier = Modifier.weight(1f), accessibilityLabel = "RESET PRISM MOTION") {

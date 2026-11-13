@@ -1,6 +1,6 @@
 package com.snipsnap.synth
 
-/** Three playable starting points around the owner-preferred harp and timed venue responses. */
+/** Three retained starting sounds and two owner-kept model-4 contact settings of one PEARL voice. */
 object NacrePresets {
     private fun p(name: String, venue: Float, bloom: Float) = NacrePatch(
         name, NacreVoice.PEARL,
@@ -9,10 +9,18 @@ object NacrePresets {
         model = 3,
     )
 
+    private fun contact(name: String, loss: Float): NacrePatch {
+        val reference = p(name, 0f, .15f)
+        return reference.copy(model = NacreModels.CONTACT_MODEL_VERSION,
+            macros = reference.macros + (NacreModels.CONTACT_MACRO to loss))
+    }
+
     private val presets = listOf(
         p("Pearl Close", 0f, .15f),
         p("Coral Reply", 0f, .35f),
         p("Kelp Passage", 1f, .35f),
+        contact("Pearl Moderate Contact", .35f),
+        contact("Pearl Strong Contact", .8f),
     )
 
     fun forVoice(voice: NacreVoice): List<NacrePatch> = presets.filter { it.voice == voice }

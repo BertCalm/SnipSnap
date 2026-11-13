@@ -177,7 +177,7 @@ internal fun AquariumPanel(
         }
 
         TapeText(
-            "PREVIEW PLAYS THE MAIN SAMPLE. KEEP UPDATES EVERY VELOCITY LAYER.",
+            "Preview plays the main sample. Keep updates every velocity layer.",
             TapeType.pixelSmall, scheme.ink2.tape, maxLines = Int.MAX_VALUE,
         )
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {

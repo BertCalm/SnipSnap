@@ -127,6 +127,6 @@ class ProvenanceTest {
         // is how the card's liner notes and the KIT screen's line stay the
         // same claim in two registers.
         assertEquals("Chopped from \"break.wav\".", Provenance.asSentence("chopped from \"break.wav\""))
-        assertEquals("THIS KIT: CHOPPED FROM \"BREAK.WAV\"", Copy.kitCameFrom("chopped from \"break.wav\""))
+        assertEquals("This kit: chopped from \"break.wav\"", Copy.kitCameFrom("chopped from \"break.wav\""))
     }
 }

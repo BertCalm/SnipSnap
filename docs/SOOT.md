@@ -28,10 +28,10 @@ How the owner got there:
   - moved the four bars to the heavier dictaphone (.9).
 
 Still to come:
-- the owner's listen to the four sibling kits, which are built and on the shelf:
+- nothing for the sound. The four sibling kits are approved:
   - SOOT DRUMLESS, SOOT BASEMENT DUB, SOOT BRUSHED NOIR and SOOT WAREHOUSE INDUSTRIAL
-    (`SootGenreKits.kt`, `:shell:generateSootGenreKits`);
-  - listening page: https://claude.ai/artifact/J6S61MGPeNuErNGJq9v4xa;
+    (`SootGenreKits.kt` 2, `:shell:generateSootGenreKits`);
+  - 63 of 64 pads kept as built; Basement Dub's four bars are the steppers groove the owner picked;
 - phone and MPC hardware;
 - the picker entry, in a session with an Android SDK, as the house rule says.
 

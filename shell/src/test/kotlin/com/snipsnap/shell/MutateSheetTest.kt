@@ -430,7 +430,7 @@ class MutateSheetTest {
         assertEquals("BECOME × SOUL A03", PadSheetBoxes.mutate(applied))
         assertEquals("COMBINED: BECOME", KitDiff.recipeName(ramped))
         assertEquals(
-            RecipeReplay.Plan.Refused("COMBINE SOUNDS (BECOME WITH SOUL A03) NEEDS ITS PARTNER - NOT CARRIED."),
+            RecipeReplay.Plan.Refused("COMBINE SOUNDS (BECOME with SOUL A03) needs its partner - not carried."),
             RecipeReplay.plan(ramped),
         )
 
@@ -493,7 +493,7 @@ class MutateSheetTest {
         assertEquals("50 ms", readouts.first { it != "OFF" }, "the first step a thumb reaches above OFF")
         assertEquals("2000 ms", readouts.last(), "a thumb let go at the far end")
 
-        assertEquals(b.label.uppercase(), b.label, "a card label shouts")
+        assertEquals(b.label.uppercase(), b.label)
         // A coarse proxy only. The label font is Silkscreen (TapeTheme.kt:59), which is proportional, and
         // BECOME's M is wider than any letter of ATTACK, so a letter count cannot see a pixel overflow of the
         // 44 dp label column. The phone check (line 3, "BECOME is not cut off") is the real gate; this

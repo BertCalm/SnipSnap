@@ -7,7 +7,7 @@ class SheetRowTest {
 
     @Test
     fun `a row with a description is spoken as its name, then its description`() {
-        assertEquals("BACKUP. EVERY KIT, ONE FILE", sheetRowSpoken("BACKUP", "EVERY KIT, ONE FILE"))
+        assertEquals("BACKUP. Every kit, one file", sheetRowSpoken("BACKUP", "Every kit, one file"))
     }
 
     @Test

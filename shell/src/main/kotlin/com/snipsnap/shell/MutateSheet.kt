@@ -522,16 +522,16 @@ object MutateSheet {
 
     /** One line per move, under the move chips: `design/mutate-v2/Moves.dc.html:45-50`, verbatim. */
     private val MOVE_LINES: Map<Mutate.Mode, String> = mapOf(
-        Mutate.Mode.STACK to "BOTH AT ONCE. THICKER.",
-        Mutate.Mode.SPLICE to "THIS ATTACK, THAT TAIL.",
-        Mutate.Mode.SPLIT to "MY LOWS, THEIR HIGHS.",
-        Mutate.Mode.MORPH to "A HIT BETWEEN THE TWO.",
-        Mutate.Mode.ROOM to "MY HIT, PLAYED IN THEIR ROOM.",
-        Mutate.Mode.TRANSPLANT to "MY TIMING, THEIR TONE.",
+        Mutate.Mode.STACK to "Both at once. Thicker.",
+        Mutate.Mode.SPLICE to "This attack, that tail.",
+        Mutate.Mode.SPLIT to "My lows, their highs.",
+        Mutate.Mode.MORPH to "A hit between the two.",
+        Mutate.Mode.ROOM to "My hit, played in their room.",
+        Mutate.Mode.TRANSPLANT to "My timing, their tone.",
     )
 
     /** MORPH's line while BECOME is above OFF (the brief's). */
-    private const val BECOME_LINE = "STARTS AS MINE, TURNS INTO THE MIX."
+    private const val BECOME_LINE = "Starts as mine, turns into the mix."
 
     /** What each knob means, on a caption line under its bar: `design/mutate-v2/Moves.dc.html:46-50`, verbatim. */
     private val KNOB_MEANINGS: Map<Mutate.Mode, String> = mapOf(

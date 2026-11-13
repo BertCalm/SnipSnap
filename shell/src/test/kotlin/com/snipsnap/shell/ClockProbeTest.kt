@@ -194,7 +194,7 @@ class ClockProbeTest {
         assertTrue(r.rateErrorPpm!! < -50_000, "rate error ${r.rateErrorPpm}")
         val line = ClockProbe.describe(r)
         assertEquals(Copy.clockRateWrong(Math.round(r.rateErrorPpm!!)), line)
-        assertTrue("SLOW" in line && !line.contains(Copy.CLOCK_TRACKED), line)
+        assertTrue(line.contains("SLOW", ignoreCase = true) && !line.contains(Copy.CLOCK_TRACKED), line)
     }
 
     @Test
@@ -212,7 +212,7 @@ class ClockProbeTest {
         assertEquals(Verdict.TRACKED, inside.verdict)
         val outside = ClockProbe.analyze(stream(48_000, 10_000, hwRatePpm = ClockProbe.RATE_LIMIT_PPM * 1.5), 48_000)
         assertEquals(Verdict.RATE_WRONG, outside.verdict)
-        assertTrue(ClockProbe.describe(outside).contains("FAST."), ClockProbe.describe(outside))
+        assertTrue(ClockProbe.describe(outside).contains("FAST.", ignoreCase = true), ClockProbe.describe(outside))
     }
 
     @Test
@@ -260,8 +260,8 @@ class ClockProbeTest {
         assertEquals(Verdict.STALLED, r.verdict)
         assertTrue(r.startupGapMs!! > ClockProbe.SLOW_START_MS)
         val line = ClockProbe.describe(r)
-        assertTrue(line.startsWith("POSITION STOPPED FOR "), line)
-        assertTrue(line.contains(", AFTER A SLOW START OF ${Math.round(r.startupGapMs!!)} MS."), line)
+        assertTrue(line.startsWith("POSITION STOPPED FOR ", ignoreCase = true), line)
+        assertTrue(line.contains(", AFTER A SLOW START OF ${Math.round(r.startupGapMs!!)} MS.", ignoreCase = true), line)
     }
 
     @Test
@@ -275,12 +275,12 @@ class ClockProbeTest {
 
     @Test
     fun `rate words carry the sign`() {
-        assertEquals("RATE 12 PPM FAST.", Copy.clockRate(12))
-        assertEquals("RATE 9 PPM SLOW.", Copy.clockRate(-9))
+        assertEquals("Rate 12 ppm fast.", Copy.clockRate(12))
+        assertEquals("Rate 9 ppm slow.", Copy.clockRate(-9))
         val fast = ClockProbe.analyze(stream(48_000, 10_000, hwRatePpm = 200.0), 48_000)
-        assertTrue(ClockProbe.describe(fast).contains("PPM FAST."), ClockProbe.describe(fast))
+        assertTrue(ClockProbe.describe(fast).contains("PPM FAST.", ignoreCase = true), ClockProbe.describe(fast))
         val slow = ClockProbe.analyze(stream(48_000, 10_000, hwRatePpm = -300.0), 48_000)
-        assertTrue(ClockProbe.describe(slow).contains("PPM SLOW."), ClockProbe.describe(slow))
+        assertTrue(ClockProbe.describe(slow).contains("PPM SLOW.", ignoreCase = true), ClockProbe.describe(slow))
     }
 
     @Test

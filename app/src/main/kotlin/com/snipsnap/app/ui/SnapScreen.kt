@@ -1477,9 +1477,9 @@ private fun PhotoStrip(thumb: Bitmap?, reading: Snap.Reading?, looking: Boolean,
             when {
                 looking -> TapeText("LOOKING…", TapeType.lcdSmall, scheme.amber.tape)
                 reading == null -> {
-                    TapeText("TAKE A PHOTO.", TapeType.lcdSmall, scheme.lcdInk.tape)
+                    TapeText("Take a photo.", TapeType.lcdSmall, scheme.lcdInk.tape)
                     TapeText("ITS LINE IS THE WAVE,", TapeType.lcdSmall, scheme.lcdInk.tape.copy(alpha = 0.7f))
-                    TapeText("ITS COLOURS ARE THE KNOBS.", TapeType.lcdSmall, scheme.lcdInk.tape.copy(alpha = 0.7f))
+                    TapeText("Its colours are the knobs.", TapeType.lcdSmall, scheme.lcdInk.tape.copy(alpha = 0.7f))
                 }
                 else -> {
                     TapeText("LUM ${pct(reading.luminance)}  SAT ${pct(reading.saturation)}", TapeType.lcdSmall, scheme.lcdInk.tape)
