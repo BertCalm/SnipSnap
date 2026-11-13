@@ -1,8 +1,13 @@
 """Render the CLUTTER round-0 audition: WAVs per section plus manifest.json with measurements.
 
-Python harness, not Kotlin. Nothing here has been heard by its author. Every one-shot is
-peak-matched (0.89), so a pad never wins by being louder; the sampler's velocity gain is not
-applied except in the roll and the groove, where it is stated.
+Python harness, not Kotlin. Nothing here has been heard by its author. Every one-shot is peak-matched
+(0.89), so a pad never wins by being louder; the sampler's velocity gain is applied only in the
+grooves and on the page's pad grid, where it is stated.
+
+Five kits (kits.py): the sixteen-object CLUTTER kit and four genre kits. For each pad of each kit the
+generator renders three velocity zones x four takes and writes them as one WAV of twelve equal slots
+(soft takes 1-4, medium 1-4, hard 1-4), which the page's pad grid slices; a version of the listening
+page can hold 511 files, and 5 x 16 x 12 separate files would not fit.
 
 Run:  python3 gen_audition.py OUT_DIR      then   python3 build_page.py OUT_DIR
 """
@@ -10,7 +15,6 @@ from __future__ import annotations
 
 import itertools
 import json
-import math
 import os
 import sys
 import time
@@ -20,40 +24,15 @@ import numpy as np
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import clutter_proto as e  # noqa: E402
+import kits as K  # noqa: E402
 import measures as ms  # noqa: E402
 
 sk = e.sk
 OUT = sys.argv[1] if len(sys.argv) > 1 else "clutter-audition"
 RATE = e.RATE
-BPM = 92.0
-SIXTEENTH = 60.0 / BPM / 4
 ZONES = {"s": 0.35, "m": 0.65, "h": 1.0}   # the three velocity zones the house kits use
 TAKES = 4
-MANIFEST: dict = {"bpm": BPM, "zones": ZONES, "takes": TAKES, "sections": [], "kit": [], "checks": {}}
-
-# The round-0 kit: sixteen pads, sixteen different objects, laid out as AutoPlace expects (A01 kick, A02 snare,
-# A03/A04 hats, A05 second kick, A06 clap, A07/A08 second hats, toms, then percussion). Names are plain words
-# for the object, never a product. "shape"
-KIT = [
-    ("A01", "Bucket", "BUCKET", {}),
-    ("A02", "Rice Box", "BOX", {}),
-    ("A03", "Rice Jar", "JAR", {}),
-    ("A04", "Key Ring", "KEYS", {}),
-    ("A05", "Suitcase", "SUITCASE", {}),
-    ("A06", "Book Slam", "BOOK", {}),
-    ("A07", "Matchbox", "MATCHBOX", {}),
-    ("A08", "Cutlery Drawer", "DRAWER", {}),
-    ("A09", "Tub", "TUB", {}),
-    ("A10", "Frying Pan", "PAN", {}),
-    ("A11", "Knuckle", "TABLE", {}),
-    ("A12", "Saucepan", "POT", {}),
-    ("A13", "Bottle", "BOTTLE", {}),
-    ("A14", "Mug", "MUG", {}),
-    ("A15", "Wine Glass", "GLASS", {}),
-    ("A16", "Zipper", "ZIP", {}),
-]
-MIX = {"BUCKET": 1.0, "BOX": .85, "BOOK": .6, "JAR": .42, "KEYS": .38, "TABLE": .5, "POT": .45, "BOTTLE": .4,
-       "SUITCASE": .9, "MATCHBOX": .4, "DRAWER": .4, "TUB": .7, "PAN": .5, "MUG": .4, "GLASS": .35, "ZIP": .4}
+MANIFEST: dict = {"zones": ZONES, "takes": TAKES, "sections": [], "kits": [], "checks": {}}
 
 
 def path(section, name):
@@ -88,7 +67,7 @@ def chain(parts, pause=0.18):
 
 
 def full_distance_db(a, b):
-    """The take distance over the whole render, not only the first 150 ms: DAMP and MIC live in the tail."""
+    """The house distance over the whole render, not only the first 150 ms: DAMP and MIC live in the tail."""
     n = max(len(a), len(b))
     a = np.pad(a, (0, n - len(a)))
     b = np.pad(b, (0, n - len(b)))
@@ -104,114 +83,134 @@ def place(buf, y, at):
     buf[i:i + n] += y[:n]
 
 
-# ------------------------------------------------------------------------------ the kit pads
+def groove(kit, layers):
+    """Two bars of the kit's pattern, played twice. Every hit is the next take at its own velocity zone; the
+    sampler's velocity gain is applied; A03 chokes A04 and A07 chokes A08."""
+    six = 60.0 / kit["bpm"] / 4
+    pads = {p[0]: p for p in kit["pads"]}
+    pattern = sorted(kit["groove"], key=lambda g: g[1])
+    bar2 = 32 * six
+    buf = np.zeros(int((bar2 + 2.2) * RATE))
+    dealt: dict = {}
+    for i, (pad, step, vel) in enumerate(pattern):
+        zone = min(ZONES, key=lambda z: abs(ZONES[z] - vel))
+        tk = dealt.get(pad, 0) % TAKES
+        dealt[pad] = dealt.get(pad, 0) + 1
+        y = layers[pad][zone][tk] * K.MIX[pads[pad][4]] * (0.35 + 0.65 * vel)
+        at = step * six + (six * (kit["swing"] - 0.5) * 2 if step % 2 == 1 else 0.0)
+        for choker, victims in K.CHOKES.items():
+            if pad in victims:
+                nxt = next((s for p, s, _ in pattern if p == choker and s > step), None)
+                if nxt is not None:
+                    cut = int((nxt - step) * six * RATE)
+                    f = int(0.006 * RATE)
+                    y = y[:cut + f].copy()
+                    y[cut:cut + f] *= np.linspace(1, 0, len(y[cut:cut + f]))
+        place(buf, y, at)
+    buf *= 0.95 / np.max(np.abs(buf))
+    n2 = int(bar2 * RATE)
+    return np.concatenate([buf[:n2], buf[:n2], buf[n2:]])
+
+
+# ------------------------------------------------------------------------------ every kit
 
 timings = []
-for pad, name, voice, macros in KIT:
-    t0 = time.perf_counter()
-    hard = e.render(voice, macros, 1.0, 0)
-    timings.append((time.perf_counter() - t0) * 1000)
-    soft = e.render(voice, macros, ZONES["s"], 0)
-    takes = [e.render(voice, macros, 1.0, t) for t in range(TAKES)]
-    dists = [ms.take_distance_db(a, b) for a, b in itertools.combinations(takes, 2)]
-    m = {"centroid_hz": ms.centroid(hard), "decay_ms": ms.decay_ms(hard), "crest_db": ms.crest_db(hard),
-         "soft_vs_hard_db": ms.take_distance_db(soft, hard),
-         "soft_centroid_hz": ms.centroid(soft),
-         "after_soft_db": ms.window_db(soft, 0.012, 0.08), "after_hard_db": ms.window_db(hard, 0.012, 0.08),
-         "closest_takes_db": min(dists), "widest_takes_db": max(dists), "render_ms": round(timings[-1], 1)}
-    if voice in ("MATCHBOX", "ZIP"):
-        # No strike at the start (a shake, a pull), so "after the hit" against the first 5 ms means nothing.
-        m.pop("after_soft_db")
-        m.pop("after_hard_db")
-    if voice in ("BUCKET", "SUITCASE", "TUB"):
-        m.update({"hz_early_hard": ms.window_hz(hard, 0.004, 0.03, 30, 300), "hz_late_hard": ms.window_hz(hard, 0.1, 0.3, 30, 300),
-                  "hz_early_soft": ms.window_hz(soft, 0.004, 0.03, 30, 300)})
-    save("kit", f"{pad.lower()}-{name.lower().replace(' ', '-')}", hard,
-         f"{pad} {name}: {voice} ({e.DRUM_CLASS[voice]}), hard hit, first take.", m,
-         {"pad": pad, "label": name, "voice": voice, "macros": e.settled(voice, macros)})
-    MANIFEST["kit"].append({"pad": pad, "label": name, "voice": voice, "class": e.DRUM_CLASS[voice],
-                            "macros": e.settled(voice, macros), "metrics": m})
-    # Every zone and take for the playable grid.
-    for z, v in ZONES.items():
-        for t in range(TAKES):
-            y = takes[t] if z == "h" else e.render(voice, macros, v, t)
-            full, _ = path("grid", f"{pad.lower()}-{z}{t}")
-            sk.write_wav(full, y)
-    # The velocity ladder and the four takes as sequences.
-    ladder = [e.render(voice, macros, v, 0) for v in ZONES.values()]
-    save("velocity", pad.lower(), chain(ladder, 0.25),
-         f"{pad} {name}: soft, medium, hard (velocity {ZONES['s']}, {ZONES['m']}, {ZONES['h']}), each peak-matched so only the strike differs.",
-         {"soft_vs_hard_db": m["soft_vs_hard_db"], "soft_centroid_hz": m["soft_centroid_hz"], "centroid_hz": m["centroid_hz"],
-          "after_soft_db": m.get("after_soft_db"), "after_hard_db": m.get("after_hard_db")}, {"pad": pad, "label": name})
-    save("takes", pad.lower(), chain(takes, 0.22),
-         f"{pad} {name}: the four round-robin takes, hard, in the order the pad deals them.",
-         {"closest_takes_db": m["closest_takes_db"], "widest_takes_db": m["widest_takes_db"]}, {"pad": pad, "label": name})
-    print(pad, name, m)
+kit_layers = {}
+for kit in K.ALL:
+    layers = {}
+    rows = []
+    for pad, label, voice, macros, cls in kit["pads"]:
+        zl = {}
+        for z, v in ZONES.items():
+            zl[z] = []
+            for t in range(TAKES):
+                t0 = time.perf_counter()
+                zl[z].append(e.render(voice, macros, v, t))
+                timings.append((time.perf_counter() - t0) * 1000)
+        layers[pad] = zl
+        hard, soft = zl["h"][0], zl["s"][0]
+        dists = [ms.take_distance_db(a, b) for a, b in itertools.combinations(zl["h"], 2)]
+        m = {"centroid_hz": ms.centroid(hard), "decay_ms": ms.decay_ms(hard), "soft_vs_hard_db": ms.take_distance_db(soft, hard),
+             "soft_centroid_hz": ms.centroid(soft), "closest_takes_db": min(dists), "widest_takes_db": max(dists)}
+        # One WAV per pad: twelve equal slots, soft takes 1-4, medium 1-4, hard 1-4.
+        slot = max(len(y) for z in ZONES for y in zl[z])
+        sprite = np.concatenate([np.pad(y, (0, slot - len(y))) for z in ZONES for y in zl[z]])
+        _, rel = path(f"grid/{kit['id']}", pad.lower())
+        sk.write_wav(os.path.join(OUT, rel), sprite)
+        rows.append({"pad": pad, "label": label, "voice": voice, "class": cls, "macros": e.settled(voice, macros),
+                     "metrics": m, "sprite": rel, "slot_frames": slot})
+    kit_layers[kit["id"]] = layers
+    # Within the kit: how far apart are its sixteen pads (hard, first take)?
+    hard = {r["pad"]: layers[r["pad"]]["h"][0] for r in rows}
+    pair = min(((ms.take_distance_db(hard[a], hard[b]), a, b) for a, b in itertools.combinations(hard, 2)))
+    g = groove(kit, layers)
+    _, grel = path("grooves", kit["id"])
+    sk.write_wav(os.path.join(OUT, grel), g)
+    run = chain([hard[r["pad"]] for r in rows], 0.15)
+    _, rrel = path("runs", kit["id"])
+    sk.write_wav(os.path.join(OUT, rrel), run)
+    MANIFEST["kits"].append({
+        "id": kit["id"], "name": kit["name"], "bpm": kit["bpm"], "swing": kit["swing"], "character": kit["character"],
+        "pads": rows, "groove": grel, "groove_seconds": round(len(g) / RATE, 1), "run": rrel,
+        "closest_pads_db": pair[0], "closest_pads": [pair[1], pair[2]],
+        "soft_vs_hard_min_db": min(r["metrics"]["soft_vs_hard_db"] for r in rows),
+        "closest_takes_min_db": min(r["metrics"]["closest_takes_db"] for r in rows),
+        "mean_centroid_hz": round(float(np.mean([r["metrics"]["centroid_hz"] for r in rows]))),
+        "mean_decay_ms": round(float(np.mean([r["metrics"]["decay_ms"] for r in rows]))),
+        "mean_mic": round(float(np.mean([r["macros"]["MIC"] for r in rows])), 2),
+    })
+    print(kit["id"], "closest pads", pair, "soft/hard min", MANIFEST["kits"][-1]["soft_vs_hard_min_db"],
+          "takes min", MANIFEST["kits"][-1]["closest_takes_min_db"])
 
-# ------------------------------------------------------------------------------ B01: the roll (bank B, off the 16 pads)
+# Between the genre kits: the same pad slot in two kits, and the kits as a whole.
+ids = [k["id"] for k in K.GENRE]
+between = {}
+for a, b in itertools.combinations(ids, 2):
+    d = [ms.take_distance_db(kit_layers[a][p]["h"][0], kit_layers[b][p]["h"][0]) for p in kit_layers[a]]
+    same = [p for p in kit_layers[a]
+            if next(r for r in K.ALL if r["id"] == a)["pads"][int(p[1:]) - 1][2:4] == next(r for r in K.ALL if r["id"] == b)["pads"][int(p[1:]) - 1][2:4]]
+    between[f"{a}-{b}"] = {"mean_slot_db": round(float(np.mean(d)), 1), "min_slot_db": round(min(d), 2),
+                           "min_slot": f"A{int(np.argmin(d)) + 1:02d}", "identical_pads": same}
+MANIFEST["between"] = between
+print("between", between)
 
-ROLL = []  # (time, velocity, take): two beats of eighths, one of sixteenths, one of thirty-seconds
-t, k = 0.0, 0
-for step, count in ((2 * SIXTEENTH, 4), (SIXTEENTH, 4), (SIXTEENTH / 2, 8)):
-    for _ in range(count):
-        ROLL.append((t, 0.3 + 0.7 * (k / 15) ** 1.3, k % TAKES))
-        t += step
-        k += 1
-bar = 16 * SIXTEENTH
-roll = np.zeros(int((bar + 1.6) * RATE))
-for at, vel, tk in ROLL:
-    place(roll, e.render("POT", {"TOOL": .45, "RATTLE": .55}, vel, tk) * (0.35 + 0.65 * vel), at)
-roll *= 0.95 / np.max(np.abs(roll))
-roll_metrics = {"hits": len(ROLL), "first_gap_ms": round(2 * SIXTEENTH * 1000), "last_gap_ms": round(SIXTEENTH / 2 * 1000),
-                "seconds": round(len(roll) / RATE, 2)}
-save("extras", "b01-pot-roll", roll, f"B01 Pot Roll: a wooden spoon on the saucepan, eighths to thirty-seconds over one bar at {BPM:.0f} BPM, "
-     "soft to hard, the four takes in turn. The sampler's velocity gain is applied here.", roll_metrics,
-     {"pad": "B01", "label": "Pot Roll", "voice": "POT"})
+# ------------------------------------------------------------------------------ the CLUTTER kit's sections
 
-# ------------------------------------------------------------------------------ B02: the groove (bank B)
+base = MANIFEST["kits"][0]
+L0 = kit_layers["clutter"]
+for r in base["pads"]:
+    pad, label = r["pad"], r["label"]
+    zl = L0[pad]
+    save("kit", f"{pad.lower()}-{label.lower().replace(' ', '-')}", zl["h"][0],
+         f"{pad} {label}: {r['voice']} ({r['class']}), hard hit, first take.", r["metrics"], {"pad": pad, "label": label})
+    save("velocity", pad.lower(), chain([zl[z][0] for z in ZONES], 0.25),
+         f"{pad} {label}: soft, medium, hard (velocity {ZONES['s']}, {ZONES['m']}, {ZONES['h']}), each peak-matched so only the strike differs.",
+         {k: r["metrics"][k] for k in ("soft_vs_hard_db", "soft_centroid_hz", "centroid_hz")}, {"pad": pad, "label": label})
+    save("takes", pad.lower(), chain(zl["h"], 0.22),
+         f"{pad} {label}: the four round-robin takes, hard, in the order the pad deals them.",
+         {k: r["metrics"][k] for k in ("closest_takes_db", "widest_takes_db")}, {"pad": pad, "label": label})
 
-# Two bars on a sixteenth grid: (voice, step, velocity). "shape": a first idea of a found-sound beat.
-PATTERN = []
-for b in (0, 16):
-    PATTERN += [("BUCKET", b + 0, 1.0), ("SUITCASE", b + 7, .55), ("BUCKET", b + 10, .9),
-                ("BOX", b + 4, 1.0), ("BOX", b + 12, 1.0), ("BOX", b + 15, .35),
-                ("TABLE", b + 5, .45), ("MUG", b + 11, .55), ("KEYS", b + 14, .8)]
-    PATTERN += [("JAR", b + s, .9 if s % 4 == 0 else .55) for s in range(0, 16, 4)]
-    PATTERN += [("MATCHBOX", b + s, .6 if s % 4 == 2 else .4) for s in range(1, 16, 2) if s != 13]
-    PATTERN += [("JAR", b + 13, .4)]
-PATTERN += [("TUB", 26, .8), ("PAN", 27, .7), ("BOOK", 28, .9), ("TABLE", 30, .35), ("ZIP", 31, .6), ("GLASS", 3, .5)]
-PATTERN.sort(key=lambda p: p[1])
-groove = np.zeros(int((32 * SIXTEENTH + 1.2) * RATE))
-dealt: dict = {}
-hat_open_until = None
-for voice, step, vel in PATTERN:
-    tk = dealt.get(voice, 0)
-    dealt[voice] = tk + 1
-    y = e.render(voice, None, vel, tk % TAKES) * MIX[voice] * (0.35 + 0.65 * vel)
-    at = step * SIXTEENTH
-    if voice == "KEYS":
-        # The closed jar chokes the open keys, as A03 and A04 share a mute group in the kit.
-        nxt = next((s for v, s, _ in PATTERN if v == "JAR" and s > step), None)
-        if nxt is not None:
-            cut = int((nxt - step) * SIXTEENTH * RATE)
-            f = int(0.006 * RATE)
-            y = y[:cut + f].copy()
-            y[cut:cut + f] *= np.linspace(1, 0, len(y[cut:cut + f]))
-    place(groove, y, at)
-groove *= 0.95 / np.max(np.abs(groove))
-groove_metrics = {"bars": 2, "hits": len(PATTERN), "seconds": round(len(groove) / RATE, 2)}
-save("extras", "b02-kitchen-groove", np.concatenate([groove[:int(32 * SIXTEENTH * RATE)]] * 2 + [groove[int(32 * SIXTEENTH * RATE):]]),
-     f"B02 Kitchen Groove: two bars at {BPM:.0f} BPM, played twice. Every hit is a fresh take at its own velocity; the jar chokes the keys.",
-     groove_metrics, {"pad": "B02", "label": "Kitchen Groove", "voice": "kit"})
+# Bank B: B01 is a one-shot now (owner, 2026-11-13), B02 the CLUTTER kit's groove.
+b_pad, b_label, b_voice, b_macros, b_cls = K.B01
+b_hard = e.render(b_voice, b_macros, 1.0, 0)
+b_soft = e.render(b_voice, b_macros, ZONES["s"], 0)
+b_takes = [e.render(b_voice, b_macros, 1.0, t) for t in range(TAKES)]
+b_m = {"centroid_hz": ms.centroid(b_hard), "decay_ms": ms.decay_ms(b_hard), "soft_vs_hard_db": ms.take_distance_db(b_soft, b_hard),
+       "soft_centroid_hz": ms.centroid(b_soft),
+       "closest_takes_db": min(ms.take_distance_db(a, b) for a, b in itertools.combinations(b_takes, 2))}
+save("extras", "b01-bin-lid", chain([b_soft, b_hard] + b_takes[1:], 0.3),
+     "B01 Bin Lid: a corrugated metal lid struck with a drumstick, soft then hard, then three more hard takes. A one-shot in place of the round-0 roll.",
+     b_m, {"pad": "B01", "label": b_label})
+save("extras", "b02-kitchen-groove", sk.read_wav(os.path.join(OUT, base["groove"]))[0],
+     f"B02 Kitchen Groove: the CLUTTER kit, two bars at {K.BASE['bpm']:.0f} BPM, played twice.",
+     {}, {"pad": "B02", "label": "Kitchen Groove"})
 
 # ------------------------------------------------------------------------------ macro sweeps
 
 activity = {}
 for voice in e.VOICES:
     for mac in e.MACROS:
-        lo = e.render(voice, {mac: 0.0})
-        mid = e.render(voice, {mac: 0.5})
-        hi = e.render(voice, {mac: 1.0})
+        lo, mid, hi = (e.render(voice, {mac: x}) for x in (0.0, 0.5, 1.0))
         d = full_distance_db(lo, hi)
         activity[f"{voice}.{mac}"] = d
         meaning = e.MEANING[voice].get(mac) or {"TUNE": "the object's size", "DAMP": "a hand resting on it",
@@ -226,7 +225,8 @@ for voice in e.VOICES:
 
 checks = MANIFEST["checks"]
 checks["deterministic"] = all(np.array_equal(e.render(v, take=t), e.render(v, take=t)) for v in e.VOICES for t in range(2))
-renders = [e.render(v, velocity=z, take=t) for v in e.VOICES for z in ZONES.values() for t in range(TAKES)]
+renders = [y for k in kit_layers.values() for zl in k.values() for ys in zl.values() for y in ys]
+checks["renders"] = len(renders)
 checks["finite"] = all(bool(np.all(np.isfinite(y))) for y in renders)
 checks["peak_max"] = round(max(float(np.max(np.abs(y))) for y in renders), 4)
 checks["dc_max"] = round(max(abs(float(np.mean(y))) for y in renders), 5)
@@ -242,11 +242,10 @@ t0 = time.perf_counter()
 e.mic_ir.cache_clear()
 e.mic_ir(300)
 checks["mic_ir_build_ms"] = round((time.perf_counter() - t0) * 1000, 1)
-kit = [k for k in MANIFEST["kit"] if "soft_vs_hard_db" in k["metrics"]]
-checks["soft_vs_hard_min_db"] = min(k["metrics"]["soft_vs_hard_db"] for k in kit)
-checks["closest_takes_min_db"] = min(k["metrics"]["closest_takes_db"] for k in kit)
-checks["widest_takes_max_db"] = max(k["metrics"]["widest_takes_db"] for k in kit)
-print(json.dumps(checks, indent=1)[:1500])
+checks["soft_vs_hard_min_db"] = min(k["soft_vs_hard_min_db"] for k in MANIFEST["kits"])
+checks["closest_takes_min_db"] = min(k["closest_takes_min_db"] for k in MANIFEST["kits"])
+checks["closest_pads_min_db"] = min(k["closest_pads_db"] for k in MANIFEST["kits"])
+print(json.dumps({k: v for k, v in checks.items() if k != "macro_activity_db"}, indent=1))
 
 json.dump(MANIFEST, open(os.path.join(OUT, "manifest.json"), "w"), indent=1)
 print("wrote", OUT)

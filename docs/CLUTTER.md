@@ -8,7 +8,7 @@ house distance measures, `gen_audition.py` renders and measures, `build_page.py`
 Every number below is from that Python harness, not from Kotlin.
 
 Listening page: <https://claude.ai/artifact/6dkeY2rrjNGUvUYvobs3v5> (private to the owner; published
-2026-11-13, version 4 for the sixteen-object kit). It carries a playable 4×4 pad grid with three velocity
+2026-11-13, version 7 for the five kits). It carries a playable 4×4 pad grid with three velocity
 layers and four round-robin takes per pad, the kit, velocity ladders, takes, bank B (the roll and the
 groove), and every control on every object.
 
@@ -52,7 +52,7 @@ with eight more objects. The layout is the one `AutoPlace` expects (A01 kick, A0
 | A15 | Wine Glass, flicked | PERC | thin glass, few partials, 2 s ring | ice cubes |
 | A16 | Zipper, pulled | PERC | one click per tooth along a 12 cm pull, cloth rustle | the pull tab at the end |
 
-B01 Pot Roll and B02 Kitchen Groove moved off the sixteen pads to a second bank.
+The roll and the groove moved off the sixteen pads to a second bank; the roll then became a one-shot (B01 Bin Lid).
 
 ## Why it earns a pad (sibling check)
 
@@ -104,14 +104,21 @@ a pot are different things.
 
 | Control | Default | What it changes in the model | Required interaction | Measured 0 vs 1 (weakest object) |
 |---|---:|---|---|---|
-| TUNE | .50 | the object's size: every mode × 2^(±7/12) (zipper: tooth size) | none | 4.5 dB (TABLE) |
+| TUNE | .50 | the object's size: every mode × 2^(±7/12) (zipper: tooth size) | none | 2.8 dB (STOMP) |
 | TOOL | per object | contact width: palm, wood, metal (jar: sand, rice, coins inside; matchbox: shake sharpness; drawer: slam; zipper: pull speed); a metal tool adds its own ring | TOOL × velocity: both shorten the contact | 3.3 dB (BOOK) |
-| RATTLE | per object | how much is loose and how loosely: the lift threshold and the part count (pan: the rivet's play) | RATTLE × velocity: the threshold is crossed by the strike | 3.3 dB (MATCHBOX) |
-| DAMP | per object | a hand on the object: every t60 × 1 .. 0.15, higher modes faster | DAMP × MIC: a damped hit leaves less for the room | 3.1 dB (TABLE) |
-| MIC | per object | the phone: 12 cm (proximity lift) to 2.8 m across a 3.6 × 3.0 × 2.5 m tiled kitchen (image sources, first and second order; a 0.32 s tail; capsule band and presence) | MIC × DAMP | 4.8 dB (POT) |
+| RATTLE | per object | how much is loose and how loosely: the lift threshold and the part count (pan: the rivet's play) | RATTLE × velocity: the threshold is crossed by the strike | 3.0 dB (JAR) |
+| DAMP | per object | a hand on the object: every t60 × 1 .. 0.15, higher modes faster | DAMP × MIC: a damped hit leaves less for the room | 2.7 dB (STOMP) |
+| MIC | per object | the phone: 12 cm (proximity lift) to 2.8 m across a 3.6 × 3.0 × 2.5 m tiled kitchen (image sources, first and second order; a 0.32 s tail; capsule band and presence) | MIC × DAMP | 4.4 dB (BINLID) |
 
 The distance is the house measure over the whole render (10 ms frames, third octaves, floored 80 dB under
-the loudest). Every control moves every object by at least 3.1 dB.
+the loudest). Every control moves every one of the 22 objects by at least 2.7 dB (the stomp's DAMP and TUNE are
+the weakest: a heavy floor rings briefly whatever its size or damping).
+
+**Velocity and takes, round 0c.** Velocity shortens a contact by v^−0.5 for a palm or a fingertip down to
+v^−0.2 for metal (Hunt-Crossley: soft materials stiffen as they compress, p near 3; hard contacts follow Hertz,
+p = 1.5); a utensil rings harder the harder it lands. A take moves the strike point (which modes it reaches),
+reshuffles the loose parts, and changes the hand: DAMP ±0.05 and TOOL ±0.04, seeded by the object and the
+take, never by velocity, so a soft and a hard hit of one take are the same hand.
 
 ## Three directions
 
@@ -136,26 +143,61 @@ strike) and keeps every pad a different object.
 
 ## Round 0: what was built and measured
 
-The audition kit is the sixteen objects above, one per pad. Bank B holds B01 Pot Roll (a wooden spoon,
-eighths to thirty-seconds over one bar at 92 BPM, soft to hard) and B02 Kitchen Groove (two bars at 92 BPM;
-every hit a fresh take; the jar chokes the keys). On the page's pad grid the jar chokes the keys and the
-matchbox chokes the drawer.
+The audition kit is the sixteen objects above, one per pad. Bank B holds B01 Bin Lid (a one-shot: the owner
+replaced the round-0 pot roll with one on 2026-11-13, "Roll becomes one shot, groove can stay") and B02
+Kitchen Groove (two bars at 92 BPM; every hit a fresh take; the jar chokes the keys). On the page's pad grid,
+A03 chokes A04 and A07 chokes A08 in every kit.
+
+### Round 0c: six more objects and four genre kits
+
+The owner chose four genre kits (2026-11-13): Kitchen Lo-fi, Street Bucket, Junk Boom Bap, Microbeat. The
+gate asks for "authored musical choices with distinct roles, balance and character", so the kits do not
+share the CLUTTER kit's settings; they draw on six more objects as well (22 in all), defined in
+[`prototype/clutter/kits.py`](../prototype/clutter/kits.py):
+
+| Object | Class | What rings | What is loose |
+|---|---|---|---|
+| STOMP, a heel on a wooden floor | KICK | a 3 × 2 m span of boards on joists, plus the boards' own knock | glasses in the cupboard |
+| BAG, a paper bag of air smacked | CLAP | a one-sided pressure pulse (the crack, after DC) and the tear | the torn flaps |
+| BINLID, a corrugated metal lid | HAT_OPEN (crash) | 24 plate modes scattered by the ribs; the high cloud fed by a short kick that grows with velocity squared, an **analogy** of a thin plate's nonlinear cascade | the wire bail handle |
+| CAN, an empty drinks can flicked | PERC | a very thin aluminium ring plus its air | the ring-pull |
+| SWITCH, a wall light switch | HAT_CLOSED | two clicks (the rocker leaves, the spring snaps it over), housing and wall box | a loose cover plate |
+| BOARD, a chopping board slapped | SNARE | a thick 40 × 28 cm wooden plate and the air under a cupped palm | one corner rocking on the counter |
+
+| Kit | BPM | Swing | Phone | Character | Soft vs hard, min | Closest takes | Closest two pads |
+|---|---:|---:|---|---|---:|---:|---:|
+| CLUTTER | 92 | none | 0.31 | the sixteen objects at their defaults | 5.8 dB | 1.9 dB | 10.4 dB |
+| KITCHEN LO-FI | 82 | 58% | 0.40, the kitchen in every hit | palms and wooden spoons, damped, warm | 5.8 dB | 1.8 dB | 7.7 dB |
+| STREET BUCKET | 120 | none | 0.13, outdoors, close and dry | drumsticks and a ladle, loose, bright | 4.4 dB | 1.2 dB | 5.4 dB |
+| JUNK BOOM BAP | 90 | 56% | 0.31 | suitcase and heel knock, bag and book crack, tight hats | 4.3 dB | 1.7 dB | 8.5 dB |
+| MICROBEAT | 100 | none | 0.03, almost touching | tiny objects tuned up, damped, clicky | 3.9 dB | 1.2 dB | 8.5 dB |
+
+Between the genre kits no pad is the same object at the same settings. The same pad slot in two kits is
+15.1 dB apart on average at the closest pair of kits (Lo-fi and Boom Bap) and 6.0 dB at the closest single slot
+(A09, Lo-fi's low tub against Boom Bap's). Each kit has a two-bar groove at its own tempo and swing, every hit
+dealing the next take at its own zone.
+
+Round-0c defects the probes caught, all fixed before publishing: the microbeat mug's takes were 0.19 dB apart
+and the bin lid's 0.48 dB (damped ringing objects with nothing loose varied too little between takes; fixed by
+the wider strike positions and the hand); the microbeat mug and glass moved 1.7 and 2.8 dB from soft to hard
+(fixed by the soft-contact law, a spoon left in the mug and an ice cube that settles within 120 ms); RATTLE
+moved the bag by 0.1 dB and the bin lid by 0.6 dB, and DAMP the bag by 1.6 dB.
 
 Measured (Python harness, `gen_audition.py` at round 0):
 
 - Deterministic, finite, peak 0.89, DC 0.0 at every zone and take; an unknown control, a NaN control and
   a NaN velocity all fall back to the default render.
-- **Velocity changes the strike.** Soft (0.35) against hard (1.0) at matched level: 3.4 dB (Wine Glass: the
-  ice only stirs, the glass rings the same) to 25.4 dB (Rice Box). The rice box's centroid goes 554 Hz soft to
+- **Velocity changes the strike.** Soft (0.35) against hard (1.0) at matched level, on all 80 pads of the five
+  kits: at least 3.9 dB (Microbeat) and up to 25 dB (Rice Box). The rice box's centroid goes 554 Hz soft to
   4.0 kHz hard; the knuckle's 317 Hz to 1.6 kHz as the cutlery joins in; the suitcase's 227 Hz to 727 Hz as
   the latches hop.
 - **The bucket's boom falls.** Hard: 78 Hz in the first 30 ms, 64 Hz by 100 to 300 ms. Soft starts at 72 Hz.
 - **The suitcase does not drop; the bucket does.** Suitcase 75 Hz early, 79 Hz late; bucket 78 → 64 Hz.
-- **Takes are distinct strikes.** Closest pair 1.1 dB (Frying Pan), widest 13.3 dB (Wine Glass, where the ice
-  falls differently). ETCH's takes that the owner heard as one strike measured 0.5 to 0.8 dB on the unfloored
-  version of this measure; the pan is the pad to listen to for takes that are too alike.
-- **Render time.** Python: 44 ms mean per hit, 144 ms the slowest (the cutlery drawer: up to twenty pieces,
-  two modes each, for 1.2 s at 176.4 kHz). The MIC response builds in 2 ms and is cached by MIC alone.
+- **Takes are distinct strikes.** On all 80 pads the closest pair of takes is 1.2 dB apart (Street Bucket and
+  Microbeat). ETCH's takes that the owner heard as one strike measured 0.5 to 0.8 dB on the unfloored version
+  of this measure.
+- **Render time.** Python, 960 renders: 35 ms mean per hit, 176 ms the slowest (the cutlery drawer: up to
+  twenty pieces, two modes each, for 1.2 s at 176.4 kHz). The MIC response builds in 2 ms and is cached by MIC alone.
 
 Four defects the probes caught during the round, all fixed before publishing: RATTLE did nothing on the
 bottle (0.0 dB between 0 and 1: the rocking was never scaled by the control); the key ring took 160 ms
@@ -169,7 +211,7 @@ and RATTLE moved the zipper by 2.4 dB (the tab's clink was too quiet).
 |---|---|---|
 | The rattle switches on like a gate, not a physics | a medium hit that is a clean knock and a hard hit that is a different instrument | the velocity ladder; a fourth zone between .65 and 1 |
 | Modal objects read as "generic bell" | the pot and the bottle sound like synth bells | the owner's listen; the mode tables are sourced, the damping is shape |
-| The kit sounds like a sound-effects library, not drums | pads that are convincing alone and useless in a beat | A16 groove; genre kits with roles |
+| The kit sounds like a sound-effects library, not drums | pads that are convincing alone and useless in a beat | each kit's groove |
 | The kick is too light for a phone or an MPC | 64 Hz boom with little above it | centroid 273 Hz hard; BUCKET TOOL sweep |
 | The jar's wall rings like a pitch | a closed hat with a note | JAR TUNE and DAMP sweeps |
 | The room is the same on every pad | the kitchen as set dressing | MIC is per object; the Kotlin port should call the shared `Room` |
@@ -178,10 +220,10 @@ and RATTLE moved the zipper by 2.4 dB (the tab's clink was too quiet).
 
 - **Melodic, keygroup and chord tool:** not applicable. A drum engine.
 - **Articulation:** finite hits, no HOLD. Not a plucked string.
-- **Percussion (roll or riser):** B01 Pot Roll authored in the prototype, on bank B. Not heard.
-- **Drums (several genre kits):** open. One audition kit. Proposed after the owner's verdict on the objects:
-  KITCHEN TABLE (bedroom lo-fi, around 82 BPM, close mic, soft tools), STREET BUCKET (busker, around
-  120 BPM, hard tools, bright, the room far), MICROBEAT (tiny objects, high TUNE, dry, glitch-adjacent).
+- **Percussion (roll or riser):** open. The owner replaced the round-0 pot roll with a one-shot (B01 Bin Lid) on
+  2026-11-13. No roll exists, so the gate is not passed; whether CLUTTER needs one is the owner's call.
+- **Drums (several genre kits):** four authored and measured in Python (Kitchen Lo-fi, Street Bucket, Junk Boom
+  Bap, Microbeat; above). Not on the shelf: no Kotlin. Not heard.
 - **Velocity and round robin:** rendering measured in Python (above). Saving, playback and export: open; no
   Kotlin yet. The page's pad grid is a browser stand-in for playback, not evidence for the app.
 
@@ -194,8 +236,9 @@ and RATTLE moved the zipper by 2.4 dB (the tab's clink was too quiet).
   canary, and `ClutterTest` with the probes above plus "soft leaves the rice still" and "a take replays
   byte for byte". The modal banks go through `Modes.ring` and are peak-normalised per body before mixing
   (the Kotlin gains are not frequency-compensated; the Python is). MIC calls the shared `Room`.
-- **R2 kits**: the genre kits with three zones of four takes each, mute group for A03/A04, saved and
-  exported through `PadHit.resolve` and the MPC 3 writer, as SOOT and SCUFF did.
+- **R2 kits**: the four genre kits from `kits.py` (or what the listen keeps) as `ClutterKits`, three zones of four
+  takes each, mute groups for A03/A04 and A07/A08, on the shelf under SKINS, saved and exported through
+  `PadHit.resolve` and the MPC 3 writer, as SOOT and SCUFF did.
 
 ## Ledger
 
@@ -204,7 +247,9 @@ and RATTLE moved the zipper by 2.4 dB (the tab's clink was too quiet).
 | `Modes.ring`, `Modes.Mode`, `Dsp.seedFor`, `Room`, `PadHit.resolve` exist | verified | grep at `523aacfb` |
 | CLUTTER is free as an engine name | verified | grep of `synth/`, `shell/`, `docs/` |
 | Every render deterministic, finite, bounded | measured | `gen_audition.py` checks |
-| Every control moves every object (sixteen objects, five controls) by at least 3.1 dB | measured | `macro_activity_db` in the manifest |
+| Every control moves every object (22 objects, five controls) by at least 2.7 dB | measured | `macro_activity_db` in the manifest |
+| Four genre kits differ in objects, settings, tempo and swing; no shared pad | measured | `between` in the manifest |
+| The bin lid's brightness is a plate's nonlinear cascade | analogy, not simulated | `binlid` in `clutter_proto.py` |
 | Soft and hard differ on every pad; nothing rattles below the threshold | measured; by construction | velocity section |
 | Thin-ring, plate and bar ratios are the textbook ones | proposed (sourced formulas, shape damping) | `clutter_proto.py` constants |
 | The objects sound like the objects | not heard | the owner's listen |

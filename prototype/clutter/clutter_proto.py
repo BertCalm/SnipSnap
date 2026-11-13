@@ -67,11 +67,14 @@ FS = sk.INTERNAL        # 176 400, the rate the objects ring at
 G = 9.81                # gravity, m/s^2: the lift threshold and the flight times use it
 
 VOICES = ("BUCKET", "BOX", "BOOK", "JAR", "KEYS", "TABLE", "POT", "BOTTLE",
-          "SUITCASE", "MATCHBOX", "DRAWER", "TUB", "PAN", "MUG", "GLASS", "ZIP")
+          "SUITCASE", "MATCHBOX", "DRAWER", "TUB", "PAN", "MUG", "GLASS", "ZIP",
+          "STOMP", "BAG", "BINLID", "CAN", "SWITCH", "BOARD")
 DRUM_CLASS = {"BUCKET": "KICK", "BOX": "SNARE", "BOOK": "CLAP", "JAR": "HAT_CLOSED",
               "KEYS": "HAT_OPEN", "TABLE": "PERC", "POT": "PERC", "BOTTLE": "PERC",
               "SUITCASE": "KICK", "MATCHBOX": "HAT_CLOSED", "DRAWER": "HAT_OPEN", "TUB": "TOM",
-              "PAN": "TOM", "MUG": "PERC", "GLASS": "PERC", "ZIP": "PERC"}
+              "PAN": "TOM", "MUG": "PERC", "GLASS": "PERC", "ZIP": "PERC",
+              "STOMP": "KICK", "BAG": "CLAP", "BINLID": "HAT_OPEN", "CAN": "PERC", "SWITCH": "HAT_CLOSED",
+              "BOARD": "SNARE"}
 MACROS = ("TUNE", "TOOL", "RATTLE", "DAMP", "MIC")
 
 # What each macro means on each object. TUNE is the object's size (all modes scale together,
@@ -95,6 +98,12 @@ MEANING = {
     "MUG":      {"TOOL": "fingertip -> pencil -> metal spoon", "RATTLE": "the spoon left in the mug"},
     "GLASS":    {"TOOL": "finger pad -> fingernail -> metal spoon", "RATTLE": "ice cubes inside"},
     "ZIP":      {"TOOL": "how fast you pull: slow rasp -> quick zip", "RATTLE": "the pull tab clinking at the end"},
+    "STOMP":    {"TOOL": "socked foot -> trainer -> hard heel", "RATTLE": "glasses in the cupboard"},
+    "BAG":      {"TOOL": "thin bag -> thick bag", "RATTLE": "the torn flaps fluttering"},
+    "BINLID":   {"TOOL": "palm -> drumstick -> metal pipe", "RATTLE": "the loose handle"},
+    "CAN":      {"TOOL": "finger pad -> fingernail -> a key", "RATTLE": "the ring-pull buzzing"},
+    "SWITCH":   {"TOOL": "slow press -> quick flick", "RATTLE": "a loose cover plate"},
+    "BOARD":    {"TOOL": "cupped palm -> flat hand -> wooden spoon", "RATTLE": "the board rocking on the counter"},
 }
 
 # Per-object defaults. "shape"
@@ -115,12 +124,19 @@ DEFAULTS = {
     "MUG":      {"TUNE": .5, "TOOL": .85, "RATTLE": .40, "DAMP": .30, "MIC": .30},
     "GLASS":    {"TUNE": .5, "TOOL": .50, "RATTLE": .40, "DAMP": .15, "MIC": .30},
     "ZIP":      {"TUNE": .5, "TOOL": .55, "RATTLE": .40, "DAMP": .30, "MIC": .25},
+    "STOMP":    {"TUNE": .5, "TOOL": .45, "RATTLE": .35, "DAMP": .30, "MIC": .35},
+    "BAG":      {"TUNE": .5, "TOOL": .45, "RATTLE": .45, "DAMP": .30, "MIC": .35},
+    "BINLID":   {"TUNE": .5, "TOOL": .60, "RATTLE": .35, "DAMP": .25, "MIC": .35},
+    "CAN":      {"TUNE": .5, "TOOL": .55, "RATTLE": .40, "DAMP": .30, "MIC": .25},
+    "SWITCH":   {"TUNE": .5, "TOOL": .55, "RATTLE": .35, "DAMP": .30, "MIC": .20},
+    "BOARD":    {"TUNE": .5, "TOOL": .20, "RATTLE": .35, "DAMP": .30, "MIC": .30},
 }
 
 # Render length per object, seconds, before the MIC tail. "shape"
 LENGTH = {"BUCKET": .70, "BOX": .45, "BOOK": .40, "JAR": .32, "KEYS": 1.0, "TABLE": .50,
           "POT": 1.40, "BOTTLE": 1.20, "SUITCASE": .60, "MATCHBOX": .35, "DRAWER": 1.20, "TUB": .60,
-          "PAN": 1.40, "MUG": .70, "GLASS": 2.0, "ZIP": .60}
+          "PAN": 1.40, "MUG": .70, "GLASS": 2.0, "ZIP": .60, "STOMP": .60, "BAG": .40, "BINLID": 2.0,
+          "CAN": .45, "SWITCH": .25, "BOARD": .40}
 
 PEAK = 0.89  # every one-shot is peak-matched, as in SCUFF, so no pad wins by being louder
 
@@ -233,23 +249,27 @@ def bounce_train(t0: float, v0: float, e: float, vmin: float = 0.004, limit: int
     return ts, vs
 
 
-def utensil_ring(n: int, pulse: np.ndarray, tool: float) -> np.ndarray:
+def utensil_ring(n: int, pulse: np.ndarray, tool: float, rng: np.random.Generator | None = None,
+                 vel: float = 1.0) -> np.ndarray:
     """A metal spoon or key rings a little on its own when it hits something. Only the top third of
     TOOL reaches it. Free-free bar ratios (1, 2.756, 5.404). "shape" frequency."""
     g = smooth(tool, 0.6, 1.0)
     if g <= 0:
         return np.zeros(n)
+    # The utensil rings harder the harder it lands (on top of the body's own response), and a take holds
+    # it a little differently, which moves its pitch a few percent.
+    f = 2900.0 * (rng.uniform(0.96, 1.04) if rng is not None else 1.0)
     table = [(1.0, 1.0, .07), (2.756, .6, .045), (5.404, .35, .03)]
-    return 0.22 * g * modes(pulse, 2900.0, table)
+    return 0.22 * g * vel ** 0.8 * modes(pulse, f, table)
 
 
 def take_weights(rng: np.random.Generator, count: int) -> np.ndarray:
     """Where on the object the hit lands changes which modes it reaches: weight k by how far that
     spot is from mode k's node lines. A take is a hand landing somewhere else."""
-    pos = rng.uniform(0.18, 0.42)
+    pos = rng.uniform(0.1, 0.5)
     k = np.arange(1, count + 1)
-    phase = rng.uniform(0, 0.25, count)
-    return 0.3 + 0.7 * np.abs(np.sin(np.pi * k * pos + phase))
+    phase = rng.uniform(0, 0.6, count)
+    return 0.15 + 0.85 * np.abs(np.sin(np.pi * k * pos + phase))
 
 
 # Thin-ring flexural modes (Rayleigh): f_n proportional to n (n^2 - 1) / sqrt(n^2 + 1), n = 2..6.
@@ -265,7 +285,10 @@ FREE_BAR = [1.0, 2.756, 5.404]                                         # free-fr
 
 def strike_width(tool: float, velocity: float, soft_ms: float, hard_ms: float, jitter: float) -> float:
     """Contact time: TOOL picks soft..hard, and a harder hit shortens it (Hertz contact: t ~ v^-1/5)."""
-    return sk.exp_map(tool, soft_ms, hard_ms) * 1e-3 * velocity ** -0.2 * jitter
+    # Soft contacts (a palm, a fingertip, felt) stiffen as they compress, so a harder hit shortens them
+    # much more than it shortens a metal one: Hunt-Crossley contact time ~ v^-(p-1)/(p+1), with p near 3
+    # for soft tissue (exponent 0.5) and Hertz p = 1.5 for hard tools (exponent 0.2).
+    return sk.exp_map(tool, soft_ms, hard_ms) * 1e-3 * velocity ** -sk.lin(tool, 0.5, 0.2) * jitter
 
 
 def bucket(m, vel, take, n):
@@ -290,7 +313,7 @@ def bucket(m, vel, take, n):
     plate = modes(pulse, 150.0 * tr, table)
     # The rim slaps the floor on a hard hit: a short wooden-ish knock.
     floor = 0.25 * vel ** 2 * modes(contact(n, 0.0015, 0.0008, J), 340.0 * tr, [(1, 1, .025), (1.9, .6, .018)])
-    out = 1.0 * air + 0.55 * plate + floor + utensil_ring(n, pulse, m["TOOL"])
+    out = 1.0 * air + 0.55 * plate + floor + utensil_ring(n, pulse, m["TOOL"], rng, vel)
     # RATTLE: the wire handle lying on the floor bounces.
     L = lift(vel, m["RATTLE"])
     if L > 0:
@@ -322,7 +345,7 @@ def box(m, vel, take, n):
     # Cardboard fibres crush under the hand: a short noisy scuff that follows the contact.
     crush_noise = rng.standard_normal(n) * np.exp(-np.arange(n) / (FS * max(width, 3e-4) * 1.4))
     crush = 0.12 * (0.6 + m["TOOL"]) * J * bandpass(crush_noise, 1200, 9000) / max(1e-9, width * 1e3) ** 0.3
-    out = panel + cavity + crush + utensil_ring(n, pulse, m["TOOL"])
+    out = panel + cavity + crush + utensil_ring(n, pulse, m["TOOL"], rng, vel)
     # RATTLE: rice thrown up by the panel lands 5 to 50 ms later and bounces once.
     L = lift(vel, m["RATTLE"])
     if L > 0:
@@ -441,7 +464,7 @@ def table(m, vel, take, n):
     ratios = [1, 1.47, 2.09, 2.56, 3.18, 3.9, 4.6, 5.7, 6.9, 8.3]  # "shape": a dense wooden plate
     w = take_weights(rng, len(ratios))
     wood = [(r, w[i] / (i + 1) ** 0.4, 0.10 * df * r ** -0.8) for i, r in enumerate(ratios)]
-    out = modes(pulse, 215.0 * tr, wood) + utensil_ring(n, pulse, m["TOOL"])
+    out = modes(pulse, 215.0 * tr, wood) + utensil_ring(n, pulse, m["TOOL"], rng, vel)
     # A knuckle is bone under skin: a dull low thump under the knock.
     out += 0.35 * modes(pulse, 120.0, [(1, 1, .03)])
     # RATTLE: a fork and a spoon on the table jump and land.
@@ -468,7 +491,7 @@ def pot(m, vel, take, n):
     bottom = [(0.72 * r, 0.5 * w[len(RING) + i] / (i + 1), 0.6 * df) for i, r in enumerate(CLAMPED_PLATE[:3])]
     body_table = doublets(wall + bottom, 0.0025)
     f1 = 410.0 * tr
-    out = modes(pulse, f1, body_table) + utensil_ring(n, pulse, m["TOOL"])
+    out = modes(pulse, f1, body_table) + utensil_ring(n, pulse, m["TOOL"], rng, vel)
     # RATTLE: the lid hops and rocks: each landing is two contacts (one edge, then the other).
     L = lift(vel, m["RATTLE"])
     if L > 0:
@@ -494,7 +517,7 @@ def bottle(m, vel, take, n):
     w = take_weights(rng, len(RING))
     glass = doublets([(r, w[i] / (i + 1) ** 0.4, 0.9 * df * r ** -0.5) for i, r in enumerate(RING)], 0.0015)
     f1 = 1450.0 * tr
-    out = modes(pulse, f1, glass) + utensil_ring(n, pulse, m["TOOL"])
+    out = modes(pulse, f1, glass) + utensil_ring(n, pulse, m["TOOL"], rng, vel)
     # The air inside (a Helmholtz resonator) is barely moved by a tap on the side: a soft body.
     out += 0.25 * modes(pulse, 118.0 * tr, [(1, 1, .22 * df)])
     # RATTLE: a hard tap tips the bottle; its base lands back on the table, twice or three times.
@@ -605,7 +628,7 @@ def tub(m, vel, take, n):
     lid = modes(pulse, 120.0 * tr, table)
     f = 96.0 * tr * (1 + 0.15 * vel ** 1.2 * np.exp(-t / 0.02))
     air = J * np.sin(2 * np.pi * np.cumsum(f) / FS) * (1 - np.exp(-t / max(width * 0.6, 2e-4))) * np.exp(-6.9078 * t / (0.22 * df ** 0.7))
-    out = 0.8 * air + 0.8 * lid + utensil_ring(n, pulse, m["TOOL"])
+    out = 0.8 * air + 0.8 * lid + utensil_ring(n, pulse, m["TOOL"], rng, vel)
     # RATTLE: one corner of the lid has come unclipped and chatters.
     L = lift(vel, m["RATTLE"])
     if L > 0:
@@ -627,7 +650,7 @@ def pan(m, vel, take, n):
     w = take_weights(rng, len(FREE_PLATE))
     plate = doublets([(r, w[i] / (i + 1) ** 0.5, 0.9 * df * r ** -0.5) for i, r in enumerate(FREE_PLATE)], 0.003)
     body = modes(pulse, 230.0 * tr, plate)
-    out = body + 0.25 * modes(pulse, 165.0 * tr, [(1, 1, .12 * df)]) + utensil_ring(n, pulse, m["TOOL"])
+    out = body + 0.25 * modes(pulse, 165.0 * tr, [(1, 1, .12 * df)]) + utensil_ring(n, pulse, m["TOOL"], rng, vel)
     # RATTLE: the handle's loose rivet. Each time the pan swings past the rivet's play, the rivet
     # knocks, so it buzzes while the pan rings hard and stops on its own as the ring dies away.
     # A soft hit never reaches the play. This one reads the body (one way); the rest are thrown.
@@ -653,7 +676,7 @@ def mug(m, vel, take, n):
     # Thick ceramic with a handle: the handle breaks the symmetry, so the pairs split wider than glass.
     glaze = doublets([(r, w[i] / (i + 1) ** 0.4, 0.28 * df * r ** -0.6) for i, r in enumerate(RING[:4])], 0.015)
     f1 = 1100.0 * tr
-    out = modes(pulse, f1, glaze) + utensil_ring(n, pulse, m["TOOL"]) + 0.2 * modes(pulse, 300.0 * tr, [(1, 1, .02)])
+    out = modes(pulse, f1, glaze) + utensil_ring(n, pulse, m["TOOL"], rng, vel) + 0.2 * modes(pulse, 300.0 * tr, [(1, 1, .02)])
     # RATTLE: the spoon left in the mug jumps and knocks the rim.
     L = lift(vel, m["RATTLE"])
     if L > 0:
@@ -675,14 +698,14 @@ def glass(m, vel, take, n):
     # Thin, nearly perfect glass: few partials, long, beating slowly.
     ring = doublets([(r, w[i] / (i + 1) ** 0.9, 2.2 * df * r ** -1.0) for i, r in enumerate(RING[:4])], 0.0012)
     f1 = 880.0 * tr
-    out = modes(pulse, f1, ring) + utensil_ring(n, pulse, m["TOOL"])
+    out = modes(pulse, f1, ring) + utensil_ring(n, pulse, m["TOOL"], rng, vel)
     # RATTLE: ice cubes, nudged by the flick, settle against the wall a few times.
     L = lift(vel, m["RATTLE"], 0.1, 0.6)
     if L > 0:
         cubes = 1 + int(round(m["RATTLE"] * 4))
         times, amps = [], []
         for c in range(cubes):
-            t0 = rng.uniform(0.02, 0.25)
+            t0 = rng.uniform(0.01, 0.12)  # the flick shifts the ice at once
             for j in range(rng.integers(1, 4)):
                 times.append(t0 + j * rng.uniform(0.012, 0.05))
                 amps.append(L * rng.uniform(0.3, 1.0) * 0.6 ** j)
@@ -690,7 +713,7 @@ def glass(m, vel, take, n):
         kl = int(0.0004 * FS)
         click = signal.fftconvolve(hit, bandpass(rng.standard_normal(kl) * np.hanning(kl), 2000, 8000))[:n]
         k = smooth(m["RATTLE"], 0, .6)
-        out += k * J * (0.5 * click + 0.25 * modes(hit, f1, ring[:4]))
+        out += k * J * (1.2 * click + 0.4 * modes(hit, f1, ring[:4]))
     return out
 
 
@@ -725,9 +748,167 @@ def zipper(m, vel, take, n):
     return out
 
 
+def rect_modes(a: float, b: float, count: int, x: float, y: float, t60: float, slope: float, df: float):
+    """Simply supported rectangular plate a x b, struck at (x, y) as fractions: (ratio, gain, t60) per mode."""
+    raw = sorted(((mm / a) ** 2 + (nn / b) ** 2, mm, nn) for mm in range(1, 6) for nn in range(1, 6))[:count]
+    base = raw[0][0]
+    return [((fq / base), (0.25 + abs(math.sin(math.pi * mm * x) * math.sin(math.pi * nn * y))) / (i + 1) ** 0.5,
+             t60 * df * (fq / base) ** -slope) for i, (fq, mm, nn) in enumerate(raw)]
+
+
+def stomp(m, vel, take, n):
+    rng = rng_for("STOMP", take)
+    tr, df = tune_ratio(m["TUNE"]), damp_factor(m["DAMP"])
+    J = vel ** 1.2 * rng.uniform(0.95, 1.05)
+    width = strike_width(m["TOOL"], vel, 14.0, 2.0, rng.uniform(0.94, 1.06))
+    pulse = contact(n, 0.0, width, J)
+    t = np.arange(n) / FS
+    # A heel on a wooden floor: a 3 x 2 m span of boards on joists, heavy and lossy, so the lowest
+    # modes carry the weight and there is no trapped air to boom.
+    floor = modes(pulse, 44.0 * tr, rect_modes(3.0, 2.0, 12, rng.uniform(0.3, 0.45), rng.uniform(0.3, 0.45), 0.16, 0.6, df))
+    boards = 0.35 * modes(pulse, 260.0 * tr, [(1, 1, .05 * df), (1.6, .6, .035 * df), (2.3, .4, .025 * df)])
+    sole = 0.06 * J * bandpass(rng.standard_normal(n) * np.exp(-t / max(width * 0.8, 5e-4)), 80, 1800)
+    out = floor + boards + sole
+    # RATTLE: glasses in the cupboard jump and clink a moment later.
+    L = lift(vel, m["RATTLE"])
+    if L > 0:
+        for i in range(1 + int(round(m["RATTLE"] * 3))):
+            ts, vs = bounce_train(rng.uniform(0.004, 0.012), 0.05 * L * rng.uniform(0.85, 1.1), 0.3)
+            hit = impulses(n, ts, [v / 0.05 for v in vs], 0.0001)
+            f = (2050.0, 2400.0, 1850.0, 2250.0)[i] * rng.uniform(0.98, 1.02)  # the same four glasses every take
+            out += 0.02 * smooth(m["RATTLE"], 0, .6) * J * modes(hit, f, [(r, g, .25) for r, g in zip(RING[:3], (1, .5, .3))])
+    return out
+
+
+def bag(m, vel, take, n):
+    rng = rng_for("BAG", take)
+    tr, df = tune_ratio(m["TUNE"]), damp_factor(m["DAMP"])
+    J = vel ** 1.2 * rng.uniform(0.95, 1.05)
+    t = np.arange(n) / FS
+    # A paper bag full of air, smacked: the wall tears and the air leaves at once. The pressure pulse is
+    # one-sided (after the DC stage it is the crack); a thicker bag (TOOL) holds more pressure and tears
+    # slower, so the crack is louder and lower. A harder smack ruptures it faster.
+    rise = sk.exp_map(m["TOOL"], 0.0004, 0.0012) / vel / tr
+    t0 = 0.001
+    tt = np.maximum(0.0, t - t0)
+    crack = J * (tt / rise) * np.exp(1 - tt / rise) * (t >= t0)
+    crack -= signal.lfilter([1.0], [1.0, -math.exp(-1.0 / (0.004 * FS))], crack) * (1 - math.exp(-1.0 / (0.004 * FS)))
+    tear = 0.35 * J * bandpass(rng.standard_normal(n), sk.lin(vel, 500.0, 1800.0) * tr, sk.lin(vel, 3500.0, 9000.0)) * np.exp(-tt / (sk.exp_map(m["TOOL"], 0.012, 0.03) * df)) * (t >= t0)
+    out = 1.2 * crack + tear
+    # RATTLE: the torn flaps flutter a few times as the air rushes past.
+    flaps = 1 + int(round(m["RATTLE"] * 6 * vel))
+    ts = t0 + np.cumsum(rng.uniform(0.004, 0.011, flaps))
+    amps = vel * 0.8 ** np.arange(flaps) * rng.uniform(0.6, 1.0, flaps)
+    k = int(0.0015 * FS)
+    flutter = np.zeros(n)
+    for t1, a1 in zip(ts, amps):
+        i = int(t1 * FS)
+        if i + k < n:
+            flutter[i:i + k] += a1 * rng.standard_normal(k) * np.hanning(k)
+    # A hand closed round the bag (DAMP) holds the flaps still.
+    out += 2.0 * smooth(m["RATTLE"], 0, .5) * (1 - 0.7 * m["DAMP"]) * J * bandpass(flutter, 900, 6000)
+    return out
+
+
+def binlid(m, vel, take, n):
+    rng = rng_for("BINLID", take)
+    obj = rng_for("BINLID", "body")  # the lid's own corrugations: the same lid on every take
+    tr, df = tune_ratio(m["TUNE"]), damp_factor(m["DAMP"])
+    J = vel ** 1.2 * rng.uniform(0.95, 1.05)
+    width = strike_width(m["TOOL"], vel, 4.0, 0.2, rng.uniform(0.94, 1.06))
+    pulse = contact(n, 0.0, width, J)
+    # A corrugated galvanised lid: a thin plate whose ribs scatter its modes into a dense, crash-like
+    # cloud. Thin plates pass energy upward when hit hard, so the high modes grow faster than the strike
+    # (a stand-in for that cascade, not the nonlinear plate itself).
+    ratios = np.sort(np.concatenate([[1.0, 1.73, 2.33], obj.uniform(2.6, 55.0, 21)]))
+    w = take_weights(rng, len(ratios))
+    low = [(float(r), w[i] / (i + 1) ** 0.5, 1.7 * df * r ** -0.25) for i, r in enumerate(ratios) if r < 4]
+    high = [(float(r), w[i], 1.4 * df * r ** -0.3) for i, r in enumerate(ratios) if r >= 4]
+    # The low modes hear the stick. The ribbed, thin plate then throws energy up into the dense high
+    # cloud, faster the harder it is hit: an ANALOGY of the plate's nonlinear cascade (a short kick
+    # into the high modes that grows with velocity squared), not a simulation of it.
+    cascade = contact(n, width * rng.uniform(0.3, 0.7), 0.00008, J * 0.5 * vel ** 2 * rng.uniform(0.8, 1.2))
+    out = modes(pulse, 240.0 * tr, low) + modes(cascade, 240.0 * tr, high) + utensil_ring(n, pulse, m["TOOL"], rng, vel)
+    # RATTLE: the handle, riveted loosely, chatters on the lid.
+    L = lift(vel, m["RATTLE"])
+    if L > 0:
+        # A heavy wire bail handle: it lifts, drops back on the lid and chatters down.
+        ts, vs = bounce_train(0.001, 0.09 * L * rng.uniform(0.85, 1.15), 0.6)
+        hit = impulses(n, ts, [v / 0.09 for v in vs], 0.0001)
+        out += 1.5 * smooth(m["RATTLE"], 0, .6) * J * modes(hit, 900.0, [(r, g, .15) for r, g in zip(FREE_BAR, (1, .6, .3))])
+    return out
+
+
+def can(m, vel, take, n):
+    rng = rng_for("CAN", take)
+    tr, df = tune_ratio(m["TUNE"]), damp_factor(m["DAMP"])
+    J = vel ** 1.2 * rng.uniform(0.95, 1.05)
+    width = strike_width(m["TOOL"], vel, 2.0, 0.1, rng.uniform(0.94, 1.06))
+    pulse = contact(n, 0.0, width, J)
+    w = take_weights(rng, 5)
+    # An empty drinks can: a very thin aluminium cylinder, tinny and short, with its air behind.
+    wall = doublets([(r, w[i] / (i + 1) ** 0.4, 0.16 * df * r ** -0.4) for i, r in enumerate(RING)], 0.006)
+    f1 = 1500.0 * tr
+    out = modes(pulse, f1, wall) + 0.2 * modes(pulse, 330.0 * tr, [(1, 1, .05 * df)]) + utensil_ring(n, pulse, m["TOOL"], rng, vel)
+    # RATTLE: the ring-pull, bent up, buzzes against the top.
+    L = lift(vel, m["RATTLE"])
+    if L > 0:
+        ts, vs = bounce_train(0.0008, 0.03 * L * rng.uniform(0.85, 1.15), 0.7, vmin=0.002)
+        hit = impulses(n, ts, [v / 0.03 for v in vs], 0.00008)
+        out += 0.12 * smooth(m["RATTLE"], 0, .6) * J * modes(hit, 4200.0, [(1, 1, .03), (2.7, .5, .02)])
+    return out
+
+
+def switch(m, vel, take, n):
+    rng = rng_for("SWITCH", take)
+    tr, df = tune_ratio(m["TUNE"]), damp_factor(m["DAMP"])
+    # A wall light switch: the rocker leaves its rest with a small click, the spring passes centre and
+    # snaps it to the other side. A quick flick (TOOL) and a harder press shorten the gap between them.
+    gap = sk.exp_map(m["TOOL"], 0.012, 0.003) / vel ** 0.5 * rng.uniform(0.92, 1.08)
+    times = [0.001, 0.001 + gap]
+    amps = [rng.uniform(0.2, 0.5) * vel, 1.0 * vel]
+    hit = impulses(n, times, amps, sk.exp_map(m["TOOL"], 0.0002, 0.00006) * rng.uniform(0.8, 1.25))
+    # Where the finger presses the rocker changes which housing modes the snap reaches.
+    w = take_weights(rng, 4)
+    housing = modes(hit, 2600.0 * tr * rng.uniform(0.97, 1.03),
+                    [(1, w[0], .025 * df), (1.6, .7 * w[1], .018 * df), (2.4, .5 * w[2], .012 * df), (3.3, .3 * w[3], .008 * df)])
+    wall = rng.uniform(0.3, 0.7) * modes(hit, 180.0 * tr, [(1, 1, .03 * df), (2.1, .4, .02 * df)])
+    out = housing + wall
+    # RATTLE: a loose cover plate taps the wall once or twice after the snap.
+    k = smooth(m["RATTLE"], 0, .6)
+    if k > 0:
+        ts, vs = bounce_train(times[1], 0.02 * vel, 0.35, vmin=0.003)
+        plate = impulses(n, ts, [v / 0.02 for v in vs], 0.0001)
+        out += 0.3 * k * modes(plate, 1200.0 * tr, [(1, 1, .02), (1.9, .5, .012)])
+    return out
+
+
+def board(m, vel, take, n):
+    rng = rng_for("BOARD", take)
+    tr, df = tune_ratio(m["TUNE"]), damp_factor(m["DAMP"])
+    J = vel ** 1.2 * rng.uniform(0.95, 1.05)
+    width = strike_width(m["TOOL"], vel, 3.0, 0.3, rng.uniform(0.94, 1.06))
+    pulse = contact(n, 0.0, width, J)
+    t = np.arange(n) / FS
+    # A wooden chopping board slapped flat with a palm: a thick 40 x 28 cm plate (stiff, so it sits high)
+    # and the air trapped under a cupped palm popping out (a cupped hand is the clap inside the slap).
+    wood = modes(pulse, 230.0 * tr, rect_modes(0.40, 0.28, 10, rng.uniform(0.3, 0.5), rng.uniform(0.3, 0.5), 0.07, 0.5, df))
+    cup = 1 - m["TOOL"]  # a flat palm traps air; a stick does not
+    pop = 0.5 * cup * J * bandpass(rng.standard_normal(n) * np.exp(-t / 0.002), 500.0 * tr, 1800.0 * tr)
+    out = wood + pop + utensil_ring(n, pulse, m["TOOL"], rng, vel)
+    # RATTLE: the board is not flat on the counter; one corner knocks back down.
+    L = lift(vel, m["RATTLE"])
+    if L > 0:
+        ts, vs = bounce_train(0.0015, 0.05 * L * rng.uniform(0.85, 1.15), 0.4)
+        hit = impulses(n, ts, [v / 0.05 for v in vs], 0.0004)
+        out += 0.5 * smooth(m["RATTLE"], 0, .6) * J * modes(hit, 230.0 * tr, rect_modes(0.40, 0.28, 5, 0.1, 0.1, 0.05, 0.5, df))
+    return out
+
+
 OBJECTS = {"BUCKET": bucket, "BOX": box, "BOOK": book, "JAR": jar, "KEYS": keys,
            "TABLE": table, "POT": pot, "BOTTLE": bottle, "SUITCASE": suitcase, "MATCHBOX": matchbox,
-           "DRAWER": drawer, "TUB": tub, "PAN": pan, "MUG": mug, "GLASS": glass, "ZIP": zipper}
+           "DRAWER": drawer, "TUB": tub, "PAN": pan, "MUG": mug, "GLASS": glass, "ZIP": zipper,
+           "STOMP": stomp, "BAG": bag, "BINLID": binlid, "CAN": can, "SWITCH": switch, "BOARD": board}
 
 # ---------------------------------------------------------------------------------- MIC
 
@@ -829,6 +1010,11 @@ def render(voice: str, macros: dict | None = None, velocity: float = 1.0, take: 
     fall. peak=None returns the unmatched render so a test can see absolute level."""
     m = settled(voice, macros)
     vel = min(1.0, max(0.05, float(velocity) if math.isfinite(velocity) else 1.0))
+    # A take is a different hand: the resting hand damps a little more or less, the grip on the tool is a
+    # little firmer or looser. Seeded by the object and the take only, so velocity never reshuffles it.
+    hand = rng_for(voice, int(take), "hand")
+    m["DAMP"] = min(1.0, max(0.0, m["DAMP"] + hand.uniform(-0.05, 0.05)))
+    m["TOOL"] = min(1.0, max(0.0, m["TOOL"] + hand.uniform(-0.04, 0.04)))
     secs = length if length is not None else LENGTH[voice]
     n = int(secs * FS)
     raw = OBJECTS[voice](m, vel, int(take), n)
