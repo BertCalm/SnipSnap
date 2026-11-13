@@ -25,7 +25,7 @@ import com.snipsnap.shell.Scheme
 internal fun PageDoor(label: String, line: String, scheme: Scheme, enabled: Boolean, onClick: () -> Unit) {
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(2.dp)) {
         ActionButton(label, scheme, enabled = enabled, modifier = Modifier.fillMaxWidth(), onClick = onClick)
-        TapeText(line, TapeType.pixelSmall, scheme.ink2.tape, Modifier.fillMaxWidth(), maxLines = 1)
+        TapeText(line, TapeType.pixelSmall, scheme.ink2.tape, Modifier.fillMaxWidth(), maxLines = 2)
     }
 }
 

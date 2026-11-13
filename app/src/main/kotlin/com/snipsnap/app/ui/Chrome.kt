@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -32,6 +33,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
@@ -100,7 +102,20 @@ enum class AppScreen(val label: String) {
     SPLIT("SPLIT"),
 }
 
-/** Single-line themed text; TapeOS never relies on Material's Text. */
+/**
+ * A row's height as a floor, not a size: a label that wraps to a second line
+ * (clarity spec D7) grows the row instead of being clipped. Same call shape
+ * as `height(dp)`, so swapping one for the other costs a big composable no
+ * registers.
+ */
+fun Modifier.minHeight(height: Dp): Modifier = heightIn(min = height)
+
+/**
+ * Themed text, one line by default, ellipsised: that default is for the
+ * names a person gave (kit, pad, project, sample), which have no length
+ * cap. A button or a section label says `maxLines = 2` and wraps instead
+ * (clarity spec D7). TapeOS never relies on Material's Text.
+ */
 @Composable
 fun TapeText(
     text: String,

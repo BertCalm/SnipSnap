@@ -466,6 +466,10 @@ object Layout {
      */
     const val DOCK_H = 56
     const val STATUS_BAR_H = 26
+    /**
+     * A floor, not a height (clarity spec D7): the header row grows when its
+     * back label or title wraps to a second line. Read through `minHeight`.
+     */
     const val LCD_HEADER_H = 40
     const val PAD_GAP = 8
     const val PAD_H = 76
@@ -479,6 +483,7 @@ object Layout {
      */
     const val KIT_PAD_H = 88
     const val PAD_RADIUS = 6
+    /** A floor, not a height, for the same reason as [LCD_HEADER_H]: a primary action's label may wrap. */
     const val PRIMARY_ACTION_H = 52
 
     /**
