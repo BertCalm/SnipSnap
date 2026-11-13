@@ -4,7 +4,9 @@ import com.snipsnap.audio.DrumClass
 import com.snipsnap.audio.Snip
 import kotlin.math.PI
 import kotlin.math.cos
+import kotlin.math.exp
 import kotlin.math.pow
+import kotlin.math.sin
 import kotlin.random.Random
 
 /**
@@ -12,10 +14,11 @@ import kotlin.random.Random
  * - the kick and snare the owner accepted (rounds 0 to 1b);
  * - round 2's hats, cross stick, shaker, tambourine and three toms;
  * - round 3's ride and crash, a modal synth fitted to CC0 recordings ([BreakerCymbal]);
- * - the snare riser, a roll into the spring.
+ * - the snare riser, a roll into the spring;
+ * - model 5's Bump, the spring tank kicked.
  *
- * The cymbals and the riser have no drum class of their own in the classifier; they file as PERC, as
- * BACKWASH's percussion does.
+ * The cymbals, the riser and Bump have no drum class of their own in the classifier; they file as PERC,
+ * as BACKWASH's percussion does.
  */
 enum class BreakerVoice(val drumClass: DrumClass) {
     KICK(DrumClass.KICK), SNARE(DrumClass.SNARE),
@@ -23,6 +26,7 @@ enum class BreakerVoice(val drumClass: DrumClass) {
     STICK(DrumClass.PERC), SHAKER(DrumClass.PERC), TAMBOURINE(DrumClass.PERC),
     TOM_FLOOR(DrumClass.TOM), TOM_RACK(DrumClass.TOM), TOM_HIGH(DrumClass.TOM),
     RIDE(DrumClass.PERC), CRASH(DrumClass.PERC), RISER(DrumClass.PERC),
+    BUMP(DrumClass.PERC),
 }
 
 /**
@@ -59,6 +63,9 @@ enum class BreakerVoice(val drumClass: DrumClass) {
 object Breaker {
     /**
      * Renderer models. A save keeps the model it was made with.
+     * - **5 (the genre kits, 2026-11-12):** DAMP, each drum's damping, and Bump, the spring tank kicked.
+     *   The owner approved both for Dub Tank and Trip hop. At DAMP .5 every model-4 voice renders as it
+     *   did on model 4.
      * - **4 (the kit's tone, 2026-11-12):** the owner heard the kit as mid heavy, "like listening
      *   through dollar tree headphones", and picked the open rig: DUST's filter opens and the amp
      *   loses its speaker ([open]). The cymbals and the riser keep the rig they were heard with.
@@ -68,7 +75,7 @@ object Breaker {
      *   and the slap is the round-0 95 ms. The ride is round 2's SKIN ride through the rig.
      * - **1 (round 1):** every voice through tank B, a 90 ms slap.
      */
-    const val MODEL_VERSION = 4
+    const val MODEL_VERSION = 5
 
     /** A hit's length: tails are capped here, with a [FADE_SECONDS] raised-cosine fade, so a hit never files as a LOOP (1.5 s). */
     const val SECONDS = 1.49f
@@ -77,6 +84,9 @@ object Breaker {
     /** The crash rings past the one-shot limit (the owner's call, 2026-11-11); its pad is declared PERC, never classified. */
     const val CRASH_SECONDS = 3.2f
 
+    /** Bump: the kicked tank rings out, so it is longer than a one-shot and declared PERC. */
+    const val BUMP_SECONDS = 2.5f
+
     /** The riser: a 2.4 s build and the spring after it. */
     const val RISER_SECONDS = 3.4f
     private const val RISER_BUILD = 2.4f
@@ -84,11 +94,38 @@ object Breaker {
     fun secondsFor(voice: BreakerVoice) = when (voice) {
         BreakerVoice.CRASH -> CRASH_SECONDS
         BreakerVoice.RISER -> RISER_SECONDS
+        BreakerVoice.BUMP -> BUMP_SECONDS
         else -> SECONDS
     }
 
     /** The voices model 3 added. Model 2 renders the ride its own way, and refuses these. */
     private val MODEL_3 = setOf(BreakerVoice.CRASH, BreakerVoice.RISER)
+
+    /** The voice model 5 added. Earlier models refuse it. */
+    private val MODEL_5 = setOf(BreakerVoice.BUMP)
+
+    /**
+     * DAMP (model 5, shape): each drum's damping. At .5 nothing changes. Above it the drum is damped
+     * and dies sooner; below it the drum rings longer.
+     * - **SKIN's drums** (kick, snare, toms, hats, stick, shaker, the riser's strikes): their own DECAY
+     *   moves by up to [DAMP_DECAY_SPAN] either way. Above .5 the drum is also damped as tape on a head
+     *   damps it, an exponential fade on the drum before the rig, up to [DAMP_RATE] per second. In the
+     *   rig, a drum's own DECAY barely moves the snare, hats, stick or floor tom, whose tails are the
+     *   spring's (measured, 2026-11-12).
+     * - **The cymbals:** every fitted mode's decay is steepened, or eased, by up to 2x.
+     * - **Bump:** the kicked tank rings shorter or longer, by up to 2x.
+     * - **The tambourine:** recordings cannot ring longer than they were played, so below .5 it is
+     *   unchanged. Above .5 it is BACKWASH's own DAMP, which shortens the recording.
+     */
+    private const val DAMP_DECAY_SPAN = .3f
+
+    /** The tape's fade at DAMP 1, per second: about 12 dB in the first 100 ms (shape). */
+    private const val DAMP_RATE = 14.0
+
+    private fun damp(m: Map<String, Float>, model: Int) = if (model >= 5) m["DAMP"] ?: .5f else .5f
+
+    /** How much DAMP scales a decay rate: 1 at .5, 2 (twice as fast) at 1, 1/2 at 0. */
+    private fun dampRate(damp: Float) = 2.0.pow((damp - .5) * 2)
 
     private fun modal(voice: BreakerVoice, model: Int) = voice == BreakerVoice.CRASH || (voice == BreakerVoice.RIDE && model >= 3)
 
@@ -111,6 +148,7 @@ object Breaker {
     private val controls = listOf(
         MacroSpec("TUNE", .5f), MacroSpec("DUST", .35f), MacroSpec("DRIP", .45f),
         MacroSpec("SLAP", .2f), MacroSpec("CRUSH", .9f), MacroSpec("AMP", .35f),
+        MacroSpec("DAMP", .5f),
     )
 
     /**
@@ -135,6 +173,8 @@ object Breaker {
         BreakerVoice.RIDE to DRY,
         BreakerVoice.CRASH to DRY,
         BreakerVoice.RISER to mapOf("DUST" to .2f, "DRIP" to .6f, "SLAP" to .2f, "CRUSH" to .5f, "AMP" to .2f),
+        // Bump: DRIP is how hard the tank is kicked. Like the cymbals, it skips the tube.
+        BreakerVoice.BUMP to mapOf("DUST" to .2f, "DRIP" to .7f, "SLAP" to .2f, "CRUSH" to .5f, "AMP" to .3f),
     )
 
     private val DRY get() = mapOf("DUST" to 0f, "DRIP" to 0f, "SLAP" to 0f, "CRUSH" to 0f, "AMP" to 0f)
@@ -144,7 +184,8 @@ object Breaker {
 
     fun macrosFor(voice: BreakerVoice, model: Int = MODEL_VERSION): List<MacroSpec> {
         val own = if (voice == BreakerVoice.RIDE && model < 3) RIDE_MODEL_2 else voiceDefaults.getValue(voice)
-        return controls.map { spec -> own[spec.name]?.let { spec.copy(default = it) } ?: spec }
+        // DAMP arrived with model 5: an older save has no such control.
+        return controls.filter { model >= 5 || it.name != "DAMP" }.map { spec -> own[spec.name]?.let { spec.copy(default = it) } ?: spec }
     }
 
     fun defaults(voice: BreakerVoice, model: Int = MODEL_VERSION) = macrosFor(voice, model).associate { it.name to it.default }
@@ -198,20 +239,28 @@ object Breaker {
      * [take] re-strikes it: a fresh noise seed in the SKIN source, or the next recorded alternate on
      * the tambourine (it has two).
      */
-    internal fun source(voice: BreakerVoice, m: Map<String, Float>, velocity: Float, take: Int): Snip {
+    internal fun source(voice: BreakerVoice, m: Map<String, Float>, velocity: Float, take: Int, model: Int = MODEL_VERSION): Snip {
         val shift = (m.getValue("TUNE") - .5f) * .5f
+        val damp = damp(m, model)
         if (voice == BreakerVoice.TAMBOURINE) {
             val tamb = BackwashVoice.TAMBOURINE
-            return BackwashAcoustic.source(tamb, Backwash.defaults(tamb) + ("TUNE" to (.5f + shift).coerceIn(0f, 1f)), velocity, take)
+            val own = Backwash.defaults(tamb) + ("TUNE" to (.5f + shift).coerceIn(0f, 1f))
+            // A recording cannot ring longer than it was played: DAMP only shortens it, through BACKWASH's own DAMP.
+            val shortened = if (damp > .5f) own + ("DAMP" to ((damp - .5f) * 2f).coerceIn(0f, 1f)) else own
+            return BackwashAcoustic.source(tamb, shortened, velocity, take)
         }
         val (skin, macros) = SOURCES.getValue(voice)
         var own = Skin.defaults(skin) + macros
+        if (damp != .5f) own = own + ("DECAY" to (own.getValue("DECAY") + (.5f - damp) * 2f * DAMP_DECAY_SPAN).coerceIn(0f, 1f))
         // The shaker has no TUNE: its pitch is its band, so TUNE moves TONE (shape).
         val pitch = if ("TUNE" in own) "TUNE" else "TONE"
         own = own + (pitch to (own.getValue(pitch) + shift).coerceIn(0f, 1f))
         // SKIN reads the velocity only on its struck voices; the unstruck ones soften after the rig.
         // Every BREAKER source re-seeds per take, the unstruck ones included.
-        return Skin.render(skin, own, if (skin in Skin.STRUCK) velocity else 1f, take, reseedUnstruck = true)
+        val hit = Skin.render(skin, own, if (skin in Skin.STRUCK) velocity else 1f, take, reseedUnstruck = true)
+        if (damp <= .5f) return hit
+        val k = (damp - .5) * 2 * DAMP_RATE / hit.sampleRate
+        return Snip(FloatArray(hit.samples.size) { (hit.samples[it] * exp(-k * it)).toFloat() }, hit.channels, hit.sampleRate)
     }
 
     /** The hats, shaker and cross stick (and model 2's ride): SKIN does not strike them, so they soften after the rig. */
@@ -265,12 +314,12 @@ object Breaker {
      * 4 to 25 a second and rising in strength. They go through one pass of the rig, so the spring
      * fills and the crush pumps. The pad's velocity scales every strike; a take re-strikes them all.
      */
-    private fun riserRoll(m: Map<String, Float>, velocity: Float, take: Int, rate: Int): Snip {
+    private fun riserRoll(m: Map<String, Float>, velocity: Float, take: Int, rate: Int, model: Int): Snip {
         val dry = FloatArray(((RISER_BUILD + .5f) * rate).toInt())
         for (i in 0 until 20) {
             val p = i / 19f
             val at = (RISER_BUILD * (1 - (1 - p).toDouble().pow(1.6))).toFloat()
-            val hit = source(BreakerVoice.SNARE, m, velocity * (.3f + .55f * p), take * 20 + i + 1).samples
+            val hit = source(BreakerVoice.SNARE, m, velocity * (.3f + .55f * p), take * 20 + i + 1, model).samples
             val o = (at * rate).toInt(); val g = .35f + .65f * p
             for (k in hit.indices) if (o + k < dry.size) dry[o + k] += g * hit[k]
         }
@@ -278,6 +327,41 @@ object Breaker {
         for (s in dry) peak = maxOf(peak, kotlin.math.abs(s))
         if (peak > 0f) for (i in dry.indices) dry[i] /= peak
         return Snip(dry, 1, rate)
+    }
+
+    /**
+     * Bump: the spring tank kicked. The jolt moves the transducer all at once, so the springs get a
+     * broadband slap: a 2 ms click and 25 ms of noise, re-seeded per take, into tank B with no dry signal.
+     * - **DRIP** is how hard the tank is kicked: the dwell drive, so a harder kick clangs and rings longer.
+     * - **TUNE** is the springs' tension: tank B's dispersion corner, half an octave either way.
+     * - **DAMP** is how long the tank rings.
+     * - **A softer pad** kicks it softer: less drive, and a duller jolt.
+     * The tank's mechanical knock is the click's own 60 Hz thud, kept under the springs. All shape.
+     */
+    private fun bump(m: Map<String, Float>, velocity: Float, take: Int, frames: Int, rate: Int, model: Int): Snip {
+        val rng = Random(Dsp.seedFor("BREAKER", "BUMP", take))
+        val jolt = DoubleArray(frames)
+        val bright = Dsp.OnePole(rate)
+        val corner = 2_000f + 10_000f * velocity
+        for (i in 0 until (.03 * rate).toInt()) {
+            val t = i.toDouble() / rate
+            val click = if (t < .002) .5 - .5 * cos(2 * PI * t / .002) else 0.0
+            val noise = (rng.nextDouble() * 2 - 1) * exp(-t / .006)
+            jolt[i] = bright.lp((click + noise).toFloat(), corner).toDouble()
+        }
+        val tension = 2.0.pow((m.getValue("TUNE") - .5) * 1.0)
+        val tank = BreakerChain.Tank(BreakerChain.TANK_B.fc * tension, BreakerChain.TANK_B.k, BreakerChain.TANK_B.ap, BreakerChain.TANK_B.stages)
+        val kick = m.getValue("DRIP").toDouble() * (.4 + .6 * velocity)
+        val springs = BreakerChain.spring(jolt, kick, frames, rate, tank, decay = 1 / dampRate(damp(m, model)))
+        var peak = 0.0
+        for (v in springs) peak = maxOf(peak, kotlin.math.abs(v))
+        val out = FloatArray(frames)
+        for (i in 0 until frames) {
+            val t = i.toDouble() / rate
+            val thud = if (t < .012) .25 * sin(2 * PI * 60 * t) * sin(PI * t / .012) else 0.0
+            out[i] = ((if (peak > 0) springs[i] / peak else 0.0) + thud).toFloat()
+        }
+        return Snip(out, 1, rate)
     }
 
     /** The cymbals' TUNE: three semitones either way (shape). */
@@ -293,6 +377,7 @@ object Breaker {
         require(model in 1..MODEL_VERSION) { "unsupported breaker model $model" }
         require(model >= 2 || voice == BreakerVoice.KICK || voice == BreakerVoice.SNARE) { "breaker model 1 has no $voice" }
         require(model >= 3 || voice !in MODEL_3) { "breaker model $model has no $voice" }
+        require(model >= 5 || voice !in MODEL_5) { "breaker model $model has no $voice" }
         val m = settled(voice, macros, model)
         val v = velocity.takeIf { it.isFinite() }?.coerceIn(0f, 1f) ?: 1f
         val rate = Dsp.RATE
@@ -300,20 +385,23 @@ object Breaker {
         val frames = (seconds * rate).toInt()
         val cymbal = modal(voice, model)
         val riser = voice == BreakerVoice.RISER
+        val bumped = voice == BreakerVoice.BUMP
         val dry = when {
             cymbal -> Snip(BreakerCymbal.render(if (voice == BreakerVoice.CRASH) BreakerCymbal.Kind.CRASH else BreakerCymbal.Kind.RIDE,
-                v, take, seconds, cymbalPitch(m.getValue("TUNE")), rate), 1, rate)
-            riser -> riserRoll(m, v, take, rate)
-            else -> source(voice, m, v, take)
+                v, take, seconds, cymbalPitch(m.getValue("TUNE")), rate, damping = dampRate(damp(m, model))), 1, rate)
+            riser -> riserRoll(m, v, take, rate, model)
+            bumped -> bump(m, v, take, frames, rate, model)
+            else -> source(voice, m, v, take, model)
         }
         val dusted = dustChain(m.getValue("DUST"), voice, model)?.process(dry) ?: dry
         val crush = m.getValue("CRUSH").toDouble()
         var x = DoubleArray(dusted.samples.size) { dusted.samples[it].toDouble() }
         // The tube: the drums' character. The cymbals and the riser skip it: on noisy metal and a dense
         // roll it was the fizz the owner heard as harsh (round 3).
-        if (!cymbal && !riser) x = BreakerChain.saturate(x, rate)
+        if (!cymbal && !riser && !bumped) x = BreakerChain.saturate(x, rate)
         x = BreakerChain.crush(x, minOf(1.0, crush / .5) * .7, rate)
-        x = BreakerChain.tankMix(x, m.getValue("DRIP").toDouble(), frames, rate, tankFor(voice, model))
+        // Bump is the tank itself: its DRIP already kicked it, so it is not sent to the tank again.
+        if (!bumped) x = BreakerChain.tankMix(x, m.getValue("DRIP").toDouble(), frames, rate, tankFor(voice, model))
         x = BreakerChain.slap(x, m.getValue("SLAP").toDouble(), rate, if (model >= 2) BreakerChain.SLAP_SECONDS else .09)
         x = BreakerChain.crush(x, maxOf(0.0, (crush - .5) / .5), rate)
         val amp = m.getValue("AMP")
