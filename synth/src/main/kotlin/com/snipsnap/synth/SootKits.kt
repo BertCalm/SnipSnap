@@ -25,8 +25,11 @@ import kotlin.random.Random
  * [VERSION] when any pad's audio changes; saved kits keep the version they were printed with.
  */
 object SootKits {
-    /** 2: A11 and A12 re-voiced (the owner heard A02, A11 and A12 as the same snare). */
-    const val VERSION = 2
+    /**
+     * 3: the four bars' dictaphone at .9 (the owner's round-2 pick). 2: A11 and A12 re-voiced (the owner
+     * heard A02, A11 and A12 as the same snare).
+     */
+    const val VERSION = 3
     const val BPM = 84
     val velocities = listOf(.30f, .65f, 1f)
     const val TAKES = 4
@@ -161,8 +164,11 @@ object SootKits {
     private val busSend = mapOf(1 to .25, 6 to .3, 7 to .2, 8 to .25)
     private const val KICK_SEND = .45
 
-    /** The phrase's dictaphone: .45, the owner's pick for the kit (round 1). */
-    const val PHRASE_GRIME = .45
+    /**
+     * The four bars' dictaphone: .9, the owner's pick for this pad at round 2 (the single pads stay at
+     * the .45 they picked at round 1).
+     */
+    const val PHRASE_GRIME = .9
 
     /** The phrase's exact length: four bars of four beats at [BPM]. */
     val phraseFrames: Int get() = (16 * 60.0 / BPM * Dsp.RATE).toInt()

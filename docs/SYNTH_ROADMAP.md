@@ -3475,5 +3475,12 @@ and approved the kit.
 Round 2 (`SootKits` 1) puts the 16-pad kit on the FRESH TAPE shelf. Its grids pass GATECRASH's
 proof in software: save, reload, `PadHit.resolve` and MPC 3 read-back. It adds the coil roll (A15)
 and four bars through one shared coil (A16), which await a listen. The two sibling genre kits and
-hardware remain. See [SOOT](SOOT.md) and the
+hardware remain.
+
+Round 2 was heard on 2026-11-13, and the owner said "All sounds fine":
+- the re-voiced snares are different drums (kit 2);
+- the roll and the loop point were accepted;
+- the four bars moved to the heavier dictaphone (kit 3).
+
+The sound gate is closed. The sibling kits and hardware remain. See [SOOT](SOOT.md) and the
 [design](superpowers/specs/2026-11-12-soot-drum-kit-design.md).

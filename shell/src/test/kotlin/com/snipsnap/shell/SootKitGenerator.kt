@@ -88,8 +88,8 @@ object SootKitGenerator {
             clip("roll", "z$z", "A15 Coil Roll at ${(v * 100).roundToInt()}%", play(SootKits.HITS + 1, v, 0).first)
             clip("phrase", "z$z", "A16 Four Bars at ${(v * 100).roundToInt()}%", play(SootKits.PADS, v, 0).first)
         }
-        // Not part of the kit: the four bars with round 0's heavy dictaphone, to steer by.
-        clip("phrase", "grime90", "A16 Four Bars with the dictaphone at .9 (not in the kit)", SootKits.phrase(1f, 0, grime = .9).samples)
+        // Not part of the kit: the four bars at round 2's first dictaphone (.45), to steer by. The kit's is .9.
+        clip("phrase", "grime45", "A16 Four Bars with the dictaphone at .45 (round 2's first, not in the kit)", SootKits.phrase(1f, 0, grime = .45).samples)
         // The four bars played around twice, to hear the loop point.
         val bars = play(SootKits.PADS, 1f, 0).first
         clip("phrase", "looped", "A16 Four Bars, looped twice", bars + bars)

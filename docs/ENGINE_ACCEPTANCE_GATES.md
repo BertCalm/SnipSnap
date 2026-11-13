@@ -159,14 +159,14 @@ Rounds 0 and 0b are Python prototype auditions; no Kotlin exists. Round 0b answe
 - **Sound character:** direction accepted. On 2026-11-12 the owner responded to the published round-0b audition, "Sounds good, please merge." Preserve round 0b as the accepted baseline; this is a listen to Python renders, not evidence of Kotlin, phone or MPC playback.
 - **Overall: incomplete.** Round 0b is a prototype with an accepted direction; voices in Kotlin, kits, roll/riser and every saving, playback and export stage remain open.
 
-## SOOT (rounds 0 to 2, 2026-11-12)
+## SOOT (sound approved at round 2, 2026-11-13; sibling kits and hardware open)
 
 A drum engine for grimy street boom bap from physical models. See [SOOT](SOOT.md).
 
 - **Melodic, keygroup and chord-tool gates:** not applicable. SOOT is a drum engine.
 - **Articulation:** finite hits, with no HOLD.
-- **Percussion:** A15, the coil roll, is built: sixteen fresh snare strikes into one coil, with three
-  zones and four takes. Not yet heard.
+- **Percussion: pass, heard.** A15, the coil roll: sixteen fresh snare strikes into one coil, with
+  three zones and four takes. The owner heard all three zones on 2026-11-13: "Yes".
 - **Drum shelf: one of three.** SOOT is on the shelf (SKINS). The two sibling genre kits are the
   owner's choice, and not yet built.
 - **Velocity and round robin:**
@@ -179,10 +179,19 @@ A drum engine for grimy street boom bap from physical models. See [SOOT](SOOT.md
   - **Export: verified for MPC 3 by read-back.** The exported slices match their renders. **MPC 2 does
     not pass:** it keeps only the first take of each zone. SFZ and DecentSampler were not generated.
     No MPC has loaded the kit.
-- **Sound character:**
-  - **Round 0:** the owner picked the hits.
+- **Sound character: approved at round 2.** On 2026-11-13 the owner heard the kit read back from its
+  MPC 3 export and said, "All sounds fine". How they got there:
+  - **Round 0:** they picked the hits.
   - **Round 1:** they accepted the kick and snare in Kotlin.
-  - **Round 1b:** they kept the alternates and approved the kit ("Is this the kit?" "Yes").
-  - **Round 2:** the roll and the four bars await a listen.
-- **Overall: incomplete.** The sibling kits, the roll and the four bars' listen, and phone and MPC
-  hardware are open. MPC 2 does not pass the round-robin export gate.
+  - **Round 1b:** they kept the alternates and approved the kit.
+  - **Round 2:**
+    - the three re-voiced snares heard as different drums;
+    - the roll and the loop point accepted;
+    - the four bars moved to the heavier dictaphone (`SootKits.VERSION` 3).
+
+  Preserve version 3 as the baseline. This is not evidence of a phone or MPC audition.
+- **Overall: incomplete.** The sound is approved and the software evidence is in place. Still open:
+  - the two sibling genre kits;
+  - phone and MPC hardware playback.
+
+  MPC 2 does not pass the round-robin export gate.

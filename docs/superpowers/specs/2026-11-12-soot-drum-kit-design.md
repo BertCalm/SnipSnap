@@ -1,8 +1,8 @@
 # SOOT drum kit: design brief and round 0
 
-Status: the hits and the kit approved by the owner at round 1b (2026-11-12). Round 2 puts the
-16-pad kit on the FRESH TAPE shelf, proves its grids through save, playback and MPC 3 export, and adds
-the coil roll and the four bars, published for a listen. The
+Status: the sound approved by the owner at round 2 (2026-11-13): "All sounds fine". The 16-pad kit
+is on the FRESH TAPE shelf (`SootKits.VERSION` 3), its grids proven in software through save,
+playback and MPC 3 export. Open: two sibling genre kits, phone and MPC hardware, MPC 2's round robin. The
 overview is [SOOT](../../SOOT.md).
 Repository truth: `1d8f24ec` (main after #1037). Read: `BreakerChain.kt` (the dispersive spring
 tank, `Tank`, `spring`, `tankMix`, `crush`), `Terra.kt` (DROOP: a sliding membrane fundamental,
@@ -446,3 +446,30 @@ A02). `SootKitsTest` holds the three snares at least 6 dB apart; the old voicing
 `SootPresets`' "Bench" and "Coil" carry the new settings. Saved patches keep their own macros. The
 kit regenerated and passed the whole proof again: 16 pads, 192 slices, saved and exported PCM,
 playback, the MPC 3 track.
+
+## Round 2, heard (2026-11-13, `SootKits.VERSION` 3)
+
+Page: https://claude.ai/artifact/3zmAc3qu32W7vEpJ6Yb6C2. The owner's answers:
+
+| Question | Heard |
+|---|---|
+| 0. The three snares, re-voiced | A02, A11, A12: "Different" |
+| 1. The coil roll (A15) | all three zones: "Yes" |
+| 2. Four bars (A16), which dictaphone | **.9** (the "not in the kit" version) |
+| 3. The loop point | "Clean" |
+| 4. The sixteen pads | no notes |
+| 5. Touch and takes | unanswered |
+| 6. Two bars from the single pads | no notes |
+| Overall | "All sounds fine" |
+
+**The change.** `SootKits.PHRASE_GRIME` goes from .45 to .9. The single pads keep the .45 picked at
+round 1. The kit's hard first take of A16 is now exactly the render the owner picked:
+`phrase(1, 0, grime = .9)`.
+
+**Re-checked.** The loop point still clean: take 0, 0.0071 against the 99.9th-percentile 0.1292;
+take 3, 0.0033 against 0.1332. The full kit proof passes again: 16 pads, 192 slices, saved and
+exported PCM, playback, the MPC 3 track.
+
+**The sound gate is closed for SOOT.** Round 2's touch question went unanswered. The owner's
+"All sounds fine" is read as covering it. Their round-0 and round-1 touch answers were "softer hand"
+throughout.

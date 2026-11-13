@@ -152,7 +152,7 @@ QUESTIONS_R2 = [
     ("roll", "1 · The coil roll (A15)", "Sixteen fresh snare strikes speeding up into one coil, so the spring fills as the roll builds, then rings out. A fader push over the build, as BREAKER's riser. Each zone as the pad plays it.",
      "Is this the roll?", ["z2", "z1", "z0"], "yesno", ["Yes", "Not yet"], {}),
     ("phrase", "2 · Four bars (A16)", "Your round-0 groove through one shared coil the kick drives, then the dictaphone the kick pumps: the only pad where the whole kit breathes through one spring. The kit prints it at GRIME .45; the .9 version is here to steer by.",
-     "Which dictaphone for the four bars?", ["z2", "grime90", "z1", "z0"], "pick", [], {}),
+     "Which dictaphone for the four bars?", ["z2", "grime45", "z1", "z0"], "pick", [], {}),
     ("phrase", "3 · The loop point", "Four bars, played around twice. The file is exactly four bars at 84 BPM, its tail wrapped into its start.",
      "Does it loop cleanly?", ["looped"], "yesno", ["Clean", "I hear a seam"], {}),
     ("pads", "4 · The sixteen pads", "Each pad's hard first take, read back from the exported MPC 3 files through the app's own pad resolver.",

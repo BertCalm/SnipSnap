@@ -11,24 +11,25 @@ kit breathing through a dictaphone**.
 
 ## Status
 
-Round 2: the 16-pad kit is on the FRESH TAPE shelf (SKINS: "SOOT"). Its grids are proven in software,
-and the coil roll (A15) and the four bars (A16) are published for a listen at
-https://claude.ai/artifact/3zmAc3qu32W7vEpJ6Yb6C2 (private to the owner). The engine stays a prototype
-outside the factory presets and the phone picker.
+**Sound approved at round 2** (2026-11-13: "All sounds fine"). The 16-pad kit (`SootKits.VERSION` 3)
+is on the FRESH TAPE shelf (SKINS: "SOOT"). Its grids are proven in software through save, playback
+and MPC 3 export. The engine stays a prototype outside the factory presets and the phone picker.
 
-The owner's verdicts on 2026-11-12:
-- **Round 0:** the picks: the kick at sag .35 with the longer sub, the hot snare, the wide hats, and
-  the layout.
+How the owner got there:
+- **Round 0** picked the hits.
 - **Round 1:**
-  - the Kotlin kick and snare are their picks, and every touch strip a softer hand;
-  - the pads print at GRIME .45, and the layout swaps are right;
-  - the hat had an effect sound, its own coil send.
-- **Round 1b:** model 2 removes the hats' coil send. The thirteen alternates are kept, and four bars
-  of the kit are "Yes".
+  - accepted the Kotlin kick and snare;
+  - moved the pads to GRIME .45;
+  - found the hats' coil send.
+- **Round 1b** removed that send, kept the alternates, and approved the kit.
+- **Round 2:**
+  - heard the re-voiced A11 and A12 as different drums;
+  - accepted the coil roll and the loop point;
+  - moved the four bars to the heavier dictaphone (.9).
 
 Still to come:
-- the owner's listen to the roll and the four bars;
-- two sibling genre kits, the owner's choice;
+- two sibling genre kits, the owner's choice (the drum gate needs several distinct kits on the
+  shelf);
 - phone and MPC hardware;
 - the picker entry, in a session with an Android SDK, as the house rule says.
 
@@ -82,7 +83,7 @@ A take re-strikes: fresh noise, a moved strike position, fresh metal phases.
 - **A15, the coil roll:** sixteen snare strikes speeding up into one coil, with a fader push over
   the build.
 - **A16, four bars:** the groove through one shared coil the kick drives, then the dictaphone the
-  kick pumps. It is exactly four bars at 84 BPM, its tail wrapped onto its start.
+  kick pumps (GRIME .9, the owner's round-2 pick; the single pads stay at .45). It is exactly four bars at 84 BPM, its tail wrapped onto its start.
 - **Recipes:** none. The pads carry their grids, as GATECRASH's do.
 
 `./gradlew --no-daemon :shell:generateSootKit` builds the kit and proves it. The saved kit reloads
