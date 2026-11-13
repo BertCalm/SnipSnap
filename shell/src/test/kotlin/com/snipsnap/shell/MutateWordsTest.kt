@@ -49,7 +49,7 @@ class MutateWordsTest {
         )
         assertEquals("Undone. The version before the last combine is back from the trash.", Copy.UNMUTATED)
         assertEquals("The LIBRARY holds no other pad. RANDOM PARTNER has nothing to pick.", Copy.CRATE_EMPTY)
-        assertEquals("NOT A PARTNER: THAT FILE IS SILENT.", Copy.fileRefused("that file is silent"))
+        assertEquals("Not a partner: that file is silent.", Copy.fileRefused("that file is silent"))
         assertEquals(
             "COMBINE SOUNDS (SPLICE with KIT A02) needs its partner - not carried.",
             Copy.replayNeedsPartner("SPLICE", listOf("KIT A02")),
@@ -301,10 +301,10 @@ class MutateWordsTest {
             "This pad plays its slices in turn. COMBINE SOUNDS wants ONE SAMPLE - send the chop again in classic for pads of ONE SAMPLE.",
             Copy.MUTATE_CHAINED,
         )
-        assertEquals("EVERY OTHER SOUND IN THE LIBRARY IS A DOUBLE OF THIS PAD. PICK THE PARTNER YOURSELF.", Copy.ROULETTE_ONLY_COPIES)
-        assertEquals("THAT PARTNER IS GONE. PICK ANOTHER.", Copy.MUTATE_PARTNER_GONE)
-        assertEquals("THIS PAD CARRIES NO COMBINE. NOTHING TO UNDO HERE.", Copy.UNDO_NOTHING)
-        assertEquals("THE TRASH HOLDS NO EARLIER VERSION OF THIS PAD. THE COMBINE STAYS.", Copy.UNDO_NOT_BINNED)
+        assertEquals("Every other sound in the LIBRARY is a double of this pad. Pick the partner yourself.", Copy.ROULETTE_ONLY_COPIES)
+        assertEquals("That partner is gone. Pick another.", Copy.MUTATE_PARTNER_GONE)
+        assertEquals("This pad carries no combine. Nothing to undo here.", Copy.UNDO_NOTHING)
+        assertEquals("The trash holds no earlier version of this pad. The combine stays.", Copy.UNDO_NOT_BINNED)
         for (r in listOf(
             MutateSheet.Refusal.NoPartner, MutateSheet.Refusal.Layered, MutateSheet.Refusal.Chained,
             MutateSheet.Refusal.ShelfEmpty, MutateSheet.Refusal.OnlyCopies, MutateSheet.Refusal.PartnerGone,

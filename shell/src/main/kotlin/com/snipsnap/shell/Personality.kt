@@ -1945,7 +1945,7 @@ object Copy {
     /** A movable pedal flipped to the other side of the amp, in place of any pedal it silenced there. */
     fun pedalSide(pedal: String, beforeAmp: Boolean, pad: String, replaced: List<String> = emptyList()): String =
         "$pedal now ${if (beforeAmp) "before" else "after"} the amp on $pad" +
-            (if (replaced.isEmpty()) "." else ", In place of ${replaced.joinToString(" and ")}. Original is in the trash.")
+            (if (replaced.isEmpty()) "." else ", in place of ${replaced.joinToString(" and ")}. Original is in the trash.")
     /** A pedal past a pad's limit ([com.snipsnap.synth.PedalBoard.MAX_PICKS]): nothing changed. */
     const val PEDALS_FULL = "A pad holds ${com.snipsnap.synth.PedalBoard.MAX_PICKS} pedals. Tap one off first."
     /**
@@ -2056,7 +2056,7 @@ object Copy {
      * the answer and read as complete.
      */
     fun desampled(pad: String, engine: String, voice: String, distance: Float): String =
-        "$pad IS A ${engine} ${voice.replace('_', ' ')} PATCH NOW, %.2f AWAY. ORIGINAL IS IN THE TRASH.".format(java.util.Locale.ROOT, distance)
+        "$pad is a ${engine} ${voice.replace('_', ' ')} patch now, %.2f away. Original is in the trash.".format(java.util.Locale.ROOT, distance)
     /**
      * DE-SAMPLE's UNDO on the pad sheet (and `snipsnap desample --undo`). It restores the newest take
      * of the pad's file from the bin, which after two de-samples is the first one's render, and the
@@ -3158,7 +3158,7 @@ object Copy {
      * draft of this fn.)
      */
     fun padCaptureReady(grabSeconds: Int): String =
-        "SAVES WHAT'S BEEN HEARD SINCE LISTEN, UP TO ${grabSeconds}s. HOLD RECORDS WHILE YOU HOLD."
+        "Saves what's been heard since LISTEN, up to ${grabSeconds}s. HOLD records while you hold."
     /** GRAB/HOLD's own idle panel before LISTEN has ever been pressed. */
     const val PAD_CAPTURE_NEEDS_MIC = "Not listening yet. Start the mic, then hit something."
 

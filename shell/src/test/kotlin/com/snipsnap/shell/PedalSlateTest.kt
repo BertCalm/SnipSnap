@@ -720,18 +720,18 @@ class PedalSlateTest {
         assertEquals("WAH now after the amp on A01.", PedalSlate.toast(flip, PedalSlate.Landed.Applied(board(PedalBoard.Pick("wahed", 0.5f, PedalSide.POST)), false), "A01"))
         assertEquals("WAH now before the amp on A01.", PedalSlate.toast(flip, PedalSlate.Landed.Applied(board(PedalBoard.Pick("wahed", 0.5f)), false), "A01"))
         assertEquals(
-            "WAH NOW AFTER THE AMP ON A01, IN PLACE OF TOUCH. ORIGINAL SLEEPS IN THE TRASH.",
+            "WAH now after the amp on A01, in place of TOUCH. Original is in the trash.",
             PedalSlate.toast(flip, PedalSlate.Landed.Applied(board(PedalBoard.Pick("wahed", 0.5f, PedalSide.POST)), false, listOf("touchwahed")), "A01"),
         )
         assertEquals(Copy.unTreated("A01"), PedalSlate.toast(on, PedalSlate.Landed.Cleared, "A01"))
         assertNull(PedalSlate.toast(on, PedalSlate.Landed.Unchanged, "A01"), "nothing happened; nothing to say")
         assertEquals(Copy.BIN_ITEM_GONE, PedalSlate.toast(on, PedalSlate.Landed.Gone, "A01"))
-        assertEquals("A PAD HOLDS 6 PEDALS. TAP ONE OFF FIRST.", PedalSlate.toast(on, PedalSlate.Landed.Full, "A01"))
-        assertEquals("REMOVE WIDE BEFORE ADDING PEDALS.", PedalSlate.toast(on, PedalSlate.Landed.Printed("WIDE"), "A01"))
+        assertEquals("A pad holds 6 pedals. Tap one off first.", PedalSlate.toast(on, PedalSlate.Landed.Full, "A01"))
+        assertEquals("Remove WIDE before adding pedals.", PedalSlate.toast(on, PedalSlate.Landed.Printed("WIDE"), "A01"))
         assertEquals(Copy.RETREAT_REFUSED, PedalSlate.toast(on, PedalSlate.Landed.GhostsPostdate, "A01"))
         assertEquals(Copy.PEDALS_NOT_BINNED, PedalSlate.toast(on, PedalSlate.Landed.NotBinned, "A01"))
         assertTrue(!Copy.PEDALS_NOT_BINNED.contains("VERSIONS", ignoreCase = true), "VERSIONS cannot bring back audio the bin let go of")
-        assertEquals("TOUCH ON THE ROW IN EVERY KIT. FORGE MOVES BEHIND MORE.", Copy.rowSwapped("TOUCH", "FORGE"))
-        assertEquals("NOW TAP THE ROW CHIP TO SWAP FOR TOUCH.", Copy.putOnRowPrompt("TOUCH"))
+        assertEquals("TOUCH on the row in every kit. FORGE moves behind more.", Copy.rowSwapped("TOUCH", "FORGE"))
+        assertEquals("Now tap the row chip to swap for TOUCH.", Copy.putOnRowPrompt("TOUCH"))
     }
 }

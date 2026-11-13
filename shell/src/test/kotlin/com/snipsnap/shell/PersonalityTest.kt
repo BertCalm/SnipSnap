@@ -76,13 +76,13 @@ class PersonalityTest {
         // the shape that would have caught `grooveRead` counting BAR/BARS
         // right while leaving HITS always plural.
         assertEquals("Heard 1 hit over 1 bar at ~90 BPM. They play on your pads now.", Copy.grooveRead(1, 1, 90))
-        assertEquals("TOOK 9 HITS OVER 2 BARS. PLAYING ON CAPTURED NOW.", Copy.takeLanded(9, 2), "4/4 carries no meter")
+        assertEquals("Took 9 hits over 2 bars. Playing on CAPTURED now.", Copy.takeLanded(9, 2), "4/4 carries no meter")
         // Was "TOOK 1 HITS OVER 1 BAR OF 3/4." — takeLanded sang BAR/BARS
         // right (it shares grooveRead's shape) and left HITS always plural,
         // the same asymmetry inside one sentence that the general helper
         // below exists to rule out everywhere at once.
-        assertEquals("TOOK 1 HIT OVER 1 BAR OF 3/4. PLAYING ON CAPTURED NOW.", Copy.takeLanded(1, 1, "3/4"))
-        assertEquals("TOOK 5 HITS OVER 2 BARS OF 5/4. PLAYING ON CAPTURED NOW.", Copy.takeLanded(5, 2, "5/4"))
+        assertEquals("Took 1 hit over 1 bar of 3/4. Playing on CAPTURED now.", Copy.takeLanded(1, 1, "3/4"))
+        assertEquals("Took 5 hits over 2 bars of 5/4. Playing on CAPTURED now.", Copy.takeLanded(5, 2, "5/4"))
         assertEquals("BANK A · 0 FREE", Copy.catchBank('A', 0))
         // A refusal names the control as it reads and the tab it is on
         // (September wiring review, findings 4 and 14): the reflective
@@ -112,25 +112,25 @@ class PersonalityTest {
         // The length is the voice's own, not RING's four-second ask: a ring
         // that only just started gives less, and the ceiling law below holds
         // this line to what was kept.
-        assertEquals("FROZE 4.0 S OF THE MIC ON THE SURFACE. PAD ◄ ► BRINGS THE PAD BACK.", Copy.ringFrozen(4f, appAudio = false))
-        assertEquals("FROZE 1.5 S OF APP AUDIO ON THE SURFACE. PAD ◄ ► BRINGS THE PAD BACK.", Copy.ringFrozen(1.5f, appAudio = true))
+        assertEquals("Froze 4.0 s of the mic on the SURFACE. Pad ◄ ► brings the pad back.", Copy.ringFrozen(4f, appAudio = false))
+        assertEquals("Froze 1.5 s of APP AUDIO on the SURFACE. Pad ◄ ► brings the pad back.", Copy.ringFrozen(1.5f, appAudio = true))
         assertTrue(Copy.CHOP_NO_HITS.contains("OPEN CHOP", ignoreCase = true), "GRID is inside the closed CUT box: ${Copy.CHOP_NO_HITS}")
         // BOUNCE on a stopped GROOVE used to just dim with no reason
         // (wiring review finding 8) - tapping it now names the control
         // that actually resolves it, the same PLAY button GROOVE draws.
         assertTrue(Copy.GROOVE_BOUNCE_NEEDS_PLAY.contains("PLAY", ignoreCase = true), "names the control that unblocks BOUNCE: ${Copy.GROOVE_BOUNCE_NEEDS_PLAY}")
         assertEquals("BANK B · 16 FREE", Copy.catchBank('B', 16))
-        assertEquals("NO GROOVE: NO BEAT HEARD - THE EAR FINDS HITS, NOT TONES.", Copy.grooveRefused("no beat heard - the ear finds hits, not tones."))
-        assertEquals("BREAK FOUND AT 1:12-1:20. IN AND OUT ARE SET. INSTANT KIT IS ONE TAP AWAY.", Copy.dug("1:12", "1:20"))
+        assertEquals("No GROOVE: no beat heard - the ear finds hits, not tones.", Copy.grooveRefused("no beat heard - the ear finds hits, not tones."))
+        assertEquals("Break found at 1:12-1:20. IN and OUT are set. INSTANT KIT is one tap away.", Copy.dug("1:12", "1:20"))
         // SEND TO PADS reports the real slice count.
-        assertEquals("7 SLICES ON THE PADS. CHOKE GROUP SET.", Copy.sentToPads(7, chokeSet = true))
-        assertEquals("3 SLICES ON THE PADS.", Copy.sentToPads(3, chokeSet = false))
+        assertEquals("7 slices on the pads. CHOKE GROUP set.", Copy.sentToPads(7, chokeSet = true))
+        assertEquals("3 slices on the pads.", Copy.sentToPads(3, chokeSet = false))
         // The kit switcher names the kit it put on the grid, in capitals.
-        assertEquals("ON THE GRID: FUNK ROOM.", Copy.onTheGrid("Funk Room"))
+        assertEquals("On the grid: Funk Room.", Copy.onTheGrid("Funk Room"))
         // A single slice sent to the pads is singular too — sentToPads used
         // to say "1 SLICES" (and so did instantKit, which routes through it).
-        assertEquals("1 SLICE ON THE PADS.", Copy.sentToPads(1, chokeSet = false))
-        assertEquals("ONE TAP, THE WHOLE SAMPLE. 1 SLICE ON THE PADS.", Copy.instantKit(1, chokeSet = false, wholeTape = true))
+        assertEquals("1 slice on the pads.", Copy.sentToPads(1, chokeSet = false))
+        assertEquals("One tap, the whole sample. 1 slice on the pads.", Copy.instantKit(1, chokeSet = false, wholeTape = true))
     }
 
     /**
@@ -813,8 +813,8 @@ class PersonalityTest {
             "One tap, your IN + OUT. 8 slices on the pads. CHOKE GROUP set.",
             Copy.instantKit(8, chokeSet = true, wholeTape = false),
         )
-        assertEquals("ONE TAP, THE WHOLE SAMPLE. 5 SLICES ON THE PADS.", Copy.instantKit(5, chokeSet = false, wholeTape = true))
-        assertEquals("3 PADS RETUNED INTO A MINOR. THE KICK IS UNTOUCHED.", Copy.inKey(3, "A MINOR"))
+        assertEquals("One tap, the whole sample. 5 slices on the pads.", Copy.instantKit(5, chokeSet = false, wholeTape = true))
+        assertEquals("3 pads retuned into A MINOR. The kick is untouched.", Copy.inKey(3, "A MINOR"))
         assertTrue(Copy.takeRestored("T3").startsWith("T3 RESTORED.", ignoreCase = true), "the take leads its own toast")
         assertTrue(Copy.feelRolled(4).startsWith("Feel #4 rolled."), "the seed leads its own toast")
         assertTrue(Copy.feelRolled(4).endsWith("."), "and still lands on a full stop")
@@ -834,23 +834,23 @@ class PersonalityTest {
         assertTrue(sirenShot.startsWith("PAD A05 ADDED: WAIL SIREN.", ignoreCase = true), sirenShot)
         assertTrue(sirenShot.contains("ECHO IS IN THE RACK", ignoreCase = true) && !sirenShot.contains("SURFACE", ignoreCase = true), sirenShot)
         val sirenLoop = Copy.sirenSent("A05", "Wail Siren", replaced = true, loop = true)
-        assertTrue(sirenLoop.startsWith("PAD A05 REPLACED WITH WAIL SIREN. ORIGINAL SLEEPS IN THE TRASH.", ignoreCase = true), sirenLoop)
+        assertTrue(sirenLoop.startsWith("PAD A05 REPLACED WITH WAIL SIREN. ORIGINAL IS IN THE TRASH.", ignoreCase = true), sirenLoop)
         assertTrue(sirenLoop.contains("SURFACE", ignoreCase = true) && sirenLoop.contains("PAD ◄ ► TO A05", ignoreCase = true) && !sirenLoop.contains("RACK", ignoreCase = true), sirenLoop)
         assertTrue(sirenLoop.endsWith(".") && sirenShot.endsWith("."))
         val toSurface = Copy.sirenToSurface("A13", "Wail Siren", replaced = false)
         assertTrue(toSurface.startsWith("PAD A13 ADDED: WAIL SIREN.", ignoreCase = true), toSurface)
         assertTrue(toSurface.contains("SURFACE OPENS", ignoreCase = true) && toSurface.contains("HOLD", ignoreCase = true) && toSurface.endsWith("."), toSurface)
-        assertEquals("TUNE ON A02, IN C MAJOR. ORIGINAL SLEEPS IN THE TRASH.", Copy.keyed("TUNE", "A02", "C MAJOR"))
-        assertEquals("A02 BLENDED TOWARD Other:B03. ORIGINAL SLEEPS IN THE TRASH.", Copy.drifted("A02", "Other:B03"))
+        assertEquals("TUNE on A02, in C MAJOR. Original is in the trash.", Copy.keyed("TUNE", "A02", "C MAJOR"))
+        assertEquals("A02 blended toward Other:B03. Original is in the trash.", Copy.drifted("A02", "Other:B03"))
         // Both engines own a HAT_CLOSED and a SNARE, so the engine is
         // part of the answer rather than a prefix (DE-SAMPLE searched
         // THUMP alone until SKIN joined it).
         assertEquals(
-            "A03 IS A THUMP HAT CLOSED PATCH NOW, 0.12 AWAY. ORIGINAL SLEEPS IN THE TRASH.",
+            "A03 is a THUMP HAT CLOSED patch now, 0.12 away. Original is in the trash.",
             Copy.desampled("A03", "THUMP", "HAT_CLOSED", 0.123f),
         )
         assertEquals("NO PATCH IS NEAR. THE CLOSEST IS A SKIN SNARE, 0.61 AWAY.", Copy.desampleFar("SKIN", "SNARE", 0.61f))
-        assertEquals("NOT A NOTE: A KICK IS A DRUM, NOT A NOTE.", Copy.notANote("a kick is a drum, not a note"))
+        assertEquals("Not a note: a kick is a drum, not a note.", Copy.notANote("a kick is a drum, not a note"))
         assertTrue(
             Copy.mutated("SPLICE", "A01", "A03").startsWith("SPLICE: A01 × A03.", ignoreCase = true),
             "the move and both parents lead their own toast",
@@ -866,23 +866,23 @@ class PersonalityTest {
         // LOOP: the snip, the track it landed on, and the block count that
         // decides how it drifts — all three named, and the counts passed in
         // rather than typed into the line (`:shell` cannot import `:loop`).
-        assertEquals("BREAK IS ON TRACK 2, 3 BLOCKS LONG.", Copy.loopTrackFilled("BREAK", 2, 3))
-        assertEquals("HIT IS ON TRACK 1, 1 BLOCK LONG.", Copy.loopTrackFilled("HIT", 1, 1))
-        assertEquals("LONG IS ON TRACK 4. ONLY ITS FIRST 8 BLOCKS FIT.", Copy.loopTrackTruncated("LONG", 4, 8))
+        assertEquals("BREAK is on track 2, 3 blocks long.", Copy.loopTrackFilled("BREAK", 2, 3))
+        assertEquals("HIT is on track 1, 1 block long.", Copy.loopTrackFilled("HIT", 1, 1))
+        assertEquals("LONG is on track 4. Only its first 8 blocks fit.", Copy.loopTrackTruncated("LONG", 4, 8))
         // loopTrackFilled beside it already sang "1 BLOCK LONG" — truncated
         // said "1 BLOCKS FIT" regardless, the same one-sided fix as the rest.
-        assertEquals("LONG IS ON TRACK 4. ONLY ITS FIRST 1 BLOCK FIT.", Copy.loopTrackTruncated("LONG", 4, 1))
-        assertEquals("ALL 6 TRACKS ARE FULL. CLEAR ONE IN LOOP FIRST.", Copy.loopFull(6))
+        assertEquals("LONG is on track 4. Only its first 1 block fit.", Copy.loopTrackTruncated("LONG", 4, 1))
+        assertEquals("All 6 tracks are full. Clear one in LOOP first.", Copy.loopFull(6))
         // The bounce names what it rendered, and names the cycle too when the
         // two differ — a player told only "12 BARS" would read that as the
         // whole loop.
-        assertEquals("12 BARS BOUNCED. IT IS IN SAVED SAMPLES NOW.", Copy.loopBounced(12))
-        assertEquals("64 BARS BOUNCED, OUT OF A 840 BAR CYCLE. IT IS IN SAVED SAMPLES NOW.", Copy.loopBouncedPart(64, 840))
+        assertEquals("12 bars bounced. It is in SAVED SAMPLES now.", Copy.loopBounced(12))
+        assertEquals("64 bars bounced, out of a 840 bar cycle. It is in SAVED SAMPLES now.", Copy.loopBouncedPart(64, 840))
         // One bar is a legal bounce — the grid's default interval is one bar,
         // so a six-track grid of one-block chains bounces exactly this. Both
         // lines count the same thing and both have to say BAR for it.
-        assertEquals("1 BAR BOUNCED. IT IS IN SAVED SAMPLES NOW.", Copy.loopBounced(1))
-        assertEquals("1 BAR BOUNCED, OUT OF A 6 BAR CYCLE. IT IS IN SAVED SAMPLES NOW.", Copy.loopBouncedPart(1, 6))
+        assertEquals("1 bar bounced. It is in SAVED SAMPLES now.", Copy.loopBounced(1))
+        assertEquals("1 bar bounced, out of a 6 bar cycle. It is in SAVED SAMPLES now.", Copy.loopBouncedPart(1, 6))
         // The block readout: 1-based like everything else on the grid, and
         // its own line for a track nothing has been sent to — an app that
         // counts tracks and blocks from zero anywhere on screen is the one
@@ -900,11 +900,11 @@ class PersonalityTest {
         // roomPacked and backedUp because it is the same moment, and says
         // READY rather than SENT because `ShareOut.send` only reports that
         // the chooser opened.
-        assertEquals("BREAK IS READY TO SEND. PICK WHERE IT GOES.", Copy.snipReady("BREAK"))
+        assertEquals("BREAK is ready to send. Pick where it goes.", Copy.snipReady("BREAK"))
         assertTrue(Copy.snipReady("BREAK").endsWith("."), "and still lands on a full stop")
         assertFalse(Copy.snipReady("BREAK").contains("SENT", ignoreCase = true), "the chooser opening is not the file leaving")
-        assertEquals("PAD MADE — DRONE 2. IN THE LIBRARY.", Copy.madeNamed("PAD", "DRONE 2"))
-        assertEquals("INSTRUMENT MADE — BELL. IN THE LIBRARY.", Copy.madeNamed("INSTRUMENT", "BELL"))
+        assertEquals("PAD made — DRONE 2. In the LIBRARY.", Copy.madeNamed("PAD", "DRONE 2"))
+        assertEquals("INSTRUMENT made — BELL. In the LIBRARY.", Copy.madeNamed("INSTRUMENT", "BELL"))
         assertTrue(Copy.madeNamed("PAD", "DRONE").endsWith("."), "and still lands on a full stop")
         val made = Copy.madeNamed("PAD", "DRONE 2")
         assertSentenceCase(made)
@@ -916,12 +916,12 @@ class PersonalityTest {
         assertTrue(note.contains("BIG BRASS 2", ignoreCase = true), "the note names what will land: $note")
         assertTrue(note.contains("KEYBOARD", ignoreCase = true) && note.endsWith("."), "and says where it plays, on a full stop: $note")
         assertSentenceCase(note)
-        assertEquals("RENDERING 3/9…", Copy.instrumentRendering(3, 9))
+        assertEquals("Rendering 3/9…", Copy.instrumentRendering(3, 9))
         // SYNTH's DRONE TO LOOP: the toast names the note, the track as
         // counted on screen, and how long before it repeats; LOOP's readout
         // names the slice, and the nudge only when the promise was missed.
-        assertEquals("A1 DRONE IS ON TRACK 3, 4 BARS AROUND.", Copy.droneLanded("A1", 3, 4))
-        assertEquals("A3 DRONE IS ON TRACK 1, 1 BAR AROUND.", Copy.droneLanded("A3", 1, 1))
+        assertEquals("A1 drone is on track 3, 4 bars around.", Copy.droneLanded("A1", 3, 4))
+        assertEquals("A3 drone is on track 1, 1 bar around.", Copy.droneLanded("A3", 1, 1))
         assertEquals("DRONE A1 · 2/4", Copy.droneBlock("A1", 2, 4))
         assertEquals("DRONE A1 · 1/8 · -3.2¢ OFF", Copy.droneBlock("A1", 1, 8, -3.16))
         assertTrue(Copy.DRONE_NOTE.contains("TEMPO", ignoreCase = true) && Copy.DRONE_NOTE.contains("LOOP", ignoreCase = true), Copy.DRONE_NOTE)
@@ -954,11 +954,10 @@ class PersonalityTest {
      * the moment it's said and never becomes false later — there is
      * nothing to qualify. Only a claim that reads as an ongoing, standing
      * fact about a live buffer ("LAST Ns") is the false-until-full shape
-     * this law refuses. Case-sensitive on purpose: the shout law above
-     * already forces every Copy string constant fully uppercase, so a
-     * real violation is always uppercase too — a lowercase match here
-     * would only ever fire on a KDoc comment, which the source-text half
-     * of this test skips.
+     * this law refuses. Case-insensitive on purpose: messages are sentence
+     * case now, so a real violation reads "last 60s" and a case-sensitive
+     * match would find none and pass by checking nothing. A lowercase match
+     * on a KDoc comment is skipped by the source-text half of this test.
      *
      * The number slot accepts either a literal digit run OR a Kotlin
      * string-template reference (`$n`, `${n}`, `${length}`) — a templated
@@ -970,7 +969,7 @@ class PersonalityTest {
      * by the reflective field scan below; this is what makes the
      * source-text scan worth doing at all).
      */
-    private val ceilingClaim = Regex("""LAST\s+(?:\d+|\$\{?[A-Za-z_]\w*\}?)\s*(s\b|MIN\b)""")
+    private val ceilingClaim = Regex("""LAST\s+(?:\d+|\$\{?[A-Za-z_]\w*\}?)\s*(s\b|MIN\b)""", RegexOption.IGNORE_CASE)
 
     /**
      * Reviewed Copy field names allowed to match [ceilingClaim] anyway,
@@ -978,7 +977,7 @@ class PersonalityTest {
      * fact there (e.g. it describes a ring already known to be full).
      * Empty today — no current Copy string legitimately needs "LAST Ns"
      * phrasing — kept as an explicit list rather than loosening the regex,
-     * per the same reasoning as [notASentence] above: a rule loose enough
+     * per the same reasoning as the marks on `Copy`: a rule loose enough
      * to auto-approve the legitimate cases is a rule someone disables the
      * first time it's wrong.
      */

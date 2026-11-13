@@ -77,7 +77,7 @@ class ReversalTest {
     /**
      * `Copy` constants that read as destructive but are not a destructive
      * action landing, so the law does not apply to them. Commented one by
-     * one, in the same spirit as `PersonalityTest`'s `notASentence`: a rule
+     * one, in the same spirit as the marks on `Copy`: a rule
      * loose enough to guess these is a rule someone disables the first time
      * it is wrong.
      *

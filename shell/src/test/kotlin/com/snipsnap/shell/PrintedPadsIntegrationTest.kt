@@ -108,7 +108,7 @@ class PrintedPadsIntegrationTest {
                 Spread.Sound("Aquarium", kept.drumClass, "#19645B", like = kept),
             )) {
                 val error = assertFailsWith<IllegalArgumentException> { Spread.apply(model, tone(220.0), plan, sound) }
-                assertEquals("REMOVE AQUARIUM BEFORE SPREAD.", error.message)
+                assertEquals("Remove AQUARIUM before SPREAD.", error.message)
             }
             assertEquals(kept, model.pad(1))
             assertEquals(before, files(model.kitDir), "every refusal precedes audio, source and undo writes")
