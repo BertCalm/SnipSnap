@@ -44,7 +44,7 @@ object ApsisKitGenerator {
         try {
             val bank = ApsisKitBank.all()
             check(bank.size == 16 && bank.map { it.slot } == (1..16).toList())
-            check(bank.all { it.patch.config.modelVersion == Apsis.MODEL_VERSION })
+            check(bank.all { it.patch.config.modelVersion == Apsis.PASSAGE_MODEL_VERSION })
             val arranged = SynthKits.apsis().map { requireNotNull(it) }
             val initial = KitAssembler.assembleArranged(KIT_NAME, arranged, work, key = KeySpec.parse("Cminpent"))
             val kit = initial.copy(pads = initial.pads.map { pad ->
@@ -133,7 +133,7 @@ object ApsisKitGenerator {
                     "recipe" to recipePath, "layers" to layerRows))
             }
             val manifest = json(linkedMapOf("schemaVersion" to 1, "engine" to "APSIS", "name" to KIT_NAME,
-                "model" to Apsis.MODEL_VERSION, "padCount" to 16, "sampleCount" to expectedPcm.size,
+                "model" to Apsis.PASSAGE_MODEL_VERSION, "padCount" to 16, "sampleCount" to expectedPcm.size,
                 "audio" to linkedMapOf("sampleRate" to 44_100, "channels" to 1, "bitsPerSample" to 24,
                     "effects" to false, "auditionMatching" to false),
                 "layout" to "A01–04 bass C2/Eb2/G2/Bb2; A05–08 keys C3/Eb3/G3/Bb3; A09–12 chord tones C4/Eb4/G4/Bb4; A13–14 gathered/spaced C4; A15–16 held C3/G3.",
