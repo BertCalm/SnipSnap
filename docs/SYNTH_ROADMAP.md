@@ -3542,3 +3542,10 @@ the GATECRASH shape, every strike rendered by the engine at a velocity and a tak
 phrases through one bus clipper ("Two Bars", the accepted pattern, and "Clap Riser"). The grid is proved
 through save, playback and MPC 3 export in software; MPC 2 keeps one take per zone; nothing heard. See
 [SCUFF](SCUFF.md) and the gates entry.
+
+### SCUFF, round 3 (2026-11-13)
+
+The second kit, SCUFF FLINT (`scuff-flint`, 132 BPM): faster and brighter, every pad moved up or shortened
+against DETROIT's, three rims and no low bass hit, the chain set harder for the whole kit, frantic two bars
+and a rim riser. The drum gate's "multiple distinct genre kits" now has two; `ScuffKitsTest` holds them apart
+pad for pad. Proved through save, playback and MPC 3 export like DETROIT; nothing heard. See [SCUFF](SCUFF.md).

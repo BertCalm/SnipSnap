@@ -1,6 +1,6 @@
 # SCUFF: design brief and round-0 audition
 
-Status: **round 2, the kit on the shelf; sound direction (round 0b) accepted by the owner 2026-11-12; the Kotlin port and the kit not yet heard.** No Kotlin exists. The engine stays in
+Status: **round 3, two kits on the shelf; sound direction (round 0b) accepted by the owner 2026-11-12; the Kotlin port and the kit not yet heard.** No Kotlin exists. The engine stays in
 progress until every applicable owner gate has evidence (see "Gates" below).
 
 Prototype: [`prototype/scuff/`](../prototype/scuff/) (`scuff_proto.py` is the model,
@@ -475,3 +475,57 @@ hardware open. Sound character: round 0b accepted; the Kotlin engine and the kit
 **Published.** The listening page's version 4 (2026-11-13, <https://claude.ai/artifact/Vh9vx4ezAScNhiLp9KFJd8>) adds the kit at the top: every pad's hard first take cut from the
 exported MPC 3 track through the pad resolver, a soft-to-hard strip of all twelve strikes for every hit, and the
 two phrases. Not heard.
+
+## As built, round 3: the second kit, FLINT (2026-11-13)
+
+The owner said "Do round 3 with the Flint kit". The drum gate asks for multiple distinct genre kits, authored
+musical choices with distinct roles, balance and character, and says that different effect strengths on the
+same kit are not enough. FLINT (`ScuffKits.Kit.FLINT`, id `scuff-flint`, 132 BPM, the brief's "occasionally
+pushing 135+") differs from DETROIT in every one of those: its pads, their tunings and lengths, its roles, its
+tempo, its chain and its phrases.
+
+| Pad | FLINT | against DETROIT |
+|---|---|---|
+| A01 Kick | TUNE .6 (about 110 Hz), DECAY .3, CLICK .8 | higher, shorter, more click |
+| A02 Clap | TUNE .6, DECAY .35, SNAP .8 (taps 8.4 ms apart) | tighter and shorter |
+| A03 Hat | TUNE .7, DECAY .3, GRIT .55 and SLAM .65 (the engine's own, not the kit's) | higher and shorter |
+| A04 Hat Open | TUNE .7, DECAY 1, GRIT .55 and SLAM .65 | higher |
+| A05 Boom | TUNE .6 (65 Hz), DECAY .3, DRIVE .8 | shorter, harder driven; no low bass hit |
+| A06 Boom High | TUNE 1 (80 Hz), DECAY .3, DRIVE .8 | the jump partner |
+| A07 Rim | TUNE .55, DECAY .4, BITE .9 | the stank rim, more bite |
+| A08 Rim Low | TUNE .25, DECAY .5, BITE .8 | a new role: the low rim answers |
+| A09 Rim High | TUNE .9, DECAY .3, BITE .9 | higher, shorter |
+| A10 Zap | TUNE .7, DECAY .3 | higher, faster |
+| A11 Tick | TUNE .7 | higher |
+| A12 Pluck | TUNE .8, DECAY .3 | higher, shorter |
+| A13 Bell | TUNE .7, DECAY .4, TONE .8 | higher, shorter, brighter |
+| A14 Inhale | DECAY .2 | a faster suck-back |
+| A15 Two Bars | a frantic pattern at 132: a ghost before every clap, rims stumbling with the low rim answering, two 32nd hat bursts, bass hits jumping up, a zap before each of bar 2's claps | a different pattern |
+| A16 Rim Riser | the stank rim from eighths to thirty-seconds, rising, the low rim answering each eighth | the riser is the rim, not the clap |
+| The chain | GRIT .7, BARK .65, LOCKER .3, SLAM .75 on every pad | more crush and bark, less box, slammed harder |
+
+Three rims and no low bass hit because the brief makes the rim Flint's voice: the stank rim "plays off-beat
+sixteenth patterns to create a stumbling, rubbery counter-rhythm", so FLINT gives it three pads and the riser.
+DETROIT keeps the pluck-and-rim call and response and the three bass hits.
+
+**Measured** (`ScuffKitsTest`, "the two kits are different kits"): each kit has its own tempo and its own chain
+setting; pad for pad, FLINT's render is not DETROIT's at matched level (shape distance over .05 on all sixteen
+roles); FLINT's kick lands more than 5 percent higher, and its kick, clap and hat are shorter.
+
+"Brighter" did not survive measurement as a claim about the pads as played, and the attempt taught two
+things. FLINT's clap carries less energy above 2 kHz than DETROIT's, because its harder GRIT folds the top
+down and its stronger BARK lifts 1.1 kHz: it is nastier rather than airier, the brief's "brittle and papery".
+And on the closed hat the kit's chain did the opposite of the intent: at the kit's GRIT .7 the hat's 9 kHz ring
+folded into the mids, and at the kit's SLAM .75 the bus clipper's 600 Hz growl sat under the hat (spectral
+centroid 1.6 kHz at SLAM .75 against 4.2 kHz at .65, measured on the engine's render). The brief's hat is
+clipped clean, so FLINT's hats keep the engine's own GRIT and SLAM; the kit's crush and slam are for the claps,
+rims and bass hits. This also answers the round-0 question "should the hats go through the bus at all": not
+harder than the engine's default.
+
+**Disclosed:** FLINT's soft rim, 60 ms long, keeps a mean of .0050 of its peak after both DC blocks, because a
+20 Hz one-pole's transient does not settle inside it; the kit test's bound is .008 (the house range is .005 to
+.01). Nothing in FLINT has been heard.
+
+The starter `SCUFF FLINT` sits beside DETROIT under SKINS; the generator builds, proves and packs both kits
+(2026-11-13: "Verified Flint: 16 pads, 192 slices, saved PCM + playback + MPC 3 track, built in 11208 ms");
+the listening page's version 5 (<https://claude.ai/artifact/Vh9vx4ezAScNhiLp9KFJd8>) carries both kits at the top.

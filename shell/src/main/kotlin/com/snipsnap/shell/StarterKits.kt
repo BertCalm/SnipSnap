@@ -728,6 +728,11 @@ object StarterKits {
             "A dry Michigan kit: punch kick, whip clap, staccato bass hits, two-peak rims and a chopper hat, crushed, boxed, barked and slammed. Three touch zones, four takes; two bars through one bus and a clap riser.",
             seeded = false, tempoBpm = com.snipsnap.synth.ScuffKits.Kit.DETROIT.bpm.toFloat(),
         ) { com.snipsnap.synth.ScuffKits.build(com.snipsnap.synth.ScuffKits.Kit.DETROIT) },
+        Starter(
+            "scuff-flint", "SCUFF FLINT",
+            "The faster, brighter Michigan kit: a higher, shorter kick, a tighter clap, bright hats, short hard bass hits and three stank rims, crushed and slammed harder. Three touch zones, four takes; frantic two bars and a rim riser.",
+            seeded = false, tempoBpm = com.snipsnap.synth.ScuffKits.Kit.FLINT.bpm.toFloat(),
+        ) { com.snipsnap.synth.ScuffKits.build(com.snipsnap.synth.ScuffKits.Kit.FLINT) },
     )
 
     fun byId(id: String): Starter? = ALL.firstOrNull { it.id == id }
