@@ -94,8 +94,9 @@ numpy and scipy. See [`../docs/SCUFF.md`](../docs/SCUFF.md).
 
 ## clutter/ — CLUTTER round-0 audition (Python harness)
 
-A found-sound drum kit of modelled household objects (bucket, rice box, book, jar, keys, table,
-saucepan, bottle), each with loose parts that only move above a strike threshold, as numbers and
+A found-sound drum kit of sixteen modelled household objects, one per pad (bucket, rice box, jar,
+keys, suitcase, book, matchbox, cutlery drawer, tub, frying pan, table, saucepan, bottle, mug, wine
+glass, zipper), each with loose parts that only move above a strike threshold, as numbers and
 WAVs before any Kotlin. `python3 gen_audition.py OUT && python3 build_page.py OUT` renders the
 sixteen-pad kit, every pad at three velocity zones and four takes (the page's playable pad grid),
 the velocity ladders, the takes and every control on every object, with their measurements.

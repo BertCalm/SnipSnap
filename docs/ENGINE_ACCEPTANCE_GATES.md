@@ -392,20 +392,21 @@ unchanged.
 
 ## CLUTTER (round 0, 2026-11-13)
 
-A found-sound drum kit of modelled household objects: bucket, rice box, book, rice jar, key ring,
-table, saucepan, bottle. Every object has loose parts (rice, a lid, a handle, cutlery) that only move
+A found-sound drum kit of sixteen modelled household objects, one per pad: bucket, rice box, rice jar,
+key ring, suitcase, book, matchbox, cutlery drawer, tub, frying pan, table, saucepan, bottle, mug, wine
+glass, zipper. Every object has loose parts (rice, a lid, a handle, cutlery, a rivet) that only move
 above a strike threshold. See [CLUTTER](CLUTTER.md). Round 0 is a Python prototype audition; no Kotlin exists.
 
 - **Melodic, keygroup and chord-tool gates:** not applicable. A drum engine.
 - **Articulation:** finite hits, no HOLD. Not a picked or thumbed string.
-- **Percussion:** A15 Pot Roll (a wooden spoon, eighths to thirty-seconds over one bar, soft to hard) is
-  authored in the prototype. Not heard.
+- **Percussion:** B01 Pot Roll (a wooden spoon, eighths to thirty-seconds over one bar, soft to hard) is
+  authored in the prototype, on a second bank beside the sixteen pads. Not heard.
 - **Drum shelf: open.** One audition kit. Three genre kits are proposed in [CLUTTER](CLUTTER.md) and wait
   for the owner's verdict on the objects.
 - **Velocity and round robin:**
-  - **Rendering: measured in Python, not Kotlin.** Soft against hard at matched level differs by 3.1 dB
-    (Empty Box, nothing loose) to 25.4 dB (Rice Box). Four takes per pad; the closest pair is 1.9 dB
-    apart. Each take replays byte for byte.
+  - **Rendering: measured in Python, not Kotlin.** Soft against hard at matched level differs by 3.4 dB
+    (Wine Glass) to 25.4 dB (Rice Box). Four takes per pad; the closest pair is 1.1 dB apart (Frying
+    Pan). Each take replays byte for byte.
   - **Saving, playback, export: open.** Nothing to save, play or export until the Kotlin round. The
     listening page's pad grid is a browser stand-in, not app evidence.
 - **Sound character: not heard.** Listening page published 2026-11-13:

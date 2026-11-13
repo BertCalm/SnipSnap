@@ -66,9 +66,12 @@ RATE = sk.RATE          # 44 100, the MPC rate
 FS = sk.INTERNAL        # 176 400, the rate the objects ring at
 G = 9.81                # gravity, m/s^2: the lift threshold and the flight times use it
 
-VOICES = ("BUCKET", "BOX", "BOOK", "JAR", "KEYS", "TABLE", "POT", "BOTTLE")
+VOICES = ("BUCKET", "BOX", "BOOK", "JAR", "KEYS", "TABLE", "POT", "BOTTLE",
+          "SUITCASE", "MATCHBOX", "DRAWER", "TUB", "PAN", "MUG", "GLASS", "ZIP")
 DRUM_CLASS = {"BUCKET": "KICK", "BOX": "SNARE", "BOOK": "CLAP", "JAR": "HAT_CLOSED",
-              "KEYS": "HAT_OPEN", "TABLE": "PERC", "POT": "PERC", "BOTTLE": "PERC"}
+              "KEYS": "HAT_OPEN", "TABLE": "PERC", "POT": "PERC", "BOTTLE": "PERC",
+              "SUITCASE": "KICK", "MATCHBOX": "HAT_CLOSED", "DRAWER": "HAT_OPEN", "TUB": "TOM",
+              "PAN": "TOM", "MUG": "PERC", "GLASS": "PERC", "ZIP": "PERC"}
 MACROS = ("TUNE", "TOOL", "RATTLE", "DAMP", "MIC")
 
 # What each macro means on each object. TUNE is the object's size (all modes scale together,
@@ -84,6 +87,14 @@ MEANING = {
     "TABLE":  {"TOOL": "knuckle -> spoon handle -> fork", "RATTLE": "cutlery on the table jumping"},
     "POT":    {"TOOL": "palm -> wooden spoon -> metal ladle", "RATTLE": "the lid chattering"},
     "BOTTLE": {"TOOL": "fingertip -> wooden spoon -> a key", "RATTLE": "the bottle rocking on its base"},
+    "SUITCASE": {"TOOL": "fist -> heel -> drumstick", "RATTLE": "the two latches hopping"},
+    "MATCHBOX": {"TOOL": "a lazy shake -> a sharp flick", "RATTLE": "how full the box is"},
+    "DRAWER":   {"TOOL": "pushed shut -> slammed", "RATTLE": "how much cutlery is inside"},
+    "TUB":      {"TOOL": "palm -> drumstick -> metal spoon", "RATTLE": "an unclipped corner of the lid chattering"},
+    "PAN":      {"TOOL": "palm -> wooden spoon -> metal ladle", "RATTLE": "the loose rivet in the handle buzzing"},
+    "MUG":      {"TOOL": "fingertip -> pencil -> metal spoon", "RATTLE": "the spoon left in the mug"},
+    "GLASS":    {"TOOL": "finger pad -> fingernail -> metal spoon", "RATTLE": "ice cubes inside"},
+    "ZIP":      {"TOOL": "how fast you pull: slow rasp -> quick zip", "RATTLE": "the pull tab clinking at the end"},
 }
 
 # Per-object defaults. "shape"
@@ -96,11 +107,20 @@ DEFAULTS = {
     "TABLE":  {"TUNE": .5, "TOOL": .20, "RATTLE": .40, "DAMP": .30, "MIC": .30},
     "POT":    {"TUNE": .5, "TOOL": .45, "RATTLE": .45, "DAMP": .30, "MIC": .35},
     "BOTTLE": {"TUNE": .5, "TOOL": .75, "RATTLE": .35, "DAMP": .20, "MIC": .30},
+    "SUITCASE": {"TUNE": .5, "TOOL": .15, "RATTLE": .40, "DAMP": .30, "MIC": .30},
+    "MATCHBOX": {"TUNE": .5, "TOOL": .55, "RATTLE": .55, "DAMP": .30, "MIC": .25},
+    "DRAWER":   {"TUNE": .5, "TOOL": .60, "RATTLE": .55, "DAMP": .25, "MIC": .40},
+    "TUB":      {"TUNE": .5, "TOOL": .35, "RATTLE": .35, "DAMP": .35, "MIC": .30},
+    "PAN":      {"TUNE": .5, "TOOL": .45, "RATTLE": .50, "DAMP": .45, "MIC": .30},
+    "MUG":      {"TUNE": .5, "TOOL": .85, "RATTLE": .40, "DAMP": .30, "MIC": .30},
+    "GLASS":    {"TUNE": .5, "TOOL": .50, "RATTLE": .40, "DAMP": .15, "MIC": .30},
+    "ZIP":      {"TUNE": .5, "TOOL": .55, "RATTLE": .40, "DAMP": .30, "MIC": .25},
 }
 
 # Render length per object, seconds, before the MIC tail. "shape"
 LENGTH = {"BUCKET": .70, "BOX": .45, "BOOK": .40, "JAR": .32, "KEYS": 1.0, "TABLE": .50,
-          "POT": 1.40, "BOTTLE": 1.20}
+          "POT": 1.40, "BOTTLE": 1.20, "SUITCASE": .60, "MATCHBOX": .35, "DRAWER": 1.20, "TUB": .60,
+          "PAN": 1.40, "MUG": .70, "GLASS": 2.0, "ZIP": .60}
 
 PEAK = 0.89  # every one-shot is peak-matched, as in SCUFF, so no pad wins by being louder
 
@@ -488,8 +508,226 @@ def bottle(m, vel, take, n):
     return out
 
 
+def suitcase(m, vel, take, n):
+    rng = rng_for("SUITCASE", take)
+    tr, df = tune_ratio(m["TUNE"]), damp_factor(m["DAMP"])
+    J = vel ** 1.2 * rng.uniform(0.95, 1.05)
+    width = strike_width(m["TOOL"], vel, 9.0, 0.6, rng.uniform(0.94, 1.06))
+    pulse = contact(n, 0.0, width, J)
+    t = np.arange(n) / FS
+    # A 70 x 45 cm fibreboard lid under fabric: very lossy, so it thuds rather than booms.
+    a, b = 0.70, 0.45
+    x, y = rng.uniform(0.3, 0.5), rng.uniform(0.3, 0.5)
+    raw = sorted(((mm / a) ** 2 + (nn / b) ** 2, mm, nn) for mm in range(1, 4) for nn in range(1, 4))[:8]
+    table = [((fq / raw[0][0]), (0.25 + abs(math.sin(math.pi * mm * x) * math.sin(math.pi * nn * y))) / (i + 1) ** 0.5,
+              0.11 * df * (fq / raw[0][0]) ** -0.7) for i, (fq, mm, nn) in enumerate(raw)]
+    panel = modes(pulse, 78.0 * tr, table)
+    # The air inside: a short low thud. Fabric does not stiffen, so no pitch drop (the bucket has one).
+    air = J * np.sin(2 * np.pi * 52.0 * tr * t) * (1 - np.exp(-t / max(width * 0.6, 2e-4))) * np.exp(-6.9078 * t / (0.2 * df ** 0.7))
+    slap = 0.08 * J * bandpass(rng.standard_normal(n) * np.exp(-t / max(width * 1.2, 3e-4)), 60, 1500)
+    out = 0.9 * air + 0.8 * panel + slap
+    # RATTLE: the two latches hop.
+    L = lift(vel, m["RATTLE"])
+    if L > 0:
+        for i in range(2):
+            ts, vs = bounce_train(rng.uniform(0.0005, 0.002), 0.08 * L * rng.uniform(0.8, 1.2), 0.4)
+            hit = impulses(n, ts, [v / 0.08 for v in vs], 0.0001)
+            f = (1900.0, 2350.0)[i] * rng.uniform(0.97, 1.03)
+            out += 0.03 * smooth(m["RATTLE"], 0, .6) * J * modes(hit, f, [(1, 1, .04), (2.4, .5, .025), (4.1, .3, .015)])
+    return out
+
+
+def matchbox(m, vel, take, n):
+    rng = rng_for("MATCHBOX", take)
+    tr, df = tune_ratio(m["TUNE"]), damp_factor(m["DAMP"])
+    J = vel ** 1.2 * rng.uniform(0.95, 1.05)
+    # The matches slide and hit the end of the tray together, then a few slide back.
+    pool = 500
+    count = int(min(pool, (45 + 180 * m["RATTLE"]) * vel ** 0.7))
+    spread = sk.exp_map(m["TOOL"], 0.03, 0.008) / vel ** 0.5 * sk.lin(m["DAMP"], 1.0, 0.6)
+    ts = 0.001 + rng.gamma(2.5, spread / 2.5, pool)[:count]
+    amps = rng.uniform(0.3, 1.0, pool)[:count] * np.exp(-np.maximum(0.0, ts - 1.5 * spread) / spread)
+    back = rng.uniform(0.07, 0.11)
+    nb = count // 3
+    ts2 = back + rng.gamma(2.5, spread / 2.5, pool)[:nb]
+    amps2 = 0.35 * rng.uniform(0.3, 1.0, pool)[:nb]
+    hit = impulses(n, np.concatenate([ts, ts2]), np.concatenate([amps, amps2]))
+    kl = int(0.0003 * FS)
+    kernel = bandpass(rng.standard_normal(kl) * np.hanning(kl), 1500.0 * tr, 6000.0 * tr)
+    clicks = signal.fftconvolve(hit, kernel)[:n]
+    tray = modes(hit, 880.0 * tr, [(1, 1, .03 * df), (1.7, .6, .02 * df), (2.6, .4, .015 * df)])
+    return (2.0 * clicks + 0.10 * tray) * J
+
+
+def drawer(m, vel, take, n):
+    rng = rng_for("DRAWER", take)
+    tr, df = tune_ratio(m["TUNE"]), damp_factor(m["DAMP"])
+    J = vel ** 1.2 * rng.uniform(0.95, 1.05)
+    width = strike_width(m["TOOL"], vel, 6.0, 1.0, rng.uniform(0.94, 1.06))
+    pulse = contact(n, 0.0, width, J)
+    wood = modes(pulse, 140.0 * tr, [(1, 1, .06 * df), (1.6, .7, .045 * df), (2.5, .5, .03 * df), (3.7, .3, .02 * df)])
+    # The cutlery keeps going after the drawer stops: it slides into the front and piles up.
+    items = 6 + int(round(m["RATTLE"] * 14))
+    f = rng.uniform(650.0, 3600.0, 20)
+    t60 = rng.uniform(0.3, 0.8, 20)
+    tau = 0.09 * (1 + m["RATTLE"]) * sk.lin(m["DAMP"], 1.0, 0.5)
+    start = rng.uniform(0.004, 0.012)
+    cand = np.sort(rng.uniform(0, 0.9, 3000))
+    # A harder slam (TOOL) throws the cutlery harder: more collisions at first, shorter, brighter contacts.
+    slam = sk.lin(m["TOOL"], 0.45, 1.3)
+    keep = rng.uniform(0, 1, 3000) < np.minimum(1.0, slam * vel * np.exp(-cand / tau))
+    who = rng.integers(0, 20, 3000)[keep]
+    av = rng.uniform(0.3, 1.0, 3000)[keep]
+    times = cand[keep] + start
+    cutlery = np.zeros(n)
+    for k in range(items):
+        sel = who == k
+        if not sel.any():
+            continue
+        exc = impulses(n, times[sel], av[sel] * np.exp(-times[sel] / (tau * 1.5)), sk.exp_map(m["TOOL"], 0.0005, 0.00008))
+        cutlery += modes(exc, f[k] * tr, [(1.0, 1.0, t60[k] * df), (2.756, .6, t60[k] * df * 0.55)])
+    return wood + 1.8 * J * cutlery
+
+
+def tub(m, vel, take, n):
+    rng = rng_for("TUB", take)
+    tr, df = tune_ratio(m["TUNE"]), damp_factor(m["DAMP"])
+    J = vel ** 1.2 * rng.uniform(0.95, 1.05)
+    width = strike_width(m["TOOL"], vel, 5.0, 0.3, rng.uniform(0.94, 1.06))
+    pulse = contact(n, 0.0, width, J)
+    t = np.arange(n) / FS
+    # The lid is the drumhead: a 45 x 35 cm plastic rectangle over a box of air.
+    a, b = 0.45, 0.35
+    x, y = rng.uniform(0.25, 0.5), rng.uniform(0.25, 0.5)
+    raw = sorted(((mm / a) ** 2 + (nn / b) ** 2, mm, nn) for mm in range(1, 4) for nn in range(1, 4))[:8]
+    table = [((fq / raw[0][0]), (0.25 + abs(math.sin(math.pi * mm * x) * math.sin(math.pi * nn * y))) / (i + 1) ** 0.5,
+              0.10 * df * (fq / raw[0][0]) ** -0.6) for i, (fq, mm, nn) in enumerate(raw)]
+    lid = modes(pulse, 120.0 * tr, table)
+    f = 96.0 * tr * (1 + 0.15 * vel ** 1.2 * np.exp(-t / 0.02))
+    air = J * np.sin(2 * np.pi * np.cumsum(f) / FS) * (1 - np.exp(-t / max(width * 0.6, 2e-4))) * np.exp(-6.9078 * t / (0.22 * df ** 0.7))
+    out = 0.8 * air + 0.8 * lid + utensil_ring(n, pulse, m["TOOL"])
+    # RATTLE: one corner of the lid has come unclipped and chatters.
+    L = lift(vel, m["RATTLE"])
+    if L > 0:
+        ts, vs = bounce_train(0.001, 0.05 * L * rng.uniform(0.85, 1.15), 0.65)
+        hit = impulses(n, ts, [v / 0.05 for v in vs], 0.0002)
+        out += 0.25 * smooth(m["RATTLE"], 0, .6) * J * modes(hit, 520.0 * tr, [(1, 1, .04), (1.7, .6, .03), (2.6, .4, .02)])
+    return out
+
+
+PAN_GAP = 0.6  # the rivet's play in the body's own units at a full-strength hit: "shape", fixed, never per hit
+
+
+def pan(m, vel, take, n):
+    rng = rng_for("PAN", take)
+    tr, df = tune_ratio(m["TUNE"]), damp_factor(m["DAMP"])
+    J = vel ** 1.2 * rng.uniform(0.95, 1.05)
+    width = strike_width(m["TOOL"], vel, 4.0, 0.25, rng.uniform(0.94, 1.06))
+    pulse = contact(n, 0.0, width, J)
+    w = take_weights(rng, len(FREE_PLATE))
+    plate = doublets([(r, w[i] / (i + 1) ** 0.5, 0.9 * df * r ** -0.5) for i, r in enumerate(FREE_PLATE)], 0.003)
+    body = modes(pulse, 230.0 * tr, plate)
+    out = body + 0.25 * modes(pulse, 165.0 * tr, [(1, 1, .12 * df)]) + utensil_ring(n, pulse, m["TOOL"])
+    # RATTLE: the handle's loose rivet. Each time the pan swings past the rivet's play, the rivet
+    # knocks, so it buzzes while the pan rings hard and stops on its own as the ring dies away.
+    # A soft hit never reaches the play. This one reads the body (one way); the rest are thrown.
+    rattle = m["RATTLE"]
+    if rattle > 0:
+        gap = PAN_GAP * sk.lin(rattle, 1.6, 0.25)
+        up = np.where((body[:-1] < gap) & (body[1:] >= gap))[0]
+        if len(up):
+            from scipy.ndimage import maximum_filter1d
+            env = maximum_filter1d(np.abs(body), size=int(FS / (230.0 * tr)) + 1)
+            hit = impulses(n, up / FS, np.maximum(0.0, env[up] - gap), 0.0001)
+            out += 0.3 * smooth(rattle, 0, .6) * modes(hit, 3400.0 * rng.uniform(0.97, 1.03), [(1, 1, .02), (1.8, .5, .012)])
+    return out
+
+
+def mug(m, vel, take, n):
+    rng = rng_for("MUG", take)
+    tr, df = tune_ratio(m["TUNE"]), damp_factor(m["DAMP"])
+    J = vel ** 1.2 * rng.uniform(0.95, 1.05)
+    width = strike_width(m["TOOL"], vel, 2.0, 0.12, rng.uniform(0.94, 1.06))
+    pulse = contact(n, 0.0, width, J)
+    w = take_weights(rng, 4)
+    # Thick ceramic with a handle: the handle breaks the symmetry, so the pairs split wider than glass.
+    glaze = doublets([(r, w[i] / (i + 1) ** 0.4, 0.28 * df * r ** -0.6) for i, r in enumerate(RING[:4])], 0.015)
+    f1 = 1100.0 * tr
+    out = modes(pulse, f1, glaze) + utensil_ring(n, pulse, m["TOOL"]) + 0.2 * modes(pulse, 300.0 * tr, [(1, 1, .02)])
+    # RATTLE: the spoon left in the mug jumps and knocks the rim.
+    L = lift(vel, m["RATTLE"])
+    if L > 0:
+        ts, vs = bounce_train(0.001, 0.05 * L * rng.uniform(0.85, 1.15), 0.45)
+        hit = impulses(n, ts, [v / 0.05 for v in vs], 0.0001)
+        k = smooth(m["RATTLE"], 0, .6)
+        out += 0.15 * k * J * modes(hit, 1800.0, [(r, g, .12) for r, g in zip(FREE_BAR, (1, .5, .3))])
+        out += 0.30 * k * J * modes(hit, f1, glaze[:4])
+    return out
+
+
+def glass(m, vel, take, n):
+    rng = rng_for("GLASS", take)
+    tr, df = tune_ratio(m["TUNE"]), damp_factor(m["DAMP"])
+    J = vel ** 1.2 * rng.uniform(0.95, 1.05)
+    width = strike_width(m["TOOL"], vel, 3.0, 0.15, rng.uniform(0.94, 1.06))
+    pulse = contact(n, 0.0, width, J)
+    w = take_weights(rng, 4)
+    # Thin, nearly perfect glass: few partials, long, beating slowly.
+    ring = doublets([(r, w[i] / (i + 1) ** 0.9, 2.2 * df * r ** -1.0) for i, r in enumerate(RING[:4])], 0.0012)
+    f1 = 880.0 * tr
+    out = modes(pulse, f1, ring) + utensil_ring(n, pulse, m["TOOL"])
+    # RATTLE: ice cubes, nudged by the flick, settle against the wall a few times.
+    L = lift(vel, m["RATTLE"], 0.1, 0.6)
+    if L > 0:
+        cubes = 1 + int(round(m["RATTLE"] * 4))
+        times, amps = [], []
+        for c in range(cubes):
+            t0 = rng.uniform(0.02, 0.25)
+            for j in range(rng.integers(1, 4)):
+                times.append(t0 + j * rng.uniform(0.012, 0.05))
+                amps.append(L * rng.uniform(0.3, 1.0) * 0.6 ** j)
+        hit = impulses(n, times, amps, 0.0002)
+        kl = int(0.0004 * FS)
+        click = signal.fftconvolve(hit, bandpass(rng.standard_normal(kl) * np.hanning(kl), 2000, 8000))[:n]
+        k = smooth(m["RATTLE"], 0, .6)
+        out += k * J * (0.5 * click + 0.25 * modes(hit, f1, ring[:4]))
+    return out
+
+
+def zipper(m, vel, take, n):
+    rng = rng_for("ZIP", take)
+    tr, df = tune_ratio(m["TUNE"]), damp_factor(m["DAMP"])
+    # A 12 cm pull whose speed rises and falls (a raised sine); a tooth every 2 mm clicks as it passes.
+    # TOOL is how fast you pull; TUNE the tooth size (bigger teeth, fewer and lower clicks).
+    dur = sk.exp_map(m["TOOL"], 0.32, 0.09) / vel ** 0.3
+    pitch = 0.002 / tr
+    teeth = int(0.12 / pitch)
+    x = (np.arange(1, teeth + 1) * pitch) + rng.normal(0, pitch * 0.06, teeth)
+    x = np.clip(x, 0, 0.12 - 1e-6)
+    ts = dur / np.pi * np.arccos(1 - 2 * x / 0.12)
+    speed = np.sin(np.pi * ts / dur)
+    amps = (0.25 + speed) ** 0.7 * vel * rng.uniform(0.7, 1.0, teeth)
+    hit = impulses(n, ts, amps)
+    kl = int(0.00025 * FS)
+    clicks = signal.fftconvolve(hit, bandpass(rng.standard_normal(kl) * np.hanning(kl), 2500.0 * tr, 9000.0 * tr))[:n]
+    # The cloth rustles while it moves; a hand holding it taut (DAMP) quietens it.
+    t = np.arange(n) / FS
+    env = np.where(t < dur, np.sin(np.pi * np.clip(t / dur, 0, 1)), 0.0)
+    cloth = bandpass(rng.standard_normal(n), 700, 4000) * env * 0.05 * vel * (1 - 0.7 * m["DAMP"])
+    body = modes(hit, 600.0, [(1, 1, .02 * df), (1.9, .5, .015 * df)])
+    out = 2.0 * clicks + cloth + 0.15 * body
+    # RATTLE: the pull tab clinks against the teeth when the pull stops.
+    k = smooth(m["RATTLE"], 0, .6)
+    if k > 0:
+        tts, vs = bounce_train(dur, 0.04 * vel, 0.4)
+        tab = impulses(n, tts, [v / 0.04 for v in vs], 0.0001)
+        out += 0.3 * k * modes(tab, 2600.0, [(r, g, .06) for r, g in zip(FREE_BAR, (1, .5, .3))])
+    return out
+
+
 OBJECTS = {"BUCKET": bucket, "BOX": box, "BOOK": book, "JAR": jar, "KEYS": keys,
-           "TABLE": table, "POT": pot, "BOTTLE": bottle}
+           "TABLE": table, "POT": pot, "BOTTLE": bottle, "SUITCASE": suitcase, "MATCHBOX": matchbox,
+           "DRAWER": drawer, "TUB": tub, "PAN": pan, "MUG": mug, "GLASS": glass, "ZIP": zipper}
 
 # ---------------------------------------------------------------------------------- MIC
 

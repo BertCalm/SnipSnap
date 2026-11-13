@@ -31,24 +31,29 @@ ZONES = {"s": 0.35, "m": 0.65, "h": 1.0}   # the three velocity zones the house 
 TAKES = 4
 MANIFEST: dict = {"bpm": BPM, "zones": ZONES, "takes": TAKES, "sections": [], "kit": [], "checks": {}}
 
-# The round-0 kit. Names are plain words for the object, never a product. "shape"
+# The round-0 kit: sixteen pads, sixteen different objects, laid out as AutoPlace expects (A01 kick, A02 snare,
+# A03/A04 hats, A05 second kick, A06 clap, A07/A08 second hats, toms, then percussion). Names are plain words
+# for the object, never a product. "shape"
 KIT = [
     ("A01", "Bucket", "BUCKET", {}),
     ("A02", "Rice Box", "BOX", {}),
     ("A03", "Rice Jar", "JAR", {}),
     ("A04", "Key Ring", "KEYS", {}),
-    ("A05", "Book Slam", "BOOK", {}),
-    ("A06", "Knuckle", "TABLE", {}),
-    ("A07", "Saucepan", "POT", {}),
-    ("A08", "Bottle", "BOTTLE", {}),
-    ("A09", "Bucket Side", "BUCKET", {"TUNE": .82, "TOOL": .40, "RATTLE": .20}),
-    ("A10", "Empty Box", "BOX", {"TUNE": .30, "RATTLE": 0.0, "DAMP": .55}),
-    ("A11", "Stockpot", "POT", {"TUNE": .20, "TOOL": .30, "RATTLE": .90}),
-    ("A12", "Full Bottle", "BOTTLE", {"TUNE": .22, "TOOL": .50}),
-    ("A13", "Fork Drop", "TABLE", {"TOOL": 1.0, "RATTLE": .85}),
-    ("A14", "Coin Jar", "JAR", {"TOOL": .92, "RATTLE": .35}),
+    ("A05", "Suitcase", "SUITCASE", {}),
+    ("A06", "Book Slam", "BOOK", {}),
+    ("A07", "Matchbox", "MATCHBOX", {}),
+    ("A08", "Cutlery Drawer", "DRAWER", {}),
+    ("A09", "Tub", "TUB", {}),
+    ("A10", "Frying Pan", "PAN", {}),
+    ("A11", "Knuckle", "TABLE", {}),
+    ("A12", "Saucepan", "POT", {}),
+    ("A13", "Bottle", "BOTTLE", {}),
+    ("A14", "Mug", "MUG", {}),
+    ("A15", "Wine Glass", "GLASS", {}),
+    ("A16", "Zipper", "ZIP", {}),
 ]
-MIX = {"BUCKET": 1.0, "BOX": .85, "BOOK": .6, "JAR": .42, "KEYS": .38, "TABLE": .5, "POT": .45, "BOTTLE": .4}
+MIX = {"BUCKET": 1.0, "BOX": .85, "BOOK": .6, "JAR": .42, "KEYS": .38, "TABLE": .5, "POT": .45, "BOTTLE": .4,
+       "SUITCASE": .9, "MATCHBOX": .4, "DRAWER": .4, "TUB": .7, "PAN": .5, "MUG": .4, "GLASS": .35, "ZIP": .4}
 
 
 def path(section, name):
@@ -114,7 +119,11 @@ for pad, name, voice, macros in KIT:
          "soft_centroid_hz": ms.centroid(soft),
          "after_soft_db": ms.window_db(soft, 0.012, 0.08), "after_hard_db": ms.window_db(hard, 0.012, 0.08),
          "closest_takes_db": min(dists), "widest_takes_db": max(dists), "render_ms": round(timings[-1], 1)}
-    if voice == "BUCKET":
+    if voice in ("MATCHBOX", "ZIP"):
+        # No strike at the start (a shake, a pull), so "after the hit" against the first 5 ms means nothing.
+        m.pop("after_soft_db")
+        m.pop("after_hard_db")
+    if voice in ("BUCKET", "SUITCASE", "TUB"):
         m.update({"hz_early_hard": ms.window_hz(hard, 0.004, 0.03, 30, 300), "hz_late_hard": ms.window_hz(hard, 0.1, 0.3, 30, 300),
                   "hz_early_soft": ms.window_hz(soft, 0.004, 0.03, 30, 300)})
     save("kit", f"{pad.lower()}-{name.lower().replace(' ', '-')}", hard,
@@ -133,13 +142,13 @@ for pad, name, voice, macros in KIT:
     save("velocity", pad.lower(), chain(ladder, 0.25),
          f"{pad} {name}: soft, medium, hard (velocity {ZONES['s']}, {ZONES['m']}, {ZONES['h']}), each peak-matched so only the strike differs.",
          {"soft_vs_hard_db": m["soft_vs_hard_db"], "soft_centroid_hz": m["soft_centroid_hz"], "centroid_hz": m["centroid_hz"],
-          "after_soft_db": m["after_soft_db"], "after_hard_db": m["after_hard_db"]}, {"pad": pad, "label": name})
+          "after_soft_db": m.get("after_soft_db"), "after_hard_db": m.get("after_hard_db")}, {"pad": pad, "label": name})
     save("takes", pad.lower(), chain(takes, 0.22),
          f"{pad} {name}: the four round-robin takes, hard, in the order the pad deals them.",
          {"closest_takes_db": m["closest_takes_db"], "widest_takes_db": m["widest_takes_db"]}, {"pad": pad, "label": name})
     print(pad, name, m)
 
-# ------------------------------------------------------------------------------ A15: the roll
+# ------------------------------------------------------------------------------ B01: the roll (bank B, off the 16 pads)
 
 ROLL = []  # (time, velocity, take): two beats of eighths, one of sixteenths, one of thirty-seconds
 t, k = 0.0, 0
@@ -155,23 +164,22 @@ for at, vel, tk in ROLL:
 roll *= 0.95 / np.max(np.abs(roll))
 roll_metrics = {"hits": len(ROLL), "first_gap_ms": round(2 * SIXTEENTH * 1000), "last_gap_ms": round(SIXTEENTH / 2 * 1000),
                 "seconds": round(len(roll) / RATE, 2)}
-save("kit", "a15-pot-roll", roll, f"A15 Pot Roll: a wooden spoon on the saucepan, eighths to thirty-seconds over one bar at {BPM:.0f} BPM, "
+save("extras", "b01-pot-roll", roll, f"B01 Pot Roll: a wooden spoon on the saucepan, eighths to thirty-seconds over one bar at {BPM:.0f} BPM, "
      "soft to hard, the four takes in turn. The sampler's velocity gain is applied here.", roll_metrics,
-     {"pad": "A15", "label": "Pot Roll", "voice": "POT"})
-MANIFEST["kit"].append({"pad": "A15", "label": "Pot Roll", "voice": "POT", "class": "PERC (roll)", "metrics": roll_metrics})
-sk.write_wav(path("grid", "a15")[0], roll)
+     {"pad": "B01", "label": "Pot Roll", "voice": "POT"})
 
-# ------------------------------------------------------------------------------ A16: the groove
+# ------------------------------------------------------------------------------ B02: the groove (bank B)
 
 # Two bars on a sixteenth grid: (voice, step, velocity). "shape": a first idea of a found-sound beat.
 PATTERN = []
 for b in (0, 16):
-    PATTERN += [("BUCKET", b + 0, 1.0), ("BUCKET", b + 7, .5), ("BUCKET", b + 10, .9),
+    PATTERN += [("BUCKET", b + 0, 1.0), ("SUITCASE", b + 7, .55), ("BUCKET", b + 10, .9),
                 ("BOX", b + 4, 1.0), ("BOX", b + 12, 1.0), ("BOX", b + 15, .35),
-                ("TABLE", b + 5, .45), ("BOTTLE", b + 11, .6), ("KEYS", b + 14, .8)]
-    PATTERN += [("JAR", b + s, .9 if s % 4 == 0 else .55) for s in range(0, 16, 2) if s != 14]
+                ("TABLE", b + 5, .45), ("MUG", b + 11, .55), ("KEYS", b + 14, .8)]
+    PATTERN += [("JAR", b + s, .9 if s % 4 == 0 else .55) for s in range(0, 16, 4)]
+    PATTERN += [("MATCHBOX", b + s, .6 if s % 4 == 2 else .4) for s in range(1, 16, 2) if s != 13]
     PATTERN += [("JAR", b + 13, .4)]
-PATTERN += [("POT", 3, .6), ("POT", 27, .75), ("BOOK", 28, .9), ("TABLE", 30, .35)]
+PATTERN += [("TUB", 26, .8), ("PAN", 27, .7), ("BOOK", 28, .9), ("TABLE", 30, .35), ("ZIP", 31, .6), ("GLASS", 3, .5)]
 PATTERN.sort(key=lambda p: p[1])
 groove = np.zeros(int((32 * SIXTEENTH + 1.2) * RATE))
 dealt: dict = {}
@@ -192,11 +200,9 @@ for voice, step, vel in PATTERN:
     place(groove, y, at)
 groove *= 0.95 / np.max(np.abs(groove))
 groove_metrics = {"bars": 2, "hits": len(PATTERN), "seconds": round(len(groove) / RATE, 2)}
-save("kit", "a16-kitchen-groove", np.concatenate([groove[:int(32 * SIXTEENTH * RATE)]] * 2 + [groove[int(32 * SIXTEENTH * RATE):]]),
-     f"A16 Kitchen Groove: two bars at {BPM:.0f} BPM, played twice. Every hit is a fresh take at its own velocity; the jar chokes the keys.",
-     groove_metrics, {"pad": "A16", "label": "Kitchen Groove", "voice": "kit"})
-MANIFEST["kit"].append({"pad": "A16", "label": "Kitchen Groove", "voice": "kit", "class": "LOOP", "metrics": groove_metrics})
-sk.write_wav(path("grid", "a16")[0], groove)
+save("extras", "b02-kitchen-groove", np.concatenate([groove[:int(32 * SIXTEENTH * RATE)]] * 2 + [groove[int(32 * SIXTEENTH * RATE):]]),
+     f"B02 Kitchen Groove: two bars at {BPM:.0f} BPM, played twice. Every hit is a fresh take at its own velocity; the jar chokes the keys.",
+     groove_metrics, {"pad": "B02", "label": "Kitchen Groove", "voice": "kit"})
 
 # ------------------------------------------------------------------------------ macro sweeps
 

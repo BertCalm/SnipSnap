@@ -8,8 +8,9 @@ house distance measures, `gen_audition.py` renders and measures, `build_page.py`
 Every number below is from that Python harness, not from Kotlin.
 
 Listening page: <https://claude.ai/artifact/6dkeY2rrjNGUvUYvobs3v5> (private to the owner; published
-2026-11-13). It carries a playable 4×4 pad grid with three velocity layers and four round-robin takes per
-pad, the kit, velocity ladders, takes, and every control on every object.
+2026-11-13, version 4 for the sixteen-object kit). It carries a playable 4×4 pad grid with three velocity
+layers and four round-robin takes per pad, the kit, velocity ladders, takes, bank B (the roll and the
+groove), and every control on every object.
 
 Repository truth: read at `523aacfb` (2026-11-13). APIs named here were grepped: `Modes.ring`,
 `Modes.Mode(ratio, gain, t60, pan)`, `Dsp.seedFor`, `Dsp.Noise`, `Room` (`synth/.../Room.kt`: SIZE, WALLS,
@@ -28,16 +29,30 @@ loose in it or on it rattles a moment later → the kitchen answers, then it is 
 
 Working name CLUTTER (the stuff on the counter). No product or maker is named anywhere.
 
+Sixteen objects, one per pad. The first version had eight objects plus six variations and a roll and a
+groove on the pads; the owner's note "A kit is 16 pads" and the choice "16 different objects" replaced them
+with eight more objects. The layout is the one `AutoPlace` expects (A01 kick, A02 snare, A03/A04 hats, A05 second kick, A06 clap, A07/A08 second hats, toms, percussion):
+
 | Pad | Object | Class | What rings | What is loose |
 |---|---|---|---|---|
-| A01 BUCKET | upturned plastic bucket, palm on the base | KICK | trapped air (a falling boom) + clamped plate | the wire handle bouncing on the floor |
-| A02 BOX | cardboard box with dried rice inside, slapped | SNARE | rectangular panel, hit at (x, y) + box air | the rice, thrown up and landing |
-| A05 BOOK | hardback slammed shut | CLAP | board cover; pages meeting in 2 to 6 taps | page flutter |
-| A03 JAR | glass jar of rice, one flick | HAT_CLOSED | the glass wall | the contents (sand, rice or coins) |
-| A04 KEYS | a ring of keys shaken | HAT_OPEN | 3 to 9 keys as free-free bars + the split ring | the keys themselves |
-| A06 TABLE | knuckle on a wooden table | PERC | dense wooden plate + the knuckle's bone | a fork and a spoon jumping |
-| A07 POT | saucepan struck on its side | PERC | thin-ring modes in beating pairs + the base | the lid chattering |
-| A08 BOTTLE | glass bottle tapped with a key | PERC | thin-ring glass modes + the air inside | the bottle rocking on its base |
+| A01 | Bucket | KICK | trapped air (a falling boom) + clamped plate | the wire handle |
+| A02 | Rice Box | SNARE | cardboard panel + box air | the rice |
+| A03 | Rice Jar | HAT_CLOSED | the glass wall | the contents |
+| A04 | Key Ring | HAT_OPEN | keys as free-free bars + the ring | the keys |
+| A05 | Suitcase, stomped | KICK | lossy fibreboard lid + a short air thud, no pitch drop | the two latches |
+| A06 | Book Slam | CLAP | board cover; pages meeting in taps; an air pop | page flutter |
+| A07 | Matchbox, shaken | HAT_CLOSED | the cardboard tray | the matches: a forward stroke and a softer one back |
+| A08 | Cutlery Drawer, slammed | HAT_OPEN (crash-like) | the wooden drawer front | 6 to 20 pieces of cutlery piling into the front |
+| A09 | Tub, lid on | TOM | the plastic lid over a box of air | an unclipped corner of the lid |
+| A10 | Frying Pan | TOM | heavy free circular plate in beating pairs + the handle | the handle's loose rivet, which buzzes while the pan swings past its play |
+| A11 | Knuckle (table) | PERC | dense wooden plate + bone | a fork and a spoon |
+| A12 | Saucepan | PERC | thin-ring steel modes + the base | the lid |
+| A13 | Bottle | PERC | thin-ring glass + the air inside | rocking on its base |
+| A14 | Mug, tapped with a spoon | PERC | thick ceramic ring, pairs split wide by the handle | the spoon left inside |
+| A15 | Wine Glass, flicked | PERC | thin glass, few partials, 2 s ring | ice cubes |
+| A16 | Zipper, pulled | PERC | one click per tooth along a 12 cm pull, cloth rustle | the pull tab at the end |
+
+B01 Pot Roll and B02 Kitchen Groove moved off the sixteen pads to a second bank.
 
 ## Why it earns a pad (sibling check)
 
@@ -89,9 +104,9 @@ a pot are different things.
 
 | Control | Default | What it changes in the model | Required interaction | Measured 0 vs 1 (weakest object) |
 |---|---:|---|---|---|
-| TUNE | .50 | the object's size: every mode × 2^(±7/12) | none | 4.3 dB (TABLE) |
-| TOOL | per object | contact width: palm, wood, metal (jar: sand, rice, coins inside); a metal tool adds its own ring | TOOL × velocity: both shorten the contact | 3.3 dB (BOOK) |
-| RATTLE | per object | how much is loose and how loosely: the lift threshold and the part count | RATTLE × velocity: the threshold is crossed by the strike | 3.7 dB (JAR) |
+| TUNE | .50 | the object's size: every mode × 2^(±7/12) (zipper: tooth size) | none | 4.5 dB (TABLE) |
+| TOOL | per object | contact width: palm, wood, metal (jar: sand, rice, coins inside; matchbox: shake sharpness; drawer: slam; zipper: pull speed); a metal tool adds its own ring | TOOL × velocity: both shorten the contact | 3.3 dB (BOOK) |
+| RATTLE | per object | how much is loose and how loosely: the lift threshold and the part count (pan: the rivet's play) | RATTLE × velocity: the threshold is crossed by the strike | 3.3 dB (MATCHBOX) |
 | DAMP | per object | a hand on the object: every t60 × 1 .. 0.15, higher modes faster | DAMP × MIC: a damped hit leaves less for the room | 3.1 dB (TABLE) |
 | MIC | per object | the phone: 12 cm (proximity lift) to 2.8 m across a 3.6 × 3.0 × 2.5 m tiled kitchen (image sources, first and second order; a 0.32 s tail; capsule band and presence) | MIC × DAMP | 4.8 dB (POT) |
 
@@ -121,28 +136,32 @@ strike) and keeps every pad a different object.
 
 ## Round 0: what was built and measured
 
-The audition kit, A01 to A16 (A09 to A14 are the same eight objects at other settings): Bucket, Rice Box,
-Rice Jar, Key Ring, Book Slam, Knuckle, Saucepan, Bottle, Bucket Side (TUNE .82: a bucket tom), Empty Box
-(no rice, damped), Stockpot (big, the lid loose), Full Bottle, Fork Drop (a fork on the table, hard),
-Coin Jar, A15 Pot Roll (a wooden spoon, eighths to thirty-seconds over one bar at 92 BPM, soft to hard) and
-A16 Kitchen Groove (two bars at 92 BPM; every hit a fresh take; the jar chokes the keys).
+The audition kit is the sixteen objects above, one per pad. Bank B holds B01 Pot Roll (a wooden spoon,
+eighths to thirty-seconds over one bar at 92 BPM, soft to hard) and B02 Kitchen Groove (two bars at 92 BPM;
+every hit a fresh take; the jar chokes the keys). On the page's pad grid the jar chokes the keys and the
+matchbox chokes the drawer.
 
 Measured (Python harness, `gen_audition.py` at round 0):
 
 - Deterministic, finite, peak 0.89, DC 0.0 at every zone and take; an unknown control, a NaN control and
   a NaN velocity all fall back to the default render.
-- **Velocity changes the strike.** Soft (0.35) against hard (1.0) at matched level: 3.1 dB (Empty Box, the
-  one pad with nothing loose) to 25.4 dB (Rice Box). The rice box's centroid goes 554 Hz soft to 4.0 kHz
-  hard; the knuckle's 317 Hz to 1.6 kHz as the cutlery joins in.
+- **Velocity changes the strike.** Soft (0.35) against hard (1.0) at matched level: 3.4 dB (Wine Glass: the
+  ice only stirs, the glass rings the same) to 25.4 dB (Rice Box). The rice box's centroid goes 554 Hz soft to
+  4.0 kHz hard; the knuckle's 317 Hz to 1.6 kHz as the cutlery joins in; the suitcase's 227 Hz to 727 Hz as
+  the latches hop.
 - **The bucket's boom falls.** Hard: 78 Hz in the first 30 ms, 64 Hz by 100 to 300 ms. Soft starts at 72 Hz.
-- **Takes are distinct strikes.** Closest pair 1.9 dB (Empty Box), widest 10.5 dB (Key Ring). ETCH's takes
-  that the owner heard as one strike measured 0.5 to 0.8 dB on the unfloored version of this measure.
-- **Render time.** Python: 43 ms mean per hit, 103 ms the slowest (the stockpot: 16 beating ring modes for
-  1.4 s at 176.4 kHz). The MIC response builds in 2 ms and is cached by MIC alone.
+- **The suitcase does not drop; the bucket does.** Suitcase 75 Hz early, 79 Hz late; bucket 78 → 64 Hz.
+- **Takes are distinct strikes.** Closest pair 1.1 dB (Frying Pan), widest 13.3 dB (Wine Glass, where the ice
+  falls differently). ETCH's takes that the owner heard as one strike measured 0.5 to 0.8 dB on the unfloored
+  version of this measure; the pan is the pad to listen to for takes that are too alike.
+- **Render time.** Python: 44 ms mean per hit, 144 ms the slowest (the cutlery drawer: up to twenty pieces,
+  two modes each, for 1.2 s at 176.4 kHz). The MIC response builds in 2 ms and is cached by MIC alone.
 
-Two defects the probes caught during the round, both fixed before publishing: RATTLE did nothing on the
-bottle (0.0 dB between 0 and 1: the rocking was never scaled by the control), and the key ring took 160 ms
-per hit (a full-length buffer per collision, now one convolution).
+Four defects the probes caught during the round, all fixed before publishing: RATTLE did nothing on the
+bottle (0.0 dB between 0 and 1: the rocking was never scaled by the control); the key ring took 160 ms
+per hit (a full-length buffer per collision, now one convolution); TOOL moved the cutlery drawer by only
+0.55 dB (the slam reached the wooden thump, which the cutlery buries; the slam now throws the cutlery too);
+and RATTLE moved the zipper by 2.4 dB (the tab's clink was too quiet).
 
 ## Risks (where it could sound bad)
 
@@ -159,7 +178,7 @@ per hit (a full-length buffer per collision, now one convolution).
 
 - **Melodic, keygroup and chord tool:** not applicable. A drum engine.
 - **Articulation:** finite hits, no HOLD. Not a plucked string.
-- **Percussion (roll or riser):** A15 Pot Roll authored in the prototype. Not heard.
+- **Percussion (roll or riser):** B01 Pot Roll authored in the prototype, on bank B. Not heard.
 - **Drums (several genre kits):** open. One audition kit. Proposed after the owner's verdict on the objects:
   KITCHEN TABLE (bedroom lo-fi, around 82 BPM, close mic, soft tools), STREET BUCKET (busker, around
   120 BPM, hard tools, bright, the room far), MICROBEAT (tiny objects, high TUNE, dry, glitch-adjacent).
@@ -185,7 +204,7 @@ per hit (a full-length buffer per collision, now one convolution).
 | `Modes.ring`, `Modes.Mode`, `Dsp.seedFor`, `Room`, `PadHit.resolve` exist | verified | grep at `523aacfb` |
 | CLUTTER is free as an engine name | verified | grep of `synth/`, `shell/`, `docs/` |
 | Every render deterministic, finite, bounded | measured | `gen_audition.py` checks |
-| Every control moves every object by at least 3.1 dB | measured | `macro_activity_db` in the manifest |
+| Every control moves every object (sixteen objects, five controls) by at least 3.1 dB | measured | `macro_activity_db` in the manifest |
 | Soft and hard differ on every pad; nothing rattles below the threshold | measured; by construction | velocity section |
 | Thin-ring, plate and bar ratios are the textbook ones | proposed (sourced formulas, shape damping) | `clutter_proto.py` constants |
 | The objects sound like the objects | not heard | the owner's listen |
@@ -193,8 +212,8 @@ per hit (a full-length buffer per collision, now one convolution).
 ## Why it is built this way
 
 - **Every object is a body plus its loose parts.** The body is what rings when you hit it; the loose parts
-  are what make it sound found rather than manufactured. Take the loose parts away (Empty Box, RATTLE 0)
-  and you hear how much of the character they carry.
+  are what make it sound found rather than manufactured. Turn RATTLE to 0 on any object and you hear how
+  much of the character they carry.
 - **The rattle has a threshold, not a volume knob.** Rice only leaves the panel when the panel accelerates
   harder than gravity holds it down, so soft hits stay clean. That is why a soft and a hard hit differ by
   up to 25 dB in shape at the same level, which is the owner's velocity gate met by physics rather than by

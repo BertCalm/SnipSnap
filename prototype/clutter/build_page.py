@@ -56,8 +56,8 @@ def clip_html(c: dict) -> str:
 
 SECTIONS = {
     "kit": ("The kit as it lands",
-            "Sixteen pads, each a hard hit on its first take. A01 to A04 sit where an MPC player expects the kick, snare and hats; "
-            "A15 is the roll and A16 the groove.",
+            "Sixteen pads, sixteen different objects, each a hard hit on its first take. A01 to A08 sit where an MPC player expects "
+            "two kicks, a snare, a clap and two pairs of hats; A09 and A10 are toms, A11 to A16 percussion.",
             "Does this read as a kit made of real things? Which objects already convince you, and which sound like a synth pretending?"),
     "velocity": ("Velocity: the strike, not the volume",
                  "Each file is soft, medium, hard on one pad, each peak-matched so only the strike differs. A harder hit is a shorter, brighter "
@@ -67,6 +67,10 @@ SECTIONS = {
               "The four takes a pad deals in turn, all hard. A take is the hand landing somewhere else on the object, and the loose parts "
               "falling another way.",
               "Do the four sound like one object hit four times, rather than four objects or one copy?"),
+    "extras": ("Bank B: the roll and the groove",
+               "Off the sixteen pads. B01 is the roll your percussion gate asks for; B02 is the kit in a two-bar beat. "
+               "The sampler's velocity gain is applied here, so soft hits are quieter as well as duller.",
+               "Does the roll build? Does the groove sound like one kitchen, or sixteen sound effects?"),
     "macros": ("Each control on each object",
                "Each file plays a control at 0, 0.5 and 1 with the others at their defaults.",
                "Does each control do what its name says on that object? Which ones would you never touch?"),
@@ -76,7 +80,7 @@ kit_clips = next(s for s in M["sections"] if s["id"] == "kit")["clips"]
 pads = []
 for k in M["kit"]:
     pad = k["pad"].lower()
-    one_shot = k["pad"] not in ("A15", "A16")
+    one_shot = True
     pads.append({"id": pad, "label": k["label"], "voice": k["voice"], "cls": k["class"], "oneShot": one_shot})
 
 sections_html = []
@@ -109,7 +113,7 @@ kit_rows = "".join(
 GATES = [
     ("Melodic, keygroup, chord tool", "na", "Not applicable. A drum engine; the objects are not tuned to notes."),
     ("Articulation (HOLD, STRUM)", "na", "Finite hits, no HOLD. Not a plucked string."),
-    ("Percussion: roll or riser", "mid", "A15 Pot Roll is authored in the prototype. Not heard."),
+    ("Percussion: roll or riser", "mid", "B01 Pot Roll is authored in the prototype, on bank B. Not heard."),
     ("Drums: several genre kits on the shelf", "open", "One audition kit. Genre kits wait for your verdict on the objects."),
     ("Velocity in rendering", "mid", f"Measured in Python: soft against hard {C['soft_vs_hard_min_db']} dB at the closest pad, at matched level."),
     ("Round robin in rendering", "mid", f"Measured in Python: the closest pair of takes is {C['closest_takes_min_db']} dB apart, the widest {C['widest_takes_max_db']} dB."),
@@ -221,17 +225,18 @@ a {{ color: var(--accent); }}
   <header>
     <div class="mark"><i></i><span class="eyebrow">SNIPSNAP · CLUTTER · ROUND 0 · PYTHON PROTOTYPE · NOT HEARD</span></div>
     <h1>CLUTTER Audition</h1>
-    <p class="lede">A found-sound drum kit made from modelled household objects: an upturned bucket for the kick, a box of rice for the snare,
-    a jar and a key ring for the hats, a book, a table, a saucepan and a bottle. Nothing is sampled. These are prototype renders from a Python model,
+    <p class="lede">A found-sound drum kit of sixteen modelled household objects: a bucket and a suitcase for kicks, a box of rice for the snare,
+    a book for the clap, a jar, a matchbox, a key ring and a cutlery drawer for hats, a tub and a frying pan for toms, and a table, a saucepan,
+    a bottle, a mug, a wine glass and a zipper. Nothing is sampled. These are prototype renders from a Python model,
     not the app, and nobody has heard them yet.</p>
     <p class="gesture">A hand or a spoon hits an everyday object → its body rings → whatever is loose in it or on it rattles a moment later → the kitchen answers, then it is still.</p>
-    <nav><a href="#play">Play</a><a href="#kit">Kit</a><a href="#velocity">Velocity</a><a href="#takes">Takes</a><a href="#macros">Controls</a><a href="#gates">Gates</a><a href="#ledger">Ledger</a></nav>
+    <nav><a href="#play">Play</a><a href="#kit">Kit</a><a href="#velocity">Velocity</a><a href="#takes">Takes</a><a href="#extras">Bank B</a><a href="#macros">Controls</a><a href="#gates">Gates</a><a href="#ledger">Ledger</a></nav>
   </header>
 
   <section class="card" id="play">
     <h2>Play the kit</h2>
     <p class="intro">Tap a pad. The top third plays the hard layer, the middle the medium one, the bottom the soft one, and every tap deals the next of four takes,
-    as the kit would on a pad. The rice jar (A03) chokes the key ring (A04). A15 and A16 play once; tap again to stop. Sound starts from your first tap.</p>
+    as the kit would on a pad. The rice jar (A03) chokes the key ring (A04), and the matchbox (A07) chokes the cutlery drawer (A08). Sound starts from your first tap.</p>
     <div class="grid-box">
       <div class="grid" id="grid" aria-label="Sixteen pads, laid out as on an MPC with A01 at the bottom left"></div>
       <div class="readout"><span id="status">Tap any pad. Each pad loads on its first tap.</span><button class="load" id="loadall" type="button">LOAD ALL PADS</button></div>
@@ -271,7 +276,7 @@ const PADS = {json.dumps(pads)};
 const ZONES = {{ h: 1.0, m: 0.65, s: 0.35 }};
 const ZONE_NAME = {{ h: "HARD", m: "MEDIUM", s: "SOFT" }};
 const ORDER = ["a13","a14","a15","a16","a09","a10","a11","a12","a05","a06","a07","a08","a01","a02","a03","a04"];
-const CHOKES = {{ a03: ["a04"] }};
+const CHOKES = {{ a03: ["a04"], a07: ["a08"] }};
 let ctx = null;
 const cache = new Map();
 const deal = {{}};
