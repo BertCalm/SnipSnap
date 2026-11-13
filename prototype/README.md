@@ -86,5 +86,7 @@ scipy and numba. See [`../docs/ETCH.md`](../docs/ETCH.md).
 A dry Michigan drum kit (ten voices) and the chain that makes it (GRIT, LOCKER, BARK, SLAM),
 as numbers and WAVs before any Kotlin. `python3 gen_audition.py OUT && python3 build_page.py OUT`
 renders 155 peak-matched clips with their measurements and writes the audition page, including a
-round-0 against round-0b section built from the round-0 model read out of git. Needs
+round-0 against round-0b section built from the round-0 model read out of git. `compare_kotlin.py KOTLIN OUT`
+measures the Kotlin engine's clips (`./gradlew :synth:generateScuffAudition`) against the Python ones, aligned
+by cross-correlation, and `build_page.py` then puts the pairs at the top of the page. Needs
 numpy and scipy. See [`../docs/SCUFF.md`](../docs/SCUFF.md).

@@ -3450,3 +3450,14 @@ The BREAKER kit (2026-11-12) is the first of three shelf kits:
   - MPC 2 plays each zone's first take only.
   - The kick's takes are distinct but close (34 dB apart).
   - The owner's listen to the kit.
+
+### SCUFF, round 1 (2026-11-13)
+
+A dry Michigan drum kit and its chain, ported from the accepted round-0b Python prototype to
+`Scuff.kt`: ten voices (KICK, CLAP, BOOM, RIM, HAT, BELL, ZAP, TICK, PLUCK, INHALE), the four-stage
+chain (GRIT, LOCKER, BARK, SLAM) inside the engine, velocity on every voice, four dealt takes,
+`ScuffPatch` with velocity, take and model, rosterless (no presets before the listen), no kit yet.
+Measured against the Python: the deterministic voices are the same waveform (0.05 to 0.17 dB,
+correlation 0.997 to 1.000 after a 1 ms resampler lag), the noise voices another take. The
+classifier reads the kick as PERC and the crushed hat as SNARE, disclosed. See [SCUFF](SCUFF.md)
+and the gates entry. The picker entry waits for a session with an SDK.

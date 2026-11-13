@@ -1,6 +1,6 @@
 # SCUFF: design brief and round-0 audition
 
-Status: **round 0b, Python prototype; sound direction accepted by the owner 2026-11-12.** No Kotlin exists. The engine stays in
+Status: **round 1, Kotlin engine; sound direction (round 0b) accepted by the owner 2026-11-12; the Kotlin port measured as the same drum, not yet heard.** No Kotlin exists. The engine stays in
 progress until every applicable owner gate has evidence (see "Gates" below).
 
 Prototype: [`prototype/scuff/`](../prototype/scuff/) (`scuff_proto.py` is the model,
@@ -290,3 +290,108 @@ same link as version 2 (155 clips).
 
 **Heard, 2026-11-12:** "Sounds good, please merge." The owner accepted round 0b's direction as
 published. Preserve it as the baseline; nothing in Kotlin, on a phone or on an MPC has been heard.
+
+## As built, round 1: the Kotlin engine (2026-11-13)
+
+The owner said "Do round 1" on 2026-11-13. Round 1 is the port of round 0b to Kotlin, all ten
+voices and the chain, with the registry, the probe tests, a determinism canary and an A/B against
+the accepted Python renders. Built at the commit that carries this section.
+
+**What exists.** `synth/.../Scuff.kt` (`ScuffVoice`, `Scuff.macrosFor/defaults/settled/drumClassFor/
+scramble/render`, model version 1), `ScuffPatch.kt` (name, voice, macros, velocity, take, model;
+JSON round trip), the `Patches.fromJsonValue` arm, the two `Velocity` arms (every SCUFF voice
+re-strikes at velocity), the shell's `SynthRoot` arm (a drum: no root), `PatchTypes.ROSTERLESS`
+(no presets before the listen), hand-built entries in `PatchesTest`, `PadRecipeTest` and
+`SynthRootTest`, a `DeterminismTest` canary (every voice, a soft hit and a take, through JSON),
+`ScuffTest` (17 probes) and `ScuffAuditionGenerator` behind `./gradlew :synth:generateScuffAudition`.
+No kit, no presets, no app picker entry (deferred to a session with an SDK, the house rule).
+
+**What is the same arithmetic.** Every constant, envelope, filter and shaper. The prototype's
+`scipy.signal.butter` cascades are RBJ biquads at the Butterworth section Qs, its `iirpeak` is the
+RBJ constant-peak band-pass, both bilinear with pre-warping, so the transfer functions match.
+
+**What is not, disclosed.**
+- The resamplers: `Tide.bandLimit` then `Dsp.decimate` (and `Valve.upsample`) in place of the
+  prototype's approximate FIR decimator and `resample_poly`. Measured, the difference is a constant
+  45-sample (1 ms) latency and a residual of -33 to -40 dB on the deterministic voices.
+- The noise: `Dsp.Noise` (the house LCG) in place of numpy's generator, so every noise-driven voice
+  (clap, hat tip, tick, crash, the kick's click and knock) is a different realisation, as another take
+  would be. The kick's click and knock sit under a deterministic body, so the kick still correlates
+  1.000.
+- The takes: take k takes column k - 1 of the Latin square with its own jitter, where the
+  prototype hashed the voice into the column. Takes 1 to 4 are therefore different strikes from the
+  prototype's takes 1 to 4, dealt the same way.
+- The output level: `Dsp.normalize` to peak 0.95, the drum convention, where the prototype used 0.89.
+- Two round-1 changes made in both models: the tick's TUNE did nothing (a knob with no sound change
+  is a lie on the panel), so it now moves the tick's cutoff half an octave either way; the bass hit's
+  harmonic path now scales with velocity (a soft hit saturates less), after its soft and hard strikes
+  measured 1.4 dB apart in spectral shape. At the defaults and full velocity both renders are unchanged,
+  so the accepted round-0b baseline holds.
+- `macrosFor` lists only the chain knobs a voice takes: the kick shows SLAM but not GRIT, LOCKER or
+  BARK. The prototype showed all four on every voice and three of them did nothing on the kick.
+
+**Measured, Kotlin against Python** (`prototype/scuff/compare_kotlin.py`, clips aligned by
+cross-correlation first; distance is the page's take-distance measure; "waveform" is the
+correlation and residual after alignment):
+
+| Pad | Distance | Waveform | The voice's own takes | Verdict |
+|---|---|---|---|---|
+| KICK | 0.08 dB | 1.000, -33 dB | 3.1 to 6.9 dB | the same drum |
+| BOOM | 0.05 dB | 1.000, -35 dB | 1.9 to 3.5 dB | the same drum |
+| PLUCK | 0.12 dB | 1.000, -34 dB | 1.9 to 5.0 dB | the same drum |
+| BELL | 0.12 dB | 0.997, -22 dB | 2.3 to 4.3 dB | the same drum |
+| ZAP | 0.17 dB | 0.997, -23 dB | 2.5 to 7.7 dB | the same drum |
+| RIM | 1.38 dB | 0.992, -18 dB | 3.9 to 5.7 dB | the same drum; its click is noise |
+| CLAP | 4.15 dB | 0.339 | 4.6 to 6.3 dB | another take: a noise voice |
+| TICK | 2.28 dB | 0.249 | 2.0 to 2.7 dB | another take: a noise voice |
+| HAT | 6.98 dB | 0.527 | 2.4 to 4.9 dB | wider than a take: the tip is noise and GRIT folds whatever the resampler's ripple leaves above 11 kHz; waits for the ear |
+| INHALE | 8.27 dB | 0.498 | 3.1 to 4.1 dB | wider than a take: a noise voice whose whole body is noise and six free phases; waits for the ear |
+| kick + bass, SLAM 0.55 | 0.14 dB | 1.000, -39 dB | | the bus fuses the same way |
+
+93 pairs in all (the kit, three velocities and four takes per voice, the chain stage by stage on the
+rim and the clap, the bus pair at three settings); the velocity rows follow the kit rows above.
+
+**The measure, corrected.** The take-distance measure read a 16-bit copy of a clip as 12 dB from its
+float original, because near-silent bands and tail frames sat on its numerical floor. Round 1 floors
+every band 80 dB under the loudest. Every distance on the page is re-measured with it; the round-0b
+numbers quoted in the section above were with the unfloored measure and read lower now: round 0 to
+0b, kick 8.5 (was 20.0), pluck 9.7 (15.2), tick 11.5 (11.5), rim 10.2 (11.2), clap 8.2 (8.7), zap 6.2
+(7.5), hat 7.2 (7.0), bell 5.3 (5.2), crash 4.4 (4.6), bass hit 3.6 (3.6); soft against hard, kick 9.7
+(was 14.9), clap 8.8 (9.7), bass hit 4.4 (4.0, with the round-1 change), rim 8.4 (8.5), hat 4.7, bell
+8.7, zap 8.3, tick 2.8, pluck 3.5 (5.0), crash 2.8; closest takes 1.9 (tick) to 4.6 dB (clap). The
+ordering did not change; the kick's and the pluck's round-0-to-0b distances were the ones inflated.
+
+**The classifier.** Our own analysis files the Kotlin kick as PERC, not KICK: its 3 kHz click and
+420 Hz knock put the first 93 ms's centroid above the kick rule's 130 Hz, a rule set for sub kicks
+(THUMP tunes 34 to 62 Hz; this kick lands at 95, as the brief asks). The crushed hat reads SNARE
+because GRIT folds its ring under the hat rule's 12 kHz. `drumClassFor` files them KICK and HAT_CLOSED,
+which is what a kit will carry; `ScuffTest` holds the classifier's verdicts so a change in either
+direction is noticed, and the clap must read CLAP, which it does. Disclosed, not fixed: making the
+kick read KICK would mean cutting the click the brief calls its identity.
+
+**Tests.** `ScuffTest`: finite, bounded, DC-free, under 1.5 s; byte-identical renders; every macro
+changes the sound and an unknown or non-finite one does not; the chain knobs at 0 are exact bypasses;
+each stage moves the voices the brief gives it and leaves the others; velocity changes spectral
+shape on every core voice (over 2 dB, 40 Hz to 10 kHz third-octave); takes are distinct and
+deterministic; the kick lands in 85 to 115 Hz with under -25 dB below 45 Hz and its body in 80 to
+160 Hz; the bass hit's fundamental sits in 50 to 75 Hz with 100 to 300 Hz above -10 dB; the rim's
+peaks sit within 60 and 90 Hz of 850 and 1350; TUNE and DECAY move inside each window; the patch
+round-trips with velocity, take and model and refuses a bad take, velocity, model or macro; scramble
+stays in bounds. Plus the `DeterminismTest` canary. `./gradlew --no-daemon test` was run before the
+push; the result is in the commit body.
+
+**Render budget.** Not measured on a phone. A pad is one 4x pass of oscillators and biquads, two
+resampler trips (the voice's and SLAM's) and a per-sample comb at 1x; the test class renders every
+voice, its takes and velocities in about 3 s on the JVM here, which is tens of ms per pad.
+
+**Published.** The listening page's version 3 (2026-11-13) adds the Kotlin section at the top: the
+kit, the bus pair and the chain on the rim, each Python render beside its Kotlin render with the
+distance and the waveform correlation. Not heard.
+
+**Gates after round 1.** Velocity and round robin: rendering passes by test in Kotlin; saving passes
+for a patch (not yet a kit); playback and export not yet verified. Roll or riser: open. Genre kits:
+open (none). Sound character: round 0b accepted; the Kotlin not heard. Overall: incomplete.
+
+**Round 2, proposed.** A 16-pad SCUFF kit on the shelf with three velocity zones of four takes per pad
+in the GATECRASH mould, two loop pads (the two-bar pattern through one bus, and a snare-roll riser)
+and MPC 3 export read back; then a second genre kit.
