@@ -949,6 +949,11 @@ fun SynthScreen(
                         else if (e == Engine.CHAMBER) seed.restoredChamber[v as ChamberVoice]
                         else if (e == Engine.NACRE) seed.seededDrafts.filterIsInstance<NacrePatch>()
                             .firstOrNull { it.voice == v }
+                        // A held TREFOIL draft carries NUDGE=0 and HOLD=1, which the held patch
+                        // requires. Without it the sliders start at the finite defaults, and the
+                        // first held patch built from them refuses its own controls.
+                        else if (e == Engine.TREFOIL) seed.seededDrafts.filterIsInstance<TrefoilPatch>()
+                            .firstOrNull { it.voice == v && it.playback == TrefoilPlayback.HELD }
                         // PRISM's draft is its complete recipe (sound source, motion, TUNE, HOLD); without
                         // it the sliders fall back to defaults and the first write-back replaces the draft.
                         else if (e == Engine.PRISM) seed.seededDrafts.filterIsInstance<PrismPatch>()
