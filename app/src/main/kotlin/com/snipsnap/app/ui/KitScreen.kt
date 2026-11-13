@@ -1195,13 +1195,13 @@ private fun KitLearnChip(showing: Boolean, onToggle: () -> Unit) {
     Box(
         Modifier
             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
-            .raisedBevel(scheme, fill = if (showing) scheme.amber.tape.copy(alpha = 0.85f) else null)
+            .raisedBevel(scheme, fill = if (showing) scheme.accent.tape else null)
             .tapeClick(label = "LEARN", onClick = onToggle)
             .semantics { selected = showing }
             .padding(horizontal = 10.dp),
         contentAlignment = Alignment.Center,
     ) {
-        TapeText("LEARN", TapeType.pixel, if (showing) scheme.titleInk.tape else scheme.ink2.tape)
+        TapeText("LEARN", TapeType.pixel, if (showing) scheme.onAccent.tape else scheme.ink2.tape)
     }
 }
 
@@ -1405,7 +1405,7 @@ private fun KeyPanel(
                         Modifier
                             .weight(1f)
                             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
-                            .raisedBevel(scheme, fill = if (selected) scheme.amber.tape.copy(alpha = 0.85f) else null)
+                            .raisedBevel(scheme, fill = if (selected) scheme.accent.tape else null)
                             // Always clickable, `!busy` forwarded rather
                             // than dropped — see ActionButton's own note in
                             // PadSheetScreen.kt (accessibility audit finding
@@ -1414,7 +1414,7 @@ private fun KeyPanel(
                             .padding(horizontal = 2.dp),
                         contentAlignment = Alignment.Center,
                     ) {
-                        TapeText(KeyPicker.ROOTS[r], TapeType.pixel, if (busy) scheme.ink3.tape else if (selected) scheme.titleInk.tape else scheme.ink2.tape)
+                        TapeText(KeyPicker.ROOTS[r], TapeType.pixel, if (busy) scheme.ink3.tape else if (selected) scheme.onAccent.tape else scheme.ink2.tape)
                     }
                 }
             }
@@ -1426,7 +1426,7 @@ private fun KeyPanel(
                     Modifier
                         .weight(1f)
                         .heightIn(min = Layout.MIN_HIT_TARGET.dp)
-                        .raisedBevel(scheme, fill = if (selected) scheme.amber.tape.copy(alpha = 0.85f) else null)
+                        .raisedBevel(scheme, fill = if (selected) scheme.accent.tape else null)
                         // Always clickable, `!busy` forwarded rather than
                         // dropped (accessibility audit finding 12).
                         .tapeClick(label = s, enabled = !busy) { onSetKey(KeyPicker.key(root, s)) }
@@ -1436,7 +1436,7 @@ private fun KeyPanel(
                     TapeText(
                         s,
                         TapeType.pixelSmall,
-                        if (busy) scheme.ink3.tape else if (selected) scheme.titleInk.tape else scheme.ink2.tape,
+                        if (busy) scheme.ink3.tape else if (selected) scheme.onAccent.tape else scheme.ink2.tape,
                         maxLines = 2,
                     )
                 }
@@ -1497,14 +1497,14 @@ private fun TexturePanel(
                     Modifier
                         .weight(1f)
                         .heightIn(min = Layout.MIN_HIT_TARGET.dp)
-                        .raisedBevel(scheme, fill = if (selected) scheme.amber.tape.copy(alpha = 0.85f) else null)
+                        .raisedBevel(scheme, fill = if (selected) scheme.accent.tape else null)
                         // Always clickable, `!busy` forwarded rather than
                         // dropped (accessibility audit finding 12).
                         .tapeClick(label = m, enabled = !busy) { onMode(m) }
                         .padding(horizontal = 4.dp),
                     contentAlignment = Alignment.Center,
                 ) {
-                    TapeText(m, TapeType.pixel, if (busy) scheme.ink3.tape else if (selected) scheme.titleInk.tape else scheme.ink2.tape)
+                    TapeText(m, TapeType.pixel, if (busy) scheme.ink3.tape else if (selected) scheme.onAccent.tape else scheme.ink2.tape)
                 }
             }
         }
@@ -1513,7 +1513,7 @@ private fun TexturePanel(
             label = knobLabel,
             fraction = knobFraction,
             valueText = knobText,
-            fillColor = scheme.amber.tape,
+            fillColor = scheme.accent.tape,
             scheme = scheme,
             enabled = !busy,
             onFractionChange = onKnob,

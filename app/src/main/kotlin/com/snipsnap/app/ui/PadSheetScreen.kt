@@ -77,6 +77,7 @@ import com.snipsnap.app.MixVoice
 import com.snipsnap.app.OutsideSession
 import com.snipsnap.app.ShareInbox
 import com.snipsnap.app.theme.BinRedGlow
+import com.snipsnap.app.theme.BinRedOnLcd
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
 import com.snipsnap.app.theme.lcdInk2
@@ -3992,7 +3993,7 @@ fun PadSheetScreen(
                 scheme = scheme,
                 enabled = !busy,
                 // The trip out: the strip goes lcd-alt while the reels turn.
-                summaryColor = if (outsideStage != null) scheme.amber.tape else scheme.ink2.tape,
+                summaryColor = if (outsideStage != null) scheme.accent.tape else scheme.ink2.tape,
             ) {
         OutsideCard(
             moves = OutsideSheet.MOVES,
@@ -4895,7 +4896,7 @@ internal fun ToggleChip(
         TapeText(
             label,
             TapeType.pixel,
-            if (!enabled) scheme.ink3.tape else if (engaged) scheme.titleInk.tape else scheme.ink2.tape,
+            if (!enabled) scheme.ink3.tape else if (engaged) (if (color == scheme.accent.tape) scheme.onAccent.tape else scheme.titleInk.tape) else scheme.ink2.tape,
             maxLines = 1,
         )
     }
@@ -4965,7 +4966,7 @@ private fun BoardCard(
                 else -> "Hear the swell and pitched echoes before keeping it"
             },
             TapeType.pixelSmall,
-            if (action != null) scheme.amber.tape else scheme.ink2.tape,
+            if (action != null) scheme.accent.tape else scheme.ink2.tape,
             maxLines = 3,
         )
         StepperSlider(
@@ -5143,7 +5144,7 @@ private fun TreatmentCard(
                 else -> "ONE PER PAD · PEDALS STACK"
             },
             TapeType.pixelSmall,
-            if (applying != null || placing != null) scheme.amber.tape else scheme.ink3.tape,
+            if (applying != null || placing != null) scheme.accent.tape else scheme.ink3.tape,
             maxLines = 1,
         )
         // Row one is the eras; most of the rest are the rack's characters,
@@ -5921,7 +5922,7 @@ internal fun ActionButton(
             .padding(horizontal = 8.dp),
         contentAlignment = Alignment.Center,
     ) {
-        val ink = if (!enabled) scheme.ink3.tape else if (litNow) scheme.amber.tape else if (dimmed) scheme.ink2.tape else scheme.ink.tape
+        val ink = if (!enabled) scheme.ink3.tape else if (litNow) scheme.accent.tape else if (dimmed) scheme.ink2.tape else scheme.ink.tape
         if (ringUp) {
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
                 Spinner(scheme.accent.tape)
@@ -5932,15 +5933,6 @@ internal fun ActionButton(
         }
     }
 }
-
-// THE ONLY NON-SCHEME COLOURS IN THE DESIGN — BIN red is deliberately
-// constant across every scheme (HANDOFF.md X2 / TAKES+BIN), so a delete
-// action reads as "red" even in a scheme with no red anywhere else in it.
-// The glow half moved to Schemes.BIN_RED_GLOW / theme.BinRedGlow — a
-// single tuned token instead of a duplicated literal (accessibility audit
-// finding 5); the border half is untouched (a 3:1, non-text UI element,
-// not the failure that was found).
-private val BIN_RED_BORDER = Color(0xFF6A2020)
 
 /**
  * Pad delete → bin. Named DeleteButton, not EjectButton — EJECT already
@@ -5958,7 +5950,7 @@ private fun DeleteButton(scheme: Scheme, enabled: Boolean, onClick: () -> Unit) 
             // this scheme (see PrimaryAction) — only the rim is the fixed
             // bin-red; the fill still answers to the scheme.
             .background(scheme.lcd.tape, RoundedCornerShape(4.dp))
-            .border(2.dp, BIN_RED_BORDER, RoundedCornerShape(4.dp))
+            .border(2.dp, scheme.binLcd.tape, RoundedCornerShape(4.dp))
             // enabled forwarded, not dropped — see ActionButton's own note.
             .tapeClick(label = "DELETE → TRASH", enabled = enabled, onClick = onClick)
             .padding(horizontal = 10.dp),
@@ -5970,6 +5962,6 @@ private fun DeleteButton(scheme: Scheme, enabled: Boolean, onClick: () -> Unit) 
         // sibling BIN-red button (EmptyBinButton × 3, EmptyRoomsBinButton):
         // BinRedGlow at reduced alpha risks failing contrast against the
         // dark LCD fill, where ink3 is a scheme token already tuned for it.
-        TapeText("DELETE → TRASH", TapeType.pixel, if (enabled) BinRedGlow else scheme.ink3.tape)
+        TapeText("DELETE → TRASH", TapeType.pixel, if (enabled) BinRedOnLcd else scheme.ink3.tape)
     }
 }

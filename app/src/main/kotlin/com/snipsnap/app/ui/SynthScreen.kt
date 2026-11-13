@@ -89,6 +89,7 @@ import com.snipsnap.synth.OrphicaMaterial
 import com.snipsnap.synth.OrphicaMode
 import com.snipsnap.synth.OrphicaPatch
 import com.snipsnap.app.theme.BinRedGlow
+import com.snipsnap.app.theme.BinRedOnLcd
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
 import com.snipsnap.app.theme.lcdInk2
@@ -4876,12 +4877,12 @@ private fun PresetForgetDialog(name: String, scheme: Scheme, onCancel: () -> Uni
                         .weight(1f)
                         .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                         .background(scheme.lcd.tape, RoundedCornerShape(4.dp))
-                        .border(2.dp, BIN_RED_BORDER, RoundedCornerShape(4.dp))
+                        .border(2.dp, scheme.binLcd.tape, RoundedCornerShape(4.dp))
                         .tapeClick(label = "FORGET $name", onClick = onForget)
                         .padding(horizontal = 10.dp),
                     contentAlignment = Alignment.Center,
                 ) {
-                    TapeText("FORGET → TRASH", TapeType.pixel, BinRedGlow)
+                    TapeText("FORGET → TRASH", TapeType.pixel, BinRedOnLcd)
                 }
             }
         }
@@ -4989,11 +4990,6 @@ private fun BinnedPresetRow(row: UserPresets.Binned, scheme: Scheme, busy: Boole
     }
 }
 
-// Duplicated, not hoisted — `KitsScreen.kt`'s and `DeletedKitsSection.kt`'s
-// own `BIN_RED_BORDER`, deliberately constant across every scheme so a
-// delete reads as "red" even in a scheme with no red anywhere else in it.
-private val BIN_RED_BORDER = Color(0xFF6A2020)
-
 // ---------- SAVE AS PRESET: the name ----------
 
 /**
@@ -5023,11 +5019,11 @@ private fun PresetNameDialog(
     var field by remember { mutableStateOf(TextFieldValue(suggestion, TextRange(suggestion.length))) }
     val check = UserPresets.check(field.text, engine.name, voice.name, yours)
     val (caption, captionColor) = when (check) {
-        is UserPresets.Check.Blank -> Copy.PRESET_NAME_BLANK to scheme.warn.tape
-        is UserPresets.Check.TooLong -> Copy.PRESET_NAME_NOTE to scheme.warn.tape
-        is UserPresets.Check.Factory -> Copy.presetNameFactory(check.name) to scheme.warn.tape
+        is UserPresets.Check.Blank -> Copy.PRESET_NAME_BLANK to scheme.warnInk.tape
+        is UserPresets.Check.TooLong -> Copy.PRESET_NAME_NOTE to scheme.warnInk.tape
+        is UserPresets.Check.Factory -> Copy.presetNameFactory(check.name) to scheme.warnInk.tape
         is UserPresets.Check.Fresh -> Copy.PRESET_NAME_NOTE to scheme.ink2.tape
-        is UserPresets.Check.Replaces -> Copy.presetReplaces(check.name) to scheme.amber.tape
+        is UserPresets.Check.Replaces -> Copy.presetReplaces(check.name) to scheme.accent.tape
     }
     val canSave = check is UserPresets.Check.Fresh || check is UserPresets.Check.Replaces
     val focus = remember { FocusRequester() }
@@ -5612,7 +5608,7 @@ private fun HeldInstrumentSheet(
                         TapeType.pixelSmall, scheme.ink2.tape, maxLines = 5,
                     )
                 }
-                if (previewing) TapeText("RENDERING…", TapeType.lcdSmall, scheme.amber.tape)
+                if (previewing) TapeText("RENDERING…", TapeType.lcdSmall, scheme.accent.tape)
                 if (heldPreview != null) FlockHeldAudition(heldPreview, fillColor, scheme,
                     accessibilityLabel = "INSTRUMENT AUDITION")
             }
@@ -5769,7 +5765,7 @@ private fun DroneSheet(
                     }
                 }
             }
-            if (previewing) TapeText("RENDERING…", TapeType.lcdSmall, scheme.amber.tape)
+            if (previewing) TapeText("RENDERING…", TapeType.lcdSmall, scheme.accent.tape)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 ActionButton("CANCEL", scheme, enabled = true, modifier = Modifier.weight(1f), onClick = onCancel)
                 ActionButton(
@@ -5815,7 +5811,7 @@ private fun HeldProgress(done: Int, total: Int, fillColor: Color, scheme: Scheme
         ) {
             Box(Modifier.fillMaxHeight().fillMaxWidth(fraction).background(fillColor.copy(alpha = 0.85f)))
         }
-        TapeText(line, TapeType.lcdSmall, scheme.amber.tape)
+        TapeText(line, TapeType.lcdSmall, scheme.accent.tape)
     }
 }
 
@@ -6011,7 +6007,7 @@ internal fun TidalPerformanceControls(
         )
     }
     if (seedText.toLongOrNull() == null) {
-        TapeText("INVALID SEED · PREVIOUS VARIATION KEPT", TapeType.pixelSmall, scheme.warn.tape, maxLines = 3)
+        TapeText("INVALID SEED · PREVIOUS VARIATION KEPT", TapeType.pixelSmall, scheme.warnInk.tape, maxLines = 3)
     }
     TapeText("PLAYBACK", TapeType.pixelSmall, scheme.ink2.tape)
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -7029,7 +7025,7 @@ private fun PresetForgetDoor(name: String, scheme: Scheme, onClick: () -> Unit) 
                 .padding(horizontal = 10.dp),
             contentAlignment = Alignment.Center,
         ) {
-            TapeText("${Copy.PRESET_FORGET_DOOR} $name", TapeType.pixelSmall, scheme.amber.tape, maxLines = 1)
+            TapeText("${Copy.PRESET_FORGET_DOOR} $name", TapeType.pixelSmall, scheme.accent.tape, maxLines = 1)
         }
     }
 }
@@ -7105,7 +7101,7 @@ private fun PresetStrip(
                             .padding(horizontal = 8.dp),
                         contentAlignment = Alignment.Center,
                     ) {
-                        TapeText(p.name, TapeType.pixelSmall, if (selected) scheme.amber.tape else scheme.ink2.tape, maxLines = 1)
+                        TapeText(p.name, TapeType.pixelSmall, if (selected) scheme.accent.tape else scheme.ink2.tape, maxLines = 1)
                     }
                 }
             }
@@ -7154,7 +7150,7 @@ private fun ReopenPadOverlay(
                     ) {
                         TapeText("${padTag(pad.slot)} · ${pad.displayName}", TapeType.pixelSmall, scheme.ink2.tape)
                         val voiceLabel = (patch as? BallastPatch)?.voice?.displayName ?: patch?.voiceName?.replace('_', ' ')
-                        TapeText("${patch?.engine} · $voiceLabel", TapeType.lcdSmall, scheme.amber.tape)
+                        TapeText("${patch?.engine} · $voiceLabel", TapeType.lcdSmall, scheme.accent.tape)
                     }
                 }
             }

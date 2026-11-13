@@ -42,14 +42,14 @@ internal fun OrbitAquariumPanel(set: OrbitSet, route: OrbitAquarium.Route, schem
             route.settings.outputGain == 0f -> "WET MIX MUTED"
             playing -> "STEREO KIT FX LIVE"
             else -> "KIT FX READY"
-        }, TapeType.pixelSmall, if (faulted) scheme.warn.tape else scheme.ink.tape, maxLines = Int.MAX_VALUE)
-        route.warning?.let { TapeText(it, TapeType.pixelSmall, scheme.warn.tape, maxLines = Int.MAX_VALUE) }
+        }, TapeType.pixelSmall, if (faulted) scheme.warnInk.tape else scheme.ink.tape, maxLines = Int.MAX_VALUE)
+        route.warning?.let { TapeText(it, TapeType.pixelSmall, scheme.warnInk.tape, maxLines = Int.MAX_VALUE) }
         TapeText(when {
             !auditionUp -> "TAP STREAM UNAVAILABLE"
             auditionFaulted -> "TAP FX FAULT · RESET TAIL OR RETRY A TAP"
             auditionPending -> "Tap FX waiting to queue settings…"
             else -> "TAP STREAM READY"
-        }, TapeType.pixelSmall, if (!auditionUp || auditionFaulted) scheme.warn.tape else scheme.ink2.tape,
+        }, TapeType.pixelSmall, if (!auditionUp || auditionFaulted) scheme.warnInk.tape else scheme.ink2.tape,
             maxLines = Int.MAX_VALUE)
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             ActionButton("TAIL −", scheme, enabled = !busy && set.aquariumTailSeconds > 0,

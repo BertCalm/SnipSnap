@@ -147,7 +147,7 @@ internal fun Modifier.padSkin(
     if (cls == null) return this.raisedBevel(scheme, Layout.PAD_RADIUS.dp)
     return this
         .background(scheme.raised.tape, shape)
-        .border(1.dp, scheme.grayEdge.tape, shape)
+        .border(1.dp, scheme.edge.tape, shape)
         .drawBehind {
             val edge = 4.dp.toPx()
             drawRect(cls.tape, topLeft = Offset(0f, size.height - edge), size = Size(size.width, edge))

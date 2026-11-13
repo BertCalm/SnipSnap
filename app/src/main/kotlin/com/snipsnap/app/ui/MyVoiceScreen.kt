@@ -384,8 +384,8 @@ fun MyVoiceScreen(
             })
         }
         val line = refusal ?: working ?: if (saving) "SAVING…" else status
-        if (line != null) TapeText(line, TapeType.pixelSmall, if (refusal == null) scheme.ink2.tape else scheme.warn.tape, maxLines = Int.MAX_VALUE)
-        if (assessment?.usable == false && refusal == null) TapeText(assessment!!.message, TapeType.pixelSmall, scheme.warn.tape, maxLines = Int.MAX_VALUE)
+        if (line != null) TapeText(line, TapeType.pixelSmall, if (refusal == null) scheme.ink2.tape else scheme.warnInk.tape, maxLines = Int.MAX_VALUE)
+        if (assessment?.usable == false && refusal == null) TapeText(assessment!!.message, TapeType.pixelSmall, scheme.warnInk.tape, maxLines = Int.MAX_VALUE)
         val current = take
         if (current != null) {
             TapeText("${"%.2f".format(Locale.ROOT, (endFrame - startFrame).toFloat() / current.sampleRate)}S SELECTED", TapeType.pixelSmall, scheme.ink2.tape)

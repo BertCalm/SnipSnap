@@ -489,7 +489,7 @@ internal fun Dock(
                         }
                     }
                     DockChip(Places.SNIP, scheme.amber.tape, onClick = onSnip)
-                    DockChip(Places.STOP, BinRedOnLcd, onClick = onEject, border = BIN_RED_BORDER)
+                    DockChip(Places.STOP, BinRedOnLcd, onClick = onEject)
                 }
             }
             // Now: the line, then the job's count, then CANCEL or the standing door.
@@ -569,20 +569,12 @@ private fun CaptureMeter(modifier: Modifier) {
 
 /**
  * The meter's empty-field tint on exact digital silence — a deliberate,
- * scheme-independent constant like [BIN_RED_BORDER]: "something's off"
+ * scheme-independent constant: "something's off"
  * has to read the same in every scheme. A different colour from the
  * bin-red pair on purpose: a warning about a live session, not the end
  * of one.
  */
 private val MUTE_WARN_FIELD = Color(0xFF4A2E14)
-
-/**
- * BIN red, the house constant for a session-ending action (STOP here,
- * EMPTY THE BIN there), the same in every scheme. The glow half is the
- * tuned token `BinRedGlow`; this is its border, duplicated per file by
- * the convention the other copies state rather than hoisted.
- */
-private val BIN_RED_BORDER = Color(0xFF6A2020)
 
 /** A small chip on the LCD: a word in a one-pixel frame, a hit target tall. */
 @Composable

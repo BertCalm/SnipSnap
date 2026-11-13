@@ -599,8 +599,8 @@ private fun HoldRecordAction(label: String, enabled: Boolean, onPress: () -> Uni
  * The armed session's live-level bar + elapsed counter. Structurally the
  * same composable as `KitsScreen.kt`'s own private `RecordingIndicator` /
  * `LevelBar` / `formatElapsed` — replicated rather than hoisted, per the
- * house convention that file's own `BIN_RED_BORDER`/`BIN_RED_GLOW` comment
- * states explicitly ("duplicated, not hoisted... do it if a clean
+ * house convention that file's comments state
+ * explicitly ("duplicated, not hoisted... do it if a clean
  * one-liner, else duplicate with a comment"). Extracting three private
  * symbols out of `KitsScreen.kt` into a third shared file was worse than
  * a small, faithful duplicate here.
@@ -640,7 +640,7 @@ private fun CaptureLevelIndicator() {
         horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         CaptureLevelBar(level, scheme, Modifier.weight(1f).fillMaxHeight())
-        TapeText(formatCaptureElapsed(elapsedSeconds), TapeType.pixelSmall, scheme.amber.tape)
+        TapeText(formatCaptureElapsed(elapsedSeconds), TapeType.pixelSmall, scheme.accent.tape)
     }
 }
 
@@ -656,7 +656,7 @@ private fun CaptureLevelBar(level: Float, scheme: com.snipsnap.shell.Scheme, mod
     ) {
         drawRect(color = scheme.field.tape, size = size)
         if (filled > 0f) {
-            drawRect(color = scheme.amber.tape, size = Size(size.width * filled, size.height))
+            drawRect(color = scheme.accent.tape, size = Size(size.width * filled, size.height))
         }
     }
 }

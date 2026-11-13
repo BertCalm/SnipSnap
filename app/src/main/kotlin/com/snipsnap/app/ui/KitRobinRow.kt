@@ -44,7 +44,7 @@ internal fun KitRobinRow(
     // and follow it through the effect below.
     var pendingAmount by remember(kitKey) { mutableFloatStateOf(robin?.amount ?: KitRobin.DEFAULT_AMOUNT) }
     var pendingTakes by remember(kitKey) { mutableIntStateOf(robin?.takes ?: KitRobin.DEFAULT_TAKES) }
-    val classColor = scheme.amber.tape
+    val classColor = scheme.accent.tape
     val liveRobin by rememberUpdatedState(robin)
     LaunchedEffect(robin) {
         robin?.let {

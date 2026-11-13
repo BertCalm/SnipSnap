@@ -206,7 +206,7 @@ private fun MemberRow(e: Crate.Entry, onShelf: Boolean, scheme: Scheme, onGo: ()
             .fillMaxWidth()
             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
             .background(scheme.lcd.tape, RoundedCornerShape(3.dp))
-            .border(1.dp, scheme.grayEdge.tape, RoundedCornerShape(3.dp))
+            .border(1.dp, scheme.edge.tape, RoundedCornerShape(3.dp))
             .padding(horizontal = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(6.dp),

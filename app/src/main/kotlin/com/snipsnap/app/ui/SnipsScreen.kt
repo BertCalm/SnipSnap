@@ -37,6 +37,7 @@ import com.snipsnap.app.KitShelf
 import com.snipsnap.app.LoopBounce
 import com.snipsnap.app.TapeVoice
 import com.snipsnap.app.theme.BinRedGlow
+import com.snipsnap.app.theme.BinRedOnLcd
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
 import com.snipsnap.app.theme.lcdInk2
@@ -631,12 +632,12 @@ private fun DeleteButton(scheme: Scheme, modifier: Modifier = Modifier, onClick:
         modifier
             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
             .background(scheme.lcd.tape, RoundedCornerShape(4.dp))
-            .border(2.dp, BIN_RED_BORDER, RoundedCornerShape(4.dp))
+            .border(2.dp, scheme.binLcd.tape, RoundedCornerShape(4.dp))
             .tapeClick(label = "DELETE", onClick = onClick)
             .padding(horizontal = 10.dp),
         contentAlignment = Alignment.Center,
     ) {
-        TapeText("DELETE", TapeType.pixel, BinRedGlow)
+        TapeText("DELETE", TapeType.pixel, BinRedOnLcd)
     }
 }
 
@@ -730,11 +731,3 @@ private fun usedSnipsAcrossShelf(root: File, snips: List<SnipStore.Info>): Set<F
         .flatMap { it.pads }
     return snips.filter { info -> pads.any { pad -> SnipStore.isUsedBy(pad, info.file) } }.map { it.file }.toSet()
 }
-
-// Duplicated, not hoisted (see this file's own `DeleteButton`/`HeaderChip`
-// comments) — BIN red is deliberately constant across every scheme so a
-// delete action reads as "red" even in a scheme with no red anywhere else.
-// The glow half moved to Schemes.BIN_RED_GLOW / theme.BinRedGlow
-// (accessibility audit finding 5) — a single tuned token, not a duplicated
-// literal.
-private val BIN_RED_BORDER = Color(0xFF6A2020)

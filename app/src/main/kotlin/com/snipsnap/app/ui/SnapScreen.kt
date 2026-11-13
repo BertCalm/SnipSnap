@@ -1434,7 +1434,7 @@ private fun SnapBottomBar(
  */
 @Composable
 private fun SnapNeedsKitLine(kitOpen: Boolean, scheme: Scheme) {
-    if (!kitOpen) TapeText(Copy.SNAP_NEEDS_KIT, TapeType.pixelSmall, scheme.amber.tape)
+    if (!kitOpen) TapeText(Copy.SNAP_NEEDS_KIT, TapeType.pixelSmall, scheme.accent.tape)
 }
 
 /**
