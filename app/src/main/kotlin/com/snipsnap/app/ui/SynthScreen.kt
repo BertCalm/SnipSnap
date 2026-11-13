@@ -231,6 +231,9 @@ import com.snipsnap.synth.Skin
 import com.snipsnap.synth.Backwash
 import com.snipsnap.synth.BackwashPatch
 import com.snipsnap.synth.BackwashVoice
+import com.snipsnap.synth.Soot
+import com.snipsnap.synth.SootPatch
+import com.snipsnap.synth.SootVoice
 import com.snipsnap.synth.FiredBronzePatch
 import com.snipsnap.synth.FiredBronzeInstrument
 import com.snipsnap.synth.FiredBronzeDryKit
@@ -935,6 +938,7 @@ fun SynthScreen(
                     val recipe = seed.seededOvenPatches[e to v]
                         ?: if (e == Engine.SKIN) seed.seededDrafts.filterIsInstance<SkinPatch>().firstOrNull { it.voice == v }
                         else if (e == Engine.BACKWASH) seed.seededDrafts.filterIsInstance<BackwashPatch>().firstOrNull { it.voice == v }
+                        else if (e == Engine.SOOT) seed.seededDrafts.filterIsInstance<SootPatch>().firstOrNull { it.voice == v }
                         else if (e == Engine.ONSET) seed.seededDrafts.filterIsInstance<OnsetPatch>().firstOrNull { it.voice == v }
                         else if (e == Engine.FILAMENT) seed.seededFilamentPatches[v as FilamentVoice]
                         else if (e == Engine.PLUCK && v == PluckVoice.UPRIGHT)
@@ -1131,6 +1135,13 @@ fun SynthScreen(
                 engine.patchDisplayName(voice), voice as BackwashVoice, macros,
             )
         }
+        // SOOT keeps its renderer model on the patch, as BACKWASH does, so freeze one before a macro bag.
+        if (engine == Engine.SOOT && (engine to voice) !in loadedPatchesByVoice &&
+            (engine to voice) !in seed.seededPresets) {
+            loadedPatchesByVoice[engine to voice] = SootPatch(
+                engine.patchDisplayName(voice), voice as SootVoice, macros,
+            )
+        }
         // Keep a visited default's renderer before persisting its controls, so
         // a later restore cannot mistake the new macro bag for an old model.
         if (engine == Engine.TREMOR) retainTremorDraft(
@@ -1152,7 +1163,7 @@ fun SynthScreen(
         // existing draft format, including a last-frame macro edit before navigation.
         if (patch is CausticPatch) CausticEditing.edited(patch, macros = macrosByVoice.getValue(pair))
         else if (patch is SkinPatch) patch.withMacros(macrosByVoice.getValue(pair))
-        else if (patch is BackwashPatch || patch is HalobarPatch || patch is ErosionPatch || patch is OnsetPatch || patch is AccordPatch || patch is LibrationPatch || patch is RimePatch || patch is OtisPatch || patch is RivetPatch || patch is WickPatch || patch is FilamentPatch || patch is TidalPatch || patch is TremorPatch || patch is ChamberPatch ||
+        else if (patch is BackwashPatch || patch is SootPatch || patch is HalobarPatch || patch is ErosionPatch || patch is OnsetPatch || patch is AccordPatch || patch is LibrationPatch || patch is RimePatch || patch is OtisPatch || patch is RivetPatch || patch is WickPatch || patch is FilamentPatch || patch is TidalPatch || patch is TremorPatch || patch is ChamberPatch ||
             patch is PrismPatch || patch is NacrePatch || patch is OverlapPatch || patch is ObbligatoPatch || patch is RelayPatch || patch is MurmurPatch ||
             patch is PluckPatch && patch.voice == PluckVoice.UPRIGHT)
             patch.withMacros(macrosByVoice.getValue(pair)) else patch
@@ -6053,7 +6064,7 @@ private enum class ObbligatoVoice { AIR_REED }
  */
 private enum class Engine {
     LATTICE, ACCORD,
-    THUMP, SCANNED_CHAIN, SKIN, ONSET, TINES, VELVET, VOX, PLUCK, ORPHICA, TONEWHEEL, OTIS, REGISTERS, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, HALOBAR, FLOTILLA, AEROSTAT, TREMOR, BALLAST, CISTERN, CIRCUIT, OBBLIGATO, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVERLAP, OVEN, FLOCK, VENT, CREASE, TRIO, NACRE, ORIGAMI, TREFOIL, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS, TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME, BORE, ARCO, SCOUR, KEEL, CHITIN, WICK, EROSION, RIVET, FIRED_BRONZE, BACKWASH;
+    THUMP, SCANNED_CHAIN, SKIN, ONSET, TINES, VELVET, VOX, PLUCK, ORPHICA, TONEWHEEL, OTIS, REGISTERS, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, HALOBAR, FLOTILLA, AEROSTAT, TREMOR, BALLAST, CISTERN, CIRCUIT, OBBLIGATO, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVERLAP, OVEN, FLOCK, VENT, CREASE, TRIO, NACRE, ORIGAMI, TREFOIL, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS, TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME, BORE, ARCO, SCOUR, KEEL, CHITIN, WICK, EROSION, RIVET, FIRED_BRONZE, BACKWASH, SOOT;
     val displayName: String get() = name.replace('_', ' ')
 
     /** The engine after this one in the enum's order, wrapping from the last back to the first. */
@@ -6069,6 +6080,7 @@ private enum class Engine {
         FIRED_BRONZE -> FiredBronzeDryKit.Pad.entries
         SKIN -> SkinVoice.entries
         BACKWASH -> BackwashVoice.entries
+        SOOT -> SootVoice.entries
         ONSET -> listOf(
             OnsetVoice.KICK, OnsetVoice.SNARE, OnsetVoice.HAT_CLOSED, OnsetVoice.HAT_OPEN,
             OnsetVoice.TOM, OnsetVoice.PERC_PLUCK, OnsetVoice.PERC_WOOD, OnsetVoice.PERC_METAL,
@@ -6158,6 +6170,7 @@ private enum class Engine {
         FIRED_BRONZE -> FiredBronzeInstrument.macros
         SKIN -> Skin.macrosFor(voice as SkinVoice)
         BACKWASH -> Backwash.macrosFor(voice as BackwashVoice)
+        SOOT -> Soot.macrosFor(voice as SootVoice)
         ONSET -> Onset.macrosFor(voice as OnsetVoice)
         TINES -> Tines.macrosFor(voice as TinesVoice)
         VELVET -> Velvet.macrosFor(voice as VelvetVoice)
@@ -6242,6 +6255,7 @@ private enum class Engine {
         FIRED_BRONZE -> FiredBronzeInstrument.defaults()
         SKIN -> Skin.defaults(voice as SkinVoice)
         BACKWASH -> Backwash.defaults(voice as BackwashVoice)
+        SOOT -> Soot.defaults(voice as SootVoice)
         ONSET -> Onset.defaults(voice as OnsetVoice)
         TINES -> Tines.defaults(voice as TinesVoice)
         VELVET -> Velvet.defaults(voice as VelvetVoice)
@@ -6326,6 +6340,7 @@ private enum class Engine {
         FIRED_BRONZE -> FiredBronzeInstrument.scramble(random)
         SKIN -> Skin.scramble(voice as SkinVoice, random)
         BACKWASH -> Backwash.scramble(voice as BackwashVoice, random)
+        SOOT -> Soot.scramble(voice as SootVoice, random)
         ONSET -> Onset.scramble(voice as OnsetVoice, random)
         TINES -> Tines.scramble(voice as TinesVoice, random)
         VELVET -> Velvet.scramble(voice as VelvetVoice, random)
@@ -6424,6 +6439,7 @@ private enum class Engine {
         FIRED_BRONZE -> FiredBronzeInstrument.render(voice as FiredBronzeDryKit.Pad, macros)
         SKIN -> Skin.render(voice as SkinVoice, macros)
         BACKWASH -> BackwashPatch("Backwash", voice as BackwashVoice, macros).render()
+        SOOT -> SootPatch("Soot", voice as SootVoice, macros).render()
         ONSET -> Onset.render(voice as OnsetVoice, macros)
         TINES -> Tines.render(voice as TinesVoice, macros)
         VELVET -> Velvet.render(voice as VelvetVoice, macros)
@@ -6512,6 +6528,7 @@ private enum class Engine {
         FIRED_BRONZE -> (voice as FiredBronzeDryKit.Pad).kind
         SKIN -> (voice as SkinVoice).drumClass
         BACKWASH -> Backwash.drumClassFor(voice as BackwashVoice)
+        SOOT -> Soot.drumClassFor(voice as SootVoice)
         ONSET -> (voice as OnsetVoice).drumClass
         TINES -> (voice as TinesVoice).drumClass
         VELVET -> Velvet.drumClassFor(voice as VelvetVoice, macros)
@@ -6599,6 +6616,7 @@ private enum class Engine {
         FIRED_BRONZE -> FiredBronzePatch(name, voice as FiredBronzeDryKit.Pad, macros)
         SKIN -> SkinPatch(name, voice as SkinVoice, macros)
         BACKWASH -> BackwashPatch(name, voice as BackwashVoice, macros)
+        SOOT -> SootPatch(name, voice as SootVoice, macros)
         ONSET -> OnsetPatch(name, voice as OnsetVoice, macros)
         TINES -> TinesPatch(name, voice as TinesVoice, macros)
         VELVET -> VelvetPatch(name, voice as VelvetVoice, macros)
