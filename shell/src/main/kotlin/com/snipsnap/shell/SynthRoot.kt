@@ -61,6 +61,8 @@ import com.snipsnap.synth.GyrePatch
 import com.snipsnap.synth.ScuffPatch
 import com.snipsnap.synth.Keel
 import com.snipsnap.synth.KeelPatch
+import com.snipsnap.synth.Etch
+import com.snipsnap.synth.EtchPatch
 import com.snipsnap.synth.Lacquer
 import com.snipsnap.synth.LacquerPatch
 import com.snipsnap.synth.Lattice
@@ -271,6 +273,7 @@ object SynthRoot {
         is FlockPatch -> Field(patch.midi, Flock.MIN_MIDI..Flock.MAX_MIDI) { patch.copy(midi = it) }
         is FlotillaPatch -> Field(patch.midi, Flotilla.MIDI_MIN..Flotilla.MIDI_MAX) { patch.copy(midi = it) }
         is KeelPatch -> Field(patch.midi, Keel.MIDI_MIN..Keel.MIDI_MAX) { patch.copy(midi = it) }
+        is EtchPatch -> Field(patch.midi, Etch.MIDI_MIN..Etch.MIDI_MAX) { patch.copy(midi = it) }
         is LacquerPatch -> Field(patch.midi, Lacquer.MIDI_MIN..Lacquer.MIDI_MAX) { patch.copy(midi = it) }
         is LatticePatch -> Field(patch.midi, Lattice.MIDI_MIN..Lattice.MIDI_MAX) { patch.copy(midi = it) }
         is LibrationPatch -> Field(patch.midi, Libration.MIN_MIDI..Libration.MAX_MIDI) { patch.copy(midi = it) }

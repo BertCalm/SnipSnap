@@ -1,11 +1,12 @@
 # ETCH: design brief and round-1 audition
 
-Status: **round 1b, Python prototype; sound direction accepted by the owner 2026-11-12.** No Kotlin exists. The engine stays in
+Status: **Kotlin round K1 (2026-11-13): the accepted round-3 sound ported to the engine, a prototype outside the
+factory presets and the picker.** The owner accepted the round-3 audition on 2026-11-12. The engine stays in
 progress until every applicable owner gate has evidence (see "Gates" below).
 
 Prototype: [`prototype/etch/`](../prototype/etch/) (`etch_proto.py` is the model,
 `gen_audition.py` renders and measures, `build_page.py` writes the audition page).
-Every number below is from that Python harness, not from Kotlin.
+Every number below is from that Python harness unless a section says Kotlin.
 
 ## What it is
 
@@ -159,7 +160,7 @@ stay inside the tens-of-ms one-shot rule for notes and around 100 ms for loops. 
 - **Measured:** every number on this page and the audition page, Python harness.
 - **Proposed:** every constant marked "shape" in `etch_proto.py`; the six voices; HOLD; the
   slide-does-not-retrigger behaviour.
-- **Heard:** round 1b's square against the saw, "That's better", and then the whole round-1b audition, "It all seems fine from the audition" (both 2026-11-12). Accepted as the sound-direction baseline; nothing in Kotlin, on a phone or on an MPC has been heard.
+- **Heard:** round 1b's square against the saw, "That's better"; the whole round-1b audition, "It all seems fine from the audition"; round 2, "Mostly good, but the 4 takes in RR sound the same"; then "It feels a bit mid heavy. Like dollar store headphones"; and the round-3 audition, "I'm good with evening in audition" (read as "everything") (all 2026-11-12). Round 3 is the accepted baseline; nothing in Kotlin, on a phone or on an MPC has been heard.
 
 ## Why it is built this way
 
@@ -339,6 +340,67 @@ Knock-on effects, measured and handled:
 - SAW and SQUARE are 3.1 dB apart (3.7 in round 2). Disclosed for the owner's ears.
 
 Not heard.
+
+## Round 3 accepted (2026-11-12)
+
+**Heard:** after the round-3 audition (version 5) the owner said "I'm good with evening in audition" (read as "everything"). That accepts, as
+rendered in the Python harness at `c445980b`:
+- the round-3 tone (CUT_HI 2 kHz, FC_MAX 8 kHz, ladder output 0.4/0.3/0.3, BITE low-pass 14
+  to 9 kHz with a +4 dB shelf at 3 kHz, default CUTOFF 0.45);
+- the rebuilt round robin (five dimensions dealt by a Latin hypercube, filter opening ±7%);
+- the six voices: SAW and SQUARE, and the four new ones, RUBBER, WHISTLE, GRIT and DUB, at
+  their defaults.
+
+Preserve round 3 as the baseline. This is a listen to Python renders on the audition page,
+not evidence of Kotlin, phone playback or an MPC. Questions the page asked that "everything"
+answers by default rather than by name: whether RUBBER is too dark, whether GRIT's accents
+need more level, how long DUB's wash runs, and whether SAW and SQUARE (3.1 dB apart after the
+brighter tone) still read as different. Still open: whether chord tools apply to a mono
+line voice.
+
+## Kotlin round K1 (2026-11-13)
+
+The owner said "Proceed" to the Kotlin engine. K1 ports the accepted round-3 sound and registers ETCH as a
+prototype; the kit, the factory roster, keygroups and the app picker are the next round.
+
+**Built:**
+- `synth/.../Etch.kt`: the six voices, the voice kernel (oscillator, accent capacitor, RC slide, ladder), BITE,
+  SPACE (delay, DUB's delay, FDN reverb) and the round-robin takes, ported line for line from `etch_proto.py`
+  in Double, with Butterworth sections designed as scipy's `butter` designs them. The output stage is the house's:
+  `Tide.bandLimit`, `Dsp.decimate`, mean and 20 Hz high-pass, `Dsp.levelTo` to the melodic target times v^0.35.
+- HOLD under .85 is a TONAL one-shot (gate 0.1 to 0.9 s, under 1.45 s with SPACE's first repeats). From .85 the
+  voice plays its sixteen-step line (SQUARE and DUB line A at 112 BPM, the others line B at 130 BPM) as a two-bar
+  LOOP, rendered with two warm passes and checked with `Keys.requireSeam`. The sustained keygroup loop is not
+  built.
+- `EtchPatch` (saved note, velocity, model), `EtchPresets` (provisional: each voice's default note and line, and
+  the audition's busy and sparse lines), and the registrations: `Patches`, both `Velocity` arms, `Restrike`
+  (ETCH deals its own takes, ahead of the generic force spread), the shell's `SynthRoot` note field and
+  `Spread` root, `PatchTypes.PROTOTYPES`, the determinism canary and the hand-built roster entries.
+
+**Kotlin against the accepted Python** (same notes, takes and loops, measured with the audition's own tools):
+- Velocity, level-matched attack centroid soft → hard: Kotlin within 2 Hz of Python on every voice (SAW
+  1,222 → 1,664 Hz against 1,223 → 1,663).
+- The same note: 0.65 to 2.8 dB apart by third-octave spectrum (GRIT at full accent the widest); octaves at 4,
+  8 and 16 kHz within about 1 dB, Kotlin the darker, from the house decimator.
+- The same line loop: 0.36 to 1.9 dB apart, the same length to the frame, octave balance within 0.1 dB.
+- Round robin at velocity .6: closest take pairs 1.96 to 2.48 dB in Kotlin (Python 1.78 to 3.11), attack spread
+  10 to 20% (Python 5 to 18.5%). The jitter source differs by design (Kotlin's seeded `Random`).
+
+**Tests** (`EtchTest`, 14; plus the roster, round-robin and shell classes: 120 tests in 12 classes, all passing):
+byte-identical renders, finite and bounded, centred, the root within 2.1 cents (SAW and SQUARE, C2 and C3), the
+one-shot and loop classes and lengths to the frame, every loop closing at SPACE 0 and 1, every macro moving the
+sound, unknown and non-finite macros, velocity brighter on every voice, four distinct takes reachable through
+`Restrike`, the square's 2nd harmonic 40 dB under the saw's, BITE cutting the line's crest factor from 12.6 to
+7.0 dB, the register and scramble, and JSON.
+
+**Disclosed, not fixed:**
+- The classifier hears some short, low notes as drums. The engine files every one-shot TONAL and kit pads take
+  that class, but `SnipStore` names a saved sound by what the classifier hears. At the default HOLD no voice reads
+  as a drum from C2 up except DUB on a soft C2 (KICK). Soft hits at C1, and HOLD 0 to 0.2 on RUBBER, GRIT and DUB,
+  read as KICK (RUBBER at C3 short, TOM). Lengthening short notes or brightening DUB would change the accepted
+  sound: the owner's call.
+- Render time on this machine: 51 to 88 ms per one-shot, 330 to 460 ms per line loop. A one-shot is a little over
+  the house's "tens of milliseconds"; a loop needs the cache a kit pad already gives it.
 
 ## Published audition
 

@@ -30,6 +30,8 @@ remains blocked on slice-map/hardware verification. Owner listening is pending.
 
 [GATECRASH](docs/GATECRASH.md) is a family of three 1980s gated drum kits on the shelf: Stone Room, Machine Pop and Electro Funk. Each has sixteen pads with three velocity zones of four takes. The owner approved the sound on 2026-11-11 after four rounds; phone and MPC hardware playback remain unverified.
 
+[MIRRORBALL](docs/MIRRORBALL.md) is a family of three 1970s disco kits on the shelf: Philly Strings, Loft Party and Munich Machine. Every pad is printed through an FET compressor, a multi-head tape echo, then an amp, in an order the FX rack cannot make. Each has sixteen pads with three velocity zones of four takes; Philly's tambourine is synthesized, fitted to CC0 recordings. The owner approved the sound on 2026-11-12 after five rounds; phone and MPC hardware playback remain unverified.
+
 TRIAD has a [native shared-bus drum audition](docs/TRIAD.md): one hybrid groove through three processing rigs. These are listening candidates, not a factory engine or MPC program.
 
 ## The loop
@@ -443,7 +445,7 @@ explicit MIDI root (24–96), strike velocity and model version; TUNE is a
 relative ±12-semitone offset, neutral at 0.5, so the effective note spans
 12–108 without clamping back to the saved-root range. Seven provisional presets
 and a dry sixteen-pad C minor pentatonic kit are included, with PITCHWHEEL among
-FRESH TAPE's 95 starters. Run `./gradlew :synth:generatePitchwheelAudition`
+FRESH TAPE's 104 starters. Run `./gradlew :synth:generatePitchwheelAudition`
 for the compact first listening set, or add `-PpitchwheelFull` for the broader
 dry probes. HOLD's top step returns settled loop-only material with a
 deterministic attachment cycle and capped adhesion. The owner heard R1 as six
@@ -1286,7 +1288,19 @@ macro swaps the locked taps for six independent players, each with their own
 pitch drift, vibrato, onset, tone and level, which is the difference between
 one instrument swirled and several playing), PHASE (four allpasses
 swept by one slow sine and summed back with the dry, the notches sliding
-up and down the spectrum), ECHO (one delay line and
+up and down the spectrum), FLANGER (one short delay, 0.1 to 10 ms, swept
+by one sine on a log law and summed with the dry: a comb of notches sliding
+down and back up, the jet; DEPTH is how far down it sweeps, FEEDBACK is
+two-way, metallic above the middle, hollow below it and none at its middle
+default, and the ring dies inside the pad; the FLANGE pedal, the `flanged`
+character, is the plain sweep at DEPTH 0.7 at a tap (AMT 70), DEPTH 1 at
+AMT 100; for drums and held sounds), TREMOLO (the level
+pulses between full and 1 minus DEPTH at 1 to 12 Hz, starting at full level
+so a hit's attack is kept; SHAPE runs from a smooth sine to a square whose
+edge takes 4 ms at every rate, so it chops without clicking; the TREM
+pedal, the `tremoloed` character, is a gentle sine throb about 3.5 times a
+second at DEPTH 0.5 at a tap (AMT 70), about 0.71 at AMT 100; for held
+sounds), ECHO (one delay line and
 one filter, repeats darkening as they fade; its HEAD macro, turned up,
 feeds the repeats only the note's first 120 ms, so a held note's attack
 comes back as a repeat; the `delayed` character, the DELAY pedal, is its long,
@@ -1324,7 +1338,7 @@ the kit's own grid, a note division at its tempo — ROLL (the hit's own
 head struck again) and GATE (the hit chopped into a square envelope)
 share that same grid, so all three land on the same beats. `FxChain` fixes the order — pitch → dive → swell → reverse → smear → ghost →
 spike → volume → octaver → eq → contour → wah → compressor → squash → forge → valve → crunch →
-ring → dub → vinyl → tape → vibrato → ensemble → phase → echo → rewind → spring → room → hush → motion — owns
+ring → dub → vinyl → tape → vibrato → ensemble → phase → flanger → tremolo → echo → rewind → spring → room → hush → motion — owns
 the total tail budget so stacked reverbs can't turn a hit into a phrase,
 and serializes per-pad next to the WAV.
 
@@ -1684,6 +1698,12 @@ BREAKER is a drum engine in progress: surf rock by way of boom bap. Backroom's a
 and snare run through record dust, a tube, a spring tank that drips, a slap echo, a compressor that
 crushes the spring back up behind each hit, and a bright combo amp. Round 1 (kick and snare) is a
 prototype outside the picker. [Design and listening rounds](docs/BREAKER.md).
+
+ETCH is a step-line bass engine in progress: a squelching sixteen-step line, a drive that glues the steps, and a
+dotted-eighth delay into a reverb, from the owner's two reference clips and pedal chain. Six voices (SAW, SQUARE,
+RUBBER, WHISTLE, GRIT, DUB); velocity is the accent; HOLD's top plays the line as a loop. The owner accepted the
+Python audition; Kotlin round K1 ports it as a prototype outside the picker. [Design, listening rounds and
+measurements](docs/ETCH.md).
 
 Fired Bronze is an MPC-approved sixteen-pad skin, clay and bronze kit with four
 strike layers, a driven processor and amp, and editable source/drive controls.

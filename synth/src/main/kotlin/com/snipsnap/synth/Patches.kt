@@ -132,6 +132,7 @@ object Patches {
             NacrePatch.ENGINE -> NacrePatch.fromJsonValue(value)
             OvenPatch.ENGINE -> OvenPatch.fromJsonValue(value)
             KeelPatch.ENGINE -> KeelPatch.fromJsonValue(value)
+            EtchPatch.ENGINE -> EtchPatch.fromJsonValue(value)
             CreasePatch.ENGINE -> CreasePatch.fromJsonValue(value)
             TrioPatch.ENGINE -> TrioPatch.fromJsonValue(value)
             OhmPatch.ENGINE -> OhmPatch.fromJsonValue(value)

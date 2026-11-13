@@ -56,7 +56,10 @@ internal object PresetTestSupport {
             """|solina|eminent|string\s*ensemble|\barp(?!eggi)""" +
             // MAGNET's amp and speaker: "rectifier" is a near-miss of an amplifier line and "oxford" a
             // speaker maker (docs/superpowers/specs/2026-09-29-magnet-valve-design.md, "The name").
-            """|rectifier|oxford""",
+            """|rectifier|oxford""" +
+            // MIRRORBALL's brief named the compressor pedal and the tape echo pedal
+            // (docs/superpowers/specs/2026-11-12-mirrorball-disco-kit-design.md).
+            """|1176|uafx|universal\s*audio|teletronix|strymon|capistan""",
     )
 
     /**

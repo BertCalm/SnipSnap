@@ -33,7 +33,8 @@ object Restrike {
     /** True when [patch] has a strike model to vary, so a chain of it can re-strike. */
     fun canRestrike(patch: Patch?): Boolean =
         (patch is SkinPatch && patch.voice in Skin.STRUCK) || patch is TerraPatch ||
-            patch is HalobarPatch || patch is BreakerPatch || (patch is BackwashPatch && patch.model == 5)
+            patch is HalobarPatch || patch is BreakerPatch || (patch is BackwashPatch && patch.model == 5) || patch is EtchPatch ||
+            (patch is ThumpPatch && patch.voice == ThumpVoice.SUB)
 
     /** The velocity and the TERRA POS offset take [take] lands with, drawn from [seed]; take 0 is (velocity, 0). */
     internal fun landing(velocity: Float, seed: Int, take: Int): Pair<Float, Float> {
@@ -54,10 +55,14 @@ object Restrike {
         require(take >= 0) { "a take is 0 or more, got $take" }
         if (!canRestrike(patch)) return null
         if (patch is BackwashPatch) return patch.copy(take = patch.take + take).render(velocity)
+        // ETCH deals its own five-dimension takes (Etch.takeFor), accepted by ear; no extra force spread on top.
+        if (patch is EtchPatch) return patch.render(velocity.coerceIn(0f, 1f), take, seed)
         val (v, offset) = landing(velocity.coerceIn(0f, 1f), seed, take)
         return when (patch) {
             is HalobarPatch -> Halobar.renderTake(patch.voice, patch.macros, v, seed, take, patch.model)
             is SkinPatch -> patch.render(velocity = v, take = take)
+            // THUMP's SUB deals its settle, click, drive and slide timing out per take (Thump.SUB_TAKES).
+            is ThumpPatch -> Thump.render(patch.voice, patch.macros, velocity = v, take = take)
             // BREAKER's source is a struck SKIN drum: each take is a fresh strike through the same chain.
             is BreakerPatch -> patch.render(velocity = v, take = take)
             is TerraPatch -> {

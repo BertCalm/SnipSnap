@@ -176,17 +176,17 @@ GATES = [
     ("Velocity: rendering", "pass (Python only)",
      "On all six voices a hard hit changes the tone, not only the level. Level-matched attack centroid, "
      "velocity 0.35 → 1.0, in Hz: " + " · ".join(f"{v} {d['soft_attack_hz']}→{d['hard_attack_hz']}" for v, d in checks["six_dynamics"].items()) + ". Kotlin not built."),
-    ("Round robin: rendering", "rebuilt, not heard",
-     "You heard round 1's takes as the same strike (they measured 0.5 to 0.8 dB apart). Rebuilt: five "
+    ("Round robin: rendering", "pass (Python only)",
+     "You heard round 1's takes as the same strike (they measured 0.5 to 0.8 dB apart), then accepted the rebuilt takes with round 3. Five "
      "audible dimensions, takes dealt out so no two share a setting. The closest two takes on any voice "
      f"are now {min(d['rr_closest_db'] for d in checks['six_dynamics'].values())} dB apart, the widest "
      f"{max(d['rr_widest_db'] for d in checks['six_dynamics'].values())} dB. Kotlin not built."),
     ("Velocity and round robin: saving", "not yet verified", "No Kotlin patch exists to save."),
     ("Velocity and round robin: playback", "not yet verified", "No phone playback."),
     ("Velocity and round robin: export", "not yet verified", "No MPC export."),
-    ("Sound character", "partial",
-     "Round 1b accepted 2026-11-12, then heard as mid heavy after round 2. Round 3 opens the top end "
-     "for the whole engine; not heard."),
+    ("Sound character", "pass (Python renders)",
+     "Round 3 accepted 2026-11-12: \"I'm good with evening in audition\" (read as \"everything\"). "
+     "Python renders only; nothing in Kotlin, on a phone or on an MPC has been heard."),
 ]
 
 
@@ -276,7 +276,7 @@ a {{ color: var(--accent); }}
 
 <div class="wrap">
   <header>
-    <div class="mark"><i></i><span class="eyebrow">SNIPSNAP · ETCH · ROUND 3 · PYTHON HARNESS · NEW TONE NOT HEARD</span></div>
+    <div class="mark"><i></i><span class="eyebrow">SNIPSNAP · ETCH · ROUND 3 · PYTHON HARNESS · ACCEPTED BY EAR 2026-11-12</span></div>
     <h1>ETCH Audition</h1>
     <p class="lede">A squelching step-line bass, then a drive that glues the steps, then a tempo delay into a reverb.
     Built from your two reference clips. These are prototype renders from a Python model, not the app.

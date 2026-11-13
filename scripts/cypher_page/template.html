@@ -1,0 +1,257 @@
+<title>CYPHER Audition</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: a console channel. Kit selector across the top, the 4x4 pad grid on the left the way an MPC
+   lays it out (A13 top-left, A01 bottom-left), the selected pad's measured envelope on the right. */
+:root {
+  --bg: #e4e7ec; --panel: #f3f5f8; --ink: #18202b; --muted: #55606f; --line: #c3cad4;
+  --stone: #2f5f8f; --machine: #a8327a; --electro: #9a6a00; --trap: #7a2fa0; --drill: #1f6f6a; --backroom: #8a4b00; --lowrider: #2f5f8f; --dust: #5b5248; --flint: #a8327a;
+  --accent: var(--stone); --wet: var(--accent); --dry: #18202b; --warn: #8a4b00; --pad: #fbfcfd;
+  --display: "Chakra Petch", "Arial Narrow", sans-serif;
+  --body: "IBM Plex Sans", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #141a22; --panel: #1c242e; --ink: #e6ebf2; --muted: #9aa6b5; --line: #334050;
+  --stone: #7fb2e6; --machine: #ee7fc0; --electro: #e8b64a; --trap: #c99bf0; --drill: #7fd6cf; --backroom: #f0b060; --lowrider: #7fb2e6; --dust: #c9bfae; --flint: #ee7fc0; --dry: #e6ebf2; --warn: #f0b060; --pad: #232d39;
+  color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #141a22; --panel: #1c242e; --ink: #e6ebf2; --muted: #9aa6b5; --line: #334050;
+  --stone: #7fb2e6; --machine: #ee7fc0; --electro: #e8b64a; --trap: #c99bf0; --drill: #7fd6cf; --dry: #e6ebf2; --warn: #f0b060; --pad: #232d39;
+  color-scheme: dark }
+body { background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 15px; line-height: 1.5; }
+.wrap { max-width: 1080px; margin: 0 auto; padding-block: 28px 56px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: flex; flex-direction: column; gap: 28px; }
+h1 { font-family: var(--display); font-weight: 700; font-size: clamp(30px, 6vw, 46px); letter-spacing: .04em; margin: 0; line-height: 1.05; }
+h2 { font-family: var(--display); font-weight: 600; font-size: 20px; letter-spacing: .03em; margin: 0 0 10px; text-wrap: balance; }
+p { margin: 0; max-width: 68ch; }
+.gesture { font-family: var(--mono); font-size: 13px; color: var(--muted); }
+.status { border-left: 4px solid var(--warn); padding: 8px 12px; background: var(--panel); max-width: 72ch; }
+.status strong { color: var(--warn); }
+header { display: flex; flex-direction: column; gap: 12px; }
+.kits { display: flex; flex-wrap: wrap; gap: 8px; }
+.kit { font-family: var(--display); font-weight: 600; font-size: 15px; letter-spacing: .05em; text-transform: uppercase;
+  padding: 10px 14px; border: 1.5px solid var(--line); background: var(--panel); color: var(--ink); cursor: pointer; border-radius: 3px; text-align: left; }
+.kit small { display: block; font-family: var(--mono); font-weight: 400; font-size: 11px; letter-spacing: 0; text-transform: none; color: var(--muted); }
+.kit[aria-pressed="true"] { border-color: var(--accent); box-shadow: inset 0 -4px 0 var(--accent); }
+.deck { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 4fr); gap: 24px; align-items: start; }
+@media (max-width: 760px) { .deck { grid-template-columns: minmax(0, 1fr); } }
+.grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.pad { aspect-ratio: 1 / 1; max-width: 100%; min-width: 0; display: flex; flex-direction: column; justify-content: space-between;
+  padding: 7px; border: 1.5px solid var(--line); border-radius: 4px; background: var(--pad); color: var(--ink); cursor: pointer;
+  font-family: var(--body); text-align: left; overflow: hidden; }
+.pad .slot { font-family: var(--mono); font-size: 10.5px; color: var(--muted); }
+.pad .name { font-weight: 600; font-size: clamp(10.5px, 2.6vw, 13px); line-height: 1.15; overflow-wrap: anywhere; }
+.pad svg { width: 100%; height: 26%; display: block; }
+.pad[aria-pressed="true"] { border-color: var(--accent); box-shadow: inset 0 0 0 1.5px var(--accent); }
+.pad.hit { background: color-mix(in srgb, var(--accent) 22%, var(--pad)); }
+button:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.detail { background: var(--panel); border: 1px solid var(--line); border-radius: 4px; padding: 16px; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.detail h2 { margin: 0; }
+.tag { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+.plot { width: 100%; height: auto; display: block; }
+.legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 12.5px; color: var(--muted); }
+.legend i { display: inline-block; width: 14px; height: 10px; margin-right: 5px; vertical-align: -1px; }
+.acts { display: flex; flex-wrap: wrap; gap: 8px; }
+.act { font-family: var(--body); font-weight: 600; font-size: 14px; padding: 9px 13px; border-radius: 3px; cursor: pointer;
+  border: 1.5px solid var(--accent); background: transparent; color: var(--ink); }
+.act.main { background: var(--accent); color: var(--bg); }
+.act[disabled] { opacity: .4; cursor: default; }
+dl { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 14px; margin: 0; font-size: 13.5px; }
+dt { color: var(--muted); } dd { margin: 0; font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.note { font-size: 13px; color: var(--muted); }
+.cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px; }
+ol.listen { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 8px; max-width: 68ch; }
+.tablewrap { overflow-x: auto; }
+table { border-collapse: collapse; font-size: 13.5px; min-width: 560px; width: 100%; }
+th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-family: var(--display); font-weight: 600; letter-spacing: .04em; font-size: 12.5px; text-transform: uppercase; color: var(--muted); }
+.ok { color: var(--stone); font-weight: 600; } .open { color: var(--warn); font-weight: 600; }
+#err { color: var(--warn); font-size: 13px; min-height: 1.2em; }
+@media (prefers-reduced-motion: no-preference) { .pad { transition: background .12s; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>CYPHER</h1>
+    <p class="gesture">kick and snare → the print → the hats' grid → the phrase that proves the genre</p>
+    <p>Six hip-hop drum kits for the FRESH TAPE shelf. Tap a pad to hear it.</p>
+    <p class="status"><strong>Round 2.</strong> TRAP and DRILL are the round 1b kits you approved ("Ok, sounds good"), unchanged. BACKROOM, LOWRIDER, DUST and FLINT are new and not heard. BACKROOM opens with the six Backroom pads you accepted on 2026-11-07, byte for byte through their rack, plus ten more through the same rack and two swung phrases. LOWRIDER's snare, clap and toms bloom into a long room; its laid-back phrase puts the backbeat 18 ms behind. DUST is raw tape with no compressor, a crash, and an unquantized break on crackle. FLINT is the fast kit with clicks thrown off the grid.</p>
+  </header>
+
+  <div class="kits" id="kits" role="group" aria-label="Kit"></div>
+
+  <section class="deck">
+    <div>
+      <div class="grid" id="grid" aria-label="Pads, laid out as on an MPC: A13 top left, A01 bottom left"></div>
+      <p class="note" style="margin-top:10px">Laid out like the hardware: A01 is bottom left. The small trace on each pad is its real level over time.</p>
+    </div>
+    <div class="detail" aria-live="polite">
+      <div><h2 id="dName"></h2><div class="tag" id="dTag"></div></div>
+      <svg class="plot" id="plot" viewBox="0 0 400 150" role="img" aria-label="Level over time for the selected pad"></svg>
+      <div class="legend"><span><i style="background:var(--wet);opacity:.55"></i>the pad</span><span><i style="border:1.5px solid var(--dry);box-sizing:border-box"></i>same strike, dry (printed pads)</span><span id="lgGate"></span></div>
+      <div class="acts">
+        <button class="act main" id="bPad" type="button">Play pad</button>
+        <button class="act" id="bDry" type="button">Play dry</button>
+        <button class="act" id="bTouch" type="button">Play all 12 strikes</button>
+        <button class="act" id="bDrive0" type="button">Clean sub (DRIVE 0)</button>
+        <button class="act" id="bDrive70" type="button">Driven (DRIVE 0.7)</button>
+        <button class="act" id="bDrive100" type="button">Driven hard (DRIVE 1)</button>
+        <button class="act" id="bStop" type="button">Stop</button>
+      </div>
+      <dl id="dNums"></dl>
+      <p class="note" id="dNote"></p>
+      <div id="err" role="status"></div>
+    </div>
+  </section>
+
+  <section>
+    <h2 id="gTitle">Groove</h2>
+    <p>Two bars at the kit's tempo, played the way the app plays a pad: velocity picks the soft, medium or hard zone, each hit takes the next of four takes, a hat cuts the hat before it, and a sub cuts the sub before it (the sub pads share a choke group, which is how sliding subs are played).</p>
+    <div class="acts" style="margin-top:12px"><button class="act main" id="bGroove" type="button">Play groove</button><button class="act" id="bFill" type="button">Play A15</button><button class="act" id="bBuild" type="button">Play A16</button></div>
+  </section>
+
+  <section class="cols">
+    <div>
+      <h2>What to listen for</h2>
+      <ol class="listen">
+        <li><strong>Does the sub slide read as a note moving?</strong> A07 and A08 on TRAP, A06 to A08 on DRILL. If it reads as a wobble rather than a second note, say so and I will slow the glide and start it earlier.</li>
+        <li><strong>How much drive on the sub?</strong> Every sub pad has "Clean", "Driven" and "Driven hard" beside "Play pad". A clean sub is correct and nearly silent on a phone; a driven one is audible and less pure. Tell me which you would keep, and on what you listened.</li>
+        <li><strong>Does the hat roll roll?</strong> TRAP A15 tightens from eighths to sixty-fourths and rises at the end. If the last beat is a buzz rather than hits, say so.</li>
+        <li><strong>Is the drill room right?</strong> DRILL's snare, clap and metal hits are in one dark big room; "Play dry" plays the same strike without it. Too much, too little, too dark?</li>
+        <li><strong>Do soft strikes sound like the same drum, and do the four takes sound like four hits?</strong> "Play all 12 strikes": four soft, four medium, four hard. The sub's takes differ mostly in drive and click.</li>
+        <li><strong>BACKROOM:</strong> A01 to A06 should be exactly the Backroom sound you accepted. Do the ten new pads belong with them, and do the swung hats (A15) nod?</li>
+        <li><strong>LOWRIDER:</strong> is the snare's room drenched enough, or too much? Is the laid-back phrase (A15) behind the beat, or just late?</li>
+        <li><strong>DUST:</strong> is the tape thud raw enough with no compressor? Does the unquantized break (A15) read as feel, or as a mistake? A16 adds the crash on the one.</li>
+        <li><strong>FLINT:</strong> do the clicks (A07 to A11) sound thrown, and does the early slide (A05) land in time at 120?</li>
+        <li><strong>Are these six kits?</strong> If any two read as one kit at two tempos, that is the finding.</li>
+      </ol>
+    </div>
+    <div>
+      <h2>How to tell me what you heard</h2>
+      <p>The most useful notes name a kit, a pad and a direction. For example: "Trap A07: slide later, longer" or "Drill A02: less room". "Sounds good, proceed" also works and gets recorded as approval of this baseline.</p>
+      <p style="margin-top:10px">Everything is mono. The records this sound comes from are wide; this page is not.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Acceptance gates</h2>
+    <div class="tablewrap"><table>
+      <thead><tr><th>Gate</th><th>Status</th><th>Evidence</th></tr></thead>
+      <tbody>
+        <tr><td>Several distinct genre kits on the shelf</td><td class="ok">Six, in software</td><td>All six under SKINS. Tests check every pair differs in at least six pads and in its kick and snare, and that the prints differ. Four of the six are not heard.</td></tr>
+        <tr><td>Authored roll or riser</td><td class="ok">Built</td><td>A hat roll and a sub line on TRAP; a drill snare bar and a sub call on DRILL; swung hats and a break drop; a laid-back groove and a big fill; two unquantized breaks; a click scatter and a slide stack.</td></tr>
+        <tr><td>Velocity: rendering</td><td class="ok">Verified</td><td>Every hit measures duller at the soft zone, every sub cleaner; the sub's root does not move with velocity.</td></tr>
+        <tr><td>Round robin: rendering</td><td class="ok">Verified</td><td>Four different takes in every zone of every pad. The sub deals five settings out and keeps its root within 10 cents.</td></tr>
+        <tr><td>Saving</td><td class="ok">Verified</td><td>All 1152 slices match after save and reload.</td></tr>
+        <tr><td>Playback</td><td class="ok">Verified in software</td><td>The app's own pad resolver picks the zone and deals takes in order, then repeats.</td></tr>
+        <tr><td>Export: MPC 3</td><td class="ok">Verified by read-back</td><td>Velocity ranges, slice starts and cycle lengths read back from the exported track.</td></tr>
+        <tr><td>Export: SFZ and DecentSampler</td><td class="ok">Written</td><td>Both formats cycle takes; written beside the MPC 3 track by the generator.</td></tr>
+        <tr><td>Export: MPC 2</td><td class="open">Does not pass</td><td>MPC 2's format keeps only the first take of each zone. A format limit, stated.</td></tr>
+        <tr><td>Phone and MPC hardware</td><td class="open">Not verified</td><td>Nothing has been played on a device.</td></tr>
+        <tr><td>Sound character</td><td class="open">Two of six approved</td><td>TRAP and DRILL approved at round 1b. The four new kits wait for you.</td></tr>
+        <tr><td>Melodic voices, keygroups, chord tools, HOLD</td><td>Not applicable</td><td>These are drum kits with finite hits.</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+</div>
+
+<script>
+const DATA = /*MANIFEST*/;
+const EXT = "/*EXT*/";
+const accents = { "cypher-trap": "var(--trap)", "cypher-drill": "var(--drill)", "cypher-backroom": "var(--backroom)", "cypher-lowrider": "var(--lowrider)", "cypher-dust": "var(--dust)", "cypher-flint": "var(--flint)" };
+let kit = DATA.kits[0], pad = kit.pads[0], audio = null;
+const $ = id => document.getElementById(id);
+const nn = n => String(n).padStart(2, "0");
+const url = (k, kind, slot) => k.id + "/" + kind + (slot ? "-" + nn(slot) : "") + "." + EXT;
+
+function stop() { if (audio) { audio.pause(); audio = null; } }
+function play(src) {
+  stop(); $("err").textContent = "";
+  const a = new Audio(src); audio = a;
+  a.play().catch(() => { if (audio === a) $("err").textContent = "This clip would not play in your browser."; });
+}
+function path(env, w, h, close) {
+  if (!env) return "";
+  const step = w / env.length; let d = "M0," + h;
+  env.forEach((v, i) => { d += " L" + (i * step).toFixed(1) + "," + (h - Math.min(v, 1) * h).toFixed(1) + " L" + ((i + 1) * step).toFixed(1) + "," + (h - Math.min(v, 1) * h).toFixed(1); });
+  return d + (close ? " L" + w + "," + h + " Z" : "");
+}
+function drawKits() {
+  $("kits").innerHTML = "";
+  DATA.kits.forEach(k => {
+    const b = document.createElement("button"); b.type = "button"; b.className = "kit"; b.id = "kit-" + k.id;
+    b.setAttribute("aria-pressed", k === kit); b.style.setProperty("--accent", accents[k.id]);
+    b.innerHTML = k.title + "<small>" + k.bpm + " BPM</small>";
+    b.onclick = () => { stop(); kit = k; pad = k.pads[0]; render(); };
+    $("kits").appendChild(b);
+  });
+}
+function drawGrid() {
+  const g = $("grid"); g.innerHTML = "";
+  // MPC order: top row is A13..A16, bottom row A01..A04.
+  [12, 13, 14, 15, 8, 9, 10, 11, 4, 5, 6, 7, 0, 1, 2, 3].forEach(i => {
+    const p = kit.pads[i];
+    const b = document.createElement("button"); b.type = "button"; b.className = "pad"; b.id = "pad-" + p.slot;
+    b.setAttribute("aria-pressed", p === pad);
+    b.setAttribute("aria-label", "A" + nn(p.slot) + " " + p.name + ", play");
+    b.innerHTML = '<span class="slot">A' + nn(p.slot) + '</span><svg viewBox="0 0 100 26" preserveAspectRatio="none" aria-hidden="true"><path d="' + path(p.wet, 100, 26, true) + '" fill="var(--accent)" opacity=".55"/></svg><span class="name">' + p.name + "</span>";
+    b.onclick = () => { pad = p; play(url(kit, "pad", p.slot)); drawGrid(); drawDetail(); const el = $("pad-" + p.slot); el.classList.add("hit"); setTimeout(() => el.classList.remove("hit"), 160); el.focus(); };
+    g.appendChild(b);
+  });
+}
+function drawDetail() {
+  $("dName").textContent = "A" + nn(pad.slot) + "  " + pad.name;
+  const how = pad.space === "STONE" ? "room" : pad.sub ? "sub, dry, chokes other subs" : "dry";
+  $("dTag").textContent = pad["class"].replace("_", " ").toLowerCase() + " · " + how + " · " + pad.seconds.toFixed(2) + " s";
+  const W = 400, H = 120, top = 8;
+  let s = '<line x1="0" y1="' + (top + H) + '" x2="' + W + '" y2="' + (top + H) + '" stroke="var(--line)" stroke-width="1"/>';
+  s += '<g transform="translate(0,' + top + ')"><path d="' + path(pad.wet, W, H, true) + '" fill="var(--wet)" opacity=".55"/>';
+  if (pad.dryEnv) s += '<path d="' + path(pad.dryEnv, W, H, false) + '" fill="none" stroke="var(--dry)" stroke-width="1.5"/>';
+  let gate = "";
+  if (pad.space === "STONE" && pad.slot <= 14) {
+    const x = Math.min(W, (pad.holdMs + pad.closeMs) / (pad.seconds * 1000) * W);
+    s += '<line x1="' + x.toFixed(1) + '" y1="0" x2="' + x.toFixed(1) + '" y2="' + H + '" stroke="var(--warn)" stroke-width="1.5" stroke-dasharray="4 3"/>';
+    gate = '<i style="border-left:2px dashed var(--warn);width:2px"></i>faded out';
+  }
+  s += "</g>";
+  const ticks = pad.seconds > 1.2 ? 0.5 : 0.1;
+  for (let t = ticks; t < pad.seconds; t += ticks) {
+    const x = t / pad.seconds * W;
+    s += '<line x1="' + x.toFixed(1) + '" y1="' + (top + H) + '" x2="' + x.toFixed(1) + '" y2="' + (top + H + 4) + '" stroke="var(--muted)" stroke-width="1"/>';
+    if (x < W - 24) s += '<text x="' + x.toFixed(1) + '" y="' + (top + H + 16) + '" font-size="10" font-family="IBM Plex Mono, monospace" fill="var(--muted)" text-anchor="middle">' + (ticks < 0.5 ? Math.round(t * 1000) + " ms" : t.toFixed(1) + " s") + "</text>";
+  }
+  $("plot").innerHTML = s; $("lgGate").innerHTML = gate;
+  const rows = [];
+  if (pad.space !== "DRY") {
+    rows.push(["Stays open", pad.holdMs + " ms after the last hit"], ["Fades out over", pad.closeMs + " ms"]);
+    if (pad.roomDb !== null) rows.push(["Room energy vs the drum's", (pad.roomDb > 0 ? "+" : "") + pad.roomDb.toFixed(0) + " dB"]);
+    if (pad.earlyDb !== null) rows.push(["Space level, start → end of hold", pad.earlyDb.toFixed(1) + " → " + pad.lateDb.toFixed(1) + " dB"]);
+  }
+  if (pad.sub) rows.push(["Authored DRIVE", pad.drive.toFixed(2)]);
+  rows.push(["Velocity zones × takes", "3 × 4"]);
+  $("dNums").innerHTML = rows.map(r => "<dt>" + r[0] + "</dt><dd>" + r[1] + "</dd>").join("");
+  $("dNote").textContent = pad.slot > 14 ? (pad.space === "DRY" ? "A phrase: every note is a fresh strike; a sub stops the sub before it." : "A phrase: every note re-opens one shared room, which shuts once after the last note.")
+    : pad.sub ? "A sub: the root holds, then slides where the pad says. A new sub stops the last one." : pad.space === "DRY" ? "This pad is dry on purpose." : "";
+  $("bDry").disabled = !pad.dry; $("bTouch").disabled = !pad.touch;
+  $("bDrive0").hidden = !pad.sub; $("bDrive70").hidden = !pad.sub; $("bDrive100").hidden = !pad.sub;
+}
+function render() {
+  document.documentElement.style.setProperty("--accent", accents[kit.id]);
+  drawKits(); drawGrid(); drawDetail();
+  $("gTitle").textContent = kit.title + " groove, " + kit.bpm + " BPM";
+}
+$("bPad").onclick = () => play(url(kit, "pad", pad.slot));
+$("bDry").onclick = () => play(url(kit, "dry", pad.slot));
+$("bTouch").onclick = () => play(url(kit, "touch", pad.slot));
+$("bDrive0").onclick = () => play(url(kit, "drive0", pad.slot));
+$("bDrive70").onclick = () => play(url(kit, "drive70", pad.slot));
+$("bDrive100").onclick = () => play(url(kit, "drive100", pad.slot));
+$("bStop").onclick = stop;
+$("bGroove").onclick = () => play(url(kit, "groove"));
+$("bFill").onclick = () => play(url(kit, "pad", 15));
+$("bBuild").onclick = () => play(url(kit, "pad", 16));
+render();
+</script>
