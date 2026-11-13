@@ -70,10 +70,14 @@ Unit/native execution, independent artifact checks, browser publication/listenin
 normal App/APK integration and physical acceptance remain distinct gates. This
 source increment does not establish any of those results by itself.
 
-## Policy v2: strike shaping (awaiting the owner's listen)
+## Policy v2: strike shaping (owner KEEP, 2026-11-13)
 
-Status: built and measured, **not heard**. It awaits the owner's listen in Listening Desk
-round `nacre-strike-1`. v1 above is unchanged: it still decodes, and it still renders
+Status: built, measured and **kept by ear**. On the Listening Desk (round `nacre-strike-1`,
+2026-11-13) the owner marked KEEP on all four candidates: A and B at CONTACT .35 (N2, N3) and
+A and B at CONTACT .80 (N5, N6), with no notes. That answers the four Soft/Medium TWEAK
+verdicts ("Sounds the same as hard", "Same as other group") for v2. Both strengths are
+acceptable; which one becomes the recipe's default is the owner's call and is still open.
+This is a listen to the recipe's renders, not to a phone or an MPC. v1 above is unchanged: it still decodes, and it still renders
 byte-identically (Float hashes of all six v1 layers read at `f3df719d` are pinned in
 `NacreContactStrikeRecipeTest`).
 
@@ -201,4 +205,4 @@ gitignored; `-PnacreStrikeAuditionOutput=<dir>` redirects it) writes six ladders
 with a 30 ms fade at the cut, 0.3 s apart, at the recipes' own delivered levels, 16-bit mono at the
 house rate; plus `measurements.json` with the numbers above. Listening question for round
 `nacre-strike-1`: does Soft now sound like a softer pluck rather than a quieter Hard, and is A or B
-the right amount? Nothing here is heard yet.
+the right amount? Heard 2026-11-13: KEEP for both A and B at both CONTACT settings.
