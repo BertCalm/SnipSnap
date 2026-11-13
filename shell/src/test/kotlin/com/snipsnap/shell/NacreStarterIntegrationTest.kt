@@ -38,7 +38,8 @@ class NacreStarterIntegrationTest {
             assertEquals(starter.key, kit.key)
             assertFalse(Preflight.check(kit, dir).blocked())
 
-            val factory = NacrePresets.all()
+            // The starter is the model-3 harp bank; the opt-in model-4 CONTACT presets add no starter.
+            val factory = NacrePresets.all().filter { it.model == 3 }
             val patches = kit.pads.map { pad ->
                 val recipe = PadRecipe.fromJsonValue(assertNotNull(pad.recipe))
                 val patch = assertIs<NacrePatch>(recipe.patch)

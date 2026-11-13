@@ -743,6 +743,7 @@ private fun editableDefaults(base: Map<String, Float>, editable: Patch): Map<Str
     is EmbouchurePatch -> Embouchure.defaults(editable.voice, editable.model)
     is RimePatch -> Rime.defaults(editable.voice, editable.model)
     is TidalPatch -> Tidal.defaults(editable.voice, editable.model)
+    is NacrePatch -> Nacre.defaults(editable.voice, editable.model)
     is OhmPatch -> Ohm.defaults(editable.model)
     else -> base
 }
@@ -927,6 +928,7 @@ fun SynthScreen(
                         orphica != null -> Orphica.macrosFrom(orphica.config) + orphica.macros
                         nativeFactory is RimePatch -> Rime.defaults(nativeFactory.voice, nativeFactory.model) + nativeFactory.macros
                         nativeFactory is OhmPatch -> Ohm.defaults(nativeFactory.model) + nativeFactory.macros
+                        nativeFactory is NacrePatch -> NacreEditing.controls(nativeFactory)
                         else -> e.defaults(v) + nativeFactory?.macros.orEmpty()
                     }
                     val recipe = seed.seededOvenPatches[e to v]
@@ -980,6 +982,7 @@ fun SynthScreen(
                         recipe is SkinPatch -> recipe.defaults() + recipe.macros
                         recipe is RimePatch -> Rime.defaults(recipe.voice, recipe.model) + recipe.macros
                         recipe is TidalPatch -> Tidal.defaults(recipe.voice, recipe.model) + recipe.macros
+                        recipe is NacrePatch -> NacreEditing.controls(recipe)
                         recipe is OverlapPatch -> editableDefaults(defaults, recipe) + recipe.macros
                         recipe != null -> defaults + recipe.macros
                         settings.isEmpty() || origami != null || orphica != null -> defaults
@@ -1896,7 +1899,7 @@ fun SynthScreen(
                         if (editable is TremorPatch) macrosByVoice[pair] = Tremor.defaults(editable.voice) + editable.macros
                         if (editable is RelayPatch) macrosByVoice[pair] = Relay.defaults(editable.voice) + editable.macros
                         if (editable is ChamberPatch) macrosByVoice[pair] = Chamber.defaults(editable.voice) + editable.macros
-                        if (editable is NacrePatch) macrosByVoice[pair] = Nacre.defaults(editable.voice) + editable.macros
+                        if (editable is NacrePatch) macrosByVoice[pair] = NacreEditing.controls(editable)
                         // The saved model and controls are one recipe. Adopting only
                         // the model would let the next edit overwrite its finite HOLD.
                         if (editable is MeridianPatch) macrosByVoice[pair] = MeridianSynth.defaults(editable.voice) + editable.macros
@@ -3414,9 +3417,10 @@ fun SynthScreen(
 
                 val creaseModel = (loadedPatch as? CreasePatch)?.model ?: Crease.MODEL_VERSION
                 // BRASS GROW (model 3) swaps in its own four controls; other EMBOUCHURE models keep the engine's six.
-                val macroSpecs = remember(engine, voice, creaseModel, (loadedPatch as? SkinPatch)?.model, (loadedPatch as? EmbouchurePatch)?.model, (loadedPatch as? CausticPatch)?.model, (loadedPatch as? TrefoilPatch)?.playback, (loadedPatch as? OverlapPatch)?.playback, (loadedPatch as? OverlapPatch)?.model, (loadedPatch as? ObbligatoPatch)?.playback, embouchureRestore.pending.containsKey(engine to voice)) {
+                val macroSpecs = remember(engine, voice, creaseModel, (loadedPatch as? SkinPatch)?.model, (loadedPatch as? NacrePatch)?.model, (loadedPatch as? EmbouchurePatch)?.model, (loadedPatch as? CausticPatch)?.model, (loadedPatch as? TrefoilPatch)?.playback, (loadedPatch as? OverlapPatch)?.playback, (loadedPatch as? OverlapPatch)?.model, (loadedPatch as? ObbligatoPatch)?.playback, embouchureRestore.pending.containsKey(engine to voice)) {
                     if (embouchureRestore.waitsForRecipe(engine, voice)) emptyList()
                     else if (loadedPatch is SkinPatch) loadedPatch.macroSpecs()
+                    else if (loadedPatch is NacrePatch) NacreEditing.macrosFor(loadedPatch)
                     else if (engine == Engine.CREASE) Crease.macrosFor(voice as CreaseVoice, creaseModel)
                     else if (loadedPatch is CausticPatch) CausticInstrument.macrosFor(loadedPatch.voice, 2)
                     else if (loadedPatch is EmbouchurePatch) Embouchure.macrosFor(loadedPatch.voice, loadedPatch.model)
@@ -3518,6 +3522,8 @@ fun SynthScreen(
                             Engine.CAUSTIC -> CausticInstrument.defaults(voice as CausticVoice, 2) + next
                             Engine.ORIGAMI -> next + ("TUNE" to macros.getValue("TUNE"))
                             Engine.OHM -> next + macros.filterKeys { it == "HOLD" }
+                            Engine.NACRE -> NacreEditing.scrambledControls(
+                                buildCurrentPatch(engine.patchDisplayName(voice)) as NacrePatch, next)
                             else -> next
                         }
                         if (engine == Engine.MURMUR) murmurDelivery.invalidate()
