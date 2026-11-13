@@ -568,8 +568,10 @@ fourteen frozen factory recipes, with three absolute touches (.30/.65/1). Five p
 captures of held sounds. **MERIDIAN SIX** is a separate sixteen-pad bank with its own
 schema: nine earlier finite recipes, the four DRAW/LIFT recipes and three octave roles.
 Neither changes the original MERIDIAN starter. Both carry every layer's recipe and WAV hash,
-checked by `MeridianMaterialsKitFiles` and `MeridianSixKitFiles`. The six-voice bank has not
-been rendered in full or listened to.
+checked by `MeridianMaterialsKitFiles` and `MeridianSixKitFiles`. On 2026-11-13 the owner
+heard all sixteen MERIDIAN SIX pads at hard touch (two seconds each) and kept the bank (KEEP,
+no notes). Its soft and medium layers and the held DRAW/LIFT loops are still awaiting a
+verdict.
 
 The held keyboard's manifest now states the program's real range (MIDI 36–72) instead of
 0–127 (`MeridianKeyboardDescriptionTest`).

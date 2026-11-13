@@ -402,7 +402,7 @@ and LIFT existed (`MeridianGesturesTest`).
 |---|---|---|
 | Melodic: six voices with presets | Pass | SWEEP, CLACK, CHIME, RASP, DRAW and LIFT, 18 presets (`MeridianPresetsTest`, `MeridianSixVoiceCompatibilityTest`). |
 | Melodic: playable keygroups | Pass in software | Finite keys for every voice across MIDI 36–96, held keys C2–C5, both with three touch layers and validated source bindings (`MeridianFiniteKeygroupMakerTest`, `MeridianHeldKeygroupPackageTest`, `MeridianFinitePadMakerTest`). Not run on a device. |
-| Melodic: premade kit | Pass in software | MERIDIAN, MERIDIAN MATERIALS and MERIDIAN SIX (`MeridianKitsTest`, `MeridianMaterialsKitTest`, `MeridianSixKitTest`). The six-voice bank has not been rendered in full or listened to. |
+| Melodic: premade kit | Pass in software | MERIDIAN, MERIDIAN MATERIALS and MERIDIAN SIX (`MeridianKitsTest`, `MeridianMaterialsKitTest`, `MeridianSixKitTest`). The owner kept all sixteen MERIDIAN SIX pads at hard touch on 2026-11-13; its soft and medium layers await a verdict. |
 | Melodic: chord-tool compatibility | Partial | 384 chord-tool note sets play on finite keys built from synthetic notes (`MeridianFiniteKeygroupMakerTest`). Not checked on real MERIDIAN samples. |
 | Articulation: HOLD | Pass in software | Fixed-alignment HOLD at 97.5% and above for every voice; held DRAW and LIFT have no final listening verdict. |
 | Articulation: STRUM | Not applicable | Struck and rubbed surfaces, not picked strings. |
@@ -415,7 +415,8 @@ and LIFT existed (`MeridianGesturesTest`).
 | Hardware playback | Not verified | No phone timing, MPC load or MPC velocity check is recorded. |
 
 - **Sound character: partly accepted.** The owner kept the four DRAW/LIFT finite takes and
-  accepted the model-3 material voices earlier. Held DRAW/LIFT and the MERIDIAN SIX bank have
-  no listening verdict.
+  accepted the model-3 material voices earlier. On 2026-11-13 the owner kept the sixteen
+  MERIDIAN SIX pads at hard touch. Held DRAW/LIFT and the bank's soft and medium layers have no
+  verdict yet.
 - **Overall: incomplete.** Round robin, chord tools on real keys, held DRAW/LIFT listening, the
-  six-voice bank's listening, device runs and hardware playback remain open.
+  six-voice bank's soft and medium layers, device runs and hardware playback remain open.
