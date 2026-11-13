@@ -3462,3 +3462,12 @@ The kit's tone (renderer model 4, 2026-11-12):
 - **Measured:** DUST's crunch low-passed the drums near 4 kHz, and the amp's speaker took more off the top.
 - **Picked by ear:** both opened. DUST's filter goes to about 9 kHz and the speaker goes, on every drum
   but the cymbals and riser. Model-3 saves keep their tone.
+
+### ETCH, Kotlin round K1 (2026-11-13)
+
+Owner-requested step-line bass: an accented, sliding sixteen-step line → BITE (a clean/drive blend after a bass
+overdrive) → SPACE (a dotted-eighth delay into a reverb, after a delay and reverb pedal). Rounds 1 to 3 were a
+Python audition the owner accepted on 2026-11-12; K1 ports it to Kotlin with six voices, velocity as the accent,
+the line loop at HOLD's top and round-robin takes through `Restrike`, as a prototype outside the factory presets
+and the picker. Kotlin measures within 0.4 to 2.8 dB of the accepted renders. The kit, the roster, keygroups, the
+picker and the saving, playback and export evidence follow. See [ETCH](ETCH.md).

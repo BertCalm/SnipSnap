@@ -133,14 +133,16 @@ A kit family of three 1980s gated drum kits: Stone Room, Machine Pop and Electro
 ## ETCH (round 1, 2026-11-11)
 
 A step-line bass with a drive stage and a tempo delay into a reverb. See [ETCH](ETCH.md).
-Round 1 is a Python prototype audition; no Kotlin exists.
+Rounds 1 to 3 were a Python audition, accepted 2026-11-12. Kotlin round K1 (2026-11-13) ports it as a prototype (`PatchTypes.PROTOTYPES`) with provisional `EtchPresets`.
 
-- **Melodic:** open. The owner chose the six voices on 2026-11-12: SAW, SQUARE, RUBBER, WHISTLE, GRIT and DUB. All six are built in the Python prototype (round 2), each with its own mechanism; every pair is at least 3.7 dB apart by third-octave spectrum, and each new voice at least 5.4 dB. RUBBER, WHISTLE, GRIT and DUB are not heard. No presets, keygroups or kit yet. Chord-tool compatibility is the owner's call, because the line voice is monophonic by design.
-- **Articulation:** HOLD open (proposed: held note up to a seamless sustain loop, top step plays the line as a LOOP). STRUM not applicable: not a picked or thumbed string.
+- **Melodic:** open. The owner chose the six voices on 2026-11-12: SAW, SQUARE, RUBBER, WHISTLE, GRIT and DUB. All six are built in Python (round 2) and in Kotlin (K1), each with its own mechanism; every pair is at least 3.7 dB apart by third-octave spectrum, and each new voice at least 5.4 dB. RUBBER, WHISTLE, GRIT and DUB are not heard. Provisional presets only (each voice's note and line); no factory roster, keygroups or kit yet. Chord-tool compatibility is the owner's call, because the line voice is monophonic by design.
+- **Articulation:** HOLD built in part: under .85 it sets the note's gate (TONAL), from .85 it plays the line as a seamless LOOP (`Keys.requireSeam` on every render). The sustained keygroup loop is not built. STRUM not applicable: not a picked or thumbed string.
 - **Percussion and drum kits:** not applicable. A bass engine.
 - **Velocity and round robin:**
   - **Rendering: Python harness only.** Velocity changes the tone on all six voices, not only the level: level-matched attack centroid rises from soft to hard hits on every voice (GRIT 876 → 1,102 Hz, the smallest; WHISTLE 622 → 1,734 Hz, the largest). Round robin **failed by ear** on 2026-11-12: the owner heard the four takes as the same strike (they measured 0.5 to 0.8 dB apart by take distance). Rebuilt with five audible dimensions dealt out so no two takes share a setting: after the round-3 tone the closest two takes are 1.8 to 3.1 dB apart at velocity 0.6, and no pair exceeds a 0.6 to 0.8 velocity step. Accepted by ear with the round-3 audition on 2026-11-12, in Python rendering only.
-  - **Saving, playback and export:** not yet verified.
+  - **Rendering in Kotlin (K1): verified.** Velocity changes the tone on all six voices (`EtchTest`; Kotlin within 2 Hz of the accepted Python on every voice). Four takes are distinct strikes reachable through `Restrike.take`, deterministic in (patch, velocity, seed, take); take 0 is the plain render.
+  - **Saving: partly verified.** The patch round-trips through JSON with its note, velocity and model; a saved kit is not tested (no kit yet).
+  - **Playback and export:** not yet verified (no kit; `Robin`'s round-robin path accepts ETCH through `Restrike.canRestrike`, but no ETCH chain has been played or exported).
 - **Sound character: direction accepted at round 1b.** On 2026-11-12 the owner heard the corrected square ("That's better") and then the whole round-1b audition: "It all seems fine from the audition." Preserve round 1b as the baseline. This is a listen to Python renders, not evidence of Kotlin, phone or MPC playback. After round 2 the owner heard the engine as "a bit mid heavy, like dollar store headphones"; round 3 restores the top end (line B 8 kHz from -30.4 to -18.6 dB against the 500 Hz band; reference B -16.0). The owner then accepted the round-3 audition: "I'm good with evening in audition" (read as "everything"). Preserve round 3 as the baseline; this is a listen to Python renders, not evidence of Kotlin, phone or MPC playback.
 - **Overall: incomplete.** The sound direction is accepted; the six voices, presets, keygroups, kit, HOLD and every saving, playback and export stage remain open, and no Kotlin exists.
 
@@ -177,6 +179,8 @@ Rounds 0 and 0b are Python prototype auditions; no Kotlin exists. Round 0b answe
 - **Drum shelf:** open. One kit's worth of voices in Python; a second genre kit is proposed, not built.
 - **Velocity and round robin:**
   - **Rendering: Python harness only.** Every voice changes tone with velocity at matched peak (round 0b: soft against hard, 2.6 to 14.9 dB by take distance). Four takes per voice on four dealt dimensions; closest pairs 1.9 to 4.9 dB apart. The tick's takes are the closest and are disclosed.
-  - **Saving, playback and export:** not yet verified.
+  - **Rendering in Kotlin (K1): verified.** Velocity changes the tone on all six voices (`EtchTest`; Kotlin within 2 Hz of the accepted Python on every voice). Four takes are distinct strikes reachable through `Restrike.take`, deterministic in (patch, velocity, seed, take); take 0 is the plain render.
+  - **Saving: partly verified.** The patch round-trips through JSON with its note, velocity and model; a saved kit is not tested (no kit yet).
+  - **Playback and export:** not yet verified (no kit; `Robin`'s round-robin path accepts ETCH through `Restrike.canRestrike`, but no ETCH chain has been played or exported).
 - **Sound character:** direction accepted. On 2026-11-12 the owner responded to the published round-0b audition, "Sounds good, please merge." Preserve round 0b as the accepted baseline; this is a listen to Python renders, not evidence of Kotlin, phone or MPC playback.
 - **Overall: incomplete.** Round 0b is a prototype with an accepted direction; voices in Kotlin, kits, roll/riser and every saving, playback and export stage remain open.
