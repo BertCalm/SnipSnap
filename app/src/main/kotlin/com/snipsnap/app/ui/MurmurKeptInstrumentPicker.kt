@@ -36,7 +36,7 @@ internal fun MurmurKeptInstrumentPicker(enabled: Boolean, onMake: (String) -> Un
         .raisedBevel(scheme)
         .tapeClick(label = "MURMUR PLUCK INSTRUMENTS", enabled = enabled) { if (enabled) choosing = true }
         .padding(10.dp), contentAlignment = Alignment.CenterStart) {
-        TapeText("MURMUR PLUCK ▸", TapeType.pixel, scheme.ink.tape)
+        TapeText("MURMUR PLUCK ▾", TapeType.pixel, scheme.ink.tape)
     }
     if (choosing && enabled) Dialog(onDismissRequest = { choosing = false }) {
         Column(Modifier.widthIn(max = 400.dp).fillMaxWidth().raisedBevel(scheme)
