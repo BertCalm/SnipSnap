@@ -63,7 +63,7 @@ object LandingNote {
     /** BACKUP: null when every kit made it; else the box naming each kit preflight refused and its reason, the packed ones after. [presets] rode along beside them. */
     fun backedUp(packed: List<String>, skipped: Map<String, String>, presets: Int = 0): Note? {
         if (skipped.isEmpty()) return null
-        val lines = skipped.map { (kit, why) -> Line("SKIPPED · ${shout(kit)}: ${shout(why)}", trouble = true) } +
+        val lines = skipped.map { (kit, why) -> Line("SKIPPED · ${shout(kit)}: ${reasonText(why)}", trouble = true) } +
             packed.map { Line("PACKED · ${shout(it)}") }
         return Note(Copy.backedUp(packed.size, skipped.size, presets), fold(lines))
     }
@@ -92,7 +92,7 @@ object LandingNote {
         if (blocking.isEmpty()) return null
         return Note(
             Copy.EXPORT_BLOCKED,
-            fold(blocking.map { Line("BLOCKED · ${shout(it.message)}", trouble = true) }),
+            fold(blocking.map { Line("BLOCKED · ${reasonText(it.message)}", trouble = true) }),
         )
     }
 
@@ -100,7 +100,7 @@ object LandingNote {
     fun refused(displayName: String, reason: String): Note =
         Note(
             Copy.NOTHING_LANDED,
-            listOf(Line(shout(displayName.ifBlank { "the share" })), Line(shout(reason.ifBlank { "it said no" }), trouble = true)),
+            listOf(Line(shout(displayName.ifBlank { "the share" })), Line(reasonText(reason.ifBlank { "it said no" }), trouble = true)),
         )
 
     /**
@@ -145,10 +145,13 @@ object LandingNote {
 
     /** DUST threw: the title, and [reason] — the exception's own words — in the warn colour. */
     fun dustFailed(reason: String): Note =
-        Note(Copy.DUST_FAILED, listOf(Line(shout(reason.ifBlank { "it said no" }), trouble = true)))
+        Note(Copy.DUST_FAILED, listOf(Line(reasonText(reason.ifBlank { "it said no" }), trouble = true)))
 
-    /** The house casing: uppercase in Locale.ROOT (never the phone's language), no trailing full stop, no space left where it was. */
+    /** A name, as the lines draw it: uppercase in Locale.ROOT (never the phone's language), no trailing full stop, no space left where it was. */
     fun shout(s: String): String = s.uppercase(java.util.Locale.ROOT).trim().trimEnd('.').trimEnd()
+
+    /** A reason, which is a sentence: drawn in the case it was written in, with no trailing full stop and no space left where it was. */
+    fun reasonText(s: String): String = s.trim().trimEnd('.').trimEnd()
 
     private fun fold(lines: List<Line>): List<Line> {
         if (lines.size <= MAX_LINES) return lines

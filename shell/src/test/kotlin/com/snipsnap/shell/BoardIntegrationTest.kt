@@ -42,7 +42,7 @@ class BoardIntegrationTest {
         assertIs<RecipeReplay.Plan.Board>(RecipeReplay.plan(sourceRecipe))
         val destination = RecipeReplay.apply(model, 2, sourceRecipe, "NYLON 02")
         assertEquals(.7f, BoardSheet.read(destination.pad.recipe)?.amount)
-        assertTrue("ORIGINAL KEPT" in destination.toast)
+        assertTrue(destination.toast.contains("ORIGINAL KEPT", ignoreCase = true))
         BoardSheet.remove(model, 2)
         assertEquals(base, model.pad(2)!!.recipe)
     }

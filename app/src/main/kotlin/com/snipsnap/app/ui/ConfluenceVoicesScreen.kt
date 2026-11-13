@@ -88,7 +88,7 @@ fun ConfluenceVoicesScreen(
     var player by remember { mutableStateOf<MixVoice?>(null) }
     var request by remember { mutableIntStateOf(0) }
     var work by remember { mutableStateOf<Job?>(null) }
-    var working by remember { mutableStateOf<String?>("OPENING THE VOICE BANK…") }
+    var working by remember { mutableStateOf<String?>("Opening the voice bank…") }
     var saving by remember { mutableStateOf(false) }
     var status by remember { mutableStateOf<String?>(null) }
     var refusal by remember { mutableStateOf<String?>(null) }
@@ -183,7 +183,7 @@ fun ConfluenceVoicesScreen(
         if (saving || exact.settings != settings) return
         stop(); saving = true; refusal = null
         appScope.launch(Dispatchers.Main.immediate) {
-            val board = jobs?.begin(Busy("SAVING VOICE PASSAGE…"))
+            val board = jobs?.begin(Busy("Saving voice passage…"))
             try {
                 val updated = offMain { KitWrites.mutex.withLock {
                     val fresh = KitBuilderModel.open(target.dir)
@@ -216,7 +216,7 @@ fun ConfluenceVoicesScreen(
         val current = entry ?: return
         if (saving) return
         stop(); val ticket = request
-        prepared = null; readySeconds = null; refusal = null; working = "OPENING THE SAVED PASSAGE…"
+        prepared = null; readySeconds = null; refusal = null; working = "Opening the saved passage…"
         work = scope.launch(Dispatchers.Main.immediate) {
             try {
                 val reopened = offMain { ConfluenceSelectedWorkshop.openPad(current.dir, pad) }
@@ -236,7 +236,7 @@ fun ConfluenceVoicesScreen(
     val adjustable = selected?.mode in listOf(ConfluenceSelectedWorkshop.Mode.SOLO, ConfluenceSelectedWorkshop.Mode.PAIR, ConfluenceSelectedWorkshop.Mode.GROUP)
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(8.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         TapeText("CONFLUENCE VOICES", TapeType.lcdHeader, scheme.ink.tape)
-        TapeText("HEAR THE RECORDED PASSAGE FIRST. SOLO, PAIR AND GROUP MAKE A FINITE TEXTURE FROM ITS OWN PITCH MOTION.", TapeType.pixelSmall, scheme.ink2.tape, maxLines = Int.MAX_VALUE)
+        TapeText("Hear the recorded passage first. Solo, pair and group make a finite texture from its own pitch motion.", TapeType.pixelSmall, scheme.ink2.tape, maxLines = Int.MAX_VALUE)
         if (passage != null && selected != null) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 ActionButton("◄", scheme, enabled = !saving, accessibilityLabel = "Previous voice passage", onClick = {
@@ -263,8 +263,8 @@ fun ConfluenceVoicesScreen(
                     accessibilityLabel = "Voice mode: ${mode.name}", modifier = Modifier.weight(1f), onClick = { change(selected.copy(mode = mode)) })
             }
             TapeText(when (selected.mode) {
-                ConfluenceSelectedWorkshop.Mode.SOURCE -> "THE EXACT RECORDED CROP, AT NATIVE PITCH."
-                ConfluenceSelectedWorkshop.Mode.REFERENCE -> "THE SAME PASSAGE WITH CONSTANT GAIN AND EDGE FADES."
+                ConfluenceSelectedWorkshop.Mode.SOURCE -> "The exact recorded crop, at native pitch."
+                ConfluenceSelectedWorkshop.Mode.REFERENCE -> "The same passage with constant gain and edge fades."
                 else -> "30-SECOND TEXTURE · NO NOTE OR MELODY CONTROL"
             }, TapeType.pixelSmall, scheme.ink2.tape, maxLines = Int.MAX_VALUE)
             StepperSlider("VARIATION", selected.variation, "${(selected.variation * 100).roundToInt()}%", scheme.accent.tape, scheme,
@@ -282,8 +282,8 @@ fun ConfluenceVoicesScreen(
             if (player != null || working != null) ActionButton("STOP", scheme, enabled = !saving,
                 modifier = Modifier.fillMaxWidth(), onClick = { stop(); status = "PREVIEW STOPPED" })
             readySeconds?.let { TapeText("${"%.2f".format(Locale.ROOT, it)}S READY · EXACT HEARD SETTINGS", TapeType.pixelSmall, scheme.ink2.tape) }
-            if (entry == null) TapeText("OPEN A KIT TO SAVE A NEW PAD.", TapeType.pixelSmall, scheme.ink2.tape)
-            else if (destination == null) TapeText("NO EMPTY PAD. MAKE ROOM BEFORE SAVING.", TapeType.pixelSmall, scheme.warn.tape, maxLines = Int.MAX_VALUE)
+            if (entry == null) TapeText("Open a kit to save a new pad.", TapeType.pixelSmall, scheme.ink2.tape)
+            else if (destination == null) TapeText("No empty pad. Make room before saving.", TapeType.pixelSmall, scheme.warn.tape, maxLines = Int.MAX_VALUE)
             ActionButton(if (creditsOpen) "CLOSE SOURCE CREDITS" else "SOURCE CREDITS & LICENCE", scheme, enabled = true,
                 modifier = Modifier.fillMaxWidth(), onClick = { creditsOpen = !creditsOpen })
             if (creditsOpen) {
@@ -298,7 +298,7 @@ fun ConfluenceVoicesScreen(
                 }
             }
         }
-        val line = refusal ?: if (saving) "SAVING THE HEARD PASSAGE…" else working ?: status
+        val line = refusal ?: if (saving) "Saving the heard passage…" else working ?: status
         if (line != null) TapeText(line, TapeType.pixelSmall, if (refusal == null) scheme.ink2.tape else scheme.warn.tape, maxLines = Int.MAX_VALUE)
         val saved = entry?.kit?.pads.orEmpty().filter(ConfluenceSelectedWorkshop::isEditable)
         if (saved.isNotEmpty()) {
@@ -316,7 +316,7 @@ fun ConfluenceVoicesScreen(
  */
 @Composable
 private fun PassageSheet(choices: List<PassageChoice>, index: Int, saving: Boolean, onDismiss: () -> Unit, onPick: (PassageChoice) -> Unit) {
-    SheetMenu("WHICH RECORDED PASSAGE?", onDismiss) {
+    SheetMenu("Which recorded passage?", onDismiss) {
         for ((i, choice) in choices.withIndex()) {
             SheetRow(
                 Places.pickedRow(choice.title, i == index),

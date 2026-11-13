@@ -265,9 +265,11 @@ class ReversalTest {
         "EXPANSION_DELETE_CONFIRM" to "an expansion has no bin; its kits stay on the shelf, and a new expansion can gather them again",
     )
 
-    private fun soundsDestructive(line: String) = destructive.any { it in line }
+    // The vocabulary is caps; the copy is sentence case now, so the line is read in caps. A case-sensitive
+    // match against a sentence-case line would find nothing and pass by checking nothing.
+    private fun soundsDestructive(line: String) = line.uppercase(java.util.Locale.ROOT).let { up -> destructive.any { it in up } }
 
-    private fun answersTheQuestion(line: String) = answersIt.any { it in line }
+    private fun answersTheQuestion(line: String) = line.uppercase(java.util.Locale.ROOT).let { up -> answersIt.any { it in up } }
 
     @Test
     fun `every destructive line answers can I get it back`() {
@@ -440,7 +442,7 @@ class ReversalTest {
                     "such function - remove the stale entry, or fix the rename it is tracking.",
             )
             assertTrue(
-                entry.stillTrue in decl!!.value,
+                decl!!.value.contains(entry.stillTrue, ignoreCase = true),
                 "Copy.$name is exempted as \"${entry.why}\", which held because its line said " +
                     "\"${entry.stillTrue}\". It no longer does:\n  ${decl.value.trim()}\n" +
                     "If it has become a landing, delete the exemption and give it a way back. If it " +
@@ -493,7 +495,7 @@ class ReversalTest {
         for (name in noWayBack.keys) {
             val line = all.getValue(name)
             assertTrue(
-                "CANNOT BE UNDONE" in line || "FOR GOOD" in line || "GONE" in line,
+                line.contains("CANNOT BE UNDONE", ignoreCase = true) || line.contains("FOR GOOD", ignoreCase = true) || line.contains("GONE", ignoreCase = true),
                 "Copy.$name is recorded as having no way back, but its line does not say so: \"$line\"",
             )
         }
@@ -569,7 +571,7 @@ class ReversalTest {
         // And no line may retype the number, which is how they drifted apart
         // in the first place: three Copy lines said "30 DAYS" as a literal.
         // Read the SOURCE, not the values - every line that correctly uses
-        // Reversal.BIN has "30 DAYS" in its value, so a value scan would flag
+        // Reversal.BIN has its.contains("30 DAYS", ignoreCase = true) value, so a value scan would flag
         // the fix and miss nothing else.
         val src = personalitySource()
         // Any numeric retention literal, not just today's value: interpolating
@@ -590,11 +592,11 @@ class ReversalTest {
     @Test
     fun `goneBut lands on exactly one full stop, whatever it is handed`() {
         assertEquals(
-            "THIS CANNOT BE UNDONE. TAP THE STEPS BACK IN.",
+            "This cannot be undone. TAP THE STEPS BACK IN.",
             Reversal.goneBut("TAP THE STEPS BACK IN"),
         )
         assertEquals(
-            "THIS CANNOT BE UNDONE. TAP THE STEPS BACK IN.",
+            "This cannot be undone. TAP THE STEPS BACK IN.",
             Reversal.goneBut("TAP THE STEPS BACK IN."),
             "a caller who wrote a whole sentence must not get two full stops",
         )
@@ -607,9 +609,9 @@ class ReversalTest {
      * they do to everything else. Plain words, existing case.
      */
     @Test
-    fun `the reversal lines still shout and land on a full stop`() {
+    fun `the reversal lines are sentence case and land on a full stop`() {
         for (line in listOf(Reversal.BIN, Reversal.MIND, Reversal.UNDO, Reversal.GONE)) {
-            assertEquals(line.uppercase(java.util.Locale.ROOT), line, "TapeOS shouts: $line")
+            assertTrue(line.any { it.isLowerCase() } && line.first().let { !it.isLetter() || it.isUpperCase() }, "sentence case: $line")
             assertTrue(line.endsWith("."), "a line the app says, not furniture: $line")
         }
     }

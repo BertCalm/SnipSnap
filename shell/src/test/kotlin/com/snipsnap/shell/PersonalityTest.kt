@@ -55,27 +55,27 @@ class PersonalityTest {
 
     @Test
     fun `kit round robin copy counts pads in the singular and the plural`() {
-        assertEquals("ROUND ROBIN ON 1 PAD.", Copy.robinKitOn(1))
-        assertEquals("ROUND ROBIN ON 5 PADS.", Copy.robinKitOn(5))
-        assertEquals("ROUND ROBIN ON 0 PADS.", Copy.robinKitOn(0))
+        assertEquals("ROUND ROBIN on 1 pad.", Copy.robinKitOn(1))
+        assertEquals("ROUND ROBIN on 5 pads.", Copy.robinKitOn(5))
+        assertEquals("ROUND ROBIN on 0 pads.", Copy.robinKitOn(0))
     }
 
     @Test
     fun `law 3 - funny copy still says exactly what happened`() {
         // The capture-blocked box names the problem and the way out.
-        assertTrue("SCREEN RECORDER" in Copy.CAPTURE_BLOCKED)
+        assertTrue(Copy.CAPTURE_BLOCKED.contains("SCREEN RECORDER", ignoreCase = true))
         // A session the phone ended names the two ways that happens.
-        assertTrue("LOCK SCREEN" in Copy.PHONE_STOPPED_TAPE)
-        assertTrue("STOP CHIP" in Copy.PHONE_STOPPED_TAPE)
+        assertTrue(Copy.PHONE_STOPPED_TAPE.contains("LOCK SCREEN", ignoreCase = true))
+        assertTrue(Copy.PHONE_STOPPED_TAPE.contains("STOP CHIP", ignoreCase = true))
         // A refused consent must not claim anything is armed.
-        assertTrue("NOTHING ARMED" in Copy.APP_AUDIO_REFUSED)
+        assertTrue(Copy.APP_AUDIO_REFUSED.contains("NOTHING ARMED", ignoreCase = true))
         // The Ear reports what it heard, in real numbers.
-        assertEquals("HEARD 12 HITS OVER 2 BARS AT ~93 BPM. THEY PLAY ON YOUR PADS NOW.", Copy.grooveRead(12, 2, 93))
-        assertEquals("HEARD 4 HITS OVER 1 BAR AT ~120 BPM. THEY PLAY ON YOUR PADS NOW.", Copy.grooveRead(4, 1, 120))
+        assertEquals("Heard 12 hits over 2 bars at ~93 BPM. They play on your pads now.", Copy.grooveRead(12, 2, 93))
+        assertEquals("Heard 4 hits over 1 bar at ~120 BPM. They play on your pads now.", Copy.grooveRead(4, 1, 120))
         // A single hit over a single bar is singular in both counts at once —
         // the shape that would have caught `grooveRead` counting BAR/BARS
         // right while leaving HITS always plural.
-        assertEquals("HEARD 1 HIT OVER 1 BAR AT ~90 BPM. THEY PLAY ON YOUR PADS NOW.", Copy.grooveRead(1, 1, 90))
+        assertEquals("Heard 1 hit over 1 bar at ~90 BPM. They play on your pads now.", Copy.grooveRead(1, 1, 90))
         assertEquals("TOOK 9 HITS OVER 2 BARS. PLAYING ON CAPTURED NOW.", Copy.takeLanded(9, 2), "4/4 carries no meter")
         // Was "TOOK 1 HITS OVER 1 BAR OF 3/4." — takeLanded sang BAR/BARS
         // right (it shares grooveRead's shape) and left HITS always plural,
@@ -89,36 +89,36 @@ class PersonalityTest {
         // laws below hold shape, not route, so a slide back to "ARM THE
         // MIC" or a bare "TRY GRID" would pass them.
         for (line in listOf(Copy.HUM_NOT_LISTENING, Copy.HUM_APP_AUDIO, Copy.HUM_NOTHING)) {
-            assertTrue("LISTEN · MIC IN LIBRARY" in line || ("LISTEN · MIC" in line && "LIBRARY" in line), "HUM's route is the button on LIBRARY: $line")
-            assertTrue("ARM" !in line, "nothing on any screen is called ARM: $line")
+            assertTrue(line.contains("LISTEN · MIC IN LIBRARY", ignoreCase = true) || (line.contains("LISTEN · MIC", ignoreCase = true) && line.contains("LIBRARY", ignoreCase = true)), "HUM's route is the button on LIBRARY: $line")
+            assertTrue(!line.contains("ARM", ignoreCase = true), "nothing on any screen is called ARM: $line")
         }
-        assertTrue("STOP IN LIBRARY" in Copy.HUM_APP_AUDIO, "APP AUDIO has to be stopped before the mic can start: ${Copy.HUM_APP_AUDIO}")
+        assertTrue(Copy.HUM_APP_AUDIO.contains("STOP IN LIBRARY", ignoreCase = true), "APP AUDIO has to be stopped before the mic can start: ${Copy.HUM_APP_AUDIO}")
         // RING takes either ring, so its refusal names both doors on SHELF
         // (a slide back to the mic alone would send an APP AUDIO user to
         // stop the very session RING wanted).
         for (line in listOf(Copy.RING_NOT_LISTENING, Copy.RING_NOTHING)) {
-            assertTrue("RING" in line, "the refusal names the button as it reads: $line")
-            assertTrue("ARM" !in line, "nothing on any screen is called ARM: $line")
+            assertTrue(line.contains("RING", ignoreCase = true), "the refusal names the button as it reads: $line")
+            assertTrue(!line.contains("ARM", ignoreCase = true), "nothing on any screen is called ARM: $line")
         }
         // EVERY BAR switching itself off names the button as it reads and
         // the same two doors, since either ring feeds it.
-        assertTrue("EVERY BAR" in Copy.RING_BAR_STOPPED && "LISTEN · MIC" in Copy.RING_BAR_STOPPED && "APP AUDIO" in Copy.RING_BAR_STOPPED && "LIBRARY" in Copy.RING_BAR_STOPPED, Copy.RING_BAR_STOPPED)
-        assertTrue("ARM" !in Copy.RING_BAR_STOPPED, "nothing on any screen is called ARM: ${Copy.RING_BAR_STOPPED}")
-        assertTrue("LISTEN · MIC" in Copy.RING_NOT_LISTENING && "APP AUDIO" in Copy.RING_NOT_LISTENING && "LIBRARY" in Copy.RING_NOT_LISTENING, "RING's route is either button on LIBRARY: ${Copy.RING_NOT_LISTENING}")
+        assertTrue(Copy.RING_BAR_STOPPED.contains("EVERY BAR", ignoreCase = true) && Copy.RING_BAR_STOPPED.contains("LISTEN · MIC", ignoreCase = true) && Copy.RING_BAR_STOPPED.contains("APP AUDIO", ignoreCase = true) && Copy.RING_BAR_STOPPED.contains("LIBRARY", ignoreCase = true), Copy.RING_BAR_STOPPED)
+        assertTrue(!Copy.RING_BAR_STOPPED.contains("ARM", ignoreCase = true), "nothing on any screen is called ARM: ${Copy.RING_BAR_STOPPED}")
+        assertTrue(Copy.RING_NOT_LISTENING.contains("LISTEN · MIC", ignoreCase = true) && Copy.RING_NOT_LISTENING.contains("APP AUDIO", ignoreCase = true) && Copy.RING_NOT_LISTENING.contains("LIBRARY", ignoreCase = true), "RING's route is either button on LIBRARY: ${Copy.RING_NOT_LISTENING}")
         // FOLLOW and DUCK read the same ring RING does, so the same two doors.
-        assertTrue("FOLLOW" in Copy.FOLLOW_NOT_LISTENING && "DUCK" in Copy.FOLLOW_NOT_LISTENING, "names the shapes as the MOD row reads them: ${Copy.FOLLOW_NOT_LISTENING}")
-        assertTrue("LISTEN · MIC" in Copy.FOLLOW_NOT_LISTENING && "APP AUDIO" in Copy.FOLLOW_NOT_LISTENING && "LIBRARY" in Copy.FOLLOW_NOT_LISTENING, "FOLLOW's route is either button on LIBRARY: ${Copy.FOLLOW_NOT_LISTENING}")
-        assertTrue("ARM" !in Copy.FOLLOW_NOT_LISTENING, "nothing on any screen is called ARM: ${Copy.FOLLOW_NOT_LISTENING}")
+        assertTrue(Copy.FOLLOW_NOT_LISTENING.contains("FOLLOW", ignoreCase = true) && Copy.FOLLOW_NOT_LISTENING.contains("DUCK", ignoreCase = true), "names the shapes as the MOD row reads them: ${Copy.FOLLOW_NOT_LISTENING}")
+        assertTrue(Copy.FOLLOW_NOT_LISTENING.contains("LISTEN · MIC", ignoreCase = true) && Copy.FOLLOW_NOT_LISTENING.contains("APP AUDIO", ignoreCase = true) && Copy.FOLLOW_NOT_LISTENING.contains("LIBRARY", ignoreCase = true), "FOLLOW's route is either button on LIBRARY: ${Copy.FOLLOW_NOT_LISTENING}")
+        assertTrue(!Copy.FOLLOW_NOT_LISTENING.contains("ARM", ignoreCase = true), "nothing on any screen is called ARM: ${Copy.FOLLOW_NOT_LISTENING}")
         // The length is the voice's own, not RING's four-second ask: a ring
         // that only just started gives less, and the ceiling law below holds
         // this line to what was kept.
         assertEquals("FROZE 4.0 S OF THE MIC ON THE SURFACE. PAD ◄ ► BRINGS THE PAD BACK.", Copy.ringFrozen(4f, appAudio = false))
         assertEquals("FROZE 1.5 S OF APP AUDIO ON THE SURFACE. PAD ◄ ► BRINGS THE PAD BACK.", Copy.ringFrozen(1.5f, appAudio = true))
-        assertTrue("OPEN CHOP" in Copy.CHOP_NO_HITS, "GRID is inside the closed CUT box: ${Copy.CHOP_NO_HITS}")
+        assertTrue(Copy.CHOP_NO_HITS.contains("OPEN CHOP", ignoreCase = true), "GRID is inside the closed CUT box: ${Copy.CHOP_NO_HITS}")
         // BOUNCE on a stopped GROOVE used to just dim with no reason
         // (wiring review finding 8) - tapping it now names the control
         // that actually resolves it, the same PLAY button GROOVE draws.
-        assertTrue("PLAY" in Copy.GROOVE_BOUNCE_NEEDS_PLAY, "names the control that unblocks BOUNCE: ${Copy.GROOVE_BOUNCE_NEEDS_PLAY}")
+        assertTrue(Copy.GROOVE_BOUNCE_NEEDS_PLAY.contains("PLAY", ignoreCase = true), "names the control that unblocks BOUNCE: ${Copy.GROOVE_BOUNCE_NEEDS_PLAY}")
         assertEquals("BANK B · 16 FREE", Copy.catchBank('B', 16))
         assertEquals("NO GROOVE: NO BEAT HEARD - THE EAR FINDS HITS, NOT TONES.", Copy.grooveRefused("no beat heard - the ear finds hits, not tones."))
         assertEquals("BREAK FOUND AT 1:12-1:20. IN AND OUT ARE SET. INSTANT KIT IS ONE TAP AWAY.", Copy.dug("1:12", "1:20"))
@@ -146,11 +146,6 @@ class PersonalityTest {
         assertEquals("2 BARS", Copy.countOf(2, "BAR", "BARS"))
         assertEquals("0 BARS", Copy.countOf(0, "BAR", "BARS"), "zero is plural, same as English")
         assertEquals("-1 BARS", Copy.countOf(-1, "BAR", "BARS"), "a count can't go negative, but this is not the guard for that")
-    }
-
-    @Test
-    fun `boot sequence ends ready`() {
-        assertEquals("READY.", Copy.BOOT_LINES.last())
     }
 
     /**
@@ -215,7 +210,7 @@ class PersonalityTest {
         assertTrue(busy.contains(label), busy)
         assertFalse(busy.contains(segment), "the header carries the chip's word, not the segment id: $busy")
         assertTrue(busy.endsWith("…"), "a progress line has to look unfinished: $busy")
-        assertTrue(busy.startsWith("EFFECTS"), "it replaces the card's own header: $busy")
+        assertTrue(busy.startsWith("EFFECTS", ignoreCase = true), "it replaces the card's own header: $busy")
         // Distinguishable from the idle header, which is the whole point.
         assertTrue(busy != "EFFECTS", busy)
         // Every segment's label has to fit, not just this one: a slate pedal behind MORE as well.
@@ -235,11 +230,11 @@ class PersonalityTest {
         val room = Copy.snipLanding(hasEmptyPad = true)
         val full = Copy.snipLanding(hasEmptyPad = false)
         assertTrue(room != full, "a full kit and an empty one cannot read the same")
-        assertTrue(room.contains("PAD"), room)
-        assertTrue(room.contains("LONG-PRESS"), "it names the gesture, which nothing else on that screen does: $room")
-        assertTrue(full.contains("FULL"), full)
+        assertTrue(room.contains("PAD", ignoreCase = true), room)
+        assertTrue(room.contains("LONG-PRESS", ignoreCase = true), "it names the gesture, which nothing else on that screen does: $room")
+        assertTrue(full.contains("FULL", ignoreCase = true), full)
         for (line in listOf(room, full)) {
-            assertEquals(line.uppercase(Locale.ROOT), line, "TapeOS shouts: $line")
+            assertSentenceCase(line)
             assertTrue(line.endsWith("."), "a toast lands on a full stop: $line")
         }
     }
@@ -253,13 +248,13 @@ class PersonalityTest {
     @Test
     fun `the overwrite warning names what is at risk and what the next tap does`() {
         val line = Copy.dubWouldOverwrite("MY KIT.XPN")
-        assertTrue(line.contains("MY KIT.XPN"), "it names the thing, not \"a file\": $line")
-        assertTrue(line.contains("EXPORT AGAIN"), "it says what the next tap does: $line")
-        assertEquals(line.uppercase(Locale.ROOT), line, "TapeOS shouts: $line")
+        assertTrue(line.contains("MY KIT.XPN", ignoreCase = true), "it names the thing, not \"a file\": $line")
+        assertTrue(line.contains("EXPORT AGAIN", ignoreCase = true), "it says what the next tap does: $line")
+        assertSentenceCase(line)
         assertTrue(line.endsWith("."), "a toast lands on a full stop: $line")
         // It must not read like something already happened - nothing has been
         // written when this appears.
-        assertFalse(line.contains("DONE"), "nothing was written yet: $line")
+        assertFalse(line.contains("DONE", ignoreCase = true), "nothing was written yet: $line")
         assertTrue(line != Copy.DUB_DONE && line != Copy.DUB_FAILED, "distinct from both outcomes: $line")
     }
 
@@ -279,20 +274,20 @@ class PersonalityTest {
         val whole = Copy.instantKit(8, chokeSet = false, wholeTape = true)
         val selected = Copy.instantKit(8, chokeSet = false, wholeTape = false)
         assertTrue(whole != selected, "the whole tape and a selection cannot read the same: $whole")
-        assertTrue(whole.contains("WHOLE SAMPLE"), "it says it took everything: $whole")
+        assertTrue(whole.contains("WHOLE SAMPLE", ignoreCase = true), "it says it took everything: $whole")
         // COMMIT's refusal is "SET IN + OUT FIRST"; the same two markers are
         // named here, so the pair of buttons speaks one vocabulary.
-        assertTrue(selected.contains("IN + OUT"), "it names the markers COMMIT asks for: $selected")
-        assertTrue(Copy.COMMIT_NEEDS_SELECTION.contains("IN + OUT"), Copy.COMMIT_NEEDS_SELECTION)
+        assertTrue(selected.contains("IN + OUT", ignoreCase = true), "it names the markers COMMIT asks for: $selected")
+        assertTrue(Copy.COMMIT_NEEDS_SELECTION.contains("IN + OUT", ignoreCase = true), Copy.COMMIT_NEEDS_SELECTION)
 
         for (line in listOf(whole, selected)) {
             // The count survives either reading - it is the part users act on.
-            assertTrue(line.contains("8 SLICES"), "the slice count is still there: $line")
-            assertEquals(line.uppercase(Locale.ROOT), line, "TapeOS shouts: $line")
+            assertTrue(line.contains("8 SLICES", ignoreCase = true), "the slice count is still there: $line")
+            assertSentenceCase(line)
             assertTrue(line.endsWith("."), "a toast lands on a full stop: $line")
         }
         assertTrue(
-            Copy.instantKit(8, chokeSet = true, wholeTape = true).endsWith("CHOKE GROUP SET."),
+            Copy.instantKit(8, chokeSet = true, wholeTape = true).endsWith("CHOKE GROUP SET.", ignoreCase = true),
             "the choke note still rides on the end, whichever scope it was",
         )
     }
@@ -307,18 +302,18 @@ class PersonalityTest {
     @Test
     fun `the un-treat says which of its three answers it is giving`() {
         val landed = Copy.unTreated("KICK")
-        assertTrue(landed.contains("KICK"), "it names the pad it gave back: $landed")
-        assertTrue(landed.contains("TRASH"), "the bin is where the take came from, and the user has to learn that: $landed")
-        assertEquals(landed.uppercase(Locale.ROOT), landed, "TapeOS shouts: $landed")
+        assertTrue(landed.contains("KICK", ignoreCase = true), "it names the pad it gave back: $landed")
+        assertTrue(landed.contains("TRASH", ignoreCase = true), "the bin is where the take came from, and the user has to learn that: $landed")
+        assertSentenceCase(landed)
         assertTrue(landed.endsWith("."), "a toast lands on a full stop: $landed")
 
         // The three answers are three sentences, not one sentence three times.
         val answers = listOf(landed, Copy.RETREAT_REFUSED, Copy.UNTREAT_NOT_BINNED)
         assertEquals(answers.size, answers.toSet().size, "a refusal that reads like a success teaches nothing: $answers")
         // The two refusals say what is in the way, and neither claims a restore.
-        assertTrue(Copy.RETREAT_REFUSED.contains("SOFT HITS"), Copy.RETREAT_REFUSED)
-        assertTrue(Copy.UNTREAT_NOT_BINNED.contains("TRASH"), Copy.UNTREAT_NOT_BINNED)
-        assertFalse(Copy.UNTREAT_NOT_BINNED.contains("BACK"), "nothing came back: ${Copy.UNTREAT_NOT_BINNED}")
+        assertTrue(Copy.RETREAT_REFUSED.contains("SOFT HITS", ignoreCase = true), Copy.RETREAT_REFUSED)
+        assertTrue(Copy.UNTREAT_NOT_BINNED.contains("TRASH", ignoreCase = true), Copy.UNTREAT_NOT_BINNED)
+        assertFalse(Copy.UNTREAT_NOT_BINNED.contains("BACK", ignoreCase = true), "nothing came back: ${Copy.UNTREAT_NOT_BINNED}")
     }
 
     /**
@@ -338,22 +333,22 @@ class PersonalityTest {
             val (landed, nothing, notBinned) = lines
             val answers = lines + Copy.UNDO_LAYERED
             assertEquals(answers.size, answers.toSet().size, "$door: a refusal that reads like a success teaches nothing: $answers")
-            assertTrue(landed.contains("TRASH"), "$door: the bin is where the take came from: $landed")
+            assertTrue(landed.contains("TRASH", ignoreCase = true), "$door: the bin is where the take came from: $landed")
             assertTrue(landed.contains(door), "$door: the landing names what it took off: $landed")
             assertTrue(nothing.contains(door), "$door: the refusal names what the pad does not carry: $nothing")
-            assertFalse(nothing.contains("BACK"), "$door: nothing came back: $nothing")
-            assertTrue(notBinned.contains("TRASH"), "$door: $notBinned")
-            assertFalse(notBinned.contains("BACK"), "$door: nothing came back: $notBinned")
+            assertFalse(nothing.contains("BACK", ignoreCase = true), "$door: nothing came back: $nothing")
+            assertTrue(notBinned.contains("TRASH", ignoreCase = true), "$door: $notBinned")
+            assertFalse(notBinned.contains("BACK", ignoreCase = true), "$door: nothing came back: $notBinned")
             for (line in answers) {
-                assertEquals(line.uppercase(Locale.ROOT), line, "TapeOS shouts: $line")
+                assertSentenceCase(line)
                 assertTrue(line.endsWith("."), "a toast lands on a full stop: $line")
-                assertFalse(line.contains("COMBINE SOUNDS"), "$door's UNDO is not COMBINE SOUNDS's: $line")
+                assertFalse(line.contains("COMBINE SOUNDS", ignoreCase = true), "$door's UNDO is not COMBINE SOUNDS's: $line")
             }
         }
-        assertTrue(Copy.UNDO_LAYERED.contains("SOFT HITS"), "the layered refusal names the chip that clears it: ${Copy.UNDO_LAYERED}")
-        assertFalse(Copy.UNDO_LAYERED.contains("BACK"), Copy.UNDO_LAYERED)
-        assertTrue(Copy.UNSPLICED.contains("THE VERSION BEFORE THE LAST SPLICE"), "after two splices the first splice's result comes back: ${Copy.UNSPLICED}")
-        assertTrue(Copy.UNDESAMPLED.contains("THE VERSION BEFORE THE LAST FIND NEAREST SYNTH"), Copy.UNDESAMPLED)
+        assertTrue(Copy.UNDO_LAYERED.contains("SOFT HITS", ignoreCase = true), "the layered refusal names the chip that clears it: ${Copy.UNDO_LAYERED}")
+        assertFalse(Copy.UNDO_LAYERED.contains("BACK", ignoreCase = true), Copy.UNDO_LAYERED)
+        assertTrue(Copy.UNSPLICED.contains("THE VERSION BEFORE THE LAST SPLICE", ignoreCase = true), "after two splices the first splice's result comes back: ${Copy.UNSPLICED}")
+        assertTrue(Copy.UNDESAMPLED.contains("THE VERSION BEFORE THE LAST FIND NEAREST SYNTH", ignoreCase = true), Copy.UNDESAMPLED)
     }
 
     /** TAPE SPLICE's landing names its way back, as DE-SAMPLE's, MUTATE's and DRIFT's do. */
@@ -361,8 +356,8 @@ class PersonalityTest {
     fun `the SPLICE landing says where the take before it went, either way it joined`() {
         for (crossfaded in listOf(true, false)) {
             val line = Copy.spliced(crossfaded)
-            assertTrue(line.endsWith(" THE VERSION BEFORE IT SLEEPS IN THE TRASH."), "crossfaded=$crossfaded: $line")
-            assertTrue(line.startsWith("SPLICED"), line)
+            assertTrue(line.endsWith(" The version before it is in the trash."), "crossfaded=$crossfaded: $line")
+            assertTrue(line.startsWith("SPLICED", ignoreCase = true), line)
         }
         assertNotEquals(Copy.spliced(true), Copy.spliced(false), "the seam's honesty survives the new ending")
     }
@@ -377,8 +372,8 @@ class PersonalityTest {
     /** KEEP on SPLICE and STACK names where the way back lives, as the buttons really are labelled. */
     @Test
     fun `the SPLICE and STACK landings say where the undo is`() {
-        assertTrue("UNDO SPLICE" in Copy.SPLICE_UNDO_AT && "PAD EDITOR" in Copy.SPLICE_UNDO_AT, Copy.SPLICE_UNDO_AT)
-        assertTrue("SOFT HITS" in Copy.STACK_UNDO_AT && "PAD EDITOR" in Copy.STACK_UNDO_AT, Copy.STACK_UNDO_AT)
+        assertTrue(Copy.SPLICE_UNDO_AT.contains("UNDO SPLICE", ignoreCase = true) && Copy.SPLICE_UNDO_AT.contains("PAD EDITOR", ignoreCase = true), Copy.SPLICE_UNDO_AT)
+        assertTrue(Copy.STACK_UNDO_AT.contains("SOFT HITS", ignoreCase = true) && Copy.STACK_UNDO_AT.contains("PAD EDITOR", ignoreCase = true), Copy.STACK_UNDO_AT)
         assertEquals("USE THIS PART ▸", Copy.USE_THIS_PART)
     }
 
@@ -389,8 +384,8 @@ class PersonalityTest {
      */
     @Test
     fun `a print refuses SPLICE and DE-SAMPLE in the words it refuses the other doors with`() {
-        assertEquals("REMOVE WIDE BEFORE SPLICE.", Copy.boardRemoveBeforeSplice("WIDE"))
-        assertEquals("REMOVE AQUARIUM BEFORE FIND NEAREST SYNTH.", Copy.boardRemoveBeforeDesample("AQUARIUM"))
+        assertEquals("Remove WIDE before SPLICE.", Copy.boardRemoveBeforeSplice("WIDE"))
+        assertEquals("Remove AQUARIUM before FIND NEAREST SYNTH.", Copy.boardRemoveBeforeDesample("AQUARIUM"))
         val lines = listOf(
             Copy.boardRemoveBeforeSoftHits("RUSH"),
             Copy.boardRemoveBeforeStack("RUSH"),
@@ -400,8 +395,8 @@ class PersonalityTest {
         )
         assertEquals(lines.size, lines.toSet().size, "each refusal names its own door: $lines")
         for (line in lines) {
-            assertTrue(line.startsWith("REMOVE RUSH BEFORE "), "the print and the way out lead: $line")
-            assertEquals(line.uppercase(Locale.ROOT), line, "TapeOS shouts: $line")
+            assertTrue(line.startsWith("REMOVE RUSH BEFORE ", ignoreCase = true), "the print and the way out lead: $line")
+            assertSentenceCase(line)
             assertTrue(line.endsWith("."), "a toast lands on a full stop: $line")
         }
     }
@@ -417,7 +412,7 @@ class PersonalityTest {
     fun `SETUP answers its three questions without pretending to own them`() {
         // The format readout says where it is changed, because SETUP is not
         // a second picker and must not read like one.
-        assertTrue(Copy.SETUP_FORMAT_NOTE.contains("EXPORT"), Copy.SETUP_FORMAT_NOTE)
+        assertTrue(Copy.SETUP_FORMAT_NOTE.contains("EXPORT", ignoreCase = true), Copy.SETUP_FORMAT_NOTE)
         assertTrue(Copy.SETUP_FORMAT_NOTE.endsWith("."), "a sentence the screen says: ${Copy.SETUP_FORMAT_NOTE}")
         assertTrue(Copy.SETUP_CARD_NONE.endsWith("."), Copy.SETUP_CARD_NONE)
 
@@ -428,7 +423,7 @@ class PersonalityTest {
         )
         for (h in headings) {
             assertFalse(h.endsWith("."), "furniture, not a sentence: $h")
-            assertEquals(h.uppercase(Locale.ROOT), h, "TapeOS shouts: $h")
+            assertLabel(h, "heading")
             assertTrue(h.length <= 24, "a heading on a narrow screen: $h")
         }
         // Four different questions must read as four different questions.
@@ -442,7 +437,7 @@ class PersonalityTest {
         assertEquals("44.1 KHZ", Copy.SETUP_RATE)
         assertTrue(Copy.SETUP_RATE_NOTE.endsWith("."), Copy.SETUP_RATE_NOTE)
         assertTrue(
-            Copy.SETUP_RATE_NOTE.contains("TIME MACHINE"),
+            Copy.SETUP_RATE_NOTE.contains("TIME MACHINE", ignoreCase = true),
             "the note sends a reader to the rate they can actually turn: ${Copy.SETUP_RATE_NOTE}",
         )
 
@@ -461,10 +456,10 @@ class PersonalityTest {
         assertEquals("CARD", Copy.cardName(null), "and neither has a uri with no segment")
         assertEquals("CARD", Copy.cardName(""))
 
-        // A held card is named, and shouts like everything else.
+        // A held card is named, in the case it was given.
         val held = Copy.setupCardHeld("Untitled SD card")
-        assertTrue(held.contains("UNTITLED SD CARD"), held)
-        assertEquals(held.uppercase(Locale.ROOT), held, held)
+        assertTrue(held.contains("UNTITLED SD CARD", ignoreCase = true), held)
+        assertCaption(held, "setupCardHeld")
         assertTrue(held != Copy.SETUP_CARD_NONE)
     }
 
@@ -477,12 +472,12 @@ class PersonalityTest {
      */
     @Test
     fun `the shelf legend names the hold and what it reveals`() {
-        assertTrue(Copy.SHELF_LEGEND.contains("HOLD"), "it names the gesture: ${Copy.SHELF_LEGEND}")
-        assertTrue(Copy.SHELF_LEGEND.contains("KIT"), "and what to hold: ${Copy.SHELF_LEGEND}")
-        assertTrue(Copy.SHELF_LEGEND.contains("RENAME"), "naming is the finding's own subject: ${Copy.SHELF_LEGEND}")
-        assertTrue(Copy.SHELF_LEGEND.contains("DELETE"), "the hold reveals both, so both are named: ${Copy.SHELF_LEGEND}")
-        assertTrue(Copy.SHELF_LEGEND.contains("EXPANSION"), "and the third door the hold now reveals: ${Copy.SHELF_LEGEND}")
-        assertEquals(Copy.SHELF_LEGEND.uppercase(Locale.ROOT), Copy.SHELF_LEGEND, "TapeOS shouts")
+        assertTrue(Copy.SHELF_LEGEND.contains("HOLD", ignoreCase = true), "it names the gesture: ${Copy.SHELF_LEGEND}")
+        assertTrue(Copy.SHELF_LEGEND.contains("KIT", ignoreCase = true), "and what to hold: ${Copy.SHELF_LEGEND}")
+        assertTrue(Copy.SHELF_LEGEND.contains("RENAME", ignoreCase = true), "naming is the finding's own subject: ${Copy.SHELF_LEGEND}")
+        assertTrue(Copy.SHELF_LEGEND.contains("DELETE", ignoreCase = true), "the hold reveals both, so both are named: ${Copy.SHELF_LEGEND}")
+        assertTrue(Copy.SHELF_LEGEND.contains("EXPANSION", ignoreCase = true), "and the third door the hold now reveals: ${Copy.SHELF_LEGEND}")
+        assertCaption(Copy.SHELF_LEGEND, "SHELF_LEGEND")
         assertTrue(Copy.SHELF_LEGEND.length <= 52, "one line under the shelf: ${Copy.SHELF_LEGEND.length}")
         // Furniture, not a toast - it never lands on a full stop, and the
         // reflective law exempts it for exactly that reason.
@@ -512,8 +507,8 @@ class PersonalityTest {
     @Test
     fun `GROOVE names its programs the same way wherever it says them`() {
         // The row's own words, which these three now use.
-        assertTrue(Copy.STEP_EDIT_TITLE.contains("YOURS"), Copy.STEP_EDIT_TITLE)
-        assertTrue(Copy.GROOVE_OVERDUBBING.contains("CAPTURED"), Copy.GROOVE_OVERDUBBING)
+        assertTrue(Copy.STEP_EDIT_TITLE.contains("YOURS", ignoreCase = true), Copy.STEP_EDIT_TITLE)
+        assertTrue(Copy.GROOVE_OVERDUBBING.contains("CAPTURED", ignoreCase = true), Copy.GROOVE_OVERDUBBING)
 
         // Shorter than the string it replaces: the header shares its row
         // with DONE and has about 260dp of a 360dp phone to live in.
@@ -529,11 +524,11 @@ class PersonalityTest {
         // The footer says what editing yours does NOT do, in the words
         // FORKED_TO_E already uses for the same fact.
         val footer = Copy.stepEditFooter(16, "CAPTURED")
-        assertTrue(footer.contains("16 STEPS"), footer)
-        assertTrue(footer.contains("COPIED FROM CAPTURED"), footer)
-        assertTrue(footer.contains("THE OTHER FOUR"), "the house phrase, as FORKED_TO_E says it: $footer")
-        assertTrue(Copy.FORKED_TO_E.contains("THE OTHER FOUR"), Copy.FORKED_TO_E)
-        assertEquals("1 STEP", Copy.stepEditFooter(1, "X").substringBefore(" ·"))
+        assertTrue(footer.contains("16 STEPS", ignoreCase = true), footer)
+        assertTrue(footer.contains("COPIED FROM CAPTURED", ignoreCase = true), footer)
+        assertTrue(footer.contains("THE OTHER FOUR", ignoreCase = true), "the house phrase, as FORKED_TO_E says it: $footer")
+        assertTrue(Copy.FORKED_TO_E.contains("THE OTHER FOUR", ignoreCase = true), Copy.FORKED_TO_E)
+        assertEquals("1 step", Copy.stepEditFooter(1, "X").substringBefore(" ·"))
 
         // And none of the three says a letter again.
         for (line in listOf(Copy.STEP_EDIT_TITLE, Copy.GROOVE_OVERDUBBING, footer)) {
@@ -568,7 +563,7 @@ class PersonalityTest {
         // One verb per stage, in the stage order, and step four is the
         // word on EXPORT's own button rather than the one on its progress
         // line. WRITE KIT is what a first-run user will tap.
-        assertTrue(note.startsWith("RECORD IT, CUT IT, KIT IT, WRITE IT."), note)
+        assertTrue(note.startsWith("RECORD IT, CUT IT, KIT IT, WRITE IT.", ignoreCase = true), note)
         assertFalse(
             Regex("""\bDUB\b""").containsMatchIn(note),
             "DUB is the app's word for the write and stays everywhere else, but not in the one " +
@@ -580,7 +575,7 @@ class PersonalityTest {
         // rather than by pinning the replacement, so the clause can be
         // reworded without a test rewrite.
         assertFalse(
-            note.endsWith("FOUR TABS, IN ORDER."),
+            note.endsWith("FOUR TABS, IN ORDER.", ignoreCase = true),
             "a starter kit begins at step three and TAPE's shortcuts skip CHOP, so the note must not " +
                 "end by claiming the four tabs are compulsory: $note",
         )
@@ -592,9 +587,9 @@ class PersonalityTest {
         // copy of a control already on screen. "A KIT" is the way in, not the
         // button's label.
         for (door in listOf("STARTERS", "NEW KIT", "INSTANT KIT", "CATCH", "LISTEN", "MIC")) {
-            assertFalse(note.contains(door), "the note names a door it does not have to name: $note")
+            assertFalse(note.contains(door, ignoreCase = true), "the note names a door it does not have to name: $note")
         }
-        assertTrue(note.endsWith(" OR START FROM A KIT."), "the tail says the second way in: $note")
+        assertTrue(note.endsWith(" Or start from a kit."), "the tail says the second way in: $note")
         // The panel's two ways in are the labels the note glosses.
         assertEquals("START FROM A KIT ▾", Copy.START_FROM_KIT)
         assertEquals("LISTEN FOR YOUR FIRST SOUND", Places.CATCH_FIRST)
@@ -604,264 +599,94 @@ class PersonalityTest {
         // INSTANT KIT was in no list at all, which is the half of P3.2
         // that was actually open.
         val help = Places.HELP.values.flatten() + Copy.HELP_MORE
-        assertTrue(help.any { it.contains("INSTANT KIT") }, "INSTANT KIT is in no HELP list")
-        assertTrue(help.any { it.contains("CATCH ON SAMPLE") }, "CATCH is in no HELP list")
+        assertTrue(help.any { it.contains("INSTANT KIT", ignoreCase = true) }, "INSTANT KIT is in no HELP list")
+        assertTrue(help.any { it.contains("CATCH ON SAMPLE", ignoreCase = true) }, "CATCH is in no HELP list")
     }
 
     @Test
     fun `the pads strip's resting line names the gesture`() {
         // Was the pad sheet legend under the grid, one line of 52. The strip
         // above the grid replaced it and draws its resting line on up to two.
-        assertTrue(Copy.PADS_RESTING_LINE.contains("HOLD"), Copy.PADS_RESTING_LINE)
-        assertTrue(Copy.PADS_RESTING_LINE.contains("PAD"), Copy.PADS_RESTING_LINE)
+        assertTrue(Copy.PADS_RESTING_LINE.contains("HOLD", ignoreCase = true), Copy.PADS_RESTING_LINE)
+        assertTrue(Copy.PADS_RESTING_LINE.contains("PAD", ignoreCase = true), Copy.PADS_RESTING_LINE)
         assertTrue(Copy.PADS_RESTING_LINE.length <= 2 * 52, "two lines on the strip: ${Copy.PADS_RESTING_LINE.length}")
     }
 
-    /**
-     * `Copy` constants that are legitimately not full-stop toasts — button
-     * labels, tile subtitles, chip text, "…BUSY" progress indicators, and
-     * one hidden-egg unlock name — so the "every line lands on a full
-     * stop" law doesn't apply to them. Explicit and commented per the same
-     * reasoning as the ceiling law below: a rule loose enough to guess
-     * these automatically (e.g. "ends in an ellipsis") is a rule someone
-     * disables the first time it's wrong, so it's a reviewed list instead.
-     * NOT ONE of these may also appear in [legacyHandListedToasts] below —
-     * that's the mechanical proof this reflective law didn't quietly
-     * exempt anything the old hand list used to check.
-     */
-    private val notASentence = setOf(
-        // The step editor's pad picker and velocity strip: a pad's "empty" tag, a close chip, four level labels.
-        "STEP_PAD_EMPTY", "STEP_DETAIL_CLOSE", "STEP_DETAIL_LONG_LABEL", "STEP_TAP_TOGGLES", "STEP_TAP_EDITS", "STEP_OTHER_ROW", "STEP_UNDO", "STEP_COPY_BAR", "STEP_PASTE_BAR", "STEP_DOUBLE", "STEP_HALF", "VEL_SOFT", "VEL_MED", "VEL_HARD", "VEL_ACCENT",
-        // The step-detail strip's roll, nudge and length rows: captions and buttons, not toasts.
-        "STEP_ROLL", "STEP_NUDGE", "STEP_LENGTH", "STEP_CHANCE", "STEP_EARLY", "STEP_LATE", "STEP_CENTRE", "STEP_LEN_SHORT", "STEP_LEN_HALF", "STEP_LEN_STEP", "STEP_LEN_TIE_2", "STEP_LEN_TIE_4",
-        // The Bubble permission line's door: a label, not a toast.
-        "BUBBLE_ALLOW",
-        // The one-line descriptions under the kept brand names (ledger ruling 9): read beside a door, not toasts.
-        "ORBIT_DOOR_LINE", "LOOP_DOOR_LINE", "SONG_DOOR_LINE", "GRAIN_DOOR_LINE", "AQUARIUM_LINE", "SCULPT_LINE",
-        // Pattern names: the rename hint and button, the slip's title and buttons, the list's heading and close chip. Labels, not toasts.
-        "PATTERN_RENAME_HINT", "PATTERN_RENAME", "PATTERN_NAME_TITLE", "PATTERN_LIST_TITLE", "PATTERN_LIST_CLOSE", "PATTERN_NAME_SAVE", "PATTERN_NAME_RESET",
-        // The four one-word captions over the STRIKE FX buttons: labels, not toasts.
-        // LIVE's small READING label over the four read-only sliders.
-        "LIVE_READING_LABEL",
-        "STRIKE_CAPTION_STRIP", "STRIKE_CAPTION_SIDE", "STRIKE_CAPTION_RELEASE", "STRIKE_CAPTION_LEVEL",
-        // The tile art picker's row and sheet: headings, a chip, a title and a busy line, not landings.
-        "ART_ROW", "ART_SHEET_TITLE", "ART_PALETTE", "ART_SEED_PAD", "ART_SEED_AUTO", "ART_MARK", "ART_BUSY", "ART_SEED_KIT",
-        // Expansions: a door, a sheet title, a row, a dialog title and button, a marker, a title prefix.
-        "EXPANSION_DOOR", "ROW_MORE", "PRESET_FORGET_DOOR", "ORBIT_TAP_PLACES", "EXPANSION_SHEET_TITLE", "EXPANSION_NEW", "EXPANSION_NAME_TITLE", "EXPANSION_NAME_CONFIRM", "EXPANSION_IN", "ART_FOR",
-        // The shelf's EXPANSIONS group heading and the rename dialog title.
-        "EXPANSIONS_HEADING", "EXPANSION_RENAME_TITLE",
-        // SYNTH's four group headings: labels over a run of controls, not landings.
-        "SYNTH_HEADING_VOICE", "SYNTH_HEADING_PRESETS", "SYNTH_HEADING_PLAYING", "SYNTH_HEADING_USE",
-        // The starter picker's nine group headings: labels over a run of starters, not landings.
-        "STARTER_HEADING_START_HERE", "STARTER_HEADING_BASS", "STARTER_HEADING_KEYS", "STARTER_HEADING_PLUCKS", "STARTER_HEADING_BREATH",
-        "STARTER_HEADING_VOICES", "STARTER_HEADING_METAL", "STARTER_HEADING_SKINS", "STARTER_HEADING_MOVING",
-        // EXPORT's expansion subject: switch labels, row headings, a door, two form chips, a button.
-        "EXPORT_SUBJECT_KIT", "EXPORT_SUBJECT_EXPANSION", "EXPANSION_PICK", "EXPANSION_MEMBERS", "EXPANSION_INSTRUMENTS", "CHANGE_ART",
-        "EXPANSION_FORM_FOLDER", "EXPANSION_FORM_XPN", "EXPANSION_WRITE",
-        // The pedal slate's PUT ON ROW button: a label, not a landing.
-        "PUT_ON_ROW",
-        // The pad editor's two doors and their screens' titles, and its per-tool UNDO buttons: labels, not landings.
-        "PAD_EFFECTS_DOOR", "PAD_VARIATIONS_DOOR", "PAD_EFFECTS_TITLE", "PAD_VARIATIONS_TITLE",
-        "UNDO_MUTATE", "UNDO_SPLICE", "UNDO_DESAMPLE", "UNDO_OUTSIDE", "UNDO_BOARD",
-        // BEAT's GO TO and SEND IT OUT group headings: labels over a run of controls, not landings.
-        "BEAT_HEADING_GO_TO", "BEAT_HEADING_SEND_OUT",
-        // MAKE's two group headings: labels, not landings.
-        "MAKE_A_SOUND", "WHAT_YOU_MADE",
-        // SNAP's four group headings: labels, not landings.
-        "SNAP_SOURCE", "SNAP_ONE_PAD", "SNAP_ALL_SIXTEEN", "SNAP_PLAY_IT",
-        // The PEDALS card's strip with no pedals on the pad: a strip, like UNTOUCHED, not a landing.
-        "PEDALS_NONE",
-        "TILE_LABEL_IDLE", "TILE_LABEL_ARMED", "TILE_SUBTITLE_IDLE", "TILE_SUBTITLE_ARMED",
-        "COMMIT_NEEDS_SELECTION", "USE_THIS_PART", "CAPTURE_BLOCKED_BUTTON",
-        // Headings over a group of controls (the deck's NEXT, the CUT screen's LAND AS) and the PAD CAPTURE tap twin's two labels.
-        "DECK_NEXT", "CHOP_LAND_AS", "PAD_CAPTURE_TAP_TO_REC", "PAD_CAPTURE_TAP_STOP",
-        "IMPORT_BUSY", "PACKING_BUSY", "LANDING_BUSY", "READ_GROOVE_BUSY", "DIG_BUSY", "FEEL_BUSY", "CHART_BUSY", "BEAT_SHARE_BUSY", "BREEDING_BUSY",
-        // SNIPS' SHARE, while the snip is copied into the share cache under
-        // a readable name — like every other *_BUSY here, an overlay line
-        // rather than a landing.
-        "SHARE_BUSY",
-        "ARRANGE_MIXING", "XRAY_BUSY", "DOUBLES_BUSY",
-        // SONG's buttons on the selected section, its UNDO button and the two words it prints on a chip or a row: labels, not toasts.
-        "SONG_UP", "SONG_DOWN", "SONG_REPEAT_LESS", "SONG_REPEAT_MORE", "SONG_SWAP", "SONG_DUPLICATE", "SONG_DELETE",
-        "SONG_LOCK", "SONG_UNLOCK", "SONG_ADD", "SONG_REROLL", "SONG_UNDO", "SONG_PICK_NOW", "SONG_LOCKED",
-        "SONG_BASS_ON", "SONG_BASS_OFF", "SONG_PULL_UP_ON", "SONG_PULL_UP_OFF", "SONG_ROW_BASS", "SONG_ROW_PULL_UP", "SONG_PLAY", "SONG_STOP", "SONG_LOOP_ON", "SONG_LOOP_OFF", "SONG_KEEP_ORDER", "SONG_ROW_NEXT",
-        // The words UNDO names an edit by, and the spoken names of SONG's glyph buttons: labels, not toasts.
-        "SONG_VERB_REORDER", "SONG_VERB_REPEATS", "SONG_VERB_SWAP", "SONG_VERB_REROLL",
-        "SONG_A11Y_UP", "SONG_A11Y_DOWN", "SONG_A11Y_REPEAT_LESS", "SONG_A11Y_REPEAT_MORE", "SONG_A11Y_REROLL",
-        "CHOP_ALL_BUSY",
-        // SETUP's MIDI OUT heading and the two words beside a device's port
-        // (OUT / BUSY): labels, not landings.
-        "SETUP_MIDI_OUT_HEADING", "SETUP_MIDI_DEVICES", "TITLE_HELP", "TITLE_SETTINGS", "SETUP_MIDI_OUT_PORT_OK", "SETUP_MIDI_OUT_PORT_BUSY",
-        // SETUP's LISTEN FROM heading: a label over two rows, not a landing.
-        "SETUP_LISTEN_HEADING", "SETUP_LISTEN_ASKS",
-        // The MIDI screen's CLOCK CHECK button and its label while it runs:
-        // button labels, not landings. The other three MIDI_CLOCK_* lines are
-        // sentences and keep their full stops.
-        "MIDI_CLOCK_CHECK", "MIDI_CLOCK_RUNNING",
-        // The two published MIDI port names SETUP and the LCD list: device names, not toasts.
-        "MIDI_PORT_OUT_NAME", "MIDI_PORT_IN_NAME",
-        // DUST ALL's busy overlay line, like every other *_BUSY above.
-        "DUSTING_BUSY", "CHOP_BENCH_BUSY",
-        // LOOP's bounce, while the render runs — same shape as every other
-        // *_BUSY above: a button's label, not a landing.
-        "LOOP_BOUNCE_BUSY",
-        // LOOP's CLEAR TRACK button and the UNDO CLEAR chip's prefix (the
-        // track's name follows it): labels, not landings.
-        "LOOP_CLEAR_BUTTON", "LOOP_UNDO_CLEAR",
-        // LOOP's header title, like the other benches' names: a title, not a landing.
-        "LOOP_TITLE",
-        // SNAP's FIELD and CLOUD, while the photo is cut into grains and
-        // while the field is granulated — the same shape as every other
-        // *_BUSY above: an overlay line, not a landing.
-        "SNAP_FIELD_BUSY", "SNAP_CLOUD_BUSY",
-        // SNAP's KIT, while the photo renders as sixteen pads. The
-        // landing toast is `photoKitMade`, a function, which the
-        // reflection sweep below never sees in the first place.
-        "SNAP_KIT_BUSY",
-        // PATH's RING ▸ (leaves SNAP for ORBIT) and its own LOOP PAD ▸
-        // (stays on SNAP) — the same *_BUSY shape as FIELD/CLOUD/KIT
-        // above. The landing toasts are `pathRingMade` and `synthSent`,
-        // functions, which this reflective sweep never sees.
-        "SNAP_PATH_BUSY", "SNAP_PATH_SEND_BUSY",
-        // SPECTRUM's own busy line, the same *_BUSY shape as FIELD/CLOUD
-        // above — the landing toast is `synthSent`, a function.
-        "SNAP_SPECTRUM_BUSY",
-        // CHORD's busy line (leaves SNAP for ORBIT) and TELEPHONE's (stays
-        // on SNAP) — the same *_BUSY shape as FIELD/CLOUD/KIT/SPECTRUM
-        // above. CHORD's landing toast is `chordKitMade`, a function,
-        // which this reflective sweep never sees; TELEPHONE's landing
-        // reuses `synthSent`.
-        "SNAP_CHORD_BUSY", "SNAP_TELEPHONE_BUSY",
-        // BACK ONTO's busy overlay line, like every other *_BUSY above.
-        "RETRIM_BUSY",
-        // CATCH A HIT's busy line while the hits are found, and its grid's
-        // one-word button — a label, not a landing.
-        "CATCH_BUSY", "CATCH_DONE_BUTTON",
-        // HUM THE CHOP's readout while the hum runs.
-        "HUM_BUSY",
-        // The HITS stepper's own busy readout.
-        "HITS_BUSY",
-        "OUTSIDE_LISTENING", "ROOM_FORGET_BUSY", "ROOM_RESTORE_BUSY", "ROOM_BIN_EMPTY_BUSY", "KIT_DELETE_BUSY", "KIT_RENAME_BUSY",
-        "CHIP_NOT_SURE", "CHIP_OVERRIDDEN",
-        "EXPORT_SAVED_TO", "EXPORT_SHARE_LABEL", "CARD_PICKED", "CARD_FORGET",
-        "SHELF_SORT_RECENT", "SHELF_SORT_ALPHA",
-        // BREED's button label (glyph sweep): now a constant destination
-        // name, same shape as CAPTURE_BLOCKED_BUTTON above — furniture on
-        // a button, not a line the app says once. The pad-count readout
-        // that used to live here moved to Copy.breedSubtitle, a function,
-        // which this reflective law doesn't reach either.
-        "BREED_BUTTON",
-        // The shelf filter's chip (finding 16) is the sort chip's twin and
-        // sits beside it, so it is furniture under the same rule. The
-        // filtered labels come from Copy.shelfFilter(), a function, which
-        // this reflective law does not reach - ShelfFilterTest holds those.
-        "SHELF_FILTER_ALL",
-        // The empty panel's button and its amber closing line: a label and
-        // furniture on the panel, not sentences the app says once.
-        "START_FROM_KIT", "EMPTY_SHELF_ENDS",
-        // Permanent on-screen furniture, not toasts: the two legends that sit
-        // under KIT's grid and the kit shelf's own list for as long as those
-        // screens are open, and HELP's two section headings. ROOMS' third
-        // legend, Copy.ROOMS_LEGEND ("HOLD A ROOM TO FORGET IT · THE BIN
-        // KEEPS IT 30 DAYS"), reads without a full stop for the same reason -
-        // a copy-consolidation pass brought it in from `:app`, where it used
-        // to live inline. A label on the furniture is not a line the app
-        // says to you once and takes away, so it does not end in a full stop
-        // - and every legend must be added here when it is written, or the
-        // shouting law will ask it to become a sentence.
-        // PAD_VELOCITY_LEGEND is furniture under KIT's grid, on screen
-        // permanently, not a sentence the app says once.
-        // The J10 door label is a button, not a sentence - "EXPORT ▸"
-        // carries its own arrow the way every other door label does. (Its
-        // twin, CAPTURE_OFFER_DOOR, retired when KEEP became a stage switch.)
-        "KIT_OFFER_DOOR",
-        // GROOVE's and ORBIT's BOUNCE buttons, moved out of inline
-        // literals so one law can hold all three bounces to one
-        // destination word (prior #25). Labels on buttons, not sentences.
-        "GROOVE_BOUNCE_BUTTON", "ORBIT_BOUNCE_BUTTON",
-        "PAD_VELOCITY_LEGEND", "SHELF_LEGEND", "ROOMS_LEGEND",
-        // The empty shelf's row of places is `Places.PLACES`, not Copy, so it
-        // needs no exemption here; FIRST_RUN_PLACES_NOTE, the sentence under
-        // it that says what the four verbs mean, keeps its full stop.
-        // EXPORT's DESTINATION legend joins them (finding 21): same rule,
-        // same register - a line that stays under the row it explains.
-        "EXPORT_CARD_LEGEND",
-        // SETUP's three section headings and the "nothing picked yet" it
-        // shows in place of a format - labels above a readout, in the same
-        // register as the legends above. SETUP_FORMAT_NOTE and
-        // SETUP_CARD_NONE are NOT here: both are sentences the screen says
-        // to you, and both keep their full stops.
-        "SETUP_FORMAT_HEADING", "SETUP_WHERE_HEADING", "SETUP_CARD_HEADING", "SETUP_FORMAT_NONE",
-        // THE RATE, the fourth of the same kind, and the readout under it -
-        // "44.1 KHZ" is a value, not a sentence, exactly as the format
-        // readout above it is. SETUP_RATE_NOTE is NOT here: it is a
-        // sentence the screen says, and it keeps its full stop.
-        "SETUP_RATE_HEADING", "SETUP_RATE",
-        // The step editor's header and RECORD's own status line - a title
-        // over a grid and a label saying what is happening right now,
-        // neither of them a toast said once. Both arrived with the sweep
-        // that found the two PROG letters J18's rename had missed.
-        "STEP_EDIT_TITLE", "GROOVE_OVERDUBBING",
-        // GRAIN FIELD's own busy line while the tape is read into its grid -
-        // furniture, like every other `…`-suffixed busy line above.
-        "GRAIN_FIELD_LISTENING",
-        // EVIL TWINS' and INSTANT KIT's own busy overlays - the same
-        // `…`-suffixed shape as every other *_BUSY constant above.
-        "EVIL_TWINS_BUSY", "INSTANT_KIT_BUSY",
-        // The dock's progress line when a job has a name to give, or only a
-        // generic one (LOADING_BUSY, WORKING_BUSY), and the KITS screen's
-        // placeholder while the library is read - the same `…`-suffixed
-        // shape as every other *_BUSY constant above. The named and counted
-        // forms are `loadingBusy` and `busyCount`, functions, which this
-        // reflective sweep never sees; BusyTest holds those.
-        "LOADING_BUSY", "WORKING_BUSY", "LIBRARY_LOADING",
-        // RECORD's and CHOP's placeholder and dock line while a recording is
-        // decoded: the same `…`-suffixed shape as LIBRARY_LOADING.
-        "READING_RECORDING",
-        // The dock's CANCEL control: a button label, not a landing.
-        "CANCEL_JOB",
-        // The dock's progress lines for the pad editor's named jobs (MUTATE
-        // and DRIFT, DE-SAMPLE, MAKE PAD, MAKE INSTRUMENT, SPREAD) and for
-        // SPLIT - the same `…`-suffixed shape as every other *_BUSY constant
-        // above: a line the dock says while the job runs, not a landing.
-        // Each job's own landing toast is a separate line.
-        "MUTATE_BUSY", "DESAMPLE_BUSY", "MAKE_PAD_BUSY", "MAKE_KIT_BUSY", "MAKE_INSTRUMENT_BUSY", "SPREAD_BUSY", "SPLIT_BUSY",
-        // The pad editor's plain save and its close-time flush: the same
-        // `…`-suffixed dock line as the named jobs above, for a write no
-        // control of its own started.
-        "SAVING_PAD_BUSY",
-        // App's own silent operations: setting the kit's key, IN KEY's retune
-        // of every tonal pad, NEW PROJECT's make-the-project, and the three
-        // kit moves (open a kit row, add a kit from the shelf, switch the
-        // open project's kit) - the same `…`-suffixed dock line as every
-        // other *_BUSY constant above.
-        "KEY_BUSY", "IN_KEY_BUSY", "ROBIN_KIT_BUSY", "NEW_PROJECT_BUSY",
-        "OPENING_KIT_BUSY", "ADDING_KIT_BUSY", "SWITCHING_KIT_BUSY",
-        // The dock's line while KIT's bank, KEYS' instrument and a SURFACE pad
-        // are read off disk: the same `…`-suffixed dock line as every other
-        // *_BUSY constant above, for a load no control started.
-        "KIT_LOADING_BUSY", "KEYS_LOADING_BUSY", "SURFACE_LOADING_BUSY",
-        // The dock's line while KEYS rewrites an instrument's descriptors for
-        // a new voice mode: the same `…`-suffixed dock line as the loads
-        // above. Its failure toast, KEYS_VOICE_FAILED, is a sentence and
-        // keeps its full stop.
-        "KEYS_VOICE_BUSY",
-    )
+    // ---- The case law (clarity spec 7.5, owner ruling D3) ----
+    //
+    // Copy is three kinds, told apart by the marks on the field (see CopyKind.kt):
+    // a message is unmarked and is a sentence, a label is [CopyLabel] and is CAPS,
+    // a caption is [CopyCaption] and is a sentence fragment. The kinds below are
+    // read off the static fields of `Copy` and `Places`, so a constant added
+    // next year is held to the law for its kind without anyone coming back here.
+
+    private enum class Kind { MESSAGE, LABEL, CAPTION }
+
+    private fun kindOf(field: java.lang.reflect.Field): Kind = when {
+        field.isAnnotationPresent(CopyLabel::class.java) -> Kind.LABEL
+        field.isAnnotationPresent(CopyCaption::class.java) -> Kind.CAPTION
+        else -> Kind.MESSAGE
+    }
+
+    /** Every String constant of [owner], by name: its value and its kind. */
+    private fun stringConstants(owner: Any): Map<String, Pair<String, Kind>> {
+        val out = LinkedHashMap<String, Pair<String, Kind>>()
+        for (field in owner.javaClass.declaredFields) {
+            if (field.type != String::class.java || field.isSynthetic) continue
+            field.isAccessible = true
+            val value = field.get(owner) as? String ?: continue
+            out[field.name] = value to kindOf(field)
+        }
+        return out
+    }
+
+    /** The first letter of [s], if it has one. A message that opens on a number or a glyph has no first letter to hold. */
+    private fun firstLetter(s: String): Char? = s.firstOrNull { it.isLetter() }
 
     /**
-     * `Copy` constants whose lowercase "s" is a deliberate seconds-unit
-     * suffix (matching this codebase's own "10 MIN" / "8s" convention,
-     * e.g. `tapeTruncated`/`imported`'s templated output) rather than a
-     * violation of "TapeOS shouts". Still checked for the full-stop law.
+     * What a message must be, in one place: a sentence in sentence case. It
+     * ends in a full stop, `…` (work in progress) or `?`; its first letter
+     * is a capital; and it is not all caps, which is how a label reads. It
+     * does not decide which words stay caps (a control's name stays exactly as
+     * labelled): that is for review, and a regex cannot.
      */
-    private val allowedLowercaseUnit = setOf("SNIPPED", "TILE_SUBTITLE_ARMED", "NO_TAPE_YET_ARMED")
+    private fun assertMessage(value: String, what: String) {
+        assertTrue(
+            value.endsWith(".") || value.endsWith("…") || value.endsWith("?"),
+            "$what = '$value' must end in a full stop, '…' (work in progress) or '?'. If it is a label or a caption it needs @field:CopyLabel or @field:CopyCaption.",
+        )
+        assertCaption(value, what)
+    }
+
+    /** A caption: sentence case, no terminator required. */
+    private fun assertCaption(value: String, what: String) {
+        val first = value.firstOrNull()
+        assertTrue(first == null || !first.isLetter() || first.isUpperCase(), "$what = '$value' must open with a capital (sentence case).")
+        assertTrue(
+            value.any { it.isLowerCase() },
+            "$what = '$value' is all caps. A sentence is in sentence case; if it is a label it needs @field:CopyLabel.",
+        )
+    }
+
+    /** A label is CAPS. Lowercase units (the "s" in 60s) belong in a message or a caption, not a label. */
+    private fun assertLabel(value: String, what: String) {
+        assertEquals(value.uppercase(Locale.ROOT), value, "$what = '$value' is a label and a label is CAPS. If it is a sentence, remove @field:CopyLabel.")
+    }
+
+    /** For the lines the tests build by calling a function: a message, whatever its arguments. */
+    private fun assertSentenceCase(line: String) = assertMessage(line, "line")
+
+    private fun assertWord(line: String, word: String, present: Boolean = true) {
+        val found = Regex("\\b" + Regex.escape(word) + "\\b", RegexOption.IGNORE_CASE).containsMatchIn(line)
+        assertEquals(present, found, "'$word' ${if (present) "is missing from" else "must not appear in"}: $line")
+    }
 
     /**
      * The exact ~30 names the old hand-listed `listOf(Copy.A, Copy.B, ...)`
-     * checked, kept only so the test below can assert none of them ended
-     * up in an exclusion set above — proof this change swapped the
-     * mechanism (hand list -> reflection) without relaxing which strings
-     * are actually held to the law.
+     * checked, kept only so the test below can assert that every one of
+     * them is still a message, never a label or a caption — proof that the
+     * mechanism (hand list -> reflection -> marks) never relaxed which
+     * strings are held to the full-stop law.
      */
     private val legacyHandListedToasts = setOf(
         "MELODIC_ON", "KEY_OFF",
@@ -917,7 +742,7 @@ class PersonalityTest {
         )
         // The gestures a legend can be teaching.
         //
-        // This law read `"HOLD" in value` until a legend arrived for a
+        // This law read `value.contains("HOLD", ignoreCase = true)` until a legend arrived for a
         // gesture that is not a hold. That was not the law being wrong — its
         // own message says the point is naming *the gesture*, and HOLD was
         // simply the only invisible one the app had. TAP joined it when the
@@ -930,7 +755,7 @@ class PersonalityTest {
         val gestures = listOf("HOLD", "TAP")
         for ((name, value) in legends) {
             assertTrue(
-                gestures.any { it in value },
+                gestures.any { it in value.uppercase(Locale.ROOT) },
                 "Copy.$name is a legend but names none of $gestures: '$value' — " +
                     "a legend that does not name the gesture teaches nobody the thing they cannot guess. " +
                     "If it teaches a genuinely new gesture, add that verb to the list above rather than " +
@@ -940,78 +765,81 @@ class PersonalityTest {
     }
 
     @Test
-    fun `every Copy string constant shouts and stops (reflective)`() {
-        val allStrings = copyStringConstants()
-        assertTrue(
-            allStrings.size > 50,
-            "reflection over Copy.javaClass.declaredFields found only ${allStrings.size} String constants — " +
-                "expected well over 50. A build/classpath change may be hiding fields from plain reflection, " +
-                "which would make this law pass by checking nothing; fix the reflection, don't lower this bound.",
-        )
+    fun `messages are sentence case and end in a full stop, labels are caps (reflective)`() {
+        val copy = stringConstants(Copy)
+        val places = stringConstants(Places)
+        val all = copy + places
+        // Guards, one per kind, so a build or classpath change that hides the
+        // fields (or the marks) fails here instead of making the law pass by
+        // checking nothing. Fix the reflection; do not lower these bounds.
+        fun count(k: Kind, m: Map<String, Pair<String, Kind>>) = m.values.count { it.second == k }
+        assertTrue(count(Kind.MESSAGE, copy) > 300, "only ${count(Kind.MESSAGE, copy)} Copy messages found by reflection")
+        assertTrue(count(Kind.LABEL, copy) > 100, "only ${count(Kind.LABEL, copy)} Copy labels found: is @field:CopyLabel still readable at run time?")
+        assertTrue(count(Kind.CAPTION, copy) >= 10, "only ${count(Kind.CAPTION, copy)} Copy captions found")
+        assertTrue(count(Kind.LABEL, places) > 20, "only ${count(Kind.LABEL, places)} Places labels found")
+        assertTrue(count(Kind.CAPTION, places) >= 5, "only ${count(Kind.CAPTION, places)} Places captions found")
 
-        // Anti-relaxation: every exclusion above must be an addition to
-        // coverage the old hand list never had, never a carve-out from it.
+        // The old hand list: every name it held is a message, and still exists.
         for (legacy in legacyHandListedToasts) {
-            assertTrue(legacy in allStrings, "Copy.$legacy (checked by the old hand-listed test) no longer exists via reflection — did it get renamed without updating this legacy set?")
-            assertFalse(legacy in notASentence, "Copy.$legacy was checked by the original hand-listed law and must not be exempted from the full-stop law now — that would be a relaxation, not a mechanism change.")
-            assertFalse(legacy in allowedLowercaseUnit, "Copy.$legacy was checked by the original hand-listed law and must not be exempted from the shout law now — that would be a relaxation, not a mechanism change.")
-        }
-        // Every entry in the exclusion sets must correspond to a real
-        // field — a stale exclusion (the constant was renamed or removed)
-        // would otherwise sit there doing nothing, forever.
-        for (name in notASentence) {
-            assertTrue(name in allStrings, "Copy.$name is listed in notASentence but reflection found no such String constant — remove the stale exclusion (or fix the rename it's tracking).")
-        }
-        for (name in allowedLowercaseUnit) {
-            assertTrue(name in allStrings, "Copy.$name is listed in allowedLowercaseUnit but reflection found no such String constant — remove the stale exclusion (or fix the rename it's tracking).")
+            val entry = copy[legacy]
+            assertTrue(entry != null, "Copy.$legacy (checked by the old hand-listed test) no longer exists via reflection — did it get renamed without updating this legacy set?")
+            assertEquals(Kind.MESSAGE, entry.second, "Copy.$legacy was checked by the original hand-listed law and must stay a message, not a label or a caption.")
         }
 
-        for ((name, value) in allStrings) {
-            if (name !in allowedLowercaseUnit) {
-                assertEquals(value.uppercase(), value, "TapeOS shouts: Copy.$name = '$value' has a lowercase letter — if it's the deliberate seconds-unit 's' (like SNIPPED's '60s'), add Copy.$name to allowedLowercaseUnit with a comment; otherwise SHOUT IT.")
-            }
-            if (name !in notASentence) {
-                assertTrue(value.endsWith("."), "every toast lands on a full stop: Copy.$name = '$value' — if this is genuinely a label/button/busy-indicator rather than a toast, add Copy.$name to notASentence with a comment explaining why; otherwise it needs a period.")
+        for ((name, entry) in all) {
+            val (value, kind) = entry
+            when (kind) {
+                Kind.MESSAGE -> assertMessage(value, "Copy/Places.$name")
+                Kind.CAPTION -> assertCaption(value, "Copy/Places.$name")
+                Kind.LABEL -> assertLabel(value, "Copy/Places.$name")
             }
         }
     }
 
     @Test
+    fun `HELP lines are messages, and a section is a label`() {
+        val lines = Places.HELP.values.flatten() + Copy.HELP_MORE
+        assertTrue(lines.size > 30, "only ${lines.size} HELP lines")
+        for (line in lines) assertMessage(line.removePrefix("· "), "HELP line")
+        for (section in Places.HELP.keys) assertLabel(section, "HELP section")
+    }
+
+    @Test
     fun `the interpolated lines name what they acted on`() {
-        assertTrue(Copy.keySet("Am").startsWith("Am SET."), "the key leads its own toast")
+        assertTrue(Copy.keySet("Am").startsWith("Am set."), "the key leads its own toast")
         assertTrue(Copy.keySet("Am").endsWith("."), "and still lands on a full stop")
-        assertEquals("1 PAD RETUNED INTO A MINOR. THE KICK IS UNTOUCHED.", Copy.inKey(1, "A MINOR"))
+        assertEquals("1 pad retuned into A MINOR. The kick is untouched.", Copy.inKey(1, "A MINOR"))
         assertEquals(
-            "ONE TAP, YOUR IN + OUT. 8 SLICES ON THE PADS. CHOKE GROUP SET.",
+            "One tap, your IN + OUT. 8 slices on the pads. CHOKE GROUP set.",
             Copy.instantKit(8, chokeSet = true, wholeTape = false),
         )
         assertEquals("ONE TAP, THE WHOLE SAMPLE. 5 SLICES ON THE PADS.", Copy.instantKit(5, chokeSet = false, wholeTape = true))
         assertEquals("3 PADS RETUNED INTO A MINOR. THE KICK IS UNTOUCHED.", Copy.inKey(3, "A MINOR"))
-        assertTrue(Copy.takeRestored("T3").startsWith("T3 RESTORED."), "the take leads its own toast")
-        assertTrue(Copy.feelRolled(4).startsWith("FEEL #4 ROLLED."), "the seed leads its own toast")
+        assertTrue(Copy.takeRestored("T3").startsWith("T3 RESTORED.", ignoreCase = true), "the take leads its own toast")
+        assertTrue(Copy.feelRolled(4).startsWith("Feel #4 rolled."), "the seed leads its own toast")
         assertTrue(Copy.feelRolled(4).endsWith("."), "and still lands on a full stop")
         assertTrue(
-            Copy.treated("CRUSH", "A02").startsWith("CRUSH ON A02."),
+            Copy.treated("CRUSH", "A02").startsWith("CRUSH ON A02.", ignoreCase = true),
             "the treatment and the pad both lead their own toast",
         )
         assertTrue(Copy.treated("CRUSH", "A02").endsWith("."), "and still lands on a full stop")
         // The stacked landing: same opening, then the honest difference and the way back.
         val stacked = Copy.treatedStacked("CRUSH", "A02")
-        assertTrue(stacked.startsWith("CRUSH ON A02,"), stacked)
-        assertTrue("NO ORIGINAL IN THE TRASH" in stacked && "VERSIONS" in stacked, stacked)
-        assertEquals(stacked.uppercase(), stacked, "shouts")
+        assertTrue(stacked.startsWith("CRUSH ON A02,", ignoreCase = true), stacked)
+        assertTrue(stacked.contains("NO ORIGINAL IN THE TRASH", ignoreCase = true) && stacked.contains("VERSIONS", ignoreCase = true), stacked)
+        assertSentenceCase(stacked)
         assertTrue(stacked.endsWith("."))
         // A siren's landing: SEND TO PAD's own line first, then which shape landed and where its echo is.
         val sirenShot = Copy.sirenSent("A05", "Wail Siren", replaced = false, loop = false)
-        assertTrue(sirenShot.startsWith("PAD A05 ADDED: WAIL SIREN."), sirenShot)
-        assertTrue("ECHO IS IN THE RACK" in sirenShot && "SURFACE" !in sirenShot, sirenShot)
+        assertTrue(sirenShot.startsWith("PAD A05 ADDED: WAIL SIREN.", ignoreCase = true), sirenShot)
+        assertTrue(sirenShot.contains("ECHO IS IN THE RACK", ignoreCase = true) && !sirenShot.contains("SURFACE", ignoreCase = true), sirenShot)
         val sirenLoop = Copy.sirenSent("A05", "Wail Siren", replaced = true, loop = true)
-        assertTrue(sirenLoop.startsWith("PAD A05 REPLACED WITH WAIL SIREN. ORIGINAL SLEEPS IN THE TRASH."), sirenLoop)
-        assertTrue("SURFACE" in sirenLoop && "PAD ◄ ► TO A05" in sirenLoop && "RACK" !in sirenLoop, sirenLoop)
+        assertTrue(sirenLoop.startsWith("PAD A05 REPLACED WITH WAIL SIREN. ORIGINAL SLEEPS IN THE TRASH.", ignoreCase = true), sirenLoop)
+        assertTrue(sirenLoop.contains("SURFACE", ignoreCase = true) && sirenLoop.contains("PAD ◄ ► TO A05", ignoreCase = true) && !sirenLoop.contains("RACK", ignoreCase = true), sirenLoop)
         assertTrue(sirenLoop.endsWith(".") && sirenShot.endsWith("."))
         val toSurface = Copy.sirenToSurface("A13", "Wail Siren", replaced = false)
-        assertTrue(toSurface.startsWith("PAD A13 ADDED: WAIL SIREN."), toSurface)
-        assertTrue("SURFACE OPENS" in toSurface && "HOLD" in toSurface && toSurface.endsWith("."), toSurface)
+        assertTrue(toSurface.startsWith("PAD A13 ADDED: WAIL SIREN.", ignoreCase = true), toSurface)
+        assertTrue(toSurface.contains("SURFACE OPENS", ignoreCase = true) && toSurface.contains("HOLD", ignoreCase = true) && toSurface.endsWith("."), toSurface)
         assertEquals("TUNE ON A02, IN C MAJOR. ORIGINAL SLEEPS IN THE TRASH.", Copy.keyed("TUNE", "A02", "C MAJOR"))
         assertEquals("A02 BLENDED TOWARD Other:B03. ORIGINAL SLEEPS IN THE TRASH.", Copy.drifted("A02", "Other:B03"))
         // Both engines own a HAT_CLOSED and a SNARE, so the engine is
@@ -1024,7 +852,7 @@ class PersonalityTest {
         assertEquals("NO PATCH IS NEAR. THE CLOSEST IS A SKIN SNARE, 0.61 AWAY.", Copy.desampleFar("SKIN", "SNARE", 0.61f))
         assertEquals("NOT A NOTE: A KICK IS A DRUM, NOT A NOTE.", Copy.notANote("a kick is a drum, not a note"))
         assertTrue(
-            Copy.mutated("SPLICE", "A01", "A03").startsWith("SPLICE: A01 × A03."),
+            Copy.mutated("SPLICE", "A01", "A03").startsWith("SPLICE: A01 × A03.", ignoreCase = true),
             "the move and both parents lead their own toast",
         )
         assertTrue(Copy.mutated("SPLICE", "A01", "A03").endsWith("."), "and still lands on a full stop")
@@ -1074,20 +902,20 @@ class PersonalityTest {
         // the chooser opened.
         assertEquals("BREAK IS READY TO SEND. PICK WHERE IT GOES.", Copy.snipReady("BREAK"))
         assertTrue(Copy.snipReady("BREAK").endsWith("."), "and still lands on a full stop")
-        assertFalse("SENT" in Copy.snipReady("BREAK"), "the chooser opening is not the file leaving")
+        assertFalse(Copy.snipReady("BREAK").contains("SENT", ignoreCase = true), "the chooser opening is not the file leaving")
         assertEquals("PAD MADE — DRONE 2. IN THE LIBRARY.", Copy.madeNamed("PAD", "DRONE 2"))
         assertEquals("INSTRUMENT MADE — BELL. IN THE LIBRARY.", Copy.madeNamed("INSTRUMENT", "BELL"))
         assertTrue(Copy.madeNamed("PAD", "DRONE").endsWith("."), "and still lands on a full stop")
         val made = Copy.madeNamed("PAD", "DRONE 2")
-        assertEquals(made.uppercase(), made, "TapeOS shouts here too")
+        assertSentenceCase(made)
         // SYNTH's MAKE INSTRUMENT (RESIN, held): the sheet names what MAKE
         // will leave, by the same name the madeNamed toast then uses, and
         // says where it plays. The progress line counts zones, 1-based
         // like every count on screen, and trails off like treatmentBusy.
         val note = Copy.heldInstrumentNote("Big Brass 2")
-        assertTrue("BIG BRASS 2" in note, "the note names what will land: $note")
-        assertTrue("KEYBOARD" in note && note.endsWith("."), "and says where it plays, on a full stop: $note")
-        assertEquals(note.uppercase(), note, "TapeOS shouts here too")
+        assertTrue(note.contains("BIG BRASS 2", ignoreCase = true), "the note names what will land: $note")
+        assertTrue(note.contains("KEYBOARD", ignoreCase = true) && note.endsWith("."), "and says where it plays, on a full stop: $note")
+        assertSentenceCase(note)
         assertEquals("RENDERING 3/9…", Copy.instrumentRendering(3, 9))
         // SYNTH's DRONE TO LOOP: the toast names the note, the track as
         // counted on screen, and how long before it repeats; LOOP's readout
@@ -1096,13 +924,13 @@ class PersonalityTest {
         assertEquals("A3 DRONE IS ON TRACK 1, 1 BAR AROUND.", Copy.droneLanded("A3", 1, 1))
         assertEquals("DRONE A1 · 2/4", Copy.droneBlock("A1", 2, 4))
         assertEquals("DRONE A1 · 1/8 · -3.2¢ OFF", Copy.droneBlock("A1", 1, 8, -3.16))
-        assertTrue("TEMPO" in Copy.DRONE_NOTE && "LOOP" in Copy.DRONE_NOTE, Copy.DRONE_NOTE)
+        assertTrue(Copy.DRONE_NOTE.contains("TEMPO", ignoreCase = true) && Copy.DRONE_NOTE.contains("LOOP", ignoreCase = true), Copy.DRONE_NOTE)
     }
 
     @Test
     fun `tapeTruncated matches the import cap's own truncation phrasing`() {
-        assertEquals("FIRST 10 MIN KEPT - A SAMPLE IS ONLY SO LONG.", Copy.tapeTruncated(600f))
-        assertEquals("FIRST 8s KEPT - A SAMPLE IS ONLY SO LONG.", Copy.tapeTruncated(8.2f))
+        assertEquals("First 10 min kept - a sample is only so long.", Copy.tapeTruncated(600f))
+        assertEquals("First 8s kept - a sample is only so long.", Copy.tapeTruncated(8.2f))
         // Same tail as SnipStore.import's own truncation line — one voice
         // for "a cap cut this tape's tail", not two competing ones.
         assertTrue(Copy.imported(180f, truncated = true).endsWith(Copy.tapeTruncated(180f)))
@@ -1218,13 +1046,13 @@ class PersonalityTest {
     @Test
     fun `one section clipped is a sentence, not a count with an S on it`() {
         val one = Copy.clippedSectionsIntoKit(1, 2, 8, 0)
-        assertTrue(one.startsWith("1 SECTION IS"), "said: $one")
-        assertTrue(one.contains("IT RIDES TO THE MPC"), "said: $one")
+        assertTrue(one.startsWith("1 SECTION IS", ignoreCase = true), "said: $one")
+        assertTrue(one.contains("IT RIDES TO THE MPC", ignoreCase = true), "said: $one")
         val many = Copy.clippedSectionsIntoKit(3, 6, 24, 0)
-        assertTrue(many.startsWith("3 SECTIONS ARE") && many.contains("THEY RIDE"), "said: $many")
+        assertTrue(many.startsWith("3 SECTIONS ARE", ignoreCase = true) && many.contains("THEY RIDE", ignoreCase = true), "said: $many")
         // And the same on the branch that counts what stayed behind.
-        assertTrue(Copy.clippedSectionsIntoKit(1, 2, 8, 1).startsWith("1 SECTION IN"))
-        assertTrue(Copy.clippedSectionsIntoKit(2, 2, 8, 2).startsWith("2 SECTIONS IN"))
+        assertTrue(Copy.clippedSectionsIntoKit(1, 2, 8, 1).startsWith("1 SECTION IN", ignoreCase = true))
+        assertTrue(Copy.clippedSectionsIntoKit(2, 2, 8, 2).startsWith("2 SECTIONS IN", ignoreCase = true))
         // BARS and NOTES used to stay plural in this same sentence even
         // though SECTIONS was already singular right beside them — this
         // function's own KDoc bragged about fixing the count-with-an-S-on-it
@@ -1232,11 +1060,11 @@ class PersonalityTest {
         // neighbors. One bar, one note, one section, one snip ring, all at
         // once: the sentence that would have caught it.
         assertEquals(
-            "1 SECTION IS IN THE KIT'S GROOVES — 1 BAR, 1 NOTE, ONE SEQUENCE EACH. IT RIDES TO THE MPC.",
+            "1 section is in the kit's grooves — 1 bar, 1 note, one sequence each. it rides to the MPC.",
             Copy.clippedSectionsIntoKit(1, 1, 1, 0),
         )
         assertEquals(
-            "1 SECTION IN THE GROOVES: 1 BAR, 1 NOTE. 1 SAMPLE RING STAYED OUT.",
+            "1 section in the grooves: 1 bar, 1 note. 1 SAMPLE RING stayed out.",
             Copy.clippedSectionsIntoKit(1, 1, 1, 1),
         )
     }
@@ -1250,11 +1078,11 @@ class PersonalityTest {
     @Test
     fun `clippedIntoKit sings BARS and NOTES singular at one, same as its multi-section sibling`() {
         assertEquals(
-            "GROOVE IS IN THE KIT'S GROOVES — 1 BAR, 1 NOTE. IT RIDES TO THE MPC.",
+            "GROOVE is in the kit's grooves — 1 bar, 1 note. It rides to the MPC.",
             Copy.clippedIntoKit("GROOVE", 1, 1, 0),
         )
         assertEquals(
-            "GROOVE IN THE GROOVES: 2 BARS, 8 NOTES. 1 SAMPLE RING STAYED OUT.",
+            "GROOVE in the grooves: 2 bars, 8 notes. 1 SAMPLE RING stayed out.",
             Copy.clippedIntoKit("GROOVE", 2, 8, 1),
         )
     }
@@ -1262,8 +1090,8 @@ class PersonalityTest {
     /** CHOP ALL's own singular: one .wav file chopped, not "1 FILES". */
     @Test
     fun `choppedAll counts its files singular at one`() {
-        assertEquals("CHOPPED 1 OF 1 FILE INTO 1 KIT.", Copy.choppedAll(made = 1, wavCount = 1, skipped = 0, failed = 0))
-        assertEquals("CHOPPED 2 OF 3 FILES INTO 2 KITS.", Copy.choppedAll(made = 2, wavCount = 3, skipped = 0, failed = 0))
+        assertEquals("Chopped 1 of 1 file into 1 kit.", Copy.choppedAll(made = 1, wavCount = 1, skipped = 0, failed = 0))
+        assertEquals("Chopped 2 of 3 files into 2 kits.", Copy.choppedAll(made = 2, wavCount = 3, skipped = 0, failed = 0))
     }
 
     /**
@@ -1292,7 +1120,7 @@ class PersonalityTest {
         )
         for ((who, line) in before + after) {
             assertTrue(
-                "SAMPLES" in line,
+                line.contains("SAMPLES", ignoreCase = true),
                 "$who reads \"$line\", which does not name SAMPLES (the buttons say BOUNCE TO SAMPLES, the landing lines say SAVED SAMPLES). Every bounce in the app writes through " +
                     "SnipStore.import into the folder SAVED SAMPLES lists — three names for one destination is what " +
                     "prior #25 was, and TAPE (ORBIT's old word) is a different screen.",
@@ -1315,16 +1143,16 @@ class PersonalityTest {
      */
     @Test
     fun `the layout preview counts the pads and tallies the classes`() {
-        assertEquals("NOTHING ON THE PADS YET.", Copy.layoutPreview(List(16) { null }))
+        assertEquals("Nothing on the pads yet.", Copy.layoutPreview(List(16) { null }))
         assertEquals(
-            "1 PAD OF 16 · 1 KICK",
+            "1 pad of 16 · 1 KICK",
             Copy.layoutPreview(listOf("KICK") + List(15) { null }),
             "singular at one, like every other count in this file",
         )
         // Sorted by count, then alphabetically, so the same layout always
         // reads the same way rather than following slot order.
         assertEquals(
-            "5 PADS OF 16 · 3 HAT CLOSED · 1 KICK · 1 SNARE",
+            "5 pads of 16 · 3 HAT CLOSED · 1 KICK · 1 SNARE",
             Copy.layoutPreview(
                 listOf("HAT_CLOSED", "KICK", "HAT_CLOSED", "SNARE", "HAT_CLOSED") + List(11) { null },
             ),
@@ -1336,9 +1164,9 @@ class PersonalityTest {
     /** OUT's first line names what is going out, in a sentence that ends on a full stop. */
     @Test
     fun `out names what it is exporting`() {
-        assertEquals("EXPORTING THE KIT BREAKS.", Copy.exportingKit("BREAKS"))
-        assertEquals("EXPORTING THE KIT BREAKS AND THE PROJECT DEMO.", Copy.exportingKitAndProject("BREAKS", "DEMO"))
-        assertEquals("EXPORTING THE EXPANSION VOL 1.", Copy.exportingExpansion("VOL 1"))
+        assertEquals("Exporting the kit BREAKS.", Copy.exportingKit("BREAKS"))
+        assertEquals("Exporting the kit BREAKS and the project DEMO.", Copy.exportingKitAndProject("BREAKS", "DEMO"))
+        assertEquals("Exporting the expansion VOL 1.", Copy.exportingExpansion("VOL 1"))
     }
 
     /** J30: CHOP's fallback source, named only when the app picked it rather than the player. */
@@ -1353,8 +1181,8 @@ class PersonalityTest {
         // carry SNIPPED's qualified cap ("UP TO 60s", not "the last 60s") and must
         // not repeat NO_TAPE_YET's instruction to tap LISTEN.
         assertTrue(Copy.NO_TAPE_YET_ARMED.startsWith(Copy.SESSION_ARMED), Copy.NO_TAPE_YET_ARMED)
-        assertTrue("UP TO 60s" in Copy.NO_TAPE_YET_ARMED && "UP TO 60s" in Copy.SNIPPED)
-        assertTrue("TAP LISTEN" !in Copy.NO_TAPE_YET_ARMED, Copy.NO_TAPE_YET_ARMED)
+        assertTrue(Copy.NO_TAPE_YET_ARMED.contains("up to 60s", ignoreCase = true) && Copy.SNIPPED.contains("up to 60s", ignoreCase = true))
+        assertTrue(!Copy.NO_TAPE_YET_ARMED.contains("TAP LISTEN", ignoreCase = true), Copy.NO_TAPE_YET_ARMED)
     }
 
     @Test
@@ -1368,7 +1196,7 @@ class PersonalityTest {
         )
         for (c in all) {
             assertTrue(c.length <= 8, "'$c' must fit under a tab at 360 dp")
-            assertEquals(c.uppercase(), c, "TapeOS shouts: '$c'")
+            assertLabel(c, "tab caption")
         }
         assertEquals("PAD A01", Copy.surfacePeekVoice(false, "A01"))
         assertEquals("ARM B", Copy.surfacePeekShape('B'))

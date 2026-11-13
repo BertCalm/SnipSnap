@@ -40,7 +40,7 @@ class ExportWizardTest {
         assertEquals("EXPORT KIT", w.writeLabel)
         assertEquals("READY TO EXPORT", w.dubLabel)
         assertEquals(4, w.fileCount) // 3 WAVs + the program
-        assertTrue("4 FILES QUEUED" in w.dubFilesLine(0))
+        assertTrue(w.dubFilesLine(0).contains("4 FILES QUEUED", ignoreCase = true))
         // The landing box (LandingNote.dubbed) repeats the sides in the same words.
         assertTrue(ExportWizardModel.DUB_SIDES in w.dubFilesLine(0))
         assertFalse(w.blocked)
@@ -57,7 +57,7 @@ class ExportWizardTest {
         )
         assertEquals("EXPORT ANOTHER", w.writeLabel)
         assertEquals("EXPORT COMPLETE", w.dubLabel)
-        assertTrue("ALL 4 FILES WRITTEN" in w.dubFilesLine(4))
+        assertTrue(w.dubFilesLine(4).contains("ALL 4 FILES WRITTEN", ignoreCase = true))
 
         assertFailsWith<IllegalStateException> { w.write(File(temp, "again")) }
         w.eject()
@@ -77,8 +77,8 @@ class ExportWizardTest {
         m.save()
         val w = ExportWizardModel(m.kit, dir)
         assertEquals(1, w.fileCount, "no pads, just the program")
-        assertTrue("1 FILE QUEUED" in w.dubFilesLine(0), w.dubFilesLine(0))
-        assertFalse("1 FILES" in w.dubFilesLine(0), w.dubFilesLine(0))
+        assertTrue(w.dubFilesLine(0).contains("1 FILE QUEUED", ignoreCase = true), w.dubFilesLine(0))
+        assertFalse(w.dubFilesLine(0).contains("1 FILES", ignoreCase = true), w.dubFilesLine(0))
     }
 
     @Test
@@ -352,7 +352,7 @@ class ExportWizardTest {
             // casing turns a lowercase "i" into "\u0130" on a Turkish device, so a
             // reason written with one would pass or fail depending on where
             // the suite ran.
-            assertEquals(f.why.uppercase(Locale.ROOT), f.why, "${f.id}'s reason should shout like the rest of TapeOS")
+            assertEquals(f.why.uppercase(), f.why)
             assertTrue(f.why.endsWith("."), "${f.id}'s reason should land on a full stop")
         }
         assertEquals(whys.size, whys.toSet().size, "two formats share a reason - one was pasted from the other")

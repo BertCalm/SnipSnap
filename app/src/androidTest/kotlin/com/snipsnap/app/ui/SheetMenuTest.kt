@@ -24,7 +24,7 @@ class SheetMenuTest : ComposeScreenTest() {
     private fun show(onDismiss: () -> Unit = {}, canRun: Boolean = true, onRun: () -> Unit = {}, onOther: () -> Unit = {}) {
         setPhoneContent {
             SheetMenu("TOOLS", onDismiss) {
-                SheetRow("BACKUP", "EVERY KIT, ONE FILE", onRun, enabled = canRun)
+                SheetRow("BACKUP", "Every kit, one file", onRun, enabled = canRun)
                 SheetRow("INSPECT FILE", "INSPECT A FILE", onOther, accessibilityLabel = "OPEN INSPECT FILE")
             }
         }

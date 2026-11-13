@@ -1359,19 +1359,19 @@ class UserPresetsTest {
 
     @Test
     fun `the forget lines ask first, then say where it went and how it comes back`() {
-        assertEquals("FORGET MY KICK? IT WAITS IN DELETED PRESETS FOR ${Reversal.DAYS} DAYS.", Copy.presetForgetAsk("MY KICK"))
-        assertEquals("MY KICK IS OFF THE STRIP. ${Reversal.MIND}", Copy.presetForgotten("MY KICK"))
+        assertEquals("Forget MY KICK? It waits in DELETED PRESETS for ${Reversal.DAYS} days.", Copy.presetForgetAsk("MY KICK"))
+        assertEquals("MY KICK is off the strip. ${Reversal.MIND}", Copy.presetForgotten("MY KICK"))
         assertEquals("MY KICK 2 IS BACK UNDER YOURS.", Copy.presetRestored("MY KICK 2"))
-        assertTrue("HOLD ITS CHIP TO FORGET IT" in Copy.PRESET_NAME_NOTE, "the save note says how a preset leaves: ${Copy.PRESET_NAME_NOTE}")
+        assertTrue(Copy.PRESET_NAME_NOTE.contains("HOLD ITS CHIP TO FORGET IT", ignoreCase = true), "the save note says how a preset leaves: ${Copy.PRESET_NAME_NOTE}")
         assertTrue(Reversal.BIN in Copy.PRESET_NAME_NOTE, "and for how long the bin keeps it")
-        assertTrue("STAYS" in Copy.PRESET_FORGET_FAILED && "TRASH" in Copy.PRESET_RESTORE_FAILED)
+        assertTrue(Copy.PRESET_FORGET_FAILED.contains("STAYS", ignoreCase = true) && Copy.PRESET_RESTORE_FAILED.contains("TRASH", ignoreCase = true))
     }
 
     @Test
     fun `the copy lines say what happened and what is not kept`() {
-        assertEquals("MY KICK SAVED. IT IS UNDER THE FACTORY ROW ON EVERY KIT.", Copy.presetSaved("MY KICK"))
-        assertEquals("MY KICK REPLACED. THE OLD SETTINGS ARE NOT KEPT.", Copy.presetReplaced("MY KICK"))
-        assertEquals("REPLACES YOUR MY KICK. THE OLD SETTINGS ARE NOT KEPT.", Copy.presetReplaces("MY KICK"))
+        assertEquals("MY KICK saved. It is under the factory row on every kit.", Copy.presetSaved("MY KICK"))
+        assertEquals("MY KICK replaced. The old settings are not kept.", Copy.presetReplaced("MY KICK"))
+        assertEquals("Replaces your MY KICK. The old settings are not kept.", Copy.presetReplaces("MY KICK"))
         assertEquals("THE FACTORY HAS DUSTY BOOM. PICK ANOTHER NAME.", Copy.presetNameFactory("DUSTY BOOM"))
         assertTrue("${UserPresets.MAX_NAME} LETTERS" in Copy.PRESET_NAME_NOTE, "the note says the one number the rule has: ${Copy.PRESET_NAME_NOTE}")
         assertTrue(Copy.PRESET_NAME_BLANK.endsWith("."))
@@ -1459,10 +1459,10 @@ class UserPresetsTest {
 
     @Test
     fun `the backup and landing lines count the presets beside the kits, and read as they always did without them`() {
-        assertEquals("2 KITS ON ONE FILE. PICK WHERE IT GOES.", Copy.backedUp(2, 0))
-        assertEquals("3 KITS AND 2 PRESETS ON ONE FILE. PICK WHERE IT GOES.", Copy.backedUp(3, 0, 2))
+        assertEquals("2 kits on one file. Pick where it goes.", Copy.backedUp(2, 0))
+        assertEquals("3 kits and 2 presets on one file. Pick where it goes.", Copy.backedUp(3, 0, 2))
         assertEquals("1 KIT AND 1 PRESET ON ONE FILE. 1 SKIPPED. PICK WHERE IT GOES.", Copy.backedUp(1, 1, 1))
-        assertEquals("1 KIT LANDED IN THE LIBRARY.", Copy.landed(1, 0))
+        assertEquals("1 kit landed in the LIBRARY.", Copy.landed(1, 0))
         assertEquals("1 KIT LANDED IN THE LIBRARY. 1 PRESET UNDER YOURS.", Copy.landed(1, 0, 1))
         assertEquals("2 KITS LANDED IN THE LIBRARY. 3 PRESETS UNDER YOURS. 1 SKIPPED.", Copy.landed(2, 1, 3))
     }

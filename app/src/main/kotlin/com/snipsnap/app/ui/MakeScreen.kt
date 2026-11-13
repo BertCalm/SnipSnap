@@ -85,14 +85,14 @@ fun MakeList(onOpen: (Bench) -> Unit, hasKit: Boolean, onMyVoice: (() -> Unit)? 
             TapeText(Copy.makeHeader(kitName.takeIf { hasKit }), TapeType.lcdSmall, scheme.lcdInk.tape, maxLines = 3)
         }
         if (!hasKit) {
-            TapeText(if (onMyVoice == null) Copy.ADD_KIT_FIRST else "OPEN A KIT FOR NEW PADS. MY VOICE CAN KEEP A PERSONAL SOURCE FIRST.",
+            TapeText(if (onMyVoice == null) Copy.ADD_KIT_FIRST else "Open a kit for new pads. MY VOICE can keep a personal source first.",
                 TapeType.pixelSmall, scheme.ink2.tape, Modifier.fillMaxWidth(), maxLines = 3)
         }
         MakeGroupHeading(Copy.MAKE_A_SOUND)
         for (bench in listOf(Bench.SYNTH, Bench.SNAP, Bench.SURFACE, Bench.CONFLUENCE_VOICES)) {
             MakeRow("${bench.label} ▸", sub = Copy.makeSub(bench), scheme = scheme, onOpen = { onOpen(bench) })
         }
-        if (onMyVoice != null) MakeRow("MY VOICE ▸", "A SHORT VOWEL INTO A PERSONAL VOICE. KEPT ON THIS PHONE.", scheme, onMyVoice)
+        if (onMyVoice != null) MakeRow("MY VOICE ▸", "A short vowel into a personal voice. Kept on this phone.", scheme, onMyVoice)
         MakeGroupHeading(Copy.WHAT_YOU_MADE)
         for (bench in listOf(Bench.INSTRUMENTS)) {
             MakeRow("${bench.label} ▸", sub = Copy.makeSub(bench), scheme = scheme, onOpen = { onOpen(bench) })
@@ -205,7 +205,7 @@ fun InstrumentsBench(
 }
 
 /** The empty list's one line: where an instrument comes from. */
-private const val NO_INSTRUMENTS = "NO INSTRUMENTS YET. SYNTH'S MAKE INSTRUMENT, OR A PAD EDITOR'S, PUTS ONE HERE."
+private const val NO_INSTRUMENTS = "No instruments yet. Synth's MAKE INSTRUMENT, or a pad editor's, puts one here."
 
 /** One instrument: its name, zones and root, and KEYS ▸; EXPANSION ▸ beside it when [onExpansion] is given. */
 @Composable

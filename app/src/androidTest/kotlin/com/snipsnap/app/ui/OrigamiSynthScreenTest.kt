@@ -250,7 +250,7 @@ class OrigamiSynthScreenTest {
         assertEquals("saving, recalling and sending must keep the complete authored TOUCH recipe",
             saved.copy(name = delivered.name), delivered)
         click("MAKE INSTRUMENT")
-        compose.onNodeWithText("C3–C5 · SOFT, MID AND HARD HITS CHANGE SOURCE AND FOLDED COLOR. HOLD TO SUSTAIN; LET GO TO FADE.").assertExists()
+        compose.onNodeWithText("C3–C5 · soft, mid and hard hits change source and folded color. Hold to sustain; let go to fade.").assertExists()
         compose.onNodeWithContentDescription("RELEASE").assertExists()
         compose.onNodeWithContentDescription("ATTACK").assertDoesNotExist()
         // Opening this sheet checks the selected performance spec without rendering its zones.
@@ -262,18 +262,18 @@ class OrigamiSynthScreenTest {
         click("FAN")
         dial("MOTION", 0f)
         click("ORIGAMI BLOOM")
-        compose.onNodeWithText("START OPEN, THEN FOLD.").assertExists()
+        compose.onNodeWithText("Start open, then fold.").assertExists()
         compose.onNodeWithText("MOTION SETS GESTURE TIME · FAST → SLOW · PLAYS ONCE").assertExists()
         compose.onNodeWithText("0.12s").assertExists()
         dial("MOTION", 1f)
         compose.onNodeWithText("1.20s").assertExists()
         click("ORIGAMI UNFOLD")
-        compose.onNodeWithText("START FOLDED, THEN OPEN.").assertExists()
+        compose.onNodeWithText("Start folded, then open.").assertExists()
         compose.onNodeWithText("1.20s").assertExists()
         click("MAKE INSTRUMENT")
         compose.onNodeWithContentDescription("RELEASE").assertExists()
         compose.onNodeWithContentDescription("ATTACK").assertDoesNotExist()
-        compose.onNodeWithText("C3–C5 · HOLD A KEY TO SUSTAIN. LET GO TO FADE.").assertExists()
+        compose.onNodeWithText("C3–C5 · hold a key to sustain. Let go to fade.").assertExists()
         compose.onNodeWithText("RELEASE 0.60 s").assertExists()
         dial("RELEASE", 1f)
         compose.onNodeWithText("RELEASE 1.50 s").assertExists()
@@ -286,11 +286,11 @@ class OrigamiSynthScreenTest {
         show()
         click("FAN")
         click("ORIGAMI VELOCITY FOLD")
-        compose.onNodeWithText("SOFT HITS HAVE LESS FOLDED COLOR. HARD HITS HAVE MORE.").assertExists()
+        compose.onNodeWithText("SOFT HITS have less folded color. Hard hits have more.").assertExists()
         compose.onNodeWithText("PADS: USE SOFT HITS FOR VELOCITY COLOR").assertExists()
         click("ORIGAMI PREVIEW SOFT")
         click("MAKE INSTRUMENT")
-        compose.onNodeWithText("C3–C5 · SOFT, MID AND HARD TOUCH CHANGE FOLDED COLOR. HOLD TO SUSTAIN; LET GO TO FADE.").assertExists()
+        compose.onNodeWithText("C3–C5 · soft, mid and hard touch change folded color. Hold to sustain; let go to fade.").assertExists()
         compose.onNodeWithContentDescription("RELEASE").assertExists()
         compose.onNodeWithContentDescription("ATTACK").assertDoesNotExist()
         compose.onNodeWithText("RELEASE 0.60 s").assertExists()
@@ -347,10 +347,10 @@ class OrigamiSynthScreenTest {
         assertEquals(before, controls.associateWith(::macroValue))
         assertEquals(written, OrigamiPatch.fromJsonText(settings.getValue("patch.ORIGAMI.FAN")))
         if (mode == OrigamiExpression.TOUCH) {
-            compose.onNodeWithText("SOFT HITS DARKEN THE SOURCE AND FOLD. STRONG HITS KEEP THEIR COLOR.").assertExists()
+            compose.onNodeWithText("SOFT HITS darken the source and fold. Strong hits keep their color.").assertExists()
             compose.onNodeWithText("PADS: USE SOFT HITS FOR VELOCITY COLOR").assertExists()
             click("MAKE INSTRUMENT")
-            compose.onNodeWithText("C3–C5 · SOFT, MID AND HARD HITS CHANGE SOURCE AND FOLDED COLOR. HOLD TO SUSTAIN; LET GO TO FADE.").assertExists()
+            compose.onNodeWithText("C3–C5 · soft, mid and hard hits change source and folded color. Hold to sustain; let go to fade.").assertExists()
         }
     }
 
@@ -443,7 +443,7 @@ class OrigamiSynthScreenTest {
             for (hit in listOf("SOFT", "MID", "FULL")) {
                 compose.onNodeWithContentDescription("ORIGAMI PREVIEW $hit").assertDoesNotExist()
             }
-            compose.onNodeWithText("THIS SAVED RECIPE KEEPS ITS ORIGINAL SOUND. LOAD A FACTORY PRESET FOR GESTURES AND VELOCITY COLOR.").assertExists()
+            compose.onNodeWithText("This saved recipe keeps its original sound. Load a factory preset for gestures and velocity color.").assertExists()
             compose.onNodeWithContentDescription("MAKE INSTRUMENT").assertDoesNotExist()
             assertEquals(.31f, macroValue("FOLD"), .0001f)
             val restored = OrigamiPatch.fromJsonText(settings.getValue("patch.ORIGAMI.${voice.name}"))
@@ -517,7 +517,7 @@ class OrigamiSynthScreenTest {
             for (gesture in OrigamiGesture.entries) {
                 compose.onNodeWithContentDescription("ORIGAMI ${gesture.name}").assertDoesNotExist()
             }
-            compose.onNodeWithText("THIS SAVED RECIPE KEEPS ITS ORIGINAL SOUND. LOAD A FACTORY PRESET FOR GESTURES AND VELOCITY COLOR.").assertExists()
+            compose.onNodeWithText("This saved recipe keeps its original sound. Load a factory preset for gestures and velocity color.").assertExists()
         }
         assertEquals(19f / 24f, macroValue("TUNE"), .0001f)
         // Sparse older recipes must use their frozen defaults, not R4's

@@ -86,7 +86,7 @@ class PedalSlateTest {
         val mine = row("touchwahed", "compressed", "wahed", "forged", "driven")
         val text = PedalSlate.write(mine)
         assertEquals(mine, PedalSlate.read(text))
-        assertTrue("\"touchwahed\"" in text && "TOUCH" !in text, "the store holds keys, never words: $text")
+        assertTrue("\"touchwahed\"" in text && !text.contains("TOUCH"), "the store holds keys, never words: $text")
         assertEquals("pedals.row", PedalSlate.PREFS_KEY, "the key every saved row lives under; changing it forgets every row")
         assertEquals(1.0, (com.snipsnap.json.Json.parse(text).obj()["version"] as JsonValue.Num).value, text)
         for (bad in listOf(null, "", "   ", "not json", "[]", "{}", "\"row\"", "{\"version\":99,\"row\":[]}",
@@ -653,7 +653,7 @@ class PedalSlateTest {
         PedalSlate.land(m, 1, PedalSlate.Gesture.On("wahed"))
         val landed = PedalSlate.land(m, 1, PedalSlate.Gesture.On("touchwahed"))
         assertEquals(PedalSlate.Landed.Applied(board(PedalBoard.Pick("touchwahed", 0.7f)), stacked = false, replaced = listOf("wahed")), landed)
-        assertEquals("TOUCH ON A01 IN PLACE OF WAH. ORIGINAL SLEEPS IN THE TRASH.", PedalSlate.toast(PedalSlate.Gesture.On("touchwahed"), landed, "A01"))
+        assertEquals("TOUCH on A01 in place of WAH. Original is in the trash.", PedalSlate.toast(PedalSlate.Gesture.On("touchwahed"), landed, "A01"))
         m.pedalPad(2, board(PedalBoard.Pick("touchwahed", 0.7f)))
         m.save()
         assertContentEquals(samples(m, dir, 2), samples(m, dir, 1), "TOUCH alone, from the original")
@@ -711,14 +711,14 @@ class PedalSlateTest {
         val withoutDelay = PedalSlate.Landed.Applied(board(PedalBoard.Pick("compressed", 0.7f), PedalBoard.Pick("driven", 0.7f)), stacked = false)
         assertEquals(Copy.treated("DELAY", "A01"), PedalSlate.toast(on, withDelay, "A01"))
         assertEquals(Copy.treatedStacked("DELAY", "A01"), PedalSlate.toast(on, withDelay.copy(stacked = true), "A01"))
-        assertEquals("DELAY OFF A01. AMT NOW MOVES DRIVE.", PedalSlate.toast(off, withoutDelay, "A01"))
-        assertEquals("DELAY OFF A01. AMT NOW MOVES DRIVE.", PedalSlate.toast(PedalSlate.Gesture.Amount("delayed", 0f), withoutDelay, "A01"))
+        assertEquals("DELAY off A01. Amt now moves DRIVE.", PedalSlate.toast(off, withoutDelay, "A01"))
+        assertEquals("DELAY off A01. Amt now moves DRIVE.", PedalSlate.toast(PedalSlate.Gesture.Amount("delayed", 0f), withoutDelay, "A01"))
         assertEquals(Copy.treated("DELAY", "A01"), PedalSlate.toast(PedalSlate.Gesture.Amount("delayed", 0.4f), withDelay, "A01"))
         val touch = PedalSlate.Landed.Applied(board(PedalBoard.Pick("touchwahed", 0.7f)), stacked = false, replaced = listOf("wahed"))
-        assertEquals("TOUCH ON A01 IN PLACE OF WAH. ORIGINAL SLEEPS IN THE TRASH.", PedalSlate.toast(PedalSlate.Gesture.On("touchwahed"), touch, "A01"))
+        assertEquals("TOUCH on A01 in place of WAH. Original is in the trash.", PedalSlate.toast(PedalSlate.Gesture.On("touchwahed"), touch, "A01"))
         val flip = PedalSlate.Gesture.Flip("wahed", PedalSide.POST)
-        assertEquals("WAH NOW AFTER THE AMP ON A01.", PedalSlate.toast(flip, PedalSlate.Landed.Applied(board(PedalBoard.Pick("wahed", 0.5f, PedalSide.POST)), false), "A01"))
-        assertEquals("WAH NOW BEFORE THE AMP ON A01.", PedalSlate.toast(flip, PedalSlate.Landed.Applied(board(PedalBoard.Pick("wahed", 0.5f)), false), "A01"))
+        assertEquals("WAH now after the amp on A01.", PedalSlate.toast(flip, PedalSlate.Landed.Applied(board(PedalBoard.Pick("wahed", 0.5f, PedalSide.POST)), false), "A01"))
+        assertEquals("WAH now before the amp on A01.", PedalSlate.toast(flip, PedalSlate.Landed.Applied(board(PedalBoard.Pick("wahed", 0.5f)), false), "A01"))
         assertEquals(
             "WAH NOW AFTER THE AMP ON A01, IN PLACE OF TOUCH. ORIGINAL SLEEPS IN THE TRASH.",
             PedalSlate.toast(flip, PedalSlate.Landed.Applied(board(PedalBoard.Pick("wahed", 0.5f, PedalSide.POST)), false, listOf("touchwahed")), "A01"),
@@ -730,7 +730,7 @@ class PedalSlateTest {
         assertEquals("REMOVE WIDE BEFORE ADDING PEDALS.", PedalSlate.toast(on, PedalSlate.Landed.Printed("WIDE"), "A01"))
         assertEquals(Copy.RETREAT_REFUSED, PedalSlate.toast(on, PedalSlate.Landed.GhostsPostdate, "A01"))
         assertEquals(Copy.PEDALS_NOT_BINNED, PedalSlate.toast(on, PedalSlate.Landed.NotBinned, "A01"))
-        assertTrue("VERSIONS" !in Copy.PEDALS_NOT_BINNED, "VERSIONS cannot bring back audio the bin let go of")
+        assertTrue(!Copy.PEDALS_NOT_BINNED.contains("VERSIONS", ignoreCase = true), "VERSIONS cannot bring back audio the bin let go of")
         assertEquals("TOUCH ON THE ROW IN EVERY KIT. FORGE MOVES BEHIND MORE.", Copy.rowSwapped("TOUCH", "FORGE"))
         assertEquals("NOW TAP THE ROW CHIP TO SWAP FOR TOUCH.", Copy.putOnRowPrompt("TOUCH"))
     }

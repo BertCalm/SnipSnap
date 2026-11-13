@@ -54,8 +54,8 @@ class StackTakesTest {
     @Test
     fun `the warning line names the zone and the number`() {
         val line = Copy.stackOverLive("SOFT", 3.04f)
-        assertTrue(line.startsWith("SOFT IS +3.0 DB OVER LIVE."), line)
-        assertEquals("1 REAL TAKE STACKED UNDER LIVE. THIS PAD IS LAYERED NOW - CLEAR SOFT HITS TO TREAT IT AGAIN.", Copy.stacked(1))
-        assertTrue(Copy.stacked(3).startsWith("3 REAL TAKES STACKED"))
+        assertTrue(line.startsWith("SOFT IS +3.0 DB OVER LIVE.", ignoreCase = true), line)
+        assertEquals("1 real take stacked under live. This pad is layered now - clear SOFT HITS to treat it again.", Copy.stacked(1))
+        assertTrue(Copy.stacked(3).startsWith("3 REAL TAKES STACKED", ignoreCase = true))
     }
 }

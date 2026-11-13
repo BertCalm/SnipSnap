@@ -719,7 +719,7 @@ fun OrbitScreen(
     fun addSection() {
         val s = set ?: return
         if (s.sections.size >= OrbitSection.MAX_SECTIONS) {
-            onToast("AN ARRANGEMENT HOLDS ${OrbitSection.MAX_SECTIONS} SECTIONS.")
+            onToast("An arrangement holds ${OrbitSection.MAX_SECTIONS} sections.")
             return
         }
         val plays = s.sections.lastOrNull()?.plays ?: s.orbits.indices.toSet()
@@ -1098,7 +1098,7 @@ fun OrbitScreen(
                 }
                 onToast(
                     if (caveats.isEmpty()) {
-                        "$name IS ON THE RINGS — $rings. RE-LENGTH ONE AND HEAR IT DRIFT."
+                        "$name is on the rings — $rings. Re-length one and hear it drift."
                     } else {
                         "$name: $rings. ${caveats.joinToString(". ")}."
                     },
@@ -1555,7 +1555,7 @@ private fun ArpPanel(
     onApply: () -> Unit,
 ) {
     TapeText(
-        "THE CHORD IS WHATEVER PADS PLAY ON THIS RING — PICK THEM ON PLAYS, BELOW.",
+        "The chord is whatever pads play on this ring — pick them on plays, below.",
         TapeType.pixelSmall,
         scheme.ink2.tape,
         Modifier.fillMaxWidth(),
@@ -1578,7 +1578,7 @@ private fun ArpPanel(
         }
     }
     if (arpShape == Arp.Shape.CHORD) {
-        TapeText("CHORD PLAYS EVERY NOTE AT ONCE — OCTAVES DON'T APPLY.", TapeType.pixelSmall, scheme.ink2.tape, Modifier.fillMaxWidth())
+        TapeText("Chord plays every note at once — octaves don't apply.", TapeType.pixelSmall, scheme.ink2.tape, Modifier.fillMaxWidth())
     }
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
         SmallChip("−", scheme, description = "GATE SHORTER") { onGateChange((arpGate - ARP_GATE_STEP).coerceAtLeast(Arp.MIN_GATE)) }
@@ -1591,7 +1591,7 @@ private fun ArpPanel(
         SmallChip("+", scheme, description = "GATE LONGER") { onGateChange((arpGate + ARP_GATE_STEP).coerceAtMost(1f)) }
     }
     TapeText(
-        "EACH STEP GETS THE RUN'S NEXT NOTE, WRAPPING OR CUTTING SHORT TO FIT THE RING'S OWN STEPS. GATE SHORTENS EACH HIT INSTEAD OF LETTING IT RING OUT.",
+        "Each step gets the run's next note, wrapping or cutting short to fit the ring's own steps. Gate shortens each hit instead of letting it ring out.",
         TapeType.pixelSmall,
         scheme.ink2.tape,
         Modifier.fillMaxWidth(),
@@ -1652,9 +1652,9 @@ private fun OutPanel(
         val keeps = OrbitClip.declaredMeterLabel(current)
         TapeText(
             if (keeps != null) {
-                "A PROJECT KEEPS $keeps. A TRACK COUNTS 4/4 BARS: $mpcBars."
+                "A project keeps $keeps. A track counts 4/4 bars: $mpcBars."
             } else {
-                "THE MPC COUNTS 4/4 BARS: $mpcBars."
+                "The MPC counts 4/4 bars: $mpcBars."
             },
             TapeType.pixelSmall,
             scheme.ink2.tape,
@@ -1684,7 +1684,7 @@ private fun OutPanel(
     why.forEach { TapeText(it, TapeType.pixelSmall, scheme.warn.tape, Modifier.fillMaxWidth(), maxLines = 2) }
     if (why.isEmpty()) {
         TapeText(
-            "SAMPLE: WHAT YOU HEAR, AS A SAMPLE IN THE LIBRARY — TRIM IT, CHOP IT, MAKE A KIT OF IT. KIT: THE PATTERN AS A CLIP IN THE KIT'S GROOVES, SO IT RIDES TO THE MPC.",
+            "SAMPLE: what you hear, as a sample in the LIBRARY — trim it, chop it, make a kit of it. KIT: the pattern as a clip in the kit's grooves, so it rides to the MPC.",
             TapeType.pixelSmall,
             scheme.ink2.tape,
             Modifier.fillMaxWidth(),
@@ -1702,7 +1702,7 @@ private fun OutPanel(
     // it doesn't navigate anywhere.
     ActionButton("GROOVE TO RINGS", scheme, Modifier.fillMaxWidth()) { onRingsFromGroove() }
     TapeText(
-        "THE KIT'S GROOVE AS RINGS, ONE PER PAD, JOINING WHAT IS ALREADY HERE — A CAPTURED BREAK OR AN IMPORTED .MID, PLAYED BY THIS ENGINE AT LAST.",
+        "The kit's GROOVE as rings, one per pad, joining what is already here — a CAPTURED break or an imported .mid, played by this engine at last.",
         TapeType.pixelSmall,
         scheme.ink2.tape,
         Modifier.fillMaxWidth(),
@@ -1760,7 +1760,7 @@ private fun TheSetPanel(
                 onCommit(current.copy(seed = current.seed + 1))
             }
             TapeText(
-                "THE SAME TAKE PLAYS, BOUNCES AND CLIPS THE SAME EVERY TIME. ROLL FOR A NEW ONE — NO HIT MOVES.",
+                "The same take plays, bounces and clips the same every time. Roll for a new one — no hit moves.",
                 TapeType.pixelSmall,
                 scheme.ink2.tape,
                 Modifier.weight(1f),
@@ -1769,7 +1769,7 @@ private fun TheSetPanel(
         }
     }
     TapeText(
-        "THE BAR EVERY SPANNED RING IS MEASURED AGAINST; FREE RINGS DO NOT CARE. SWING PUSHES THE ODD 16THS LATE — 66 IS A TRIPLET FEEL — ON EVERY RING WHOSE STEP IS A 16TH. ${current.bpm.roundToInt()} BPM — THE PROJECT'S, SET IN BEAT.",
+        "The bar every spanned ring is measured against; free rings do not care. Swing pushes the odd 16ths late — 66 is a triplet feel — on every ring whose step is a 16th. ${current.bpm.roundToInt()} BPM — the project's, set in BEAT.",
         TapeType.pixelSmall,
         scheme.ink2.tape,
         Modifier.fillMaxWidth(),
@@ -1790,7 +1790,7 @@ private fun SectionsPanel(
 ) {
     if (current.sections.isEmpty()) {
         TapeText(
-            "NO ARRANGEMENT — EVERY RING TURNS FOREVER. ADD A SECTION TO SAY \"THESE RINGS FOR EIGHT BARS, THEN THOSE\".",
+            "No arrangement — every ring turns forever. Add a section to say \"these rings for eight bars, then those\".",
             TapeType.pixelSmall,
             scheme.ink2.tape,
             Modifier.fillMaxWidth(),
@@ -1850,8 +1850,8 @@ private fun SectionsPanel(
         }
     }
     TapeText(
-        "A SECTION STARTS ITS RINGS OVER, SO IT REPEATS THE SAME EVERY TIME AND CLIPS AS ITS OWN SEQUENCE. " +
-            "A SECTION WITH NO RINGS IS A BREAK, AND WRITES NO GROOVE. CLIP ▸ KIT WRITES ONE FOR EVERY OTHER — FLIP THEM ON THE MPC.",
+        "A section starts its rings over, so it repeats the same every time and clips as its own sequence. " +
+            "A section with no rings is a break, and writes no GROOVE. CLIP ▸ KIT writes one for every other — flip them on the MPC.",
         TapeType.pixelSmall,
         scheme.ink2.tape,
         Modifier.fillMaxWidth(),
@@ -2173,7 +2173,7 @@ private fun OrbitRingRail(
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             TapeText(
-                "${offer.ringName} SOUNDS LIKE ${offer.bpm.roundToInt()} BPM · THE PROJECT IS AT ${current.bpm.roundToInt()}.",
+                "${offer.ringName} sounds like ${offer.bpm.roundToInt()} BPM · the project is at ${current.bpm.roundToInt()}.",
                 TapeType.pixel,
                 scheme.ink.tape,
                 maxLines = 2,
@@ -2334,7 +2334,7 @@ private fun RingsCanvas(
         if (set.orbits.isEmpty()) {
             "RINGS: NONE"
         } else if (set.sections.isEmpty()) {
-            "RINGS, SHORTEST INSIDE: $rings. THEY MEET EVERY ${cycleLabel(set)}."
+            "Rings, shortest inside: $rings. They meet every ${cycleLabel(set)}."
         } else {
             // With an arrangement the rings' meeting is not what the
             // transport goes round, and which rings are even sounding
@@ -2343,8 +2343,8 @@ private fun RingsCanvas(
             val playing = set.sections.getOrNull(here)?.plays.orEmpty()
                 .mapNotNull { set.orbits.getOrNull(it)?.name?.ifBlank { "RING ${it + 1}" } }
             "RINGS, SHORTEST INSIDE: $rings. SECTION ${set.sections.getOrNull(here)?.name ?: "?"} OF " +
-                "${set.sections.size}, ${transportLabel(set)} ROUND THE PLAN. " +
-                if (playing.isEmpty()) "IT PLAYS NOTHING — A BREAK." else "IT PLAYS ${playing.joinToString(", ")}."
+                "${set.sections.size}, ${transportLabel(set)} round the plan. " +
+                if (playing.isEmpty()) "It plays nothing — a break." else "It plays ${playing.joinToString(", ")}."
         }
     }
 

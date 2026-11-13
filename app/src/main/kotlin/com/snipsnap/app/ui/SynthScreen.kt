@@ -3130,8 +3130,8 @@ fun SynthScreen(
                     }
                     TapeText(
                         if (Shoal.supportsHold(shoalPatch.model, shoalPatch.material))
-                            "HARMONIC TONE CAN LOOP. WOOD, BOWL AND WIRE TURN HOLD OFF."
-                        else "MATERIAL NOTES ARE FINITE. HOLD IS AVAILABLE FOR HARMONIC TONE.",
+                            "Harmonic tone can loop. Wood, bowl and wire turn hold off."
+                        else "Material notes are finite. Hold is available for harmonic tone.",
                         TapeType.pixelSmall, scheme.ink2.tape, maxLines = 3,
                     )
                     MacroSlider(
@@ -3163,8 +3163,8 @@ fun SynthScreen(
                     if (embouchureRestore.pending.containsKey(engine to voice)) {
                         TapeText(
                             if (embouchureRestore.pending[engine to voice] == false)
-                                "SAVED TIDAL COULD NOT OPEN. CHOOSE A PRESET."
-                            else "RESTORING SAVED TIDAL…",
+                                "Saved tidal could not open. Choose a preset."
+                            else "Restoring saved tidal…",
                             TapeType.pixelSmall, scheme.ink2.tape, maxLines = 3,
                         )
                     } else {
@@ -3180,8 +3180,8 @@ fun SynthScreen(
                 if (engine == Engine.TREMOR && embouchureRestore.waitsForRecipe(engine, voice)) {
                     TapeText(
                         if (embouchureRestore.pending[engine to voice] == false)
-                            "SAVED TREMOR COULD NOT OPEN. CHOOSE A PRESET."
-                        else "RESTORING SAVED TREMOR…",
+                            "Saved tremor could not open. Choose a preset."
+                        else "Restoring saved tremor…",
                         TapeType.pixelSmall, scheme.ink2.tape, maxLines = 3,
                     )
                 }
@@ -3419,8 +3419,8 @@ fun SynthScreen(
                 if (engine == Engine.RIME) {
                     val rimePatch = buildCurrentPatch(loadedPatch?.name ?: engine.patchDisplayName(voice)) as RimePatch
                     if (Rime.isLoop(rimePatch.macros)) {
-                        TapeText(if (rimePatch.model >= 6) "UNFOLD 60–100 REPEATS DETAIL DURING HOLD. LOWER SETTINGS UNFOLD ONCE."
-                            else "UNFOLD SHAPES THE OPENING. HELD DETAIL STAYS STEADY.",
+                        TapeText(if (rimePatch.model >= 6) "Unfold 60–100 repeats detail during hold. Lower settings unfold once."
+                            else "Unfold shapes the opening. Held detail stays steady.",
                             TapeType.pixelSmall, scheme.ink2.tape)
                     }
                     fun editRime(edit: (RimePatch) -> RimePatch) {
@@ -3467,8 +3467,8 @@ fun SynthScreen(
                         },
                     )
                     TapeText(
-                        if (Crease.isLoop(macros.getValue("HOLD"))) "HOLD: REPEATING PRESSURE GESTURE."
-                        else "HOLD: NOTE LENGTH · TOP STEP: LOOP.",
+                        if (Crease.isLoop(macros.getValue("HOLD"))) "Hold: repeating pressure gesture."
+                        else "Hold: note length · top step: loop.",
                         TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2,
                     )
                 }
@@ -3546,8 +3546,8 @@ fun SynthScreen(
                     if (embouchureRestore.waitsForRecipe(engine, voice)) {
                         TapeText(
                             if (embouchureRestore.pending[engine to voice] == false)
-                                "SAVED RELAY COULD NOT OPEN. CHOOSE A PRESET."
-                            else "RESTORING SAVED RELAY…",
+                                "Saved relay could not open. Choose a preset."
+                            else "Restoring saved relay…",
                             TapeType.pixelSmall, scheme.ink2.tape, maxLines = 3,
                         )
                     } else {
@@ -3666,9 +3666,9 @@ fun SynthScreen(
                     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         TapeText(
                             when (voice as RegistersVoice) {
-                                RegistersVoice.PIPE -> "PIPE SPEECH, CHIFF AND SOFT SUSTAINED AIR."
-                                RegistersVoice.MUSETTE -> "THREE BEATING REEDS, SHAPED BY BELLOWS."
-                                RegistersVoice.TRANSISTOR -> "SQUARE-WAVE RANKS WITH A TRANSISTOR KEYER."
+                                RegistersVoice.PIPE -> "Pipe speech, chiff and soft sustained air."
+                                RegistersVoice.MUSETTE -> "Three beating reeds, shaped by bellows."
+                                RegistersVoice.TRANSISTOR -> "Square-wave ranks with a transistor keyer."
                             },
                             TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2,
                         )
@@ -3690,8 +3690,8 @@ fun SynthScreen(
                         )
                         TapeText(
                             if (Registers.isLoop(macros.getValue("HOLD")))
-                                "LOOP STARTS AT THE SETTLED TONE. LOW SPREAD MAY SOUND IN UNISON."
-                            else "HOLD: NOTE LENGTH · TOP STEP: LOOP WITHOUT ATTACK.",
+                                "Loop starts at the settled tone. Low spread may sound in unison."
+                            else "Hold: note length · top step: loop without attack.",
                             TapeType.pixelSmall, scheme.ink2.tape, maxLines = 3,
                         )
                     }
@@ -3699,7 +3699,7 @@ fun SynthScreen(
 
                 if (loadedPatch is EmbouchurePatch && loadedPatch.model == Embouchure.BRASS_GROW_MODEL) {
                     TapeText(
-                        "GROW: ROUGH → CENTERED → EXPRESSIVE. HELD SAMPLE EXCLUDES ATTACK; PADS PLAY ONE LOOP LENGTH.",
+                        "Grow: rough → centered → expressive. Held sample excludes attack; pads play one loop length.",
                         TapeType.pixelSmall, scheme.ink2.tape, maxLines = 3,
                     )
                 }
@@ -3821,9 +3821,9 @@ fun SynthScreen(
                         TapeText(
                             when (engine) {
                                 Engine.MERIDIAN -> meridianInstrumentReadiness(buildCurrentPatch(engine.patchDisplayName(voice)) as MeridianPatch)
-                                Engine.CREASE -> "MAKE INSTRUMENT NEEDS MODEL 3. THE SAVED ORIGINAL STILL PLAYS AS BEFORE."
-                                Engine.BELLOWS -> "MAKE INSTRUMENT NEEDS A CURRENT BELLOWS SOUND. THE SAVED ORIGINAL STILL PLAYS AS BEFORE."
-                                Engine.PRISM -> "WAIT FOR THE SOURCE TONE TO FINISH LOADING."
+                                Engine.CREASE -> "MAKE INSTRUMENT needs model 3. The saved original still plays as before."
+                                Engine.BELLOWS -> "MAKE INSTRUMENT needs a current bellows sound. The saved original still plays as before."
+                                Engine.PRISM -> "Wait for the source tone to finish loading."
                                 else -> "MAKE INSTRUMENT NEEDS ROOT ${Scales.nameOf(OpenSkyPadMaker.ROOT_MIDI_MIN)}–${Scales.nameOf(OpenSkyPadMaker.ROOT_MIDI_MAX)}"
                             },
                             TapeType.pixelSmall,
@@ -4174,8 +4174,8 @@ private fun ApsisPlayingControls(
         onValueChange = { onPatch(patch.copy(velocity = it.coerceIn(0f, 1f))) },
     )
     TapeText(
-        if (Apsis.isLoop(patch.macros["HOLD"] ?: 0f)) "HOLD: SETTLED CYCLE · REPEATS UNTIL STOP."
-        else "HOLD: NOTE LENGTH · TOP STEP: LOOP.",
+        if (Apsis.isLoop(patch.macros["HOLD"] ?: 0f)) "Hold: settled cycle · repeats until stop."
+        else "Hold: note length · top step: loop.",
         TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2,
     )
 }
@@ -4211,7 +4211,7 @@ private fun OrigamiPerformanceControls(
 ) {
     if (patch.model != Origami.MODEL_VERSION) {
         TapeText(
-            "THIS SAVED RECIPE KEEPS ITS ORIGINAL SOUND. LOAD A FACTORY PRESET FOR GESTURES AND VELOCITY COLOR.",
+            "This saved recipe keeps its original sound. Load a factory preset for gestures and velocity color.",
             TapeType.pixelSmall, scheme.ink2.tape, maxLines = 3,
         )
         return
@@ -4231,9 +4231,9 @@ private fun OrigamiPerformanceControls(
     }
     TapeText(
         when (patch.gesture) {
-            OrigamiGesture.STEADY -> "MOTION MOVES THE FOLD AXIS."
-            OrigamiGesture.BLOOM -> "START OPEN, THEN FOLD."
-            OrigamiGesture.UNFOLD -> "START FOLDED, THEN OPEN."
+            OrigamiGesture.STEADY -> "Motion moves the fold axis."
+            OrigamiGesture.BLOOM -> "Start open, then fold."
+            OrigamiGesture.UNFOLD -> "Start folded, then open."
         },
         TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2,
     )
@@ -4258,9 +4258,9 @@ private fun OrigamiPerformanceControls(
     }
     TapeText(
         when (patch.expression) {
-            OrigamiExpression.LEVEL -> "HIT STRENGTH CHANGES VOLUME."
-            OrigamiExpression.FOLD -> "SOFT HITS HAVE LESS FOLDED COLOR. HARD HITS HAVE MORE."
-            OrigamiExpression.TOUCH -> "SOFT HITS DARKEN THE SOURCE AND FOLD. STRONG HITS KEEP THEIR COLOR."
+            OrigamiExpression.LEVEL -> "Hit strength changes volume."
+            OrigamiExpression.FOLD -> "SOFT HITS have less folded color. Hard hits have more."
+            OrigamiExpression.TOUCH -> "SOFT HITS darken the source and fold. Strong hits keep their color."
         },
         TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2,
     )
@@ -4965,7 +4965,7 @@ internal sealed interface HeldSpec {
         override val hasAttack get() = false
         override val progressPerZone get() = HalobarPadMaker.LAYERS
         override val knobLabel get() = "RELEASE ${HalobarPadMaker.secondsLabel(spec.releaseSeconds)}"
-        override val instrumentNote get() = "FINITE MALLET RING · TWO TOUCH LEVELS · THREE TAKES PER TOUCH. LET GO TO FADE."
+        override val instrumentNote get() = "Finite mallet ring · two touch levels · three takes per touch. Let go to fade."
         override fun renderZone(midi: Int, cancelled: () -> Boolean) = HalobarPadMaker.renderZone(spec, midi, cancelled)
         override fun preview(cancelled: () -> Boolean) = HalobarPadMaker.preview(spec, cancelled)
         override fun export(name: String, notes: List<List<KeyNote>>, destRoot: File) =
@@ -4977,7 +4977,7 @@ internal sealed interface HeldSpec {
         override val hasAttack get() = false
         override val knobLabel get() = "RELEASE ${LatticePadMaker.secondsLabel(spec.releaseSeconds)}"
         override val instrumentNote get() =
-            "C3–C5 · KEEPS THE MOVING PLUCK, THEN HOLDS ITS RINGING TONE. LET GO TO FADE."
+            "C3–C5 · keeps the moving pluck, then holds its ringing tone. Let go to fade."
         override fun renderZone(midi: Int, cancelled: () -> Boolean) = listOf(LatticePadMaker.renderZone(spec, midi, cancelled))
         override fun preview(cancelled: () -> Boolean) = LatticePadMaker.preview(spec, cancelled)
         override fun export(name: String, notes: List<List<KeyNote>>, destRoot: File) =
@@ -4990,10 +4990,10 @@ internal sealed interface HeldSpec {
         override val touchLayers get() = spec.touchLayers
         override val progressPerZone get() = spec.layerCount
         override val touchLayersNote get() =
-            "ON: SOFT AND HARD TOUCH CHANGE ATTACK AND TONE. TOUCH SETS THE HARD CAPTURE. TWO SAMPLES PER NOTE; ABOUT 2× THE TIME AND STORAGE."
+            "On: soft and hard touch change attack and tone. Touch sets the hard capture. Two samples per note; about 2× the time and storage."
         override val instrumentNote get() = if (spec.touchLayers)
-            "PREVIEW PLAYS SOFT, THEN HARD, THROUGH TWO WRAPS AND KEY-UP. EACH TOUCH KEEPS ITS ATTACK AND MOVING SUSTAIN."
-            else "THE NOTE SPEAKS, THEN KEEPS MOVING WHILE HELD. RELEASE FADES WHEN YOU LIFT A KEY."
+            "Preview plays soft, then hard, through two wraps and key-up. Each touch keeps its attack and moving sustain."
+            else "The note speaks, then keeps moving while held. Release fades when you lift a key."
         override val knobLabel get() = "RELEASE ${LibrationPadMaker.secondsLabel(spec.releaseSeconds)}"
         override fun renderZone(midi: Int, cancelled: () -> Boolean) = LibrationPadMaker.renderLayers(spec, midi, cancelled)
         override fun preview(cancelled: () -> Boolean) = LibrationPadMaker.preview(spec, cancelled)
@@ -5026,7 +5026,7 @@ internal sealed interface HeldSpec {
         override val hasAttack get() = false
         override val knobLabel get() = "RELEASE ${BallastPadMaker.secondsLabel(spec.releaseSeconds)}"
         override val instrumentNote get() =
-            "KEEPS THE NOTE'S ONSET AND THE STRUCTURE SETTLING, THEN HOLDS THE SETTLED BASS."
+            "Keeps the note's onset and the structure settling, then holds the settled bass."
         override fun renderZone(midi: Int, cancelled: () -> Boolean) = listOf(BallastPadMaker.renderZone(spec, midi, cancelled))
         override fun preview(cancelled: () -> Boolean) = BallastPadMaker.preview(spec, cancelled)
         override fun export(name: String, notes: List<List<KeyNote>>, destRoot: File) = BallastPadMaker.export(name, spec, notes.map { it.single() }, destRoot)
@@ -5036,7 +5036,7 @@ internal sealed interface HeldSpec {
         override val zoneMidis get() = MercuryPadMaker.zoneMidis(spec)
         override val hasAttack get() = false
         override val knobLabel get() = "RELEASE ${MercuryPadMaker.secondsLabel(spec.releaseSeconds)}"
-        override val instrumentNote get() = "EACH KEY PLAYS THE GLASS'S HOLD LOOP AT ITS OWN NOTE, WITH NO ATTACK."
+        override val instrumentNote get() = "Each key plays the glass's hold LOOP at its own note, with no attack."
         override fun renderZone(midi: Int, cancelled: () -> Boolean) = listOf(MercuryPadMaker.renderZone(spec, midi, cancelled))
         override fun preview(cancelled: () -> Boolean) = MercuryPadMaker.preview(spec, cancelled)
         override fun export(name: String, notes: List<List<KeyNote>>, destRoot: File) = MercuryPadMaker.export(name, spec, notes.map { it.single() }, destRoot)
@@ -5047,7 +5047,7 @@ internal sealed interface HeldSpec {
         override val zoneMidis get() = LoopPadMaker.zoneMidis(spec)
         override val hasAttack get() = false
         override val knobLabel get() = "RELEASE ${LoopPadMaker.secondsLabel(spec.releaseSeconds)}"
-        override val instrumentNote get() = "EACH KEY PLAYS THIS SOUND'S HOLD LOOP AT ITS OWN NOTE, WITH NO ATTACK."
+        override val instrumentNote get() = "Each key plays this sound's hold LOOP at its own note, with no attack."
         override fun renderZone(midi: Int, cancelled: () -> Boolean) = listOf(LoopPadMaker.renderZone(spec, midi, cancelled))
         override fun preview(cancelled: () -> Boolean) = LoopPadMaker.preview(spec, cancelled)
         override fun export(name: String, notes: List<List<KeyNote>>, destRoot: File) = LoopPadMaker.export(name, spec, notes.map { it.single() }, destRoot)
@@ -5059,7 +5059,7 @@ internal sealed interface HeldSpec {
         override val hasAttack get() = false
         override val progressPerZone get() = ArcoPadMaker.VELOCITY_WINDOWS.size
         override val knobLabel get() = "RELEASE ${ArcoPadMaker.secondsLabel(spec.releaseSeconds)}"
-        override val instrumentNote get() = "SOFT AND HARD TOUCH. EACH KEY STARTS WITH THE BOW'S OWN STROKE, THEN HOLDS WHILE YOU KEEP IT DOWN."
+        override val instrumentNote get() = "Soft and hard touch. Each key starts with the bow's own stroke, then holds while you keep it down."
         override fun renderZone(midi: Int, cancelled: () -> Boolean) = ArcoPadMaker.renderZone(spec, midi, cancelled)
         override fun preview(cancelled: () -> Boolean) = ArcoPadMaker.preview(spec, cancelled)
         override fun export(name: String, notes: List<List<KeyNote>>, destRoot: File) = ArcoPadMaker.export(name, spec, notes, destRoot)
@@ -5071,7 +5071,7 @@ internal sealed interface HeldSpec {
         override val hasAttack get() = false
         override val progressPerZone get() = BorePadMaker.VELOCITY_WINDOWS.size
         override val knobLabel get() = "RELEASE ${BorePadMaker.secondsLabel(spec.releaseSeconds)}"
-        override val instrumentNote get() = "SOFT AND HARD TOUCH. EACH KEY STARTS WITH THE NOTE'S OWN BREATH, THEN HOLDS WHILE YOU KEEP IT DOWN. OVERBLOW STAYS OFF."
+        override val instrumentNote get() = "Soft and hard touch. Each key starts with the note's own breath, then holds while you keep it down. Overblow stays off."
         override fun renderZone(midi: Int, cancelled: () -> Boolean) = BorePadMaker.renderZone(spec, midi, cancelled)
         override fun preview(cancelled: () -> Boolean) = BorePadMaker.preview(spec, cancelled)
         override fun export(name: String, notes: List<List<KeyNote>>, destRoot: File) = BorePadMaker.export(name, spec, notes, destRoot)
@@ -5081,7 +5081,7 @@ internal sealed interface HeldSpec {
         override val zoneMidis get() = KeelPadMaker.zoneMidis(spec)
         override val hasAttack get() = false
         override val knobLabel get() = "RELEASE ${KeelPadMaker.secondsLabel(spec.releaseSeconds)}"
-        override val instrumentNote get() = "KEEPS THE NOTE'S ATTACK AND SETTLE, THEN HOLDS THE SETTLED BASS."
+        override val instrumentNote get() = "Keeps the note's attack and settle, then holds the settled bass."
         override fun renderZone(midi: Int, cancelled: () -> Boolean) = listOf(KeelPadMaker.renderZone(spec, midi, cancelled))
         override fun preview(cancelled: () -> Boolean) = KeelPadMaker.preview(spec, cancelled)
         override fun export(name: String, notes: List<List<KeyNote>>, destRoot: File) = KeelPadMaker.export(name, spec, notes.map { it.single() }, destRoot)
@@ -5119,7 +5119,7 @@ internal sealed interface HeldSpec {
         override val hasAttack get() = false
         override val knobLabel get() = "RELEASE ${TidalPadMaker.secondsLabel(spec.releaseSeconds)}"
         override val instrumentNote get() =
-            "C2–C6 · KEEPS THE ENCOUNTER, THEN HOLDS ITS MOVING AFTERMATH. LET GO TO FADE."
+            "C2–C6 · keeps the encounter, then holds its moving aftermath. Let go to fade."
         override fun renderZone(midi: Int, cancelled: () -> Boolean) = listOf(TidalPadMaker.renderZone(spec, midi, cancelled))
         override fun preview(cancelled: () -> Boolean) = TidalPadMaker.preview(spec, cancelled)
         override fun export(name: String, notes: List<List<KeyNote>>, destRoot: File) =
@@ -5131,7 +5131,7 @@ internal sealed interface HeldSpec {
         override val hasAttack get() = false
         override val knobLabel get() = "RELEASE ${RegistersPadMaker.secondsLabel(spec.releaseSeconds)}"
         override val instrumentNote get() =
-            "KEEPS THE NOTE'S ATTACK, THEN HOLDS ITS SETTLED TONE. SYNTH'S LOOP AUDITION STARTS AFTER THE ATTACK."
+            "Keeps the note's attack, then holds its settled tone. Synth's loop audition starts after the attack."
         override fun renderZone(midi: Int, cancelled: () -> Boolean) = listOf(RegistersPadMaker.renderZone(spec, midi, cancelled))
         override fun preview(cancelled: () -> Boolean) = RegistersPadMaker.preview(spec, cancelled)
         override fun export(name: String, notes: List<List<KeyNote>>, destRoot: File) = RegistersPadMaker.export(name, spec, notes.map { it.single() }, destRoot)
@@ -5142,7 +5142,7 @@ internal sealed interface HeldSpec {
         override val hasAttack get() = false
         override val knobLabel get() = "RELEASE ${CausticPadMaker.secondsLabel(spec.releaseSeconds)}"
         override val instrumentNote get() =
-            "KEEPS THE ARRIVAL, THEN REPEATS THE VESSEL WHILE HELD. KEY TOUCH CHANGES VOLUME."
+            "Keeps the arrival, then repeats the vessel while held. Key touch changes volume."
         override fun renderZone(midi: Int, cancelled: () -> Boolean) = listOf(CausticPadMaker.renderZone(spec, midi, cancelled))
         override fun preview(cancelled: () -> Boolean) = CausticPadMaker.preview(spec, cancelled)
         override fun export(name: String, notes: List<List<KeyNote>>, destRoot: File) =
@@ -5156,8 +5156,8 @@ internal sealed interface HeldSpec {
         override val touchLayers get() = spec.touchLayers
         override val knobLabel get() = "RELEASE ${CreasePadMaker.secondsLabel(spec.releaseSeconds)}"
         override val instrumentNote get() = if (spec.touchLayers)
-            "KEEPS THE PRESSURE ATTACK AND MOVING SUSTAIN. SOFT, MID AND HARD TOUCH CHANGE PRESSURE AND TONE."
-        else "KEEPS THE PRESSURE ATTACK, THEN REPEATS ITS MOVING SUSTAIN WHILE HELD. KEY TOUCH CHANGES VOLUME."
+            "Keeps the pressure attack and moving sustain. Soft, mid and hard touch change pressure and tone."
+        else "Keeps the pressure attack, then repeats its moving sustain while held. Key touch changes volume."
         override fun renderZone(midi: Int, cancelled: () -> Boolean) = CreasePadMaker.renderLayers(spec, midi, cancelled)
         override fun preview(cancelled: () -> Boolean) = CreasePadMaker.preview(spec, cancelled)
         override fun export(name: String, notes: List<List<KeyNote>>, destRoot: File) = CreasePadMaker.exportLayers(name, spec, notes, destRoot)
@@ -5168,7 +5168,7 @@ internal sealed interface HeldSpec {
         override val hasAttack get() = false
         override val knobLabel get() = "RELEASE ${RimePadMaker.secondsLabel(spec.releaseSeconds)}"
         override val instrumentNote get() =
-            "TWO OCTAVES OF CONTOUR OPENING AND HELD SUSTAIN. RELEASE FOLLOWS KEY LIFT."
+            "Two octaves of contour opening and held sustain. Release follows key lift."
         override fun renderZone(midi: Int, cancelled: () -> Boolean) = listOf(RimePadMaker.renderZone(spec, midi, cancelled))
         override fun preview(cancelled: () -> Boolean) = RimePadMaker.preview(spec, cancelled)
         override fun export(name: String, notes: List<List<KeyNote>>, destRoot: File) = RimePadMaker.export(name, spec, notes.map { it.single() }, destRoot)
@@ -5179,7 +5179,7 @@ internal sealed interface HeldSpec {
         override val hasAttack get() = false
         override val knobLabel get() = "RELEASE ${ContourPadMaker.secondsLabel(spec.releaseSeconds)}"
         override val instrumentNote get() =
-            "FOUR OCTAVES OF SETTLED TONE. ORIGINAL ATTACK OMITTED. TUNE FOLLOWS THE KEYBOARD."
+            "Four octaves of settled tone. Original attack omitted. Tune follows the keyboard."
         override fun renderZone(midi: Int, cancelled: () -> Boolean) = listOf(ContourPadMaker.renderZone(spec, midi, cancelled))
         override fun preview(cancelled: () -> Boolean) = ContourPadMaker.preview(spec, cancelled)
         override fun export(name: String, notes: List<List<KeyNote>>, destRoot: File) = ContourPadMaker.export(name, spec, notes.map { it.single() }, destRoot)
@@ -5190,8 +5190,8 @@ internal sealed interface HeldSpec {
         override val hasAttack get() = false
         override val knobLabel get() = "RELEASE ${BellowsPadMaker.secondsLabel(spec.releaseSeconds)}"
         override val instrumentNote get() = if (spec.patch.voice == BellowsVoice.WHEEL)
-            "C3–C5 · SOFT, MEDIUM AND HARD TOUCH. MELODY ONLY; THE TONIC BED PLAYS SEPARATELY."
-        else "C3–C5 · SOFT, MEDIUM AND HARD TOUCH. KEEPS THE ATTACK AND SUSTAINS WHILE HELD."
+            "C3–C5 · soft, medium and hard touch. Melody only; the tonic bed plays separately."
+        else "C3–C5 · soft, medium and hard touch. Keeps the attack and sustains while held."
         override fun renderZone(midi: Int, cancelled: () -> Boolean) = BellowsPadMaker.renderZone(spec, midi, cancelled)
         override fun preview(cancelled: () -> Boolean) = BellowsPadMaker.preview(spec, cancelled)
         override fun export(name: String, notes: List<List<KeyNote>>, destRoot: File) = BellowsPadMaker.export(name, spec, notes, destRoot)
@@ -5204,7 +5204,7 @@ internal sealed interface HeldSpec {
         override val releaseFraction get() = MeridianPadMaker.RELEASE.fraction(spec.releaseSeconds)
         override val knobLabel get() = "RELEASE ${MeridianPadMaker.secondsLabel(spec.releaseSeconds)}"
         override val instrumentNote get() =
-            "FIXED-ALIGNMENT SWING · C2–C5 · SOFT, MEDIUM AND HARD TOUCH."
+            "Fixed-alignment swing · C2–C5 · soft, medium and hard touch."
         override fun renderZone(midi: Int, cancelled: () -> Boolean) = MeridianPadMaker.renderZone(spec, midi, cancelled)
         override fun preview(cancelled: () -> Boolean) = MeridianPadMaker.preview(spec, cancelled)
         override fun export(name: String, notes: List<List<KeyNote>>, destRoot: File) = MeridianPadMaker.export(name, spec, notes, destRoot)
@@ -5216,12 +5216,12 @@ internal sealed interface HeldSpec {
         override val progressPerZone get() = spec.layerCount
         override val touchLayers get() = spec.touchLayers
         override val touchLayersNote get() =
-            "ON: SOFT, MID AND HARD TOUCH CHANGE FLOCK MOTION. VELOCITY SETS THE HARD TOUCH. THREE SAMPLES PER NOTE; ABOUT 3× THE TIME AND STORAGE."
+            "On: soft, mid and hard touch change flock motion. Velocity sets the hard touch. Three samples per note; about 3× the time and storage."
         override val releaseFraction get() = FlockPadMaker.RELEASE.fraction(spec.releaseSeconds)
         override val knobLabel get() = "RELEASE ${FlockPadMaker.secondsLabel(spec.releaseSeconds)}"
         override val instrumentNote get() = if (spec.touchLayers)
-            "DRY RIBBON · SOFT, MID AND HARD TOUCH CHANGE THE FLOCK'S DISTURBANCE. PREVIEW PLAYS ALL THREE; LIFT A KEY TO RELEASE."
-        else "DRY RIBBON · KEEPS THE ATTACK, THEN REPEATS CAPTURED MOTION UNTIL NOTE-OFF. KEY TOUCH CHANGES VOLUME."
+            "Dry ribbon · soft, mid and hard touch change the flock's disturbance. Preview plays all three; lift a key to release."
+        else "Dry ribbon · keeps the attack, then repeats CAPTURED motion until note-off. Key touch changes volume."
         override fun renderZone(midi: Int, cancelled: () -> Boolean) = FlockPadMaker.renderLayers(spec, midi, cancelled)
         override fun preview(cancelled: () -> Boolean) = FlockPadMaker.preview(spec, cancelled)
         override fun export(name: String, notes: List<List<KeyNote>>, destRoot: File) =
@@ -5233,7 +5233,7 @@ internal sealed interface HeldSpec {
         override val hasAttack get() = false
         override val releaseFraction get() = OverlapPadMaker.RELEASE.fraction(spec.releaseSeconds)
         override val knobLabel get() = "RELEASE ${OverlapPadMaker.secondsLabel(spec.releaseSeconds)}"
-        override val instrumentNote get() = "STEADY RESONANCE WHILE HELD. LIFT A KEY TO RELEASE."
+        override val instrumentNote get() = "Steady resonance while held. Lift a key to release."
         override fun renderZone(midi: Int, cancelled: () -> Boolean) = listOf(OverlapPadMaker.renderZone(spec, midi, cancelled))
         override fun preview(cancelled: () -> Boolean) = OverlapPadMaker.preview(spec, cancelled)
         override fun export(name: String, notes: List<List<KeyNote>>, destRoot: File) =
@@ -5245,7 +5245,7 @@ internal sealed interface HeldSpec {
         override val hasAttack get() = false
         override val releaseFraction get() = TrefoilPadMaker.RELEASE.fraction(spec.releaseSeconds)
         override val knobLabel get() = "RELEASE ${TrefoilPadMaker.secondsLabel(spec.releaseSeconds)}"
-        override val instrumentNote get() = "ORDERED ENERGY EXCHANGE WHILE HELD. LIFT A KEY TO RELEASE."
+        override val instrumentNote get() = "Ordered energy exchange while held. Lift a key to release."
         override fun renderZone(midi: Int, cancelled: () -> Boolean) = listOf(TrefoilPadMaker.renderZone(spec, midi, cancelled))
         override fun preview(cancelled: () -> Boolean) = TrefoilPadMaker.preview(spec, cancelled)
         override fun export(name: String, notes: List<List<KeyNote>>, destRoot: File) =
@@ -5258,8 +5258,8 @@ internal sealed interface HeldSpec {
         override val releaseFraction get() = OhmPadMaker.RELEASE.fraction(spec.releaseSeconds)
         override val knobLabel get() = "RELEASE ${OhmPadMaker.secondsLabel(spec.releaseSeconds)}"
         override val instrumentNote get() = if (spec.patch.model == 5)
-            "FINITE NOTES; RELEASE STOPS RINGING."
-        else "C3–C5 · KEEPS THE ARRIVAL, THEN HOLDS THE SHARED TONE. LET GO TO RELEASE."
+            "Finite notes; release stops ringing."
+        else "C3–C5 · keeps the arrival, then holds the shared tone. Let go to release."
         override fun renderZone(midi: Int, cancelled: () -> Boolean) = listOf(OhmPadMaker.renderZone(spec, midi, cancelled))
         override fun preview(cancelled: () -> Boolean) = OhmPadMaker.preview(spec, cancelled)
         override fun export(name: String, notes: List<List<KeyNote>>, destRoot: File) =
@@ -5273,10 +5273,10 @@ internal sealed interface HeldSpec {
         override val knobLabel get() = "RELEASE %.2f s".format(Locale.ROOT, spec.releaseSeconds)
         override val instrumentNote get() = when {
             spec.patch.expression == OrigamiExpression.TOUCH ->
-                "C3–C5 · SOFT, MID AND HARD HITS CHANGE SOURCE AND FOLDED COLOR. HOLD TO SUSTAIN; LET GO TO FADE."
+                "C3–C5 · soft, mid and hard hits change source and folded color. Hold to sustain; let go to fade."
             spec.layerCount > 1 ->
-                "C3–C5 · SOFT, MID AND HARD TOUCH CHANGE FOLDED COLOR. HOLD TO SUSTAIN; LET GO TO FADE."
-            else -> "C3–C5 · HOLD A KEY TO SUSTAIN. LET GO TO FADE."
+                "C3–C5 · soft, mid and hard touch change folded color. Hold to sustain; let go to fade."
+            else -> "C3–C5 · hold a key to sustain. Let go to fade."
         }
         override fun renderZone(midi: Int, cancelled: () -> Boolean) = OrigamiPadMaker.renderVelocityZone(spec, midi, cancelled)
         override fun preview(cancelled: () -> Boolean) = OrigamiPadMaker.preview(spec, cancelled)
@@ -5292,11 +5292,11 @@ internal sealed interface HeldSpec {
         override val wideKeys get() = spec.wideKeys
         override val keyRangeLabel get() = "${spec.rangeLabel} · ${zoneMidis.size * spec.layerCount} SAMPLES"
         override val touchLayersNote get() =
-            "ON: SOFT, MID AND HARD TOUCH CHANGE THE ATTACK AND TONE. VELOCITY SETS THE HARD TOUCH. THREE SAMPLES PER NOTE; ABOUT 3× THE TIME AND STORAGE."
+            "On: soft, mid and hard touch change the attack and tone. Velocity sets the hard touch. Three samples per note; about 3× the time and storage."
         override val knobLabel get() = "RELEASE ${FilamentPadMaker.secondsLabel(spec.releaseSeconds)}"
         override val instrumentNote get() = if (spec.touchLayers)
-            "NATIVE ${spec.rangeLabel} · SOFT, MID AND HARD TOUCH KEEP THEIR ATTACK AND SUSTAIN. PREVIEW: C4, ALL THREE TOUCHES. LET GO TO FADE."
-        else "NATIVE ${spec.rangeLabel} · KEEPS THE ATTACK. HOLD A KEY TO SUSTAIN; LET GO TO FADE."
+            "Native ${spec.rangeLabel} · soft, mid and hard touch keep their attack and sustain. PREVIEW: C4, all three touches. Let go to fade."
+        else "Native ${spec.rangeLabel} · keeps the attack. Hold a key to sustain; let go to fade."
         override fun renderZone(midi: Int, cancelled: () -> Boolean) = FilamentPadMaker.renderLayers(spec, midi, cancelled)
         override fun preview(cancelled: () -> Boolean) = FilamentPadMaker.preview(spec, cancelled)
         override fun export(name: String, notes: List<List<KeyNote>>, destRoot: File) =
@@ -5398,7 +5398,7 @@ private fun HeldInstrumentSheet(
                         modifier = Modifier.fillMaxWidth().semantics { selected = touchLayers },
                     ) { onTouchLayers(!touchLayers) }
                     TapeText(
-                        touchLayersNote ?: "ON: SOFT, MID AND HARD TOUCH CHANGE PRESSURE AND TONE. THREE SAMPLES PER NOTE; ABOUT 3× THE TIME AND STORAGE.",
+                        touchLayersNote ?: "On: soft, mid and hard touch change pressure and tone. Three samples per note; about 3× the time and storage.",
                         TapeType.pixelSmall, scheme.ink2.tape, maxLines = 5,
                     )
                 }
@@ -5615,7 +5615,7 @@ private fun RivetPerformanceControls(
 ) {
     MacroSlider("VELOCITY", patch.velocity, fill, scheme,
         onValueChange = { value -> onEdit(patch.voice) { it.copy(velocity = value.coerceIn(0f, 1f)) } })
-    TapeText("FINITE HIT · SIZE OPENS THE ROOM · WALLS SETS THE RING.",
+    TapeText("Finite hit · size opens the room · walls sets the ring.",
         TapeType.lcdSmall, scheme.ink2.tape)
 }
 
@@ -5649,7 +5649,7 @@ private fun WickPerformanceControls(
         }
     }
     TapeText(if (Wick.isLoop(patch.macros["HOLD"] ?: 0f))
-        "HOLD REPEATS THE MOVEMENT" else "PLAYS ONCE · LET THE TAIL RING.",
+        "HOLD REPEATS THE MOVEMENT" else "Plays once · let the tail ring.",
         TapeType.lcdSmall, scheme.ink2.tape)
 }
 
@@ -5685,7 +5685,7 @@ internal fun AccordPerformanceControls(
             }
         }
     }
-    TapeText("PLAYS ONCE · LET THE TAIL RING.", TapeType.lcdSmall, scheme.ink2.tape)
+    TapeText("Plays once · let the tail ring.", TapeType.lcdSmall, scheme.ink2.tape)
 }
 
 /** Keep the saved phrase and velocity intact while the player chooses the pulse gesture. */
@@ -7032,7 +7032,7 @@ private fun ChamberNoteControls(
         onValueChange = { value -> onPatchChange { it.copy(velocity = value.coerceIn(0f, 1f)) } },
     )
     TapeText(
-        "FINITE STRIKE · ROOM TAIL INCLUDED. SPREAD TRANSPOSES THE ROOM TOO.",
+        "Finite strike · room tail included. Spread transposes the room too.",
         TapeType.pixelSmall, scheme.ink2.tape, maxLines = 3,
     )
 }
@@ -7100,7 +7100,7 @@ private fun NacreNoteControls(
         onValueChange = { onVelocityChange(it.coerceIn(0f, 1f)) },
     )
     TapeText(
-        "PAIRED HARP · FINITE STRUM · SPACE FOLLOWS THE NOTE.",
+        "Paired harp · finite strum · space follows the note.",
         TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2,
     )
 }
@@ -7121,8 +7121,8 @@ private fun CausticNoteControls(
         onValueChange = { onVelocityChange(it.coerceIn(0f, 1f)) },
     )
     TapeText(
-        if (patch.model == 1) "ORIGINAL FINITE NOTE · MOVE HOLD OR MOTION TO EXPLORE FURTHER."
-        else "LENGTH SETS THE NOTE · THE TOP HOLD STEP SUSTAINS.",
+        if (patch.model == 1) "Original finite note · move hold or motion to explore further."
+        else "Length sets the note · the top hold step sustains.",
         TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2,
     )
 }

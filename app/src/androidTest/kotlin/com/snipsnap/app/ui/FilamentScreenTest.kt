@@ -320,7 +320,7 @@ class FilamentScreenTest : ComposeScreenTest() {
             assertReadsInFull("SAMPLED RANGE C2–C6 · 15 SAMPLES")
             button("TOUCH LAYERS").assertIsSelected()
             assertReadsInFull("TOUCH LAYERS ON")
-            compose.onNodeWithText("ON: SOFT, MID AND HARD TOUCH CHANGE THE ATTACK AND TONE. VELOCITY SETS THE HARD TOUCH. THREE SAMPLES PER NOTE; ABOUT 3× THE TIME AND STORAGE.").assertExists()
+            compose.onNodeWithText("On: soft, mid and hard touch change the attack and tone. Velocity sets the hard touch. Three samples per note; about 3× the time and storage.").assertExists()
             activate("TOUCH LAYERS")
             button("TOUCH LAYERS").assertIsNotSelected()
             assertReadsInFull("TOUCH LAYERS OFF")

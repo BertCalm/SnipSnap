@@ -257,7 +257,7 @@ class FlockSynthScreenTest : ComposeScreenTest() {
         assertReadsInFull("TOUCH LAYERS ON")
         button("PREVIEW").assertExists()
         button("INSTRUMENT AUDITION").assertDoesNotExist()
-        compose.onNodeWithText("ON: SOFT, MID AND HARD TOUCH CHANGE FLOCK MOTION. VELOCITY SETS THE HARD TOUCH. THREE SAMPLES PER NOTE; ABOUT 3× THE TIME AND STORAGE.")
+        compose.onNodeWithText("On: soft, mid and hard touch change flock motion. Velocity sets the hard touch. Three samples per note; about 3× the time and storage.")
             .fetchSemanticsNode()
         activate("TOUCH LAYERS")
         button("TOUCH LAYERS").assertIsNotSelected()
