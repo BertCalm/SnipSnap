@@ -13,6 +13,7 @@ import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsNotSelected
@@ -142,8 +143,8 @@ class StrikeStripTest : ComposeScreenTest() {
         for (label in listOf("VELOCITY STRIP", "VELOCITY STRIP THUMB SIDE", "VELOCITY STRIP ON RELEASE", "VELOCITY STRIP CHANGES VOLUME")) {
             button(label).assertDoesNotExist()
         }
-        for (caption in listOf("SIDE", "RELEASE", "LEVEL")) {
-            compose.onAllNodesWithText(caption, useUnmergedTree = true).assertCountEquals(0)
+        for (caption in listOf("STRIP", "SIDE", "RELEASE", "LEVEL")) {
+            compose.onAllNodesWithTag("strike-caption-$caption", useUnmergedTree = true).assertCountEquals(0)
         }
 
         button("EXPAND VELOCITY STRIP").performClick()
@@ -151,7 +152,7 @@ class StrikeStripTest : ComposeScreenTest() {
         // Open: every toggle is there, each under the caption saying what it sets.
         button("COLLAPSE VELOCITY STRIP").assertExists()
         for (caption in listOf("STRIP", "SIDE", "RELEASE", "LEVEL")) {
-            assertTrue("caption $caption is on screen", compose.onAllNodesWithText(caption, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty())
+            assertTrue("caption $caption is on screen", compose.onAllNodesWithTag("strike-caption-$caption", useUnmergedTree = true).fetchSemanticsNodes().size == 1)
         }
         for (label in listOf("VELOCITY STRIP", "VELOCITY STRIP THUMB SIDE", "VELOCITY STRIP ON RELEASE", "VELOCITY STRIP CHANGES VOLUME")) {
             button(label).assertExists()
