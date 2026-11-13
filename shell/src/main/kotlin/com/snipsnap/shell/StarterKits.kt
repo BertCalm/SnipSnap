@@ -39,6 +39,8 @@ import java.io.File
  * CYPHER starters follow GATECRASH's shape: dry or printed hits, two phrases, provenance on every pad.
  * MIRRORBALL starters are built the same way, each pad printed through an FET compressor,
  * a multi-head tape echo and an amp.
+ * SCUFF's starter is the same shape, every strike rendered by the SCUFF engine at a velocity and a take, its two
+ * phrases through one bus clipper.
  * CLOUD's GRAINS clouds (A07-A16) carry no recipe;
  * only its VOX pads (A01-A06) do, as `SynthKits.cloud` says. LUCKY DIP
  * A/B's bank-B twins carry fx-only recipes (`Shuffle.withRemixBank`), the
@@ -588,15 +590,20 @@ object StarterKits {
             seeded = false,
         ) { SynthKits.rivet(1f) },
         Starter(
+            "velour-close", "VELOUR CLOSE",
+            "Close drums and percussion through a warm amp. Three touch layers, with short natural tails.",
+            seeded = false, tempoBpm = com.snipsnap.synth.VelourApprovedKits.TEMPO,
+        ) { com.snipsnap.synth.VelourApprovedKits.build(com.snipsnap.synth.VelourApprovedKits.Treatment.CLOSE) },
+        Starter(
             "velour", "VELOUR",
-            "Muted drums, scattered echoes and a warm amp. Three touch zones; new kit voices to explore.",
-            seeded = false,
-        ) { com.snipsnap.synth.VelourKits.build() },
+            "Muted drums, scattered echoes and a warm amp. Three touch layers and four percussion pads.",
+            seeded = false, tempoBpm = com.snipsnap.synth.VelourApprovedKits.TEMPO,
+        ) { com.snipsnap.synth.VelourApprovedKits.build() },
         Starter(
             "velour-bloom", "VELOUR BLOOM",
             "The same drums with denser grains, longer space and more amp drive. Three touch zones.",
-            seeded = false,
-        ) { com.snipsnap.synth.VelourKits.build(com.snipsnap.synth.Velour.Treatment.BLOOM) },
+            seeded = false, tempoBpm = com.snipsnap.synth.VelourApprovedKits.TEMPO,
+        ) { com.snipsnap.synth.VelourApprovedKits.build(com.snipsnap.synth.VelourApprovedKits.Treatment.BLOOM) },
         Starter("backwash-soul", "BACKWASH SOUL", "Tight soul drums, cross-stick pocket and acoustic percussion. Native recorded alternates and a tambourine roll/riser.", seeded=false, tempoBpm=94f) {
             com.snipsnap.synth.BackwashKits.build(com.snipsnap.synth.BackwashKits.Genre.SOUL_POCKET)
         },
@@ -739,6 +746,16 @@ object StarterKits {
             key = KeySpec.parse("Cminpent"),
             prepare = { directory -> MurmurKeptBankFiles.write(directory) },
         ) { SynthKits.murmurKept() },
+        Starter(
+            "scuff-detroit", "SCUFF DETROIT",
+            "A dry Michigan kit: punch kick, whip clap, staccato bass hits, two-peak rims and a chopper hat, crushed, boxed, barked and slammed. Three touch zones, four takes; two bars through one bus and a clap riser.",
+            seeded = false, tempoBpm = com.snipsnap.synth.ScuffKits.Kit.DETROIT.bpm.toFloat(),
+        ) { com.snipsnap.synth.ScuffKits.build(com.snipsnap.synth.ScuffKits.Kit.DETROIT) },
+        Starter(
+            "scuff-flint", "SCUFF FLINT",
+            "The faster, brighter Michigan kit: a higher, shorter kick, a tighter clap, bright hats, short hard bass hits and three stank rims, crushed and slammed harder. Three touch zones, four takes; frantic two bars and a rim riser.",
+            seeded = false, tempoBpm = com.snipsnap.synth.ScuffKits.Kit.FLINT.bpm.toFloat(),
+        ) { com.snipsnap.synth.ScuffKits.build(com.snipsnap.synth.ScuffKits.Kit.FLINT) },
     )
 
     fun byId(id: String): Starter? = ALL.firstOrNull { it.id == id }

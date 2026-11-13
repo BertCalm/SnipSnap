@@ -1,8 +1,23 @@
 # HALOBAR six voices and performance
 
-Status: implementation and software validation in progress. New bell voices and
-all new performance examples await the owner's listening. This does not promote
-unheard recipes into the accepted factory bank.
+Status: the owner heard and approved the glockenspiel, crotales and tubular-bell
+banks on 2026-11-12. Bank listening approval is complete. Device playback and
+MPC acceptance remain open; the software evidence below records the delivered
+build.
+
+## Owner bank approval, 2026-11-12
+
+The owner confirmed hearing and approving the three bell banks identified in
+the preceding status: glockenspiel, crotales and tubular bells. This joins the
+earlier approval of vibraphone, marimba and xylophone. All six voice banks now
+have owner listening approval.
+
+This records the bank verdict. Separate kit, chord and roll/riser examples keep
+their existing review status. The factory registry still contains the original
+twelve recipes; this documentation update changes no recipes or rendered audio.
+Device playback, MPC loading and combined MPC keygroup velocity/round robin
+still require their own evidence. Historical validation receipts retain their
+pre-approval status and measurements.
 
 Repository read: `cadcad2c26a020607df06c27a016b4781f73c2b5`. Existing APIs verified:
 `Halobar.render`, `Restrike.take`, `Robin.apply`, `Velocity.atVelocity`,
@@ -102,7 +117,8 @@ remain polyphonic. The audition uses the actual PCM24 package reloaded through
 HALOBAR SIX STUDY adds a separate shelf starter: six dry/dub pairs followed by
 four tubular-bell scale answers. The accepted three-voice starter and twelve
 factory recipes remain unchanged. Each of the six voices has four starting
-recipes available in MAKE and the CLI; the new bell banks remain provisional.
+recipes available in MAKE and the CLI. The owner approved the three bell banks
+on 2026-11-12; the existing factory registry remains unchanged.
 
 Authored roll and riser examples use saved keygroups: a finite accelerating roll
 with alternating touches, and a rising minor pentatonic phrase. Individual
@@ -163,6 +179,15 @@ The [MPC diagnostic bench](https://halobar-native-audition.bertcalm.chatgpt.site
 provides three programs, three MIDI scores and software expectations. Its
 velocity-only and cycle-only controls isolate the combined candidate. The
 production MPC/MIDI readers accept the files, but the candidate is not enabled
-for production export. Physical firmware results are still needed. Owner
-listening, phone playback and MPC loading remain open; engine acceptance is
-in progress.
+for production export. Physical firmware results are still needed. At the
+software validation above, bank listening, phone playback and MPC loading were
+open. The owner subsequently approved the bell banks on 2026-11-12, as recorded
+at the top of this guide. Phone playback and MPC loading remain open; engine
+acceptance is in progress.
+
+## Render-speed follow-up
+
+[The render-speed report](HALOBAR_RENDER_SPEED.md) records the subsequent
+model-1 optimization, exact-audio checks, complete CI gate and paired desktop
+timings. Fresh rendering remains above the 50 ms target; device and MPC gates
+remain open. The original build measurements above retain their provenance.

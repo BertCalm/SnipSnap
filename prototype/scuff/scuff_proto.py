@@ -282,7 +282,7 @@ def boom(m, vel, tk):
     harm = butter(body, 90.0, 2, "high", FS)
     harm = asym_clip(harm * 4.0, 2.0 + 8.0 * drive, 0.3)
     harm = butter(butter(harm, 100.0, 2, "high", FS), 420.0, 4, "low", FS)
-    y = sub + (0.35 + 0.45 * drive) * harm
+    y = sub + (0.35 + 0.45 * drive) * (0.4 + 0.6 * vel) * harm   # a soft hit saturates less (round 1)
     # The hard note-off: the next note mutes this one. 3 ms, as a sampler's choke would.
     return y * np.clip((gate_at - t) / 0.003, 0.0, 1.0)
 
@@ -369,7 +369,7 @@ def tick(m, vel, tk):
     # Money counter: 7 kHz+ noise, 10 to 15 ms, cutoff and level following velocity.
     # Round 0b: a 0.8 ms pitched click at 3.6 kHz under the hiss, the mechanism's own tick.
     t60 = expmap(m["DECAY"], 0.008, 0.020) * (0.7 + 0.3 * vel)
-    cut = 7000.0 * (1.0 + 0.1 * tk["a"]) * (1.4 - 0.4 * vel)     # soft hits sit higher and thinner
+    cut = 7000.0 * 2 ** (m["TUNE"] - 0.5) * (1.0 + 0.1 * tk["a"]) * (1.4 - 0.4 * vel)  # soft hits sit higher and thinner; TUNE half an octave (round 1)
     t = t_axis(t60 * 2.0)
     y = noise(tk["rng"], len(t)) * np.minimum(1.0, t / 0.0003) * exp_env(t, t60)
     y = butter(y, cut, 4, "high", FS) * (0.4 + 0.6 * vel)
