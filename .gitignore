@@ -298,6 +298,16 @@ testkit/SnipSnap Embouchure Kit/
 testkit/murmur-audition/
 testkit/SnipSnap Murmur Kit/
 
+# Osteria's generated first listening WAVs, recipes, traces and page.
+testkit/osteria-audition/
+testkit/osteria-voices-audition/
+testkit/osteria-presets-audition/
+testkit/osteria-performance-bank/
+testkit/osteria-six-voice-bank/
+testkit/SnipSnap Osteria Kit/
+testkit/SnipSnap-Osteria-Kit.zip
+testkit/SnipSnap-Osteria-MPC2.zip
+
 # REVEL's regenerated raw/matched acceptance matrix, diagnostics and listening page.
 testkit/revel-audition/
 testkit/SnipSnap Revel Kit/

@@ -49,6 +49,7 @@ object Patches {
             ChitinPatch.ENGINE -> ChitinPatch.fromJsonValue(value)
             AccordPatch.ENGINE -> AccordPatch.fromJsonValue(value)
             ErosionPatch.ENGINE -> ErosionPatch.fromJsonValue(value)
+            OsteriaPatch.ENGINE -> OsteriaPatch.fromJsonValue(value)
             RimePatch.ENGINE -> RimePatch.fromJsonValue(value)
             OtisPatch.ENGINE -> OtisPatch.fromJsonValue(value)
             LibrationPatch.ENGINE -> LibrationPatch.fromJsonValue(value)

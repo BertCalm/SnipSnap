@@ -97,6 +97,10 @@ six-voice digital drum instrument, its 22 factory presets, the sixteen-pad start
 with choking hats and the retained tuned kit. [`TEMPEST.md`](TEMPEST.md) and
 [`TEMPEST_R2.md`](TEMPEST_R2.md) keep the first build and the model-2 revision.
 
+**Osteria.** [`OSTERIA.md`](OSTERIA.md) records the evolving-note engine: its
+listening rounds, the owner-accepted six-voice bank, the 13 factory presets, the
+finite keygroups and the saved PLUCK STRUM, and what is still open.
+
 **Filament.** [`FILAMENT.md`](FILAMENT.md) records the THREAD/PULSE/CURL
 approved strand-routing instrument, factory and phone integration, saved
 recipes, branch allocation, dry listening comparisons and held-loop evidence.

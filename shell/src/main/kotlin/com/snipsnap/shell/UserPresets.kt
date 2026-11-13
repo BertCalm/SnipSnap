@@ -44,6 +44,7 @@ import com.snipsnap.synth.Patches
 import com.snipsnap.synth.PitchwheelPatch
 import com.snipsnap.synth.SpoolPatch
 import com.snipsnap.synth.EmbouchurePatch
+import com.snipsnap.synth.OsteriaPatch
 import com.snipsnap.synth.ErosionPatch
 import com.snipsnap.synth.Embouchure
 import com.snipsnap.synth.BellowsPatch
@@ -461,6 +462,10 @@ object UserPresets {
             // Preserve native strike and renderer version, including old model-1 hits.
             val recipe = Json.write(JsonValue.Str(patch.toJsonText())).replace("$", "\\$")
             return "RivetPatch.fromJsonText($recipe),"
+        }
+        if (patch is OsteriaPatch) {
+            val recipe = Json.write(JsonValue.Str(patch.toJsonText())).replace("$", "\\$")
+            return "OsteriaPatch.fromJsonText($recipe),"
         }
         if (patch is ErosionPatch) {
             // Native touch is outside the macro map; promotion must retain it.

@@ -786,6 +786,18 @@ object StarterKits {
             "One TONGUE voice. Five finite settings: 1, 2, 4, 8 and 16 mechanisms.",
             seeded = false,
         ) { SplayDelivery.starterPads() },
+        Starter(
+            "osteria", "OSTERIA",
+            "The original evolving Note in C minor, with soft touches and a short tap.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.osteria() },
+        Starter(
+            "osteria-six-voice", "OSTERIA SIX VOICES",
+            "Note, bass, pluck, reed, bowed and pad: twelve evolving sounds with three native touch levels.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { com.snipsnap.synth.OsteriaKits.sixVoice() },
     )
 
     fun byId(id: String): Starter? = ALL.firstOrNull { it.id == id }
