@@ -24,13 +24,15 @@ import kotlin.random.Random
  * - **A15:** a roll of the genre's lead strike into one coil.
  * - **A16:** four bars through one shared coil and one keyed dictaphone, wrapped to loop.
  *
- * The four bars are built from exactly the parts and groove of the sketch the owner chose. Take 0 at
- * full velocity reproduces the sketch: the sketch generator renders through [phrase].
+ * The four bars are built from exactly the parts and groove of the sketch the owner chose, except
+ * Basement Dub's, which is the steppers groove they picked after hearing the kit (version 2). Take 0 at
+ * full velocity reproduces the chosen render.
  *
  * Bump [VERSION] when any pad's audio changes; saved kits keep the version they were printed with.
  */
 object SootGenreKits {
-    const val VERSION = 1
+    /** 2: Basement Dub's four bars become steppers (the owner heard the one-drop as incoherent, 2026-11-13). */
+    const val VERSION = 2
     val velocities = listOf(.30f, .65f, 1f)
     const val TAKES = 4
     const val PADS = 16
@@ -62,7 +64,7 @@ object SootGenreKits {
         val rollPad: Int, val rollCoil: Double,
     ) {
         DRUMLESS("soot-drumless", "Drumless", 80, grime = .6, wet = .45, swing = .32, hatDrag = .012, rollPad = 0, rollCoil = .55),
-        DUB("soot-dub", "Basement Dub", 72, grime = .5, wet = .7, swing = .2, hatDrag = .008, rollPad = 1, rollCoil = .9),
+        DUB("soot-dub", "Basement Dub", 72, grime = .5, wet = .5, swing = .2, hatDrag = .008, rollPad = 1, rollCoil = .9),
         NOIR("soot-noir", "Brushed Noir", 76, grime = .25, wet = .25, swing = .36, hatDrag = .016, rollPad = 1, rollCoil = .3),
         INDUSTRIAL("soot-industrial", "Warehouse Industrial", 96, grime = .9, wet = .4, swing = 0.0, hatDrag = 0.0, rollPad = 1, rollCoil = .5),
     }
@@ -90,7 +92,7 @@ object SootGenreKits {
         )
         Genre.DUB -> listOf(
             p("Drop Kick", SootVoice.KICK, "SUB" to .9f, "TUNE" to .38f, "SAG" to .5f, gain = 1.0, send = .5),
-            p("Thrown Rim", SootVoice.SNARE, "BENCH" to 1f, "TUNE" to .85f, "COIL" to .8f, "EDGE" to .3f, gain = .7, send = .85),
+            p("Thrown Rim", SootVoice.SNARE, "BENCH" to 1f, "TUNE" to .85f, "COIL" to .8f, "EDGE" to .3f, gain = .7, send = .4),
             p("Closed Hat", SootVoice.HAT_CLOSED, "DETUNE" to .4f, "DECAY" to .7f, mute = 1, gain = .25),
             p("Open Hat", SootVoice.HAT_OPEN, "DETUNE" to .4f, "DECAY" to .7f, mute = 1),
             p("Deep Kick", SootVoice.KICK, "SUB" to 1f, "TUNE" to .2f, "SAG" to .8f, "COIL" to .8f),
@@ -151,12 +153,14 @@ object SootGenreKits {
             { b -> at(b, 2, .4f, 1, 5, 9, 15) },
             { b -> if (b == 3) at(b, 12, .9f, 14) else emptyList() },
         )
+        // Steppers, the owner's pick (2026-11-13) over the sketch's one-drop, which they heard as
+        // incoherent: a kick on every beat, the rim on 3, offbeat hats, the rim thrown at the turn.
+        // Onset autocorrelation at the beat: 0.58, against the one-drop's 0.20.
         Genre.DUB -> bars(
-            { b -> at(b, 0, 1f, 8) },
-            { b -> at(b, 1, .9f, 8) + (if (b == 1 || b == 3) at(b, 1, .5f, 14) else emptyList()) },
+            { b -> at(b, 0, .9f, 0, 4, 12) + at(b, 0, 1f, 8) },
+            { b -> at(b, 1, .85f, 8) + (if (b == 3) at(b, 1, .55f, 14) else emptyList()) },
             { b -> at(b, 2, .5f, 2, 6, 10, 14) },
-            { b -> if (b == 1) at(b, 8, .6f, 15) else emptyList() },
-            { b -> if (b == 3) at(b, 10, 1f, 12) else emptyList() },
+            { b -> if (b == 1) at(b, 8, .5f, 15) else emptyList() },
         )
         Genre.NOIR -> bars(
             { b -> at(b, 0, .55f, 0) + at(b, 0, .4f, 10) },
