@@ -74,7 +74,7 @@ class SplaySynthScreenTest : ComposeScreenTest() {
         }
     }
 
-    private fun source() = SplayPatch("SAVED OLD TONGUE", SplayVoice.TONGUE,
+    private fun source() = SplayPatch("SAVED TONGUE", SplayVoice.TONGUE,
         mapOf("CONTACT" to .29f, "ENERGY" to .43f), midi = 49, velocity = .37f,
         seed = Int.MIN_VALUE, model = 1)
 

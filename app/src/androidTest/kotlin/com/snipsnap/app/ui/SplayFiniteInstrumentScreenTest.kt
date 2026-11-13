@@ -4,6 +4,8 @@ import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -64,6 +66,14 @@ class SplayFiniteInstrumentScreenTest : ComposeScreenTest() {
         pump(16)
     }
 
+    /** The sheet has two CANCEL targets (its dimmed backdrop and its button); press the button, drawn last. */
+    private fun cancelSheet() {
+        val action = requireNotNull(compose.onAllNodes(hasContentDescription("CANCEL") and hasClickAction())
+            .fetchSemanticsNodes().last().config.getOrNull(SemanticsActions.OnClick)?.action)
+        compose.runOnIdle { assertTrue(action()) }
+        pump(16)
+    }
+
     @Test fun editedLegacyPerformanceOpensFiniteKeysAndCancelPreservesEverySavedField() {
         val patch = source()
         val settings = show(patch)
@@ -79,7 +89,7 @@ class SplayFiniteInstrumentScreenTest : ComposeScreenTest() {
         assertFalse(spec.hasRelease)
         assertEquals(3, spec.progressPerZone)
         assertEquals("LANDS ON THE SHELF AS SPLAY KEYS, PLAYABLE ON KEYS.", spec.shelfNote("Splay Keys"))
-        press("CANCEL")
+        cancelSheet()
         assertEquals(patch, SynthDrafts.read(settings).filterIsInstance<SplayPatch>().single())
     }
 
@@ -97,7 +107,7 @@ class SplayFiniteInstrumentScreenTest : ComposeScreenTest() {
             press("MAKE INSTRUMENT")
             compose.onNodeWithText(SplayFinitePadMaker.instrumentNote(SplayFinitePadMaker.Spec(patch))).assertExists()
             button("RELEASE").assertDoesNotExist()
-            press("CANCEL")
+            cancelSheet()
             assertEquals(patch, SynthDrafts.read(settings).filterIsInstance<SplayPatch>().single())
         }
     }
