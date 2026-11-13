@@ -184,22 +184,21 @@ class SchemesTest {
     }
 
     /**
-     * The colourways hold what OPENSKY does not: the third text tier clears
-     * AA on its own chrome. OPENSKY's gap is pinned as a known one in
-     * `ContrastTest`; no newer scheme gets to have one.
+     * Every scheme's third text tier clears AA on its own chrome. OPENSKY's
+     * used to be a measured, pinned gap (3.85:1); it was moved to clear it,
+     * and no scheme gets to have one.
      */
     @Test
     fun `every colourway's third ink tier clears AA text contrast`() {
-        for (scheme in Schemes.ALL.filter { it.id != SchemeId.OPENSKY }) {
+        for (scheme in Schemes.ALL) {
             val ratio = Scheme.contrastRatio(scheme.ink3, scheme.gray)
             assertTrue(ratio >= 4.5, "${scheme.id} ink3 vs gray = %.2f:1, below AA text".format(ratio))
         }
     }
 
     /**
-     * VENT's third text tier clears AA on its own chrome. OPENSKY's does
-     * not, and `ContrastTest` pins that gap as a measured one; this pins
-     * that the dark scheme has no known text-contrast gap.
+     * VENT's third text tier clears AA on its own chrome, the dark default
+     * named on its own.
      */
     @Test
     fun `VENT's third ink tier clears AA text contrast`() {

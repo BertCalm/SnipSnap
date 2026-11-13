@@ -527,7 +527,7 @@ private fun SectionRow(
             // amber, at the same 2 dp, with the play glyph.
             .border(
                 if (selected) 2.dp else 1.dp,
-                if (active) scheme.amber.tape else if (selected) scheme.accent.tape else scheme.grayEdge.tape,
+                if (active) scheme.amber.tape else if (selected) scheme.accent.tape else scheme.edge.tape,
                 RoundedCornerShape(4.dp),
             )
             .semantics { this.selected = selected }

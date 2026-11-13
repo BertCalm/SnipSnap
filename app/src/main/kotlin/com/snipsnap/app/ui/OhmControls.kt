@@ -175,11 +175,11 @@ internal fun OhmControls(
                 TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
             if (busy) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    TapeText("CAPTURING ATTACK…", TapeType.pixelSmall, scheme.amber.tape, Modifier.weight(1f))
+                    TapeText("CAPTURING ATTACK…", TapeType.pixelSmall, scheme.accent.tape, Modifier.weight(1f))
                     LabButton("CANCEL", scheme, enabled = true) { sourceJob?.cancel() }
                 }
             }
-            error?.let { TapeText(it, TapeType.pixelSmall, scheme.warn.tape, maxLines = 3) }
+            error?.let { TapeText(it, TapeType.pixelSmall, scheme.warnInk.tape, maxLines = 3) }
             MacroSlider("HOLD", patch.macros["HOLD"] ?: 0f, fillColor, scheme, onValueChange = {
                 changePatch(currentPatch.copy(macros = currentPatch.macros + ("HOLD" to it.coerceIn(0f, 1f))))
             })

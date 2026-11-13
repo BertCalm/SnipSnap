@@ -83,10 +83,10 @@ internal fun ConfluenceGatheringCard(
         }
         val line = refusal ?: status ?: if (loading) "Opening the saved gathering…" else null
         if (line != null) {
-            TapeText(line, TapeType.pixelSmall, if (refusal == null) scheme.ink2.tape else scheme.warn.tape, maxLines = Int.MAX_VALUE)
+            TapeText(line, TapeType.pixelSmall, if (refusal == null) scheme.ink2.tape else scheme.warnInk.tape, maxLines = Int.MAX_VALUE)
         }
         if (!loading && controls != null && destination == null) {
-            TapeText("No empty pad. Make room before saving a variation.", TapeType.pixelSmall, scheme.warn.tape, maxLines = Int.MAX_VALUE)
+            TapeText("No empty pad. Make room before saving a variation.", TapeType.pixelSmall, scheme.warnInk.tape, maxLines = Int.MAX_VALUE)
         }
         ActionButton("HEAR", scheme, enabled = enabled, modifier = Modifier.fillMaxWidth(), onClick = onHear)
         ActionButton(

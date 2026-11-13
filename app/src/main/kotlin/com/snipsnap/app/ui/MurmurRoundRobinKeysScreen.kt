@@ -145,7 +145,7 @@ internal fun MurmurRoundRobinKeysScreen(
             }
             TapeText("${state.activeCount}/8 VOICES", TapeType.lcdSmall, scheme.ink2.tape)
         }
-        if (state.error != null) TapeText(checkNotNull(state.error), TapeType.lcdSmall, scheme.amber.tape, maxLines = 3)
+        if (state.error != null) TapeText(checkNotNull(state.error), TapeType.lcdSmall, scheme.accent.tape, maxLines = 3)
         else if (state.loading) TapeText("LOADING… KEYS WILL BE READY SHORTLY.", TapeType.lcdSmall, scheme.ink2.tape)
     }
 }

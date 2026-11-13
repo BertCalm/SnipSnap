@@ -180,7 +180,7 @@ private fun ArtPickerContent(
     }
 }
 
-/** A style's live preview with its name under it; the picked style is framed in the scheme's amber. */
+/** A style's live preview with its name under it; the picked style is framed in the scheme's accent. */
 @Composable
 private fun StyleCell(previews: ArtPreviews, knobs: ArtKnobs, picked: Boolean, scheme: Scheme, modifier: Modifier, onPick: () -> Unit) {
     // Seeded from the cache, so a preview already drawn shows at once instead of DRAWING… for a frame.
@@ -190,7 +190,7 @@ private fun StyleCell(previews: ArtPreviews, knobs: ArtKnobs, picked: Boolean, s
     Column(
         modifier
             .tapeClick(label = "STYLE: ${knobs.style.name}", onClick = onPick)
-            .border(if (picked) 2.dp else 1.dp, if (picked) scheme.amber.tape else scheme.grayEdge.tape, RoundedCornerShape(4.dp))
+            .border(if (picked) 2.dp else 1.dp, if (picked) scheme.accent.tape else scheme.edge.tape, RoundedCornerShape(4.dp))
             .padding(4.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(4.dp),
@@ -206,7 +206,7 @@ private fun StyleCell(previews: ArtPreviews, knobs: ArtKnobs, picked: Boolean, s
         TapeText(
             if (picked) "● ${knobs.style.name}" else knobs.style.name,
             TapeType.pixel.copy(textAlign = TextAlign.Center),
-            if (picked) scheme.amber.tape else scheme.ink.tape,
+            if (picked) scheme.accent.tape else scheme.ink.tape,
             Modifier.fillMaxWidth(),
         )
     }
@@ -229,12 +229,12 @@ private fun Chip(text: String, label: String, picked: Boolean, scheme: Scheme, o
         Modifier
             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
             .raisedBevel(scheme)
-            .border(if (picked) 2.dp else 0.dp, if (picked) scheme.amber.tape else scheme.grayEdge.tape, RoundedCornerShape(4.dp))
+            .border(if (picked) 2.dp else 1.dp, if (picked) scheme.accent.tape else scheme.edge.tape, RoundedCornerShape(4.dp))
             .tapeClick(label = label, onClick = onPick)
             .padding(horizontal = 10.dp, vertical = 8.dp),
         contentAlignment = Alignment.Center,
     ) {
-        TapeText(text, TapeType.pixel, if (picked) scheme.amber.tape else scheme.ink.tape)
+        TapeText(text, TapeType.pixel, if (picked) scheme.accent.tape else scheme.ink.tape)
     }
 }
 

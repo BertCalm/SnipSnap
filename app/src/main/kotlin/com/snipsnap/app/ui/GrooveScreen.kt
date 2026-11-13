@@ -2109,7 +2109,7 @@ fun GrooveScreen(
                             // Fix 2: the beat count, same as this screen's other three "COUNTING IN…" render sites.
                             if (countingIn) "COUNTING IN… $countInBeat" else Copy.GROOVE_OVERDUBBING,
                             TapeType.pixel,
-                            scheme.amber.tape,
+                            scheme.accent.tape,
                         )
                     }
                     // WINDOW_GRID_ROWS, not BankRow — see the from-scratch
@@ -2487,7 +2487,7 @@ private fun FeelRow(
                     else -> "FEEL · LOOSE $feel% · #$seed"
                 },
                 TapeType.pixel,
-                scheme.amber.tape,
+                scheme.accent.tape,
             )
             // "RIDES A · C · D" until J18. The feel is applied to the
             // take and every program derived from it inherits it —
@@ -2567,7 +2567,7 @@ private fun ColumnScope.BeatShape(
     ) {
         SwingStepper("−", scheme, description = "SWING DOWN") { onSwingChange((swingPercent - GROOVE_SWING_STEP).coerceAtLeast(GROOVE_SWING_MIN)) }
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            TapeText("SWING $swingPercent%", TapeType.pixel, scheme.amber.tape)
+            TapeText("SWING $swingPercent%", TapeType.pixel, scheme.accent.tape)
             TapeText("RIDES SWING", TapeType.pixelSmall, scheme.ink2.tape)
         }
         SwingStepper("+", scheme, description = "SWING UP") { onSwingChange((swingPercent + GROOVE_SWING_STEP).coerceAtMost(GROOVE_SWING_MAX)) }
@@ -2674,7 +2674,7 @@ private fun GrooveActionButton(
         modifier
             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
             .background(scheme.field.tape, RoundedCornerShape(6.dp))
-            .border(1.dp, if (accent) scheme.accent.tape else scheme.grayEdge.tape, RoundedCornerShape(6.dp))
+            .border(1.dp, if (accent) scheme.accent.tape else scheme.edge.tape, RoundedCornerShape(6.dp))
             // Always clickable, `enabled` forwarded rather than dropped: a
             // screen reader is told this control is temporarily unavailable
             // instead of it silently vanishing from the tree (accessibility

@@ -39,10 +39,12 @@ fun Modifier.raisedBevel(
     radius: Dp = 4.dp,
     fill: Color? = null,
 ): Modifier =
-    // `.sound-card`: the raised fill, a hairline, a 2dp corner.
+    // `.sound-card`: the raised fill, a line, a 2dp corner. A raised form is
+    // a control, so the line is the scheme's `edge` (3 : 1 on what it sits
+    // on, WCAG 1.4.11), not the quiet `grayEdge` hairline.
     this
         .background(fill ?: scheme.raised.tape, RoundedCornerShape(MODERN_RADIUS))
-        .border(1.dp, scheme.grayEdge.tape, RoundedCornerShape(MODERN_RADIUS))
+        .border(1.dp, scheme.edge.tape, RoundedCornerShape(MODERN_RADIUS))
 
 /**
  * The same surface, pushed in — selected menu items, held buttons.
@@ -92,10 +94,11 @@ fun Modifier.sunkenField(
     scheme: Scheme,
     radius: Dp = 4.dp,
 ): Modifier =
-    // `.note-card textarea`: the field fill and a line, no inset.
+    // `.note-card textarea`: the field fill and a line, no inset. Fields are
+    // what you type into and pick from, so the line is `edge`.
     this
         .background(scheme.field.tape, RoundedCornerShape(MODERN_RADIUS))
-        .border(1.dp, scheme.grayEdge.tape, RoundedCornerShape(MODERN_RADIUS))
+        .border(1.dp, scheme.edge.tape, RoundedCornerShape(MODERN_RADIUS))
 
 /**
  * The rule between two groups of controls in a strip: one hairline at the

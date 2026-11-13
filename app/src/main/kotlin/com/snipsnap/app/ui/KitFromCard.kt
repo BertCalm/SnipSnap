@@ -96,11 +96,11 @@ private fun KitFromChip(
     Box(
         modifier
             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
-            .raisedBevel(scheme, fill = if (selected) scheme.amber.tape.copy(alpha = 0.85f) else null)
+            .raisedBevel(scheme, fill = if (selected) scheme.accent.tape else null)
             .tapeClick(label = label, enabled = !busy, onClick = onClick)
             .padding(horizontal = 2.dp),
         contentAlignment = Alignment.Center,
     ) {
-        TapeText(label, type, if (busy) scheme.ink3.tape else if (selected) scheme.titleInk.tape else scheme.ink2.tape, maxLines = maxLines)
+        TapeText(label, type, if (busy) scheme.ink3.tape else if (selected) scheme.onAccent.tape else scheme.ink2.tape, maxLines = maxLines)
     }
 }

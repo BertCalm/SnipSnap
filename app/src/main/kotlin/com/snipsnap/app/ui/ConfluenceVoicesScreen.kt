@@ -283,7 +283,7 @@ fun ConfluenceVoicesScreen(
                 modifier = Modifier.fillMaxWidth(), onClick = { stop(); status = "PREVIEW STOPPED" })
             readySeconds?.let { TapeText("${"%.2f".format(Locale.ROOT, it)}S READY · EXACT HEARD SETTINGS", TapeType.pixelSmall, scheme.ink2.tape) }
             if (entry == null) TapeText("Open a kit to save a new pad.", TapeType.pixelSmall, scheme.ink2.tape)
-            else if (destination == null) TapeText("No empty pad. Make room before saving.", TapeType.pixelSmall, scheme.warn.tape, maxLines = Int.MAX_VALUE)
+            else if (destination == null) TapeText("No empty pad. Make room before saving.", TapeType.pixelSmall, scheme.warnInk.tape, maxLines = Int.MAX_VALUE)
             ActionButton(if (creditsOpen) "CLOSE SOURCE CREDITS" else "SOURCE CREDITS & LICENCE", scheme, enabled = true,
                 modifier = Modifier.fillMaxWidth(), onClick = { creditsOpen = !creditsOpen })
             if (creditsOpen) {
@@ -299,7 +299,7 @@ fun ConfluenceVoicesScreen(
             }
         }
         val line = refusal ?: if (saving) "Saving the heard passage…" else working ?: status
-        if (line != null) TapeText(line, TapeType.pixelSmall, if (refusal == null) scheme.ink2.tape else scheme.warn.tape, maxLines = Int.MAX_VALUE)
+        if (line != null) TapeText(line, TapeType.pixelSmall, if (refusal == null) scheme.ink2.tape else scheme.warnInk.tape, maxLines = Int.MAX_VALUE)
         val saved = entry?.kit?.pads.orEmpty().filter(ConfluenceSelectedWorkshop::isEditable)
         if (saved.isNotEmpty()) {
             TapeText("SAVED VOICE PADS", TapeType.pixelSmall, scheme.ink2.tape)

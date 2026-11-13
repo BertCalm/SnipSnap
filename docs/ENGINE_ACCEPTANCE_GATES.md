@@ -198,23 +198,23 @@ Hip-hop drum kits in the GATECRASH shape, six built: TRAP, DRILL, BACKROOM, LOWR
 - **THUMP SUB as a voice:** six macros, velocity and takes through `Thump.render`, `Velocity` and `Restrike`. The classifier reads a long sub as TONAL; the default reads KICK; no setting makes a LOOP (`ThumpSubTest`). Round 2 made its length its DECAY alone (velocity moves drive, click and settle), so the robin's windows never change with the touch.
 - **Overall:** every software gate passes and all six kits are approved by ear; phone and MPC playback wait for the owner's devices; MPC 2 cannot carry the round robin.
 
-## SCUFF (rounds 0 and 0b, 2026-11-12; round 1 Kotlin, round 2 and 3 kits, 2026-11-13)
+## SCUFF (rounds 0 and 0b, 2026-11-12; round 1 Kotlin, round 2 and 3 kits, heard, 2026-11-13)
 
 A dry Michigan drum kit and its chain (GRIT, LOCKER, BARK, SLAM). See [SCUFF](SCUFF.md).
 Rounds 0 and 0b are Python prototype auditions; no Kotlin exists. Round 0b answered the owner's note "more character in general" (written before listening): every voice gained a mechanism, BARK went from under 1 dB of effect to 3 to 5 dB, and every pad ends at a tail gate.
 
 - **Melodic, keygroup and chord-tool gates:** not applicable. A drum engine.
 - **Articulation:** finite hits, no HOLD. Not a picked or thumbed string.
-- **Percussion: pass in software (rounds 2 and 3).** DETROIT's A16 is "Clap Riser" and FLINT's is "Rim Riser", each tightening from eighths to thirty-seconds over one bar through the bus; each kit's A15 is its own two bars through one bus. Not heard.
-- **Drum shelf: pass in software (round 3), not heard.** SCUFF DETROIT (118 BPM) and SCUFF FLINT (132 BPM) are on the shelf under SKINS, sixteen pads each, three zones of four takes, two bus phrases each. They differ in pads, tunings, lengths, roles (FLINT has three rims and no low bass hit), tempo, chain setting and phrases; `ScuffKitsTest` holds every role apart by shape and FLINT's kick and hat brighter. Not a copy at other settings.
+- **Percussion: pass (rounds 2 and 3, heard).** DETROIT's A16 is "Clap Riser" and FLINT's is "Rim Riser", each tightening from eighths to thirty-seconds over one bar through the bus; each kit's A15 is its own two bars through one bus. Both risers and both two-bar phrases were on the page the owner accepted on 2026-11-13.
+- **Drum shelf: pass (round 3, heard).** SCUFF DETROIT (118 BPM) and SCUFF FLINT (132 BPM) are on the shelf under SKINS, sixteen pads each, three zones of four takes, two bus phrases each. They differ in pads, tunings, lengths, roles (FLINT has three rims and no low bass hit), tempo, chain setting and phrases; `ScuffKitsTest` holds every role apart by shape and FLINT's kick and hat brighter. Not a copy at other settings. Both kits were on the page the owner accepted on 2026-11-13.
 - **Velocity and round robin:**
   - **Rendering: verified in Kotlin by test (round 1).** `ScuffTest` holds that a soft and a hard hit differ in spectral shape at matched level on every core voice, that the kick clicks and drops harder and the clap loses a tap, and that four takes per voice are distinct strikes that each replay byte for byte. Python, re-measured with the corrected distance: soft against hard 2.8 to 9.7 dB; closest takes 1.9 (tick) to 4.6 dB (clap).
   - **Saving: verified (round 2).** A SCUFF patch saves velocity, take and model version and replays byte for byte through JSON (`DeterminismTest`). The kit reloads equal and all 192 saved slices match their renders through the pad resolver (`ScuffKitTest`, `:shell:generateScuffKits`).
   - **Playback: verified in software.** `PadHit.resolve` picks the zone by velocity and deals the four takes in order, then repeats. No phone has played the kit.
   - **Export: MPC 3 verified by read-back.** Velocity ranges, base slices, cycle lengths and frame windows match, and the exported PCM matches the renders. **MPC 2 does not pass:** it keeps one take per zone. No MPC has loaded the kit.
-- **Sound character:** direction accepted. On 2026-11-12 the owner responded to the published round-0b audition, "Sounds good, please merge." Preserve round 0b as the accepted baseline; this is a listen to Python renders. The round-1 Kotlin port measures as the same waveform on the five deterministic voices (0.05 to 0.17 dB, correlation 0.997 to 1.000) and as another take on the four noise voices; it has not been heard.
+- **Sound character:** direction accepted. On 2026-11-12 the owner responded to the published round-0b audition, "Sounds good, please merge." Preserve round 0b as the accepted baseline; this is a listen to Python renders. The round-1 Kotlin port measures as the same waveform on the five deterministic voices (0.05 to 0.17 dB, correlation 0.997 to 1.000) and as another take on the four noise voices. On 2026-11-13, after the round-3 merge, the owner heard the page's version 5 (every pad of both kits cut from the exported MPC 3 tracks, the velocity strips, the phrases and the round-1 Kotlin section) and said, "Audition is all good." Preserve `Scuff.MODEL_VERSION` 1 and `ScuffKits.VERSION` 1 as the accepted baseline. This is a listen to the page, not evidence of a phone or MPC audition.
 - **Classifier:** the Kotlin kick reads PERC (its click and knock lift the 93 ms centroid past the sub-kick rule) and the crushed hat reads SNARE; `drumClassFor` files them KICK and HAT_CLOSED. Disclosed in [SCUFF](SCUFF.md), held by `ScuffTest`.
-- **Overall: incomplete, every software gate in place.** Round 3 has the engine, the patch, two distinct kits on the shelf with their risers, and velocity and round robin proved through rendering, saving, playback and MPC 3 export in software. MPC 2 round robin (one take per zone), hardware playback, presets and the roster, the app picker, and the owner's listen to the Kotlin engine and both kits remain open.
+- **Overall: incomplete, every software gate in place and the sound heard.** Round 3 has the engine, the patch, two distinct kits on the shelf with their risers, and velocity and round robin proved through rendering, saving, playback and MPC 3 export in software; the owner accepted the engine and both kits by ear on 2026-11-13. MPC 2 round robin (one take per zone), hardware playback, presets and the roster, and the app picker remain open.
 
 ## MIRRORBALL kits (sound approved 2026-11-12, hardware open)
 
@@ -389,6 +389,41 @@ unchanged.
   2026-11-07.
 - **Overall: incomplete.** The voice count, chord tools, round robin and held hardware listening
   remain open.
+
+## APSIS (GRAIN Lower texture ported from the recovery backup, 2026-11-13)
+
+An orbital modal instrument with three voices: PASSAGE, GRAIN and ANCHOR. See [APSIS](APSIS.md),
+[GRAIN and ANCHOR](APSIS-POPULATIONS.md) and [the acceptance bank](APSIS-ACCEPTANCE.md).
+
+This port brings back GRAIN model 4, the owner-selected Lower texture balance: material excitation
+is halved before the modal bank, and root forcing, contact timing and leveling are unchanged. New
+GRAIN patches and GRAIN's three factory presets now use model 4. Saved model-3 GRAIN recipes, and
+recipes with no saved model, keep model 3 and their original audio. PASSAGE and ANCHOR stay on
+model 3. `ApsisLowerTextureTest` matches native PCM24 hashes against twelve frozen audition
+references (six model 3, six Lower texture), now a text fixture in
+`synth/src/test/resources/apsis-lower-texture`.
+
+| Gate | Status | Evidence |
+|---|---|---|
+| Six melodic voices | **Fail: three of six** | PASSAGE, GRAIN and ANCHOR. TETHER, VESSEL and CORONA remain Python listening prototypes. |
+| Presets | Pass | Twelve: six PASSAGE recipes and three each for GRAIN and ANCHOR (`ApsisPresets`). |
+| Playable keygroups | Not yet verified | Dedicated keygroup export is recorded as later work in [APSIS](APSIS.md); this port adds none. |
+| Premade kit | Partial | A sixteen-pad PASSAGE musical bank (`SynthKits.apsis`, exported by `:synth:generateApsisKit`) and the download-only GRAIN/ANCHOR acceptance bank exist. Neither is on the starter shelf. |
+| Chord-tool compatibility | Not yet verified | No chord-tool evidence is recorded for APSIS. |
+| Articulation: HOLD | Partial | HOLD ≥ .99 renders a settled loop; held pads are gated full-sample loops and held previews repeat until STOP. Physical phone/MPC listening of the joins is open. STRUM: not applicable, not a picked or thumbed string. |
+| Percussion, drum kits | Not applicable | A melodic engine. |
+| Velocity: rendering | Pass | Native velocity changes the excitation spectrum before output leveling. Model 4 replays identically through native touch, edits and pad recipes at .35, .65 and 1 (`ApsisLowerTextureTest`). The hardware's velocity-to-amplitude curve is unmeasured. |
+| Saved audio | Pass in software | Explicit models replay their original sound; GRAIN accepts 3 and 4, ANCHOR 3, PASSAGE 1 to 3 (`ApsisLowerTextureTest`, `ApsisIntegrationTest`). |
+| Round robin | Not yet verified | APSIS has no re-strike (`Restrike.canRestrike` is false), so no round robin exists through rendering, saving, playback or export. |
+| Hardware playback | Not verified | The acceptance bank's MPC checklist has not been reported back; phone render latency is unmeasured. |
+
+- **Sound character, as recorded in [GRAIN and ANCHOR](APSIS-POPULATIONS.md):** "the owner selected
+  the Python GRAIN/ANCHOR identities". "On 8 November the owner selected Lower texture for Grain
+  Passage, Scattered Grains and Held Grains." The soft, hard and C3 engineering cards "have no
+  separate owner verdict". [APSIS](APSIS.md) records that "The owner found model 2 more
+  distinctive; the musical bank still awaits the owner's listening decision."
+- **Overall: incomplete.** The voice count, keygroups, chord tools, round robin and hardware
+  playback remain open.
 
 ## CLUTTER (round 0, 2026-11-13)
 
