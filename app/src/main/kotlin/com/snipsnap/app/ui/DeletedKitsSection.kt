@@ -199,7 +199,7 @@ internal fun DeletedKitsSection(
     Column(modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
         // The shelf's section-header style; the bench's header row and Back
         // live in `BinScreen`, not here.
-        TapeText("DELETED KITS AND PROJECTS · ${binned.size + binnedProjects.size} WAITING", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
+        TapeText("DELETED KITS AND PROJECTS · ${binned.size + binnedProjects.size} WAITING", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
 
         if (binned.isEmpty() && binnedProjects.isEmpty()) {
             Box(

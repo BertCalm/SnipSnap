@@ -556,9 +556,10 @@ private fun Modifier.fadeEdges(state: LazyListState): Modifier = this
 private fun SectionHeader(text: String) {
     TapeText(
         text,
-        TapeType.pixel,
+        TapeType.eyebrow,
         LocalScheme.current.ink2.tape,
         Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp).semantics { heading() },
+        maxLines = 2,
     )
 }
 

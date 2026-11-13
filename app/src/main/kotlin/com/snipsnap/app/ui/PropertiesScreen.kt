@@ -263,7 +263,7 @@ fun PropertiesScreen(
             onToggle = { rateOpen = !rateOpen },
             scheme = scheme,
         ) {
-            TapeText(Copy.SETUP_RATE, TapeType.pixel, scheme.ink2.tape, maxLines = 1)
+            TapeText(Copy.SETUP_RATE, TapeType.pixel, scheme.ink2.tape, maxLines = 2)
             TapeText(Copy.SETUP_RATE_NOTE, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 3)
         }
 

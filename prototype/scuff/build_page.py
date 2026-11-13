@@ -37,6 +37,7 @@ LABELS = {
     "last_sample": ("LAST SAMPLE", "{:.4f}"), "closest_takes_db": ("CLOSEST TAKES", "{:.1f} dB"),
     "widest_takes_db": ("WIDEST TAKES", "{:.1f} dB"),
     "round0_to_0b_db": ("FROM ROUND 0", "{:.1f} dB"),
+    "python_to_kotlin_db": ("FROM PYTHON", "{:.1f} dB"),
 }
 
 
@@ -61,7 +62,7 @@ def chips(metrics: dict) -> str:
 def clip_html(c: dict) -> str:
     return f"""
       <li class="clip">
-        <div class="clip-head"><span class="clip-id">{ESC(c['name'])}</span><span class="clip-len">{c['seconds']:.1f} s</span></div>
+        <div class="clip-head"><span class="clip-id">{ESC(c['name'])}</span><span class="clip-len">{(f"{c['seconds']:.1f} s" if c['seconds'] else "")}</span></div>
         <p class="clip-note">{ESC(c['note'])}</p>
         <audio controls preload="none" src="{ESC(c['file'])}"></audio>
         <div class="chips">{chips(c['metrics'])}</div>
@@ -85,6 +86,87 @@ LISTEN = {
     "velocity": "Does the soft hit sound like a softer hit, not a quieter one? On the kick, the bass and the rim especially.",
     "round-robin": "Start with the A/B pair at the end. Does B sound like four strikes and A like one strike repeated? Is any take so different it sounds like another pad?",
 }
+
+# The Kotlin port against the Python prototype, when compare_kotlin.py has run.
+KOTLIN = None
+try:
+    KOTLIN = json.load(open(os.path.join(OUT, "kotlin.json")))
+except FileNotFoundError:
+    pass
+
+
+def kotlin_section():
+    if KOTLIN is None:
+        return ""
+    pairs = KOTLIN["pairs"]
+    scale = KOTLIN["scale"]
+    by = lambda sec: [p for p in pairs if p["section"] == sec]  # noqa: E731
+    rows = "".join(
+        f"<tr><th>{p['name'].upper()}</th><td>{p['distance_db']} dB</td><td>{p['correlation']:.3f} · {p['residual_db']} dB</td><td>{scale[p['name'].upper()]['takes_closest_db']} to {scale[p['name'].upper()]['takes_widest_db']} dB</td>"
+        f"<td>{scale[p['name'].upper()]['velocity_step_db']} dB</td><td>{p['python_measures']['centroid_hz']} → {p['kotlin_measures']['centroid_hz']} Hz</td>"
+        f"<td>{p['python_measures']['decay_ms']:.0f} → {p['kotlin_measures']['decay_ms']:.0f} ms</td></tr>" for p in by("kit"))
+    def pair_clips(ps):
+        out = []
+        for p in ps:
+            out.append(clip_html({"name": p["name"] + " · python", "seconds": p["python_measures"]["seconds"], "note": "Round 0b, the accepted Python render.", "file": p["python"],
+                                  "metrics": {"centroid_hz": p["python_measures"]["centroid_hz"], "decay_ms": p["python_measures"]["decay_ms"], "crest_db": p["python_measures"]["crest_db"]}}))
+            out.append(clip_html({"name": p["name"] + " · kotlin", "seconds": p["kotlin_measures"]["seconds"], "note": "Round 1, the Kotlin engine.", "file": p["kotlin"],
+                                  "metrics": {"centroid_hz": p["kotlin_measures"]["centroid_hz"], "decay_ms": p["kotlin_measures"]["decay_ms"], "crest_db": p["kotlin_measures"]["crest_db"], "python_to_kotlin_db": p["distance_db"]}}))
+        return "".join(out)
+    def summary(sec, label):
+        ps = by(sec)
+        if not ps:
+            return ""
+        return f"<tr><th>{label}</th><td>{len(ps)}</td><td>{min(p['distance_db'] for p in ps)} to {max(p['distance_db'] for p in ps)} dB</td></tr>"
+    other = "".join(summary(s, l) for s, l in (("velocity", "velocity, 3 per voice"), ("round-robin", "takes, 4 per voice"), ("chain-rim", "the chain on the rim"), ("chain-clap", "the chain on the clap"), ("fuse", "the kick and bass pair")))
+    return f"""
+    <section class="card" id="kotlin">
+      <h2>Round 1: the Kotlin engine against the Python prototype</h2>
+      <p class="intro">The app's own engine (`Scuff.kt`, model {KOTLIN.get('model')}) rendering the same pads as the accepted round-0b prototype. The port keeps every constant;
+      what cannot be the same arithmetic is the resampler, the noise generator and how takes are dealt. The distance is the take-distance measure used everywhere on this page.
+      For scale, the next two columns are how far that voice's own four takes sit apart and how far its soft hit sits from its hard hit: a port closer than a take is the same drum.</p>
+      <p class="ask"><span class="tag">LISTEN FOR</span> Each pair: is the Kotlin pad the same drum as the Python one? Name any pair where the port lost something.</p>
+      <p class="intro">The clips are aligned by cross-correlation first (the two resamplers differ by about 1 ms of latency). "Waveform" is the correlation of the aligned clips and the residual between them in dB:
+      1.000 and -30 dB or lower means the same waveform; a lower correlation means a different noise realisation (the tick's hiss and the hat's tip come from a different noise generator in Kotlin, as another take would).</p>
+      <div class="table-wrap"><table><thead><tr><th>Voice</th><th>Python to Kotlin</th><th>Waveform</th><th>Its takes</th><th>Soft to hard</th><th>Centroid</th><th>To -60 dB</th></tr></thead><tbody>{rows}</tbody></table></div>
+      <div class="table-wrap"><table><thead><tr><th>Also compared</th><th>Pairs</th><th>Python to Kotlin</th></tr></thead><tbody>{other}</tbody></table></div>
+      <ol class="clips">{pair_clips(by("kit"))}{pair_clips(by("fuse"))}{pair_clips(by("chain-rim"))}</ol>
+    </section>"""
+
+
+# The kit on the shelf (round 2), when the shell generator's pack has been copied in under shelf/.
+SHELF = None
+try:
+    SHELF = json.load(open(os.path.join(OUT, "shelf", "manifest.json")))
+except FileNotFoundError:
+    pass
+
+
+def shelf_section():
+    if SHELF is None:
+        return ""
+    out = []
+    for kit in SHELF["kits"]:
+        clips = []
+        for p in kit["pads"]:
+            n = f"{p['slot']:02d}"
+            clips.append(clip_html({"name": f"A{n} {p['name']}", "seconds": p["seconds"], "file": f"shelf/{kit['id']}/pad-{n}.wav",
+                                    "note": f"{p['class']}: the hard first take, as the saved kit plays it.", "metrics": {}}))
+            if p["touch"]:
+                clips.append(clip_html({"name": f"A{n} {p['name']} · touch", "seconds": 0.0, "file": f"shelf/{kit['id']}/touch-{n}.wav",
+                                        "note": "Twelve strikes in the order the pad deals them: four soft takes, four medium, four hard.", "metrics": {}}))
+        out.append(f"""
+    <section class="card" id="shelf-{kit['id']}">
+      <h2>Round 2: SCUFF {kit['title'].upper()} on the shelf</h2>
+      <p class="intro">The sixteen-pad kit the app lists under SKINS, at {kit['bpm']} BPM: fourteen hits with three velocity zones of four takes each, rendered by the engine
+      itself, and two phrases through one bus clipper, "Two Bars" (the round-0b pattern) and "Clap Riser" (eighths tightening to thirty-seconds).
+      Every clip here is cut from the exported MPC 3 track's own audio through the app's pad resolver, so what you hear is what the kit plays.
+      The grid is proved in software: the saved kit reloads equal, every slice matches its render, playback deals the takes in order, and the MPC 3 track reads back.</p>
+      <p class="ask"><span class="tag">LISTEN FOR</span> Is this a kit you would load? Do the hats choke right, do the three bass hits sit as one instrument, and does "Two Bars" fuse the kick and the bass the way the one-shots cannot?</p>
+      <ol class="clips">{''.join(clips)}</ol>
+    </section>""")
+    return "".join(out)
+
 
 sections = []
 for s in M["sections"]:
@@ -140,13 +222,14 @@ GATES = [
     ("Percussion: authored roll or riser", "open",
      "The 32nd hat burst and the suck-back crash are in the two-bar pattern. No roll or riser pad is authored yet; a snare-roll riser in the GATECRASH and BREAKER mould is proposed for round 1."),
     ("Drums: multiple distinct genre kits on the shelf", "open", "One kit's worth of voices, in Python. The brief covers one genre; a second kit (Flint faster and brighter, Detroit heavier) is proposed, not built."),
-    ("Velocity: rendering", "pass (Python only)",
-     "Every voice changes tone with velocity, peak-matched. Soft against hard, in dB: " + " · ".join(f"{v} {d['soft_vs_hard_db']}" for v, d in vel.items()) + ". No Kotlin."),
-    ("Round robin: rendering", "pass (Python only), not heard",
-     f"Four takes per voice on four dealt dimensions. Closest two takes {min(d['closest_db'] for d in rr.values())} to {max(d['closest_db'] for d in rr.values())} dB apart; "
-     f"widest {min(d['widest_db'] for d in rr.values())} to {max(d['widest_db'] for d in rr.values())} dB. The hat's takes are free-running oscillator phases, a real re-strike. No Kotlin."),
-    ("Velocity and round robin: saving, playback, export", "not yet verified", "No Kotlin patch, kit or MPC export exists."),
-    ("Sound character", "not heard", "Round 0b. The owner asked for more character after seeing round 0; neither round has been heard."),
+    ("Velocity: rendering", "pass in Kotlin, by test",
+     "ScuffTest holds that a soft and a hard hit differ in spectral shape at matched level on every core voice, the kick clicks and drops harder, the clap loses a tap. Python, soft against hard, in dB: " + " · ".join(f"{v} {d['soft_vs_hard_db']}" for v, d in vel.items()) + "."),
+    ("Round robin: rendering", "pass in Kotlin, by test; not heard",
+     f"Four takes per voice, dealt on four dimensions; ScuffTest holds that no two are copies and each replays byte for byte. Python: closest two takes {min(d['closest_db'] for d in rr.values())} to {max(d['closest_db'] for d in rr.values())} dB apart; "
+     f"widest {min(d['widest_db'] for d in rr.values())} to {max(d['widest_db'] for d in rr.values())} dB."),
+    ("Velocity and round robin: saving", "pass, by test", "A SCUFF patch saves its velocity, take and model version and replays byte for byte through JSON (DeterminismTest). No kit is saved yet."),
+    ("Velocity and round robin: playback, export", "not yet verified", "No kit, no phone playback, no MPC export."),
+    ("Sound character", "partial", "Round 0b accepted 2026-11-12 (\"Sounds good\"). The Kotlin port measures as the same waveform on the five deterministic voices and as another take on the four noise voices; it has not been heard."),
 ]
 
 
@@ -256,12 +339,14 @@ a {{ color: var(--accent); }}
 
 <div class="wrap">
   <header>
-    <div class="mark"><i></i><span class="eyebrow">SNIPSNAP · SCUFF · ROUND 0B · PYTHON HARNESS · NOT HEARD</span></div>
+    <div class="mark"><i></i><span class="eyebrow">SNIPSNAP · SCUFF · ROUND 1 · KOTLIN AGAINST THE ACCEPTED PYTHON · KOTLIN NOT HEARD</span></div>
     <h1>SCUFF Audition</h1>
     <p class="lede">A dry, mid-forward Michigan drum kit and the chain that makes it: ten voices built to your brief's numbers,
     crushed, boxed, barked and slammed into the ceiling. These are prototype renders from a Python model, not the app.
     Every one-shot is peak-matched, so a later stage never wins by being louder.</p>
-    <p class="lede"><b>Round 0b</b> answers "more character in general": every voice gained one more mechanism (a knock, a crack, a harmonic path, a woody body, a tip, a clang, a mechanical click, a slap),
+    <p class="lede"><b>Round 1</b> is the Kotlin engine. Start with the first section: every pad from the app's own code beside the round-0b render you accepted.
+    The rest of the page is round 0b as you approved it, re-measured with a corrected distance measure (see the foot).</p>
+    <p class="lede"><b>Round 0b</b> answered "more character in general": every voice gained one more mechanism (a knock, a crack, a harmonic path, a woody body, a tip, a clang, a mechanical click, a slap),
     BARK went from inaudible to a real boost, LOCKER's loop got hotter with a soft clip in it, SLAM got more asymmetric, and every pad ends bone-dry at a hard tail gate. Start with the before/after section.</p>
     <p class="gesture">The gesture: a dry hit lands at the front of the speaker, the mids bark, the bus squares it off against the ceiling, and it is gone before the next sixteenth.</p>
   </header>
@@ -289,8 +374,10 @@ RACK    DROP (tape stop, DIVE's move) and CHOKE (gated burst, GATECRASH's room) 
     <div class="table-wrap"><table><thead><tr><th>Target</th><th>Measured</th></tr></thead><tbody>{target_rows}</tbody></table></div>
   </section>
 
-  <nav aria-label="Sections">{nav}<a href="#gates">Gates</a><a href="#next">Your answers</a></nav>
+  <nav aria-label="Sections">{''.join(f'<a href="#shelf-{k["id"]}">Shelf</a>' for k in (SHELF or {}).get("kits", []))}{'<a href="#kotlin">Kotlin</a>' if KOTLIN else ''}{nav}<a href="#gates">Gates</a><a href="#next">Your answers</a></nav>
 
+  {shelf_section()}
+  {kotlin_section()}
   {''.join(sections)}
 
   <section class="card" id="gates">
@@ -302,6 +389,7 @@ RACK    DROP (tape stop, DIVE's move) and CHOKE (gated burst, GATECRASH's room) 
   <section class="card" id="next">
     <h2>What I need from you</h2>
     <ul class="plain">
+      <li><b>Kotlin:</b> in the first section, is every Kotlin pad the same drum as the Python one you accepted? The clap, hat, tick and crash are different noise takes by construction; do they still read as the same pad?</li>
       <li><b>Round 0 or 0b:</b> pad by pad, which has the character you want? Any pad that got worse?</li>
       <li><b>The kit:</b> which of the ten pads are the sound, which are close, and which are wrong? Name the wrong ones and what they should do instead.</li>
       <li><b>The bus:</b> is SLAM 0.55 the glue and 0.9 the trunk, or is the whole thing too flat? Should hats go through the bus?</li>
@@ -316,7 +404,8 @@ RACK    DROP (tape stop, DIVE's move) and CHOKE (gated burst, GATECRASH's room) 
     <h2>Measured, not heard</h2>
     <p>{checks['clips']} clips, all finite: {'yes' if checks['all_finite'] else 'NO'}. Pads and the two-bar loop render byte-identical across runs: {'yes' if checks['determinism_pads'] and checks['determinism_pattern'] else 'NO'}.
     Centroid is magnitude-weighted over 150 Hz to 12 kHz. "To -60 dB" is the time from the peak to 60 dB below it. "At the ceiling" is the share of samples within 3 dB of the peak in the hit's first 120 ms (4 s and 1.5 dB for the loops): the square-topped signature.
-    Take and velocity distances are the RMS difference of two hits' level-matched third-octave spectrograms over their first 150 ms in 5 ms frames.</p>
+    Take and velocity distances are the RMS difference of two hits' level-matched third-octave spectrograms over their first 150 ms in 5 ms frames, every band floored 80 dB under the loudest.
+    Round 1 added that floor after the measure read a 16-bit copy of a clip as 12 dB from its float original; every distance on this page is re-measured with it, so the round-0b numbers are lower than the ones first published (the kick's round 0 to 0b, for instance, 8.5 dB where 20.0 was quoted).</p>
     <p>Research (names allowed here, never on a pad): the distortion pedal's filter is a passive low-pass after the clip (<a href="https://thejhsshow.com/articles/history-and-timeline-of-the-proco-rat-pedal" target="_blank" rel="noopener">history</a>);
     the bass overdrive's BALANCE blends dry against drive (<a href="https://www.adorama.com/col/productManuals/BSODB3.pdf" target="_blank" rel="noopener">manual</a>);
     the 12-bit sampler ran 26.04 kHz (<a href="https://www.rossum-electro.com/products/sp-1200/" target="_blank" rel="noopener">reissue page</a>);

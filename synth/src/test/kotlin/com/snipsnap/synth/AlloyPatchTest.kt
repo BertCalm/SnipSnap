@@ -1,13 +1,17 @@
 package com.snipsnap.synth
 
 import com.snipsnap.audio.DrumClass
+import com.snipsnap.json.Json
 import com.snipsnap.json.JsonException
 import com.snipsnap.json.JsonValue
+import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertIs
 import kotlin.test.assertNull
+import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
 class AlloyPatchTest {
@@ -96,13 +100,14 @@ class AlloyPatchTest {
     @Test
     fun `twenty four factory presets cover every voice and expose dry pitched routing`() {
         val presets = AlloyPresets.all()
+        val additions = approvedMaterialChoices()
         assertEquals(24, presets.size)
         assertEquals(24, presets.map { it.name }.distinct().size)
         assertTrue(Presets.all().containsAll(presets))
         for (voice in AlloyVoice.entries) {
             val group = AlloyPresets.forVoice(voice)
             assertEquals(4, group.size)
-            assertEquals(group, Presets.forVoice("ALLOY", voice.name))
+            assertEquals(group + additions.filter { it.voice == voice }, Presets.forVoice("ALLOY", voice.name))
             for (preset in group) {
                 assertEquals(preset, Presets.byName("ALLOY", voice.name, preset.name))
                 assertTrue(preset.name.length <= 14, "${preset.name} does not fit the preset strip")
@@ -126,5 +131,58 @@ class AlloyPatchTest {
             }, "$voice must retain its settled held reference outside the active bank")
         }
         assertTrue(Presets.forVoice("ALLOY", "UNKNOWN").isEmpty())
+    }
+
+    @Test
+    fun `public material choices retain the three exact approved recipes without replacing factory roles`() {
+        val expected = approvedMaterialChoices()
+        assertEquals(listOf(AlloyVoice.BASS, AlloyVoice.KEY, AlloyVoice.PLUCK,
+            AlloyVoice.BRASS, AlloyVoice.STRING, AlloyVoice.SOFT), AlloyVoice.entries)
+        val global = Presets.all().filterIsInstance<AlloyPatch>()
+        assertEquals(AlloyPresets.all() + expected, global,
+            "the public roster must preserve the original 24 in order and append only the three approved choices")
+        assertEquals(27, global.map { it.name }.distinct().size)
+        assertTrue(AlloyPresets.all().all { it.materialResponse == null })
+        assertTrue(AlloyPresets.heldReferences().all { it.materialResponse == null })
+        for (approved in expected) {
+            val selected = assertIs<AlloyPatch>(Presets.byName("ALLOY", approved.voice.name, approved.name))
+            assertEquals(approved, selected, "${approved.name} differs from the approved baseline or body descriptor")
+            assertTrue(selected.name.length <= 14)
+            assertTrue(!PresetTestSupport.trademarkBlocklist.containsMatchIn(selected.name))
+            assertEquals(Alloy.macrosFor(selected.voice).map { it.name }.toSet(), selected.macros.keys)
+            assertEquals(.5f, selected.macros.getValue("TUNE"))
+            assertEquals(.5f, selected.macros.getValue("MATERIAL"))
+            assertEquals(selected, Patches.fromJsonText(selected.toJsonText()))
+            assertNull(Presets.landingFor("ALLOY", selected.voice.name, selected.macros))
+            assertTrue(!Alloy.isLoop(selected.macros.getValue("HOLD")))
+            assertEquals(DrumClass.TONAL, Alloy.drumClassFor(selected.voice, selected.macros))
+            assertSame(selected.config, selected.effectiveConfig(), "the loaded midpoint must return the exact saved anchor")
+        }
+    }
+
+    /** Read the accepted authoring data rather than deriving expectations from the production preset helper. */
+    private fun approvedMaterialChoices(): List<AlloyPatch> {
+        val fixtures = File("src/test/resources/alloy-material-body")
+        val designs = Json.parse(File(fixtures, "final-designs.json").readText()).obj()
+        return listOf("rounded_plug" to "Rounded Body", "long_prism" to "Prism Body", "velvet_rise" to "Velvet Body")
+            .map { (role, label) ->
+                val baseline = AlloyPatch.fromJsonText(File(fixtures, "baselines/$role.json").readText())
+                val design = designs.getValue(role).obj()
+                val wood = design.getValue("wood").obj()
+                val response = AlloyMaterialResponse(
+                    version = 1,
+                    originalWeightPower = design.getValue("originalWeightPower").int(),
+                    operators = design.getValue("operators").arr().map { item -> item.obj().let {
+                        AlloyMaterialResponse.Operator(it.getValue("gain").num(), it.getValue("decay").num(), it.getValue("sustain").num())
+                    } },
+                    routing = design.getValue("routing").arr().map { item -> item.obj().let {
+                        AlloyMaterialResponse.Route(it.getValue("from_").int(), it.getValue("to").int(), it.getValue("radians").num())
+                    } },
+                    woodLosses = wood.getValue("losses").arr().map { it.num() },
+                    woodGains = wood.getValue("gains").arr().map { it.num() },
+                    cutoffRatio = design.getValue("cutoffRatio").num(),
+                )
+                baseline.copy(name = label, macros = baseline.macros + ("MATERIAL" to .5f), materialResponse = response)
+            }
     }
 }
