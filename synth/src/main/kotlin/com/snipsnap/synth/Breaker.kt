@@ -63,6 +63,9 @@ enum class BreakerVoice(val drumClass: DrumClass) {
 object Breaker {
     /**
      * Renderer models. A save keeps the model it was made with.
+     * - **6 (the genre kits' takes, 2026-11-13):** a later take of a kick or tom lands with a slightly
+     *   different beater ([BEATER_SPREAD]): its click, punch, pitch bend and head tone move a little. Its
+     *   first take, the reference, is model 5's.
      * - **5 (the genre kits, 2026-11-12):** DAMP, each drum's damping, and Bump, the spring tank kicked.
      *   The owner approved both for Dub Tank and Trip hop. At DAMP .5 every model-4 voice renders as it
      *   did on model 4.
@@ -75,7 +78,7 @@ object Breaker {
      *   and the slap is the round-0 95 ms. The ride is round 2's SKIN ride through the rig.
      * - **1 (round 1):** every voice through tank B, a 90 ms slap.
      */
-    const val MODEL_VERSION = 5
+    const val MODEL_VERSION = 6
 
     /** A hit's length: tails are capped here, with a [FADE_SECONDS] raised-cosine fade, so a hit never files as a LOOP (1.5 s). */
     const val SECONDS = 1.49f
@@ -123,6 +126,19 @@ object Breaker {
     private const val DAMP_RATE = 14.0
 
     private fun damp(m: Map<String, Float>, model: Int) = if (model >= 5) m["DAMP"] ?: .5f else .5f
+
+    /**
+     * Model 6 (shape): how far a later strike's beater moves a kick's or tom's CLICK, PUNCH, DROP (how far the
+     * head is pushed, so how far its pitch bends) and TONE, either way.
+     *
+     * Measured on the genre kits, a struck kick's takes differed only by how hard each landed (up to 15%
+     * softer, `Restrike`) and by its click, which peaks 0.4 ms in. The round robin trims up to 2 ms off a
+     * later take's front as timing jitter, which can cut that click, and a damped, crushed kick's body was
+     * then the same strike every time: Dub Tank's Steppers Kick had two takes 42.4 dB apart, past the 40 dB
+     * that marks a copy (33.5 on model 6, `BreakerTest`). A real beater meets the head a little differently
+     * each time, so each later take now does too. The drum's root and its decay stay its own.
+     */
+    private const val BEATER_SPREAD = .1f
 
     /** How much DAMP scales a decay rate: 1 at .5, 2 (twice as fast) at 1, 1/2 at 0. */
     private fun dampRate(damp: Float) = 2.0.pow((damp - .5) * 2)
@@ -251,6 +267,13 @@ object Breaker {
         }
         val (skin, macros) = SOURCES.getValue(voice)
         var own = Skin.defaults(skin) + macros
+        if (model >= 6 && take > 0 && (skin == SkinVoice.KICK || skin == SkinVoice.TOM)) {
+            // All four drawn every time, in this order, so no draw depends on another's value.
+            val rng = Random(Dsp.seedFor("BREAKER", "BEATER", voice.name, take))
+            for (control in listOf("CLICK", "PUNCH", "DROP", "TONE")) {
+                own = own + (control to (own.getValue(control) + BEATER_SPREAD * (rng.nextFloat() * 2 - 1)).coerceIn(0f, 1f))
+            }
+        }
         if (damp != .5f) own = own + ("DECAY" to (own.getValue("DECAY") + (.5f - damp) * 2f * DAMP_DECAY_SPAN).coerceIn(0f, 1f))
         // The shaker has no TUNE: its pitch is its band, so TUNE moves TONE (shape).
         val pitch = if ("TUNE" in own) "TUNE" else "TONE"
