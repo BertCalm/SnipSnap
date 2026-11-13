@@ -1699,6 +1699,12 @@ and snare run through record dust, a tube, a spring tank that drips, a slap echo
 crushes the spring back up behind each hit, and a bright combo amp. Round 1 (kick and snare) is a
 prototype outside the picker. [Design and listening rounds](docs/BREAKER.md).
 
+ETCH is a step-line bass engine in progress: a squelching sixteen-step line, a drive that glues the steps, and a
+dotted-eighth delay into a reverb, from the owner's two reference clips and pedal chain. Six voices (SAW, SQUARE,
+RUBBER, WHISTLE, GRIT, DUB); velocity is the accent; HOLD's top plays the line as a loop. The owner accepted the
+Python audition; Kotlin round K1 ports it as a prototype outside the picker. [Design, listening rounds and
+measurements](docs/ETCH.md).
+
 Fired Bronze is an MPC-approved sixteen-pad skin, clay and bronze kit with four
 strike layers, a driven processor and amp, and editable source/drive controls.
 See [Fired Bronze integration](docs/FIRED_BRONZE_INTEGRATION.md).

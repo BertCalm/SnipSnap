@@ -905,6 +905,17 @@ class DeterminismTest {
     }
 
     @Test
+    fun `ETCH is byte-identical across renders, every voice, a take and the line loop`() {
+        for (voice in EtchVoice.entries) {
+            val patch = EtchPatch("Canary", voice, Etch.defaults(voice), midi = 36, velocity = .8f)
+            assertContentEquals(patch.render().samples, patch.render().samples, "$voice")
+            assertContentEquals(patch.render(.8f, take = 2, seed = 5).samples, patch.render(.8f, take = 2, seed = 5).samples, "$voice take")
+        }
+        val loop = EtchPatch("Canary", EtchVoice.SAW, Etch.defaults(EtchVoice.SAW) + ("HOLD" to 1f))
+        assertContentEquals(loop.render().samples, loop.render().samples, "SAW line loop")
+    }
+
+    @Test
     fun `KEEL's held loop is byte-identical across renders, every voice`() {
         for (voice in KeelVoice.entries) {
             val patch = KeelPatch("Canary", voice, Keel.defaults(voice) + ("HOLD" to 1f), midi = 36, velocity = .8f)
