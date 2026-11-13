@@ -110,7 +110,7 @@ class NacreSynthScreenTest : ComposeScreenTest() {
             draft(settings)?.let { it.model == 4 && it.macros["CONTACT"] == .62f &&
                 it.macros["BLOOM"] == .52f } == true
         }
-        press("SCRAMBLE")
+        press("RANDOMISE")
         waitFor("complete contact draft after scramble") {
             draft(settings)?.let { it.model == 4 && it.macros["CONTACT"] == .62f &&
                 it.macros.keys == Nacre.defaults(it.voice, 4).keys } == true
