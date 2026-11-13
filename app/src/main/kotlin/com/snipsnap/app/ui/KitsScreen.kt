@@ -498,9 +498,9 @@ fun KitsScreen(
             // the shelf yet, the empty-state panel just below carries the
             // real instruction instead (Copy.EMPTY_SHELF_FOR_ASSIGN).
             if (assigningSnip && kits.isNotEmpty()) {
-                TapeText(Copy.ASSIGN_PICK_HINT, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
+                TapeText(Copy.ASSIGN_PICK_HINT, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
             } else if (breedingFrom != null && kits.size > 1) {
-                TapeText(Copy.BREED_PICK_HINT, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
+                TapeText(Copy.BREED_PICK_HINT, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
             }
 
             if (holding) {
@@ -542,7 +542,7 @@ fun KitsScreen(
                     // made one per kit before this screen read them.
                     if (!assigningSnip && breedingFrom == null && addingTo == null) {
                         item(key = "projects-header") {
-                            TapeText("PROJECTS · ${projects.size} · OPEN ONE, OR START ONE", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
+                            TapeText("PROJECTS · ${projects.size} · OPEN ONE, OR START ONE", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
                         }
                         items(projects, key = { "project:" + it.dir.name }) { row ->
                             ProjectRow(row, row.name == openProjectName, busy, onOpenProject, onMore = { opsTarget = it })
@@ -562,7 +562,7 @@ fun KitsScreen(
                         }
                         if (expansionList.isNotEmpty()) {
                             item(key = "expansions-header") {
-                                TapeText(Copy.EXPANSIONS_HEADING, TapeType.pixelSmall, scheme.ink2.tape, Modifier.padding(top = 6.dp), maxLines = 1)
+                                TapeText(Copy.EXPANSIONS_HEADING, TapeType.pixelSmall, scheme.ink2.tape, Modifier.padding(top = 6.dp), maxLines = 2)
                             }
                             items(expansionList, key = { "expansion:" + it.id }) { e ->
                                 ExpansionRow(
@@ -579,7 +579,7 @@ fun KitsScreen(
                             }
                         }
                         item(key = "kits-header") {
-                            TapeText("KITS · THE LIBRARY EVERY PROJECT SHARES", TapeType.pixelSmall, scheme.ink2.tape, Modifier.padding(top = 6.dp), maxLines = 1)
+                            TapeText("KITS · THE LIBRARY EVERY PROJECT SHARES", TapeType.pixelSmall, scheme.ink2.tape, Modifier.padding(top = 6.dp), maxLines = 2)
                         }
                     }
                     // A filter that empties the shelf must say so itself: a
@@ -619,28 +619,28 @@ fun KitsScreen(
                     // forgotten - and RENAME is the only place a kit is ever
                     // named by hand (September UAT, finding 17).
                     item(key = "kits-note") {
-                        TapeText(Copy.SHELF_LEGEND, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
+                        TapeText(Copy.SHELF_LEGEND, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
                     }
                     // INSTRUMENTS left for MAKE ▸ INSTRUMENTS (plan §3.6): they are
                     // what MAKE made, and the list is where you find them.
                     // ROOMS: what OUTSIDE measured and KEEP ROOM kept - any pad plays inside one through ROOM, then KEEP.
                     if (rooms.isNotEmpty() || binnedRooms.isNotEmpty()) {
                         item(key = "rooms-header") {
-                            TapeText("Rooms · RE-AMP AND ROOM measured them. Any pad plays in one.", TapeType.pixelSmall, scheme.ink2.tape, Modifier.padding(top = 6.dp), maxLines = 1)
+                            TapeText("Rooms · RE-AMP AND ROOM measured them. Any pad plays in one.", TapeType.pixelSmall, scheme.ink2.tape, Modifier.padding(top = 6.dp), maxLines = 2)
                         }
                         items(rooms, key = { "room:" + it.file.name }) { room ->
                             RoomRow(room, busy, onForgetRoom, onShareRoom)
                         }
                         if (rooms.isNotEmpty()) {
                             item(key = "rooms-note") {
-                                TapeText(Copy.ROOMS_LEGEND, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
+                                TapeText(Copy.ROOMS_LEGEND, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
                             }
                         }
                         // The bin's door on the phone: every forgotten room, its days
                         // left, and RESTORE - the same row TAKES + BIN draws for a pad.
                         if (binnedRooms.isNotEmpty()) {
                             item(key = "rooms-bin-header") {
-                                TapeText("IN THE TRASH · RESTORE BEFORE THE DAYS RUN OUT", TapeType.pixelSmall, scheme.ink2.tape, Modifier.padding(top = 6.dp), maxLines = 1)
+                                TapeText("IN THE TRASH · RESTORE BEFORE THE DAYS RUN OUT", TapeType.pixelSmall, scheme.ink2.tape, Modifier.padding(top = 6.dp), maxLines = 2)
                             }
                             items(binnedRooms, key = { "binned:" + it.room.file.name }) { binned ->
                                 BinnedRoomRow(binned, busy) {
@@ -1500,7 +1500,7 @@ fun PrimaryAction(
     Box(
         Modifier
             .fillMaxWidth()
-            .height(Layout.PRIMARY_ACTION_H.dp)
+            .minHeight(Layout.PRIMARY_ACTION_H.dp)
             .then(
                 if (enabled) {
                     Modifier.background(scheme.lcd.tape, RoundedCornerShape(6.dp)).then(rim)

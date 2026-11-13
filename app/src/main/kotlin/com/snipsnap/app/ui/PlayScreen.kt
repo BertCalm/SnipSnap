@@ -74,7 +74,7 @@ internal fun FullscreenPlayGrid(
         ) {
             Column(Modifier.weight(1f).padding(end = 8.dp)) {
                 TapeText(kit.name, TapeType.lcdSmall, scheme.lcdInk.tape, maxLines = 1)
-                TapeText(status, TapeType.pixelSmall, scheme.amber.tape, maxLines = 1)
+                TapeText(status, TapeType.pixelSmall, scheme.amber.tape, maxLines = 2)
             }
             StrikeControls(strike, Modifier.width(312.dp).padding(end = 8.dp))
             Box(

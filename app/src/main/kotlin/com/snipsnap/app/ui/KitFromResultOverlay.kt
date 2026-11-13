@@ -77,7 +77,7 @@ internal fun KitFromResultOverlay(
                 verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
                 TapeText(report.header, TapeType.pixel, scheme.lcdInk.tape, maxLines = 3)
-                TapeText(report.tableHeader, TapeType.pixelSmall, scheme.ink3.tape, maxLines = 1)
+                TapeText(report.tableHeader, TapeType.pixelSmall, scheme.ink3.tape, maxLines = 2)
                 report.rows.forEachIndexed { i, row ->
                     val ink = when (report.rowGates[i]) {
                         KitFromAnything.Gate.FAIL -> scheme.amber.tape

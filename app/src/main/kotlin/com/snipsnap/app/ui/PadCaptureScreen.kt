@@ -477,7 +477,7 @@ private fun RecordRow(
         Box(
             Modifier
                 .weight(1f)
-                .height(Layout.PRIMARY_ACTION_H.dp)
+                .minHeight(Layout.PRIMARY_ACTION_H.dp)
                 .then(
                     if (tapEnabled) {
                         Modifier
@@ -529,7 +529,7 @@ private fun HoldRecordAction(label: String, enabled: Boolean, onPress: () -> Uni
     Box(
         modifier
             .fillMaxWidth()
-            .height(Layout.PRIMARY_ACTION_H.dp)
+            .minHeight(Layout.PRIMARY_ACTION_H.dp)
             .background(scheme.lcd.tape, RoundedCornerShape(6.dp))
             .then(rim)
             // A screen-reader double-tap has no duration to report, so

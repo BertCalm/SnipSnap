@@ -3636,6 +3636,16 @@ tasks.register<JavaExec>("generateSporeMembraneAudition") {
     args(providers.gradleProperty("sporePrototypeOutput").orNull ?: "${rootDir}/testkit/spore-synthesis")
 }
 
+/** Render SCUFF's round-1 Kotlin clips under testkit/scuff-audition/kotlin/, for the Python A/B and the listening page. */
+tasks.register<JavaExec>("generateScuffAudition") {
+    group = "distribution"
+    description = "Render the SCUFF Kotlin clips (kit, velocity, takes, chain stages, the bus pair) under testkit/scuff-audition/kotlin/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ScuffAuditionGenerator")
+    workingDir = projectDir
+    args(providers.gradleProperty("scuffOutput").orNull ?: "${rootDir}/testkit/scuff-audition/kotlin")
+}
+
 /** Finite R1 source/drive/filter/memory handoff, before the owner's listening gate. */
 tasks.register<JavaExec>("generateTempestAudition") {
     group = "distribution"

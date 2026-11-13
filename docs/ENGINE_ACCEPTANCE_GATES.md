@@ -60,10 +60,16 @@ See [implementation and evidence](HALOBAR_SIX_VOICES.md). Software validation
 for this build is recorded with the delivered artifacts; this table keeps
 unverified completion gates explicit.
 
+On 2026-11-12 the owner confirmed hearing and approving the glockenspiel,
+crotales and tubular-bell banks. Together with the previously accepted original
+three voices, this closes bank listening approval for all six voices. Separate
+performance-example reviews and physical playback/export checks retain their
+own status.
+
 | Gate | Implemented behavior | Remaining acceptance |
 |---|---|---|
-| Six melodic voices | Original five plus tubular bells, with different spectral/decay/contact shapes. | Owner listening for the new bell voices. |
-| Presets | Four starting recipes per voice are available in MAKE and CLI. Original twelve accepted presets retain their factory identity. | New bell banks remain provisional. |
+| Six melodic voices | Original five plus tubular bells, with different spectral/decay/contact shapes. | Bank listening passed: owner approval, 2026-11-12. |
+| Presets | Four starting recipes per voice are available in MAKE and CLI. Original twelve accepted presets retain their factory identity. | Three bell banks approved by ear, 2026-11-12; the factory registry is unchanged. |
 | Playable keygroups | Six finite instruments, sampled roots, two touch levels and three strikes per touch. Saved phone sidecars retain all captures. | On-device playability and MPC loading. |
 | Premade kit | Separate HALOBAR SIX STUDY shelf kit, six dry/dub pairs and four tubular answers. | Owner listening. |
 | Chord tools | Existing diatonic, modal and borrowed voicings can be mapped into every voice's range. Polyphonic keygroups and exported-sample chord auditions. | Owner listening and device playback. |
@@ -168,22 +174,23 @@ Hip-hop drum kits in the GATECRASH shape, six built: TRAP, DRILL, BACKROOM, LOWR
 - **THUMP SUB as a voice:** six macros, velocity and takes through `Thump.render`, `Velocity` and `Restrike`. The classifier reads a long sub as TONAL; the default reads KICK; no setting makes a LOOP (`ThumpSubTest`). Round 2 made its length its DECAY alone (velocity moves drive, click and settle), so the robin's windows never change with the touch.
 - **Overall:** every software gate passes and all six kits are approved by ear; phone and MPC playback wait for the owner's devices; MPC 2 cannot carry the round robin.
 
-## SCUFF (rounds 0 and 0b, 2026-11-12)
+## SCUFF (rounds 0 and 0b, 2026-11-12; round 1 Kotlin, round 2 and 3 kits, 2026-11-13)
 
 A dry Michigan drum kit and its chain (GRIT, LOCKER, BARK, SLAM). See [SCUFF](SCUFF.md).
 Rounds 0 and 0b are Python prototype auditions; no Kotlin exists. Round 0b answered the owner's note "more character in general" (written before listening): every voice gained a mechanism, BARK went from under 1 dB of effect to 3 to 5 dB, and every pad ends at a tail gate.
 
 - **Melodic, keygroup and chord-tool gates:** not applicable. A drum engine.
 - **Articulation:** finite hits, no HOLD. Not a picked or thumbed string.
-- **Percussion:** open. The two-bar pattern carries a 32nd hat burst, a tape-stopped hat and a suck-back crash; no roll or riser pad is authored.
-- **Drum shelf:** open. One kit's worth of voices in Python; a second genre kit is proposed, not built.
+- **Percussion: pass in software (rounds 2 and 3).** DETROIT's A16 is "Clap Riser" and FLINT's is "Rim Riser", each tightening from eighths to thirty-seconds over one bar through the bus; each kit's A15 is its own two bars through one bus. Not heard.
+- **Drum shelf: pass in software (round 3), not heard.** SCUFF DETROIT (118 BPM) and SCUFF FLINT (132 BPM) are on the shelf under SKINS, sixteen pads each, three zones of four takes, two bus phrases each. They differ in pads, tunings, lengths, roles (FLINT has three rims and no low bass hit), tempo, chain setting and phrases; `ScuffKitsTest` holds every role apart by shape and FLINT's kick and hat brighter. Not a copy at other settings.
 - **Velocity and round robin:**
-  - **Rendering: Python harness only.** Every voice changes tone with velocity at matched peak (round 0b: soft against hard, 2.6 to 14.9 dB by take distance). Four takes per voice on four dealt dimensions; closest pairs 1.9 to 4.9 dB apart. The tick's takes are the closest and are disclosed.
-  - **Rendering in Kotlin (K1): verified.** Velocity changes the tone on all six voices (`EtchTest`; Kotlin within 2 Hz of the accepted Python on every voice). Four takes are distinct strikes reachable through `Restrike.take`, deterministic in (patch, velocity, seed, take); take 0 is the plain render.
-  - **Saving: partly verified.** The patch round-trips through JSON with its note, velocity and model; a saved kit is not tested (no kit yet).
-  - **Playback and export:** not yet verified (no kit; `Robin`'s round-robin path accepts ETCH through `Restrike.canRestrike`, but no ETCH chain has been played or exported).
-- **Sound character:** direction accepted. On 2026-11-12 the owner responded to the published round-0b audition, "Sounds good, please merge." Preserve round 0b as the accepted baseline; this is a listen to Python renders, not evidence of Kotlin, phone or MPC playback.
-- **Overall: incomplete.** Round 0b is a prototype with an accepted direction; voices in Kotlin, kits, roll/riser and every saving, playback and export stage remain open.
+  - **Rendering: verified in Kotlin by test (round 1).** `ScuffTest` holds that a soft and a hard hit differ in spectral shape at matched level on every core voice, that the kick clicks and drops harder and the clap loses a tap, and that four takes per voice are distinct strikes that each replay byte for byte. Python, re-measured with the corrected distance: soft against hard 2.8 to 9.7 dB; closest takes 1.9 (tick) to 4.6 dB (clap).
+  - **Saving: verified (round 2).** A SCUFF patch saves velocity, take and model version and replays byte for byte through JSON (`DeterminismTest`). The kit reloads equal and all 192 saved slices match their renders through the pad resolver (`ScuffKitTest`, `:shell:generateScuffKits`).
+  - **Playback: verified in software.** `PadHit.resolve` picks the zone by velocity and deals the four takes in order, then repeats. No phone has played the kit.
+  - **Export: MPC 3 verified by read-back.** Velocity ranges, base slices, cycle lengths and frame windows match, and the exported PCM matches the renders. **MPC 2 does not pass:** it keeps one take per zone. No MPC has loaded the kit.
+- **Sound character:** direction accepted. On 2026-11-12 the owner responded to the published round-0b audition, "Sounds good, please merge." Preserve round 0b as the accepted baseline; this is a listen to Python renders. The round-1 Kotlin port measures as the same waveform on the five deterministic voices (0.05 to 0.17 dB, correlation 0.997 to 1.000) and as another take on the four noise voices; it has not been heard.
+- **Classifier:** the Kotlin kick reads PERC (its click and knock lift the 93 ms centroid past the sub-kick rule) and the crushed hat reads SNARE; `drumClassFor` files them KICK and HAT_CLOSED. Disclosed in [SCUFF](SCUFF.md), held by `ScuffTest`.
+- **Overall: incomplete, every software gate in place.** Round 3 has the engine, the patch, two distinct kits on the shelf with their risers, and velocity and round robin proved through rendering, saving, playback and MPC 3 export in software. MPC 2 round robin (one take per zone), hardware playback, presets and the roster, the app picker, and the owner's listen to the Kotlin engine and both kits remain open.
 
 ## MIRRORBALL kits (sound approved 2026-11-12, hardware open)
 
@@ -295,6 +302,37 @@ accepted C2 pluck. The other gates keep the scope earlier MURMUR work recorded.
   the owner kept V2's repeated C2s and its four takes heard one at a time. V1's REVISIT
   stays on record for V1. This is a listen to saved-player renders, not to a phone or an MPC.
 - **Overall: incomplete.** Phone playback and MPC rotation remain open.
+
+## ALLOY (MATERIAL body choices ported from the recovery backup, 2026-11-13)
+
+An attack-driven four-operator phase-modulation instrument with six voices. See [ALLOY](ALLOY.md)
+and [the MATERIAL response](alloy-material/IMPLEMENTATION.md).
+
+This port brings back the optional MATERIAL body response: Rounded Body (BASS), Prism Body (KEY)
+and Velvet Body (SOFT) join the picker and CLI after each voice's four factory presets. Below
+MATERIAL .5 each blends toward an owner-approved body; at .5 and above it is the factory preset
+exactly. The 24 factory presets and every old save are unchanged.
+
+| Gate | Status | Evidence |
+|---|---|---|
+| Six melodic voices | Pass | BASS, KEY, PLUCK, BRASS, STRING and SOFT. |
+| Presets | Pass | 24 factory presets, four per voice, plus the three opt-in body choices. |
+| Playable keygroups | Not yet verified | No ALLOY keygroup has been played on a phone or MPC. |
+| Premade kit | Pass in software | ALLOY starter kit; its A15/A16 pads are settled STRING/SOFT loops. The body choices are not on it. |
+| Chord-tool compatibility | Not yet verified | No chord-tool evidence is recorded for ALLOY. |
+| Articulation: HOLD | Partial | Settled HOLD loops with seam checks; indefinite HOLD on the MPC needs whole-sample looping turned on by hand. STRUM: not applicable, not a picked or thumbed string. |
+| Percussion, drum kits | Not applicable | A melodic engine. |
+| Velocity: rendering | Pass | Velocity is native: it re-renders the strike. A body choice keeps its response at every velocity (`AlloyMaterialResponseTest`). |
+| Body response: rendering and saving | Pass in software | All 36 approved snapshots replay with their PCM24 fingerprints. The response survives edits, user-preset save and promotion, and pad-recipe reopen (`AlloyMaterialResponseTest`, `AlloyMaterialPickerTest`, `AlloyMaterialIntegrationTest`). |
+| Round robin | Not yet verified | ALLOY has no re-strike (`Restrike.canRestrike` is false), so no round robin exists through rendering, saving, playback or export. |
+| Hardware playback | Not verified | No phone or MPC has played the body choices. |
+
+- **Sound character:** the owner heard the role comparison, reported that it was much better and
+  authorized integration of the 24-preset bank ([ALLOY](ALLOY.md)). The body study for Rounded Plug,
+  Long Prism and Velvet Rise was approved on 2026-11-07 as "New body is good", as recorded in the
+  backup. That approval covers those three roles' endpoints and their exact original midpoint only.
+- **Overall: incomplete.** The other fifteen roles have no body response, and keygroups, chord
+  tools, round robin and hardware playback remain open.
 
 ## TEMPEST (ported from the recovery backup, 2026-11-13)
 

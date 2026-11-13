@@ -39,6 +39,8 @@ import java.io.File
  * CYPHER starters follow GATECRASH's shape: dry or printed hits, two phrases, provenance on every pad.
  * MIRRORBALL starters are built the same way, each pad printed through an FET compressor,
  * a multi-head tape echo and an amp.
+ * SCUFF's starter is the same shape, every strike rendered by the SCUFF engine at a velocity and a take, its two
+ * phrases through one bus clipper.
  * CLOUD's GRAINS clouds (A07-A16) carry no recipe;
  * only its VOX pads (A01-A06) do, as `SynthKits.cloud` says. LUCKY DIP
  * A/B's bank-B twins carry fx-only recipes (`Shuffle.withRemixBank`), the
@@ -729,6 +731,16 @@ object StarterKits {
             key = KeySpec.parse("Cminpent"),
             prepare = { directory -> MurmurKeptBankFiles.write(directory) },
         ) { SynthKits.murmurKept() },
+        Starter(
+            "scuff-detroit", "SCUFF DETROIT",
+            "A dry Michigan kit: punch kick, whip clap, staccato bass hits, two-peak rims and a chopper hat, crushed, boxed, barked and slammed. Three touch zones, four takes; two bars through one bus and a clap riser.",
+            seeded = false, tempoBpm = com.snipsnap.synth.ScuffKits.Kit.DETROIT.bpm.toFloat(),
+        ) { com.snipsnap.synth.ScuffKits.build(com.snipsnap.synth.ScuffKits.Kit.DETROIT) },
+        Starter(
+            "scuff-flint", "SCUFF FLINT",
+            "The faster, brighter Michigan kit: a higher, shorter kick, a tighter clap, bright hats, short hard bass hits and three stank rims, crushed and slammed harder. Three touch zones, four takes; frantic two bars and a rim riser.",
+            seeded = false, tempoBpm = com.snipsnap.synth.ScuffKits.Kit.FLINT.bpm.toFloat(),
+        ) { com.snipsnap.synth.ScuffKits.build(com.snipsnap.synth.ScuffKits.Kit.FLINT) },
         Starter(
             "tempest", "TEMPEST",
             "Six-voice digital drum kit: kicks, snares, claps, toms, choking hats and driven metal.",

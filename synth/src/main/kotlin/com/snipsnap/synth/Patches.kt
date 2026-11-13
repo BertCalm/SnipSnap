@@ -57,6 +57,7 @@ object Patches {
             CairnPatch.ENGINE -> CairnPatch.fromJsonValue(value)
             ApsisPatch.ENGINE -> ApsisPatch.fromJsonValue(value)
             ThumpPatch.ENGINE -> ThumpPatch.fromJsonValue(value)
+            ScuffPatch.ENGINE -> ScuffPatch.fromJsonValue(value)
             OnsetPatch.ENGINE -> OnsetPatch.fromJsonValue(value)
             FiredBronzePatch.ENGINE -> FiredBronzePatch.fromJsonValue(value)
             SkinPatch.ENGINE -> SkinPatch.fromJsonValue(value)
