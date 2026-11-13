@@ -748,3 +748,4 @@ testkit/soot-snares/
 testkit/soot-genres/
 testkit/soot-genre-kits/
 testkit/soot-dub-candidates/
+/testkit/murmur-rr-v2-audition/

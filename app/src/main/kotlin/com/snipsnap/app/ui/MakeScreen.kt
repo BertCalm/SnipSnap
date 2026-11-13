@@ -16,6 +16,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -36,6 +37,11 @@ import com.snipsnap.shell.ExpansionStore
 import com.snipsnap.shell.KeysLayout
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.Scheme
+import com.snipsnap.shell.MurmurRoundRobinShelf
+import java.io.File
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /*
  * MAKE (`docs/SCREEN_PLAN_2026_10.md` §3.6): sound from nothing. A list
@@ -145,9 +151,29 @@ fun InstrumentsBench(
     onBack: () -> Unit,
     expansions: ExpansionStore? = null,
     onToast: (String) -> Unit = {},
+    onMakeMurmurInstrument: ((String) -> Unit)? = null,
+    murmurInstrumentEnabled: Boolean = true,
+    roundRobinShelf: File? = null,
+    onOpenRoundRobin: ((MurmurRoundRobinShelf.SavedBank) -> Unit)? = null,
 ) {
     val scheme = LocalScheme.current
     var expanding by remember { mutableStateOf<KitShelf.InstrumentEntry?>(null) }
+    var rrRevision by remember(roundRobinShelf) { mutableStateOf(0) }
+    var rrListing by remember(roundRobinShelf) { mutableStateOf<MurmurRoundRobinShelf.Listing?>(null) }
+    var rrLoading by remember(roundRobinShelf) { mutableStateOf(false) }
+    var rrError by remember(roundRobinShelf) { mutableStateOf(false) }
+    LaunchedEffect(roundRobinShelf, rrRevision) {
+        if (roundRobinShelf != null && onOpenRoundRobin != null) {
+            rrLoading = true
+            try {
+                rrListing = withContext(Dispatchers.IO) { MurmurRoundRobinShelf.list(roundRobinShelf) }
+                rrError = false
+            } catch (cancelled: CancellationException) { throw cancelled }
+            catch (_: Exception) { rrListing = null; rrError = true }
+            finally { rrLoading = false }
+        }
+    }
+    val rrBanks = rrListing?.banks.orEmpty()
     BackHandler(onBack = onBack)
     val target = expanding
     if (target != null && expansions != null) {
@@ -174,9 +200,27 @@ fun InstrumentsBench(
             Spacer(Modifier.weight(1f))
             TapeText(Bench.INSTRUMENTS.label, TapeType.lcdHeader, scheme.lcdInk.tape)
             Spacer(Modifier.weight(1f))
-            TapeText("${instruments.size}", TapeType.lcdSmall, scheme.amber.tape)
+            TapeText("${instruments.size + rrBanks.size}", TapeType.lcdSmall, scheme.amber.tape)
         }
-        if (instruments.isEmpty()) {
+        if (onMakeMurmurInstrument != null) {
+            MurmurKeptInstrumentPicker(enabled = murmurInstrumentEnabled, onMake = onMakeMurmurInstrument)
+        }
+        if (roundRobinShelf != null && onOpenRoundRobin != null) {
+            MurmurRoundRobinImport(roundRobinShelf, murmurInstrumentEnabled) { rrRevision++ }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                TapeText("ROUND-ROBIN INSTRUMENTS", TapeType.pixelSmall, scheme.ink2.tape, Modifier.weight(1f))
+                ActionButton("REFRESH", scheme, enabled = !rrLoading, working = rrLoading) { rrRevision++ }
+            }
+            val rrMessage = when {
+                rrLoading -> "CHECKING SAVED INSTRUMENTS…"
+                rrError -> "ROUND-ROBIN INSTRUMENTS COULD NOT BE READ. TRY REFRESH."
+                rrListing?.refused?.isNotEmpty() == true -> "${rrListing!!.refused.size} SAVED ROUND-ROBIN INSTRUMENTS COULD NOT BE OPENED."
+                rrBanks.isEmpty() -> "NO ROUND-ROBIN INSTRUMENTS SAVED."
+                else -> null
+            }
+            if (rrMessage != null) TapeText(rrMessage, TapeType.lcdSmall, scheme.ink2.tape, maxLines = 2)
+        }
+        if (instruments.isEmpty() && rrBanks.isEmpty()) {
             Box(
                 Modifier
                     .fillMaxWidth()
@@ -196,6 +240,14 @@ fun InstrumentsBench(
                     .padding(6.dp),
                 verticalArrangement = Arrangement.spacedBy(6.dp),
             ) {
+                items(rrBanks, key = { "murmur-rr:" + it.name + ":" + it.identitySha256 }) { bank ->
+                    Row(Modifier.fillMaxWidth().heightIn(min = Layout.MIN_HIT_TARGET.dp).raisedBevel(scheme)
+                        .tapeClick(label = "OPEN ROUND ROBIN ${bank.name}") { onOpenRoundRobin?.invoke(bank) }
+                        .padding(10.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+                        TapeText(bank.name, TapeType.pixel, scheme.ink.tape, Modifier.weight(1f))
+                        TapeText("RR KEYS ▸", TapeType.pixelSmall, scheme.ink2.tape)
+                    }
+                }
                 items(instruments, key = { "instrument:" + it.sidecar.name }) { entry ->
                     InstrumentRow(entry, onOpen, onExpansion = expansions?.let { { expanding = entry } })
                 }

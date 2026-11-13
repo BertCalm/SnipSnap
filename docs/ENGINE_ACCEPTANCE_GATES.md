@@ -271,3 +271,29 @@ A drum engine for grimy street boom bap from physical models. See [SOOT](SOOT.md
   - phone and MPC hardware playback.
 
   MPC 2 does not pass the round-robin export gate.
+
+## MURMUR round robin (V2 instrument, 2026-11-13)
+
+MURMUR's selected, kept and round-robin work came back from the owner's recovery snapshot
+(source 53a409bc) onto this branch, MURMUR files only. See
+[MURMUR_RR_CONTRAST_V2.md](MURMUR_RR_CONTRAST_V2.md). This entry covers round robin for the
+accepted C2 pluck. The other gates keep the scope earlier MURMUR work recorded.
+
+- **Velocity:** unchanged. Three native touches (.35, .65, 1) render separately. The owner's
+  C2 touch verdict was KEEP.
+- **Round robin:**
+  - **Rendering: verified.** V2 takes are distinct native strikes: two FM modulator start
+    phases and the transient index and contact length vary, and pitch and level do not.
+    Take 0 is the accepted sound exactly.
+  - **Saving: verified.** A V2 bank saves, admits to the shelf and reloads with its policy at
+    every level. V1 banks keep their exact version-1 format. Neither reads as the other.
+  - **Playback: verified in software.** The saved-sample player deals takes 0 to 3 in order
+    and wraps back to 0. Through it, V2's closest pair of takes is .039 apart by spectrum,
+    against .0020 for V1's furthest pair. The app's native round-robin player and KEYS
+    screen are ported (native host tests pass); no phone has played a bank.
+  - **Export: partial.** Each take exports as a fixed-take MPC program; an MPC does not
+    rotate them.
+- **Sound character: KEEP for V2 (2026-11-13).** On the Listening Desk (round `murmur-rr-1`)
+  the owner kept V2's repeated C2s and its four takes heard one at a time. V1's REVISIT
+  stays on record for V1. This is a listen to saved-player renders, not to a phone or an MPC.
+- **Overall: incomplete.** Phone playback and MPC rotation remain open.

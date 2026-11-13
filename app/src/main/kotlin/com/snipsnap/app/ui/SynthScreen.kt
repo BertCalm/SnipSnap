@@ -299,6 +299,9 @@ import com.snipsnap.synth.PitchwheelVoice
 import com.snipsnap.synth.Murmur
 import com.snipsnap.synth.MurmurPatch
 import com.snipsnap.synth.MurmurVoice
+import com.snipsnap.synth.ChordStabs
+import com.snipsnap.shell.MurmurSelectedChordPlan
+import com.snipsnap.shell.MurmurSelectedInstrumentMaker
 import com.snipsnap.synth.Trio
 import com.snipsnap.synth.TrioPatch
 import com.snipsnap.synth.Trefoil
@@ -914,7 +917,7 @@ fun SynthScreen(
                                 it.name == settings[presetSettingsKey(e, v)]
                             } as? OrphicaPatch)
                     } else null
-                    val nativeFactory = if (e == Engine.HALOBAR || e == Engine.EROSION || e == Engine.CHITIN || e == Engine.CAUSTIC || e == Engine.ACCORD || e == Engine.RIME || e == Engine.FILAMENT || e == Engine.CHAMBER || e == Engine.TREMOR || e == Engine.RELAY || e == Engine.NACRE || e == Engine.MERIDIAN || e == Engine.OTIS || e == Engine.OHM || e == Engine.WICK || e == Engine.RIVET) {
+                    val nativeFactory = if (e == Engine.HALOBAR || e == Engine.EROSION || e == Engine.CHITIN || e == Engine.CAUSTIC || e == Engine.ACCORD || e == Engine.RIME || e == Engine.FILAMENT || e == Engine.CHAMBER || e == Engine.TREMOR || e == Engine.RELAY || e == Engine.NACRE || e == Engine.MERIDIAN || e == Engine.OTIS || e == Engine.OHM || e == Engine.WICK || e == Engine.RIVET || e == Engine.MURMUR) {
                         factoryPresets(e, v).firstOrNull {
                             it.name == settings[presetSettingsKey(e, v)]
                         }
@@ -940,6 +943,7 @@ fun SynthScreen(
                         else if (e == Engine.EROSION) seed.seededDrafts.firstOrNull { it is ErosionPatch && it.voice == v }
                         else if (e == Engine.RIVET) seed.seededDrafts.firstOrNull { it is RivetPatch && it.voice == v }
                         else if (e == Engine.WICK) seed.seededDrafts.firstOrNull { it is WickPatch && it.voice == v }
+                        else if (e == Engine.MURMUR) seed.seededDrafts.firstOrNull { it is MurmurPatch && it.voice == v }
                         else if (e == Engine.TIDAL) seed.seededDrafts.firstOrNull { it is TidalPatch && it.voice == v }
                         else if (e == Engine.LIBRATION) seed.seededDrafts.firstOrNull { it is LibrationPatch && it.voice == v }
                         else if (e == Engine.TREMOR) seed.seededDrafts.firstOrNull { it is TremorPatch && it.voice == v }
@@ -1097,6 +1101,7 @@ fun SynthScreen(
         }
     }
     val macros = macrosByVoice.getValue(engine to voice)
+    val murmurDelivery = rememberMurmurSelectedDelivery()
     // Every macro write (a slider, a preset, SCRAMBLE) lands on the current
     // (engine, voice), so this is the one place the bag needs to follow; the
     // pairs the player left earlier already wrote theirs when they were open.
@@ -1139,7 +1144,7 @@ fun SynthScreen(
         if (patch is CausticPatch) CausticEditing.edited(patch, macros = macrosByVoice.getValue(pair))
         else if (patch is SkinPatch) patch.withMacros(macrosByVoice.getValue(pair))
         else if (patch is BackwashPatch || patch is HalobarPatch || patch is ErosionPatch || patch is OnsetPatch || patch is AccordPatch || patch is LibrationPatch || patch is RimePatch || patch is OtisPatch || patch is RivetPatch || patch is WickPatch || patch is FilamentPatch || patch is TidalPatch || patch is TremorPatch || patch is ChamberPatch ||
-            patch is PrismPatch || patch is NacrePatch || patch is OverlapPatch || patch is ObbligatoPatch || patch is RelayPatch ||
+            patch is PrismPatch || patch is NacrePatch || patch is OverlapPatch || patch is ObbligatoPatch || patch is RelayPatch || patch is MurmurPatch ||
             patch is PluckPatch && patch.voice == PluckVoice.UPRIGHT)
             patch.withMacros(macrosByVoice.getValue(pair)) else patch
     }
@@ -1185,6 +1190,7 @@ fun SynthScreen(
     // These maps remain the live session maps, so flush the final edit here.
     DisposableEffect(Unit) {
         onDispose {
+            murmurDelivery.invalidate()
             SynthDrafts.write(settings, currentDrafts())
             persistReopenedWork()
         }
@@ -1201,6 +1207,14 @@ fun SynthScreen(
     }
     val activeRecipe = loadedRecipesByVoice[engine to voice] ?: recalledRecipesByVoice[engine to voice]
     fun buildCurrentPatch(name: String): Patch {
+        if (engine == Engine.MURMUR) {
+            // A preset, native root or touch edit can share a frame with SAVE/SEND.
+            // Keep the live complete body definition and its newest macro controls.
+            val current = loadedPatchesByVoice[engine to voice] as? MurmurPatch
+            val controls = macrosByVoice.getValue(engine to voice)
+            return current?.let { Patches.edited(it, name, controls) }
+                ?: MurmurPatch(name, voice as MurmurVoice, controls)
+        }
         if (engine == Engine.SKIN) {
             val current = loadedPatchesByVoice[engine to voice] as? SkinPatch
             val controls = macrosByVoice.getValue(engine to voice)
@@ -1547,6 +1561,7 @@ fun SynthScreen(
     }
     fun updateMacro(name: String, value: Float) {
         if (embouchureRestore.waitsForRecipe(engine, voice)) return
+        if (engine == Engine.MURMUR) murmurDelivery.invalidate()
         embouchureRestore.pending.remove(engine to voice)
         currentPresetByVoice.remove(engine to voice)
         val bounded = value.coerceIn(macroRange(name))
@@ -1569,6 +1584,14 @@ fun SynthScreen(
         }
         ensureNativeDraft()
         if (engine == Engine.WICK || engine == Engine.RIVET) SynthDrafts.write(settings, currentDrafts())
+        if (engine == Engine.MURMUR) {
+            settings.remove(presetSettingsKey(engine, voice))
+            SynthDrafts.write(settings, currentDrafts())
+            // A reopened pad's working recipe outranks the draft when the screen is rebuilt,
+            // and a rebuild seeds before this screen's dispose writes it. Write it now, or
+            // the edit is lost to the recipe the pad was opened with.
+            if ((engine to voice) in loadedRecipesByVoice) persistReopenedWork()
+        }
         // An absolute ORIGAMI MIDI note overrides TUNE. A deliberate pitch edit
         // must move that override too; timbral edits retain the whole saved recipe.
         val origami = loadedPatchesByVoice[engine to voice] as? OrigamiPatch
@@ -1751,6 +1774,7 @@ fun SynthScreen(
                 val patch = if (onScreen) buildCurrentPatch(loadedPatchesByVoice[pair]?.name ?: engine.patchDisplayName(voice))
                     else loadedPatchesByVoice[pair] ?: return
                 val next = (SynthRoot.of(patch) ?: control).at(midi)
+                if (next is MurmurPatch) murmurDelivery.invalidate()
                 currentPresetByVoice.remove(pair)
                 when (next) {
                     is OhmPatch -> if (onScreen) updateOhmPerformance { next }
@@ -1779,6 +1803,7 @@ fun SynthScreen(
         }
     }
     fun loadPreset(patch: Patch) {
+        if (engine == Engine.MURMUR || patch is MurmurPatch) murmurDelivery.invalidate()
         loadedRecipesByVoice.remove(engine to voice)
         recalledRecipesByVoice.remove(engine to voice)
         reopenedPadsByVoice.remove(engine to voice)
@@ -1875,6 +1900,7 @@ fun SynthScreen(
                         // The saved model and controls are one recipe. Adopting only
                         // the model would let the next edit overwrite its finite HOLD.
                         if (editable is MeridianPatch) macrosByVoice[pair] = MeridianSynth.defaults(editable.voice) + editable.macros
+                        if (editable is MurmurPatch) macrosByVoice[pair] = Murmur.defaults(editable.voice) + editable.macros
                         // The named preset is being restored whole. A partial legacy
                         // OVERLAP recipe must fill its sliders from its saved model.
                         if (mine is OverlapPatch) {
@@ -2183,6 +2209,7 @@ fun SynthScreen(
         currentPresetByVoice.remove(key)
         embouchureRestore.pending.remove(key)
         engine = sourceEngine
+        murmurDelivery.invalidate()
         voice = sourceVoice
         reopeningPad.value = false
     }
@@ -2439,9 +2466,13 @@ fun SynthScreen(
         (engine == Engine.FILAMENT && FilamentPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as FilamentPatch)) ||
         (engine == Engine.LATTICE && LatticePadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as LatticePatch)) ||
         (engine == Engine.PRISM && prismOpeningInstrumentSupported(buildCurrentPatch(engine.patchDisplayName(voice)))) ||
+        (engine == Engine.MURMUR && revisedMurmur(buildCurrentPatch(engine.patchDisplayName(voice)) as MurmurPatch)) ||
         (LoopPadMaker.offers(engine.name) && !embouchureRestore.pending.containsKey(engine to voice) &&
             LoopPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice))))
     val heldInstrumentReady = when (engine) {
+        Engine.MURMUR -> (buildCurrentPatch(engine.patchDisplayName(voice)) as MurmurPatch).let {
+            !revisedMurmur(it) || MurmurSelectedInstrumentMaker.supports(it)
+        }
         Engine.LIBRATION -> LibrationPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as LibrationPatch)
         Engine.MERIDIAN -> MeridianPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as MeridianPatch)
         Engine.CREASE -> CreasePadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as CreasePatch)
@@ -2573,7 +2604,106 @@ fun SynthScreen(
             .takeIf { LoopPadMaker.supports(it) }?.let { HeldSpec.Loop(LoopPadMaker.spec(it, heldSheet.holdRelease)) }
     }
 
+    fun selectedMurmurSpec(): MurmurSelectedInstrumentMaker.Spec? {
+        if (engine != Engine.MURMUR) return null
+        val patch = buildCurrentPatch(loadedPatchesByVoice[engine to voice]?.name ?: engine.patchDisplayName(voice)) as MurmurPatch
+        return if (revisedMurmur(patch) && MurmurSelectedInstrumentMaker.supports(patch))
+            MurmurSelectedInstrumentMaker.Spec(patch, murmurDelivery.releaseSeconds) else null
+    }
+
+    fun previewMurmurSelected(chord: Boolean = false) {
+        if (heldSheet.holdDone >= 0 || heldSheet.holdPreviewing) return
+        val spec = selectedMurmurSpec() ?: return
+        val notes = if (chord) try {
+            val source = spec.sourcePatch()
+            // Expand the actual chord tool before any rendering or root copy. An
+            // uncovered tone refuses the whole request; there is no clamping/repair.
+            MurmurSelectedChordPlan.fromStab(source,
+                ChordStabs.Stab("MINOR", source.midi, listOf(0, 3, 7))).notes
+        } catch (_: IllegalArgumentException) {
+            onToast(MURMUR_CHORD_OUT_OF_RANGE)
+            return
+        } else null
+        val token = murmurDelivery.begin()
+        sampleHeldPreview?.silence()
+        heldSheet.holdPreviewing = true
+        heldSheet.holdJob = appScope.launch {
+            try {
+                val renderJob = coroutineContext[Job]
+                val heard = offMainInterruptible(Dispatchers.Default) {
+                    val cancelled = { renderJob?.isActive == false || !murmurDelivery.isCurrent(token) || Thread.currentThread().isInterrupted }
+                    if (notes == null) murmurDelivery.actions.preview(spec, cancelled)
+                    else murmurDelivery.actions.previewChord(spec, notes, cancelled)
+                }
+                coroutineContext.ensureActive()
+                if (!murmurDelivery.isCurrent(token)) throw CancellationException("MURMUR preview source changed")
+                audition(heard, allowLoop = false)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.e("SynthScreen", "previewMurmurSelected: failed", e)
+                onToast(Copy.RENDER_FAILED)
+            } finally {
+                murmurDelivery.finish(token)
+                heldSheet.holdPreviewing = false
+                heldSheet.holdJob = null
+            }
+        }
+    }
+
+    fun makeMurmurSelected() {
+        if (heldSheet.holdDone >= 0 || heldSheet.holdPreviewing) return
+        // Re-read the live source at the final MAKE press. Spec owns its full JSON,
+        // independently of the composition and all subsequent mutable UI edits.
+        val spec = selectedMurmurSpec() ?: return
+        val token = murmurDelivery.begin()
+        val base = holdBase
+        heldSheet.holdTotal = MurmurSelectedInstrumentMaker.roots(spec).size * MurmurSelectedInstrumentMaker.VELOCITY_WINDOWS.size
+        heldSheet.holdDone = 0
+        sampleHeldPreview?.silence()
+        heldSheet.holdJob = appScope.launch {
+            try {
+                val renderJob = coroutineContext[Job]
+                val made = offMainInterruptible(Dispatchers.Default) {
+                    val cancelled = { renderJob?.isActive == false || !murmurDelivery.isCurrent(token) || Thread.currentThread().isInterrupted }
+                    if (cancelled()) throw CancellationException("MURMUR instrument cancelled")
+                    val name = OneNote.freshName(instrumentsDir, base)
+                    // The maker renders/writes one cell at a time, validates the whole
+                    // staged packet, then performs the existing fresh shelf admission.
+                    murmurDelivery.actions.export(name, spec, instrumentsDir, cancelled) { done, total ->
+                        appScope.launch(Dispatchers.Main.immediate) {
+                            if (murmurDelivery.isCurrent(token)) {
+                                heldSheet.holdDone = done
+                                heldSheet.holdTotal = total
+                            }
+                        }
+                    }
+                    name
+                }
+                coroutineContext.ensureActive()
+                if (!murmurDelivery.isCurrent(token)) throw CancellationException("MURMUR instrument source changed")
+                makingInstrument = false
+                heldSheet.murmurSelected = false
+                onShelfAssetWritten()
+                onToast(Copy.madeNamed("INSTRUMENT", made))
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.e("SynthScreen", "makeMurmurSelected: failed", e)
+                onToast(Copy.actionFailed("INSTRUMENT"))
+            } finally {
+                murmurDelivery.finish(token)
+                heldSheet.holdDone = -1
+                heldSheet.holdJob = null
+            }
+        }
+    }
+
     fun previewHeld() {
+        if (engine == Engine.MURMUR && revisedMurmur(buildCurrentPatch(engine.patchDisplayName(voice)) as MurmurPatch)) {
+            previewMurmurSelected()
+            return
+        }
         if (heldSheet.holdDone >= 0 || heldSheet.holdPreviewing) return
         if (engine == Engine.PRISM && (!makingInstrument || heldSheet.prismPatch == null || prismMotionStudio.sourceBusy)) return
         val spec = heldSpec() ?: return
@@ -2607,6 +2737,10 @@ fun SynthScreen(
     }
 
     fun makeHeld() {
+        if (engine == Engine.MURMUR && revisedMurmur(buildCurrentPatch(engine.patchDisplayName(voice)) as MurmurPatch)) {
+            makeMurmurSelected()
+            return
+        }
         if (heldSheet.holdDone >= 0 || heldSheet.holdPreviewing) return
         if (engine == Engine.PRISM && (!makingInstrument || heldSheet.prismPatch == null || prismMotionStudio.sourceBusy)) return
         // Captured now: the sheet's own sound, before anything can move it.
@@ -2685,8 +2819,11 @@ fun SynthScreen(
     }
 
     fun closeHeld() {
-        // Every zone rendered means the write is under way; let it land.
-        if (heldSheet.holdDone >= 0 && heldSheet.holdDone >= heldSheet.holdTotal) return
+        // Legacy writes finish after the last zone. MURMUR's fresh streaming
+        // admission remains cancellable through its guarded final moves.
+        if (heldSheet.holdDone >= 0 && heldSheet.holdDone >= heldSheet.holdTotal &&
+                !heldSheet.murmurSelected && !murmurDelivery.inFlight) return
+        murmurDelivery.invalidate()
         sampleHeldPreview?.silence()
         if (heldSheet.prismPatch != null) {
             prismMotionStudio.cancelPreview()
@@ -2704,6 +2841,7 @@ fun SynthScreen(
                     // Cancellation before the body starts skips its finally.
                     // A later job must never be cleared by this one's handler.
                     if (heldSheet.holdJob === job) {
+                        murmurDelivery.finishInvalidated()
                         heldSheet.holdJob = null
                         heldSheet.holdDone = -1
                         heldSheet.holdPreviewing = false
@@ -2716,12 +2854,19 @@ fun SynthScreen(
         // drains. Reopening must not launch another render that the old
         // worker's cleanup could then overwrite.
         makingInstrument = false
+        heldSheet.murmurSelected = false
     }
 
     GuardPrismHeldInstrument(heldSheet.prismPatch,
         if (engine == Engine.PRISM) buildCurrentPatch(loadedPatchesByVoice[engine to voice]?.name
             ?: engine.patchDisplayName(voice)) as PrismPatch else null,
         prismMotionStudio.sourceBusy, ::closeHeld)
+
+    LaunchedEffect(engine, voice, macros, loadedPatch, heldSheet.murmurSelected) {
+        if (heldSheet.murmurSelected && selectedMurmurSpec() == null) {
+            closeHeld()
+        }
+    }
 
     // ---- DRONE TO LOOP: RESIN and SIREN, droning ----
     // docs/superpowers/specs/2026-09-25-resin-drone-design.md (RESIN) and
@@ -2966,6 +3111,7 @@ fun SynthScreen(
     // what the tap-to-cycle header did: the new engine starts on its first voice and renders
     // quietly, ready for AUDITION.
     fun arrive(next: Engine) {
+        if (murmurDelivery.inFlight) closeHeld() else murmurDelivery.invalidate()
         engine = next
         voice = next.voices().first()
     }
@@ -2997,6 +3143,7 @@ fun SynthScreen(
                 SynthSectionHeading(Copy.SYNTH_HEADING_VOICE, scheme)
                 if (engine == Engine.SHOAL) TapeText("MOTION", TapeType.pixelSmall, scheme.ink2.tape)
                 VoicePicker(engine, voice, scheme, onSelect = {
+                    if (murmurDelivery.inFlight) closeHeld() else murmurDelivery.invalidate()
                     if (engine == Engine.PRISM) { prismMotionStudio.cancel(); voicePlayer?.stop() }
                     voice = it
                 })
@@ -3373,6 +3520,7 @@ fun SynthScreen(
                             Engine.OHM -> next + macros.filterKeys { it == "HOLD" }
                             else -> next
                         }
+                        if (engine == Engine.MURMUR) murmurDelivery.invalidate()
                         macrosByVoice[engine to voice] = values
                         keepOhmMacros(values)
                         keepMeridianMacros(values)
@@ -3485,10 +3633,13 @@ fun SynthScreen(
                         fillColor = classColor,
                         scheme = scheme,
                         onValueChange = { value ->
+                            murmurDelivery.invalidate()
                             currentPresetByVoice.remove(engine to voice)
                             loadedPatchesByVoice[engine to voice] =
                                 (buildCurrentPatch(engine.patchDisplayName(voice)) as MurmurPatch)
                                     .copy(velocity = value.coerceIn(0f, 1f))
+                            settings.remove(presetSettingsKey(engine, voice))
+                            SynthDrafts.write(settings, currentDrafts())
                         },
                     )
                 }
@@ -3801,6 +3952,16 @@ fun SynthScreen(
                         modifier = Modifier.fillMaxWidth(),
                         accessibilityLabel = "MAKE INSTRUMENT",
                     ) {
+                        if (engine == Engine.MURMUR) {
+                            val current = buildCurrentPatch(loadedPatchesByVoice[engine to voice]?.name
+                                ?: engine.patchDisplayName(voice)) as MurmurPatch
+                            if (revisedMurmur(current) && !MurmurSelectedInstrumentMaker.supports(current)) {
+                                onToast(murmurInstrumentUnavailable(current))
+                                return@LabButton
+                            }
+                            heldSheet.murmurSelected = revisedMurmur(current)
+                        }
+                        if (engine != Engine.MURMUR) heldSheet.murmurSelected = false
                         if (engine == Engine.CAUSTIC) {
                             val current = buildCurrentPatch(engine.patchDisplayName(voice)) as CausticPatch
                             loadedPatchesByVoice[engine to voice] = CausticEditing.edited(current,
@@ -3820,6 +3981,7 @@ fun SynthScreen(
                     if (!heldInstrumentReady) {
                         TapeText(
                             when (engine) {
+                                Engine.MURMUR -> murmurInstrumentUnavailable(buildCurrentPatch(engine.patchDisplayName(voice)) as MurmurPatch)
                                 Engine.MERIDIAN -> meridianInstrumentReadiness(buildCurrentPatch(engine.patchDisplayName(voice)) as MeridianPatch)
                                 Engine.CREASE -> "MAKE INSTRUMENT NEEDS MODEL 3. THE SAVED ORIGINAL STILL PLAYS AS BEFORE."
                                 Engine.BELLOWS -> "MAKE INSTRUMENT NEEDS A CURRENT BELLOWS SOUND. THE SAVED ORIGINAL STILL PLAYS AS BEFORE."
@@ -3828,7 +3990,7 @@ fun SynthScreen(
                             },
                             TapeType.pixelSmall,
                             scheme.ink2.tape,
-                            maxLines = 2,
+                            maxLines = if (engine == Engine.MURMUR) 4 else 2,
                         )
                     }
                 }
@@ -3963,10 +4125,17 @@ fun SynthScreen(
             // Recomputed here rather than cached: cheap (a Spec is a data
             // class, no rendering), and it must reflect whatever the panel
             // holds right now, the same as every value below it.
-            heldSpec()?.let { spec ->
+            if (heldSheet.murmurSelected) {
+                selectedMurmurSpec()?.let { spec ->
+                    MurmurSelectedInstrumentSheet(spec, heldSheet, murmurDelivery, classColor, scheme,
+                        onPreview = { previewMurmurSelected() },
+                        onPreviewChord = { previewMurmurSelected(chord = true) },
+                        onMake = ::makeMurmurSelected, onCancel = ::closeHeld)
+                }
+            } else heldSpec()?.let { spec ->
                 HeldInstrumentSheet(
                     heading = "${engine.name} · ${chipLabel(engine, voice)}",
-                    name = heldSheet.holdName,
+                    nameNote = if (heldSheet.holdName.isEmpty()) "" else Copy.heldInstrumentNote(heldSheet.holdName),
                     hasAttack = spec.hasAttack,
                     attack = heldSheet.holdAttack,
                     release = spec.releaseFraction ?: heldSheet.holdRelease,
@@ -4402,6 +4571,7 @@ private class HeldSheetState {
     var holdJob by mutableStateOf<Job?>(null)
     var holdName by mutableStateOf("")
     var prismPatch by mutableStateOf<PrismPatch?>(null)
+    var murmurSelected by mutableStateOf(false)
 }
 
 /**
@@ -5304,6 +5474,38 @@ internal sealed interface HeldSpec {
     }
 }
 
+/** MURMUR's selected PLUCK sheet: the shared held sheet with a key release and a chord preview. */
+@Composable
+private fun MurmurSelectedInstrumentSheet(
+    spec: MurmurSelectedInstrumentMaker.Spec,
+    state: HeldSheetState,
+    delivery: MurmurSelectedDeliveryState,
+    fillColor: Color,
+    scheme: Scheme,
+    onPreview: () -> Unit,
+    onPreviewChord: () -> Unit,
+    onMake: () -> Unit,
+    onCancel: () -> Unit,
+) {
+    val range = "${Scales.nameOf(spec.supportedMidi.first)}–${Scales.nameOf(spec.supportedMidi.last)}"
+    HeldInstrumentSheet(
+        heading = "MURMUR · ${if (spec.held) "HELD" else "FINITE"} PLUCK",
+        nameNote = if (state.holdName.isEmpty()) "" else
+            "LANDS ON THE SHELF AS ${state.holdName.uppercase(Locale.ROOT)}, PLAYABLE ON KEYS.",
+        hasAttack = false, attack = 0f, release = delivery.releaseFraction,
+        knobLabel = String.format(Locale.ROOT, "KEY RELEASE %.2f SECONDS", spec.releaseSeconds),
+        instrumentNote = "$range · SOFT, MEDIUM AND HARD TOUCH. " +
+            if (spec.held) "SOFTENED START; THE SOUND HOLDS UNTIL KEY RELEASE."
+            else "EACH NOTE KEEPS ITS SOURCE ENVELOPE AND FINITE TAIL.",
+        touchLayers = null, touchLayersNote = null, wideKeys = null, keyRangeLabel = null,
+        done = state.holdDone, total = state.holdTotal, previewing = state.holdPreviewing,
+        heldPreview = null, fillColor = fillColor, scheme = scheme,
+        onAttack = {}, onRelease = delivery::setRelease, onTouchLayers = {}, onWideKeys = {},
+        onPreview = onPreview, onMake = onMake, onCancel = onCancel,
+        onPreviewChord = onPreviewChord, allowCancelDuringWrite = true,
+    )
+}
+
 /**
  * MAKE INSTRUMENT ▸'s sheet (RESIN, SIREN, GLINT, REGISTERS, CREASE, BELLOWS, CONTOUR, BALLAST, MERCURY, KEEL, OPENSKY HALO or ORIGAMI FAN/STILL): [PresetNameDialog]'s frame -
  * scrim, raised bevel, CANCEL beside the real buttons - over the knobs a
@@ -5319,7 +5521,7 @@ internal sealed interface HeldSpec {
 @Composable
 private fun HeldInstrumentSheet(
     heading: String,
-    name: String,
+    nameNote: String,
     hasAttack: Boolean,
     attack: Float,
     release: Float,
@@ -5342,10 +5544,12 @@ private fun HeldInstrumentSheet(
     onPreview: () -> Unit,
     onMake: () -> Unit,
     onCancel: () -> Unit,
+    onPreviewChord: (() -> Unit)? = null,
+    allowCancelDuringWrite: Boolean = false,
 ) {
     val making = done >= 0
     val busy = making || previewing
-    val writing = making && done >= total
+    val writing = making && done >= total && !allowCancelDuringWrite
     Box(
         Modifier
             .fillMaxSize()
@@ -5368,8 +5572,8 @@ private fun HeldInstrumentSheet(
         ) {
             TapeText("MAKE INSTRUMENT", TapeType.lcdSmall, scheme.ink.tape)
             TapeText(heading, TapeType.pixel, scheme.ink2.tape)
-            if (name.isNotEmpty()) {
-                TapeText(Copy.heldInstrumentNote(name), TapeType.pixelSmall, scheme.ink2.tape, maxLines = 4)
+            if (nameNote.isNotEmpty()) {
+                TapeText(nameNote, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 4)
             }
             if (instrumentNote != null) {
                 TapeText(instrumentNote, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 4)
@@ -5405,6 +5609,10 @@ private fun HeldInstrumentSheet(
                 if (previewing) TapeText("RENDERING…", TapeType.lcdSmall, scheme.amber.tape)
                 if (heldPreview != null) FlockHeldAudition(heldPreview, fillColor, scheme,
                     accessibilityLabel = "INSTRUMENT AUDITION")
+            }
+            if (onPreviewChord != null) {
+                ActionButton("MINOR CHORD PREVIEW", scheme, enabled = !busy,
+                    modifier = Modifier.fillMaxWidth(), onClick = onPreviewChord)
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 ActionButton("CANCEL", scheme, enabled = !writing, modifier = Modifier.weight(1f), onClick = onCancel)
