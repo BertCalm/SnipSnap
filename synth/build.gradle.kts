@@ -1324,6 +1324,8 @@ dependencies {
     // The factory kit builders hand ArrangedPads (audio + class + recipe)
     // straight to the kit pipeline.
     implementation(project(":kit"))
+    // CAIRN's retained SING sampler delivery assembles a KeygroupProgram.
+    implementation(project(":xpm"))
     testImplementation(kotlin("test"))
     // Integration tests drive a rendered kit through the real export pipeline.
     testImplementation(project(":xpm"))

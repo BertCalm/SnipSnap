@@ -424,3 +424,37 @@ references (six model 3, six Lower texture), now a text fixture in
   distinctive; the musical bank still awaits the owner's listening decision."
 - **Overall: incomplete.** The voice count, keygroups, chord tools, round robin and hardware
   playback remain open.
+
+## CAIRN SING sampler studies (from the recovery backup, 2026-11-13)
+
+CAIRN's retained-SING sampler code came back from the owner's recovery snapshot onto this
+branch, CAIRN files only. See [CAIRN_SING_SAMPLER.md](CAIRN_SING_SAMPLER.md). This entry covers
+those five studies of one SING voice. Earlier CAIRN work keeps the scope its own documents record.
+
+- **Melodic voices: fail, four of six.** KNOCK, ANSWER, TUMBLE and SING are built; GRIND and
+  VESSEL are not. The five studies are settings of one SING voice, not new voices.
+- **Presets: not yet verified.** CAIRN has no factory presets. The nine Wave 3 KEEP SING recipes
+  are source-bound inputs to the studies, not factory presets.
+- **Playable keygroups: partial.** The shell builds and validates all five keygroup packages from
+  pinned captures in JVM tests: EARLIER and MOVING over MIDI 48–72 from three native roots, the
+  GROOVE studies at C4 only. No phone entry exists, because the nine Float captures are not in
+  this repository. No phone or MPC has loaded a package.
+- **Premade kit: not yet.** None is built.
+- **Chord tools: partial.** In JVM tests, the existing chord stabs for C that fit inside 48–72 play as
+  independent notes on a MOVING package, and notes outside the range are refused. Not on a device.
+- **Articulation (HOLD): partial.** Each study loops the accepted 88,200-frame SING cycle after its
+  real predecessor, with a 220-frame intro and a 0.08 s sampler release. There is no natural
+  attack or release. The owner kept the sampler delivery on 2026-11-13 (see below).
+- **Percussion and drum gates:** not applicable. These are held melodic studies.
+- **Velocity and round robin: fail.** Sampler velocity is gain only. There are no native touch
+  layers and no round-robin takes.
+- **Sound character.** The documents record the owner's earlier CAIRN approvals: “I love the new
+  direction” for the first reconstructed audition ([CAIRN.md](CAIRN.md)), and approval of the
+  KNOCK/ANSWER HOLD direction ([SYNTH_ROADMAP.md](SYNTH_ROADMAP.md)). The nine SING recordings'
+  Wave 3 KEEP appears only in the backup's source constants (owner batch
+  `trefoil-splay-cairn-published-source-v1`, reviewed 2026-11-09), with no quoted verdict.
+  On 2026-11-13 the owner heard all five studies as playable keys (roots, in-between keys
+  and a chord for EARLIER and MOVING; C4 for each GROOVE) and kept all of them
+  ([CAIRN_SING_SAMPLER.md](CAIRN_SING_SAMPLER.md#owner-listening)).
+- **Overall: incomplete.** The Float captures' home, the phone picker, phone
+  and MPC playback, velocity layers, round robin and the remaining voices are open.
