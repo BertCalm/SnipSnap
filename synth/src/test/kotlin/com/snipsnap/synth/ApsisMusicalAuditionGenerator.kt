@@ -213,7 +213,7 @@ object ApsisMusicalAuditionGenerator {
                 },
                 "scoreKind" to score.kind.name, "tempoBpm" to score.tempoBpm,
                 "scoreSummary" to "${score.events.size} pad triggers at ${score.tempoBpm} BPM; ${score.events.map { it.slot }.distinct().size} exact exported pads; ${if (score.kind == ApsisScoreKind.PAD_PERFORMANCE) "velocity 127/unity" else "sample layers before hardware velocity scaling"}.",
-                "role" to score.role, "modelVersion" to Apsis.MODEL_VERSION,
+                "role" to score.role, "modelVersion" to Apsis.PASSAGE_MODEL_VERSION,
                 "rawFile" to rawPath, "matchedFile" to matchedPath, "recipeFile" to scorePath,
                 "scoreFile" to scorePath, "colorFile" to colorPath, "colorGain" to colorGain,
                 "loop" to false, "durationSeconds" to samples.size.toDouble() / Dsp.RATE,
@@ -235,7 +235,7 @@ object ApsisMusicalAuditionGenerator {
         File(root, archivePath).also { it.parentFile.mkdirs() }.let { kitArchive.copyTo(it, overwrite = true) }
         kitManifest.copyTo(File(root, kitManifestPath), overwrite = true)
         val manifest = linkedMapOf<String, Any?>(
-            "engine" to "APSIS", "title" to "Apsis / Played passages", "modelVersion" to Apsis.MODEL_VERSION,
+            "engine" to "APSIS", "title" to "Apsis / Played passages", "modelVersion" to Apsis.PASSAGE_MODEL_VERSION,
             "sampleRate" to Dsp.RATE, "channels" to 1, "bitDepth" to 24,
             "clipCount" to clips.size, "padCount" to pads.size, "tempoBpm" to 80,
             "baseRevision" to git("rev-parse", "HEAD"), "workingTreeDirty" to !git("status", "--porcelain").isNullOrEmpty(),
@@ -266,7 +266,7 @@ object ApsisMusicalAuditionGenerator {
         writeJson(File(root, "manifest.json"), apsisJson(manifest))
         writeJson(File(root, "data/manifest.json"), apsisJson(manifest))
         File(root, "PLAYBACK.txt").writeText("""
-            APSIS musical proof / sound model ${Apsis.MODEL_VERSION}
+            APSIS musical proof / sound model ${Apsis.PASSAGE_MODEL_VERSION}
             Seven dry musical scores use the downloadable kit's exact PCM24 samples, all at MIDI velocity 127.
             Onsets are pad triggers, not bright-contact peaks. The approach is never trimmed.
             Finite one-shots ignore note-off and keep their tails unless the same pad is retriggered.

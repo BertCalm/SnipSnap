@@ -114,7 +114,7 @@ object ApsisAuditionGenerator {
             )
         }
         val manifest = linkedMapOf<String, Any?>(
-            "engine" to "APSIS", "prototype" to true, "modelVersion" to if (performance) Apsis.MODEL_VERSION else 2,
+            "engine" to "APSIS", "prototype" to true, "modelVersion" to if (performance) Apsis.PASSAGE_MODEL_VERSION else 2,
             "title" to if (performance) "Apsis / Playing response" else "Apsis / The bodies emerge", "baseRevision" to git("rev-parse", "HEAD"),
             "sourceStatus" to "Experimental voicing revision on the recorded base revision; exact source files are SHA-256 identified below.",
             "sourceFiles" to sourceHashes(),
