@@ -204,7 +204,13 @@ Ranked by the verifiers' worth score, then by cost and certainty. Pedals first (
 
 **Verifiers:** buildable with fixes (0.85): write the floor into the gain law; add the ramp. New (0.85), but if the owner hears "GATE with a softer shape", a SHAPE weight on GATE is cheaper. Worth 4: a first-day tap on long pads, second-day on guitars.
 
+**Built chip-less, 2026-11-13:** `Pump.kt`, `Pump.pump(snip, bpm, division, amount)` beside `Gate.chop`, with GATE's refusal (two divisions), its grid (`Wobble.periodSec`) and its peak match, and its own default division, 1/4. Both verifier fixes are in: the floor is in the gain law (the dip's gain is 1 - AMOUNT (1 - the -24 dB floor), so a tap dips 9.3 dB and AMOUNT 1 exactly 24), and the fall is a 5 ms raised cosine. The rise is a compressor's release, a straight line in decibels over 0.8 of the division, then full level until the next beat; the first division is untouched. Not yet in `Keyed.NAMES`, the KEYED row or the CLI: the chip, the `pumped` name and a `pump` verb wait for the gate. `generatePumpAudition` renders the gate on JANGLE, CHUG, the choir and the organ at 92 BPM, beside GATE and TREMOLO on the same beat at the same depth.
+
+**Gate passed, 2026-11-13:** on every question. The owner heard it on JANGLE and CHUG (after their amps), the choir and the organ, at a quarter (a tap and full depth) and an eighth (a tap), beside GATE and TREMOLO on the same beats: it pumps, the first beat is untouched, it is clearly more than GATE and clearly more than TREMOLO, there are no clicks, the depth is enough, and it is for all held sounds. They chose Eighths for the tap (AMOUNT 0.7 at 1/8), not the quarter this idea expected, so `Pump.DEFAULT_DIVISION` is the grid's own eighth and the "own field" above is not needed: `pumped` joins `Keyed.NAMES` with the shared `Dials.division`, the PUMP chip joins the KEYED row (TUNE, BODY, WOBBLE, ETERNAL, PUMP; 49 segments), and `snipsnap pump` joins the CLI beside `gate`. A tap is the heard Eighths clip exactly (PadSheetTest pins it sample for sample): a 9.3 dB duck on every eighth after the first.
+
 ### 8. ROTARY (section, saved key `rotary`), worth 4
+
+**Built chip-less, 2026-11-12:** `Rotary.kt`, after TREMOLO and before ECHO; macros SPIN, SPEED and RAMP (see the pedal board spec's Stage 4b note). **Gate passed, 2026-11-13:** the ROTARY chip, character `spun` = {SPIN 1} with SPEED and RAMP at their new defaults of 1 (the owner's Spin-up), for held sounds only; the brainstorm's {SPIN 1.0, RAMP 0.6} candidate was heard and not chosen.
 
 **Chip and key:** ROTARY on the PEDALS row. Recipe `spun` = {SPIN 1.0, RAMP 0.6}. ROTOR is a preset word; ROTARY is clean.
 

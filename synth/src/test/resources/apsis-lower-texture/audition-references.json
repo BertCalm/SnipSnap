@@ -1,0 +1,316 @@
+{
+  "source_commit": "12977c099f33522c4e3abc97cfb548739d75bc65",
+  "source": "published Wave 1 feedback revision PCM, before native integration",
+  "owner_selected": [
+    "grain-passage",
+    "scattered-grains",
+    "held-grains"
+  ],
+  "additional_engineering_checks": [
+    "grain-passage-soft",
+    "grain-passage-hard",
+    "grain-passage-c3"
+  ],
+  "cases": [
+    {
+      "id": "grain-passage-model3",
+      "patch": {
+        "engine": "APSIS",
+        "version": 1,
+        "name": "Grain Passage",
+        "voice": "GRAIN",
+        "macros": {
+          "STRETCH": 0.6499999761581421,
+          "DISTANCE": 0.4000000059604645,
+          "BODIES": 0.4000000059604645,
+          "ALIGN": 0.550000011920929,
+          "COUPLE": 0.44999998807907104,
+          "HOLD": 0
+        },
+        "midi": 60,
+        "velocity": 0.6499999761581421,
+        "config": {
+          "modelVersion": 3,
+          "seedContext": 0
+        }
+      },
+      "output_gain": 1.2803869247436523,
+      "expected_wav_sha256": "5cf182be985a79fc745ae8396a298a485a89547746dedf8f30231b09812007bd"
+    },
+    {
+      "id": "grain-passage-model4",
+      "patch": {
+        "engine": "APSIS",
+        "version": 1,
+        "name": "Grain Passage",
+        "voice": "GRAIN",
+        "macros": {
+          "STRETCH": 0.6499999761581421,
+          "DISTANCE": 0.4000000059604645,
+          "BODIES": 0.4000000059604645,
+          "ALIGN": 0.550000011920929,
+          "COUPLE": 0.44999998807907104,
+          "HOLD": 0
+        },
+        "midi": 60,
+        "velocity": 0.6499999761581421,
+        "config": {
+          "modelVersion": 4,
+          "seedContext": 0
+        }
+      },
+      "output_gain": 1.2946977615356445,
+      "expected_wav_sha256": "2e8b23d6a579bc61ae04a46592dddf4ab247b3032583bdf470bceebf0745648d"
+    },
+    {
+      "id": "scattered-grains-model3",
+      "patch": {
+        "engine": "APSIS",
+        "version": 1,
+        "name": "Scattered Grains",
+        "voice": "GRAIN",
+        "macros": {
+          "STRETCH": 0.8500000238418579,
+          "DISTANCE": 0.4000000059604645,
+          "BODIES": 0.699999988079071,
+          "ALIGN": 0.15000000596046448,
+          "COUPLE": 0.6499999761581421,
+          "HOLD": 0
+        },
+        "midi": 60,
+        "velocity": 0.6499999761581421,
+        "config": {
+          "modelVersion": 3,
+          "seedContext": 0
+        }
+      },
+      "output_gain": 0.8041117191314697,
+      "expected_wav_sha256": "90088153e8b45a419801a56d670ca276d2dfdb18c046dfcca3286333271b9c3d"
+    },
+    {
+      "id": "scattered-grains-model4",
+      "patch": {
+        "engine": "APSIS",
+        "version": 1,
+        "name": "Scattered Grains",
+        "voice": "GRAIN",
+        "macros": {
+          "STRETCH": 0.8500000238418579,
+          "DISTANCE": 0.4000000059604645,
+          "BODIES": 0.699999988079071,
+          "ALIGN": 0.15000000596046448,
+          "COUPLE": 0.6499999761581421,
+          "HOLD": 0
+        },
+        "midi": 60,
+        "velocity": 0.6499999761581421,
+        "config": {
+          "modelVersion": 4,
+          "seedContext": 0
+        }
+      },
+      "output_gain": 0.808203399181366,
+      "expected_wav_sha256": "65469c7f53e18cadeb038cb2033ea224b31a1aac93a5c2d75e2f236abe3eb58f"
+    },
+    {
+      "id": "held-grains-model3",
+      "patch": {
+        "engine": "APSIS",
+        "version": 1,
+        "name": "Held Grains",
+        "voice": "GRAIN",
+        "macros": {
+          "STRETCH": 0.6499999761581421,
+          "DISTANCE": 0.4000000059604645,
+          "BODIES": 0.4000000059604645,
+          "ALIGN": 0.550000011920929,
+          "COUPLE": 0.44999998807907104,
+          "HOLD": 1
+        },
+        "midi": 60,
+        "velocity": 0.6499999761581421,
+        "config": {
+          "modelVersion": 3,
+          "seedContext": 0
+        }
+      },
+      "output_gain": 0.9768083095550537,
+      "expected_wav_sha256": "c715b0aa2cd4dca979d7bd46d67e55ef89130463887bc908e76f83babca1dba6"
+    },
+    {
+      "id": "held-grains-model4",
+      "patch": {
+        "engine": "APSIS",
+        "version": 1,
+        "name": "Held Grains",
+        "voice": "GRAIN",
+        "macros": {
+          "STRETCH": 0.6499999761581421,
+          "DISTANCE": 0.4000000059604645,
+          "BODIES": 0.4000000059604645,
+          "ALIGN": 0.550000011920929,
+          "COUPLE": 0.44999998807907104,
+          "HOLD": 1
+        },
+        "midi": 60,
+        "velocity": 0.6499999761581421,
+        "config": {
+          "modelVersion": 4,
+          "seedContext": 0
+        }
+      },
+      "output_gain": 0.9899864792823792,
+      "expected_wav_sha256": "2d5cfeef0967d7a6dd18982cc6b39227e274ae3eedeb617233ea8decc84c87c8"
+    },
+    {
+      "id": "grain-passage-soft-model3",
+      "patch": {
+        "engine": "APSIS",
+        "version": 1,
+        "name": "Grain Passage soft",
+        "voice": "GRAIN",
+        "macros": {
+          "STRETCH": 0.6499999761581421,
+          "DISTANCE": 0.4000000059604645,
+          "BODIES": 0.4000000059604645,
+          "ALIGN": 0.550000011920929,
+          "COUPLE": 0.44999998807907104,
+          "HOLD": 0
+        },
+        "midi": 60,
+        "velocity": 0.3499999940395355,
+        "config": {
+          "modelVersion": 3,
+          "seedContext": 0
+        }
+      },
+      "output_gain": 2.3895647525787354,
+      "expected_wav_sha256": "b2a0a41da07cb26e986db557b1ac5d69fd9608975bc04243932c8951e069a1ab"
+    },
+    {
+      "id": "grain-passage-soft-model4",
+      "patch": {
+        "engine": "APSIS",
+        "version": 1,
+        "name": "Grain Passage soft",
+        "voice": "GRAIN",
+        "macros": {
+          "STRETCH": 0.6499999761581421,
+          "DISTANCE": 0.4000000059604645,
+          "BODIES": 0.4000000059604645,
+          "ALIGN": 0.550000011920929,
+          "COUPLE": 0.44999998807907104,
+          "HOLD": 0
+        },
+        "midi": 60,
+        "velocity": 0.3499999940395355,
+        "config": {
+          "modelVersion": 4,
+          "seedContext": 0
+        }
+      },
+      "output_gain": 2.4075188636779785,
+      "expected_wav_sha256": "01267fbb055a15e468a49cec3d778ac8a9904db127f9ae890cbc2d0c6f75eeae"
+    },
+    {
+      "id": "grain-passage-hard-model3",
+      "patch": {
+        "engine": "APSIS",
+        "version": 1,
+        "name": "Grain Passage hard",
+        "voice": "GRAIN",
+        "macros": {
+          "STRETCH": 0.6499999761581421,
+          "DISTANCE": 0.4000000059604645,
+          "BODIES": 0.4000000059604645,
+          "ALIGN": 0.550000011920929,
+          "COUPLE": 0.44999998807907104,
+          "HOLD": 0
+        },
+        "midi": 60,
+        "velocity": 1,
+        "config": {
+          "modelVersion": 3,
+          "seedContext": 0
+        }
+      },
+      "output_gain": 0.8265460133552551,
+      "expected_wav_sha256": "d5debd19a93d74279d23d0016d07d192a125303d50b9404a9fe5a77dd3710f94"
+    },
+    {
+      "id": "grain-passage-hard-model4",
+      "patch": {
+        "engine": "APSIS",
+        "version": 1,
+        "name": "Grain Passage hard",
+        "voice": "GRAIN",
+        "macros": {
+          "STRETCH": 0.6499999761581421,
+          "DISTANCE": 0.4000000059604645,
+          "BODIES": 0.4000000059604645,
+          "ALIGN": 0.550000011920929,
+          "COUPLE": 0.44999998807907104,
+          "HOLD": 0
+        },
+        "midi": 60,
+        "velocity": 1,
+        "config": {
+          "modelVersion": 4,
+          "seedContext": 0
+        }
+      },
+      "output_gain": 0.8400377631187439,
+      "expected_wav_sha256": "8d9422f766254a51b73e6556703fba291adabb1edb202dafd4d3c7d86374ac7f"
+    },
+    {
+      "id": "grain-passage-c3-model3",
+      "patch": {
+        "engine": "APSIS",
+        "version": 1,
+        "name": "Grain Passage C3",
+        "voice": "GRAIN",
+        "macros": {
+          "STRETCH": 0.6499999761581421,
+          "DISTANCE": 0.4000000059604645,
+          "BODIES": 0.4000000059604645,
+          "ALIGN": 0.550000011920929,
+          "COUPLE": 0.44999998807907104,
+          "HOLD": 0
+        },
+        "midi": 48,
+        "velocity": 0.6499999761581421,
+        "config": {
+          "modelVersion": 3,
+          "seedContext": 0
+        }
+      },
+      "output_gain": 1.2850078344345093,
+      "expected_wav_sha256": "a646408b7509d35344343903e4932c84e84ae2fb32c674380bd0dec1c2af2b23"
+    },
+    {
+      "id": "grain-passage-c3-model4",
+      "patch": {
+        "engine": "APSIS",
+        "version": 1,
+        "name": "Grain Passage C3",
+        "voice": "GRAIN",
+        "macros": {
+          "STRETCH": 0.6499999761581421,
+          "DISTANCE": 0.4000000059604645,
+          "BODIES": 0.4000000059604645,
+          "ALIGN": 0.550000011920929,
+          "COUPLE": 0.44999998807907104,
+          "HOLD": 0
+        },
+        "midi": 48,
+        "velocity": 0.6499999761581421,
+        "config": {
+          "modelVersion": 4,
+          "seedContext": 0
+        }
+      },
+      "output_gain": 1.304157018661499,
+      "expected_wav_sha256": "b06625b747925aa2732f34f4d0da2a0d795620dcc100e1032601fb6e262e54e3"
+    }
+  ]
+}

@@ -1,5 +1,10 @@
 # GRAIN and ANCHOR in SnipSnap
 
+New GRAIN patches and its three factory presets use model 4: the owner-selected
+Lower texture balance. Material excitation is halved before the modal bank; root
+forcing, contact timing and whole-part leveling remain unchanged. Saved model 3
+patches keep their original sound. ANCHOR and PASSAGE retain model 3.
+
 The download-only [MPC acceptance bank](APSIS-ACCEPTANCE.md) adds native touch
 layers and exported-sample performances for these six presets.
 
@@ -73,11 +78,24 @@ acceptance remain separate work.
 
 ## Saved audio and compatibility
 
-Audio identity is `(voice, modelVersion)`. GRAIN and ANCHOR begin at model 3;
-they reject models 1/2 because those definitions never existed. Missing/null
-model metadata chooses 3 for these new voices. PASSAGE still chooses model 1
-when model metadata is missing/null and accepts explicit models 1, 2 and 3.
-`ApsisConfig()` and PASSAGE's current model remain 3.
+Audio identity is `(voice, modelVersion)`. GRAIN accepts models 3 and 4; ANCHOR
+accepts only model 3. Neither accepts 1/2 because those definitions never existed.
+Missing/null saved model metadata still chooses 3 for both population voices,
+including an absent/null config object. PASSAGE still chooses model 1 when saved
+model metadata is missing/null and accepts explicit models 1, 2 and 3.
+`ApsisConfig()` remains 3. Fresh patch/render defaults use
+`Apsis.configurationFor(voice)`: 4 for GRAIN and 3 for PASSAGE/ANCHOR.
+Editing or replaying a saved patch retains its explicit configuration.
+
+On 8 November the owner selected Lower texture for Grain Passage, Scattered
+Grains and Held Grains. Model 4 carries the study's exact 0.5 material-excitation
+gain into the native renderer. `ApsisLowerTextureTest` compares native PCM24
+hashes against twelve frozen published audition WAVs: six model-3 references and
+six Lower texture takes, including soft/hard touch and C3 engineering coverage.
+The WAVs are not in the repository; their recipes, gains and SHA-256 values are
+in `synth/src/test/resources/apsis-lower-texture/audition-references.json`. The
+soft, hard and C3 engineering cards have no separate owner verdict. This change
+does not supply additional musical voices, keygroups or a new HOLD design.
 
 Before/after captures on Java 17 compared PASSAGE at C4, native velocity .65,
 seed 17, defaults and HOLD=1 for each saved model. All six final Float32 sample
@@ -124,7 +142,7 @@ complete JSON recipes, score events, internal 4× Float32 captures and reports.
 The phrase uses C3/G3/E-flat3 at 0/1.8/3.6 seconds, native velocities
 .65/.45/.85 and gain .35, retaining each note's complete tail.
 
-Measured core fidelity: twelve internal-radiation comparisons cover both voices
+Historical model-3 core fidelity: twelve internal-radiation comparisons cover both voices
 at C2/C4/C6, soft/hard touch and HOLD. The maximum relative RMS error against
 the Python laws was `3.035e-8`, with correlation above `.99999999999999`.
 The comparison uses the native Float recipe values and effective root, before
@@ -143,7 +161,8 @@ navigation, YOURS, pad delivery and reopening for the new voices.
 Verified and measured: the implementation and the checks described above.
 Proposed: the two variation presets, their musical usefulness and phone render
 budgets. Heard: the owner selected the Python GRAIN/ANCHOR identities; the Kotlin
-output-stage comparison still needs the owner's listening decision.
+output-stage comparison was followed by the owner's GRAIN Lower texture selection
+recorded above. Hardware acceptance and expanded instrument requirements remain open.
 
 ## Why it is built this way
 
