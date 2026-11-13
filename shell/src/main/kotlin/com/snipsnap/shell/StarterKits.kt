@@ -688,7 +688,7 @@ object StarterKits {
         ) { com.snipsnap.synth.BreakerKits.build(com.snipsnap.synth.BreakerKits.Kit.DUB_TANK) },
         Starter(
             com.snipsnap.synth.BreakerKits.Kit.TRIP_HOP.id, com.snipsnap.synth.BreakerKits.Kit.TRIP_HOP.title,
-            "A heavy, dusty break: a fatter kick and snare a semitone down, ghost notes, a crushed break snare and a ride dialled into the rig. Three touch zones, three takes.",
+            "A heavy, dusty break: a fatter kick and snare a semitone down, ghost notes, a crushed break snare and a dusty ride, kept dry. Three touch zones, three takes.",
             seeded = false, tempoBpm = com.snipsnap.synth.BreakerKits.Kit.TRIP_HOP.bpm,
         ) { com.snipsnap.synth.BreakerKits.build(com.snipsnap.synth.BreakerKits.Kit.TRIP_HOP) },
         Starter(

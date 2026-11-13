@@ -3477,7 +3477,9 @@ The genre kits (renderer models 5 and 6, 2026-11-12 to 11-13):
 - **Model 6:** each later kick or tom take lands with another beater. The round robin's start trim
   can cut a kick's click, which had left two takes of a damped, crushed kick as copies.
 - **Verified in software** (`BreakerKitTest`) on all three kits: saving, the pad resolver and the
-  MPC 3 export. The genre kits wait for the owner's listen. The BREAKER kit stays on model 5.
+  MPC 3 export. The BREAKER kit stays on model 5.
+- **Heard (2026-11-13):** the kicks, the High Timbale and the soft-to-hard grid were accepted. Both
+  grooves were too wet, and the owner picked their echo and spring from four versions each.
 
 ### ETCH, Kotlin round K1 (2026-11-13)
 

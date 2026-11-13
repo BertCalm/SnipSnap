@@ -769,7 +769,7 @@ it sits 8.6 dB under a full kick, so that is the soft-hit claim.
 
 Dub Tank (`breaker-dub`, 74 BPM) and Trip hop (`breaker-triphop`, 92 BPM) are on the shelf after
 BREAKER, built to the approved layouts. docs/BREAKER.md, "The genre kits" and "Model 6", has the
-pads, settings and measurements. Neither kit has been heard yet.
+pads, settings and measurements.
 
 **Departures from the layouts**, each for a measured reason:
 - **High Timbale:** about three semitones over the high tom, not five. 220 Hz is the top of SKIN's
@@ -796,3 +796,27 @@ re-struck kit, including kits already accepted. A trimmed take of the Second Kic
 3 dB quieter over its first 300 ms, without its click. Whether the trim should spare a synth
 strike's attack is the owner's call.
 
+## Heard: the genre kits (2026-11-13)
+
+**Accepted:**
+- the kicks hit again: "one kick played again: fine";
+- the High Timbale at about three semitones up: high enough;
+- every pad soft to hard: softer in character, with a fresh hit each time.
+
+**Both grooves: "the balance is off".** Asked what was off, the owner answered "too much echo or
+spring" for each. Measured against BREAKER's accepted groove:
+- **Dub Tank** echoed nearly every pad: the hats at 150 ms, the kick and toms at 95 ms, besides the
+  two throws.
+- **Trip hop** slapped its kick and snare. Its crush pulled the ride's and crash's ringing tails 8 to
+  9 dB above BREAKER's: with the crush off, the ride's tail fell from −1.8 to −6.1 dB against its hit.
+  Halving its drums' spring alone barely changed the groove's wash.
+
+The owner heard each groove four ways, from as built to driest, at one loudness, and picked:
+- **Dub Tank (3):** echo only on the rimshot and the thrown snare, and every pad's spring halved
+  (Bump's DRIP stays).
+- **Trip hop (4):** no echo, a quarter of every pad's spring, and the ride and crash without their
+  crush.
+
+**As built from the picks.** Both kits' grooves are the picked versions sample for sample, except for
+one pad. Trip hop's Second Kick keeps DRIP .1: at a quarter (.025), its closest takes measured
+39.7 dB apart, a hair under a copy. The Steppers Kick, at half its spring, measures 37.7 dB.

@@ -61,10 +61,12 @@ On the open tone (model 4) the owner accepted the kit (2026-11-12):
 - **Every pad, soft to hard:** softer in character, with a fresh hit each time.
 
 The two genre kits, Dub Tank and Trip hop, are built to the layouts the owner approved (below, "The
-genre kits") and wait for the owner's listen.
+genre kits"). On 2026-11-13 the owner heard them:
+- **Accepted:** their kicks hit again, the High Timbale's height, and every pad soft to hard.
+- **Too wet:** both grooves. The owner picked how much echo and spring each keeps, and the kits are
+  built from those picks.
 
 Still to come:
-- the owner's listen of the genre kits;
 - the surf tom fill;
 - the audition page.
 
@@ -143,31 +145,31 @@ phone has not been timed.
 ## The genre kits
 
 Two more starters, each laid out for the owner and approved before it was built ("Build it",
-2026-11-12). Both are on renderer model 6 (below), and neither has been heard yet. Like the BREAKER
-kit, every pad is a BREAKER patch with its recipe, dealt by the shared robin: 3 zones × 3 re-struck
-takes, and 2 × 2 on the recorded tambourine.
+2026-11-12). Both are on renderer model 6 (below). Like the BREAKER kit, every pad is a BREAKER patch
+with its recipe, dealt by the shared robin: 3 zones × 3 re-struck takes, and 2 × 2 on the recorded
+tambourine.
 
 **Dub Tank** (`breaker-dub`, 74 BPM, one-drop). The drop is the kick and the rimshot together on
-three. The space is echo more than spring. The toms are left open to ring, and the steppers kick and
-the dry snare are damped tight.
+three. The echo is the rimshot's and the thrown snare's. The toms are left open to ring, and the
+steppers kick and the dry snare are damped tight.
 
 | | | | |
 |---|---|---|---|
-| A13 Ride (two semitones up, echoed) | A14 Crash | A15 Bump (Kicked) | A16 Snare Riser |
+| A13 Ride (two semitones up) | A14 Crash | A15 Bump (Kicked) | A16 Snare Riser |
 | A09 Low Tom (open) | A10 Mid Tom (open) | A11 High Timbale | A12 Shaker |
 | A05 Thrown Snare (375 ms echo) | A06 Steppers Kick (damped) | A07 Dry Snare (damped) | A08 Tambourine |
-| A01 Drop Kick (low, round) | A02 Rimshot (300 ms echo) | A03 Closed Hat (echoed) | A04 Open Hat (chokes A03) |
+| A01 Drop Kick (low, round) | A02 Rimshot (300 ms echo) | A03 Closed Hat | A04 Open Hat (chokes A03) |
 
 **Trip hop** (`breaker-triphop`, 92 BPM, a heavy break). The kick and snare sit a semitone down and
 fatter: less damped, with more dust and crush. The ghost snare and the second kick are damped short
-and nearly dry, so they stay out of the way. The ride and crash are dialled into the rig.
+and nearly dry, so they stay out of the way. The ride and crash carry dust and amp, without the crush.
 
 | | | | |
 |---|---|---|---|
-| A13 Dusty Ride (rig in) | A14 Crash (in the spring) | A15 Crushed Riser | A16 Shaker |
+| A13 Dusty Ride (dust and amp) | A14 Crash (a little spring) | A15 Crushed Riser | A16 Shaker |
 | A09 Low Tom (three semitones down) | A10 Mid Tom (two down) | A11 Cross Stick (dark) | A12 Break Snare (crushed, amp) |
 | A05 Ghost Snare (damped short) | A06 Second Kick (two down, short) | A07 Tambourine | A08 Open Hat (long, crushed; chokes A03) |
-| A01 Heavy Kick (one down) | A02 Fat Snare (one down, wide spring) | A03 Closed Hat (dusty) | A04 Half-open Hat (chokes A03) |
+| A01 Heavy Kick (one down) | A02 Fat Snare (one down) | A03 Closed Hat (dusty) | A04 Half-open Hat (chokes A03) |
 
 **How the tunings are set.** BREAKER's TUNE moves SKIN's own tuning a quarter of its range either
 way. SKIN's kick spans 45 to 75 Hz (8.8 semitones), its snare 170 to 260 Hz (7.4) and its tom 90 to
@@ -175,14 +177,36 @@ way. SKIN's kick spans 45 to 75 Hz (8.8 semitones), its snare 170 to 260 Hz (7.4
 cymbals move three semitones either way. SLAP is a 95 ms slap up to .5 and grows to 375 ms at 1, so
 300 ms is SLAP .87.
 
-**Where the kits depart from their layouts:**
+**Heard (2026-11-13).** The owner heard:
+- **The kicks hit again** as "one kick played again: fine".
+- **The High Timbale** at three semitones up as high enough.
+- **Every pad, soft to hard,** as softer in character, with a fresh hit each time.
+- **Both grooves** as too wet: "too much echo or spring".
+
+Measured against BREAKER's accepted groove:
+- **Dub Tank** had an echo on nearly every pad, not only the two throws.
+- **Trip hop's** kick and snare slapped, and its crush pulled the ride's and crash's ringing tails up
+  toward their hits, 8 to 9 dB over BREAKER's own.
+
+From each groove four ways at one loudness, the owner picked:
+- **Dub Tank:** echo only on the rimshot and the thrown snare, and every pad's spring halved. Bump's
+  DRIP is how hard the tank is kicked, so it stays.
+- **Trip hop:** no echo, a quarter of every pad's spring, and the ride and crash without their crush.
+
+The kits are built from those picks, and their grooves are the picked versions sample for sample,
+except for one pad (below).
+
+**Where the kits depart from their layouts and picks:**
 - **Dub Tank's High Timbale** reaches about three semitones over the high tom, not the five the
   layout asked for: 220 Hz is the top of SKIN's tom.
 - **Dub Tank's Steppers Kick** is damped at .7 and crushed at .6, not .8 and .8. Damped and crushed
   harder, its strikes measured as copies (43 dB apart).
-- **Trip hop's Second Kick** keeps a touch of spring (DRIP .1, as on the ghost snare). Fully dry,
-  its soft strikes were one body: everything that differed between them was a 0.4 ms click, which
-  the round robin's start trim (up to 2 ms) can cut. Two takes then measured 44 dB apart.
+- **Trip hop's Second Kick** keeps its touch of spring (DRIP .1), not the quarter of it the owner
+  picked for the kit (.025). Its soft strikes are one body once the round robin's start trim (up to
+  2 ms) cuts their 0.4 ms click, and its spring is what keeps each strike its own:
+  - fully dry, two takes measured 44 dB apart, past the 40 dB that marks a copy;
+  - at .025, 39.7 dB, a hair under a copy;
+  - at .1, 35.6 dB.
 
 **Not BREAKER at other settings** (`BreakerKitTest`, pad by pad against the BREAKER kit):
 
@@ -197,21 +221,22 @@ cymbals move three semitones either way. SLAP is a 95 ms slap up to .5 and grows
 
 | Pad | Closest two takes, apart by | Least-changed soft zone |
 |---|---:|---:|
+| Dub Tank Steppers Kick | 37.7 dB | 0.5 dB |
 | Trip hop Second Kick | 35.6 dB | 1.0 dB |
-| Dub Tank Steppers Kick | 33.9 dB | 0.5 dB |
-| Dub Tank Drop Kick | 29.6 dB | 0.9 dB |
-| Dub Tank Rimshot | 27.2 dB | 2.4 dB |
-| Trip hop Heavy Kick | 26.8 dB | 1.8 dB |
-| Trip hop Cross Stick | 26.9 dB | 2.3 dB |
-| Trip hop Crushed Riser | 26.2 dB | 4.4 dB |
-| Dub Tank Snare Riser | 25.1 dB | 4.7 dB |
-| The toms and the timbale | 21.0 to 23.5 dB | 4.0 to 5.0 dB |
-| The snares | 14.2 to 16.5 dB | 3.9 to 6.2 dB |
+| Trip hop Heavy Kick | 33.9 dB | 1.3 dB |
+| Dub Tank Drop Kick | 32.7 dB | 0.9 dB |
+| Trip hop Cross Stick | 31.5 dB | 2.3 dB |
+| Dub Tank Rimshot | 26.5 dB | 2.4 dB |
+| Trip hop Crushed Riser | 26.2 dB | 4.2 dB |
+| Dub Tank Snare Riser | 24.9 dB | 4.8 dB |
+| The toms and the timbale | 22.6 to 26.7 dB | 3.7 to 4.8 dB |
+| The snares | 14.1 to 15.9 dB | 2.9 to 6.3 dB |
 | Bump | 1.3 dB | 0.6 dB (it rings shorter) |
-| Cymbals, hats, shaker, tambourine | about 0 dB (uncorrelated) | 1.6 to 7.0 dB |
+| Cymbals, hats, shaker, tambourine | about 0 dB (uncorrelated) | 1.5 to 6.6 dB |
 
 The kicks are again the weak spot: their crush evens out how hard each strike lands, and their soft
-zones move least. Bump's soft zone barely changes colour, since the tank's send is normalised. It
+zones move least. Drying the spring brought them closer still: the Steppers Kick's takes went from
+33.9 to 37.7 dB apart when its spring was halved. Bump's soft zone barely changes colour, since the tank's send is normalised. It
 rings shorter instead, which the decay half of the measure hears.
 
 ## How a hit is made
@@ -359,8 +384,8 @@ On model 5, a later take of a kick or tom differed from the first only in how ha
 15% softer, `Restrike`) and in its click, which peaks 0.4 ms in. The round robin trims up to 2 ms
 off a later take's front as timing jitter, and that can cut the click. What is left of a damped,
 crushed kick is then nearly the same strike every time: the crush evens out the force, and the
-damping leaves little body for it to show in. Dub Tank's Steppers Kick had two takes 42.4 dB apart,
-past the 40 dB that marks a copy.
+damping leaves little body for it to show in. Dub Tank's Steppers Kick, as first built, had two takes
+42.4 dB apart, past the 40 dB that marks a copy.
 
 A real beater meets the head a little differently each time. So on model 6 each later take of a
 kick or tom moves SKIN's CLICK, PUNCH, DROP (how far the pitch bends) and TONE by up to .1 either
@@ -370,14 +395,16 @@ Trip hop's Second Kick needed a touch of spring as well (above, "The genre kits"
 cut, its takes measure 43.9 dB apart on model 5 even with DRIP .1, 43.8 on model 6 fully dry, and
 35.2 with both.
 
+On the kits as built, at the space the owner picked (`BreakerTest`):
+
 | Kick or tom, 2 ms cut off every take | Model 5 | Model 6 |
 |---|---:|---:|
+| Dub Tank Steppers Kick | 45.9 dB | 37.7 dB |
 | Trip hop Second Kick | 43.9 dB | 35.2 dB |
-| Dub Tank Steppers Kick | 42.4 dB | 33.5 dB |
-| Dub Tank Drop Kick | 33.5 dB | 29.6 dB |
-| Trip hop Heavy Kick | 30.7 dB | 26.7 dB |
-| Dub Tank High Timbale | 28.1 dB | 21.5 dB |
-| The other toms | 24.3 to 25.4 dB | 21.0 to 23.5 dB |
+| Dub Tank Drop Kick | 36.0 dB | 32.6 dB |
+| Trip hop Heavy Kick | 35.9 dB | 33.9 dB |
+| Dub Tank High Timbale | 30.6 dB | 22.5 dB |
+| The other toms | 26.6 to 34.0 dB | 24.0 to 26.7 dB |
 
 **The start trim cuts the click on every re-struck kit.** The round robin's trim was made for
 recordings, as timing jitter. On a synth drum whose strike starts at its first sample, a trim past
