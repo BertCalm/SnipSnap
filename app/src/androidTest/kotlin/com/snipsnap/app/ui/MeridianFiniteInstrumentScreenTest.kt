@@ -3,6 +3,8 @@ package com.snipsnap.app.ui
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -59,6 +61,14 @@ class MeridianFiniteInstrumentScreenTest : ComposeScreenTest() {
         pump(16)
     }
 
+    /** The sheet has two CANCEL targets (its dimmed backdrop and its button); press the button, drawn last. */
+    private fun cancelSheet() {
+        val action = requireNotNull(compose.onAllNodes(hasContentDescription("CANCEL") and hasClickAction())
+            .fetchSemanticsNodes().last().config.getOrNull(SemanticsActions.OnClick)?.action)
+        compose.runOnIdle { assertTrue(action()) }
+        pump(16)
+    }
+
     @Test fun finiteEditedRecipeOpensFiniteKeysAndCancelPreservesEverySavedField() {
         val patch = source()
         val settings = show(patch)
@@ -72,7 +82,7 @@ class MeridianFiniteInstrumentScreenTest : ComposeScreenTest() {
         assertFalse(spec.hasAttack)
         assertFalse(spec.hasRelease)
         assertEquals("Lands in the LIBRARY as Meridian Keys, playable on keyboard.", spec.shelfNote("Meridian Keys"))
-        press("CANCEL")
+        cancelSheet()
         assertEquals(patch, SynthDrafts.read(settings).filterIsInstance<MeridianPatch>().single())
     }
 
@@ -84,7 +94,7 @@ class MeridianFiniteInstrumentScreenTest : ComposeScreenTest() {
         press("MAKE INSTRUMENT")
         compose.onNodeWithText("FINITE SOURCE GESTURE · THREE TOUCH LAYERS").assertExists()
         button("RELEASE").assertDoesNotExist()
-        press("CANCEL")
+        cancelSheet()
         assertEquals(patch, SynthDrafts.read(settings).filterIsInstance<MeridianPatch>().single())
     }
 
@@ -95,7 +105,7 @@ class MeridianFiniteInstrumentScreenTest : ComposeScreenTest() {
         compose.onNodeWithText("Fixed-alignment swing · C2–C5 · soft, medium and hard touch.").assertExists()
         button("RELEASE").assertExists()
         compose.onNodeWithText("FINITE SOURCE GESTURE · THREE TOUCH LAYERS").assertDoesNotExist()
-        press("CANCEL")
+        cancelSheet()
         assertEquals(patch, SynthDrafts.read(settings).filterIsInstance<MeridianPatch>().single())
     }
 
