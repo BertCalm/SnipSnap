@@ -36,12 +36,15 @@ class PumpTest {
         val tone = sine(220f, 3f)
         assertContentEquals(tone.samples, Pump.pump(tone, bpm, "1/4", 0f).samples, "PUMP at 0 is not a copy")
         assertEquals(tone.frameCount, Pump.pump(tone, bpm).frameCount, "PUMP changed the length")
+        // The gate's tap: the default is an eighth, the grid's own.
+        assertEquals("1/8", Pump.DEFAULT_DIVISION)
+        assertEquals(Wobble.DEFAULT_DIVISION, Pump.DEFAULT_DIVISION)
 
         // Two quarters at 92 BPM is 1.30 s: the choir (1.44 s) is in, a snare is out.
         val snare = Onset.render(OnsetVoice.SNARE)
         val why = assertNotNull(Pump.refusal(snare, bpm, "1/4"), "a snare was not refused")
         assertTrue("1/4" in why && "92 BPM" in why, "the refusal does not say why: $why")
-        assertFailsWith<IllegalArgumentException> { Pump.pump(snare, bpm) }
+        assertFailsWith<IllegalArgumentException> { Pump.pump(snare, bpm, "1/4") }
         assertNull(Pump.refusal(Vox.render(VoxVoice.CHOIR), bpm, "1/4"), "the choir was refused")
         // AMOUNT 0 is never refused: it does nothing.
         assertContentEquals(snare.samples, Pump.pump(snare, bpm, "1/4", 0f).samples)

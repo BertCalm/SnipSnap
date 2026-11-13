@@ -615,7 +615,7 @@ CONTOUR), row four what happens to it in time (SLAP · WASH · ROLL ·
 GATE · ENSEMBLE · SECTION), row five
 the machine's own transport (FLIP · STOP · START · PITCH), row six
 the keyed family that reads the kit itself (TUNE · BODY · WOBBLE ·
-ETERNAL — `retune`, `body`, `wobble` and `eternal`, below), and row seven
+ETERNAL · PUMP — `retune`, `body`, `wobble`, `eternal` and `pump`, below), and row seven
 the pedals, grouped by what an effect *is*, because a guitarist looks for a
 pedal by its name: the slate (DRIVE · SUSTAIN · WAH · TOUCH · ROCK · FORGE ·
 DELAY · ROOM · FADE IN · VIBRATO · DIVE · HUSH · SUB · REWIND · TREM · FLANGE · ROTARY — `driven`, `compressed`, `wahed`, `touchwahed`, `rockwahed`, `forged`,
@@ -1074,6 +1074,23 @@ matched, deterministic; bin-backed, `--undo` byte-identical, the recipe
 (division, tempo, amount) riding the pad. Keyed rather than racked for
 the same reason as ROLL, and sharing its grid for the same reason too.
 On the phone it is GATE on the PAD SHEET's fourth row, beside ROLL.
+
+### `pump <kit-dir> <pad>` — the sidechain pump
+
+The same grid again, a third edit: the first division plays untouched
+(the hit is the kick the pump answers), then on every later beat the
+level falls over 5 ms along a raised cosine and breathes back over 0.8
+of the division, a compressor's release, straight in decibels, then
+holds at full level until the next beat. A note division (`--rate`,
+WOBBLE's ladder, `1/8` default) of the kit's tempo (`--bpm` sets it
+first). `--amount 0..1` is the depth: 0.7 ducks about 9 dB, 1 ducks
+24 dB and never silences; length unchanged. A pad shorter than two
+divisions is refused, in words. One gain for every channel, peak
+matched, deterministic; bin-backed, `--undo` byte-identical, the recipe
+(division, tempo, amount) riding the pad. GATE chops square and TREMOLO
+is symmetric; a pump is neither. For held sounds. On the phone it is
+PUMP on the PAD SHEET's sixth row, at `1/8` of the kit's tempo and AMT
+0.7, the owner's tap at its gate (2026-11-13).
 
 ### `eternal <kit-dir> <pad>` — attack kept, tail eternal
 

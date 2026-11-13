@@ -1,13 +1,16 @@
 package com.snipsnap.shell
 
+import com.snipsnap.audio.Snip
 import com.snipsnap.json.JsonValue
 import com.snipsnap.kit.KitLayer
 import com.snipsnap.kit.KitPad
 import com.snipsnap.synth.Eras
 import com.snipsnap.synth.Hush
 import com.snipsnap.synth.PadRecipe
+import com.snipsnap.synth.Pump
 import com.snipsnap.synth.Room
 import com.snipsnap.synth.Treatments
+import com.snipsnap.synth.Wobble
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -184,6 +187,25 @@ class PadSheetTest {
     }
 
     @Test
+    fun `a tap of PUMP is the Eighths clip the owner chose - pumped at AMT 0_7 on the grid's eighth`() {
+        // The gate (2026-11-13): Eighths, AMOUNT 0.7 at 1/8. The card taps at its default AMT with the default dials,
+        // so the tap is that clip with nothing of its own to set.
+        assertEquals(PadSheet.Treatment.Keyed("pumped"), PadSheet.treatmentFor("PUMP"))
+        assertEquals(0.7f, PadSheet.DEFAULT_AMOUNT)
+        assertEquals("1/8", Keyed.Dials().division)
+        val rate = 44_100
+        val held = Snip(FloatArray(3 * rate) { 0.5f * kotlin.math.sin(2.0 * Math.PI * 220.0 * it / rate).toFloat() }, 1, rate)
+        val tap = Keyed.apply("pumped", held, Keyed.Context(null, 92f), PadSheet.DEFAULT_AMOUNT).snip
+        val clip = Pump.pump(held, 92f, "1/8", 0.7f)
+        kotlin.test.assertContentEquals(clip.samples, tap.samples, "a PUMP tap is not the Eighths clip")
+        assertEquals(Wobble.DEFAULT_DIVISION, Pump.DEFAULT_DIVISION)
+        // A hit shorter than two eighths is refused in words, before anything is touched.
+        val short = Snip(FloatArray(rate / 2) { 0.5f }, 1, rate)
+        assertTrue(Keyed.refusal("pumped", short, Keyed.Context(null, 92f), PadSheet.DEFAULT_AMOUNT)!!.contains("1/8"))
+        assertFailsWith<Keyed.Refused> { Keyed.apply("pumped", short, Keyed.Context(null, 92f), PadSheet.DEFAULT_AMOUNT) }
+    }
+
+    @Test
     fun `segmentFor is eraFor's inverse for every era segment`() {
         for (segment in PadSheet.SEGMENTS - PadSheet.NONE - PadSheet.SMEAR - PadSheet.DUST) {
             val era = PadSheet.eraFor(segment)!!
@@ -205,9 +227,9 @@ class PadSheetTest {
         assertEquals(listOf("PUNCH", "RING", "DUB", "VINYL", "PHASE", "CONTOUR"), PadSheet.CHARACTER_SEGMENTS)
         assertEquals(listOf("SLAP", "WASH", "ROLL", "GATE", "ENSEMBLE", "SECTION"), PadSheet.TIME_SEGMENTS)
         assertEquals(listOf("FLIP", "STOP", "START", "PITCH"), PadSheet.TRANSPORT_SEGMENTS)
-        assertEquals(listOf("TUNE", "BODY", "WOBBLE", "ETERNAL"), PadSheet.KEYED_SEGMENTS)
+        assertEquals(listOf("TUNE", "BODY", "WOBBLE", "ETERNAL", "PUMP"), PadSheet.KEYED_SEGMENTS)
         assertEquals(listOf("DRIVE", "SUSTAIN", "WAH", "TOUCH", "ROCK", "FORGE", "DELAY", "ROOM", "FADE IN", "VIBRATO", "DIVE", "HUSH", "SUB", "REWIND", "TREM", "FLANGE", "ROTARY"), PadSheet.PEDAL_SEGMENTS)
-        assertEquals(48, PadSheet.ALL_SEGMENTS.size, "the card should hold 48 segments")
+        assertEquals(49, PadSheet.ALL_SEGMENTS.size, "the card should hold 49 segments")
     }
 
     /**
@@ -218,7 +240,7 @@ class PadSheetTest {
      * anything ended up on.
      */
     @Test
-    fun `the regroup keeps every chip the card already drew, adds its seven, the merge's DUST makes twenty-nine, ENSEMBLE thirty and SECTION thirty-one the pedals' two thirty-three, the wah's three thirty-six, FORGE thirty-seven, DELAY thirty-eight ROOM thirty-nine, FADE IN forty, VIBRATO forty-one, DIVE forty-two, HUSH forty-three, SUB forty-four, REWIND forty-five, TREM and FLANGE forty-seven and ROTARY forty-eight`() {
+    fun `the regroup keeps every chip the card already drew, adds its seven, the merge's DUST makes twenty-nine, ENSEMBLE thirty and SECTION thirty-one the pedals' two thirty-three, the wah's three thirty-six, FORGE thirty-seven, DELAY thirty-eight ROOM thirty-nine, FADE IN forty, VIBRATO forty-one, DIVE forty-two, HUSH forty-three, SUB forty-four, REWIND forty-five, TREM and FLANGE forty-seven, ROTARY forty-eight and PUMP forty-nine`() {
         val expected = setOf(
             // the twenty that existed before the regroup, plus the row-one
             // DUST chip a separate branch merged in later (`readDust`,
@@ -264,9 +286,11 @@ class PadSheetTest {
             "FLANGE",
             // ROTARY's gate (2026-11-13): on the slate, behind MORE
             "ROTARY",
+            // PUMP's gate (2026-11-13): on the KEYED row
+            "PUMP",
         )
         assertEquals(expected, PadSheet.ALL_SEGMENTS.toSet(), "the card's inventory changed")
-        assertEquals(48, PadSheet.ALL_SEGMENTS.size, "a chip is drawn twice or missing")
+        assertEquals(49, PadSheet.ALL_SEGMENTS.size, "a chip is drawn twice or missing")
     }
 
     @Test
@@ -417,6 +441,8 @@ class PadSheetTest {
         assertEquals(PadSheet.Applied(PadSheet.Treatment.Keyed("retuned"), 1f, "TUNE"), PadSheet.read(retuned))
         val bodied = JsonValue.Obj(linkedMapOf<String, JsonValue>("keyed" to JsonValue.Str("bodied"), "key" to JsonValue.Str("C"), "amount" to JsonValue.Num(0.5)))
         assertEquals(PadSheet.Applied(PadSheet.Treatment.Keyed("bodied"), 0.5f, "BODY"), PadSheet.read(bodied))
+        val pumped = JsonValue.Obj(linkedMapOf<String, JsonValue>("keyed" to JsonValue.Str("pumped"), "key" to JsonValue.Str("1/8 AT 92 BPM"), "amount" to JsonValue.Num(0.7), "division" to JsonValue.Str("1/8")))
+        assertEquals(PadSheet.Applied(PadSheet.Treatment.Keyed("pumped"), 0.7f, "PUMP"), PadSheet.read(pumped))
     }
 
     @Test

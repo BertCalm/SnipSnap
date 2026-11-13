@@ -19,8 +19,8 @@ import kotlin.math.pow
  * (`docs/superpowers/specs/2026-10-19-pedal-board-brainstorm.md`), parked behind the keyed row's two free chips.
  *
  * Keyed rather than racked, for GATE's reason: it reads the kit's tempo, and shares WOBBLE's grid ([Wobble.periodSec]),
- * so a pump, a gate, a roll and a filter sweep land on the same beats. Its own default division is [DEFAULT_DIVISION],
- * a quarter, where GATE's is an eighth: a pump on every eighth is a flutter.
+ * so a pump, a gate, a roll and a filter sweep land on the same beats. Its default division is the grid's own,
+ * [DEFAULT_DIVISION], an eighth, as GATE's.
  *
  * The envelope, one gain for every channel, so mono stays mono:
  * - The first division is untouched: the hit is the kick the pump answers, so nothing ducks it.
@@ -30,16 +30,21 @@ import kotlin.math.pow
  *   AMOUNT 0.7 dips about 9 dB and AMOUNT 1 [FLOOR_DB]. The floor is written into the law: AMOUNT 1 never silences.
  *
  * A pad shorter than [MIN_DIVISIONS] divisions is refused, in words, as GATE's is: it would hear one dip at most, at
- * its very end. Every drum one-shot is out (two quarters at 92 BPM is 1.3 s); the brainstorm puts it on long pads.
+ * its very end. At the default eighth and 92 BPM a pad needs 0.65 s (at a quarter, 1.3 s), so a short hit is out;
+ * the brainstorm puts it on long pads.
  * Length unchanged, peak matched (the first division is untouched, so the peak is almost always where it was),
  * deterministic, no seed.
  *
- * Chip-less until its listening gate (the brainstorm's chip is PUMP on the KEYED row).
+ * At its gate (2026-11-13) the owner heard it on JANGLE and CHUG (after their amps), the choir and the organ, at a
+ * quarter and an eighth, beside GATE and TREMOLO on the same beats: it pumps, the first beat is untouched, it is
+ * clearly more than either, there are no clicks, the depth is enough, and it is for all held sounds. They chose
+ * Eighths for the tap (AMOUNT 0.7 at 1/8), so the default division is the grid's own and the keyed treatment
+ * `pumped` (the PUMP chip on the KEYED row) needs no dial of its own.
  */
 object Pump {
 
-    /** A quarter: where a club record's kick lands. */
-    const val DEFAULT_DIVISION = "1/4"
+    /** An eighth, the grid's own default: the owner's tap at the gate. */
+    const val DEFAULT_DIVISION = Wobble.DEFAULT_DIVISION
 
     /** The fall into each dip: fast enough to read as a duck, slow enough not to click. */
     const val ATTACK_SEC = 0.005f
