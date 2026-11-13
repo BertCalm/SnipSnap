@@ -6,9 +6,10 @@ weights and decay remain distinct. The vibraphone also has an amplitude motor.
 These are synthesized tuned bars, not recordings or measured instrument models.
 
 GLOCKENSPIEL is the new fourth voice, with four inharmonic steel-bar modes and
-a C4–C7 register centered on C5. Its [separate audition and study kit](HALOBAR_GLOCKENSPIEL.md)
-await listening; the twelve accepted factory recipes and original starter stay
-fixed. [CROTALES](HALOBAR_CROTALES.md) now adds a fifth voice: a longer bronze-disc
+a C4–C7 register centered on C5. The bank received owner listening approval on
+2026-11-12. Its [separate audition and study kit](HALOBAR_GLOCKENSPIEL.md) remain
+available; the twelve accepted factory recipes and original starter stay fixed.
+[CROTALES](HALOBAR_CROTALES.md) now adds a fifth voice: a longer bronze-disc
 inspired ring, sounding C6–C8, with its own audition and study kit. [Tubular bells](HALOBAR_SIX_VOICES.md) adds the sixth voice, playable finite
 keygroups and performance studies.
 
@@ -16,9 +17,9 @@ keygroups and performance studies.
 
 HALOBAR remains in progress against the owner's
 [engine acceptance gates](ENGINE_ACCEPTANCE_GATES.md). The six-voice build adds
-keygroups, provisional preset coverage, chord voicings and native repeat strikes.
-New-voice listening, device verification and combined velocity/round-robin MPC
-keygroup export remain open. The
+keygroups, preset coverage, chord voicings and native repeat strikes.
+The owner heard and approved all three new bell banks on 2026-11-12. Device
+verification and combined velocity/round-robin MPC keygroup export remain open. The
 existing starter, provisional study kits and passing build/DSP checks have
 their own evidence; they do not close those remaining gates. Finite mallet
 articulation is documented below for the final per-voice HOLD decision.

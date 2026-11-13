@@ -5904,4 +5904,98 @@ class ConventionTest {
         "VERSIONS ▸ rolls back", "COMBINE SOUNDS ▸ ROOM TONE", "ROOM ▸ SEND", // toasts and lines naming a menu path
         "OPEN ▸ for its bench", "CLIP ▸ KIT writes one", // PADS help, and ORBIT's section line
     )
+    // ---- Type scale and the 11 sp floor (clarity spec section 7.5, PR 7a) ----
+
+    /** Every `fontSize` the source gives as a literal sp (or `TextUnit(n, Sp)`) below [floor], as `file:line: text`. */
+    private fun subFloorSizes(file: String, src: String, floor: Int): List<String> {
+        val literal = Regex("""fontSize\s*=\s*(\d+(?:\.\d+)?)f?\.sp\b""")
+        val unit = Regex("""TextUnit\(\s*(\d+(?:\.\d+)?)f?\s*,\s*TextUnitType\.Sp\s*\)""")
+        val out = mutableListOf<String>()
+        stripCommentsAndStrings(src).lines().forEachIndexed { i, line ->
+            for (m in literal.findAll(line) + unit.findAll(line)) {
+                if (m.groupValues[1].toDouble() < floor) out += "$file:${i + 1}: ${line.trim()}"
+            }
+        }
+        return out
+    }
+
+    @Test
+    fun `law - no font size in app main is a literal under 11 sp`() {
+        val floor = 11
+        val offenders = appSrcRoot.walkTopDown().filter { it.isFile && it.extension == "kt" }.flatMap {
+            subFloorSizes(it.path, it.readText(Charsets.UTF_8), floor)
+        }.toList()
+        assertTrue(
+            offenders.isEmpty(),
+            "A font size under the $floor sp floor (clarity spec section 7.5). Use a TapeType style " +
+                "(eyebrow is the smallest) and, where the text sat in a small cell, grow the cell or drop the " +
+                "text for an existing visual:\n" + offenders.joinToString("\n"),
+        )
+    }
+
+    @Test
+    fun `law - the sub-floor law fails on a literal under the floor and passes on tracking and on the floor itself`() {
+        assertEquals(1, subFloorSizes("x", "val s = TextStyle(fontSize = 9.sp)", 11).size)
+        assertEquals(1, subFloorSizes("x", "labelStyle.copy(fontSize = 7.5.sp)", 11).size)
+        assertEquals(1, subFloorSizes("x", "TextUnit(10f, TextUnitType.Sp)", 11).size)
+        assertEquals(0, subFloorSizes("x", "TextStyle(fontSize = 11.sp, letterSpacing = 0.5.sp)", 11).size)
+        assertEquals(0, subFloorSizes("x", "// fontSize = 9.sp was the old size", 11).size)
+    }
+
+    @Test
+    fun `law - LOOP's grid draws its text through TapeText, not Material's Text`() {
+        val src = File("../app/src/main/kotlin/com/snipsnap/app/LoopGrid.kt").readText(Charsets.UTF_8)
+        assertFalse("material3.Text" in stripCommentsAndStrings(src), "LoopGrid.kt draws text through Material's Text again; use TapeText and a TapeType style")
+    }
+
+    @Test
+    fun `law - TapeType holds the type scale table`() {
+        val src = File("../app/src/main/kotlin/com/snipsnap/app/theme/TapeTheme.kt").readText(Charsets.UTF_8)
+        val code = stripCommentsAndStrings(src)
+        fun const(name: String): Int =
+            Regex("""const\s+val\s+$name\s*=\s*(\d+)""").find(code)?.groupValues?.get(1)?.toInt()
+                ?: fail("TapeType has no `const val $name`")
+        val sizes = mapOf("BODY_SP" to 14, "SECONDARY_SP" to 13, "LABEL_SP" to 13, "EYEBROW_SP" to 11, "TITLE_SP" to 20, "MIN_SP" to 11)
+        for ((name, want) in sizes) assertEquals(want, const(name), "TapeType.$name is the spec's table entry")
+        for (name in listOf("BODY_SP", "SECONDARY_SP", "LABEL_SP", "EYEBROW_SP", "TITLE_SP")) {
+            assertTrue(const(name) >= const("MIN_SP"), "TapeType.$name is under the floor")
+        }
+        // Each rung is built from its size and nothing else: a rung that stopped reading its constant would pass the table above.
+        for ((style, size) in listOf("BODY" to "BODY_SP", "SECONDARY" to "SECONDARY_SP", "LABEL" to "LABEL_SP", "EYEBROW" to "EYEBROW_SP")) {
+            val def = Regex("""private\s+val\s+$style\s*=\s*TextStyle\(([^)]*)\)""").find(code)?.groupValues?.get(1)
+                ?: fail("TapeType has no private val $style")
+            assertTrue(Regex("""fontSize\s*=\s*$size\.sp""").containsMatchIn(def), "$style does not read $size: $def")
+        }
+        assertTrue("fontSize = TITLE_SP.sp" in code, "screenTitle does not read TITLE_SP")
+        // Button and label: +0.5 tracking; eyebrow keeps +1. Labels and eyebrows are mono (caps as written, so no transform).
+        assertTrue(Regex("""val\s+LABEL\s*=[^\n]*letterSpacing\s*=\s*0\.5\.sp""").containsMatchIn(code), "LABEL is not +0.5 tracking")
+        assertTrue(Regex("""val\s+LABEL\s*=[^\n]*Monospace""").containsMatchIn(code), "LABEL is not mono")
+        // The old names are rungs of the scale.
+        for ((old, rung) in listOf("pixel" to "LABEL", "pixelSmall" to "SECONDARY", "lcdHeader" to "screenTitle")) {
+            assertTrue(
+                Regex("""val\s+$old\s*:\s*TextStyle\s*@Composable\s+get\(\)\s*=\s*$rung\b""").containsMatchIn(code),
+                "TapeType.$old is not $rung",
+            )
+        }
+        assertTrue(Regex("""if\s*\(size\s*<=\s*17\)\s*BODY\b""").containsMatchIn(code), "lcd(17) and under is not the body style")
+    }
+
+    @Test
+    fun `law - rows that hold a label are a floor tall, not a fixed height`() {
+        val fixed = Regex("""\.height\(\s*Layout\.(LCD_HEADER_H|PRIMARY_ACTION_H)\.dp\s*\)""")
+        val offenders = appSrcRoot.walkTopDown().filter { it.isFile && it.extension == "kt" }.flatMap { f ->
+            stripCommentsAndStrings(f.readText(Charsets.UTF_8)).lines().withIndex()
+                .filter { fixed.containsMatchIn(it.value) }.map { "${f.path}:${it.index + 1}" }
+        }.toList()
+        assertTrue(offenders.isEmpty(), "A header or primary-action row is a fixed height again; use minHeight so a wrapped label grows it (clarity spec D7):\n" + offenders.joinToString("\n"))
+        // ... and the button components let their labels wrap, which is what the floor is for.
+        val ui = File("../app/src/main/kotlin/com/snipsnap/app/ui")
+        for ((file, marker) in listOf("ChopScreen.kt" to "internal fun SegmentButton(", "PadSheetScreen.kt" to "internal fun ActionButton(")) {
+            val text = File(ui, file).readText(Charsets.UTF_8)
+            val body = text.substring(text.indexOf(marker).also { assertTrue(it >= 0, "$file lost $marker") })
+            val end = body.indexOf("\n}\n").let { if (it < 0) body.length else it }
+            assertTrue("maxLines = 2" in body.substring(0, end), "$marker no longer lets its label wrap to two lines (clarity spec D7)")
+        }
+    }
+
 }

@@ -128,7 +128,7 @@ fun DoublesScreen(
                     maxLines = 1,
                 )
             }
-            TapeText("${clusters.size} ${if (clusters.size == 1) "GROUP" else "GROUPS"}", TapeType.pixelSmall, scheme.amber.tape, maxLines = 1)
+            TapeText("${clusters.size} ${if (clusters.size == 1) "GROUP" else "GROUPS"}", TapeType.pixelSmall, scheme.amber.tape, maxLines = 2)
         }
 
         TapeText(Copy.DOUBLES_RULE, TapeType.pixelSmall, scheme.ink2.tape, Modifier.fillMaxWidth().padding(horizontal = 4.dp), maxLines = 2)
@@ -211,7 +211,7 @@ private fun MemberRow(e: Crate.Entry, onShelf: Boolean, scheme: Scheme, onGo: ()
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        TapeText(Doubles.memberLine(e), TapeType.pixelSmall, scheme.lcdInk.tape, Modifier.weight(1f), maxLines = 1)
+        TapeText(Doubles.memberLine(e), TapeType.pixelSmall, scheme.lcdInk.tape, Modifier.weight(1f), maxLines = 2)
         ActionButton(
             "GO",
             scheme,

@@ -682,7 +682,11 @@ object UserPresets {
             }
             is AlloyPatch -> {
                 val config = Json.write(JsonValue.Str(Json.write(patch.config.toJsonValue()))).replace("$", "\\$")
-                ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f, model = ${patch.model}, config = AlloyConfig.fromJsonValue(com.snipsnap.json.Json.parse($config)))"
+                val response = patch.materialResponse?.let {
+                    val json = Json.write(JsonValue.Str(Json.write(it.toJsonValue()))).replace("$", "\\$")
+                    ", materialResponse = com.snipsnap.synth.AlloyMaterialResponse.fromJsonValue(com.snipsnap.json.Json.parse($json))"
+                } ?: ""
+                ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f, model = ${patch.model}, config = AlloyConfig.fromJsonValue(com.snipsnap.json.Json.parse($config))$response)"
             }
             is ContourPatch -> ".copy(config = ${contourConfigLine(patch.config)}, velocity = ${patch.velocity}f, model = ${patch.model})"
             is SkitterPatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f, seed = ${patch.seed})"

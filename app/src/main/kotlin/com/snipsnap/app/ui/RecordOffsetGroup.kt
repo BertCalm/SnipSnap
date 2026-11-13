@@ -63,7 +63,7 @@ internal fun RecordOffsetGroup(scheme: Scheme) {
                 RecordLatency.choose(now + OFFSET_STEP_MS)
             }
         }
-        TapeText(reading, TapeType.pixel, scheme.ink.tape, maxLines = 1)
+        TapeText(reading, TapeType.pixel, scheme.ink.tape, maxLines = 2)
         TapeText(Copy.SETUP_RECORD_OFFSET_NOTE, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 4)
     }
 }

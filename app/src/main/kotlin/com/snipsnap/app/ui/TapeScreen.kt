@@ -1089,7 +1089,7 @@ private fun TapeDeckContent(
                     retrim?.let { Copy.backOnto(it.padLabel) } ?: Copy.USE_THIS_PART,
                     Modifier
                         .weight(1f)
-                        .height(Layout.PRIMARY_ACTION_H.dp),
+                        .minHeight(Layout.PRIMARY_ACTION_H.dp),
                     enabled = model.hasSelection,
                 ) {
                     val range = model.commitSelection()
@@ -1129,7 +1129,7 @@ private fun TapeDeckContent(
                     "INSTANT KIT",
                     Modifier
                         .weight(1f)
-                        .height(Layout.PRIMARY_ACTION_H.dp),
+                        .minHeight(Layout.PRIMARY_ACTION_H.dp),
                 ) {
                     // Stop the transport as well as the voice: the deck would
                     // otherwise keep rolling silently under the busy overlay.
@@ -1164,7 +1164,7 @@ private fun TapeDeckContent(
             if (retrim == null) {
                 DeckButton(
                     if (catchBusy) Copy.CATCH_BUSY else "CATCH A HIT",
-                    Modifier.fillMaxWidth().height(Layout.PRIMARY_ACTION_H.dp),
+                    Modifier.fillMaxWidth().minHeight(Layout.PRIMARY_ACTION_H.dp),
                     enabled = !catchBusy,
                 ) {
                     startCatch()
@@ -1371,7 +1371,7 @@ private fun DeckButton(
                 engaged -> scheme.lcd.tape
                 enabled -> scheme.ink.tape
                 else -> scheme.ink2.tape
-            },
+            },            maxLines = 2,
         )
     }
 }

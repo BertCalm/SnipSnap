@@ -699,7 +699,7 @@ fun KitScreen(
                         .padding(horizontal = 10.dp),
                     contentAlignment = Alignment.Center,
                 ) {
-                    TapeText(Places.ADD_KIT, TapeType.pixel, scheme.accent.tape, maxLines = 1)
+                    TapeText(Places.ADD_KIT, TapeType.pixel, scheme.accent.tape, maxLines = 2)
                 }
                 // PLAY's FULL, at the header's right end (section 3.3):
                 // the fullscreen grid is the part of PLAY that was
@@ -715,7 +715,7 @@ fun KitScreen(
                         .padding(horizontal = 10.dp),
                     contentAlignment = Alignment.Center,
                 ) {
-                    TapeText("FULL", TapeType.pixel, scheme.ink2.tape, maxLines = 1)
+                    TapeText("FULL", TapeType.pixel, scheme.ink2.tape, maxLines = 2)
                 }
             }
             val tempo = kit.tempoBpm?.let { "%.0f BPM  ".format(java.util.Locale.ROOT, it) } ?: ""
@@ -1082,7 +1082,7 @@ fun KitScreen(
             // to where it is tapped is not discoverable by looking, and a hint
             // that can be dismissed is a feature that can be lost. The one
             // legend left: the strip carries the other.
-            TapeText(Copy.PAD_VELOCITY_LEGEND, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
+            TapeText(Copy.PAD_VELOCITY_LEGEND, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
             // Where the kit came from (persona review, P4.4). The same move as
             // the two lines above: always there, cannot be dismissed. The
             // finding was that provenance is good and reachable only by
@@ -1094,7 +1094,7 @@ fun KitScreen(
             // line for "nowhere".
             val cameFrom = Provenance.ofKit(kit.pads)
             if (cameFrom != null) {
-                TapeText(Copy.kitCameFrom(cameFrom), TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
+                TapeText(Copy.kitCameFrom(cameFrom), TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
             }
     
             // PLAY's footer, folded in (section 3.3): PANIC always, and the MIDI
@@ -1123,7 +1123,7 @@ fun KitScreen(
                 if (midiDevices.isEmpty()) {
                     Box(Modifier.weight(1f))
                 } else {
-                    TapeText(midiLine(midiDevices), TapeType.pixelSmall, scheme.ink2.tape, Modifier.weight(1f), maxLines = 1)
+                    TapeText(midiLine(midiDevices), TapeType.pixelSmall, scheme.ink2.tape, Modifier.weight(1f), maxLines = 2)
                     Box(
                         Modifier
                             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
@@ -1180,7 +1180,7 @@ fun KitScreen(
 /** A heading inside THIS KIT, over the tools it names: a quiet label, its own composable so KitScreen grows by a call. */
 @Composable
 private fun KitGroupHeading(text: String) {
-    TapeText(text, TapeType.pixelSmall, LocalScheme.current.ink2.tape, Modifier.padding(top = 4.dp), maxLines = 1)
+    TapeText(text, TapeType.pixelSmall, LocalScheme.current.ink2.tape, Modifier.padding(top = 4.dp), maxLines = 2)
 }
 
 /**
@@ -1234,7 +1234,7 @@ private fun PadStripLine(
             return@Row
         }
         val strip = PadStrip.line(pad, slot)
-        TapeText(PadStrip.oneLine(strip), TapeType.pixelSmall, scheme.ink2.tape, Modifier.weight(1f), maxLines = 1)
+        TapeText(PadStrip.oneLine(strip), TapeType.pixelSmall, scheme.ink2.tape, Modifier.weight(1f), maxLines = 2)
         for (door in strip.doors) {
             DoorChip(door, onClick = {
                 when (door) {
@@ -1395,7 +1395,7 @@ private fun KeyPanel(
     val root = key?.rootSemitone ?: KeyPicker.DEFAULT_ROOT
     val scaleLabel = key?.let { KeyPicker.scaleLabel(it.scale) } ?: KeyPicker.DEFAULT_SCALE
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        TapeText("KEY · ${KeyPicker.label(key)}", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
+        TapeText("KEY · ${KeyPicker.label(key)}", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
 
         for (row in KeyPicker.ROOTS.indices.chunked(6)) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -1449,9 +1449,9 @@ private fun KeyPanel(
         }
 
         if (readouts.isEmpty()) {
-            TapeText(Copy.NO_TONAL_PADS, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
+            TapeText(Copy.NO_TONAL_PADS, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
         } else {
-            for (line in readouts) TapeText(line, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
+            for (line in readouts) TapeText(line, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
         }
     }
 }
@@ -1481,12 +1481,12 @@ private fun TexturePanel(
 ) {
     val scheme = LocalScheme.current
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        if (kind == "SCULPT") TapeText(Copy.SCULPT_LINE, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
-        TapeText("TEXTURE · $kind · FOUR TAKES, ONE NEW SAMPLE", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
+        if (kind == "SCULPT") TapeText(Copy.SCULPT_LINE, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
+        TapeText("TEXTURE · $kind · FOUR TAKES, ONE NEW SAMPLE", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
 
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
             ActionButton("◄", scheme, enabled = !busy, accessibilityLabel = "PREVIOUS SOURCE", onClick = { onSourceStep(-1) })
-            TapeText("SOURCE  $sourceLabel", TapeType.pixel, scheme.ink.tape, Modifier.weight(1f), maxLines = 1)
+            TapeText("SOURCE  $sourceLabel", TapeType.pixel, scheme.ink.tape, Modifier.weight(1f), maxLines = 2)
             ActionButton("►", scheme, enabled = !busy, accessibilityLabel = "NEXT SOURCE", onClick = { onSourceStep(1) })
         }
 
