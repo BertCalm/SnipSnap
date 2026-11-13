@@ -350,7 +350,7 @@ fun KeysScreen(
         Row(
             Modifier
                 .fillMaxWidth()
-                .height(Layout.LCD_HEADER_H.dp)
+                .minHeight(Layout.LCD_HEADER_H.dp)
                 .lcdPanel(scheme)
                 .padding(horizontal = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -466,7 +466,7 @@ fun KeysScreen(
         // nothing here rather than an invitation it cannot honour.
         if (midiSupported) {
             Box(Modifier.fillMaxWidth().height(24.dp), contentAlignment = Alignment.Center) {
-                TapeText(midiLine(midiDevices), TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
+                TapeText(midiLine(midiDevices), TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
             }
         }
     }

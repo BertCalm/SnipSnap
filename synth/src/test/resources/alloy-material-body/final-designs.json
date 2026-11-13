@@ -1,0 +1,168 @@
+{
+  "rounded_plug": {
+    "name": "Rounded Plug",
+    "voice": "BASS",
+    "description": "A woody harmonic bass body below the original nearly pure rounded tone.",
+    "operators": [
+      {
+        "gain": 0.2,
+        "decay": 0.35,
+        "sustain": 0.85
+      },
+      {
+        "gain": 0.1,
+        "decay": 0.2,
+        "sustain": 0.8
+      },
+      {
+        "gain": 0.95,
+        "decay": 0.18,
+        "sustain": 1.0
+      },
+      {
+        "gain": 0.7,
+        "decay": 0.1,
+        "sustain": 0.95
+      }
+    ],
+    "wood": {
+      "losses": [
+        0.04,
+        0.012,
+        0.008
+      ],
+      "gains": [
+        0.1,
+        1.0,
+        0.6
+      ]
+    },
+    "cutoffRatio": 16.0,
+    "originalWeightPower": 2,
+    "routing": [
+      {
+        "from_": 1,
+        "to": 0,
+        "radians": 0.18
+      },
+      {
+        "from_": 3,
+        "to": 2,
+        "radians": 0.28
+      }
+    ]
+  },
+  "long_prism": {
+    "name": "Long Prism",
+    "voice": "KEY",
+    "description": "A more fundamental-led wooden key with a sustained hollow third, below the original glassy tine.",
+    "operators": [
+      {
+        "gain": 0.65,
+        "decay": 0.45,
+        "sustain": 0.85
+      },
+      {
+        "gain": 0.75,
+        "decay": 0.3,
+        "sustain": 0.9
+      },
+      {
+        "gain": 0.25,
+        "decay": 0.15,
+        "sustain": 0.55
+      },
+      {
+        "gain": 0.1,
+        "decay": 0.08,
+        "sustain": 0.1
+      }
+    ],
+    "wood": {
+      "losses": [
+        0.18,
+        0.045,
+        0.012,
+        0.008
+      ],
+      "gains": [
+        0.7,
+        0.45,
+        0.2,
+        0.1
+      ]
+    },
+    "cutoffRatio": 10.0,
+    "originalWeightPower": 1,
+    "routing": [
+      {
+        "from_": 1,
+        "to": 0,
+        "radians": 0.04
+      },
+      {
+        "from_": 2,
+        "to": 1,
+        "radians": 0.03
+      }
+    ]
+  },
+  "velvet_rise": {
+    "name": "Velvet Rise",
+    "voice": "SOFT",
+    "description": "A hollow, reedier sustained body below the original warm soft tone, with its slow swell retained.",
+    "operators": [
+      {
+        "gain": 0.2,
+        "decay": 1.0,
+        "sustain": 1.0
+      },
+      {
+        "gain": 0.05,
+        "decay": 0.3,
+        "sustain": 0.15
+      },
+      {
+        "gain": 0.95,
+        "decay": 1.2,
+        "sustain": 1.0
+      },
+      {
+        "gain": 0.55,
+        "decay": 0.8,
+        "sustain": 0.95
+      }
+    ],
+    "wood": {
+      "losses": [
+        0.085,
+        0.025,
+        0.008
+      ],
+      "gains": [
+        0.15,
+        0.6,
+        0.85
+      ]
+    },
+    "cutoffRatio": 18.0,
+    "originalWeightPower": 1,
+    "routing": [
+      {
+        "from_": 1,
+        "to": 0,
+        "radians": 0.9
+      },
+      {
+        "from_": 2,
+        "to": 1,
+        "radians": 0.2
+      },
+      {
+        "from_": 3,
+        "to": 0,
+        "radians": 0.25
+      }
+    ]
+  }
+}

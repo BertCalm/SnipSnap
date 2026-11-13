@@ -508,7 +508,7 @@ private fun SpliceLane(loaded: LoadedTake, sharedMaxFrames: Int, needleFrame: In
             val needleX = (needleFrame / framesPerPixel).toFloat().coerceIn(0f, w)
             drawLine(scheme.warn.tape, Offset(needleX, 0f), Offset(needleX, h), strokeWidth = NEEDLE_STROKE_PX)
         }
-        TapeText(label, TapeType.pixelSmall, scheme.lcdInk2, Modifier.align(Alignment.TopStart).padding(4.dp), maxLines = 1)
+        TapeText(label, TapeType.pixelSmall, scheme.lcdInk2, Modifier.align(Alignment.TopStart).padding(4.dp), maxLines = 2)
     }
 }
 

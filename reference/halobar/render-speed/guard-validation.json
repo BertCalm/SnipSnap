@@ -1,0 +1,31 @@
+{
+  "rows": [
+    {
+      "mode": "rounding",
+      "variant": "retained",
+      "exitCode": 0,
+      "result": "rounding 25000 passed"
+    },
+    {
+      "mode": "peak",
+      "variant": "retained",
+      "exitCode": 0,
+      "result": "peak 25000 passed"
+    },
+    {
+      "mode": "rounding",
+      "variant": "guard removed in external copy",
+      "exitCode": 1,
+      "expectedAssertion": "Exception in thread \"main\" java.lang.AssertionError: rounding guard: Float mismatch at 1"
+    },
+    {
+      "mode": "peak",
+      "variant": "guard removed in external copy",
+      "exitCode": 1,
+      "expectedAssertion": "Exception in thread \"main\" java.lang.AssertionError: peak guard: Double mismatch at 1"
+    }
+  ],
+  "productionSourceUnmodified": true,
+  "testedSourceCommit": "9a5017c42a6a86e18691489127d5c826f068baa1",
+  "rendererSourceSha256": "d47bc84bd3ddfb81dcb905a42f8eb51a0d349de194dac019f750769556df4d30"
+}
