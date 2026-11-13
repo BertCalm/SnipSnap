@@ -473,3 +473,28 @@ exported PCM, playback, the MPC 3 track.
 **The sound gate is closed for SOOT.** Round 2's touch question went unanswered. The owner's
 "All sounds fine" is read as covering it. Their round-0 and round-1 touch answers were "softer hand"
 throughout.
+
+## Genre candidates (2026-11-13)
+
+The drum gate needs multiple distinct genre kits on the shelf. Asked for two directions, the owner
+chose all four candidates offered: drumless, basement dub, brushed noir and warehouse industrial.
+
+`SootGenreSketchGenerator` (test-side, like the round-0 harness, `:synth:generateSootGenreSketches`)
+renders each one in the SOOT engine: four bars through SOOT's A16 bus (one coil, a keyed dictaphone,
+wrapped to loop), plus signature pads. Each candidate has its own tempo, tuning, pad roles, groove,
+coil wetness and dictaphone:
+
+| Candidate | BPM | What makes it | Distance from SOOT's four bars |
+|---|---:|---|---:|
+| Drumless | 80 | no kick; rods, cups and a plate over a muted snare | 10.2 dB |
+| Basement dub | 72 | one-drop; heavy kick and a high rim thrown into the coil | 6.8 dB |
+| Brushed noir | 76 | brush-weight snare taps, damp kick, pure hats, light dictaphone | 7.3 dB |
+| Warehouse industrial | 96 | straight; driven kick, bench snare, struck plates, pushed dictaphone | 3.5 dB |
+
+The distances are log-spectral, 24 bands. They ignore rhythm. Industrial is closest to SOOT in tone,
+and its difference is mostly tempo and pattern; the page says so. The candidates are 7.6 to 13.9 dB
+from each other, except industrial, at 8.0 to 9.5 dB from the others.
+
+Page: https://claude.ai/artifact/Uoh1uk5NztKLXFWSUQ9Sj4. The owner picks which become authored
+16-pad kits, at least two. Each kit kept gets its own layout approval and listening rounds, and then
+the same save, playback and export proof as SOOT. Nothing here changes `SootKits.VERSION` 3.

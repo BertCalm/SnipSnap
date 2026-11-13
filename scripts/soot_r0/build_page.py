@@ -172,6 +172,29 @@ MEASURED_R2 = {
     "Kit build time, this host (4 cores, in parallel)": "27.6 s: the four bars are 2.0 s a render, 12 renders; a hit 10 to 225 ms; the roll 0.3 s",
 }
 
+# Genre sketches: four candidate sibling kits (`:synth:generateSootGenreSketches`).
+QUESTIONS_G = [
+    ("drumless", "1 · Drumless (80 BPM)", "No kick. A lead tension rod, cups and a plate carry the groove over a muted snare, with the coil kicked at the end. Proposed pads: three rods, two plates, three cups, two muted snares, narrow hats, the coil, a rod roll, four bars.",
+     "Build this one as a kit?", ["sketch"], "yesno", ["Build it", "Not this one"],
+     {"sketch": ("drumless/rod.wav", "Its lead rod")}),
+    ("dub", "2 · Basement dub (72 BPM)", "A one-drop: a heavy kick and a high rimshot together on beat three, the rim thrown deep into the coil, a plate splashed into the spring. Proposed pads: drop kick, two rimshots, a thrown snare, hats, plates and coil hits, a spring roll, four bars.",
+     "Build this one as a kit?", ["sketch"], "yesno", ["Build it", "Not this one"],
+     {"sketch": ("dub/rim.wav", "Its thrown rimshot")}),
+    ("noir", "3 · Brushed noir (76 BPM)", "Soft and close: a damp kick, brush-weight snare taps and ghosts, pure hats, a soft cup, a light dictaphone. Proposed pads: damp kick, brush snare and ghosts, rim, pure hats, cups and rods played soft, a brush roll, four bars.",
+     "Build this one as a kit?", ["sketch"], "yesno", ["Build it", "Not this one"],
+     {"sketch": ("noir/brush.wav", "Its brush snare")}),
+    ("industrial", "4 · Warehouse industrial (96 BPM)", "Straight and hard: a driven kick, a bench snare, struck plates up front, sixteenth hats, the dictaphone pushed. Closest to SOOT in tone (3.5 dB on the measure below); it differs mostly in tempo and pattern. Proposed pads: driven kicks, bench snares, plates, rods, wide hats, coil hits, a snare roll, four bars.",
+     "Build this one as a kit?", ["sketch"], "yesno", ["Build it", "Not this one"],
+     {"sketch": ("industrial/plate.wav", "Its struck plate")}),
+]
+
+MEASURED_G = {
+    "Four bars, log-spectral distance from SOOT's own four bars": "drumless 10.2 · basement dub 6.8 · brushed noir 7.3 · warehouse industrial 3.5 dB",
+    "Between the candidates": "drumless/dub 11.6 · drumless/noir 13.9 · drumless/industrial 9.0 · dub/noir 7.6 · dub/industrial 8.0 · noir/industrial 9.5 dB",
+    "Energy under 100 Hz (dB re the whole)": "SOOT -4.0 · drumless -22.0 · dub -5.4 · noir -2.8 · industrial -5.6",
+    "Energy over 6 kHz": "SOOT -24.7 · drumless -27.3 · dub -34.9 · noir -28.9 · industrial -24.7",
+}
+
 MEASURED_R1 = {
     "Velocity, dry: share above each drum's split, soft (0.3) to hard (1.0), dB": "kick +10.6 · snare +4.0 · closed hat +5.5 · open hat +5.0 · rod +6.1 · plate +1.5 · cup +3.4 · coil +1.4",
     "Velocity through GRIME .9, same measure, dB": "kick +13.2 · snare +3.2 · closed hat +0.1 · open hat +0.3 · rod +1.8 · plate +0.7 · cup +0.9 · coil +0.8",
@@ -183,6 +206,12 @@ MEASURED_R1 = {
     "BREAKER after the shared spring change": "every voice, full and 60% take 2: byte-identical (SHA-256 before and after)",
 }
 
+
+GATES_G = """      <tbody>
+        <tr><td>SOOT</td><td><span class="state s-part">Sound approved</span></td><td>On the shelf; grids proven through save, playback and MPC 3 export.</td></tr>
+        <tr><td>Multiple genre kits</td><td><span class="state s-open">One of three</span></td><td>Your picks here become authored sixteen-pad kits, each with its own listen.</td></tr>
+        <tr><td>Hardware</td><td><span class="state s-open">Open</span></td><td>No phone or MPC has played any SOOT kit. MPC 2 keeps one take per zone.</td></tr>
+      </tbody>"""
 
 GATES_R2 = """      <tbody>
         <tr><td>Sound character</td><td><span class="state s-part">Hits approved</span></td><td>You approved the fourteen hits and the kit (round 1b). A11 and A12 are re-voiced; the roll and the four bars are new on this page.</td></tr>
@@ -199,7 +228,7 @@ GATES_R2 = """      <tbody>
 def main_r1(r1: str, r0: str, out: str, sub: str = "1") -> int:
     global TARGET_DB
     TARGET_DB = -26.0  # the printed metal's peaks are high for its loudness; match lower so few clips hit the limit
-    questions, measured = {"1b": (QUESTIONS_R1B, MEASURED_R1B), "2": (QUESTIONS_R2, MEASURED_R2)}.get(sub, (QUESTIONS_R1, MEASURED_R1))
+    questions, measured = {"1b": (QUESTIONS_R1B, MEASURED_R1B), "2": (QUESTIONS_R2, MEASURED_R2), "g": (QUESTIONS_G, MEASURED_G)}.get(sub, (QUESTIONS_R1, MEASURED_R1))
     man = json.load(open(os.path.join(r1, "manifest.json")))
     by = {(c["section"], c["id"]): c for c in man["clips"]}
     sections = []
@@ -218,6 +247,23 @@ def main_r1(r1: str, r0: str, out: str, sub: str = "1") -> int:
     if "render_ms_warm_median5" in man:
         meas["Warm render time per hit, this host, ms"] = man["render_ms_warm_median5"]
     tpl = open(os.path.join(os.path.dirname(__file__), "template_r1.html")).read()
+    if sub == "g":
+        a = tpl.index("      <tbody>"); b = tpl.index("      </tbody>") + len("      </tbody>")
+        tpl = tpl[:a] + GATES_G + tpl[b:]
+        tpl = (tpl.replace("Round 1 · Kotlin, the app's own engine", "Sibling kits · four candidates")
+               .replace("<title>SOOT Round 1</title>", "<title>SOOT Genre Sketches</title>")
+               .replace('const KEY = "soot-r1-picks";', 'const KEY = "soot-genres-picks";')
+               .replace('const lines = ["SOOT round 1 answers"];', 'const lines = ["SOOT genre answers"];')
+               .replace("Your round-0 picks, now built in the app's engine: the kick with the longer sub, the hot snare, the wide hats, the heavy dictaphone, and the layout you approved. This page is the confirming listen. Nothing here has been heard by anyone yet.",
+                        "SOOT's sound is approved. The drum gate needs more than one genre kit on the shelf, so here are sketches of the four you asked for, all from the SOOT engine: four bars of each through one coil and the dictaphone, plus one signature pad. Each has its own tempo, tuning, pad roles and groove. Pick which to build as full sixteen-pad kits; at least two are needed.")
+               .replace('Every clip plays at the same loudness. Kotlin and Python render noise and a few filters differently, so "the same drum" means the same character, not the same file. Pick on each question, then copy the answers at the bottom and paste them back to me.',
+                        "Every clip plays at the same loudness. These are sketches, not kits: the layouts are proposals, and each kit you keep gets its own listening rounds.")
+               .replace('<section aria-labelledby="kit-h">', '<section aria-labelledby="kit-h" hidden>')
+               .replace('lines.push("6 · Layout swaps: " + (picks.layout || "no answer"));', "")
+               .replace('<div class="eyebrow">7 · Where the gates stand</div>', '<div class="eyebrow">5 · Where the gates stand</div>')
+               .replace('<p>From the engine acceptance gates. This round builds the drums; the kit, saving, playback and export are the next round.</p>',
+                        '<p>The drum gate: multiple distinct genre kits on the shelf. Different effect strengths on one kit do not count.</p>')
+               .replace('<div class="eyebrow">8 · What I measured</div>', '<div class="eyebrow">6 · What I measured</div>'))
     if sub == "2":
         a = tpl.index("      <tbody>"); b = tpl.index("      </tbody>") + len("      </tbody>")
         tpl = (tpl[:a] + GATES_R2 + tpl[b:])
@@ -257,7 +303,7 @@ def main_r1(r1: str, r0: str, out: str, sub: str = "1") -> int:
 
 
 def main() -> int:
-    if len(sys.argv) > 2 and sys.argv[1] == "--round" and sys.argv[2] in ("1", "1b", "2"):
+    if len(sys.argv) > 2 and sys.argv[1] == "--round" and sys.argv[2] in ("1", "1b", "2", "g"):
         a = sys.argv[3:]
         return main_r1(a[0] if a else "testkit/soot-audition", a[1] if len(a) > 1 else "testkit/soot-r0",
                        a[2] if len(a) > 2 else "testkit/soot-audition/index.html", sys.argv[2])

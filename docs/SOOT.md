@@ -29,7 +29,8 @@ How the owner got there:
 
 Still to come:
 - two sibling genre kits, the owner's choice (the drum gate needs several distinct kits on the
-  shelf);
+  shelf): four candidates are sketched for the owner's pick at
+  https://claude.ai/artifact/Uoh1uk5NztKLXFWSUQ9Sj4 (`:synth:generateSootGenreSketches`);
 - phone and MPC hardware;
 - the picker entry, in a session with an Android SDK, as the house rule says.
 
