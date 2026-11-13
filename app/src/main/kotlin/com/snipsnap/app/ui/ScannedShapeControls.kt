@@ -199,6 +199,8 @@ internal fun ScannedShapeControls(
         if (source == null) error?.let { TapeText(it, TapeType.pixelSmall, scheme.warn.tape, maxLines = 4) }
         MacroSlider(
             label = "VELOCITY", value = patch.velocity, fillColor = scheme.amber.tape, scheme = scheme,
+            // VELOCITY is 8 caps in the 13 sp sans, about 60 dp: wider than the default 56 dp column.
+            labelWidth = 72.dp,
             onValueChange = { changePatch(edit.patch.copy(velocity = it.coerceIn(0f, 1f))) },
         )
         MacroSlider(

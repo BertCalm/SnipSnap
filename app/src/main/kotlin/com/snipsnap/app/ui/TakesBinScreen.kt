@@ -728,7 +728,7 @@ private fun TakeRowLine(
                 val changes = row.changes
                 val headline = if (changes == null) "WON'T READ" else KitDiff.headline(changes)
                 val headlineInk = if (changes == null) scheme.warn.tape else if (changes.isEmpty()) scheme.ink3.tape else scheme.ink2.tape
-                TapeText("$headline ${if (expanded) "−" else "+"}", TapeType.pixelSmall, headlineInk, maxLines = 1)
+                TapeText("$headline ${if (expanded) "−" else "+"}", TapeType.pixelSmall, headlineInk, maxLines = 2)
             }
             Spacer(Modifier.weight(1f))
             row.whenText?.let { TapeText(it, TapeType.pixelSmall, scheme.ink2.tape) }
@@ -761,7 +761,7 @@ private fun TakeRowLine(
                 } else {
                     // "SINCE T3": the direction the lines read in — this take
                     // then, the kit as it is now.
-                    TapeText("SINCE ${row.label}", TapeType.pixelSmall, scheme.amber.tape, maxLines = 1)
+                    TapeText("SINCE ${row.label}", TapeType.pixelSmall, scheme.amber.tape, maxLines = 2)
                     for (c in changes) {
                         TapeText(c.text, TapeType.pixelSmall, scheme.ink.tape, maxLines = 3)
                     }
@@ -894,7 +894,7 @@ private fun PillCard(
                 .border(1.dp, pillBorder, RoundedCornerShape(999.dp))
                 .padding(horizontal = 8.dp, vertical = 2.dp),
         ) {
-            TapeText(label, TapeType.pixelSmall, pillInk, maxLines = 1)
+            TapeText(label, TapeType.pixelSmall, pillInk, maxLines = 2)
         }
     }
 }

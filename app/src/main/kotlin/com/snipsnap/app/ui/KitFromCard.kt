@@ -52,7 +52,7 @@ internal fun KitFromCard(
     val key = KeyPicker.key(root, scaleLabel)
 
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        TapeText("KIT FROM ANYTHING · SIXTEEN PADS FROM THIS ONE · ${KeyPicker.label(key)}", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
+        TapeText("KIT FROM ANYTHING · SIXTEEN PADS FROM THIS ONE · ${KeyPicker.label(key)}", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
         for (row in KeyPicker.ROOTS.indices.chunked(6)) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 for (r in row) {

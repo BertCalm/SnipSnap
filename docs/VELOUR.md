@@ -1,4 +1,65 @@
-# Velour and Velour Bloom
+# Velour Close, Velour and Velour Bloom
+
+## Approved Round 5 shelf integration (2026-11-13)
+
+The owner selected the recording-derived tambourine on 2026-11-10 and accepted the
+silence-trimmed delivery on 2026-11-12. `VelourApprovedKits` freezes that exact bank
+from audition source commit `147679e4a88d61ad1fdb735a0b75e1881b1baad0`.
+Its 144 PCM24 files are copied without re-rendering or normalization from the three
+published Round 5 archives. A manifest pins every file hash and its original level,
+class and choke group. Shelf creation gives each kit its own mutable PCM buffers.
+
+FRESH TAPE now offers **VELOUR CLOSE**, **VELOUR** and **VELOUR BLOOM**, at 84 BPM.
+A01–A12 keep their approved roles, including dry kick/snare at A05/A06. A13–A16
+are low conga, high bongo, tambourine and woodblock. Every pad has soft, medium
+and hard layers. Only the two hats share a choke group.
+
+A15 is reference-derived spectral resynthesis, not an independent physical model.
+Its CC0 source is VSCO Community Edition: Sam Gossner and Simon Dalzell, sample
+cutting by Elan Hickler / Soundemote. The reference license and provenance ship
+under `synth/src/main/resources/velour/approved-v1/`; sample provenance also travels
+in the saved kit. These sources are unrelated to the original video's audio.
+
+The trim retains every sample through the last signal above -100 dBFS, then 25 ms
+of safety and a 5 ms sub-threshold fade. Late echoes survive quiet gaps. The Close
+snare is about 0.33 s; the longer Velour and Bloom tails remain intact. The checked
+bank totals 218.86 s across all layers instead of 478.72 s before trimming.
+
+### Why it is built this way
+
+- Loading the final approved samples preserves the precise source, effect treatment,
+  gain and trim the owner selected; another DSP port would introduce a new comparison.
+- The existing model-1 boards and `VelourKits` renderer are kept separate, so old
+  saved boards and their parity tests retain their original behavior.
+- The shelf bank carries source provenance instead of an editable synth recipe:
+  replaying a board over already-printed samples would apply the effects twice.
+- Three touch layers are retained verbatim. Inventing variants during integration
+  would change the accepted sound; authored round robin needs its own delivery.
+
+### Acceptance ledger
+
+- **Heard:** owner-approved tambourine and trimmed Round 5 baseline.
+- **Software checks:** `VelourApprovedKitsTest` pins all 144 hashes, layer energies,
+  buffer ownership and trimmed lengths. `VelourApprovedStarterTest` checks shelf
+  registration, save/load, every MIDI velocity's playback window, PCM preservation
+  and both MPC program read-backs. Test execution results belong to the delivered
+  commit/CI status, not to these test descriptions.
+- **Velocity character:** existing recorded/resynthesized and procedural layers are
+  preserved. Some inherited SKIN voices are chiefly gain-scaled; this does not certify
+  independent strike-character changes for every pad.
+- **Round robin:** open. This bank has one strike per velocity; no duplicated takes
+  or volume-only copies are counted as round robin.
+- **Genre shelf:** open. Close/Velour/Bloom are treatments of the same layout, not
+  three distinct genre kits.
+- **Percussion rolls/risers:** not authored in this baseline. Individual finite pads
+  retain the approved layout.
+- **Physical playback:** Android and MPC audio behavior is unverified. Export
+  read-back and JVM playback-window checks do not substitute for a hardware audition.
+- **Melodic/keygroup/chord/STRUM gates:** not applicable to this finite drum sample bank.
+
+The sections below document the earlier model-1 renderer and boards. Their original
+kit generator remains available for regression comparisons, not as the Round 5 source.
+
 
 Velour is a fixed drum starter and reusable compound board. The owner selected
 the C kick/snare sources, then accepted both the restrained atmosphere-through-amp

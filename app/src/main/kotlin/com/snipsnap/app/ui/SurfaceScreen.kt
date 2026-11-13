@@ -1269,7 +1269,9 @@ fun SurfaceScreen(
                         // (finding #21) - the same `selected` semantics the
                         // CUT bench's SegmentButtons already carry for their
                         // own mutually-exclusive row.
-                        modifier = Modifier.weight(1f).semantics { selected = m == mode },
+                        // Weighted by name length (+4): equal fifths left VECTOR's six
+                        // letters 0.8 dp short once the label went to 13 sp mono.
+                        modifier = Modifier.weight(m.name.length + 4f).semantics { selected = m == mode },
                     ) {
                         mode = m
                         target = Reading.REST // the frame loop snaps to it on the mode change
@@ -1288,14 +1290,14 @@ fun SurfaceScreen(
             // destination as "TA..." and never found → PAD. BARS sits here
             // with the print it sizes, not on VOICE beside LATCH.
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                PrintDestination(printToPad, enabled = !printing && !finishing, modifier = Modifier.weight(1.9f)) { printToPad = it }
+                PrintDestination(printToPad, enabled = !printing && !finishing, modifier = Modifier.weight(2.3f)) { printToPad = it }
                 // BARS needs a tempo; a kit without one prints free.
                 PrintBarsOpener(barsIndex, entry?.kit?.tempoBpm, printing, scheme, Modifier.weight(1.3f)) { barsIndex = it }
                 ActionButton(
                     label = if (printing) "STOP PRINT" else "PRINT",
                     scheme = scheme,
                     enabled = engineUp && padName != null && !finishing,
-                    modifier = Modifier.weight(1.4f),
+                    modifier = Modifier.weight(1.0f),
                 ) {
                     if (printing) {
                         finishPrint()

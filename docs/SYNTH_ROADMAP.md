@@ -3469,6 +3469,20 @@ The kit's tone (renderer model 4, 2026-11-12):
 - **Picked by ear:** both opened. DUST's filter goes to about 9 kHz and the speaker goes, on every drum
   but the cymbals and riser. Model-3 saves keep their tone.
 
+The genre kits (renderer models 5 and 6, 2026-11-12 to 11-13):
+- **Model 5:** DAMP (each drum's damping) and Bump (the spring tank kicked), approved and heard by
+  the owner.
+- **Dub Tank and Trip hop:** two more shelf kits, at 74 and 92 BPM, built to layouts the owner
+  approved. They differ from BREAKER in their pads' roles, tuning and damping, not only in rig.
+- **Model 6:** each later kick or tom take lands with another beater. The round robin's start trim
+  can cut a kick's click, which had left two takes of a damped, crushed kick as copies.
+- **Verified in software** (`BreakerKitTest`) on all three kits: saving, the pad resolver and the
+  MPC 3 export. The BREAKER kit stays on model 5.
+- **Heard (2026-11-13):** the kicks, the High Timbale and the soft-to-hard grid were accepted. Both
+  grooves were too wet, and the owner picked their echo and spring from four versions each.
+- **The final audition** (`:shell:generateBreakerAudition`, 68 clips) is published for the owner's
+  closing listen.
+
 ### ETCH, Kotlin round K1 (2026-11-13)
 
 Owner-requested step-line bass: an accented, sliding sixteen-step line → BITE (a clean/drive blend after a bass
@@ -3526,3 +3540,30 @@ The siblings' pads await a listen; hardware remains.
 The owner kept 63 of the 64 sibling pads. They heard Basement Dub's one-drop four bars as
 incoherent, and picked a steppers groove in its place (`SootGenreKits` 2). The sound of all five SOOT
 kits is now approved, and hardware remains.
+
+
+### SCUFF, round 1 (2026-11-13)
+
+A dry Michigan drum kit and its chain, ported from the accepted round-0b Python prototype to
+`Scuff.kt`: ten voices (KICK, CLAP, BOOM, RIM, HAT, BELL, ZAP, TICK, PLUCK, INHALE), the four-stage
+chain (GRIT, LOCKER, BARK, SLAM) inside the engine, velocity on every voice, four dealt takes,
+`ScuffPatch` with velocity, take and model, rosterless (no presets before the listen), no kit yet.
+Measured against the Python: the deterministic voices are the same waveform (0.05 to 0.17 dB,
+correlation 0.997 to 1.000 after a 1 ms resampler lag), the noise voices another take. The
+classifier reads the kick as PERC and the crushed hat as SNARE, disclosed. See [SCUFF](SCUFF.md)
+and the gates entry. The picker entry waits for a session with an SDK.
+
+### SCUFF, round 2 (2026-11-13)
+
+The first SCUFF kit on the shelf: SCUFF DETROIT (`ScuffKits`, id `scuff-detroit`, 118 BPM), sixteen pads in
+the GATECRASH shape, every strike rendered by the engine at a velocity and a take (three zones of four), two
+phrases through one bus clipper ("Two Bars", the accepted pattern, and "Clap Riser"). The grid is proved
+through save, playback and MPC 3 export in software; MPC 2 keeps one take per zone; nothing heard. See
+[SCUFF](SCUFF.md) and the gates entry.
+
+### SCUFF, round 3 (2026-11-13)
+
+The second kit, SCUFF FLINT (`scuff-flint`, 132 BPM): faster and brighter, every pad moved up or shortened
+against DETROIT's, three rims and no low bass hit, the chain set harder for the whole kit, frantic two bars
+and a rim riser. The drum gate's "multiple distinct genre kits" now has two; `ScuffKitsTest` holds them apart
+pad for pad. Proved through save, playback and MPC 3 export like DETROIT; nothing heard. See [SCUFF](SCUFF.md).

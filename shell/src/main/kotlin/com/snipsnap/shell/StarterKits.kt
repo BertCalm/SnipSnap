@@ -39,6 +39,8 @@ import java.io.File
  * CYPHER starters follow GATECRASH's shape: dry or printed hits, two phrases, provenance on every pad.
  * MIRRORBALL starters are built the same way, each pad printed through an FET compressor,
  * a multi-head tape echo and an amp.
+ * SCUFF's starter is the same shape, every strike rendered by the SCUFF engine at a velocity and a take, its two
+ * phrases through one bus clipper.
  * CLOUD's GRAINS clouds (A07-A16) carry no recipe;
  * only its VOX pads (A01-A06) do, as `SynthKits.cloud` says. LUCKY DIP
  * A/B's bank-B twins carry fx-only recipes (`Shuffle.withRemixBank`), the
@@ -80,11 +82,11 @@ object StarterKits {
             val kit = KitAssembler.assembleArranged(name, build(seed), dir, key, tempoBpm = tempoBpm)
             // BACKWASH and BREAKER pads carry their recipes; the shared robin deals each pad's velocity
             // zones and re-struck takes from it, then the pad keeps its recipe.
-            if (id.startsWith("backwash-") || id == com.snipsnap.synth.BreakerKits.ID) {
+            val breaker = com.snipsnap.synth.BreakerKits.byId(id)
+            if (id.startsWith("backwash-") || breaker != null) {
                 val model = KitBuilderModel.open(dir)
-                val breaker = id == com.snipsnap.synth.BreakerKits.ID
                 for (pad in kit.pads) {
-                    val (zones, takes) = if (breaker) com.snipsnap.synth.BreakerKits.gridFor(pad.slot) else 3 to 3
+                    val (zones, takes) = if (breaker != null) com.snipsnap.synth.BreakerKits.gridFor(pad.slot, breaker) else 3 to 3
                     Robin.apply(model, pad.slot, takes = takes, zones = zones)
                     model.update(pad.slot) { it.copy(recipe=pad.recipe) }
                 }
@@ -588,15 +590,20 @@ object StarterKits {
             seeded = false,
         ) { SynthKits.rivet(1f) },
         Starter(
+            "velour-close", "VELOUR CLOSE",
+            "Close drums and percussion through a warm amp. Three touch layers, with short natural tails.",
+            seeded = false, tempoBpm = com.snipsnap.synth.VelourApprovedKits.TEMPO,
+        ) { com.snipsnap.synth.VelourApprovedKits.build(com.snipsnap.synth.VelourApprovedKits.Treatment.CLOSE) },
+        Starter(
             "velour", "VELOUR",
-            "Muted drums, scattered echoes and a warm amp. Three touch zones; new kit voices to explore.",
-            seeded = false,
-        ) { com.snipsnap.synth.VelourKits.build() },
+            "Muted drums, scattered echoes and a warm amp. Three touch layers and four percussion pads.",
+            seeded = false, tempoBpm = com.snipsnap.synth.VelourApprovedKits.TEMPO,
+        ) { com.snipsnap.synth.VelourApprovedKits.build() },
         Starter(
             "velour-bloom", "VELOUR BLOOM",
             "The same drums with denser grains, longer space and more amp drive. Three touch zones.",
-            seeded = false,
-        ) { com.snipsnap.synth.VelourKits.build(com.snipsnap.synth.Velour.Treatment.BLOOM) },
+            seeded = false, tempoBpm = com.snipsnap.synth.VelourApprovedKits.TEMPO,
+        ) { com.snipsnap.synth.VelourApprovedKits.build(com.snipsnap.synth.VelourApprovedKits.Treatment.BLOOM) },
         Starter("backwash-soul", "BACKWASH SOUL", "Tight soul drums, cross-stick pocket and acoustic percussion. Native recorded alternates and a tambourine roll/riser.", seeded=false, tempoBpm=94f) {
             com.snipsnap.synth.BackwashKits.build(com.snipsnap.synth.BackwashKits.Genre.SOUL_POCKET)
         },
@@ -683,6 +690,16 @@ object StarterKits {
             seeded = false, tempoBpm = com.snipsnap.synth.BreakerKits.BPM,
         ) { com.snipsnap.synth.BreakerKits.build() },
         Starter(
+            com.snipsnap.synth.BreakerKits.Kit.DUB_TANK.id, com.snipsnap.synth.BreakerKits.Kit.DUB_TANK.title,
+            "One-drop dub through the spring: a rimshot on three, a snare thrown into a long echo, open toms and the tank kicked. Three touch zones, three takes.",
+            seeded = false, tempoBpm = com.snipsnap.synth.BreakerKits.Kit.DUB_TANK.bpm,
+        ) { com.snipsnap.synth.BreakerKits.build(com.snipsnap.synth.BreakerKits.Kit.DUB_TANK) },
+        Starter(
+            com.snipsnap.synth.BreakerKits.Kit.TRIP_HOP.id, com.snipsnap.synth.BreakerKits.Kit.TRIP_HOP.title,
+            "A heavy, dusty break: a fatter kick and snare a semitone down, ghost notes, a crushed break snare and a dusty ride, kept dry. Three touch zones, three takes.",
+            seeded = false, tempoBpm = com.snipsnap.synth.BreakerKits.Kit.TRIP_HOP.bpm,
+        ) { com.snipsnap.synth.BreakerKits.build(com.snipsnap.synth.BreakerKits.Kit.TRIP_HOP) },
+        Starter(
             "mirrorball-philly", "MIRRORBALL PHILLY STRINGS",
             "A dry live disco kit: dead kick, towelled snare, congas and tambourine through an FET squeeze, tape repeats and a clean amp. Three touch zones, four takes; a tom fill and a snare build.",
             seeded = false, tempoBpm = com.snipsnap.synth.MirrorballKits.Kit.PHILLY.bpm.toFloat(),
@@ -729,6 +746,16 @@ object StarterKits {
             key = KeySpec.parse("Cminpent"),
             prepare = { directory -> MurmurKeptBankFiles.write(directory) },
         ) { SynthKits.murmurKept() },
+        Starter(
+            "scuff-detroit", "SCUFF DETROIT",
+            "A dry Michigan kit: punch kick, whip clap, staccato bass hits, two-peak rims and a chopper hat, crushed, boxed, barked and slammed. Three touch zones, four takes; two bars through one bus and a clap riser.",
+            seeded = false, tempoBpm = com.snipsnap.synth.ScuffKits.Kit.DETROIT.bpm.toFloat(),
+        ) { com.snipsnap.synth.ScuffKits.build(com.snipsnap.synth.ScuffKits.Kit.DETROIT) },
+        Starter(
+            "scuff-flint", "SCUFF FLINT",
+            "The faster, brighter Michigan kit: a higher, shorter kick, a tighter clap, bright hats, short hard bass hits and three stank rims, crushed and slammed harder. Three touch zones, four takes; frantic two bars and a rim riser.",
+            seeded = false, tempoBpm = com.snipsnap.synth.ScuffKits.Kit.FLINT.bpm.toFloat(),
+        ) { com.snipsnap.synth.ScuffKits.build(com.snipsnap.synth.ScuffKits.Kit.FLINT) },
         Starter(
             SplayDelivery.STARTER_ID, "SPLAY POPULATIONS",
             "One TONGUE voice. Five finite settings: 1, 2, 4, 8 and 16 mechanisms.",

@@ -285,6 +285,7 @@ object Velocity {
         is StoopPatch -> Stoop.macrosFor(patch.voice)
         is LacquerPatch -> Lacquer.macrosFor(patch.voice)
         is SkitterPatch -> Skitter.macrosFor(patch.voice)
+        is ScuffPatch -> Scuff.macrosFor(patch.voice)
         is TanglePatch -> Tangle.macrosFor(patch.voice)
         is OverlapPatch -> if (patch.playback == OverlapPlayback.HELD) OverlapHeld.macrosFor(patch.topology)
             else Overlap.macrosFor(patch.topology, patch.model)
@@ -463,6 +464,8 @@ object Velocity {
         is StoopPatch -> patch.copy(velocity = v).render()
         is LacquerPatch -> patch.copy(velocity = v).render()
         is SkitterPatch -> patch.copy(velocity = v).render()
+        // SCUFF re-strikes every voice: the kick drops deeper, the clap loses a tap, GRIT bites deeper.
+        is ScuffPatch -> patch.copy(velocity = v).render()
         is TanglePatch -> patch.copy(velocity = v).render()
         is OverlapPatch -> patch.copy(velocity = v).render()
         is FlockPatch -> patch.copy(velocity = v).render()
