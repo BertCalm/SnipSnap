@@ -445,7 +445,7 @@ explicit MIDI root (24–96), strike velocity and model version; TUNE is a
 relative ±12-semitone offset, neutral at 0.5, so the effective note spans
 12–108 without clamping back to the saved-root range. Seven provisional presets
 and a dry sixteen-pad C minor pentatonic kit are included, with PITCHWHEEL among
-FRESH TAPE's 106 starters. Run `./gradlew :synth:generatePitchwheelAudition`
+FRESH TAPE's 111 starters. Run `./gradlew :synth:generatePitchwheelAudition`
 for the compact first listening set, or add `-PpitchwheelFull` for the broader
 dry probes. HOLD's top step returns settled loop-only material with a
 deterministic attachment cycle and capped adhesion. The owner heard R1 as six
@@ -1704,6 +1704,12 @@ dotted-eighth delay into a reverb, from the owner's two reference clips and peda
 RUBBER, WHISTLE, GRIT, DUB); velocity is the accent; HOLD's top plays the line as a loop. The owner accepted the
 Python audition; Kotlin round K1 ports it as a prototype outside the picker. [Design, listening rounds and
 measurements](docs/ETCH.md).
+
+SOOT is a drum engine in progress: grimy street boom bap from physical models only. A membrane
+kick that sags in pitch over a tuned sub, a papery snare into a tight coil spring and a cassette
+edge, metal hats and percussion with no noise in them, and each pad printed through its own coil
+send and a dictaphone. Round 1 (eight voices) is a prototype outside the picker.
+[Design and listening rounds](docs/SOOT.md).
 
 Fired Bronze is an MPC-approved sixteen-pad skin, clay and bronze kit with four
 strike layers, a driven processor and amp, and editable source/drive controls.

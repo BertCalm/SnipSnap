@@ -230,3 +230,52 @@ A kit family of three 1970s disco kits: Philly Strings, Loft Party and Munich Ma
 - **Overall: incomplete.** The software evidence is in place and the sound is approved. Phone and MPC hardware
   playback remain open, and MPC 2 does not pass the round-robin export gate. The owner waived SFZ and
   DecentSampler.
+
+## SOOT (sound approved at round 2; five kits on the shelf; siblings' listen and hardware open)
+
+A drum engine for grimy street boom bap from physical models. See [SOOT](SOOT.md).
+
+- **Melodic, keygroup and chord-tool gates:** not applicable. SOOT is a drum engine.
+- **Articulation:** finite hits, with no HOLD.
+- **Percussion: pass for SOOT, heard.** A15, the coil roll: sixteen fresh snare strikes into one coil,
+  with three zones and four takes. The owner heard all three zones on 2026-11-13: "Yes". Each sibling
+  kit has its own roll on A15 (rod, rim, brush, snare). Those are not yet heard.
+- **Drum shelf: five kits, pass in software.** SOOT and four siblings the owner chose on 2026-11-13
+  are on the shelf (SKINS):
+  - SOOT DRUMLESS, 80 BPM;
+  - SOOT BASEMENT DUB, 72 BPM;
+  - SOOT BRUSHED NOIR, 76 BPM;
+  - SOOT WAREHOUSE INDUSTRIAL, 96 BPM.
+
+  Each sibling has its own tempo, tuning, pad roles, groove and processing (`SootGenreKits`).
+  `SootGenreKitsTest` checks the tempos and roles, and that pads within each kit stay apart. The
+  siblings' A16 four bars are the sketches the owner chose. Their other pads await the owner's
+  listen.
+- **Velocity and round robin:**
+  - **Rendering: verified.** Every drum takes velocity through its own contact law, so a soft zone
+    is a duller strike. A take is a fresh strike.
+  - **Saving: verified.** Each saved kit reloads equal. All 960 saved slices of the five kits match
+    their renders (`SootKitTest`, `SootGenreKitTest`, `:shell:generateSootKit`,
+    `:shell:generateSootGenreKits`).
+  - **Playback: verified in software.** `PadHit.resolve` picks the zone by velocity and deals the four
+    takes in order, then repeats. No phone has played the kit.
+  - **Export: verified for MPC 3 by read-back.** The exported slices match their renders. **MPC 2 does
+    not pass:** it keeps only the first take of each zone. SFZ and DecentSampler were not generated.
+    No MPC has loaded the kit.
+- **Sound character: approved at round 2.** On 2026-11-13 the owner heard the kit read back from its
+  MPC 3 export and said, "All sounds fine". How they got there:
+  - **Round 0:** they picked the hits.
+  - **Round 1:** they accepted the kick and snare in Kotlin.
+  - **Round 1b:** they kept the alternates and approved the kit.
+  - **Round 2:**
+    - the three re-voiced snares heard as different drums;
+    - the roll and the loop point accepted;
+    - the four bars moved to the heavier dictaphone (`SootKits.VERSION` 3).
+
+  Preserve version 3 as the baseline. This is not evidence of a phone or MPC audition.
+- **Overall: incomplete.** SOOT's sound is approved, and the software evidence is in place for all
+  five kits. Still open:
+  - the owner's listen to the four siblings' pads;
+  - phone and MPC hardware playback.
+
+  MPC 2 does not pass the round-robin export gate.
