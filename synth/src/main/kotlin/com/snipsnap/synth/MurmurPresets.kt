@@ -1,7 +1,7 @@
 package com.snipsnap.synth
 
 /**
- * Thirty-six original dry recipes followed by six settings selected in listening.
+ * Thirty-six original dry recipes, six KEY/CHOIR settings and three kept PLUCK aliases.
  * The original bank retains its order and sound; the added KEY and low CHOIR recipes
  * use their saved render definition rather than changing existing voice defaults.
  */
@@ -152,5 +152,8 @@ object MurmurPresets {
 
     fun forVoice(voice: MurmurVoice): List<MurmurPatch> = all().filter { it.voice == voice }
 
-    fun all(): List<MurmurPatch> = presets + selectedPresets
+    /** Unique aliases retain the three complete model-4 sources without replacing old names. */
+    fun kept(): List<MurmurPatch> = MurmurKeptSources.presets()
+
+    fun all(): List<MurmurPatch> = presets + selectedPresets + kept()
 }

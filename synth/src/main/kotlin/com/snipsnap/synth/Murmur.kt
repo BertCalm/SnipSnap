@@ -24,6 +24,9 @@ enum class MurmurVoice { BASS, KEY, PLUCK, LEAD, CHOIR, METAL }
 enum class MurmurRouting { PARALLEL, PAIRS, STACK }
 enum class MurmurTrajectory { ATTACK, CYCLE }
 
+/** Saved opt-in PLUCK identities. Existing models never select a revised body implicitly. */
+enum class MurmurBody { LEGACY, STEADY_ROOT_V1, HOLLOW_WIRE_V1 }
+
 /** Absolute-Hz spectral targets. Widths are bandwidths in Hz and gains are linear amplitude. */
 data class MurmurFormantTarget(
     val name: String,
@@ -62,9 +65,13 @@ data class MurmurConfig(
     val release: Double,
     val targets: List<MurmurFormantTarget>,
     val model: Int = 3,
+    val body: MurmurBody = MurmurBody.LEGACY,
 ) {
     init {
-        require(model in 1..3) { "unsupported Murmur model $model" }
+        require(model in 1..4) { "unsupported Murmur model $model" }
+        require((model == 4) == (body != MurmurBody.LEGACY)) {
+            "Murmur model 4 requires an explicit revised body; models 1–3 retain LEGACY"
+        }
         require(ratios.size == 4 && ratios.all { it.isFinite() && it in .5..8.0 }) { "Murmur needs four bounded operator ratios" }
         require(ratios[0] == 1.0) { "Murmur's principal carrier must bear the requested root" }
         require(direction == -1 || direction == 1) { "Murmur trajectory direction must be -1 or +1" }
@@ -100,6 +107,10 @@ object Murmur {
     const val DEFAULT_MIDI = 60
     const val MIN_MIDI = 36
     const val MAX_MIDI = 96
+    /** The supported low pluck retains its heard law; higher-root failures are refused, not retuned. */
+    fun rootRange(config: MurmurConfig): IntRange =
+        MIN_MIDI..if (config.body == MurmurBody.STEADY_ROOT_V1) 54 else MAX_MIDI
+
     const val LOOP_THRESHOLD = .99f
     const val MAX_SECONDS = 8.0
     internal const val MAX_INDEX_RADIANS = 4.5
@@ -331,7 +342,16 @@ object Murmur {
         velocity: Float = 1f,
         config: MurmurConfig = configurationFor(voice),
     ): Snip {
-        val samples = renderRaw(voice, macros, midi, velocity, config)
+        return finishHouseSnapshot(renderRaw(voice, macros, midi, velocity, config), velocity)
+    }
+
+    /**
+     * One owner for the existing output-stage arithmetic. Cloning changes only
+     * ownership, so native probe history cannot be altered by a caller's finish.
+     * Existing Patch rendering retains the exact level/peak/dynamics pass order.
+     */
+    internal fun finishHouseSnapshot(raw: FloatArray, velocity: Float): Snip {
+        val samples = raw.copyOf()
         val v = cleanVelocity(velocity)
         if (v > 0.0) {
             stopIfUnwanted()
@@ -407,13 +427,54 @@ object Murmur {
         if (Thread.currentThread().isInterrupted) throw java.util.concurrent.CancellationException("MURMUR render no longer wanted")
     }
 
+    /**
+     * Explicit selected-PLUCK repeat policy. Ordinary Patch rendering and every saved model
+     * retain take zero. The complete owned recipe is validated before native work begins.
+     */
+    fun renderRoundRobin(patch: MurmurPatch, take: Int): Snip {
+        val owned = MurmurRoundRobinRecipe(patch, take).patch()
+        return finishHouseSnapshot(probeWithTake(owned.voice, owned.macros, owned.midi,
+            owned.velocity, owned.config, take).samples, owned.velocity)
+    }
+
+    /** Separate finite-only repeat policy; the saved v1 recipe and ordinary renderer stay exact. */
+    fun renderRoundRobinContrast(patch: MurmurPatch, take: Int): Snip {
+        val owned = MurmurRoundRobinContrastRecipe(patch, take).patch()
+        return finishHouseSnapshot(probeWithTake(owned.voice, owned.macros, owned.midi,
+            owned.velocity, owned.config, take, contrast = true).samples, owned.velocity)
+    }
+
+    internal fun probeRoundRobinContrast(patch: MurmurPatch, take: Int): MurmurProbe {
+        val owned = MurmurRoundRobinContrastRecipe(patch, take).patch()
+        return probeWithTake(owned.voice, owned.macros, owned.midi, owned.velocity,
+            owned.config, take, contrast = true)
+    }
+
+    internal fun probeRoundRobin(patch: MurmurPatch, take: Int): MurmurProbe {
+        val owned = MurmurRoundRobinRecipe(patch, take).patch()
+        return probeWithTake(owned.voice, owned.macros, owned.midi, owned.velocity, owned.config, take)
+    }
+
+    // Keep this signature and its Kotlin default bridge for existing compiled source consumers.
     internal fun probe(
         voice: MurmurVoice,
         macros: Map<String, Float> = emptyMap(),
         midi: Int = DEFAULT_MIDI,
         velocity: Float = 1f,
         config: MurmurConfig = configurationFor(voice),
+    ): MurmurProbe = probeWithTake(voice, macros, midi, velocity, config, 0)
+
+    private fun probeWithTake(
+        voice: MurmurVoice, macros: Map<String, Float>, midi: Int, velocity: Float,
+        config: MurmurConfig, take: Int, contrast: Boolean = false,
     ): MurmurProbe {
+        require(config.body == MurmurBody.LEGACY || voice == MurmurVoice.PLUCK) {
+            "Murmur revised bodies are PLUCK recipes"
+        }
+        // Keep legacy clamping unchanged. The revised low recipe has a measured contiguous domain.
+        require(config.body != MurmurBody.STEADY_ROOT_V1 || midi in rootRange(config)) {
+            "MURMUR ${config.body} supports MIDI ${rootRange(config)}; got $midi"
+        }
         val c = config.copy(ratios = config.ratios.toList(), targets = config.targets.map { target ->
             target.copy(centers = target.centers.toList(), widths = target.widths.toList(), gains = target.gains.toList())
         })
@@ -439,8 +500,10 @@ object Murmur {
         // three continuously rendered periods plus decimator padding; compare the last two.
         val preroll = if (held) period * 2 else 0
         val keep = if (held) period * 3 + 512 * Dsp.OVERSAMPLE else period
-        val raw = synthesize(voice, m, note, v, c, plan, gate, effectiveAttack, preroll, keep)
+        val raw = synthesize(voice, m, note, v, c, plan, gate, effectiveAttack, preroll, keep, take, contrast)
         stopIfUnwanted()
+        // Preserve the legacy decimator input exactly. Only the selected wire body has this stage.
+        if (c.body == MurmurBody.HOLLOW_WIRE_V1) Tide.bandLimit(raw, INTERNAL_RATE)
         val down = Dsp.decimate(raw, RATE)
         if (!held) {
             removeMean(down)
@@ -515,10 +578,21 @@ object Murmur {
 
     private fun synthesize(
         voice: MurmurVoice, m: Map<String, Float>, midi: Int, velocity: Double, config: MurmurConfig,
-        plan: LoopPlan?, gate: Double, attack: Double, preroll: Int, keep: Int,
+        plan: LoopPlan?, gate: Double, attack: Double, preroll: Int, keep: Int, take: Int, contrast: Boolean = false,
     ): FloatArray {
         val held = plan != null
-        val profile = if (config.model >= 2) profileFor(voice) else null
+        val wire = config.body == MurmurBody.HOLLOW_WIRE_V1
+        val fixedExcitation = config.body != MurmurBody.LEGACY
+        // This complete preset family owns its smooth register law; there is no note-based body switch.
+        val rootLift = if (!held && config.body == MurmurBody.STEADY_ROOT_V1)
+            .75 * smooth((DEFAULT_MIDI - midi) / 12.0) else 0.0
+        val originalProfile = if (config.model >= 2) profileFor(voice) else null
+        val profile = if (wire) originalProfile!!.copy(mainCarrier = .62, carrierStrike = .0,
+            indexFloor = .10, indexEdge = 2.1, indexSustain = .80, indexBite = .15,
+            bankFm = .50, bankUpper = .18, bankGain = 1.10,
+            root = .44, direct = .78, chestSecond = .12, chestThird = .08,
+            thinCarrier = .0, ringGain = .0, air = 1.8, contact = .55,
+            cutoffThin = 7500.0, cutoffFull = 3200.0) else originalProfile
         val root = plan?.root ?: Keys.midiHz(midi).toDouble()
         val ratios = plan?.ratios ?: config.ratios.toDoubleArray()
         val upperOperator = ratios.indices.maxBy { ratios[it] }
@@ -546,14 +620,39 @@ object Murmur {
         val trajectorySeconds = if (held) requestedTrajectory else minOf(requestedTrajectory, max(.1, gate - .05))
         val loopSeconds = plan?.frames?.div(RATE.toDouble()) ?: 0.0
         val contourCycles = if (held) (loopSeconds / trajectorySeconds).roundToInt().coerceIn(1, 24) else 0
-        val contactSeconds = (.007 + .025 * (1.0 - edge) + .018 * breath).coerceIn(.005, .060)
+        // A changed initial operator relationship and contact gesture survive the quiet breath
+        // mix. These are versioned shape choices, not extra voices or an audibility approval.
+        // The carrier/root starts at its original phase and all oscillator steps stay exact.
+        val variedStrike = contrast && take != 0
+        val strikeColor = if (!variedStrike) 0.0 else when (take) {
+            1 -> -.28
+            2 -> .34
+            else -> -.12
+        }
+        val oldContactSeconds = (.007 + .025 * (1.0 - edge) + .018 * breath).coerceIn(.005, .060)
+        val contactSeconds = if (!variedStrike) oldContactSeconds
+            else (oldContactSeconds * (1.0 + strikeColor)).coerceIn(.005, .060)
         val period = plan?.frames?.times(Dsp.OVERSAMPLE) ?: 0
-        val seed = Dsp.seedFor("MURMUR", voice.name, midi, "BREATH")
+        // Preserve the old seed tuple exactly, including model-1..4 and selected take zero.
+        // Other takes change native breath/contact excitation before the same formant bank.
+        // A held take still repeats one complete noise table, preserving its periodic input.
+        val seed = if (take == 0) Dsp.seedFor("MURMUR", voice.name, midi, "BREATH")
+            else if (contrast) Dsp.seedFor("MURMUR", voice.name, midi, "BREATH", MurmurRoundRobinContrastRecipe.POLICY, take)
+            else Dsp.seedFor("MURMUR", voice.name, midi, "BREATH", MurmurRoundRobinRecipe.POLICY, take)
         val noise = Dsp.Noise(seed)
         val repeatedNoise = if (held) FloatArray(period) { noise.next() } else null
         val total = preroll + keep
         val out = FloatArray(keep)
         val phases = DoubleArray(4)
+        if (variedStrike) {
+            // Fractional turns alter excitation colour without moving the root frequency.
+            // The fourth carrier is deliberately kept exact to limit changes to the strike.
+            phases[1] = when (take) { 1 -> .09; 2 -> .23; else -> .37 }
+            phases[2] = when (take) { 1 -> .31; 2 -> .07; else -> .19 }
+        }
+        // Feed-forward subtraction hollows the operator body before the moving mouth, with no feedback.
+        val wireDelay = if (wire) DoubleArray((.28 * INTERNAL_RATE / root).roundToInt().coerceAtLeast(1)) else DoubleArray(0)
+        var wirePosition = 0
         val steps = DoubleArray(4) { root * ratios[it] / INTERNAL_RATE }
         val noiseA = exp(-2.0 * PI * (profile?.airHz ?: 6_000.0) / INTERNAL_RATE)
         // BODY's damping acts within the musical spectrum, while a register floor preserves
@@ -626,18 +725,20 @@ object Murmur {
             }
             val transient = if (profile == null) {
                 if (held) .25 else exp(-t / (.025 + config.decay * .35))
-            } else if (held) .0 else exp(-max(0.0, t - attack) / (.012 + config.decay * profile.indexDecay))
-            val index = if (profile == null) {
+            } else if (held) .0 else if (fixedExcitation) 1.0 else exp(-max(0.0, t - attack) / (.012 + config.decay * profile.indexDecay))
+            val baseIndex = if (profile == null) {
                 minOf(indexCeiling, indexBase * (.65 + .55 * edge * transient) * (1.0 + .18 * sourceBalance))
             } else minOf(indexCeiling, indexBase *
                 (profile.indexSustain + profile.indexBite * (.35 + .65 * edge) * transient) * (1.0 + .18 * sourceBalance))
+            val index = if (!variedStrike) baseIndex
+                else minOf(indexCeiling, baseIndex * (1.0 + strikeColor * transient))
             val p0 = phases[0] * 2.0 * PI
             val p1 = phases[1] * 2.0 * PI
             val p2 = phases[2] * 2.0 * PI
             val p3 = phases[3] * 2.0 * PI
             // One carrier sine serves both the ramp's fundamental removal and the anchor.
             val sinP0 = sin(p0)
-            val fm = if (profile == null) when (config.routing) {
+            var fm = if (profile == null) when (config.routing) {
                 MurmurRouting.PARALLEL -> .78 * sin(p0 + index * (.65 * sin(p1) + .35 * sin(p2))) + .22 * sin(p3)
                 MurmurRouting.PAIRS -> .74 * sin(p0 + index * sin(p1)) + .26 * sin(p2 + .6 * index * sin(p3))
                 MurmurRouting.STACK -> sin(p0 + .8 * index * sin(p1 + .55 * index * sin(p2 + .35 * index * sin(p3))))
@@ -647,6 +748,12 @@ object Murmur {
                 MurmurRouting.PAIRS -> profile.mainCarrier * sin(p0 + index * sin(p1)) +
                     (1.0 - profile.mainCarrier) * (1.0 + profile.carrierStrike * transient) * sin(p2 + .6 * index * sin(p3))
                 MurmurRouting.STACK -> sin(p0 + .8 * index * sin(p1 + .55 * index * sin(p2 + .35 * index * sin(p3))))
+            }
+            if (wireDelay.isNotEmpty()) {
+                val old = wireDelay[wirePosition]
+                wireDelay[wirePosition] = fm
+                wirePosition = (wirePosition + 1) % wireDelay.size
+                fm = (fm - .72 * old) / 1.72
             }
             val ramp = 2.0 * phases[0] - 1.0 - polyBlep(phases[0], steps[0])
             val upperRamp = ramp + (2.0 / PI) * sinP0
@@ -669,7 +776,9 @@ object Murmur {
             val drive = voiced + unvoiced
             var formant = 0.0
             for (band in bands) formant += band.next(drive)
-            val anchor = if (profile == null) sinP0 * (.30 + .20 * fullness) else sinP0 * (profile.root + .18 * fullness)
+            val originalAnchor = if (profile == null) sinP0 * (.30 + .20 * fullness) else sinP0 * (profile.root + .18 * fullness)
+            // Quadrature supports the root without cancellation against the FM sine sideband.
+            val anchor = if (rootLift == 0.0) originalAnchor else originalAnchor + cos(p0) * rootLift
             // Chesty support contains pitched second/third harmonics, not an added sub or a
             // louder sine. Thin BODY keeps the existing upper carrier and a clearer FM edge;
             // full BODY supports low mids and rounds away upper-formant/direct brightness.
@@ -690,12 +799,16 @@ object Murmur {
                     profile.thinCarrier * (1.0 - fullness) * upperCos +
                     profile.ringGain * (.65 + .35 * edge) * (if (held) 1.0 else .55 + .45 * transient) * ringCos
             }
-            var y = anchor + chest + direct + formant * (1.30 + .60 * sqrt(motion)) * (profile?.bankGain ?: 1.0)
+            val formantReadout = formant * (1.30 + .60 * sqrt(motion)) * (profile?.bankGain ?: 1.0)
+            // Keep the legacy addition order exactly; the wire body adds a separate quadrature anchor.
+            var y = if (wire) anchor + .45 * cos(p0) + chest + direct + formantReadout
+                else anchor + chest + direct + formantReadout
             highLow = highA * highLow + (1.0 - highA) * y
             y = .06 * y + .94 * highLow
             y *= excitationGain * amplitude
             dcLow = dcA * dcLow + (1.0 - dcA) * y
             y -= dcLow
+            if (fixedExcitation) check(y.isFinite()) { "Nonfinite Murmur revised body at frame $i" }
             if (i >= preroll) out[i - preroll] = if (y.isFinite()) y.toFloat() else 0f
             for (operator in phases.indices) {
                 phases[operator] += steps[operator]

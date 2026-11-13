@@ -211,6 +211,16 @@ public:
         return commands_.pushAll(stamped, n);
     }
 
+    static constexpr size_t kMaxRoundRobinChordNotes = 8;
+    /**
+     * Dedicated RR handle, serialized control thread: independent per-note sample,
+     * window, loop and pitch. Validate the whole chord before one ring publication.
+     * No displacement or stealing policy here: the owning RR controller reserves
+     * at most eight outstanding voices, including queued notes and release tails,
+     * until drainEnded reports them. Never mix legacy note producers on its handle.
+     */
+    bool admitRoundRobinChord(const PadCommand* notes, size_t noteCount);
+
     /** UI thread: the ids of voices that ended since the last drain. */
     size_t drainEnded(int32_t* out, size_t max);
 
@@ -301,6 +311,10 @@ private:
     static_assert(std::atomic<int64_t>::is_always_lock_free, "the frame counter must be lock-free on every ABI the app builds for");
 
     std::unique_ptr<Bank> building_;  // UI thread only
+    struct SampleBounds { int64_t frames; int32_t rate; };
+    // Committed sample metadata owned by the control thread. Admission must not
+    // dereference current_, which the audio callback may replace concurrently.
+    std::vector<SampleBounds> committedSampleBounds_;
     std::atomic<uint32_t> uiGeneration_{0};  // the last committed bank's generation
     std::atomic<Bank*> pending_{nullptr};
     std::atomic<Bank*> retired_{nullptr};

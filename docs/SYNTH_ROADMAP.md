@@ -3523,6 +3523,10 @@ DRUMLESS (80 BPM), SOOT BASEMENT DUB (72), SOOT BRUSHED NOIR (76) and SOOT WAREH
 
 The siblings' pads await a listen; hardware remains.
 
+The owner kept 63 of the 64 sibling pads. They heard Basement Dub's one-drop four bars as
+incoherent, and picked a steppers groove in its place (`SootGenreKits` 2). The sound of all five SOOT
+kits is now approved, and hardware remains.
+
 
 ### SCUFF, round 1 (2026-11-13)
 

@@ -497,12 +497,13 @@ private const val BEND_RANGE_KEY = "keys.bendRange"
 private val CENTER_VELOCITY = PadHit.CENTER
 
 @Composable
-private fun KeyPad(
+internal fun KeyPad(
     label: String,
     enabled: Boolean,
     onPress: (Float) -> Unit,
     onRelease: () -> Unit,
     modifier: Modifier = Modifier,
+    disabledReason: String = "NOT MAPPED",
 ) {
     val scheme = LocalScheme.current
     val shape = RoundedCornerShape(Layout.PAD_RADIUS.dp)
@@ -522,7 +523,7 @@ private fun KeyPad(
             // mergeDescendants: without it, the label TapeText below is
             // a second, separately-focusable node.
             .semantics(mergeDescendants = true) {
-                contentDescription = if (enabled) "KEY $label" else "KEY $label: NOT MAPPED"
+                contentDescription = if (enabled) "KEY $label" else "KEY $label: $disabledReason"
                 if (enabled) {
                     onClick(label = "PLAY") { onPress(CENTER_VELOCITY); onRelease(); true }
                 } else {

@@ -5,6 +5,8 @@ import com.snipsnap.audio.Scales
 import com.snipsnap.audio.Snip
 import com.snipsnap.kit.Names
 import com.snipsnap.kit.OneNote
+import com.snipsnap.synth.MurmurBody
+import com.snipsnap.synth.MurmurPatch
 import com.snipsnap.synth.KeyNote
 import com.snipsnap.synth.Patch
 import com.snipsnap.xpm.Keygroup
@@ -89,14 +91,22 @@ object LoopPadMaker {
 
     /** Whether [patch] can become an instrument here: a qualified voice with a root to move. */
     fun supports(patch: Patch): Boolean =
-        patch.voiceName in QUALIFIED[patch.engine].orEmpty() && SynthRoot.of(held(patch)) != null
+        // Revised PLUCK sources need bounded finite/held makers; this route forces HOLD
+        // and stretches descriptors across the keyboard. Legacy source recipes stay eligible.
+        !(patch is MurmurPatch && patch.config.body != MurmurBody.LEGACY) &&
+            patch.voiceName in QUALIFIED[patch.engine].orEmpty() && SynthRoot.of(held(patch)) != null
 
     /** The sheet's one stepper as a spec, clamped as [MercuryPadMaker.spec] is. */
     fun spec(patch: Patch, releaseFraction: Float): Spec =
         Spec(patch, releaseSeconds = RELEASE.value(releaseFraction).coerceIn(RELEASE_MIN_SECONDS, RELEASE_MAX_SECONDS))
 
     /** [patch] at HOLD's top step: the loop a held key repeats. */
-    fun held(patch: Patch): Patch = patch.withMacros(patch.macros + ("HOLD" to 1f))
+    fun held(patch: Patch): Patch {
+        require(!(patch is MurmurPatch && patch.config.body != MurmurBody.LEGACY)) {
+            "MURMUR revised bodies require a bounded source-aware finite or held maker"
+        }
+        return patch.withMacros(patch.macros + ("HOLD" to 1f))
+    }
 
     /** The zones' roots: every minor third from the patch's root, an octave either way, inside the engine's range. */
     fun zoneMidis(spec: Spec): List<Int> {

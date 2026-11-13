@@ -1,0 +1,155 @@
+{
+  "renderer": "snipsnap-murmur-body-audition",
+  "version": 1,
+  "packager_source_sha256": "8c2c5ff4c9e13335816a9d5f32f43b07452d2d214eb8559f675e02970aa828f8",
+  "body_recipe": {
+    "renderer": "snipsnap-murmur-body-study",
+    "version": 1,
+    "source_sha256": "626793bc9743b075b296e51231aa9d36b943872ac56eb3da60ede5943e991a19",
+    "variant": "HOLLOW_WIRE",
+    "patch": {
+      "engine": "MURMUR",
+      "version": 1,
+      "name": "OPEN STRING",
+      "voice": "PLUCK",
+      "macros": {
+        "MOUTH": 0.8399999737739563,
+        "EDGE": 0.2199999988079071,
+        "BREATH": 0.03999999910593033,
+        "MOTION": 0.019999999552965164,
+        "BODY": 0.8799999952316284,
+        "HOLD": 1
+      },
+      "midi": 60,
+      "velocity": 0.8600000143051147,
+      "config": {
+        "routing": "PAIRS",
+        "ratios": [
+          1,
+          2,
+          2.006,
+          3
+        ],
+        "trajectory": "ATTACK",
+        "direction": 1,
+        "referenceSeconds": 0.48,
+        "attack": 0.002,
+        "decay": 0.24,
+        "sustain": 0.08,
+        "release": 0.35,
+        "targets": [
+          {
+            "name": "pluck Closed hum",
+            "centers": [
+              283.5,
+              840,
+              1680.0000000000002,
+              2860.0000000000005,
+              3800
+            ],
+            "widths": [
+              103.49999999999999,
+              186.29999999999998,
+              254.14999999999998,
+              322,
+              488.74999999999994
+            ],
+            "gains": [
+              1.1700000000000002,
+              0.7200000000000001,
+              0.325,
+              0.18000000000000002,
+              0.065
+            ],
+            "sourceBalance": 0.05000000000000001
+          },
+          {
+            "name": "pluck Rounded",
+            "centers": [
+              346.5,
+              787.5,
+              1568.0000000000002,
+              2585,
+              3500
+            ],
+            "widths": [
+              124.19999999999999,
+              165.6,
+              234.6,
+              322,
+              439.87499999999994
+            ],
+            "gains": [
+              1.105,
+              0.81,
+              0.39,
+              0.18000000000000002,
+              0.0975
+            ],
+            "sourceBalance": 0.098
+          },
+          {
+            "name": "pluck Open",
+            "centers": [
+              798,
+              1312.5,
+              2744.0000000000005,
+              3630.0000000000005,
+              4400
+            ],
+            "widths": [
+              196.64999999999998,
+              206.99999999999997,
+              293.25,
+              349.59999999999997,
+              508.29999999999995
+            ],
+            "gains": [
+              0.8450000000000001,
+              1.26,
+              0.8450000000000001,
+              0.36000000000000004,
+              0.0975
+            ],
+            "sourceBalance": 0.23000000000000004
+          },
+          {
+            "name": "pluck Narrow",
+            "centers": [
+              378,
+              2152.5,
+              3192.0000000000005,
+              4180,
+              4800
+            ],
+            "widths": [
+              113.85,
+              238.04999999999998,
+              342.125,
+              386.4,
+              566.9499999999999
+            ],
+            "gains": [
+              0.7150000000000001,
+              1.215,
+              0.9750000000000001,
+              0.27,
+              0.078
+            ],
+            "sourceBalance": 0.13
+          }
+        ],
+        "model": 2
+      }
+    },
+    "output_gain": 1.0885975360870361
+  },
+  "source_cycle_wav_sha256": "3a8c07f472a5d0667bf38bd063524b7450f8bd3cb2b9ccb1d7670893d70b814b",
+  "playback": {
+    "cycles": 2,
+    "onset_frames": 0,
+    "release_frames": 3528,
+    "silence_frames": 11025,
+    "rounding": "nearest integer, ties to even"
+  }
+}

@@ -1193,6 +1193,9 @@ object SynthKits {
         return notes + heardKeys + contrasts + choir
     }
 
+    /** Kept PLUCK sources and prior KEY/CHOIR choices, with saved pad endings. */
+    fun murmurKept(): List<ArrangedPad?> = MurmurKeptBank.render()
+
     /** Eight native-note lead pads followed by the accepted Round 3 source recipes. */
     fun openSky(): List<ArrangedPad?> {
         val presets = OpenSkyPresets.all()

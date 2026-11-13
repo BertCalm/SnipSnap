@@ -75,7 +75,7 @@ class ExpansionBackupTest {
         val landed = ShelfImport.land(zip, "shelf.zip", shelf, expansions = store)
         assertEquals(0, landed.expansions)
         assertEquals(listOf(e), store.list(), "the expansion already here is left as it is")
-        assertTrue(landed.skipped.any { it.contains("CRATE") }, "and the restore says why it was not added: ${landed.skipped}")
+        assertTrue(landed.skipped.any { it.contains("CRATE", ignoreCase = true) }, "and the restore says why it was not added: ${landed.skipped}")
     }
 
     @Test
@@ -110,15 +110,15 @@ class ExpansionBackupTest {
 
     @Test
     fun `the expansion side's overwrite line names its own button`() {
-        assertEquals("NIGHT SHIFT IS ALREADY THERE. EXPORT EXPANSION AGAIN TO WRITE OVER IT.", Copy.expansionWouldOverwrite("NIGHT SHIFT"))
+        assertEquals("NIGHT SHIFT is already there. EXPORT EXPANSION again to write over it.", Copy.expansionWouldOverwrite("NIGHT SHIFT"))
         assertTrue(Copy.EXPANSION_WRITE in Copy.expansionWouldOverwrite("X"), "the line names the button it asks for")
     }
 
     @Test
     fun `the landing line counts the expansions that came back`() {
-        assertEquals("2 KITS LANDED IN THE LIBRARY. 1 EXPANSION BACK IN THE LIBRARY.", Copy.landed(2, 0, expansions = 1))
-        assertEquals("1 KIT LANDED IN THE LIBRARY. 1 PRESET UNDER YOURS. 2 EXPANSIONS BACK IN THE LIBRARY. 1 SKIPPED.", Copy.landed(1, 1, presets = 1, expansions = 2))
-        assertEquals("1 KIT LANDED IN THE LIBRARY.", Copy.landed(1, 0), "a restore with none reads as it always did")
+        assertEquals("2 kits landed in the LIBRARY. 1 expansion back in the LIBRARY.", Copy.landed(2, 0, expansions = 1))
+        assertEquals("1 kit landed in the LIBRARY. 1 preset under yours. 2 expansions back in the LIBRARY. 1 skipped.", Copy.landed(1, 1, presets = 1, expansions = 2))
+        assertEquals("1 kit landed in the LIBRARY.", Copy.landed(1, 0), "a restore with none reads as it always did")
     }
 
     @Test
