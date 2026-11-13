@@ -495,3 +495,34 @@ Every existing render, preset and saved recipe is unchanged.
   passed"; no listening document for them came back with it.
 - **Overall: incomplete.** Device runs of the keygroups, native held keygroups, chord tools on
   real WICK samples, the PLUCK STRUM question, round robin and hardware playback remain open.
+
+## MERIDIAN six voices (ported from the recovery backup, 2026-11-13)
+
+MERIDIAN was already on the default branch with SWEEP, CLACK, CHIME and RASP. This port adds
+model-4 DRAW and LIFT, finite keygroups, source-bound held keygroups and the MERIDIAN
+MATERIALS and MERIDIAN SIX starters. See [MERIDIAN](MERIDIAN.md#draw-lift-finite-keys-and-two-material-banks-ported-2026-11-13).
+The four earlier voices' recipes and renders are pinned against a capture made before DRAW
+and LIFT existed (`MeridianGesturesTest`).
+
+| Gate | Status | Evidence |
+|---|---|---|
+| Melodic: six voices with presets | Pass | SWEEP, CLACK, CHIME, RASP, DRAW and LIFT, 18 presets (`MeridianPresetsTest`, `MeridianSixVoiceCompatibilityTest`). |
+| Melodic: playable keygroups | Pass in software | Finite keys for every voice across MIDI 36–96, held keys C2–C5, both with three touch layers and validated source bindings (`MeridianFiniteKeygroupMakerTest`, `MeridianHeldKeygroupPackageTest`, `MeridianFinitePadMakerTest`). Not run on a device. |
+| Melodic: premade kit | Pass in software | MERIDIAN, MERIDIAN MATERIALS and MERIDIAN SIX (`MeridianKitsTest`, `MeridianMaterialsKitTest`, `MeridianSixKitTest`). The owner kept all sixteen MERIDIAN SIX pads at hard touch on 2026-11-13. |
+| Melodic: chord-tool compatibility | Partial | 384 chord-tool note sets play on finite keys built from synthetic notes (`MeridianFiniteKeygroupMakerTest`). Not checked on real MERIDIAN samples. |
+| Articulation: HOLD | Pass | Fixed-alignment HOLD at 97.5% and above for every voice; the owner kept held DRAW and LIFT on 2026-11-13. |
+| Articulation: STRUM | Not applicable | Struck and rubbed surfaces, not picked strings. |
+| Percussion: roll or riser | Not applicable | A melodic engine. |
+| Drums: genre kits | Not applicable | A melodic engine. |
+| Velocity: rendering | **Fail: owner REVISIT** | Banks and keys render three native touches, but on MERIDIAN SIX the owner heard no change between soft, medium and hard (2026-11-13). The layers are level-matched and their brightness moves at most 13 %. |
+| Velocity: saving, playback, export | Pass in software | Each layer's recipe and WAV hash is saved and replayed (`MeridianMaterialsKitTest`, `MeridianSixKitTest`). No hardware check. |
+| Round robin | Not yet verified | No MERIDIAN round robin exists. |
+| Picker | Not yet verified on a device | `MeridianSynthScreenTest`, `MeridianFiniteInstrumentScreenTest`, `MeridianHeldSourceInstrumentScreenTest` and the two starter-menu tests cover DRAW/LIFT, finite keys and the starters. None has run on a device. |
+| Hardware playback | Not verified | No phone timing, MPC load or MPC velocity check is recorded. |
+
+- **Sound character: partly accepted.** The owner kept the four DRAW/LIFT finite takes and
+  accepted the model-3 material voices earlier. On 2026-11-13 the owner kept the sixteen
+  MERIDIAN SIX pads at hard touch and the four held DRAW/LIFT presets. The bank's soft and
+  medium layers came back REVISIT ("No change between soft, medium and hard").
+- **Overall: incomplete.** Round robin, chord tools on real keys, the six-voice bank's soft and
+  medium layers (touch must change the strike, not only the level), device runs and hardware playback remain open.

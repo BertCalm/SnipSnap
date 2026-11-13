@@ -89,7 +89,8 @@ internal object MeridianMaterials {
             MeridianVoice.CLACK -> clack
             MeridianVoice.CHIME -> chime
             MeridianVoice.RASP -> rasp
-            MeridianVoice.SWEEP -> error("SWEEP uses its saved model-one material tables")
+            MeridianVoice.SWEEP, MeridianVoice.DRAW, MeridianVoice.LIFT ->
+                error("$voice does not select a model-three material table directly")
         }
         require(hz.isFinite() && hz > 0.0)
         require(surface.isFinite() && surface in 0.0..1.0)

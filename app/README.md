@@ -73,7 +73,7 @@ M0's exit test was: browse kits on a phone, tap pads, hear WAVs, flip
 schemes in Tape Properties. The player for that test was `SoundPool`
 (`PadPlayer`), since deleted. Every screen that makes a sound goes
 through `PadEngine`. PLAY's exit test passed on a phone on 2026-09-08
-(`docs/BENCH.md` A1). The FRESH TAPE menu (115 starters including HALOBAR, HALOBAR SIX STUDY, EROSION, NACRE, CONFLUENCE VOICES, ACCORD, STRIKE FX, CIRCUIT,
+(`docs/BENCH.md` A1). The FRESH TAPE menu (117 starters including MERIDIAN MATERIALS, MERIDIAN SIX, HALOBAR, HALOBAR SIX STUDY, EROSION, NACRE, CONFLUENCE VOICES, ACCORD, STRIKE FX, CIRCUIT,
 THAW, SCOUR, NIMBUS, UNDERTOW, CISTERN, UPRIGHT BASS, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, ORIGAMI, FILAMENT, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, LATTICE, FLOCK, OVERLAP, OHM, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, MURMUR SELECTED, MURMUR KEPT, SCANNED CHAIN, TREFOIL, TRIO, OSPREY, OSPREY CURATED, OPENSKY, VENT, CAUSTIC, TIDAL, CHAMBER, KEEL, LIBRATION, MERIDIAN, RIME, RIME COMPLETE, OTIS, OBBLIGATO, WICK, CHORD STABS, CHORD STABS DORIAN, CHORD STABS MIXOLYDIAN, CHORD STABS BORROWED, VELOUR CLOSE, VELOUR, VELOUR BLOOM, FIRED BRONZE, COSMIC BREAKS, TRIAD WAREHOUSE TECHNO, TRIAD SUBMERGED HOUSE, TRIAD FRACTURE MINIMAL, BACKWASH SOUL, BACKWASH PSYCH, SPORE JUNGLE, SPORE DUB, SPORE ELECTRO, GATECRASH STONE ROOM, GATECRASH MACHINE POP, GATECRASH ELECTRO FUNK, CYPHER TRAP, CYPHER DRILL, CYPHER BACKROOM, CYPHER LOWRIDER, CYPHER DUST, CYPHER FLINT, BREAKER, BREAKER DUB TANK, BREAKER TRIP HOP, MIRRORBALL PHILLY STRINGS, MIRRORBALL LOFT PARTY, MIRRORBALL MUNICH MACHINE, SOOT, SOOT DRUMLESS, SOOT BASEMENT DUB, SOOT BRUSHED NOIR and SOOT WAREHOUSE INDUSTRIAL, SCUFF DETROIT, SCUFF FLINT,
 from `StarterKits`, rendered by
 the `:synth` builders on-device, including fixed sample banks) makes the shelf useful before a capture
@@ -124,9 +124,10 @@ CHITIN provides SHELL bass and WING lead voices, with six candidate presets each
 HOLD extends a finite note; its maximum reads LONG NOTE. It does not offer
 seamless instrument sustain.
 
-MERIDIAN provides SWEEP, CLACK, CHIME and RASP, fourteen saved factory presets
-and seven macros. The original eight SWEEP recipes retain model 2; each new
-material voice adds a finite/held pair using model 3. ROOT
+MERIDIAN provides SWEEP, CLACK, CHIME, RASP, DRAW and LIFT, 18 saved factory presets
+and seven macros. The original eight SWEEP recipes retain model 2; each material
+voice adds a finite/held pair using model 3; DRAW and LIFT add two finite recipes
+each on model 4. ROOT
 (MIDI 36–96) and native VELOCITY preserve the complete loaded model and noise
 context; TUNE transposes relative to ROOT, with .5 as its center. Model 1 stays
 finite even at HOLD 1. SWEEP still defaults to model 2; the added voices default
@@ -135,13 +136,16 @@ Its SYNTH preview is a bounded short capture, as the caption states. SEND TO PAD
 and SPREAD always deliver finite TONAL one-shots with the authored root. Held
 captures save a terminal fade of at least 20 ms; reopened recipes retain the
 complete rack, board and pedal placement. MAKE INSTRUMENT accepts supported
-held recipes from all four voices and samples thirteen native roots, MIDI 36–72 in minor
-thirds, at three physical velocities (.30, .65, 1.0). The phone/MPC packages keep
+held recipes from every voice and samples thirteen native roots, MIDI 36–72 in minor
+thirds, at three physical velocities (.30, .65, 1.0). A finite recipe gets finite
+keys instead: minor thirds across MIDI 36–96 plus its own root, three touch layers
+and its own envelope, with no RELEASE on the sheet. The phone/MPC packages keep
 the real second-cycle loops and note-off release, including explicit NoteOn
 playback in the MPC 2 program. Neighboring keys transpose by at most one semitone,
 which also changes the sampled swing cadence. FRESH TAPE → MERIDIAN retains the
 existing sixteen-pad bank and its authored roots without assigning a global
-kit key. Physical phone timing, listening and MPC loading remain separate checks.
+kit key. MERIDIAN MATERIALS and MERIDIAN SIX are separate finite banks with three
+native touches. Physical phone timing, listening and MPC loading remain separate checks.
 See [MERIDIAN](../docs/MERIDIAN.md) for the workflow and opt-in Android benchmark.
 
 CHAMBER starts new HYBRID/AQUARIUM sounds with the wider, register-aware

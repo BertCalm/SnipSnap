@@ -69,6 +69,20 @@ object MeridianPresets {
         p(MeridianVoice.RASP, "EDGE THREAD",
             "TUNE" to .50f, "LATITUDE" to .50f, "LENGTH" to .45f, "REACH" to .60f,
             "SURFACE" to 1f, "MEMORY" to .40f, "HOLD" to 1f),
+        // Model-four candidates. These four are proposed; the preceding fourteen
+        // accepted complete recipes keep their ordering, fields and saved models.
+        p(MeridianVoice.DRAW, "OPEN LINE",
+            "TUNE" to .50f, "LATITUDE" to .76f, "LENGTH" to .48f, "REACH" to .65f,
+            "SURFACE" to .25f, "MEMORY" to .45f, "HOLD" to 0f),
+        p(MeridianVoice.DRAW, "WIDE THREAD",
+            "TUNE" to .50f, "LATITUDE" to .22f, "LENGTH" to .66f, "REACH" to .46f,
+            "SURFACE" to .76f, "MEMORY" to .65f, "HOLD" to 0f),
+        p(MeridianVoice.LIFT, "AFTER PRESS",
+            "TUNE" to .50f, "LATITUDE" to .76f, "LENGTH" to .48f, "REACH" to .65f,
+            "SURFACE" to .45f, "MEMORY" to .40f, "HOLD" to 0f),
+        p(MeridianVoice.LIFT, "SOFT RETURN",
+            "TUNE" to .50f, "LATITUDE" to .24f, "LENGTH" to .68f, "REACH" to .48f,
+            "SURFACE" to .82f, "MEMORY" to .62f, "HOLD" to 0f),
     ))
 
     private val roles = mapOf(
@@ -86,6 +100,10 @@ object MeridianPresets {
         "LANTERN TONE" to "Fixed-alignment contact sustaining a hollow, dispersed metallic response.",
         "BRIGHT EDGE" to "A finite journey through bright contact roughness and widely spaced wire-like modes.",
         "EDGE THREAD" to "Fixed-alignment contact sustaining bright roughness and a wire-like response.",
+        "OPEN LINE" to "Proposed drawn harmonic contact across the existing surface ring, with restrained upper drive.",
+        "WIDE THREAD" to "Proposed slower drawn contact with more upper drive and retained surface ringing.",
+        "AFTER PRESS" to "Proposed pressure storage that supplies a pitched answer as each contact withdraws.",
+        "SOFT RETURN" to "Proposed slower pressure-release bloom with a longer control reservoir and retained ringing.",
     )
 
     fun all(): List<MeridianPatch> = roster
