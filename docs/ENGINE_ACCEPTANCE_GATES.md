@@ -558,3 +558,35 @@ hashes: sixteen full-kit pads, ten model-2 and eight model-1 files (`TempestProm
   great, proceed as recommended." Preserve these renders; this is not a phone or MPC audition.
 - **Overall: incomplete.** Genre kits, a roll or riser, velocity layers, round robin, device
   runs of the picker and hardware playback remain open.
+
+## SPLAY (from the recovery backup, 2026-11-13)
+
+SPLAY came back from the owner's recovery snapshot onto this branch, SPLAY files only: the
+engine (models 1 and 2), its registration, the SYNTH picker entry, the SPLAY POPULATIONS starter
+and finite MAKE INSTRUMENT keys. See [SPLAY_FINITE_DELIVERY.md](SPLAY_FINITE_DELIVERY.md),
+[SPLAY_NATIVE_RECOVERY.md](SPLAY_NATIVE_RECOVERY.md) and
+[SPLAY_PRODUCTION_INTAKE.md](SPLAY_PRODUCTION_INTAKE.md).
+
+- **Melodic voices: fail, one of six.** TONGUE is the one voice. Its five population settings
+  (1, 2, 4, 8 and 16 mechanisms) are settings, not voices.
+- **Presets: pass for the one voice.** The five accepted population settings are the factory
+  presets; the five provisional recipes stay in the CLI only.
+- **Playable keygroups: partial.** In JVM tests the shell builds finite keygroups (MIDI 36–84,
+  roots every three semitones plus the saved root, three touch levels) and admits them to the
+  shelf. The SynthScreen wiring and its two Android tests have not compiled or run here (no
+  Android SDK); CI's emulator runs them. No phone or MPC has played one.
+- **Premade kit: partial.** SPLAY POPULATIONS puts the five settings on A01–A05. All five render
+  in JVM tests, with a saved-recipe replay. It is one voice, not a full melodic kit.
+- **Chord tools: not yet verified.**
+- **Articulation (HOLD): fail.** SPLAY is finite (eight seconds). Positive HOLD is refused, and
+  the instrument has no loop.
+- **Percussion and drum gates:** not applicable. SPLAY is a pitched finite instrument.
+- **Velocity and round robin: fail.** Velocity is gain only (the keygroups' three levels too).
+  There are no round-robin takes.
+- **Sound character.** The five population settings were KEEP decisions in the owner's Wave 3
+  review (2026-11-09). That is recorded only in the backup's notes and manifest
+  ([SPLAY_NATIVE_RECOVERY.md](SPLAY_NATIVE_RECOVERY.md): “All five decisions are KEEP”), with no
+  quoted verdict. The heard recordings are not in this repository; on this branch all five
+  model-2 renders reproduce their pinned raw-PCM and matched-recording SHA-256 values.
+- **Overall: incomplete.** Six voices, HOLD, timbral velocity, round robin, chord tools and phone
+  and MPC playback are open.

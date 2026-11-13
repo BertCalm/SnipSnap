@@ -339,6 +339,12 @@ class UserPresetsTest {
                 assertEquals("TempestPatch", (call.receiver as KotlinLiteral.Call).name)
                 val promoted = com.snipsnap.synth.TempestPatch.fromJsonText((call.positional.single() as KotlinLiteral.Str).value)
                 assertEquals(preset, promoted, "${preset.name}: complete versioned percussion promotion")
+            } else if (preset is com.snipsnap.synth.SplayPatch) {
+                val call = KotlinLiteral.parse(line.removeSuffix(",")) as KotlinLiteral.Call
+                assertEquals("fromJsonText", call.name)
+                assertEquals("SplayPatch", (call.receiver as KotlinLiteral.Call).name)
+                val promoted = com.snipsnap.synth.SplayPatch.fromJsonText((call.positional.single() as KotlinLiteral.Str).value)
+                assertEquals(preset, promoted, "${preset.name}: complete model, seed, note and touch promotion")
                 assertEquals(preset.macros.mapValues { it.value.toRawBits() }, promoted.macros.mapValues { it.value.toRawBits() })
             } else if (preset is com.snipsnap.synth.WickPatch) {
                 val call = KotlinLiteral.parse(line.removeSuffix(",")) as KotlinLiteral.Call
@@ -1271,6 +1277,17 @@ class UserPresetsTest {
                 assertTrue("TempestPatch(" in text, "TEMPEST's table constructs complete typed recipes")
                 assertTrue(UserPresets.rosterLine(Presets.all().first { it.engine == engine }).startsWith("TempestPatch.fromJsonText("),
                     "TEMPEST's roster line invokes its complete-JSON constructor")
+            } else if (engine == com.snipsnap.synth.SplayPatch.ENGINE) {
+                val decoder = com.snipsnap.synth.SplayPatch.Companion.javaClass.getMethod("fromJsonText", String::class.java)
+                assertEquals(com.snipsnap.synth.SplayPatch::class.java, decoder.returnType,
+                    "SPLAY promotion names its public complete-JSON constructor")
+                assertTrue("SplayPatch(" in text, "SPLAY's historical table accepts complete typed recipes")
+                val patch = Presets.all().first { it.engine == engine }
+                val call = KotlinLiteral.parse(UserPresets.rosterLine(patch).removeSuffix(",")) as KotlinLiteral.Call
+                assertEquals("fromJsonText", call.name)
+                assertEquals("SplayPatch", (call.receiver as KotlinLiteral.Call).name)
+                assertEquals(patch, com.snipsnap.synth.SplayPatch.fromJsonText((call.positional.single() as KotlinLiteral.Str).value),
+                    "SPLAY promotion retains complete model, note, native velocity, seed and controls")
             } else if (engine == com.snipsnap.synth.WickPatch.ENGINE) {
                 val decoder = com.snipsnap.synth.WickPatch.Companion.javaClass.getMethod("fromJsonText", String::class.java)
                 assertEquals(com.snipsnap.synth.WickPatch::class.java, decoder.returnType,

@@ -1,0 +1,273 @@
+{
+  "schema": 1,
+  "origin": "published Kotlin model-2 working-tree snapshot, not missing later handoff bundle",
+  "archiveSha256": "d09c5018ca50debd98f37f5842e545a72be7db69512034911e5cced5e06dca11",
+  "archiveBase": "9801adecfec0269c2935a148e437156125f525f4",
+  "reportedLaterImplementation": "a4491eb1c742c3549d7f2fc433ccfd86ce036fea",
+  "laterImplementationRecovered": false,
+  "wave3ManifestSha256": "0b4efb577a80c616e1752ef802b39fb3cafa9678c4606af8c7e670d06a060312",
+  "workingTree": true,
+  "sourceFiles": [
+    {
+      "path": "synth/src/main/kotlin/com/snipsnap/synth/Splay.kt",
+      "sha256": "9ae818965a55912d006d4c065a366cc59d4c93abb61bc7f0c99cfa9b01974145",
+      "gitBlob": "9ed03983af270b087a640b7bcabfdf1bf8864762",
+      "verbatim": true
+    },
+    {
+      "path": "synth/src/main/kotlin/com/snipsnap/synth/SplayTrajectoryBank.kt",
+      "sha256": "c2a6d81ac9b2eea77651ae7d1c397758afef429ad8fbbcc876a58d2f0f2cff71",
+      "gitBlob": "cfe387973736072866c6864e4599d49e64bee5a2",
+      "verbatim": true
+    },
+    {
+      "path": "synth/src/main/kotlin/com/snipsnap/synth/SplayPatch.kt",
+      "sha256": "536ffddb27c2ef2f046d12baded5d91a32b618956b88ff630d8c2ed9896eaedd",
+      "gitBlob": "ff734fcbc4bc3959b44633b8e4f66f9360210b6f",
+      "verbatim": true
+    },
+    {
+      "path": "synth/src/main/kotlin/com/snipsnap/synth/SplayPresets.kt",
+      "sha256": "0b9272be87b53b9aed85536f1fb0eda6d4b0e9c58a4a2c5f4a27fb4953af071b",
+      "gitBlob": "ddc731b3c4f36b9e34588eefd241f77f022f08d3",
+      "verbatim": true
+    },
+    {
+      "path": "synth/src/test/kotlin/com/snipsnap/synth/SplayTest.kt",
+      "sha256": "5bb03a6e7fd3cc594545d829ed73d49999582ba4158e6e1e1354c3493460f01a",
+      "gitBlob": "e4c28a41f9dfbd2430088d295c835434c0a91907",
+      "verbatim": true
+    },
+    {
+      "path": "synth/src/test/kotlin/com/snipsnap/synth/SplayTrajectoryBankTest.kt",
+      "sha256": "9022aa29d2f44e6a0b0501b9b12832723849b9b883ca41e28b048b8c636b54d6",
+      "gitBlob": "c44efb69c19bafe1186d3eba29dbe65de5174692",
+      "verbatim": true
+    },
+    {
+      "path": "synth/src/test/kotlin/com/snipsnap/synth/SplayPatchTest.kt",
+      "sha256": "d738605a404e34e0f8f4515988679b0c175349166b1077168d339629e16093e9",
+      "gitBlob": "971e4acc2fc8f3a06773115593c18820e11f51f9",
+      "verbatim": true
+    },
+    {
+      "path": "synth/src/test/kotlin/com/snipsnap/synth/SplayDiagnosticReplay.kt",
+      "sha256": "33845bcd476b085edbc8f2595a533e02511811e71ca4d5a54593941a9de04896",
+      "gitBlob": "9ac76d1322479b67e1048285eee9ec57a433036e",
+      "verbatim": true
+    },
+    {
+      "path": "synth/src/test/kotlin/com/snipsnap/synth/SplayRevisionTest.kt",
+      "sha256": "b397860a57a9e47c673c71aaf19138ffb813231702e8e33e24f9267b6c1111ab",
+      "gitBlob": "d40cd15b3d35be169bba3fc4c9227e6a16fa4486",
+      "verbatim": true
+    }
+  ],
+  "bank": [
+    {
+      "id": "pc-1",
+      "count": 1,
+      "patch": {
+        "engine": "SPLAY",
+        "version": 1,
+        "name": "1 mechanism",
+        "voice": "TONGUE",
+        "macros": {
+          "TRACE": 0.6200000047683716,
+          "SEED GAP": 0.7200000286102295,
+          "ENERGY": 0.7799999713897705,
+          "CONTACT": 0.699999988079071,
+          "POPULATION": 0,
+          "HOLD": 0
+        },
+        "model": 2,
+        "midi": 60,
+        "velocity": 0.800000011920929,
+        "seed": 41001
+      },
+      "render": {
+        "mode": "FULL",
+        "entryPoint": "Splay.renderDetailed",
+        "sampleSource": "raw",
+        "rawGain": 1,
+        "matchedGain": 2.56811770069021,
+        "matchGroup": "playability-bank",
+        "loop": false
+      },
+      "originalRecipeSha256": "a9b070c5fe955f5e1334911617915293cac775d5784cb47b08cbdedf74ea13ef",
+      "matchedWavSha256": "6a7c4a937f3389e67df32661e33e2ae629916b01ea29d6fcead398c53e9f3e83",
+      "rawWavSha256": "618536c8aeb22f8689750996805abb2f4a1e79d3574860b1a4b97525206be637",
+      "reviewedVerdict": "keep",
+      "nativePatchFile": "pc-1.patch.json",
+      "nativePatchSha256": "87119ccab3b2c812f882ed475dcaf4f1890fd0bf3ac4e62ebfdd9ad3060b3300",
+      "diagnosticRecipeFile": "pc-1.recipe.json",
+      "reviewedAt": "2026-11-09T01:12:42.298Z",
+      "decisionId": "splay-pc-1"
+    },
+    {
+      "id": "pc-2",
+      "count": 2,
+      "patch": {
+        "engine": "SPLAY",
+        "version": 1,
+        "name": "2 mechanisms",
+        "voice": "TONGUE",
+        "macros": {
+          "TRACE": 0.6200000047683716,
+          "SEED GAP": 0.7200000286102295,
+          "ENERGY": 0.7799999713897705,
+          "CONTACT": 0.699999988079071,
+          "POPULATION": 0.010101010091602802,
+          "HOLD": 0
+        },
+        "model": 2,
+        "midi": 60,
+        "velocity": 0.800000011920929,
+        "seed": 41001
+      },
+      "render": {
+        "mode": "FULL",
+        "entryPoint": "Splay.renderDetailed",
+        "sampleSource": "raw",
+        "rawGain": 1,
+        "matchedGain": 2.56811770069021,
+        "matchGroup": "playability-bank",
+        "loop": false
+      },
+      "originalRecipeSha256": "01fcf7fd09bf6a88fd5215127bf4884e03aa31767113d1aa094c9949c6807abf",
+      "matchedWavSha256": "f1591af0d9959070ba19a15902c13eb3c745fc2593029a9e6be66aee70b44bf0",
+      "rawWavSha256": "631e00891a4524633dd43b608398dc869be7e43cf25d8638c7fce37fd78ebffd",
+      "reviewedVerdict": "keep",
+      "nativePatchFile": "pc-2.patch.json",
+      "nativePatchSha256": "2242db9ddd24d45e21e609b2ed09f2b74b5dc118c53cecda10dd49f07fb1cd1e",
+      "diagnosticRecipeFile": "pc-2.recipe.json",
+      "reviewedAt": "2026-11-09T01:12:46.465Z",
+      "decisionId": "splay-pc-2"
+    },
+    {
+      "id": "pc-4",
+      "count": 4,
+      "patch": {
+        "engine": "SPLAY",
+        "version": 1,
+        "name": "4 mechanisms",
+        "voice": "TONGUE",
+        "macros": {
+          "TRACE": 0.6200000047683716,
+          "SEED GAP": 0.7200000286102295,
+          "ENERGY": 0.7799999713897705,
+          "CONTACT": 0.699999988079071,
+          "POPULATION": 0.03030303120613098,
+          "HOLD": 0
+        },
+        "model": 2,
+        "midi": 60,
+        "velocity": 0.800000011920929,
+        "seed": 41001
+      },
+      "render": {
+        "mode": "FULL",
+        "entryPoint": "Splay.renderDetailed",
+        "sampleSource": "raw",
+        "rawGain": 1,
+        "matchedGain": 2.56811770069021,
+        "matchGroup": "playability-bank",
+        "loop": false
+      },
+      "originalRecipeSha256": "8de4a7a9c286a56f1be369c39cbc330c88cc317184fdc3b48b4384a94e5b1a9a",
+      "matchedWavSha256": "b66311851dee063dda962a9efda5ecd2468256170bac1b7e2c6a76b1f7b357ba",
+      "rawWavSha256": "0f1053d3826d65e927cf48d9f730acbf05e2fce449c0358b8a13b1bcc818b031",
+      "reviewedVerdict": "keep",
+      "nativePatchFile": "pc-4.patch.json",
+      "nativePatchSha256": "bc0b2f5528f49be2e57a2d45e569defce3a5af4ef3b56ee42c84c752fa0707a3",
+      "diagnosticRecipeFile": "pc-4.recipe.json",
+      "reviewedAt": "2026-11-09T01:13:07.016Z",
+      "decisionId": "splay-pc-4"
+    },
+    {
+      "id": "pc-8",
+      "count": 8,
+      "patch": {
+        "engine": "SPLAY",
+        "version": 1,
+        "name": "8 mechanisms",
+        "voice": "TONGUE",
+        "macros": {
+          "TRACE": 0.6200000047683716,
+          "SEED GAP": 0.7200000286102295,
+          "ENERGY": 0.7799999713897705,
+          "CONTACT": 0.699999988079071,
+          "POPULATION": 0.07070706784725189,
+          "HOLD": 0
+        },
+        "model": 2,
+        "midi": 60,
+        "velocity": 0.800000011920929,
+        "seed": 41001
+      },
+      "render": {
+        "mode": "FULL",
+        "entryPoint": "Splay.renderDetailed",
+        "sampleSource": "raw",
+        "rawGain": 1,
+        "matchedGain": 2.56811770069021,
+        "matchGroup": "playability-bank",
+        "loop": false
+      },
+      "originalRecipeSha256": "1f05d4a83cafe4b00bcf654f7f2ea83173c97b7b980ff4be4473a6a5e42ed5f4",
+      "matchedWavSha256": "cf12f9dd992b31e2d9a1b3461633f31bebb5a95f08ab135c90fb4d142e3cb0fd",
+      "rawWavSha256": "0f78b9360c89b796e90507961df6efc2c169e2556830288aa334ea1d0645f2e5",
+      "reviewedVerdict": "keep",
+      "nativePatchFile": "pc-8.patch.json",
+      "nativePatchSha256": "20da8c4c9a508a2ce2ef4a07ac221b6ffae025873e3135f51676f9465a80856a",
+      "diagnosticRecipeFile": "pc-8.recipe.json",
+      "reviewedAt": "2026-11-09T01:13:04.606Z",
+      "decisionId": "splay-pc-8"
+    },
+    {
+      "id": "pc-16",
+      "count": 16,
+      "patch": {
+        "engine": "SPLAY",
+        "version": 1,
+        "name": "16 mechanisms",
+        "voice": "TONGUE",
+        "macros": {
+          "TRACE": 0.6200000047683716,
+          "SEED GAP": 0.7200000286102295,
+          "ENERGY": 0.7799999713897705,
+          "CONTACT": 0.699999988079071,
+          "POPULATION": 0.1515151560306549,
+          "HOLD": 0
+        },
+        "model": 2,
+        "midi": 60,
+        "velocity": 0.800000011920929,
+        "seed": 41001
+      },
+      "render": {
+        "mode": "FULL",
+        "entryPoint": "Splay.renderDetailed",
+        "sampleSource": "raw",
+        "rawGain": 1,
+        "matchedGain": 2.56811770069021,
+        "matchGroup": "playability-bank",
+        "loop": false
+      },
+      "originalRecipeSha256": "d8f545d5f05ce948483f02901aea986c87c32afd6f9b150bc4f6011dcabc67dc",
+      "matchedWavSha256": "5a059c1358f6d9dc86a1b367a3889b490456706c9635eab2423e15320856c897",
+      "rawWavSha256": "08e61fc031fc7440d6c3eddf71e190c3f983a4e4a8d72b1dfde748b5b46030e9",
+      "reviewedVerdict": "keep",
+      "nativePatchFile": "pc-16.patch.json",
+      "nativePatchSha256": "1fa5d0222b865baeecc8152e975e1c035de1aa1713e68ec468ba35c7b2c90bbe",
+      "diagnosticRecipeFile": "pc-16.recipe.json",
+      "reviewedAt": "2026-11-09T01:13:14.984Z",
+      "decisionId": "splay-pc-16"
+    }
+  ],
+  "newSynthesis": false,
+  "rawFloatBaselinesAvailable": false,
+  "currentNumericReplayExecuted": false,
+  "ownerReceiptSha256": "8f4a30592cc1f91f9b5368657a051be1846306f496e8ae75d55c06eccaaba767",
+  "ownerOriginalFeedbackSha256": "4a2c83d2729f6091133a44e4624f5213a995396622cb809fb2dfcd1efd05db7d"
+}

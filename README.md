@@ -1123,7 +1123,7 @@ render-time limits. Build its MPC program and replay files with:
 ```
 
 ONSET, SCANNED CHAIN, VOX, FORK, HALOBAR, AEROSTAT, TREMOR, BALLAST, FLOTILLA, CISTERN, CIRCUIT, OBBLIGATO, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE,
-TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, LATTICE, ACCORD, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, REGISTERS, OSPREY, OPENSKY, OVEN, FLOCK, VENT, OVERLAP, TRIO, NACRE, ORIGAMI, TREFOIL, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS, TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME, OTIS, WICK, BORE, ARCO, SCOUR, KEEL, CHITIN, EROSION, RIVET, FIRED BRONZE, BACKWASH, TEMPEST and GRAINS round out the lineup —
+TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, LATTICE, ACCORD, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, REGISTERS, OSPREY, OPENSKY, OVEN, FLOCK, VENT, OVERLAP, TRIO, NACRE, ORIGAMI, TREFOIL, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS, TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME, OTIS, WICK, BORE, ARCO, SCOUR, KEEL, CHITIN, EROSION, RIVET, FIRED BRONZE, BACKWASH, TEMPEST, SPLAY and GRAINS round out the lineup —
 82 engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
 since it has no voice enum and works on a source snip instead of picking
 one. VOX is formant vocal synthesis — the shopping-mall-keyboard choir,
@@ -1379,9 +1379,16 @@ TREMOR, BALLAST, CISTERN, CIRCUIT, OBBLIGATO, ALLOY, THAW, MURK, NIMBUS, COROLLA
 UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL,
 SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVERLAP,
 OVEN, FLOCK, VENT, CREASE, TRIO, NACRE, ORIGAMI, TREFOIL, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS,
-TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME, BORE, ARCO, SCOUR, KEEL, CHITIN, WICK, EROSION, RIVET, FIRED BRONZE, BACKWASH, SOOT, TEMPEST, plus GRAINS, SNAP and DRAW,
+TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME, BORE, ARCO, SCOUR, KEEL, CHITIN, WICK, EROSION, RIVET, FIRED BRONZE, BACKWASH, SOOT, TEMPEST, SPLAY, plus GRAINS, SNAP and DRAW,
 which sit beside the picker. `:synth` also holds engines that picker does not show.
 LORENTZ has a preset roster, so `snipsnap synth` renders it.
+
+SPLAY offers one finite TONGUE voice with five accepted population settings
+(1, 2, 4, 8 and 16 mechanisms), not five voices. Its original model-1 and model-2
+recipes and the five provisional CLI presets remain replayable. The picker and the
+SPLAY POPULATIONS starter use those exact settings through the native recipe path.
+HOLD and phone validation remain open; see
+[finite delivery and its limits](docs/SPLAY_FINITE_DELIVERY.md).
 
 EROSION has a [native ARC/CRATER proof](docs/EROSION.md), saved touch and a
 regenerable audition. Its current contrast bank has eight playing roles, three touch

@@ -60,6 +60,7 @@ class PatchesTest {
         VentPresets.all().first(),
         OverlapPresets.all().first(),
         CairnPatch("Door", CairnVoice.ANSWER, emptyMap()),
+        SplayPresets.all().first(),
         WickPresets.all().first(),
         RimePresets.all().first(),
         FerryPresets.all().first(),

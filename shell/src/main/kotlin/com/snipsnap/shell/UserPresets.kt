@@ -471,6 +471,11 @@ object UserPresets {
             val recipe = Json.write(JsonValue.Str(patch.toJsonText())).replace("$", "\\$")
             return "TempestPatch.fromJsonText($recipe),"
         }
+        if (patch is com.snipsnap.synth.SplayPatch) {
+            // The acoustic model, signed seed and authored note/touch are outside macros.
+            val recipe = Json.write(JsonValue.Str(patch.toJsonText())).replace("$", "\\$")
+            return "SplayPatch.fromJsonText($recipe),"
+        }
         if (patch is WickPatch) {
             // Save the selected body as well as note, velocity and controls.
             val recipe = Json.write(JsonValue.Str(patch.toJsonText())).replace("$", "\\$")

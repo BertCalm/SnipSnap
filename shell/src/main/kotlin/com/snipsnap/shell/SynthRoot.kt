@@ -164,6 +164,8 @@ import com.snipsnap.synth.Tonewheel
 import com.snipsnap.synth.TonewheelPatch
 import com.snipsnap.synth.Trefoil
 import com.snipsnap.synth.TrefoilPatch
+import com.snipsnap.synth.Splay
+import com.snipsnap.synth.SplayPatch
 import com.snipsnap.synth.Tremor
 import com.snipsnap.synth.TremorPatch
 import com.snipsnap.synth.Trio
@@ -264,6 +266,7 @@ object SynthRoot {
         is BellowsPatch -> Field(patch.midi, playedRange(Bellows.midiRange(patch.voice),
             patch.macros["TUNE"] ?: Bellows.defaults(patch.voice).getValue("TUNE"), Bellows.TUNE_SEMITONES)) { patch.copy(midi = it) }
         is CairnPatch -> Field(patch.midi, Cairn.MIN_MIDI..Cairn.MAX_MIDI) { patch.copy(midi = it) }
+        is SplayPatch -> Field(patch.midi, Splay.MIDI_MIN..Splay.MIDI_MAX) { patch.copy(midi = it) }
         is CausticPatch -> Field(patch.midi, CausticInstrument.MIDI_MIN..CausticInstrument.MIDI_MAX) { patch.copy(midi = it) }
         is ChamberPatch -> Field(patch.midi, Chamber.MIDI_MIN..Chamber.MIDI_MAX) { patch.copy(midi = it) }
         is CisternPatch -> Field(patch.midi, Cistern.MIDI_MIN..Cistern.MIDI_MAX) { patch.copy(midi = it) }

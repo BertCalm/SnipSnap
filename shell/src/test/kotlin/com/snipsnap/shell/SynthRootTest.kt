@@ -52,6 +52,7 @@ import com.snipsnap.synth.SilkVoice
 import com.snipsnap.synth.Snap
 import com.snipsnap.synth.SnapPatch
 import com.snipsnap.synth.SnapVoice
+import com.snipsnap.synth.SplayPresets
 import com.snipsnap.synth.Stoop
 import com.snipsnap.synth.StoopPatch
 import com.snipsnap.synth.StoopVoice
@@ -98,6 +99,7 @@ class SynthRootTest {
                 TerraPatch("Door", TerraVoice.COMPOUND_MEMBRANE, emptyMap()),
                 ErosionPatch("Door", ErosionVoice.ARC),
                 CairnPatch("Door", CairnVoice.ANSWER, emptyMap()),
+                SplayPresets.all().first(),
                 WickPresets.all().first(),
                 NacrePresets.all().first(),
                 FerryPresets.all().first(),

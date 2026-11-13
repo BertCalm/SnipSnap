@@ -781,6 +781,11 @@ object StarterKits {
             seeded = false,
             key = KeySpec.parse("Eminpent"),
         ) { SynthKits.tempestTuned() },
+        Starter(
+            SplayDelivery.STARTER_ID, "SPLAY POPULATIONS",
+            "One TONGUE voice. Five finite settings: 1, 2, 4, 8 and 16 mechanisms.",
+            seeded = false,
+        ) { SplayDelivery.starterPads() },
     )
 
     fun byId(id: String): Starter? = ALL.firstOrNull { it.id == id }
