@@ -65,6 +65,12 @@ class DeterminismTest {
         assertContentEquals(patch.render().samples, Patches.fromJsonValue(patch.toJsonValue()).render().samples)
     }
 
+    @Test fun `FIRED BRONZE model 2 strikes replay through JSON`() {
+        val patch = FiredBronzePatch("Low Kettle", FiredBronzeDryKit.Pad.KETTLE_LOW)
+        val back = Patches.fromJsonValue(patch.toJsonValue()) as FiredBronzePatch
+        assertContentEquals(patch.render(.45f, 2).samples, back.render(.45f, 2).samples)
+    }
+
     @Test fun `FIRED BRONZE performance recipe replays`() {
         val r = FiredBronzePerformance.Recipe(FiredBronzeDryKit.Recipe(FiredBronzeDryKit.Pad.TIN, velocity = .45f, take = 2))
         assertContentEquals(r.render().samples, FiredBronzePerformance.Recipe.fromJsonText(r.toJsonText()).render().samples)
@@ -194,6 +200,15 @@ class DeterminismTest {
         }
         val held = GyrePatch("Held canary", GyreVoice.entries.first(), Gyre.defaults(GyreVoice.entries.first()) + ("HOLD" to 1f))
         assertContentEquals(held.render().samples, held.render().samples, "HOLD top")
+    }
+
+    @Test fun `SCUFF renders every voice, a soft hit and every take byte for byte through JSON`() {
+        for (voice in ScuffVoice.entries) {
+            val patch = ScuffPatch("Canary", voice, Scuff.defaults(voice))
+            assertContentEquals(patch.render().samples, Patches.fromJsonText(patch.toJsonText()).render().samples, "$voice")
+            val struck = ScuffPatch("Soft take", voice, Scuff.defaults(voice), velocity = 0.6f, take = 3)
+            assertContentEquals(struck.render().samples, Patches.fromJsonText(struck.toJsonText()).render().samples, "$voice soft take 3")
+        }
     }
 
     @Test fun `EROSION native voices replay their saved touch`() {

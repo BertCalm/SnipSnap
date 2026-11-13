@@ -1924,13 +1924,13 @@ fun GrooveScreen(
                         Box(
                             Modifier
                                 .fillMaxWidth()
-                                .height(Layout.MIN_HIT_TARGET.dp)
+                                .minHeight(Layout.MIN_HIT_TARGET.dp)
                                 .background(scheme.lcd.tape, RoundedCornerShape(6.dp))
                                 .border(1.dp, scheme.amber.tape, RoundedCornerShape(6.dp))
                                 .let { m -> if (countingIn) m else m.tapeClick(label = "STOP RECORDING") { stopRecording() } },
                             contentAlignment = Alignment.Center,
                         ) {
-                            TapeText(if (countingIn) "COUNTING IN… $countInBeat" else "■ STOP RECORDING", TapeType.pixel, scheme.lcdInk.tape)
+                            TapeText(if (countingIn) "COUNTING IN… $countInBeat" else "■ STOP RECORDING", TapeType.pixel, scheme.lcdInk.tape, maxLines = 2)
                         }
                     } else {
                         // RECORD is the one filled button: the way in that needs
@@ -2400,7 +2400,7 @@ private fun ProgramSelector(
     modifier: Modifier = Modifier,
 ) {
     Column(modifier, verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        TapeText("PROGRAM · $sub", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
+        TapeText("PROGRAM · $sub", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             for (i in 0 until count) {
                 SegmentButton(
@@ -3040,7 +3040,7 @@ private fun StepEditorOverlay(
                 }
                 Box(
                     Modifier
-                        .height(Layout.MIN_HIT_TARGET.dp)
+                        .minHeight(Layout.MIN_HIT_TARGET.dp)
                         .border(1.dp, scheme.amber.tape, RoundedCornerShape(4.dp))
                         .tapeClick(label = "DONE", onClick = onDone)
                         .padding(horizontal = 12.dp),
@@ -3180,7 +3180,7 @@ private fun BeatHeader(
     onTempo: ((Float) -> Unit)?,
 ) {
     Box(
-        Modifier.fillMaxWidth().height(Layout.LCD_HEADER_H.dp).lcdPanel(scheme).padding(horizontal = 12.dp),
+        Modifier.fillMaxWidth().minHeight(Layout.LCD_HEADER_H.dp).lcdPanel(scheme).padding(horizontal = 12.dp),
         contentAlignment = Alignment.CenterStart,
     ) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {

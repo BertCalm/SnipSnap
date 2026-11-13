@@ -14,6 +14,12 @@ explicit operator, routing and envelope configurations. The owner heard the
 reported that it was much better, and authorized integration of that bank.
 The original 36-preset gallery and selected-voice release remain frozen references.
 
+Three opt-in MATERIAL body choices follow the 24 in the picker: Rounded Body (BASS),
+Prism Body (KEY) and Velvet Body (SOFT). Each keeps its factory preset's complete
+configuration as the anchor and adds a stronger body below MATERIAL .5; at .5 and
+above it is the original preset exactly. The factory 24 and old saves are unchanged.
+See [the MATERIAL response](alloy-material/IMPLEMENTATION.md).
+
 ## Controls and render contract
 
 TUNE offsets the saved MIDI root by ±12 semitones, neutral at 0.5. Saved roots
@@ -65,7 +71,7 @@ The CLI accepts complete Alloy JSON through `--patch`, including retained held
 recipes and authored factory configurations. `--midi` and `--velocity` override
 only the saved root and energy; they keep the complete material, routing and
 envelope data. `--all` and numbered `--preset` selections use the active four
-factory patches per voice.
+factory patches per voice, followed by that voice's MATERIAL body choice if it has one.
 
 Generate the current factory listening files with:
 

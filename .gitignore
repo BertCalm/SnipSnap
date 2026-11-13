@@ -742,7 +742,11 @@ testkit/backwash-acoustic-integration/
 # CYPHER kits: regenerate with :shell:generateCypherKits
 /testkit/cypher-kits/
 /testkit/breaker-kit/
+/testkit/breaker-audition/
 /testkit/mirrorball-kits/
+# SCUFF kits and the Kotlin audition clips: regenerate with :shell:generateScuffKits and :synth:generateScuffAudition
+/testkit/scuff-kits/
+/testkit/scuff-audition/
 /testkit/cosmic-family/
 testkit/soot-r0/
 testkit/soot-audition/

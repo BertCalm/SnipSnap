@@ -1,6 +1,8 @@
 # HALOBAR crotales
 
-Status: native implementation and measured audition published; owner listening pending.
+Status: native implementation and measured audition published; the owner heard
+and approved the crotales bank on 2026-11-12. Historical audition receipts below
+retain their original pre-approval status.
 Repository baseline: `49d3f3013b8e0a0cb1d9fa5fd2e37e7d4eff9d53`, the
 reviewable glockenspiel follow-up in #1003. This addition depends on that work.
 
