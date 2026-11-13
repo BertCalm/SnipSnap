@@ -975,16 +975,21 @@ class PersonalityTest {
      * Reviewed Copy field names allowed to match [ceilingClaim] anyway,
      * with a comment on each explaining why the ceiling really is settled
      * fact there (e.g. it describes a ring already known to be full).
-     * Empty today — no current Copy string legitimately needs "LAST Ns"
+     * Nearly empty — almost no Copy string legitimately needs "LAST Ns"
      * phrasing — kept as an explicit list rather than loosening the regex,
      * per the same reasoning as the marks on `Copy`: a rule loose enough
      * to auto-approve the legitimate cases is a rule someone disables the
      * first time it's wrong.
      */
-    private val reviewedCeilingClaimFields = emptySet<String>()
+    private val reviewedCeilingClaimFields = setOf(
+        // Matched only once the law became case-insensitive (its uppercase "16 S" never fit the
+        // lowercase-s unit). It is a failure line that names the length of the request that failed,
+        // which KEYS' GRAB always makes as the last 16 s; it claims nothing about what a buffer holds.
+        "KEYS_GRAB_FAILED",
+    )
 
     /** Same idea as [reviewedCeilingClaimFields], but for a match inside `Personality.kt`'s own source text (a templated `fun`'s string literal) rather than a reflected field value. */
-    private val reviewedCeilingClaimSourceSnippets = emptyList<String>()
+    private val reviewedCeilingClaimSourceSnippets = listOf("const val KEYS_GRAB_FAILED = ") // see reviewedCeilingClaimFields
 
     private fun isCommentLine(line: String): Boolean {
         val t = line.trimStart()
