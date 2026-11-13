@@ -497,7 +497,7 @@ object Velocity {
         // A harder stick or beater: more upper modes, a deeper bend, a
         // brighter click (StrikeVelocity). SKIN SNARE additionally changes
         // its wire excitation; hats, ride and shaker retain their macro response.
-        is FiredBronzePatch -> FiredBronzeInstrument.render(patch.voice, patch.macros, v)
+        is FiredBronzePatch -> patch.render(v)
         is SkinPatch -> if (patch.voice in Skin.STRUCK) patch.render(velocity = v) else null
         is BackwashPatch -> patch.render(v)
         // BREAKER strikes its SKIN source at the velocity; the chain after it keeps the timbre that gives.

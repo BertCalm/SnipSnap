@@ -142,9 +142,14 @@ class RivetSynthScreenTest : ComposeScreenTest() {
         waitFor("saved complete recipe") { UserPresets.read(shelf).any { it.name == saved.name } }
         assertEquals(saved, UserPresets.read(shelf).single { it.name == saved.name }.patch)
         activate("PRESET Wire Snare")
-        val recall = compose.onNode(SemanticsMatcher("YOUR PRESET MY RIVET") {
+        val yours = SemanticsMatcher("YOUR PRESET MY RIVET") {
             it.config.getOrNull(SemanticsActions.OnClick)?.label == "YOUR PRESET MY RIVET"
-        }, useUnmergedTree = true).fetchSemanticsNode().config.getOrNull(SemanticsActions.OnClick)!!.action!!
+        }
+        // The save writes the preset and re-reads the list off the main thread, and only then shows the
+        // YOURS strip, so the file on disk can land a frame or more before its button does.
+        waitFor("the saved preset's button") { compose.onAllNodes(yours, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
+        val recall = compose.onNode(yours, useUnmergedTree = true).fetchSemanticsNode()
+            .config.getOrNull(SemanticsActions.OnClick)!!.action!!
         compose.runOnIdle { assertTrue(recall()) }; pump()
         waitFor("user preset recall") { stored(source.voice) == saved }
 

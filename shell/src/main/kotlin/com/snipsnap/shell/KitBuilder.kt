@@ -634,7 +634,10 @@ class KitBuilderModel private constructor(
         return update(slot) { it.copy(recipe = treated.recipe) }
     }
 
-    /** Rebuild the owned four-strike bank from an edited source, preserving pad mix and zones. */
+    /**
+     * Rebuild the owned bank from an edited source, preserving pad mix and zones: the model-1 four-strike
+     * bank's four files, or model 2's round-robin grid as one chain ([FiredBronzePads]).
+     */
     fun replaceFiredBronze(slot: Int, recipe: com.snipsnap.synth.PadRecipe): KitPad {
         val pad = kit.pad(slot)
         require(FiredBronzePads.canEdit(pad)) { "pad $slot is not a native Fired Bronze bank" }
@@ -642,6 +645,20 @@ class KitBuilderModel private constructor(
             ?: throw IllegalArgumentException("a Fired Bronze bank requires a Fired Bronze patch")
         require(com.snipsnap.synth.Velocity.patchForLayers(recipe) != null) {
             "this finishing recipe cannot be replayed on strike layers"
+        }
+        if (pad!!.chain != null) {
+            require(recipe.fx == null && recipe.board == null && recipe.terminalFadeMs == null) {
+                "a Fired Bronze strike grid replays its own chain only"
+            }
+            // The edited sound on its own model: a grid takes model 2 or later, so an older save's patch is lifted.
+            val grid = patch.copy(model = maxOf(patch.model, 2))
+            // Render the whole grid before touching files, so a failed render leaves the kit intact.
+            val rendered = Robin.firedBronzeGrid(grid)
+            moveToBin(pad.sampleFile)
+            WavWriter.write(File(kitDir, pad.sampleFile), Robin.concat(rendered))
+            return update(slot) { it.copy(recipe = recipe.copy(patch = grid).toJsonValue(),
+                chain = it.chain!!.copy(boundaries = Robin.sliceStarts(rendered)),
+                source = it.source - "rawSha256" - "rawVelocitySha256" - "desampled") }
         }
         val hard = recipe.render()
         // Render every zone before touching files, so a failed render leaves the kit intact.
