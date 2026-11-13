@@ -1,7 +1,7 @@
 # SCUFF: design brief and round-0 audition
 
-Status: **round 3, two kits on the shelf; sound direction (round 0b) accepted by the owner 2026-11-12; the Kotlin port and the kit not yet heard.** No Kotlin exists. The engine stays in
-progress until every applicable owner gate has evidence (see "Gates" below).
+Status: **round 3, two kits on the shelf; sound direction (round 0b) accepted by the owner 2026-11-12; the Kotlin engine and both kits accepted from the listening page's version 5 on 2026-11-13 ("Audition is all good").** The Kotlin engine is `Scuff.kt`, the kits `ScuffKits.kt`. No phone or MPC has played them. The engine stays in
+progress until every applicable owner gate has evidence (see "Gates" below and the gates entry).
 
 Prototype: [`prototype/scuff/`](../prototype/scuff/) (`scuff_proto.py` is the model,
 `gen_audition.py` renders and measures, `build_page.py` writes the audition page). Every
@@ -524,8 +524,27 @@ harder than the engine's default.
 
 **Disclosed:** FLINT's soft rim, 60 ms long, keeps a mean of .0050 of its peak after both DC blocks, because a
 20 Hz one-pole's transient does not settle inside it; the kit test's bound is .008 (the house range is .005 to
-.01). Nothing in FLINT has been heard.
+.01). Nothing in FLINT had been heard when round 3 was pushed; see "Round 3 heard" below.
 
 The starter `SCUFF FLINT` sits beside DETROIT under SKINS; the generator builds, proves and packs both kits
 (2026-11-13: "Verified Flint: 16 pads, 192 slices, saved PCM + playback + MPC 3 track, built in 11208 ms");
 the listening page's version 5 (<https://claude.ai/artifact/Vh9vx4ezAScNhiLp9KFJd8>) carries both kits at the top.
+
+## Round 3 heard (2026-11-13)
+
+After [BertCalm/SnipSnap#1052](https://github.com/BertCalm/SnipSnap/pull/1052) merged, the owner listened to
+the page's version 5, which carries every DETROIT and FLINT pad cut from the exported MPC 3 tracks (so the
+Kotlin engine's renders through the kit builder, the bus and the export path), the soft-to-hard strips of
+every hit's twelve strikes, both kits' two phrases, and the round-1 Kotlin-against-Python section. Their
+word: "Audition is all good." Nothing to keep, revise or cut was named, so every pad, phrase and chain setting
+stands as pushed.
+
+What that closes: the owner's listen to the Kotlin engine and to both kits, which the round-1, round-2 and
+round-3 sections above each left open. Preserve `Scuff.MODEL_VERSION` 1 and `ScuffKits.VERSION` 1 as the
+accepted baseline; a later change to a voice or a kit is a new round against this one.
+
+What it does not close: a phone has not played the kits and no MPC has loaded the tracks (hardware playback),
+MPC 2 keeps one take per zone, SCUFF has no presets and is not on the roster (the engine stayed rosterless
+until this listen), the app's picker has no SCUFF entry (a session with an SDK), and the three BOOM pads are
+0.83 of an octave apart rather than an octave (the owner's call). The listen was through whatever the owner
+played the page on, which the page does not record.
