@@ -1,0 +1,1024 @@
+{
+  "version": 1,
+  "approval": "Owner approved reconstruction 2026-11-10 and trimmed delivery 2026-11-12",
+  "audition": "https://velour-drum-audition.bertcalm.chatgpt.site/round5/",
+  "siteCommit": "147679e4a88d61ad1fdb735a0b75e1881b1baad0",
+  "reference": "https://github.com/sgossner/VSCO-2-CE",
+  "referenceLicense": "CC0-1.0",
+  "kits": {
+    "close": [
+      {
+        "slot": 1,
+        "name": "C Kick",
+        "class": "KICK",
+        "level": 0.7079460024833679,
+        "muteGroup": 0,
+        "layers": [
+          {
+            "file": "close/01-soft.wav",
+            "sha256": "4c8e731548e6e3283afefa6a14036f1295b28a4e76eeaaaa420afe0da2f28e83"
+          },
+          {
+            "file": "close/01-mid.wav",
+            "sha256": "454bc854997e437c6f2c98e54fdbc15a5bd261f2d0f077642b59b7782a044a7b"
+          },
+          {
+            "file": "close/01-hard.wav",
+            "sha256": "88b2a79e2fdfddaa880a6ae7f0f5a0cebd73a5ad4ef2dc9a9eb059c826dabcbc"
+          }
+        ]
+      },
+      {
+        "slot": 2,
+        "name": "C Snare",
+        "class": "SNARE",
+        "level": 0.7079460024833679,
+        "muteGroup": 0,
+        "layers": [
+          {
+            "file": "close/02-soft.wav",
+            "sha256": "d20d1b29fedc6cd867bc26cdc38ac3861745c028e1f37ba2fb2c855dbc38d553"
+          },
+          {
+            "file": "close/02-mid.wav",
+            "sha256": "8a4d99e5eea0f153478afae76b329132e2032fc5d77d4118ecc66bd3df7839dd"
+          },
+          {
+            "file": "close/02-hard.wav",
+            "sha256": "567b88dbdfd1b8b4012c312d9c4fe1d2d391f9056d05c55bc9274e8a8fa055fd"
+          }
+        ]
+      },
+      {
+        "slot": 3,
+        "name": "Closed Hat",
+        "class": "HAT_CLOSED",
+        "level": 0.7079460024833679,
+        "muteGroup": 1,
+        "layers": [
+          {
+            "file": "close/03-soft.wav",
+            "sha256": "3b0030f93b3ce32314886dece4dfe943ceac418248ca004a78ce5e1d67a27ed4"
+          },
+          {
+            "file": "close/03-mid.wav",
+            "sha256": "ae1e593114445811308c4370a15b27425c06b97ab82f838464a2939f3b4d98b2"
+          },
+          {
+            "file": "close/03-hard.wav",
+            "sha256": "a36cd1e0f8a1cb87064f1acc8bccbd64fd22e590e1b0b9255baf56a491e19154"
+          }
+        ]
+      },
+      {
+        "slot": 4,
+        "name": "Open Hat",
+        "class": "HAT_OPEN",
+        "level": 0.7079460024833679,
+        "muteGroup": 1,
+        "layers": [
+          {
+            "file": "close/04-soft.wav",
+            "sha256": "2caf95562840d47677b673259604e8677731ffcc0607af8c2148f7fe4ca308d7"
+          },
+          {
+            "file": "close/04-mid.wav",
+            "sha256": "4fdeb38b44c9d1d07ebaa61ef536b7834faf29646ef228f2554842864d307a51"
+          },
+          {
+            "file": "close/04-hard.wav",
+            "sha256": "e4eb238d064cb687bbba8530d8df0404de0dd7c09318c78608e96672a6e76285"
+          }
+        ]
+      },
+      {
+        "slot": 5,
+        "name": "Dry C Kick",
+        "class": "KICK",
+        "level": 0.7079460024833679,
+        "muteGroup": 0,
+        "layers": [
+          {
+            "file": "close/05-soft.wav",
+            "sha256": "8f547130d84d9e5701596c5aa06a2f695466b1778f854ee30a8fa0718a9cf7bb"
+          },
+          {
+            "file": "close/05-mid.wav",
+            "sha256": "974be763d60d54e51a65bcec0caace69ff4a5c7b70d56269bd79e78e5aed74b6"
+          },
+          {
+            "file": "close/05-hard.wav",
+            "sha256": "bd5c9a2d2175ae32faf81cacfcce09c85a135838e8a2911c4c68089c10bfd66e"
+          }
+        ]
+      },
+      {
+        "slot": 6,
+        "name": "Dry C Snare",
+        "class": "SNARE",
+        "level": 0.7079460024833679,
+        "muteGroup": 0,
+        "layers": [
+          {
+            "file": "close/06-soft.wav",
+            "sha256": "7c093eb08dcb2b131b674af7362f9ee6d3cc208611277cbb9817149216e0dd56"
+          },
+          {
+            "file": "close/06-mid.wav",
+            "sha256": "a4cc6ef765b5a64554ff724d4531622d4454065bec9ab64e8bc5dce28adc0732"
+          },
+          {
+            "file": "close/06-hard.wav",
+            "sha256": "8fe8f00092744a09021b19c6d56f784a67f19675db23b0fbcf3fe3a698a92008"
+          }
+        ]
+      },
+      {
+        "slot": 7,
+        "name": "Cross Stick",
+        "class": "PERC",
+        "level": 0.7079460024833679,
+        "muteGroup": 0,
+        "layers": [
+          {
+            "file": "close/07-soft.wav",
+            "sha256": "8b11ca70a9e06b902d90783eb6969c04585683b50b2cb55ffed249dbf9e15410"
+          },
+          {
+            "file": "close/07-mid.wav",
+            "sha256": "e310a014e30859bf1e4e266b1a51442b64de544d9bc5055425de22fa49fe8cfc"
+          },
+          {
+            "file": "close/07-hard.wav",
+            "sha256": "3526df9cf77dc9758b48d10372c5c1eb1f9affdd9412a940384e19f5d5e4f1d3"
+          }
+        ]
+      },
+      {
+        "slot": 8,
+        "name": "Soft Shaker",
+        "class": "PERC",
+        "level": 0.7079460024833679,
+        "muteGroup": 0,
+        "layers": [
+          {
+            "file": "close/08-soft.wav",
+            "sha256": "a1fe110d9247fa57e137736173ffa56878f37b15d8967e2c9992a1bab34f526d"
+          },
+          {
+            "file": "close/08-mid.wav",
+            "sha256": "3acb7f9e355fdef9c116cb1dc6fc94c8b6a3ab27560d1b5e367c9ce95506470c"
+          },
+          {
+            "file": "close/08-hard.wav",
+            "sha256": "ba72652acfdcb5af0d95482788e41274c233b81dee18bf7c251fdd04dadebad3"
+          }
+        ]
+      },
+      {
+        "slot": 9,
+        "name": "Low Tom",
+        "class": "TOM",
+        "level": 0.7079460024833679,
+        "muteGroup": 0,
+        "layers": [
+          {
+            "file": "close/09-soft.wav",
+            "sha256": "d77f6bee121195a11e9d310cdbd244f138d1d6238f7e42762702d62898387e0b"
+          },
+          {
+            "file": "close/09-mid.wav",
+            "sha256": "da9ca2739885a967ad731623a756f7b815b2cd8e28441115d009c7bdccb2fbe0"
+          },
+          {
+            "file": "close/09-hard.wav",
+            "sha256": "73c4fe9519b160a6dd6857506224521df271c83790fb60437dac3a5424bf30ba"
+          }
+        ]
+      },
+      {
+        "slot": 10,
+        "name": "Mid Tom",
+        "class": "TOM",
+        "level": 0.7079460024833679,
+        "muteGroup": 0,
+        "layers": [
+          {
+            "file": "close/10-soft.wav",
+            "sha256": "d23e40ccbd56db3aa811b3ce2080f9204e7d5a97d78e71333467a79fa7d53a5d"
+          },
+          {
+            "file": "close/10-mid.wav",
+            "sha256": "e06116841591b097a24bf1baa0e2f890917eecfc1a464150cfb9abf5019e727e"
+          },
+          {
+            "file": "close/10-hard.wav",
+            "sha256": "9174aae24699f8324fdbb60b98228a5c84111a3d59fce5836eca4a04e9bf984e"
+          }
+        ]
+      },
+      {
+        "slot": 11,
+        "name": "High Tom",
+        "class": "TOM",
+        "level": 0.7079460024833679,
+        "muteGroup": 0,
+        "layers": [
+          {
+            "file": "close/11-soft.wav",
+            "sha256": "6d476d3ea8483665c83d6016f0147af4a1fe8a82b173a30b4310c65944cad06a"
+          },
+          {
+            "file": "close/11-mid.wav",
+            "sha256": "25dd39a1b0fa51b2d5b52eb0b860176c922f16038da5a9ac5f257ee1903402b6"
+          },
+          {
+            "file": "close/11-hard.wav",
+            "sha256": "80e619ab1ee7d109abb52630c5a5abd53f98a7cd52b5a6db972e5b070760195d"
+          }
+        ]
+      },
+      {
+        "slot": 12,
+        "name": "Dark Ride",
+        "class": "PERC",
+        "level": 0.7079460024833679,
+        "muteGroup": 0,
+        "layers": [
+          {
+            "file": "close/12-soft.wav",
+            "sha256": "b524c261ba59b62c7192fe88ee0cb801c9f21e156b8b4d7f05688a675f977cd0"
+          },
+          {
+            "file": "close/12-mid.wav",
+            "sha256": "123c41e436967dc3bd505348c9c8ab0e9fd2d976081ada38a0607fa9e61ea46a"
+          },
+          {
+            "file": "close/12-hard.wav",
+            "sha256": "09e2d3deb5a49fbc1a44a5da343e66280a8b779c3b0aac81b20a51194eb68d2c"
+          }
+        ]
+      },
+      {
+        "slot": 13,
+        "name": "Low Conga",
+        "class": "PERC",
+        "level": 0.7079460024833679,
+        "muteGroup": 0,
+        "layers": [
+          {
+            "file": "close/13-soft.wav",
+            "sha256": "8682a24d5d76bb409583b20a73e14988992ba458b35a335dfcf0a18bf7e7ecfb"
+          },
+          {
+            "file": "close/13-mid.wav",
+            "sha256": "c445a828abc67cd3b58100caffbfff1b2c594b960087588aa9fb0256d08f160d"
+          },
+          {
+            "file": "close/13-hard.wav",
+            "sha256": "2b0982890be5786fd5d7eaca0b5bb7bc3bdde7d8db9c2ac23371dfcbfaa65526"
+          }
+        ]
+      },
+      {
+        "slot": 14,
+        "name": "High Bongo",
+        "class": "PERC",
+        "level": 0.7079460024833679,
+        "muteGroup": 0,
+        "layers": [
+          {
+            "file": "close/14-soft.wav",
+            "sha256": "9e0e709a56c58f914fa3b5b2c8c0299610945c309592561347900da955784fe3"
+          },
+          {
+            "file": "close/14-mid.wav",
+            "sha256": "6df0423252865530df4eecf1d4830d5a6019a22c773259becf1ec353cb349881"
+          },
+          {
+            "file": "close/14-hard.wav",
+            "sha256": "75bfaa767869e081bd7bc09911cff9f3d4b562f69ca392e3717dbdce208d4378"
+          }
+        ]
+      },
+      {
+        "slot": 15,
+        "name": "Tambourine",
+        "class": "PERC",
+        "level": 0.7079460024833679,
+        "muteGroup": 0,
+        "layers": [
+          {
+            "file": "close/15-soft.wav",
+            "sha256": "dd054b0dd9bfbcfe9f8fee3fafec3ba927e6ddf636766e558b2ef760591143cc"
+          },
+          {
+            "file": "close/15-mid.wav",
+            "sha256": "5ba92e5d0e17f30d71d031d44b49a65ca1a3f5a3293fe5e1d09ce49dfb14c418"
+          },
+          {
+            "file": "close/15-hard.wav",
+            "sha256": "f89b34c318837070eee5fdfed5d941df8e9ca8afa42f47d54cecc16227fbc816"
+          }
+        ]
+      },
+      {
+        "slot": 16,
+        "name": "Woodblock",
+        "class": "PERC",
+        "level": 0.7079460024833679,
+        "muteGroup": 0,
+        "layers": [
+          {
+            "file": "close/16-soft.wav",
+            "sha256": "47a362bf0f1e630815c78c0a284aea87064f1f546b43539ab1b4447267bff3d3"
+          },
+          {
+            "file": "close/16-mid.wav",
+            "sha256": "e37512f8e5b3488809e179ad0d7af69bc90d571a0822f70ab7f82cd814d79215"
+          },
+          {
+            "file": "close/16-hard.wav",
+            "sha256": "08002dfbd1b7b88ff975cf10a97c93790758376eb7428b81c18c6f767d091dab"
+          }
+        ]
+      }
+    ],
+    "velour": [
+      {
+        "slot": 1,
+        "name": "C Kick",
+        "class": "KICK",
+        "level": 0.7079460024833679,
+        "muteGroup": 0,
+        "layers": [
+          {
+            "file": "velour/01-soft.wav",
+            "sha256": "fe981f90bf4b614bfbb5419acec14772489ea2a5d4b4808736ac90415f981dda"
+          },
+          {
+            "file": "velour/01-mid.wav",
+            "sha256": "8618c82f46ea9ad1667d39f73bb530eb21acea71c40250eecad9fb94d80d276b"
+          },
+          {
+            "file": "velour/01-hard.wav",
+            "sha256": "8fceafeef15622bd2609fb72739861b1e2232cd36218ebe4afc82d5f0a12d729"
+          }
+        ]
+      },
+      {
+        "slot": 2,
+        "name": "C Snare",
+        "class": "SNARE",
+        "level": 0.7079460024833679,
+        "muteGroup": 0,
+        "layers": [
+          {
+            "file": "velour/02-soft.wav",
+            "sha256": "2ea595f413ac6c0f6347701aa7d3a70db51533cec955aff86960f576fdde2f95"
+          },
+          {
+            "file": "velour/02-mid.wav",
+            "sha256": "658f3728a3e1bf74b5507340cbb1e12ec5bf487ddd2660f54521421a40c74b3e"
+          },
+          {
+            "file": "velour/02-hard.wav",
+            "sha256": "47cb9506d2ce210cf7595988a7023144136cb1b3675a0586f6745e3ee1cc88ca"
+          }
+        ]
+      },
+      {
+        "slot": 3,
+        "name": "Closed Hat",
+        "class": "HAT_CLOSED",
+        "level": 0.7079460024833679,
+        "muteGroup": 1,
+        "layers": [
+          {
+            "file": "velour/03-soft.wav",
+            "sha256": "133b0ff4324695728ee56bdac2f97a2f66602f59cd0612709f5908d820fbda63"
+          },
+          {
+            "file": "velour/03-mid.wav",
+            "sha256": "7b696ecd134fcbd38619294e4dee72e81dd187fc35fa5203575cd47eccbc533f"
+          },
+          {
+            "file": "velour/03-hard.wav",
+            "sha256": "dc9e89e2926e1648ffc203a9379847b706dea56d2aa54a4e208b2881013c21bd"
+          }
+        ]
+      },
+      {
+        "slot": 4,
+        "name": "Open Hat",
+        "class": "HAT_OPEN",
+        "level": 0.7079460024833679,
+        "muteGroup": 1,
+        "layers": [
+          {
+            "file": "velour/04-soft.wav",
+            "sha256": "a4dd298d81bf5bf791816b5bfa780928ae7960abce588d889c0a9eccf290f781"
+          },
+          {
+            "file": "velour/04-mid.wav",
+            "sha256": "5236e2f0d81cb2620a408f4a427a2b54726d9ce070a7708076b1f84d019662ad"
+          },
+          {
+            "file": "velour/04-hard.wav",
+            "sha256": "845110d50fa8edef50b85e290c508f6af33aaa19d5c604e7bffd431535d7f034"
+          }
+        ]
+      },
+      {
+        "slot": 5,
+        "name": "Dry C Kick",
+        "class": "KICK",
+        "level": 0.7079460024833679,
+        "muteGroup": 0,
+        "layers": [
+          {
+            "file": "velour/05-soft.wav",
+            "sha256": "8f547130d84d9e5701596c5aa06a2f695466b1778f854ee30a8fa0718a9cf7bb"
+          },
+          {
+            "file": "velour/05-mid.wav",
+            "sha256": "974be763d60d54e51a65bcec0caace69ff4a5c7b70d56269bd79e78e5aed74b6"
+          },
+          {
+            "file": "velour/05-hard.wav",
+            "sha256": "bd5c9a2d2175ae32faf81cacfcce09c85a135838e8a2911c4c68089c10bfd66e"
+          }
+        ]
+      },
+      {
+        "slot": 6,
+        "name": "Dry C Snare",
+        "class": "SNARE",
+        "level": 0.7079460024833679,
+        "muteGroup": 0,
+        "layers": [
+          {
+            "file": "velour/06-soft.wav",
+            "sha256": "7c093eb08dcb2b131b674af7362f9ee6d3cc208611277cbb9817149216e0dd56"
+          },
+          {
+            "file": "velour/06-mid.wav",
+            "sha256": "a4cc6ef765b5a64554ff724d4531622d4454065bec9ab64e8bc5dce28adc0732"
+          },
+          {
+            "file": "velour/06-hard.wav",
+            "sha256": "8fe8f00092744a09021b19c6d56f784a67f19675db23b0fbcf3fe3a698a92008"
+          }
+        ]
+      },
+      {
+        "slot": 7,
+        "name": "Cross Stick",
+        "class": "PERC",
+        "level": 0.7079460024833679,
+        "muteGroup": 0,
+        "layers": [
+          {
+            "file": "velour/07-soft.wav",
+            "sha256": "8f94248c34f3fbef8c591a8fa19d23802d92bd43538f488f3b66892d27d50883"
+          },
+          {
+            "file": "velour/07-mid.wav",
+            "sha256": "43471577ef85d0e6e2269e0b9b2010d695f9548bd8cb87ba7def3f2bd871bbaa"
+          },
+          {
+            "file": "velour/07-hard.wav",
+            "sha256": "fde0c28bccd182c1b8b206196c81bbc58350bb405e00438d670c282a93e9b08e"
+          }
+        ]
+      },
+      {
+        "slot": 8,
+        "name": "Soft Shaker",
+        "class": "PERC",
+        "level": 0.7079460024833679,
+        "muteGroup": 0,
+        "layers": [
+          {
+            "file": "velour/08-soft.wav",
+            "sha256": "83772883344ea13c68805da082faddc39776111660722a2b12b388cb84482a29"
+          },
+          {
+            "file": "velour/08-mid.wav",
+            "sha256": "f7e10a3d7c669496948852624c85ca55714d64e784db3ee0d45bd92555f75a62"
+          },
+          {
+            "file": "velour/08-hard.wav",
+            "sha256": "cb4bf4bf3b8cb213d1aa7f257b7946c8bd46b40aaed9dd25a65a600e589a5c83"
+          }
+        ]
+      },
+      {
+        "slot": 9,
+        "name": "Low Tom",
+        "class": "TOM",
+        "level": 0.7079460024833679,
+        "muteGroup": 0,
+        "layers": [
+          {
+            "file": "velour/09-soft.wav",
+            "sha256": "2e7e3d61875df1b514817138ee9d3d9706827dd1632a16a4287074e0b0930422"
+          },
+          {
+            "file": "velour/09-mid.wav",
+            "sha256": "67e4e6794ed4b562d15ad8625c5352f2dc0a0bed9ceaf301edc05c4d77867c86"
+          },
+          {
+            "file": "velour/09-hard.wav",
+            "sha256": "b51566a753b65d95b1548c18df5dde96101f5b6de5a77e4cef7f1380f9b4246a"
+          }
+        ]
+      },
+      {
+        "slot": 10,
+        "name": "Mid Tom",
+        "class": "TOM",
+        "level": 0.7079460024833679,
+        "muteGroup": 0,
+        "layers": [
+          {
+            "file": "velour/10-soft.wav",
+            "sha256": "59eb77c67dcfd362dcaff86ad3cace5f8b5e3699d32705e880afd2736cd98440"
+          },
+          {
+            "file": "velour/10-mid.wav",
+            "sha256": "9494aa8a6ae25cec6f8ee21cb4342e138bf3ec0126892e1574568717d0d1ff7b"
+          },
+          {
+            "file": "velour/10-hard.wav",
+            "sha256": "bf060ecd0000e702ec37e58e7bf7bbc23fc6a4a8d9eafd80fef5f31701b9ab06"
+          }
+        ]
+      },
+      {
+        "slot": 11,
+        "name": "High Tom",
+        "class": "TOM",
+        "level": 0.7079460024833679,
+        "muteGroup": 0,
+        "layers": [
+          {
+            "file": "velour/11-soft.wav",
+            "sha256": "0b3cf2c434be427dfaa4c2475974e073f5630a2c7b5b7aadb220843ccc130017"
+          },
+          {
+            "file": "velour/11-mid.wav",
+            "sha256": "e908d5b62435ffa508207a7cda8abda07268c51b7f4f0af032ff1ba2755618bd"
+          },
+          {
+            "file": "velour/11-hard.wav",
+            "sha256": "e3d6ddb834ff2244e287dd6561d611a459ff51069d1866eb26a003579b450458"
+          }
+        ]
+      },
+      {
+        "slot": 12,
+        "name": "Dark Ride",
+        "class": "PERC",
+        "level": 0.7079460024833679,
+        "muteGroup": 0,
+        "layers": [
+          {
+            "file": "velour/12-soft.wav",
+            "sha256": "591194b9218f651dede99cf6c279b962fcd8efc6eeaf12b8815aaf281cdb3b4a"
+          },
+          {
+            "file": "velour/12-mid.wav",
+            "sha256": "0eb3ea3fa7869ee67c02414d414a0cf034af4c932e73cc322b030ba2061b22fe"
+          },
+          {
+            "file": "velour/12-hard.wav",
+            "sha256": "59908b6591527fb0866d6a370b0467248e4a72c869e8b4b3506285deb6a3bc07"
+          }
+        ]
+      },
+      {
+        "slot": 13,
+        "name": "Low Conga",
+        "class": "PERC",
+        "level": 0.7079460024833679,
+        "muteGroup": 0,
+        "layers": [
+          {
+            "file": "velour/13-soft.wav",
+            "sha256": "1776b86cc25372bac708a33008aeaf44e9ab419881ececbf259a7775e751f3fb"
+          },
+          {
+            "file": "velour/13-mid.wav",
+            "sha256": "64755accfdaf3bd96a9a1c3ed648f3616ec498c0e4be46c9e6abf0322abf6be5"
+          },
+          {
+            "file": "velour/13-hard.wav",
+            "sha256": "7cd88159b5ba74e677aa57be9b3219bb4253b8ac3b07c9020a3588b1265a7ca3"
+          }
+        ]
+      },
+      {
+        "slot": 14,
+        "name": "High Bongo",
+        "class": "PERC",
+        "level": 0.7079460024833679,
+        "muteGroup": 0,
+        "layers": [
+          {
+            "file": "velour/14-soft.wav",
+            "sha256": "a817f4e7e1b749330871699f4560ace2348f5892b8ed17fefdff02a128bfe8c8"
+          },
+          {
+            "file": "velour/14-mid.wav",
+            "sha256": "219da428e8b1ea15b70d4c6e52dbe5df77ece1fe705fc414532d8a94a6810f46"
+          },
+          {
+            "file": "velour/14-hard.wav",
+            "sha256": "c86b975f1682828dda737782fcff40ec60b28a2849f5e9f67694665f7ed4e7f0"
+          }
+        ]
+      },
+      {
+        "slot": 15,
+        "name": "Tambourine",
+        "class": "PERC",
+        "level": 0.7079460024833679,
+        "muteGroup": 0,
+        "layers": [
+          {
+            "file": "velour/15-soft.wav",
+            "sha256": "8bd785e33ce2a615c7b218f81ccced2fff38584fb19d7ea96f8bdef4ab22a577"
+          },
+          {
+            "file": "velour/15-mid.wav",
+            "sha256": "fe5c8ac2d933287d4192254f15c7aafa7d7be50e4347dfae9be5ea3c8f4c3d1d"
+          },
+          {
+            "file": "velour/15-hard.wav",
+            "sha256": "886672bf154696793111d4e7852f30a9973203ecd7ebe2ae568d3a225a9f3e74"
+          }
+        ]
+      },
+      {
+        "slot": 16,
+        "name": "Woodblock",
+        "class": "PERC",
+        "level": 0.7079460024833679,
+        "muteGroup": 0,
+        "layers": [
+          {
+            "file": "velour/16-soft.wav",
+            "sha256": "5a946534f2e4d6c46b5c7c5e27b6720bd7a92698fef88627f10276522c51eece"
+          },
+          {
+            "file": "velour/16-mid.wav",
+            "sha256": "52cf287a1e86026192de8046d1b44d289bbc3ee7d3936717096d18541d90a505"
+          },
+          {
+            "file": "velour/16-hard.wav",
+            "sha256": "33012ca3f9ce10134e85b2caafc91e1524d80f07f0aac1a12de8b53180c5e878"
+          }
+        ]
+      }
+    ],
+    "bloom": [
+      {
+        "slot": 1,
+        "name": "C Kick",
+        "class": "KICK",
+        "level": 0.7079460024833679,
+        "muteGroup": 0,
+        "layers": [
+          {
+            "file": "bloom/01-soft.wav",
+            "sha256": "07c2c7e106cfeb0c63f121cb856967d158b843cc9eb6af806c91ca1679148175"
+          },
+          {
+            "file": "bloom/01-mid.wav",
+            "sha256": "de3f6d643bc83cbc99dfb48f9267f457853345da2b6d26dff58255b9d5c6860e"
+          },
+          {
+            "file": "bloom/01-hard.wav",
+            "sha256": "9cf25a6d3e5af1bddc297f7db9fbfa5cf2db4f01673db64166eb9d9b16675472"
+          }
+        ]
+      },
+      {
+        "slot": 2,
+        "name": "C Snare",
+        "class": "SNARE",
+        "level": 0.7079460024833679,
+        "muteGroup": 0,
+        "layers": [
+          {
+            "file": "bloom/02-soft.wav",
+            "sha256": "aabd54ece5217971c9a2ea9eaaf85acfb23148ea62cbf3fa095a362b317923f2"
+          },
+          {
+            "file": "bloom/02-mid.wav",
+            "sha256": "28a8d1ad0b30d5207a66acdc3c453d9fd1745165f41bee8d2cec30df6d9af2e4"
+          },
+          {
+            "file": "bloom/02-hard.wav",
+            "sha256": "05a04d381ed14d0cc721def8558ef4c7921f1e8ca4c8f30e59088482c42c13e6"
+          }
+        ]
+      },
+      {
+        "slot": 3,
+        "name": "Closed Hat",
+        "class": "HAT_CLOSED",
+        "level": 0.7079460024833679,
+        "muteGroup": 1,
+        "layers": [
+          {
+            "file": "bloom/03-soft.wav",
+            "sha256": "bac04939f72c54c5d92c07e0ecc1391633f7a16bdd62cacec9d751b54615aaec"
+          },
+          {
+            "file": "bloom/03-mid.wav",
+            "sha256": "485113e53a56049e7cc9b663be9cb1ac8ad003aa56b086d69565367fb27bcc92"
+          },
+          {
+            "file": "bloom/03-hard.wav",
+            "sha256": "3a587d6da2eabe9324c6096d7f9068e14f99c733f804cc1c08ab2dd2a830f8a5"
+          }
+        ]
+      },
+      {
+        "slot": 4,
+        "name": "Open Hat",
+        "class": "HAT_OPEN",
+        "level": 0.7079460024833679,
+        "muteGroup": 1,
+        "layers": [
+          {
+            "file": "bloom/04-soft.wav",
+            "sha256": "f3c263dc77f9bfa93851bf3cab7074e35b8481911b21aa04a975368e4b56ff5a"
+          },
+          {
+            "file": "bloom/04-mid.wav",
+            "sha256": "b9441331a9c3fc2007a44232417c5b7162ebc654f668be5f683f42447483b4c9"
+          },
+          {
+            "file": "bloom/04-hard.wav",
+            "sha256": "625489cb9a3101719712b8bdf01094a198e426393f3036269eaf19f5f7b5df0d"
+          }
+        ]
+      },
+      {
+        "slot": 5,
+        "name": "Dry C Kick",
+        "class": "KICK",
+        "level": 0.7079460024833679,
+        "muteGroup": 0,
+        "layers": [
+          {
+            "file": "bloom/05-soft.wav",
+            "sha256": "8f547130d84d9e5701596c5aa06a2f695466b1778f854ee30a8fa0718a9cf7bb"
+          },
+          {
+            "file": "bloom/05-mid.wav",
+            "sha256": "974be763d60d54e51a65bcec0caace69ff4a5c7b70d56269bd79e78e5aed74b6"
+          },
+          {
+            "file": "bloom/05-hard.wav",
+            "sha256": "bd5c9a2d2175ae32faf81cacfcce09c85a135838e8a2911c4c68089c10bfd66e"
+          }
+        ]
+      },
+      {
+        "slot": 6,
+        "name": "Dry C Snare",
+        "class": "SNARE",
+        "level": 0.7079460024833679,
+        "muteGroup": 0,
+        "layers": [
+          {
+            "file": "bloom/06-soft.wav",
+            "sha256": "7c093eb08dcb2b131b674af7362f9ee6d3cc208611277cbb9817149216e0dd56"
+          },
+          {
+            "file": "bloom/06-mid.wav",
+            "sha256": "a4cc6ef765b5a64554ff724d4531622d4454065bec9ab64e8bc5dce28adc0732"
+          },
+          {
+            "file": "bloom/06-hard.wav",
+            "sha256": "8fe8f00092744a09021b19c6d56f784a67f19675db23b0fbcf3fe3a698a92008"
+          }
+        ]
+      },
+      {
+        "slot": 7,
+        "name": "Cross Stick",
+        "class": "PERC",
+        "level": 0.7079460024833679,
+        "muteGroup": 0,
+        "layers": [
+          {
+            "file": "bloom/07-soft.wav",
+            "sha256": "96450e6cf7567713af71aa41b94a1e7efeaa00f5940586f05fb6e338aab96bf1"
+          },
+          {
+            "file": "bloom/07-mid.wav",
+            "sha256": "f45540852b48a21436be677efde25aa8bc5ae6aa17808a9bf20c946d16fb5499"
+          },
+          {
+            "file": "bloom/07-hard.wav",
+            "sha256": "34cfb467edbc23dd35f2446ed2ad1b3319ca91566e016475a9031157ddfb4d24"
+          }
+        ]
+      },
+      {
+        "slot": 8,
+        "name": "Soft Shaker",
+        "class": "PERC",
+        "level": 0.7079460024833679,
+        "muteGroup": 0,
+        "layers": [
+          {
+            "file": "bloom/08-soft.wav",
+            "sha256": "571b42ac2ac4c03283162700dc8f35c3d3023d45d5c2c85d091805f760a23ec7"
+          },
+          {
+            "file": "bloom/08-mid.wav",
+            "sha256": "e565361da568601f144f9e7e33b71ba4d5e8055d417a07162561f5d82494b6d8"
+          },
+          {
+            "file": "bloom/08-hard.wav",
+            "sha256": "64d2862b6ade467bded47597cb97263d1e0b2b09e166cadb7f9be702ff2bba4a"
+          }
+        ]
+      },
+      {
+        "slot": 9,
+        "name": "Low Tom",
+        "class": "TOM",
+        "level": 0.7079460024833679,
+        "muteGroup": 0,
+        "layers": [
+          {
+            "file": "bloom/09-soft.wav",
+            "sha256": "2f1ea68084fd829c216f5d4d07ec05e0a655b8d3fea9b7b388dba1d092c83777"
+          },
+          {
+            "file": "bloom/09-mid.wav",
+            "sha256": "7cd245ba242182c3b405791d51c5fbb28bd99ed478b67f65fe65c4b854714e00"
+          },
+          {
+            "file": "bloom/09-hard.wav",
+            "sha256": "0e37ec47b2fea9b92261238ca11d75c4cab6395a6995d0d184f0926b7bd13e93"
+          }
+        ]
+      },
+      {
+        "slot": 10,
+        "name": "Mid Tom",
+        "class": "TOM",
+        "level": 0.7079460024833679,
+        "muteGroup": 0,
+        "layers": [
+          {
+            "file": "bloom/10-soft.wav",
+            "sha256": "afc21d96015ba65eba1c8308c7b66cc47532cc06319b69a072104eabe2ba3343"
+          },
+          {
+            "file": "bloom/10-mid.wav",
+            "sha256": "e574ee19f4c2abc52f7d8752e8c122fb0fcbaf9838e0ae6129cf0fc295de3195"
+          },
+          {
+            "file": "bloom/10-hard.wav",
+            "sha256": "f83ca6c6d26f632464bc405bd54fe4e928eb4302dd288286be5a2236497f48bd"
+          }
+        ]
+      },
+      {
+        "slot": 11,
+        "name": "High Tom",
+        "class": "TOM",
+        "level": 0.7079460024833679,
+        "muteGroup": 0,
+        "layers": [
+          {
+            "file": "bloom/11-soft.wav",
+            "sha256": "8bc1b9199e5631ee7e756e11e6855af34be09f621482560cc94164a35832a551"
+          },
+          {
+            "file": "bloom/11-mid.wav",
+            "sha256": "881ca09145f52f4bb9ddde7acc41e34270d6857e2ac83c0937c8f3c3f9c68a2c"
+          },
+          {
+            "file": "bloom/11-hard.wav",
+            "sha256": "ab58791c42584ecf21d0df60ef3e66543efdc36130e1ac7a1976605ad284b04d"
+          }
+        ]
+      },
+      {
+        "slot": 12,
+        "name": "Dark Ride",
+        "class": "PERC",
+        "level": 0.7079460024833679,
+        "muteGroup": 0,
+        "layers": [
+          {
+            "file": "bloom/12-soft.wav",
+            "sha256": "3bf274c04cf6ee929637e194ab708d48b148909d7c7f2d7a8396bab3450a274a"
+          },
+          {
+            "file": "bloom/12-mid.wav",
+            "sha256": "9445de494778cae593487e3d670fbd2f063655146aa79495d8a891ad450d9b44"
+          },
+          {
+            "file": "bloom/12-hard.wav",
+            "sha256": "e8ddbc0c40fede53d41da3b96ced7c3589e3b95bfe7c1511479057c399577712"
+          }
+        ]
+      },
+      {
+        "slot": 13,
+        "name": "Low Conga",
+        "class": "PERC",
+        "level": 0.7079460024833679,
+        "muteGroup": 0,
+        "layers": [
+          {
+            "file": "bloom/13-soft.wav",
+            "sha256": "e58809b2d8f4dce2ee9f197dcd4d5640937d054afd643a2020693637d6e49b7f"
+          },
+          {
+            "file": "bloom/13-mid.wav",
+            "sha256": "ec4c36b5f12f7cb449d102114394e3564e9c89d402c0e2c6b4a767e42359a786"
+          },
+          {
+            "file": "bloom/13-hard.wav",
+            "sha256": "bad817d397b499678ea310b124474a385145611db90b9537719a886f298fb1b5"
+          }
+        ]
+      },
+      {
+        "slot": 14,
+        "name": "High Bongo",
+        "class": "PERC",
+        "level": 0.7079460024833679,
+        "muteGroup": 0,
+        "layers": [
+          {
+            "file": "bloom/14-soft.wav",
+            "sha256": "0bce001e5a1744c64412de22e8da9c5adbf2098193a461d161a24623cd6d8e32"
+          },
+          {
+            "file": "bloom/14-mid.wav",
+            "sha256": "30bfd9a93378559e1cd7d29b8d7be83ba29a2f4ac9c99cc597c186a2cbc62988"
+          },
+          {
+            "file": "bloom/14-hard.wav",
+            "sha256": "a6610826cfead8b1a1d57ab480cda5de559b645dcb398e96daa2ff742cc53d42"
+          }
+        ]
+      },
+      {
+        "slot": 15,
+        "name": "Tambourine",
+        "class": "PERC",
+        "level": 0.7079460024833679,
+        "muteGroup": 0,
+        "layers": [
+          {
+            "file": "bloom/15-soft.wav",
+            "sha256": "e5aa447248951cbf9cbfd696fea7be7fc39dec0ff4f6335bc23a9f402e1a7ddc"
+          },
+          {
+            "file": "bloom/15-mid.wav",
+            "sha256": "ff85ba28015f36d6ebbc152209ea6853c60fcace8c51447fe31217348452a92a"
+          },
+          {
+            "file": "bloom/15-hard.wav",
+            "sha256": "71fe41c0c08111f36d07e4f09f2c73bf089e2acb3ec0ba48d2a04249befab499"
+          }
+        ]
+      },
+      {
+        "slot": 16,
+        "name": "Woodblock",
+        "class": "PERC",
+        "level": 0.7079460024833679,
+        "muteGroup": 0,
+        "layers": [
+          {
+            "file": "bloom/16-soft.wav",
+            "sha256": "c6623b58e80288e29a7ebff6aeeb3e9f212faa7de79b5e6fffd1e370d8e561e6"
+          },
+          {
+            "file": "bloom/16-mid.wav",
+            "sha256": "6565913f72bb0af8dbe67d5d537cebc5f5404421cb0d40e807cd3f752d5a8cbc"
+          },
+          {
+            "file": "bloom/16-hard.wav",
+            "sha256": "66aa0e71fceb5e4ca306aa8dcad671e610c8064aae993673975f13c8ba644423"
+          }
+        ]
+      }
+    ]
+  }
+}
