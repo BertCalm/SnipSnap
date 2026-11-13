@@ -27,6 +27,11 @@
 > presets, HOLD, phone controls and MPC program export remain outside this gate.
 > See [design and evidence](TRIAD.md).
 
+> Fired Bronze round robin (model 2, 2026-11-13): the starter deals each pad's four
+> strike layers three fresh strikes each; every layer's first strike is the approved
+> layer, and model-1 saves keep their sound. Waits for the owner's listen.
+> See [integration and verification](FIRED_BRONZE_INTEGRATION.md), "Model 2".
+
 > Fired Bronze integration: owner confirmed the four-layer kit on MPC. Editable
 > FIRED BRONZE patches and a Fresh Tape starter preserve the approved performance.
 > See [integration and verification](FIRED_BRONZE_INTEGRATION.md).
@@ -3485,8 +3490,8 @@ The genre kits (renderer models 5 and 6, 2026-11-12 to 11-13):
   MPC 3 export. The BREAKER kit stays on model 5.
 - **Heard (2026-11-13):** the kicks, the High Timbale and the soft-to-hard grid were accepted. Both
   grooves were too wet, and the owner picked their echo and spring from four versions each.
-- **The final audition** (`:shell:generateBreakerAudition`, 68 clips) is published for the owner's
-  closing listen.
+- **The final audition** (`:shell:generateBreakerAudition`, 68 clips): the owner signed off the
+  sound on 2026-11-13 (every voice, every control, the edges, the presets and the three kits).
 
 ### ETCH, Kotlin round K1 (2026-11-13)
 
