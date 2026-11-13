@@ -59,6 +59,12 @@ object Nacre {
     fun defaults(voice: NacreVoice = NacreVoice.PEARL): Map<String, Float> =
         macrosFor(voice).associate { it.name to it.default }
 
+    /** Saved-source editing controls; the original one-argument model-3 API remains unchanged. */
+    fun macrosFor(voice: NacreVoice, model: Int): List<MacroSpec> = NacreModels.macrosFor(voice, model)
+
+    /** Fill partial saved recipes from their own model, including opt-in CONTACT at zero. */
+    fun defaults(voice: NacreVoice, model: Int): Map<String, Float> = NacreModels.defaults(voice, model)
+
     private fun settled(voice: NacreVoice, macros: Map<String, Float>): Map<String, Float> {
         val defaults = defaults(voice)
         require(macros.keys.all { it in defaults }) { "NACRE contains unknown macros: ${macros.keys - defaults.keys}" }
@@ -86,9 +92,28 @@ object Nacre {
         midi: Int = DEFAULT_MIDI, velocity: Float = 1f, seed: Long = DEFAULT_SEED,
         options: Options = Options()): Probe = play(voice, macros, midi, velocity, seed, options, true)
 
+    /**
+     * Explicit saved model 4 shares the heard profile-1 string law. The default renderer and
+     * saved models 1..3 still bypass it; no extra gain or new finishing stage is introduced.
+     */
+    internal fun renderContactProfile(voice: NacreVoice, macros: Map<String, Float>, midi: Int,
+        velocity: Float, seed: Long, contactLoss: Float): Snip {
+        require(contactLoss.isFinite() && contactLoss in 0f..1f)
+        return play(voice, macros, midi, velocity, seed, Options(), false,
+            if (contactLoss == 0f) 0f else contactLoss).snip
+    }
+
+    /** Profile inspection shares the same play path; earlier saved models never opt in. */
+    internal fun inspectContactStudy(voice: NacreVoice, macros: Map<String, Float>, midi: Int,
+        velocity: Float, seed: Long, options: Options, contactLoss: Float): Probe {
+        require(contactLoss.isFinite() && contactLoss in 0f..1f)
+        return play(voice, macros, midi, velocity, seed, options, true,
+            if (contactLoss == 0f) 0f else contactLoss)
+    }
+
     private data class CoreKey(val voice: NacreVoice, val touch: Float, val duet: Float, val midi: Int,
         val velocity: Float, val seed: Long, val muteBass: Boolean, val muteUpper: Boolean,
-        val disableCross: Boolean, val postCurrentOnly: Boolean)
+        val disableCross: Boolean, val postCurrentOnly: Boolean, val contactLoss: Float = 0f)
     private data class Core(val raw: FloatArray, val oldVenue: FloatArray, val bass: FloatArray,
         val upper: FloatArray, val sympathetic: FloatArray, val source: FloatArray,
         val events: List<Event>, val diagnostics: Map<String, Double>) {
@@ -107,8 +132,11 @@ object Nacre {
     private fun core(key: CoreKey): Pair<Core, Boolean> = cores.getOrBuild(key) {
         val macros = NacreModel1.defaults(key.voice) + mapOf("TOUCH" to key.touch, "DUET" to key.duet,
             "CURRENT" to CORE_CURRENT, "BLOOM" to CORE_BLOOM, "VENUE" to CORE_VENUE, "HOLD" to 0f)
-        val p = NacreModel1.inspect(key.voice, macros, key.midi, key.velocity, key.seed,
-            NacreModel1.Options(key.muteBass, key.muteUpper, key.disableCross, key.postCurrentOnly, false))
+        val p = if (key.contactLoss == 0f) {
+            NacreModel1.inspect(key.voice, macros, key.midi, key.velocity, key.seed,
+                NacreModel1.Options(key.muteBass, key.muteUpper, key.disableCross, key.postCurrentOnly, false))
+        } else NacreModel1.inspectContactStudy(key.voice, macros, key.midi, key.velocity, key.seed,
+            NacreModel1.Options(key.muteBass, key.muteUpper, key.disableCross, key.postCurrentOnly, false), key.contactLoss)
         stopIfInterrupted()
         val bass = p.stems.getValue("bass"); val upper = p.stems.getValue("upper")
         Core(p.raw, p.stems.getValue("venue"), bass, upper, p.stems.getValue("sympathetic"),
@@ -171,7 +199,7 @@ object Nacre {
     }
 
     private fun play(voice: NacreVoice, macros: Map<String, Float>, midi: Int, velocity: Float,
-        seed: Long, options: Options, record: Boolean): Probe {
+        seed: Long, options: Options, record: Boolean, contactLoss: Float = 0f): Probe {
         require(midi in MIN_MIDI..MAX_MIDI) { "NACRE supports MIDI $MIN_MIDI..$MAX_MIDI, got $midi" }
         require(velocity.isFinite() && velocity in 0f..1f) { "NACRE velocity must be finite and in 0..1, got $velocity" }
         val m = settled(voice, macros)
@@ -180,7 +208,7 @@ object Nacre {
         }
         stopIfInterrupted()
         val (c, hit) = core(CoreKey(voice, m.getValue("TOUCH"), m.getValue("DUET"), midi, velocity, seed,
-            options.muteBassPlucks, options.muteUpperPlucks, options.disableCrossHarp, options.postCurrentOnly))
+            options.muteBassPlucks, options.muteUpperPlucks, options.disableCrossHarp, options.postCurrentOnly, contactLoss))
         val venue = m.getValue("VENUE").toDouble()
         val current = m.getValue("CURRENT"); val bloom = m.getValue("BLOOM")
         val gain = REFERENCE_RETURN_GAIN * returnAmount(bloom)

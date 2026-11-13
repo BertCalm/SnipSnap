@@ -147,9 +147,9 @@ class NacreModelCompatibilityTest {
     }
 
     @Test
-    fun `model validation keeps all three versions available and refuses unsupported versions`() {
-        for (model in listOf(1, 2, 3)) assertTrue(NacreModels.supports(model), "lost saved model $model")
-        for (model in listOf(Int.MIN_VALUE, -1, 0, 4, Int.MAX_VALUE)) {
+    fun `model validation keeps retained versions plus opt in contact and refuses unsupported versions`() {
+        for (model in listOf(1, 2, 3, 4)) assertTrue(NacreModels.supports(model), "lost saved model $model")
+        for (model in listOf(Int.MIN_VALUE, -1, 0, 5, Int.MAX_VALUE)) {
             assertFalse(NacreModels.supports(model), "accepted unsupported model $model")
         }
         assertFailsWith<IllegalArgumentException> {
