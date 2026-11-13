@@ -57,8 +57,8 @@ class BreakerTest {
             for (m in corners) {
                 val x = Breaker.render(voice, m).samples
                 assertEquals(length, x.size, "$voice $m length")
-                // Two declared exceptions ring longer: the crash and the riser.
-                if (voice != BreakerVoice.CRASH && voice != BreakerVoice.RISER) assertTrue(length < (1.5 * rate).toInt(), "$voice stays under the loop threshold")
+                // Three declared exceptions ring longer: the crash, the riser and Bump.
+                if (voice !in setOf(BreakerVoice.CRASH, BreakerVoice.RISER, BreakerVoice.BUMP)) assertTrue(length < (1.5 * rate).toInt(), "$voice stays under the loop threshold")
                 assertTrue(x.all { it.isFinite() }, "$voice $m finite")
                 val peak = x.maxOf { abs(it) }
                 assertTrue(peak in .01f..1f, "$voice $m peak $peak")
@@ -82,8 +82,11 @@ class BreakerTest {
         }
     }
 
-    /** The drums the rig's tail claims are about. The cymbals ring longer than any tail window here, and the riser is all build. */
-    private val struckDrums = BreakerVoice.entries - setOf(BreakerVoice.RIDE, BreakerVoice.CRASH, BreakerVoice.RISER)
+    /**
+     * The drums the rig's tail claims are about. The cymbals ring longer than any tail window here, the
+     * riser is all build, and Bump is the tank itself.
+     */
+    private val struckDrums = BreakerVoice.entries - setOf(BreakerVoice.RIDE, BreakerVoice.CRASH, BreakerVoice.RISER, BreakerVoice.BUMP)
 
     @Test
     fun `CRUSH lifts the tail, and past halfway swells the kick's and snare's back up`() {
@@ -302,6 +305,64 @@ class BreakerTest {
         assertEquals(3, back.model)
         assertContentEquals(Breaker.render(BreakerVoice.SNARE, model = 3).samples, back.render().samples, "a model-3 save keeps its tone")
         assertFalse(back.render().samples.contentEquals(Breaker.render(BreakerVoice.SNARE).samples))
+    }
+
+    @Test
+    fun `model 5 at DAMP's neutral renders every model-4 voice as model 4 did, and model 4 has no DAMP or Bump`() {
+        for (voice in BreakerVoice.entries - BreakerVoice.BUMP) {
+            assertContentEquals(Breaker.render(voice, model = 4).samples, Breaker.render(voice).samples, "$voice at DAMP .5")
+            assertContentEquals(Breaker.render(voice, velocity = .4f, take = 2, model = 4).samples,
+                Breaker.render(voice, velocity = .4f, take = 2).samples, "$voice soft, take 2, at DAMP .5")
+        }
+        assertFalse(Breaker.macrosFor(BreakerVoice.SNARE, model = 4).any { it.name == "DAMP" })
+        kotlin.test.assertFailsWith<IllegalArgumentException> { BreakerPatch("Old", BreakerVoice.BUMP, emptyMap(), model = 4) }
+        kotlin.test.assertFailsWith<IllegalArgumentException> { BreakerPatch("Old", BreakerVoice.SNARE, mapOf("DAMP" to .8f), model = 4) }
+    }
+
+    @Test
+    fun `DAMP damps every kind of source, and below its neutral lets the drums with room ring longer`() {
+        // The drum's body (.05 to .3 s) against its first 50 ms; on the cymbals and Bump, which ring, the
+        // tail (.3 to 1.2 s). In the rig a drum's tail is mostly the spring, so the drums are measured
+        // where the drum itself is.
+        fun body(x: FloatArray) = db(rms(x, .05, .3)) - db(rms(x, 0.0, .05))
+        fun ring(x: FloatArray) = db(rms(x, .3, 1.2)) - db(rms(x, 0.0, .05))
+        val ringers = setOf(BreakerVoice.RIDE, BreakerVoice.CRASH, BreakerVoice.BUMP)
+        // Below .5 only a drum whose own decay has room rings longer; the recorded tambourine cannot.
+        val longer = setOf(BreakerVoice.KICK, BreakerVoice.HAT_OPEN, BreakerVoice.TOM_RACK) + ringers
+        // In the full rig a heavy spring and crush rebuild a damped drum's tail (the snare at DRIP .6,
+        // CRUSH .9 measures the same at every DAMP), so a drum is measured with the rig's tail stages off.
+        val bare = mapOf("DRIP" to 0f, "SLAP" to 0f, "CRUSH" to 0f)
+        for (voice in BreakerVoice.entries - BreakerVoice.RISER) {
+            val measure: (FloatArray) -> Double = if (voice in ringers) ::ring else ::body
+            val rig = if (voice in ringers) emptyMap() else bare
+            val r = listOf(.15f, .5f, .85f).map { measure(Breaker.render(voice, rig + ("DAMP" to it)).samples) }
+            val inRig = listOf(.15f, .5f, .85f).map { measure(Breaker.render(voice, mapOf("DAMP" to it)).samples) }
+            println("BREAKER $voice ${if (voice in ringers) "ring" else "body, bare"} at DAMP .15/.5/.85: ${r.map { "%.1f".format(it) }} dB; in its rig: ${inRig.map { "%.1f".format(it) }} dB")
+            assertTrue(r[2] < r[1] - 1.0, "$voice: DAMP .85 dies sooner than .5 ($r)")
+            if (voice in longer) assertTrue(r[0] > r[1] + .5, "$voice: DAMP .15 rings longer than .5 ($r)")
+        }
+        // The riser's strikes are the snare's, damped as the snare is.
+        val riser = listOf(.5f, .85f).map { Breaker.render(BreakerVoice.RISER, mapOf("DAMP" to it)).samples }
+        assertFalse(riser[0].contentEquals(riser[1]), "the riser's snares take DAMP")
+        assertContentEquals(Breaker.render(BreakerVoice.TAMBOURINE, mapOf("DAMP" to .2f)).samples,
+            Breaker.render(BreakerVoice.TAMBOURINE).samples, "the tambourine below DAMP .5 is the recording as played")
+    }
+
+    @Test
+    fun `Bump is the tank kicked - it rings past the one-shot limit, each take another kick, a softer one rings shorter`() {
+        val x = Breaker.render(BreakerVoice.BUMP).samples
+        val ringing = db(rms(x, 1.6, 2.2)) - db(rms(x, 0.0, .1))
+        println("BREAKER Bump 1.6-2.2 s against its first 100 ms: ${"%.1f".format(ringing)} dB")
+        assertTrue(ringing > -45, "the kicked tank still rings after 1.5 s ($ringing dB)")
+        assertEquals(DrumClass.PERC, Breaker.drumClassFor(BreakerVoice.BUMP))
+        val again = Breaker.render(BreakerVoice.BUMP, take = 1).samples
+        assertTrue(x.indices.sumOf { abs(x[it] - again[it]).toDouble() } / x.size > 1e-3, "a take is another kick")
+        // A softer kick drives the springs less, so they ring shorter. Each hit is levelled, so this is
+        // the sound changing, not its level: 1.4 to 2.2 s in, against the first 100 ms.
+        fun late(y: FloatArray) = db(rms(y, 1.4, 2.2)) - db(rms(y, 0.0, .1))
+        val full = late(x); val soft = late(Breaker.render(BreakerVoice.BUMP, velocity = .4f).samples)
+        println("BREAKER Bump 1.4-2.2 s re its first 100 ms, full / 40%: ${"%.1f".format(full)} / ${"%.1f".format(soft)} dB")
+        assertTrue(soft < full - 3.0, "a softer kick of the tank rings shorter ($full, $soft dB)")
     }
 
     @Test
