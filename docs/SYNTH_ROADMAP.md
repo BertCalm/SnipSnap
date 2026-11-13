@@ -3553,3 +3553,11 @@ The second kit, SCUFF FLINT (`scuff-flint`, 132 BPM): faster and brighter, every
 against DETROIT's, three rims and no low bass hit, the chain set harder for the whole kit, frantic two bars
 and a rim riser. The drum gate's "multiple distinct genre kits" now has two; `ScuffKitsTest` holds them apart
 pad for pad. Proved through save, playback and MPC 3 export like DETROIT; nothing heard. See [SCUFF](SCUFF.md).
+
+### SCUFF, heard (2026-11-13)
+
+After the rounds 1 to 3 pull request merged, the owner heard the listening page's version 5 (both kits' pads
+cut from the exported MPC 3 tracks, the velocity strips, the phrases, the Kotlin-against-Python section):
+"Audition is all good." The Kotlin engine (`Scuff.MODEL_VERSION` 1) and both kits (`ScuffKits.VERSION` 1) are
+the accepted baseline. Open: hardware playback, MPC 2's one take per zone, presets and the roster, the app
+picker. See [SCUFF](SCUFF.md) and the gates entry.
