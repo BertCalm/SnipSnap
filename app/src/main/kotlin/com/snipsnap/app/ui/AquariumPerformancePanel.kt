@@ -64,7 +64,7 @@ internal fun AquariumPerformancePanel(
             when {
                 !streamUp -> "NO STREAM · SETTINGS CAN STILL BE SAVED"
                 faulted -> "AQUARIUM FAULT · RESET TAIL OR REOPEN KIT"
-                pending -> "WAITING TO QUEUE SETTINGS…"
+                pending -> "Waiting to queue settings…"
                 !settings.enabled -> "GLOBAL BYPASS · DRY MIX"
                 settings.settings.isBypass -> "DRY · ALL SIX EFFECT MIXES ARE ZERO"
                 settings.outputGain == 0f -> "LIVE WET MIX MUTED"

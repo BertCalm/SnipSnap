@@ -2943,6 +2943,17 @@ tasks.register<JavaExec>("generateVentKnuckleAudition") {
 }
 
 /** Three model-1 clips, preserving the foreground and comparing only venue return. */
+/** Listening Desk round nacre-strike-1: v1 and the two v2 strike-shaping variants as C3 ladders. */
+tasks.register<JavaExec>("generateNacreStrikeAudition") {
+    group = "distribution"
+    description = "Render NACRE model-4 Soft/Medium/Hard ladders for v1 and strike-shaping variants A and B, with measurements."
+    maxHeapSize = "768m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.NacreStrikeAuditionGenerator")
+    workingDir = projectDir
+    args(providers.gradleProperty("nacreStrikeAuditionOutput").orNull ?: "${rootDir}/testkit/nacre-strike-audition")
+}
+
 tasks.register<JavaExec>("generateNacreGentleAudition") {
     group = "distribution"
     description = "Render the original model-1 gesture and two restrained venue-return comparisons."

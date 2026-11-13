@@ -40,7 +40,7 @@ internal fun ConfluenceGatheringCard(
     Column(Modifier.fillMaxWidth().testTag("confluence-gathering"), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         TapeText("GATHERING · A NEW VARIATION", TapeType.pixelSmall, scheme.ink.tape, maxLines = 2)
         TapeText(
-            "REBUILDS THE SAVED GATHERING. THIS PAD'S CURRENT EDITS AND FX STAY ON THE ORIGINAL.",
+            "Rebuilds the saved gathering. This pad's current edits and FX stay on the original.",
             TapeType.pixelSmall, scheme.ink2.tape, maxLines = Int.MAX_VALUE,
         )
         if (seconds != null && performers != null) {
@@ -81,12 +81,12 @@ internal fun ConfluenceGatheringCard(
                 onControlsChange(controls.copy(answerGain = positiveValue(it)))
             }
         }
-        val line = refusal ?: status ?: if (loading) "OPENING THE SAVED GATHERING…" else null
+        val line = refusal ?: status ?: if (loading) "Opening the saved gathering…" else null
         if (line != null) {
             TapeText(line, TapeType.pixelSmall, if (refusal == null) scheme.ink2.tape else scheme.warn.tape, maxLines = Int.MAX_VALUE)
         }
         if (!loading && controls != null && destination == null) {
-            TapeText("NO EMPTY PAD. MAKE ROOM BEFORE SAVING A VARIATION.", TapeType.pixelSmall, scheme.warn.tape, maxLines = Int.MAX_VALUE)
+            TapeText("No empty pad. Make room before saving a variation.", TapeType.pixelSmall, scheme.warn.tape, maxLines = Int.MAX_VALUE)
         }
         ActionButton("HEAR", scheme, enabled = enabled, modifier = Modifier.fillMaxWidth(), onClick = onHear)
         ActionButton(

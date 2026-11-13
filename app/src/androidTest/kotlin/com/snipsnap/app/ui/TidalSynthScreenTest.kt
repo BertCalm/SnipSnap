@@ -396,7 +396,7 @@ class TidalSynthScreenTest : ComposeScreenTest() {
         show(presetReader = { error("fixture shelf read failed") })
         // The test clock is manual: async shelf state needs a frame to reach semantics.
         waitFor("failed TIDAL shelf state", timeoutMillis = 5_000) {
-            compose.onAllNodesWithText("SAVED TIDAL COULD NOT OPEN. CHOOSE A PRESET.")
+            compose.onAllNodesWithText("Saved tidal could not open. Choose a preset.")
                 .fetchSemanticsNodes().isNotEmpty()
         }
         assertNull(currentRootOrNull())

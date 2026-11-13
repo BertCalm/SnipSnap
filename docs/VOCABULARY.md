@@ -6,7 +6,7 @@ This is part 1 of clarity PR 5 (`docs/superpowers/specs/2026-10-27-ui-clarity-de
 
 How to read it:
 
-- Copy is ALL CAPS on screen, so names are written in caps and in backticks. Anything in backticks is a literal on-screen string or a code identifier.
+- Labels are ALL CAPS on screen, so names are written in caps and in backticks. Messages and hints are sentence case (clarity PR 5d); when a sentence names a control it keeps the control's name in caps, exactly as labelled. Anything in backticks is a literal on-screen string or a code identifier.
 - "Today" is what the code draws or says now. "Proposed" is a suggestion, not a decision.
 - A name written as `Keep` means the name stays and the control that opens it carries a one-line plain description.
 
@@ -20,7 +20,7 @@ How to read it:
 
 ## Voice guide
 
-Copied from the spec (section 7.5). It goes at the top of `Personality.kt` in the next part.
+Copied from the spec (section 7.5). It is at the top of `Personality.kt` (clarity PR 5d).
 
 - Say what happened, or what to do next.
 - Buttons are verbs.
@@ -28,6 +28,8 @@ Copied from the spec (section 7.5). It goes at the top of `Personality.kt` in th
 - Errors say what failed and what to try.
 - No metaphors, jokes or period references.
 - An ellipsis means work in progress, and nothing else.
+
+**Case** (owner ruling D3, clarity PR 5d). Sentence case for anything that is a sentence: hints, empty states, descriptions, errors, dock messages, HELP and sheet row descriptions. A message ends in a full stop, `…` (work in progress) or `?`. CAPS stays for place and stage tabs, buttons, section titles, chip labels and pad ids. In `Copy` and `Places` a label is marked `@field:CopyLabel`, a caption (a sentence fragment read beside a control) `@field:CopyCaption`, and an unmarked string is a message; `PersonalityTest` holds each kind to its law.
 
 ---
 

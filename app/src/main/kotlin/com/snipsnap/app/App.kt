@@ -82,6 +82,7 @@ import com.snipsnap.app.ui.HelpScreen
 import com.snipsnap.app.ui.KitLoading
 import com.snipsnap.app.ui.KitScreen
 import com.snipsnap.app.ui.KeysScreen
+import com.snipsnap.app.ui.MurmurRoundRobinKeysScreen
 import com.snipsnap.app.ui.KitsScreen
 import com.snipsnap.app.ui.LocalBusySink
 import com.snipsnap.app.ui.LocalJobs
@@ -200,12 +201,15 @@ import com.snipsnap.xpm.PadNoteMap
 import java.io.File
 import kotlin.math.roundToInt
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.random.Random
 
 private const val TAG = "App"
@@ -599,6 +603,7 @@ fun App(shelf: KitShelf) {
     }
     // KEYS: the instrument open on the grid, from the shelf's INSTRUMENTS list.
     var openInstrument by remember { mutableStateOf<KitShelf.InstrumentEntry?>(null) }
+    var openRoundRobin by remember { mutableStateOf<com.snipsnap.shell.MurmurRoundRobinShelf.SavedBank?>(null) }
     var instruments by remember { mutableStateOf<List<KitShelf.InstrumentEntry>>(emptyList()) }
     // ROOMS (YY5): kept rooms beside the instruments; the revision bumps after a forget.
     var rooms by remember { mutableStateOf<List<Rooms.Room>>(emptyList()) }
@@ -1361,6 +1366,41 @@ fun App(shelf: KitShelf) {
      */
     fun hasLandingPad(kit: com.snipsnap.kit.Kit): Boolean =
         (PadBanks.slots(0).first..PadBanks.slots(1).last).any { kit.pad(it) == null }
+
+    /** The kept PLUCK picker uses the same source-bound writer as SYNTH's instrument sheet. */
+    fun makeMurmurKeptInstrument(id: String) {
+        if (busy != null) return
+        val cancelled = AtomicBoolean(false)
+        var operation = Busy("MAKING MURMUR PLUCK", cancel = { cancelled.set(true) })
+        busy = operation
+        scope.launch {
+            try {
+                val made = withContext(Dispatchers.IO) {
+                    val worker = currentCoroutineContext()
+                    com.snipsnap.shell.MurmurKeptInstrumentPicker.make(id, shelf.instrumentsDir,
+                        cancelled = { cancelled.get() || !worker.isActive },
+                        progress = { done, total ->
+                            scope.launch(Dispatchers.Main.immediate) {
+                                if (busy === operation) {
+                                    operation = operation.copy(done = done, total = total)
+                                    busy = operation
+                                }
+                            }
+                        })
+                }
+                roomsRevision++
+                dock.say("${made.name.uppercase(java.util.Locale.ROOT)} IS READY IN INSTRUMENTS.")
+            } catch (e: CancellationException) {
+                dock.say("MURMUR INSTRUMENT CANCELLED.")
+                throw e
+            } catch (e: Exception) {
+                Log.e(TAG, "makeMurmurKeptInstrument: selected delivery failed", e)
+                dock.say(Copy.CREATE_FAILED)
+            } finally {
+                if (busy === operation) busy = null
+            }
+        }
+    }
 
     /**
      * A starter kit, rendered and landed on PADS. The render takes a few
@@ -4676,7 +4716,15 @@ fun App(shelf: KitShelf) {
                         )
                         top == Bench.KEYS -> {
                             val inst = openInstrument
-                            if (inst == null) {
+                            val rr = openRoundRobin
+                            if (rr != null) {
+                                MurmurRoundRobinKeysScreen(
+                                    saved = rr,
+                                    shelf = shelf.root,
+                                    backLabel = checkNotNull(nav.backChip),
+                                    onBack = { openRoundRobin = null; nav.closeBench() },
+                                )
+                            } else if (inst == null) {
                                 nav.closeBench()
                             } else {
                                 KeysScreen(
@@ -4724,10 +4772,14 @@ fun App(shelf: KitShelf) {
                         top == Bench.INSTRUMENTS -> InstrumentsBench(
                             instruments = instruments,
                             backLabel = checkNotNull(nav.backChip) { "INSTRUMENTS is a bench, so it has something to go back to" },
-                            onOpen = { openInstrument = it; landOn(AppScreen.KEYS) },
+                            onOpen = { openRoundRobin = null; openInstrument = it; landOn(AppScreen.KEYS) },
                             onBack = { nav.closeBench() },
                             expansions = expansionStore,
                             onToast = { dock.say(it) },
+                            onMakeMurmurInstrument = ::makeMurmurKeptInstrument,
+                            murmurInstrumentEnabled = busy == null,
+                            roundRobinShelf = shelf.root,
+                            onOpenRoundRobin = { openInstrument = null; openRoundRobin = it; landOn(AppScreen.KEYS) },
                         )
                         // The pad editor benches (PAD SHEET, GRAIN FIELD,
                         // SPLICE, STACK, SPREAD) and SNAP's own panels (LIVE,

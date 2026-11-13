@@ -92,7 +92,7 @@ class ContourSynthScreenTest : ComposeScreenTest() {
         dial("BODY", .2f)
         click("MAKE INSTRUMENT")
         slider("RELEASE").assertExists()
-        compose.onNodeWithText("FOUR OCTAVES OF SETTLED TONE.", substring = true).assertExists()
+        compose.onNodeWithText("Four octaves of settled tone.", substring = true).assertExists()
         dial("RELEASE", .5f)
         click("MAKE")
         // Real offline DSP is deliberately not tied to the Compose frame clock.

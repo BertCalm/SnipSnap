@@ -156,7 +156,7 @@ class StrikeFxLayersTest {
             { f.m.clearStrikeFxLayers(3) },
         )) {
             val e = assertFailsWith<IllegalArgumentException> { verb() }
-            assertTrue(e.message!!.startsWith("REMOVE "), e.message)
+            assertTrue(e.message!!.startsWith("Remove "), e.message)
         }
         assertEquals(before, f.dir.listFiles()!!.map { it.name }.sorted())
     }
