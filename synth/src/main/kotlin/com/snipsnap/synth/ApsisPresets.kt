@@ -3,7 +3,8 @@ package com.snipsnap.synth
 /**
  * Six frozen PASSAGE recipes plus three starters each for GRAIN and ANCHOR.
  * The new voices begin at the study's native .65 strike level, with a distinct
- * movement variation and a held version. ANCHOR starts one octave lower.
+ * movement variation and a held version. GRAIN uses the approved model-four
+ * material balance; ANCHOR stays model three and starts one octave lower.
  */
 object ApsisPresets {
     private fun p(name: String, stretch: Float, distance: Float, bodies: Float, align: Float,

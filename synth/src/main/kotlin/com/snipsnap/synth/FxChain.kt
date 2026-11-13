@@ -8,7 +8,7 @@ import com.snipsnap.json.JsonValue
 /**
  * The per-pad effects rack. Order is fixed and not negotiable:
  *
- *    PITCH → DIVE → SWELL → REVERSE → SMEAR → GHOST → SPIKE → VOLUME → OCTAVER → EQ → CONTOUR → WAH → COMPRESSOR → SQUASH → FORGE → VALVE → CRUNCH → RING → DUB → VINYL → TAPE → VIBRATO → ENSEMBLE → PHASE → FLANGER → TREMOLO → ECHO → REWIND → SPRING → ROOM → HUSH → MOTION
+ *    PITCH → DIVE → SWELL → REVERSE → SMEAR → GHOST → SPIKE → VOLUME → OCTAVER → EQ → CONTOUR → WAH → COMPRESSOR → SQUASH → FORGE → VALVE → CRUNCH → RING → DUB → VINYL → TAPE → VIBRATO → ENSEMBLE → PHASE → FLANGER → TREMOLO → ROTARY → ECHO → REWIND → SPRING → ROOM → HUSH → MOTION
  *
  * contour after EQ and before the dynamics, so SQUASH tames the resonant
  * peak rather than the peak riding over the squash; ensemble after tape and
@@ -47,6 +47,9 @@ import com.snipsnap.json.JsonValue
  * sit after the amp (the pedal board spec's Stage 4 order), the sweep and the throb are
  * moves on the finished tone, and the delay's repeats then carry both, as a real board's
  * modulation pedals feed its delay.
+ *
+ * rotary after tremolo and before echo: a rotary speaker is the cabinet after the amp, the last
+ * of the moves on the finished tone, and the delay's repeats then carry the swirl.
  *
  * rewind after echo and before spring: a reverse delay sits after the amp beside
  * the delay, and the spring and the room then put the same space on the backwards
@@ -124,6 +127,7 @@ data class FxChain(
     val rewind: Map<String, Float>? = null,
     val flanger: Map<String, Float>? = null,
     val tremolo: Map<String, Float>? = null,
+    val rotary: Map<String, Float>? = null,
 ) {
     init {
         for (s in SECTIONS) {
@@ -284,6 +288,7 @@ data class FxChain(
             Section("phase", Phase.MACROS, { it.phase }, { c, m -> c.copy(phase = m) }, Phase::process),
             Section("flanger", Flanger.MACROS, { it.flanger }, { c, m -> c.copy(flanger = m) }, Flanger::process),
             Section("tremolo", Tremolo.MACROS, { it.tremolo }, { c, m -> c.copy(tremolo = m) }, Tremolo::process),
+            Section("rotary", Rotary.MACROS, { it.rotary }, { c, m -> c.copy(rotary = m) }, Rotary::process),
             Section("echo", Echo.MACROS, { it.echo }, { c, m -> c.copy(echo = m) }, Echo::process),
             Section("rewind", Rewind.MACROS, { it.rewind }, { c, m -> c.copy(rewind = m) }, Rewind::process),
             Section("spring", Spring.MACROS, { it.spring }, { c, m -> c.copy(spring = m) }, Spring::process),

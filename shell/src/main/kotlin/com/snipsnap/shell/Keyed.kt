@@ -10,6 +10,7 @@ import com.snipsnap.audio.Scales
 import com.snipsnap.audio.Snip
 import com.snipsnap.audio.Tuner
 import com.snipsnap.synth.Gate
+import com.snipsnap.synth.Pump
 import com.snipsnap.synth.Roll
 import com.snipsnap.synth.Wobble
 import java.util.Locale
@@ -33,14 +34,17 @@ import java.util.Locale
  *   same beats;
  * - **gated** — the hit chopped into a square envelope at a note division
  *   at the kit's tempo ([Gate]): shares WOBBLE's grid too, so a gate and a
- *   roll and a filter sweep land on the same beats.
+ *   roll and a filter sweep land on the same beats;
+ * - **pumped** — the sidechain pump: the first division untouched, then on
+ *   every beat the level ducks and breathes back up ([Pump]), on the same
+ *   grid, so a pump lands under a gate or a roll.
  *
  * Each is `Snip → Snip` with AMOUNT how far, peak matched, and its own
  * honest refusal in words.
  */
 object Keyed {
 
-    val NAMES: List<String> = listOf("retuned", "bodied", "wobbled", "eternal", "rolled", "gated")
+    val NAMES: List<String> = listOf("retuned", "bodied", "wobbled", "eternal", "rolled", "gated", "pumped")
 
     /** The honest refusal: the sound is not what the treatment wants. */
     class Refused(message: String) : IllegalArgumentException(message)
@@ -52,7 +56,7 @@ object Keyed {
     data class Dials(
         /** BODY: the modes' T60, seconds. */
         val decay: Float = Body.DECAY_DEFAULT,
-        /** WOBBLE: the note division the sweep is synced to. */
+        /** WOBBLE, ROLL, GATE and PUMP: the note division they are synced to. */
         val division: String = Wobble.DEFAULT_DIVISION,
         /** ETERNAL: the tail in seconds; null takes it from AMOUNT ([Eternal.tailFor]). */
         val tail: Float? = null,
@@ -84,6 +88,7 @@ object Keyed {
             "eternal" -> if (amount <= 0f) null else Eternal.refusal(snip, dials.tail ?: Eternal.tailFor(amount), dials.knee)
             "rolled" -> if (amount <= 0f) null else Roll.refusal(snip, context.bpm, dials.division)
             "gated" -> if (amount <= 0f) null else Gate.refusal(snip, context.bpm, dials.division)
+            "pumped" -> if (amount <= 0f) null else Pump.refusal(snip, context.bpm, dials.division)
             else -> null
         }
     }
@@ -131,6 +136,15 @@ object Keyed {
                 }
                 Result(
                     Gate.chop(snip, context.bpm, dials.division, amount),
+                    "%s AT %d BPM".format(Locale.ROOT, dials.division, Math.round(context.bpm)),
+                )
+            }
+            "pumped" -> {
+                if (amount > 0f) {
+                    Pump.refusal(snip, context.bpm, dials.division)?.let { throw Refused(it) }
+                }
+                Result(
+                    Pump.pump(snip, context.bpm, dials.division, amount),
                     "%s AT %d BPM".format(Locale.ROOT, dials.division, Math.round(context.bpm)),
                 )
             }
