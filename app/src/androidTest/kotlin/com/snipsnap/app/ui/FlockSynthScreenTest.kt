@@ -164,7 +164,7 @@ class FlockSynthScreenTest : ComposeScreenTest() {
         val progress = compose.onAllNodes(SemanticsMatcher("instrument render counter") { node ->
             node.config.getOrNull(SemanticsProperties.ProgressBarRangeInfo) != null &&
                 node.config.getOrNull(SemanticsProperties.ContentDescription)
-                    ?.any { it.startsWith("RENDERING ") } == true
+                    ?.any { it.startsWith("Rendering ") } == true
         }).fetchSemanticsNodes().singleOrNull()
         return progress?.config?.getOrNull(SemanticsProperties.ContentDescription)?.joinToString()
             ?: "no instrument render counter on screen"

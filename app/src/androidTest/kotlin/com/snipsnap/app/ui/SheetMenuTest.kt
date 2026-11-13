@@ -34,7 +34,7 @@ class SheetMenuTest : ComposeScreenTest() {
     @Test
     fun a_row_is_named_by_its_name_and_its_description_and_is_a_full_touch_target() {
         show()
-        button("BACKUP. EVERY KIT, ONE FILE").assertHeightIsAtLeast(Layout.MIN_HIT_TARGET.dp)
+        button("BACKUP. Every kit, one file").assertHeightIsAtLeast(Layout.MIN_HIT_TARGET.dp)
         button("OPEN INSPECT FILE").assertHeightIsAtLeast(Layout.MIN_HIT_TARGET.dp)
     }
 
@@ -43,7 +43,7 @@ class SheetMenuTest : ComposeScreenTest() {
         var ran = 0
         var dismissed = 0
         show(onDismiss = { dismissed++ }, onRun = { ran++ })
-        button("BACKUP. EVERY KIT, ONE FILE").performClick()
+        button("BACKUP. Every kit, one file").performClick()
         pump()
         compose.runOnIdle {
             assertEquals(1, ran)
@@ -55,7 +55,7 @@ class SheetMenuTest : ComposeScreenTest() {
     fun a_disabled_row_stays_in_the_list_and_does_not_run() {
         var ran = 0
         show(canRun = false, onRun = { ran++ })
-        button("BACKUP. EVERY KIT, ONE FILE").assertIsNotEnabled()
+        button("BACKUP. Every kit, one file").assertIsNotEnabled()
         button("OPEN INSPECT FILE").assertIsEnabled()
         compose.runOnIdle { assertEquals(0, ran) }
     }
