@@ -97,10 +97,11 @@ object Nacre {
      * saved models 1..3 still bypass it; no extra gain or new finishing stage is introduced.
      */
     internal fun renderContactProfile(voice: NacreVoice, macros: Map<String, Float>, midi: Int,
-        velocity: Float, seed: Long, contactLoss: Float): Snip {
+        velocity: Float, seed: Long, contactLoss: Float,
+        strike: NacreStrikeShape = NacreStrikeShape.DEFAULT): Snip {
         require(contactLoss.isFinite() && contactLoss in 0f..1f)
         return play(voice, macros, midi, velocity, seed, Options(), false,
-            if (contactLoss == 0f) 0f else contactLoss).snip
+            if (contactLoss == 0f) 0f else contactLoss, strike).snip
     }
 
     /** Profile inspection shares the same play path; earlier saved models never opt in. */
@@ -113,7 +114,8 @@ object Nacre {
 
     private data class CoreKey(val voice: NacreVoice, val touch: Float, val duet: Float, val midi: Int,
         val velocity: Float, val seed: Long, val muteBass: Boolean, val muteUpper: Boolean,
-        val disableCross: Boolean, val postCurrentOnly: Boolean, val contactLoss: Float = 0f)
+        val disableCross: Boolean, val postCurrentOnly: Boolean, val contactLoss: Float = 0f,
+        val strike: NacreStrikeShape = NacreStrikeShape.DEFAULT)
     private data class Core(val raw: FloatArray, val oldVenue: FloatArray, val bass: FloatArray,
         val upper: FloatArray, val sympathetic: FloatArray, val source: FloatArray,
         val events: List<Event>, val diagnostics: Map<String, Double>) {
@@ -134,9 +136,10 @@ object Nacre {
             "CURRENT" to CORE_CURRENT, "BLOOM" to CORE_BLOOM, "VENUE" to CORE_VENUE, "HOLD" to 0f)
         val p = if (key.contactLoss == 0f) {
             NacreModel1.inspect(key.voice, macros, key.midi, key.velocity, key.seed,
-                NacreModel1.Options(key.muteBass, key.muteUpper, key.disableCross, key.postCurrentOnly, false))
+                NacreModel1.Options(key.muteBass, key.muteUpper, key.disableCross, key.postCurrentOnly, false), key.strike)
         } else NacreModel1.inspectContactStudy(key.voice, macros, key.midi, key.velocity, key.seed,
-            NacreModel1.Options(key.muteBass, key.muteUpper, key.disableCross, key.postCurrentOnly, false), key.contactLoss)
+            NacreModel1.Options(key.muteBass, key.muteUpper, key.disableCross, key.postCurrentOnly, false), key.contactLoss,
+            key.strike)
         stopIfInterrupted()
         val bass = p.stems.getValue("bass"); val upper = p.stems.getValue("upper")
         Core(p.raw, p.stems.getValue("venue"), bass, upper, p.stems.getValue("sympathetic"),
@@ -199,7 +202,8 @@ object Nacre {
     }
 
     private fun play(voice: NacreVoice, macros: Map<String, Float>, midi: Int, velocity: Float,
-        seed: Long, options: Options, record: Boolean, contactLoss: Float = 0f): Probe {
+        seed: Long, options: Options, record: Boolean, contactLoss: Float = 0f,
+        strike: NacreStrikeShape = NacreStrikeShape.DEFAULT): Probe {
         require(midi in MIN_MIDI..MAX_MIDI) { "NACRE supports MIDI $MIN_MIDI..$MAX_MIDI, got $midi" }
         require(velocity.isFinite() && velocity in 0f..1f) { "NACRE velocity must be finite and in 0..1, got $velocity" }
         val m = settled(voice, macros)
@@ -208,7 +212,8 @@ object Nacre {
         }
         stopIfInterrupted()
         val (c, hit) = core(CoreKey(voice, m.getValue("TOUCH"), m.getValue("DUET"), midi, velocity, seed,
-            options.muteBassPlucks, options.muteUpperPlucks, options.disableCrossHarp, options.postCurrentOnly, contactLoss))
+            options.muteBassPlucks, options.muteUpperPlucks, options.disableCrossHarp, options.postCurrentOnly, contactLoss,
+            strike))
         val venue = m.getValue("VENUE").toDouble()
         val current = m.getValue("CURRENT"); val bloom = m.getValue("BLOOM")
         val gain = REFERENCE_RETURN_GAIN * returnAmount(bloom)

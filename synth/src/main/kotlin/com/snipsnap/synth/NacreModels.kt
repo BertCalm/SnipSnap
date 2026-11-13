@@ -61,6 +61,17 @@ internal object NacreModels {
         }
     }
 
+    /**
+     * Model-4 render with an explicit [NacreStrikeShape] (a velocity layer's pluck). The patch's own
+     * render is this call with [NacreStrikeShape.DEFAULT]; earlier saved models have no strike input.
+     */
+    fun renderStruck(patch: NacrePatch, strike: NacreStrikeShape): Snip {
+        require(patch.model == CONTACT_MODEL_VERSION) { "NACRE strike shapes apply only to saved model $CONTACT_MODEL_VERSION" }
+        return contactControls(patch.voice, patch.macros).let { (source, loss) ->
+            Nacre.renderContactProfile(patch.voice, source, patch.midi, patch.velocity, patch.seed, loss, strike)
+        }
+    }
+
     fun inspect(
         voice: NacreVoice = NacreVoice.PEARL,
         macros: Map<String, Float> = emptyMap(),

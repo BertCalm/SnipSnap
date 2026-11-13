@@ -131,23 +131,25 @@ class NacreContactVelocityRecipe(layers: List<NacreContactVelocityLayerRecipe>) 
             require(obj.getValue("schemaVersion").int() == SCHEMA_VERSION &&
                 obj.getValue("engine").str() == NacrePatch.ENGINE && obj.getValue("policy").str() == POLICY &&
                 obj.getValue("policyVersion").int() == POLICY_VERSION) { "unsupported NACRE contact velocity policy" }
-            return NacreContactVelocityRecipe(obj.getValue("layers").arr().map { raw ->
-                val layer = raw.obj()
-                require(layer.keys == setOf("name", "velocityStart", "velocityEnd", "samplingGain", "recipe")) {
-                    "unsupported NACRE contact velocity layer fields"
-                }
-                val gain = layer.getValue("samplingGain").num()
-                require(gain.isFinite() && gain > 0.0 && gain <= 32.0 && gain.toFloat().toDouble() == gain) {
-                    "NACRE contact sampling gain must preserve its exact Float policy value"
-                }
-                val source = layer.getValue("recipe")
-                val decoded = PadRecipe.fromJsonValue(source)
-                // PadRecipe supports other workflows permissively. This policy requires a complete,
-                // canonical dry source, refusing unknown fields and values rounded away by Float decoding.
-                require(source == decoded.toJsonValue()) { "NACRE contact source recipe is not complete and canonical" }
-                NacreContactVelocityLayerRecipe(layer.getValue("name").str(), layer.getValue("velocityStart").int(),
-                    layer.getValue("velocityEnd").int(), gain.toFloat(), decoded)
-            })
+            return NacreContactVelocityRecipe(obj.getValue("layers").arr().map { decodeLayer(it.obj()) })
+        }
+
+        /** One exact v1 layer; v2 reuses it after removing its own two fields. */
+        internal fun decodeLayer(layer: Map<String, JsonValue>): NacreContactVelocityLayerRecipe {
+            require(layer.keys == setOf("name", "velocityStart", "velocityEnd", "samplingGain", "recipe")) {
+                "unsupported NACRE contact velocity layer fields"
+            }
+            val gain = layer.getValue("samplingGain").num()
+            require(gain.isFinite() && gain > 0.0 && gain <= 32.0 && gain.toFloat().toDouble() == gain) {
+                "NACRE contact sampling gain must preserve its exact Float policy value"
+            }
+            val source = layer.getValue("recipe")
+            val decoded = PadRecipe.fromJsonValue(source)
+            // PadRecipe supports other workflows permissively. This policy requires a complete,
+            // canonical dry source, refusing unknown fields and values rounded away by Float decoding.
+            require(source == decoded.toJsonValue()) { "NACRE contact source recipe is not complete and canonical" }
+            return NacreContactVelocityLayerRecipe(layer.getValue("name").str(), layer.getValue("velocityStart").int(),
+                layer.getValue("velocityEnd").int(), gain.toFloat(), decoded)
         }
     }
 }
@@ -172,6 +174,144 @@ object NacreContactVelocityRecipes {
                 NacreVelocityKits.samplingGain(VELOCITIES[index], TOUCHES[index]),
                 PadRecipe(patch = hardPatch.copy(velocity = VELOCITIES[index],
                     macros = hardPatch.macros + ("TOUCH" to TOUCHES[index]))))
+        })
+    }
+}
+
+/**
+ * The two strike-shaping variants of policy v2, each a fixed table of shapes for Soft and Medium.
+ * Hard is always [NacreStrikeShape.DEFAULT], so v2 Hard is v1 Hard bit for bit. MODERATE's shapes
+ * are each softer-sounding than DEFAULT and gentler than STRONG's on every control.
+ */
+enum class NacreStrikeVariant(val id: String, val soft: NacreStrikeShape, val medium: NacreStrikeShape) {
+    MODERATE("A", soft = NacreStrikeShape(.8, .5, .12), medium = NacreStrikeShape(.4, .75, .06)),
+    STRONG("B", soft = NacreStrikeShape(1.4, .33, .18), medium = NacreStrikeShape(.7, .6, .10));
+
+    /** Soft, Medium, Hard in the recipe's layer order. */
+    val shapes: List<NacreStrikeShape> get() = listOf(soft, medium, NacreStrikeShape.DEFAULT)
+
+    companion object {
+        fun forId(id: String): NacreStrikeVariant =
+            requireNotNull(entries.firstOrNull { it.id == id }) { "unsupported NACRE strike variant $id" }
+    }
+}
+
+/**
+ * One v2 layer: the unchanged v1 layer (source, window, fixed sampling gain) plus the strike shape
+ * its exciter plays with. The shape is a render input of this layer, not part of the saved patch:
+ * replaying [recipe] alone as an ordinary pad reproduces the v1 (unshaped) source.
+ */
+class NacreContactStrikeLayerRecipe(
+    val variant: NacreStrikeVariant,
+    val strike: NacreStrikeShape,
+    val base: NacreContactVelocityLayerRecipe,
+) {
+    val name: String get() = base.name
+    val velocityStart: Int get() = base.velocityStart
+    val velocityEnd: Int get() = base.velocityEnd
+    val samplingGain: Float get() = base.samplingGain
+    val recipe: PadRecipe get() = base.recipe
+    val patch: NacrePatch get() = base.patch
+
+    /** The v1 replay contract (full length, finite, fixed gain, .95 ceiling) around a shaped native render. */
+    fun render(render: (NacrePatch, NacreStrikeShape) -> Snip = NacreModels::renderStruck): Snip =
+        base.render { render(it, strike) }
+
+    fun toJsonValue(): JsonValue.Obj = JsonValue.Obj(linkedMapOf(
+        "name" to JsonValue.Str(name),
+        "velocityStart" to JsonValue.Num(velocityStart.toDouble()),
+        "velocityEnd" to JsonValue.Num(velocityEnd.toDouble()),
+        "samplingGain" to JsonValue.Num(samplingGain.toDouble()),
+        "variant" to JsonValue.Str(variant.id),
+        "strike" to JsonValue.Obj(linkedMapOf(
+            "widthMs" to JsonValue.Num(strike.widthMs),
+            "pickBrightness" to JsonValue.Num(strike.pickBrightness),
+            "toneShift" to JsonValue.Num(strike.toneShift),
+        )),
+        "recipe" to recipe.toJsonValue(),
+    ))
+
+    override fun equals(other: Any?): Boolean = other is NacreContactStrikeLayerRecipe &&
+        variant == other.variant && strike == other.strike && base == other.base
+    override fun hashCode(): Int = listOf(variant, strike, base).hashCode()
+}
+
+/**
+ * Policy v2: v1's three native velocity/TOUCH performances and fixed sampling gains, plus a strike
+ * shape per layer so Soft and Medium are plucked by a broader, darker contact instead of being a
+ * quieter copy of Hard. Every v1 rule still holds (it is checked by building the v1 recipe from the
+ * same layers). All layers carry one variant; Hard keeps [NacreStrikeShape.DEFAULT].
+ */
+class NacreContactStrikeRecipe(layers: List<NacreContactStrikeLayerRecipe>) {
+    val layers: List<NacreContactStrikeLayerRecipe> = Collections.unmodifiableList(ArrayList(layers))
+    /** The same sources under v1: constructing it applies every v1 window, source and gain rule. */
+    val unshaped: NacreContactVelocityRecipe = NacreContactVelocityRecipe(this.layers.map { it.base })
+    val variant: NacreStrikeVariant
+
+    init {
+        variant = this.layers.first().variant
+        require(this.layers.all { it.variant == variant }) { "NACRE strike layers must share one variant" }
+        require(this.layers.map { it.strike } == variant.shapes) {
+            "NACRE strike layers must carry their variant's fixed Soft, Medium and DEFAULT Hard shapes"
+        }
+    }
+
+    val hardPatch: NacrePatch get() = unshaped.hardPatch
+    fun renderAllLayers(render: (NacrePatch, NacreStrikeShape) -> Snip = NacreModels::renderStruck): List<Snip> =
+        layers.map { it.render(render) }
+
+    fun toJsonValue(): JsonValue.Obj = JsonValue.Obj(linkedMapOf(
+        "schemaVersion" to JsonValue.Num(SCHEMA_VERSION.toDouble()),
+        "engine" to JsonValue.Str(NacrePatch.ENGINE),
+        "policy" to JsonValue.Str(POLICY),
+        "policyVersion" to JsonValue.Num(POLICY_VERSION.toDouble()),
+        "layers" to JsonValue.Arr(layers.map { it.toJsonValue() }),
+    ))
+    fun toJsonText(): String = Json.write(toJsonValue())
+    override fun equals(other: Any?): Boolean = other is NacreContactStrikeRecipe && layers == other.layers
+    override fun hashCode(): Int = layers.hashCode()
+
+    companion object {
+        const val SOURCE_KEY = "nacreContactStrikeLayers"
+        const val POLICY = "native-velocity-touch-contact-model4-v2"
+        const val POLICY_VERSION = 2
+        const val SCHEMA_VERSION = 1
+
+        fun fromJsonText(text: String): NacreContactStrikeRecipe = fromJsonValue(Json.parse(text))
+
+        fun fromJsonValue(value: JsonValue): NacreContactStrikeRecipe {
+            val obj = value.obj()
+            require(obj.keys == setOf("schemaVersion", "engine", "policy", "policyVersion", "layers")) {
+                "unsupported NACRE contact strike recipe fields"
+            }
+            require(obj.getValue("schemaVersion").int() == SCHEMA_VERSION &&
+                obj.getValue("engine").str() == NacrePatch.ENGINE && obj.getValue("policy").str() == POLICY &&
+                obj.getValue("policyVersion").int() == POLICY_VERSION) { "unsupported NACRE contact strike policy" }
+            return NacreContactStrikeRecipe(obj.getValue("layers").arr().map { raw ->
+                val layer = raw.obj()
+                require(layer.keys == setOf("name", "velocityStart", "velocityEnd", "samplingGain", "variant", "strike", "recipe")) {
+                    "unsupported NACRE contact strike layer fields"
+                }
+                val strike = layer.getValue("strike").obj()
+                require(strike.keys == setOf("widthMs", "pickBrightness", "toneShift")) {
+                    "unsupported NACRE strike shape fields"
+                }
+                // The v1 layer decoder owns gain precision and canonical-source checks.
+                val base = NacreContactVelocityRecipe.decodeLayer(layer - "variant" - "strike")
+                NacreContactStrikeLayerRecipe(NacreStrikeVariant.forId(layer.getValue("variant").str()),
+                    NacreStrikeShape(strike.getValue("widthMs").num(), strike.getValue("pickBrightness").num(),
+                        strike.getValue("toneShift").num()), base)
+            })
+        }
+    }
+}
+
+/** Recipe construction only; v1 [NacreContactVelocityRecipes] and every existing starter stay unchanged. */
+object NacreContactStrikeRecipes {
+    fun recipeFor(hardPatch: NacrePatch, variant: NacreStrikeVariant): NacreContactStrikeRecipe {
+        val unshaped = NacreContactVelocityRecipes.recipeFor(hardPatch)
+        return NacreContactStrikeRecipe(unshaped.layers.mapIndexed { index, layer ->
+            NacreContactStrikeLayerRecipe(variant, variant.shapes[index], layer)
         })
     }
 }
