@@ -86,8 +86,18 @@ Everything that needs the Float captures stayed out too:
 Once the owner settles where the captures live, these pieces can come back
 unchanged.
 
+## Owner listening
+
+On 2026-11-13 the owner heard all five studies played as keys through the
+reference sampler (`InstrumentEngine`, touch .8): EARLIER and MOVING at their
+three recorded roots (C3, C4, C5), then at E3, A3, F4 and A4 (each a root
+moved by the sampler) and a C major chord on C4; and GROOVE 0, 50 and 100 at
+C4, each held seven seconds. The owner kept all seven clips (KEEP, no notes).
+This covers the studies as the reference sampler plays them, not a phone or
+MPC playback.
+
 ## Open gates
 
-Owner sampler listening, Android playback, MPC hardware loading, native
-velocity layers, round robin and the remaining CAIRN voices are open. See the
+Android playback, MPC hardware loading, native velocity layers, round robin
+and the remaining CAIRN voices are open. See the
 CAIRN section of [the acceptance gates](ENGINE_ACCEPTANCE_GATES.md).

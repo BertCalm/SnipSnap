@@ -394,7 +394,7 @@ those five studies of one SING voice. Earlier CAIRN work keeps the scope its own
   independent notes on a MOVING package, and notes outside the range are refused. Not on a device.
 - **Articulation (HOLD): partial.** Each study loops the accepted 88,200-frame SING cycle after its
   real predecessor, with a 220-frame intro and a 0.08 s sampler release. There is no natural
-  attack or release. Owner listening to the sampler delivery is pending.
+  attack or release. The owner kept the sampler delivery on 2026-11-13 (see below).
 - **Percussion and drum gates:** not applicable. These are held melodic studies.
 - **Velocity and round robin: fail.** Sampler velocity is gain only. There are no native touch
   layers and no round-robin takes.
@@ -403,6 +403,8 @@ those five studies of one SING voice. Earlier CAIRN work keeps the scope its own
   KNOCK/ANSWER HOLD direction ([SYNTH_ROADMAP.md](SYNTH_ROADMAP.md)). The nine SING recordings'
   Wave 3 KEEP appears only in the backup's source constants (owner batch
   `trefoil-splay-cairn-published-source-v1`, reviewed 2026-11-09), with no quoted verdict.
-  No one has listened to the sampler studies.
-- **Overall: incomplete.** The Float captures' home, the phone picker, owner listening, phone
+  On 2026-11-13 the owner heard all five studies as playable keys (roots, in-between keys
+  and a chord for EARLIER and MOVING; C4 for each GROOVE) and kept all of them
+  ([CAIRN_SING_SAMPLER.md](CAIRN_SING_SAMPLER.md#owner-listening)).
+- **Overall: incomplete.** The Float captures' home, the phone picker, phone
   and MPC playback, velocity layers, round robin and the remaining voices are open.
