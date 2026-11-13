@@ -29,7 +29,7 @@
 
 > Fired Bronze round robin (model 2, 2026-11-13): the starter deals each pad's four
 > strike layers three fresh strikes each; every layer's first strike is the approved
-> layer, and model-1 saves keep their sound. Waits for the owner's listen.
+> layer, and model-1 saves keep their sound. Heard and accepted by the owner (2026-11-13).
 > See [integration and verification](FIRED_BRONZE_INTEGRATION.md), "Model 2".
 
 > Fired Bronze integration: owner confirmed the four-layer kit on MPC. Editable
