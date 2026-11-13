@@ -788,7 +788,7 @@ fun KitScreen(
             }
         }
 
-        StrikeControls(strike, Modifier.fillMaxWidth())
+        StrikeStripSection(strike, scheme)
         StrikeLayerFeedback(strike, Modifier.fillMaxWidth())
         if (strike.enabled && kit.pads.none { it.velocityLayers.isNotEmpty() || it.chain?.zones?.isNotEmpty() == true }) {
             TapeText("FOR TONE CHANGES: ADD SOFT HITS IN PAD EDITOR", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)

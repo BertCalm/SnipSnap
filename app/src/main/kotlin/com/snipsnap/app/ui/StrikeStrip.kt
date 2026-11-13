@@ -39,6 +39,7 @@ import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.setProgress
 import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.semantics.testTag
 import androidx.compose.ui.unit.dp
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
@@ -140,7 +141,7 @@ internal fun StrikeControls(state: StrikeState, modifier: Modifier = Modifier) {
     @Composable
     fun Control(caption: String, text: String, label: String, active: Boolean, waiting: Boolean, modifier: Modifier, click: () -> Unit) {
         Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
-            TapeText(caption, TapeType.pixelSmall, scheme.ink2.tape, Modifier.clearAndSetSemantics { })
+            TapeText(caption, TapeType.pixelSmall, scheme.ink2.tape, Modifier.clearAndSetSemantics { testTag = "strike-caption-$caption" })
             Box(
                 Modifier.fillMaxWidth().heightIn(min = Layout.MIN_HIT_TARGET.dp)
                     .let { if (active) it.pressedBevel(scheme) else it.raisedBevel(scheme) }
