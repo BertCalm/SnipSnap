@@ -96,6 +96,7 @@ import com.snipsnap.synth.Orphica
 import com.snipsnap.synth.OrphicaPatch
 import com.snipsnap.synth.Osprey
 import com.snipsnap.synth.OspreyPatch
+import com.snipsnap.synth.OsteriaPatch
 import com.snipsnap.synth.Otis
 import com.snipsnap.synth.OtisPatch
 import com.snipsnap.synth.Oven
@@ -285,6 +286,7 @@ object SynthRoot {
         is OpenSkyPatch -> Field(patch.midi, OpenSkyPatch.MIDI_MIN..OpenSkyPatch.MIDI_MAX) { patch.copy(midi = it) }
         is OrphicaPatch -> Field(patch.config.midi, Orphica.MIDI_MIN..Orphica.MIDI_MAX) { patch.copy(config = patch.config.copy(midi = it)) }
         is OspreyPatch -> Field(patch.midi, Osprey.MIDI_MIN..Osprey.MIDI_MAX) { patch.copy(midi = it) }
+        is OsteriaPatch -> Field(patch.midi, patch.rootRange) { patch.copy(midi = it) }
         is OtisPatch -> Field(patch.midi, Otis.MIDI_MIN..Otis.MIDI_MAX) { patch.copy(midi = it) }
         is OvenPatch -> Field(patch.midi, Oven.MIDI_MIN..Oven.MIDI_MAX) { patch.copy(midi = it) }
         is OverlapPatch -> Field(patch.midi, Overlap.MIN_MIDI..Overlap.MAX_MIDI) { patch.copy(midi = it) }

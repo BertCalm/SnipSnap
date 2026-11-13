@@ -729,6 +729,18 @@ object StarterKits {
             key = KeySpec.parse("Cminpent"),
             prepare = { directory -> MurmurKeptBankFiles.write(directory) },
         ) { SynthKits.murmurKept() },
+        Starter(
+            "osteria", "OSTERIA",
+            "The original evolving Note in C minor, with soft touches and a short tap.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.osteria() },
+        Starter(
+            "osteria-six-voice", "OSTERIA SIX VOICES",
+            "Note, bass, pluck, reed, bowed and pad: twelve evolving sounds with three native touch levels.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { com.snipsnap.synth.OsteriaKits.sixVoice() },
     )
 
     fun byId(id: String): Starter? = ALL.firstOrNull { it.id == id }

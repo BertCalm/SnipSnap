@@ -1,0 +1,476 @@
+[
+{
+  "engine": "OSTERIA",
+  "version": 1,
+  "name": "Anchored Note",
+  "voice": "QUARTET",
+  "macros": {
+    "SHORE": 0.41999998688697815,
+    "TENSION": 0.8799999952316284,
+    "WANDER": 0.07999999821186066,
+    "MEMORY": 0,
+    "ROOM": 0,
+    "HOLD": 0
+  },
+  "midi": 48,
+  "velocity": 0.800000011920929,
+  "config": {
+    "initialShores": [
+      0.35,
+      1.25,
+      2.6,
+      3.55
+    ],
+    "roleLevels": [
+      0.9,
+      0.62,
+      0.42,
+      0.32
+    ],
+    "seed": 173,
+    "seconds": 6,
+    "tavernShore": 1,
+    "direction": 1,
+    "model": 2
+  }
+},
+{
+  "engine": "OSTERIA",
+  "version": 1,
+  "name": "Evolving Note",
+  "voice": "QUARTET",
+  "macros": {
+    "SHORE": 0.41999998688697815,
+    "TENSION": 0.20000000298023224,
+    "WANDER": 0.8500000238418579,
+    "MEMORY": 0,
+    "ROOM": 0,
+    "HOLD": 0
+  },
+  "midi": 48,
+  "velocity": 0.800000011920929,
+  "config": {
+    "initialShores": [
+      0.35,
+      1.25,
+      2.6,
+      3.55
+    ],
+    "roleLevels": [
+      0.9,
+      0.62,
+      0.42,
+      0.32
+    ],
+    "seed": 173,
+    "seconds": 6,
+    "tavernShore": 1,
+    "direction": 1,
+    "model": 2
+  }
+},
+{
+  "engine": "OSTERIA",
+  "version": 1,
+  "name": "Lingering Color",
+  "voice": "QUARTET",
+  "macros": {
+    "SHORE": 0.41999998688697815,
+    "TENSION": 0.20000000298023224,
+    "WANDER": 0.8500000238418579,
+    "MEMORY": 0.8799999952316284,
+    "ROOM": 0,
+    "HOLD": 0
+  },
+  "midi": 48,
+  "velocity": 0.800000011920929,
+  "config": {
+    "initialShores": [
+      0.35,
+      1.25,
+      2.6,
+      3.55
+    ],
+    "roleLevels": [
+      0.9,
+      0.62,
+      0.42,
+      0.32
+    ],
+    "seed": 173,
+    "seconds": 6,
+    "tavernShore": 1,
+    "direction": 1,
+    "model": 2
+  }
+},
+{
+  "engine": "OSTERIA",
+  "version": 1,
+  "name": "Anchor",
+  "voice": "BASS",
+  "macros": {
+    "SHORE": 1,
+    "TENSION": 1,
+    "WANDER": 0,
+    "MEMORY": 0,
+    "ROOM": 0,
+    "HOLD": 0
+  },
+  "midi": 48,
+  "velocity": 0.800000011920929,
+  "config": {
+    "initialShores": [
+      4,
+      4,
+      4,
+      4
+    ],
+    "roleLevels": [
+      1,
+      0.08,
+      0.04,
+      0.04
+    ],
+    "seed": 173,
+    "seconds": 5.32,
+    "tavernShore": 1,
+    "direction": 1,
+    "model": 2,
+    "attackSeconds": 0.008,
+    "releaseSeconds": 0.12
+  }
+},
+{
+  "engine": "OSTERIA",
+  "version": 1,
+  "name": "Roaming",
+  "voice": "BASS",
+  "macros": {
+    "SHORE": 0.5,
+    "TENSION": 0.2199999988079071,
+    "WANDER": 0.75,
+    "MEMORY": 0.6000000238418579,
+    "ROOM": 0,
+    "HOLD": 0
+  },
+  "midi": 48,
+  "velocity": 0.800000011920929,
+  "config": {
+    "initialShores": [
+      2.8,
+      2.8,
+      2.8,
+      2.8
+    ],
+    "roleLevels": [
+      0.12,
+      1,
+      0.8,
+      0.7
+    ],
+    "seed": 173,
+    "seconds": 5.5,
+    "tavernShore": 1,
+    "direction": 1,
+    "model": 2,
+    "attackSeconds": 0.18,
+    "releaseSeconds": 0.3
+  }
+},
+{
+  "engine": "OSTERIA",
+  "version": 1,
+  "name": "Rounded",
+  "voice": "PLUCK",
+  "macros": {
+    "SHORE": 1,
+    "TENSION": 0.949999988079071,
+    "WANDER": 0,
+    "MEMORY": 0,
+    "ROOM": 0,
+    "HOLD": 0
+  },
+  "midi": 48,
+  "velocity": 0.800000011920929,
+  "config": {
+    "initialShores": [
+      4,
+      4,
+      4,
+      4
+    ],
+    "roleLevels": [
+      1,
+      0.1,
+      0.08,
+      0.04
+    ],
+    "seed": 173,
+    "seconds": 5.32,
+    "tavernShore": 1,
+    "direction": 1,
+    "model": 2,
+    "attackSeconds": 0.025,
+    "releaseSeconds": 0.12
+  }
+},
+{
+  "engine": "OSTERIA",
+  "version": 1,
+  "name": "Bright",
+  "voice": "PLUCK",
+  "macros": {
+    "SHORE": 0.5,
+    "TENSION": 0.75,
+    "WANDER": 0.30000001192092896,
+    "MEMORY": 0,
+    "ROOM": 0,
+    "HOLD": 0
+  },
+  "midi": 48,
+  "velocity": 0.800000011920929,
+  "config": {
+    "initialShores": [
+      2,
+      2,
+      2,
+      2
+    ],
+    "roleLevels": [
+      0.08,
+      1,
+      0.8,
+      0.6
+    ],
+    "seed": 173,
+    "seconds": 5.55,
+    "tavernShore": 1,
+    "direction": 1,
+    "model": 2,
+    "attackSeconds": 0.005,
+    "releaseSeconds": 0.35
+  }
+},
+{
+  "engine": "OSTERIA",
+  "version": 1,
+  "name": "Still",
+  "voice": "REED",
+  "macros": {
+    "SHORE": 0.25,
+    "TENSION": 0.949999988079071,
+    "WANDER": 0.019999999552965164,
+    "MEMORY": 0,
+    "ROOM": 0,
+    "HOLD": 0
+  },
+  "midi": 48,
+  "velocity": 0.800000011920929,
+  "config": {
+    "initialShores": [
+      1,
+      1,
+      1,
+      1
+    ],
+    "roleLevels": [
+      1,
+      0.15,
+      0.35,
+      0.08
+    ],
+    "seed": 173,
+    "seconds": 5.4,
+    "tavernShore": 1,
+    "direction": 1,
+    "model": 2,
+    "attackSeconds": 0.045,
+    "releaseSeconds": 0.2
+  }
+},
+{
+  "engine": "OSTERIA",
+  "version": 1,
+  "name": "Remembered",
+  "voice": "REED",
+  "macros": {
+    "SHORE": 0.800000011920929,
+    "TENSION": 0.25,
+    "WANDER": 0.8999999761581421,
+    "MEMORY": 0.949999988079071,
+    "ROOM": 0,
+    "HOLD": 0
+  },
+  "midi": 48,
+  "velocity": 0.800000011920929,
+  "config": {
+    "initialShores": [
+      0.1,
+      0.1,
+      0.1,
+      0.1
+    ],
+    "roleLevels": [
+      0.68,
+      0.52,
+      0.66,
+      0.18
+    ],
+    "seed": 173,
+    "seconds": 5.7,
+    "tavernShore": 1,
+    "direction": 1,
+    "model": 2,
+    "attackSeconds": 0.18,
+    "releaseSeconds": 0.5
+  }
+},
+{
+  "engine": "OSTERIA",
+  "version": 1,
+  "name": "Warm",
+  "voice": "PAD",
+  "macros": {
+    "SHORE": 1,
+    "TENSION": 0.949999988079071,
+    "WANDER": 0.019999999552965164,
+    "MEMORY": 0,
+    "ROOM": 0,
+    "HOLD": 0
+  },
+  "midi": 48,
+  "velocity": 0.800000011920929,
+  "config": {
+    "initialShores": [
+      4,
+      4,
+      4,
+      4
+    ],
+    "roleLevels": [
+      1,
+      0.18,
+      0.1,
+      0.04
+    ],
+    "seed": 173,
+    "seconds": 5.75,
+    "tavernShore": 1,
+    "direction": 1,
+    "model": 2,
+    "attackSeconds": 0.28,
+    "releaseSeconds": 0.55
+  }
+},
+{
+  "engine": "OSTERIA",
+  "version": 1,
+  "name": "Drift",
+  "voice": "PAD",
+  "macros": {
+    "SHORE": 0.47999998927116394,
+    "TENSION": 0.15000000596046448,
+    "WANDER": 0.75,
+    "MEMORY": 0.8500000238418579,
+    "ROOM": 0,
+    "HOLD": 0
+  },
+  "midi": 48,
+  "velocity": 0.800000011920929,
+  "config": {
+    "initialShores": [
+      3.9,
+      3.9,
+      3.9,
+      3.9
+    ],
+    "roleLevels": [
+      0.72,
+      0.78,
+      0.42,
+      0.3
+    ],
+    "seed": 173,
+    "seconds": 6.4,
+    "tavernShore": 1,
+    "direction": 1,
+    "model": 2,
+    "attackSeconds": 0.95,
+    "releaseSeconds": 1.2
+  }
+},
+{
+  "engine": "OSTERIA",
+  "version": 1,
+  "name": "Warm",
+  "voice": "BOWED",
+  "macros": {
+    "SHORE": 1,
+    "TENSION": 0.949999988079071,
+    "WANDER": 0.019999999552965164,
+    "MEMORY": 0,
+    "ROOM": 0,
+    "HOLD": 0
+  },
+  "midi": 48,
+  "velocity": 0.800000011920929,
+  "config": {
+    "initialShores": [
+      4,
+      4,
+      4,
+      4
+    ],
+    "roleLevels": [
+      1,
+      0.3,
+      0.2,
+      0.08
+    ],
+    "seed": 173,
+    "seconds": 5.75,
+    "tavernShore": 1,
+    "direction": 1,
+    "model": 2,
+    "attackSeconds": 0.2,
+    "releaseSeconds": 0.55
+  }
+},
+{
+  "engine": "OSTERIA",
+  "version": 1,
+  "name": "Rosin",
+  "voice": "BOWED",
+  "macros": {
+    "SHORE": 0.75,
+    "TENSION": 0.30000001192092896,
+    "WANDER": 0.7200000286102295,
+    "MEMORY": 0.6499999761581421,
+    "ROOM": 0,
+    "HOLD": 0
+  },
+  "midi": 48,
+  "velocity": 0.800000011920929,
+  "config": {
+    "initialShores": [
+      3,
+      3,
+      3,
+      3
+    ],
+    "roleLevels": [
+      0.48,
+      0.78,
+      0.64,
+      0.28
+    ],
+    "seed": 173,
+    "seconds": 6,
+    "tavernShore": 1,
+    "direction": 1,
+    "model": 2,
+    "attackSeconds": 0.14
+  }
+}
+]

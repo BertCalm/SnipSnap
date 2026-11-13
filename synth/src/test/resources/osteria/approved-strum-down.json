@@ -1,0 +1,48 @@
+{
+  "study": "OSTERIA_STRUM",
+  "version": 1,
+  "patch": {
+    "engine": "OSTERIA",
+    "version": 1,
+    "name": "Rounded",
+    "voice": "PLUCK",
+    "macros": {
+      "SHORE": 1,
+      "TENSION": 0.949999988079071,
+      "WANDER": 0,
+      "MEMORY": 0,
+      "ROOM": 0,
+      "HOLD": 0
+    },
+    "midi": 48,
+    "velocity": 0.800000011920929,
+    "config": {
+      "initialShores": [
+        4,
+        4,
+        4,
+        4
+      ],
+      "roleLevels": [
+        1,
+        0.1,
+        0.08,
+        0.04
+      ],
+      "seed": 173,
+      "seconds": 1,
+      "tavernShore": 1,
+      "direction": 1,
+      "model": 2,
+      "attackSeconds": 0.025,
+      "releaseSeconds": 0.12
+    }
+  },
+  "notes": [
+    48,
+    51,
+    55
+  ],
+  "sweepSeconds": 0.09,
+  "direction": "DOWN"
+}

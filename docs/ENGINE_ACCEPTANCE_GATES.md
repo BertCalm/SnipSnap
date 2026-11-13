@@ -295,3 +295,36 @@ accepted C2 pluck. The other gates keep the scope earlier MURMUR work recorded.
   the owner kept V2's repeated C2s and its four takes heard one at a time. V1's REVISIT
   stays on record for V1. This is a listen to saved-player renders, not to a phone or an MPC.
 - **Overall: incomplete.** Phone playback and MPC rotation remain open.
+
+## OSTERIA (ported from the recovery backup, 2026-11-13)
+
+One evolving note: four spectral layers on a fixed root drift between five coastal palettes,
+with remembered color. See [OSTERIA](OSTERIA.md).
+
+This port brings the whole engine back with its DSP unchanged: the six voices, 13 factory
+presets, the `osteria` and `osteria-six-voice` starters, finite keygroups through MAKE
+INSTRUMENT, the saved PLUCK STRUM, user-preset promotion and the SYNTH picker. The accepted
+bank is pinned by the owner-auditioned WAV and recipe hashes (`OsteriaPerformanceBankTest`),
+and the approved strum study by its published WAV hashes (`OsteriaStrumTest`).
+
+| Gate | Status | Evidence |
+|---|---|---|
+| Melodic: six voices with presets | Pass | NOTE (`QUARTET`), BASS, PLUCK, REED, PAD and BOWED, 13 presets (`OsteriaAcceptedDeliveryTest`, `PresetsTest`). |
+| Melodic: playable keygroups | Pass in software | Any single-note model-2 sound: thirteen roots C2–C6, three touch layers, saved envelope, no loop. Source recipes and WAV hashes are validated before the package lands, with rollback on failure (`OsteriaPadMakerTest`, `OsteriaKeygroupBankTest`, `OsteriaKeygroupTransactionTest`). Not run on a device. |
+| Melodic: premade kit | Pass in software | OSTERIA (the original Note kit) and OSTERIA SIX VOICES (sixteen pads, 48 native layers) through MPC 3 and MPC 2 export (`OsteriaKitTest`, `OsteriaPerformanceBankTest`). |
+| Melodic: chord-tool compatibility | Partial | Keys default to POLY, and STRUM takes a `ChordStabs.Stab` directly (`OsteriaStrumTest`). No chord-tool run on real OSTERIA keys is recorded. |
+| Articulation: HOLD | Partial | HOLD lengthens a finite note up to eight seconds. It is not a seamless loop or live release. |
+| Articulation: STRUM | Pass in software | PLUCK saves MINOR or MAJOR, DOWN or UP and a 10–240 ms sweep, one strike per tone. HOLD 0 matches the owner-approved WAVs byte for byte; HOLD above 0 is engineering-tested, not listened to. |
+| Percussion: roll or riser | Not applicable | A melodic engine. |
+| Drums: genre kits | Not applicable | A melodic engine. |
+| Velocity: rendering | Pass | Touch changes the excitation spectrum, attack and level, not only volume. The bank and keys render genuine soft, medium and hard layers. |
+| Velocity: saving, playback, export | Pass in software | 48 layers with their recipes in the starter and both MPC programs; the prepared WAVs apply velocity once at playback (`OsteriaPerformanceBankTest`, `OsteriaBankImportTest`). No hardware check. |
+| Round robin | Not yet verified | No OSTERIA round robin exists. |
+| Picker | Not yet verified on a device | `OsteriaSynthScreenTest` and `OsteriaStrumControlsTest` cover the six voices, saved recipes, STRUM and MAKE INSTRUMENT. Neither has run on a device. |
+| Hardware playback | Not verified | No phone timing, MPC load or MPC velocity check is recorded. |
+
+- **Sound character: accepted.** The owner accepted the six-voice bank's sound, the six STRUM
+  comparisons and six Rounded keygroup previews. Preserve these renders; HOLD extensions and
+  the other keygroup sounds have not been listened to.
+- **Overall: incomplete.** Round robin, a seamless HOLD, chord tools on real keys, device runs
+  of the picker and hardware playback remain open.

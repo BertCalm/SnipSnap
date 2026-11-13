@@ -188,6 +188,61 @@ tasks.register<JavaExec>("generateFerryMatchAudition") {
     args(providers.gradleProperty("ferryMatchOutput").orNull ?: "${rootDir}/testkit/ferry-match-audition")
 }
 
+/** Render Osteria's dry first-listen quartet, shared-performance stems and causal comparisons. */
+tasks.register<JavaExec>("generateOsteriaAudition") {
+    group = "distribution"
+    description = "Render OSTERIA native/matched stereo WAVs, complete recipes, shore traces and the first-listen audition page under testkit/osteria-audition/."
+    maxHeapSize = "1g"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.OsteriaAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/osteria-audition")
+}
+
+/** Audition provisional single-note source families without promoting presets or kit pads. */
+tasks.register<JavaExec>("generateOsteriaVoiceAudition") {
+    group = "distribution"
+    description = "Render 13 OSTERIA voice-candidate notes, native/matched WAVs, recipes, traces and a listening page under testkit/osteria-voices-audition/."
+    maxHeapSize = "1g"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.OsteriaVoiceAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/osteria-voices-audition")
+}
+
+/** Audition eight dry preset proposals and their register, touch and memory controls. */
+tasks.register<JavaExec>("generateOsteriaPresetAudition") {
+    group = "distribution"
+    description = "Render 27 OSTERIA preset-proposal notes, native/matched WAVs, complete recipes, traces and a listening page under testkit/osteria-presets-audition/."
+    maxHeapSize = "1g"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.OsteriaPresetAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/osteria-presets-audition")
+}
+
+/** Export the finite-note starter bank, with native recipes and both MPC generations. */
+tasks.register<JavaExec>("generateOsteriaKit") {
+    group = "distribution"
+    description = "Render the dry OSTERIA starter kit with MPC 3, MPC 2 and complete kit.json recipes."
+    maxHeapSize = "512m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.OsteriaKitGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit")
+}
+
+/** Reproduce the accepted six-voice performance bank and its complete saved recipes. */
+tasks.register<JavaExec>("generateOsteriaPerformanceBank") {
+    group = "distribution"
+    description = "Render 12 OSTERIA presets across six voices and 16 pads, with 48 velocity samples and MPC 2/3 programs."
+    maxHeapSize = "1g"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.OsteriaPerformanceBankGenerator")
+    workingDir = projectDir
+    args(providers.gradleProperty("osteriaBankOutput").orNull ?: "${rootDir}/testkit/osteria-six-voice-bank")
+}
+
 /** Nine finite RIME recipes as a sixteen-pad, three-zone MPC 3 / MPC 2 kit. */
 tasks.register<JavaExec>("generateRimeKit") {
     group = "distribution"

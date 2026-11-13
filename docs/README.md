@@ -90,6 +90,10 @@ The original 27 recipes are preserved; the nine additions await listening.
 Physical-phone performance and MPC hardware acceptance remain separate checks.
 The supplied [`engineering specification`](WICK_SPEC.md) is preserved as the proposal.
 
+**Osteria.** [`OSTERIA.md`](OSTERIA.md) records the evolving-note engine: its
+listening rounds, the owner-accepted six-voice bank, the 13 factory presets, the
+finite keygroups and the saved PLUCK STRUM, and what is still open.
+
 **Filament.** [`FILAMENT.md`](FILAMENT.md) records the THREAD/PULSE/CURL
 approved strand-routing instrument, factory and phone integration, saved
 recipes, branch allocation, dry listening comparisons and held-loop evidence.

@@ -1168,6 +1168,55 @@ object SynthKits {
             }
     }
 
+
+    /**
+     * Three four-note rows of the accepted evolving-note model: Anchored, Evolving,
+     * then Lingering Color, each at C3, E-flat3, G3 and C4. The final row compares
+     * three excitation velocities at C3 and a short tap. These are finite samples,
+     * not held loops: a hit plays the authored note and its release once through.
+     *
+     * A01–A12 also have two genuinely softer renders, so MIDI velocity changes the
+     * source color as well as playback level. The main sample's recipe is saved;
+     * KitAssembler stores the soft samples as zones, without per-zone recipes.
+     * Rebuilding this starter regenerates all zones; editing/replaying one pad's
+     * main recipe does not regenerate its softer zones.
+     */
+    fun osteria(): List<ArrangedPad?> {
+        val presets = OsteriaPresets.original()
+        val notes = listOf(48 to "C3", 51 to "Eb3", 55 to "G3", 60 to "C4")
+        fun note(
+            base: OsteriaPatch,
+            name: String,
+            midi: Int = 48,
+            velocity: Float = 1f,
+            seconds: Double = 3.0,
+            velocityLayers: Boolean = false,
+        ): ArrangedPad {
+            val patch = base.copy(name = name, midi = midi, velocity = velocity, config = base.config.copy(seconds = seconds))
+            val recipe = PadRecipe(patch)
+            return ArrangedPad(
+                snip = recipe.render(),
+                drumClass = DrumClass.TONAL,
+                recipe = recipe.toJsonValue(),
+                oneShot = true,
+                softVariants = if (velocityLayers) listOf(.25f, .60f).map { patch.copy(velocity = it).render() } else emptyList(),
+                displayName = name,
+            )
+        }
+        val rows = listOf("Anchored Note" to "Anchored", "Evolving Note" to "Evolving", "Lingering Color" to "Lingering")
+            .flatMap { (presetName, label) ->
+                val base = presets.first { it.name == presetName }
+                notes.map { (midi, noteName) -> note(base, "$label $noteName", midi, velocityLayers = true) }
+            }
+        val evolving = presets.first { it.name == "Evolving Note" }
+        return rows + listOf(
+            note(evolving, "Evolving Soft", velocity = .25f),
+            note(evolving, "Evolving Medium", velocity = .60f),
+            note(evolving, "Evolving Hard"),
+            note(evolving, "Evolving Tap", velocity = .8f, seconds = 1.0),
+        )
+    }
+
     /**
      * The selected KEY and lower-air CHOIR settings, alongside all six voice roles.
      * Six C-minor key notes leave room for the four heard C4 MOTION settings, four
