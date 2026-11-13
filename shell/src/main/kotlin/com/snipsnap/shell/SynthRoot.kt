@@ -60,6 +60,8 @@ import com.snipsnap.synth.HydroformPatch
 import com.snipsnap.synth.GyrePatch
 import com.snipsnap.synth.Keel
 import com.snipsnap.synth.KeelPatch
+import com.snipsnap.synth.Etch
+import com.snipsnap.synth.EtchPatch
 import com.snipsnap.synth.Lacquer
 import com.snipsnap.synth.LacquerPatch
 import com.snipsnap.synth.Lattice
@@ -129,6 +131,7 @@ import com.snipsnap.synth.Siren
 import com.snipsnap.synth.SirenPatch
 import com.snipsnap.synth.BackwashPatch
 import com.snipsnap.synth.BreakerPatch
+import com.snipsnap.synth.SootPatch
 import com.snipsnap.synth.SkinPatch
 import com.snipsnap.synth.Skitter
 import com.snipsnap.synth.SkitterPatch
@@ -270,6 +273,7 @@ object SynthRoot {
         is FlockPatch -> Field(patch.midi, Flock.MIN_MIDI..Flock.MAX_MIDI) { patch.copy(midi = it) }
         is FlotillaPatch -> Field(patch.midi, Flotilla.MIDI_MIN..Flotilla.MIDI_MAX) { patch.copy(midi = it) }
         is KeelPatch -> Field(patch.midi, Keel.MIDI_MIN..Keel.MIDI_MAX) { patch.copy(midi = it) }
+        is EtchPatch -> Field(patch.midi, Etch.MIDI_MIN..Etch.MIDI_MAX) { patch.copy(midi = it) }
         is LacquerPatch -> Field(patch.midi, Lacquer.MIDI_MIN..Lacquer.MIDI_MAX) { patch.copy(midi = it) }
         is LatticePatch -> Field(patch.midi, Lattice.MIDI_MIN..Lattice.MIDI_MAX) { patch.copy(midi = it) }
         is LibrationPatch -> Field(patch.midi, Libration.MIN_MIDI..Libration.MAX_MIDI) { patch.copy(midi = it) }
@@ -351,7 +355,7 @@ object SynthRoot {
         is TinesPatch -> if (patch.voice == TinesVoice.KALIMBA) tune(patch, { nearestMidi(Tines.frequencyFor(patch.voice, it)) }) else null
 
         // ---- no root a note name would describe ----
-        is BackwashPatch, is BreakerPatch, is ThumpPatch, is SkinPatch, is OnsetPatch, is TerraPatch, is VoxPatch, is FillPatch, is RivetPatch -> null
+        is BackwashPatch, is BreakerPatch, is SootPatch, is ThumpPatch, is SkinPatch, is OnsetPatch, is TerraPatch, is VoxPatch, is FillPatch, is RivetPatch -> null
         // SILK's TUNE walks scale degrees, EROSION's sweeps a frequency: neither names a note.
         is SilkPatch, is ErosionPatch -> null
     }

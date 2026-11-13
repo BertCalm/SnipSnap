@@ -26,6 +26,14 @@ class DeterminismTest {
         }
     }
 
+    @Test fun `SOOT replays every saved drum and every take byte for byte`() {
+        for (voice in SootVoice.entries) {
+            val patch = SootPatch("Canary", voice, Soot.defaults(voice))
+            assertContentEquals(patch.render().samples, Patches.fromJsonText(patch.toJsonText()).render().samples)
+            assertContentEquals(patch.render(.6f, take = 2).samples, patch.render(.6f, take = 2).samples)
+        }
+    }
+
     @Test fun `BREAKER replays every saved drum and every take byte for byte`() {
         for (voice in BreakerVoice.entries) {
             val patch = BreakerPatch("Canary", voice, Breaker.defaults(voice))
@@ -424,6 +432,19 @@ class DeterminismTest {
         val saved = PadRecipe.fromJsonText(PadRecipe(patch).toJsonText())
         assertContentEquals(patch.render().samples, saved.render().samples)
         assertContentEquals(saved.render().samples, saved.render().samples)
+    }
+
+    @Test
+    fun `THUMP SUB regenerates its sliding sub and every take from the saved recipe exactly`() {
+        val patch = ThumpPatch("Sub canary", ThumpVoice.SUB,
+            Thump.defaults(ThumpVoice.SUB) + mapOf("SLIDE" to .29f, "WHEN" to .6f, "DRIVE" to .55f))
+        val saved = PadRecipe.fromJsonText(PadRecipe(patch).toJsonText())
+        assertContentEquals(patch.render().samples, saved.render().samples)
+        for (take in 0 until 4) for (v in listOf(.3f, 1f)) {
+            assertContentEquals(
+                Thump.render(ThumpVoice.SUB, patch.macros, velocity = v, take = take).samples,
+                Thump.render(ThumpVoice.SUB, patch.macros, velocity = v, take = take).samples, "take $take v $v")
+        }
     }
 
     @Test
@@ -889,6 +910,17 @@ class DeterminismTest {
             val patch = KeelPatch("Canary", voice, Keel.defaults(voice), midi = 36, velocity = .8f)
             assertContentEquals(patch.render().samples, patch.render().samples, "$voice")
         }
+    }
+
+    @Test
+    fun `ETCH is byte-identical across renders, every voice, a take and the line loop`() {
+        for (voice in EtchVoice.entries) {
+            val patch = EtchPatch("Canary", voice, Etch.defaults(voice), midi = 36, velocity = .8f)
+            assertContentEquals(patch.render().samples, patch.render().samples, "$voice")
+            assertContentEquals(patch.render(.8f, take = 2, seed = 5).samples, patch.render(.8f, take = 2, seed = 5).samples, "$voice take")
+        }
+        val loop = EtchPatch("Canary", EtchVoice.SAW, Etch.defaults(EtchVoice.SAW) + ("HOLD" to 1f))
+        assertContentEquals(loop.render().samples, loop.render().samples, "SAW line loop")
     }
 
     @Test

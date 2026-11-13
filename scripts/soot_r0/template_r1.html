@@ -1,0 +1,293 @@
+<title>SOOT Round 1</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,500;62..125,800&family=IBM+Plex+Sans:wght@400;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one listening column; each question is a rack of clips, picks collect into a copyable answer at the end. */
+:root {
+  --bg: #e9e8e4;        /* poured concrete */
+  --panel: #f4f3f0;
+  --fg: #1c1d1f;
+  --muted: #5d6066;
+  --line: #c9c7c1;
+  --accent: #2f6f62;    /* oxidised copper, the coil */
+  --accent-ink: #f4f3f0;
+  --warn: #9a4a1c;
+  --display: "Archivo", "Arial Narrow", system-ui, sans-serif;
+  --body: "IBM Plex Sans", system-ui, -apple-system, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #17191b; --panel: #1f2225; --fg: #e4e3df; --muted: #9a9ea5; --line: #33373b;
+    --accent: #6cb3a3; --accent-ink: #101213; --warn: #e0925f; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #17191b; --panel: #1f2225; --fg: #e4e3df; --muted: #9a9ea5; --line: #33373b;
+  --accent: #6cb3a3; --accent-ink: #101213; --warn: #e0925f; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--fg); font: 15px/1.55 var(--body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 28px 64px;
+}
+main { max-width: 760px; margin: 0 auto; display: grid; gap: 40px; }
+h1, h2 { font-family: var(--display); font-stretch: 70%; font-weight: 800; letter-spacing: .01em; text-wrap: balance; margin: 0; }
+h1 { font-size: clamp(44px, 11vw, 84px); line-height: .9; text-transform: uppercase; }
+h2 { font-size: 30px; line-height: 1.05; text-transform: uppercase; }
+p { margin: 0; max-width: 65ch; }
+.eyebrow { font: 500 12px/1.3 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.gesture { font-family: var(--display); font-stretch: 85%; font-weight: 500; font-size: 20px; line-height: 1.3; }
+.gesture b { color: var(--accent); font-weight: 800; }
+header { display: grid; gap: 14px; }
+.status { border-left: 3px solid var(--warn); padding: 8px 12px; background: var(--panel); font-size: 14px; }
+section { display: grid; gap: 14px; }
+.ask { font-weight: 600; }
+.rack { display: grid; border-top: 1px solid var(--line); }
+.clip { display: grid; grid-template-columns: 44px 1fr auto; gap: 4px 12px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.clip.ref .label { color: var(--muted); font-style: italic; }
+.play { width: 44px; height: 44px; border-radius: 50%; border: 1.5px solid var(--fg); background: transparent; color: var(--fg); cursor: pointer; display: grid; place-items: center; }
+.play:hover { background: var(--fg); color: var(--bg); }
+.play.on { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.play:focus-visible, .chip:focus-visible, button:focus-visible, textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.play svg { width: 14px; height: 14px; fill: currentColor; }
+.meta { min-width: 0; display: grid; gap: 4px; }
+.label { font-weight: 600; }
+.id { font: 12px var(--mono); color: var(--muted); }
+.bar { height: 3px; background: var(--line); border-radius: 2px; overflow: hidden; }
+.bar i { display: block; height: 100%; width: 0; background: var(--accent); }
+.note { font-size: 13px; color: var(--muted); grid-column: 2 / -1; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
+.chip { font: 500 12px var(--mono); padding: 6px 10px; border-radius: 999px; border: 1px solid var(--line); background: var(--panel); color: var(--fg); cursor: pointer; }
+.chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+textarea { width: 100%; min-height: 54px; font: 14px var(--body); color: var(--fg); background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; resize: vertical; }
+.scroll { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 13px; }
+th, td { text-align: left; vertical-align: top; padding: 7px 8px; border-bottom: 1px solid var(--line); }
+th { font: 500 11px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+td.num { font: 12px var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.pad { background: var(--panel); border: 1px solid var(--line); border-radius: 4px; padding: 8px; min-height: 64px; display: grid; align-content: space-between; gap: 4px; }
+.pad b { font: 500 11px var(--mono); color: var(--muted); }
+.pad span { font-size: 13px; line-height: 1.25; }
+.pad.new { border-color: var(--accent); }
+.state { font: 500 11px var(--mono); letter-spacing: .04em; text-transform: uppercase; padding: 2px 7px; border-radius: 3px; white-space: nowrap; }
+.s-open { background: color-mix(in srgb, var(--warn) 18%, transparent); color: var(--warn); }
+.s-na { background: color-mix(in srgb, var(--muted) 16%, transparent); color: var(--muted); }
+.s-part { background: color-mix(in srgb, var(--accent) 18%, transparent); color: var(--accent); }
+.answer { position: relative; display: grid; gap: 10px; }
+.answer pre { margin: 0; white-space: pre-wrap; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 12px; font: 13px/1.5 var(--mono); max-height: 360px; overflow: auto; }
+.btn { justify-self: start; font: 600 14px var(--body); padding: 10px 16px; border-radius: 6px; border: 0; background: var(--accent); color: var(--accent-ink); cursor: pointer; }
+.copied { font-size: 13px; color: var(--muted); }
+@media (max-width: 520px) {
+  .clip { grid-template-columns: 44px 1fr; }
+  .chips { grid-column: 1 / -1; justify-content: flex-start; }
+  .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<main>
+  <header>
+    <div class="eyebrow">Round 1 · Kotlin, the app's own engine · 2026-11-12</div>
+    <h1>Soot</h1>
+    <p class="gesture">The characteristic gesture is <b>dry skin knock that sags</b> → <b>papery crack</b> → <b>tight coil clatter</b> → <b>the kit breathing through a dictaphone</b>.</p>
+    <p>Your round-0 picks, now built in the app's engine: the kick with the longer sub, the hot snare, the wide hats, the heavy dictaphone, and the layout you approved. This page is the confirming listen. Nothing here has been heard by anyone yet.</p>
+    <p class="status">Every clip plays at the same loudness. Kotlin and Python render noise and a few filters differently, so "the same drum" means the same character, not the same file. Pick on each question, then copy the answers at the bottom and paste them back to me.</p>
+  </header>
+
+  <div id="questions" style="display:grid;gap:40px"></div>
+
+  <section aria-labelledby="kit-h">
+    <div class="eyebrow">6 · The layout, as your picks moved it</div>
+    <h2 id="kit-h">The sixteen pads</h2>
+    <p>Your picks became the main pads, so three alternates swapped to the sounds you did not pick. Outlined pads are not built yet.</p>
+    <div class="grid" role="table" aria-label="Pad layout">
+      <div class="pad"><b>A13</b><span>Narrow closed hat (9 cents)</span></div>
+      <div class="pad"><b>A14</b><span>Narrow open hat, chokes A13</span></div>
+      <div class="pad new"><b>A15</b><span>Coil roll: snare strikes speeding into the spring</span></div>
+      <div class="pad new"><b>A16</b><span>Four-bar phrase through the shared coil</span></div>
+      <div class="pad"><b>A09</b><span>Steel plate</span></div>
+      <div class="pad"><b>A10</b><span>The coil kicked alone</span></div>
+      <div class="pad"><b>A11</b><span>Bench snare</span></div>
+      <div class="pad"><b>A12</b><span>Coil snare, cassette 0.5 (round 0's default)</span></div>
+      <div class="pad"><b>A05</b><span>Heavy kick (sub t60 0.9 s)</span></div>
+      <div class="pad"><b>A06</b><span>Dry crack</span></div>
+      <div class="pad"><b>A07</b><span>Tension rod</span></div>
+      <div class="pad"><b>A08</b><span>Small metal cup</span></div>
+      <div class="pad"><b>A01</b><span>Kick (sag .35, sub 0.6 s)</span></div>
+      <div class="pad"><b>A02</b><span>Hot snare (12-bit)</span></div>
+      <div class="pad"><b>A03</b><span>Wide closed hat (25 cents)</span></div>
+      <div class="pad"><b>A04</b><span>Wide open hat, chokes A03</span></div>
+    </div>
+    <p class="ask">Are those three swaps right?</p>
+    <div class="chips" style="justify-content:flex-start" data-q="layout"></div>
+    <textarea id="note-layout" aria-label="Notes on the layout" placeholder="Notes on the layout"></textarea>
+  </section>
+
+  <section aria-labelledby="gates-h">
+    <div class="eyebrow">7 · Where the gates stand</div>
+    <h2 id="gates-h">Owner gates</h2>
+    <p>From the engine acceptance gates. This round builds the drums; the kit, saving, playback and export are the next round.</p>
+    <div class="scroll"><table>
+      <thead><tr><th>Gate</th><th>Status</th><th>Evidence or plan</th></tr></thead>
+      <tbody>
+        <tr><td>Sound character</td><td><span class="state s-part">Round 0 picked</span></td><td>Your round-0 picks; this page confirms the Kotlin renders.</td></tr>
+        <tr><td>Melodic, keygroups, chord tools</td><td><span class="state s-na">N/A</span></td><td>A drum kit.</td></tr>
+        <tr><td>Articulation</td><td><span class="state s-na">N/A</span></td><td>Finite hits under 1.5 s, no HOLD.</td></tr>
+        <tr><td>Percussion roll or riser</td><td><span class="state s-open">Not built</span></td><td>A15, the coil roll, next round.</td></tr>
+        <tr><td>Multiple genre kits</td><td><span class="state s-open">Not built</span></td><td>Two sibling kits you choose at a later gate.</td></tr>
+        <tr><td>Velocity, rendering</td><td><span class="state s-part">Verified in Kotlin</span></td><td>Every drum is brighter hard than soft when dry, by 1.4 to 10.6 dB. Through GRIME .9 the hats keep almost none of that brightness (section 4 asks).</td></tr>
+        <tr><td>Round robin, rendering</td><td><span class="state s-part">Verified in Kotlin</span></td><td>Each take a fresh strike. The kick's takes are the closest (18 to 23 dB apart).</td></tr>
+        <tr><td>Velocity and round robin: saving, playback, export</td><td><span class="state s-open">Not verified</span></td><td>Next round: the kit saved, reloaded, played through the app's resolver and exported to MPC 3.</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section aria-labelledby="m-h">
+    <div class="eyebrow">8 · What I measured</div>
+    <h2 id="m-h">Numbers, not listening</h2>
+    <p>From the Kotlin tests and generator. They say the engine behaves as designed; they say nothing about whether it sounds right.</p>
+    <div class="scroll"><table id="measure"><thead><tr><th>Measurement</th><th>Result</th></tr></thead><tbody></tbody></table></div>
+  </section>
+
+  <section class="answer" aria-labelledby="a-h">
+    <div class="eyebrow">Your answers</div>
+    <h2 id="a-h">Copy and paste back</h2>
+    <pre id="answer" aria-live="polite"></pre>
+    <button class="btn" id="copy" type="button">Copy answers</button>
+    <span class="copied" id="copied"></span>
+  </section>
+</main>
+
+<script>
+const DATA = /*DATA*/null;
+const KEY = "soot-r1-picks";
+let picks = {};
+try { picks = JSON.parse(localStorage.getItem(KEY) || "{}"); } catch (e) { picks = {}; }
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(picks)); } catch (e) {} render(); };
+
+const MODE = Object.fromEntries(DATA.sections.map(s => [s.key, s.mode]));
+const OPTS = Object.fromEntries(DATA.sections.map(s => [s.key, s.options || []]));
+const PLAY = '<svg viewBox="0 0 14 14" aria-hidden="true"><path d="M3 1.5v11l9-5.5z"/></svg>';
+const STOP = '<svg viewBox="0 0 14 14" aria-hidden="true"><rect x="3" y="3" width="8" height="8"/></svg>';
+let current = null;
+
+function chip(text, pressed, onClick) {
+  const b = document.createElement("button");
+  b.type = "button"; b.className = "chip"; b.textContent = text;
+  b.setAttribute("aria-pressed", pressed ? "true" : "false");
+  b.addEventListener("click", onClick);
+  return b;
+}
+
+function build() {
+  const host = document.getElementById("questions");
+  DATA.sections.forEach((s, si) => {
+    const sec = document.createElement("section");
+    sec.setAttribute("aria-labelledby", "h-" + s.key);
+    sec.innerHTML = `<div class="eyebrow">${s.title.split(" · ")[0]} · ${s.tag || s.key}</div><h2 id="h-${s.key}">${s.title.split(" · ")[1]}</h2><p></p><p class="ask"></p>`;
+    sec.querySelectorAll("p")[0].textContent = s.what;
+    sec.querySelectorAll("p")[1].textContent = s.ask;
+    const rack = document.createElement("div"); rack.className = "rack";
+    s.rows.forEach(r => {
+      const row = document.createElement("div"); row.className = "clip" + (r.ref ? " ref" : "");
+      const audio = new Audio(r.src); audio.preload = "none";
+      const btn = document.createElement("button"); btn.className = "play"; btn.type = "button";
+      btn.innerHTML = PLAY; btn.setAttribute("aria-label", "Play " + r.label);
+      const meta = document.createElement("div"); meta.className = "meta";
+      meta.innerHTML = `<span class="label"></span><span class="id"></span><div class="bar"><i></i></div>`;
+      meta.querySelector(".label").textContent = r.label;
+      meta.querySelector(".id").textContent = (r.ref ? "reference" : (s.tag || s.key) + "/" + r.id) + (r.trim ? ` · plays ${r.trim} dB under the others (peak limit)` : "");
+      const fill = meta.querySelector("i");
+      audio.addEventListener("timeupdate", () => { fill.style.width = (100 * audio.currentTime / (audio.duration || 1)) + "%"; });
+      const stop = () => { audio.pause(); audio.currentTime = 0; btn.classList.remove("on"); btn.innerHTML = PLAY; fill.style.width = "0"; };
+      audio.addEventListener("ended", stop);
+      btn.addEventListener("click", () => {
+        if (current && current.audio !== audio) current.stop();
+        if (audio.paused) { audio.play(); btn.classList.add("on"); btn.innerHTML = STOP; current = { audio, stop }; }
+        else { stop(); current = null; }
+      });
+      row.append(btn, meta);
+      const chips = document.createElement("div"); chips.className = "chips";
+      if (!r.ref) {
+        if (MODE[s.key] === "pick") chips.dataset.pick = s.key + "|" + r.id;
+        if (MODE[s.key] === "each") chips.dataset.each = s.key + "|" + r.id;
+        if (MODE[s.key] === "yesno") chips.dataset.yesno = s.key + "|" + r.id;
+      }
+      row.append(chips);
+      if (r.note) { const n = document.createElement("div"); n.className = "note"; n.textContent = r.note; row.append(n); }
+      rack.append(row);
+    });
+    sec.append(rack);
+    const ta = document.createElement("textarea");
+    ta.id = "note-" + s.key; ta.placeholder = "Notes"; ta.setAttribute("aria-label", "Notes on " + s.title);
+    ta.value = picks["note-" + s.key] || "";
+    ta.addEventListener("input", () => { picks["note-" + s.key] = ta.value; save(); });
+    sec.append(ta);
+    host.append(sec);
+  });
+  const lay = document.getElementById("note-layout");
+  lay.value = picks["note-layout"] || "";
+  lay.addEventListener("input", () => { picks["note-layout"] = lay.value; save(); });
+
+  const tb = document.querySelector("#measure tbody");
+  Object.entries(DATA.measurements).forEach(([k, v]) => {
+    const tr = document.createElement("tr");
+    const val = typeof v === "object" && !Array.isArray(v)
+      ? Object.entries(v).map(([a, b]) => `${a}: ${b}`).join(" · ") : Array.isArray(v) ? v.join(" / ") : String(v);
+    tr.innerHTML = "<td></td><td class='num'></td>";
+    tr.children[0].textContent = k; tr.children[1].textContent = val;
+    tb.append(tr);
+  });
+  render();
+}
+
+function render() {
+  document.querySelectorAll("[data-pick]").forEach(el => {
+    const [q, id] = el.dataset.pick.split("|");
+    el.replaceChildren(chip(picks[q] === id ? "Picked" : "Pick", picks[q] === id, () => { picks[q] = picks[q] === id ? undefined : id; save(); }));
+  });
+  document.querySelectorAll("[data-each]").forEach(el => {
+    const k = el.dataset.each;
+    el.replaceChildren(...OPTS[k.split("|")[0]].map(w => chip(w, picks[k] === w, () => { picks[k] = picks[k] === w ? undefined : w; save(); })));
+  });
+  document.querySelectorAll("[data-yesno]").forEach(el => {
+    const k = el.dataset.yesno;
+    el.replaceChildren(...OPTS[k.split("|")[0]].map(w => chip(w, picks[k] === w, () => { picks[k] = picks[k] === w ? undefined : w; save(); })));
+  });
+  const lay = document.querySelector('[data-q="layout"]');
+  lay.replaceChildren(...["Right", "Change"].map(w => chip(w, picks.layout === w, () => { picks.layout = picks.layout === w ? undefined : w; save(); })));
+
+  const lines = ["SOOT round 1 answers"];
+  DATA.sections.forEach(s => {
+    const label = id => (s.rows.find(r => r.id === id) || {}).label || id;
+    let line = s.title + ": ";
+    if (MODE[s.key] === "pick") line += picks[s.key] ? `${picks[s.key]} (${label(picks[s.key])})` : "no pick";
+    else if (MODE[s.key] === "each" || MODE[s.key] === "yesno")
+      line += s.rows.filter(r => !r.ref).map(r => `${r.id} ${picks[s.key + "|" + r.id] || "?"}`).join(", ");
+    else line += "(notes only)";
+    lines.push(line);
+    if (picks["note-" + s.key]) lines.push("  notes: " + picks["note-" + s.key]);
+  });
+  lines.push("6 · Layout swaps: " + (picks.layout || "no answer"));
+  if (picks["note-layout"]) lines.push("  notes: " + picks["note-layout"]);
+  document.getElementById("answer").textContent = lines.join("\n");
+}
+
+document.getElementById("copy").addEventListener("click", () => {
+  const text = document.getElementById("answer").textContent;
+  const done = m => { document.getElementById("copied").textContent = m; };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(() => done("Copied."), () => selectIt());
+  } else selectIt();
+  function selectIt() {
+    const r = document.createRange(); r.selectNodeContents(document.getElementById("answer"));
+    const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r);
+    done("Selected. Copy it with your device's copy command.");
+  }
+});
+build();
+</script>

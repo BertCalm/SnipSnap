@@ -70,6 +70,6 @@ regression criteria, not an audibility threshold.
   with no notes. That replaces V1's REVISIT ("Didn't hear any variation") for the V2 policy.
   It is a listen to saved-player renders, not to a phone or an MPC.
 - **App and phone:** the Android screens and the native round-robin player from the recovery
-  snapshot are not ported yet. That is the next MURMUR change. No phone has played a V2 bank.
+  snapshot are ported (#1051), and their native host tests pass. No phone has played a V2 bank.
 - **MPC export:** each take exports as its own fixed-take program. An MPC does not rotate
   them, which is the existing V1 limit.

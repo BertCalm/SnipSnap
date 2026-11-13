@@ -39,6 +39,7 @@ class PadRecipeTest {
     private fun handBuiltPatches(): List<Patch> = listOf(
         BackwashPatch("Damped hit", BackwashVoice.SNARE, emptyMap()),
         BreakerPatch("Crushed drip", BreakerVoice.SNARE, emptyMap()),
+        SootPatch("Hot", SootVoice.SNARE, emptyMap()),
         HalobarPatch("Mallet dub", HalobarVoice.MARIMBA, emptyMap()),
         HydroformPatch("Saved impact", HydroformVoice.BULKHEAD, mapOf("YIELD" to .3f), velocity = .6f),
         RivetPatch("Industrial kick", RivetVoice.KICK),
@@ -100,6 +101,8 @@ class PadRecipeTest {
         TidalPatch("Encounter Test", TidalVoice.STREAM, mapOf("TAIL" to .7f), midi = 55, velocity = .6f, seed = Long.MAX_VALUE),
         // KEEL is rostered, but every factory preset sits on the default root at full velocity; this patch carries a saved note and velocity.
         KeelPatch("Settle Test", KeelVoice.REDUCE, mapOf("SETTLE" to .3f, "WEIGHT" to .7f), midi = 42, velocity = .6f),
+        // ETCH is a prototype with no factory presets yet; this patch carries a saved note and velocity.
+        EtchPatch("Accent Test", EtchVoice.GRIT, mapOf("BITE" to .7f), midi = 41, velocity = .7f),
         OhmPatch("Family Test", mapOf("LENGTH" to 0f, "MEDDLING" to .7f, "COMMUNE" to .8f),
             midi = 57, velocity = .6f, seed = -7, gesture = OhmGesture.GATHER),
     )

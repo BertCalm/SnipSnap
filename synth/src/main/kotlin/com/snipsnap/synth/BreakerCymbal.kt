@@ -62,10 +62,10 @@ internal object BreakerCymbal {
     private const val STICK_MIX = .6
 
     /**
-     * [seconds] of [kind] at [velocity], take [take], its modes scaled by [pitch] (a frequency ratio). Peak 0.9, not
-     * levelled: [Breaker] levels it with every other hit.
+     * [seconds] of [kind] at [velocity], take [take], its modes scaled by [pitch] (a frequency ratio) and every mode's
+     * decay steepened by [damping] (1 as fitted). Peak 0.9, not levelled: [Breaker] levels it with every other hit.
      */
-    fun render(kind: Kind, velocity: Float, take: Int, seconds: Float, pitch: Double = 1.0, rate: Int = Dsp.RATE): FloatArray {
+    fun render(kind: Kind, velocity: Float, take: Int, seconds: Float, pitch: Double = 1.0, rate: Int = Dsp.RATE, damping: Double = 1.0): FloatArray {
         val m = models.getValue(kind)
         val n = (seconds * rate).toInt()
         val soft = ((1.0 - velocity.coerceIn(0f, 1f)) / .8).coerceIn(0.0, 1.0)
@@ -79,7 +79,7 @@ internal object BreakerCymbal {
             val phase = rng.nextDouble(0.0, 2 * PI)
             // A decaying phasor, rotated and shrunk each sample: two multiplies per mode per sample.
             val w = 2 * PI * hz / rate
-            val r = 10.0.pow(m.slope[k] / 20 / rate)
+            val r = 10.0.pow(m.slope[k] * damping / 20 / rate)
             val cr = r * cos(w); val sr = r * sin(w)
             var re = g * cos(phase); var im = g * sin(phase)
             for (i in 0 until n) {

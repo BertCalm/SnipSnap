@@ -3281,6 +3281,36 @@ tasks.register<JavaExec>("generateHydroformCandidateKit") {
 }
 
 // Backroom is a listening study until the owner approves its voicing.
+tasks.register<JavaExec>("generateSootDubCandidates") {
+    group = "distribution"
+    description = "Render candidate four bars for SOOT BASEMENT DUB's A16 beside the current one."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.SootDubCandidateGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "1g"
+    args("${rootDir}/testkit/soot-dub-candidates")
+}
+
+tasks.register<JavaExec>("generateSootGenreSketches") {
+    group = "distribution"
+    description = "Render sketches of four candidate SOOT genre kits (four bars and signature pads each) for the owner to choose from."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.SootGenreSketchGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "1g"
+    args(providers.gradleProperty("sootGenresOutput").orNull ?: "${rootDir}/testkit/soot-genres")
+}
+
+tasks.register<JavaExec>("generateSootAudition") {
+    group = "distribution"
+    description = "Render SOOT's round-1 listening pack: the round-0 picks in Kotlin, the pad prints, the alternates, touch strips and four bars from the pads."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.SootAuditionGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "1g"
+    args(providers.gradleProperty("sootOutput").orNull ?: "${rootDir}/testkit/soot-audition")
+}
+
 tasks.register<JavaExec>("generateBoomBapAudition") {
     group = "distribution"
     description = "Render the Backroom boom bap study, dry/wet grooves, metrics and layered MPC kit."
@@ -3574,6 +3604,15 @@ tasks.register<JavaExec>("generateCosmicBreaksFamily") {
     workingDir = rootProject.projectDir
     maxHeapSize = "1g"
     args(providers.gradleProperty("cosmicFamilyOutput").orNull ?: "testkit/cosmic-family")
+}
+
+tasks.register<JavaExec>("generateTremoloFlangerAudition") {
+    group = "distribution"
+    description = "Render TREMOLO and FLANGER's listening gate clips under testkit/tremflange-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.TremoloFlangerAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/tremflange-audition")
 }
 
 tasks.register<JavaExec>("generateSporeMembraneAudition") {

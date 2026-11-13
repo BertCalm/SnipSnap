@@ -364,7 +364,8 @@ class StrikeVelocityTest {
 
     @Test
     fun `THUMP and ONSET voices other than KICK ignore velocity`() {
-        for (voice in ThumpVoice.entries - ThumpVoice.KICK) {
+        // KICK and SUB read velocity (ThumpTest holds SUB's own velocity claims); every other voice ignores it.
+        for (voice in ThumpVoice.entries - ThumpVoice.KICK - ThumpVoice.SUB) {
             val m = Thump.defaults(voice)
             assertContentEquals(Thump.render(voice, m).samples, Thump.render(voice, m, .3f).samples, "THUMP $voice ignores a render velocity")
         }

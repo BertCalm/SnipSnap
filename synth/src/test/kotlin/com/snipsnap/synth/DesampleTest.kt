@@ -17,6 +17,7 @@ class DesampleTest {
             Desample.Voices.THUMP.map { it.name })
         assertEquals(null, Desample.Voices.of(ThumpPatch.ENGINE, ThumpVoice.SPARK.name))
         assertTrue(Desample.Voices.ALL.none { it.engine == ThumpPatch.ENGINE && it.name == ThumpVoice.SPARK.name })
+        assertEquals(null, Desample.Voices.of(ThumpPatch.ENGINE, ThumpVoice.SUB.name))
     }
 
     @Test

@@ -6731,6 +6731,8 @@ private val ThumpVoice.drumClass: DrumClass
         ThumpVoice.COWBELL -> DrumClass.PERC
         ThumpVoice.RIM -> DrumClass.PERC
         ThumpVoice.SPARK -> DrumClass.PERC
+        // A sub drum sits on the kick pad by convention; the classifier reads a long one as TONAL.
+        ThumpVoice.SUB -> DrumClass.KICK
     }
 
 // SKIN's voices are built to hit the same classifier gates THUMP's do
@@ -6839,6 +6841,7 @@ private fun thumpChipLabel(voice: ThumpVoice): String = when (voice) {
     ThumpVoice.COWBELL -> "COWBELL"
     ThumpVoice.RIM -> "RIM"
     ThumpVoice.SPARK -> "SPARK"
+    ThumpVoice.SUB -> "SUB"
 }
 
 private fun skinChipLabel(voice: SkinVoice): String = when (voice) {

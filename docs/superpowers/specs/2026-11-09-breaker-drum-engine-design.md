@@ -626,7 +626,7 @@ It has two dynamic layers of two recorded takes, so it now gets exactly that: 2 
 - **Their takes are distinct strikes, but close.** Each is struck again up to 15% softer with fresh
   click noise. The crush at CRUSH .9 to 1 evens out the force difference, so the takes are
   34 dB apart. A copy measures more than 40 dB apart.
-- **Their soft zones move only 0.9 to 1.2 dB in spectral shape.**
+- **Their soft zones move only 0.9 to 1.2 dB in spectral shape** (0.6 to 0.8 dB on model 4).
 - **The owner has accepted the kick as is.** They heard it at round 1b as "the same drum, a softer
   hand".
 - **If more variation is wanted,** a later model can vary the beater per strike, as a drummer does,
@@ -646,3 +646,121 @@ export through `PadHit.resolve`, and the groove plays through `KitPreview`. It a
 - the pushed row: keep it?
 - the kick hit again: one kick played again, or one sample repeated?
 - every pad soft to hard: softer in character, with a fresh hit each time?
+
+## Heard: the kit (2026-11-12)
+
+| Question | Owner's answer |
+|---|---|
+| The kit in a groove: is this BREAKER, balanced the way you want? | **The balance is off: "Feels very mid heavy like listening through dollar tree headphones"** |
+| The pushed row (A05, A06, A12): keep them? | (not answered) |
+| Your kick hit again: one kick played again, or one sample repeated? | (not answered) |
+| Every pad, soft to hard: softer in character, and a fresh hit each time? | (not answered) |
+
+**Measured:** the groove's octave levels fell 9 dB from 2 to 8 kHz and 17 dB to 16 kHz. Each drum's
+top fell harder:
+- the snare: −28 dB at 8 kHz;
+- the closed hat: −35 dB at 8 kHz;
+- the kick: −28 dB at 4 kHz.
+
+**Stage by stage**, rendering each drum with one stage bypassed at a time:
+- DUST's CRUNCH low-passes near 4.2 kHz at DUST .35 (5.5 kHz on the snare). That costs 10 to 20 dB
+  in the top two octaves.
+- The combo's speaker costs another 4 to 8 dB above 8 kHz, and adds breakup peaks at 2.6 and
+  3.75 kHz.
+
+Page: https://claude.ai/artifact/L7Tf8Zdvy4TSzV9RfFfw2i. It played the same five bars four ways at one
+loudness: as built, DUST opened (TONE .75 at DUST .35), no speaker (CAB 0), and both.
+
+## Heard: the kit's tone (2026-11-12)
+
+| Question | Owner's answer |
+|---|---|
+| Which groove sounds right? | **D (both)** |
+| Your snare, hat and kick opened up (D): still your BREAKER drums? | **Yes, better** |
+
+## As built: model 4, the open rig (2026-11-12)
+
+What changes on every drum except the cymbals and the riser:
+- **DUST:** CRUNCH's output filter at DUST .35 goes from TONE .43 (.55 on the snare) to .75: about
+  8.9 kHz, CRUNCH's own default.
+- **The amp:** VALVE's speaker goes (CAB 0); its drive and sag stay.
+
+What stays:
+- **The cymbals and the riser** keep the rig they were heard with: in the D groove, and the cymbals'
+  dialled presets approved at round 3.
+- **Model-3 saves** keep their tone.
+
+Checked against what was heard:
+- **The app's model-4 render of every kit pad at velocities 1, .65 and .3 is the D clip,** to
+  within 6 × 10⁻⁸.
+- **The top octave rises:** the snare by 9.6 dB, the hats by 8.7 to 10 dB, the kick by 6.3 dB
+  (`BreakerTest`).
+- **The crush's swell past halfway holds** where the spring's tail is:
+  - **Below 2 kHz,** CRUSH .5 to .9 lifts the snare's tail 1.3 dB (1.5 on model 3) and the kick's
+    1.2 dB (1.9).
+  - **Broadband,** the opened crack of the hit hides it (0.4 and 0.9 dB).
+  - **So `BreakerTest` measures it below 2 kHz,** with its 1 dB bound unchanged.
+
+## Heard: the kit on the open tone (2026-11-12)
+
+| Question | Owner's answer |
+|---|---|
+| The kit in a groove, on the open tone: is this BREAKER, balanced the way you want? | **Sounds right now** |
+| The pushed row (A05, A06, A12): keep them? | **Keep all three** |
+| Your kick hit again: one kick played again, or one sample repeated? | **One kick played again: fine** |
+| Every pad, soft to hard: softer in character, and a fresh hit each time? | **Yes** |
+
+The page kept the first answer from the model-3 listen, word for word. Asked directly, the owner said
+the open tone "sounds right now".
+
+The BREAKER kit is accepted by ear on model 4. Next come the two genre kits, Dub Tank and Trip hop,
+each laid out for the owner before it is built.
+
+## Decided: the genre kits' layouts (2026-11-12)
+
+The owner approved both layouts as proposed ("Build it").
+
+**Dub Tank, 74 BPM, one-drop.** The backbeat moves to a rimshot on beat 3, with the kick. A snare is
+thrown into a 375 ms echo, and the toms are tuned up like timbales.
+
+| | | | |
+|---|---|---|---|
+| A13 Ride (bell, up 2) | A14 Crash (dry) | A15 Bump (the tank kicked) | A16 Snare Riser |
+| A09 Low Tom (long) | A10 Mid Tom | A11 High Timbale (up 5) | A12 Shaker |
+| A05 Thrown Snare (375 ms echo) | A06 Steppers Kick (tight) | A07 Dry Snare | A08 Tambourine |
+| A01 Drop Kick (low, round) | A02 Rimshot (beat 3, 300 ms echo) | A03 Closed Hat (echoed) | A04 Open Hat |
+
+**Trip hop, 92 BPM, heavy break.** The kick and snare are down a semitone and fatter, with a ghost
+snare and a second kick for the break. The ride and crash are dialled into the rig.
+
+| | | | |
+|---|---|---|---|
+| A13 Dusty Ride (rig in) | A14 Crash (in the spring) | A15 Crushed Riser | A16 Shaker |
+| A09 Low Tom (down 3) | A10 Mid Tom | A11 Cross Stick (dark) | A12 Break Snare (crushed, amp) |
+| A05 Ghost Snare (short) | A06 Second Kick (short, lower) | A07 Tambourine | A08 Open Hat (long, crushed) |
+| A01 Heavy Kick (down 1) | A02 Fat Snare (down 1, wide spring) | A03 Closed Hat (dusty) | A04 Half-open Hat |
+
+**Engine additions, approved ("Add both"):**
+- **DAMP:** each drum's damping, so that the kits differ in damping, not only in effects.
+- **Bump:** the tank kicked, for Dub Tank's A15.
+
+Both arrive as renderer model 5, and each is heard before a kit uses it.
+
+## As built: model 5 (2026-11-12)
+
+DAMP and Bump are described in docs/BREAKER.md, "Model 5". At DAMP .5 every model-4 voice renders
+byte for byte as on model 4, including soft hits and later takes.
+
+**Found while building DAMP.** In a wet rig, a drum's own DECAY barely moves what is heard: the
+spring (normalised to the hit's peak) and the crush rebuild the tail. With DECAY alone:
+- the kick's tail past .3 s measured the same at every DAMP;
+- the snare's body did too.
+
+So above .5 DAMP also fades the drum itself, as tape on a head does, before the rig. Even so, at the
+snare's own DRIP .6 and CRUSH .9 its body measures the same at every DAMP. The kits therefore dry the
+spring wherever they want a damped drum to be heard. `BreakerTest` measures DAMP on the drum with
+the rig's tail stages off, and prints its measure in the rig beside it.
+
+**Found while testing Bump.** A softer kick of the tank barely changes its tone, since the tank's send
+is normalised and its 3 kHz corner hides a duller jolt. It does ring shorter: at 40%, 1.4 to 2.2 s in,
+it sits 8.6 dB under a full kick, so that is the soft-hit claim.

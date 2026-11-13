@@ -539,6 +539,26 @@ tasks.register<JavaExec>("generateBreakerKit") {
     args(providers.gradleProperty("breakerOutput").orNull ?: "${rootDir}/testkit/breaker-kit")
 }
 
+tasks.register<JavaExec>("generateSootGenreKits") {
+    group = "distribution"
+    description = "Build SOOT's four sibling genre kits, prove every grid through save, playback and MPC 3 export, and write the listening pack."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.SootGenreKitGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "3g"
+    args(providers.gradleProperty("sootGenreKitsOutput").orNull ?: "${rootDir}/testkit/soot-genre-kits")
+}
+
+tasks.register<JavaExec>("generateSootKit") {
+    group = "distribution"
+    description = "Build the SOOT kit, prove its velocity and round-robin grids through save, playback and MPC 3 export, and write the listening pack."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.SootKitGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "2g"
+    args(providers.gradleProperty("sootKitOutput").orNull ?: "${rootDir}/testkit/soot-kit")
+}
+
 tasks.register<JavaExec>("generateGatecrashKits") {
     group = "distribution"
     description = "Build the three GATECRASH kits, prove the velocity and round-robin grid through save, playback and MPC 3 export, and write the listening pack."
@@ -547,6 +567,26 @@ tasks.register<JavaExec>("generateGatecrashKits") {
     workingDir = rootProject.projectDir
     maxHeapSize = "2g"
     args(providers.gradleProperty("gatecrashOutput").orNull ?: "${rootDir}/testkit/gatecrash-kits")
+}
+
+tasks.register<JavaExec>("generateCypherKits") {
+    group = "distribution"
+    description = "Build the CYPHER kits, prove the velocity and round-robin grid through save, playback and MPC 3 export, and write the listening pack."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.CypherKitGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "2g"
+    args(providers.gradleProperty("cypherOutput").orNull ?: "${rootDir}/testkit/cypher-kits")
+}
+
+tasks.register<JavaExec>("generateMirrorballKits") {
+    group = "distribution"
+    description = "Build the three MIRRORBALL disco kits, prove the velocity and round-robin grid through save, playback and MPC 3 export, and write the listening pack."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.MirrorballKitGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "2g"
+    args(providers.gradleProperty("mirrorballOutput").orNull ?: "${rootDir}/testkit/mirrorball-kits")
 }
 
 tasks.register<JavaExec>("generateTriadKits") {

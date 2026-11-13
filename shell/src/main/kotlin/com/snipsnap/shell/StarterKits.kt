@@ -36,6 +36,9 @@ import java.io.File
  * per zone, including finite bus phrases, with source provenance on every pad.
  * GATECRASH starters are the same kind of bank: three zones of four takes, each pad printed
  * through its own gated space, with two finite phrases and source provenance on every pad.
+ * CYPHER starters follow GATECRASH's shape: dry or printed hits, two phrases, provenance on every pad.
+ * MIRRORBALL starters are built the same way, each pad printed through an FET compressor,
+ * a multi-head tape echo and an amp.
  * CLOUD's GRAINS clouds (A07-A16) carry no recipe;
  * only its VOX pads (A01-A06) do, as `SynthKits.cloud` says. LUCKY DIP
  * A/B's bank-B twins carry fx-only recipes (`Shuffle.withRemixBank`), the
@@ -645,10 +648,80 @@ object StarterKits {
             seeded = false, tempoBpm = com.snipsnap.synth.GatecrashKits.Kit.ELECTRO_FUNK.bpm.toFloat(),
         ) { com.snipsnap.synth.GatecrashKits.build(com.snipsnap.synth.GatecrashKits.Kit.ELECTRO_FUNK) },
         Starter(
+            "cypher-trap", "CYPHER TRAP",
+            "A short punch over subs that hold and slide, a piercing snare, hats that roll in triplets and sixty-fourths, a bell and a zap. Dry. Three touch zones, four takes; a hat roll and a sub line.",
+            seeded = false, tempoBpm = com.snipsnap.synth.CypherKits.Kit.TRAP.bpm.toFloat(),
+        ) { com.snipsnap.synth.CypherKits.build(com.snipsnap.synth.CypherKits.Kit.TRAP) },
+        Starter(
+            "cypher-drill", "CYPHER DRILL",
+            "Subs that land then slide down on the off-beat, a snare and clap in a dark big room on the triplet grid, hats ticking under, metal hits. Three touch zones, four takes; a triplet snare bar and a sub call.",
+            seeded = false, tempoBpm = com.snipsnap.synth.CypherKits.Kit.DRILL.bpm.toFloat(),
+        ) { com.snipsnap.synth.CypherKits.build(com.snipsnap.synth.CypherKits.Kit.DRILL) },
+        Starter(
+            "cypher-backroom", "CYPHER BACKROOM",
+            "Boom bap: the accepted Backroom six through their rack, completed to sixteen pads. Three touch zones, four takes; swung hats and a break drop.",
+            seeded = false, tempoBpm = com.snipsnap.synth.CypherKits.Kit.BACKROOM.bpm.toFloat(),
+        ) { com.snipsnap.synth.CypherKits.build(com.snipsnap.synth.CypherKits.Kit.BACKROOM) },
+        Starter(
+            "cypher-lowrider", "CYPHER LOWRIDER",
+            "G-funk: a hybrid thump, a fat snare and clap that bloom into a long room, hats and a shaker behind the beat, a bell. Three touch zones, four takes; a laid-back groove and a big fill.",
+            seeded = false, tempoBpm = com.snipsnap.synth.CypherKits.Kit.LOWRIDER.bpm.toFloat(),
+        ) { com.snipsnap.synth.CypherKits.build(com.snipsnap.synth.CypherKits.Kit.LOWRIDER) },
+        Starter(
+            "cypher-dust", "CYPHER DUST",
+            "Underground cinematic boom bap: raw tape thuds, a high wooden crack, a crash, no compressor anywhere. Three touch zones, four takes; an unquantized break with and without the crash.",
+            seeded = false, tempoBpm = com.snipsnap.synth.CypherKits.Kit.DUST.bpm.toFloat(),
+        ) { com.snipsnap.synth.CypherKits.build(com.snipsnap.synth.CypherKits.Kit.DUST) },
+        Starter(
+            "cypher-flint", "CYPHER FLINT",
+            "Michigan scat: a fast kick and an early-sliding sub, a high piercing snare, wooden clicks and high rims off the grid, an off-beat bell. Three touch zones, four takes; a click scatter and a slide stack.",
+            seeded = false, tempoBpm = com.snipsnap.synth.CypherKits.Kit.FLINT.bpm.toFloat(),
+        ) { com.snipsnap.synth.CypherKits.build(com.snipsnap.synth.CypherKits.Kit.FLINT) },
+        Starter(
             com.snipsnap.synth.BreakerKits.ID, "BREAKER",
             "Surf rock by way of boom bap: dusty drums through a spring tank, a crush and a surf amp. Three touch zones, three takes; a snare riser.",
             seeded = false, tempoBpm = com.snipsnap.synth.BreakerKits.BPM,
         ) { com.snipsnap.synth.BreakerKits.build() },
+        Starter(
+            "mirrorball-philly", "MIRRORBALL PHILLY STRINGS",
+            "A dry live disco kit: dead kick, towelled snare, congas and tambourine through an FET squeeze, tape repeats and a clean amp. Three touch zones, four takes; a tom fill and a snare build.",
+            seeded = false, tempoBpm = com.snipsnap.synth.MirrorballKits.Kit.PHILLY.bpm.toFloat(),
+        ) { com.snipsnap.synth.MirrorballKits.build(com.snipsnap.synth.MirrorballKits.Kit.PHILLY) },
+        Starter(
+            "mirrorball-loft", "MIRRORBALL LOFT PARTY",
+            "A percussion-first disco kit: clap snare, hand drums, timbales and cowbell riding long tape repeats into a warm amp. Three touch zones, four takes; a timbale fill and a clap build.",
+            seeded = false, tempoBpm = com.snipsnap.synth.MirrorballKits.Kit.LOFT.bpm.toFloat(),
+        ) { com.snipsnap.synth.MirrorballKits.build(com.snipsnap.synth.MirrorballKits.Kit.LOFT) },
+        Starter(
+            "mirrorball-munich", "MIRRORBALL MUNICH MACHINE",
+            "Machine disco: analog kick, four falling synth toms and a sequencer hat on the dotted-eighth head, into a pushed amp. Three touch zones, four takes; a pew fill and a snare build.",
+            seeded = false, tempoBpm = com.snipsnap.synth.MirrorballKits.Kit.MUNICH.bpm.toFloat(),
+        ) { com.snipsnap.synth.MirrorballKits.build(com.snipsnap.synth.MirrorballKits.Kit.MUNICH) },
+        Starter(
+            "soot", "SOOT",
+            "Grimy street boom bap from physical models: a sagging skin over a sub, a hot snare into a tight coil, detuned metal and a dictaphone. Three touch zones, four takes; a coil roll and four bars.",
+            seeded = false, tempoBpm = com.snipsnap.synth.SootKits.BPM.toFloat(),
+        ) { com.snipsnap.synth.SootKits.build() },
+        Starter(
+            "soot-drumless", "SOOT DRUMLESS",
+            "No kick: tension rods, cups and plates carry the groove over muted snares, all from SOOT's physical models. Three touch zones, four takes; a rod roll and four bars.",
+            seeded = false, tempoBpm = com.snipsnap.synth.SootGenreKits.Genre.DRUMLESS.bpm.toFloat(),
+        ) { com.snipsnap.synth.SootGenreKits.build(com.snipsnap.synth.SootGenreKits.Genre.DRUMLESS) },
+        Starter(
+            "soot-dub", "SOOT BASEMENT DUB",
+            "A one-drop: a heavy kick and a high rimshot thrown deep into the coil, plates in the spring. Three touch zones, four takes; a spring roll and four bars.",
+            seeded = false, tempoBpm = com.snipsnap.synth.SootGenreKits.Genre.DUB.bpm.toFloat(),
+        ) { com.snipsnap.synth.SootGenreKits.build(com.snipsnap.synth.SootGenreKits.Genre.DUB) },
+        Starter(
+            "soot-noir", "SOOT BRUSHED NOIR",
+            "Soft and close: a damp kick, brush-weight snares, pure hats and soft metal under a light dictaphone. Three touch zones, four takes; a brush roll and four bars.",
+            seeded = false, tempoBpm = com.snipsnap.synth.SootGenreKits.Genre.NOIR.bpm.toFloat(),
+        ) { com.snipsnap.synth.SootGenreKits.build(com.snipsnap.synth.SootGenreKits.Genre.NOIR) },
+        Starter(
+            "soot-industrial", "SOOT WAREHOUSE INDUSTRIAL",
+            "Straight and hard: a driven kick, bench snares, struck plates and rods, the dictaphone pushed. Three touch zones, four takes; a snare roll and four bars.",
+            seeded = false, tempoBpm = com.snipsnap.synth.SootGenreKits.Genre.INDUSTRIAL.bpm.toFloat(),
+        ) { com.snipsnap.synth.SootGenreKits.build(com.snipsnap.synth.SootGenreKits.Genre.INDUSTRIAL) },
         Starter(
             MurmurKeptBank.ID, "MURMUR KEPT",
             "Kept plucks, vowel keys and lower-air choir. Held pads have a short delivery fade.",
