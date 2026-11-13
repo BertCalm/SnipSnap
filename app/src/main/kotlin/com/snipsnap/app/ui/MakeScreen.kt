@@ -224,7 +224,6 @@ fun InstrumentsBench(
             Box(
                 Modifier
                     .fillMaxWidth()
-                    .weight(1f)
                     .lcdPanel(scheme)
                     .padding(14.dp),
                 contentAlignment = Alignment.Center,
@@ -257,7 +256,7 @@ fun InstrumentsBench(
 }
 
 /** The empty list's one line: where an instrument comes from. */
-private const val NO_INSTRUMENTS = "No instruments yet. Synth's MAKE INSTRUMENT, or a pad editor's, puts one here."
+private const val NO_INSTRUMENTS = "No instruments yet, and Synth's MAKE INSTRUMENT, or a pad editor's, puts one here."
 
 /** One instrument: its name, zones and root, and KEYS ▸; EXPANSION ▸ beside it when [onExpansion] is given. */
 @Composable

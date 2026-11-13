@@ -442,7 +442,7 @@ class ContrastTest {
         "ui/KeysScreen.kt" to 1,
         "ui/KitFromResultOverlay.kt" to 4,
         "ui/KitScreen.kt" to 2,
-        "ui/KitsScreen.kt" to 8,
+        "ui/KitsScreen.kt" to 7,
         "ui/MakeScreen.kt" to 1,
         "ui/MurmurRoundRobinKeysScreen.kt" to 1,
         "ui/OrbitScreen.kt" to 2,

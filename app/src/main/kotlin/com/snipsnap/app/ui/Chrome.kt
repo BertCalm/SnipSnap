@@ -324,7 +324,8 @@ data class EmptyStateRoute(val label: String, val onClick: () -> Unit)
  * the user to find by hand (September UAT follow-up).
  *
  * [routes] is usually one door, sometimes two (CHOP's own EMPTY_CHOP names
- * both TAPE and SHELF, since its own sentence promises both) — deliberately
+ * both TAPE and SHELF, since its own sentence promises both); the first is
+ * the primary button and any other is secondary, so the panel has one primary — deliberately
  * never validated non-empty here: a screen with no honest route to offer
  * (EXPORT's own "kit won't parse" face, `KIT_WONT_OPEN`, same reasoning as
  * `TakesBinScreen`'s) simply doesn't call this at all, and stays a bare
@@ -337,9 +338,11 @@ fun EmptyStatePanel(
     modifier: Modifier = Modifier,
 ) {
     val scheme = LocalScheme.current
+    // Sized to what it holds, across the width: one sentence and its doors,
+    // not a lit panel the height of the screen with two lines in the middle.
     Box(
         modifier
-            .fillMaxSize()
+            .fillMaxWidth()
             .lcdPanel(scheme)
             .padding(14.dp),
         contentAlignment = Alignment.Center,
@@ -349,8 +352,16 @@ fun EmptyStatePanel(
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             TapeText(message, TapeType.lcdSmall, scheme.lcdInk.tape, maxLines = 3)
-            routes.forEach { route ->
-                ActionButton(route.label, scheme, enabled = true, modifier = Modifier.fillMaxWidth(), onClick = route.onClick)
+            routes.forEachIndexed { index, route ->
+                // The first door is the way out the sentence names: the screen's primary.
+                ActionButton(
+                    route.label,
+                    scheme,
+                    enabled = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    tier = if (index == 0) ButtonTier.Primary else ButtonTier.Secondary,
+                    onClick = route.onClick,
+                )
             }
         }
     }
