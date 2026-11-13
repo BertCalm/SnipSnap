@@ -6,6 +6,7 @@ import com.snipsnap.kit.ConfluenceBankFiles
 import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitAssembler
 import com.snipsnap.kit.Names
+import com.snipsnap.synth.MurmurKeptBank
 import com.snipsnap.synth.ChordStabs
 import com.snipsnap.synth.Shuffle
 import com.snipsnap.synth.ConfluenceVoiceBank
@@ -648,6 +649,13 @@ object StarterKits {
             "Surf rock by way of boom bap: dusty drums through a spring tank, a crush and a surf amp. Three touch zones, three takes; a snare riser.",
             seeded = false, tempoBpm = com.snipsnap.synth.BreakerKits.BPM,
         ) { com.snipsnap.synth.BreakerKits.build() },
+        Starter(
+            MurmurKeptBank.ID, "MURMUR KEPT",
+            "Kept plucks, vowel keys and lower-air choir. Held pads have a short delivery fade.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+            prepare = { directory -> MurmurKeptBankFiles.write(directory) },
+        ) { SynthKits.murmurKept() },
     )
 
     fun byId(id: String): Starter? = ALL.firstOrNull { it.id == id }

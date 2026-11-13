@@ -274,7 +274,7 @@ object SynthRoot {
         is LatticePatch -> Field(patch.midi, Lattice.MIDI_MIN..Lattice.MIDI_MAX) { patch.copy(midi = it) }
         is LibrationPatch -> Field(patch.midi, Libration.MIN_MIDI..Libration.MAX_MIDI) { patch.copy(midi = it) }
         is MeridianPatch -> Field(patch.midi, Meridian.MIDI_MIN..Meridian.MIDI_MAX) { patch.copy(midi = it) }
-        is MurmurPatch -> Field(patch.midi, Murmur.MIN_MIDI..Murmur.MAX_MIDI) { patch.copy(midi = it) }
+        is MurmurPatch -> Field(patch.midi, Murmur.rootRange(patch.config)) { patch.copy(midi = it) }
         is NacrePatch -> Field(patch.midi, Nacre.MIN_MIDI..Nacre.MAX_MIDI) { patch.copy(midi = it) }
         is ObbligatoPatch -> Field(patch.midi, Obbligato.midiRange(patch.model)) { patch.copy(midi = it) }
         is OhmPatch -> Field(patch.midi, Ohm.MIDI_MIN..Ohm.MIDI_MAX) { patch.copy(midi = it) }

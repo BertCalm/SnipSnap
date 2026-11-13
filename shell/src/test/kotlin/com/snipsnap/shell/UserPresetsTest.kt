@@ -37,6 +37,7 @@ import com.snipsnap.synth.OrphicaMaterial
 import com.snipsnap.synth.OrphicaMode
 import com.snipsnap.synth.OrphicaPatch
 import com.snipsnap.synth.Murmur
+import com.snipsnap.synth.MurmurBody
 import com.snipsnap.synth.MurmurConfig
 import com.snipsnap.synth.MurmurFormantTarget
 import com.snipsnap.synth.MurmurPatch
@@ -761,6 +762,17 @@ class UserPresetsTest {
                 assertEquals("MurmurPresets.kt\n  $line\n", UserPresets.renderAll(listOf(saved)))
                 assertEquals(source, murmurFromRosterLine(line), "the pasteable line rebuilds model $model exactly")
             }
+            for (body in listOf(MurmurBody.STEADY_ROOT_V1, MurmurBody.HOLLOW_WIRE_V1)) {
+                val source = held.copy(voice = MurmurVoice.PLUCK, midi = 48, config = config.copy(model = 4, body = body))
+                UserPresets.save(root, source, 1L)
+                val saved = UserPresets.read(root).single { it.patch.name == source.name }
+                assertEquals(source, saved.patch)
+                assertEquals(source, murmurFromRosterLine(UserPresets.rosterLine(saved.patch)))
+                val transposed = SynthRoot.of(source)!!.at(67) as MurmurPatch
+                assertEquals(minOf(67, Murmur.rootRange(source.config).last), transposed.midi)
+                assertEquals(source.config, transposed.config, "the shared chord/root control preserves body identity")
+                assertEquals(source.velocity, transposed.velocity)
+            }
         } finally {
             root.deleteRecursively()
         }
@@ -833,6 +845,7 @@ class UserPresetsTest {
                 )
             },
             model = int(a.getValue("model")),
+            body = MurmurBody.valueOf(entry(a.getValue("body"), "MurmurBody")),
         )
     }
 
