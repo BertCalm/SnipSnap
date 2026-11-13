@@ -55,7 +55,7 @@ internal fun AquariumPerformancePanel(
     }
     Column(Modifier.fillMaxWidth().testTag("aquarium-performance-panel"), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         TapeText("AQUARIUM · LIVE KIT MIX", TapeType.lcdHeader, scheme.lcdInk.tape)
-        TapeText(com.snipsnap.shell.Copy.AQUARIUM_LINE, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
+        TapeText(com.snipsnap.shell.Copy.AQUARIUM_LINE, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
         TapeText(
             "PADS + BEAT/GROOVE + their PRINT/BOUNCE. Count-in clicks share the effects. Other players and MPC kit exports use their own routes.",
             TapeType.pixelSmall, scheme.ink2.tape, maxLines = Int.MAX_VALUE,

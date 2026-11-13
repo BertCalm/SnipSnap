@@ -109,7 +109,7 @@ fun MakeList(onOpen: (Bench) -> Unit, hasKit: Boolean, onMyVoice: (() -> Unit)? 
 /** A group heading on the MAKE list: a quiet label over the rows it names. */
 @Composable
 private fun MakeGroupHeading(text: String) {
-    TapeText(text, TapeType.pixelSmall, LocalScheme.current.ink2.tape, Modifier.padding(top = 4.dp), maxLines = 1)
+    TapeText(text, TapeType.pixelSmall, LocalScheme.current.ink2.tape, Modifier.padding(top = 4.dp), maxLines = 2)
 }
 
 /** One MAKE row: the lab's name and arrow, and under it what the word means. */

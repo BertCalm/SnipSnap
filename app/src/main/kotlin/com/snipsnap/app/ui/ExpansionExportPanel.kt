@@ -318,7 +318,7 @@ private fun save(scope: CoroutineScope, onToast: (String) -> Unit, change: () ->
 
 @Composable
 private fun Heading(text: String) {
-    TapeText(text, TapeType.pixelSmall, LocalScheme.current.ink2.tape)
+    TapeText(text, TapeType.eyebrow, LocalScheme.current.ink2.tape, maxLines = 2)
 }
 
 @Composable

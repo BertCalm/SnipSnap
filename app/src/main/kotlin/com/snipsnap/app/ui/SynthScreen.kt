@@ -955,6 +955,11 @@ fun SynthScreen(
                         else if (e == Engine.CHAMBER) seed.restoredChamber[v as ChamberVoice]
                         else if (e == Engine.NACRE) seed.seededDrafts.filterIsInstance<NacrePatch>()
                             .firstOrNull { it.voice == v }
+                        // A held TREFOIL draft carries NUDGE=0 and HOLD=1, which the held patch
+                        // requires. Without it the sliders start at the finite defaults, and the
+                        // first held patch built from them refuses its own controls.
+                        else if (e == Engine.TREFOIL) seed.seededDrafts.filterIsInstance<TrefoilPatch>()
+                            .firstOrNull { it.voice == v && it.playback == TrefoilPlayback.HELD }
                         // PRISM's draft is its complete recipe (sound source, motion, TUNE, HOLD); without
                         // it the sliders fall back to defaults and the first write-back replaces the draft.
                         else if (e == Engine.PRISM) seed.seededDrafts.filterIsInstance<PrismPatch>()
@@ -4154,7 +4159,7 @@ fun SynthScreen(
                     done = heldSheet.holdDone,
                     total = heldSheet.holdTotal,
                     previewing = heldSheet.holdPreviewing,
-                    heldPreview = if ((engine == Engine.FLOCK && !heldSheet.holdFlockTouchLayers) || engine == Engine.OVERLAP || engine == Engine.OBBLIGATO) sampleHeldPreview else null,
+                    heldPreview = if ((engine == Engine.FLOCK && !heldSheet.holdFlockTouchLayers) || engine == Engine.OVERLAP || engine == Engine.OBBLIGATO || engine == Engine.TREFOIL) sampleHeldPreview else null,
                     fillColor = classColor,
                     scheme = scheme,
                     onAttack = { heldSheet.holdAttack = it },
@@ -6926,7 +6931,7 @@ private fun VoicePicker(engine: Engine, current: Enum<*>, scheme: Scheme, onSele
                             // (blank when not selected) — so one selection
                             // doesn't grow only its own cell and leave the row
                             // jagged against its neighbours.
-                            TapeText(if (selected) "SELECTED" else "", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
+                            TapeText(if (selected) "SELECTED" else "", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
                         }
                     }
                 }
@@ -6955,7 +6960,7 @@ private fun OrphicaModePicker(current: OrphicaMode, scheme: Scheme, onSelect: (O
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
                         TapeText(mode.name, TapeType.pixelSmall, scheme.ink.tape, maxLines = 1)
-                        TapeText(if (chosen) "SELECTED" else "", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
+                        TapeText(if (chosen) "SELECTED" else "", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
                     }
                 }
             }
@@ -7372,6 +7377,8 @@ internal fun MacroSlider(
     enabled: Boolean = true,
     semanticRange: (() -> ClosedFloatingPointRange<Float>)? = null,
     readoutWidth: Dp = 44.dp,
+    /** The label's column; 56 dp fits the short names at 13 sp, and VELOCITY needs more. */
+    labelWidth: Dp = 56.dp,
 ) {
     val currentOnChange by rememberUpdatedState(onValueChange)
     val currentSemanticRange by rememberUpdatedState(semanticRange)
@@ -7380,7 +7387,7 @@ internal fun MacroSlider(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        TapeText(label, TapeType.pixelSmall, scheme.ink2.tape, Modifier.width(56.dp))
+        TapeText(label, TapeType.pixelSmall, scheme.ink2.tape, Modifier.width(labelWidth))
         Box(
             Modifier
                 .weight(1f)
@@ -7507,7 +7514,7 @@ internal fun LabButton(
             .padding(horizontal = 8.dp),
         contentAlignment = Alignment.Center,
     ) {
-        TapeText(label, TapeType.pixel, if (enabled) scheme.ink.tape else scheme.ink3.tape, maxLines = 1)
+        TapeText(label, TapeType.pixel, if (enabled) scheme.ink.tape else scheme.ink3.tape, maxLines = 2)
     }
 }
 
