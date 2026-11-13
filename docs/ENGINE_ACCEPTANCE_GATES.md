@@ -223,7 +223,7 @@ A kit family of three 1970s disco kits: Philly Strings, Loft Party and Munich Ma
   playback remain open, and MPC 2 does not pass the round-robin export gate. The owner waived SFZ and
   DecentSampler.
 
-## SOOT (sound approved at round 2; five kits on the shelf; siblings' listen and hardware open)
+## SOOT (five kits on the shelf, sound approved; hardware open)
 
 A drum engine for grimy street boom bap from physical models. See [SOOT](SOOT.md).
 
@@ -231,7 +231,7 @@ A drum engine for grimy street boom bap from physical models. See [SOOT](SOOT.md
 - **Articulation:** finite hits, with no HOLD.
 - **Percussion: pass for SOOT, heard.** A15, the coil roll: sixteen fresh snare strikes into one coil,
   with three zones and four takes. The owner heard all three zones on 2026-11-13: "Yes". Each sibling
-  kit has its own roll on A15 (rod, rim, brush, snare). Those are not yet heard.
+  kit has its own roll on A15 (rod, rim, brush, snare), and the owner kept all four on 2026-11-13.
 - **Drum shelf: five kits, pass in software.** SOOT and four siblings the owner chose on 2026-11-13
   are on the shelf (SKINS):
   - SOOT DRUMLESS, 80 BPM;
@@ -240,9 +240,9 @@ A drum engine for grimy street boom bap from physical models. See [SOOT](SOOT.md
   - SOOT WAREHOUSE INDUSTRIAL, 96 BPM.
 
   Each sibling has its own tempo, tuning, pad roles, groove and processing (`SootGenreKits`).
-  `SootGenreKitsTest` checks the tempos and roles, and that pads within each kit stay apart. The
-  siblings' A16 four bars are the sketches the owner chose. Their other pads await the owner's
-  listen.
+  `SootGenreKitsTest` checks the tempos and roles, and that pads within each kit stay apart. On
+  2026-11-13 the owner kept 63 of the 64 sibling pads, and picked a steppers groove for Basement
+  Dub's four bars (`SootGenreKits.VERSION` 2).
 - **Velocity and round robin:**
   - **Rendering: verified.** Every drum takes velocity through its own contact law, so a soft zone
     is a duller strike. A take is a fresh strike.
@@ -265,9 +265,7 @@ A drum engine for grimy street boom bap from physical models. See [SOOT](SOOT.md
     - the four bars moved to the heavier dictaphone (`SootKits.VERSION` 3).
 
   Preserve version 3 as the baseline. This is not evidence of a phone or MPC audition.
-- **Overall: incomplete.** SOOT's sound is approved, and the software evidence is in place for all
-  five kits. Still open:
-  - the owner's listen to the four siblings' pads;
-  - phone and MPC hardware playback.
+- **Overall: incomplete.** The sound of all five kits is approved, and the software evidence is in
+  place for all of them. Still open: phone and MPC hardware playback.
 
   MPC 2 does not pass the round-robin export gate.
