@@ -3633,3 +3633,12 @@ tasks.register<JavaExec>("generateRotaryAudition") {
     workingDir = projectDir
     args("${rootDir}/testkit/rotary-audition")
 }
+
+tasks.register<JavaExec>("generatePumpAudition") {
+    group = "distribution"
+    description = "Render PUMP's listening gate clips under testkit/pump-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.PumpAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/pump-audition")
+}
