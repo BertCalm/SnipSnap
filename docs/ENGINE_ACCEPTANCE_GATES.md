@@ -334,6 +334,38 @@ exactly. The 24 factory presets and every old save are unchanged.
 - **Overall: incomplete.** The other fifteen roles have no body response, and keygroups, chord
   tools, round robin and hardware playback remain open.
 
+## TREFOIL (held instrument sheet ported from the recovery backup, 2026-11-13)
+
+A three-body resonator: five voices (WEAVE, HOLLOW, WIRE, TANGLE, TRACE) with finite model-two
+studies and an ordered held playback. See [TREFOIL](TREFOIL.md) and [held playback](TREFOIL_HELD.md).
+
+This port brings one change back from the recovery backup: MAKE INSTRUMENT's sheet for a held
+TREFOIL patch now offers the same press-and-release INSTRUMENT AUDITION as the held source, in
+place of a one-shot PREVIEW (`TrefoilHeldInstrumentSheetTest`). The renderer, presets and kit are
+unchanged.
+
+| Gate | Status | Evidence |
+|---|---|---|
+| Six melodic voices | **Fail: five of six** | WEAVE, HOLLOW, WIRE, TANGLE and TRACE. No sixth voice is designed. |
+| Presets | Pass | Twelve model-two presets across all five voices (`TrefoilPresets`). |
+| Playable keygroups | Partial | The held trial exports three native roots with loop metadata; finite notes play from the pads. No phone or MPC check of the held keygroup is recorded. |
+| Premade kit | Pass in software | TREFOIL starter: the twelve presets on C4/Eb4/F4/G4 and four Low Weave pads, each at three touch layers (`TrefoilKits`). |
+| Chord-tool compatibility | Not yet verified | No chord-tool evidence is recorded for TREFOIL. |
+| Articulation: HOLD | Partial | Ordered held playback is built (`TrefoilHeld`); finite HOLD stays zero by design. Held MPC listening is still open. STRUM: not applicable, not a picked or thumbed string. |
+| Percussion, drum kits | Not applicable | A melodic resonator. |
+| Velocity: rendering | Pass | Velocity re-renders the contact (`Velocity`), and the kit's soft zones are native renders at .3 and .6, not the hard sample turned down. The held trial has one authored sample per root; key velocity only scales it. |
+| Round robin | Not yet verified | TREFOIL has no re-strike (`Restrike.canRestrike` is false), so no round robin exists through rendering, saving, playback or export. |
+| Hardware playback | Partial | Finite bank: owner hardware acceptance recorded (below). The held trial and the INSTRUMENT AUDITION sheet have not been played on a phone or MPC; the instrumentation test has not been run on a device here. |
+
+- **Sound character, as recorded in [TREFOIL](TREFOIL.md):** Josh described the revised model-two
+  audition as "Sounds pretty good" and authorized the playable-bank round; owner feedback on the
+  playable bank was positive on 2026-10-26. On 2026-11-01 Josh reported, "Hardware is fine proceed
+  as recommended." That records finite-bank hardware acceptance; device models and firmware were
+  not supplied. The owner accepted the revised Python HOLD proof and authorized its Kotlin port on
+  2026-11-07.
+- **Overall: incomplete.** The voice count, chord tools, round robin and held hardware listening
+  remain open.
+
 ## TEMPEST (ported from the recovery backup, 2026-11-13)
 
 A six-voice digital drum instrument: a pitched strike, driven filtering and folding, then
