@@ -389,3 +389,25 @@ unchanged.
   2026-11-07.
 - **Overall: incomplete.** The voice count, chord tools, round robin and held hardware listening
   remain open.
+
+## CLUTTER (round 0, 2026-11-13)
+
+A found-sound drum kit of modelled household objects: bucket, rice box, book, rice jar, key ring,
+table, saucepan, bottle. Every object has loose parts (rice, a lid, a handle, cutlery) that only move
+above a strike threshold. See [CLUTTER](CLUTTER.md). Round 0 is a Python prototype audition; no Kotlin exists.
+
+- **Melodic, keygroup and chord-tool gates:** not applicable. A drum engine.
+- **Articulation:** finite hits, no HOLD. Not a picked or thumbed string.
+- **Percussion:** A15 Pot Roll (a wooden spoon, eighths to thirty-seconds over one bar, soft to hard) is
+  authored in the prototype. Not heard.
+- **Drum shelf: open.** One audition kit. Three genre kits are proposed in [CLUTTER](CLUTTER.md) and wait
+  for the owner's verdict on the objects.
+- **Velocity and round robin:**
+  - **Rendering: measured in Python, not Kotlin.** Soft against hard at matched level differs by 3.1 dB
+    (Empty Box, nothing loose) to 25.4 dB (Rice Box). Four takes per pad; the closest pair is 1.9 dB
+    apart. Each take replays byte for byte.
+  - **Saving, playback, export: open.** Nothing to save, play or export until the Kotlin round. The
+    listening page's pad grid is a browser stand-in, not app evidence.
+- **Sound character: not heard.** Listening page published 2026-11-13:
+  <https://claude.ai/artifact/6dkeY2rrjNGUvUYvobs3v5>.
+- **Overall: incomplete.** Every gate except the prototype measurements is open.
