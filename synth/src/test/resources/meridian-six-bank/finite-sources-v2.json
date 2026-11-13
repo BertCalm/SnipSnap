@@ -1,0 +1,169 @@
+{
+  "schema": 2,
+  "bankId": "meridian-six",
+  "sourceCommit": "f7af6804483b1b8fe80772519984d3da899485b4",
+  "historicalFixtureSha256": "44c0afa2d1685f40bcecfce6cb5657a7449af5632ef9e6799b06ae61d3e4c06c",
+  "keptFixtureSha256": "1b40cabf581270d7c41610ade5b3191e5bea8b088a6e2becd71b5d9cbd023596",
+  "factoryAnchors": [
+    {
+      "name": "FIRST ARC",
+      "canonicalPatchJson": "{\n  \"engine\": \"MERIDIAN\",\n  \"version\": 1,\n  \"name\": \"FIRST ARC\",\n  \"voice\": \"SWEEP\",\n  \"macros\": {\n    \"TUNE\": 0.5,\n    \"LATITUDE\": 0.800000011920929,\n    \"LENGTH\": 0.44999998807907104,\n    \"REACH\": 0.6000000238418579,\n    \"SURFACE\": 0.550000011920929,\n    \"MEMORY\": 0.4000000059604645,\n    \"HOLD\": 0\n  },\n  \"midi\": 57,\n  \"velocity\": 1,\n  \"model\": 2,\n  \"seedContext\": 4810\n}",
+      "sourceIdentity": "ORIGINAL_FACTORY",
+      "sha256": "4382aa1817fbd12b6ca4487c6d05d47c39ec8a7d3e0e812042f2b13eef9ac4a6"
+    },
+    {
+      "name": "BACK ARC",
+      "canonicalPatchJson": "{\n  \"engine\": \"MERIDIAN\",\n  \"version\": 1,\n  \"name\": \"BACK ARC\",\n  \"voice\": \"SWEEP\",\n  \"macros\": {\n    \"TUNE\": 0.5,\n    \"LATITUDE\": 0.20000000298023224,\n    \"LENGTH\": 0.44999998807907104,\n    \"REACH\": 0.6000000238418579,\n    \"SURFACE\": 0.550000011920929,\n    \"MEMORY\": 0.4000000059604645,\n    \"HOLD\": 0\n  },\n  \"midi\": 57,\n  \"velocity\": 1,\n  \"model\": 2,\n  \"seedContext\": 4810\n}",
+      "sourceIdentity": "ORIGINAL_FACTORY",
+      "sha256": "793e370d00996aaa59c89f493093302b86fbc171a585333c1720056d7cbf2892"
+    },
+    {
+      "name": "CLOSE GRAIN",
+      "canonicalPatchJson": "{\n  \"engine\": \"MERIDIAN\",\n  \"version\": 1,\n  \"name\": \"CLOSE GRAIN\",\n  \"voice\": \"SWEEP\",\n  \"macros\": {\n    \"TUNE\": 0.5,\n    \"LATITUDE\": 0.699999988079071,\n    \"LENGTH\": 0.3199999928474426,\n    \"REACH\": 0.41999998688697815,\n    \"SURFACE\": 0.1599999964237213,\n    \"MEMORY\": 0.18000000715255737,\n    \"HOLD\": 0\n  },\n  \"midi\": 57,\n  \"velocity\": 1,\n  \"model\": 2,\n  \"seedContext\": 4810\n}",
+      "sourceIdentity": "ORIGINAL_FACTORY",
+      "sha256": "7a8904e84995dfb37f890d2bc37008865120c0643263c3a5c218929ffbe45f61"
+    },
+    {
+      "name": "DEEP KNOCK",
+      "canonicalPatchJson": "{\n  \"engine\": \"MERIDIAN\",\n  \"version\": 1,\n  \"name\": \"DEEP KNOCK\",\n  \"voice\": \"SWEEP\",\n  \"macros\": {\n    \"TUNE\": 0.5,\n    \"LATITUDE\": 0.8999999761581421,\n    \"LENGTH\": 0.18000000715255737,\n    \"REACH\": 0.9200000166893005,\n    \"SURFACE\": 0.7200000286102295,\n    \"MEMORY\": 0.2800000011920929,\n    \"HOLD\": 0\n  },\n  \"midi\": 57,\n  \"velocity\": 1,\n  \"model\": 2,\n  \"seedContext\": 4810\n}",
+      "sourceIdentity": "ORIGINAL_FACTORY",
+      "sha256": "6288b999bb66f77994b3445a8c677e84df0dcd9b9282417a7452562ab67fff84"
+    },
+    {
+      "name": "STILL PAIR",
+      "canonicalPatchJson": "{\n  \"engine\": \"MERIDIAN\",\n  \"version\": 1,\n  \"name\": \"STILL PAIR\",\n  \"voice\": \"SWEEP\",\n  \"macros\": {\n    \"TUNE\": 0.5,\n    \"LATITUDE\": 0.5,\n    \"LENGTH\": 0.5,\n    \"REACH\": 0.550000011920929,\n    \"SURFACE\": 0.6000000238418579,\n    \"MEMORY\": 0.44999998807907104,\n    \"HOLD\": 0\n  },\n  \"midi\": 57,\n  \"velocity\": 1,\n  \"model\": 2,\n  \"seedContext\": 4810\n}",
+      "sourceIdentity": "ORIGINAL_FACTORY",
+      "sha256": "0ef696f5a58fe673a3532dd1ffd1e0212f72e31d4fe4a3f105bf71494697f0cb"
+    },
+    {
+      "name": "LONG TRAIL",
+      "canonicalPatchJson": "{\n  \"engine\": \"MERIDIAN\",\n  \"version\": 1,\n  \"name\": \"LONG TRAIL\",\n  \"voice\": \"SWEEP\",\n  \"macros\": {\n    \"TUNE\": 0.5,\n    \"LATITUDE\": 0.7200000286102295,\n    \"LENGTH\": 0.7799999713897705,\n    \"REACH\": 0.699999988079071,\n    \"SURFACE\": 0.6200000047683716,\n    \"MEMORY\": 0.8399999737739563,\n    \"HOLD\": 0.6499999761581421\n  },\n  \"midi\": 57,\n  \"velocity\": 1,\n  \"model\": 2,\n  \"seedContext\": 4810\n}",
+      "sourceIdentity": "ORIGINAL_FACTORY",
+      "sha256": "022d2be5b7e7a6920dee91b1c19575599ab4d8cf285ea7ca673b70248f4d0311"
+    },
+    {
+      "name": "HARD GRAIN",
+      "canonicalPatchJson": "{\n  \"engine\": \"MERIDIAN\",\n  \"version\": 1,\n  \"name\": \"HARD GRAIN\",\n  \"voice\": \"CLACK\",\n  \"macros\": {\n    \"TUNE\": 0.5,\n    \"LATITUDE\": 0.800000011920929,\n    \"LENGTH\": 0.44999998807907104,\n    \"REACH\": 0.6000000238418579,\n    \"SURFACE\": 1,\n    \"MEMORY\": 0.4000000059604645,\n    \"HOLD\": 0\n  },\n  \"midi\": 57,\n  \"velocity\": 1,\n  \"model\": 3,\n  \"seedContext\": 4810\n}",
+      "sourceIdentity": "ORIGINAL_FACTORY",
+      "sha256": "9faf8beb2fe9732ad282b16d544cfee54a94565980ba6839b30ee6595595785f"
+    },
+    {
+      "name": "HOLLOW TONE",
+      "canonicalPatchJson": "{\n  \"engine\": \"MERIDIAN\",\n  \"version\": 1,\n  \"name\": \"HOLLOW TONE\",\n  \"voice\": \"CHIME\",\n  \"macros\": {\n    \"TUNE\": 0.5,\n    \"LATITUDE\": 0.800000011920929,\n    \"LENGTH\": 0.44999998807907104,\n    \"REACH\": 0.6000000238418579,\n    \"SURFACE\": 1,\n    \"MEMORY\": 0.4000000059604645,\n    \"HOLD\": 0\n  },\n  \"midi\": 57,\n  \"velocity\": 1,\n  \"model\": 3,\n  \"seedContext\": 4810\n}",
+      "sourceIdentity": "ORIGINAL_FACTORY",
+      "sha256": "a3addab5890c055d4b2c91ad8328c691e46eae8c57bfbc29bca521ea6e7dc6d1"
+    },
+    {
+      "name": "BRIGHT EDGE",
+      "canonicalPatchJson": "{\n  \"engine\": \"MERIDIAN\",\n  \"version\": 1,\n  \"name\": \"BRIGHT EDGE\",\n  \"voice\": \"RASP\",\n  \"macros\": {\n    \"TUNE\": 0.5,\n    \"LATITUDE\": 0.800000011920929,\n    \"LENGTH\": 0.44999998807907104,\n    \"REACH\": 0.6000000238418579,\n    \"SURFACE\": 1,\n    \"MEMORY\": 0.4000000059604645,\n    \"HOLD\": 0\n  },\n  \"midi\": 57,\n  \"velocity\": 1,\n  \"model\": 3,\n  \"seedContext\": 4810\n}",
+      "sourceIdentity": "ORIGINAL_FACTORY",
+      "sha256": "da2ba35e8699046eea4b3afd5673e3ce4b39f6e41f001f0ea109f5d5aa75ec7c"
+    },
+    {
+      "name": "OPEN LINE",
+      "canonicalPatchJson": "{\n  \"engine\": \"MERIDIAN\",\n  \"version\": 1,\n  \"name\": \"OPEN LINE\",\n  \"voice\": \"DRAW\",\n  \"macros\": {\n    \"TUNE\": 0.5,\n    \"LATITUDE\": 0.7599999904632568,\n    \"LENGTH\": 0.47999998927116394,\n    \"REACH\": 0.6499999761581421,\n    \"SURFACE\": 0.25,\n    \"MEMORY\": 0.44999998807907104,\n    \"HOLD\": 0\n  },\n  \"midi\": 57,\n  \"velocity\": 1,\n  \"model\": 4,\n  \"seedContext\": 4810\n}",
+      "sourceIdentity": "FINITE_KEEP",
+      "sha256": "d8e80193430e550dafd36433e5a350be3b33ff66b039892c2591b97a8829fb10"
+    },
+    {
+      "name": "WIDE THREAD",
+      "canonicalPatchJson": "{\n  \"engine\": \"MERIDIAN\",\n  \"version\": 1,\n  \"name\": \"WIDE THREAD\",\n  \"voice\": \"DRAW\",\n  \"macros\": {\n    \"TUNE\": 0.5,\n    \"LATITUDE\": 0.2199999988079071,\n    \"LENGTH\": 0.6600000262260437,\n    \"REACH\": 0.46000000834465027,\n    \"SURFACE\": 0.7599999904632568,\n    \"MEMORY\": 0.6499999761581421,\n    \"HOLD\": 0\n  },\n  \"midi\": 57,\n  \"velocity\": 1,\n  \"model\": 4,\n  \"seedContext\": 4810\n}",
+      "sourceIdentity": "FINITE_KEEP",
+      "sha256": "73d9fec2b92a256eb5a5e779ebe51fc2330f47d8783f0141a9ca3f26f08b137e"
+    },
+    {
+      "name": "AFTER PRESS",
+      "canonicalPatchJson": "{\n  \"engine\": \"MERIDIAN\",\n  \"version\": 1,\n  \"name\": \"AFTER PRESS\",\n  \"voice\": \"LIFT\",\n  \"macros\": {\n    \"TUNE\": 0.5,\n    \"LATITUDE\": 0.7599999904632568,\n    \"LENGTH\": 0.47999998927116394,\n    \"REACH\": 0.6499999761581421,\n    \"SURFACE\": 0.44999998807907104,\n    \"MEMORY\": 0.4000000059604645,\n    \"HOLD\": 0\n  },\n  \"midi\": 57,\n  \"velocity\": 1,\n  \"model\": 4,\n  \"seedContext\": 4810\n}",
+      "sourceIdentity": "FINITE_KEEP",
+      "sha256": "19857838aa1f00a1c6ef5bb790c294810f87792b50a26ea023fc7ce12e644d8c"
+    },
+    {
+      "name": "SOFT RETURN",
+      "canonicalPatchJson": "{\n  \"engine\": \"MERIDIAN\",\n  \"version\": 1,\n  \"name\": \"SOFT RETURN\",\n  \"voice\": \"LIFT\",\n  \"macros\": {\n    \"TUNE\": 0.5,\n    \"LATITUDE\": 0.23999999463558197,\n    \"LENGTH\": 0.6800000071525574,\n    \"REACH\": 0.47999998927116394,\n    \"SURFACE\": 0.8199999928474426,\n    \"MEMORY\": 0.6200000047683716,\n    \"HOLD\": 0\n  },\n  \"midi\": 57,\n  \"velocity\": 1,\n  \"model\": 4,\n  \"seedContext\": 4810\n}",
+      "sourceIdentity": "FINITE_KEEP",
+      "sha256": "a0b004e4a7a8026339c29eebf8768ba44d8af354dd8e9e66806aacab0dce911e"
+    }
+  ],
+  "layout": [
+    {
+      "factoryPreset": "FIRST ARC",
+      "midi": 57,
+      "registerRole": "FACTORY"
+    },
+    {
+      "factoryPreset": "BACK ARC",
+      "midi": 57,
+      "registerRole": "FACTORY"
+    },
+    {
+      "factoryPreset": "CLOSE GRAIN",
+      "midi": 57,
+      "registerRole": "FACTORY"
+    },
+    {
+      "factoryPreset": "DEEP KNOCK",
+      "midi": 57,
+      "registerRole": "FACTORY"
+    },
+    {
+      "factoryPreset": "STILL PAIR",
+      "midi": 57,
+      "registerRole": "FACTORY"
+    },
+    {
+      "factoryPreset": "LONG TRAIL",
+      "midi": 57,
+      "registerRole": "FACTORY"
+    },
+    {
+      "factoryPreset": "HARD GRAIN",
+      "midi": 57,
+      "registerRole": "FACTORY"
+    },
+    {
+      "factoryPreset": "HOLLOW TONE",
+      "midi": 57,
+      "registerRole": "FACTORY"
+    },
+    {
+      "factoryPreset": "BRIGHT EDGE",
+      "midi": 57,
+      "registerRole": "FACTORY"
+    },
+    {
+      "factoryPreset": "OPEN LINE",
+      "midi": 57,
+      "registerRole": "FACTORY"
+    },
+    {
+      "factoryPreset": "WIDE THREAD",
+      "midi": 57,
+      "registerRole": "FACTORY"
+    },
+    {
+      "factoryPreset": "AFTER PRESS",
+      "midi": 57,
+      "registerRole": "FACTORY"
+    },
+    {
+      "factoryPreset": "SOFT RETURN",
+      "midi": 57,
+      "registerRole": "FACTORY"
+    },
+    {
+      "factoryPreset": "FIRST ARC",
+      "midi": 45,
+      "registerRole": "A2_SWEEP"
+    },
+    {
+      "factoryPreset": "OPEN LINE",
+      "midi": 45,
+      "registerRole": "A2_DRAW"
+    },
+    {
+      "factoryPreset": "SOFT RETURN",
+      "midi": 69,
+      "registerRole": "A4_LIFT"
+    }
+  ]
+}

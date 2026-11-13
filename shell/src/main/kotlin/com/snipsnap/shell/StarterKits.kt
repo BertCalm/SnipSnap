@@ -729,6 +729,16 @@ object StarterKits {
             key = KeySpec.parse("Cminpent"),
             prepare = { directory -> MurmurKeptBankFiles.write(directory) },
         ) { SynthKits.murmurKept() },
+        Starter(
+            "meridian-materials", "MERIDIAN MATERIALS",
+            "Sixteen finite pads across four ringing voices, with three touch levels and five held-sound captures.",
+            seeded = false,
+        ) { SynthKits.meridianMaterials() },
+        Starter(
+            "meridian-six", "MERIDIAN SIX",
+            "Sixteen finite pads across six voices, with three native touch levels and three octave roles.",
+            seeded = false,
+        ) { SynthKits.meridianSix() },
     )
 
     fun byId(id: String): Starter? = ALL.firstOrNull { it.id == id }

@@ -46,7 +46,7 @@ object StarterShelf {
         Group(
             Copy.STARTER_HEADING_METAL,
             listOf(
-                "libration", "meridian", "accord", "thaw", "scour", "nimbus", "suture",
+                "libration", "meridian", "meridian-materials", "meridian-six", "accord", "thaw", "scour", "nimbus", "suture",
                 "tessera", "pitchwheel", "chamber", "alloy", "caustic", "cistern", "filament", "erosion",
             ),
         ),
