@@ -263,7 +263,7 @@ private fun SheetRow(title: String, facts: String?, marked: Boolean, onTap: () -
             TapeText(title, TapeType.marker, scheme.ink.tape)
             facts?.let { TapeText(it, TapeType.pixelSmall, scheme.ink2.tape) }
         }
-        if (marked) TapeText(Copy.EXPANSION_IN, TapeType.pixel, scheme.amber.tape)
+        if (marked) TapeText(Copy.EXPANSION_IN, TapeType.pixel, scheme.accent.tape)
     }
 }
 

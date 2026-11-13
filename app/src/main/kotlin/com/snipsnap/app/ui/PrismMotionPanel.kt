@@ -295,7 +295,7 @@ internal fun PrismMotionPanel(
         }
         if (studio.sourceBusy) TapeText("LOADING TONE…", TapeType.pixelSmall, scheme.ink2.tape)
         else if (studio.previewing) TapeText("PREPARING PREVIEW…", TapeType.pixelSmall, scheme.ink2.tape)
-        studio.error?.let { TapeText(it, TapeType.pixelSmall, scheme.warn.tape, maxLines = 2) }
+        studio.error?.let { TapeText(it, TapeType.pixelSmall, scheme.warnInk.tape, maxLines = 2) }
     }
     if (pickingSource) PrismSourceDialog(source?.id, scheme, ::selectSource) { pickingSource = false }
 }

@@ -34,6 +34,7 @@ import androidx.compose.ui.unit.dp
 import com.snipsnap.app.KitShelf
 import com.snipsnap.app.KitWrites
 import com.snipsnap.app.theme.BinRedGlow
+import com.snipsnap.app.theme.BinRedOnLcd
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
 import com.snipsnap.app.theme.lcdInk2
@@ -581,7 +582,7 @@ fun TakesBinScreen(
             // "your takes, kept 30 days"). How long is each row's to say
             // since 2026-10-31: a countdown, or KEPT FOR the pad that still
             // needs it, which no 30 days in the title would be true of.
-            PillCard("THE TRASH — DELETED PAD AUDIO", scheme, BIN_RED_BORDER, BinRedGlow) {
+            PillCard("THE TRASH — DELETED PAD AUDIO", scheme, BinRedGlow, BinRedGlow) {
                 if (binRows.isEmpty()) {
                     TapeText(Copy.BIN_EMPTY_STATE, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
                 } else {
@@ -733,7 +734,7 @@ private fun TakeRowLine(
             Spacer(Modifier.weight(1f))
             row.whenText?.let { TapeText(it, TapeType.pixelSmall, scheme.ink2.tape) }
             if (row.current) {
-                TapeText("NOW", TapeType.pixelSmall, scheme.amber.tape)
+                TapeText("NOW", TapeType.pixelSmall, scheme.accent.tape)
             } else if (row.file != null) {
                 val file = row.file
                 Box(
@@ -845,7 +846,7 @@ private fun EmptyBinButton(scheme: Scheme, enabled: Boolean, armed: Boolean, onC
             .fillMaxWidth()
             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
             .background(scheme.lcd.tape, RoundedCornerShape(5.dp))
-            .border(2.dp, BIN_RED_BORDER, RoundedCornerShape(5.dp))
+            .border(2.dp, scheme.binLcd.tape, RoundedCornerShape(5.dp))
             // Always clickable, `enabled` forwarded rather than dropped: a
             // screen reader is told this control is temporarily unavailable
             // instead of it silently vanishing from the tree (accessibility
@@ -860,7 +861,7 @@ private fun EmptyBinButton(scheme: Scheme, enabled: Boolean, armed: Boolean, onC
             // than a `Copy` constant for prototype text that doesn't exist.
             label,
             TapeType.pixel,
-            if (enabled) BinRedGlow else scheme.ink3.tape,
+            if (enabled) BinRedOnLcd else scheme.ink3.tape,
             maxLines = 1,
         )
     }
@@ -934,13 +935,3 @@ private fun HeaderChip(
         TapeText(label, TapeType.pixel, if (enabled) ink else dim)
     }
 }
-
-// Duplicated, not hoisted (brief's own call: "do it if a clean one-liner,
-// else duplicate with a comment") — PadSheetScreen.kt and ExportScreen.kt
-// each already carry this same border privately; this is the third. BIN red
-// is deliberately constant across every scheme (HANDOFF.md X2 / TAKES+BIN),
-// so a delete action reads as "red" even in a scheme with no red anywhere
-// else in it. The glow half moved to Schemes.BIN_RED_GLOW / theme.BinRedGlow
-// (accessibility audit finding 5) — a single tuned token, not a duplicated
-// literal.
-private val BIN_RED_BORDER = Color(0xFF6A2020)

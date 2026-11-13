@@ -89,6 +89,7 @@ import com.snipsnap.synth.OrphicaMaterial
 import com.snipsnap.synth.OrphicaMode
 import com.snipsnap.synth.OrphicaPatch
 import com.snipsnap.app.theme.BinRedGlow
+import com.snipsnap.app.theme.BinRedOnLcd
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
 import com.snipsnap.app.theme.lcdInk2
@@ -230,6 +231,9 @@ import com.snipsnap.synth.Skin
 import com.snipsnap.synth.Backwash
 import com.snipsnap.synth.BackwashPatch
 import com.snipsnap.synth.BackwashVoice
+import com.snipsnap.synth.Soot
+import com.snipsnap.synth.SootPatch
+import com.snipsnap.synth.SootVoice
 import com.snipsnap.synth.FiredBronzePatch
 import com.snipsnap.synth.FiredBronzeInstrument
 import com.snipsnap.synth.FiredBronzeDryKit
@@ -934,6 +938,7 @@ fun SynthScreen(
                     val recipe = seed.seededOvenPatches[e to v]
                         ?: if (e == Engine.SKIN) seed.seededDrafts.filterIsInstance<SkinPatch>().firstOrNull { it.voice == v }
                         else if (e == Engine.BACKWASH) seed.seededDrafts.filterIsInstance<BackwashPatch>().firstOrNull { it.voice == v }
+                        else if (e == Engine.SOOT) seed.seededDrafts.filterIsInstance<SootPatch>().firstOrNull { it.voice == v }
                         else if (e == Engine.ONSET) seed.seededDrafts.filterIsInstance<OnsetPatch>().firstOrNull { it.voice == v }
                         else if (e == Engine.FILAMENT) seed.seededFilamentPatches[v as FilamentVoice]
                         else if (e == Engine.PLUCK && v == PluckVoice.UPRIGHT)
@@ -955,6 +960,11 @@ fun SynthScreen(
                         else if (e == Engine.CHAMBER) seed.restoredChamber[v as ChamberVoice]
                         else if (e == Engine.NACRE) seed.seededDrafts.filterIsInstance<NacrePatch>()
                             .firstOrNull { it.voice == v }
+                        // A held TREFOIL draft carries NUDGE=0 and HOLD=1, which the held patch
+                        // requires. Without it the sliders start at the finite defaults, and the
+                        // first held patch built from them refuses its own controls.
+                        else if (e == Engine.TREFOIL) seed.seededDrafts.filterIsInstance<TrefoilPatch>()
+                            .firstOrNull { it.voice == v && it.playback == TrefoilPlayback.HELD }
                         // PRISM's draft is its complete recipe (sound source, motion, TUNE, HOLD); without
                         // it the sliders fall back to defaults and the first write-back replaces the draft.
                         else if (e == Engine.PRISM) seed.seededDrafts.filterIsInstance<PrismPatch>()
@@ -1125,6 +1135,13 @@ fun SynthScreen(
                 engine.patchDisplayName(voice), voice as BackwashVoice, macros,
             )
         }
+        // SOOT keeps its renderer model on the patch, as BACKWASH does, so freeze one before a macro bag.
+        if (engine == Engine.SOOT && (engine to voice) !in loadedPatchesByVoice &&
+            (engine to voice) !in seed.seededPresets) {
+            loadedPatchesByVoice[engine to voice] = SootPatch(
+                engine.patchDisplayName(voice), voice as SootVoice, macros,
+            )
+        }
         // Keep a visited default's renderer before persisting its controls, so
         // a later restore cannot mistake the new macro bag for an old model.
         if (engine == Engine.TREMOR) retainTremorDraft(
@@ -1146,7 +1163,7 @@ fun SynthScreen(
         // existing draft format, including a last-frame macro edit before navigation.
         if (patch is CausticPatch) CausticEditing.edited(patch, macros = macrosByVoice.getValue(pair))
         else if (patch is SkinPatch) patch.withMacros(macrosByVoice.getValue(pair))
-        else if (patch is BackwashPatch || patch is HalobarPatch || patch is ErosionPatch || patch is OnsetPatch || patch is AccordPatch || patch is LibrationPatch || patch is RimePatch || patch is OtisPatch || patch is RivetPatch || patch is WickPatch || patch is FilamentPatch || patch is TidalPatch || patch is TremorPatch || patch is ChamberPatch ||
+        else if (patch is BackwashPatch || patch is SootPatch || patch is HalobarPatch || patch is ErosionPatch || patch is OnsetPatch || patch is AccordPatch || patch is LibrationPatch || patch is RimePatch || patch is OtisPatch || patch is RivetPatch || patch is WickPatch || patch is FilamentPatch || patch is TidalPatch || patch is TremorPatch || patch is ChamberPatch ||
             patch is PrismPatch || patch is NacrePatch || patch is OverlapPatch || patch is ObbligatoPatch || patch is RelayPatch || patch is MurmurPatch ||
             patch is PluckPatch && patch.voice == PluckVoice.UPRIGHT)
             patch.withMacros(macrosByVoice.getValue(pair)) else patch
@@ -2190,7 +2207,9 @@ fun SynthScreen(
     val reopenablePads = kit?.pads.orEmpty().filter { pad ->
         val patch = Breed.recipeOf(pad)?.patch
         val sourceEngine = Engine.entries.firstOrNull { it.name == patch?.engine }
-        (pad.velocityLayers.isEmpty() || FiredBronzePads.canEdit(pad)) && !(pad.chain != null && !pad.isRobinChain) &&
+        // A native FIRED BRONZE bank reopens whole: model 1's four layer files, or model 2's strike grid.
+        (pad.velocityLayers.isEmpty() || FiredBronzePads.canEdit(pad)) &&
+            (!(pad.chain != null && !pad.isRobinChain) || FiredBronzePads.canEdit(pad)) &&
             patch != null && sourceEngine?.voices()?.any { it.name == patch.voiceName } == true
     }
     fun reopenPad(slot: Int) {
@@ -4154,7 +4173,7 @@ fun SynthScreen(
                     done = heldSheet.holdDone,
                     total = heldSheet.holdTotal,
                     previewing = heldSheet.holdPreviewing,
-                    heldPreview = if ((engine == Engine.FLOCK && !heldSheet.holdFlockTouchLayers) || engine == Engine.OVERLAP || engine == Engine.OBBLIGATO) sampleHeldPreview else null,
+                    heldPreview = if ((engine == Engine.FLOCK && !heldSheet.holdFlockTouchLayers) || engine == Engine.OVERLAP || engine == Engine.OBBLIGATO || engine == Engine.TREFOIL) sampleHeldPreview else null,
                     fillColor = classColor,
                     scheme = scheme,
                     onAttack = { heldSheet.holdAttack = it },
@@ -4876,12 +4895,12 @@ private fun PresetForgetDialog(name: String, scheme: Scheme, onCancel: () -> Uni
                         .weight(1f)
                         .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                         .background(scheme.lcd.tape, RoundedCornerShape(4.dp))
-                        .border(2.dp, BIN_RED_BORDER, RoundedCornerShape(4.dp))
+                        .border(2.dp, scheme.binLcd.tape, RoundedCornerShape(4.dp))
                         .tapeClick(label = "FORGET $name", onClick = onForget)
                         .padding(horizontal = 10.dp),
                     contentAlignment = Alignment.Center,
                 ) {
-                    TapeText("FORGET → TRASH", TapeType.pixel, BinRedGlow)
+                    TapeText("FORGET → TRASH", TapeType.pixel, BinRedOnLcd)
                 }
             }
         }
@@ -4989,11 +5008,6 @@ private fun BinnedPresetRow(row: UserPresets.Binned, scheme: Scheme, busy: Boole
     }
 }
 
-// Duplicated, not hoisted — `KitsScreen.kt`'s and `DeletedKitsSection.kt`'s
-// own `BIN_RED_BORDER`, deliberately constant across every scheme so a
-// delete reads as "red" even in a scheme with no red anywhere else in it.
-private val BIN_RED_BORDER = Color(0xFF6A2020)
-
 // ---------- SAVE AS PRESET: the name ----------
 
 /**
@@ -5023,11 +5037,11 @@ private fun PresetNameDialog(
     var field by remember { mutableStateOf(TextFieldValue(suggestion, TextRange(suggestion.length))) }
     val check = UserPresets.check(field.text, engine.name, voice.name, yours)
     val (caption, captionColor) = when (check) {
-        is UserPresets.Check.Blank -> Copy.PRESET_NAME_BLANK to scheme.warn.tape
-        is UserPresets.Check.TooLong -> Copy.PRESET_NAME_NOTE to scheme.warn.tape
-        is UserPresets.Check.Factory -> Copy.presetNameFactory(check.name) to scheme.warn.tape
+        is UserPresets.Check.Blank -> Copy.PRESET_NAME_BLANK to scheme.warnInk.tape
+        is UserPresets.Check.TooLong -> Copy.PRESET_NAME_NOTE to scheme.warnInk.tape
+        is UserPresets.Check.Factory -> Copy.presetNameFactory(check.name) to scheme.warnInk.tape
         is UserPresets.Check.Fresh -> Copy.PRESET_NAME_NOTE to scheme.ink2.tape
-        is UserPresets.Check.Replaces -> Copy.presetReplaces(check.name) to scheme.amber.tape
+        is UserPresets.Check.Replaces -> Copy.presetReplaces(check.name) to scheme.accent.tape
     }
     val canSave = check is UserPresets.Check.Fresh || check is UserPresets.Check.Replaces
     val focus = remember { FocusRequester() }
@@ -5612,7 +5626,7 @@ private fun HeldInstrumentSheet(
                         TapeType.pixelSmall, scheme.ink2.tape, maxLines = 5,
                     )
                 }
-                if (previewing) TapeText("RENDERING…", TapeType.lcdSmall, scheme.amber.tape)
+                if (previewing) TapeText("RENDERING…", TapeType.lcdSmall, scheme.accent.tape)
                 if (heldPreview != null) FlockHeldAudition(heldPreview, fillColor, scheme,
                     accessibilityLabel = "INSTRUMENT AUDITION")
             }
@@ -5769,7 +5783,7 @@ private fun DroneSheet(
                     }
                 }
             }
-            if (previewing) TapeText("RENDERING…", TapeType.lcdSmall, scheme.amber.tape)
+            if (previewing) TapeText("RENDERING…", TapeType.lcdSmall, scheme.accent.tape)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 ActionButton("CANCEL", scheme, enabled = true, modifier = Modifier.weight(1f), onClick = onCancel)
                 ActionButton(
@@ -5815,7 +5829,7 @@ private fun HeldProgress(done: Int, total: Int, fillColor: Color, scheme: Scheme
         ) {
             Box(Modifier.fillMaxHeight().fillMaxWidth(fraction).background(fillColor.copy(alpha = 0.85f)))
         }
-        TapeText(line, TapeType.lcdSmall, scheme.amber.tape)
+        TapeText(line, TapeType.lcdSmall, scheme.accent.tape)
     }
 }
 
@@ -6011,7 +6025,7 @@ internal fun TidalPerformanceControls(
         )
     }
     if (seedText.toLongOrNull() == null) {
-        TapeText("INVALID SEED · PREVIOUS VARIATION KEPT", TapeType.pixelSmall, scheme.warn.tape, maxLines = 3)
+        TapeText("INVALID SEED · PREVIOUS VARIATION KEPT", TapeType.pixelSmall, scheme.warnInk.tape, maxLines = 3)
     }
     TapeText("PLAYBACK", TapeType.pixelSmall, scheme.ink2.tape)
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -6050,7 +6064,7 @@ private enum class ObbligatoVoice { AIR_REED }
  */
 private enum class Engine {
     LATTICE, ACCORD,
-    THUMP, SCANNED_CHAIN, SKIN, ONSET, TINES, VELVET, VOX, PLUCK, ORPHICA, TONEWHEEL, OTIS, REGISTERS, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, HALOBAR, FLOTILLA, AEROSTAT, TREMOR, BALLAST, CISTERN, CIRCUIT, OBBLIGATO, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVERLAP, OVEN, FLOCK, VENT, CREASE, TRIO, NACRE, ORIGAMI, TREFOIL, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS, TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME, BORE, ARCO, SCOUR, KEEL, CHITIN, WICK, EROSION, RIVET, FIRED_BRONZE, BACKWASH;
+    THUMP, SCANNED_CHAIN, SKIN, ONSET, TINES, VELVET, VOX, PLUCK, ORPHICA, TONEWHEEL, OTIS, REGISTERS, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, HALOBAR, FLOTILLA, AEROSTAT, TREMOR, BALLAST, CISTERN, CIRCUIT, OBBLIGATO, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVERLAP, OVEN, FLOCK, VENT, CREASE, TRIO, NACRE, ORIGAMI, TREFOIL, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS, TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME, BORE, ARCO, SCOUR, KEEL, CHITIN, WICK, EROSION, RIVET, FIRED_BRONZE, BACKWASH, SOOT;
     val displayName: String get() = name.replace('_', ' ')
 
     /** The engine after this one in the enum's order, wrapping from the last back to the first. */
@@ -6066,6 +6080,7 @@ private enum class Engine {
         FIRED_BRONZE -> FiredBronzeDryKit.Pad.entries
         SKIN -> SkinVoice.entries
         BACKWASH -> BackwashVoice.entries
+        SOOT -> SootVoice.entries
         ONSET -> listOf(
             OnsetVoice.KICK, OnsetVoice.SNARE, OnsetVoice.HAT_CLOSED, OnsetVoice.HAT_OPEN,
             OnsetVoice.TOM, OnsetVoice.PERC_PLUCK, OnsetVoice.PERC_WOOD, OnsetVoice.PERC_METAL,
@@ -6155,6 +6170,7 @@ private enum class Engine {
         FIRED_BRONZE -> FiredBronzeInstrument.macros
         SKIN -> Skin.macrosFor(voice as SkinVoice)
         BACKWASH -> Backwash.macrosFor(voice as BackwashVoice)
+        SOOT -> Soot.macrosFor(voice as SootVoice)
         ONSET -> Onset.macrosFor(voice as OnsetVoice)
         TINES -> Tines.macrosFor(voice as TinesVoice)
         VELVET -> Velvet.macrosFor(voice as VelvetVoice)
@@ -6239,6 +6255,7 @@ private enum class Engine {
         FIRED_BRONZE -> FiredBronzeInstrument.defaults()
         SKIN -> Skin.defaults(voice as SkinVoice)
         BACKWASH -> Backwash.defaults(voice as BackwashVoice)
+        SOOT -> Soot.defaults(voice as SootVoice)
         ONSET -> Onset.defaults(voice as OnsetVoice)
         TINES -> Tines.defaults(voice as TinesVoice)
         VELVET -> Velvet.defaults(voice as VelvetVoice)
@@ -6323,6 +6340,7 @@ private enum class Engine {
         FIRED_BRONZE -> FiredBronzeInstrument.scramble(random)
         SKIN -> Skin.scramble(voice as SkinVoice, random)
         BACKWASH -> Backwash.scramble(voice as BackwashVoice, random)
+        SOOT -> Soot.scramble(voice as SootVoice, random)
         ONSET -> Onset.scramble(voice as OnsetVoice, random)
         TINES -> Tines.scramble(voice as TinesVoice, random)
         VELVET -> Velvet.scramble(voice as VelvetVoice, random)
@@ -6421,6 +6439,7 @@ private enum class Engine {
         FIRED_BRONZE -> FiredBronzeInstrument.render(voice as FiredBronzeDryKit.Pad, macros)
         SKIN -> Skin.render(voice as SkinVoice, macros)
         BACKWASH -> BackwashPatch("Backwash", voice as BackwashVoice, macros).render()
+        SOOT -> SootPatch("Soot", voice as SootVoice, macros).render()
         ONSET -> Onset.render(voice as OnsetVoice, macros)
         TINES -> Tines.render(voice as TinesVoice, macros)
         VELVET -> Velvet.render(voice as VelvetVoice, macros)
@@ -6509,6 +6528,7 @@ private enum class Engine {
         FIRED_BRONZE -> (voice as FiredBronzeDryKit.Pad).kind
         SKIN -> (voice as SkinVoice).drumClass
         BACKWASH -> Backwash.drumClassFor(voice as BackwashVoice)
+        SOOT -> Soot.drumClassFor(voice as SootVoice)
         ONSET -> (voice as OnsetVoice).drumClass
         TINES -> (voice as TinesVoice).drumClass
         VELVET -> Velvet.drumClassFor(voice as VelvetVoice, macros)
@@ -6596,6 +6616,7 @@ private enum class Engine {
         FIRED_BRONZE -> FiredBronzePatch(name, voice as FiredBronzeDryKit.Pad, macros)
         SKIN -> SkinPatch(name, voice as SkinVoice, macros)
         BACKWASH -> BackwashPatch(name, voice as BackwashVoice, macros)
+        SOOT -> SootPatch(name, voice as SootVoice, macros)
         ONSET -> OnsetPatch(name, voice as OnsetVoice, macros)
         TINES -> TinesPatch(name, voice as TinesVoice, macros)
         VELVET -> VelvetPatch(name, voice as VelvetVoice, macros)
@@ -7029,7 +7050,7 @@ private fun PresetForgetDoor(name: String, scheme: Scheme, onClick: () -> Unit) 
                 .padding(horizontal = 10.dp),
             contentAlignment = Alignment.Center,
         ) {
-            TapeText("${Copy.PRESET_FORGET_DOOR} $name", TapeType.pixelSmall, scheme.amber.tape, maxLines = 1)
+            TapeText("${Copy.PRESET_FORGET_DOOR} $name", TapeType.pixelSmall, scheme.accent.tape, maxLines = 1)
         }
     }
 }
@@ -7105,7 +7126,7 @@ private fun PresetStrip(
                             .padding(horizontal = 8.dp),
                         contentAlignment = Alignment.Center,
                     ) {
-                        TapeText(p.name, TapeType.pixelSmall, if (selected) scheme.amber.tape else scheme.ink2.tape, maxLines = 1)
+                        TapeText(p.name, TapeType.pixelSmall, if (selected) scheme.accent.tape else scheme.ink2.tape, maxLines = 1)
                     }
                 }
             }
@@ -7154,7 +7175,7 @@ private fun ReopenPadOverlay(
                     ) {
                         TapeText("${padTag(pad.slot)} · ${pad.displayName}", TapeType.pixelSmall, scheme.ink2.tape)
                         val voiceLabel = (patch as? BallastPatch)?.voice?.displayName ?: patch?.voiceName?.replace('_', ' ')
-                        TapeText("${patch?.engine} · $voiceLabel", TapeType.lcdSmall, scheme.amber.tape)
+                        TapeText("${patch?.engine} · $voiceLabel", TapeType.lcdSmall, scheme.accent.tape)
                     }
                 }
             }

@@ -27,6 +27,11 @@
 > presets, HOLD, phone controls and MPC program export remain outside this gate.
 > See [design and evidence](TRIAD.md).
 
+> Fired Bronze round robin (model 2, 2026-11-13): the starter deals each pad's four
+> strike layers three fresh strikes each; every layer's first strike is the approved
+> layer, and model-1 saves keep their sound. Waits for the owner's listen.
+> See [integration and verification](FIRED_BRONZE_INTEGRATION.md), "Model 2".
+
 > Fired Bronze integration: owner confirmed the four-layer kit on MPC. Editable
 > FIRED BRONZE patches and a Fresh Tape starter preserve the approved performance.
 > See [integration and verification](FIRED_BRONZE_INTEGRATION.md).
@@ -3468,6 +3473,20 @@ The kit's tone (renderer model 4, 2026-11-12):
 - **Measured:** DUST's crunch low-passed the drums near 4 kHz, and the amp's speaker took more off the top.
 - **Picked by ear:** both opened. DUST's filter goes to about 9 kHz and the speaker goes, on every drum
   but the cymbals and riser. Model-3 saves keep their tone.
+
+The genre kits (renderer models 5 and 6, 2026-11-12 to 11-13):
+- **Model 5:** DAMP (each drum's damping) and Bump (the spring tank kicked), approved and heard by
+  the owner.
+- **Dub Tank and Trip hop:** two more shelf kits, at 74 and 92 BPM, built to layouts the owner
+  approved. They differ from BREAKER in their pads' roles, tuning and damping, not only in rig.
+- **Model 6:** each later kick or tom take lands with another beater. The round robin's start trim
+  can cut a kick's click, which had left two takes of a damped, crushed kick as copies.
+- **Verified in software** (`BreakerKitTest`) on all three kits: saving, the pad resolver and the
+  MPC 3 export. The BREAKER kit stays on model 5.
+- **Heard (2026-11-13):** the kicks, the High Timbale and the soft-to-hard grid were accepted. Both
+  grooves were too wet, and the owner picked their echo and spring from four versions each.
+- **The final audition** (`:shell:generateBreakerAudition`, 68 clips): the owner signed off the
+  sound on 2026-11-13 (every voice, every control, the edges, the presets and the three kits).
 
 ### ETCH, Kotlin round K1 (2026-11-13)
 

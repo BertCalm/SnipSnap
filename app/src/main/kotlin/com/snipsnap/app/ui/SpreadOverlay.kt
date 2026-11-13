@@ -117,7 +117,7 @@ internal fun SpreadSheet(
                 verticalArrangement = Arrangement.spacedBy(6.dp),
             ) {
                 if (source.midi == null) {
-                    TapeText(Copy.SPREAD_NO_PITCH, TapeType.pixelSmall, scheme.amber.tape, maxLines = 3)
+                    TapeText(Copy.SPREAD_NO_PITCH, TapeType.pixelSmall, scheme.accent.tape, maxLines = 3)
                 }
 
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {

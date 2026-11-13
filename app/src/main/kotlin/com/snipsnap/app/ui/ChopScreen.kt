@@ -1640,7 +1640,7 @@ private fun SliceRow(
             } else {
                 "${(row.classification.confidence * 100).toInt()}%"
             }
-            TapeText(confText, TapeType.pixelSmall, if (row.unsure) scheme.warn.tape else scheme.ink2.tape)
+            TapeText(confText, TapeType.pixelSmall, if (row.unsure) scheme.warnInk.tape else scheme.ink2.tape)
         }
     }
 }

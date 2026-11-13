@@ -83,13 +83,13 @@ own status.
 The engine remains in progress. Voice count, green tests and export file
 presence do not close the outstanding gates above.
 
-## BREAKER (rounds 1 to 3 and the kit, 2026-11-09 to 11-12)
+## BREAKER (sound signed off 2026-11-13; three kits on the shelf; the surf tom fill and hardware open)
 
 - **Melodic, keygroup and chord-tool gates:** not applicable. BREAKER is a drum engine.
 - **Articulation:** finite hits, with no HOLD.
   - **The snare riser (round 3): on the kit, verified in software.** It is twenty fresh snare strikes accelerating over 2.4 s into the spring, with a fader push after the rig. The owner picked the tamed roll on 2026-11-11 and heard the app's render as their pick. It is A15 on the BREAKER kit: saved with its grid, played through the pad resolver and exported to MPC 3 (`BreakerKitTest`). No phone or MPC has played it.
   - **The surf tom fill:** not yet built.
-- **Drum shelf: one of three kits.** The BREAKER kit is on the shelf (2026-11-12). The owner picked Dub Tank and Trip hop on 2026-11-09 to join it. Each will be an authored 16-pad kit with its own tuning, damping, backbeat roles and pad arrangement. A copy of the BREAKER kit at other control settings would not pass this gate.
+- **Drum shelf: three kits, heard.** The BREAKER kit is on the shelf (2026-11-12), and Dub Tank and Trip hop joined it (2026-11-13), each built to a layout the owner approved first and heard by the owner. They are authored 16-pad kits with their own tempo, tuning, damping, backbeat roles and pad arrangement. `BreakerKitTest` checks them pad by pad against BREAKER: 7 and 5 pads are another drum, 4 and 6 are retuned, 7 and 11 are damped or opened, and only 3 in each differ in the rig alone.
 - **Velocity and round robin:**
   - **Rendering: verified.** Velocity re-strikes the SKIN source, which changes its character as well as its level. `Restrike` takes are fresh, deterministic strikes (`BreakerTest`, `DeterminismTest`).
   - **Saving: partly verified.** A patch round-trips through JSON with its model. A saved kit has not been tested yet.
@@ -119,7 +119,31 @@ presence do not close the outstanding gates above.
   - **Playback: verified in software.** `PadHit.resolve` picks the zone by velocity and deals each zone's takes in order, then repeats them. The preview mixer cycles them too. No phone has played the kit.
   - **Export: MPC 3 verified by read-back.** The velocity ranges, slice anchors, cycle lengths and slice windows match, and the exported samples are the saved ones. **MPC 2 does not pass:** it plays each zone's first take. No MPC has loaded the kit.
   - **Sound character:** the drums, cymbals and riser are each accepted by ear. On 2026-11-12 the owner heard the kit as mid heavy. They picked model 4's open rig by ear, with DUST's filter opened and no amp speaker, and heard their snare, hat and kick through it as "better". On the open tone the owner accepted the kit (2026-11-12): the balance "sounds right now", all three pushed pads kept, the kick's takes "one kick played again: fine", and every pad softer in character with a fresh hit each time.
-- **Overall: incomplete.** One of three genre kits is on the shelf. Dub Tank and Trip hop are still to be authored, MPC 2 round robin and hardware playback are open, and the surf tom fill is not built.
+- **The genre kits (2026-11-13): velocity and round robin through rendering, saving, playback and MPC 3 export, verified in software** (`BreakerKitTest`, the same checks as the BREAKER kit, run on all three kits).
+  - **Rendering:** every pad is dealt by the shared robin from its recipe, 3 zones × 3 re-struck takes (2 × 2 on the tambourine). No two takes are copies: the closest pair is the Steppers Kick's, 37.7 dB apart. No soft zone is the hard one turned down: the least change is the Steppers Kick's, 0.5 dB.
+  - **Model 6:** a later kick or tom take lands with another beater. Without it, the round robin's start trim could cut a kick's click and leave two takes as copies (the Steppers Kick, 42.4 dB). `BreakerTest` checks every genre-kit kick and tom with the click cut. The BREAKER kit stays on model 5.
+  - **Saving: verified.** Each kit reloads equal.
+  - **Playback: verified in software.** No phone has played them.
+  - **Export: MPC 3 verified by read-back.** MPC 2 does not pass, as for the BREAKER kit. No MPC has loaded them.
+  - **Sound character, heard 2026-11-13:** the kicks hit again ("one kick played again: fine"), the High Timbale at about three semitones up (high enough, where the layout asked five), and every pad soft to hard were accepted. Both grooves were heard as too wet, and the owner picked how much echo and spring each keeps from four versions. The kits are built from the picks; only Trip hop's Second Kick keeps its touch of spring, since at a quarter its takes measured as near-copies.
+  - **Decided by the owner (2026-11-13):** the shared robin's start trim, which can cut a synth strike's click on any re-struck kit, stays as it is (docs/BREAKER.md, "Model 6").
+- **The final audition (2026-11-13):** `:shell:generateBreakerAudition` renders every voice, soft to hard, every control swept, corners, edges, presets and the three kits' grooves (68 clips). Every edge render is finite and within full scale. **Sound character: signed off.** On 2026-11-13 the owner answered the published page ([BREAKER audition](https://claude.ai/artifact/TyimBbsBAwNeVRzxsSx3En)): every voice as it ships is BREAKER, every control does what its name says all the way along, nothing breaks at the edges, all the presets stay, and the shelf of three kits is right. Preserve renderer model 6 (the BREAKER kit on model 5) as the accepted baseline. This is not evidence of a phone or MPC audition.
+- **Overall: incomplete.** The sound is signed off and the three kits are on the shelf. MPC 2 round robin and hardware playback are open, and the surf tom fill is not built.
+
+## FIRED BRONZE (approved on MPC 2026-11-08; round robin built 2026-11-13, not yet heard)
+
+Skin, clay and bronze through a driven processor and amp. See [FIRED BRONZE integration](FIRED_BRONZE_INTEGRATION.md).
+
+- **Melodic, keygroup and chord-tool gates:** not applicable. FIRED BRONZE is a percussion kit.
+- **Articulation:** finite hits, with no HOLD, including the long kettle and gong tails.
+- **Velocity and round robin:**
+  - **Velocity: verified.** Four native strike layers (.20, .45, .70, 1) re-render the source, so a softer layer changes its touch and drive, not only its level. Every softer layer moves at least 1.8 dB in spectral shape at matched loudness.
+  - **Round robin: built in software on model 2 (2026-11-13), not yet heard.** Until then each layer was one strike, so a repeated hit played one sample. Each pad is now a chain of its four layers, three fresh strikes each. The closest two strikes are the gong's, 28.9 dB apart (a copy is more than 40), and every layer's first strike is the approved layer, sample for sample. Model-1 saves keep their one strike, and the model-1 kit still renders all 64 approved files to their pinned hashes.
+  - **Saving: verified.** The kit reloads equal, and an edit regenerates the whole grid and replays to the same bytes (`FiredBronzeStarterTest`).
+  - **Playback: verified in software.** `PadHit.resolve` deals each layer's strikes in turn and repeats them, and the preview mixer cycles them too. No phone has played the new kit.
+  - **Export: MPC 3 verified by read-back.** **MPC 2 does not pass:** it plays each layer's first strike. No MPC has loaded the new kit.
+- **Sound character:** the approved kit is accepted on MPC ("Good on MPC, we can proceed", 2026-11-08). The new strikes wait for the owner's listen.
+- **Overall: incomplete.** The new strikes need the owner's listen, and MPC 2 round robin and hardware playback are open.
 
 ## GATECRASH kits (sound approved 2026-11-11, hardware open)
 
@@ -334,3 +358,70 @@ exactly. The 24 factory presets and every old save are unchanged.
   backup. That approval covers those three roles' endpoints and their exact original midpoint only.
 - **Overall: incomplete.** The other fifteen roles have no body response, and keygroups, chord
   tools, round robin and hardware playback remain open.
+
+## TREFOIL (held instrument sheet ported from the recovery backup, 2026-11-13)
+
+A three-body resonator: five voices (WEAVE, HOLLOW, WIRE, TANGLE, TRACE) with finite model-two
+studies and an ordered held playback. See [TREFOIL](TREFOIL.md) and [held playback](TREFOIL_HELD.md).
+
+This port brings one change back from the recovery backup: MAKE INSTRUMENT's sheet for a held
+TREFOIL patch now offers the same press-and-release INSTRUMENT AUDITION as the held source, in
+place of a one-shot PREVIEW (`TrefoilHeldInstrumentSheetTest`). The renderer, presets and kit are
+unchanged.
+
+| Gate | Status | Evidence |
+|---|---|---|
+| Six melodic voices | **Fail: five of six** | WEAVE, HOLLOW, WIRE, TANGLE and TRACE. No sixth voice is designed. |
+| Presets | Pass | Twelve model-two presets across all five voices (`TrefoilPresets`). |
+| Playable keygroups | Partial | The held trial exports three native roots with loop metadata; finite notes play from the pads. No phone or MPC check of the held keygroup is recorded. |
+| Premade kit | Pass in software | TREFOIL starter: the twelve presets on C4/Eb4/F4/G4 and four Low Weave pads, each at three touch layers (`TrefoilKits`). |
+| Chord-tool compatibility | Not yet verified | No chord-tool evidence is recorded for TREFOIL. |
+| Articulation: HOLD | Partial | Ordered held playback is built (`TrefoilHeld`); finite HOLD stays zero by design. Held MPC listening is still open. STRUM: not applicable, not a picked or thumbed string. |
+| Percussion, drum kits | Not applicable | A melodic resonator. |
+| Velocity: rendering | Pass | Velocity re-renders the contact (`Velocity`), and the kit's soft zones are native renders at .3 and .6, not the hard sample turned down. The held trial has one authored sample per root; key velocity only scales it. |
+| Round robin | Not yet verified | TREFOIL has no re-strike (`Restrike.canRestrike` is false), so no round robin exists through rendering, saving, playback or export. |
+| Hardware playback | Partial | Finite bank: owner hardware acceptance recorded (below). The held trial and the INSTRUMENT AUDITION sheet have not been played on a phone or MPC; the instrumentation test has not been run on a device here. |
+
+- **Sound character, as recorded in [TREFOIL](TREFOIL.md):** Josh described the revised model-two
+  audition as "Sounds pretty good" and authorized the playable-bank round; owner feedback on the
+  playable bank was positive on 2026-10-26. On 2026-11-01 Josh reported, "Hardware is fine proceed
+  as recommended." That records finite-bank hardware acceptance; device models and firmware were
+  not supplied. The owner accepted the revised Python HOLD proof and authorized its Kotlin port on
+  2026-11-07.
+- **Overall: incomplete.** The voice count, chord tools, round robin and held hardware listening
+  remain open.
+
+## APSIS (GRAIN Lower texture ported from the recovery backup, 2026-11-13)
+
+An orbital modal instrument with three voices: PASSAGE, GRAIN and ANCHOR. See [APSIS](APSIS.md),
+[GRAIN and ANCHOR](APSIS-POPULATIONS.md) and [the acceptance bank](APSIS-ACCEPTANCE.md).
+
+This port brings back GRAIN model 4, the owner-selected Lower texture balance: material excitation
+is halved before the modal bank, and root forcing, contact timing and leveling are unchanged. New
+GRAIN patches and GRAIN's three factory presets now use model 4. Saved model-3 GRAIN recipes, and
+recipes with no saved model, keep model 3 and their original audio. PASSAGE and ANCHOR stay on
+model 3. `ApsisLowerTextureTest` matches native PCM24 hashes against twelve frozen audition
+references (six model 3, six Lower texture), now a text fixture in
+`synth/src/test/resources/apsis-lower-texture`.
+
+| Gate | Status | Evidence |
+|---|---|---|
+| Six melodic voices | **Fail: three of six** | PASSAGE, GRAIN and ANCHOR. TETHER, VESSEL and CORONA remain Python listening prototypes. |
+| Presets | Pass | Twelve: six PASSAGE recipes and three each for GRAIN and ANCHOR (`ApsisPresets`). |
+| Playable keygroups | Not yet verified | Dedicated keygroup export is recorded as later work in [APSIS](APSIS.md); this port adds none. |
+| Premade kit | Partial | A sixteen-pad PASSAGE musical bank (`SynthKits.apsis`, exported by `:synth:generateApsisKit`) and the download-only GRAIN/ANCHOR acceptance bank exist. Neither is on the starter shelf. |
+| Chord-tool compatibility | Not yet verified | No chord-tool evidence is recorded for APSIS. |
+| Articulation: HOLD | Partial | HOLD ≥ .99 renders a settled loop; held pads are gated full-sample loops and held previews repeat until STOP. Physical phone/MPC listening of the joins is open. STRUM: not applicable, not a picked or thumbed string. |
+| Percussion, drum kits | Not applicable | A melodic engine. |
+| Velocity: rendering | Pass | Native velocity changes the excitation spectrum before output leveling. Model 4 replays identically through native touch, edits and pad recipes at .35, .65 and 1 (`ApsisLowerTextureTest`). The hardware's velocity-to-amplitude curve is unmeasured. |
+| Saved audio | Pass in software | Explicit models replay their original sound; GRAIN accepts 3 and 4, ANCHOR 3, PASSAGE 1 to 3 (`ApsisLowerTextureTest`, `ApsisIntegrationTest`). |
+| Round robin | Not yet verified | APSIS has no re-strike (`Restrike.canRestrike` is false), so no round robin exists through rendering, saving, playback or export. |
+| Hardware playback | Not verified | The acceptance bank's MPC checklist has not been reported back; phone render latency is unmeasured. |
+
+- **Sound character, as recorded in [GRAIN and ANCHOR](APSIS-POPULATIONS.md):** "the owner selected
+  the Python GRAIN/ANCHOR identities". "On 8 November the owner selected Lower texture for Grain
+  Passage, Scattered Grains and Held Grains." The soft, hard and C3 engineering cards "have no
+  separate owner verdict". [APSIS](APSIS.md) records that "The owner found model 2 more
+  distinctive; the musical bank still awaits the owner's listening decision."
+- **Overall: incomplete.** The voice count, keygroups, chord tools, round robin and hardware
+  playback remain open.

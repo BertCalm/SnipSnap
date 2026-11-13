@@ -388,12 +388,12 @@ fun KeysScreen(
                     Modifier
                         .weight(1f)
                         .heightIn(min = Layout.MIN_HIT_TARGET.dp)
-                        .raisedBevel(scheme, fill = if (selected) scheme.amber.tape.copy(alpha = 0.85f) else null)
+                        .raisedBevel(scheme, fill = if (selected) scheme.accent.tape else null)
                         .tapeClick(label = l) { silence(); layout = l }
                         .padding(horizontal = 2.dp),
                     contentAlignment = Alignment.Center,
                 ) {
-                    TapeText(l, TapeType.pixelSmall, if (selected) scheme.titleInk.tape else scheme.ink2.tape, maxLines = 2)
+                    TapeText(l, TapeType.pixelSmall, if (selected) scheme.onAccent.tape else scheme.ink2.tape, maxLines = 2)
                 }
             }
         }
@@ -508,7 +508,7 @@ internal fun KeyPad(
     val scheme = LocalScheme.current
     val shape = RoundedCornerShape(Layout.PAD_RADIUS.dp)
     var down by remember { mutableStateOf(false) }
-    val ink = scheme.amber.tape
+    val ink = scheme.accent.tape
     Box(
         modifier
             .height(Layout.PAD_H.dp)

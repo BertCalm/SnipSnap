@@ -43,9 +43,9 @@ internal fun SurfaceAquariumPanel(
             route.settings.settings.isBypass -> "DRY · ALL SIX EFFECT MIXES ARE ZERO"
             route.settings.outputGain == 0f -> "WET MIX MUTED"
             else -> "STEREO KIT FX LIVE"
-        }, TapeType.pixelSmall, if (faulted) scheme.warn.tape else scheme.ink.tape,
+        }, TapeType.pixelSmall, if (faulted) scheme.warnInk.tape else scheme.ink.tape,
             Modifier.testTag("surface-aquarium-state"), maxLines = Int.MAX_VALUE)
-        route.warning?.let { TapeText(it, TapeType.pixelSmall, scheme.warn.tape, maxLines = Int.MAX_VALUE) }
+        route.warning?.let { TapeText(it, TapeType.pixelSmall, scheme.warnInk.tape, maxLines = Int.MAX_VALUE) }
         TapeText("Saved for this kit. Uses KIT → PERFORMANCE settings on SURFACE’s own stereo bus. PRINT includes FX. Playing the print through KIT FX applies them again.",
             TapeType.pixelSmall, scheme.ink2.tape, maxLines = Int.MAX_VALUE)
         if (optedIn) TapeText("PROTECTION · $limitedFrames FRAMES THIS STREAM", TapeType.pixelSmall, scheme.ink2.tape)

@@ -104,11 +104,11 @@ internal fun AquariumPanel(
         }
 
         if (disabledReason != null) {
-            TapeText(disabledReason, TapeType.pixelSmall, scheme.warn.tape, maxLines = Int.MAX_VALUE)
+            TapeText(disabledReason, TapeType.pixelSmall, scheme.warnInk.tape, maxLines = Int.MAX_VALUE)
         }
         if (error != null) {
             TapeText(
-                error, TapeType.pixelSmall, scheme.warn.tape,
+                error, TapeType.pixelSmall, scheme.warnInk.tape,
                 Modifier.testTag("aquarium-error"), maxLines = Int.MAX_VALUE,
             )
         }

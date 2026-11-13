@@ -294,7 +294,7 @@ private fun InstrumentRow(entry: KitShelf.InstrumentEntry, onOpen: (KitShelf.Ins
                     .padding(horizontal = 10.dp, vertical = 10.dp),
                 contentAlignment = Alignment.Center,
             ) {
-                TapeText(Copy.EXPANSION_DOOR, TapeType.pixelSmall, scheme.amber.tape)
+                TapeText(Copy.EXPANSION_DOOR, TapeType.pixelSmall, scheme.accent.tape)
             }
         }
     }

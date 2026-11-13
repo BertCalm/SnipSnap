@@ -23,8 +23,9 @@ the musical bank still awaits the owner's listening decision.
 The Kotlin engine now implements PASSAGE, GRAIN and ANCHOR, with three participating
 bodies at the default BODIES setting and a stable roster of up to six. GRAIN and
 ANCHOR port the owner-preferred Python study laws, with three starter presets
-each. PASSAGE retains its six recipes and all three saved renderers. New voice
-recipes use model 3; model-less GRAIN/ANCHOR recipes select their first model, 3.
+each. PASSAGE retains its six recipes and all three saved renderers. New ANCHOR
+recipes use model 3 and new GRAIN recipes the owner-selected model 4
+([Lower texture](APSIS-POPULATIONS.md)); model-less GRAIN/ANCHOR recipes select their first model, 3.
 The other study candidates remain Python prototypes. See
 [the port notes](APSIS-POPULATIONS.md) for mechanisms, reproduction and limits. Dedicated keygroup export,
 device acceptance, naming clearance, and the owner's sonic verdict remain later

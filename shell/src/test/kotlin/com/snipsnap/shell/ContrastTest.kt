@@ -212,26 +212,21 @@ class ContrastTest {
         }
     }
 
-    // ==================== OPENSKY's ink3: a documented, measured gap ====================
+    // ==================== OPENSKY's ink3: no longer a gap ====================
 
     @Test
-    fun `OPENSKY ink3 is a known, measured AA gap - not a silent one`() {
-        // The third tier exists to be dimmer than the second, and on paper
-        // that is 3.9:1 (`docs/MODERN_LOOK.md` §4, which carried the same
-        // gap for the scheme this test used to pin). Lightening ink3 until
-        // it clears 4.5:1 would land it on ink2 and erase the two-tier
-        // hierarchy it exists to draw. This test pins the measured ratio
-        // so a future change to either token is a deliberate decision, not
-        // an accidental drift. The gap must also not widen past the 3:1 UI
-        // threshold.
-        val ratio = Scheme.contrastRatio(Schemes.OPENSKY.ink3, Schemes.OPENSKY.gray)
+    fun `OPENSKY ink3 clears AA and is still the dimmest tier`() {
+        // The third tier used to be a measured 3.85:1 gap (the ink that would
+        // clear AA landed on ink2 and erased the hierarchy). It now clears
+        // 4.5:1 on every chrome fill (law 1 holds it), and the hierarchy
+        // survives because ink3 is still lighter than ink2 on paper, so still
+        // the quieter of the two.
+        val s = Schemes.OPENSKY
+        assertTrue(Scheme.contrastRatio(s.ink3, s.gray) >= AA_TEXT, "OPENSKY ink3 must clear AA on gray")
         assertTrue(
-            ratio in 3.7..4.0,
-            "OPENSKY ink3 vs gray = %.2f:1 — expected ~3.85:1 (the measured, accepted gap); ".format(ratio) +
-                "if this moved, update this test and the OPENSKY row's comment together, whichever direction it moved",
+            Scheme.contrastRatio(s.ink3, s.gray) < Scheme.contrastRatio(s.ink2, s.gray),
+            "ink3 must stay quieter than ink2",
         )
-        assertTrue(ratio < AA_TEXT, "if ink3 now clears AA on its own, drop this test's framing — it's no longer a gap")
-        assertTrue(ratio >= AA_UI, "ink3 fell under the 3:1 UI threshold: the gap is wider than the one accepted")
     }
 
     // ==================== Finding 7: selection state ====================
@@ -254,5 +249,309 @@ class ContrastTest {
                     .format(ratio, AA_UI),
             )
         }
+    }
+
+    // ==================== 7b: the four contrast laws ====================
+    //
+    // Law 1: text is at least 4.5:1 against its background.
+    // Law 2: the boundary of an interactive control is at least 3:1 against
+    //        what it sits on (WCAG 1.4.11).
+    // Law 3: no `amber` on chrome (a source scan; `accent` is chrome's colour).
+    // Law 4: a per-scheme destructive red, at least 4.5:1 on its fill, and
+    //        no scheme-independent BIN_RED_BORDER copies.
+    //
+    // Each law is a function that returns its failures, so the vacuous-test
+    // check is a plain assertion that the function reports a known-bad input.
+
+    /** The fills text is drawn on in chrome, by name. */
+    private fun chromeFills(s: Scheme): Map<String, Int> =
+        mapOf("gray" to s.gray, "win" to s.win, "raised" to s.raised, "field" to s.field)
+
+    private data class Pair3(val what: String, val fg: Int, val bg: Int, val min: Double)
+
+    /** Every (text colour, background) pair the app draws text with, for one scheme. */
+    private fun textPairs(s: Scheme): List<Pair3> {
+        val out = ArrayList<Pair3>()
+        val chromeInks = mapOf(
+            "ink" to s.ink, "ink2" to s.ink2, "ink3" to s.ink3,
+            "accent" to s.accent, "bin" to s.bin, "warnInk" to s.warnInk,
+        )
+        for ((inkName, ink) in chromeInks) for ((fillName, fill) in chromeFills(s)) {
+            out += Pair3("$inkName on $fillName", ink, fill, AA_TEXT)
+        }
+        out += Pair3("titleInk on title1", s.titleInk, s.title1, AA_TEXT)
+        out += Pair3("titleInk on title2", s.titleInk, s.title2, AA_TEXT)
+        out += Pair3("onAccent on accent", s.onAccent, s.accent, AA_TEXT)
+        val lcdInk2 = blend(s.lcdInk, s.lcd, Schemes.LCD_INK2_ALPHA.toDouble())
+        val lcdInks = mapOf("lcdInk" to s.lcdInk, "lcdInk2" to lcdInk2, "amber" to s.amber, "warn" to s.warn, "binLcd" to s.binLcd)
+        for ((inkName, ink) in lcdInks) out += Pair3("$inkName on lcd", ink, s.lcd, AA_TEXT)
+        return out
+    }
+
+    private fun failures(pairs: List<Pair3>): List<String> =
+        pairs.filter { Scheme.contrastRatio(it.fg, it.bg) < it.min }
+            .map { "%s = %.2f:1 (needs %.1f)".format(it.what, Scheme.contrastRatio(it.fg, it.bg), it.min) }
+
+    @Test
+    fun `law 1 - every text colour clears 4_5 to 1 on every surface it is drawn on, in every scheme`() {
+        var checked = 0
+        for (s in Schemes.ALL) {
+            val pairs = textPairs(s)
+            checked += pairs.size
+            val bad = failures(pairs)
+            assertTrue(bad.isEmpty(), "${s.id}: " + bad.joinToString("; "))
+        }
+        assertTrue(checked >= Schemes.ALL.size * 30, "law 1 must assert over a real set, got $checked pairs")
+    }
+
+    @Test
+    fun `law 1 reports the old tokens it replaced`() {
+        // The vacuous-test check: the law's own pair list, fed the values this
+        // PR moved, must say so. OPENSKY's old ink3 (3.85:1 on gray), its raw
+        // warn used as chrome text (2.11:1), amber used as chrome text
+        // (2.11:1), and the dark-chrome text on an accent fill.
+        assertTrue(failures(textPairs(Schemes.OPENSKY.copy(ink3 = 0x817A6B))).any { it.startsWith("ink3 on gray") })
+        assertTrue(failures(textPairs(Schemes.OPENSKY.copy(warnInk = 0xFF8C00))).any { it.startsWith("warnInk on gray") })
+        assertTrue(failures(textPairs(Schemes.OPENSKY.copy(accent = Schemes.OPENSKY.amber))).any { it.startsWith("accent on gray") })
+        assertTrue(failures(textPairs(Schemes.OPENSKY.copy(onAccent = Schemes.OPENSKY.lcd))).any { it.startsWith("onAccent on accent") })
+    }
+
+    /** The outline of an interactive control against everything it sits on. */
+    private fun edgePairs(s: Scheme): List<Pair3> =
+        (chromeFills(s) + ("lcd" to s.lcd)).map { (name, fill) -> Pair3("edge on $name", s.edge, fill, AA_UI) } +
+            (chromeFills(s).filterKeys { it == "field" }).map { (name, fill) -> Pair3("accent outline on $name", s.accent, fill, AA_UI) }
+
+    @Test
+    fun `law 2 - a control's outline clears 3 to 1 on what it sits on, in every scheme`() {
+        var checked = 0
+        for (s in Schemes.ALL) {
+            val pairs = edgePairs(s)
+            checked += pairs.size
+            val bad = failures(pairs)
+            assertTrue(bad.isEmpty(), "${s.id}: " + bad.joinToString("; "))
+        }
+        assertTrue(checked >= Schemes.ALL.size * 5, "law 2 must assert over a real set, got $checked pairs")
+    }
+
+    @Test
+    fun `law 2 reports the hairline it replaced as a control outline`() {
+        // grayEdge as a button's outline is 1.24 to 1.41:1: every scheme fails.
+        for (s in Schemes.ALL) {
+            assertTrue(failures(edgePairs(s.copy(edge = s.grayEdge))).isNotEmpty(), "${s.id}: grayEdge must not pass as an outline")
+        }
+    }
+
+    private val appSrc = java.io.File("../app/src/main/kotlin/com/snipsnap/app")
+
+    private fun appSources(): List<java.io.File> =
+        appSrc.walkTopDown().filter { it.isFile && it.extension == "kt" }.toList()
+
+    /** Code lines only: comments and KDoc carry the words and are not reads. */
+    private fun codeLines(text: String): List<Pair<Int, String>> =
+        text.lines().mapIndexed { i, l -> (i + 1) to l }
+            .filter { (_, l) -> l.trim().let { !it.startsWith("//") && !it.startsWith("*") && !it.startsWith("/*") } }
+
+    @Test
+    fun `law 2 - the raised and sunken forms outline with edge, not the hairline`() {
+        val bevel = java.io.File(appSrc, "theme/Bevel.kt").readText()
+        for (form in listOf("raisedBevel", "sunkenField")) {
+            val at = bevel.indexOf("fun Modifier.$form(")
+            assertTrue(at >= 0, "$form must exist")
+            val next = Regex("""@Suppress|/\*\*""").find(bevel, at)?.range?.first ?: bevel.length
+            val body2 = bevel.substring(at, next).lines().filter { !it.trim().startsWith("//") }.joinToString("\n")
+            assertTrue("scheme.edge.tape" in body2, "$form must outline with scheme.edge")
+            assertTrue("grayEdge" !in body2, "$form must not outline with the grayEdge hairline")
+        }
+    }
+
+    @Test
+    fun `law 2 - a pad's face outlines with edge`() {
+        val skin = java.io.File(appSrc, "ui/PadGrid.kt").readText().substringAfter("fun Modifier.padSkin(").substringBefore("\n}\n")
+        assertTrue(skin.isNotBlank() && "scheme.edge.tape" in skin && "grayEdge" !in skin, "padSkin must outline with scheme.edge")
+    }
+
+    /** A grayEdge outline in the same modifier chain as a click handler is a control drawn with a hairline. */
+    private fun hairlineControls(text: String): List<Int> {
+        val raw = text.lines()
+        val clicks = Regex("""tapeClick\(|\.clickable\(|\.toggleable\(|\.selectable\(|\.pointerInput\(""")
+        val out = ArrayList<Int>()
+        for ((i, l) in raw.withIndex()) {
+            if ("grayEdge" !in l || l.trim().startsWith("//") || l.trim().startsWith("*")) continue
+            // The statement: back to the line that opens the call, forward to the line that opens its block.
+            var a = i
+            while (a > 0 && i - a < 8 && raw[a - 1].isNotBlank() && !raw[a - 1].trimEnd().endsWith("{")) a--
+            var b = i
+            while (b < raw.size - 1 && b - i < 8 && !raw[b].trimEnd().endsWith("{") && raw[b + 1].isNotBlank()) b++
+            if ((a..b).any { clicks.containsMatchIn(raw[it]) }) out += i + 1
+        }
+        return out
+    }
+
+    @Test
+    fun `law 2 - no interactive control is outlined with the grayEdge hairline`() {
+        val files = appSources()
+        assertTrue(files.size > 100, "the scan must see the app, saw ${files.size} files")
+        val hits = files.flatMap { f -> hairlineControls(f.readText()).map { "${f.name}:$it" } }
+        assertTrue(hits.isEmpty(), "controls outlined with grayEdge (use scheme.edge): $hits")
+    }
+
+    @Test
+    fun `law 2 scan reports a control drawn with the hairline`() {
+        val bad = """
+            Box(
+                Modifier
+                    .border(1.dp, scheme.grayEdge.tape, RoundedCornerShape(4.dp))
+                    .tapeClick(label = "X", onClick = {})
+            ) {}
+        """.trimIndent()
+        assertEquals(1, hairlineControls(bad).size)
+        val fine = """
+            Box(Modifier.fillMaxWidth().border(1.dp, scheme.grayEdge.tape))
+
+            Box(Modifier.tapeClick(label = "X", onClick = {})) {}
+        """.trimIndent()
+        assertEquals(0, hairlineControls(fine).size)
+    }
+
+    /**
+     * Law 3. Every raw `amber` read left in `:app`, by file. `amber` is the
+     * LCD's second colour: bright, tuned to read on the dark LCD (6.9 to 12.4:1)
+     * and, on a paper scheme, 1.3 to 2.3:1 on chrome. A read that sits on
+     * chrome says `accent` instead (and `onAccent` for the ink on it). What
+     * stays here are the reads that sit on the LCD, decided one by one by
+     * following each read up its composable tree to the box that paints its
+     * background (an `lcdPanel`, a `scheme.lcd` fill, the dock, the canvases
+     * that draw on one), and by following a colour passed as a parameter to
+     * its callers. The count is exact: a new read, on either surface, fails
+     * here until its author has decided which surface it is on and updated
+     * the number, which is the point.
+     */
+    private val LCD_AMBER_READS: Map<String, Int> = mapOf(
+        "LoopGrid.kt" to 2,
+        "ui/AquariumPanel.kt" to 1,
+        "ui/ArrangeScreen.kt" to 4,
+        "ui/Busy.kt" to 3,
+        "ui/DeletedKitsSection.kt" to 3,
+        "ui/DeletedSnipsSection.kt" to 3,
+        "ui/DoublesScreen.kt" to 2,
+        "ui/ExportScreen.kt" to 1,
+        "ui/Frame.kt" to 8,
+        "ui/GrainFieldScreen.kt" to 1,
+        "ui/GrooveScreen.kt" to 8,
+        "ui/GroupBox.kt" to 1,
+        "ui/KeysScreen.kt" to 1,
+        "ui/KitFromResultOverlay.kt" to 4,
+        "ui/KitScreen.kt" to 2,
+        "ui/KitsScreen.kt" to 8,
+        "ui/MakeScreen.kt" to 1,
+        "ui/MurmurRoundRobinKeysScreen.kt" to 1,
+        "ui/OrbitScreen.kt" to 2,
+        "ui/PadCaptureScreen.kt" to 2,
+        "ui/PatternPicker.kt" to 1,
+        "ui/PlayScreen.kt" to 1,
+        "ui/ProjectOps.kt" to 3,
+        "ui/ScannedShapeControls.kt" to 1,
+        "ui/SnapScreen.kt" to 7,
+        "ui/SnipsScreen.kt" to 2,
+        "ui/SplitScreen.kt" to 2,
+        "ui/StackTakesScreen.kt" to 1,
+        "ui/StepEditorParts.kt" to 1,
+        "ui/SurfaceScreen.kt" to 2,
+        "ui/SynthScreen.kt" to 10,
+        "ui/TakesBinScreen.kt" to 8,
+        "ui/TapeScreen.kt" to 1,
+        "ui/XRayScreen.kt" to 3,
+    )
+
+    private fun amberReads(text: String): Int =
+        codeLines(text).count { (_, l) -> Regex("""\.amber\b""").containsMatchIn(l) }
+
+    @Test
+    fun `law 3 - amber is read only where it sits on the LCD`() {
+        val files = appSources()
+        assertTrue(files.size > 100, "the scan must see the app, saw ${files.size} files")
+        val seen = LinkedHashMap<String, Int>()
+        for (f in files) {
+            val n = amberReads(f.readText())
+            if (n > 0) seen[f.relativeTo(appSrc).path] = n
+        }
+        assertTrue(LCD_AMBER_READS.isNotEmpty() && LCD_AMBER_READS.values.sum() > 0, "the allow-list must not be empty")
+        assertEquals(
+            LCD_AMBER_READS.toSortedMap(), seen.toSortedMap(),
+            "a raw `amber` read appeared, vanished or moved. On chrome use `accent` (`onAccent` for ink on it); " +
+                "on the LCD, say so here by updating the count",
+        )
+    }
+
+    @Test
+    fun `law 3 scan counts a raw amber read and ignores comments`() {
+        assertEquals(1, amberReads("TapeText(\"X\", TapeType.pixel, scheme.amber.tape)"))
+        assertEquals(0, amberReads("// scheme.amber.tape\n * scheme.amber\nTapeText(\"X\", TapeType.pixel, scheme.accent.tape)"))
+    }
+
+    @Test
+    fun `law 3 - accent and amber each read at AA on the surface that owns them`() {
+        for (s in Schemes.ALL) {
+            for ((name, fill) in chromeFills(s)) {
+                assertTrue(Scheme.contrastRatio(s.accent, fill) >= AA_TEXT, "${s.id}: accent on $name")
+            }
+            assertTrue(Scheme.contrastRatio(s.amber, s.lcd) >= AA_TEXT, "${s.id}: amber on lcd")
+        }
+        // and the reason the split exists: on paper chrome amber is not enough
+        assertTrue(Scheme.contrastRatio(Schemes.OPENSKY.amber, Schemes.OPENSKY.gray) < 2.2)
+    }
+
+    /** Law 4: a destructive red that is a literal rather than a scheme token. */
+    private fun fixedBinRed(text: String): List<Int> =
+        codeLines(text).filter { (_, l) -> "BIN_RED_BORDER" in l || "6A2020" in l || "PROJECT_BIN_RED" in l }.map { it.first }
+
+    /** An lcd-filled box that draws the chrome red (`BinRedGlow`) on it: a red that fails on its own fill. */
+    private fun chromeRedOnLcdFill(text: String): List<Int> {
+        val raw = text.lines()
+        val out = ArrayList<Int>()
+        for ((i, l) in raw.withIndex()) {
+            if (".background(scheme.lcd.tape" !in l) continue
+            var j = i + 1
+            while (j < raw.size && j < i + 24) {
+                val t = raw[j]
+                if (t.trim().startsWith("//")) { j++; continue }
+                if (Regex("""\bBinRedGlow\b""").containsMatchIn(t)) { out += j + 1; break }
+                if (t.trim() == "}" && raw[j].length - raw[j].trimStart().length <= raw[i].length - raw[i].trimStart().length - 8) break
+                j++
+            }
+        }
+        return out
+    }
+
+    @Test
+    fun `law 4 - the destructive red is the scheme's, not a literal, and reads on its fill`() {
+        val files = appSources()
+        assertTrue(files.size > 100, "the scan must see the app, saw ${files.size} files")
+        val literals = files.flatMap { f -> fixedBinRed(f.readText()).map { "${f.name}:$it" } }
+        assertTrue(literals.isEmpty(), "BIN_RED_BORDER (or a copy) is back: $literals")
+        val wrongRed = files.flatMap { f -> chromeRedOnLcdFill(f.readText()).map { "${f.name}:$it" } }
+        assertTrue(wrongRed.isEmpty(), "chrome red (BinRedGlow) drawn on an lcd fill; use BinRedOnLcd: $wrongRed")
+        for (s in Schemes.ALL) {
+            for ((name, fill) in chromeFills(s)) assertTrue(Scheme.contrastRatio(s.bin, fill) >= AA_TEXT, "${s.id}: bin on $name")
+            assertTrue(Scheme.contrastRatio(s.binLcd, s.lcd) >= AA_TEXT, "${s.id}: binLcd on lcd")
+            // the border of a button that is drawn on the LCD is binLcd, so its outline reads too
+            assertTrue(Scheme.contrastRatio(s.binLcd, s.lcd) >= AA_UI, "${s.id}: binLcd outline on lcd")
+        }
+    }
+
+    @Test
+    fun `law 4 scan reports the old literal and the chrome red on an lcd fill`() {
+        assertEquals(1, fixedBinRed("private val BIN_RED_BORDER = Color(0xFF6A2020)\n// BIN_RED_BORDER in a comment").size)
+        val old = """
+            Box(
+                Modifier
+                    .background(scheme.lcd.tape, RoundedCornerShape(4.dp))
+                    .border(2.dp, scheme.binLcd.tape, RoundedCornerShape(4.dp))
+            ) {
+                TapeText("DELETE", TapeType.pixel, BinRedGlow)
+            }
+        """.trimIndent()
+        assertEquals(1, chromeRedOnLcdFill(old).size)
+        assertEquals(0, chromeRedOnLcdFill(old.replace("BinRedGlow", "BinRedOnLcd")).size)
     }
 }

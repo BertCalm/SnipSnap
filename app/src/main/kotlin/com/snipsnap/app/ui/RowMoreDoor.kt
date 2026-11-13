@@ -35,6 +35,6 @@ internal fun RowMoreDoor(label: String, enabled: Boolean = true, onClick: () -> 
             .tapeClick(label = label, enabled = enabled, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        TapeText(Copy.ROW_MORE, TapeType.markerBig, if (enabled) scheme.amber.tape else scheme.ink3.tape)
+        TapeText(Copy.ROW_MORE, TapeType.markerBig, if (enabled) scheme.accent.tape else scheme.ink3.tape)
     }
 }

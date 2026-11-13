@@ -174,7 +174,7 @@ internal fun MidiLearnPanel(
         TapeText(hint, TapeType.pixel, scheme.ink.tape)
         for ((t, chip) in targets) {
             val bound = bindings.firstOrNull { it.target == t }
-            TapeText("$chip  ${bound?.let { MidiLearn.describe(it.source) } ?: "-"}", TapeType.pixel, scheme.amber.tape)
+            TapeText("$chip  ${bound?.let { MidiLearn.describe(it.source) } ?: "-"}", TapeType.pixel, scheme.accent.tape)
         }
         TapeText("LAST  ${state.lastHeard ?: "-"}", TapeType.pixel, scheme.ink.tape)
     }

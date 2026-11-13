@@ -292,11 +292,11 @@ private fun SubjectSwitch(expansion: Boolean, onKit: () -> Unit, onExpansion: ()
                     .weight(1f)
                     .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                     .raisedBevel(scheme)
-                    .border(if (picked) 2.dp else 0.dp, if (picked) scheme.amber.tape else scheme.grayEdge.tape, RoundedCornerShape(4.dp))
+                    .border(if (picked) 2.dp else 1.dp, if (picked) scheme.accent.tape else scheme.edge.tape, RoundedCornerShape(4.dp))
                     .tapeClick(label = label, onClick = tap),
                 contentAlignment = Alignment.Center,
             ) {
-                TapeText(label, TapeType.pixel, if (picked) scheme.amber.tape else scheme.ink.tape)
+                TapeText(label, TapeType.pixel, if (picked) scheme.accent.tape else scheme.ink.tape)
             }
         }
     }
@@ -1340,11 +1340,6 @@ internal const val PREF_CARD_TREE = "export_card_tree"
  */
 internal const val PREF_EXPORT_FORMAT = "export_format"
 
-// The glow half moved to Schemes.BIN_RED_GLOW / theme.BinRedGlow
-// (accessibility audit finding 5) — a single tuned token, not a
-// duplicated literal; the border half is untouched.
-private val BIN_RED_BORDER = Color(0xFF6A2020)
-
 /** One titled list of [Finding] rows — PREFLIGHT before the write, READ BACK after it, same rows either way. */
 @Composable
 private fun FindingsCard(findings: List<Finding>, scheme: Scheme, modifier: Modifier = Modifier, title: String = "PREFLIGHT") {
@@ -1365,7 +1360,7 @@ private fun FindingsCard(findings: List<Finding>, scheme: Scheme, modifier: Modi
 private fun FindingRow(finding: Finding, scheme: Scheme) {
     val color = when (finding.severity) {
         Severity.FAIL -> BinRedGlow
-        Severity.WARN -> scheme.warn.tape
+        Severity.WARN -> scheme.warnInk.tape
         Severity.OK -> scheme.ink2.tape
         // "Not checked" reads quieter than OK on purpose: it's an absence
         // of a claim, not a pass.
@@ -1381,7 +1376,7 @@ private fun FindingRow(finding: Finding, scheme: Scheme) {
         Box(
             Modifier
                 .heightIn(min = Layout.MIN_HIT_TARGET.dp / 2)
-                .let { if (finding.severity == Severity.FAIL) it.border(1.dp, BIN_RED_BORDER) else it }
+                .let { if (finding.severity == Severity.FAIL) it.border(1.dp, color) else it }
                 .padding(horizontal = 3.dp),
             contentAlignment = Alignment.CenterStart,
         ) {

@@ -445,7 +445,7 @@ explicit MIDI root (24–96), strike velocity and model version; TUNE is a
 relative ±12-semitone offset, neutral at 0.5, so the effective note spans
 12–108 without clamping back to the saved-root range. Seven provisional presets
 and a dry sixteen-pad C minor pentatonic kit are included, with PITCHWHEEL among
-FRESH TAPE's 112 starters. Run `./gradlew :synth:generatePitchwheelAudition`
+FRESH TAPE's 115 starters. Run `./gradlew :synth:generatePitchwheelAudition`
 for the compact first listening set, or add `-PpitchwheelFull` for the broader
 dry probes. HOLD's top step returns settled loop-only material with a
 deterministic attachment cycle and capped adhesion. The owner heard R1 as six
@@ -504,14 +504,15 @@ each with sixteen pads, three strike layers and choking hats. The
 [audition and MPC downloads](https://rivet-drum-audition.bertcalm.chatgpt.site) and
 [implementation notes](docs/RIVET.md) include the pending hardware check.
 
-VELOUR and VELOUR BLOOM preserve the selected synthetic C kick/snare sources
-in two fixed sixteen-pad, three-touch-zone kits. Their reusable boards place
-chorus, finite echoes, grains and room before a sagging amp surrogate. Added
-hats, toms, stick, shaker and ride remain listening candidates. The
-[private audition and MPC downloads](https://velour-drum-audition.bertcalm.chatgpt.site/native/)
-and [implementation notes](docs/VELOUR.md) separate reference parity, printed
-pad behavior and pending hardware checks. Run `./gradlew :synth:generateVelourKit`
-to reproduce both kits and the native/reference comparisons.
+VELOUR CLOSE, VELOUR and VELOUR BLOOM load the approved, trimmed Round 5 bank:
+sixteen pads, three touch layers, dry C kick/snare on A05/A06, and conga, bongo,
+recording-derived tambourine and woodblock on A13–A16. The fixed PCM keeps the
+[audition and MPC downloads](https://velour-drum-audition.bertcalm.chatgpt.site/round5/)
+intact when the shelf makes a kit. The existing Velour/Bloom boards and original
+model-1 renderer remain available. [Implementation notes](docs/VELOUR.md) distinguish
+this approved baseline from the still-open round-robin, genre-kit and hardware gates.
+The older `:synth:generateVelourKit` task reproduces the original model-1 comparison,
+not the approved Round 5 shelf bank.
 
 TANGLE is an experimental pitched engine whose two oscillators influence,
 catch and release each other. BASS, LEAD, HOLLOW, PULSE, METAL and KNOT share
@@ -1116,7 +1117,7 @@ render-time limits. Build its MPC program and replay files with:
 
 ONSET, SCANNED CHAIN, VOX, FORK, HALOBAR, AEROSTAT, TREMOR, BALLAST, FLOTILLA, CISTERN, CIRCUIT, OBBLIGATO, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE,
 TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, LATTICE, ACCORD, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, REGISTERS, OSPREY, OPENSKY, OVEN, FLOCK, VENT, OVERLAP, TRIO, NACRE, ORIGAMI, TREFOIL, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS, TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME, OTIS, WICK, BORE, ARCO, SCOUR, KEEL, CHITIN, EROSION, RIVET, FIRED BRONZE, BACKWASH and GRAINS round out the lineup —
-81 engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
+82 engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
 since it has no voice enum and works on a source snip instead of picking
 one. VOX is formant vocal synthesis — the shopping-mall-keyboard choir,
 proudly: a VOWEL knob morphs
@@ -1300,7 +1301,13 @@ so a hit's attack is kept; SHAPE runs from a smooth sine to a square whose
 edge takes 4 ms at every rate, so it chops without clicking; the TREM
 pedal, the `tremoloed` character, is a gentle sine throb about 3.5 times a
 second at DEPTH 0.5 at a tap (AMT 70), about 0.71 at AMT 100; for held
-sounds), ECHO (one delay line and
+sounds), ROTARY (the spinning speaker: the pad is split at 800 Hz, the top
+half circles with its level and pitch rising and falling together, the low
+half sways more slowly, from the slow chorale at 0.7 Hz to the fast tremolo
+at 7 Hz; RAMP starts it at the chorale and spins it up the way a cabinet
+switched to fast does; the ROTARY pedal, the `spun` character, starts at
+the chorale and spins up to the fast speed at SPIN 0.7 at a tap (AMT 70),
+SPIN 1 at AMT 100; for held sounds), ECHO (one delay line and
 one filter, repeats darkening as they fade; its HEAD macro, turned up,
 feeds the repeats only the note's first 120 ms, so a held note's attack
 comes back as a repeat; the `delayed` character, the DELAY pedal, is its long,
@@ -1335,10 +1342,12 @@ clicks, scaled to the hit's own peak, seeded once per pad), SWELL
 (the sound arrives before it strikes) and MOTION (the tape stop and the
 tape start, baked); beside the rack, WOBBLE sweeps the same filter on
 the kit's own grid, a note division at its tempo — ROLL (the hit's own
-head struck again) and GATE (the hit chopped into a square envelope)
-share that same grid, so all three land on the same beats. `FxChain` fixes the order — pitch → dive → swell → reverse → smear → ghost →
+head struck again), GATE (the hit chopped into a square envelope) and
+PUMP (the sidechain pump: the first beat untouched, then the level
+ducked on every beat and breathed back) share that same grid, so all
+four land on the same beats. `FxChain` fixes the order — pitch → dive → swell → reverse → smear → ghost →
 spike → volume → octaver → eq → contour → wah → compressor → squash → forge → valve → crunch →
-ring → dub → vinyl → tape → vibrato → ensemble → phase → flanger → tremolo → echo → rewind → spring → room → hush → motion — owns
+ring → dub → vinyl → tape → vibrato → ensemble → phase → flanger → tremolo → rotary → echo → rewind → spring → room → hush → motion — owns
 the total tail budget so stacked reverbs can't turn a hit into a phrase,
 and serializes per-pad next to the WAV.
 
@@ -1363,7 +1372,7 @@ TREMOR, BALLAST, CISTERN, CIRCUIT, OBBLIGATO, ALLOY, THAW, MURK, NIMBUS, COROLLA
 UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL,
 SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVERLAP,
 OVEN, FLOCK, VENT, CREASE, TRIO, NACRE, ORIGAMI, TREFOIL, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS,
-TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME, BORE, ARCO, SCOUR, KEEL, CHITIN, WICK, EROSION, RIVET, FIRED BRONZE, BACKWASH, plus GRAINS, SNAP and DRAW,
+TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME, BORE, ARCO, SCOUR, KEEL, CHITIN, WICK, EROSION, RIVET, FIRED BRONZE, BACKWASH, SOOT, plus GRAINS, SNAP and DRAW,
 which sit beside the picker. `:synth` also holds engines that picker does not show.
 LORENTZ and SCUFF have preset rosters, so `snipsnap synth` renders them.
 

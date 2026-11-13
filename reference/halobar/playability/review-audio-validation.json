@@ -1,0 +1,125 @@
+{
+  "state": "passed",
+  "losslessClips": 17,
+  "proof": [
+    {
+      "file": "clips/pad-01.flac",
+      "frames": 286562,
+      "channels": 1,
+      "sampleRate": 44100,
+      "pcm16Sha256": "630a642194cb267addc846fa4c9ce55f40225179c3fd3ee832ce1e67831db62c"
+    },
+    {
+      "file": "clips/pad-02.flac",
+      "frames": 529200,
+      "channels": 1,
+      "sampleRate": 44100,
+      "pcm16Sha256": "23fd9a58173c64d16a4db8873ef792ff633163cfb8a51ac98f4d2c3cda356a82"
+    },
+    {
+      "file": "clips/pad-03.flac",
+      "frames": 77881,
+      "channels": 1,
+      "sampleRate": 44100,
+      "pcm16Sha256": "6a8592c0bb8fff054a61ec3e2ba9aa40e23c1f3c21e67031106cf7b97ac4144b"
+    },
+    {
+      "file": "clips/pad-04.flac",
+      "frames": 342481,
+      "channels": 1,
+      "sampleRate": 44100,
+      "pcm16Sha256": "8325820fc87e6803c2065838a279c4f81878cf715a90e6548fac8a4751b8a0e7"
+    },
+    {
+      "file": "clips/pad-05.flac",
+      "frames": 30641,
+      "channels": 1,
+      "sampleRate": 44100,
+      "pcm16Sha256": "0fc01698b3482e1d926ba0d5cad457ff8b799cb54e66ee57d6d562af4a31c838"
+    },
+    {
+      "file": "clips/pad-06.flac",
+      "frames": 295241,
+      "channels": 1,
+      "sampleRate": 44100,
+      "pcm16Sha256": "698bb837f981af3760f222148eb00b1366cbb650a897deb8877b568b6bad2be6"
+    },
+    {
+      "file": "clips/pad-07.flac",
+      "frames": 156046,
+      "channels": 1,
+      "sampleRate": 44100,
+      "pcm16Sha256": "99903e1220b571aa125726113fc33b951d8005d5ce752ea5f8509101a9f8bbed"
+    },
+    {
+      "file": "clips/pad-08.flac",
+      "frames": 420646,
+      "channels": 1,
+      "sampleRate": 44100,
+      "pcm16Sha256": "97dc0cadffdae51809f6718d01653361bb33bbfd7c67f56075d07f0fa402bcf4"
+    },
+    {
+      "file": "clips/pad-09.flac",
+      "frames": 254557,
+      "channels": 1,
+      "sampleRate": 44100,
+      "pcm16Sha256": "81400d61dcf66ef3182415b4af693690006b79b35d9d8aab2e98da6877140c92"
+    },
+    {
+      "file": "clips/pad-10.flac",
+      "frames": 519157,
+      "channels": 1,
+      "sampleRate": 44100,
+      "pcm16Sha256": "63113940db3ce12289a409ea21fede70d8e5f596e1557509e75fa93fb4749d0f"
+    },
+    {
+      "file": "clips/pad-11.flac",
+      "frames": 352800,
+      "channels": 1,
+      "sampleRate": 44100,
+      "pcm16Sha256": "4af156c15e194e5e21d7e0dce31ac4d7a2899aa6b27f5c443b65dc4bbf7f0aeb"
+    },
+    {
+      "file": "clips/pad-12.flac",
+      "frames": 529200,
+      "channels": 1,
+      "sampleRate": 44100,
+      "pcm16Sha256": "61a870124d44b799144aa97b62ea1901eed3835b3b4207924029f45693b252d7"
+    },
+    {
+      "file": "clips/pad-13.flac",
+      "frames": 529200,
+      "channels": 1,
+      "sampleRate": 44100,
+      "pcm16Sha256": "88a1755a908ddf5ea090d6ed0f7cfb0cb1e32f94d3e1cf949dc14f313b06c92f"
+    },
+    {
+      "file": "clips/pad-14.flac",
+      "frames": 529200,
+      "channels": 1,
+      "sampleRate": 44100,
+      "pcm16Sha256": "367b61f1ae215fc999091cf797ba844d64e950f20444d4951c126765011d9b68"
+    },
+    {
+      "file": "clips/pad-15.flac",
+      "frames": 529200,
+      "channels": 1,
+      "sampleRate": 44100,
+      "pcm16Sha256": "5e91b338d7506d71cabbf96a43a22d716196da4c750b068cb6a43a9654ed3387"
+    },
+    {
+      "file": "clips/pad-16.flac",
+      "frames": 529200,
+      "channels": 1,
+      "sampleRate": 44100,
+      "pcm16Sha256": "8992ee07763f9b9a67415c50fab8af294b5dd25ca35bfdb80280d1890cbe52ab"
+    },
+    {
+      "file": "clips/six-study-sequence.flac",
+      "frames": 1080450,
+      "channels": 2,
+      "sampleRate": 44100,
+      "pcm16Sha256": "e6c0bf93c2379f28c86913e7865f8ae888ea97d1c74e879d90d306aef5586724"
+    }
+  ]
+}
