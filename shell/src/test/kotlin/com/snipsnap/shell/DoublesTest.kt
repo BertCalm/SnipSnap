@@ -85,7 +85,7 @@ class DoublesTest {
         val b = entry("K1", 2, DrumClass.KICK, 1f, 0f)
         assertEquals(emptyList(), Doubles.clusters(index(a, b), within = 0.05f))
         assertEquals(emptyList(), Doubles.clusters(index(a), within = 0.05f))
-        assertEquals("NOTHING SIMILAR WITHIN 0.05. NOT A CLEAN BILL - JUST NONE THIS CLOSE.", Copy.noDoubles(0.05f))
+        assertEquals("Nothing similar within 0.05. Not a clean bill - just none this close.", Copy.noDoubles(0.05f))
     }
 
     @Test

@@ -37,7 +37,7 @@ internal fun SurfaceAquariumPanel(
             !ready -> "CHOOSE A KIT · WAIT FOR ITS SURFACE SETTINGS"
             !streamUp -> "NO STREAM"
             faulted -> "AQUARIUM FAULT · RESET TAIL OR REOPEN SURFACE"
-            pending -> "WAITING TO QUEUE SETTINGS…"
+            pending -> "Waiting to queue settings…"
             !optedIn -> "KIT FX OFF"
             !route.settings.enabled -> "DRY · KIT PERFORMANCE IS BYPASSED"
             route.settings.settings.isBypass -> "DRY · ALL SIX EFFECT MIXES ARE ZERO"
