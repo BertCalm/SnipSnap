@@ -623,3 +623,30 @@ and the approved strum study by its published WAV hashes (`OsteriaStrumTest`).
   the other keygroup sounds have not been listened to.
 - **Overall: incomplete.** Round robin, a seamless HOLD, chord tools on real keys, device runs
   of the picker and hardware playback remain open.
+
+## CLUTTER (round 0c, 2026-11-13)
+
+A found-sound drum engine of 22 modelled household objects, and five sixteen-pad kits from them: the CLUTTER
+kit (one each of sixteen objects) and four genre kits. Every object has loose parts (rice, a lid, a handle,
+cutlery, a rivet) that only move above a strike threshold. See [CLUTTER](CLUTTER.md). Round 0c is a Python
+prototype audition; no Kotlin exists.
+
+- **Melodic, keygroup and chord-tool gates:** not applicable. A drum engine.
+- **Articulation:** finite hits, no HOLD. Not a picked or thumbed string.
+- **Percussion: open.** The owner replaced the round-0 pot roll with a one-shot (B01 Bin Lid) on 2026-11-13:
+  "Roll becomes one shot, groove can stay". No roll exists, so this gate is not passed.
+- **Drum shelf: four genre kits authored, not on the shelf.** KITCHEN LO-FI (82 BPM), STREET BUCKET (120 BPM),
+  JUNK BOOM BAP (90 BPM) and MICROBEAT (100 BPM), chosen by the owner. They differ in which objects fill each
+  role, how they are hit, how loose and damped they are, where the phone is, and in tempo, swing and groove.
+  No pad is shared between any two; the same slot in two kits is at least 6.0 dB apart (Python). No Kotlin,
+  so nothing is on the shelf yet.
+- **Velocity and round robin:**
+  - **Rendering: measured in Python, not Kotlin.** On all 80 pads of the five kits: soft against hard at
+    matched level at least 3.9 dB; the closest two takes of any pad 1.2 dB apart. Each take replays byte for
+    byte.
+  - **Saving, playback, export: open.** Nothing to save, play or export until the Kotlin round. The
+    listening page's pad grid is a browser stand-in, not app evidence.
+- **Sound character: not heard.** Listening page published 2026-11-13, version 7:
+  <https://claude.ai/artifact/6dkeY2rrjNGUvUYvobs3v5>.
+- **Overall: incomplete.** The percussion gate, the shelf, saving, playback, export, hardware and the
+  owner's listen are open.
