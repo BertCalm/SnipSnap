@@ -123,12 +123,12 @@ class TempestSynthScreenTest : ComposeScreenTest() {
         pump()
         waitFor("return retains original renderer") { stored(source.voice) == expected }
         activate("SAVE PRESET")
-        compose.onNode(hasSetTextAction()).performTextReplacement("MY ORIGINAL KICK")
+        compose.onNode(hasSetTextAction()).performTextReplacement("MY OLD KICK")
         pump()
         activate("SAVE")
-        waitFor("saved legacy recipe") { UserPresets.read(shelf).any { it.name == "MY ORIGINAL KICK" } }
-        assertEquals(expected.copy(name = "MY ORIGINAL KICK"),
-            UserPresets.read(shelf).single { it.name == "MY ORIGINAL KICK" }.patch)
+        waitFor("saved legacy recipe") { UserPresets.read(shelf).any { it.name == "MY OLD KICK" } }
+        assertEquals(expected.copy(name = "MY OLD KICK"),
+            UserPresets.read(shelf).single { it.name == "MY OLD KICK" }.patch)
     }
 
     @Test fun an_explicit_model_three_metal_recipe_survives_scramble_and_navigation() {
