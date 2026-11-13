@@ -1,0 +1,99 @@
+{
+  "state": "passed",
+  "pcm24Samples": 16,
+  "existingArchive": "/workspace/sites/halobar-audition/dist/tubular-bells/Six-Voice-Study-Kit.zip",
+  "samples": [
+    {
+      "sample": "A01_Loop_01.wav",
+      "frames": 286562,
+      "pcm24Sha256": "e7519d541b22434424ba1e9b2ff17bbaee5163ddd3a93c9450c25ded421ab048"
+    },
+    {
+      "sample": "A02_Loop_02.wav",
+      "frames": 529200,
+      "pcm24Sha256": "99ccb1ccb6323b26a906ef4bb0e8d0990b83eafcb2a6301dbc05bb847bd88877"
+    },
+    {
+      "sample": "A03_Loop_03.wav",
+      "frames": 77881,
+      "pcm24Sha256": "96f1aaabe39bdecac4fd7cf8a885d14c65cfa83b6d53396e570f3529645ebbad"
+    },
+    {
+      "sample": "A04_Loop_04.wav",
+      "frames": 342481,
+      "pcm24Sha256": "69565cc6a76dd8fa45175601ebbff3a35516110218516f4969f299733336d1dd"
+    },
+    {
+      "sample": "A05_Perc_01.wav",
+      "frames": 30641,
+      "pcm24Sha256": "58ab1abdc1f5de319cfdec90fc497d6f9e15df86dbd3938f3721623241552ab1"
+    },
+    {
+      "sample": "A06_Loop_05.wav",
+      "frames": 295241,
+      "pcm24Sha256": "1cba18fd2cfebedef59035b9fa8eea02e632cc17da7b1dd4105c24fc8c784b7d"
+    },
+    {
+      "sample": "A07_Loop_06.wav",
+      "frames": 156046,
+      "pcm24Sha256": "9740160836cb1ea7dd76340b0be56685afe755d068eea5c209eef21783ff2830"
+    },
+    {
+      "sample": "A08_Loop_07.wav",
+      "frames": 420646,
+      "pcm24Sha256": "f955057e523b5abab366a534d29710c43e3e8395db9ad73f6738548ef578a9f1"
+    },
+    {
+      "sample": "A09_Loop_08.wav",
+      "frames": 254557,
+      "pcm24Sha256": "122ab9ed43cb40a724972c5a31e4447660604c7c42605f53ed0eaacd9fff38ab"
+    },
+    {
+      "sample": "A10_Loop_09.wav",
+      "frames": 519157,
+      "pcm24Sha256": "cad2744849c09ae8039ddf7cd0316b84c0b780793fd6e15dba0885c6cc125aae"
+    },
+    {
+      "sample": "A11_Loop_10.wav",
+      "frames": 352800,
+      "pcm24Sha256": "78856b82e0ce82149d3874046fd8676bfd34aeda752681b7d5221a52ee4c6773"
+    },
+    {
+      "sample": "A12_Loop_11.wav",
+      "frames": 529200,
+      "pcm24Sha256": "d95d9b2d4c922734fdaa4bcb3188bdb61614629818733e24fb3fbbcee0566b34"
+    },
+    {
+      "sample": "A13_Loop_12.wav",
+      "frames": 529200,
+      "pcm24Sha256": "22114fd6c28de0d7a61a64a5ad20917f7e55abefc1b1627e7f1caa25004b448d"
+    },
+    {
+      "sample": "A14_Loop_13.wav",
+      "frames": 529200,
+      "pcm24Sha256": "1f615280012b66d1b6f07c1040829cb6b69a847b6b81bf9f8c2349eefcf00cc4"
+    },
+    {
+      "sample": "A15_Loop_14.wav",
+      "frames": 529200,
+      "pcm24Sha256": "a89894a5de500f4e1ca5247d8decda7531d59aeeba632c5d3df65612ee74a95d"
+    },
+    {
+      "sample": "A16_Loop_15.wav",
+      "frames": 529200,
+      "pcm24Sha256": "cd335cd37c17590d4754a46fbf416ff92676aa69310912e68e660d219fb8cce6"
+    }
+  ],
+  "playbackLayoutMatches": true,
+  "playbackFieldsCompared": [
+    "sampleFile",
+    "level",
+    "pan",
+    "tuneCoarse",
+    "tuneFine",
+    "oneShot",
+    "loop",
+    "chain",
+    "velocityLayers"
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "state": "passed",
+  "rows": [
+    {
+      "guard": "source",
+      "retainedExitCode": 0,
+      "mutantExitCode": 1,
+      "mutantFailure": "Exception in thread \"main\" java.lang.AssertionError: source stage key: stale audio mismatch\n\tat StageKeyOracle.main(StageKeyOracle.java:9)"
+    },
+    {
+      "guard": "return",
+      "retainedExitCode": 0,
+      "mutantExitCode": 1,
+      "mutantFailure": "Exception in thread \"main\" java.lang.AssertionError: return stage key: stale audio mismatch\n\tat StageKeyOracle.main(StageKeyOracle.java:9)"
+    },
+    {
+      "guard": "motor",
+      "retainedExitCode": 0,
+      "mutantExitCode": 1,
+      "mutantFailure": "Exception in thread \"main\" java.lang.AssertionError: motor stage key: stale audio mismatch\n\tat StageKeyOracle.main(StageKeyOracle.java:9)"
+    }
+  ]
+}
