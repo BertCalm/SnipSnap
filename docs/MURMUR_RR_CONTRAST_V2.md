@@ -19,3 +19,55 @@ Starting phase and transient constants are proposed shape choices. The new seven
 - The root carrier and phase increments stay fixed so this policy is not authored as detuning or a new voice.
 - The contact/index perturbation remains bounded. Its shape needs native measurements and owner listening before any bank or app adoption.
 - Finite-only scope prevents an unmeasured new strike law from silently changing held loops and their seam contracts.
+
+## The opt-in V2 instrument (2026-11-13)
+
+V2 is now a saved instrument as well as a recipe. One setting,
+`MurmurRoundRobinInstrumentSource.RoundRobinPolicy`, travels through every layer: the
+instrument cell, the fixed-take package, the four-take bank and the shelf handle. It
+defaults to `BREATH_V1`, and a V1 cell, package or bank is written exactly as before:
+version 1, with no policy field, byte for byte. `CONTRAST_V2` writes version 2 and names
+`NATIVE_OPERATOR_CONTACT_V2` in the bank manifest, in every package and in every cell,
+including the cell's renderer binding. Neither format reads as the other:
+
+- A V2 bank validated against a V1 spec is refused, and the reverse.
+- A V2 manifest relabelled as version 1 is refused because its cells still name V2.
+- A version-2 manifest that names the breath policy is refused, because version 1 is the
+  breath policy's only spelling.
+- A V2 cell for a held source is refused, as the recipe already refuses HOLD.
+
+Cells of the two policies never share a cache key. The player, shelf, import and fixed-take
+export read saved files only, so they need no change. A V2 bank goes through them unchanged.
+
+### Measured from the saved player
+
+`MurmurRoundRobinContrastBankTest` and `:shell:generateMurmurRoundRobinAudition` take the
+whole path. They render native cells into a real bank, save it, admit it to the shelf,
+reload it from PCM24 and play C2 at touch .65 through `MurmurRoundRobinPlayer`. Nothing is
+re-rendered between the save and the sound.
+
+- **Order:** the player deals takes 0, 1, 2, 3 and returns to the identical take 0.
+- **Take 0:** V2's saved take 0 has the same finished Float hash as V1's take 0 cell.
+- **Distinctness:** four isolated strikes, measured pairwise.
+
+| Policy | Residual after level matching | Spectral distance (phase-blind) |
+| --- | --- | --- |
+| V1, breath seed | .0095 to .0109 | .0015 to .0020 |
+| V2, operator/contact | .548 to .998 | .039 to .196 |
+
+The residual is what remains of one take after the best single gain matches it to another.
+The spectral distance compares Hann-windowed 2048-point power spectra every 512 frames over
+the first second, with each strike normalised to unit power. It is half the summed absolute
+difference, so a phase-only change barely moves it. The test's floors are .025 and .01. V1
+sits below both and V2's closest pair is about four times the spectral floor. The floors are
+regression criteria, not an audibility threshold.
+
+### Still open
+
+- **Owner listening:** the round-robin-only audition is on the private Listening Desk as round
+  `murmur-rr-1`. M2 and M4 are V2; M1 and M3 are the V1 reference. Until it is heard, the
+  owner's REVISIT ("Didn't hear any variation") stands.
+- **App and phone:** the Android screens and the native round-robin player from the recovery
+  snapshot are not ported yet. That is the next MURMUR change. No phone has played a V2 bank.
+- **MPC export:** each take exports as its own fixed-take program. An MPC does not rotate
+  them, which is the existing V1 limit.

@@ -1,5 +1,6 @@
 package com.snipsnap.shell
 
+import com.snipsnap.audio.WavWriter
 import com.snipsnap.audio.WavReader
 import com.snipsnap.mpc3.Mpc3TrackWriter
 import com.snipsnap.synth.MurmurRoundRobinInstrumentSource
@@ -43,7 +44,9 @@ object MurmurRoundRobinShelf {
     /** The exact admission seal is part of the handle; a name alone is not an identity. */
     class SavedBank internal constructor(val name: String, val identitySha256: String,
                                          val decodedPcmBytes: Long, val cellCount: Int,
-                                         val supportedMidi: IntRange)
+                                         val supportedMidi: IntRange,
+                                         val roundRobinPolicy: MurmurRoundRobinInstrumentSource.RoundRobinPolicy =
+                                             MurmurRoundRobinInstrumentSource.RoundRobinPolicy.BREATH_V1)
     data class Refused(val name: String, val reason: String)
     data class Listing(val banks: List<SavedBank>, val refused: List<Refused>)
     internal data class Hooks(val sourceValidated: () -> Unit = {}, val copied: () -> Unit = {},
@@ -309,7 +312,7 @@ object MurmurRoundRobinShelf {
     private fun decodedBytes(packet: MurmurRoundRobinInstrumentBank.Packet) =
         packet.takes.sumOf { take -> take.rows.sumOf { it.frameCount.toLong() * Float.SIZE_BYTES } }
     private fun handle(name: String, identity: String, packet: MurmurRoundRobinInstrumentBank.Packet) =
-        SavedBank(name, identity, decodedBytes(packet), packet.cellCount, packet.spec.supportedMidi)
+        SavedBank(name, identity, decodedBytes(packet), packet.cellCount, packet.spec.supportedMidi, packet.spec.policy)
 
     private fun namespace(shelf: File, create: Boolean): File? {
         if (!Files.exists(shelf.toPath(), LinkOption.NOFOLLOW_LINKS)) {

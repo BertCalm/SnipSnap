@@ -557,3 +557,14 @@ tasks.register<JavaExec>("generateTriadKits") {
     maxHeapSize = "2g"
     args("${rootDir}/testkit/triad-kits")
 }
+
+/** MURMUR's C2 repeats, V1 against opt-in V2, played from real saved banks by the saved-sample player. */
+tasks.register<JavaExec>("generateMurmurRoundRobinAudition") {
+    group = "distribution"
+    description = "Render real V1 and V2 MURMUR RR banks, play C2 repeats from the saved files and write testkit/murmur-rr-v2-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.MurmurRoundRobinAuditionGenerator")
+    workingDir = projectDir
+    maxHeapSize = "768m"
+    args("${rootDir}/testkit/murmur-rr-v2-audition")
+}

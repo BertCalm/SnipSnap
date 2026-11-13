@@ -31,6 +31,21 @@ object MurmurRoundRobinInstrumentSource {
 
     enum class OutputPolicy { FACTORY_SINGLE_FINITE_V1, HOUSE_ADJACENT_CONTEXT_V1 }
 
+    /**
+     * How takes 1..3 differ from take 0. [BREATH_V1] varies the quiet breath seed; the owner
+     * heard its C2 repeats as one strike. [CONTRAST_V2] moves two FM modulator starting phases
+     * and the transient index/contact length, finite sources only. Both keep take 0 exact.
+     * V1 stays the default, so every saved V1 cell keeps its serialization byte for byte.
+     */
+    enum class RoundRobinPolicy(val json: String) {
+        BREATH_V1(MurmurRoundRobinRecipe.POLICY),
+        CONTRAST_V2(MurmurRoundRobinContrastRecipe.POLICY);
+
+        companion object {
+            fun fromJson(value: String): RoundRobinPolicy? = entries.firstOrNull { it.json == value }
+        }
+    }
+
     fun nativeTouches(): List<Float> = touches.toList()
 
     /**
@@ -46,6 +61,7 @@ object MurmurRoundRobinInstrumentSource {
         val releaseSeconds: Float,
         val outputPolicy: OutputPolicy,
         val onsetFrames: Int,
+        val policy: RoundRobinPolicy = RoundRobinPolicy.BREATH_V1,
     ) {
         init { validateCell(this) }
 
@@ -62,11 +78,11 @@ object MurmurRoundRobinInstrumentSource {
             "touchPolicy" to JsonValue.Str(TOUCH_POLICY),
             "touchIndex" to JsonValue.Num(touchIndex.toDouble()),
             "take" to JsonValue.Num(take.toDouble()),
-            "roundRobinPolicy" to JsonValue.Str(MurmurRoundRobinRecipe.POLICY),
+            "roundRobinPolicy" to JsonValue.Str(policy.json),
             "releaseSeconds" to JsonValue.Num(releaseSeconds.toDouble()),
             "outputPolicy" to JsonValue.Str(outputPolicy.name),
             "onsetFrames" to JsonValue.Num(onsetFrames.toDouble()),
-            "rendererBinding" to rendererBinding(),
+            "rendererBinding" to rendererBinding(policy),
         ))
 
         fun toJsonText(): String = Json.write(toJsonValue())
@@ -81,9 +97,9 @@ object MurmurRoundRobinInstrumentSource {
                     throw JsonException("unsupported MURMUR instrument cell kind/version")
                 if (obj.getValue("touchPolicy").str() != TOUCH_POLICY)
                     throw JsonException("unsupported MURMUR native touch policy")
-                if (obj.getValue("roundRobinPolicy").str() != MurmurRoundRobinRecipe.POLICY)
-                    throw JsonException("unsupported MURMUR round-robin policy")
-                if (obj.getValue("rendererBinding") != rendererBinding())
+                val policy = RoundRobinPolicy.fromJson(obj.getValue("roundRobinPolicy").str())
+                    ?: throw JsonException("unsupported MURMUR round-robin policy")
+                if (obj.getValue("rendererBinding") != rendererBinding(policy))
                     throw JsonException("MURMUR instrument renderer binding differs")
                 val output = OutputPolicy.entries.firstOrNull { it.name == obj.getValue("outputPolicy").str() }
                     ?: throw JsonException("unknown MURMUR instrument output policy")
@@ -92,7 +108,7 @@ object MurmurRoundRobinInstrumentSource {
                         canonicalPatch(obj.getValue("sourcePatch")).toJsonText(),
                         canonicalPatch(obj.getValue("cellPatch")).toJsonText(),
                         obj.getValue("touchIndex").int(), obj.getValue("take").int(), obj.getValue("releaseSeconds").num().toFloat(),
-                        output, obj.getValue("onsetFrames").int())
+                        output, obj.getValue("onsetFrames").int(), policy)
                     require(recipe.toJsonValue() == value) { "MURMUR RR cell contains lossy or noncanonical values" }
                     return recipe
                 } catch (failure: IllegalArgumentException) {
@@ -104,7 +120,8 @@ object MurmurRoundRobinInstrumentSource {
         }
     }
 
-    fun cellRecipe(patch: MurmurPatch, midi: Int, touchIndex: Int, take: Int, releaseSeconds: Float = DEFAULT_RELEASE_SECONDS): CellRecipe {
+    fun cellRecipe(patch: MurmurPatch, midi: Int, touchIndex: Int, take: Int, releaseSeconds: Float = DEFAULT_RELEASE_SECONDS,
+                   policy: RoundRobinPolicy = RoundRobinPolicy.BREATH_V1): CellRecipe {
         val source = canonicalPatch(patch.toJsonValue())
         val eligible = requireNotNull(MurmurSelectedInstrumentSource.eligibility(source)) { "Choose a qualified kept MURMUR source setting" }
         require(midi in eligible.supportedMidi) { "MURMUR requested cell note is outside the selected range" }
@@ -112,7 +129,7 @@ object MurmurRoundRobinInstrumentSource {
         val cell = source.copy(midi = midi, velocity = touches[touchIndex])
         return CellRecipe(eligible.selectionId, source.toJsonText(), cell.toJsonText(), touchIndex, take, releaseSeconds,
             if (eligible.held) OutputPolicy.HOUSE_ADJACENT_CONTEXT_V1 else OutputPolicy.FACTORY_SINGLE_FINITE_V1,
-            if (eligible.held) HELD_ONSET_FRAMES else 0)
+            if (eligible.held) HELD_ONSET_FRAMES else 0, policy)
     }
 
     /** A capture value, not a signature of trusted native authorship. Production builders render it here. */
@@ -172,7 +189,10 @@ object MurmurRoundRobinInstrumentSource {
 
     private fun renderUncached(recipe: CellRecipe): Capture {
         val patch = recipe.cellPatch()
-        val proof = Murmur.probeRoundRobin(patch, recipe.take)
+        val proof = when (recipe.policy) {
+            RoundRobinPolicy.BREATH_V1 -> Murmur.probeRoundRobin(patch, recipe.take)
+            RoundRobinPolicy.CONTRAST_V2 -> Murmur.probeRoundRobinContrast(patch, recipe.take)
+        }
         require(proof.samples.isNotEmpty() && proof.samples.all { it.isFinite() } &&
             proof.previousCycle.all { it.isFinite() }) { "MURMUR native context is empty or nonfinite" }
         val sampleHash = floatSha256(proof.samples)
@@ -218,7 +238,11 @@ object MurmurRoundRobinInstrumentSource {
         require(recipe.touchIndex in touches.indices) { "MURMUR native touch index must be 0..2" }
         require(recipe.releaseSeconds.isFinite() && recipe.releaseSeconds in MIN_RELEASE_SECONDS..MAX_RELEASE_SECONDS) { "invalid MURMUR sampler release" }
         val cell = canonicalPatch(Json.parse(recipe.cellPatchJson))
-        MurmurRoundRobinRecipe(cell, recipe.take) // Exact native policy and complete selected source eligibility.
+        // Exact native policy and complete selected source eligibility; V2 also refuses held sources.
+        when (recipe.policy) {
+            RoundRobinPolicy.BREATH_V1 -> MurmurRoundRobinRecipe(cell, recipe.take)
+            RoundRobinPolicy.CONTRAST_V2 -> MurmurRoundRobinContrastRecipe(cell, recipe.take)
+        }
         require(cell.midi in eligible.supportedMidi) { "MURMUR cell note is outside the selected range" }
         require(cell == source.copy(midi = cell.midi, velocity = touches[recipe.touchIndex])) {
             "MURMUR adapted cell changed its source shape or absolute native touch"
@@ -235,11 +259,15 @@ object MurmurRoundRobinInstrumentSource {
         return patch
     }
 
-    /** Hashes the new adapter and native dependencies; external receipts qualify actual execution. */
-    fun rendererBinding(): JsonValue {
+    /**
+     * Hashes the new adapter and native dependencies; external receipts qualify actual execution.
+     * A V2 cell names its own policy in the binding, so a V1 cell can never satisfy a V2 request.
+     */
+    fun rendererBinding(policy: RoundRobinPolicy = RoundRobinPolicy.BREATH_V1): JsonValue {
         val binding = Json.parse(MurmurRoundRobinRendererIdentity.JSON)
         require(binding.obj()["sealed"]?.bool() == true) { "MURMUR selected renderer identity has not been sealed" }
-        return binding
+        if (policy == RoundRobinPolicy.BREATH_V1) return binding
+        return JsonValue.Obj(LinkedHashMap(binding.obj()).apply { put("roundRobinPolicy", JsonValue.Str(policy.json)) })
     }
 
     fun floatSha256(samples: FloatArray): String {

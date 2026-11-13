@@ -6,6 +6,7 @@ import com.snipsnap.kit.Names
 import com.snipsnap.kit.OneNote
 import com.snipsnap.synth.MurmurPatch
 import com.snipsnap.synth.MurmurRoundRobinInstrumentSource
+import com.snipsnap.synth.MurmurRoundRobinInstrumentSource.RoundRobinPolicy
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.LinkOption
@@ -25,14 +26,19 @@ object MurmurRoundRobinInstrumentBank {
     private const val KIND = "MURMUR_ROUND_ROBIN_INSTRUMENT_BANK"
     private const val MAX_MANIFEST_BYTES = 64L * 1024
 
-    class Spec(patch: MurmurPatch, releaseSeconds: Float = MurmurRoundRobinInstrumentSource.DEFAULT_RELEASE_SECONDS) {
-        private val frozen = MurmurRoundRobinTakePackage.Spec(patch, 0, releaseSeconds)
+    /** [policy] is opt-in: the default breath policy writes exactly the version-1 bank it always did. */
+    class Spec(
+        patch: MurmurPatch,
+        releaseSeconds: Float = MurmurRoundRobinInstrumentSource.DEFAULT_RELEASE_SECONDS,
+        val policy: RoundRobinPolicy = RoundRobinPolicy.BREATH_V1,
+    ) {
+        private val frozen = MurmurRoundRobinTakePackage.Spec(patch, 0, releaseSeconds, policy)
         val sourcePatchJson: String get() = frozen.sourcePatchJson
         val releaseSeconds: Float get() = frozen.releaseSeconds
         val supportedMidi: IntRange get() = frozen.supportedMidi
         val held: Boolean get() = frozen.held
         fun sourcePatch(): MurmurPatch = frozen.sourcePatch()
-        fun takeSpec(take: Int) = MurmurRoundRobinTakePackage.Spec(sourcePatch(), take, releaseSeconds)
+        fun takeSpec(take: Int) = MurmurRoundRobinTakePackage.Spec(sourcePatch(), take, releaseSeconds, policy)
     }
 
     class Packet internal constructor(val name: String, val spec: Spec, takes: List<MurmurRoundRobinTakePackage.Packet>) {
@@ -94,16 +100,23 @@ object MurmurRoundRobinInstrumentBank {
         val manifestText = read?.invoke(file)?.toString(Charsets.UTF_8) ?: file.readText()
         val value = Json.parse(manifestText)
         val obj = value.obj()
-        require(obj.keys == setOf("kind", "version", "name", "sourcePatch", "releaseSeconds", "cursorPolicy", "exportPolicy", "takes"))
-        require(obj.getValue("kind").str() == KIND && obj.getValue("version").int() == 1)
+        // Version 1 is the breath policy and never names it; version 2 names its policy.
+        val version = obj["version"]?.int()
+        val v1Keys = setOf("kind", "version", "name", "sourcePatch", "releaseSeconds", "cursorPolicy", "exportPolicy", "takes")
+        require(obj.keys == if (version == 2) v1Keys + "roundRobinPolicy" else v1Keys) { "Unknown or incomplete MURMUR RR bank fields" }
+        require(obj.getValue("kind").str() == KIND && (version == 1 || version == 2)) { "Unsupported MURMUR RR bank kind/version" }
+        val policy = if (version == 1) RoundRobinPolicy.BREATH_V1 else
+            requireNotNull(RoundRobinPolicy.fromJson(obj.getValue("roundRobinPolicy").str())
+                ?.takeIf { it != RoundRobinPolicy.BREATH_V1 }) { "Unsupported MURMUR RR bank round-robin policy" }
         require(obj.getValue("name").str() == name && obj.getValue("cursorPolicy").str() == CURSOR_POLICY &&
             obj.getValue("exportPolicy").str() == EXPORT_POLICY)
         val patch = MurmurPatch.fromJsonValue(obj.getValue("sourcePatch")) as MurmurPatch
         require(patch.toJsonValue() == obj.getValue("sourcePatch")) { "Complete canonical MURMUR source is required" }
         val release = obj.getValue("releaseSeconds").num()
         require(release.isFinite() && release == release.toFloat().toDouble())
-        val spec = Spec(patch, release.toFloat())
-        require(expected == null || (expected.sourcePatchJson == spec.sourcePatchJson && expected.releaseSeconds == spec.releaseSeconds))
+        val spec = Spec(patch, release.toFloat(), policy)
+        require(expected == null || (expected.sourcePatchJson == spec.sourcePatchJson && expected.releaseSeconds == spec.releaseSeconds &&
+            expected.policy == spec.policy))
         val packets = (0..3).map { take ->
             if (read == null) MurmurRoundRobinTakePackage.validatePacket(programName(name, take), File(root, takeFolder(take)), spec.takeSpec(take))
             else MurmurRoundRobinTakePackage.validateWithReads(programName(name, take), File(root, takeFolder(take)), spec.takeSpec(take), read)
@@ -141,7 +154,8 @@ object MurmurRoundRobinInstrumentBank {
     }
 
     private fun manifest(name: String, spec: Spec, packets: List<MurmurRoundRobinTakePackage.Packet>): String = Json.write(JsonValue.Obj(linkedMapOf(
-        "kind" to JsonValue.Str(KIND), "version" to JsonValue.Num(1.0), "name" to JsonValue.Str(name),
+        "kind" to JsonValue.Str(KIND), "version" to JsonValue.Num(if (spec.policy == RoundRobinPolicy.BREATH_V1) 1.0 else 2.0),
+        "name" to JsonValue.Str(name),
         "sourcePatch" to spec.sourcePatch().toJsonValue(), "releaseSeconds" to JsonValue.Num(spec.releaseSeconds.toDouble()),
         "cursorPolicy" to JsonValue.Str(CURSOR_POLICY), "exportPolicy" to JsonValue.Str(EXPORT_POLICY),
         "takes" to JsonValue.Arr(packets.mapIndexed { take, packet -> JsonValue.Obj(linkedMapOf(
@@ -150,7 +164,7 @@ object MurmurRoundRobinInstrumentBank {
             "recipesSha256" to JsonValue.Str(hashText(packet.rows.joinToString("\n") { it.recipeJson })),
             "wavHashesSha256" to JsonValue.Str(hashText(packet.rows.joinToString("\n") { it.wavSha256 })),
         )) }),
-    )))
+    ).apply { if (spec.policy != RoundRobinPolicy.BREATH_V1) put("roundRobinPolicy", JsonValue.Str(spec.policy.json)) }))
     private fun hashText(text: String): String = MessageDigest.getInstance("SHA-256").digest(text.toByteArray(Charsets.UTF_8)).joinToString("") { "%02x".format(it) }
     private fun checkName(name: String) { require(Names.isMpcSafe(name) && name.length <= OneNote.MAX_NAME_LENGTH - 3) { "Invalid MURMUR RR bank name" } }
     private fun checkCancelled(cancelled: () -> Boolean) { if (cancelled() || Thread.currentThread().isInterrupted) throw CancellationException("MURMUR RR bank cancelled") }

@@ -15,6 +15,7 @@ import com.snipsnap.synth.Murmur
 import com.snipsnap.synth.MurmurKeptSources
 import com.snipsnap.synth.MurmurPatch
 import com.snipsnap.synth.MurmurRoundRobinInstrumentSource
+import com.snipsnap.synth.MurmurRoundRobinInstrumentSource.RoundRobinPolicy
 import com.snipsnap.synth.MurmurSelectedInstrumentSource
 import com.snipsnap.xpm.Keygroup
 import com.snipsnap.xpm.KeygroupProgram
@@ -41,7 +42,12 @@ object MurmurRoundRobinTakePackage {
     val VELOCITY_WINDOWS: List<IntRange> get() = listOf(1..42, 43..84, 85..127)
 
     /** Freeze the complete source now, rather than retaining the caller's mutable collections. */
-    class Spec(patch: MurmurPatch, val take: Int, val releaseSeconds: Float = MurmurRoundRobinInstrumentSource.DEFAULT_RELEASE_SECONDS) {
+    class Spec(
+        patch: MurmurPatch,
+        val take: Int,
+        val releaseSeconds: Float = MurmurRoundRobinInstrumentSource.DEFAULT_RELEASE_SECONDS,
+        val policy: RoundRobinPolicy = RoundRobinPolicy.BREATH_V1,
+    ) {
         val sourcePatchJson: String = patch.toJsonText()
         private val selected = requireNotNull(MurmurSelectedInstrumentSource.eligibility(sourcePatch())) {
             "MURMUR instruments require an exact selected shape with a positive authored touch"
@@ -54,7 +60,7 @@ object MurmurRoundRobinTakePackage {
             require(take in 0..3) { "MURMUR round-robin take must be 0..3" }
             require(releaseSeconds.isFinite() && releaseSeconds in MurmurRoundRobinInstrumentSource.MIN_RELEASE_SECONDS..MurmurRoundRobinInstrumentSource.MAX_RELEASE_SECONDS) { "MURMUR sampler release must be ${MurmurRoundRobinInstrumentSource.MIN_RELEASE_SECONDS}..${MurmurRoundRobinInstrumentSource.MAX_RELEASE_SECONDS} seconds" }
             require(sourcePatch().midi in supportedMidi) { "MURMUR authored root is outside its selected domain" }
-            MurmurRoundRobinInstrumentSource.cellRecipe(sourcePatch(), sourcePatch().midi, 0, take, releaseSeconds)
+            MurmurRoundRobinInstrumentSource.cellRecipe(sourcePatch(), sourcePatch().midi, 0, take, releaseSeconds, policy)
         }
         fun sourcePatch(): MurmurPatch = MurmurPatch.fromJsonText(sourcePatchJson)
     }
@@ -88,7 +94,7 @@ object MurmurRoundRobinTakePackage {
         val source = spec.sourcePatch()
         return linkedMapOf<Cell, MurmurRoundRobinInstrumentSource.CellRecipe>().apply {
             for (midi in roots(spec)) for (touch in 0..2) put(Cell(midi, touch, spec.take),
-                MurmurRoundRobinInstrumentSource.cellRecipe(source, midi, touch, spec.take, spec.releaseSeconds))
+                MurmurRoundRobinInstrumentSource.cellRecipe(source, midi, touch, spec.take, spec.releaseSeconds, spec.policy))
         }
     }
 
@@ -184,9 +190,15 @@ object MurmurRoundRobinTakePackage {
         require(if (requireRootClosure) present == rootNames else present.containsAll(rootNames)) { "Unexpected or missing MURMUR packet root entry" }
         require(sourceFile.length() in 1..MAX_METADATA_BYTES) { "MURMUR metadata size exceeds the bounded packet format" }
         val obj = Json.parse(read?.invoke(sourceFile)?.toString(Charsets.UTF_8) ?: sourceFile.readText()).obj()
-        require(obj.keys == setOf("kind", "version", "sourcePatch", "sourcePatchSha256", "selectedSource", "lowMidi", "highMidi",
-            "releaseSeconds", "take", "rootPolicy", "touchPolicy", "encoding", "samples")) { "Unknown or incomplete MURMUR package fields" }
-        require(obj.getValue("kind").str() == KIND && obj.getValue("version").int() == 1) { "Unsupported MURMUR package kind/version" }
+        // Version 1 is the breath policy and never names it; version 2 names its policy.
+        val version = obj["version"]?.int()
+        val v1Keys = setOf("kind", "version", "sourcePatch", "sourcePatchSha256", "selectedSource", "lowMidi", "highMidi",
+            "releaseSeconds", "take", "rootPolicy", "touchPolicy", "encoding", "samples")
+        require(obj.keys == if (version == 2) v1Keys + "roundRobinPolicy" else v1Keys) { "Unknown or incomplete MURMUR package fields" }
+        require(obj.getValue("kind").str() == KIND && (version == 1 || version == 2)) { "Unsupported MURMUR package kind/version" }
+        val policy = if (version == 1) RoundRobinPolicy.BREATH_V1 else
+            requireNotNull(RoundRobinPolicy.fromJson(obj.getValue("roundRobinPolicy").str())
+                ?.takeIf { it != RoundRobinPolicy.BREATH_V1 }) { "Unsupported MURMUR package round-robin policy" }
         require(obj.getValue("rootPolicy").str() == ROOT_POLICY && obj.getValue("touchPolicy").str() == TOUCH_POLICY &&
             obj.getValue("encoding").str() == "PCM24_WITH_SMPL_V1") { "Unknown MURMUR adaptation policy" }
         val patch = MurmurPatch.fromJsonValue(obj.getValue("sourcePatch")) as MurmurPatch
@@ -194,8 +206,9 @@ object MurmurRoundRobinTakePackage {
         require(obj.getValue("sourcePatchSha256").str() == hashText(patch.toJsonText())) { "MURMUR source recipe hash changed" }
         val release = obj.getValue("releaseSeconds").num()
         require(release.isFinite() && release == release.toFloat().toDouble()) { "MURMUR sampler release must retain its canonical Float value" }
-        val spec = Spec(patch, obj.getValue("take").int(), release.toFloat())
-        require(expectedSpec == null || (expectedSpec.sourcePatchJson == spec.sourcePatchJson && expectedSpec.releaseSeconds == spec.releaseSeconds && expectedSpec.take == spec.take)) {
+        val spec = Spec(patch, obj.getValue("take").int(), release.toFloat(), policy)
+        require(expectedSpec == null || (expectedSpec.sourcePatchJson == spec.sourcePatchJson && expectedSpec.releaseSeconds == spec.releaseSeconds &&
+                expectedSpec.take == spec.take && expectedSpec.policy == spec.policy)) {
             "Unexpected MURMUR source specification"
         }
         require(obj.getValue("selectedSource") == MurmurKeptSources.byId(spec.selectionId).toJsonValue()) { "MURMUR historical selection profile changed" }
@@ -323,14 +336,14 @@ object MurmurRoundRobinTakePackage {
     }
 
     private fun metadata(spec: Spec, rows: List<Row>): String = Json.write(JsonValue.Obj(linkedMapOf(
-        "kind" to JsonValue.Str(KIND), "version" to num(1),
+        "kind" to JsonValue.Str(KIND), "version" to num(if (spec.policy == RoundRobinPolicy.BREATH_V1) 1 else 2),
         "sourcePatch" to spec.sourcePatch().toJsonValue(), "sourcePatchSha256" to JsonValue.Str(hashText(spec.sourcePatchJson)),
         "selectedSource" to MurmurKeptSources.byId(spec.selectionId).toJsonValue(),
         "lowMidi" to num(spec.supportedMidi.first), "highMidi" to num(spec.supportedMidi.last),
         "releaseSeconds" to num(spec.releaseSeconds), "take" to num(spec.take), "rootPolicy" to JsonValue.Str(ROOT_POLICY),
         "touchPolicy" to JsonValue.Str(TOUCH_POLICY), "encoding" to JsonValue.Str("PCM24_WITH_SMPL_V1"),
         "samples" to JsonValue.Arr(rows.map(::rowJson)),
-    )))
+    ).apply { if (spec.policy != RoundRobinPolicy.BREATH_V1) put("roundRobinPolicy", JsonValue.Str(spec.policy.json)) }))
 
     private fun rowJson(row: Row): JsonValue.Obj = JsonValue.Obj(linkedMapOf(
         "midi" to num(row.cell.midi), "touchIndex" to num(row.cell.touchIndex), "take" to num(row.cell.take), "sample" to JsonValue.Str(row.sample),

@@ -158,3 +158,29 @@ Rounds 0 and 0b are Python prototype auditions; no Kotlin exists. Round 0b answe
   - **Saving, playback and export:** not yet verified.
 - **Sound character:** direction accepted. On 2026-11-12 the owner responded to the published round-0b audition, "Sounds good, please merge." Preserve round 0b as the accepted baseline; this is a listen to Python renders, not evidence of Kotlin, phone or MPC playback.
 - **Overall: incomplete.** Round 0b is a prototype with an accepted direction; voices in Kotlin, kits, roll/riser and every saving, playback and export stage remain open.
+
+## MURMUR round robin (V2 instrument, 2026-11-13)
+
+MURMUR's selected, kept and round-robin work came back from the owner's recovery snapshot
+(source 53a409bc) onto this branch, MURMUR files only. See
+[MURMUR_RR_CONTRAST_V2.md](MURMUR_RR_CONTRAST_V2.md). This entry covers round robin for the
+accepted C2 pluck. The other gates keep the scope earlier MURMUR work recorded.
+
+- **Velocity:** unchanged. Three native touches (.35, .65, 1) render separately. The owner's
+  C2 touch verdict was KEEP.
+- **Round robin:**
+  - **Rendering: verified.** V2 takes are distinct native strikes: two FM modulator start
+    phases and the transient index and contact length vary, and pitch and level do not.
+    Take 0 is the accepted sound exactly.
+  - **Saving: verified.** A V2 bank saves, admits to the shelf and reloads with its policy at
+    every level. V1 banks keep their exact version-1 format. Neither reads as the other.
+  - **Playback: verified in software.** The saved-sample player deals takes 0 to 3 in order
+    and wraps back to 0. Through it, V2's closest pair of takes is .039 apart by spectrum,
+    against .0020 for V1's furthest pair. No phone has played it, and the app's native
+    player is not ported yet.
+  - **Export: partial.** Each take exports as a fixed-take MPC program; an MPC does not
+    rotate them.
+- **Sound character:** waits for the owner. Round `murmur-rr-1` is on the Listening Desk.
+  REVISIT ("Didn't hear any variation") stands for V1 until V2 is heard.
+- **Overall: incomplete.** Owner listening, the app and native player port, phone playback
+  and MPC rotation remain open.

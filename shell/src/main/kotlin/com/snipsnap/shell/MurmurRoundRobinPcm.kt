@@ -1,5 +1,6 @@
 package com.snipsnap.shell
 
+import com.snipsnap.audio.WavWriter
 import com.snipsnap.xpm.WavInfo
 import java.io.File
 import java.nio.file.Files
@@ -50,7 +51,7 @@ internal object MurmurRoundRobinPcm {
                     require(!fmt && n >= 16)
                     val b = body.toInt()
                     require(u16(b) == 1 && u16(b + 2) == 1 && u32(b + 4) == WavWriter.MPC_SAMPLE_RATE.toLong() &&
-                        u32(b + 8) == WavWriter.MPC_SAMPLE_RATE * 3L && u16(b + 12) == 3 && u16(b + 14) == 24) { "RR WAV must be mono 44100 Hz PCM24" }
+                        u32(b + 8) == WavWriter.MPC_SAMPLE_RATE * 3L && u16(b + 12) == 3 && u16(b + 14) == 24) { "RR WAV must be mono ${WavWriter.MPC_SAMPLE_RATE} Hz PCM24" }
                     fmt = true
                 }
                 "data" -> { require(data < 0 && n > 0 && n % 3 == 0L); data = n }
