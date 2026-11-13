@@ -157,6 +157,15 @@ object SootGenreSketchGenerator {
         return out
     }
 
+    /**
+     * Since the owner chose all four (2026-11-13), the sketches render through [SootGenreKits]: the four
+     * bars are each kit's A16 at full velocity, take 0, and the signature pads its hits. The four bars
+     * matched the heard sketches byte for byte when this switch was made.
+     */
+    private val kitOf = mapOf("drumless" to SootGenreKits.Genre.DRUMLESS, "dub" to SootGenreKits.Genre.DUB,
+        "noir" to SootGenreKits.Genre.NOIR, "industrial" to SootGenreKits.Genre.INDUSTRIAL)
+    private val signaturePad = mapOf("rod" to 0, "plate" to 9, "snare" to 1, "coil" to 12)
+
     @JvmStatic fun main(args: Array<String>) {
         val out = File(args.getOrElse(0) { "testkit/soot-genres" }).apply { deleteRecursively(); mkdirs() }
         val clips = mutableListOf<String>()
@@ -166,7 +175,8 @@ object SootGenreSketchGenerator {
             clips += "  {\"section\": \"$section\", \"id\": \"$id\", \"label\": \"$label\", \"file\": \"$section/$id.wav\", \"seconds\": ${"%.3f".format(x.size.toDouble() / rate)}}"
         }
         for (g in genres) {
-            emit(g.id, "sketch", "${g.title}: four bars at ${g.bpm} BPM through one coil and the dictaphone", sketch(g))
+            val kit = kitOf.getValue(g.id)
+            emit(g.id, "sketch", "${g.title}: four bars at ${g.bpm} BPM through one coil and the dictaphone", SootGenreKits.phrase(kit, 1f, 0).samples)
             for ((key, name) in g.signature) {
                 val p = g.parts.getValue(key)
                 emit(g.id, key, "${g.title}: $name", Soot.render(p.voice, p.macros + ("GRIME" to g.grime.toFloat())).samples)

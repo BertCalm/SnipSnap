@@ -195,6 +195,28 @@ MEASURED_G = {
     "Energy over 6 kHz": "SOOT -24.7 · drumless -27.3 · dub -34.9 · noir -28.9 · industrial -24.7",
 }
 
+# The four sibling kits, built (`:shell:generateSootGenreKits`), every pad read back from its MPC 3 export.
+_PADS = [f"a{n:02d}" for n in range(1, 17)]
+QUESTIONS_GK = [
+    ("soot-drumless", "1 · SOOT Drumless (80 BPM)", "No kick. Rods high, lead and low; three cups; two plates; a muted snare, a sprung snare and a bench tap; narrow hats; the coil; a rod roll; and the four bars you heard as the sketch.",
+     "Keep or change each pad.", _PADS, "each", ["Keep", "Change"], {}),
+    ("soot-dub", "2 · SOOT Basement Dub (72 BPM)", "The drop kick and a deep one; the thrown rim and a dry one; a thrown snare and a low one; hats; two plates, two coils, a rod and a cup in the spring; a spring roll of the rim; the four bars.",
+     "Keep or change each pad.", _PADS, "each", ["Keep", "Change"], {}),
+    ("soot-noir", "3 · SOOT Brushed Noir (76 BPM)", "A damp kick and a high knock; the brush snare, a dark brush, a rim and a sprung snare; pure and shimmer hats; soft cups, a rod, a plate swell and the coil; a brush roll; the four bars.",
+     "Keep or change each pad.", _PADS, "each", ["Keep", "Change"], {}),
+    ("soot-industrial", "4 · SOOT Warehouse Industrial (96 BPM)", "A driven kick and a low one; bench, clang and dry snares; wide hats; struck and low plates; two rods, a cup and two coils; a snare roll; the four bars.",
+     "Keep or change each pad.", _PADS, "each", ["Keep", "Change"], {}),
+]
+
+MEASURED_GK = {
+    "Save, reload, playback, MPC 3 export (4 kits x 16 pads, 768 slices)": "verified for every kit: the reloaded kit equals the saved one; saved and exported PCM match the renders through PadHit.resolve over two cycles of every zone; the MPC 3 tracks read back with their zones, cycles and windows",
+    "A16 against the sketch you chose": "the same render: read back from the export it matches the sketch to within 16-bit rounding (largest difference 0.00005)",
+    "Pads on the same voice within a kit, log-spectral distance": "at least 4.7 dB apart in every kit (SootGenreKitsTest holds them at 4 dB or more; SOOT's three snares were 0.4 to 2.0 dB when you heard them as one)",
+    "The rolls: last 400 ms of the build against the first": "drumless +11.0 · dub +11.1 · noir +12.2 · industrial +11.4 dB",
+    "The four bars' loop points against the music's own 99.9th-percentile step": "drumless 0.022 / 0.120 · dub 0.002 / 0.050 · noir 0.008 / 0.121 · industrial 0.036 / 0.139",
+    "Kit build time, this host (4 cores)": "drumless 11.8 s · dub 12.9 s · noir 17.6 s · industrial 21.5 s",
+}
+
 MEASURED_R1 = {
     "Velocity, dry: share above each drum's split, soft (0.3) to hard (1.0), dB": "kick +10.6 · snare +4.0 · closed hat +5.5 · open hat +5.0 · rod +6.1 · plate +1.5 · cup +3.4 · coil +1.4",
     "Velocity through GRIME .9, same measure, dB": "kick +13.2 · snare +3.2 · closed hat +0.1 · open hat +0.3 · rod +1.8 · plate +0.7 · cup +0.9 · coil +0.8",
@@ -206,6 +228,14 @@ MEASURED_R1 = {
     "BREAKER after the shared spring change": "every voice, full and 60% take 2: byte-identical (SHA-256 before and after)",
 }
 
+
+GATES_GK = """      <tbody>
+        <tr><td>Multiple genre kits</td><td><span class="state s-part">Five on the shelf</span></td><td>SOOT (sound approved) and four siblings, each its own tempo, tuning, roles and groove. The siblings' pads await this listen.</td></tr>
+        <tr><td>Percussion roll or riser</td><td><span class="state s-part">One per kit</span></td><td>SOOT's coil roll heard and approved; the four siblings' rolls on this page.</td></tr>
+        <tr><td>Velocity and round robin: rendering, saving, playback</td><td><span class="state s-part">Verified in software</span></td><td>All five kits: 960 slices through KitStore and PadHit.resolve. No phone has played them.</td></tr>
+        <tr><td>Velocity and round robin: export</td><td><span class="state s-part">MPC 3 verified by read-back</span></td><td>MPC 2 keeps one take per zone and does not pass. No MPC has loaded them.</td></tr>
+        <tr><td>Melodic, articulation</td><td><span class="state s-na">N/A</span></td><td>Drum kits.</td></tr>
+      </tbody>"""
 
 GATES_G = """      <tbody>
         <tr><td>SOOT</td><td><span class="state s-part">Sound approved</span></td><td>On the shelf; grids proven through save, playback and MPC 3 export.</td></tr>
@@ -228,7 +258,8 @@ GATES_R2 = """      <tbody>
 def main_r1(r1: str, r0: str, out: str, sub: str = "1") -> int:
     global TARGET_DB
     TARGET_DB = -26.0  # the printed metal's peaks are high for its loudness; match lower so few clips hit the limit
-    questions, measured = {"1b": (QUESTIONS_R1B, MEASURED_R1B), "2": (QUESTIONS_R2, MEASURED_R2), "g": (QUESTIONS_G, MEASURED_G)}.get(sub, (QUESTIONS_R1, MEASURED_R1))
+    questions, measured = {"1b": (QUESTIONS_R1B, MEASURED_R1B), "2": (QUESTIONS_R2, MEASURED_R2), "g": (QUESTIONS_G, MEASURED_G),
+                           "gk": (QUESTIONS_GK, MEASURED_GK)}.get(sub, (QUESTIONS_R1, MEASURED_R1))
     man = json.load(open(os.path.join(r1, "manifest.json")))
     by = {(c["section"], c["id"]): c for c in man["clips"]}
     sections = []
@@ -247,6 +278,23 @@ def main_r1(r1: str, r0: str, out: str, sub: str = "1") -> int:
     if "render_ms_warm_median5" in man:
         meas["Warm render time per hit, this host, ms"] = man["render_ms_warm_median5"]
     tpl = open(os.path.join(os.path.dirname(__file__), "template_r1.html")).read()
+    if sub == "gk":
+        a = tpl.index("      <tbody>"); b = tpl.index("      </tbody>") + len("      </tbody>")
+        tpl = tpl[:a] + GATES_GK + tpl[b:]
+        tpl = (tpl.replace("Round 1 · Kotlin, the app's own engine", "Sibling kits · built")
+               .replace("<title>SOOT Round 1</title>", "<title>SOOT Sibling Kits</title>")
+               .replace('const KEY = "soot-r1-picks";', 'const KEY = "soot-gk-picks";')
+               .replace('const lines = ["SOOT round 1 answers"];', 'const lines = ["SOOT sibling kit answers"];')
+               .replace("Your round-0 picks, now built in the app's engine: the kick with the longer sub, the hot snare, the wide hats, the heavy dictaphone, and the layout you approved. This page is the confirming listen. Nothing here has been heard by anyone yet.",
+                        "You chose all four, so all four are built: SOOT DRUMLESS, SOOT BASEMENT DUB, SOOT BRUSHED NOIR and SOOT WAREHOUSE INDUSTRIAL are on the FRESH TAPE shelf beside SOOT. Each has sixteen pads with three touch zones and four takes, a roll on A15, and on A16 the four bars you heard as its sketch. Every pad here was saved, reloaded, exported to MPC 3 and read back through the app's own pad resolver. Only A16 has been heard before.")
+               .replace('Every clip plays at the same loudness. Kotlin and Python render noise and a few filters differently, so "the same drum" means the same character, not the same file. Pick on each question, then copy the answers at the bottom and paste them back to me.',
+                        "Every clip plays at the same loudness. Mark each pad Keep or Change; for a change, say what you want in the notes. Then copy the answers at the bottom and paste them back to me.")
+               .replace('<section aria-labelledby="kit-h">', '<section aria-labelledby="kit-h" hidden>')
+               .replace('lines.push("6 · Layout swaps: " + (picks.layout || "no answer"));', "")
+               .replace('<div class="eyebrow">7 · Where the gates stand</div>', '<div class="eyebrow">5 · Where the gates stand</div>')
+               .replace('<p>From the engine acceptance gates. This round builds the drums; the kit, saving, playback and export are the next round.</p>',
+                        '<p>From the engine acceptance gates, for the SOOT engine as a whole.</p>')
+               .replace('<div class="eyebrow">8 · What I measured</div>', '<div class="eyebrow">6 · What I measured</div>'))
     if sub == "g":
         a = tpl.index("      <tbody>"); b = tpl.index("      </tbody>") + len("      </tbody>")
         tpl = tpl[:a] + GATES_G + tpl[b:]
@@ -303,7 +351,7 @@ def main_r1(r1: str, r0: str, out: str, sub: str = "1") -> int:
 
 
 def main() -> int:
-    if len(sys.argv) > 2 and sys.argv[1] == "--round" and sys.argv[2] in ("1", "1b", "2", "g"):
+    if len(sys.argv) > 2 and sys.argv[1] == "--round" and sys.argv[2] in ("1", "1b", "2", "g", "gk"):
         a = sys.argv[3:]
         return main_r1(a[0] if a else "testkit/soot-audition", a[1] if len(a) > 1 else "testkit/soot-r0",
                        a[2] if len(a) > 2 else "testkit/soot-audition/index.html", sys.argv[2])

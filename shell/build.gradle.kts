@@ -539,6 +539,16 @@ tasks.register<JavaExec>("generateBreakerKit") {
     args(providers.gradleProperty("breakerOutput").orNull ?: "${rootDir}/testkit/breaker-kit")
 }
 
+tasks.register<JavaExec>("generateSootGenreKits") {
+    group = "distribution"
+    description = "Build SOOT's four sibling genre kits, prove every grid through save, playback and MPC 3 export, and write the listening pack."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.SootGenreKitGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "3g"
+    args(providers.gradleProperty("sootGenreKitsOutput").orNull ?: "${rootDir}/testkit/soot-genre-kits")
+}
+
 tasks.register<JavaExec>("generateSootKit") {
     group = "distribution"
     description = "Build the SOOT kit, prove its velocity and round-robin grids through save, playback and MPC 3 export, and write the listening pack."

@@ -653,6 +653,26 @@ object StarterKits {
             "Grimy street boom bap from physical models: a sagging skin over a sub, a hot snare into a tight coil, detuned metal and a dictaphone. Three touch zones, four takes; a coil roll and four bars.",
             seeded = false, tempoBpm = com.snipsnap.synth.SootKits.BPM.toFloat(),
         ) { com.snipsnap.synth.SootKits.build() },
+        Starter(
+            "soot-drumless", "SOOT DRUMLESS",
+            "No kick: tension rods, cups and plates carry the groove over muted snares, all from SOOT's physical models. Three touch zones, four takes; a rod roll and four bars.",
+            seeded = false, tempoBpm = com.snipsnap.synth.SootGenreKits.Genre.DRUMLESS.bpm.toFloat(),
+        ) { com.snipsnap.synth.SootGenreKits.build(com.snipsnap.synth.SootGenreKits.Genre.DRUMLESS) },
+        Starter(
+            "soot-dub", "SOOT BASEMENT DUB",
+            "A one-drop: a heavy kick and a high rimshot thrown deep into the coil, plates in the spring. Three touch zones, four takes; a spring roll and four bars.",
+            seeded = false, tempoBpm = com.snipsnap.synth.SootGenreKits.Genre.DUB.bpm.toFloat(),
+        ) { com.snipsnap.synth.SootGenreKits.build(com.snipsnap.synth.SootGenreKits.Genre.DUB) },
+        Starter(
+            "soot-noir", "SOOT BRUSHED NOIR",
+            "Soft and close: a damp kick, brush-weight snares, pure hats and soft metal under a light dictaphone. Three touch zones, four takes; a brush roll and four bars.",
+            seeded = false, tempoBpm = com.snipsnap.synth.SootGenreKits.Genre.NOIR.bpm.toFloat(),
+        ) { com.snipsnap.synth.SootGenreKits.build(com.snipsnap.synth.SootGenreKits.Genre.NOIR) },
+        Starter(
+            "soot-industrial", "SOOT WAREHOUSE INDUSTRIAL",
+            "Straight and hard: a driven kick, bench snares, struck plates and rods, the dictaphone pushed. Three touch zones, four takes; a snare roll and four bars.",
+            seeded = false, tempoBpm = com.snipsnap.synth.SootGenreKits.Genre.INDUSTRIAL.bpm.toFloat(),
+        ) { com.snipsnap.synth.SootGenreKits.build(com.snipsnap.synth.SootGenreKits.Genre.INDUSTRIAL) },
     )
 
     fun byId(id: String): Starter? = ALL.firstOrNull { it.id == id }

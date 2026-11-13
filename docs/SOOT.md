@@ -28,9 +28,10 @@ How the owner got there:
   - moved the four bars to the heavier dictaphone (.9).
 
 Still to come:
-- two sibling genre kits, the owner's choice (the drum gate needs several distinct kits on the
-  shelf): four candidates are sketched for the owner's pick at
-  https://claude.ai/artifact/Uoh1uk5NztKLXFWSUQ9Sj4 (`:synth:generateSootGenreSketches`);
+- the owner's listen to the four sibling kits, which are built and on the shelf:
+  - SOOT DRUMLESS, SOOT BASEMENT DUB, SOOT BRUSHED NOIR and SOOT WAREHOUSE INDUSTRIAL
+    (`SootGenreKits.kt`, `:shell:generateSootGenreKits`);
+  - listening page: https://claude.ai/artifact/J6S61MGPeNuErNGJq9v4xa;
 - phone and MPC hardware;
 - the picker entry, in a session with an Android SDK, as the house rule says.
 

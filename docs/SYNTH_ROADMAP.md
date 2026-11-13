@@ -3484,3 +3484,11 @@ Round 2 was heard on 2026-11-13, and the owner said "All sounds fine":
 
 The sound gate is closed. The sibling kits and hardware remain. See [SOOT](SOOT.md) and the
 [design](superpowers/specs/2026-11-12-soot-drum-kit-design.md).
+
+The owner chose all four genre sketches. `SootGenreKits` puts four sibling kits on the shelf: SOOT
+DRUMLESS (80 BPM), SOOT BASEMENT DUB (72), SOOT BRUSHED NOIR (76) and SOOT WAREHOUSE INDUSTRIAL (96).
+- **A16** in each is the chosen sketch, byte for byte.
+- **The pads** within each kit are held at least 4 dB apart.
+- **The proof:** all 768 slices pass save, playback and MPC 3 read-back.
+
+The siblings' pads await a listen; hardware remains.

@@ -159,21 +159,32 @@ Rounds 0 and 0b are Python prototype auditions; no Kotlin exists. Round 0b answe
 - **Sound character:** direction accepted. On 2026-11-12 the owner responded to the published round-0b audition, "Sounds good, please merge." Preserve round 0b as the accepted baseline; this is a listen to Python renders, not evidence of Kotlin, phone or MPC playback.
 - **Overall: incomplete.** Round 0b is a prototype with an accepted direction; voices in Kotlin, kits, roll/riser and every saving, playback and export stage remain open.
 
-## SOOT (sound approved at round 2, 2026-11-13; sibling kits and hardware open)
+## SOOT (sound approved at round 2; five kits on the shelf; siblings' listen and hardware open)
 
 A drum engine for grimy street boom bap from physical models. See [SOOT](SOOT.md).
 
 - **Melodic, keygroup and chord-tool gates:** not applicable. SOOT is a drum engine.
 - **Articulation:** finite hits, with no HOLD.
-- **Percussion: pass, heard.** A15, the coil roll: sixteen fresh snare strikes into one coil, with
-  three zones and four takes. The owner heard all three zones on 2026-11-13: "Yes".
-- **Drum shelf: one of three.** SOOT is on the shelf (SKINS). The two sibling genre kits are the
-  owner's choice, and not yet built.
+- **Percussion: pass for SOOT, heard.** A15, the coil roll: sixteen fresh snare strikes into one coil,
+  with three zones and four takes. The owner heard all three zones on 2026-11-13: "Yes". Each sibling
+  kit has its own roll on A15 (rod, rim, brush, snare). Those are not yet heard.
+- **Drum shelf: five kits, pass in software.** SOOT and four siblings the owner chose on 2026-11-13
+  are on the shelf (SKINS):
+  - SOOT DRUMLESS, 80 BPM;
+  - SOOT BASEMENT DUB, 72 BPM;
+  - SOOT BRUSHED NOIR, 76 BPM;
+  - SOOT WAREHOUSE INDUSTRIAL, 96 BPM.
+
+  Each sibling has its own tempo, tuning, pad roles, groove and processing (`SootGenreKits`).
+  `SootGenreKitsTest` checks the tempos and roles, and that pads within each kit stay apart. The
+  siblings' A16 four bars are the sketches the owner chose. Their other pads await the owner's
+  listen.
 - **Velocity and round robin:**
   - **Rendering: verified.** Every drum takes velocity through its own contact law, so a soft zone
     is a duller strike. A take is a fresh strike.
-  - **Saving: verified.** The saved kit reloads equal, and all 192 saved slices match their renders
-    (`SootKitTest`, `:shell:generateSootKit`).
+  - **Saving: verified.** Each saved kit reloads equal. All 960 saved slices of the five kits match
+    their renders (`SootKitTest`, `SootGenreKitTest`, `:shell:generateSootKit`,
+    `:shell:generateSootGenreKits`).
   - **Playback: verified in software.** `PadHit.resolve` picks the zone by velocity and deals the four
     takes in order, then repeats. No phone has played the kit.
   - **Export: verified for MPC 3 by read-back.** The exported slices match their renders. **MPC 2 does
@@ -190,8 +201,9 @@ A drum engine for grimy street boom bap from physical models. See [SOOT](SOOT.md
     - the four bars moved to the heavier dictaphone (`SootKits.VERSION` 3).
 
   Preserve version 3 as the baseline. This is not evidence of a phone or MPC audition.
-- **Overall: incomplete.** The sound is approved and the software evidence is in place. Still open:
-  - the two sibling genre kits;
+- **Overall: incomplete.** SOOT's sound is approved, and the software evidence is in place for all
+  five kits. Still open:
+  - the owner's listen to the four siblings' pads;
   - phone and MPC hardware playback.
 
   MPC 2 does not pass the round-robin export gate.

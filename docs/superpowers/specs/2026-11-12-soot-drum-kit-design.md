@@ -498,3 +498,47 @@ from each other, except industrial, at 8.0 to 9.5 dB from the others.
 Page: https://claude.ai/artifact/Uoh1uk5NztKLXFWSUQ9Sj4. The owner picks which become authored
 16-pad kits, at least two. Each kit kept gets its own layout approval and listening rounds, and then
 the same save, playback and export proof as SOOT. Nothing here changes `SootKits.VERSION` 3.
+
+## The four sibling kits, built (2026-11-13, `SootGenreKits.VERSION` 1)
+
+The owner marked all four sketches "Build it". **`SootGenreKits.kt`** makes them authored 16-pad
+kits from the SOOT engine, each with three zones of four takes. SOOT's own kit (`SootKits` 3) is
+untouched.
+
+| Kit (starter id) | BPM | A01 to A14 | A15 | A16 |
+|---|---:|---|---|---|
+| SOOT DRUMLESS (`soot-drumless`) | 80 | no kick: lead, high and low rods; three cups; two plates; muted and sprung snares; a bench tap; narrow hats; the coil | rod roll | the sketch |
+| SOOT BASEMENT DUB (`soot-dub`) | 72 | drop and deep kicks; thrown and dry rims; thrown and low snares; hats; two plates; two coils; a rod and a cup in the spring | rim roll, coil .9 | the sketch |
+| SOOT BRUSHED NOIR (`soot-noir`) | 76 | a damp kick and a high knock; brush, dark brush, rim and sprung snares; pure, open and shimmer hats; soft cups, a rod, a plate swell, the coil | brush roll | the sketch |
+| SOOT WAREHOUSE INDUSTRIAL (`soot-industrial`) | 96 | driven and low kicks; bench, clang and dry snares; wide hats; struck and low plates; two rods; a cup; two coils | snare roll | the sketch |
+
+**A16 is the sketch the owner chose.** The pads it plays carry the sketch's parts exactly. When
+the sketch generator was switched to render through `SootGenreKits.phrase`, all 20 sketch files
+matched the heard ones byte for byte. That needed one fix first: the genre's dictaphone is a
+Double, as the sketch's was. .6f and .9f are not .6 and .9, and that alone had changed the
+drumless and industrial four bars. Read back from each kit's MPC 3 export, A16 matches its sketch
+to within 16-bit rounding.
+
+**Pads within a kit are different drums.** `SootGenreKitsTest` holds every two hits on the same
+voice in a kit at least 4 dB apart, on the measure under which SOOT's three snares were 0.4 to
+2.0 dB. The first authoring failed in four places:
+
+| Kit | Pair | Before | Change | After |
+|---|---|---:|---|---:|
+| Drumless | the two muted snares | 3.6 dB | a sprung snare | 5.1 dB |
+| Noir | the two kicks | 3.0 dB | a high, coiled knock | 5.2 dB |
+| Noir | the two hats | 1.4 dB | the shimmer hat higher and longer | 4.6 dB |
+| Noir | the rim and the hot snare | 3.7 dB | a sprung snare | 4.9 dB |
+
+The closest pair now is industrial's kicks, at 4.7 dB.
+
+**Proof.** `SootGenreKitTest` and `:shell:generateSootGenreKits` pass: all four kits, 64 pads, 768
+slices, through save, reload, `PadHit.resolve`, and MPC 3 export and read-back.
+- **The rolls rise** 11.0 to 12.2 dB over the build.
+- **The four bars loop cleanly.** The seam step is 0.002 to 0.036, against the music's own
+  0.050 to 0.139.
+- **Build time on this host:** 11.8 to 21.5 s per kit.
+
+The pads were authored unheard, apart from A16 (the sketch) and the four signature pads. Page:
+https://claude.ai/artifact/J6S61MGPeNuErNGJq9v4xa. It plays all 64 pads read back from the
+exports, with Keep or Change on each. Both READMEs now count 100 starters.
