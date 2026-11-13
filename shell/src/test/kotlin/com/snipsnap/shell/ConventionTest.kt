@@ -1528,7 +1528,10 @@ class ConventionTest {
         val places = Places.PLACES.toSet()
         assertTrue(places.size >= 4, "only $places places — the shape has four, and a shorter roster makes this law pass by checking nothing")
 
-        val words = Regex("""[A-Z]+""").findAll(Copy.FIRST_RUN_PLACES_NOTE).map { it.value }.toList()
+        // Read in any case: the note is a sentence now, so a tab name in it is a word in
+        // either case, and a case-sensitive read would find none and pass by checking nothing.
+        val words = Regex("""[A-Za-z]+""").findAll(Copy.FIRST_RUN_PLACES_NOTE).map { it.value.uppercase() }.toList()
+        assertTrue(words.size >= 6, "only ${words.size} words were read from the note: $words")
         // The note no longer names places at all: the panel's row of places
         // went with the amber line, and the buttons under the note are the
         // way in. Held as absence, so a place sneaking back in is a failure
@@ -1640,7 +1643,7 @@ class ConventionTest {
         // HELP names every chip of the row, not four of the five.
         for (label in Ladder.ROW_LABELS) {
             assertTrue(
-                Copy.HELP_MORE.any { label in it && "ZOOM ON CHOP" in it },
+                Copy.HELP_MORE.any { label in it && "ZOOM on CHOP" in it },
                 "HELP's ZOOM line does not name the ladder chip '$label'. It is built from " +
                     "Ladder.ROW_LABELS precisely so it cannot miss one; something has retyped it.",
             )
@@ -5860,6 +5863,7 @@ class ConventionTest {
 
     /** Controls that open a screen: a bench, or a place or stage switch. */
     private val SCREEN_OPENERS = setOf(
+        "RR KEYS ▸", // MAKE's instrument shelf: a saved MURMUR round-robin bank opens its own KEYS screen
         "CHOP ▸", "PADS ▸", "BEAT ▸", "EXPORT ▸", // Places.DOOR_*: the stage doors
         "OPEN ▸", "CAPTURE ▸", "FROM SAVED SAMPLES ▸", // the pad strip's doors, and a project row's OPEN
         "EXPORT ▸", "EFFECTS ▸", "VARIATIONS ▸", "USE THIS PART ▸", // Copy: doors to EXPORT, the pad editor's two screens, and TAPE's next screen
@@ -5880,6 +5884,7 @@ class ConventionTest {
 
     /** Controls that open a sheet or a picker: BottomSheet, SheetMenu or a Dialog picker. */
     private val SHEET_OPENERS = setOf(
+        "MURMUR PLUCK ▾", // MAKE's instrument shelf: opens the kept-pluck picker dialog
         " ▾", // the kit chip's name is drawn with it, and the kit switcher's accessible tail drops it
         "${'$'}label ▾", // Places.opener: ORBIT's steps, span, spread and snip pickers, SURFACE's BARS, CONFLUENCE's passage
         "${'$'}summary ▾", // EXPORT's ART row opens the art sheet
@@ -5895,8 +5900,8 @@ class ConventionTest {
 
     /** Help prose where `▸` reads as "then", naming a path through the app: a path, not a control, so it keeps the arrow. */
     private val GLYPH_PATHS = listOf(
-        "RE-TRIM ▸: CHOP", "MAKE BANK B VARIATIONS ▸ FILLS AN EMPTY BANK B", "COMBINE KITS ▸ CROSS A KIT'S RECIPES", "MAKE BANK B VARIATIONS ▸ FILLS IT HERE", // HELP lines naming the button then what it does
-        "VERSIONS ▸ ROLLS BACK", "COMBINE SOUNDS ▸ ROOM TONE", "ROOM ▸ SEND", // toasts and lines naming a menu path
-        "OPEN ▸ FOR ITS BENCH", "CLIP ▸ KIT WRITES ONE", // PADS help, and ORBIT's section line
+        "RE-TRIM ▸: CHOP", "MAKE BANK B VARIATIONS ▸ fills an empty BANK B", "COMBINE KITS ▸ cross a kit's recipes", "MAKE BANK B VARIATIONS ▸ fills it here", // HELP lines naming the button then what
+        "VERSIONS ▸ rolls back", "COMBINE SOUNDS ▸ ROOM TONE", "ROOM ▸ SEND", // toasts and lines naming a menu path
+        "OPEN ▸ for its bench", "CLIP ▸ KIT writes one", // PADS help, and ORBIT's section line
     )
 }

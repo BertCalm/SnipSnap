@@ -88,7 +88,7 @@ class MyVoiceScreenTest : ComposeScreenTest() {
         }
         click("USE THIS TRIM")
         waitFor("the trimmed source to requalify", timeoutMillis = 60_000) {
-            hasText("TRIM READY. COMPARE YOUR VOICE BELOW.")
+            hasText("Trim ready. Compare your voice below.")
         }
         click("SOLO")
         waitFor("the real solo render", timeoutMillis = 120_000) { hasText("SOLO PREVIEW READY") }

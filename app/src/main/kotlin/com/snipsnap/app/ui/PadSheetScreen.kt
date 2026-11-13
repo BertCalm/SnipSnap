@@ -2890,7 +2890,7 @@ fun PadSheetScreen(
         val kitDir = entry.dir
         val previewGeneration = gatheringPreviewGeneration
         gatheringRefusal = null
-        gatheringStatus = "RENDERING THE PREVIEW…"
+        gatheringStatus = "Rendering the preview…"
         busy = true
         val boardJob = jobs.beginJob(Copy.WORKING_BUSY)
         scope.launch {
@@ -2932,7 +2932,7 @@ fun PadSheetScreen(
         }
         val stalePads = pendingMetadataSlots.associateWith { sourceModel.kit.pad(it) }
         gatheringRefusal = null
-        gatheringStatus = "RENDERING A NEW GATHERING…"
+        gatheringStatus = "Rendering a new gathering…"
         busy = true
         val boardJob = jobs.beginJob(Copy.WORKING_BUSY)
         // Disk work outlives this sheet; navigation and preview do not.
@@ -5355,7 +5355,7 @@ private fun DustFromRow(
                 )
             }
             if (tapes.size > DUST_FROM_SHOWN) {
-                TapeText("NEWEST $DUST_FROM_SHOWN OF ${tapes.size}.", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
+                TapeText("Newest $DUST_FROM_SHOWN of ${tapes.size}.", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
             }
         }
     }

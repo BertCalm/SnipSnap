@@ -146,6 +146,7 @@ object Spread {
         is CausticPatch -> patch.midi.toFloat()
         is ChamberPatch -> patch.midi.toFloat()
         is WickPatch -> patch.midi.toFloat()
+        is com.snipsnap.synth.MurmurPatch -> patch.midi.toFloat()
         is OrigamiPatch -> (patch.midi ?: Origami.midiFor(patch.voice, patch.resolvedMacros().getValue("TUNE"))).toFloat()
         else -> detect(snip)
     }

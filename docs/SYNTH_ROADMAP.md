@@ -3536,3 +3536,7 @@ DRUMLESS (80 BPM), SOOT BASEMENT DUB (72), SOOT BRUSHED NOIR (76) and SOOT WAREH
 - **The proof:** all 768 slices pass save, playback and MPC 3 read-back.
 
 The siblings' pads await a listen; hardware remains.
+
+The owner kept 63 of the 64 sibling pads. They heard Basement Dub's one-drop four bars as
+incoherent, and picked a steppers groove in its place (`SootGenreKits` 2). The sound of all five SOOT
+kits is now approved, and hardware remains.

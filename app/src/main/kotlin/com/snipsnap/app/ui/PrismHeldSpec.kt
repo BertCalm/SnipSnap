@@ -36,7 +36,7 @@ internal class PrismHeldSpec(private val spec: PrismPadMaker.Spec) : HeldSpec {
     override val hasAttack get() = false
     override val knobLabel get() = "RELEASE ${PrismPadMaker.secondsLabel(spec.releaseSeconds)}"
     override val instrumentNote get() =
-        "OPENING ONCE, THEN REPEATING SUSTAIN. HOLD A KEY TO CONTINUE; LET GO TO FADE."
+        "Opening once, then repeating sustain. Hold a key to continue; let go to fade."
 
     override fun renderZone(midi: Int, cancelled: () -> Boolean): List<KeyNote> =
         listOf(PrismPadMaker.renderZone(spec, midi, cancelled))
@@ -56,9 +56,9 @@ internal class PrismHeldSpec(private val spec: PrismPadMaker.Spec) : HeldSpec {
 
 @Composable
 internal fun PrismInstrumentHint(scheme: Scheme) {
-    TapeText("INSTRUMENT: OPENING ONCE, THEN REPEATING SUSTAIN.",
+    TapeText("Instrument: opening once, then repeating sustain.",
         TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
-    TapeText("PAD AND MAIN AUDITION KEEP THE SUSTAIN ONLY.",
+    TapeText("Pad and main audition keep the sustain only.",
         TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
 }
 

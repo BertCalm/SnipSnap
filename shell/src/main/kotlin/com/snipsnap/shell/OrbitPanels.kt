@@ -67,7 +67,7 @@ object OrbitPanels {
     fun spanNote(span: OrbitSpan): String =
         if (span.laps == null) "AS LONG AS ITS STEPS" else "ONE TURN IS ${span.label} WHATEVER THE STEPS"
 
-    const val SPAN_HELP = "FREE IS AS LONG AS ITS STEPS. A SPAN IS ½, 1, 2 OR 4 BARS WHATEVER THE STEPS: 3 STEPS ACROSS 2 BARS IS THREE HITS IN EIGHT BEATS."
+    const val SPAN_HELP = "Free is as long as its steps. A span is ½, 1, 2 or 4 bars whatever the steps: 3 steps across 2 bars is three hits in eight beats."
 
     /** The spread counts a ring of [steps] offers: one to twelve, never more than its steps. */
     fun spreadCounts(steps: Int): IntRange = 1..minOf(steps, 12)
@@ -81,9 +81,9 @@ object OrbitPanels {
         else -> null
     }
 
-    const val SPREAD_HELP = "AS EVEN AS THE STEPS ALLOW. ON THE RING'S FIRST PAD."
+    const val SPREAD_HELP = "As even as the steps allow. On the ring's first pad."
 
-    fun spreadTitle(steps: Int): String = "SPACE EVENLY · HOW MANY HITS ROUND ${Copy.countOf(steps, "STEP", "STEPS")}?"
+    fun spreadTitle(steps: Int): String = "SPACE EVENLY · how many hits round ${Copy.countOf(steps, "step", "steps")}?"
 
     /** A tempo line in seconds for a printing length row, to one place. */
     internal fun seconds(s: Float): String = "%.1f".format(Locale.ROOT, s)
