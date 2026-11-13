@@ -62,6 +62,7 @@ object Patches {
             SkinPatch.ENGINE -> SkinPatch.fromJsonValue(value)
             BackwashPatch.ENGINE -> BackwashPatch.fromJsonValue(value)
             BreakerPatch.ENGINE -> BreakerPatch.fromJsonValue(value)
+            SootPatch.ENGINE -> SootPatch.fromJsonValue(value)
             TinesPatch.ENGINE -> TinesPatch.fromJsonValue(value)
             PluckPatch.ENGINE -> PluckPatch.fromJsonValue(value)
             TonewheelPatch.ENGINE -> TonewheelPatch.fromJsonValue(value)
