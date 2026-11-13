@@ -820,3 +820,11 @@ The owner heard each groove four ways, from as built to driest, at one loudness,
 **As built from the picks.** Both kits' grooves are the picked versions sample for sample, except for
 one pad. Trip hop's Second Kick keeps DRIP .1: at a quarter (.025), its closest takes measured
 39.7 dB apart, a hair under a copy. The Steppers Kick, at half its spring, measures 37.7 dB.
+
+## As built: the final audition (2026-11-13)
+
+`BreakerAuditionGenerator` (`./gradlew :shell:generateBreakerAudition`) renders the engine end to end
+for the owner's closing listen, as docs/BREAKER.md, "The audition", lists. It sits in `:shell` rather
+than `:synth`, so its kits section plays the three kits as the shelf deals them, through the app's own
+preview mixer. The page template is the strike gate's, with its title, badge and section lines taken
+from the manifest. Published 2026-11-13; the owner's answers are not in yet.

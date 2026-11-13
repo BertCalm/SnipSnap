@@ -66,9 +66,11 @@ genre kits"). On 2026-11-13 the owner heard them:
 - **Too wet:** both grooves. The owner picked how much echo and spring each keeps, and the kits are
   built from those picks.
 
+The final audition is published for the owner's closing listen (below, "The audition").
+
 Still to come:
-- the surf tom fill;
-- the audition page.
+- the owner's answers on the audition;
+- the surf tom fill.
 
 ## The kit
 
@@ -238,6 +240,35 @@ The kicks are again the weak spot: their crush evens out how hard each strike la
 zones move least. Drying the spring brought them closer still: the Steppers Kick's takes went from
 33.9 to 37.7 dB apart when its spring was halved. Bump's soft zone barely changes colour, since the tank's send is normalised. It
 rings shorter instead, which the decay half of the measure hears.
+
+## The audition
+
+`./gradlew :shell:generateBreakerAudition` (`BreakerAuditionGenerator`) renders the whole engine into
+`testkit/breaker-audition/` in about 85 s. It writes 68 clips (about 10 minutes, 54 MB) and a page,
+`index.html`, from `shell/src/test/resources/audition/breaker-audition.html`. The page was published
+for the owner on 2026-11-13: [BREAKER audition](https://claude.ai/artifact/TyimBbsBAwNeVRzxsSx3En).
+
+Every clip plays at the house audition loudness (`AuditionLevel`). Inside a strip, each strike is
+levelled first, so only the sound differs:
+
+| Section | Clips | What it holds |
+|---|---:|---|
+| Voices | 14 | each voice at its defaults, hit hard, on the current model |
+| Touch | 14 | each voice soft, medium and hard, three strikes each, as a kit pad deals them |
+| Controls | 18 | each control from 0 to 1 in quarters on the kick and snare; the ride's crush and amp; Bump's DRIP and TUNE |
+| Corners | 3 | the snare's DRIP × CRUSH and SLAP × DRIP, the kick's DUST × AMP, at 0/0, 0/1, 1/0, 1/1 |
+| Edges | 2 | every voice with every control at 0, then at 1 |
+| Presets | 14 | every factory preset, three per voice |
+| Kits | 3 | BREAKER, Dub Tank and Trip hop in their grooves, through the app's own preview mixer |
+
+The kits' grooves are the kit pack's (`:shell:generateBreakerKit`) sample for sample, up to level.
+
+Besides the clips, it writes:
+- `recipes/`: each voice's default and every preset, as the app saves them;
+- `metrics.csv`: each clip's length and crest;
+- `diagnostics.json`: every edge render's peak, that it is finite, and whether it is silent.
+
+At both edges every voice renders finite and within full scale, and none is silent.
 
 ## How a hit is made
 

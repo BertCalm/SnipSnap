@@ -121,7 +121,8 @@ presence do not close the outstanding gates above.
   - **Export: MPC 3 verified by read-back.** MPC 2 does not pass, as for the BREAKER kit. No MPC has loaded them.
   - **Sound character, heard 2026-11-13:** the kicks hit again ("one kick played again: fine"), the High Timbale at about three semitones up (high enough, where the layout asked five), and every pad soft to hard were accepted. Both grooves were heard as too wet, and the owner picked how much echo and spring each keeps from four versions. The kits are built from the picks; only Trip hop's Second Kick keeps its touch of spring, since at a quarter its takes measured as near-copies.
   - **Open, for the owner:** the shared robin's start trim cuts a synth strike's click on any re-struck kit (docs/BREAKER.md, "Model 6").
-- **Overall: incomplete.** The three kits are on the shelf and heard. MPC 2 round robin and hardware playback are open, and the surf tom fill is not built.
+- **The final audition (2026-11-13):** `:shell:generateBreakerAudition` renders every voice, soft to hard, every control swept, corners, edges, presets and the three kits' grooves (68 clips). It is published for the owner's closing listen ([BREAKER audition](https://claude.ai/artifact/TyimBbsBAwNeVRzxsSx3En)); the answers are not in yet. Every edge render is finite and within full scale.
+- **Overall: incomplete.** The three kits are on the shelf and heard, and the final audition waits for the owner's answers. MPC 2 round robin and hardware playback are open, and the surf tom fill is not built.
 
 ## GATECRASH kits (sound approved 2026-11-11, hardware open)
 
