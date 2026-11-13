@@ -65,6 +65,12 @@ class DeterminismTest {
         assertContentEquals(patch.render().samples, Patches.fromJsonValue(patch.toJsonValue()).render().samples)
     }
 
+    @Test fun `FIRED BRONZE model 2 strikes replay through JSON`() {
+        val patch = FiredBronzePatch("Low Kettle", FiredBronzeDryKit.Pad.KETTLE_LOW)
+        val back = Patches.fromJsonValue(patch.toJsonValue()) as FiredBronzePatch
+        assertContentEquals(patch.render(.45f, 2).samples, back.render(.45f, 2).samples)
+    }
+
     @Test fun `FIRED BRONZE performance recipe replays`() {
         val r = FiredBronzePerformance.Recipe(FiredBronzeDryKit.Recipe(FiredBronzeDryKit.Pad.TIN, velocity = .45f, take = 2))
         assertContentEquals(r.render().samples, FiredBronzePerformance.Recipe.fromJsonText(r.toJsonText()).render().samples)
