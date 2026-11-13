@@ -504,14 +504,15 @@ each with sixteen pads, three strike layers and choking hats. The
 [audition and MPC downloads](https://rivet-drum-audition.bertcalm.chatgpt.site) and
 [implementation notes](docs/RIVET.md) include the pending hardware check.
 
-VELOUR and VELOUR BLOOM preserve the selected synthetic C kick/snare sources
-in two fixed sixteen-pad, three-touch-zone kits. Their reusable boards place
-chorus, finite echoes, grains and room before a sagging amp surrogate. Added
-hats, toms, stick, shaker and ride remain listening candidates. The
-[private audition and MPC downloads](https://velour-drum-audition.bertcalm.chatgpt.site/native/)
-and [implementation notes](docs/VELOUR.md) separate reference parity, printed
-pad behavior and pending hardware checks. Run `./gradlew :synth:generateVelourKit`
-to reproduce both kits and the native/reference comparisons.
+VELOUR CLOSE, VELOUR and VELOUR BLOOM load the approved, trimmed Round 5 bank:
+sixteen pads, three touch layers, dry C kick/snare on A05/A06, and conga, bongo,
+recording-derived tambourine and woodblock on A13–A16. The fixed PCM keeps the
+[audition and MPC downloads](https://velour-drum-audition.bertcalm.chatgpt.site/round5/)
+intact when the shelf makes a kit. The existing Velour/Bloom boards and original
+model-1 renderer remain available. [Implementation notes](docs/VELOUR.md) distinguish
+this approved baseline from the still-open round-robin, genre-kit and hardware gates.
+The older `:synth:generateVelourKit` task reproduces the original model-1 comparison,
+not the approved Round 5 shelf bank.
 
 TANGLE is an experimental pitched engine whose two oscillators influence,
 catch and release each other. BASS, LEAD, HOLLOW, PULSE, METAL and KNOT share

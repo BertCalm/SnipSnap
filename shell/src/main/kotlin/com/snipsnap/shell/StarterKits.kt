@@ -587,15 +587,20 @@ object StarterKits {
             seeded = false,
         ) { SynthKits.rivet(1f) },
         Starter(
+            "velour-close", "VELOUR CLOSE",
+            "Close drums and percussion through a warm amp. Three touch layers, with short natural tails.",
+            seeded = false, tempoBpm = com.snipsnap.synth.VelourApprovedKits.TEMPO,
+        ) { com.snipsnap.synth.VelourApprovedKits.build(com.snipsnap.synth.VelourApprovedKits.Treatment.CLOSE) },
+        Starter(
             "velour", "VELOUR",
-            "Muted drums, scattered echoes and a warm amp. Three touch zones; new kit voices to explore.",
-            seeded = false,
-        ) { com.snipsnap.synth.VelourKits.build() },
+            "Muted drums, scattered echoes and a warm amp. Three touch layers and four percussion pads.",
+            seeded = false, tempoBpm = com.snipsnap.synth.VelourApprovedKits.TEMPO,
+        ) { com.snipsnap.synth.VelourApprovedKits.build() },
         Starter(
             "velour-bloom", "VELOUR BLOOM",
             "The same drums with denser grains, longer space and more amp drive. Three touch zones.",
-            seeded = false,
-        ) { com.snipsnap.synth.VelourKits.build(com.snipsnap.synth.Velour.Treatment.BLOOM) },
+            seeded = false, tempoBpm = com.snipsnap.synth.VelourApprovedKits.TEMPO,
+        ) { com.snipsnap.synth.VelourApprovedKits.build(com.snipsnap.synth.VelourApprovedKits.Treatment.BLOOM) },
         Starter("backwash-soul", "BACKWASH SOUL", "Tight soul drums, cross-stick pocket and acoustic percussion. Native recorded alternates and a tambourine roll/riser.", seeded=false, tempoBpm=94f) {
             com.snipsnap.synth.BackwashKits.build(com.snipsnap.synth.BackwashKits.Genre.SOUL_POCKET)
         },
