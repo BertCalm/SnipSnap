@@ -9,6 +9,9 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performTextReplacement
+import androidx.compose.ui.semantics.getOrNull
+import androidx.compose.ui.test.hasContentDescription
+import androidx.compose.ui.test.hasClickAction
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.snipsnap.shell.UserPresets
@@ -77,6 +80,14 @@ class OsteriaSynthScreenTest : ComposeScreenTest() {
         pump(16)
     }
 
+    /** The sheet has two CANCEL targets (its dimmed backdrop and its button); press the button, drawn last. */
+    private fun cancelSheet() {
+        val action = requireNotNull(compose.onAllNodes(hasContentDescription("CANCEL") and hasClickAction())
+            .fetchSemanticsNodes().last().config.getOrNull(SemanticsActions.OnClick)?.action)
+        compose.runOnIdle { assertTrue(action()) }
+        pump(16)
+    }
+
     // The header's arrows step the engine ring; OSTERIA sits at its end, one step back from the first engine.
     private fun chooseOsteria() {
         repeat(128) {
@@ -110,7 +121,7 @@ class OsteriaSynthScreenTest : ComposeScreenTest() {
             assertTrue(!spec.hasAttack && !spec.hasRelease)
             assertTrue(!spec.shelfNote("Test").contains("holds while"))
             assertEquals(39, spec.zoneMidis.size * spec.progressPerZone)
-            click("CANCEL")
+            cancelSheet()
         }
     }
 
@@ -256,15 +267,15 @@ class OsteriaSynthScreenTest : ComposeScreenTest() {
         val root = shelfRoot()
         UserPresets.save(
             root,
-            OsteriaPatch("PREVIOUS PHRASE", OsteriaVoice.QUARTET, Osteria.defaults(OsteriaVoice.QUARTET), config = OsteriaConfig(model = 1)),
+            OsteriaPatch("OLD PHRASE", OsteriaVoice.QUARTET, Osteria.defaults(OsteriaVoice.QUARTET), config = OsteriaConfig(model = 1)),
             System.currentTimeMillis(),
         )
         show(root)
         chooseOsteria()
         waitFor("the legacy preset") {
-            compose.onAllNodesWithContentDescription("YOUR PRESET PREVIOUS PHRASE").fetchSemanticsNodes().isNotEmpty()
+            compose.onAllNodesWithContentDescription("YOUR PRESET OLD PHRASE").fetchSemanticsNodes().isNotEmpty()
         }
-        click("YOUR PRESET PREVIOUS PHRASE")
+        click("YOUR PRESET OLD PHRASE")
         compose.onNodeWithText("LEGACY QUARTET PHRASE").assertExists()
         compose.onNodeWithText("Legacy articulation is fixed.").assertExists()
         compose.onNodeWithContentDescription("ATTACK").assertDoesNotExist()
