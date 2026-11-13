@@ -217,6 +217,19 @@ MEASURED_GK = {
     "Kit build time, this host (4 cores)": "drumless 11.8 s · dub 12.9 s · noir 17.6 s · industrial 21.5 s",
 }
 
+# Basement Dub's A16, re-grooved after the owner heard it as incoherent (2026-11-13).
+QUESTIONS_DUB = [
+    ("dub", "1 · Basement Dub, four bars (A16)", "You heard the current four bars as incoherent. It has no downbeat (the kick and rim land only on beat 3), the hats play only the offbeats, and the rim is thrown into the coil twice over (its own spring, then a heavy bus send). Two clearer grooves, same drums, same tempo.",
+     "Which four bars for SOOT BASEMENT DUB?", ["current", "a_onedrop", "b_steppers"], "pick", [], {}),
+]
+
+MEASURED_DUB = {
+    "Pulse at the beat (onset autocorrelation at 0.83 s, 1 is a perfectly regular beat)": "current 0.20 · A one-drop 0.35 · B steppers 0.58",
+    "Repetition at the bar": "current 0.45 · A 0.46 · B 0.46 (all three repeat; what the current lacks is a pulse inside the bar)",
+    "The rim's send into the shared coil": "current 0.85 · A and B 0.4; the coil's wetness 0.7 to 0.45 (A) and 0.5 (B)",
+    "The other three kits' four bars": "unchanged, byte for byte (hash before and after the change that renders these)",
+}
+
 MEASURED_R1 = {
     "Velocity, dry: share above each drum's split, soft (0.3) to hard (1.0), dB": "kick +10.6 · snare +4.0 · closed hat +5.5 · open hat +5.0 · rod +6.1 · plate +1.5 · cup +3.4 · coil +1.4",
     "Velocity through GRIME .9, same measure, dB": "kick +13.2 · snare +3.2 · closed hat +0.1 · open hat +0.3 · rod +1.8 · plate +0.7 · cup +0.9 · coil +0.8",
@@ -259,7 +272,7 @@ def main_r1(r1: str, r0: str, out: str, sub: str = "1") -> int:
     global TARGET_DB
     TARGET_DB = -26.0  # the printed metal's peaks are high for its loudness; match lower so few clips hit the limit
     questions, measured = {"1b": (QUESTIONS_R1B, MEASURED_R1B), "2": (QUESTIONS_R2, MEASURED_R2), "g": (QUESTIONS_G, MEASURED_G),
-                           "gk": (QUESTIONS_GK, MEASURED_GK)}.get(sub, (QUESTIONS_R1, MEASURED_R1))
+                           "gk": (QUESTIONS_GK, MEASURED_GK), "dub": (QUESTIONS_DUB, MEASURED_DUB)}.get(sub, (QUESTIONS_R1, MEASURED_R1))
     man = json.load(open(os.path.join(r1, "manifest.json")))
     by = {(c["section"], c["id"]): c for c in man["clips"]}
     sections = []
@@ -278,6 +291,21 @@ def main_r1(r1: str, r0: str, out: str, sub: str = "1") -> int:
     if "render_ms_warm_median5" in man:
         meas["Warm render time per hit, this host, ms"] = man["render_ms_warm_median5"]
     tpl = open(os.path.join(os.path.dirname(__file__), "template_r1.html")).read()
+    if sub == "dub":
+        a = tpl.index("      <tbody>"); b = tpl.index("      </tbody>") + len("      </tbody>")
+        tpl = tpl[:a] + GATES_GK + tpl[b:]
+        tpl = (tpl.replace("Round 1 · Kotlin, the app's own engine", "Basement Dub · A16")
+               .replace("<title>SOOT Round 1</title>", "<title>SOOT Dub Groove</title>")
+               .replace('const KEY = "soot-r1-picks";', 'const KEY = "soot-dub-picks";')
+               .replace('const lines = ["SOOT round 1 answers"];', 'const lines = ["SOOT dub groove answer"];')
+               .replace("Your round-0 picks, now built in the app's engine: the kick with the longer sub, the hot snare, the wide hats, the heavy dictaphone, and the layout you approved. This page is the confirming listen. Nothing here has been heard by anyone yet.",
+                        "You kept 63 of the 64 sibling pads. The one change: Basement Dub's four bars. Here is the current one beside two clearer grooves.")
+               .replace('Every clip plays at the same loudness. Kotlin and Python render noise and a few filters differently, so "the same drum" means the same character, not the same file. Pick on each question, then copy the answers at the bottom and paste them back to me.',
+                        "Every clip plays at the same loudness. Pick one, then copy the answer at the bottom and paste it back to me.")
+               .replace('<section aria-labelledby="kit-h">', '<section aria-labelledby="kit-h" hidden>')
+               .replace('lines.push("6 · Layout swaps: " + (picks.layout || "no answer"));', "")
+               .replace('<div class="eyebrow">7 · Where the gates stand</div>', '<div class="eyebrow">2 · Where the gates stand</div>')
+               .replace('<div class="eyebrow">8 · What I measured</div>', '<div class="eyebrow">3 · What I measured</div>'))
     if sub == "gk":
         a = tpl.index("      <tbody>"); b = tpl.index("      </tbody>") + len("      </tbody>")
         tpl = tpl[:a] + GATES_GK + tpl[b:]
@@ -351,7 +379,7 @@ def main_r1(r1: str, r0: str, out: str, sub: str = "1") -> int:
 
 
 def main() -> int:
-    if len(sys.argv) > 2 and sys.argv[1] == "--round" and sys.argv[2] in ("1", "1b", "2", "g", "gk"):
+    if len(sys.argv) > 2 and sys.argv[1] == "--round" and sys.argv[2] in ("1", "1b", "2", "g", "gk", "dub"):
         a = sys.argv[3:]
         return main_r1(a[0] if a else "testkit/soot-audition", a[1] if len(a) > 1 else "testkit/soot-r0",
                        a[2] if len(a) > 2 else "testkit/soot-audition/index.html", sys.argv[2])

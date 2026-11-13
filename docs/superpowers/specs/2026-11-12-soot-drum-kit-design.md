@@ -542,3 +542,30 @@ slices, through save, reload, `PadHit.resolve`, and MPC 3 export and read-back.
 The pads were authored unheard, apart from A16 (the sketch) and the four signature pads. Page:
 https://claude.ai/artifact/J6S61MGPeNuErNGJq9v4xa. It plays all 64 pads read back from the
 exports, with Keep or Change on each. Both READMEs now count 100 starters.
+
+## The sibling kits, heard (2026-11-13)
+
+Page: https://claude.ai/artifact/J6S61MGPeNuErNGJq9v4xa. The owner kept 63 of the 64 pads:
+- **Drumless, Brushed Noir and Warehouse Industrial:** all sixteen kept.
+- **Basement Dub:** fifteen kept. A16 (four bars) is marked "Change", with the note "Beat is
+  incoherent".
+
+**Read from the groove.**
+- **No downbeat.** The kick and the rim land only on beat 3, and nothing marks beat 1.
+- **Thin hats.** They play only the offbeats.
+- **A double throw.** The rim is thrown into the coil twice: its own spring (COIL .8), then a .85
+  send into a bus at .7 wet.
+
+**Measured.** As an onset autocorrelation at the beat (0.83 s):
+- the current four bars: 0.20;
+- A, a steady one-drop (hats on every eighth, the rim's send .4, wet .45): 0.35;
+- B, steppers (a kick on every beat): 0.58.
+
+All three repeat at the bar alike (0.45 to 0.46).
+
+**The candidates** render through an internal `SootGenreKits.phrase` overload that takes a groove,
+the wetness and sends; `:synth:generateSootDubCandidates` writes them. The kits' own four bars are
+byte-identical through the change (a hash over all four, `6412613f…`, before and after).
+
+Page: https://claude.ai/artifact/Gqu8thscT25ga3iWQrG2S7. The owner picks; the pick replaces A16's
+groove, and `SootGenreKits.VERSION` goes to 2.

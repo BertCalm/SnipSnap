@@ -3281,6 +3281,16 @@ tasks.register<JavaExec>("generateHydroformCandidateKit") {
 }
 
 // Backroom is a listening study until the owner approves its voicing.
+tasks.register<JavaExec>("generateSootDubCandidates") {
+    group = "distribution"
+    description = "Render candidate four bars for SOOT BASEMENT DUB's A16 beside the current one."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.SootDubCandidateGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "1g"
+    args("${rootDir}/testkit/soot-dub-candidates")
+}
+
 tasks.register<JavaExec>("generateSootGenreSketches") {
     group = "distribution"
     description = "Render sketches of four candidate SOOT genre kits (four bars and signature pads each) for the owner to choose from."

@@ -138,8 +138,8 @@ object SootGenreKits {
         )
     }
 
-    private fun bars(vararg perBar: (Int) -> List<Note>): List<Note> = (0..3).flatMap { bar -> perBar.flatMap { it(bar) } }
-    private fun at(bar: Int, pad: Int, weight: Float, vararg steps: Int) = steps.map { Note(bar * 16 + it, pad, weight) }
+    internal fun bars(vararg perBar: (Int) -> List<Note>): List<Note> = (0..3).flatMap { bar -> perBar.flatMap { it(bar) } }
+    internal fun at(bar: Int, pad: Int, weight: Float, vararg steps: Int) = steps.map { Note(bar * 16 + it, pad, weight) }
 
     /** The four bars' groove: the sketch the owner chose, pad for pad. */
     fun notes(g: Genre): List<Note> = when (g) {
@@ -262,7 +262,13 @@ object SootGenreKits {
      * at the genre's [Genre.grime], keyed by the kick. Wrapped onto its start to loop at tempo. The pad's
      * velocity scales every strike; a take re-strikes every note and re-draws the timing.
      */
-    fun phrase(g: Genre, velocity: Float, take: Int): Snip {
+    fun phrase(g: Genre, velocity: Float, take: Int): Snip = phrase(g, velocity, take, notes(g), g.wet, emptyMap())
+
+    /**
+     * [phrase] with another groove, coil wetness or per-pad sends ([sendOverride], pad index to send):
+     * how candidate four bars are rendered for the owner to choose between. The kit uses the defaults.
+     */
+    internal fun phrase(g: Genre, velocity: Float, take: Int, groove: List<Note>, wet: Double, sendOverride: Map<Int, Double>): Snip {
         val rate = Dsp.RATE
         val pads = pads(g)
         val step = 60.0 / g.bpm / 4
@@ -272,7 +278,7 @@ object SootGenreKits {
         val touch = .35f + .65f * velocity.coerceIn(0f, 1f)
         val mix = DoubleArray(total); val kick = DoubleArray(total); val send = DoubleArray(total)
         val counts = IntArray(HITS)
-        for (n in notes(g).sortedBy { it.step }) {
+        for (n in groove.sortedBy { it.step }) {
             val pad = pads[n.pad]
             var t = n.step * step
             if (n.step % 2 == 1) t += g.swing * step
@@ -286,14 +292,14 @@ object SootGenreKits {
                 if (i >= total) break
                 val v = pad.gain * n.weight * touch * x[k]
                 mix[i] += v
-                if (pad.voice == SootVoice.KICK) kick[i] += v else send[i] += pad.send * v
+                if (pad.voice == SootVoice.KICK) kick[i] += v else send[i] += (sendOverride[n.pad] ?: pad.send) * v
             }
         }
         val kickSend = Soot.highpass(kick, 90.0)
         for (i in send.indices) send[i] += .45 * kickSend[i]
         val ret = Soot.lowpass(BreakerChain.spring(send, .5, total, rate, Soot.COIL_TANK, sendHp = 60.0), Soot.COIL_TANK.tone)
         val pm = mix.maxOf { abs(it) }; val pr = ret.maxOf { abs(it) }
-        if (pr > 0) for (i in mix.indices) mix[i] += g.wet * pm / pr * ret[i]
+        if (pr > 0) for (i in mix.indices) mix[i] += wet * pm / pr * ret[i]
         val key = DoubleArray(total) { kick[it] + .3 * mix[it] }
         val bus = Soot.dictaphone(mix, g.grime, key)
         val out = FloatArray(loop)
