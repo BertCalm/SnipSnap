@@ -3477,3 +3477,48 @@ Python audition the owner accepted on 2026-11-12; K1 ports it to Kotlin with six
 the line loop at HOLD's top and round-robin takes through `Restrike`, as a prototype outside the factory presets
 and the picker. Kotlin measures within 0.4 to 2.8 dB of the accepted renders. The kit, the roster, keygroups, the
 picker and the saving, playback and export evidence follow. See [ETCH](ETCH.md).
+
+  - The kick's takes are distinct but close (34 dB apart).
+  - The owner's listen to the kit.
+
+- **Status:** the Kotlin renders wait for the owner's confirming listen; the kit is next.
+
+### SOOT, round 1 (2026-11-12)
+
+Owner-requested drum engine: a grimy street boom bap kit built only from physical models, after the
+owner's sonic profile. A membrane kick whose pitch sags under the hit over a tuned sub, a papery
+snare into a tight coil (BREAKER's spring model, a new tank) and a cassette edge, noise-free metal
+hats and percussion, and a per-pad print through the pad's own coil send and a dictaphone. Round 0
+was heard in the Python harness on 2026-11-12. The owner picked sag .35 with the longer sub, the
+hot snare, the 25-cent hats and the heavy dictaphone, kept all four metal voices, heard every
+velocity strip as a softer hand, found no pad print ruined and approved the 16-pad layout. Round 1
+builds the eight voices in Kotlin (`Soot`, renderer model 1), a prototype outside the factory
+presets. BREAKER's `Tank` grew fields for the coil, with defaults that keep BREAKER byte-identical
+(checked by hash). Round 1 was heard the same day:
+- the kick, snare and touch were accepted;
+- the pads moved to GRIME .45;
+- the hat had an effect sound, its own coil send.
+
+Round 1b (model 2) removes the send. Model-1 saves keep their sound. The owner kept the alternates
+and approved the kit.
+
+Round 2 (`SootKits` 1) puts the 16-pad kit on the FRESH TAPE shelf. Its grids pass GATECRASH's
+proof in software: save, reload, `PadHit.resolve` and MPC 3 read-back. It adds the coil roll (A15)
+and four bars through one shared coil (A16), which await a listen. The two sibling genre kits and
+hardware remain.
+
+Round 2 was heard on 2026-11-13, and the owner said "All sounds fine":
+- the re-voiced snares are different drums (kit 2);
+- the roll and the loop point were accepted;
+- the four bars moved to the heavier dictaphone (kit 3).
+
+The sound gate is closed. The sibling kits and hardware remain. See [SOOT](SOOT.md) and the
+[design](superpowers/specs/2026-11-12-soot-drum-kit-design.md).
+
+The owner chose all four genre sketches. `SootGenreKits` puts four sibling kits on the shelf: SOOT
+DRUMLESS (80 BPM), SOOT BASEMENT DUB (72), SOOT BRUSHED NOIR (76) and SOOT WAREHOUSE INDUSTRIAL (96).
+- **A16** in each is the chosen sketch, byte for byte.
+- **The pads** within each kit are held at least 4 dB apart.
+- **The proof:** all 768 slices pass save, playback and MPC 3 read-back.
+
+The siblings' pads await a listen; hardware remains.

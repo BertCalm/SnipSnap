@@ -115,12 +115,25 @@ internal object BreakerChain {
 
     // ------------------------------------------------------------------ DRIP: the spring tank
 
+    /** (transit s, pre-delay s, weight): two springs of slightly different lengths, interleaving. */
+    internal val SPRINGS = listOf(Triple(.037, 0.0, 1.0), Triple(.043, .004, .8))
+
     /**
      * A tank's chirp (shape): [fc] is the transition frequency the chirps live under, [k] the
      * allpasses' stretch (round(rate / 2 fc) at 44.1 kHz), [ap] each stage's coefficient (positive,
      * so each stage delays the highs more than the lows) and [stages] how many there are.
+     *
+     * SOOT's tighter coil reuses this model, so a tank also carries its springs ((transit s,
+     * pre-delay s, weight)), its loop decay ([t60Base] + [t60Span] x DRIP seconds), the send's
+     * high-pass and the return's tone. The defaults are BREAKER's, written exactly as before, so
+     * BREAKER's tanks render byte for byte as they did.
      */
-    class Tank(val fc: Double, val k: Int, val ap: Double, val stages: Int)
+    class Tank(
+        val fc: Double, val k: Int, val ap: Double, val stages: Int,
+        val springs: List<Triple<Double, Double, Double>> = SPRINGS,
+        val t60Base: Double = 1.0, val t60Span: Double = 1.6,
+        val sendHp: Double = 250.0, val tone: Double = 3500.0,
+    )
 
     /** Tank A from round 0: a lighter, brighter bend (fc 4.3 kHz). The kick the owner picked rang through it. */
     val TANK_A = Tank(fc = 4300.0, k = 5, ap = 0.6, stages = 60)
@@ -128,8 +141,6 @@ internal object BreakerChain {
     /** Tank B from round 0: the bend lower and deeper, a twang near 3 kHz. The owner's surf spring. */
     val TANK_B = Tank(fc = 3000.0, k = 7, ap = 0.7, stages = 100)
 
-    /** (transit s, pre-delay s, weight): two springs of slightly different lengths, interleaving. */
-    private val SPRINGS = listOf(Triple(.037, 0.0, 1.0), Triple(.043, .004, .8))
 
     /**
      * The tank's return for [x]. The send is high-passed at 250 Hz (a driver transformer passes
@@ -139,8 +150,8 @@ internal object BreakerChain {
      * chain is allpass and g < 1, so the loop's gain is under 1 at every frequency by construction:
      * no limiter.
      */
-    fun spring(x: DoubleArray, drip: Double, frames: Int, rate: Int, tank: Tank = TANK_B, decay: Double = 1.0): DoubleArray {
-        val hp = Section.highpass(250.0, BUTTERWORTH_Q, rate)
+    fun spring(x: DoubleArray, drip: Double, frames: Int, rate: Int, tank: Tank = TANK_B, decay: Double = 1.0, sendHp: Double = tank.sendHp): DoubleArray {
+        val hp = Section.highpass(sendHp, BUTTERWORTH_Q, rate)
         val send = DoubleArray(frames) { hp.process(x.getOrElse(it) { 0.0 }) }
         val p = peak(send)
         val out = DoubleArray(frames)
@@ -148,8 +159,8 @@ internal object BreakerChain {
         val dwell = 1.0 + 7.0 * drip
         val norm = tanh(dwell)
         for (i in send.indices) send[i] = tanh(dwell * send[i] / p) / norm
-        val t60 = (1.0 + 1.6 * drip) * decay
-        for ((transit, pre, weight) in SPRINGS) {
+        val t60 = (tank.t60Base + tank.t60Span * drip) * decay
+        for ((transit, pre, weight) in tank.springs) {
             val lp1 = Section.lowpass(tank.fc, 0.5411961001461970, rate)
             val lp2 = Section.lowpass(tank.fc, 1.3065629648763766, rate)
             val g = 10.0.pow(-3 * transit / t60)
@@ -176,12 +187,12 @@ internal object BreakerChain {
         return out
     }
 
-    /** The dry hit plus the tank's return, darkened by the tank's tone (3.5 kHz), at 0.9 x DRIP of the dry peak. */
+    /** The dry hit plus the tank's return, darkened by the tank's tone (BREAKER's: 3.5 kHz), at 0.9 x DRIP of the dry peak. */
     fun tankMix(x: DoubleArray, drip: Double, frames: Int, rate: Int, tank: Tank = TANK_B): DoubleArray {
         val xs = DoubleArray(frames) { x.getOrElse(it) { 0.0 } }
         if (drip <= 0) return xs
         val ret = spring(xs, drip, frames, rate, tank)
-        val tone = Section.lowpass(3500.0, BUTTERWORTH_Q, rate)
+        val tone = Section.lowpass(tank.tone, BUTTERWORTH_Q, rate)
         for (i in ret.indices) ret[i] = tone.process(ret[i])
         val pr = peak(ret)
         if (pr <= 0) return xs
