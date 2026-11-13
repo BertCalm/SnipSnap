@@ -104,7 +104,7 @@ fun MessageBox(note: LandingNote.Note, onDismiss: () -> Unit) {
                     scheme,
                     enabled = true,
                     accessibilityLabel = route.label.removeSuffix("▸").trim(),
-                    modifier = Modifier.fillMaxWidth().height(Layout.MIN_HIT_TARGET.dp),
+                    modifier = Modifier.fillMaxWidth().minHeight(Layout.MIN_HIT_TARGET.dp),
                 ) {
                     onDismiss()
                     route.go()
