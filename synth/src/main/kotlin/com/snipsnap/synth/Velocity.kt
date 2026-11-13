@@ -251,6 +251,7 @@ object Velocity {
         is BorePatch -> Bore.macrosFor(patch.voice)
         is ObbligatoPatch -> Obbligato.macrosFor()
         is ArcoPatch -> Arco.macrosFor(patch.voice)
+        is TempestPatch -> Tempest.macrosFor(patch.voice)
         is MercuryPatch -> Mercury.macrosFor(patch.voice)
         is GyrePatch -> Gyre.macrosFor(patch.voice)
         is MeridianPatch -> Meridian.macrosFor(patch.voice)
@@ -512,7 +513,7 @@ object Velocity {
         is OnsetPatch -> if (patch.voice == OnsetVoice.KICK) Onset.render(patch.voice, patch.macros, patch.modelVersion, velocity = v) else null
         is SpoolPatch -> patch.copy(velocity = v).render()
         // Velocity moves a brightness macro (brightnessSpec) or softens the render.
-        is ArcoPatch, is BorePatch, is FathomPatch, is ForkPatch, is GlintPatch, is GyrePatch,
+        is TempestPatch, is ArcoPatch, is BorePatch, is FathomPatch, is ForkPatch, is GlintPatch, is GyrePatch,
         is MagnetPatch, is ResinPatch, is SilkPatch, is SirenPatch,
         is SnapPatch, is TidePatch, is TinesPatch, is TonewheelPatch,
         is VelvetPatch, is VoxPatch,

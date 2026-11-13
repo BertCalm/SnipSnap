@@ -770,6 +770,17 @@ object StarterKits {
             "Sixteen finite pads across six voices, with three native touch levels and three octave roles.",
             seeded = false,
         ) { SynthKits.meridianSix() },
+        Starter(
+            "tempest", "TEMPEST",
+            "Six-voice digital drum kit: kicks, snares, claps, toms, choking hats and driven metal.",
+            seeded = false,
+        ) { SynthKits.tempest() },
+        Starter(
+            "tempest-tuned", "TEMPEST TUNED",
+            "The original E minor pentatonic kicks, alternate strikes and six metal colors.",
+            seeded = false,
+            key = KeySpec.parse("Eminpent"),
+        ) { SynthKits.tempestTuned() },
     )
 
     fun byId(id: String): Starter? = ALL.firstOrNull { it.id == id }

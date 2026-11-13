@@ -101,6 +101,8 @@ object Cli {
         |                         --midi 48..84 (xylophone 57..84; glockenspiel 60..96; crotales 84..108);
         |                         --velocity 0..1 --macros SPACE=.7,RETURN=.6 --patch recipe.patch; finite notes)
         |                        (NACRE prototype: PEARL; --midi 28..72 --velocity 0..1; finite duet, HOLD unavailable)
+        |                        (TEMPEST: six voices and 22 factory presets; KICK/METAL model 2, others model 3;
+        |                         --patch recipe.patch --macros SOURCE=.5,SPACE=.75; new voices add DECAY; HOLD reserved)
         |                        (FERRY prototype: PASSAGE; --midi 36..72 --velocity 0..1;
         |                         --model 1|2|3|4 --patch recipe.json --macros HANDOFF=.5,MATCH=1,LOSS=.5;
         |                         MATCH requires model 2+; LOSS requires model 3+; model 4 adds a dry release;

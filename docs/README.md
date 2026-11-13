@@ -92,6 +92,11 @@ The supplied [`engineering specification`](WICK_SPEC.md) is preserved as the pro
 [`WICK_KEYGROUPS.md`](WICK_KEYGROUPS.md) covers MAKE INSTRUMENT for finite recipes
 and the held entry source.
 
+**Tempest.** [`TEMPEST_FULL_KIT.md`](TEMPEST_FULL_KIT.md) records the owner-accepted
+six-voice digital drum instrument, its 22 factory presets, the sixteen-pad starter
+with choking hats and the retained tuned kit. [`TEMPEST.md`](TEMPEST.md) and
+[`TEMPEST_R2.md`](TEMPEST_R2.md) keep the first build and the model-2 revision.
+
 **Filament.** [`FILAMENT.md`](FILAMENT.md) records the THREAD/PULSE/CURL
 approved strand-routing instrument, factory and phone integration, saved
 recipes, branch allocation, dry listening comparisons and held-loop evidence.

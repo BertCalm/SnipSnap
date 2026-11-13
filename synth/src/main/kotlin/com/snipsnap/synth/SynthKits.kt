@@ -19,6 +19,39 @@ object SynthKits {
     /** Candidate RIVET bank; not a factory starter until the expanded kit is heard. */
     fun rivet(size: Float? = null) = RivetKits.build(size)
 
+    /** Accepted full drum starter. Explicit hat groups survive ordinary assembly and export. */
+    fun tempest(): List<ArrangedPad?> = TempestPresets.fullKitPatches().map { patch ->
+        val recipe = PadRecipe(patch)
+        val snip = recipe.render()
+        ArrangedPad(snip, Tempest.drumClassFor(snip), recipe.toJsonValue(), displayName = patch.name,
+            source = mapOf("role" to patch.voice.name, "model" to patch.model.toString(),
+                "status" to "accepted", "factoryPreset" to patch.name),
+            muteGroup = if (patch.voice == TempestVoice.HAT) 1 else 0)
+    }
+
+    /** Compatibility entry point; its audio and arrangement are the accepted full starter. */
+    fun tempestFullAudition(): List<ArrangedPad?> = tempest()
+
+    /** Eight KICK notes from E1, two alternate strikes and six METAL colors, all dry model 2. */
+    fun tempestTuned(): List<ArrangedPad?> {
+        fun arranged(patch: TempestPatch, factoryName: String = patch.name): ArrangedPad {
+            val recipe = PadRecipe(patch)
+            val snip = recipe.render()
+            val midi = Tempest.midiFor(patch.macros.getValue("TUNE"))
+            return ArrangedPad(snip, Tempest.drumClassFor(snip), recipe.toJsonValue(),
+                displayName = patch.name, source = mapOf("rootMidi" to midi.toString(),
+                    "rootNote" to Scales.nameOf(midi), "factoryPreset" to factoryName,
+                    "model" to patch.model.toString()))
+        }
+        val anchor = TempestPresets.forVoice(TempestVoice.KICK).first()
+        val scale = listOf(28, 31, 33, 35, 38, 40, 43, 45).mapIndexed { i, midi ->
+            arranged(anchor.copy(name = "GROUND ${i + 1}",
+                macros = anchor.macros + ("TUNE" to (midi - 24) / 36f)), anchor.name)
+        }
+        val strikes = TempestPresets.forVoice(TempestVoice.KICK).filter { it.name in setOf("RUST", "BREAK") }
+        return scale + (strikes + TempestPresets.forVoice(TempestVoice.METAL)).map { arranged(it) }
+    }
+
     /** Candidate finite CHITIN kit, with complete pad recipes. */
     fun chitin(): List<ArrangedPad?> = ChitinKits.build()
 

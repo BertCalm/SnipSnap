@@ -3665,3 +3665,67 @@ tasks.register<JavaExec>("generatePumpAudition") {
     workingDir = projectDir
     args("${rootDir}/testkit/pump-audition")
 }
+
+/** Finite R1 source/drive/filter/memory handoff, before the owner's listening gate. */
+tasks.register<JavaExec>("generateTempestAudition") {
+    group = "distribution"
+    description = "Render TEMPEST's two finite voices, control sweeps, exact recipes and diagnostics."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.TempestAuditionGenerator")
+    workingDir = rootDir
+    maxHeapSize = "768m"
+    args(providers.gradleProperty("tempestOutput").orNull ?: "${rootDir}/testkit/tempest-audition")
+}
+
+/** Accepted six-voice starter, editable recipes and both MPC generations. */
+tasks.register<JavaExec>("generateTempestKit") {
+    group = "distribution"
+    description = "Build the dry sixteen-pad TEMPEST kit and verify MPC 3 / MPC 2 read-back."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.TempestKitGenerator")
+    workingDir = rootDir
+    maxHeapSize = "768m"
+    args(providers.gradleProperty("tempestKitOutput").orNull ?: "${rootDir}/testkit/SnipSnap Tempest Full Kit")
+}
+
+/** Accepted six-role TEMPEST kit; compatibility task retained alongside generateTempestKit. */
+tasks.register<JavaExec>("generateTempestFullKit") {
+    group = "distribution"
+    description = "Build the accepted six-role TEMPEST kit under testkit/tempest-full-kit/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.TempestFullKitGenerator")
+    workingDir = rootDir
+    maxHeapSize = "768m"
+    args(providers.gradleProperty("tempestFullKitOutput").orNull ?: "${rootDir}/testkit/tempest-full-kit")
+}
+
+/** Accepted model-3 voices, their controls and the sixteen-pad factory arrangement. */
+tasks.register<JavaExec>("generateTempestExpansionAudition") {
+    group = "distribution"
+    description = "Render the four model-3 TEMPEST voices, their controls and the full-kit arrangement."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.TempestExpansionAuditionGenerator")
+    workingDir = rootDir
+    maxHeapSize = "768m"
+    args(providers.gradleProperty("tempestExpansionOutput").orNull ?: "${rootDir}/testkit/tempest-expansion")
+}
+
+tasks.register<JavaExec>("generateTempestDriveProbe") {
+    group = "verification"
+    description = "Render TEMPEST's isolated DRIVE probes under testkit/tempest-expansion/drive-probe/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.TempestDriveProbeGenerator")
+    workingDir = rootDir
+    args(providers.gradleProperty("tempestDriveProbeOutput").orNull ?: "${rootDir}/testkit/tempest-expansion/drive-probe")
+}
+
+/** Retained two-voice tuned arrangement; the normal TEMPEST task exports the full kit. */
+tasks.register<JavaExec>("generateTempestTunedKit") {
+    group = "distribution"
+    description = "Build the retained E minor pentatonic TEMPEST TUNED kit."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.TempestKitGenerator")
+    workingDir = rootDir
+    maxHeapSize = "768m"
+    args(providers.gradleProperty("tempestTunedKitOutput").orNull ?: "${rootDir}/testkit/SnipSnap Tempest Tuned Kit", "--tuned")
+}

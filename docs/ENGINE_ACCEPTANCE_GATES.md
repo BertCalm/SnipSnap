@@ -526,3 +526,35 @@ and LIFT existed (`MeridianGesturesTest`).
   medium layers came back REVISIT ("No change between soft, medium and hard").
 - **Overall: incomplete.** Round robin, chord tools on real keys, the six-voice bank's soft and
   medium layers (touch must change the strike, not only the level), device runs and hardware playback remain open.
+
+## TEMPEST (ported from the recovery backup, 2026-11-13)
+
+A six-voice digital drum instrument: a pitched strike, driven filtering and folding, then
+short repeats that darken as they fade. See [the full kit](TEMPEST_FULL_KIT.md),
+[model 2](TEMPEST_R2.md) and [the first build](TEMPEST.md).
+
+This port brings the whole engine back: the six engine, patch, preset and compatibility
+sources byte for byte, the 22 factory presets, the `tempest` and `tempest-tuned` starters,
+the CLI, user-preset promotion and the SYNTH picker. The accepted renders are pinned by PCM24
+hashes: sixteen full-kit pads, ten model-2 and eight model-1 files (`TempestPromotionTest`,
+`TempestTest`).
+
+| Gate | Status | Evidence |
+|---|---|---|
+| Melodic voices, keygroups, chord tools | Not applicable | A drum engine. TEMPEST TUNED is a pitched arrangement of kicks and metal, not a keygroup instrument. |
+| Articulation: HOLD, STRUM | Not applicable | Finite 1.20-second hits; HOLD is reserved and hidden in the picker. No strings. |
+| Percussion: authored roll or riser | Not yet verified | No roll or riser is authored. |
+| Drums: multiple distinct genre kits | **Fail: one kit** | The sixteen-pad TEMPEST kit (`SynthKits.tempest`). TEMPEST TUNED is the original two-voice kick and metal scale, not a second genre kit. |
+| Velocity: rendering | Partial | No TEMPEST control is a brightness macro, so a softer hit is the full render low-passed by `Velocity.soften`, not a re-strike. The starter's pads have no velocity layers. |
+| Velocity: saving, playback, export | Not yet verified | No velocity layers exist to save, play or export. |
+| Round robin | Not yet verified | TEMPEST has no re-strike (`Restrike.canRestrike` is false), so no round robin exists through rendering, saving, playback or export. |
+| Starter kit: saving and export | Pass in software | Each pad regenerates from its saved recipe byte for byte, and the hats share mute group 1. The generator writes MPC 3 and MPC 2 programs and checks them with the export read-back (`TempestKitTest`, `TempestExpansionTest`, `TempestStarterTest`). |
+| Picker | Not yet verified on a device | All six voices and 22 presets; recalled recipes keep their saved model through edits, RANDOMISE, navigation and SAVE. `TempestSynthScreenTest` covers this and has not run on a device. |
+| Hardware playback | Not verified | No phone timing, MPC load or MPC hat choke is recorded. |
+
+- **Sound character: accepted.** [TEMPEST_R2](TEMPEST_R2.md) records that the owner accepted
+  model 2 with "Sounds great, proceed as recommended." [The full kit](TEMPEST_FULL_KIT.md)
+  records that on 2026-11-07 the owner accepted the complete six-voice audition with "Sounds
+  great, proceed as recommended." Preserve these renders; this is not a phone or MPC audition.
+- **Overall: incomplete.** Genre kits, a roll or riser, velocity layers, round robin, device
+  runs of the picker and hardware playback remain open.

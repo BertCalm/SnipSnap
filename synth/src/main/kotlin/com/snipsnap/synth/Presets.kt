@@ -324,6 +324,10 @@ object Presets {
             val v = KeelVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
             KeelPresets.forVoice(v)
         }
+        TempestPatch.ENGINE -> {
+            val v = TempestVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
+            TempestPresets.forVoice(v)
+        }
         else -> emptyList()
     }
 
@@ -349,6 +353,7 @@ object Presets {
     }
 
     fun all(): List<Patch> =
+        TempestPresets.all() +
         BackwashPresets.all() + HalobarPresets.all() + FiredBronzePresets.all() + RivetPresets.all() + ErosionPresets.all() + WickPresets.all() +
         OtisPresets.all() +
         LorentzPresets.all() +
