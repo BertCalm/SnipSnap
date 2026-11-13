@@ -54,6 +54,7 @@ object Patches {
             TrefoilPatch.ENGINE -> TrefoilPatch.fromJsonValue(value)
             FerryPatch.ENGINE -> FerryPatch.fromJsonValue(value)
             CairnPatch.ENGINE -> CairnPatch.fromJsonValue(value)
+            SplayPatch.ENGINE -> SplayPatch.fromJsonValue(value)
             ApsisPatch.ENGINE -> ApsisPatch.fromJsonValue(value)
             ThumpPatch.ENGINE -> ThumpPatch.fromJsonValue(value)
             OnsetPatch.ENGINE -> OnsetPatch.fromJsonValue(value)

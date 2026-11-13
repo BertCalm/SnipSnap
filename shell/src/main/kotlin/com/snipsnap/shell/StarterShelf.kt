@@ -47,7 +47,7 @@ object StarterShelf {
             Copy.STARTER_HEADING_METAL,
             listOf(
                 "libration", "meridian", "accord", "thaw", "scour", "nimbus", "suture",
-                "tessera", "pitchwheel", "chamber", "alloy", "caustic", "cistern", "filament", "erosion",
+                "tessera", "pitchwheel", "chamber", "alloy", "caustic", "cistern", "filament", "erosion", SplayDelivery.STARTER_ID,
             ),
         ),
         Group(Copy.STARTER_HEADING_SKINS, listOf("skin", "tremor", "revel", "triad-techno", "triad-house", "triad-minimal", "rivet-workshop", "rivet-factory", "rivet-warehouse", "velour", "velour-bloom", "backwash-soul", "backwash-psych", "fired-bronze", "cosmic-breaks", "cosmic-jungle", "cosmic-dubstep", "spore-jungle", "spore-dub", "spore-electro", "gatecrash-stone", "gatecrash-machine", "gatecrash-electro", "cypher-trap", "cypher-drill", "cypher-backroom", "cypher-lowrider", "cypher-dust", "cypher-flint", "breaker", "mirrorball-philly", "mirrorball-loft", "mirrorball-munich", "soot", "soot-drumless", "soot-dub", "soot-noir", "soot-industrial")),
