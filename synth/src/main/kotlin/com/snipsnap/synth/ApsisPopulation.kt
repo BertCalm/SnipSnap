@@ -188,7 +188,11 @@ internal object ApsisPopulation {
                     val base = 3 + 4 * body
                     if (grainVoice) {
                         val force = near * grains * (.30 * root + n * (1 + velocity)) * .5
-                        val material = near * grains * n * (12 + 12 * velocity)
+                        // The owner selected the study's half-strength material excitation.
+                        // Keep root drive, contact timing and the old model's arithmetic intact.
+                        val originalMaterial = near * grains * n * (12 + 12 * velocity)
+                        val material = if (config.modelVersion == Apsis.GRAIN_TEXTURE_MODEL_VERSION)
+                            originalMaterial * .5 else originalMaterial
                         bank.v[base] += injection * amp * force
                         bank.v[base + 1] += injection * amp * material
                         bank.v[base + 2] += injection * amp * material * .8

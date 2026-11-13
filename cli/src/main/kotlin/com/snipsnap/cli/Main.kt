@@ -193,6 +193,8 @@ object Cli {
         |                        (--rate 1/16, --bpm, --amount, --undo)
         |  gate <kit-dir> <pad>  the hit chopped on the grid
         |                        (--rate 1/8, --bpm, --amount, --undo)
+        |  pump <kit-dir> <pad>  the level ducked on every beat and breathed
+        |                        back (--rate 1/8, --bpm, --amount, --undo)
         |  drift <kit-dir> <pad> one knob: the crate deals the neighbour, morph
         |                        blends toward it (--amount, --seed, --root)
         |  breed <kit-a> <kit-b> two kits' recipes crossed into a child kit,
@@ -441,6 +443,7 @@ object Cli {
                 "eternal" -> EternalCommand.run(args.drop(1), out)
                 "roll" -> RollCommand.run(args.drop(1), out)
                 "gate" -> GateCommand.run(args.drop(1), out)
+                "pump" -> PumpCommand.run(args.drop(1), out)
                 "drift" -> DriftCommand.run(args.drop(1), out)
                 "breed" -> BreedCommand.run(args.drop(1), out)
                 "desample" -> DesampleCommand.run(args.drop(1), out)

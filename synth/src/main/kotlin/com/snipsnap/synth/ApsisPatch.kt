@@ -14,7 +14,7 @@ data class ApsisPatch(
     override val macros: Map<String, Float>,
     val midi: Int = Apsis.DEFAULT_MIDI,
     val velocity: Float = 1f,
-    val config: ApsisConfig = ApsisConfig(),
+    val config: ApsisConfig = Apsis.configurationFor(voice),
 ) : Patch {
     init {
         Patches.validateMacros(this, Apsis.macrosFor(voice))

@@ -3646,6 +3646,24 @@ tasks.register<JavaExec>("generateScuffAudition") {
     args(providers.gradleProperty("scuffOutput").orNull ?: "${rootDir}/testkit/scuff-audition/kotlin")
 }
 
+tasks.register<JavaExec>("generateRotaryAudition") {
+    group = "distribution"
+    description = "Render ROTARY's listening gate clips under testkit/rotary-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.RotaryAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/rotary-audition")
+}
+
+tasks.register<JavaExec>("generatePumpAudition") {
+    group = "distribution"
+    description = "Render PUMP's listening gate clips under testkit/pump-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.PumpAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/pump-audition")
+}
+
 /** Finite R1 source/drive/filter/memory handoff, before the owner's listening gate. */
 tasks.register<JavaExec>("generateTempestAudition") {
     group = "distribution"

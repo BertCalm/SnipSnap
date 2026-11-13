@@ -1456,19 +1456,21 @@ class CliTest {
     }
 
     @Test
-    fun `roll and gate each want a kit and a pad`() {
+    fun `roll, gate and pump each want a kit and a pad`() {
         val sink = PrintStream(ByteArrayOutputStream())
         val rollErr = assertFailsWith<CliError> { RollCommand.run(emptyList(), sink) }
         assertTrue(rollErr.message!!.contains("roll"), "the error does not name the verb: ${rollErr.message}")
         val gateErr = assertFailsWith<CliError> { GateCommand.run(emptyList(), sink) }
         assertTrue(gateErr.message!!.contains("gate"), "the error does not name the verb: ${gateErr.message}")
+        val pumpErr = assertFailsWith<CliError> { PumpCommand.run(emptyList(), sink) }
+        assertTrue(pumpErr.message!!.contains("pump"), "the error does not name the verb: ${pumpErr.message}")
     }
 
     @Test
-    fun `roll and gate refuse a folder that is not a kit`() {
+    fun `roll, gate and pump refuse a folder that is not a kit`() {
         val sink = PrintStream(ByteArrayOutputStream())
         val notAKit = createTempDirectory("not-a-kit").toFile()
-        for (run in listOf(RollCommand::run, GateCommand::run)) {
+        for (run in listOf(RollCommand::run, GateCommand::run, PumpCommand::run)) {
             val err = assertFailsWith<CliError> { run(listOf(notAKit.path, "A01"), sink) }
             assertTrue(err.message!!.contains("kit.json"), "the error does not say why: ${err.message}")
         }
@@ -1533,6 +1535,36 @@ class CliTest {
         val pad3File = File(kitDir, KitStore.load(kitDir).pad(3)!!.sampleFile)
         val pad3Before = pad3File.readBytes()
         val (shortCode, _, shortErr) = cli("gate", kitDir.path, "A03", "--rate", "1/2", "--bpm", "60")
+        assertTrue(shortCode != 0 && "shorter than 2 divisions of 1/2" in shortErr, shortErr)
+        assertTrue(pad3Before.contentEquals(pad3File.readBytes()), "a refusal touches nothing")
+    }
+
+    @Test
+    fun `pump ducks the pad on the grid from the terminal, refuses honestly, and undoes`() {
+        val wav = writeBreak(File(temp, "pm.wav"))
+        val out = File(temp, "pm-out")
+        assertEquals(0, cli("chop", wav.path, "--out", out.path, "--name", "PM", "--grid", "4").first)
+        val kitDir = File(out, "PM")
+        val padFile = File(kitDir, KitStore.load(kitDir).pad(1)!!.sampleFile)
+        val before = padFile.readBytes()
+
+        val (code, stdout, stderr) = cli("pump", kitDir.path, "A01", "--rate", "1/16", "--bpm", "100")
+        assertEquals(0, code, "stderr: $stderr")
+        assertContains(stdout, "pumped at 1/16 at 100 bpm (150 ms a division)")
+        assertTrue(!before.contentEquals(padFile.readBytes()))
+        assertEquals(100f, KitStore.load(kitDir).tempoBpm, "--bpm set the kit's tempo")
+
+        assertEquals(0, cli("pump", kitDir.path, "A01", "--undo").first)
+        assertTrue(before.contentEquals(padFile.readBytes()))
+
+        val (rateCode, _, rateErr) = cli("pump", kitDir.path, "A01", "--rate", "1/3")
+        assertTrue(rateCode != 0 && "--rate wants" in rateErr, rateErr)
+
+        // A quarter of this ~2.9 s bar is too short for 2 divisions of 1/2 at
+        // 60 BPM (4.0 s): refused in words, nothing touched.
+        val pad3File = File(kitDir, KitStore.load(kitDir).pad(3)!!.sampleFile)
+        val pad3Before = pad3File.readBytes()
+        val (shortCode, _, shortErr) = cli("pump", kitDir.path, "A03", "--rate", "1/2", "--bpm", "60")
         assertTrue(shortCode != 0 && "shorter than 2 divisions of 1/2" in shortErr, shortErr)
         assertTrue(pad3Before.contentEquals(pad3File.readBytes()), "a refusal touches nothing")
     }

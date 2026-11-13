@@ -90,8 +90,11 @@ object PadSheet {
     /** Row five — the machine's own transport. */
     val TRANSPORT_SEGMENTS: List<String> = listOf("FLIP", "STOP", "START", "PITCH")
 
-    /** Row six — the treatments that read the kit itself: its key, its tempo. */
-    val KEYED_SEGMENTS: List<String> = listOf(TUNE, "BODY", "WOBBLE", "ETERNAL")
+    /**
+     * Row six — the treatments that read the kit itself: its key, its tempo. PUMP, the sidechain pump,
+     * joined after its gate (2026-11-13): the pedal board brainstorm's idea 7 put it here.
+     */
+    val KEYED_SEGMENTS: List<String> = listOf(TUNE, "BODY", "WOBBLE", "ETERNAL", "PUMP")
 
     /**
      * The slate: every pedal the card can put on a pad, the guitar-pedal words over the rack's own
@@ -297,6 +300,8 @@ object PadSheet {
         "ROLL" to "rolled",
         // The hit chopped on the grid.
         "GATE" to "gated",
+        // The level ducked on every beat and breathed back, the first beat left alone.
+        "PUMP" to "pumped",
     )
 
     /**
