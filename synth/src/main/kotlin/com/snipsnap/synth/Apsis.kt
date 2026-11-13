@@ -8,7 +8,7 @@ import kotlin.random.Random
 
 enum class ApsisVoice { PASSAGE, GRAIN, ANCHOR }
 
-/** Saved models replay their original sound; new patches use the current musical model. */
+/** Explicit configurations retain their version; new patch defaults are selected per voice. */
 data class ApsisConfig(val modelVersion: Int = 3, val seedContext: Int = 0)
 
 /**
@@ -26,12 +26,21 @@ data class ApsisConfig(val modelVersion: Int = 3, val seedContext: Int = 0)
  * All voicing numbers are musical prototype choices, awaiting listening review.
  */
 object Apsis {
-    const val MODEL_VERSION = 3
+    /** Highest supported saved model; current defaults are voice-specific. */
+    const val MODEL_VERSION = 4
+    const val PASSAGE_MODEL_VERSION = 3
     const val LEGACY_MODEL_VERSION = 1
     const val POPULATION_MODEL_VERSION = 3
+    const val GRAIN_TEXTURE_MODEL_VERSION = 4
     fun supportsModel(model: Int) = model in LEGACY_MODEL_VERSION..MODEL_VERSION
-    fun supportsModel(voice: ApsisVoice, model: Int) =
-        supportsModel(model) && (voice == ApsisVoice.PASSAGE || model == POPULATION_MODEL_VERSION)
+    fun supportsModel(voice: ApsisVoice, model: Int) = when (voice) {
+        ApsisVoice.PASSAGE -> model in LEGACY_MODEL_VERSION..PASSAGE_MODEL_VERSION
+        ApsisVoice.GRAIN -> model in POPULATION_MODEL_VERSION..GRAIN_TEXTURE_MODEL_VERSION
+        ApsisVoice.ANCHOR -> model == POPULATION_MODEL_VERSION
+    }
+    /** Fresh GRAIN notes use the approved texture balance; saved recipes never opt in implicitly. */
+    fun configurationFor(voice: ApsisVoice) = ApsisConfig(
+        if (voice == ApsisVoice.GRAIN) GRAIN_TEXTURE_MODEL_VERSION else POPULATION_MODEL_VERSION)
     const val MIDI_MIN = 36
     const val MIDI_MAX = 84
     const val DEFAULT_MIDI = 60
@@ -114,7 +123,7 @@ object Apsis {
     )
 
     fun render(voice: ApsisVoice, macros: Map<String, Float> = emptyMap(), midi: Int = DEFAULT_MIDI,
-        velocity: Float = 1f, config: ApsisConfig = ApsisConfig()): Snip =
+        velocity: Float = 1f, config: ApsisConfig = configurationFor(voice)): Snip =
         Snip(probe(voice, macros, midi, velocity, config,
             ProbeOptions(normalize = true, recordStems = false, recordTraces = false, recordDiagnostics = false)).samples,
             channels = 1, sampleRate = Dsp.RATE)
@@ -212,12 +221,12 @@ object Apsis {
 
     internal fun probe(voice: ApsisVoice = ApsisVoice.PASSAGE,
         macros: Map<String, Float> = emptyMap(), midi: Int = DEFAULT_MIDI,
-        velocity: Float = 1f, config: ApsisConfig = ApsisConfig(),
+        velocity: Float = 1f, config: ApsisConfig = configurationFor(voice),
         options: ProbeOptions = ProbeOptions(), cancelled: () -> Boolean = { false }): Probe {
         if (voice != ApsisVoice.PASSAGE)
             return ApsisPopulation.probe(voice, macros, midi, velocity, config, options, cancelled)
         val began = System.nanoTime()
-        require(supportsModel(config.modelVersion)) { "Unsupported APSIS model ${config.modelVersion}" }
+        require(supportsModel(voice, config.modelVersion)) { "Unsupported APSIS $voice model ${config.modelVersion}" }
         val legacy = config.modelVersion == LEGACY_MODEL_VERSION
         val musical = config.modelVersion >= 3
         require(midi in MIDI_MIN..MIDI_MAX) { "APSIS MIDI must be $MIDI_MIN..$MIDI_MAX" }
