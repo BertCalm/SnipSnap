@@ -180,3 +180,41 @@ Rounds 0 and 0b are Python prototype auditions; no Kotlin exists. Round 0b answe
   - **Saving, playback and export:** not yet verified.
 - **Sound character:** direction accepted. On 2026-11-12 the owner responded to the published round-0b audition, "Sounds good, please merge." Preserve round 0b as the accepted baseline; this is a listen to Python renders, not evidence of Kotlin, phone or MPC playback.
 - **Overall: incomplete.** Round 0b is a prototype with an accepted direction; voices in Kotlin, kits, roll/riser and every saving, playback and export stage remain open.
+
+## MIRRORBALL kits (sound approved 2026-11-12, hardware open)
+
+A kit family of three 1970s disco kits: Philly Strings, Loft Party and Munich Machine. See [MIRRORBALL](MIRRORBALL.md).
+
+- **Melodic, keygroup and chord-tool gates:** not applicable. These are drum kits.
+- **Articulation:** finite hits, with no HOLD. Each kit has an authored fill on A15 and an accelerating build on
+  A16. The build is the roll and riser for this family.
+- **Drum shelf: pass in software, not heard.** Three authored 16-pad kits are on the shelf under SKINS. They
+  differ in source drums (kick and snare measured apart, dry), tunings, pad roles (2, 0 and 4 toms), tempo, tape
+  and amp, not only in effect strength. `MirrorballTest` checks each of those differences.
+- **Velocity and round robin:**
+  - **Rendering: verified.** Three zones of four takes per pad. Every soft hit is a different strike and duller.
+    A softer hit drives the tape, compressor and amp less, so it is squeezed less (measured on each main snare).
+    Kicks, snares and toms are fresh strikes, each kick with its own seeded beater. The tambourine is synthesized,
+    and every take is a new pattern of jingle collisions and rattle. The fitted open hats and ride re-strike all
+    400 modes. The fitted shakers and clap draw fresh noise on a slightly stretched envelope. The closed hats and
+    the THUMP and ONSET voices take small control moves on fresh noise, which is weaker than a re-strike and is
+    disclosed.
+  - **Saving: verified.** Each saved kit reloads equal, and all 576 saved slices match their renders
+    (`:shell:generateMirrorballKits`, `MirrorballKitTest`).
+  - **Playback: verified in software.** `PadHit.resolve` picks the zone by velocity and deals the four takes in
+    order, then repeats. No phone has played these kits.
+  - **Export: verified for MPC 3 by read-back.** Velocity ranges, base slices, cycle lengths and frame windows
+    match, and the exported slices match their renders. **MPC 2 does not pass:** its projection keeps only the
+    first take of each zone. **SFZ: waived by the owner** (2026-11-12: "I'm good with skipping sfz").
+    **DecentSampler: waived by the owner** (2026-11-12: "Ok, Skip"). No MPC has loaded these kits.
+- **Sound character: approved at round 2.** On 2026-11-12 the owner heard round 2 as "Much better" and chose to lock it in. Preserve round 2 (`MirrorballKits.VERSION` 3) as the accepted baseline. This is not evidence of a phone or MPC audition. The rounds so far:
+  - Round 0: heard as "kind of basic and not very punchy or character rich".
+  - Round 0b: the owner picked Punch, "dialed back like 10-15%".
+  - Round 1b: heard as "mid heavy, like listening through dollar store headphones".
+  - Round 1c: the owner picked the Open + parallel speaker and flagged seven pads.
+  - Round 2: those pads are fitted to CC0 recordings
+    ([audition](https://claude.ai/artifact/2BN7Peh1FUwrjvHjZZ5YbB),
+    [comparison](https://claude.ai/artifact/AJSFi9tEwm26kTzCCFUY5M)).
+- **Overall: incomplete.** The software evidence is in place and the sound is approved. Phone and MPC hardware
+  playback remain open, and MPC 2 does not pass the round-robin export gate. The owner waived SFZ and
+  DecentSampler.

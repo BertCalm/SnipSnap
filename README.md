@@ -30,6 +30,8 @@ remains blocked on slice-map/hardware verification. Owner listening is pending.
 
 [GATECRASH](docs/GATECRASH.md) is a family of three 1980s gated drum kits on the shelf: Stone Room, Machine Pop and Electro Funk. Each has sixteen pads with three velocity zones of four takes. The owner approved the sound on 2026-11-11 after four rounds; phone and MPC hardware playback remain unverified.
 
+[MIRRORBALL](docs/MIRRORBALL.md) is a family of three 1970s disco kits on the shelf: Philly Strings, Loft Party and Munich Machine. Every pad is printed through an FET compressor, a multi-head tape echo, then an amp, in an order the FX rack cannot make. Each has sixteen pads with three velocity zones of four takes; Philly's tambourine is synthesized, fitted to CC0 recordings. The owner approved the sound on 2026-11-12 after five rounds; phone and MPC hardware playback remain unverified.
+
 TRIAD has a [native shared-bus drum audition](docs/TRIAD.md): one hybrid groove through three processing rigs. These are listening candidates, not a factory engine or MPC program.
 
 ## The loop
@@ -443,7 +445,7 @@ explicit MIDI root (24–96), strike velocity and model version; TUNE is a
 relative ±12-semitone offset, neutral at 0.5, so the effective note spans
 12–108 without clamping back to the saved-root range. Seven provisional presets
 and a dry sixteen-pad C minor pentatonic kit are included, with PITCHWHEEL among
-FRESH TAPE's 101 starters. Run `./gradlew :synth:generatePitchwheelAudition`
+FRESH TAPE's 104 starters. Run `./gradlew :synth:generatePitchwheelAudition`
 for the compact first listening set, or add `-PpitchwheelFull` for the broader
 dry probes. HOLD's top step returns settled loop-only material with a
 deterministic attachment cycle and capped adhesion. The owner heard R1 as six
