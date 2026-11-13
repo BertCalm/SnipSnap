@@ -6,11 +6,12 @@ The characteristic gesture is a bright metal strike → inharmonic ringing →
 dark rhythmic answers → a moving halo.
 
 GLOCKENSPIEL is HALOBAR's fourth voice. It is a native steel-bar approximation
-for listening, with provisional studies rather than a promoted factory bank.
+with four listening recipes outside the promoted factory registry.
 The existing twelve vibraphone, marimba and xylophone presets retain their
 approval. Crotales and tubular bells are now built in the
-[subsequent six-voice expansion](HALOBAR_SIX_VOICES.md); new bell banks remain
-provisional.
+[subsequent six-voice expansion](HALOBAR_SIX_VOICES.md). The owner heard and
+approved all three bell banks on 2026-11-12; historical audition receipts below
+retain their original pre-approval status.
 
 ## Source and controls
 

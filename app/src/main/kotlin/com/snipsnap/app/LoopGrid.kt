@@ -28,12 +28,10 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.ui.text.style.TextOverflow
 import java.io.File
 import androidx.compose.runtime.setValue
 import com.snipsnap.loop.Arrangement
@@ -46,6 +44,8 @@ import com.snipsnap.loop.Session
 import com.snipsnap.loop.SessionBuilder
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.tape
+import com.snipsnap.app.theme.TapeType
+import com.snipsnap.app.ui.TapeText
 import com.snipsnap.app.ui.tapeClick
 import com.snipsnap.audio.Scales
 import com.snipsnap.shell.Copy
@@ -136,23 +136,23 @@ fun LoopGrid(
                 )
             }
         }
-        androidx.compose.material3.Text(
+        TapeText(
             // The readout takes the legend's place while a block is
             // selected: short, and the question just asked is worth
             // more than the instructions for asking it.
             text = selected?.let { (t, b) -> Copy.loopBlock(t + 1, b + 1, describe(session, t, b)) }
                 ?: Copy.LOOP_LEGEND,
+            style = TapeType.pixelSmall,
             color = if (selected != null) scheme.ink.tape else scheme.ink2.tape,
-            fontSize = 9.sp,
-            fontFamily = FontFamily.Monospace,
-            // Its own full-width line, two lines tall: beside the tempo
+            // Its own full-width line, three lines tall: beside the tempo
             // readout, CLEAR TRACK and the bounce button it was left a few
             // characters of a single line and the legend was cut off. A
             // renamed snip's name is user text with no length cap
-            // (Names.isMpcSafe checks characters, not length), so two lines
-            // is also the most it can take from the grid above.
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
+            // (Names.isMpcSafe checks characters, not length), so three
+            // lines is the most it can take from the grid above. It was two
+            // lines at 9 sp; at the 13 sp secondary size (clarity spec
+            // section 7.5) the same words need a third.
+            maxLines = 3,
             modifier = Modifier.fillMaxWidth(),
         )
         Row(
@@ -185,12 +185,11 @@ private fun ClearButton(enabled: Boolean, onClear: () -> Unit) {
             .padding(horizontal = 10.dp, vertical = 8.dp),
         contentAlignment = Alignment.Center,
     ) {
-        androidx.compose.material3.Text(
+        TapeText(
             text = Copy.LOOP_CLEAR_BUTTON,
+            style = TapeType.pixel.copy(fontWeight = FontWeight.Bold),
             color = if (enabled) scheme.ink.tape else scheme.lcdInk.tape.dim(),
-            fontSize = 10.sp,
-            fontWeight = FontWeight.Bold,
-            fontFamily = FontFamily.Monospace,
+            maxLines = 2,
         )
     }
 }
@@ -246,12 +245,10 @@ private fun describe(session: Session, track: Int, block: Int): String? {
 @Composable
 private fun TempoReadout(bpm: Float) {
     val scheme = LocalScheme.current
-    androidx.compose.material3.Text(
+    TapeText(
         text = "${bpm.toInt()} BPM",
+        style = TapeType.pixel.copy(fontWeight = FontWeight.Bold),
         color = scheme.amber.tape,
-        fontSize = 10.sp,
-        fontWeight = FontWeight.Bold,
-        fontFamily = FontFamily.Monospace,
         modifier = Modifier.background(scheme.lcd.tape).padding(horizontal = 8.dp, vertical = 6.dp),
     )
 }
@@ -307,12 +304,11 @@ private fun BounceButton(session: Session, bouncing: Boolean, onBounce: () -> Un
             .padding(horizontal = 12.dp, vertical = 8.dp),
         contentAlignment = Alignment.Center,
     ) {
-        androidx.compose.material3.Text(
+        TapeText(
             text = if (bouncing) Copy.LOOP_BOUNCE_BUSY else Copy.loopBounceButton(bars),
+            style = TapeType.pixel.copy(fontWeight = FontWeight.Bold),
             color = if (bouncing) scheme.lcdInk.tape.dim() else scheme.ink.tape,
-            fontSize = 10.sp,
-            fontWeight = FontWeight.Bold,
-            fontFamily = FontFamily.Monospace,
+            maxLines = 3,
         )
     }
 }
@@ -334,12 +330,11 @@ fun LoopEmpty(line: String, modifier: Modifier = Modifier, onGoToSnips: (() -> U
         contentAlignment = Alignment.Center,
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            androidx.compose.material3.Text(
+            TapeText(
                 text = line,
+                style = TapeType.pixelSmall.copy(fontFamily = FontFamily.Monospace, textAlign = TextAlign.Center),
                 color = scheme.ink.tape,
-                fontSize = 12.sp,
-                fontFamily = FontFamily.Monospace,
-                textAlign = TextAlign.Center,
+                maxLines = Int.MAX_VALUE,
             )
             // The route the line above names, offered rather than described.
             // This used to be its own Activity with no tab row behind it, and
@@ -362,12 +357,11 @@ fun LoopEmpty(line: String, modifier: Modifier = Modifier, onGoToSnips: (() -> U
                         .padding(horizontal = 16.dp, vertical = 10.dp),
                     contentAlignment = Alignment.Center,
                 ) {
-                    androidx.compose.material3.Text(
+                    TapeText(
                         text = "SAVED SAMPLES \u25b8",
+                        style = TapeType.pixel.copy(fontWeight = FontWeight.Bold),
                         color = scheme.lcdInk.tape,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        fontFamily = FontFamily.Monospace,
+                        maxLines = 2,
                     )
                 }
             }
@@ -413,12 +407,13 @@ private fun TrackColumn(
 @Composable
 private fun TrackHeader(name: String, engaged: Boolean, onToggle: () -> Unit) {
     val scheme = LocalScheme.current
-    androidx.compose.material3.Text(
+    // The track's name is a snip's, user text: one line and an ellipsis, at the
+    // 11 sp eyebrow size (it was 10 sp, under the floor). A six-column cell is
+    // about 52 dp wide, so the cell stays as it was and the name gives.
+    TapeText(
         text = name.uppercase(),
+        style = TapeType.eyebrow.copy(fontWeight = FontWeight.Bold),
         color = if (engaged) scheme.lcdInk.tape else scheme.lcdInk.tape.dim(),
-        fontSize = 10.sp,
-        fontWeight = FontWeight.Bold,
-        fontFamily = FontFamily.Monospace,
         modifier = Modifier
             .fillMaxWidth()
             .background(scheme.lcd.tape)
@@ -486,15 +481,14 @@ private fun BlockCell(
     val currentOnSelect by rememberUpdatedState(onSelect)
     val currentOnClear by rememberUpdatedState(onClear)
     val scheme = LocalScheme.current
-    androidx.compose.material3.Text(
+    TapeText(
         text = label,
+        style = TapeType.eyebrow,
         // The lit cell is amber, so its number is the LCD's dark (dark in
         // every scheme) rather than a chrome ink that would vanish on it. A
         // filled cell is chrome-surface, so its number is chrome ink. An empty
         // cell sits on the LCD fill and takes the LCD's own dimmed ink.
         color = if (lit) scheme.lcd.tape else if (filled) scheme.ink2.tape else scheme.lcdInk.tape.dim(),
-        fontSize = 11.sp,
-        fontFamily = FontFamily.Monospace,
         modifier = modifier
             .aspectRatio(1.2f)
             .background(if (lit) scheme.amber.tape else if (filled) scheme.gray.tape else scheme.lcd.tape)
