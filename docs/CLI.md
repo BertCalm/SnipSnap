@@ -571,7 +571,11 @@ peak over about 87 ms at AMT 70, the pad sheet's tap, and 6 dB under it at AMT 1
 none at AMT 0; for tails, so a snare with ROOM on it is the gated 80s snare, while a dry snare is only shorter and a
 hat a stub), `octaved` (an octave down, the OCTAVER section: a half-speed copy of the hit mixed under it at DEPTH 0.5,
 driven to Grit, at AMT 70, the pad sheet's tap, about 0.71 at AMT 100, less below and none at AMT 0; for snares and
-toms, since a kick's octave lands under 40 Hz) and `rewound` (a reverse delay, the REWIND section: the hit comes
+toms, since a kick's octave lands under 40 Hz), `tremoloed` (a tremolo, the TREMOLO section: the level dips by half in a
+smooth throb about 3.5 times a second, starting at full level, at AMT 70, the pad sheet's tap, by about 0.71 at AMT 100,
+less below and none at AMT 0; for held sounds), `flanged` (a flanger, the FLANGER section: a comb of notches sweeps down
+from 5 kHz and back up, with no feedback, at DEPTH 0.7 at AMT 70, the pad sheet's tap, the deepest sweep at AMT 100,
+shallower below and none at AMT 0; for drums and held sounds both) and `rewound` (a reverse delay, the REWIND section: the hit comes
 back backwards, its attack about 0.48 s after the hit, then forward and backwards again, each pass darker, at MIX 0.7
 and REPEAT 0.5 at AMT 70, the pad sheet's tap, MIX 1 and REPEAT about 0.71 at AMT 100, less below and none at AMT 0;
 for drums and held sounds both).
@@ -590,7 +594,7 @@ own landing amp and the `post` picks after it, and the recipe keeps the patch;
 `--undo` then gives the pad its patch recipe back. The library today: `driven` (the amp), `compressed` (the
 sustain pedal), `wahed`, `touchwahed`, `rockwahed`, `forged` (in front of the amp,
 fixed there), `delayed` (after the amp), `roomed` (after the amp, fixed there), `eased` (in front of the amp, fixed
-there), `vibratoed` (after the amp, fixed there), `dived` (in front of the amp, fixed there), `hushed` (after the amp and the room, fixed there), `octaved` (in front of the amp, fixed there), `rewound` (after the amp, fixed there), and
+there), `vibratoed` (after the amp, fixed there), `dived` (in front of the amp, fixed there), `hushed` (after the amp and the room, fixed there), `octaved` (in front of the amp, fixed there), `rewound` (after the amp, fixed there), `tremoloed` (after the amp, fixed there), `flanged` (after the amp, fixed there), and
 `rig` (a board: compressor, drive, slapback); every one but `rig` is on the
 PAD SHEET's slate (below), and `rig` waits for its gate — e.g.
 `--pedals compressed@0.7:pre,driven` or `--pedals wahed@0.7:post,rig`. At most
@@ -611,8 +615,8 @@ the keyed family that reads the kit itself (TUNE · BODY · WOBBLE ·
 ETERNAL — `retune`, `body`, `wobble` and `eternal`, below), and row seven
 the pedals, grouped by what an effect *is*, because a guitarist looks for a
 pedal by its name: the slate (DRIVE · SUSTAIN · WAH · TOUCH · ROCK · FORGE ·
-DELAY · ROOM · FADE IN · VIBRATO · DIVE · HUSH · SUB · REWIND — `driven`, `compressed`, `wahed`, `touchwahed`, `rockwahed`, `forged`,
-`delayed`, `roomed`, `eased`, `vibratoed`, `dived`, `hushed`, `octaved` and `rewound`), of which the row draws five, the user's choice and the same
+DELAY · ROOM · FADE IN · VIBRATO · DIVE · HUSH · SUB · REWIND · TREM · FLANGE — `driven`, `compressed`, `wahed`, `touchwahed`, `rockwahed`, `forged`,
+`delayed`, `roomed`, `eased`, `vibratoed`, `dived`, `hushed`, `octaved`, `rewound`, `tremoloed` and `flanged`), of which the row draws five, the user's choice and the same
 in every kit (DRIVE · SUSTAIN · WAH · FORGE · DELAY until changed), then MORE,
 which holds them all; a pad carries up to six at once
 ([`docs/superpowers/specs/2026-10-28-pedal-slate-design.md`](superpowers/specs/2026-10-28-pedal-slate-design.md);

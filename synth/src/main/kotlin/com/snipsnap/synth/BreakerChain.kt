@@ -150,7 +150,7 @@ internal object BreakerChain {
      * chain is allpass and g < 1, so the loop's gain is under 1 at every frequency by construction:
      * no limiter.
      */
-    fun spring(x: DoubleArray, drip: Double, frames: Int, rate: Int, tank: Tank = TANK_B, sendHp: Double = tank.sendHp): DoubleArray {
+    fun spring(x: DoubleArray, drip: Double, frames: Int, rate: Int, tank: Tank = TANK_B, decay: Double = 1.0, sendHp: Double = tank.sendHp): DoubleArray {
         val hp = Section.highpass(sendHp, BUTTERWORTH_Q, rate)
         val send = DoubleArray(frames) { hp.process(x.getOrElse(it) { 0.0 }) }
         val p = peak(send)
@@ -159,7 +159,7 @@ internal object BreakerChain {
         val dwell = 1.0 + 7.0 * drip
         val norm = tanh(dwell)
         for (i in send.indices) send[i] = tanh(dwell * send[i] / p) / norm
-        val t60 = tank.t60Base + tank.t60Span * drip
+        val t60 = (tank.t60Base + tank.t60Span * drip) * decay
         for ((transit, pre, weight) in tank.springs) {
             val lp1 = Section.lowpass(tank.fc, 0.5411961001461970, rate)
             val lp2 = Section.lowpass(tank.fc, 1.3065629648763766, rate)

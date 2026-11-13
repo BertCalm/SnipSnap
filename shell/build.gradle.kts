@@ -569,6 +569,26 @@ tasks.register<JavaExec>("generateGatecrashKits") {
     args(providers.gradleProperty("gatecrashOutput").orNull ?: "${rootDir}/testkit/gatecrash-kits")
 }
 
+tasks.register<JavaExec>("generateCypherKits") {
+    group = "distribution"
+    description = "Build the CYPHER kits, prove the velocity and round-robin grid through save, playback and MPC 3 export, and write the listening pack."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.CypherKitGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "2g"
+    args(providers.gradleProperty("cypherOutput").orNull ?: "${rootDir}/testkit/cypher-kits")
+}
+
+tasks.register<JavaExec>("generateMirrorballKits") {
+    group = "distribution"
+    description = "Build the three MIRRORBALL disco kits, prove the velocity and round-robin grid through save, playback and MPC 3 export, and write the listening pack."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.MirrorballKitGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "2g"
+    args(providers.gradleProperty("mirrorballOutput").orNull ?: "${rootDir}/testkit/mirrorball-kits")
+}
+
 tasks.register<JavaExec>("generateTriadKits") {
     group = "distribution"
     classpath = sourceSets["test"].runtimeClasspath
