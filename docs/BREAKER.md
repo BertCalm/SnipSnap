@@ -66,11 +66,16 @@ genre kits"). On 2026-11-13 the owner heard them:
 - **Too wet:** both grooves. The owner picked how much echo and spring each keeps, and the kits are
   built from those picks.
 
-The final audition is published for the owner's closing listen (below, "The audition").
+On the final audition (2026-11-13, below, "The audition") the owner signed off the engine's sound:
+- **Every voice as it ships:** "Yes", this is BREAKER.
+- **Every control from 0 to 1:** each does what its name says, all the way along.
+- **The edges:** nothing breaks.
+- **The presets:** keep them all.
+- **The three kits side by side:** the shelf is right.
 
 Still to come:
-- the owner's answers on the audition;
-- the surf tom fill.
+- the surf tom fill;
+- a phone and an MPC playing the kits.
 
 ## The kit
 
@@ -246,7 +251,9 @@ rings shorter instead, which the decay half of the measure hears.
 `./gradlew :shell:generateBreakerAudition` (`BreakerAuditionGenerator`) renders the whole engine into
 `testkit/breaker-audition/` in about 85 s. It writes 68 clips (about 10 minutes, 54 MB) and a page,
 `index.html`, from `shell/src/test/resources/audition/breaker-audition.html`. The page was published
-for the owner on 2026-11-13: [BREAKER audition](https://claude.ai/artifact/TyimBbsBAwNeVRzxsSx3En).
+for the owner on 2026-11-13 ([BREAKER audition](https://claude.ai/artifact/TyimBbsBAwNeVRzxsSx3En)),
+and the owner signed it off the same day: every voice, every control, the edges, the presets and the
+three kits.
 
 Every clip plays at the house audition loudness (`AuditionLevel`). Inside a strip, each strike is
 levelled first, so only the sound differs:
@@ -442,8 +449,8 @@ recordings, as timing jitter. On a synth drum whose strike starts at its first s
 the click's peak takes the attack with it. On the Second Kick (click at 0.4 ms) such a take loses its
 click and plays about 2.5 to 3 dB quieter over its first 300 ms. This is the shared `Robin`, so it
 applies to every kit whose takes are re-struck (`Restrike`: SKIN, TERRA, HALOBAR, BREAKER and
-others), including kits already heard and accepted. It is left as it is here, since changing it
-would change those kits too.
+others), including kits already heard and accepted. Asked, the owner chose to leave it as it is
+(2026-11-13): nobody has heard it as a problem, and the accepted kits stay as accepted.
 
 Model-5 saves keep their takes, and the BREAKER kit stays on model 5.
 
