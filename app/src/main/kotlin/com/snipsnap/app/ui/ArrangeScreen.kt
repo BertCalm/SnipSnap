@@ -349,7 +349,7 @@ private fun ReadoutPanel(shown: Arranger.Section?) {
         verticalArrangement = Arrangement.spacedBy(3.dp),
     ) {
         TapeText(shown?.name?.uppercase() ?: "", TapeType.pixel, scheme.amber.tape)
-        TapeText(shown?.reason?.uppercase() ?: "", TapeType.pixelSmall, scheme.lcdInk2, maxLines = 2)
+        TapeText(shown?.reason ?: "", TapeType.pixelSmall, scheme.lcdInk2, maxLines = 2)
     }
 }
 

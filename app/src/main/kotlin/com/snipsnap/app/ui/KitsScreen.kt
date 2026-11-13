@@ -626,7 +626,7 @@ fun KitsScreen(
                     // ROOMS: what OUTSIDE measured and KEEP ROOM kept - any pad plays inside one through ROOM, then KEEP.
                     if (rooms.isNotEmpty() || binnedRooms.isNotEmpty()) {
                         item(key = "rooms-header") {
-                            TapeText("ROOMS · RE-AMP AND ROOM MEASURED THEM. ANY PAD PLAYS IN ONE.", TapeType.pixelSmall, scheme.ink2.tape, Modifier.padding(top = 6.dp), maxLines = 1)
+                            TapeText("Rooms · RE-AMP AND ROOM measured them. Any pad plays in one.", TapeType.pixelSmall, scheme.ink2.tape, Modifier.padding(top = 6.dp), maxLines = 1)
                         }
                         items(rooms, key = { "room:" + it.file.name }) { room ->
                             RoomRow(room, busy, onForgetRoom, onShareRoom)
@@ -1262,7 +1262,7 @@ private fun KitDeleteConfirmDialog(onCancel: () -> Unit, onConfirm: () -> Unit) 
                 .padding(14.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            TapeText("DELETE THIS KIT? IT WAITS IN DELETED KITS FOR 30 DAYS.", TapeType.lcdSmall, scheme.ink.tape, maxLines = 3)
+            TapeText("Delete this kit? It waits in deleted kits for 30 days.", TapeType.lcdSmall, scheme.ink.tape, maxLines = 3)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 ActionButton("CANCEL", scheme, enabled = true, modifier = Modifier.weight(1f), onClick = onCancel)
                 Box(
@@ -1363,7 +1363,7 @@ internal fun KitRenameDialog(
             }
             if (!safe) {
                 TapeText(
-                    "NAMES CAN'T HOLD / \\ : * ? \" < > | OR END IN A DOT/SPACE.",
+                    "Names can't hold / \\ : * ? \" < > | or end in a dot/space.",
                     TapeType.pixelSmall,
                     scheme.ink2.tape,
                     maxLines = 2,

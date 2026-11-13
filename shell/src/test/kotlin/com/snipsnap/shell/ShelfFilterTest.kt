@@ -93,10 +93,10 @@ class ShelfFilterTest {
     fun `an empty result says the kits are still there and how to see them`() {
         val line = Copy.shelfFilterEmpty(DubStamp.Status.ON_CARD, total = 4)
         assertTrue(Copy.dubChip(DubStamp.Status.ON_CARD) in line, "names the filter that did it: $line")
-        assertTrue("4" in line, "names how many are really there: $line")
-        assertTrue("SHOW" in line, "names the chip that undoes it: $line")
+        assertTrue(line.contains("4", ignoreCase = true), "names how many are really there: $line")
+        assertTrue(line.contains("SHOW", ignoreCase = true), "names the chip that undoes it: $line")
         assertTrue(line.endsWith("."), "a line the screen says, not furniture: $line")
-        assertEquals(line.uppercase(java.util.Locale.ROOT), line, "TapeOS shouts: $line")
+        assertTrue(line.first().isUpperCase() && line.any { it.isLowerCase() }, "a sentence, in sentence case: $line")
     }
 
     /**
@@ -169,7 +169,7 @@ class ShelfFilterTest {
         for (label in listOf(Copy.shelfFilter(null)) + DubStamp.Status.entries.map { Copy.shelfFilter(it) }) {
             assertTrue("·" in label, "the header's chips share one shape: $label vs ${Copy.SHELF_SORT_RECENT}")
             assertTrue(!label.endsWith("."), "furniture, not a sentence: $label")
-            assertEquals(label.uppercase(java.util.Locale.ROOT), label, "TapeOS shouts: $label")
+            assertEquals(label.uppercase(), label)
         }
     }
 }

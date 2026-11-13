@@ -265,6 +265,6 @@ class OrbitScreenTest : ComposeScreenTest() {
         invokeClick("OUT")
         invokeClick("GROOVE TO RINGS")
         waitFor("the groove's rings saved beside the first", timeoutMillis = 30_000) { (ringsOnDisk(entry) ?: 0) > before }
-        assertTrue("the screen said what it read: $toasts", toasts.any { "IS ON THE RINGS" in it || "RING" in it })
+        assertTrue("the screen said what it read: $toasts", toasts.any { " is on the rings" in it })
     }
 }

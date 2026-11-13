@@ -333,7 +333,7 @@ class BusyTest {
 
     @Test
     fun `copy`() {
-        assertEquals("LOADING FACTORY…", Copy.loadingBusy("FACTORY"))
+        assertEquals("Loading FACTORY…", Copy.loadingBusy("FACTORY"))
         assertEquals("5 OF 16", Copy.busyCount(5, 16))
     }
 }

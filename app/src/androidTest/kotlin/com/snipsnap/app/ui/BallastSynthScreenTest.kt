@@ -75,7 +75,7 @@ class BallastSynthScreenTest : ComposeScreenTest() {
         val macros = Ballast.defaults(voice) + ("GLASS" to .6f)
         show(voice, macros)
         click("MAKE INSTRUMENT")
-        compose.onNodeWithText("THEN HOLDS THE SETTLED BASS.", substring = true).assertExists()
+        compose.onNodeWithText("then holds the settled bass.", substring = true).assertExists()
         dial("RELEASE", .5f)
         click("MAKE")
         // Real offline DSP is deliberately not tied to the Compose frame clock.
