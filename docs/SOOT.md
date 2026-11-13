@@ -13,7 +13,8 @@ kit breathing through a dictaphone**.
 
 **Sound approved at round 2** (2026-11-13: "All sounds fine"). The 16-pad kit (`SootKits.VERSION` 3)
 is on the FRESH TAPE shelf (SKINS: "SOOT"). Its grids are proven in software through save, playback
-and MPC 3 export. The engine stays a prototype outside the factory presets and the phone picker.
+and MPC 3 export. The engine is on SYNTH's picker (DRUMS) and stays a prototype outside the factory
+presets.
 
 How the owner got there:
 - **Round 0** picked the hits.
@@ -33,7 +34,8 @@ Still to come:
     (`SootGenreKits.kt` 2, `:shell:generateSootGenreKits`);
   - 63 of 64 pads kept as built; Basement Dub's four bars are the steppers groove the owner picked;
 - phone and MPC hardware;
-- the picker entry, in a session with an Android SDK, as the house rule says.
+- nothing for the picker: SOOT is on it (2026-11-13), mirroring BACKWASH, with an on-device test in
+  `NewEngineSynthScreenTest`.
 
 ## The kit (approved 2026-11-12, re-pointed by the picks)
 

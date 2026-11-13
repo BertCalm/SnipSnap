@@ -16,6 +16,8 @@ import com.snipsnap.synth.Ballast
 import com.snipsnap.synth.BackwashPatch
 import com.snipsnap.synth.BallastPatch
 import com.snipsnap.synth.BallastVoice
+import com.snipsnap.synth.Soot
+import com.snipsnap.synth.SootPatch
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -95,6 +97,28 @@ class NewEngineSynthScreenTest : ComposeScreenTest() {
         val pushed = SynthDrafts.read(settings).single { it.engine == "BACKWASH" && it.voiceName == "SNARE" } as BackwashPatch
         assertEquals(4, pushed.model)
         assertEquals(.72f, pushed.macros.getValue("PRESS"), .0001f)
+    }
+
+    /**
+     * SOOT on the picker (2026-11-13): a prototype outside the factory presets, so its voices and controls
+     * with no preset chips. The snare opens at the owner's pick (EDGE 1, the hot cassette), an edit survives
+     * a rebuild, and the saved draft keeps its renderer model.
+     */
+    @Test
+    fun sootOpensItsSnareAtThePickAndKeepsAnEditAndItsModel() {
+        show("SOOT", "SNARE")
+        button("SNARE").assertIsSelected()
+        for (label in listOf("TUNE", "COIL", "EDGE", "BENCH", "GRIME")) button(label).assertExists()
+        assertEquals(1f, progress("EDGE"), .0001f)
+        adjust("COIL", .8f)
+        compose.runOnIdle { generation++ }
+        pump()
+        assertEquals("SOOT", settings["engine"])
+        assertEquals(.8f, progress("COIL"), .0001f)
+        assertFalse(showsLoop())
+        val draft = SynthDrafts.read(settings).single { it.engine == "SOOT" && it.voiceName == "SNARE" } as SootPatch
+        assertEquals(Soot.MODEL_VERSION, draft.model)
+        assertEquals(.8f, draft.macros.getValue("COIL"), .0001f)
     }
 
     @Test
