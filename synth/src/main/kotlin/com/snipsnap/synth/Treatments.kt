@@ -191,6 +191,14 @@ object Treatments {
         // and AMT 1 the deepest sweep. RATE and FEEDBACK are left at their defaults, 0.4 and 0.5 (none), each its own
         // neutral, so AMT moves neither; FEEDBACK's default moved to 0.5 at this gate so that Plain needs no setting.
         "flanged" to FxChain(flanger = mapOf("DEPTH" to 1.0f)),
+        // ROTARY: the spinning speaker, the ROTARY section. The owner heard it at its gate (2026-11-13) on ONSET's snare,
+        // JANGLE and CHUG (after their amps) and the choir: it sounds like a rotary speaker, clearly more than TREMOLO plus
+        // VIBRATO at the same speed, the spin-up is heard, there are no artifacts, the depth is enough, and it is for held
+        // sounds only. They chose Spin-up for the tap: SPIN 1 at the fast speed, starting at the chorale and spinning up.
+        // SPEED and RAMP are left at their defaults, 1 and 1, each its own neutral, so AMT moves neither. SPIN fades
+        // linearly toward none, so AMT 1 is the heard clip and a tap (AMT 0.7) swirls at SPIN 0.7: a macro tops out at 1,
+        // as REWIND's MIX (RotaryTest measures how far under the clip the tap's swing lands).
+        "spun" to FxChain(rotary = mapOf("SPIN" to 1.0f)),
     )
 
     private val ALL: List<Pair<String, FxChain>> get() = Shuffle.TREATMENTS + EXTRA

@@ -104,7 +104,7 @@ class RotaryTest {
     @Test
     fun `it starts open, at the loudest point of the swirl`() {
         for (speed in listOf(0f, 0.5f, 1f)) for (hz in listOf(150f, 3000f)) {
-            val env = envelopeDb(Rotary.process(sine(hz, 2f), mapOf("SPIN" to 1f, "SPEED" to speed)), 20f)
+            val env = envelopeDb(Rotary.process(sine(hz, 2f), mapOf("SPIN" to 1f, "SPEED" to speed, "RAMP" to 0f)), 20f)
             assertTrue(env[0] > env.max() - 1.5f, "SPEED $speed at $hz Hz starts ${env.max() - env[0]} dB under its loudest")
         }
     }
@@ -112,8 +112,8 @@ class RotaryTest {
     @Test
     fun `the horn moves level at SPEED, deeper with SPIN`() {
         val tone = sine(8000f, 2f)
-        val full = envelopeDb(Rotary.process(tone, mapOf("SPIN" to 1f, "SPEED" to 1f)), 5f)
-        val light = envelopeDb(Rotary.process(tone, mapOf("SPIN" to 0.3f, "SPEED" to 1f)), 5f)
+        val full = envelopeDb(Rotary.process(tone, mapOf("SPIN" to 1f, "SPEED" to 1f, "RAMP" to 0f)), 5f)
+        val light = envelopeDb(Rotary.process(tone, mapOf("SPIN" to 0.3f, "SPEED" to 1f, "RAMP" to 0f)), 5f)
         val fullDepth = full.max() - full.min()
         val lightDepth = light.max() - light.min()
         assertTrue(fullDepth > 6f, "the horn's level swing at SPIN 1 is only $fullDepth dB")
@@ -129,16 +129,16 @@ class RotaryTest {
     @Test
     fun `the horn's pitch swings with its level, and a low tone's moves a fraction of it`() {
         // At 7 Hz a horn of 0.52 ms swings its pitch about 2.3 percent each way.
-        val horn = pitchSwing(Rotary.process(sine(8000f, 2f), mapOf("SPIN" to 1f, "SPEED" to 1f)), 16)
+        val horn = pitchSwing(Rotary.process(sine(8000f, 2f), mapOf("SPIN" to 1f, "SPEED" to 1f, "RAMP" to 0f)), 16)
         assertTrue(horn in 1.03f..1.07f, "the horn's pitch swing at SPIN 1, SPEED 1 is $horn")
-        val light = pitchSwing(Rotary.process(sine(8000f, 2f), mapOf("SPIN" to 0.2f, "SPEED" to 1f)), 16)
+        val light = pitchSwing(Rotary.process(sine(8000f, 2f), mapOf("SPIN" to 0.2f, "SPEED" to 1f, "RAMP" to 0f)), 16)
         assertTrue(light < 1.015f, "SPIN 0.2 swings the pitch $light")
 
         // The drum: its level moves (BASS_AM 0.4 is 4.4 dB) and it turns a little slower, but its path has no
         // Doppler, so a low tone's pitch moves a fraction of the horn's. What it does move (0.9 percent at 100 Hz,
         // measured) is the crossover's: the two halves rise and fall at different rates, so the one-pole's phase
         // between them wanders, about the rotor's speed over the crossover's, whatever the tone.
-        val low = Rotary.process(sine(100f, 2f), mapOf("SPIN" to 1f, "SPEED" to 1f))
+        val low = Rotary.process(sine(100f, 2f), mapOf("SPIN" to 1f, "SPEED" to 1f, "RAMP" to 0f))
         val drum = pitchSwing(low, 4)
         assertTrue(drum < 1.015f && drum - 1f < (horn - 1f) / 3f, "the drum's pitch swings $drum against the horn's $horn")
         val env = envelopeDb(low, 20f)
@@ -162,5 +162,42 @@ class RotaryTest {
 
         assertEquals(Rotary.hz(1f), Rotary.startHz(Rotary.hz(1f), 0f), 1e-4f, "RAMP 0 does not start at SPEED")
         assertEquals(Rotary.SLOW_HZ, Rotary.startHz(Rotary.hz(1f), 1f), 1e-4f, "RAMP 1 does not start at the chorale")
+    }
+
+    @Test
+    fun `a tap of the ROTARY chip is the Spin-up clip at SPIN 0_7, AMT 1 is the clip, and AMT 0 is a copy`() {
+        // The gate (2026-11-13): Spin-up, SPIN 1 at SPEED 1 with RAMP 1, heard through the rack. SPEED and RAMP are left at
+        // their defaults, each its own neutral, so no AMT moves them; SPIN fades toward none.
+        val character = Treatments.chain("spun").rotary!!
+        assertEquals(setOf("SPIN"), character.keys, "the spun character set more than SPIN")
+        assertEquals(1f, Rotary.MACROS.single { it.name == "SPEED" }.default, "SPEED's default is no longer Spin-up's")
+        assertEquals(1f, Rotary.MACROS.single { it.name == "RAMP" }.default, "RAMP's default is no longer Spin-up's")
+        val clip = mapOf("SPIN" to 1f, "SPEED" to 1f, "RAMP" to 1f)
+        assertContentEquals(FxChain(rotary = clip).process(choir).samples, Treatments.apply("spun", choir, 1f).snip.samples, "AMT 1 is not the Spin-up clip")
+        val tap = 0.7f
+        assertEquals(0.7f, Treatments.chain("spun", tap).rotary!!.getValue("SPIN"), 1e-6f, "a tap is not SPIN 0.7")
+        val heard = FxChain(rotary = mapOf("SPIN" to 0.7f, "SPEED" to 1f, "RAMP" to 1f)).process(choir).samples
+        val got = Treatments.apply("spun", choir, tap).snip.samples
+        assertEquals(heard.size, got.size)
+        var worst = 0f
+        for (i in heard.indices) worst = maxOf(worst, abs(heard[i] - got[i]))
+        assertTrue(worst < 1e-6f, "the tap is not the Spin-up clip at SPIN 0.7: worst sample difference $worst")
+        // How far under the clip the tap swirls: SPIN tops out at 1, so a tap cannot reach it. On the horn's own band, once
+        // it has spun up, the tap's level swing is about four fifths of the clip's in dB (8.4 against 10.5, measured: the
+        // horn's trough is a gain, so its dB do not scale with SPIN) and its pitch swing about three quarters (3.7 percent
+        // peak to peak against 4.9).
+        val tone = sine(8000f, 3f)
+        val late = { spin: Float ->
+            val out = Rotary.process(tone, mapOf("SPIN" to spin))
+            val tail = Snip(out.samples.copyOfRange(2 * rate, 3 * rate), 1, rate)
+            val env = envelopeDb(tail, 5f)
+            Pair(env.max() - env.min(), pitchSwing(tail, 16, 0f))
+        }
+        val (clipLevel, clipPitch) = late(1f)
+        val (tapLevel, tapPitch) = late(0.7f)
+        println("ROTARY tap against the clip, last second at 8 kHz: level swing $tapLevel dB against $clipLevel, pitch swing $tapPitch against $clipPitch")
+        assertTrue(tapLevel in 0.7f * clipLevel..0.9f * clipLevel, "the tap's level swing is $tapLevel dB against the clip's $clipLevel")
+        assertTrue(tapPitch - 1f in 0.65f * (clipPitch - 1f)..0.85f * (clipPitch - 1f), "the tap's pitch swing is $tapPitch against the clip's $clipPitch")
+        assertContentEquals(choir.samples, Treatments.apply("spun", choir, 0f).snip.samples, "AMT 0 is not a copy")
     }
 }

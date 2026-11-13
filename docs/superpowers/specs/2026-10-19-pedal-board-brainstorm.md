@@ -206,7 +206,7 @@ Ranked by the verifiers' worth score, then by cost and certainty. Pedals first (
 
 ### 8. ROTARY (section, saved key `rotary`), worth 4
 
-**Built chip-less, 2026-11-12:** `Rotary.kt`, after TREMOLO and before ECHO; macros SPIN, SPEED and RAMP (see the pedal board spec's Stage 4b note). Its gate decides the chip.
+**Built chip-less, 2026-11-12:** `Rotary.kt`, after TREMOLO and before ECHO; macros SPIN, SPEED and RAMP (see the pedal board spec's Stage 4b note). **Gate passed, 2026-11-13:** the ROTARY chip, character `spun` = {SPIN 1} with SPEED and RAMP at their new defaults of 1 (the owner's Spin-up), for held sounds only; the brainstorm's {SPIN 1.0, RAMP 0.6} candidate was heard and not chosen.
 
 **Chip and key:** ROTARY on the PEDALS row. Recipe `spun` = {SPIN 1.0, RAMP 0.6}. ROTOR is a preset word; ROTARY is clean.
 

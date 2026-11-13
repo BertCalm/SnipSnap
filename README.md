@@ -1302,7 +1302,9 @@ sounds), ROTARY (the spinning speaker: the pad is split at 800 Hz, the top
 half circles with its level and pitch rising and falling together, the low
 half sways more slowly, from the slow chorale at 0.7 Hz to the fast tremolo
 at 7 Hz; RAMP starts it at the chorale and spins it up the way a cabinet
-switched to fast does; chip-less until its listening gate), ECHO (one delay line and
+switched to fast does; the ROTARY pedal, the `spun` character, starts at
+the chorale and spins up to the fast speed at SPIN 0.7 at a tap (AMT 70),
+SPIN 1 at AMT 100; for held sounds), ECHO (one delay line and
 one filter, repeats darkening as they fade; its HEAD macro, turned up,
 feeds the repeats only the note's first 120 ms, so a held note's attack
 comes back as a repeat; the `delayed` character, the DELAY pedal, is its long,

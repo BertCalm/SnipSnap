@@ -48,14 +48,20 @@ import kotlin.math.pow
  * Sits after TREMOLO and before ECHO: after the amp, where a rotary cabinet sits, and in front of the delay, so the
  * repeats carry the swirl.
  *
- * Chip-less until its listening gate (the brainstorm's chip is ROTARY, character `spun`).
+ * For held sounds. At its gate (2026-11-13) the owner heard it on ONSET's snare, JANGLE and CHUG (after their amps)
+ * and the choir: it sounds like a rotary speaker, it is clearly more than TREMOLO plus VIBRATO at the same speed, the
+ * spin-up is heard, it works after CHUG's amp, there are no artifacts, the depth is enough, and it is for held sounds
+ * only. They chose Spin-up for the tap (SPIN 1, SPEED 1, RAMP 1), so SPEED and RAMP default to 1, each its own neutral
+ * (no AMT moves them, as TREMOLO's RATE), and the ROTARY chip's character, `spun`, sets SPIN 1 alone. SPIN is a depth
+ * and fades to none, so a tap (AMT 0.7) swirls at SPIN 0.7 and AMT 1 is the heard clip: a macro tops out at 1, as
+ * REWIND's MIX ([RotaryTest] measures how far under the clip the tap's swing lands).
  */
 object Rotary {
 
     val MACROS: List<MacroSpec> = listOf(
         MacroSpec("SPIN", 0.8f),                    // how much it swirls: none .. the full horn and drum throw
-        MacroSpec("SPEED", 0.5f, neutral = 0.5f),   // SLOW_HZ .. FAST_HZ (log); its own neutral, so AMT never moves it
-        MacroSpec("RAMP", 0f),                      // 0 steady at SPEED .. 1 starts at the chorale and spins up to SPEED
+        MacroSpec("SPEED", 1f, neutral = 1f),       // SLOW_HZ .. FAST_HZ (log); the gate's Spin-up, its own neutral, so AMT never moves it
+        MacroSpec("RAMP", 1f, neutral = 1f),        // 0 steady at SPEED .. 1 starts at the chorale and spins up; the same
     )
 
     /** The horn's speed at SPEED 0 (the chorale) and SPEED 1 (the tremolo), turns a second. */

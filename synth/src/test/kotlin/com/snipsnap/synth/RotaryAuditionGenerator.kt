@@ -22,7 +22,8 @@ object RotaryAuditionGenerator {
     /** clip id -> the chain it adds to the source's (section name -> macros, in rack order). */
     internal val SETTINGS: LinkedHashMap<String, List<Pair<String, Map<String, Float>>>> = linkedMapOf(
         "rot_chorale" to listOf("rotary" to mapOf("SPIN" to 1f, "SPEED" to 0f, "RAMP" to 0f)),
-        "rot_middle" to listOf("rotary" to Rotary.defaults()),
+        // The section's defaults at the gate (2026-11-13), before SPEED and RAMP took the chosen Spin-up's.
+        "rot_middle" to listOf("rotary" to mapOf("SPIN" to 0.8f, "SPEED" to 0.5f, "RAMP" to 0f)),
         "rot_fast" to listOf("rotary" to mapOf("SPIN" to 1f, "SPEED" to 1f, "RAMP" to 0f)),
         "rot_spinup" to listOf("rotary" to mapOf("SPIN" to 1f, "SPEED" to 1f, "RAMP" to 1f)),
         // The brainstorm's `spun` = {SPIN 1.0, RAMP 0.6} at the pad sheet's AMT 70: SPIN 0.7, RAMP 0.42, SPEED its neutral.
