@@ -13,9 +13,11 @@ data class AlloyPatch(
     val velocity: Float = 1f,
     val model: Int = Alloy.MODEL_VERSION,
     val config: AlloyConfig = Alloy.defaultConfigFor(voice),
+    val materialResponse: AlloyMaterialResponse? = null,
 ) : Patch {
     init {
         Patches.validateMacros(this, Alloy.macrosFor(voice))
+        materialResponse?.validateAnchor(config)
         require(midi in Alloy.MIDI_MIN..Alloy.MIDI_MAX) {
             "ALLOY midi out of ${Alloy.MIDI_MIN}..${Alloy.MIDI_MAX}: $midi"
         }
@@ -25,7 +27,8 @@ data class AlloyPatch(
 
     override val engine get() = ENGINE
     override val voiceName get() = voice.name
-    override fun render() = Alloy.render(voice, macros, midi, velocity, config)
+    fun effectiveConfig(): AlloyConfig = materialResponse?.resolve(config, Alloy.settled(voice, macros).getValue("MATERIAL")) ?: config
+    override fun render() = Alloy.render(voice, macros, midi, velocity, effectiveConfig())
     override fun withMacros(macros: Map<String, Float>) = copy(macros = macros)
 
     override fun toJsonValue(): JsonValue.Obj {
@@ -34,6 +37,7 @@ data class AlloyPatch(
         obj["midi"] = JsonValue.Num(midi.toDouble())
         obj["velocity"] = JsonValue.Num(velocity.toDouble())
         obj["config"] = config.toJsonValue()
+        materialResponse?.let { obj["materialResponse"] = it.toJsonValue() }
         return JsonValue.Obj(obj)
     }
 
@@ -54,7 +58,9 @@ data class AlloyPatch(
                 // even after a different voice is selected for newly made patches.
                 val config = obj["config"]?.takeUnless { it is JsonValue.Null }?.let { AlloyConfig.fromJsonValue(it) }
                     ?: Alloy.configFor(voice)
-                AlloyPatch(name, voice, macros, midi, velocity, model, config)
+                val response = obj["materialResponse"]?.takeUnless { it is JsonValue.Null }?.let(AlloyMaterialResponse::fromJsonValue)
+                if (response != null && response.woodLosses.size != config.wood.ratios.size) throw JsonException("alloy material response wood size differs from anchor")
+                AlloyPatch(name, voice, macros, midi, velocity, model, config, response)
             }
 
         fun fromJsonText(text: String): AlloyPatch = fromJsonValue(Json.parse(text)) as AlloyPatch

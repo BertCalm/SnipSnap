@@ -271,3 +271,34 @@ A drum engine for grimy street boom bap from physical models. See [SOOT](SOOT.md
   - phone and MPC hardware playback.
 
   MPC 2 does not pass the round-robin export gate.
+
+## ALLOY (MATERIAL body choices ported from the recovery backup, 2026-11-13)
+
+An attack-driven four-operator phase-modulation instrument with six voices. See [ALLOY](ALLOY.md)
+and [the MATERIAL response](alloy-material/IMPLEMENTATION.md).
+
+This port brings back the optional MATERIAL body response: Rounded Body (BASS), Prism Body (KEY)
+and Velvet Body (SOFT) join the picker and CLI after each voice's four factory presets. Below
+MATERIAL .5 each blends toward an owner-approved body; at .5 and above it is the factory preset
+exactly. The 24 factory presets and every old save are unchanged.
+
+| Gate | Status | Evidence |
+|---|---|---|
+| Six melodic voices | Pass | BASS, KEY, PLUCK, BRASS, STRING and SOFT. |
+| Presets | Pass | 24 factory presets, four per voice, plus the three opt-in body choices. |
+| Playable keygroups | Not yet verified | No ALLOY keygroup has been played on a phone or MPC. |
+| Premade kit | Pass in software | ALLOY starter kit; its A15/A16 pads are settled STRING/SOFT loops. The body choices are not on it. |
+| Chord-tool compatibility | Not yet verified | No chord-tool evidence is recorded for ALLOY. |
+| Articulation: HOLD | Partial | Settled HOLD loops with seam checks; indefinite HOLD on the MPC needs whole-sample looping turned on by hand. STRUM: not applicable, not a picked or thumbed string. |
+| Percussion, drum kits | Not applicable | A melodic engine. |
+| Velocity: rendering | Pass | Velocity is native: it re-renders the strike. A body choice keeps its response at every velocity (`AlloyMaterialResponseTest`). |
+| Body response: rendering and saving | Pass in software | All 36 approved snapshots replay with their PCM24 fingerprints. The response survives edits, user-preset save and promotion, and pad-recipe reopen (`AlloyMaterialResponseTest`, `AlloyMaterialPickerTest`, `AlloyMaterialIntegrationTest`). |
+| Round robin | Not yet verified | ALLOY has no re-strike (`Restrike.canRestrike` is false), so no round robin exists through rendering, saving, playback or export. |
+| Hardware playback | Not verified | No phone or MPC has played the body choices. |
+
+- **Sound character:** the owner heard the role comparison, reported that it was much better and
+  authorized integration of the 24-preset bank ([ALLOY](ALLOY.md)). The body study for Rounded Plug,
+  Long Prism and Velvet Rise was approved on 2026-11-07 as "New body is good", as recorded in the
+  backup. That approval covers those three roles' endpoints and their exact original midpoint only.
+- **Overall: incomplete.** The other fifteen roles have no body response, and keygroups, chord
+  tools, round robin and hardware playback remain open.

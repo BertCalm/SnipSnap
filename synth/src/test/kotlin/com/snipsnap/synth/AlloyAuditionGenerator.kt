@@ -76,7 +76,7 @@ object AlloyAuditionGenerator {
         // consume the same complete recipe, including its base note and velocity.
         val recipe = AlloyPatch(patch?.name ?: title, voice, macros, baseMidi, velocity,
             model = patch?.model ?: Alloy.MODEL_VERSION,
-            config = patch?.config ?: Alloy.defaultConfigFor(voice))
+            config = patch?.config ?: Alloy.defaultConfigFor(voice), materialResponse = patch?.materialResponse)
 
         // A diagnostic can carry a transposed factory recipe without replacing
         // that preset's canonical saved note in patches/ or the preset gallery.
@@ -136,7 +136,7 @@ object AlloyAuditionGenerator {
             val p = Alloy.renderProbe(
                 recipe.voice, recipe.macros, midi = recipe.midi, velocity = recipe.velocity,
                 normalize = false, attackModulation = !c.ablation,
-                config = recipe.config,
+                config = recipe.effectiveConfig(),
             )
             val renderMs = (System.nanoTime() - started) / 1e6
             val loop = Alloy.isLoop(c.macros.getValue("HOLD"))
@@ -177,6 +177,7 @@ object AlloyAuditionGenerator {
                 "velocity" to c.velocity, "macros" to c.macros, "loop" to loop,
                 "baseMidi" to recipe.midi, "effectiveMidi" to c.midi,
                 "model" to recipe.model, "config" to recipe.config.toJsonValue(),
+                "effectiveConfig" to recipe.effectiveConfig().toJsonValue(),
                 "completePatch" to recipe.toJsonValue(),
                 "attackModulation" to !c.ablation, "renderRecipeFile" to "recipes/${c.id}.json",
                 "patchFile" to if (c.ablation) null else "clip-patches/${c.id}.json",
@@ -556,7 +557,7 @@ object AlloyAuditionGenerator {
     }
 
     private fun provenance(roster: List<Case>, root: File): Map<String, Any?> {
-        val sourceNames = listOf("Alloy.kt", "AlloyConfig.kt", "AlloyPatch.kt", "AlloyPresets.kt", "AlloyFactoryRoles.kt", "AlloyContrastPresets.kt")
+        val sourceNames = listOf("Alloy.kt", "AlloyConfig.kt", "AlloyPatch.kt", "AlloyPresets.kt", "AlloyFactoryRoles.kt", "AlloyContrastPresets.kt", "AlloyMaterialResponse.kt", "AlloyMaterialPresets.kt")
         val cwd = File(System.getProperty("user.dir"))
         val synth = if (File(cwd, "src/main/kotlin/com/snipsnap/synth/Alloy.kt").isFile) cwd else File(cwd, "synth")
         val repo = synth.parentFile
@@ -571,7 +572,8 @@ object AlloyAuditionGenerator {
             listOf(cls) + cls.declaredClasses.flatMap { executableClasses(it) }
         // Include the shared stages that shape the rendered and written bytes, not only ALLOY's own classes.
         val compiled = listOf(Alloy::class.java, AlloyConfig::class.java, AlloyPatch::class.java,
-            AlloyPresets::class.java, AlloyFactoryRoles::class.java, AlloyContrastPresets::class.java, AlloyAuditionGenerator::class.java,
+            AlloyPresets::class.java, AlloyFactoryRoles::class.java, AlloyContrastPresets::class.java,
+            AlloyMaterialResponse::class.java, AlloyMaterialPresets::class.java, AlloyAuditionGenerator::class.java,
             SynthKits::class.java, Dsp::class.java, Tide::class.java, Resampler::class.java,
             AuditionLevel::class.java, Loudness::class.java, Snip::class.java, WavWriter::class.java,
             KitAssembler::class.java, KitExporter::class.java, KitStore::class.java,
@@ -608,6 +610,7 @@ object AlloyAuditionGenerator {
         "baseMidi" to c.recipe.midi, "effectiveMidi" to c.midi,
         "velocity" to c.recipe.velocity, "attackModulation" to !c.ablation,
         "config" to Json.write(c.recipe.config.toJsonValue()),
+        "effectiveConfig" to Json.write(c.recipe.effectiveConfig().toJsonValue()),
         "patch" to c.recipe.toJsonValue(), "renderRecipeFile" to "recipes/${c.id}.json",
         "patchFile" to if (c.ablation) null else "clip-patches/${c.id}.json",
     )
