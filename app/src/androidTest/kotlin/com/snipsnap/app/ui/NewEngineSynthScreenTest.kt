@@ -6,7 +6,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.hasContentDescription
+import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -58,13 +62,17 @@ class NewEngineSynthScreenTest : ComposeScreenTest() {
         button("ENGINE $engine. CHOOSE ENGINE").assertExists()
     }
 
+    /** A macro slider by its label. A voice chip can share the name (SOOT's COIL voice and its snare's COIL). */
+    private fun control(label: String) = compose.onNode(
+        hasContentDescription(label) and SemanticsMatcher.keyIsDefined(SemanticsProperties.ProgressBarRangeInfo))
+
     private fun adjust(label: String, value: Float) {
-        button(label).performSemanticsAction(SemanticsActions.SetProgress) { it(value) }
+        control(label).performSemanticsAction(SemanticsActions.SetProgress) { it(value) }
         pump()
     }
 
     private fun progress(label: String) =
-        button(label).fetchSemanticsNode().config[SemanticsProperties.ProgressBarRangeInfo].current
+        control(label).fetchSemanticsNode().config[SemanticsProperties.ProgressBarRangeInfo].current
 
     private fun showsLoop() = compose.onAllNodesWithText("LOOP", useUnmergedTree = true)
         .fetchSemanticsNodes().isNotEmpty()
@@ -108,7 +116,9 @@ class NewEngineSynthScreenTest : ComposeScreenTest() {
     fun sootOpensItsSnareAtThePickAndKeepsAnEditAndItsModel() {
         show("SOOT", "SNARE")
         button("SNARE").assertIsSelected()
-        for (label in listOf("TUNE", "COIL", "EDGE", "BENCH", "GRIME")) button(label).assertExists()
+        for (label in listOf("TUNE", "COIL", "EDGE", "BENCH", "GRIME")) control(label).assertExists()
+        // COIL is both a voice chip and the snare's spring send: two nodes, one of them the slider.
+        compose.onAllNodesWithContentDescription("COIL").assertCountEquals(2)
         assertEquals(1f, progress("EDGE"), .0001f)
         adjust("COIL", .8f)
         compose.runOnIdle { generation++ }
