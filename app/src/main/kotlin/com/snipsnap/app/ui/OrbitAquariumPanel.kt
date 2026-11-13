@@ -47,7 +47,7 @@ internal fun OrbitAquariumPanel(set: OrbitSet, route: OrbitAquarium.Route, schem
         TapeText(when {
             !auditionUp -> "TAP STREAM UNAVAILABLE"
             auditionFaulted -> "TAP FX FAULT · RESET TAIL OR RETRY A TAP"
-            auditionPending -> "TAP FX WAITING TO QUEUE SETTINGS…"
+            auditionPending -> "Tap FX waiting to queue settings…"
             else -> "TAP STREAM READY"
         }, TapeType.pixelSmall, if (!auditionUp || auditionFaulted) scheme.warn.tape else scheme.ink2.tape,
             maxLines = Int.MAX_VALUE)

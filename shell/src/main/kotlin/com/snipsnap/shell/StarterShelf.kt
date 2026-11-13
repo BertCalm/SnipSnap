@@ -41,7 +41,7 @@ object StarterShelf {
         ),
         Group(
             Copy.STARTER_HEADING_VOICES,
-            listOf(StarterKits.CONFLUENCE_ID, StarterKits.CONFLUENCE_VOICES_ID, "murmur", "murmur-selected"),
+            listOf(StarterKits.CONFLUENCE_ID, StarterKits.CONFLUENCE_VOICES_ID, "murmur", "murmur-selected", "murmur-kept"),
         ),
         Group(
             Copy.STARTER_HEADING_METAL,

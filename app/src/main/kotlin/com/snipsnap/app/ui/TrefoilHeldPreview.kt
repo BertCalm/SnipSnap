@@ -97,12 +97,12 @@ internal fun TrefoilPerformanceControls(
         )
         TapeText("ORDERED ORBIT · NUDGE IS FIXED AT ZERO", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
         TapeText("STEADY HELD PREVIEW · LIFT TO RELEASE", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
-        TapeText("SEND AND SPREAD MAKE FINITE PADS. MAKE INSTRUMENT SUSTAINS.", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 3)
+        TapeText("Send and spread make finite pads. MAKE INSTRUMENT sustains.", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 3)
     } else {
         MacroSlider("CONTACT", (patch.activeSeconds - .05f) / (patch.seconds - .15f), fill, scheme,
             onValueChange = { value -> onEdit { it.copy(activeSeconds = (.05f + value * (it.seconds - .15f)).coerceIn(.05f, it.seconds - .1f)) } },
             readout = "%.2fs".format(java.util.Locale.ROOT, patch.activeSeconds))
-        TapeText("ROOT IS THE REFERENCE NOTE. CONTACT CONTROLS THE FINITE GESTURE.",
+        TapeText("Root is the reference note. Contact controls the finite gesture.",
             TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
     }
 }

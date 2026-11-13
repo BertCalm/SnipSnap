@@ -260,7 +260,7 @@ fun StackTakesScreen(
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         StackHeader(backLabel, busy, onBack, stackTitle(slot), scheme)
         TapeText(
-            "PICK UP TO THREE PRIOR VERSIONS AS SOFT ZONES UNDER LIVE. FIRST PICKED IS SOFTEST; ▲ MOVES ONE SOFTER.",
+            "Pick up to three prior VERSIONS as soft zones under live. First picked is softest; ▲ moves one softer.",
             TapeType.pixelSmall,
             scheme.ink2.tape,
             Modifier.fillMaxWidth().padding(horizontal = 4.dp),

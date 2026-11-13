@@ -93,7 +93,7 @@ class CausticSynthScreenTest : ComposeScreenTest() {
         .config[SemanticsProperties.ProgressBarRangeInfo].current
 
     private fun assertFiniteControls() {
-        compose.onNodeWithText("ORIGINAL FINITE NOTE · MOVE HOLD OR MOTION TO EXPLORE FURTHER.").assertExists()
+        compose.onNodeWithText("Original finite note · move hold or motion to explore further.").assertExists()
         compose.onNodeWithContentDescription("HOLD", useUnmergedTree = true).assertIsEnabled()
         compose.onNodeWithContentDescription("MOTION", useUnmergedTree = true).assertIsEnabled()
         val hold = compose.onNodeWithContentDescription("HOLD", useUnmergedTree = true).fetchSemanticsNode()
@@ -138,7 +138,7 @@ class CausticSynthScreenTest : ComposeScreenTest() {
         compose.onNodeWithContentDescription("RELEASE").assertIsEnabled()
         compose.onNodeWithContentDescription("ATTACK").assertDoesNotExist()
         compose.onNodeWithContentDescription("MAKE").assertIsEnabled()
-        compose.onNodeWithText("KEEPS THE ARRIVAL, THEN REPEATS THE VESSEL WHILE HELD. KEY TOUCH CHANGES VOLUME.").assertExists()
+        compose.onNodeWithText("Keeps the arrival, then repeats the vessel while held. Key touch changes volume.").assertExists()
         waitFor("working source expanded for keys") { SynthDrafts.read(settings).any { it is CausticPatch && it.model == 2 } }
         assertEquals(1, original.model)
         val instruments = File(root, KitShelf.INSTRUMENTS_DIR)

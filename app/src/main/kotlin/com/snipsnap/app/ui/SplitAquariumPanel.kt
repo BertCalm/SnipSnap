@@ -47,7 +47,7 @@ internal fun SplitAquariumPanel(settings: SplitAquarium.Settings, route: SplitAq
                 refused -> "SPLIT FX SETTINGS UNREADABLE · USING DRY"
                 !streamUp -> "NO SPLIT STREAM · PLAY CAN RETRY"
                 faulted -> "AQUARIUM FAULT · RESET TAIL OR RETRY PLAY"
-                pending -> "WAITING TO QUEUE SETTINGS…"
+                pending -> "Waiting to queue settings…"
                 !settings.fromKit -> "KIT FX OFF"
                 !route.sound.enabled -> "DRY · KIT PERFORMANCE IS BYPASSED"
                 route.sound.settings.isBypass -> "DRY · ALL SIX EFFECT MIXES ARE ZERO"

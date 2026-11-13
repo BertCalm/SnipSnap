@@ -2649,7 +2649,7 @@ private fun ColumnScope.BeatSendOut(
         )
     }
     TapeText(
-        "SAME BREAK, FOUR FEELS — ALL FOUR DUB TO THE MPC'S CLIP LIST.",
+        "Same break, four feels — all four dub to the MPC's clip list.",
         TapeType.pixelSmall,
         scheme.ink2.tape,
         Modifier.fillMaxWidth(),

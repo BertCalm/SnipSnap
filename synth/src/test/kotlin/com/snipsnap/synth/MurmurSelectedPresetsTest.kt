@@ -22,8 +22,8 @@ class MurmurSelectedPresetsTest {
         val rows = Json.parse(resource("manifest.json")).obj().getValue("clips").arr().map { it.obj() }
         val selected = MurmurPresets.selected()
         assertEquals(6, selected.size)
-        assertEquals(MurmurPresets.original() + selected, MurmurPresets.all())
-        assertEquals(42, MurmurPresets.all().map { it.name }.toSet().size)
+        assertEquals(MurmurPresets.original() + selected, MurmurPresets.all().take(42))
+        assertEquals(45, MurmurPresets.all().map { it.name }.toSet().size)
         assertEquals(rows.map { it.getValue("name").str() }, selected.map { it.name })
         for ((row, patch) in rows.zip(selected)) {
             val expected = MurmurPatch.fromJsonText(resource(row.getValue("recipePath").str()))

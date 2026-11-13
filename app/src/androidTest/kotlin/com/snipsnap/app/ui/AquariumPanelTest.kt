@@ -425,7 +425,7 @@ class AquariumPanelTest : ComposeScreenTest() {
         assertEquals(selected, preview.recipe)
         assertEquals("PREVIEW must not change live or hidden kit files", before, files(fixture.entry.dir))
         assertNull(updated)
-        compose.onNodeWithText("PREVIEW PLAYS THE MAIN SAMPLE. KEEP UPDATES EVERY VELOCITY LAYER.", useUnmergedTree = true).assertExists()
+        compose.onNodeWithText("Preview plays the main sample. Keep updates every velocity layer.", useUnmergedTree = true).assertExists()
 
         waitUntilEnabled("aquarium-keep")
         activate("aquarium-keep")

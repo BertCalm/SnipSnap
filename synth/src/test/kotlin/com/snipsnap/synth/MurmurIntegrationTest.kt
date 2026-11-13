@@ -207,7 +207,7 @@ class MurmurIntegrationTest {
             refuses("macro $name out of 0..1: $value", "$name $value") { source.copy(macros = mapOf(name to value)) }
         }
         val config = source.config
-        for (model in listOf(0, 4)) {
+        for (model in listOf(0, 5)) {
             refuses("unsupported Murmur model $model", "model $model") { config.copy(model = model) }
             val invalid = JsonValue.Obj(LinkedHashMap(source.toJsonValue().entries.getValue("config").obj()).also {
                 it["model"] = JsonValue.Num(model.toDouble())
@@ -267,14 +267,14 @@ class MurmurIntegrationTest {
     }
 
     @Test
-    fun `the original bank and six selected recipes are discoverable through shared rosters and preserve pitched routing`() {
+    fun `the preserved bank and all selected recipes are discoverable through shared rosters and preserve pitched routing`() {
         val presets = MurmurPresets.all()
         val registered = Presets.all().filter { it.engine == MurmurPatch.ENGINE }
-        assertEquals(42, registered.size, "the global roster must expose the original bank and selected settings")
+        assertEquals(45, registered.size, "the global roster must retain the old forty two and append three kept PLUCK aliases")
         assertEquals(presets, registered, "the shared roster must retain every authored recipe and its order")
         assertEquals(presets.size, presets.map { it.name }.distinct().size)
         val expectedSizes = linkedMapOf(
-            MurmurVoice.BASS to 8, MurmurVoice.KEY to 8, MurmurVoice.PLUCK to 4,
+            MurmurVoice.BASS to 8, MurmurVoice.KEY to 8, MurmurVoice.PLUCK to 7,
             MurmurVoice.LEAD to 8, MurmurVoice.CHOIR to 8, MurmurVoice.METAL to 6,
         )
         assertEquals(MurmurVoice.entries.toSet(), expectedSizes.keys)

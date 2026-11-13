@@ -24,7 +24,15 @@ object SootDubCandidateGenerator {
         val md = MessageDigest.getInstance("SHA-256")
         for (g in Genre.entries) { val x = SootGenreKits.phrase(g, 1f, 0).samples; val bb = java.nio.ByteBuffer.allocate(x.size * 4); for (s in x) bb.putFloat(s); md.update(bb.array()) }
         File(dir, "phrases.sha").writeText(md.digest().joinToString("") { "%02x".format(it) })
-        write("current", SootGenreKits.phrase(Genre.DUB, 1f, 0).samples)
+        // The version-1 one-drop, the owner heard it as incoherent (its wetness .7, the rim's send .85).
+        val v1 = bars(
+            { b -> at(b, 0, 1f, 8) },
+            { b -> at(b, 1, .9f, 8) + (if (b == 1 || b == 3) at(b, 1, .5f, 14) else emptyList()) },
+            { b -> at(b, 2, .5f, 2, 6, 10, 14) },
+            { b -> if (b == 1) at(b, 8, .6f, 15) else emptyList() },
+            { b -> if (b == 3) at(b, 10, 1f, 12) else emptyList() },
+        )
+        write("current", SootGenreKits.phrase(Genre.DUB, 1f, 0, v1, .7, mapOf(1 to .85)).samples)
         // A: one-drop, steady. Kick and rim on 3; hats every eighth, offbeats leaning; a lighter spring; the throw only at the turn.
         val a = bars(
             { b -> at(b, 0, 1f, 8) },

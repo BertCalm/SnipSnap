@@ -21,6 +21,7 @@ object SynthCaches {
         Apsis.clearPreparationCache()
         ApsisPopulation.clearPreparationCache()
         Ballast.clearSourceCache()
+        MurmurSelectedInstrumentSource.clearCache()
         Cairn.clearMotionCache()
         LatticeMotion.clearCache()
         CausticInstrument.clearGeometryCache()
