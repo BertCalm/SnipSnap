@@ -16,12 +16,18 @@ privately now live in one place (`KitStrikes`) for both families.
 The [engineering specification](superpowers/specs/2026-11-12-cypher-hiphop-drum-kits.md) has the six kits'
 design, the Python prototype's numbers, and what changed while building.
 
-**Status: round 2 built; TRAP and DRILL approved, the other four not heard.** The owner chose the family on
-2026-11-12 ("I want to build this"), asked for the sub as an editable THUMP voice, chose TRAP and DRILL
-first, and on hearing round 1b said "Ok, sounds good. Make sure we clear the approval gates." All six kits
-are on the shelf, with their velocity and round-robin grid proven through save, playback, MPC 3, SFZ and
-DecentSampler export in software. Nothing has been played on a phone or an MPC. The
-[listening page](https://claude.ai/artifact/ARC6e7nxteRTuAmiocntHG) is private to the owner's account.
+**Status: round 2 heard; all six kits approved (2026-11-12).** The owner chose the family on 2026-11-12
+("I want to build this"), asked for the sub as an editable THUMP voice, chose TRAP and DRILL first, on
+hearing round 1b said "Ok, sounds good. Make sure we clear the approval gates," and on hearing round 2 said
+"All four pass." All six kits are on the shelf, with their velocity and round-robin grid proven through
+save, playback, MPC 3, SFZ and DecentSampler export in software. Nothing has been played on a phone or an
+MPC. The [listening page](https://claude.ai/artifact/ARC6e7nxteRTuAmiocntHG) is private to the owner's
+account.
+
+**Round 2 heard (2026-11-12): approved.** "All four pass." BACKROOM, LOWRIDER, DUST and FLINT join TRAP and
+DRILL as the accepted baseline at kit version 3 (`CypherKits.VERSION`). This is a listen to the page's
+renders, not evidence of phone or MPC playback. The same day the owner kept both Michigan kits, CYPHER
+FLINT and SCUFF ("I'll keep all kits"); the overlap is a choice, not an oversight.
 
 **Round 1b heard (2026-11-12): approved.** "Ok, sounds good." Preserve TRAP's and DRILL's hard first takes
 as the accepted baseline; round 2 changed only their soft zones' length (the sub's decay no longer follows
@@ -39,7 +45,7 @@ was said about the other thirty-one pads, which is not the same as approval.
 prints only the snare and clap, and the kick and hats stay dry, as they are on their own pads. The pattern is
 the drill shape: snare on three and the and of four, one eighth-triplet clap pickup before each, kick on one
 and the and of two, hats in straight eighths. `CypherTest` checks the gate is keyed only by the printed
-notes and shuts between them. Not heard.
+notes and shuts between them. Heard and approved with round 2.
 
 ## THUMP SUB
 
@@ -49,8 +55,8 @@ CLICK. No PUNCH: the clipper is the only shaper it wants. The pitch law is one f
 into phase, never a retune of a ringing resonator, so a slide cannot click. It reads velocity (drive, click and
 the onset settle follow it; the root and the length never move) and takes (four takes deal settle, click, drive, slide start
 and glide time out so no two share a setting; the root never moves). It re-strikes through `Restrike`, so a
-pad of it gets fresh takes from the app's robin. No factory presets until the owner's listening verdict
-(`PatchTypes.PROTOTYPE_VOICES`, like SPARK); the kits carry their own authored settings.
+pad of it gets fresh takes from the app's robin. Eight factory presets, the sub recipes of the approved kits
+(`ThumpPresets`); the kits carry their own authored settings, so a later preset edit cannot move a kit.
 
 Why it is new: THUMP's kick only falls onto its root in the first tens of milliseconds and its tail is capped
 so it keeps reading as a kick; FATHOM's GLIDE slides into the note from below; the SUB pedal is an octave-down
@@ -129,8 +135,8 @@ few milliseconds; the kit's timing is sample-accurate).
 
 ## Limits, stated plainly
 
-- **Not heard.** Round 1 waits for the owner. Every control value is a shape value.
-- **Four of six kits are not heard.** BACKROOM, LOWRIDER, DUST and FLINT wait for the owner.
+- **Heard on the listening page only.** All six kits are approved by ear from the page's MP3 renders.
+  Every control value was chosen by shape and accepted by ear; none was measured against a reference drum.
 - **MPC 3, SFZ and DecentSampler keep the round robin.** MPC 2's projection keeps only the first take of
   each zone and is not written. No MPC or other sampler has loaded these kits.
 - **No hardware.** Nothing was played on a phone or an MPC.

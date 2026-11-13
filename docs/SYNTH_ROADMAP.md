@@ -1,4 +1,4 @@
-> CYPHER kits (round 2 built 2026-11-12; TRAP and DRILL approved, four not heard): six hip-hop drum kits in
+> CYPHER kits (round 2 heard 2026-11-12; all six kits approved): six hip-hop drum kits in
 > the GATECRASH shape over THUMP's new SUB voice, a sub drum whose pitch holds its root and then slides to
 > another note. Velocity × round robin is proven through save, playback and MPC 3, SFZ and DecentSampler
 > export in software. No phone or MPC hardware audition; MPC 2 keeps one take per zone. See [CYPHER](CYPHER.md).
