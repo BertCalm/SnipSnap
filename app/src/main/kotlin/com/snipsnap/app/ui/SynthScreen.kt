@@ -3979,7 +3979,7 @@ fun SynthScreen(
                     done = heldSheet.holdDone,
                     total = heldSheet.holdTotal,
                     previewing = heldSheet.holdPreviewing,
-                    heldPreview = if ((engine == Engine.FLOCK && !heldSheet.holdFlockTouchLayers) || engine == Engine.OVERLAP || engine == Engine.OBBLIGATO) sampleHeldPreview else null,
+                    heldPreview = if ((engine == Engine.FLOCK && !heldSheet.holdFlockTouchLayers) || engine == Engine.OVERLAP || engine == Engine.OBBLIGATO || engine == Engine.TREFOIL) sampleHeldPreview else null,
                     fillColor = classColor,
                     scheme = scheme,
                     onAttack = { heldSheet.holdAttack = it },
