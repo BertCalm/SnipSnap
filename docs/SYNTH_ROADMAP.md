@@ -3621,6 +3621,13 @@ deterministic objects correlate 0.93 to 0.99; random draws are another realisati
 owner waived the roll gate. See [CLUTTER](CLUTTER.md) and the gates entry. The four genre kits go on the shelf
 at round 2; the picker entry waits for a session with an SDK.
 
+### SCUFF, round 5 (2026-11-14)
+
+On SYNTH's engine picker, mirroring SOOT arm for arm plus the native-factory path for its presets (a kit's pad
+loads whole, with its take and model); `EngineCatalog` under DRUMS, after ETCH; both READMEs count 87; an on-device test
+beside SOOT's in `NewEngineSynthScreenTest` (CI's emulator runs it). Open: hardware playback (MPC 2 round robin is not
+applicable since 2026-11-14, a format limit). See [SCUFF](SCUFF.md).
+
 ### CLUTTER, round 2 (2026-11-14)
 
 The four accepted genre kits on the shelf: `ClutterKits` (KITCHEN LO-FI 82 BPM, STREET BUCKET 120, JUNK BOOM BAP 90,
