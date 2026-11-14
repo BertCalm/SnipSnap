@@ -12,6 +12,7 @@ import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.SemanticsMatcher
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.snipsnap.shell.UserPresets
@@ -80,6 +81,18 @@ class OsteriaSynthScreenTest : ComposeScreenTest() {
         pump(16)
     }
 
+    /** User-preset chips carry their name on the OnClick label, not a content description (as in WICK's test). */
+    private fun yourPreset(name: String) = SemanticsMatcher("YOUR PRESET $name") {
+        it.config.getOrNull(SemanticsActions.OnClick)?.label == "YOUR PRESET $name"
+    }
+
+    private fun activateUserPreset(name: String) {
+        val action = compose.onNode(yourPreset(name), useUnmergedTree = true).fetchSemanticsNode()
+            .config.getOrNull(SemanticsActions.OnClick)!!.action!!
+        compose.runOnIdle { assertTrue(action.invoke()) }
+        pump(16)
+    }
+
     /** The sheet has two CANCEL targets (its dimmed backdrop and its button); press the button, drawn last. */
     private fun cancelSheet() {
         val action = requireNotNull(compose.onAllNodes(hasContentDescription("CANCEL") and hasClickAction())
@@ -145,9 +158,9 @@ class OsteriaSynthScreenTest : ComposeScreenTest() {
             button(label).assertIsSelected()
         }
         waitFor("the imported bowed preset") {
-            compose.onAllNodesWithContentDescription("YOUR PRESET IMPORTED BOW").fetchSemanticsNodes().isNotEmpty()
+            compose.onAllNodes(yourPreset("IMPORTED BOW"), useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
         }
-        click("YOUR PRESET IMPORTED BOW")
+        activateUserPreset("IMPORTED BOW")
         button("BOWED").assertIsSelected()
         assertEquals((55 - 36) / 48f, sliderValue("ROOT"), .0001f)
         assertEquals(.43f, sliderValue("VELOCITY"), .0001f)
@@ -161,7 +174,7 @@ class OsteriaSynthScreenTest : ComposeScreenTest() {
         show(shelfRoot())
         chooseOsteria()
         button("NOTE").assertIsSelected()
-        assertReadsInFull("OSTERIA")
+        assertReadsInFull("OSTERIA ▾")
         compose.onNodeWithText("ONE NOTE · FOUR EVOLVING LAYERS").assertExists()
         for (name in listOf("Anchored Note", "Evolving Note", "Lingering Color")) {
             compose.onNodeWithContentDescription("PRESET $name").assertExists()
@@ -193,9 +206,9 @@ class OsteriaSynthScreenTest : ComposeScreenTest() {
         show(root)
         chooseOsteria()
         waitFor("the saved Osteria preset") {
-            compose.onAllNodesWithContentDescription("YOUR PRESET CUSTOM NOTE").fetchSemanticsNodes().isNotEmpty()
+            compose.onAllNodes(yourPreset("CUSTOM NOTE"), useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
         }
-        click("YOUR PRESET CUSTOM NOTE")
+        activateUserPreset("CUSTOM NOTE")
         dial("ROOT", .625f) // MIDI 66 within the explicit 36..84 register.
         dial("VELOCITY", .35f)
         dial("ATTACK", .75f)
@@ -225,7 +238,7 @@ class OsteriaSynthScreenTest : ComposeScreenTest() {
         assertEquals(.12f, saved.macros.getValue("ROOM"), .0001f)
         assertEquals(.3f, saved.macros.getValue("HOLD"), .0001f)
         assertEquals(original.config.copy(attackSeconds = .005 * 200.0.pow(.75), releaseSeconds = .02 * 47.5.pow(.25)), saved.config)
-        click("YOUR PRESET CUSTOM NOTE")
+        activateUserPreset("CUSTOM NOTE")
         assertEquals(.65f, sliderValue("VELOCITY"), .0001f)
         assertEquals((57 - 36) / 48f, sliderValue("ROOT"), .0001f)
     }
@@ -242,9 +255,9 @@ class OsteriaSynthScreenTest : ComposeScreenTest() {
         chooseOsteria()
         click("PLUCK")
         waitFor("the saved strum") {
-            compose.onAllNodesWithContentDescription("YOUR PRESET SAVED STRUM").fetchSemanticsNodes().isNotEmpty()
+            compose.onAllNodes(yourPreset("SAVED STRUM"), useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
         }
-        click("YOUR PRESET SAVED STRUM")
+        activateUserPreset("SAVED STRUM")
         compose.onNodeWithText("ONE STRIKE PER TONE · FINITE STRUM").assertExists()
         compose.onNodeWithContentDescription("MAKE INSTRUMENT").assertDoesNotExist()
         dial("HOLD", .5f)
@@ -273,9 +286,9 @@ class OsteriaSynthScreenTest : ComposeScreenTest() {
         show(root)
         chooseOsteria()
         waitFor("the legacy preset") {
-            compose.onAllNodesWithContentDescription("YOUR PRESET OLD PHRASE").fetchSemanticsNodes().isNotEmpty()
+            compose.onAllNodes(yourPreset("OLD PHRASE"), useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
         }
-        click("YOUR PRESET OLD PHRASE")
+        activateUserPreset("OLD PHRASE")
         compose.onNodeWithText("LEGACY QUARTET PHRASE").assertExists()
         compose.onNodeWithText("Legacy articulation is fixed.").assertExists()
         compose.onNodeWithContentDescription("ATTACK").assertDoesNotExist()
