@@ -12,6 +12,12 @@ import kotlin.test.assertTrue
  * both depend on the second half.
  */
 class DeterminismTest {
+    @Test fun `DRUMLINE keeps section and take identities deterministic`() {
+        for (voice in listOf(DrumlineVoice.SNARE, DrumlineVoice.CRASH, DrumlineVoice.ROLL)) {
+            assertContentEquals(Drumline.render(voice, take = 2).samples, Drumline.render(voice, take = 2).samples)
+        }
+    }
+
     @Test
     fun `TEMPEST retains both saved finite strikes and seeded noise`() {
         for (voice in TempestVoice.entries) {

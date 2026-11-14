@@ -3605,3 +3605,7 @@ Measured against the Python: no brightness bias across the 22 objects (0.06 dB a
 deterministic objects correlate 0.93 to 0.99; random draws are another realisation of the same law. The
 owner waived the roll gate. See [CLUTTER](CLUTTER.md) and the gates entry. The four genre kits go on the shelf
 at round 2; the picker entry waits for a session with an SDK.
+
+### DRUMLINE native battery
+
+Model 1 ports the preferred cymbal mechanisms and independent player sections into native synthesis. FIELD and STREET CADENCE have different source tuning, damping, section sizes and scored articulations, each a 3 × 3 velocity/take grid with editable versioned recipes. Implementation and gate evidence: [DRUMLINE](DRUMLINE.md). Native listening and phone/MPC hardware remain open.

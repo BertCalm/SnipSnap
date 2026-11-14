@@ -628,3 +628,13 @@ tasks.register<JavaExec>("generateMurmurRoundRobinAudition") {
     maxHeapSize = "768m"
     args("${rootDir}/testkit/murmur-rr-v2-audition")
 }
+
+tasks.register<JavaExec>("generateDrumlineKit") {
+    group = "distribution"
+    description = "Render and verify both drumline batteries through saving, playback and MPC export."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.DrumlineKitGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "1g"
+    args(providers.gradleProperty("drumlineOutput").orNull ?: "${rootDir}/testkit/drumline-kit")
+}
