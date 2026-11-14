@@ -250,6 +250,49 @@ if REF and os.path.isdir(REF):
     MANIFEST["cymbal_real_takes_db"] = [ms.take_distance_db(a, b), full_distance_db(a, b)]
     print("cymbal refs", MANIFEST["cymbal_refs"], MANIFEST["cymbal_real_takes_db"], flush=True)
 
+# ------------------------------------------------------------------------------ brushes against their recordings
+# Round 0c: the owner heard round 0b's sweeps as "hail hitting a roof". The sweep and the brush roll, dry, then the CC0
+# stir or flutter they were fitted to (Karoryfer Swirly Drums, main mic). Page only, never the repository.
+
+STIRS = os.environ.get("EMBER_STIR_DIR")
+MANIFEST["brush_refs"] = []
+if STIRS and os.path.isdir(STIRS):
+    import warnings
+    from scipy import signal as _sig, stats as _st
+    from scipy.io import wavfile as _wf
+
+    def stir(name, at, secs):
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            _, x = _wf.read(os.path.join(STIRS, name + ".wav"))
+        x = x.astype(float)[int(at * RATE):int((at + secs) * RATE)]
+        f = int(0.02 * RATE)
+        x[:f] *= np.linspace(0, 1, f)
+        x[-f:] *= np.linspace(1, 0, f)
+        return x / np.max(np.abs(x)) * .89
+
+    def kurt(x):
+        h = _sig.sosfilt(_sig.butter(4, 2000 / (RATE / 2), "high", output="sos"), x)
+        n = int(0.02 * RATE)
+        k = [_st.kurtosis(h[i:i + n], fisher=False) for i in range(0, len(h) - n, n)
+             if np.sqrt(np.mean(h[i:i + n] ** 2)) > 1e-3 * np.max(np.abs(h))]
+        return round(float(np.median(k)), 1)
+
+    dry = {"DISTANCE": 0.0, "WARMTH": 0.0}
+    for voice, macros, vel, name, note in (
+            ("BRUSH_SWEEP", {"SPEED": .1}, .3, "stir_dl1_rr2", "a soft, slow sweep, then the softest recorded stir"),
+            ("BRUSH_SWEEP", {"SPEED": .5}, 1.0, "stir_dl4_rr2", "a full sweep, then the loudest recorded stir"),
+            ("BRUSH_ROLL", {}, 1.0, "../snare_flutter/flutter_rr3", "the brush roll, then a recorded flutter")):
+        y = e.render(voice, dict(dry, **macros), vel)
+        x = stir(name, 1.0, 2.5)
+        item = save("brushes", f"{voice.lower()}-{name.split('/')[-1]}", chain([y, x], 0.5),
+                    f"{voice} ({note}), EMBER dry first.",
+                    {"kurt": kurt(y), "rec_kurt": kurt(x), "centroid_hz": ms.centroid(y), "rec_centroid_hz": ms.centroid(x)},
+                    {"voice": voice})
+        MANIFEST["brush_refs"].append({"voice": voice, "recording": name, "kurt": item["metrics"]["kurt"],
+                                       "rec_kurt": item["metrics"]["rec_kurt"]})
+    print("brush refs", MANIFEST["brush_refs"], flush=True)
+
 # ------------------------------------------------------------------------------ control sweeps
 
 activity = {}

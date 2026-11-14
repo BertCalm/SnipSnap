@@ -14,6 +14,8 @@ python3 prototype/ember/build_page.py OUT           # OUT/index.html, the listen
 - `fit_ember_cymbals.py`, `cymbals.json`, `NOTICE.txt`: round 0b. The cymbals and hats fitted to CC0 recordings
   (Virtuosity Drums) with BREAKER's fitter; only the fitted numbers are here. To show each cymbal beside its recording on
   the page, decode the recordings listed in NOTICE.txt and run the generator with `EMBER_REF_WAVS=<dir>`.
+- `fit_ember_brushes.py`, `brushes.json`: round 0c. The brush sweep and brush roll fitted to CC0 stirs and flutters
+  (Karoryfer Swirly Drums); NOTICE.txt lists them. `EMBER_STIR_DIR=<.../Samples/snare_stir>` adds the comparisons to the page.
 - `measures.py`: CLUTTER's house distance measures, copied so the numbers mean the same thing.
 - `gen_audition.py`, `build_page.py`: the listening page (CLUTTER's layout and pad grid).
 

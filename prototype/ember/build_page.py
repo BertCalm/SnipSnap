@@ -31,6 +31,7 @@ LABELS = {
     "lo_vs_hi_db": ("0 VS 1", "{:.1f} dB"),
     "vs_recording_db": ("VS RECORDING", "{:.1f} dB"), "vs_recording_whole_db": ("WHOLE", "{:.1f} dB"),
     "rec_centroid_hz": ("REC CENTROID", "{:.0f} Hz"),
+    "kurt": ("CLICKINESS", "{:.1f}"), "rec_kurt": ("REC", "{:.1f}"),
 }
 
 
@@ -101,6 +102,20 @@ if any(s["id"] == "cymbals" for s in M["sections"]):
     <ul class="clips">{''.join(clip_html(c) for c in section('cymbals')['clips'])}</ul>
   </section>"""
 
+brush_card = ""
+if any(s["id"] == "brushes" for s in M["sections"]):
+    brush_card = f"""
+  <section class="card" id="brushes">
+    <h2>Brush sweeps against real stirs (round 0c)</h2>
+    <p class="intro">You heard the sweeps as hail hitting a roof. They were thousands of separate tiny impulses, each striking the head
+    and the wires: a rain of tiny drum hits. A real sweep is many wires sliding at once, which sums to a smooth hiss. The sweep and the brush
+    roll are now shaped noise fitted to CC0 recordings of brush stirs and flutters on a snare: their spectrum at four dynamic levels,
+    how each band brightens as the stroke speeds up, and how much the level wobbles. Each clip is EMBER dry, then the recording.
+    CLICKINESS is the median kurtosis of the top half (3 is a smooth hiss; round 0b's sweep measured 5.7 to 7.8).</p>
+    <p class="ask"><span class="tag">LISTEN FOR</span>Is it a brush on a snare now? Is anything still ticking like hail?</p>
+    <ul class="clips">{''.join(clip_html(c) for c in section('brushes')['clips'])}</ul>
+  </section>"""
+
 base_sections = []
 for sid, title, intro, ask in (
     ("velocity", "Velocity: the stroke, not the volume", "Soft, medium, hard on each EMBER pad, each peak-matched so only the stroke differs. "
@@ -165,6 +180,7 @@ LEDGER = [
     ("Wires, rivets, hat plates, jingles lift past a threshold", "literal, one-way", "a threshold on the body's own motion schedules impacts; the parts never push back on the body"),
     ("The cymbals and hats are the recorded cymbals' own resonances", "measured", "fitted to CC0 recordings (Virtuosity Drums) with BREAKER's fitter; the split into beating pairs is shape, below the fit's 5.4 Hz resolution"),
     ("Round 0's cymbals sounded like sheet metal", "heard", "the owner, 2026-11-14; replaced in round 0b"),
+    ("Round 0b's sweeps sounded like hail hitting a roof", "heard", "the owner, 2026-11-14; replaced in round 0c by noise fitted to CC0 stirs and flutters (Karoryfer Swirly Drums)"),
     ("The bow locks to one cymbal mode", "analogy", "a stick-slip-shaped drive at one mode; the Kotlin can use Modes.Friction for the real solve"),
     ("The club and the 1962 chain", "analogy", "a synthetic room response (geometry-shaped early reflections, two-band tail) and a ribbon, valve and tape sketch; no real room or console was measured"),
     ("The kits sound like a club in 1962", "not heard", "your listen"),
@@ -274,15 +290,16 @@ details[open] > summary {{ margin-bottom: 8px; }}
 
 <div class="wrap">
   <header>
-    <div class="mark"><i></i><span class="eyebrow">SNIPSNAP · EMBER · ROUND 0B · PYTHON PROTOTYPE · CYMBALS REFITTED</span></div>
+    <div class="mark"><i></i><span class="eyebrow">SNIPSNAP · EMBER · ROUND 0C · PYTHON PROTOTYPE · CYMBALS AND SWEEPS REFITTED</span></div>
     <h1>EMBER Audition</h1>
     <p class="lede">A live jazz and soul drum kit in a small, warm, smoky club in 1962, built only from physical models: calfskin drums,
     a riveted ride, real brush sweeps, a hi-hat foot on 2 and 4, a table snapping its fingers, a bowed cymbal for the late set.
     Four sixteen-pad kits: EMBER (hard bop on sticks), After Hours (brushes), Soul Jazz (organ-trio backbeat) and Free (the rebellious late set).
-    Nothing is sampled. These are prototype renders from a Python model, not the app. Round 0b answers your first listen:
-    the cymbals and hats are rebuilt from measurements of real cymbals. Nothing else has changed sound.</p>
+    Nothing is sampled. These are prototype renders from a Python model, not the app. Round 0b rebuilt the cymbals and hats from
+    measurements of real cymbals; round 0c rebuilds the brush sweep and brush roll from measurements of real brush stirs. Nothing else
+    has changed sound.</p>
     <p class="gesture">A stick, a brush or a hand meets calfskin or thin bronze → the head sags back to pitch while the wires and rivets answer on their own threshold → the rest of the kit hums along → a low-ceilinged room and a warm 1962 chain close around it.</p>
-    <nav><a href="#play">Play</a><a href="#cymbals">Cymbals</a>{''.join(f'<a href="#kit-{k["id"]}">{ESC(short(k["name"]))}</a>' for k in KITS)}<a href="#velocity">Velocity</a><a href="#takes">Takes</a><a href="#voices">Voices</a><a href="#macros">Controls</a><a href="#gates">Gates</a><a href="#ledger">Ledger</a></nav>
+    <nav><a href="#play">Play</a><a href="#cymbals">Cymbals</a><a href="#brushes">Sweeps</a>{''.join(f'<a href="#kit-{k["id"]}">{ESC(short(k["name"]))}</a>' for k in KITS)}<a href="#velocity">Velocity</a><a href="#takes">Takes</a><a href="#voices">Voices</a><a href="#macros">Controls</a><a href="#gates">Gates</a><a href="#ledger">Ledger</a></nav>
   </header>
 
   <section class="card" id="play">
@@ -296,6 +313,7 @@ details[open] > summary {{ margin-bottom: 8px; }}
     </div>
   </section>
 {cymbal_card}
+{brush_card}
 {''.join(kit_cards)}
 {''.join(base_sections)}
 

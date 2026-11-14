@@ -723,5 +723,8 @@ prototype and a listening page (<https://claude.ai/artifact/Xmcj5t8MYSNCQPoTKHBc
   metal". Round 0b rebuilds every cymbal and hat from CC0 recordings of a jazz club kit, with BREAKER's fitter. Measured
   against the recordings, they are 5.6 to 9.3 dB away over the first 150 ms, where round 0's were 11 to 34 dB and two
   takes of one real ride are 6.2 dB apart (Python). A new SIZZLE voice carries the recording's rivets. Not heard yet.
+  The owner then heard the sweeps as "hail hitting a roof". Round 0c fits the sweep and brush roll to CC0 brush stirs and
+  flutters (Karoryfer Swirly Drums). Their clickiness (kurtosis above 2 kHz) is now 2.9 to 3.0, as recorded, where it was
+  5.7 to 7.8 (Python). Not heard yet.
 - **Overall: incomplete.** Round 0 asks the owner which voices and kits to keep. Kotlin (round 1), the shelf and
   saving, playback and MPC 3 export (round 2), and phone and MPC hardware (round 3) are all open.

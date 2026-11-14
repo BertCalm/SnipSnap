@@ -39,3 +39,54 @@ are derived synthesis parameters, not recordings or PCM. The engine synthesizes
 sinusoids and band noise; it does not play back any recording, and none ships.
 Fitted by prototype/ember/fit_ember_cymbals.py with BREAKER's fitter
 (scripts/fit_breaker_cymbals.py). No endorsement is implied.
+
+EMBER brush sweep and brush roll, round 0c (Python prototype)
+
+brushes.json holds synthesis parameters fitted to nineteen recordings from
+Karoryfer Samples, Swirly Drums, https://github.com/sfzinstruments/karoryfer.swirly-drums
+at commit c40dafe0011cb2e54c0c220ff0fa308a11fc60f5, main mic.
+License: CC0 1.0 Universal (credited although not required).
+  Samples/snare_stir/stir_dl1_rr1.wav
+    sha256 cddbaa6b165ebbd8dfd2b6b9f05dc8c985341c98847ab22afb54dc79b4c603fb
+  Samples/snare_stir/stir_dl1_rr2.wav
+    sha256 5f5fbcebcde9422a40b00dba6d556183fbf98a91044b5ad523f51fd018d4bc18
+  Samples/snare_stir/stir_dl1_rr3.wav
+    sha256 0e976d193a042e54418f1866f8e15fc0704bb4211265830bec1261ec15b359d6
+  Samples/snare_stir/stir_dl1_rr4.wav
+    sha256 f0c44374601be4cc9e3d7fb5b9518ade9da608c288af4a8e400df01166234305
+  Samples/snare_stir/stir_dl2_rr1.wav
+    sha256 6b61f2c97d386e11ae1be7e9c3ba8853a81dce650a4cad504c297bae8785a990
+  Samples/snare_stir/stir_dl2_rr2.wav
+    sha256 c831f0c8d29e1a8f58cc1ad7bd343ff661ed1de8830d23122bc52cfd173fc102
+  Samples/snare_stir/stir_dl2_rr3.wav
+    sha256 b92bd2e69887737a85ffe9d07d966fab5ed97a4cf0f32834b2f8f0c5d3d0e328
+  Samples/snare_stir/stir_dl2_rr4.wav
+    sha256 ad7052984c37cbfec4861993c24cac983c050221c97aa27a416c04ef0c8ff910
+  Samples/snare_stir/stir_dl3_rr1.wav
+    sha256 0d903f5f9b5a296cd569a27ea974deaf42d9337ba5c7f91452294a4bd0919a14
+  Samples/snare_stir/stir_dl3_rr2.wav
+    sha256 1b42423e7995dd5b59ab7328178575781429f327f4c89301b06b502a77deead0
+  Samples/snare_stir/stir_dl3_rr3.wav
+    sha256 ff13c18d523c7ae3b799898727a5a41b7e848cadd08c50057621f27903f56a98
+  Samples/snare_stir/stir_dl3_rr4.wav
+    sha256 78567d6f0e1b2bae307c8acbe1f71d0d13a1e9963db05c28dab45068972e770b
+  Samples/snare_stir/stir_dl4_rr2.wav
+    sha256 d46c952108d47d63d3a48485fe43c386918a9d6998bfab815a54c26480c23f42
+  Samples/snare_stir/stir_dl4_rr3.wav
+    sha256 bd9471584060a8e959a6eaa525ed61e825f6bb6bf24870471a8bc3efdb54820f
+  Samples/snare_stir/stir_dl4_rr4.wav
+    sha256 a4a17de1683f57ac17c9aa50feb1602aec99cb96912756bfcf6823840f589832
+  Samples/snare_flutter/flutter_rr1.wav
+    sha256 9a264eff637e25533b6b50836a5334082bb03c16670222f7f39987531c35f46a
+  Samples/snare_flutter/flutter_rr2.wav
+    sha256 bc674a08dfc7d5020834d1659d4784de6a18181380f2d7d5ad17298de0935624
+  Samples/snare_flutter/flutter_rr3.wav
+    sha256 48115949da341374a31e1863bc1d4741477d13078ca90bbc5b54e00bfd354a90
+  Samples/snare_flutter/flutter_rr4.wav
+    sha256 7460d11df64c34f8e842c496653bb75e490bef7c90f7cd67117a8b0c4366a027
+
+Changes: per third-octave band, the mean level re the overall level over 50 ms frames,
+the dB each band moves per dB of overall level, and the overall level's spread at 50 ms and
+250 ms, for each of four dynamic levels and for the flutter. These are derived synthesis
+parameters, not recordings or PCM; the engine synthesizes band noise and plays back none of
+them. Fitted by prototype/ember/fit_ember_brushes.py. No endorsement is implied.

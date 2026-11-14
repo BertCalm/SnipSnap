@@ -1,8 +1,12 @@
 # EMBER: design brief and round-0 audition
 
-Status: **round 0b, a Python prototype (2026-11-14).** The owner's first listen: "Cymbals need a lot of work.
-Sounds like hitting sheet metal." Round 0b rebuilds every cymbal and hat from measurements of real cymbals
-(below); nothing else changed sound. Nothing else has been heard yet. No Kotlin exists. The engine
+Status: **round 0c, a Python prototype (2026-11-14).** The owner's listens so far:
+- "Cymbals need a lot of work. Sounds like hitting sheet metal." Round 0b rebuilt every cymbal and hat from
+  measurements of real cymbals.
+- "Sweeps sound like hail hitting a roof." Round 0c rebuilds the brush sweep and the brush roll from
+  measurements of real brush stirs and flutters.
+
+Both are below. Nothing else changed sound, and nothing else has been heard yet. No Kotlin exists. The engine
 stays in progress until every applicable owner gate has evidence (see "Gates" below and the gates entry in
 [ENGINE_ACCEPTANCE_GATES.md](ENGINE_ACCEPTANCE_GATES.md#ember-round-0-2026-11-14-python-prototype-not-heard)).
 
@@ -20,6 +24,53 @@ Repository truth: read at `8742c5b8` (2026-11-14). APIs named here were grepped:
 `Soot.render(voice, macros, velocity, take, model)` / `Clutter.render(voice, macros, velocity, take)` as the
 drum-engine shape to copy. `EMBER` is a working name: the word is already a CIRCUIT preset ("EMBER PULSE"),
 an ALLOY preset ("Endless Ember") and a name in `shell/.../Names.kt`. It is not an engine name anywhere.
+
+## Round 0c: the brush sweep and roll, refitted (2026-11-14)
+
+**What the owner heard:** "Sweeps sound like hail hitting a roof."
+
+**Why.** Round 0b's sweep was a cloud of separate micro-impulses (5,000 to 11,000 a second), and each one struck
+the snare head and the wires: a rain of tiny drum hits, which is hail on a roof. Measured:
+- **Impulsive.** The median kurtosis of its top half (above 2 kHz, 20 ms frames) was 5.7 to 7.8. A smooth hiss
+  is 3, and real stirs measure 2.9 to 3.0.
+- **The wrong spectrum.** It peaked at the head's own pitch (253 to 320 Hz) where real stirs carry a broad hump
+  from about 500 Hz to 5 kHz.
+
+The brush roll had the same fault, more mildly: kurtosis 4.1 against a real flutter's 3.1.
+
+**What changed.** A brush sweep is many wires sliding at once, which sums to a smooth noise, not a train of hits.
+So the sweep and the roll are now fitted noise, like the closed hats. `prototype/ember/fit_ember_brushes.py`
+writes `prototype/ember/brushes.json` from CC0 recordings:
+- **Source:** Karoryfer Samples, Swirly Drums (CC0 1.0), `sfzinstruments/karoryfer.swirly-drums` at
+  `c40dafe0`, main mic. This is a brush-played kit named for its snare swirls ([KVR listing](https://www.kvraudio.com/product/swirly-drums-by-karoryfer)).
+- **What is fitted:** 15 stirs at four dynamic levels, and four flutters. For each, per third-octave band:
+  - the mean level;
+  - how many dB the band moves per dB of overall level (so the fast middle of a stroke is brighter, as measured);
+  - the level's wobble (50 ms) and sway (250 ms).
+
+  dl4's take 1 on the main mic is byte-identical to its skin-mic file in the library, so it is left out.
+  `NOTICE.txt` lists the nineteen files and their sha256.
+- **BRUSH_SWEEP:** band noise along the stir spectrum for its velocity (soft is dl1's warm middle, hard dl4's
+  brighter top), riding EMBER's circle. SPEED is still the circle's speed and length. TUNE slides the spectrum.
+  BUZZ now tilts the wire band (2 to 8 kHz) 6 dB either side of the recording.
+- **BRUSH_ROLL:** band noise along the flutter spectrum, crescendoing over 2.3 s with a stroke-rate ripple (the
+  two hands, rate set by SPEED), into a brush accent on the snare. A soft roll leans toward the soft stir.
+
+**Measured** (Python, dry, 1 s of the stroke's middle against 1 s of the recording):
+
+| | Clickiness (kurtosis) | Centroid | Spectral shape, dB from the recording |
+|---|---:|---:|---:|
+| Sweep, velocity .3, vs dl1 | 2.9 (was 5.7 to 7.8) | 2974 Hz vs 2661 | 5.07 (two real takes: 3.05) |
+| Sweep, velocity .55, vs dl2 | 2.9 | 4261 Hz vs 4444 | 3.23 (2.65) |
+| Sweep, velocity .8, vs dl3 | 2.9 | 4805 Hz vs 4487 | 4.94 (3.06) |
+| Sweep, velocity 1, vs dl4 | 3.0 | 5487 Hz vs 5508 | 4.02 (3.96) |
+| Brush roll vs flutter | 3.0 (was 4.1; real 3.1) | 6157 Hz vs 6525 | 2.36 |
+
+Every other check still holds on all 768 kit renders. SPEED on the brush roll is now the weakest control on the roll,
+at 1.26 dB between 0 and 1: it only sets the hands' ripple rate. Disclosed, not fixed. The sweep's controls move
+5.6 to 40 dB.
+
+**Not heard.** The page plays each sweep and the roll, then the recording.
 
 ## Round 0b: the cymbals, refitted (2026-11-14)
 
@@ -190,7 +241,7 @@ Five per voice (four on SNAPS, CLAPS and STICKS), each 0..1, no HOLD (finite hit
 
 Drums: KICK (18-inch, calf, open, felt beater, "feathered" when soft), SNARE (14-inch, calf, tuned high),
 RIMSHOT, CROSS_STICK, TOM_RACK (12-inch), TOM_FLOOR (14-inch), ELBOW_TOM, MALLET_TOM. Brushes: BRUSH_TAP,
-BRUSH_SWEEP, BRUSH_TOM, BRUSH_RIDE, BRUSH_ROLL. Cymbals (fitted to recordings from round 0b): RIDE (a flat ride), RIDE_BELL, SIZZLE (riveted),
+BRUSH_SWEEP and BRUSH_ROLL (fitted to recorded stirs and flutters from round 0c), BRUSH_TOM, BRUSH_RIDE. Cymbals (fitted to recordings from round 0b): RIDE (a flat ride), RIDE_BELL, SIZZLE (riveted),
 BOWED_CYMBAL, CYMBAL_SWELL. Hats: HAT_FOOT (the 2-and-4 chick), HAT_CLOSED (stick), HAT_OPEN. Room and hands: SNAPS (the
 1962 crowd snapping instead of clapping), CLAPS, TAMBOURINE, CONGA, STICKS (two sticks clicked: the count-in).
 Rolls: PRESS_ROLL.
@@ -298,8 +349,9 @@ The Kotlin port should keep both caches, keyed by the quantised control value, a
 2. **The cymbals as sheet metal (heard at round 0).** Round 0b replaces guessed modes with fitted ones. Probe:
    the page's "Cymbals against real cymbals" section, and the distances above; if a cymbal is still heard as
    metal sheet, compare its doublets on and off before anything else.
-3. **The sweep as wind.** A brush sweep without the head and wires under it is filtered noise. Probe: the
-   SPEED sweep and the velocity ladder (pressure brings the head up).
+3. **The sweep as hail (heard at round 0b), or as wind.** Round 0c replaces the impulse cloud with noise fitted
+   to recorded stirs; its head and wires are in the recording's spectrum. Probe: the page's sweep comparisons; if
+   it now reads as wind, the stroke's speed envelope or the follow is wrong, not the spectrum.
 4. **The room as reverb.** At DISTANCE .3 the club should be heard as closeness and air, not a tail. Probe:
    the DISTANCE sweep on KICK and SNARE.
 5. **WARMTH as mud.** The chain's head bump and top roll-off stack with calf's darkness. Probe: the WARMTH
@@ -309,7 +361,7 @@ The Kotlin port should keep both caches, keyed by the quantised control value, a
 
 ## Next rounds
 
-- **Round 0c:** the owner's listen to round 0b. Which voices convince, which kits are the right four (a Latin jazz kit is
+- **Round 0d:** the owner's listen to rounds 0b and 0c. Which voices convince, which kits are the right four (a Latin jazz kit is
   the obvious swap for FREE if rebellious should mean something else), the WARMTH and DISTANCE defaults.
 - **Round 1:** `Ember.kt`, `EmberPatch.kt`, the registration rows (`Patches`, `Velocity`, the roster), the
   house probes, a `DeterminismTest` canary, render-time tests; built from the picks, with Kotlin renders

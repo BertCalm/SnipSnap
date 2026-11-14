@@ -745,40 +745,64 @@ def seconds_for(voice, m):
     return VOICES[voice][1]
 
 
-def _sweep_force(speed_curve, pressure, tr, n, grain=6000):
-    """Friction of brush wires on a coated head: a cloud of micro-slips whose rate follows the
-    sweep speed, pushed by the pressure."""
-    rate = grain * speed_curve
-    events = tr.random(n) < rate / FS
-    amp = tr.uniform(0.2, 1.0, n) * events * pressure
-    return amp
+BRUSH_PATH = os.path.join(HERE, "brushes.json")
+
+
+@functools.cache
+def brush_fit():
+    with open(BRUSH_PATH) as fh:
+        return json.load(fh)
+
+
+def stir_profile(v):
+    """The fitted stir at velocity v: spectrum, follow, wobble and sway, interpolated between the four recorded
+    dynamic levels (dl1 at velocity .3 to dl4 at 1; clamped outside)."""
+    f = brush_fit()
+    keys = sorted(f["velocity"], key=lambda k: f["velocity"][k])
+    vs = [f["velocity"][k] for k in keys]
+    v = float(np.clip(v, vs[0], vs[-1]))
+    i = max(0, min(len(vs) - 2, int(np.searchsorted(vs, v)) - 1))
+    w = (v - vs[i]) / (vs[i + 1] - vs[i])
+    a, b = f["levels"][keys[i]], f["levels"][keys[i + 1]]
+    mix = lambda k: (1 - w) * np.array(a[k], float) + w * np.array(b[k], float)
+    return mix("spectrum"), mix("follow"), float(mix("wobble")), float(mix("sway"))
 
 
 def _brush_sweep(m, v, tr, n):
-    """A brush circling on the snare head: one full circle, faster in the middle, the wires
-    hissing on the coating and the head and wires answering underneath. SPEED is the circle's
-    speed (and so how long it takes)."""
-    t = np.arange(n) / FS
+    """A brush circling on the snare head (round 0c: fitted). Many wires sliding at once sum to a smooth noise, so
+    the sweep is band noise along the recorded stirs' spectrum at this velocity (Swirly Drums, CC0), riding the
+    circle's own speed: each band moves by its measured dB per dB of level, so the fast middle of the circle is
+    brighter, as measured, and the level wobbles and sways by the recordings' own amounts. TUNE slides the
+    spectrum (the head's pitch), BUZZ tilts the wire band (2 to 8 kHz) 6 dB either way of the recording, SPEED
+    is the circle's speed and length. Round 0b's micro-impulses that each struck the head are gone: the owner
+    heard them as hail on a roof."""
+    k = int(n / 4) + 1
+    t = np.arange(k) / RATE
     dur = sweep_seconds(m["SPEED"]) * tr.uniform(0.97, 1.0)
     x = np.clip(t / dur, 0, 1)
     speed = np.sin(math.pi * x) ** 1.3 * (0.75 + 0.25 * np.cos(TAU * 2 * x + tr.uniform(0, 1)))
     speed[t > dur] = 0
-    press = 0.4 + 0.6 * v
-    slips = _sweep_force(speed, press, tr, n, grain=5000 + 6000 * m["SPEED"])
-    # The hiss: the coating, brighter as the brush speeds up.
-    hiss = band(slips, 1200 + 1400 * (1 - v), 9000) + (0.3 + 0.5 * v) * band(slips, 4000, 12000) * speed
-    # The head underneath, struck from a position that circles (centre <-> edge crossfade).
-    f1 = 285.0 * semis(m["TUNE"], 5)
-    irc = peak_norm(membrane_ir(f1, n, 0.25, 1.15, 0.2, 0.3))
-    ire = peak_norm(membrane_ir(f1, n, 0.25, 1.15, 0.75, 1.1))
-    lowf = lp(slips, 600) * 30
-    circle = 0.5 + 0.5 * np.sin(TAU * x + tr.uniform(0, TAU))
-    head = conv(lowf * circle, irc, n) + conv(lowf * (1 - circle), ire, n)
-    hd = peak_norm(lp(head, 900)) * 0.6 * v
-    # Pressure (velocity) pushes the head and the wires up under the hiss: a light sweep is air,
-    # a heavy one has a body.
-    return (0.55 * peak_norm(hiss) + 0.45 * v ** 1.2 * peak_norm(head)
-            + 0.6 * v * WIRE_GAIN * wires(hd, v, m["BUZZ"], tr, n))
+    spectrum, follow, wobble, sway = stir_profile(v)
+    slow = signal.sosfiltfilt(signal.butter(2, 3.0 / (RATE / 2), output="sos"), tr.standard_normal(k))
+    fast = signal.sosfiltfilt(signal.butter(2, 20.0 / (RATE / 2), output="sos"), tr.standard_normal(k))
+    level = (20 * np.log10(np.maximum(speed, 1e-4)) + sway * slow / (np.std(slow) + 1e-12)
+             + wobble * fast / (np.std(fast) + 1e-12))
+    c = np.clip(level - np.max(level), -15.0, 0.0) + 3.0               # how far under the stroke's peak, centred
+    bands = brush_fit()["bands"]
+    idx = np.arange(len(bands))
+    shift = (m["TUNE"] - 0.5) * 2 * 5 / 4                             # TUNE: up to 5 semitones, in third octaves
+    spectrum = np.interp(idx - shift, idx, spectrum)
+    out = np.zeros(k)
+    for i, fc in enumerate(bands):
+        if fc * 2 ** (1 / 6) >= 0.49 * RATE:
+            continue
+        wire = (m["BUZZ"] - 0.5) * 12.0 if 2000 <= fc <= 8000 else 0.0
+        noise = signal.sosfilt(fit_band_sos(i), tr.standard_normal(k + 2000))[2000:]
+        noise /= sk.rms(noise) + 1e-20
+        db = spectrum[i] + follow[i] * c + wire + tr.normal(0, 0.5)
+        out += noise * 10 ** (db / 20)
+    out *= 10 ** (level / 20)
+    return to_internal(out, n)
 
 
 def _tom(m, v, tr, n, f_base, implement, r_base, t1_max, bend=None):
@@ -965,7 +989,43 @@ def _press_roll(m, v, tr, n):
 
 
 def _brush_roll(m, v, tr, n):
-    return _roll(m, v, tr, n, brush=True)
+    """Percussion gate: the brush roll (round 0c: fitted). A brush roll is a flutter of wires that never leaves the
+    head, so like the sweep it is band noise along the recorded flutters (Swirly Drums, CC0): their spectrum, the
+    dB each band moves per dB of level, their wobble and sway. It crescendos over 2.3 s into a brush accent, the
+    alternating hands showing as a stroke-rate ripple whose rate SPEED sets. A soft roll leans toward the soft
+    stirs' darker spectrum. TUNE slides the spectrum, BUZZ tilts the wire band as on the sweep."""
+    k = int(n / 4) + 1
+    t = np.arange(k) / RATE
+    t_end = 2.3
+    f = brush_fit()["flutter"]
+    soft_spec = stir_profile(0.3)[0]
+    w = float(np.clip((1.0 - v) / 0.7, 0.0, 1.0))
+    spectrum = (1 - 0.5 * w) * np.array(f["spectrum"]) + 0.5 * w * soft_spec
+    follow = np.array(f["follow"])
+    x = np.clip(t / t_end, 0, 1)
+    rate = sk.lin(m["SPEED"], 9, 14) + (sk.lin(m["SPEED"], 14, 22) - sk.lin(m["SPEED"], 9, 14)) * x
+    ripple = 1.5 * np.sin(TAU * np.cumsum(rate) / RATE / 2 + tr.uniform(0, TAU))       # the two hands
+    slow = signal.sosfiltfilt(signal.butter(2, 3.0 / (RATE / 2), output="sos"), tr.standard_normal(k))
+    fast = signal.sosfiltfilt(signal.butter(2, 20.0 / (RATE / 2), output="sos"), tr.standard_normal(k))
+    level = (20 * np.log10(0.06 + 0.94 * x ** 1.8) + ripple
+             + f["sway"] * slow / (np.std(slow) + 1e-12) + f["wobble"] * fast / (np.std(fast) + 1e-12))
+    level[t > t_end] = -120.0
+    c = np.clip(level - level[t <= t_end].max(), -15.0, 0.0) + 3.0
+    bands = brush_fit()["bands"]
+    idx = np.arange(len(bands))
+    spectrum = np.interp(idx - (m["TUNE"] - 0.5) * 2 * 5 / 4, idx, spectrum)
+    out = np.zeros(k)
+    for i, fc in enumerate(bands):
+        if fc * 2 ** (1 / 6) >= 0.49 * RATE:
+            continue
+        wire = (m["BUZZ"] - 0.5) * 12.0 if 2000 <= fc <= 8000 else 0.0
+        noise = signal.sosfilt(fit_band_sos(i), tr.standard_normal(k + 2000))[2000:]
+        noise /= sk.rms(noise) + 1e-20
+        out += noise * 10 ** ((spectrum[i] + follow[i] * c + wire + tr.normal(0, 0.5)) / 20)
+    out *= 10 ** (level / 20)
+    roll = to_internal(out, n)
+    accent = _snare_core(m | {"DAMP": .3}, v, tr, n, brush_tap(v, tr, n, at=t_end) * 2, 0.35, wire_gain=1.0)
+    return peak_norm(roll) + 0.9 * peak_norm(accent)
 
 
 def _crowd(m, v, tr, n, clap):
