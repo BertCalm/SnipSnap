@@ -73,7 +73,7 @@ M0's exit test was: browse kits on a phone, tap pads, hear WAVs, flip
 schemes in Tape Properties. The player for that test was `SoundPool`
 (`PadPlayer`), since deleted. Every screen that makes a sound goes
 through `PadEngine`. PLAY's exit test passed on a phone on 2026-09-08
-(`docs/BENCH.md` A1). The FRESH TAPE menu (122 starters including MERIDIAN MATERIALS, MERIDIAN SIX, TEMPEST, TEMPEST TUNED, SPLAY POPULATIONS, OSTERIA, OSTERIA SIX VOICES, HALOBAR, HALOBAR SIX STUDY, EROSION, NACRE, CONFLUENCE VOICES, ACCORD, STRIKE FX, CIRCUIT,
+(`docs/BENCH.md` A1). The FRESH TAPE menu (125 starters including MERIDIAN MATERIALS, MERIDIAN SIX, TEMPEST, TEMPEST TUNED, TEMPEST CIRCUIT, TEMPEST FOUNDRY, TEMPEST STEP, SPLAY POPULATIONS, OSTERIA, OSTERIA SIX VOICES, HALOBAR, HALOBAR SIX STUDY, EROSION, NACRE, CONFLUENCE VOICES, ACCORD, STRIKE FX, CIRCUIT,
 THAW, SCOUR, NIMBUS, UNDERTOW, CISTERN, UPRIGHT BASS, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, ORIGAMI, FILAMENT, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, LATTICE, FLOCK, OVERLAP, OHM, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, MURMUR SELECTED, MURMUR KEPT, SCANNED CHAIN, TREFOIL, TRIO, OSPREY, OSPREY CURATED, OPENSKY, VENT, CAUSTIC, TIDAL, CHAMBER, KEEL, LIBRATION, MERIDIAN, RIME, RIME COMPLETE, OTIS, OBBLIGATO, WICK, CHORD STABS, CHORD STABS DORIAN, CHORD STABS MIXOLYDIAN, CHORD STABS BORROWED, VELOUR CLOSE, VELOUR, VELOUR BLOOM, FIRED BRONZE, COSMIC BREAKS, TRIAD WAREHOUSE TECHNO, TRIAD SUBMERGED HOUSE, TRIAD FRACTURE MINIMAL, BACKWASH SOUL, BACKWASH PSYCH, SPORE JUNGLE, SPORE DUB, SPORE ELECTRO, GATECRASH STONE ROOM, GATECRASH MACHINE POP, GATECRASH ELECTRO FUNK, CYPHER TRAP, CYPHER DRILL, CYPHER BACKROOM, CYPHER LOWRIDER, CYPHER DUST, CYPHER FLINT, BREAKER, BREAKER DUB TANK, BREAKER TRIP HOP, MIRRORBALL PHILLY STRINGS, MIRRORBALL LOFT PARTY, MIRRORBALL MUNICH MACHINE, SOOT, SOOT DRUMLESS, SOOT BASEMENT DUB, SOOT BRUSHED NOIR and SOOT WAREHOUSE INDUSTRIAL, SCUFF DETROIT, SCUFF FLINT,
 from `StarterKits`, rendered by
 the `:synth` builders on-device, including fixed sample banks) makes the shelf useful before a capture
@@ -94,7 +94,8 @@ and their 22 presets. Its 1.20-second samples offer neither HOLD nor MAKE INSTRU
 New KICK and METAL recipes save model 2 and the other voices model 3; recalled model-1
 recipes keep their renderer through edits, navigation, RANDOMISE and SAVE. FRESH TAPE →
 TEMPEST is the sixteen-pad drum kit with choking hats, and TEMPEST TUNED keeps the
-original E minor pentatonic kicks and metal colors.
+original E minor pentatonic kicks and metal colors. TEMPEST CIRCUIT, TEMPEST FOUNDRY and TEMPEST STEP
+are candidate electro, industrial and UK garage kits built from the same accepted voices.
 
 SPLAY exposes one finite TONGUE voice and its five accepted population settings.
 Its original model, root, touch and seed survive editing and navigation; positive

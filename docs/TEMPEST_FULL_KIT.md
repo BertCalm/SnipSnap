@@ -229,6 +229,30 @@ The audition includes four defaults, note positions, quarter-step controls, pair
 all sixteen pads and a two-bar 100 BPM sketch using those same pad sounds and hat choke rules.
 The sketch is a proposed arrangement and makes no sequencer or factory-pattern claim.
 
+## Genre kits (candidates)
+
+TEMPEST CIRCUIT, TEMPEST FOUNDRY and TEMPEST STEP are three more sixteen-pad kits
+(`TempestGenreKits`, starters `tempest-circuit`, `tempest-foundry` and `tempest-step`,
+shelved under SKINS after TEMPEST). They are new recipes on the existing voices: KICK and
+METAL save model 2, the other four voices model 3. No engine file changes, so every accepted
+render and pinned hash stays byte-identical (`TempestPromotionTest` and `TempestTest` run
+unchanged).
+
+| Kit | Character | Kicks | Snares | Claps | Toms | Hats | Metal | Accepted presets reused |
+|---|---|---|---|---|---|---|---|---|
+| TEMPEST (accepted) | Full six-voice kit | 2 | 2 | 2 | 3 | 3 | 4 | all 16 |
+| CIRCUIT | Electro: dry, tight, clap-led, tuned bell and clave blips | 2 | 2 | 3 | 2 | 3 | 4 | CLAP START, HAT CLOSED, HAT OPEN, WIRE |
+| FOUNDRY | Industrial: heavy drive, metallic sources, long darkening repeats | 3 | 2 | 1 | 3 | 2 | 5 | HAT NOISE, BURR, TRAIL |
+| STEP | UK garage: short, hat-forward, rim and ghost snares, no toms | 2 | 3 | 2 | 0 | 5 | 4 | CLAP SPREAD, HAT OPEN |
+
+- **Choke:** every hat in every kit shares mute group 1, as on the accepted kit.
+- **Kick limit:** a TEMPEST kick ends by about 0.6 s, so no kit has a long 808-style boom.
+  The kits are designed around that rather than changing the engine.
+- **Status:** proposed shape values, not heard. `TempestGenreKitsTest` checks role counts, the
+  choke group, distinctness (no shared kick or snare; at least 12 different pads between any
+  two kits, today's included), exact replay from saved recipes, and MPC 3 / MPC 2 export
+  read-back. Once the owner keeps them, PCM24 hashes for every pad get pinned.
+
 ## Verified / measured / proposed / heard
 
 Verified: source/patch dispatch, supported-model policy and real APIs at base `df675d0` plus
