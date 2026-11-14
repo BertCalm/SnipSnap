@@ -188,6 +188,61 @@ tasks.register<JavaExec>("generateFerryMatchAudition") {
     args(providers.gradleProperty("ferryMatchOutput").orNull ?: "${rootDir}/testkit/ferry-match-audition")
 }
 
+/** Render Osteria's dry first-listen quartet, shared-performance stems and causal comparisons. */
+tasks.register<JavaExec>("generateOsteriaAudition") {
+    group = "distribution"
+    description = "Render OSTERIA native/matched stereo WAVs, complete recipes, shore traces and the first-listen audition page under testkit/osteria-audition/."
+    maxHeapSize = "1g"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.OsteriaAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/osteria-audition")
+}
+
+/** Audition provisional single-note source families without promoting presets or kit pads. */
+tasks.register<JavaExec>("generateOsteriaVoiceAudition") {
+    group = "distribution"
+    description = "Render 13 OSTERIA voice-candidate notes, native/matched WAVs, recipes, traces and a listening page under testkit/osteria-voices-audition/."
+    maxHeapSize = "1g"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.OsteriaVoiceAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/osteria-voices-audition")
+}
+
+/** Audition eight dry preset proposals and their register, touch and memory controls. */
+tasks.register<JavaExec>("generateOsteriaPresetAudition") {
+    group = "distribution"
+    description = "Render 27 OSTERIA preset-proposal notes, native/matched WAVs, complete recipes, traces and a listening page under testkit/osteria-presets-audition/."
+    maxHeapSize = "1g"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.OsteriaPresetAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/osteria-presets-audition")
+}
+
+/** Export the finite-note starter bank, with native recipes and both MPC generations. */
+tasks.register<JavaExec>("generateOsteriaKit") {
+    group = "distribution"
+    description = "Render the dry OSTERIA starter kit with MPC 3, MPC 2 and complete kit.json recipes."
+    maxHeapSize = "512m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.OsteriaKitGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit")
+}
+
+/** Reproduce the accepted six-voice performance bank and its complete saved recipes. */
+tasks.register<JavaExec>("generateOsteriaPerformanceBank") {
+    group = "distribution"
+    description = "Render 12 OSTERIA presets across six voices and 16 pads, with 48 velocity samples and MPC 2/3 programs."
+    maxHeapSize = "1g"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.OsteriaPerformanceBankGenerator")
+    workingDir = projectDir
+    args(providers.gradleProperty("osteriaBankOutput").orNull ?: "${rootDir}/testkit/osteria-six-voice-bank")
+}
+
 /** Nine finite RIME recipes as a sixteen-pad, three-zone MPC 3 / MPC 2 kit. */
 tasks.register<JavaExec>("generateRimeKit") {
     group = "distribution"
@@ -1324,6 +1379,8 @@ dependencies {
     // The factory kit builders hand ArrangedPads (audio + class + recipe)
     // straight to the kit pipeline.
     implementation(project(":kit"))
+    // CAIRN's retained SING sampler delivery assembles a KeygroupProgram.
+    implementation(project(":xpm"))
     testImplementation(kotlin("test"))
     // Integration tests drive a rendered kit through the real export pipeline.
     testImplementation(project(":xpm"))
@@ -3662,4 +3719,68 @@ tasks.register<JavaExec>("generatePumpAudition") {
     mainClass.set("com.snipsnap.synth.PumpAuditionGenerator")
     workingDir = projectDir
     args("${rootDir}/testkit/pump-audition")
+}
+
+/** Finite R1 source/drive/filter/memory handoff, before the owner's listening gate. */
+tasks.register<JavaExec>("generateTempestAudition") {
+    group = "distribution"
+    description = "Render TEMPEST's two finite voices, control sweeps, exact recipes and diagnostics."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.TempestAuditionGenerator")
+    workingDir = rootDir
+    maxHeapSize = "768m"
+    args(providers.gradleProperty("tempestOutput").orNull ?: "${rootDir}/testkit/tempest-audition")
+}
+
+/** Accepted six-voice starter, editable recipes and both MPC generations. */
+tasks.register<JavaExec>("generateTempestKit") {
+    group = "distribution"
+    description = "Build the dry sixteen-pad TEMPEST kit and verify MPC 3 / MPC 2 read-back."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.TempestKitGenerator")
+    workingDir = rootDir
+    maxHeapSize = "768m"
+    args(providers.gradleProperty("tempestKitOutput").orNull ?: "${rootDir}/testkit/SnipSnap Tempest Full Kit")
+}
+
+/** Accepted six-role TEMPEST kit; compatibility task retained alongside generateTempestKit. */
+tasks.register<JavaExec>("generateTempestFullKit") {
+    group = "distribution"
+    description = "Build the accepted six-role TEMPEST kit under testkit/tempest-full-kit/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.TempestFullKitGenerator")
+    workingDir = rootDir
+    maxHeapSize = "768m"
+    args(providers.gradleProperty("tempestFullKitOutput").orNull ?: "${rootDir}/testkit/tempest-full-kit")
+}
+
+/** Accepted model-3 voices, their controls and the sixteen-pad factory arrangement. */
+tasks.register<JavaExec>("generateTempestExpansionAudition") {
+    group = "distribution"
+    description = "Render the four model-3 TEMPEST voices, their controls and the full-kit arrangement."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.TempestExpansionAuditionGenerator")
+    workingDir = rootDir
+    maxHeapSize = "768m"
+    args(providers.gradleProperty("tempestExpansionOutput").orNull ?: "${rootDir}/testkit/tempest-expansion")
+}
+
+tasks.register<JavaExec>("generateTempestDriveProbe") {
+    group = "verification"
+    description = "Render TEMPEST's isolated DRIVE probes under testkit/tempest-expansion/drive-probe/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.TempestDriveProbeGenerator")
+    workingDir = rootDir
+    args(providers.gradleProperty("tempestDriveProbeOutput").orNull ?: "${rootDir}/testkit/tempest-expansion/drive-probe")
+}
+
+/** Retained two-voice tuned arrangement; the normal TEMPEST task exports the full kit. */
+tasks.register<JavaExec>("generateTempestTunedKit") {
+    group = "distribution"
+    description = "Build the retained E minor pentatonic TEMPEST TUNED kit."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.TempestKitGenerator")
+    workingDir = rootDir
+    maxHeapSize = "768m"
+    args(providers.gradleProperty("tempestTunedKitOutput").orNull ?: "${rootDir}/testkit/SnipSnap Tempest Tuned Kit", "--tuned")
 }

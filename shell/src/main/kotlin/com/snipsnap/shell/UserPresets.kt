@@ -13,6 +13,7 @@ import com.snipsnap.synth.AlloyPatch
 import com.snipsnap.synth.MeridianPatch
 import com.snipsnap.synth.CisternPatch
 import com.snipsnap.synth.ChamberPatch
+import com.snipsnap.synth.TempestPatch
 import com.snipsnap.synth.TidalPatch
 import com.snipsnap.synth.ContourConfig
 import com.snipsnap.synth.ContourPatch
@@ -43,6 +44,7 @@ import com.snipsnap.synth.Patches
 import com.snipsnap.synth.PitchwheelPatch
 import com.snipsnap.synth.SpoolPatch
 import com.snipsnap.synth.EmbouchurePatch
+import com.snipsnap.synth.OsteriaPatch
 import com.snipsnap.synth.ErosionPatch
 import com.snipsnap.synth.Embouchure
 import com.snipsnap.synth.BellowsPatch
@@ -461,10 +463,23 @@ object UserPresets {
             val recipe = Json.write(JsonValue.Str(patch.toJsonText())).replace("$", "\\$")
             return "RivetPatch.fromJsonText($recipe),"
         }
+        if (patch is OsteriaPatch) {
+            val recipe = Json.write(JsonValue.Str(patch.toJsonText())).replace("$", "\\$")
+            return "OsteriaPatch.fromJsonText($recipe),"
+        }
         if (patch is ErosionPatch) {
             // Native touch is outside the macro map; promotion must retain it.
             val recipe = Json.write(JsonValue.Str(patch.toJsonText())).replace("$", "\\$")
             return "ErosionPatch.fromJsonText($recipe),"
+        }
+        if (patch is TempestPatch) {
+            val recipe = Json.write(JsonValue.Str(patch.toJsonText())).replace("$", "\\$")
+            return "TempestPatch.fromJsonText($recipe),"
+        }
+        if (patch is com.snipsnap.synth.SplayPatch) {
+            // The acoustic model, signed seed and authored note/touch are outside macros.
+            val recipe = Json.write(JsonValue.Str(patch.toJsonText())).replace("$", "\\$")
+            return "SplayPatch.fromJsonText($recipe),"
         }
         if (patch is WickPatch) {
             // Save the selected body as well as note, velocity and controls.

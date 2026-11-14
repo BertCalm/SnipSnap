@@ -98,6 +98,8 @@ internal object MeridianHeld {
             initialOrientation = orientation, fixedAlignment = true).plan
         val setups = Meridian.setupsForVoice(voice, hz, m.getValue("SURFACE").toDouble(),
             m.getValue("MEMORY"), reach, velocity.toDouble())
+        val gestureCarrier = if (MeridianGestures.supports(voice)) MeridianGestures.carrier(
+            voice, rootGridHz, count, m.getValue("SURFACE").toDouble(), velocity.toDouble(), seedContext) else null
         val inputHashes = LongArray(Meridian.SURFACES) { HASH_START }
         val roughnessHashes = LongArray(Meridian.SURFACES) { HASH_START }
         val surfaces = ArrayList<Surface>()
@@ -109,7 +111,8 @@ internal object MeridianHeld {
             val setup = setups[j]
             val seed = Dsp.seedFor("MERIDIAN", Meridian.LEGACY_MODEL_VERSION, Meridian.noiseIdentity(voice), seedContext, j)
             val excitation = periodicInput(motion, setup, j, seed, count, swings,
-                effectivePeriod, reach, velocity.toDouble(), roughnessHashes)
+                effectivePeriod, reach, velocity.toDouble(), roughnessHashes, voice,
+                gestureCarrier, m.getValue("SURFACE").toDouble(), m.getValue("MEMORY"))
             val input = excitation.input
             noiseStateError = maxOf(noiseStateError, excitation.noiseStateError)
             for (x in input) inputHashes[j] = (inputHashes[j] xor x.toBits()) * HASH_MULTIPLIER
@@ -267,7 +270,15 @@ internal object MeridianHeld {
 
     private fun periodicInput(motion: MeridianMotion.Plan, setup: Meridian.SurfaceSetup,
         surface: Int, seed: Int, count: Int, swings: Int, period: Double, reach: Double,
-        velocity: Double, roughnessHashes: LongArray): Excitation {
+        velocity: Double, roughnessHashes: LongArray, voice: MeridianVoice,
+        gestureCarrier: DoubleArray?, surfaceMacro: Double, memory: Float): Excitation {
+        if (gestureCarrier != null) {
+            val source = MeridianGestures.periodicSource(voice, motion, surface, count, swings,
+                period, reach, velocity, surfaceMacro, memory, gestureCarrier)
+            // These two voices use a coherent carrier, not the roughness filters.
+            // Their separate pressure-memory recurrence is checked at the source.
+            return Excitation(source.input, noiseStateError = 0.0)
+        }
         val alpha = setup.noiseAlpha
         val q = 1 - alpha
         var noise1 = 0.0

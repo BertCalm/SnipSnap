@@ -114,5 +114,14 @@ than 40 dB apart):
 - **MPC export:** MPC 3 carries every layer and strike. MPC 2 plays each layer's first strike only, so it
   does not pass the round-robin gate.
 
-**Not yet:** the owner's listen, and a phone or MPC playing the new kit.
+**Heard (2026-11-13).** On the published page (repeated hits before and after, and every pad's four
+layers of three strikes) the owner answered:
+- **Repeated hits:** "Yes, fresh strikes". They sound like the drum played again, not one sample repeated.
+- **Every pad:** "Yes". Each layer's three strikes are the same instrument hit again.
+- **The Moving Bass's press:** "Natural".
+- **The kettles' and gong's new balance per strike:** "Natural".
+
+Preserve model 2 as the accepted round robin.
+
+**Not yet:** a phone or MPC playing the new kit.
 

@@ -891,28 +891,31 @@ fun SnapScreen(
                     .lcdPanel(scheme)
                     .padding(horizontal = 10.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                TapeText("PHOTO TO SOUND", TapeType.lcdHeader, scheme.lcdInk.tape)
-                val lineWord = when {
-                    voice == SnapVoice.DRAWN -> "LINE DRAWN"
-                    photo == null -> "NO PHOTO"
-                    else -> "LINE ${voice.name}"
+                // Title on up to two lines (D7), the status under it, not beside it.
+                Column(Modifier.weight(1f).padding(vertical = 4.dp)) {
+                    TapeText("PHOTO TO SOUND", TapeType.lcdHeader, scheme.lcdInk.tape, maxLines = 2)
+                    val lineWord = when {
+                        voice == SnapVoice.DRAWN -> "LINE DRAWN"
+                        photo == null -> "NO PHOTO"
+                        else -> "LINE ${voice.name}"
+                    }
+                    TapeText(
+                        when {
+                            buildingField -> Copy.SNAP_FIELD_BUSY
+                            cloudBusy -> Copy.SNAP_CLOUD_BUSY
+                            pathBusy -> Copy.SNAP_PATH_SEND_BUSY
+                            spectrumBusy -> Copy.SNAP_SPECTRUM_BUSY
+                            telephoneBusy -> Copy.SNAP_TELEPHONE_BUSY
+                            busy -> Copy.SNAP_KIT_BUSY
+                            envelope != null -> "$lineWord · SHAPE DRAWN"
+                            else -> lineWord
+                        },
+                        TapeType.lcdSmall,
+                        scheme.amber.tape,
+                        maxLines = 2,
+                    )
                 }
-                TapeText(
-                    when {
-                        buildingField -> Copy.SNAP_FIELD_BUSY
-                        cloudBusy -> Copy.SNAP_CLOUD_BUSY
-                        pathBusy -> Copy.SNAP_PATH_SEND_BUSY
-                        spectrumBusy -> Copy.SNAP_SPECTRUM_BUSY
-                        telephoneBusy -> Copy.SNAP_TELEPHONE_BUSY
-                        busy -> Copy.SNAP_KIT_BUSY
-                        envelope != null -> "$lineWord · SHAPE DRAWN"
-                        else -> lineWord
-                    },
-                    TapeType.lcdSmall,
-                    scheme.amber.tape,
-                )
             }
 
             Column(

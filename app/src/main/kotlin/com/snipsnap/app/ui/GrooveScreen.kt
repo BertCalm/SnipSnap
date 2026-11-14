@@ -3069,7 +3069,7 @@ private fun StepEditorOverlay(
                             .tapeClick(label = "SELECT BAR ${bar + 1}") { onBarSelect(bar) },
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
-                        TapeText("BAR ${bar + 1}", TapeType.pixelSmall, if (selected) scheme.lcd.tape else scheme.ink2.tape)
+                        TapeText("BAR ${bar + 1}", TapeType.pixelSmall, if (selected) scheme.ink.tape else scheme.ink2.tape)
                         TapeText(if (selected) "SELECTED" else "", TapeType.pixelSmall, scheme.ink2.tape)
                     }
                 }

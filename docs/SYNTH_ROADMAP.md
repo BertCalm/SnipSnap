@@ -29,7 +29,7 @@
 
 > Fired Bronze round robin (model 2, 2026-11-13): the starter deals each pad's four
 > strike layers three fresh strikes each; every layer's first strike is the approved
-> layer, and model-1 saves keep their sound. Waits for the owner's listen.
+> layer, and model-1 saves keep their sound. Heard and accepted by the owner (2026-11-13).
 > See [integration and verification](FIRED_BRONZE_INTEGRATION.md), "Model 2".
 
 > Fired Bronze integration: owner confirmed the four-layer kit on MPC. Editable
@@ -53,6 +53,11 @@
 > New kit listening is pending; no processor or amp is added. See [dry kit notes](FIRED_BRONZE_DRY_KIT.md).
 
 # Synth roadmap — generate kits, not just capture them
+
+**TEMPEST on the default branch (2026-11-13).** The owner-accepted six-voice digital drum instrument
+came back from the recovery backup with its 22 presets, the full drum starter with choking hats, the
+original tuned starter and the SYNTH picker. The DSP and model sources are unchanged. See
+[TEMPEST_FULL_KIT.md](TEMPEST_FULL_KIT.md).
 
 **Fired Bronze R2 dry study (2026-11-08).** The first kit was rejected by owner
 listening. Five credited tabla preview profiles now drive additive/stochastic

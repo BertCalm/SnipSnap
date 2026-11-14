@@ -535,3 +535,53 @@ Host audition timings are not phone latency measurements.
   through finite and sustained playing.
 - Keeping the original starter intact preserves its established layout while
   the new voices receive a separate listening check.
+
+## DRAW, LIFT, finite keys and two material banks (ported 2026-11-13)
+
+This work came back from the recovery backup. The four accepted voices keep their models,
+defaults, seeds and signal paths: `MeridianGesturesTest` compares all fourteen earlier
+factory recipes and eight finite and held renders with a capture made before DRAW and LIFT
+existed, and `MeridianSixVoiceCompatibilityTest` holds the four kept DRAW/LIFT finite
+takes to their published PCM.
+
+**Model 4: DRAW and LIFT.** DRAW gates a coherent rubbing force by contact pressure. LIFT
+stores pressure in a bounded memory and answers with a pitched release as each contact
+withdraws. Both use the existing twelve surfaces and motion; DRAW reuses SWEEP's surface
+setup and LIFT reuses CHIME's. They save and require model 4; SWEEP still accepts models 1–3
+(default 2), CLACK, CHIME and RASP model 3. A model-4 save on an old voice, a missing model
+on a new voice and model 5 are refused. Four presets are added after the fourteen earlier
+ones, which keep their order and JSON: OPEN LINE and WIDE THREAD (DRAW), AFTER PRESS and
+SOFT RETURN (LIFT). The owner kept the four finite takes; the held versions were heard as
+better but have no final verdict.
+
+**Finite keys.** MAKE INSTRUMENT now also takes a finite sound (HOLD below 97.5%), including
+an original model-1 recipe with HOLD up. Roots run every minor third across MIDI 36–96 plus
+the authored root, each with three touch layers at .30/.65/1 of the saved velocity. The
+authored root cell is the exact patch, and the source envelope is kept, so the sheet has no
+RELEASE. Every cell recipe and WAV hash travels in the package's TrackData and is validated
+before it lands; failures roll back. A zero velocity or a root outside C2–C7 keeps the
+button disabled with a reason. Held sounds keep the existing maker, which now also writes
+its source bindings (`MeridianHeldKeygroupPackage`); its audio is unchanged.
+
+**MERIDIAN MATERIALS** is sixteen finite pads across SWEEP, CLACK, CHIME and RASP from the
+fourteen frozen factory recipes, with three absolute touches (.30/.65/1). Five pads are
+captures of held sounds. **MERIDIAN SIX** is a separate sixteen-pad bank with its own
+schema: nine earlier finite recipes, the four DRAW/LIFT recipes and three octave roles.
+Neither changes the original MERIDIAN starter. Both carry every layer's recipe and WAV hash,
+checked by `MeridianMaterialsKitFiles` and `MeridianSixKitFiles`. On 2026-11-13 the owner
+heard all sixteen MERIDIAN SIX pads at hard touch (two seconds each) and kept the bank (KEEP,
+no notes). The owner also kept the four held DRAW/LIFT presets (OPEN LINE, WIDE THREAD,
+AFTER PRESS, SOFT RETURN: the real opening, then the loop cycle three times).
+
+The bank's soft and medium layers came back REVISIT: "No change between soft, medium and
+hard." Measured on pads 1, 6 and 11, the three layers sit within 0.1 dB of each other (each
+layer is level-matched; the player applies velocity gain once) and their brightness differs by
+at most 13 % (2 % on WIDE THREAD). Touch has to change the strike itself, not only its level;
+the hard layers stay as kept.
+
+The held keyboard's manifest now states the program's real range (MIDI 36–72) instead of
+0–127 (`MeridianKeyboardDescriptionTest`).
+
+Not ported: the backup's direct test harnesses and copied classes under `experiments/`,
+their recorded results and the capture program. No device run, phone timing or MPC
+playback is recorded for any of this.

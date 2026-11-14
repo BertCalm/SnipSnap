@@ -1,0 +1,402 @@
+{
+  "schema": 1,
+  "source": "0f7d0e26cfdf875a995e6c8a5aec8225e3fd1fe9",
+  "capturedAt": "2026-11-08T20:40:34.643277144Z",
+  "dependencyClassManifestSha256": "a93c250eb24ba794376c8524cd0f9da53711edc19eb9fb97bdfc743283dd9dfc",
+  "method": "Eight sequential native Kotlin renders through pristine copied dependencies; raw Float bits, little endian. No listening verdict.",
+  "elapsedMillis": 6578,
+  "recipes": [
+    {
+      "voice": "SWEEP",
+      "ordinal": 0,
+      "name": "FIRST ARC",
+      "json": "{\n  \"engine\": \"MERIDIAN\",\n  \"version\": 1,\n  \"name\": \"FIRST ARC\",\n  \"voice\": \"SWEEP\",\n  \"macros\": {\n    \"TUNE\": 0.5,\n    \"LATITUDE\": 0.800000011920929,\n    \"LENGTH\": 0.44999998807907104,\n    \"REACH\": 0.6000000238418579,\n    \"SURFACE\": 0.550000011920929,\n    \"MEMORY\": 0.4000000059604645,\n    \"HOLD\": 0\n  },\n  \"midi\": 57,\n  \"velocity\": 1,\n  \"model\": 2,\n  \"seedContext\": 4810\n}",
+      "recipeJsonSha256": "4382aa1817fbd12b6ca4487c6d05d47c39ec8a7d3e0e812042f2b13eef9ac4a6"
+    },
+    {
+      "voice": "SWEEP",
+      "ordinal": 0,
+      "name": "BACK ARC",
+      "json": "{\n  \"engine\": \"MERIDIAN\",\n  \"version\": 1,\n  \"name\": \"BACK ARC\",\n  \"voice\": \"SWEEP\",\n  \"macros\": {\n    \"TUNE\": 0.5,\n    \"LATITUDE\": 0.20000000298023224,\n    \"LENGTH\": 0.44999998807907104,\n    \"REACH\": 0.6000000238418579,\n    \"SURFACE\": 0.550000011920929,\n    \"MEMORY\": 0.4000000059604645,\n    \"HOLD\": 0\n  },\n  \"midi\": 57,\n  \"velocity\": 1,\n  \"model\": 2,\n  \"seedContext\": 4810\n}",
+      "recipeJsonSha256": "793e370d00996aaa59c89f493093302b86fbc171a585333c1720056d7cbf2892"
+    },
+    {
+      "voice": "SWEEP",
+      "ordinal": 0,
+      "name": "CLOSE GRAIN",
+      "json": "{\n  \"engine\": \"MERIDIAN\",\n  \"version\": 1,\n  \"name\": \"CLOSE GRAIN\",\n  \"voice\": \"SWEEP\",\n  \"macros\": {\n    \"TUNE\": 0.5,\n    \"LATITUDE\": 0.699999988079071,\n    \"LENGTH\": 0.3199999928474426,\n    \"REACH\": 0.41999998688697815,\n    \"SURFACE\": 0.1599999964237213,\n    \"MEMORY\": 0.18000000715255737,\n    \"HOLD\": 0\n  },\n  \"midi\": 57,\n  \"velocity\": 1,\n  \"model\": 2,\n  \"seedContext\": 4810\n}",
+      "recipeJsonSha256": "7a8904e84995dfb37f890d2bc37008865120c0643263c3a5c218929ffbe45f61"
+    },
+    {
+      "voice": "SWEEP",
+      "ordinal": 0,
+      "name": "DEEP KNOCK",
+      "json": "{\n  \"engine\": \"MERIDIAN\",\n  \"version\": 1,\n  \"name\": \"DEEP KNOCK\",\n  \"voice\": \"SWEEP\",\n  \"macros\": {\n    \"TUNE\": 0.5,\n    \"LATITUDE\": 0.8999999761581421,\n    \"LENGTH\": 0.18000000715255737,\n    \"REACH\": 0.9200000166893005,\n    \"SURFACE\": 0.7200000286102295,\n    \"MEMORY\": 0.2800000011920929,\n    \"HOLD\": 0\n  },\n  \"midi\": 57,\n  \"velocity\": 1,\n  \"model\": 2,\n  \"seedContext\": 4810\n}",
+      "recipeJsonSha256": "6288b999bb66f77994b3445a8c677e84df0dcd9b9282417a7452562ab67fff84"
+    },
+    {
+      "voice": "SWEEP",
+      "ordinal": 0,
+      "name": "STILL PAIR",
+      "json": "{\n  \"engine\": \"MERIDIAN\",\n  \"version\": 1,\n  \"name\": \"STILL PAIR\",\n  \"voice\": \"SWEEP\",\n  \"macros\": {\n    \"TUNE\": 0.5,\n    \"LATITUDE\": 0.5,\n    \"LENGTH\": 0.5,\n    \"REACH\": 0.550000011920929,\n    \"SURFACE\": 0.6000000238418579,\n    \"MEMORY\": 0.44999998807907104,\n    \"HOLD\": 0\n  },\n  \"midi\": 57,\n  \"velocity\": 1,\n  \"model\": 2,\n  \"seedContext\": 4810\n}",
+      "recipeJsonSha256": "0ef696f5a58fe673a3532dd1ffd1e0212f72e31d4fe4a3f105bf71494697f0cb"
+    },
+    {
+      "voice": "SWEEP",
+      "ordinal": 0,
+      "name": "LONG TRAIL",
+      "json": "{\n  \"engine\": \"MERIDIAN\",\n  \"version\": 1,\n  \"name\": \"LONG TRAIL\",\n  \"voice\": \"SWEEP\",\n  \"macros\": {\n    \"TUNE\": 0.5,\n    \"LATITUDE\": 0.7200000286102295,\n    \"LENGTH\": 0.7799999713897705,\n    \"REACH\": 0.699999988079071,\n    \"SURFACE\": 0.6200000047683716,\n    \"MEMORY\": 0.8399999737739563,\n    \"HOLD\": 0.6499999761581421\n  },\n  \"midi\": 57,\n  \"velocity\": 1,\n  \"model\": 2,\n  \"seedContext\": 4810\n}",
+      "recipeJsonSha256": "022d2be5b7e7a6920dee91b1c19575599ab4d8cf285ea7ca673b70248f4d0311"
+    },
+    {
+      "voice": "SWEEP",
+      "ordinal": 0,
+      "name": "ROUND THREAD",
+      "json": "{\n  \"engine\": \"MERIDIAN\",\n  \"version\": 1,\n  \"name\": \"ROUND THREAD\",\n  \"voice\": \"SWEEP\",\n  \"macros\": {\n    \"TUNE\": 0.5,\n    \"LATITUDE\": 0.5,\n    \"LENGTH\": 0.550000011920929,\n    \"REACH\": 0.5,\n    \"SURFACE\": 0.18000000715255737,\n    \"MEMORY\": 0.6000000238418579,\n    \"HOLD\": 1\n  },\n  \"midi\": 57,\n  \"velocity\": 1,\n  \"model\": 2,\n  \"seedContext\": 4810\n}",
+      "recipeJsonSha256": "9803d8c131abc23a90af5b873cf4285ba2e260c24b57d135d392ed35835ce9b0"
+    },
+    {
+      "voice": "SWEEP",
+      "ordinal": 0,
+      "name": "FINE STRAND",
+      "json": "{\n  \"engine\": \"MERIDIAN\",\n  \"version\": 1,\n  \"name\": \"FINE STRAND\",\n  \"voice\": \"SWEEP\",\n  \"macros\": {\n    \"TUNE\": 0.5,\n    \"LATITUDE\": 0.20000000298023224,\n    \"LENGTH\": 0.7799999713897705,\n    \"REACH\": 0.7599999904632568,\n    \"SURFACE\": 0.8999999761581421,\n    \"MEMORY\": 0.7799999713897705,\n    \"HOLD\": 1\n  },\n  \"midi\": 57,\n  \"velocity\": 1,\n  \"model\": 2,\n  \"seedContext\": 4810\n}",
+      "recipeJsonSha256": "8aa586cb15056f14a38bb349a126bd02e9c6d75cb3dc13cbafdbf303633919de"
+    },
+    {
+      "voice": "CLACK",
+      "ordinal": 1,
+      "name": "HARD GRAIN",
+      "json": "{\n  \"engine\": \"MERIDIAN\",\n  \"version\": 1,\n  \"name\": \"HARD GRAIN\",\n  \"voice\": \"CLACK\",\n  \"macros\": {\n    \"TUNE\": 0.5,\n    \"LATITUDE\": 0.800000011920929,\n    \"LENGTH\": 0.44999998807907104,\n    \"REACH\": 0.6000000238418579,\n    \"SURFACE\": 1,\n    \"MEMORY\": 0.4000000059604645,\n    \"HOLD\": 0\n  },\n  \"midi\": 57,\n  \"velocity\": 1,\n  \"model\": 3,\n  \"seedContext\": 4810\n}",
+      "recipeJsonSha256": "9faf8beb2fe9732ad282b16d544cfee54a94565980ba6839b30ee6595595785f"
+    },
+    {
+      "voice": "CLACK",
+      "ordinal": 1,
+      "name": "GRAIN THREAD",
+      "json": "{\n  \"engine\": \"MERIDIAN\",\n  \"version\": 1,\n  \"name\": \"GRAIN THREAD\",\n  \"voice\": \"CLACK\",\n  \"macros\": {\n    \"TUNE\": 0.5,\n    \"LATITUDE\": 0.5,\n    \"LENGTH\": 0.44999998807907104,\n    \"REACH\": 0.6000000238418579,\n    \"SURFACE\": 1,\n    \"MEMORY\": 0.4000000059604645,\n    \"HOLD\": 1\n  },\n  \"midi\": 57,\n  \"velocity\": 1,\n  \"model\": 3,\n  \"seedContext\": 4810\n}",
+      "recipeJsonSha256": "e4f47637c17b85acf35880d0c09fde4cea9ef8bcd813d59664dca42e8443b523"
+    },
+    {
+      "voice": "CHIME",
+      "ordinal": 2,
+      "name": "HOLLOW TONE",
+      "json": "{\n  \"engine\": \"MERIDIAN\",\n  \"version\": 1,\n  \"name\": \"HOLLOW TONE\",\n  \"voice\": \"CHIME\",\n  \"macros\": {\n    \"TUNE\": 0.5,\n    \"LATITUDE\": 0.800000011920929,\n    \"LENGTH\": 0.44999998807907104,\n    \"REACH\": 0.6000000238418579,\n    \"SURFACE\": 1,\n    \"MEMORY\": 0.4000000059604645,\n    \"HOLD\": 0\n  },\n  \"midi\": 57,\n  \"velocity\": 1,\n  \"model\": 3,\n  \"seedContext\": 4810\n}",
+      "recipeJsonSha256": "a3addab5890c055d4b2c91ad8328c691e46eae8c57bfbc29bca521ea6e7dc6d1"
+    },
+    {
+      "voice": "CHIME",
+      "ordinal": 2,
+      "name": "LANTERN TONE",
+      "json": "{\n  \"engine\": \"MERIDIAN\",\n  \"version\": 1,\n  \"name\": \"LANTERN TONE\",\n  \"voice\": \"CHIME\",\n  \"macros\": {\n    \"TUNE\": 0.5,\n    \"LATITUDE\": 0.5,\n    \"LENGTH\": 0.44999998807907104,\n    \"REACH\": 0.6000000238418579,\n    \"SURFACE\": 1,\n    \"MEMORY\": 0.4000000059604645,\n    \"HOLD\": 1\n  },\n  \"midi\": 57,\n  \"velocity\": 1,\n  \"model\": 3,\n  \"seedContext\": 4810\n}",
+      "recipeJsonSha256": "a9c47eeb4b2861b37b813c9a009e269cdf9e8d5c799dc5ab2a093b27744ebaa2"
+    },
+    {
+      "voice": "RASP",
+      "ordinal": 3,
+      "name": "BRIGHT EDGE",
+      "json": "{\n  \"engine\": \"MERIDIAN\",\n  \"version\": 1,\n  \"name\": \"BRIGHT EDGE\",\n  \"voice\": \"RASP\",\n  \"macros\": {\n    \"TUNE\": 0.5,\n    \"LATITUDE\": 0.800000011920929,\n    \"LENGTH\": 0.44999998807907104,\n    \"REACH\": 0.6000000238418579,\n    \"SURFACE\": 1,\n    \"MEMORY\": 0.4000000059604645,\n    \"HOLD\": 0\n  },\n  \"midi\": 57,\n  \"velocity\": 1,\n  \"model\": 3,\n  \"seedContext\": 4810\n}",
+      "recipeJsonSha256": "da2ba35e8699046eea4b3afd5673e3ce4b39f6e41f001f0ea109f5d5aa75ec7c"
+    },
+    {
+      "voice": "RASP",
+      "ordinal": 3,
+      "name": "EDGE THREAD",
+      "json": "{\n  \"engine\": \"MERIDIAN\",\n  \"version\": 1,\n  \"name\": \"EDGE THREAD\",\n  \"voice\": \"RASP\",\n  \"macros\": {\n    \"TUNE\": 0.5,\n    \"LATITUDE\": 0.5,\n    \"LENGTH\": 0.44999998807907104,\n    \"REACH\": 0.6000000238418579,\n    \"SURFACE\": 1,\n    \"MEMORY\": 0.4000000059604645,\n    \"HOLD\": 1\n  },\n  \"midi\": 57,\n  \"velocity\": 1,\n  \"model\": 3,\n  \"seedContext\": 4810\n}",
+      "recipeJsonSha256": "ca57cc76246a69d5a4b186c0cc3f75ba7a68da8b73ae5f4dba5cc607aa7fe973"
+    }
+  ],
+  "renders": [
+    {
+      "voice": "SWEEP",
+      "ordinal": 0,
+      "name": "FIRST ARC",
+      "playback": "FINITE",
+      "recipe": {
+        "engine": "MERIDIAN",
+        "version": 1,
+        "name": "FIRST ARC",
+        "voice": "SWEEP",
+        "macros": {
+          "TUNE": 0.5,
+          "LATITUDE": 0.800000011920929,
+          "LENGTH": 0.44999998807907104,
+          "REACH": 0.6000000238418579,
+          "SURFACE": 0.550000011920929,
+          "MEMORY": 0.4000000059604645,
+          "HOLD": 0
+        },
+        "midi": 57,
+        "velocity": 1,
+        "model": 2,
+        "seedContext": 4810
+      },
+      "json": "{\n  \"engine\": \"MERIDIAN\",\n  \"version\": 1,\n  \"name\": \"FIRST ARC\",\n  \"voice\": \"SWEEP\",\n  \"macros\": {\n    \"TUNE\": 0.5,\n    \"LATITUDE\": 0.800000011920929,\n    \"LENGTH\": 0.44999998807907104,\n    \"REACH\": 0.6000000238418579,\n    \"SURFACE\": 0.550000011920929,\n    \"MEMORY\": 0.4000000059604645,\n    \"HOLD\": 0\n  },\n  \"midi\": 57,\n  \"velocity\": 1,\n  \"model\": 2,\n  \"seedContext\": 4810\n}",
+      "frames": 129813,
+      "channels": 1,
+      "sampleRate": 44100,
+      "rawSha256": "19b1867f12b6ae9c1ed3b21ae6fbe0ff5e769e9e4369eb9502581fda2d0174a5",
+      "elapsedMillis": 1608,
+      "loopStartFrame": null,
+      "loopEndFrameExclusive": null
+    },
+    {
+      "voice": "SWEEP",
+      "ordinal": 0,
+      "name": "ROUND THREAD",
+      "playback": "HELD",
+      "recipe": {
+        "engine": "MERIDIAN",
+        "version": 1,
+        "name": "ROUND THREAD",
+        "voice": "SWEEP",
+        "macros": {
+          "TUNE": 0.5,
+          "LATITUDE": 0.5,
+          "LENGTH": 0.550000011920929,
+          "REACH": 0.5,
+          "SURFACE": 0.18000000715255737,
+          "MEMORY": 0.6000000238418579,
+          "HOLD": 1
+        },
+        "midi": 57,
+        "velocity": 1,
+        "model": 2,
+        "seedContext": 4810
+      },
+      "json": "{\n  \"engine\": \"MERIDIAN\",\n  \"version\": 1,\n  \"name\": \"ROUND THREAD\",\n  \"voice\": \"SWEEP\",\n  \"macros\": {\n    \"TUNE\": 0.5,\n    \"LATITUDE\": 0.5,\n    \"LENGTH\": 0.550000011920929,\n    \"REACH\": 0.5,\n    \"SURFACE\": 0.18000000715255737,\n    \"MEMORY\": 0.6000000238418579,\n    \"HOLD\": 1\n  },\n  \"midi\": 57,\n  \"velocity\": 1,\n  \"model\": 2,\n  \"seedContext\": 4810\n}",
+      "frames": 93812,
+      "channels": 1,
+      "sampleRate": 44100,
+      "rawSha256": "2ccc1b8a63bf68c0316901eb5b29f2f1da07e3178d2d9070cdfb25941dc8b3d6",
+      "elapsedMillis": 1530,
+      "loopStartFrame": 46906,
+      "loopEndFrameExclusive": 93812,
+      "seamError": 0,
+      "cycleError": 0,
+      "stateError": 5.667344828081688E-14,
+      "noiseStateError": 0,
+      "loopFrames": 46906,
+      "rootHz": 220,
+      "rootGridHz": 220.00170553873704
+    },
+    {
+      "voice": "CLACK",
+      "ordinal": 1,
+      "name": "HARD GRAIN",
+      "playback": "FINITE",
+      "recipe": {
+        "engine": "MERIDIAN",
+        "version": 1,
+        "name": "HARD GRAIN",
+        "voice": "CLACK",
+        "macros": {
+          "TUNE": 0.5,
+          "LATITUDE": 0.800000011920929,
+          "LENGTH": 0.44999998807907104,
+          "REACH": 0.6000000238418579,
+          "SURFACE": 1,
+          "MEMORY": 0.4000000059604645,
+          "HOLD": 0
+        },
+        "midi": 57,
+        "velocity": 1,
+        "model": 3,
+        "seedContext": 4810
+      },
+      "json": "{\n  \"engine\": \"MERIDIAN\",\n  \"version\": 1,\n  \"name\": \"HARD GRAIN\",\n  \"voice\": \"CLACK\",\n  \"macros\": {\n    \"TUNE\": 0.5,\n    \"LATITUDE\": 0.800000011920929,\n    \"LENGTH\": 0.44999998807907104,\n    \"REACH\": 0.6000000238418579,\n    \"SURFACE\": 1,\n    \"MEMORY\": 0.4000000059604645,\n    \"HOLD\": 0\n  },\n  \"midi\": 57,\n  \"velocity\": 1,\n  \"model\": 3,\n  \"seedContext\": 4810\n}",
+      "frames": 129813,
+      "channels": 1,
+      "sampleRate": 44100,
+      "rawSha256": "b12e27ecd5c64766cceab56f97e637f301bf5d7d30ed3d6e1dd89658fc42d0ee",
+      "elapsedMillis": 330,
+      "loopStartFrame": null,
+      "loopEndFrameExclusive": null
+    },
+    {
+      "voice": "CLACK",
+      "ordinal": 1,
+      "name": "GRAIN THREAD",
+      "playback": "HELD",
+      "recipe": {
+        "engine": "MERIDIAN",
+        "version": 1,
+        "name": "GRAIN THREAD",
+        "voice": "CLACK",
+        "macros": {
+          "TUNE": 0.5,
+          "LATITUDE": 0.5,
+          "LENGTH": 0.44999998807907104,
+          "REACH": 0.6000000238418579,
+          "SURFACE": 1,
+          "MEMORY": 0.4000000059604645,
+          "HOLD": 1
+        },
+        "midi": 57,
+        "velocity": 1,
+        "model": 3,
+        "seedContext": 4810
+      },
+      "json": "{\n  \"engine\": \"MERIDIAN\",\n  \"version\": 1,\n  \"name\": \"GRAIN THREAD\",\n  \"voice\": \"CLACK\",\n  \"macros\": {\n    \"TUNE\": 0.5,\n    \"LATITUDE\": 0.5,\n    \"LENGTH\": 0.44999998807907104,\n    \"REACH\": 0.6000000238418579,\n    \"SURFACE\": 1,\n    \"MEMORY\": 0.4000000059604645,\n    \"HOLD\": 1\n  },\n  \"midi\": 57,\n  \"velocity\": 1,\n  \"model\": 3,\n  \"seedContext\": 4810\n}",
+      "frames": 74570,
+      "channels": 1,
+      "sampleRate": 44100,
+      "rawSha256": "a8e21f767bd431bdf9eff8fad6b8e97b3e5b8821764024441957bccb894c2e38",
+      "elapsedMillis": 642,
+      "loopStartFrame": 37285,
+      "loopEndFrameExclusive": 74570,
+      "seamError": 0,
+      "cycleError": 0,
+      "stateError": 5.472139032229039E-15,
+      "noiseStateError": 0,
+      "loopFrames": 37285,
+      "rootHz": 220,
+      "rootGridHz": 219.9973179562827
+    },
+    {
+      "voice": "CHIME",
+      "ordinal": 2,
+      "name": "HOLLOW TONE",
+      "playback": "FINITE",
+      "recipe": {
+        "engine": "MERIDIAN",
+        "version": 1,
+        "name": "HOLLOW TONE",
+        "voice": "CHIME",
+        "macros": {
+          "TUNE": 0.5,
+          "LATITUDE": 0.800000011920929,
+          "LENGTH": 0.44999998807907104,
+          "REACH": 0.6000000238418579,
+          "SURFACE": 1,
+          "MEMORY": 0.4000000059604645,
+          "HOLD": 0
+        },
+        "midi": 57,
+        "velocity": 1,
+        "model": 3,
+        "seedContext": 4810
+      },
+      "json": "{\n  \"engine\": \"MERIDIAN\",\n  \"version\": 1,\n  \"name\": \"HOLLOW TONE\",\n  \"voice\": \"CHIME\",\n  \"macros\": {\n    \"TUNE\": 0.5,\n    \"LATITUDE\": 0.800000011920929,\n    \"LENGTH\": 0.44999998807907104,\n    \"REACH\": 0.6000000238418579,\n    \"SURFACE\": 1,\n    \"MEMORY\": 0.4000000059604645,\n    \"HOLD\": 0\n  },\n  \"midi\": 57,\n  \"velocity\": 1,\n  \"model\": 3,\n  \"seedContext\": 4810\n}",
+      "frames": 129813,
+      "channels": 1,
+      "sampleRate": 44100,
+      "rawSha256": "439e9b0c125336b6ef2ac831dcbabf831fcb79c25dbc040c7b5923d9c1336d59",
+      "elapsedMillis": 526,
+      "loopStartFrame": null,
+      "loopEndFrameExclusive": null
+    },
+    {
+      "voice": "CHIME",
+      "ordinal": 2,
+      "name": "LANTERN TONE",
+      "playback": "HELD",
+      "recipe": {
+        "engine": "MERIDIAN",
+        "version": 1,
+        "name": "LANTERN TONE",
+        "voice": "CHIME",
+        "macros": {
+          "TUNE": 0.5,
+          "LATITUDE": 0.5,
+          "LENGTH": 0.44999998807907104,
+          "REACH": 0.6000000238418579,
+          "SURFACE": 1,
+          "MEMORY": 0.4000000059604645,
+          "HOLD": 1
+        },
+        "midi": 57,
+        "velocity": 1,
+        "model": 3,
+        "seedContext": 4810
+      },
+      "json": "{\n  \"engine\": \"MERIDIAN\",\n  \"version\": 1,\n  \"name\": \"LANTERN TONE\",\n  \"voice\": \"CHIME\",\n  \"macros\": {\n    \"TUNE\": 0.5,\n    \"LATITUDE\": 0.5,\n    \"LENGTH\": 0.44999998807907104,\n    \"REACH\": 0.6000000238418579,\n    \"SURFACE\": 1,\n    \"MEMORY\": 0.4000000059604645,\n    \"HOLD\": 1\n  },\n  \"midi\": 57,\n  \"velocity\": 1,\n  \"model\": 3,\n  \"seedContext\": 4810\n}",
+      "frames": 74570,
+      "channels": 1,
+      "sampleRate": 44100,
+      "rawSha256": "0b20ff10937708f121e4bf3d40331e1c7ad4b2a909b1085c0d589999a64fc0b1",
+      "elapsedMillis": 370,
+      "loopStartFrame": 37285,
+      "loopEndFrameExclusive": 74570,
+      "seamError": 0,
+      "cycleError": 0,
+      "stateError": 1.2657260683855573E-12,
+      "noiseStateError": 0,
+      "loopFrames": 37285,
+      "rootHz": 220,
+      "rootGridHz": 219.9973179562827
+    },
+    {
+      "voice": "RASP",
+      "ordinal": 3,
+      "name": "BRIGHT EDGE",
+      "playback": "FINITE",
+      "recipe": {
+        "engine": "MERIDIAN",
+        "version": 1,
+        "name": "BRIGHT EDGE",
+        "voice": "RASP",
+        "macros": {
+          "TUNE": 0.5,
+          "LATITUDE": 0.800000011920929,
+          "LENGTH": 0.44999998807907104,
+          "REACH": 0.6000000238418579,
+          "SURFACE": 1,
+          "MEMORY": 0.4000000059604645,
+          "HOLD": 0
+        },
+        "midi": 57,
+        "velocity": 1,
+        "model": 3,
+        "seedContext": 4810
+      },
+      "json": "{\n  \"engine\": \"MERIDIAN\",\n  \"version\": 1,\n  \"name\": \"BRIGHT EDGE\",\n  \"voice\": \"RASP\",\n  \"macros\": {\n    \"TUNE\": 0.5,\n    \"LATITUDE\": 0.800000011920929,\n    \"LENGTH\": 0.44999998807907104,\n    \"REACH\": 0.6000000238418579,\n    \"SURFACE\": 1,\n    \"MEMORY\": 0.4000000059604645,\n    \"HOLD\": 0\n  },\n  \"midi\": 57,\n  \"velocity\": 1,\n  \"model\": 3,\n  \"seedContext\": 4810\n}",
+      "frames": 129813,
+      "channels": 1,
+      "sampleRate": 44100,
+      "rawSha256": "61abd344748b65d42607132cbf026029f1a2c03e87ac04ffa4df4f2e006e012b",
+      "elapsedMillis": 431,
+      "loopStartFrame": null,
+      "loopEndFrameExclusive": null
+    },
+    {
+      "voice": "RASP",
+      "ordinal": 3,
+      "name": "EDGE THREAD",
+      "playback": "HELD",
+      "recipe": {
+        "engine": "MERIDIAN",
+        "version": 1,
+        "name": "EDGE THREAD",
+        "voice": "RASP",
+        "macros": {
+          "TUNE": 0.5,
+          "LATITUDE": 0.5,
+          "LENGTH": 0.44999998807907104,
+          "REACH": 0.6000000238418579,
+          "SURFACE": 1,
+          "MEMORY": 0.4000000059604645,
+          "HOLD": 1
+        },
+        "midi": 57,
+        "velocity": 1,
+        "model": 3,
+        "seedContext": 4810
+      },
+      "json": "{\n  \"engine\": \"MERIDIAN\",\n  \"version\": 1,\n  \"name\": \"EDGE THREAD\",\n  \"voice\": \"RASP\",\n  \"macros\": {\n    \"TUNE\": 0.5,\n    \"LATITUDE\": 0.5,\n    \"LENGTH\": 0.44999998807907104,\n    \"REACH\": 0.6000000238418579,\n    \"SURFACE\": 1,\n    \"MEMORY\": 0.4000000059604645,\n    \"HOLD\": 1\n  },\n  \"midi\": 57,\n  \"velocity\": 1,\n  \"model\": 3,\n  \"seedContext\": 4810\n}",
+      "frames": 74570,
+      "channels": 1,
+      "sampleRate": 44100,
+      "rawSha256": "8f4ba7d0dcc7717a32b97efce2aa0d0f1a083f78b3c78a979ff212a9c0cbc3bf",
+      "elapsedMillis": 318,
+      "loopStartFrame": 37285,
+      "loopEndFrameExclusive": 74570,
+      "seamError": 0,
+      "cycleError": 0,
+      "stateError": 1.1178571426375158E-14,
+      "noiseStateError": 0,
+      "loopFrames": 37285,
+      "rootHz": 220,
+      "rootGridHz": 219.9973179562827
+    }
+  ]
+}

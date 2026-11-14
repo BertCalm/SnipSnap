@@ -132,7 +132,7 @@ private fun PatternRow(label: String, place: Int, total: Int, now: Boolean, onTa
             TapeText(label, TapeType.marker, scheme.ink.tape)
             TapeText(if (now) Copy.SONG_PICK_NOW else "", TapeType.pixelSmall, scheme.ink2.tape)
         }
-        TapeText("%02d".format(java.util.Locale.ROOT, place), TapeType.pixel, scheme.amber.tape)
+        TapeText("%02d".format(java.util.Locale.ROOT, place), TapeType.pixel, (if (now) scheme.ink2 else scheme.amber).tape)
     }
 }
 

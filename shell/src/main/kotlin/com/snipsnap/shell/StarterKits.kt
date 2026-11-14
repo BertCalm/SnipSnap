@@ -121,8 +121,8 @@ object StarterKits {
             seeded = false,
         ) { ThumpKits.classic() },
         Starter(
-            "strike-fx", "STRIKE FX",
-            "Four short hits: DRY, REVERB, ECHO. Turn STRIKE ON, use STAY and VOL OFF, then tap while moving the strip.",
+            "strike-fx", "FX BY VELOCITY",
+            "Four short hits: DRY, REVERB, ECHO. Open VELOCITY STRIP, turn STRIP ON, set RELEASE to STAY and LEVEL to VOL OFF, then tap while moving the strip.",
             seeded = false,
         ) { com.snipsnap.synth.StrikeDemoKit.build() },
         Starter(
@@ -760,6 +760,44 @@ object StarterKits {
             "The faster, brighter Michigan kit: a higher, shorter kick, a tighter clap, bright hats, short hard bass hits and three stank rims, crushed and slammed harder. Three touch zones, four takes; frantic two bars and a rim riser.",
             seeded = false, tempoBpm = com.snipsnap.synth.ScuffKits.Kit.FLINT.bpm.toFloat(),
         ) { com.snipsnap.synth.ScuffKits.build(com.snipsnap.synth.ScuffKits.Kit.FLINT) },
+        Starter(
+            "meridian-materials", "MERIDIAN MATERIALS",
+            "Sixteen finite pads across four ringing voices, with three touch levels and five held-sound captures.",
+            seeded = false,
+        ) { SynthKits.meridianMaterials() },
+        Starter(
+            "meridian-six", "MERIDIAN SIX",
+            "Sixteen finite pads across six voices, with three native touch levels and three octave roles.",
+            seeded = false,
+        ) { SynthKits.meridianSix() },
+        Starter(
+            "tempest", "TEMPEST",
+            "Six-voice digital drum kit: kicks, snares, claps, toms, choking hats and driven metal.",
+            seeded = false,
+        ) { SynthKits.tempest() },
+        Starter(
+            "tempest-tuned", "TEMPEST TUNED",
+            "The original E minor pentatonic kicks, alternate strikes and six metal colors.",
+            seeded = false,
+            key = KeySpec.parse("Eminpent"),
+        ) { SynthKits.tempestTuned() },
+        Starter(
+            SplayDelivery.STARTER_ID, "SPLAY POPULATIONS",
+            "One TONGUE voice. Five finite settings: 1, 2, 4, 8 and 16 mechanisms.",
+            seeded = false,
+        ) { SplayDelivery.starterPads() },
+        Starter(
+            "osteria", "OSTERIA",
+            "The original evolving Note in C minor, with soft touches and a short tap.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.osteria() },
+        Starter(
+            "osteria-six-voice", "OSTERIA SIX VOICES",
+            "Note, bass, pluck, reed, bowed and pad: twelve evolving sounds with three native touch levels.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { com.snipsnap.synth.OsteriaKits.sixVoice() },
     )
 
     fun byId(id: String): Starter? = ALL.firstOrNull { it.id == id }
