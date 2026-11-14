@@ -27,17 +27,17 @@ No unbounded cache or geometry solver is used. Sequential bank generation bounds
 
 The generator writes both native kit folders, MPC 3 tracks with MPC 2 twins, full per-pad velocity/take audition strips, all source voices and articulations, grooves through KitPreview, diversity measurements and render timing. It checks PCM after saving and after export; zone boundary selection and two cycles through PadHit; persisted recipe replay; velocity spectral differences and take similarity; and MPC metadata read-back. Exporting a file does not establish that hardware selects its slices correctly.
 
-| Owner gate | Status before verification |
+| Owner gate | Current evidence |
 | --- | --- |
 | Melodic voices, keygroups, chords | Not applicable: drum battery |
 | Articulation | Finite hits and authored roll/riser implemented; native listening pending |
 | Multiple genre kits | Two authored shelf starters implemented; native listening pending |
-| Velocity and RR rendering | Native paths implemented; test results recorded below when run |
-| Save/play/export software | End-to-end proof implemented; test results recorded below when run |
+| Velocity and RR rendering | Passed all 21 voices and 32 authored pads; see measurements below |
+| Save/play/export software | Passed both complete grids in software; hardware remains open |
 | MPC 2 combined velocity/RR | RR exception applies per owner's 2026-11-14 decision; velocity still tested |
 | Phone and MPC hardware | Not yet verified |
 | Kotlin sound vs preferred Python | Not yet approved |
-| Render budget | Measurement pending; phone unverified |
+| Render budget | Host: bass 21–23 ms, snare 135 ms, crash 866 ms, roll 4.36 s; fast-render target not met |
 | Full control corners and alias-reference comparison | Not yet verified |
 | Overall | In progress; never inferred from a successful preview |
 
@@ -47,3 +47,15 @@ The generator writes both native kit folders, MPC 3 tracks with MPC 2 twins, ful
 - Fixed player identities and fresh contact preserve the impression of the same line playing again.
 - Progressive, frequency-dependent hand loss lets cymbals darken and settle instead of hitting a mute wall.
 - Saved recipes and the shared kit grid keep the sound and repeat pool together through normal app operations.
+
+[Native audition and downloadable kits](https://snipsnap-drumline-audition.bertcalm.chatgpt.site/kotlin.html) · [Preferred Python cymbals](https://snipsnap-drumline-audition.bertcalm.chatgpt.site/)
+
+## Verified native round
+
+On 2026-11-14 the focused renderer tests (six), both complete-kit tests (two), and `:shell:generateDrumlineKit` completed with exit 0. The field kit's closest take correlation is 0.999870 and minimum matched-level velocity shape movement is 1.110 dB; street is 0.999924 and 1.393 dB. The shared acceptance thresholds are below 0.99995 correlation and above 0.5 dB shape movement. Bass mallet modal weights were widened after the first saved-bank proof exposed a near-copy at soft velocity. Thresholds were retained.
+
+Each kit has 16 pads × 3 velocity levels × 3 takes. The proof covers all exported PCM, persisted recipes, inclusive velocity boundaries and two repeat cycles per zone. Both kits include an authored cadence. Their combined layouts exercise every voice and finite articulation. The generator measured approximately 60 seconds for the field kit and 47 seconds for street on this host. These bank build times and the one-shot timings leave the fast-render gate open.
+
+The full JVM regression suite is running after merging current default branch `42b37f6`. Android compilation and emulator execution require CI; this workspace has no SDK. No phone/MPC hardware pass or native sound approval is claimed.
+
+Recorded host evidence: [field grid](evidence/drumline/drumline-field.csv), [street grid](evidence/drumline/drumline-street.csv), and [render times](evidence/drumline/render-times.csv). Timings are warmed single renders under Temurin 21.0.13 on the shared Linux host; they are not phone estimates.

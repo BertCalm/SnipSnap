@@ -781,3 +781,6 @@ testkit/tempest-full-kit/
 testkit/SnipSnap Tempest Full Kit/
 testkit/SnipSnap Tempest Tuned Kit/
 testkit/etch-audition/
+
+# Reproducible native drumline audition and exported kits.
+/testkit/drumline-kit/

@@ -102,8 +102,6 @@ object StarterKits {
     }
 
     val ALL: List<Starter> = listOf(
-        Starter("drumline-field", "DRUMLINE FIELD CADENCE", "Tight marching battery: independent snares and tenors, five bass sizes and ringing cymbals. Three touch levels and three takes.", seeded = false, tempoBpm = 120f) { com.snipsnap.synth.DrumlineKits.build(com.snipsnap.synth.DrumlineKits.Kit.FIELD) },
-        Starter("drumline-street", "DRUMLINE STREET CADENCE", "Open street battery: lower heads, smaller sections, softer mallets, split bass and an accelerating snare. Three touch levels and three takes.", seeded = false, tempoBpm = 100f) { com.snipsnap.synth.DrumlineKits.build(com.snipsnap.synth.DrumlineKits.Kit.STREET) },
         // displayName is "EMPTY GRID", not "BLANK" — the other
         // entries are all pre-composed kits, and a plain "BLANK" reads as
         // just one more label in that list rather than the one option
@@ -821,6 +819,8 @@ object StarterKits {
             "UK garage TEMPEST kit: short kicks, rim and ghost snares, five choking hats and pitched blips.",
             seeded = false,
         ) { SynthKits.tempestStep() },
+        Starter("drumline-field", "DRUMLINE FIELD CADENCE", "Tight marching battery: independent snares and tenors, five bass sizes and ringing cymbals. Three touch levels and three takes.", seeded = false, tempoBpm = 120f) { com.snipsnap.synth.DrumlineKits.build(com.snipsnap.synth.DrumlineKits.Kit.FIELD) },
+        Starter("drumline-street", "DRUMLINE STREET CADENCE", "Open street battery: lower heads, smaller sections, softer mallets, split bass and an accelerating snare. Three touch levels and three takes.", seeded = false, tempoBpm = 100f) { com.snipsnap.synth.DrumlineKits.build(com.snipsnap.synth.DrumlineKits.Kit.STREET) },
     )
 
     fun byId(id: String): Starter? = ALL.firstOrNull { it.id == id }
