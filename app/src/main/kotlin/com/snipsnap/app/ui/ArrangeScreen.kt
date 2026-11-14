@@ -377,6 +377,7 @@ private fun LiveRow(
             enabled = !mixing && (playing || !exporting),
             accessibilityLabel = if (playing || mixing) null else Copy.songA11yPlayFrom(from, fromName),
             modifier = Modifier.weight(1f),
+            tier = ButtonTier.Primary,
             onClick = onPlay,
         )
         ActionButton(
