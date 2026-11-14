@@ -464,8 +464,8 @@ DROP is DIVE's move in the rack, not the engine's.
 - Playback: `PadHit.resolve` picks the zone by velocity and deals the four takes in order, then repeats; a soft
   and a hard hit never share a slice.
 - Export: the MPC 3 track's velocity ranges, base slices, cycle lengths and frame windows match, and the
-  exported PCM matches the renders. **MPC 2 does not pass:** as on every kit in this repository, its projection
-  keeps one take per zone. No MPC has loaded the kit and no phone has played it.
+  exported PCM matches the renders. **MPC 2: not applicable** (a format limit, recorded 2026-11-14 in
+  [ENGINE_ACCEPTANCE_GATES.md](ENGINE_ACCEPTANCE_GATES.md#mpc-2-and-round-robin-owner-decision-2026-11-14)): as on every kit in this repository, its projection keeps one take per zone. No MPC has loaded the kit and no phone has played it.
 
 **Gates after round 2.** Drum shelf: one of the multiple kits the gate asks for; a second genre kit (Flint, faster
 and brighter) is proposed. Roll or riser: pass in software, "Clap Riser" is on A16 and "Two Bars" on A15.

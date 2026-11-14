@@ -123,6 +123,7 @@ Round 0's harness: `python3 scripts/soot_r0/soot_r0.py` then `python3 scripts/so
   carries only its own breath.
 - **The kit takes 27.6 s to build on this host** (4 cores). The four bars are 63% of it. A phone
   will be slower.
-- **MPC 2 does not pass the round-robin export gate.** It keeps one take per zone. SFZ and
+- **MPC 2: the round-robin export gate does not apply** (a format limit, recorded 2026-11-14 in
+  [ENGINE_ACCEPTANCE_GATES.md](ENGINE_ACCEPTANCE_GATES.md#mpc-2-and-round-robin-owner-decision-2026-11-14)). It keeps one take per zone. SFZ and
   DecentSampler were not generated.
 - **Mono, no hardware.** Nothing has been played on a phone or an MPC.
