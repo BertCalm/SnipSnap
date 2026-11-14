@@ -3512,7 +3512,8 @@ FRESH TAPE → ETCH (BASS, 130 BPM) is a SAW walk in C minor pentatonic, five vo
 note pad is three velocity zones by four takes, verified through saving, the pad resolver and the MPC 3 export
 (`EtchKitTest`). Short, low one-shots read as KICK or TOM (122 of 756); the owner heard three endings and chose C
 for every voice, now model 2 (4 of 756, RUBBER's shortest C1 notes; model-1 recipes keep the accepted ending).
-Open: a listen to the Kotlin presets and kit at model 2, the chord tool (it voices above ETCH's C4 ceiling), phone playback and an MPC. See [ETCH](ETCH.md).
+The owner heard the presets, the kit and SAW C2's grid at model 2 and accepted them (2026-11-14). The kit
+now renders its cells in parallel (14.0 s to 6.8 s on four cores, byte for byte). The chord tool is not applicable, the owner's decision (ETCH is a monophonic bass). Open: phone playback and an MPC. See [ETCH](ETCH.md).
 
   - The kick's takes are distinct but close (34 dB apart).
   - The owner's listen to the kit.
@@ -3623,6 +3624,17 @@ at round 2; the picker entry waits for a session with an SDK.
 ### SCUFF, round 5 (2026-11-14)
 
 On SYNTH's engine picker, mirroring SOOT arm for arm plus the native-factory path for its presets (a kit's pad
-loads whole, with its take and model); `EngineCatalog` under DRUMS; both READMEs count 86; an on-device test
+loads whole, with its take and model); `EngineCatalog` under DRUMS, after ETCH; both READMEs count 87; an on-device test
 beside SOOT's in `NewEngineSynthScreenTest` (CI's emulator runs it). Open: hardware playback (MPC 2 round robin is not
 applicable since 2026-11-14, a format limit). See [SCUFF](SCUFF.md).
+
+### CLUTTER, round 2 (2026-11-14)
+
+The four accepted genre kits on the shelf: `ClutterKits` (KITCHEN LO-FI 82 BPM, STREET BUCKET 120, JUNK BOOM BAP 90,
+MICROBEAT 100), sixteen one-shot pads each, three zones of four takes rendered by the engine, the hat pairs
+choking, FRESH TAPE starters under SKINS (129 starters). A zone's takes are matched in loudness, CLUTTER's own
+level law: the first-take peak law left granular takes up to 10 dB apart. Every grid proved through saving,
+playback and the MPC 3 export (768 slices). No roll: the owner waived the gate. Open: MPC 2, hardware, presets and the
+picker. See [CLUTTER](CLUTTER.md) and the gates entry. The owner heard the four Kotlin kits on the listening page's version 8 (read back from the MPC 3 export) and
+answered "I approve the audition" (2026-11-14): `Clutter.MODEL_VERSION` 1 and `ClutterKits.VERSION` 1 are the
+approved baseline.

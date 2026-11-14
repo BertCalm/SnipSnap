@@ -183,13 +183,18 @@ Rounds 1 to 3 were a Python audition, accepted 2026-11-12. Kotlin round K1 (2026
   - **Six voices: pass.** SAW, SQUARE, RUBBER, WHISTLE, GRIT and DUB, chosen by the owner 2026-11-12 and heard in
     rounds 2 and 3, each its own mechanism; every pair at least 3.7 dB apart by third-octave spectrum.
   - **Presets: pass.** Fourteen factory presets (each voice's note and line, SAW's busy line, SQUARE's sparse
-    line), every one a setting heard in round 3. The Kotlin renders of them are on the K2 page, not yet heard.
+    line), every one a setting heard in round 3. The owner heard their Kotlin renders at model 2 on the K2 page
+    and accepted them (2026-11-14: "Sounds good in audition. Proceed").
   - **Playable keygroups: built, not verified on a phone.** MAKE INSTRUMENT renders finite keys C1 to C4 with
     three touch layers (`EtchPadMaker`, `EtchKeygroupMaker`); lines are not offered as keys.
-  - **Premade kit: built, not heard.** FRESH TAPE → ETCH under BASS: a SAW walk, five voices' notes and three
-    lines at 130 BPM.
-  - **Chord tool: open, the owner's call.** The keys are polyphonic, but the chord tool voices around G3 to F#4,
-    above ETCH's C4 ceiling, and the line voice is monophonic by design.
+  - **Premade kit: pass, heard.** FRESH TAPE → ETCH under BASS: a SAW walk, five voices' notes and three lines
+    at 130 BPM, accepted on the K2 page (2026-11-14). The build renders its cells in parallel, byte for byte as
+    the serial path (`EtchKitsTest`): 14.0 s serial, 6.8 s on four cores, on the session's machine.
+  - **Chord tool: not applicable (the owner's decision, 2026-11-14).** ETCH is a monophonic bass: its character is
+    one line, with accents that carry into the next note, slides between notes and one filter riding it all, and a
+    stack of copies has none of that. The chord tool voices around G3 to F#4, above ETCH's C4 ceiling, and widening
+    the range would put the filter and drive where nobody has listened. The keys stay polyphonic, so a hand-played
+    power chord or low triad inside C1 to C4 plays every note (`EtchKeygroupMakerTest`).
 - **Articulation:** HOLD under .85 sets the note's gate (TONAL); from .85 the voice plays its line as a seamless
   LOOP (`Keys.requireSeam` on every render). A sustained keygroup loop is not built: the keys are finite notes.
   STRUM not applicable: not a picked or thumbed string.
@@ -197,7 +202,8 @@ Rounds 1 to 3 were a Python audition, accepted 2026-11-12. Kotlin round K1 (2026
 - **Velocity and round robin:**
   - **Rendering: pass.** Velocity changes the tone on all six voices (Kotlin within 2 Hz of the accepted Python
     attack centroids). Four takes are distinct strikes through `Restrike.take`; the owner accepted the rebuilt
-    takes by ear in round 3 (Python renders).
+    takes by ear in round 3 (Python renders) and SAW C2's whole 3 × 4 Kotlin grid at model 2 on the K2 page
+    (2026-11-14).
   - **Saving: pass in software.** The patch round-trips with its note, velocity and model; a kit pad's 3 × 4 grid
     survives saving and reloading (`EtchKitTest`, `TriadKitProof`).
   - **Playback: pass in software, phone not exercised.** The app's pad resolver picks the zone by velocity and
@@ -209,8 +215,10 @@ Rounds 1 to 3 were a Python audition, accepted 2026-11-12. Kotlin round K1 (2026
   Short, low notes read as KICK or TOM to the classifier (122 of 756 one-shots). The owner heard three endings on
   the K2 page and chose C for every voice (2026-11-14): model 2 rings one-shots out, leaving 4 of 756 (RUBBER's
   shortest C1 notes). Model-1 recipes keep the accepted ending.
-- **Overall: incomplete.** Open: a listen to the Kotlin presets and kit at model 2, the chord tool,
-  phone playback of keys and kit, and an MPC.
+- **Render time: disclosed.** A one-shot takes 56 to 75 ms at model 2 (one machine, warm), over the house's "tens
+  of milliseconds": the voice runs at 4x with several transcendental calls a sample, and bringing it under would
+  approximate the filter, a change to the accepted sound. A line loop takes 0.3 to 0.5 s; kit pads cache both.
+- **Overall: incomplete.** Open: phone playback of keys and kit, and an MPC.
 ## CYPHER kits and THUMP SUB (round 2, 2026-11-12)
 
 Hip-hop drum kits in the GATECRASH shape, six built: TRAP, DRILL, BACKROOM, LOWRIDER, DUST, FLINT. See [CYPHER](CYPHER.md). The owner heard round 1 ("The triple snare thing is messy"), then round 1b ("Ok, sounds good. Make sure we clear the approval gates"), which approved TRAP and DRILL, then round 2 ("All four pass"), which approved BACKROOM, LOWRIDER, DUST and FLINT. Evidence at kit version 3, `CypherTest`, `CypherKitTest`, `ThumpSubTest`, `ThumpSubRobinTest` and `:shell:generateCypherKits`.
@@ -610,8 +618,13 @@ and finite MAKE INSTRUMENT keys. See [SPLAY_FINITE_DELIVERY.md](SPLAY_FINITE_DEL
 [SPLAY_NATIVE_RECOVERY.md](SPLAY_NATIVE_RECOVERY.md) and
 [SPLAY_PRODUCTION_INTAKE.md](SPLAY_PRODUCTION_INTAKE.md).
 
-- **Melodic voices: fail, one of six.** TONGUE is the one voice. Its five population settings
-  (1, 2, 4, 8 and 16 mechanisms) are settings, not voices.
+- **Melodic voices: partial, six bodies kept, one registered.** TONGUE is the one registered voice.
+  Its five population settings (1, 2, 4, 8 and 16 mechanisms) are settings, not voices. Five further
+  bodies are built as model 3 and kept by the owner on 14 Nov, with every heard take pinned: WIRE (a
+  string, round splay-voices-1), RUB (a rubbed resonator with a stick-slip catch, round splay-voices-2)
+  and AIR (a breath-blown tube), BAR (a mallet bar) and SKIN (a drum head) (round splay-voices-3). See
+  [SPLAY_WIRE_RUB.md](SPLAY_WIRE_RUB.md) and [SPLAY_AIR_BAR_SKIN.md](SPLAY_AIR_BAR_SKIN.md). None is in
+  the picker, patch format, starters or keygroups yet.
 - **Presets: pass for the one voice.** The five accepted population settings are the factory
   presets; the five provisional recipes stay in the CLI only.
 - **Playable keygroups: partial.** In JVM tests the shell builds finite keygroups (MIDI 36–84,
@@ -622,10 +635,14 @@ and finite MAKE INSTRUMENT keys. See [SPLAY_FINITE_DELIVERY.md](SPLAY_FINITE_DEL
   in JVM tests, with a saved-recipe replay. It is one voice, not a full melodic kit.
 - **Chord tools: not yet verified.**
 - **Articulation (HOLD): fail.** SPLAY is finite (eight seconds). Positive HOLD is refused, and
-  the instrument has no loop.
+  the instrument has no loop. RUB and AIR (both kept, including their held-loop clips S12 and S16)
+  have measured seamless loops (a real two-second window of the motion played in a circle;
+  seam under 1e-6), not yet registered.
 - **Percussion and drum gates:** not applicable. SPLAY is a pitched finite instrument.
 - **Velocity and round robin: fail.** Velocity is gain only (the keygroups' three levels too).
-  There are no round-robin takes.
+  There are no round-robin takes. WIRE (kept), RUB, AIR, BAR and SKIN make a softer touch a duller
+  contact or darker breath (soft/hard brightness .78, .54, .35, .63 and .69 after level matching); all
+  five are kept, none is registered yet.
 - **Sound character.** The five population settings were KEEP decisions in the owner's Wave 3
   review (2026-11-09). That is recorded only in the backup's notes and manifest
   ([SPLAY_NATIVE_RECOVERY.md](SPLAY_NATIVE_RECOVERY.md): “All five decisions are KEEP”), with no
@@ -667,37 +684,41 @@ and the approved strum study by its published WAV hashes (`OsteriaStrumTest`).
 - **Overall: incomplete.** Round robin, a seamless HOLD, chord tools on real keys, device runs
   of the picker and hardware playback remain open.
 
-## CLUTTER (round 1 Kotlin, 2026-11-14; sound accepted at round 0c; shelf and hardware open)
+## CLUTTER (round 2, 2026-11-14: four genre kits on the shelf, audition approved; hardware open)
 
-A found-sound drum engine of 22 modelled household objects, and five sixteen-pad kits from them: the CLUTTER
-kit (one each of sixteen objects) and four genre kits. Every object has loose parts (rice, a lid, a handle,
-cutlery, a rivet) that only move above a strike threshold. See [CLUTTER](CLUTTER.md). Round 0c is a Python
-prototype audition; no Kotlin exists.
+A found-sound drum engine of 22 modelled household objects (`Clutter.kt`, round 1) and four sixteen-pad genre
+kits on the shelf (`ClutterKits`, round 2). Every object has loose parts (rice, a lid, a handle, cutlery, a
+rivet) that only move above a strike threshold. See [CLUTTER](CLUTTER.md).
 
 - **Melodic, keygroup and chord-tool gates:** not applicable. A drum engine.
 - **Articulation:** finite hits, no HOLD. Not a picked or thumbed string.
 - **Percussion: waived by the owner.** The owner replaced the round-0 pot roll with a one-shot (B01 Bin Lid) on
   2026-11-13 ("Roll becomes one shot, groove can stay"), then overruled the roll gate on 2026-11-14: "I overrule
   that gate". CLUTTER has no roll or riser by the owner's decision; this is an exception, not a pass.
-- **Drum shelf: four genre kits authored, not on the shelf.** KITCHEN LO-FI (82 BPM), STREET BUCKET (120 BPM),
-  JUNK BOOM BAP (90 BPM) and MICROBEAT (100 BPM), chosen by the owner. They differ in which objects fill each
-  role, how they are hit, how loose and damped they are, where the phone is, and in tempo, swing and groove.
-  No pad is shared between any two; the same slot in two kits is at least 6.0 dB apart (Python). The owner
-  accepted all four as they are on 2026-11-14. No Kotlin, so nothing is on the shelf yet.
+- **Drum shelf: pass in software (round 2).** CLUTTER KITCHEN LO-FI (82 BPM), CLUTTER STREET BUCKET (120 BPM),
+  CLUTTER JUNK BOOM BAP (90 BPM) and CLUTTER MICROBEAT (100 BPM) are FRESH TAPE starters under SKINS, sixteen
+  pads each, three zones of four takes. The owner chose the four genres and accepted the kits as authored on
+  2026-11-14. They differ in which objects fill each role, how they are hit, how loose and damped they are,
+  where the phone is, and in tempo; `ClutterKitsTest` holds that no pad is the same object at the same settings
+  in two kits and that every slot differs in shape across kits.
 - **Velocity and round robin:**
-  - **Rendering: verified in Kotlin by test (round 1).** `ClutterTest` holds that every one of the 22
-    objects' soft and hard hits differ in shape at matched level, that its four takes are distinct strikes,
-    and that every take replays byte for byte (through JSON in `DeterminismTest`). Measured in Kotlin: soft
-    against hard at least 3.95 dB, the closest two takes 1.55 dB apart. (Python, on the five kits' 80 pads:
-    3.9 dB and 1.2 dB.)
-  - **Saving, playback, export: open.** The kits are not on the shelf yet (round 2). The listening page's pad
-    grid is a browser stand-in, not app evidence.
-- **Sound character: accepted at round 0c.** On 2026-11-14 the owner heard the listening page (version 7,
-  <https://claude.ai/artifact/6dkeY2rrjNGUvUYvobs3v5>) and answered "All are good" (which kit fits its genre)
-  and "I like it as is" (pads to swap). This is a listen to Python renders, not to Kotlin, a phone or an MPC.
-  Preserve round 0c as the baseline.
-- **Overall: incomplete.** The Kotlin engine is in (round 1) and not yet heard; the kits on the shelf,
-  saving, playback, export and hardware are open. The percussion gate is waived by the owner.
+  - **Rendering: verified in Kotlin by test.** `ClutterTest` (all 22 objects) and `ClutterKitsTest` (all 64
+    pads) hold that a soft zone is a different strike in shape, that each zone holds four different strikes,
+    and that every take replays byte for byte. Each zone's takes are matched in loudness (within 0.1 dB over
+    150 ms), CLUTTER's own level law: the first-take peak law left granular takes up to 10 dB apart.
+  - **Saving: verified.** Each kit reloads equal, and every saved slice matches its render
+    (`:shell:generateClutterKits`, 768 slices across the four kits).
+  - **Playback: verified in software.** `PadHit.resolve` picks the zone by velocity and deals the four takes in
+    order, then repeats (`ClutterKitTest`, and two playback cycles of every pad in the generator). No phone has
+    played the kits.
+  - **Export: MPC 3 verified by read-back** for every pad of the four kits. **MPC 2: not exercised;** on the
+    house's other kits it keeps one take per zone. No MPC has loaded the kits.
+- **Sound character: approved.** On 2026-11-14 the owner accepted the Python renders (listening page version 7,
+  <https://claude.ai/artifact/6dkeY2rrjNGUvUYvobs3v5>: "All are good", "I like it as is"), then heard version 8,
+  the four Kotlin kits read back from the MPC 3 export, and answered "I approve the audition". Preserve
+  `Clutter.MODEL_VERSION` 1 and `ClutterKits.VERSION` 1 as the baseline. Not a phone or MPC listen.
+- **Overall: incomplete.** Every software gate is in place and the sound is approved. Open: the MPC 2 export,
+  phone and MPC playback. The percussion gate is waived by the owner.
 
 ## EMBER (round 0, 2026-11-14, Python prototype, not heard)
 
