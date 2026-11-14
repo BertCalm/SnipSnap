@@ -150,13 +150,21 @@ object Breaker {
      * [velocity] times its accent, and re-struck per stroke and [take] (`take * 100 + stroke + 1`, so no two
      * strokes or takes share a strike). A softer pad strikes every tom softer, which is each tom's own
      * velocity law, not a fader.
+     *
+     * Twelve whole tom renders cost about twelve hits' time (about 1 s on a desktop JVM, against the riser's
+     * 0.4 s). The strokes are independent, so they render in parallel, as SootKits renders its cells; they
+     * are summed in stroke order afterwards, so the result does not depend on which finished first.
      */
     private fun tomFill(m: Map<String, Float>, velocity: Float, take: Int, frames: Int, rate: Int): FloatArray {
-        val out = FloatArray(frames)
-        FILL_STROKES.forEachIndexed { i, (beat, tom, accent) ->
+        val hits = FILL_STROKES.indices.toList().parallelStream().map { i ->
+            val (_, tom, accent) = FILL_STROKES[i]
             val own = defaults(tom, FILL_TOMS_MODEL)
             val drip = (m.getValue("DRIP") * own.getValue("DRIP") / FILL_DRIP_REF).coerceIn(0f, 1f)
-            val hit = render(tom, m.filterKeys { it in own } + ("DRIP" to drip), velocity * accent, take * 100 + i + 1, FILL_TOMS_MODEL).samples
+            render(tom, m.filterKeys { it in own } + ("DRIP" to drip), velocity * accent, take * 100 + i + 1, FILL_TOMS_MODEL).samples
+        }.collect(java.util.stream.Collectors.toList())
+        val out = FloatArray(frames)
+        FILL_STROKES.forEachIndexed { i, (beat, _, _) ->
+            val hit = hits[i]
             val at = Math.round(beat * FILL_BEAT * rate).toInt()
             for (k in hit.indices) if (at + k < frames) out[at + k] += hit[k]
         }

@@ -503,6 +503,9 @@ The owner picked ×.35 ("4 Drier") and heard a fresh take as the same fill with 
 - **Round robin:** every take re-strikes all twelve strokes (stroke `take × 100 + stroke + 1`).
 - **Older saves:** models 1 to 6 refuse FILL. Every other voice renders on model 7 exactly as it does
   on model 6.
+- **Render cost:** twelve whole tom renders, about 1 s one after another on a desktop JVM, against
+  the riser's 0.4 s and a drum's 0.1 s. The strokes are independent, so they render in parallel and
+  are summed in stroke order, so the result is the same however they finish.
 
 **Not yet:**
 - **The kit:** the fill is not on a kit. Where it goes is the owner's call.
