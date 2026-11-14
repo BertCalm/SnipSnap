@@ -6019,6 +6019,7 @@ class ConventionTest {
     /** Controls that open a sheet or a picker: BottomSheet, SheetMenu or a Dialog picker. */
     private val SHEET_OPENERS = setOf(
         "MURMUR PLUCK ▾", // MAKE's instrument shelf: opens the kept-pluck picker dialog
+        "CAIRN SING ▾", // MAKE's instrument shelf: opens the five-study SING picker dialog
         " ▾", // the kit chip's name is drawn with it, and the kit switcher's accessible tail drops it
         "${'$'}label ▾", // Places.opener: ORBIT's steps, span, spread and snip pickers, SURFACE's BARS, CONFLUENCE's passage
         "${'$'}summary ▾", // EXPORT's ART row opens the art sheet

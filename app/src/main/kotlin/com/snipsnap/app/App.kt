@@ -1368,6 +1368,54 @@ fun App(shelf: KitShelf) {
     fun hasLandingPad(kit: com.snipsnap.kit.Kit): Boolean =
         (PadBanks.slots(0).first..PadBanks.slots(1).last).any { kit.pad(it) == null }
 
+    /**
+     * MAKE › INSTRUMENTS › CAIRN SING. The nine SING captures are not shipped:
+     * the first study that needs one renders it here, off the UI thread, and
+     * keeps it in the app's cache only if it matches its pinned SHA-256
+     * (`CairnSingRenderedCaptures`). A mismatch makes nothing and says so.
+     */
+    fun makeCairnStudy(id: String) {
+        if (busy != null) return
+        val cancelled = AtomicBoolean(false)
+        var operation = Busy("MAKING CAIRN SING", cancel = { cancelled.set(true) })
+        busy = operation
+        // App's scope survives a bench/tab switch, like the other shelf
+        // writers. Only immutable choice IDs cross this background boundary.
+        scope.launch {
+            try {
+                val made = withContext(Dispatchers.IO) {
+                    val worker = currentCoroutineContext()
+                    val cache = File(context.applicationContext.cacheDir, "cairn-sing-captures")
+                    com.snipsnap.shell.CairnSingInstrumentPicker.make(id, shelf.instrumentsDir,
+                        load = { program, stop ->
+                            com.snipsnap.shell.CairnSingRenderedCaptures.readCaptures(program, cache, stop,
+                                progress = { done, total ->
+                                    scope.launch(Dispatchers.Main.immediate) {
+                                        if (busy === operation) {
+                                            operation = operation.copy(done = done, total = total)
+                                            busy = operation
+                                        }
+                                    }
+                                })
+                        }, cancelled = { cancelled.get() || !worker.isActive })
+                }
+                roomsRevision++
+                dock.say("${made.name.uppercase(java.util.Locale.ROOT)} IS READY IN INSTRUMENTS.")
+            } catch (e: CancellationException) {
+                dock.say("CAIRN INSTRUMENT CANCELLED.")
+                throw e
+            } catch (e: com.snipsnap.shell.CairnSingRenderedCaptures.Mismatch) {
+                Log.e(TAG, "makeCairnStudy: ${e.sourceId} did not match its pinned capture", e)
+                dock.say(Copy.CAIRN_SING_MISMATCH)
+            } catch (e: Exception) {
+                Log.e(TAG, "makeCairnStudy: rendered capture delivery failed", e)
+                dock.say(Copy.CREATE_FAILED)
+            } finally {
+                if (busy === operation) busy = null
+            }
+        }
+    }
+
     /** The kept PLUCK picker uses the same source-bound writer as SYNTH's instrument sheet. */
     fun makeMurmurKeptInstrument(id: String) {
         if (busy != null) return
@@ -4777,6 +4825,8 @@ fun App(shelf: KitShelf) {
                             onBack = { nav.closeBench() },
                             expansions = expansionStore,
                             onToast = { dock.say(it) },
+                            onMakeCairnStudy = ::makeCairnStudy,
+                            cairnStudyEnabled = busy == null,
                             onMakeMurmurInstrument = ::makeMurmurKeptInstrument,
                             murmurInstrumentEnabled = busy == null,
                             roundRobinShelf = shelf.root,

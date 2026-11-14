@@ -2809,6 +2809,13 @@ object Copy {
      */
     const val CREATE_FAILED = "Couldn't make that sample."
 
+    /**
+     * MAKE › INSTRUMENTS › CAIRN SING, when this phone's render of a SING
+     * capture does not match the recording it was accepted as
+     * (`CairnSingRenderedCaptures.Mismatch`). Nothing is added to the library.
+     */
+    const val CAIRN_SING_MISMATCH = "CAIRN SING didn't match its kept recording on this phone, so nothing was made."
+
     // ==================== Escaped strings, brought in (name-and-find follow-ups, Part C) ====================
     //
     // 78 strings across `:app`'s newer screens lived as inline literals

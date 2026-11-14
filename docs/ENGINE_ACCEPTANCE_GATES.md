@@ -443,8 +443,11 @@ those five studies of one SING voice. Earlier CAIRN work keeps the scope its own
   are source-bound inputs to the studies, not factory presets.
 - **Playable keygroups: partial.** The shell builds and validates all five keygroup packages from
   pinned captures in JVM tests: EARLIER and MOVING over MIDI 48–72 from three native roots, the
-  GROOVE studies at C4 only. No phone entry exists, because the nine Float captures are not in
-  this repository. No phone or MPC has loaded a package.
+  GROOVE studies at C4 only. Since 2026-11-14 the phone offers them under MAKE › INSTRUMENTS ›
+  CAIRN SING: it renders the nine Float captures itself and admits a study only if every render
+  matches its pinned SHA-256 (`CairnSingRenderedCaptures`); the captures are not in this
+  repository. `CairnSingRenderOnDeviceTest` checks the renders on the emulator. No physical phone
+  or MPC has loaded a package.
 - **Premade kit: not yet.** None is built.
 - **Chord tools: partial.** In JVM tests, the existing chord stabs for C that fit inside 48–72 play as
   independent notes on a MOVING package, and notes outside the range are refused. Not on a device.
