@@ -310,7 +310,8 @@ class BreakerTest {
 
     @Test
     fun `model 5 at DAMP's neutral renders every model-4 voice as model 4 did, and model 4 has no DAMP or Bump`() {
-        for (voice in BreakerVoice.entries - BreakerVoice.BUMP) {
+        // Bump arrived with model 5 and the fill with model 7, so model 4 has neither.
+        for (voice in BreakerVoice.entries - BreakerVoice.BUMP - BreakerVoice.FILL) {
             assertContentEquals(Breaker.render(voice, model = 4).samples, Breaker.render(voice).samples, "$voice at DAMP .5")
             assertContentEquals(Breaker.render(voice, velocity = .4f, take = 2, model = 4).samples,
                 Breaker.render(voice, velocity = .4f, take = 2, model = 5).samples, "$voice soft, take 2, at DAMP .5")
@@ -333,7 +334,8 @@ class BreakerTest {
         // In the full rig a heavy spring and crush rebuild a damped drum's tail (the snare at DRIP .6,
         // CRUSH .9 measures the same at every DAMP), so a drum is measured with the rig's tail stages off.
         val bare = mapOf("DRIP" to 0f, "SLAP" to 0f, "CRUSH" to 0f)
-        for (voice in BreakerVoice.entries - BreakerVoice.RISER) {
+        // The riser and the fill keep striking through every window; their strikes take DAMP (below).
+        for (voice in BreakerVoice.entries - BreakerVoice.RISER - BreakerVoice.FILL) {
             val measure: (FloatArray) -> Double = if (voice in ringers) ::ring else ::body
             val rig = if (voice in ringers) emptyMap() else bare
             val r = listOf(.15f, .5f, .85f).map { measure(Breaker.render(voice, rig + ("DAMP" to it)).samples) }
@@ -345,6 +347,8 @@ class BreakerTest {
         // The riser's strikes are the snare's, damped as the snare is.
         val riser = listOf(.5f, .85f).map { Breaker.render(BreakerVoice.RISER, mapOf("DAMP" to it)).samples }
         assertFalse(riser[0].contentEquals(riser[1]), "the riser's snares take DAMP")
+        val fill = listOf(.5f, .85f).map { Breaker.render(BreakerVoice.FILL, mapOf("DAMP" to it)).samples }
+        assertFalse(fill[0].contentEquals(fill[1]), "the fill's toms take DAMP")
         assertContentEquals(Breaker.render(BreakerVoice.TAMBOURINE, mapOf("DAMP" to .2f)).samples,
             Breaker.render(BreakerVoice.TAMBOURINE).samples, "the tambourine below DAMP .5 is the recording as played")
     }
@@ -467,7 +471,8 @@ class BreakerTest {
         val full = Breaker.render(BreakerVoice.FILL).samples
         val soft = Breaker.render(BreakerVoice.FILL, velocity = .3f).samples
         // Each tom's own velocity law (SKIN's contact), not a fader: the run is levelled either way.
-        assertTrue(soft.indices.maxOf { abs(soft[it] - fillAsHeard(.35f, .3f)[it]) } < 1e-3f, "a softer pad strikes the toms softer")
+        val softAsHeard = fillAsHeard(.35f, .3f)
+        assertTrue(soft.indices.maxOf { abs(soft[it] - softAsHeard[it]) } < 1e-3f, "a softer pad strikes the toms softer")
         val octaves = listOf(125f, 250f, 500f, 1000f, 2000f, 4000f)
         fun shape(x: FloatArray): List<Double> { val all = db(rms(x, 0.0, 1.3)); return octaves.map { db(rms(band(x, it, 1.4f), 0.0, 1.3)) - all } }
         val moved = shape(full).zip(shape(soft)).maxOf { (a, b) -> abs(a - b) }
