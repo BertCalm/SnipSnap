@@ -17,6 +17,8 @@ package com.snipsnap.synth
  *   - GRIND: model 6.
  *   - VESSEL: model 7.
  * - **GRIND was kept at G9's scrape level** (round cairn-voices-2). Its four presets use that level.
+ * - **The owner kept all 24 and the CAIRN starter** (round cairn-presets-1, 14 Nov 2026);
+ *   `CairnPresetsTest` pins every render.
  *
  * Promoted YOUR PRESET recipes are complete JSON constructors (see `UserPresets.rosterLine`),
  * because CAIRN keeps its root, touch, cue and model outside the macro map.

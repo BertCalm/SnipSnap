@@ -41,9 +41,10 @@ object SynthKits {
      * The CAIRN starter: sixteen factory presets at their saved roots, all six voices.
      * - A01–A03 KNOCK, A04–A06 ANSWER and A07–A09 TUMBLE are finite strikes.
      * - A10–A11 are two of the kept SING recipes (EARLIER and MOVING), which are loops.
-     * - A12–A13 GRIND and A14–A16 VESSEL. GRIND follows its re-tune.
+     * - A12–A13 GRIND (at its kept G9 scrape level) and A14–A16 VESSEL.
      * Every pad keeps its complete recipe (root, touch, cue and model) and is filed by
-     * [Cairn.drumClassFor] under that recipe's own model.
+     * [Cairn.drumClassFor] under that recipe's own model. The owner kept this starter in
+     * round cairn-presets-1 (14 Nov 2026); `CairnPresetsTest` pins its sixteen pads.
      */
     fun cairn(): List<ArrangedPad?> {
         val names = listOf(

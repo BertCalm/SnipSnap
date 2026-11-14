@@ -150,9 +150,10 @@ warmed path still misses the proposed 50 ms target; cold rendering needs work.
 The older documents describe historical milestones and may list a now-built
 voice as pending. Use this overview and `CAIRN_SING_MOTION.md` for current status.
 Recipe dispatch and velocity integration exist in `Patches.kt` and `Velocity.kt`;
-the shell also preserves Cairn's explicit note. Cairn remains in the prototype
-roster. A finished four-voice factory bank, starter kit and Android picker are
-still separate work.
+the shell also preserves Cairn's explicit note. Cairn has left the prototype
+roster: its 24 factory presets, the CAIRN starter kit and its SYNTH picker entry
+are built, and the owner kept the presets and the starter in round
+`cairn-presets-1` (14 Nov 2026). Device runs remain.
 
 ## Reproduce and extend
 
