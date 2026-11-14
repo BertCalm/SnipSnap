@@ -448,8 +448,10 @@ roots every minor third plus the authored note, three touch layers (0.30, 0.65, 
 accent changes the tone), no loops, and the source recipes bound to the PCM by hash. A line (HOLD from 0.85) is
 not offered as keys. The keys carry no round robin: one take per touch, as WICK's.
 
-**Chord tool: open, the owner's call.** The keys are polyphonic, and bass-register chords play every note
-(`EtchKeygroupMakerTest`), but the chord tool voices around G3 to F#4, above ETCH's C4 ceiling.
+**Chord tool: not applicable, the owner's decision (2026-11-14).** ETCH is a monophonic bass; the chord tool voices
+around G3 to F#4, above ETCH's C4 ceiling, and widening the range would need a listening round for a feature the
+instrument does not suit. The keys stay polyphonic, and bass-register chords play every note
+(`EtchKeygroupMakerTest`).
 
 **The picker.** ETCH is in SYNTH's engine list after OSTERIA (86 engines), with WICK's typed-patch handling: the
 complete recipe (root, velocity, model) survives same-frame edits, voice and engine navigation, SAVE and SEND;
