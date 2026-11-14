@@ -5787,7 +5787,7 @@ private fun MurmurSelectedInstrumentSheet(
     HeldInstrumentSheet(
         heading = "MURMUR · ${if (spec.held) "HELD" else "FINITE"} PLUCK",
         nameNote = if (state.holdName.isEmpty()) "" else
-            "LANDS ON THE SHELF AS ${state.holdName.uppercase(Locale.ROOT)}, PLAYABLE ON KEYS.",
+            "LANDS IN THE LIBRARY AS ${state.holdName.uppercase(Locale.ROOT)}, PLAYABLE ON KEYS.",
         hasAttack = false, hasRelease = true, attack = 0f, release = delivery.releaseFraction,
         knobLabel = String.format(Locale.ROOT, "KEY RELEASE %.2f SECONDS", spec.releaseSeconds),
         instrumentNote = "$range · SOFT, MEDIUM AND HARD TOUCH. " +

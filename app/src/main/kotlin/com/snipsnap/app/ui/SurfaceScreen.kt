@@ -1453,7 +1453,7 @@ fun SurfaceScreen(
                             enabled = padName != null,
                             modifier = Modifier.weight(1.1f),
                         ) { grainKnob = (grainKnob + 1) % GRAIN_KNOBS.size }
-                        ActionButton("◄", scheme, enabled = padName != null) { stepGrain(-1) }
+                        ActionButton("◄", scheme, enabled = padName != null, accessibilityLabel = "PREVIOUS VALUE") { stepGrain(-1) }
                         val g = kitSettings.grain
                         TapeText(
                             "SIZE ${pct(g.size)}  DENS ${pct(g.density)}  SPRAY ${pct(g.spray)}",
@@ -1461,7 +1461,7 @@ fun SurfaceScreen(
                             scheme.ink.tape,
                             Modifier.weight(1.8f).padding(horizontal = 4.dp),
                         )
-                        ActionButton("►", scheme, enabled = padName != null) { stepGrain(+1) }
+                        ActionButton("►", scheme, enabled = padName != null, accessibilityLabel = "NEXT VALUE") { stepGrain(+1) }
                     }
                 }
 
@@ -1480,7 +1480,7 @@ fun SurfaceScreen(
                             enabled = padName != null,
                             modifier = Modifier.weight(1.1f),
                         ) { swarmKnob = (swarmKnob + 1) % SWARM_KNOBS.size }
-                        ActionButton("◄", scheme, enabled = padName != null) { stepSwarm(-1) }
+                        ActionButton("◄", scheme, enabled = padName != null, accessibilityLabel = "PREVIOUS VALUE") { stepSwarm(-1) }
                         val w = kitSettings.swarm
                         TapeText(
                             "SWARM ${w.voices} ${if (w.voices == 1) "VOICE" else "VOICES"}  DETUNE ${pct(w.detune)}",
@@ -1488,7 +1488,7 @@ fun SurfaceScreen(
                             scheme.ink.tape,
                             Modifier.weight(1.8f).padding(horizontal = 4.dp),
                         )
-                        ActionButton("►", scheme, enabled = padName != null) { stepSwarm(+1) }
+                        ActionButton("►", scheme, enabled = padName != null, accessibilityLabel = "NEXT VALUE") { stepSwarm(+1) }
                     }
                 }
 
@@ -1554,14 +1554,14 @@ fun SurfaceScreen(
                 // LIBRARY and the class doc.
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
                     val armed = armedCorner
-                    ActionButton("◄ PRESET", scheme, enabled = armed != null, modifier = Modifier.weight(1f)) { stepPreset(-1) }
+                    ActionButton("PREVIOUS PRESET", scheme, enabled = armed != null, modifier = Modifier.weight(1f)) { stepPreset(-1) }
                     TapeText(
-                        armed?.let { c -> presetIndexFor(c)?.let { SurfaceStore.Corner.LIBRARY[it].name } ?: "◄ ► TO STEP" } ?: "ARM A CORNER",
+                        armed?.let { c -> presetIndexFor(c)?.let { SurfaceStore.Corner.LIBRARY[it].name } ?: "PICK A PRESET" } ?: "ARM A CORNER",
                         TapeType.pixel,
                         scheme.ink.tape,
                         Modifier.weight(1.2f).padding(horizontal = 4.dp),
                     )
-                    ActionButton("PRESET ►", scheme, enabled = armed != null, modifier = Modifier.weight(1f)) { stepPreset(+1) }
+                    ActionButton("NEXT PRESET", scheme, enabled = armed != null, modifier = Modifier.weight(1f)) { stepPreset(+1) }
                 }
             }
 
@@ -1599,7 +1599,7 @@ fun SurfaceScreen(
                         enabled = padName != null,
                         modifier = Modifier.weight(1.1f),
                     ) { modField = (modField + 1) % MOD_FIELDS.size }
-                    ActionButton("◄", scheme, enabled = padName != null) { stepMod(-1) }
+                    ActionButton("◄", scheme, enabled = padName != null, accessibilityLabel = "PREVIOUS VALUE") { stepMod(-1) }
                     TapeText(
                         "${slot.target} ${slot.shape} ${
                             when {
@@ -1612,7 +1612,7 @@ fun SurfaceScreen(
                         scheme.ink.tape,
                         Modifier.weight(1.6f).padding(horizontal = 4.dp),
                     )
-                    ActionButton("►", scheme, enabled = padName != null) { stepMod(+1) }
+                    ActionButton("►", scheme, enabled = padName != null, accessibilityLabel = "NEXT VALUE") { stepMod(+1) }
                 }
 
                 // GESTURE's row, while a slot is on the shape, REC is armed or a
@@ -1926,8 +1926,8 @@ private fun PrintDestination(toPad: Boolean, enabled: Boolean, modifier: Modifie
 @Composable
 private fun SamplePadRow(tag: String, name: String?, scheme: Scheme, enabled: Boolean, onStep: (Int) -> Unit) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-        ActionButton("◄ $tag", scheme, enabled = enabled, modifier = Modifier.weight(1f)) { onStep(-1) }
+        ActionButton("PREVIOUS $tag", scheme, enabled = enabled, modifier = Modifier.weight(1f)) { onStep(-1) }
         TapeText(name ?: "NO $tag", TapeType.pixel, scheme.ink.tape, Modifier.weight(1.2f).padding(horizontal = 4.dp))
-        ActionButton("$tag ►", scheme, enabled = enabled, modifier = Modifier.weight(1f)) { onStep(+1) }
+        ActionButton("NEXT $tag", scheme, enabled = enabled, modifier = Modifier.weight(1f)) { onStep(+1) }
     }
 }

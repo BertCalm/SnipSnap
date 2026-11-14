@@ -283,7 +283,7 @@ Back labels that do not come from `backChip`:
 | `LISTEN · MIC`, `LISTEN · APP AUDIO` | `Places.kt:34,42` | Dock chip, source shown once chosen. See F, call 1. |
 | `SNIP` | `Places.kt:60` | Dock button: saves the last 60 seconds. |
 | `STOP` | `Places.kt:63` | Dock button: ends the listening session. |
-| `RECORD FROM`, `MIC`, `APP AUDIO` | `Places.kt:91,83,87` | The source sheet and its two rows. |
+| `LISTEN FROM`, `MIC`, `APP AUDIO` | `Places.kt:91,83,87` | The source sheet and its two rows. |
 | `PLAY THE BEAT`, `STOP THE BEAT` | `Places.kt:66,67` | Transport chip, spoken names. |
 | `SHARE`, `SHARE THIS BEAT` | `Places.kt:74,75` | Beat share chip and its spoken name. |
 | `OPEN SETTINGS` | `Places.kt:52` | Opens Android's page for this app. |

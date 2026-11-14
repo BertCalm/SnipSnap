@@ -304,7 +304,7 @@ object Copy {
      * what SNIP will keep instead, in the same words and cap as [SNIPPED]
      * (heard since LISTEN, not "the last 60 seconds").
      */
-    const val NO_TAPE_YET_ARMED = "Listening, and a snip keeps what it's heard, up to 60s."
+    const val NO_TAPE_YET_ARMED = "Listening, and SNIP keeps what it's heard, up to 60s."
 
     /**
      * The first SNIP of a cold shelf, landed: App has made the project, the
@@ -321,7 +321,7 @@ object Copy {
      * opens: the settings page is only ever reached through [BUBBLE_ALLOW]. Gone the moment the
      * permission is granted. Drawn only while armed, because the Bubble exists only then.
      */
-    const val BUBBLE_WHY = "The bubble floats over other apps, so you can snip without coming back. Android asks you to allow that once."
+    const val BUBBLE_WHY = "The bubble floats over other apps, so you can SNIP without coming back. Android asks you to allow that once."
     /** [BUBBLE_WHY]'s door: the one tap that opens Android's "Display over other apps" page. A label, not a toast. */
     @field:CopyLabel const val BUBBLE_ALLOW = "ALLOW"
     const val CAPTURE_BLOCKED =
@@ -1646,7 +1646,7 @@ object Copy {
 
     // ---- GROOVE: CHART ▸ (wave XXX) — the program on screen as a text drum chart ----
     const val CHART_BUSY = "Charting…"
-    const val CHART_NEEDS_GROOVE = "No GROOVE to chart. CHOP with a GROOVE, RECORD one, or steal one first."
+    const val CHART_NEEDS_GROOVE = "No GROOVE to chart. CHOP with a GROOVE, RECORD one, or READ AS GROOVE first."
     /** The chart is written and the chooser is up; [offGrid] hits were drawn in their nearest cell and footnoted, never moved. */
     fun chartWritten(notes: Int, offGrid: Int): String {
         val noteWord = if (notes == 1) "note" else "notes"
@@ -1671,7 +1671,7 @@ object Copy {
     fun beatKept(where: String): String = "BEAT kept at $where. $SHARE_NOWHERE"
 
     // ---- ARRANGE ----
-    const val ARRANGE_NEEDS_GROOVE = "No GROOVE to arrange. CHOP with a GROOVE, or steal one, first."
+    const val ARRANGE_NEEDS_GROOVE = "No GROOVE to arrange. CHOP with a GROOVE, or READ AS GROOVE, first."
     const val ARRANGE_MIXING = "Mixing…"
 
     // ---- SONG: the song you keep and edit (docs/plans/2026-10-30-song-making.md, Phase 5) ----

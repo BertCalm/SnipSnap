@@ -5483,7 +5483,6 @@ class ConventionTest {
     private enum class WaiverOwner(val why: String) {
         PR_3E("moves to a bench in PR 3e (Snap's own screens: LIVE_SNAP, DRAW, FIELD)"),
         IN_SCREEN_PANEL("permanent: an in-screen panel, not a bench"),
-        STEPPER("permanent: a stepper (previous pad, previous preset), not a back label"),
     }
 
     private data class BackLabelWaiver(val literal: String, val owner: WaiverOwner)
@@ -5509,18 +5508,16 @@ class ConventionTest {
      *   the model's words; none of them has a literal left.)
      * - **Permanent, an in-screen panel**: SynthScreen's deleted-presets panel,
      *   and TapeSpliceScreen's "CHOOSE DIFFERENT TAKES". (AquariumPanel left the list when it became a section: its button reads CLOSE.)
-     * - **Permanent, a stepper**: SurfaceScreen's previous-pad and
-     *   previous-preset buttons start with the same arrow and a capital, but
-     *   they step through pads and presets and go nowhere.
+     * - SurfaceScreen's steppers left the list: they read PREVIOUS PRESET and
+     *   NEXT PRESET in words, so `◄` means Back everywhere ([RETIRED_WORDS]).
      */
     private val BACK_LABEL_WAIVERS: Map<String, List<BackLabelWaiver>> = mapOf(
         "ui/TapeSpliceScreen.kt" to waive(WaiverOwner.IN_SCREEN_PANEL, "◄ CHOOSE DIFFERENT VERSIONS", "◄ CHOOSE DIFFERENT VERSIONS"),
         "ui/SnapScreen.kt" to waive(WaiverOwner.PR_3E, "◄ PHOTO"),
         "ui/LiveSnapScreen.kt" to waive(WaiverOwner.PR_3E, "◄ PHOTO"),
         "ui/SynthScreen.kt" to waive(WaiverOwner.IN_SCREEN_PANEL, "◄ SYNTH"),
-        "ui/SurfaceScreen.kt" to waive(WaiverOwner.STEPPER, "◄ PRESET"),
     )
-    private val BACK_LABEL_WAIVER_CEILING = 6
+    private val BACK_LABEL_WAIVER_CEILING = 5
 
     /** Every string literal in [code] (comments already stripped) that starts with the arrow and a capital: a hand-drawn back label. A lone arrow, a template (`"◄ ${...}"`) and the other arrow are not. */
     private fun handDrawnBackLabels(code: String): List<String> =
@@ -5912,6 +5909,69 @@ class ConventionTest {
         assertEquals(1, problemsIn("SAVE PRESET ▸"), "an action with an arrow is a fault")
         assertEquals(1, problemsIn("TOOLS ▸"), "a sheet opener with the screen arrow is a fault")
         assertEquals(0, problemsIn("STACK ▸", "TOOLS ▾", "TRY IT FROM COMBINE SOUNDS ▸ ROOM TONE.", "DUST FROM +"), "listed openers, a path and a fold pass")
+    }
+
+    /**
+     * Words the owner retired (2026-11-13, review Q4 and finding 17), as the
+     * literals that would bring them back. `◄` only ever means Back, so a
+     * stepper to the previous preset or pad says PREVIOUS in words; the dock's
+     * capture sheet is LISTEN FROM; SHELF is LIBRARY (docs/VOCABULARY.md); the
+     * rhythm tools are READ AS GROOVE, never "steal"; and the dock verb in a
+     * sentence of Personality's is the label SNIP, not a lowercase verb.
+     * Each entry is a regex over one shipped string literal, scoped to the
+     * files it governs (null = every shipped source).
+     */
+    private val RETIRED_WORDS: List<Triple<String, Regex, String?>> = listOf(
+        Triple("RECORD FROM is LISTEN FROM", Regex("RECORD FROM"), null),
+        Triple("THE SHELF is THE LIBRARY", Regex("THE SHELF"), null),
+        Triple("steal one is READ AS GROOVE", Regex("(?i)steal one"), null),
+        Triple("a lowercase snip verb is the label SNIP", Regex("\\bsnip\\b"), "Personality.kt"),
+        Triple("◄ and ► are Back; a stepper says PREVIOUS or NEXT", Regex("◄ PRESET|PRESET ►|◄ \\\$tag|\\\$tag ►"), null),
+    )
+
+    private fun retiredWordProblems(literals: List<Triple<String, Int, String>>): List<String> =
+        literals.flatMap { (file, line, text) ->
+            RETIRED_WORDS.filter { (_, re, only) -> (only == null || only == file) && re.containsMatchIn(text) }
+                .map { (why, _, _) -> "$file:$line `$text`: $why" }
+        }
+
+    private fun shippedLiterals(): List<Triple<String, Int, String>> {
+        val literal = Regex(""""((?:[^"\\\n]|\\.)*)"""")
+        val found = mutableListOf<Triple<String, Int, String>>()
+        val roots = File("..").listFiles { f -> f.isDirectory }.orEmpty().map { File(it, "src/main/kotlin") }.filter { it.isDirectory }
+        for (root in roots) {
+            for (file in root.walkTopDown().filter { it.isFile && it.extension == "kt" }) {
+                file.readLines(Charsets.UTF_8).forEachIndexed { i, raw ->
+                    val line = raw.trim()
+                    if (line.startsWith("//") || line.startsWith("*") || line.startsWith("/*")) return@forEachIndexed
+                    for (m in literal.findAll(raw)) found += Triple(file.name, i + 1, m.groupValues[1])
+                }
+            }
+        }
+        return found
+    }
+
+    @Test
+    fun `law - no retired word is drawn, RECORD FROM, THE SHELF, steal one, a snip verb, a previous-arrow stepper`() {
+        val problems = retiredWordProblems(shippedLiterals())
+        if (problems.isNotEmpty()) fail("Retired words are back (docs/VOCABULARY.md is the ledger):\n  " + problems.joinToString("\n  "))
+    }
+
+    @Test
+    fun `law - the retired-word scan finds each retired word and lets the current ones through`() {
+        fun hits(file: String, text: String) = retiredWordProblems(listOf(Triple(file, 1, text))).size
+        assertEquals(1, hits("Places.kt", "RECORD FROM"))
+        assertEquals(1, hits("MurmurKeptInstrumentPicker.kt", "CHOOSE AN INSTRUMENT FOR THE SHELF."))
+        assertEquals(1, hits("Personality.kt", "or steal one first."))
+        assertEquals(1, hits("Personality.kt", "so you can snip without coming back"))
+        assertEquals(1, hits("SurfaceScreen.kt", "◄ PRESET"))
+        assertEquals(1, hits("SurfaceScreen.kt", "PRESET ►"))
+        assertEquals(1, hits("SurfaceScreen.kt", "◄ \$tag"))
+        assertEquals(0, hits("Places.kt", "LISTEN FROM"))
+        assertEquals(0, hits("Personality.kt", "so you can SNIP without coming back"))
+        assertEquals(0, hits("SurfaceScreen.kt", "PREVIOUS PRESET"))
+        assertEquals(0, hits("SynthScreen.kt", "val snip = 1; \"snip\" in a non-copy file"), "the snip rule is scoped to Personality.kt")
+        assertEquals(0, hits("Navigation.kt", "◄ PAD"), "a Back chip keeps its arrow")
     }
 
     private val GLYPH_REST = Regex("[▸▾]\\s*\\S")

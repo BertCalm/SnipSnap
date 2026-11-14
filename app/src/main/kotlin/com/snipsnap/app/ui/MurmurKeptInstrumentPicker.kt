@@ -43,7 +43,7 @@ internal fun MurmurKeptInstrumentPicker(enabled: Boolean, onMake: (String) -> Un
             .verticalScroll(rememberScrollState()).padding(14.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)) {
             TapeText("MURMUR PLUCK", TapeType.markerBig, scheme.ink.tape)
-            TapeText("THREE KEPT SETTINGS. CHOOSE AN INSTRUMENT FOR THE SHELF.",
+            TapeText("THREE KEPT SETTINGS. CHOOSE AN INSTRUMENT FOR THE LIBRARY.",
                 TapeType.pixelSmall, scheme.ink2.tape, maxLines = 3)
             TapeText("THE HELD SETTING KEEPS SOUNDING UNTIL YOU LIFT A KEY.",
                 TapeType.pixelSmall, scheme.ink2.tape, maxLines = 3)
