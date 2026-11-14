@@ -759,4 +759,17 @@ The Sites credential issue cleared; deployment of site commit
 `e487785b8427d479ea429c902257aa3910a9a644` succeeded. Page controls and all 63
 listening targets passed the Node checks. Browser audio playback could not be
 verified because this managed session exposes no browser-control tool; physical
-MPC loading remains outstanding. Full JVM regression is running separately.
+MPC loading remains outstanding.
+
+JVM regression is complete: the final reports across all nine modules contain
+9,079 tests, zero failures, zero errors and zero skipped tests. The first broad
+run found two stale starter-roster expectations (71 rather than 74 starters,
+and an ordered ID list missing the three PATIO kits). Both were corrected;
+the focused correction run passed, followed by the entire shell suite (2,235
+tests, exit 0). The complete synth/XPM run also exited 0, including all 4,909
+synth tests; the other module suites passed in the broad run. No tests were
+disabled or filtered from those full module runs. Android compilation and
+device tests were not run because this environment has no Android SDK.
+
+The implementation and these verification results are committed on
+`claude/patio-first-build`.
