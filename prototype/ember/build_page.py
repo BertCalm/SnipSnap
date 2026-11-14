@@ -29,6 +29,8 @@ LABELS = {
     "centroid_lo_hz": ("CENTROID AT 0", "{:.0f} Hz"), "centroid_hi_hz": ("AT 1", "{:.0f} Hz"),
     "decay_lo_ms": ("DECAY AT 0", "{:.0f} ms"), "decay_hi_ms": ("AT 1", "{:.0f} ms"),
     "lo_vs_hi_db": ("0 VS 1", "{:.1f} dB"),
+    "vs_recording_db": ("VS RECORDING", "{:.1f} dB"), "vs_recording_whole_db": ("WHOLE", "{:.1f} dB"),
+    "rec_centroid_hz": ("REC CENTROID", "{:.0f} Hz"),
 }
 
 
@@ -84,6 +86,21 @@ for k in KITS:
     <p class="ask"><span class="tag">LISTEN FOR</span>Is this that set, that night? Which pads would you swap or re-voice?</p>
   </section>""")
 
+cymbal_card = ""
+if any(s["id"] == "cymbals" for s in M["sections"]):
+    rt = M.get("cymbal_real_takes_db", ["?", "?"])
+    cymbal_card = f"""
+  <section class="card" id="cymbals">
+    <h2>Cymbals against real cymbals (round 0b)</h2>
+    <p class="intro">You heard round 0's cymbals as hitting sheet metal. They were guessed, and measured they sat 11 to 34 dB from real cymbals,
+    with half the brightness. Every cymbal and hat is now resynthesized from a CC0 recording of a jazz club kit, the way BREAKER's approved
+    cymbals are: about 400 measured resonances each, split into the beating pairs a hammered plate has, plus what those resonances leave out,
+    played as shaped noise. Each clip is EMBER dry (no club, no 1962 chain), then the real cymbal. Two takes of one real flat ride measure
+    {rt[0]} dB apart on the same scale.</p>
+    <p class="ask"><span class="tag">LISTEN FOR</span>Is each EMBER cymbal the same kind of cymbal as the recording after it? Which still sounds like metal sheet?</p>
+    <ul class="clips">{''.join(clip_html(c) for c in section('cymbals')['clips'])}</ul>
+  </section>"""
+
 base_sections = []
 for sid, title, intro, ask in (
     ("velocity", "Velocity: the stroke, not the volume", "Soft, medium, hard on each EMBER pad, each peak-matched so only the stroke differs. "
@@ -92,7 +109,7 @@ for sid, title, intro, ask in (
     ("takes", "Round robin: four takes", "The four takes each EMBER pad deals in turn, all hard. A take moves where the stick lands and how it lies, "
      "which wires and rivets fly, and which people in the crowd are early.",
      "Do the four sound like one drummer playing the same drum four times, rather than four drums or one copy?"),
-    ("voices", "All twenty-six voices", "Every voice at its defaults, soft then hard. Some voices only appear in one kit.",
+    ("voices", "All twenty-seven voices", "Every voice at its defaults, soft then hard. Some voices only appear in one kit.",
      "Which convince you as a 1962 kit in a room, and which sound like a synth pretending?"),
 ):
     sec = section(sid)
@@ -146,7 +163,8 @@ LEDGER = [
      f"Python: median {C['render_ms_median']} ms, mean {C['render_ms_mean']} ms, slowest {C['render_ms_max']} ms ({C['render_ms_max_voice']}, building its cymbal cache). Cymbal and room responses are cached by TUNE, DAMP and DISTANCE."),
     ("Calf loss, tension sag, two heads, Bessel modes", "literal", "the membrane equations run (ideal circular membrane, a loss law per mode); air loading and shell are not simulated"),
     ("Wires, rivets, hat plates, jingles lift past a threshold", "literal, one-way", "a threshold on the body's own motion schedules impacts; the parts never push back on the body"),
-    ("The ride's wash grows in after the strike", "analogy", "the top band rises with velocity squared over ~90 ms; the nonlinear cascade itself is not simulated"),
+    ("The cymbals and hats are the recorded cymbals' own resonances", "measured", "fitted to CC0 recordings (Virtuosity Drums) with BREAKER's fitter; the split into beating pairs is shape, below the fit's 5.4 Hz resolution"),
+    ("Round 0's cymbals sounded like sheet metal", "heard", "the owner, 2026-11-14; replaced in round 0b"),
     ("The bow locks to one cymbal mode", "analogy", "a stick-slip-shaped drive at one mode; the Kotlin can use Modes.Friction for the real solve"),
     ("The club and the 1962 chain", "analogy", "a synthetic room response (geometry-shaped early reflections, two-band tail) and a ribbon, valve and tape sketch; no real room or console was measured"),
     ("The kits sound like a club in 1962", "not heard", "your listen"),
@@ -256,14 +274,15 @@ details[open] > summary {{ margin-bottom: 8px; }}
 
 <div class="wrap">
   <header>
-    <div class="mark"><i></i><span class="eyebrow">SNIPSNAP · EMBER · ROUND 0 · PYTHON PROTOTYPE · NOT HEARD</span></div>
+    <div class="mark"><i></i><span class="eyebrow">SNIPSNAP · EMBER · ROUND 0B · PYTHON PROTOTYPE · CYMBALS REFITTED</span></div>
     <h1>EMBER Audition</h1>
     <p class="lede">A live jazz and soul drum kit in a small, warm, smoky club in 1962, built only from physical models: calfskin drums,
     a riveted ride, real brush sweeps, a hi-hat foot on 2 and 4, a table snapping its fingers, a bowed cymbal for the late set.
     Four sixteen-pad kits: EMBER (hard bop on sticks), After Hours (brushes), Soul Jazz (organ-trio backbeat) and Free (the rebellious late set).
-    Nothing is sampled. These are prototype renders from a Python model, not the app, and nobody has heard them yet.</p>
+    Nothing is sampled. These are prototype renders from a Python model, not the app. Round 0b answers your first listen:
+    the cymbals and hats are rebuilt from measurements of real cymbals. Nothing else has changed sound.</p>
     <p class="gesture">A stick, a brush or a hand meets calfskin or thin bronze → the head sags back to pitch while the wires and rivets answer on their own threshold → the rest of the kit hums along → a low-ceilinged room and a warm 1962 chain close around it.</p>
-    <nav><a href="#play">Play</a>{''.join(f'<a href="#kit-{k["id"]}">{ESC(short(k["name"]))}</a>' for k in KITS)}<a href="#velocity">Velocity</a><a href="#takes">Takes</a><a href="#voices">Voices</a><a href="#macros">Controls</a><a href="#gates">Gates</a><a href="#ledger">Ledger</a></nav>
+    <nav><a href="#play">Play</a><a href="#cymbals">Cymbals</a>{''.join(f'<a href="#kit-{k["id"]}">{ESC(short(k["name"]))}</a>' for k in KITS)}<a href="#velocity">Velocity</a><a href="#takes">Takes</a><a href="#voices">Voices</a><a href="#macros">Controls</a><a href="#gates">Gates</a><a href="#ledger">Ledger</a></nav>
   </header>
 
   <section class="card" id="play">
@@ -276,6 +295,7 @@ details[open] > summary {{ margin-bottom: 8px; }}
       <div class="readout"><span id="status">Tap any pad. Each pad loads on its first tap.</span><button class="load" id="loadall" type="button">LOAD THIS KIT</button></div>
     </div>
   </section>
+{cymbal_card}
 {''.join(kit_cards)}
 {''.join(base_sections)}
 
