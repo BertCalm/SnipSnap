@@ -173,22 +173,44 @@ A kit family of three 1980s gated drum kits: Stone Room, Machine Pop and Electro
 - **Sound character: approved at round 4.** On 2026-11-11 the owner heard round 4 on the published listening page and said, "Everything sounds good". Preserve round 4 (`GatecrashKits.VERSION` 4) as the accepted baseline. This is not evidence of a phone or MPC audition. The path there: round 1 rejected ("harsh", "more like loud static"; its rooms carried 14 to 20 dB more energy than the drums), round 2 corrected ("80s drums round off at the end rather than cut abruptly"), round 3 corrected ("we are missing some brightness").
 - **Overall: incomplete.** The software evidence is in place and the sound is approved. Phone playback and MPC hardware playback remain open.
 
-## ETCH (round 1, 2026-11-11)
+## ETCH (rounds 1 to K2, 2026-11-11 to 2026-11-14)
 
 A step-line bass with a drive stage and a tempo delay into a reverb. See [ETCH](ETCH.md).
-Rounds 1 to 3 were a Python audition, accepted 2026-11-12. Kotlin round K1 (2026-11-13) ports it as a prototype (`PatchTypes.PROTOTYPES`) with provisional `EtchPresets`.
+Rounds 1 to 3 were a Python audition, accepted 2026-11-12. Kotlin round K1 (2026-11-13) ported it; round K2
+(2026-11-14) put it on the roster, in the picker and on the shelf, with keys.
 
-- **Melodic:** open. The owner chose the six voices on 2026-11-12: SAW, SQUARE, RUBBER, WHISTLE, GRIT and DUB. All six are built in Python (round 2) and in Kotlin (K1), each with its own mechanism; every pair is at least 3.7 dB apart by third-octave spectrum, and each new voice at least 5.4 dB. RUBBER, WHISTLE, GRIT and DUB are not heard. Provisional presets only (each voice's note and line); no factory roster, keygroups or kit yet. Chord-tool compatibility is the owner's call, because the line voice is monophonic by design.
-- **Articulation:** HOLD built in part: under .85 it sets the note's gate (TONAL), from .85 it plays the line as a seamless LOOP (`Keys.requireSeam` on every render). The sustained keygroup loop is not built. STRUM not applicable: not a picked or thumbed string.
+- **Melodic:**
+  - **Six voices: pass.** SAW, SQUARE, RUBBER, WHISTLE, GRIT and DUB, chosen by the owner 2026-11-12 and heard in
+    rounds 2 and 3, each its own mechanism; every pair at least 3.7 dB apart by third-octave spectrum.
+  - **Presets: pass.** Fourteen factory presets (each voice's note and line, SAW's busy line, SQUARE's sparse
+    line), every one a setting heard in round 3. The Kotlin renders of them are on the K2 page, not yet heard.
+  - **Playable keygroups: built, not verified on a phone.** MAKE INSTRUMENT renders finite keys C1 to C4 with
+    three touch layers (`EtchPadMaker`, `EtchKeygroupMaker`); lines are not offered as keys.
+  - **Premade kit: built, not heard.** FRESH TAPE → ETCH under BASS: a SAW walk, five voices' notes and three
+    lines at 130 BPM.
+  - **Chord tool: open, the owner's call.** The keys are polyphonic, but the chord tool voices around G3 to F#4,
+    above ETCH's C4 ceiling, and the line voice is monophonic by design.
+- **Articulation:** HOLD under .85 sets the note's gate (TONAL); from .85 the voice plays its line as a seamless
+  LOOP (`Keys.requireSeam` on every render). A sustained keygroup loop is not built: the keys are finite notes.
+  STRUM not applicable: not a picked or thumbed string.
 - **Percussion and drum kits:** not applicable. A bass engine.
 - **Velocity and round robin:**
-  - **Rendering: Python harness only.** Velocity changes the tone on all six voices, not only the level: level-matched attack centroid rises from soft to hard hits on every voice (GRIT 876 → 1,102 Hz, the smallest; WHISTLE 622 → 1,734 Hz, the largest). Round robin **failed by ear** on 2026-11-12: the owner heard the four takes as the same strike (they measured 0.5 to 0.8 dB apart by take distance). Rebuilt with five audible dimensions dealt out so no two takes share a setting: after the round-3 tone the closest two takes are 1.8 to 3.1 dB apart at velocity 0.6, and no pair exceeds a 0.6 to 0.8 velocity step. Accepted by ear with the round-3 audition on 2026-11-12, in Python rendering only.
-  - **Rendering in Kotlin (K1): verified.** Velocity changes the tone on all six voices (`EtchTest`; Kotlin within 2 Hz of the accepted Python on every voice). Four takes are distinct strikes reachable through `Restrike.take`, deterministic in (patch, velocity, seed, take); take 0 is the plain render.
-  - **Saving: partly verified.** The patch round-trips through JSON with its note, velocity and model; a saved kit is not tested (no kit yet).
-  - **Playback and export:** not yet verified (no kit; `Robin`'s round-robin path accepts ETCH through `Restrike.canRestrike`, but no ETCH chain has been played or exported).
-- **Sound character: direction accepted at round 1b.** On 2026-11-12 the owner heard the corrected square ("That's better") and then the whole round-1b audition: "It all seems fine from the audition." Preserve round 1b as the baseline. This is a listen to Python renders, not evidence of Kotlin, phone or MPC playback. After round 2 the owner heard the engine as "a bit mid heavy, like dollar store headphones"; round 3 restores the top end (line B 8 kHz from -30.4 to -18.6 dB against the 500 Hz band; reference B -16.0). The owner then accepted the round-3 audition: "I'm good with evening in audition" (read as "everything"). Preserve round 3 as the baseline; this is a listen to Python renders, not evidence of Kotlin, phone or MPC playback.
-- **Overall: incomplete.** The sound direction is accepted; the six voices, presets, keygroups, kit, HOLD and every saving, playback and export stage remain open, and no Kotlin exists.
-
+  - **Rendering: pass.** Velocity changes the tone on all six voices (Kotlin within 2 Hz of the accepted Python
+    attack centroids). Four takes are distinct strikes through `Restrike.take`; the owner accepted the rebuilt
+    takes by ear in round 3 (Python renders).
+  - **Saving: pass in software.** The patch round-trips with its note, velocity and model; a kit pad's 3 × 4 grid
+    survives saving and reloading (`EtchKitTest`, `TriadKitProof`).
+  - **Playback: pass in software, phone not exercised.** The app's pad resolver picks the zone by velocity and
+    walks the four takes in order (`EtchKitTest`); harder zones are brighter strikes, not only louder.
+  - **Export: MPC 3 metadata pass in software; MPC hardware open.** The MPC 3 export's zones and cycles read back
+    (`TriadKitProof.verifyTrack`). MPC 2 keeps each zone's first take (the owner's format limit, 2026-11-14).
+  - **Not covered:** loop pads have velocity zones and no takes; keys have touch layers and no takes.
+- **Sound character: direction accepted at round 3** ("I'm good with evening in audition", read as "everything").
+  Short, low notes read as KICK or TOM to the classifier (122 of 756 one-shots). The owner heard three endings on
+  the K2 page and chose C for every voice (2026-11-14): model 2 rings one-shots out, leaving 4 of 756 (RUBBER's
+  shortest C1 notes). Model-1 recipes keep the accepted ending.
+- **Overall: incomplete.** Open: a listen to the Kotlin presets and kit at model 2, the chord tool,
+  phone playback of keys and kit, and an MPC.
 ## CYPHER kits and THUMP SUB (round 2, 2026-11-12)
 
 Hip-hop drum kits in the GATECRASH shape, six built: TRAP, DRILL, BACKROOM, LOWRIDER, DUST, FLINT. See [CYPHER](CYPHER.md). The owner heard round 1 ("The triple snare thing is messy"), then round 1b ("Ok, sounds good. Make sure we clear the approval gates"), which approved TRAP and DRILL, then round 2 ("All four pass"), which approved BACKROOM, LOWRIDER, DUST and FLINT. Evidence at kit version 3, `CypherTest`, `CypherKitTest`, `ThumpSubTest`, `ThumpSubRobinTest` and `:shell:generateCypherKits`.
@@ -268,7 +290,7 @@ A kit family of three 1970s disco kits: Philly Strings, Loft Party and Munich Ma
   playback remain open. The owner waived SFZ and
   DecentSampler.
 
-## SOOT (five kits on the shelf, sound approved; hardware open)
+## SOOT (five kits on the shelf, sound approved, hardware confirmed: complete)
 
 A drum engine for grimy street boom bap from physical models. See [SOOT](SOOT.md).
 
@@ -295,10 +317,13 @@ A drum engine for grimy street boom bap from physical models. See [SOOT](SOOT.md
     their renders (`SootKitTest`, `SootGenreKitTest`, `:shell:generateSootKit`,
     `:shell:generateSootGenreKits`).
   - **Playback: verified in software.** `PadHit.resolve` picks the zone by velocity and deals the four
-    takes in order, then repeats. No phone has played the kit.
+    takes in order, then repeats. **Phone: pass, owner-confirmed 2026-11-14.** The owner played SOOT
+    and its starter kits and said, "Everything is good": soft-to-hard and repeated hits were right.
   - **Export: verified for MPC 3 by read-back.** The exported slices match their renders. **MPC 2: not
     applicable** ([format limit](#mpc-2-and-round-robin-owner-decision-2026-11-14)): it keeps only the first take of each zone. SFZ and DecentSampler were not generated.
-    No MPC has loaded the kit.
+    **MPC 3 on an MPC: pass, owner-confirmed 2026-11-14.** The exported kits loaded and repeated hits
+    cycled through the takes. This is the owner's report, not a slice-map capture (HH1.4 stays
+    parked), and the first report against the general MPC note above.
 - **Sound character: approved at round 2.** On 2026-11-13 the owner heard the kit read back from its
   MPC 3 export and said, "All sounds fine". How they got there:
   - **Round 0:** they picked the hits.
@@ -309,9 +334,11 @@ A drum engine for grimy street boom bap from physical models. See [SOOT](SOOT.md
     - the roll and the loop point accepted;
     - the four bars moved to the heavier dictaphone (`SootKits.VERSION` 3).
 
-  Preserve version 3 as the baseline. This is not evidence of a phone or MPC audition.
-- **Overall: incomplete.** The sound of all five kits is approved, and the software evidence is in
-  place for all of them. Still open: phone and MPC hardware playback.
+  Preserve version 3 as the baseline. The phone and MPC 3 auditions are recorded under velocity and
+  round robin above.
+- **Overall: complete (2026-11-14).** The sound of all five kits is approved, the software evidence
+  is in place for all of them, and the owner confirmed phone and MPC 3 playback. MPC 2 is not
+  applicable (format limit).
 
 ## MURMUR round robin (V2 instrument, 2026-11-13)
 
@@ -680,3 +707,27 @@ prototype audition; no Kotlin exists.
   Preserve round 0c as the baseline.
 - **Overall: incomplete.** The Kotlin engine is in (round 1) and not yet heard; the kits on the shelf,
   saving, playback, export and hardware are open. The percussion gate is waived by the owner.
+
+## EMBER (round 0, 2026-11-14, Python prototype, not heard)
+
+A drum engine for a live jazz and soul kit in a small club in 1962: calfskin drums, a riveted ride, brushes, the
+club and a 1962 chain, from physical models. Four sixteen-pad kits. See [EMBER](EMBER.md). Round 0 is a Python
+prototype and a listening page (<https://claude.ai/artifact/Xmcj5t8MYSNCQPoTKHBcdw>); no Kotlin exists.
+
+- **Melodic, keygroup and chord-tool gates:** not applicable. A drum engine.
+- **Articulation:** finite hits, no HOLD. No picked or thumbed strings.
+- **Percussion: authored, not heard.** Every kit carries a roll or riser on A15/A16: a press roll and a mallet
+  cymbal swell (EMBER), a brush roll and a far swell (AFTER HOURS), a snare roll (SOUL JAZZ), a swell (FREE).
+  Rendered in Python.
+- **Drum shelf: authored, not on the shelf.** EMBER (138 BPM), EMBER AFTER HOURS (66), EMBER SOUL JAZZ (104) and
+  EMBER FREE (80) differ in implements, drums per role, tuning, damping, looseness, microphone distance, chain and
+  tempo. No pad is identical between any two kits; the same slot in two kits is at least 2.98 dB apart (Python).
+  No Kotlin, so nothing is on the shelf.
+- **Velocity and round robin:**
+  - **Rendering: measured in Python, not Kotlin.** On all 64 pads, soft against hard at matched level differs by at
+    least 1.92 dB; the closest two of any pad's four takes are 1.19 dB apart. Velocity moves the contact, the
+    threshold parts and the swell's arc, not a filter.
+  - **Saving, playback, export: open.** The listening page's pad grid is a browser stand-in, not app evidence.
+- **Sound character: open.** Nothing has been heard.
+- **Overall: incomplete.** Round 0 asks the owner which voices and kits to keep. Kotlin (round 1), the shelf and
+  saving, playback and MPC 3 export (round 2), and phone and MPC hardware (round 3) are all open.

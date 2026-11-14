@@ -3503,6 +3503,17 @@ the line loop at HOLD's top and round-robin takes through `Restrike`, as a proto
 and the picker. Kotlin measures within 0.4 to 2.8 dB of the accepted renders. The kit, the roster, keygroups, the
 picker and the saving, playback and export evidence follow. See [ETCH](ETCH.md).
 
+### ETCH, round K2 (2026-11-14)
+
+The roster, the picker, keys and a kit. The fourteen K1 presets, every one heard in round 3, are the factory bank.
+ETCH is in the SYNTH picker after OSTERIA with WICK's typed-patch handling (root, velocity and model survive edits,
+navigation, SAVE and SEND), a VELOCITY control and MAKE INSTRUMENT's finite keys (C1 to C4, three touch layers).
+FRESH TAPE → ETCH (BASS, 130 BPM) is a SAW walk in C minor pentatonic, five voices' notes and three lines; each
+note pad is three velocity zones by four takes, verified through saving, the pad resolver and the MPC 3 export
+(`EtchKitTest`). Short, low one-shots read as KICK or TOM (122 of 756); the owner heard three endings and chose C
+for every voice, now model 2 (4 of 756, RUBBER's shortest C1 notes; model-1 recipes keep the accepted ending).
+Open: a listen to the Kotlin presets and kit at model 2, the chord tool (it voices above ETCH's C4 ceiling), phone playback and an MPC. See [ETCH](ETCH.md).
+
   - The kick's takes are distinct but close (34 dB apart).
   - The owner's listen to the kit.
 
@@ -3551,6 +3562,9 @@ The siblings' pads await a listen; hardware remains.
 The owner kept 63 of the 64 sibling pads. They heard Basement Dub's one-drop four bars as
 incoherent, and picked a steppers groove in its place (`SootGenreKits` 2). The sound of all five SOOT
 kits is now approved, and hardware remains.
+
+On 2026-11-14 the owner confirmed phone and MPC 3 playback ("Everything is good"), with repeated hits
+cycling through the takes on the MPC 3. SOOT is complete; MPC 2 is not applicable (format limit).
 
 
 ### SCUFF, round 1 (2026-11-13)
