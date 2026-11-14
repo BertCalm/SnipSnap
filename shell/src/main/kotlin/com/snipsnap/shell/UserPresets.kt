@@ -92,7 +92,7 @@ import java.util.Locale
  * Promotion into the shipped roster stays a code change, on purpose: a
  * preset worth every player having is pasted into its engine's table by
  * hand ([rosterLine] renders the line), where the spread, blocklist and
- * identity tests judge it. SEND TO BENCH carries the file and the lines.
+ * identity tests judge it.
  *
  * FORGET follows the app's one rule for a delete: into the bin, not gone.
  * A forgotten preset moves to a `binned` list in the same file ([forget]),

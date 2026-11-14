@@ -1635,12 +1635,11 @@ UI layer. What lives here:
 - **`Personality`/`Delight`/`Copy`** — `docs/PERSONALITY.md` as executable
   data: the four laws gate for real (OFF silences everything; deck sounds
   hard-mute while capture is armed), all shipped copy, and the eggs.
-- **`Workshop` / `TeachLog` / `BenchExport` / `CutRatings` / `LabelledHits` /
-  `BenchNotes` / `ChopReviewModel`'s confirm and harvest** — the developer's
-  bench pipeline (`docs/WORKSHOP.md`). Removed from the UI (the knock, TEACH
-  THE MACHINE, CONFIRM ALL and the stars, the pad sheet's BENCH box, the NOTE
-  chip, SEND TO BENCH, SEND HITS TO BENCH; UI-clarity spec §7.4.1, D8); kept
-  here with their tests until the owner decides to delete them.
+- **The developer's bench pipeline is gone** (`Workshop`, `TeachLog`,
+  `BenchExport`, `CutRatings`, `LabelledHits`, `BenchNotes` and
+  `ChopReviewModel`'s confirm and harvest). Removed from the UI by UI-clarity
+  spec §7.4.1, D8, and deleted from `:shell` with their tests (review Q5,
+  2026-11); `docs/WORKSHOP.md` keeps the spec as history.
 - **`UserPresets`** — SAVE AS PRESET on SYNTH (`docs/WORKSHOP.md`, WS5,
   the one tool on that list that is for every player): the player's own
   presets in `presets.json` beside the kits, the name rules (fourteen
@@ -1691,7 +1690,7 @@ in [`app/README.md`](app/README.md). CI compiles it in `android-build`.
 - [`docs/KIT_BEST_PRACTICES.md`](docs/KIT_BEST_PRACTICES.md) — pad layout, mute groups, naming, and what Akai does and doesn't document
 - [`docs/UI_DESIGN.md`](docs/UI_DESIGN.md) — the TapeOS visual language (90s desktop × cassette) and the mockup artboards in [`design/`](design/)
 - [`docs/PERSONALITY.md`](docs/PERSONALITY.md) — the delight system: voice, the four laws, gag catalog, easter eggs
-- [`docs/WORKSHOP.md`](docs/WORKSHOP.md) — the WORKSHOP: the spec for the developer's tools, removed from the UI (D8), with SAVE AS PRESET, which was never behind it
+- [`docs/WORKSHOP.md`](docs/WORKSHOP.md) — the WORKSHOP: the spec for the developer's tools, removed from the app (D8, code deleted), with SAVE AS PRESET, which was never behind it
 - [`docs/SYNTH_ROADMAP.md`](docs/SYNTH_ROADMAP.md) — THUMP/CRUNCH/TINES/VELVET: generate kits, not just capture them
 - [`reference/README.md`](reference/README.md) — harvesting reference programs off hardware
 
