@@ -780,4 +780,7 @@ testkit/tempest-expansion/
 testkit/tempest-full-kit/
 testkit/SnipSnap Tempest Full Kit/
 testkit/SnipSnap Tempest Tuned Kit/
+
+# Generated Velour round-robin audio and delivery packages.
+testkit/velour-round-robin/
 testkit/etch-audition/
