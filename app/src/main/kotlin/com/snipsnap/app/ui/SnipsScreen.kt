@@ -333,14 +333,16 @@ fun SnipsScreen(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 HeaderChip(backLabel, scheme, Modifier.widthIn(min = 72.dp), onClick = onBack)
-                Spacer(Modifier.weight(1f))
-                TapeText("SAVED SAMPLES", TapeType.lcdHeader, scheme.lcdInk.tape)
-                Spacer(Modifier.weight(1f))
-                TapeText(
-                    "${snips.size} · ${humanSize(snips.sumOf { it.sizeBytes })}",
-                    TapeType.lcdSmall,
-                    scheme.amber.tape,
-                )
+                // Title on up to two lines (D7), the count and size under it, not beside it.
+                Column(Modifier.weight(1f).padding(start = 8.dp, top = 4.dp, bottom = 4.dp)) {
+                    TapeText("SAVED SAMPLES", TapeType.lcdHeader, scheme.lcdInk.tape, maxLines = 2)
+                    TapeText(
+                        "${snips.size} · ${humanSize(snips.sumOf { it.sizeBytes })}",
+                        TapeType.lcdSmall,
+                        scheme.amber.tape,
+                        maxLines = 2,
+                    )
+                }
             }
 
             // BIN: gated on the bin actually holding something — a user

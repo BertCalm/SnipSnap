@@ -387,4 +387,11 @@ class SnapScreenTest : ComposeScreenTest() {
         assertEquals(listOf(Copy.SNAP_NO_CAMERA), toasts.toList())
         assertTrue("still no photo", showing("NO PHOTO"))
     }
+
+    /** D7: the title may take two lines, the status is under it, and nothing is cut short at 360 dp. */
+    @Test
+    fun the_title_is_not_cut_short_at_360_dp() {
+        show(emptyKit())
+        assertNotCutShort("PHOTO TO SOUND")
+    }
 }

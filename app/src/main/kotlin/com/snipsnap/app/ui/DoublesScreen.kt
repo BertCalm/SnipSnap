@@ -119,16 +119,21 @@ fun DoublesScreen(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             HeaderChip(backLabel, scheme, Modifier.widthIn(min = 72.dp), onClick = onBack)
-            Column(Modifier.weight(1f).padding(start = 8.dp)) {
-                TapeText("FIND SIMILAR SOUNDS", TapeType.lcdHeader, scheme.lcdInk.tape)
-                TapeText(
-                    idx?.let { "${Copy.countOf(it.entries.size, "PAD", "PADS")} MEASURED" } ?: Copy.DOUBLES_BUSY,
-                    TapeType.pixelSmall,
-                    scheme.lcdInk2,
-                    maxLines = 1,
-                )
+            // The title may take two lines (D7: only a user's own names ellipsize),
+            // and the group count sits under it, not beside it, so it cannot squeeze it.
+            Column(Modifier.weight(1f).padding(start = 8.dp, top = 4.dp, bottom = 4.dp)) {
+                TapeText("FIND SIMILAR SOUNDS", TapeType.lcdHeader, scheme.lcdInk.tape, maxLines = 2)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    TapeText(
+                        idx?.let { "${Copy.countOf(it.entries.size, "PAD", "PADS")} MEASURED" } ?: Copy.DOUBLES_BUSY,
+                        TapeType.pixelSmall,
+                        scheme.lcdInk2,
+                        Modifier.weight(1f, fill = false),
+                        maxLines = 2,
+                    )
+                    TapeText("${clusters.size} ${if (clusters.size == 1) "GROUP" else "GROUPS"}", TapeType.pixelSmall, scheme.amber.tape, maxLines = 2)
+                }
             }
-            TapeText("${clusters.size} ${if (clusters.size == 1) "GROUP" else "GROUPS"}", TapeType.pixelSmall, scheme.amber.tape, maxLines = 2)
         }
 
         TapeText(Copy.DOUBLES_RULE, TapeType.pixelSmall, scheme.ink2.tape, Modifier.fillMaxWidth().padding(horizontal = 4.dp), maxLines = 2)

@@ -4742,7 +4742,13 @@ internal fun StepperSlider(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        TapeText(label, TapeType.pixelSmall, scheme.ink2.tape, Modifier.width(labelWidth))
+        // A minimum, not a cap (D7): VELOCITY, ALTERNATES, GRAIN SIZE read in full, and a name
+        // longer than the cap wraps to a second line. The track keeps >= 120 dp at 360 dp.
+        TapeText(
+            label, TapeType.pixelSmall, scheme.ink2.tape,
+            Modifier.widthIn(min = labelWidth, max = maxOf(labelWidth, 96.dp)),
+            maxLines = 2,
+        )
         Box(
             Modifier
                 .weight(1f)
