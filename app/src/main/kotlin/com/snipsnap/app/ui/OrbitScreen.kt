@@ -2570,24 +2570,7 @@ private fun StripEditor(
         val cellW = maxOf(CELL_MIN_DP.dp, (available - gap * (ring.steps - 1)) / ring.steps)
         val scroll = rememberScrollState()
         Column(verticalArrangement = Arrangement.spacedBy(gap)) {
-            // What a long-press writes. The grid has two gestures and a hit
-            // has four things to say, so the chip is the third gesture -
-            // one tap to change what the next long-press means, rather than
-            // a panel over the strip the player is trying to hear.
-            Row(
-                Modifier.fillMaxWidth().padding(bottom = 2.dp),
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                // Batch 3, Task 4: "·", not "▸" — one tap cycles the brush
-                // in place (the KDoc above), it doesn't navigate or open a
-                // panel. "·" is the house separator for a label-plus-detail
-                // pair that isn't either of those (`PROG A · THE BREAK`,
-                // GrooveScreen.kt).
-                SmallChip("HOLD · ${brush.label}", scheme, accent = brush != OrbitBrush.WEIGHT, onClick = onBrush)
-                TapWritesChip(tapWrites, brush, scheme) { tapWrites = !tapWrites }
-                TapeText(BRUSH_SAYS[brush].orEmpty(), TapeType.pixelSmall, scheme.lcdInk2, Modifier.weight(1f), maxLines = 2)
-            }
+            BrushStrip(brush, tapWrites, scheme, onBrush) { tapWrites = !tapWrites }
             for (slot in rows) {
                 val color = padColor(kit, slot, inkColor)
                 Row(horizontalArrangement = Arrangement.spacedBy(gap), verticalAlignment = Alignment.CenterVertically) {
@@ -2646,6 +2629,38 @@ private fun StripEditor(
                 }
             }
         }
+    }
+}
+
+/**
+ * What a long-press writes, and what a tap does: the two chips on one row, the
+ * brush's [BRUSH_SAYS] hint under them on a full-width row of its own (the
+ * chips take ~260 of ~310 dp, so a hint beside them was cut to a sliver).
+ * Its own function, not more locals in the ring's grid: that composable is a
+ * few registers from the dex limit.
+ *
+ * The grid has two gestures and a hit has four things to say, so the chip is
+ * the third gesture: one tap to change what the next long-press means,
+ * rather than a panel over the strip the player is trying to hear.
+ */
+@Composable
+private fun BrushStrip(
+    brush: OrbitBrush,
+    tapWrites: Boolean,
+    scheme: Scheme,
+    onBrush: () -> Unit,
+    onTapWrites: () -> Unit,
+) {
+    Column(Modifier.fillMaxWidth().padding(bottom = 2.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+            // Batch 3, Task 4: "·", not "▸" — one tap cycles the brush
+            // in place, it doesn't navigate or open a panel. "·" is the
+            // house separator for a label-plus-detail pair that isn't either
+            // of those (`PROG A · THE BREAK`, GrooveScreen.kt).
+            SmallChip("HOLD · ${brush.label}", scheme, accent = brush != OrbitBrush.WEIGHT, onClick = onBrush)
+            TapWritesChip(tapWrites, brush, scheme, onTapWrites)
+        }
+        TapeText(BRUSH_SAYS[brush].orEmpty(), TapeType.pixelSmall, scheme.lcdInk2, Modifier.fillMaxWidth(), maxLines = 2)
     }
 }
 

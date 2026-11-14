@@ -189,6 +189,22 @@ abstract class ComposeScreenTest {
         assertFalse("\"$text\" is cut short with an ellipsis at $PHONE_WIDTH_DP dp", layout.isLineEllipsized(0))
     }
 
+    /**
+     * A title that may take two lines (clarity spec D7): drawn whole, none of
+     * its lines cut short with an ellipsis. [assertReadsInFull] is the
+     * one-line form; this one does not ask for the line count.
+     */
+    protected fun assertNotCutShort(text: String) {
+        val node = compose.onNodeWithText(text, useUnmergedTree = true).fetchSemanticsNode("nothing on screen reads \"$text\"")
+        val action = node.config.getOrNull(SemanticsActions.GetTextLayoutResult)?.action
+        assertNotNull("\"$text\" has no text layout to inspect", action)
+        val results = mutableListOf<TextLayoutResult>()
+        assertTrue(action!!.invoke(results))
+        val layout = results.single()
+        val cut = (0 until layout.lineCount).filter { layout.isLineEllipsized(it) }
+        assertTrue("\"$text\" is cut short with an ellipsis at $PHONE_WIDTH_DP dp (lines $cut of ${layout.lineCount})", cut.isEmpty())
+    }
+
     companion object {
         /** The narrow phone: 360 dp, the width `SurfaceScreenTest`'s first pass was done at. */
         const val PHONE_WIDTH_DP = 360

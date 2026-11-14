@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -7393,7 +7394,7 @@ internal fun MacroSlider(
     enabled: Boolean = true,
     semanticRange: (() -> ClosedFloatingPointRange<Float>)? = null,
     readoutWidth: Dp = 44.dp,
-    /** The label's column; 56 dp fits the short names at 13 sp, and VELOCITY needs more. */
+    /** The label column's minimum; 56 dp fits the short names at 13 sp, a longer one widens it (to 96 dp) then wraps. */
     labelWidth: Dp = 56.dp,
 ) {
     val currentOnChange by rememberUpdatedState(onValueChange)
@@ -7403,7 +7404,13 @@ internal fun MacroSlider(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        TapeText(label, TapeType.pixelSmall, scheme.ink2.tape, Modifier.width(labelWidth))
+        // A minimum, not a cap (D7): VELOCITY, ALTERNATES, GRAIN SIZE read in full, and a name
+        // longer than the cap wraps to a second line. The track keeps >= 120 dp at 360 dp.
+        TapeText(
+            label, TapeType.pixelSmall, scheme.ink2.tape,
+            Modifier.widthIn(min = labelWidth, max = maxOf(labelWidth, 96.dp)),
+            maxLines = 2,
+        )
         Box(
             Modifier
                 .weight(1f)

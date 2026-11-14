@@ -6042,4 +6042,21 @@ class ConventionTest {
         }
     }
 
+    @Test
+    fun `law - slider label columns are a minimum that wraps, not a fixed one-line width`() {
+        val ui = File("../app/src/main/kotlin/com/snipsnap/app/ui")
+        for ((file, marker) in listOf("SynthScreen.kt" to "internal fun MacroSlider(", "PadSheetScreen.kt" to "internal fun StepperSlider(")) {
+            val text = File(ui, file).readText(Charsets.UTF_8)
+            val start = text.indexOf(marker).also { assertTrue(it >= 0, "$file lost $marker") }
+            val body = stripCommentsAndStrings(text.substring(start)).let { it.substring(0, it.indexOf("\n}\n").let { e -> if (e < 0) it.length else e }) }
+            val at = Regex("""TapeText\(\s*label\b""").find(body)
+            assertTrue(at != null, "$marker no longer draws its label with TapeText(label, ...)")
+            // The label's call, up to the track's Box that follows it.
+            val call = body.substring(at!!.range.first, body.indexOf("Box(", at.range.first))
+            assertTrue(!Regex("""\.width\(\s*labelWidth""").containsMatchIn(call), "$marker pins its label to width(labelWidth); use widthIn(min = labelWidth) (clarity spec D7)")
+            assertTrue("widthIn(min = labelWidth" in call, "$marker's label column is not a widthIn(min = labelWidth) minimum")
+            assertTrue("maxLines = 2" in call, "$marker's label is not allowed two lines (clarity spec D7)")
+        }
+    }
+
 }
