@@ -1,0 +1,11 @@
+{
+  "build": "BRINE · ride ring R10",
+  "version": 10,
+  "notes": {
+    "r10-ride-groove-ring": "Keep",
+    "r9-crash-groove-focused": "Keep",
+    "r10-dark-ride-ring": "Keep",
+    "r9-thin-crash-focused": "Keep, but fix the length- seconds of silence ",
+    "r9-choked-crash-focused": "Keep fix length"
+  }
+}

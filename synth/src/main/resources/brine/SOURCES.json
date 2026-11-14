@@ -1,0 +1,69 @@
+{
+  "virtuosityCommit": "9f04cf9a734527edfbb0a4eee1f674e45bbf71bc",
+  "sources": [
+    {
+      "id": "ride-main",
+      "url": "https://raw.githubusercontent.com/sfzinstruments/virtuosity_drums/9f04cf9a734527edfbb0a4eee1f674e45bbf71bc/Samples/mid/ride/mid_ride_ride_vl2_rr1.flac",
+      "page": "https://versilian-studios.com/virtuosity-drums/",
+      "license": "CC0-1.0",
+      "sha256": "b1b52f2f7143917cb9f38dbcab37da645d4109d0795d8cd8563a6a957ab30727",
+      "downloadedFile": "ride-main.flac"
+    },
+    {
+      "id": "ride-check",
+      "url": "https://raw.githubusercontent.com/sfzinstruments/virtuosity_drums/9f04cf9a734527edfbb0a4eee1f674e45bbf71bc/Samples/mid/ride/mid_ride_ride_vl2_rr2.flac",
+      "page": "https://versilian-studios.com/virtuosity-drums/",
+      "license": "CC0-1.0",
+      "sha256": "878a96721a1a50b4c0f798bb681804ce2c1e84e3675606a75aa241e132e05139",
+      "downloadedFile": "ride-check.flac"
+    },
+    {
+      "id": "ride-soft",
+      "url": "https://raw.githubusercontent.com/sfzinstruments/virtuosity_drums/9f04cf9a734527edfbb0a4eee1f674e45bbf71bc/Samples/mid/ride/mid_ride_ride_vl1_rr1.flac",
+      "page": "https://versilian-studios.com/virtuosity-drums/",
+      "license": "CC0-1.0",
+      "sha256": "465995b9f2ee979a0f2f26d0065c06cd11b57fd8b03a978e396abbb8ebe4284d",
+      "downloadedFile": "ride-soft.flac"
+    },
+    {
+      "id": "ride-bell",
+      "url": "https://raw.githubusercontent.com/sfzinstruments/virtuosity_drums/9f04cf9a734527edfbb0a4eee1f674e45bbf71bc/Samples/mid/ride/mid_ride_bell_vl2_rr1.flac",
+      "page": "https://versilian-studios.com/virtuosity-drums/",
+      "license": "CC0-1.0",
+      "sha256": "0adb696d626516bb85a9da6e136dd22084c5e78fb0db9f29b84ca772322c1f7a",
+      "downloadedFile": "ride-bell.flac"
+    },
+    {
+      "id": "flat-ride",
+      "url": "https://raw.githubusercontent.com/sfzinstruments/virtuosity_drums/9f04cf9a734527edfbb0a4eee1f674e45bbf71bc/Samples/mid/flatride/mid_flatride_ride_vl2_rr1.flac",
+      "page": "https://versilian-studios.com/virtuosity-drums/",
+      "license": "CC0-1.0",
+      "sha256": "b6c026cadf52b703b4870f9d7c8b0921305fe0010b016c9570de5febc2f5661e",
+      "downloadedFile": "flat-ride.flac"
+    },
+    {
+      "id": "crash-main",
+      "url": "https://raw.githubusercontent.com/sfzinstruments/virtuosity_drums/9f04cf9a734527edfbb0a4eee1f674e45bbf71bc/Samples/mid/crash/mid_crash_crash_vl2_rr1.flac",
+      "page": "https://versilian-studios.com/virtuosity-drums/",
+      "license": "CC0-1.0",
+      "sha256": "6e51e885a3f0fa3bfbad1349526e3781aefae4063f36691185bc176fad3ce588",
+      "downloadedFile": "crash-main.flac"
+    },
+    {
+      "id": "choke-main",
+      "url": "https://cdn.freesound.org/previews/696/696202_2253220-hq.mp3",
+      "page": "https://freesound.org/people/ankealtd/sounds/696202/",
+      "license": "CC0-1.0",
+      "sha256": "b3c31195183dd989f08bd4946a307efec245a80b03c96190c67b8007ad27d197",
+      "downloadedFile": "choke-main.mp3"
+    },
+    {
+      "id": "choke-check",
+      "url": "https://cdn.freesound.org/previews/696/696204_2253220-hq.mp3",
+      "page": "https://freesound.org/people/ankealtd/sounds/696204/",
+      "license": "CC0-1.0",
+      "sha256": "1b36943d28b8a1e3535ac5446b90fa1283923dce9867ae646bc9881aaa7a78ff",
+      "downloadedFile": "choke-check.mp3"
+    }
+  ]
+}

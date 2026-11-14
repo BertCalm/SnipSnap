@@ -12,6 +12,13 @@ import kotlin.test.assertTrue
  * both depend on the second half.
  */
 class DeterminismTest {
+    @Test fun `BRINE saved settings replay the finite drum board byte for byte`() {
+        val dry = Skin.render(SkinVoice.SNARE)
+        val settings = Brine.Settings()
+        assertContentEquals(Brine.process(dry, settings).samples,
+            Brine.process(dry, Brine.Settings.fromJsonText(settings.toJsonText())).samples)
+    }
+
     @Test fun `RIVET finite drums replay complete room recipes byte for byte`() {
         for (voice in RivetVoice.entries) {
             val p = RivetPatch("Canary", voice, Rivet.defaults(voice) + ("SIZE" to 1f))

@@ -3315,3 +3315,26 @@ tasks.register<JavaExec>("generateOctaverAudition") {
     workingDir = projectDir
     args("${rootDir}/testkit/octaver-audition")
 }
+
+/** Finite shared-drum-board listening gate; no factory registration before audition. */
+tasks.register<JavaExec>("generateBrineAudition") {
+    group = "distribution"
+    description = "Render BRINE stages, single hits, control sweeps and interactions with saved settings."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.BrineAuditionGenerator")
+    systemProperty("brine.references", providers.gradleProperty("brineReferences").orNull ?: "${rootDir}/testkit/brine-references")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "768m"
+    args(providers.gradleProperty("brineOutput").orNull ?: "${rootDir}/testkit/brine-audition")
+}
+
+/** Focused cymbal recording/decay reset, retaining the previous build as comparison evidence. */
+tasks.register<JavaExec>("generateBrineCymbalReset") {
+    group = "distribution"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.BrineCymbalResetGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "768m"
+    args(providers.gradleProperty("brineOutput").orNull ?: "${rootDir}/testkit/brine-r9-audition",
+        providers.gradleProperty("brinePrevious").orNull ?: "${rootDir}/testkit/brine-r8-audition")
+}

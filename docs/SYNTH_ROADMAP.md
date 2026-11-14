@@ -3321,3 +3321,55 @@ See [ONSET](ONSET.md) and the [native specification](superpowers/specs/2026-11-0
 Backroom update: the user-accepted More Snap recipes now feed the six-pad candidate and its velocity layers. A separate four-bar phrase adds a second-bar variation and turnaround; the accepted two-bar render is retained. Factory promotion awaits MPC checks. See `docs/BOOM_BAP.md`.
 
 Backroom controls: an explicit SKIN SNARE model 2 maps Attack, Body, Wire and Brightness around the accepted More Snap midpoint. Original SKIN patches remain model 1. The two heard pair surfaces have 150 PCM24 regression pins; all-four interactions resolve centrally. See `docs/BOOM_BAP.md`.
+
+### BRINE finite drum-board listening study (2026-11-08)
+
+BRINE reuses SKIN with fixed pickup perspectives and a shared recording → dispersive spring
+→ PHASE → VALVE chain. First Kotlin build and 37-comparison audition; candidate voicing,
+not factory-promoted. `generateBrineAudition` writes raw/matched WAVs, replay settings and
+metrics. No new engine, picker or HOLD claim. See [BRINE](BRINE.md) and its linked spec.
+
+BRINE R3 adds open hat, floor tom, cross-stick, ghost snare and simultaneous rimshot
+recipes over the listener-approved R2 recording. The audition adds fourteen comparisons
+(new groove, snare dynamics phrase and five before-pedal/full-chain pairs); prior comparisons
+remain available. Closed hits choke open-hat source vibration before the shared effects.
+
+BRINE R4 adds a lower, longer-ringing floor-tom candidate with a stronger pitch drop and
+softer click. Eight before/after comparisons cover the isolated drum and expanded groove,
+before the pedals and through the full chain; R2/R3 remain reproducible.
+
+BRINE R5 adds half-open hat, dark ride, thin/choked crashes, two groove arrangements and a
+reduced-cymbal balance alternative. The R4 tom is carried forward. An audition download
+contains before-pedal and baked full-chain 13-pad MPC 3 tracks plus MPC 2 twins; new cymbals
+and hardware behavior await listening. No editable BRINE patch or phone picker is claimed.
+
+BRINE R6 responds to cymbal listening feedback: finite impact-driven metal modes replace the
+noise-driven ride/crash in candidate renders and MPC test programs. Old R5 comparisons remain.
+The choked crash now damps the same metallic onset after 230 ms; the approved tom is unchanged.
+
+BRINE R7 follows rejection of unreferenced cymbal models: CC0 recorded ride/crash and real
+hand-choke examples now lead the audition. A measured-envelope spectral reconstruction
+replaces invented mode lists in the candidate and MPC test kit. Alternate takes are withheld
+from fitting; the page separates source A/B from identical recording/board processing.
+Training-metric agreement improves, but listening realism and hardware acceptance remain open.
+
+BRINE R8 (2026-11-10): whole-kit balance comparisons plus three snare/ride velocities and
+two deterministic takes; four MPC test programs keep take selection separate from velocity
+layers. Listening selection and MPC hardware verification remain open. See docs/BRINE.md.
+
+BRINE R9 (2026-11-12): cymbals reopened after overbearing/muddy listener feedback. Focused
+recording-contour and decay candidates in BrineCymbalReset; listening selection is open,
+and R8 test kit remains previous rather than silently receiving an unapproved cymbal.
+
+BRINE R10: R9 focused cymbal direction selected; relax ride-only damping to restore ring.
+Crash/choke remain selected R9 sound; final ride amount awaits listening.
+
+BRINE R11 (2026-11-13): listener keeps R10 ring ride and R9 focused crashes. Trim excessive
+trailing silence from the two kept isolated crash files; accepted notes archived verbatim.
+
+BRINE R12: audit all current audition files and the 68-WAV previous MPC kit for tail padding.
+Clean synthesized preview ends and zero-padded references; current MPC re-export remains open.
+
+BRINE R13: rebuild selected-sound MPC test kit with all sample tails trimmed and fresh
+program endpoints. Four 13-pad programs, 68 WAVs, snare/ride velocity layers, separate takes.
+MPC hardware loading and Sites Git publication remain external verification items.
