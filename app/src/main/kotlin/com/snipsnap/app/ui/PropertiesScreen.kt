@@ -228,7 +228,7 @@ fun PropertiesScreen(
                 .tapeClick(label = Copy.SETUP_MIDI_DEVICES, onClick = onMidiDevices),
             contentAlignment = Alignment.Center,
         ) {
-            TapeText(Copy.SETUP_MIDI_DEVICES, TapeType.pixel, scheme.amber.tape)
+            TapeText(Copy.SETUP_MIDI_DEVICES, TapeType.pixel, scheme.accent.tape)
         }
 
         // ---- What the app already knew and never said (finding 23) ----
@@ -263,7 +263,7 @@ fun PropertiesScreen(
             onToggle = { rateOpen = !rateOpen },
             scheme = scheme,
         ) {
-            TapeText(Copy.SETUP_RATE, TapeType.pixel, scheme.ink2.tape, maxLines = 1)
+            TapeText(Copy.SETUP_RATE, TapeType.pixel, scheme.ink2.tape, maxLines = 2)
             TapeText(Copy.SETUP_RATE_NOTE, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 3)
         }
 
@@ -318,7 +318,7 @@ fun PropertiesScreen(
                 .tapeClick(label = "HELP", onClick = onHelp),
             contentAlignment = Alignment.Center,
         ) {
-            TapeText("HELP ▸", TapeType.pixel, scheme.amber.tape)
+            TapeText("HELP ▸", TapeType.pixel, scheme.accent.tape)
         }
 
         // The build, last and quiet: the one fact a bug report needs and

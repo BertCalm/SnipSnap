@@ -20,7 +20,7 @@ import kotlin.random.Random
  *
  * Modal mallets and drums re-strike ([canRestrike]): SKIN's [Skin.STRUCK]
  * voices, every TERRA voice, HALOBAR mallets, BREAKER (whose source is a
- * struck SKIN drum), and BACKWASH's model 5. Every take is deterministic in
+ * struck SKIN drum), BACKWASH's model 5 and FIRED BRONZE's model 2. Every take is deterministic in
  * (patch, velocity, seed, take); take 0 is the reference itself.
  */
 object Restrike {
@@ -34,7 +34,8 @@ object Restrike {
     fun canRestrike(patch: Patch?): Boolean =
         (patch is SkinPatch && patch.voice in Skin.STRUCK) || patch is TerraPatch ||
             patch is HalobarPatch || patch is BreakerPatch || patch is SootPatch || (patch is BackwashPatch && patch.model == 5) || patch is EtchPatch ||
-            (patch is ThumpPatch && patch.voice == ThumpVoice.SUB)
+            (patch is ThumpPatch && patch.voice == ThumpVoice.SUB) ||
+            (patch is FiredBronzePatch && patch.model >= 2)
 
     /** The velocity and the TERRA POS offset take [take] lands with, drawn from [seed]; take 0 is (velocity, 0). */
     internal fun landing(velocity: Float, seed: Int, take: Int): Pair<Float, Float> {
@@ -65,6 +66,8 @@ object Restrike {
             is ThumpPatch -> Thump.render(patch.voice, patch.macros, velocity = v, take = take)
             // BREAKER's source is a struck SKIN drum: each take is a fresh strike through the same chain.
             is BreakerPatch -> patch.render(velocity = v, take = take)
+            // FIRED BRONZE model 2: each take is a fresh strike through the approved chain (FiredBronzeInstrument).
+            is FiredBronzePatch -> patch.render(v, take)
             // SOOT's takes are fresh strikes: new noise, a moved strike position, fresh metal phases.
             is SootPatch -> patch.render(velocity = v, take = take)
             is TerraPatch -> {

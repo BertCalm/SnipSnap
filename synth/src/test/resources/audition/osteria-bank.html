@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#722f37">
+  <meta name="description" content="Play Osteria's provisional sixteen-pad bank: six voices, twelve evolving sounds and three separately rendered touches.">
+  <title>Osteria — the sixteen-pad bank</title>
+  <link rel="stylesheet" href="osteria-bank.css?v=bank-3-six-voices">
+  <script src="osteria-bank.js?v=bank-3-six-voices" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#instrument">Skip to the pads</a>
+  <header class="masthead"><div class="wrap masthead-inner">
+    <a class="brand" href="../"><span class="brand-mark" aria-hidden="true">S<span>/</span>S</span><span>SnipSnap <span class="brand-detail">/ Listening room</span></span></a>
+    <span class="edition">Osteria <span aria-hidden="true">·</span> The performance bank</span>
+  </div></header>
+
+  <main>
+    <section class="hero wrap" aria-labelledby="page-title">
+      <div><p class="eyebrow">A provisional bank to play</p><h1 id="page-title">Osteria<span aria-hidden="true">.</span></h1>
+        <p class="tagline">Six voices.<br>Sixteen pads.</p>
+        <p class="hero-description">Choose a touch, then play. Twelve presets give each of the six voices two directions, with alternate pitches for Bass and Pad. Soft, medium and hard touches are rendered separately.</p>
+        <a class="text-link" href="../">Compare the original four-voice pairs <span aria-hidden="true">↗</span></a>
+      </div>
+      <aside class="voices-card" aria-label="The six voices">
+        <p class="eyebrow">Six voices, two directions each</p>
+        <div class="voice-line quartet"><span>Note</span><p>Anchored <i aria-hidden="true">/</i> Lingering Color</p></div>
+        <div class="voice-line bass"><span>Bass</span><p>Anchor <i aria-hidden="true">/</i> Roaming</p></div>
+        <div class="voice-line pluck"><span>Pluck</span><p>Rounded <i aria-hidden="true">/</i> Bright</p></div>
+        <div class="voice-line reed"><span>Reed</span><p>Still <i aria-hidden="true">/</i> Remembered</p></div>
+        <div class="voice-line bowed"><span>Bowed</span><p>Warm Bow <i aria-hidden="true">/</i> Rosin Bow</p></div>
+        <div class="voice-line pad"><span>Pad</span><p>Warm Swell <i aria-hidden="true">/</i> Memory Drift</p></div>
+        <p class="card-note">One evolving note per trigger.</p>
+      </aside>
+      <div class="study-strip"><span><b>16</b> playable pads</span><span><b>48</b> authored renders</span><span><b>3</b> touches per pad</span><span>Dry sound <i aria-hidden="true">·</i> 44.1 kHz stereo</span></div>
+    </section>
+
+    <section class="instrument wrap" id="instrument" aria-labelledby="instrument-title">
+      <div class="section-heading"><div><p class="eyebrow">The pad bank</p><h2 id="instrument-title">Put the sounds together.</h2></div><button class="stop-button" id="stop-all" type="button" disabled><span aria-hidden="true">■</span> Stop all</button></div>
+      <p class="section-description">Tap a pad or use its keyboard key. Choose Soft, Medium or Hard to change the actual rendered touch. Up to eight notes can sound together.</p>
+      <div class="touch-bar"><div class="touch-control" role="group" aria-label="Rendered touch"><span class="control-label">Touch</span><button type="button" data-touch="soft" aria-pressed="false">Soft</button><button type="button" data-touch="medium" aria-pressed="true">Medium</button><button type="button" data-touch="hard" aria-pressed="false">Hard</button></div><span class="voice-count" id="voice-count">0 / 8 notes</span></div>
+      <p class="audio-note" id="preview-note">The same listening gain applies to every touch, preserving the soft-to-hard difference.</p>
+      <div class="library-error" id="library-error" hidden><h3>The bank could not open.</h3><p id="library-error-detail"></p><button class="filled-button" id="retry-library" type="button">Try again</button></div>
+      <div class="bank-desk" id="bank-desk" hidden>
+        <div class="pads-frame"><div class="pad-grid" id="pad-grid" role="group" aria-label="Sixteen playable pads"></div><div class="pad-key"><span>MPC order: A01 starts at the bottom left.</span><span><kbd>Esc</kbd> Stop all</span></div></div>
+        <aside class="selected-pad" aria-label="Selected pad details"><p class="eyebrow" id="selected-slot">The selected note</p><h3 id="selected-name">Choose a pad</h3><p class="selected-family" id="selected-family"></p><p id="selected-description"></p><dl id="selected-details"></dl><a id="recipe-link" class="text-link" download hidden>Download this touch's recipe <span aria-hidden="true">↓</span></a></aside>
+      </div>
+      <div class="bank-status-line"><p class="bank-status" id="bank-status" role="status" aria-live="polite">Opening the bank…</p><button class="quiet-button" id="retry-audio" type="button" hidden>Retry audio</button></div>
+      <p class="playback-note">Each tap plays one complete rendered note, including its release. Lifting your finger does not shorten that note. Stop all cuts playback.</p>
+      <div id="voice-rack" hidden aria-hidden="true"></div>
+    </section>
+
+    <section class="download-section wrap" aria-labelledby="download-title">
+      <div><p class="eyebrow">Take the bank with you</p><h2 id="download-title">One bank. <br>Three ways to open it.</h2><p>The MPC download includes both the MPC 3 track and MPC 2 program. The SnipSnap import includes all sixteen pads and twelve user presets. All 48 WAVs and complete saved recipes for rebuilding are included.</p><p>Use an imported preset on a fresh SnipSnap pad to edit its controls.</p></div>
+      <div class="download-card"><div class="format-tags"><span>MPC 2</span><span>MPC 3</span><span>SnipSnap</span></div><p id="archive-summary">Preparing download information…</p><div class="download-actions"><button class="filled-button" id="prepare-download" type="button" disabled>Prepare bank downloads <span aria-hidden="true">↓</span></button><button class="quiet-button" id="cancel-download" type="button" hidden>Cancel</button><a class="filled-button" id="save-download" download hidden>Save for MPC 2 / 3 <span aria-hidden="true">↓</span></a><a class="filled-button" id="save-snipsnap" download hidden>Save for SnipSnap <span aria-hidden="true">↓</span></a></div><p class="download-status" id="download-status" role="status" aria-live="polite">Prepare once, then choose your format. You can keep playing while it prepares.</p></div>
+    </section>
+    <section class="model-note wrap" aria-label="About this bank"><span class="eyebrow">An instrument in progress</span><p>These twelve presets are provisional listening choices. Each note starts with fresh motion and memory. The bank uses finite notes, with authored releases and no automatic loop.</p></section>
+  </main>
+  <footer class="footer wrap"><span class="footer-name">Osteria <span>/</span> SnipSnap</span><a href="../">Original four-voice comparisons <span aria-hidden="true">↗</span></a><a href="https://github.com/BertCalm/SnipSnap" target="_blank" rel="noopener">Source & engineering <span aria-hidden="true">↗</span></a></footer>
+  <noscript><p class="noscript">JavaScript is needed for the pads and bank download. The <a href="manifest.json">bank manifest</a> lists the rendered notes and recipes.</p></noscript>
+</body>
+</html>

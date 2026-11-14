@@ -887,32 +887,35 @@ fun SnapScreen(
             Row(
                 Modifier
                     .fillMaxWidth()
-                    .height(Layout.LCD_HEADER_H.dp)
+                    .minHeight(Layout.LCD_HEADER_H.dp)
                     .lcdPanel(scheme)
                     .padding(horizontal = 10.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                TapeText("PHOTO TO SOUND", TapeType.lcdHeader, scheme.lcdInk.tape)
-                val lineWord = when {
-                    voice == SnapVoice.DRAWN -> "LINE DRAWN"
-                    photo == null -> "NO PHOTO"
-                    else -> "LINE ${voice.name}"
+                // Title on up to two lines (D7), the status under it, not beside it.
+                Column(Modifier.weight(1f).padding(vertical = 4.dp)) {
+                    TapeText("PHOTO TO SOUND", TapeType.lcdHeader, scheme.lcdInk.tape, maxLines = 2)
+                    val lineWord = when {
+                        voice == SnapVoice.DRAWN -> "LINE DRAWN"
+                        photo == null -> "NO PHOTO"
+                        else -> "LINE ${voice.name}"
+                    }
+                    TapeText(
+                        when {
+                            buildingField -> Copy.SNAP_FIELD_BUSY
+                            cloudBusy -> Copy.SNAP_CLOUD_BUSY
+                            pathBusy -> Copy.SNAP_PATH_SEND_BUSY
+                            spectrumBusy -> Copy.SNAP_SPECTRUM_BUSY
+                            telephoneBusy -> Copy.SNAP_TELEPHONE_BUSY
+                            busy -> Copy.SNAP_KIT_BUSY
+                            envelope != null -> "$lineWord · SHAPE DRAWN"
+                            else -> lineWord
+                        },
+                        TapeType.lcdSmall,
+                        scheme.amber.tape,
+                        maxLines = 2,
+                    )
                 }
-                TapeText(
-                    when {
-                        buildingField -> Copy.SNAP_FIELD_BUSY
-                        cloudBusy -> Copy.SNAP_CLOUD_BUSY
-                        pathBusy -> Copy.SNAP_PATH_SEND_BUSY
-                        spectrumBusy -> Copy.SNAP_SPECTRUM_BUSY
-                        telephoneBusy -> Copy.SNAP_TELEPHONE_BUSY
-                        busy -> Copy.SNAP_KIT_BUSY
-                        envelope != null -> "$lineWord · SHAPE DRAWN"
-                        else -> lineWord
-                    },
-                    TapeType.lcdSmall,
-                    scheme.amber.tape,
-                )
             }
 
             Column(
@@ -1361,7 +1364,7 @@ private fun TelephonePortrait(index: Int, bitmap: ImageBitmap, picked: Boolean, 
                 .size(96.dp)
                 .border(
                     if (picked) 2.dp else 1.dp,
-                    if (picked) scheme.amber.tape else scheme.grayEdge.tape,
+                    if (picked) scheme.amber.tape else scheme.edge.tape,
                     RoundedCornerShape(4.dp),
                 ),
         ) {
@@ -1386,7 +1389,7 @@ private fun TelephonePortrait(index: Int, bitmap: ImageBitmap, picked: Boolean, 
 /** A heading over a group of SNAP's buttons: a quiet label, its own composable so [SnapScreen] grows by a call. */
 @Composable
 private fun SnapGroupHeading(text: String, scheme: Scheme) {
-    TapeText(text, TapeType.pixelSmall, scheme.ink2.tape, Modifier.padding(top = 4.dp), maxLines = 1)
+    TapeText(text, TapeType.pixelSmall, scheme.ink2.tape, Modifier.padding(top = 4.dp), maxLines = 2)
 }
 
 /**
@@ -1434,7 +1437,7 @@ private fun SnapBottomBar(
  */
 @Composable
 private fun SnapNeedsKitLine(kitOpen: Boolean, scheme: Scheme) {
-    if (!kitOpen) TapeText(Copy.SNAP_NEEDS_KIT, TapeType.pixelSmall, scheme.amber.tape)
+    if (!kitOpen) TapeText(Copy.SNAP_NEEDS_KIT, TapeType.pixelSmall, scheme.accent.tape)
 }
 
 /**
@@ -1477,9 +1480,9 @@ private fun PhotoStrip(thumb: Bitmap?, reading: Snap.Reading?, looking: Boolean,
             when {
                 looking -> TapeText("LOOKING…", TapeType.lcdSmall, scheme.amber.tape)
                 reading == null -> {
-                    TapeText("TAKE A PHOTO.", TapeType.lcdSmall, scheme.lcdInk.tape)
+                    TapeText("Take a photo.", TapeType.lcdSmall, scheme.lcdInk.tape)
                     TapeText("ITS LINE IS THE WAVE,", TapeType.lcdSmall, scheme.lcdInk.tape.copy(alpha = 0.7f))
-                    TapeText("ITS COLOURS ARE THE KNOBS.", TapeType.lcdSmall, scheme.lcdInk.tape.copy(alpha = 0.7f))
+                    TapeText("Its colours are the knobs.", TapeType.lcdSmall, scheme.lcdInk.tape.copy(alpha = 0.7f))
                 }
                 else -> {
                     TapeText("LUM ${pct(reading.luminance)}  SAT ${pct(reading.saturation)}", TapeType.lcdSmall, scheme.lcdInk.tape)
@@ -1520,7 +1523,7 @@ private fun LinePicker(current: SnapVoice, scheme: Scheme, onSelect: (SnapVoice)
                     .padding(horizontal = 2.dp, vertical = 3.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                TapeText(label, TapeType.pixelSmall, color, maxLines = 1)
+                TapeText(label, TapeType.pixelSmall, color, maxLines = 2)
                 TapeText(
                     when (v) {
                         SnapVoice.HORIZON -> "ACROSS"
@@ -1774,7 +1777,7 @@ private fun DrawOverlay(
                     LabButton("CLEAR", scheme, enabled = pathPoints.isNotEmpty(), modifier = Modifier.weight(1f)) {
                         pathPoints = emptyList()
                     }
-                    LabButton("CANCEL", scheme, enabled = true, modifier = Modifier.weight(1f), onClick = onCancel)
+                    LabButton("CANCEL", scheme, enabled = true, modifier = Modifier.weight(1f), tier = ButtonTier.Text, onClick = onCancel)
                     LabButton(
                         "LOOP PAD",
                         scheme,
@@ -1823,7 +1826,7 @@ private fun DrawOverlay(
                             edits++
                         }
                     }
-                    LabButton("CANCEL", scheme, enabled = true, modifier = Modifier.weight(1f), onClick = onCancel)
+                    LabButton("CANCEL", scheme, enabled = true, modifier = Modifier.weight(1f), tier = ButtonTier.Text, onClick = onCancel)
                     LabButton("DONE", scheme, enabled = true, modifier = Modifier.weight(1f)) { done() }
                 }
             }

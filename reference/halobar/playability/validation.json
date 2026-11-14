@@ -1,0 +1,196 @@
+{
+  "engine": "HALOBAR",
+  "audioModel": 1,
+  "testedCommit": "05ff0aa17a25d40e2f638c1be05961236075e70b",
+  "testedTree": "2c2d3a9dae396bbd313273ddf5b3f8881e2efe33",
+  "baselineCommit": "20833d96949c2d13c389c03da1faaa7587259e13",
+  "sharedDspUnchanged": true,
+  "sourceSha256": {
+    "before": "d47bc84bd3ddfb81dcb905a42f8eb51a0d349de194dac019f750769556df4d30",
+    "after": "f93bf4f12ce5808c0d63d3bc5a4ba00352b99427a9acb342625e5d88f9fa9261"
+  },
+  "jvm": {
+    "tests": 9735,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "modules": {
+      "json": {
+        "tests": 16,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "suites": 2
+      },
+      "xpm": {
+        "tests": 51,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "suites": 6
+      },
+      "audio": {
+        "tests": 457,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "suites": 62
+      },
+      "kit": {
+        "tests": 634,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "suites": 81
+      },
+      "mpc3": {
+        "tests": 95,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "suites": 11
+      },
+      "synth": {
+        "tests": 5303,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "suites": 643
+      },
+      "loop": {
+        "tests": 439,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "suites": 37
+      },
+      "cli": {
+        "tests": 308,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "suites": 57
+      },
+      "shell": {
+        "tests": 2432,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "suites": 336
+      }
+    },
+    "sourceCommit": "05ff0aa17a25d40e2f638c1be05961236075e70b",
+    "sourceTree": "2c2d3a9dae396bbd313273ddf5b3f8881e2efe33",
+    "exitCode": 0,
+    "classCoverage": {
+      "expectedTopLevelClasses": 643,
+      "executedTopLevelClasses": 643,
+      "missingClasses": [],
+      "duplicateClasses": [],
+      "shards": {
+        "0": {
+          "classes": 206,
+          "suites": 206
+        },
+        "1": {
+          "classes": 219,
+          "suites": 219
+        },
+        "2": {
+          "classes": 218,
+          "suites": 218
+        }
+      },
+      "method": "Repository CI class-hash partition; union compared with concrete compiled JUnit test classes including inherited and nested tests"
+    },
+    "validationMode": "Local repository CI gate: other eight modules plus all three synthesis shards"
+  },
+  "android": {
+    "sha256": "a3d5f529a1c78c1e4bcf79afa0e01d7bd9eabf5ef1548231558790fd9b3568c7",
+    "bytes": 213763815,
+    "signatureVerified": true,
+    "v2Verified": true,
+    "sourceCommit": "05ff0aa17a25d40e2f638c1be05961236075e70b",
+    "sourceTree": "2c2d3a9dae396bbd313273ddf5b3f8881e2efe33",
+    "deviceTestsCompiled": true,
+    "deviceTestsExecuted": false
+  },
+  "audioParity": {
+    "referenceCases": 408,
+    "additionalTakeCases": 72,
+    "allFloat32HashesExact": true,
+    "ownerBankListeningApproved": true,
+    "devicePlaybackVerified": false,
+    "mpcHardwareVerified": false
+  },
+  "cacheKeyOracles": {
+    "state": "passed",
+    "rows": [
+      {
+        "guard": "source",
+        "retainedExitCode": 0,
+        "mutantExitCode": 1,
+        "mutantFailure": "Exception in thread \"main\" java.lang.AssertionError: source stage key: stale audio mismatch\n\tat StageKeyOracle.main(StageKeyOracle.java:9)"
+      },
+      {
+        "guard": "return",
+        "retainedExitCode": 0,
+        "mutantExitCode": 1,
+        "mutantFailure": "Exception in thread \"main\" java.lang.AssertionError: return stage key: stale audio mismatch\n\tat StageKeyOracle.main(StageKeyOracle.java:9)"
+      },
+      {
+        "guard": "motor",
+        "retainedExitCode": 0,
+        "mutantExitCode": 1,
+        "mutantFailure": "Exception in thread \"main\" java.lang.AssertionError: motor stage key: stale audio mismatch\n\tat StageKeyOracle.main(StageKeyOracle.java:9)"
+      }
+    ]
+  },
+  "cacheAudioArrayBudgetsMiB": {
+    "completed": 6,
+    "stems": 8,
+    "source": 8,
+    "unmodulatedReturn": 8,
+    "total": 30,
+    "additional": 16
+  },
+  "ownerBankListeningApproved": true,
+  "ownerApprovedVoiceBanks": 6,
+  "performanceVerdict": {
+    "approved": false,
+    "status": "Awaiting owner listening verdict"
+  },
+  "site": {
+    "id": "appgdep_6af72e7e75ac8191896e20e10a6e94e0",
+    "project_id": "appgprj_6aeff45f943881919e9b885aa356bfa6",
+    "title": "HALOBAR Native Audition",
+    "version_id": "appgprj_6aeff45f943881919e9b885aa356bfa6~appgver_d75976289780819199b32701bc0a61ff",
+    "type": "publish",
+    "status": "succeeded",
+    "url": "https://halobar-native-audition.bertcalm.chatgpt.site",
+    "has_mcp": false,
+    "screenshot_asset_pointer": null,
+    "provider_deployment_id": "site---6aeff45f943881919e9b885aa356bfa6",
+    "failure_message": null,
+    "env_set_revision": 0,
+    "updated_at": "2026-11-13T15:36:44.483658+00:00",
+    "sourceCommit": "9b3f3220d598e9727db431618772e7beb86208a8",
+    "reviewUrl": "https://halobar-native-audition.bertcalm.chatgpt.site/tubular-bells/performance/review/",
+    "audiencePreserved": true,
+    "existingAudioAndDownloadsUnchanged": true,
+    "browserQaExecuted": false
+  },
+  "hardware": {
+    "adbAvailable": true,
+    "connectedDevices": 0,
+    "emulatorBinaryAvailable": false,
+    "kvmAvailable": false,
+    "deviceTestsCompiled": true,
+    "deviceTestsExecuted": false,
+    "physicalPlaybackVerified": false
+  },
+  "mpcCombinedVelocityRoundRobinVerified": false,
+  "freshRenderTargetMs": 50,
+  "freshRenderTargetMet": false,
+  "engineAcceptanceComplete": false
+}

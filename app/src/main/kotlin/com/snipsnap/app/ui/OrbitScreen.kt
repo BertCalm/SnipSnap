@@ -58,7 +58,6 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -358,7 +357,7 @@ fun OrbitScreen(
         if (!playerUp || player.needsRestart()) playerUp = player.start()
         auditionFaulted = player.aquariumFaulted()
         auditionPending = player.hasPendingAquariumControls()
-        if (!playerUp || !player.isUp()) { onToast("ORBIT TAP STREAM UNAVAILABLE"); return }
+        if (!playerUp || !player.isUp()) { onToast(Copy.ORBIT_TAP_STREAM_UNAVAILABLE); return }
         player.hit(pad, 0.9f, auditionId)
         auditionId = auditionId % 1_000_000 + 1
     }
@@ -496,7 +495,7 @@ fun OrbitScreen(
             preparing = false
         }.onFailure { e ->
             set = null
-            refusal = e.message ?: "NO RINGS"
+            refusal = e.message ?: Copy.NO_RINGS
         }
     }
 
@@ -617,7 +616,7 @@ fun OrbitScreen(
                 engine = null
                 sink = null
                 Log.e("OrbitScreen", "startPlayback: failed", failure)
-                onToast("ORBIT PLAY FAILED")
+                onToast(Copy.ORBIT_PLAY_FAILED)
             } finally { preparing = false }
         }
     }
@@ -650,7 +649,7 @@ fun OrbitScreen(
             transportFailure.getAndSet(null)?.let { failure ->
                 Log.e("OrbitScreen", "playback: failed", failure)
                 stopPlayback()
-                onToast("ORBIT PLAY FAILED")
+                onToast(Copy.ORBIT_PLAY_FAILED)
             }
         }
     }
@@ -719,7 +718,7 @@ fun OrbitScreen(
     fun addSection() {
         val s = set ?: return
         if (s.sections.size >= OrbitSection.MAX_SECTIONS) {
-            onToast("AN ARRANGEMENT HOLDS ${OrbitSection.MAX_SECTIONS} SECTIONS.")
+            onToast("An arrangement holds ${OrbitSection.MAX_SECTIONS} sections.")
             return
         }
         val plays = s.sections.lastOrNull()?.plays ?: s.orbits.indices.toSet()
@@ -1036,7 +1035,7 @@ fun OrbitScreen(
     fun ringsFromGroove() {
         val s = set ?: return
         val room = OrbitSet.MAX_ORBITS - s.orbits.size
-        if (room <= 0) { onToast("EIGHT RINGS IS THE SKY — TAKE ONE OFF FIRST"); return }
+        if (room <= 0) { onToast(Copy.ORBIT_RINGS_FULL); return }
         panels.close(OrbitFold.OUT)
         scope.launch {
             val result = offMain {
@@ -1047,7 +1046,7 @@ fun OrbitScreen(
                     // the first clip meant PROG E could never reach a ring.
                     val stored = GrooveStore.load(kitDir)
                     val clip = stored.firstOrNull { GrooveEdit.isProgE(it) } ?: stored.firstOrNull()
-                        ?: throw IllegalArgumentException("NO GROOVE IN THIS KIT YET — RECORD ONE IN GROOVE FIRST")
+                        ?: throw IllegalArgumentException(Copy.ORBIT_NO_GROOVE)
                     // The destination's swing, so the import lands where the
                     // clip put it rather than taking the set's push on top.
                     clip.name to OrbitImport.rings(
@@ -1061,7 +1060,7 @@ fun OrbitScreen(
                 // budget was measured against the old one, and `OrbitSet`
                 // refuses a ninth ring by throwing, out here where no
                 // `runCatching` would catch it.
-                if (set !== s) { onToast("THE RINGS CHANGED WHILE THAT LOADED — TRY AGAIN"); return@onSuccess }
+                if (set !== s) { onToast(Copy.RINGS_CHANGED_TRY_AGAIN); return@onSuccess }
                 commit(s.copy(orbits = s.orbits + imported.set.orbits))
                 selected = s.orbits.size
                 // Every pad that could not come, named. A silent drop here
@@ -1098,12 +1097,12 @@ fun OrbitScreen(
                 }
                 onToast(
                     if (caveats.isEmpty()) {
-                        "$name IS ON THE RINGS — $rings. RE-LENGTH ONE AND HEAR IT DRIFT."
+                        "$name is on the rings — $rings. Re-length one and hear it drift."
                     } else {
                         "$name: $rings. ${caveats.joinToString(". ")}."
                     },
                 )
-            }.onFailure { e -> onToast(e.message ?: "COULD NOT READ THE GROOVE") }
+            }.onFailure { e -> onToast(e.message ?: Copy.GROOVE_READ_FAILED) }
         }
     }
 
@@ -1436,7 +1435,7 @@ private fun RingDetailPanel(
         Box(
             Modifier
                 .weight(1f)
-                .heightIn(min = 36.dp)
+                .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                 // Names the action the chevron draws, not the
                 // live count it opens onto (an accessibility-
                 // tree dump showed the TapeText below doesn't
@@ -1484,7 +1483,7 @@ private fun RingDetailPanel(
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
         SmallChip("−", scheme, description = "QUIETER") { onUpdateRing { it.copy(level = (it.level - LEVEL_STEP).coerceAtLeast(0f)) } }
         Box(
-            Modifier.weight(1f).heightIn(min = 36.dp).tapeClick(label = "RESET LEVEL TO 100") {
+            Modifier.weight(1f).heightIn(min = Layout.MIN_HIT_TARGET.dp).tapeClick(label = "RESET LEVEL TO 100") {
                 onUpdateRing { it.copy(level = 1f) }
             },
             contentAlignment = Alignment.Center,
@@ -1494,7 +1493,7 @@ private fun RingDetailPanel(
         SmallChip("+", scheme, description = "LOUDER") { onUpdateRing { it.copy(level = (it.level + LEVEL_STEP).coerceAtMost(MAX_LEVEL)) } }
         SmallChip("◀", scheme, description = "PAN LEFT") { onUpdateRing { it.copy(pan = (it.pan - PAN_STEP).coerceAtLeast(-1f)) } }
         Box(
-            Modifier.weight(1f).heightIn(min = 36.dp).tapeClick(label = "RESET PAN TO CENTRE") {
+            Modifier.weight(1f).heightIn(min = Layout.MIN_HIT_TARGET.dp).tapeClick(label = "RESET PAN TO CENTRE") {
                 onUpdateRing { it.copy(pan = 0f) }
             },
             contentAlignment = Alignment.Center,
@@ -1535,7 +1534,7 @@ private fun RingDetailPanel(
             TapeText(
                 "WRAPS ${content.sampleFile.uppercase()}${if (seconds != null) " ($seconds S)" else ""} ROUND ${Copy.countOf(ring.steps, "STEP", "STEPS")} · $what",
                 TapeType.pixelSmall,
-                if (report?.fit == com.snipsnap.loop.LoopFit.SLICED) scheme.amber.tape else scheme.ink2.tape,
+                if (report?.fit == com.snipsnap.loop.LoopFit.SLICED) scheme.accent.tape else scheme.ink2.tape,
                 maxLines = 3,
             )
         }
@@ -1555,7 +1554,7 @@ private fun ArpPanel(
     onApply: () -> Unit,
 ) {
     TapeText(
-        "THE CHORD IS WHATEVER PADS PLAY ON THIS RING — PICK THEM ON PLAYS, BELOW.",
+        "The chord is whatever pads play on this ring — pick them on plays, below.",
         TapeType.pixelSmall,
         scheme.ink2.tape,
         Modifier.fillMaxWidth(),
@@ -1578,12 +1577,12 @@ private fun ArpPanel(
         }
     }
     if (arpShape == Arp.Shape.CHORD) {
-        TapeText("CHORD PLAYS EVERY NOTE AT ONCE — OCTAVES DON'T APPLY.", TapeType.pixelSmall, scheme.ink2.tape, Modifier.fillMaxWidth())
+        TapeText("Chord plays every note at once — octaves don't apply.", TapeType.pixelSmall, scheme.ink2.tape, Modifier.fillMaxWidth())
     }
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
         SmallChip("−", scheme, description = "GATE SHORTER") { onGateChange((arpGate - ARP_GATE_STEP).coerceAtLeast(Arp.MIN_GATE)) }
         Box(
-            Modifier.weight(1f).heightIn(min = 36.dp).tapeClick(label = "RESET GATE TO FULL") { onGateChange(1f) },
+            Modifier.weight(1f).heightIn(min = Layout.MIN_HIT_TARGET.dp).tapeClick(label = "RESET GATE TO FULL") { onGateChange(1f) },
             contentAlignment = Alignment.Center,
         ) {
             TapeText("GATE ${(arpGate * 100).roundToInt()}%", TapeType.pixel, scheme.ink.tape)
@@ -1591,7 +1590,7 @@ private fun ArpPanel(
         SmallChip("+", scheme, description = "GATE LONGER") { onGateChange((arpGate + ARP_GATE_STEP).coerceAtMost(1f)) }
     }
     TapeText(
-        "EACH STEP GETS THE RUN'S NEXT NOTE, WRAPPING OR CUTTING SHORT TO FIT THE RING'S OWN STEPS. GATE SHORTENS EACH HIT INSTEAD OF LETTING IT RING OUT.",
+        "Each step gets the run's next note, wrapping or cutting short to fit the ring's own steps. Gate shortens each hit instead of letting it ring out.",
         TapeType.pixelSmall,
         scheme.ink2.tape,
         Modifier.fillMaxWidth(),
@@ -1652,9 +1651,9 @@ private fun OutPanel(
         val keeps = OrbitClip.declaredMeterLabel(current)
         TapeText(
             if (keeps != null) {
-                "A PROJECT KEEPS $keeps. A TRACK COUNTS 4/4 BARS: $mpcBars."
+                "A project keeps $keeps. A track counts 4/4 bars: $mpcBars."
             } else {
-                "THE MPC COUNTS 4/4 BARS: $mpcBars."
+                "The MPC counts 4/4 bars: $mpcBars."
             },
             TapeType.pixelSmall,
             scheme.ink2.tape,
@@ -1681,10 +1680,10 @@ private fun OutPanel(
     // bounce's, so when a length is what refuses them both
     // it is literally the same sentence twice.
     val why = listOfNotNull(bounceWhy, clipWhy).distinct()
-    why.forEach { TapeText(it, TapeType.pixelSmall, scheme.warn.tape, Modifier.fillMaxWidth(), maxLines = 2) }
+    why.forEach { TapeText(it, TapeType.pixelSmall, scheme.warnInk.tape, Modifier.fillMaxWidth(), maxLines = 2) }
     if (why.isEmpty()) {
         TapeText(
-            "SAMPLE: WHAT YOU HEAR, AS A SAMPLE IN THE LIBRARY — TRIM IT, CHOP IT, MAKE A KIT OF IT. KIT: THE PATTERN AS A CLIP IN THE KIT'S GROOVES, SO IT RIDES TO THE MPC.",
+            "SAMPLE: what you hear, as a sample in the LIBRARY — trim it, chop it, make a kit of it. KIT: the pattern as a clip in the kit's grooves, so it rides to the MPC.",
             TapeType.pixelSmall,
             scheme.ink2.tape,
             Modifier.fillMaxWidth(),
@@ -1702,7 +1701,7 @@ private fun OutPanel(
     // it doesn't navigate anywhere.
     ActionButton("GROOVE TO RINGS", scheme, Modifier.fillMaxWidth()) { onRingsFromGroove() }
     TapeText(
-        "THE KIT'S GROOVE AS RINGS, ONE PER PAD, JOINING WHAT IS ALREADY HERE — A CAPTURED BREAK OR AN IMPORTED .MID, PLAYED BY THIS ENGINE AT LAST.",
+        "The kit's GROOVE as rings, one per pad, joining what is already here — a CAPTURED break or an imported .mid, played by this engine at last.",
         TapeType.pixelSmall,
         scheme.ink2.tape,
         Modifier.fillMaxWidth(),
@@ -1760,7 +1759,7 @@ private fun TheSetPanel(
                 onCommit(current.copy(seed = current.seed + 1))
             }
             TapeText(
-                "THE SAME TAKE PLAYS, BOUNCES AND CLIPS THE SAME EVERY TIME. ROLL FOR A NEW ONE — NO HIT MOVES.",
+                "The same take plays, bounces and clips the same every time. Roll for a new one — no hit moves.",
                 TapeType.pixelSmall,
                 scheme.ink2.tape,
                 Modifier.weight(1f),
@@ -1769,7 +1768,7 @@ private fun TheSetPanel(
         }
     }
     TapeText(
-        "THE BAR EVERY SPANNED RING IS MEASURED AGAINST; FREE RINGS DO NOT CARE. SWING PUSHES THE ODD 16THS LATE — 66 IS A TRIPLET FEEL — ON EVERY RING WHOSE STEP IS A 16TH. ${current.bpm.roundToInt()} BPM — THE PROJECT'S, SET IN BEAT.",
+        "The bar every spanned ring is measured against; free rings do not care. Swing pushes the odd 16ths late — 66 is a triplet feel — on every ring whose step is a 16th. ${current.bpm.roundToInt()} BPM — the project's, set in BEAT.",
         TapeType.pixelSmall,
         scheme.ink2.tape,
         Modifier.fillMaxWidth(),
@@ -1790,7 +1789,7 @@ private fun SectionsPanel(
 ) {
     if (current.sections.isEmpty()) {
         TapeText(
-            "NO ARRANGEMENT — EVERY RING TURNS FOREVER. ADD A SECTION TO SAY \"THESE RINGS FOR EIGHT BARS, THEN THOSE\".",
+            "No arrangement — every ring turns forever. Add a section to say \"these rings for eight bars, then those\".",
             TapeType.pixelSmall,
             scheme.ink2.tape,
             Modifier.fillMaxWidth(),
@@ -1850,8 +1849,8 @@ private fun SectionsPanel(
         }
     }
     TapeText(
-        "A SECTION STARTS ITS RINGS OVER, SO IT REPEATS THE SAME EVERY TIME AND CLIPS AS ITS OWN SEQUENCE. " +
-            "A SECTION WITH NO RINGS IS A BREAK, AND WRITES NO GROOVE. CLIP ▸ KIT WRITES ONE FOR EVERY OTHER — FLIP THEM ON THE MPC.",
+        "A section starts its rings over, so it repeats the same every time and clips as its own sequence. " +
+            "A section with no rings is a break, and writes no GROOVE. CLIP ▸ KIT writes one for every other — flip them on the MPC.",
         TapeType.pixelSmall,
         scheme.ink2.tape,
         Modifier.fillMaxWidth(),
@@ -2061,7 +2060,7 @@ private fun OrbitHeaderRow(
     onToggleSetPanel: () -> Unit,
 ) {
     Row(
-        Modifier.fillMaxWidth().height(Layout.LCD_HEADER_H.dp).lcdPanel(scheme).padding(horizontal = 12.dp),
+        Modifier.fillMaxWidth().minHeight(Layout.LCD_HEADER_H.dp).lcdPanel(scheme).padding(horizontal = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
@@ -2169,11 +2168,11 @@ private fun OrbitRingRail(
     // The offer a snip makes on landing: its own tempo, once.
     tempoOffer?.takeIf { !it.accepted }?.let { offer ->
         Column(
-            Modifier.fillMaxWidth().sunkenField(scheme).border(1.dp, scheme.amber.tape, RoundedCornerShape(4.dp)).padding(8.dp),
+            Modifier.fillMaxWidth().sunkenField(scheme).border(1.dp, scheme.accent.tape, RoundedCornerShape(4.dp)).padding(8.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             TapeText(
-                "${offer.ringName} SOUNDS LIKE ${offer.bpm.roundToInt()} BPM · THE PROJECT IS AT ${current.bpm.roundToInt()}.",
+                "${offer.ringName} sounds like ${offer.bpm.roundToInt()} BPM · the project is at ${current.bpm.roundToInt()}.",
                 TapeType.pixel,
                 scheme.ink.tape,
                 maxLines = 2,
@@ -2206,8 +2205,8 @@ private fun OrbitFooterRow(
         // Read-only: the tempo is the project's, set from BEAT. Said where the
         // BPM buttons used to be, so the row does not move under a thumb that
         // learned it.
-        Box(Modifier.weight(2f).height(Layout.MIN_HIT_TARGET.dp), contentAlignment = Alignment.Center) {
-            TapeText("${bpm.roundToInt()} BPM · SET IN BEAT", TapeType.pixel, scheme.ink2.tape, maxLines = 1)
+        Box(Modifier.weight(2f).minHeight(Layout.MIN_HIT_TARGET.dp), contentAlignment = Alignment.Center) {
+            TapeText("${bpm.roundToInt()} BPM · SET IN BEAT", TapeType.pixel, scheme.ink2.tape, maxLines = 2)
         }
         ActionButton("+ PAD", scheme, Modifier.weight(1f)) { onAddPatternRing() }
         ActionButton(Places.opener("+ SAMPLE"), scheme, Modifier.weight(1f), enabled = snips.isNotEmpty(), accent = snipPickerOpen, description = "+ SAMPLE") {
@@ -2277,7 +2276,7 @@ private fun RingsCanvas(
         }
     }
     val textMeasurer = rememberTextMeasurer()
-    val labelStyle = TapeType.pixelSmall.copy(fontSize = 7.sp)
+    val labelStyle = TapeType.eyebrow
     val inkColor = scheme.lcdInk.tape
     val amber = scheme.amber.tape
     val dim = scheme.ink3.tape.copy(alpha = 0.6f)
@@ -2334,7 +2333,7 @@ private fun RingsCanvas(
         if (set.orbits.isEmpty()) {
             "RINGS: NONE"
         } else if (set.sections.isEmpty()) {
-            "RINGS, SHORTEST INSIDE: $rings. THEY MEET EVERY ${cycleLabel(set)}."
+            "Rings, shortest inside: $rings. They meet every ${cycleLabel(set)}."
         } else {
             // With an arrangement the rings' meeting is not what the
             // transport goes round, and which rings are even sounding
@@ -2343,8 +2342,8 @@ private fun RingsCanvas(
             val playing = set.sections.getOrNull(here)?.plays.orEmpty()
                 .mapNotNull { set.orbits.getOrNull(it)?.name?.ifBlank { "RING ${it + 1}" } }
             "RINGS, SHORTEST INSIDE: $rings. SECTION ${set.sections.getOrNull(here)?.name ?: "?"} OF " +
-                "${set.sections.size}, ${transportLabel(set)} ROUND THE PLAN. " +
-                if (playing.isEmpty()) "IT PLAYS NOTHING — A BREAK." else "IT PLAYS ${playing.joinToString(", ")}."
+                "${set.sections.size}, ${transportLabel(set)} round the plan. " +
+                if (playing.isEmpty()) "It plays nothing — a break." else "It plays ${playing.joinToString(", ")}."
         }
     }
 
@@ -2571,24 +2570,7 @@ private fun StripEditor(
         val cellW = maxOf(CELL_MIN_DP.dp, (available - gap * (ring.steps - 1)) / ring.steps)
         val scroll = rememberScrollState()
         Column(verticalArrangement = Arrangement.spacedBy(gap)) {
-            // What a long-press writes. The grid has two gestures and a hit
-            // has four things to say, so the chip is the third gesture -
-            // one tap to change what the next long-press means, rather than
-            // a panel over the strip the player is trying to hear.
-            Row(
-                Modifier.fillMaxWidth().padding(bottom = 2.dp),
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                // Batch 3, Task 4: "·", not "▸" — one tap cycles the brush
-                // in place (the KDoc above), it doesn't navigate or open a
-                // panel. "·" is the house separator for a label-plus-detail
-                // pair that isn't either of those (`PROG A · THE BREAK`,
-                // GrooveScreen.kt).
-                SmallChip("HOLD · ${brush.label}", scheme, accent = brush != OrbitBrush.WEIGHT, onClick = onBrush)
-                TapWritesChip(tapWrites, brush, scheme) { tapWrites = !tapWrites }
-                TapeText(BRUSH_SAYS[brush].orEmpty(), TapeType.pixelSmall, scheme.lcdInk2, Modifier.weight(1f), maxLines = 1)
-            }
+            BrushStrip(brush, tapWrites, scheme, onBrush) { tapWrites = !tapWrites }
             for (slot in rows) {
                 val color = padColor(kit, slot, inkColor)
                 Row(horizontalArrangement = Arrangement.spacedBy(gap), verticalAlignment = Alignment.CenterVertically) {
@@ -2621,9 +2603,9 @@ private fun StripEditor(
                             val mark = hit?.let { OrbitBrushes.mark(it) }.orEmpty()
                             val edge = when {
                                 step == playheadStep -> inkColor
-                                mark.isNotEmpty() -> scheme.amber.tape
+                                mark.isNotEmpty() -> scheme.accent.tape
                                 accent -> color
-                                else -> scheme.grayEdge.tape
+                                else -> scheme.edge.tape
                             }
                             StripCell(
                                 width = cellW,
@@ -2647,6 +2629,38 @@ private fun StripEditor(
                 }
             }
         }
+    }
+}
+
+/**
+ * What a long-press writes, and what a tap does: the two chips on one row, the
+ * brush's [BRUSH_SAYS] hint under them on a full-width row of its own (the
+ * chips take ~260 of ~310 dp, so a hint beside them was cut to a sliver).
+ * Its own function, not more locals in the ring's grid: that composable is a
+ * few registers from the dex limit.
+ *
+ * The grid has two gestures and a hit has four things to say, so the chip is
+ * the third gesture: one tap to change what the next long-press means,
+ * rather than a panel over the strip the player is trying to hear.
+ */
+@Composable
+private fun BrushStrip(
+    brush: OrbitBrush,
+    tapWrites: Boolean,
+    scheme: Scheme,
+    onBrush: () -> Unit,
+    onTapWrites: () -> Unit,
+) {
+    Column(Modifier.fillMaxWidth().padding(bottom = 2.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+            // Batch 3, Task 4: "·", not "▸" — one tap cycles the brush
+            // in place, it doesn't navigate or open a panel. "·" is the
+            // house separator for a label-plus-detail pair that isn't either
+            // of those (`PROG A · THE BREAK`, GrooveScreen.kt).
+            SmallChip("HOLD · ${brush.label}", scheme, accent = brush != OrbitBrush.WEIGHT, onClick = onBrush)
+            TapWritesChip(tapWrites, brush, scheme, onTapWrites)
+        }
+        TapeText(BRUSH_SAYS[brush].orEmpty(), TapeType.pixelSmall, scheme.lcdInk2, Modifier.fillMaxWidth(), maxLines = 2)
     }
 }
 
@@ -2882,16 +2896,21 @@ internal fun SmallChip(
     description: String? = null,
     onClick: () -> Unit,
 ) {
+    // The touch target is 48 dp; the drawn chip stays 36.
     Box(
-        Modifier
-            .heightIn(min = 36.dp)
-            .background(scheme.field.tape, RoundedCornerShape(4.dp))
-            .border(1.dp, if (accent && enabled) scheme.accent.tape else scheme.grayEdge.tape, RoundedCornerShape(4.dp))
-            .tapeClick(label = description ?: label, enabled = enabled, onClick = onClick)
-            .padding(horizontal = 8.dp),
+        Modifier.heightIn(min = Layout.MIN_HIT_TARGET.dp).tapeClick(label = description ?: label, enabled = enabled, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        TapeText(label, TapeType.pixel, if (!enabled) scheme.ink3.tape else if (accent) scheme.accent.tape else scheme.ink2.tape)
+        Box(
+            Modifier
+                .heightIn(min = 36.dp)
+                .background(scheme.field.tape, RoundedCornerShape(4.dp))
+                .border(1.dp, if (accent && enabled) scheme.accent.tape else scheme.edge.tape, RoundedCornerShape(4.dp))
+                .padding(horizontal = 8.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            TapeText(label, TapeType.pixel, if (!enabled) scheme.ink3.tape else if (accent) scheme.accent.tape else scheme.ink2.tape, maxLines = 2)
+        }
     }
 }
 
@@ -2903,37 +2922,49 @@ internal fun SmallChip(
 private fun SpanChip(span: OrbitSpan, scheme: Scheme, onPick: () -> Unit) {
     val spanned = span != OrbitSpan.FREE
     val chip = if (spanned) "SPAN ${span.label}" else "SPAN FREE"
+    // The touch target is 48 dp; the drawn chip stays 36.
     Box(
         Modifier
-            .heightIn(min = 36.dp)
-            .background(scheme.field.tape, RoundedCornerShape(4.dp))
-            .border(1.dp, if (spanned) scheme.accent.tape else scheme.grayEdge.tape, RoundedCornerShape(4.dp))
+            .heightIn(min = Layout.MIN_HIT_TARGET.dp)
             .semantics { contentDescription = "SPAN: ${span.label}" }
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
                 onClickLabel = "PICK A SPAN",
                 onClick = onPick,
-            )
-            .padding(horizontal = 8.dp),
+            ),
         contentAlignment = Alignment.Center,
     ) {
-        TapeText(Places.opener(chip), TapeType.pixel, if (spanned) scheme.accent.tape else scheme.ink2.tape)
+        Box(
+            Modifier
+                .heightIn(min = 36.dp)
+                .background(scheme.field.tape, RoundedCornerShape(4.dp))
+                .border(1.dp, if (spanned) scheme.accent.tape else scheme.edge.tape, RoundedCornerShape(4.dp))
+                .padding(horizontal = 8.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            TapeText(Places.opener(chip), TapeType.pixel, if (spanned) scheme.accent.tape else scheme.ink2.tape)
+        }
     }
 }
 
 @Composable
 private fun PadChip(label: String, color: Color, chosen: Boolean, used: Boolean, scheme: Scheme, onClick: () -> Unit) {
+    // The touch target is 48 dp; the drawn chip stays 36.
     Box(
-        Modifier
-            .heightIn(min = 36.dp)
-            .background(if (chosen) color else scheme.field.tape, RoundedCornerShape(4.dp))
-            .border(if (used) 2.dp else 1.dp, if (chosen || used) color else scheme.grayEdge.tape, RoundedCornerShape(4.dp))
-            .tapeClick(label = "PAD $label", onClick = onClick)
-            .padding(horizontal = 8.dp),
+        Modifier.heightIn(min = Layout.MIN_HIT_TARGET.dp).tapeClick(label = "PAD $label", onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        TapeText(label, TapeType.pixelSmall, if (chosen) scheme.lcd.tape else scheme.ink2.tape)
+        Box(
+            Modifier
+                .heightIn(min = 36.dp)
+                .background(if (chosen) color else scheme.field.tape, RoundedCornerShape(4.dp))
+                .border(if (used) 2.dp else 1.dp, if (chosen || used) color else scheme.edge.tape, RoundedCornerShape(4.dp))
+                .padding(horizontal = 8.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            TapeText(label, TapeType.pixelSmall, if (chosen) scheme.lcd.tape else scheme.ink2.tape)
+        }
     }
 }
 
@@ -2950,16 +2981,16 @@ private fun ActionButton(
 ) {
     Box(
         modifier
-            .height(Layout.MIN_HIT_TARGET.dp)
+            .minHeight(Layout.MIN_HIT_TARGET.dp)
             .background(scheme.field.tape, RoundedCornerShape(6.dp))
-            .border(1.dp, if (accent) scheme.accent.tape else scheme.grayEdge.tape, RoundedCornerShape(6.dp))
+            .border(1.dp, if (accent) scheme.accent.tape else scheme.edge.tape, RoundedCornerShape(6.dp))
             // Falls back to label itself (matches HeaderChip/SmallChip in
             // this file) rather than to a descendant merge that Compose's
             // clickable semantics do not actually perform.
             .tapeClick(label = description ?: label, enabled = enabled, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        TapeText(label, TapeType.pixel, if (!enabled) scheme.ink3.tape else if (accent) scheme.accent.tape else scheme.ink2.tape)
+        TapeText(label, TapeType.pixel, if (!enabled) scheme.ink3.tape else if (accent) scheme.accent.tape else scheme.ink2.tape, maxLines = 2)
     }
 }
 

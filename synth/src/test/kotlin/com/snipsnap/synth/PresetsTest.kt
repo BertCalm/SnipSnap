@@ -14,7 +14,10 @@ class PresetsTest {
 
     @Test
     fun `forVoice forwards every registered engine by name`() {
+        for (voice in SplayVoice.entries) assertEquals(SplayFactoryPresets.forVoice(voice), Presets.forVoice("SPLAY", voice.name))
         for (voice in RivetVoice.entries) assertEquals(RivetPresets.forVoice(voice), Presets.forVoice("RIVET", voice.name))
+        for (voice in TempestVoice.entries) assertEquals(TempestPresets.forVoice(voice), Presets.forVoice("TEMPEST", voice.name))
+        for (voice in ScuffVoice.entries) assertEquals(ScuffPresets.forVoice(voice), Presets.forVoice("SCUFF", voice.name))
         for (voice in NacreVoice.entries) assertEquals(NacrePresets.forVoice(voice), Presets.forVoice("NACRE", voice.name))
         for (voice in AccordVoice.entries) assertEquals(AccordPresets.forVoice(voice), Presets.forVoice("ACCORD", voice.name))
         for (voice in TidalVoice.entries) assertEquals(TidalPresets.forVoice(voice), Presets.forVoice("TIDAL", voice.name))
@@ -70,7 +73,7 @@ class PresetsTest {
         for (voice in PrismVoice.entries) assertEquals(PrismPresets.forVoice(voice), Presets.forVoice("PRISM", voice.name))
         for (voice in OrigamiVoice.entries) assertEquals(OrigamiPresets.forVoice(voice), Presets.forVoice("ORIGAMI", voice.name))
         for (voice in FilamentVoice.entries) assertEquals(FilamentPresets.forVoice(voice), Presets.forVoice("FILAMENT", voice.name))
-        for (voice in AlloyVoice.entries) assertEquals(AlloyPresets.forVoice(voice), Presets.forVoice("ALLOY", voice.name))
+        for (voice in AlloyVoice.entries) assertEquals(AlloyPresets.forVoice(voice) + AlloyMaterialPresets.pickerForVoice(voice), Presets.forVoice("ALLOY", voice.name))
         for (voice in ContourVoice.entries) assertEquals(ContourPresets.forVoice(voice), Presets.forVoice("CONTOUR", voice.name))
         for (voice in StoopVoice.entries) assertEquals(StoopPresets.forVoice(voice), Presets.forVoice("STOOP", voice.name))
         for (voice in SkitterVoice.entries) assertEquals(SkitterPresets.forVoice(voice), Presets.forVoice("SKITTER", voice.name))
@@ -163,14 +166,14 @@ class PresetsTest {
 
     @Test
     fun `all sums every registered engine's roster with nothing lost or duplicated`() {
-        val expected = BackwashPresets.all() + HalobarPresets.all() + FiredBronzePresets.all() + RivetPresets.all() + ErosionPresets.all() + LorentzPresets.all() + AccordPresets.all() + OtisPresets.all() + TrefoilPresets.all() + ApsisPresets.all() + NacrePresets.all() + ThumpPresets.all() + OnsetPresets.all() + TinesPresets.all() + PluckPresets.all() +
+        val expected = TempestPresets.all() + SplayFactoryPresets.all() + BackwashPresets.all() + HalobarPresets.all() + FiredBronzePresets.all() + RivetPresets.all() + ScuffPresets.all() + ErosionPresets.all() + LorentzPresets.all() + AccordPresets.all() + OtisPresets.all() + TrefoilPresets.all() + ApsisPresets.all() + NacrePresets.all() + ThumpPresets.all() + OnsetPresets.all() + TinesPresets.all() + PluckPresets.all() +
             VelvetPresets.all() + FathomPresets.all() + TonewheelPresets.all() + VoxPresets.all() +
             SkinPresets.all() + MeridianPresets.all() + ResinPresets.all() + TidePresets.all() + GlintPresets.all() + SirenPresets.all() + ForkPresets.all() +
             BorePresets.all() + ObbligatoPresets.all() + ArcoPresets.all() + MercuryPresets.all() +
             FlotillaPresets.all() + AerostatPresets.all() + BallastPresets.all() + TremorPresets.all() +
             CisternPresets.all() + CircuitPresets.all() + ThawPresets.all() + ScourPresets.all() +
             MurkPresets.all() + NimbusPresets.all() + CorollaPresets.all() + UndertowPresets.all() +
-            SuturePresets.all() + TesseraPresets.all() + PitchwheelPresets.all() + RevelPresets.all() + PrismPresets.all() + OrigamiPresets.all() + FilamentPresets.all() + AlloyPresets.all() + ContourPresets.all() + StoopPresets.all() + LacquerPresets.all() + SpoolPresets.all() + SkitterPresets.all() + TanglePresets.all() + FlockPresets.all() + OverlapFactoryPresets.all() + RelayPresets.all() + EmbouchurePresets.all() + EmbouchurePresets.experimental() + BellowsPresets.all() + MurmurPresets.all() + OspreyPresets.all() + RegistersPresets.all() + ShoalPresets.all() + OpenSkyPresets.all() + ScannedChainPresets.all() + OrphicaPresets.all() + OvenPresets.all() + VentKitPresets.all() + CreasePresets.patches() + TrioPresets.all() + OhmPresets.all() + CausticPresets.all() + LatticePresets.all() + TidalPresets.all() + ChamberPresets.all() + LibrationPresets.all() + KeelPresets.all() + RimePresets.all() + WickPresets.all()
+            OsteriaPresets.all() + SuturePresets.all() + TesseraPresets.all() + PitchwheelPresets.all() + RevelPresets.all() + PrismPresets.all() + OrigamiPresets.all() + FilamentPresets.all() + AlloyPresets.all() + ContourPresets.all() + StoopPresets.all() + LacquerPresets.all() + SpoolPresets.all() + SkitterPresets.all() + TanglePresets.all() + FlockPresets.all() + OverlapFactoryPresets.all() + RelayPresets.all() + EmbouchurePresets.all() + EmbouchurePresets.experimental() + BellowsPresets.all() + MurmurPresets.all() + OspreyPresets.all() + RegistersPresets.all() + ShoalPresets.all() + OpenSkyPresets.all() + ScannedChainPresets.all() + OrphicaPresets.all() + OvenPresets.all() + VentKitPresets.all() + CreasePresets.patches() + TrioPresets.all() + OhmPresets.all() + CausticPresets.all() + LatticePresets.all() + TidalPresets.all() + ChamberPresets.all() + LibrationPresets.all() + KeelPresets.all() + RimePresets.all() + WickPresets.all() + AlloyMaterialPresets.pickerAdditions()
         assertEquals(expected.size, Presets.all().size)
         assertEquals(expected.toSet(), Presets.all().toSet())
     }

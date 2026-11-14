@@ -93,14 +93,14 @@ class PrintedPadsIntegrationTest {
             val layerError = assertFailsWith<IllegalArgumentException> {
                 if (layered) model.clearGhostLayers(1) else model.addGhostLayers(1)
             }
-            assertEquals("REMOVE AQUARIUM BEFORE CHANGING SOFT HITS.", layerError.message)
+            assertEquals("Remove AQUARIUM before changing SOFT HITS.", layerError.message)
             val take = KitBuilderModel.BinEntry("main.wav", 0L, File(model.kitDir, "absent-take.wav"))
             val stackError = assertFailsWith<IllegalArgumentException> { model.stackTakes(1, listOf(take)) }
-            assertEquals("REMOVE AQUARIUM BEFORE STACK VERSIONS.", stackError.message)
+            assertEquals("Remove AQUARIUM before STACK VERSIONS.", stackError.message)
             val spliceError = assertFailsWith<IllegalArgumentException> { model.splicePad(1, tone(220.0), 700, tone(330.0), 900) }
-            assertEquals("REMOVE AQUARIUM BEFORE SPLICE.", spliceError.message)
+            assertEquals("Remove AQUARIUM before SPLICE.", spliceError.message)
             val desampleError = assertFailsWith<IllegalArgumentException> { model.desamplePad(1, evenIfFar = true) }
-            assertEquals("REMOVE AQUARIUM BEFORE FIND NEAREST SYNTH.", desampleError.message)
+            assertEquals("Remove AQUARIUM before FIND NEAREST SYNTH.", desampleError.message)
 
             val plan = Spread.plan(model.kit, 60f, Spread.Options(60, Scale.MAJOR, padCount = 4, bank = 1, replaceFull = true))
             for (sound in listOf(
@@ -108,7 +108,7 @@ class PrintedPadsIntegrationTest {
                 Spread.Sound("Aquarium", kept.drumClass, "#19645B", like = kept),
             )) {
                 val error = assertFailsWith<IllegalArgumentException> { Spread.apply(model, tone(220.0), plan, sound) }
-                assertEquals("REMOVE AQUARIUM BEFORE SPREAD.", error.message)
+                assertEquals("Remove AQUARIUM before SPREAD.", error.message)
             }
             assertEquals(kept, model.pad(1))
             assertEquals(before, files(model.kitDir), "every refusal precedes audio, source and undo writes")
@@ -175,7 +175,7 @@ class PrintedPadsIntegrationTest {
         val done = RecipeReplay.apply(model, 2, recipe, "DESTINATION", aquariumRenderer = renderer)
         assertEquals(context, AquariumPadSheet.read(done.pad.recipe))
         assertContentEquals(encoded(renderer.render(destinationAudio, context)), File(model.kitDir, done.pad.sampleFile).readBytes())
-        assertTrue(done.toast.startsWith("AQUARIUM DONE AGAIN"))
+        assertTrue(done.toast.startsWith("AQUARIUM DONE AGAIN", ignoreCase = true))
         val restored = AquariumPadSheet.remove(model, 2)
         assertEquals(destination.recipe, restored.recipe, "REMOVE restores the destination's prior recipe, never the donor's")
         assertContentEquals(destinationBytes, File(model.kitDir, restored.sampleFile).readBytes())

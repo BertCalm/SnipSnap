@@ -288,7 +288,7 @@ fun PlaceRow(current: Place, onSelect: (Place) -> Unit, modifier: Modifier = Mod
                     .tapeClick(label = place.label) { onSelect(place) },
                 contentAlignment = Alignment.Center,
             ) {
-                TapeText(place.label, TapeType.pixel, if (isSelected) scheme.ink.tape else scheme.ink2.tape)
+                TapeText(place.label, TapeType.pixel, if (isSelected) scheme.ink.tape else scheme.ink2.tape, maxLines = 2)
             }
         }
     }
@@ -330,7 +330,7 @@ fun DoorChip(label: String, onClick: () -> Unit, modifier: Modifier = Modifier) 
             .padding(horizontal = 10.dp),
         contentAlignment = Alignment.Center,
     ) {
-        TapeText(label, TapeType.pixel, scheme.accent.tape)
+        TapeText(label, TapeType.pixel, scheme.accent.tape, maxLines = 2)
     }
 }
 
@@ -474,23 +474,33 @@ internal fun Dock(
                     TapeText(dock.captureLabel, TapeType.pixelSmall, scheme.amber.tape)
                 }
             } else {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                    // The light, the count and the meter, one node that says the
-                    // state; SNIP and STOP stay their own, so they are not merged in.
-                    Row(
-                        Modifier.semantics(mergeDescendants = true) { stateDescription = "MIC ARMED" },
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(5.dp),
-                    ) {
-                        CaptureLight(lit = true)
-                        Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                            TapeText(dock.captureLabel, TapeType.pixelSmall, scheme.amber.tape)
-                            CaptureMeter(Modifier.width(72.dp).height(6.dp))
-                        }
+                // SNIP and STOP are siblings of this row, not inside a group
+                // that can be squeezed: a Row measures its unweighted children
+                // first, so their 48 dp floors are taken before the counter and
+                // the line share what is left (at 360 dp with the transport
+                // chip: 344 - 48 - 48 - 48 - 32 gaps = 168 dp). The counter is
+                // a live readout, so it gives way on ONE line with an
+                // ellipsis (D7's wrap rule is for labels; a counter that
+                // changes line count as it ticks would jump the dock).
+                // 1000:1 against the line below, so the counter keeps what it
+                // can and the line is the one that goes to nothing.
+                Row(
+                    Modifier
+                        .weight(1000f, fill = false)
+                        // The light, the count and the meter, one node that says the
+                        // state; SNIP and STOP stay their own, so they are not merged in.
+                        .semantics(mergeDescendants = true) { stateDescription = "MIC ARMED" },
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(5.dp),
+                ) {
+                    CaptureLight(lit = true)
+                    Column(Modifier.weight(1f, fill = false), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                        TapeText(dock.captureLabel, TapeType.pixelSmall, scheme.amber.tape, maxLines = 1)
+                        CaptureMeter(Modifier.width(72.dp).height(6.dp))
                     }
-                    DockChip(Places.SNIP, scheme.amber.tape, onClick = onSnip)
-                    DockChip(Places.STOP, BinRedOnLcd, onClick = onEject, border = BIN_RED_BORDER)
                 }
+                DockChip(Places.SNIP, scheme.amber.tape, onClick = onSnip)
+                DockChip(Places.STOP, BinRedOnLcd, onClick = onEject)
             }
             // Now: the line, then the job's count, then CANCEL or the standing door.
             TapeText(
@@ -569,20 +579,12 @@ private fun CaptureMeter(modifier: Modifier) {
 
 /**
  * The meter's empty-field tint on exact digital silence — a deliberate,
- * scheme-independent constant like [BIN_RED_BORDER]: "something's off"
+ * scheme-independent constant: "something's off"
  * has to read the same in every scheme. A different colour from the
  * bin-red pair on purpose: a warning about a live session, not the end
  * of one.
  */
 private val MUTE_WARN_FIELD = Color(0xFF4A2E14)
-
-/**
- * BIN red, the house constant for a session-ending action (STOP here,
- * EMPTY THE BIN there), the same in every scheme. The glow half is the
- * tuned token `BinRedGlow`; this is its border, duplicated per file by
- * the convention the other copies state rather than hoisted.
- */
-private val BIN_RED_BORDER = Color(0xFF6A2020)
 
 /** A small chip on the LCD: a word in a one-pixel frame, a hit target tall. */
 @Composable
@@ -596,7 +598,7 @@ private fun DockChip(text: String, ink: Color, onClick: () -> Unit, border: Colo
             .padding(horizontal = 6.dp),
         contentAlignment = Alignment.Center,
     ) {
-        TapeText(text, TapeType.pixelSmall, ink)
+        TapeText(text, TapeType.pixelSmall, ink, maxLines = 2)
     }
 }
 

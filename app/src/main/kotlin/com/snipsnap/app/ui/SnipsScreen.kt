@@ -37,6 +37,7 @@ import com.snipsnap.app.KitShelf
 import com.snipsnap.app.LoopBounce
 import com.snipsnap.app.TapeVoice
 import com.snipsnap.app.theme.BinRedGlow
+import com.snipsnap.app.theme.BinRedOnLcd
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
 import com.snipsnap.app.theme.lcdInk2
@@ -152,8 +153,13 @@ fun SnipsScreen(
     // stale — see that property's own note. On mount this is the load it
     // always was; every landing after that runs it again.
     val landed by LoopBounce.landed.collectAsState()
+    // False until the first read lands: an empty list before that is "not read
+    // yet", and must not draw as "no samples" (spec 4, a loading state that
+    // looks like an empty state).
+    var snipsRead by remember { mutableStateOf(false) }
     LaunchedEffect(landed) {
         snips = withContext(Dispatchers.IO) { SnipStore.listWithInfo(snipsRoot) }
+        snipsRead = true
     }
 
     // BIN door (was DELETED SNIPS, name-and-find task): `binnedCount` gates
@@ -327,14 +333,16 @@ fun SnipsScreen(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 HeaderChip(backLabel, scheme, Modifier.widthIn(min = 72.dp), onClick = onBack)
-                Spacer(Modifier.weight(1f))
-                TapeText("SAVED SAMPLES", TapeType.lcdHeader, scheme.lcdInk.tape)
-                Spacer(Modifier.weight(1f))
-                TapeText(
-                    "${snips.size} · ${humanSize(snips.sumOf { it.sizeBytes })}",
-                    TapeType.lcdSmall,
-                    scheme.amber.tape,
-                )
+                // Title on up to two lines (D7), the count and size under it, not beside it.
+                Column(Modifier.weight(1f).padding(start = 8.dp, top = 4.dp, bottom = 4.dp)) {
+                    TapeText("SAVED SAMPLES", TapeType.lcdHeader, scheme.lcdInk.tape, maxLines = 2)
+                    TapeText(
+                        "${snips.size} · ${humanSize(snips.sumOf { it.sizeBytes })}",
+                        TapeType.lcdSmall,
+                        scheme.amber.tape,
+                        maxLines = 2,
+                    )
+                }
             }
 
             // BIN: gated on the bin actually holding something — a user
@@ -350,19 +358,10 @@ fun SnipsScreen(
                 )
             }
 
-            if (snips.isEmpty()) {
-                Box(
-                    Modifier
-                        .fillMaxWidth()
-                        .weight(1f)
-                        .lcdPanel(scheme)
-                        .padding(14.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    // Plain, not the tape-metaphor voice (`Copy`'s own quips) —
-                    // this screen's own locked tone, per the task brief.
-                    TapeText(Copy.SNIPS_EMPTY, TapeType.lcdSmall, scheme.lcdInk.tape)
-                }
+            if (!snipsRead) {
+                LoadingPanel(Copy.SNIPS_LOADING, Modifier.fillMaxWidth())
+            } else if (snips.isEmpty()) {
+                SnipsEmpty(scheme)
             } else {
                 LazyColumn(
                     Modifier
@@ -508,6 +507,26 @@ private fun SnipRow(
 }
 
 /**
+ * Nothing saved: one plain sentence in a lit panel sized to it, not a panel the
+ * height of the screen. Its own composable so [SnipsScreen]'s method does not
+ * grow. Plain, not the tape-metaphor voice (`Copy`'s own quips): this screen's
+ * own locked tone. SAVED SAMPLES has no door of its own to a sample being made
+ * (LISTEN · MIC is the dock's, on every screen), so there is no button here.
+ */
+@Composable
+private fun SnipsEmpty(scheme: Scheme) {
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .lcdPanel(scheme)
+            .padding(14.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        TapeText(Copy.SNIPS_EMPTY, TapeType.lcdSmall, scheme.lcdInk.tape)
+    }
+}
+
+/**
  * "DELETE THIS SNIP? IT WAITS IN DELETED SNIPS FOR 30 DAYS." — replaces the
  * old "CAN'T UNDO.", which this task's own bin makes false the moment it
  * ships (a string that lies is exactly what this project's copy laws exist
@@ -547,9 +566,9 @@ private fun DeleteConfirmDialog(onCancel: () -> Unit, onConfirm: () -> Unit) {
                 .padding(14.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            TapeText("DELETE THIS SAMPLE? IT WAITS IN DELETED SAMPLES FOR 30 DAYS.", TapeType.lcdSmall, scheme.ink.tape, maxLines = 3)
+            TapeText("Delete this sample? It waits in deleted samples for 30 days.", TapeType.lcdSmall, scheme.ink.tape, maxLines = 3)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                ActionButton("CANCEL", scheme, enabled = true, modifier = Modifier.weight(1f), onClick = onCancel)
+                ActionButton("CANCEL", scheme, enabled = true, modifier = Modifier.weight(1f), tier = ButtonTier.Text, onClick = onCancel)
                 DeleteButton(scheme, Modifier.weight(1f), onClick = onConfirm)
             }
         }
@@ -611,14 +630,14 @@ private fun SnipRenameDialog(initialName: String, onCancel: () -> Unit, onConfir
             }
             if (!safe) {
                 TapeText(
-                    "NAMES CAN'T HOLD / \\ : * ? \" < > | OR END IN A DOT/SPACE.",
+                    "Names can't hold / \\ : * ? \" < > | or end in a dot/space.",
                     TapeType.pixelSmall,
                     scheme.ink2.tape,
                     maxLines = 2,
                 )
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                ActionButton("CANCEL", scheme, enabled = true, modifier = Modifier.weight(1f), onClick = onCancel)
+                ActionButton("CANCEL", scheme, enabled = true, modifier = Modifier.weight(1f), tier = ButtonTier.Text, onClick = onCancel)
                 ActionButton("RENAME", scheme, enabled = safe, modifier = Modifier.weight(1f), onClick = { onConfirm(name) })
             }
         }
@@ -631,12 +650,12 @@ private fun DeleteButton(scheme: Scheme, modifier: Modifier = Modifier, onClick:
         modifier
             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
             .background(scheme.lcd.tape, RoundedCornerShape(4.dp))
-            .border(2.dp, BIN_RED_BORDER, RoundedCornerShape(4.dp))
+            .border(2.dp, scheme.binLcd.tape, RoundedCornerShape(4.dp))
             .tapeClick(label = "DELETE", onClick = onClick)
             .padding(horizontal = 10.dp),
         contentAlignment = Alignment.Center,
     ) {
-        TapeText("DELETE", TapeType.pixel, BinRedGlow)
+        TapeText("DELETE", TapeType.pixel, BinRedOnLcd)
     }
 }
 
@@ -730,11 +749,3 @@ private fun usedSnipsAcrossShelf(root: File, snips: List<SnipStore.Info>): Set<F
         .flatMap { it.pads }
     return snips.filter { info -> pads.any { pad -> SnipStore.isUsedBy(pad, info.file) } }.map { it.file }.toSet()
 }
-
-// Duplicated, not hoisted (see this file's own `DeleteButton`/`HeaderChip`
-// comments) — BIN red is deliberately constant across every scheme so a
-// delete action reads as "red" even in a scheme with no red anywhere else.
-// The glow half moved to Schemes.BIN_RED_GLOW / theme.BinRedGlow
-// (accessibility audit finding 5) — a single tuned token, not a duplicated
-// literal.
-private val BIN_RED_BORDER = Color(0xFF6A2020)

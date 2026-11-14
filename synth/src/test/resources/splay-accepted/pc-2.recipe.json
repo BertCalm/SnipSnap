@@ -1,0 +1,29 @@
+{
+  "patch": {
+    "engine": "SPLAY",
+    "version": 1,
+    "name": "2 mechanisms",
+    "voice": "TONGUE",
+    "macros": {
+      "TRACE": 0.6200000047683716,
+      "SEED GAP": 0.7200000286102295,
+      "ENERGY": 0.7799999713897705,
+      "CONTACT": 0.699999988079071,
+      "POPULATION": 0.010101010091602802,
+      "HOLD": 0
+    },
+    "model": 2,
+    "midi": 60,
+    "velocity": 0.800000011920929,
+    "seed": 41001
+  },
+  "render": {
+    "mode": "FULL",
+    "entryPoint": "Splay.renderDetailed",
+    "sampleSource": "raw",
+    "rawGain": 1,
+    "matchedGain": 2.56811770069021,
+    "matchGroup": "playability-bank",
+    "loop": false
+  }
+}

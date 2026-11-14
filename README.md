@@ -445,7 +445,7 @@ explicit MIDI root (24–96), strike velocity and model version; TUNE is a
 relative ±12-semitone offset, neutral at 0.5, so the effective note spans
 12–108 without clamping back to the saved-root range. Seven provisional presets
 and a dry sixteen-pad C minor pentatonic kit are included, with PITCHWHEEL among
-FRESH TAPE's 109 starters. Run `./gradlew :synth:generatePitchwheelAudition`
+FRESH TAPE's 125 starters. Run `./gradlew :synth:generatePitchwheelAudition`
 for the compact first listening set, or add `-PpitchwheelFull` for the broader
 dry probes. HOLD's top step returns settled loop-only material with a
 deterministic attachment cycle and capped adhesion. The owner heard R1 as six
@@ -504,14 +504,32 @@ each with sixteen pads, three strike layers and choking hats. The
 [audition and MPC downloads](https://rivet-drum-audition.bertcalm.chatgpt.site) and
 [implementation notes](docs/RIVET.md) include the pending hardware check.
 
-VELOUR and VELOUR BLOOM preserve the selected synthetic C kick/snare sources
-in two fixed sixteen-pad, three-touch-zone kits. Their reusable boards place
-chorus, finite echoes, grains and room before a sagging amp surrogate. Added
-hats, toms, stick, shaker and ride remain listening candidates. The
-[private audition and MPC downloads](https://velour-drum-audition.bertcalm.chatgpt.site/native/)
-and [implementation notes](docs/VELOUR.md) separate reference parity, printed
-pad behavior and pending hardware checks. Run `./gradlew :synth:generateVelourKit`
-to reproduce both kits and the native/reference comparisons.
+TEMPEST is a six-voice digital drum instrument: a pitched strike, driven filtering
+and folding, then short repeats that darken as they fade. KICK, METAL, SNARE, CLAP,
+TOM and HAT share TUNE, SOURCE, FILTER, DRIVE and SPACE; the four later voices add
+DECAY. The owner accepted all six and the 22 factory presets. FRESH TAPE → TEMPEST
+is the sixteen-pad kit with choking hats; TEMPEST TUNED keeps the original E minor
+pentatonic kicks and metal colors. TEMPEST CIRCUIT (electro), TEMPEST FOUNDRY
+(industrial) and TEMPEST STEP (UK garage) are genre kits made from new settings of
+the same accepted voices, kept by the owner on 2026-11-14. HOLD is reserved. See [TEMPEST](docs/TEMPEST_FULL_KIT.md).
+
+OSTERIA is one evolving note: four spectral layers on a fixed root drift between
+five coastal palettes, with SHORE, TENSION, WANDER, MEMORY, ROOM and HOLD. Its six
+accepted voices (NOTE, BASS, PLUCK, REED, PAD and BOWED) carry 13 factory presets.
+FRESH TAPE → OSTERIA is the original Note kit; OSTERIA SIX VOICES is the accepted
+sixteen-pad bank with three native touch layers. PLUCK can save a STRUM, and MAKE
+INSTRUMENT builds finite three-layer keys from any single-note model-2 sound.
+See [OSTERIA](docs/OSTERIA.md).
+
+VELOUR CLOSE, VELOUR and VELOUR BLOOM load the approved, trimmed Round 5 bank:
+sixteen pads, three touch layers, dry C kick/snare on A05/A06, and conga, bongo,
+recording-derived tambourine and woodblock on A13–A16. The fixed PCM keeps the
+[audition and MPC downloads](https://velour-drum-audition.bertcalm.chatgpt.site/round5/)
+intact when the shelf makes a kit. The existing Velour/Bloom boards and original
+model-1 renderer remain available. [Implementation notes](docs/VELOUR.md) distinguish
+this approved baseline from the still-open round-robin, genre-kit and hardware gates.
+The older `:synth:generateVelourKit` task reproduces the original model-1 comparison,
+not the approved Round 5 shelf bank.
 
 TANGLE is an experimental pitched engine whose two oscillators influence,
 catch and release each other. BASS, LEAD, HOLLOW, PULSE, METAL and KNOT share
@@ -1115,8 +1133,8 @@ render-time limits. Build its MPC program and replay files with:
 ```
 
 ONSET, SCANNED CHAIN, VOX, FORK, HALOBAR, AEROSTAT, TREMOR, BALLAST, FLOTILLA, CISTERN, CIRCUIT, OBBLIGATO, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE,
-TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, LATTICE, ACCORD, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, REGISTERS, OSPREY, OPENSKY, OVEN, FLOCK, VENT, OVERLAP, TRIO, NACRE, ORIGAMI, TREFOIL, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS, TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME, OTIS, WICK, BORE, ARCO, SCOUR, KEEL, CHITIN, EROSION, RIVET, FIRED BRONZE, BACKWASH and GRAINS round out the lineup —
-81 engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
+TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, LATTICE, ACCORD, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, REGISTERS, OSPREY, OPENSKY, OVEN, FLOCK, VENT, OVERLAP, TRIO, NACRE, ORIGAMI, TREFOIL, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS, TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME, OTIS, WICK, BORE, ARCO, SCOUR, KEEL, CHITIN, EROSION, RIVET, FIRED BRONZE, BACKWASH, TEMPEST, SPLAY, OSTERIA and GRAINS round out the lineup —
+85 engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
 since it has no voice enum and works on a source snip instead of picking
 one. VOX is formant vocal synthesis — the shopping-mall-keyboard choir,
 proudly: a VOWEL knob morphs
@@ -1300,7 +1318,13 @@ so a hit's attack is kept; SHAPE runs from a smooth sine to a square whose
 edge takes 4 ms at every rate, so it chops without clicking; the TREM
 pedal, the `tremoloed` character, is a gentle sine throb about 3.5 times a
 second at DEPTH 0.5 at a tap (AMT 70), about 0.71 at AMT 100; for held
-sounds), ECHO (one delay line and
+sounds), ROTARY (the spinning speaker: the pad is split at 800 Hz, the top
+half circles with its level and pitch rising and falling together, the low
+half sways more slowly, from the slow chorale at 0.7 Hz to the fast tremolo
+at 7 Hz; RAMP starts it at the chorale and spins it up the way a cabinet
+switched to fast does; the ROTARY pedal, the `spun` character, starts at
+the chorale and spins up to the fast speed at SPIN 0.7 at a tap (AMT 70),
+SPIN 1 at AMT 100; for held sounds), ECHO (one delay line and
 one filter, repeats darkening as they fade; its HEAD macro, turned up,
 feeds the repeats only the note's first 120 ms, so a held note's attack
 comes back as a repeat; the `delayed` character, the DELAY pedal, is its long,
@@ -1335,10 +1359,12 @@ clicks, scaled to the hit's own peak, seeded once per pad), SWELL
 (the sound arrives before it strikes) and MOTION (the tape stop and the
 tape start, baked); beside the rack, WOBBLE sweeps the same filter on
 the kit's own grid, a note division at its tempo — ROLL (the hit's own
-head struck again) and GATE (the hit chopped into a square envelope)
-share that same grid, so all three land on the same beats. `FxChain` fixes the order — pitch → dive → swell → reverse → smear → ghost →
+head struck again), GATE (the hit chopped into a square envelope) and
+PUMP (the sidechain pump: the first beat untouched, then the level
+ducked on every beat and breathed back) share that same grid, so all
+four land on the same beats. `FxChain` fixes the order — pitch → dive → swell → reverse → smear → ghost →
 spike → volume → octaver → eq → contour → wah → compressor → squash → forge → valve → crunch →
-ring → dub → vinyl → tape → vibrato → ensemble → phase → flanger → tremolo → echo → rewind → spring → room → hush → motion — owns
+ring → dub → vinyl → tape → vibrato → ensemble → phase → flanger → tremolo → rotary → echo → rewind → spring → room → hush → motion — owns
 the total tail budget so stacked reverbs can't turn a hit into a phrase,
 and serializes per-pad next to the WAV.
 
@@ -1363,9 +1389,16 @@ TREMOR, BALLAST, CISTERN, CIRCUIT, OBBLIGATO, ALLOY, THAW, MURK, NIMBUS, COROLLA
 UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL,
 SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVERLAP,
 OVEN, FLOCK, VENT, CREASE, TRIO, NACRE, ORIGAMI, TREFOIL, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS,
-TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME, BORE, ARCO, SCOUR, KEEL, CHITIN, WICK, EROSION, RIVET, FIRED BRONZE, BACKWASH, plus GRAINS, SNAP and DRAW,
+TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME, BORE, ARCO, SCOUR, KEEL, CHITIN, WICK, EROSION, RIVET, FIRED BRONZE, BACKWASH, SOOT, TEMPEST, SPLAY, OSTERIA, plus GRAINS, SNAP and DRAW,
 which sit beside the picker. `:synth` also holds engines that picker does not show.
-LORENTZ has a preset roster, so `snipsnap synth` renders it.
+LORENTZ and SCUFF have preset rosters, so `snipsnap synth` renders them.
+
+SPLAY offers one finite TONGUE voice with five accepted population settings
+(1, 2, 4, 8 and 16 mechanisms), not five voices. Its original model-1 and model-2
+recipes and the five provisional CLI presets remain replayable. The picker and the
+SPLAY POPULATIONS starter use those exact settings through the native recipe path.
+HOLD and phone validation remain open; see
+[finite delivery and its limits](docs/SPLAY_FINITE_DELIVERY.md).
 
 EROSION has a [native ARC/CRATER proof](docs/EROSION.md), saved touch and a
 regenerable audition. Its current contrast bank has eight playing roles, three touch
@@ -1604,12 +1637,11 @@ UI layer. What lives here:
 - **`Personality`/`Delight`/`Copy`** — `docs/PERSONALITY.md` as executable
   data: the four laws gate for real (OFF silences everything; deck sounds
   hard-mute while capture is armed), all shipped copy, and the eggs.
-- **`Workshop` / `TeachLog` / `BenchExport` / `CutRatings` / `LabelledHits` /
-  `BenchNotes` / `ChopReviewModel`'s confirm and harvest** — the developer's
-  bench pipeline (`docs/WORKSHOP.md`). Removed from the UI (the knock, TEACH
-  THE MACHINE, CONFIRM ALL and the stars, the pad sheet's BENCH box, the NOTE
-  chip, SEND TO BENCH, SEND HITS TO BENCH; UI-clarity spec §7.4.1, D8); kept
-  here with their tests until the owner decides to delete them.
+- **The developer's bench pipeline is gone** (`Workshop`, `TeachLog`,
+  `BenchExport`, `CutRatings`, `LabelledHits`, `BenchNotes` and
+  `ChopReviewModel`'s confirm and harvest). Removed from the UI by UI-clarity
+  spec §7.4.1, D8, and deleted from `:shell` with their tests (review Q5,
+  2026-11); `docs/WORKSHOP.md` keeps the spec as history.
 - **`UserPresets`** — SAVE AS PRESET on SYNTH (`docs/WORKSHOP.md`, WS5,
   the one tool on that list that is for every player): the player's own
   presets in `presets.json` beside the kits, the name rules (fourteen
@@ -1660,7 +1692,7 @@ in [`app/README.md`](app/README.md). CI compiles it in `android-build`.
 - [`docs/KIT_BEST_PRACTICES.md`](docs/KIT_BEST_PRACTICES.md) — pad layout, mute groups, naming, and what Akai does and doesn't document
 - [`docs/UI_DESIGN.md`](docs/UI_DESIGN.md) — the TapeOS visual language (90s desktop × cassette) and the mockup artboards in [`design/`](design/)
 - [`docs/PERSONALITY.md`](docs/PERSONALITY.md) — the delight system: voice, the four laws, gag catalog, easter eggs
-- [`docs/WORKSHOP.md`](docs/WORKSHOP.md) — the WORKSHOP: the spec for the developer's tools, removed from the UI (D8), with SAVE AS PRESET, which was never behind it
+- [`docs/WORKSHOP.md`](docs/WORKSHOP.md) — the WORKSHOP: the spec for the developer's tools, removed from the app (D8, code deleted), with SAVE AS PRESET, which was never behind it
 - [`docs/SYNTH_ROADMAP.md`](docs/SYNTH_ROADMAP.md) — THUMP/CRUNCH/TINES/VELVET: generate kits, not just capture them
 - [`reference/README.md`](reference/README.md) — harvesting reference programs off hardware
 

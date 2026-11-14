@@ -1,0 +1,143 @@
+{
+  "renderer": "snipsnap-murmur-finite-root",
+  "version": 1,
+  "source_sha256": "58642d41290485af6497ab80297ac0fe992eb1a5f8bc6663f271cce161b39142",
+  "root_policy": "quadrature-075-c3-c4-smoothstep",
+  "variant": "STEADY_WITH_ROOT",
+  "patch": {
+    "engine": "MURMUR",
+    "version": 1,
+    "name": "SHORT ANSWER",
+    "voice": "PLUCK",
+    "macros": {
+      "MOUTH": 0.3499999940395355,
+      "EDGE": 0.550000011920929,
+      "BREATH": 0.10000000149011612,
+      "MOTION": 0.3499999940395355,
+      "BODY": 0.44999998807907104,
+      "HOLD": 0
+    },
+    "midi": 36,
+    "velocity": 0.6499999761581421,
+    "config": {
+      "routing": "PAIRS",
+      "ratios": [
+        1,
+        1,
+        4,
+        3
+      ],
+      "trajectory": "ATTACK",
+      "direction": 1,
+      "referenceSeconds": 0.48,
+      "attack": 0.002,
+      "decay": 0.24,
+      "sustain": 0.08,
+      "release": 0.35,
+      "targets": [
+        {
+          "name": "pluck Closed hum",
+          "centers": [
+            283.5,
+            840,
+            1680.0000000000002,
+            2860.0000000000005,
+            3800
+          ],
+          "widths": [
+            90,
+            162,
+            221,
+            280,
+            425
+          ],
+          "gains": [
+            1.1700000000000002,
+            0.7200000000000001,
+            0.325,
+            0.18000000000000002,
+            0.065
+          ],
+          "sourceBalance": 0.05000000000000001
+        },
+        {
+          "name": "pluck Rounded",
+          "centers": [
+            346.5,
+            787.5,
+            1568.0000000000002,
+            2585,
+            3500
+          ],
+          "widths": [
+            108,
+            144,
+            204,
+            280,
+            382.5
+          ],
+          "gains": [
+            1.105,
+            0.81,
+            0.39,
+            0.18000000000000002,
+            0.0975
+          ],
+          "sourceBalance": 0.098
+        },
+        {
+          "name": "pluck Open",
+          "centers": [
+            798,
+            1312.5,
+            2744.0000000000005,
+            3630.0000000000005,
+            4400
+          ],
+          "widths": [
+            171,
+            180,
+            255,
+            304,
+            442
+          ],
+          "gains": [
+            0.8450000000000001,
+            1.26,
+            0.8450000000000001,
+            0.36000000000000004,
+            0.0975
+          ],
+          "sourceBalance": 0.23000000000000004
+        },
+        {
+          "name": "pluck Narrow",
+          "centers": [
+            378,
+            2152.5,
+            3192.0000000000005,
+            4180,
+            4800
+          ],
+          "widths": [
+            99,
+            207,
+            297.5,
+            336,
+            493
+          ],
+          "gains": [
+            0.7150000000000001,
+            1.215,
+            0.9750000000000001,
+            0.27,
+            0.078
+          ],
+          "sourceBalance": 0.13
+        }
+      ],
+      "model": 2
+    }
+  },
+  "output_gain": 3.3389108180999756
+}

@@ -37,7 +37,7 @@ class ApsisIntegrationTest {
                 val presets = ApsisPresets.forVoice(voice)
                 listOf(presets[1], presets.last())
             }.map {
-                it.copy(midi = 48, velocity = .43f, config = ApsisConfig(3, -91))
+                it.copy(midi = 48, velocity = .43f, config = it.config.copy(seedContext = -91))
             }
             for ((index, patch) in patches.withIndex()) {
                 val slot = index + 1
@@ -71,7 +71,11 @@ class ApsisIntegrationTest {
     fun `edited recipes preserve every saved model and seed through drafts presets and reopened work`() {
         val shelf = createTempDirectory("apsis-integration").toFile()
         try {
-            for (voice in ApsisVoice.entries) for (model in (if (voice == ApsisVoice.PASSAGE) 1..3 else 3..3)) {
+            for (voice in ApsisVoice.entries) for (model in when (voice) {
+                ApsisVoice.PASSAGE -> 1..3
+                ApsisVoice.GRAIN -> 3..4
+                ApsisVoice.ANCHOR -> 3..3
+            }) {
                 val original = ApsisPresets.forVoice(voice).first().copy(
                     midi = 43, velocity = .37f, config = ApsisConfig(model, -193),
                 )

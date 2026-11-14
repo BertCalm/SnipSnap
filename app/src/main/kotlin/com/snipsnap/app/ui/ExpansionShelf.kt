@@ -120,7 +120,7 @@ internal fun ExpansionRow(
         }
         if (armed) {
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                Door("RENAME", "RENAME ${e.title.uppercase()}", busy, scheme.amber.tape) { onRequestRename(e) }
+                Door("RENAME", "RENAME ${e.title.uppercase()}", busy, scheme.accent.tape) { onRequestRename(e) }
                 Door("DELETE", "DELETE ${e.title.uppercase()}", busy, BinRedGlow) { onRequestDelete(e) }
             }
         } else {
@@ -158,7 +158,7 @@ internal fun ExpansionDeleteConfirm(onCancel: () -> Unit, onConfirm: () -> Unit)
         ) {
             TapeText(Copy.EXPANSION_DELETE_CONFIRM, TapeType.lcdSmall, scheme.ink.tape, maxLines = 3)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                ActionButton("CANCEL", scheme, enabled = true, modifier = Modifier.weight(1f), onClick = onCancel)
+                ActionButton("CANCEL", scheme, enabled = true, modifier = Modifier.weight(1f), tier = ButtonTier.Text, onClick = onCancel)
                 ActionButton("DELETE", scheme, enabled = true, modifier = Modifier.weight(1f), onClick = onConfirm)
             }
         }

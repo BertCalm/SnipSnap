@@ -8,11 +8,14 @@ import java.util.Locale
  * places and stages as the rows draw them, the dock's labels and doors,
  * the kit switcher's line, and HELP by place. Labels and lists, not
  * sentences — the sentences (the first-run note, the dock's resting
- * line) are in [Copy], where the shouting law holds them.
+ * line) are in [Copy], where the case law holds them. The two kinds are
+ * marked the same way here as there: [CopyLabel] (CAPS) and [CopyCaption]
+ * (a sentence fragment, such as a row's description), and an unmarked
+ * string is a message. HELP's lines are messages, in sentence case.
  *
  * Beside [Copy] rather than inside it on purpose: everything here is
- * furniture that stays on screen, which [Copy]'s reflective law would
- * otherwise ask to become a sentence with a full stop.
+ * furniture that stays on screen, mostly labels. `PersonalityTest` holds
+ * both objects to the same law for each kind.
  */
 object Places {
 
@@ -26,12 +29,12 @@ object Places {
     // ---- the dock ----
 
     /** Doors the dock can hold. Each carries its own arrow, as every door label does. */
-    const val DOOR_CUT = "CHOP ▸"
-    const val DOOR_PADS = "PADS ▸"
-    const val DOOR_BEAT = "BEAT ▸"
-    const val DOOR_OUT = "EXPORT ▸"
+    @field:CopyLabel const val DOOR_CUT = "CHOP ▸"
+    @field:CopyLabel const val DOOR_PADS = "PADS ▸"
+    @field:CopyLabel const val DOOR_BEAT = "BEAT ▸"
+    @field:CopyLabel const val DOOR_OUT = "EXPORT ▸"
 
-    const val LISTEN = "LISTEN · MIC"
+    @field:CopyLabel const val LISTEN = "LISTEN · MIC"
 
     /**
      * The dock's LISTEN, as the player has set it up. [LISTEN] stays the word before any choice is
@@ -46,33 +49,33 @@ object Places {
      * asked for in the player's own terms. It arms the same mic session the
      * dock's LISTEN does; its accessible name is its label.
      */
-    const val CATCH_FIRST = "LISTEN FOR YOUR FIRST SOUND"
+    @field:CopyLabel const val CATCH_FIRST = "LISTEN FOR YOUR FIRST SOUND"
 
     /** The mic-denied box's way out: the system's page for this app, where the permission is switched on. No arrow: that page is Android's, not a screen of ours. */
-    const val OPEN_SETTINGS = "OPEN SETTINGS"
-    const val SNIPPED = "SNIPPED"
-    const val STOPPED = "■"
+    @field:CopyLabel const val OPEN_SETTINGS = "OPEN SETTINGS"
+    @field:CopyLabel const val SNIPPED = "SNIPPED"
+    @field:CopyLabel const val STOPPED = "■"
 
     /** The live transport chip's face while the beat is stopped: what a tap does, where [STOPPED] read as the stop. */
-    const val PLAY_GLYPH = "▶"
+    @field:CopyLabel const val PLAY_GLYPH = "▶"
 
     /** The dock's SNIP, shown while armed. No arrow: it takes the last 60 s, it opens nothing. */
-    const val SNIP = "SNIP"
+    @field:CopyLabel const val SNIP = "SNIP"
 
     /** The dock's STOP, beside SNIP while armed: the session ends. The shelf's ArmControl said the same word in bin red. */
-    const val STOP = "STOP"
+    @field:CopyLabel const val STOP = "STOP"
 
     /** The transport chip's accessible names, wherever a kit is open — the beat's own PLAY / STOP, read by what they do to the beat. */
-    const val PLAY_BEAT = "PLAY THE BEAT"
-    const val STOP_BEAT = "STOP THE BEAT"
+    @field:CopyLabel const val PLAY_BEAT = "PLAY THE BEAT"
+    @field:CopyLabel const val STOP_BEAT = "STOP THE BEAT"
 
     /**
      * BEAT's SHARE chip, beside BOUNCE TO SNIPS: the pattern as two passes of
      * audio, handed to the share sheet. No arrow: an action, and the sheet is Android's. Spoken
      * as [SHARE_BEAT_SPOKEN], because "share" alone does not say what.
      */
-    const val SHARE_BEAT = "SHARE"
-    const val SHARE_BEAT_SPOKEN = "SHARE THIS BEAT"
+    @field:CopyLabel const val SHARE_BEAT = "SHARE"
+    @field:CopyLabel const val SHARE_BEAT_SPOKEN = "SHARE THIS BEAT"
 
     /**
      * The first row of the dock's capture choice, in its sheet: the room, through
@@ -80,15 +83,15 @@ object Places {
      * for on a line under the name, as [ARM_INSIDE_DESC] does for the other.
      * The row's accessible name stays [LISTEN].
      */
-    const val ARM_MIC = "MIC"
-    const val ARM_MIC_DESC = "RECORD THIS ROOM"
+    @field:CopyLabel const val ARM_MIC = "MIC"
+    @field:CopyCaption const val ARM_MIC_DESC = "Record this room"
 
     /** The second row of the dock's capture choice: another app's audio, with the projection consent that it opens. */
-    const val ARM_INSIDE = "APP AUDIO"
-    const val ARM_INSIDE_DESC = "RECORD AN APP"
+    @field:CopyLabel const val ARM_INSIDE = "APP AUDIO"
+    @field:CopyCaption const val ARM_INSIDE_DESC = "Record an app"
 
     /** The capture sheet's title. */
-    const val ARM_SHEET_TITLE = "RECORD FROM"
+    @field:CopyLabel const val ARM_SHEET_TITLE = "LISTEN FROM"
 
     /** `ARMED · 00:41 ON TAPE` — the shelf's counter, now on every screen. */
     fun armed(secondsOnTape: Int): String {
@@ -119,44 +122,44 @@ object Places {
      */
     fun switchKitName(line: String): String = "SWITCH KIT · " + line.removeSuffix(" ▾")
 
-    const val NO_KITS = "NO KITS YET"
-    const val ADD_FROM_SHELF = "+ FROM LIBRARY"
+    @field:CopyLabel const val NO_KITS = "NO KITS YET"
+    @field:CopyLabel const val ADD_FROM_SHELF = "+ FROM LIBRARY"
 
     /** The header chip that opens [ADD_FROM_SHELF]: the same door, in the room the header has. */
-    const val ADD_KIT = "+ KIT"
+    @field:CopyLabel const val ADD_KIT = "+ KIT"
 
     /** The starter sheet: its title, and the tag on a starter that rerolls on every tap. */
-    const val STARTER_SHEET_TITLE = "PICK A STARTER"
-    const val STARTER_REROLL_TAG = "TAPS REROLL"
+    @field:CopyLabel const val STARTER_SHEET_TITLE = "PICK A STARTER"
+    @field:CopyLabel const val STARTER_REROLL_TAG = "TAPS REROLL"
 
     /** The shelf's TOOLS sheet: its title, and each tool as a name and the line under it. */
-    const val TOOLS_TITLE = "TOOLS"
-    const val TOOL_BACKUP = "BACKUP"
-    const val TOOL_BACKUP_DESC = "EVERY KIT, ONE FILE"
-    const val TOOL_CHOP_ALL = "CHOP ALL"
-    const val TOOL_CHOP_ALL_DESC = "EVERY FILE, ONE KIT"
-    const val TOOL_XRAY = "INSPECT FILE"
-    const val TOOL_XRAY_DESC = "INSPECT A FILE"
-    const val TOOL_DOUBLES = "FIND SIMILAR SOUNDS"
-    const val TOOL_DOUBLES_DESC = "SAME SOUND, ANY KIT"
+    @field:CopyLabel const val TOOLS_TITLE = "TOOLS"
+    @field:CopyLabel const val TOOL_BACKUP = "BACKUP"
+    @field:CopyCaption const val TOOL_BACKUP_DESC = "Every kit, one file"
+    @field:CopyLabel const val TOOL_CHOP_ALL = "CHOP ALL"
+    @field:CopyCaption const val TOOL_CHOP_ALL_DESC = "Every file, one kit"
+    @field:CopyLabel const val TOOL_XRAY = "INSPECT FILE"
+    @field:CopyCaption const val TOOL_XRAY_DESC = "Inspect a file"
+    @field:CopyLabel const val TOOL_DOUBLES = "FIND SIMILAR SOUNDS"
+    @field:CopyCaption const val TOOL_DOUBLES_DESC = "Same sound, any kit"
 
     /**
      * The project row's menu: each action a name and the line under it. The names
      * a screen reader hears carry the project's, and are made where the row is drawn.
      */
-    const val PROJECT_RENAME = "RENAME"
-    const val PROJECT_RENAME_DESC = "GIVE THE PROJECT A NEW NAME"
-    const val PROJECT_DELETE = "DELETE"
-    const val PROJECT_DELETE_DESC = "TO THE TRASH, KITS STAY IN THE LIBRARY"
-    const val PROJECT_DROP = "REMOVE A KIT"
-    const val PROJECT_DROP_DESC = "TAKE ONE OUT, IT STAYS IN THE LIBRARY"
+    @field:CopyLabel const val PROJECT_RENAME = "RENAME"
+    @field:CopyCaption const val PROJECT_RENAME_DESC = "Give the project a new name"
+    @field:CopyLabel const val PROJECT_DELETE = "DELETE"
+    @field:CopyCaption const val PROJECT_DELETE_DESC = "To the trash, kits stay in the LIBRARY"
+    @field:CopyLabel const val PROJECT_DROP = "REMOVE A KIT"
+    @field:CopyCaption const val PROJECT_DROP_DESC = "Take one out, it stays in the LIBRARY"
 
     /** The kit sheet's title. */
-    const val SHEET_KITS_TITLE = "SWITCH KIT"
+    @field:CopyLabel const val SHEET_KITS_TITLE = "SWITCH KIT"
 
     /** The kit sheet's last row, and the line under it: it opens the shelf in pick mode. */
-    const val SHEET_ADD_FROM_SHELF = "+ FROM LIBRARY"
-    const val SHEET_ADD_FROM_SHELF_DESC = "PUT ANOTHER KIT IN THIS PROJECT"
+    @field:CopyLabel const val SHEET_ADD_FROM_SHELF = "+ FROM LIBRARY"
+    @field:CopyCaption const val SHEET_ADD_FROM_SHELF_DESC = "Put another kit in this project"
 
     /**
      * One row of the kit sheet. The active kit is marked in words and a
@@ -186,22 +189,22 @@ object Places {
      * [thisKit] does not name (it names KEY, BANK B and VERSIONS). Each word is a
      * button's or section's name inside: SPLIT, DUST ALL, BREED, SCULPT, STRETCH, ROUND ROBIN.
      */
-    const val THIS_KIT_ALSO = "ALSO: SPLIT · DUST · COMBINE KITS · SCULPT · STRETCH · ROUND ROBIN"
+    @field:CopyCaption const val THIS_KIT_ALSO = "Also: SPLIT · DUST · COMBINE KITS · SCULPT · STRETCH · ROUND ROBIN"
 
     /** THIS KIT's heading over REMIX BANK B. */
-    const val KIT_BANK_B = "BANK B"
+    @field:CopyLabel const val KIT_BANK_B = "BANK B"
 
     /** THIS KIT's heading over KEY, DUST ALL, SCULPT, STRETCH, ROUND ROBIN and SPLIT. */
-    const val KIT_WHOLE_SOUND = "THE WHOLE KIT'S SOUND"
+    @field:CopyLabel const val KIT_WHOLE_SOUND = "THE WHOLE KIT'S SOUND"
 
     /** THIS KIT's heading over VERSIONS + BIN and BREED. */
-    const val KIT_VERSIONS_AND_KITS = "VERSIONS AND OTHER KITS"
+    @field:CopyLabel const val KIT_VERSIONS_AND_KITS = "VERSIONS AND OTHER KITS"
 
     /** KEY's opener inside THIS KIT: a picker, so it opens a sheet (a trailing ▾). */
-    const val KEY_OPEN = "KEY ▾"
+    @field:CopyLabel const val KEY_OPEN = "KEY ▾"
 
     /** The KEY sheet's title. */
-    const val KEY_SHEET_TITLE = "KEY"
+    @field:CopyLabel const val KEY_SHEET_TITLE = "KEY"
 
     /**
      * The closed line of a SCULPT or STRETCH section inside THIS KIT. With a pad
@@ -233,35 +236,35 @@ object Places {
      */
     val HELP: Map<String, List<String>> = linkedMapOf(
         "LIBRARY" to listOf(
-            "· YOUR PROJECTS, AND THE KITS, SAMPLES AND INSTRUMENTS THEY SHARE.",
-            "· A KIT IS AN MPC PROGRAM. A PROJECT IS AN MPC PROJECT. THE CARD READS BOTH.",
-            "· HOLD A KIT TO RENAME IT, OR TO TRASH IT. THE TRASH KEEPS IT ${Reversal.DAYS} DAYS.",
-            "· TOOLS: BACKUP, CHOP A WHOLE FOLDER, INSPECT A FILE, FIND SIMILAR SOUNDS.",
+            "· Your projects, and the kits, samples and instruments they share.",
+            "· A kit is an MPC program. A project is an MPC project. The card reads both.",
+            "· Hold a kit to rename it, or to trash it. The trash keeps it ${Reversal.DAYS} days.",
+            "· TOOLS holds BACKUP, CHOP ALL, INSPECT FILE and FIND SIMILAR SOUNDS.",
         ),
         "SAMPLE" to listOf(
-            "· RECORD: A SOUND FROM THE MIC, ANOTHER APP, OR A FILE SHARED IN.",
-            "· CHOP: THE MACHINE CUTS ON THE HITS AND GUESSES; ARGUE WITH IT.",
-            "· INSTANT KIT AND CATCH A HIT LAND SOUNDS ON PADS WITHOUT CHOP.",
-            "· HUM ALONG ON CHOP: THE CUTS AND LABELS FOLLOW YOUR MOUTH.",
+            "· RECORD: a sound from the mic, another app, or a file shared in.",
+            "· CHOP: the machine cuts on the hits and guesses; argue with it.",
+            "· INSTANT KIT and CATCH A HIT land sounds on PADS without CHOP.",
+            "· HUM along on CHOP: the cuts and labels FOLLOW your mouth.",
         ),
         "PROJECT" to listOf(
-            "· PADS: TAP TO HEAR, OPEN ▸ FOR ITS BENCH. RAW ON A STRIP: NOTHING DONE YET.",
-            "· BEAT: THE PROJECT'S PATTERNS. RECORD A TAKE, TAP STEPS IN, OR GO TO ORBIT.",
-            "· EXPORT: WRITE THE KIT, OR THE PROJECT AS A SESSION. THE MPC OPENS BOTH.",
-            "· ONE KIT IS ACTIVE AT A TIME. SWAP IT ABOVE THE GRID; ADD MORE FROM LIBRARY.",
-            "· VERSIONS: EVERY SAVE IS A VERSION. EVERY DELETE GOES TO THE TRASH FIRST.",
+            "· PADS: tap to hear, OPEN ▸ for its bench. Raw on a strip: nothing done yet.",
+            "· BEAT: the project's patterns. Record a take, tap steps in, or go to ORBIT.",
+            "· EXPORT: write the kit, or the project as a session. The MPC opens both.",
+            "· One kit is active at a time. Swap it above the grid; add more from LIBRARY.",
+            "· VERSIONS: every save is a version. Every delete goes to the trash first.",
         ),
         "CREATE" to listOf(
-            "· SYNTH, PHOTO TO SOUND, TOUCH SURFACE: A SOUND FROM NOTHING, TO A PAD.",
-            "· TOUCH SURFACE IS THE ONE THAT PRINTS. TILT THE PHONE FOR RESONANCE.",
-            "· INSTRUMENTS: WHAT YOU MADE ONE FROM, PLAYED ON THE SAME 16 PADS.",
-            "· CONFLUENCE VOICES: HEAR A RECORDED PASSAGE, THEN SAVE IT AS A PAD.",
-            "· MY VOICE: A SHORT VOWEL OF YOURS BECOMES A VOICE, KEPT ON THIS PHONE.",
+            "· SYNTH, PHOTO TO SOUND, TOUCH SURFACE: a sound from nothing, to a pad.",
+            "· TOUCH SURFACE is the one that prints. Tilt the phone for resonance.",
+            "· INSTRUMENTS: what you made one from, played on the same 16 pads.",
+            "· CONFLUENCE VOICES: hear a recorded passage, then save it as a pad.",
+            "· MY VOICE: a short vowel of yours becomes a voice, kept on this phone.",
         ),
         "THE DOCK" to listOf(
-            "· THE BEAT KEEPS PLAYING ON PADS, EXPORT, CREATE AND A PAD BENCH.",
-            "· THE LIGHT MEANS LISTENING. WHILE ON, SNIP KEEPS WHAT IT HEARS, UP TO 60s.",
-            "· THE LINE SAYS WHAT JUST HAPPENED. A DOOR BESIDE IT STAYS UNTIL YOU TAKE IT.",
+            "· The beat keeps playing on PADS, EXPORT, CREATE and a pad bench.",
+            "· The light means listening. While on, SNIP keeps what it hears, up to 60s.",
+            "· The line says what just happened. A door beside it stays until you take it.",
         ),
     )
 

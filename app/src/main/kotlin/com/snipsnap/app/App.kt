@@ -82,6 +82,7 @@ import com.snipsnap.app.ui.HelpScreen
 import com.snipsnap.app.ui.KitLoading
 import com.snipsnap.app.ui.KitScreen
 import com.snipsnap.app.ui.KeysScreen
+import com.snipsnap.app.ui.MurmurRoundRobinKeysScreen
 import com.snipsnap.app.ui.KitsScreen
 import com.snipsnap.app.ui.LocalBusySink
 import com.snipsnap.app.ui.LocalJobs
@@ -101,8 +102,10 @@ import com.snipsnap.app.ui.OrbitStep
 import com.snipsnap.app.ui.PadCaptureScreen
 import com.snipsnap.app.ui.PadSheetScreen
 import com.snipsnap.app.ui.ReleasePadEditorWhenGone
+import com.snipsnap.app.ui.rememberPadEditorKeys
 import com.snipsnap.app.ui.PREF_CARD_TREE
 import com.snipsnap.app.ui.PREF_EXPORT_FORMAT
+import com.snipsnap.app.ui.ActionButton
 import com.snipsnap.app.ui.PrimaryAction
 import com.snipsnap.app.ui.PropertiesScreen
 import com.snipsnap.app.ui.SnipsScreen
@@ -171,7 +174,6 @@ import com.snipsnap.shell.LandingNote
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.PadBanks
 import com.snipsnap.shell.PadEditorKeep
-import com.snipsnap.shell.PadEditorKeys
 import com.snipsnap.shell.PadSheet
 import com.snipsnap.shell.PadSheetBoxes
 import com.snipsnap.shell.PadSheetPage
@@ -200,12 +202,15 @@ import com.snipsnap.xpm.PadNoteMap
 import java.io.File
 import kotlin.math.roundToInt
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.random.Random
 
 private const val TAG = "App"
@@ -547,7 +552,7 @@ fun App(shelf: KitShelf) {
     // (spec §7.3.1): the editor draws inside `padEditorHolder`, and `padEditorKeys` drops
     // what it holds when the editor leaves the stack for good or another pad is opened.
     val padEditorHolder = rememberSaveableStateHolder()
-    val padEditorKeys = remember(padEditorHolder) { PadEditorKeys(padEditorHolder::removeState) }
+    val padEditorKeys = rememberPadEditorKeys(padEditorHolder)
     ReleasePadEditorWhenGone(PadEditorKeep.inStack(location), padEditorKeys)
 
     /**
@@ -599,6 +604,7 @@ fun App(shelf: KitShelf) {
     }
     // KEYS: the instrument open on the grid, from the shelf's INSTRUMENTS list.
     var openInstrument by remember { mutableStateOf<KitShelf.InstrumentEntry?>(null) }
+    var openRoundRobin by remember { mutableStateOf<com.snipsnap.shell.MurmurRoundRobinShelf.SavedBank?>(null) }
     var instruments by remember { mutableStateOf<List<KitShelf.InstrumentEntry>>(emptyList()) }
     // ROOMS (YY5): kept rooms beside the instruments; the revision bumps after a forget.
     var rooms by remember { mutableStateOf<List<Rooms.Room>>(emptyList()) }
@@ -1361,6 +1367,89 @@ fun App(shelf: KitShelf) {
      */
     fun hasLandingPad(kit: com.snipsnap.kit.Kit): Boolean =
         (PadBanks.slots(0).first..PadBanks.slots(1).last).any { kit.pad(it) == null }
+
+    /**
+     * MAKE › INSTRUMENTS › CAIRN SING. The nine SING captures are not shipped:
+     * the first study that needs one renders it here, off the UI thread, and
+     * keeps it in the app's cache only if it matches its pinned SHA-256
+     * (`CairnSingRenderedCaptures`). A mismatch makes nothing and says so.
+     */
+    fun makeCairnStudy(id: String) {
+        if (busy != null) return
+        val cancelled = AtomicBoolean(false)
+        var operation = Busy("MAKING CAIRN SING", cancel = { cancelled.set(true) })
+        busy = operation
+        // App's scope survives a bench/tab switch, like the other shelf
+        // writers. Only immutable choice IDs cross this background boundary.
+        scope.launch {
+            try {
+                val made = withContext(Dispatchers.IO) {
+                    val worker = currentCoroutineContext()
+                    val cache = File(context.applicationContext.cacheDir, "cairn-sing-captures")
+                    com.snipsnap.shell.CairnSingInstrumentPicker.make(id, shelf.instrumentsDir,
+                        load = { program, stop ->
+                            com.snipsnap.shell.CairnSingRenderedCaptures.readCaptures(program, cache, stop,
+                                progress = { done, total ->
+                                    scope.launch(Dispatchers.Main.immediate) {
+                                        if (busy === operation) {
+                                            operation = operation.copy(done = done, total = total)
+                                            busy = operation
+                                        }
+                                    }
+                                })
+                        }, cancelled = { cancelled.get() || !worker.isActive })
+                }
+                roomsRevision++
+                dock.say("${made.name.uppercase(java.util.Locale.ROOT)} IS READY IN INSTRUMENTS.")
+            } catch (e: CancellationException) {
+                dock.say("CAIRN INSTRUMENT CANCELLED.")
+                throw e
+            } catch (e: com.snipsnap.shell.CairnSingRenderedCaptures.Mismatch) {
+                Log.e(TAG, "makeCairnStudy: ${e.sourceId} did not match its pinned capture", e)
+                dock.say(Copy.CAIRN_SING_MISMATCH)
+            } catch (e: Exception) {
+                Log.e(TAG, "makeCairnStudy: rendered capture delivery failed", e)
+                dock.say(Copy.CREATE_FAILED)
+            } finally {
+                if (busy === operation) busy = null
+            }
+        }
+    }
+
+    /** The kept PLUCK picker uses the same source-bound writer as SYNTH's instrument sheet. */
+    fun makeMurmurKeptInstrument(id: String) {
+        if (busy != null) return
+        val cancelled = AtomicBoolean(false)
+        var operation = Busy("MAKING MURMUR PLUCK", cancel = { cancelled.set(true) })
+        busy = operation
+        scope.launch {
+            try {
+                val made = withContext(Dispatchers.IO) {
+                    val worker = currentCoroutineContext()
+                    com.snipsnap.shell.MurmurKeptInstrumentPicker.make(id, shelf.instrumentsDir,
+                        cancelled = { cancelled.get() || !worker.isActive },
+                        progress = { done, total ->
+                            scope.launch(Dispatchers.Main.immediate) {
+                                if (busy === operation) {
+                                    operation = operation.copy(done = done, total = total)
+                                    busy = operation
+                                }
+                            }
+                        })
+                }
+                roomsRevision++
+                dock.say(Copy.instrumentReady(made.name.uppercase(java.util.Locale.ROOT)))
+            } catch (e: CancellationException) {
+                dock.say(Copy.MURMUR_CANCELLED)
+                throw e
+            } catch (e: Exception) {
+                Log.e(TAG, "makeMurmurKeptInstrument: selected delivery failed", e)
+                dock.say(Copy.CREATE_FAILED)
+            } finally {
+                if (busy === operation) busy = null
+            }
+        }
+    }
 
     /**
      * A starter kit, rendered and landed on PADS. The render takes a few
@@ -3376,7 +3465,7 @@ fun App(shelf: KitShelf) {
     fun savePerformance(settings: com.snipsnap.synth.AquariumPerformanceSettings, onResult: (String?) -> Unit) {
         val source = open
         if (source == null || busy != null) {
-            onResult("KIT IS BUSY · TRY SAVE AGAIN")
+            onResult(Copy.KIT_BUSY_SAVE_AGAIN)
             return
         }
         scope.launch {
@@ -3386,7 +3475,7 @@ fun App(shelf: KitShelf) {
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "savePerformance: failed", e)
-                onResult("COULD NOT SAVE PERFORMANCE · TRY AGAIN")
+                onResult(Copy.PERFORMANCE_SAVE_FAILED)
                 return@launch
             }
             val entry = KitShelf.Entry(source.dir, kit)
@@ -4246,7 +4335,7 @@ fun App(shelf: KitShelf) {
                                     }
                                 },
                                 onEmptyTapHint = {
-                                    dock.say(if (pendingSnipAssign != null) "LONG-PRESS TO PLACE THIS SAMPLE" else "LONG-PRESS TO CAPTURE")
+                                    dock.say(if (pendingSnipAssign != null) Copy.LONG_PRESS_PLACE_SAMPLE else Copy.LONG_PRESS_CAPTURE)
                                 },
                                 onNavigateKits = { goToScreen(AppScreen.KITS) },
                                 hasProject = project != null,
@@ -4676,7 +4765,15 @@ fun App(shelf: KitShelf) {
                         )
                         top == Bench.KEYS -> {
                             val inst = openInstrument
-                            if (inst == null) {
+                            val rr = openRoundRobin
+                            if (rr != null) {
+                                MurmurRoundRobinKeysScreen(
+                                    saved = rr,
+                                    shelf = shelf.root,
+                                    backLabel = checkNotNull(nav.backChip),
+                                    onBack = { openRoundRobin = null; nav.closeBench() },
+                                )
+                            } else if (inst == null) {
                                 nav.closeBench()
                             } else {
                                 KeysScreen(
@@ -4724,10 +4821,16 @@ fun App(shelf: KitShelf) {
                         top == Bench.INSTRUMENTS -> InstrumentsBench(
                             instruments = instruments,
                             backLabel = checkNotNull(nav.backChip) { "INSTRUMENTS is a bench, so it has something to go back to" },
-                            onOpen = { openInstrument = it; landOn(AppScreen.KEYS) },
+                            onOpen = { openRoundRobin = null; openInstrument = it; landOn(AppScreen.KEYS) },
                             onBack = { nav.closeBench() },
                             expansions = expansionStore,
                             onToast = { dock.say(it) },
+                            onMakeCairnStudy = ::makeCairnStudy,
+                            cairnStudyEnabled = busy == null,
+                            onMakeMurmurInstrument = ::makeMurmurKeptInstrument,
+                            murmurInstrumentEnabled = busy == null,
+                            roundRobinShelf = shelf.root,
+                            onOpenRoundRobin = { openInstrument = null; openRoundRobin = it; landOn(AppScreen.KEYS) },
                         )
                         // The pad editor benches (PAD SHEET, GRAIN FIELD,
                         // SPLICE, STACK, SPREAD) and SNAP's own panels (LIVE,
@@ -4907,8 +5010,13 @@ private fun BlockedDialog(
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             TapeText(message, TapeType.lcdSmall, scheme.ink.tape, maxLines = 4)
-            if (actionLabel != null) PrimaryAction(label = actionLabel, enabled = true, onClick = onAction)
-            PrimaryAction(label = buttonLabel, enabled = true, onClick = onDismiss)
+            // One primary: the way on when there is one, the dismiss otherwise.
+            if (actionLabel != null) {
+                PrimaryAction(label = actionLabel, enabled = true, onClick = onAction)
+                ActionButton(buttonLabel, scheme, enabled = true, modifier = Modifier.fillMaxWidth(), onClick = onDismiss)
+            } else {
+                PrimaryAction(label = buttonLabel, enabled = true, onClick = onDismiss)
+            }
         }
     }
 }

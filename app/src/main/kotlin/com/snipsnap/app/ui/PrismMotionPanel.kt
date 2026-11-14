@@ -279,7 +279,7 @@ internal fun PrismMotionPanel(
                         modifier = Modifier.weight(1f), accessibilityLabel = "PREVIEW PRISM $kind") { preview(kind) }
                 }
             }
-            if (source == null) TapeText("CHOOSE A SOURCE TO HEAR ITS ORIGINAL.", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
+            if (source == null) TapeText("Choose a source to hear its original.", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             LabButton("RESET", scheme, enabled = true, modifier = Modifier.weight(1f), accessibilityLabel = "RESET PRISM MOTION") {
@@ -295,7 +295,7 @@ internal fun PrismMotionPanel(
         }
         if (studio.sourceBusy) TapeText("LOADING TONE…", TapeType.pixelSmall, scheme.ink2.tape)
         else if (studio.previewing) TapeText("PREPARING PREVIEW…", TapeType.pixelSmall, scheme.ink2.tape)
-        studio.error?.let { TapeText(it, TapeType.pixelSmall, scheme.warn.tape, maxLines = 2) }
+        studio.error?.let { TapeText(it, TapeType.pixelSmall, scheme.warnInk.tape, maxLines = 2) }
     }
     if (pickingSource) PrismSourceDialog(source?.id, scheme, ::selectSource) { pickingSource = false }
 }
@@ -316,7 +316,7 @@ private fun PrismSourceDialog(selectedId: String?, scheme: Scheme, onSelect: (Pr
                         accessibilityLabel = "MOTION SOURCE ${source.title}") { onSelect(source) }
                 }
             }
-            LabButton("CANCEL", scheme, enabled = true, modifier = Modifier.fillMaxWidth(), onClick = onCancel)
+            LabButton("CANCEL", scheme, enabled = true, modifier = Modifier.fillMaxWidth(), tier = ButtonTier.Text, onClick = onCancel)
         }
     }
 }

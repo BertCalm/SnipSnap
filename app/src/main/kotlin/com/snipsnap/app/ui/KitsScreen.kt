@@ -46,6 +46,7 @@ import com.snipsnap.app.PREFS
 import com.snipsnap.kit.KitStore
 import com.snipsnap.loop.Session
 import com.snipsnap.app.theme.BinRedGlow
+import com.snipsnap.app.theme.BinRedOnLcd
 import androidx.compose.ui.platform.LocalContext
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
@@ -498,9 +499,9 @@ fun KitsScreen(
             // the shelf yet, the empty-state panel just below carries the
             // real instruction instead (Copy.EMPTY_SHELF_FOR_ASSIGN).
             if (assigningSnip && kits.isNotEmpty()) {
-                TapeText(Copy.ASSIGN_PICK_HINT, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
+                TapeText(Copy.ASSIGN_PICK_HINT, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
             } else if (breedingFrom != null && kits.size > 1) {
-                TapeText(Copy.BREED_PICK_HINT, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
+                TapeText(Copy.BREED_PICK_HINT, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
             }
 
             if (holding) {
@@ -523,7 +524,7 @@ fun KitsScreen(
                     startingKit = startingKit,
                     onCatchFirst = onCatchFirst,
                     onStarters = { menuOpen = true },
-                    modifier = Modifier.fillMaxWidth().weight(1f),
+                    modifier = Modifier.fillMaxWidth(),
                 )
             } else {
                 LazyColumn(
@@ -542,7 +543,7 @@ fun KitsScreen(
                     // made one per kit before this screen read them.
                     if (!assigningSnip && breedingFrom == null && addingTo == null) {
                         item(key = "projects-header") {
-                            TapeText("PROJECTS · ${projects.size} · OPEN ONE, OR START ONE", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
+                            TapeText("PROJECTS · ${projects.size} · OPEN ONE, OR START ONE", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
                         }
                         items(projects, key = { "project:" + it.dir.name }) { row ->
                             ProjectRow(row, row.name == openProjectName, busy, onOpenProject, onMore = { opsTarget = it })
@@ -562,7 +563,7 @@ fun KitsScreen(
                         }
                         if (expansionList.isNotEmpty()) {
                             item(key = "expansions-header") {
-                                TapeText(Copy.EXPANSIONS_HEADING, TapeType.pixelSmall, scheme.ink2.tape, Modifier.padding(top = 6.dp), maxLines = 1)
+                                TapeText(Copy.EXPANSIONS_HEADING, TapeType.pixelSmall, scheme.ink2.tape, Modifier.padding(top = 6.dp), maxLines = 2)
                             }
                             items(expansionList, key = { "expansion:" + it.id }) { e ->
                                 ExpansionRow(
@@ -579,7 +580,7 @@ fun KitsScreen(
                             }
                         }
                         item(key = "kits-header") {
-                            TapeText("KITS · THE LIBRARY EVERY PROJECT SHARES", TapeType.pixelSmall, scheme.ink2.tape, Modifier.padding(top = 6.dp), maxLines = 1)
+                            TapeText("KITS · THE LIBRARY EVERY PROJECT SHARES", TapeType.pixelSmall, scheme.ink2.tape, Modifier.padding(top = 6.dp), maxLines = 2)
                         }
                     }
                     // A filter that empties the shelf must say so itself: a
@@ -619,28 +620,28 @@ fun KitsScreen(
                     // forgotten - and RENAME is the only place a kit is ever
                     // named by hand (September UAT, finding 17).
                     item(key = "kits-note") {
-                        TapeText(Copy.SHELF_LEGEND, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
+                        TapeText(Copy.SHELF_LEGEND, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
                     }
                     // INSTRUMENTS left for MAKE ▸ INSTRUMENTS (plan §3.6): they are
                     // what MAKE made, and the list is where you find them.
                     // ROOMS: what OUTSIDE measured and KEEP ROOM kept - any pad plays inside one through ROOM, then KEEP.
                     if (rooms.isNotEmpty() || binnedRooms.isNotEmpty()) {
                         item(key = "rooms-header") {
-                            TapeText("ROOMS · RE-AMP AND ROOM MEASURED THEM. ANY PAD PLAYS IN ONE.", TapeType.pixelSmall, scheme.ink2.tape, Modifier.padding(top = 6.dp), maxLines = 1)
+                            TapeText("Rooms · RE-AMP AND ROOM measured them. Any pad plays in one.", TapeType.pixelSmall, scheme.ink2.tape, Modifier.padding(top = 6.dp), maxLines = 2)
                         }
                         items(rooms, key = { "room:" + it.file.name }) { room ->
                             RoomRow(room, busy, onForgetRoom, onShareRoom)
                         }
                         if (rooms.isNotEmpty()) {
                             item(key = "rooms-note") {
-                                TapeText(Copy.ROOMS_LEGEND, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
+                                TapeText(Copy.ROOMS_LEGEND, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
                             }
                         }
                         // The bin's door on the phone: every forgotten room, its days
                         // left, and RESTORE - the same row TAKES + BIN draws for a pad.
                         if (binnedRooms.isNotEmpty()) {
                             item(key = "rooms-bin-header") {
-                                TapeText("IN THE TRASH · RESTORE BEFORE THE DAYS RUN OUT", TapeType.pixelSmall, scheme.ink2.tape, Modifier.padding(top = 6.dp), maxLines = 1)
+                                TapeText("IN THE TRASH · RESTORE BEFORE THE DAYS RUN OUT", TapeType.pixelSmall, scheme.ink2.tape, Modifier.padding(top = 6.dp), maxLines = 2)
                             }
                             items(binnedRooms, key = { "binned:" + it.room.file.name }) { binned ->
                                 BinnedRoomRow(binned, busy) {
@@ -970,7 +971,7 @@ private fun RoomRow(room: Rooms.Room, busy: Boolean, onForget: (Rooms.Room) -> U
                     .width(124.dp)
                     .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                     .raisedBevel(scheme)
-                    .border(2.dp, Brush.linearGradient(listOf(BinRedGlow, BIN_RED_BORDER)), RoundedCornerShape(4.dp))
+                    .border(2.dp, BinRedGlow, RoundedCornerShape(4.dp))
                     // Always clickable, `!busy` forwarded rather than
                     // dropped (accessibility audit finding 12).
                     .tapeClick(label = "FORGET ${room.name.uppercase()}", enabled = !busy) { onForget(room) },
@@ -1040,13 +1041,13 @@ private fun EmptyRoomsBinButton(scheme: Scheme, enabled: Boolean, armed: Boolean
     // Same text the TapeText below shows — it already follows `armed`,
     // so the accessible name follows it too rather than freezing on
     // whichever state happened to be current when null was written.
-    val label = if (armed) "TAP AGAIN TO CONFIRM — NO TAKEBACKS" else "EMPTY THE TRASH NOW — NO TAKEBACKS"
+    val label = if (armed) Copy.EMPTY_TRASH_ARMED else Copy.EMPTY_TRASH_NOW
     Box(
         Modifier
             .fillMaxWidth()
             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
             .background(scheme.lcd.tape, RoundedCornerShape(5.dp))
-            .border(2.dp, BIN_RED_BORDER, RoundedCornerShape(5.dp))
+            .border(2.dp, scheme.binLcd.tape, RoundedCornerShape(5.dp))
             // Always clickable, `enabled` forwarded rather than dropped: a
             // screen reader is told this control is temporarily unavailable
             // instead of it silently vanishing from the tree (accessibility
@@ -1055,16 +1056,11 @@ private fun EmptyRoomsBinButton(scheme: Scheme, enabled: Boolean, armed: Boolean
             .padding(horizontal = 10.dp),
         contentAlignment = Alignment.Center,
     ) {
-        TapeText(
-            // The armed-label swap, copied verbatim from `TakesBinScreen.kt`'s
-            // own `EmptyBinButton` — no `Copy` constant for this text there
-            // either (see that file's own KDoc: a deliberate deviation from
-            // the artboard, which shows no confirm affordance to match).
-            label,
-            TapeType.pixel,
-            if (enabled) BinRedGlow else scheme.ink3.tape,
-            maxLines = 1,
-        )
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            TapeText(label, TapeType.pixel, if (enabled) BinRedOnLcd else scheme.ink3.tape, maxLines = 1)
+            // Said once the button is armed, in a sentence: what the second tap does.
+            if (armed) TapeText(Copy.EMPTY_TRASH_FACT, TapeType.pixelSmall, if (enabled) BinRedOnLcd else scheme.ink3.tape, maxLines = 2)
+        }
     }
 }
 
@@ -1172,13 +1168,13 @@ private fun KitRow(
                         .padding(horizontal = 10.dp),
                     contentAlignment = Alignment.Center,
                 ) {
-                    TapeText("RENAME", TapeType.pixel, if (busy) scheme.ink3.tape else scheme.amber.tape)
+                    TapeText("RENAME", TapeType.pixel, if (busy) scheme.ink3.tape else scheme.accent.tape)
                 }
                 Box(
                     Modifier
                         .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                         .raisedBevel(scheme)
-                        .border(2.dp, Brush.linearGradient(listOf(BinRedGlow, BIN_RED_BORDER)), RoundedCornerShape(4.dp))
+                        .border(2.dp, BinRedGlow, RoundedCornerShape(4.dp))
                         // Always clickable, `!busy` forwarded rather than
                         // dropped (accessibility audit finding 12).
                         .tapeClick(label = "DELETE ${kit.name.uppercase()}", enabled = !busy) { onRequestDelete(entry) }
@@ -1196,7 +1192,7 @@ private fun KitRow(
                             .padding(horizontal = 10.dp),
                         contentAlignment = Alignment.Center,
                     ) {
-                        TapeText(Copy.EXPANSION_DOOR, TapeType.pixel, if (busy) scheme.ink3.tape else scheme.amber.tape)
+                        TapeText(Copy.EXPANSION_DOOR, TapeType.pixel, if (busy) scheme.ink3.tape else scheme.accent.tape)
                     }
                 }
             }
@@ -1262,20 +1258,20 @@ private fun KitDeleteConfirmDialog(onCancel: () -> Unit, onConfirm: () -> Unit) 
                 .padding(14.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            TapeText("DELETE THIS KIT? IT WAITS IN DELETED KITS FOR 30 DAYS.", TapeType.lcdSmall, scheme.ink.tape, maxLines = 3)
+            TapeText("Delete this kit? It waits in deleted kits for 30 days.", TapeType.lcdSmall, scheme.ink.tape, maxLines = 3)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                ActionButton("CANCEL", scheme, enabled = true, modifier = Modifier.weight(1f), onClick = onCancel)
+                ActionButton("CANCEL", scheme, enabled = true, modifier = Modifier.weight(1f), tier = ButtonTier.Text, onClick = onCancel)
                 Box(
                     Modifier
                         .weight(1f)
                         .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                         .background(scheme.lcd.tape, RoundedCornerShape(4.dp))
-                        .border(2.dp, BIN_RED_BORDER, RoundedCornerShape(4.dp))
+                        .border(2.dp, scheme.binLcd.tape, RoundedCornerShape(4.dp))
                         .tapeClick(label = "DELETE", onClick = onConfirm)
                         .padding(horizontal = 10.dp),
                     contentAlignment = Alignment.Center,
                 ) {
-                    TapeText("DELETE", TapeType.pixel, BinRedGlow)
+                    TapeText("DELETE", TapeType.pixel, BinRedOnLcd)
                 }
             }
         }
@@ -1363,14 +1359,14 @@ internal fun KitRenameDialog(
             }
             if (!safe) {
                 TapeText(
-                    "NAMES CAN'T HOLD / \\ : * ? \" < > | OR END IN A DOT/SPACE.",
+                    "Names can't hold / \\ : * ? \" < > | or end in a dot/space.",
                     TapeType.pixelSmall,
                     scheme.ink2.tape,
                     maxLines = 2,
                 )
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                ActionButton("CANCEL", scheme, enabled = true, modifier = Modifier.weight(1f), onClick = onCancel)
+                ActionButton("CANCEL", scheme, enabled = true, modifier = Modifier.weight(1f), tier = ButtonTier.Text, onClick = onCancel)
                 ActionButton("RENAME", scheme, enabled = safe, modifier = Modifier.weight(1f), onClick = { onConfirm(name) })
             }
         }
@@ -1462,9 +1458,10 @@ private fun EmptyShelfPanel(
 }
 
 /**
- * The primary action per the handoff: 52dp, rimmed, dark fill. Disabled it
- * is not the same button dimmed: the accent rim and the dark fill are what
- * say "tap me", so both go, and it draws as a disabled [ActionButton] does
+ * The primary action per the handoff: 52dp, filled with the scheme's accent,
+ * lettered in `onAccent` ([ButtonTier.Primary], at the primary's height).
+ * Disabled it is not the same button dimmed: the fill is what says "tap me",
+ * so it goes, and it draws as a disabled [ActionButton] does
  * (the raised bevel, `ink3` text) at the primary's height.
  *
  * [working] marks the control that started the job in flight: a [Spinner]
@@ -1496,14 +1493,16 @@ fun PrimaryAction(
 ) {
     val scheme = LocalScheme.current
     val ringUp = rememberRingUp(working, ringClock)
-    val rim = Modifier.border(2.dp, scheme.amber.tape, RoundedCornerShape(6.dp))
     Box(
         Modifier
             .fillMaxWidth()
-            .height(Layout.PRIMARY_ACTION_H.dp)
+            .minHeight(Layout.PRIMARY_ACTION_H.dp)
             .then(
                 if (enabled) {
-                    Modifier.background(scheme.lcd.tape, RoundedCornerShape(6.dp)).then(rim)
+                    Modifier
+                        .background(scheme.accent.tape, RoundedCornerShape(6.dp))
+                        // `edge` holds the boundary at 3:1 on the LCD panel too (see ButtonTier.kt).
+                        .border(1.dp, scheme.edge.tape, RoundedCornerShape(6.dp))
                 } else {
                     Modifier.raisedBevel(scheme)
                 },
@@ -1522,10 +1521,10 @@ fun PrimaryAction(
         // 200% font scale is "WRITING — DO NOT EJECT") the next size down,
         // so CATCH YOUR FIRST SOUND ▸ is not cut mid-word.
         val type = if (label.length > 22) TapeType.display else TapeType.displayBig
-        val ink = if (enabled) scheme.lcdInk.tape else scheme.ink3.tape
+        val ink = if (enabled) scheme.onAccent.tape else scheme.ink3.tape
         if (ringUp) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                Spinner(scheme.accent.tape, size = 18.dp)
+                Spinner(scheme.onAccent.tape, size = 18.dp)
                 // Shrinks before it pushes the ring off, so a long label at a
                 // large font scale ellipsizes rather than overflowing.
                 TapeText(label, type, ink, Modifier.weight(1f, fill = false))
@@ -1589,13 +1588,3 @@ private fun ToolsMenu(
         SheetRow(Places.TOOL_DOUBLES, Places.TOOL_DOUBLES_DESC, onDoubles, enabled = canDoubles)
     }
 }
-
-// Duplicated, not hoisted — TakesBinScreen.kt's own BIN_RED_BORDER
-// comment states the house convention explicitly: do it if a clean
-// one-liner, else duplicate with a comment. BIN red is deliberately
-// constant across every scheme so a session-ending action (FORGET → BIN here,
-// EMPTY THE BIN there) reads as "red" regardless of the active scheme.
-// The glow half moved to Schemes.BIN_RED_GLOW / theme.BinRedGlow
-// (accessibility audit finding 5) — a single tuned token, not a duplicated
-// literal.
-private val BIN_RED_BORDER = Color(0xFF6A2020)

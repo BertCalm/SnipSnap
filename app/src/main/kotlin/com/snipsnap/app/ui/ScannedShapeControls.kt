@@ -163,7 +163,7 @@ internal fun ScannedShapeControls(
                 TapeType.pixelSmall, scheme.ink2.tape, maxLines = 3,
             )
         }
-        TapeText("INITIAL SHAPE · ${patch.shape.source.name}", TapeType.pixel, scheme.amber.tape)
+        TapeText("INITIAL SHAPE · ${patch.shape.source.name}", TapeType.pixel, scheme.accent.tape)
         TapeText(patch.shape.label, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
         patch.shape.sample?.let { sample ->
             val mode = if (sample.mode == ScannedChainSampleMode.TONAL_CYCLE) "TONAL CYCLE" else "20 MS IMPRINT"
@@ -192,18 +192,20 @@ internal fun ScannedShapeControls(
         }
         if (busy && source == null) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                TapeText("READING SOURCE…", TapeType.pixelSmall, scheme.amber.tape, Modifier.weight(1f))
-                LabButton("CANCEL", scheme, enabled = true) { sourceJob?.cancel() }
+                TapeText("READING SOURCE…", TapeType.pixelSmall, scheme.accent.tape, Modifier.weight(1f))
+                LabButton("CANCEL", scheme, enabled = true, tier = ButtonTier.Text) { sourceJob?.cancel() }
             }
         }
-        if (source == null) error?.let { TapeText(it, TapeType.pixelSmall, scheme.warn.tape, maxLines = 4) }
+        if (source == null) error?.let { TapeText(it, TapeType.pixelSmall, scheme.warnInk.tape, maxLines = 4) }
         MacroSlider(
-            label = "VELOCITY", value = patch.velocity, fillColor = scheme.amber.tape, scheme = scheme,
+            label = "VELOCITY", value = patch.velocity, fillColor = scheme.accent.tape, scheme = scheme,
+            // VELOCITY is 8 caps in the 13 sp sans, about 60 dp: wider than the default 56 dp column.
+            labelWidth = 72.dp,
             onValueChange = { changePatch(edit.patch.copy(velocity = it.coerceIn(0f, 1f))) },
         )
         MacroSlider(
             label = "LENGTH", value = patch.config.seconds, valueRange = .25f..4f,
-            fillColor = scheme.amber.tape, scheme = scheme,
+            fillColor = scheme.accent.tape, scheme = scheme,
             readout = String.format(Locale.ROOT, "%.2f s", patch.config.seconds),
             onValueChange = { changePatch(edit.patch.copy(config = edit.patch.config.copy(seconds = it.coerceIn(.25f, 4f)))) },
         )
@@ -214,7 +216,7 @@ internal fun ScannedShapeControls(
         }
         MacroSlider(
             label = "ATTACK", value = ScannedChainEditor.attackPosition(patch.config.attackSeconds),
-            fillColor = scheme.amber.tape, scheme = scheme,
+            fillColor = scheme.accent.tape, scheme = scheme,
             readout = scannedTimeReadout(patch.config.attackSeconds), readoutWidth = 66.dp,
             onValueChange = {
                 changePatch(edit.patch.copy(config = edit.patch.config.copy(attackSeconds = ScannedChainEditor.attackSeconds(it))))
@@ -222,7 +224,7 @@ internal fun ScannedShapeControls(
         )
         MacroSlider(
             label = "RELEASE", value = ScannedChainEditor.releasePosition(patch.config.releaseSeconds),
-            fillColor = scheme.amber.tape, scheme = scheme,
+            fillColor = scheme.accent.tape, scheme = scheme,
             readout = scannedTimeReadout(patch.config.releaseSeconds), readoutWidth = 66.dp,
             onValueChange = {
                 changePatch(edit.patch.copy(config = edit.patch.config.copy(releaseSeconds = ScannedChainEditor.releaseSeconds(it))))
@@ -240,12 +242,12 @@ internal fun ScannedShapeControls(
         if (controls.getValue("MOTION") == 0f) {
             TapeText(
                 "Shape frozen: raise MOTION to hear DAMP, BEND and BLOOM change its movement.",
-                TapeType.pixelSmall, scheme.amber.tape, maxLines = 3,
+                TapeType.pixelSmall, scheme.accent.tape, maxLines = 3,
             )
         } else if (controls.getValue("BLOOM") > 0f && patch.config.seconds - patch.config.releaseSeconds < .5f) {
             TapeText(
                 "BLOOM has little time to build. Try a longer LENGTH or shorter RELEASE.",
-                TapeType.pixelSmall, scheme.amber.tape, maxLines = 3,
+                TapeType.pixelSmall, scheme.accent.tape, maxLines = 3,
             )
         }
     }
@@ -322,7 +324,7 @@ private fun ScannedPadDialog(title: String, pads: List<KitPad>, onPick: (KitPad)
                     ) { onPick(pad) }
                 }
             }
-            LabButton("CANCEL", scheme, enabled = true, modifier = Modifier.fillMaxWidth(), onClick = onCancel)
+            LabButton("CANCEL", scheme, enabled = true, modifier = Modifier.fillMaxWidth(), tier = ButtonTier.Text, onClick = onCancel)
         }
     }
 }
@@ -364,9 +366,9 @@ private fun ScannedDrawDialog(initial: FloatArray, onUse: (ScannedChainShape) ->
                 }
             }
             if (!canUse) TapeText("Draw a shape or choose SINE or SAW.", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
-            error?.let { TapeText(it, TapeType.pixelSmall, scheme.warn.tape, maxLines = 3) }
+            error?.let { TapeText(it, TapeType.pixelSmall, scheme.warnInk.tape, maxLines = 3) }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                LabButton("CANCEL", scheme, enabled = true, modifier = Modifier.weight(1f), onClick = onCancel)
+                LabButton("CANCEL", scheme, enabled = true, modifier = Modifier.weight(1f), tier = ButtonTier.Text, onClick = onCancel)
                 LabButton("USE SHAPE", scheme, enabled = canUse, modifier = Modifier.weight(1f)) {
                     try {
                         onUse(ScannedChainShape.drawn(FloatArray(points.size) { (points[it] / 127.5f - 1f) * .35f }))
@@ -410,11 +412,11 @@ private fun ScannedSourceDialog(
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             TapeText("SHAPE FROM A PAD", TapeType.lcdSmall, scheme.ink.tape)
-            TapeText(source.label, TapeType.pixel, scheme.amber.tape, maxLines = 2)
+            TapeText(source.label, TapeType.pixel, scheme.accent.tape, maxLines = 2)
             ScannedShapeCanvas(preview, "SOURCE WAVEFORM", Modifier.fillMaxWidth().height(100.dp),
                 marker = if (source.snip.frameCount == 0) 0f else startFrame.toFloat() / source.snip.frameCount)
             MacroSlider(
-                label = "WINDOW", value = position, fillColor = scheme.amber.tape, scheme = scheme,
+                label = "WINDOW", value = position, fillColor = scheme.accent.tape, scheme = scheme,
                 readout = String.format(Locale.ROOT, "%.3f s", startFrame.toDouble() / source.snip.sampleRate),
                 onValueChange = { if (!busy) position = it.coerceIn(0f, 1f) },
             )
@@ -428,9 +430,9 @@ private fun ScannedSourceDialog(
                 TapeType.pixelSmall, scheme.ink2.tape, maxLines = 5,
             )
             if (source.truncated) TapeText("Showing the first 30 seconds. Trim the source pad to use a later section.", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 3)
-            error?.let { TapeText(it, TapeType.pixelSmall, scheme.warn.tape, maxLines = 5) }
+            error?.let { TapeText(it, TapeType.pixelSmall, scheme.warnInk.tape, maxLines = 5) }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                LabButton("CANCEL", scheme, enabled = !busy, modifier = Modifier.weight(1f), onClick = onCancel)
+                LabButton("CANCEL", scheme, enabled = !busy, modifier = Modifier.weight(1f), tier = ButtonTier.Text, onClick = onCancel)
                 LabButton(if (busy) "READING…" else "USE WINDOW", scheme, enabled = !busy, modifier = Modifier.weight(1f),
                     accessibilityLabel = "USE WINDOW") { onUse(startFrame, mode) }
             }

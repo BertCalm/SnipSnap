@@ -91,9 +91,9 @@ internal fun ObbligatoPerformanceControls(
                 current.copy(releaseSeconds = ObbligatoPadMaker.RELEASE.value(fraction)
                     .coerceIn(ObbligatoPadMaker.RELEASE.lo, ObbligatoPadMaker.RELEASE.hi))
             } }, readout = ObbligatoPadMaker.secondsLabel(patch.releaseSeconds))
-        TapeText("PHRASES CONTINUE WHILE HELD. LIFT TO RELEASE.",
+        TapeText("Phrases continue while held. Lift to release.",
             TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
-        TapeText("SEND AND SPREAD MAKE FINITE PADS. MAKE INSTRUMENT SUSTAINS.",
+        TapeText("Send and spread make finite pads. MAKE INSTRUMENT sustains.",
             TapeType.pixelSmall, scheme.ink2.tape, maxLines = 3)
     } else {
         TapeText("HOLD EXTENDS A FINITE PHRASE", TapeType.pixelSmall, scheme.ink2.tape)
@@ -107,7 +107,7 @@ internal class ObbligatoHeldSpec(private val spec: ObbligatoPadMaker.Spec) : Hel
     override val releaseFraction get() = ObbligatoPadMaker.RELEASE.fraction(spec.releaseSeconds)
     override val knobLabel get() = "RELEASE ${ObbligatoPadMaker.secondsLabel(spec.releaseSeconds)}"
     override val keyRangeLabel get() = "${Scales.nameOf(zoneMidis.first())}–${Scales.nameOf(zoneMidis.last())}"
-    override val instrumentNote get() = "THE OPENING PLAYS ONCE, THEN PHRASES CONTINUE. LIFT A KEY TO RELEASE."
+    override val instrumentNote get() = "The opening plays once, then phrases continue. Lift a key to release."
     override fun renderZone(midi: Int, cancelled: () -> Boolean): List<KeyNote> =
         listOf(ObbligatoPadMaker.renderZone(spec, midi, cancelled))
     override fun preview(cancelled: () -> Boolean): Snip = ObbligatoPadMaker.preview(spec, cancelled)

@@ -1924,13 +1924,13 @@ fun GrooveScreen(
                         Box(
                             Modifier
                                 .fillMaxWidth()
-                                .height(Layout.MIN_HIT_TARGET.dp)
+                                .minHeight(Layout.MIN_HIT_TARGET.dp)
                                 .background(scheme.lcd.tape, RoundedCornerShape(6.dp))
                                 .border(1.dp, scheme.amber.tape, RoundedCornerShape(6.dp))
                                 .let { m -> if (countingIn) m else m.tapeClick(label = "STOP RECORDING") { stopRecording() } },
                             contentAlignment = Alignment.Center,
                         ) {
-                            TapeText(if (countingIn) "COUNTING IN… $countInBeat" else "■ STOP RECORDING", TapeType.pixel, scheme.lcdInk.tape)
+                            TapeText(if (countingIn) "COUNTING IN… $countInBeat" else "■ STOP RECORDING", TapeType.pixel, scheme.lcdInk.tape, maxLines = 2)
                         }
                     } else {
                         // RECORD is the one filled button: the way in that needs
@@ -2109,7 +2109,7 @@ fun GrooveScreen(
                             // Fix 2: the beat count, same as this screen's other three "COUNTING IN…" render sites.
                             if (countingIn) "COUNTING IN… $countInBeat" else Copy.GROOVE_OVERDUBBING,
                             TapeType.pixel,
-                            scheme.amber.tape,
+                            scheme.accent.tape,
                         )
                     }
                     // WINDOW_GRID_ROWS, not BankRow — see the from-scratch
@@ -2400,7 +2400,7 @@ private fun ProgramSelector(
     modifier: Modifier = Modifier,
 ) {
     Column(modifier, verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        TapeText("PROGRAM · $sub", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
+        TapeText("PROGRAM · $sub", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             for (i in 0 until count) {
                 SegmentButton(
@@ -2487,7 +2487,7 @@ private fun FeelRow(
                     else -> "FEEL · LOOSE $feel% · #$seed"
                 },
                 TapeType.pixel,
-                scheme.amber.tape,
+                scheme.accent.tape,
             )
             // "RIDES A · C · D" until J18. The feel is applied to the
             // take and every program derived from it inherits it —
@@ -2567,7 +2567,7 @@ private fun ColumnScope.BeatShape(
     ) {
         SwingStepper("−", scheme, description = "SWING DOWN") { onSwingChange((swingPercent - GROOVE_SWING_STEP).coerceAtLeast(GROOVE_SWING_MIN)) }
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            TapeText("SWING $swingPercent%", TapeType.pixel, scheme.amber.tape)
+            TapeText("SWING $swingPercent%", TapeType.pixel, scheme.accent.tape)
             TapeText("RIDES SWING", TapeType.pixelSmall, scheme.ink2.tape)
         }
         SwingStepper("+", scheme, description = "SWING UP") { onSwingChange((swingPercent + GROOVE_SWING_STEP).coerceAtMost(GROOVE_SWING_MAX)) }
@@ -2649,7 +2649,7 @@ private fun ColumnScope.BeatSendOut(
         )
     }
     TapeText(
-        "SAME BREAK, FOUR FEELS — ALL FOUR DUB TO THE MPC'S CLIP LIST.",
+        "Same break, four feels — all four dub to the MPC's clip list.",
         TapeType.pixelSmall,
         scheme.ink2.tape,
         Modifier.fillMaxWidth(),
@@ -2674,7 +2674,7 @@ private fun GrooveActionButton(
         modifier
             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
             .background(scheme.field.tape, RoundedCornerShape(6.dp))
-            .border(1.dp, if (accent) scheme.accent.tape else scheme.grayEdge.tape, RoundedCornerShape(6.dp))
+            .border(1.dp, if (accent) scheme.accent.tape else scheme.edge.tape, RoundedCornerShape(6.dp))
             // Always clickable, `enabled` forwarded rather than dropped: a
             // screen reader is told this control is temporarily unavailable
             // instead of it silently vanishing from the tree (accessibility
@@ -3040,7 +3040,7 @@ private fun StepEditorOverlay(
                 }
                 Box(
                     Modifier
-                        .height(Layout.MIN_HIT_TARGET.dp)
+                        .minHeight(Layout.MIN_HIT_TARGET.dp)
                         .border(1.dp, scheme.amber.tape, RoundedCornerShape(4.dp))
                         .tapeClick(label = "DONE", onClick = onDone)
                         .padding(horizontal = 12.dp),
@@ -3069,7 +3069,7 @@ private fun StepEditorOverlay(
                             .tapeClick(label = "SELECT BAR ${bar + 1}") { onBarSelect(bar) },
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
-                        TapeText("BAR ${bar + 1}", TapeType.pixelSmall, if (selected) scheme.lcd.tape else scheme.ink2.tape)
+                        TapeText("BAR ${bar + 1}", TapeType.pixelSmall, if (selected) scheme.ink.tape else scheme.ink2.tape)
                         TapeText(if (selected) "SELECTED" else "", TapeType.pixelSmall, scheme.ink2.tape)
                     }
                 }
@@ -3180,7 +3180,7 @@ private fun BeatHeader(
     onTempo: ((Float) -> Unit)?,
 ) {
     Box(
-        Modifier.fillMaxWidth().height(Layout.LCD_HEADER_H.dp).lcdPanel(scheme).padding(horizontal = 12.dp),
+        Modifier.fillMaxWidth().minHeight(Layout.LCD_HEADER_H.dp).lcdPanel(scheme).padding(horizontal = 12.dp),
         contentAlignment = Alignment.CenterStart,
     ) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {

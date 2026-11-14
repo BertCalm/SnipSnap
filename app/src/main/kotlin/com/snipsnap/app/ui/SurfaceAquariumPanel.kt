@@ -23,7 +23,7 @@ internal fun SurfaceAquariumPanel(
 ) {
     Column(Modifier.fillMaxWidth().testTag("surface-aquarium-panel"), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         TapeText("AQUARIUM · KIT", TapeType.lcdHeader, scheme.ink.tape)
-        TapeText(com.snipsnap.shell.Copy.AQUARIUM_LINE, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
+        TapeText(com.snipsnap.shell.Copy.AQUARIUM_LINE, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             ActionButton(if (optedIn) "KIT FX ON" else "USE KIT FX", scheme,
                 enabled = ready && !busy && (route.warning == null || optedIn), lit = optedIn,
@@ -37,15 +37,15 @@ internal fun SurfaceAquariumPanel(
             !ready -> "CHOOSE A KIT · WAIT FOR ITS SURFACE SETTINGS"
             !streamUp -> "NO STREAM"
             faulted -> "AQUARIUM FAULT · RESET TAIL OR REOPEN SURFACE"
-            pending -> "WAITING TO QUEUE SETTINGS…"
+            pending -> "Waiting to queue settings…"
             !optedIn -> "KIT FX OFF"
             !route.settings.enabled -> "DRY · KIT PERFORMANCE IS BYPASSED"
             route.settings.settings.isBypass -> "DRY · ALL SIX EFFECT MIXES ARE ZERO"
             route.settings.outputGain == 0f -> "WET MIX MUTED"
             else -> "STEREO KIT FX LIVE"
-        }, TapeType.pixelSmall, if (faulted) scheme.warn.tape else scheme.ink.tape,
+        }, TapeType.pixelSmall, if (faulted) scheme.warnInk.tape else scheme.ink.tape,
             Modifier.testTag("surface-aquarium-state"), maxLines = Int.MAX_VALUE)
-        route.warning?.let { TapeText(it, TapeType.pixelSmall, scheme.warn.tape, maxLines = Int.MAX_VALUE) }
+        route.warning?.let { TapeText(it, TapeType.pixelSmall, scheme.warnInk.tape, maxLines = Int.MAX_VALUE) }
         TapeText("Saved for this kit. Uses KIT → PERFORMANCE settings on SURFACE’s own stereo bus. PRINT includes FX. Playing the print through KIT FX applies them again.",
             TapeType.pixelSmall, scheme.ink2.tape, maxLines = Int.MAX_VALUE)
         if (optedIn) TapeText("PROTECTION · $limitedFrames FRAMES THIS STREAM", TapeType.pixelSmall, scheme.ink2.tape)

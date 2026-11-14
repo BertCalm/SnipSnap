@@ -73,21 +73,43 @@ M0's exit test was: browse kits on a phone, tap pads, hear WAVs, flip
 schemes in Tape Properties. The player for that test was `SoundPool`
 (`PadPlayer`), since deleted. Every screen that makes a sound goes
 through `PadEngine`. PLAY's exit test passed on a phone on 2026-09-08
-(`docs/BENCH.md` A1). The FRESH TAPE menu (109 starters including HALOBAR, HALOBAR SIX STUDY, EROSION, NACRE, CONFLUENCE VOICES, ACCORD, STRIKE FX, CIRCUIT,
-THAW, SCOUR, NIMBUS, UNDERTOW, CISTERN, UPRIGHT BASS, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, ORIGAMI, FILAMENT, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, LATTICE, FLOCK, OVERLAP, OHM, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, MURMUR SELECTED, SCANNED CHAIN, TREFOIL, TRIO, OSPREY, OSPREY CURATED, OPENSKY, VENT, CAUSTIC, TIDAL, CHAMBER, KEEL, LIBRATION, MERIDIAN, RIME, RIME COMPLETE, OTIS, OBBLIGATO, WICK, CHORD STABS, CHORD STABS DORIAN, CHORD STABS MIXOLYDIAN, CHORD STABS BORROWED, VELOUR, VELOUR BLOOM, FIRED BRONZE, COSMIC BREAKS, TRIAD WAREHOUSE TECHNO, TRIAD SUBMERGED HOUSE, TRIAD FRACTURE MINIMAL, BACKWASH SOUL, BACKWASH PSYCH, SPORE JUNGLE, SPORE DUB, SPORE ELECTRO, GATECRASH STONE ROOM, GATECRASH MACHINE POP, GATECRASH ELECTRO FUNK, CYPHER TRAP, CYPHER DRILL, CYPHER BACKROOM, CYPHER LOWRIDER, CYPHER DUST, CYPHER FLINT, BREAKER, MIRRORBALL PHILLY STRINGS, MIRRORBALL LOFT PARTY, MIRRORBALL MUNICH MACHINE, SOOT, SOOT DRUMLESS, SOOT BASEMENT DUB, SOOT BRUSHED NOIR and SOOT WAREHOUSE INDUSTRIAL,
+(`docs/BENCH.md` A1). The FRESH TAPE menu (125 starters including MERIDIAN MATERIALS, MERIDIAN SIX, TEMPEST, TEMPEST TUNED, TEMPEST CIRCUIT, TEMPEST FOUNDRY, TEMPEST STEP, SPLAY POPULATIONS, OSTERIA, OSTERIA SIX VOICES, HALOBAR, HALOBAR SIX STUDY, EROSION, NACRE, CONFLUENCE VOICES, ACCORD, STRIKE FX, CIRCUIT,
+THAW, SCOUR, NIMBUS, UNDERTOW, CISTERN, UPRIGHT BASS, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, ORIGAMI, FILAMENT, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, LATTICE, FLOCK, OVERLAP, OHM, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, MURMUR SELECTED, MURMUR KEPT, SCANNED CHAIN, TREFOIL, TRIO, OSPREY, OSPREY CURATED, OPENSKY, VENT, CAUSTIC, TIDAL, CHAMBER, KEEL, LIBRATION, MERIDIAN, RIME, RIME COMPLETE, OTIS, OBBLIGATO, WICK, CHORD STABS, CHORD STABS DORIAN, CHORD STABS MIXOLYDIAN, CHORD STABS BORROWED, VELOUR CLOSE, VELOUR, VELOUR BLOOM, FIRED BRONZE, COSMIC BREAKS, TRIAD WAREHOUSE TECHNO, TRIAD SUBMERGED HOUSE, TRIAD FRACTURE MINIMAL, BACKWASH SOUL, BACKWASH PSYCH, SPORE JUNGLE, SPORE DUB, SPORE ELECTRO, GATECRASH STONE ROOM, GATECRASH MACHINE POP, GATECRASH ELECTRO FUNK, CYPHER TRAP, CYPHER DRILL, CYPHER BACKROOM, CYPHER LOWRIDER, CYPHER DUST, CYPHER FLINT, BREAKER, BREAKER DUB TANK, BREAKER TRIP HOP, MIRRORBALL PHILLY STRINGS, MIRRORBALL LOFT PARTY, MIRRORBALL MUNICH MACHINE, SOOT, SOOT DRUMLESS, SOOT BASEMENT DUB, SOOT BRUSHED NOIR and SOOT WAREHOUSE INDUSTRIAL, SCUFF DETROIT, SCUFF FLINT,
 from `StarterKits`, rendered by
 the `:synth` builders on-device, including fixed sample banks) makes the shelf useful before a capture
 exists. The ordered hardware list is `docs/BENCH.md`; the notes below
 are the per-feature detail.
 
-The SYNTH source picker has 81 engines: LATTICE, ACCORD, THUMP, SCANNED CHAIN, SKIN, ONSET,
+The SYNTH source picker has 85 engines: LATTICE, ACCORD, THUMP, SCANNED CHAIN, SKIN, ONSET,
 TINES, VELVET, VOX, PLUCK, ORPHICA, TONEWHEEL, OTIS, REGISTERS, FATHOM, RESIN, TIDE, GLINT,
 SIREN, FORK, HALOBAR, FLOTILLA, AEROSTAT, TREMOR, BALLAST, CISTERN, CIRCUIT, OBBLIGATO, ALLOY,
 THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM,
 CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS,
 MURMUR, OSPREY, OPENSKY, OVERLAP, OVEN, FLOCK, VENT, CREASE, TRIO, NACRE, ORIGAMI, TREFOIL, OHM,
 MERCURY, CAUSTIC, FILAMENT, APSIS, TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME, BORE, ARCO,
-SCOUR, KEEL, CHITIN, WICK, EROSION, RIVET, FIRED BRONZE and BACKWASH.
+SCOUR, KEEL, CHITIN, WICK, EROSION, RIVET, FIRED BRONZE, BACKWASH, SOOT, TEMPEST, SPLAY and OSTERIA.
+
+TEMPEST exposes six accepted finite drum voices (KICK, METAL, SNARE, CLAP, TOM and HAT)
+and their 22 presets. Its 1.20-second samples offer neither HOLD nor MAKE INSTRUMENT.
+New KICK and METAL recipes save model 2 and the other voices model 3; recalled model-1
+recipes keep their renderer through edits, navigation, RANDOMISE and SAVE. FRESH TAPE →
+TEMPEST is the sixteen-pad drum kit with choking hats, and TEMPEST TUNED keeps the
+original E minor pentatonic kicks and metal colors. TEMPEST CIRCUIT, TEMPEST FOUNDRY and TEMPEST STEP
+are electro, industrial and UK garage kits built from the same accepted voices, kept by the owner on 2026-11-14.
+
+SPLAY exposes one finite TONGUE voice and its five accepted population settings.
+Its original model, root, touch and seed survive editing and navigation; positive
+HOLD is not offered. SPLAY POPULATIONS supplies five native finite pads, retaining
+the source recipes. MAKE INSTRUMENT builds finite keys with three gain-only touch
+levels and no loop. See [delivery scope](../docs/SPLAY_FINITE_DELIVERY.md).
+
+OSTERIA shows its six accepted voices (NOTE, the saved QUARTET, then BASS, PLUCK, REED,
+PAD and BOWED) and their 13 presets. ROOT, VELOCITY, ATTACK and RELEASE edit the complete
+saved performance; HOLD lengthens a finite note up to eight seconds and is not a loop.
+PLUCK switches between SINGLE NOTE and a saved STRUM (MINOR or MAJOR, DOWN or UP, a
+10–240 ms sweep). MAKE INSTRUMENT renders finite keys, C2–C6 at thirteen roots with
+three touch layers and the saved envelope, so its sheet has no RELEASE; a STRUM is
+not offered as keys. Model-1 phrase recipes stay readable and keep their articulation.
 
 RIVET supplies six industrial drum voices and sixteen accepted factory sounds.
 TUNE, STRIKE, METAL, DRIVE, SIZE and WALLS shape each finite hit; VELOCITY
@@ -106,8 +128,10 @@ macro edits and SEND TO PAD. Warm wire is the new RATTLE default; Hollow reed
 and Rubbed glass are saved alternatives. Older saved RATTLE bodies remain
 reproducible. HOLD's top step previews a genuine repeating cycle; a normal
 kit pad plays its buffer. FRESH TAPE → WICK supplies the dry named sixteen-pad
-kit with all three RATTLE bodies at C4. Physical phone timing and MPC loading
-remain separate acceptance checks.
+kit with all three RATTLE bodies at C4. MAKE INSTRUMENT turns a finite recipe
+with nonzero velocity into keys: native roots every minor third from C1 to C6,
+three touch layers, no loop. HOLD-loop recipes explain why it is unavailable.
+Physical phone timing and MPC loading remain separate acceptance checks.
 
 OBBLIGATO offers PHRASE and HELD playback. New phrases render native C3–C6;
 older saved finite recipes keep their original register and sound. HELD keeps
@@ -122,9 +146,10 @@ CHITIN provides SHELL bass and WING lead voices, with six candidate presets each
 HOLD extends a finite note; its maximum reads LONG NOTE. It does not offer
 seamless instrument sustain.
 
-MERIDIAN provides SWEEP, CLACK, CHIME and RASP, fourteen saved factory presets
-and seven macros. The original eight SWEEP recipes retain model 2; each new
-material voice adds a finite/held pair using model 3. ROOT
+MERIDIAN provides SWEEP, CLACK, CHIME, RASP, DRAW and LIFT, 18 saved factory presets
+and seven macros. The original eight SWEEP recipes retain model 2; each material
+voice adds a finite/held pair using model 3; DRAW and LIFT add two finite recipes
+each on model 4. ROOT
 (MIDI 36–96) and native VELOCITY preserve the complete loaded model and noise
 context; TUNE transposes relative to ROOT, with .5 as its center. Model 1 stays
 finite even at HOLD 1. SWEEP still defaults to model 2; the added voices default
@@ -133,13 +158,16 @@ Its SYNTH preview is a bounded short capture, as the caption states. SEND TO PAD
 and SPREAD always deliver finite TONAL one-shots with the authored root. Held
 captures save a terminal fade of at least 20 ms; reopened recipes retain the
 complete rack, board and pedal placement. MAKE INSTRUMENT accepts supported
-held recipes from all four voices and samples thirteen native roots, MIDI 36–72 in minor
-thirds, at three physical velocities (.30, .65, 1.0). The phone/MPC packages keep
+held recipes from every voice and samples thirteen native roots, MIDI 36–72 in minor
+thirds, at three physical velocities (.30, .65, 1.0). A finite recipe gets finite
+keys instead: minor thirds across MIDI 36–96 plus its own root, three touch layers
+and its own envelope, with no RELEASE on the sheet. The phone/MPC packages keep
 the real second-cycle loops and note-off release, including explicit NoteOn
 playback in the MPC 2 program. Neighboring keys transpose by at most one semitone,
 which also changes the sampled swing cadence. FRESH TAPE → MERIDIAN retains the
 existing sixteen-pad bank and its authored roots without assigning a global
-kit key. Physical phone timing, listening and MPC loading remain separate checks.
+kit key. MERIDIAN MATERIALS and MERIDIAN SIX are separate finite banks with three
+native touches. Physical phone timing, listening and MPC loading remain separate checks.
 See [MERIDIAN](../docs/MERIDIAN.md) for the workflow and opt-in Android benchmark.
 
 CHAMBER starts new HYBRID/AQUARIUM sounds with the wider, register-aware

@@ -86,5 +86,19 @@ scipy and numba. See [`../docs/ETCH.md`](../docs/ETCH.md).
 A dry Michigan drum kit (ten voices) and the chain that makes it (GRIT, LOCKER, BARK, SLAM),
 as numbers and WAVs before any Kotlin. `python3 gen_audition.py OUT && python3 build_page.py OUT`
 renders 155 peak-matched clips with their measurements and writes the audition page, including a
-round-0 against round-0b section built from the round-0 model read out of git. Needs
+round-0 against round-0b section built from the round-0 model read out of git. `compare_kotlin.py KOTLIN OUT`
+measures the Kotlin engine's clips (`./gradlew :synth:generateScuffAudition`) against the Python ones, aligned
+by cross-correlation, and `build_page.py` then puts the pairs at the top of the page. With the shell generator's pack
+(`./gradlew :shell:generateScuffKits`) copied in under `OUT/shelf/`, the page also carries the kit on the shelf. Needs
 numpy and scipy. See [`../docs/SCUFF.md`](../docs/SCUFF.md).
+
+## clutter/ — CLUTTER round-0c audition (Python harness)
+
+A found-sound drum engine of 22 modelled household objects, each with loose parts that only move above a
+strike threshold, and five sixteen-pad kits from them (`kits.py`: the CLUTTER kit and four genre kits),
+as numbers and WAVs before any Kotlin. `python3 gen_audition.py OUT && python3 build_page.py OUT` renders
+every pad of every kit at three velocity zones and four takes (one twelve-slot WAV per pad, which the
+page's pad grid slices), each kit's groove, the CLUTTER kit's velocity ladders and takes, bank B, and every
+control on every object, with their measurements. `compare_kotlin.py KOTLIN_DIR` measures the Kotlin port
+(`./gradlew :synth:generateClutterAudition`) against these renders object by object. Needs numpy and scipy.
+See [`../docs/CLUTTER.md`](../docs/CLUTTER.md).

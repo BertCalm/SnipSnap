@@ -20,7 +20,7 @@ object StarterShelf {
             Copy.STARTER_HEADING_START_HERE,
             listOf("blank", "factory", "velocity", "lucky-dip", "lucky-dip-ab", "strike-fx", "chip", "vent"),
         ),
-        Group(Copy.STARTER_HEADING_BASS, listOf("keel", "upright", "contour", "ballast", "tangle")),
+        Group(Copy.STARTER_HEADING_BASS, listOf("tempest-tuned", "keel", "upright", "contour", "ballast", "tangle")),
         Group(
             Copy.STARTER_HEADING_KEYS,
             listOf(
@@ -41,19 +41,19 @@ object StarterShelf {
         ),
         Group(
             Copy.STARTER_HEADING_VOICES,
-            listOf(StarterKits.CONFLUENCE_ID, StarterKits.CONFLUENCE_VOICES_ID, "murmur", "murmur-selected"),
+            listOf(StarterKits.CONFLUENCE_ID, StarterKits.CONFLUENCE_VOICES_ID, "murmur", "murmur-selected", "murmur-kept"),
         ),
         Group(
             Copy.STARTER_HEADING_METAL,
             listOf(
-                "libration", "meridian", "accord", "thaw", "scour", "nimbus", "suture",
-                "tessera", "pitchwheel", "chamber", "alloy", "caustic", "cistern", "filament", "erosion",
+                "libration", "meridian", "meridian-materials", "meridian-six", "accord", "thaw", "scour", "nimbus", "suture",
+                "tessera", "pitchwheel", "chamber", "alloy", "caustic", "cistern", "filament", "erosion", SplayDelivery.STARTER_ID,
             ),
         ),
-        Group(Copy.STARTER_HEADING_SKINS, listOf("skin", "tremor", "revel", "triad-techno", "triad-house", "triad-minimal", "rivet-workshop", "rivet-factory", "rivet-warehouse", "velour", "velour-bloom", "backwash-soul", "backwash-psych", "fired-bronze", "cosmic-breaks", "cosmic-jungle", "cosmic-dubstep", "spore-jungle", "spore-dub", "spore-electro", "gatecrash-stone", "gatecrash-machine", "gatecrash-electro", "cypher-trap", "cypher-drill", "cypher-backroom", "cypher-lowrider", "cypher-dust", "cypher-flint", "breaker", "mirrorball-philly", "mirrorball-loft", "mirrorball-munich", "soot", "soot-drumless", "soot-dub", "soot-noir", "soot-industrial")),
+        Group(Copy.STARTER_HEADING_SKINS, listOf("skin", "tremor", "revel", "triad-techno", "triad-house", "triad-minimal", "rivet-workshop", "rivet-factory", "rivet-warehouse", "velour-close", "velour", "velour-bloom", "backwash-soul", "backwash-psych", "fired-bronze", "cosmic-breaks", "cosmic-jungle", "cosmic-dubstep", "spore-jungle", "spore-dub", "spore-electro", "gatecrash-stone", "gatecrash-machine", "gatecrash-electro", "cypher-trap", "cypher-drill", "cypher-backroom", "cypher-lowrider", "cypher-dust", "cypher-flint", "breaker", "breaker-dub", "breaker-triphop", "mirrorball-philly", "mirrorball-loft", "mirrorball-munich", "soot", "soot-drumless", "soot-dub", "soot-noir", "soot-industrial", "scuff-detroit", "scuff-flint", "tempest", "tempest-circuit", "tempest-foundry", "tempest-step")),
         Group(
             Copy.STARTER_HEADING_MOVING,
-            listOf("cloud", "osprey", "osprey-curated", "skitter", "flock", "relay", "wick"),
+            listOf("cloud", "osprey", "osprey-curated", "skitter", "flock", "relay", "wick", "osteria", "osteria-six-voice"),
         ),
     )
 

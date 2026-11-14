@@ -273,8 +273,8 @@ class RushBoardIntegrationTest {
             assertEquals(.7f, plan.amount)
             val done = RecipeReplay.apply(m, slot, recipe, "DESTINATION $slot")
             assertEquals(BoardType.RUSH, BoardSheet.read(done.pad.recipe)?.type)
-            assertTrue("RUSH" in done.toast)
-            assertTrue("ORIGINAL KEPT" in done.toast)
+            assertTrue(done.toast.contains("RUSH", ignoreCase = true))
+            assertTrue(done.toast.contains("ORIGINAL KEPT", ignoreCase = true))
             val expected = BoardRecipe(BoardType.RUSH, .7f).process(WavReader.read(dry.getValue(slot)))
             assertContentEquals(encoded(expected), File(m.kitDir, done.pad.sampleFile).readBytes())
             val removed = BoardSheet.remove(m, slot)
@@ -356,7 +356,7 @@ class RushBoardIntegrationTest {
             for ((message, action) in refusals) {
                 val error = assertFailsWith<IllegalArgumentException> { action() }
                 assertEquals(message, error.message)
-                assertTrue("RUSH" in message)
+                assertTrue(message.contains("RUSH", ignoreCase = true))
                 assertEquals(kit, m.kit)
                 assertEquals(before, files(m.kitDir), "a refused edit must leave every audio, source and undo file unchanged")
                 assertTrue(BoardSheet.canUndo(m, 1))

@@ -1,0 +1,212 @@
+{
+  "0-CLOSED CIRCUIT": {
+    "recipe_sha256": "152d2f7ca45b9e7652d12808e0976bd6a9ba02988d6bfacd992cb02491a27062",
+    "pcm_sha256": "a10f9159f79927babdc1a591b13ef319f18f9bc3c165963946ca881847498b0f",
+    "predecessor_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "1-ROUND HUM": {
+    "recipe_sha256": "39c75ddea981df2837042a4c9af567c7f9dac94c6cdd15a579d5c43de0a4505b",
+    "pcm_sha256": "ae87c6dbfa92bb53a5572b1cd709ca8d343396d1462889e2fb816060b2afac61",
+    "predecessor_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "2-TINE WHISPER": {
+    "recipe_sha256": "7f7123a04034af25271e681e31bfbe331201a487ea827fb7a08b676fc175f8a9",
+    "pcm_sha256": "a292848e106e3831dea438919e1639ff0741cd451e9332ac984e1e7b18a5b47d",
+    "predecessor_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "3-DUST VOWEL": {
+    "recipe_sha256": "f01f9f87f073d3096df1518504c13cbc1c86c41fc22a9a8ce1f64414cda1f5ef",
+    "pcm_sha256": "98ea3c8bc2b3be123a615cfb8267faa379001a12ebb45fb3b45d6863f397900f",
+    "predecessor_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "4-SHORT ANSWER": {
+    "recipe_sha256": "2f2e97b1cb8a3c3417fff00ecf503ab712ea49a1899b73c466268f73e126fafc",
+    "pcm_sha256": "be5b5f697f9389ef1804792ab892f19907a4066b24e8703ceca38fb65ee91078",
+    "predecessor_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "5-POCKET VOICE": {
+    "recipe_sha256": "9949d7264db9867eef7a0682c72cf888171d10625af68f2f60517e615e0e5fba",
+    "pcm_sha256": "8219ff736155148923b0d973a162baaa30ac75adb13a31c6aa733a4d60d16ec2",
+    "predecessor_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "6-OPEN THROAT": {
+    "recipe_sha256": "7f42fd691485ac901e1769d739db73fc498c3cf774bce174adc10c082aaf105f",
+    "pcm_sha256": "31e9a333a53db93e58916c6cb264c45e728f889837e05eced35b09c1edfb24ff",
+    "predecessor_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "7-NARROW CALL": {
+    "recipe_sha256": "591c002dddfc48158e0f47da5776349d1368cc4410c3dce028c3aa8aba60f4a4",
+    "pcm_sha256": "55afb5e4b27e73a9912daeebc19445885bc3eb99ba18c1421d8b413b3dda07c1",
+    "predecessor_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "8-SMALL CHOIR": {
+    "recipe_sha256": "61e31806a77a6d5d38089e77a503d469878f9fd0b1ac642d7d7e752c26e51156",
+    "pcm_sha256": "06b7ad1ac8e16f8ad16882e5ec645a14e361e0a05c8623949abb5effabc846b6",
+    "predecessor_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "9-HELD HUM": {
+    "recipe_sha256": "a95a2218f0dcf181b5ca2ae7d9ee39a57851fcf56cddfc0e00ef850b6fbe14a5",
+    "pcm_sha256": "98d957dcfddc6e16e8b78c56dd76e3e07eb3f723a1597274bed059ad231ffdb6",
+    "predecessor_sha256": "10e6a64871bd88604c25661bade53f6139e336ae2c86305d904599ed20f64c81"
+  },
+  "10-COPPER HUM": {
+    "recipe_sha256": "4a1ccc894900b82d30c408a880a9ecf5e9aaf07376bf8b85beb4c61b58cca75e",
+    "pcm_sha256": "43e108e545e8171fcce058348c82d75f97ecb264590502888beafc7696174f26",
+    "predecessor_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "11-GLASS MOUTH": {
+    "recipe_sha256": "9b326ecf7b23cee2a2cb81851b8e745511ecfd9a859fc5b06aa6c8852f988cbd",
+    "pcm_sha256": "f4b717ffa577394a850cd09d6b2574b4fa6cc9322067d2cfe96eaf155b9067c8",
+    "predecessor_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "12-STILL CURRENT": {
+    "recipe_sha256": "d72e229bef5e2f8a0e24e4c684d0b56afe63e164e570a04df92859874a9f6312",
+    "pcm_sha256": "e7d898c7788bbe5f9715e27a70ea77198396e6a2d9d82f965a96431f920b0315",
+    "predecessor_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "13-TALKBACK": {
+    "recipe_sha256": "124c7bc27896847f9bd0390904239e75687b629676daec2c0d45a2cc8cc5d544",
+    "pcm_sha256": "d4fae99c5b477dd2cb08aed867018cc43fb2e2a6bbaf91f27b7841579dd2df08",
+    "predecessor_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "14-CHEST VOICE": {
+    "recipe_sha256": "40134205778aeb46037bdd280d540c53a333264e64b41b878e02e37339d5d846",
+    "pcm_sha256": "15e6ebceedb53b8ea4835716cf139fd0d03372166337f3499be525015e325f73",
+    "predecessor_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "15-WIRE THROAT": {
+    "recipe_sha256": "198b1b9afb913382b59e9c988d9ccc7dc49622d11534505468f755258dd9bd7f",
+    "pcm_sha256": "626c2c910853f2d33d30d9eb62968fa32a384daa755068eca0894a83a672f170",
+    "predecessor_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "16-UNDERCURRENT": {
+    "recipe_sha256": "2aebbd93050846b41b567693c65e282857aedd30ab83780494f0636b98b796d0",
+    "pcm_sha256": "7158f67489ac477e86e7a981aa0971f67c6c8c523100279996c042d9760789b3",
+    "predecessor_sha256": "3ca9a688b0c3f58cfb1b62d1bad8d42f0bf571c8030a2f20323fbebfde2d2eef"
+  },
+  "17-DRY SYLLABLE": {
+    "recipe_sha256": "46b9f8de195a66b6627bb4bed2534d662f855e837fcfae7c11b94b5d5652d449",
+    "pcm_sha256": "94702406d60939744c4eee284cdf357c50e20fa2c0904e3167a5f13e9a885242",
+    "predecessor_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "18-STILL TINE": {
+    "recipe_sha256": "74f21eb32e1108b0200c221fa87c4863ff5ec52fdad366ba30b1caa2c27dacba",
+    "pcm_sha256": "b6ece793d249a7390aec2d7308a68b59d2c08dba43370196f9dce46d5dee1d1b",
+    "predecessor_sha256": "ac708379fcd8859498ba64438926c822afb5ed53fd8900e25dd5f0b017136792"
+  },
+  "19-FELT REPLY": {
+    "recipe_sha256": "89f748087c18f9c1d50f226cb17cf50a57968405962d141290f93337fdd60882",
+    "pcm_sha256": "a975cb1d4e9cd1211516c9bef83beeb41674e209dbddf08c3cf802841d6afa05",
+    "predecessor_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "20-BONE CLICK": {
+    "recipe_sha256": "64adfa771539a88e653d0942fd6ae3c384f605193940c0783ecf98258512f305",
+    "pcm_sha256": "e7c82bbe5be8e9e53e79312bfd6b1061b5cb6267a94b284deda693be48c5b56e",
+    "predecessor_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "21-OPEN STRING": {
+    "recipe_sha256": "d59c0212bd1d46683a32aa7ba52dee668dcb6613b8e8d7f7cdba323b6c6ce1ec",
+    "pcm_sha256": "9b36f7ac45b7aa3aa3db2938db8f6adba00a872bbbfa4eb2021ab0dd47554181",
+    "predecessor_sha256": "dabb05d41ec96f1a9a4500a05b46c5c93d36bc9d3972eea19d197c362a72d389"
+  },
+  "22-REED LINE": {
+    "recipe_sha256": "fc86c20127d6fc00dd6d1645aaa9758c5d379cf244608626c83ca4a088c8ec09",
+    "pcm_sha256": "8f518c52b8ab7dad8aaf3c70b4236893953eb9aa375c587fcfb9bb76f9e217e5",
+    "predecessor_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "23-SOFT PALATE": {
+    "recipe_sha256": "64e5e3ca84313f66317dc844f66d50fe87757073892c9f77ccf5759be928abf6",
+    "pcm_sha256": "98cc1cfb23a2b450b06773eb0882cad94396c965793b6aadac6fa9818980f914",
+    "predecessor_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "24-VOWEL RUN": {
+    "recipe_sha256": "39fece45cc939b2872c92aa558d348d3f247bc6608a336db56a6828e28164dfb",
+    "pcm_sha256": "0cc1a8e8ef88f2f46bd9ec8009193a7795e2c75f31cd9519d902e73ae7c6c9fb",
+    "predecessor_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "25-LONG WORD": {
+    "recipe_sha256": "04f45a8336680c4b9f080e340cf352c4b3242aedbaf2b06bc2f0dc55e9d9c4c3",
+    "pcm_sha256": "2f8938fa946c94fd177447a0e04e7ad033cc5c7879d5dfabb07e16fc740b8750",
+    "predecessor_sha256": "2e5588e4912a5bdea1851e71b2c666d3470453ca08039944da510096fde87ea3"
+  },
+  "26-HOLLOW SIGNAL": {
+    "recipe_sha256": "dcad77d45eae72fb997d21e99abca4a96501859064c4477ddf5fcd2423e1e57f",
+    "pcm_sha256": "fd723cf789580f237f9c2fc453857a50495fe93a8ede56adb5a6ac3074c371d6",
+    "predecessor_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "27-BREATH MARK": {
+    "recipe_sha256": "996ff466fa1d5f75380d306800359a4b3820fd853dca0a4f561679070d566c70",
+    "pcm_sha256": "64abffe3223ef2c09cce6eeac11b2799bd852f12df9da056349abe226fd9de73",
+    "predecessor_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "28-CLOSE HARMONY": {
+    "recipe_sha256": "36abfdaeb7415c05fd02ccd524a9f1c3220e993cfd2247a064c2488bfd919c1f",
+    "pcm_sha256": "140da3f63abba02aeb167829a550a7e303cd8c944a34367005da16f2f91cfeab",
+    "predecessor_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "29-OPEN ENSEMBLE": {
+    "recipe_sha256": "081f24ba213daf10cc6dbd899ace92bbd81bf2c018db20443d303d9e3c28ae2c",
+    "pcm_sha256": "0833070b3d1ae6fea8a90643e136bd926a28bdc8193975f60ea27299fba47f51",
+    "predecessor_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "30-VOWEL HALO": {
+    "recipe_sha256": "13a61676d57369bc3615a86e17930c4fe886c3991265a1c53e9df0150fdaca2d",
+    "pcm_sha256": "1407b0ebd4f76db18b46ceca21c2ee74fb877f6bdc6f1c13e050802e9cd33bc3",
+    "predecessor_sha256": "6fb22e1d4eb300a9c40a0cab62b76f191ef7f9114992ce07331fd84961b2e37b"
+  },
+  "31-THIN UNISON": {
+    "recipe_sha256": "1b75026b1195667b072b41670be86e6d247ec64ecc2b47110de656feb9069c89",
+    "pcm_sha256": "63209a708327f51975a6d4c38e0a735d4ea55dbd441b662d936bcaec062a2f92",
+    "predecessor_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "32-BELL CORE": {
+    "recipe_sha256": "4065fea61cb2670e82b2d5c94d671e0c7b8de2fdf5d2ce8d8f22977a28811f16",
+    "pcm_sha256": "7356c76d1e089deb602c65e592690fb19ec5e5b05c23316fa66315f014d779cd",
+    "predecessor_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "33-TIN LANGUAGE": {
+    "recipe_sha256": "439664fa7fb431eab99345f59774733e913e4b1850f8f0249faff2b174da6fac",
+    "pcm_sha256": "0603042e5b1a3494f08da4f3200d82b66e8196945b71fd128b2aa3369777ba7f",
+    "predecessor_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "34-NEEDLE RING": {
+    "recipe_sha256": "62cc852e0ad3db9e85cda892f0711ef0578d484e532120605b6dab3d181f55ec",
+    "pcm_sha256": "c3e9751b0220edb2bbf30d1d86ee959406a9a1eb23196d9b795a13df177b6454",
+    "predecessor_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "35-SLOW ALLOY": {
+    "recipe_sha256": "21845ba914c3a74a80c1e46284b8dbee0e943351c7a477d6c93575f4d1f66fcd",
+    "pcm_sha256": "81e7978178235b65bb0b64f5ceefea34878d620d1afd1401137075cbe0e3ba47",
+    "predecessor_sha256": "16853ff5370b1ea4af8e96fbaf09fffaf79c26cb67691353f4d236ade951c1ae"
+  },
+  "36-KEY MOTION 0.0": {
+    "recipe_sha256": "f029b7fb2e5605bda8c6beca5dfda8ed322cea33d9e592c83d8b59156a9d4665",
+    "pcm_sha256": "c3b65c68fff65154cf1896e216ddf0fa3052fcb8ebece450569dffafb04b7ddd",
+    "predecessor_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "37-KEY MOTION 0.5": {
+    "recipe_sha256": "69eefc80ad6ba6b28638ac1381fa43427fda332c7c7a3bf0f367464885740b7a",
+    "pcm_sha256": "cfb93e850649f80986d169921a46e4ce69b564aafbef86ba75c277316de3cfbd",
+    "predecessor_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "38-KEY MOTION 0.75": {
+    "recipe_sha256": "e4dcbf6a34bdb677d302430a1dbfe2a3026f60acf497128fdd4f233b8538ceca",
+    "pcm_sha256": "bc43d93f3e78acab738e0904953618107bc2959adb552fe3a533c48e66dff7b9",
+    "predecessor_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "39-KEY MOTION 1.0": {
+    "recipe_sha256": "5b7cbd98b9c5ca314b24b18fe63d3ab75ed3c8982c73725ddb75afb005a9a78d",
+    "pcm_sha256": "09cf6e241a65de69620ab436908fe5fac5a2e751179cccc9337a6ce53b9c9118",
+    "predecessor_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "40-CHOIR C2 BREATH 0.1": {
+    "recipe_sha256": "3c08aa61b191b71bf7979850dbba64068a4bdf20024ca2ee4fdfe9106694d22a",
+    "pcm_sha256": "1c0b44b045275fdf0f0082f38faa33d144b3a7b8b91cf67cd1c774ffa3105062",
+    "predecessor_sha256": "fc33d04f50f8bb36a5fd7172780ab0b84937c10239bb67d34009a7003e784d9b"
+  },
+  "41-CHOIR C3 BREATH 0.1": {
+    "recipe_sha256": "449e55766491b7691106627c4949a82c93fce0f365ee988906a147707ba0faea",
+    "pcm_sha256": "67e0f53066375bab8e738eec004d76b8e03187296e9e0e7ff7f46aaa7ab632c8",
+    "predecessor_sha256": "6670edf21b3fc15f94b99006f6c7f4740d966c38bfcd58c33f39cf8ad2f478f8"
+  }
+}

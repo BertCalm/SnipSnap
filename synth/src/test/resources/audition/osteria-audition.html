@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#722f37">
+  <meta name="description" content="An Osteria listening study for SnipSnap. Hear one sustained note change color, compare movement and memory, and save your listening notes.">
+  <title>Osteria — SnipSnap listening study</title>
+  <link rel="stylesheet" href="osteria-audition.css">
+  <script src="osteria-audition.js?v=six-voice-bank-16" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#listening">Skip to listening</a>
+  <header class="masthead">
+    <div class="wrap masthead-inner">
+      <a class="brand" href="https://github.com/BertCalm/SnipSnap" aria-label="SnipSnap on GitHub"><span class="brand-mark" aria-hidden="true">S<span>/</span>S</span><span>SnipSnap <span class="brand-detail">/ Listening room</span></span></a>
+      <span class="edition">A concept in sound <span aria-hidden="true">·</span> Study 03</span>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero wrap" aria-labelledby="page-title">
+      <div class="hero-copy">
+        <p class="eyebrow"><span class="small-dot" aria-hidden="true"></span> One note · movement · memory</p>
+        <h1 id="page-title">Osteria<span aria-hidden="true">.</span></h1>
+        <p class="tagline">One note.<br> Four changing colors.</p>
+        <p class="hero-description" id="study-description">One attack, one held pitch. Four spectral layers move between coastal colors and carry traces of where they have been. Listen for the tone to evolve while the note stays anchored.</p>
+        <a class="enter-link" href="#listening">Take a seat. Listen. <span aria-hidden="true">↓</span></a>
+      </div>
+      <aside class="quartet-card" aria-label="The listening idea">
+        <div class="card-topline"><span>The listening idea</span><span class="room-light" aria-hidden="true"></span></div>
+        <svg class="quartet-drawing" viewBox="0 0 420 185" aria-hidden="true">
+          <defs><pattern id="staff" width="420" height="24" patternUnits="userSpaceOnUse"><path d="M0 23.5H420" fill="none" stroke="currentColor" stroke-opacity=".09"/></pattern></defs>
+          <rect width="420" height="185" fill="url(#staff)"/>
+          <path d="M22 44C79 44 75 151 141 128S209 46 263 60 316 121 397 94" class="line-bass"/>
+          <path d="M22 78C75 78 83 41 145 71S204 141 262 115 328 82 397 94" class="line-harmony"/>
+          <path d="M22 112C77 112 89 146 139 101S219 24 270 46 329 92 397 94" class="line-melody"/>
+          <path d="M22 146C82 146 88 91 147 122S211 113 266 136 335 105 397 94" class="line-rhythm"/>
+          <circle cx="22" cy="44" r="4" class="dot-bass"/><circle cx="22" cy="78" r="4" class="dot-harmony"/><circle cx="22" cy="112" r="4" class="dot-melody"/><circle cx="22" cy="146" r="4" class="dot-rhythm"/>
+          <circle cx="397" cy="94" r="9" fill="#e9dac0"/><circle cx="397" cy="94" r="4" fill="#9a5a5d"/>
+        </svg>
+        <div class="quartet-legend"><span><i class="dot-bass"></i>Root</span><span><i class="dot-harmony"></i>Body</span><span><i class="dot-melody"></i>Air</span><span><i class="dot-rhythm"></i>Detail</span></div>
+        <p>Listen for changing texture around a steady pitch, from one shared attack to one release.</p>
+        <div class="card-bottomline"><span>One held note</span><span>Four timbral histories</span></div>
+      </aside>
+      <div class="study-strip"><span><b id="total-count">—</b> rendered studies</span><span><b>4</b> spectral layers</span><span><b>Dry sound.</b> Hear the note itself.</span><span class="format-label" id="render-format">Offline audio · no live synthesis</span></div>
+    </section>
+
+    <section class="listening wrap" id="listening" aria-labelledby="listening-title">
+      <div class="section-heading"><div><p class="eyebrow">The listening bench</p><h2 id="listening-title">How does the note respond to touch?</h2></div><button class="export-button" id="export-review" type="button">Export notes <span aria-hidden="true">↗</span></button></div>
+      <p class="bench-note">The first three sounds retain the established single-note character. Explore touch across the registers, then attack and release. Use Raw to judge velocity levels; Matched helps compare color. Select a row to inspect it, or press Play to hear it.</p>
+      <div id="bank-download" hidden><a class="export-button" id="bank-play" href="bank/" hidden>Play and download the 16-pad bank <span aria-hidden="true">↗</span></a><button class="export-button" id="bank-prepare" type="button" hidden>Prepare 16-pad bank <span aria-hidden="true">↓</span></button><a class="export-button" id="bank-link" download hidden>Download the 16-pad bank <span aria-hidden="true">↓</span></a><p class="bench-note" id="bank-status" role="status" aria-live="polite"></p><p class="bench-note">Three preset rows at C3, E♭3, G3 and C4, plus touch examples. Twelve pads have three separately rendered velocity zones. The MPC 2 ZIP includes the native SnipSnap recipes. Every pad plays through its authored release.</p></div>
+      <div class="level-control"><fieldset><legend>Playback level</legend><label><input type="radio" name="level" value="matched" checked> Matched</label><label><input type="radio" name="level" value="raw"> Raw</label></fieldset><span id="level-note">Same renders, level adjusted for listening.</span></div>
+      <div class="tabs-scroller"><div id="group-tabs" class="tabs" role="tablist" aria-label="Listening studies"></div></div>
+      <div id="group-panel" role="tabpanel" tabindex="-1">
+        <div class="group-heading"><div><h3 id="group-title">Opening the study…</h3><p id="group-description">Loading the manifest and render list.</p></div><span class="clip-count" id="group-count">—</span></div>
+        <div class="load-status" id="library-status" role="status"><span class="loading-dot" aria-hidden="true"></span> Opening the audition library…</div>
+        <div class="error-panel" id="library-error" hidden><h3>The library could not load.</h3><p id="library-error-detail"></p><button class="filled-button" id="retry-library" type="button">Try again</button><a href="manifest.json" download>Download manifest</a></div>
+
+        <div class="desk" id="desk" hidden>
+          <section class="player" aria-label="Selected render player">
+            <div class="player-topline"><span id="player-group">First listen</span><span id="player-level">Matched level</span></div>
+            <h3 id="player-title">Select a render</h3>
+            <p class="player-description" id="player-description"></p>
+            <div class="wave-wrap"><canvas id="waveform" aria-hidden="true"></canvas><div class="wave-playhead" id="wave-playhead" hidden></div><span id="wave-status">Select a render to see its waveform.</span><span class="wave-caption" aria-hidden="true">Actual rendered waveform</span></div>
+            <label class="seek-label" for="seek">Playback position</label>
+            <input id="seek" class="seek" type="range" min="0" max="1" step="0.01" value="0" disabled aria-valuetext="0 seconds">
+            <div class="transport"><button class="play-button" id="play" type="button" disabled><span id="play-symbol" aria-hidden="true">▶</span><span id="play-label">Play</span></button><button class="stop-button" id="stop" type="button" disabled><span aria-hidden="true">■</span> Stop</button><span class="time"><span id="elapsed">0:00.0</span><span aria-hidden="true"> / </span><span id="duration">0:00.0</span></span></div>
+            <p class="audio-status" id="audio-status" role="status" aria-live="polite"></p>
+            <p class="trace-note" id="browser-preview-note" hidden>MP3 previews use a common listening gain. WAV downloads retain their original levels.</p>
+            <details class="motion-details" id="browser-audio-details" hidden><summary>Browser audio controls</summary><audio id="browser-audio" controls preload="metadata" playsinline style="display:block;width:100%;margin:12px 0" aria-label="Selected render audio"></audio></details>
+            <div class="render-details" id="render-details"></div>
+            <div class="downloads" id="downloads" aria-label="Download selected render"></div>
+            <details class="motion-details" id="motion-details" hidden><summary>See the coastal motion <span>Actual render trace</span></summary><div class="trace-content"><p class="trace-note">Solid lines show each layer’s current position; dashed lines show its remembered position. The vertical axis is position within the timbre palette.</p><svg id="trace" viewBox="0 0 560 180" role="img" aria-label="Coastal positions and remembered positions over the render"></svg><div class="trace-legend"><span><i class="dot-bass"></i>Root</span><span><i class="dot-harmony"></i>Body</span><span><i class="dot-melody"></i>Air</span><span><i class="dot-rhythm"></i>Detail</span></div><p class="trace-status" id="trace-status" role="status"></p></div></details>
+          </section>
+
+          <aside class="review" aria-label="Render recipe and listening notes">
+            <p class="eyebrow">The gesture</p><div class="macros" id="macros"></div>
+            <div class="review-rule"></div>
+            <label class="notes-label" for="notes">Your listening notes <span>Saved on this device</span></label>
+            <div class="verdicts" role="group" aria-label="Listening verdict"><button type="button" data-verdict="keep" aria-pressed="false">Keep</button><button type="button" data-verdict="revise" aria-pressed="false">Revise</button><button type="button" data-verdict="drop" aria-pressed="false">Drop</button></div>
+            <textarea id="notes" rows="4" maxlength="10000" placeholder="Does the pitch stay anchored? Can you hear color changing without new attacks?"></textarea>
+            <p class="save-status" id="save-status" role="status">Device-local notes. Export a copy to share or keep.</p>
+          </aside>
+        </div>
+
+        <div class="library-heading" id="library-heading" hidden><span>Choose a render</span><span id="review-count">Your listening decisions stay on this device.</span></div>
+        <div class="clip-list" id="clip-list"></div>
+      </div>
+    </section>
+
+    <section class="listening-guide wrap" aria-labelledby="guide-title">
+      <div><p class="eyebrow">What to listen for</p><h2 id="guide-title">Stay with one note.</h2><p>The new candidate changes timbre within one articulation. Your notes decide whether that motion is useful and whether the result still feels like one instrument.</p></div>
+      <ol><li><span>01</span><div><h3>Hear the anchor.</h3><p>Compare still, evolving and remembered color at the same note. Listen for a steady pitch through the held portion.</p></div></li><li><span>02</span><div><h3>Play softly, then firmly.</h3><p>Compare three velocities in each register. Use Raw for dynamics and Matched to hear how excitation changes the color.</p></div></li><li><span>03</span><div><h3>Shape the articulation.</h3><p>Compare quick and slower attacks, then short and long releases after the same held interval. Try the pad bank and export your notes.</p></div></li></ol>
+    </section>
+    <section class="model-note wrap" aria-label="Model limitations"><span class="eyebrow">A revised listening model</span><p>These are rendered audio files with simulated press and release times. This page does not follow a live key or pad release. Each render starts with fresh memory; sample transposition also changes its internal clock. The files are not automatic seamless loops.</p><p id="manifest-summary" hidden></p></section>
+  </main>
+  <footer class="footer wrap"><span class="footer-name">Osteria <span>/</span> SnipSnap</span><p>A note with a changing color.</p><a href="https://github.com/BertCalm/SnipSnap" target="_blank" rel="noopener">Source & engineering <span aria-hidden="true">↗</span></a></footer>
+  <noscript><p class="noscript">JavaScript is needed for playback and notes. Download <a href="manifest.json">the manifest</a> to find the rendered audio files.</p></noscript>
+  <script id="embedded-manifest" type="application/json">__MANIFEST__</script>
+</body>
+</html>

@@ -13,6 +13,7 @@ import com.snipsnap.synth.AlloyPatch
 import com.snipsnap.synth.MeridianPatch
 import com.snipsnap.synth.CisternPatch
 import com.snipsnap.synth.ChamberPatch
+import com.snipsnap.synth.TempestPatch
 import com.snipsnap.synth.TidalPatch
 import com.snipsnap.synth.ContourConfig
 import com.snipsnap.synth.ContourPatch
@@ -43,6 +44,7 @@ import com.snipsnap.synth.Patches
 import com.snipsnap.synth.PitchwheelPatch
 import com.snipsnap.synth.SpoolPatch
 import com.snipsnap.synth.EmbouchurePatch
+import com.snipsnap.synth.OsteriaPatch
 import com.snipsnap.synth.ErosionPatch
 import com.snipsnap.synth.Embouchure
 import com.snipsnap.synth.BellowsPatch
@@ -54,6 +56,7 @@ import com.snipsnap.synth.ShoalPatch
 import com.snipsnap.synth.TanglePatch
 import com.snipsnap.synth.WickPatch
 import com.snipsnap.synth.RivetPatch
+import com.snipsnap.synth.ScuffPatch
 import com.snipsnap.synth.HalobarPatch
 import com.snipsnap.synth.SkinPatch
 import com.snipsnap.synth.OverlapPatch
@@ -89,7 +92,7 @@ import java.util.Locale
  * Promotion into the shipped roster stays a code change, on purpose: a
  * preset worth every player having is pasted into its engine's table by
  * hand ([rosterLine] renders the line), where the spread, blocklist and
- * identity tests judge it. SEND TO BENCH carries the file and the lines.
+ * identity tests judge it.
  *
  * FORGET follows the app's one rule for a delete: into the bin, not gone.
  * A forgotten preset moves to a `binned` list in the same file ([forget]),
@@ -440,7 +443,8 @@ object UserPresets {
      * passage, root, velocity, exact seed and render model through that constructor.
      * NACRE likewise retains its saved renderer, native root, strike, exact seed and
      * controls through the complete JSON constructor. WICK retains its selected
-     * RATTLE body, root, velocity and controls through that constructor as well.
+     * RATTLE body, root, velocity and controls through that constructor as well. SCUFF
+     * retains its strike velocity, take and model version the same way.
      * Names and embedded JSON are escaped
      * Kotlin string literals.
      */
@@ -461,10 +465,28 @@ object UserPresets {
             val recipe = Json.write(JsonValue.Str(patch.toJsonText())).replace("$", "\\$")
             return "RivetPatch.fromJsonText($recipe),"
         }
+        if (patch is OsteriaPatch) {
+            val recipe = Json.write(JsonValue.Str(patch.toJsonText())).replace("$", "\\$")
+            return "OsteriaPatch.fromJsonText($recipe),"
+        }
+        if (patch is ScuffPatch) {
+            // Velocity, take and model version live outside the macro map; promotion keeps the strike saved.
+            val recipe = Json.write(JsonValue.Str(patch.toJsonText())).replace("$", "\\$")
+            return "ScuffPatch.fromJsonText($recipe),"
+        }
         if (patch is ErosionPatch) {
             // Native touch is outside the macro map; promotion must retain it.
             val recipe = Json.write(JsonValue.Str(patch.toJsonText())).replace("$", "\\$")
             return "ErosionPatch.fromJsonText($recipe),"
+        }
+        if (patch is TempestPatch) {
+            val recipe = Json.write(JsonValue.Str(patch.toJsonText())).replace("$", "\\$")
+            return "TempestPatch.fromJsonText($recipe),"
+        }
+        if (patch is com.snipsnap.synth.SplayPatch) {
+            // The acoustic model, signed seed and authored note/touch are outside macros.
+            val recipe = Json.write(JsonValue.Str(patch.toJsonText())).replace("$", "\\$")
+            return "SplayPatch.fromJsonText($recipe),"
         }
         if (patch is WickPatch) {
             // Save the selected body as well as note, velocity and controls.
@@ -682,7 +704,11 @@ object UserPresets {
             }
             is AlloyPatch -> {
                 val config = Json.write(JsonValue.Str(Json.write(patch.config.toJsonValue()))).replace("$", "\\$")
-                ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f, model = ${patch.model}, config = AlloyConfig.fromJsonValue(com.snipsnap.json.Json.parse($config)))"
+                val response = patch.materialResponse?.let {
+                    val json = Json.write(JsonValue.Str(Json.write(it.toJsonValue()))).replace("$", "\\$")
+                    ", materialResponse = com.snipsnap.synth.AlloyMaterialResponse.fromJsonValue(com.snipsnap.json.Json.parse($json))"
+                } ?: ""
+                ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f, model = ${patch.model}, config = AlloyConfig.fromJsonValue(com.snipsnap.json.Json.parse($config))$response)"
             }
             is ContourPatch -> ".copy(config = ${contourConfigLine(patch.config)}, velocity = ${patch.velocity}f, model = ${patch.model})"
             is SkitterPatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f, seed = ${patch.seed})"
@@ -719,7 +745,7 @@ object UserPresets {
         return "MurmurConfig(routing = MurmurRouting.${config.routing.name}, ratios = ${values(config.ratios)}, " +
             "trajectory = MurmurTrajectory.${config.trajectory.name}, direction = ${config.direction}, " +
             "referenceSeconds = ${config.referenceSeconds}, attack = ${config.attack}, decay = ${config.decay}, " +
-            "sustain = ${config.sustain}, release = ${config.release}, targets = $targets, model = ${config.model})"
+            "sustain = ${config.sustain}, release = ${config.release}, targets = $targets, model = ${config.model}, body = MurmurBody.${config.body.name})"
     }
 
     /** Every saved preset as a roster line, grouped under the table it pastes into, in the order saved. */

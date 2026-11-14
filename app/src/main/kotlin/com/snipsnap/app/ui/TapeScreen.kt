@@ -1089,7 +1089,7 @@ private fun TapeDeckContent(
                     retrim?.let { Copy.backOnto(it.padLabel) } ?: Copy.USE_THIS_PART,
                     Modifier
                         .weight(1f)
-                        .height(Layout.PRIMARY_ACTION_H.dp),
+                        .minHeight(Layout.PRIMARY_ACTION_H.dp),
                     enabled = model.hasSelection,
                 ) {
                     val range = model.commitSelection()
@@ -1129,7 +1129,7 @@ private fun TapeDeckContent(
                     "INSTANT KIT",
                     Modifier
                         .weight(1f)
-                        .height(Layout.PRIMARY_ACTION_H.dp),
+                        .minHeight(Layout.PRIMARY_ACTION_H.dp),
                 ) {
                     // Stop the transport as well as the voice: the deck would
                     // otherwise keep rolling silently under the busy overlay.
@@ -1162,10 +1162,14 @@ private fun TapeDeckContent(
             // it was on purpose, since a RE-TRIM owning the deck is a mode
             // rather than a passing busy state.
             if (retrim == null) {
-                DeckButton(
+                // RECORD's one main button (review Q3): a filled Primary, and a plain
+                // secondary while it is busy (ActionButton drops the fill when not enabled).
+                ActionButton(
                     if (catchBusy) Copy.CATCH_BUSY else "CATCH A HIT",
-                    Modifier.fillMaxWidth().height(Layout.PRIMARY_ACTION_H.dp),
+                    scheme,
                     enabled = !catchBusy,
+                    modifier = Modifier.fillMaxWidth().minHeight(Layout.PRIMARY_ACTION_H.dp),
+                    tier = ButtonTier.Primary,
                 ) {
                     startCatch()
                 }
@@ -1365,13 +1369,13 @@ private fun DeckButton(
             label,
             TapeType.pixel,
             when {
-                // `scheme.lcd` — "dark in every scheme" per Schemes.kt — is
-                // the same dark-on-accent ink the selection markers' flag
-                // labels use below, so "lit" reads the same everywhere.
-                engaged -> scheme.lcd.tape
+                // `scheme.onAccent` is the ink made for sitting on the accent fill; it is
+                // also what the selection markers' flag labels use below, so "lit"
+                // reads the same everywhere.
+                engaged -> scheme.onAccent.tape
                 enabled -> scheme.ink.tape
                 else -> scheme.ink2.tape
-            },
+            },            maxLines = 2,
         )
     }
 }
@@ -1818,7 +1822,7 @@ private fun WaveformLcd(
                 // Field assignments only (no allocation) — refreshed per
                 // draw so the flags track the live scheme.
                 markerLabelPaint.textSize = flagHeight * 0.62f
-                markerLabelPaint.color = (0xFF shl 24) or scheme.lcd
+                markerLabelPaint.color = (0xFF shl 24) or scheme.onAccent
             }
             if (hasIn) {
                 // Flag to the RIGHT of the IN line: it reads into the

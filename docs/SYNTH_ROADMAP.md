@@ -27,6 +27,11 @@
 > presets, HOLD, phone controls and MPC program export remain outside this gate.
 > See [design and evidence](TRIAD.md).
 
+> Fired Bronze round robin (model 2, 2026-11-13): the starter deals each pad's four
+> strike layers three fresh strikes each; every layer's first strike is the approved
+> layer, and model-1 saves keep their sound. Heard and accepted by the owner (2026-11-13).
+> See [integration and verification](FIRED_BRONZE_INTEGRATION.md), "Model 2".
+
 > Fired Bronze integration: owner confirmed the four-layer kit on MPC. Editable
 > FIRED BRONZE patches and a Fresh Tape starter preserve the approved performance.
 > See [integration and verification](FIRED_BRONZE_INTEGRATION.md).
@@ -48,6 +53,11 @@
 > New kit listening is pending; no processor or amp is added. See [dry kit notes](FIRED_BRONZE_DRY_KIT.md).
 
 # Synth roadmap — generate kits, not just capture them
+
+**TEMPEST on the default branch (2026-11-13).** The owner-accepted six-voice digital drum instrument
+came back from the recovery backup with its 22 presets, the full drum starter with choking hats, the
+original tuned starter and the SYNTH picker. The DSP and model sources are unchanged. See
+[TEMPEST_FULL_KIT.md](TEMPEST_FULL_KIT.md).
 
 **Fired Bronze R2 dry study (2026-11-08).** The first kit was rejected by owner
 listening. Five credited tabla preview profiles now drive additive/stochastic
@@ -3458,7 +3468,8 @@ The BREAKER kit (2026-11-12) is the first of three shelf kits:
 - **Verified in software** (`BreakerKitTest`): saving, regenerating, the pad resolver and the MPC 3
   export.
 - **Open:**
-  - MPC 2 plays each zone's first take only.
+  - MPC 2 plays each zone's first take only: a format limit, recorded as not applicable to the
+    round-robin gate on 2026-11-14.
   - The kick's takes are distinct but close (34 dB apart). The owner heard them as "one kick played
     again: fine".
   - Accepted on the open tone (2026-11-12): the balance, the pushed row, the kick and the soft-to-hard grid.
@@ -3468,6 +3479,20 @@ The kit's tone (renderer model 4, 2026-11-12):
 - **Measured:** DUST's crunch low-passed the drums near 4 kHz, and the amp's speaker took more off the top.
 - **Picked by ear:** both opened. DUST's filter goes to about 9 kHz and the speaker goes, on every drum
   but the cymbals and riser. Model-3 saves keep their tone.
+
+The genre kits (renderer models 5 and 6, 2026-11-12 to 11-13):
+- **Model 5:** DAMP (each drum's damping) and Bump (the spring tank kicked), approved and heard by
+  the owner.
+- **Dub Tank and Trip hop:** two more shelf kits, at 74 and 92 BPM, built to layouts the owner
+  approved. They differ from BREAKER in their pads' roles, tuning and damping, not only in rig.
+- **Model 6:** each later kick or tom take lands with another beater. The round robin's start trim
+  can cut a kick's click, which had left two takes of a damped, crushed kick as copies.
+- **Verified in software** (`BreakerKitTest`) on all three kits: saving, the pad resolver and the
+  MPC 3 export. The BREAKER kit stays on model 5.
+- **Heard (2026-11-13):** the kicks, the High Timbale and the soft-to-hard grid were accepted. Both
+  grooves were too wet, and the owner picked their echo and spring from four versions each.
+- **The final audition** (`:shell:generateBreakerAudition`, 68 clips): the owner signed off the
+  sound on 2026-11-13 (every voice, every control, the edges, the presets and the three kits).
 
 ### ETCH, Kotlin round K1 (2026-11-13)
 
@@ -3522,3 +3547,61 @@ DRUMLESS (80 BPM), SOOT BASEMENT DUB (72), SOOT BRUSHED NOIR (76) and SOOT WAREH
 - **The proof:** all 768 slices pass save, playback and MPC 3 read-back.
 
 The siblings' pads await a listen; hardware remains.
+
+The owner kept 63 of the 64 sibling pads. They heard Basement Dub's one-drop four bars as
+incoherent, and picked a steppers groove in its place (`SootGenreKits` 2). The sound of all five SOOT
+kits is now approved, and hardware remains.
+
+
+### SCUFF, round 1 (2026-11-13)
+
+A dry Michigan drum kit and its chain, ported from the accepted round-0b Python prototype to
+`Scuff.kt`: ten voices (KICK, CLAP, BOOM, RIM, HAT, BELL, ZAP, TICK, PLUCK, INHALE), the four-stage
+chain (GRIT, LOCKER, BARK, SLAM) inside the engine, velocity on every voice, four dealt takes,
+`ScuffPatch` with velocity, take and model, rosterless (no presets before the listen), no kit yet.
+Measured against the Python: the deterministic voices are the same waveform (0.05 to 0.17 dB,
+correlation 0.997 to 1.000 after a 1 ms resampler lag), the noise voices another take. The
+classifier reads the kick as PERC and the crushed hat as SNARE, disclosed. See [SCUFF](SCUFF.md)
+and the gates entry. The picker entry waits for a session with an SDK.
+
+### SCUFF, round 2 (2026-11-13)
+
+The first SCUFF kit on the shelf: SCUFF DETROIT (`ScuffKits`, id `scuff-detroit`, 118 BPM), sixteen pads in
+the GATECRASH shape, every strike rendered by the engine at a velocity and a take (three zones of four), two
+phrases through one bus clipper ("Two Bars", the accepted pattern, and "Clap Riser"). The grid is proved
+through save, playback and MPC 3 export in software; MPC 2 keeps one take per zone; nothing heard. See
+[SCUFF](SCUFF.md) and the gates entry.
+
+### SCUFF, round 3 (2026-11-13)
+
+The second kit, SCUFF FLINT (`scuff-flint`, 132 BPM): faster and brighter, every pad moved up or shortened
+against DETROIT's, three rims and no low bass hit, the chain set harder for the whole kit, frantic two bars
+and a rim riser. The drum gate's "multiple distinct genre kits" now has two; `ScuffKitsTest` holds them apart
+pad for pad. Proved through save, playback and MPC 3 export like DETROIT; nothing heard. See [SCUFF](SCUFF.md).
+
+### SCUFF, heard (2026-11-13)
+
+After the rounds 1 to 3 pull request merged, the owner heard the listening page's version 5 (both kits' pads
+cut from the exported MPC 3 tracks, the velocity strips, the phrases, the Kotlin-against-Python section):
+"Audition is all good." The Kotlin engine (`Scuff.MODEL_VERSION` 1) and both kits (`ScuffKits.VERSION` 1) are
+the accepted baseline. Open: hardware playback, MPC 2's one take per zone, presets and the roster, the app
+picker. See [SCUFF](SCUFF.md) and the gates entry.
+
+### SCUFF, round 4 (2026-11-13)
+
+Presets and the roster, the round the owner chose after the listen: `ScuffPresets` is the two accepted kits'
+twenty-eight hits as patches (the kit's chain and the pad's macros, struck full, the first take), named after
+their kit, served by `Presets`; SCUFF leaves `PatchTypes.ROSTERLESS`. A saved SCUFF strike promotes with its
+velocity, take and model through the JSON constructor, as RIVET's does. Open: hardware playback, MPC 2's one
+take per zone, the app picker (a round of its own now that the convention no longer defers it to an SDK
+session). See [SCUFF](SCUFF.md).
+
+### CLUTTER, round 1 (2026-11-14)
+
+A found-sound drum engine of 22 modelled household objects, ported from the accepted round-0c Python prototype
+to `Clutter.kt`: every object's loose parts move only above a fixed strike threshold, velocity on every
+object, four takes, `ClutterPatch` with velocity, take and model, rosterless (no presets yet), no kit yet.
+Measured against the Python: no brightness bias across the 22 objects (0.06 dB above 4 kHz); the
+deterministic objects correlate 0.93 to 0.99; random draws are another realisation of the same law. The
+owner waived the roll gate. See [CLUTTER](CLUTTER.md) and the gates entry. The four genre kits go on the shelf
+at round 2; the picker entry waits for a session with an SDK.

@@ -70,43 +70,80 @@ fun TapeTheme(
 }
 
 /**
- * Text styles per the handoff; sizes are dp-at-390 read as sp.
+ * The type scale (clarity spec section 7.5), defined once here. Sizes are
+ * dp-at-390 read as sp; the floor is [MIN_SP] and a law
+ * (`ConventionTest`) holds both the floor and this table.
  *
- * The one look's faces (`docs/MODERN_LOOK.md` §5 step 3): the system
- * faces at the floor `docs/DIRECTION_2026_10.md` §5 asks for - 12 sp for
- * anything read as text, 11 sp mono for labels and eyebrows, serif italic
- * for the words a person wrote, which is the rule that keeps the metaphor
- * honest. Each style is a composable read, as it was when the scheme chose
- * between two sets of faces: the 526 call sites read `TapeType.pixel` and
- * friends inside composition, and a read outside composition (a
- * `remember`, a draw lambda) fails to compile and names itself, which is
- * the point.
+ * | Style | Size |
+ * |---|---|
+ * | [body] | 14 sp |
+ * | [secondary] | 13 sp |
+ * | [label] (buttons and labels) | 13 sp, +0.5 tracking, caps as written |
+ * | [eyebrow] (section titles) | 11 sp, caps as written |
+ * | [screenTitle] | 20 sp |
+ * | readouts | mono, [lcd] above 17 |
+ *
+ * The faces are the one look's (`docs/MODERN_LOOK.md` section 5 step 3):
+ * the system faces, serif italic for the words a person wrote, which is the
+ * rule that keeps the metaphor honest. Each style is a composable read, as
+ * it was when the scheme chose between two sets of faces: the call sites
+ * read `TapeType.pixel` and friends inside composition, and a read outside
+ * composition (a `remember`, a draw lambda) fails to compile and names
+ * itself, which is the point.
+ *
+ * The old names stay and now mean a rung of the scale: `pixel` is [label],
+ * `pixelSmall` is [secondary], `lcdSmall` and `lcd(17)` are [body],
+ * `lcdHeader` is [screenTitle].
  */
 object TapeType {
+    /** The smallest size anywhere in the app, sp. */
+    const val MIN_SP = 11
+    const val BODY_SP = 14
+    const val SECONDARY_SP = 13
+    const val LABEL_SP = 13
+    const val EYEBROW_SP = 11
+    const val TITLE_SP = 20
+
     @Composable
     fun lcd(size: Int): TextStyle =
-        // Readouts in mono; the LCD's small body in the sans, at the floor.
-        if (size <= 17) MODERN_BODY else TextStyle(fontFamily = FontFamily.Monospace, fontSize = (size - 2).coerceAtLeast(14).sp)
+        // Readouts in mono; the LCD's small body in the sans, at the body size.
+        if (size <= 17) BODY else TextStyle(fontFamily = FontFamily.Monospace, fontSize = (size - 2).coerceAtLeast(BODY_SP).sp)
 
-    /** A header on the LCD: a serif italic, the handwriting's twin. */
+    /** Body text: a proportional sans, 14 sp. */
+    val body: TextStyle
+        @Composable get() = BODY
+
+    /** Legends, subtitles, the lines under things: the sans, 13 sp. */
+    val secondary: TextStyle
+        @Composable get() = SECONDARY
+
+    /** Buttons and labels: mono, 13 sp, +0.5 tracking, caps as written. */
+    val label: TextStyle
+        @Composable get() = LABEL
+
+    /** Section titles: mono, 11 sp, caps as written, +1 tracking. */
+    val eyebrow: TextStyle
+        @Composable get() = EYEBROW
+
+    /** A screen's title: a serif italic, the handwriting's twin, 20 sp. */
+    val screenTitle: TextStyle
+        @Composable get() = TextStyle(fontFamily = FontFamily.Serif, fontStyle = FontStyle.Italic, fontSize = TITLE_SP.sp)
+
+    /** A header on the LCD: [screenTitle]. */
     val lcdHeader: TextStyle
-        @Composable get() = TextStyle(fontFamily = FontFamily.Serif, fontStyle = FontStyle.Italic, fontSize = 20.sp)
+        @Composable get() = screenTitle
     val lcdReadout: TextStyle
         @Composable get() = lcd(22)
     val lcdSmall: TextStyle
         @Composable get() = lcd(17)
 
-    /** Chrome labels: mono at 11 sp with a touch of tracking (`.eyebrow`). */
+    /** Chrome labels and buttons: [label]. */
     val pixel: TextStyle
-        @Composable get() = MODERN_LABEL
+        @Composable get() = LABEL
 
-    /**
-     * The smallest style, at 228 sites - legends, subtitles, the lines under
-     * things. Those are body text and get the 12 sp sans floor, not a
-     * smaller label.
-     */
+    /** The smaller text at 500-odd sites: [secondary]. */
     val pixelSmall: TextStyle
-        @Composable get() = MODERN_BODY
+        @Composable get() = SECONDARY
 
     val display: TextStyle
         @Composable get() = TextStyle(fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.SemiBold, fontSize = 13.sp, letterSpacing = 1.sp)
@@ -119,9 +156,8 @@ object TapeType {
     val markerBig: TextStyle
         @Composable get() = TextStyle(fontFamily = FontFamily.Serif, fontStyle = FontStyle.Italic, fontSize = 16.sp)
 
-    /** The body: a proportional sans at the 12 sp floor. */
-    private val MODERN_BODY = TextStyle(fontFamily = FontFamily.SansSerif, fontSize = 12.sp)
-
-    /** The label: mono at 11 sp, upper case as written, +1 tracking. */
-    private val MODERN_LABEL = TextStyle(fontFamily = FontFamily.Monospace, fontSize = 11.sp, letterSpacing = 1.sp)
+    private val BODY = TextStyle(fontFamily = FontFamily.SansSerif, fontSize = BODY_SP.sp)
+    private val SECONDARY = TextStyle(fontFamily = FontFamily.SansSerif, fontSize = SECONDARY_SP.sp)
+    private val LABEL = TextStyle(fontFamily = FontFamily.Monospace, fontSize = LABEL_SP.sp, letterSpacing = 0.5.sp)
+    private val EYEBROW = TextStyle(fontFamily = FontFamily.Monospace, fontSize = EYEBROW_SP.sp, letterSpacing = 1.sp)
 }

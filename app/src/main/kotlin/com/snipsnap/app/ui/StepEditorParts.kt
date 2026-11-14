@@ -459,7 +459,7 @@ internal fun LanePadPicker(
                 Modifier.heightIn(min = Layout.MIN_HIT_TARGET.dp).tapeClick(label = Copy.STEP_DETAIL_CLOSE) { state.pickLane = null }.padding(horizontal = 10.dp),
                 contentAlignment = Alignment.Center,
             ) {
-                TapeText(Copy.STEP_DETAIL_CLOSE, TapeType.pixelSmall, scheme.amber.tape)
+                TapeText(Copy.STEP_DETAIL_CLOSE, TapeType.pixelSmall, scheme.accent.tape)
             }
         }
         for (rowStart in intArrayOf(1, 9)) {
@@ -472,7 +472,7 @@ internal fun LanePadPicker(
                         Modifier
                             .weight(1f)
                             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
-                            .let { if (chosen) it.pressedBevel(scheme, 3.dp) else it.border(1.dp, scheme.grayEdge.tape, RoundedCornerShape(3.dp)) }
+                            .let { if (chosen) it.pressedBevel(scheme, 3.dp) else it.border(1.dp, scheme.edge.tape, RoundedCornerShape(3.dp)) }
                             .semantics { selected = chosen }
                             .tapeClick(label = Copy.stepPadSpoken(slot, name.ifEmpty { Copy.STEP_PAD_EMPTY })) { state.assign(lane, slot) }
                             .padding(horizontal = 2.dp, vertical = 3.dp),
@@ -520,7 +520,7 @@ internal fun StepDetailStrip(
                 Modifier.heightIn(min = Layout.MIN_HIT_TARGET.dp).tapeClick(label = Copy.STEP_DETAIL_CLOSE) { state.clearSelection() }.padding(horizontal = 10.dp),
                 contentAlignment = Alignment.Center,
             ) {
-                TapeText(Copy.STEP_DETAIL_CLOSE, TapeType.pixelSmall, scheme.amber.tape)
+                TapeText(Copy.STEP_DETAIL_CLOSE, TapeType.pixelSmall, scheme.accent.tape)
             }
         }
         if (velocity == null) {
@@ -548,7 +548,7 @@ internal fun StepDetailStrip(
                             },
                         contentAlignment = Alignment.Center,
                     ) {
-                        TapeText(name, TapeType.pixelSmall, if (chosen) scheme.lcd.tape else scheme.ink2.tape)
+                        TapeText(name, TapeType.pixelSmall, if (chosen) scheme.ink.tape else scheme.ink2.tape)
                     }
                 }
             }
@@ -637,7 +637,7 @@ private fun ShapeButton(label: String, spoken: String, chosen: Boolean, enabled:
             .padding(horizontal = 2.dp),
         contentAlignment = Alignment.Center,
     ) {
-        FitTapeText(label, TapeType.pixelSmall, if (chosen) scheme.lcd.tape else if (enabled) scheme.ink2.tape else scheme.ink3.tape)
+        FitTapeText(label, TapeType.pixelSmall, if (chosen) scheme.ink.tape else if (enabled) scheme.ink2.tape else scheme.ink3.tape)
     }
 }
 

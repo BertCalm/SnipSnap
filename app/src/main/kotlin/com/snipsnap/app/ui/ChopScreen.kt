@@ -802,7 +802,7 @@ private fun ChopContent(
         Box(
             Modifier
                 .fillMaxWidth()
-                .height(Layout.LCD_HEADER_H.dp)
+                .minHeight(Layout.LCD_HEADER_H.dp)
                 .lcdPanel(scheme)
                 .padding(horizontal = 10.dp),
             contentAlignment = Alignment.CenterStart,
@@ -1060,7 +1060,7 @@ private fun ChopContent(
             Box(
                 Modifier
                     .fillMaxWidth()
-                    .height(Layout.LCD_HEADER_MAX_H.dp)
+                    .minHeight(Layout.LCD_HEADER_MAX_H.dp)
                     .lcdPanel(scheme)
                     .padding(horizontal = 10.dp),
                 contentAlignment = Alignment.CenterStart,
@@ -1089,7 +1089,7 @@ private fun ChopContent(
         // LAND AS: how SEND TO PADS lays the slices on the pads. CLASSIC, FOLD
         // and MELODIC change the landing, not the cut, so they sit directly
         // above the button that lands them.
-        TapeText(Copy.CHOP_LAND_AS, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
+        TapeText(Copy.CHOP_LAND_AS, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             SegmentButton("CLASSIC", active = layout == ChopLayout.CLASSIC, modifier = Modifier.weight(1f)) {
                 layout = ChopLayout.CLASSIC
@@ -1209,7 +1209,7 @@ private fun ChopContent(
         if (entry != null && landBank != null) {
             SecondaryButton(
                 if (sendBusy) "…" else "ONTO ${entry.kit.name} · BANK ${PadBanks.letter(landBank)}",
-                modifier = Modifier.fillMaxWidth().height(Layout.PRIMARY_ACTION_H.dp),
+                modifier = Modifier.fillMaxWidth().minHeight(Layout.PRIMARY_ACTION_H.dp),
                 enabled = !sendBusy && !rechopBusy && !humming && model.sliceCount > 0,
             ) {
                 if (sendBusy || rechopBusy || humming) return@SecondaryButton
@@ -1252,7 +1252,7 @@ private fun ChopContent(
                         )
                     } catch (e: Exception) {
                         if (e is kotlinx.coroutines.CancellationException) throw e
-                        onToast("LAND FAILED: ${e.message ?: e.javaClass.simpleName}")
+                        onToast(Copy.landFailed(e.message ?: e.javaClass.simpleName))
                     } finally {
                         sendBusy = false
                     }
@@ -1520,7 +1520,7 @@ private fun CutBench(
                 t == null -> Copy.LADDER_NO_TEMPO
                 else -> "A PAD PER RUNG OF THE PULSE, FROM THE ONE"
             }
-            TapeText("ZOOM · THE LADDER · $caption", TapeType.pixelSmall, if (t == null && measured) scheme.ink3.tape else scheme.ink2.tape, maxLines = 1)
+            TapeText("ZOOM · THE LADDER · $caption", TapeType.pixelSmall, if (t == null && measured) scheme.ink3.tape else scheme.ink2.tape, maxLines = 2)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 SegmentButton(Ladder.COUNT_LABEL, active = ladder == null, modifier = Modifier.weight(1f), enabled = !busy) { onRung(null) }
                 for (rung in Ladder.Rung.entries) {
@@ -1529,13 +1529,13 @@ private fun CutBench(
             }
         }
         if (hits != null) {
-            TapeText("EAR · HOW HARD IT LISTENS", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
+            TapeText("EAR · HOW HARD IT LISTENS", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 for (ear in ChopReviewModel.Ear.entries) {
                     SegmentButton(ear.name, active = hits.ear == ear, modifier = Modifier.weight(1f), enabled = !busy) { onEar(ear) }
                 }
             }
-            TapeText("CHOP POINT · AGAINST THE ATTACK", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
+            TapeText("CHOP POINT · AGAINST THE ATTACK", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 for (cut in ChopReviewModel.Cut.entries) {
                     SegmentButton(cut.name, active = hits.cut == cut, modifier = Modifier.weight(1f), enabled = !busy) { onCut(cut) }
@@ -1547,7 +1547,7 @@ private fun CutBench(
                 t == null -> "NO TEMPO HEARD"
                 else -> "${t.bpm.roundToInt()} BPM"
             }
-            TapeText("SNAP · CUTS ONTO THE PULSE · $pulse", TapeType.pixelSmall, if (t == null) scheme.ink3.tape else scheme.ink2.tape, maxLines = 1)
+            TapeText("SNAP · CUTS ONTO THE PULSE · $pulse", TapeType.pixelSmall, if (t == null) scheme.ink3.tape else scheme.ink2.tape, maxLines = 2)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 for (grid in ChopReviewModel.GridSnap.entries) {
                     SegmentButton(grid.label, active = hits.grid == grid, modifier = Modifier.weight(1f), enabled = !busy) { onSnap(grid) }
@@ -1640,7 +1640,7 @@ private fun SliceRow(
             } else {
                 "${(row.classification.confidence * 100).toInt()}%"
             }
-            TapeText(confText, TapeType.pixelSmall, if (row.unsure) scheme.warn.tape else scheme.ink2.tape)
+            TapeText(confText, TapeType.pixelSmall, if (row.unsure) scheme.warnInk.tape else scheme.ink2.tape)
         }
     }
 }
@@ -1769,6 +1769,7 @@ internal fun SegmentButton(
                 active -> scheme.ink.tape
                 else -> scheme.ink2.tape
             },
+            maxLines = 2,
         )
         // Same reason, and `pressedBevel` above is keyed on `active` alone:
         // blanking this while busy left the bevel saying selected and the

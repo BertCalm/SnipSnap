@@ -116,19 +116,19 @@ internal fun OhmControls(
             MacroSlider("REPLY", patch.reply, fillColor, scheme, onValueChange = {
                 changePatch(currentPatch.copy(reply = it.coerceIn(0f, 1f)))
             })
-            TapeText("COMPANION ENTRY TIMING: CLOSER TO FARTHER APART.",
+            TapeText("Companion entry timing: closer to farther apart.",
                 TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
             MacroSlider("RING", patch.ring, fillColor, scheme, onValueChange = {
                 changePatch(currentPatch.copy(ring = it.coerceIn(0f, 1f)))
             })
-            TapeText("COMPANION DURATION: SHORT TO LONG.",
+            TapeText("Companion duration: short to long.",
                 TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
         } else if (patch.model < 3) {
             TapeText(
                 when {
-                    (patch.macros["MEDDLING"] ?: .55f) == 0f -> "ONE FINITE NOTE. MEDDLING AT ZERO PLAYS SOLO."
-                    patch.gesture == OhmGesture.GATHER -> "ONE FINITE NOTE. COMPANY ARRIVES AS IT RINGS."
-                    else -> "ONE FINITE NOTE. LENGTH SHAPES THE RING."
+                    (patch.macros["MEDDLING"] ?: .55f) == 0f -> "One finite note. Meddling at zero plays solo."
+                    patch.gesture == OhmGesture.GATHER -> "One finite note. Company arrives as it rings."
+                    else -> "One finite note. Length shapes the ring."
                 }, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2,
             )
             LabButton("EXTEND · SUSTAIN + SOURCES", scheme, enabled = true,
@@ -171,20 +171,20 @@ internal fun OhmControls(
                 TapeText("${capture.label ?: "CAPTURED ATTACK"} · ${capture.frameCount * 1000 / WavWriter.MPC_SAMPLE_RATE} MS",
                     TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
             }
-            if (pads.isEmpty()) TapeText("OPEN A KIT TO CAPTURE A PAD'S ATTACK.",
+            if (pads.isEmpty()) TapeText("Open a kit to capture a pad's attack.",
                 TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
             if (busy) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    TapeText("CAPTURING ATTACK…", TapeType.pixelSmall, scheme.amber.tape, Modifier.weight(1f))
-                    LabButton("CANCEL", scheme, enabled = true) { sourceJob?.cancel() }
+                    TapeText("CAPTURING ATTACK…", TapeType.pixelSmall, scheme.accent.tape, Modifier.weight(1f))
+                    LabButton("CANCEL", scheme, enabled = true, tier = ButtonTier.Text) { sourceJob?.cancel() }
                 }
             }
-            error?.let { TapeText(it, TapeType.pixelSmall, scheme.warn.tape, maxLines = 3) }
+            error?.let { TapeText(it, TapeType.pixelSmall, scheme.warnInk.tape, maxLines = 3) }
             MacroSlider("HOLD", patch.macros["HOLD"] ?: 0f, fillColor, scheme, onValueChange = {
                 changePatch(currentPatch.copy(macros = currentPatch.macros + ("HOLD" to it.coerceIn(0f, 1f))))
             })
-            TapeText(if (Ohm.isHeld(patch)) "AUDITION PLAYS THE SUSTAIN. MAKE INSTRUMENT KEEPS THE ATTACK AND HOLDS THE NOTE."
-                else "HOLD AT THE TOP SUSTAINS. LOWER SETTINGS PLAY ONE FINITE NOTE.",
+            TapeText(if (Ohm.isHeld(patch)) "Audition plays the sustain. MAKE INSTRUMENT keeps the attack and holds the note."
+                else "Hold at the top sustains. Lower settings play one finite note.",
                 TapeType.pixelSmall, scheme.ink2.tape, maxLines = 3)
             MacroSlider("ELDER", patch.options.elder, fillColor, scheme, onValueChange = {
                 changePatch(currentPatch.copy(options = currentPatch.options.copy(elder = it.coerceIn(0f, 1f))))
@@ -208,7 +208,7 @@ internal fun OhmControls(
                     valueRange = .02f.. .20f, readout = "${(patch.options.grainSeconds * 1000).roundToInt()} MS",
                     onValueChange = { changePatch(currentPatch.copy(options = currentPatch.options.copy(grainSeconds = it.coerceIn(.02f, .20f)))) })
             }
-            if (patch.options.freeze > 0f) TapeText("FREEZE KEEPS A SHORT CAPTURE OF THE SOURCE AUDIO.",
+            if (patch.options.freeze > 0f) TapeText("Freeze keeps a short capture of the source audio.",
                 TapeType.pixelSmall, scheme.ink2.tape, maxLines = 3)
         }
     }
@@ -228,7 +228,7 @@ private fun OhmSourcePadDialog(pads: List<KitPad>, onPick: (KitPad) -> Unit, onC
                         enabled = true, modifier = Modifier.fillMaxWidth()) { onPick(pad) }
                 }
             }
-            LabButton("CANCEL", scheme, enabled = true, modifier = Modifier.fillMaxWidth(), onClick = onCancel)
+            LabButton("CANCEL", scheme, enabled = true, modifier = Modifier.fillMaxWidth(), tier = ButtonTier.Text, onClick = onCancel)
         }
     }
 }

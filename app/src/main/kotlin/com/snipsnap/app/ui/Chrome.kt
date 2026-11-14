@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -32,6 +33,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
@@ -100,7 +102,20 @@ enum class AppScreen(val label: String) {
     SPLIT("SPLIT"),
 }
 
-/** Single-line themed text; TapeOS never relies on Material's Text. */
+/**
+ * A row's height as a floor, not a size: a label that wraps to a second line
+ * (clarity spec D7) grows the row instead of being clipped. Same call shape
+ * as `height(dp)`, so swapping one for the other costs a big composable no
+ * registers.
+ */
+fun Modifier.minHeight(height: Dp): Modifier = heightIn(min = height)
+
+/**
+ * Themed text, one line by default, ellipsised: that default is for the
+ * names a person gave (kit, pad, project, sample), which have no length
+ * cap. A button or a section label says `maxLines = 2` and wraps instead
+ * (clarity spec D7). TapeOS never relies on Material's Text.
+ */
 @Composable
 fun TapeText(
     text: String,
@@ -309,7 +324,8 @@ data class EmptyStateRoute(val label: String, val onClick: () -> Unit)
  * the user to find by hand (September UAT follow-up).
  *
  * [routes] is usually one door, sometimes two (CHOP's own EMPTY_CHOP names
- * both TAPE and SHELF, since its own sentence promises both) — deliberately
+ * both TAPE and SHELF, since its own sentence promises both); the first is
+ * the primary button and any other is secondary, so the panel has one primary — deliberately
  * never validated non-empty here: a screen with no honest route to offer
  * (EXPORT's own "kit won't parse" face, `KIT_WONT_OPEN`, same reasoning as
  * `TakesBinScreen`'s) simply doesn't call this at all, and stays a bare
@@ -322,9 +338,11 @@ fun EmptyStatePanel(
     modifier: Modifier = Modifier,
 ) {
     val scheme = LocalScheme.current
+    // Sized to what it holds, across the width: one sentence and its doors,
+    // not a lit panel the height of the screen with two lines in the middle.
     Box(
         modifier
-            .fillMaxSize()
+            .fillMaxWidth()
             .lcdPanel(scheme)
             .padding(14.dp),
         contentAlignment = Alignment.Center,
@@ -334,8 +352,16 @@ fun EmptyStatePanel(
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             TapeText(message, TapeType.lcdSmall, scheme.lcdInk.tape, maxLines = 3)
-            routes.forEach { route ->
-                ActionButton(route.label, scheme, enabled = true, modifier = Modifier.fillMaxWidth(), onClick = route.onClick)
+            routes.forEachIndexed { index, route ->
+                // The first door is the way out the sentence names: the screen's primary.
+                ActionButton(
+                    route.label,
+                    scheme,
+                    enabled = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    tier = if (index == 0) ButtonTier.Primary else ButtonTier.Secondary,
+                    onClick = route.onClick,
+                )
             }
         }
     }

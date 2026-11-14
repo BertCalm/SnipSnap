@@ -1104,6 +1104,13 @@ class ArrangerTest {
             for (r in 0 until s.repeats) {
                 val p = mix.passes[k++]
                 assertEquals(i, p.section)
+                // NEXT BAR's cut points: one per bar line inside the pass, on the clip's own bar, from the sample rate the mix was made at.
+                val bar = s.clip.pulsesPerBar
+                assertEquals(
+                    (1 until s.clip.bars).map { b -> ((pulses + b * bar) * framesPerPulse).roundToInt() },
+                    p.barLines,
+                    "section $i pass $r bar lines",
+                )
                 assertEquals((pulses * framesPerPulse).roundToInt(), p.start, "section $i pass $r on its bar")
                 pulses += s.clip.lengthPulses
                 assertEquals((pulses * framesPerPulse).roundToInt(), p.end, "section $i pass $r ends on the next bar")
@@ -1125,6 +1132,14 @@ class ArrangerTest {
         assertEquals(7, made.plan.seed)
         assertEquals(0, made.left)
         assertNull(Arranger.playedOrder(kept, listOf(1, 1, 1), emptyList()), "nothing played keeps nothing")
+    }
+
+    @Test
+    fun `a pass cut short at a bar line is kept as one whole pass, until a section can hold part of one`() {
+        // S1a open question: a section is a clip and a whole number of repeats, so a cut pass cannot be a shorter section without a new stored field.
+        val kept = sections("intro", "theme")
+        val made = Arranger.playedOrder(kept, listOf(4, 4), listOf(0, 0, 1))!!
+        assertEquals(listOf("intro" to 2, "theme" to 1), made.plan.sections.map { it.name to it.repeats })
     }
 
     @Test

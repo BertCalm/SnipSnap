@@ -43,6 +43,7 @@ object Halobar {
     private const val LOG_1000 = 6.907755278982137
     private const val CACHE_BYTES = 6 * 1024 * 1024
     private const val STEM_CACHE_BYTES = 8 * 1024 * 1024
+    private const val STAGE_CACHE_BYTES = 8 * 1024 * 1024
     private val divisions = doubleArrayOf(1.5, 1.0, .75, .5, .375, .25)
     val RATE_LABELS = listOf("Dotted quarter", "Quarter", "Dotted eighth", "Eighth", "Dotted sixteenth", "Sixteenth")
     fun rateLabel(value: Float): String = RATE_LABELS[min(5,((if(value.isFinite())value.coerceIn(0f,1f) else .45f)*6).toInt())]
@@ -178,9 +179,47 @@ object Halobar {
         val halo: FloatArray?, val loopPeak: Double, val kernelNorm: Double)
     private val stemCache = LinkedHashMap<StemKey,Stems>(2,.75f,true)
     private var stemCacheBytes = 0
+    private data class SourceKey(val voice: HalobarVoice, val midi: Int, val touch: Float,
+        val hold: Float, val motor: Float, val velocity: Float, val dryFrames: Int)
+    private data class Source(val dry: FloatArray, val send: FloatArray, val kernelNorm: Double)
+    private data class ReturnKey(val source: SourceKey, val division: Int, val amount: Float, val frames: Int)
+    private data class Return(val dry: FloatArray, val echo: FloatArray, val loopPeak: Double, val kernelNorm: Double)
+    private val sourceCache = LinkedHashMap<SourceKey,Source>(2,.75f,true)
+    private val returnCache = LinkedHashMap<ReturnKey,Return>(2,.75f,true)
+    private var sourceCacheBytes = 0
+    private var returnCacheBytes = 0
     internal fun clearCache() {
         synchronized(cache) { cache.clear(); cacheBytes=0 }
         synchronized(stemCache) { stemCache.clear(); stemCacheBytes=0 }
+        synchronized(sourceCache) { sourceCache.clear(); sourceCacheBytes=0 }
+        synchronized(returnCache) { returnCache.clear(); returnCacheBytes=0 }
+    }
+    internal fun stageCacheBytesForProbe(): List<Int> = listOf(
+        synchronized(sourceCache) { sourceCacheBytes }, synchronized(returnCache) { returnCacheBytes })
+
+    private fun rememberSource(key: SourceKey, source: Source) = synchronized(sourceCache) {
+        fun bytes(s: Source) = (s.dry.size+s.send.size)*4
+        val size=bytes(source)
+        if(size<=STAGE_CACHE_BYTES) {
+            sourceCache.remove(key)?.let { sourceCacheBytes-=bytes(it) }
+            while(sourceCacheBytes+size>STAGE_CACHE_BYTES && sourceCache.isNotEmpty()) {
+                val iterator=sourceCache.entries.iterator();val entry=iterator.next()
+                sourceCacheBytes-=bytes(entry.value);iterator.remove()
+            }
+            sourceCache[key]=source;sourceCacheBytes+=size
+        }
+    }
+    private fun rememberReturn(key: ReturnKey, returns: Return) = synchronized(returnCache) {
+        fun bytes(r: Return) = (r.dry.size+r.echo.size)*4
+        val size=bytes(returns)
+        if(size<=STAGE_CACHE_BYTES) {
+            returnCache.remove(key)?.let { returnCacheBytes-=bytes(it) }
+            while(returnCacheBytes+size>STAGE_CACHE_BYTES && returnCache.isNotEmpty()) {
+                val iterator=returnCache.entries.iterator();val entry=iterator.next()
+                returnCacheBytes-=bytes(entry.value);iterator.remove()
+            }
+            returnCache[key]=returns;returnCacheBytes+=size
+        }
     }
     private fun cachedStems(key: StemKey): Stems? = synchronized(stemCache) { stemCache[key] }
     private fun rememberStems(key: StemKey, stems: Stems) = synchronized(stemCache) {
@@ -228,7 +267,7 @@ object Halobar {
             val stemKey=if(space>0f) StemKey(voice,specs.filter { it.name!="SPACE" }
                 .map { canonical.getValue(it.name) },v) else null
             val stems=stemKey?.let(::cachedStems) ?: prepare(voice,canonical,
-                plan(voice,canonical,v),v,Dsp.OVERSAMPLE).also { if(stemKey!=null)rememberStems(stemKey,it) }
+                plan(voice,canonical,v),v,Dsp.OVERSAMPLE,reuseStages=true).also { if(stemKey!=null)rememberStems(stemKey,it) }
             finish(stems,space,normalize=true).samples
         }
         remember(key,samples)
@@ -264,7 +303,11 @@ object Halobar {
     }
 
     private fun prepare(voice: HalobarVoice,m: Map<String,Float>,p: Plan,velocity: Float,
-        oversample: Int, landing: Int? = null): Stems {
+        oversample: Int, landing: Int? = null, reuseStages: Boolean = false): Stems {
+        // A probe and a fresh landing always execute the reference path. Stage
+        // reuse is only for positive-SPACE, reference-take production renders.
+        if(reuseStages && landing==null && oversample==Dsp.OVERSAMPLE && m.getValue("SPACE")>0f)
+            return prepareReusable(voice,m,p,velocity)
         val rate=RATE*oversample
         // A finite source needs only a short filter flush. Processing seconds of
         // exact zero through Float IIRs enters subnormal arithmetic on the JVM.
@@ -280,6 +323,39 @@ object Halobar {
         val halo=echo?.let(::haloConvolution)
         cancelCheck()
         return Stems(p,sourceOut,echo,halo,loopPeak,kernelNorm)
+    }
+
+    private fun prepareReusable(voice: HalobarVoice,m: Map<String,Float>,p: Plan,velocity: Float): Stems {
+        val oversample=Dsp.OVERSAMPLE;val rate=RATE*oversample
+        val dryFrames=min(p.frames*oversample,p.sourceFrames*oversample+256)
+        // Only vibraphone puts MOTION in its source. The other motors are
+        // inactive; their motion edits can reuse the unmodulated echo too.
+        val sourceKey=SourceKey(voice,p.midi,m.getValue("TOUCH"),p.effectiveHold,
+            if(voice==HalobarVoice.VIBRAPHONE)m.getValue("MOTION") else 0f,velocity,dryFrames)
+        val returnKey=ReturnKey(sourceKey,p.rateIndex,m.getValue("RETURN"),p.frames)
+        val returns=synchronized(returnCache) { returnCache[returnKey] } ?: run {
+            val source=synchronized(sourceCache) { sourceCache[sourceKey] } ?: run {
+                val dry=FloatArray(dryFrames)
+                // bars writes only the finite body. The original remaining
+                // send frames are exact +0; recreate those when echoing.
+                val send=FloatArray(min(dryFrames,p.sourceFrames*oversample))
+                val norm=bars(voice,m,p,velocity,rate,oversample,dry,send)
+                val prepared=Source(down(dry,rate),send,norm)
+                cancelCheck();rememberSource(sourceKey,prepared);prepared
+            }
+            val send=FloatArray(p.frames*oversample)
+            source.send.copyInto(send)
+            val peak=echoes(send,m,p,rate,oversample)
+            val prepared=Return(source.dry,down(send,rate),peak,source.kernelNorm)
+            cancelCheck();rememberReturn(returnKey,prepared);prepared
+        }
+        // All cached arrays remain immutable. Phase, convolution and finishing
+        // own their outputs, including concurrent edits sharing one source.
+        val echo=returns.echo.copyOf()
+        phase(echo,m.getValue("MOTION").toDouble())
+        val halo=haloConvolution(echo)
+        cancelCheck()
+        return Stems(p,returns.dry,echo,halo,returns.loopPeak,returns.kernelNorm)
     }
 
     private fun finish(stems: Stems,space: Float,normalize: Boolean): Probe {
@@ -366,8 +442,16 @@ object Halobar {
             val damping=if(i>=end-fade) cosineFall(i-(end-fade),fade) else 1.0
             dry[i]=(body*amplitude*tremolo*damping).toFloat()
             if(send!=null) send[i]=(feed*amplitude*tremolo*(1-closed)*damping).toFloat()
-            closed*=openDecay
-            val nc=c*cr-s*sr;s=s*cr+c*sr;c=nc
+            // Once subtraction has rounded to unity, this envelope can no
+            // longer change the send. Stop its otherwise subnormal tail;
+            // the factor (1-closed) stays exactly the same Double value.
+            if(closed!=0.0) {
+                closed*=openDecay
+                if(1-closed==1.0)closed=0.0
+            }
+            if(depth!=0.0) {
+                val nc=c*cr-s*sr;s=s*cr+c*sr;c=nc
+            }
         }
         val noise=Dsp.Noise(if (landing == null) Dsp.seedFor("HALOBAR_SOURCE_V1",voice.name,p.midi)
             else Dsp.seedFor("HALOBAR_SOURCE_TAKE_V1",voice.name,p.midi,landing))
@@ -399,9 +483,32 @@ object Halobar {
         }
     }
 
+    /**
+     * The small-signal Taylor remainder is below 9e-15*abs(x) at abs(x)<=1/16.
+     * The wider 2e-12 bound includes coefficient/evaluation roundoff, the
+     * reference tanh's error and the final gain/division/addition. Accept a
+     * candidate only when both bounds round to the same stored Float and the
+     * existing Double peak cannot move. Ambiguous cases retain the reference.
+     */
+    private fun quantizedFeedback(fed: Double,gain: Double,drive: Double,x: Double,peak: Double): Double {
+        val ax=abs(x)
+        if(ax>=1e-100 && ax<=.0625 && gain>=0.0 && gain<=1.0 && drive>=1.0 && drive<=4.0) {
+            val z=x*x
+            val approximate=x*(1+z*(-1.0/3+z*(2.0/15+z*(-17.0/315+z*(62.0/2835)))))
+            val q=fed+gain*approximate/drive
+            val error=2e-12*(abs(fed)+ax)
+            val lower=q-error;val upper=q+error
+            if(lower.toFloat().toRawBits()==upper.toFloat().toRawBits() && max(abs(lower),abs(upper))<=peak) return q
+        }
+        return fed+gain*tanh(x)/drive
+    }
+
+    internal fun feedbackSampleProbe(fed: Double,gain: Double,drive: Double,x: Double,peak: Double): Double =
+        quantizedFeedback(fed,gain,drive,x,peak)
+
     private fun echoes(bus: FloatArray,m: Map<String,Float>,p: Plan,rate: Int,oversample: Int,
         gainOverride: Double? = null, energyTrace: MutableList<Double>? = null): Double {
-        val heads=p.headFrames.map { it*oversample }
+        val heads=IntArray(p.headFrames.size) { p.headFrames[it]*oversample }
         val delay=p.delayFrames*oversample
         val history=FloatArray(heads.max()+1)
         val low=LowPass(p.loopCutoffHz,rate)
@@ -417,12 +524,20 @@ object Halobar {
             if(i and 16383==0) cancelCheck()
             val input=bus[i]
             val fed=if(i<feedEnd) sendLow.step((input-hp.lp(input)).toDouble()) else 0.0
-            val delayed=if(i>=delay)history[(index-delay+history.size)%history.size].toDouble() else 0.0
-            val q=fed+gain*tanh(drive*low.step(delayed))/drive
+            // Each offset is smaller than the ring. One wrap preserves the
+            // exact read position without integer division for every sample.
+            val delayedIndex=index-delay
+            val delayed=if(i>=delay)history[if(delayedIndex<0)delayedIndex+history.size else delayedIndex].toDouble() else 0.0
+            val x=drive*low.step(delayed)
+            // Energy traces retain the full reference Double calculation.
+            val q=if(energyTrace==null) quantizedFeedback(fed,gain,drive,x,peak) else fed+gain*tanh(x)/drive
             history[index]=q.toFloat();peak=max(peak,abs(q))
             if(energyTrace!=null) { passEnergy+=q*q; if((i+1)%delay==0) { energyTrace.add(passEnergy);passEnergy=0.0 } }
             var out=0.0
-            for(k in heads.indices) if(i>=heads[k]) out+=history[(index-heads[k]+history.size)%history.size]*(if(k==0).62 else if(k==1).25 else .13)
+            for(k in heads.indices) if(i>=heads[k]) {
+                val read=index-heads[k]
+                out+=history[if(read<0)read+history.size else read]*(if(k==0).62 else if(k==1).25 else .13)
+            }
             bus[i]=out.toFloat()
             index++;if(index==history.size)index=0
         }

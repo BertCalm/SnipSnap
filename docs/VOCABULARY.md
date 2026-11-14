@@ -1,12 +1,12 @@
 # Vocabulary ledger
 
-**Status: owner has ruled on Section F (2026-11-09). Names in Sections A, B and C are final unless a row says open. This document renames nothing by itself; the renames land in PR 5b (navigation) and PR 5c (tools).** It lists every name a player navigates by or acts on, says what each one means, and proposes changes. The rulings in Section F make the proposed names final. The renames and a `ConventionTest` law that checks Section D come in the pull requests after this one.
+**Status: owner has ruled on Section F (2026-11-09). Names in Sections A, B and C are final unless a row says open. This document renames nothing by itself; the renames landed in #1027 (navigation) and #1030 (tools).** It lists every name a player navigates by or acts on, says what each one means, and proposes changes. The rulings in Section F make the proposed names final. The renames and a `ConventionTest` law that checks Section D landed in those pull requests; the law also refuses a retired name (the `Today` column) as a label.
 
 This is part 1 of clarity PR 5 (`docs/superpowers/specs/2026-10-27-ui-clarity-design.md` section 7.2). Every `file:line` below was taken from this branch (origin/claude/mobile-mpc-drum-sampler-t58x74 at the time of writing), and a sample of 28 was re-read against the file. The spec's own line references (`ChopScreen.kt:1602`, `OrbitScreen.kt:1389`, `SnapScreen.kt:1439`) have drifted and are not reused.
 
 How to read it:
 
-- Copy is ALL CAPS on screen, so names are written in caps and in backticks. Anything in backticks is a literal on-screen string or a code identifier.
+- Labels are ALL CAPS on screen, so names are written in caps and in backticks. Messages and hints are sentence case (clarity PR 5d); when a sentence names a control it keeps the control's name in caps, exactly as labelled. Anything in backticks is a literal on-screen string or a code identifier.
 - "Today" is what the code draws or says now. "Proposed" is a suggestion, not a decision.
 - A name written as `Keep` means the name stays and the control that opens it carries a one-line plain description.
 
@@ -20,7 +20,7 @@ How to read it:
 
 ## Voice guide
 
-Copied from the spec (section 7.5). It goes at the top of `Personality.kt` in the next part.
+Copied from the spec (section 7.5). It is at the top of `Personality.kt` (clarity PR 5d).
 
 - Say what happened, or what to do next.
 - Buttons are verbs.
@@ -28,6 +28,8 @@ Copied from the spec (section 7.5). It goes at the top of `Personality.kt` in th
 - Errors say what failed and what to try.
 - No metaphors, jokes or period references.
 - An ellipsis means work in progress, and nothing else.
+
+**Case** (owner ruling D3, clarity PR 5d). Sentence case for anything that is a sentence: hints, empty states, descriptions, errors, dock messages, HELP and sheet row descriptions. A message ends in a full stop, `…` (work in progress) or `?`. CAPS stays for place and stage tabs, buttons, section titles, chip labels and pad ids. In `Copy` and `Places` a label is marked `@field:CopyLabel`, a caption (a sentence fragment read beside a control) `@field:CopyCaption`, and an unmarked string is a message; `PersonalityTest` holds each kind to its law. The same law reads the screen files: a sentence-like literal in a toast, dock line, note, hint or confirm body that is all caps fails `PersonalityTest` unless it is on the shrinking waiver there, so write new ones in `Copy`.
 
 ---
 
@@ -200,7 +202,7 @@ Each row is a name with more than one meaning. The primary use keeps the name; t
 
 ### D1. Navigation labels (the `ConventionTest` law table)
 
-Every label in `Navigation.kt`. The last column says where the name goes next.
+Every label in `Navigation.kt`. The last column says where the name went: the approved and proposed renames landed in #1027 (navigation) and #1030 (tools), so a `Today` name below is the retired one and `ConventionTest` refuses it as a label.
 
 **Places** (`Navigation.kt:214-219`, shown on the place row)
 
@@ -281,7 +283,7 @@ Back labels that do not come from `backChip`:
 | `LISTEN · MIC`, `LISTEN · APP AUDIO` | `Places.kt:34,42` | Dock chip, source shown once chosen. See F, call 1. |
 | `SNIP` | `Places.kt:60` | Dock button: saves the last 60 seconds. |
 | `STOP` | `Places.kt:63` | Dock button: ends the listening session. |
-| `RECORD FROM`, `MIC`, `APP AUDIO` | `Places.kt:91,83,87` | The source sheet and its two rows. |
+| `LISTEN FROM`, `MIC`, `APP AUDIO` | `Places.kt:91,83,87` | The source sheet and its two rows. |
 | `PLAY THE BEAT`, `STOP THE BEAT` | `Places.kt:66,67` | Transport chip, spoken names. |
 | `SHARE`, `SHARE THIS BEAT` | `Places.kt:74,75` | Beat share chip and its spoken name. |
 | `OPEN SETTINGS` | `Places.kt:52` | Opens Android's page for this app. |
@@ -322,6 +324,7 @@ Back labels that do not come from `backChip`:
 | `HELP` section keys `SHELF`, `TAPE`, `PROJECT`, `MAKE`, `THE DOCK` | `Places.kt:234-265`. They follow the place names. |
 | `DECK`-side tools `READ AS GROOVE`, `COPY GROOVE`, `FIND BREAK` | See B and F, call 11. |
 | `STRIP`, `SIDE`, `RELEASE`, `LEVEL` | STRIKE STRIP captions (`Personality.kt:165-168`). Follow the strip rename. |
+| `VELOCITY STRIP` (section heading), `STRIP ON`, `STRIP OFF` | PADS' collapsible group box that holds the four strip buttons and starts closed; closed, it reads whether the strip is on (`StrikeStripSection.kt`, UI clarity 7d). Its buttons are `STRIP`/`SIDE`/`RELEASE`/`LEVEL` above. ruling 12. |
 | `ARM A CORNER`, `LATCH`, `TARGET`, `SHAPE` | SURFACE controls (`SurfaceScreen.kt:1557,1369,129,129`). Described on screen. |
 | `MIC`, `APP AUDIO` | Capture sources (`Places.kt:83,87`). |
 | `SOLO`, `DEL`, `CLEAR`, `ARP`, `THE SET`, `SECTIONS` | ORBIT ring and set controls (`OrbitScreen.kt:1423,1463,1466,2010,2020,2029`). |

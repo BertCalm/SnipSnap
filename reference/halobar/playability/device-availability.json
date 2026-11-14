@@ -1,0 +1,9 @@
+{
+  "adbAvailable": true,
+  "connectedDevices": 0,
+  "emulatorBinaryAvailable": false,
+  "kvmAvailable": false,
+  "deviceTestsCompiled": true,
+  "deviceTestsExecuted": false,
+  "physicalPlaybackVerified": false
+}

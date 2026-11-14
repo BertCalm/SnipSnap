@@ -104,11 +104,11 @@ internal fun AquariumPanel(
         }
 
         if (disabledReason != null) {
-            TapeText(disabledReason, TapeType.pixelSmall, scheme.warn.tape, maxLines = Int.MAX_VALUE)
+            TapeText(disabledReason, TapeType.pixelSmall, scheme.warnInk.tape, maxLines = Int.MAX_VALUE)
         }
         if (error != null) {
             TapeText(
-                error, TapeType.pixelSmall, scheme.warn.tape,
+                error, TapeType.pixelSmall, scheme.warnInk.tape,
                 Modifier.testTag("aquarium-error"), maxLines = Int.MAX_VALUE,
             )
         }
@@ -177,7 +177,7 @@ internal fun AquariumPanel(
         }
 
         TapeText(
-            "PREVIEW PLAYS THE MAIN SAMPLE. KEEP UPDATES EVERY VELOCITY LAYER.",
+            "Preview plays the main sample. Keep updates every velocity layer.",
             TapeType.pixelSmall, scheme.ink2.tape, maxLines = Int.MAX_VALUE,
         )
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {

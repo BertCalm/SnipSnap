@@ -318,7 +318,7 @@ private fun save(scope: CoroutineScope, onToast: (String) -> Unit, change: () ->
 
 @Composable
 private fun Heading(text: String) {
-    TapeText(text, TapeType.pixelSmall, LocalScheme.current.ink2.tape)
+    TapeText(text, TapeType.eyebrow, LocalScheme.current.ink2.tape, maxLines = 2)
 }
 
 @Composable
@@ -333,11 +333,11 @@ private fun Chip(text: String, picked: Boolean, onTap: () -> Unit) {
         Modifier
             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
             .raisedBevel(scheme)
-            .border(if (picked) 2.dp else 0.dp, if (picked) scheme.amber.tape else scheme.grayEdge.tape, RoundedCornerShape(4.dp))
+            .border(if (picked) 2.dp else 1.dp, if (picked) scheme.accent.tape else scheme.edge.tape, RoundedCornerShape(4.dp))
             .tapeClick(label = text, onClick = onTap)
             .padding(horizontal = 10.dp, vertical = 8.dp),
         contentAlignment = Alignment.Center,
     ) {
-        TapeText(text, TapeType.pixel, if (picked) scheme.amber.tape else scheme.ink.tape)
+        TapeText(text, TapeType.pixel, if (picked) scheme.accent.tape else scheme.ink.tape)
     }
 }

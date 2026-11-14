@@ -27,6 +27,7 @@ import com.snipsnap.synth.CausticPatch
 import com.snipsnap.synth.FlockPatch
 import com.snipsnap.synth.MeridianPatch
 import com.snipsnap.synth.TrefoilPatch
+import com.snipsnap.synth.SplayPatch
 import com.snipsnap.synth.ObbligatoPatch
 import com.snipsnap.synth.OhmPatch
 import com.snipsnap.synth.OpenSkyPatch
@@ -140,12 +141,14 @@ object Spread {
         is OverlapPatch -> if (patch.playback == OverlapPlayback.HELD) patch.midi.toFloat() else detect(snip)
         is OpenSkyPatch -> patch.midi.toFloat()
         is TrefoilPatch -> patch.midi.toFloat()
+        is SplayPatch -> patch.midi.toFloat()
         is OhmPatch -> patch.midi.toFloat()
         is ObbligatoPatch -> patch.midi.toFloat()
         is CreasePatch -> patch.midi.toFloat()
         is CausticPatch -> patch.midi.toFloat()
         is ChamberPatch -> patch.midi.toFloat()
         is WickPatch -> patch.midi.toFloat()
+        is com.snipsnap.synth.MurmurPatch -> patch.midi.toFloat()
         is OrigamiPatch -> (patch.midi ?: Origami.midiFor(patch.voice, patch.resolvedMacros().getValue("TUNE"))).toFloat()
         else -> detect(snip)
     }

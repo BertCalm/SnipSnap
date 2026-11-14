@@ -173,8 +173,9 @@ class MeridianPresetsTest {
             }
             patches
         }
-        assertEquals(14, MeridianPresets.all().size)
-        assertEquals(sweep + added, MeridianPresets.all(), "the original eight keep their ordering before the new profiles")
+        assertEquals(18, MeridianPresets.all().size)
+        assertEquals(sweep + added, MeridianPresets.all().take(14), "all fourteen accepted recipes retain their complete ordering")
+        assertEquals(listOf("OPEN LINE", "WIDE THREAD", "AFTER PRESS", "SOFT RETURN"), MeridianPresets.all().drop(14).map { it.name })
         assertEquals(MeridianPresets.all(), Presets.all().filterIsInstance<MeridianPatch>())
     }
 

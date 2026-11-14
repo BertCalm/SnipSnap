@@ -140,6 +140,10 @@ object EngineCatalog {
         "RIVET" to EngineEntry(listOf(EngineCategory.DRUMS), "Industrial drums from a small room to a warehouse"),
         "FIRED_BRONZE" to EngineEntry(listOf(EngineCategory.DRUMS), "Skin, clay and bronze through a driven processor and amp"),
         "BACKWASH" to EngineEntry(listOf(EngineCategory.DRUMS), "Damped drums with wavering tails and warm amp grit"),
+        "SOOT" to EngineEntry(listOf(EngineCategory.DRUMS), "Grimy boom bap drums: sagging skins, a coil, detuned metal"),
+        "TEMPEST" to EngineEntry(listOf(EngineCategory.DRUMS), "Digital drums, driven metal and degrading short repeats"),
+        "SPLAY" to EngineEntry(listOf(EngineCategory.BELLS, EngineCategory.PADS), "One tongue voice, five finite population settings"),
+        "OSTERIA" to EngineEntry(listOf(EngineCategory.SYNTH, EngineCategory.PADS), "Evolving notes, from plucked bass to bowed color and pads"),
     )
 
     /** The entry for the engine constant [name], or null for a name the catalogue does not know. */

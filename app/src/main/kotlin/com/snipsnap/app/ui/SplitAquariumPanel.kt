@@ -32,7 +32,7 @@ internal fun SplitAquariumPanel(settings: SplitAquarium.Settings, route: SplitAq
             .verticalScroll(rememberScrollState()).testTag("split-aquarium-panel"),
             verticalArrangement = Arrangement.spacedBy(8.dp)) {
             TapeText("AQUARIUM · SPLIT", TapeType.lcdHeader, scheme.ink.tape)
-            TapeText(com.snipsnap.shell.Copy.AQUARIUM_LINE, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
+            TapeText(com.snipsnap.shell.Copy.AQUARIUM_LINE, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 ActionButton(if (settings.fromKit) "KIT FX ON" else "USE KIT FX", scheme,
                     enabled = ready && !refused && !busy && (route.warning == null || settings.fromKit),
@@ -47,15 +47,15 @@ internal fun SplitAquariumPanel(settings: SplitAquarium.Settings, route: SplitAq
                 refused -> "SPLIT FX SETTINGS UNREADABLE · USING DRY"
                 !streamUp -> "NO SPLIT STREAM · PLAY CAN RETRY"
                 faulted -> "AQUARIUM FAULT · RESET TAIL OR RETRY PLAY"
-                pending -> "WAITING TO QUEUE SETTINGS…"
+                pending -> "Waiting to queue settings…"
                 !settings.fromKit -> "KIT FX OFF"
                 !route.sound.enabled -> "DRY · KIT PERFORMANCE IS BYPASSED"
                 route.sound.settings.isBypass -> "DRY · ALL SIX EFFECT MIXES ARE ZERO"
                 route.sound.outputGain == 0f -> "WET MIX MUTED"
                 else -> "STEREO KIT FX READY"
-            }, TapeType.pixelSmall, if (refused || faulted || !streamUp) scheme.warn.tape else scheme.ink.tape,
+            }, TapeType.pixelSmall, if (refused || faulted || !streamUp) scheme.warnInk.tape else scheme.ink.tape,
                 Modifier.testTag("split-aquarium-state"), maxLines = Int.MAX_VALUE)
-            route.warning?.let { TapeText(it, TapeType.pixelSmall, scheme.warn.tape, maxLines = Int.MAX_VALUE) }
+            route.warning?.let { TapeText(it, TapeType.pixelSmall, scheme.warnInk.tape, maxLines = Int.MAX_VALUE) }
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 ActionButton("TAIL −", scheme, enabled = ready && !refused && !busy && settings.tailSeconds > 0,
                     modifier = Modifier.weight(1f), accessibilityLabel = "Shorten SPLIT FX print tail",

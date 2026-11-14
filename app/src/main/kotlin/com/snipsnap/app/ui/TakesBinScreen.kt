@@ -34,6 +34,7 @@ import androidx.compose.ui.unit.dp
 import com.snipsnap.app.KitShelf
 import com.snipsnap.app.KitWrites
 import com.snipsnap.app.theme.BinRedGlow
+import com.snipsnap.app.theme.BinRedOnLcd
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
 import com.snipsnap.app.theme.lcdInk2
@@ -581,7 +582,7 @@ fun TakesBinScreen(
             // "your takes, kept 30 days"). How long is each row's to say
             // since 2026-10-31: a countdown, or KEPT FOR the pad that still
             // needs it, which no 30 days in the title would be true of.
-            PillCard("THE TRASH — DELETED PAD AUDIO", scheme, BIN_RED_BORDER, BinRedGlow) {
+            PillCard("THE TRASH — DELETED PAD AUDIO", scheme, BinRedGlow, BinRedGlow) {
                 if (binRows.isEmpty()) {
                     TapeText(Copy.BIN_EMPTY_STATE, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
                 } else {
@@ -728,12 +729,12 @@ private fun TakeRowLine(
                 val changes = row.changes
                 val headline = if (changes == null) "WON'T READ" else KitDiff.headline(changes)
                 val headlineInk = if (changes == null) scheme.warn.tape else if (changes.isEmpty()) scheme.ink3.tape else scheme.ink2.tape
-                TapeText("$headline ${if (expanded) "−" else "+"}", TapeType.pixelSmall, headlineInk, maxLines = 1)
+                TapeText("$headline ${if (expanded) "−" else "+"}", TapeType.pixelSmall, headlineInk, maxLines = 2)
             }
             Spacer(Modifier.weight(1f))
             row.whenText?.let { TapeText(it, TapeType.pixelSmall, scheme.ink2.tape) }
             if (row.current) {
-                TapeText("NOW", TapeType.pixelSmall, scheme.amber.tape)
+                TapeText("NOW", TapeType.pixelSmall, scheme.accent.tape)
             } else if (row.file != null) {
                 val file = row.file
                 Box(
@@ -761,7 +762,7 @@ private fun TakeRowLine(
                 } else {
                     // "SINCE T3": the direction the lines read in — this take
                     // then, the kit as it is now.
-                    TapeText("SINCE ${row.label}", TapeType.pixelSmall, scheme.amber.tape, maxLines = 1)
+                    TapeText("SINCE ${row.label}", TapeType.pixelSmall, scheme.amber.tape, maxLines = 2)
                     for (c in changes) {
                         TapeText(c.text, TapeType.pixelSmall, scheme.ink.tape, maxLines = 3)
                     }
@@ -839,13 +840,13 @@ private fun BinRowLine(row: BinRow, scheme: Scheme, busy: Boolean, onRestore: (K
 @Composable
 private fun EmptyBinButton(scheme: Scheme, enabled: Boolean, armed: Boolean, onClick: () -> Unit) {
     // Same text the TapeText below shows — it already follows `armed`.
-    val label = if (armed) "TAP AGAIN TO CONFIRM — NO TAKEBACKS" else "EMPTY THE TRASH NOW — NO TAKEBACKS"
+    val label = if (armed) Copy.EMPTY_TRASH_ARMED else Copy.EMPTY_TRASH_NOW
     Box(
         Modifier
             .fillMaxWidth()
             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
             .background(scheme.lcd.tape, RoundedCornerShape(5.dp))
-            .border(2.dp, BIN_RED_BORDER, RoundedCornerShape(5.dp))
+            .border(2.dp, scheme.binLcd.tape, RoundedCornerShape(5.dp))
             // Always clickable, `enabled` forwarded rather than dropped: a
             // screen reader is told this control is temporarily unavailable
             // instead of it silently vanishing from the tree (accessibility
@@ -854,15 +855,11 @@ private fun EmptyBinButton(scheme: Scheme, enabled: Boolean, armed: Boolean, onC
             .padding(horizontal = 10.dp),
         contentAlignment = Alignment.Center,
     ) {
-        TapeText(
-            // The armed state is a deviation from the artboard (see
-            // `doEmptyBin`'s KDoc) so it earns its own label here rather
-            // than a `Copy` constant for prototype text that doesn't exist.
-            label,
-            TapeType.pixel,
-            if (enabled) BinRedGlow else scheme.ink3.tape,
-            maxLines = 1,
-        )
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            TapeText(label, TapeType.pixel, if (enabled) BinRedOnLcd else scheme.ink3.tape, maxLines = 1)
+            // Said once the button is armed, in a sentence: what the second tap does.
+            if (armed) TapeText(Copy.EMPTY_TRASH_FACT, TapeType.pixelSmall, if (enabled) BinRedOnLcd else scheme.ink3.tape, maxLines = 2)
+        }
     }
 }
 
@@ -894,7 +891,7 @@ private fun PillCard(
                 .border(1.dp, pillBorder, RoundedCornerShape(999.dp))
                 .padding(horizontal = 8.dp, vertical = 2.dp),
         ) {
-            TapeText(label, TapeType.pixelSmall, pillInk, maxLines = 1)
+            TapeText(label, TapeType.pixelSmall, pillInk, maxLines = 2)
         }
     }
 }
@@ -934,13 +931,3 @@ private fun HeaderChip(
         TapeText(label, TapeType.pixel, if (enabled) ink else dim)
     }
 }
-
-// Duplicated, not hoisted (brief's own call: "do it if a clean one-liner,
-// else duplicate with a comment") — PadSheetScreen.kt and ExportScreen.kt
-// each already carry this same border privately; this is the third. BIN red
-// is deliberately constant across every scheme (HANDOFF.md X2 / TAKES+BIN),
-// so a delete action reads as "red" even in a scheme with no red anywhere
-// else in it. The glow half moved to Schemes.BIN_RED_GLOW / theme.BinRedGlow
-// (accessibility audit finding 5) — a single tuned token, not a duplicated
-// literal.
-private val BIN_RED_BORDER = Color(0xFF6A2020)

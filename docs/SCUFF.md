@@ -1,7 +1,7 @@
 # SCUFF: design brief and round-0 audition
 
-Status: **round 0b, Python prototype; sound direction accepted by the owner 2026-11-12.** No Kotlin exists. The engine stays in
-progress until every applicable owner gate has evidence (see "Gates" below).
+Status: **round 4, on the roster; sound direction (round 0b) accepted by the owner 2026-11-12; the Kotlin engine and both kits accepted from the listening page's version 5 on 2026-11-13 ("Audition is all good"); the kits' twenty-eight hits filed as the factory bank.** The Kotlin engine is `Scuff.kt`, the kits `ScuffKits.kt`. No phone or MPC has played them. The engine stays in
+progress until every applicable owner gate has evidence (see "Gates" below and the gates entry).
 
 Prototype: [`prototype/scuff/`](../prototype/scuff/) (`scuff_proto.py` is the model,
 `gen_audition.py` renders and measures, `build_page.py` writes the audition page). Every
@@ -290,3 +290,298 @@ same link as version 2 (155 clips).
 
 **Heard, 2026-11-12:** "Sounds good, please merge." The owner accepted round 0b's direction as
 published. Preserve it as the baseline; nothing in Kotlin, on a phone or on an MPC has been heard.
+
+## As built, round 1: the Kotlin engine (2026-11-13)
+
+The owner said "Do round 1" on 2026-11-13. Round 1 is the port of round 0b to Kotlin, all ten
+voices and the chain, with the registry, the probe tests, a determinism canary and an A/B against
+the accepted Python renders. Built at the commit that carries this section.
+
+**What exists.** `synth/.../Scuff.kt` (`ScuffVoice`, `Scuff.macrosFor/defaults/settled/drumClassFor/
+scramble/render`, model version 1), `ScuffPatch.kt` (name, voice, macros, velocity, take, model;
+JSON round trip), the `Patches.fromJsonValue` arm, the two `Velocity` arms (every SCUFF voice
+re-strikes at velocity), the shell's `SynthRoot` arm (a drum: no root), `PatchTypes.ROSTERLESS`
+(no presets before the listen), hand-built entries in `PatchesTest`, `PadRecipeTest` and
+`SynthRootTest`, a `DeterminismTest` canary (every voice, a soft hit and a take, through JSON),
+`ScuffTest` (17 probes) and `ScuffAuditionGenerator` behind `./gradlew :synth:generateScuffAudition`.
+No kit, no presets, no app picker entry (deferred to a session with an SDK, the house rule).
+
+**What is the same arithmetic.** Every constant, envelope, filter and shaper. The prototype's
+`scipy.signal.butter` cascades are RBJ biquads at the Butterworth section Qs, its `iirpeak` is the
+RBJ constant-peak band-pass, both bilinear with pre-warping, so the transfer functions match.
+
+**What is not, disclosed.**
+- The resamplers: `Tide.bandLimit` then `Dsp.decimate` (and `Valve.upsample`) in place of the
+  prototype's approximate FIR decimator and `resample_poly`. Measured, the difference is a constant
+  45-sample (1 ms) latency and a residual of -33 to -40 dB on the deterministic voices.
+- The noise: `Dsp.Noise` (the house LCG) in place of numpy's generator, so every noise-driven voice
+  (clap, hat tip, tick, crash, the kick's click and knock) is a different realisation, as another take
+  would be. The kick's click and knock sit under a deterministic body, so the kick still correlates
+  1.000.
+- The takes: take k takes column k - 1 of the Latin square with its own jitter, where the
+  prototype hashed the voice into the column. Takes 1 to 4 are therefore different strikes from the
+  prototype's takes 1 to 4, dealt the same way.
+- The output level: `Dsp.normalize` to peak 0.95, the drum convention, where the prototype used 0.89.
+- Two round-1 changes made in both models: the tick's TUNE did nothing (a knob with no sound change
+  is a lie on the panel), so it now moves the tick's cutoff half an octave either way; the bass hit's
+  harmonic path now scales with velocity (a soft hit saturates less), after its soft and hard strikes
+  measured 1.4 dB apart in spectral shape. At the defaults and full velocity both renders are unchanged,
+  so the accepted round-0b baseline holds.
+- `macrosFor` lists only the chain knobs a voice takes: the kick shows SLAM but not GRIT, LOCKER or
+  BARK. The prototype showed all four on every voice and three of them did nothing on the kick.
+
+**Measured, Kotlin against Python** (`prototype/scuff/compare_kotlin.py`, clips aligned by
+cross-correlation first; distance is the page's take-distance measure; "waveform" is the
+correlation and residual after alignment):
+
+| Pad | Distance | Waveform | The voice's own takes | Verdict |
+|---|---|---|---|---|
+| KICK | 0.08 dB | 1.000, -33 dB | 3.1 to 6.9 dB | the same drum |
+| BOOM | 0.05 dB | 1.000, -35 dB | 1.9 to 3.5 dB | the same drum |
+| PLUCK | 0.12 dB | 1.000, -34 dB | 1.9 to 5.0 dB | the same drum |
+| BELL | 0.12 dB | 0.997, -22 dB | 2.3 to 4.3 dB | the same drum |
+| ZAP | 0.17 dB | 0.997, -23 dB | 2.5 to 7.7 dB | the same drum |
+| RIM | 1.38 dB | 0.992, -18 dB | 3.9 to 5.7 dB | the same drum; its click is noise |
+| CLAP | 4.15 dB | 0.339 | 4.6 to 6.3 dB | another take: a noise voice |
+| TICK | 2.28 dB | 0.249 | 2.0 to 2.7 dB | another take: a noise voice |
+| HAT | 6.98 dB | 0.527 | 2.4 to 4.9 dB | wider than a take: the tip is noise and GRIT folds whatever the resampler's ripple leaves above 11 kHz; waits for the ear |
+| INHALE | 8.27 dB | 0.498 | 3.1 to 4.1 dB | wider than a take: a noise voice whose whole body is noise and six free phases; waits for the ear |
+| kick + bass, SLAM 0.55 | 0.14 dB | 1.000, -39 dB | | the bus fuses the same way |
+
+93 pairs in all (the kit, three velocities and four takes per voice, the chain stage by stage on the
+rim and the clap, the bus pair at three settings); the velocity rows follow the kit rows above.
+
+**The measure, corrected.** The take-distance measure read a 16-bit copy of a clip as 12 dB from its
+float original, because near-silent bands and tail frames sat on its numerical floor. Round 1 floors
+every band 80 dB under the loudest. Every distance on the page is re-measured with it; the round-0b
+numbers quoted in the section above were with the unfloored measure and read lower now: round 0 to
+0b, kick 8.5 (was 20.0), pluck 9.7 (15.2), tick 11.5 (11.5), rim 10.2 (11.2), clap 8.2 (8.7), zap 6.2
+(7.5), hat 7.2 (7.0), bell 5.3 (5.2), crash 4.4 (4.6), bass hit 3.6 (3.6); soft against hard, kick 9.7
+(was 14.9), clap 8.8 (9.7), bass hit 4.4 (4.0, with the round-1 change), rim 8.4 (8.5), hat 4.7, bell
+8.7, zap 8.3, tick 2.8, pluck 3.5 (5.0), crash 2.8; closest takes 1.9 (tick) to 4.6 dB (clap). The
+ordering did not change; the kick's and the pluck's round-0-to-0b distances were the ones inflated.
+
+**The classifier.** Our own analysis files the Kotlin kick as PERC, not KICK: its 3 kHz click and
+420 Hz knock put the first 93 ms's centroid above the kick rule's 130 Hz, a rule set for sub kicks
+(THUMP tunes 34 to 62 Hz; this kick lands at 95, as the brief asks). The crushed hat reads SNARE
+because GRIT folds its ring under the hat rule's 12 kHz. `drumClassFor` files them KICK and HAT_CLOSED,
+which is what a kit will carry; `ScuffTest` holds the classifier's verdicts so a change in either
+direction is noticed, and the clap must read CLAP, which it does. Disclosed, not fixed: making the
+kick read KICK would mean cutting the click the brief calls its identity.
+
+**Tests.** `ScuffTest`: finite, bounded, DC-free, under 1.5 s; byte-identical renders; every macro
+changes the sound and an unknown or non-finite one does not; the chain knobs at 0 are exact bypasses;
+each stage moves the voices the brief gives it and leaves the others; velocity changes spectral
+shape on every core voice (over 2 dB, 40 Hz to 10 kHz third-octave); takes are distinct and
+deterministic; the kick lands in 85 to 115 Hz with under -25 dB below 45 Hz and its body in 80 to
+160 Hz; the bass hit's fundamental sits in 50 to 75 Hz with 100 to 300 Hz above -10 dB; the rim's
+peaks sit within 60 and 90 Hz of 850 and 1350; TUNE and DECAY move inside each window; the patch
+round-trips with velocity, take and model and refuses a bad take, velocity, model or macro; scramble
+stays in bounds. Plus the `DeterminismTest` canary. `./gradlew --no-daemon test` was run before the
+push; the result is in the commit body.
+
+**Render budget.** Not measured on a phone. A pad is one 4x pass of oscillators and biquads, two
+resampler trips (the voice's and SLAM's) and a per-sample comb at 1x; the test class renders every
+voice, its takes and velocities in about 3 s on the JVM here, which is tens of ms per pad.
+
+**Published.** The listening page's version 3 (2026-11-13) adds the Kotlin section at the top: the
+kit, the bus pair and the chain on the rim, each Python render beside its Kotlin render with the
+distance and the waveform correlation. Not heard.
+
+**Gates after round 1.** Velocity and round robin: rendering passes by test in Kotlin; saving passes
+for a patch (not yet a kit); playback and export not yet verified. Roll or riser: open. Genre kits:
+open (none). Sound character: round 0b accepted; the Kotlin not heard. Overall: incomplete.
+
+**Round 2, proposed.** A 16-pad SCUFF kit on the shelf with three velocity zones of four takes per pad
+in the GATECRASH mould, two loop pads (the two-bar pattern through one bus, and a snare-roll riser)
+and MPC 3 export read back; then a second genre kit.
+
+## As built, round 2: the kit on the shelf (2026-11-13)
+
+The owner said "Start round 2 when the PR is green" and the round-1 PR went green on 2026-11-13. Round 2 is
+the first SCUFF kit on the shelf, in the GATECRASH shape, with the velocity and round-robin grid proved
+through saving, playback and MPC 3 export in software.
+
+**What exists.** `synth/.../ScuffKits.kt` (`ScuffKits.Kit.DETROIT`, id `scuff-detroit`, 118 BPM, kit version 1):
+sixteen pads, fourteen hits and two phrases. The starter `SCUFF DETROIT` in `StarterKits.ALL`, listed once
+under SKINS in `StarterShelf.GROUPS`, and the three `StarterKitsTest` lists it must join. `ScuffKitsTest` in
+`:synth` (eight probes) and `ScuffKitTest` in `:shell` (the grid through save, reload, the pad resolver and the
+MPC 3 track, read back from the files each step wrote). `ScuffKitGenerator` behind
+`./gradlew :shell:generateScuffKits`, which builds the kit, exports it, proves every slice twice (the saved
+PCM and the exported PCM against the renders through two playback cycles a zone) and writes the listening
+pack under `testkit/scuff-kits/` (gitignored). Run on 2026-11-13: "Verified Detroit: 16 pads, 192 slices, saved PCM + playback
++ MPC 3 track, built in 12069 ms" (the JVM here; about 63 ms per slice, chain and bus included).
+
+**The pads.** The engine's own defaults carry the accepted sound; only TUNE and DECAY move between pads.
+
+| Pad | Voice | Setting | Class | Choke |
+|---|---|---|---|---|
+| A01 Kick | KICK | defaults | KICK | |
+| A02 Clap | CLAP | defaults | CLAP | |
+| A03 Hat | HAT | defaults | HAT_CLOSED | 1 |
+| A04 Hat Open | HAT | DECAY .95 | HAT_OPEN | 1 |
+| A05 Boom Low | BOOM | TUNE .3 (about 54 Hz) | PERC | |
+| A06 Boom | BOOM | defaults (60 Hz) | PERC | |
+| A07 Boom High | BOOM | TUNE .9 (about 76 Hz) | PERC | |
+| A08 Rim | RIM | defaults | PERC | |
+| A09 Rim High | RIM | TUNE .75 | PERC | |
+| A10 Pluck | PLUCK | defaults | PERC | |
+| A11 Inhale | INHALE | defaults | PERC | |
+| A12 Bell | BELL | defaults | PERC | |
+| A13 Zap | ZAP | defaults | PERC | |
+| A14 Tick | TICK | defaults | PERC | |
+| A15 Two Bars | the round-0b pattern through one bus | | LOOP | 2 |
+| A16 Clap Riser | the clap from eighths to thirty-seconds over one bar, through one bus | | LOOP | 2 |
+
+The three bass hits are not an octave apart: BOOM's TUNE spans 45 to 80 Hz, 0.83 of an octave, so "Boom High"
+is a fifth-and-a-bit above "Boom". The brief's octave jumps need either a second BOOM voice an octave up or a
+wider TUNE; proposed for the owner's call.
+
+**Velocity and takes.** Every hit is `Scuff.renderPad(voice, macros, velocity, take + 1)`: the engine strikes
+at the zone's velocity (.30, .65, 1) and deals the take itself, so a zone is a different strike and a take
+another strike, not a control move. Grid take t is engine take t + 1 (takes 1 to 4 are the dealt set; take 0,
+the plain strike, is what the audition pages play). Level follows GATECRASH's law: every zone's first take
+peaks at .92, its takes share that gain (a take may land a little harder or softer, within .6 to .98), and a
+softer zone is a different strike rather than a quieter one. The engine's DC block runs before the kit's
+shared finish because the bass hit's asymmetric shaper leaves an offset a 20 Hz one-pole alone does not settle
+inside a 220 ms note (measured: the mean fell from .0052 to .0016 of a .92 peak). The crash gets 6 ms of
+silence after its zero-crossing cut, because the shared finish fades the last 4 ms and the crash's reverse
+envelope peaks there; without it the zone-gain law and the .98 ceiling fought (measured .86 and .88 against .92).
+
+**The bus.** On the two phrases every note is rendered through GRIT, LOCKER and BARK only, the notes are
+summed, and SLAM runs once on the sum (`Scuff.slamBus`, at the engine's default .65). This is the place the
+brief's defining move is real: the kick and the bass hit fuse into one growl. `ScuffKitsTest` holds that the
+bus changes both phrases and lowers their crest factor. The round-0b pattern's tape-stopped hat is left out:
+DROP is DIVE's move in the rack, not the engine's.
+
+**Proved in software** (`ScuffKitTest`, `StarterKitsTest`, `ScuffKitGenerator`):
+- Rendering: every pad renders the same bytes twice; finite, bounded, centred, ends in silence; every zone's
+  first take at .92; a soft hit is a different strike (shape distance over .05 on every pad); every zone holds
+  four different strikes (over .005); the phrases are longer than 1.5 s and the hits shorter, so the classifier's
+  own threshold agrees with the LOOP filing; no pad or kit name is on the trademark blocklist.
+- Saving: the kit reloads equal, and all 192 saved slices match their renders within 3/2^23 through the pad
+  resolver, two cycles a zone.
+- Playback: `PadHit.resolve` picks the zone by velocity and deals the four takes in order, then repeats; a soft
+  and a hard hit never share a slice.
+- Export: the MPC 3 track's velocity ranges, base slices, cycle lengths and frame windows match, and the
+  exported PCM matches the renders. **MPC 2: not applicable** (a format limit, recorded 2026-11-14 in
+  [ENGINE_ACCEPTANCE_GATES.md](ENGINE_ACCEPTANCE_GATES.md#mpc-2-and-round-robin-owner-decision-2026-11-14)): as on every kit in this repository, its projection keeps one take per zone. No MPC has loaded the kit and no phone has played it.
+
+**Gates after round 2.** Drum shelf: one of the multiple kits the gate asks for; a second genre kit (Flint, faster
+and brighter) is proposed. Roll or riser: pass in software, "Clap Riser" is on A16 and "Two Bars" on A15.
+Velocity and round robin through rendering, saving, playback and MPC 3 export: pass in software; MPC 2 and
+hardware open. Sound character: round 0b accepted; the Kotlin engine and the kit not heard.
+
+**Published.** The listening page's version 4 (2026-11-13, <https://claude.ai/artifact/Vh9vx4ezAScNhiLp9KFJd8>) adds the kit at the top: every pad's hard first take cut from the
+exported MPC 3 track through the pad resolver, a soft-to-hard strip of all twelve strikes for every hit, and the
+two phrases. Not heard.
+
+## As built, round 3: the second kit, FLINT (2026-11-13)
+
+The owner said "Do round 3 with the Flint kit". The drum gate asks for multiple distinct genre kits, authored
+musical choices with distinct roles, balance and character, and says that different effect strengths on the
+same kit are not enough. FLINT (`ScuffKits.Kit.FLINT`, id `scuff-flint`, 132 BPM, the brief's "occasionally
+pushing 135+") differs from DETROIT in every one of those: its pads, their tunings and lengths, its roles, its
+tempo, its chain and its phrases.
+
+| Pad | FLINT | against DETROIT |
+|---|---|---|
+| A01 Kick | TUNE .6 (about 110 Hz), DECAY .3, CLICK .8 | higher, shorter, more click |
+| A02 Clap | TUNE .6, DECAY .35, SNAP .8 (taps 8.4 ms apart) | tighter and shorter |
+| A03 Hat | TUNE .7, DECAY .3, GRIT .55 and SLAM .65 (the engine's own, not the kit's) | higher and shorter |
+| A04 Hat Open | TUNE .7, DECAY 1, GRIT .55 and SLAM .65 | higher |
+| A05 Boom | TUNE .6 (65 Hz), DECAY .3, DRIVE .8 | shorter, harder driven; no low bass hit |
+| A06 Boom High | TUNE 1 (80 Hz), DECAY .3, DRIVE .8 | the jump partner |
+| A07 Rim | TUNE .55, DECAY .4, BITE .9 | the stank rim, more bite |
+| A08 Rim Low | TUNE .25, DECAY .5, BITE .8 | a new role: the low rim answers |
+| A09 Rim High | TUNE .9, DECAY .3, BITE .9 | higher, shorter |
+| A10 Zap | TUNE .7, DECAY .3 | higher, faster |
+| A11 Tick | TUNE .7 | higher |
+| A12 Pluck | TUNE .8, DECAY .3 | higher, shorter |
+| A13 Bell | TUNE .7, DECAY .4, TONE .8 | higher, shorter, brighter |
+| A14 Inhale | DECAY .2 | a faster suck-back |
+| A15 Two Bars | a frantic pattern at 132: a ghost before every clap, rims stumbling with the low rim answering, two 32nd hat bursts, bass hits jumping up, a zap before each of bar 2's claps | a different pattern |
+| A16 Rim Riser | the stank rim from eighths to thirty-seconds, rising, the low rim answering each eighth | the riser is the rim, not the clap |
+| The chain | GRIT .7, BARK .65, LOCKER .3, SLAM .75 on every pad | more crush and bark, less box, slammed harder |
+
+Three rims and no low bass hit because the brief makes the rim Flint's voice: the stank rim "plays off-beat
+sixteenth patterns to create a stumbling, rubbery counter-rhythm", so FLINT gives it three pads and the riser.
+DETROIT keeps the pluck-and-rim call and response and the three bass hits.
+
+**Measured** (`ScuffKitsTest`, "the two kits are different kits"): each kit has its own tempo and its own chain
+setting; pad for pad, FLINT's render is not DETROIT's at matched level (shape distance over .05 on all sixteen
+roles); FLINT's kick lands more than 5 percent higher, and its kick, clap and hat are shorter.
+
+"Brighter" did not survive measurement as a claim about the pads as played, and the attempt taught two
+things. FLINT's clap carries less energy above 2 kHz than DETROIT's, because its harder GRIT folds the top
+down and its stronger BARK lifts 1.1 kHz: it is nastier rather than airier, the brief's "brittle and papery".
+And on the closed hat the kit's chain did the opposite of the intent: at the kit's GRIT .7 the hat's 9 kHz ring
+folded into the mids, and at the kit's SLAM .75 the bus clipper's 600 Hz growl sat under the hat (spectral
+centroid 1.6 kHz at SLAM .75 against 4.2 kHz at .65, measured on the engine's render). The brief's hat is
+clipped clean, so FLINT's hats keep the engine's own GRIT and SLAM; the kit's crush and slam are for the claps,
+rims and bass hits. This also answers the round-0 question "should the hats go through the bus at all": not
+harder than the engine's default.
+
+**Disclosed:** FLINT's soft rim, 60 ms long, keeps a mean of .0050 of its peak after both DC blocks, because a
+20 Hz one-pole's transient does not settle inside it; the kit test's bound is .008 (the house range is .005 to
+.01). Nothing in FLINT had been heard when round 3 was pushed; see "Round 3 heard" below.
+
+The starter `SCUFF FLINT` sits beside DETROIT under SKINS; the generator builds, proves and packs both kits
+(2026-11-13: "Verified Flint: 16 pads, 192 slices, saved PCM + playback + MPC 3 track, built in 11208 ms");
+the listening page's version 5 (<https://claude.ai/artifact/Vh9vx4ezAScNhiLp9KFJd8>) carries both kits at the top.
+
+## Round 3 heard (2026-11-13)
+
+After [BertCalm/SnipSnap#1052](https://github.com/BertCalm/SnipSnap/pull/1052) merged, the owner listened to
+the page's version 5, which carries every DETROIT and FLINT pad cut from the exported MPC 3 tracks (so the
+Kotlin engine's renders through the kit builder, the bus and the export path), the soft-to-hard strips of
+every hit's twelve strikes, both kits' two phrases, and the round-1 Kotlin-against-Python section. Their
+word: "Audition is all good." Nothing to keep, revise or cut was named, so every pad, phrase and chain setting
+stands as pushed.
+
+What that closes: the owner's listen to the Kotlin engine and to both kits, which the round-1, round-2 and
+round-3 sections above each left open. Preserve `Scuff.MODEL_VERSION` 1 and `ScuffKits.VERSION` 1 as the
+accepted baseline; a later change to a voice or a kit is a new round against this one.
+
+What it does not close: a phone has not played the kits and no MPC has loaded the tracks (hardware playback),
+MPC 2 keeps one take per zone (a format limit, not applicable since 2026-11-14), SCUFF had no presets and was not on the roster (the engine stayed rosterless
+until this listen; round 4 below files them), the app's picker has no SCUFF entry (a round of its own), and the three BOOM pads are
+0.83 of an octave apart rather than an octave (the owner's call). The listen was through whatever the owner
+played the page on, which the page does not record.
+
+## As built, round 4: presets and the roster (2026-11-13)
+
+The owner chose presets and the roster as the round after the listen. The rule the house keeps is that a
+roster holds heard sounds, not reasoned ones, so SCUFF's factory bank is the two accepted kits, hit for hit:
+`ScuffPresets.all()` is `ScuffKits.parts(kit)` for DETROIT and then FLINT, each hit as a `ScuffPatch` under the
+kit's own chain setting and the pad's own macros (`Scuff.settled(voice, kit.chain + part.macros)`, so a complete
+map of the voice's knobs), struck full, filed at engine take 1 (the kit grid's first take, the one the page
+played first). Twenty-eight presets over the ten voices, every voice with at least two (one from each kit),
+named "<kit> <hit>": DETROIT KICK, FLINT RIM LOW, DETROIT HAT OPEN. RIVET set the pattern; `promoted` beside
+the kits is where a player's own saved strike pastes in.
+
+A preset renders through the engine's own finish (`Scuff.render`: DC block, peak match, 4 ms fade); the kit's
+pad is the same strike through the kit's level law, its own 20 Hz block and its gate. `ScuffPresetsTest` holds
+the two as one shape (normalised correlation above .995 short of the tails) and holds each preset to
+`Scuff.render` byte for byte, with the five other preset contracts: finite, bounded, above half scale, ending
+in silence and centred; the JSON round trip with velocity, take and model, and `Velocity.atVelocity` as a
+re-strike of the same recipe; names unique across the bank, in caps, from a kit, none a maker's; and every two
+presets of a voice a different recipe (macro distance above .02) and different bytes.
+
+Wiring: `Presets.forVoice` and `Presets.all()` serve the bank; `PatchTypes.ROSTERLESS` no longer lists SCUFF
+(`PresetsTest` reflects over the sealed `Patch` type, so the registry test would have failed either way);
+`PatchesTest` and the shell's `SynthRootTest` take their SCUFF sound from the roster instead of a hand-built one;
+`UserPresets.rosterLine` writes a SCUFF promotion as `ScuffPatch.fromJsonText(...)`, as RIVET's does, because
+velocity, take and model live outside the macro map and the plain `p(...)` helper would drop them. The README's
+list of engines with rosters that the picker does not show gains SCUFF. The app picker entry is a round of its
+own: the house convention no longer defers it to a session with an SDK (corrected by the owner on 2026-11-13;
+mirror the nearest engine arm for arm, with an on-device test, and CI compiles and runs it), and `EngineCatalog`
+follows the picker, so neither changes here.
+
+**Disclosed:** a preset carries one 20 Hz block where the kit's pad carries two, so a short rim through
+FLINT's harder SLAM keeps a mean of .0145 of its peak inside its 60 ms (37 dB down; the kit's pad .005 after
+its second block, the round-3 finding). `ScuffPresetsTest` bounds a preset's mean at .02, a measurement with
+room, not a target; the sound is the accepted one and model version 1 does not move for it.
+
+Gates after round 4: presets and the roster pass. Open: hardware playback, the app
+picker (now a round that needs no SDK), and BOOM's octave spacing (the owner's call). Nothing new to hear: every preset is a pad already heard.

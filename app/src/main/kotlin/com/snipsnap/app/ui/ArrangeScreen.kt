@@ -27,6 +27,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
@@ -50,6 +51,7 @@ import com.snipsnap.kit.SongPlan
 import com.snipsnap.shell.Arranger
 import com.snipsnap.shell.Copy
 import com.snipsnap.shell.Layout
+import com.snipsnap.shell.SongCursor
 import com.snipsnap.shell.Scheme
 import com.snipsnap.shell.SongExport
 import kotlinx.coroutines.CancellationException
@@ -240,7 +242,7 @@ fun ArrangeScreen(
 
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(
-            Modifier.fillMaxWidth().height(Layout.LCD_HEADER_H.dp).lcdPanel(scheme).padding(horizontal = 12.dp),
+            Modifier.fillMaxWidth().minHeight(Layout.LCD_HEADER_H.dp).lcdPanel(scheme).padding(horizontal = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
@@ -290,6 +292,7 @@ fun ArrangeScreen(
                     onPlay = ::togglePlay,
                     onKeep = ::keepOrder,
                 )
+                QueueModeRow(live)
                 TransportRow(
                     mixing = mixing,
                     exporting = exporting,
@@ -297,7 +300,7 @@ fun ArrangeScreen(
                     onExport = ::exportSong,
                 )
                 TapeText(
-                    if (playing) Copy.SONG_CAPTION_PLAYING else if (keeper.keeps) Copy.SONG_CAPTION_KEPT else Copy.SONG_CAPTION_NOT_KEPT,
+                    if (playing) (if (live.queueMode == SongCursor.QueueMode.NEXT_BAR) Copy.SONG_CAPTION_PLAYING_BAR else Copy.SONG_CAPTION_PLAYING) else if (keeper.keeps) Copy.SONG_CAPTION_KEPT else Copy.SONG_CAPTION_NOT_KEPT,
                     TapeType.pixelSmall,
                     scheme.ink2.tape,
                     Modifier.fillMaxWidth(),
@@ -349,7 +352,7 @@ private fun ReadoutPanel(shown: Arranger.Section?) {
         verticalArrangement = Arrangement.spacedBy(3.dp),
     ) {
         TapeText(shown?.name?.uppercase() ?: "", TapeType.pixel, scheme.amber.tape)
-        TapeText(shown?.reason?.uppercase() ?: "", TapeType.pixelSmall, scheme.lcdInk2, maxLines = 2)
+        TapeText(shown?.reason ?: "", TapeType.pixelSmall, scheme.lcdInk2, maxLines = 2)
     }
 }
 
@@ -377,6 +380,7 @@ private fun LiveRow(
             enabled = !mixing && (playing || !exporting),
             accessibilityLabel = if (playing || mixing) null else Copy.songA11yPlayFrom(from, fromName),
             modifier = Modifier.weight(1f),
+            tier = ButtonTier.Primary,
             onClick = onPlay,
         )
         ActionButton(
@@ -394,6 +398,23 @@ private fun LiveRow(
             modifier = Modifier.weight(1.4f),
             onClick = onKeep,
         )
+    }
+}
+
+/**
+ * Where a tapped section starts while playing: END OF PASS (the default) or
+ * NEXT BAR. The choice is session state ([rememberSaveable], survives
+ * rotation) and is handed to [LivePlay]; it is not written to the song.
+ */
+@Composable
+private fun QueueModeRow(live: LivePlay) {
+    var nextBar by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(live, nextBar) {
+        live.chooseQueueMode(if (nextBar) SongCursor.QueueMode.NEXT_BAR else SongCursor.QueueMode.END_OF_PASS)
+    }
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        SegmentButton(Copy.SONG_QUEUE_END_OF_PASS, active = !nextBar, modifier = Modifier.weight(1f)) { nextBar = false }
+        SegmentButton(Copy.SONG_QUEUE_NEXT_BAR, active = nextBar, modifier = Modifier.weight(1f)) { nextBar = true }
     }
 }
 
@@ -527,7 +548,7 @@ private fun SectionRow(
             // amber, at the same 2 dp, with the play glyph.
             .border(
                 if (selected) 2.dp else 1.dp,
-                if (active) scheme.amber.tape else if (selected) scheme.accent.tape else scheme.grayEdge.tape,
+                if (active) scheme.amber.tape else if (selected) scheme.accent.tape else scheme.edge.tape,
                 RoundedCornerShape(4.dp),
             )
             .semantics { this.selected = selected }

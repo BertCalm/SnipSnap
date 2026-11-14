@@ -30,6 +30,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.snipsnap.app.KitShelf
 import com.snipsnap.app.theme.BinRedGlow
+import com.snipsnap.app.theme.BinRedOnLcd
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
 import com.snipsnap.app.theme.lcdInk2
@@ -229,18 +230,18 @@ private fun ProjectDeleteCard(onCancel: () -> Unit, onConfirm: () -> Unit) {
     val scheme = LocalScheme.current
     OpsCard(Copy.PROJECT_DELETE_CONFIRM, onCancel) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            ActionButton("CANCEL", scheme, enabled = true, modifier = Modifier.weight(1f), onClick = onCancel)
+            ActionButton("CANCEL", scheme, enabled = true, modifier = Modifier.weight(1f), tier = ButtonTier.Text, onClick = onCancel)
             Box(
                 Modifier
                     .weight(1f)
                     .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                     .background(scheme.lcd.tape, RoundedCornerShape(4.dp))
-                    .border(2.dp, PROJECT_BIN_RED, RoundedCornerShape(4.dp))
+                    .border(2.dp, scheme.binLcd.tape, RoundedCornerShape(4.dp))
                     .tapeClick(label = "DELETE", onClick = onConfirm)
                     .padding(horizontal = 10.dp),
                 contentAlignment = Alignment.Center,
             ) {
-                TapeText("DELETE", TapeType.pixel, BinRedGlow)
+                TapeText("DELETE", TapeType.pixel, BinRedOnLcd)
             }
         }
     }
@@ -269,12 +270,9 @@ private fun ProjectDropCard(row: ShelfModel.ProjectRow, onPick: (String) -> Unit
                 )
             }
         }
-        ActionButton("CANCEL", scheme, enabled = true, modifier = Modifier.fillMaxWidth(), onClick = onDismiss)
+        ActionButton("CANCEL", scheme, enabled = true, modifier = Modifier.fillMaxWidth(), tier = ButtonTier.Text, onClick = onDismiss)
     }
 }
-
-/** The bin's red, constant across schemes: `KitsScreen.kt`'s and `DeletedKitsSection.kt`'s own copy. */
-private val PROJECT_BIN_RED = Color(0xFF6A2020)
 
 /**
  * A project asleep in the bin, in the shape of `DeletedKitRow`: its name,

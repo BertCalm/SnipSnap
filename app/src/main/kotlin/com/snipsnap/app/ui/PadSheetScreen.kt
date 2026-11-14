@@ -77,6 +77,7 @@ import com.snipsnap.app.MixVoice
 import com.snipsnap.app.OutsideSession
 import com.snipsnap.app.ShareInbox
 import com.snipsnap.app.theme.BinRedGlow
+import com.snipsnap.app.theme.BinRedOnLcd
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
 import com.snipsnap.app.theme.lcdInk2
@@ -2890,7 +2891,7 @@ fun PadSheetScreen(
         val kitDir = entry.dir
         val previewGeneration = gatheringPreviewGeneration
         gatheringRefusal = null
-        gatheringStatus = "RENDERING THE PREVIEW…"
+        gatheringStatus = "Rendering the preview…"
         busy = true
         val boardJob = jobs.beginJob(Copy.WORKING_BUSY)
         scope.launch {
@@ -2932,7 +2933,7 @@ fun PadSheetScreen(
         }
         val stalePads = pendingMetadataSlots.associateWith { sourceModel.kit.pad(it) }
         gatheringRefusal = null
-        gatheringStatus = "RENDERING A NEW GATHERING…"
+        gatheringStatus = "Rendering a new gathering…"
         busy = true
         val boardJob = jobs.beginJob(Copy.WORKING_BUSY)
         // Disk work outlives this sheet; navigation and preview do not.
@@ -2960,7 +2961,7 @@ fun PadSheetScreen(
                 }
                 val result = checkNotNull(made)
                 onKitUpdated(fresh.kit)
-                onToast("GATHERING MADE ON ${padTag(result.slot)} · ORIGINAL KEPT")
+                onToast(Copy.gatheringMade(padTag(result.slot)))
                 if (scope.isActive && liveSlot == sourceSlot && liveKitDir == kitDir && model === sourceModel) {
                     model = fresh
                     pendingMetadataSlots = emptySet()
@@ -3992,7 +3993,7 @@ fun PadSheetScreen(
                 scheme = scheme,
                 enabled = !busy,
                 // The trip out: the strip goes lcd-alt while the reels turn.
-                summaryColor = if (outsideStage != null) scheme.amber.tape else scheme.ink2.tape,
+                summaryColor = if (outsideStage != null) scheme.accent.tape else scheme.ink2.tape,
             ) {
         OutsideCard(
             moves = OutsideSheet.MOVES,
@@ -4104,7 +4105,7 @@ fun PadSheetScreen(
                 )
             }
         Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            TapeText("SUSTAIN ANY SOUND", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
+            TapeText("SUSTAIN ANY SOUND", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
             StepperSlider(
                 label = "DEPTH",
                 fraction = pendingDepth,
@@ -4144,7 +4145,7 @@ fun PadSheetScreen(
             // (onUndesample). Named in full for TalkBack: MAKE holds five doors, so a
             // bare UNDO would not say whose it is.
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                TapeText("FIND NEAREST SYNTH", TapeType.pixelSmall, scheme.ink2.tape, Modifier.weight(1f), maxLines = 1)
+                TapeText("FIND NEAREST SYNTH", TapeType.pixelSmall, scheme.ink2.tape, Modifier.weight(1f), maxLines = 2)
                 ActionButton(
                     Copy.UNDO_DESAMPLE,
                     scheme,
@@ -4248,7 +4249,7 @@ fun PadSheetScreen(
             // the only way to move — so the middle cell says where you are
             // rather than promising a gesture that doesn't exist (law 3).
             val position = (idx + 1).takeIf { idx >= 0 }?.let { "$it OF ${assignedSlots.size}" } ?: ""
-            TapeText(position, TapeType.pixelSmall, scheme.ink2.tape, Modifier.weight(1f), maxLines = 1)
+            TapeText(position, TapeType.pixelSmall, scheme.ink2.tape, Modifier.weight(1f), maxLines = 2)
             ActionButton(
                 "NEXT PAD",
                 scheme,
@@ -4702,7 +4703,7 @@ private fun ReplaceLayersConfirmDialog(text: String, confirmLabel: String, busy:
         ) {
             TapeText(text, TapeType.lcdSmall, scheme.ink.tape, maxLines = 3)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                ActionButton("CANCEL", scheme, enabled = !busy, modifier = Modifier.weight(1f), onClick = onCancel)
+                ActionButton("CANCEL", scheme, enabled = !busy, modifier = Modifier.weight(1f), tier = ButtonTier.Text, onClick = onCancel)
                 ActionButton(confirmLabel, scheme, enabled = !busy, modifier = Modifier.weight(1f), onClick = onConfirm)
             }
         }
@@ -4741,7 +4742,13 @@ internal fun StepperSlider(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        TapeText(label, TapeType.pixelSmall, scheme.ink2.tape, Modifier.width(labelWidth))
+        // A minimum, not a cap (D7): VELOCITY, ALTERNATES, GRAIN SIZE read in full, and a name
+        // longer than the cap wraps to a second line. The track keeps >= 120 dp at 360 dp.
+        TapeText(
+            label, TapeType.pixelSmall, scheme.ink2.tape,
+            Modifier.widthIn(min = labelWidth, max = maxOf(labelWidth, 96.dp)),
+            maxLines = 2,
+        )
         Box(
             Modifier
                 .weight(1f)
@@ -4895,7 +4902,7 @@ internal fun ToggleChip(
         TapeText(
             label,
             TapeType.pixel,
-            if (!enabled) scheme.ink3.tape else if (engaged) scheme.titleInk.tape else scheme.ink2.tape,
+            if (!enabled) scheme.ink3.tape else if (engaged) (if (color == scheme.accent.tape) scheme.onAccent.tape else scheme.titleInk.tape) else scheme.ink2.tape,
             maxLines = 1,
         )
     }
@@ -4965,7 +4972,7 @@ private fun BoardCard(
                 else -> "Hear the swell and pitched echoes before keeping it"
             },
             TapeType.pixelSmall,
-            if (action != null) scheme.amber.tape else scheme.ink2.tape,
+            if (action != null) scheme.accent.tape else scheme.ink2.tape,
             maxLines = 3,
         )
         StepperSlider(
@@ -5073,10 +5080,10 @@ private fun ObliterateBoardControls(
 private fun SectionHeading(text: String, scheme: Scheme) {
     TapeText(
         text,
-        TapeType.pixel,
+        TapeType.eyebrow,
         scheme.ink.tape,
         Modifier.fillMaxWidth().padding(top = 6.dp).semantics { heading() },
-        maxLines = 1,
+        maxLines = 2,
     )
 }
 
@@ -5143,7 +5150,7 @@ private fun TreatmentCard(
                 else -> "ONE PER PAD · PEDALS STACK"
             },
             TapeType.pixelSmall,
-            if (applying != null || placing != null) scheme.amber.tape else scheme.ink3.tape,
+            if (applying != null || placing != null) scheme.accent.tape else scheme.ink3.tape,
             maxLines = 1,
         )
         // Row one is the eras; most of the rest are the rack's characters,
@@ -5355,7 +5362,7 @@ private fun DustFromRow(
                 )
             }
             if (tapes.size > DUST_FROM_SHOWN) {
-                TapeText("NEWEST $DUST_FROM_SHOWN OF ${tapes.size}.", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
+                TapeText("Newest $DUST_FROM_SHOWN of ${tapes.size}.", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
             }
         }
     }
@@ -5397,7 +5404,7 @@ private fun ShapeCard(
             // What the line is for is the thing the legend cannot say -
             // that these four are metadata the hardware applies, not edits
             // to the audio on disk - so that is all it says now.
-            TapeText("THE MPC RENDERS IT", TapeType.pixelSmall, scheme.ink2.tape, Modifier.weight(1f), maxLines = 1)
+            TapeText("THE MPC RENDERS IT", TapeType.pixelSmall, scheme.ink2.tape, Modifier.weight(1f), maxLines = 2)
             ActionButton("RESET", scheme, enabled = !busy && shaped, onClick = onReset)
         }
         for (knob in knobs) {
@@ -5483,7 +5490,7 @@ private fun MutateCard(
     val move = MutateSheet.modeFor(mode)
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            TapeText("ONE HIT FROM TWO", TapeType.pixelSmall, scheme.ink2.tape, Modifier.weight(1f), maxLines = 1)
+            TapeText("ONE HIT FROM TWO", TapeType.pixelSmall, scheme.ink2.tape, Modifier.weight(1f), maxLines = 2)
             // Dimmed, not disabled, with nothing to undo: a tap says why (onUnmutate).
             ActionButton(Copy.UNDO_MUTATE, scheme, enabled = !busy, dimmed = MutateSheet.undoRefusal(mutated, canUndo) != null, onClick = onUndo)
         }
@@ -5524,7 +5531,7 @@ private fun MutateCard(
         // What the move does, in the house's own copy (design/mutate-v2's
         // Moves board), and on MORPH with BECOME above OFF, that the hit
         // turns: the line always describes what HEAR would play.
-        TapeText(MutateSheet.outcomeLine(move, becomeFraction), TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
+        TapeText(MutateSheet.outcomeLine(move, becomeFraction), TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
         // The move's knob, under its line, its meaning on a caption line under the bar.
         // STACK has no knob, so its row says so in words. Both rows are drawn on
         // every move, at one height, so the card never jumps.
@@ -5587,7 +5594,7 @@ private fun MutateCard(
         // The rooms on the shelf, two to a row (their names are words, not
         // tags); the row is absent until OUTSIDE has kept one.
         if (rooms.isNotEmpty()) {
-            TapeText("ROOMS IN THE LIBRARY · ROOM PLAYS THE PAD INSIDE ONE", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
+            TapeText("ROOMS IN THE LIBRARY · ROOM PLAYS THE PAD INSIDE ONE", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
             val chosenRoom = (partner as? MutateSheet.Partner.Room)?.name
             for (row in rooms.chunked(2)) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -5621,7 +5628,7 @@ private fun MutateCard(
         // then its pads (four to a row) - the shelf with intent, where
         // ROULETTE below is the shelf by chance. Absent on a one-kit shelf.
         if (otherKits.isNotEmpty()) {
-            TapeText("ANOTHER KIT · PICK ITS PAD", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
+            TapeText("ANOTHER KIT · PICK ITS PAD", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
             for (row in otherKits.chunked(2)) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     for (k in row) {
@@ -5715,7 +5722,7 @@ private fun MutateCard(
             modifier = Modifier.fillMaxWidth(),
             onClick = onHear,
         )
-        TapeText(MutateSheet.NOTE_LINE, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
+        TapeText(MutateSheet.NOTE_LINE, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
         // KEEP writes the move in place (no ▸, which means "goes
         // somewhere"); DRIFT beside it is the card's one-tap blend and save,
         // and says it saves. Each half row holds DRIFT's 20 characters.
@@ -5766,7 +5773,7 @@ private fun OutsideCard(
 ) {
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            TapeText("THE WORLD AS AN EFFECT", TapeType.pixelSmall, scheme.ink2.tape, Modifier.weight(1f), maxLines = 1)
+            TapeText("THE WORLD AS AN EFFECT", TapeType.pixelSmall, scheme.ink2.tape, Modifier.weight(1f), maxLines = 2)
             ActionButton(Copy.UNDO_OUTSIDE, scheme, enabled = !busy && applied != null && canUndo, onClick = onUndo)
         }
         if (stage != null) {
@@ -5855,8 +5862,8 @@ internal fun ActionButton(
     /**
      * Lit in the LCD's second colour when [enabled] too — a state that
      * has to announce itself (KEEP ROOM the instant a trip measures a
-     * room), not merely stop being dimmed: an amber rim over the ordinary
-     * bevel, [PrimaryAction]'s own dress on a working-surface button.
+     * room), not merely stop being dimmed: an accent rim over the ordinary
+     * bevel.
      * Busy, or not yet earned, and the plain bevel and ink3 return.
      */
     lit: Boolean = false,
@@ -5901,14 +5908,24 @@ internal fun ActionButton(
      * as `KitsScreen.loadingClock`).
      */
     ringClock: () -> Long = SystemClock::uptimeMillis,
+    /**
+     * How loudly this button asks to be pressed ([ButtonTier]). [ButtonTier.Secondary],
+     * the outlined raised button, is what a call site that says nothing gets.
+     * A Primary that cannot be pressed ([enabled] false, or [dimmed]) is not the
+     * same button dimmed: the fill is what says "press me", so it goes, and the
+     * button draws as a disabled secondary does. A Text button keeps its place
+     * and goes `ink3`.
+     */
+    tier: ButtonTier = ButtonTier.Secondary,
     onClick: () -> Unit,
 ) {
     val litNow = lit && enabled
     val ringUp = rememberRingUp(working, ringClock)
+    val shown = if (tier == ButtonTier.Primary && (!enabled || dimmed)) ButtonTier.Secondary else tier
     Box(
         modifier
             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
-            .raisedBevel(scheme)
+            .tierSurface(shown, scheme)
             .let { if (litNow) it.border(2.dp, scheme.accent.tape, RoundedCornerShape(4.dp)) else it }
             // Always clickable, `enabled` forwarded rather than dropped:
             // a screen reader is told this control is temporarily
@@ -5921,26 +5938,17 @@ internal fun ActionButton(
             .padding(horizontal = 8.dp),
         contentAlignment = Alignment.Center,
     ) {
-        val ink = if (!enabled) scheme.ink3.tape else if (litNow) scheme.amber.tape else if (dimmed) scheme.ink2.tape else scheme.ink.tape
+        val ink = tierInk(shown, scheme, enabled, litNow, dimmed)
         if (ringUp) {
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                Spinner(scheme.accent.tape)
-                TapeText(label, TapeType.pixel, ink, Modifier.weight(1f, fill = false), maxLines = 1)
+                Spinner(if (shown == ButtonTier.Primary) scheme.onAccent.tape else scheme.accent.tape)
+                TapeText(label, TapeType.pixel, ink, Modifier.weight(1f, fill = false), maxLines = 2)
             }
         } else {
-            TapeText(label, TapeType.pixel, ink, maxLines = 1)
+            TapeText(label, TapeType.pixel, ink, maxLines = 2)
         }
     }
 }
-
-// THE ONLY NON-SCHEME COLOURS IN THE DESIGN — BIN red is deliberately
-// constant across every scheme (HANDOFF.md X2 / TAKES+BIN), so a delete
-// action reads as "red" even in a scheme with no red anywhere else in it.
-// The glow half moved to Schemes.BIN_RED_GLOW / theme.BinRedGlow — a
-// single tuned token instead of a duplicated literal (accessibility audit
-// finding 5); the border half is untouched (a 3:1, non-text UI element,
-// not the failure that was found).
-private val BIN_RED_BORDER = Color(0xFF6A2020)
 
 /**
  * Pad delete → bin. Named DeleteButton, not EjectButton — EJECT already
@@ -5958,7 +5966,7 @@ private fun DeleteButton(scheme: Scheme, enabled: Boolean, onClick: () -> Unit) 
             // this scheme (see PrimaryAction) — only the rim is the fixed
             // bin-red; the fill still answers to the scheme.
             .background(scheme.lcd.tape, RoundedCornerShape(4.dp))
-            .border(2.dp, BIN_RED_BORDER, RoundedCornerShape(4.dp))
+            .border(2.dp, scheme.binLcd.tape, RoundedCornerShape(4.dp))
             // enabled forwarded, not dropped — see ActionButton's own note.
             .tapeClick(label = "DELETE → TRASH", enabled = enabled, onClick = onClick)
             .padding(horizontal = 10.dp),
@@ -5970,6 +5978,6 @@ private fun DeleteButton(scheme: Scheme, enabled: Boolean, onClick: () -> Unit) 
         // sibling BIN-red button (EmptyBinButton × 3, EmptyRoomsBinButton):
         // BinRedGlow at reduced alpha risks failing contrast against the
         // dark LCD fill, where ink3 is a scheme token already tuned for it.
-        TapeText("DELETE → TRASH", TapeType.pixel, if (enabled) BinRedGlow else scheme.ink3.tape)
+        TapeText("DELETE → TRASH", TapeType.pixel, if (enabled) BinRedOnLcd else scheme.ink3.tape)
     }
 }

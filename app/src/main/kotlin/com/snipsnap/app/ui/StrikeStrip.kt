@@ -39,6 +39,7 @@ import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.setProgress
 import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.semantics.testTag
 import androidx.compose.ui.unit.dp
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
@@ -97,7 +98,7 @@ internal fun StrikeLayerFeedback(state: StrikeState, modifier: Modifier = Modifi
     Row(modifier.heightIn(min = 28.dp), horizontalArrangement = Arrangement.spacedBy(4.dp),
         verticalAlignment = Alignment.CenterVertically) {
         if (hit == null) {
-            TapeText("TAP A PAD TO SEE ITS LAYER", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
+            TapeText("TAP A PAD TO SEE ITS LAYER", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
         } else {
             TapeText("LAST ${PadNoteMap.labelForPad(hit.slot)}", TapeType.pixelSmall, scheme.ink2.tape)
             hit.labels.forEachIndexed { index, label ->
@@ -111,7 +112,7 @@ internal fun StrikeLayerFeedback(state: StrikeState, modifier: Modifier = Modifi
                         }.padding(horizontal = 3.dp),
                     contentAlignment = Alignment.Center,
                 ) {
-                    TapeText(label, TapeType.pixelSmall, if (active) scheme.accent.tape else scheme.ink2.tape, maxLines = 1)
+                    TapeText(label, TapeType.pixelSmall, if (active) scheme.accent.tape else scheme.ink2.tape, maxLines = 2)
                 }
             }
         }
@@ -140,7 +141,7 @@ internal fun StrikeControls(state: StrikeState, modifier: Modifier = Modifier) {
     @Composable
     fun Control(caption: String, text: String, label: String, active: Boolean, waiting: Boolean, modifier: Modifier, click: () -> Unit) {
         Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
-            TapeText(caption, TapeType.pixelSmall, scheme.ink2.tape, Modifier.clearAndSetSemantics { })
+            TapeText(caption, TapeType.pixelSmall, scheme.ink2.tape, Modifier.clearAndSetSemantics { testTag = "strike-caption-$caption" })
             Box(
                 Modifier.fillMaxWidth().heightIn(min = Layout.MIN_HIT_TARGET.dp)
                     .let { if (active) it.pressedBevel(scheme) else it.raisedBevel(scheme) }
@@ -152,7 +153,7 @@ internal fun StrikeControls(state: StrikeState, modifier: Modifier = Modifier) {
                     .padding(horizontal = 4.dp),
                 contentAlignment = Alignment.Center,
             ) {
-                TapeText(text, TapeType.pixelSmall, if (waiting) scheme.ink2.tape else scheme.ink.tape, maxLines = 1)
+                TapeText(text, TapeType.pixelSmall, if (waiting) scheme.ink2.tape else scheme.ink.tape, maxLines = 2)
             }
         }
     }

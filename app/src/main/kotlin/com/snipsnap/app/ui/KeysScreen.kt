@@ -350,7 +350,7 @@ fun KeysScreen(
         Row(
             Modifier
                 .fillMaxWidth()
-                .height(Layout.LCD_HEADER_H.dp)
+                .minHeight(Layout.LCD_HEADER_H.dp)
                 .lcdPanel(scheme)
                 .padding(horizontal = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -388,12 +388,12 @@ fun KeysScreen(
                     Modifier
                         .weight(1f)
                         .heightIn(min = Layout.MIN_HIT_TARGET.dp)
-                        .raisedBevel(scheme, fill = if (selected) scheme.amber.tape.copy(alpha = 0.85f) else null)
+                        .raisedBevel(scheme, fill = if (selected) scheme.accent.tape else null)
                         .tapeClick(label = l) { silence(); layout = l }
                         .padding(horizontal = 2.dp),
                     contentAlignment = Alignment.Center,
                 ) {
-                    TapeText(l, TapeType.pixelSmall, if (selected) scheme.titleInk.tape else scheme.ink2.tape, maxLines = 2)
+                    TapeText(l, TapeType.pixelSmall, if (selected) scheme.onAccent.tape else scheme.ink2.tape, maxLines = 2)
                 }
             }
         }
@@ -457,7 +457,7 @@ fun KeysScreen(
                 KeysMidi.TARGETS,
                 supported = true,
                 connected = midiDevices.isNotEmpty(),
-                hint = "${KeysMidi.label(volume)} · A LEARNED KEY PLAYS NO NOTE",
+                hint = "${KeysMidi.label(volume)} · ${Copy.LEARNED_KEY_NO_NOTE}",
             )
         }
 
@@ -466,7 +466,7 @@ fun KeysScreen(
         // nothing here rather than an invitation it cannot honour.
         if (midiSupported) {
             Box(Modifier.fillMaxWidth().height(24.dp), contentAlignment = Alignment.Center) {
-                TapeText(midiLine(midiDevices), TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
+                TapeText(midiLine(midiDevices), TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
             }
         }
     }
@@ -497,17 +497,18 @@ private const val BEND_RANGE_KEY = "keys.bendRange"
 private val CENTER_VELOCITY = PadHit.CENTER
 
 @Composable
-private fun KeyPad(
+internal fun KeyPad(
     label: String,
     enabled: Boolean,
     onPress: (Float) -> Unit,
     onRelease: () -> Unit,
     modifier: Modifier = Modifier,
+    disabledReason: String = "NOT MAPPED",
 ) {
     val scheme = LocalScheme.current
     val shape = RoundedCornerShape(Layout.PAD_RADIUS.dp)
     var down by remember { mutableStateOf(false) }
-    val ink = scheme.amber.tape
+    val ink = scheme.accent.tape
     Box(
         modifier
             .height(Layout.PAD_H.dp)
@@ -522,7 +523,7 @@ private fun KeyPad(
             // mergeDescendants: without it, the label TapeText below is
             // a second, separately-focusable node.
             .semantics(mergeDescendants = true) {
-                contentDescription = if (enabled) "KEY $label" else "KEY $label: NOT MAPPED"
+                contentDescription = if (enabled) "KEY $label" else "KEY $label: $disabledReason"
                 if (enabled) {
                     onClick(label = "PLAY") { onPress(CENTER_VELOCITY); onRelease(); true }
                 } else {

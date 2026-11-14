@@ -13,7 +13,8 @@ kit breathing through a dictaphone**.
 
 **Sound approved at round 2** (2026-11-13: "All sounds fine"). The 16-pad kit (`SootKits.VERSION` 3)
 is on the FRESH TAPE shelf (SKINS: "SOOT"). Its grids are proven in software through save, playback
-and MPC 3 export. The engine stays a prototype outside the factory presets and the phone picker.
+and MPC 3 export. The engine is on SYNTH's picker (DRUMS) and stays a prototype outside the factory
+presets.
 
 How the owner got there:
 - **Round 0** picked the hits.
@@ -28,12 +29,13 @@ How the owner got there:
   - moved the four bars to the heavier dictaphone (.9).
 
 Still to come:
-- the owner's listen to the four sibling kits, which are built and on the shelf:
+- nothing for the sound. The four sibling kits are approved:
   - SOOT DRUMLESS, SOOT BASEMENT DUB, SOOT BRUSHED NOIR and SOOT WAREHOUSE INDUSTRIAL
-    (`SootGenreKits.kt`, `:shell:generateSootGenreKits`);
-  - listening page: https://claude.ai/artifact/J6S61MGPeNuErNGJq9v4xa;
+    (`SootGenreKits.kt` 2, `:shell:generateSootGenreKits`);
+  - 63 of 64 pads kept as built; Basement Dub's four bars are the steppers groove the owner picked;
 - phone and MPC hardware;
-- the picker entry, in a session with an Android SDK, as the house rule says.
+- nothing for the picker: SOOT is on it (2026-11-13), mirroring BACKWASH, with an on-device test in
+  `NewEngineSynthScreenTest`.
 
 ## The kit (approved 2026-11-12, re-pointed by the picks)
 
@@ -121,6 +123,7 @@ Round 0's harness: `python3 scripts/soot_r0/soot_r0.py` then `python3 scripts/so
   carries only its own breath.
 - **The kit takes 27.6 s to build on this host** (4 cores). The four bars are 63% of it. A phone
   will be slower.
-- **MPC 2 does not pass the round-robin export gate.** It keeps one take per zone. SFZ and
+- **MPC 2: the round-robin export gate does not apply** (a format limit, recorded 2026-11-14 in
+  [ENGINE_ACCEPTANCE_GATES.md](ENGINE_ACCEPTANCE_GATES.md#mpc-2-and-round-robin-owner-decision-2026-11-14)). It keeps one take per zone. SFZ and
   DecentSampler were not generated.
 - **Mono, no hardware.** Nothing has been played on a phone or an MPC.

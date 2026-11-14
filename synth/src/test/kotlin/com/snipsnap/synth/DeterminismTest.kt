@@ -12,6 +12,24 @@ import kotlin.test.assertTrue
  * both depend on the second half.
  */
 class DeterminismTest {
+    @Test
+    fun `TEMPEST retains both saved finite strikes and seeded noise`() {
+        for (voice in TempestVoice.entries) {
+            val patch = TempestPatch("Canary", voice, Tempest.defaults(voice) + ("SOURCE" to 1f))
+            assertContentEquals(patch.render().samples, Patches.fromJsonText(patch.toJsonText()).render().samples)
+        }
+    }
+
+    @Test fun `SPLAY recovered performance repeats its acoustic seed and trajectories exactly`() {
+        val patch = SplayPatch("Revised population canary", SplayVoice.TONGUE,
+            Splay.defaults(SplayVoice.TONGUE, model = 2) + ("POPULATION" to 3f / 99f),
+            midi = 57, velocity = .6f, seed = 41001, model = 2)
+        val first = Splay.renderDetailed(patch.voice, patch.macros, patch.midi, patch.velocity, patch.seed, patch.model)
+        val second = Splay.renderDetailed(patch.voice, patch.macros, patch.midi, patch.velocity, patch.seed, patch.model)
+        assertContentEquals(first.raw, second.raw)
+        assertContentEquals(first.snip.samples, second.snip.samples)
+    }
+
     @Test fun `TRIAD shared bus phrase replays byte for byte`() {
         val source = Triad.source(Triad.Settings(bars = 1)).mix()
         for (rig in Triad.Rig.entries) assertContentEquals(
@@ -63,6 +81,12 @@ class DeterminismTest {
     @Test fun `FIRED BRONZE editable patch replays`() {
         val patch = FiredBronzePatch("Edge Ring", FiredBronzeDryKit.Pad.TIN)
         assertContentEquals(patch.render().samples, Patches.fromJsonValue(patch.toJsonValue()).render().samples)
+    }
+
+    @Test fun `FIRED BRONZE model 2 strikes replay through JSON`() {
+        val patch = FiredBronzePatch("Low Kettle", FiredBronzeDryKit.Pad.KETTLE_LOW)
+        val back = Patches.fromJsonValue(patch.toJsonValue()) as FiredBronzePatch
+        assertContentEquals(patch.render(.45f, 2).samples, back.render(.45f, 2).samples)
     }
 
     @Test fun `FIRED BRONZE performance recipe replays`() {
@@ -196,6 +220,24 @@ class DeterminismTest {
         assertContentEquals(held.render().samples, held.render().samples, "HOLD top")
     }
 
+    @Test fun `SCUFF renders every voice, a soft hit and every take byte for byte through JSON`() {
+        for (voice in ScuffVoice.entries) {
+            val patch = ScuffPatch("Canary", voice, Scuff.defaults(voice))
+            assertContentEquals(patch.render().samples, Patches.fromJsonText(patch.toJsonText()).render().samples, "$voice")
+            val struck = ScuffPatch("Soft take", voice, Scuff.defaults(voice), velocity = 0.6f, take = 3)
+            assertContentEquals(struck.render().samples, Patches.fromJsonText(struck.toJsonText()).render().samples, "$voice soft take 3")
+        }
+    }
+
+    @Test fun `CLUTTER renders every object, a soft hit and every take byte for byte through JSON`() {
+        for (voice in ClutterVoice.entries) {
+            val patch = ClutterPatch("Canary", voice, Clutter.defaults(voice))
+            assertContentEquals(patch.render().samples, Patches.fromJsonText(patch.toJsonText()).render().samples, "$voice")
+            val struck = ClutterPatch("Soft take", voice, Clutter.defaults(voice), velocity = 0.4f, take = 3)
+            assertContentEquals(struck.render().samples, Patches.fromJsonText(struck.toJsonText()).render().samples, "$voice soft take 3")
+        }
+    }
+
     @Test fun `EROSION native voices replay their saved touch`() {
         for (voice in ErosionVoice.entries) {
             val patch = ErosionPatch("Canary", voice, velocity = .6f)
@@ -257,6 +299,17 @@ class DeterminismTest {
             val saved = PadRecipe.fromJsonText(PadRecipe(patch).toJsonText())
             assertContentEquals(original, saved.render().samples)
         }
+    }
+
+    @Test
+    fun `NACRE strike-shaped v2 layers reproduce across cold source caches and a saved policy`() {
+        val hard = NacrePresets.all().first { it.model == 4 }.copy(midi = 55, seed = -3L)
+        val bank = NacreContactStrikeRecipes.recipeFor(hard, NacreStrikeVariant.STRONG)
+        Nacre.clearCoreCache()
+        val original = bank.layers.first().render().samples
+        Nacre.clearCoreCache()
+        val saved = NacreContactStrikeRecipe.fromJsonText(bank.toJsonText())
+        assertContentEquals(original, saved.layers.first().render().samples)
     }
 
     @Test

@@ -25,6 +25,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.snipsnap.app.theme.BinRedGlow
+import com.snipsnap.app.theme.BinRedOnLcd
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
 import com.snipsnap.app.theme.lcdInk2
@@ -170,7 +171,7 @@ internal fun DeletedSnipsSection(
     Column(modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
         // The shelf's section-header style; the bench's header row and Back
         // live in `BinScreen`, not here.
-        TapeText("DELETED SAMPLES · ${binned.size} WAITING", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
+        TapeText("DELETED SAMPLES · ${binned.size} WAITING", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
 
         if (binned.isEmpty()) {
             Box(
@@ -280,13 +281,13 @@ private fun DeletedSnipRow(row: SnipStore.BinnedSnip, busy: Boolean, onRestore: 
 @Composable
 private fun EmptyBinButton(scheme: Scheme, enabled: Boolean, armed: Boolean, onClick: () -> Unit) {
     // Same text the TapeText below shows — it already follows `armed`.
-    val label = if (armed) "TAP AGAIN TO CONFIRM — NO TAKEBACKS" else "EMPTY THE TRASH NOW — NO TAKEBACKS"
+    val label = if (armed) Copy.EMPTY_TRASH_ARMED else Copy.EMPTY_TRASH_NOW
     Box(
         Modifier
             .fillMaxWidth()
             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
             .background(scheme.lcd.tape, RoundedCornerShape(5.dp))
-            .border(2.dp, BIN_RED_BORDER, RoundedCornerShape(5.dp))
+            .border(2.dp, scheme.binLcd.tape, RoundedCornerShape(5.dp))
             // Always clickable, `enabled` forwarded rather than dropped: a
             // screen reader is told this control is temporarily unavailable
             // instead of it silently vanishing from the tree (accessibility
@@ -295,19 +296,10 @@ private fun EmptyBinButton(scheme: Scheme, enabled: Boolean, armed: Boolean, onC
             .padding(horizontal = 10.dp),
         contentAlignment = Alignment.Center,
     ) {
-        TapeText(
-            // `TakesBinScreen.kt`'s own armed-label swap, copied verbatim.
-            label,
-            TapeType.pixel,
-            if (enabled) BinRedGlow else scheme.ink3.tape,
-            maxLines = 1,
-        )
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            TapeText(label, TapeType.pixel, if (enabled) BinRedOnLcd else scheme.ink3.tape, maxLines = 1)
+            // Said once the button is armed, in a sentence: what the second tap does.
+            if (armed) TapeText(Copy.EMPTY_TRASH_FACT, TapeType.pixelSmall, if (enabled) BinRedOnLcd else scheme.ink3.tape, maxLines = 2)
+        }
     }
 }
-
-// Duplicated, not hoisted — deliberately constant across every scheme so a
-// delete/empty action reads as "red" even in a scheme with no red anywhere
-// else in it. The glow half moved to Schemes.BIN_RED_GLOW / theme.BinRedGlow
-// (accessibility audit finding 5) — a single tuned token, not a duplicated
-// literal.
-private val BIN_RED_BORDER = Color(0xFF6A2020)

@@ -1269,7 +1269,9 @@ fun SurfaceScreen(
                         // (finding #21) - the same `selected` semantics the
                         // CUT bench's SegmentButtons already carry for their
                         // own mutually-exclusive row.
-                        modifier = Modifier.weight(1f).semantics { selected = m == mode },
+                        // Weighted by name length (+4): equal fifths left VECTOR's six
+                        // letters 0.8 dp short once the label went to 13 sp mono.
+                        modifier = Modifier.weight(m.name.length + 4f).semantics { selected = m == mode },
                     ) {
                         mode = m
                         target = Reading.REST // the frame loop snaps to it on the mode change
@@ -1288,14 +1290,14 @@ fun SurfaceScreen(
             // destination as "TA..." and never found → PAD. BARS sits here
             // with the print it sizes, not on VOICE beside LATCH.
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                PrintDestination(printToPad, enabled = !printing && !finishing, modifier = Modifier.weight(1.9f)) { printToPad = it }
+                PrintDestination(printToPad, enabled = !printing && !finishing, modifier = Modifier.weight(2.3f)) { printToPad = it }
                 // BARS needs a tempo; a kit without one prints free.
                 PrintBarsOpener(barsIndex, entry?.kit?.tempoBpm, printing, scheme, Modifier.weight(1.3f)) { barsIndex = it }
                 ActionButton(
                     label = if (printing) "STOP PRINT" else "PRINT",
                     scheme = scheme,
                     enabled = engineUp && padName != null && !finishing,
-                    modifier = Modifier.weight(1.4f),
+                    modifier = Modifier.weight(1.0f),
                 ) {
                     if (printing) {
                         finishPrint()
@@ -1451,7 +1453,7 @@ fun SurfaceScreen(
                             enabled = padName != null,
                             modifier = Modifier.weight(1.1f),
                         ) { grainKnob = (grainKnob + 1) % GRAIN_KNOBS.size }
-                        ActionButton("◄", scheme, enabled = padName != null) { stepGrain(-1) }
+                        ActionButton("◄", scheme, enabled = padName != null, accessibilityLabel = "PREVIOUS VALUE") { stepGrain(-1) }
                         val g = kitSettings.grain
                         TapeText(
                             "SIZE ${pct(g.size)}  DENS ${pct(g.density)}  SPRAY ${pct(g.spray)}",
@@ -1459,7 +1461,7 @@ fun SurfaceScreen(
                             scheme.ink.tape,
                             Modifier.weight(1.8f).padding(horizontal = 4.dp),
                         )
-                        ActionButton("►", scheme, enabled = padName != null) { stepGrain(+1) }
+                        ActionButton("►", scheme, enabled = padName != null, accessibilityLabel = "NEXT VALUE") { stepGrain(+1) }
                     }
                 }
 
@@ -1478,7 +1480,7 @@ fun SurfaceScreen(
                             enabled = padName != null,
                             modifier = Modifier.weight(1.1f),
                         ) { swarmKnob = (swarmKnob + 1) % SWARM_KNOBS.size }
-                        ActionButton("◄", scheme, enabled = padName != null) { stepSwarm(-1) }
+                        ActionButton("◄", scheme, enabled = padName != null, accessibilityLabel = "PREVIOUS VALUE") { stepSwarm(-1) }
                         val w = kitSettings.swarm
                         TapeText(
                             "SWARM ${w.voices} ${if (w.voices == 1) "VOICE" else "VOICES"}  DETUNE ${pct(w.detune)}",
@@ -1486,7 +1488,7 @@ fun SurfaceScreen(
                             scheme.ink.tape,
                             Modifier.weight(1.8f).padding(horizontal = 4.dp),
                         )
-                        ActionButton("►", scheme, enabled = padName != null) { stepSwarm(+1) }
+                        ActionButton("►", scheme, enabled = padName != null, accessibilityLabel = "NEXT VALUE") { stepSwarm(+1) }
                     }
                 }
 
@@ -1552,14 +1554,14 @@ fun SurfaceScreen(
                 // LIBRARY and the class doc.
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
                     val armed = armedCorner
-                    ActionButton("◄ PRESET", scheme, enabled = armed != null, modifier = Modifier.weight(1f)) { stepPreset(-1) }
+                    ActionButton("PREVIOUS PRESET", scheme, enabled = armed != null, modifier = Modifier.weight(1f)) { stepPreset(-1) }
                     TapeText(
-                        armed?.let { c -> presetIndexFor(c)?.let { SurfaceStore.Corner.LIBRARY[it].name } ?: "◄ ► TO STEP" } ?: "ARM A CORNER",
+                        armed?.let { c -> presetIndexFor(c)?.let { SurfaceStore.Corner.LIBRARY[it].name } ?: "PICK A PRESET" } ?: "ARM A CORNER",
                         TapeType.pixel,
                         scheme.ink.tape,
                         Modifier.weight(1.2f).padding(horizontal = 4.dp),
                     )
-                    ActionButton("PRESET ►", scheme, enabled = armed != null, modifier = Modifier.weight(1f)) { stepPreset(+1) }
+                    ActionButton("NEXT PRESET", scheme, enabled = armed != null, modifier = Modifier.weight(1f)) { stepPreset(+1) }
                 }
             }
 
@@ -1571,7 +1573,7 @@ fun SurfaceScreen(
                     SurfaceMidi.TARGETS,
                     supported = midiSupported,
                     connected = midiDevices.isNotEmpty(),
-                    hint = "KNOBS MOVE THE PUCK, HOLD SOUNDS IT",
+                    hint = Copy.SURFACE_KNOBS_HINT,
                 )
             }
 
@@ -1597,7 +1599,7 @@ fun SurfaceScreen(
                         enabled = padName != null,
                         modifier = Modifier.weight(1.1f),
                     ) { modField = (modField + 1) % MOD_FIELDS.size }
-                    ActionButton("◄", scheme, enabled = padName != null) { stepMod(-1) }
+                    ActionButton("◄", scheme, enabled = padName != null, accessibilityLabel = "PREVIOUS VALUE") { stepMod(-1) }
                     TapeText(
                         "${slot.target} ${slot.shape} ${
                             when {
@@ -1610,7 +1612,7 @@ fun SurfaceScreen(
                         scheme.ink.tape,
                         Modifier.weight(1.6f).padding(horizontal = 4.dp),
                     )
-                    ActionButton("►", scheme, enabled = padName != null) { stepMod(+1) }
+                    ActionButton("►", scheme, enabled = padName != null, accessibilityLabel = "NEXT VALUE") { stepMod(+1) }
                 }
 
                 // GESTURE's row, while a slot is on the shape, REC is armed or a
@@ -1839,7 +1841,7 @@ fun SurfaceScreen(
             }
             SlotChooserOverlay(
                 kit = entry?.kit,
-                previewColor = scheme.amber.tape,
+                previewColor = scheme.accent.tape,
                 scheme = scheme,
                 busy = landing,
                 onPick = ::landOnPad,
@@ -1924,8 +1926,8 @@ private fun PrintDestination(toPad: Boolean, enabled: Boolean, modifier: Modifie
 @Composable
 private fun SamplePadRow(tag: String, name: String?, scheme: Scheme, enabled: Boolean, onStep: (Int) -> Unit) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-        ActionButton("◄ $tag", scheme, enabled = enabled, modifier = Modifier.weight(1f)) { onStep(-1) }
+        ActionButton("PREVIOUS $tag", scheme, enabled = enabled, modifier = Modifier.weight(1f)) { onStep(-1) }
         TapeText(name ?: "NO $tag", TapeType.pixel, scheme.ink.tape, Modifier.weight(1.2f).padding(horizontal = 4.dp))
-        ActionButton("$tag ►", scheme, enabled = enabled, modifier = Modifier.weight(1f)) { onStep(+1) }
+        ActionButton("NEXT $tag", scheme, enabled = enabled, modifier = Modifier.weight(1f)) { onStep(+1) }
     }
 }
