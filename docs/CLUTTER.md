@@ -337,12 +337,11 @@ version survive, as SCUFF's do.
 
 ## Round 4: the engine picker (2026-11-14)
 
-CLUTTER joins SYNTH's `Engine` picker as its last constant, after ETCH, the way SCUFF's round 5 (#1107, open at
-the time of writing) does it: SOOT's seven `when` arms, the saved-draft restore, a frozen draft before a macro bag,
+CLUTTER joins SYNTH's `Engine` picker as its last constant, after SCUFF, the way SCUFF's round 5 (#1107) does it: SOOT's seven `when` arms, the saved-draft restore, a frozen draft before a macro bag,
 the live-edit list, plus the native-factory path RIVET takes, because a CLUTTER preset carries a strike velocity, a
 take and a renderer model outside the macro map. A chosen kit pad loads whole and keeps its take through edits and
 drafts. The 22 object chips are their names, with the bin lid's as BIN LID. `EngineCatalog` files CLUTTER under
-DRUMS; both READMEs count 87 picker engines.
+DRUMS after SCUFF; both READMEs count 88 picker engines.
 
 The editor plays a preset as filed: full velocity, take 0. Velocity and the takes are the kit grid's (and the
 pad sheet's), not knobs on the editor; SCUFF's entry made the same choice.
