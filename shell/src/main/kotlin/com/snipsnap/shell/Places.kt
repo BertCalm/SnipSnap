@@ -91,7 +91,7 @@ object Places {
     @field:CopyCaption const val ARM_INSIDE_DESC = "Record an app"
 
     /** The capture sheet's title. */
-    @field:CopyLabel const val ARM_SHEET_TITLE = "RECORD FROM"
+    @field:CopyLabel const val ARM_SHEET_TITLE = "LISTEN FROM"
 
     /** `ARMED · 00:41 ON TAPE` — the shelf's counter, now on every screen. */
     fun armed(secondsOnTape: Int): String {

@@ -12,7 +12,7 @@ internal class SplayFiniteHeldSpec(private val spec: SplayFinitePadMaker.Spec) :
     override val hasAttack get() = false
     override val hasRelease get() = false
     override fun shelfNote(name: String) = if (name.isEmpty()) "" else
-        "LANDS ON THE SHELF AS ${name.uppercase(Locale.ROOT)}, PLAYABLE ON KEYS."
+        "LANDS IN THE LIBRARY AS ${name.uppercase(Locale.ROOT)}, PLAYABLE ON KEYS."
     override val progressPerZone get() = SplayFiniteKeygroupMaker.TOUCHES.size
     override val knobLabel get() = "FINITE SOURCE · GAIN-ONLY VELOCITY"
     override val instrumentNote get() = SplayFinitePadMaker.instrumentNote(spec)

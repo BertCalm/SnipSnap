@@ -1364,7 +1364,7 @@ private fun TelephonePortrait(index: Int, bitmap: ImageBitmap, picked: Boolean, 
                 .size(96.dp)
                 .border(
                     if (picked) 2.dp else 1.dp,
-                    if (picked) scheme.amber.tape else scheme.grayEdge.tape,
+                    if (picked) scheme.amber.tape else scheme.edge.tape,
                     RoundedCornerShape(4.dp),
                 ),
         ) {

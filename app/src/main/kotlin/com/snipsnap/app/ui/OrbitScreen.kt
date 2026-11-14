@@ -1435,7 +1435,7 @@ private fun RingDetailPanel(
         Box(
             Modifier
                 .weight(1f)
-                .heightIn(min = 36.dp)
+                .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                 // Names the action the chevron draws, not the
                 // live count it opens onto (an accessibility-
                 // tree dump showed the TapeText below doesn't
@@ -1483,7 +1483,7 @@ private fun RingDetailPanel(
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
         SmallChip("−", scheme, description = "QUIETER") { onUpdateRing { it.copy(level = (it.level - LEVEL_STEP).coerceAtLeast(0f)) } }
         Box(
-            Modifier.weight(1f).heightIn(min = 36.dp).tapeClick(label = "RESET LEVEL TO 100") {
+            Modifier.weight(1f).heightIn(min = Layout.MIN_HIT_TARGET.dp).tapeClick(label = "RESET LEVEL TO 100") {
                 onUpdateRing { it.copy(level = 1f) }
             },
             contentAlignment = Alignment.Center,
@@ -1493,7 +1493,7 @@ private fun RingDetailPanel(
         SmallChip("+", scheme, description = "LOUDER") { onUpdateRing { it.copy(level = (it.level + LEVEL_STEP).coerceAtMost(MAX_LEVEL)) } }
         SmallChip("◀", scheme, description = "PAN LEFT") { onUpdateRing { it.copy(pan = (it.pan - PAN_STEP).coerceAtLeast(-1f)) } }
         Box(
-            Modifier.weight(1f).heightIn(min = 36.dp).tapeClick(label = "RESET PAN TO CENTRE") {
+            Modifier.weight(1f).heightIn(min = Layout.MIN_HIT_TARGET.dp).tapeClick(label = "RESET PAN TO CENTRE") {
                 onUpdateRing { it.copy(pan = 0f) }
             },
             contentAlignment = Alignment.Center,
@@ -1582,7 +1582,7 @@ private fun ArpPanel(
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
         SmallChip("−", scheme, description = "GATE SHORTER") { onGateChange((arpGate - ARP_GATE_STEP).coerceAtLeast(Arp.MIN_GATE)) }
         Box(
-            Modifier.weight(1f).heightIn(min = 36.dp).tapeClick(label = "RESET GATE TO FULL") { onGateChange(1f) },
+            Modifier.weight(1f).heightIn(min = Layout.MIN_HIT_TARGET.dp).tapeClick(label = "RESET GATE TO FULL") { onGateChange(1f) },
             contentAlignment = Alignment.Center,
         ) {
             TapeText("GATE ${(arpGate * 100).roundToInt()}%", TapeType.pixel, scheme.ink.tape)
@@ -2896,16 +2896,21 @@ internal fun SmallChip(
     description: String? = null,
     onClick: () -> Unit,
 ) {
+    // The touch target is 48 dp; the drawn chip stays 36.
     Box(
-        Modifier
-            .heightIn(min = 36.dp)
-            .background(scheme.field.tape, RoundedCornerShape(4.dp))
-            .border(1.dp, if (accent && enabled) scheme.accent.tape else scheme.edge.tape, RoundedCornerShape(4.dp))
-            .tapeClick(label = description ?: label, enabled = enabled, onClick = onClick)
-            .padding(horizontal = 8.dp),
+        Modifier.heightIn(min = Layout.MIN_HIT_TARGET.dp).tapeClick(label = description ?: label, enabled = enabled, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        TapeText(label, TapeType.pixel, if (!enabled) scheme.ink3.tape else if (accent) scheme.accent.tape else scheme.ink2.tape, maxLines = 2)
+        Box(
+            Modifier
+                .heightIn(min = 36.dp)
+                .background(scheme.field.tape, RoundedCornerShape(4.dp))
+                .border(1.dp, if (accent && enabled) scheme.accent.tape else scheme.edge.tape, RoundedCornerShape(4.dp))
+                .padding(horizontal = 8.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            TapeText(label, TapeType.pixel, if (!enabled) scheme.ink3.tape else if (accent) scheme.accent.tape else scheme.ink2.tape, maxLines = 2)
+        }
     }
 }
 
@@ -2917,37 +2922,49 @@ internal fun SmallChip(
 private fun SpanChip(span: OrbitSpan, scheme: Scheme, onPick: () -> Unit) {
     val spanned = span != OrbitSpan.FREE
     val chip = if (spanned) "SPAN ${span.label}" else "SPAN FREE"
+    // The touch target is 48 dp; the drawn chip stays 36.
     Box(
         Modifier
-            .heightIn(min = 36.dp)
-            .background(scheme.field.tape, RoundedCornerShape(4.dp))
-            .border(1.dp, if (spanned) scheme.accent.tape else scheme.edge.tape, RoundedCornerShape(4.dp))
+            .heightIn(min = Layout.MIN_HIT_TARGET.dp)
             .semantics { contentDescription = "SPAN: ${span.label}" }
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
                 onClickLabel = "PICK A SPAN",
                 onClick = onPick,
-            )
-            .padding(horizontal = 8.dp),
+            ),
         contentAlignment = Alignment.Center,
     ) {
-        TapeText(Places.opener(chip), TapeType.pixel, if (spanned) scheme.accent.tape else scheme.ink2.tape)
+        Box(
+            Modifier
+                .heightIn(min = 36.dp)
+                .background(scheme.field.tape, RoundedCornerShape(4.dp))
+                .border(1.dp, if (spanned) scheme.accent.tape else scheme.edge.tape, RoundedCornerShape(4.dp))
+                .padding(horizontal = 8.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            TapeText(Places.opener(chip), TapeType.pixel, if (spanned) scheme.accent.tape else scheme.ink2.tape)
+        }
     }
 }
 
 @Composable
 private fun PadChip(label: String, color: Color, chosen: Boolean, used: Boolean, scheme: Scheme, onClick: () -> Unit) {
+    // The touch target is 48 dp; the drawn chip stays 36.
     Box(
-        Modifier
-            .heightIn(min = 36.dp)
-            .background(if (chosen) color else scheme.field.tape, RoundedCornerShape(4.dp))
-            .border(if (used) 2.dp else 1.dp, if (chosen || used) color else scheme.edge.tape, RoundedCornerShape(4.dp))
-            .tapeClick(label = "PAD $label", onClick = onClick)
-            .padding(horizontal = 8.dp),
+        Modifier.heightIn(min = Layout.MIN_HIT_TARGET.dp).tapeClick(label = "PAD $label", onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        TapeText(label, TapeType.pixelSmall, if (chosen) scheme.lcd.tape else scheme.ink2.tape)
+        Box(
+            Modifier
+                .heightIn(min = 36.dp)
+                .background(if (chosen) color else scheme.field.tape, RoundedCornerShape(4.dp))
+                .border(if (used) 2.dp else 1.dp, if (chosen || used) color else scheme.edge.tape, RoundedCornerShape(4.dp))
+                .padding(horizontal = 8.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            TapeText(label, TapeType.pixelSmall, if (chosen) scheme.lcd.tape else scheme.ink2.tape)
+        }
     }
 }
 
