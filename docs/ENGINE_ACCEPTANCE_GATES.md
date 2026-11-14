@@ -130,7 +130,7 @@ presence do not close the outstanding gates above.
 - **The final audition (2026-11-13):** `:shell:generateBreakerAudition` renders every voice, soft to hard, every control swept, corners, edges, presets and the three kits' grooves (68 clips). Every edge render is finite and within full scale. **Sound character: signed off.** On 2026-11-13 the owner answered the published page ([BREAKER audition](https://claude.ai/artifact/TyimBbsBAwNeVRzxsSx3En)): every voice as it ships is BREAKER, every control does what its name says all the way along, nothing breaks at the edges, all the presets stay, and the shelf of three kits is right. Preserve renderer model 6 (the BREAKER kit on model 5) as the accepted baseline. This is not evidence of a phone or MPC audition.
 - **Overall: incomplete.** The sound is signed off and the three kits are on the shelf. MPC 2 round robin and hardware playback are open, and the surf tom fill is not built.
 
-## FIRED BRONZE (approved on MPC 2026-11-08; round robin built 2026-11-13, not yet heard)
+## FIRED BRONZE (approved on MPC 2026-11-08; round robin heard and accepted 2026-11-13; hardware open)
 
 Skin, clay and bronze through a driven processor and amp. See [FIRED BRONZE integration](FIRED_BRONZE_INTEGRATION.md).
 
@@ -138,12 +138,17 @@ Skin, clay and bronze through a driven processor and amp. See [FIRED BRONZE inte
 - **Articulation:** finite hits, with no HOLD, including the long kettle and gong tails.
 - **Velocity and round robin:**
   - **Velocity: verified.** Four native strike layers (.20, .45, .70, 1) re-render the source, so a softer layer changes its touch and drive, not only its level. Every softer layer moves at least 1.8 dB in spectral shape at matched loudness.
-  - **Round robin: built in software on model 2 (2026-11-13), not yet heard.** Until then each layer was one strike, so a repeated hit played one sample. Each pad is now a chain of its four layers, three fresh strikes each. The closest two strikes are the gong's, 28.9 dB apart (a copy is more than 40), and every layer's first strike is the approved layer, sample for sample. Model-1 saves keep their one strike, and the model-1 kit still renders all 64 approved files to their pinned hashes.
+  - **Round robin: verified in software on model 2, heard and accepted (2026-11-13).** Until then each layer was one strike, so a repeated hit played one sample. Each pad is now a chain of its four layers, three fresh strikes each. The closest two strikes are the gong's, 28.9 dB apart (a copy is more than 40), and every layer's first strike is the approved layer, sample for sample. Model-1 saves keep their one strike, and the model-1 kit still renders all 64 approved files to their pinned hashes.
   - **Saving: verified.** The kit reloads equal, and an edit regenerates the whole grid and replays to the same bytes (`FiredBronzeStarterTest`).
   - **Playback: verified in software.** `PadHit.resolve` deals each layer's strikes in turn and repeats them, and the preview mixer cycles them too. No phone has played the new kit.
   - **Export: MPC 3 verified by read-back.** **MPC 2 does not pass:** it plays each layer's first strike. No MPC has loaded the new kit.
-- **Sound character:** the approved kit is accepted on MPC ("Good on MPC, we can proceed", 2026-11-08). The new strikes wait for the owner's listen.
-- **Overall: incomplete.** The new strikes need the owner's listen, and MPC 2 round robin and hardware playback are open.
+- **Sound character:** the approved kit is accepted on MPC ("Good on MPC, we can proceed", 2026-11-08). On 2026-11-13 the owner heard the round robin and accepted it:
+  - **Repeated hits:** "Yes, fresh strikes".
+  - **Every pad's three strikes:** the same instrument hit again ("Yes").
+  - **The Moving Bass's varying press:** "Natural".
+  - **The kettles' and gong's new balance per strike:** "Natural".
+  This is a listen to app renders, not evidence of a phone or MPC audition.
+- **Overall: incomplete.** Velocity and round robin are verified in software and accepted by ear. MPC 2 round robin and phone and MPC playback of the new kit are open.
 
 ## GATECRASH kits (sound approved 2026-11-11, hardware open)
 
