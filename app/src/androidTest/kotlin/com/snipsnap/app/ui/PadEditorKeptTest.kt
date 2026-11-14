@@ -47,7 +47,7 @@ class PadEditorKeptTest : ComposeScreenTest() {
 
     private fun host() = setPhoneContent {
         val holder = rememberSaveableStateHolder()
-        keys = remember(holder) { PadEditorKeys(holder::removeState) }
+        keys = remember(holder) { PadEditorKeys(removeState = holder::removeState) }
         if (onTool) {
             Text("TOOL")
         } else {

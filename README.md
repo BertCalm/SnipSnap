@@ -1389,7 +1389,7 @@ SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVE
 OVEN, FLOCK, VENT, CREASE, TRIO, NACRE, ORIGAMI, TREFOIL, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS,
 TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME, BORE, ARCO, SCOUR, KEEL, CHITIN, WICK, EROSION, RIVET, FIRED BRONZE, BACKWASH, SOOT, TEMPEST, SPLAY, OSTERIA, plus GRAINS, SNAP and DRAW,
 which sit beside the picker. `:synth` also holds engines that picker does not show.
-LORENTZ has a preset roster, so `snipsnap synth` renders it.
+LORENTZ and SCUFF have preset rosters, so `snipsnap synth` renders them.
 
 SPLAY offers one finite TONGUE voice with five accepted population settings
 (1, 2, 4, 8 and 16 mechanisms), not five voices. Its original model-1 and model-2
