@@ -190,8 +190,11 @@ Rounds 1 to 3 were a Python audition, accepted 2026-11-12. Kotlin round K1 (2026
   - **Premade kit: pass, heard.** FRESH TAPE → ETCH under BASS: a SAW walk, five voices' notes and three lines
     at 130 BPM, accepted on the K2 page (2026-11-14). The build renders its cells in parallel, byte for byte as
     the serial path (`EtchKitsTest`): 14.0 s serial, 6.8 s on four cores, on the session's machine.
-  - **Chord tool: open, the owner's call.** The keys are polyphonic, but the chord tool voices around G3 to F#4,
-    above ETCH's C4 ceiling, and the line voice is monophonic by design.
+  - **Chord tool: not applicable (the owner's decision, 2026-11-14).** ETCH is a monophonic bass: its character is
+    one line, with accents that carry into the next note, slides between notes and one filter riding it all, and a
+    stack of copies has none of that. The chord tool voices around G3 to F#4, above ETCH's C4 ceiling, and widening
+    the range would put the filter and drive where nobody has listened. The keys stay polyphonic, so a hand-played
+    power chord or low triad inside C1 to C4 plays every note (`EtchKeygroupMakerTest`).
 - **Articulation:** HOLD under .85 sets the note's gate (TONAL); from .85 the voice plays its line as a seamless
   LOOP (`Keys.requireSeam` on every render). A sustained keygroup loop is not built: the keys are finite notes.
   STRUM not applicable: not a picked or thumbed string.
@@ -215,7 +218,7 @@ Rounds 1 to 3 were a Python audition, accepted 2026-11-12. Kotlin round K1 (2026
 - **Render time: disclosed.** A one-shot takes 56 to 75 ms at model 2 (one machine, warm), over the house's "tens
   of milliseconds": the voice runs at 4x with several transcendental calls a sample, and bringing it under would
   approximate the filter, a change to the accepted sound. A line loop takes 0.3 to 0.5 s; kit pads cache both.
-- **Overall: incomplete.** Open: the chord tool (the owner's call), phone playback of keys and kit, and an MPC.
+- **Overall: incomplete.** Open: phone playback of keys and kit, and an MPC.
 ## CYPHER kits and THUMP SUB (round 2, 2026-11-12)
 
 Hip-hop drum kits in the GATECRASH shape, six built: TRAP, DRILL, BACKROOM, LOWRIDER, DUST, FLINT. See [CYPHER](CYPHER.md). The owner heard round 1 ("The triple snare thing is messy"), then round 1b ("Ok, sounds good. Make sure we clear the approval gates"), which approved TRAP and DRILL, then round 2 ("All four pass"), which approved BACKROOM, LOWRIDER, DUST and FLINT. Evidence at kit version 3, `CypherTest`, `CypherKitTest`, `ThumpSubTest`, `ThumpSubRobinTest` and `:shell:generateCypherKits`.
