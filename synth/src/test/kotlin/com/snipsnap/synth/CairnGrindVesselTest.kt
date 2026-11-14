@@ -1,6 +1,12 @@
 package com.snipsnap.synth
 
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
+import java.security.MessageDigest
+import kotlin.math.PI
 import kotlin.math.abs
+import kotlin.math.cos
+import kotlin.math.sin
 import kotlin.math.ln
 import kotlin.math.log2
 import kotlin.math.sqrt
@@ -130,5 +136,85 @@ class CairnGrindVesselTest {
             Cairn.clearMotionCache()
             assertContentEquals(a, Cairn.render(voice, m, 55, .6f).samples, "$voice H$hold not deterministic")
         }
+    }
+
+    private fun floatSha(s: FloatArray): String {
+        val b = ByteBuffer.allocate(s.size * 4).order(ByteOrder.LITTLE_ENDIAN)
+        for (x in s) b.putFloat(x)
+        return MessageDigest.getInstance("SHA-256").digest(b.array()).joinToString("") { "%02x".format(it.toInt() and 255) }
+    }
+
+    /** Power per FFT bin of [s], zero-padded to a power of two. */
+    private fun power(s: FloatArray): Pair<DoubleArray, Double> {
+        var n = 1; while (n < s.size) n *= 2
+        val re = DoubleArray(n) { if (it < s.size) s[it].toDouble() else 0.0 }; val im = DoubleArray(n)
+        var j = 0
+        for (i in 1 until n) {
+            var bit = n shr 1
+            while (j and bit != 0) { j = j xor bit; bit = bit shr 1 }
+            j = j xor bit
+            if (i < j) { val t = re[i]; re[i] = re[j]; re[j] = t }
+        }
+        var len = 2
+        while (len <= n) {
+            val a = -2 * PI / len
+            for (i in 0 until n step len) for (k in 0 until len / 2) {
+                val c = cos(a * k); val si = sin(a * k)
+                val xr = re[i + k + len / 2] * c - im[i + k + len / 2] * si
+                val xi = re[i + k + len / 2] * si + im[i + k + len / 2] * c
+                re[i + k + len / 2] = re[i + k] - xr; im[i + k + len / 2] = im[i + k] - xi
+                re[i + k] += xr; im[i + k] += xi
+            }
+            len *= 2
+        }
+        return DoubleArray(n / 2 + 1) { re[it] * re[it] + im[it] * im[it] } to Cairn.RATE.toDouble() / n
+    }
+
+    private fun share(s: FloatArray, fromHz: Double, toHz: Double = 1e9): Double {
+        val (p, hz) = power(s)
+        val total = p.sum()
+        return p.indices.filter { it * hz >= fromHz && it * hz < toHz }.sumOf { p[it] } / total
+    }
+
+    /**
+     * The owner kept VESSEL V1-V4 (round cairn-voices-1, 14 Nov 2026). These are
+     * every render those four clips were assembled from, byte for byte; the clips
+     * were rebuilt from these renders to within one 16-bit step.
+     */
+    @Test fun `the VESSEL renders the owner kept stay byte-identical`() {
+        val v = CairnVoice.VESSEL; val d = Cairn.defaults(v)
+        val pins = listOf(
+            Triple("V1 C4 soft", Cairn.render(v, d, 60, .35f), "1cddde74583c77bd7ae422c268fa2f90a72764e362ad3a6281ab3f8b25ec8246"),
+            Triple("V1 C4 medium", Cairn.render(v, d, 60, .65f), "b118cf4e90a8b69cd14ecab0e2946b1c4bca2d0f66e53df022a729bc0838be76"),
+            Triple("V1 C4 hard", Cairn.render(v, d, 60, 1f), "1c67b83607ca3e149759e8486888883add6671c8cdae3f9e9d568a65ae394185"),
+            Triple("V2 deep bowl", Cairn.render(v, d + ("BODY" to .9f), 60, 1f), "622613f25b14298c2037edf6c9353cc920b90bcb5baf2bc0b38d6959ef2419dd"),
+            Triple("V2 small stone", Cairn.render(v, d + ("WEIGHT" to .15f), 60, 1f), "9e5942b1d127bd26d2dc2c028c767ab23d57b94e57308cf16a1540e39658e159"),
+            Triple("V3 loop", Cairn.render(v, d + ("HOLD" to 1f), 60, 1f), "622bfe229f608c553f3a5da83d8f6c0f87c409509a6848e6d6fec44ace2bc337"),
+            Triple("V4 C3", Cairn.render(v, d, 48, 1f), "4da1ed6a7ef1e5fbc2386ca79fbf9c560ac13d760233947101e478b4b31845b0"),
+            Triple("V4 G3", Cairn.render(v, d, 55, .7f), "24fdc632832edee7ba568b9683be8b7e9077fec350ac240ab5b1dbd0f4647e58"),
+            Triple("V4 C4", Cairn.render(v, d, 60, .85f), "bfa0250adabd0c2a680d54522ae3ea93d142e31aef50f72661e6c72e9ee03c7e"),
+            Triple("V4 G4", Cairn.render(v, d, 67, .6f), "41f9bcb11a14d79c844d43b58b8de1197c93649f82ad2c79868afb643cf6c0c5"),
+            Triple("V4 C5", Cairn.render(v, d, 72, .9f), "2b4133678518dab1df41b150401227d92065b8d232ab287d5ac435a25ef2969a"))
+        for ((name, snip, sha) in pins) assertEquals(sha, floatSha(snip.samples), "kept VESSEL render $name moved")
+    }
+
+    /**
+     * Round 1's GRIND had 13% of its energy above 4 kHz; the owner heard the top
+     * as overpowering and static-y. The directly heard scrape now goes through a
+     * two-pole lowpass: the top falls to about 2%, the 2-4 kHz grit stays, and
+     * FRICTION still brightens it.
+     */
+    @Test fun `GRIND's heard scrape keeps its grit without the hiss`() {
+        val g = CairnVoice.GRIND; val d = Cairn.defaults(g)
+        for (note in listOf(48, 60, 72)) for (velocity in listOf(.35f, .65f, 1f)) {
+            val s = Cairn.render(g, d, note, velocity).samples
+            val top = share(s, 4000.0); val grit = share(s, 2000.0, 4000.0)
+            assertTrue(top < .05, "GRIND MIDI$note v$velocity: ${100 * top}% above 4 kHz")
+            assertTrue(share(s, 8000.0) < .01, "GRIND MIDI$note v$velocity: hiss above 8 kHz")
+            assertTrue(grit > .02, "GRIND MIDI$note v$velocity lost its 2-4 kHz grit (${100 * grit}%)")
+        }
+        val dull = share(Cairn.render(g, d + ("FRICTION" to 0f)).samples, 2000.0)
+        val bright = share(Cairn.render(g, d + ("FRICTION" to 1f)).samples, 2000.0)
+        assertTrue(bright > 1.3 * dull, "FRICTION no longer brightens the scrape ($dull vs $bright)")
     }
 }

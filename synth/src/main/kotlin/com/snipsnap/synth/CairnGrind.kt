@@ -28,6 +28,8 @@ import kotlin.random.Random
  * reaches it, so each lap restarts from the same state and repeats exactly.
  * The audio is a one-way readout: catches strike the stone's modes, and every
  * slip is also a short band-limited noise burst, as long as the slip itself.
+ * That burst also reaches the output directly, through a two-pole lowpass
+ * whose cutoff FRICTION sets (2.5-5.5 kHz), so the scrape has grit without hiss.
  * Constants are design shapes, not measured stone or bed data.
  */
 internal object CairnGrind {
@@ -36,6 +38,10 @@ internal object CairnGrind {
     private const val MAX_SEGMENTS = 200_000
     private const val CELL = .012
     private const val TICK_SHARE = .3
+    /** The directly heard scrape: two-pole lowpass at 2.5-5.5 kHz (FRICTION) and its level (round 2). */
+    private const val AIR_BASE_HZ = 2500.0
+    private const val AIR_SPAN_HZ = 3000.0
+    internal const val DIRECT_GAIN = .012
     private const val LAPS = 12
     const val CATCH = 0
     const val SLIP = 1
@@ -283,6 +289,7 @@ internal object CairnGrind {
         val kernel = DoubleArray(pulseFrames) { .5 - .5 * cos(2 * PI * (it + .5) / pulseFrames) }
         val area = kernel.sum() / rate
         val bright = (1800 + 7000 * frictionMacro).toFloat()
+        val air = (AIR_BASE_HZ + AIR_SPAN_HZ * frictionMacro).toFloat()
         for ((index, event) in motion.events.withIndex()) {
             val first = (event.seconds * rate).roundToInt()
             if (event.stone != SLIP) {
@@ -297,13 +304,20 @@ internal object CairnGrind {
             val amplitude = 12.0 * sqrt(event.work / seconds)
             val noise = Dsp.Noise(Dsp.seedFor("CAIRN", 6, "GRIND", "scrape", index))
             val low = Dsp.OnePole(rate); val floor = Dsp.OnePole(rate)
+            val airA = Dsp.OnePole(rate); val airB = Dsp.OnePole(rate)
             for (j in 0 until n) {
                 val shaped = low.lp(noise.next(), bright)
                 val band = shaped - floor.lp(shaped, 500f)
                 val envelope = sin(PI * (j + .5) / n).pow(2)
                 val value = amplitude * envelope * band
                 put(forces[SLIP], first + j, value)
-                put(direct, first + j, .008 * value)
+                // The scrape heard directly, not through the stone. Round 1's
+                // one-pole at the force path's cutoff left 13% of the energy above
+                // 4 kHz, which the owner heard as an overpowering, static-y top.
+                // A two-pole lowpass at its own, lower cutoff keeps the 2-4 kHz grit
+                // and takes the hiss off.
+                val heard = airB.lp(airA.lp(value.toFloat(), air), air)
+                put(direct, first + j, DIRECT_GAIN * heard)
             }
         }
         val contacts = arrayOf(catchContact, slipContact, tickContact)
