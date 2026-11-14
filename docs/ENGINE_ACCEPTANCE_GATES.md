@@ -183,11 +183,13 @@ Rounds 1 to 3 were a Python audition, accepted 2026-11-12. Kotlin round K1 (2026
   - **Six voices: pass.** SAW, SQUARE, RUBBER, WHISTLE, GRIT and DUB, chosen by the owner 2026-11-12 and heard in
     rounds 2 and 3, each its own mechanism; every pair at least 3.7 dB apart by third-octave spectrum.
   - **Presets: pass.** Fourteen factory presets (each voice's note and line, SAW's busy line, SQUARE's sparse
-    line), every one a setting heard in round 3. The Kotlin renders of them are on the K2 page, not yet heard.
+    line), every one a setting heard in round 3. The owner heard their Kotlin renders at model 2 on the K2 page
+    and accepted them (2026-11-14: "Sounds good in audition. Proceed").
   - **Playable keygroups: built, not verified on a phone.** MAKE INSTRUMENT renders finite keys C1 to C4 with
     three touch layers (`EtchPadMaker`, `EtchKeygroupMaker`); lines are not offered as keys.
-  - **Premade kit: built, not heard.** FRESH TAPE → ETCH under BASS: a SAW walk, five voices' notes and three
-    lines at 130 BPM.
+  - **Premade kit: pass, heard.** FRESH TAPE → ETCH under BASS: a SAW walk, five voices' notes and three lines
+    at 130 BPM, accepted on the K2 page (2026-11-14). The build renders its cells in parallel, byte for byte as
+    the serial path (`EtchKitsTest`): 14.0 s serial, 6.8 s on four cores, on the session's machine.
   - **Chord tool: open, the owner's call.** The keys are polyphonic, but the chord tool voices around G3 to F#4,
     above ETCH's C4 ceiling, and the line voice is monophonic by design.
 - **Articulation:** HOLD under .85 sets the note's gate (TONAL); from .85 the voice plays its line as a seamless
@@ -197,7 +199,8 @@ Rounds 1 to 3 were a Python audition, accepted 2026-11-12. Kotlin round K1 (2026
 - **Velocity and round robin:**
   - **Rendering: pass.** Velocity changes the tone on all six voices (Kotlin within 2 Hz of the accepted Python
     attack centroids). Four takes are distinct strikes through `Restrike.take`; the owner accepted the rebuilt
-    takes by ear in round 3 (Python renders).
+    takes by ear in round 3 (Python renders) and SAW C2's whole 3 × 4 Kotlin grid at model 2 on the K2 page
+    (2026-11-14).
   - **Saving: pass in software.** The patch round-trips with its note, velocity and model; a kit pad's 3 × 4 grid
     survives saving and reloading (`EtchKitTest`, `TriadKitProof`).
   - **Playback: pass in software, phone not exercised.** The app's pad resolver picks the zone by velocity and
@@ -209,8 +212,10 @@ Rounds 1 to 3 were a Python audition, accepted 2026-11-12. Kotlin round K1 (2026
   Short, low notes read as KICK or TOM to the classifier (122 of 756 one-shots). The owner heard three endings on
   the K2 page and chose C for every voice (2026-11-14): model 2 rings one-shots out, leaving 4 of 756 (RUBBER's
   shortest C1 notes). Model-1 recipes keep the accepted ending.
-- **Overall: incomplete.** Open: a listen to the Kotlin presets and kit at model 2, the chord tool,
-  phone playback of keys and kit, and an MPC.
+- **Render time: disclosed.** A one-shot takes 56 to 75 ms at model 2 (one machine, warm), over the house's "tens
+  of milliseconds": the voice runs at 4x with several transcendental calls a sample, and bringing it under would
+  approximate the filter, a change to the accepted sound. A line loop takes 0.3 to 0.5 s; kit pads cache both.
+- **Overall: incomplete.** Open: the chord tool (the owner's call), phone playback of keys and kit, and an MPC.
 ## CYPHER kits and THUMP SUB (round 2, 2026-11-12)
 
 Hip-hop drum kits in the GATECRASH shape, six built: TRAP, DRILL, BACKROOM, LOWRIDER, DUST, FLINT. See [CYPHER](CYPHER.md). The owner heard round 1 ("The triple snare thing is messy"), then round 1b ("Ok, sounds good. Make sure we clear the approval gates"), which approved TRAP and DRILL, then round 2 ("All four pass"), which approved BACKROOM, LOWRIDER, DUST and FLINT. Evidence at kit version 3, `CypherTest`, `CypherKitTest`, `ThumpSubTest`, `ThumpSubRobinTest` and `:shell:generateCypherKits`.
