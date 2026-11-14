@@ -176,7 +176,7 @@ internal fun OhmControls(
             if (busy) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     TapeText("CAPTURING ATTACK…", TapeType.pixelSmall, scheme.accent.tape, Modifier.weight(1f))
-                    LabButton("CANCEL", scheme, enabled = true) { sourceJob?.cancel() }
+                    LabButton("CANCEL", scheme, enabled = true, tier = ButtonTier.Text) { sourceJob?.cancel() }
                 }
             }
             error?.let { TapeText(it, TapeType.pixelSmall, scheme.warnInk.tape, maxLines = 3) }
@@ -228,7 +228,7 @@ private fun OhmSourcePadDialog(pads: List<KitPad>, onPick: (KitPad) -> Unit, onC
                         enabled = true, modifier = Modifier.fillMaxWidth()) { onPick(pad) }
                 }
             }
-            LabButton("CANCEL", scheme, enabled = true, modifier = Modifier.fillMaxWidth(), onClick = onCancel)
+            LabButton("CANCEL", scheme, enabled = true, modifier = Modifier.fillMaxWidth(), tier = ButtonTier.Text, onClick = onCancel)
         }
     }
 }

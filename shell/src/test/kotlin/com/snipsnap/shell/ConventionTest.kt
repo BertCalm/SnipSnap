@@ -1565,6 +1565,19 @@ class ConventionTest {
     private fun ledgerMisses(labels: Collection<String>, ledger: String): List<String> =
         labels.filter { "`$it`" !in ledger }.distinct().sorted()
 
+    /**
+     * Names the ledger's before-columns retired as labels (Sections A and B; the renames landed in
+     * #1027 and #1030). The ledger still lists them, in backticks, as the "Today" column, so
+     * [ledgerMisses] alone would accept one coming back. Only labels are checked: enum constants such as
+     * `Bench.PAD_SHEET`, `Place.SHELF` or `Stage.OUT` keep their identifiers and are not read here.
+     */
+    private val RETIRED = setOf(
+        "SHELF", "TAPE", "DECK", "CUT", "OUT", "SETUP", "SNIPS", "BIN", "X-RAY", "DOUBLES",
+        "PAD SHEET", "WRITE KIT", "MUTATE",
+    )
+
+    private fun retiredIn(labels: Collection<String>): List<String> = labels.filter { it in RETIRED }.distinct().sorted()
+
     @Test
     fun `law - every place, stage, bench and back label is in docs VOCABULARY md`() {
         val ledgerFile = File("../docs/VOCABULARY.md")
@@ -1592,12 +1605,29 @@ class ConventionTest {
         assertTrue(chips.isNotEmpty() && chips.all { it.startsWith("◄ ") }, "back chips are not read: $chips")
         val backNames = chips.map { it.removePrefix("◄ ") }
 
+        val retired = retiredIn(labels + backNames)
+        assertTrue(
+            retired.isEmpty(),
+            "$retired are names the ledger retired. A place, stage, bench or back label may not use one again; use the new name in docs/VOCABULARY.md.",
+        )
+
         val missing = ledgerMisses(labels + backNames, ledger)
         assertTrue(
             missing.isEmpty(),
             "docs/VOCABULARY.md has no backticked entry for $missing. Add a row for each new place, stage, bench " +
                 "or back label before it ships, with what it means and the owner's ruling.",
         )
+    }
+
+    @Test
+    fun `law - the retired-name law fails on a retired label, a retired back chip, and passes the new names`() {
+        assertEquals(emptyList(), retiredIn(listOf("LIBRARY", "SAMPLE", "RECORD", "CHOP", "EXPORT", "SETTINGS", "SAVED SAMPLES", "TRASH", "PAD EDITOR")))
+        assertEquals(listOf("SHELF"), retiredIn(listOf("LIBRARY", "SHELF")))
+        // A back chip over the old bench would read "◄ X-RAY"; the law reads the name behind the arrow.
+        assertEquals(listOf("X-RAY"), retiredIn(listOf("◄ X-RAY").map { it.removePrefix("◄ ") }))
+        // The real model today is clean: every retired name is absent from the labels (not a vacuous set).
+        val real = Place.entries.map { it.label } + Stage.entries.map { it.label } + Bench.entries.flatMap { listOf(it.label, it.backName) }
+        assertTrue(RETIRED.size == 13 && real.isNotEmpty() && retiredIn(real).isEmpty())
     }
 
     @Test
@@ -6059,4 +6089,51 @@ class ConventionTest {
         }
     }
 
+    // ==================== Law: the pad editor is drawn in App's saveable holder ====================
+
+    /**
+     * `PadEditorKeptTest` (androidTest) composes a stand-in beside the holder, never App's own tree, so
+     * it cannot see App lose the wrapper. This pins App's real call site: the `PadSheetScreen(` call is
+     * inside `padEditorHolder.SaveableStateProvider(padEditorKeys.keyFor(...)) { ... }`, the keys come
+     * from [rememberPadEditorKeys] (saved with the holder), and [ReleasePadEditorWhenGone] is composed.
+     * Returns what is wrong, empty when wired.
+     */
+    private fun padEditorWiringFaults(app: String): List<String> {
+        val faults = mutableListOf<String>()
+        val wrapper = "padEditorHolder.SaveableStateProvider(padEditorKeys.keyFor("
+        val call = Regex("""\bPadSheetScreen\(""").find(app)?.range?.first
+        val open = app.lastIndexOf(wrapper, startIndex = call ?: app.length)
+        if (call == null) faults += "no PadSheetScreen( call"
+        else if (open < 0) faults += "PadSheetScreen( is not under $wrapper"
+        else {
+            var depth = 0
+            var started = false
+            for (c in app.substring(open, call)) {
+                if (c == '{') { depth++; started = true } else if (c == '}') depth--
+                if (started && depth <= 0) { faults += "the $wrapper block closes before PadSheetScreen( is called"; break }
+            }
+            if (!started) faults += "the $wrapper call has no block before PadSheetScreen("
+        }
+        if ("ReleasePadEditorWhenGone(" !in app) faults += "ReleasePadEditorWhenGone( is not composed"
+        if ("rememberPadEditorKeys(padEditorHolder)" !in app) faults += "the keys are not rememberPadEditorKeys(padEditorHolder)"
+        return faults
+    }
+
+    @Test
+    fun `law - App draws PadSheetScreen inside the pad editor's saveable holder and releases it`() {
+        val app = appKt.readText(Charsets.UTF_8)
+        assertEquals(emptyList(), padEditorWiringFaults(app))
+    }
+
+    @Test
+    fun `law - the pad editor wiring law fails when the wrapper or the release is removed`() {
+        val good = "ReleasePadEditorWhenGone(x, k)\nval k = rememberPadEditorKeys(padEditorHolder)\n" +
+            "padEditorHolder.SaveableStateProvider(padEditorKeys.keyFor(p)) {\n    PadSheetScreen(a)\n}"
+        assertEquals(emptyList(), padEditorWiringFaults(good))
+        // Planted: the call drawn bare, the wrapper closed before the call, the release gone, the keys back to plain remember.
+        assertTrue(padEditorWiringFaults(good.replace("padEditorHolder.SaveableStateProvider(padEditorKeys.keyFor(p)) {", "run {")).isNotEmpty())
+        assertTrue(padEditorWiringFaults(good.replace("{\n    PadSheetScreen(a)\n}", "{ }\nPadSheetScreen(a)")).isNotEmpty())
+        assertTrue(padEditorWiringFaults(good.replace("ReleasePadEditorWhenGone(x, k)", "")).isNotEmpty())
+        assertTrue(padEditorWiringFaults(good.replace("rememberPadEditorKeys(padEditorHolder)", "remember { PadEditorKeys(h) }")).isNotEmpty())
+    }
 }

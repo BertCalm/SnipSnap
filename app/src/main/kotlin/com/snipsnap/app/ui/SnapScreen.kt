@@ -1777,7 +1777,7 @@ private fun DrawOverlay(
                     LabButton("CLEAR", scheme, enabled = pathPoints.isNotEmpty(), modifier = Modifier.weight(1f)) {
                         pathPoints = emptyList()
                     }
-                    LabButton("CANCEL", scheme, enabled = true, modifier = Modifier.weight(1f), onClick = onCancel)
+                    LabButton("CANCEL", scheme, enabled = true, modifier = Modifier.weight(1f), tier = ButtonTier.Text, onClick = onCancel)
                     LabButton(
                         "LOOP PAD",
                         scheme,
@@ -1826,7 +1826,7 @@ private fun DrawOverlay(
                             edits++
                         }
                     }
-                    LabButton("CANCEL", scheme, enabled = true, modifier = Modifier.weight(1f), onClick = onCancel)
+                    LabButton("CANCEL", scheme, enabled = true, modifier = Modifier.weight(1f), tier = ButtonTier.Text, onClick = onCancel)
                     LabButton("DONE", scheme, enabled = true, modifier = Modifier.weight(1f)) { done() }
                 }
             }
