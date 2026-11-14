@@ -5122,7 +5122,7 @@ private fun PresetForgetDialog(name: String, scheme: Scheme, onCancel: () -> Uni
         ) {
             TapeText(Copy.presetForgetAsk(name), TapeType.lcdSmall, scheme.ink.tape, maxLines = 3)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                ActionButton("CANCEL", scheme, enabled = true, modifier = Modifier.weight(1f), onClick = onCancel)
+                ActionButton("CANCEL", scheme, enabled = true, modifier = Modifier.weight(1f), tier = ButtonTier.Text, onClick = onCancel)
                 Box(
                     Modifier
                         .weight(1f)
@@ -5322,7 +5322,7 @@ private fun PresetNameDialog(
             }
             TapeText(caption, TapeType.pixelSmall, captionColor, maxLines = 4)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                ActionButton("CANCEL", scheme, enabled = true, modifier = Modifier.weight(1f), onClick = onCancel)
+                ActionButton("CANCEL", scheme, enabled = true, modifier = Modifier.weight(1f), tier = ButtonTier.Text, onClick = onCancel)
                 ActionButton(
                     if (check is UserPresets.Check.Replaces) "REPLACE" else "SAVE",
                     scheme,
@@ -5918,7 +5918,7 @@ private fun HeldInstrumentSheet(
                     modifier = Modifier.fillMaxWidth(), onClick = onPreviewChord)
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                ActionButton("CANCEL", scheme, enabled = !writing, modifier = Modifier.weight(1f), onClick = onCancel)
+                ActionButton("CANCEL", scheme, enabled = !writing, modifier = Modifier.weight(1f), tier = ButtonTier.Text, onClick = onCancel)
                 if (heldPreview == null) {
                     ActionButton("PREVIEW", scheme, enabled = !busy, dimmed = busy, modifier = Modifier.weight(1f), onClick = onPreview)
                 }
@@ -6068,7 +6068,7 @@ private fun DroneSheet(
             }
             if (previewing) TapeText("RENDERING…", TapeType.lcdSmall, scheme.accent.tape)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                ActionButton("CANCEL", scheme, enabled = true, modifier = Modifier.weight(1f), onClick = onCancel)
+                ActionButton("CANCEL", scheme, enabled = true, modifier = Modifier.weight(1f), tier = ButtonTier.Text, onClick = onCancel)
                 ActionButton(
                     "PREVIEW",
                     scheme,

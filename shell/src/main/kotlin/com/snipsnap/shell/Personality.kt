@@ -40,7 +40,7 @@ object Copy {
      * the panel's one door. Replaces the transport, IN/OUT and ZOOM groups,
      * which were live-looking over nothing.
      */
-    const val NO_TAPE_YET = "No sample yet. Tap LISTEN · MIC below, or open a sample."
+    const val NO_TAPE_YET = "No sample yet, so tap LISTEN · MIC below or open a sample."
 
     /**
      * The product loop, named once, on the only screen a new user is
@@ -142,13 +142,13 @@ object Copy {
      * place. Names the real blocker (no kit to land on) and the real fix
      * (NEW KIT, right below this panel) rather than denying the snip exists.
      */
-    const val EMPTY_SHELF_FOR_ASSIGN = "This sample needs a kit to land on. Tap NEW KIT below to make one."
+    const val EMPTY_SHELF_FOR_ASSIGN = "This sample needs a kit to land on, so tap NEW KIT below to make one."
     /**
      * A kit with no pads in it: what is true, and the way in. "16 EMPTY
      * PADS." said the first and left a person to guess the second (the UX
      * review's minor list).
      */
-    const val EMPTY_KIT = "No pads yet. Hold a pad to catch a sound into it, or send a chop from SAMPLE."
+    const val EMPTY_KIT = "No pads yet, so hold a pad to catch a sound into it or send a chop from SAMPLE."
 
     /**
      * The PADS strip before any pad is tapped: tapping is how the strip
@@ -178,13 +178,13 @@ object Copy {
      * buttons under it, so the sentence no longer lists them. TAPE's
      * [EMPTY_SHELF] sent people to the wrong screen.
      */
-    const val EMPTY_GROOVE = "No beat yet. Tap RECORD and play pads."
+    const val EMPTY_GROOVE = "No beat yet, so tap RECORD and play pads."
     /**
      * BEAT with a kit in the project but no pads in the kit: ADD A KIT would
      * be the wrong ask, so it names the real blocker and the place that fixes
      * it (PADS ▸ is the panel's door). Also the dock's play chip's answer.
      */
-    const val BEAT_NEEDS_PADS = "This kit has no pads yet. Fill some on PADS first."
+    const val BEAT_NEEDS_PADS = "This kit has no pads yet, so fill some on PADS first."
     /** The dock's play chip, tapped on BEAT with no notes in the beat: it would start a clock over nothing, so it says so instead of staying silent. */
     const val NOTHING_TO_PLAY = "Nothing to play yet. Record or tap steps in."
     /**
@@ -193,25 +193,25 @@ object Copy {
      * opened or started. Replaces the tab era's two empties (a switcher
      * reading NO KITS YET above a deck that was never the point).
      */
-    const val NO_PROJECT_OPEN = "No project open. Open one in the LIBRARY, or start one."
+    const val NO_PROJECT_OPEN = "No project is open, so open one in the LIBRARY or start one."
     /**
      * PROJECT with a project open and no kit in it: the two ways to give it
      * one, named, and both on the panel (+ FROM SHELF and TAPE ▸).
      */
-    const val PROJECT_HAS_NO_KIT = "This project has no kit yet. Add one from the LIBRARY, or record in SAMPLE."
+    const val PROJECT_HAS_NO_KIT = "This project has no kit yet, so add one from the LIBRARY or record in SAMPLE."
     /**
      * The other places that need a kit (BEAT, OUT, ORBIT) in project words:
      * the kit is added to the project, not "opened". Each is the one fact
      * that place needs, said after the lead; with no project open at all
      * they give way to [NO_PROJECT_OPEN].
      */
-    const val NO_KIT_FOR_ORBIT = "Add a kit to this project first. ORBIT puts it on rings."
+    const val NO_KIT_FOR_ORBIT = "Add a kit to this project first, because ORBIT puts it on rings."
     /**
      * SONG with no kit open: reached by Back, to a SONG whose kit has since gone
      * (SONG is drawn only for the kit it was opened for). Same shape as
      * [NO_KIT_FOR_ORBIT].
      */
-    const val NO_KIT_FOR_SONG = "Add a kit to this project first. SONG lays its GROOVE out as a track."
+    const val NO_KIT_FOR_SONG = "Add a kit to this project first, because SONG lays its GROOVE out as a track."
     /**
      * EXPORT with no kit in the project — distinct from [EMPTY_SHELF], which this
      * screen used to borrow: EMPTY_SHELF claims nothing has been taped,
@@ -219,7 +219,7 @@ object Copy {
      * anything at all, so a user with kits and no tape was told nothing
      * existed. Same shape as [NO_KIT_FOR_ORBIT].
      */
-    const val NO_KIT_FOR_EXPORT = "Add a kit to this project first. EXPORT dubs it for the MPC."
+    const val NO_KIT_FOR_EXPORT = "Add a kit to this project first, because EXPORT dubs it for the MPC."
     /** A kit folder that won't parse (torn `kit.json`, missing file, etc.) — distinct from EMPTY_SHELF, which claims no kit exists at all. */
     const val KIT_WONT_OPEN = "This kit won't open. The file may be damaged."
     /**
@@ -230,7 +230,7 @@ object Copy {
      * to chop at all: a user who taped something deserves to know the tape
      * is unreadable rather than be told they never made one.
      */
-    const val CHOP_SOURCE_GONE = "That sample won't read. The file may be damaged."
+    const val CHOP_SOURCE_GONE = "That sample won't read, and the file may be damaged."
     /**
      * CHOP SHOP's own empty face with no source at all — no TAPE commit
      * exists yet and no open kit has a sample to fall back on. Reusing
@@ -246,7 +246,7 @@ object Copy {
      * new kit built directly) rather than putting anything CHOP itself can
      * read.
      */
-    const val EMPTY_CHOP = "Nothing to chop yet. Record something and USE THIS PART, or open a kit with samples on it."
+    const val EMPTY_CHOP = "Nothing to chop yet, so record something and USE THIS PART, or open a kit with samples on it."
     /**
      * Said when a source loaded fine but the detector found zero onsets
      * (silence, or nothing loud enough to register) —
@@ -303,7 +303,7 @@ object Copy {
      * what SNIP will keep instead, in the same words and cap as [SNIPPED]
      * (heard since LISTEN, not "the last 60 seconds").
      */
-    const val NO_TAPE_YET_ARMED = "$SESSION_ARMED snip keeps what it's heard, up to 60s."
+    const val NO_TAPE_YET_ARMED = "Listening, and a snip keeps what it's heard, up to 60s."
 
     /**
      * The first SNIP of a cold shelf, landed: App has made the project, the
@@ -1356,7 +1356,7 @@ object Copy {
     // to it. See feelRolled/FEEL_RECENTRED below for its replacements.
     // The phone reads (wave ZZ): READ AS GROOVE, DIG, STEAL THE FEEL on TAPE.
     const val READ_GROOVE_BUSY = "Listening…"
-    const val READ_GROOVE_NEEDS_KIT = "Add a kit to this project first. The ear needs pads to play on."
+    const val READ_GROOVE_NEEDS_KIT = "Add a kit to this project first, because the ear needs pads to play on."
     /** The reading landed: how much was heard, and where it plays. */
     fun grooveRead(hits: Int, bars: Int, bpm: Int): String =
         "Heard ${countOf(hits, "hit", "hits")} over ${countOf(bars, "bar", "bars")} at ~$bpm BPM. They play on your pads now."
@@ -3377,6 +3377,8 @@ object Copy {
     const val NOTHING_DELETED = "Nothing deleted."
     /** SNIPS' own empty state. */
     const val SNIPS_EMPTY = "No samples yet."
+    /** SAVED SAMPLES while the first read of the folder is still running: not "no samples", which it has not found out yet. */
+    const val SNIPS_LOADING = "Loading SAVED SAMPLES…"
     /**
      * The deck with no tape committed. Reserved for the deck: PROJECT's cold
      * page no longer borrows it (it speaks project words now,

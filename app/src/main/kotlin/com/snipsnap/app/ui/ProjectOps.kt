@@ -230,7 +230,7 @@ private fun ProjectDeleteCard(onCancel: () -> Unit, onConfirm: () -> Unit) {
     val scheme = LocalScheme.current
     OpsCard(Copy.PROJECT_DELETE_CONFIRM, onCancel) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            ActionButton("CANCEL", scheme, enabled = true, modifier = Modifier.weight(1f), onClick = onCancel)
+            ActionButton("CANCEL", scheme, enabled = true, modifier = Modifier.weight(1f), tier = ButtonTier.Text, onClick = onCancel)
             Box(
                 Modifier
                     .weight(1f)
@@ -270,7 +270,7 @@ private fun ProjectDropCard(row: ShelfModel.ProjectRow, onPick: (String) -> Unit
                 )
             }
         }
-        ActionButton("CANCEL", scheme, enabled = true, modifier = Modifier.fillMaxWidth(), onClick = onDismiss)
+        ActionButton("CANCEL", scheme, enabled = true, modifier = Modifier.fillMaxWidth(), tier = ButtonTier.Text, onClick = onDismiss)
     }
 }
 

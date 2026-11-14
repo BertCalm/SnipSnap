@@ -1184,7 +1184,7 @@ class PersonalityTest {
         // TAPE's empty deck, once LISTEN is armed, says what SNIP keeps. It must
         // carry SNIPPED's qualified cap ("UP TO 60s", not "the last 60s") and must
         // not repeat NO_TAPE_YET's instruction to tap LISTEN.
-        assertTrue(Copy.NO_TAPE_YET_ARMED.startsWith(Copy.SESSION_ARMED), Copy.NO_TAPE_YET_ARMED)
+        assertTrue(Copy.NO_TAPE_YET_ARMED.startsWith(Copy.SESSION_ARMED.removeSuffix(".")), Copy.NO_TAPE_YET_ARMED)
         assertTrue(Copy.NO_TAPE_YET_ARMED.contains("up to 60s", ignoreCase = true) && Copy.SNIPPED.contains("up to 60s", ignoreCase = true))
         assertTrue(!Copy.NO_TAPE_YET_ARMED.contains("TAP LISTEN", ignoreCase = true), Copy.NO_TAPE_YET_ARMED)
     }

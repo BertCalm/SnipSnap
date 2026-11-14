@@ -104,6 +104,7 @@ import com.snipsnap.app.ui.PadSheetScreen
 import com.snipsnap.app.ui.ReleasePadEditorWhenGone
 import com.snipsnap.app.ui.PREF_CARD_TREE
 import com.snipsnap.app.ui.PREF_EXPORT_FORMAT
+import com.snipsnap.app.ui.ActionButton
 import com.snipsnap.app.ui.PrimaryAction
 import com.snipsnap.app.ui.PropertiesScreen
 import com.snipsnap.app.ui.SnipsScreen
@@ -4959,8 +4960,13 @@ private fun BlockedDialog(
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             TapeText(message, TapeType.lcdSmall, scheme.ink.tape, maxLines = 4)
-            if (actionLabel != null) PrimaryAction(label = actionLabel, enabled = true, onClick = onAction)
-            PrimaryAction(label = buttonLabel, enabled = true, onClick = onDismiss)
+            // One primary: the way on when there is one, the dismiss otherwise.
+            if (actionLabel != null) {
+                PrimaryAction(label = actionLabel, enabled = true, onClick = onAction)
+                ActionButton(buttonLabel, scheme, enabled = true, modifier = Modifier.fillMaxWidth(), onClick = onDismiss)
+            } else {
+                PrimaryAction(label = buttonLabel, enabled = true, onClick = onDismiss)
+            }
         }
     }
 }

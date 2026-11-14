@@ -234,7 +234,7 @@ internal fun PatternNameDialog(
             }
             TapeText(caption.first, TapeType.pixelSmall, caption.second, maxLines = 3)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                ActionButton("CANCEL", scheme, enabled = true, modifier = Modifier.weight(1f), onClick = onCancel)
+                ActionButton("CANCEL", scheme, enabled = true, modifier = Modifier.weight(1f), tier = ButtonTier.Text, onClick = onCancel)
                 ActionButton(
                     if (verdict == GrooveEdit.NameCheck.Default) Copy.PATTERN_NAME_RESET else Copy.PATTERN_NAME_SAVE,
                     scheme,
