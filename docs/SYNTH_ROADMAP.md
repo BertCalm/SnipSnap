@@ -3574,6 +3574,9 @@ The owner kept 63 of the 64 sibling pads. They heard Basement Dub's one-drop fou
 incoherent, and picked a steppers groove in its place (`SootGenreKits` 2). The sound of all five SOOT
 kits is now approved, and hardware remains.
 
+On 2026-11-14 the owner confirmed phone and MPC 3 playback ("Everything is good"), with repeated hits
+cycling through the takes on the MPC 3. SOOT is complete; MPC 2 is not applicable (format limit).
+
 
 ### SCUFF, round 1 (2026-11-13)
 
