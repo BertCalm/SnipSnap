@@ -3594,3 +3594,13 @@ their kit, served by `Presets`; SCUFF leaves `PatchTypes.ROSTERLESS`. A saved SC
 velocity, take and model through the JSON constructor, as RIVET's does. Open: hardware playback, MPC 2's one
 take per zone, the app picker (a round of its own now that the convention no longer defers it to an SDK
 session). See [SCUFF](SCUFF.md).
+
+### CLUTTER, round 1 (2026-11-14)
+
+A found-sound drum engine of 22 modelled household objects, ported from the accepted round-0c Python prototype
+to `Clutter.kt`: every object's loose parts move only above a fixed strike threshold, velocity on every
+object, four takes, `ClutterPatch` with velocity, take and model, rosterless (no presets yet), no kit yet.
+Measured against the Python: no brightness bias across the 22 objects (0.06 dB above 4 kHz); the
+deterministic objects correlate 0.93 to 0.99; random draws are another realisation of the same law. The
+owner waived the roll gate. See [CLUTTER](CLUTTER.md) and the gates entry. The four genre kits go on the shelf
+at round 2; the picker entry waits for a session with an SDK.

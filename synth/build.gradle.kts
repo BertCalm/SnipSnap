@@ -3784,3 +3784,13 @@ tasks.register<JavaExec>("generateTempestTunedKit") {
     maxHeapSize = "768m"
     args(providers.gradleProperty("tempestTunedKitOutput").orNull ?: "${rootDir}/testkit/SnipSnap Tempest Tuned Kit", "--tuned")
 }
+
+/** Render CLUTTER's round-1 Kotlin clips under testkit/clutter-audition/kotlin/, for the Python A/B. */
+tasks.register<JavaExec>("generateClutterAudition") {
+    group = "distribution"
+    description = "Render the CLUTTER Kotlin clips (every object hard, soft and at its four takes) under testkit/clutter-audition/kotlin/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ClutterAuditionGenerator")
+    workingDir = projectDir
+    args(providers.gradleProperty("clutterOutput").orNull ?: "${rootDir}/testkit/clutter-audition/kotlin")
+}

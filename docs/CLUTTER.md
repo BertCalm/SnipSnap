@@ -1,8 +1,9 @@
 # CLUTTER: design brief and round-0 audition
 
-Status: **round 0c accepted by the owner on 2026-11-14** (Python prototype renders: "All are good", "I like it as
-is"). No Kotlin exists. The engine stays in progress until every applicable owner gate has evidence (see
-"Gates" below); preserve round 0c as the sound baseline for the Kotlin port.
+Status: **round 1, the Kotlin port (2026-11-14), not yet heard.** Round 0c's Python renders were accepted by the
+owner on 2026-11-14 ("All are good", "I like it as is") and are the sound baseline. `Clutter.kt` ports all 22
+objects; the four genre kits are not on the shelf yet (round 2). The engine stays in progress until every
+applicable owner gate has evidence (see "Gates" below).
 
 Prototype: [`prototype/clutter/`](../prototype/clutter/) (`clutter_proto.py` is the model, `measures.py` the
 house distance measures, `gen_audition.py` renders and measures, `build_page.py` writes the audition page).
@@ -206,6 +207,65 @@ per hit (a full-length buffer per collision, now one convolution); TOOL moved th
 0.55 dB (the slam reached the wooden thump, which the cutlery buries; the slam now throws the cutlery too);
 and RATTLE moved the zipper by 2.4 dB (the tab's clink was too quiet).
 
+## Round 1: the Kotlin port (2026-11-14)
+
+`synth/.../Clutter.kt` ports all 22 objects with every round-0c constant: the contact law, the lift threshold,
+the bounce trains, the modal tables, the take's hand, the phone and the kitchen. `ClutterPatch` saves velocity,
+take (0 to 3) and `MODEL_VERSION` 1. Registered in `Patches`, the two `Velocity` arms (a velocity re-strikes the
+object) and `SynthRoot` (rootless, as the other drum engines); `PatchTypes.ROSTERLESS` until presets follow the
+kits; hand-built entries in `PatchesTest`, `PadRecipeTest` and `SynthRootTest`; a `DeterminismTest` canary
+through JSON.
+
+What could not be the same arithmetic, disclosed:
+- **Random draws.** Kotlin's `Random` (seeded by `Dsp.seedFor`) in place of numpy's generator, with Box-Muller
+  normals and Marsaglia-Tsang gammas. Every strike point, grain and loose part is another realisation of the
+  same law, so a Kotlin take is a new take of the accepted object, not a copy of a Python one.
+- **Resampling.** The house `Tide.bandLimit` and `Dsp.decimate` in place of the prototype's FIR: a 1 ms
+  lag (about 40 samples) and the same pass band.
+- **Filters are the same designs.** scipy's `butter(2, band)` is reproduced exactly: the analog prototype moved
+  to a band-pass, then the bilinear transform with prewarping. Checked against scipy at five band edges: 0.0 dB
+  difference. The second-order low- and high-passes are the RBJ biquad at Q = 1/√2, which is scipy's design.
+
+Measured with `prototype/clutter/compare_kotlin.py` against the Python render, object by object (Python
+harness; `./gradlew :synth:generateClutterAudition` writes the Kotlin clips):
+- **No brightness bias.** Averaged over each object's four takes, Kotlin's share of energy above 4 kHz is
+  0.06 dB under Python's across the 22 objects (median 0.4 dB under).
+- **The deterministic objects are the same waveform** in all but where the hand lands: correlation 0.93 to
+  0.99 on the bucket, box, pot, bottle, suitcase, tub, glass, stomp, can and board.
+- **17 of 22 hard hits sit within the spread of Python's own four takes.** The other five (tub, bag, bin lid,
+  can, switch) sit just outside a four-take spread. The switch was checked against 40 Python takes: Kotlin's
+  energy above 4 kHz (−10.8 dB) is inside their range (−20 to −8.9 dB), so four takes had simply drawn dark ones.
+- The darkest objects first measured brighter in Kotlin by their centroid. That was the measure: the Kotlin
+  clips are 16-bit WAVs, and quantising the Python renders the same way closes the tub's gap entirely.
+
+`ClutterTest` holds the probes in Kotlin on all 22 objects:
+- finite, peak-matched, DC under 0.005, the object's length plus the MIC tail;
+- every take replays byte for byte, and the closest two of four takes are at least 1 dB apart;
+- soft (0.35) against hard (1.0) differs by at least 3 dB in shape at matched level;
+- every control moves every object by at least 1.5 dB over the whole render, and an unknown control, a NaN
+  control or a NaN velocity changes nothing;
+- the patch round-trips through JSON and refuses a take, velocity or model it cannot render.
+Measured in Kotlin by the comparison script: soft against hard is at least 3.95 dB (the switch), and the closest
+two takes of any object are 1.55 dB apart.
+
+Two physical claims are tests too:
+- **A soft hit leaves the loose parts lying still:** on the box, pot, bucket, table and mug at velocity 0.3,
+  RATTLE 0 and RATTLE 0.5 render byte for byte the same.
+- **The pan's rivet only buzzes past its play:** soft, RATTLE changes nothing; hard, it does.
+- The bucket's boom falls by more than 10 % from the first 30 ms to the tail.
+
+One claim did not survive as a test. "The suitcase does not glide" was measured as its loudest frequency early
+against late, and failed (75 Hz against 48 Hz). The cause is the measure, not the engine: the suitcase's lid
+(78 Hz) and its air (52 Hz) fade at different rates, so the loudest one changes with no glide. That half stays a
+design statement.
+
+Local test runs need one workaround that is not CLUTTER's: OpenJDK 21.0.12's JIT crashes compiling
+`Splay::renderDetailed` (`type.cpp:1283`, the crash `build.gradle.kts` already excludes for Filament and
+CAUSTIC). It reproduced on a clean checkout of the base branch, without CLUTTER. CI's Temurin 17 does not hit it.
+Local runs here excluded that one method with `-XX:CompileCommand`; nothing in the build changed.
+
+Not heard: no one has listened to the Kotlin renders. Not measured in Kotlin: render time per hit.
+
 ## Risks (where it could sound bad)
 
 | Risk | What would show it | Probe or question |
@@ -226,18 +286,18 @@ and RATTLE moved the zipper by 2.4 dB (the tab's clink was too quiet).
 - **Drums (several genre kits):** four authored and measured in Python (Kitchen Lo-fi, Street Bucket, Junk Boom
   Bap, Microbeat; above) and accepted by the owner as they are on 2026-11-14 ("All are good", "I like it as is").
   Not on the shelf: no Kotlin.
-- **Velocity and round robin:** rendering measured in Python (above). Saving, playback and export: open; no
-  Kotlin yet. The page's pad grid is a browser stand-in for playback, not evidence for the app.
+- **Velocity and round robin:** rendering verified in Kotlin by test (round 1, below): every object's soft and
+  hard hits differ in shape at matched level, its four takes are distinct strikes, and every take replays byte
+  for byte, through JSON too. Saving into a kit, playback and export: open until the kits reach the shelf
+  (round 2).
 
 ## Next rounds
 
 - **R0b**: done. The owner accepted round 0c without changes on 2026-11-14 and waived the roll gate.
-- **R1 Kotlin**: `Clutter.kt` (an `enum class ClutterVoice(val drumClass: DrumClass)`, `render(voice, macros,
-  velocity, take, model)` as `Soot.render` has it, `MODEL_VERSION`), `ClutterPatch.kt` in the
-  `SootPatch` shape, the `Patches.fromJsonValue` arm, the two `Velocity.kt` arms, a `DeterminismTest`
-  canary, and `ClutterTest` with the probes above plus "soft leaves the rice still" and "a take replays
-  byte for byte". The modal banks go through `Modes.ring` and are peak-normalised per body before mixing
-  (the Kotlin gains are not frequency-compensated; the Python is). MIC calls the shared `Room`.
+- **R1 Kotlin**: done (below). Two choices differ from what this plan said, both to keep the accepted sound:
+  the modal banks keep the prototype's sin(theta)-compensated two-pole loop instead of `Modes.ring` plus a
+  peak match per body (which would rebalance every object), and MIC keeps the prototype's kitchen sketch
+  instead of the shared `Room` (a different room is a different sound; moving to `Room` is its own listen).
 - **R2 kits**: the four genre kits from `kits.py` (or what the listen keeps) as `ClutterKits`, three zones of four
   takes each, mute groups for A03/A04 and A07/A08, on the shelf under SKINS, saved and exported through
   `PadHit.resolve` and the MPC 3 writer, as SOOT and SCUFF did.
@@ -252,6 +312,9 @@ and RATTLE moved the zipper by 2.4 dB (the tab's clink was too quiet).
 | Every control moves every object (22 objects, five controls) by at least 2.7 dB | measured | `macro_activity_db` in the manifest |
 | Four genre kits differ in objects, settings, tempo and swing; no shared pad | measured | `between` in the manifest |
 | The bin lid's brightness is a plate's nonlinear cascade | analogy, not simulated | `binlid` in `clutter_proto.py` |
+| The Kotlin port renders the accepted objects | measured (Python harness against Kotlin clips) | `compare_kotlin.py`: no brightness bias; 17 of 22 within Python's own take spread |
+| Soft hits leave loose parts still; the rivet needs its play; the bucket's boom falls | verified in Kotlin by test | `ClutterTest` |
+| The Kotlin renders sound like the accepted ones | not heard | the owner's listen |
 | Soft and hard differ on every pad; nothing rattles below the threshold | measured; by construction | velocity section |
 | Thin-ring, plate and bar ratios are the textbook ones | proposed (sourced formulas, shape damping) | `clutter_proto.py` constants |
 | The objects and the four genre kits are the sound | heard, accepted | the owner, 2026-11-14: "All are good", "I like it as is" (Python renders, listening page version 7) |
