@@ -3804,3 +3804,13 @@ tasks.register<JavaExec>("generateClutterAudition") {
     workingDir = projectDir
     args(providers.gradleProperty("clutterOutput").orNull ?: "${rootDir}/testkit/clutter-audition/kotlin")
 }
+
+tasks.register<JavaExec>("generateVelourRoundRobin") {
+    group = "distribution"
+    description = "Render opt-in Velour round-robin candidates and full-grid audition packages."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.VelourRoundRobinGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "1g"
+    args(providers.gradleProperty("velourRoundRobinOutput").orNull ?: "testkit/velour-round-robin")
+}
