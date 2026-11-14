@@ -220,14 +220,15 @@ except for one pad (below).
   - at .025, 39.7 dB, a hair under a copy;
   - at .1, 35.6 dB.
 
-**Not BREAKER at other settings** (`BreakerKitTest`, pad by pad against the BREAKER kit):
+**Not BREAKER at other settings** (`BreakerKitTest`, pad by pad against the BREAKER kit, since the
+fill took BREAKER's A16 on 2026-11-14; before that, Trip hop's A16 shaker matched BREAKER's, 5 and 3):
 
 | | Dub Tank | Trip hop |
 |---|---:|---:|
-| Pads that are another drum | 7 | 5 |
+| Pads that are another drum | 7 | 6 |
 | Same drum, retuned | 4 | 6 |
 | Damped or opened (DAMP off .5) | 7 | 11 |
-| Same drum and tuning, only the rig moved | 3 | 3 |
+| Same drum and tuning, only the rig moved | 3 | 2 |
 
 **The grid**, measured on the saved kits as for BREAKER above:
 
@@ -509,12 +510,20 @@ The owner picked ×.35 ("4 Drier") and heard a fresh take as the same fill with 
   on model 6.
 - **Render cost:** twelve whole tom renders, about 1 s one after another on a desktop JVM, against
   the riser's 0.4 s and a drum's 0.1 s. The strokes are independent, so they render in parallel and
-  are summed in stroke order, so the result is the same however they finish.
+  are summed in stroke order, so the result is the same however they finish: 0.45 s on a 4-core
+  desktop JVM.
+- **Measured** (`BreakerTest`):
+  - the default fill against the pick as heard: a 1.7e-5 maximum difference;
+  - the spring after the run: −11.3 dB at the default against −4.1 dB at DRIP .45;
+  - a 30% fill against a full one, at matched loudness: its most-moved octave moves 2.7 dB;
+  - a second take against the first: 11.0 dB apart.
 
 **On the kit (2026-11-14):** the owner put it on the BREAKER kit's A16, beside the snare riser, in
 the shaker's place, at the toms' level. Its pad saves on model 7 and is dealt like every synth drum,
 3 zones × 3 re-struck takes, through saving, the pad resolver and the MPC 3 export (`BreakerKitTest`).
-The demo groove does not play it. No phone or MPC has played it.
+On the saved kit its closest two takes are 24.0 dB apart (a copy is more than 40) and its least-changed
+soft zone moves 2.8 dB in spectral shape. The demo groove does not play it. No phone or MPC has
+played it.
 
 ## The cymbals
 
