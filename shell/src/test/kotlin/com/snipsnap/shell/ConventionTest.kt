@@ -14,7 +14,7 @@ import kotlin.test.fail
  * Gradle's test JVM working directory is each module's own project dir —
  * no module overrides `tasks.test`'s `workingDir` — so a `:shell` test
  * reaches `:app`'s files via `../app/...` the same way
- * `TeachLogTest.kt:88`/`CalibrationCorpusTest.kt:31` already reach
+ * `CalibrationCorpusTest.kt:31` already reaches
  * `../reference/...`.
  *
  * The shared bug shape these laws guard against: a pattern applied
@@ -1826,8 +1826,8 @@ class ConventionTest {
         "share" to "ShareOut.kt",
         "landing" to "ShareInbox.kt",
         // The player's presets (docs/WORKSHOP.md, WS5): one file at the
-        // shelf root, named by its store and nowhere else — SYNTH and
-        // SEND TO BENCH both reach it through UserPresets.file.
+        // shelf root, named by its store and nowhere else — SYNTH reaches
+        // it through UserPresets.file.
         "presets.json" to "UserPresets.kt",
         // The song a project keeps (SONG, docs/plans/2026-10-30-song-making.md
         // Phase 5): one file in the project's folder, named by its store.
@@ -6019,6 +6019,7 @@ class ConventionTest {
     /** Controls that open a sheet or a picker: BottomSheet, SheetMenu or a Dialog picker. */
     private val SHEET_OPENERS = setOf(
         "MURMUR PLUCK ▾", // MAKE's instrument shelf: opens the kept-pluck picker dialog
+        "CAIRN SING ▾", // MAKE's instrument shelf: opens the five-study SING picker dialog
         " ▾", // the kit chip's name is drawn with it, and the kit switcher's accessible tail drops it
         "${'$'}label ▾", // Places.opener: ORBIT's steps, span, spread and snip pickers, SURFACE's BARS, CONFLUENCE's passage
         "${'$'}summary ▾", // EXPORT's ART row opens the art sheet

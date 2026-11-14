@@ -248,8 +248,7 @@ class ChopReviewModel private constructor(
     }
 
     /**
-     * The bench's own record of how this chop was reached, for the cut
-     * rating ([CutRatings]): how many chops ran on this source before this
+     * The bench's own record of how this chop was reached: how many chops ran on this source before this
      * one ([tries] — RE-CHOP, AUTO, every EAR, CUT, SNAP and HITS step, a
      * hum landing), and how many cuts were moved by hand since ([merges],
      * [splits]). A re-chop starts the hand count over: its cuts are the
@@ -261,17 +260,6 @@ class ChopReviewModel private constructor(
         internal set
     var splits: Int = 0
         internal set
-
-    /**
-     * CONFIRM ALL was pressed on this chop (`docs/WORKSHOP.md`): every chip
-     * the human left alone is the human's word too, and
-     * [labeledConfirmations] says so. A property of *this* model — a
-     * re-chop or a hand edit makes a new one, and the confirmation does
-     * not follow it (new slices, new opinions), the same way RE-CHOP's
-     * fresh labels do not inherit the old chips' overrides.
-     */
-    var confirmed: Boolean = false
-        private set
 
     /** True for a GHOSTS chop: rows are the spaces between the hits. */
     val ghosts: Boolean get() = mode is ChopMode.Ghosts
@@ -519,64 +507,11 @@ class ChopReviewModel private constructor(
         )
     }
 
-    /** RE-CHOP: fresh detection, fresh labels, overrides gone, hand edits gone, the confirmation gone; the tape reference rides along, and [tries] counts one more. */
+    /** RE-CHOP: fresh detection, fresh labels, overrides gone, hand edits gone; the tape reference rides along, and [tries] counts one more. */
     fun rechop(newMode: ChopMode = mode): ChopReviewModel = chop(source, newMode, tape, tempoLazy).also { it.tries = tries + 1 }
 
     /** The bench's own re-chop: [newMode], with this model's corrected chips carried across ([carryingOverrides]). */
     fun rechopKeeping(newMode: ChopMode): ChopReviewModel = carryingOverrides(rechop(newMode))
-
-    /**
-     * The teach-the-machine harvest: every overridden chip as a labeled
-     * example — the measurements plus the human's word, never the audio.
-     * The app appends these to the teach log only behind a consent switch.
-     */
-    fun labeledOverrides(): List<TeachLog.Example> =
-        rows.filter { it.overridden }.map {
-            TeachLog.Example(
-                label = it.effectiveClass,
-                features = it.classification.features,
-                machineSaid = it.classification.drumClass,
-            )
-        }
-
-    /**
-     * The other half of the harvest (`docs/WORKSHOP.md`, CONFIRM ALL): a
-     * chip the human vouched for, as a labeled example whose label *is*
-     * the machine's own verdict — [TeachLog.Example.confirmation]. Two
-     * ways a chip is vouched for: the picker's own agreement (the human
-     * chose the class the machine had chosen — [setLabel] on the machine's
-     * call, which [Row.overridden] already reads as agreement rather than
-     * correction), and CONFIRM ALL ([confirmAll]), which vouches for every
-     * chip left alone at once.
-     *
-     * Only chips the classifier itself named: a ghost's LOOP and a rung's
-     * LOOP are given by construction ([Row.label] is set), and confirming
-     * a verdict the classifier never gave would teach it a lie.
-     */
-    fun labeledConfirmations(): List<TeachLog.Example> =
-        rows.filter { it.label == null && !it.overridden && (confirmed || it.override != null) }.map {
-            TeachLog.Example(
-                label = it.classification.drumClass,
-                features = it.classification.features,
-                machineSaid = it.classification.drumClass,
-            )
-        }
-
-    /** Everything TEACH THE MACHINE logs for this chop: the corrections, then the confirmations, each in row order. */
-    fun teachHarvest(): List<TeachLog.Example> = labeledOverrides() + labeledConfirmations()
-
-    /** How many chips CONFIRM ALL vouches for: the classifier's own, left alone, not already agreed with one by one. */
-    fun confirmable(): Int = rows.count { it.label == null && it.override == null }
-
-    /**
-     * CONFIRM ALL: every chip the classifier named and the human left alone
-     * becomes the human's word. Returns how many that is — the toast's
-     * number — and holds until this model is replaced.
-     */
-    fun confirmAll(): Int {
-        confirmed = true
-        return confirmable()
-    }
 
     // ---------- melodic placement ----------
 

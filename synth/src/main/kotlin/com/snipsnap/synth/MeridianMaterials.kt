@@ -84,6 +84,7 @@ internal object MeridianMaterials {
         memory: Float,
         reach: Double,
         velocity: Double,
+        touch: Double = 0.0,
     ): Array<Meridian.SurfaceSetup> {
         val shape = when (voice) {
             MeridianVoice.CLACK -> clack
@@ -103,9 +104,9 @@ internal object MeridianMaterials {
         // Calibrate to the actual normalized Float default, so the reference
         // descriptors retain the scratch study's cutoff and pulse arithmetic.
         val cutoffHardness = (.65 + .35 * reach) / (.65 + .35 * referenceReach) *
-            (.65 + .35 * velocity)
+            (.65 + .35 * velocity) * MeridianTouch.cutoffMul(velocity, touch)
         val pulseHardness = (.0035 - .002 * reach) / (.0035 - .002 * referenceReach) *
-            (1.15 - .3 * velocity) / (1.15 - .3)
+            (1.15 - .3 * velocity) / (1.15 - .3) * MeridianTouch.widthMul(velocity, touch)
 
         return Array(Meridian.SURFACES) { j ->
             val material = Meridian.materialFor(j).ordinal
@@ -128,7 +129,7 @@ internal object MeridianMaterials {
                 val upperFade = 1 - MeridianMotion.smooth((frequencies[k] - 14000) / 4000)
                 val gain = shape.gains[k] * (if (k == 0) 1.0 else upperParticipation) *
                     (1 + .045 * sin((j + 1) * 1.7 + k)) * upperFade
-                sqrt(gain)
+                sqrt(gain) * MeridianTouch.modeTilt(velocity, touch, k)
             }
             val pickup = DoubleArray(Meridian.MODES_PER_SURFACE) { PICKUP * participation[it] }
             val cutoff = (1400 + surface * (shape.noiseHz - 1400)) *

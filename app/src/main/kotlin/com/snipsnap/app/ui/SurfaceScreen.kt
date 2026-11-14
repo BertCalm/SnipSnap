@@ -1573,7 +1573,7 @@ fun SurfaceScreen(
                     SurfaceMidi.TARGETS,
                     supported = midiSupported,
                     connected = midiDevices.isNotEmpty(),
-                    hint = "KNOBS MOVE THE PUCK, HOLD SOUNDS IT",
+                    hint = Copy.SURFACE_KNOBS_HINT,
                 )
             }
 

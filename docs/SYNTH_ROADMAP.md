@@ -3468,7 +3468,8 @@ The BREAKER kit (2026-11-12) is the first of three shelf kits:
 - **Verified in software** (`BreakerKitTest`): saving, regenerating, the pad resolver and the MPC 3
   export.
 - **Open:**
-  - MPC 2 plays each zone's first take only.
+  - MPC 2 plays each zone's first take only: a format limit, recorded as not applicable to the
+    round-robin gate on 2026-11-14.
   - The kick's takes are distinct but close (34 dB apart). The owner heard them as "one kick played
     again: fine".
   - Accepted on the open tone (2026-11-12): the balance, the pushed row, the kick and the soft-to-hard grid.
@@ -3595,9 +3596,19 @@ velocity, take and model through the JSON constructor, as RIVET's does. Open: ha
 take per zone, the app picker (a round of its own now that the convention no longer defers it to an SDK
 session). See [SCUFF](SCUFF.md).
 
+### CLUTTER, round 1 (2026-11-14)
+
+A found-sound drum engine of 22 modelled household objects, ported from the accepted round-0c Python prototype
+to `Clutter.kt`: every object's loose parts move only above a fixed strike threshold, velocity on every
+object, four takes, `ClutterPatch` with velocity, take and model, rosterless (no presets yet), no kit yet.
+Measured against the Python: no brightness bias across the 22 objects (0.06 dB above 4 kHz); the
+deterministic objects correlate 0.93 to 0.99; random draws are another realisation of the same law. The
+owner waived the roll gate. See [CLUTTER](CLUTTER.md) and the gates entry. The four genre kits go on the shelf
+at round 2; the picker entry waits for a session with an SDK.
+
 ### SCUFF, round 5 (2026-11-14)
 
 On SYNTH's engine picker, mirroring SOOT arm for arm plus the native-factory path for its presets (a kit's pad
 loads whole, with its take and model); `EngineCatalog` under DRUMS; both READMEs count 86; an on-device test
-beside SOOT's in `NewEngineSynthScreenTest` (CI's emulator runs it). Open: hardware playback, MPC 2's one take
-per zone. See [SCUFF](SCUFF.md).
+beside SOOT's in `NewEngineSynthScreenTest` (CI's emulator runs it). Open: hardware playback (MPC 2 round robin is not
+applicable since 2026-11-14, a format limit). See [SCUFF](SCUFF.md).

@@ -11,6 +11,11 @@ import com.snipsnap.json.JsonValue
  * A macro edit keeps the saved note, velocity, model and material-noise identity.
  * CLACK, CHIME and RASP require explicit model 3 when decoded; an omitted model
  * still means the historical SWEEP model 1, never an implicit migration.
+ *
+ * [touchShaping] is an optional finite-only [MeridianTouch] amount, saved only
+ * when it is above 0. Missing means 0, the unshaped law, so every recipe saved
+ * before it existed keeps its JSON and its sound. The MERIDIAN SIX bank sets it
+ * on its soft and medium layers.
  */
 data class MeridianPatch(
     override val name: String,
@@ -20,6 +25,7 @@ data class MeridianPatch(
     val velocity: Float = 1f,
     val model: Int = Meridian.defaultModelFor(voice),
     val seedContext: Int = 0,
+    val touchShaping: Float = 0f,
 ) : Patch {
     init {
         Patches.validateMacros(this, Meridian.macrosFor(voice))
@@ -30,11 +36,13 @@ data class MeridianPatch(
             "MERIDIAN velocity out of 0..1: $velocity"
         }
         require(Meridian.supportsVoice(voice, model)) { "unsupported meridian model $model for ${voice.name}" }
+        require(touchShaping.isFinite() && touchShaping in 0f..1f) { "MERIDIAN touch shaping out of 0..1: $touchShaping" }
+        require(touchShaping == 0f || !Meridian.isLoop(macros, model)) { "MERIDIAN touch shaping applies to finite recipes only" }
     }
 
     override val engine get() = ENGINE
     override val voiceName get() = voice.name
-    override fun render() = Meridian.render(voice, macros, midi, velocity, seedContext, model)
+    override fun render() = Meridian.render(voice, macros, midi, velocity, seedContext, model, touchShaping)
     override fun withMacros(macros: Map<String, Float>) = copy(macros = macros)
 
     override fun toJsonValue(): JsonValue.Obj {
@@ -43,6 +51,7 @@ data class MeridianPatch(
         obj["velocity"] = JsonValue.Num(velocity.toDouble())
         obj["model"] = JsonValue.Num(model.toDouble())
         obj["seedContext"] = JsonValue.Num(seedContext.toDouble())
+        if (touchShaping != 0f) obj["touchShaping"] = JsonValue.Num(touchShaping.toDouble())
         return JsonValue.Obj(obj)
     }
 
@@ -65,7 +74,10 @@ data class MeridianPatch(
                     throw JsonException("MERIDIAN velocity out of 0..1: $velocity")
                 }
                 val seed = obj["seedContext"]?.takeUnless { it is JsonValue.Null }?.int() ?: 0
-                MeridianPatch(name, voice, macros, midi, velocity, model, seed)
+                val touch = obj["touchShaping"]?.takeUnless { it is JsonValue.Null }?.num()?.toFloat() ?: 0f
+                if (!touch.isFinite() || touch !in 0f..1f) throw JsonException("MERIDIAN touch shaping out of 0..1: $touch")
+                if (touch != 0f && Meridian.isLoop(macros, model)) throw JsonException("MERIDIAN touch shaping applies to finite recipes only")
+                MeridianPatch(name, voice, macros, midi, velocity, model, seed, touch)
             }
 
         fun fromJsonText(text: String): MeridianPatch = fromJsonValue(Json.parse(text)) as MeridianPatch

@@ -272,7 +272,7 @@ fun MyVoiceScreen(
             try {
                 val stored = offMain { ConfluencePersonalWorkshop.saveVoice(library, selected, title, sourceOrigin) }
                 val all = offMain { ConfluencePersonalWorkshop.listVoices(library) }
-                onToast("VOICE SAVED ON THIS PHONE")
+                onToast(com.snipsnap.shell.Copy.VOICE_SAVED_ON_PHONE)
                 if (scope.isActive && mounted && take === source) { kept = stored; voices = all; status = "VOICE SAVED · READY FOR A NEW PAD" }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
@@ -303,7 +303,7 @@ fun MyVoiceScreen(
                     fresh.save(); fresh.kit
                 } }
                 onKitUpdated(updated)
-                onToast("MY VOICE SAVED ON ${PadNoteMap.labelForPad(slot)}")
+                onToast(com.snipsnap.shell.Copy.myVoiceSaved(PadNoteMap.labelForPad(slot)))
                 if (scope.isActive && mounted) {
                     status = "${selectedMode.name} SAVED ON ${PadNoteMap.labelForPad(slot)} · VOICE KEPT"
                     destination = (1..128).firstOrNull { updated.pad(it) == null }

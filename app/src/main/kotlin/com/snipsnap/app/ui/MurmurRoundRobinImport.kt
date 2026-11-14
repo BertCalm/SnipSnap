@@ -20,6 +20,7 @@ import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
 import com.snipsnap.app.theme.tape
 import com.snipsnap.shell.Busy
+import com.snipsnap.shell.Copy
 import com.snipsnap.shell.MurmurRoundRobinBankImport
 import java.io.File
 import java.util.concurrent.CancellationException
@@ -56,7 +57,7 @@ internal fun MurmurRoundRobinImport(shelf: File, enabled: Boolean, onImported: (
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         picking = false
         if (uri != null && cancellation == null) {
-            if (uri.scheme != "content") message = "CHOOSE AN RR BANK ZIP FROM FILES."
+            if (uri.scheme != "content") message = Copy.RR_IMPORT_CHOOSE_ZIP
             else pending = uri
         }
     }
@@ -83,13 +84,13 @@ internal fun MurmurRoundRobinImport(shelf: File, enabled: Boolean, onImported: (
                         saved to closed
                     }
                     // A completed atomic admission wins a late cancel; refresh the real shelf.
-                    message = if (imported.first.stagingCleaned && imported.second) "RR BANK IMPORTED. OPEN IT BELOW."
-                        else "RR BANK IMPORTED. CLEANUP NEEDS ATTENTION."
+                    message = if (imported.first.stagingCleaned && imported.second) Copy.RR_IMPORT_DONE
+                        else Copy.RR_IMPORT_CLEANUP
                     onImported()
                 } catch (_: CancellationException) {
-                    message = "RR BANK IMPORT CANCELLED."
+                    message = Copy.RR_IMPORT_CANCELLED
                 } catch (_: Exception) {
-                    message = "COULD NOT IMPORT. CHOOSE A COMPLETE SUPPORTED RR BANK ZIP."
+                    message = Copy.RR_IMPORT_FAILED
                 } finally { cancellation = null }
             }
         }

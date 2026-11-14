@@ -29,7 +29,7 @@ Copied from the spec (section 7.5). It is at the top of `Personality.kt` (clarit
 - No metaphors, jokes or period references.
 - An ellipsis means work in progress, and nothing else.
 
-**Case** (owner ruling D3, clarity PR 5d). Sentence case for anything that is a sentence: hints, empty states, descriptions, errors, dock messages, HELP and sheet row descriptions. A message ends in a full stop, `…` (work in progress) or `?`. CAPS stays for place and stage tabs, buttons, section titles, chip labels and pad ids. In `Copy` and `Places` a label is marked `@field:CopyLabel`, a caption (a sentence fragment read beside a control) `@field:CopyCaption`, and an unmarked string is a message; `PersonalityTest` holds each kind to its law.
+**Case** (owner ruling D3, clarity PR 5d). Sentence case for anything that is a sentence: hints, empty states, descriptions, errors, dock messages, HELP and sheet row descriptions. A message ends in a full stop, `…` (work in progress) or `?`. CAPS stays for place and stage tabs, buttons, section titles, chip labels and pad ids. In `Copy` and `Places` a label is marked `@field:CopyLabel`, a caption (a sentence fragment read beside a control) `@field:CopyCaption`, and an unmarked string is a message; `PersonalityTest` holds each kind to its law. The same law reads the screen files: a sentence-like literal in a toast, dock line, note, hint or confirm body that is all caps fails `PersonalityTest` unless it is on the shrinking waiver there, so write new ones in `Copy`.
 
 ---
 

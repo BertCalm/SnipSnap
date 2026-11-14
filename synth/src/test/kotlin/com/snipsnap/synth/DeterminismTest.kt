@@ -229,6 +229,15 @@ class DeterminismTest {
         }
     }
 
+    @Test fun `CLUTTER renders every object, a soft hit and every take byte for byte through JSON`() {
+        for (voice in ClutterVoice.entries) {
+            val patch = ClutterPatch("Canary", voice, Clutter.defaults(voice))
+            assertContentEquals(patch.render().samples, Patches.fromJsonText(patch.toJsonText()).render().samples, "$voice")
+            val struck = ClutterPatch("Soft take", voice, Clutter.defaults(voice), velocity = 0.4f, take = 3)
+            assertContentEquals(struck.render().samples, Patches.fromJsonText(struck.toJsonText()).render().samples, "$voice soft take 3")
+        }
+    }
+
     @Test fun `EROSION native voices replay their saved touch`() {
         for (voice in ErosionVoice.entries) {
             val patch = ErosionPatch("Canary", voice, velocity = .6f)

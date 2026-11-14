@@ -55,6 +55,7 @@ class PatchesTest {
         TerraPatch("Door", TerraVoice.COMPOUND_MEMBRANE, emptyMap()),
         SilkPatch("Door", SilkVoice.OUD, emptyMap()),
         GyrePatch("Door", GyreVoice.FLICK, emptyMap()),
+        ClutterPatch("Bucket", ClutterVoice.BUCKET, emptyMap()),
         MagnetPatch("Door", MagnetVoice.JANGLE, emptyMap()),
         VentPresets.all().first(),
         OverlapPresets.all().first(),

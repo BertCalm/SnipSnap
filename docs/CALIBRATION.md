@@ -35,7 +35,7 @@ threshold *fitting*.
 
 ## From the phone: SEND TO BENCH
 
-> **No longer in the app (D8, 2026-11).** The workshop, TEACH THE MACHINE and the hand-outs below were removed from the UI; the `:shell` pipeline stays for now (`docs/WORKSHOP.md`). A phone cannot produce these files today, so what follows is the format the harness still reads.
+> **No longer in the app (D8, 2026-11).** The workshop, TEACH THE MACHINE and the hand-outs below were removed from the UI; the `:shell` code that wrote and exported them was deleted (`docs/WORKSHOP.md`). A phone cannot produce these files today, and no harness reads the logs now; what follows is kept as the format's history.
 
 The other on-ramp is the app's own teach log. With TEACH THE MACHINE on
 (SETUP), every chip corrected on CHOP is logged as a feature vector plus
@@ -58,19 +58,16 @@ tests to judge, nothing here reads them), and a `manifest.txt` naming
 which kit gave what. Drop the first two files into `reference/calibration/`
 and run
 
-```
-./gradlew :shell:test --tests '*TeachLogTest*' --tests '*CutRatingsTest*'
-```
-
-The first prints every label the current rules still disagree with, with
+(The `TeachLogTest` and `CutRatingsTest` harnesses that read the files were
+deleted with the pipeline.) The first printed every label the current rules still disagree with, with
 the features behind each, and counts corrections and confirmations apart
 — so with confirmations in the file the agreement line is the rules'
-accuracy on real material. The second sums the cut ratings by setting,
+accuracy on real material. The second summed the cut ratings by setting,
 best first, with what each setting cost in tries and hand edits.
 
 ## From the phone: LABEL THIS HIT
 
-> **No longer in the app (D8, 2026-11).** The workshop, TEACH THE MACHINE and the hand-outs below were removed from the UI; the `:shell` pipeline stays for now (`docs/WORKSHOP.md`). A phone cannot produce these files today, so what follows is the format the harness still reads.
+> **No longer in the app (D8, 2026-11).** The workshop, TEACH THE MACHINE and the hand-outs below were removed from the UI; the `:shell` code that wrote and exported them was deleted (`docs/WORKSHOP.md`). A phone cannot produce these files today, and no harness reads the logs now; what follows is kept as the format's history.
 
 The WAVs themselves come the same way, by their own door. On any pad's
 sheet with the WORKSHOP open, the BENCH box offers the nine classes as

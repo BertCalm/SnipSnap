@@ -357,7 +357,7 @@ fun OrbitScreen(
         if (!playerUp || player.needsRestart()) playerUp = player.start()
         auditionFaulted = player.aquariumFaulted()
         auditionPending = player.hasPendingAquariumControls()
-        if (!playerUp || !player.isUp()) { onToast("ORBIT TAP STREAM UNAVAILABLE"); return }
+        if (!playerUp || !player.isUp()) { onToast(Copy.ORBIT_TAP_STREAM_UNAVAILABLE); return }
         player.hit(pad, 0.9f, auditionId)
         auditionId = auditionId % 1_000_000 + 1
     }
@@ -495,7 +495,7 @@ fun OrbitScreen(
             preparing = false
         }.onFailure { e ->
             set = null
-            refusal = e.message ?: "NO RINGS"
+            refusal = e.message ?: Copy.NO_RINGS
         }
     }
 
@@ -616,7 +616,7 @@ fun OrbitScreen(
                 engine = null
                 sink = null
                 Log.e("OrbitScreen", "startPlayback: failed", failure)
-                onToast("ORBIT PLAY FAILED")
+                onToast(Copy.ORBIT_PLAY_FAILED)
             } finally { preparing = false }
         }
     }
@@ -649,7 +649,7 @@ fun OrbitScreen(
             transportFailure.getAndSet(null)?.let { failure ->
                 Log.e("OrbitScreen", "playback: failed", failure)
                 stopPlayback()
-                onToast("ORBIT PLAY FAILED")
+                onToast(Copy.ORBIT_PLAY_FAILED)
             }
         }
     }
@@ -1060,7 +1060,7 @@ fun OrbitScreen(
                 // budget was measured against the old one, and `OrbitSet`
                 // refuses a ninth ring by throwing, out here where no
                 // `runCatching` would catch it.
-                if (set !== s) { onToast("THE RINGS CHANGED WHILE THAT LOADED — TRY AGAIN"); return@onSuccess }
+                if (set !== s) { onToast(Copy.RINGS_CHANGED_TRY_AGAIN); return@onSuccess }
                 commit(s.copy(orbits = s.orbits + imported.set.orbits))
                 selected = s.orbits.size
                 // Every pad that could not come, named. A silent drop here
@@ -1102,7 +1102,7 @@ fun OrbitScreen(
                         "$name: $rings. ${caveats.joinToString(". ")}."
                     },
                 )
-            }.onFailure { e -> onToast(e.message ?: "COULD NOT READ THE GROOVE") }
+            }.onFailure { e -> onToast(e.message ?: Copy.GROOVE_READ_FAILED) }
         }
     }
 

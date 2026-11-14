@@ -15,6 +15,16 @@ tasks.register<JavaExec>("generateFiredBronzeAudition") {
     else args(providers.gradleProperty("firedBronzeOutput").orNull ?: "testkit/fired-bronze-audition")
 }
 
+tasks.register<JavaExec>("generateBreakerFillStudy") {
+    group = "distribution"
+    description = "Render BREAKER's surf tom fill study: four figures down the kit's toms through one pass of the rig, alone and in a groove."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.BreakerFillStudy")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "768m"
+    args(providers.gradleProperty("breakerFillStudyOutput").orNull ?: "${rootDir}/testkit/breaker-fill-study")
+}
+
 tasks.register<JavaExec>("generateRivetKit") {
     group = "distribution"
     description = "Export three RIVET sixteen-pad, three-zone industrial drum kits with native MPC 3 and MPC 2 read-back."
@@ -3783,4 +3793,14 @@ tasks.register<JavaExec>("generateTempestTunedKit") {
     workingDir = rootDir
     maxHeapSize = "768m"
     args(providers.gradleProperty("tempestTunedKitOutput").orNull ?: "${rootDir}/testkit/SnipSnap Tempest Tuned Kit", "--tuned")
+}
+
+/** Render CLUTTER's round-1 Kotlin clips under testkit/clutter-audition/kotlin/, for the Python A/B. */
+tasks.register<JavaExec>("generateClutterAudition") {
+    group = "distribution"
+    description = "Render the CLUTTER Kotlin clips (every object hard, soft and at its four takes) under testkit/clutter-audition/kotlin/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ClutterAuditionGenerator")
+    workingDir = projectDir
+    args(providers.gradleProperty("clutterOutput").orNull ?: "${rootDir}/testkit/clutter-audition/kotlin")
 }

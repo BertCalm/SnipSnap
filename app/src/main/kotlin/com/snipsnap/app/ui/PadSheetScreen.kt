@@ -2961,7 +2961,7 @@ fun PadSheetScreen(
                 }
                 val result = checkNotNull(made)
                 onKitUpdated(fresh.kit)
-                onToast("GATHERING MADE ON ${padTag(result.slot)} · ORIGINAL KEPT")
+                onToast(Copy.gatheringMade(padTag(result.slot)))
                 if (scope.isActive && liveSlot == sourceSlot && liveKitDir == kitDir && model === sourceModel) {
                     model = fresh
                     pendingMetadataSlots = emptySet()
