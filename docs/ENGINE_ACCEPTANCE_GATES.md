@@ -268,7 +268,7 @@ A kit family of three 1970s disco kits: Philly Strings, Loft Party and Munich Ma
   playback remain open. The owner waived SFZ and
   DecentSampler.
 
-## SOOT (five kits on the shelf, sound approved; hardware open)
+## SOOT (five kits on the shelf, sound approved, hardware confirmed: complete)
 
 A drum engine for grimy street boom bap from physical models. See [SOOT](SOOT.md).
 
@@ -295,10 +295,13 @@ A drum engine for grimy street boom bap from physical models. See [SOOT](SOOT.md
     their renders (`SootKitTest`, `SootGenreKitTest`, `:shell:generateSootKit`,
     `:shell:generateSootGenreKits`).
   - **Playback: verified in software.** `PadHit.resolve` picks the zone by velocity and deals the four
-    takes in order, then repeats. No phone has played the kit.
+    takes in order, then repeats. **Phone: pass, owner-confirmed 2026-11-14.** The owner played SOOT
+    and its starter kits and said, "Everything is good": soft-to-hard and repeated hits were right.
   - **Export: verified for MPC 3 by read-back.** The exported slices match their renders. **MPC 2: not
     applicable** ([format limit](#mpc-2-and-round-robin-owner-decision-2026-11-14)): it keeps only the first take of each zone. SFZ and DecentSampler were not generated.
-    No MPC has loaded the kit.
+    **MPC 3 on an MPC: pass, owner-confirmed 2026-11-14.** The exported kits loaded and repeated hits
+    cycled through the takes. This is the owner's report, not a slice-map capture (HH1.4 stays
+    parked), and the first report against the general MPC note above.
 - **Sound character: approved at round 2.** On 2026-11-13 the owner heard the kit read back from its
   MPC 3 export and said, "All sounds fine". How they got there:
   - **Round 0:** they picked the hits.
@@ -309,9 +312,11 @@ A drum engine for grimy street boom bap from physical models. See [SOOT](SOOT.md
     - the roll and the loop point accepted;
     - the four bars moved to the heavier dictaphone (`SootKits.VERSION` 3).
 
-  Preserve version 3 as the baseline. This is not evidence of a phone or MPC audition.
-- **Overall: incomplete.** The sound of all five kits is approved, and the software evidence is in
-  place for all of them. Still open: phone and MPC hardware playback.
+  Preserve version 3 as the baseline. The phone and MPC 3 auditions are recorded under velocity and
+  round robin above.
+- **Overall: complete (2026-11-14).** The sound of all five kits is approved, the software evidence
+  is in place for all of them, and the owner confirmed phone and MPC 3 playback. MPC 2 is not
+  applicable (format limit).
 
 ## MURMUR round robin (V2 instrument, 2026-11-13)
 
