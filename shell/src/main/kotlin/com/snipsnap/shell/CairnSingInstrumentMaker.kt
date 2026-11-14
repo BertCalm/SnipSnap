@@ -21,7 +21,8 @@ import java.nio.file.Files
 import java.util.concurrent.CancellationException
 
 /**
- * Explicit retained-SING instrument packaging. No native renderer is called.
+ * Explicit retained-SING instrument packaging. No native renderer is called here;
+ * [CairnSingRenderedCaptures] renders and pins the captures it is given.
  * Five delivered studies still represent ONE voice; entry/release and device listening remain separate.
  * This API does not register a factory, picker entry or automatic shelf import.
  */
@@ -48,6 +49,10 @@ object CairnSingInstrumentMaker {
         "cairn-groove-50" to Pins("59df7cc9625212e13f50e4add9115331b1b44b8ba4af842e6cd5c87e4aeeb2e1", "a868d630dda6f50dbada1e4310afef712e3ec9d4f64e099b5891819fe4e21ce9"),
         "cairn-groove-100" to Pins("9ce2efa081e6f68027e888b3363c7e86923d57ed6cc53b7a7eead1de6c972fe1", "2cbfc848ab6c83f2965aad7c2da96b478509e5f7e0fc4d931850b4b8d7efe127"),
     )
+
+    /** The pinned native Float SHA-256 for one of the nine retained sources. */
+    fun floatSha256(sourceId: String): String =
+        requireNotNull(pins[sourceId]) { "Unknown retained CAIRN source" }.floatSha256
 
     data class Assembly(val program: KeygroupProgram, val samples: Map<String, Snip>)
     /** Own the program/source association; legacy prototype catalogues are not a trusted oracle. */
