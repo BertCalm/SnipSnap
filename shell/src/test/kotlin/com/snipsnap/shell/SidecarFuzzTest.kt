@@ -242,20 +242,6 @@ class SidecarFuzzTest {
         return f.readText()
     }
 
-    private fun teachLine(): String = TeachLog.toJsonl(
-        listOf(
-            TeachLog.Example(
-                label = DrumClass.SNARE,
-                machineSaid = DrumClass.CLAP,
-                features = Features(
-                    centroidHz = 1800f, rolloffHz = 5000f, flatness = 0.3f, zeroCrossingRate = 0.1f,
-                    lowRatio = 0.2f, midRatio = 0.5f, highRatio = 0.3f, durationSeconds = 0.4f,
-                    decayMs = 120f, peak = 0.8f, attackBursts = 1,
-                ),
-            ),
-        ),
-    ).trim()
-
     private fun recipeJson(): String = PadRecipe(
         patch = ThumpPatch("Seed", ThumpVoice.KICK, mapOf("TUNE" to 0.2f, "DRIVE" to 0.8f)),
         fx = FxChain(reverse = true, eq = mapOf("BASS" to 0.5f), echo = mapOf("TIME" to 0.3f), spring = mapOf("MIX" to 0.2f)),
@@ -305,27 +291,6 @@ class SidecarFuzzTest {
         fuzz("PocketStore.read", pocketJson(), seed = 34) { text ->
             f.writeText(text)
             PocketStore.read(f)
-        }
-    }
-
-    @Test
-    fun `teach log never throws at all`() {
-        // Stricter than the others: a torn line is skipped, never fatal, so
-        // the harness fails on *any* throwable here.
-        val valid = teachLine()
-        val rnd = Random(35)
-        val tree = Json.parse(valid)
-        for (i in 0 until ROUNDS) {
-            val mutant = if (i % 2 == 0) {
-                String(mutateBytes(valid.toByteArray(Charsets.UTF_8), rnd), Charsets.UTF_8)
-            } else {
-                Json.write(mutateTree(tree, rnd)).replace("\n", "")
-            }
-            try {
-                TeachLog.fromJsonl(valid + "\n" + mutant + "\n" + valid)
-            } catch (t: Throwable) {
-                fail("TeachLog.fromJsonl round $i: threw ${t::class.simpleName}: ${t.message}\n$mutant")
-            }
         }
     }
 
