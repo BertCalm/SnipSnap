@@ -3,6 +3,7 @@ package com.snipsnap.synth
 import com.snipsnap.audio.Snip
 import java.util.concurrent.CancellationException
 import kotlin.math.PI
+import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.exp
 import kotlin.math.floor
@@ -19,8 +20,9 @@ import kotlin.math.sqrt
  * exactly model 2's ([Splay.prepareModel2Excitation]); only the thing they strike changes.
  *
  *  - [WIRE]: one string (a tuned delay loop), plucked at a point the upper arm's angle chooses.
- *  - [RUB]: a long-memory harmonic resonator rubbed continuously by the upper arm's pressure, with
- *    the catches as accents. It sings between catches and is SPLAY's first held (HOLD) voice.
+ *  - [RUB]: a long-memory harmonic resonator rubbed continuously by the upper arm's pressure. Each catch
+ *    is a stick-slip gesture (the bow grips, the ringing ducks, then it slips and strikes), landing where
+ *    the upper arm points. It sings between catches and is SPLAY's first held (HOLD) voice.
  */
 enum class SplayBody { WIRE, RUB }
 
@@ -78,7 +80,29 @@ object SplayBodies {
     /** The rub never fully lifts: the arms' pressure swells it from this floor, through a 40 ms lag (the bow's give). */
     private const val RUB_FLOOR = .30
     private const val RUB_LAG_SECONDS = .040
-    private const val RUB_CATCH = .40
+    private const val RUB_CATCH = 4.0
+    /**
+     * Each catch is a stick-slip gesture, not just an accent (the owner's round-1 note: "We need a bit of
+     * a catch like gesture in the sound"). For [STICK_SECONDS] before it the bow grips: the rub sags by up
+     * to [STICK_DEPTH] and the grip holds the resonator back ([GRAB_PER_SECOND]), so the ringing ducks.
+     * At the catch it slips: the catch strikes the partials, the rub surges by up to [SLIP_GAIN] over
+     * [SLIP_SECONDS], and a short band-passed scrape of friction noise ([SCRAPE_SECONDS]) rides on top.
+     * A stronger catch grips and slips harder. Measured (C4, 16 mechanisms): the dip-to-peak swing around
+     * a catch is about 9.5 dB, against 2.5 dB before.
+     */
+    private const val STICK_SECONDS = .010
+    private const val STICK_DEPTH = .75
+    private const val SLIP_SECONDS = .030
+    private const val SLIP_GAIN = 1.0
+    /** How hard a grip holds the resonator back, per second, at a full touch (60% of it at the softest). */
+    private const val GRAB_PER_SECOND = 300.0
+    private const val SCRAPE_SECONDS = .018
+    private const val SCRAPE_GAIN = .35
+    /**
+     * Where along the resonator a catch lands, as on WIRE: the upper arm's angle picks a point between these
+     * anchors, so successive catches strike different partial balances.
+     */
+    private val CATCH_POINTS = doubleArrayOf(.06, .22, .38)
     /** The loop window's last stretch is blended toward the motion that led into the window, so the circle has no jump. */
     private const val SEAM_BLEND_SECONDS = .15
 
@@ -166,6 +190,11 @@ object SplayBodies {
         val width = contactSeconds(contact, velocity, hz)
         val kernel = kernel(width * INTERNAL_RATE)
 
+        /** The strongest untapered catch, so a held and a finite note grade their catches alike. */
+        val catchScale = e.events.maxOfOrNull {
+            abs(it.direction * it.strength * e.weights[it.participantId] * it.coincidenceGain / total)
+        }?.takeIf { it > 0.0 } ?: 1.0
+
         class Pulse(val start: Int, val amplitude: Double, val position: Double, val circular: Boolean)
 
         init {
@@ -197,6 +226,24 @@ object SplayBodies {
                         if (n >= linearOut.size) break
                         linearOut[n] += value
                     }
+                }
+            }
+        }
+
+        /**
+         * Adds [shape] × [gain] into [linearOut] or [circularOut] from [offset] samples after [pulse]'s start
+         * ([offset] may be negative, for what comes before a catch), wrapping a circular pulse like [stamp].
+         */
+        fun stampShape(pulse: Pulse, offset: Int, shape: FloatArray, gain: Double, linearOut: FloatArray, circularOut: FloatArray) {
+            for (j in shape.indices) {
+                val value = (gain * shape[j]).toFloat()
+                if (pulse.circular) {
+                    circularOut[Math.floorMod(pulse.start + offset + j, circularOut.size)] += value
+                } else {
+                    val n = pulse.start + offset + j
+                    if (n < 0) continue
+                    if (n >= linearOut.size) break
+                    linearOut[n] += value
                 }
             }
         }
@@ -250,12 +297,31 @@ object SplayBodies {
             sr[k] = radius * sin(TAU * hz * partial / INTERNAL_RATE)
             rubGain[k] = (.35 + .65 * sin(PI * partial * RUB_POINT).pow(2)) / partial
         }
-        // The catches strike every partial through one shared accent buffer (the rub, not the catch
-        // point, is what moves RUB's partial balance).
-        val accent = FloatArray(frames); val accentC = FloatArray(s.circularSize)
-        for (pulse in s.pulses) s.stamp(pulse, 1.0, 0, accent, accentC)
-        val accentGain = DoubleArray(count) { k ->
-            RUB_CATCH * (.45 + .75 * sin(PI * (k + 1) * RUB_POINT * 1.7).pow(2)) / sqrt(k + 1.0)
+        // The catches strike the partials through three accent buffers, one per catch point: each catch is
+        // shared between the two anchors either side of where the upper arm puts it, so its partial balance
+        // follows the arm, as WIRE's pluck point does.
+        val anchors = CATCH_POINTS.size
+        val accents = Array(anchors) { FloatArray(frames) }
+        val accentsC = Array(anchors) { FloatArray(s.circularSize) }
+        for (pulse in s.pulses) {
+            val w = anchorWeights(pulse.position)
+            for (j in 0 until anchors) if (w[j] > 0.0) s.stamp(pulse, w[j], 0, accents[j], accentsC[j])
+        }
+        val accentGain = Array(anchors) { j ->
+            DoubleArray(count) { k -> RUB_CATCH * (.25 + .75 * sin(PI * (k + 1) * CATCH_POINTS[j]).pow(2)) / sqrt(k + 1.0) }
+        }
+        // The stick-slip gesture of every catch (not the release): grip before it, slip and scrape after.
+        val grip = FloatArray(frames); val gripC = FloatArray(s.circularSize)
+        val slip = FloatArray(frames); val slipC = FloatArray(s.circularSize)
+        val scrape = FloatArray(frames); val scrapeC = FloatArray(s.circularSize)
+        val gripShape = gripShape(STICK_SECONDS * INTERNAL_RATE)
+        val slipShape = burstShape(SLIP_SECONDS * INTERNAL_RATE)
+        val scrapeShape = burstShape(SCRAPE_SECONDS * INTERNAL_RATE)
+        for (pulse in s.pulses.drop(1)) {
+            val grade = (abs(pulse.amplitude) / s.catchScale).pow(.7).coerceAtMost(1.0)
+            s.stampShape(pulse, -gripShape.size, gripShape, grade, grip, gripC)
+            s.stampShape(pulse, 0, slipShape, grade, slip, slipC)
+            s.stampShape(pulse, 0, scrapeShape, grade, scrape, scrapeC)
         }
         // One shared rosin-noise stream, low-passed darker for a softer touch.
         val noise = Dsp.Noise(Dsp.seedFor("SPLAY", MODEL, "RUB", seed, "rosin"))
@@ -267,6 +333,18 @@ object SplayBodies {
         for (i in rosin.indices) {
             lp1 += lpA * (noise.next() - lp1); lp2 += lpA * (lp1 - lp2)
             rosin[i] = lp2.toFloat()
+        }
+        // The slip's friction scrape: its own seeded noise, band-passed above the rub, brighter for a harder touch.
+        val scrapeNoise = Dsp.Noise(Dsp.seedFor("SPLAY", MODEL, "RUB", seed, "scrape"))
+        val hpA = 1.0 - exp(-TAU * 1200.0 / INTERNAL_RATE)
+        val scrapeLpA = 1.0 - exp(-TAU * (2200.0 + 4800.0 * velocity.pow(1.5)) / INTERNAL_RATE)
+        val grit = FloatArray(noiseFrames)
+        var hp = 0.0; var g1 = 0.0; var g2 = 0.0
+        for (i in grit.indices) {
+            val raw = scrapeNoise.next().toDouble()
+            hp += hpA * (raw - hp)
+            g1 += scrapeLpA * ((raw - hp) - g1); g2 += scrapeLpA * (g1 - g2)
+            grit[i] = g2.toFloat()
         }
         val pressure = e.upperPressure
         val control = 1.0 / e.dtSeconds
@@ -283,12 +361,16 @@ object SplayBodies {
             lagged += lagA * (p - lagged)
             return RUB_FLOOR + (1.0 - RUB_FLOOR) * lagged
         }
+        val hits = DoubleArray(anchors)
+        // A harder touch grips harder.
+        val grab = GRAB_PER_SECOND * (.6 + .4 * velocity) / INTERNAL_RATE
         val out = FloatArray(frames)
         for (i in 0 until frames) {
             if (i % 16384 == 0) checkCancellation()
             // The rub: real pressure and noise, or, once held, the window's, with its last stretch
             // blended (pressure linearly, noise at constant power) toward what led into the window.
             val rub: Double
+            val gritNow: Double
             if (held && i >= s.loopFrom) {
                 val phase = (i - s.loopFrom) % s.cycle
                 val now = s.loopFrom + phase
@@ -296,24 +378,59 @@ object SplayBodies {
                 val before = now - s.cycle
                 val p = (1.0 - x) * pressureAt(now.toDouble() / INTERNAL_RATE) + x * pressureAt(before.toDouble() / INTERNAL_RATE)
                 val n = cos(.5 * PI * x) * rosin[now] + sin(.5 * PI * x) * rosin[before]
+                gritNow = cos(.5 * PI * x) * grit[now] + sin(.5 * PI * x) * grit[before]
                 rub = swell(p) * n
             } else {
                 val t = i.toDouble() / INTERNAL_RATE
                 val active = if (t < ACTIVE_SECONDS) smooth(t / .012) * smooth((ACTIVE_SECONDS - t) / .20) else 0.0
                 rub = swell(pressureAt(t)) * rosin[i] * active
+                gritNow = grit[i] * active
             }
-            val hit = s.force(accent, accentC, i).toDouble()
+            // Stick then slip: the rub sags while the bow grips and surges as it lets go.
+            val stick = min(1.0, s.force(grip, gripC, i).toDouble())
+            val surge = s.force(slip, slipC, i).toDouble()
+            val bowed = rub * max(0.0, 1.0 - STICK_DEPTH * stick + SLIP_GAIN * surge)
+            for (j in 0 until anchors) hits[j] = s.force(accents[j], accentsC[j], i).toDouble()
+            // While the bow grips it also holds the resonator back: the ringing ducks, then rebounds on the slip.
+            val hold = 1.0 - grab * stick
             var sum = 0.0
             for (k in 0 until count) {
-                val force = RUB_FRICTION * rub * rubGain[k] + accentGain[k] * hit
-                val x = cr[k] * re[k] - sr[k] * im[k]
-                im[k] = sr[k] * re[k] + cr[k] * im[k] + force
+                var hit = 0.0
+                for (j in 0 until anchors) hit += accentGain[j][k] * hits[j]
+                val force = RUB_FRICTION * bowed * rubGain[k] + hit
+                val x = hold * (cr[k] * re[k] - sr[k] * im[k])
+                im[k] = hold * (sr[k] * re[k] + cr[k] * im[k]) + force
                 re[k] = x
                 sum += x
             }
+            sum += SCRAPE_GAIN * s.force(scrape, scrapeC, i) * gritNow
             out[i] = sum.toFloat()
         }
         return out
+    }
+
+    /** How a catch at [position] along the resonator is shared between the two nearest [CATCH_POINTS]. */
+    private fun anchorWeights(position: Double): DoubleArray {
+        val w = DoubleArray(CATCH_POINTS.size)
+        val p = position.coerceIn(CATCH_POINTS.first(), CATCH_POINTS.last())
+        for (j in 0 until CATCH_POINTS.size - 1) {
+            val lo = CATCH_POINTS[j]; val hi = CATCH_POINTS[j + 1]
+            if (p <= hi) { val x = (p - lo) / (hi - lo); w[j] = 1.0 - x; w[j + 1] = x; return w }
+        }
+        w[w.size - 1] = 1.0
+        return w
+    }
+
+    /** The grip before a catch: a sag that deepens over [length] samples and lets go at the catch. */
+    private fun gripShape(length: Double): FloatArray {
+        val n = max(1, length.roundToInt())
+        return FloatArray(n) { j -> sin(.5 * PI * (j + 1.0) / n).pow(2).toFloat() }
+    }
+
+    /** A slip burst: a 1 ms rise, then an exponential fall with time constant [tau] samples, cut after 6 τ. */
+    private fun burstShape(tau: Double): FloatArray {
+        val rise = .001 * INTERNAL_RATE
+        return FloatArray((6.0 * tau).roundToInt()) { j -> ((1.0 - exp(-j / rise)) * exp(-j / tau)).toFloat() }
     }
 
     private fun smooth(value: Double): Double = value.coerceIn(0.0, 1.0).let { it * it * (3.0 - 2.0 * it) }
