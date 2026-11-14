@@ -16,6 +16,12 @@ the docs disagree with each other, start at [`docs/README.md`](docs/README.md).
 
 HYDROFORM now has a registered two-voice native prototype: [DOME and BULKHEAD](docs/HYDROFORM.md), with DOME HOLD and native/Python audition comparisons. Factory presets, kits and the Android picker await the native listening gate.
 
+[PATIO](docs/PATIO.md) supplies three Latin-inspired percussion starter kits: Cumbia,
+Samba and Latin dub. Each has eighteen pads, including an authored hand-drum roll
+and cuíca-inspired friction voice, with three velocity levels and four takes per
+level. `./gradlew :shell:generatePatioPerformance` writes the compact audition and
+native MPC 3 downloads. Physical MPC loading remains unverified.
+
 ## The loop
 
 ```

@@ -69,6 +69,7 @@ object StarterKits {
         }
     }
 
+    val PATIO_IDS = com.snipsnap.synth.PatioPerformance.Genre.entries.map { it.id }.toSet()
     val ALL: List<Starter> = listOf(
         // displayName is "EMPTY GRID", not "BLANK" — the other
         // entries are all pre-composed kits, and a plain "BLANK" reads as
@@ -515,7 +516,11 @@ object StarterKits {
             seeded = false,
             key = KeySpec.parse("C"),
         ) { ChordStabs.borrowedKit(KeySpec.parse("C")) },
-    )
+    ).plus(com.snipsnap.synth.PatioPerformance.Genre.entries.map { genre ->
+        Starter(genre.id, genre.title.uppercase(java.util.Locale.ROOT), "Latin percussion, three velocities and four takes per voice, with a hand-drum roll and cuica.", seeded = false) {
+            com.snipsnap.synth.PatioPerformance.build(genre)
+        }
+    })
 
     fun byId(id: String): Starter? = ALL.firstOrNull { it.id == id }
 }

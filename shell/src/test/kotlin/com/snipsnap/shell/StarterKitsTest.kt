@@ -202,13 +202,14 @@ class StarterKitsTest {
                 assertFalse(Preflight.check(kit, dir).blocked(), "${starter.id} failed preflight")
                 // Regenerable where the engine records how: most starter pads
                 // carry recipes (not all — some treatments are render-only).
-                if (starter.id !in setOf(StarterKits.CONFLUENCE_ID, StarterKits.CONFLUENCE_VOICES_ID)) {
+                if (starter.id !in setOf(StarterKits.CONFLUENCE_ID, StarterKits.CONFLUENCE_VOICES_ID) + StarterKits.PATIO_IDS) {
                     assertTrue(kit.pads.any { it.recipe != null }, "${starter.id}: no pad carries a recipe")
                 }
                 // Most starters fill bank A. The wordless source bank has eight pads;
                 // VENT leaves four capture slots free; the A/B dip fills bank B with a twin of each,
                 // and SCOUR fills banks B, C and D with its thunder sheet, its beam, and its disc and rod.
                 val slots = when (starter.id) {
+                    in StarterKits.PATIO_IDS -> 18
                     "scour" -> 64
                     "lucky-dip-ab" -> 32
                     StarterKits.CONFLUENCE_ID -> 8
@@ -226,6 +227,7 @@ class StarterKitsTest {
                 // Every remaining pad of every starter carries its recipe.
                 val renderOnly = kit.pads.filter { it.recipe == null }.map { it.slot }
                 val expectedRenderOnly = when (starter.id) {
+                    in StarterKits.PATIO_IDS -> (1..18).toList()
                     "cloud" -> (7..16).toList()
                     StarterKits.CONFLUENCE_ID -> (1..8).toList()
                     StarterKits.CONFLUENCE_VOICES_ID -> (1..16).toList()

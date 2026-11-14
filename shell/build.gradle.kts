@@ -503,3 +503,12 @@ tasks.register<JavaExec>("generateTrefoilHeldMpc") {
     workingDir = rootProject.projectDir
     args(providers.gradleProperty("trefoilHeldMpcOutput").orNull ?: "${rootDir}/testkit/trefoil-held-mpc")
 }
+
+tasks.register<JavaExec>("generatePatioPerformance") {
+    group = "distribution"
+    description = "Build PATIO genre kits with velocity and round robin, native MPC 3 exports and playback auditions."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.PatioPerformanceGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "2g"
+}
