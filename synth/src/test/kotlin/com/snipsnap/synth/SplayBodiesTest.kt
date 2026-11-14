@@ -253,9 +253,9 @@ class SplayBodiesTest {
         assertTrue(high / all < .03, "RUB energy above 4 kHz %.2f%%".format(100 * high / all))
     }
 
-    // ---- RUB as heard in round splay-voices-2 (S9-S12). Not yet kept; pinned so the new bodies cannot move it. ----
+    // ---- RUB as kept in round splay-voices-2 (S9-S12, owner KEEP 14 Nov). ----
 
-    @Test fun `RUB renders exactly the round-2 takes`() {
+    @Test fun `RUB renders exactly the takes the owner kept`() {
         val m = pc16.macros
         assertEquals("5b97c746a8dc4de33418aefd7b61f472f063eb3fc32d2a9a48368f728d2e9ce4", sha(SplayBodies.render(SplayBody.RUB, m, pc16.midi, pc16.velocity, pc16.seed).samples))
         assertEquals(listOf("21a10a373dbda8e1479aace0ef8aff69f0175e9a9502568348e9d959b768a913", "768823cbd4864f331644f87729b5763acf2a3ee089e297419360a090f46d8f74", "58fb8a1fbf035bb7663472863f2dd81484cc0b12aa2e6d6d6dd20613ea43db7d"),
@@ -265,9 +265,64 @@ class SplayBodiesTest {
         val held = SplayBodies.renderDetailed(SplayBody.RUB, m + ("HOLD" to 1f), pc16.midi, pc16.velocity, pc16.seed)
         assertEquals("563c67f495e749918f27ba689edcff77e8a57185b21a8638b251a7f9abdaf0f1", sha(held.snip.samples))
         assertEquals(308700, held.loopStart)
+        // The four clips the owner heard on the desk, rebuilt byte for byte (PCM16 WAV files).
+        val s9 = SplayBodies.render(SplayBody.RUB, m, pc16.midi, pc16.velocity, pc16.seed).samples
+        val s10 = listOf(.3f, .6f, 1f).map { SplayBodies.render(SplayBody.RUB, m, 60, it, pc16.seed).samples }
+        val s11 = phraseNotes.map { SplayBodies.render(SplayBody.RUB, m, it, .7f, pc16.seed).samples }
+        assertEquals("0175fc33551adeeedf5ce919f3732f2eb4de38320e69757be58af8a75af9dbf9", wav(s9))
+        assertEquals("36bd0047c5c2630eec5636be38096ab18b7f43d18da54f916e87568fb511a681", wav(join(s10.map { excerpt(it, 4.0) })))
+        assertEquals("307697b0e02587a666236acbe5b24d957e2c9f54143f789f96682fa37b820eed", wav(phrase(s11)))
+        // S12: the held render, then its loop twice more, with the 50 ms end fade.
+        val loop = held.snip.samples.copyOfRange(held.loopStart!!, held.snip.samples.size)
+        val played = held.snip.samples + loop + loop
+        assertEquals("de152edadf72f496b4eafe5e0f793bc04da55c32dd533a4fed1909224a989856", wav(excerpt(played, played.size / 44100.0)))
     }
 
-    // ---- AIR, BAR and SKIN (round splay-voices-3, not yet heard) ----
+    // ---- AIR, BAR and SKIN as kept in round splay-voices-3 (S13-S22, owner KEEP 14 Nov). ----
+
+    @Test fun `AIR, BAR and SKIN render exactly the takes the owner kept`() {
+        val m = pc16.macros
+        // Per body: the same-settings take, the soft/medium/hard takes at C4, the six phrase notes,
+        // then the desk files' hashes (same settings, soft-medium-hard, phrase).
+        val pins = mapOf(
+            SplayBody.AIR to listOf(
+                listOf("182524e9907689331ec002b6f139455b459840ee1396c327aae9ec73935b4b04"),
+                listOf("852c3daf3ac6f96776e4a5324c2d01940eaf03ac55d3afeb84c50f227ae29b80", "cc0021c015721bed42320414175ad56102e12e2bfaae5f38ab4f177a9258ec98", "9dec05bf1cb0584b860524c27c4c7ed9718f42c9c7c60b5ecfa2e548ab2e89ed"),
+                listOf("7819fdab1d9d6a78f861e40d349d27eef62980bffb0a56fd7ceb2cc43f6cb77b", "2ddd40b14475c5b27d44cde895d9a7a3fea0db55f6c12c63032471d7583fcb0e", "6fcbdbe8b5e4f2d3832f409322169d0ef01081b1d91e844bd8291d1f3c65908b", "b60bfb78ae18e0663aafe0dbbaeb62e5bd028b52bab7e636a22ee640ead88af9", "a5d3ac8fe882449b67c9fc1b9d91bf6668f53341369b3ce1dc1e8e7f5a71bbe0", "c51e59838b9969c6f42e41c82d1863cec18f33574073abc22fa379a88ddfb2af"),
+                listOf("b774386e18a5673329fcf29c9a0becfb078cfa4efbb50f7c40722e9787822f6e", "be8b4afe8a5a2d172788d5a396ef7b730c3cfdcf20cd7fa23577fb3209efe3ca", "ecc4b98c537552f97c16c67891e57f787030cc97defcd686b0cf469e3eb04e2f"),
+            ),
+            SplayBody.BAR to listOf(
+                listOf("50066b54c18f8612d0861e0b3921abe8080b462ac47854c6a3188787f68492cd"),
+                listOf("ea91191046351584051a89c2ae820797feda27aca0bb140de24ace1438cd29c4", "abc5d4bce0d22c9e7e7502d7f2556facae35898963b4e03eae6e6d566929244e", "29549974866ae6a059756d43295294159510c4377d3fd2e6b3baed4cc400331b"),
+                listOf("08991dc9031ff2ff185263f42ca4f84e32d9e64650da21b150a43725ec43468e", "5c7e64d89975b915f380db60f71698432fe3e5df7523150943df3414ad34b1d1", "d8cd14706aeb6e6f2f5ffa0674e886103775eebb2a81d0b7bffa15c821af0c9a", "8c465948b002a45cef3e9fd4f5ba00cf7dd1ef0db2ae8a5655fcfc2d1298e53b", "c9553e44a1c1b3bdd51efcb4a04fba8a990bf4af8481e5c798da3d3fc800c6c0", "033f662b79e5ed8acd2e312f9932e11ef3ebad643ebf81b41eb73ad3da761710"),
+                listOf("712f5d5bdc2fa04ce29a3f87041264a78ea01f1f575e700daca7f2b13a3d4caa", "8bd0d5fcdede72d8bad5ee55dd9d9029539fb527b61f28ee2b88b488aab9af52", "2b17fb320c62b5c42fc1896d31cf5bdd8e02abb25a2310dc36c9aa5e4b83aa09"),
+            ),
+            SplayBody.SKIN to listOf(
+                listOf("0da53b5cea53d105a46b02f8dbc78e067eb3098e105c4fb5ceaf923bceddf0b1"),
+                listOf("a4d53821d23a09104c798b87eafe33d0d8ede2ba4bc074217c27c417ad3c4fc4", "e996c9c81cb70eccf007f79b6401a341e44c3e280671c98f3d21afa91f94c51a", "d9d8b3fc7d8b3b3a9fb3df29410235040df6ead18ab86d19b92ee77c24085563"),
+                listOf("affc921255a1f23ae587953073a2f6203f0ddf1d2bcc293a420acad574e9c466", "6353af0225390de8b62a221f5b6767d4a339e1a5d9169ed31a2de1d706680454", "7b7d88dd6a325490b51a3c60bc64330746a3d513b553d072a791b1223d2dad21", "8306d2fcb9f0682e01ce0d4eee7f7e39c3383435b123c457f633ff492378470d", "52fe4edc730e69a7dc707db0f682c22ddeb822ea994281022c4ae6a6b6af6c76", "49bc96c9cb471f5c56a59d54efc9942f4d2eda2f6ff182cda4ca47e197fcaa64"),
+                listOf("d6f5c0607c2b1a5e9b1f68eaec8806f941bc01b36b068a59266d7ec67750dc45", "d5c538d806e337ddc38f22ff1f0656644596afbe20c384212774f8fda827ecc5", "72ac5e560a1ae95169d8e15b24faf010c0da39d56b7d28e9f884d5153a3303b4"),
+            ),
+        )
+        for ((body, p) in pins) {
+            val same = SplayBodies.render(body, m, pc16.midi, pc16.velocity, pc16.seed).samples
+            val touch = listOf(.3f, .6f, 1f).map { SplayBodies.render(body, m, 60, it, pc16.seed).samples }
+            val notes = phraseNotes.map { SplayBodies.render(body, m, it, .7f, pc16.seed).samples }
+            assertEquals(p[0], listOf(sha(same)), "$body same settings")
+            assertEquals(p[1], touch.map { sha(it) }, "$body soft, medium, hard")
+            assertEquals(p[2], notes.map { sha(it) }, "$body phrase notes")
+            assertEquals(p[3], listOf(wav(same), wav(join(touch.map { excerpt(it, 4.0) })), wav(phrase(notes))), "$body desk files")
+        }
+        // S16: AIR held, the loop played round three times after the real motion.
+        val h = SplayBodies.renderDetailed(SplayBody.AIR, m + ("HOLD" to 1f), pc16.midi, pc16.velocity, pc16.seed)
+        assertEquals("3cca3fc89dbcd3f1e40e70650c9183064f6ce434bd043bbe00dfbac82ac4f53c", sha(h.snip.samples))
+        assertEquals(308700, h.loopStart)
+        val s = h.snip.samples; val start = h.loopStart!!; val loop = s.size - start
+        assertEquals("1925e1d2558944bec12cd9d5aaccf0e1ea8a43e8413e85f7628aedc731d2a34f",
+            wav(FloatArray(start + 3 * loop) { if (it < start) s[it] else s[start + (it - start) % loop] }))
+    }
+
+    // ---- AIR, BAR and SKIN: what makes them new bodies (round splay-voices-3) ----
 
     private val newBodies = listOf(SplayBody.AIR, SplayBody.BAR, SplayBody.SKIN)
 

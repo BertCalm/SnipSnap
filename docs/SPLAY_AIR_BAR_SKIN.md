@@ -1,20 +1,39 @@
-# SPLAY AIR, BAR and SKIN (model 3, not yet heard)
+# SPLAY AIR, BAR and SKIN (model 3, kept)
 
 These are the last three bodies from the SPLAY voices design. They build on
 [SPLAY_WIRE_RUB.md](SPLAY_WIRE_RUB.md) and work the same way: the pendulums and catch times are exactly
 model 2's (`Splay.prepareModel2Excitation`), and only the body the catches strike changes. They live in
 `SplayBodies` as `SplayBody.AIR`, `BAR` and `SKIN`.
 
-Like WIRE and RUB, they are not yet in the picker, patch format, starters or keygroups. That waits for a
-KEEP. Nobody has heard them; the listening round is `splay-voices-3` (S13–S22).
+Like WIRE and RUB, they are not yet in the picker, patch format, starters or keygroups.
+
+## Owner listening
+
+Round `splay-voices-3` (14 Nov 2026): **KEEP on all ten clips** (S13–S22), no notes. So AIR, BAR and SKIN
+are heard as new bodies, not TONGUE settings. `SplayBodiesTest` pins every take behind them (the
+same-settings take, the soft, medium and hard takes at C4, the six phrase notes, and AIR's held render)
+and rebuilds the ten clip WAVs byte for byte:
+
+| Clip | PCM16 WAV SHA-256 |
+| --- | --- |
+| S13 AIR, 16 mechanisms at C4 | `b774386e18a5673329fcf29c9a0becfb078cfa4efbb50f7c40722e9787822f6e` |
+| S14 AIR, soft, medium, hard | `be8b4afe8a5a2d172788d5a396ef7b730c3cfdcf20cd7fa23577fb3209efe3ca` |
+| S15 AIR, phrase | `ecc4b98c537552f97c16c67891e57f787030cc97defcd686b0cf469e3eb04e2f` |
+| S16 AIR, held loop | `1925e1d2558944bec12cd9d5aaccf0e1ea8a43e8413e85f7628aedc731d2a34f` |
+| S17 BAR, 16 mechanisms at C4 | `712f5d5bdc2fa04ce29a3f87041264a78ea01f1f575e700daca7f2b13a3d4caa` |
+| S18 BAR, soft, medium, hard | `8bd0d5fcdede72d8bad5ee55dd9d9029539fb527b61f28ee2b88b488aab9af52` |
+| S19 BAR, phrase | `2b17fb320c62b5c42fc1896d31cf5bdd8e02abb25a2310dc36c9aa5e4b83aa09` |
+| S20 SKIN, 16 mechanisms at C4 | `d6f5c0607c2b1a5e9b1f68eaec8806f941bc01b36b068a59266d7ec67750dc45` |
+| S21 SKIN, soft, medium, hard | `d5c538d806e337ddc38f22ff1f0656644596afbe20c384212774f8fda827ecc5` |
+| S22 SKIN, phrase | `72ac5e560a1ae95169d8e15b24faf010c0da39d56b7d28e9f884d5153a3303b4` |
 
 ## What stays exactly as it was
 
 - **TONGUE:** its models 1 and 2 are untouched (`Splay.kt` is not changed), and `SplayAcceptedBankTest`
   passes unchanged.
 - **WIRE (kept):** `WIRE renders exactly the takes the owner kept` still passes.
-- **RUB (round 2, not yet heard):** a new test, `RUB renders exactly the round-2 takes`, pins the S9–S12
-  renders as they were before these bodies were added (hashes captured at dd2974194).
+- **RUB (kept in round 2):** `RUB renders exactly the takes the owner kept` pins the S9–S12 renders as
+  they were before these bodies were added (hashes captured at dd2974194), and their four desk WAVs.
 - **The one shared change:** the catch schedule takes a contact-width scale that is exactly 1.0 for
   WIRE and RUB, so their bytes cannot move.
 
@@ -111,15 +130,13 @@ Only listening decides it, which is why the round asks the question directly.
 - **New bodies:** AIR, BAR and SKIN are new bodies, not TONGUE settings, and differ from each other and
   from WIRE and RUB, by the numbers above. All keep under 3% of their energy above 4 kHz.
 - **AIR's catches:** they swing more than 5 dB.
-- **Earlier pins:** RUB's round-2 takes and WIRE's kept takes are pinned.
+- **Kept takes:** `AIR, BAR and SKIN render exactly the takes the owner kept`, plus the WIRE and RUB pins.
 
 ## Still open
 
 - **Registration:** none of the three is registered, and nothing here reaches the phone.
 - **Render cost:** a warm C4 render measured 77 ms (BAR), 141 ms (SKIN) and 367 ms (AIR) on this
   machine. That is a JVM number, not a phone measurement.
-- **Tuning by numbers:** the balance of breath, puff and pop in AIR, and the mode gains of BAR and SKIN,
-  were set from measurements alone; nobody has heard them.
 
 ## Why it is built this way
 

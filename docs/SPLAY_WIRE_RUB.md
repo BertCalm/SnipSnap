@@ -1,4 +1,4 @@
-# SPLAY WIRE and RUB (model 3: WIRE kept, RUB re-tuned)
+# SPLAY WIRE and RUB (model 3: both kept)
 
 SPLAY had one voice, TONGUE. These are the first two of the five further bodies proposed for it. The
 characteristic gesture is unchanged: **common release → coordinated catches → separating flams →
@@ -25,8 +25,17 @@ picker, the patch format, the starters or MAKE INSTRUMENT yet.
   - **RUB: TWEAK** on all four of its clips (S3, S5, S7, S8). The note on S3: "We need a bit of a catch
     like gesture in the sound."
   - S1 was the TONGUE reference (also marked KEEP; it is the accepted sound and unchanged).
-- **Round `splay-voices-2`:** RUB re-tuned with a stick-slip catch (below), in the same four shapes
-  (S9–S12) with S1 again as the reference. Not yet heard.
+- **Round `splay-voices-2` (14 Nov 2026):** RUB re-tuned with a stick-slip catch (below), in the same
+  four shapes (S9–S12) with S1 again as the reference. **RUB: KEEP** on all four clips, no notes.
+  `SplayBodiesTest` pins every take behind them (eleven float renders, including the held render and
+  its loop start) and rebuilds the four clip WAVs byte for byte:
+
+  | Clip | PCM16 WAV SHA-256 |
+  | --- | --- |
+  | S9 (16 mechanisms at C4) | `0175fc33551adeeedf5ce919f3732f2eb4de38320e69757be58af8a75af9dbf9` |
+  | S10 (soft, medium, hard) | `36bd0047c5c2630eec5636be38096ab18b7f43d18da54f916e87568fb511a681` |
+  | S11 (phrase, C3 to C5) | `307697b0e02587a666236acbe5b24d957e2c9f54143f789f96682fa37b820eed` |
+  | S12 (held, loop played twice more) | `de152edadf72f496b4eafe5e0f793bc04da55c32dd533a4fed1909224a989856` |
 
 ## What stays exactly as it was
 
@@ -141,7 +150,7 @@ playing:
 - WIRE and RUB are new bodies, not TONGUE settings, at 1 and 16 mechanisms:
   - each is over 1.6× brighter than TONGUE;
   - RUB keeps more sound between catches than WIRE.
-- WIRE renders exactly the takes the owner kept: ten float renders and the three heard clip WAVs.
+- WIRE and RUB render exactly the takes the owner kept: their float renders and the seven heard clip WAVs.
 - RUB's catches swing more than 6 dB around each catch group (measured about 9.5), with under 3% of
   its energy above 4 kHz.
 - RUB's held loop is exactly one 2-second cycle, its seam is under 1e-6, and it matches the finite
@@ -152,8 +161,8 @@ playing:
 
 ## Still open
 
-- **Owner listening:** RUB's round 2 (`splay-voices-2`) is unheard.
-- **The other three bodies:** AIR, BAR and SKIN.
+- **The other three bodies:** AIR, BAR and SKIN, kept in round `splay-voices-3`; see
+  [SPLAY_AIR_BAR_SKIN.md](SPLAY_AIR_BAR_SKIN.md).
 - **Registration:** the SYNTH picker, the patch format at model 3, keygroups with three real touch
   layers (and held keys for RUB), presets and a starter. After a KEEP, each accepted render gets a
   pinned PCM24 hash.
