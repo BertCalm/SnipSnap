@@ -5790,9 +5790,9 @@ private fun MurmurSelectedInstrumentSheet(
             "LANDS IN THE LIBRARY AS ${state.holdName.uppercase(Locale.ROOT)}, PLAYABLE ON KEYS.",
         hasAttack = false, hasRelease = true, attack = 0f, release = delivery.releaseFraction,
         knobLabel = String.format(Locale.ROOT, "KEY RELEASE %.2f SECONDS", spec.releaseSeconds),
-        instrumentNote = "$range · SOFT, MEDIUM AND HARD TOUCH. " +
-            if (spec.held) "SOFTENED START; THE SOUND HOLDS UNTIL KEY RELEASE."
-            else "EACH NOTE KEEPS ITS SOURCE ENVELOPE AND FINITE TAIL.",
+        instrumentNote = "$range · ${Copy.INSTRUMENT_NOTE_TOUCH} " +
+            if (spec.held) Copy.INSTRUMENT_NOTE_HELD
+            else Copy.INSTRUMENT_NOTE_FINITE,
         touchLayers = null, touchLayersNote = null, wideKeys = null, keyRangeLabel = null,
         done = state.holdDone, total = state.holdTotal, previewing = state.holdPreviewing,
         heldPreview = null, fillColor = fillColor, scheme = scheme,

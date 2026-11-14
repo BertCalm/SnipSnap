@@ -1438,9 +1438,9 @@ fun App(shelf: KitShelf) {
                         })
                 }
                 roomsRevision++
-                dock.say("${made.name.uppercase(java.util.Locale.ROOT)} IS READY IN INSTRUMENTS.")
+                dock.say(Copy.instrumentReady(made.name.uppercase(java.util.Locale.ROOT)))
             } catch (e: CancellationException) {
-                dock.say("MURMUR INSTRUMENT CANCELLED.")
+                dock.say(Copy.MURMUR_CANCELLED)
                 throw e
             } catch (e: Exception) {
                 Log.e(TAG, "makeMurmurKeptInstrument: selected delivery failed", e)
@@ -3465,7 +3465,7 @@ fun App(shelf: KitShelf) {
     fun savePerformance(settings: com.snipsnap.synth.AquariumPerformanceSettings, onResult: (String?) -> Unit) {
         val source = open
         if (source == null || busy != null) {
-            onResult("KIT IS BUSY · TRY SAVE AGAIN")
+            onResult(Copy.KIT_BUSY_SAVE_AGAIN)
             return
         }
         scope.launch {
@@ -3475,7 +3475,7 @@ fun App(shelf: KitShelf) {
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "savePerformance: failed", e)
-                onResult("COULD NOT SAVE PERFORMANCE · TRY AGAIN")
+                onResult(Copy.PERFORMANCE_SAVE_FAILED)
                 return@launch
             }
             val entry = KitShelf.Entry(source.dir, kit)
@@ -4335,7 +4335,7 @@ fun App(shelf: KitShelf) {
                                     }
                                 },
                                 onEmptyTapHint = {
-                                    dock.say(if (pendingSnipAssign != null) "LONG-PRESS TO PLACE THIS SAMPLE" else "LONG-PRESS TO CAPTURE")
+                                    dock.say(if (pendingSnipAssign != null) Copy.LONG_PRESS_PLACE_SAMPLE else Copy.LONG_PRESS_CAPTURE)
                                 },
                                 onNavigateKits = { goToScreen(AppScreen.KITS) },
                                 hasProject = project != null,

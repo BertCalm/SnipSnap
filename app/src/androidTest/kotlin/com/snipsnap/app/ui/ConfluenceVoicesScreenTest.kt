@@ -161,7 +161,7 @@ class ConfluenceVoicesScreenTest : ComposeScreenTest() {
 
     private fun smallHit(): Snip = Snip(floatArrayOf(.25f, -.25f, 0f), 1, WavWriter.MPC_SAMPLE_RATE)
     private fun waitForSavedPad(what: String, toasts: List<String>, after: Int, slot: String) {
-        val expected = "VOICE PASSAGE SAVED ON $slot"
+        val expected = "Voice passage saved on $slot."
         waitFor(what, timeoutMillis = 180_000) {
             val received = toasts.drop(after)
             received.firstOrNull { it != expected }?.let { refusal ->

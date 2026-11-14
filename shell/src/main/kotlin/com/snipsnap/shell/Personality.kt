@@ -3612,4 +3612,42 @@ object Copy {
     fun clockBehind(ms: Long): String = "About $ms ms behind."
     /** Coarse: the position is ahead of the frames written by about [ms] (the two reads skew). */
     fun clockAhead(ms: Long): String = "About $ms ms ahead."
+
+    // ---- Toasts, dock lines, hints and notes that used to live in screen files ----
+    // Moved here so the case law in PersonalityTest holds them (R4, review Q2). A control, place or
+    // engine name stays caps inside the sentence.
+    fun instrumentReady(name: String): String = "$name is ready in INSTRUMENTS."
+    const val MURMUR_CANCELLED = "MURMUR instrument cancelled."
+    const val KIT_BUSY_SAVE_AGAIN = "Kit is busy. Try SAVE again."
+    const val PERFORMANCE_SAVE_FAILED = "Could not save the performance. Try again."
+    const val LONG_PRESS_PLACE_SAMPLE = "Long-press to place this sample."
+    const val LONG_PRESS_CAPTURE = "Long-press to capture."
+    fun landFailed(why: String): String = "Land failed: $why"
+    fun voicePassageSaved(pad: String): String = "Voice passage saved on $pad."
+    const val VOICE_SAVED_ON_PHONE = "Voice saved on this phone."
+    fun myVoiceSaved(pad: String): String = "MY VOICE saved on $pad."
+    const val ORBIT_TAP_STREAM_UNAVAILABLE = "ORBIT tap stream unavailable."
+    const val ORBIT_PLAY_FAILED = "ORBIT play failed."
+    const val RINGS_CHANGED_TRY_AGAIN = "The rings changed while that loaded. Try again."
+    const val GROOVE_READ_FAILED = "Could not read the GROOVE."
+    const val NO_RINGS = "No rings."
+    fun gatheringMade(pad: String): String = "Gathering made on $pad. Original kept."
+    const val SPLIT_FX_NOT_SAVED = "SPLIT FX settings not saved."
+    const val SPLIT_PRINT_FAILED = "SPLIT print failed."
+    const val LEARNED_KEY_NO_NOTE = "A learned key plays no note."
+    const val LEARNED_PAD_NO_SOUND = "A learned pad plays no sound."
+    const val SURFACE_KNOBS_HINT = "Knobs move the puck. Hold sounds it."
+    const val INSTRUMENT_NOTE_TOUCH = "Soft, medium and hard touch."
+    const val INSTRUMENT_NOTE_HELD = "Softened start; the sound holds until key release."
+    const val INSTRUMENT_NOTE_FINITE = "Each note keeps its source envelope and finite tail."
+    const val RR_IMPORT_CHOOSE_ZIP = "Choose an RR bank zip from Files."
+    const val RR_IMPORT_DONE = "RR bank imported. Open it below."
+    const val RR_IMPORT_CLEANUP = "RR bank imported. Cleanup needs attention."
+    const val RR_IMPORT_CANCELLED = "RR bank import cancelled."
+    const val RR_IMPORT_FAILED = "Could not import. Choose a complete supported RR bank zip."
+
+    // The two-tap empty-the-trash button: its labels are controls, the line under it is the fact.
+    @field:CopyLabel const val EMPTY_TRASH_NOW = "EMPTY THE TRASH NOW"
+    @field:CopyLabel const val EMPTY_TRASH_ARMED = "TAP AGAIN TO CONFIRM"
+    const val EMPTY_TRASH_FACT = "Deletes everything in the trash. This can't be undone."
 }
