@@ -5,6 +5,8 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.SaveableStateHolder
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.snapshots.SnapshotStateMap
@@ -99,4 +101,23 @@ private val KnobsSaver: Saver<SnapshotStateMap<String, Float>, Any> = Saver(
 @Composable
 internal fun ReleasePadEditorWhenGone(inStack: Boolean, keys: PadEditorKeys) {
     LaunchedEffect(inStack) { if (!inStack) keys.release() }
+}
+
+/**
+ * The [PadEditorKeys] for [holder], saved with the holder. The holder's parked state survives process
+ * death, so the key list must too: otherwise the restored process cannot release what it holds and
+ * the next pad opened on the same kit inherits the old pad's folds and knobs.
+ */
+@Composable
+internal fun rememberPadEditorKeys(holder: SaveableStateHolder): PadEditorKeys {
+    val saver = remember(holder) {
+        Saver<PadEditorKeys, Any>(
+            save = { ArrayList(it.heldKeys()) },
+            restore = { saved ->
+                @Suppress("UNCHECKED_CAST")
+                PadEditorKeys(saved as List<String>, holder::removeState)
+            },
+        )
+    }
+    return rememberSaveable(holder, saver = saver) { PadEditorKeys(removeState = holder::removeState) }
 }

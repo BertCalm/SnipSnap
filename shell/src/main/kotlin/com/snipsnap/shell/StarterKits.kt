@@ -799,6 +799,21 @@ object StarterKits {
             key = KeySpec.parse("Cminpent"),
         ) { com.snipsnap.synth.OsteriaKits.sixVoice() },
         Starter(
+            "tempest-circuit", "TEMPEST CIRCUIT",
+            "Electro TEMPEST kit: dry tight kicks, three claps, zaps, choking hats and tuned bells.",
+            seeded = false,
+        ) { SynthKits.tempestCircuit() },
+        Starter(
+            "tempest-foundry", "TEMPEST FOUNDRY",
+            "Industrial TEMPEST kit: driven kicks with echoes, metal snares, pipe toms and anvil and chain hits.",
+            seeded = false,
+        ) { SynthKits.tempestFoundry() },
+        Starter(
+            "tempest-step", "TEMPEST STEP",
+            "UK garage TEMPEST kit: short kicks, rim and ghost snares, five choking hats and pitched blips.",
+            seeded = false,
+        ) { SynthKits.tempestStep() },
+        Starter(
             "cairn", "CAIRN",
             "Stones that knock, answer, tumble, sing, grind and roll in a bowl, at C4.",
             seeded = false,

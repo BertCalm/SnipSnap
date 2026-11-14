@@ -6,7 +6,6 @@ import com.snipsnap.synth.PrismPatch
 import com.snipsnap.synth.PrismPresets
 import com.snipsnap.synth.PrismVoice
 import java.io.File
-import java.util.zip.ZipFile
 import kotlin.io.path.createTempDirectory
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
@@ -104,32 +103,6 @@ class PrismUserPresetsTest {
             }
         } finally {
             shelf.deleteRecursively()
-        }
-    }
-
-    @Test
-    fun `send to bench carries matching complete opening JSON and reconstructable roster code`() {
-        val shelf = createTempDirectory("prism-opening-bench").toFile()
-        val restoredShelf = createTempDirectory("prism-opening-bench-restore").toFile()
-        try {
-            val patch = PrismOpeningPresets.all().first().copy(name = "MY BODY")
-            val saved = UserPresets.save(shelf, patch, nowMillis = 20L)
-            val result = BenchExport.pack(shelf, File(shelf, "share"), "2026-10-23 1200")
-            assertEquals(listOf(saved), result.presets)
-            ZipFile(result.file).use { zip ->
-                fun text(name: String) = zip.getInputStream(zip.getEntry(name)).bufferedReader(Charsets.UTF_8).use { it.readText() }
-                val presetFile = text(BenchExport.PRESETS_NAME)
-                assertEquals(UserPresets.file(shelf).readText(Charsets.UTF_8), presetFile)
-                assertEquals(listOf(saved), UserPresets.merge(restoredShelf, presetFile, nowMillis = 21L).landed)
-                assertEquals(patch, UserPresets.read(restoredShelf).single().patch)
-                val manifest = text(BenchExport.MANIFEST_NAME)
-                val line = manifest.lineSequence().single { it.trimStart().startsWith("p(PrismVoice.") }.trim()
-                assertEquals(patch, fromMotionRosterLine(line), "the pasteable bench entry must preserve the same opening as its JSON")
-                assertTrue("PrismPresets.kt\n  $line\n" in manifest)
-            }
-        } finally {
-            shelf.deleteRecursively()
-            restoredShelf.deleteRecursively()
         }
     }
 

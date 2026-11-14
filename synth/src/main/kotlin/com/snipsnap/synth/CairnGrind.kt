@@ -38,10 +38,10 @@ internal object CairnGrind {
     private const val MAX_SEGMENTS = 200_000
     private const val CELL = .012
     private const val TICK_SHARE = .3
-    /** The directly heard scrape: two-pole lowpass at 2.5-5.5 kHz (FRICTION) and its level (round 2). */
+    /** The directly heard scrape: two-pole lowpass at 2.5-5.5 kHz (FRICTION) and its level (round 2; the owner chose G9's .008). */
     private const val AIR_BASE_HZ = 2500.0
     private const val AIR_SPAN_HZ = 3000.0
-    internal const val DIRECT_GAIN = .012
+    internal const val DIRECT_GAIN = .008
     private const val LAPS = 12
     const val CATCH = 0
     const val SLIP = 1

@@ -37,12 +37,13 @@ internal object MeridianGestures {
 
     /** One carrier per note, shared by all twelve surfaces; never restarted at contact. */
     fun carrier(voice: MeridianVoice, hz: Double, count: Int, surface: Double,
-        velocity: Double, seedContext: Int): DoubleArray {
+        velocity: Double, seedContext: Int, touch: Double = 0.0): DoubleArray {
         require(supports(voice) && hz.isFinite() && hz > 0 && count > 0)
         val seed = Dsp.Noise(Dsp.seedFor("MERIDIAN", 4, voice.name, seedContext))
         val phase = seed.next().toDouble() * PI
-        val second = (if (voice == MeridianVoice.DRAW) .22 else .10) * surface * (.45 + .55 * velocity)
-        val third = (if (voice == MeridianVoice.DRAW) .07 else .16) * surface * velocity
+        val second = (if (voice == MeridianVoice.DRAW) .22 else .10) * surface * (.45 + .55 * velocity) *
+            MeridianTouch.harmonicMul(velocity, touch)
+        val third = (if (voice == MeridianVoice.DRAW) .07 else .16) * surface * velocity * MeridianTouch.harmonicMul(velocity, touch)
         val scale = 1 / (1 + abs(second) + abs(third))
         return DoubleArray(count) { i ->
             if (i and 4095 == 0) stop()
@@ -118,7 +119,8 @@ internal object MeridianGestures {
      */
     fun probe(voice: MeridianVoice, macros: Map<String, Float>, midi: Int, velocity: Float,
         seedContext: Int, activeOverride: Float?, tailOverride: Float?, normalize: Boolean,
-        taps: Boolean, fixedAlignment: Boolean, pMax: Double, resetOnContact: Boolean): Meridian.Probe {
+        taps: Boolean, fixedAlignment: Boolean, pMax: Double, resetOnContact: Boolean,
+        touch: Double = 0.0): Meridian.Probe {
         require(supports(voice))
         val m = Meridian.settled(voice, macros)
         val active = activeOverride?.toDouble() ?: Meridian.activeSeconds(m.getValue("HOLD"))
@@ -131,9 +133,9 @@ internal object MeridianGestures {
         val hz = Meridian.frequencyFor(voice, m.getValue("TUNE"), midi).toDouble()
         val reach = m.getValue("REACH").toDouble()
         val surfaceMacro = m.getValue("SURFACE").toDouble()
-        val configs = Meridian.setupsForVoice(voice, hz, surfaceMacro, m.getValue("MEMORY"), reach, velocity.toDouble())
+        val configs = Meridian.setupsForVoice(voice, hz, surfaceMacro, m.getValue("MEMORY"), reach, velocity.toDouble(), touch)
         val count = ((active + tail) * Dsp.RATE).roundToInt() * Dsp.OVERSAMPLE
-        val carrier = carrier(voice, hz, count, surfaceMacro, velocity.toDouble(), seedContext)
+        val carrier = carrier(voice, hz, count, surfaceMacro, velocity.toDouble(), seedContext, touch)
         val sum = DoubleArray(count)
         val rawTaps = if (taps) Array(Meridian.SURFACES) { FloatArray(count) } else emptyArray()
         val inputEnergy = DoubleArray(Meridian.SURFACES)

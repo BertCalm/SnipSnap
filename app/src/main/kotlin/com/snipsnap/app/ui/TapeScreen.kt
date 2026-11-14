@@ -1162,10 +1162,14 @@ private fun TapeDeckContent(
             // it was on purpose, since a RE-TRIM owning the deck is a mode
             // rather than a passing busy state.
             if (retrim == null) {
-                DeckButton(
+                // RECORD's one main button (review Q3): a filled Primary, and a plain
+                // secondary while it is busy (ActionButton drops the fill when not enabled).
+                ActionButton(
                     if (catchBusy) Copy.CATCH_BUSY else "CATCH A HIT",
-                    Modifier.fillMaxWidth().minHeight(Layout.PRIMARY_ACTION_H.dp),
+                    scheme,
                     enabled = !catchBusy,
+                    modifier = Modifier.fillMaxWidth().minHeight(Layout.PRIMARY_ACTION_H.dp),
+                    tier = ButtonTier.Primary,
                 ) {
                     startCatch()
                 }

@@ -1,9 +1,9 @@
 # CAIRN: GRIND and VESSEL
 
 CAIRN had four voices: KNOCK, ANSWER, TUMBLE and SING. Its handoffs named GRIND and VESSEL as
-planned voices, with no design. This adds both voices as saved models 6 and 7. In the first
-listening round, `cairn-voices-1` (14 Nov 2026), the owner kept VESSEL and asked for a tweak to
-GRIND; see [Owner listening](#owner-listening).
+planned voices, with no design. This adds both voices as saved models 6 and 7. The owner kept
+VESSEL in the first listening round, `cairn-voices-1` (14 Nov 2026), and the re-tuned GRIND in
+the second, `cairn-voices-2`, at G9's gentler scrape level; see [Owner listening](#owner-listening).
 
 - **GRIND** (model 6): a stone dragged across a rough bed. The gesture is push → catch →
   bursts of slipping that bunch up and stall → a last catch and ring.
@@ -41,7 +41,8 @@ Round 1 offered BOWL or BASIN instead; the owner kept VESSEL with no rename, so 
 The sound is a one-way readout. Catches strike an eight-mode stone with its own ratio table.
 Every slip is also a short band-limited noise burst, as long as the slip itself, at a level set
 by the slip's friction power. The burst drives the stone and is also heard directly: that path
-goes through a two-pole lowpass at 2.5–5.5 kHz, which FRICTION sets. The burst is the scrape.
+goes through a two-pole lowpass at 2.5–5.5 kHz, which FRICTION sets, at level 0.008. The burst
+is the scrape.
 
 ## VESSEL: an averaged orbit in a cone
 
@@ -141,7 +142,8 @@ At HOLD .99 or above, both voices render a true two-second loop.
   same one-pole lowpass that drives the stone (about 5 kHz at the default FRICTION). That
   left 13% of the energy above 4 kHz and 6% above 8 kHz, as hiss on every slip.
 - **The fix:** the directly heard scrape now has its own two-pole lowpass, at 2.5 kHz plus
-  3 kHz × FRICTION (3.85 kHz at the default), and a level of 0.012, up from 0.008. The force
+  3 kHz × FRICTION (3.85 kHz at the default). Round 2's clips G5–G8 used a level of 0.012,
+  up from round 1's 0.008; the owner then chose G9's 0.008, which is what ships. The force
   that drives the stone, the motion, the catches and the loop are unchanged.
 - **Measured** (round-1 clip → round-2 clip, the same shapes):
 
@@ -153,8 +155,8 @@ At HOLD .99 or above, both voices render a true two-second loop.
   | Phrase (G4 → G8) | 14.3% → 2.6% | 6.5% → 0.2% | 7.0% → 7.4% | 1,756 → 730 Hz |
 
 - **Gentler option (G9):** the same filter at level 0.008 gives 1.2% above 4 kHz and 3.3% grit
-  (centroid 496 Hz). It is offered beside G5 in case the owner wants less scrape still. It is
-  not in the code; choosing it is a one-constant change (`CairnGrind.DIRECT_GAIN`).
+  (centroid 496 Hz). It was offered beside G5 in case the owner wanted less scrape still, as a
+  one-constant change (`CairnGrind.DIRECT_GAIN`).
 - **Not changed:** the transient crest stays within about 1.5 dB of round 1. The catches,
   which carry the peaks, were not the bright part.
 - **Test:** `GRIND's heard scrape keeps its grit without the hiss` holds GRIND below 5% above
@@ -162,6 +164,17 @@ At HOLD .99 or above, both voices render a true two-second loop.
   It also checks that FRICTION still brightens the scrape.
 - **Unchanged voices:** KNOCK, ANSWER, TUMBLE, SING and VESSEL are byte-identical; the tests
   above prove it.
+
+**Round `cairn-voices-2` (14 Nov 2026)**
+
+- **GRIND, G5–G9: KEEP, at G9's level.** All five clips were kept. G9's note: "I like this
+  better than the other grind". The round said that preferring G9 there would mean using its
+  level, so `CairnGrind.DIRECT_GAIN` is now 0.008.
+- **What is pinned:** `CairnGrindVesselTest` pins eleven GRIND float SHA-256s at the shipped
+  level. G9's clip was rebuilt from its three drags byte for byte. The slow drag, the coarse
+  bed, the loop and the phrase notes are the shapes the owner heard as G6–G8. Those clips
+  were rendered at the louder 0.012 level, so the pinned renders are the same gestures with
+  G9's quieter scrape, not the exact G6–G8 audio. The scrape level is the only difference.
 
 ## Still open
 

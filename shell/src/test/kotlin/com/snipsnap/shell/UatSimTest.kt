@@ -281,7 +281,7 @@ class UatSimTest {
         if (!bwiz.blocked) {
             finding("J1-EMPTY", "an entirely empty kit is NOT blocked by preflight — a 0-pad program can reach the card")
         }
-        note("what tells a new user how to fill it? only a toast on tapping an empty pad: LONG-PRESS TO CAPTURE")
+        note("what tells a new user how to fill it? only a toast on tapping an empty pad: Long-press to capture.")
     }
 
     // ================================================================

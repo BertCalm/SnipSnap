@@ -199,6 +199,31 @@ class CairnGrindVesselTest {
     }
 
     /**
+     * The owner kept GRIND in round cairn-voices-2 (14 Nov 2026) and chose G9's
+     * gentler scrape ([CairnGrind.DIRECT_GAIN] .008) over G5's (.012). G9's three
+     * drags are rebuilt from the first three renders exactly. The slow drag, the
+     * coarse bed, the loop and the phrase were heard as G6-G8 at the louder level;
+     * these pin the same shapes at the level the owner chose.
+     */
+    @Test fun `the GRIND renders the owner kept stay byte-identical at G9's level`() {
+        assertEquals(.008, CairnGrind.DIRECT_GAIN)
+        val g = CairnVoice.GRIND; val d = Cairn.defaults(g)
+        val pins = listOf(
+            Triple("G9 C4 soft", Cairn.render(g, d, 60, .35f).samples, "e28bb2bf05516fd93f73dc39909ba002fc7fcca5cdcfe5d82f18e01efbd271a4"),
+            Triple("G9 C4 medium", Cairn.render(g, d, 60, .65f).samples, "8c76b325cce34ea4784d2cb08ac783d28750f242705972d47ae23efe8210fa13"),
+            Triple("G9 C4 hard", Cairn.render(g, d, 60, 1f).samples, "3c09e0ef399d5db060d4aba219a27da7cf84fe0f2c292a25b92c543e1a867a20"),
+            Triple("slow drag", Cairn.render(g, d + ("SLOPE" to .2f), 60, 1f).samples, "a858faf1c5d4e94de8e17c2c5da5b0e1e88023dca9dd0198d3598015f64e52c8"),
+            Triple("coarse bed", Cairn.render(g, d + ("GROOVE" to .85f), 60, 1f).samples, "0981ce2c365faeea77e96a04b3608bfef6bffe14fd8d834e9271d53a4a75dcca"),
+            Triple("loop", Cairn.inspect(g, d + ("HOLD" to 1f), 60, 1f).samples, "3ff2a2fbab71f7934c454c0d0c22c2bba5cb8c6b224ade173cfadaa4e710a79a"),
+            Triple("phrase C3", Cairn.render(g, d, 48, .55f).samples, "7d06e11a18562838dc8d5408d32f9155498ce951bb182a4b1bebd7e7a745784c"),
+            Triple("phrase E3", Cairn.render(g, d, 52, .8f).samples, "93c92c186eb3a1b1737ac89003ab354ed61e2eb27d1ab8bf47a72263b0070e8b"),
+            Triple("phrase G3", Cairn.render(g, d, 55, .65f).samples, "36f5bf938116e52faa9163cedd24e22b742718206dec669e7906b8865c31111e"),
+            Triple("phrase G4", Cairn.render(g, d, 67, .7f).samples, "615a8c196fb3b8f8f6bdfa6654eeb7ef4cba992de59a34e8d9822f25f681d4cd"),
+            Triple("phrase C5", Cairn.render(g, d, 72, .9f).samples, "34a2c6dc383f196aabd7884b149e374d055975c9ab0c9a0b77a3c41ad20c8dcf"))
+        for ((name, samples, sha) in pins) assertEquals(sha, floatSha(samples), "kept GRIND render $name moved")
+    }
+
+    /**
      * Round 1's GRIND had 13% of its energy above 4 kHz; the owner heard the top
      * as overpowering and static-y. The directly heard scrape now goes through a
      * two-pole lowpass: the top falls to about 2%, the 2-4 kHz grit stays, and

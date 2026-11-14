@@ -579,6 +579,40 @@ layer is level-matched; the player applies velocity gain once) and their brightn
 at most 13 % (2 % on WIDE THREAD). Touch has to change the strike itself, not only its level;
 the hard layers stay as kept.
 
+**Touch shaping (bank v3, 2026-11-14).** A soft MERIDIAN SIX strike now changes the strike
+itself. Each recipe can record a touch shaping amount (`MeridianPatch.touchShaping`, 0–1;
+`MeridianTouch`). Each part of the strike scales with the amount × (1 − velocity):
+
+- the catch pulse widens (×1 + 3·a·(1 − v)), so the contact presses for longer;
+- the brush cutoff falls (×1 − .8·a·(1 − v), never below .15);
+- drive into upper mode k falls (×e^(−.6·a·(1 − v)·k));
+- on DRAW and LIFT, the carrier's second and third harmonics fall (×1 − .9·a·(1 − v)).
+
+Each factor is exactly 1 at velocity 1 and at amount 0. An amount of 0 is the default and is
+not saved, so every earlier recipe, factory preset, keygroup and pinned render is unchanged:
+with no amount, all 48 bank layers render the bytes captured on the base before this existed
+(`MeridianSixLayerHashTest`, `MeridianTouchTest`). Held renders take no amount.
+
+The bank's soft and medium layers share one recorded amount, `MeridianSixKits.SOFT_TOUCH_SHAPING`,
+**1.0 (B)**. The hard layer never has one, so the sixteen kept hard layers are unchanged.
+The owner heard both amounts in round meridian-touch-1, A (.5, T2) and B (1.0, T3), and kept
+both (KEEP, no notes), then chose B as the default on 2026-11-14. The hashes for both are
+pinned, so switching back to A is that one constant. Bank v3 saves the amount in each layer's recipe under policy
+`absolute-native-touch-six-v3`; a saved bank v2 (`…-six-v2`, no amount) still loads and replays
+as it was.
+
+Measured as spectral centroid against the same pad's hard layer (median of 16 pads):
+
+| Amount | Soft / hard | Medium / hard |
+|---|---|---|
+| 0 (bank v2) | .90 | .95 |
+| .5 | .70 | .83 |
+| 1.0 | .56 | .74 |
+
+The SWEEP, CLACK, CHIME and RASP pads darken the most (soft .41–.57 at 1.0). The six DRAW and
+LIFT pads barely move (.96–.99), because their sound comes mostly from the sustained carrier
+rather than the catch pulse. Finite and held MAKE INSTRUMENT keys are not shaped.
+
 The held keyboard's manifest now states the program's real range (MIDI 36–72) instead of
 0–127 (`MeridianKeyboardDescriptionTest`).
 

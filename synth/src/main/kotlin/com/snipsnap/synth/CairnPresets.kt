@@ -16,8 +16,7 @@ package com.snipsnap.synth
  *   - KNOCK, ANSWER and TUMBLE: model 5, which renders byte-identically at 6 and 7.
  *   - GRIND: model 6.
  *   - VESSEL: model 7.
- * - **GRIND is still being re-tuned** (round cairn-voices-2). Its four presets are recipes only
- *   and follow whatever GRIND becomes.
+ * - **GRIND was kept at G9's scrape level** (round cairn-voices-2). Its four presets use that level.
  *
  * Promoted YOUR PRESET recipes are complete JSON constructors (see `UserPresets.rosterLine`),
  * because CAIRN keeps its root, touch, cue and model outside the macro map.

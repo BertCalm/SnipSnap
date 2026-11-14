@@ -32,6 +32,23 @@ class ExportWizardTest {
     }
 
     @Test
+    fun `an MPC 2 format says what it leaves of a velocity x round robin pad, before anything is written`() {
+        val (kit, dir) = makeKit("Grid")
+        val zones = listOf(com.snipsnap.kit.ChainZone(0, 63, 0, 2), com.snipsnap.kit.ChainZone(64, 127, 2, 2))
+        val grid = kit.copy(pads = kit.pads.map {
+            if (it.slot == 1) it.copy(chain = com.snipsnap.kit.ChainInfo(listOf(0L, 10L, 20L, 30L), cycle = 2, zones = zones)) else it
+        })
+        val w = ExportWizardModel(grid, dir)
+        w.setFormat(ExportFormat.PROGRAM_FOLDER)
+        val note = kotlin.test.assertNotNull(w.formatNote)
+        assertEquals(Severity.WARN, note.severity)
+        assertTrue("1 pad keeps its velocity layers, one take each" in note.message, note.message)
+        w.setFormat(ExportFormat.MPC3_TRACK)
+        assertEquals(null, w.formatNote, "MPC 3 native keeps the grid")
+        assertEquals(null, ExportWizardModel(kit, dir).formatNote, "a kit with no grid has nothing to say")
+    }
+
+    @Test
     fun `the stage machine - ready, writing labels, complete, eject`() {
         val (kit, dir) = makeKit("Stages")
         val w = ExportWizardModel(kit, dir)

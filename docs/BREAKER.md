@@ -143,7 +143,8 @@ How to read the two columns:
   the takes in order and repeats them. The preview mixer cycles them too.
 - **MPC 3:** the exported track's velocity ranges, slice anchors, cycle lengths and slice windows
   match the kit, and its samples are the saved ones.
-- **MPC 2** plays each zone's first take only, so it does not pass the round-robin export gate.
+- **MPC 2** plays each zone's first take only. The format can't hold velocity and round robin on one pad,
+  so the owner recorded the round-robin export gate as not applicable there on 2026-11-14 ([ENGINE_ACCEPTANCE_GATES.md](ENGINE_ACCEPTANCE_GATES.md#mpc-2-and-round-robin-owner-decision-2026-11-14)).
 - **Not yet tested on hardware:** no phone or MPC has played the kit.
 
 **Cost:** 139 slices in 34 MB of 24-bit audio. The kit takes about 15 s to deal on a desktop JVM; a

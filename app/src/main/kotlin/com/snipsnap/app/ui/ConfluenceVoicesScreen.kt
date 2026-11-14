@@ -191,7 +191,7 @@ fun ConfluenceVoicesScreen(
                     fresh.save(); fresh.kit
                 } }
                 onKitUpdated(updated)
-                onToast("VOICE PASSAGE SAVED ON ${PadNoteMap.labelForPad(slot)}")
+                onToast(com.snipsnap.shell.Copy.voicePassageSaved(PadNoteMap.labelForPad(slot)))
                 if (mounted && scope.isActive) {
                     status = "${exact.settings.mode.name} SAVED ON ${PadNoteMap.labelForPad(slot)}"
                     destination = (1..128).firstOrNull { updated.pad(it) == null }

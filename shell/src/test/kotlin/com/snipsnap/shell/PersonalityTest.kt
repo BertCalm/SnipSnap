@@ -662,11 +662,14 @@ class PersonalityTest {
     private fun assertCaption(value: String, what: String) {
         val first = value.firstOrNull()
         assertTrue(first == null || !first.isLetter() || first.isUpperCase(), "$what = '$value' must open with a capital (sentence case).")
-        assertTrue(
-            value.any { it.isLowerCase() },
+        assertFalse(
+            readsAsAllCaps(value),
             "$what = '$value' is all caps. A sentence is in sentence case; if it is a label it needs @field:CopyLabel.",
         )
     }
+
+    /** The one definition of "reads as a label": no lowercase letter anywhere. Shared by the field law above and the source-scan law below. */
+    private fun readsAsAllCaps(value: String): Boolean = value.none { it.isLowerCase() }
 
     /** A label is CAPS. Lowercase units (the "s" in 60s) belong in a message or a caption, not a label. */
     private fun assertLabel(value: String, what: String) {
@@ -1205,5 +1208,261 @@ class PersonalityTest {
         assertEquals("PAD A01", Copy.surfacePeekVoice(false, "A01"))
         assertEquals("ARM B", Copy.surfacePeekShape('B'))
         assertEquals("2 ON", Copy.surfacePeekMod(2))
+    }
+
+    // ---- The case law, read off the screen files (R4, review Q2) ----
+    //
+    // The laws above only see the String constants of Copy and Places. A sentence written
+    // straight into a screen file passed every test. This scan reads the source of every Kotlin
+    // file under app/src/main and shell/src/main and holds the sentence-like string literals
+    // that reach the user through the sinks below to the same rule (sentence case; a control,
+    // place or engine name stays caps inside the sentence: "Record one on BEAT first.").
+    //
+    // Sinks scanned (a literal sitting directly in the argument or value, not inside a nested call,
+    // so `Copy.foo("KEEP")` is a control's name handed to a function, not a sentence):
+    //  - toasts:      onToast(..) toast(..) onSnapToast(..) currentOnToast(..) onResult(..)
+    //  - dock lines:  say(..) startOrSay(..)   (dock.say and the beat player's say)
+    //  - notes, hints and status lines, as `name = value`:
+    //                 hint note status message instrumentNote gatheringStatus working refusal
+    //  - confirm dialogs: the first argument of every TapeText(..) inside a `fun *Confirm*(..)`
+    //
+    // "Sentence-like" is two or more words, or a terminator (. ! ?). A single caps word is a label.
+    // What is held is the caps rule of assertCaption (readsAsAllCaps), the same detector as above.
+    // The terminator rule is not applied to source literals: a fragment before a template is not a sentence.
+
+    private val sourceSinkCalls = listOf("onToast", "toast", "onSnapToast", "currentOnToast", "onResult", "say", "startOrSay")
+    private val sourceSinkNames = listOf("hint", "note", "status", "message", "instrumentNote", "gatheringStatus", "working", "refusal")
+    private val tripleQuote = "\"\"\""
+
+    /** Index just past the string literal opening at [i] (a `"` or a triple quote). */
+    private fun endOfString(src: String, i: Int): Int {
+        if (src.startsWith(tripleQuote, i)) {
+            val j = src.indexOf(tripleQuote, i + 3)
+            return if (j < 0) src.length else j + 3
+        }
+        var k = i + 1
+        while (k < src.length && src[k] != '"') {
+            when {
+                src[k] == '\\' -> k += 2
+                src[k] == '$' && k + 1 < src.length && src[k + 1] == '{' -> {
+                    var depth = 1
+                    k += 2
+                    while (k < src.length && depth > 0) {
+                        when (src[k]) {
+                            '"' -> { k = endOfString(src, k); continue }
+                            '{' -> depth++
+                            '}' -> depth--
+                        }
+                        k++
+                    }
+                }
+                else -> k++
+            }
+        }
+        return k + 1
+    }
+
+    /** The text inside the parens opened just before [start], up to the matching close. */
+    private fun balancedArgs(src: String, start: Int): String {
+        var depth = 1
+        var i = start
+        while (i < src.length && depth > 0) {
+            when (src[i]) {
+                '"' -> { i = endOfString(src, i); continue }
+                '(' -> depth++
+                ')' -> depth--
+            }
+            i++
+        }
+        return src.substring(start, maxOf(start, i - 1))
+    }
+
+    /** The string literals of [text] that sit at paren depth 0, raw (templates left in), without their quotes. */
+    private fun topLevelLiterals(text: String): List<String> {
+        val out = ArrayList<String>()
+        var depth = 0
+        var i = 0
+        while (i < text.length) {
+            when (text[i]) {
+                '"' -> {
+                    val end = endOfString(text, i)
+                    if (depth == 0 && !text.startsWith(tripleQuote, i)) out += text.substring(i + 1, maxOf(i + 1, end - 1))
+                    i = end
+                    continue
+                }
+                '(' -> depth++
+                ')' -> depth--
+            }
+            i++
+        }
+        return out
+    }
+
+    /** The value of a `name = value` at [start]: to the end of the statement, following `+`, `else` and string continuation lines. */
+    private fun assignedValue(src: String, start: Int): String {
+        var depth = 0
+        var i = start
+        while (i < src.length) {
+            when (src[i]) {
+                '"' -> { i = endOfString(src, i); continue }
+                '(' -> depth++
+                ')' -> { if (depth == 0) break; depth-- }
+                ',', ';' -> if (depth == 0) break
+                '\n' -> if (depth == 0) {
+                    val before = src.substring(start, i).trimEnd()
+                    val after = src.substring(i).trimStart()
+                    val continues = before.endsWith("+") || before.endsWith("else") || before.endsWith("?:") ||
+                        after.startsWith("+") || after.startsWith("else ") || after.startsWith("?:") ||
+                        (after.startsWith("\"") && !before.endsWith("\""))
+                    if (!continues) break
+                }
+            }
+            i++
+        }
+        return src.substring(start, i)
+    }
+
+    /** [literal] with its `$name` and `${expr}` templates removed, which is what the reader sees as fixed text. */
+    private fun withoutTemplates(literal: String): String {
+        val sb = StringBuilder()
+        var i = 0
+        while (i < literal.length) {
+            if (literal[i] == '$' && i + 1 < literal.length && literal[i + 1] == '{') {
+                var depth = 1
+                i += 2
+                while (i < literal.length && depth > 0) {
+                    when (literal[i]) {
+                        '{' -> depth++
+                        '}' -> depth--
+                    }
+                    i++
+                }
+            } else if (literal[i] == '$' && i + 1 < literal.length && (literal[i + 1].isLetter() || literal[i + 1] == '_')) {
+                i++
+                while (i < literal.length && (literal[i].isLetterOrDigit() || literal[i] == '_')) i++
+            } else {
+                sb.append(literal[i])
+                i++
+            }
+        }
+        return sb.toString()
+    }
+
+    private fun isSentenceLike(fixed: String): Boolean {
+        val words = fixed.split(Regex("\\s+")).count { w -> w.any { it.isLetter() } }
+        return words >= 2 || fixed.trimEnd().let { it.endsWith(".") || it.endsWith("!") || it.endsWith("?") }
+    }
+
+    /** Every top-level sink literal as `file:literal`, and how many sink sites were read. */
+    private class SinkScan(val literals: MutableSet<String> = LinkedHashSet(), var sites: Int = 0)
+
+    private fun scanSinks(fileName: String, rawSource: String, into: SinkScan) {
+        val src = rawSource.lines().joinToString("\n") { if (it.trimStart().startsWith("//")) "" else it }
+        fun take(literals: List<String>) { for (l in literals) into.literals += "$fileName:$l" }
+        for (sink in sourceSinkCalls) {
+            for (m in Regex("(?<![\\w])(?:\\w+\\.)*" + sink + "\\(").findAll(src)) {
+                if (src.substring(maxOf(0, m.range.first - 4), m.range.first) == "fun ") continue
+                into.sites++
+                take(topLevelLiterals(balancedArgs(src, m.range.last + 1)))
+            }
+        }
+        for (name in sourceSinkNames) {
+            for (m in Regex("(?<![\\w.])" + name + "\\s*=(?![=>])\\s*").findAll(src)) {
+                into.sites++
+                take(topLevelLiterals(assignedValue(src, m.range.last + 1)))
+            }
+        }
+        for (f in Regex("fun \\w*Confirm\\w*\\(").findAll(src)) {
+            val end = src.indexOf("\n}\n", f.range.last).let { if (it < 0) src.length else it }
+            val body = src.substring(f.range.last, end)
+            for (t in Regex("TapeText\\(").findAll(body)) {
+                into.sites++
+                take(topLevelLiterals(balancedArgs(body, t.range.last + 1)).take(1))
+            }
+        }
+    }
+
+    /** The `file:literal` keys in [scan] that read as a caps sentence. */
+    private fun capsSentences(scan: SinkScan): Set<String> = scan.literals.filterTo(LinkedHashSet()) { key ->
+        val fixed = withoutTemplates(key.substringAfter(':'))
+        fixed.any { it.isLetter() } && isSentenceLike(fixed) && readsAsAllCaps(fixed)
+    }
+
+    private fun scanTree(): SinkScan {
+        val scan = SinkScan()
+        var files = 0
+        for (root in listOf(File("src/main"), File("../app/src/main"))) {
+            require(root.isDirectory) { "expected ${root.absolutePath}: fix the path, do not delete the scan; a scan of nothing passes by accident." }
+            for (f in root.walkTopDown().filter { it.isFile && it.extension == "kt" }) {
+                files++
+                scanSinks(f.name, f.readText(), scan)
+            }
+        }
+        require(files > 300) { "only $files Kotlin files found under app/src/main and shell/src/main" }
+        require(scan.sites > 400) { "only ${scan.sites} sink sites found: the scan has stopped seeing the sinks" }
+        return scan
+    }
+
+    /**
+     * Caps sentences that predate this law, one `file:literal` per entry. This list can only
+     * shrink: [caseLawWaiverCeiling] is today's size and the stale-entry test fails on any
+     * entry the scan no longer finds. Fix a site, delete its entry, lower the ceiling.
+     * What is left is the MY VOICE and CONFLUENCE status lines and the gathering preview
+     * status, which androidTests read back as exact text.
+     */
+    private val caseLawWaiver: Set<String> = setOf(
+        "ConfluenceVoicesScreen.kt:SETTINGS CHANGED · HEAR BEFORE SAVING",
+        "ConfluenceVoicesScreen.kt:\${selected.mode.name} PREVIEW READY",
+        "ConfluenceVoicesScreen.kt:\${exact.settings.mode.name} SAVED ON \${PadNoteMap.labelForPad(slot)}",
+        "ConfluenceVoicesScreen.kt:SAVED SETTINGS READY · HEAR BEFORE SAVING",
+        "ConfluenceVoicesScreen.kt:PREVIEW STOPPED",
+        "MyVoiceScreen.kt:STARTING MICROPHONE…",
+        "MyVoiceScreen.kt:\${next.name} PREVIEW READY",
+        "MyVoiceScreen.kt:VOICE SAVED · READY FOR A NEW PAD",
+        "MyVoiceScreen.kt:\${selectedMode.name} SAVED ON \${PadNoteMap.labelForPad(slot)} · VOICE KEPT",
+        "MyVoiceScreen.kt:SAVED VOICE READY",
+        "MyVoiceScreen.kt:TRIM CHANGED · CHECK THIS PASSAGE",
+        "MyVoiceScreen.kt:PREVIEW STOPPED",
+        "MyVoiceScreen.kt:RECORDING · HOLD ONE STEADY AH OR OO",
+        "PadSheetScreen.kt:PREVIEW READY · ORIGINAL KEPT",
+    )
+    private val caseLawWaiverCeiling = 14
+
+    @Test
+    fun `law - a sentence in a toast, dock line, note, hint or confirm is sentence case, wherever it is written`() {
+        val unwaived = capsSentences(scanTree()) - caseLawWaiver
+        assertTrue(
+            unwaived.isEmpty(),
+            "These sentences reach the user in ALL CAPS. A sentence is sentence case; a control, place or engine name inside it stays caps " +
+                "(\"Record one on BEAT first.\"). Move each into Copy as a message. Do not add to the waiver.\n" + unwaived.joinToString("\n") { "  $it" },
+        )
+    }
+
+    @Test
+    fun `law - the case law waiver only shrinks`() {
+        val found = capsSentences(scanTree())
+        val stale = caseLawWaiver - found
+        assertTrue(stale.isEmpty(), "Waiver entries the scan no longer finds (fixed, or reworded): delete them and lower caseLawWaiverCeiling.\n" + stale.joinToString("\n") { "  $it" })
+        assertEquals(caseLawWaiverCeiling, caseLawWaiver.size, "caseLawWaiverCeiling must equal the waiver's size: lower it as entries go; never raise it.")
+    }
+
+    @Test
+    fun `law - the source scan sees a planted caps toast, dock line, hint and confirm, and lets a label inside a sentence pass`() {
+        fun violations(source: String): Set<String> {
+            val scan = SinkScan()
+            scanSinks("Plant.kt", source, scan)
+            return capsSentences(scan)
+        }
+        assertEquals(setOf("Plant.kt:KIT IS BUSY · TRY SAVE AGAIN"), violations("onToast(\"KIT IS BUSY · TRY SAVE AGAIN\")"))
+        assertEquals(setOf("Plant.kt:LONG-PRESS TO CAPTURE"), violations("dock.say(if (a) \"Long-press to place.\" else \"LONG-PRESS TO CAPTURE\")"))
+        assertEquals(setOf("Plant.kt:A LEARNED PAD PLAYS NO SOUND"), violations("KitPad(\n    hint = \"A LEARNED PAD PLAYS NO SOUND\",\n)"))
+        assertEquals(
+            setOf("Plant.kt:DELETE THIS KIT FOR GOOD"),
+            violations("private fun KitDeleteConfirmDialog() {\n    TapeText(\"DELETE THIS KIT FOR GOOD\", TapeType.lcdSmall)\n    TapeText(\"DELETE\", TapeType.pixel)\n}\n"),
+        )
+        assertEquals(emptySet(), violations("onToast(\"Record one on BEAT first.\")"), "a label inside a sentence is the house style")
+        assertEquals(emptySet(), violations("onToast(Copy.keptLabel(\"KEEP\"))"), "a control's name handed to a function is not a sentence")
+        assertEquals(emptySet(), violations("onToast(\"\${pad.tag} saved.\")"), "a template is not text the reader reads as caps")
+        assertEquals(emptySet(), violations("// onToast(\"COMMENTED OUT SHOUT\")"))
     }
 }

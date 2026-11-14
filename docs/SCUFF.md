@@ -1,6 +1,6 @@
 # SCUFF: design brief and round-0 audition
 
-Status: **round 3, two kits on the shelf; sound direction (round 0b) accepted by the owner 2026-11-12; the Kotlin engine and both kits accepted from the listening page's version 5 on 2026-11-13 ("Audition is all good").** The Kotlin engine is `Scuff.kt`, the kits `ScuffKits.kt`. No phone or MPC has played them. The engine stays in
+Status: **round 4, on the roster; sound direction (round 0b) accepted by the owner 2026-11-12; the Kotlin engine and both kits accepted from the listening page's version 5 on 2026-11-13 ("Audition is all good"); the kits' twenty-eight hits filed as the factory bank.** The Kotlin engine is `Scuff.kt`, the kits `ScuffKits.kt`. No phone or MPC has played them. The engine stays in
 progress until every applicable owner gate has evidence (see "Gates" below and the gates entry).
 
 Prototype: [`prototype/scuff/`](../prototype/scuff/) (`scuff_proto.py` is the model,
@@ -464,8 +464,8 @@ DROP is DIVE's move in the rack, not the engine's.
 - Playback: `PadHit.resolve` picks the zone by velocity and deals the four takes in order, then repeats; a soft
   and a hard hit never share a slice.
 - Export: the MPC 3 track's velocity ranges, base slices, cycle lengths and frame windows match, and the
-  exported PCM matches the renders. **MPC 2 does not pass:** as on every kit in this repository, its projection
-  keeps one take per zone. No MPC has loaded the kit and no phone has played it.
+  exported PCM matches the renders. **MPC 2: not applicable** (a format limit, recorded 2026-11-14 in
+  [ENGINE_ACCEPTANCE_GATES.md](ENGINE_ACCEPTANCE_GATES.md#mpc-2-and-round-robin-owner-decision-2026-11-14)): as on every kit in this repository, its projection keeps one take per zone. No MPC has loaded the kit and no phone has played it.
 
 **Gates after round 2.** Drum shelf: one of the multiple kits the gate asks for; a second genre kit (Flint, faster
 and brighter) is proposed. Roll or riser: pass in software, "Clap Riser" is on A16 and "Two Bars" on A15.
@@ -544,7 +544,44 @@ round-3 sections above each left open. Preserve `Scuff.MODEL_VERSION` 1 and `Scu
 accepted baseline; a later change to a voice or a kit is a new round against this one.
 
 What it does not close: a phone has not played the kits and no MPC has loaded the tracks (hardware playback),
-MPC 2 keeps one take per zone, SCUFF has no presets and is not on the roster (the engine stayed rosterless
-until this listen), the app's picker has no SCUFF entry (a session with an SDK), and the three BOOM pads are
+MPC 2 keeps one take per zone (a format limit, not applicable since 2026-11-14), SCUFF had no presets and was not on the roster (the engine stayed rosterless
+until this listen; round 4 below files them), the app's picker has no SCUFF entry (a round of its own), and the three BOOM pads are
 0.83 of an octave apart rather than an octave (the owner's call). The listen was through whatever the owner
 played the page on, which the page does not record.
+
+## As built, round 4: presets and the roster (2026-11-13)
+
+The owner chose presets and the roster as the round after the listen. The rule the house keeps is that a
+roster holds heard sounds, not reasoned ones, so SCUFF's factory bank is the two accepted kits, hit for hit:
+`ScuffPresets.all()` is `ScuffKits.parts(kit)` for DETROIT and then FLINT, each hit as a `ScuffPatch` under the
+kit's own chain setting and the pad's own macros (`Scuff.settled(voice, kit.chain + part.macros)`, so a complete
+map of the voice's knobs), struck full, filed at engine take 1 (the kit grid's first take, the one the page
+played first). Twenty-eight presets over the ten voices, every voice with at least two (one from each kit),
+named "<kit> <hit>": DETROIT KICK, FLINT RIM LOW, DETROIT HAT OPEN. RIVET set the pattern; `promoted` beside
+the kits is where a player's own saved strike pastes in.
+
+A preset renders through the engine's own finish (`Scuff.render`: DC block, peak match, 4 ms fade); the kit's
+pad is the same strike through the kit's level law, its own 20 Hz block and its gate. `ScuffPresetsTest` holds
+the two as one shape (normalised correlation above .995 short of the tails) and holds each preset to
+`Scuff.render` byte for byte, with the five other preset contracts: finite, bounded, above half scale, ending
+in silence and centred; the JSON round trip with velocity, take and model, and `Velocity.atVelocity` as a
+re-strike of the same recipe; names unique across the bank, in caps, from a kit, none a maker's; and every two
+presets of a voice a different recipe (macro distance above .02) and different bytes.
+
+Wiring: `Presets.forVoice` and `Presets.all()` serve the bank; `PatchTypes.ROSTERLESS` no longer lists SCUFF
+(`PresetsTest` reflects over the sealed `Patch` type, so the registry test would have failed either way);
+`PatchesTest` and the shell's `SynthRootTest` take their SCUFF sound from the roster instead of a hand-built one;
+`UserPresets.rosterLine` writes a SCUFF promotion as `ScuffPatch.fromJsonText(...)`, as RIVET's does, because
+velocity, take and model live outside the macro map and the plain `p(...)` helper would drop them. The README's
+list of engines with rosters that the picker does not show gains SCUFF. The app picker entry is a round of its
+own: the house convention no longer defers it to a session with an SDK (corrected by the owner on 2026-11-13;
+mirror the nearest engine arm for arm, with an on-device test, and CI compiles and runs it), and `EngineCatalog`
+follows the picker, so neither changes here.
+
+**Disclosed:** a preset carries one 20 Hz block where the kit's pad carries two, so a short rim through
+FLINT's harder SLAM keeps a mean of .0145 of its peak inside its 60 ms (37 dB down; the kit's pad .005 after
+its second block, the round-3 finding). `ScuffPresetsTest` bounds a preset's mean at .02, a measurement with
+room, not a target; the sound is the accepted one and model version 1 does not move for it.
+
+Gates after round 4: presets and the roster pass. Open: hardware playback, the app
+picker (now a round that needs no SDK), and BOOM's octave spacing (the owner's call). Nothing new to hear: every preset is a pad already heard.
