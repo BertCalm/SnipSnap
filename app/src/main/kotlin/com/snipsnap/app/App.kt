@@ -1400,9 +1400,9 @@ fun App(shelf: KitShelf) {
                         }, cancelled = { cancelled.get() || !worker.isActive })
                 }
                 roomsRevision++
-                dock.say("${made.name.uppercase(java.util.Locale.ROOT)} IS READY IN INSTRUMENTS.")
+                dock.say(Copy.instrumentReady(made.name.uppercase(java.util.Locale.ROOT)))
             } catch (e: CancellationException) {
-                dock.say("CAIRN INSTRUMENT CANCELLED.")
+                dock.say(Copy.CAIRN_CANCELLED)
                 throw e
             } catch (e: com.snipsnap.shell.CairnSingRenderedCaptures.Mismatch) {
                 Log.e(TAG, "makeCairnStudy: ${e.sourceId} did not match its pinned capture", e)
