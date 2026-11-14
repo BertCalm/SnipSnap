@@ -510,8 +510,8 @@ TOM and HAT share TUNE, SOURCE, FILTER, DRIVE and SPACE; the four later voices a
 DECAY. The owner accepted all six and the 22 factory presets. FRESH TAPE → TEMPEST
 is the sixteen-pad kit with choking hats; TEMPEST TUNED keeps the original E minor
 pentatonic kicks and metal colors. TEMPEST CIRCUIT (electro), TEMPEST FOUNDRY
-(industrial) and TEMPEST STEP (UK garage) are candidate genre kits made from new
-settings of the same accepted voices, awaiting the owner's listening round. HOLD is reserved. See [TEMPEST](docs/TEMPEST_FULL_KIT.md).
+(industrial) and TEMPEST STEP (UK garage) are genre kits made from new settings of
+the same accepted voices, kept by the owner on 2026-11-14. HOLD is reserved. See [TEMPEST](docs/TEMPEST_FULL_KIT.md).
 
 OSTERIA is one evolving note: four spectral layers on a fixed root drift between
 five coastal palettes, with SHORE, TENSION, WANDER, MEMORY, ROOM and HOLD. Its six

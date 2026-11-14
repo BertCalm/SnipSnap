@@ -3,15 +3,16 @@ package com.snipsnap.synth
 import com.snipsnap.kit.ArrangedPad
 
 /**
- * Three candidate genre kits authored from TEMPEST's six accepted voices: CIRCUIT
+ * Three genre kits authored from TEMPEST's six accepted voices: CIRCUIT
  * (electro), FOUNDRY (industrial) and STEP (UK garage). Every pad is a new recipe
  * on the existing model-2 (KICK, METAL) and model-3 (SNARE, CLAP, TOM, HAT) voices,
  * or an accepted factory preset unchanged, so no engine file and no accepted render
  * moves. Each kit keeps at most four accepted presets, has its own kick and snare
  * recipes, and chokes every hat in mute group 1, like the accepted [SynthKits.tempest].
  *
- * The settings are shape values for the owner's first listening round
- * (tempest-kits-1); nothing here is accepted audio yet.
+ * The owner kept all three in listening round tempest-kits-1 (K1–K6, 2026-11-14).
+ * Every pad's PCM24 render is pinned in `TempestGenreKitsTest`, so a change to any
+ * recipe here, or to the engine under it, fails that test.
  */
 object TempestGenreKits {
     enum class Kit(val id: String, val displayName: String) {
@@ -115,14 +116,17 @@ object TempestGenreKits {
         return patches(kit).filter { it in factory }.map { it.name }
     }
 
+    /** The listening round in which the owner kept the new pads. */
+    const val KEPT_ROUND = "tempest-kits-1"
+
     fun build(kit: Kit): List<ArrangedPad?> = patches(kit).map { patch ->
         val recipe = PadRecipe(patch)
         val snip = recipe.render()
-        val status = if (patch in TempestPresets.all()) "accepted" else "candidate"
+        val status = if (patch in TempestPresets.all()) "accepted" else "kept"
         ArrangedPad(snip, Tempest.drumClassFor(snip), recipe.toJsonValue(), displayName = patch.name,
             source = mapOf("role" to patch.voice.name, "model" to patch.model.toString(),
                 "status" to status, "kit" to kit.displayName) +
-                (if (status == "accepted") mapOf("factoryPreset" to patch.name) else emptyMap()),
+                (if (status == "accepted") mapOf("factoryPreset" to patch.name) else mapOf("round" to KEPT_ROUND)),
             muteGroup = if (patch.voice == TempestVoice.HAT) 1 else 0)
     }
 }

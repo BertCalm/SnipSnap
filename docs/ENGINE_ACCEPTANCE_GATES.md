@@ -549,7 +549,7 @@ hashes: sixteen full-kit pads, ten model-2 and eight model-1 files (`TempestProm
 | Melodic voices, keygroups, chord tools | Not applicable | A drum engine. TEMPEST TUNED is a pitched arrangement of kicks and metal, not a keygroup instrument. |
 | Articulation: HOLD, STRUM | Not applicable | Finite 1.20-second hits; HOLD is reserved and hidden in the picker. No strings. |
 | Percussion: authored roll or riser | Not yet verified | No roll or riser is authored. |
-| Drums: multiple distinct genre kits | Partial: three candidate kits, not yet heard | The accepted sixteen-pad TEMPEST kit (`SynthKits.tempest`), plus three candidate genre kits from the same voices: TEMPEST CIRCUIT (electro), TEMPEST FOUNDRY (industrial) and TEMPEST STEP (UK garage), in [the full kit](TEMPEST_FULL_KIT.md#genre-kits-candidates). `TempestGenreKitsTest` proves distinct role balances, no shared kick or snare, at least 12 different pads between any two kits, and the hat choke group. This passes only when the owner keeps them in round tempest-kits-1. TEMPEST TUNED is the original two-voice kick and metal scale, not a genre kit. |
+| Drums: multiple distinct genre kits | Pass: four kits, owner KEEP of the three new ones on 2026-11-14 | The accepted sixteen-pad TEMPEST kit (`SynthKits.tempest`), plus three genre kits from the same voices: TEMPEST CIRCUIT (electro), TEMPEST FOUNDRY (industrial) and TEMPEST STEP (UK garage), in [the full kit](TEMPEST_FULL_KIT.md#genre-kits-kept-2026-11-14). The owner kept all six clips of round tempest-kits-1 (pad walks and grooves). `TempestGenreKitsTest` pins every pad's PCM24 hash and proves distinct role balances, no shared kick or snare, at least 12 different pads between any two kits, and the hat choke group. TEMPEST TUNED is the original two-voice kick and metal scale, not a genre kit. |
 | Velocity: rendering | Partial | No TEMPEST control is a brightness macro, so a softer hit is the full render low-passed by `Velocity.soften`, not a re-strike. The starter's pads have no velocity layers. |
 | Velocity: saving, playback, export | Not yet verified | No velocity layers exist to save, play or export. |
 | Round robin | Not yet verified | TEMPEST has no re-strike (`Restrike.canRestrike` is false), so no round robin exists through rendering, saving, playback or export. |
@@ -561,7 +561,7 @@ hashes: sixteen full-kit pads, ten model-2 and eight model-1 files (`TempestProm
   model 2 with "Sounds great, proceed as recommended." [The full kit](TEMPEST_FULL_KIT.md)
   records that on 2026-11-07 the owner accepted the complete six-voice audition with "Sounds
   great, proceed as recommended." Preserve these renders; this is not a phone or MPC audition.
-- **Overall: incomplete.** The genre kits' listening verdict, a roll or riser, velocity layers, round robin, device
+- **Overall: incomplete.** A roll or riser, velocity layers, round robin, device
   runs of the picker and hardware playback remain open.
 
 ## SPLAY (from the recovery backup, 2026-11-13)

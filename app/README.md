@@ -95,7 +95,7 @@ New KICK and METAL recipes save model 2 and the other voices model 3; recalled m
 recipes keep their renderer through edits, navigation, RANDOMISE and SAVE. FRESH TAPE →
 TEMPEST is the sixteen-pad drum kit with choking hats, and TEMPEST TUNED keeps the
 original E minor pentatonic kicks and metal colors. TEMPEST CIRCUIT, TEMPEST FOUNDRY and TEMPEST STEP
-are candidate electro, industrial and UK garage kits built from the same accepted voices.
+are electro, industrial and UK garage kits built from the same accepted voices, kept by the owner on 2026-11-14.
 
 SPLAY exposes one finite TONGUE voice and its five accepted population settings.
 Its original model, root, touch and seed survive editing and navigation; positive

@@ -229,7 +229,7 @@ The audition includes four defaults, note positions, quarter-step controls, pair
 all sixteen pads and a two-bar 100 BPM sketch using those same pad sounds and hat choke rules.
 The sketch is a proposed arrangement and makes no sequencer or factory-pattern claim.
 
-## Genre kits (candidates)
+## Genre kits (kept 2026-11-14)
 
 TEMPEST CIRCUIT, TEMPEST FOUNDRY and TEMPEST STEP are three more sixteen-pad kits
 (`TempestGenreKits`, starters `tempest-circuit`, `tempest-foundry` and `tempest-step`,
@@ -248,10 +248,17 @@ unchanged).
 - **Choke:** every hat in every kit shares mute group 1, as on the accepted kit.
 - **Kick limit:** a TEMPEST kick ends by about 0.6 s, so no kit has a long 808-style boom.
   The kits are designed around that rather than changing the engine.
-- **Status:** proposed shape values, not heard. `TempestGenreKitsTest` checks role counts, the
-  choke group, distinctness (no shared kick or snare; at least 12 different pads between any
-  two kits, today's included), exact replay from saved recipes, and MPC 3 / MPC 2 export
-  read-back. Once the owner keeps them, PCM24 hashes for every pad get pinned.
+- **Heard: kept.** On 2026-11-14 the owner marked every clip of Listening Desk round
+  tempest-kits-1 KEEP, with no notes: the CIRCUIT, FOUNDRY and STEP pad walks (K1, K3, K5) and
+  their 112, 128 and 132 BPM grooves (K2, K4, K6). K7, today's TEMPEST playing K2's pattern, was
+  a reference.
+- **Pinned:** `TempestGenreKitsTest` pins the PCM24 SHA-256 of all 48 pads. They are the
+  renders the owner heard: each pad walk is these pads 0.9 s apart, lowered 0.93 dB and written
+  as 16-bit, and differs from that sum by at most half a 16-bit step.
+- **Also checked:** role counts, the choke group, distinctness (no shared kick or snare; at
+  least 12 different pads between any two kits, today's included), exact replay from saved
+  recipes, and MPC 3 / MPC 2 export read-back. A new pad's source records status `kept` and
+  round `tempest-kits-1`; reused factory presets stay `accepted`.
 
 ## Verified / measured / proposed / heard
 
