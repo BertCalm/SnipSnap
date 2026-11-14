@@ -755,6 +755,7 @@ testkit/backwash-acoustic-integration/
 /testkit/cypher-kits/
 /testkit/breaker-kit/
 /testkit/breaker-audition/
+/testkit/breaker-fill-study/
 /testkit/mirrorball-kits/
 # SCUFF kits and the Kotlin audition clips: regenerate with :shell:generateScuffKits and :synth:generateScuffAudition
 /testkit/scuff-kits/
