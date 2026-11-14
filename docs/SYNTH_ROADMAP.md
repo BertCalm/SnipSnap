@@ -3605,3 +3605,12 @@ Measured against the Python: no brightness bias across the 22 objects (0.06 dB a
 deterministic objects correlate 0.93 to 0.99; random draws are another realisation of the same law. The
 owner waived the roll gate. See [CLUTTER](CLUTTER.md) and the gates entry. The four genre kits go on the shelf
 at round 2; the picker entry waits for a session with an SDK.
+
+### CLUTTER, round 2 (2026-11-14)
+
+The four accepted genre kits on the shelf: `ClutterKits` (KITCHEN LO-FI 82 BPM, STREET BUCKET 120, JUNK BOOM BAP 90,
+MICROBEAT 100), sixteen one-shot pads each, three zones of four takes rendered by the engine, the hat pairs
+choking, FRESH TAPE starters under SKINS (129 starters). A zone's takes are matched in loudness, CLUTTER's own
+level law: the first-take peak law left granular takes up to 10 dB apart. Every grid proved through saving,
+playback and the MPC 3 export (768 slices). No roll: the owner waived the gate. Open: the owner's listen to the
+Kotlin kits, MPC 2, hardware, presets and the picker. See [CLUTTER](CLUTTER.md) and the gates entry.

@@ -640,34 +640,38 @@ and the approved strum study by its published WAV hashes (`OsteriaStrumTest`).
 - **Overall: incomplete.** Round robin, a seamless HOLD, chord tools on real keys, device runs
   of the picker and hardware playback remain open.
 
-## CLUTTER (round 1 Kotlin, 2026-11-14; sound accepted at round 0c; shelf and hardware open)
+## CLUTTER (round 2, 2026-11-14: four genre kits on the shelf; sound accepted at round 0c; hardware open)
 
-A found-sound drum engine of 22 modelled household objects, and five sixteen-pad kits from them: the CLUTTER
-kit (one each of sixteen objects) and four genre kits. Every object has loose parts (rice, a lid, a handle,
-cutlery, a rivet) that only move above a strike threshold. See [CLUTTER](CLUTTER.md). Round 0c is a Python
-prototype audition; no Kotlin exists.
+A found-sound drum engine of 22 modelled household objects (`Clutter.kt`, round 1) and four sixteen-pad genre
+kits on the shelf (`ClutterKits`, round 2). Every object has loose parts (rice, a lid, a handle, cutlery, a
+rivet) that only move above a strike threshold. See [CLUTTER](CLUTTER.md).
 
 - **Melodic, keygroup and chord-tool gates:** not applicable. A drum engine.
 - **Articulation:** finite hits, no HOLD. Not a picked or thumbed string.
 - **Percussion: waived by the owner.** The owner replaced the round-0 pot roll with a one-shot (B01 Bin Lid) on
   2026-11-13 ("Roll becomes one shot, groove can stay"), then overruled the roll gate on 2026-11-14: "I overrule
   that gate". CLUTTER has no roll or riser by the owner's decision; this is an exception, not a pass.
-- **Drum shelf: four genre kits authored, not on the shelf.** KITCHEN LO-FI (82 BPM), STREET BUCKET (120 BPM),
-  JUNK BOOM BAP (90 BPM) and MICROBEAT (100 BPM), chosen by the owner. They differ in which objects fill each
-  role, how they are hit, how loose and damped they are, where the phone is, and in tempo, swing and groove.
-  No pad is shared between any two; the same slot in two kits is at least 6.0 dB apart (Python). The owner
-  accepted all four as they are on 2026-11-14. No Kotlin, so nothing is on the shelf yet.
+- **Drum shelf: pass in software (round 2).** CLUTTER KITCHEN LO-FI (82 BPM), CLUTTER STREET BUCKET (120 BPM),
+  CLUTTER JUNK BOOM BAP (90 BPM) and CLUTTER MICROBEAT (100 BPM) are FRESH TAPE starters under SKINS, sixteen
+  pads each, three zones of four takes. The owner chose the four genres and accepted the kits as authored on
+  2026-11-14. They differ in which objects fill each role, how they are hit, how loose and damped they are,
+  where the phone is, and in tempo; `ClutterKitsTest` holds that no pad is the same object at the same settings
+  in two kits and that every slot differs in shape across kits.
 - **Velocity and round robin:**
-  - **Rendering: verified in Kotlin by test (round 1).** `ClutterTest` holds that every one of the 22
-    objects' soft and hard hits differ in shape at matched level, that its four takes are distinct strikes,
-    and that every take replays byte for byte (through JSON in `DeterminismTest`). Measured in Kotlin: soft
-    against hard at least 3.95 dB, the closest two takes 1.55 dB apart. (Python, on the five kits' 80 pads:
-    3.9 dB and 1.2 dB.)
-  - **Saving, playback, export: open.** The kits are not on the shelf yet (round 2). The listening page's pad
-    grid is a browser stand-in, not app evidence.
-- **Sound character: accepted at round 0c.** On 2026-11-14 the owner heard the listening page (version 7,
-  <https://claude.ai/artifact/6dkeY2rrjNGUvUYvobs3v5>) and answered "All are good" (which kit fits its genre)
-  and "I like it as is" (pads to swap). This is a listen to Python renders, not to Kotlin, a phone or an MPC.
-  Preserve round 0c as the baseline.
-- **Overall: incomplete.** The Kotlin engine is in (round 1) and not yet heard; the kits on the shelf,
-  saving, playback, export and hardware are open. The percussion gate is waived by the owner.
+  - **Rendering: verified in Kotlin by test.** `ClutterTest` (all 22 objects) and `ClutterKitsTest` (all 64
+    pads) hold that a soft zone is a different strike in shape, that each zone holds four different strikes,
+    and that every take replays byte for byte. Each zone's takes are matched in loudness (within 0.1 dB over
+    150 ms), CLUTTER's own level law: the first-take peak law left granular takes up to 10 dB apart.
+  - **Saving: verified.** Each kit reloads equal, and every saved slice matches its render
+    (`:shell:generateClutterKits`, 768 slices across the four kits).
+  - **Playback: verified in software.** `PadHit.resolve` picks the zone by velocity and deals the four takes in
+    order, then repeats (`ClutterKitTest`, and two playback cycles of every pad in the generator). No phone has
+    played the kits.
+  - **Export: MPC 3 verified by read-back** for every pad of the four kits. **MPC 2: not exercised;** on the
+    house's other kits it keeps one take per zone. No MPC has loaded the kits.
+- **Sound character: accepted at round 0c, Kotlin not heard.** On 2026-11-14 the owner heard the listening page
+  (version 7, <https://claude.ai/artifact/6dkeY2rrjNGUvUYvobs3v5>) and answered "All are good" and "I like it as
+  is" of Python renders. Version 8 of the page carries the four Kotlin kits, read back from the MPC 3 export; not
+  heard.
+- **Overall: incomplete.** Every software gate is in place. Open: the owner's listen to the Kotlin kits, the MPC 2
+  export, phone and MPC playback. The percussion gate is waived by the owner.
