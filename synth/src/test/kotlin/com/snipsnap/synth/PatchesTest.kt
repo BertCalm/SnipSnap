@@ -56,6 +56,7 @@ class PatchesTest {
         SilkPatch("Door", SilkVoice.OUD, emptyMap()),
         GyrePatch("Door", GyreVoice.FLICK, emptyMap()),
         ScuffPatch("Door", ScuffVoice.KICK, emptyMap()),
+        ClutterPatch("Bucket", ClutterVoice.BUCKET, emptyMap()),
         MagnetPatch("Door", MagnetVoice.JANGLE, emptyMap()),
         VentPresets.all().first(),
         OverlapPresets.all().first(),

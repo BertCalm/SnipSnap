@@ -629,7 +629,7 @@ and the approved strum study by its published WAV hashes (`OsteriaStrumTest`).
 - **Overall: incomplete.** Round robin, a seamless HOLD, chord tools on real keys, device runs
   of the picker and hardware playback remain open.
 
-## CLUTTER (round 0c, sound accepted 2026-11-14; Kotlin, shelf and hardware open)
+## CLUTTER (round 1 Kotlin, 2026-11-14; sound accepted at round 0c; shelf and hardware open)
 
 A found-sound drum engine of 22 modelled household objects, and five sixteen-pad kits from them: the CLUTTER
 kit (one each of sixteen objects) and four genre kits. Every object has loose parts (rice, a lid, a handle,
@@ -647,14 +647,16 @@ prototype audition; no Kotlin exists.
   No pad is shared between any two; the same slot in two kits is at least 6.0 dB apart (Python). The owner
   accepted all four as they are on 2026-11-14. No Kotlin, so nothing is on the shelf yet.
 - **Velocity and round robin:**
-  - **Rendering: measured in Python, not Kotlin.** On all 80 pads of the five kits: soft against hard at
-    matched level at least 3.9 dB; the closest two takes of any pad 1.2 dB apart. Each take replays byte for
-    byte.
-  - **Saving, playback, export: open.** Nothing to save, play or export until the Kotlin round. The
-    listening page's pad grid is a browser stand-in, not app evidence.
+  - **Rendering: verified in Kotlin by test (round 1).** `ClutterTest` holds that every one of the 22
+    objects' soft and hard hits differ in shape at matched level, that its four takes are distinct strikes,
+    and that every take replays byte for byte (through JSON in `DeterminismTest`). Measured in Kotlin: soft
+    against hard at least 3.95 dB, the closest two takes 1.55 dB apart. (Python, on the five kits' 80 pads:
+    3.9 dB and 1.2 dB.)
+  - **Saving, playback, export: open.** The kits are not on the shelf yet (round 2). The listening page's pad
+    grid is a browser stand-in, not app evidence.
 - **Sound character: accepted at round 0c.** On 2026-11-14 the owner heard the listening page (version 7,
   <https://claude.ai/artifact/6dkeY2rrjNGUvUYvobs3v5>) and answered "All are good" (which kit fits its genre)
   and "I like it as is" (pads to swap). This is a listen to Python renders, not to Kotlin, a phone or an MPC.
   Preserve round 0c as the baseline.
-- **Overall: incomplete.** The Kotlin engine, the kits on the shelf, saving, playback, export and hardware
-  are open. The percussion gate is waived by the owner.
+- **Overall: incomplete.** The Kotlin engine is in (round 1) and not yet heard; the kits on the shelf,
+  saving, playback, export and hardware are open. The percussion gate is waived by the owner.
