@@ -43,7 +43,8 @@ object BreakerKits {
     /**
      * A kit's starter id, shelf title, tempo and the renderer model its pads are saved on. The BREAKER kit stays
      * on model 5, the sound the owner accepted (model 4's, at DAMP .5); the genre kits are built on model 6, whose
-     * later kick and tom takes land with another beater (`Breaker`, BEATER_SPREAD).
+     * later kick and tom takes land with another beater (`Breaker`, BEATER_SPREAD). The one exception is the surf
+     * tom fill, which only model 7 has ([Breaker.FILL_MODEL]); its strokes are the BREAKER kit's toms on model 5.
      */
     enum class Kit(val id: String, val title: String, val bpm: Float, val model: Int) {
         BREAKER(ID, "BREAKER", BPM, 5),
@@ -91,7 +92,9 @@ object BreakerKits {
         Role("Ride", BreakerVoice.RIDE, .27f),
         Role("Crash", BreakerVoice.CRASH, .32f),
         Role("Snare Riser", BreakerVoice.RISER, .60f),
-        Role("Shaker", BreakerVoice.SHAKER, .35f),
+        // The surf tom fill, at the toms' level: beside the snare riser, in the shaker's place (the owner's pick,
+        // 2026-11-14).
+        Role("Surf Tom Fill", BreakerVoice.FILL, .70f),
     )
 
     // TUNE moves a drum by a quarter of SKIN's own range either way. SKIN's kick spans 45 to 75 Hz (8.8
@@ -174,8 +177,10 @@ object BreakerKits {
     )
 
     /** [kit]'s sixteen pads' sounds, A01 first. */
-    fun patches(kit: Kit = Kit.BREAKER): List<BreakerPatch> =
-        roles(kit).map { BreakerPatch(it.name, it.voice, Breaker.defaults(it.voice, kit.model) + it.push, kit.model) }
+    fun patches(kit: Kit = Kit.BREAKER): List<BreakerPatch> = roles(kit).map {
+        val model = if (it.voice == BreakerVoice.FILL) maxOf(kit.model, Breaker.FILL_MODEL) else kit.model
+        BreakerPatch(it.name, it.voice, Breaker.defaults(it.voice, model) + it.push, model)
+    }
 
     /** [kit]'s pad levels, A01 first: the kit's balance. */
     fun levels(kit: Kit = Kit.BREAKER): List<Float> = roles(kit).map { it.level }

@@ -117,6 +117,9 @@ object Breaker {
     /** The voice model 7 added. Earlier models refuse it. */
     private val MODEL_7 = setOf(BreakerVoice.FILL)
 
+    /** The first renderer model with the fill: a kit on an older model saves its fill pad on this one. */
+    const val FILL_MODEL = 7
+
     /**
      * The surf tom fill, as the owner picked it (2026-11-14, docs/BREAKER.md, "The surf tom fill"): fill B,
      * two beats of sixteenth-note triplets down the toms, four on the high tom, four on the rack, four on the

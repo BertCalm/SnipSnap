@@ -74,8 +74,9 @@ On the final audition (2026-11-13, below, "The audition") the owner signed off t
 - **The three kits side by side:** the shelf is right.
 
 Still to come:
-- the surf tom fill on a kit (built as a voice, below, "The surf tom fill");
 - a phone and an MPC playing the kits.
+
+The surf tom fill is built and on the BREAKER kit's A16 (2026-11-14, below, "The surf tom fill").
 
 ## The kit
 
@@ -84,7 +85,7 @@ The BREAKER starter (`BreakerKits`, `StarterKits` id `breaker`, under SKINS on t
 
 | | | | |
 |---|---|---|---|
-| A13 Ride | A14 Crash (rings 3.2 s) | A15 Snare Riser | A16 Shaker |
+| A13 Ride | A14 Crash (rings 3.2 s) | A15 Snare Riser | A16 Surf Tom Fill |
 | A09 Floor Tom | A10 Rack Tom | A11 High Tom | A12 Crushed Snare |
 | A05 Crushed Boom | A06 Drip Snare | A07 Cross Stick | A08 Tambourine |
 | A01 Boom | A02 Bap | A03 Closed Hat | A04 Open Hat (chokes A03) |
@@ -96,7 +97,10 @@ The BREAKER starter (`BreakerKits`, `StarterKits` id `breaker`, under SKINS on t
   - A06 Drip Snare: the snare at DRIP .9, SLAP .35;
   - A12 Crushed Snare: the snare at CRUSH 1, DUST .5, AMP .55, DRIP .35.
 - **Levels** come from the balance the owner heard in the round-3 beats: Boom .90, Bap .80, the
-  hats and shaker .35, the toms .70, the ride .27 and the crash .32.
+  hats .35, the toms .70, the ride .27 and the crash .32. The surf tom fill sits at the toms' .70.
+- **A16** was the shaker until 2026-11-14, when the owner put the surf tom fill there, beside the
+  snare riser (below, "The surf tom fill"). The fill's pad saves on renderer model 7, the only
+  model with it; the rest of the kit stays on model 5.
 - **Chokes:** only the open hat chokes the closed one. The cymbals never choke.
 
 **Velocity and round robin.** The shared robin (`Robin.apply`, as the BACKWASH kits) deals each pad
@@ -507,10 +511,10 @@ The owner picked ×.35 ("4 Drier") and heard a fresh take as the same fill with 
   the riser's 0.4 s and a drum's 0.1 s. The strokes are independent, so they render in parallel and
   are summed in stroke order, so the result is the same however they finish.
 
-**Not yet:**
-- **The kit:** the fill is not on a kit. Where it goes is the owner's call.
-- **Saving, playback and export:** not verified until it is on a kit.
-- **Hardware:** no phone or MPC has played it.
+**On the kit (2026-11-14):** the owner put it on the BREAKER kit's A16, beside the snare riser, in
+the shaker's place, at the toms' level. Its pad saves on model 7 and is dealt like every synth drum,
+3 zones × 3 re-struck takes, through saving, the pad resolver and the MPC 3 export (`BreakerKitTest`).
+The demo groove does not play it. No phone or MPC has played it.
 
 ## The cymbals
 

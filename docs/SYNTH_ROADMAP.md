@@ -3501,8 +3501,9 @@ The surf tom fill (renderer model 7, 2026-11-14):
   - a fresh take heard as the same fill with fresh hits.
 - **Built:** FILL, twelve strokes of the BREAKER kit's own toms (model 5), each its own fresh strike. A
   softer pad strikes every tom softer. DRIP scales the three springs together.
-- **Open:** where it goes on the kits (the owner's call), then saving, playback and export on a kit,
-  and hardware.
+- **On the kit:** the BREAKER kit's A16, in the shaker's place beside the snare riser (the owner's
+  call, 2026-11-14). It is verified like every pad through saving, playback and the MPC 3 export.
+- **Open:** hardware.
 
 ### ETCH, Kotlin round K1 (2026-11-13)
 
