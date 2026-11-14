@@ -88,7 +88,7 @@ class SplayFiniteInstrumentScreenTest : ComposeScreenTest() {
         assertFalse(spec.hasAttack)
         assertFalse(spec.hasRelease)
         assertEquals(3, spec.progressPerZone)
-        assertEquals("LANDS ON THE SHELF AS SPLAY KEYS, PLAYABLE ON KEYS.", spec.shelfNote("Splay Keys"))
+        assertEquals("LANDS IN THE LIBRARY AS SPLAY KEYS, PLAYABLE ON KEYS.", spec.shelfNote("Splay Keys"))
         cancelSheet()
         assertEquals(patch, SynthDrafts.read(settings).filterIsInstance<SplayPatch>().single())
     }
