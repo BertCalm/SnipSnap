@@ -316,7 +316,7 @@ private fun PrismSourceDialog(selectedId: String?, scheme: Scheme, onSelect: (Pr
                         accessibilityLabel = "MOTION SOURCE ${source.title}") { onSelect(source) }
                 }
             }
-            LabButton("CANCEL", scheme, enabled = true, modifier = Modifier.fillMaxWidth(), onClick = onCancel)
+            LabButton("CANCEL", scheme, enabled = true, modifier = Modifier.fillMaxWidth(), tier = ButtonTier.Text, onClick = onCancel)
         }
     }
 }

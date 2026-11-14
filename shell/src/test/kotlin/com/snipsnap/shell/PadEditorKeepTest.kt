@@ -77,4 +77,18 @@ class PadEditorKeepTest {
         keys.opened("/kits/a", 7)
         assertEquals(emptyList(), removed, "the editor stayed in the stack, on the pad it stepped to")
     }
+
+    @Test
+    fun `keys a previous process handed out are released by the next one, so no pad inherits them`() {
+        // Process death: the holder's parked state comes back under the old keys, but a fresh
+        // PadEditorKeys starts with nothing, so release() would remove nothing.
+        val before = PadEditorKeys { }
+        val old = before.keyFor("/kits/a")
+        val restored = mutableListOf<String>()
+        val after = PadEditorKeys(before.heldKeys()) { restored += it }
+        after.opened("/kits/a", 7)
+        assertEquals(listOf(old), restored, "pad 7 does not inherit what pad 3 parked before the process died")
+        after.release()
+        assertEquals(emptyList(), after.heldKeys())
+    }
 }

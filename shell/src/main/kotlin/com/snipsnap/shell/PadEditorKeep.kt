@@ -24,10 +24,17 @@ object PadEditorKeep {
  * The keys handed to the holder so far, so they can all be dropped together. One editor is in the
  * stack at a time, but the kit it is over can change, so a key is not assumed to be the last one used.
  */
-class PadEditorKeys(private val removeState: (String) -> Unit) {
-    private val used = linkedSetOf<String>()
+class PadEditorKeys(restored: Collection<String> = emptyList(), private val removeState: (String) -> Unit) {
+    // [restored]: the keys a previous process had handed out. The holder's parked state is saved to the
+    // instance Bundle and comes back under exactly these keys after process death, while navigation does
+    // not (the new process starts on the shelf), so [release] must know them or the next pad opened on
+    // the same kit inherits the old pad's state.
+    private val used = linkedSetOf<String>().apply { addAll(restored) }
     private var kitDir: String? = null
     private var slot: Int? = null
+
+    /** The keys handed out so far, for the saved instance state ([restored] on the way back in). */
+    fun heldKeys(): List<String> = used.toList()
 
     /** The key to draw the editor under now, remembered for [release]. */
     fun keyFor(kitDirPath: String): String = PadEditorKeep.keyFor(kitDirPath).also { used += it }

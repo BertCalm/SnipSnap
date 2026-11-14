@@ -7161,7 +7161,7 @@ private fun ReopenPadOverlay(
         Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 TapeText("REOPEN PAD RECIPE", TapeType.lcdSmall, scheme.lcdInk.tape, Modifier.weight(1f))
-                LabButton("CANCEL", scheme, enabled = true, onClick = onCancel)
+                LabButton("CANCEL", scheme, enabled = true, tier = ButtonTier.Text, onClick = onCancel)
             }
             TapeText("LOAD, EDIT, THEN SEND TO PAD", TapeType.lcdSmall, scheme.ink2.tape)
             LazyColumn(Modifier.weight(1f).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -7516,12 +7516,14 @@ internal fun LabButton(
      * `null` (every other call site) falls back to [label] alone.
      */
     accessibilityLabel: String? = null,
+    /** The button's weight, dressed as [ActionButton] dresses it: CANCEL is [ButtonTier.Text], accent ink on no body. */
+    tier: ButtonTier = ButtonTier.Secondary,
     onClick: () -> Unit,
 ) {
     Box(
         modifier
             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
-            .raisedBevel(scheme)
+            .tierSurface(tier, scheme)
             // Always clickable, `enabled` forwarded rather than dropped: a
             // screen reader is told this control is temporarily unavailable
             // instead of it silently vanishing from the tree (accessibility
@@ -7530,7 +7532,7 @@ internal fun LabButton(
             .padding(horizontal = 8.dp),
         contentAlignment = Alignment.Center,
     ) {
-        TapeText(label, TapeType.pixel, if (enabled) scheme.ink.tape else scheme.ink3.tape, maxLines = 2)
+        TapeText(label, TapeType.pixel, tierInk(tier, scheme, enabled, lit = false, dimmed = false), maxLines = 2)
     }
 }
 
