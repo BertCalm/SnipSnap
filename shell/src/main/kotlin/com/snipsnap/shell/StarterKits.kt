@@ -625,6 +625,18 @@ object StarterKits {
             "Skin, clay and bronze through a driven processor and amp. Sixteen pads, four strike layers, three fresh strikes each.",
             seeded = false, tempoBpm = 96f,
         ) { com.snipsnap.synth.FiredBronzeInstrument.kit() },
+        Starter("spore-synth-jungle", "SPORE DRY JUNGLE",
+            "Approved synthesized kick and snare, dry hats, toms and ghost strokes. Space accents, roll and riser.", seeded=false, tempoBpm=170f) {
+            com.snipsnap.synth.SporeSyntheticKits.arranged(com.snipsnap.synth.SporeSyntheticKits.Genre.JUNGLE)
+        },
+        Starter("spore-synth-dub", "SPORE DUB BREAKS",
+            "Deep kick, low snare, cross-stick and hand percussion. Dark echo answers and triplet roll.", seeded=false, tempoBpm=85f) {
+            com.snipsnap.synth.SporeSyntheticKits.arranged(com.snipsnap.synth.SporeSyntheticKits.Genre.DUB)
+        },
+        Starter("spore-synth-broken", "SPORE ORBITAL BREAKS",
+            "Short kick, wire clap, higher toms and metallic percussion. Reverse-metal accents and accelerating riser.", seeded=false, tempoBpm=155f) {
+            com.snipsnap.synth.SporeSyntheticKits.arranged(com.snipsnap.synth.SporeSyntheticKits.Genre.BROKEN)
+        },
         Starter(
             "spore-jungle", "SPORE JUNGLE",
             "Psychedelic breaks, tight ghosts and canopy echoes. Three touch zones and three takes; B01 roll and B02 riser.",

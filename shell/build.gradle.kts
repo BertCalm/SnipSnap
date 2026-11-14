@@ -638,3 +638,13 @@ tasks.register<JavaExec>("generateSporeApprovedSnare") {
     maxHeapSize = "1g"
     args(providers.gradleProperty("sporeApprovedOutput").orNull ?: "${rootDir}/testkit/spore-approved-snare")
 }
+
+tasks.register<JavaExec>("generateSporeSyntheticKits") {
+    group = "distribution"
+    description = "Render and verify all three complete sample-free Spore shelf kits."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.SporeSyntheticDelivery")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "2g"
+    args(providers.gradleProperty("sporeSyntheticOutput").orNull ?: "${rootDir}/testkit/spore-synthetic-kits")
+}
