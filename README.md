@@ -1362,7 +1362,8 @@ the kit's own grid, a note division at its tempo — ROLL (the hit's own
 head struck again), GATE (the hit chopped into a square envelope) and
 PUMP (the sidechain pump: the first beat untouched, then the level
 ducked on every beat and breathed back) share that same grid, so all
-four land on the same beats. `FxChain` fixes the order — pitch → dive → swell → reverse → smear → ghost →
+four land on the same beats, and ON BEAT (the tempo delay: the hit back
+on a dotted eighth, each repeat darker, gone within a bar) echoes on it. `FxChain` fixes the order — pitch → dive → swell → reverse → smear → ghost →
 spike → volume → octaver → eq → contour → wah → compressor → squash → forge → valve → crunch →
 ring → dub → vinyl → tape → vibrato → ensemble → phase → flanger → tremolo → rotary → echo → rewind → spring → room → hush → motion — owns
 the total tail budget so stacked reverbs can't turn a hit into a phrase,

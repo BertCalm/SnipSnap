@@ -37,8 +37,12 @@ import kotlin.math.ln
  * Mono stays mono and a stereo pair repeats together (one delay for every channel; no ping-pong). The output is
  * matched to the pad's peak, since repeats can stack on a held pad. Deterministic, no seed.
  *
- * Chip-less until its gate: not in `Keyed.NAMES`, the KEYED row or the CLI. `generateOnBeatAudition` renders the
- * gate at the kit's default tempo on ONSET's snare and closed hat, JANGLE and the choir, beside DELAY and SLAP.
+ * At its gate (2026-11-14) the owner heard it at 92 BPM on ONSET's snare and closed hat, JANGLE and the choir, beside
+ * the DELAY and SLAP chips: the repeats land on the beat, it is clearly different from DELAY, the trail fades
+ * naturally, the hat makes a rhythm (its repeats fall 12 to 13 dB each, the snare's about 8, and that was heard as
+ * fine), it works on held sounds, and it is for drums and held sounds both. They chose the dotted eighth at a tap as
+ * heard (AMOUNT 0.7), so [DEFAULT_DIVISION] stays three sixteenths and the keyed treatment `echoed` (the ON BEAT
+ * chip on the KEYED row) carries its own division dial, since the grid's shared default is an eighth.
  */
 object OnBeat {
 
@@ -48,7 +52,7 @@ object OnBeat {
     /** Every division ON BEAT takes: the grid's, and the dotted eighth. */
     val DIVISIONS: List<String> = Wobble.DIVISIONS + DOTTED_EIGHTH
 
-    /** The brainstorm's pick, three sixteenths; the gate decides the tap. */
+    /** Three sixteenths: the brainstorm's pick and the owner's tap at the gate. */
     const val DEFAULT_DIVISION = DOTTED_EIGHTH
 
     /** At AMOUNT 1, each repeat is this much of the one before, before the filter. */
