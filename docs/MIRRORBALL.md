@@ -174,7 +174,8 @@ The generator, `:shell:generateMirrorballKits`:
 - **Heard on the listening pages only.** The owner approved round 2 there. The pages play mono 16-bit copies of
   the exported slices in a browser. Nothing was heard on a phone or an MPC.
 - **MPC 3 is the export target that keeps the round robin.** MPC 2's grid projection keeps the velocity zones
-  but only the first take of each, so an MPC 2 export does not pass the round-robin gate. The owner waived SFZ
+  but only the first take of each: a format limit, recorded as not applicable to the round-robin gate on
+  2026-11-14 ([ENGINE_ACCEPTANCE_GATES.md](ENGINE_ACCEPTANCE_GATES.md#mpc-2-and-round-robin-owner-decision-2026-11-14)). The owner waived SFZ
   and DecentSampler (2026-11-12).
 - **No hardware.** Nothing here was played on a phone or loaded on an MPC.
 - **Rendered bank, not recipes.** A pad cannot be re-edited as a SYNTH patch. Changing the kits means bumping

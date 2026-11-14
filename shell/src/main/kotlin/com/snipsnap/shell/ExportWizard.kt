@@ -8,6 +8,7 @@ import com.snipsnap.kit.ExportReadBack
 import com.snipsnap.kit.Exporters
 import com.snipsnap.kit.Finding
 import com.snipsnap.kit.Kit
+import com.snipsnap.kit.Mpc2Limits
 import com.snipsnap.kit.Preflight
 import com.snipsnap.kit.Severity
 import com.snipsnap.kit.blocked
@@ -113,6 +114,12 @@ class ExportWizardModel(
     val blocked: Boolean get() = preflight.blocked()
 
     val warnings: List<Finding> get() = preflight.filter { it.severity == Severity.WARN }
+
+    /**
+     * What the picked format cannot hold of this kit, or null: today only MPC 2's `.xpm` and a
+     * velocity × round-robin grid ([Mpc2Limits]). Shown under the format, before anything is written.
+     */
+    val formatNote: Finding? get() = Mpc2Limits.note(format, kit)
 
     // ---------- the dub ----------
 

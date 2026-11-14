@@ -17,6 +17,13 @@ import java.util.concurrent.CopyOnWriteArrayList
  * passes, which is exactly what a [com.snipsnap.kit.SongPlan] section
  * holds (a clip and how many times it plays).
  *
+ * NEXT BAR (2026-11-13, [QueueMode]) is the other choice: a queued section
+ * starts at the next bar line of the pass playing ([Arranger.Pass.barLines]
+ * and the pass's end), in the clip's own meter, on the same frames the mix
+ * was laid on. Nothing is rendered for it either. The pass cut short is a
+ * partial pass in [played]; a song section cannot hold part of a pass, so
+ * KEEP THIS ORDER counts it as a whole one.
+ *
  * A jump that does not run on into the next pass of the mix crossfades
  * over [FADE_FRAMES], because a sample-exact cut between two unrelated
  * points of the waveform clicks. What the crossfade cannot fix, and is
@@ -38,6 +45,9 @@ class SongCursor(
     private val passes: List<Arranger.Pass>,
     from: Int,
 ) {
+    /** When a queued section starts. */
+    enum class QueueMode { END_OF_PASS, NEXT_BAR }
+
     /** One pass starting to sound at [stream] frames into the playback. */
     data class Mark(val stream: Long, val section: Int)
 
@@ -52,6 +62,9 @@ class SongCursor(
 
     /** The section to go to when the current pass ends; cleared once it starts. Wins over [loop]. */
     @Volatile var queued: Int? = null
+
+    /** END_OF_PASS (the default) or NEXT_BAR; read at each step, so it can change while playing. */
+    @Volatile var queueMode: QueueMode = QueueMode.END_OF_PASS
 
     private var pass = firstPassOf(from).takeIf { it >= 0 } ?: 0
     private var at = passes[pass].start
@@ -75,12 +88,15 @@ class SongCursor(
     fun read(out: FloatArray, frames: Int): Int {
         var n = 0
         while (n < frames) {
-            if (!tail && at >= passes[pass].end) {
-                val next = nextPass()
+            // One look at the queue per step, so a tap between here and the jump cannot cut a pass for nothing.
+            val q = queued?.takeIf { firstPassOf(it) >= 0 }
+            val cut = if (q != null && queueMode == QueueMode.NEXT_BAR) nextBarLine() else passes[pass].end
+            if (!tail && at >= cut) {
+                val next = nextPass(q)
                 if (next == null) {
                     tail = true
                 } else {
-                    if (next != pass + 1) {
+                    if (next != pass + 1 || at != passes[next].start) {
                         fadeAt = at
                         fadeLeft = FADE_FRAMES
                         at = passes[next].start
@@ -90,7 +106,7 @@ class SongCursor(
                 }
                 continue
             }
-            val stop = if (tail) totalFrames else passes[pass].end
+            val stop = if (tail) totalFrames else cut
             if (at >= stop) {
                 finished = true
                 break
@@ -126,16 +142,28 @@ class SongCursor(
         if (frame in 0 until totalFrames) mix[frame * CHANNELS + channel] else 0f
 
     /** Where the pass that just ended goes: the queued section, the loop, the song's next pass, or null at the end. */
-    private fun nextPass(): Int? {
+    private fun nextPass(q: Int?): Int? {
         val section = passes[pass].section
-        queued?.let { q ->
-            queued = null
-            val first = firstPassOf(q)
-            if (first >= 0) return first
+        if (q != null) {
+            // Spent, unless the screen has already replaced it, which then waits for its own turn.
+            if (queued == q) queued = null
+            return firstPassOf(q)
         }
+        // A queue that names no pass is dropped, as it always was.
+        queued = null
         val lastOfSection = pass == passes.lastIndex || passes[pass + 1].section != section
         if (loop && lastOfSection) return firstPassOf(section)
         return if (pass < passes.lastIndex) pass + 1 else null
+    }
+
+    /**
+     * The first bar line at or after the read position inside this pass
+     * (the pass's own first frame is not one: it was only just reached),
+     * or the pass's end. A queue tapped exactly on a bar line switches there.
+     */
+    private fun nextBarLine(): Int {
+        val p = passes[pass]
+        return p.barLines.firstOrNull { it > p.start && it >= at && it < p.end } ?: p.end
     }
 
     private fun firstPassOf(section: Int): Int = passes.indexOfFirst { it.section == section }

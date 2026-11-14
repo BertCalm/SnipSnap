@@ -457,7 +457,7 @@ fun KeysScreen(
                 KeysMidi.TARGETS,
                 supported = true,
                 connected = midiDevices.isNotEmpty(),
-                hint = "${KeysMidi.label(volume)} · A LEARNED KEY PLAYS NO NOTE",
+                hint = "${KeysMidi.label(volume)} · ${Copy.LEARNED_KEY_NO_NOTE}",
             )
         }
 

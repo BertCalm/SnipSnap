@@ -42,4 +42,27 @@ class TempestStarterTest {
             assertEquals(kit,KitStore.load(dir))
         } finally { dir.deleteRecursively() }
     }
+    @Test fun `the three genre starters render their candidate kits shelved beside TEMPEST`() {
+        for (genre in TempestGenreKits.Kit.entries) {
+            val dir=kotlin.io.path.createTempDirectory(genre.id).toFile()
+            try {
+                val starter=assertNotNull(StarterKits.byId(genre.id))
+                assertEquals(genre.displayName,starter.displayName)
+                assertFalse(starter.seeded)
+                val kit=starter.render("${genre.displayName} Test",dir)
+                assertNull(kit.key)
+                assertEquals(16,kit.pads.size)
+                assertEquals(TempestGenreKits.patches(genre),kit.pads.map { PadRecipe.fromJsonValue(it.recipe!!).patch })
+                for (pad in kit.pads) {
+                    val p=assertIs<TempestPatch>(PadRecipe.fromJsonValue(pad.recipe!!).patch)
+                    assertEquals(if (p.voice==TempestVoice.HAT) 1 else 0,pad.muteGroup)
+                    assertTrue(pad.oneShot && !pad.loop && pad.velocityLayers.isEmpty())
+                }
+                assertEquals(kit,KitStore.load(dir))
+            } finally { dir.deleteRecursively() }
+        }
+        val skins=StarterShelf.GROUPS.single { it.heading==Copy.STARTER_HEADING_SKINS }.ids
+        val at=skins.indexOf("tempest")
+        assertEquals(listOf("tempest","tempest-circuit","tempest-foundry","tempest-step"),skins.subList(at,at+4))
+    }
 }

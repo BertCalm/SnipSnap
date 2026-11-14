@@ -6,7 +6,6 @@ import com.snipsnap.synth.OvenPresets
 import com.snipsnap.synth.OvenVoice
 import java.io.File
 import java.lang.reflect.Modifier
-import java.util.zip.ZipFile
 import kotlin.io.path.createTempDirectory
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
@@ -63,33 +62,6 @@ class OvenUserPresetsTest {
             }
         } finally {
             shelf.deleteRecursively()
-        }
-    }
-
-    @Test
-    fun `send to bench carries the saved JSON and a pasteable constructor with identical playback`() {
-        val shelf = createTempDirectory("oven-bench").toFile()
-        val restoredShelf = createTempDirectory("oven-bench-restore").toFile()
-        try {
-            val patch = custom(OvenVoice.FORGED)
-            val saved = UserPresets.save(shelf, patch, nowMillis = 20L)
-            val result = BenchExport.pack(shelf, File(shelf, "share"), "2026-10-18 1200")
-            assertEquals(listOf(saved), result.presets)
-            ZipFile(result.file).use { zip ->
-                fun text(name: String) = zip.getInputStream(zip.getEntry(name)).bufferedReader(Charsets.UTF_8).use { it.readText() }
-                val sent = text(BenchExport.PRESETS_NAME)
-                assertEquals(UserPresets.file(shelf).readText(Charsets.UTF_8), sent, "the bench carries the shelf file byte for byte")
-                assertEquals(listOf(saved), UserPresets.merge(restoredShelf, sent, nowMillis = 21L).landed)
-                assertEquals(patch, UserPresets.read(restoredShelf).single().patch)
-                val line = text(BenchExport.MANIFEST_NAME).lineSequence().single { it.trimStart().startsWith("OvenPatch(") }.trim()
-                val promoted = fromRosterLine(line)
-                assertEquals(patch, promoted)
-                assertTrue("OvenPresets.kt\n  $line\n" in text(BenchExport.MANIFEST_NAME))
-                assertContentEquals(patch.render().samples, promoted.render().samples)
-            }
-        } finally {
-            shelf.deleteRecursively()
-            restoredShelf.deleteRecursively()
         }
     }
 

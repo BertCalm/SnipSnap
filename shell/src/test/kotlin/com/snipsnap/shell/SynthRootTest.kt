@@ -22,8 +22,8 @@ import com.snipsnap.synth.Glint
 import com.snipsnap.synth.GlintPatch
 import com.snipsnap.synth.GlintVoice
 import com.snipsnap.synth.GyrePatch
-import com.snipsnap.synth.ScuffPatch
-import com.snipsnap.synth.ScuffVoice
+import com.snipsnap.synth.ClutterPatch
+import com.snipsnap.synth.ClutterVoice
 import com.snipsnap.synth.GyreVoice
 import com.snipsnap.synth.Keys
 import com.snipsnap.synth.MagnetPatch
@@ -92,7 +92,7 @@ class SynthRootTest {
         private val patches: List<Patch> by lazy {
             Presets.all() + listOf(
                 GyrePatch("Door", GyreVoice.FLICK, emptyMap()),
-                ScuffPatch("Door", ScuffVoice.KICK, emptyMap()),
+                ClutterPatch("Bucket", ClutterVoice.BUCKET, emptyMap()),
                 MagnetPatch("Door", MagnetVoice.JANGLE, emptyMap()),
                 SilkPatch("Door", SilkVoice.OUD, emptyMap()),
                 SnapPatch("Door", SnapVoice.ORBIT, emptyMap(), IntArray(Snap.TABLE_SIZE) { (it * 255) / (Snap.TABLE_SIZE - 1) }),
@@ -110,7 +110,7 @@ class SynthRootTest {
         }
 
         /** The engines whose every patch answers null: drums, voice, scale rows, frequency sweeps. */
-        private val ROOTLESS = setOf("RIVET", "THUMP", "SKIN", "ONSET", "TERRA", "VOX", "SILK", "EROSION", "FIRED_BRONZE", "BACKWASH", "SCUFF", "TEMPEST")
+        private val ROOTLESS = setOf("RIVET", "THUMP", "SKIN", "ONSET", "TERRA", "VOX", "SILK", "EROSION", "FIRED_BRONZE", "BACKWASH", "SCUFF", "CLUTTER", "TEMPEST")
 
         private fun cents(hz: Float, midi: Int): Float = 1200f * ln(hz / Keys.midiHz(midi)) / ln(2f)
     }

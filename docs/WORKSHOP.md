@@ -6,11 +6,13 @@
 > ALL and the stars on CHOP, the pad sheet's BENCH box, SEND TO BENCH,
 > SEND HITS TO BENCH and the TEACH THE MACHINE setting. Nothing in the app
 > reaches them now, and a stale `workshop` or `teach` preference is
-> ignored. The JVM-side pipeline stays in `:shell` for now, with its
-> tests (`TeachLog`, `BenchExport`, `CutRatings`, `LabelledHits`,
-> `BenchNotes`, `Workshop`, `ChopReview`); deleting it is a separate
-> cleanup the owner decides. SAVE AS PRESET (WS5) was never behind the
-> workshop and stays. What follows is the original spec, kept as history.
+> ignored. The JVM-side pipeline (`TeachLog`, `BenchExport`, `CutRatings`,
+> `LabelledHits`, `BenchNotes`, `Workshop`, and `ChopReviewModel`'s
+> confirm and harvest) was deleted from `:shell`, with its tests, on the
+> owner's ruling of 2026-11-13 (review Q5). SAVE AS PRESET (WS5) was never
+> behind the workshop and stays; its `presets.json` and `UserPresets` are
+> live. What follows is the original spec, kept as history; the names in
+> it no longer exist in the tree.
 
 *The spec for the admin mode. Status: the door and every tool on the
 list are built — WS1–WS4 inside the workshop (SEND TO BENCH, CONFIRM ALL

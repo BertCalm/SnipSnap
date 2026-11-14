@@ -48,19 +48,19 @@ arrives is captures, labelled by ear.
 
 ## The overrides log
 
-> **No longer in the app (D8, 2026-11).** The workshop, TEACH THE MACHINE and the hand-outs below were removed from the UI; the `:shell` pipeline stays for now (`docs/WORKSHOP.md`). A phone cannot produce these files today, so what follows is the format the harness still reads.
+> **No longer in the app (D8, 2026-11).** The workshop, TEACH THE MACHINE and the hand-outs below were removed from the UI; the `:shell` code that wrote and exported them was deleted (`docs/WORKSHOP.md`). A phone cannot produce these files today, and no harness reads the logs now; what follows is kept as the format's history.
 
 Beside the WAVs, `overrides.jsonl` collects **teach-the-machine** data:
 every chip override in the chop screen, logged as a feature vector plus
 the human's label — never audio, so it's rights-clean by construction.
-The app appends it only behind a consent switch; `TeachLog` (`:shell`)
-is the reader/writer, and `TeachLogTest` scores every logged correction
-against the current rules on each test run.
+The app appended it only behind a consent switch. `TeachLog` (`:shell`),
+its reader/writer, and `TeachLogTest`, which scored every logged
+correction against the current rules, were deleted with the pipeline.
 
 Since CONFIRM ALL (`docs/WORKSHOP.md`, WS2) the same file also holds
 **confirmations** — a chip the human vouched for, written as the same
-line with the label equal to what the machine said — so `TeachLogTest`
-counts the two apart and its agreement line reads as accuracy, not only
+line with the label equal to what the machine said — so the harness
+counted the two apart and its agreement line read as accuracy, not only
 as misses fixed.
 
 ## The cut ratings
@@ -70,8 +70,8 @@ the stars, the CUT bench's settings that made the cuts (mode, HITS,
 EAR, CUT, SNAP), the slice count, how many chops ran before it, how many
 cuts were then moved by hand, how many chips were corrected or
 confirmed, and the source's length and tempo. No audio, no features.
-`CutRatings` (`:shell`) is the reader/writer; `CutRatingsTest` sums the
-file by setting on each test run, best first.
+`CutRatings` (`:shell`) was the reader/writer, and `CutRatingsTest` summed
+the file by setting; both were deleted with the pipeline.
 
 Both get here by **SEND TO BENCH** in the app's WORKSHOP
 (`docs/WORKSHOP.md`: seven taps on SETUP's title open it). The button

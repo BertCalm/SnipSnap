@@ -89,7 +89,7 @@ class AquariumPerformancePanelTest : ComposeScreenTest() {
         compose.onNodeWithTag("performance-revert").assertIsNotEnabled()
         compose.onNodeWithTag("performance-enable").assertIsNotEnabled()
         compose.onNodeWithTag("aquarium-preset-full").assertIsNotEnabled()
-        compose.runOnIdle { busy = false; status = "COULD NOT SAVE PERFORMANCE · TRY AGAIN" }
+        compose.runOnIdle { busy = false; status = "Could not save the performance. Try again." }
         pump()
         assertEquals(draft, current)
         activate("performance-save")

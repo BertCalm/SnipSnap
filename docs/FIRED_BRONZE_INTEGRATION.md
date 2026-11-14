@@ -111,8 +111,8 @@ than 40 dB apart):
 - **Files:** one WAV per pad, sliced, instead of four.
 - **Size:** about three times the audio.
 - **Layer names:** the LIGHT, MEDIUM, FIRM and FULL names belonged to the four files.
-- **MPC export:** MPC 3 carries every layer and strike. MPC 2 plays each layer's first strike only, so it
-  does not pass the round-robin gate.
+- **MPC export:** MPC 3 carries every layer and strike. MPC 2 plays each layer's first strike only: a
+  format limit, recorded as not applicable to the round-robin gate on 2026-11-14 ([ENGINE_ACCEPTANCE_GATES.md](ENGINE_ACCEPTANCE_GATES.md#mpc-2-and-round-robin-owner-decision-2026-11-14)).
 
 **Heard (2026-11-13).** On the published page (repeated hits before and after, and every pad's four
 layers of three strikes) the owner answered:
