@@ -813,6 +813,11 @@ object StarterKits {
             "UK garage TEMPEST kit: short kicks, rim and ghost snares, five choking hats and pitched blips.",
             seeded = false,
         ) { SynthKits.tempestStep() },
+        Starter(
+            "terra", "TERRA",
+            "World percussion kit: udu and cajon bass, djembe, dholak, dumbek and tabla, agogo bells and a balafon key.",
+            seeded = false,
+        ) { com.snipsnap.synth.TerraKits.classic() },
     )
 
     fun byId(id: String): Starter? = ALL.firstOrNull { it.id == id }

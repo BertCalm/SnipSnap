@@ -677,20 +677,21 @@ prototype audition; no Kotlin exists.
 TERRA is a world-percussion drum engine with 13 voices. Four are spec voices, frozen to `LegacyTerraBank`. Nine are newer voices built from the owner's listening rounds of 6–8 Nov.
 - On 2026-11-14 the owner chose to promote it from its factory exemption to a finished engine.
 - See [the promotion note](TERRA_PROMOTION.md), [TERRA BOX](TERRA_BOX.md) and [TERRA HANDS](TERRA_HANDS.md).
-- Its one kit, `TerraKits.classic()`, is not on the shelf yet. Its first full-kit verdict is round `terra-kit-1`.
+- Its one kit, `TerraKits.classic()`, was kept in full by the owner in round `terra-kit-1` (2026-11-14; E1 and E2 KEEP, "Full kit" over the picks-only version) and is now the `terra` starter.
 
 | Gate | Status | Evidence |
 |---|---|---|
 | Melodic voices, keygroups, chord tools | Not applicable | A drum engine. Its pitched voices (agogô, balafon, tabla) are single drum hits, not a keygroup instrument. |
 | Articulation: HOLD, STRUM | Not applicable | Finite hits, no strings. |
 | Percussion: authored roll or riser | Not yet verified | No roll or riser is authored. |
-| Drums: multiple distinct genre kits on the shelf | Fail | One kit exists, it is not on the shelf, and the owner has not yet heard it as a whole. |
+| Drums: premade kit | Pass | The classic 16-pad kit, owner KEEP in full (`terra-kit-1`, 2026-11-14), on the shelf as `terra`. `TerraKitsTest` pins all 16 pads and their softer strikes. |
+| Drums: multiple distinct genre kits on the shelf | Fail | One kit. Genre kits come after presets and the picker. |
 | Velocity: rendering | Pass in software | Every TERRA voice strikes at the velocity: a softer hit is a different strike, not a quieter copy ([STRIKE_VELOCITY](STRIKE_VELOCITY.md), `StrikeVelocityTest`). The classic kit's pads carry two softer strikes each. The owner has never heard soft and medium hits clearly ("Can't tell" twice, [TERRA HANDS](TERRA_HANDS.md)). |
-| Velocity: saving, playback, export | Not yet verified | No TERRA kit is on the shelf to save, play or export. |
+| Velocity: saving, playback, export | Pass in software | The `terra` starter saves each pad's two softer strikes as velocity zones under the hard one, and they survive `KitStore` and MPC 3/MPC 2 export read-back (`TerraStarterTest`, `TerraKitsTest`). Not heard on a phone or MPC. |
 | Round robin | Not yet verified | TERRA can re-strike (`Restrike.canRestrike`, POS moved per take), but no shelf pad deals takes. |
-| Starter kit: saving and export | Not yet verified | `TerraKitsTest` regenerates each pad from its recipe. No starter exists. |
+| Starter kit: saving and export | Pass in software | The `terra` starter: every pad regenerates from its saved recipe, the kit reloads from `KitStore`, and MPC 3 and MPC 2 exports read back clean (`TerraStarterTest`, `TerraKitsTest`). |
 | Presets and picker | Fail | No `TerraPresets.kt` and no SYNTH picker entry. |
 | Hardware playback | Not verified | No phone or MPC run is recorded. |
 
-- **Sound character: the nine newer voices were picked by the owner, as Python prototype clips.** The six classic pads on the four spec voices (A01, A04, A13–A16) were heard only at the strike-velocity gate, and no setting of theirs was picked.
-- **Overall: incomplete.** The finish path is the kit verdict, the starter, presets and the picker, genre kits, then round robin and touch.
+- **Sound character: the whole classic kit is owner KEEP, as the app renders it** (`terra-kit-1`). The nine newer voices were first picked as Python prototype clips. The six spec pads (A01, A04, A13–A16) were kept as part of the full kit, over a picks-only alternative.
+- **Overall: incomplete.** The kit verdict and the starter are done. Next come presets and the picker, then genre kits, then round robin and touch.

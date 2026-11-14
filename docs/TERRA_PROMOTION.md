@@ -44,13 +44,27 @@ Pitches were measured as the strongest spectral peak, from 20 ms into each pad's
 
 **Flagged:** six pads (A01, A04, A13–A16) use the spec voices, whose settings the owner never picked.
 - Nothing in the owner's picks can stand in for an agogô or a balafon, so swapping them would cost the kit its bells and its bar.
-- The round therefore plays them as they are, as clip T4. It also offers a labelled alternative, T3: the same groove with each of the six swapped for a picked pad.
+- The round therefore played them as they are, as clip E4. It also offered a labelled alternative, E3: the same groove with each of the six swapped for a picked pad.
 - None of the six changes without a verdict.
+
+## The owner's verdict (terra-kit-1, 2026-11-14)
+
+| Clip | What it was | Verdict |
+|---|---|---|
+| E1 | The 16 pads in order, one second apart | KEEP |
+| E2 | A four-bar groove on the full kit, 100 BPM | KEEP |
+| E3 | The same groove with the six spec pads swapped for picked pads | TWEAK: "Full kit" |
+| E4 | The six spec pads on their own | TWEAK: "Full kit" |
+
+**The kit is kept in full.** The owner chose the full kit over the picks-only version, which settles the six spec pads: Udu Whoomp, Cajon Low, Agogo Low, Agogo High, Agogo Clack and Balafon Key stay, as heard.
+- Nothing was re-tuned or re-levelled. The six spec pads keep their shorter lengths and their full-scale peaks.
+- `TerraKitsTest` pins the PCM24 SHA-256 of all 16 pads and of their 32 softer strikes. E1 is these 16 pads, one second apart, summed and lowered 0.56 dB as one clip, to within half a 16-bit step at every sample (0.502 at worst, from fitting the gain).
+- The kit is now FRESH TAPE's **TERRA** starter, shelved under SKINS after the TEMPEST kits.
 
 ## Finish path
 
-1. **Kit verdict:** Listening Desk round `terra-kit-1`. This is the first time the owner hears the classic kit as a whole, and in the app's own renders.
-2. **Starter:** on a KEEP, the kit becomes TERRA's first starter on the shelf, with its pads pinned by hash, exact replay from saved recipes and MPC 3/MPC 2 export read-back.
+1. **Kit verdict:** done. Round `terra-kit-1`, KEEP in full (2026-11-14).
+2. **Starter:** done. The `terra` starter, with its pads pinned by hash, exact replay from saved recipes and MPC 3/MPC 2 export read-back.
 3. **Presets:** a factory preset set from the kept pads and the owner's picks.
 4. **Picker:** a SYNTH picker entry for TERRA's voices and presets.
 5. **Genre kits:** more sixteen-pad kits from the kept voices, as TEMPEST did.
