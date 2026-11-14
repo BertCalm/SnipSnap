@@ -49,7 +49,8 @@ Reference-derived tambourine provenance and the CC0 license travel in each ZIP.
 
 ## Acceptance ledger
 
-- Owner-heard: approved Round 5 reference only. Alternate takes await listening.
+- Owner-heard: Round 5 reference and Round 6 four-take audition approved by the owner.
+  This listening approval does not establish hardware/export acceptance.
 - Candidate tests: deterministic/finite PCM, peak/DC limits, unchanged reference,
   unchanged lengths and tails, and velocity energy ordering. Pairwise residuals
   after fitting gain reject gain-only copies.
@@ -84,5 +85,17 @@ peaked at 0.4599. These are numerical checks, not listening approval.
 
 Measured whole-kit builds (16 pads × 12 takes): Close 423 ms, Velour 699 ms,
 Bloom 876 ms in this environment, including source loading. No real-time render
-path is introduced. The full JVM regression run was started separately; its
-pending result is not counted as passing.
+path is introduced. The earlier full JVM run failed on the CAIRN sentence-case check in
+`PersonalityTest`; CI showed the same failure. All synth CI shards, Android
+build and native tests passed. The refreshed base contains the CAIRN fix;
+validation of this merged revision is tracked separately.
+
+## Owner approval
+
+The owner approved the published Round 6 audition after the status check.
+The approved sound is the existing four-take render at source commit
+`c8d5e625a30faba2feab864a5b3af14677062100`, published from Site commit
+`46f51737b3210d956844056945192b600bdb4333`. No DSP constants or PCM change
+in recording this approval. All three treatments and their three velocity
+zones retain the approved first take. Shelf activation remains separate
+because MPC delivery cannot yet preserve the entire velocity/take grid.

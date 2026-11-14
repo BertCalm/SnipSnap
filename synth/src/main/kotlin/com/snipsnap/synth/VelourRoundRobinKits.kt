@@ -7,7 +7,8 @@ import kotlin.math.*
 /** Listening candidates derived from the approved printed hits, not independent recordings.
  * Take one is untouched. Alternate contact envelopes and spectral balances keep the pitch
  * and timing fixed. Changes fade out over the first 240 ms so late board echoes remain intact.
- * This is opt-in until listening approval; it does not replace the approved factory shelf.
+ * Round 6 has owner listening approval. This remains opt-in while MPC grid export
+ * validation is open; it does not replace the existing factory shelf.
  */
 object VelourRoundRobinKits {
     const val VERSION = 1
@@ -22,7 +23,7 @@ object VelourRoundRobinKits {
                 velocityTakes = grid, source = pad.source + mapOf(
                     "roundRobin" to "4 sample-derived candidates per velocity",
                     "roundRobinVersion" to VERSION.toString(),
-                    "approval" to "round5 take 1 approved; alternate takes await listening"))
+                    "approval" to "round6 four-take audition owner-approved"))
         }
 
     internal fun variation(original: Snip, take: Int): Snip {

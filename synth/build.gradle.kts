@@ -3814,3 +3814,12 @@ tasks.register<JavaExec>("generateVelourRoundRobin") {
     maxHeapSize = "1g"
     args(providers.gradleProperty("velourRoundRobinOutput").orNull ?: "testkit/velour-round-robin")
 }
+
+tasks.register<JavaExec>("generateEtchAudition") {
+    group = "distribution"
+    description = "Render ETCH's round-K2 Kotlin clips (the one-shot ending study, a pad riff, the presets) under testkit/etch-audition/k2/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.EtchAuditionGenerator")
+    workingDir = rootDir
+    args(providers.gradleProperty("etchOutput").orNull ?: "${rootDir}/testkit/etch-audition/k2")
+}
