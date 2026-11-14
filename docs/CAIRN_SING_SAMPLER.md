@@ -7,9 +7,10 @@ and 100 at C4 only. These are five settings of one voice, not five new voices
 or a finished CAIRN factory bank. `Cairn.kt`, `CairnPatch.kt`, `CairnSing.kt`
 and `CairnTumble.kt` are unchanged, so every saved model keeps its sound.
 
-The app does not offer these studies yet. The backup's phone picker needs the
-nine native Float captures as Android assets, and this repository does not
-carry them (see [What was left out](#what-was-left-out)).
+The phone offers them under MAKE › INSTRUMENTS › CAIRN SING. The nine native
+Float captures are not shipped: the phone renders each one the first time a
+study needs it and keeps it only if it matches its pinned SHA-256 (see
+[Rendering the captures on the phone](#rendering-the-captures-on-the-phone)).
 
 ## What is in the repository
 
@@ -36,7 +37,37 @@ carry them (see [What was left out](#what-was-left-out)).
   descriptor-last admission. It never replaces an existing instrument.
 - `CairnSingInstrumentPicker` (shell) maps the five choice IDs to fresh
   instrument names. It takes the capture loader as an argument, so the caller
-  owns asset access, and checks cancellation before and during admission.
+  owns capture access, and checks cancellation before and during admission.
+- `CairnSingRenderedCaptures` (shell) is that loader on the phone. It renders
+  each capture natively, checks it against its pin, and caches it (see below).
+  The nine `.full.json` metadata files ship next to it as shell resources
+  (`shell/src/main/resources/cairn-retained-sing/`).
+
+## Rendering the captures on the phone
+
+The owner chose this route on 2026-11-14, so the 6.3 MB of Float captures stay
+out of the public repository.
+
+1. MAKE › INSTRUMENTS › CAIRN SING ▾ lists the five studies. Choosing one runs
+   off the UI thread as a cancellable busy job ("MAKING CAIRN SING").
+2. For each of the study's one or three sources, `CairnSingRenderedCaptures`
+   looks in the app's cache (`cacheDir/cairn-sing-captures/`). It uses a cached
+   capture only if it is exactly 705,600 bytes and its SHA-256 matches the pin.
+3. A capture that is missing, damaged or truncated is rendered through
+   `CairnAcceptedSingContext.prepare`, which already refuses a render whose
+   PCM24 anchors differ. Its little-endian Float bytes must then match the
+   Float pin before they are written (atomically) to the cache. The busy job
+   counts the renders.
+4. Any mismatch raises `CairnSingRenderedCaptures.Mismatch`. Nothing is cached,
+   a damaged cached copy is removed, no instrument is made, and the phone says
+   "CAIRN SING didn't match its kept recording on this phone, so nothing was
+   made."
+5. `CairnSingInstrumentMaker.readCaptures` then reads every pair again with its
+   own Float, metadata and PCM24 checks. The rendered path cannot admit
+   anything the shipped-asset path would have refused.
+
+If the phone's cache is cleared, the next study simply renders again. On this
+JVM all nine renders take about 2.5 s together; a phone is slower.
 
 ## Tests
 
@@ -52,9 +83,33 @@ The test covers the five-program catalogue, bounded C3–C5 and C4 coverage,
 refusal of unknown, truncated or substituted captures, the untouched loop body,
 all five packages with their recipes and mapping, chords inside the captured
 range, staged-byte tampering and rollback after an interrupted move.
-`CairnSingInstrumentPickerTest` keeps the two checks that need no capture:
-an unknown or cancelled choice opens nothing, and a broken loader leaves no
-instrument behind.
+`CairnSingRenderedCapturesTest` (7 tests) checks the phone's loader on the
+JVM:
+
+- all nine native renders match their Float pins;
+- a corrupted render (silence, one flipped low bit, or the wrong length) is
+  refused and never cached;
+- a damaged or truncated cached capture is rendered again, and one that cannot
+  be repaired is removed;
+- a good cache is used without rendering;
+- cancellation stops between renders;
+- a refused render never reaches the shelf;
+- every metadata resource ships with the shell.
+
+`CairnSingInstrumentPickerTest` (5 tests) admits real instruments from those
+rendered captures: all five choices with their bounded ranges, repeated
+choices beside an orphan descriptor, and rollback after cancelled admission.
+It also keeps the earlier checks that an unknown or cancelled choice opens
+nothing and a broken loader leaves no instrument.
+
+Two androidTests cover the phone:
+
+- `CairnSingStudyPickerTest` checks that the INSTRUMENTS bench offers all five
+  studies and dispatches their IDs, and offers none while busy.
+- `CairnSingRenderOnDeviceTest` renders all nine captures on the device,
+  checks each against its pin, and admits MOVING from the rendered cache.
+  This is the check that the phone's own floating-point maths reproduces the
+  accepted captures.
 
 ```sh
 ./gradlew --no-daemon :shell:test --tests '*CairnSing*'
@@ -66,25 +121,15 @@ The backup carried 19 retained files under `app/src/main/assets/cairn-retained-s
 nine native Float captures (`before-48`, `before-60`, `before-72`, `after-48`,
 `after-60`, `after-72`, `groove-0`, `groove-50` and `groove-100`, each
 `.full.f32le`, 705,600 bytes), their nine `.full.json` metadata files and a
-`manifest.json`. The nine Float captures are binary audio and stay out of this
-public repository until the owner decides where they live. The nine metadata
-files are here as test resources under `shell/src/test/resources/cairn-retained-sing/`.
-Everything that needs the Float captures stayed out too:
+`manifest.json`. The nine Float captures stay out of this public repository;
+the phone renders them instead. The metadata files ship as shell resources.
+Still left out:
 
-- `CairnSingAssetProvider` and the `CairnSingStudyPicker` composable, with the
-  `App.kt` and `MakeScreen.kt` hooks that open MAKE → INSTRUMENTS → CAIRN SING.
-  Without the assets every choice would fail.
-- `CairnSingStudyPickerTest` (androidTest).
-- `CairnSingCaptureInputsTest`. Eight of its nine checks read the shipped Float
-  captures, and the ninth only guards that same stream path.
-- Three `CairnSingInstrumentPickerTest` checks that admit real instruments from
-  the shipped captures: all five choices, repeated choices beside an orphan
-  descriptor, and cancelled admission.
-- Shell's `processTestResources` step, which copied the app asset bank into
+- the asset `manifest.json` and the backup's `CairnSingAssetProvider`, which
+  read the shipped captures; `CairnSingRenderedCaptures` replaces it;
+- `CairnSingCaptureInputsTest`, whose checks read the shipped Float captures;
+- shell's `processTestResources` step, which copied the app asset bank into
   the test resources.
-
-Once the owner settles where the captures live, these pieces can come back
-unchanged.
 
 ## Owner listening
 
@@ -98,6 +143,6 @@ MPC playback.
 
 ## Open gates
 
-Android playback, MPC hardware loading, native velocity layers, round robin
-and the remaining CAIRN voices are open. See the
+Playing the studies on a physical phone, MPC hardware loading, native velocity
+layers, round robin and the remaining CAIRN voices are open. See the
 CAIRN section of [the acceptance gates](ENGINE_ACCEPTANCE_GATES.md).

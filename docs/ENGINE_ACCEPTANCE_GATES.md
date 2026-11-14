@@ -18,6 +18,14 @@ Velocity evidence must distinguish changes in recorded or synthesized strike cha
 
 Genre kits must be authored musical choices with distinct roles, balance and character; different effect strengths on the same kit are not sufficient evidence of distinct genre kits.
 
+## MPC 2 and round robin (owner decision, 2026-11-14)
+
+- **Decision:** the round-robin export gate does not apply to MPC 2 for a pad that has both velocity layers and round robin. The owner recorded this on 2026-11-14 as a format limit. MPC 3 native (`.xtd`) is the export that gate is judged on.
+- **Why the format can't hold it:** an MPC 2 drum pad picks its layers one way only. Akai's MPC Software 2.7 user guide lists Layer Play as Cycle ("1, 2, 3, 4, 1, 2, 3, 4…"), Velocity or Random. Cycle takes no account of how hard the pad is hit, and Simultaneous Play fires its linked pads at every velocity. So no arrangement of pads and layers both switches by velocity and deals takes. The harvested MPC 2 kits in `reference/golden/drum/` agree: their cycling pads carry only full-range layers.
+- **What an MPC 2 export keeps:** a velocity × round-robin pad goes out as its velocity layers, each its zone's first take. A pad with round robin and no velocity layers still cycles up to four takes as `_RR` files. When a kit has such pads, the export screen says so under the format before anything is written (`Mpc2Limits`, `Mpc2LimitsTest`).
+- **Nothing else changes.** MPC 2's velocity layers are still checked, and every other format's export evidence stands as recorded.
+- **MPC 3 on an MPC is still open.** The MPC 3 read-back checks the metadata we write. An MPC finds each take in a chain WAV from a slice map stored inside the WAV, and that layout has never been captured (`docs/FEATURE_PLAN.md`, HH1.4). Until it is, an MPC most likely plays each zone's first take from the MPC 3 export too. The owner parked the capture on 2026-11-14. Every "no MPC has loaded the kit" below still stands.
+
 ## BACKWASH acoustic integration (updated 2026-11-10)
 
 - Melodic/keygroup/chord-tool gate: not applicable to this drum engine.
@@ -25,7 +33,7 @@ Genre kits must be authored musical choices with distinct roles, balance and cha
 - Drum shelf: BACKWASH SOUL and BACKWASH PSYCH are authored 16-pad kits. They differ in tuning, damping, backbeat roles and percussion arrangement as well as effects. The owner approved the published sound direction on 2026-11-10.
 - Velocity/round robin: model 5 selects recorded dynamic groups and native alternate strikes. Cross-stick groups four adjacent velocity recordings into each of four groups (not dedicated recorded round robins); cowbell has 3 × 7, ride bell 3 × 3, tambourine 2 × 2. Procedural core drums retain generated variations.
 - Automated integration evidence is produced by `:shell:generateBackwashAcousticKits`: PCM replay from persisted recipes, save/load of all 32 grids, offline playback cycling, MPC 3 cycle metadata and MPC 2 read-back. SFZ and DecentSampler exports are also generated.
-- **Overall gate remains incomplete:** Android/MPC hardware playback has not been exercised. MPC 2 exports only the first take of each velocity zone and therefore does not pass the round-robin export gate. The repository emulator suite passes on the integrated build; this does not establish physical phone audio behavior or MPC playback.
+- **Overall gate remains incomplete:** Android/MPC hardware playback has not been exercised. MPC 2 exports keep the first take of each velocity zone; the round-robin export gate does not apply there ([format limit](#mpc-2-and-round-robin-owner-decision-2026-11-14)). The repository emulator suite passes on the integrated build; this does not establish physical phone audio behavior or MPC playback.
 - Sound character: approved direction. On 2026-11-10 the owner responded to the published acoustic integration, “Sounds good, proceed.” Preserve this sound as the accepted baseline; this is not evidence of a physical MPC audition.
 - Repository regression checks: **pass at `4cfe915f6bb84e1b755614277989b1001cb5521a`**, which contains merged BACKWASH PR #1009. All JVM shards, Android build and native tests passed in [CI run 42700786733](https://github.com/BertCalm/SnipSnap/actions/runs/42700786733); the full emulator suite passed in [run 42700786974](https://github.com/BertCalm/SnipSnap/actions/runs/42700786974). These are specific-commit results, not a claim about later unrelated changes.
 
@@ -117,18 +125,18 @@ presence do not close the outstanding gates above.
     - The tambourine at 3 × 3 measured as copies, and as one zone that was another turned down. It is fixed by giving it exactly its recordings.
   - **Saving: verified.** The kit reloads equal and regenerates from its saved recipes byte for byte.
   - **Playback: verified in software.** `PadHit.resolve` picks the zone by velocity and deals each zone's takes in order, then repeats them. The preview mixer cycles them too. No phone has played the kit.
-  - **Export: MPC 3 verified by read-back.** The velocity ranges, slice anchors, cycle lengths and slice windows match, and the exported samples are the saved ones. **MPC 2 does not pass:** it plays each zone's first take. No MPC has loaded the kit.
+  - **Export: MPC 3 verified by read-back.** The velocity ranges, slice anchors, cycle lengths and slice windows match, and the exported samples are the saved ones. **MPC 2: not applicable** ([format limit](#mpc-2-and-round-robin-owner-decision-2026-11-14)): it plays each zone's first take. No MPC has loaded the kit.
   - **Sound character:** the drums, cymbals and riser are each accepted by ear. On 2026-11-12 the owner heard the kit as mid heavy. They picked model 4's open rig by ear, with DUST's filter opened and no amp speaker, and heard their snare, hat and kick through it as "better". On the open tone the owner accepted the kit (2026-11-12): the balance "sounds right now", all three pushed pads kept, the kick's takes "one kick played again: fine", and every pad softer in character with a fresh hit each time.
 - **The genre kits (2026-11-13): velocity and round robin through rendering, saving, playback and MPC 3 export, verified in software** (`BreakerKitTest`, the same checks as the BREAKER kit, run on all three kits).
   - **Rendering:** every pad is dealt by the shared robin from its recipe, 3 zones × 3 re-struck takes (2 × 2 on the tambourine). No two takes are copies: the closest pair is the Steppers Kick's, 37.7 dB apart. No soft zone is the hard one turned down: the least change is the Steppers Kick's, 0.5 dB.
   - **Model 6:** a later kick or tom take lands with another beater. Without it, the round robin's start trim could cut a kick's click and leave two takes as copies (the Steppers Kick, 42.4 dB). `BreakerTest` checks every genre-kit kick and tom with the click cut. The BREAKER kit stays on model 5.
   - **Saving: verified.** Each kit reloads equal.
   - **Playback: verified in software.** No phone has played them.
-  - **Export: MPC 3 verified by read-back.** MPC 2 does not pass, as for the BREAKER kit. No MPC has loaded them.
+  - **Export: MPC 3 verified by read-back.** MPC 2 is not applicable, as for the BREAKER kit. No MPC has loaded them.
   - **Sound character, heard 2026-11-13:** the kicks hit again ("one kick played again: fine"), the High Timbale at about three semitones up (high enough, where the layout asked five), and every pad soft to hard were accepted. Both grooves were heard as too wet, and the owner picked how much echo and spring each keeps from four versions. The kits are built from the picks; only Trip hop's Second Kick keeps its touch of spring, since at a quarter its takes measured as near-copies.
   - **Decided by the owner (2026-11-13):** the shared robin's start trim, which can cut a synth strike's click on any re-struck kit, stays as it is (docs/BREAKER.md, "Model 6").
 - **The final audition (2026-11-13):** `:shell:generateBreakerAudition` renders every voice, soft to hard, every control swept, corners, edges, presets and the three kits' grooves (68 clips). Every edge render is finite and within full scale. **Sound character: signed off.** On 2026-11-13 the owner answered the published page ([BREAKER audition](https://claude.ai/artifact/TyimBbsBAwNeVRzxsSx3En)): every voice as it ships is BREAKER, every control does what its name says all the way along, nothing breaks at the edges, all the presets stay, and the shelf of three kits is right. Preserve renderer model 6 (the BREAKER kit on model 5) as the accepted baseline. This is not evidence of a phone or MPC audition.
-- **Overall: incomplete.** The sound is signed off and the three kits are on the shelf. MPC 2 round robin and hardware playback are open, and the surf tom fill is not built.
+- **Overall: incomplete.** The sound is signed off and the three kits are on the shelf. Hardware playback is open, and the surf tom fill is not built.
 
 ## FIRED BRONZE (approved on MPC 2026-11-08; round robin heard and accepted 2026-11-13; hardware open)
 
@@ -141,14 +149,14 @@ Skin, clay and bronze through a driven processor and amp. See [FIRED BRONZE inte
   - **Round robin: verified in software on model 2, heard and accepted (2026-11-13).** Until then each layer was one strike, so a repeated hit played one sample. Each pad is now a chain of its four layers, three fresh strikes each. The closest two strikes are the gong's, 28.9 dB apart (a copy is more than 40), and every layer's first strike is the approved layer, sample for sample. Model-1 saves keep their one strike, and the model-1 kit still renders all 64 approved files to their pinned hashes.
   - **Saving: verified.** The kit reloads equal, and an edit regenerates the whole grid and replays to the same bytes (`FiredBronzeStarterTest`).
   - **Playback: verified in software.** `PadHit.resolve` deals each layer's strikes in turn and repeats them, and the preview mixer cycles them too. No phone has played the new kit.
-  - **Export: MPC 3 verified by read-back.** **MPC 2 does not pass:** it plays each layer's first strike. No MPC has loaded the new kit.
+  - **Export: MPC 3 verified by read-back.** **MPC 2: not applicable** ([format limit](#mpc-2-and-round-robin-owner-decision-2026-11-14)): it plays each layer's first strike. No MPC has loaded the new kit.
 - **Sound character:** the approved kit is accepted on MPC ("Good on MPC, we can proceed", 2026-11-08). On 2026-11-13 the owner heard the round robin and accepted it:
   - **Repeated hits:** "Yes, fresh strikes".
   - **Every pad's three strikes:** the same instrument hit again ("Yes").
   - **The Moving Bass's varying press:** "Natural".
   - **The kettles' and gong's new balance per strike:** "Natural".
   This is a listen to app renders, not evidence of a phone or MPC audition.
-- **Overall: incomplete.** Velocity and round robin are verified in software and accepted by ear. MPC 2 round robin and phone and MPC playback of the new kit are open.
+- **Overall: incomplete.** Velocity and round robin are verified in software and accepted by ear. Phone and MPC playback of the new kit are open.
 
 ## GATECRASH kits (sound approved 2026-11-11, hardware open)
 
@@ -161,26 +169,48 @@ A kit family of three 1980s gated drum kits: Stone Room, Machine Pop and Electro
   - **Rendering: verified.** Three zones of four takes per pad. The closest pair of takes is the stone kick's at the soft zone (41 dB apart), which is weak. All 42 hits measure duller at the soft zone, and the toms at least 1.5 dB drier for their level, so a zone is not a volume change. Every take differs from the others in its zone. SKIN's kick, snare and toms are fresh strikes. THUMP, ONSET and SKIN's hats and shaker cannot be re-struck from outside, so their takes are small control moves on the same noise. That is weaker than a re-strike and is disclosed.
   - **Saving: verified.** A saved kit reloads equal, and all 576 saved slices match their renders (`:shell:generateGatecrashKits`, `GatecrashKitTest`).
   - **Playback: verified in software.** `PadHit.resolve`, the resolver the app's pad engine calls, picks the zone by velocity and deals the four takes in order, then repeats. No phone has played these kits.
-  - **Export: verified for MPC 3 by read-back.** The exported track's velocity ranges, base slices, cycle lengths and frame windows match, and the exported slices match their renders. **MPC 2 does not pass:** its projection keeps only the first take of each zone. SFZ and DecentSampler exports were not generated. No MPC has loaded these kits.
+  - **Export: verified for MPC 3 by read-back.** The exported track's velocity ranges, base slices, cycle lengths and frame windows match, and the exported slices match their renders. **MPC 2: not applicable** ([format limit](#mpc-2-and-round-robin-owner-decision-2026-11-14)): its projection keeps only the first take of each zone. SFZ and DecentSampler exports were not generated. No MPC has loaded these kits.
 - **Sound character: approved at round 4.** On 2026-11-11 the owner heard round 4 on the published listening page and said, "Everything sounds good". Preserve round 4 (`GatecrashKits.VERSION` 4) as the accepted baseline. This is not evidence of a phone or MPC audition. The path there: round 1 rejected ("harsh", "more like loud static"; its rooms carried 14 to 20 dB more energy than the drums), round 2 corrected ("80s drums round off at the end rather than cut abruptly"), round 3 corrected ("we are missing some brightness").
-- **Overall: incomplete.** The software evidence is in place and the sound is approved. Phone playback and MPC hardware playback remain open, and MPC 2 does not pass the round-robin export gate.
+- **Overall: incomplete.** The software evidence is in place and the sound is approved. Phone playback and MPC hardware playback remain open.
 
-## ETCH (round 1, 2026-11-11)
+## ETCH (rounds 1 to K2, 2026-11-11 to 2026-11-14)
 
 A step-line bass with a drive stage and a tempo delay into a reverb. See [ETCH](ETCH.md).
-Rounds 1 to 3 were a Python audition, accepted 2026-11-12. Kotlin round K1 (2026-11-13) ports it as a prototype (`PatchTypes.PROTOTYPES`) with provisional `EtchPresets`.
+Rounds 1 to 3 were a Python audition, accepted 2026-11-12. Kotlin round K1 (2026-11-13) ported it; round K2
+(2026-11-14) put it on the roster, in the picker and on the shelf, with keys.
 
-- **Melodic:** open. The owner chose the six voices on 2026-11-12: SAW, SQUARE, RUBBER, WHISTLE, GRIT and DUB. All six are built in Python (round 2) and in Kotlin (K1), each with its own mechanism; every pair is at least 3.7 dB apart by third-octave spectrum, and each new voice at least 5.4 dB. RUBBER, WHISTLE, GRIT and DUB are not heard. Provisional presets only (each voice's note and line); no factory roster, keygroups or kit yet. Chord-tool compatibility is the owner's call, because the line voice is monophonic by design.
-- **Articulation:** HOLD built in part: under .85 it sets the note's gate (TONAL), from .85 it plays the line as a seamless LOOP (`Keys.requireSeam` on every render). The sustained keygroup loop is not built. STRUM not applicable: not a picked or thumbed string.
+- **Melodic:**
+  - **Six voices: pass.** SAW, SQUARE, RUBBER, WHISTLE, GRIT and DUB, chosen by the owner 2026-11-12 and heard in
+    rounds 2 and 3, each its own mechanism; every pair at least 3.7 dB apart by third-octave spectrum.
+  - **Presets: pass.** Fourteen factory presets (each voice's note and line, SAW's busy line, SQUARE's sparse
+    line), every one a setting heard in round 3. The Kotlin renders of them are on the K2 page, not yet heard.
+  - **Playable keygroups: built, not verified on a phone.** MAKE INSTRUMENT renders finite keys C1 to C4 with
+    three touch layers (`EtchPadMaker`, `EtchKeygroupMaker`); lines are not offered as keys.
+  - **Premade kit: built, not heard.** FRESH TAPE → ETCH under BASS: a SAW walk, five voices' notes and three
+    lines at 130 BPM.
+  - **Chord tool: open, the owner's call.** The keys are polyphonic, but the chord tool voices around G3 to F#4,
+    above ETCH's C4 ceiling, and the line voice is monophonic by design.
+- **Articulation:** HOLD under .85 sets the note's gate (TONAL); from .85 the voice plays its line as a seamless
+  LOOP (`Keys.requireSeam` on every render). A sustained keygroup loop is not built: the keys are finite notes.
+  STRUM not applicable: not a picked or thumbed string.
 - **Percussion and drum kits:** not applicable. A bass engine.
 - **Velocity and round robin:**
-  - **Rendering: Python harness only.** Velocity changes the tone on all six voices, not only the level: level-matched attack centroid rises from soft to hard hits on every voice (GRIT 876 → 1,102 Hz, the smallest; WHISTLE 622 → 1,734 Hz, the largest). Round robin **failed by ear** on 2026-11-12: the owner heard the four takes as the same strike (they measured 0.5 to 0.8 dB apart by take distance). Rebuilt with five audible dimensions dealt out so no two takes share a setting: after the round-3 tone the closest two takes are 1.8 to 3.1 dB apart at velocity 0.6, and no pair exceeds a 0.6 to 0.8 velocity step. Accepted by ear with the round-3 audition on 2026-11-12, in Python rendering only.
-  - **Rendering in Kotlin (K1): verified.** Velocity changes the tone on all six voices (`EtchTest`; Kotlin within 2 Hz of the accepted Python on every voice). Four takes are distinct strikes reachable through `Restrike.take`, deterministic in (patch, velocity, seed, take); take 0 is the plain render.
-  - **Saving: partly verified.** The patch round-trips through JSON with its note, velocity and model; a saved kit is not tested (no kit yet).
-  - **Playback and export:** not yet verified (no kit; `Robin`'s round-robin path accepts ETCH through `Restrike.canRestrike`, but no ETCH chain has been played or exported).
-- **Sound character: direction accepted at round 1b.** On 2026-11-12 the owner heard the corrected square ("That's better") and then the whole round-1b audition: "It all seems fine from the audition." Preserve round 1b as the baseline. This is a listen to Python renders, not evidence of Kotlin, phone or MPC playback. After round 2 the owner heard the engine as "a bit mid heavy, like dollar store headphones"; round 3 restores the top end (line B 8 kHz from -30.4 to -18.6 dB against the 500 Hz band; reference B -16.0). The owner then accepted the round-3 audition: "I'm good with evening in audition" (read as "everything"). Preserve round 3 as the baseline; this is a listen to Python renders, not evidence of Kotlin, phone or MPC playback.
-- **Overall: incomplete.** The sound direction is accepted; the six voices, presets, keygroups, kit, HOLD and every saving, playback and export stage remain open, and no Kotlin exists.
-
+  - **Rendering: pass.** Velocity changes the tone on all six voices (Kotlin within 2 Hz of the accepted Python
+    attack centroids). Four takes are distinct strikes through `Restrike.take`; the owner accepted the rebuilt
+    takes by ear in round 3 (Python renders).
+  - **Saving: pass in software.** The patch round-trips with its note, velocity and model; a kit pad's 3 × 4 grid
+    survives saving and reloading (`EtchKitTest`, `TriadKitProof`).
+  - **Playback: pass in software, phone not exercised.** The app's pad resolver picks the zone by velocity and
+    walks the four takes in order (`EtchKitTest`); harder zones are brighter strikes, not only louder.
+  - **Export: MPC 3 metadata pass in software; MPC hardware open.** The MPC 3 export's zones and cycles read back
+    (`TriadKitProof.verifyTrack`). MPC 2 keeps each zone's first take (the owner's format limit, 2026-11-14).
+  - **Not covered:** loop pads have velocity zones and no takes; keys have touch layers and no takes.
+- **Sound character: direction accepted at round 3** ("I'm good with evening in audition", read as "everything").
+  Short, low notes read as KICK or TOM to the classifier (122 of 756 one-shots). The owner heard three endings on
+  the K2 page and chose C for every voice (2026-11-14): model 2 rings one-shots out, leaving 4 of 756 (RUBBER's
+  shortest C1 notes). Model-1 recipes keep the accepted ending.
+- **Overall: incomplete.** Open: a listen to the Kotlin presets and kit at model 2, the chord tool,
+  phone playback of keys and kit, and an MPC.
 ## CYPHER kits and THUMP SUB (round 2, 2026-11-12)
 
 Hip-hop drum kits in the GATECRASH shape, six built: TRAP, DRILL, BACKROOM, LOWRIDER, DUST, FLINT. See [CYPHER](CYPHER.md). The owner heard round 1 ("The triple snare thing is messy"), then round 1b ("Ok, sounds good. Make sure we clear the approval gates"), which approved TRAP and DRILL, then round 2 ("All four pass"), which approved BACKROOM, LOWRIDER, DUST and FLINT. Evidence at kit version 3, `CypherTest`, `CypherKitTest`, `ThumpSubTest`, `ThumpSubRobinTest` and `:shell:generateCypherKits`.
@@ -195,13 +225,13 @@ Hip-hop drum kits in the GATECRASH shape, six built: TRAP, DRILL, BACKROOM, LOWR
 | Round robin: rendering | Pass | Four different takes in every zone of every pad; SUB deals five dimensions out and keeps its root within 10 cents; SKIN drums on the new kits re-strike with a force spread and a small decay and contact move. |
 | Velocity and round robin: saving | Pass | Each kit reloads equal and all 1152 saved slices match their renders. A lone SUB pad's chain and recipe survive a save and regenerate the drum (`ThumpSubRobinTest`). |
 | Velocity and round robin: playback | Pass in software | `PadHit.resolve` picks the zone by velocity and deals the takes in order, then repeats; chokes survive. No phone has played these kits. |
-| Velocity and round robin: export | Pass for MPC 3, SFZ and DecentSampler; **fail for MPC 2** | MPC 3 read back: velocity ranges, base slices, cycle lengths, frame windows and slices match. SFZ and DecentSampler written by the generator, both cycling takes. MPC 2 keeps only each zone's first take: a format limit, stated. |
+| Velocity and round robin: export | Pass for MPC 3, SFZ and DecentSampler; **MPC 2 not applicable** ([format limit](#mpc-2-and-round-robin-owner-decision-2026-11-14)) | MPC 3 read back: velocity ranges, base slices, cycle lengths, frame windows and slices match. SFZ and DecentSampler written by the generator, both cycling takes. MPC 2 keeps only each zone's first take: a format limit, stated. |
 | Hardware playback (phone, MPC) | Not verified | Only the owner's devices can close this. |
 | Sound character | Approved, all six kits | Round 1b approved TRAP and DRILL and round 2 approved the rest, both 2026-11-12, both from the listening page. Preserve kit version 3 as the accepted baseline. BACKROOM opens with the six accepted Backroom pads byte for byte through their rack (`CypherTest`). |
 | SUB presets | Pass | Eight factory presets, the sub recipes of the approved TRAP and DRILL (`ThumpPresets`); none authored blind. |
 
 - **THUMP SUB as a voice:** six macros, velocity and takes through `Thump.render`, `Velocity` and `Restrike`. The classifier reads a long sub as TONAL; the default reads KICK; no setting makes a LOOP (`ThumpSubTest`). Round 2 made its length its DECAY alone (velocity moves drive, click and settle), so the robin's windows never change with the touch.
-- **Overall:** every software gate passes and all six kits are approved by ear; phone and MPC playback wait for the owner's devices; MPC 2 cannot carry the round robin.
+- **Overall:** every software gate passes and all six kits are approved by ear; phone and MPC playback wait for the owner's devices; MPC 2 cannot carry the round robin, a format limit the owner recorded on 2026-11-14.
 
 ## SCUFF (rounds 0 and 0b, 2026-11-12; round 1 Kotlin, round 2 and 3 kits, heard, round 4 roster, 2026-11-13; round 5 picker, 2026-11-14)
 
@@ -216,7 +246,7 @@ Rounds 0 and 0b are Python prototype auditions; no Kotlin exists. Round 0b answe
   - **Rendering: verified in Kotlin by test (round 1).** `ScuffTest` holds that a soft and a hard hit differ in spectral shape at matched level on every core voice, that the kick clicks and drops harder and the clap loses a tap, and that four takes per voice are distinct strikes that each replay byte for byte. Python, re-measured with the corrected distance: soft against hard 2.8 to 9.7 dB; closest takes 1.9 (tick) to 4.6 dB (clap).
   - **Saving: verified (round 2).** A SCUFF patch saves velocity, take and model version and replays byte for byte through JSON (`DeterminismTest`). The kit reloads equal and all 192 saved slices match their renders through the pad resolver (`ScuffKitTest`, `:shell:generateScuffKits`).
   - **Playback: verified in software.** `PadHit.resolve` picks the zone by velocity and deals the four takes in order, then repeats. No phone has played the kit.
-  - **Export: MPC 3 verified by read-back.** Velocity ranges, base slices, cycle lengths and frame windows match, and the exported PCM matches the renders. **MPC 2 does not pass:** it keeps one take per zone. No MPC has loaded the kit.
+  - **Export: MPC 3 verified by read-back.** Velocity ranges, base slices, cycle lengths and frame windows match, and the exported PCM matches the renders. **MPC 2: not applicable** ([format limit](#mpc-2-and-round-robin-owner-decision-2026-11-14)): it keeps one take per zone. No MPC has loaded the kit.
 - **Sound character:** direction accepted. On 2026-11-12 the owner responded to the published round-0b audition, "Sounds good, please merge." Preserve round 0b as the accepted baseline; this is a listen to Python renders. The round-1 Kotlin port measures as the same waveform on the five deterministic voices (0.05 to 0.17 dB, correlation 0.997 to 1.000) and as another take on the four noise voices. On 2026-11-13, after the round-3 merge, the owner heard the page's version 5 (every pad of both kits cut from the exported MPC 3 tracks, the velocity strips, the phrases and the round-1 Kotlin section) and said, "Audition is all good." Preserve `Scuff.MODEL_VERSION` 1 and `ScuffKits.VERSION` 1 as the accepted baseline. This is a listen to the page, not evidence of a phone or MPC audition.
 - **Presets and the roster: pass (round 4).** `ScuffPresets` files the two accepted kits' twenty-eight hits as the factory bank (every voice at least twice, named after the kit), served by `Presets`; SCUFF is off `PatchTypes.ROSTERLESS`. Each preset is a pad the owner heard, through the engine's own finish (`ScuffPresetsTest` holds the shape to the kit's pad above .995 correlation). A player's saved SCUFF strike promotes with its velocity, take and model through `ScuffPatch.fromJsonText`.
 - **Classifier:** the Kotlin kick reads PERC (its click and knock lift the 93 ms centroid past the sub-kick rule) and the crushed hat reads SNARE; `drumClassFor` files them KICK and HAT_CLOSED. Disclosed in [SCUFF](SCUFF.md), held by `ScuffTest`.
@@ -245,8 +275,8 @@ A kit family of three 1970s disco kits: Philly Strings, Loft Party and Munich Ma
   - **Playback: verified in software.** `PadHit.resolve` picks the zone by velocity and deals the four takes in
     order, then repeats. No phone has played these kits.
   - **Export: verified for MPC 3 by read-back.** Velocity ranges, base slices, cycle lengths and frame windows
-    match, and the exported slices match their renders. **MPC 2 does not pass:** its projection keeps only the
-    first take of each zone. **SFZ: waived by the owner** (2026-11-12: "I'm good with skipping sfz").
+    match, and the exported slices match their renders. **MPC 2: not applicable** ([format limit](#mpc-2-and-round-robin-owner-decision-2026-11-14)): its projection
+    keeps only the first take of each zone. **SFZ: waived by the owner** (2026-11-12: "I'm good with skipping sfz").
     **DecentSampler: waived by the owner** (2026-11-12: "Ok, Skip"). No MPC has loaded these kits.
 - **Sound character: approved at round 2.** On 2026-11-12 the owner heard round 2 as "Much better" and chose to lock it in. Preserve round 2 (`MirrorballKits.VERSION` 3) as the accepted baseline. This is not evidence of a phone or MPC audition. The rounds so far:
   - Round 0: heard as "kind of basic and not very punchy or character rich".
@@ -257,10 +287,10 @@ A kit family of three 1970s disco kits: Philly Strings, Loft Party and Munich Ma
     ([audition](https://claude.ai/artifact/2BN7Peh1FUwrjvHjZZ5YbB),
     [comparison](https://claude.ai/artifact/AJSFi9tEwm26kTzCCFUY5M)).
 - **Overall: incomplete.** The software evidence is in place and the sound is approved. Phone and MPC hardware
-  playback remain open, and MPC 2 does not pass the round-robin export gate. The owner waived SFZ and
+  playback remain open. The owner waived SFZ and
   DecentSampler.
 
-## SOOT (five kits on the shelf, sound approved; hardware open)
+## SOOT (five kits on the shelf, sound approved, hardware confirmed: complete)
 
 A drum engine for grimy street boom bap from physical models. See [SOOT](SOOT.md).
 
@@ -287,10 +317,13 @@ A drum engine for grimy street boom bap from physical models. See [SOOT](SOOT.md
     their renders (`SootKitTest`, `SootGenreKitTest`, `:shell:generateSootKit`,
     `:shell:generateSootGenreKits`).
   - **Playback: verified in software.** `PadHit.resolve` picks the zone by velocity and deals the four
-    takes in order, then repeats. No phone has played the kit.
-  - **Export: verified for MPC 3 by read-back.** The exported slices match their renders. **MPC 2 does
-    not pass:** it keeps only the first take of each zone. SFZ and DecentSampler were not generated.
-    No MPC has loaded the kit.
+    takes in order, then repeats. **Phone: pass, owner-confirmed 2026-11-14.** The owner played SOOT
+    and its starter kits and said, "Everything is good": soft-to-hard and repeated hits were right.
+  - **Export: verified for MPC 3 by read-back.** The exported slices match their renders. **MPC 2: not
+    applicable** ([format limit](#mpc-2-and-round-robin-owner-decision-2026-11-14)): it keeps only the first take of each zone. SFZ and DecentSampler were not generated.
+    **MPC 3 on an MPC: pass, owner-confirmed 2026-11-14.** The exported kits loaded and repeated hits
+    cycled through the takes. This is the owner's report, not a slice-map capture (HH1.4 stays
+    parked), and the first report against the general MPC note above.
 - **Sound character: approved at round 2.** On 2026-11-13 the owner heard the kit read back from its
   MPC 3 export and said, "All sounds fine". How they got there:
   - **Round 0:** they picked the hits.
@@ -301,11 +334,11 @@ A drum engine for grimy street boom bap from physical models. See [SOOT](SOOT.md
     - the roll and the loop point accepted;
     - the four bars moved to the heavier dictaphone (`SootKits.VERSION` 3).
 
-  Preserve version 3 as the baseline. This is not evidence of a phone or MPC audition.
-- **Overall: incomplete.** The sound of all five kits is approved, and the software evidence is in
-  place for all of them. Still open: phone and MPC hardware playback.
-
-  MPC 2 does not pass the round-robin export gate.
+  Preserve version 3 as the baseline. The phone and MPC 3 auditions are recorded under velocity and
+  round robin above.
+- **Overall: complete (2026-11-14).** The sound of all five kits is approved, the software evidence
+  is in place for all of them, and the owner confirmed phone and MPC 3 playback. MPC 2 is not
+  applicable (format limit).
 
 ## MURMUR round robin (V2 instrument, 2026-11-13)
 
@@ -443,8 +476,11 @@ those five studies of one SING voice. Earlier CAIRN work keeps the scope its own
   are source-bound inputs to the studies, not factory presets.
 - **Playable keygroups: partial.** The shell builds and validates all five keygroup packages from
   pinned captures in JVM tests: EARLIER and MOVING over MIDI 48–72 from three native roots, the
-  GROOVE studies at C4 only. No phone entry exists, because the nine Float captures are not in
-  this repository. No phone or MPC has loaded a package.
+  GROOVE studies at C4 only. Since 2026-11-14 the phone offers them under MAKE › INSTRUMENTS ›
+  CAIRN SING: it renders the nine Float captures itself and admits a study only if every render
+  matches its pinned SHA-256 (`CairnSingRenderedCaptures`); the captures are not in this
+  repository. `CairnSingRenderOnDeviceTest` checks the renders on the emulator. No physical phone
+  or MPC has loaded a package.
 - **Premade kit: not yet.** None is built.
 - **Chord tools: partial.** In JVM tests, the existing chord stabs for C that fit inside 48–72 play as
   independent notes on a MOVING package, and notes outside the range are refused. Not on a device.
@@ -520,7 +556,7 @@ and LIFT existed (`MeridianGesturesTest`).
 | Articulation: STRUM | Not applicable | Struck and rubbed surfaces, not picked strings. |
 | Percussion: roll or riser | Not applicable | A melodic engine. |
 | Drums: genre kits | Not applicable | A melodic engine. |
-| Velocity: rendering | **Fail: owner REVISIT** | Banks and keys render three native touches, but on MERIDIAN SIX the owner heard no change between soft, medium and hard (2026-11-13). The layers are level-matched and their brightness moves at most 13 %. |
+| Velocity: rendering | Pass on MERIDIAN SIX (owner KEEP); partial elsewhere | On 2026-11-13 the owner heard no change between soft, medium and hard on MERIDIAN SIX (REVISIT). Bank v3 now shapes the soft and medium strikes (`MeridianTouch`; amount `MeridianSixKits.SOFT_TOUCH_SHAPING` = 1.0, B). In meridian-touch-1 the owner kept both A (.5, T2) and B (1.0, T3) and chose B as the default (2026-11-14). Soft/hard brightness at 1.0: median .56, against .90 before. Hard layers are unchanged (`MeridianSixLayerHashTest`). The DRAW and LIFT pads barely darken (.96–.99), and MAKE INSTRUMENT keys are not shaped. |
 | Velocity: saving, playback, export | Pass in software | Each layer's recipe and WAV hash is saved and replayed (`MeridianMaterialsKitTest`, `MeridianSixKitTest`). No hardware check. |
 | Round robin | Not yet verified | No MERIDIAN round robin exists. |
 | Picker | Not yet verified on a device | `MeridianSynthScreenTest`, `MeridianFiniteInstrumentScreenTest`, `MeridianHeldSourceInstrumentScreenTest` and the two starter-menu tests cover DRAW/LIFT, finite keys and the starters. None has run on a device. |
@@ -529,9 +565,10 @@ and LIFT existed (`MeridianGesturesTest`).
 - **Sound character: partly accepted.** The owner kept the four DRAW/LIFT finite takes and
   accepted the model-3 material voices earlier. On 2026-11-13 the owner kept the sixteen
   MERIDIAN SIX pads at hard touch and the four held DRAW/LIFT presets. The bank's soft and
-  medium layers came back REVISIT ("No change between soft, medium and hard").
-- **Overall: incomplete.** Round robin, chord tools on real keys, the six-voice bank's soft and
-  medium layers (touch must change the strike, not only the level), device runs and hardware playback remain open.
+  medium layers came back REVISIT ("No change between soft, medium and hard"). On 2026-11-14
+  the owner kept both shaped versions (meridian-touch-1, A and B) and chose B, which bank v3 uses.
+- **Overall: incomplete.** Round robin, chord tools on real keys, touch on the DRAW/LIFT pads and
+  MAKE INSTRUMENT keys, device runs and hardware playback remain open.
 
 ## TEMPEST (ported from the recovery backup, 2026-11-13)
 
@@ -550,7 +587,7 @@ hashes: sixteen full-kit pads, ten model-2 and eight model-1 files (`TempestProm
 | Melodic voices, keygroups, chord tools | Not applicable | A drum engine. TEMPEST TUNED is a pitched arrangement of kicks and metal, not a keygroup instrument. |
 | Articulation: HOLD, STRUM | Not applicable | Finite 1.20-second hits; HOLD is reserved and hidden in the picker. No strings. |
 | Percussion: authored roll or riser | Not yet verified | No roll or riser is authored. |
-| Drums: multiple distinct genre kits | **Fail: one kit** | The sixteen-pad TEMPEST kit (`SynthKits.tempest`). TEMPEST TUNED is the original two-voice kick and metal scale, not a second genre kit. |
+| Drums: multiple distinct genre kits | Pass: four kits, owner KEEP of the three new ones on 2026-11-14 | The accepted sixteen-pad TEMPEST kit (`SynthKits.tempest`), plus three genre kits from the same voices: TEMPEST CIRCUIT (electro), TEMPEST FOUNDRY (industrial) and TEMPEST STEP (UK garage), in [the full kit](TEMPEST_FULL_KIT.md#genre-kits-kept-2026-11-14). The owner kept all six clips of round tempest-kits-1 (pad walks and grooves). `TempestGenreKitsTest` pins every pad's PCM24 hash and proves distinct role balances, no shared kick or snare, at least 12 different pads between any two kits, and the hat choke group. TEMPEST TUNED is the original two-voice kick and metal scale, not a genre kit. |
 | Velocity: rendering | Partial | No TEMPEST control is a brightness macro, so a softer hit is the full render low-passed by `Velocity.soften`, not a re-strike. The starter's pads have no velocity layers. |
 | Velocity: saving, playback, export | Not yet verified | No velocity layers exist to save, play or export. |
 | Round robin | Not yet verified | TEMPEST has no re-strike (`Restrike.canRestrike` is false), so no round robin exists through rendering, saving, playback or export. |
@@ -562,7 +599,7 @@ hashes: sixteen full-kit pads, ten model-2 and eight model-1 files (`TempestProm
   model 2 with "Sounds great, proceed as recommended." [The full kit](TEMPEST_FULL_KIT.md)
   records that on 2026-11-07 the owner accepted the complete six-voice audition with "Sounds
   great, proceed as recommended." Preserve these renders; this is not a phone or MPC audition.
-- **Overall: incomplete.** Genre kits, a roll or riser, velocity layers, round robin, device
+- **Overall: incomplete.** A roll or riser, velocity layers, round robin, device
   runs of the picker and hardware playback remain open.
 
 ## SPLAY (from the recovery backup, 2026-11-13)
@@ -630,7 +667,7 @@ and the approved strum study by its published WAV hashes (`OsteriaStrumTest`).
 - **Overall: incomplete.** Round robin, a seamless HOLD, chord tools on real keys, device runs
   of the picker and hardware playback remain open.
 
-## CLUTTER (round 0c, sound accepted 2026-11-14; Kotlin, shelf and hardware open)
+## CLUTTER (round 1 Kotlin, 2026-11-14; sound accepted at round 0c; shelf and hardware open)
 
 A found-sound drum engine of 22 modelled household objects, and five sixteen-pad kits from them: the CLUTTER
 kit (one each of sixteen objects) and four genre kits. Every object has loose parts (rice, a lid, a handle,
@@ -648,14 +685,40 @@ prototype audition; no Kotlin exists.
   No pad is shared between any two; the same slot in two kits is at least 6.0 dB apart (Python). The owner
   accepted all four as they are on 2026-11-14. No Kotlin, so nothing is on the shelf yet.
 - **Velocity and round robin:**
-  - **Rendering: measured in Python, not Kotlin.** On all 80 pads of the five kits: soft against hard at
-    matched level at least 3.9 dB; the closest two takes of any pad 1.2 dB apart. Each take replays byte for
-    byte.
-  - **Saving, playback, export: open.** Nothing to save, play or export until the Kotlin round. The
-    listening page's pad grid is a browser stand-in, not app evidence.
+  - **Rendering: verified in Kotlin by test (round 1).** `ClutterTest` holds that every one of the 22
+    objects' soft and hard hits differ in shape at matched level, that its four takes are distinct strikes,
+    and that every take replays byte for byte (through JSON in `DeterminismTest`). Measured in Kotlin: soft
+    against hard at least 3.95 dB, the closest two takes 1.55 dB apart. (Python, on the five kits' 80 pads:
+    3.9 dB and 1.2 dB.)
+  - **Saving, playback, export: open.** The kits are not on the shelf yet (round 2). The listening page's pad
+    grid is a browser stand-in, not app evidence.
 - **Sound character: accepted at round 0c.** On 2026-11-14 the owner heard the listening page (version 7,
   <https://claude.ai/artifact/6dkeY2rrjNGUvUYvobs3v5>) and answered "All are good" (which kit fits its genre)
   and "I like it as is" (pads to swap). This is a listen to Python renders, not to Kotlin, a phone or an MPC.
   Preserve round 0c as the baseline.
-- **Overall: incomplete.** The Kotlin engine, the kits on the shelf, saving, playback, export and hardware
-  are open. The percussion gate is waived by the owner.
+- **Overall: incomplete.** The Kotlin engine is in (round 1) and not yet heard; the kits on the shelf,
+  saving, playback, export and hardware are open. The percussion gate is waived by the owner.
+
+## EMBER (round 0, 2026-11-14, Python prototype, not heard)
+
+A drum engine for a live jazz and soul kit in a small club in 1962: calfskin drums, a riveted ride, brushes, the
+club and a 1962 chain, from physical models. Four sixteen-pad kits. See [EMBER](EMBER.md). Round 0 is a Python
+prototype and a listening page (<https://claude.ai/artifact/Xmcj5t8MYSNCQPoTKHBcdw>); no Kotlin exists.
+
+- **Melodic, keygroup and chord-tool gates:** not applicable. A drum engine.
+- **Articulation:** finite hits, no HOLD. No picked or thumbed strings.
+- **Percussion: authored, not heard.** Every kit carries a roll or riser on A15/A16: a press roll and a mallet
+  cymbal swell (EMBER), a brush roll and a far swell (AFTER HOURS), a snare roll (SOUL JAZZ), a swell (FREE).
+  Rendered in Python.
+- **Drum shelf: authored, not on the shelf.** EMBER (138 BPM), EMBER AFTER HOURS (66), EMBER SOUL JAZZ (104) and
+  EMBER FREE (80) differ in implements, drums per role, tuning, damping, looseness, microphone distance, chain and
+  tempo. No pad is identical between any two kits; the same slot in two kits is at least 2.98 dB apart (Python).
+  No Kotlin, so nothing is on the shelf.
+- **Velocity and round robin:**
+  - **Rendering: measured in Python, not Kotlin.** On all 64 pads, soft against hard at matched level differs by at
+    least 1.92 dB; the closest two of any pad's four takes are 1.19 dB apart. Velocity moves the contact, the
+    threshold parts and the swell's arc, not a filter.
+  - **Saving, playback, export: open.** The listening page's pad grid is a browser stand-in, not app evidence.
+- **Sound character: open.** Nothing has been heard.
+- **Overall: incomplete.** Round 0 asks the owner which voices and kits to keep. Kotlin (round 1), the shelf and
+  saving, playback and MPC 3 export (round 2), and phone and MPC hardware (round 3) are all open.

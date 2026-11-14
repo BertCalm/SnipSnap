@@ -55,6 +55,7 @@ class PatchesTest {
         TerraPatch("Door", TerraVoice.COMPOUND_MEMBRANE, emptyMap()),
         SilkPatch("Door", SilkVoice.OUD, emptyMap()),
         GyrePatch("Door", GyreVoice.FLICK, emptyMap()),
+        ClutterPatch("Bucket", ClutterVoice.BUCKET, emptyMap()),
         MagnetPatch("Door", MagnetVoice.JANGLE, emptyMap()),
         VentPresets.all().first(),
         OverlapPresets.all().first(),
@@ -67,7 +68,7 @@ class PatchesTest {
         LibrationPresets.references().first(),
         // KEEL is rostered (its factory presets all sit on the default root at full velocity); this one carries a saved note and velocity.
         KeelPatch("Octave Test", KeelVoice.UPRIGHT, mapOf("WEIGHT" to .7f, "SETTLE" to .3f), midi = 42, velocity = .6f),
-        // ETCH is a prototype (PatchTypes.PROTOTYPES): no factory presets yet, so it is hand-built here.
+        // ETCH is rostered (its factory presets sit on the default root at full velocity); this one carries a saved note and velocity.
         EtchPatch("Line Test", EtchVoice.DUB, mapOf("SPACE" to .9f, "HOLD" to .3f), midi = 41, velocity = .7f),
     )
 

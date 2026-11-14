@@ -3468,7 +3468,8 @@ The BREAKER kit (2026-11-12) is the first of three shelf kits:
 - **Verified in software** (`BreakerKitTest`): saving, regenerating, the pad resolver and the MPC 3
   export.
 - **Open:**
-  - MPC 2 plays each zone's first take only.
+  - MPC 2 plays each zone's first take only: a format limit, recorded as not applicable to the
+    round-robin gate on 2026-11-14.
   - The kick's takes are distinct but close (34 dB apart). The owner heard them as "one kick played
     again: fine".
   - Accepted on the open tone (2026-11-12): the balance, the pushed row, the kick and the soft-to-hard grid.
@@ -3501,6 +3502,17 @@ Python audition the owner accepted on 2026-11-12; K1 ports it to Kotlin with six
 the line loop at HOLD's top and round-robin takes through `Restrike`, as a prototype outside the factory presets
 and the picker. Kotlin measures within 0.4 to 2.8 dB of the accepted renders. The kit, the roster, keygroups, the
 picker and the saving, playback and export evidence follow. See [ETCH](ETCH.md).
+
+### ETCH, round K2 (2026-11-14)
+
+The roster, the picker, keys and a kit. The fourteen K1 presets, every one heard in round 3, are the factory bank.
+ETCH is in the SYNTH picker after OSTERIA with WICK's typed-patch handling (root, velocity and model survive edits,
+navigation, SAVE and SEND), a VELOCITY control and MAKE INSTRUMENT's finite keys (C1 to C4, three touch layers).
+FRESH TAPE → ETCH (BASS, 130 BPM) is a SAW walk in C minor pentatonic, five voices' notes and three lines; each
+note pad is three velocity zones by four takes, verified through saving, the pad resolver and the MPC 3 export
+(`EtchKitTest`). Short, low one-shots read as KICK or TOM (122 of 756); the owner heard three endings and chose C
+for every voice, now model 2 (4 of 756, RUBBER's shortest C1 notes; model-1 recipes keep the accepted ending).
+Open: a listen to the Kotlin presets and kit at model 2, the chord tool (it voices above ETCH's C4 ceiling), phone playback and an MPC. See [ETCH](ETCH.md).
 
   - The kick's takes are distinct but close (34 dB apart).
   - The owner's listen to the kit.
@@ -3550,6 +3562,9 @@ The siblings' pads await a listen; hardware remains.
 The owner kept 63 of the 64 sibling pads. They heard Basement Dub's one-drop four bars as
 incoherent, and picked a steppers groove in its place (`SootGenreKits` 2). The sound of all five SOOT
 kits is now approved, and hardware remains.
+
+On 2026-11-14 the owner confirmed phone and MPC 3 playback ("Everything is good"), with repeated hits
+cycling through the takes on the MPC 3. SOOT is complete; MPC 2 is not applicable (format limit).
 
 
 ### SCUFF, round 1 (2026-11-13)
@@ -3601,3 +3616,13 @@ On SYNTH's engine picker, mirroring SOOT arm for arm plus the native-factory pat
 loads whole, with its take and model); `EngineCatalog` under DRUMS; both READMEs count 86; an on-device test
 beside SOOT's in `NewEngineSynthScreenTest` (CI's emulator runs it). Open: hardware playback, MPC 2's one take
 per zone. See [SCUFF](SCUFF.md).
+
+### CLUTTER, round 1 (2026-11-14)
+
+A found-sound drum engine of 22 modelled household objects, ported from the accepted round-0c Python prototype
+to `Clutter.kt`: every object's loose parts move only above a fixed strike threshold, velocity on every
+object, four takes, `ClutterPatch` with velocity, take and model, rosterless (no presets yet), no kit yet.
+Measured against the Python: no brightness bias across the 22 objects (0.06 dB above 4 kHz); the
+deterministic objects correlate 0.93 to 0.99; random draws are another realisation of the same law. The
+owner waived the roll gate. See [CLUTTER](CLUTTER.md) and the gates entry. The four genre kits go on the shelf
+at round 2; the picker entry waits for a session with an SDK.

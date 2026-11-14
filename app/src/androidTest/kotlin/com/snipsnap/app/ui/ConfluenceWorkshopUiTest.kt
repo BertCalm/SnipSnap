@@ -122,7 +122,7 @@ class ConfluenceWorkshopUiTest : ComposeScreenTest() {
 
         clickAction("MAKE VARIATION → A02")
         waitFor("the saved variation and destination pad", timeoutMillis = 120_000) {
-            toasts.contains("GATHERING MADE ON A02 · ORIGINAL KEPT") &&
+            toasts.contains("Gathering made on A02. Original kept.") &&
                 hasText("PAD A02") && sliderState("REVERB") == "70%"
         }
         val saved = KitStore.load(directory)

@@ -445,7 +445,7 @@ explicit MIDI root (24–96), strike velocity and model version; TUNE is a
 relative ±12-semitone offset, neutral at 0.5, so the effective note spans
 12–108 without clamping back to the saved-root range. Seven provisional presets
 and a dry sixteen-pad C minor pentatonic kit are included, with PITCHWHEEL among
-FRESH TAPE's 122 starters. Run `./gradlew :synth:generatePitchwheelAudition`
+FRESH TAPE's 126 starters. Run `./gradlew :synth:generatePitchwheelAudition`
 for the compact first listening set, or add `-PpitchwheelFull` for the broader
 dry probes. HOLD's top step returns settled loop-only material with a
 deterministic attachment cycle and capped adhesion. The owner heard R1 as six
@@ -509,7 +509,9 @@ and folding, then short repeats that darken as they fade. KICK, METAL, SNARE, CL
 TOM and HAT share TUNE, SOURCE, FILTER, DRIVE and SPACE; the four later voices add
 DECAY. The owner accepted all six and the 22 factory presets. FRESH TAPE → TEMPEST
 is the sixteen-pad kit with choking hats; TEMPEST TUNED keeps the original E minor
-pentatonic kicks and metal colors. HOLD is reserved. See [TEMPEST](docs/TEMPEST_FULL_KIT.md).
+pentatonic kicks and metal colors. TEMPEST CIRCUIT (electro), TEMPEST FOUNDRY
+(industrial) and TEMPEST STEP (UK garage) are genre kits made from new settings of
+the same accepted voices, kept by the owner on 2026-11-14. HOLD is reserved. See [TEMPEST](docs/TEMPEST_FULL_KIT.md).
 
 OSTERIA is one evolving note: four spectral layers on a fixed root drift between
 five coastal palettes, with SHORE, TENSION, WANDER, MEMORY, ROOM and HOLD. Its six
@@ -1131,8 +1133,8 @@ render-time limits. Build its MPC program and replay files with:
 ```
 
 ONSET, SCANNED CHAIN, VOX, FORK, HALOBAR, AEROSTAT, TREMOR, BALLAST, FLOTILLA, CISTERN, CIRCUIT, OBBLIGATO, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE,
-TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, LATTICE, ACCORD, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, REGISTERS, OSPREY, OPENSKY, OVEN, FLOCK, VENT, OVERLAP, TRIO, NACRE, ORIGAMI, TREFOIL, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS, TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME, OTIS, WICK, BORE, ARCO, SCOUR, KEEL, CHITIN, EROSION, RIVET, FIRED BRONZE, BACKWASH, TEMPEST, SPLAY, OSTERIA and GRAINS round out the lineup —
-86 engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
+TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, LATTICE, ACCORD, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, REGISTERS, OSPREY, OPENSKY, OVEN, FLOCK, VENT, OVERLAP, TRIO, NACRE, ORIGAMI, TREFOIL, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS, TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME, OTIS, WICK, BORE, ARCO, SCOUR, KEEL, CHITIN, EROSION, RIVET, FIRED BRONZE, BACKWASH, TEMPEST, SPLAY, OSTERIA, SCUFF, ETCH and GRAINS round out the lineup —
+87 engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
 since it has no voice enum and works on a source snip instead of picking
 one. VOX is formant vocal synthesis — the shopping-mall-keyboard choir,
 proudly: a VOWEL knob morphs
@@ -1387,7 +1389,7 @@ TREMOR, BALLAST, CISTERN, CIRCUIT, OBBLIGATO, ALLOY, THAW, MURK, NIMBUS, COROLLA
 UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL,
 SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVERLAP,
 OVEN, FLOCK, VENT, CREASE, TRIO, NACRE, ORIGAMI, TREFOIL, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS,
-TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME, BORE, ARCO, SCOUR, KEEL, CHITIN, WICK, EROSION, RIVET, FIRED BRONZE, BACKWASH, SOOT, TEMPEST, SPLAY, OSTERIA, SCUFF, plus GRAINS, SNAP and DRAW,
+TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME, BORE, ARCO, SCOUR, KEEL, CHITIN, WICK, EROSION, RIVET, FIRED BRONZE, BACKWASH, SOOT, TEMPEST, SPLAY, OSTERIA, SCUFF, ETCH, plus GRAINS, SNAP and DRAW,
 which sit beside the picker. `:synth` also holds engines that picker does not show.
 LORENTZ has a preset roster, so `snipsnap synth` renders it.
 
@@ -1635,12 +1637,11 @@ UI layer. What lives here:
 - **`Personality`/`Delight`/`Copy`** — `docs/PERSONALITY.md` as executable
   data: the four laws gate for real (OFF silences everything; deck sounds
   hard-mute while capture is armed), all shipped copy, and the eggs.
-- **`Workshop` / `TeachLog` / `BenchExport` / `CutRatings` / `LabelledHits` /
-  `BenchNotes` / `ChopReviewModel`'s confirm and harvest** — the developer's
-  bench pipeline (`docs/WORKSHOP.md`). Removed from the UI (the knock, TEACH
-  THE MACHINE, CONFIRM ALL and the stars, the pad sheet's BENCH box, the NOTE
-  chip, SEND TO BENCH, SEND HITS TO BENCH; UI-clarity spec §7.4.1, D8); kept
-  here with their tests until the owner decides to delete them.
+- **The developer's bench pipeline is gone** (`Workshop`, `TeachLog`,
+  `BenchExport`, `CutRatings`, `LabelledHits`, `BenchNotes` and
+  `ChopReviewModel`'s confirm and harvest). Removed from the UI by UI-clarity
+  spec §7.4.1, D8, and deleted from `:shell` with their tests (review Q5,
+  2026-11); `docs/WORKSHOP.md` keeps the spec as history.
 - **`UserPresets`** — SAVE AS PRESET on SYNTH (`docs/WORKSHOP.md`, WS5,
   the one tool on that list that is for every player): the player's own
   presets in `presets.json` beside the kits, the name rules (fourteen
@@ -1691,7 +1692,7 @@ in [`app/README.md`](app/README.md). CI compiles it in `android-build`.
 - [`docs/KIT_BEST_PRACTICES.md`](docs/KIT_BEST_PRACTICES.md) — pad layout, mute groups, naming, and what Akai does and doesn't document
 - [`docs/UI_DESIGN.md`](docs/UI_DESIGN.md) — the TapeOS visual language (90s desktop × cassette) and the mockup artboards in [`design/`](design/)
 - [`docs/PERSONALITY.md`](docs/PERSONALITY.md) — the delight system: voice, the four laws, gag catalog, easter eggs
-- [`docs/WORKSHOP.md`](docs/WORKSHOP.md) — the WORKSHOP: the spec for the developer's tools, removed from the UI (D8), with SAVE AS PRESET, which was never behind it
+- [`docs/WORKSHOP.md`](docs/WORKSHOP.md) — the WORKSHOP: the spec for the developer's tools, removed from the app (D8, code deleted), with SAVE AS PRESET, which was never behind it
 - [`docs/SYNTH_ROADMAP.md`](docs/SYNTH_ROADMAP.md) — THUMP/CRUNCH/TINES/VELVET: generate kits, not just capture them
 - [`reference/README.md`](reference/README.md) — harvesting reference programs off hardware
 
@@ -1732,8 +1733,9 @@ prototype outside the picker. [Design and listening rounds](docs/BREAKER.md).
 
 ETCH is a step-line bass engine in progress: a squelching sixteen-step line, a drive that glues the steps, and a
 dotted-eighth delay into a reverb, from the owner's two reference clips and pedal chain. Six voices (SAW, SQUARE,
-RUBBER, WHISTLE, GRIT, DUB); velocity is the accent; HOLD's top plays the line as a loop. The owner accepted the
-Python audition; Kotlin round K1 ports it as a prototype outside the picker. [Design, listening rounds and
+RUBBER, WHISTLE, GRIT, DUB); velocity is the accent; HOLD's top plays the line as a loop. Round K2 put it in the
+SYNTH picker with fourteen presets heard in round 3, finite keys from MAKE INSTRUMENT, and FRESH TAPE → ETCH (three
+touch zones, four takes per note). Model 2 lets short notes ring out, the owner's choice, so they are no longer saved as kicks. [Design, listening rounds and
 measurements](docs/ETCH.md).
 
 SOOT is a drum engine in progress: grimy street boom bap from physical models only. A membrane

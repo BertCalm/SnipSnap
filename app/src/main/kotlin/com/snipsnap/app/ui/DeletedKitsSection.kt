@@ -314,7 +314,7 @@ private fun DeletedKitRow(row: KitShelf.BinnedKit, busy: Boolean, onRestore: () 
 @Composable
 private fun EmptyBinButton(scheme: Scheme, enabled: Boolean, armed: Boolean, onClick: () -> Unit) {
     // Same text the TapeText below shows — it already follows `armed`.
-    val label = if (armed) "TAP AGAIN TO CONFIRM — NO TAKEBACKS" else "EMPTY THE TRASH NOW — NO TAKEBACKS"
+    val label = if (armed) Copy.EMPTY_TRASH_ARMED else Copy.EMPTY_TRASH_NOW
     Box(
         Modifier
             .fillMaxWidth()
@@ -329,12 +329,10 @@ private fun EmptyBinButton(scheme: Scheme, enabled: Boolean, armed: Boolean, onC
             .padding(horizontal = 10.dp),
         contentAlignment = Alignment.Center,
     ) {
-        TapeText(
-            // `TakesBinScreen.kt`'s own armed-label swap, copied verbatim.
-            label,
-            TapeType.pixel,
-            if (enabled) BinRedOnLcd else scheme.ink3.tape,
-            maxLines = 1,
-        )
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            TapeText(label, TapeType.pixel, if (enabled) BinRedOnLcd else scheme.ink3.tape, maxLines = 1)
+            // Said once the button is armed, in a sentence: what the second tap does.
+            if (armed) TapeText(Copy.EMPTY_TRASH_FACT, TapeType.pixelSmall, if (enabled) BinRedOnLcd else scheme.ink3.tape, maxLines = 2)
+        }
     }
 }

@@ -483,8 +483,11 @@ object Arranger {
     /**
      * One time through [section]'s clip: frames [start] until [end] of the
      * mix, on the grid. A section played three times is three passes.
+     * [barLines] are the frames of the bar lines strictly inside the pass,
+     * each rounded once from its own pulse like every other boundary (a
+     * one-bar pass has none); live play's NEXT BAR cuts there.
      */
-    data class Pass(val section: Int, val start: Int, val end: Int)
+    data class Pass(val section: Int, val start: Int, val end: Int, val barLines: List<Int> = emptyList())
 
     /**
      * What a played run of passes makes as a song: [plan], and how many
@@ -623,9 +626,13 @@ object Arranger {
         val song = BeatTape.tapeStop(Snip(out.copyOf(songEnd * 2), 2, KitPreview.RATE))
         SongBus.ceiling(song.samples)
         val passes = plan.sections.indices.flatMap { i ->
-            val one = plan.sections[i].clip.lengthPulses
+            val clip = plan.sections[i].clip
+            val one = clip.lengthPulses
             (0 until plan.sections[i].repeats).map { r ->
-                Pass(i, frameAt(startPulses[i] + r * one), frameAt(startPulses[i] + (r + 1) * one))
+                val at = startPulses[i] + r * one
+                // The clip's own bar (a three-four bar is three beats), counted in pulses and rounded once.
+                val lines = (1 until clip.bars).map { b -> frameAt(at + b * clip.pulsesPerBar) }
+                Pass(i, frameAt(at), frameAt(at + one), lines)
             }
         }
         return Mix(song, starts, passes)
