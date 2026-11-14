@@ -767,6 +767,6 @@ private fun HeaderChip(
             .padding(horizontal = 6.dp),
         contentAlignment = Alignment.Center,
     ) {
-        TapeText(label, TapeType.pixel, if (engaged) scheme.lcd.tape else scheme.lcdInk.tape)
+        TapeText(label, TapeType.pixel, if (engaged) scheme.onAccent.tape else scheme.lcdInk.tape)
     }
 }

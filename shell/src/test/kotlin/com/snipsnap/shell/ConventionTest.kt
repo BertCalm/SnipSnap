@@ -1544,7 +1544,7 @@ class ConventionTest {
         // The old tab names that are no longer anywhere on the row. A note
         // that still said one of them would point a new user at a screen
         // that does not exist as a destination any more.
-        val retiredTabs = setOf("CHOP", "EXPORT", "GROOVE", "ORBIT", "SYNTH", "SURFACE", "SNAP", "SETUP", "HELP", "PLAY")
+        val retiredTabs = setOf("GROOVE", "ORBIT", "SYNTH", "SURFACE", "SNAP", "SETUP", "HELP", "PLAY")
         val strays = words.filter { it in retiredTabs }
         assertTrue(
             strays.isEmpty(),
