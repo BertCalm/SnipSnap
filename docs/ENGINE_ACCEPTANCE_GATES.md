@@ -583,21 +583,25 @@ and finite MAKE INSTRUMENT keys. See [SPLAY_FINITE_DELIVERY.md](SPLAY_FINITE_DEL
 [SPLAY_NATIVE_RECOVERY.md](SPLAY_NATIVE_RECOVERY.md) and
 [SPLAY_PRODUCTION_INTAKE.md](SPLAY_PRODUCTION_INTAKE.md).
 
-- **Melodic voices: partial, six bodies kept, one registered.** TONGUE is the one registered voice.
+- **Melodic voices: pass in software, six bodies kept and registered.** TONGUE was the one voice.
   Its five population settings (1, 2, 4, 8 and 16 mechanisms) are settings, not voices. Five further
   bodies are built as model 3 and kept by the owner on 14 Nov, with every heard take pinned: WIRE (a
   string, round splay-voices-1), RUB (a rubbed resonator with a stick-slip catch, round splay-voices-2)
   and AIR (a breath-blown tube), BAR (a mallet bar) and SKIN (a drum head) (round splay-voices-3). See
-  [SPLAY_WIRE_RUB.md](SPLAY_WIRE_RUB.md) and [SPLAY_AIR_BAR_SKIN.md](SPLAY_AIR_BAR_SKIN.md). None is in
-  the picker, patch format, starters or keygroups yet.
-- **Presets: pass for the one voice.** The five accepted population settings are the factory
-  presets; the five provisional recipes stay in the CLI only.
+  [SPLAY_WIRE_RUB.md](SPLAY_WIRE_RUB.md) and [SPLAY_AIR_BAR_SKIN.md](SPLAY_AIR_BAR_SKIN.md). All five
+  are SPLAY voices in the picker and the patch format (model 3), each with its kept setting as a preset,
+  the SPLAY BODIES starter and finite MAKE INSTRUMENT keys; see
+  [SPLAY_BODIES_PICKER.md](SPLAY_BODIES_PICKER.md). Their keys outside the heard range are round
+  splay-bodies-1.
+- **Presets: pass.** TONGUE's five accepted population settings are its factory presets, and each
+  body's kept 16-mechanism setting is its one preset; the five provisional recipes stay in the CLI only.
 - **Playable keygroups: partial.** In JVM tests the shell builds finite keygroups (MIDI 36–84,
   roots every three semitones plus the saved root, three touch levels) and admits them to the
   shelf. The SynthScreen wiring and its two Android tests have not compiled or run here (no
   Android SDK); CI's emulator runs them. No phone or MPC has played one.
-- **Premade kit: partial.** SPLAY POPULATIONS puts the five settings on A01–A05. All five render
-  in JVM tests, with a saved-recipe replay. It is one voice, not a full melodic kit.
+- **Premade kit: partial.** SPLAY POPULATIONS puts TONGUE's five settings on A01–A05, and SPLAY
+  BODIES puts the five kept bodies on A01–A05 (each its kept same-settings take). Both render in JVM
+  tests with saved-recipe replays. Neither is a full melodic kit.
 - **Chord tools: not yet verified.**
 - **Articulation (HOLD): fail.** SPLAY is finite (eight seconds). Positive HOLD is refused, and
   the instrument has no loop. RUB and AIR (both kept, including their held-loop clips S12 and S16)
@@ -607,7 +611,7 @@ and finite MAKE INSTRUMENT keys. See [SPLAY_FINITE_DELIVERY.md](SPLAY_FINITE_DEL
 - **Velocity and round robin: fail.** Velocity is gain only (the keygroups' three levels too).
   There are no round-robin takes. WIRE (kept), RUB, AIR, BAR and SKIN make a softer touch a duller
   contact or darker breath (soft/hard brightness .78, .54, .35, .63 and .69 after level matching); all
-  five are kept, none is registered yet.
+  five are kept and registered, but the keys' three levels are still gain-only.
 - **Sound character.** The five population settings were KEEP decisions in the owner's Wave 3
   review (2026-11-09). That is recorded only in the backup's notes and manifest
   ([SPLAY_NATIVE_RECOVERY.md](SPLAY_NATIVE_RECOVERY.md): “All five decisions are KEEP”), with no

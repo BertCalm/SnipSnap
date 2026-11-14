@@ -94,10 +94,10 @@ class SplayFiniteInstrumentScreenTest : ComposeScreenTest() {
     }
 
     @Test fun eachAcceptedFactoryChoiceOpensFiniteInstrumentWithoutChangingItsOneVoiceRecipe() {
-        val factories = SplayFactoryPresets.all()
+        val factories = SplayFactoryPresets.forVoice(SplayVoice.TONGUE)
         val settings = show(factories.first())
         assertEquals(5, factories.size)
-        assertEquals(setOf(SplayVoice.TONGUE), factories.map { it.voice }.toSet())
+        assertEquals(10, SplayFactoryPresets.all().size)
         for (patch in factories) {
             press("PRESET ${patch.name}")
             waitFor("factory SPLAY recipe ${patch.name}") {
@@ -111,6 +111,28 @@ class SplayFiniteInstrumentScreenTest : ComposeScreenTest() {
             assertEquals(patch, SynthDrafts.read(settings).filterIsInstance<SplayPatch>().single())
         }
     }
+
+    /** Each kept body opens as its own SPLAY voice, with its kept setting as its preset, and makes finite keys. */
+    private fun keptBodyOpensFiniteInstrument(voice: SplayVoice) {
+        val patch = SplayFactoryPresets.forVoice(voice).single()
+        assertEquals(3, patch.model)
+        val settings = show(patch)
+        button("PRESET ${patch.name}").assertExists()
+        press("PRESET ${patch.name}")
+        waitFor("kept $voice recipe") { SynthDrafts.read(settings).filterIsInstance<SplayPatch>().singleOrNull() == patch }
+        button("MAKE INSTRUMENT").assertIsEnabled()
+        press("MAKE INSTRUMENT")
+        compose.onNodeWithText(SplayFinitePadMaker.instrumentNote(SplayFinitePadMaker.Spec(patch))).assertExists()
+        button("RELEASE").assertDoesNotExist()
+        cancelSheet()
+        assertEquals(patch, SynthDrafts.read(settings).filterIsInstance<SplayPatch>().single())
+    }
+
+    @Test fun keptWireOpensFiniteInstrument() = keptBodyOpensFiniteInstrument(SplayVoice.WIRE)
+    @Test fun keptRubOpensFiniteInstrument() = keptBodyOpensFiniteInstrument(SplayVoice.RUB)
+    @Test fun keptAirOpensFiniteInstrument() = keptBodyOpensFiniteInstrument(SplayVoice.AIR)
+    @Test fun keptBarOpensFiniteInstrument() = keptBodyOpensFiniteInstrument(SplayVoice.BAR)
+    @Test fun keptSkinOpensFiniteInstrument() = keptBodyOpensFiniteInstrument(SplayVoice.SKIN)
 
     @Test fun zeroExcitationExplainsUnavailableInstrumentAndKeepsTheSavedPerformance() {
         val patch = source().copy(velocity = 0f)

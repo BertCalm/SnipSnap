@@ -813,6 +813,11 @@ object StarterKits {
             "UK garage TEMPEST kit: short kicks, rim and ghost snares, five choking hats and pitched blips.",
             seeded = false,
         ) { SynthKits.tempestStep() },
+        Starter(
+            SplayDelivery.BODIES_STARTER_ID, "SPLAY BODIES",
+            "Five more things SPLAY's catches strike: WIRE, RUB, AIR, BAR and SKIN, each as you kept it.",
+            seeded = false,
+        ) { SplayDelivery.bodyStarterPads() },
     )
 
     fun byId(id: String): Starter? = ALL.firstOrNull { it.id == id }

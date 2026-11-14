@@ -119,6 +119,25 @@ class SplaySynthCommandTest {
         } finally { directory.deleteRecursively() }
     }
 
+    @Test
+    fun `each kept body renders its kept setting as preset 1 and refuses TONGUE's models`() {
+        val directory = createTempDirectory("splay-cli-bodies").toFile()
+        try {
+            for (voice in SplayVoice.entries.filter { it.body != null }) {
+                val output = File(directory, voice.name)
+                assertEquals(0, SynthCommand.run(listOf("SPLAY", voice.name, "--preset", "1",
+                    "--out", output.path), quiet()))
+                assertRendered(Presets.forVoice("SPLAY", voice.name).single() as SplayPatch, output)
+                val refused = File(directory, "${voice.name}-model-2")
+                val errors = ByteArrayOutputStream()
+                assertEquals(2, Cli.run(arrayOf("synth", "SPLAY", voice.name, "--model", "2",
+                    "--out", refused.path), quiet(), PrintStream(errors)))
+                assertTrue(errors.toString().contains("requires model 3"), errors.toString())
+                assertFalse(refused.exists())
+            }
+        } finally { directory.deleteRecursively() }
+    }
+
     private fun assertRendered(expected: SplayPatch, output: File) {
         val sidecar = requireNotNull(output.listFiles { it.extension == "patch" }).single()
         assertEquals(expected, Patches.fromJsonText(sidecar.readText()))
