@@ -137,24 +137,42 @@ class EtchTest {
     }
 
     @Test
-    fun `the classifier hears no drum at the default note from C2 up, except DUB's soft C2, and the low short notes are on record`() {
+    fun `model 2 keeps one-shots out of the drum set but RUBBER's shortest C1, and model 1's exceptions stay on record`() {
         val drums = setOf(DrumClass.KICK, DrumClass.SNARE, DrumClass.CLAP, DrumClass.HAT_CLOSED, DrumClass.HAT_OPEN, DrumClass.TOM)
-        // The engine files every one-shot TONAL (drumClassFor), and kit pads take that class. The classifier judges the
-        // audio alone, and a short, dark, low pluck looks like a kick to it. Measured 2026-11-13: at the default HOLD
-        // no voice reads as a drum from C2 up except DUB, the darkest, on a soft C2. Lengthening short notes or
-        // brightening DUB would change the sound the owner accepted, so this is disclosed, not fixed (docs/ETCH.md).
-        val knownExceptions = setOf(Triple(EtchVoice.DUB, 36, .35f))
-        for (voice in voices) for (midi in listOf(36, 48)) for (v in listOf(.35f, 1f)) {
-            val cls = Classifier.classify(render(voice, midi = midi, velocity = v)).drumClass
-            if (Triple(voice, midi, v) in knownExceptions) { println("ETCH class $voice midi $midi v $v: $cls (known exception)"); continue }
-            assertTrue(cls !in drums, "$voice midi $midi velocity $v at the default HOLD: the classifier hears a drum ($cls)")
+        // The app names a saved sound by what the classifier hears, and a bass-heavy note that falls 20 dB inside
+        // 500 ms reads as a kick. Model 1 (round 3) lets go 7 ms after the gate: 122 of 756 grid one-shots read as
+        // drums (docs/ETCH.md, round K2). Model 2 rings out (the owner's "C all", 2026-11-14): only RUBBER's shortest
+        // notes at C1, whose sub-octave sits near 16 Hz, still do.
+        val readings = mutableListOf<String>()
+        for (voice in voices) for (midi in listOf(24, 30, 36, 43, 48)) for (v in listOf(.3f, .6f, 1f)) for (h in listOf(0f, .1f, .2f, .4f)) {
+            val cls = Classifier.classify(render(voice, mapOf("HOLD" to h), midi, v)).drumClass
+            if (cls in drums) readings += "$voice MIDI $midi v $v HOLD $h: $cls"
         }
-        // For the record: the low and short notes the classifier does hear as drums.
+        println("ETCH model 2, one-shots read as drums: ${readings.ifEmpty { listOf("none") }}")
+        assertTrue(readings.all { it.startsWith("RUBBER MIDI 24 ") && (it.contains("HOLD 0.0") || it.contains("HOLD 0.1")) }, "$readings")
+        assertTrue(readings.size <= 4, "$readings")
+        // Model 1, as accepted: at the default HOLD no voice reads as a drum from C2 up except DUB on a soft C2.
+        for (voice in voices) for (midi in listOf(36, 48)) for (v in listOf(.35f, 1f)) {
+            val cls = Classifier.classify(Etch.render(voice, emptyMap(), midi, v, model = 1)).drumClass
+            if (voice == EtchVoice.DUB && midi == 36 && v == .35f) continue
+            assertTrue(cls !in drums, "model 1 $voice midi $midi velocity $v at the default HOLD: $cls")
+        }
+    }
+
+    @Test
+    fun `model 1 is the accepted render byte for byte, model 2 rings out longer, and loops are the same in both`() {
+        for (voice in voices) for (midi in listOf(24, 36, 48)) {
+            val m = mapOf("HOLD" to .1f)
+            val one = Etch.render(voice, m, midi, .6f, take = 2, model = 1)
+            assertContentEquals(Etch.renderOneShotShaped(voice, m, midi, .6f, Etch.OneShotShape.ACCEPTED, take = 2).samples, one.samples,
+                "$voice MIDI $midi model 1 is the accepted ending")
+            val two = Etch.render(voice, m, midi, .6f, take = 2, model = 2)
+            assertTrue(two.frameCount >= one.frameCount, "$voice MIDI $midi: model 2's tail is not shorter")
+            assertFalse(two.samples.contentEquals(one.samples), "$voice MIDI $midi: model 2 changed nothing")
+        }
         for (voice in voices) {
-            val row = listOf(24, 36).flatMap { midi -> listOf(0f, .2f, .4f).map { h -> midi to h } }
-                .filter { (midi, h) -> Classifier.classify(render(voice, mapOf("HOLD" to h), midi, .35f)).drumClass in drums }
-                .joinToString(" ") { (midi, h) -> "MIDI $midi HOLD $h" }
-            println("ETCH class $voice, soft hits read as a drum at: ${row.ifEmpty { "none" }}")
+            val m = mapOf("HOLD" to 1f)
+            assertContentEquals(Etch.render(voice, m, model = 1).samples, Etch.render(voice, m, model = 2).samples, "$voice line")
         }
     }
 
@@ -261,7 +279,15 @@ class EtchTest {
         assertEquals(p, Patches.fromJsonText(p.toJsonText()))
         assertFailsWith<IllegalArgumentException> { EtchPatch("x", EtchVoice.SAW, emptyMap(), midi = 12) }
         assertFailsWith<IllegalArgumentException> { EtchPatch("x", EtchVoice.SAW, emptyMap(), velocity = 2f) }
-        assertFailsWith<IllegalArgumentException> { EtchPatch("x", EtchVoice.SAW, emptyMap(), model = 2) }
+        assertFailsWith<IllegalArgumentException> { EtchPatch("x", EtchVoice.SAW, emptyMap(), model = 3) }
+        assertFailsWith<IllegalArgumentException> { EtchPatch("x", EtchVoice.SAW, emptyMap(), model = 0) }
+        assertEquals(Etch.MODEL_VERSION, p.model)
+        val old = p.copy(model = 1)
+        assertEquals(old, EtchPatch.fromJsonText(old.toJsonText()))
+        // A recipe saved before models were written reads as the round-3 sound.
+        val bare = p.toJsonText().replace(Regex(",?\\s*\"model\"\\s*:\\s*2(\\.0)?"), "")
+        assertFalse("model" in bare, bare)
+        assertEquals(1, EtchPatch.fromJsonText(bare).model)
     }
 
     @Test

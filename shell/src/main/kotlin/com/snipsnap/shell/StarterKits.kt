@@ -505,6 +505,12 @@ object StarterKits {
             key = KeySpec.parse("Cminpent"),
         ) { SynthKits.keel() },
         Starter(
+            com.snipsnap.synth.EtchKits.ID, "ETCH",
+            "Squelching step-line bass: a SAW walk in C minor pentatonic, five more voices and three 130 BPM lines. Three touch zones, four takes.",
+            seeded = false, tempoBpm = com.snipsnap.synth.EtchKits.BPM.toFloat(),
+            key = KeySpec.parse("Cminpent"),
+        ) { com.snipsnap.synth.EtchKits.build() },
+        Starter(
             "wick", "WICK",
             "Six pitched voices with recovering motion and three RATTLE bodies.",
             seeded = false,
