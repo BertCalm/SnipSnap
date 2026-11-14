@@ -1,7 +1,8 @@
 # CLUTTER: design brief and round-0 audition
 
-Status: **round 0, a Python prototype audition; nothing heard.** No Kotlin exists. The engine stays in
-progress until every applicable owner gate has evidence (see "Gates" below).
+Status: **round 0c accepted by the owner on 2026-11-14** (Python prototype renders: "All are good", "I like it as
+is"). No Kotlin exists. The engine stays in progress until every applicable owner gate has evidence (see
+"Gates" below); preserve round 0c as the sound baseline for the Kotlin port.
 
 Prototype: [`prototype/clutter/`](../prototype/clutter/) (`clutter_proto.py` is the model, `measures.py` the
 house distance measures, `gen_audition.py` renders and measures, `build_page.py` writes the audition page).
@@ -220,16 +221,17 @@ and RATTLE moved the zipper by 2.4 dB (the tab's clink was too quiet).
 
 - **Melodic, keygroup and chord tool:** not applicable. A drum engine.
 - **Articulation:** finite hits, no HOLD. Not a plucked string.
-- **Percussion (roll or riser):** open. The owner replaced the round-0 pot roll with a one-shot (B01 Bin Lid) on
-  2026-11-13. No roll exists, so the gate is not passed; whether CLUTTER needs one is the owner's call.
+- **Percussion (roll or riser):** waived by the owner on 2026-11-14 ("I overrule that gate"). CLUTTER ships no
+  roll or riser; B01 stays the Bin Lid one-shot. This is an owner exception, not a pass.
 - **Drums (several genre kits):** four authored and measured in Python (Kitchen Lo-fi, Street Bucket, Junk Boom
-  Bap, Microbeat; above). Not on the shelf: no Kotlin. Not heard.
+  Bap, Microbeat; above) and accepted by the owner as they are on 2026-11-14 ("All are good", "I like it as is").
+  Not on the shelf: no Kotlin.
 - **Velocity and round robin:** rendering measured in Python (above). Saving, playback and export: open; no
   Kotlin yet. The page's pad grid is a browser stand-in for playback, not evidence for the app.
 
 ## Next rounds
 
-- **R0b**: the owner's listen; adjust objects, defaults and the rattle curve. Keep every number in the ledger.
+- **R0b**: done. The owner accepted round 0c without changes on 2026-11-14 and waived the roll gate.
 - **R1 Kotlin**: `Clutter.kt` (an `enum class ClutterVoice(val drumClass: DrumClass)`, `render(voice, macros,
   velocity, take, model)` as `Soot.render` has it, `MODEL_VERSION`), `ClutterPatch.kt` in the
   `SootPatch` shape, the `Patches.fromJsonValue` arm, the two `Velocity.kt` arms, a `DeterminismTest`
@@ -252,7 +254,7 @@ and RATTLE moved the zipper by 2.4 dB (the tab's clink was too quiet).
 | The bin lid's brightness is a plate's nonlinear cascade | analogy, not simulated | `binlid` in `clutter_proto.py` |
 | Soft and hard differ on every pad; nothing rattles below the threshold | measured; by construction | velocity section |
 | Thin-ring, plate and bar ratios are the textbook ones | proposed (sourced formulas, shape damping) | `clutter_proto.py` constants |
-| The objects sound like the objects | not heard | the owner's listen |
+| The objects and the four genre kits are the sound | heard, accepted | the owner, 2026-11-14: "All are good", "I like it as is" (Python renders, listening page version 7) |
 
 ## Why it is built this way
 
