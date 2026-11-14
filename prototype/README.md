@@ -100,5 +100,5 @@ as numbers and WAVs before any Kotlin. `python3 gen_audition.py OUT && python3 b
 every pad of every kit at three velocity zones and four takes (one twelve-slot WAV per pad, which the
 page's pad grid slices), each kit's groove, the CLUTTER kit's velocity ladders and takes, bank B, and every
 control on every object, with their measurements. `compare_kotlin.py KOTLIN_DIR` measures the Kotlin port
-(`./gradlew :synth:generateClutterAudition`) against these renders object by object. Needs numpy and scipy.
-See [`../docs/CLUTTER.md`](../docs/CLUTTER.md).
+(`./gradlew :synth:generateClutterAudition`) against these renders object by object. With the shell generator's pack (`./gradlew :shell:generateClutterKits`) encoded as MP3 under `OUT/shelf/`, the
+page also carries the four kits on the shelf. Needs numpy and scipy. See [`../docs/CLUTTER.md`](../docs/CLUTTER.md).
