@@ -2,6 +2,7 @@ package com.snipsnap.app.ui
 
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.onAllNodesWithContentDescription
@@ -229,6 +230,8 @@ class OsteriaSynthScreenTest : ComposeScreenTest() {
         assertEquals(.25f, sliderValue("RELEASE"), .0001f)
         click("SAVE PRESET")
         compose.onNode(hasSetTextAction()).performTextReplacement("TOUCH EDIT")
+        pump() // The clock is manual: let the typed name recompose into SAVE before pressing it.
+        compose.onNodeWithContentDescription("SAVE").assertIsEnabled()
         click("SAVE")
         waitFor("the edited recipe on disk") { UserPresets.read(root).any { it.name == "TOUCH EDIT" } }
         val saved = UserPresets.read(root).single { it.name == "TOUCH EDIT" }.patch as OsteriaPatch
@@ -264,6 +267,8 @@ class OsteriaSynthScreenTest : ComposeScreenTest() {
         dial("ROOT", 1f)
         click("SAVE PRESET")
         compose.onNode(hasSetTextAction()).performTextReplacement("EDITED STRUM")
+        pump() // The clock is manual: let the typed name recompose into SAVE before pressing it.
+        compose.onNodeWithContentDescription("SAVE").assertIsEnabled()
         click("SAVE")
         waitFor("edited strum saved") { UserPresets.read(root).any { it.name == "EDITED STRUM" } }
         val saved = UserPresets.read(root).single { it.name == "EDITED STRUM" }.patch as OsteriaPatch
