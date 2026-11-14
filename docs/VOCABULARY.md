@@ -1,6 +1,6 @@
 # Vocabulary ledger
 
-**Status: owner has ruled on Section F (2026-11-09). Names in Sections A, B and C are final unless a row says open. This document renames nothing by itself; the renames land in PR 5b (navigation) and PR 5c (tools).** It lists every name a player navigates by or acts on, says what each one means, and proposes changes. The rulings in Section F make the proposed names final. The renames and a `ConventionTest` law that checks Section D come in the pull requests after this one.
+**Status: owner has ruled on Section F (2026-11-09). Names in Sections A, B and C are final unless a row says open. This document renames nothing by itself; the renames landed in #1027 (navigation) and #1030 (tools).** It lists every name a player navigates by or acts on, says what each one means, and proposes changes. The rulings in Section F make the proposed names final. The renames and a `ConventionTest` law that checks Section D landed in those pull requests; the law also refuses a retired name (the `Today` column) as a label.
 
 This is part 1 of clarity PR 5 (`docs/superpowers/specs/2026-10-27-ui-clarity-design.md` section 7.2). Every `file:line` below was taken from this branch (origin/claude/mobile-mpc-drum-sampler-t58x74 at the time of writing), and a sample of 28 was re-read against the file. The spec's own line references (`ChopScreen.kt:1602`, `OrbitScreen.kt:1389`, `SnapScreen.kt:1439`) have drifted and are not reused.
 
@@ -202,7 +202,7 @@ Each row is a name with more than one meaning. The primary use keeps the name; t
 
 ### D1. Navigation labels (the `ConventionTest` law table)
 
-Every label in `Navigation.kt`. The last column says where the name goes next.
+Every label in `Navigation.kt`. The last column says where the name went: the approved and proposed renames landed in #1027 (navigation) and #1030 (tools), so a `Today` name below is the retired one and `ConventionTest` refuses it as a label.
 
 **Places** (`Navigation.kt:214-219`, shown on the place row)
 

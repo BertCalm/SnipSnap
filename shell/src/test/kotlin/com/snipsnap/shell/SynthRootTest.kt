@@ -24,8 +24,6 @@ import com.snipsnap.synth.GlintVoice
 import com.snipsnap.synth.GyrePatch
 import com.snipsnap.synth.ClutterPatch
 import com.snipsnap.synth.ClutterVoice
-import com.snipsnap.synth.ScuffPatch
-import com.snipsnap.synth.ScuffVoice
 import com.snipsnap.synth.GyreVoice
 import com.snipsnap.synth.Keys
 import com.snipsnap.synth.MagnetPatch
@@ -94,7 +92,6 @@ class SynthRootTest {
         private val patches: List<Patch> by lazy {
             Presets.all() + listOf(
                 GyrePatch("Door", GyreVoice.FLICK, emptyMap()),
-                ScuffPatch("Door", ScuffVoice.KICK, emptyMap()),
                 ClutterPatch("Bucket", ClutterVoice.BUCKET, emptyMap()),
                 MagnetPatch("Door", MagnetVoice.JANGLE, emptyMap()),
                 SilkPatch("Door", SilkVoice.OUD, emptyMap()),

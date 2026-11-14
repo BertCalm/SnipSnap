@@ -270,13 +270,28 @@ class ButtonTierTest {
         assertTrue("snipsRead = true" in screen)
     }
 
+    /** A line that passes "CANCEL" as the label of an ActionButton or a LabButton, the two shapes a visible CANCEL takes. */
+    private val cancelButton = Regex("""\b(ActionButton|LabButton)\(\s*"CANCEL"""")
+
+    private fun loudCancels(lines: List<String>) = lines.filter { cancelButton.containsMatchIn(it) && "ButtonTier.Text" !in it }
+
     @Test
     fun `cancel is a text button`() {
         val cancels = sources().flatMap { (name, text) ->
-            codeLines(text).filter { (_, l) -> l.contains("ActionButton(\"CANCEL\"") }.map { name to it.second }
+            codeLines(text).filter { (_, l) -> cancelButton.containsMatchIn(l) }.map { name to it.second }
         }
-        assertTrue(cancels.size >= 10, "found ${cancels.size} CANCEL buttons")
+        assertTrue(cancels.size >= 20, "found ${cancels.size} CANCEL buttons")
+        assertTrue(cancels.any { "LabButton(" in it.second }, "the LabButton shape is scanned")
         val loud = cancels.filter { "ButtonTier.Text" !in it.second }
         assertEquals(emptyList(), loud)
+    }
+
+    @Test
+    fun `the cancel law reads a LabButton CANCEL and fails when it is not a text button`() {
+        val bare = "LabButton(\"CANCEL\", scheme, enabled = true, onClick = onCancel)"
+        val ok = "LabButton(\"CANCEL\", scheme, enabled = true, tier = ButtonTier.Text, onClick = onCancel)"
+        assertEquals(listOf(bare), loudCancels(listOf(bare, ok)))
+        assertEquals(listOf("ActionButton(\"CANCEL\", scheme)"), loudCancels(listOf("ActionButton(\"CANCEL\", scheme)")))
+        assertEquals(emptyList(), loudCancels(listOf("LabButton(\"SAVE\", scheme, enabled = true) {}")))
     }
 }

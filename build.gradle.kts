@@ -58,12 +58,19 @@ repositories {
 // nothing measurable: its own classes and StarterKitsTest, which renders
 // CAUSTIC instruments, took 572 s with the exclude and 585 s without, on the
 // same machine. Remove it on the same proof as Filament's.
+//
+// Splay.renderDetailed (1,575 bytes) is the third, at type.cpp:1283 on
+// 21.0.12, and is intermittent like CAUSTIC's. It killed two local test JVMs
+// on 2026-11-14, in :synth's shard 2 of 3 and in a plain :shell:test, the
+// first full runs after SPLAY landed. CI's Temurin 17 has not shown it.
+// Remove it on the same proof as Filament's.
 subprojects {
     tasks.withType<Test>().configureEach {
         jvmArgs(
             "-XX:CompileCommand=quiet",
             "-XX:CompileCommand=exclude,com.snipsnap.synth.Filament::synthesize",
             "-XX:CompileCommand=exclude,com.snipsnap.synth.CausticInstrument::synthesize",
+            "-XX:CompileCommand=exclude,com.snipsnap.synth.Splay::renderDetailed",
         )
     }
 }

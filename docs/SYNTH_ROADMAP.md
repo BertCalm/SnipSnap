@@ -3586,6 +3586,15 @@ cut from the exported MPC 3 tracks, the velocity strips, the phrases, the Kotlin
 the accepted baseline. Open: hardware playback, MPC 2's one take per zone, presets and the roster, the app
 picker. See [SCUFF](SCUFF.md) and the gates entry.
 
+### SCUFF, round 4 (2026-11-13)
+
+Presets and the roster, the round the owner chose after the listen: `ScuffPresets` is the two accepted kits'
+twenty-eight hits as patches (the kit's chain and the pad's macros, struck full, the first take), named after
+their kit, served by `Presets`; SCUFF leaves `PatchTypes.ROSTERLESS`. A saved SCUFF strike promotes with its
+velocity, take and model through the JSON constructor, as RIVET's does. Open: hardware playback, MPC 2's one
+take per zone, the app picker (a round of its own now that the convention no longer defers it to an SDK
+session). See [SCUFF](SCUFF.md).
+
 ### CLUTTER, round 1 (2026-11-14)
 
 A found-sound drum engine of 22 modelled household objects, ported from the accepted round-0c Python prototype

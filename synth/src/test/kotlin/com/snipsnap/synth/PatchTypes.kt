@@ -51,9 +51,10 @@ internal object PatchTypes {
     /**
      * The engines with a [Patch] type but no preset roster in [Presets]: SNAP reads its
      * table off a photo, TERRA, SILK, GYRE and MAGNET have no factory
-     * presets. Named here so a new engine has to be either rostered or listed.
+     * presets. Named here so a new engine has to be either rostered or listed. SCUFF
+     * sat here from its Kotlin port until the owner heard its kits (2026-11-13).
      */
-    val ROSTERLESS: Set<String> = setOf(HydroformPatch.ENGINE, SnapPatch.ENGINE, TerraPatch.ENGINE, SilkPatch.ENGINE, GyrePatch.ENGINE, MagnetPatch.ENGINE, ScuffPatch.ENGINE, ClutterPatch.ENGINE)
+    val ROSTERLESS: Set<String> = setOf(HydroformPatch.ENGINE, SnapPatch.ENGINE, TerraPatch.ENGINE, SilkPatch.ENGINE, GyrePatch.ENGINE, MagnetPatch.ENGINE, ClutterPatch.ENGINE)
 
     /**
      * The engines with a [Patch] type and provisional recipes of their own that are
