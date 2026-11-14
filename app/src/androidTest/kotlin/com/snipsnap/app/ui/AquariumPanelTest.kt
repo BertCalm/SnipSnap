@@ -284,7 +284,8 @@ class AquariumPanelTest : ComposeScreenTest() {
         showPanel(AquariumEditor(context()).selectPreset("full"))
         revealPanelAction("aquarium-cancel")
         assertReadsInFull("AQUARIUM · PAD")
-        assertReadsInFull("◄ PAD")
+        // A section folds with CLOSE. The old "◄ PAD" chip was the back-label waiver this panel left behind.
+        assertReadsInFull("CLOSE")
         tagged("aquarium-cancel").assertHeightIsAtLeast(44.dp)
         for ((id, label) in listOf("before" to "BEFORE", "hear" to "PREVIEW", "keep" to "KEEP", "remove" to "REMOVE", "undo" to "UNDO")) {
             revealPanelAction("aquarium-$id")
@@ -354,7 +355,7 @@ class AquariumPanelTest : ComposeScreenTest() {
                 onBack = { pageState = PadSheetPage.EDITOR },
                 onToast = {}, onNavigateTape = {}, onGrainField = {}, onSplice = {}, onStack = {},
                 onKitUpdated = { updated = it }, onShelfAssetWritten = {}, appScope = appScope,
-                workshopOpen = false, openBox = openBox, onOpenBox = { openBox = it },
+                openBox = openBox, onOpenBox = { openBox = it },
                 pedalRow = PedalSlate.DEFAULT, onPedalRowChange = {},
                 aquariumRenderer = renderer,
             )
@@ -424,7 +425,7 @@ class AquariumPanelTest : ComposeScreenTest() {
         assertEquals(selected, preview.recipe)
         assertEquals("PREVIEW must not change live or hidden kit files", before, files(fixture.entry.dir))
         assertNull(updated)
-        compose.onNodeWithText("PREVIEW PLAYS THE MAIN SAMPLE. KEEP UPDATES EVERY VELOCITY LAYER.", useUnmergedTree = true).assertExists()
+        compose.onNodeWithText("Preview plays the main sample. Keep updates every velocity layer.", useUnmergedTree = true).assertExists()
 
         waitUntilEnabled("aquarium-keep")
         activate("aquarium-keep")
@@ -558,7 +559,7 @@ class AquariumPanelTest : ComposeScreenTest() {
         waitFor("the preview before changing benches") { renderer.entered.count == 0L }
         // openBox is caller-owned. Changing it here exercises the same input
         // update as parent navigation, including paths that do not tap Close.
-        compose.runOnIdle { openBox = "BENCH" }
+        compose.runOnIdle { openBox = null }
         pump()
         tagged("aquarium-panel").assertDoesNotExist()
         renderer.release.countDown()

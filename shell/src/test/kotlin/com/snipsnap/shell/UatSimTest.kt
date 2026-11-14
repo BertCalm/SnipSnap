@@ -221,11 +221,11 @@ class UatSimTest {
         val root = tmp("j1")
         var taps = 0
 
-        step(++taps, "App opens on SHELF. Kits on disk: ${KitStore.list(root).size}")
+        step(++taps, "App opens on LIBRARY. Kits on disk: ${KitStore.list(root).size}")
         note("empty-shelf copy: \"${Copy.EMPTY_SHELF}\"")
-        note("the one filled button reads: ${Places.CATCH_FIRST}; NEW KIT ▸ STARTERS is the outline row beneath it")
+        note("the empty panel holds the filled ${Places.CATCH_FIRST} and the outline ${Copy.START_FROM_KIT} under the note: \"${Copy.FIRST_RUN_PLACES_NOTE}\"; then the amber \"${Copy.EMPTY_SHELF_ENDS}\"")
 
-        step(++taps, "Tap the outline row, NEW KIT ▸ STARTERS. Menu heading: PICK A STARTER")
+        step(++taps, "Tap the outline button, ${Copy.START_FROM_KIT}. Menu heading: PICK A STARTER")
         StarterKits.ALL.forEachIndexed { i, s ->
             note("${i + 1}. ${s.displayName.padEnd(14)} ${if (s.seeded) "(TAPS REROLL) " else ""}— ${s.blurb}")
         }
@@ -281,7 +281,7 @@ class UatSimTest {
         if (!bwiz.blocked) {
             finding("J1-EMPTY", "an entirely empty kit is NOT blocked by preflight — a 0-pad program can reach the card")
         }
-        note("what tells a new user how to fill it? only a toast on tapping an empty pad: LONG-PRESS TO CAPTURE")
+        note("what tells a new user how to fill it? only a toast on tapping an empty pad: Long-press to capture.")
     }
 
     // ================================================================
@@ -303,21 +303,21 @@ class UatSimTest {
         val captured = fieldRecording()
         note("snip is ${"%.1f".format(captured.durationSeconds)}s of the rolling 60s buffer")
 
-        step(0, "…and now what? The snip has landed in SNIPS. Nothing navigates there.")
-        note("the user must: STOP, then find SNIPS ▸ EVERY CATCH, ONE LIST at the bottom of the shelf")
-        note("from a SNIPS row: → TAPE (trim) or → PAD (place). → PAD needs a kit that exists.")
+        step(0, "…and now what? The snip has landed in SAVED SAMPLES. Nothing navigates there.")
+        note("the user must: STOP, then find SAVED SAMPLES ▸ EVERY CATCH, ONE LIST at the bottom of the shelf")
+        note("from a SAVED SAMPLES row: → TAPE (trim) or → PAD (place). → PAD needs a kit that exists.")
         note("on a cold shelf the FIRST snip is placed for them: a project, an empty kit, A01 selected and lit, and \"${Copy.FIRST_CATCH_LANDED}\" after the CUT ▸ offer")
         note("what follows is the route a LATER failure or an emptied shelf still takes")
 
         // route A: → PAD with no kit on the shelf
-        step(++taps, "Tap SNIPS ▸ EVERY CATCH, ONE LIST")
+        step(++taps, "Tap SAVED SAMPLES ▸ EVERY CATCH, ONE LIST")
         step(++taps, "On the row, tap → PAD (with an empty shelf)")
-        note("shelf header swaps to PICK A KIT FOR THIS SNIP")
+        note("shelf header swaps to PICK A KIT FOR THIS SAMPLE")
         note("empty-shelf copy for this mode: \"${Copy.EMPTY_SHELF_FOR_ASSIGN}\"")
         finding(
             "J2-DEADEND",
             "→ PAD on an empty shelf is a dead end by design: the user must back out, make a kit, " +
-                "come back to SNIPS, and re-press → PAD. Nothing offers to make the kit for them.",
+                "come back to SAVED SAMPLES, and re-press → PAD. Nothing offers to make the kit for them.",
         )
 
         // route B: TAPE → INSTANT KIT (the fast path)
@@ -647,7 +647,7 @@ class UatSimTest {
                 "never told which they got.",
         )
         say("")
-        note("SETUP holds exactly three things: SCHEME, PERSONALITY, TEACH THE MACHINE.")
+        note("SETTINGS holds exactly three things: SCHEME, PERSONALITY, TEACH THE MACHINE.")
         note("no default export format, no storage/where-things-live readout, no capture settings, no HELP link.")
     }
 
@@ -684,10 +684,10 @@ class UatSimTest {
             finding("J10-ROW", "$longest needs ${"%.0f".format(need)}dp and its chip is ${"%.0f".format(chip)}dp: a place is cut short on the row that never scrolls")
         }
         note("the row is ${Layout.MENU_ROW_H}dp and each place fills it, against MIN_HIT_TARGET=${Layout.MIN_HIT_TARGET}dp (finding 9, kept)")
-        note("stage rows under TAPE (${Places.TAPE_STAGES.joinToString(" · ")}) and PROJECT (${Places.PROJECT_STAGES.joinToString(" · ")}); SHELF and MAKE are lists")
-        note("the gear at the title bar's right opens ${Places.GEAR_SETUP} ▸, ${Places.GEAR_HELP} ▸ and ${Places.GEAR_MIDI} ▸ — the first two were tabs twelve and thirteen of the old row, all one tap from anywhere now")
+        note("stage rows under TAPE (${Places.TAPE_STAGES.joinToString(" · ")}) and PROJECT (${Places.PROJECT_STAGES.joinToString(" · ")}); LIBRARY and MAKE are lists")
+        note("the title bar's right end holds ${Copy.TITLE_HELP} (?) and ${Copy.TITLE_SETTINGS} (gear), each opening its screen directly, one tap from anywhere; ${Copy.SETUP_MIDI_DEVICES} is a row inside ${Copy.TITLE_SETTINGS}")
         note("the dock is ${Layout.DOCK_H}dp at the foot of every screen: the beat's transport, the capture light and counter, the line and its door")
-        note("no status bar: where you are is the two rows, the shelf count is on the SHELF, the busy line is the dock's")
+        note("no status bar: where you are is the two rows, the shelf count is on the LIBRARY, the busy line is the dock's")
         note("title bar reads: SNIPSNAP, then the open project's name — the stale M0 build tag went with finding 2")
         // The PERSONALITY slider and its `Delight` gate (OFF/MILD/FULL,
         // toasts/quips/deckSounds) are gone — deleted rather than fixed,

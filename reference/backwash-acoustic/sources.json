@@ -1,0 +1,532 @@
+[
+  {
+    "voice": "ride-bell",
+    "repo": "sfzinstruments/virtuosity_drums",
+    "commit": "9f04cf9a734527edfbb0a4eee1f674e45bbf71bc",
+    "path": "Samples/oh/ride/oh_ride_bell_vl1_rr1.flac",
+    "gitBlob": "95f7c62fa3f122d30fb4dfb4bc19897f7a30de75",
+    "downloadUrl": "https://raw.githubusercontent.com/sfzinstruments/virtuosity_drums/9f04cf9a734527edfbb0a4eee1f674e45bbf71bc/Samples/oh/ride/oh_ride_bell_vl1_rr1.flac",
+    "sha256": "c1d4a6d958fe778cda3c534c3343e1072da5a69b2853a2ae0b1805e6643080e0",
+    "bytes": 600750
+  },
+  {
+    "voice": "ride-bell",
+    "repo": "sfzinstruments/virtuosity_drums",
+    "commit": "9f04cf9a734527edfbb0a4eee1f674e45bbf71bc",
+    "path": "Samples/oh/ride/oh_ride_bell_vl1_rr2.flac",
+    "gitBlob": "7ea28d4f0b95ca4a343180703a8162a2cef2a370",
+    "downloadUrl": "https://raw.githubusercontent.com/sfzinstruments/virtuosity_drums/9f04cf9a734527edfbb0a4eee1f674e45bbf71bc/Samples/oh/ride/oh_ride_bell_vl1_rr2.flac",
+    "sha256": "0995af72e6736f11caa8b6a341b8dcd4e4a0d9b5bfa57b2ca20e4e880e0a9577",
+    "bytes": 508042
+  },
+  {
+    "voice": "ride-bell",
+    "repo": "sfzinstruments/virtuosity_drums",
+    "commit": "9f04cf9a734527edfbb0a4eee1f674e45bbf71bc",
+    "path": "Samples/oh/ride/oh_ride_bell_vl1_rr3.flac",
+    "gitBlob": "5324c9172292b0b9c743c740a8b3e3e54a61190b",
+    "downloadUrl": "https://raw.githubusercontent.com/sfzinstruments/virtuosity_drums/9f04cf9a734527edfbb0a4eee1f674e45bbf71bc/Samples/oh/ride/oh_ride_bell_vl1_rr3.flac",
+    "sha256": "d0f1e24bd906ee78a52a99fcf36047656cab2104ed2cbaba790e16b075e9704c",
+    "bytes": 575149
+  },
+  {
+    "voice": "ride-bell",
+    "repo": "sfzinstruments/virtuosity_drums",
+    "commit": "9f04cf9a734527edfbb0a4eee1f674e45bbf71bc",
+    "path": "Samples/oh/ride/oh_ride_bell_vl2_rr1.flac",
+    "gitBlob": "cb62785f95e29a240efd9c26ac2876b84ba5d504",
+    "downloadUrl": "https://raw.githubusercontent.com/sfzinstruments/virtuosity_drums/9f04cf9a734527edfbb0a4eee1f674e45bbf71bc/Samples/oh/ride/oh_ride_bell_vl2_rr1.flac",
+    "sha256": "36930c1702ff868d84e1bf58fad899c9559b0312b6393bb1b7a4c5d5e91e28aa",
+    "bytes": 659602
+  },
+  {
+    "voice": "ride-bell",
+    "repo": "sfzinstruments/virtuosity_drums",
+    "commit": "9f04cf9a734527edfbb0a4eee1f674e45bbf71bc",
+    "path": "Samples/oh/ride/oh_ride_bell_vl2_rr2.flac",
+    "gitBlob": "b421eca320539096a3a347e817f22128b0cea145",
+    "downloadUrl": "https://raw.githubusercontent.com/sfzinstruments/virtuosity_drums/9f04cf9a734527edfbb0a4eee1f674e45bbf71bc/Samples/oh/ride/oh_ride_bell_vl2_rr2.flac",
+    "sha256": "fcd4127cef7484c9f6a647013989844cb622b689795de16ad4777bf76f152cd0",
+    "bytes": 690283
+  },
+  {
+    "voice": "ride-bell",
+    "repo": "sfzinstruments/virtuosity_drums",
+    "commit": "9f04cf9a734527edfbb0a4eee1f674e45bbf71bc",
+    "path": "Samples/oh/ride/oh_ride_bell_vl2_rr3.flac",
+    "gitBlob": "2d0f22ad68dacc4490d7f4acb6c7c6fcb29e8220",
+    "downloadUrl": "https://raw.githubusercontent.com/sfzinstruments/virtuosity_drums/9f04cf9a734527edfbb0a4eee1f674e45bbf71bc/Samples/oh/ride/oh_ride_bell_vl2_rr3.flac",
+    "sha256": "591aa4be5bd0f753c70d7b537d5d21b3c4c445c3f6c9086dbc50f17b7acabd54",
+    "bytes": 686494
+  },
+  {
+    "voice": "ride-bell",
+    "repo": "sfzinstruments/virtuosity_drums",
+    "commit": "9f04cf9a734527edfbb0a4eee1f674e45bbf71bc",
+    "path": "Samples/oh/ride/oh_ride_bell_vl3_rr1.flac",
+    "gitBlob": "2bd256a7c5cae3de0fe854b6388d2fbc06c32f03",
+    "downloadUrl": "https://raw.githubusercontent.com/sfzinstruments/virtuosity_drums/9f04cf9a734527edfbb0a4eee1f674e45bbf71bc/Samples/oh/ride/oh_ride_bell_vl3_rr1.flac",
+    "sha256": "e9d367cb70b15377fcec2299a15b6590a93e2b8b0d789511616bcb7b8345281d",
+    "bytes": 938303
+  },
+  {
+    "voice": "ride-bell",
+    "repo": "sfzinstruments/virtuosity_drums",
+    "commit": "9f04cf9a734527edfbb0a4eee1f674e45bbf71bc",
+    "path": "Samples/oh/ride/oh_ride_bell_vl3_rr2.flac",
+    "gitBlob": "e717207aebfc47fbd298daab5a5256013e34b9f8",
+    "downloadUrl": "https://raw.githubusercontent.com/sfzinstruments/virtuosity_drums/9f04cf9a734527edfbb0a4eee1f674e45bbf71bc/Samples/oh/ride/oh_ride_bell_vl3_rr2.flac",
+    "sha256": "89f73fcf2c149f89c4cee3d904ad37d4e2d47aad6a5693f8386977009584e4dd",
+    "bytes": 969328
+  },
+  {
+    "voice": "ride-bell",
+    "repo": "sfzinstruments/virtuosity_drums",
+    "commit": "9f04cf9a734527edfbb0a4eee1f674e45bbf71bc",
+    "path": "Samples/oh/ride/oh_ride_bell_vl3_rr3.flac",
+    "gitBlob": "7bcbc79b7de9fecd52f77038f1079749b3d967de",
+    "downloadUrl": "https://raw.githubusercontent.com/sfzinstruments/virtuosity_drums/9f04cf9a734527edfbb0a4eee1f674e45bbf71bc/Samples/oh/ride/oh_ride_bell_vl3_rr3.flac",
+    "sha256": "edd9e99771d5dbfdfd49ceacb0c922d2a3575deeda7956328260ef5ad6dfd202",
+    "bytes": 1029946
+  },
+  {
+    "voice": "cowbell",
+    "repo": "sfzinstruments/virtuosity_drums",
+    "commit": "9f04cf9a734527edfbb0a4eee1f674e45bbf71bc",
+    "path": "Samples/perc/close/cowbell/Cowbell1_Normal_v1_rr1_Close.wav",
+    "gitBlob": "ed454cce39ddfb2e1d42f38400116bf719927e00",
+    "downloadUrl": "https://raw.githubusercontent.com/sfzinstruments/virtuosity_drums/9f04cf9a734527edfbb0a4eee1f674e45bbf71bc/Samples/perc/close/cowbell/Cowbell1_Normal_v1_rr1_Close.wav",
+    "sha256": "b8d17c91f4cf802adc73bf29528569b1904e2849cb2988d9aa50117cd8b139f3",
+    "bytes": 91688
+  },
+  {
+    "voice": "cowbell",
+    "repo": "sfzinstruments/virtuosity_drums",
+    "commit": "9f04cf9a734527edfbb0a4eee1f674e45bbf71bc",
+    "path": "Samples/perc/close/cowbell/Cowbell1_Normal_v1_rr2_Close.wav",
+    "gitBlob": "41f3e67fc4c674ac4399c554bf9b3df190ea69b1",
+    "downloadUrl": "https://raw.githubusercontent.com/sfzinstruments/virtuosity_drums/9f04cf9a734527edfbb0a4eee1f674e45bbf71bc/Samples/perc/close/cowbell/Cowbell1_Normal_v1_rr2_Close.wav",
+    "sha256": "8f331a0f559b31bf29a860a85e1949b40d0b79978c45ea09debfe6d40bd2b679",
+    "bytes": 95534
+  },
+  {
+    "voice": "cowbell",
+    "repo": "sfzinstruments/virtuosity_drums",
+    "commit": "9f04cf9a734527edfbb0a4eee1f674e45bbf71bc",
+    "path": "Samples/perc/close/cowbell/Cowbell1_Normal_v1_rr3_Close.wav",
+    "gitBlob": "928d6dd8653b57c234d719748e6ca4ff1a69982f",
+    "downloadUrl": "https://raw.githubusercontent.com/sfzinstruments/virtuosity_drums/9f04cf9a734527edfbb0a4eee1f674e45bbf71bc/Samples/perc/close/cowbell/Cowbell1_Normal_v1_rr3_Close.wav",
+    "sha256": "26d18ea73b3f4fe657be0cd51a136841164ec4daae9d63dc207832ddde35c467",
+    "bytes": 91724
+  },
+  {
+    "voice": "cowbell",
+    "repo": "sfzinstruments/virtuosity_drums",
+    "commit": "9f04cf9a734527edfbb0a4eee1f674e45bbf71bc",
+    "path": "Samples/perc/close/cowbell/Cowbell1_Normal_v1_rr4_Close.wav",
+    "gitBlob": "aebc001302d745efe46e1ff11fe0fba83daa2c0d",
+    "downloadUrl": "https://raw.githubusercontent.com/sfzinstruments/virtuosity_drums/9f04cf9a734527edfbb0a4eee1f674e45bbf71bc/Samples/perc/close/cowbell/Cowbell1_Normal_v1_rr4_Close.wav",
+    "sha256": "4799502dbd3289c207cebca593336eb43b4c78f9e515ac79b8f42dd733b4d75b",
+    "bytes": 86992
+  },
+  {
+    "voice": "cowbell",
+    "repo": "sfzinstruments/virtuosity_drums",
+    "commit": "9f04cf9a734527edfbb0a4eee1f674e45bbf71bc",
+    "path": "Samples/perc/close/cowbell/Cowbell1_Normal_v1_rr5_Close.wav",
+    "gitBlob": "1bef8b2afd87eebaf53f441908efed328b35e200",
+    "downloadUrl": "https://raw.githubusercontent.com/sfzinstruments/virtuosity_drums/9f04cf9a734527edfbb0a4eee1f674e45bbf71bc/Samples/perc/close/cowbell/Cowbell1_Normal_v1_rr5_Close.wav",
+    "sha256": "89339e11336adca563b88ef350b45e9202f1088a50a69de30c492a524fa95fd2",
+    "bytes": 89428
+  },
+  {
+    "voice": "cowbell",
+    "repo": "sfzinstruments/virtuosity_drums",
+    "commit": "9f04cf9a734527edfbb0a4eee1f674e45bbf71bc",
+    "path": "Samples/perc/close/cowbell/Cowbell1_Normal_v1_rr6_Close.wav",
+    "gitBlob": "884539b3829ea9f8b96f5eb05375609a9cdd314e",
+    "downloadUrl": "https://raw.githubusercontent.com/sfzinstruments/virtuosity_drums/9f04cf9a734527edfbb0a4eee1f674e45bbf71bc/Samples/perc/close/cowbell/Cowbell1_Normal_v1_rr6_Close.wav",
+    "sha256": "066e4533f8c3b70e090925907f1c844ddf0d208300fe4a5465101f327db38076",
+    "bytes": 88924
+  },
+  {
+    "voice": "cowbell",
+    "repo": "sfzinstruments/virtuosity_drums",
+    "commit": "9f04cf9a734527edfbb0a4eee1f674e45bbf71bc",
+    "path": "Samples/perc/close/cowbell/Cowbell1_Normal_v1_rr7_Close.wav",
+    "gitBlob": "c241f2c569f685ff61797ddbc22a918624b1d36a",
+    "downloadUrl": "https://raw.githubusercontent.com/sfzinstruments/virtuosity_drums/9f04cf9a734527edfbb0a4eee1f674e45bbf71bc/Samples/perc/close/cowbell/Cowbell1_Normal_v1_rr7_Close.wav",
+    "sha256": "28922080b1090101b58850472930a72cd0ce7e803dc472d7e5aca797738782b4",
+    "bytes": 92692
+  },
+  {
+    "voice": "cowbell",
+    "repo": "sfzinstruments/virtuosity_drums",
+    "commit": "9f04cf9a734527edfbb0a4eee1f674e45bbf71bc",
+    "path": "Samples/perc/close/cowbell/Cowbell1_Normal_v2_rr1_Close.wav",
+    "gitBlob": "9c74062be40775e6d5b8ff14e3a5f6852554c39f",
+    "downloadUrl": "https://raw.githubusercontent.com/sfzinstruments/virtuosity_drums/9f04cf9a734527edfbb0a4eee1f674e45bbf71bc/Samples/perc/close/cowbell/Cowbell1_Normal_v2_rr1_Close.wav",
+    "sha256": "f6e45e7a372ba932425c34d503163d5bbbc98ccf99a3b0c34c4265066d70005a",
+    "bytes": 87536
+  },
+  {
+    "voice": "cowbell",
+    "repo": "sfzinstruments/virtuosity_drums",
+    "commit": "9f04cf9a734527edfbb0a4eee1f674e45bbf71bc",
+    "path": "Samples/perc/close/cowbell/Cowbell1_Normal_v2_rr2_Close.wav",
+    "gitBlob": "8d40d2d7210bd91d2ee3bb602943e7dafb6f3abf",
+    "downloadUrl": "https://raw.githubusercontent.com/sfzinstruments/virtuosity_drums/9f04cf9a734527edfbb0a4eee1f674e45bbf71bc/Samples/perc/close/cowbell/Cowbell1_Normal_v2_rr2_Close.wav",
+    "sha256": "286ae0ab3487e0f0c2194ac9a4925478534a96736b98956df6d2c19b4b6f61dd",
+    "bytes": 91242
+  },
+  {
+    "voice": "cowbell",
+    "repo": "sfzinstruments/virtuosity_drums",
+    "commit": "9f04cf9a734527edfbb0a4eee1f674e45bbf71bc",
+    "path": "Samples/perc/close/cowbell/Cowbell1_Normal_v2_rr3_Close.wav",
+    "gitBlob": "6a87d1a101de90e04ada8331dd81fc4804f5b87d",
+    "downloadUrl": "https://raw.githubusercontent.com/sfzinstruments/virtuosity_drums/9f04cf9a734527edfbb0a4eee1f674e45bbf71bc/Samples/perc/close/cowbell/Cowbell1_Normal_v2_rr3_Close.wav",
+    "sha256": "9e099b95f38f19d12f398ddb10549dcf16d0e63d67bf6c13d2536c1554d08ae6",
+    "bytes": 89804
+  },
+  {
+    "voice": "cowbell",
+    "repo": "sfzinstruments/virtuosity_drums",
+    "commit": "9f04cf9a734527edfbb0a4eee1f674e45bbf71bc",
+    "path": "Samples/perc/close/cowbell/Cowbell1_Normal_v2_rr4_Close.wav",
+    "gitBlob": "df2ede47bef3d0a6667a0d4e78599f7fa9ab11ee",
+    "downloadUrl": "https://raw.githubusercontent.com/sfzinstruments/virtuosity_drums/9f04cf9a734527edfbb0a4eee1f674e45bbf71bc/Samples/perc/close/cowbell/Cowbell1_Normal_v2_rr4_Close.wav",
+    "sha256": "400c152755766668c67bbebfa4eefb679ec09347e589b1bd1970ff5d03a96603",
+    "bytes": 82484
+  },
+  {
+    "voice": "cowbell",
+    "repo": "sfzinstruments/virtuosity_drums",
+    "commit": "9f04cf9a734527edfbb0a4eee1f674e45bbf71bc",
+    "path": "Samples/perc/close/cowbell/Cowbell1_Normal_v2_rr5_Close.wav",
+    "gitBlob": "1f3c0d300467acb41183711f387054fa481b3285",
+    "downloadUrl": "https://raw.githubusercontent.com/sfzinstruments/virtuosity_drums/9f04cf9a734527edfbb0a4eee1f674e45bbf71bc/Samples/perc/close/cowbell/Cowbell1_Normal_v2_rr5_Close.wav",
+    "sha256": "1084939dab99cad91e3a0055be9080838ba9c3b1afebc8e498731f380dbf7b06",
+    "bytes": 88404
+  },
+  {
+    "voice": "cowbell",
+    "repo": "sfzinstruments/virtuosity_drums",
+    "commit": "9f04cf9a734527edfbb0a4eee1f674e45bbf71bc",
+    "path": "Samples/perc/close/cowbell/Cowbell1_Normal_v2_rr6_Close.wav",
+    "gitBlob": "8a0a9bb787b4e81bfecfa38a904d2a663908f7ec",
+    "downloadUrl": "https://raw.githubusercontent.com/sfzinstruments/virtuosity_drums/9f04cf9a734527edfbb0a4eee1f674e45bbf71bc/Samples/perc/close/cowbell/Cowbell1_Normal_v2_rr6_Close.wav",
+    "sha256": "a4cde86219c2deeaedccedc42387bf7387afaca5e8b21e01dbdb2d0fe3eb6b0d",
+    "bytes": 87650
+  },
+  {
+    "voice": "cowbell",
+    "repo": "sfzinstruments/virtuosity_drums",
+    "commit": "9f04cf9a734527edfbb0a4eee1f674e45bbf71bc",
+    "path": "Samples/perc/close/cowbell/Cowbell1_Normal_v2_rr7_Close.wav",
+    "gitBlob": "bbf9a333d3e27365259e7a4a4e9caad1cb92e6f3",
+    "downloadUrl": "https://raw.githubusercontent.com/sfzinstruments/virtuosity_drums/9f04cf9a734527edfbb0a4eee1f674e45bbf71bc/Samples/perc/close/cowbell/Cowbell1_Normal_v2_rr7_Close.wav",
+    "sha256": "b5ec0f78457e81412517caef278ed32c5e3d6e26eef19ba93521ad2529d1c6d0",
+    "bytes": 90784
+  },
+  {
+    "voice": "cowbell",
+    "repo": "sfzinstruments/virtuosity_drums",
+    "commit": "9f04cf9a734527edfbb0a4eee1f674e45bbf71bc",
+    "path": "Samples/perc/close/cowbell/Cowbell1_Normal_v3_rr1_Close.wav",
+    "gitBlob": "3f6cf1d4c62377122d19d5e424ba5ee60de11a84",
+    "downloadUrl": "https://raw.githubusercontent.com/sfzinstruments/virtuosity_drums/9f04cf9a734527edfbb0a4eee1f674e45bbf71bc/Samples/perc/close/cowbell/Cowbell1_Normal_v3_rr1_Close.wav",
+    "sha256": "da608770ee5ef4dc17e9527b7b69254024e601bfa7745a7f97c33001dd163e47",
+    "bytes": 83002
+  },
+  {
+    "voice": "cowbell",
+    "repo": "sfzinstruments/virtuosity_drums",
+    "commit": "9f04cf9a734527edfbb0a4eee1f674e45bbf71bc",
+    "path": "Samples/perc/close/cowbell/Cowbell1_Normal_v3_rr2_Close.wav",
+    "gitBlob": "abbce011a538bc53b757fbdf9bcbe513c516602c",
+    "downloadUrl": "https://raw.githubusercontent.com/sfzinstruments/virtuosity_drums/9f04cf9a734527edfbb0a4eee1f674e45bbf71bc/Samples/perc/close/cowbell/Cowbell1_Normal_v3_rr2_Close.wav",
+    "sha256": "be210c031354dcb889b0a2ba1902abdd59611677dbf1434c58f2fd90de0927f4",
+    "bytes": 88270
+  },
+  {
+    "voice": "cowbell",
+    "repo": "sfzinstruments/virtuosity_drums",
+    "commit": "9f04cf9a734527edfbb0a4eee1f674e45bbf71bc",
+    "path": "Samples/perc/close/cowbell/Cowbell1_Normal_v3_rr3_Close.wav",
+    "gitBlob": "3fee8f8c257c4334250ed3998c73e45154cdafc4",
+    "downloadUrl": "https://raw.githubusercontent.com/sfzinstruments/virtuosity_drums/9f04cf9a734527edfbb0a4eee1f674e45bbf71bc/Samples/perc/close/cowbell/Cowbell1_Normal_v3_rr3_Close.wav",
+    "sha256": "2370eee083026f2cc3ff98c9c8daadf41de37dabc27a82f22c3d8ce924dc6621",
+    "bytes": 129858
+  },
+  {
+    "voice": "cowbell",
+    "repo": "sfzinstruments/virtuosity_drums",
+    "commit": "9f04cf9a734527edfbb0a4eee1f674e45bbf71bc",
+    "path": "Samples/perc/close/cowbell/Cowbell1_Normal_v3_rr4_Close.wav",
+    "gitBlob": "61515322959ceaa0190c046f58988b47056c9630",
+    "downloadUrl": "https://raw.githubusercontent.com/sfzinstruments/virtuosity_drums/9f04cf9a734527edfbb0a4eee1f674e45bbf71bc/Samples/perc/close/cowbell/Cowbell1_Normal_v3_rr4_Close.wav",
+    "sha256": "cbd0bd35c597030ac28a1cf20e7a2a23d77cd6dd0d671f087738e7c8e83e0272",
+    "bytes": 85882
+  },
+  {
+    "voice": "cowbell",
+    "repo": "sfzinstruments/virtuosity_drums",
+    "commit": "9f04cf9a734527edfbb0a4eee1f674e45bbf71bc",
+    "path": "Samples/perc/close/cowbell/Cowbell1_Normal_v3_rr5_Close.wav",
+    "gitBlob": "aa49c8e0486ab89b0ffeed007c65871a8995bf06",
+    "downloadUrl": "https://raw.githubusercontent.com/sfzinstruments/virtuosity_drums/9f04cf9a734527edfbb0a4eee1f674e45bbf71bc/Samples/perc/close/cowbell/Cowbell1_Normal_v3_rr5_Close.wav",
+    "sha256": "87ef70d20acba51158bc37f7192abaa5069673b778504a295bec9547a85ae253",
+    "bytes": 159894
+  },
+  {
+    "voice": "cowbell",
+    "repo": "sfzinstruments/virtuosity_drums",
+    "commit": "9f04cf9a734527edfbb0a4eee1f674e45bbf71bc",
+    "path": "Samples/perc/close/cowbell/Cowbell1_Normal_v3_rr6_Close.wav",
+    "gitBlob": "cd35450bf324034543ccd88d234e4d0d94cce780",
+    "downloadUrl": "https://raw.githubusercontent.com/sfzinstruments/virtuosity_drums/9f04cf9a734527edfbb0a4eee1f674e45bbf71bc/Samples/perc/close/cowbell/Cowbell1_Normal_v3_rr6_Close.wav",
+    "sha256": "750ee63d2fb8268a4d26e94a0d025aa7e4edbda8f48a61b6eb35af5124a10624",
+    "bytes": 87948
+  },
+  {
+    "voice": "cowbell",
+    "repo": "sfzinstruments/virtuosity_drums",
+    "commit": "9f04cf9a734527edfbb0a4eee1f674e45bbf71bc",
+    "path": "Samples/perc/close/cowbell/Cowbell1_Normal_v3_rr7_Close.wav",
+    "gitBlob": "d7fbf4aa96170c5c179acb1442cf95d346d29e19",
+    "downloadUrl": "https://raw.githubusercontent.com/sfzinstruments/virtuosity_drums/9f04cf9a734527edfbb0a4eee1f674e45bbf71bc/Samples/perc/close/cowbell/Cowbell1_Normal_v3_rr7_Close.wav",
+    "sha256": "f6f226b4765a9ad7c1a5f73c374c5b7ba2fec72080595e3b19cfc9dabc3182f6",
+    "bytes": 143044
+  },
+  {
+    "voice": "cross-stick",
+    "repo": "sfzinstruments/virtuosity_drums",
+    "commit": "9f04cf9a734527edfbb0a4eee1f674e45bbf71bc",
+    "path": "Samples/snaremic/snare/snaremic_snare_crossstick_vl1.flac",
+    "gitBlob": "ca7f953c6ad6b8de1a3a7abe0ad45ef36309ca43",
+    "downloadUrl": "https://raw.githubusercontent.com/sfzinstruments/virtuosity_drums/9f04cf9a734527edfbb0a4eee1f674e45bbf71bc/Samples/snaremic/snare/snaremic_snare_crossstick_vl1.flac",
+    "sha256": "e3cb6db89d9a3b4abb290008038c7bbdbfa1db1d08babf40cc554457821e1a2e",
+    "bytes": 102519
+  },
+  {
+    "voice": "cross-stick",
+    "repo": "sfzinstruments/virtuosity_drums",
+    "commit": "9f04cf9a734527edfbb0a4eee1f674e45bbf71bc",
+    "path": "Samples/snaremic/snare/snaremic_snare_crossstick_vl10.flac",
+    "gitBlob": "e8c69e5921c4461e4f574fa81082a7edbab91933",
+    "downloadUrl": "https://raw.githubusercontent.com/sfzinstruments/virtuosity_drums/9f04cf9a734527edfbb0a4eee1f674e45bbf71bc/Samples/snaremic/snare/snaremic_snare_crossstick_vl10.flac",
+    "sha256": "f0278ade075915864d793a5a9ce790ec4f0d5f39806d0d1a0d0fba1e7973032f",
+    "bytes": 118184
+  },
+  {
+    "voice": "cross-stick",
+    "repo": "sfzinstruments/virtuosity_drums",
+    "commit": "9f04cf9a734527edfbb0a4eee1f674e45bbf71bc",
+    "path": "Samples/snaremic/snare/snaremic_snare_crossstick_vl11.flac",
+    "gitBlob": "1b17b09954563784ed922b07d6140235a58457d6",
+    "downloadUrl": "https://raw.githubusercontent.com/sfzinstruments/virtuosity_drums/9f04cf9a734527edfbb0a4eee1f674e45bbf71bc/Samples/snaremic/snare/snaremic_snare_crossstick_vl11.flac",
+    "sha256": "413e13a8b1d8e03db539a04d2828082a8efeb0630b83521b7e55830204926b0a",
+    "bytes": 128072
+  },
+  {
+    "voice": "cross-stick",
+    "repo": "sfzinstruments/virtuosity_drums",
+    "commit": "9f04cf9a734527edfbb0a4eee1f674e45bbf71bc",
+    "path": "Samples/snaremic/snare/snaremic_snare_crossstick_vl12.flac",
+    "gitBlob": "e222bd9e67f50f188f50fd3363801d37c9735129",
+    "downloadUrl": "https://raw.githubusercontent.com/sfzinstruments/virtuosity_drums/9f04cf9a734527edfbb0a4eee1f674e45bbf71bc/Samples/snaremic/snare/snaremic_snare_crossstick_vl12.flac",
+    "sha256": "dbc095af2eb7b58d2fd93cbbdc1e5e7cffc3eadd95bacde213e9f1d2035bfdb3",
+    "bytes": 126901
+  },
+  {
+    "voice": "cross-stick",
+    "repo": "sfzinstruments/virtuosity_drums",
+    "commit": "9f04cf9a734527edfbb0a4eee1f674e45bbf71bc",
+    "path": "Samples/snaremic/snare/snaremic_snare_crossstick_vl13.flac",
+    "gitBlob": "00245b67a2f8645b0d1419abf4d777e36f9e8187",
+    "downloadUrl": "https://raw.githubusercontent.com/sfzinstruments/virtuosity_drums/9f04cf9a734527edfbb0a4eee1f674e45bbf71bc/Samples/snaremic/snare/snaremic_snare_crossstick_vl13.flac",
+    "sha256": "563a3478501c1c601f4b85a8fd4429b70d8d9cb3c74e5bb85bfe7a3bbe60252f",
+    "bytes": 125780
+  },
+  {
+    "voice": "cross-stick",
+    "repo": "sfzinstruments/virtuosity_drums",
+    "commit": "9f04cf9a734527edfbb0a4eee1f674e45bbf71bc",
+    "path": "Samples/snaremic/snare/snaremic_snare_crossstick_vl14.flac",
+    "gitBlob": "5bbc37053b631e7e751ed5801e2e155a65779102",
+    "downloadUrl": "https://raw.githubusercontent.com/sfzinstruments/virtuosity_drums/9f04cf9a734527edfbb0a4eee1f674e45bbf71bc/Samples/snaremic/snare/snaremic_snare_crossstick_vl14.flac",
+    "sha256": "e12c2d9e137229810c1749ce2502415acc4c203ea05d7ab1a79876d6513da014",
+    "bytes": 124416
+  },
+  {
+    "voice": "cross-stick",
+    "repo": "sfzinstruments/virtuosity_drums",
+    "commit": "9f04cf9a734527edfbb0a4eee1f674e45bbf71bc",
+    "path": "Samples/snaremic/snare/snaremic_snare_crossstick_vl15.flac",
+    "gitBlob": "7e67ccc3846c6691f6a5c08d58894209367a8222",
+    "downloadUrl": "https://raw.githubusercontent.com/sfzinstruments/virtuosity_drums/9f04cf9a734527edfbb0a4eee1f674e45bbf71bc/Samples/snaremic/snare/snaremic_snare_crossstick_vl15.flac",
+    "sha256": "55a508bf8005774f20e386efb9e00437e56982c2be9ee8bae61770991b16360a",
+    "bytes": 121359
+  },
+  {
+    "voice": "cross-stick",
+    "repo": "sfzinstruments/virtuosity_drums",
+    "commit": "9f04cf9a734527edfbb0a4eee1f674e45bbf71bc",
+    "path": "Samples/snaremic/snare/snaremic_snare_crossstick_vl16.flac",
+    "gitBlob": "487cef7a1a81cd1b09716cbbf36516f459171f2f",
+    "downloadUrl": "https://raw.githubusercontent.com/sfzinstruments/virtuosity_drums/9f04cf9a734527edfbb0a4eee1f674e45bbf71bc/Samples/snaremic/snare/snaremic_snare_crossstick_vl16.flac",
+    "sha256": "2211228b897b87dd133e3bc88295b1ea7b31ba03b9a7db3a66a477d999775e2d",
+    "bytes": 116223
+  },
+  {
+    "voice": "cross-stick",
+    "repo": "sfzinstruments/virtuosity_drums",
+    "commit": "9f04cf9a734527edfbb0a4eee1f674e45bbf71bc",
+    "path": "Samples/snaremic/snare/snaremic_snare_crossstick_vl2.flac",
+    "gitBlob": "49214a000bf4f58ca224ca84e10b1b6761ec8c93",
+    "downloadUrl": "https://raw.githubusercontent.com/sfzinstruments/virtuosity_drums/9f04cf9a734527edfbb0a4eee1f674e45bbf71bc/Samples/snaremic/snare/snaremic_snare_crossstick_vl2.flac",
+    "sha256": "ee29b435d74112fe9cbec203aaffcc6deda3b94ba007359e45fe4be7390dfd59",
+    "bytes": 98875
+  },
+  {
+    "voice": "cross-stick",
+    "repo": "sfzinstruments/virtuosity_drums",
+    "commit": "9f04cf9a734527edfbb0a4eee1f674e45bbf71bc",
+    "path": "Samples/snaremic/snare/snaremic_snare_crossstick_vl3.flac",
+    "gitBlob": "244979fd525a5453e969ac44c8c066d4bdc85c6e",
+    "downloadUrl": "https://raw.githubusercontent.com/sfzinstruments/virtuosity_drums/9f04cf9a734527edfbb0a4eee1f674e45bbf71bc/Samples/snaremic/snare/snaremic_snare_crossstick_vl3.flac",
+    "sha256": "4744d1942c52a468bb97006ce58e4fe1b6348e7a94339fe386a914628ec7f171",
+    "bytes": 103541
+  },
+  {
+    "voice": "cross-stick",
+    "repo": "sfzinstruments/virtuosity_drums",
+    "commit": "9f04cf9a734527edfbb0a4eee1f674e45bbf71bc",
+    "path": "Samples/snaremic/snare/snaremic_snare_crossstick_vl4.flac",
+    "gitBlob": "2af54156e79d649cf79d49feefad3cff27ff201e",
+    "downloadUrl": "https://raw.githubusercontent.com/sfzinstruments/virtuosity_drums/9f04cf9a734527edfbb0a4eee1f674e45bbf71bc/Samples/snaremic/snare/snaremic_snare_crossstick_vl4.flac",
+    "sha256": "5723f21370a6784b4f52fef43bc0c31751ffe45355cc0602cd7b595e80cf33e3",
+    "bytes": 122022
+  },
+  {
+    "voice": "cross-stick",
+    "repo": "sfzinstruments/virtuosity_drums",
+    "commit": "9f04cf9a734527edfbb0a4eee1f674e45bbf71bc",
+    "path": "Samples/snaremic/snare/snaremic_snare_crossstick_vl5.flac",
+    "gitBlob": "878ad747a9fbdda96a9d33f3546e85bf83a05cf0",
+    "downloadUrl": "https://raw.githubusercontent.com/sfzinstruments/virtuosity_drums/9f04cf9a734527edfbb0a4eee1f674e45bbf71bc/Samples/snaremic/snare/snaremic_snare_crossstick_vl5.flac",
+    "sha256": "8f13e72476de993e99222110920bb4ed3d161a568c341613002c5eb02c4f8639",
+    "bytes": 117749
+  },
+  {
+    "voice": "cross-stick",
+    "repo": "sfzinstruments/virtuosity_drums",
+    "commit": "9f04cf9a734527edfbb0a4eee1f674e45bbf71bc",
+    "path": "Samples/snaremic/snare/snaremic_snare_crossstick_vl6.flac",
+    "gitBlob": "8376d2e48d3d71673f3696afc4de24a51035be78",
+    "downloadUrl": "https://raw.githubusercontent.com/sfzinstruments/virtuosity_drums/9f04cf9a734527edfbb0a4eee1f674e45bbf71bc/Samples/snaremic/snare/snaremic_snare_crossstick_vl6.flac",
+    "sha256": "6e29ca21f980b69847b41083500e6f3a501c7068b56a9556c1b8005d96b0e8bf",
+    "bytes": 105399
+  },
+  {
+    "voice": "cross-stick",
+    "repo": "sfzinstruments/virtuosity_drums",
+    "commit": "9f04cf9a734527edfbb0a4eee1f674e45bbf71bc",
+    "path": "Samples/snaremic/snare/snaremic_snare_crossstick_vl7.flac",
+    "gitBlob": "f5cf344f328c5e6dc3c3a3149e92d7e08d156fd7",
+    "downloadUrl": "https://raw.githubusercontent.com/sfzinstruments/virtuosity_drums/9f04cf9a734527edfbb0a4eee1f674e45bbf71bc/Samples/snaremic/snare/snaremic_snare_crossstick_vl7.flac",
+    "sha256": "8c35f440f37b0b434564526b0259956bed6e2e9f593c24b2496ac152e950683b",
+    "bytes": 114290
+  },
+  {
+    "voice": "cross-stick",
+    "repo": "sfzinstruments/virtuosity_drums",
+    "commit": "9f04cf9a734527edfbb0a4eee1f674e45bbf71bc",
+    "path": "Samples/snaremic/snare/snaremic_snare_crossstick_vl8.flac",
+    "gitBlob": "6bd61ed7b2709279d6a98dbc17859c58bf15ccdf",
+    "downloadUrl": "https://raw.githubusercontent.com/sfzinstruments/virtuosity_drums/9f04cf9a734527edfbb0a4eee1f674e45bbf71bc/Samples/snaremic/snare/snaremic_snare_crossstick_vl8.flac",
+    "sha256": "72213f5ffaadf7641e06de28ac9d8d7bfc1d0b2c9e2a1d4e68db219b5fb26359",
+    "bytes": 117773
+  },
+  {
+    "voice": "cross-stick",
+    "repo": "sfzinstruments/virtuosity_drums",
+    "commit": "9f04cf9a734527edfbb0a4eee1f674e45bbf71bc",
+    "path": "Samples/snaremic/snare/snaremic_snare_crossstick_vl9.flac",
+    "gitBlob": "0082e0779d761d095823fdccc053234360bcf48b",
+    "downloadUrl": "https://raw.githubusercontent.com/sfzinstruments/virtuosity_drums/9f04cf9a734527edfbb0a4eee1f674e45bbf71bc/Samples/snaremic/snare/snaremic_snare_crossstick_vl9.flac",
+    "sha256": "ec99989552829a11054a6f9c1cae3a70fe9139d9244e660621b5786f0ce4145f",
+    "bytes": 111813
+  },
+  {
+    "voice": "tambourine",
+    "repo": "sgossner/VSCO-2-CE",
+    "commit": "440300901dfe9275fd84e0b7763af1f8443ae62e",
+    "path": "Percussion/Tamb1-Hit_v1_rr1_Sum.wav",
+    "gitBlob": "fbddb1e497d238e85b5c5646ed2c435767ae4385",
+    "downloadUrl": "https://raw.githubusercontent.com/sgossner/VSCO-2-CE/440300901dfe9275fd84e0b7763af1f8443ae62e/Percussion/Tamb1-Hit_v1_rr1_Sum.wav",
+    "sha256": "5f1ab08eb22948898695933b175d99b30f4aa9c6b4dcdb7b1fba90ab9f28baf2",
+    "bytes": 338496
+  },
+  {
+    "voice": "tambourine",
+    "repo": "sgossner/VSCO-2-CE",
+    "commit": "440300901dfe9275fd84e0b7763af1f8443ae62e",
+    "path": "Percussion/Tamb1-Hit_v1_rr2_Sum.wav",
+    "gitBlob": "a9077c258202b6ae4065a33b93478814079065ef",
+    "downloadUrl": "https://raw.githubusercontent.com/sgossner/VSCO-2-CE/440300901dfe9275fd84e0b7763af1f8443ae62e/Percussion/Tamb1-Hit_v1_rr2_Sum.wav",
+    "sha256": "0a881855ea4de1aa4a75153db04d97bfc991e6e30cff702638b347d1fa397d10",
+    "bytes": 290840
+  },
+  {
+    "voice": "tambourine",
+    "repo": "sgossner/VSCO-2-CE",
+    "commit": "440300901dfe9275fd84e0b7763af1f8443ae62e",
+    "path": "Percussion/Tamb1-Hit_v2_rr1_Sum.wav",
+    "gitBlob": "de276008d59c05d274d56457931781263380f8f2",
+    "downloadUrl": "https://raw.githubusercontent.com/sgossner/VSCO-2-CE/440300901dfe9275fd84e0b7763af1f8443ae62e/Percussion/Tamb1-Hit_v2_rr1_Sum.wav",
+    "sha256": "7bfc01a7d8b51bcc0a2e3dab986de8e06980d136f0ad645b798820d8ecd5eb37",
+    "bytes": 293256
+  },
+  {
+    "voice": "tambourine",
+    "repo": "sgossner/VSCO-2-CE",
+    "commit": "440300901dfe9275fd84e0b7763af1f8443ae62e",
+    "path": "Percussion/Tamb1-Hit_v2_rr2_Sum.wav",
+    "gitBlob": "e446f1fa39898b778aae62f99e8ed51a031f6834",
+    "downloadUrl": "https://raw.githubusercontent.com/sgossner/VSCO-2-CE/440300901dfe9275fd84e0b7763af1f8443ae62e/Percussion/Tamb1-Hit_v2_rr2_Sum.wav",
+    "sha256": "2666d711d49fa7dc5d1fa520e1d338b7322a87694cc8ce023403fc2923966965",
+    "bytes": 303536
+  },
+  {
+    "voice": "tambourine-roll",
+    "repo": "sgossner/VSCO-2-CE",
+    "commit": "440300901dfe9275fd84e0b7763af1f8443ae62e",
+    "path": "Percussion/Tamb1-Roll_v1_rr1_Sum.wav",
+    "gitBlob": "35e0d59936e59600e4d18b9968e4668e57014c07",
+    "downloadUrl": "https://raw.githubusercontent.com/sgossner/VSCO-2-CE/440300901dfe9275fd84e0b7763af1f8443ae62e/Percussion/Tamb1-Roll_v1_rr1_Sum.wav",
+    "sha256": "cfca343796e4caaf3f1b8a9213696aeaebc906624341644bc9adb6da5b1964a1",
+    "bytes": 1849956
+  },
+  {
+    "voice": "tambourine-roll",
+    "repo": "sgossner/VSCO-2-CE",
+    "commit": "440300901dfe9275fd84e0b7763af1f8443ae62e",
+    "path": "Percussion/Tamb1-Roll_v2_rr1_Sum.wav",
+    "gitBlob": "42cd417e2ddb111f3cfc47a325c8bf32fe42265a",
+    "downloadUrl": "https://raw.githubusercontent.com/sgossner/VSCO-2-CE/440300901dfe9275fd84e0b7763af1f8443ae62e/Percussion/Tamb1-Roll_v2_rr1_Sum.wav",
+    "sha256": "40868d3153799addd20e11388f5c2ba7013e46caec35ca4754f690eb3e92fa52",
+    "bytes": 1857924
+  },
+  {
+    "voice": "tambourine-roll",
+    "repo": "sgossner/VSCO-2-CE",
+    "commit": "440300901dfe9275fd84e0b7763af1f8443ae62e",
+    "path": "Percussion/Tamb1-Roll_v3_rr1_Sum.wav",
+    "gitBlob": "1831851e4cfd5d43d438ae452351a673f6aba9a1",
+    "downloadUrl": "https://raw.githubusercontent.com/sgossner/VSCO-2-CE/440300901dfe9275fd84e0b7763af1f8443ae62e/Percussion/Tamb1-Roll_v3_rr1_Sum.wav",
+    "sha256": "a5f69d1ca71f4c833b26f8b25cc656a934b5c9b861efa2fad23d988948a8664d",
+    "bytes": 1711720
+  }
+]

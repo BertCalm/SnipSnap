@@ -14,7 +14,7 @@ import kotlin.test.fail
  * Gradle's test JVM working directory is each module's own project dir —
  * no module overrides `tasks.test`'s `workingDir` — so a `:shell` test
  * reaches `:app`'s files via `../app/...` the same way
- * `TeachLogTest.kt:88`/`CalibrationCorpusTest.kt:31` already reach
+ * `CalibrationCorpusTest.kt:31` already reaches
  * `../reference/...`.
  *
  * The shared bug shape these laws guard against: a pattern applied
@@ -1518,9 +1518,9 @@ class ConventionTest {
      *    and the model are one roster; a place renamed in one and not the
      *    other is the defect shape this repo keeps finding.
      * 2. Every place the first-run note names is a real one, and it names
-     *    the two the plan says it does (TAPE, then PROJECT). A note that
-     *    said "THEN KIT" would be J13 again: a word that reads as a place
-     *    and lands nowhere.
+     *    none (the tab row above the panel says them). A note that said
+     *    "THEN KIT" would be J13 again: a word that reads as a place and
+     *    lands nowhere.
      */
     @Test
     fun `the first-run note names real places`() {
@@ -1528,18 +1528,23 @@ class ConventionTest {
         val places = Places.PLACES.toSet()
         assertTrue(places.size >= 4, "only $places places — the shape has four, and a shorter roster makes this law pass by checking nothing")
 
-        val words = Regex("""[A-Z]+""").findAll(Copy.FIRST_RUN_PLACES_NOTE).map { it.value }.toList()
-        for (expected in listOf("TAPE", "PROJECT")) {
-            assertTrue(
-                expected in words,
-                "Copy.FIRST_RUN_PLACES_NOTE (\"${Copy.FIRST_RUN_PLACES_NOTE}\") no longer names $expected. The note's job is " +
-                    "to say where the loop starts and where it lands; the plan's §3.1 names those two places.",
-            )
-        }
+        // Read in any case: the note is a sentence now, so a tab name in it is a word in
+        // either case, and a case-sensitive read would find none and pass by checking nothing.
+        val words = Regex("""[A-Za-z]+""").findAll(Copy.FIRST_RUN_PLACES_NOTE).map { it.value.uppercase() }.toList()
+        assertTrue(words.size >= 6, "only ${words.size} words were read from the note: $words")
+        // The note no longer names places at all: the panel's row of places
+        // went with the amber line, and the buttons under the note are the
+        // way in. Held as absence, so a place sneaking back in is a failure
+        // here and not a drift.
+        assertTrue(
+            "SAMPLE" !in words && "PROJECT" !in words,
+            "Copy.FIRST_RUN_PLACES_NOTE (\"${Copy.FIRST_RUN_PLACES_NOTE}\") names a place again. The tab row says the places; " +
+                "the note says the four verbs and that a kit is a way in too.",
+        )
         // The old tab names that are no longer anywhere on the row. A note
         // that still said one of them would point a new user at a screen
         // that does not exist as a destination any more.
-        val retiredTabs = setOf("CHOP", "EXPORT", "GROOVE", "ORBIT", "SYNTH", "SURFACE", "SNAP", "SETUP", "HELP", "PLAY")
+        val retiredTabs = setOf("GROOVE", "ORBIT", "SYNTH", "SURFACE", "SNAP", "SETUP", "HELP", "PLAY")
         val strays = words.filter { it in retiredTabs }
         assertTrue(
             strays.isEmpty(),
@@ -1547,6 +1552,93 @@ class ConventionTest {
                 "under the place row and reads as a gloss of it; a tab name in it points a new user at a screen " +
                 "that is not a place. Use a verb that is not a tab, or the place's own name.",
         )
+    }
+
+    // ==================== Law: the vocabulary ledger names every place, stage, bench and back label ====================
+
+    /**
+     * `docs/VOCABULARY.md` is the one list of names a player navigates by (clarity PR 5,
+     * spec section 7.2 "Ledger and law"). A label added to [Place], [Stage] or [Bench] without a
+     * row there is a name nobody ruled on. A name counts as listed when the ledger carries it in
+     * backticks, the way every row writes a literal on-screen string.
+     */
+    private fun ledgerMisses(labels: Collection<String>, ledger: String): List<String> =
+        labels.filter { "`$it`" !in ledger }.distinct().sorted()
+
+    /**
+     * Names the ledger's before-columns retired as labels (Sections A and B; the renames landed in
+     * #1027 and #1030). The ledger still lists them, in backticks, as the "Today" column, so
+     * [ledgerMisses] alone would accept one coming back. Only labels are checked: enum constants such as
+     * `Bench.PAD_SHEET`, `Place.SHELF` or `Stage.OUT` keep their identifiers and are not read here.
+     */
+    private val RETIRED = setOf(
+        "SHELF", "TAPE", "DECK", "CUT", "OUT", "SETUP", "SNIPS", "BIN", "X-RAY", "DOUBLES",
+        "PAD SHEET", "WRITE KIT", "MUTATE",
+    )
+
+    private fun retiredIn(labels: Collection<String>): List<String> = labels.filter { it in RETIRED }.distinct().sorted()
+
+    @Test
+    fun `law - every place, stage, bench and back label is in docs VOCABULARY md`() {
+        val ledgerFile = File("../docs/VOCABULARY.md")
+        assertTrue(ledgerFile.isFile, "docs/VOCABULARY.md is missing: ${ledgerFile.absolutePath}")
+        val ledger = ledgerFile.readText(Charsets.UTF_8)
+
+        val labels = Place.entries.map { it.label } + Stage.entries.map { it.label } +
+            Bench.entries.flatMap { listOf(it.label, it.backName) }
+        assertTrue(labels.size >= 40, "only ${labels.size} labels were read: the law would pass by checking nothing")
+
+        // Every back label the model can draw: the chip over each bench on each place and stage,
+        // and over each bench on another bench. Read out of Navigation.backChip, not retyped.
+        val chips = mutableListOf<String>()
+        for (place in Place.entries) {
+            val stages = Stage.of(place).ifEmpty { listOf(null) }
+            for (stage in stages) {
+                for (bench in Bench.entries) {
+                    Navigation(Location(place, stage, listOf(bench))).backChip?.let { chips += it }
+                    for (under in Bench.entries) {
+                        Navigation(Location(place, stage, listOf(under, bench))).backChip?.let { chips += it }
+                    }
+                }
+            }
+        }
+        assertTrue(chips.isNotEmpty() && chips.all { it.startsWith("◄ ") }, "back chips are not read: $chips")
+        val backNames = chips.map { it.removePrefix("◄ ") }
+
+        val retired = retiredIn(labels + backNames)
+        assertTrue(
+            retired.isEmpty(),
+            "$retired are names the ledger retired. A place, stage, bench or back label may not use one again; use the new name in docs/VOCABULARY.md.",
+        )
+
+        val missing = ledgerMisses(labels + backNames, ledger)
+        assertTrue(
+            missing.isEmpty(),
+            "docs/VOCABULARY.md has no backticked entry for $missing. Add a row for each new place, stage, bench " +
+                "or back label before it ships, with what it means and the owner's ruling.",
+        )
+    }
+
+    @Test
+    fun `law - the retired-name law fails on a retired label, a retired back chip, and passes the new names`() {
+        assertEquals(emptyList(), retiredIn(listOf("LIBRARY", "SAMPLE", "RECORD", "CHOP", "EXPORT", "SETTINGS", "SAVED SAMPLES", "TRASH", "PAD EDITOR")))
+        assertEquals(listOf("SHELF"), retiredIn(listOf("LIBRARY", "SHELF")))
+        // A back chip over the old bench would read "◄ X-RAY"; the law reads the name behind the arrow.
+        assertEquals(listOf("X-RAY"), retiredIn(listOf("◄ X-RAY").map { it.removePrefix("◄ ") }))
+        // The real model today is clean: every retired name is absent from the labels (not a vacuous set).
+        val real = Place.entries.map { it.label } + Stage.entries.map { it.label } + Bench.entries.flatMap { listOf(it.label, it.backName) }
+        assertTrue(RETIRED.size == 13 && real.isNotEmpty() && retiredIn(real).isEmpty())
+    }
+
+    @Test
+    fun `law - the ledger law fails on a label the ledger does not carry`() {
+        val ledger = "| `LIBRARY` | place |\n| `SAVED SAMPLES` | bench |"
+        assertEquals(emptyList(), ledgerMisses(listOf("LIBRARY", "SAVED SAMPLES"), ledger))
+        assertEquals(listOf("SHELF"), ledgerMisses(listOf("LIBRARY", "SHELF"), ledger))
+        // A word that is only a substring of a listed one is not listed.
+        assertEquals(listOf("SAMPLES"), ledgerMisses(listOf("SAMPLES"), ledger))
+        // Unticked prose does not count either.
+        assertEquals(listOf("BENCH"), ledgerMisses(listOf("BENCH"), "the BENCH is mentioned"))
     }
 
     // ==================== Law: the ladder row's chips are named once ====================
@@ -1581,7 +1673,7 @@ class ConventionTest {
         // HELP names every chip of the row, not four of the five.
         for (label in Ladder.ROW_LABELS) {
             assertTrue(
-                Copy.HELP_MORE.any { label in it && "ZOOM ON CHOP" in it },
+                Copy.HELP_MORE.any { label in it && "ZOOM on CHOP" in it },
                 "HELP's ZOOM line does not name the ladder chip '$label'. It is built from " +
                     "Ladder.ROW_LABELS precisely so it cannot miss one; something has retyped it.",
             )
@@ -1734,8 +1826,8 @@ class ConventionTest {
         "share" to "ShareOut.kt",
         "landing" to "ShareInbox.kt",
         // The player's presets (docs/WORKSHOP.md, WS5): one file at the
-        // shelf root, named by its store and nowhere else — SYNTH and
-        // SEND TO BENCH both reach it through UserPresets.file.
+        // shelf root, named by its store and nowhere else — SYNTH reaches
+        // it through UserPresets.file.
         "presets.json" to "UserPresets.kt",
         // The song a project keeps (SONG, docs/plans/2026-10-30-song-making.md
         // Phase 5): one file in the project's folder, named by its store.
@@ -1912,12 +2004,6 @@ class ConventionTest {
         "humStart" to "the instant that hum began",
         "voice" to "plays this model's audio; the DisposableEffect on the same key is what releases it",
         "classicError" to "the failure of a derivation over this model, cleared by the next successful one",
-        // RATE THE CUTS (docs/WORKSHOP.md, WS2). A star is a verdict on THIS
-        // model's cuts, not a preference: a re-chop, a MERGE or a SPLIT is
-        // different cuts, and a rating of the old ones riding onto the new
-        // would be logged against a setting that never earned it - the
-        // same reason `ChopReviewModel.confirmed` does not follow a re-chop.
-        "stars" to "a star rates this model's own cuts; a re-chop, a MERGE or a SPLIT is different cuts, and a verdict on the old ones must not ride onto them",
     )
 
     /**
@@ -2099,9 +2185,9 @@ class ConventionTest {
         }
         for (map in listOf("mutateKnobs", "outsideKnobs")) {
             assertTrue(
-                Regex("""val\s+$map\s*=\s*remember\(slot\)\s*\{\s*mutableStateMapOf""").containsMatchIn(src),
-                "expected `$map` to be a `remember(slot) { mutableStateMapOf<String, Float>() }` — one dialled " +
-                    "value per move, reset only when the pad itself changes.",
+                Regex("""val\s+$map\s*=\s*rememberKeptKnobs\(slot,\s*null\)""").containsMatchIn(src),
+                "expected `val $map = rememberKeptKnobs(slot, null)` (a `rememberSaveable` state map keyed on the pad) — one " +
+                    "dialled value per move, reset only when the pad itself changes, and kept while GRAIN, SPLICE or STACK is open over the editor.",
             )
         }
     }
@@ -2132,13 +2218,13 @@ class ConventionTest {
         val src = padSheetScreen.readText(Charsets.UTF_8)
         for (name in listOf("measuredRoom", "pendingDepth", "pendingBloom")) {
             assertTrue(
-                !Regex("""var\s+$name\s+by\s+remember\(slot\)""").containsMatchIn(src),
+                !Regex("""var\s+$name\s+by\s+(remember\(slot\)|rememberKeptFraction\(slot)""").containsMatchIn(src),
                 "`$name` is keyed on `slot` again, so moving to the next pad destroys it. It is not a " +
                     "property of one pad: a measured room is the room (and KEEP ROOM shelves it named after " +
                     "the *kit*), and MAKE PAD's DEPTH/BLOOM are a tool's settings. Key it on `entry.dir`.",
             )
             assertTrue(
-                Regex("""var\s+$name\s+by\s+remember\(entry\.dir\)""").containsMatchIn(src),
+                Regex("""var\s+$name\s+by\s+(remember\(entry\.dir\)|rememberKeptFraction\(entry\.dir,)""").containsMatchIn(src),
                 "expected `$name` to be keyed on `entry.dir` — the kit, which is the scope it belongs to. " +
                     "Unkeyed would carry a measured room across a kit switch and let KEEP ROOM name it after " +
                     "the wrong kit; keyed on `slot` it dies on the pad-nav arrows.",
@@ -2204,9 +2290,9 @@ class ConventionTest {
         val src = padSheetScreen.readText(Charsets.UTF_8)
         assertTrue(
             Regex(
-                """var\s+pendingBecome\s+by\s+remember\(slot\)\s*\{\s*mutableFloatStateOf\(\s*MutateSheet\.BECOME\.defaultFraction\s*\)\s*\}""",
+                """var\s+pendingBecome\s+by\s+rememberKeptFraction\(\s*slot,\s*null,\s*MutateSheet\.BECOME\.defaultFraction\s*\)""",
             ).containsMatchIn(codeOnly(src)),
-            "expected `var pendingBecome by remember(slot) { mutableFloatStateOf(MutateSheet.BECOME.defaultFraction) }` " +
+            "expected `var pendingBecome by rememberKeptFraction(slot, null, MutateSheet.BECOME.defaultFraction)` " +
                 "- BECOME's one value per pad, opening OFF, reset only when the pad itself changes.",
         )
         val drift = codeOnly(blockAfter(src, "fun onDrift() {"))
@@ -2566,7 +2652,7 @@ class ConventionTest {
             "the card's status line is not the pairing line read uncut by TalkBack:\n  $status",
         )
         assertTrue(
-            "tapeClick(label = if (selected) \"\$m, SELECTED\" else m" in card,
+            "tapeClick(label = if (selected) \"\${MutateSheet.modeLabel(m)}, SELECTED\" else MutateSheet.modeLabel(m)" in card,
             "a move chip does not say it is selected; its bevel's fill is invisible to TalkBack",
         )
         val call = normalizeSpan(blockAfterList(padSheetScreen.readText(Charsets.UTF_8), "MutateCard("))
@@ -2702,7 +2788,7 @@ class ConventionTest {
             "onClick = ::onUndesample",
         )
         assertTrue(
-            desample.startsWith("( Copy.UNDO_DESAMPLE,") && Copy.UNDO_DESAMPLE == "UNDO DE-SAMPLE",
+            desample.startsWith("( Copy.UNDO_DESAMPLE,") && Copy.UNDO_DESAMPLE == "UNDO NEAREST SYNTH",
             "DE-SAMPLE's UNDO does not read `Copy.UNDO_DESAMPLE` (UNDO DE-SAMPLE, in full: MAKE holds five doors), as MUTATE's and OUTSIDE's header buttons name theirs:\n  $desample",
         )
         val legend = code.indexOf("legend = PadSheetBoxes.Box.MAKE.legend")
@@ -2710,7 +2796,7 @@ class ConventionTest {
         val box = code.lastIndexOf("GroupBox(", legend)
         val args = blockAfterList(code.substring(box), "GroupBox(")
         val make = blockAfter(code.substring(box + "GroupBox".length + args.length), "{")
-        val header = make.indexOf("TapeText(\"DE-SAMPLE · THE NEAREST PATCH\"")
+        val header = make.indexOf("TapeText(\"FIND NEAREST SYNTH\"")
         val rowAt = if (header >= 0) make.lastIndexOf("Row(", header) else -1
         assertTrue(
             rowAt >= 0 && "Copy.UNDO_DESAMPLE" in blockAfter(make.substring(rowAt), "Row("),
@@ -2835,8 +2921,8 @@ class ConventionTest {
         for ((door, word) in listOf(
             "fun onHear() {" to "HEAR",
             "fun onMutate() {" to "KEEP",
-            "fun onRoulette() {" to "ROULETTE",
-            "fun onDrift() {" to "DRIFT",
+            "fun onRoulette() {" to "RANDOM PARTNER",
+            "fun onDrift() {" to "RANDOM BLEND",
         )) {
             val body = codeOnly(blockAfter(src, door))
             val catchAt = body.indexOf("catch (e: Exception)")
@@ -5197,7 +5283,6 @@ class ConventionTest {
     /** Who gives a bench with no opener its opener. */
     private enum class OpenerOwner(val why: String) {
         PR_3E("moves to a bench in PR 3e (Snap's own screens: LIVE_SNAP, DRAW, FIELD)"),
-        PR_4("routed in PR 4 with the inline panels the spec's section 7.3 turns into sections or screens (SPREAD)"),
     }
 
     /**
@@ -5205,18 +5290,16 @@ class ConventionTest {
      * is still a `remember` var in App, wiped on every move (the spec's
      * §7.3.1), and its steps of the routing work give it an opener:
      *
-     * - **PR 4** ([OpenerOwner.PR_4]): SPREAD. It is not a screen but a panel inside the pad
-     *   editor, drawn in place of the sheet from inside `PadSheetScreen`, and
-     *   it writes through the editor's own job. The spec's §7.3 turns inline
-     *   panels behind a `▸` into sections or screens, which is PR 4's work, so
-     *   it is routed with them. (PR 3d moved the rest of the pad editor family,
-     *   PAD_SHEET, GRAIN_FIELD, SPLICE and STACK, off this list.)
+     * - SPREAD is not on the list because it is not a bench: PR 4e made it a sheet over the pad
+     *   editor (`SpreadSheet`, opened by `SPREAD · SCALE ACROSS PADS ▾`), and the roster entry went
+     *   with it. (PR 3d moved the rest of the pad editor family, PAD_SHEET, GRAIN_FIELD, SPLICE and
+     *   STACK, off this list.)
      * - **PR 3e** ([OpenerOwner.PR_3E]): LIVE_SNAP, DRAW and FIELD, Snap's own screens. The spec's
-     *   §7.3.1 lists these (with SPREAD) as loose state to route, so they are
+     *   §7.3.1 lists these as loose state to route, so they are
      *   routed later, not waived as panels that stay in their screen.
      *
      * Each bench on the list has an owner, the PR that gives it an opener
-     * ([OpenerOwner]), in the shape of [BACK_LABEL_WAIVERS]: a PR 4 author finds
+     * ([OpenerOwner]), in the shape of [BACK_LABEL_WAIVERS]: a later author finds
      * what they own by the enum, not by a name in a comment.
      *
      * The list only shrinks, and the ceiling pins it exactly. The law fails
@@ -5229,12 +5312,11 @@ class ConventionTest {
      * with nothing failing.
      */
     private val NOT_YET_OPENED: Map<Bench, OpenerOwner> = mapOf(
-        Bench.SPREAD to OpenerOwner.PR_4,
         Bench.LIVE_SNAP to OpenerOwner.PR_3E,
         Bench.DRAW to OpenerOwner.PR_3E,
         Bench.FIELD to OpenerOwner.PR_3E,
     )
-    private val NOT_YET_OPENED_CEILING = 4
+    private val NOT_YET_OPENED_CEILING = 3
 
     /**
      * The benches something in :app opens, by the three ways it does. [sources]
@@ -5385,17 +5467,13 @@ class ConventionTest {
             "a bench with no opener and not on the list must be reported, naming the call that opens it",
         )
         assertTrue(
-            openerProblems(everyBench, mapOf(Bench.SPREAD to OpenerOwner.PR_4)).any { "SPREAD" in it && "PR_4" in it && "only shrinks" in it },
+            openerProblems(everyBench, mapOf(Bench.FIELD to OpenerOwner.PR_3E)).any { "FIELD" in it && "PR_3E" in it && "only shrinks" in it },
             "a listed bench that something opens is reported with its owner, so the author who opened it knows whose list it left",
         )
-        assertTrue(
-            openerProblems(everyBench, mapOf(Bench.FIELD to OpenerOwner.PR_3E)).any { "FIELD" in it && "PR_3E" in it && "only shrinks" in it },
-            "the same for an owner that is not PR 4",
-        )
         assertEquals(
-            setOf(OpenerOwner.PR_3E, OpenerOwner.PR_4),
+            setOf(OpenerOwner.PR_3E),
             NOT_YET_OPENED.values.toSet(),
-            "the list has benches for both owners; an owner with no bench left is a stale enum entry to delete with the last bench",
+            "the list has a bench for every owner; an owner with no bench left is a stale enum entry to delete with the last bench",
         )
     }
 
@@ -5405,7 +5483,6 @@ class ConventionTest {
     private enum class WaiverOwner(val why: String) {
         PR_3E("moves to a bench in PR 3e (Snap's own screens: LIVE_SNAP, DRAW, FIELD)"),
         IN_SCREEN_PANEL("permanent: an in-screen panel, not a bench"),
-        STEPPER("permanent: a stepper (previous pad, previous preset), not a back label"),
     }
 
     private data class BackLabelWaiver(val literal: String, val owner: WaiverOwner)
@@ -5430,20 +5507,17 @@ class ConventionTest {
      *   StackTakesScreen, TapeSpliceScreen's back chip and GrainFieldScreen, onto
      *   the model's words; none of them has a literal left.)
      * - **Permanent, an in-screen panel**: SynthScreen's deleted-presets panel,
-     *   AquariumPanel, and TapeSpliceScreen's "CHOOSE DIFFERENT TAKES".
-     * - **Permanent, a stepper**: SurfaceScreen's previous-pad and
-     *   previous-preset buttons start with the same arrow and a capital, but
-     *   they step through pads and presets and go nowhere.
+     *   and TapeSpliceScreen's "CHOOSE DIFFERENT TAKES". (AquariumPanel left the list when it became a section: its button reads CLOSE.)
+     * - SurfaceScreen's steppers left the list: they read PREVIOUS PRESET and
+     *   NEXT PRESET in words, so `◄` means Back everywhere ([RETIRED_WORDS]).
      */
     private val BACK_LABEL_WAIVERS: Map<String, List<BackLabelWaiver>> = mapOf(
-        "ui/TapeSpliceScreen.kt" to waive(WaiverOwner.IN_SCREEN_PANEL, "◄ CHOOSE DIFFERENT TAKES", "◄ CHOOSE DIFFERENT TAKES"),
-        "ui/SnapScreen.kt" to waive(WaiverOwner.PR_3E, "◄ SNAP"),
-        "ui/LiveSnapScreen.kt" to waive(WaiverOwner.PR_3E, "◄ SNAP"),
+        "ui/TapeSpliceScreen.kt" to waive(WaiverOwner.IN_SCREEN_PANEL, "◄ CHOOSE DIFFERENT VERSIONS", "◄ CHOOSE DIFFERENT VERSIONS"),
+        "ui/SnapScreen.kt" to waive(WaiverOwner.PR_3E, "◄ PHOTO"),
+        "ui/LiveSnapScreen.kt" to waive(WaiverOwner.PR_3E, "◄ PHOTO"),
         "ui/SynthScreen.kt" to waive(WaiverOwner.IN_SCREEN_PANEL, "◄ SYNTH"),
-        "ui/AquariumPanel.kt" to waive(WaiverOwner.IN_SCREEN_PANEL, "◄ PAD"),
-        "ui/SurfaceScreen.kt" to waive(WaiverOwner.STEPPER, "◄ PAD", "◄ PRESET"),
     )
-    private val BACK_LABEL_WAIVER_CEILING = 8
+    private val BACK_LABEL_WAIVER_CEILING = 5
 
     /** Every string literal in [code] (comments already stripped) that starts with the arrow and a capital: a hand-drawn back label. A lone arrow, a template (`"◄ ${...}"`) and the other arrow are not. */
     private fun handDrawnBackLabels(code: String): List<String> =
@@ -5532,6 +5606,50 @@ class ConventionTest {
         )
     }
 
+    // ---- Law: PADS holds the four strip buttons in a labelled VELOCITY STRIP section that starts closed (7d) ----
+
+    private val strikeSection = File("../app/src/main/kotlin/com/snipsnap/app/ui/StrikeStripSection.kt")
+
+    /**
+     * Before 7d, PADS stacked an unlabelled row of strip buttons above the grid
+     * (`StrikeControls(strike, Modifier.fillMaxWidth())` straight in KitScreen). Now KitScreen calls
+     * `StrikeStripSection`, a group box whose legend is the ledger's `VELOCITY STRIP` and whose open
+     * state starts false. Each button inside keeps its own caption (Copy.STRIKE_CAPTION_*).
+     */
+    private fun strikeSectionProblems(kitScreenCode: String, sectionCode: String, ledger: String): List<String> {
+        val problems = mutableListOf<String>()
+        if ("StrikeStripSection(" !in kitScreenCode) problems += "KitScreen no longer draws StrikeStripSection"
+        if ("StrikeControls(" in kitScreenCode) problems += "KitScreen draws StrikeControls bare, an unlabelled row above the grid"
+        if (!Regex("""var open by rememberSaveable \{ mutableStateOf\(false\) \}""").containsMatchIn(sectionCode)) {
+            problems += "the section does not start closed (`var open by rememberSaveable { mutableStateOf(false) }`)"
+        }
+        if ("StrikeControls(strike" !in sectionCode) problems += "the section does not hold StrikeControls"
+        if ("""STRIKE_STRIP_LEGEND = "VELOCITY STRIP"""" !in sectionCode) problems += "the legend is not VELOCITY STRIP"
+        if ("`VELOCITY STRIP`" !in ledger) problems += "VELOCITY STRIP is not a backticked ledger entry"
+        return problems
+    }
+
+    @Test
+    fun `law - PADS holds the strip buttons in a VELOCITY STRIP section that starts closed`() {
+        val kit = codeOnly(kitScreen.readText(Charsets.UTF_8))
+        val section = codeOnly(strikeSection.readText(Charsets.UTF_8))
+        val ledger = File("../docs/VOCABULARY.md").readText(Charsets.UTF_8)
+        assertEquals(emptyList(), strikeSectionProblems(kit, section, ledger))
+        for (caption in listOf("STRIP", "SIDE", "RELEASE", "LEVEL")) {
+            val name = "STRIKE_CAPTION_$caption"
+            assertTrue(name in codeOnly(strikeStripUi.readText(Charsets.UTF_8)), "StrikeControls lost its $caption caption ($name)")
+        }
+    }
+
+    @Test
+    fun `law - the strip section law fails on the old bare row`() {
+        val old = "StrikeControls(strike, Modifier.fillMaxWidth())"
+        val problems = strikeSectionProblems(old, "internal fun Other() {}", "")
+        assertTrue(problems.size >= 4, "the old shape should break several rules, got $problems")
+        val open = "var open by rememberSaveable { mutableStateOf(true) }"
+        assertTrue(strikeSectionProblems("StrikeStripSection(s, c)", open, "`VELOCITY STRIP`").any { "start closed" in it })
+    }
+
     // ---- Law: the strike strip shows what is on by its border, and draws its LCD marks in the LCD's ink ----
 
     private val strikeStripUi = File("../app/src/main/kotlin/com/snipsnap/app/ui/StrikeStrip.kt")
@@ -5600,7 +5718,7 @@ class ConventionTest {
             "exactly the three settings behind STRIKE (side, return, volume) wait on it",
         )
         assertTrue(
-            Regex(""""STRIKE STRIP", state\.enabled, false,""").containsMatchIn(controls),
+            Regex(""""VELOCITY STRIP", state\.enabled, false,""").containsMatchIn(controls),
             "STRIKE itself must never wait on the strip it turns on",
         )
         assertTrue(
@@ -5609,8 +5727,8 @@ class ConventionTest {
                 "STRIKE would look as live as STRIKE itself while the strip ignores them",
         )
         assertTrue(
-            "takes effect when STRIKE is on" in controls,
-            "a waiting control no longer tells TalkBack it takes effect when STRIKE is on, so the quiet ink " +
+            "takes effect when the VELOCITY STRIP is on" in controls,
+            "a waiting control no longer tells TalkBack it takes effect when the VELOCITY STRIP is on, so the quiet ink " +
                 "would be the only cue",
         )
         assertFalse(
@@ -5618,5 +5736,465 @@ class ConventionTest {
             "a control behind STRIKE passes `enabled` to tapeClick. These are dimmed, not disabled: they stay " +
                 "tappable and keep their value for when STRIKE comes on.",
         )
+    }
+
+    // ==================== Law: every hold has a visible twin ====================
+
+    /** A waiver names why the hold has no twin; the list below is empty and a new hold takes a visible twin and a `// twin:` tag, not a waiver. */
+    private data class HoldWaiver(val why: String, val lineText: String)
+
+    /**
+     * Holds with no visible twin, keyed on the file and the site line's own trimmed text (never a line number).
+     *
+     * **This list only shrinks, and it is empty.** The pencil rewind (D9) and the workshop (D8) were its last owners and
+     * are gone from the tree. The law stays: [HOLD_WAIVER_CEILING] is 0, so a hold with no visible twin fails the build
+     * rather than being waived. Raising the ceiling is the visible admission that the list grew, and a hold added after
+     * this law should never need to.
+     */
+    private val HOLD_WAIVERS: Map<String, List<HoldWaiver>> = emptyMap()
+    private val HOLD_WAIVER_CEILING = 0
+
+    /** How many lines above a hold site its `// twin:` tag may sit; a hold's modifier chain and its labels sit between. */
+    private val TWIN_TAG_WINDOW = 8
+
+    private val holdDeclaration = Regex("""\bonLong\w*\s*:""")
+    private val holdSite = Regex("""\bonLongClick\b(?!Label)|\bonLongPress\w*|\b(delay|withTimeoutOrNull)\(\w*LONG_PRESS_MS""")
+
+    /**
+     * Every line that registers a hold: `onLongClick`, `onLongPress` and its `...Chip`/`...Ring` plumbing, semantics
+     * `onLongClick(`, `combinedClickable(onLongClick =`, and the hand-timed `delay(LONG_PRESS_MS)` pads use. Imports,
+     * comments, `const val`s and parameter declarations (`onLongPress: () -> Unit`) are not sites. A scrim absorber
+     * (`detectTapGestures { }` with no `onLongPress`) has no such line, which is why it needs no exemption.
+     */
+    private fun holdSites(lines: List<String>): List<Int> = lines.indices.filter { i ->
+        val line = lines[i]
+        val t = line.trim()
+        !isCommentLine(line) && !t.startsWith("import ") && !t.startsWith("const val ") && !t.contains(" const val ") &&
+            holdSite.containsMatchIn(holdDeclaration.replace(t, ""))
+    }
+
+    private fun hasTwinTag(lines: List<String>, site: Int): Boolean =
+        (maxOf(0, site - TWIN_TAG_WINDOW)..site).any { Regex("""//\s*twin:\s*\S""").containsMatchIn(lines[it]) }
+
+    /** One line per fault: a hold with no tag and no waiver, and a waiver that matches no hold. Empty when the tree and the list agree. */
+    private fun holdTwinProblems(files: Map<String, List<String>>, waivers: Map<String, List<HoldWaiver>>): List<String> {
+        val problems = mutableListOf<String>()
+        for ((file, lines) in files.toSortedMap()) {
+            val unused = waivers[file].orEmpty().toMutableList()
+            for (site in holdSites(lines)) {
+                val text = lines[site].trim()
+                val waiver = unused.firstOrNull { it.lineText == text }
+                when {
+                    waiver != null -> unused.remove(waiver)
+                    hasTwinTag(lines, site) -> Unit
+                    else -> problems += "$file:${site + 1} registers a hold (`$text`) with no visible twin. Give the hold a " +
+                        "visible control that does the same thing (a button, chip or ⋮ on the screen) and put " +
+                        "`// twin: <that control>` within $TWIN_TAG_WINDOW lines above it. HOLD_WAIVERS only shrinks."
+                }
+            }
+            for (left in unused) {
+                problems += "$file: the hold waiver for `${left.lineText}` (${left.why}) matches no hold in the file. " +
+                    "Delete the entry and lower HOLD_WAIVER_CEILING; the list only shrinks."
+            }
+        }
+        for (file in waivers.keys - files.keys) problems += "$file: HOLD_WAIVERS names a file that is not in :app. Delete the entry."
+        return problems
+    }
+
+    @Test
+    fun `law - every press-and-hold names its visible twin, or is waived with an owner`() {
+        val files = requireAppKotlinFiles().associate { it.relativeToAppRoot() to it.readText(Charsets.UTF_8).lines() }
+        val found = files.values.sumOf { holdSites(it).size }
+        assertTrue(found > 20, "found $found hold sites under :app (recon counted about 40, 24 once the pencil went) - the scan is broken, not the tree.")
+        assertEquals(
+            HOLD_WAIVER_CEILING,
+            HOLD_WAIVERS.values.sumOf { it.size },
+            "lower the ceiling in the same change that removes a waiver (HOLD_WAIVERS only shrinks; a new hold takes a " +
+                "visible twin and a `// twin:` tag, and raising the ceiling is the visible admission that the list grew)",
+        )
+        val problems = holdTwinProblems(files, HOLD_WAIVERS)
+        assertTrue(
+            problems.isEmpty(),
+            "the spec's 7.4: every hold gets a visible equivalent.\n  " + problems.joinToString("\n  "),
+        )
+    }
+
+    @Test
+    fun `law - the hold-twin law finds an untagged hold, accepts a tagged one and a waived one, and skips scrims and declarations`() {
+        val untagged = listOf("Modifier.combinedClickable(", "    onLongClick = { arm() },", "    onClick = { open() },", ")")
+        assertEquals(1, holdTwinProblems(mapOf("A.kt" to untagged), emptyMap()).size, "a bare hold is a fault")
+        val tagged = listOf("// twin: the ⋮ on the row", "Modifier.combinedClickable(", "    onLongClick = { arm() },", ")")
+        assertEquals(emptyList(), holdTwinProblems(mapOf("A.kt" to tagged), emptyMap()), "a tagged hold passes")
+        val far = listOf("// twin: the ⋮ on the row") + List(TWIN_TAG_WINDOW + 2) { "x" } + listOf("onLongClick = { arm() },")
+        assertEquals(1, holdTwinProblems(mapOf("A.kt" to far), emptyMap()).size, "a tag too far above its hold does not count")
+        val semantic = listOf("semantics {", "    onLongClick(label = \"OPEN\") { open(); true }", "}")
+        assertEquals(1, holdTwinProblems(mapOf("A.kt" to semantic), emptyMap()).size, "a semantics action is a hold")
+        val timed = listOf("scope.launch {", "    delay(LONG_PRESS_MS)", "}")
+        assertEquals(1, holdTwinProblems(mapOf("A.kt" to timed), emptyMap()).size, "a hand-timed hold is a hold")
+        val waived = mapOf("A.kt" to listOf(HoldWaiver("fixture", "onLongClick = { arm() },")))
+        assertEquals(emptyList(), holdTwinProblems(mapOf("A.kt" to listOf("    onLongClick = { arm() },")), waived), "a waived hold passes")
+        assertEquals(1, holdTwinProblems(mapOf("A.kt" to listOf("// twin: x", "onLongClick = { other() },")), waived).size, "a waiver that matches nothing is a fault")
+        val exempt = listOf(
+            "import androidx.compose.ui.semantics.onLongClick",
+            "// onLongClick = { x() }",
+            "    onLongPress: () -> Unit,",
+            "private const val LONG_PRESS_MS = 480L",
+            ".pointerInput(Unit) { detectTapGestures { } }",
+            "onLongClickLabel = \"SOMETHING\",",
+        )
+        assertEquals(emptyList(), holdTwinProblems(mapOf("A.kt" to exempt), emptyMap()), "imports, comments, declarations, scrims and labels are not holds")
+    }
+
+    // ---- Law: ▸ opens a screen, ▾ opens a sheet, and nothing else uses them (clarity spec §7.3, PR 4d) ----
+
+    /**
+     * `▸` on a control means "opens a screen" (a bench, or a stage or place
+     * switch) and nothing else; `▾` means "opens a sheet or a picker" (a
+     * BottomSheet, a SheetMenu, a Dialog picker) and nothing else. An action
+     * (GO, SAVE PRESET, SEND TO PAD, SHARE), an inline panel toggle, a
+     * disclosure toggle (`+` / `−`) and a selected row (`● `) carry neither.
+     * A label with a description puts the glyph last: `NAME · DESCRIPTION ▸`,
+     * never `NAME ▸ DESCRIPTION`.
+     *
+     * Mechanically: every string literal in the shipped sources that holds a
+     * `▸`, `▾` or `▴` is read. A literal where the glyph is followed by more
+     * text is a separator or a marker, and fails unless it is help prose
+     * naming a path ([GLYPH_PATHS]). A literal that ends in a glyph must be
+     * in the allow-list for that glyph. Whether a given control really opens
+     * a screen or a sheet is for the reviewer; the allow-lists make adding
+     * one a visible edit.
+     */
+    @Test
+    fun `law - an arrow on a control means a screen or a sheet, and nothing else carries one`() {
+        val seenEnds = mutableSetOf<String>()
+        val seenPaths = mutableSetOf<String>()
+        val problems = mutableListOf<String>()
+        for ((path, line, literal) in glyphLiterals()) {
+            val where = "$path:$line `$literal`"
+            val trimmed = literal.trimEnd()
+            when {
+                "▴" in literal -> problems += "$where: ▴ is retired; an open/closed fold is `+` / `−`"
+                GLYPH_REST.containsMatchIn(literal) -> {
+                    val path = GLYPH_PATHS.firstOrNull { it in literal }
+                    if (path == null) problems += "$where: a glyph with words after it. A description goes before the glyph (`NAME · DESCRIPTION ▸`), a selected row is `● NAME`"
+                    else seenPaths += path
+                }
+                trimmed.endsWith("▸") -> {
+                    if (trimmed in SCREEN_OPENERS) seenEnds += trimmed else problems += "$where: ▸ is for a control that opens a screen; add it to SCREEN_OPENERS if it does, drop the glyph if it is an action"
+                }
+                trimmed.endsWith("▾") -> {
+                    if (trimmed in SHEET_OPENERS) seenEnds += trimmed else problems += "$where: ▾ is for a control that opens a sheet or picker; add it to SHEET_OPENERS if it does, drop the glyph if it is not"
+                }
+            }
+        }
+        for (entry in SCREEN_OPENERS + SHEET_OPENERS) {
+            if (entry !in seenEnds) problems += "allow-list entry `$entry` is no longer drawn anywhere; remove it"
+        }
+        for (entry in GLYPH_PATHS) {
+            if (entry !in seenPaths) problems += "path entry `$entry` is no longer in any help line; remove it"
+        }
+        if (problems.isNotEmpty()) fail("The arrow rule (▸ screen, ▾ sheet, nothing else):\n  " + problems.joinToString("\n  "))
+    }
+
+    @Test
+    fun `law - the arrow rule finds a separator, a marker, a retired fold and an unlisted opener, and lets a listed one and a path through`() {
+        fun problemsIn(vararg literals: String) = literals.count { lit ->
+            val trimmed = lit.trimEnd()
+            "▴" in lit || (GLYPH_REST.containsMatchIn(lit) && GLYPH_PATHS.none { it in lit }) ||
+                (trimmed.endsWith("▸") && trimmed !in SCREEN_OPENERS) || (trimmed.endsWith("▾") && trimmed !in SHEET_OPENERS)
+        }
+        assertEquals(1, problemsIn("SAVE PRESET ▸ NOW"), "a separator is a fault")
+        assertEquals(1, problemsIn("▸ HALL"), "a marker is a fault")
+        assertEquals(1, problemsIn("FORMAT ▴"), "a fold glyph is a fault")
+        assertEquals(1, problemsIn("SAVE PRESET ▸"), "an action with an arrow is a fault")
+        assertEquals(1, problemsIn("TOOLS ▸"), "a sheet opener with the screen arrow is a fault")
+        assertEquals(0, problemsIn("STACK ▸", "TOOLS ▾", "TRY IT FROM COMBINE SOUNDS ▸ ROOM TONE.", "DUST FROM +"), "listed openers, a path and a fold pass")
+    }
+
+    /**
+     * Words the owner retired (2026-11-13, review Q4 and finding 17), as the
+     * literals that would bring them back. `◄` only ever means Back, so a
+     * stepper to the previous preset or pad says PREVIOUS in words; the dock's
+     * capture sheet is LISTEN FROM; SHELF is LIBRARY (docs/VOCABULARY.md); the
+     * rhythm tools are READ AS GROOVE, never "steal"; and the dock verb in a
+     * sentence of Personality's is the label SNIP, not a lowercase verb.
+     * Each entry is a regex over one shipped string literal, scoped to the
+     * files it governs (null = every shipped source).
+     */
+    private val RETIRED_WORDS: List<Triple<String, Regex, String?>> = listOf(
+        Triple("RECORD FROM is LISTEN FROM", Regex("RECORD FROM"), null),
+        Triple("THE SHELF is THE LIBRARY", Regex("THE SHELF"), null),
+        Triple("steal one is READ AS GROOVE", Regex("(?i)steal one"), null),
+        Triple("a lowercase snip verb is the label SNIP", Regex("\\bsnip\\b"), "Personality.kt"),
+        Triple("◄ and ► are Back; a stepper says PREVIOUS or NEXT", Regex("◄ PRESET|PRESET ►|◄ \\\$tag|\\\$tag ►"), null),
+    )
+
+    private fun retiredWordProblems(literals: List<Triple<String, Int, String>>): List<String> =
+        literals.flatMap { (file, line, text) ->
+            RETIRED_WORDS.filter { (_, re, only) -> (only == null || only == file) && re.containsMatchIn(text) }
+                .map { (why, _, _) -> "$file:$line `$text`: $why" }
+        }
+
+    private fun shippedLiterals(): List<Triple<String, Int, String>> {
+        val literal = Regex(""""((?:[^"\\\n]|\\.)*)"""")
+        val found = mutableListOf<Triple<String, Int, String>>()
+        val roots = File("..").listFiles { f -> f.isDirectory }.orEmpty().map { File(it, "src/main/kotlin") }.filter { it.isDirectory }
+        for (root in roots) {
+            for (file in root.walkTopDown().filter { it.isFile && it.extension == "kt" }) {
+                file.readLines(Charsets.UTF_8).forEachIndexed { i, raw ->
+                    val line = raw.trim()
+                    if (line.startsWith("//") || line.startsWith("*") || line.startsWith("/*")) return@forEachIndexed
+                    for (m in literal.findAll(raw)) found += Triple(file.name, i + 1, m.groupValues[1])
+                }
+            }
+        }
+        return found
+    }
+
+    @Test
+    fun `law - no retired word is drawn, RECORD FROM, THE SHELF, steal one, a snip verb, a previous-arrow stepper`() {
+        val problems = retiredWordProblems(shippedLiterals())
+        if (problems.isNotEmpty()) fail("Retired words are back (docs/VOCABULARY.md is the ledger):\n  " + problems.joinToString("\n  "))
+    }
+
+    @Test
+    fun `law - the retired-word scan finds each retired word and lets the current ones through`() {
+        fun hits(file: String, text: String) = retiredWordProblems(listOf(Triple(file, 1, text))).size
+        assertEquals(1, hits("Places.kt", "RECORD FROM"))
+        assertEquals(1, hits("MurmurKeptInstrumentPicker.kt", "CHOOSE AN INSTRUMENT FOR THE SHELF."))
+        assertEquals(1, hits("Personality.kt", "or steal one first."))
+        assertEquals(1, hits("Personality.kt", "so you can snip without coming back"))
+        assertEquals(1, hits("SurfaceScreen.kt", "◄ PRESET"))
+        assertEquals(1, hits("SurfaceScreen.kt", "PRESET ►"))
+        assertEquals(1, hits("SurfaceScreen.kt", "◄ \$tag"))
+        assertEquals(0, hits("Places.kt", "LISTEN FROM"))
+        assertEquals(0, hits("Personality.kt", "so you can SNIP without coming back"))
+        assertEquals(0, hits("SurfaceScreen.kt", "PREVIOUS PRESET"))
+        assertEquals(0, hits("SynthScreen.kt", "val snip = 1; \"snip\" in a non-copy file"), "the snip rule is scoped to Personality.kt")
+        assertEquals(0, hits("Navigation.kt", "◄ PAD"), "a Back chip keeps its arrow")
+    }
+
+    private val GLYPH_REST = Regex("[▸▾]\\s*\\S")
+
+    /** Every string literal in the shipped sources that holds an arrow: file, line, text. Comments are skipped. */
+    private fun glyphLiterals(): List<Triple<String, Int, String>> {
+        val literal = Regex(""""((?:[^"\\\n]|\\.)*)"""")
+        val found = mutableListOf<Triple<String, Int, String>>()
+        val roots = File("..").listFiles { f -> f.isDirectory }.orEmpty().map { File(it, "src/main/kotlin") }.filter { it.isDirectory }
+        for (root in roots) {
+            for (file in root.walkTopDown().filter { it.isFile && it.extension == "kt" }) {
+                file.readLines(Charsets.UTF_8).forEachIndexed { i, raw ->
+                    val line = raw.trim()
+                    if (line.startsWith("//") || line.startsWith("*") || line.startsWith("/*")) return@forEachIndexed
+                    for (m in literal.findAll(raw)) {
+                        if (Regex("[▸▾▴]").containsMatchIn(m.groupValues[1])) found += Triple(file.name, i + 1, m.groupValues[1])
+                    }
+                }
+            }
+        }
+        return found
+    }
+
+    /** Controls that open a screen: a bench, or a place or stage switch. */
+    private val SCREEN_OPENERS = setOf(
+        "RR KEYS ▸", // MAKE's instrument shelf: a saved MURMUR round-robin bank opens its own KEYS screen
+        "CHOP ▸", "PADS ▸", "BEAT ▸", "EXPORT ▸", // Places.DOOR_*: the stage doors
+        "OPEN ▸", "CAPTURE ▸", "FROM SAVED SAMPLES ▸", // the pad strip's doors, and a project row's OPEN
+        "EXPORT ▸", "EFFECTS ▸", "VARIATIONS ▸", "USE THIS PART ▸", // Copy: doors to EXPORT, the pad editor's two screens, and TAPE's next screen
+        "COMBINE KITS · MIX TWO KITS ▸", // lands on the shelf to pick the partner kit
+        "LIBRARY ▸", "SAMPLE ▸", "SAVED SAMPLES ▸", // the empty-state routes
+        "MIDI DEVICES ▸", // SETTINGS' door to the MIDI devices screen
+        "${'$'}{bench.label} ▸", "MY VOICE ▸", "KEYBOARD ▸", // MAKE's rows
+        "ORBIT ▸", "LOOP ▸", "SONG ▸", // GROOVE's doors to the other beat benches
+        "STACK ▸", "SPLICE ▸", "GRAIN · PLAY THIS SOUND AS GRAINS ▸", "AUDITION ▸", "RE-TRIM ▸", // the pad editor's tool screens
+        "VERSIONS · RESTORE ▸", "SPLIT · SINES · TRANSIENT · AIR ▸", // THIS KIT's two screens
+        "BEAT WRITERS · BOUNCE · MIDI · CHART ▸", // EXPORT's way to the BEAT stage
+        "TRASH · ${'$'}binnedCount WAITING ▸", "LOOP · ${'$'}loopTracks OF ${'$'}{Session.TRACK_COUNT} TRACKS ▸", // the shelf's BIN and LOOP rows
+        "READ AS GROOVE ▸", "COPY GROOVE ▸", // TAPE's two ways onto GROOVE
+        "LIVE ▸", "FIELD ▸", "RING ▸", // SNAP's live camera, the field screen, and the ring on ORBIT
+        "OPEN KIT ▸", "HELP ▸", // the kit result's way in, and the setup screen's way to HELP
+        "▸", // MessageBox strips the arrow off a route's label for its accessible name
+    )
+
+    /** Controls that open a sheet or a picker: BottomSheet, SheetMenu or a Dialog picker. */
+    private val SHEET_OPENERS = setOf(
+        "MURMUR PLUCK ▾", // MAKE's instrument shelf: opens the kept-pluck picker dialog
+        "CAIRN SING ▾", // MAKE's instrument shelf: opens the five-study SING picker dialog
+        " ▾", // the kit chip's name is drawn with it, and the kit switcher's accessible tail drops it
+        "${'$'}label ▾", // Places.opener: ORBIT's steps, span, spread and snip pickers, SURFACE's BARS, CONFLUENCE's passage
+        "${'$'}summary ▾", // EXPORT's ART row opens the art sheet
+        "${'$'}{active.uppercase(Locale.ROOT)} · ${'$'}n ${'$'}kits IN THIS PROJECT ▾", // the kit switcher's line: the chip opens the kit sheet
+        "CHANGE ART ▾", "EXPANSION ▾", // the expansion sheet's picker and the door to the sheet
+        "FROM PAD ▾", "RECALL SCANNED PAD ▾", "SOURCE ▾", // pad and motion-source picker dialogs
+        "NEW KIT · STARTERS ▾", "START FROM A KIT ▾", "TOOLS ▾", // the starter menu and the tools menu
+        "REOPEN PAD · EDIT ITS RECIPE ▾", // SYNTH's pad picker dialog
+        "SPREAD · SCALE ACROSS PADS ▾", // the pad editor's and SYNTH's door to the SPREAD sheet (root, scale, pads, bank)
+        "KEY ▾", // THIS KIT's key picker (Places.KEY_OPEN)
+        "${'$'}{engine.displayName} ▾", "▾", // the engine picker sheet, and a BEAT lane's pad picker
+    )
+
+    /** Help prose where `▸` reads as "then", naming a path through the app: a path, not a control, so it keeps the arrow. */
+    private val GLYPH_PATHS = listOf(
+        "RE-TRIM ▸: CHOP", "MAKE BANK B VARIATIONS ▸ fills an empty BANK B", "COMBINE KITS ▸ cross a kit's recipes", "MAKE BANK B VARIATIONS ▸ fills it here", // HELP lines naming the button then what
+        "VERSIONS ▸ rolls back", "COMBINE SOUNDS ▸ ROOM TONE", "ROOM ▸ SEND", // toasts and lines naming a menu path
+        "OPEN ▸ for its bench", "CLIP ▸ KIT writes one", // PADS help, and ORBIT's section line
+    )
+    // ---- Type scale and the 11 sp floor (clarity spec section 7.5, PR 7a) ----
+
+    /** Every `fontSize` the source gives as a literal sp (or `TextUnit(n, Sp)`) below [floor], as `file:line: text`. */
+    private fun subFloorSizes(file: String, src: String, floor: Int): List<String> {
+        val literal = Regex("""fontSize\s*=\s*(\d+(?:\.\d+)?)f?\.sp\b""")
+        val unit = Regex("""TextUnit\(\s*(\d+(?:\.\d+)?)f?\s*,\s*TextUnitType\.Sp\s*\)""")
+        val out = mutableListOf<String>()
+        stripCommentsAndStrings(src).lines().forEachIndexed { i, line ->
+            for (m in literal.findAll(line) + unit.findAll(line)) {
+                if (m.groupValues[1].toDouble() < floor) out += "$file:${i + 1}: ${line.trim()}"
+            }
+        }
+        return out
+    }
+
+    @Test
+    fun `law - no font size in app main is a literal under 11 sp`() {
+        val floor = 11
+        val offenders = appSrcRoot.walkTopDown().filter { it.isFile && it.extension == "kt" }.flatMap {
+            subFloorSizes(it.path, it.readText(Charsets.UTF_8), floor)
+        }.toList()
+        assertTrue(
+            offenders.isEmpty(),
+            "A font size under the $floor sp floor (clarity spec section 7.5). Use a TapeType style " +
+                "(eyebrow is the smallest) and, where the text sat in a small cell, grow the cell or drop the " +
+                "text for an existing visual:\n" + offenders.joinToString("\n"),
+        )
+    }
+
+    @Test
+    fun `law - the sub-floor law fails on a literal under the floor and passes on tracking and on the floor itself`() {
+        assertEquals(1, subFloorSizes("x", "val s = TextStyle(fontSize = 9.sp)", 11).size)
+        assertEquals(1, subFloorSizes("x", "labelStyle.copy(fontSize = 7.5.sp)", 11).size)
+        assertEquals(1, subFloorSizes("x", "TextUnit(10f, TextUnitType.Sp)", 11).size)
+        assertEquals(0, subFloorSizes("x", "TextStyle(fontSize = 11.sp, letterSpacing = 0.5.sp)", 11).size)
+        assertEquals(0, subFloorSizes("x", "// fontSize = 9.sp was the old size", 11).size)
+    }
+
+    @Test
+    fun `law - LOOP's grid draws its text through TapeText, not Material's Text`() {
+        val src = File("../app/src/main/kotlin/com/snipsnap/app/LoopGrid.kt").readText(Charsets.UTF_8)
+        assertFalse("material3.Text" in stripCommentsAndStrings(src), "LoopGrid.kt draws text through Material's Text again; use TapeText and a TapeType style")
+    }
+
+    @Test
+    fun `law - TapeType holds the type scale table`() {
+        val src = File("../app/src/main/kotlin/com/snipsnap/app/theme/TapeTheme.kt").readText(Charsets.UTF_8)
+        val code = stripCommentsAndStrings(src)
+        fun const(name: String): Int =
+            Regex("""const\s+val\s+$name\s*=\s*(\d+)""").find(code)?.groupValues?.get(1)?.toInt()
+                ?: fail("TapeType has no `const val $name`")
+        val sizes = mapOf("BODY_SP" to 14, "SECONDARY_SP" to 13, "LABEL_SP" to 13, "EYEBROW_SP" to 11, "TITLE_SP" to 20, "MIN_SP" to 11)
+        for ((name, want) in sizes) assertEquals(want, const(name), "TapeType.$name is the spec's table entry")
+        for (name in listOf("BODY_SP", "SECONDARY_SP", "LABEL_SP", "EYEBROW_SP", "TITLE_SP")) {
+            assertTrue(const(name) >= const("MIN_SP"), "TapeType.$name is under the floor")
+        }
+        // Each rung is built from its size and nothing else: a rung that stopped reading its constant would pass the table above.
+        for ((style, size) in listOf("BODY" to "BODY_SP", "SECONDARY" to "SECONDARY_SP", "LABEL" to "LABEL_SP", "EYEBROW" to "EYEBROW_SP")) {
+            val def = Regex("""private\s+val\s+$style\s*=\s*TextStyle\(([^)]*)\)""").find(code)?.groupValues?.get(1)
+                ?: fail("TapeType has no private val $style")
+            assertTrue(Regex("""fontSize\s*=\s*$size\.sp""").containsMatchIn(def), "$style does not read $size: $def")
+        }
+        assertTrue("fontSize = TITLE_SP.sp" in code, "screenTitle does not read TITLE_SP")
+        // Button and label: +0.5 tracking; eyebrow keeps +1. Labels and eyebrows are mono (caps as written, so no transform).
+        assertTrue(Regex("""val\s+LABEL\s*=[^\n]*letterSpacing\s*=\s*0\.5\.sp""").containsMatchIn(code), "LABEL is not +0.5 tracking")
+        assertTrue(Regex("""val\s+LABEL\s*=[^\n]*Monospace""").containsMatchIn(code), "LABEL is not mono")
+        // The old names are rungs of the scale.
+        for ((old, rung) in listOf("pixel" to "LABEL", "pixelSmall" to "SECONDARY", "lcdHeader" to "screenTitle")) {
+            assertTrue(
+                Regex("""val\s+$old\s*:\s*TextStyle\s*@Composable\s+get\(\)\s*=\s*$rung\b""").containsMatchIn(code),
+                "TapeType.$old is not $rung",
+            )
+        }
+        assertTrue(Regex("""if\s*\(size\s*<=\s*17\)\s*BODY\b""").containsMatchIn(code), "lcd(17) and under is not the body style")
+    }
+
+    @Test
+    fun `law - rows that hold a label are a floor tall, not a fixed height`() {
+        val fixed = Regex("""\.height\(\s*Layout\.(LCD_HEADER_H|PRIMARY_ACTION_H)\.dp\s*\)""")
+        val offenders = appSrcRoot.walkTopDown().filter { it.isFile && it.extension == "kt" }.flatMap { f ->
+            stripCommentsAndStrings(f.readText(Charsets.UTF_8)).lines().withIndex()
+                .filter { fixed.containsMatchIn(it.value) }.map { "${f.path}:${it.index + 1}" }
+        }.toList()
+        assertTrue(offenders.isEmpty(), "A header or primary-action row is a fixed height again; use minHeight so a wrapped label grows it (clarity spec D7):\n" + offenders.joinToString("\n"))
+        // ... and the button components let their labels wrap, which is what the floor is for.
+        val ui = File("../app/src/main/kotlin/com/snipsnap/app/ui")
+        for ((file, marker) in listOf("ChopScreen.kt" to "internal fun SegmentButton(", "PadSheetScreen.kt" to "internal fun ActionButton(")) {
+            val text = File(ui, file).readText(Charsets.UTF_8)
+            val body = text.substring(text.indexOf(marker).also { assertTrue(it >= 0, "$file lost $marker") })
+            val end = body.indexOf("\n}\n").let { if (it < 0) body.length else it }
+            assertTrue("maxLines = 2" in body.substring(0, end), "$marker no longer lets its label wrap to two lines (clarity spec D7)")
+        }
+    }
+
+    @Test
+    fun `law - slider label columns are a minimum that wraps, not a fixed one-line width`() {
+        val ui = File("../app/src/main/kotlin/com/snipsnap/app/ui")
+        for ((file, marker) in listOf("SynthScreen.kt" to "internal fun MacroSlider(", "PadSheetScreen.kt" to "internal fun StepperSlider(")) {
+            val text = File(ui, file).readText(Charsets.UTF_8)
+            val start = text.indexOf(marker).also { assertTrue(it >= 0, "$file lost $marker") }
+            val body = stripCommentsAndStrings(text.substring(start)).let { it.substring(0, it.indexOf("\n}\n").let { e -> if (e < 0) it.length else e }) }
+            val at = Regex("""TapeText\(\s*label\b""").find(body)
+            assertTrue(at != null, "$marker no longer draws its label with TapeText(label, ...)")
+            // The label's call, up to the track's Box that follows it.
+            val call = body.substring(at!!.range.first, body.indexOf("Box(", at.range.first))
+            assertTrue(!Regex("""\.width\(\s*labelWidth""").containsMatchIn(call), "$marker pins its label to width(labelWidth); use widthIn(min = labelWidth) (clarity spec D7)")
+            assertTrue("widthIn(min = labelWidth" in call, "$marker's label column is not a widthIn(min = labelWidth) minimum")
+            assertTrue("maxLines = 2" in call, "$marker's label is not allowed two lines (clarity spec D7)")
+        }
+    }
+
+    // ==================== Law: the pad editor is drawn in App's saveable holder ====================
+
+    /**
+     * `PadEditorKeptTest` (androidTest) composes a stand-in beside the holder, never App's own tree, so
+     * it cannot see App lose the wrapper. This pins App's real call site: the `PadSheetScreen(` call is
+     * inside `padEditorHolder.SaveableStateProvider(padEditorKeys.keyFor(...)) { ... }`, the keys come
+     * from [rememberPadEditorKeys] (saved with the holder), and [ReleasePadEditorWhenGone] is composed.
+     * Returns what is wrong, empty when wired.
+     */
+    private fun padEditorWiringFaults(app: String): List<String> {
+        val faults = mutableListOf<String>()
+        val wrapper = "padEditorHolder.SaveableStateProvider(padEditorKeys.keyFor("
+        val call = Regex("""\bPadSheetScreen\(""").find(app)?.range?.first
+        val open = app.lastIndexOf(wrapper, startIndex = call ?: app.length)
+        if (call == null) faults += "no PadSheetScreen( call"
+        else if (open < 0) faults += "PadSheetScreen( is not under $wrapper"
+        else {
+            var depth = 0
+            var started = false
+            for (c in app.substring(open, call)) {
+                if (c == '{') { depth++; started = true } else if (c == '}') depth--
+                if (started && depth <= 0) { faults += "the $wrapper block closes before PadSheetScreen( is called"; break }
+            }
+            if (!started) faults += "the $wrapper call has no block before PadSheetScreen("
+        }
+        if ("ReleasePadEditorWhenGone(" !in app) faults += "ReleasePadEditorWhenGone( is not composed"
+        if ("rememberPadEditorKeys(padEditorHolder)" !in app) faults += "the keys are not rememberPadEditorKeys(padEditorHolder)"
+        return faults
+    }
+
+    @Test
+    fun `law - App draws PadSheetScreen inside the pad editor's saveable holder and releases it`() {
+        val app = appKt.readText(Charsets.UTF_8)
+        assertEquals(emptyList(), padEditorWiringFaults(app))
+    }
+
+    @Test
+    fun `law - the pad editor wiring law fails when the wrapper or the release is removed`() {
+        val good = "ReleasePadEditorWhenGone(x, k)\nval k = rememberPadEditorKeys(padEditorHolder)\n" +
+            "padEditorHolder.SaveableStateProvider(padEditorKeys.keyFor(p)) {\n    PadSheetScreen(a)\n}"
+        assertEquals(emptyList(), padEditorWiringFaults(good))
+        // Planted: the call drawn bare, the wrapper closed before the call, the release gone, the keys back to plain remember.
+        assertTrue(padEditorWiringFaults(good.replace("padEditorHolder.SaveableStateProvider(padEditorKeys.keyFor(p)) {", "run {")).isNotEmpty())
+        assertTrue(padEditorWiringFaults(good.replace("{\n    PadSheetScreen(a)\n}", "{ }\nPadSheetScreen(a)")).isNotEmpty())
+        assertTrue(padEditorWiringFaults(good.replace("ReleasePadEditorWhenGone(x, k)", "")).isNotEmpty())
+        assertTrue(padEditorWiringFaults(good.replace("rememberPadEditorKeys(padEditorHolder)", "remember { PadEditorKeys(h) }")).isNotEmpty())
     }
 }

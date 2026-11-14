@@ -334,14 +334,14 @@ class SpreadTest {
     @Test
     fun `the landing toast says only what happened`() {
         assertEquals(
-            "C4 MAJOR ACROSS 16 PADS FROM A01.",
+            "C4 MAJOR across 16 pads from A01.",
             Copy.spreadLanded("C4", "MAJOR", 16, "A01", 0, 0, 0, 0, false),
         )
         assertEquals(
-            "A3 MIN PENT ACROSS 1 PAD FROM B01. 1 FULL PAD KEPT. 2 NOTES OUT OF TUNE RANGE. 1 ORIGINAL SLEEPS IN THE BIN. CHOKE GROUP 3: ONE NOTE AT A TIME.",
+            "A3 MIN PENT across 1 pad from B01. 1 full pad kept. 2 notes out of tune range. 1 original is in the trash. CHOKE GROUP 3: one note at a time.",
             Copy.spreadLanded("A3", "MIN PENT", 1, "B01", 1, 2, 1, 3, false),
         )
-        assertTrue(Copy.spreadLanded("C4", "MAJOR", 4, "A01", 0, 0, 0, 0, true).endsWith("NO FREE CHOKE GROUP, SO NOTES OVERLAP."))
+        assertTrue(Copy.spreadLanded("C4", "MAJOR", 4, "A01", 0, 0, 0, 0, true).endsWith("NO FREE CHOKE GROUP, SO NOTES OVERLAP.", ignoreCase = true))
     }
 
     @Test
@@ -349,7 +349,7 @@ class SpreadTest {
         val m = kit("Toast")
         m.assign(1, DrumSynth.kick(), DrumClass.KICK)
         val plan = Spread.plan(m.kit, 60f, Spread.Options(rootMidi = 60, scale = Scale.MAJOR, padCount = 4, bank = 0, mono = true))
-        assertEquals("C4 MAJOR ACROSS 3 PADS FROM A02. 1 FULL PAD KEPT. CHOKE GROUP 1: ONE NOTE AT A TIME.", Spread.toast(plan))
+        assertEquals("C4 MAJOR across 3 pads from A02. 1 full pad kept. CHOKE GROUP 1: one note at a time.", Spread.toast(plan))
 
         m.assign(2, DrumSynth.kick(), DrumClass.KICK)
         m.assign(3, DrumSynth.kick(), DrumClass.KICK)

@@ -1010,6 +1010,69 @@ TEST(pad_engine_print_stops_at_its_ceiling_mid_callback) {
     e.clearPrint();
 }
 
+TEST(pad_engine_print_addressed_to_frames_keeps_exactly_those_frames) {
+    // A BOUNCE's edges belong to the audio thread: the print is armed ahead with the engine frames it starts and
+    // ends on, and keeps exactly [start, stop) however the callback's blocks fall across them. The assertion is
+    // frame for frame against the bus the callbacks wrote, with blocks that do not divide either edge.
+    PadEngine& e = seeded();
+    const int64_t base = e.framesRendered();
+    const int64_t start = base + 100, stop = base + 250;
+    CHECK(e.armPrintAt(1000, start, stop));
+    PadCommand c = noteOn(1, 0, 0, 900);
+    c.atFrame = start;  // the note lands on the print's first frame
+    e.pushCommand(c);
+    std::vector<float> heard;
+    int blocks = 0;
+    while (e.printState() == PrintBuffer::State::Recording && blocks++ < 20) {
+        const std::vector<float> b = callback(e, 64);
+        heard.insert(heard.end(), b.begin(), b.end());
+        const int64_t after = e.framesRendered();
+        // Nothing is kept before the start; the state flips to Done on the block that reaches the stop.
+        if (after <= start) CHECK_EQ(static_cast<int>(e.printFrames()), 0);
+    }
+    CHECK(e.printState() == PrintBuffer::State::Done);
+    CHECK_EQ(static_cast<int>(e.printFrames()), 150);
+    CHECK_EQ(static_cast<int>(e.printSamples()), 300);
+    for (int i = 0; i < 300; ++i) CHECK_NEAR(e.printData()[i], heard[static_cast<size_t>(2 * 100 + i)], 1e-6);
+    // The first printed frame is the note's first: silence before it, sound from it.
+    CHECK(std::fabs(heard[2 * 99]) < 1e-9f && std::fabs(heard[2 * 99 + 1]) < 1e-9f);
+    CHECK(peak(std::vector<float>(e.printData(), e.printData() + 300)) > 0.01f);
+    callback(e, 64);  // and stays there
+    CHECK_EQ(static_cast<int>(e.printFrames()), 150);
+    CHECK(e.clearPrint());
+}
+
+TEST(pad_engine_print_addressed_late_ends_on_its_stop_frame_short_not_shifted) {
+    // The UI thread armed after the start frame had gone by: the print begins at the top of the block it found,
+    // and still ends on the stop frame, so it is short by the lateness and no frame of it is out of place.
+    PadEngine& e = seeded();
+    const int64_t base = e.framesRendered();
+    CHECK(e.armPrintAt(1000, base - 50, base + 200));
+    std::vector<float> heard;
+    for (int i = 0; i < 4; ++i) {
+        const std::vector<float> b = callback(e, 64);
+        heard.insert(heard.end(), b.begin(), b.end());
+    }
+    CHECK(e.printState() == PrintBuffer::State::Done);
+    CHECK_EQ(static_cast<int>(e.printFrames()), 200);
+    CHECK_EQ(static_cast<int>(e.printSamples()), 400);
+    e.clearPrint();
+}
+
+TEST(pad_engine_print_addressed_discarded_before_its_start_is_done_and_empty) {
+    PadEngine& e = seeded();
+    const int64_t base = e.framesRendered();
+    CHECK(e.armPrintAt(1000, base + 500, base + 900));
+    callback(e, 64);
+    CHECK(e.printState() == PrintBuffer::State::Recording);
+    CHECK_EQ(static_cast<int>(e.printFrames()), 0);
+    e.requestStopPrint();
+    callback(e, 64);
+    CHECK(e.printState() == PrintBuffer::State::Done);
+    CHECK_EQ(static_cast<int>(e.printFrames()), 0);
+    CHECK(e.clearPrint());
+}
+
 // ---- SurfaceEngine -------------------------------------------------------------
 
 TEST(surface_engine_is_silent_until_gated_and_loops_its_sample) {

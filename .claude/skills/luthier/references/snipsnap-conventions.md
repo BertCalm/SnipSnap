@@ -1,5 +1,7 @@
 # SnipSnap conventions, verified against the repo
 
+Owner acceptance gates: see `docs/ENGINE_ACCEPTANCE_GATES.md` at the repository root. Apply them in addition to this older contract, especially six distinct melodic voices, genre kits, and velocity/round robin through rendering, saving, playback and export.
+
 Everything here was read from `github.com/BertCalm/SnipSnap` at commit `565551e` on 2026-10-21. The tree moves
 fast. Treat each line as "true on that day, re-grep before you lean on it." Where a line says
 VERIFY, a grep is cheap and a wrong API name in a spec is expensive: the three engine specs
@@ -60,6 +62,19 @@ data class XxxPatch(override val name: String, val voice: XxxVoice,
 
 "BorePatch-style sibling patch" in older specs means exactly this: copy the file shape.
 
+### Owner completion gates, 2026-11-09
+
+The owner's [engine acceptance gates](../../../../docs/ENGINE_ACCEPTANCE_GATES.md)
+define completion: melodic engines need at least six distinct musical voices
+with presets, playable keygroups, a premade kit and chord-tool compatibility;
+articulation needs appropriate HOLD and STRUM for picked/thumbed strings, with
+the stated intended-character exception for distinctive repeats; percussion
+needs authored roll/riser where appropriate while individual voices may stay
+finite; drums need multiple distinct genre kits on the shelf. Every instrument
+needs working velocity levels and round robin through rendering, saving,
+playback and export. A smaller prototype or a passing build does not close
+these gates.
+
 ## 3. What a new engine ships (the registration checklist)
 
 The canonical table is the BORE spec's "Data flow and compatibility"
@@ -81,7 +96,7 @@ Expected by convention:
 11. `XxxAuditionGenerator.kt` + `generateXxxAudition` task + `synth/src/test/resources/audition/xxx-audition.html`. Output goes to `testkit/xxx-audition/` (gitignored): section folders of levelled WAVs, `manifest.json`, `index.html`. Sections: voices at three notes, each macro swept, macro pairs at their corners, edges, the kit as it lands, the LOOP played eight times end to end. Newer generators (Murk, Nacre) also write `recipes/*.json`, `diagnostics/*.json`, `metrics.csv`, raw and matched levels.
 12. HOLD: a real loop with `Keys.seamError < Keys.MAX_SEAM_ERROR` (1e-3) measured against a real preceding cycle, or the top step reserved/refused with a test that says so.
 13. Docs: an "As built" section appended to the spec in the same commit as the code, a `docs/SYNTH_ROADMAP.md` row, `docs/XXX.md`, README engine count.
-14. The app picker (`app/.../SynthScreen.kt`: the `Engine` enum entry plus seven arms) is deferred to a session with an Android SDK. "A picker button guessed blind is worse than one left for a session that can verify it."
+14. The app picker (`app/.../SynthScreen.kt`: the `Engine` enum entry plus seven arms, an `EngineCatalog` entry, the README picker counts and lists) does not need an Android SDK in the session: mirror the nearest shipped engine arm for arm, and CI's `android-build` compiles it. Add an on-device test beside that engine's (`app/src/androidTest`, e.g. `NewEngineSynthScreenTest`) so `emulator-tests` proves the entry opens and keeps a draft, not only that it compiles. Corrected 2026-11-13: an older line here deferred the picker to an SDK session, and the owner pointed out that picker entries had been added without one many times.
 
 Test gate: `./gradlew --no-daemon test` (no `-x :app:test` in a session without an SDK). Judge
 green by the exit code, never by grepping output.
@@ -149,10 +164,11 @@ When you review or implement them, start here:
 - "Standard 4× internal DSP with proper decimation" is real (`Tide.bandLimit` then
   `Dsp.decimate`). "Shared leveling" is `Dsp.levelTo` to `MELODIC_LOUDNESS_TARGET`.
 - "Classifier mapping" is `drumClassFor` plus a test over real renders.
-- The specs' five-macros-plus-HOLD shape fits the house (3 to 6 macros). Six voices and 36
-  presets is heavier than any shipped engine's R1 (Bore shipped 8 per voice for two voices;
-  Mercury 6 per voice). Propose presets per voice only after the voice has been heard; "presets
-  authored blind are disposable" (SILK).
+- The specs' five-macros-plus-HOLD shape fits the house (3 to 6 macros).
+  Prototype rounds can start smaller, but the owner's melodic completion gate
+  is at least six distinct musical voices with presets. Do not infer a fixed
+  36-preset requirement. Propose final presets after listening; "presets authored
+  blind are disposable" (SILK).
 - None of the three states a render-time budget. Rung's 42 rigid bodies with continuous
   collision, Skirl's quaternion rolling solver, and Terrane's per-frame Voronoi all need one, or
   a precompute-and-cache story keyed by the macro values that affect mechanics.

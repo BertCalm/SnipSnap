@@ -190,4 +190,200 @@ class ProjectStoreTest {
         assertTrue(ProjectStore.clearBeat(dir))
         assertEquals(emptyList(), ProjectStore.beat(dir))
     }
+
+    // ---- rename, bin, restore ----
+
+    private fun projectWithBeat(name: String, kits: List<String> = emptyList()): File {
+        ProjectStore.save(shelf, Project(name, kits, tempoBpm = 100f))
+        val dir = ProjectStore.dir(shelf, name)
+        ProjectStore.saveBeat(dir, listOf(clip("Beat A")))
+        File(dir, "song.json").writeText("{}")
+        return dir
+    }
+
+    @Test
+    fun `rename moves the folder, rewrites the name, and the project still opens with its beat and tempo`() {
+        projectWithBeat("Late Set", listOf("Kitchen"))
+        val renamed = ProjectStore.rename(shelf, "Late Set", "  Early Set ")
+        assertEquals("Early Set", renamed.name)
+        assertFalse(File(ProjectStore.projectsDir(shelf), "Late Set").exists())
+        val dir = ProjectStore.dir(shelf, "Early Set")
+        val loaded = ProjectStore.load(dir)
+        assertEquals("Early Set", loaded.name)
+        assertEquals(listOf("Kitchen"), loaded.kits)
+        assertEquals(100f, loaded.tempoBpm)
+        assertEquals(listOf("Beat A"), ProjectStore.beat(dir).map { it.name })
+        assertTrue(File(dir, "song.json").isFile, "what lives in the folder rides along")
+        assertEquals(listOf("Early Set"), ProjectStore.list(shelf).map { it.name })
+    }
+
+    @Test
+    fun `rename to a name another project holds is refused, ignoring case, and changes nothing`() {
+        projectWithBeat("Alpha")
+        projectWithBeat("Beta")
+        assertFailsWith<ProjectStore.NameTakenException> { ProjectStore.rename(shelf, "Alpha", "Beta") }
+        assertFailsWith<ProjectStore.NameTakenException> { ProjectStore.rename(shelf, "Alpha", "beta") }
+        assertEquals(listOf("Alpha", "Beta"), ProjectStore.list(shelf).map { it.name })
+        assertEquals("Alpha", ProjectStore.load(ProjectStore.dir(shelf, "Alpha")).name)
+    }
+
+    @Test
+    fun `rename to its own name is a no-op and a case-only change is allowed`() {
+        projectWithBeat("Alpha")
+        assertEquals("Alpha", ProjectStore.rename(shelf, "Alpha", "Alpha").name)
+        assertEquals("ALPHA", ProjectStore.rename(shelf, "Alpha", "ALPHA").name)
+        assertEquals("ALPHA", ProjectStore.load(ProjectStore.dir(shelf, "ALPHA")).name)
+        assertEquals(1, ProjectStore.list(shelf).size)
+    }
+
+    @Test
+    fun `rename refuses a name that cannot be a folder, and a project that is not there`() {
+        projectWithBeat("Alpha")
+        for (bad in listOf("", "   ", "a/b", "..", "a:b", "ends.", ".hidden")) {
+            assertFailsWith<IllegalArgumentException>(bad) { ProjectStore.rename(shelf, "Alpha", bad) }
+        }
+        assertEquals("Alpha", ProjectStore.load(ProjectStore.dir(shelf, "Alpha")).name)
+        assertFailsWith<IOException> { ProjectStore.rename(shelf, "Nothing", "Something") }
+    }
+
+    @Test
+    fun `trash moves the whole project into the bin and leaves its kits where they are`() {
+        val kit = kitOnShelf("Kitchen")
+        val dir = projectWithBeat("Late Set", listOf("Kitchen"))
+        val binned = ProjectStore.trash(shelf, "Late Set", nowMillis = 1_000L)
+        assertEquals(File(File(shelf, ProjectStore.BIN_DIR), "Late Set-1000"), binned)
+        assertFalse(dir.exists())
+        assertTrue(File(binned, "song.json").isFile)
+        assertTrue(File(kit, KitStore.FILE_NAME).isFile, "the kit is untouched")
+        assertEquals(emptyList(), ProjectStore.list(shelf))
+        val listed = ProjectStore.binned(shelf)
+        assertEquals(listOf("Late Set"), listed.map { it.project.name })
+        assertEquals(1_000L, listed.single().binnedAtMillis)
+        assertEquals(emptyList(), KitStore.list(shelf).filter { it.name == ".bin" }, "a binned project is not a kit")
+    }
+
+    @Test
+    fun `two projects binned in the same millisecond do not share a folder`() {
+        projectWithBeat("A")
+        val first = ProjectStore.trash(shelf, "A", nowMillis = 5L)
+        projectWithBeat("A")
+        val second = ProjectStore.trash(shelf, "A", nowMillis = 5L)
+        assertTrue(first != second)
+        assertEquals(2, ProjectStore.binned(shelf).size)
+    }
+
+    @Test
+    fun `restore puts the project back under its own name with its beat`() {
+        projectWithBeat("Late Set", listOf("Kitchen"))
+        val binned = ProjectStore.trash(shelf, "Late Set")
+        val restored = ProjectStore.restore(shelf, binned)
+        assertEquals("Late Set", restored.name)
+        assertEquals(listOf("Late Set"), ProjectStore.list(shelf).map { it.name })
+        assertEquals(listOf("Beat A"), ProjectStore.beat(ProjectStore.dir(shelf, "Late Set")).map { it.name })
+        assertEquals(emptyList(), ProjectStore.binned(shelf))
+    }
+
+    @Test
+    fun `restore onto a name now in use lands as NAME 2, never over the project there, and the name is rewritten`() {
+        projectWithBeat("Late Set")
+        val binned = ProjectStore.trash(shelf, "Late Set")
+        ProjectStore.save(shelf, Project("Late Set", tempoBpm = 70f)) // a newer project took the name
+        val restored = ProjectStore.restore(shelf, binned)
+        assertEquals("Late Set 2", restored.name)
+        assertEquals("Late Set 2", ProjectStore.load(ProjectStore.dir(shelf, "Late Set 2")).name)
+        assertEquals(70f, ProjectStore.load(ProjectStore.dir(shelf, "Late Set")).tempoBpm, "the project already there is untouched")
+        assertEquals(listOf("Beat A"), ProjectStore.beat(ProjectStore.dir(shelf, "Late Set 2")).map { it.name })
+
+        // And a case-only clash counts, as it does on the card.
+        ProjectStore.save(shelf, Project("Mix"))
+        val b2 = ProjectStore.trash(shelf, "Mix")
+        ProjectStore.save(shelf, Project("MIX"))
+        assertEquals("Mix 2", ProjectStore.restore(shelf, b2).name)
+    }
+
+    @Test
+    fun `restore of a folder that is gone says so`() {
+        assertFailsWith<IOException> { ProjectStore.restore(shelf, File(shelf, ".bin/nothing-1")) }
+    }
+
+    @Test
+    fun `a kit only the deleted project held is not re-adopted into a project of its own, until it is opened again`() {
+        kitOnShelf("Kitchen")
+        kitOnShelf("Funk Room")
+        ProjectStore.save(shelf, Project("Late Set", listOf("Kitchen")))
+        ProjectStore.save(shelf, Project("Other", listOf("Funk Room")))
+        ProjectStore.trash(shelf, "Late Set")
+        assertEquals(setOf("Kitchen"), ProjectStore.released(shelf))
+        assertEquals(emptyList(), ProjectMigration.adopt(shelf).created)
+        assertEquals(listOf("Other"), ProjectStore.list(shelf).map { it.name })
+
+        // Restoring holds it again, which takes it off the list.
+        val restored = ProjectStore.restore(shelf, ProjectStore.binned(shelf).single().dir)
+        assertEquals("Late Set", restored.name)
+        assertEquals(emptySet(), ProjectStore.released(shelf))
+    }
+
+    @Test
+    fun `a kit another project still holds is not released when one project goes`() {
+        kitOnShelf("Kitchen")
+        ProjectStore.save(shelf, Project("A", listOf("Kitchen")))
+        ProjectStore.save(shelf, Project("B", listOf("Kitchen")))
+        ProjectStore.trash(shelf, "A")
+        assertEquals(emptySet(), ProjectStore.released(shelf))
+    }
+    @Test
+    fun `a kit renamed on the shelf is held under its new name, in place and still active`() {
+        val renamed = sampleProject().withKitRenamed("Funk Room", "Funk Den")
+        assertEquals(listOf("Kitchen", "Funk Den"), renamed.kits)
+        assertEquals("Funk Den", renamed.activeKit)
+        assertEquals(sampleProject(), sampleProject().withKitRenamed("Elsewhere", "Gone"), "a project not holding it is unchanged")
+        val both = Project("Both", listOf("A", "B"), activeKit = "A").withKitRenamed("A", "B")
+        assertEquals(listOf("B"), both.kits, "never held twice")
+        assertEquals("B", both.activeKit)
+    }
+
+    @Test
+    fun `following a kit rename rewrites every project that held it, its song and the bin's, and leaves the rest`() {
+        kitOnShelf("Kitchen")
+        kitOnShelf("Funk Den")
+        ProjectStore.save(shelf, sampleProject())
+        ProjectStore.save(shelf, Project("Other", listOf("Kitchen")))
+        val binned = Project("Asleep", listOf("Funk Room"))
+        ProjectStore.save(shelf, binned)
+        ProjectStore.trash(shelf, "Asleep")
+        val lateSet = ProjectStore.dir(shelf, "Late Set")
+        val song = SongPlan(0, listOf(PlanSection("theme", ClipRef.CAPTURED)))
+        SongPlanStore.save(lateSet, "Funk Room", song)
+        assertEquals(listOf("Funk Room"), ProjectStore.missingKits(shelf, sampleProject()), "the folder is already gone: this is the bug")
+
+        val followed = ProjectStore.followKitRename(shelf, "Funk Room", "Funk Den")
+
+        assertEquals(listOf("Late Set"), followed.updated.map { it.name }, "only live projects that held it")
+        assertTrue(followed.failed.isEmpty())
+        val late = ProjectStore.load(lateSet)
+        assertEquals(listOf("Kitchen", "Funk Den"), late.kits)
+        assertEquals("Funk Den", late.activeKit)
+        assertTrue(ProjectStore.missingKits(shelf, late).isEmpty(), "the kit is no longer gone")
+        assertEquals(song, SongPlanStore.load(lateSet, "Funk Den"))
+        assertNull(SongPlanStore.load(lateSet, "Funk Room"))
+        assertEquals(listOf("Kitchen"), ProjectStore.load(ProjectStore.dir(shelf, "Other")).kits)
+        val asleep = ProjectStore.binned(shelf).single()
+        assertEquals(listOf("Funk Den"), asleep.project.kits, "a restore finds the kit")
+    }
+
+    @Test
+    fun `a released kit stays released under its new name, and one bad project does not stop the rest`() {
+        ProjectStore.release(shelf, listOf("Loose"))
+        ProjectStore.save(shelf, Project("Holds", listOf("Loose 2")))
+        val broken = File(ProjectStore.projectsDir(shelf), "Broken").apply { mkdirs() }
+        File(broken, ProjectStore.FILE_NAME).writeText("{ not json")
+        ProjectStore.save(shelf, Project("Fine", listOf("Loose 2")))
+
+        val followed = ProjectStore.followKitRename(shelf, "Loose", "Free")
+        assertEquals(setOf("Free"), ProjectStore.released(shelf))
+        assertEquals(listOf(broken.name), followed.failed.map { it.name })
+
+        val again = ProjectStore.followKitRename(shelf, "Loose 2", "Bound")
+        assertEquals(setOf("Fine", "Holds"), again.updated.map { it.name }.toSet(), "the broken one did not stop the others")
+    }
 }

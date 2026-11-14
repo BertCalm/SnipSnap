@@ -71,7 +71,7 @@ class StrikeFxSectionTest : ComposeScreenTest() {
         kitDirs += dir
         val samples = FloatArray(4410) { i -> if (i < 400) 0.5f * (1f - i / 400f) * (if (i % 2 == 0) 1f else -1f) else 0f }
         WavWriter.write(File(dir, "kick1.wav"), Snip(samples, channels = 1, sampleRate = WavWriter.MPC_SAMPLE_RATE))
-        val kit = Kit(name = "STRIKE FX TEST", pads = listOf(KitPad(slot = 1, sampleFile = "kick1.wav", drumClass = DrumClass.KICK)), tempoBpm = 92f)
+        val kit = Kit(name = "FX BY VELOCITY TEST", pads = listOf(KitPad(slot = 1, sampleFile = "kick1.wav", drumClass = DrumClass.KICK)), tempoBpm = 92f)
         KitStore.save(kit, dir)
         if (softHits) {
             val m = KitBuilderModel.open(dir)
@@ -100,7 +100,6 @@ class StrikeFxSectionTest : ComposeScreenTest() {
                     onKitUpdated = {},
                     onShelfAssetWritten = {},
                     appScope = appScope,
-                    workshopOpen = false,
                     openBox = null,
                     onOpenBox = {},
                     pedalRow = PedalSlate.DEFAULT,
@@ -117,7 +116,7 @@ class StrikeFxSectionTest : ComposeScreenTest() {
 
     /** The sheet is idle when its buttons answer again: `busy` disables every one of them. */
     private fun settled() = waitFor("the sheet to settle") {
-        val keep = compose.onAllNodesWithContentDescription("STRIKE FX KEEP", useUnmergedTree = true).fetchSemanticsNodes()
+        val keep = compose.onAllNodesWithContentDescription("FX BY VELOCITY KEEP", useUnmergedTree = true).fetchSemanticsNodes()
         keep.isNotEmpty() && keep[0].config.getOrNull(SemanticsProperties.Disabled) == null
     }
 
@@ -143,8 +142,8 @@ class StrikeFxSectionTest : ComposeScreenTest() {
     @Test
     fun strike_fx_section_fits_a_narrow_phone_beside_soft_hits() {
         show(strikeKit())
-        for (text in listOf("STRIKE FX", "AUDITION", "KEEP")) assertReadsInFull(text)
-        for (label in listOf("STRIKE FX ROOM", "STRIKE FX SLAP", "STRIKE FX AUDITION", "STRIKE FX KEEP")) {
+        for (text in listOf("FX BY VELOCITY", "AUDITION", "KEEP")) assertReadsInFull(text)
+        for (label in listOf("FX BY VELOCITY REVERB", "FX BY VELOCITY SLAP", "FX BY VELOCITY AUDITION", "FX BY VELOCITY KEEP")) {
             val bounds = node(label).fetchSemanticsNode("nothing on screen is named \"$label\"").boundsInRoot
             assertTrue("\"$label\" starts inside the phone width", bounds.left >= 0f)
             assertTrue("\"$label\" ends inside the phone width", bounds.right <= PHONE_WIDTH_DP * compose.density.density + 1f)
@@ -158,7 +157,7 @@ class StrikeFxSectionTest : ComposeScreenTest() {
         val before = File(entry.dir, KitStore.FILE_NAME).readBytes()
         val files = entry.dir.list()!!.sorted()
         show(entry)
-        press("STRIKE FX AUDITION")
+        press("FX BY VELOCITY AUDITION")
         // The audition renders off the main thread: wait for it to say it rendered, or fail.
         waitFor("the audition to render its layers") { synchronized(heard) { heard.isNotEmpty() } || toasts.isNotEmpty() }
         assertEquals("the audition rendered DRY, ROOM and ECHO", listOf(3), heard.toList())
@@ -173,13 +172,13 @@ class StrikeFxSectionTest : ComposeScreenTest() {
         val entry = strikeKit()
         val sampleBefore = File(entry.dir, "kick1.wav").readBytes()
         show(entry)
-        press("STRIKE FX KEEP")
+        press("FX BY VELOCITY KEEP")
         waitFor("the bank to land") { pad(entry).velocityLayers.size == 3 }
         assertEquals(listOf("DRY", "ROOM", "ECHO"), pad(entry).velocityLayers.map { it.displayName })
         waitFor("the layer names on the section") {
             compose.onAllNodesWithText("DRY · ROOM · ECHO", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
         }
-        press("STRIKE FX CLEAR")
+        press("FX BY VELOCITY CLEAR")
         waitFor("the bank to go") { pad(entry).velocityLayers.isEmpty() }
         assertArrayEquals("the pad's sample is its first bytes again", sampleBefore, File(entry.dir, "kick1.wav").readBytes())
         assertEquals("one sample on disk again", listOf("kick1.wav", KitStore.FILE_NAME).sorted(), entry.dir.list()!!.filter { !it.startsWith(".") }.sorted())
@@ -191,7 +190,7 @@ class StrikeFxSectionTest : ComposeScreenTest() {
         assertTrue("the fixture starts with soft hits", pad(entry).velocityLayers.isNotEmpty())
         val softLayers = pad(entry).velocityLayers
         show(entry)
-        press("STRIKE FX KEEP")
+        press("FX BY VELOCITY KEEP")
         compose.onNodeWithText(Copy.STRIKE_FX_REPLACES_LAYERS, useUnmergedTree = true).assertExists()
         assertEquals("nothing is written before the answer", softLayers, pad(entry).velocityLayers)
         press("KEEP")
@@ -203,7 +202,7 @@ class StrikeFxSectionTest : ComposeScreenTest() {
     private fun keptBankThenSoftHits(): KitShelf.Entry {
         val entry = strikeKit()
         show(entry)
-        press("STRIKE FX KEEP")
+        press("FX BY VELOCITY KEEP")
         waitFor("the bank to land") { pad(entry).velocityLayers.size == 3 }
         settled() // the files land before `busy` clears; a tap while busy is dropped on the floor
         press("SOFT HITS, OFF") // the bank is not soft hits: the chip reads off on a STRIKE FX pad
@@ -232,28 +231,28 @@ class StrikeFxSectionTest : ComposeScreenTest() {
         waitFor("the ghosts to land") { pad(entry).velocityLayers.let { it.isNotEmpty() && it.map { l -> l.displayName } != listOf("DRY", "ROOM", "ECHO") } }
         val after = pad(entry)
         assertTrue("ghost layers are on", after.velocityLayers.isNotEmpty())
-        assertTrue("no STRIKE FX bank in the recipe", !com.snipsnap.synth.StrikeFxBank.isStrikeFx(com.snipsnap.shell.Breed.recipeOf(after)))
+        assertTrue("no FX BY VELOCITY bank in the recipe", !com.snipsnap.synth.StrikeFxBank.isStrikeFx(com.snipsnap.shell.Breed.recipeOf(after)))
     }
 
     @Test
     fun knobs_read_back_from_a_kept_pad() {
         val entry = strikeKit()
         show(entry)
-        assertEquals("0.42", sliderText("STRIKE FX ROOM"))
-        assertEquals("0.90", sliderText("STRIKE FX SLAP"))
-        dial("STRIKE FX ROOM", 0.2f)
-        dial("STRIKE FX SLAP", 0.5f)
-        assertEquals("0.20", sliderText("STRIKE FX ROOM"))
-        press("STRIKE FX KEEP")
+        assertEquals("0.42", sliderText("FX BY VELOCITY REVERB"))
+        assertEquals("0.90", sliderText("FX BY VELOCITY SLAP"))
+        dial("FX BY VELOCITY REVERB", 0.2f)
+        dial("FX BY VELOCITY SLAP", 0.5f)
+        assertEquals("0.20", sliderText("FX BY VELOCITY REVERB"))
+        press("FX BY VELOCITY KEEP")
         waitFor("the bank to land") { pad(entry).velocityLayers.size == 3 }
         // Close the sheet and open it on the kept kit: the knobs come from the pad's recipe.
         compose.runOnIdle { sheetShown = false }
         pump()
         compose.runOnIdle { sheetShown = true }
         waitFor("the reopened sheet's knobs") {
-            compose.onAllNodesWithContentDescription("STRIKE FX ROOM").fetchSemanticsNodes().isNotEmpty()
+            compose.onAllNodesWithContentDescription("FX BY VELOCITY REVERB").fetchSemanticsNodes().isNotEmpty()
         }
-        assertEquals("0.20", sliderText("STRIKE FX ROOM"))
-        assertEquals("0.50", sliderText("STRIKE FX SLAP"))
+        assertEquals("0.20", sliderText("FX BY VELOCITY REVERB"))
+        assertEquals("0.50", sliderText("FX BY VELOCITY SLAP"))
     }
 }

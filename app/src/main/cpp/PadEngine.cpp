@@ -141,6 +141,10 @@ int32_t PadEngine::addSample(std::vector<float>&& interleaved, int32_t channels,
 
 void PadEngine::commitBank() {
     if (!building_) return;
+    std::vector<SampleBounds> bounds;
+    bounds.reserve(building_->samples.size());
+    for (const auto& sample : building_->samples) bounds.push_back({sample.frameCount(), sample.rate});
+    committedSampleBounds_.swap(bounds);
     // The generation moves before the bank is parked: from here every
     // command the UI pushes is for this bank, and the callback drops (and
     // reports) any it still finds stamped with the old one.
@@ -150,6 +154,30 @@ void PadEngine::commitBank() {
     // and so is the one it retired last time.
     delete pending_.exchange(building_.release(), std::memory_order_acq_rel);
     delete retired_.exchange(nullptr, std::memory_order_acq_rel);
+}
+
+bool PadEngine::admitRoundRobinChord(const PadCommand* notes, size_t noteCount) {
+    if (!notes || noteCount == 0 || noteCount > kMaxRoundRobinChordNotes) return false;
+    PadCommand transaction[kMaxRoundRobinChordNotes];
+    const uint32_t generation = uiGeneration_.load(std::memory_order_acquire);
+    for (size_t i = 0; i < noteCount; ++i) {
+        const auto& note = notes[i];
+        if (note.type != PadCommand::Type::NoteOn || note.voiceId <= 0 ||
+            note.atFrame != -1 || note.frameOffset != 0 || note.reverse || note.sample < 0 ||
+            static_cast<size_t>(note.sample) >= committedSampleBounds_.size()) return false;
+        const auto& bounds = committedSampleBounds_[static_cast<size_t>(note.sample)];
+        const double speed = (static_cast<double>(bounds.rate) / sampleRate_) * note.pitch;
+        if (note.start < 0 || note.end > bounds.frames || note.end <= note.start || note.end - note.start < 2 ||
+            (note.loopStart != -1 && (note.loopStart < note.start || note.loopStart >= note.end - 1)) ||
+            !std::isfinite(note.pitch) || note.pitch <= 0.0 ||
+            !std::isfinite(speed) || speed <= 0.0 || speed > kMaxSpeed ||
+            !std::isfinite(note.gainL) || !std::isfinite(note.gainR) ||
+            note.gainL < 0.0f || note.gainL > 1.0f || note.gainR < 0.0f || note.gainR > 1.0f) return false;
+        for (size_t j = 0; j < i; ++j) if (note.voiceId == notes[j].voiceId) return false;
+        transaction[i] = note;
+        transaction[i].generation = generation;
+    }
+    return commands_.pushAll(transaction, noteCount);
 }
 
 size_t PadEngine::drainEnded(int32_t* out, size_t max) {
@@ -553,11 +581,11 @@ oboe::DataCallbackResult PadEngine::onAudioReady(oboe::AudioStream*, void* audio
     }
     // What is still waiting is due in a later block: count this one off.
     for (int32_t i = 0; i < heldCount_; ++i) held_[i].frameOffset -= numFrames;
-    framesRendered_.fetch_add(numFrames, std::memory_order_release);
+    const int64_t blockStart = framesRendered_.fetch_add(numFrames, std::memory_order_release);
     // The print tap takes the bus after the mix, so what it captures is
     // what the speaker got: the clamp, stolen voices, fades and this
     // instance's Aquarium bus are already in these frames.
-    print_.record(out, static_cast<size_t>(numFrames));
+    print_.recordAt(out, static_cast<size_t>(numFrames), blockStart);
     return oboe::DataCallbackResult::Continue;
 }
 

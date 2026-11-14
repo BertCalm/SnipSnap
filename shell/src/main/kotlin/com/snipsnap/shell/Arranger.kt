@@ -5,6 +5,7 @@ import com.snipsnap.audio.Snip
 import com.snipsnap.audio.SongBus
 import com.snipsnap.kit.AnswerStore
 import com.snipsnap.kit.BeatTape
+import com.snipsnap.kit.StepChance
 import com.snipsnap.kit.ClipRef
 import com.snipsnap.kit.GrooveEdit
 import com.snipsnap.kit.GrooveFeel
@@ -13,6 +14,7 @@ import com.snipsnap.kit.GrooveVariations
 import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitPreview
 import com.snipsnap.kit.PlanSection
+import com.snipsnap.kit.SectionNames
 import com.snipsnap.kit.SongPlan
 import com.snipsnap.mpc3.Mpc3Clip
 import com.snipsnap.mpc3.Mpc3Note
@@ -80,6 +82,10 @@ object Arranger {
         val ref: String = "",
         val locked: Boolean = false,
         val seed: Int = 0,
+        /** The Answer's bass plays under it ([PlanSection.bass]). */
+        val bass: Boolean = SectionNames.bassUnder(name),
+        /** A pull-up plays over the beat before it ([PlanSection.pullUp]). */
+        val pullUp: Boolean = SectionNames.pullsUpInto(name),
     ) {
         init {
             require(repeats >= 1) { "a section plays at least once" }
@@ -141,7 +147,7 @@ object Arranger {
      */
     fun toPlan(arrangement: Arrangement): SongPlan = SongPlan(
         seed = arrangement.seed,
-        sections = arrangement.sections.map { PlanSection(it.name, it.ref, it.repeats, it.locked, it.seed) },
+        sections = arrangement.sections.map { PlanSection(it.name, it.ref, it.repeats, it.locked, it.seed, it.bass, it.pullUp) },
     )
 
     /**
@@ -170,7 +176,7 @@ object Arranger {
         val sections = plan.sections.map { s ->
             val clip = palette.clip(s.clip, s.seed)
             if (clip != null) {
-                Section(s.name, clip, minOf(s.repeats, maxRepeats(clip)), palette.reason(s.clip), s.clip, s.locked, s.seed)
+                Section(s.name, clip, minOf(s.repeats, maxRepeats(clip)), palette.reason(s.clip), s.clip, s.locked, s.seed, s.bass, s.pullUp)
             } else {
                 if (s.clip !in refused) refused += s.clip
                 // A gone program of yours is not replaced by a different one of
@@ -179,10 +185,77 @@ object Arranger {
                 // the section name the old one had.
                 val draft = palette.draft(s.seed).filter { ClipRef.yoursId(s.clip) == null || ClipRef.yoursId(it.ref) == null }
                 val again = draft.firstOrNull { it.name == s.name } ?: draft.first { it.ref == ClipRef.CAPTURED }
-                again.copy(name = s.name, repeats = minOf(s.repeats, maxRepeats(again.clip)), locked = s.locked, seed = s.seed)
+                again.copy(name = s.name, repeats = minOf(s.repeats, maxRepeats(again.clip)), locked = s.locked, seed = s.seed, bass = s.bass, pullUp = s.pullUp)
             }
         }
         return Resolved(Arrangement("${kit.name} Song", plan.seed, sections), refused)
+    }
+
+    /** A rerolled plan, and how many sections it redrew (a new clip, or a new take of a seeded one). */
+    data class Rerolled(val plan: SongPlan, val redrawn: Int)
+
+    /** Clips that stand in for one another on a reroll: the full beat, and the light one. A fill stays a fill. */
+    private val FULL_FAMILY = listOf(ClipRef.CAPTURED, ClipRef.TIGHT, ClipRef.GHOSTED)
+    private val LIGHT_FAMILY = listOf(ClipRef.SPARSE, ClipRef.HALF)
+
+    /**
+     * REROLL: every unlocked section redrawn with [newSeed], the song's
+     * order kept. A section on one of the derived clips draws again from
+     * its family — the full beat (captured, tight, ghosted) or the light
+     * one (sparse, half) — among what the kit can make now, so an intro
+     * stays light and a body section stays full. It avoids repeating the
+     * section before it when its family has another choice, and keeps
+     * the section's length in bars as near as the new clip allows.
+     *
+     * Left as they are: a locked section; a section playing one of your
+     * own programs (the arranger never swaps out what somebody wrote); a
+     * fill, which stays the fill and gets a new take from the seed. The
+     * draw is keyed on [newSeed] and the section's place, so the same
+     * reroll of the same plan is the same song.
+     */
+    fun rerolled(
+        kit: Kit,
+        kitDir: File,
+        plan: SongPlan,
+        newSeed: Int,
+        swingPercent: Int? = null,
+        feel: Float = 0f,
+        feelTemplate: GrooveFeel.Template? = null,
+    ): Rerolled {
+        val palette = Palette.load(kit, kitDir, swingPercent, feel, feelTemplate)
+        var redrawn = 0
+        val out = ArrayList<PlanSection>(plan.sections.size)
+        for ((i, s) in plan.sections.withIndex()) {
+            if (s.locked) {
+                out += s
+                continue
+            }
+            val family = when (s.clip) {
+                in FULL_FAMILY -> FULL_FAMILY
+                in LIGHT_FAMILY -> LIGHT_FAMILY
+                else -> null
+            }
+            if (family == null) {
+                // Yours keeps its clip; a fill (or a name this build does not know) keeps its name and takes the new seed.
+                if (s.clip == ClipRef.FILL || s.clip == ClipRef.GHOSTED) redrawn++
+                out += s.copy(seed = newSeed)
+                continue
+            }
+            val choices = family.filter { palette.clip(it, newSeed) != null }
+            if (choices.isEmpty()) {
+                out += s.copy(seed = newSeed)
+                continue
+            }
+            val previous = out.lastOrNull()?.clip
+            val pool = choices.filter { it != previous }.ifEmpty { choices }
+            val pick = pool[kotlin.random.Random(newSeed * 31 + i).nextInt(pool.size)]
+            val oldBars = (palette.clip(s.clip, s.seed)?.bars ?: 1) * s.repeats
+            val newBars = palette.clip(pick, newSeed)!!.bars
+            val repeats = Math.round(oldBars.toFloat() / newBars).coerceIn(1, maxRepeats(newBars))
+            if (pick != s.clip || pick == ClipRef.GHOSTED) redrawn++
+            out += s.copy(clip = pick, repeats = repeats, seed = newSeed)
+        }
+        return Rerolled(plan.copy(seed = newSeed, sections = out), redrawn)
     }
 
     /** A clip name the kit can play, and how many bars one play of it is. */
@@ -400,14 +473,60 @@ object Arranger {
 
     // ---- the mixdown (KK3) ------------------------------------------------
 
-    /** The stitched song plus where each section starts, in frames. */
-    data class Mix(val snip: Snip, val sectionStarts: List<Int>)
+    /**
+     * The stitched song plus where each section starts, in frames, and
+     * [passes]: every time through every section's clip, in song order, on
+     * the same grid. Live play ([SongCursor]) moves between passes.
+     */
+    data class Mix(val snip: Snip, val sectionStarts: List<Int>, val passes: List<Pass> = emptyList())
 
-    /** The bed sits under the body sections only — never the intro or the turn. */
-    private val BED_SECTIONS = setOf("theme", "variation", "reprise")
+    /**
+     * One time through [section]'s clip: frames [start] until [end] of the
+     * mix, on the grid. A section played three times is three passes.
+     * [barLines] are the frames of the bar lines strictly inside the pass,
+     * each rounded once from its own pulse like every other boundary (a
+     * one-bar pass has none); live play's NEXT BAR cuts there.
+     */
+    data class Pass(val section: Int, val start: Int, val end: Int, val barLines: List<Int> = emptyList())
 
-    /** The section a pull-up leads into. */
-    private const val TURN = "the turn"
+    /**
+     * What a played run of passes makes as a song: [plan], and how many
+     * passes did not fit ([left]) once the song reached
+     * [SongPlan.MAX_SECTIONS] sections.
+     */
+    data class Played(val plan: SongPlan, val left: Int)
+
+    /**
+     * KEEP THIS ORDER: the song [played] makes, where [played] names the
+     * section of every pass heard, in order, and [clipBars] is each
+     * section's clip length. Each run of one section becomes that section
+     * (its clip, lock, seed, BASS and PULL-UP) played that many times. A run
+     * longer than one sequence holds ([maxRepeats]) is split across copies.
+     * Null when nothing was played.
+     */
+    fun playedOrder(kept: SongPlan, clipBars: List<Int>, played: List<Int>): Played? {
+        if (played.isEmpty()) return null
+        val runs = mutableListOf<Pair<Int, Int>>()
+        for (s in played) {
+            val last = runs.lastOrNull()
+            if (last != null && last.first == s) runs[runs.lastIndex] = s to last.second + 1 else runs += s to 1
+        }
+        val out = mutableListOf<PlanSection>()
+        var left = 0
+        for ((s, count) in runs) {
+            val max = maxRepeats(clipBars[s])
+            var rest = count
+            while (rest > 0) {
+                val take = minOf(rest, max)
+                if (out.size < SongPlan.MAX_SECTIONS) out += kept.sections[s].copy(repeats = take) else left += take
+                rest -= take
+            }
+        }
+        return Played(SongPlan(kept.seed, out), left)
+    }
+
+    /** The section a pull-up leads into, in the arranger's own draft. */
+    private const val TURN = SectionNames.THE_TURN
 
     /** The Answer plays under the song at bed level. */
     private const val BED_GAIN = 0.8f
@@ -452,17 +571,20 @@ object Arranger {
         fun frameAt(pulse: Long) = (pulse * framesPerPulse).roundToInt()
         val bed = answerBed(kitDir)
 
+        // Rolled per repeat here (the WAV is what the song sounds like); the .xpj under WRITE keeps the chances for the MPC to roll.
         val clips = plan.sections.map { tiled(it.clip, it.repeats) }
+        // A stretch whose every hit rolled silent is a stretch of silence, not a kit that cannot play the clip.
+        val chancy = plan.sections.any { StepChance.hasChance(it.clip) }
         // Counted in pulses and turned into a frame once per boundary, so
         // rounding never accumulates across the song.
         val startPulses = clips.runningFold(0L) { at, clip -> at + clip.lengthPulses }
         val starts = plan.sections.indices.map { frameAt(startPulses[it]) }
 
-        // Every section named "the turn" (past the first) is preceded by a
-        // pull-up, so a song with the turn played twice pulls up twice. The
-        // plan's sections can be moved, copied and removed by the person, so
-        // there may be none, or several; the name is the cue, as it always was.
-        val turns = plan.sections.indices.filter { it > 0 && plan.sections[it].name == TURN }
+        // Every section marked [Section.pullUp] (past the first, which has
+        // nothing before it to pull up) is preceded by a pull-up, so a song
+        // with the turn played twice pulls up twice. The mark is the
+        // section's own, kept through a move, a copy or a new name.
+        val turns = plan.sections.indices.filter { it > 0 && plan.sections[it].pullUp }
         val cuts = listOf(0) + turns + listOf(plan.sections.size)
         val stretches = cuts.zipWithNext { from, to -> from until to }
 
@@ -472,11 +594,11 @@ object Arranger {
                 val offset = startPulses[i] - startPulses[first]
                 clips[i].notes.map { it.copy(timePulses = it.timePulses + offset) }
             }
-            val drums = KitPreview.renderNotes(kit, kitDir, notes, startPulses[range.last + 1] - startPulses[first], bpm)
+            val drums = KitPreview.renderNotes(kit, kitDir, notes, startPulses[range.last + 1] - startPulses[first], bpm, allowSilence = chancy)
             var audio = drums
             if (bed != null) {
                 for (i in range) {
-                    if (plan.sections[i].name in BED_SECTIONS) {
+                    if (plan.sections[i].bass) {
                         audio = addAt(audio, renderBed(bed, clips[i].lengthPulses, framesPerPulse), starts[i] - starts[first])
                     }
                 }
@@ -500,10 +622,20 @@ object Arranger {
         // own length is no guide: a long pad struck earlier in it rings on
         // inside the take, and would hold the tape stop back.
         val last = plan.sections.lastIndex
-        val songEnd = starts[last] + KitPreview.render(kit, kitDir, clip = clips[last], tempoBpm = bpm).frameCount
+        val songEnd = starts[last] + KitPreview.renderNotes(kit, kitDir, clips[last].notes, clips[last].lengthPulses, bpm, allowSilence = chancy).frameCount
         val song = BeatTape.tapeStop(Snip(out.copyOf(songEnd * 2), 2, KitPreview.RATE))
         SongBus.ceiling(song.samples)
-        return Mix(song, starts)
+        val passes = plan.sections.indices.flatMap { i ->
+            val clip = plan.sections[i].clip
+            val one = clip.lengthPulses
+            (0 until plan.sections[i].repeats).map { r ->
+                val at = startPulses[i] + r * one
+                // The clip's own bar (a three-four bar is three beats), counted in pulses and rounded once.
+                val lines = (1 until clip.bars).map { b -> frameAt(at + b * clip.pulsesPerBar) }
+                Pass(i, frameAt(at), frameAt(at + one), lines)
+            }
+        }
+        return Mix(song, starts, passes)
     }
 
     /** [KitPreview]'s own frame arithmetic, so a section boundary and a note inside it agree. */
@@ -514,14 +646,21 @@ object Arranger {
      * clip-length later, in the clip's own meter: a three-four bar is
      * three beats, and tiling it by a four-four bar put every repeat a
      * beat per bar late.
+     *
+     * With [roll] each repeat rolls its own step chances ([StepChance], pass
+     * = the repeat, keyed on [clip]'s own name), so a half-likely step can
+     * sound in the first lap and not the second. Do it here, before the
+     * caller renames the clip. [roll] false keeps every hit and its chance,
+     * for an MPC file that rolls them itself.
      */
-    internal fun tiled(clip: Mpc3Clip, repeats: Int): Mpc3Clip {
-        if (repeats == 1) return clip
+    internal fun tiled(clip: Mpc3Clip, repeats: Int, roll: Boolean = true): Mpc3Clip {
         val length = clip.lengthPulses
+        fun lap(r: Int) = if (roll) StepChance.resolve(clip, r.toLong()) else clip
+        if (repeats == 1) return lap(0)
         return clip.copy(
             bars = clip.bars * repeats,
             notes = (0 until repeats).flatMap { r ->
-                clip.notes.map { it.copy(timePulses = it.timePulses + r * length) }
+                lap(r).notes.map { it.copy(timePulses = it.timePulses + r * length) }
             },
         )
     }
@@ -598,7 +737,7 @@ object Arranger {
         val loop = clip.lengthPulses
         val laps = ((sectionPulses + loop - 1) / loop).toInt()
         return (0 until laps)
-            .flatMap { r -> clip.notes.map { it.copy(timePulses = it.timePulses + r * loop) } }
+            .flatMap { r -> StepChance.resolve(clip, r.toLong()).notes.map { it.copy(timePulses = it.timePulses + r * loop) } }
             .filter { it.timePulses < sectionPulses }
     }
 

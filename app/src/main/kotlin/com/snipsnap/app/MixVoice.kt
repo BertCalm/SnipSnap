@@ -6,6 +6,7 @@ import android.media.AudioTrack
 import android.util.Log
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
+import com.snipsnap.shell.SongCursor
 import kotlin.concurrent.thread
 
 /**
@@ -24,10 +25,42 @@ import kotlin.concurrent.thread
  * class over channel count buys nothing when there are exactly two call
  * sites and each already knows its own answer.
  */
-class MixVoice(private val mix: FloatArray, private val sampleRate: Int) : AudioVoice {
+class MixVoice private constructor(
+    private val mix: FloatArray,
+    private val sampleRate: Int,
+    private val cursor: SongCursor?,
+) : AudioVoice {
+
+    constructor(mix: FloatArray, sampleRate: Int) : this(mix, sampleRate, null)
+
+    /**
+     * SONG's live play: streams what [cursor] reads from [mix] (play from a
+     * section, loop it, go to a queued one) instead of the mix from the
+     * top. A [start] does not rewind a cursor; make a new voice instead.
+     */
+    constructor(cursor: SongCursor, mix: FloatArray, sampleRate: Int) : this(mix, sampleRate, cursor)
+
+    @Volatile private var track: AudioTrack? = null
+    @Volatile private var heard = 0L
+
+    /** True once the stream played out to its end and drained; false while playing or after [stop]. */
+    @Volatile var ended: Boolean = false
+        private set
+
+    /**
+     * Frames the speaker has played since [start]: the track's playback
+     * head, which runs about a buffer behind what has been written. What
+     * the cursor wrote ahead is not heard yet.
+     */
+    fun heardFrames(): Long {
+        val t = track ?: return heard
+        val h = runCatching { t.playbackHeadPosition.toLong() and 0xFFFFFFFFL }.getOrNull() ?: return heard
+        heard = h
+        return h
+    }
 
     private val running = AtomicBoolean(false)
-    private val cursor = AtomicInteger(0)
+    private val position = AtomicInteger(0)
     private val generation = AtomicInteger(0)
     private var streamThread: Thread? = null
     private val focusOwners = AtomicInteger(0)
@@ -36,7 +69,9 @@ class MixVoice(private val mix: FloatArray, private val sampleRate: Int) : Audio
 
     /** Begin streaming from the top. Safe to call while already running — see [TapeVoice.start]'s own KDoc for the handoff this mirrors. */
     fun start() {
-        cursor.set(0)
+        position.set(0)
+        heard = 0L
+        ended = false
         running.set(true)
         val myGeneration = generation.incrementAndGet()
         focusOwners.incrementAndGet()
@@ -88,19 +123,20 @@ class MixVoice(private val mix: FloatArray, private val sampleRate: Int) : Audio
         }
         var ranToCompletion = false
         var framesWritten = 0
+        this.track = track
         try {
             runCatching { track.play() }
             val block = FloatArray(BLOCK_FRAMES * CHANNELS)
             while (running.get() && generation.get() == myGeneration) {
-                val at = cursor.get()
-                if (at >= totalFrames) {
+                val at = position.get()
+                val n = if (cursor != null) cursor.read(block, BLOCK_FRAMES) else minOf(BLOCK_FRAMES, totalFrames - at).coerceAtLeast(0)
+                if (n <= 0) {
                     running.set(false)
                     ranToCompletion = true
                     framesWritten += padToFillBuffer(track, framesWritten, myGeneration)
                     return
                 }
-                val n = minOf(BLOCK_FRAMES, totalFrames - at)
-                System.arraycopy(mix, at * CHANNELS, block, 0, n * CHANNELS)
+                if (cursor == null) System.arraycopy(mix, at * CHANNELS, block, 0, n * CHANNELS)
                 var written = 0
                 while (written < n * CHANNELS) {
                     if (!running.get() || generation.get() != myGeneration) return
@@ -112,10 +148,12 @@ class MixVoice(private val mix: FloatArray, private val sampleRate: Int) : Audio
                     if (w <= 0) return
                     written += w
                 }
-                cursor.addAndGet(n)
+                position.addAndGet(n)
                 framesWritten += n
             }
         } finally {
+            // Read before a flush, which may put the head back to zero.
+            heardFrames()
             if (ranToCompletion) {
                 val drainTimeoutNanos = (framesWritten * 1_000_000_000L / sampleRate) + DRAIN_MARGIN_NANOS
                 val deadline = System.nanoTime() + drainTimeoutNanos
@@ -129,6 +167,7 @@ class MixVoice(private val mix: FloatArray, private val sampleRate: Int) : Audio
                     }
                     Thread.sleep(DRAIN_POLL_MILLIS)
                 }
+                if (drained) heard = framesWritten.toLong()
                 if (!drained) {
                     runCatching { track.pause() }
                     runCatching { track.flush() }
@@ -137,6 +176,8 @@ class MixVoice(private val mix: FloatArray, private val sampleRate: Int) : Audio
                 runCatching { track.pause() }
                 runCatching { track.flush() }
             }
+            if (this.track === track) this.track = null
+            if (ranToCompletion && generation.get() == myGeneration) ended = true
             runCatching { track.release() }
             if (focusOwners.decrementAndGet() == 0) AudioFocus.release(this)
         }

@@ -299,7 +299,7 @@ fun PadCaptureScreen(
     fun grab() {
         commitToPad(
             gesture = Gesture.GRAB,
-            successLabel = Copy.padGestureLanded("GRABBED", padTag(slot)),
+            successLabel = Copy.padGestureLanded("SAVED", padTag(slot)),
             nothingLabel = Copy.GRAB_NOTHING_YET,
             failureAction = "GRAB",
         ) {
@@ -435,7 +435,7 @@ fun PadCaptureScreen(
             PrimaryAction(label = "START MIC", enabled = true, onClick = onRequestArm)
         }
         PrimaryAction(
-            label = if (committing == Gesture.GRAB) "GRABBING…" else "GRAB · UP TO ${GRAB_SECONDS}s",
+            label = if (committing == Gesture.GRAB) "SAVING…" else "SAVE LAST ${GRAB_SECONDS} S",
             enabled = armed && committing == null,
             onClick = ::grab,
         )
@@ -477,7 +477,7 @@ private fun RecordRow(
         Box(
             Modifier
                 .weight(1f)
-                .height(Layout.PRIMARY_ACTION_H.dp)
+                .minHeight(Layout.PRIMARY_ACTION_H.dp)
                 .then(
                     if (tapEnabled) {
                         Modifier
@@ -529,7 +529,7 @@ private fun HoldRecordAction(label: String, enabled: Boolean, onPress: () -> Uni
     Box(
         modifier
             .fillMaxWidth()
-            .height(Layout.PRIMARY_ACTION_H.dp)
+            .minHeight(Layout.PRIMARY_ACTION_H.dp)
             .background(scheme.lcd.tape, RoundedCornerShape(6.dp))
             .then(rim)
             // A screen-reader double-tap has no duration to report, so
@@ -599,8 +599,8 @@ private fun HoldRecordAction(label: String, enabled: Boolean, onPress: () -> Uni
  * The armed session's live-level bar + elapsed counter. Structurally the
  * same composable as `KitsScreen.kt`'s own private `RecordingIndicator` /
  * `LevelBar` / `formatElapsed` — replicated rather than hoisted, per the
- * house convention that file's own `BIN_RED_BORDER`/`BIN_RED_GLOW` comment
- * states explicitly ("duplicated, not hoisted... do it if a clean
+ * house convention that file's comments state
+ * explicitly ("duplicated, not hoisted... do it if a clean
  * one-liner, else duplicate with a comment"). Extracting three private
  * symbols out of `KitsScreen.kt` into a third shared file was worse than
  * a small, faithful duplicate here.
@@ -640,7 +640,7 @@ private fun CaptureLevelIndicator() {
         horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         CaptureLevelBar(level, scheme, Modifier.weight(1f).fillMaxHeight())
-        TapeText(formatCaptureElapsed(elapsedSeconds), TapeType.pixelSmall, scheme.amber.tape)
+        TapeText(formatCaptureElapsed(elapsedSeconds), TapeType.pixelSmall, scheme.accent.tape)
     }
 }
 
@@ -656,7 +656,7 @@ private fun CaptureLevelBar(level: Float, scheme: com.snipsnap.shell.Scheme, mod
     ) {
         drawRect(color = scheme.field.tape, size = size)
         if (filled > 0f) {
-            drawRect(color = scheme.amber.tape, size = Size(size.width * filled, size.height))
+            drawRect(color = scheme.accent.tape, size = Size(size.width * filled, size.height))
         }
     }
 }

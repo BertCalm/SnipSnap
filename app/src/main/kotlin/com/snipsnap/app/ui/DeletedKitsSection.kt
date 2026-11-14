@@ -28,6 +28,7 @@ import com.snipsnap.app.KitShelf
 import com.snipsnap.app.KitWrites
 import com.snipsnap.app.pruneExpansions
 import com.snipsnap.app.theme.BinRedGlow
+import com.snipsnap.app.theme.BinRedOnLcd
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
 import com.snipsnap.app.theme.lcdInk2
@@ -38,6 +39,7 @@ import com.snipsnap.app.theme.tape
 import com.snipsnap.shell.Copy
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.Scheme
+import com.snipsnap.shell.ShelfModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -76,6 +78,8 @@ internal fun DeletedKitsSection(
     shelf: KitShelf,
     onToast: (String) -> Unit,
     onRestored: (KitShelf.Entry) -> Unit,
+    /** A project came back from the bin: the shelf's PROJECTS list is stale and wants a re-read. */
+    onProjectRestored: () -> Unit = {},
     /** Reports the section's write-in-flight state up to the bench, which holds its back chip and Back while either list is busy. */
     onBusyChange: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier,
@@ -84,8 +88,13 @@ internal fun DeletedKitsSection(
     val scope = rememberCoroutineScope()
 
     var binned by remember { mutableStateOf<List<KitShelf.BinnedKit>>(emptyList()) }
+    // Deleted projects sleep in the same bin and are listed in the same
+    // section, under the kits (PR 6b): RESTORE puts one back on the shelf's
+    // PROJECTS list, `ProjectStore.restore`'s name rule.
+    var binnedProjects by remember { mutableStateOf<List<KitShelf.BinnedProject>>(emptyList()) }
     LaunchedEffect(Unit) {
         binned = withContext(Dispatchers.IO) { shelf.binnedKits() }
+        binnedProjects = withContext(Dispatchers.IO) { runCatching { shelf.binnedProjects() }.getOrDefault(emptyList()) }
     }
 
     var busy by remember { mutableStateOf(false) }
@@ -143,6 +152,28 @@ internal fun DeletedKitsSection(
         }
     }
 
+    fun doRestoreProject(target: KitShelf.BinnedProject) {
+        if (busy) return
+        armed = false
+        busy = true
+        scope.launch {
+            try {
+                val restored = withContext(Dispatchers.IO) { KitWrites.mutex.withLock { ShelfModel(shelf.root).restoreProject(target.dir) } }
+                binnedProjects = binnedProjects.filter { it.dir != target.dir }
+                // The name it landed under, off the returned Project: a clash may have made it NAME 2.
+                onToast(Copy.projectRestored(restored.name))
+                onProjectRestored()
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                // A row that outran the tap (already swept or restored) reads like the kit one: refresh, say so.
+                binnedProjects = withContext(Dispatchers.IO) { runCatching { shelf.binnedProjects() }.getOrDefault(emptyList()) }
+                if (e is java.io.IOException) onToast(Copy.BIN_ITEM_GONE) else failure("RESTORE", e)
+            } finally {
+                busy = false
+            }
+        }
+    }
+
     fun doEmptyBin() {
         if (busy) return
         if (!armed) {
@@ -155,10 +186,11 @@ internal fun DeletedKitsSection(
             try {
                 withContext(Dispatchers.IO) { KitWrites.mutex.withLock { shelf.emptyKitBin().also { runCatching { shelf.pruneExpansions() } } } }
                 binned = emptyList()
+                binnedProjects = emptyList()
                 onToast(Copy.kitBinEmptied)
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
-                failure("EMPTY BIN", e)
+                failure("EMPTY TRASH", e)
             } finally {
                 busy = false
             }
@@ -168,9 +200,9 @@ internal fun DeletedKitsSection(
     Column(modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
         // The shelf's section-header style; the bench's header row and Back
         // live in `BinScreen`, not here.
-        TapeText("DELETED KITS · ${binned.size} WAITING", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
+        TapeText("DELETED KITS AND PROJECTS · ${binned.size + binnedProjects.size} WAITING", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
 
-        if (binned.isEmpty()) {
+        if (binned.isEmpty() && binnedProjects.isEmpty()) {
             Box(
                 Modifier
                     .fillMaxWidth()
@@ -201,10 +233,13 @@ internal fun DeletedKitsSection(
                 items(binned, key = { it.dir.name }) { row ->
                     DeletedKitRow(row, busy, onRestore = { doRestore(row) })
                 }
+                items(binnedProjects, key = { "project:" + it.dir.name }) { row ->
+                    DeletedProjectRow(row, relativeTime(row.binnedAtMillis), busy, onRestore = { doRestoreProject(row) })
+                }
             }
         }
 
-        if (binned.isNotEmpty()) {
+        if (binned.isNotEmpty() || binnedProjects.isNotEmpty()) {
             EmptyBinButton(scheme, enabled = !busy, armed = armed, onClick = ::doEmptyBin)
         }
     }
@@ -279,13 +314,13 @@ private fun DeletedKitRow(row: KitShelf.BinnedKit, busy: Boolean, onRestore: () 
 @Composable
 private fun EmptyBinButton(scheme: Scheme, enabled: Boolean, armed: Boolean, onClick: () -> Unit) {
     // Same text the TapeText below shows — it already follows `armed`.
-    val label = if (armed) "TAP AGAIN TO CONFIRM — NO TAKEBACKS" else "EMPTY THE BIN NOW — NO TAKEBACKS"
+    val label = if (armed) Copy.EMPTY_TRASH_ARMED else Copy.EMPTY_TRASH_NOW
     Box(
         Modifier
             .fillMaxWidth()
             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
             .background(scheme.lcd.tape, RoundedCornerShape(5.dp))
-            .border(2.dp, BIN_RED_BORDER, RoundedCornerShape(5.dp))
+            .border(2.dp, scheme.binLcd.tape, RoundedCornerShape(5.dp))
             // Always clickable, `enabled` forwarded rather than dropped: a
             // screen reader is told this control is temporarily unavailable
             // instead of it silently vanishing from the tree (accessibility
@@ -294,19 +329,10 @@ private fun EmptyBinButton(scheme: Scheme, enabled: Boolean, armed: Boolean, onC
             .padding(horizontal = 10.dp),
         contentAlignment = Alignment.Center,
     ) {
-        TapeText(
-            // `TakesBinScreen.kt`'s own armed-label swap, copied verbatim.
-            label,
-            TapeType.pixel,
-            if (enabled) BinRedGlow else scheme.ink3.tape,
-            maxLines = 1,
-        )
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            TapeText(label, TapeType.pixel, if (enabled) BinRedOnLcd else scheme.ink3.tape, maxLines = 1)
+            // Said once the button is armed, in a sentence: what the second tap does.
+            if (armed) TapeText(Copy.EMPTY_TRASH_FACT, TapeType.pixelSmall, if (enabled) BinRedOnLcd else scheme.ink3.tape, maxLines = 2)
+        }
     }
 }
-
-// Duplicated, not hoisted — `TakesBinScreen.kt`'s own `BIN_RED_BORDER`,
-// deliberately constant across every scheme so a delete/empty action reads
-// as "red" even in a scheme with no red anywhere else in it. The glow half
-// moved to Schemes.BIN_RED_GLOW / theme.BinRedGlow (accessibility audit
-// finding 5) — a single tuned token, not a duplicated literal.
-private val BIN_RED_BORDER = Color(0xFF6A2020)

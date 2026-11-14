@@ -36,7 +36,7 @@ import kotlin.math.pow
 import kotlin.math.roundToInt
 
 /**
- * A staged PAD editor. Sound/context changes leave through [onEditorChange]; the host owns
+ * A staged PAD editor, drawn inside the pad editor's AQUARIUM section (its CLOSE folds the section). Sound/context changes leave through [onEditorChange]; the host owns
  * source validation, background preview, persistence and audition lifetime. Tabs and folds
  * are presentation state only. A preview never blocks another edit or a return to BEFORE.
  */
@@ -83,7 +83,7 @@ internal fun AquariumPanel(
                 )
                 Spacer(Modifier.width(8.dp))
                 ActionButton(
-                    "◄ PAD", scheme, enabled = enabled,
+                    "CLOSE", scheme, enabled = enabled,
                     accessibilityLabel = "Close Aquarium",
                     modifier = Modifier.testTag("aquarium-cancel"), onClick = onCancel,
                 )
@@ -104,11 +104,11 @@ internal fun AquariumPanel(
         }
 
         if (disabledReason != null) {
-            TapeText(disabledReason, TapeType.pixelSmall, scheme.warn.tape, maxLines = Int.MAX_VALUE)
+            TapeText(disabledReason, TapeType.pixelSmall, scheme.warnInk.tape, maxLines = Int.MAX_VALUE)
         }
         if (error != null) {
             TapeText(
-                error, TapeType.pixelSmall, scheme.warn.tape,
+                error, TapeType.pixelSmall, scheme.warnInk.tape,
                 Modifier.testTag("aquarium-error"), maxLines = Int.MAX_VALUE,
             )
         }
@@ -177,7 +177,7 @@ internal fun AquariumPanel(
         }
 
         TapeText(
-            "PREVIEW PLAYS THE MAIN SAMPLE. KEEP UPDATES EVERY VELOCITY LAYER.",
+            "Preview plays the main sample. Keep updates every velocity layer.",
             TapeType.pixelSmall, scheme.ink2.tape, maxLines = Int.MAX_VALUE,
         )
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {

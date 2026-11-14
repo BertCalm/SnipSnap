@@ -7,6 +7,8 @@ import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -20,7 +22,9 @@ import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitPad
 import com.snipsnap.kit.KitStore
 import com.snipsnap.loop.OrbitPresets
+import com.snipsnap.loop.OrbitSpan
 import com.snipsnap.loop.OrbitStore
+import com.snipsnap.shell.OrbitPanels
 import com.snipsnap.synth.AquariumPerformanceSettings
 import com.snipsnap.synth.AquariumRecipe
 import org.junit.After
@@ -200,11 +204,51 @@ class OrbitScreenTest : ComposeScreenTest() {
         assertEquals("one tap on the chip closes the screen once", 1, backs.get())
     }
 
+    /** The span chip used to cycle on a tap and open its picker on a hold; a tap now opens the five as a sheet. */
+    @Test
+    fun the_span_chip_opens_a_sheet_of_the_five_spans_and_picking_one_saves_it() {
+        val entry = kit()
+        show(entry)
+        invokeClick("SPAN: FREE")
+        for (span in OrbitSpan.entries.filter { it != OrbitSpan.FREE }) assertTrue("${span.label} is a row", present("SPAN: ${span.label}"))
+        invokeClick("SPAN: ${OrbitSpan.ONE.label}")
+        waitFor("the span saved", timeoutMillis = 30_000) {
+            runCatching { OrbitStore.load(entry.dir).orbits.first().span }.getOrNull() == OrbitSpan.ONE
+        }
+        assertTrue("the sheet closed on the pick", !present("SPAN: ${OrbitSpan.TWO.label}"))
+    }
+
+    /** The step count opens a sheet of ring sizes; a pick sets it and closes the sheet. */
+    @Test
+    fun the_step_readout_opens_a_sheet_of_ring_sizes_and_picking_one_saves_it() {
+        val entry = kit()
+        show(entry)
+        invokeClick("EDIT STEPS")
+        compose.onNodeWithText(OrbitPanels.stepsName(12), useUnmergedTree = true).performClick()
+        pump()
+        waitFor("the steps saved", timeoutMillis = 30_000) {
+            runCatching { OrbitStore.load(entry.dir).orbits.first().steps }.getOrNull() == 12
+        }
+    }
+
+    /** ARP, THE SET, SECTIONS and ONE TURN OUT fold open one at a time, and each closed line says what is in it. */
+    @Test
+    fun the_folds_open_one_at_a_time() {
+        show(kit())
+        assertTrue("OUT is folded shut", !present("CLIP TO KIT") && present("EXPAND ONE TURN OUT"))
+        invokeClick("OUT")
+        assertTrue("OUT opened", present("CLIP TO KIT") && present("COLLAPSE ONE TURN OUT"))
+        invokeClick("EXPAND SECTIONS")
+        assertTrue("SECTIONS replaced OUT", present("+ SECTION") && !present("CLIP TO KIT"))
+        invokeClick("OPEN THE SET")
+        assertTrue("THE SET replaced SECTIONS", present("COLLAPSE THE SET") && !present("+ SECTION"))
+    }
+
     @Test
     fun clip_to_kit_writes_the_rings_into_the_kits_grooves() {
         val entry = kit()
         show(entry)
-        invokeClick("OUT ▸")
+        invokeClick("OUT")
         invokeClick("CLIP TO KIT")
         waitFor("the groove written", timeoutMillis = 30_000) { groovesWritten.get() == 1 }
         assertTrue("a clip in groove.json", GrooveStore.load(entry.dir).isNotEmpty())
@@ -215,12 +259,12 @@ class OrbitScreenTest : ComposeScreenTest() {
         val entry = kit()
         show(entry)
         val before = builtRings(entry)
-        invokeClick("OUT ▸")
+        invokeClick("OUT")
         invokeClick("CLIP TO KIT")
         waitFor("the groove written", timeoutMillis = 30_000) { groovesWritten.get() == 1 }
-        invokeClick("OUT ▸")
+        invokeClick("OUT")
         invokeClick("GROOVE TO RINGS")
         waitFor("the groove's rings saved beside the first", timeoutMillis = 30_000) { (ringsOnDisk(entry) ?: 0) > before }
-        assertTrue("the screen said what it read: $toasts", toasts.any { "IS ON THE RINGS" in it || "RING" in it })
+        assertTrue("the screen said what it read: $toasts", toasts.any { " is on the rings" in it })
     }
 }

@@ -320,7 +320,7 @@ class FilamentScreenTest : ComposeScreenTest() {
             assertReadsInFull("SAMPLED RANGE C2–C6 · 15 SAMPLES")
             button("TOUCH LAYERS").assertIsSelected()
             assertReadsInFull("TOUCH LAYERS ON")
-            compose.onNodeWithText("ON: SOFT, MID AND HARD TOUCH CHANGE THE ATTACK AND TONE. VELOCITY SETS THE HARD TOUCH. THREE SAMPLES PER NOTE; ABOUT 3× THE TIME AND STORAGE.").assertExists()
+            compose.onNodeWithText("On: soft, mid and hard touch change the attack and tone. Velocity sets the hard touch. Three samples per note; about 3× the time and storage.").assertExists()
             activate("TOUCH LAYERS")
             button("TOUCH LAYERS").assertIsNotSelected()
             assertReadsInFull("TOUCH LAYERS OFF")
@@ -369,8 +369,8 @@ class FilamentScreenTest : ComposeScreenTest() {
         slider("ATTACK").assertDoesNotExist()
         val range = if (wideKeys) "C2–C6" else "C3–C5"
         compose.onNodeWithText(if (touchLayers)
-            "NATIVE $range · SOFT, MID AND HARD TOUCH KEEP THEIR ATTACK AND SUSTAIN. PREVIEW: C4, ALL THREE TOUCHES. LET GO TO FADE."
-        else "NATIVE $range · KEEPS THE ATTACK. HOLD A KEY TO SUSTAIN; LET GO TO FADE.").assertExists()
+            "Native $range · soft, mid and hard touch keep their attack and sustain. PREVIEW: C4, all three touches. Let go to fade."
+        else "Native $range · keeps the attack. Hold a key to sustain; let go to fade.").assertExists()
         dial("RELEASE", 1f)
         compose.onNodeWithText("RELEASE 1.50 s").assertExists()
         activate("MAKE")
@@ -406,7 +406,7 @@ class FilamentScreenTest : ComposeScreenTest() {
     private fun waitForInstrument(what: String, timeoutMillis: Long, condition: () -> Boolean) {
         fun progress(): String = compose.onAllNodes(SemanticsMatcher("instrument progress") { node ->
             node.config.getOrNull(SemanticsProperties.ProgressBarRangeInfo) != null &&
-                node.config.getOrNull(SemanticsProperties.ContentDescription)?.any { it.startsWith("RENDERING ") } == true
+                node.config.getOrNull(SemanticsProperties.ContentDescription)?.any { it.startsWith("Rendering ") } == true
         }).fetchSemanticsNodes().singleOrNull()?.config?.getOrNull(SemanticsProperties.ContentDescription)
             ?.joinToString() ?: "no instrument progress on screen"
         val started = SystemClock.elapsedRealtime()
@@ -493,7 +493,7 @@ class FilamentScreenTest : ComposeScreenTest() {
     @Test
     fun fresh_default_scramble_and_same_frame_navigation_preserve_all_controls() {
         show(shelfRoot())
-        val scramble = button("SCRAMBLE").fetchSemanticsNode().config[SemanticsActions.OnClick].action!!
+        val scramble = button("RANDOMISE").fetchSemanticsNode().config[SemanticsActions.OnClick].action!!
         compose.runOnIdle {
             assertTrue(scramble.invoke())
             screenVisible = false
@@ -532,7 +532,7 @@ class FilamentScreenTest : ComposeScreenTest() {
         assertRoot(67)
         assertEquals(source.velocity, progress("VELOCITY"), 0f)
 
-        activate("SCRAMBLE")
+        activate("RANDOMISE")
         waitFor("scrambled FILAMENT controls") { currentPatch(source.voice)?.macros != source.macros }
         assertGeometry(source, checkNotNull(currentPatch(source.voice)))
         dial("INJECT", .83f)

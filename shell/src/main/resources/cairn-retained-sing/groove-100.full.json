@@ -1,0 +1,59 @@
+{
+  "schema": 1,
+  "kind": "new host native Float proof capture",
+  "historicalOriginalFloatClaimed": false,
+  "deliveryIntroApplied": false,
+  "sourceId": "cairn-groove-100",
+  "sourceModel": 5,
+  "midi": 60,
+  "effectiveMidi": 60,
+  "velocity": 1,
+  "startAtContact": true,
+  "controls": {
+    "TUNE": 0.5,
+    "WEIGHT": 0.550000011920929,
+    "SLOPE": 0.44999998807907104,
+    "GROOVE": 1,
+    "FRICTION": 0.6000000238418579,
+    "BODY": 0.6499999761581421,
+    "HOLD": 1
+  },
+  "originalRecipeUtf8": "{\n  \"engine\": \"CAIRN\",\n  \"version\": 1,\n  \"name\": \"GROOVE 100%\",\n  \"voice\": \"SING\",\n  \"macros\": {\n    \"TUNE\": 0.5,\n    \"WEIGHT\": 0.550000011920929,\n    \"SLOPE\": 0.44999998807907104,\n    \"GROOVE\": 1,\n    \"FRICTION\": 0.6000000238418579,\n    \"BODY\": 0.6499999761581421,\n    \"HOLD\": 1\n  },\n  \"model\": 5,\n  \"midi\": 60,\n  \"velocity\": 1,\n  \"startAtContact\": true\n}",
+  "originalRecipeSha256": "1258ce4b0063507b92ef4c1d02046ab60a56c953099034c2b171f2c122eb7fb1",
+  "savedPatch": {
+    "engine": "CAIRN",
+    "version": 1,
+    "name": "GROOVE 100%",
+    "voice": "SING",
+    "macros": {
+      "TUNE": 0.5,
+      "WEIGHT": 0.550000011920929,
+      "SLOPE": 0.44999998807907104,
+      "GROOVE": 1,
+      "FRICTION": 0.6000000238418579,
+      "BODY": 0.6499999761581421,
+      "HOLD": 1
+    },
+    "model": 5,
+    "midi": 60,
+    "velocity": 1,
+    "startAtContact": true
+  },
+  "encoding": "IEEE754 binary32 little endian mono44100",
+  "frames": 176400,
+  "fullLoopStartFrame": 88200,
+  "fullOutputStartFrame": 88200,
+  "croppedCycleInFull": [
+    88200,
+    176400
+  ],
+  "croppedCycleLoopStartFrame": 0,
+  "captureFile": "groove-100.full.f32le",
+  "captureSha256": "9ce2efa081e6f68027e888b3363c7e86923d57ed6cc53b7a7eead1de6c972fe1",
+  "nativeCyclePcmS24leSha256": "dabe5430270c02dc292ab97c19736b81f51f3baade8b967b686cdd1e9417694e",
+  "nativeFullPcmS24leSha256": "d11898b3100cacbbd21f0bc463b92eb0797321651d73015ddcbea2d74a57d4eb",
+  "onsetPolicy": "SETTLED_NATIVE_PREDECESSOR",
+  "naturalAttack": false,
+  "naturalRelease": false,
+  "separateDeliveryPolicySha256": "853c18236fa2c64400ac1815d5194e9aa7da345167c855034254d2c6d7454470"
+}

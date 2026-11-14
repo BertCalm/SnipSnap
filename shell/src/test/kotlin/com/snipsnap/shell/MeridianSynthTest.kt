@@ -27,6 +27,44 @@ import kotlin.test.assertTrue
 /** Actual bench persistence and pad placement, distinct from a continuous keyboard export. */
 class MeridianSynthTest {
     @Test
+    fun `model four gestures preserve complete native sources through draft work user shelf and both maker routes`() {
+        val root = createTempDirectory("meridian-model-four-work").toFile()
+        try {
+            var savedAt = 0L
+            for (voice in listOf(MeridianVoice.DRAW, MeridianVoice.LIFT)) for (held in listOf(false, true)) {
+                val factory = MeridianSynth.defaultPatch(voice)
+                assertEquals(2, MeridianSynth.factory(voice).size)
+                assertTrue(MeridianSynth.factory(voice).all { it.model == 4 && !MeridianSynth.isHeld(it) })
+                val source = factory.copy(name = "${voice.name} ${if (held) "HELD" else "FINITE"}",
+                    midi = 57, velocity = .37f, seedContext = -73,
+                    macros = factory.macros + mapOf("TUNE" to .75f, "HOLD" to if (held) .975f else .974f))
+                assertEquals(4, source.model)
+                assertEquals(63, MeridianSynth.rootMidi(source))
+                assertEquals(63f, Spread.detect(Snip(FloatArray(256), 1, Meridian.RATE), source))
+                assertEquals(held, MeridianSynth.isHeld(source))
+                assertEquals(held, MeridianPadMaker.supports(source))
+                assertEquals(!held, MeridianFiniteKeygroupMaker.supports(source))
+                val landing = MeridianSynth.padLanding(source)
+                assertEquals(source, landing.recipe.patch)
+                assertEquals(if (held) 20f else null, landing.recipe.terminalFadeMs)
+                assertEquals("4", landing.source["model"])
+                assertEquals("63", landing.source["rootMidi"])
+                assertEquals("-73", landing.source["seedContext"])
+                val settings = mutableMapOf("engine" to "MERIDIAN", "voice" to voice.name)
+                SynthDrafts.write(settings, listOf(source))
+                SynthWork.replace(settings, listOf(SynthWork.Working(landing.recipe, source = null)))
+                assertEquals(source, SynthDrafts.read(settings).single())
+                assertEquals(landing.recipe, SynthWork.read(settings).single().recipe)
+                UserPresets.save(root, source, ++savedAt)
+                assertEquals(source, UserPresets.read(root).single { it.name == source.name }.patch)
+                val edited = assertIs<MeridianPatch>(Patches.edited(source, "MY ${voice.name}", source.macros + ("MEMORY" to .25f)))
+                assertEquals(source.copy(name = edited.name, macros = edited.macros), edited)
+                assertEquals(edited, Patches.fromJsonText(edited.toJsonText()))
+            }
+        } finally { root.deleteRecursively() }
+    }
+
+    @Test
     fun `factory defaults and performance edits keep the accepted recipe and legacy transport`() {
         val accepted = MeridianPresets.forVoice(MeridianVoice.SWEEP).first()
         assertEquals(8, MeridianSynth.factory().size)

@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -32,6 +33,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
@@ -79,18 +81,18 @@ enum class AppScreen(val label: String) {
      * lists "whether the desktop metaphor extends to a 'My Kits'
      * file-manager screen or kits stay a menu" as open, and it stays open.
      */
-    KITS("SHELF"),
-    KIT("KIT"),
-    TAPE("TAPE"),
+    KITS("LIBRARY"),
+    KIT("PADS"),
+    TAPE("SAMPLE"),
     CHOP("CHOP"),
-    GROOVE("GROOVE"),
+    GROOVE("BEAT"),
     EXPORT("EXPORT"),
-    PROPERTIES("SETUP"),
+    PROPERTIES("SETTINGS"),
     HELP("HELP"),
     /** Behind the gear with SETUP and HELP: what MIDI is plugged in and what it sends. */
     MIDI("MIDI"),
     /** A MAKE bench: reached from the INSTRUMENTS list there, left by ◄ MAKE. */
-    KEYS("KEYS"),
+    KEYS("KEYBOARD"),
 
     /**
      * A PADS bench: reached from the stage's action row on the pad you
@@ -100,7 +102,20 @@ enum class AppScreen(val label: String) {
     SPLIT("SPLIT"),
 }
 
-/** Single-line themed text; TapeOS never relies on Material's Text. */
+/**
+ * A row's height as a floor, not a size: a label that wraps to a second line
+ * (clarity spec D7) grows the row instead of being clipped. Same call shape
+ * as `height(dp)`, so swapping one for the other costs a big composable no
+ * registers.
+ */
+fun Modifier.minHeight(height: Dp): Modifier = heightIn(min = height)
+
+/**
+ * Themed text, one line by default, ellipsised: that default is for the
+ * names a person gave (kit, pad, project, sample), which have no length
+ * cap. A button or a section label says `maxLines = 2` and wraps instead
+ * (clarity spec D7). TapeOS never relies on Material's Text.
+ */
 @Composable
 fun TapeText(
     text: String,
@@ -199,29 +214,25 @@ fun spokenBack(label: String): String? =
     if (label.startsWith("◄ ")) "BACK TO " + label.removePrefix("◄ ") else null
 
 /**
- * The title bar. [onNote] is the WORKSHOP's NOTE chip (`docs/WORKSHOP.md`,
- * WS4): non-null only while the workshop is open, so a phone that never
- * knocked draws the bar exactly as before. It lives here, on the one row
- * every screen shares, because a bench note is about whatever screen is
- * under it - PLAY, CHOP, a pad sheet - and a chip per screen would be one
- * more thing per screen to keep in step. A raised bevel at the bar's right
- * end: the Win9x button-on-a-title-bar, which is what this is.
+ * The title bar.
  *
  * [projectName] is the open project, at the bar's right (plan §1): the
  * one word of state the title carries, since the status bar that carried
  * the open kit's name is gone and the project is the unit now.
  *
- * [onGear] is the gear (`docs/SCREEN_PLAN_2026_10.md` §1): SETUP and HELP
- * behind one chip at the bar's right end, one tap from every screen, where
- * the two used to be the twelfth and thirteenth tabs of a row that fit
- * nine. Drawn as the same button-on-a-bar the NOTE chip is.
+ * [onHelp] and [onSettings] are two labelled icon buttons at the bar's
+ * right end (clarity spec §7.3): a `?` that opens HELP and a gear that
+ * opens SETTINGS, each directly, one tap from every screen. They replaced
+ * one gear chip and the pop-up behind it. Each is a whole
+ * [Layout.MIN_HIT_TARGET] wide and tall, drawn as the same
+ * button-on-a-bar the NOTE chip is.
  */
 @Composable
 fun TitleBar(
     modifier: Modifier = Modifier,
     projectName: String? = null,
-    onNote: (() -> Unit)? = null,
-    onGear: () -> Unit,
+    onHelp: () -> Unit,
+    onSettings: () -> Unit,
 ) {
     val scheme = LocalScheme.current
     // `.masthead`: a flat bar, a hairline under it, no gradient.
@@ -262,18 +273,17 @@ fun TitleBar(
                     Modifier.weight(1f, fill = false).widthIn(max = 140.dp).semantics { contentDescription = fullName },
                 )
             }
-            if (onNote != null) {
-                TitleChip("NOTE", label = "NOTE", onClick = onNote)
-            }
-            // The gear's accessible name says what is behind it; the glyph
-            // alone would be read as a symbol name or not at all.
-            TitleChip("⚙", label = "${Places.GEAR_SETUP} · ${Places.GEAR_HELP} · ${Places.GEAR_MIDI}", onClick = onGear)
+            // The glyphs alone would be read as a symbol name or not at all,
+            // so each button's accessible name is the word for its screen.
+            TitleChip("?", label = Copy.TITLE_HELP, onClick = onHelp)
+            TitleChip("⚙", label = Copy.TITLE_SETTINGS, onClick = onSettings)
         }
     }
 }
 
 /**
- * A button on the title bar. The whole 34dp height is the tap target; the
+ * A button on the title bar. The whole bar height ([Layout.TITLEBAR_H], a
+ * hit target tall) and at least [Layout.MIN_HIT_TARGET] of width are the tap target; the
  * bevel sits inside a vertical inset so it reads as a button on the bar
  * rather than the bar's own edge. `tapeClick` before the inset, so the
  * inset is inside the target and not taken out of it.
@@ -284,6 +294,7 @@ private fun TitleChip(text: String, label: String, onClick: () -> Unit) {
     Box(
         Modifier
             .fillMaxHeight()
+            .widthIn(min = Layout.MIN_HIT_TARGET.dp)
             .tapeClick(label = label, onClick = onClick)
             .padding(vertical = 5.dp)
             .raisedBevel(scheme)
@@ -313,7 +324,8 @@ data class EmptyStateRoute(val label: String, val onClick: () -> Unit)
  * the user to find by hand (September UAT follow-up).
  *
  * [routes] is usually one door, sometimes two (CHOP's own EMPTY_CHOP names
- * both TAPE and SHELF, since its own sentence promises both) — deliberately
+ * both TAPE and SHELF, since its own sentence promises both); the first is
+ * the primary button and any other is secondary, so the panel has one primary — deliberately
  * never validated non-empty here: a screen with no honest route to offer
  * (EXPORT's own "kit won't parse" face, `KIT_WONT_OPEN`, same reasoning as
  * `TakesBinScreen`'s) simply doesn't call this at all, and stays a bare
@@ -326,9 +338,11 @@ fun EmptyStatePanel(
     modifier: Modifier = Modifier,
 ) {
     val scheme = LocalScheme.current
+    // Sized to what it holds, across the width: one sentence and its doors,
+    // not a lit panel the height of the screen with two lines in the middle.
     Box(
         modifier
-            .fillMaxSize()
+            .fillMaxWidth()
             .lcdPanel(scheme)
             .padding(14.dp),
         contentAlignment = Alignment.Center,
@@ -338,8 +352,16 @@ fun EmptyStatePanel(
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             TapeText(message, TapeType.lcdSmall, scheme.lcdInk.tape, maxLines = 3)
-            routes.forEach { route ->
-                ActionButton(route.label, scheme, enabled = true, modifier = Modifier.fillMaxWidth(), onClick = route.onClick)
+            routes.forEachIndexed { index, route ->
+                // The first door is the way out the sentence names: the screen's primary.
+                ActionButton(
+                    route.label,
+                    scheme,
+                    enabled = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    tier = if (index == 0) ButtonTier.Primary else ButtonTier.Secondary,
+                    onClick = route.onClick,
+                )
             }
         }
     }
@@ -363,6 +385,6 @@ fun NoKitPanel(
     if (hasProject) {
         EmptyStatePanel(need, listOf(EmptyStateRoute(Places.ADD_FROM_SHELF, onAddFromShelf)), modifier)
     } else {
-        EmptyStatePanel(Copy.NO_PROJECT_OPEN, listOf(EmptyStateRoute("SHELF ▸", onNavigateKits)), modifier)
+        EmptyStatePanel(Copy.NO_PROJECT_OPEN, listOf(EmptyStateRoute("LIBRARY ▸", onNavigateKits)), modifier)
     }
 }

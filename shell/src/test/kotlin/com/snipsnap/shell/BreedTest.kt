@@ -125,11 +125,11 @@ class BreedTest {
         assertEquals(listOf(1), Breed.crossable(m.kit, n.kit), "A's rack")
         assertEquals(listOf(1), Breed.crossable(n.kit, m.kit), "B's rack over A's audio")
         assertTrue(Breed.recipePads(n.kit).isEmpty(), "the button on the plain kit still reads zero")
-        assertEquals(Copy.BREED_BUTTON, "BREED ▸ MIX TWO KITS", "the button always opens the picker, so its label is constant")
-        assertEquals(Copy.breedSubtitle(0, 2), "NO RECIPES HERE YET. THE OTHER KIT'S CAN CROSS. PARENTS STAY.")
-        assertEquals(Copy.breedSubtitle(1, 2), "1 OF 2 PADS HAS A RECIPE. BOTH PARENTS STAY.")
-        assertEquals(Copy.breedSubtitle(1, 1), "ITS ONE PAD HAS A RECIPE TO CROSS. BOTH PARENTS STAY.", "a one-pad kit reads in the singular")
-        assertEquals(Copy.breedSubtitle(2, 2), "2 OF 2 PADS HAVE RECIPES. BOTH PARENTS STAY.")
+        assertEquals(Copy.BREED_BUTTON, "COMBINE KITS · MIX TWO KITS ▸", "the button always opens the picker, so its label is constant")
+        assertEquals(Copy.breedSubtitle(0, 2), "No recipes here yet. The other kit's can cross. Parents stay.")
+        assertEquals(Copy.breedSubtitle(1, 2), "1 of 2 pads has a recipe. Both parents stay.")
+        assertEquals(Copy.breedSubtitle(1, 1), "Its one pad has a recipe to cross. Both parents stay.", "a one-pad kit reads in the singular")
+        assertEquals(Copy.breedSubtitle(2, 2), "2 of 2 pads have recipes. Both parents stay.")
     }
 
     // ---------- corrupt recipe vs. genuinely captured (hardening audit item 5) ----------

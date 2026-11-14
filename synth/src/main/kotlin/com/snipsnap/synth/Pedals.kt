@@ -39,7 +39,9 @@ enum class PedalSide(val id: String) {
  * hydroforming section, gated on 2026-10-26; DELAY, added after its own
  * spec and gated on 2026-10-28; ROOM, the drum room, gated on 2026-11-01; FADE IN, the
  * volume swell, gated on 2026-11-02; VIBRATO, the pitch vibrato, gated on 2026-11-04; DIVE, the
- * whammy dive, gated on 2026-11-07.
+ * whammy dive, gated on 2026-11-07; HUSH, the gate, gated on 2026-11-07; SUB, the octave down,
+ * gated on 2026-11-09; REWIND, the reverse delay, gated on 2026-11-11; TREM, the tremolo, and FLANGE, the
+ * flanger, gated together on 2026-11-12; ROTARY, the spinning speaker, gated on 2026-11-13.
  * Seven pedals already did not fit row seven's six chips, so the sheet draws a slate: five of the gated pedals on the row,
  * the user's choice and the same everywhere, and every gated pedal behind
  * MORE (`PedalSlate`, docs/superpowers/specs/2026-10-28-pedal-slate-design.md).
@@ -160,6 +162,40 @@ object Pedals {
         // owner heard it only there. For held sounds: a snare, a tom and a rim are too short for a dive. Gated on 2026-11-07
         // (docs/superpowers/specs/2026-10-19-pedal-board-brainstorm.md, section 3). Behind MORE.
         Entry("DIVE", "dived", character("dived"), PedalSide.PRE, movable = false, gated = true),
+        // A gate: the `hushed` character, the HUSH section, whose tap (AMT 0.7) shuts the pad 12 dB under its peak over about
+        // 87 ms. After the amp and after the room, where the rack puts it, so a pad with ROOM on it is the gated 80s snare; not
+        // movable, since a gate in front of the room would shut the hit, not the room. For tails: a dry snare is only shorter
+        // and a hat a stub. Gated on 2026-11-07 (docs/superpowers/specs/2026-10-19-pedal-board-brainstorm.md, section 3,
+        // idea 5, which called it CHOKE; a choke is a choke group here). Behind MORE.
+        Entry("HUSH", "hushed", character("hushed"), PedalSide.POST, movable = false, gated = true),
+        // An octave down: the `octaved` character, the OCTAVER section, whose tap (AMT 0.7) mixes a half-speed copy of the hit
+        // under it at DEPTH 0.5, driven to Grit. In front of the amp, where the rack puts it and an octave pedal sits on a board;
+        // not movable, since the owner heard it only there. For snares and toms: a kick's octave lands under 40 Hz, weight a
+        // phone does not play. Gated on 2026-11-09 (docs/superpowers/specs/2026-10-19-pedal-board-brainstorm.md, idea 11).
+        // Behind MORE.
+        Entry("SUB", "octaved", character("octaved"), PedalSide.PRE, movable = false, gated = true),
+        // A reverse delay: the `rewound` character, the REWIND section, whose tap (AMT 0.7) plays the hit back backwards, its
+        // attack landing about 0.48 s after the hit, at MIX 0.7, then forward and backwards again, each pass darker, at
+        // REPEAT 0.5. After the amp, where the rack puts it beside ECHO and a reverse delay sits on a board; not movable,
+        // since the owner heard it only there. For drums and held sounds both. Gated on 2026-11-11
+        // (docs/superpowers/specs/2026-10-19-pedal-board-brainstorm.md, idea 6). Behind MORE.
+        Entry("REWIND", "rewound", character("rewound"), PedalSide.POST, movable = false, gated = true),
+        // A tremolo: the `tremoloed` character, the TREMOLO section, whose tap (AMT 0.7) dips the level by half in a smooth
+        // throb about 3.5 times a second, starting at full level. After the amp, where the rack puts it and an amp's tremolo
+        // lives; not movable, since the owner heard it only there (and heard no difference against the spring's other side).
+        // For held sounds. Gated on 2026-11-12 (docs/superpowers/specs/2026-10-04-pedal-board-design.md, Stage 4). Behind MORE.
+        Entry("TREM", "tremoloed", character("tremoloed"), PedalSide.POST, movable = false, gated = true),
+        // A flanger: the `flanged` character, the FLANGER section, whose tap (AMT 0.7) sweeps a comb of notches down from
+        // 5 kHz and back up, at DEPTH 0.7 with no feedback. After the amp, beside PHASE, where the rack puts it; not movable,
+        // since the owner heard it only there. For drums and held sounds both. Gated on 2026-11-12
+        // (docs/superpowers/specs/2026-10-04-pedal-board-design.md, Stage 4). Behind MORE.
+        Entry("FLANGE", "flanged", character("flanged"), PedalSide.POST, movable = false, gated = true),
+        // A spinning speaker: the `spun` character, the ROTARY section, whose tap (AMT 0.7) starts at the slow chorale and
+        // spins up to the fast tremolo, the top end circling with its pitch and level, the low end swaying under it. After
+        // the amp, where the rack puts it and a rotary cabinet sits; not movable, since the owner heard it only there. For
+        // held sounds only. Gated on 2026-11-13 (docs/superpowers/specs/2026-10-19-pedal-board-brainstorm.md, idea 8).
+        // Behind MORE.
+        Entry("ROTARY", "spun", character("spun"), PedalSide.POST, movable = false, gated = true),
     )
 
     init {

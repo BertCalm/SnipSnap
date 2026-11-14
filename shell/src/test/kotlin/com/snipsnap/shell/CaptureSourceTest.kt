@@ -29,7 +29,7 @@ class CaptureSourceTest {
         dock.captureSource = CaptureSource.APP_AUDIO
         assertEquals("LISTEN · APP AUDIO", dock.captureLabel)
         dock.capture = DockModel.Capture.Armed(41)
-        assertEquals("ARMED · 00:41 ON TAPE", dock.captureLabel, "armed reads as it always did")
+        assertEquals("LISTENING · 00:41 BUFFERED", dock.captureLabel, "armed reads as it always did")
         dock.capture = DockModel.Capture.Idle
         dock.captureSource = null
         assertEquals(Places.LISTEN, dock.captureLabel)

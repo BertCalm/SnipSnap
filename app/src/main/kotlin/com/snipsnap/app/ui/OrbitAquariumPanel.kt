@@ -25,6 +25,7 @@ internal fun OrbitAquariumPanel(set: OrbitSet, route: OrbitAquarium.Route, schem
     val tails = listOf(0f, 1f, 3f, 5f, 10f, 30f)
     Column(Modifier.fillMaxWidth().testTag("orbit-aquarium-panel"), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         TapeText("AQUARIUM · ORBIT", TapeType.lcdHeader, scheme.ink.tape)
+        TapeText(com.snipsnap.shell.Copy.AQUARIUM_LINE, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             ActionButton(if (set.aquariumFromKit) "KIT FX ON" else "USE KIT FX", scheme,
                 enabled = !busy && (route.warning == null || set.aquariumFromKit), lit = set.aquariumFromKit,
@@ -41,14 +42,14 @@ internal fun OrbitAquariumPanel(set: OrbitSet, route: OrbitAquarium.Route, schem
             route.settings.outputGain == 0f -> "WET MIX MUTED"
             playing -> "STEREO KIT FX LIVE"
             else -> "KIT FX READY"
-        }, TapeType.pixelSmall, if (faulted) scheme.warn.tape else scheme.ink.tape, maxLines = Int.MAX_VALUE)
-        route.warning?.let { TapeText(it, TapeType.pixelSmall, scheme.warn.tape, maxLines = Int.MAX_VALUE) }
+        }, TapeType.pixelSmall, if (faulted) scheme.warnInk.tape else scheme.ink.tape, maxLines = Int.MAX_VALUE)
+        route.warning?.let { TapeText(it, TapeType.pixelSmall, scheme.warnInk.tape, maxLines = Int.MAX_VALUE) }
         TapeText(when {
             !auditionUp -> "TAP STREAM UNAVAILABLE"
             auditionFaulted -> "TAP FX FAULT · RESET TAIL OR RETRY A TAP"
-            auditionPending -> "TAP FX WAITING TO QUEUE SETTINGS…"
+            auditionPending -> "Tap FX waiting to queue settings…"
             else -> "TAP STREAM READY"
-        }, TapeType.pixelSmall, if (!auditionUp || auditionFaulted) scheme.warn.tape else scheme.ink2.tape,
+        }, TapeType.pixelSmall, if (!auditionUp || auditionFaulted) scheme.warnInk.tape else scheme.ink2.tape,
             maxLines = Int.MAX_VALUE)
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             ActionButton("TAIL −", scheme, enabled = !busy && set.aquariumTailSeconds > 0,
@@ -61,7 +62,7 @@ internal fun OrbitAquariumPanel(set: OrbitSet, route: OrbitAquarium.Route, schem
         }
         TapeText("Saved KIT → PERFORMANCE sound at ORBIT tempo. Mix and tapped pads have separate FX history. BOUNCE starts fresh for one turn plus the chosen zero-input tail; taps are excluded. The ending can cut a long tail, and a wet bounce can have a loop seam. CLIP TO KIT carries notes only.",
             TapeType.pixelSmall, scheme.ink2.tape, maxLines = Int.MAX_VALUE)
-        TapeText("SNIPS keeps the stereo file; TAPE edits in mono. A wet bounce already contains FX. Playing it through KIT FX applies them again.",
+        TapeText("SAVED SAMPLES keeps the stereo file; SAMPLE edits in mono. A wet bounce already contains FX. Playing it through KIT FX applies them again.",
             TapeType.pixelSmall, scheme.ink2.tape, maxLines = Int.MAX_VALUE)
         if (set.aquariumFromKit) TapeText("MIX PROTECTION · $limitedFrames FRAMES THIS PLAY", TapeType.pixelSmall, scheme.ink2.tape)
     }

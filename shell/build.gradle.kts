@@ -57,7 +57,11 @@ tasks.test {
     // the live set grows with every engine (10 to 35 MB each). With 1g the whole suite
     // passed at a 475 MB peak live set; 1536m is that peak with room for the next
     // dozen engines, set here rather than discovered when one tips it over.
-    maxHeapSize = "1536m"
+    // On 2026-11-09 jvm-other's executor 25 still ran out: StereoPerformanceImportTest
+    // copies the 180-second stereo cap in SnipStore.import, and the worker that had
+    // already memoised the pad makers had no contiguous room left. 2g is the step
+    // the long shell tasks beside this one already take.
+    maxHeapSize = "2g"
     testLogging {
         events("passed", "failed", "skipped")
         // FULL, because this module's tests are mostly LAWS, and a law's whole
@@ -511,4 +515,125 @@ tasks.register<JavaExec>("generatePatioPerformance") {
     mainClass.set("com.snipsnap.shell.PatioPerformanceGenerator")
     workingDir = rootProject.projectDir
     maxHeapSize = "2g"
+}
+
+
+tasks.register<JavaExec>("generateHalobarPerformance") {
+    group = "distribution"
+    description = "Render six finite mallet keygroups and performances of their saved PCM24 captures."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.HalobarPerformanceGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "2g"
+    args(providers.gradleProperty("halobarPerformanceOutput").orNull ?: "${rootDir}/testkit/halobar-performance")
+}
+
+tasks.register<JavaExec>("generateBackwashAcousticKits") {
+    group = "verification"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.BackwashAcousticKitGenerator")
+    dependsOn(tasks.testClasses)
+    workingDir(rootDir)
+    maxHeapSize = "2g"
+    args("${rootDir}/testkit/backwash-acoustic-integration")
+}
+
+tasks.register<JavaExec>("generateBreakerKit") {
+    group = "distribution"
+    description = "Build BREAKER's three kits, prove each velocity and round-robin grid through save, playback and MPC 3 export, and write the listening pack."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.BreakerKitGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "2g"
+    args(providers.gradleProperty("breakerOutput").orNull ?: "${rootDir}/testkit/breaker-kit")
+}
+
+tasks.register<JavaExec>("generateBreakerAudition") {
+    group = "distribution"
+    description = "Render BREAKER's final audition: every voice, soft to hard, every control swept, corners, edges, presets and the three kits' grooves."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.BreakerAuditionGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "2g"
+    args(providers.gradleProperty("breakerAuditionOutput").orNull ?: "${rootDir}/testkit/breaker-audition")
+}
+
+tasks.register<JavaExec>("generateSootGenreKits") {
+    group = "distribution"
+    description = "Build SOOT's four sibling genre kits, prove every grid through save, playback and MPC 3 export, and write the listening pack."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.SootGenreKitGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "3g"
+    args(providers.gradleProperty("sootGenreKitsOutput").orNull ?: "${rootDir}/testkit/soot-genre-kits")
+}
+
+tasks.register<JavaExec>("generateSootKit") {
+    group = "distribution"
+    description = "Build the SOOT kit, prove its velocity and round-robin grids through save, playback and MPC 3 export, and write the listening pack."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.SootKitGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "2g"
+    args(providers.gradleProperty("sootKitOutput").orNull ?: "${rootDir}/testkit/soot-kit")
+}
+
+tasks.register<JavaExec>("generateGatecrashKits") {
+    group = "distribution"
+    description = "Build the three GATECRASH kits, prove the velocity and round-robin grid through save, playback and MPC 3 export, and write the listening pack."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.GatecrashKitGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "2g"
+    args(providers.gradleProperty("gatecrashOutput").orNull ?: "${rootDir}/testkit/gatecrash-kits")
+}
+
+tasks.register<JavaExec>("generateCypherKits") {
+    group = "distribution"
+    description = "Build the CYPHER kits, prove the velocity and round-robin grid through save, playback and MPC 3 export, and write the listening pack."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.CypherKitGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "2g"
+    args(providers.gradleProperty("cypherOutput").orNull ?: "${rootDir}/testkit/cypher-kits")
+}
+
+tasks.register<JavaExec>("generateMirrorballKits") {
+    group = "distribution"
+    description = "Build the three MIRRORBALL disco kits, prove the velocity and round-robin grid through save, playback and MPC 3 export, and write the listening pack."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.MirrorballKitGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "2g"
+    args(providers.gradleProperty("mirrorballOutput").orNull ?: "${rootDir}/testkit/mirrorball-kits")
+}
+
+tasks.register<JavaExec>("generateTriadKits") {
+    group = "distribution"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.TriadKitAuditionGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "2g"
+    args("${rootDir}/testkit/triad-kits")
+}
+
+tasks.register<JavaExec>("generateScuffKits") {
+    group = "distribution"
+    description = "Build the SCUFF kit, prove the velocity and round-robin grid through save, playback and MPC 3 export, and write the listening pack."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.ScuffKitGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "2g"
+    args(providers.gradleProperty("scuffKitsOutput").orNull ?: "${rootDir}/testkit/scuff-kits")
+}
+
+/** MURMUR's C2 repeats, V1 against opt-in V2, played from real saved banks by the saved-sample player. */
+tasks.register<JavaExec>("generateMurmurRoundRobinAudition") {
+    group = "distribution"
+    description = "Render real V1 and V2 MURMUR RR banks, play C2 repeats from the saved files and write testkit/murmur-rr-v2-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.MurmurRoundRobinAuditionGenerator")
+    workingDir = projectDir
+    maxHeapSize = "768m"
+    args("${rootDir}/testkit/murmur-rr-v2-audition")
 }

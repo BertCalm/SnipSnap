@@ -13,7 +13,7 @@ CI keeps its APK in the `snipsnap-strike-fx-<commit>` artifact. Download
 through the GitHub Actions artifact page while signed in; that route creates
 fresh download authorization when clicked.
 
-1. Create a **STRIKE FX** starter (near FACTORY in the starter list).
+1. Create an **FX BY VELOCITY** starter (near FACTORY in the starter list).
 2. Turn **STRIKE ON**, select **STAY**, and leave **VOL OFF**.
 3. Tap **A01 RIM** with the strip at the bottom, middle, and top. Those
    positions select **DRY**, **REVERB**, and **ECHO**. Leave about two seconds

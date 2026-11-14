@@ -292,11 +292,11 @@ private fun SubjectSwitch(expansion: Boolean, onKit: () -> Unit, onExpansion: ()
                     .weight(1f)
                     .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                     .raisedBevel(scheme)
-                    .border(if (picked) 2.dp else 0.dp, if (picked) scheme.amber.tape else scheme.grayEdge.tape, RoundedCornerShape(4.dp))
+                    .border(if (picked) 2.dp else 1.dp, if (picked) scheme.accent.tape else scheme.edge.tape, RoundedCornerShape(4.dp))
                     .tapeClick(label = label, onClick = tap),
                 contentAlignment = Alignment.Center,
             ) {
-                TapeText(label, TapeType.pixel, if (picked) scheme.amber.tape else scheme.ink.tape)
+                TapeText(label, TapeType.pixel, if (picked) scheme.accent.tape else scheme.ink.tape)
             }
         }
     }
@@ -861,7 +861,7 @@ private fun ExportContent(
             Box(
                 Modifier
                     .fillMaxWidth()
-                    .height(Layout.LCD_HEADER_H.dp)
+                    .minHeight(Layout.LCD_HEADER_H.dp)
                     .lcdPanel(scheme)
                     .padding(horizontal = 10.dp),
                 contentAlignment = Alignment.CenterStart,
@@ -968,6 +968,9 @@ private fun ExportContent(
                             revision++
                         },
                     )
+                    // What the picked format leaves behind, under the format that leaves it (MPC 2's
+                    // `.xpm` keeps a velocity × round-robin pad's velocity layers, one take each).
+                    model.formatNote?.let { FindingsCard(listOf(it), scheme, title = "FORMAT") }
                     ArtRow(
                         knobs = model.artKnobs ?: ArtKnobs.default(scheme),
                         enabled = !session.busy,
@@ -1059,7 +1062,7 @@ private fun OutCard(heading: String, scheme: Scheme, content: @Composable Column
         Modifier.fillMaxWidth().etchedBox(scheme).padding(8.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        TapeText(heading, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
+        TapeText(heading, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
         content()
     }
 }
@@ -1203,7 +1206,8 @@ private fun ProjectCard(
                 readBack = emptyList(),
                 scheme = scheme,
             )
-            PrimaryAction(label = "WRITE ANOTHER ✓", enabled = !busy, onClick = ::writeAnother)
+            // Secondary: the kit's card above holds EXPORT's one primary.
+            ActionButton("EXPORT ANOTHER", scheme, enabled = !busy, modifier = Modifier.fillMaxWidth(), onClick = ::writeAnother)
         } else {
             val shown = read
             // One line of status, as the subtitle already is (`1 KIT · BEAT ON
@@ -1220,7 +1224,7 @@ private fun ProjectCard(
                 }
                 if (shown.missing.isNotEmpty()) {
                     TapeText(
-                        "MISSING FROM THE SHELF: ${shown.missing.joinToString(", ")}",
+                        "MISSING FROM THE LIBRARY: ${shown.missing.joinToString(", ")}",
                         TapeType.pixelSmall,
                         BinRedGlow,
                         Modifier.fillMaxWidth(),
@@ -1228,9 +1232,12 @@ private fun ProjectCard(
                     )
                 }
             }
-            PrimaryAction(
-                label = if (busy) "WRITING — DO NOT EJECT" else overwriting?.let { Copy.replaceWhat(it.name) } ?: "WRITE SESSION",
+            // Secondary: the kit's card above holds EXPORT's one primary.
+            ActionButton(
+                if (busy) "EXPORTING…" else overwriting?.let { Copy.replaceWhat(it.name) } ?: "EXPORT PROJECT",
+                scheme,
                 enabled = !busy && shown != null && !shown.blocked,
+                modifier = Modifier.fillMaxWidth(),
                 onClick = ::writeSession,
             )
         }
@@ -1241,16 +1248,16 @@ private fun ProjectCard(
 @Composable
 private fun AlsoList(scheme: Scheme, canShare: Boolean, onShareKit: () -> Unit, onBeatWriters: () -> Unit) {
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        TapeText("ALSO", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
+        TapeText("ALSO", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
         ActionButton(
-            "SHARE KIT ▸ THIS KIT AS ONE FILE",
+            "SHARE KIT · THIS KIT AS ONE FILE",
             scheme,
             enabled = canShare,
             modifier = Modifier.fillMaxWidth(),
             onClick = onShareKit,
         )
         ActionButton(
-            "BEAT WRITERS ▸ BOUNCE · MIDI · CHART",
+            "BEAT WRITERS · BOUNCE · MIDI · CHART ▸",
             scheme,
             enabled = true,
             modifier = Modifier.fillMaxWidth(),
@@ -1340,11 +1347,6 @@ internal const val PREF_CARD_TREE = "export_card_tree"
  */
 internal const val PREF_EXPORT_FORMAT = "export_format"
 
-// The glow half moved to Schemes.BIN_RED_GLOW / theme.BinRedGlow
-// (accessibility audit finding 5) — a single tuned token, not a
-// duplicated literal; the border half is untouched.
-private val BIN_RED_BORDER = Color(0xFF6A2020)
-
 /** One titled list of [Finding] rows — PREFLIGHT before the write, READ BACK after it, same rows either way. */
 @Composable
 private fun FindingsCard(findings: List<Finding>, scheme: Scheme, modifier: Modifier = Modifier, title: String = "PREFLIGHT") {
@@ -1365,7 +1367,7 @@ private fun FindingsCard(findings: List<Finding>, scheme: Scheme, modifier: Modi
 private fun FindingRow(finding: Finding, scheme: Scheme) {
     val color = when (finding.severity) {
         Severity.FAIL -> BinRedGlow
-        Severity.WARN -> scheme.warn.tape
+        Severity.WARN -> scheme.warnInk.tape
         Severity.OK -> scheme.ink2.tape
         // "Not checked" reads quieter than OK on purpose: it's an absence
         // of a claim, not a pass.
@@ -1381,15 +1383,15 @@ private fun FindingRow(finding: Finding, scheme: Scheme) {
         Box(
             Modifier
                 .heightIn(min = Layout.MIN_HIT_TARGET.dp / 2)
-                .let { if (finding.severity == Severity.FAIL) it.border(1.dp, BIN_RED_BORDER) else it }
+                .let { if (finding.severity == Severity.FAIL) it.border(1.dp, color) else it }
                 .padding(horizontal = 3.dp),
             contentAlignment = Alignment.CenterStart,
         ) {
             TapeText(tag, TapeType.pixelSmall, color)
         }
-        // Capitals, like every other line in the UI: a finding's message is
-        // written once in `:kit` in sentence case for the CLI and the report.
-        TapeText(finding.message.uppercase(Locale.ROOT), TapeType.pixelSmall, color, Modifier.weight(1f), maxLines = 2)
+        // A finding's message is a sentence, written once in `:kit` in sentence
+        // case for the CLI and the report. It is drawn as written.
+        TapeText(finding.message, TapeType.pixelSmall, color, Modifier.weight(1f), maxLines = 2)
     }
 }
 
@@ -1442,6 +1444,7 @@ private fun CardRow(
                     indication = null,
                     enabled = enabled,
                     onClickLabel = "PICK A CARD",
+                    // twin: the FORGET CARD button beside the card (Copy.CARD_FORGET), which calls the same onForget
                     onLongClickLabel = if (tree != null) "FORGET THIS CARD" else null,
                     onLongClick = if (tree != null) onForget else null,
                     onClick = onPick,
@@ -1485,7 +1488,7 @@ private fun CardRow(
         // either and the legend advertises an action that cannot run - the
         // same "furniture describing nothing" this gate exists to prevent.
         if (tree != null && enabled) {
-            TapeText(Copy.EXPORT_CARD_LEGEND, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
+            TapeText(Copy.EXPORT_CARD_LEGEND, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
         }
     }
 }
@@ -1532,7 +1535,7 @@ private fun FormatPickerRow(
             // wraps to a second line here rather than shrinking below
             // readable size — maxLines=2, fixed 9sp, per the brief.
             TapeText(
-                if (open) "${current.cyclerLabel} ▴" else "${current.cyclerLabel} ▾",
+                if (open) "${current.cyclerLabel} −" else "${current.cyclerLabel} +",
                 TapeType.pixel.copy(textAlign = TextAlign.Center),
                 if (enabled) scheme.ink.tape else scheme.ink3.tape,
                 Modifier.fillMaxWidth(),
@@ -1580,7 +1583,7 @@ private fun FormatPickerRow(
                         verticalArrangement = Arrangement.spacedBy(2.dp),
                     ) {
                         TapeText(
-                            if (picked) "▸ ${f.cyclerLabel}" else f.cyclerLabel,
+                            if (picked) "● ${f.cyclerLabel}" else f.cyclerLabel,
                             TapeType.pixel,
                             if (picked) scheme.amber.tape else scheme.lcdInk.tape,
                             maxLines = 2,

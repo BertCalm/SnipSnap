@@ -114,4 +114,58 @@ class ShelfModelTest {
         File(bad, ProjectStore.FILE_NAME).writeText("{not json")
         assertEquals(listOf("Good"), model.projects().map { it.name })
     }
+
+    @Test
+    fun `dropKit takes a kit out of the project, keeps it on the shelf, and the next open does not make it a project`() {
+        kitOnShelf("Kitchen")
+        kitOnShelf("Funk Room")
+        ProjectStore.save(shelf, Project("Late Set", listOf("Kitchen", "Funk Room")))
+        val updated = model.dropKit("Late Set", "Kitchen")
+        assertEquals(listOf("Funk Room"), updated.kits)
+        assertEquals("Funk Room", updated.activeKit)
+        assertEquals(listOf("Funk Room"), model.openProject("Late Set").kits)
+        assertTrue(File(File(shelf, "Kitchen"), KitStore.FILE_NAME).isFile, "dropping a kit deletes nothing")
+        assertEquals(emptyList(), model.open().created, "a kit taken out on purpose is not adopted again")
+        assertEquals(emptyList(), model.kits().first { it.folder == "Kitchen" }.heldBy)
+
+        // Opening it from the shelf makes a project again, as it always has.
+        assertEquals(listOf("Kitchen"), model.projectForKit("Kitchen").kits)
+        assertEquals(emptySet(), ProjectStore.released(shelf))
+    }
+
+    @Test
+    fun `dropKit of a kit another project holds releases nothing, and dropping one not held is a no-op`() {
+        kitOnShelf("Kitchen")
+        ProjectStore.save(shelf, Project("A", listOf("Kitchen")))
+        ProjectStore.save(shelf, Project("B", listOf("Kitchen")))
+        model.dropKit("A", "Kitchen")
+        assertEquals(emptySet(), ProjectStore.released(shelf))
+        assertEquals(listOf("Kitchen"), model.openProject("B").kits)
+        assertEquals(listOf("Kitchen"), model.dropKit("B", "Nope").kits)
+    }
+
+    @Test
+    fun `trash and restore through the model leave the kits and the lists in step`() {
+        kitOnShelf("Kitchen")
+        model.open()
+        val before = model.projects().single().project
+        model.trashProject("Kitchen")
+        assertEquals(emptyList(), model.projects())
+        assertEquals(emptyList(), model.open().created, "the shelf does not remake it")
+        assertEquals(listOf("Kitchen"), model.kits().map { it.folder })
+        val binned = model.binnedProjects().single()
+        assertEquals("Kitchen", binned.project.name)
+        assertEquals(before, model.restoreProject(binned.dir))
+        assertEquals(listOf("Kitchen"), model.projects().map { it.name })
+    }
+
+    @Test
+    fun `renameProject keeps what the project holds`() {
+        kitOnShelf("Kitchen")
+        model.open()
+        val renamed = model.renameProject("Kitchen", "Dinner")
+        assertEquals(listOf("Kitchen"), renamed.kits)
+        assertEquals(listOf("Dinner"), model.projects().map { it.name })
+        assertEquals(emptyList(), model.open().created, "the kit is still held, now by Dinner")
+    }
 }

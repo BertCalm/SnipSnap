@@ -29,7 +29,7 @@ class TitleBarTest {
 
     @Test
     fun theLockupIsNamedSnipSnap() {
-        rule.setContent { TapeTheme(Schemes.DEFAULT) { TitleBar(onGear = {}) } }
+        rule.setContent { TapeTheme(Schemes.DEFAULT) { TitleBar(onHelp = {}, onSettings = {}) } }
         rule.onNodeWithContentDescription("SNIPSNAP").assertIsDisplayed()
         rule.onNodeWithText("SNIP", useUnmergedTree = true).assertExists()
         rule.onNodeWithText("SNAP", useUnmergedTree = true).assertExists()
@@ -44,8 +44,8 @@ class TitleBarTest {
         rule.setContent {
             TapeTheme(Schemes.DEFAULT) {
                 Column(Modifier.width(320.dp)) {
-                    TitleBar(projectName = name, onNote = {}, onGear = {})
-                    TitleBar(onGear = {})
+                    TitleBar(projectName = name, onHelp = {}, onSettings = {})
+                    TitleBar(onHelp = {}, onSettings = {})
                 }
             }
         }

@@ -82,7 +82,7 @@ class ConfluenceVoicesScreenTest : ComposeScreenTest() {
         }
         click("Voice mode: GROUP")
         setSlider("VARIATION", .4f)
-        setSlider("ROOM", .25f)
+        setSlider("REVERB", .25f)
         compose.onNodeWithContentDescription("SAVE → A02").assertIsNotEnabled()
         click("HEAR")
         waitFor("the changed group preview", timeoutMillis = 180_000) { hasText("GROUP PREVIEW READY") }
@@ -105,7 +105,7 @@ class ConfluenceVoicesScreenTest : ComposeScreenTest() {
         click("Open voice pad A02")
         waitFor("the saved passage settings", timeoutMillis = 60_000) { hasText("SAVED SETTINGS READY · HEAR BEFORE SAVING") }
         assertEquals("40%", sliderText("VARIATION"))
-        assertEquals("25%", sliderText("ROOM"))
+        assertEquals("25%", sliderText("REVERB"))
         compose.onNodeWithContentDescription("SAVE → A03").assertIsNotEnabled()
         click("HEAR")
         waitFor("the reopened group preview", timeoutMillis = 180_000) { hasText("GROUP PREVIEW READY") }
@@ -161,7 +161,7 @@ class ConfluenceVoicesScreenTest : ComposeScreenTest() {
 
     private fun smallHit(): Snip = Snip(floatArrayOf(.25f, -.25f, 0f), 1, WavWriter.MPC_SAMPLE_RATE)
     private fun waitForSavedPad(what: String, toasts: List<String>, after: Int, slot: String) {
-        val expected = "VOICE PASSAGE SAVED ON $slot"
+        val expected = "Voice passage saved on $slot."
         waitFor(what, timeoutMillis = 180_000) {
             val received = toasts.drop(after)
             received.firstOrNull { it != expected }?.let { refusal ->

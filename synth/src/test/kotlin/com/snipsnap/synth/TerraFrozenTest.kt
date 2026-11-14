@@ -23,7 +23,8 @@ class TerraFrozenTest {
     @Test
     fun `the frozen copy's macro table is today's`() {
         for (voice in TerraCases.FROZEN_VOICES) assertEquals(LegacyTerraBank.macrosFor(voice), Terra.macrosFor(voice), voice.name)
-        assertEquals(TerraVoice.entries - TerraCases.FROZEN_VOICES, listOf(TerraVoice.BOX), "only BOX came after the freeze")
+        assertEquals(listOf(TerraVoice.BOX, TerraVoice.SLAP, TerraVoice.DAYAN, TerraVoice.DARBUKA, TerraVoice.DOUM, TerraVoice.DJEMBE, TerraVoice.DHOLAK, TerraVoice.BAYAN, TerraVoice.TUN),
+            TerraVoice.entries - TerraCases.FROZEN_VOICES, "the voices that came after the freeze")
     }
 
     @Test
@@ -38,8 +39,9 @@ class TerraFrozenTest {
 
     /**
      * The audio the kit ships with, through whatever path TerraPatch.render
-     * takes - the routing Task 5 rewrites. The fifteen pads on frozen voices
-     * against the frozen copy; A07, the BOX, against its own voice.
+     * takes - the routing Task 5 rewrites. The six pads on frozen voices
+     * against the frozen copy; A07 (BOX) and the hand drums (A02, A03, A05,
+     * A06, A08, A09, A10, A11, A12) against their own voices.
      */
     @Test
     fun `the shipped Terra Kit is the frozen TERRA, pad for pad`() {
@@ -52,11 +54,12 @@ class TerraFrozenTest {
                 assertContentEquals(LegacyTerraBank.render(pad.voice, pad.macros).samples, shipped.snip.samples, "pad ${pad.slot} ${pad.name}")
                 frozen++
             } else {
-                assertEquals("A07" to TerraVoice.BOX, pad.slot to pad.voice, "the one pad off the frozen voices")
+                assertTrue(pad.slot to pad.voice in setOf("A02" to TerraVoice.BAYAN, "A03" to TerraVoice.DJEMBE, "A05" to TerraVoice.DHOLAK, "A06" to TerraVoice.DOUM,
+                    "A07" to TerraVoice.BOX, "A08" to TerraVoice.DJEMBE, "A09" to TerraVoice.DAYAN, "A10" to TerraVoice.TUN, "A11" to TerraVoice.DARBUKA, "A12" to TerraVoice.SLAP), "pad ${pad.slot} on ${pad.voice} is off the frozen voices")
                 assertContentEquals(Terra.render(pad.voice, pad.macros).samples, shipped.snip.samples, "pad ${pad.slot} ${pad.name}")
             }
         }
-        assertEquals(15, frozen)
+        assertEquals(6, frozen)
     }
 
     /**

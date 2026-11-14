@@ -1,13 +1,11 @@
 package com.snipsnap.app.ui
 
 import android.os.SystemClock
-import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.border
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -36,7 +34,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.liveRegion
@@ -291,7 +288,7 @@ fun PlaceRow(current: Place, onSelect: (Place) -> Unit, modifier: Modifier = Mod
                     .tapeClick(label = place.label) { onSelect(place) },
                 contentAlignment = Alignment.Center,
             ) {
-                TapeText(place.label, TapeType.pixel, if (isSelected) scheme.ink.tape else scheme.ink2.tape)
+                TapeText(place.label, TapeType.pixel, if (isSelected) scheme.ink.tape else scheme.ink2.tape, maxLines = 2)
             }
         }
     }
@@ -333,7 +330,7 @@ fun DoorChip(label: String, onClick: () -> Unit, modifier: Modifier = Modifier) 
             .padding(horizontal = 10.dp),
         contentAlignment = Alignment.Center,
     ) {
-        TapeText(label, TapeType.pixel, scheme.accent.tape)
+        TapeText(label, TapeType.pixel, scheme.accent.tape, maxLines = 2)
     }
 }
 
@@ -477,23 +474,33 @@ internal fun Dock(
                     TapeText(dock.captureLabel, TapeType.pixelSmall, scheme.amber.tape)
                 }
             } else {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                    // The light, the count and the meter, one node that says the
-                    // state; SNIP and STOP stay their own, so they are not merged in.
-                    Row(
-                        Modifier.semantics(mergeDescendants = true) { stateDescription = "MIC ARMED" },
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(5.dp),
-                    ) {
-                        CaptureLight(lit = true)
-                        Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                            TapeText(dock.captureLabel, TapeType.pixelSmall, scheme.amber.tape)
-                            CaptureMeter(Modifier.width(72.dp).height(6.dp))
-                        }
+                // SNIP and STOP are siblings of this row, not inside a group
+                // that can be squeezed: a Row measures its unweighted children
+                // first, so their 48 dp floors are taken before the counter and
+                // the line share what is left (at 360 dp with the transport
+                // chip: 344 - 48 - 48 - 48 - 32 gaps = 168 dp). The counter is
+                // a live readout, so it gives way on ONE line with an
+                // ellipsis (D7's wrap rule is for labels; a counter that
+                // changes line count as it ticks would jump the dock).
+                // 1000:1 against the line below, so the counter keeps what it
+                // can and the line is the one that goes to nothing.
+                Row(
+                    Modifier
+                        .weight(1000f, fill = false)
+                        // The light, the count and the meter, one node that says the
+                        // state; SNIP and STOP stay their own, so they are not merged in.
+                        .semantics(mergeDescendants = true) { stateDescription = "MIC ARMED" },
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(5.dp),
+                ) {
+                    CaptureLight(lit = true)
+                    Column(Modifier.weight(1f, fill = false), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                        TapeText(dock.captureLabel, TapeType.pixelSmall, scheme.amber.tape, maxLines = 1)
+                        CaptureMeter(Modifier.width(72.dp).height(6.dp))
                     }
-                    DockChip(Places.SNIP, scheme.amber.tape, onClick = onSnip)
-                    DockChip(Places.STOP, BinRedOnLcd, onClick = onEject, border = BIN_RED_BORDER)
                 }
+                DockChip(Places.SNIP, scheme.amber.tape, onClick = onSnip)
+                DockChip(Places.STOP, BinRedOnLcd, onClick = onEject)
             }
             // Now: the line, then the job's count, then CANCEL or the standing door.
             TapeText(
@@ -572,20 +579,12 @@ private fun CaptureMeter(modifier: Modifier) {
 
 /**
  * The meter's empty-field tint on exact digital silence — a deliberate,
- * scheme-independent constant like [BIN_RED_BORDER]: "something's off"
+ * scheme-independent constant: "something's off"
  * has to read the same in every scheme. A different colour from the
  * bin-red pair on purpose: a warning about a live session, not the end
  * of one.
  */
 private val MUTE_WARN_FIELD = Color(0xFF4A2E14)
-
-/**
- * BIN red, the house constant for a session-ending action (STOP here,
- * EMPTY THE BIN there), the same in every scheme. The glow half is the
- * tuned token `BinRedGlow`; this is its border, duplicated per file by
- * the convention the other copies state rather than hoisted.
- */
-private val BIN_RED_BORDER = Color(0xFF6A2020)
 
 /** A small chip on the LCD: a word in a one-pixel frame, a hit target tall. */
 @Composable
@@ -599,76 +598,20 @@ private fun DockChip(text: String, ink: Color, onClick: () -> Unit, border: Colo
             .padding(horizontal = 6.dp),
         contentAlignment = Alignment.Center,
     ) {
-        TapeText(text, TapeType.pixelSmall, ink)
+        TapeText(text, TapeType.pixelSmall, ink, maxLines = 2)
     }
-}
-
-/**
- * One row of a [ChoiceSheet]: its label and what it does. The label carries
- * its own ▸ when it opens a screen. [accessibilityLabel] is the accessible
- * name when it should not be the label - the name the dock's chip already
- * wears for the same door.
- */
-data class SheetRow(val label: String, val accessibilityLabel: String? = null, val onClick: () -> Unit)
-
-/**
- * A short menu over the screen — the shelf's own pop-up shape (a scrim, a
- * raised card, a CANCEL), so it reads as the same kind of thing the TOOLS
- * menu is. Tapping outside the card is a genuine dismiss path and needs
- * its own label even though CANCEL below also reaches it; the card
- * swallows the tap so it does not fall through to the scrim. Opening a
- * row may be a navigation; opening the sheet never is.
- */
-@Composable
-fun ChoiceSheet(rows: List<SheetRow>, onDismiss: () -> Unit) {
-    val scheme = LocalScheme.current
-    BackHandler(onBack = onDismiss)
-    Box(
-        Modifier
-            .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.55f))
-            .tapeClick(label = "CANCEL", onClick = onDismiss),
-        contentAlignment = Alignment.Center,
-    ) {
-        Column(
-            Modifier
-                .fillMaxWidth()
-                .padding(12.dp)
-                .raisedBevel(scheme)
-                .pointerInput(Unit) { detectTapGestures { } }
-                .padding(10.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
-            for (row in rows) {
-                ActionButton(row.label, scheme, enabled = true, accessibilityLabel = row.accessibilityLabel, modifier = Modifier.fillMaxWidth(), onClick = row.onClick)
-            }
-            ActionButton("CANCEL", scheme, enabled = true, modifier = Modifier.fillMaxWidth(), onClick = onDismiss)
-        }
-    }
-}
-
-/** Behind the gear in the title bar: SETUP ▸, HELP ▸ and MIDI ▸, one tap from every screen. */
-@Composable
-fun GearSheet(onSetup: () -> Unit, onHelp: () -> Unit, onMidi: () -> Unit, onDismiss: () -> Unit) {
-    ChoiceSheet(
-        listOf(
-            SheetRow("${Places.GEAR_SETUP} ▸", onClick = onSetup),
-            SheetRow("${Places.GEAR_HELP} ▸", onClick = onHelp),
-            SheetRow("${Places.GEAR_MIDI} ▸", onClick = onMidi),
-        ),
-        onDismiss,
-    )
 }
 
 /**
  * Behind the dock's idle capture chip: the two sources the shelf's
  * ArmControl offered as two buttons — the room through the mic, or
- * another app's audio with the projection consent.
+ * another app's audio with the projection consent. The mic row's accessible
+ * name stays [Places.LISTEN], the name the dock's chip wears for the same door.
  */
 @Composable
 fun CaptureSheet(onMic: () -> Unit, onInside: () -> Unit, onDismiss: () -> Unit) {
-    ChoiceSheet(
-        listOf(SheetRow(Places.ARM_MIC, accessibilityLabel = Places.LISTEN, onClick = onMic), SheetRow(Places.ARM_INSIDE, onClick = onInside)),
-        onDismiss,
-    )
+    SheetMenu(Places.ARM_SHEET_TITLE, onDismiss) {
+        SheetRow(Places.ARM_MIC, Places.ARM_MIC_DESC, onMic, accessibilityLabel = Places.LISTEN)
+        SheetRow(Places.ARM_INSIDE, Places.ARM_INSIDE_DESC, onInside)
+    }
 }

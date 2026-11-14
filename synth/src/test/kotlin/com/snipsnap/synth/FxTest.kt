@@ -717,7 +717,7 @@ class FxTest {
     fun `ROOM sits after SPRING and before MOTION, and an absent section keeps old recipes byte-stable`() {
         val names = FxChain.SECTION_NAMES
         assertEquals(names.indexOf("spring") + 1, names.indexOf("room"), "ROOM is not right after SPRING: $names")
-        assertEquals(names.indexOf("room") + 1, names.indexOf("motion"), "ROOM is not right before MOTION: $names")
+        assertEquals(names.indexOf("room") + 1, names.indexOf("hush"), "ROOM is not right before HUSH: $names")
 
         val without = FxChain(spring = Spring.defaults())
         assertTrue(!without.toJsonText().contains("room"), "no room key unless the section is set")
@@ -732,10 +732,28 @@ class FxTest {
     }
 
     @Test
-    fun `VOLUME sits after SPIKE and before EQ, and an absent section keeps old recipes byte-stable`() {
+    fun `HUSH sits after ROOM and before MOTION, and an absent section keeps old recipes byte-stable`() {
+        val names = FxChain.SECTION_NAMES
+        assertEquals(names.indexOf("room") + 1, names.indexOf("hush"), "HUSH is not right after ROOM: $names")
+        assertEquals(names.indexOf("hush") + 1, names.indexOf("motion"), "HUSH is not right before MOTION: $names")
+
+        val without = FxChain(room = Room.defaults())
+        assertTrue(!without.toJsonText().contains("hush"), "no hush key unless the section is set")
+        assertEquals(without, FxChain.fromJsonText(without.toJsonText()))
+
+        val with = FxChain(hush = Hush.defaults())
+        assertEquals(with, FxChain.fromJsonText(with.toJsonText()))
+        val chained = with.process(snare)
+        assertTrue(!chained.samples.contentEquals(snare.samples), "the hush section is a no-op in the chain")
+        assertContentEquals(Hush.process(snare, Hush.defaults()).samples, chained.samples, "the chain's hush row does not run Hush.process")
+    }
+
+    @Test
+    fun `VOLUME sits after SPIKE and before OCTAVER, and an absent section keeps old recipes byte-stable`() {
         val names = FxChain.SECTION_NAMES
         assertEquals(names.indexOf("spike") + 1, names.indexOf("volume"), "VOLUME is not right after SPIKE: $names")
-        assertEquals(names.indexOf("volume") + 1, names.indexOf("eq"), "VOLUME is not right before EQ: $names")
+        // SUB's octaver arrived between VOLUME and EQ (2026-11-08); VOLUME is still ahead of the tone.
+        assertEquals(names.indexOf("volume") + 1, names.indexOf("octaver"), "VOLUME is not right before OCTAVER: $names")
 
         val without = FxChain(spike = Spike.defaults())
         assertTrue(!without.toJsonText().contains("volume"), "no volume key unless the section is set")
@@ -746,6 +764,80 @@ class FxTest {
         val chained = with.process(snare)
         assertTrue(!chained.samples.contentEquals(snare.samples), "the volume section is a no-op in the chain")
         assertContentEquals(Volume.process(snare, Volume.defaults()).samples, chained.samples, "the chain's volume row does not run Volume.process")
+    }
+
+    @Test
+    fun `OCTAVER sits after VOLUME and before EQ, and an absent section keeps old recipes byte-stable`() {
+        val names = FxChain.SECTION_NAMES
+        assertEquals(names.indexOf("volume") + 1, names.indexOf("octaver"), "OCTAVER is not right after VOLUME: $names")
+        assertEquals(names.indexOf("octaver") + 1, names.indexOf("eq"), "OCTAVER is not right before EQ: $names")
+
+        val without = FxChain(volume = Volume.defaults())
+        assertTrue(!without.toJsonText().contains("octaver"), "no octaver key unless the section is set")
+        assertEquals(without, FxChain.fromJsonText(without.toJsonText()))
+
+        val with = FxChain(octaver = Octaver.defaults())
+        assertEquals(with, FxChain.fromJsonText(with.toJsonText()))
+        val chained = with.process(snare)
+        assertTrue(!chained.samples.contentEquals(snare.samples), "the octaver section is a no-op in the chain")
+        assertContentEquals(Octaver.process(snare, Octaver.defaults()).samples, chained.samples, "the chain's octaver row does not run Octaver.process")
+    }
+
+    @Test
+    fun `FLANGER then TREMOLO sit between PHASE and ECHO, and an absent section keeps old recipes byte-stable`() {
+        val names = FxChain.SECTION_NAMES
+        assertEquals(names.indexOf("phase") + 1, names.indexOf("flanger"), "FLANGER is not right after PHASE: $names")
+        assertEquals(names.indexOf("flanger") + 1, names.indexOf("tremolo"), "TREMOLO is not right after FLANGER: $names")
+        assertEquals(names.indexOf("tremolo") + 1, names.indexOf("rotary"), "ROTARY is not right after TREMOLO: $names")
+        assertEquals(names.indexOf("rotary") + 1, names.indexOf("echo"), "ROTARY is not right before ECHO: $names")
+
+        val without = FxChain(phase = Phase.defaults(), echo = Echo.defaults())
+        val text = without.toJsonText()
+        assertTrue(!text.contains("flanger") && !text.contains("tremolo"), "no flanger or tremolo key unless the section is set")
+        assertEquals(without, FxChain.fromJsonText(text))
+
+        val both = FxChain(flanger = Flanger.defaults(), tremolo = Tremolo.defaults())
+        assertEquals(both, FxChain.fromJsonText(both.toJsonText()))
+        for ((chain, alone) in listOf(
+            FxChain(flanger = Flanger.defaults()) to Flanger.process(snare, Flanger.defaults()),
+            FxChain(tremolo = Tremolo.defaults()) to Tremolo.process(snare, Tremolo.defaults()),
+        )) {
+            val chained = chain.process(snare)
+            assertTrue(!chained.samples.contentEquals(snare.samples), "a section is a no-op in the chain")
+            assertContentEquals(alone.samples, chained.samples, "the chain's row does not run the section's process")
+        }
+    }
+
+    @Test
+    fun `ROTARY sits after TREMOLO and before ECHO, and an absent section keeps old recipes byte-stable`() {
+        val without = FxChain(tremolo = Tremolo.defaults(), echo = Echo.defaults())
+        val text = without.toJsonText()
+        assertTrue(!text.contains("rotary"), "no rotary key unless the section is set")
+        assertEquals(without, FxChain.fromJsonText(text))
+
+        val with = FxChain(rotary = Rotary.defaults())
+        assertEquals(with, FxChain.fromJsonText(with.toJsonText()))
+        val chained = with.process(snare)
+        assertTrue(!chained.samples.contentEquals(snare.samples), "ROTARY is a no-op in the chain")
+        assertContentEquals(Rotary.process(snare, Rotary.defaults()).samples, chained.samples, "the chain's rotary row does not run Rotary.process")
+    }
+
+    @Test
+    fun `REWIND sits after ECHO and before SPRING, and an absent section keeps old recipes byte-stable`() {
+        val names = FxChain.SECTION_NAMES
+        assertEquals(names.indexOf("echo") + 1, names.indexOf("rewind"), "REWIND is not right after ECHO: $names")
+        assertEquals(names.indexOf("rewind") + 1, names.indexOf("spring"), "REWIND is not right before SPRING: $names")
+
+        val without = FxChain(echo = Echo.defaults())
+        assertTrue(!without.toJsonText().contains("rewind"), "no rewind key unless the section is set")
+        assertEquals(without, FxChain.fromJsonText(without.toJsonText()))
+
+        assertEquals(FxChain(rewind = Rewind.defaults()), FxChain.fromJsonText(FxChain(rewind = Rewind.defaults()).toJsonText()))
+        // One backwards copy, so the whole render is inside the rack's tail budget and nothing but the row is compared.
+        val once = Rewind.defaults() + ("REPEAT" to 0f)
+        val chained = FxChain(rewind = once).process(snare)
+        assertTrue(!chained.samples.contentEquals(snare.samples), "the rewind section is a no-op in the chain")
+        assertContentEquals(Rewind.process(snare, once).samples, chained.samples, "the chain's rewind row does not run Rewind.process")
     }
 
     @Test

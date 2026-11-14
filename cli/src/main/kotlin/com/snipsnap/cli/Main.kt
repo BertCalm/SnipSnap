@@ -97,7 +97,12 @@ object Cli {
         |                        (TIDAL PAIR/STREAM: --midi 36..84 --velocity 0..1;
         |                         --macros HOLD=1 loops aftermath; --instrument [--release S] keeps encounter;
         |                        --seed signed-64-bit N --model 1|2 --patch recipe.json; NOTE or HOLD)
+        |                        (HALOBAR: VIBRAPHONE/MARIMBA/XYLOPHONE/GLOCKENSPIEL/CROTALES/TUBULAR_BELLS;
+        |                         --midi 48..84 (xylophone 57..84; glockenspiel 60..96; crotales 84..108);
+        |                         --velocity 0..1 --macros SPACE=.7,RETURN=.6 --patch recipe.patch; finite notes)
         |                        (NACRE prototype: PEARL; --midi 28..72 --velocity 0..1; finite duet, HOLD unavailable)
+        |                        (TEMPEST: six voices and 22 factory presets; KICK/METAL model 2, others model 3;
+        |                         --patch recipe.patch --macros SOURCE=.5,SPACE=.75; new voices add DECAY; HOLD reserved)
         |                        (FERRY prototype: PASSAGE; --midi 36..72 --velocity 0..1;
         |                         --model 1|2|3|4 --patch recipe.json --macros HANDOFF=.5,MATCH=1,LOSS=.5;
         |                         MATCH requires model 2+; LOSS requires model 3+; model 4 adds a dry release;
@@ -188,6 +193,8 @@ object Cli {
         |                        (--rate 1/16, --bpm, --amount, --undo)
         |  gate <kit-dir> <pad>  the hit chopped on the grid
         |                        (--rate 1/8, --bpm, --amount, --undo)
+        |  pump <kit-dir> <pad>  the level ducked on every beat and breathed
+        |                        back (--rate 1/8, --bpm, --amount, --undo)
         |  drift <kit-dir> <pad> one knob: the crate deals the neighbour, morph
         |                        blends toward it (--amount, --seed, --root)
         |  breed <kit-a> <kit-b> two kits' recipes crossed into a child kit,
@@ -436,6 +443,7 @@ object Cli {
                 "eternal" -> EternalCommand.run(args.drop(1), out)
                 "roll" -> RollCommand.run(args.drop(1), out)
                 "gate" -> GateCommand.run(args.drop(1), out)
+                "pump" -> PumpCommand.run(args.drop(1), out)
                 "drift" -> DriftCommand.run(args.drop(1), out)
                 "breed" -> BreedCommand.run(args.drop(1), out)
                 "desample" -> DesampleCommand.run(args.drop(1), out)

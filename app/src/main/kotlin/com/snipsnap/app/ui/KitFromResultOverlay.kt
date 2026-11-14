@@ -22,6 +22,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import com.snipsnap.app.KitShelf
 import com.snipsnap.app.theme.TapeType
+import com.snipsnap.app.theme.lcdInk2
 import com.snipsnap.app.theme.tape
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.Scheme
@@ -40,7 +41,7 @@ internal class KitFromMade(
 
 /**
  * KIT FROM ANYTHING's result, drawn instead of whatever is under it, as
- * [SpreadOverlay] is: the kit's name, key and tempo, the gate every pad was
+ * [SpreadSheet] is: the kit's name, key and tempo, the gate every pad was
  * held to and what the gate said, each blended pad's partner, the count,
  * and OPEN KIT. Back, and CLOSE, just close it; the kit is already on the
  * shelf either way.
@@ -77,11 +78,11 @@ internal fun KitFromResultOverlay(
                 verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
                 TapeText(report.header, TapeType.pixel, scheme.lcdInk.tape, maxLines = 3)
-                TapeText(report.tableHeader, TapeType.pixelSmall, scheme.ink3.tape, maxLines = 1)
+                TapeText(report.tableHeader, TapeType.pixelSmall, scheme.lcdInk2, maxLines = 2)
                 report.rows.forEachIndexed { i, row ->
                     val ink = when (report.rowGates[i]) {
                         KitFromAnything.Gate.FAIL -> scheme.amber.tape
-                        KitFromAnything.Gate.UNMEASURED -> scheme.ink3.tape
+                        KitFromAnything.Gate.UNMEASURED -> scheme.lcdInk2
                         KitFromAnything.Gate.PASS -> scheme.lcdInk.tape
                     }
                     TapeText(row, TapeType.pixelSmall, ink, maxLines = 3)

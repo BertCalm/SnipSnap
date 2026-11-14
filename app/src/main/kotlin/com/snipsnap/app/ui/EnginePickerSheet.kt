@@ -58,6 +58,7 @@ import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalView
@@ -156,14 +157,18 @@ private val ROW_MIN_H = 64.dp
  * reader can reach without a gesture. A dialog is modal to a screen reader as well:
  * what is under it is not reachable until it is gone.
  *
+ * [wrap] sizes the panel to its content (up to the same share), for the short menus
+ * of [SheetMenu]; the default fills that share, for a list that scrolls inside it.
+ *
  * Reusable: nothing in it knows about engines. The menus the UI plan turns into
- * sheets are meant to be given to this.
+ * sheets are given to this.
  */
 @Composable
 fun BottomSheet(
     title: String,
     onDismiss: () -> Unit,
     scrimLabel: String = "CLOSE",
+    wrap: Boolean = false,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     Dialog(
@@ -176,8 +181,14 @@ fun BottomSheet(
             decorFitsSystemWindows = false,
         ),
     ) {
-        BottomSheetWindow(title, onDismiss, scrimLabel, content)
+        BottomSheetWindow(title, onDismiss, scrimLabel, wrap, content)
     }
+}
+
+/** The panel as tall as its content, and no taller than [share] of the height it is offered. */
+private fun Modifier.atMostShareOfHeight(share: Float): Modifier = layout { measurable, constraints ->
+    val placeable = measurable.measure(constraints.copy(minHeight = 0, maxHeight = (constraints.maxHeight * share).toInt()))
+    layout(placeable.width, placeable.height) { placeable.place(0, 0) }
 }
 
 /** What is inside [BottomSheet]'s window: the scrim and the panel. */
@@ -186,6 +197,7 @@ private fun BottomSheetWindow(
     title: String,
     onDismiss: () -> Unit,
     scrimLabel: String,
+    wrap: Boolean,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val scheme = LocalScheme.current
@@ -211,7 +223,7 @@ private fun BottomSheetWindow(
             Modifier
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
-                .fillMaxHeight(PANEL_HEIGHT_SHARE)
+                .then(if (wrap) Modifier.atMostShareOfHeight(PANEL_HEIGHT_SHARE) else Modifier.fillMaxHeight(PANEL_HEIGHT_SHARE))
                 .graphicsLayer { translationY = (1f - seated.value) * size.height + pulled }
                 .raisedBevel(scheme)
                 // Swallows a tap on the panel so it does not fall through to the scrim: a bare
@@ -544,9 +556,10 @@ private fun Modifier.fadeEdges(state: LazyListState): Modifier = this
 private fun SectionHeader(text: String) {
     TapeText(
         text,
-        TapeType.pixel,
+        TapeType.eyebrow,
         LocalScheme.current.ink2.tape,
         Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp).semantics { heading() },
+        maxLines = 2,
     )
 }
 

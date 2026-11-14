@@ -209,7 +209,7 @@ private fun SplitDesk(
             } catch (e: CancellationException) { throw e }
             catch (e: Exception) {
                 Log.e("SplitScreen", "SPLIT FX settings not saved", e)
-                onToast("SPLIT FX SETTINGS NOT SAVED")
+                onToast(Copy.SPLIT_FX_NOT_SAVED)
             }
         }
     }
@@ -513,7 +513,7 @@ private fun SplitDesk(
             } catch (e: CancellationException) { throw e }
             catch (e: Exception) {
                 Log.e("SplitScreen", "SPLIT PRINT refused", e)
-                onToast(e.message ?: "SPLIT PRINT FAILED")
+                onToast(e.message ?: Copy.SPLIT_PRINT_FAILED)
             } finally {
                 working = false
             }
@@ -555,8 +555,8 @@ private fun SplitDesk(
         // ---- the source, and the split itself ----
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             ActionButton(backLabel, scheme, enabled = !working, accessibilityLabel = spokenBack(backLabel), modifier = Modifier.weight(1f)) { onExit() }
-            ActionButton("PAD ◄", scheme, enabled = !working && entry != null, modifier = Modifier.weight(1f)) { stepPad(-1) }
-            ActionButton("PAD ►", scheme, enabled = !working && entry != null, modifier = Modifier.weight(1f)) { stepPad(1) }
+            ActionButton("PREVIOUS PAD", scheme, enabled = !working && entry != null, modifier = Modifier.weight(1f)) { stepPad(-1) }
+            ActionButton("NEXT PAD", scheme, enabled = !working && entry != null, modifier = Modifier.weight(1f)) { stepPad(1) }
         }
         ActionButton(
             // Batch 3, Task 4: no ▸ — SPLIT runs in place on the loaded pad;
@@ -629,7 +629,7 @@ private fun SplitDesk(
                 modifier = Modifier.weight(1f),
             ) { if (playing) stopAll() else startAll() }
             ActionButton(
-                if (printToPad) "→ PAD" else "→ TAPE",
+                if (printToPad) "→ PAD" else "→ SAMPLE",
                 scheme,
                 enabled = !working,
                 modifier = Modifier.weight(1f),
@@ -660,7 +660,7 @@ private fun SplitDesk(
         }
         SlotChooserOverlay(
             kit = entry?.kit,
-            previewColor = scheme.amber.tape,
+            previewColor = scheme.accent.tape,
             scheme = scheme,
             busy = landing,
             onPick = ::landOnPad,

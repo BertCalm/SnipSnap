@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -89,6 +90,7 @@ import com.snipsnap.synth.OrphicaMaterial
 import com.snipsnap.synth.OrphicaMode
 import com.snipsnap.synth.OrphicaPatch
 import com.snipsnap.app.theme.BinRedGlow
+import com.snipsnap.app.theme.BinRedOnLcd
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
 import com.snipsnap.app.theme.lcdInk2
@@ -125,6 +127,7 @@ import com.snipsnap.shell.OverlapPadMaker
 import com.snipsnap.shell.FlockPadMaker
 import com.snipsnap.shell.OhmPadMaker
 import com.snipsnap.shell.CreasePadMaker
+import com.snipsnap.shell.HalobarPadMaker
 import com.snipsnap.shell.CausticPadMaker
 import com.snipsnap.shell.CausticPad
 import com.snipsnap.shell.CausticEditing
@@ -146,6 +149,8 @@ import com.snipsnap.shell.TidalPad
 import com.snipsnap.shell.OrigamiPadMaker
 import com.snipsnap.shell.KitBuilderModel
 import com.snipsnap.shell.MeridianPadMaker
+import com.snipsnap.shell.MeridianFinitePadMaker
+import com.snipsnap.shell.MeridianHeldKeygroupPackage
 import com.snipsnap.shell.MeridianSynth
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.PadBanks
@@ -178,9 +183,19 @@ import com.snipsnap.synth.Patch
 import com.snipsnap.synth.Otis
 import com.snipsnap.synth.OtisPatch
 import com.snipsnap.synth.OtisVoice
+import com.snipsnap.synth.Rivet
+import com.snipsnap.synth.RivetPatch
+import com.snipsnap.synth.RivetPresets
+import com.snipsnap.synth.RivetVoice
+import com.snipsnap.synth.Tempest
+import com.snipsnap.synth.TempestPatch
+import com.snipsnap.synth.TempestVoice
 import com.snipsnap.synth.Wick
 import com.snipsnap.synth.WickPatch
 import com.snipsnap.synth.WickVoice
+import com.snipsnap.synth.Etch
+import com.snipsnap.synth.EtchPatch
+import com.snipsnap.synth.EtchVoice
 import com.snipsnap.synth.Patches
 import com.snipsnap.synth.ScannedChain
 import com.snipsnap.synth.ScannedChainPatch
@@ -222,6 +237,17 @@ import com.snipsnap.synth.PluckPatch
 import com.snipsnap.synth.PluckVoice
 import com.snipsnap.synth.Presets
 import com.snipsnap.synth.Skin
+import com.snipsnap.synth.Backwash
+import com.snipsnap.synth.BackwashPatch
+import com.snipsnap.synth.BackwashVoice
+import com.snipsnap.synth.Soot
+import com.snipsnap.synth.SootPatch
+import com.snipsnap.synth.SootVoice
+import com.snipsnap.synth.FiredBronzePatch
+import com.snipsnap.synth.FiredBronzeInstrument
+import com.snipsnap.synth.FiredBronzeDryKit
+import com.snipsnap.shell.FiredBronzePads
+import com.snipsnap.synth.BackroomSnare
 import com.snipsnap.synth.SkinPatch
 import com.snipsnap.synth.SkinVoice
 import com.snipsnap.synth.Thump
@@ -263,6 +289,18 @@ import com.snipsnap.synth.Arco
 import com.snipsnap.synth.ArcoPatch
 import com.snipsnap.synth.ArcoVoice
 import com.snipsnap.synth.Scour
+import com.snipsnap.synth.Splay
+import com.snipsnap.synth.SplayPatch
+import com.snipsnap.synth.SplayVoice
+import com.snipsnap.shell.SplayDelivery
+import com.snipsnap.shell.SplayFinitePadMaker
+import com.snipsnap.synth.Erosion
+import com.snipsnap.synth.ErosionVoice
+import com.snipsnap.synth.Osteria
+import com.snipsnap.synth.OsteriaStrum
+import com.snipsnap.synth.OsteriaPatch
+import com.snipsnap.synth.OsteriaVoice
+import com.snipsnap.synth.ErosionPatch
 import com.snipsnap.synth.ScourPatch
 import com.snipsnap.synth.ScourVoice
 import com.snipsnap.synth.Keel
@@ -283,6 +321,9 @@ import com.snipsnap.synth.PitchwheelVoice
 import com.snipsnap.synth.Murmur
 import com.snipsnap.synth.MurmurPatch
 import com.snipsnap.synth.MurmurVoice
+import com.snipsnap.synth.ChordStabs
+import com.snipsnap.shell.MurmurSelectedChordPlan
+import com.snipsnap.shell.MurmurSelectedInstrumentMaker
 import com.snipsnap.synth.Trio
 import com.snipsnap.synth.TrioPatch
 import com.snipsnap.synth.Trefoil
@@ -290,7 +331,10 @@ import com.snipsnap.synth.TrefoilPatch
 import com.snipsnap.synth.TrefoilVoice
 import com.snipsnap.synth.TrefoilHeld
 import com.snipsnap.synth.TrefoilPlayback
+import com.snipsnap.shell.OsteriaPadMaker
 import com.snipsnap.shell.TrefoilPadMaker
+import com.snipsnap.shell.WickPadMaker
+import com.snipsnap.shell.EtchPadMaker
 import com.snipsnap.synth.TrioVoice
 import com.snipsnap.synth.OpenSky
 import com.snipsnap.synth.OpenSkyPatch
@@ -392,6 +436,9 @@ import com.snipsnap.synth.RevelPatch
 import com.snipsnap.synth.Fork
 import com.snipsnap.synth.ForkPatch
 import com.snipsnap.synth.ForkVoice
+import com.snipsnap.synth.Halobar
+import com.snipsnap.synth.HalobarVoice
+import com.snipsnap.synth.HalobarPatch
 import com.snipsnap.synth.Circuit
 import com.snipsnap.synth.CircuitPatch
 import com.snipsnap.synth.CircuitVoice
@@ -418,6 +465,8 @@ import com.snipsnap.synth.VentPatch
 import com.snipsnap.synth.VentVoice
 import java.io.File
 import java.util.Locale
+import kotlin.math.ln
+import kotlin.math.pow
 import kotlin.math.max
 import kotlin.math.roundToInt
 import kotlin.random.Random
@@ -586,9 +635,9 @@ private class EmbouchureRestore(
     val pending = mutableStateMapOf<Pair<Engine, Enum<*>>, Boolean>().apply {
         for (pair in seededPresets.keys) {
             if (pair.first == Engine.EMBOUCHURE && pair !in patches && pair !in reopenedPads) put(pair, true)
-            // A named-only TIDAL, TREMOR or RELAY YOURS restore has no typed performance yet.
+            // A named-only TIDAL, TREMOR, RELAY or SPLAY YOURS restore has no typed performance yet.
             // Default sliders must not materialize model 2 before its shelf read.
-            if ((pair.first == Engine.TIDAL || pair.first == Engine.TREMOR || pair.first == Engine.RELAY) && pair !in reopenedPads &&
+            if ((pair.first == Engine.TIDAL || pair.first == Engine.TREMOR || pair.first == Engine.RELAY || pair.first == Engine.SPLAY) && pair !in reopenedPads &&
                 SynthDrafts.read(settings).none { it.engine == pair.first.name && it.voiceName == pair.second.name } &&
                 Presets.byName(pair.first.name, pair.second.name, seededPresets.getValue(pair)) == null) {
                 put(pair, true)
@@ -598,7 +647,7 @@ private class EmbouchureRestore(
 
     /** A named recipe's saved model must arrive before default controls can replace it. */
     fun waitsForRecipe(engine: Engine, voice: Enum<*>): Boolean =
-        (engine == Engine.TIDAL || engine == Engine.TREMOR || engine == Engine.RELAY) && pending.containsKey(engine to voice)
+        (engine == Engine.TIDAL || engine == Engine.TREMOR || engine == Engine.RELAY || engine == Engine.SPLAY) && pending.containsKey(engine to voice)
 }
 
 @Composable
@@ -710,6 +759,8 @@ private fun editablePreset(patch: Patch): Patch = if (patch is RegistersPatch) p
  * by reopening a pad, so both put a saved recipe on the same sliders.
  */
 private fun editableDefaults(base: Map<String, Float>, editable: Patch): Map<String, Float> = when (editable) {
+    is SplayPatch -> Splay.defaults(editable.voice, editable.model)
+    is SkinPatch -> editable.defaults()
     is OrphicaPatch -> Orphica.macrosFrom(editable.config)
     is OspreyPatch -> Osprey.defaults(editable.voice, editable.modelVersion)
     is TrefoilPatch -> if (editable.playback == TrefoilPlayback.HELD) TrefoilHeld.defaults(editable.voice) else Trefoil.defaults(editable.voice)
@@ -720,6 +771,7 @@ private fun editableDefaults(base: Map<String, Float>, editable: Patch): Map<Str
     is EmbouchurePatch -> Embouchure.defaults(editable.voice, editable.model)
     is RimePatch -> Rime.defaults(editable.voice, editable.model)
     is TidalPatch -> Tidal.defaults(editable.voice, editable.model)
+    is NacrePatch -> Nacre.defaults(editable.voice, editable.model)
     is OhmPatch -> Ohm.defaults(editable.model)
     else -> base
 }
@@ -894,7 +946,7 @@ fun SynthScreen(
                                 it.name == settings[presetSettingsKey(e, v)]
                             } as? OrphicaPatch)
                     } else null
-                    val nativeFactory = if (e == Engine.CHITIN || e == Engine.CAUSTIC || e == Engine.ACCORD || e == Engine.RIME || e == Engine.FILAMENT || e == Engine.CHAMBER || e == Engine.TREMOR || e == Engine.RELAY || e == Engine.NACRE || e == Engine.MERIDIAN || e == Engine.OTIS || e == Engine.OHM || e == Engine.WICK) {
+                    val nativeFactory = if (e == Engine.TEMPEST || e == Engine.SPLAY || e == Engine.OSTERIA || e == Engine.ETCH || e == Engine.HALOBAR || e == Engine.EROSION || e == Engine.CHITIN || e == Engine.CAUSTIC || e == Engine.ACCORD || e == Engine.RIME || e == Engine.FILAMENT || e == Engine.CHAMBER || e == Engine.TREMOR || e == Engine.RELAY || e == Engine.NACRE || e == Engine.MERIDIAN || e == Engine.OTIS || e == Engine.OHM || e == Engine.WICK || e == Engine.RIVET || e == Engine.MURMUR) {
                         factoryPresets(e, v).firstOrNull {
                             it.name == settings[presetSettingsKey(e, v)]
                         }
@@ -904,17 +956,29 @@ fun SynthScreen(
                         orphica != null -> Orphica.macrosFrom(orphica.config) + orphica.macros
                         nativeFactory is RimePatch -> Rime.defaults(nativeFactory.voice, nativeFactory.model) + nativeFactory.macros
                         nativeFactory is OhmPatch -> Ohm.defaults(nativeFactory.model) + nativeFactory.macros
+                        nativeFactory is NacrePatch -> NacreEditing.controls(nativeFactory)
                         else -> e.defaults(v) + nativeFactory?.macros.orEmpty()
                     }
                     val recipe = seed.seededOvenPatches[e to v]
-                        ?: if (e == Engine.ONSET) seed.seededDrafts.filterIsInstance<OnsetPatch>().firstOrNull { it.voice == v }
+                        ?: if (e == Engine.SKIN) seed.seededDrafts.filterIsInstance<SkinPatch>().firstOrNull { it.voice == v }
+                        else if (e == Engine.BACKWASH) seed.seededDrafts.filterIsInstance<BackwashPatch>().firstOrNull { it.voice == v }
+                        else if (e == Engine.SOOT) seed.seededDrafts.filterIsInstance<SootPatch>().firstOrNull { it.voice == v }
+                        else if (e == Engine.ONSET) seed.seededDrafts.filterIsInstance<OnsetPatch>().firstOrNull { it.voice == v }
                         else if (e == Engine.FILAMENT) seed.seededFilamentPatches[v as FilamentVoice]
                         else if (e == Engine.PLUCK && v == PluckVoice.UPRIGHT)
                             seed.seededDrafts.filterIsInstance<PluckPatch>().firstOrNull { it.voice == PluckVoice.UPRIGHT }
                         else if (e == Engine.ACCORD) seed.seededDrafts.firstOrNull { it is AccordPatch && it.voice == v }
                         else if (e == Engine.RIME) seed.seededDrafts.filterIsInstance<RimePatch>().firstOrNull { it.voice == v }
                         else if (e == Engine.OTIS) seed.seededDrafts.firstOrNull { it is OtisPatch && it.voice == v }
+                        else if (e == Engine.SPLAY) seed.seededDrafts.filterIsInstance<SplayPatch>().firstOrNull { it.voice == v }
+                        else if (e == Engine.OSTERIA) seed.seededDrafts.firstOrNull { it is OsteriaPatch && it.voice == v }
+                        else if (e == Engine.HALOBAR) seed.seededDrafts.firstOrNull { it is HalobarPatch && it.voice == v }
+                        else if (e == Engine.EROSION) seed.seededDrafts.firstOrNull { it is ErosionPatch && it.voice == v }
+                        else if (e == Engine.RIVET) seed.seededDrafts.firstOrNull { it is RivetPatch && it.voice == v }
+                        else if (e == Engine.TEMPEST) seed.seededDrafts.filterIsInstance<TempestPatch>().firstOrNull { it.voice == v }
                         else if (e == Engine.WICK) seed.seededDrafts.firstOrNull { it is WickPatch && it.voice == v }
+                        else if (e == Engine.ETCH) seed.seededDrafts.firstOrNull { it is EtchPatch && it.voice == v }
+                        else if (e == Engine.MURMUR) seed.seededDrafts.firstOrNull { it is MurmurPatch && it.voice == v }
                         else if (e == Engine.TIDAL) seed.seededDrafts.firstOrNull { it is TidalPatch && it.voice == v }
                         else if (e == Engine.LIBRATION) seed.seededDrafts.firstOrNull { it is LibrationPatch && it.voice == v }
                         else if (e == Engine.TREMOR) seed.seededDrafts.firstOrNull { it is TremorPatch && it.voice == v }
@@ -924,6 +988,11 @@ fun SynthScreen(
                         else if (e == Engine.CHAMBER) seed.restoredChamber[v as ChamberVoice]
                         else if (e == Engine.NACRE) seed.seededDrafts.filterIsInstance<NacrePatch>()
                             .firstOrNull { it.voice == v }
+                        // A held TREFOIL draft carries NUDGE=0 and HOLD=1, which the held patch
+                        // requires. Without it the sliders start at the finite defaults, and the
+                        // first held patch built from them refuses its own controls.
+                        else if (e == Engine.TREFOIL) seed.seededDrafts.filterIsInstance<TrefoilPatch>()
+                            .firstOrNull { it.voice == v && it.playback == TrefoilPlayback.HELD }
                         // PRISM's draft is its complete recipe (sound source, motion, TUNE, HOLD); without
                         // it the sliders fall back to defaults and the first write-back replaces the draft.
                         else if (e == Engine.PRISM) seed.seededDrafts.filterIsInstance<PrismPatch>()
@@ -948,8 +1017,11 @@ fun SynthScreen(
                             CausticInstrument.defaults(recipe.voice, 2).mapValues { (name, fallback) ->
                                 settings[macroSettingsKey(e, v, name)]?.toFloatOrNull() ?: fallback
                             })
+                        recipe is SplayPatch -> SplayDelivery.controls(recipe)
+                        recipe is SkinPatch -> recipe.defaults() + recipe.macros
                         recipe is RimePatch -> Rime.defaults(recipe.voice, recipe.model) + recipe.macros
                         recipe is TidalPatch -> Tidal.defaults(recipe.voice, recipe.model) + recipe.macros
+                        recipe is NacrePatch -> NacreEditing.controls(recipe)
                         recipe is OverlapPatch -> editableDefaults(defaults, recipe) + recipe.macros
                         recipe != null -> defaults + recipe.macros
                         settings.isEmpty() || origami != null || orphica != null -> defaults
@@ -958,7 +1030,7 @@ fun SynthScreen(
                         else -> embouchureRestore.macrosFor(e, v, settings) ?: defaults.mapValues { (name, fallback) ->
                             // Finite voices reserve HOLD: a stale
                             // navigation value must not leave the voice stuck.
-                            if ((e == Engine.ACCORD || e == Engine.CHAMBER || e == Engine.NACRE || e == Engine.LIBRATION) && name == "HOLD") fallback
+                            if ((e == Engine.ACCORD || e == Engine.CHAMBER || e == Engine.NACRE || e == Engine.LIBRATION || e == Engine.RIVET || e == Engine.TEMPEST || e == Engine.SPLAY) && name == "HOLD") fallback
                             else if (e == Engine.TIDAL && name == "HOLD") {
                                 if (settings[macroSettingsKey(e, v, name)]?.toFloatOrNull() == 1f) 1f else 0f
                             } else settings[macroSettingsKey(e, v, name)]?.toFloatOrNull()
@@ -1071,6 +1143,7 @@ fun SynthScreen(
         }
     }
     val macros = macrosByVoice.getValue(engine to voice)
+    val murmurDelivery = rememberMurmurSelectedDelivery()
     // Every macro write (a slider, a preset, SCRAMBLE) lands on the current
     // (engine, voice), so this is the one place the bag needs to follow; the
     // pairs the player left earlier already wrote theirs when they were open.
@@ -1085,6 +1158,19 @@ fun SynthScreen(
                 engine.patchDisplayName(voice), voice as OnsetVoice, macros,
             )
         }
+        if (engine == Engine.BACKWASH && (engine to voice) !in loadedPatchesByVoice &&
+            (engine to voice) !in seed.seededPresets) {
+            loadedPatchesByVoice[engine to voice] = BackwashPatch(
+                engine.patchDisplayName(voice), voice as BackwashVoice, macros,
+            )
+        }
+        // SOOT keeps its renderer model on the patch, as BACKWASH does, so freeze one before a macro bag.
+        if (engine == Engine.SOOT && (engine to voice) !in loadedPatchesByVoice &&
+            (engine to voice) !in seed.seededPresets) {
+            loadedPatchesByVoice[engine to voice] = SootPatch(
+                engine.patchDisplayName(voice), voice as SootVoice, macros,
+            )
+        }
         // Keep a visited default's renderer before persisting its controls, so
         // a later restore cannot mistake the new macro bag for an old model.
         if (engine == Engine.TREMOR) retainTremorDraft(
@@ -1095,7 +1181,7 @@ fun SynthScreen(
             loadedPatchesByVoice, voice as RelayVoice, macros,
             seed.relayModelsWithoutRecipe.getValue(voice as RelayVoice),
         )
-        if (engine == Engine.EMBOUCHURE) {
+        if (engine == Engine.EMBOUCHURE || engine == Engine.SKIN) {
             val prefix = "$SETTINGS_MACRO_PREFIX${engine.name}.${voice.name}."
             settings.keys.removeAll { it.startsWith(prefix) && it.removePrefix(prefix) !in macros }
         }
@@ -1105,8 +1191,9 @@ fun SynthScreen(
         // Native physical instruments keep complete recipes in the
         // existing draft format, including a last-frame macro edit before navigation.
         if (patch is CausticPatch) CausticEditing.edited(patch, macros = macrosByVoice.getValue(pair))
-        else if (patch is OnsetPatch || patch is AccordPatch || patch is LibrationPatch || patch is RimePatch || patch is OtisPatch || patch is WickPatch || patch is FilamentPatch || patch is TidalPatch || patch is TremorPatch || patch is ChamberPatch ||
-            patch is PrismPatch || patch is NacrePatch || patch is OverlapPatch || patch is ObbligatoPatch || patch is RelayPatch ||
+        else if (patch is SkinPatch) patch.withMacros(macrosByVoice.getValue(pair))
+        else if (patch is TempestPatch || patch is SplayPatch || patch is OsteriaPatch || patch is EtchPatch || patch is BackwashPatch || patch is SootPatch || patch is HalobarPatch || patch is ErosionPatch || patch is OnsetPatch || patch is AccordPatch || patch is LibrationPatch || patch is RimePatch || patch is OtisPatch || patch is RivetPatch || patch is WickPatch || patch is FilamentPatch || patch is TidalPatch || patch is TremorPatch || patch is ChamberPatch ||
+            patch is PrismPatch || patch is NacrePatch || patch is OverlapPatch || patch is ObbligatoPatch || patch is RelayPatch || patch is MurmurPatch ||
             patch is PluckPatch && patch.voice == PluckVoice.UPRIGHT)
             patch.withMacros(macrosByVoice.getValue(pair)) else patch
     }
@@ -1152,6 +1239,7 @@ fun SynthScreen(
     // These maps remain the live session maps, so flush the final edit here.
     DisposableEffect(Unit) {
         onDispose {
+            murmurDelivery.invalidate()
             SynthDrafts.write(settings, currentDrafts())
             persistReopenedWork()
         }
@@ -1168,12 +1256,58 @@ fun SynthScreen(
     }
     val activeRecipe = loadedRecipesByVoice[engine to voice] ?: recalledRecipesByVoice[engine to voice]
     fun buildCurrentPatch(name: String): Patch {
+        if (engine == Engine.SPLAY) {
+            val current = loadedPatchesByVoice[engine to voice] as? SplayPatch
+                ?: SplayPatch(name, voice as SplayVoice, emptyMap())
+            return SplayDelivery.edited(current, name, macrosByVoice.getValue(engine to voice))
+        }
+        if (engine == Engine.MURMUR) {
+            // A preset, native root or touch edit can share a frame with SAVE/SEND.
+            // Keep the live complete body definition and its newest macro controls.
+            val current = loadedPatchesByVoice[engine to voice] as? MurmurPatch
+            val controls = macrosByVoice.getValue(engine to voice)
+            return current?.let { Patches.edited(it, name, controls) }
+                ?: MurmurPatch(name, voice as MurmurVoice, controls)
+        }
+        if (engine == Engine.SKIN) {
+            val current = loadedPatchesByVoice[engine to voice] as? SkinPatch
+            val controls = macrosByVoice.getValue(engine to voice)
+            return current?.let { Patches.edited(it, name, controls) }
+                ?: SkinPatch(name, voice as SkinVoice, controls)
+        }
+        if (engine == Engine.OSTERIA) {
+            val current = loadedPatchesByVoice[engine to voice] as? OsteriaPatch
+            val controls = macrosByVoice.getValue(engine to voice)
+            return current?.let { Patches.edited(it, name, controls) }
+                ?: OsteriaPatch(name, voice as OsteriaVoice, controls)
+        }
         if (engine == Engine.OHM) {
             // Reply, Ring and native performance edits can share a frame with SAVE or SEND.
             val current = loadedPatchesByVoice[engine to voice] as? OhmPatch
             val controls = macrosByVoice.getValue(engine to voice)
             return current?.let { Patches.edited(it, name, controls) }
                 ?: OhmPatch(name, controls)
+        }
+        if (engine == Engine.TEMPEST) {
+            // A recalled legacy drum must retain its renderer through same-frame edits and SAVE.
+            val current = loadedPatchesByVoice[engine to voice] as? TempestPatch
+            val controls = macrosByVoice.getValue(engine to voice)
+            return current?.let { Patches.edited(it, name, controls) }
+                ?: TempestPatch(name, voice as TempestVoice, controls)
+        }
+        if (engine == Engine.RIVET) {
+            // Read live controls and strike so a last-frame edit reaches SAVE/SEND.
+            val current = loadedPatchesByVoice[engine to voice] as? RivetPatch
+            val controls = macrosByVoice.getValue(engine to voice)
+            return current?.copy(name = name, macros = controls)
+                ?: RivetPatch(name, voice as RivetVoice, controls)
+        }
+        if (engine == Engine.ETCH) {
+            // Note and velocity edits can share a frame with SAVE/SEND: read the live typed recipe.
+            val current = loadedPatchesByVoice[engine to voice] as? EtchPatch
+            val controls = macrosByVoice.getValue(engine to voice)
+            return current?.copy(name = name, macros = controls)
+                ?: EtchPatch(name, voice as EtchVoice, controls)
         }
         if (engine == Engine.WICK) {
             // Body, note and velocity edits can share a frame with SAVE/SEND.
@@ -1182,6 +1316,14 @@ fun SynthScreen(
             val controls = macrosByVoice.getValue(engine to voice)
             return current?.let { Patches.edited(it, name, controls) }
                 ?: WickPatch(name, voice as WickVoice, controls)
+        }
+        if (engine == Engine.MERIDIAN) {
+            // A native-root/touch edit can share a frame with MAKE. Keep the newest
+            // complete saved model and seed instead of the composed patch snapshot.
+            val current = loadedPatchesByVoice[engine to voice] as? MeridianPatch
+            val controls = macrosByVoice.getValue(engine to voice)
+            return current?.let { Patches.edited(it, name, controls) }
+                ?: MeridianSynth.defaultPatch(voice as MeridianVoice).copy(name = name, macros = controls)
         }
         if (engine == Engine.CAUSTIC) {
             val current = loadedPatchesByVoice[engine to voice] as? CausticPatch
@@ -1439,6 +1581,9 @@ fun SynthScreen(
         // that edited recipe so onDispose can flush it before navigation.
         if (pair !in loadedPatchesByVoice) {
             when (engine) {
+                Engine.SPLAY -> loadedPatchesByVoice[pair] = SplayPatch(
+                    engine.patchDisplayName(voice), voice as SplayVoice, macrosByVoice.getValue(pair),
+                )
                 Engine.CAUSTIC -> loadedPatchesByVoice[pair] = CausticPatch(
                     engine.patchDisplayName(voice), voice as CausticVoice, macrosByVoice.getValue(pair),
                 )
@@ -1450,8 +1595,14 @@ fun SynthScreen(
                 )
                 Engine.OTIS -> loadedPatchesByVoice[pair] = OtisPatch(
                     engine.patchDisplayName(voice), voice as OtisVoice, macrosByVoice.getValue(pair))
+                Engine.RIVET -> loadedPatchesByVoice[pair] = RivetPatch(
+                    engine.patchDisplayName(voice), voice as RivetVoice, macrosByVoice.getValue(pair))
+                Engine.TEMPEST -> loadedPatchesByVoice[pair] = TempestPatch(
+                    engine.patchDisplayName(voice), voice as TempestVoice, macrosByVoice.getValue(pair))
                 Engine.WICK -> loadedPatchesByVoice[pair] = WickPatch(
                     engine.patchDisplayName(voice), voice as WickVoice, macrosByVoice.getValue(pair))
+                Engine.ETCH -> loadedPatchesByVoice[pair] = EtchPatch(
+                    engine.patchDisplayName(voice), voice as EtchVoice, macrosByVoice.getValue(pair))
                 Engine.FILAMENT -> loadedPatchesByVoice[pair] = FilamentPatch(
                     engine.patchDisplayName(voice), voice as FilamentVoice, macrosByVoice.getValue(pair),
                 )
@@ -1499,6 +1650,7 @@ fun SynthScreen(
     }
     fun updateMacro(name: String, value: Float) {
         if (embouchureRestore.waitsForRecipe(engine, voice)) return
+        if (engine == Engine.MURMUR) murmurDelivery.invalidate()
         embouchureRestore.pending.remove(engine to voice)
         currentPresetByVoice.remove(engine to voice)
         val bounded = value.coerceIn(macroRange(name))
@@ -1520,7 +1672,15 @@ fun SynthScreen(
             if (old != null) loadedPatchesByVoice[engine to voice] = old.copy(model = Rime.MODEL_VERSION, macros = values)
         }
         ensureNativeDraft()
-        if (engine == Engine.WICK) SynthDrafts.write(settings, currentDrafts())
+        if (engine == Engine.WICK || engine == Engine.RIVET || engine == Engine.TEMPEST || engine == Engine.SPLAY || engine == Engine.ETCH) SynthDrafts.write(settings, currentDrafts())
+        if (engine == Engine.MURMUR) {
+            settings.remove(presetSettingsKey(engine, voice))
+            SynthDrafts.write(settings, currentDrafts())
+            // A reopened pad's working recipe outranks the draft when the screen is rebuilt,
+            // and a rebuild seeds before this screen's dispose writes it. Write it now, or
+            // the edit is lost to the recipe the pad was opened with.
+            if ((engine to voice) in loadedRecipesByVoice) persistReopenedWork()
+        }
         // An absolute ORIGAMI MIDI note overrides TUNE. A deliberate pitch edit
         // must move that override too; timbral edits retain the whole saved recipe.
         val origami = loadedPatchesByVoice[engine to voice] as? OrigamiPatch
@@ -1658,6 +1818,24 @@ fun SynthScreen(
         currentPresetByVoice.remove(pair)
         loadedPatchesByVoice[pair] = change(patch)
     }
+    fun updateRivetPatch(expectedVoice: RivetVoice, change: (RivetPatch) -> RivetPatch) {
+        if (engine != Engine.RIVET || voice != expectedVoice) return
+        val pair = engine to voice
+        val current = buildCurrentPatch(loadedPatchesByVoice[pair]?.name ?: engine.patchDisplayName(voice)) as RivetPatch
+        currentPresetByVoice.remove(pair)
+        settings.remove(presetSettingsKey(engine, voice))
+        loadedPatchesByVoice[pair] = change(current)
+        SynthDrafts.write(settings, currentDrafts())
+    }
+    fun updateEtchPatch(expectedVoice: EtchVoice, change: (EtchPatch) -> EtchPatch) {
+        if (engine != Engine.ETCH || voice != expectedVoice) return
+        val pair = engine to voice
+        val current = buildCurrentPatch(loadedPatchesByVoice[pair]?.name ?: engine.patchDisplayName(voice)) as EtchPatch
+        currentPresetByVoice.remove(pair)
+        settings.remove(presetSettingsKey(engine, voice))
+        loadedPatchesByVoice[pair] = change(current)
+        SynthDrafts.write(settings, currentDrafts())
+    }
     fun updateWickPatch(expectedVoice: WickVoice, change: (WickPatch) -> WickPatch) {
         if (engine != Engine.WICK || voice != expectedVoice) return
         val pair = engine to voice
@@ -1694,6 +1872,7 @@ fun SynthScreen(
                 val patch = if (onScreen) buildCurrentPatch(loadedPatchesByVoice[pair]?.name ?: engine.patchDisplayName(voice))
                     else loadedPatchesByVoice[pair] ?: return
                 val next = (SynthRoot.of(patch) ?: control).at(midi)
+                if (next is MurmurPatch) murmurDelivery.invalidate()
                 currentPresetByVoice.remove(pair)
                 when (next) {
                     is OhmPatch -> if (onScreen) updateOhmPerformance { next }
@@ -1722,6 +1901,7 @@ fun SynthScreen(
         }
     }
     fun loadPreset(patch: Patch) {
+        if (engine == Engine.MURMUR || patch is MurmurPatch) murmurDelivery.invalidate()
         loadedRecipesByVoice.remove(engine to voice)
         recalledRecipesByVoice.remove(engine to voice)
         reopenedPadsByVoice.remove(engine to voice)
@@ -1798,6 +1978,7 @@ fun SynthScreen(
                     if (mine != null) {
                         val editable = editablePreset(mine)
                         loadedPatchesByVoice[pair] = editable
+                        if (editable is SplayPatch) macrosByVoice[pair] = SplayDelivery.controls(editable)
                         if (editable is OnsetPatch) macrosByVoice[pair] = Onset.defaults(editable.voice) + editable.macros
                         if (editable is PrismPatch) {
                             macrosByVoice[pair] = Prism.defaults(editable.voice) + editable.macros
@@ -1814,10 +1995,11 @@ fun SynthScreen(
                         if (editable is TremorPatch) macrosByVoice[pair] = Tremor.defaults(editable.voice) + editable.macros
                         if (editable is RelayPatch) macrosByVoice[pair] = Relay.defaults(editable.voice) + editable.macros
                         if (editable is ChamberPatch) macrosByVoice[pair] = Chamber.defaults(editable.voice) + editable.macros
-                        if (editable is NacrePatch) macrosByVoice[pair] = Nacre.defaults(editable.voice) + editable.macros
+                        if (editable is NacrePatch) macrosByVoice[pair] = NacreEditing.controls(editable)
                         // The saved model and controls are one recipe. Adopting only
                         // the model would let the next edit overwrite its finite HOLD.
                         if (editable is MeridianPatch) macrosByVoice[pair] = MeridianSynth.defaults(editable.voice) + editable.macros
+                        if (editable is MurmurPatch) macrosByVoice[pair] = Murmur.defaults(editable.voice) + editable.macros
                         // The named preset is being restored whole. A partial legacy
                         // OVERLAP recipe must fill its sliders from its saved model.
                         if (mine is OverlapPatch) {
@@ -1832,7 +2014,7 @@ fun SynthScreen(
         } catch (e: Exception) {
             Log.e("SynthScreen", "presets: unreadable", e)
             for (pair in embouchureRestore.pending.keys.toList()) {
-                if (pair.first == Engine.TIDAL || pair.first == Engine.TREMOR || pair.first == Engine.RELAY) embouchureRestore.pending[pair] = false
+                if (pair.first == Engine.TIDAL || pair.first == Engine.TREMOR || pair.first == Engine.RELAY || pair.first == Engine.SPLAY) embouchureRestore.pending[pair] = false
             }
         }
     }
@@ -2024,7 +2206,7 @@ fun SynthScreen(
             shimmerDelayMillis = RENDER_SHIMMER_DELAY_MS,
             onRendering = { rendering = it },
             render = {
-                val sourcePatch = if (loadedPatch != null || engine == Engine.ACCORD || engine == Engine.WICK || engine == Engine.RIME || engine == Engine.PRISM || engine == Engine.ORIGAMI || engine == Engine.OPENSKY || engine == Engine.FILAMENT || engine == Engine.TIDAL || engine == Engine.TREMOR || engine == Engine.RELAY || engine == Engine.CHAMBER || engine == Engine.NACRE || engine == Engine.LIBRATION)
+                val sourcePatch = if (loadedPatch != null || engine == Engine.TEMPEST || engine == Engine.SPLAY || engine == Engine.OSTERIA || engine == Engine.ETCH || engine == Engine.ACCORD || engine == Engine.WICK || engine == Engine.RIME || engine == Engine.PRISM || engine == Engine.ORIGAMI || engine == Engine.OPENSKY || engine == Engine.FILAMENT || engine == Engine.TIDAL || engine == Engine.TREMOR || engine == Engine.RELAY || engine == Engine.CHAMBER || engine == Engine.NACRE || engine == Engine.LIBRATION)
                     buildCurrentPatch(engine.patchDisplayName(voice)) else null
                 // The bench's hit strength is audition-only. Saving, SEND and
                 // the instrument maker all keep the patch's authored velocity.
@@ -2104,7 +2286,9 @@ fun SynthScreen(
     val reopenablePads = kit?.pads.orEmpty().filter { pad ->
         val patch = Breed.recipeOf(pad)?.patch
         val sourceEngine = Engine.entries.firstOrNull { it.name == patch?.engine }
-        pad.velocityLayers.isEmpty() && !(pad.chain != null && !pad.isRobinChain) &&
+        // A native FIRED BRONZE bank reopens whole: model 1's four layer files, or model 2's strike grid.
+        (pad.velocityLayers.isEmpty() || FiredBronzePads.canEdit(pad)) &&
+            (!(pad.chain != null && !pad.isRobinChain) || FiredBronzePads.canEdit(pad)) &&
             patch != null && sourceEngine?.voices()?.any { it.name == patch.voiceName } == true
     }
     fun reopenPad(slot: Int) {
@@ -2126,6 +2310,7 @@ fun SynthScreen(
         currentPresetByVoice.remove(key)
         embouchureRestore.pending.remove(key)
         engine = sourceEngine
+        murmurDelivery.invalidate()
         voice = sourceVoice
         reopeningPad.value = false
     }
@@ -2163,20 +2348,24 @@ fun SynthScreen(
                     else Presets.landingFor(engine.name, voice.name, macros)
                 val meridianLanding = (patch as? MeridianPatch)?.let { MeridianSynth.padLanding(it, activeRecipe) }
                 val cls = meridianLanding?.drumClass ?: when (patch) {
+                    is TempestPatch -> Tempest.drumClassFor(patch.voice, patch.macros, patch.model)
                     is AccordPatch -> Accord.drumClassFor(patch)
                     is RimePatch -> Rime.drumClassFor(patch.voice, patch.macros, patch.gateSeconds, patch.model)
                     is OtisPatch -> Otis.drumClassFor(patch)
                     is WickPatch -> Wick.drumClassFor(patch.voice, patch.macros)
+                    is EtchPatch -> Etch.drumClassFor(patch.voice, patch.macros)
                     is OhmPatch -> Ohm.drumClassFor(patch)
                     else -> engine.drumClass(voice, macros)
                 }
                 // These engines author their pitch. Detection can invent a cent
                 // offset and retune an already equal-tempered note.
                 val authoredMidi = when (patch) {
+                    is SplayPatch -> patch.midi
                     is ObbligatoPatch -> patch.midi
                     is AccordPatch -> patch.midi
                     is OtisPatch -> Otis.midiFor(patch)
                     is WickPatch -> patch.midi
+                    is EtchPatch -> Etch.midiFor(patch.macros["TUNE"] ?: .5f, patch.midi)
                     is LibrationPatch -> patch.midi
                     is MeridianPatch -> requireNotNull(meridianLanding).knownRootMidi
                     is TrefoilPatch -> patch.midi
@@ -2240,7 +2429,9 @@ fun SynthScreen(
                             // pad's identity would still say (and choke-group
                             // with) whatever it was before, while sounding like
                             // the new voice.
-                            model.replaceAudio(slot, recipe) { _ -> rendered }
+                            if (patch is FiredBronzePatch && FiredBronzePads.canEdit(model.pad(slot)))
+                                model.replaceFiredBronze(slot, padRecipe)
+                            else model.replaceAudio(slot, recipe) { _ -> rendered }
                             // FILAMENT and CHAMBER keep deliberate pad tuning
                             // when reopened. ROOT changes the native pitch
                             // and source tags; the player's tune offsets stay put.
@@ -2368,11 +2559,12 @@ fun SynthScreen(
     val heldSheet = remember { HeldSheetState() }
     // The name MAKE will land under, read off the shelf when the sheet opens
     // so the sheet can say it; MAKE asks the shelf again at write time.
-    val supportsHeldInstrument = engine == Engine.CAUSTIC || engine == Engine.LIBRATION || engine == Engine.RIME || (engine == Engine.TIDAL && !embouchureRestore.pending.containsKey(engine to voice)) || engine == Engine.CREASE || engine == Engine.ORPHICA || engine == Engine.RESIN || engine == Engine.SIREN || engine == Engine.GLINT || engine == Engine.REGISTERS || engine == Engine.BELLOWS || engine == Engine.CONTOUR || engine == Engine.BALLAST || engine == Engine.MERIDIAN || engine == Engine.MERCURY || engine == Engine.KEEL || engine == Engine.ARCO ||
+    val supportsHeldInstrument = (engine == Engine.SPLAY && !embouchureRestore.waitsForRecipe(engine, voice)) || engine == Engine.WICK || engine == Engine.ETCH || engine == Engine.HALOBAR || engine == Engine.CAUSTIC || engine == Engine.LIBRATION || engine == Engine.RIME || (engine == Engine.TIDAL && !embouchureRestore.pending.containsKey(engine to voice)) || engine == Engine.CREASE || engine == Engine.ORPHICA || engine == Engine.RESIN || engine == Engine.SIREN || engine == Engine.GLINT || engine == Engine.REGISTERS || engine == Engine.BELLOWS || engine == Engine.CONTOUR || engine == Engine.BALLAST || engine == Engine.MERIDIAN || engine == Engine.MERCURY || engine == Engine.KEEL || engine == Engine.ARCO ||
         (engine == Engine.OPENSKY && OpenSkyPadMaker.supports(voice as OpenSkyVoice)) ||
         (engine == Engine.ORIGAMI && OrigamiPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as OrigamiPatch)) ||
         (engine == Engine.FLOCK && FlockPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as FlockPatch)) ||
         (engine == Engine.BORE && BorePadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as BorePatch)) ||
+        (engine == Engine.OSTERIA && OsteriaPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as OsteriaPatch)) ||
         (engine == Engine.TREFOIL && TrefoilPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as TrefoilPatch)) ||
         (engine == Engine.OBBLIGATO && ObbligatoPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as ObbligatoPatch)) ||
         (engine == Engine.OVERLAP && OverlapPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as OverlapPatch)) ||
@@ -2380,11 +2572,21 @@ fun SynthScreen(
         (engine == Engine.FILAMENT && FilamentPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as FilamentPatch)) ||
         (engine == Engine.LATTICE && LatticePadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as LatticePatch)) ||
         (engine == Engine.PRISM && prismOpeningInstrumentSupported(buildCurrentPatch(engine.patchDisplayName(voice)))) ||
+        (engine == Engine.MURMUR && revisedMurmur(buildCurrentPatch(engine.patchDisplayName(voice)) as MurmurPatch)) ||
         (LoopPadMaker.offers(engine.name) && !embouchureRestore.pending.containsKey(engine to voice) &&
             LoopPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice))))
     val heldInstrumentReady = when (engine) {
+        Engine.SPLAY -> !embouchureRestore.waitsForRecipe(engine, voice) &&
+            SplayFinitePadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as SplayPatch)
+        Engine.MURMUR -> (buildCurrentPatch(engine.patchDisplayName(voice)) as MurmurPatch).let {
+            !revisedMurmur(it) || MurmurSelectedInstrumentMaker.supports(it)
+        }
+        Engine.WICK -> WickPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as WickPatch)
+        Engine.ETCH -> EtchPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as EtchPatch)
         Engine.LIBRATION -> LibrationPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as LibrationPatch)
-        Engine.MERIDIAN -> MeridianPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as MeridianPatch)
+        Engine.MERIDIAN -> (buildCurrentPatch(engine.patchDisplayName(voice)) as MeridianPatch).let {
+            MeridianPadMaker.supports(it) || MeridianFinitePadMaker.supports(it)
+        }
         Engine.CREASE -> CreasePadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as CreasePatch)
         Engine.OPENSKY -> OpenSkyPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as OpenSkyPatch)
         Engine.BELLOWS -> BellowsPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as BellowsPatch)
@@ -2415,6 +2617,30 @@ fun SynthScreen(
     // periodic sustain. CONTOUR starts directly from its settled tone.
     // These specs expose only a release control.
     fun heldSpec(): HeldSpec? = when (engine) {
+        Engine.WICK -> {
+            val patch = buildCurrentPatch(loadedPatchesByVoice[engine to voice]?.name
+                ?: currentPresetByVoice[engine to voice] ?: engine.patchDisplayName(voice)) as WickPatch
+            if (WickPadMaker.supports(patch)) HeldSpec.Wick(WickPadMaker.Spec(patch)) else null
+        }
+        Engine.ETCH -> {
+            val patch = buildCurrentPatch(loadedPatchesByVoice[engine to voice]?.name
+                ?: currentPresetByVoice[engine to voice] ?: engine.patchDisplayName(voice)) as EtchPatch
+            if (EtchPadMaker.supports(patch)) HeldSpec.Etch(EtchPadMaker.Spec(patch)) else null
+        }
+        Engine.SPLAY -> {
+            if (embouchureRestore.waitsForRecipe(engine, voice)) null else {
+                val patch = buildCurrentPatch(loadedPatchesByVoice[engine to voice]?.name
+                    ?: currentPresetByVoice[engine to voice] ?: engine.patchDisplayName(voice)) as SplayPatch
+                if (SplayFinitePadMaker.supports(patch)) SplayFiniteHeldSpec(SplayFinitePadMaker.Spec(patch)) else null
+            }
+        }
+        Engine.HALOBAR -> HeldSpec.Halobar(HalobarPadMaker.spec(
+            buildCurrentPatch(engine.patchDisplayName(voice)) as HalobarPatch, heldSheet.holdRelease))
+        Engine.OSTERIA -> {
+            val patch = buildCurrentPatch(loadedPatchesByVoice[engine to voice]?.name
+                ?: currentPresetByVoice[engine to voice] ?: engine.patchDisplayName(voice)) as OsteriaPatch
+            if (OsteriaPadMaker.supports(patch)) HeldSpec.Osteria(OsteriaPadMaker.Spec(patch)) else null
+        }
         Engine.LATTICE -> {
             val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as LatticePatch
             if (LatticePadMaker.supports(patch))
@@ -2428,9 +2654,13 @@ fun SynthScreen(
                 LibrationPadMaker.spec(patch, heldSheet.holdRelease, heldSheet.holdLibrationTouchLayers)) else null
         }
         Engine.MERIDIAN -> {
-            val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as MeridianPatch
-            if (MeridianPadMaker.supports(patch))
-                HeldSpec.Meridian(MeridianPadMaker.spec(patch, heldSheet.meridianHoldRelease)) else null
+            val patch = buildCurrentPatch(loadedPatchesByVoice[engine to voice]?.name
+                ?: currentPresetByVoice[engine to voice] ?: engine.patchDisplayName(voice)) as MeridianPatch
+            when {
+                MeridianPadMaker.supports(patch) -> HeldSpec.Meridian(MeridianPadMaker.spec(patch, heldSheet.meridianHoldRelease))
+                MeridianFinitePadMaker.supports(patch) -> HeldSpec.MeridianFinite(MeridianFinitePadMaker.Spec(patch))
+                else -> null
+            }
         }
         Engine.RESIN -> HeldSpec.Resin(ResinPadMaker.spec(voice as ResinVoice, macros, heldSheet.holdAttack, heldSheet.holdRelease))
         Engine.SIREN -> HeldSpec.Siren(SirenPadMaker.spec(voice as SirenVoice, macros, heldSheet.holdRelease))
@@ -2512,7 +2742,106 @@ fun SynthScreen(
             .takeIf { LoopPadMaker.supports(it) }?.let { HeldSpec.Loop(LoopPadMaker.spec(it, heldSheet.holdRelease)) }
     }
 
+    fun selectedMurmurSpec(): MurmurSelectedInstrumentMaker.Spec? {
+        if (engine != Engine.MURMUR) return null
+        val patch = buildCurrentPatch(loadedPatchesByVoice[engine to voice]?.name ?: engine.patchDisplayName(voice)) as MurmurPatch
+        return if (revisedMurmur(patch) && MurmurSelectedInstrumentMaker.supports(patch))
+            MurmurSelectedInstrumentMaker.Spec(patch, murmurDelivery.releaseSeconds) else null
+    }
+
+    fun previewMurmurSelected(chord: Boolean = false) {
+        if (heldSheet.holdDone >= 0 || heldSheet.holdPreviewing) return
+        val spec = selectedMurmurSpec() ?: return
+        val notes = if (chord) try {
+            val source = spec.sourcePatch()
+            // Expand the actual chord tool before any rendering or root copy. An
+            // uncovered tone refuses the whole request; there is no clamping/repair.
+            MurmurSelectedChordPlan.fromStab(source,
+                ChordStabs.Stab("MINOR", source.midi, listOf(0, 3, 7))).notes
+        } catch (_: IllegalArgumentException) {
+            onToast(MURMUR_CHORD_OUT_OF_RANGE)
+            return
+        } else null
+        val token = murmurDelivery.begin()
+        sampleHeldPreview?.silence()
+        heldSheet.holdPreviewing = true
+        heldSheet.holdJob = appScope.launch {
+            try {
+                val renderJob = coroutineContext[Job]
+                val heard = offMainInterruptible(Dispatchers.Default) {
+                    val cancelled = { renderJob?.isActive == false || !murmurDelivery.isCurrent(token) || Thread.currentThread().isInterrupted }
+                    if (notes == null) murmurDelivery.actions.preview(spec, cancelled)
+                    else murmurDelivery.actions.previewChord(spec, notes, cancelled)
+                }
+                coroutineContext.ensureActive()
+                if (!murmurDelivery.isCurrent(token)) throw CancellationException("MURMUR preview source changed")
+                audition(heard, allowLoop = false)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.e("SynthScreen", "previewMurmurSelected: failed", e)
+                onToast(Copy.RENDER_FAILED)
+            } finally {
+                murmurDelivery.finish(token)
+                heldSheet.holdPreviewing = false
+                heldSheet.holdJob = null
+            }
+        }
+    }
+
+    fun makeMurmurSelected() {
+        if (heldSheet.holdDone >= 0 || heldSheet.holdPreviewing) return
+        // Re-read the live source at the final MAKE press. Spec owns its full JSON,
+        // independently of the composition and all subsequent mutable UI edits.
+        val spec = selectedMurmurSpec() ?: return
+        val token = murmurDelivery.begin()
+        val base = holdBase
+        heldSheet.holdTotal = MurmurSelectedInstrumentMaker.roots(spec).size * MurmurSelectedInstrumentMaker.VELOCITY_WINDOWS.size
+        heldSheet.holdDone = 0
+        sampleHeldPreview?.silence()
+        heldSheet.holdJob = appScope.launch {
+            try {
+                val renderJob = coroutineContext[Job]
+                val made = offMainInterruptible(Dispatchers.Default) {
+                    val cancelled = { renderJob?.isActive == false || !murmurDelivery.isCurrent(token) || Thread.currentThread().isInterrupted }
+                    if (cancelled()) throw CancellationException("MURMUR instrument cancelled")
+                    val name = OneNote.freshName(instrumentsDir, base)
+                    // The maker renders/writes one cell at a time, validates the whole
+                    // staged packet, then performs the existing fresh shelf admission.
+                    murmurDelivery.actions.export(name, spec, instrumentsDir, cancelled) { done, total ->
+                        appScope.launch(Dispatchers.Main.immediate) {
+                            if (murmurDelivery.isCurrent(token)) {
+                                heldSheet.holdDone = done
+                                heldSheet.holdTotal = total
+                            }
+                        }
+                    }
+                    name
+                }
+                coroutineContext.ensureActive()
+                if (!murmurDelivery.isCurrent(token)) throw CancellationException("MURMUR instrument source changed")
+                makingInstrument = false
+                heldSheet.murmurSelected = false
+                onShelfAssetWritten()
+                onToast(Copy.madeNamed("INSTRUMENT", made))
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.e("SynthScreen", "makeMurmurSelected: failed", e)
+                onToast(Copy.actionFailed("INSTRUMENT"))
+            } finally {
+                murmurDelivery.finish(token)
+                heldSheet.holdDone = -1
+                heldSheet.holdJob = null
+            }
+        }
+    }
+
     fun previewHeld() {
+        if (engine == Engine.MURMUR && revisedMurmur(buildCurrentPatch(engine.patchDisplayName(voice)) as MurmurPatch)) {
+            previewMurmurSelected()
+            return
+        }
         if (heldSheet.holdDone >= 0 || heldSheet.holdPreviewing) return
         if (engine == Engine.PRISM && (!makingInstrument || heldSheet.prismPatch == null || prismMotionStudio.sourceBusy)) return
         val spec = heldSpec() ?: return
@@ -2523,7 +2852,7 @@ fun SynthScreen(
         heldSheet.holdJob = appScope.launch {
             try {
                 // CANCEL cancels this job; the render asks and stops.
-                val heard = if (spec is HeldSpec.Libration || spec is HeldSpec.Ohm || spec is HeldSpec.Tidal || spec is HeldSpec.Flock || spec is HeldSpec.Overlap || spec is HeldSpec.Trefoil || spec is HeldSpec.Filament || spec is HeldSpec.Lattice || spec is HeldSpec.Meridian || spec is PrismHeldSpec || spec is ObbligatoHeldSpec) {
+                val heard = if (spec is HeldSpec.Libration || spec is HeldSpec.Ohm || spec is HeldSpec.Tidal || spec is HeldSpec.Flock || spec is HeldSpec.Overlap || spec is HeldSpec.Wick || spec is HeldSpec.Etch || spec is HeldSpec.Osteria || spec is HeldSpec.Trefoil || spec is HeldSpec.Filament || spec is HeldSpec.Lattice || spec is HeldSpec.Meridian || spec is HeldSpec.MeridianFinite || spec is SplayFiniteHeldSpec || spec is PrismHeldSpec || spec is ObbligatoHeldSpec) {
                     val renderJob = coroutineContext[Job]
                     offMainInterruptible(Dispatchers.Default) {
                         spec.previewPlayback { renderJob?.isActive == false || Thread.currentThread().isInterrupted }
@@ -2546,6 +2875,10 @@ fun SynthScreen(
     }
 
     fun makeHeld() {
+        if (engine == Engine.MURMUR && revisedMurmur(buildCurrentPatch(engine.patchDisplayName(voice)) as MurmurPatch)) {
+            makeMurmurSelected()
+            return
+        }
         if (heldSheet.holdDone >= 0 || heldSheet.holdPreviewing) return
         if (engine == Engine.PRISM && (!makingInstrument || heldSheet.prismPatch == null || prismMotionStudio.sourceBusy)) return
         // Captured now: the sheet's own sound, before anything can move it.
@@ -2562,7 +2895,7 @@ fun SynthScreen(
                 // throws must surface here as an exception this catch sees,
                 // not fail the app's own scope.
                 val notes = coroutineScope {
-                    if (spec is HeldSpec.OpenSky || spec is HeldSpec.Bellows || spec is HeldSpec.Crease || spec is HeldSpec.Contour || spec is HeldSpec.Origami || spec is HeldSpec.Flock || spec is HeldSpec.Caustic || spec is HeldSpec.Libration || spec is HeldSpec.Ohm || spec is HeldSpec.Filament || spec is HeldSpec.Lattice || spec is HeldSpec.Tidal || spec is HeldSpec.Ballast || spec is HeldSpec.Overlap || spec is HeldSpec.Trefoil || spec is HeldSpec.Meridian || spec is HeldSpec.Mercury || spec is HeldSpec.Keel || spec is HeldSpec.Arco || spec is HeldSpec.Bore || spec is HeldSpec.Loop || spec is PrismHeldSpec || spec is ObbligatoHeldSpec) {
+                    if (spec is HeldSpec.OpenSky || spec is HeldSpec.Bellows || spec is HeldSpec.Crease || spec is HeldSpec.Contour || spec is HeldSpec.Origami || spec is HeldSpec.Flock || spec is HeldSpec.Caustic || spec is HeldSpec.Libration || spec is HeldSpec.Ohm || spec is HeldSpec.Filament || spec is HeldSpec.Lattice || spec is HeldSpec.Tidal || spec is HeldSpec.Ballast || spec is HeldSpec.Overlap || spec is HeldSpec.Wick || spec is HeldSpec.Etch || spec is HeldSpec.Osteria || spec is HeldSpec.Trefoil || spec is HeldSpec.Meridian || spec is HeldSpec.MeridianFinite || spec is SplayFiniteHeldSpec || spec is HeldSpec.Mercury || spec is HeldSpec.Keel || spec is HeldSpec.Arco || spec is HeldSpec.Bore || spec is HeldSpec.Loop || spec is PrismHeldSpec || spec is ObbligatoHeldSpec) {
                         // OPENSKY has larger wet state, BELLOWS has three
                         // velocity layers, CREASE evolves its attack and
                         // held control history, CONTOUR spans seventeen zones,
@@ -2579,7 +2912,7 @@ fun SynthScreen(
                         // independent oversampled states at once. CANCEL stays live;
                         // the counter advances after each note's samples finish.
                         midis.map { midi ->
-                            val note = if (spec is HeldSpec.Caustic || spec is HeldSpec.Libration || spec is HeldSpec.Ohm || spec is HeldSpec.Tidal || spec is HeldSpec.Flock || spec is HeldSpec.Overlap || spec is HeldSpec.Trefoil || spec is HeldSpec.Filament || spec is HeldSpec.Lattice || spec is HeldSpec.Meridian || spec is HeldSpec.Mercury || spec is HeldSpec.Keel || spec is HeldSpec.Arco || spec is HeldSpec.Bore || spec is HeldSpec.Loop || spec is PrismHeldSpec || spec is ObbligatoHeldSpec) {
+                            val note = if (spec is HeldSpec.Caustic || spec is HeldSpec.Libration || spec is HeldSpec.Ohm || spec is HeldSpec.Tidal || spec is HeldSpec.Flock || spec is HeldSpec.Overlap || spec is HeldSpec.Wick || spec is HeldSpec.Etch || spec is HeldSpec.Osteria || spec is HeldSpec.Trefoil || spec is HeldSpec.Filament || spec is HeldSpec.Lattice || spec is HeldSpec.Meridian || spec is HeldSpec.MeridianFinite || spec is SplayFiniteHeldSpec || spec is HeldSpec.Mercury || spec is HeldSpec.Keel || spec is HeldSpec.Arco || spec is HeldSpec.Bore || spec is HeldSpec.Loop || spec is PrismHeldSpec || spec is ObbligatoHeldSpec) {
                                 val renderJob = coroutineContext[Job]
                                 offMainInterruptible(Dispatchers.Default) {
                                     spec.renderZone(midi) { renderJob?.isActive == false || Thread.currentThread().isInterrupted }
@@ -2624,8 +2957,11 @@ fun SynthScreen(
     }
 
     fun closeHeld() {
-        // Every zone rendered means the write is under way; let it land.
-        if (heldSheet.holdDone >= 0 && heldSheet.holdDone >= heldSheet.holdTotal) return
+        // Legacy writes finish after the last zone. MURMUR's fresh streaming
+        // admission remains cancellable through its guarded final moves.
+        if (heldSheet.holdDone >= 0 && heldSheet.holdDone >= heldSheet.holdTotal &&
+                !heldSheet.murmurSelected && !murmurDelivery.inFlight) return
+        murmurDelivery.invalidate()
         sampleHeldPreview?.silence()
         if (heldSheet.prismPatch != null) {
             prismMotionStudio.cancelPreview()
@@ -2643,6 +2979,7 @@ fun SynthScreen(
                     // Cancellation before the body starts skips its finally.
                     // A later job must never be cleared by this one's handler.
                     if (heldSheet.holdJob === job) {
+                        murmurDelivery.finishInvalidated()
                         heldSheet.holdJob = null
                         heldSheet.holdDone = -1
                         heldSheet.holdPreviewing = false
@@ -2655,12 +2992,19 @@ fun SynthScreen(
         // drains. Reopening must not launch another render that the old
         // worker's cleanup could then overwrite.
         makingInstrument = false
+        heldSheet.murmurSelected = false
     }
 
     GuardPrismHeldInstrument(heldSheet.prismPatch,
         if (engine == Engine.PRISM) buildCurrentPatch(loadedPatchesByVoice[engine to voice]?.name
             ?: engine.patchDisplayName(voice)) as PrismPatch else null,
         prismMotionStudio.sourceBusy, ::closeHeld)
+
+    LaunchedEffect(engine, voice, macros, loadedPatch, heldSheet.murmurSelected) {
+        if (heldSheet.murmurSelected && selectedMurmurSpec() == null) {
+            closeHeld()
+        }
+    }
 
     // ---- DRONE TO LOOP: RESIN and SIREN, droning ----
     // docs/superpowers/specs/2026-09-25-resin-drone-design.md (RESIN) and
@@ -2795,6 +3139,7 @@ fun SynthScreen(
         val patch = buildCurrentPatch(engine.patchDisplayName(voice))
         val cls = if (patch is MeridianPatch) MeridianSynth.padLanding(patch).drumClass
             else when (patch) {
+                is TempestPatch -> Tempest.drumClassFor(patch.voice, patch.macros, patch.model)
                 is AccordPatch -> Accord.drumClassFor(patch)
                 is RimePatch -> Rime.drumClassFor(patch.voice, patch.macros, patch.gateSeconds, patch.model)
                 is OtisPatch -> Otis.drumClassFor(patch)
@@ -2894,7 +3239,7 @@ fun SynthScreen(
         }
     }
 
-    val classColor = Schemes.classColor(engine.drumClass(voice)).tape
+    val classColor = Schemes.classColor(uiPaletteClass(engine, voice)).tape
 
     // The engine list's sheet and the engines picked from it lately, in one holder: this
     // composable is at the limit of what the toolchain verifies (see `embouchureRestore`).
@@ -2905,6 +3250,7 @@ fun SynthScreen(
     // what the tap-to-cycle header did: the new engine starts on its first voice and renders
     // quietly, ready for AUDITION.
     fun arrive(next: Engine) {
+        if (murmurDelivery.inFlight) closeHeld() else murmurDelivery.invalidate()
         engine = next
         voice = next.voices().first()
     }
@@ -2936,6 +3282,7 @@ fun SynthScreen(
                 SynthSectionHeading(Copy.SYNTH_HEADING_VOICE, scheme)
                 if (engine == Engine.SHOAL) TapeText("MOTION", TapeType.pixelSmall, scheme.ink2.tape)
                 VoicePicker(engine, voice, scheme, onSelect = {
+                    if (murmurDelivery.inFlight) closeHeld() else murmurDelivery.invalidate()
                     if (engine == Engine.PRISM) { prismMotionStudio.cancel(); voicePlayer?.stop() }
                     voice = it
                 })
@@ -2953,7 +3300,7 @@ fun SynthScreen(
                 // Directly under the strip it adds to: the sound is kept before it is
                 // placed. No kit is needed - a preset is the shelf's, not the open kit's.
                     LabButton(
-                        if (presets.saveBusy) "…" else "SAVE PRESET ▸",
+                        if (presets.saveBusy) "…" else "SAVE PRESET",
                         scheme,
                         enabled = !presets.saveBusy && !embouchureRestore.waitsForRecipe(engine, voice),
                         modifier = Modifier.fillMaxWidth(),
@@ -2968,7 +3315,7 @@ fun SynthScreen(
                 // forgotten on SNARE is found from KICK.
                 if (presets.binnedPresets.isNotEmpty()) {
                     LabButton(
-                        "DELETED PRESETS ▸ ${presets.binnedPresets.size} WAITING",
+                        "DELETED PRESETS · ${presets.binnedPresets.size} WAITING",
                         scheme,
                         enabled = !presets.binBusy,
                         modifier = Modifier.fillMaxWidth(),
@@ -3069,8 +3416,8 @@ fun SynthScreen(
                     }
                     TapeText(
                         if (Shoal.supportsHold(shoalPatch.model, shoalPatch.material))
-                            "HARMONIC TONE CAN LOOP. WOOD, BOWL AND WIRE TURN HOLD OFF."
-                        else "MATERIAL NOTES ARE FINITE. HOLD IS AVAILABLE FOR HARMONIC TONE.",
+                            "Harmonic tone can loop. Wood, bowl and wire turn hold off."
+                        else "Material notes are finite. Hold is available for harmonic tone.",
                         TapeType.pixelSmall, scheme.ink2.tape, maxLines = 3,
                     )
                     MacroSlider(
@@ -3102,8 +3449,8 @@ fun SynthScreen(
                     if (embouchureRestore.pending.containsKey(engine to voice)) {
                         TapeText(
                             if (embouchureRestore.pending[engine to voice] == false)
-                                "SAVED TIDAL COULD NOT OPEN. CHOOSE A PRESET."
-                            else "RESTORING SAVED TIDAL…",
+                                "Saved tidal could not open. Choose a preset."
+                            else "Restoring saved tidal…",
                             TapeType.pixelSmall, scheme.ink2.tape, maxLines = 3,
                         )
                     } else {
@@ -3119,8 +3466,8 @@ fun SynthScreen(
                 if (engine == Engine.TREMOR && embouchureRestore.waitsForRecipe(engine, voice)) {
                     TapeText(
                         if (embouchureRestore.pending[engine to voice] == false)
-                            "SAVED TREMOR COULD NOT OPEN. CHOOSE A PRESET."
-                        else "RESTORING SAVED TREMOR…",
+                            "Saved tremor could not open. Choose a preset."
+                        else "Restoring saved tremor…",
                         TapeType.pixelSmall, scheme.ink2.tape, maxLines = 3,
                     )
                 }
@@ -3200,10 +3547,17 @@ fun SynthScreen(
                     RootStepperRow(rootControl, scheme) { midi -> updateRoot(rootControl, midi, rootPair) }
                 }
 
+                if (engine == Engine.SKIN && voice == SkinVoice.SNARE) {
+                    BackroomSnareControls((loadedPatch as? SkinPatch)?.model == 2, scheme, ::loadPreset)
+                }
+
                 val creaseModel = (loadedPatch as? CreasePatch)?.model ?: Crease.MODEL_VERSION
                 // BRASS GROW (model 3) swaps in its own four controls; other EMBOUCHURE models keep the engine's six.
-                val macroSpecs = remember(engine, voice, creaseModel, (loadedPatch as? EmbouchurePatch)?.model, (loadedPatch as? CausticPatch)?.model, (loadedPatch as? TrefoilPatch)?.playback, (loadedPatch as? OverlapPatch)?.playback, (loadedPatch as? OverlapPatch)?.model, (loadedPatch as? ObbligatoPatch)?.playback, embouchureRestore.pending.containsKey(engine to voice)) {
+                val macroSpecs = remember(engine, voice, creaseModel, (loadedPatch as? SplayPatch)?.model, (loadedPatch as? SkinPatch)?.model, (loadedPatch as? NacrePatch)?.model, (loadedPatch as? EmbouchurePatch)?.model, (loadedPatch as? CausticPatch)?.model, (loadedPatch as? TrefoilPatch)?.playback, (loadedPatch as? OverlapPatch)?.playback, (loadedPatch as? OverlapPatch)?.model, (loadedPatch as? ObbligatoPatch)?.playback, embouchureRestore.pending.containsKey(engine to voice)) {
                     if (embouchureRestore.waitsForRecipe(engine, voice)) emptyList()
+                    else if (loadedPatch is SplayPatch) Splay.macrosFor(loadedPatch.voice, loadedPatch.model).filterNot { it.name == "HOLD" }
+                    else if (loadedPatch is SkinPatch) loadedPatch.macroSpecs()
+                    else if (loadedPatch is NacrePatch) NacreEditing.macrosFor(loadedPatch)
                     else if (engine == Engine.CREASE) Crease.macrosFor(voice as CreaseVoice, creaseModel)
                     else if (loadedPatch is CausticPatch) CausticInstrument.macrosFor(loadedPatch.voice, 2)
                     else if (loadedPatch is EmbouchurePatch) Embouchure.macrosFor(loadedPatch.voice, loadedPatch.model)
@@ -3233,7 +3587,7 @@ fun SynthScreen(
 
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     LabButton(
-                        "SCRAMBLE",
+                        "RANDOMISE",
                         scheme,
                         enabled = !embouchureRestore.waitsForRecipe(engine, voice),
                         modifier = Modifier.weight(1f),
@@ -3243,6 +3597,7 @@ fun SynthScreen(
                         currentPresetByVoice.remove(engine to voice)
                         val random = Random(System.nanoTime())
                         val scrambled = when {
+                            (loadedPatch as? SkinPatch)?.model == 2 -> BackroomSnare.scramble(random)
                             engine == Engine.LIBRATION ->
                                 Libration.scramble(voice as LibrationVoice, random,
                                     near = buildCurrentPatch(engine.patchDisplayName(voice))) +
@@ -3261,6 +3616,12 @@ fun SynthScreen(
                                 OverlapHeld.defaults(voice as OverlapTopology) +
                                     OverlapHeld.macrosFor(voice as OverlapTopology)
                                         .associate { it.name to random.nextFloat() }
+                            engine == Engine.SPLAY ->
+                                Splay.scramble(voice as SplayVoice, random,
+                                    near = buildCurrentPatch(engine.patchDisplayName(voice)))
+                            engine == Engine.OSTERIA ->
+                                Osteria.scramble(voice as OsteriaVoice, random,
+                                    near = buildCurrentPatch(engine.patchDisplayName(voice)))
                             engine == Engine.APSIS ->
                                 Apsis.scramble(voice as ApsisVoice, random,
                                     near = buildCurrentPatch(engine.patchDisplayName(voice)))
@@ -3304,18 +3665,37 @@ fun SynthScreen(
                             Engine.CAUSTIC -> CausticInstrument.defaults(voice as CausticVoice, 2) + next
                             Engine.ORIGAMI -> next + ("TUNE" to macros.getValue("TUNE"))
                             Engine.OHM -> next + macros.filterKeys { it == "HOLD" }
+                            Engine.NACRE -> NacreEditing.scrambledControls(
+                                buildCurrentPatch(engine.patchDisplayName(voice)) as NacrePatch, next)
                             else -> next
                         }
+                        if (engine == Engine.MURMUR) murmurDelivery.invalidate()
                         macrosByVoice[engine to voice] = values
                         keepOhmMacros(values)
                         keepMeridianMacros(values)
                         ensureNativeDraft()
-                        if (engine == Engine.WICK || engine == Engine.OBBLIGATO) SynthDrafts.write(settings, currentDrafts())
+                        if (engine == Engine.WICK || engine == Engine.RIVET || engine == Engine.OBBLIGATO || engine == Engine.TEMPEST || engine == Engine.SPLAY || engine == Engine.ETCH) SynthDrafts.write(settings, currentDrafts())
                     }
                 }
 
                 if (hasPlayingExtras(engine, voice, loadedPatch)) {
                     SynthSectionHeading(Copy.SYNTH_HEADING_PLAYING, scheme)
+                }
+                if (engine == Engine.TEMPEST) {
+                    TapeText("FINITE DRUM · 1.20 SECONDS · HOLD IS RESERVED",
+                        TapeType.pixelSmall, scheme.ink2.tape)
+                }
+                if (engine == Engine.RIVET) {
+                    RivetPerformanceControls(
+                        patch = buildCurrentPatch(engine.patchDisplayName(voice)) as RivetPatch,
+                        fill = classColor, scheme = scheme, onEdit = ::updateRivetPatch,
+                    )
+                }
+                if (engine == Engine.ETCH) {
+                    EtchPerformanceControls(
+                        patch = buildCurrentPatch(engine.patchDisplayName(voice)) as EtchPatch,
+                        fill = classColor, scheme = scheme, onEdit = ::updateEtchPatch,
+                    )
                 }
                 if (engine == Engine.WICK) {
                     WickPerformanceControls(
@@ -3346,8 +3726,8 @@ fun SynthScreen(
                 if (engine == Engine.RIME) {
                     val rimePatch = buildCurrentPatch(loadedPatch?.name ?: engine.patchDisplayName(voice)) as RimePatch
                     if (Rime.isLoop(rimePatch.macros)) {
-                        TapeText(if (rimePatch.model >= 6) "UNFOLD 60–100 REPEATS DETAIL DURING HOLD. LOWER SETTINGS UNFOLD ONCE."
-                            else "UNFOLD SHAPES THE OPENING. HELD DETAIL STAYS STEADY.",
+                        TapeText(if (rimePatch.model >= 6) "Unfold 60–100 repeats detail during hold. Lower settings unfold once."
+                            else "Unfold shapes the opening. Held detail stays steady.",
                             TapeType.pixelSmall, scheme.ink2.tape)
                     }
                     fun editRime(edit: (RimePatch) -> RimePatch) {
@@ -3394,8 +3774,8 @@ fun SynthScreen(
                         },
                     )
                     TapeText(
-                        if (Crease.isLoop(macros.getValue("HOLD"))) "HOLD: REPEATING PRESSURE GESTURE."
-                        else "HOLD: NOTE LENGTH · TOP STEP: LOOP.",
+                        if (Crease.isLoop(macros.getValue("HOLD"))) "Hold: repeating pressure gesture."
+                        else "Hold: note length · top step: loop.",
                         TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2,
                     )
                 }
@@ -3412,11 +3792,25 @@ fun SynthScreen(
                         fillColor = classColor,
                         scheme = scheme,
                         onValueChange = { value ->
+                            murmurDelivery.invalidate()
                             currentPresetByVoice.remove(engine to voice)
                             loadedPatchesByVoice[engine to voice] =
                                 (buildCurrentPatch(engine.patchDisplayName(voice)) as MurmurPatch)
                                     .copy(velocity = value.coerceIn(0f, 1f))
+                            settings.remove(presetSettingsKey(engine, voice))
+                            SynthDrafts.write(settings, currentDrafts())
                         },
+                    )
+                }
+
+                if (engine == Engine.SPLAY) {
+                    TapeText(
+                        if (embouchureRestore.waitsForRecipe(engine, voice)) {
+                            if (embouchureRestore.pending[engine to voice] == false)
+                                "SAVED SPLAY COULD NOT OPEN. CHOOSE A PRESET."
+                            else "RESTORING SAVED SPLAY…"
+                        } else SplayDelivery.PLAYING_NOTE,
+                        TapeType.pixelSmall, scheme.ink2.tape, maxLines = 3,
                     )
                 }
 
@@ -3453,6 +3847,25 @@ fun SynthScreen(
                     )
                 }
 
+                // Preserve the complete accepted performance while editing its native controls.
+                if (engine == Engine.OSTERIA) {
+                    val osteriaVoice = voice
+                    OsteriaPerformanceControls(
+                        buildCurrentPatch(engine.patchDisplayName(voice)) as OsteriaPatch,
+                        classColor, scheme,
+                    ) { change ->
+                        if (engine == Engine.OSTERIA && voice == osteriaVoice) {
+                            val current = buildCurrentPatch(engine.patchDisplayName(voice)) as OsteriaPatch
+                            val updated = change(current)
+                            if (updated != current) {
+                                currentPresetByVoice.remove(engine to voice)
+                                loadedPatchesByVoice[engine to voice] = updated
+                                SynthDrafts.write(settings, currentDrafts())
+                            }
+                        }
+                    }
+                }
+
                 // FILAMENT's note and playing energy are separate from its six controls.
                 // Copy the complete recipe so edits keep its strand roster and model.
                 if (engine == Engine.FILAMENT) {
@@ -3473,8 +3886,8 @@ fun SynthScreen(
                     if (embouchureRestore.waitsForRecipe(engine, voice)) {
                         TapeText(
                             if (embouchureRestore.pending[engine to voice] == false)
-                                "SAVED RELAY COULD NOT OPEN. CHOOSE A PRESET."
-                            else "RESTORING SAVED RELAY…",
+                                "Saved relay could not open. Choose a preset."
+                            else "Restoring saved relay…",
                             TapeType.pixelSmall, scheme.ink2.tape, maxLines = 3,
                         )
                     } else {
@@ -3593,9 +4006,9 @@ fun SynthScreen(
                     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         TapeText(
                             when (voice as RegistersVoice) {
-                                RegistersVoice.PIPE -> "PIPE SPEECH, CHIFF AND SOFT SUSTAINED AIR."
-                                RegistersVoice.MUSETTE -> "THREE BEATING REEDS, SHAPED BY BELLOWS."
-                                RegistersVoice.TRANSISTOR -> "SQUARE-WAVE RANKS WITH A TRANSISTOR KEYER."
+                                RegistersVoice.PIPE -> "Pipe speech, chiff and soft sustained air."
+                                RegistersVoice.MUSETTE -> "Three beating reeds, shaped by bellows."
+                                RegistersVoice.TRANSISTOR -> "Square-wave ranks with a transistor keyer."
                             },
                             TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2,
                         )
@@ -3617,8 +4030,8 @@ fun SynthScreen(
                         )
                         TapeText(
                             if (Registers.isLoop(macros.getValue("HOLD")))
-                                "LOOP STARTS AT THE SETTLED TONE. LOW SPREAD MAY SOUND IN UNISON."
-                            else "HOLD: NOTE LENGTH · TOP STEP: LOOP WITHOUT ATTACK.",
+                                "Loop starts at the settled tone. Low spread may sound in unison."
+                            else "Hold: note length · top step: loop without attack.",
                             TapeType.pixelSmall, scheme.ink2.tape, maxLines = 3,
                         )
                     }
@@ -3626,7 +4039,7 @@ fun SynthScreen(
 
                 if (loadedPatch is EmbouchurePatch && loadedPatch.model == Embouchure.BRASS_GROW_MODEL) {
                     TapeText(
-                        "GROW: ROUGH → CENTERED → EXPRESSIVE. HELD SAMPLE EXCLUDES ATTACK; PADS PLAY ONE LOOP LENGTH.",
+                        "Grow: rough → centered → expressive. Held sample excludes attack; pads play one loop length.",
                         TapeType.pixelSmall, scheme.ink2.tape, maxLines = 3,
                     )
                 }
@@ -3658,7 +4071,7 @@ fun SynthScreen(
 
                 SynthSectionHeading(Copy.SYNTH_HEADING_USE, scheme)
                 LabButton(
-                    "REOPEN PAD ▸ EDIT ITS RECIPE",
+                    "REOPEN PAD · EDIT ITS RECIPE ▾",
                     scheme,
                     enabled = reopenablePads.isNotEmpty() && !padChooser.sendBusy,
                     modifier = Modifier.fillMaxWidth(),
@@ -3672,7 +4085,7 @@ fun SynthScreen(
                     LabButton(
                         if (padChooser.sendBusy) "…" else "UPDATE PAD ${padTag(slot)}",
                         scheme,
-                        enabled = !padChooser.sendBusy && target != null && target.velocityLayers.isEmpty() && !(target.chain != null && !target.isRobinChain),
+                        enabled = !padChooser.sendBusy && target != null && (target.velocityLayers.isEmpty() || (engine == Engine.FIRED_BRONZE && FiredBronzePads.canEdit(target))) && !(target.chain != null && !target.isRobinChain),
                         modifier = Modifier.fillMaxWidth(),
                     ) {
                         sendToSlot(slot)
@@ -3681,7 +4094,7 @@ fun SynthScreen(
                 // One sound, a whole bank of notes: its own row, since the
                 // three above already fill theirs at the pixel face.
                 LabButton(
-                    if (spreadState.opening) "…" else "SPREAD ▸ SCALE ACROSS PADS",
+                    if (spreadState.opening) "…" else "SPREAD · SCALE ACROSS PADS ▾",
                     scheme,
                     enabled = kit != null && !padChooser.sendBusy && !spreadState.opening &&
                         !embouchureRestore.waitsForRecipe(engine, voice),
@@ -3696,7 +4109,7 @@ fun SynthScreen(
                 // replay its sweep at every wrap (the spec's SURFACE section).
                 if (engine == Engine.SIREN && Siren.isLoop(macros.getValue("HOLD"))) {
                     LabButton(
-                        if (padChooser.sendBusy && padChooser.sendToSurface) "…" else "→ SURFACE ▸",
+                        if (padChooser.sendBusy && padChooser.sendToSurface) "…" else "→ SURFACE",
                         scheme,
                         enabled = kit != null && !padChooser.sendBusy,
                         modifier = Modifier.fillMaxWidth(),
@@ -3722,12 +4135,23 @@ fun SynthScreen(
                 if (supportsHeldInstrument) {
                     if (engine == Engine.PRISM) PrismInstrumentHint(scheme)
                     LabButton(
-                        "MAKE INSTRUMENT ▸",
+                        "MAKE INSTRUMENT",
                         scheme,
                         enabled = heldInstrumentReady,
                         modifier = Modifier.fillMaxWidth(),
                         accessibilityLabel = "MAKE INSTRUMENT",
                     ) {
+                        if (engine == Engine.SPLAY && (!heldInstrumentReady || embouchureRestore.waitsForRecipe(engine, voice))) return@LabButton
+                        if (engine == Engine.MURMUR) {
+                            val current = buildCurrentPatch(loadedPatchesByVoice[engine to voice]?.name
+                                ?: engine.patchDisplayName(voice)) as MurmurPatch
+                            if (revisedMurmur(current) && !MurmurSelectedInstrumentMaker.supports(current)) {
+                                onToast(murmurInstrumentUnavailable(current))
+                                return@LabButton
+                            }
+                            heldSheet.murmurSelected = revisedMurmur(current)
+                        }
+                        if (engine != Engine.MURMUR) heldSheet.murmurSelected = false
                         if (engine == Engine.CAUSTIC) {
                             val current = buildCurrentPatch(engine.patchDisplayName(voice)) as CausticPatch
                             loadedPatchesByVoice[engine to voice] = CausticEditing.edited(current,
@@ -3747,15 +4171,22 @@ fun SynthScreen(
                     if (!heldInstrumentReady) {
                         TapeText(
                             when (engine) {
-                                Engine.MERIDIAN -> meridianInstrumentReadiness(buildCurrentPatch(engine.patchDisplayName(voice)) as MeridianPatch)
-                                Engine.CREASE -> "MAKE INSTRUMENT NEEDS MODEL 3. THE SAVED ORIGINAL STILL PLAYS AS BEFORE."
-                                Engine.BELLOWS -> "MAKE INSTRUMENT NEEDS A CURRENT BELLOWS SOUND. THE SAVED ORIGINAL STILL PLAYS AS BEFORE."
-                                Engine.PRISM -> "WAIT FOR THE SOURCE TONE TO FINISH LOADING."
+                                Engine.MURMUR -> murmurInstrumentUnavailable(buildCurrentPatch(engine.patchDisplayName(voice)) as MurmurPatch)
+                                Engine.WICK -> WickPadMaker.UNSUPPORTED_NOTE
+                                Engine.ETCH -> EtchPadMaker.UNSUPPORTED_NOTE
+                                Engine.SPLAY -> SplayFinitePadMaker.UNSUPPORTED_NOTE
+                                Engine.MERIDIAN -> (buildCurrentPatch(engine.patchDisplayName(voice)) as MeridianPatch).let {
+                                    if (MeridianSynth.isHeld(it)) meridianInstrumentReadiness(it)
+                                    else MeridianFinitePadMaker.UNSUPPORTED_NOTE
+                                }
+                                Engine.CREASE -> "MAKE INSTRUMENT needs model 3. The saved original still plays as before."
+                                Engine.BELLOWS -> "MAKE INSTRUMENT needs a current bellows sound. The saved original still plays as before."
+                                Engine.PRISM -> "Wait for the source tone to finish loading."
                                 else -> "MAKE INSTRUMENT NEEDS ROOT ${Scales.nameOf(OpenSkyPadMaker.ROOT_MIDI_MIN)}–${Scales.nameOf(OpenSkyPadMaker.ROOT_MIDI_MAX)}"
                             },
                             TapeType.pixelSmall,
                             scheme.ink2.tape,
-                            maxLines = 2,
+                            maxLines = if (engine == Engine.MURMUR) 4 else 2,
                         )
                     }
                 }
@@ -3763,7 +4194,7 @@ fun SynthScreen(
                 // RESIN's own breathing filter or SIREN's own wail.
                 if (engine == Engine.RESIN || engine == Engine.SIREN) {
                     LabButton(
-                        "DRONE TO LOOP ▸",
+                        "DRONE TO LOOP",
                         scheme,
                         enabled = true,
                         modifier = Modifier.fillMaxWidth(),
@@ -3786,7 +4217,7 @@ fun SynthScreen(
                     if (engine == Engine.PRISM) prismMotionStudio.cancelPreview()
                     voicePlayer?.stop(); voicePlayer = null
                 },
-                sendLabel = if (padChooser.sendBusy) "…" else "SEND TO PAD ▸",
+                sendLabel = if (padChooser.sendBusy) "…" else "SEND TO PAD",
                 sendEnabled = kit != null && !padChooser.sendBusy && !embouchureRestore.waitsForRecipe(engine, voice),
                 onSend = {
                     if (embouchureRestore.waitsForRecipe(engine, voice)) return@AuditionBar
@@ -3819,6 +4250,7 @@ fun SynthScreen(
                 previewColor = classColor,
                 scheme = scheme,
                 busy = padChooser.sendBusy,
+                firedBronze = engine == Engine.FIRED_BRONZE,
                 onPick = ::sendToSlot,
                 onCancel = cancelChooser,
             )
@@ -3831,9 +4263,9 @@ fun SynthScreen(
 
         spreadState.source?.let { src ->
             // Self-guarded like the chooser's CANCEL: a write in flight
-            // keeps the panel up until it lands.
+            // keeps the sheet up until it lands.
             val cancelSpread = { if (!spreadState.busy) spreadState.source = null }
-            SpreadOverlay(
+            SpreadSheet(
                 kit = kit,
                 source = src,
                 colorHex = AutoPlace.colorFor(spreadState.drumClass),
@@ -3842,7 +4274,6 @@ fun SynthScreen(
                 onSpread = ::spread,
                 onCancel = cancelSpread,
             )
-            SynthOverlayBackHandler(onBack = cancelSpread)
         }
 
         if (presets.namingPreset) {
@@ -3890,11 +4321,19 @@ fun SynthScreen(
             // Recomputed here rather than cached: cheap (a Spec is a data
             // class, no rendering), and it must reflect whatever the panel
             // holds right now, the same as every value below it.
-            heldSpec()?.let { spec ->
+            if (heldSheet.murmurSelected) {
+                selectedMurmurSpec()?.let { spec ->
+                    MurmurSelectedInstrumentSheet(spec, heldSheet, murmurDelivery, classColor, scheme,
+                        onPreview = { previewMurmurSelected() },
+                        onPreviewChord = { previewMurmurSelected(chord = true) },
+                        onMake = ::makeMurmurSelected, onCancel = ::closeHeld)
+                }
+            } else heldSpec()?.let { spec ->
                 HeldInstrumentSheet(
                     heading = "${engine.name} · ${chipLabel(engine, voice)}",
-                    name = heldSheet.holdName,
+                    nameNote = spec.shelfNote(heldSheet.holdName),
                     hasAttack = spec.hasAttack,
+                    hasRelease = spec.hasRelease,
                     attack = heldSheet.holdAttack,
                     release = spec.releaseFraction ?: heldSheet.holdRelease,
                     knobLabel = spec.knobLabel,
@@ -3906,7 +4345,7 @@ fun SynthScreen(
                     done = heldSheet.holdDone,
                     total = heldSheet.holdTotal,
                     previewing = heldSheet.holdPreviewing,
-                    heldPreview = if ((engine == Engine.FLOCK && !heldSheet.holdFlockTouchLayers) || engine == Engine.OVERLAP || engine == Engine.OBBLIGATO) sampleHeldPreview else null,
+                    heldPreview = if ((engine == Engine.FLOCK && !heldSheet.holdFlockTouchLayers) || engine == Engine.OVERLAP || engine == Engine.OBBLIGATO || engine == Engine.TREFOIL) sampleHeldPreview else null,
                     fillColor = classColor,
                     scheme = scheme,
                     onAttack = { heldSheet.holdAttack = it },
@@ -4014,7 +4453,7 @@ private fun hasPlayingExtras(engine: Engine, voice: Enum<*>, loadedPatch: Patch?
         Engine.NACRE, Engine.RIME, Engine.CAUSTIC, Engine.CREASE, Engine.MURMUR, Engine.ACCORD,
         Engine.APSIS, Engine.OVEN, Engine.FILAMENT, Engine.RELAY, Engine.VENT, Engine.OSPREY,
         Engine.OPENSKY, Engine.REGISTERS, Engine.TRIO, Engine.TREFOIL, Engine.OBBLIGATO,
-        Engine.MERIDIAN, Engine.WICK -> true
+        Engine.MERIDIAN, Engine.WICK, Engine.RIVET, Engine.TEMPEST, Engine.SPLAY, Engine.OSTERIA, Engine.ETCH -> true
         else -> loadedPatch is EmbouchurePatch && loadedPatch.model == Embouchure.BRASS_GROW_MODEL
     }
 
@@ -4088,6 +4527,99 @@ private fun RepeatingAuditionControls(
     }
 }
 
+/** Complete finite-note performance controls, kept outside the large screen method. */
+@Composable
+internal fun OsteriaPerformanceControls(
+    patch: OsteriaPatch,
+    classColor: Color,
+    scheme: Scheme,
+    onPatch: ((OsteriaPatch) -> OsteriaPatch) -> Unit,
+) {
+    TapeText(
+        if (patch.config.model == 1) "LEGACY QUARTET PHRASE"
+        else if (patch.strum != null) "ONE STRIKE PER TONE · FINITE STRUM"
+        else "ONE NOTE · FOUR EVOLVING LAYERS",
+        TapeType.pixelSmall, scheme.ink2.tape,
+    )
+    if (patch.voice == OsteriaVoice.PLUCK && patch.config.model == 2) {
+        val minor = OsteriaStrum.triad(minor = true)
+        val major = OsteriaStrum.triad(minor = false)
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            ActionButton("SINGLE NOTE", scheme, enabled = true, lit = patch.strum == null,
+                accessibilityLabel = "OSTERIA SINGLE NOTE", modifier = Modifier.weight(1f)) {
+                onPatch { it.copy(strum = null) }
+            }
+            ActionButton("STRUM", scheme, lit = patch.strum != null,
+                enabled = patch.strum != null || patch.midi in minor.rootRange,
+                accessibilityLabel = "OSTERIA STRUM", modifier = Modifier.weight(1f)) {
+                onPatch { current ->
+                    if (current.voice == OsteriaVoice.PLUCK && current.config.model == 2 &&
+                        (current.strum != null || current.midi in minor.rootRange))
+                        current.copy(strum = current.strum ?: minor) else current
+                }
+            }
+        }
+        patch.strum?.let { articulation ->
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                for ((label, shape) in listOf("MINOR" to minor, "MAJOR" to major)) {
+                    ActionButton(label, scheme, lit = articulation.intervals == shape.intervals,
+                        enabled = patch.midi in shape.rootRange,
+                        accessibilityLabel = "OSTERIA STRUM $label", modifier = Modifier.weight(1f)) {
+                        onPatch { current -> current.strum?.takeIf { current.midi in shape.rootRange }?.let {
+                            current.copy(strum = it.copy(intervals = shape.intervals))
+                        } ?: current }
+                    }
+                }
+                ActionButton(articulation.direction.name, scheme, enabled = true,
+                    accessibilityLabel = "OSTERIA STRUM DIRECTION", modifier = Modifier.weight(1f)) {
+                    onPatch { current -> current.strum?.let {
+                        current.copy(strum = it.copy(direction = if (it.direction == OsteriaStrum.Direction.DOWN) OsteriaStrum.Direction.UP else OsteriaStrum.Direction.DOWN))
+                    } ?: current }
+                }
+            }
+            MacroSlider("SWEEP", ((articulation.sweepSeconds - .01) / .23).toFloat(), classColor, scheme,
+                readout = osteriaTime(articulation.sweepSeconds), onValueChange = { value ->
+                    onPatch { current -> current.strum?.let {
+                        current.copy(strum = it.copy(sweepSeconds = (.01 + .23 * value.coerceIn(0f, 1f)).coerceIn(.01, .24)))
+                    } ?: current }
+                })
+            TapeText("Hold lengthens each string's ring · no repeated plucks.", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
+        }
+        if (patch.strum == null && patch.midi !in minor.rootRange) {
+            TapeText("Lower the root to fit a strum above it.", TapeType.pixelSmall, scheme.ink2.tape)
+        }
+    }
+    // ROOT is the shared ROOT/OCT row above the panel (SynthRoot's Field over patch.rootRange,
+    // which a strum narrows), so the panel draws no second ROOT control.
+    MacroSlider(
+        label = "VELOCITY", value = patch.velocity, fillColor = classColor, scheme = scheme,
+        onValueChange = { value -> onPatch { current -> current.copy(velocity = value.coerceIn(0f, 1f)) } },
+    )
+    if (patch.config.model == 2) {
+        MacroSlider(
+            label = "ATTACK", value = (ln(patch.config.attackSeconds / .005) / ln(200.0)).toFloat(),
+            fillColor = classColor, scheme = scheme, readout = osteriaTime(patch.config.attackSeconds),
+            onValueChange = { value -> onPatch { current -> current.copy(config = current.config.copy(
+                attackSeconds = .005 * 200.0.pow(value.coerceIn(0f, 1f).toDouble()))) } },
+        )
+        val maximumRelease = minOf(2.0, patch.config.seconds - .05)
+        val releaseRatio = maximumRelease / .02
+        MacroSlider(
+            label = "RELEASE", value = (ln(patch.config.releaseSeconds / .02) / ln(releaseRatio)).toFloat(),
+            fillColor = classColor, scheme = scheme, readout = osteriaTime(patch.config.releaseSeconds),
+            onValueChange = { value -> onPatch { current -> current.copy(config = current.config.copy(
+                releaseSeconds = (.02 * releaseRatio.pow(value.coerceIn(0f, 1f).toDouble())).coerceAtMost(current.config.seconds - .05))) } },
+        )
+        TapeText(if (patch.strum == null) "Rendered release · hold extends up to 8 s." else "Each string rings up to 8 s.",
+            TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
+    } else {
+        TapeText("Legacy articulation is fixed.", TapeType.pixelSmall, scheme.ink2.tape)
+    }
+}
+
+private fun osteriaTime(seconds: Double): String =
+    if (seconds < .1) "${(seconds * 1000).roundToInt()}ms" else String.format(Locale.ROOT, "%.2fs", seconds)
+
 /** Apsis playing controls stay outside the large screen's Compose method. */
 @Composable
 private fun ApsisPlayingControls(
@@ -4101,8 +4633,8 @@ private fun ApsisPlayingControls(
         onValueChange = { onPatch(patch.copy(velocity = it.coerceIn(0f, 1f))) },
     )
     TapeText(
-        if (Apsis.isLoop(patch.macros["HOLD"] ?: 0f)) "HOLD: SETTLED CYCLE · REPEATS UNTIL STOP."
-        else "HOLD: NOTE LENGTH · TOP STEP: LOOP.",
+        if (Apsis.isLoop(patch.macros["HOLD"] ?: 0f)) "Hold: settled cycle · repeats until stop."
+        else "Hold: note length · top step: loop.",
         TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2,
     )
 }
@@ -4138,7 +4670,7 @@ private fun OrigamiPerformanceControls(
 ) {
     if (patch.model != Origami.MODEL_VERSION) {
         TapeText(
-            "THIS SAVED RECIPE KEEPS ITS ORIGINAL SOUND. LOAD A FACTORY PRESET FOR GESTURES AND VELOCITY COLOR.",
+            "This saved recipe keeps its original sound. Load a factory preset for gestures and velocity color.",
             TapeType.pixelSmall, scheme.ink2.tape, maxLines = 3,
         )
         return
@@ -4158,9 +4690,9 @@ private fun OrigamiPerformanceControls(
     }
     TapeText(
         when (patch.gesture) {
-            OrigamiGesture.STEADY -> "MOTION MOVES THE FOLD AXIS."
-            OrigamiGesture.BLOOM -> "START OPEN, THEN FOLD."
-            OrigamiGesture.UNFOLD -> "START FOLDED, THEN OPEN."
+            OrigamiGesture.STEADY -> "Motion moves the fold axis."
+            OrigamiGesture.BLOOM -> "Start open, then fold."
+            OrigamiGesture.UNFOLD -> "Start folded, then open."
         },
         TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2,
     )
@@ -4185,9 +4717,9 @@ private fun OrigamiPerformanceControls(
     }
     TapeText(
         when (patch.expression) {
-            OrigamiExpression.LEVEL -> "HIT STRENGTH CHANGES VOLUME."
-            OrigamiExpression.FOLD -> "SOFT HITS HAVE LESS FOLDED COLOR. HARD HITS HAVE MORE."
-            OrigamiExpression.TOUCH -> "SOFT HITS DARKEN THE SOURCE AND FOLD. STRONG HITS KEEP THEIR COLOR."
+            OrigamiExpression.LEVEL -> "Hit strength changes volume."
+            OrigamiExpression.FOLD -> "SOFT HITS have less folded color. Hard hits have more."
+            OrigamiExpression.TOUCH -> "SOFT HITS darken the source and fold. Strong hits keep their color."
         },
         TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2,
     )
@@ -4329,6 +4861,7 @@ private class HeldSheetState {
     var holdJob by mutableStateOf<Job?>(null)
     var holdName by mutableStateOf("")
     var prismPatch by mutableStateOf<PrismPatch?>(null)
+    var murmurSelected by mutableStateOf(false)
 }
 
 /**
@@ -4494,10 +5027,14 @@ private fun macroReadout(
     engine == Engine.REVEL && name == "HOLD" && Revel.isLoop(macros.getValue(name)) -> "LOOP"
     engine == Engine.CHITIN && name == "TUNE" -> Scales.nameOf(Chitin.midiFor(voice as ChitinVoice, macros.getValue(name)))
     engine == Engine.CHITIN && name == "HOLD" && macros.getValue(name) >= .98f -> "LONG NOTE"
+    engine == Engine.HALOBAR && name == "TUNE" -> Scales.nameOf(Halobar.midiFor(voice as HalobarVoice, macros.getValue(name)))
+    engine == Engine.HALOBAR && name == "RATE" -> Halobar.rateLabel(macros.getValue(name))
+    engine == Engine.HALOBAR && name == "HOLD" && macros.getValue(name) >= .98f -> "LONG NOTE"
     engine == Engine.BORE && name == "HOLD" && Bore.isLoop(macros.getValue(name)) -> "LOOP"
     engine == Engine.ARCO && name == "HOLD" && Arco.isLoop(macros.getValue(name)) -> "LOOP"
     engine == Engine.KEEL && name == "HOLD" && Keel.isLoop(macros.getValue(name)) -> "LOOP"
     engine == Engine.WICK && name == "HOLD" && Wick.isLoop(macros.getValue(name)) -> "LOOP"
+    engine == Engine.ETCH && name == "HOLD" && Etch.isLoop(macros.getValue(name)) -> "LOOP"
     else -> null
 }
 
@@ -4618,18 +5155,18 @@ private fun PresetForgetDialog(name: String, scheme: Scheme, onCancel: () -> Uni
         ) {
             TapeText(Copy.presetForgetAsk(name), TapeType.lcdSmall, scheme.ink.tape, maxLines = 3)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                ActionButton("CANCEL", scheme, enabled = true, modifier = Modifier.weight(1f), onClick = onCancel)
+                ActionButton("CANCEL", scheme, enabled = true, modifier = Modifier.weight(1f), tier = ButtonTier.Text, onClick = onCancel)
                 Box(
                     Modifier
                         .weight(1f)
                         .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                         .background(scheme.lcd.tape, RoundedCornerShape(4.dp))
-                        .border(2.dp, BIN_RED_BORDER, RoundedCornerShape(4.dp))
+                        .border(2.dp, scheme.binLcd.tape, RoundedCornerShape(4.dp))
                         .tapeClick(label = "FORGET $name", onClick = onForget)
                         .padding(horizontal = 10.dp),
                     contentAlignment = Alignment.Center,
                 ) {
-                    TapeText("FORGET → BIN", TapeType.pixel, BinRedGlow)
+                    TapeText("FORGET → TRASH", TapeType.pixel, BinRedOnLcd)
                 }
             }
         }
@@ -4737,11 +5274,6 @@ private fun BinnedPresetRow(row: UserPresets.Binned, scheme: Scheme, busy: Boole
     }
 }
 
-// Duplicated, not hoisted — `KitsScreen.kt`'s and `DeletedKitsSection.kt`'s
-// own `BIN_RED_BORDER`, deliberately constant across every scheme so a
-// delete reads as "red" even in a scheme with no red anywhere else in it.
-private val BIN_RED_BORDER = Color(0xFF6A2020)
-
 // ---------- SAVE AS PRESET: the name ----------
 
 /**
@@ -4771,11 +5303,11 @@ private fun PresetNameDialog(
     var field by remember { mutableStateOf(TextFieldValue(suggestion, TextRange(suggestion.length))) }
     val check = UserPresets.check(field.text, engine.name, voice.name, yours)
     val (caption, captionColor) = when (check) {
-        is UserPresets.Check.Blank -> Copy.PRESET_NAME_BLANK to scheme.warn.tape
-        is UserPresets.Check.TooLong -> Copy.PRESET_NAME_NOTE to scheme.warn.tape
-        is UserPresets.Check.Factory -> Copy.presetNameFactory(check.name) to scheme.warn.tape
+        is UserPresets.Check.Blank -> Copy.PRESET_NAME_BLANK to scheme.warnInk.tape
+        is UserPresets.Check.TooLong -> Copy.PRESET_NAME_NOTE to scheme.warnInk.tape
+        is UserPresets.Check.Factory -> Copy.presetNameFactory(check.name) to scheme.warnInk.tape
         is UserPresets.Check.Fresh -> Copy.PRESET_NAME_NOTE to scheme.ink2.tape
-        is UserPresets.Check.Replaces -> Copy.presetReplaces(check.name) to scheme.amber.tape
+        is UserPresets.Check.Replaces -> Copy.presetReplaces(check.name) to scheme.accent.tape
     }
     val canSave = check is UserPresets.Check.Fresh || check is UserPresets.Check.Replaces
     val focus = remember { FocusRequester() }
@@ -4823,7 +5355,7 @@ private fun PresetNameDialog(
             }
             TapeText(caption, TapeType.pixelSmall, captionColor, maxLines = 4)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                ActionButton("CANCEL", scheme, enabled = true, modifier = Modifier.weight(1f), onClick = onCancel)
+                ActionButton("CANCEL", scheme, enabled = true, modifier = Modifier.weight(1f), tier = ButtonTier.Text, onClick = onCancel)
                 ActionButton(
                     if (check is UserPresets.Check.Replaces) "REPLACE" else "SAVE",
                     scheme,
@@ -4867,6 +5399,10 @@ private fun contourMacroGroup(name: String): String = when (name) {
 internal sealed interface HeldSpec {
     val zoneMidis: List<Int>
     val hasAttack: Boolean
+    /** False for finite sources that keep their own envelope: the sheet hides RELEASE. */
+    val hasRelease: Boolean get() = true
+    /** The sheet's LIBRARY line for [name]; finite instruments drop the held-key promise. */
+    fun shelfNote(name: String): String = if (name.isEmpty()) "" else Copy.heldInstrumentNote(name)
     val instrumentNote: String? get() = null
     val releaseFraction: Float? get() = null
     val touchLayers: Boolean? get() = null
@@ -4884,12 +5420,24 @@ internal sealed interface HeldSpec {
     fun previewPlayback(cancelled: () -> Boolean): HeldPreviewPlayback = HeldPreviewPlayback(preview(cancelled))
     fun export(name: String, notes: List<List<KeyNote>>, destRoot: File): KeygroupProgram
 
+    class Halobar(private val spec: HalobarPadMaker.Spec) : HeldSpec {
+        override val zoneMidis get() = HalobarPadMaker.zoneMidis(spec)
+        override val hasAttack get() = false
+        override val progressPerZone get() = HalobarPadMaker.LAYERS
+        override val knobLabel get() = "RELEASE ${HalobarPadMaker.secondsLabel(spec.releaseSeconds)}"
+        override val instrumentNote get() = "Finite mallet ring · two touch levels · three takes per touch. Let go to fade."
+        override fun renderZone(midi: Int, cancelled: () -> Boolean) = HalobarPadMaker.renderZone(spec, midi, cancelled)
+        override fun preview(cancelled: () -> Boolean) = HalobarPadMaker.preview(spec, cancelled)
+        override fun export(name: String, notes: List<List<KeyNote>>, destRoot: File) =
+            HalobarPadMaker.export(name, spec, notes, destRoot)
+    }
+
     class Lattice(private val spec: LatticePadMaker.Spec) : HeldSpec {
         override val zoneMidis get() = LatticePadMaker.zoneMidis(spec)
         override val hasAttack get() = false
         override val knobLabel get() = "RELEASE ${LatticePadMaker.secondsLabel(spec.releaseSeconds)}"
         override val instrumentNote get() =
-            "C3–C5 · KEEPS THE MOVING PLUCK, THEN HOLDS ITS RINGING TONE. LET GO TO FADE."
+            "C3–C5 · keeps the moving pluck, then holds its ringing tone. Let go to fade."
         override fun renderZone(midi: Int, cancelled: () -> Boolean) = listOf(LatticePadMaker.renderZone(spec, midi, cancelled))
         override fun preview(cancelled: () -> Boolean) = LatticePadMaker.preview(spec, cancelled)
         override fun export(name: String, notes: List<List<KeyNote>>, destRoot: File) =
@@ -4902,10 +5450,10 @@ internal sealed interface HeldSpec {
         override val touchLayers get() = spec.touchLayers
         override val progressPerZone get() = spec.layerCount
         override val touchLayersNote get() =
-            "ON: SOFT AND HARD TOUCH CHANGE ATTACK AND TONE. TOUCH SETS THE HARD CAPTURE. TWO SAMPLES PER NOTE; ABOUT 2× THE TIME AND STORAGE."
+            "On: soft and hard touch change attack and tone. Touch sets the hard capture. Two samples per note; about 2× the time and storage."
         override val instrumentNote get() = if (spec.touchLayers)
-            "PREVIEW PLAYS SOFT, THEN HARD, THROUGH TWO WRAPS AND KEY-UP. EACH TOUCH KEEPS ITS ATTACK AND MOVING SUSTAIN."
-            else "THE NOTE SPEAKS, THEN KEEPS MOVING WHILE HELD. RELEASE FADES WHEN YOU LIFT A KEY."
+            "Preview plays soft, then hard, through two wraps and key-up. Each touch keeps its attack and moving sustain."
+            else "The note speaks, then keeps moving while held. Release fades when you lift a key."
         override val knobLabel get() = "RELEASE ${LibrationPadMaker.secondsLabel(spec.releaseSeconds)}"
         override fun renderZone(midi: Int, cancelled: () -> Boolean) = LibrationPadMaker.renderLayers(spec, midi, cancelled)
         override fun preview(cancelled: () -> Boolean) = LibrationPadMaker.preview(spec, cancelled)
@@ -4938,7 +5486,7 @@ internal sealed interface HeldSpec {
         override val hasAttack get() = false
         override val knobLabel get() = "RELEASE ${BallastPadMaker.secondsLabel(spec.releaseSeconds)}"
         override val instrumentNote get() =
-            "KEEPS THE NOTE'S ONSET AND THE STRUCTURE SETTLING, THEN HOLDS THE SETTLED BASS."
+            "Keeps the note's onset and the structure settling, then holds the settled bass."
         override fun renderZone(midi: Int, cancelled: () -> Boolean) = listOf(BallastPadMaker.renderZone(spec, midi, cancelled))
         override fun preview(cancelled: () -> Boolean) = BallastPadMaker.preview(spec, cancelled)
         override fun export(name: String, notes: List<List<KeyNote>>, destRoot: File) = BallastPadMaker.export(name, spec, notes.map { it.single() }, destRoot)
@@ -4948,7 +5496,7 @@ internal sealed interface HeldSpec {
         override val zoneMidis get() = MercuryPadMaker.zoneMidis(spec)
         override val hasAttack get() = false
         override val knobLabel get() = "RELEASE ${MercuryPadMaker.secondsLabel(spec.releaseSeconds)}"
-        override val instrumentNote get() = "EACH KEY PLAYS THE GLASS'S HOLD LOOP AT ITS OWN NOTE, WITH NO ATTACK."
+        override val instrumentNote get() = "Each key plays the glass's hold LOOP at its own note, with no attack."
         override fun renderZone(midi: Int, cancelled: () -> Boolean) = listOf(MercuryPadMaker.renderZone(spec, midi, cancelled))
         override fun preview(cancelled: () -> Boolean) = MercuryPadMaker.preview(spec, cancelled)
         override fun export(name: String, notes: List<List<KeyNote>>, destRoot: File) = MercuryPadMaker.export(name, spec, notes.map { it.single() }, destRoot)
@@ -4959,7 +5507,7 @@ internal sealed interface HeldSpec {
         override val zoneMidis get() = LoopPadMaker.zoneMidis(spec)
         override val hasAttack get() = false
         override val knobLabel get() = "RELEASE ${LoopPadMaker.secondsLabel(spec.releaseSeconds)}"
-        override val instrumentNote get() = "EACH KEY PLAYS THIS SOUND'S HOLD LOOP AT ITS OWN NOTE, WITH NO ATTACK."
+        override val instrumentNote get() = "Each key plays this sound's hold LOOP at its own note, with no attack."
         override fun renderZone(midi: Int, cancelled: () -> Boolean) = listOf(LoopPadMaker.renderZone(spec, midi, cancelled))
         override fun preview(cancelled: () -> Boolean) = LoopPadMaker.preview(spec, cancelled)
         override fun export(name: String, notes: List<List<KeyNote>>, destRoot: File) = LoopPadMaker.export(name, spec, notes.map { it.single() }, destRoot)
@@ -4971,7 +5519,7 @@ internal sealed interface HeldSpec {
         override val hasAttack get() = false
         override val progressPerZone get() = ArcoPadMaker.VELOCITY_WINDOWS.size
         override val knobLabel get() = "RELEASE ${ArcoPadMaker.secondsLabel(spec.releaseSeconds)}"
-        override val instrumentNote get() = "SOFT AND HARD TOUCH. EACH KEY STARTS WITH THE BOW'S OWN STROKE, THEN HOLDS WHILE YOU KEEP IT DOWN."
+        override val instrumentNote get() = "Soft and hard touch. Each key starts with the bow's own stroke, then holds while you keep it down."
         override fun renderZone(midi: Int, cancelled: () -> Boolean) = ArcoPadMaker.renderZone(spec, midi, cancelled)
         override fun preview(cancelled: () -> Boolean) = ArcoPadMaker.preview(spec, cancelled)
         override fun export(name: String, notes: List<List<KeyNote>>, destRoot: File) = ArcoPadMaker.export(name, spec, notes, destRoot)
@@ -4983,7 +5531,7 @@ internal sealed interface HeldSpec {
         override val hasAttack get() = false
         override val progressPerZone get() = BorePadMaker.VELOCITY_WINDOWS.size
         override val knobLabel get() = "RELEASE ${BorePadMaker.secondsLabel(spec.releaseSeconds)}"
-        override val instrumentNote get() = "SOFT AND HARD TOUCH. EACH KEY STARTS WITH THE NOTE'S OWN BREATH, THEN HOLDS WHILE YOU KEEP IT DOWN. OVERBLOW STAYS OFF."
+        override val instrumentNote get() = "Soft and hard touch. Each key starts with the note's own breath, then holds while you keep it down. Overblow stays off."
         override fun renderZone(midi: Int, cancelled: () -> Boolean) = BorePadMaker.renderZone(spec, midi, cancelled)
         override fun preview(cancelled: () -> Boolean) = BorePadMaker.preview(spec, cancelled)
         override fun export(name: String, notes: List<List<KeyNote>>, destRoot: File) = BorePadMaker.export(name, spec, notes, destRoot)
@@ -4993,7 +5541,7 @@ internal sealed interface HeldSpec {
         override val zoneMidis get() = KeelPadMaker.zoneMidis(spec)
         override val hasAttack get() = false
         override val knobLabel get() = "RELEASE ${KeelPadMaker.secondsLabel(spec.releaseSeconds)}"
-        override val instrumentNote get() = "KEEPS THE NOTE'S ATTACK AND SETTLE, THEN HOLDS THE SETTLED BASS."
+        override val instrumentNote get() = "Keeps the note's attack and settle, then holds the settled bass."
         override fun renderZone(midi: Int, cancelled: () -> Boolean) = listOf(KeelPadMaker.renderZone(spec, midi, cancelled))
         override fun preview(cancelled: () -> Boolean) = KeelPadMaker.preview(spec, cancelled)
         override fun export(name: String, notes: List<List<KeyNote>>, destRoot: File) = KeelPadMaker.export(name, spec, notes.map { it.single() }, destRoot)
@@ -5031,7 +5579,7 @@ internal sealed interface HeldSpec {
         override val hasAttack get() = false
         override val knobLabel get() = "RELEASE ${TidalPadMaker.secondsLabel(spec.releaseSeconds)}"
         override val instrumentNote get() =
-            "C2–C6 · KEEPS THE ENCOUNTER, THEN HOLDS ITS MOVING AFTERMATH. LET GO TO FADE."
+            "C2–C6 · keeps the encounter, then holds its moving aftermath. Let go to fade."
         override fun renderZone(midi: Int, cancelled: () -> Boolean) = listOf(TidalPadMaker.renderZone(spec, midi, cancelled))
         override fun preview(cancelled: () -> Boolean) = TidalPadMaker.preview(spec, cancelled)
         override fun export(name: String, notes: List<List<KeyNote>>, destRoot: File) =
@@ -5043,7 +5591,7 @@ internal sealed interface HeldSpec {
         override val hasAttack get() = false
         override val knobLabel get() = "RELEASE ${RegistersPadMaker.secondsLabel(spec.releaseSeconds)}"
         override val instrumentNote get() =
-            "KEEPS THE NOTE'S ATTACK, THEN HOLDS ITS SETTLED TONE. SYNTH'S LOOP AUDITION STARTS AFTER THE ATTACK."
+            "Keeps the note's attack, then holds its settled tone. Synth's loop audition starts after the attack."
         override fun renderZone(midi: Int, cancelled: () -> Boolean) = listOf(RegistersPadMaker.renderZone(spec, midi, cancelled))
         override fun preview(cancelled: () -> Boolean) = RegistersPadMaker.preview(spec, cancelled)
         override fun export(name: String, notes: List<List<KeyNote>>, destRoot: File) = RegistersPadMaker.export(name, spec, notes.map { it.single() }, destRoot)
@@ -5054,7 +5602,7 @@ internal sealed interface HeldSpec {
         override val hasAttack get() = false
         override val knobLabel get() = "RELEASE ${CausticPadMaker.secondsLabel(spec.releaseSeconds)}"
         override val instrumentNote get() =
-            "KEEPS THE ARRIVAL, THEN REPEATS THE VESSEL WHILE HELD. KEY TOUCH CHANGES VOLUME."
+            "Keeps the arrival, then repeats the vessel while held. Key touch changes volume."
         override fun renderZone(midi: Int, cancelled: () -> Boolean) = listOf(CausticPadMaker.renderZone(spec, midi, cancelled))
         override fun preview(cancelled: () -> Boolean) = CausticPadMaker.preview(spec, cancelled)
         override fun export(name: String, notes: List<List<KeyNote>>, destRoot: File) =
@@ -5068,8 +5616,8 @@ internal sealed interface HeldSpec {
         override val touchLayers get() = spec.touchLayers
         override val knobLabel get() = "RELEASE ${CreasePadMaker.secondsLabel(spec.releaseSeconds)}"
         override val instrumentNote get() = if (spec.touchLayers)
-            "KEEPS THE PRESSURE ATTACK AND MOVING SUSTAIN. SOFT, MID AND HARD TOUCH CHANGE PRESSURE AND TONE."
-        else "KEEPS THE PRESSURE ATTACK, THEN REPEATS ITS MOVING SUSTAIN WHILE HELD. KEY TOUCH CHANGES VOLUME."
+            "Keeps the pressure attack and moving sustain. Soft, mid and hard touch change pressure and tone."
+        else "Keeps the pressure attack, then repeats its moving sustain while held. Key touch changes volume."
         override fun renderZone(midi: Int, cancelled: () -> Boolean) = CreasePadMaker.renderLayers(spec, midi, cancelled)
         override fun preview(cancelled: () -> Boolean) = CreasePadMaker.preview(spec, cancelled)
         override fun export(name: String, notes: List<List<KeyNote>>, destRoot: File) = CreasePadMaker.exportLayers(name, spec, notes, destRoot)
@@ -5080,7 +5628,7 @@ internal sealed interface HeldSpec {
         override val hasAttack get() = false
         override val knobLabel get() = "RELEASE ${RimePadMaker.secondsLabel(spec.releaseSeconds)}"
         override val instrumentNote get() =
-            "TWO OCTAVES OF CONTOUR OPENING AND HELD SUSTAIN. RELEASE FOLLOWS KEY LIFT."
+            "Two octaves of contour opening and held sustain. Release follows key lift."
         override fun renderZone(midi: Int, cancelled: () -> Boolean) = listOf(RimePadMaker.renderZone(spec, midi, cancelled))
         override fun preview(cancelled: () -> Boolean) = RimePadMaker.preview(spec, cancelled)
         override fun export(name: String, notes: List<List<KeyNote>>, destRoot: File) = RimePadMaker.export(name, spec, notes.map { it.single() }, destRoot)
@@ -5091,7 +5639,7 @@ internal sealed interface HeldSpec {
         override val hasAttack get() = false
         override val knobLabel get() = "RELEASE ${ContourPadMaker.secondsLabel(spec.releaseSeconds)}"
         override val instrumentNote get() =
-            "FOUR OCTAVES OF SETTLED TONE. ORIGINAL ATTACK OMITTED. TUNE FOLLOWS THE KEYBOARD."
+            "Four octaves of settled tone. Original attack omitted. Tune follows the keyboard."
         override fun renderZone(midi: Int, cancelled: () -> Boolean) = listOf(ContourPadMaker.renderZone(spec, midi, cancelled))
         override fun preview(cancelled: () -> Boolean) = ContourPadMaker.preview(spec, cancelled)
         override fun export(name: String, notes: List<List<KeyNote>>, destRoot: File) = ContourPadMaker.export(name, spec, notes.map { it.single() }, destRoot)
@@ -5102,11 +5650,26 @@ internal sealed interface HeldSpec {
         override val hasAttack get() = false
         override val knobLabel get() = "RELEASE ${BellowsPadMaker.secondsLabel(spec.releaseSeconds)}"
         override val instrumentNote get() = if (spec.patch.voice == BellowsVoice.WHEEL)
-            "C3–C5 · SOFT, MEDIUM AND HARD TOUCH. MELODY ONLY; THE TONIC BED PLAYS SEPARATELY."
-        else "C3–C5 · SOFT, MEDIUM AND HARD TOUCH. KEEPS THE ATTACK AND SUSTAINS WHILE HELD."
+            "C3–C5 · soft, medium and hard touch. Melody only; the tonic bed plays separately."
+        else "C3–C5 · soft, medium and hard touch. Keeps the attack and sustains while held."
         override fun renderZone(midi: Int, cancelled: () -> Boolean) = BellowsPadMaker.renderZone(spec, midi, cancelled)
         override fun preview(cancelled: () -> Boolean) = BellowsPadMaker.preview(spec, cancelled)
         override fun export(name: String, notes: List<List<KeyNote>>, destRoot: File) = BellowsPadMaker.export(name, spec, notes, destRoot)
+    }
+
+    /** Finite MERIDIAN keys keep the source gesture's own envelope, so this sheet has no replacement release knob. */
+    class MeridianFinite(private val spec: MeridianFinitePadMaker.Spec) : HeldSpec {
+        override val zoneMidis get() = MeridianFinitePadMaker.zoneMidis(spec)
+        override val hasAttack get() = false
+        override val hasRelease get() = false
+        override fun shelfNote(name: String) = if (name.isEmpty()) "" else "Lands in the LIBRARY as $name, playable on keyboard."
+        override val progressPerZone get() = 3
+        override val knobLabel get() = "FINITE SOURCE GESTURE · THREE TOUCH LAYERS"
+        override val instrumentNote get() = MeridianFinitePadMaker.instrumentNote(spec)
+        override fun renderZone(midi: Int, cancelled: () -> Boolean) = MeridianFinitePadMaker.renderZone(spec, midi, cancelled)
+        override fun preview(cancelled: () -> Boolean) = MeridianFinitePadMaker.preview(spec, cancelled)
+        override fun export(name: String, notes: List<List<KeyNote>>, destRoot: File) =
+            MeridianFinitePadMaker.export(name, spec, notes, destRoot)
     }
 
     class Meridian(private val spec: MeridianPadMaker.Spec) : HeldSpec {
@@ -5116,10 +5679,10 @@ internal sealed interface HeldSpec {
         override val releaseFraction get() = MeridianPadMaker.RELEASE.fraction(spec.releaseSeconds)
         override val knobLabel get() = "RELEASE ${MeridianPadMaker.secondsLabel(spec.releaseSeconds)}"
         override val instrumentNote get() =
-            "FIXED-ALIGNMENT SWING · C2–C5 · SOFT, MEDIUM AND HARD TOUCH."
+            "Fixed-alignment swing · C2–C5 · soft, medium and hard touch."
         override fun renderZone(midi: Int, cancelled: () -> Boolean) = MeridianPadMaker.renderZone(spec, midi, cancelled)
         override fun preview(cancelled: () -> Boolean) = MeridianPadMaker.preview(spec, cancelled)
-        override fun export(name: String, notes: List<List<KeyNote>>, destRoot: File) = MeridianPadMaker.export(name, spec, notes, destRoot)
+        override fun export(name: String, notes: List<List<KeyNote>>, destRoot: File) = MeridianHeldKeygroupPackage.exportFresh(name, spec, notes, destRoot).program
     }
 
     class Flock(private val spec: FlockPadMaker.Spec) : HeldSpec {
@@ -5128,12 +5691,12 @@ internal sealed interface HeldSpec {
         override val progressPerZone get() = spec.layerCount
         override val touchLayers get() = spec.touchLayers
         override val touchLayersNote get() =
-            "ON: SOFT, MID AND HARD TOUCH CHANGE FLOCK MOTION. VELOCITY SETS THE HARD TOUCH. THREE SAMPLES PER NOTE; ABOUT 3× THE TIME AND STORAGE."
+            "On: soft, mid and hard touch change flock motion. Velocity sets the hard touch. Three samples per note; about 3× the time and storage."
         override val releaseFraction get() = FlockPadMaker.RELEASE.fraction(spec.releaseSeconds)
         override val knobLabel get() = "RELEASE ${FlockPadMaker.secondsLabel(spec.releaseSeconds)}"
         override val instrumentNote get() = if (spec.touchLayers)
-            "DRY RIBBON · SOFT, MID AND HARD TOUCH CHANGE THE FLOCK'S DISTURBANCE. PREVIEW PLAYS ALL THREE; LIFT A KEY TO RELEASE."
-        else "DRY RIBBON · KEEPS THE ATTACK, THEN REPEATS CAPTURED MOTION UNTIL NOTE-OFF. KEY TOUCH CHANGES VOLUME."
+            "Dry ribbon · soft, mid and hard touch change the flock's disturbance. Preview plays all three; lift a key to release."
+        else "Dry ribbon · keeps the attack, then repeats CAPTURED motion until note-off. Key touch changes volume."
         override fun renderZone(midi: Int, cancelled: () -> Boolean) = FlockPadMaker.renderLayers(spec, midi, cancelled)
         override fun preview(cancelled: () -> Boolean) = FlockPadMaker.preview(spec, cancelled)
         override fun export(name: String, notes: List<List<KeyNote>>, destRoot: File) =
@@ -5145,11 +5708,56 @@ internal sealed interface HeldSpec {
         override val hasAttack get() = false
         override val releaseFraction get() = OverlapPadMaker.RELEASE.fraction(spec.releaseSeconds)
         override val knobLabel get() = "RELEASE ${OverlapPadMaker.secondsLabel(spec.releaseSeconds)}"
-        override val instrumentNote get() = "STEADY RESONANCE WHILE HELD. LIFT A KEY TO RELEASE."
+        override val instrumentNote get() = "Steady resonance while held. Lift a key to release."
         override fun renderZone(midi: Int, cancelled: () -> Boolean) = listOf(OverlapPadMaker.renderZone(spec, midi, cancelled))
         override fun preview(cancelled: () -> Boolean) = OverlapPadMaker.preview(spec, cancelled)
         override fun export(name: String, notes: List<List<KeyNote>>, destRoot: File) =
             OverlapPadMaker.export(name, spec, notes.map { it.single() }, destRoot)
+    }
+
+    /** Finite WICK notes keep their saved envelope, so this sheet has no replacement release knob. */
+    class Wick(private val spec: WickPadMaker.Spec) : HeldSpec {
+        override val zoneMidis get() = WickPadMaker.zoneMidis(spec)
+        override val hasAttack get() = false
+        override val hasRelease get() = false
+        override fun shelfNote(name: String) = if (name.isEmpty()) "" else "Lands in the LIBRARY as $name, playable on keyboard."
+        override val progressPerZone get() = 3
+        override val knobLabel get() = "FINITE SOURCE GESTURE · THREE TOUCH LAYERS"
+        override val instrumentNote get() = WickPadMaker.instrumentNote(spec)
+        override fun renderZone(midi: Int, cancelled: () -> Boolean) = WickPadMaker.renderZone(spec, midi, cancelled)
+        override fun preview(cancelled: () -> Boolean) = WickPadMaker.preview(spec, cancelled)
+        override fun export(name: String, notes: List<List<KeyNote>>, destRoot: File) =
+            WickPadMaker.export(name, spec, notes, destRoot)
+    }
+
+    /** Finite ETCH notes keep their own gate and release, so this sheet has no replacement release knob. */
+    class Etch(private val spec: EtchPadMaker.Spec) : HeldSpec {
+        override val zoneMidis get() = EtchPadMaker.zoneMidis(spec)
+        override val hasAttack get() = false
+        override val hasRelease get() = false
+        override fun shelfNote(name: String) = if (name.isEmpty()) "" else "Lands in the LIBRARY as $name, playable on keyboard."
+        override val progressPerZone get() = 3
+        override val knobLabel get() = "FINITE NOTE · THREE TOUCH LAYERS"
+        override val instrumentNote get() = EtchPadMaker.instrumentNote(spec)
+        override fun renderZone(midi: Int, cancelled: () -> Boolean) = EtchPadMaker.renderZone(spec, midi, cancelled)
+        override fun preview(cancelled: () -> Boolean) = EtchPadMaker.preview(spec, cancelled)
+        override fun export(name: String, notes: List<List<KeyNote>>, destRoot: File) =
+            EtchPadMaker.export(name, spec, notes, destRoot)
+    }
+
+    /** Finite source samples use their saved envelope, so this sheet has no replacement release knob. */
+    class Osteria(private val spec: OsteriaPadMaker.Spec) : HeldSpec {
+        override val zoneMidis get() = OsteriaPadMaker.zoneMidis
+        override val hasAttack get() = false
+        override val hasRelease get() = false
+        override fun shelfNote(name: String) = if (name.isEmpty()) "" else "Lands in the LIBRARY as $name, playable on keyboard."
+        override val progressPerZone get() = 3
+        override val knobLabel get() = "SAVED SOURCE ENVELOPE · THREE TOUCH LAYERS"
+        override val instrumentNote get() = OsteriaPadMaker.INSTRUMENT_NOTE
+        override fun renderZone(midi: Int, cancelled: () -> Boolean) = OsteriaPadMaker.renderZone(spec, midi, cancelled)
+        override fun preview(cancelled: () -> Boolean) = OsteriaPadMaker.preview(spec, cancelled)
+        override fun export(name: String, notes: List<List<KeyNote>>, destRoot: File) =
+            OsteriaPadMaker.export(name, spec, notes, destRoot)
     }
 
     class Trefoil(private val spec: TrefoilPadMaker.Spec) : HeldSpec {
@@ -5157,7 +5765,7 @@ internal sealed interface HeldSpec {
         override val hasAttack get() = false
         override val releaseFraction get() = TrefoilPadMaker.RELEASE.fraction(spec.releaseSeconds)
         override val knobLabel get() = "RELEASE ${TrefoilPadMaker.secondsLabel(spec.releaseSeconds)}"
-        override val instrumentNote get() = "ORDERED ENERGY EXCHANGE WHILE HELD. LIFT A KEY TO RELEASE."
+        override val instrumentNote get() = "Ordered energy exchange while held. Lift a key to release."
         override fun renderZone(midi: Int, cancelled: () -> Boolean) = listOf(TrefoilPadMaker.renderZone(spec, midi, cancelled))
         override fun preview(cancelled: () -> Boolean) = TrefoilPadMaker.preview(spec, cancelled)
         override fun export(name: String, notes: List<List<KeyNote>>, destRoot: File) =
@@ -5170,8 +5778,8 @@ internal sealed interface HeldSpec {
         override val releaseFraction get() = OhmPadMaker.RELEASE.fraction(spec.releaseSeconds)
         override val knobLabel get() = "RELEASE ${OhmPadMaker.secondsLabel(spec.releaseSeconds)}"
         override val instrumentNote get() = if (spec.patch.model == 5)
-            "FINITE NOTES; RELEASE STOPS RINGING."
-        else "C3–C5 · KEEPS THE ARRIVAL, THEN HOLDS THE SHARED TONE. LET GO TO RELEASE."
+            "Finite notes; release stops ringing."
+        else "C3–C5 · keeps the arrival, then holds the shared tone. Let go to release."
         override fun renderZone(midi: Int, cancelled: () -> Boolean) = listOf(OhmPadMaker.renderZone(spec, midi, cancelled))
         override fun preview(cancelled: () -> Boolean) = OhmPadMaker.preview(spec, cancelled)
         override fun export(name: String, notes: List<List<KeyNote>>, destRoot: File) =
@@ -5185,10 +5793,10 @@ internal sealed interface HeldSpec {
         override val knobLabel get() = "RELEASE %.2f s".format(Locale.ROOT, spec.releaseSeconds)
         override val instrumentNote get() = when {
             spec.patch.expression == OrigamiExpression.TOUCH ->
-                "C3–C5 · SOFT, MID AND HARD HITS CHANGE SOURCE AND FOLDED COLOR. HOLD TO SUSTAIN; LET GO TO FADE."
+                "C3–C5 · soft, mid and hard hits change source and folded color. Hold to sustain; let go to fade."
             spec.layerCount > 1 ->
-                "C3–C5 · SOFT, MID AND HARD TOUCH CHANGE FOLDED COLOR. HOLD TO SUSTAIN; LET GO TO FADE."
-            else -> "C3–C5 · HOLD A KEY TO SUSTAIN. LET GO TO FADE."
+                "C3–C5 · soft, mid and hard touch change folded color. Hold to sustain; let go to fade."
+            else -> "C3–C5 · hold a key to sustain. Let go to fade."
         }
         override fun renderZone(midi: Int, cancelled: () -> Boolean) = OrigamiPadMaker.renderVelocityZone(spec, midi, cancelled)
         override fun preview(cancelled: () -> Boolean) = OrigamiPadMaker.preview(spec, cancelled)
@@ -5204,11 +5812,11 @@ internal sealed interface HeldSpec {
         override val wideKeys get() = spec.wideKeys
         override val keyRangeLabel get() = "${spec.rangeLabel} · ${zoneMidis.size * spec.layerCount} SAMPLES"
         override val touchLayersNote get() =
-            "ON: SOFT, MID AND HARD TOUCH CHANGE THE ATTACK AND TONE. VELOCITY SETS THE HARD TOUCH. THREE SAMPLES PER NOTE; ABOUT 3× THE TIME AND STORAGE."
+            "On: soft, mid and hard touch change the attack and tone. Velocity sets the hard touch. Three samples per note; about 3× the time and storage."
         override val knobLabel get() = "RELEASE ${FilamentPadMaker.secondsLabel(spec.releaseSeconds)}"
         override val instrumentNote get() = if (spec.touchLayers)
-            "NATIVE ${spec.rangeLabel} · SOFT, MID AND HARD TOUCH KEEP THEIR ATTACK AND SUSTAIN. PREVIEW: C4, ALL THREE TOUCHES. LET GO TO FADE."
-        else "NATIVE ${spec.rangeLabel} · KEEPS THE ATTACK. HOLD A KEY TO SUSTAIN; LET GO TO FADE."
+            "Native ${spec.rangeLabel} · soft, mid and hard touch keep their attack and sustain. PREVIEW: C4, all three touches. Let go to fade."
+        else "Native ${spec.rangeLabel} · keeps the attack. Hold a key to sustain; let go to fade."
         override fun renderZone(midi: Int, cancelled: () -> Boolean) = FilamentPadMaker.renderLayers(spec, midi, cancelled)
         override fun preview(cancelled: () -> Boolean) = FilamentPadMaker.preview(spec, cancelled)
         override fun export(name: String, notes: List<List<KeyNote>>, destRoot: File) =
@@ -5216,12 +5824,44 @@ internal sealed interface HeldSpec {
     }
 }
 
+/** MURMUR's selected PLUCK sheet: the shared held sheet with a key release and a chord preview. */
+@Composable
+private fun MurmurSelectedInstrumentSheet(
+    spec: MurmurSelectedInstrumentMaker.Spec,
+    state: HeldSheetState,
+    delivery: MurmurSelectedDeliveryState,
+    fillColor: Color,
+    scheme: Scheme,
+    onPreview: () -> Unit,
+    onPreviewChord: () -> Unit,
+    onMake: () -> Unit,
+    onCancel: () -> Unit,
+) {
+    val range = "${Scales.nameOf(spec.supportedMidi.first)}–${Scales.nameOf(spec.supportedMidi.last)}"
+    HeldInstrumentSheet(
+        heading = "MURMUR · ${if (spec.held) "HELD" else "FINITE"} PLUCK",
+        nameNote = if (state.holdName.isEmpty()) "" else
+            "LANDS IN THE LIBRARY AS ${state.holdName.uppercase(Locale.ROOT)}, PLAYABLE ON KEYS.",
+        hasAttack = false, hasRelease = true, attack = 0f, release = delivery.releaseFraction,
+        knobLabel = String.format(Locale.ROOT, "KEY RELEASE %.2f SECONDS", spec.releaseSeconds),
+        instrumentNote = "$range · ${Copy.INSTRUMENT_NOTE_TOUCH} " +
+            if (spec.held) Copy.INSTRUMENT_NOTE_HELD
+            else Copy.INSTRUMENT_NOTE_FINITE,
+        touchLayers = null, touchLayersNote = null, wideKeys = null, keyRangeLabel = null,
+        done = state.holdDone, total = state.holdTotal, previewing = state.holdPreviewing,
+        heldPreview = null, fillColor = fillColor, scheme = scheme,
+        onAttack = {}, onRelease = delivery::setRelease, onTouchLayers = {}, onWideKeys = {},
+        onPreview = onPreview, onMake = onMake, onCancel = onCancel,
+        onPreviewChord = onPreviewChord, allowCancelDuringWrite = true,
+    )
+}
+
 /**
  * MAKE INSTRUMENT ▸'s sheet (RESIN, SIREN, GLINT, REGISTERS, CREASE, BELLOWS, CONTOUR, BALLAST, MERCURY, KEEL, OPENSKY HALO or ORIGAMI FAN/STILL): [PresetNameDialog]'s frame -
  * scrim, raised bevel, CANCEL beside the real buttons - over the knobs a
  * held note has that a one-shot never needed. [hasAttack] hides ATTACK's
- * slider for an engine with none to dial (SIREN, GLINT, REGISTERS, OPENSKY HALO); RELEASE always shows,
- * and [knobLabel] spells out whichever of the two apply in seconds. The
+ * slider for an engine with none to dial (SIREN, GLINT, REGISTERS, OPENSKY HALO); [hasRelease] hides
+ * RELEASE for a finite source that keeps its own envelope (WICK, MERIDIAN finite keys, OSTERIA, ETCH), and [knobLabel] spells out whichever of the two apply in seconds. The
  * optional touch-layer button leaves the saved recipe alone. While
  * MAKE runs the knobs give way to [HeldProgress], a bar that fills as each
  * zone lands and the line counting them; PREVIEW's one zone says
@@ -5231,8 +5871,9 @@ internal sealed interface HeldSpec {
 @Composable
 private fun HeldInstrumentSheet(
     heading: String,
-    name: String,
+    nameNote: String,
     hasAttack: Boolean,
+    hasRelease: Boolean = true,
     attack: Float,
     release: Float,
     knobLabel: String,
@@ -5254,10 +5895,12 @@ private fun HeldInstrumentSheet(
     onPreview: () -> Unit,
     onMake: () -> Unit,
     onCancel: () -> Unit,
+    onPreviewChord: (() -> Unit)? = null,
+    allowCancelDuringWrite: Boolean = false,
 ) {
     val making = done >= 0
     val busy = making || previewing
-    val writing = making && done >= total
+    val writing = making && done >= total && !allowCancelDuringWrite
     Box(
         Modifier
             .fillMaxSize()
@@ -5280,8 +5923,8 @@ private fun HeldInstrumentSheet(
         ) {
             TapeText("MAKE INSTRUMENT", TapeType.lcdSmall, scheme.ink.tape)
             TapeText(heading, TapeType.pixel, scheme.ink2.tape)
-            if (name.isNotEmpty()) {
-                TapeText(Copy.heldInstrumentNote(name), TapeType.pixelSmall, scheme.ink2.tape, maxLines = 4)
+            if (nameNote.isNotEmpty()) {
+                TapeText(nameNote, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 4)
             }
             if (instrumentNote != null) {
                 TapeText(instrumentNote, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 4)
@@ -5290,7 +5933,7 @@ private fun HeldInstrumentSheet(
                 HeldProgress(done, total, fillColor, scheme)
             } else {
                 if (hasAttack) MacroSlider("ATTACK", attack, fillColor, scheme, onAttack)
-                MacroSlider("RELEASE", release, fillColor, scheme, onRelease)
+                if (hasRelease) MacroSlider("RELEASE", release, fillColor, scheme, onRelease)
                 TapeText(knobLabel, TapeType.pixelSmall, scheme.ink2.tape)
                 if (wideKeys != null) {
                     ActionButton(
@@ -5310,16 +5953,20 @@ private fun HeldInstrumentSheet(
                         modifier = Modifier.fillMaxWidth().semantics { selected = touchLayers },
                     ) { onTouchLayers(!touchLayers) }
                     TapeText(
-                        touchLayersNote ?: "ON: SOFT, MID AND HARD TOUCH CHANGE PRESSURE AND TONE. THREE SAMPLES PER NOTE; ABOUT 3× THE TIME AND STORAGE.",
+                        touchLayersNote ?: "On: soft, mid and hard touch change pressure and tone. Three samples per note; about 3× the time and storage.",
                         TapeType.pixelSmall, scheme.ink2.tape, maxLines = 5,
                     )
                 }
-                if (previewing) TapeText("RENDERING…", TapeType.lcdSmall, scheme.amber.tape)
+                if (previewing) TapeText("RENDERING…", TapeType.lcdSmall, scheme.accent.tape)
                 if (heldPreview != null) FlockHeldAudition(heldPreview, fillColor, scheme,
                     accessibilityLabel = "INSTRUMENT AUDITION")
             }
+            if (onPreviewChord != null) {
+                ActionButton("MINOR CHORD PREVIEW", scheme, enabled = !busy,
+                    modifier = Modifier.fillMaxWidth(), onClick = onPreviewChord)
+            }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                ActionButton("CANCEL", scheme, enabled = !writing, modifier = Modifier.weight(1f), onClick = onCancel)
+                ActionButton("CANCEL", scheme, enabled = !writing, modifier = Modifier.weight(1f), tier = ButtonTier.Text, onClick = onCancel)
                 if (heldPreview == null) {
                     ActionButton("PREVIEW", scheme, enabled = !busy, dimmed = busy, modifier = Modifier.weight(1f), onClick = onPreview)
                 }
@@ -5467,9 +6114,9 @@ private fun DroneSheet(
                     }
                 }
             }
-            if (previewing) TapeText("RENDERING…", TapeType.lcdSmall, scheme.amber.tape)
+            if (previewing) TapeText("RENDERING…", TapeType.lcdSmall, scheme.accent.tape)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                ActionButton("CANCEL", scheme, enabled = true, modifier = Modifier.weight(1f), onClick = onCancel)
+                ActionButton("CANCEL", scheme, enabled = true, modifier = Modifier.weight(1f), tier = ButtonTier.Text, onClick = onCancel)
                 ActionButton(
                     "PREVIEW",
                     scheme,
@@ -5513,11 +6160,39 @@ private fun HeldProgress(done: Int, total: Int, fillColor: Color, scheme: Scheme
         ) {
             Box(Modifier.fillMaxHeight().fillMaxWidth(fraction).background(fillColor.copy(alpha = 0.85f)))
         }
-        TapeText(line, TapeType.lcdSmall, scheme.amber.tape)
+        TapeText(line, TapeType.lcdSmall, scheme.accent.tape)
     }
 }
 
 /** Copy the current typed performance rather than a stale composition snapshot. */
+@Composable
+private fun RivetPerformanceControls(
+    patch: RivetPatch,
+    fill: Color,
+    scheme: Scheme,
+    onEdit: (RivetVoice, (RivetPatch) -> RivetPatch) -> Unit,
+) {
+    MacroSlider("VELOCITY", patch.velocity, fill, scheme,
+        onValueChange = { value -> onEdit(patch.voice) { it.copy(velocity = value.coerceIn(0f, 1f)) } })
+    TapeText("Finite hit · size opens the room · walls sets the ring.",
+        TapeType.lcdSmall, scheme.ink2.tape)
+}
+
+/** ETCH's note is the shared ROOT/OCT row; VELOCITY is the accent, so a harder note opens the filter further. */
+@Composable
+private fun EtchPerformanceControls(
+    patch: EtchPatch,
+    fill: Color,
+    scheme: Scheme,
+    onEdit: (EtchVoice, (EtchPatch) -> EtchPatch) -> Unit,
+) {
+    MacroSlider("VELOCITY", patch.velocity, fill, scheme,
+        onValueChange = { value -> onEdit(patch.voice) { it.copy(velocity = value.coerceIn(0f, 1f)) } })
+    TapeText(if (Etch.isLoop(patch.macros["HOLD"] ?: 0f))
+        "HOLD PLAYS THE SIXTEEN-STEP LINE AS A LOOP" else "One note · HOLD sets the gate.",
+        TapeType.lcdSmall, scheme.ink2.tape)
+}
+
 @Composable
 private fun WickPerformanceControls(
     patch: WickPatch,
@@ -5548,7 +6223,7 @@ private fun WickPerformanceControls(
         }
     }
     TapeText(if (Wick.isLoop(patch.macros["HOLD"] ?: 0f))
-        "HOLD REPEATS THE MOVEMENT" else "PLAYS ONCE · LET THE TAIL RING.",
+        "HOLD REPEATS THE MOVEMENT" else "Plays once · let the tail ring.",
         TapeType.lcdSmall, scheme.ink2.tape)
 }
 
@@ -5584,7 +6259,7 @@ internal fun AccordPerformanceControls(
             }
         }
     }
-    TapeText("PLAYS ONCE · LET THE TAIL RING.", TapeType.lcdSmall, scheme.ink2.tape)
+    TapeText("Plays once · let the tail ring.", TapeType.lcdSmall, scheme.ink2.tape)
 }
 
 /** Keep the saved phrase and velocity intact while the player chooses the pulse gesture. */
@@ -5696,7 +6371,7 @@ internal fun TidalPerformanceControls(
         )
     }
     if (seedText.toLongOrNull() == null) {
-        TapeText("INVALID SEED · PREVIOUS VARIATION KEPT", TapeType.pixelSmall, scheme.warn.tape, maxLines = 3)
+        TapeText("INVALID SEED · PREVIOUS VARIATION KEPT", TapeType.pixelSmall, scheme.warnInk.tape, maxLines = 3)
     }
     TapeText("PLAYBACK", TapeType.pixelSmall, scheme.ink2.tape)
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -5735,7 +6410,7 @@ private enum class ObbligatoVoice { AIR_REED }
  */
 private enum class Engine {
     LATTICE, ACCORD,
-    THUMP, SCANNED_CHAIN, SKIN, ONSET, TINES, VELVET, VOX, PLUCK, ORPHICA, TONEWHEEL, OTIS, REGISTERS, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, AEROSTAT, TREMOR, BALLAST, CISTERN, CIRCUIT, OBBLIGATO, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVERLAP, OVEN, FLOCK, VENT, CREASE, TRIO, NACRE, ORIGAMI, TREFOIL, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS, TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME, BORE, ARCO, SCOUR, KEEL, CHITIN, WICK;
+    THUMP, SCANNED_CHAIN, SKIN, ONSET, TINES, VELVET, VOX, PLUCK, ORPHICA, TONEWHEEL, OTIS, REGISTERS, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, HALOBAR, FLOTILLA, AEROSTAT, TREMOR, BALLAST, CISTERN, CIRCUIT, OBBLIGATO, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVERLAP, OVEN, FLOCK, VENT, CREASE, TRIO, NACRE, ORIGAMI, TREFOIL, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS, TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME, BORE, ARCO, SCOUR, KEEL, CHITIN, WICK, EROSION, RIVET, FIRED_BRONZE, BACKWASH, SOOT, TEMPEST, SPLAY, OSTERIA, ETCH;
     val displayName: String get() = name.replace('_', ' ')
 
     /** The engine after this one in the enum's order, wrapping from the last back to the first. */
@@ -5745,10 +6420,14 @@ private enum class Engine {
     fun previous(): Engine = entries[(ordinal + entries.size - 1) % entries.size]
 
     fun voices(): List<Enum<*>> = when (this) {
+        SPLAY -> SplayVoice.entries
         CHITIN -> ChitinVoice.entries
         THUMP -> ThumpVoice.entries
         SCANNED_CHAIN -> ScannedChainVoice.entries
+        FIRED_BRONZE -> FiredBronzeDryKit.Pad.entries
         SKIN -> SkinVoice.entries
+        BACKWASH -> BackwashVoice.entries
+        SOOT -> SootVoice.entries
         ONSET -> listOf(
             OnsetVoice.KICK, OnsetVoice.SNARE, OnsetVoice.HAT_CLOSED, OnsetVoice.HAT_OPEN,
             OnsetVoice.TOM, OnsetVoice.PERC_PLUCK, OnsetVoice.PERC_WOOD, OnsetVoice.PERC_METAL,
@@ -5759,7 +6438,10 @@ private enum class Engine {
         PLUCK -> PluckVoice.entries
         ORPHICA -> OrphicaMaterial.entries
         TONEWHEEL -> TonewheelVoice.entries
+        RIVET -> RivetVoice.entries
+        TEMPEST -> TempestVoice.entries
         WICK -> WickVoice.entries
+        ETCH -> EtchVoice.entries
         OTIS -> OtisVoice.entries
         REGISTERS -> RegistersVoice.entries
         FATHOM -> FathomVoice.entries
@@ -5768,6 +6450,7 @@ private enum class Engine {
         GLINT -> GlintVoice.entries
         SIREN -> SirenVoice.entries
         FORK -> ForkVoice.entries
+        HALOBAR -> HalobarVoice.entries
         FLOTILLA -> FlotillaVoice.entries
         AEROSTAT -> AerostatVoice.entries
         TREMOR -> TremorVoice.entries
@@ -5825,14 +6508,20 @@ private enum class Engine {
         BORE -> BoreVoice.entries
         ARCO -> ArcoVoice.entries
         SCOUR -> ScourVoice.entries
+        EROSION -> ErosionVoice.entries
+        OSTERIA -> OsteriaVoice.entries
         KEEL -> KeelVoice.entries
     }
 
     fun macrosFor(voice: Enum<*>) = when (this) {
+        SPLAY -> Splay.macrosFor(voice as SplayVoice).filterNot { it.name == "HOLD" }
         CHITIN -> Chitin.macrosFor(voice as ChitinVoice)
         THUMP -> Thump.macrosFor(voice as ThumpVoice)
         SCANNED_CHAIN -> ScannedChain.macrosFor(voice as ScannedChainVoice)
+        FIRED_BRONZE -> FiredBronzeInstrument.macros
         SKIN -> Skin.macrosFor(voice as SkinVoice)
+        BACKWASH -> Backwash.macrosFor(voice as BackwashVoice)
+        SOOT -> Soot.macrosFor(voice as SootVoice)
         ONSET -> Onset.macrosFor(voice as OnsetVoice)
         TINES -> Tines.macrosFor(voice as TinesVoice)
         VELVET -> Velvet.macrosFor(voice as VelvetVoice)
@@ -5840,7 +6529,10 @@ private enum class Engine {
         PLUCK -> Pluck.macrosFor(voice as PluckVoice)
         ORPHICA -> Orphica.macrosFor(voice as OrphicaMaterial)
         TONEWHEEL -> Tonewheel.macrosFor(voice as TonewheelVoice)
+        RIVET -> Rivet.macrosFor(voice as RivetVoice).filterNot { it.name == "HOLD" }
+        TEMPEST -> Tempest.macrosFor(voice as TempestVoice).filterNot { it.name == "HOLD" }
         WICK -> Wick.macrosFor(voice as WickVoice)
+        ETCH -> Etch.macrosFor(voice as EtchVoice)
         OTIS -> Otis.macrosFor(voice as OtisVoice)
         REGISTERS -> Registers.macrosFor(voice as RegistersVoice)
         FATHOM -> Fathom.macrosFor(voice as FathomVoice)
@@ -5849,6 +6541,7 @@ private enum class Engine {
         GLINT -> Glint.macrosFor(voice as GlintVoice)
         SIREN -> Siren.macrosFor(voice as SirenVoice)
         FORK -> Fork.macrosFor(voice as ForkVoice)
+        HALOBAR -> Halobar.macrosFor(voice as HalobarVoice)
         FLOTILLA -> Flotilla.macrosFor(voice as FlotillaVoice)
         AEROSTAT -> Aerostat.macrosFor(voice as AerostatVoice)
         TREMOR -> Tremor.macrosFor(voice as TremorVoice)
@@ -5899,6 +6592,8 @@ private enum class Engine {
         BORE -> Bore.macrosFor(voice as BoreVoice)
         ARCO -> Arco.macrosFor(voice as ArcoVoice)
         SCOUR -> Scour.macrosFor(voice as ScourVoice)
+        EROSION -> Erosion.macrosFor(voice as ErosionVoice)
+        OSTERIA -> Osteria.macrosFor(voice as OsteriaVoice)
         KEEL -> Keel.macrosFor(voice as KeelVoice)
         FILAMENT -> Filament.macrosFor(voice as FilamentVoice)
         TIDAL -> Tidal.macrosFor(voice as TidalVoice).filterNot { it.name == "HOLD" }
@@ -5908,10 +6603,14 @@ private enum class Engine {
     }
 
     fun defaults(voice: Enum<*>): Map<String, Float> = when (this) {
+        SPLAY -> Splay.defaults(voice as SplayVoice)
         CHITIN -> Chitin.defaults(voice as ChitinVoice)
         THUMP -> Thump.defaults(voice as ThumpVoice)
         SCANNED_CHAIN -> ScannedChain.defaults(voice as ScannedChainVoice)
+        FIRED_BRONZE -> FiredBronzeInstrument.defaults()
         SKIN -> Skin.defaults(voice as SkinVoice)
+        BACKWASH -> Backwash.defaults(voice as BackwashVoice)
+        SOOT -> Soot.defaults(voice as SootVoice)
         ONSET -> Onset.defaults(voice as OnsetVoice)
         TINES -> Tines.defaults(voice as TinesVoice)
         VELVET -> Velvet.defaults(voice as VelvetVoice)
@@ -5919,7 +6618,10 @@ private enum class Engine {
         PLUCK -> Pluck.defaults(voice as PluckVoice)
         ORPHICA -> Orphica.defaults(voice as OrphicaMaterial)
         TONEWHEEL -> Tonewheel.defaults(voice as TonewheelVoice)
+        RIVET -> RivetPresets.forVoice(voice as RivetVoice).first().macros
+        TEMPEST -> Tempest.defaults(voice as TempestVoice)
         WICK -> Wick.defaults(voice as WickVoice)
+        ETCH -> Etch.defaults(voice as EtchVoice)
         OTIS -> Otis.defaults(voice as OtisVoice)
         REGISTERS -> Registers.defaults(voice as RegistersVoice)
         FATHOM -> Fathom.defaults(voice as FathomVoice)
@@ -5928,6 +6630,7 @@ private enum class Engine {
         GLINT -> Glint.defaults(voice as GlintVoice)
         SIREN -> Siren.defaults(voice as SirenVoice)
         FORK -> Fork.defaults(voice as ForkVoice)
+        HALOBAR -> Halobar.defaults(voice as HalobarVoice)
         FLOTILLA -> Flotilla.defaults(voice as FlotillaVoice)
         AEROSTAT -> Aerostat.defaults(voice as AerostatVoice)
         TREMOR -> Tremor.defaults(voice as TremorVoice)
@@ -5978,6 +6681,8 @@ private enum class Engine {
         BORE -> Bore.defaults(voice as BoreVoice)
         ARCO -> Arco.defaults(voice as ArcoVoice)
         SCOUR -> Scour.defaults(voice as ScourVoice)
+        EROSION -> Erosion.defaults(voice as ErosionVoice)
+        OSTERIA -> Osteria.defaults(voice as OsteriaVoice)
         KEEL -> Keel.defaults(voice as KeelVoice)
         FILAMENT -> Filament.defaults(voice as FilamentVoice)
         TIDAL -> Tidal.defaults(voice as TidalVoice)
@@ -5987,10 +6692,14 @@ private enum class Engine {
     }
 
     fun scramble(voice: Enum<*>, random: Random): Map<String, Float> = when (this) {
+        SPLAY -> Splay.scramble(voice as SplayVoice, random)
         CHITIN -> Chitin.scramble(voice as ChitinVoice, random)
         THUMP -> Thump.scramble(voice as ThumpVoice, random)
         SCANNED_CHAIN -> ScannedChain.scramble(voice as ScannedChainVoice, random)
+        FIRED_BRONZE -> FiredBronzeInstrument.scramble(random)
         SKIN -> Skin.scramble(voice as SkinVoice, random)
+        BACKWASH -> Backwash.scramble(voice as BackwashVoice, random)
+        SOOT -> Soot.scramble(voice as SootVoice, random)
         ONSET -> Onset.scramble(voice as OnsetVoice, random)
         TINES -> Tines.scramble(voice as TinesVoice, random)
         VELVET -> Velvet.scramble(voice as VelvetVoice, random)
@@ -6000,7 +6709,10 @@ private enum class Engine {
             it.name to if (it.name == "HOLD") random.nextFloat() * .95f else random.nextFloat()
         }
         TONEWHEEL -> Tonewheel.scramble(voice as TonewheelVoice, random)
+        RIVET -> Rivet.scramble(voice as RivetVoice, random)
+        TEMPEST -> Tempest.scramble(voice as TempestVoice, random)
         WICK -> Wick.scramble(voice as WickVoice, random)
+        ETCH -> Etch.scramble(voice as EtchVoice, random)
         OTIS -> Otis.scramble(voice as OtisVoice, random)
         REGISTERS -> Registers.scramble(voice as RegistersVoice, random)
         FATHOM -> Fathom.scramble(voice as FathomVoice, random)
@@ -6009,6 +6721,7 @@ private enum class Engine {
         GLINT -> Glint.scramble(voice as GlintVoice, random)
         SIREN -> Siren.scramble(voice as SirenVoice, random)
         FORK -> Fork.scramble(voice as ForkVoice, random)
+        HALOBAR -> Halobar.scramble(voice as HalobarVoice, random)
         FLOTILLA -> Flotilla.scramble(voice as FlotillaVoice, random)
         AEROSTAT -> Aerostat.scramble(voice as AerostatVoice, random)
         TREMOR -> Tremor.macrosFor(voice as TremorVoice).associate { it.name to random.nextFloat() }
@@ -6061,6 +6774,8 @@ private enum class Engine {
         BORE -> Bore.scramble(voice as BoreVoice, random)
         ARCO -> Arco.scramble(voice as ArcoVoice, random)
         SCOUR -> Scour.scramble(voice as ScourVoice, random)
+        EROSION -> Erosion.scramble(voice as ErosionVoice, random)
+        OSTERIA -> Osteria.scramble(voice as OsteriaVoice, random)
         KEEL -> Keel.scramble(voice as KeelVoice, random)
         FILAMENT -> Filament.scramble(voice as FilamentVoice, random)
         TIDAL -> Tidal.scramble(voice as TidalVoice, random)
@@ -6080,10 +6795,14 @@ private enum class Engine {
     // key-patch side), but its default already produces the one-shot stab
     // this screen wants, so the uniform two-arg call reaches it fine.
     fun render(voice: Enum<*>, macros: Map<String, Float>): Snip = when (this) {
+        SPLAY -> Splay.render(voice as SplayVoice, macros)
         CHITIN -> Chitin.render(voice as ChitinVoice, macros)
         THUMP -> Thump.render(voice as ThumpVoice, macros)
         SCANNED_CHAIN -> ScannedChain.render(voice as ScannedChainVoice, macros)
+        FIRED_BRONZE -> FiredBronzeInstrument.render(voice as FiredBronzeDryKit.Pad, macros)
         SKIN -> Skin.render(voice as SkinVoice, macros)
+        BACKWASH -> BackwashPatch("Backwash", voice as BackwashVoice, macros).render()
+        SOOT -> SootPatch("Soot", voice as SootVoice, macros).render()
         ONSET -> Onset.render(voice as OnsetVoice, macros)
         TINES -> Tines.render(voice as TinesVoice, macros)
         VELVET -> Velvet.render(voice as VelvetVoice, macros)
@@ -6091,7 +6810,10 @@ private enum class Engine {
         PLUCK -> Pluck.render(voice as PluckVoice, macros, velocity = if (voice == PluckVoice.UPRIGHT) .65f else 1f)
         ORPHICA -> buildPatch(patchDisplayName(voice), voice, macros).render()
         TONEWHEEL -> Tonewheel.render(voice as TonewheelVoice, macros)
+        RIVET -> Rivet.render(voice as RivetVoice, macros)
+        TEMPEST -> Tempest.render(voice as TempestVoice, macros)
         WICK -> Wick.render(voice as WickVoice, macros)
+        ETCH -> Etch.render(voice as EtchVoice, macros)
         OTIS -> Otis.render(voice as OtisVoice, macros)
         REGISTERS -> Registers.render(voice as RegistersVoice, macros)
         FATHOM -> Fathom.render(voice as FathomVoice, macros)
@@ -6100,6 +6822,7 @@ private enum class Engine {
         GLINT -> Glint.render(voice as GlintVoice, macros)
         SIREN -> Siren.render(voice as SirenVoice, macros)
         FORK -> Fork.render(voice as ForkVoice, macros)
+        HALOBAR -> Halobar.render(voice as HalobarVoice, macros)
         FLOTILLA -> Flotilla.render(voice as FlotillaVoice, macros)
         AEROSTAT -> Aerostat.render(voice as AerostatVoice, macros)
         TREMOR -> Tremor.render(voice as TremorVoice, macros)
@@ -6150,6 +6873,8 @@ private enum class Engine {
         BORE -> Bore.render(voice as BoreVoice, macros)
         ARCO -> Arco.render(voice as ArcoVoice, macros)
         SCOUR -> Scour.render(voice as ScourVoice, macros)
+        EROSION -> Erosion.render(voice as ErosionVoice, macros)
+        OSTERIA -> Osteria.render(voice as OsteriaVoice, macros)
         KEEL -> Keel.render(voice as KeelVoice, macros)
         FILAMENT -> Filament.render(voice as FilamentVoice, macros)
         TIDAL -> Tidal.render(voice as TidalVoice, macros)
@@ -6163,10 +6888,14 @@ private enum class Engine {
      * only where one knob picks the drum: VOX BEATBOX's HIT.
      */
     fun drumClass(voice: Enum<*>, macros: Map<String, Float> = emptyMap()): DrumClass = when (this) {
+        SPLAY -> Splay.drumClassFor(voice as SplayVoice, macros)
         CHITIN -> Chitin.drumClassFor(voice as ChitinVoice, macros)
         THUMP -> (voice as ThumpVoice).drumClass
         SCANNED_CHAIN -> ScannedChain.drumClassFor(voice as ScannedChainVoice, macros)
+        FIRED_BRONZE -> (voice as FiredBronzeDryKit.Pad).kind
         SKIN -> (voice as SkinVoice).drumClass
+        BACKWASH -> Backwash.drumClassFor(voice as BackwashVoice)
+        SOOT -> Soot.drumClassFor(voice as SootVoice)
         ONSET -> (voice as OnsetVoice).drumClass
         TINES -> (voice as TinesVoice).drumClass
         VELVET -> Velvet.drumClassFor(voice as VelvetVoice, macros)
@@ -6174,7 +6903,10 @@ private enum class Engine {
         PLUCK -> (voice as PluckVoice).drumClass
         ORPHICA -> if (Orphica.isLoop(macros["HOLD"] ?: 0f)) DrumClass.LOOP else DrumClass.TONAL
         TONEWHEEL -> Tonewheel.drumClassFor(voice as TonewheelVoice, macros)
+        RIVET -> Rivet.drumClassFor(voice as RivetVoice, macros)
+        TEMPEST -> Tempest.drumClassFor(voice as TempestVoice, macros)
         WICK -> Wick.drumClassFor(voice as WickVoice, macros)
+        ETCH -> Etch.drumClassFor(voice as EtchVoice, macros)
         OTIS -> Otis.drumClassFor(voice as OtisVoice, macros)
         REGISTERS -> Registers.drumClassFor(voice as RegistersVoice, macros)
         FATHOM -> Fathom.drumClassFor(voice as FathomVoice, macros)
@@ -6185,6 +6917,7 @@ private enum class Engine {
         SIREN -> Siren.drumClassFor(voice as SirenVoice, macros)
         // FORK: DECAY alone decides it, the same shape SIREN's HOLD takes.
         FORK -> Fork.drumClassFor(voice as ForkVoice, macros)
+        HALOBAR -> Halobar.drumClassFor(voice as HalobarVoice, macros)
         FLOTILLA -> Flotilla.drumClassFor(voice as FlotillaVoice, macros)
         AEROSTAT -> Aerostat.drumClassFor(voice as AerostatVoice, macros)
         TREMOR -> Tremor.drumClassFor(voice as TremorVoice, macros)
@@ -6236,6 +6969,8 @@ private enum class Engine {
         BORE -> Bore.drumClassFor(voice as BoreVoice, macros)
         ARCO -> Arco.drumClassFor(voice as ArcoVoice, macros)
         SCOUR -> Scour.drumClassFor(voice as ScourVoice, macros)
+        EROSION -> Erosion.drumClassFor(voice as ErosionVoice, macros)
+        OSTERIA -> Osteria.drumClassFor(voice as OsteriaVoice, macros)
         KEEL -> Keel.drumClassFor(voice as KeelVoice, macros)
         FILAMENT -> Filament.drumClassFor(voice as FilamentVoice, macros)
         TIDAL -> Tidal.drumClassFor(voice as TidalVoice, macros)
@@ -6245,10 +6980,14 @@ private enum class Engine {
     }
 
     fun buildPatch(name: String, voice: Enum<*>, macros: Map<String, Float>): Patch = when (this) {
+        SPLAY -> SplayPatch(name, voice as SplayVoice, macros)
         CHITIN -> ChitinPatch(name, voice as ChitinVoice, macros)
         THUMP -> ThumpPatch(name, voice as ThumpVoice, macros)
         SCANNED_CHAIN -> ScannedChainPatch(name, voice as ScannedChainVoice, macros)
+        FIRED_BRONZE -> FiredBronzePatch(name, voice as FiredBronzeDryKit.Pad, macros)
         SKIN -> SkinPatch(name, voice as SkinVoice, macros)
+        BACKWASH -> BackwashPatch(name, voice as BackwashVoice, macros)
+        SOOT -> SootPatch(name, voice as SootVoice, macros)
         ONSET -> OnsetPatch(name, voice as OnsetVoice, macros)
         TINES -> TinesPatch(name, voice as TinesVoice, macros)
         VELVET -> VelvetPatch(name, voice as VelvetVoice, macros)
@@ -6256,7 +6995,10 @@ private enum class Engine {
         PLUCK -> PluckPatch(name, voice as PluckVoice, macros, velocity = if (voice == PluckVoice.UPRIGHT) .65f else 1f)
         ORPHICA -> OrphicaPatch(name, OrphicaConfig(material = voice as OrphicaMaterial), macros)
         TONEWHEEL -> TonewheelPatch(name, voice as TonewheelVoice, macros)
+        RIVET -> RivetPatch(name, voice as RivetVoice, macros)
+        TEMPEST -> TempestPatch(name, voice as TempestVoice, macros)
         WICK -> WickPatch(name, voice as WickVoice, macros)
+        ETCH -> EtchPatch(name, voice as EtchVoice, macros)
         OTIS -> OtisPatch(name, voice as OtisVoice, macros)
         REGISTERS -> RegistersPatch(name, voice as RegistersVoice, macros)
         FATHOM -> FathomPatch(name, voice as FathomVoice, macros)
@@ -6265,6 +7007,7 @@ private enum class Engine {
         GLINT -> GlintPatch(name, voice as GlintVoice, macros)
         SIREN -> SirenPatch(name, voice as SirenVoice, macros)
         FORK -> ForkPatch(name, voice as ForkVoice, macros)
+        HALOBAR -> HalobarPatch(name, voice as HalobarVoice, macros)
         FLOTILLA -> FlotillaPatch(name, voice as FlotillaVoice, macros)
         AEROSTAT -> AerostatPatch(name, voice as AerostatVoice, macros)
         TREMOR -> TremorPatch(name, voice as TremorVoice, macros)
@@ -6316,6 +7059,8 @@ private enum class Engine {
         BORE -> BorePatch(name, voice as BoreVoice, macros)
         ARCO -> ArcoPatch(name, voice as ArcoVoice, macros)
         SCOUR -> ScourPatch(name, voice as ScourVoice, macros)
+        EROSION -> ErosionPatch(name, voice as ErosionVoice, macros)
+        OSTERIA -> OsteriaPatch(name, voice as OsteriaVoice, macros)
         KEEL -> KeelPatch(name, voice as KeelVoice, macros)
         FILAMENT -> FilamentPatch(name, voice as FilamentVoice, macros)
         TIDAL -> TidalPatch(name, voice as TidalVoice, macros)
@@ -6326,6 +7071,7 @@ private enum class Engine {
 
     /** A saved patch's human name — "Hat Closed Thump", "Bell Tines". */
     fun patchDisplayName(voice: Enum<*>): String {
+        if (this == OSTERIA && voice == OsteriaVoice.QUARTET) return "Evolving Note Osteria"
         val labelledVoice = if (voice is BallastVoice) voice.displayName else if (voice == OtisVoice.HARP) "BLUES_HARMONICA" else voice.name
         val voiceName = labelledVoice.split('_').joinToString(" ") { w -> w.lowercase().replaceFirstChar { it.uppercase() } }
         val engineName = displayName.lowercase().split(' ').joinToString(" ") { it.replaceFirstChar { letter -> letter.uppercase() } }
@@ -6335,9 +7081,24 @@ private enum class Engine {
 
 /** Starting recipes supplied directly by a provisional engine remain available in MAKE. */
 private fun factoryPresets(engine: Engine, voice: Enum<*>): List<Patch> =
-    if (engine == Engine.CHITIN) ChitinPresets.forVoice(voice as ChitinVoice)
+    if (engine == Engine.HALOBAR) com.snipsnap.synth.HalobarPresets.auditionFor(voice as HalobarVoice)
+    else if (engine == Engine.CHITIN) ChitinPresets.forVoice(voice as ChitinVoice)
     else if (engine == Engine.NACRE) NacrePresets.forVoice(voice as NacreVoice)
     else Presets.forVoice(engine.name, voice.name)
+
+/** TEMPEST's voice roles choose UI colors without rendering six drums on the
+ * composition thread. These colors are not capture classification: its accepted
+ * dark default HAT can classify SNARE. SEND and SPREAD still measure the actual
+ * patch with its saved model, while other engines retain their existing palette. */
+private fun uiPaletteClass(engine: Engine, voice: Enum<*>): DrumClass =
+    if (engine == Engine.TEMPEST) when (voice as TempestVoice) {
+        TempestVoice.KICK -> DrumClass.KICK
+        TempestVoice.METAL -> DrumClass.PERC
+        TempestVoice.SNARE -> DrumClass.SNARE
+        TempestVoice.CLAP -> DrumClass.CLAP
+        TempestVoice.TOM -> DrumClass.TOM
+        TempestVoice.HAT -> DrumClass.HAT_CLOSED
+    } else engine.drumClass(voice)
 
 // ---------- voice ↔ drum class ----------
 //
@@ -6390,6 +7151,8 @@ private val ThumpVoice.drumClass: DrumClass
         ThumpVoice.COWBELL -> DrumClass.PERC
         ThumpVoice.RIM -> DrumClass.PERC
         ThumpVoice.SPARK -> DrumClass.PERC
+        // A sub drum sits on the kick pad by convention; the classifier reads a long one as TONAL.
+        ThumpVoice.SUB -> DrumClass.KICK
     }
 
 // SKIN's voices are built to hit the same classifier gates THUMP's do
@@ -6451,6 +7214,11 @@ private val GlintVoice.drumClass: DrumClass
  */
 private fun chipLabel(engine: Engine, voice: Enum<*>): String = when (engine) {
     Engine.OTIS -> if (voice == OtisVoice.HARP) "BLUES HARP" else voice.name
+    Engine.RIVET -> when (voice as RivetVoice) {
+        RivetVoice.HAT_CLOSED -> "HAT CL"
+        RivetVoice.HAT_OPEN -> "HAT OP"
+        else -> voice.name
+    }
     Engine.THUMP -> thumpChipLabel(voice as ThumpVoice)
     Engine.SKIN -> skinChipLabel(voice as SkinVoice)
     Engine.ONSET -> when (voice as OnsetVoice) {
@@ -6463,6 +7231,7 @@ private fun chipLabel(engine: Engine, voice: Enum<*>): String = when (engine) {
         OnsetVoice.PERC_WOOD -> "WOOD"
         OnsetVoice.PERC_METAL -> "METAL"
     }
+    Engine.OSTERIA -> if (voice == OsteriaVoice.QUARTET) "NOTE" else voice.name
     Engine.OBBLIGATO -> "AIR + REED"
     Engine.BALLAST -> (voice as BallastVoice).displayName
     Engine.CAUSTIC -> when (voice as CausticVoice) {
@@ -6493,6 +7262,7 @@ private fun thumpChipLabel(voice: ThumpVoice): String = when (voice) {
     ThumpVoice.COWBELL -> "COWBELL"
     ThumpVoice.RIM -> "RIM"
     ThumpVoice.SPARK -> "SPARK"
+    ThumpVoice.SUB -> "SUB"
 }
 
 private fun skinChipLabel(voice: SkinVoice): String = when (voice) {
@@ -6545,7 +7315,7 @@ private fun VoicePicker(engine: Engine, current: Enum<*>, scheme: Scheme, onSele
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 for (v in row) {
                     val selected = v == current
-                    val color = Schemes.classColor(engine.drumClass(v)).tape
+                    val color = Schemes.classColor(uiPaletteClass(engine, v)).tape
                     key(v) {
                         Column(
                             Modifier
@@ -6567,7 +7337,7 @@ private fun VoicePicker(engine: Engine, current: Enum<*>, scheme: Scheme, onSele
                             // (blank when not selected) — so one selection
                             // doesn't grow only its own cell and leave the row
                             // jagged against its neighbours.
-                            TapeText(if (selected) "SELECTED" else "", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
+                            TapeText(if (selected) "SELECTED" else "", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
                         }
                     }
                 }
@@ -6596,7 +7366,7 @@ private fun OrphicaModePicker(current: OrphicaMode, scheme: Scheme, onSelect: (O
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
                         TapeText(mode.name, TapeType.pixelSmall, scheme.ink.tape, maxLines = 1)
-                        TapeText(if (chosen) "SELECTED" else "", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
+                        TapeText(if (chosen) "SELECTED" else "", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
                     }
                 }
             }
@@ -6648,6 +7418,30 @@ private fun PresetList(
     // one of these asks to forget it; the factory's chips have no hold.
     key(engine, voice, "YOURS") {
         PresetStrip(engine, voice, yours, current, scheme, label = "YOURS", spoken = "YOUR PRESET", onSelect = onSelect, onHold = onHold)
+    }
+    // The visible twin of that hold: while one of the player's own is the
+    // loaded sound, its FORGET door sits under the strip and asks the same
+    // question the hold asks.
+    yours.firstOrNull { it.name == current }?.let { chosen ->
+        PresetForgetDoor(chosen.name, scheme) { onHold(chosen) }
+    }
+}
+
+/** FORGET for the loaded YOURS preset: the same dialog a hold on its chip opens, which says the bin keeps it. */
+@Composable
+private fun PresetForgetDoor(name: String, scheme: Scheme, onClick: () -> Unit) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+        Spacer(Modifier.width(56.dp))
+        Box(
+            Modifier
+                .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+                .raisedBevel(scheme)
+                .tapeClick(label = "${Copy.PRESET_FORGET_DOOR} YOUR PRESET $name", onClick = onClick)
+                .padding(horizontal = 10.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            TapeText("${Copy.PRESET_FORGET_DOOR} $name", TapeType.pixelSmall, scheme.accent.tape, maxLines = 1)
+        }
     }
 }
 
@@ -6712,6 +7506,7 @@ private fun PresetStrip(
                                         interactionSource = remember { MutableInteractionSource() },
                                         indication = null,
                                         onClickLabel = "$spoken ${p.name}",
+                                        // twin: PresetForgetDoor, the FORGET door under the YOURS strip while this preset is loaded
                                         onLongClickLabel = "FORGET ${p.name}",
                                         onLongClick = { onHold(p) },
                                         onClick = { onSelect(p) },
@@ -6721,7 +7516,7 @@ private fun PresetStrip(
                             .padding(horizontal = 8.dp),
                         contentAlignment = Alignment.Center,
                     ) {
-                        TapeText(p.name, TapeType.pixelSmall, if (selected) scheme.amber.tape else scheme.ink2.tape, maxLines = 1)
+                        TapeText(p.name, TapeType.pixelSmall, if (selected) scheme.accent.tape else scheme.ink2.tape, maxLines = 1)
                     }
                 }
             }
@@ -6756,9 +7551,9 @@ private fun ReopenPadOverlay(
         Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 TapeText("REOPEN PAD RECIPE", TapeType.lcdSmall, scheme.lcdInk.tape, Modifier.weight(1f))
-                LabButton("CANCEL", scheme, enabled = true, onClick = onCancel)
+                LabButton("CANCEL", scheme, enabled = true, tier = ButtonTier.Text, onClick = onCancel)
             }
-            TapeText("LOAD, EDIT, THEN SEND TO PAD", TapeType.lcdSmall, scheme.ink2.tape)
+            TapeText("LOAD, EDIT, THEN SEND TO PAD", TapeType.lcdSmall, scheme.lcdInk2)
             LazyColumn(Modifier.weight(1f).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 items(pads.sortedBy { it.slot }, key = { it.slot }) { pad ->
                     val patch = Breed.recipeOf(pad)?.patch
@@ -6770,7 +7565,7 @@ private fun ReopenPadOverlay(
                     ) {
                         TapeText("${padTag(pad.slot)} · ${pad.displayName}", TapeType.pixelSmall, scheme.ink2.tape)
                         val voiceLabel = (patch as? BallastPatch)?.voice?.displayName ?: patch?.voiceName?.replace('_', ' ')
-                        TapeText("${patch?.engine} · $voiceLabel", TapeType.lcdSmall, scheme.amber.tape)
+                        TapeText("${patch?.engine} · $voiceLabel", TapeType.lcdSmall, scheme.accent.tape)
                     }
                 }
             }
@@ -6865,7 +7660,7 @@ private fun ChamberNoteControls(
         onValueChange = { value -> onPatchChange { it.copy(velocity = value.coerceIn(0f, 1f)) } },
     )
     TapeText(
-        "FINITE STRIKE · ROOM TAIL INCLUDED. SPREAD TRANSPOSES THE ROOM TOO.",
+        "Finite strike · room tail included. Spread transposes the room too.",
         TapeType.pixelSmall, scheme.ink2.tape, maxLines = 3,
     )
 }
@@ -6933,7 +7728,7 @@ private fun NacreNoteControls(
         onValueChange = { onVelocityChange(it.coerceIn(0f, 1f)) },
     )
     TapeText(
-        "PAIRED HARP · FINITE STRUM · SPACE FOLLOWS THE NOTE.",
+        "Paired harp · finite strum · space follows the note.",
         TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2,
     )
 }
@@ -6954,8 +7749,8 @@ private fun CausticNoteControls(
         onValueChange = { onVelocityChange(it.coerceIn(0f, 1f)) },
     )
     TapeText(
-        if (patch.model == 1) "ORIGINAL FINITE NOTE · MOVE HOLD OR MOTION TO EXPLORE FURTHER."
-        else "LENGTH SETS THE NOTE · THE TOP HOLD STEP SUSTAINS.",
+        if (patch.model == 1) "Original finite note · move hold or motion to explore further."
+        else "Length sets the note · the top hold step sustains.",
         TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2,
     )
 }
@@ -6988,6 +7783,8 @@ internal fun MacroSlider(
     enabled: Boolean = true,
     semanticRange: (() -> ClosedFloatingPointRange<Float>)? = null,
     readoutWidth: Dp = 44.dp,
+    /** The label column's minimum; 56 dp fits the short names at 13 sp, a longer one widens it (to 96 dp) then wraps. */
+    labelWidth: Dp = 56.dp,
 ) {
     val currentOnChange by rememberUpdatedState(onValueChange)
     val currentSemanticRange by rememberUpdatedState(semanticRange)
@@ -6996,7 +7793,13 @@ internal fun MacroSlider(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        TapeText(label, TapeType.pixelSmall, scheme.ink2.tape, Modifier.width(56.dp))
+        // A minimum, not a cap (D7): VELOCITY, ALTERNATES, GRAIN SIZE read in full, and a name
+        // longer than the cap wraps to a second line. The track keeps >= 120 dp at 360 dp.
+        TapeText(
+            label, TapeType.pixelSmall, scheme.ink2.tape,
+            Modifier.widthIn(min = labelWidth, max = maxOf(labelWidth, 96.dp)),
+            maxLines = 2,
+        )
         Box(
             Modifier
                 .weight(1f)
@@ -7109,12 +7912,14 @@ internal fun LabButton(
      * `null` (every other call site) falls back to [label] alone.
      */
     accessibilityLabel: String? = null,
+    /** The button's weight, dressed as [ActionButton] dresses it: CANCEL is [ButtonTier.Text], accent ink on no body. */
+    tier: ButtonTier = ButtonTier.Secondary,
     onClick: () -> Unit,
 ) {
     Box(
         modifier
             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
-            .raisedBevel(scheme)
+            .tierSurface(tier, scheme)
             // Always clickable, `enabled` forwarded rather than dropped: a
             // screen reader is told this control is temporarily unavailable
             // instead of it silently vanishing from the tree (accessibility
@@ -7123,7 +7928,7 @@ internal fun LabButton(
             .padding(horizontal = 8.dp),
         contentAlignment = Alignment.Center,
     ) {
-        TapeText(label, TapeType.pixel, if (enabled) scheme.ink.tape else scheme.ink3.tape, maxLines = 1)
+        TapeText(label, TapeType.pixel, tierInk(tier, scheme, enabled, lit = false, dimmed = false), maxLines = 2)
     }
 }
 
@@ -7140,6 +7945,7 @@ internal fun SlotChooserOverlay(
     busy: Boolean,
     onPick: (Int) -> Unit,
     onCancel: () -> Unit,
+    firedBronze: Boolean = false,
 ) {
     // A plain `background` doesn't hit-test — without a consuming gesture
     // here, a tap in any gap this overlay doesn't fully cover (the grid's
@@ -7184,6 +7990,7 @@ internal fun SlotChooserOverlay(
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Layout.PAD_GAP.dp)) {
                         for (slot in row) {
                             SlotCell(
+                                firedBronze = firedBronze,
                                 slot = slot,
                                 pad = kit?.pad(slot),
                                 previewColor = previewColor,
@@ -7212,6 +8019,7 @@ internal fun SlotChooserOverlay(
  */
 @Composable
 private fun SlotCell(
+    firedBronze: Boolean = false,
     slot: Int,
     pad: KitPad?,
     previewColor: Color,
@@ -7246,7 +8054,7 @@ private fun SlotCell(
         return
     }
 
-    val locked = pad.velocityLayers.isNotEmpty() || (pad.chain != null && !pad.isRobinChain)
+    val locked = (pad.velocityLayers.isNotEmpty() && !(firedBronze && FiredBronzePads.canEdit(pad))) || (pad.chain != null && !pad.isRobinChain)
     val tappable = enabled && !locked
     val cls = pad.colorHex?.removePrefix("#")?.toIntOrNull(16) ?: Schemes.classColor(pad.drumClass)
     // Locked (foreign-chained/layered, refused by replaceAudio) and explicitly

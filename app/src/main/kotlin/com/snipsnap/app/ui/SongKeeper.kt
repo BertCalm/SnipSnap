@@ -5,6 +5,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import com.snipsnap.kit.AnswerStore
 import com.snipsnap.kit.ClipRef
 import com.snipsnap.kit.GrooveFeel
 import com.snipsnap.kit.Kit
@@ -81,6 +82,10 @@ internal class SongKeeper(
     var undoStack by mutableStateOf<List<Undo>>(emptyList())
         private set
 
+    /** Whether the kit has an Answer bassline for a section's BASS to play. */
+    var hasBass by mutableStateOf(false)
+        private set
+
     /** The row the editor is on. */
     var selected by mutableIntStateOf(0)
 
@@ -89,7 +94,7 @@ internal class SongKeeper(
 
     private var layout: Job? = null
 
-    private class Opened(val kept: SongPlan, val plan: Arranger.Arrangement, val picks: List<Arranger.Pick>, val refused: List<String>, val save: Boolean, val names: Map<Int, String>)
+    private class Opened(val kept: SongPlan, val plan: Arranger.Arrangement, val picks: List<Arranger.Pick>, val refused: List<String>, val save: Boolean, val names: Map<Int, String>, val hasBass: Boolean)
 
     /**
      * Reads the kept song, or drafts one: the first open of a kit with
@@ -106,6 +111,7 @@ internal class SongKeeper(
             plan = o.plan
             picks = o.picks
             names = o.names
+            hasBass = o.hasBass
             refusal = null
             if (o.refused.isNotEmpty()) toast(Copy.songRefused(o.refused))
             if (o.save) persist(o.kept)
@@ -121,12 +127,13 @@ internal class SongKeeper(
     private fun read(): Opened {
         val stored = projectDir?.let { SongPlanStore.load(it, kitDir.name) }
         val picks = Arranger.available(kit, kitDir, swingPercent, feel, feelTemplate)
+        val bass = AnswerStore.load(kitDir) != null
         if (stored == null) {
             val draft = Arranger.arrange(kit, kitDir, 0, swingPercent, feel, feelTemplate)
-            return Opened(Arranger.toPlan(draft), draft, picks, emptyList(), save = projectDir != null, names = GrooveEdit.namesById(kitDir))
+            return Opened(Arranger.toPlan(draft), draft, picks, emptyList(), save = projectDir != null, names = GrooveEdit.namesById(kitDir), hasBass = bass)
         }
         val resolved = Arranger.resolve(kit, kitDir, stored, swingPercent, feel, feelTemplate)
-        return Opened(Arranger.toPlan(resolved.arrangement), resolved.arrangement, picks, resolved.refused, save = resolved.refused.isNotEmpty(), names = GrooveEdit.namesById(kitDir))
+        return Opened(Arranger.toPlan(resolved.arrangement), resolved.arrangement, picks, resolved.refused, save = resolved.refused.isNotEmpty(), names = GrooveEdit.namesById(kitDir), hasBass = bass)
     }
 
     // ---- edits ----
@@ -173,32 +180,93 @@ internal class SongKeeper(
         edit(Copy.SONG_ADD, k.added(ClipRef.CAPTURED) ?: return, k.sections.size)
     }
 
+    /** The selected section's bass under it, on or off; the change is named by the state it lands in. */
+    fun toggleBass() {
+        val k = kept ?: return
+        val now = !(k.sections.getOrNull(selected)?.bass ?: return)
+        edit(if (now) Copy.SONG_BASS_ON else Copy.SONG_BASS_OFF, k.withBass(selected, now) ?: return)
+        if (now && !hasBass) toast(Copy.SONG_BASS_NONE_YET)
+    }
+
+    /** The pull-up into the selected section, on or off. The first section has nothing before it to pull up. */
+    fun togglePullUp() {
+        val k = kept ?: return
+        if (selected == 0) return
+        val now = !(k.sections.getOrNull(selected)?.pullUp ?: return)
+        edit(if (now) Copy.SONG_PULL_UP_ON else Copy.SONG_PULL_UP_OFF, k.withPullUp(selected, now) ?: return)
+    }
+
     fun toggleLock() {
         val k = kept ?: return
         val now = !(k.sections.getOrNull(selected)?.locked ?: return)
         edit(if (now) Copy.SONG_LOCK else Copy.SONG_UNLOCK, k.withLock(selected, now) ?: return)
     }
 
+    /** True while a reroll is being drawn; a second tap meanwhile is dropped. */
+    var rerolling by mutableStateOf(false)
+        private set
+
     /**
-     * Redraws the unlocked sections with a new seed and says what it did.
-     * The seed moves only the ghosts and the fill, as REROLL always has, so
-     * when no unlocked section uses either, nothing would change and it
-     * says that instead of pretending.
+     * Redraws the unlocked sections with a new seed ([Arranger.rerolled]:
+     * each derived clip drawn again from its family, a fill re-taken, your
+     * own programs and the order kept) and says what it did. When nothing
+     * unlocked can change (every one plays your own program), it says that
+     * instead of pretending. The draw reads the kit's grooves, so it runs
+     * off the main thread; an edit made meanwhile wins and the draw is dropped.
      */
     fun reroll() {
         val k = kept ?: return
-        val unlocked = k.sections.filter { !it.locked }
-        if (unlocked.isEmpty()) {
+        if (rerolling) return
+        val unlocked = k.sections.count { !it.locked }
+        if (unlocked == 0) {
             toast(Copy.SONG_ALL_LOCKED)
             return
         }
-        val redrawn = unlocked.count { it.clip == ClipRef.GHOSTED || it.clip == ClipRef.FILL }
-        if (redrawn == 0) {
-            toast(Copy.SONG_REROLL_NOTHING)
+        rerolling = true
+        scope.launch {
+            try {
+                val drawn = withContext(Dispatchers.IO) {
+                    runCatching { Arranger.rerolled(kit, kitDir, k, k.seed + 1, swingPercent, feel, feelTemplate) }
+                }
+                if (kept !== k) return@launch
+                drawn.onSuccess { r ->
+                    if (r.redrawn == 0) {
+                        toast(Copy.SONG_REROLL_NOTHING)
+                    } else {
+                        edit(Copy.SONG_VERB_REROLL, r.plan)
+                        toast(Copy.songRerolled(r.redrawn, k.sections.size - unlocked))
+                    }
+                }.onFailure { e ->
+                    if (e is CancellationException) throw e
+                    Log.e(TAG, "reroll: failed", e)
+                    toast(e.message ?: Copy.ARRANGE_NEEDS_GROOVE)
+                }
+            } finally {
+                rerolling = false
+            }
+        }
+    }
+
+    /**
+     * KEEP THIS ORDER: [played] (the section of every pass heard, in order,
+     * from [com.snipsnap.shell.SongCursor.played]) becomes the song, each
+     * run of one section kept as that section played that many times. It is
+     * an edit like any other, so UNDO puts the song back.
+     */
+    fun keepOrder(played: List<Int>) {
+        val k = kept ?: return
+        val laid = plan ?: return
+        if (played.isEmpty() || played.any { it !in laid.sections.indices } || laid.sections.size != k.sections.size) {
+            toast(Copy.SONG_KEEP_NOTHING)
             return
         }
-        edit(Copy.SONG_VERB_REROLL, k.rerolled(k.seed + 1))
-        toast(Copy.songRerolled(redrawn, k.sections.size - unlocked.size))
+        val made = Arranger.playedOrder(k, laid.sections.map { it.clip.bars }, played) ?: return
+        if (made.plan == k) {
+            toast(Copy.SONG_KEEP_SAME)
+            return
+        }
+        edit(Copy.SONG_KEEP_ORDER, made.plan, 0)
+        toast(Copy.songKeptOrder(made.plan.sections.size, made.left, SongPlan.MAX_SECTIONS))
     }
 
     /** Puts back the song before the last edit. */

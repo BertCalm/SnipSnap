@@ -773,3 +773,44 @@ device tests were not run because this environment has no Android SDK.
 
 The implementation and these verification results are committed on
 `claude/patio-first-build`.
+
+
+## Integration and hardware acceptance — 14 November 2026
+
+Draft PR [#1109](https://github.com/BertCalm/SnipSnap/pull/1109) integrates PATIO
+with default-branch commit `210c839802c2eafb7d84aaa9af109a5e6ec9b45e`.
+The newer base already implements the velocity/take grid in `KitAssembler`,
+including its first-hard-take consistency guard. PATIO uses that shared path;
+the shelf now contains 129 starters. The 9,079-test result above applies to the
+pre-integration branch, not this newer combined tree.
+
+The current [acceptance gates](ENGINE_ACCEPTANCE_GATES.md) identify a concrete
+MPC 3 limitation: chain WAV slice-map capture remains bench-blocked (HH1.4).
+PATIO's tests prove saved windows and exported cycle metadata, but do not prove
+that MPC firmware locates and cycles every take. Hardware may play only the
+first take of each velocity zone. This remains an open gate. The owner has
+parked the shared slice-map capture; do not infer completion from a successful
+file load. MPC 2 velocity-plus-round-robin export is outside the owner's gate,
+and PATIO does not ship an MPC 2 substitute.
+
+When an MPC 3 is available, record its model and exact software version, then:
+
+1. Extract each genre download with its `.xtd` and corresponding TrackData
+   folder together. Load it and verify all 18 pads, with the roll on B01 and
+   cuíca on B02. Check for missing samples and unintended long chain playback.
+2. Program eight evenly spaced hits on each pad at each fixed MIDI velocity
+   20, 64 and 110. Each four-take cycle should repeat on hit five while the
+   three velocity groups retain distinct touch character. Fixed velocity is
+   necessary to distinguish cycling from dynamics.
+3. Probe velocity boundaries 41/42 and 84/85, and confirm that velocity zero
+   does not trigger a new hit. Check closed/open hat choking in both orders.
+4. Play the supplied groove and confirm that neither scrape direction is
+   sequenced. Save the project, reload it and repeat the fixed-velocity checks.
+5. Record pass/fail per kit and any pad that plays only one take. A successful
+   load alone does not close the round-robin gate.
+
+Browser acceptance remains separate: play the default cuíca example, compare
+short/long, switch kits and pads during playback, restart and repeat, then
+check all three downloads. Node event checks establish wiring, not audible
+browser playback. This managed session does not expose `cua_repl.js`; the
+Sites workflow requires skipping browser QA in that case.

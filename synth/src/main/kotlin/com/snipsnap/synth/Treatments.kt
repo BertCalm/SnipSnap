@@ -151,6 +151,54 @@ object Treatments {
         // on the heard setting). AMT 1 falls about 17 semitones. OVER is left at its default, which is also its neutral, so AMT
         // never moves the fall time. docs/superpowers/specs/2026-10-19-pedal-board-brainstorm.md, section 3.
         "dived" to FxChain(dive = mapOf("DROP" to 0.5f / 0.7f)),
+        // HUSH: a gate, the pad shut to silence once it falls FLOOR under its own peak. The owner heard it at its gate
+        // (2026-11-07) on a snare and a tom through ROOM, a dry snare and an open hat: the snare through ROOM is the gated
+        // 80s snare, the dry snare only a shorter snare, the hat a stub. They chose 12 dB under the peak at the default
+        // close (about 87 ms) for a tap. A tap puts a pedal on at AMT 0.7 (PadSheet.DEFAULT_AMOUNT and
+        // BoardSheet.DEFAULT_AMOUNT, which synth cannot see; PadSheetTest pins that they still land here) and FLOOR fades
+        // linearly toward 0, so FLOOR 1.0 makes a tap FLOOR 0.7, which HUSH's law puts at 12 dB. AMT 1 is 6 dB, a lower AMT
+        // a deeper and later gate, and AMT 0 no gate at all. CLOSE is left at its default, which is also its neutral.
+        "hushed" to FxChain(hush = mapOf("FLOOR" to 1.0f)),
+        // SUB: an octave-down copy mixed under the pad, the OCTAVER section. The owner heard it at its gate (2026-11-09)
+        // on a snare and a tom from each of four drum engines (THUMP, SKIN, TERRA, ONSET), dry and at DEPTH 0.5 clean, Fuzz
+        // and Grit: SUB helps, Grit was their pick, and the drum they liked least, THUMP, was most of what they had disliked
+        // in earlier rounds. A tap puts a pedal on at AMT 0.7 (PadSheet.DEFAULT_AMOUNT and BoardSheet.DEFAULT_AMOUNT; PadSheetTest
+        // pins that they still land here) and DEPTH fades linearly toward 0, so DEPTH 0.5 / 0.7 makes a tap DEPTH 0.5, the
+        // amount heard. DRIVE, TONE and HANG are left at their defaults, which are also their neutrals, so AMT never moves
+        // them; DRIVE's default, 1, is Grit. AMT 1 is DEPTH about 0.71, a lower AMT less octave, AMT 0 none.
+        "octaved" to FxChain(octaver = mapOf("DEPTH" to 0.5f / 0.7f)),
+        // REWIND: a reverse delay, the REWIND section. The owner heard it at its gate (2026-11-11) on ONSET's snare and tom,
+        // JANGLE and the choir, at MIX 1, each beside the whole pad flipped by REVERSE: the reverse snare works, JANGLE
+        // reads as backwards guitar, it is not too close to FLIP, and it is for drums and held sounds both. They chose the
+        // middle TIME (the backwards attack about 0.48 s after the hit) and some repeats, REPEAT 0.5 of the three heard
+        // (none, 0.5, 1). A tap puts a pedal on at AMT 0.7 (PadSheet.DEFAULT_AMOUNT and BoardSheet.DEFAULT_AMOUNT;
+        // PadSheetTest pins that they still land here) and REPEAT and MIX fade linearly toward 0, so REPEAT 0.5 / 0.7
+        // makes a tap REPEAT 0.5, the repeats chosen. TIME is left at its default, 0.5, which is also its neutral, so AMT
+        // never moves it. MIX is 1, the level every clip was heard at, so AMT 1 is the copy at the pad's own level and a
+        // tap MIX 0.7: a macro tops out at 1, so a tap cannot reach the heard MIX while AMT still walks the level
+        // (RewindTest measures how far under the heard clip the tap's copy lands). AMT 0 is no copy at all.
+        "rewound" to FxChain(rewind = mapOf("MIX" to 1.0f, "REPEAT" to 0.5f / 0.7f)),
+        // TREM: a level throb, the TREMOLO section. The owner heard it at its gate (2026-11-12) on ONSET's snare, JANGLE and
+        // the choir: it throbs like an amp's tremolo, the square chop is clean, the spring order made no difference, the ends
+        // are extreme enough, and it is for held sounds (FLANGE, not TREM, was the one they wanted on drums too). They chose
+        // Gentle for the tap: DEPTH 0.5, a smooth throb at RATE 0.5 (about 3.5 Hz). DEPTH fades linearly toward 0, so
+        // DEPTH 0.5 / 0.7 makes a tap (AMT 0.7) DEPTH 0.5; AMT 1 dips about 0.71, AMT 0 not at all. RATE and SHAPE are left at
+        // their defaults: RATE's is its own neutral, and SHAPE's, 0 (the sine), is also its neutral, so AMT moves neither.
+        "tremoloed" to FxChain(tremolo = mapOf("DEPTH" to 0.5f / 0.7f)),
+        // FLANGE: the jet, the FLANGER section. The owner heard it at the same gate: it sounds like a flanger, it is different
+        // enough from PHASE to keep both, the ends are extreme enough, and it is for drums and held sounds both. They chose
+        // Plain for the tap: DEPTH 0.7, RATE 0.4, no feedback. DEPTH fades linearly toward 0, so DEPTH 1 makes a tap DEPTH 0.7
+        // and AMT 1 the deepest sweep. RATE and FEEDBACK are left at their defaults, 0.4 and 0.5 (none), each its own
+        // neutral, so AMT moves neither; FEEDBACK's default moved to 0.5 at this gate so that Plain needs no setting.
+        "flanged" to FxChain(flanger = mapOf("DEPTH" to 1.0f)),
+        // ROTARY: the spinning speaker, the ROTARY section. The owner heard it at its gate (2026-11-13) on ONSET's snare,
+        // JANGLE and CHUG (after their amps) and the choir: it sounds like a rotary speaker, clearly more than TREMOLO plus
+        // VIBRATO at the same speed, the spin-up is heard, there are no artifacts, the depth is enough, and it is for held
+        // sounds only. They chose Spin-up for the tap: SPIN 1 at the fast speed, starting at the chorale and spinning up.
+        // SPEED and RAMP are left at their defaults, 1 and 1, each its own neutral, so AMT moves neither. SPIN fades
+        // linearly toward none, so AMT 1 is the heard clip and a tap (AMT 0.7) swirls at SPIN 0.7: a macro tops out at 1,
+        // as REWIND's MIX (RotaryTest measures how far under the clip the tap's swing lands).
+        "spun" to FxChain(rotary = mapOf("SPIN" to 1.0f)),
     )
 
     private val ALL: List<Pair<String, FxChain>> get() = Shuffle.TREATMENTS + EXTRA

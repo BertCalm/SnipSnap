@@ -21,17 +21,17 @@ internal fun MeridianPerformanceControls(
         label = "VELOCITY", value = patch.velocity, fillColor = fillColor, scheme = scheme,
         onValueChange = { onChange(MeridianSynth.withVelocity(patch, it.coerceIn(0f, 1f))) },
     )
-    TapeText("ROOT IS THE BASE NOTE; TUNE TRANSPOSES IT.", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
-    TapeText(MeridianSynth.holdCaption(patch).uppercase(Locale.ROOT), TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
+    TapeText("Root is the base note; tune transposes it.", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
+    TapeText(MeridianSynth.holdCaption(patch), TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
     if (patch.model >= 2) {
-        TapeText("HOLD 97.5–100%: FIXED-ALIGNMENT SUSTAIN.", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
+        TapeText("Hold 97.5–100%: fixed-alignment sustain.", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
     }
     if (MeridianSynth.isHeld(patch)) {
-        TapeText("AUDITION AND SEND TO PAD PLAY A SHORT CAPTURE. MAKE INSTRUMENT KEEPS SUSTAIN.",
+        TapeText("Audition and SEND TO PAD play a short capture. MAKE INSTRUMENT keeps sustain.",
             TapeType.pixelSmall, scheme.ink2.tape, maxLines = 3)
     }
 }
 
 internal fun meridianInstrumentReadiness(patch: MeridianPatch): String =
-    if (patch.model < 2) "THIS ORIGINAL SOUND IS FINITE. LOAD A CURRENT PRESET FOR SUSTAIN."
-    else "SET HOLD TO 97.5% OR ABOVE TO MAKE A SUSTAINED INSTRUMENT."
+    if (patch.model < 2) "This original sound is finite. Load a current preset for sustain."
+    else "Set hold to 97.5% or above to make a sustained instrument."

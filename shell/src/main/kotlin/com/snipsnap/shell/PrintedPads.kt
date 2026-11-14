@@ -6,7 +6,7 @@ import java.io.File
 
 /** Source-backed printed pads share copy/guard rules, while retaining their own recipe formats. */
 object PrintedPads {
-    const val AQUARIUM_RENDERER_REQUIRED = "AQUARIUM OFFLINE RENDERER IS NOT AVAILABLE ON THIS HOST."
+    const val AQUARIUM_RENDERER_REQUIRED = "AQUARIUM offline renderer is not available on this host."
 
     /** Recognize the marker even when its contents are damaged; mutation guards must still hold. */
     fun has(recipe: JsonValue.Obj?): Boolean = recipe?.entries?.let {

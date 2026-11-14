@@ -130,7 +130,7 @@ fun MyVoiceScreen(
             startFrame = start; endFrame = end; trimOpen = false; name = "My voice"
             mode = ConfluencePersonalWorkshop.Mode.ENSEMBLE
             refusal = if (selected.usable) null else selected.message
-            status = if (selected.usable) "A STEADY PASSAGE IS READY. COMPARE YOUR VOICE BELOW." else null
+            status = if (selected.usable) "A steady passage is ready. Compare your voice below." else null
         }
     }
 
@@ -145,7 +145,7 @@ fun MyVoiceScreen(
                     if (mounted && request == ticket) { recording = true; working = "RECORDING · HOLD ONE STEADY AH OR OO" }
                 }
                 if (mounted && request == ticket) {
-                    recording = false; working = "FINDING A STEADY PASSAGE…"
+                    recording = false; working = "Finding a steady passage…"
                     selectTake(raw, ConfluencePersonalLibrary.Origin.RECORDING, ticket)
                 }
             } catch (e: Exception) {
@@ -169,7 +169,7 @@ fun MyVoiceScreen(
         if (uri != null && mounted && expected == request) {
             stopRequests()
             val ticket = request
-            refusal = null; status = null; working = "OPENING THE RECORDING…"
+            refusal = null; status = null; working = "Opening the recording…"
             work = scope.launch(Dispatchers.Main.immediate) {
                 try {
                     val decoded = offMain { MediaDecode.decode(context, uri, ConfluencePersonalVoice.MAX_SOURCE_SECONDS) }
@@ -215,7 +215,7 @@ fun MyVoiceScreen(
         val source = rawTake ?: return
         stopRequests(); val ticket = request
         val start = startFrame; val end = endFrame
-        refusal = null; working = "CHECKING THIS PASSAGE…"
+        refusal = null; working = "Checking this passage…"
         work = scope.launch(Dispatchers.Main.immediate) {
             try {
                 val checked = offMain(Dispatchers.Default) { ConfluencePersonalWorkshop.assess(source, start, end) }
@@ -223,7 +223,7 @@ fun MyVoiceScreen(
                 if (mounted && request == ticket) {
                     assessment = checked; prepared = ready; kept = null
                     refusal = if (checked.usable) null else checked.message
-                    status = if (checked.usable) "TRIM READY. COMPARE YOUR VOICE BELOW." else null
+                    status = if (checked.usable) "Trim ready. Compare your voice below." else null
                 }
             } catch (e: Exception) { if (e is CancellationException) throw e; if (mounted && request == ticket) failed(e) }
             finally { if (mounted && request == ticket) working = null }
@@ -272,7 +272,7 @@ fun MyVoiceScreen(
             try {
                 val stored = offMain { ConfluencePersonalWorkshop.saveVoice(library, selected, title, sourceOrigin) }
                 val all = offMain { ConfluencePersonalWorkshop.listVoices(library) }
-                onToast("VOICE SAVED ON THIS PHONE")
+                onToast(com.snipsnap.shell.Copy.VOICE_SAVED_ON_PHONE)
                 if (scope.isActive && mounted && take === source) { kept = stored; voices = all; status = "VOICE SAVED · READY FOR A NEW PAD" }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
@@ -303,7 +303,7 @@ fun MyVoiceScreen(
                     fresh.save(); fresh.kit
                 } }
                 onKitUpdated(updated)
-                onToast("MY VOICE SAVED ON ${PadNoteMap.labelForPad(slot)}")
+                onToast(com.snipsnap.shell.Copy.myVoiceSaved(PadNoteMap.labelForPad(slot)))
                 if (scope.isActive && mounted) {
                     status = "${selectedMode.name} SAVED ON ${PadNoteMap.labelForPad(slot)} · VOICE KEPT"
                     destination = (1..128).firstOrNull { updated.pad(it) == null }
@@ -339,7 +339,7 @@ fun MyVoiceScreen(
     fun openVoice(voice: ConfluencePersonalLibrary.Summary) {
         if (saving) return
         stopRequests(); val ticket = request
-        refusal = null; working = "OPENING YOUR VOICE…"
+        refusal = null; working = "Opening your voice…"
         work = scope.launch(Dispatchers.Main.immediate) {
             try {
                 val stored = offMain { ConfluencePersonalWorkshop.loadVoice(library, voice.id) }
@@ -353,7 +353,7 @@ fun MyVoiceScreen(
         val current = entry ?: return
         if (saving) return
         stopRequests(); val ticket = request
-        refusal = null; working = "OPENING THE KIT'S VOICE SOURCE…"
+        refusal = null; working = "Opening the kit's voice source…"
         work = scope.launch(Dispatchers.Main.immediate) {
             try {
                 val stored = offMain { ConfluencePersonalWorkshop.openPad(current.dir, pad) }
@@ -368,7 +368,7 @@ fun MyVoiceScreen(
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             TapeText("MY VOICE", TapeType.lcdHeader, scheme.ink.tape, Modifier.weight(1f))
         }
-        TapeText("HOLD ONE COMFORTABLE AH OR OO FOR ABOUT 4–6 SECONDS. QUIET ROOM, NO MUSIC. PREPARED ON THIS PHONE. IMPORTS: ${ConfluencePersonalVoice.MAX_SOURCE_SECONDS} SECONDS OR LESS.", TapeType.pixelSmall, scheme.ink2.tape, maxLines = Int.MAX_VALUE)
+        TapeText("Hold one comfortable ah or oo for about 4–6 seconds. Quiet room, no music. Prepared on this phone. Imports: ${ConfluencePersonalVoice.MAX_SOURCE_SECONDS} seconds or less.", TapeType.pixelSmall, scheme.ink2.tape, maxLines = Int.MAX_VALUE)
         if (recording) ActionButton("STOP EARLY", scheme, enabled = true, modifier = Modifier.fillMaxWidth(), onClick = { recorder.finish() })
         else Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             ActionButton("RECORD 6 SECONDS", scheme, enabled = idle, modifier = Modifier.weight(1f), onClick = {
@@ -384,8 +384,8 @@ fun MyVoiceScreen(
             })
         }
         val line = refusal ?: working ?: if (saving) "SAVING…" else status
-        if (line != null) TapeText(line, TapeType.pixelSmall, if (refusal == null) scheme.ink2.tape else scheme.warn.tape, maxLines = Int.MAX_VALUE)
-        if (assessment?.usable == false && refusal == null) TapeText(assessment!!.message, TapeType.pixelSmall, scheme.warn.tape, maxLines = Int.MAX_VALUE)
+        if (line != null) TapeText(line, TapeType.pixelSmall, if (refusal == null) scheme.ink2.tape else scheme.warnInk.tape, maxLines = Int.MAX_VALUE)
+        if (assessment?.usable == false && refusal == null) TapeText(assessment!!.message, TapeType.pixelSmall, scheme.warnInk.tape, maxLines = Int.MAX_VALUE)
         val current = take
         if (current != null) {
             TapeText("${"%.2f".format(Locale.ROOT, (endFrame - startFrame).toFloat() / current.sampleRate)}S SELECTED", TapeType.pixelSmall, scheme.ink2.tape)
@@ -417,7 +417,7 @@ fun MyVoiceScreen(
                 if (kept == null) ActionButton("SAVE VOICE", scheme, enabled = idle && name.isNotBlank(), modifier = Modifier.fillMaxWidth(), onClick = ::saveVoice)
                 else {
                     TapeText("VOICE KEPT ON THIS PHONE", TapeType.pixelSmall, scheme.ink2.tape)
-                    if (entry == null) TapeText("OPEN A KIT TO SAVE A NEW PAD.", TapeType.pixelSmall, scheme.ink2.tape)
+                    if (entry == null) TapeText("Open a kit to save a new pad.", TapeType.pixelSmall, scheme.ink2.tape)
                     else ActionButton(destination?.let { "SAVE ${mode.name} → ${PadNoteMap.labelForPad(it)}" } ?: "NO EMPTY PAD", scheme,
                         enabled = idle && destination != null, modifier = Modifier.fillMaxWidth(), onClick = ::savePad)
                 }

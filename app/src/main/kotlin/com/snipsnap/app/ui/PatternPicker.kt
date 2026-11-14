@@ -121,7 +121,7 @@ private fun PatternRow(label: String, place: Int, total: Int, now: Boolean, onTa
             // Selected is the app's border-plus-word: a 2 dp accent line and
             // OPEN NOW under the name, reserved blank on every other row so
             // choosing one does not grow only its own.
-            .border(if (now) 2.dp else 1.dp, if (now) scheme.accent.tape else scheme.grayEdge.tape, RoundedCornerShape(4.dp))
+            .border(if (now) 2.dp else 1.dp, if (now) scheme.accent.tape else scheme.edge.tape, RoundedCornerShape(4.dp))
             .semantics { selected = now }
             .tapeClick(label = Copy.patternRow(label, place, total, now), onClick = onTap)
             .padding(horizontal = 10.dp, vertical = 8.dp),
@@ -132,7 +132,7 @@ private fun PatternRow(label: String, place: Int, total: Int, now: Boolean, onTa
             TapeText(label, TapeType.marker, scheme.ink.tape)
             TapeText(if (now) Copy.SONG_PICK_NOW else "", TapeType.pixelSmall, scheme.ink2.tape)
         }
-        TapeText("%02d".format(java.util.Locale.ROOT, place), TapeType.pixel, scheme.amber.tape)
+        TapeText("%02d".format(java.util.Locale.ROOT, place), TapeType.pixel, (if (now) scheme.ink2 else scheme.amber).tape)
     }
 }
 
@@ -168,7 +168,7 @@ internal fun PatternNameDialog(
     val caption = when (verdict) {
         is GrooveEdit.NameCheck.Ok -> Copy.PATTERN_NAME_NOTE to scheme.ink2.tape
         GrooveEdit.NameCheck.Default -> Copy.patternNameEmpty(default) to scheme.ink2.tape
-        GrooveEdit.NameCheck.Taken -> Copy.PATTERN_NAME_TAKEN to scheme.warn.tape
+        GrooveEdit.NameCheck.Taken -> Copy.PATTERN_NAME_TAKEN to scheme.warnInk.tape
     }
     val canSave = verdict != GrooveEdit.NameCheck.Taken && !busy
     val focus = remember { FocusRequester() }
@@ -234,7 +234,7 @@ internal fun PatternNameDialog(
             }
             TapeText(caption.first, TapeType.pixelSmall, caption.second, maxLines = 3)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                ActionButton("CANCEL", scheme, enabled = true, modifier = Modifier.weight(1f), onClick = onCancel)
+                ActionButton("CANCEL", scheme, enabled = true, modifier = Modifier.weight(1f), tier = ButtonTier.Text, onClick = onCancel)
                 ActionButton(
                     if (verdict == GrooveEdit.NameCheck.Default) Copy.PATTERN_NAME_RESET else Copy.PATTERN_NAME_SAVE,
                     scheme,

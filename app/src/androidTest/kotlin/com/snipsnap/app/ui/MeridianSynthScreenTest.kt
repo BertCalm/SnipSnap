@@ -10,7 +10,6 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsEnabled
-import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasSetTextAction
@@ -142,6 +141,50 @@ class MeridianSynthScreenTest : ComposeScreenTest() {
     }
 
     @Test
+    fun model_four_gestures_keep_native_fields_and_finite_held_selection_through_save_restore() {
+        val first = MeridianPresets.forVoice(MeridianVoice.DRAW).first()
+        val initial = first.copy(name = "SAVED DRAW")
+        val root = show(saved = initial)
+        waitFor("the saved DRAW model-four recipe", timeoutMillis = 30_000) { draft() == initial }
+        for ((index, voice) in listOf(MeridianVoice.DRAW, MeridianVoice.LIFT).withIndex()) {
+            press(voice.name)
+            waitFor("the ${voice.name} selection") { settings["voice"] == voice.name }
+            val factories = MeridianPresets.forVoice(voice)
+            assertEquals(2, factories.size)
+            for (factory in factories) {
+                val selected = loadFactory(factory.name)
+                assertEquals(4, selected.model)
+                assertEquals(selected, draft())
+            }
+            val selected = loadFactory(factories.first().name)
+            dial("HOLD", .974f)
+            compose.onNodeWithText("FINITE").assertExists()
+            compose.onNodeWithContentDescription("MAKE INSTRUMENT").assertIsEnabled()
+            dial("HOLD", .975f)
+            compose.onNodeWithText("FIXED LOOP").assertExists()
+            compose.onNodeWithContentDescription("MAKE INSTRUMENT").assertIsEnabled()
+            val midi = 57 + index * 3
+            rootTo(midi)
+            dial("TUNE", .75f)
+            dial("VELOCITY", .43f)
+            val saved = saveAs("MY ${voice.name}", root)
+            assertEquals(selected.copy(name = saved.name, midi = midi, velocity = .43f,
+                macros = selected.macros + mapOf("TUNE" to .75f, "HOLD" to .975f)), saved)
+            val highlight = "preset.MERIDIAN.${voice.name}"
+            waitFor("${voice.name} YOURS highlight") { settings[highlight] == saved.name }
+            compose.runOnIdle { generation++ }
+            pump()
+            waitFor("${voice.name} saved root") { rootIs(midi) }
+            val restored = draft() ?: error("Missing ${voice.name} draft")
+            assertEquals(saved.copy(name = restored.name), restored)
+            assertEquals(4, restored.model)
+            assertEquals(selected.seedContext, restored.seedContext)
+            assertEquals(.75f, progress("TUNE"), 1e-6f)
+            assertEquals(.43f, progress("VELOCITY"), 1e-6f)
+        }
+    }
+
+    @Test
     fun picker_exposes_eight_presets_seven_macros_and_the_actual_hold_threshold() {
         show(fromPreviousEngine = true)
         enterThroughEnginePicker()
@@ -160,7 +203,7 @@ class MeridianSynthScreenTest : ComposeScreenTest() {
         assertReadsInFull("FIXED LOOP")
         dial("HOLD", .974f)
         compose.onNodeWithText("FINITE").assertExists()
-        compose.onNodeWithContentDescription("MAKE INSTRUMENT").assertIsNotEnabled()
+        compose.onNodeWithContentDescription("MAKE INSTRUMENT").assertIsEnabled()
         dial("HOLD", .975f)
         compose.onNodeWithText("FIXED LOOP").assertExists()
         compose.onNodeWithContentDescription("MAKE INSTRUMENT").assertIsEnabled()
@@ -195,8 +238,8 @@ class MeridianSynthScreenTest : ComposeScreenTest() {
             }
             dial("HOLD", .974f)
             compose.onNodeWithText("FINITE").assertExists()
-            compose.onNodeWithContentDescription("MAKE INSTRUMENT").assertIsNotEnabled()
-            compose.onNodeWithText("SET HOLD TO 97.5% OR ABOVE TO MAKE A SUSTAINED INSTRUMENT.").assertExists()
+            compose.onNodeWithContentDescription("MAKE INSTRUMENT").assertIsEnabled()
+            compose.onNodeWithText("Set hold to 97.5% or above to make a sustained instrument.").assertDoesNotExist()
             dial("HOLD", .975f)
             compose.onNodeWithText("FIXED LOOP").assertExists()
             compose.onNodeWithContentDescription("MAKE INSTRUMENT").assertIsEnabled()
@@ -272,15 +315,19 @@ class MeridianSynthScreenTest : ComposeScreenTest() {
     }
 
     @Test
-    fun legacy_hold_stays_finite_and_only_current_held_sound_opens_the_instrument_sheet() {
+    fun legacy_hold_uses_finite_keys_and_current_held_sound_keeps_its_sustain_sheet() {
         val legacy = MeridianSynth.defaultPatch().copy(name = "ORIGINAL SWING", model = 1,
             midi = 51, velocity = .61f, seedContext = 93, macros = MeridianSynth.defaults() + ("HOLD" to 1f))
         val root = show(saved = legacy)
         waitFor("the original renderer recipe", timeoutMillis = 30_000) { draft()?.model == 1 }
         for ((macro, value) in legacy.macros) assertEquals("restored $macro", value, progress(macro), 0f)
         compose.onNodeWithText("FINITE").assertExists()
-        compose.onNodeWithContentDescription("MAKE INSTRUMENT").assertIsNotEnabled()
-        compose.onNodeWithText("THIS ORIGINAL SOUND IS FINITE. LOAD A CURRENT PRESET FOR SUSTAIN.").assertExists()
+        compose.onNodeWithContentDescription("MAKE INSTRUMENT").assertIsEnabled()
+        press("MAKE INSTRUMENT")
+        compose.onNodeWithText("FINITE SOURCE GESTURE · THREE TOUCH LAYERS").assertExists()
+        slider("RELEASE").assertDoesNotExist()
+        press("CANCEL")
+        assertEquals(1, draft()?.model)
         dial("REACH", .48f)
         val saved = saveAs("MY OLD SWING", root)
         assertEquals(legacy.copy(name = saved.name, macros = legacy.macros + ("REACH" to .48f)), saved)
@@ -290,7 +337,7 @@ class MeridianSynthScreenTest : ComposeScreenTest() {
         slider("RELEASE").assertExists()
         assertEquals(MeridianPadMaker.RELEASE.defaultFraction, progress("RELEASE"), 1e-6f)
         compose.onNodeWithContentDescription("ATTACK").assertDoesNotExist()
-        compose.onNodeWithText("FIXED-ALIGNMENT SWING · C2–C5 · SOFT, MEDIUM AND HARD TOUCH.").assertExists()
+        compose.onNodeWithText("Fixed-alignment swing · C2–C5 · soft, medium and hard touch.").assertExists()
         compose.onNodeWithContentDescription("MAKE").assertIsEnabled()
         press("CANCEL")
         slider("HOLD").assertExists()

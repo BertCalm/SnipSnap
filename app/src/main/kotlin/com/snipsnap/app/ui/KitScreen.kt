@@ -245,10 +245,10 @@ fun KitScreen(
         if (hasProject) {
             EmptyStatePanel(
                 Copy.PROJECT_HAS_NO_KIT,
-                listOf(EmptyStateRoute(Places.ADD_FROM_SHELF, onAddFromShelf), EmptyStateRoute("TAPE ▸", onNavigateTape)),
+                listOf(EmptyStateRoute(Places.ADD_FROM_SHELF, onAddFromShelf), EmptyStateRoute("SAMPLE ▸", onNavigateTape)),
             )
         } else {
-            EmptyStatePanel(Copy.NO_PROJECT_OPEN, listOf(EmptyStateRoute("SHELF ▸", onNavigateKits)))
+            EmptyStatePanel(Copy.NO_PROJECT_OPEN, listOf(EmptyStateRoute("LIBRARY ▸", onNavigateKits)))
         }
         return
     }
@@ -684,7 +684,7 @@ fun KitScreen(
                             .padding(horizontal = 10.dp),
                         contentAlignment = Alignment.CenterStart,
                     ) {
-                        TapeText(kit.name.uppercase(java.util.Locale.ROOT) + " ▸", TapeType.pixel, if (busy) scheme.ink3.tape else scheme.ink.tape, maxLines = 1)
+                        TapeText(kit.name.uppercase(java.util.Locale.ROOT) + " ▾", TapeType.pixel, if (busy) scheme.ink3.tape else scheme.ink.tape, maxLines = 1)
                     }
                     TapeText(Copy.countOf(kit.pads.size, "PAD", "PADS"), TapeType.lcdSmall, scheme.amber.tape, maxLines = 1)
                 }
@@ -699,7 +699,7 @@ fun KitScreen(
                         .padding(horizontal = 10.dp),
                     contentAlignment = Alignment.Center,
                 ) {
-                    TapeText(Places.ADD_KIT, TapeType.pixel, scheme.accent.tape, maxLines = 1)
+                    TapeText(Places.ADD_KIT, TapeType.pixel, scheme.accent.tape, maxLines = 2)
                 }
                 // PLAY's FULL, at the header's right end (section 3.3):
                 // the fullscreen grid is the part of PLAY that was
@@ -715,7 +715,7 @@ fun KitScreen(
                         .padding(horizontal = 10.dp),
                     contentAlignment = Alignment.Center,
                 ) {
-                    TapeText("FULL", TapeType.pixel, scheme.ink2.tape, maxLines = 1)
+                    TapeText("FULL", TapeType.pixel, scheme.ink2.tape, maxLines = 2)
                 }
             }
             val tempo = kit.tempoBpm?.let { "%.0f BPM  ".format(java.util.Locale.ROOT, it) } ?: ""
@@ -788,10 +788,10 @@ fun KitScreen(
             }
         }
 
-        StrikeControls(strike, Modifier.fillMaxWidth())
+        StrikeStripSection(strike, scheme)
         StrikeLayerFeedback(strike, Modifier.fillMaxWidth())
         if (strike.enabled && kit.pads.none { it.velocityLayers.isNotEmpty() || it.chain?.zones?.isNotEmpty() == true }) {
-            TapeText("FOR TONE CHANGES: ADD SOFT HITS IN PAD SHEET", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
+            TapeText("FOR TONE CHANGES: ADD SOFT HITS IN PAD EDITOR", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
         }
         StrikePadArea(strike, Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
             Column(
@@ -818,6 +818,7 @@ fun KitScreen(
                                     haptics.pad(touch.velocity)
                                     onSelectSlot(s)
                                 },
+                                // twin: the selected-pad strip's OPEN ▸ door (PadStrip.DOOR_OPEN), which opens the same PAD SHEET
                                 onLongPress = onLongPress,
                                 onEmptyLongPress = onEmptyLongPress,
                                 // An empty pad is selectable too: its strip is
@@ -856,8 +857,9 @@ fun KitScreen(
         val bankBEmpty = kit.pads.none { it.slot in PadBanks.slots(1) }
 
         // ---- TEXTURE: SCULPT / STRETCH, a pad becoming a tape of its own ----
-        // panelKind is a texture kind, KEY_PANEL for the key picker, or null.
-        var panelKind by remember(entry.dir) { mutableStateOf<String?>(null) }
+        // Two sections inside THIS KIT, one open at a time (the panels they
+        // replace were exclusive too): the kind that is open, or null.
+        var openTexture by remember(entry.dir) { mutableStateOf<String?>(null) }
         val sources = kit.pads.map { it.slot }.sorted()
 
         // SOURCE: the pad the player picked, remembered against the kit
@@ -889,15 +891,7 @@ fun KitScreen(
         // which is what the chips are for. Untouched, each still opens on
         // its own default.
         val textureModes = remember(entry.dir) { mutableStateMapOf<String, String>() }
-        val mode = panelKind?.takeIf { it != KEY_PANEL }
-            ?.let { textureModes[it] ?: TextureKits.modesFor(it).first() } ?: ""
-        val knob = panelKind?.takeIf { it != KEY_PANEL }?.let { TextureKits.knobFor(it, mode) }
         val textureKnobs = remember(entry.dir) { mutableStateMapOf<Pair<String, String>, Float>() }
-        // Dialled value first, then this mode's own default; 0f only when
-        // no panel is open and there is no knob to have a default.
-        val fraction = panelKind?.let { textureKnobs[it to mode] }
-            ?: knob?.defaultFraction
-            ?: 0f
 
         // X2.3 KIT action rows: the artboard (`isKit` in `TapeOS Oilslick.dc.html`)
         // packs EVIL TWINS (W4.3) and the KEY cycler (F5.3) in here alongside
@@ -908,7 +902,7 @@ fun KitScreen(
         // two-column grid truncated them, and a truncated visible label is
         // worse than a longer column. VERSIONS + BIN · REMIX BANK B · KEY
         // share one row (3:2:1), SPLIT, DUST ALL and BREED each take a full
-        // row, then the two texture doors; the panel below them scrolls, so
+        // row, then the two texture sections, which fold open in place; the box scrolls, so
         // a short screen never pushes the grid.
         //
         // The padding below the scroll is inside it: a dock's height of
@@ -980,7 +974,7 @@ fun KitScreen(
                     // same plain separator "KEY · <label>" already uses below.
                     val twinned = kit.pads.any { KitBuilderModel.isTwin(kit, it) }
                     ActionButton(
-                        if (twinned) "REMIX BANK B · REROLL" else "REMIX BANK B",
+                        if (twinned) "MAKE BANK B VARIATIONS · REROLL" else "MAKE BANK B VARIATIONS",
                         scheme,
                         enabled = !busy && kit.pads.any { it.slot in 1..16 },
                         modifier = Modifier.weight(2f),
@@ -989,26 +983,9 @@ fun KitScreen(
                 }
                 KitGroupHeading(Places.KIT_WHOLE_SOUND)
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    // KEY: the kit's key, IN KEY, and the tonal pads' tune readout.
-                    // Still the fourth door's shape - a bevel that lights amber
-                    // while its panel is open - not an ActionButton.
-                    val keyOpen = panelKind == KEY_PANEL
-                    Box(
-                        Modifier
-                            .weight(1f)
-                            .heightIn(min = Layout.MIN_HIT_TARGET.dp)
-                            .raisedBevel(scheme, fill = if (keyOpen) scheme.amber.tape.copy(alpha = 0.85f) else null)
-                            // Always clickable, `!busy` forwarded rather than
-                            // dropped: a screen reader is told this control is
-                            // temporarily unavailable instead of it silently
-                            // vanishing from the tree (accessibility audit
-                            // finding 12 — see ActionButton in PadSheetScreen.kt).
-                            .tapeClick(label = if (keyOpen) "CLOSE KEY" else "OPEN KEY", enabled = !busy) { panelKind = if (keyOpen) null else KEY_PANEL }
-                            .padding(horizontal = 8.dp),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        TapeText("KEY ▸", TapeType.pixel, if (busy) scheme.ink3.tape else if (keyOpen) scheme.titleInk.tape else scheme.ink2.tape)
-                    }
+                    // KEY: the kit's key, IN KEY, and the tonal pads' tune readout,
+                    // in a sheet of its own (clarity spec 7.3: a picker is a sheet).
+                    KeyDoor(entry.dir, kit, busy, scheme, Modifier.weight(1f), onSetKey, onInKey)
                 }
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     // DUST ALL: the per-pad DUST chip on every pad at one amount,
@@ -1023,45 +1000,15 @@ fun KitScreen(
                         onClick = onDustAll,
                     )
                 }
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    for (kind in TextureKits.KINDS) {
-                        val open = panelKind == kind
-                        val doorEnabled = !busy && kit.pads.isNotEmpty()
-                        Box(
-                            Modifier
-                                .weight(1f)
-                                .heightIn(min = Layout.MIN_HIT_TARGET.dp)
-                                .raisedBevel(scheme, fill = if (open) scheme.amber.tape.copy(alpha = 0.85f) else null)
-                                // Always clickable, `doorEnabled` forwarded
-                                // rather than dropped: a screen reader is told
-                                // this door is temporarily unavailable instead
-                                // of it silently vanishing from the tree
-                                // (accessibility audit finding 12).
-                                .tapeClick(label = if (open) "CLOSE $kind" else "OPEN $kind", enabled = doorEnabled) { panelKind = if (open) null else kind }
-                                .padding(horizontal = 8.dp),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            // TEXTURES dropped from SCULPT's own subtitle
-                            // (truncation pass): equal 26/23-character weights
-                            // on this even split were marginal at 411dp and
-                            // truncated at 360dp, and "TEXTURES" was the padded
-                            // half — GRANULAR already names the technique.
-                            // STRETCH's two words are untouched: SLOW and
-                            // FREEZE are its own two modes (`modesFor`), not
-                            // padding.
-                            val doorSubtitle = when (kind) {
-                                "SCULPT" -> "GRANULAR"
-                                "STRETCH" -> "SLOW & FREEZE"
-                                else -> ""
-                            }
-                            TapeText(
-                                "$kind ▸ $doorSubtitle",
-                                TapeType.pixel,
-                                if (!doorEnabled) scheme.ink3.tape else if (open) scheme.titleInk.tape else scheme.ink2.tape,
-                            )
-                        }
-                    }
-                }
+                TextureSections(
+                    kit = kit, busy = busy, scheme = scheme,
+                    openKind = openTexture,
+                    onToggle = { kind -> openTexture = if (openTexture == kind) null else kind },
+                    modes = textureModes, knobs = textureKnobs,
+                    sources = sources, sourceSlot = sourceSlot,
+                    onPickSource = { pickedSource = it },
+                    onTexture = onTexture,
+                )
 
                 // SHARE is OUT's now (plan §3.5): one file out the share sheet
                 // is an output, so it sits with the other outputs.
@@ -1077,45 +1024,11 @@ fun KitScreen(
                     // under the grid, and the loop wants to keep playing while
                     // you work it.
                     ActionButton(
-                        "SPLIT ▸ SINES · TRANSIENT · AIR",
+                        "SPLIT · SINES · TRANSIENT · AIR ▸",
                         scheme,
                         enabled = !busy && kit.pads.isNotEmpty(),
                         modifier = Modifier.fillMaxWidth(),
                         onClick = onSplit,
-                    )
-                }
-                if (panelKind == KEY_PANEL) {
-                    KeyPanel(
-                        key = kit.key,
-                        readouts = KeyPicker.readouts(kit),
-                        busy = busy,
-                        onSetKey = onSetKey,
-                        onInKey = onInKey,
-                    )
-                }
-
-                val kind = panelKind
-                val src = sourceSlot
-                if (kind != null && knob != null && src != null) {
-                    TexturePanel(
-                        kind = kind,
-                        modes = TextureKits.modesFor(kind),
-                        mode = mode,
-                        onMode = { picked -> textureModes[kind] = picked },
-                        sourceLabel = "${MutateSheet.padTag(src)} · ${kit.pad(src)?.displayName ?: ""}",
-                        onSourceStep = { step ->
-                            val i = sources.indexOf(src)
-                            if (i >= 0 && sources.size > 1) pickedSource = sources[(i + step).mod(sources.size)]
-                        },
-                        knobLabel = knob.label,
-                        knobFraction = fraction,
-                        knobText = TextureKits.knobLabel(knob, knob.value(fraction)),
-                        onKnob = { f -> textureKnobs[kind to mode] = (f * 40f).let { Math.round(it) / 40f } },
-                        busy = busy,
-                        onGo = {
-                            val seed = Random.nextLong(0L, 1_000_000L)
-                            onTexture(src, TextureKits.spec(kind, mode, fraction, seed))
-                        },
                     )
                 }
                 KitGroupHeading(Places.KIT_VERSIONS_AND_KITS)
@@ -1131,7 +1044,7 @@ fun KitScreen(
                     // the app. "ROLL BACK OR RESTORE" also dropped to
                     // "RESTORE": RESTORE alone says the same thing the longer
                     // phrase did.
-                    ActionButton("VERSIONS + BIN ▸ RESTORE", scheme, enabled = !busy, modifier = Modifier.weight(3f), onClick = onTakesBin)
+                    ActionButton("VERSIONS · RESTORE ▸", scheme, enabled = !busy, modifier = Modifier.weight(3f), onClick = onTakesBin)
                 }
                 Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     // BREED: this kit's own recipes crossed with a second kit's
@@ -1169,7 +1082,7 @@ fun KitScreen(
             // to where it is tapped is not discoverable by looking, and a hint
             // that can be dismissed is a feature that can be lost. The one
             // legend left: the strip carries the other.
-            TapeText(Copy.PAD_VELOCITY_LEGEND, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
+            TapeText(Copy.PAD_VELOCITY_LEGEND, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
             // Where the kit came from (persona review, P4.4). The same move as
             // the two lines above: always there, cannot be dismissed. The
             // finding was that provenance is good and reachable only by
@@ -1181,7 +1094,7 @@ fun KitScreen(
             // line for "nowhere".
             val cameFrom = Provenance.ofKit(kit.pads)
             if (cameFrom != null) {
-                TapeText(Copy.kitCameFrom(cameFrom), TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
+                TapeText(Copy.kitCameFrom(cameFrom), TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
             }
     
             // PLAY's footer, folded in (section 3.3): PANIC always, and the MIDI
@@ -1210,7 +1123,7 @@ fun KitScreen(
                 if (midiDevices.isEmpty()) {
                     Box(Modifier.weight(1f))
                 } else {
-                    TapeText(midiLine(midiDevices), TapeType.pixelSmall, scheme.ink2.tape, Modifier.weight(1f), maxLines = 1)
+                    TapeText(midiLine(midiDevices), TapeType.pixelSmall, scheme.ink2.tape, Modifier.weight(1f), maxLines = 2)
                     Box(
                         Modifier
                             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
@@ -1230,7 +1143,7 @@ fun KitScreen(
                     KitMidi.TARGETS,
                     supported = true,
                     connected = true,
-                    hint = "A LEARNED PAD PLAYS NO SOUND",
+                    hint = Copy.LEARNED_PAD_NO_SOUND,
                 )
             }
         }
@@ -1267,7 +1180,7 @@ fun KitScreen(
 /** A heading inside THIS KIT, over the tools it names: a quiet label, its own composable so KitScreen grows by a call. */
 @Composable
 private fun KitGroupHeading(text: String) {
-    TapeText(text, TapeType.pixelSmall, LocalScheme.current.ink2.tape, Modifier.padding(top = 4.dp), maxLines = 1)
+    TapeText(text, TapeType.pixelSmall, LocalScheme.current.ink2.tape, Modifier.padding(top = 4.dp), maxLines = 2)
 }
 
 /**
@@ -1282,13 +1195,13 @@ private fun KitLearnChip(showing: Boolean, onToggle: () -> Unit) {
     Box(
         Modifier
             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
-            .raisedBevel(scheme, fill = if (showing) scheme.amber.tape.copy(alpha = 0.85f) else null)
+            .raisedBevel(scheme, fill = if (showing) scheme.accent.tape else null)
             .tapeClick(label = "LEARN", onClick = onToggle)
             .semantics { selected = showing }
             .padding(horizontal = 10.dp),
         contentAlignment = Alignment.Center,
     ) {
-        TapeText("LEARN", TapeType.pixel, if (showing) scheme.titleInk.tape else scheme.ink2.tape)
+        TapeText("LEARN", TapeType.pixel, if (showing) scheme.onAccent.tape else scheme.ink2.tape)
     }
 }
 
@@ -1321,7 +1234,7 @@ private fun PadStripLine(
             return@Row
         }
         val strip = PadStrip.line(pad, slot)
-        TapeText(PadStrip.oneLine(strip), TapeType.pixelSmall, scheme.ink2.tape, Modifier.weight(1f), maxLines = 1)
+        TapeText(PadStrip.oneLine(strip), TapeType.pixelSmall, scheme.ink2.tape, Modifier.weight(1f), maxLines = 2)
         for (door in strip.doors) {
             DoorChip(door, onClick = {
                 when (door) {
@@ -1344,8 +1257,124 @@ private fun Context.findActivity(): Activity? {
     return null
 }
 
-/** The action row's fourth door, beside the texture kinds. */
-private const val KEY_PANEL = "KEY"
+/**
+ * KEY's opener: a bevelled door labelled [Places.KEY_OPEN] that opens the KEY
+ * sheet. The sheet is a picker (twelve roots, five scales, OFF), with IN KEY and
+ * the tonal pads' readouts under it, so it is a [BottomSheet] around [KeyPanel]
+ * rather than a list of rows. [kitDir] keys the open flag, so switching kit
+ * never leaves another kit's sheet up.
+ */
+@Composable
+private fun KeyDoor(
+    kitDir: java.io.File,
+    kit: com.snipsnap.kit.Kit,
+    busy: Boolean,
+    scheme: Scheme,
+    modifier: Modifier,
+    onSetKey: (com.snipsnap.audio.KeySpec?) -> Unit,
+    onInKey: () -> Unit,
+) {
+    var open by remember(kitDir) { mutableStateOf(false) }
+    Box(
+        modifier
+            .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+            .raisedBevel(scheme)
+            // Always clickable, `!busy` forwarded rather than dropped: a
+            // screen reader is told this control is temporarily unavailable
+            // instead of it silently vanishing from the tree (accessibility
+            // audit finding 12 - see ActionButton in PadSheetScreen.kt).
+            .tapeClick(label = "OPEN KEY", enabled = !busy) { open = true }
+            .padding(horizontal = 8.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        TapeText(Places.KEY_OPEN, TapeType.pixel, if (busy) scheme.ink3.tape else scheme.ink2.tape)
+    }
+    if (open) {
+        BottomSheet(Places.KEY_SHEET_TITLE, onDismiss = { open = false }, wrap = true) {
+            Column(
+                Modifier
+                    .weight(1f, fill = false)
+                    .verticalScroll(rememberScrollState())
+                    .padding(start = 12.dp, end = 12.dp, bottom = 12.dp),
+            ) {
+                KeyPanel(
+                    key = kit.key,
+                    readouts = KeyPicker.readouts(kit),
+                    busy = busy,
+                    onSetKey = onSetKey,
+                    onInKey = onInKey,
+                )
+            }
+        }
+    }
+}
+
+/**
+ * SCULPT and STRETCH as two sections of THIS KIT (clarity spec 7.3: an inline
+ * panel behind a glyph becomes a section). Each is a [GroupBox] whose closed line
+ * says what is inside until a pad is there to read from, then what GO would
+ * render ([Places.textureLine]). They stay sections and not screens: a source
+ * stepper, mode chips, one knob and GO, with no preview transport of their own.
+ * The mode and knob a player dialled live in [modes] and [knobs], owned by the
+ * kit, so folding one section and opening the other loses nothing.
+ */
+@Composable
+private fun TextureSections(
+    kit: com.snipsnap.kit.Kit,
+    busy: Boolean,
+    scheme: Scheme,
+    openKind: String?,
+    onToggle: (String) -> Unit,
+    modes: MutableMap<String, String>,
+    knobs: MutableMap<Pair<String, String>, Float>,
+    sources: List<Int>,
+    sourceSlot: Int?,
+    onPickSource: (Int) -> Unit,
+    onTexture: (slot: Int, spec: TextureKits.Spec) -> Unit,
+) {
+    for (kind in TextureKits.KINDS) {
+        val kindModes = TextureKits.modesFor(kind)
+        val mode = modes[kind] ?: kindModes.first()
+        val knob = TextureKits.knobFor(kind, mode)
+        // Dialled value first, then this mode's own default.
+        val fraction = knobs[kind to mode] ?: knob.defaultFraction
+        val knobText = TextureKits.knobLabel(knob, knob.value(fraction))
+        val src = sourceSlot
+        GroupBox(
+            legend = kind,
+            summary = Places.textureLine(kindModes, mode, knobText, src?.let { MutateSheet.padTag(it) }),
+            open = openKind == kind && src != null,
+            onToggle = { onToggle(kind) },
+            scheme = scheme,
+            // Always clickable, `enabled` forwarded: a kit with no pad has
+            // nothing to turn into a tape, and a job in flight owns the app.
+            enabled = !busy && kit.pads.isNotEmpty(),
+        ) {
+            if (src != null) {
+                TexturePanel(
+                    kind = kind,
+                    modes = kindModes,
+                    mode = mode,
+                    onMode = { picked -> modes[kind] = picked },
+                    sourceLabel = "${MutateSheet.padTag(src)} · ${kit.pad(src)?.displayName ?: ""}",
+                    onSourceStep = { step ->
+                        val i = sources.indexOf(src)
+                        if (i >= 0 && sources.size > 1) onPickSource(sources[(i + step).mod(sources.size)])
+                    },
+                    knobLabel = knob.label,
+                    knobFraction = fraction,
+                    knobText = knobText,
+                    onKnob = { f -> knobs[kind to mode] = (f * 40f).let { Math.round(it) / 40f } },
+                    busy = busy,
+                    onGo = {
+                        val seed = Random.nextLong(0L, 1_000_000L)
+                        onTexture(src, TextureKits.spec(kind, mode, fraction, seed))
+                    },
+                )
+            }
+        }
+    }
+}
 
 /**
  * The KEY panel (F5.3): twelve root chips, five scale chips, OFF, IN KEY,
@@ -1366,7 +1395,7 @@ private fun KeyPanel(
     val root = key?.rootSemitone ?: KeyPicker.DEFAULT_ROOT
     val scaleLabel = key?.let { KeyPicker.scaleLabel(it.scale) } ?: KeyPicker.DEFAULT_SCALE
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        TapeText("KEY · ${KeyPicker.label(key)}", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
+        TapeText("KEY · ${KeyPicker.label(key)}", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
 
         for (row in KeyPicker.ROOTS.indices.chunked(6)) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -1376,7 +1405,7 @@ private fun KeyPanel(
                         Modifier
                             .weight(1f)
                             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
-                            .raisedBevel(scheme, fill = if (selected) scheme.amber.tape.copy(alpha = 0.85f) else null)
+                            .raisedBevel(scheme, fill = if (selected) scheme.accent.tape else null)
                             // Always clickable, `!busy` forwarded rather
                             // than dropped — see ActionButton's own note in
                             // PadSheetScreen.kt (accessibility audit finding
@@ -1385,7 +1414,7 @@ private fun KeyPanel(
                             .padding(horizontal = 2.dp),
                         contentAlignment = Alignment.Center,
                     ) {
-                        TapeText(KeyPicker.ROOTS[r], TapeType.pixel, if (busy) scheme.ink3.tape else if (selected) scheme.titleInk.tape else scheme.ink2.tape)
+                        TapeText(KeyPicker.ROOTS[r], TapeType.pixel, if (busy) scheme.ink3.tape else if (selected) scheme.onAccent.tape else scheme.ink2.tape)
                     }
                 }
             }
@@ -1397,7 +1426,7 @@ private fun KeyPanel(
                     Modifier
                         .weight(1f)
                         .heightIn(min = Layout.MIN_HIT_TARGET.dp)
-                        .raisedBevel(scheme, fill = if (selected) scheme.amber.tape.copy(alpha = 0.85f) else null)
+                        .raisedBevel(scheme, fill = if (selected) scheme.accent.tape else null)
                         // Always clickable, `!busy` forwarded rather than
                         // dropped (accessibility audit finding 12).
                         .tapeClick(label = s, enabled = !busy) { onSetKey(KeyPicker.key(root, s)) }
@@ -1407,7 +1436,7 @@ private fun KeyPanel(
                     TapeText(
                         s,
                         TapeType.pixelSmall,
-                        if (busy) scheme.ink3.tape else if (selected) scheme.titleInk.tape else scheme.ink2.tape,
+                        if (busy) scheme.ink3.tape else if (selected) scheme.onAccent.tape else scheme.ink2.tape,
                         maxLines = 2,
                     )
                 }
@@ -1416,13 +1445,13 @@ private fun KeyPanel(
 
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             ActionButton("OFF", scheme, enabled = !busy && key != null, modifier = Modifier.weight(1f), onClick = { onSetKey(null) })
-            ActionButton("IN KEY ▸ RETUNE TONAL PADS", scheme, enabled = !busy && key != null, modifier = Modifier.weight(2f), onClick = onInKey)
+            ActionButton("IN KEY · RETUNE TONAL PADS", scheme, enabled = !busy && key != null, modifier = Modifier.weight(2f), onClick = onInKey)
         }
 
         if (readouts.isEmpty()) {
-            TapeText(Copy.NO_TONAL_PADS, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
+            TapeText(Copy.NO_TONAL_PADS, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
         } else {
-            for (line in readouts) TapeText(line, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
+            for (line in readouts) TapeText(line, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
         }
     }
 }
@@ -1452,11 +1481,12 @@ private fun TexturePanel(
 ) {
     val scheme = LocalScheme.current
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        TapeText("TEXTURE · $kind · FOUR TAKES, ONE NEW TAPE", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
+        if (kind == "SCULPT") TapeText(Copy.SCULPT_LINE, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
+        TapeText("TEXTURE · $kind · FOUR TAKES, ONE NEW SAMPLE", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
 
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
             ActionButton("◄", scheme, enabled = !busy, accessibilityLabel = "PREVIOUS SOURCE", onClick = { onSourceStep(-1) })
-            TapeText("SOURCE  $sourceLabel", TapeType.pixel, scheme.ink.tape, Modifier.weight(1f), maxLines = 1)
+            TapeText("SOURCE  $sourceLabel", TapeType.pixel, scheme.ink.tape, Modifier.weight(1f), maxLines = 2)
             ActionButton("►", scheme, enabled = !busy, accessibilityLabel = "NEXT SOURCE", onClick = { onSourceStep(1) })
         }
 
@@ -1467,14 +1497,14 @@ private fun TexturePanel(
                     Modifier
                         .weight(1f)
                         .heightIn(min = Layout.MIN_HIT_TARGET.dp)
-                        .raisedBevel(scheme, fill = if (selected) scheme.amber.tape.copy(alpha = 0.85f) else null)
+                        .raisedBevel(scheme, fill = if (selected) scheme.accent.tape else null)
                         // Always clickable, `!busy` forwarded rather than
                         // dropped (accessibility audit finding 12).
                         .tapeClick(label = m, enabled = !busy) { onMode(m) }
                         .padding(horizontal = 4.dp),
                     contentAlignment = Alignment.Center,
                 ) {
-                    TapeText(m, TapeType.pixel, if (busy) scheme.ink3.tape else if (selected) scheme.titleInk.tape else scheme.ink2.tape)
+                    TapeText(m, TapeType.pixel, if (busy) scheme.ink3.tape else if (selected) scheme.onAccent.tape else scheme.ink2.tape)
                 }
             }
         }
@@ -1483,7 +1513,7 @@ private fun TexturePanel(
             label = knobLabel,
             fraction = knobFraction,
             valueText = knobText,
-            fillColor = scheme.amber.tape,
+            fillColor = scheme.accent.tape,
             scheme = scheme,
             enabled = !busy,
             onFractionChange = onKnob,
@@ -1498,7 +1528,7 @@ private fun TexturePanel(
         var startedHere by remember { mutableStateOf(false) }
         LaunchedEffect(busy) { if (!busy) startedHere = false }
         ActionButton(
-            "$kind ▸ NEW TAPE",
+            "$kind · NEW SAMPLE",
             scheme,
             enabled = !busy,
             working = busy && startedHere,
@@ -1578,6 +1608,7 @@ private fun PadCell(
                     contentDescription = "PAD $tag: EMPTY"
                     this.selected = selected
                     onClick(label = "HINT") { onEmptyTapHint(slot); true }
+                    // twin: the selected empty pad's CAPTURE ▸ door in the strip (PadStrip.DOOR_CAPTURE), which opens the same capture
                     onLongClick(label = "CAPTURE A SAMPLE") { onEmptyLongPress(slot); true }
                 }
                 // Same long-press timing as the filled path below, but a
@@ -1587,6 +1618,7 @@ private fun PadCell(
                 .pointerInput(slot) {
                     while (true) {
                         val down = awaitPointerEventScope { awaitFirstDown(requireUnconsumed = false) }
+                        // twin: the selected empty pad's CAPTURE ▸ door in the strip (PadStrip.DOOR_CAPTURE)
                         val longPress = scope.launch {
                             delay(LONG_PRESS_MS)
                             onEmptyLongPress(slot)
@@ -1685,7 +1717,8 @@ private fun PadCell(
                 // this used at first, was a third disagreement with the
                 // rest of the app.
                 onClick(label = "PLAY") { onTap(slot, PadHit.CENTER); true }
-                onLongClick(label = "OPEN PAD SHEET") { onLongPress(slot); true }
+                // twin: the selected-pad strip's OPEN ▸ door (PadStrip.DOOR_OPEN), which opens the same PAD SHEET
+                onLongClick(label = "OPEN PAD EDITOR") { onLongPress(slot); true }
             }
             // The press fires the hit immediately — a pad that waited for
             // release to sound would already be wrong as a drum pad. The
@@ -1702,6 +1735,7 @@ private fun PadCell(
                         glow.snapTo(1f)
                         glow.animateTo(0f, tween(Motion.PAD_GLOW_MS))
                     }
+                    // twin: the selected-pad strip's OPEN ▸ door (PadStrip.DOOR_OPEN)
                     val longPressJob = scope.launch {
                         delay(LONG_PRESS_MS)
                         onLongPress(slot)

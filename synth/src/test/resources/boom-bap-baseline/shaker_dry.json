@@ -1,0 +1,17 @@
+{
+  "recipe": 2,
+  "patch": {
+    "engine": "SKIN",
+    "version": 1,
+    "name": "Pushed Seeds",
+    "voice": "SHAKER",
+    "macros": {
+      "TONE": 0.550000011920929,
+      "DECAY": 0.4399999976158142,
+      "PUNCH": 0.3499999940395355,
+      "SWELL": 0.18000000715255737,
+      "GRAIN": 0.6200000047683716
+    }
+  },
+  "alias": false
+}

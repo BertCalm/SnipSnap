@@ -6,6 +6,7 @@ import com.snipsnap.kit.ConfluenceBankFiles
 import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitAssembler
 import com.snipsnap.kit.Names
+import com.snipsnap.synth.MurmurKeptBank
 import com.snipsnap.synth.ChordStabs
 import com.snipsnap.synth.Shuffle
 import com.snipsnap.synth.ConfluenceVoiceBank
@@ -29,6 +30,17 @@ import java.io.File
  * and VELOCITY qualify that. CONFLUENCE's eight wordless pads are finite rendered
  * recordings; their checked source bank and exact arrangement metadata travel
  * beside the kit, rather than pretending to be asset-free synth recipes.
+ * COSMIC BREAKS, VELOUR and VELOUR BLOOM are fixed rendered banks with source provenance;
+ * their printed wet pads do not pretend to have dry-source synth recipes.
+ * TRIAD starters are versioned rendered banks: three velocity zones and four takes
+ * per zone, including finite bus phrases, with source provenance on every pad.
+ * GATECRASH starters are the same kind of bank: three zones of four takes, each pad printed
+ * through its own gated space, with two finite phrases and source provenance on every pad.
+ * CYPHER starters follow GATECRASH's shape: dry or printed hits, two phrases, provenance on every pad.
+ * MIRRORBALL starters are built the same way, each pad printed through an FET compressor,
+ * a multi-head tape echo and an amp.
+ * SCUFF's starter is the same shape, every strike rendered by the SCUFF engine at a velocity and a take, its two
+ * phrases through one bus clipper.
  * CLOUD's GRAINS clouds (A07-A16) carry no recipe;
  * only its VOX pads (A01-A06) do, as `SynthKits.cloud` says. LUCKY DIP
  * A/B's bank-B twins carry fx-only recipes (`Shuffle.withRemixBank`), the
@@ -40,6 +52,9 @@ import java.io.File
  */
 object StarterKits {
     const val CONFLUENCE_ID = "confluence-wordless"
+
+    /** FIRED BRONZE's starter: model 2's round-robin grid, four strike layers of fresh strikes each. */
+    const val FIRED_BRONZE_ID = "fired-bronze"
     const val CONFLUENCE_BANK_DIR = "confluence-voice-bank"
     const val CONFLUENCE_VOICES_ID = "confluence-voices"
 
@@ -54,6 +69,8 @@ object StarterKits {
         val seeded: Boolean,
         /** A key the kit's melodic content is in, when it has one. */
         val key: KeySpec? = null,
+        /** Authored tempo, when timing is part of the kit recipe. */
+        val tempoBpm: Float? = null,
         /** Optional source payloads written before kit.json makes a kit visible. */
         private val prepare: ((directory: File) -> Unit)? = null,
         private val build: (seed: Int) -> List<ArrangedPad?>,
@@ -65,7 +82,22 @@ object StarterKits {
         fun render(name: String, dir: File, seed: Int = 0): Kit {
             require(Names.isMpcSafe(name)) { "kit name isn't MPC-safe: '$name'" }
             prepare?.invoke(dir)
-            return KitAssembler.assembleArranged(name, build(seed), dir, key)
+            val kit = KitAssembler.assembleArranged(name, build(seed), dir, key, tempoBpm = tempoBpm)
+            // BACKWASH, BREAKER and FIRED BRONZE pads carry their recipes; the shared robin deals each pad's
+            // velocity zones and re-struck takes from it (FIRED BRONZE model 2 its own four strike layers), then
+            // the pad keeps its recipe.
+            val breaker = com.snipsnap.synth.BreakerKits.byId(id)
+            if (id.startsWith("backwash-") || breaker != null || id == FIRED_BRONZE_ID) {
+                val model = KitBuilderModel.open(dir)
+                for (pad in kit.pads) {
+                    val (zones, takes) = if (breaker != null) com.snipsnap.synth.BreakerKits.gridFor(pad.slot, breaker) else 3 to 3
+                    Robin.apply(model, pad.slot, takes = takes, zones = zones)
+                    model.update(pad.slot) { it.copy(recipe=pad.recipe) }
+                }
+                model.save(accrueWear=false)
+                return model.kit
+            }
+            return kit
         }
     }
 
@@ -90,8 +122,8 @@ object StarterKits {
             seeded = false,
         ) { ThumpKits.classic() },
         Starter(
-            "strike-fx", "STRIKE FX",
-            "Four short hits: DRY, REVERB, ECHO. Turn STRIKE ON, use STAY and VOL OFF, then tap while moving the strip.",
+            "strike-fx", "FX BY VELOCITY",
+            "Four short hits: DRY, REVERB, ECHO. Open VELOCITY STRIP, turn STRIP ON, set RELEASE to STAY and LEVEL to VOL OFF, then tap while moving the strip.",
             seeded = false,
         ) { com.snipsnap.synth.StrikeDemoKit.build() },
         Starter(
@@ -104,6 +136,17 @@ object StarterKits {
             "The dice kit plus a remixed bank B - every pad's evil twin.",
             seeded = true,
         ) { Shuffle.withRemixBank(Shuffle.kit(it), it) },
+        Starter(
+            "halobar", "HALOBAR",
+            "Vibraphone, marimba and xylophone with rhythmic dub echoes.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.halobar() },
+        Starter(
+            "halobar-six", "HALOBAR SIX STUDY",
+            "Six mallet voices, paired dry and dub. New bell voices are listening studies.",
+            seeded = false, key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.halobarCompleteStudy() },
         Starter(
             "melodic", "MELODIC",
             "Plucks and organ stabs in A minor pentatonic. Runs, not just hits.",
@@ -463,6 +506,12 @@ object StarterKits {
             key = KeySpec.parse("Cminpent"),
         ) { SynthKits.keel() },
         Starter(
+            com.snipsnap.synth.EtchKits.ID, "ETCH",
+            "Squelching step-line bass: a SAW walk in C minor pentatonic, five more voices and three 130 BPM lines. Three touch zones, four takes.",
+            seeded = false, tempoBpm = com.snipsnap.synth.EtchKits.BPM.toFloat(),
+            key = KeySpec.parse("Cminpent"),
+        ) { com.snipsnap.synth.EtchKits.build() },
+        Starter(
             "wick", "WICK",
             "Six pitched voices with recovering motion and three RATTLE bodies.",
             seeded = false,
@@ -516,6 +565,261 @@ object StarterKits {
             seeded = false,
             key = KeySpec.parse("C"),
         ) { ChordStabs.borrowedKit(KeySpec.parse("C")) },
+        Starter(
+            "erosion", "EROSION",
+            "Eight dry percussion roles, from low thuds to bright crackle, with soft, medium and hard touch.",
+            seeded = false,
+        ) { com.snipsnap.synth.ErosionKits.contrast() },
+        Starter(
+            "triad-techno", "TRIAD WAREHOUSE TECHNO",
+            "Hybrid drums, hand percussion, rolls and shared-bus phrases. Three touch zones and four takes per zone.",
+            seeded = false, tempoBpm = 128f,
+        ) { com.snipsnap.synth.TriadKits.build(com.snipsnap.synth.TriadKits.Genre.TECHNO) },
+        Starter(
+            "triad-house", "TRIAD SUBMERGED HOUSE",
+            "Hybrid drums, hand percussion, rolls and shared-bus phrases. Three touch zones and four takes per zone.",
+            seeded = false, tempoBpm = 118f,
+        ) { com.snipsnap.synth.TriadKits.build(com.snipsnap.synth.TriadKits.Genre.DEEP_HOUSE) },
+        Starter(
+            "triad-minimal", "TRIAD FRACTURE MINIMAL",
+            "Hybrid drums, hand percussion, rolls and shared-bus phrases. Three touch zones and four takes per zone.",
+            seeded = false, tempoBpm = 126f,
+        ) { com.snipsnap.synth.TriadKits.build(com.snipsnap.synth.TriadKits.Genre.MINIMAL) },
+        Starter(
+            "rivet-workshop", "RIVET WORKSHOP",
+            "Industrial drums in a small room. Sixteen pads, three strike strengths and choking metal hats.",
+            seeded = false,
+        ) { SynthKits.rivet(.10f) },
+        Starter(
+            "rivet-factory", "RIVET FACTORY",
+            "Industrial drums with a wider room. The same sixteen roles and three strike strengths.",
+            seeded = false,
+        ) { SynthKits.rivet(.55f) },
+        Starter(
+            "rivet-warehouse", "RIVET WAREHOUSE",
+            "Industrial drums with long warehouse reflections. The same sources, with room to ring.",
+            seeded = false,
+        ) { SynthKits.rivet(1f) },
+        Starter(
+            "velour-close", "VELOUR CLOSE",
+            "Close drums and percussion through a warm amp. Three touch layers, with short natural tails.",
+            seeded = false, tempoBpm = com.snipsnap.synth.VelourApprovedKits.TEMPO,
+        ) { com.snipsnap.synth.VelourApprovedKits.build(com.snipsnap.synth.VelourApprovedKits.Treatment.CLOSE) },
+        Starter(
+            "velour", "VELOUR",
+            "Muted drums, scattered echoes and a warm amp. Three touch layers and four percussion pads.",
+            seeded = false, tempoBpm = com.snipsnap.synth.VelourApprovedKits.TEMPO,
+        ) { com.snipsnap.synth.VelourApprovedKits.build() },
+        Starter(
+            "velour-bloom", "VELOUR BLOOM",
+            "The same drums with denser grains, longer space and more amp drive. Three touch zones.",
+            seeded = false, tempoBpm = com.snipsnap.synth.VelourApprovedKits.TEMPO,
+        ) { com.snipsnap.synth.VelourApprovedKits.build(com.snipsnap.synth.VelourApprovedKits.Treatment.BLOOM) },
+        Starter("backwash-soul", "BACKWASH SOUL", "Tight soul drums, cross-stick pocket and acoustic percussion. Native recorded alternates and a tambourine roll/riser.", seeded=false, tempoBpm=94f) {
+            com.snipsnap.synth.BackwashKits.build(com.snipsnap.synth.BackwashKits.Genre.SOUL_POCKET)
+        },
+        Starter("backwash-psych", "BACKWASH PSYCH", "Low rock kick, open snare, ringing toms and cowbell accents. Acoustic percussion, alternate takes and roll/riser.", seeded=false, tempoBpm=108f) {
+            com.snipsnap.synth.BackwashKits.build(com.snipsnap.synth.BackwashKits.Genre.PSYCH_ROCK)
+        },
+        Starter(
+            FIRED_BRONZE_ID, "FIRED BRONZE",
+            "Skin, clay and bronze through a driven processor and amp. Sixteen pads, four strike layers, three fresh strikes each.",
+            seeded = false, tempoBpm = 96f,
+        ) { com.snipsnap.synth.FiredBronzeInstrument.kit() },
+        Starter(
+            "spore-jungle", "SPORE JUNGLE",
+            "Psychedelic breaks, tight ghosts and canopy echoes. Three touch zones and three takes; B01 roll and B02 riser.",
+            seeded = false, tempoBpm = 170f,
+        ) { SynthKits.sporeStation() },
+        Starter(
+            "spore-dub", "SPORE DUB",
+            "Low, rounded drums with dark half-time space. Three touch zones and three takes; B01 roll and B02 riser.",
+            seeded = false, tempoBpm = 85f,
+        ) { com.snipsnap.synth.SporeStation.performance(com.snipsnap.synth.SporeStation.Genre.DUB) },
+        Starter(
+            "spore-electro", "SPORE ELECTRO",
+            "Short synthetic drums, bright wires and metallic accents. Three touch zones and three takes; B01 roll and B02 riser.",
+            seeded = false, tempoBpm = 130f,
+        ) { com.snipsnap.synth.SporeStation.performance(com.snipsnap.synth.SporeStation.Genre.ELECTRO) },
+        Starter(
+            "cosmic-breaks", "COSMIC BREAKS",
+            "Sixteen cosmic drums, glitches and rides. Three strike layers, four takes each.",
+            seeded = false, tempoBpm = com.snipsnap.synth.CosmicBreaksKits.TEMPO,
+        ) { com.snipsnap.synth.CosmicBreaksGenres.build(com.snipsnap.synth.CosmicBreaksGenres.Genre.ORBIT) },
+        Starter("cosmic-jungle", "COSMIC JUNGLE", "Jungle crack, tight hats and restless glitches. Includes a roll and riser.",
+            seeded = false, tempoBpm = 174f) { com.snipsnap.synth.CosmicBreaksGenres.build(com.snipsnap.synth.CosmicBreaksGenres.Genre.JUNGLE) },
+        Starter("cosmic-dubstep", "COSMIC DUBSTEP", "Deep kicks, dark snares and spaced echoes. Includes a roll and riser.",
+            seeded = false, tempoBpm = 140f) { com.snipsnap.synth.CosmicBreaksGenres.build(com.snipsnap.synth.CosmicBreaksGenres.Genre.DUBSTEP) },
+        Starter(
+            "gatecrash-stone", "GATECRASH STONE ROOM",
+            "Acoustic drums and six concert toms in a hard room, crushed and gated. Three touch zones, four takes; a tom fill and a snare build.",
+            seeded = false, tempoBpm = com.snipsnap.synth.GatecrashKits.Kit.STONE_ROOM.bpm.toFloat(),
+        ) { com.snipsnap.synth.GatecrashKits.build(com.snipsnap.synth.GatecrashKits.Kit.STONE_ROOM) },
+        Starter(
+            "gatecrash-machine", "GATECRASH MACHINE POP",
+            "Analog drums and four diving synth toms through a burst of reflections that stops dead. Three touch zones, four takes; a fill and a build.",
+            seeded = false, tempoBpm = com.snipsnap.synth.GatecrashKits.Kit.MACHINE_POP.bpm.toFloat(),
+        ) { com.snipsnap.synth.GatecrashKits.build(com.snipsnap.synth.GatecrashKits.Kit.MACHINE_POP) },
+        Starter(
+            "gatecrash-electro", "GATECRASH ELECTRO FUNK",
+            "A long dry boom kick with a snappy snare and clap in a small, short-gated room. Three touch zones, four takes; a tom break and a build.",
+            seeded = false, tempoBpm = com.snipsnap.synth.GatecrashKits.Kit.ELECTRO_FUNK.bpm.toFloat(),
+        ) { com.snipsnap.synth.GatecrashKits.build(com.snipsnap.synth.GatecrashKits.Kit.ELECTRO_FUNK) },
+        Starter(
+            "cypher-trap", "CYPHER TRAP",
+            "A short punch over subs that hold and slide, a piercing snare, hats that roll in triplets and sixty-fourths, a bell and a zap. Dry. Three touch zones, four takes; a hat roll and a sub line.",
+            seeded = false, tempoBpm = com.snipsnap.synth.CypherKits.Kit.TRAP.bpm.toFloat(),
+        ) { com.snipsnap.synth.CypherKits.build(com.snipsnap.synth.CypherKits.Kit.TRAP) },
+        Starter(
+            "cypher-drill", "CYPHER DRILL",
+            "Subs that land then slide down on the off-beat, a snare and clap in a dark big room on the triplet grid, hats ticking under, metal hits. Three touch zones, four takes; a triplet snare bar and a sub call.",
+            seeded = false, tempoBpm = com.snipsnap.synth.CypherKits.Kit.DRILL.bpm.toFloat(),
+        ) { com.snipsnap.synth.CypherKits.build(com.snipsnap.synth.CypherKits.Kit.DRILL) },
+        Starter(
+            "cypher-backroom", "CYPHER BACKROOM",
+            "Boom bap: the accepted Backroom six through their rack, completed to sixteen pads. Three touch zones, four takes; swung hats and a break drop.",
+            seeded = false, tempoBpm = com.snipsnap.synth.CypherKits.Kit.BACKROOM.bpm.toFloat(),
+        ) { com.snipsnap.synth.CypherKits.build(com.snipsnap.synth.CypherKits.Kit.BACKROOM) },
+        Starter(
+            "cypher-lowrider", "CYPHER LOWRIDER",
+            "G-funk: a hybrid thump, a fat snare and clap that bloom into a long room, hats and a shaker behind the beat, a bell. Three touch zones, four takes; a laid-back groove and a big fill.",
+            seeded = false, tempoBpm = com.snipsnap.synth.CypherKits.Kit.LOWRIDER.bpm.toFloat(),
+        ) { com.snipsnap.synth.CypherKits.build(com.snipsnap.synth.CypherKits.Kit.LOWRIDER) },
+        Starter(
+            "cypher-dust", "CYPHER DUST",
+            "Underground cinematic boom bap: raw tape thuds, a high wooden crack, a crash, no compressor anywhere. Three touch zones, four takes; an unquantized break with and without the crash.",
+            seeded = false, tempoBpm = com.snipsnap.synth.CypherKits.Kit.DUST.bpm.toFloat(),
+        ) { com.snipsnap.synth.CypherKits.build(com.snipsnap.synth.CypherKits.Kit.DUST) },
+        Starter(
+            "cypher-flint", "CYPHER FLINT",
+            "Michigan scat: a fast kick and an early-sliding sub, a high piercing snare, wooden clicks and high rims off the grid, an off-beat bell. Three touch zones, four takes; a click scatter and a slide stack.",
+            seeded = false, tempoBpm = com.snipsnap.synth.CypherKits.Kit.FLINT.bpm.toFloat(),
+        ) { com.snipsnap.synth.CypherKits.build(com.snipsnap.synth.CypherKits.Kit.FLINT) },
+        Starter(
+            com.snipsnap.synth.BreakerKits.ID, "BREAKER",
+            "Surf rock by way of boom bap: dusty drums through a spring tank, a crush and a surf amp. Three touch zones, three takes; a snare riser.",
+            seeded = false, tempoBpm = com.snipsnap.synth.BreakerKits.BPM,
+        ) { com.snipsnap.synth.BreakerKits.build() },
+        Starter(
+            com.snipsnap.synth.BreakerKits.Kit.DUB_TANK.id, com.snipsnap.synth.BreakerKits.Kit.DUB_TANK.title,
+            "One-drop dub through the spring: a rimshot on three, a snare thrown into a long echo, open toms and the tank kicked. Three touch zones, three takes.",
+            seeded = false, tempoBpm = com.snipsnap.synth.BreakerKits.Kit.DUB_TANK.bpm,
+        ) { com.snipsnap.synth.BreakerKits.build(com.snipsnap.synth.BreakerKits.Kit.DUB_TANK) },
+        Starter(
+            com.snipsnap.synth.BreakerKits.Kit.TRIP_HOP.id, com.snipsnap.synth.BreakerKits.Kit.TRIP_HOP.title,
+            "A heavy, dusty break: a fatter kick and snare a semitone down, ghost notes, a crushed break snare and a dusty ride, kept dry. Three touch zones, three takes.",
+            seeded = false, tempoBpm = com.snipsnap.synth.BreakerKits.Kit.TRIP_HOP.bpm,
+        ) { com.snipsnap.synth.BreakerKits.build(com.snipsnap.synth.BreakerKits.Kit.TRIP_HOP) },
+        Starter(
+            "mirrorball-philly", "MIRRORBALL PHILLY STRINGS",
+            "A dry live disco kit: dead kick, towelled snare, congas and tambourine through an FET squeeze, tape repeats and a clean amp. Three touch zones, four takes; a tom fill and a snare build.",
+            seeded = false, tempoBpm = com.snipsnap.synth.MirrorballKits.Kit.PHILLY.bpm.toFloat(),
+        ) { com.snipsnap.synth.MirrorballKits.build(com.snipsnap.synth.MirrorballKits.Kit.PHILLY) },
+        Starter(
+            "mirrorball-loft", "MIRRORBALL LOFT PARTY",
+            "A percussion-first disco kit: clap snare, hand drums, timbales and cowbell riding long tape repeats into a warm amp. Three touch zones, four takes; a timbale fill and a clap build.",
+            seeded = false, tempoBpm = com.snipsnap.synth.MirrorballKits.Kit.LOFT.bpm.toFloat(),
+        ) { com.snipsnap.synth.MirrorballKits.build(com.snipsnap.synth.MirrorballKits.Kit.LOFT) },
+        Starter(
+            "mirrorball-munich", "MIRRORBALL MUNICH MACHINE",
+            "Machine disco: analog kick, four falling synth toms and a sequencer hat on the dotted-eighth head, into a pushed amp. Three touch zones, four takes; a pew fill and a snare build.",
+            seeded = false, tempoBpm = com.snipsnap.synth.MirrorballKits.Kit.MUNICH.bpm.toFloat(),
+        ) { com.snipsnap.synth.MirrorballKits.build(com.snipsnap.synth.MirrorballKits.Kit.MUNICH) },
+        Starter(
+            "soot", "SOOT",
+            "Grimy street boom bap from physical models: a sagging skin over a sub, a hot snare into a tight coil, detuned metal and a dictaphone. Three touch zones, four takes; a coil roll and four bars.",
+            seeded = false, tempoBpm = com.snipsnap.synth.SootKits.BPM.toFloat(),
+        ) { com.snipsnap.synth.SootKits.build() },
+        Starter(
+            "soot-drumless", "SOOT DRUMLESS",
+            "No kick: tension rods, cups and plates carry the groove over muted snares, all from SOOT's physical models. Three touch zones, four takes; a rod roll and four bars.",
+            seeded = false, tempoBpm = com.snipsnap.synth.SootGenreKits.Genre.DRUMLESS.bpm.toFloat(),
+        ) { com.snipsnap.synth.SootGenreKits.build(com.snipsnap.synth.SootGenreKits.Genre.DRUMLESS) },
+        Starter(
+            "soot-dub", "SOOT BASEMENT DUB",
+            "A one-drop: a heavy kick and a high rimshot thrown deep into the coil, plates in the spring. Three touch zones, four takes; a spring roll and four bars.",
+            seeded = false, tempoBpm = com.snipsnap.synth.SootGenreKits.Genre.DUB.bpm.toFloat(),
+        ) { com.snipsnap.synth.SootGenreKits.build(com.snipsnap.synth.SootGenreKits.Genre.DUB) },
+        Starter(
+            "soot-noir", "SOOT BRUSHED NOIR",
+            "Soft and close: a damp kick, brush-weight snares, pure hats and soft metal under a light dictaphone. Three touch zones, four takes; a brush roll and four bars.",
+            seeded = false, tempoBpm = com.snipsnap.synth.SootGenreKits.Genre.NOIR.bpm.toFloat(),
+        ) { com.snipsnap.synth.SootGenreKits.build(com.snipsnap.synth.SootGenreKits.Genre.NOIR) },
+        Starter(
+            "soot-industrial", "SOOT WAREHOUSE INDUSTRIAL",
+            "Straight and hard: a driven kick, bench snares, struck plates and rods, the dictaphone pushed. Three touch zones, four takes; a snare roll and four bars.",
+            seeded = false, tempoBpm = com.snipsnap.synth.SootGenreKits.Genre.INDUSTRIAL.bpm.toFloat(),
+        ) { com.snipsnap.synth.SootGenreKits.build(com.snipsnap.synth.SootGenreKits.Genre.INDUSTRIAL) },
+        Starter(
+            MurmurKeptBank.ID, "MURMUR KEPT",
+            "Kept plucks, vowel keys and lower-air choir. Held pads have a short delivery fade.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+            prepare = { directory -> MurmurKeptBankFiles.write(directory) },
+        ) { SynthKits.murmurKept() },
+        Starter(
+            "scuff-detroit", "SCUFF DETROIT",
+            "A dry Michigan kit: punch kick, whip clap, staccato bass hits, two-peak rims and a chopper hat, crushed, boxed, barked and slammed. Three touch zones, four takes; two bars through one bus and a clap riser.",
+            seeded = false, tempoBpm = com.snipsnap.synth.ScuffKits.Kit.DETROIT.bpm.toFloat(),
+        ) { com.snipsnap.synth.ScuffKits.build(com.snipsnap.synth.ScuffKits.Kit.DETROIT) },
+        Starter(
+            "scuff-flint", "SCUFF FLINT",
+            "The faster, brighter Michigan kit: a higher, shorter kick, a tighter clap, bright hats, short hard bass hits and three stank rims, crushed and slammed harder. Three touch zones, four takes; frantic two bars and a rim riser.",
+            seeded = false, tempoBpm = com.snipsnap.synth.ScuffKits.Kit.FLINT.bpm.toFloat(),
+        ) { com.snipsnap.synth.ScuffKits.build(com.snipsnap.synth.ScuffKits.Kit.FLINT) },
+        Starter(
+            "meridian-materials", "MERIDIAN MATERIALS",
+            "Sixteen finite pads across four ringing voices, with three touch levels and five held-sound captures.",
+            seeded = false,
+        ) { SynthKits.meridianMaterials() },
+        Starter(
+            "meridian-six", "MERIDIAN SIX",
+            "Sixteen finite pads across six voices, with three native touch levels and three octave roles.",
+            seeded = false,
+        ) { SynthKits.meridianSix() },
+        Starter(
+            "tempest", "TEMPEST",
+            "Six-voice digital drum kit: kicks, snares, claps, toms, choking hats and driven metal.",
+            seeded = false,
+        ) { SynthKits.tempest() },
+        Starter(
+            "tempest-tuned", "TEMPEST TUNED",
+            "The original E minor pentatonic kicks, alternate strikes and six metal colors.",
+            seeded = false,
+            key = KeySpec.parse("Eminpent"),
+        ) { SynthKits.tempestTuned() },
+        Starter(
+            SplayDelivery.STARTER_ID, "SPLAY POPULATIONS",
+            "One TONGUE voice. Five finite settings: 1, 2, 4, 8 and 16 mechanisms.",
+            seeded = false,
+        ) { SplayDelivery.starterPads() },
+        Starter(
+            "osteria", "OSTERIA",
+            "The original evolving Note in C minor, with soft touches and a short tap.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.osteria() },
+        Starter(
+            "osteria-six-voice", "OSTERIA SIX VOICES",
+            "Note, bass, pluck, reed, bowed and pad: twelve evolving sounds with three native touch levels.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { com.snipsnap.synth.OsteriaKits.sixVoice() },
+        Starter(
+            "tempest-circuit", "TEMPEST CIRCUIT",
+            "Electro TEMPEST kit: dry tight kicks, three claps, zaps, choking hats and tuned bells.",
+            seeded = false,
+        ) { SynthKits.tempestCircuit() },
+        Starter(
+            "tempest-foundry", "TEMPEST FOUNDRY",
+            "Industrial TEMPEST kit: driven kicks with echoes, metal snares, pipe toms and anvil and chain hits.",
+            seeded = false,
+        ) { SynthKits.tempestFoundry() },
+        Starter(
+            "tempest-step", "TEMPEST STEP",
+            "UK garage TEMPEST kit: short kicks, rim and ghost snares, five choking hats and pitched blips.",
+            seeded = false,
+        ) { SynthKits.tempestStep() },
     ).plus(com.snipsnap.synth.PatioPerformance.Genre.entries.map { genre ->
         Starter(genre.id, genre.title.uppercase(java.util.Locale.ROOT), "Latin percussion, three velocities and four takes per voice, with a hand-drum roll and cuica.", seeded = false) {
             com.snipsnap.synth.PatioPerformance.build(genre)

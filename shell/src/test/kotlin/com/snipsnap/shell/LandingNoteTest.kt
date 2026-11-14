@@ -28,7 +28,7 @@ class LandingNoteTest {
     fun `a backup with refusals names the kit and preflight's reason, the packed ones after`() {
         val n = LandingNote.backedUp(listOf("Funk"), linkedMapOf("Soul" to "pad A03's WAV is missing"))!!
         assertEquals(Copy.backedUp(1, 1), n.title)
-        assertEquals("SKIPPED · SOUL: PAD A03'S WAV IS MISSING", n.lines.first().text)
+        assertEquals("SKIPPED · SOUL: pad A03's WAV is missing", n.lines.first().text)
         assertTrue(n.lines.first().trouble)
         assertEquals("PACKED · FUNK", n.lines.last().text)
         assertTrue(!n.lines.last().trouble)
@@ -46,12 +46,12 @@ class LandingNoteTest {
     fun `a refusal keeps the file's name and the refuser's words until read`() {
         val n = LandingNote.refused("holiday.mp4", "nothing to hear in that.")
         assertEquals(Copy.NOTHING_LANDED, n.title)
-        assertEquals(listOf("HOLIDAY.MP4", "NOTHING TO HEAR IN THAT"), n.lines.map { it.text })
+        assertEquals(listOf("HOLIDAY.MP4", "nothing to hear in that"), n.lines.map { it.text })
         assertEquals(listOf(false, true), n.lines.map { it.trouble })
         assertEquals("THE SHARE", LandingNote.refused("  ", "x").lines.first().text, "a nameless share still has a line")
         assertEquals("NAME", LandingNote.shout(" name . "), "no space left where the full stop was")
         assertEquals("A. B", LandingNote.shout("a. b..."), "only the trailing stops go")
-        assertEquals("IT SAID NO", LandingNote.refused("a.zip", "").lines.last().text, "a reasonless refusal still has one")
+        assertEquals("it said no", LandingNote.refused("a.zip", "").lines.last().text, "a reasonless refusal still has one")
     }
 
     @Test
@@ -89,7 +89,7 @@ class LandingNoteTest {
     fun `a blocked export names what blocked it`() {
         val note = LandingNote.exportBlocked(listOf(warn("48 khz"), fail("KICK.WAV is missing", slot = 1)))
         assertNotNull(note)
-        assertTrue(note.lines.any { "MISSING" in it.text }, "the blocking reason is not in the box: ${note.lines}")
+        assertTrue(note.lines.any { it.text.contains("MISSING", ignoreCase = true) }, "the blocking reason is not in the box: ${note.lines}")
         assertTrue(note.lines.first().trouble, "the reason that blocked the write should read as trouble")
     }
 
@@ -108,8 +108,8 @@ class LandingNoteTest {
     fun `every blocking reason is listed, not just the first`() {
         val note = LandingNote.exportBlocked(listOf(fail("A IS MISSING"), fail("B COLLIDES"), warn("C IS ODD")))
         assertNotNull(note)
-        assertTrue(note.lines.any { "A IS MISSING" in it.text })
-        assertTrue(note.lines.any { "B COLLIDES" in it.text })
+        assertTrue(note.lines.any { it.text.contains("A IS MISSING", ignoreCase = true) })
+        assertTrue(note.lines.any { it.text.contains("B COLLIDES", ignoreCase = true) })
     }
 
     /**
@@ -127,19 +127,19 @@ class LandingNoteTest {
     }
 
     @Test
-    fun `the box shouts, like every other note`() {
+    fun `the box title is a sentence and each line leads with its caps label`() {
         val note = LandingNote.exportBlocked(listOf(fail("kick.wav is missing")))!!
-        assertEquals(note.title, note.title.uppercase(java.util.Locale.ROOT))
-        for (line in note.lines) assertEquals(line.text, line.text.uppercase(java.util.Locale.ROOT))
+        assertTrue(note.title.endsWith(".") && note.title.first().isUpperCase() && note.title.any { it.isLowerCase() }, note.title)
+        for (line in note.lines) assertEquals("BLOCKED", line.text.substringBefore(" · "), line.text)
     }
 
 
     @Test
     fun `a dub names the thing and where it is, the files and the sides, and the path as it is`() {
         val phone = LandingNote.dubbed("Funk Kit", onCard = false, files = 17, where = "/storage/Android/data/Funk Kit")
-        assertEquals("FUNK KIT IS SAVED ON THIS PHONE.", phone.title)
+        assertEquals("Funk Kit is saved on this phone.", phone.title)
         assertEquals(
-            listOf("17 FILES · SIDE A: PROGRAMS · SIDE B: SAMPLES", "/storage/Android/data/Funk Kit"),
+            listOf("17 FILES · PROGRAMS AND SAMPLES", "/storage/Android/data/Funk Kit"),
             phone.lines.map { it.text },
             "the path keeps its case: it is a place on a case-sensitive disk, not a sentence",
         )
@@ -148,8 +148,8 @@ class LandingNoteTest {
         assertNull(phone.tile)
 
         val card = LandingNote.dubbed("Funk Kit", onCard = true, files = 1, where = "SD/Funk Kit")
-        assertEquals("FUNK KIT IS ON THE CARD.", card.title)
-        assertEquals("1 FILE · SIDE A: PROGRAMS · SIDE B: SAMPLES", card.lines.first().text)
+        assertEquals("Funk Kit is on the card.", card.title)
+        assertEquals("1 FILE · PROGRAMS AND SAMPLES", card.lines.first().text)
     }
 
     @Test
@@ -157,7 +157,7 @@ class LandingNoteTest {
         var shared = 0
         val n = LandingNote.dubbed("Funk", onCard = true, files = 4, where = "SD/Funk", share = { shared++ })
         val route = assertNotNull(n.route)
-        assertEquals("SHARE ▸", route.label)
+        assertEquals("SHARE", route.label)
         route.go()
         assertEquals(1, shared)
     }

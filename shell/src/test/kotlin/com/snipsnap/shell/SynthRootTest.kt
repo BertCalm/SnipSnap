@@ -15,10 +15,15 @@ import com.snipsnap.synth.FerryPresets
 import com.snipsnap.synth.Fork
 import com.snipsnap.synth.ForkPatch
 import com.snipsnap.synth.ForkVoice
+import com.snipsnap.synth.HalobarPresets
+import com.snipsnap.synth.HalobarPatch
+import com.snipsnap.synth.HalobarVoice
 import com.snipsnap.synth.Glint
 import com.snipsnap.synth.GlintPatch
 import com.snipsnap.synth.GlintVoice
 import com.snipsnap.synth.GyrePatch
+import com.snipsnap.synth.ClutterPatch
+import com.snipsnap.synth.ClutterVoice
 import com.snipsnap.synth.GyreVoice
 import com.snipsnap.synth.Keys
 import com.snipsnap.synth.MagnetPatch
@@ -34,6 +39,8 @@ import com.snipsnap.synth.Pluck
 import com.snipsnap.synth.PluckPatch
 import com.snipsnap.synth.PluckVoice
 import com.snipsnap.synth.Presets
+import com.snipsnap.synth.RivetPatch
+import com.snipsnap.synth.RivetVoice
 import com.snipsnap.synth.Prism
 import com.snipsnap.synth.PrismPatch
 import com.snipsnap.synth.PrismVoice
@@ -45,6 +52,7 @@ import com.snipsnap.synth.SilkVoice
 import com.snipsnap.synth.Snap
 import com.snipsnap.synth.SnapPatch
 import com.snipsnap.synth.SnapVoice
+import com.snipsnap.synth.SplayPresets
 import com.snipsnap.synth.Stoop
 import com.snipsnap.synth.StoopPatch
 import com.snipsnap.synth.StoopVoice
@@ -75,26 +83,34 @@ import kotlin.test.assertTrue
  * range. The screen only draws what [SynthRoot] says.
  */
 class SynthRootTest {
+    @Test fun `RIVET drum tuning does not advertise a semitone root editor`() {
+        for (voice in RivetVoice.entries) assertEquals(null, SynthRoot.of(RivetPatch("Drum", voice)))
+    }
 
     companion object {
         /** Every factory sound, plus one hand-built patch per engine kept off the preset roster. */
         private val patches: List<Patch> by lazy {
             Presets.all() + listOf(
                 GyrePatch("Door", GyreVoice.FLICK, emptyMap()),
+                ClutterPatch("Bucket", ClutterVoice.BUCKET, emptyMap()),
                 MagnetPatch("Door", MagnetVoice.JANGLE, emptyMap()),
                 SilkPatch("Door", SilkVoice.OUD, emptyMap()),
                 SnapPatch("Door", SnapVoice.ORBIT, emptyMap(), IntArray(Snap.TABLE_SIZE) { (it * 255) / (Snap.TABLE_SIZE - 1) }),
                 TerraPatch("Door", TerraVoice.COMPOUND_MEMBRANE, emptyMap()),
                 ErosionPatch("Door", ErosionVoice.ARC),
                 CairnPatch("Door", CairnVoice.ANSWER, emptyMap()),
+                SplayPresets.all().first(),
                 WickPresets.all().first(),
                 NacrePresets.all().first(),
                 FerryPresets.all().first(),
+                *HalobarPresets.all().toTypedArray(),
+                HalobarPatch("Glockenspiel Study", HalobarVoice.GLOCKENSPIEL, emptyMap()),
+                HalobarPatch("Crotales Study", HalobarVoice.CROTALES, emptyMap()),
             )
         }
 
         /** The engines whose every patch answers null: drums, voice, scale rows, frequency sweeps. */
-        private val ROOTLESS = setOf("THUMP", "SKIN", "ONSET", "TERRA", "VOX", "SILK", "EROSION")
+        private val ROOTLESS = setOf("RIVET", "THUMP", "SKIN", "ONSET", "TERRA", "VOX", "SILK", "EROSION", "FIRED_BRONZE", "BACKWASH", "SCUFF", "CLUTTER", "TEMPEST")
 
         private fun cents(hz: Float, midi: Int): Float = 1200f * ln(hz / Keys.midiHz(midi)) / ln(2f)
     }

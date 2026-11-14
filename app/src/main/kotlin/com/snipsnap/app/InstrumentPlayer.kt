@@ -42,6 +42,7 @@ class InstrumentPlayer(context: Context) {
     /** Sounding voices by id, in the order they started - the oldest first. */
     private val voices = LinkedHashMap<Int, Voice>()
     private var nextVoice = 1
+    private val cycleCursor = KeyHit.CycleCursor()
 
     /** The player's master gain, 1 = the instrument as made; see [setVolume]. */
     private var volume = 1f
@@ -95,6 +96,7 @@ class InstrumentPlayer(context: Context) {
         synchronized(this) {
             if (!open) return
             NativePads.commitBank(handle)
+            cycleCursor.clear()
             this.instrument = instrument
             sampleIndex = index
             framesOf = frames
@@ -176,7 +178,7 @@ class InstrumentPlayer(context: Context) {
         reap()
         sendBend()
         val inst = instrument ?: return false
-        val components = KeyHit.resolveAll(inst, note, velocity.coerceIn(0f, 1f)) { framesOf[it] }
+        val components = KeyHit.resolveAll(inst, note, velocity.coerceIn(0f, 1f), cycleCursor) { framesOf[it] }
         if (components.isEmpty()) return false
         val hit = components.first().hit
         val samples = components.map { sampleIndex[it.hit.sampleFile] ?: return false }.toIntArray()

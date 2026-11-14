@@ -125,7 +125,7 @@ class SurfaceScreenTest : ComposeScreenTest() {
         // The mode row: the five modes alone.
         for (m in Mode.entries) assertReadsInFull(m.name)
         // The print row: where it lands, how long, and the button.
-        assertReadsInFull("→ TAPE")
+        assertReadsInFull("→ SAMPLE")
         assertReadsInFull("NO TEMPO")
         assertReadsInFull("PRINT")
         // The strip, and VOICE's first row.
@@ -133,8 +133,8 @@ class SurfaceScreenTest : ComposeScreenTest() {
         assertReadsInFull("SHAPE")
         assertReadsInFull("MOD")
         assertReadsInFull("MIDI")
-        assertReadsInFull("◄ PAD")
-        assertReadsInFull("PAD ►")
+        assertReadsInFull("PREVIOUS PAD")
+        assertReadsInFull("NEXT PAD")
         assertReadsInFull("RING")
         assertReadsInFull("LATCH")
     }
@@ -142,13 +142,15 @@ class SurfaceScreenTest : ComposeScreenTest() {
     @Test
     fun the_print_row_reads_in_full_while_a_print_could_run() {
         show(entry = tempoKit())
-        // With a tempo the bars button is live and its longest word is on it
-        // after two taps; → PAD is on screen beside → TAPE.
-        waitFor("the bars button") { compose.onAllNodesWithText("FREE", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
-        tap("FREE")
+        // With a tempo the bars button is live and its longest word, with its arrow, is on it
+        // after two picks from its sheet; → PAD is on screen beside → TAPE.
+        waitFor("the bars button") { compose.onAllNodesWithText("FREE ▾", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
+        tap("FREE ▾")
         tap(PrintLength.label(PrintLength.BARS[1]))
-        assertReadsInFull(PrintLength.label(PrintLength.BARS[2]))
-        assertReadsInFull("→ TAPE")
+        tap("${PrintLength.label(PrintLength.BARS[1])} ▾")
+        tap(PrintLength.label(PrintLength.BARS[2]))
+        assertReadsInFull("${PrintLength.label(PrintLength.BARS[2])} ▾")
+        assertReadsInFull("→ SAMPLE")
         assertReadsInFull("→ PAD")
     }
 
@@ -167,13 +169,13 @@ class SurfaceScreenTest : ComposeScreenTest() {
     fun the_print_destination_flips_between_tape_and_pad() {
         show(entry = null)
         // Both destinations are always on screen; the one in force is selected.
-        button("→ TAPE").assertIsSelected()
+        button("→ SAMPLE").assertIsSelected()
         button("→ PAD").assertIsNotSelected()
         tap("→ PAD")
         button("→ PAD").assertIsSelected()
-        button("→ TAPE").assertIsNotSelected()
-        tap("→ TAPE")
-        button("→ TAPE").assertIsSelected()
+        button("→ SAMPLE").assertIsNotSelected()
+        tap("→ SAMPLE")
+        button("→ SAMPLE").assertIsSelected()
     }
 
     @Test
@@ -185,17 +187,20 @@ class SurfaceScreenTest : ComposeScreenTest() {
     }
 
     @Test
-    fun with_a_tempo_the_bars_button_cycles_the_print_lengths() {
+    fun with_a_tempo_the_bars_button_opens_a_sheet_of_the_print_lengths() {
         show(entry = tempoKit())
-        waitFor("the bars button") { compose.onAllNodesWithText("FREE", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
+        waitFor("the bars button") { compose.onAllNodesWithText("FREE ▾", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
         val labels = PrintLength.BARS.map { PrintLength.label(it) }
         assertEquals("FREE", labels.first())
-        for (i in labels.indices) {
-            button(labels[i]).assertExists()
-            tap(labels[i])
+        var now = labels.first()
+        for (picked in labels) {
+            // The button names the length it holds and opens every length at once.
+            tap("$now ▾")
+            for (label in labels) button(label).assertExists()
+            tap(picked)
+            button("$picked ▾").assertExists()
+            now = picked
         }
-        // Round the loop: back at FREE.
-        button(labels.first()).assertExists()
     }
 
     @Test
@@ -207,12 +212,12 @@ class SurfaceScreenTest : ComposeScreenTest() {
         tap("SHAPE")
         button("SET A").assertExists()
         button("LATCH").assertDoesNotExist()
-        button("→ TAPE").assertExists()
+        button("→ SAMPLE").assertExists()
         button("PRINT").assertExists()
         tap("MOD")
         button("MOD A").assertExists()
         button("SET A").assertDoesNotExist()
-        button("→ TAPE").assertExists()
+        button("→ SAMPLE").assertExists()
         button("PRINT").assertExists()
     }
 

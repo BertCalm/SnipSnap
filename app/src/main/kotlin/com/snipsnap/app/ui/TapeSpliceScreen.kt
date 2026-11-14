@@ -277,7 +277,7 @@ fun TapeSpliceScreen(
                     TapeText(refusal, TapeType.lcdSmall, scheme.lcdInk.tape, maxLines = 4)
                 }
                 ActionButton(
-                    "◄ CHOOSE DIFFERENT TAKES",
+                    "◄ CHOOSE DIFFERENT VERSIONS",
                     scheme,
                     enabled = true,
                     modifier = Modifier.fillMaxWidth(),
@@ -405,7 +405,7 @@ private fun NeedleStep(
 
     Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         ActionButton(
-            "◄ CHOOSE DIFFERENT TAKES",
+            "◄ CHOOSE DIFFERENT VERSIONS",
             scheme,
             enabled = !busy,
             modifier = Modifier.fillMaxWidth(),
@@ -508,7 +508,7 @@ private fun SpliceLane(loaded: LoadedTake, sharedMaxFrames: Int, needleFrame: In
             val needleX = (needleFrame / framesPerPixel).toFloat().coerceIn(0f, w)
             drawLine(scheme.warn.tape, Offset(needleX, 0f), Offset(needleX, h), strokeWidth = NEEDLE_STROKE_PX)
         }
-        TapeText(label, TapeType.pixelSmall, scheme.lcdInk2, Modifier.align(Alignment.TopStart).padding(4.dp), maxLines = 1)
+        TapeText(label, TapeType.pixelSmall, scheme.lcdInk2, Modifier.align(Alignment.TopStart).padding(4.dp), maxLines = 2)
     }
 }
 

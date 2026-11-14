@@ -27,9 +27,126 @@ class DeterminismTest {
         assertContentEquals(recipe.render().samples, PatioStudy.fromJsonText(recipe.toJsonText()).render().samples)
     }
 
+    @Test
+    fun `TEMPEST retains both saved finite strikes and seeded noise`() {
+        for (voice in TempestVoice.entries) {
+            val patch = TempestPatch("Canary", voice, Tempest.defaults(voice) + ("SOURCE" to 1f))
+            assertContentEquals(patch.render().samples, Patches.fromJsonText(patch.toJsonText()).render().samples)
+        }
+    }
+
+    @Test fun `SPLAY recovered performance repeats its acoustic seed and trajectories exactly`() {
+        val patch = SplayPatch("Revised population canary", SplayVoice.TONGUE,
+            Splay.defaults(SplayVoice.TONGUE, model = 2) + ("POPULATION" to 3f / 99f),
+            midi = 57, velocity = .6f, seed = 41001, model = 2)
+        val first = Splay.renderDetailed(patch.voice, patch.macros, patch.midi, patch.velocity, patch.seed, patch.model)
+        val second = Splay.renderDetailed(patch.voice, patch.macros, patch.midi, patch.velocity, patch.seed, patch.model)
+        assertContentEquals(first.raw, second.raw)
+        assertContentEquals(first.snip.samples, second.snip.samples)
+    }
+
+    @Test fun `TRIAD shared bus phrase replays byte for byte`() {
+        val source = Triad.source(Triad.Settings(bars = 1)).mix()
+        for (rig in Triad.Rig.entries) assertContentEquals(
+            Triad.process(source, 124, rig).output,
+            Triad.process(source, 124, rig).output)
+    }
+
+    @Test fun `BACKWASH replays every saved drum byte for byte`() {
+        for (voice in BackwashVoice.entries) {
+            val patch = BackwashPatch("Canary", voice, Backwash.defaults(voice))
+            assertContentEquals(patch.render().samples, Patches.fromJsonText(patch.toJsonText()).render().samples)
+        }
+    }
+
+    @Test fun `SOOT replays every saved drum and every take byte for byte`() {
+        for (voice in SootVoice.entries) {
+            val patch = SootPatch("Canary", voice, Soot.defaults(voice))
+            assertContentEquals(patch.render().samples, Patches.fromJsonText(patch.toJsonText()).render().samples)
+            assertContentEquals(patch.render(.6f, take = 2).samples, patch.render(.6f, take = 2).samples)
+        }
+    }
+
+    @Test fun `BREAKER replays every saved drum and every take byte for byte`() {
+        for (voice in BreakerVoice.entries) {
+            val patch = BreakerPatch("Canary", voice, Breaker.defaults(voice))
+            assertContentEquals(patch.render().samples, Patches.fromJsonText(patch.toJsonText()).render().samples)
+            assertContentEquals(patch.render(.6f, take = 2).samples, patch.render(.6f, take = 2).samples)
+        }
+    }
+
+    @Test fun `Velour approved source and both saved boards replay byte for byte`() {
+        val source = VelourKits.source(VelourKits.roles[0])
+        for (type in listOf(BoardType.VELOUR, BoardType.VELOUR_BLOOM)) {
+            val recipe = BoardRecipe(type)
+            assertContentEquals(recipe.process(source).samples,
+                BoardRecipe.fromJsonText(recipe.toJsonText()).process(source).samples)
+        }
+    }
+
+    @Test fun `HALOBAR voices regenerate through JSON after cache eviction`() {
+        for (voice in HalobarVoice.entries) {
+            val patch = HalobarPatch("Canary", voice, mapOf("RETURN" to .65f, "SPACE" to .55f))
+            val expected = patch.render().samples
+            Halobar.clearCache()
+            assertContentEquals(expected, Patches.fromJsonText(patch.toJsonText()).render().samples)
+        }
+    }
+
+    @Test fun `FIRED BRONZE editable patch replays`() {
+        val patch = FiredBronzePatch("Edge Ring", FiredBronzeDryKit.Pad.TIN)
+        assertContentEquals(patch.render().samples, Patches.fromJsonValue(patch.toJsonValue()).render().samples)
+    }
+
+    @Test fun `FIRED BRONZE model 2 strikes replay through JSON`() {
+        val patch = FiredBronzePatch("Low Kettle", FiredBronzeDryKit.Pad.KETTLE_LOW)
+        val back = Patches.fromJsonValue(patch.toJsonValue()) as FiredBronzePatch
+        assertContentEquals(patch.render(.45f, 2).samples, back.render(.45f, 2).samples)
+    }
+
+    @Test fun `FIRED BRONZE performance recipe replays`() {
+        val r = FiredBronzePerformance.Recipe(FiredBronzeDryKit.Recipe(FiredBronzeDryKit.Pad.TIN, velocity = .45f, take = 2))
+        assertContentEquals(r.render().samples, FiredBronzePerformance.Recipe.fromJsonText(r.toJsonText()).render().samples)
+    }
+
+    @Test fun `FIRED BRONZE pushed recipe replays`() {
+        val r = FiredBronzePush.Recipe(FiredBronzeDryKit.Recipe(FiredBronzeDryKit.Pad.SNARE, velocity = .65f, take = 2))
+        assertContentEquals(r.render().samples, FiredBronzePush.Recipe.fromJsonText(r.toJsonText()).render().samples)
+    }
+
+    @Test fun `FIRED BRONZE color recipe replays`() {
+        val r = FiredBronzeColor.Recipe(FiredBronzeDryKit.Recipe(FiredBronzeDryKit.Pad.TIN, velocity = .65f, take = 2))
+        assertContentEquals(r.render().samples, FiredBronzeColor.Recipe.fromJsonText(r.toJsonText()).render().samples)
+    }
+
+    @Test fun `FIRED BRONZE dry kit rattle replays`() {
+        val r = FiredBronzeDryKit.Recipe(FiredBronzeDryKit.Pad.SNARE, velocity = .65f, take = 3)
+        assertContentEquals(r.render().samples, FiredBronzeDryKit.Recipe.fromJsonText(r.toJsonText()).render().samples)
+    }
+
+    @Test fun `FIRED BRONZE R2 reference profile reproduces its spectral render`() {
+        val r = FiredBronzeR2.Recipe(FiredBronzeR2.Voice.NA, velocity = .65f, take = 3)
+        assertContentEquals(r.render().samples, FiredBronzeR2.Recipe.fromJsonText(r.toJsonText()).render().samples)
+    }
+
+    @Test fun `FIRED BRONZE study recipes reproduce every processed pad`() {
+        for (part in FiredBronze.Part.entries) {
+            val recipe = FiredBronze.Recipe(part, velocity = .65f, take = 2)
+            assertContentEquals(recipe.render().samples,
+                FiredBronze.Recipe.fromJsonText(recipe.toJsonText()).render().samples)
+        }
+    }
+
+    @Test fun `RIVET finite drums replay complete room recipes byte for byte`() {
+        for (voice in RivetVoice.entries) {
+            val p = RivetPatch("Canary", voice, Rivet.defaults(voice) + ("SIZE" to 1f))
+            assertContentEquals(p.render().samples, Patches.fromJsonText(p.toJsonText()).render().samples)
+        }
+    }
+
     @Test fun `SKIN ghost snare and its recording chain replay byte for byte`() {
         val p = BoomBapKits.parts().single { it.id == "snare" }.patch
-        val fx = BoomBapKits.coloration
+        val fx = BoomBapKits.colorationFor("snare")
         val ref = fx.process(p.render())
         val first = Velocity.variantsAt(ref, p, fx)
         val replay = PadRecipe.fromJsonText(PadRecipe(p, fx).toJsonText())
@@ -118,6 +235,24 @@ class DeterminismTest {
         assertContentEquals(held.render().samples, held.render().samples, "HOLD top")
     }
 
+    @Test fun `SCUFF renders every voice, a soft hit and every take byte for byte through JSON`() {
+        for (voice in ScuffVoice.entries) {
+            val patch = ScuffPatch("Canary", voice, Scuff.defaults(voice))
+            assertContentEquals(patch.render().samples, Patches.fromJsonText(patch.toJsonText()).render().samples, "$voice")
+            val struck = ScuffPatch("Soft take", voice, Scuff.defaults(voice), velocity = 0.6f, take = 3)
+            assertContentEquals(struck.render().samples, Patches.fromJsonText(struck.toJsonText()).render().samples, "$voice soft take 3")
+        }
+    }
+
+    @Test fun `CLUTTER renders every object, a soft hit and every take byte for byte through JSON`() {
+        for (voice in ClutterVoice.entries) {
+            val patch = ClutterPatch("Canary", voice, Clutter.defaults(voice))
+            assertContentEquals(patch.render().samples, Patches.fromJsonText(patch.toJsonText()).render().samples, "$voice")
+            val struck = ClutterPatch("Soft take", voice, Clutter.defaults(voice), velocity = 0.4f, take = 3)
+            assertContentEquals(struck.render().samples, Patches.fromJsonText(struck.toJsonText()).render().samples, "$voice soft take 3")
+        }
+    }
+
     @Test fun `EROSION native voices replay their saved touch`() {
         for (voice in ErosionVoice.entries) {
             val patch = ErosionPatch("Canary", voice, velocity = .6f)
@@ -179,6 +314,17 @@ class DeterminismTest {
             val saved = PadRecipe.fromJsonText(PadRecipe(patch).toJsonText())
             assertContentEquals(original, saved.render().samples)
         }
+    }
+
+    @Test
+    fun `NACRE strike-shaped v2 layers reproduce across cold source caches and a saved policy`() {
+        val hard = NacrePresets.all().first { it.model == 4 }.copy(midi = 55, seed = -3L)
+        val bank = NacreContactStrikeRecipes.recipeFor(hard, NacreStrikeVariant.STRONG)
+        Nacre.clearCoreCache()
+        val original = bank.layers.first().render().samples
+        Nacre.clearCoreCache()
+        val saved = NacreContactStrikeRecipe.fromJsonText(bank.toJsonText())
+        assertContentEquals(original, saved.layers.first().render().samples)
     }
 
     @Test
@@ -354,6 +500,19 @@ class DeterminismTest {
         val saved = PadRecipe.fromJsonText(PadRecipe(patch).toJsonText())
         assertContentEquals(patch.render().samples, saved.render().samples)
         assertContentEquals(saved.render().samples, saved.render().samples)
+    }
+
+    @Test
+    fun `THUMP SUB regenerates its sliding sub and every take from the saved recipe exactly`() {
+        val patch = ThumpPatch("Sub canary", ThumpVoice.SUB,
+            Thump.defaults(ThumpVoice.SUB) + mapOf("SLIDE" to .29f, "WHEN" to .6f, "DRIVE" to .55f))
+        val saved = PadRecipe.fromJsonText(PadRecipe(patch).toJsonText())
+        assertContentEquals(patch.render().samples, saved.render().samples)
+        for (take in 0 until 4) for (v in listOf(.3f, 1f)) {
+            assertContentEquals(
+                Thump.render(ThumpVoice.SUB, patch.macros, velocity = v, take = take).samples,
+                Thump.render(ThumpVoice.SUB, patch.macros, velocity = v, take = take).samples, "take $take v $v")
+        }
     }
 
     @Test
@@ -658,6 +817,14 @@ class DeterminismTest {
         for (voice in TerraVoice.entries) {
             val loud = when (voice) {
                 TerraVoice.RESONANT_CAVITY, TerraVoice.TUNED_BAR, TerraVoice.BOX -> mapOf("BUZZ" to 1f)
+                TerraVoice.SLAP -> mapOf("SMACK" to 1f)
+                TerraVoice.DAYAN -> mapOf("CLICK" to 1f)
+                TerraVoice.DARBUKA -> mapOf("SNAP" to 1f)
+                TerraVoice.DOUM -> mapOf("AIR" to 1f)
+                TerraVoice.DJEMBE -> mapOf("THUMP" to 1f)
+                TerraVoice.DHOLAK -> mapOf("DROP" to 1f)
+                TerraVoice.BAYAN -> mapOf("BEND" to 0f)
+                TerraVoice.TUN -> mapOf("KNOCK" to 1f)
                 TerraVoice.CONICAL_BELL -> mapOf("CLACK" to 1f)
                 TerraVoice.COMPOUND_MEMBRANE -> emptyMap()
             }
@@ -814,10 +981,31 @@ class DeterminismTest {
     }
 
     @Test
+    fun `ETCH is byte-identical across renders, every voice, a take and the line loop`() {
+        for (voice in EtchVoice.entries) {
+            val patch = EtchPatch("Canary", voice, Etch.defaults(voice), midi = 36, velocity = .8f)
+            assertContentEquals(patch.render().samples, patch.render().samples, "$voice")
+            assertContentEquals(patch.render(.8f, take = 2, seed = 5).samples, patch.render(.8f, take = 2, seed = 5).samples, "$voice take")
+        }
+        val loop = EtchPatch("Canary", EtchVoice.SAW, Etch.defaults(EtchVoice.SAW) + ("HOLD" to 1f))
+        assertContentEquals(loop.render().samples, loop.render().samples, "SAW line loop")
+    }
+
+    @Test
     fun `KEEL's held loop is byte-identical across renders, every voice`() {
         for (voice in KeelVoice.entries) {
             val patch = KeelPatch("Canary", voice, Keel.defaults(voice) + ("HOLD" to 1f), midi = 36, velocity = .8f)
             assertContentEquals(patch.render().samples, patch.render().samples, "$voice")
+        }
+    }
+    @Test
+    fun `SPORE MEMBRANE prototype is byte-identical for both voices and a soft restrike`() {
+        for (voice in SporeMembrane.Voice.entries) {
+            assertContentEquals(
+                SporeMembrane.render(voice, velocity = .3f, take = 2).samples,
+                SporeMembrane.render(voice, velocity = .3f, take = 2).samples,
+                "$voice soft restrike"
+            )
         }
     }
 }

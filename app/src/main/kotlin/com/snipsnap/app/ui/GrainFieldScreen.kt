@@ -501,7 +501,7 @@ fun GrainFieldScreen(
                     scheme,
                     Modifier.width(84.dp),
                     engaged = printing,
-                    accessibilityLabel = if (printing) "STOP PRINT" else "PRINT TO TAPE",
+                    accessibilityLabel = if (printing) "STOP PRINT" else "SAVE AS SAMPLE",
                 ) {
                     if (printing) finishPrint() else if (voice.startPrint()) printing = true
                 }
@@ -767,6 +767,6 @@ private fun HeaderChip(
             .padding(horizontal = 6.dp),
         contentAlignment = Alignment.Center,
     ) {
-        TapeText(label, TapeType.pixel, if (engaged) scheme.lcd.tape else scheme.lcdInk.tape)
+        TapeText(label, TapeType.pixel, if (engaged) scheme.onAccent.tape else scheme.lcdInk.tape)
     }
 }

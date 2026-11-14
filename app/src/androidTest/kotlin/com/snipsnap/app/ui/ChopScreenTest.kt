@@ -122,8 +122,6 @@ class ChopScreenTest : ComposeScreenTest() {
                     entry = entry,
                     lastCommit = commit,
                     shelf = shelf,
-                    teachEnabled = false,
-                    workshopOpen = false,
                     onToast = { toasts += it },
                     onSentToGrid = { e, line -> sent += e to line },
                     onLandedOnto = { e, bank, line -> landed += Triple(e, bank, line) },
@@ -291,7 +289,7 @@ class ChopScreenTest : ComposeScreenTest() {
     @Test
     fun the_cut_bench_grid_cuts_the_tape_into_as_many_equal_parts() {
         showChopped()
-        invokeClick("EXPAND CUT")
+        invokeClick("EXPAND CHOP")
         invokeClick("GRID")
         waitFor("the grid chop") { showing(header(4, "GRID ×4")) }
     }

@@ -263,7 +263,7 @@ private fun SheetRow(title: String, facts: String?, marked: Boolean, onTap: () -
             TapeText(title, TapeType.marker, scheme.ink.tape)
             facts?.let { TapeText(it, TapeType.pixelSmall, scheme.ink2.tape) }
         }
-        if (marked) TapeText(Copy.EXPANSION_IN, TapeType.pixel, scheme.amber.tape)
+        if (marked) TapeText(Copy.EXPANSION_IN, TapeType.pixel, scheme.accent.tape)
     }
 }
 
@@ -322,7 +322,7 @@ internal fun ExpansionNameDialog(
                 ExpansionStore.NameCheck.Ok -> Unit
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                ActionButton("CANCEL", scheme, enabled = true, modifier = Modifier.weight(1f), onClick = onCancel)
+                ActionButton("CANCEL", scheme, enabled = true, modifier = Modifier.weight(1f), tier = ButtonTier.Text, onClick = onCancel)
                 ActionButton(confirmLabel, scheme, enabled = verdict == ExpansionStore.NameCheck.Ok, modifier = Modifier.weight(1f), onClick = { onConfirm(name) })
             }
         }

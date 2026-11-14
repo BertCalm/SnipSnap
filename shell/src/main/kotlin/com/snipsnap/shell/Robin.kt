@@ -34,6 +34,73 @@ import java.util.Random
  */
 object Robin {
 
+    private fun acousticPatch(model: KitBuilderModel, slot: Int): com.snipsnap.synth.BackwashPatch? {
+        val recipe = model.pad(slot)?.let { Breed.recipeOf(it) } ?: return null
+        // External racks require their own replay path; never silently drop one.
+        if (recipe.fx != null || recipe.board != null || recipe.terminalFadeMs != null) return null
+        return (recipe.patch as? com.snipsnap.synth.BackwashPatch)?.takeIf { it.model == 5 }
+    }
+
+    /** The bank's native dynamic groups and recorded takes, with no manufactured jitter. */
+    fun applyAcoustic(model: KitBuilderModel, slot: Int, patch: com.snipsnap.synth.BackwashPatch): KitPad {
+        require(patch.model == 5)
+        val pad = requireNotNull(model.pad(slot))
+        require(pad.chain == null) { "undo the existing chain before building the acoustic grid" }
+        val layers = com.snipsnap.synth.BackwashAcoustic.layerCount(patch.voice)
+        val count = com.snipsnap.synth.BackwashAcoustic.takeCount(patch.voice)
+        val rendered = (0 until layers).flatMap { z -> (0 until count).map { t ->
+            patch.copy(take = patch.take + t).render((z + .5f) / layers)
+        } }
+        val starts = sliceStarts(rendered)
+        model.replaceAudio(slot, pad.recipe) { concat(rendered) }
+        val zones = (0 until layers).map { z -> ChainZone(128*z/layers, if(z==layers-1)127 else 128*(z+1)/layers-1,z*count,count) }
+        return model.update(slot) { it.copy(chain=ChainInfo(starts,count,zones),robin=null,
+            source=it.source + mapOf("backwashModel" to "5", "recordedTakesPerLayer" to count.toString(), "velocityLayers" to layers.toString())) }
+    }
+
+    private fun firedBronzePatch(model: KitBuilderModel, slot: Int): com.snipsnap.synth.FiredBronzePatch? {
+        val recipe = model.pad(slot)?.let { Breed.recipeOf(it) } ?: return null
+        // External racks require their own replay path; never silently drop one.
+        if (recipe.fx != null || recipe.board != null || recipe.terminalFadeMs != null) return null
+        return (recipe.patch as? com.snipsnap.synth.FiredBronzePatch)?.takeIf { it.model >= 2 }
+    }
+
+    /**
+     * FIRED BRONZE's own grid (model 2), softest layer first: its four native strike layers
+     * (`FiredBronzePerformance.layerVelocities`), each dealt `FiredBronzeInstrument.TAKES` fresh strikes. Every
+     * strike is peak-matched to the full strike, as the approved layers are, so each layer's first strike is the
+     * approved layer sample for sample. No zone level grading, because the MPC's velocity curve sets the level as
+     * it did on the approved kit, and no start trim, so no strike loses its attack.
+     */
+    fun firedBronzeGrid(patch: com.snipsnap.synth.FiredBronzePatch): List<Snip> {
+        require(patch.model >= 2) { "a round-robin grid takes FIRED BRONZE model 2 or later, got ${patch.model}" }
+        val hard = patch.render(1f, 0)
+        return com.snipsnap.synth.FiredBronzePerformance.layerVelocities.flatMap { v ->
+            (0 until com.snipsnap.synth.FiredBronzeInstrument.TAKES).map { t ->
+                if (v == 1f && t == 0) hard else com.snipsnap.synth.Velocity.peakMatch(hard, patch.render(v, t))
+            }
+        }
+    }
+
+    /** [firedBronzeGrid]'s zones: the approved kit's velocity windows, as a chain tiles them ([FiredBronzePads.GRID_WINDOWS]). */
+    internal fun firedBronzeZones(): List<ChainZone> {
+        val takes = com.snipsnap.synth.FiredBronzeInstrument.TAKES
+        return FiredBronzePads.GRID_WINDOWS.mapIndexed { z, (lo, hi) -> ChainZone(lo, hi, z * takes, takes) }
+    }
+
+    /** Pad [slot] as FIRED BRONZE model 2's own grid ([firedBronzeGrid]), keeping its recipe. */
+    fun applyFiredBronze(model: KitBuilderModel, slot: Int, patch: com.snipsnap.synth.FiredBronzePatch): KitPad {
+        val pad = requireNotNull(model.pad(slot))
+        require(pad.chain == null) { "undo the existing chain before building the strike grid" }
+        val rendered = firedBronzeGrid(patch)
+        val starts = sliceStarts(rendered)
+        model.replaceAudio(slot, pad.recipe) { concat(rendered) }
+        return model.update(slot) { it.copy(chain = ChainInfo(starts, com.snipsnap.synth.FiredBronzeInstrument.TAKES, firedBronzeZones()),
+            robin = null, source = it.source + mapOf("firedBronzeModel" to patch.model.toString(),
+                "strikesPerLayer" to com.snipsnap.synth.FiredBronzeInstrument.TAKES.toString(),
+                "velocityLayers" to FiredBronzePads.GRID_WINDOWS.size.toString())) }
+    }
+
     const val DEFAULT_TAKES = 3
 
     /** The corpus's chains cycle 2..4; 8 matches the layer count ceiling. */
@@ -86,6 +153,8 @@ object Robin {
     ): KitPad {
         require(takes in 2..MAX_TAKES) { "takes is 2..$MAX_TAKES, got $takes" }
         zones?.let { require(it in 2..4) { "zones is 2..4, got $it" } }
+        acousticPatch(model, slot)?.let { return applyAcoustic(model, slot, it) }
+        firedBronzePatch(model, slot)?.let { return applyFiredBronze(model, slot, it) }
         if (zones == null) return applyLegacy(model, slot, RobinSettings(null, takes, seed, followsKit = false))
         // Zone grids keep `robin = null` on the pad, so they are not robin chains.
         val pad = model.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
@@ -170,6 +239,8 @@ object Robin {
      * recipe), kept byte-identical for the CLI and replay.
      */
     fun apply(model: KitBuilderModel, slot: Int, settings: RobinSettings): KitPad {
+        acousticPatch(model, slot)?.let { return applyAcoustic(model, slot, it) }
+        firedBronzePatch(model, slot)?.let { return applyFiredBronze(model, slot, it) }
         val amount = settings.amount ?: return applyLegacy(model, slot, settings)
         val pad = model.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
         require(pad.chain == null) { "pad $slot is already a round-robin chain - `robin --undo` first" }
@@ -217,7 +288,7 @@ object Robin {
         }
     }
 
-    private fun sliceStarts(rendered: List<Snip>): List<Long> {
+    internal fun sliceStarts(rendered: List<Snip>): List<Long> {
         var at = 0L
         return rendered.map { t -> at.also { _ -> at += t.frameCount } }
     }

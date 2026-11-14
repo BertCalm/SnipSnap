@@ -47,7 +47,7 @@ class RecipeReplayTest {
         val mutate = RecipeReplay.plan(
             obj("mutate" to obj("mode" to JsonValue.Str("splice"), "with" to JsonValue.Arr(listOf(JsonValue.Str("Kit:A02"))))),
         )
-        assertEquals(RecipeReplay.Plan.Refused("MUTATE (SPLICE WITH KIT A02) NEEDS ITS PARTNER - NOT CARRIED."), mutate)
+        assertEquals(RecipeReplay.Plan.Refused("COMBINE SOUNDS (SPLICE with KIT A02) needs its partner - not carried."), mutate)
         assertEquals(RecipeReplay.Plan.Refused(Copy.REPLAY_SPLICE), RecipeReplay.plan(obj("splice" to obj("crossfaded" to JsonValue.Bool(true)))))
         assertEquals(RecipeReplay.Plan.Refused(Copy.REPLAY_OUTSIDE), RecipeReplay.plan(obj("outside" to obj("move" to JsonValue.Str("reamp")))))
         assertEquals(RecipeReplay.Plan.Refused(Copy.replayMeasured("THE DOCTOR")), RecipeReplay.plan(obj("doctor" to JsonValue.Str("sub-carve"))))
@@ -66,7 +66,7 @@ class RecipeReplayTest {
             ),
         )
         assertIs<RecipeReplay.Plan.Refused>(room)
-        assertTrue("FUNK ROOM" in room.reason, room.reason)
+        assertTrue(room.reason.contains("FUNK ROOM", ignoreCase = true), room.reason)
     }
 
     @Test
@@ -113,7 +113,7 @@ class RecipeReplayTest {
         m.update(2) { it.copy(recipe = JsonValue.Obj(mapOf("aquariumPad" to JsonValue.Num(99.0)))) }
         val bank = PadRecipe(layers = StrikeFxBank.layers(0.3f, 0.6f)).toJsonValue() as JsonValue.Obj
         val e = assertFailsWith<IllegalArgumentException> { RecipeReplay.apply(m, 2, bank, "SNARE 02") }
-        assertTrue(e.message!!.startsWith("REMOVE "), e.message)
+        assertTrue(e.message!!.startsWith("REMOVE ", ignoreCase = true), e.message)
     }
 
     @Test
@@ -155,7 +155,7 @@ class RecipeReplayTest {
         val done = RecipeReplay.apply(m, 2, clip.recipe, "SNARE 02")
         assertEquals(m.pad(1)!!.recipe, done.pad.recipe)
         assertTrue(bytes(m, 1).contentEquals(bytes(m, 2)), "the same era at the same AMT on the same take is the same sound")
-        assertEquals("CRUSH 50% DONE AGAIN ON SNARE 02. ORIGINAL SLEEPS IN THE BIN.", done.toast)
+        assertEquals("CRUSH 50% done again on SNARE 02. Original is in the trash.", done.toast)
 
         val c = twins("Char")
         c.characterPad(1, "punched", 0.7f)
@@ -175,11 +175,11 @@ class RecipeReplayTest {
         val carried = JsonValue.Obj(recipe.entries + ("key" to JsonValue.Str("C MAJOR")))
         val done = RecipeReplay.apply(m, 2, carried, "SNARE 02")
         assertEquals("D MINOR", m.lastKeyLabel)
-        assertTrue("IN D MINOR - THE SOURCE WAS C MAJOR" in done.toast, done.toast)
+        assertTrue(done.toast.contains("IN D MINOR - THE SOURCE WAS C MAJOR", ignoreCase = true), done.toast)
         assertTrue(bytes(m, 1).contentEquals(bytes(m, 2)), "same dials, same key, same take: same sound")
 
         val same = RecipeReplay.apply(twins("KeyedSame", key = KeySpec.parse("Dm")).also { it.keyedPad(1, "bodied", 0.6f) }, 2, recipe, "SNARE 02")
-        assertTrue("THE SOURCE WAS" !in same.toast, same.toast)
+        assertTrue(!same.toast.contains("THE SOURCE WAS", ignoreCase = true), same.toast)
     }
 
     @Test
@@ -200,13 +200,13 @@ class RecipeReplayTest {
         val done = RecipeReplay.apply(p, 2, p.pad(1)!!.recipe!!, "SNARE 02")
         assertEquals(p.pad(1)!!.recipe, p.pad(2)!!.recipe)
         assertTrue(bytes(p, 1).contentEquals(bytes(p, 2)), "a patch renders the same bytes wherever it lands")
-        assertEquals("SNARE 02 IS THAT PATCH NOW. ITS OWN SOUND SLEEPS IN THE BIN.", done.toast)
+        assertEquals("SNARE 02 is that patch now. Its own sound is in the trash.", done.toast)
 
         val r = twins("Robin")
         Robin.apply(r, 1, takes = 3, seed = 5)
         val dealt = RecipeReplay.apply(r, 2, r.pad(1)!!.recipe!!, "SNARE 02")
         assertEquals(3, dealt.pad.chain!!.boundaries.size)
-        assertEquals("ROUND ROBIN ×3 DEALT AGAIN ON SNARE 02 - SAME RECIPE, NEW DEAL.", dealt.toast)
+        assertEquals("ROUND ROBIN ×3 dealt again on SNARE 02 - same recipe, new deal.", dealt.toast)
     }
 
     @Test

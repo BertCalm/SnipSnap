@@ -9,7 +9,6 @@ import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.hasContentDescription
-import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -148,10 +147,10 @@ class PrismOpeningInstrumentScreenTest : ComposeScreenTest() {
         button("MAKE INSTRUMENT").assertDoesNotExist()
         dial("HOLD", 1f)
         button("MAKE INSTRUMENT").assertExists()
-        compose.onNodeWithText("PAD AND MAIN AUDITION KEEP THE SUSTAIN ONLY.").assertExists()
+        compose.onNodeWithText("Pad and main audition keep the sustain only.").assertExists()
         val before = requireNotNull(draft())
         press("MAKE INSTRUMENT")
-        compose.onNodeWithText("OPENING ONCE, THEN REPEATING SUSTAIN. HOLD A KEY TO CONTINUE; LET GO TO FADE.")
+        compose.onNodeWithText("Opening once, then repeating sustain. Hold a key to continue; let go to fade.")
             .assertExists()
         dial("RELEASE", .81f)
         val cancel = cancelAction()
@@ -248,8 +247,11 @@ class PrismOpeningInstrumentScreenTest : ComposeScreenTest() {
         val nextPreview = clickAction("PREVIEW")
         compose.runOnIdle { assertTrue(nextPreview()); screenGeneration++ }
         pump()
+        // The rebuilt screen still offers MAKE INSTRUMENT; what disposal must
+        // close is the sheet, so wait for its PREVIEW to be gone.
         waitForRender("PRISM screen recreation", timeoutMillis = 30_000) {
-            compose.onAllNodesWithText("MAKE INSTRUMENT", useUnmergedTree = true).fetchSemanticsNodes().isEmpty()
+            compose.onAllNodes(hasContentDescription("PREVIEW"), useUnmergedTree = true)
+                .fetchSemanticsNodes().isEmpty()
         }
         assertNotNull(draft())
         noInstrumentFiles(root)

@@ -54,9 +54,9 @@ class ReversalTest {
         // "BIN EMPTIED" also contains while saying the opposite. That loophole
         // let a genuinely irreversible line satisfy this law with the noun that
         // flagged it, and awaitingWords was quietly masking it.
-        "THE BIN KEEPS", "IN THE BIN", "TO THE BIN", "FROM THE BIN",
+        "THE TRASH KEEPS", "IN THE TRASH", "TO THE TRASH", "FROM THE TRASH",
         // Accept the same direction words without "THE" too.
-        "IN BIN", "TO BIN", "FROM BIN",
+        "IN TRASH", "TO TRASH", "FROM TRASH",
         "UNDO", "BACK", "DAYS", "RESTORE", "KEPT", "KEEPS", "SLEEPS",
         "RECOVER", "STILL THERE", "CANNOT BE UNDONE", "FOR GOOD",
         "UNTOUCHED", "STAYS", "WAITS",
@@ -77,7 +77,7 @@ class ReversalTest {
     /**
      * `Copy` constants that read as destructive but are not a destructive
      * action landing, so the law does not apply to them. Commented one by
-     * one, in the same spirit as `PersonalityTest`'s `notASentence`: a rule
+     * one, in the same spirit as the marks on `Copy`: a rule
      * loose enough to guess these is a rule someone disables the first time
      * it is wrong.
      *
@@ -137,6 +137,8 @@ class ReversalTest {
         "EXPORT_CARD_LEGEND" to "a legend, not a landing",
         // The FORGET CARD button's label: it says what the tap does, and the landing it raises is CARD_FORGOTTEN (listed in awaitingWords).
         "CARD_FORGET" to "a button label, not a landing",
+        // The YOURS preset FORGET door: it opens the same PresetForgetDialog a hold on the chip opens, which names the bin.
+        "PRESET_FORGET_DOOR" to "a button label that opens the forget dialog; nothing has happened yet",
     )
 
     /**
@@ -263,9 +265,11 @@ class ReversalTest {
         "EXPANSION_DELETE_CONFIRM" to "an expansion has no bin; its kits stay on the shelf, and a new expansion can gather them again",
     )
 
-    private fun soundsDestructive(line: String) = destructive.any { it in line }
+    // The vocabulary is caps; the copy is sentence case now, so the line is read in caps. A case-sensitive
+    // match against a sentence-case line would find nothing and pass by checking nothing.
+    private fun soundsDestructive(line: String) = line.uppercase(java.util.Locale.ROOT).let { up -> destructive.any { it in up } }
 
-    private fun answersTheQuestion(line: String) = answersIt.any { it in line }
+    private fun answersTheQuestion(line: String) = line.uppercase(java.util.Locale.ROOT).let { up -> answersIt.any { it in up } }
 
     @Test
     fun `every destructive line answers can I get it back`() {
@@ -296,7 +300,7 @@ class ReversalTest {
         assertTrue(
             unanswered.isEmpty(),
             "these lines destroy something and do not say whether it can be got back. Add the way " +
-                "back from Reversal (BIN, MIND, UNDO), or say plainly that there is none with " +
+                "back from Reversal (TRASH, MIND, UNDO), or say plainly that there is none with " +
                 "Reversal.goneBut(...) and list it in noWayBack:\n  " + unanswered.joinToString("\n  "),
         )
     }
@@ -438,7 +442,7 @@ class ReversalTest {
                     "such function - remove the stale entry, or fix the rename it is tracking.",
             )
             assertTrue(
-                entry.stillTrue in decl!!.value,
+                decl!!.value.contains(entry.stillTrue, ignoreCase = true),
                 "Copy.$name is exempted as \"${entry.why}\", which held because its line said " +
                     "\"${entry.stillTrue}\". It no longer does:\n  ${decl.value.trim()}\n" +
                     "If it has become a landing, delete the exemption and give it a way back. If it " +
@@ -491,7 +495,7 @@ class ReversalTest {
         for (name in noWayBack.keys) {
             val line = all.getValue(name)
             assertTrue(
-                "CANNOT BE UNDONE" in line || "FOR GOOD" in line || "GONE" in line,
+                line.contains("CANNOT BE UNDONE", ignoreCase = true) || line.contains("FOR GOOD", ignoreCase = true) || line.contains("GONE", ignoreCase = true),
                 "Copy.$name is recorded as having no way back, but its line does not say so: \"$line\"",
             )
         }
@@ -567,7 +571,7 @@ class ReversalTest {
         // And no line may retype the number, which is how they drifted apart
         // in the first place: three Copy lines said "30 DAYS" as a literal.
         // Read the SOURCE, not the values - every line that correctly uses
-        // Reversal.BIN has "30 DAYS" in its value, so a value scan would flag
+        // Reversal.BIN has its.contains("30 DAYS", ignoreCase = true) value, so a value scan would flag
         // the fix and miss nothing else.
         val src = personalitySource()
         // Any numeric retention literal, not just today's value: interpolating
@@ -588,11 +592,11 @@ class ReversalTest {
     @Test
     fun `goneBut lands on exactly one full stop, whatever it is handed`() {
         assertEquals(
-            "THIS CANNOT BE UNDONE. TAP THE STEPS BACK IN.",
+            "This cannot be undone. TAP THE STEPS BACK IN.",
             Reversal.goneBut("TAP THE STEPS BACK IN"),
         )
         assertEquals(
-            "THIS CANNOT BE UNDONE. TAP THE STEPS BACK IN.",
+            "This cannot be undone. TAP THE STEPS BACK IN.",
             Reversal.goneBut("TAP THE STEPS BACK IN."),
             "a caller who wrote a whole sentence must not get two full stops",
         )
@@ -605,9 +609,9 @@ class ReversalTest {
      * they do to everything else. Plain words, existing case.
      */
     @Test
-    fun `the reversal lines still shout and land on a full stop`() {
+    fun `the reversal lines are sentence case and land on a full stop`() {
         for (line in listOf(Reversal.BIN, Reversal.MIND, Reversal.UNDO, Reversal.GONE)) {
-            assertEquals(line.uppercase(java.util.Locale.ROOT), line, "TapeOS shouts: $line")
+            assertTrue(line.any { it.isLowerCase() } && line.first().let { !it.isLetter() || it.isUpperCase() }, "sentence case: $line")
             assertTrue(line.endsWith("."), "a line the app says, not furniture: $line")
         }
     }

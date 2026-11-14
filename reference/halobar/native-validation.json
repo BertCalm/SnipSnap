@@ -1,0 +1,255 @@
+{
+  "engine": "HALOBAR",
+  "audioModel": 1,
+  "generatedUtc": "2026-11-08T03:03:16.113637+00:00",
+  "originalBaseline": "cc47036c43e36d3eca78bd6e70cb15994b08d469",
+  "integrationBase": "908fd12c59a1725976ced00d2a3e1dc8f71ac186",
+  "testedTreeBeforeEvidence": "2b9ae2c4354fd57c2d6bc96ae7c6cbb01577406b",
+  "sourceSha256": {
+    "synth/src/main/kotlin/com/snipsnap/synth/Halobar.kt": "61655a79f7484acd4446526d11fb23be81f7b35e85d71f33c365bb8b1a3284f9",
+    "synth/src/main/kotlin/com/snipsnap/synth/HalobarPatch.kt": "5dce64a24fbe54fc03101fb77cd1fd8fc83aa4767927096a1486d60d4f023e5d",
+    "synth/src/main/kotlin/com/snipsnap/synth/HalobarPresets.kt": "7177fe0147f0c076bfbc369ac2f4c5d5a8b14de8280df4018785c21f37e65308"
+  },
+  "jvm": {
+    "commands": [
+      [
+        "--no-daemon",
+        "--parallel",
+        "--continue",
+        "test",
+        "-x",
+        ":synth:test"
+      ],
+      [
+        "--no-daemon",
+        ":synth:test",
+        "-PtestShards=3",
+        "-PtestShard=0"
+      ],
+      [
+        "--no-daemon",
+        ":synth:test",
+        "-PtestShards=3",
+        "-PtestShard=1"
+      ],
+      [
+        "--no-daemon",
+        ":synth:test",
+        "-PtestShards=3",
+        "-PtestShard=2"
+      ]
+    ],
+    "exitCode": 0,
+    "modules": [
+      "audio",
+      "cli",
+      "json",
+      "kit",
+      "loop",
+      "mpc3",
+      "shell",
+      "synth",
+      "xpm"
+    ],
+    "suites": 1131,
+    "tests": 9078,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "elapsedSeconds": 8680.001920461655
+  },
+  "android": {
+    "command": "./gradlew --no-daemon :app:assembleDebug",
+    "exitCode": 0,
+    "apkBytes": 82068447,
+    "apkSha256": "6e102423672b3b967d91e22bc22aebae6500db027d6950e7b712ee5744b12202",
+    "deviceBehavior": "unverified"
+  },
+  "native": {
+    "command": "./gradlew --no-daemon :synth:generateHalobarKit :synth:generateHalobarAudition",
+    "exitCode": 0,
+    "clips": 153,
+    "kitPads": 16,
+    "registerFiles": 18,
+    "rootMaximumCents": 1.6875203033456179,
+    "rootMinimumConfidence": 0.9505528211593628,
+    "outputPeakMaximum": 0.9900000691413879,
+    "rawPeakMaximum": 0.98760586977005,
+    "independentPythonHouseProbeMaximumCents": 0.1,
+    "runtime": "21.0.13+9-LTS",
+    "processors": 4,
+    "performance": [
+      {
+        "voice": "VIBRAPHONE",
+        "medianMs": 293.137017,
+        "p95Ms": 297.914469,
+        "targetMs": 50,
+        "budgetMet": false,
+        "completedAudioCache": false
+      },
+      {
+        "voice": "MARIMBA",
+        "medianMs": 169.334522,
+        "p95Ms": 181.893215,
+        "targetMs": 50,
+        "budgetMet": false,
+        "completedAudioCache": false
+      },
+      {
+        "voice": "XYLOPHONE",
+        "medianMs": 144.083423,
+        "p95Ms": 158.280387,
+        "targetMs": 50,
+        "budgetMet": false,
+        "completedAudioCache": false
+      }
+    ]
+  },
+  "limits": [
+    "Fresh rendering exceeds the 50 ms p95 target",
+    "Native listening pending; owner approved the Python R1 audition",
+    "Phone performance and MPC hardware loading unverified",
+    "HOLD is finite and carries no seamless sampler loop"
+  ],
+  "zeroTailOptimization": {
+    "defaultVibraphoneFrames": 529200,
+    "beforeSha256": "fe212facc4a3cdf08fb1494ebcc10cca8aa44c7309a0602b58eeae9a93f770ba",
+    "afterSha256": "fe212facc4a3cdf08fb1494ebcc10cca8aa44c7309a0602b58eeae9a93f770ba",
+    "sampleIdentical": true
+  },
+  "postMergeIntegration": {
+    "developmentBase": "3154473286494cfb8d3aca91ebf0a884ab318cb5",
+    "testedTreeBeforeFinalEvidence": "b33debe705ca272458ddcaffbd6c0941fa4027f3",
+    "scope": "Focused current-base host, HALOBAR core, registry, effects, CLI and both MPC exports; full 9078-test coverage belongs to the earlier named implementation tree",
+    "sourceHashesUnchanged": true,
+    "commands": [
+      {
+        "stage": "host",
+        "args": [
+          "--no-daemon",
+          ":shell:test",
+          "--tests",
+          "com.snipsnap.shell.HalobarStarterTest",
+          "--tests",
+          "com.snipsnap.shell.SynthRootTest",
+          "--tests",
+          "com.snipsnap.shell.StarterShelfTest",
+          "--tests",
+          "com.snipsnap.shell.ConventionTest",
+          "--tests",
+          "com.snipsnap.shell.StarterKitsTest.starter IDs are stable, include new synth kits, and blank leads"
+        ],
+        "log": "/workspace/halobar-postmerge-host.log",
+        "started": 1794107196.9757376,
+        "state": "passed",
+        "exitCode": 0,
+        "ended": 1794107302.9545462
+      },
+      {
+        "stage": "synth",
+        "args": [
+          "--no-daemon",
+          ":synth:test",
+          "--tests",
+          "com.snipsnap.synth.HalobarTest",
+          "--tests",
+          "com.snipsnap.synth.HalobarPresetsTest",
+          "--tests",
+          "com.snipsnap.synth.PatchesTest",
+          "--tests",
+          "com.snipsnap.synth.PresetsTest",
+          "--tests",
+          "com.snipsnap.synth.VelocityTest",
+          "--tests",
+          "com.snipsnap.synth.PadRecipeTest.every engine's patch dispatches through the same door",
+          "--tests",
+          "com.snipsnap.synth.DeterminismTest.HALOBAR voices regenerate through JSON after cache eviction",
+          "--tests",
+          "com.snipsnap.synth.FxTest",
+          "--tests",
+          "com.snipsnap.synth.HushTest"
+        ],
+        "log": "/workspace/halobar-postmerge-synth.log",
+        "started": 1794107302.963949,
+        "state": "passed",
+        "exitCode": 0,
+        "ended": 1794107447.7219796
+      },
+      {
+        "stage": "cli",
+        "args": [
+          "--no-daemon",
+          ":cli:test",
+          "--tests",
+          "com.snipsnap.cli.HalobarCommandTest"
+        ],
+        "log": "/workspace/halobar-postmerge-cli.log",
+        "started": 1794107447.7327664,
+        "state": "passed",
+        "exitCode": 0,
+        "ended": 1794107493.3906965
+      },
+      {
+        "stage": "native-assets",
+        "args": [
+          "--no-daemon",
+          ":synth:generateHalobarKit",
+          ":synth:generateHalobarAudition"
+        ],
+        "log": "/workspace/halobar-postmerge-native-assets.log",
+        "started": 1794107493.3933845,
+        "state": "passed",
+        "exitCode": 0,
+        "ended": 1794107569.962354
+      },
+      {
+        "stage": "android",
+        "args": [
+          "--no-daemon",
+          ":app:assembleDebug"
+        ],
+        "log": "/workspace/halobar-postmerge-android.log",
+        "started": 1794107569.9651682,
+        "state": "passed",
+        "exitCode": 0,
+        "ended": 1794107720.7965589
+      }
+    ],
+    "focusedTests": {
+      "tests": 202,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "suites": 15,
+    "apkSha256": "037fc1b34fcee0bd5f17b350cf3d0c43d1a0e07d4ef8891871deb783460e60c9",
+    "apkBytes": 82082579,
+    "performance": [
+      {
+        "voice": "VIBRAPHONE",
+        "medianMs": 294.293431,
+        "p95Ms": 302.82031,
+        "targetMs": 50,
+        "budgetMet": false,
+        "completedAudioCache": false
+      },
+      {
+        "voice": "MARIMBA",
+        "medianMs": 172.917425,
+        "p95Ms": 186.433461,
+        "targetMs": 50,
+        "budgetMet": false,
+        "completedAudioCache": false
+      },
+      {
+        "voice": "XYLOPHONE",
+        "medianMs": 142.289798,
+        "p95Ms": 158.336315,
+        "targetMs": 50,
+        "budgetMet": false,
+        "completedAudioCache": false
+      }
+    ]
+  },
+  "finalEvidenceUtc": "2026-11-08T03:16:11.709199+00:00"
+}

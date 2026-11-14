@@ -15,7 +15,9 @@ import kotlin.math.roundToInt
  *
  * The summaries come from what the recipes already say ([PadSheet.read],
  * [PadSheet.readPedals], [MutateSheet.read], [OutsideSheet.read], the pad's shape fields), and
- * [UNTOUCHED] when nothing does. A summary must never wrap: it is one
+ * what the box holds ([TREATMENT_HOLDS], [SHAPE_HOLDS], [OUTSIDE_HOLDS], [MUTATE_OFFERS]) when nothing
+ * does: a closed line says what is inside or its current value, never "UNTOUCHED" (clarity spec 7.3).
+ * Whether a pad carries anything from a bench is [Line.carried], never a test on the words. A summary must never wrap: it is one
  * line of the 8 px pixel face across the sheet (about 6.4 px a glyph,
  * so [SUMMARY_CHARS] of them cross a 390 sheet beside the chevron), and
  * the phone ellipsizes anything longer.
@@ -23,11 +25,11 @@ import kotlin.math.roundToInt
 object PadSheetBoxes {
 
     enum class Box(val legend: String) {
-        TREATMENT("TREATMENT"),
+        TREATMENT("EFFECTS"),
         SHAPE("SHAPE"),
-        OUTSIDE("OUTSIDE"),
-        MUTATE("MUTATE"),
-        MAKE("MAKE"),
+        OUTSIDE("RE-AMP AND ROOM"),
+        MUTATE("COMBINE SOUNDS"),
+        MAKE("MAKE FROM THIS PAD"),
     }
 
     /**
@@ -44,21 +46,32 @@ object PadSheetBoxes {
         Box.MAKE -> PadSheetPage.EDITOR
     }
 
-    /** What a strip reads when the pad carries nothing from that bench. */
-    const val UNTOUCHED = "UNTOUCHED"
+    /** What the TREATMENT strip reads when the pad carries no treatment: the rows' first words. */
+    const val TREATMENT_HOLDS = "CRUSH, TAPE, DIRT, PEDALS"
+
+    /** What the SHAPE strip reads when the pad sets no shape field: the four knobs. */
+    const val SHAPE_HOLDS = "ATTACK, DECAY, CUTOFF, RESONANCE"
+
+    /** What the OUTSIDE strip reads when the pad has made no trip: the card's two moves. */
+    const val OUTSIDE_HOLDS = "RE-AMP, ROOM"
+
+    /** One closed line and whether the pad carries anything from that bench ([text] is for the eye only). */
+    data class Line(val text: String, val carried: Boolean)
 
     /** The label budget for one strip: about this many 8 px pixel characters cross a 390 sheet. */
-    const val SUMMARY_CHARS = 44
+    const val SUMMARY_CHARS = 45
 
     fun boxFor(name: String): Box? = Box.values().firstOrNull { it.name == name }
 
     /** Tapping a strip: the tapped box opens, or closes when it was the open one. */
     fun toggle(open: Box?, tapped: Box): Box? = if (open == tapped) null else tapped
 
-    /** "CRUSH · 35%", or [UNTOUCHED]. */
-    fun treatment(applied: PadSheet.Applied?): String = applied?.let {
+    /** "CRUSH · 35%", or [TREATMENT_HOLDS]. */
+    fun treatment(applied: PadSheet.Applied?): String = appliedTreatment(applied) ?: TREATMENT_HOLDS
+
+    private fun appliedTreatment(applied: PadSheet.Applied?): String? = applied?.let {
         "${(it.segment ?: it.treatment.name).uppercase(Locale.ROOT)} · ${(it.amount * 100).roundToInt()}%"
-    } ?: UNTOUCHED
+    }
 
     /**
      * The pedals a pad plays ([PedalSlate.audible]: a pick at AMT 0, or one a later pick silences, is
@@ -75,14 +88,16 @@ object PadSheetBoxes {
     }
 
     /** "ATK 12 MS · CUT 1.2K" - only the fields the pad sets; the rest are the format's defaults and say nothing. */
-    fun shape(pad: KitPad): String {
+    fun shape(pad: KitPad): String = appliedShape(pad) ?: SHAPE_HOLDS
+
+    private fun appliedShape(pad: KitPad): String? {
         val parts = listOfNotNull(
-            pad.attack?.let { "ATK %.0f MS".format(Locale.ROOT, PadShape.attackSeconds(it) * 1000f) },
+            pad.attack?.let { "ATK %.0fMS".format(Locale.ROOT, PadShape.attackSeconds(it) * 1000f) },
             pad.decay?.let { "DEC ${(it * 100).roundToInt()}%" },
-            pad.cutoff?.let { "CUT ${cutoffLabel(it)}" },
-            pad.resonance?.let { "RES %.0f DB".format(Locale.ROOT, PadShape.resonanceDb(it)) },
+            pad.cutoff?.let { "CUTOFF ${cutoffLabel(it)}" },
+            pad.resonance?.let { "RES %.0fDB".format(Locale.ROOT, PadShape.resonanceDb(it)) },
         )
-        return if (parts.isEmpty()) UNTOUCHED else parts.joinToString(" · ")
+        return if (parts.isEmpty()) null else parts.joinToString(" · ")
     }
 
     /** "1.2K" above a kilohertz, "400 HZ" below. */
@@ -91,25 +106,30 @@ object PadSheetBoxes {
         return if (hz >= 1000f) "%.1fK".format(Locale.ROOT, hz / 1000f) else "${hz.roundToInt()} HZ"
     }
 
-    /** "ROOM × FUNK ROOM", "DRIFT × SOUL A03", or [UNTOUCHED]. */
-    fun mutate(applied: MutateSheet.Applied?): String = applied?.let {
-        "${it.word} × ${it.parents.joinToString(" + ") { p -> parentName(p) }}"
-    } ?: UNTOUCHED
+    /** "ROOM × FUNK ROOM", "DRIFT × SOUL A03", or [MUTATE_OFFERS]. */
+    fun mutate(applied: MutateSheet.Applied?): String = appliedMutate(applied) ?: MUTATE_OFFERS
+
+    private fun appliedMutate(applied: MutateSheet.Applied?): String? = applied?.let {
+        "${MutateSheet.modeLabel(it.word)} × ${it.parents.joinToString(" + ") { p -> parentName(p) }}"
+    }
 
     /** A parent's label as the strip names it: a room by its name, a pad as "KIT A03". */
     fun parentName(label: String): String =
         (if (label.startsWith(Rooms.LABEL_PREFIX)) label.removePrefix(Rooms.LABEL_PREFIX) else label.replace(':', ' '))
             .uppercase(Locale.ROOT)
 
-    /** The trip's stage while one is out; else the card's status line; else [UNTOUCHED]. */
+    /** The trip's stage while one is out; else the card's status line; else [OUTSIDE_HOLDS]. */
     fun outside(applied: OutsideSheet.Applied?, stage: String?): String =
-        stage ?: applied?.let { OutsideSheet.statusLine(it) } ?: UNTOUCHED
+        appliedOutside(applied, stage) ?: OUTSIDE_HOLDS
+
+    private fun appliedOutside(applied: OutsideSheet.Applied?, stage: String?): String? =
+        stage ?: applied?.let { OutsideSheet.statusLine(it) }
 
     /** What MAKE holds, or what DE-SAMPLE already made of the pad. */
     fun make(pad: KitPad): String =
         pad.source["desampled"]?.let { "A PATCH NOW, ${it.uppercase(Locale.ROOT)} AWAY" }
             ?: if (ConfluenceWorkshop.isGathering(pad)) "GATHERING · MAKE VARIATION"
-            else "PAD FROM ANYTHING · DE-SAMPLE · INSTRUMENT"
+            else "SUSTAIN · NEAREST SYNTH · INSTRUMENT"
 
     /**
      * Which benches this pad actually carries something from (J36).
@@ -121,18 +141,18 @@ object PadSheetBoxes {
      * draws, so the two can never disagree about what "treated" means.
      *
      * **[Box.MAKE] is not a bench in this sense and is deliberately
-     * excluded.** Its strip is never [UNTOUCHED]: with nothing applied it
+     * excluded.** Its strip is never empty of words: with nothing applied it
      * still reads "PAD FROM ANYTHING · DE-SAMPLE · INSTRUMENT", because
      * it advertises what the box can do rather than reporting what the
-     * pad carries. A plain "any strip that is not UNTOUCHED" test would
+     * pad carries. A plain "any strip has words" test would
      * therefore call every pad in every kit treated — which is the same
      * answer as marking none of them, arrived at more expensively.
      * DE-SAMPLE is the one thing MAKE leaves on a pad, so that, and only
      * that, counts.
      */
     fun touched(pad: KitPad, outsideStage: String? = null): Set<Box> {
-        val strips = summaries(pad, outsideStage)
-        val benches = ORDER.filter { it != Box.MAKE && strips[it] != UNTOUCHED }
+        val strips = lines(pad, outsideStage)
+        val benches = ORDER.filter { it != Box.MAKE && strips.getValue(it).carried }
         val desampled = if (pad.source["desampled"] != null) listOf(Box.MAKE) else emptyList()
         return (benches + desampled).toSet()
     }
@@ -143,16 +163,16 @@ object PadSheetBoxes {
     /**
      * The closed line of the editor's `EFFECTS ▸` door: what the pad has applied, from the three
      * benches that sit on that screen (what the TREATMENT strip says, then SHAPE, then OUTSIDE), as
-     * "CRUSH 35% · ATK 12 MS". [NOTHING_APPLIED] when none has anything; the count when the words would
+     * "CRUSH 35% · ATK 12 MS". [EFFECTS_HOLDS] (what the screen holds) when none has anything; the count when the words would
      * not fit the line ([SUMMARY_CHARS]).
      */
     fun effectsLine(pad: KitPad, outsideStage: String? = null): String {
-        val strips = summaries(pad, outsideStage)
+        val strips = lines(pad, outsideStage)
         val parts = ORDER.filter { page(it) == PadSheetPage.EFFECTS }
             .map { strips.getValue(it) }
-            .filter { it != UNTOUCHED }
-            .map { AMOUNT_JOINT.replace(it, "$1 $2") }
-        if (parts.isEmpty()) return NOTHING_APPLIED
+            .filter { it.carried }
+            .map { AMOUNT_JOINT.replace(it.text, "$1 $2") }
+        if (parts.isEmpty()) return EFFECTS_HOLDS
         val full = parts.joinToString(" · ")
         return if (full.length <= SUMMARY_CHARS) full else "${parts.size} APPLIED"
     }
@@ -162,14 +182,13 @@ object PadSheetBoxes {
      * so it reads what MUTATE has done to the pad ("MUTATE · ROOM × FUNK ROOM"), or what it can do.
      */
     fun variationsLine(pad: KitPad): String {
-        val applied = mutate(MutateSheet.read(pad.recipe))
-        if (applied == UNTOUCHED) return MUTATE_OFFERS
-        val full = "MUTATE · $applied"
-        return if (full.length <= SUMMARY_CHARS) full else "MUTATE · APPLIED"
+        val applied = appliedMutate(MutateSheet.read(pad.recipe)) ?: return MUTATE_OFFERS
+        val full = "COMBINE SOUNDS · $applied"
+        return if (full.length <= SUMMARY_CHARS) full else "COMBINE SOUNDS · APPLIED"
     }
 
-    /** What the EFFECTS door reads when the pad carries no treatment, shape or trip. */
-    const val NOTHING_APPLIED = "NOTHING APPLIED"
+    /** What the EFFECTS door reads when the pad carries no treatment, shape or trip: the three benches on the screen. */
+    const val EFFECTS_HOLDS = "EFFECTS, SHAPE, RE-AMP AND ROOM"
 
     /** What the VARIATIONS door reads when the pad carries no mutate: what the screen holds. */
     const val MUTATE_OFFERS = "MIX WITH ANOTHER SOUND"
@@ -177,16 +196,24 @@ object PadSheetBoxes {
     /** "CRUSH · 35%" read as the door says it, "CRUSH 35%": a name, the joint, a percentage that ends the strip. */
     private val AMOUNT_JOINT = Regex("""^(.*) · (\d+%)$""")
 
-    /** Every strip at once, in [ORDER]. */
-    fun summaries(pad: KitPad, outsideStage: String?): Map<Box, String> = linkedMapOf(
-        Box.TREATMENT to (AquariumPadSheet.read(pad.recipe)?.let { "AQUARIUM" }
+    /** Every strip's words at once, in [ORDER]. */
+    fun summaries(pad: KitPad, outsideStage: String?): Map<Box, String> =
+        lines(pad, outsideStage).mapValues { it.value.text }
+
+    /** Every strip at once, in [ORDER], with whether the pad carries anything from that bench. */
+    fun lines(pad: KitPad, outsideStage: String?): Map<Box, Line> {
+        val treatment = AquariumPadSheet.read(pad.recipe)?.let { "AQUARIUM" }
             ?: BoardSheet.read(pad.recipe)?.let { "${it.type.name} · ${(it.amount * 100).roundToInt()}%" }
             ?: pad.recipe?.takeIf(PrintedPads::has)?.let { "${PrintedPads.label(it)} · CHECK RECIPE" }
             ?: PadSheet.readPedals(pad.recipe)?.let { PedalSlate.audible(it.picks) }?.takeIf { it.isNotEmpty() }?.let(::pedals)
-            ?: treatment(PadSheet.read(pad.recipe))),
-        Box.SHAPE to shape(pad),
-        Box.MUTATE to mutate(MutateSheet.read(pad.recipe)),
-        Box.OUTSIDE to outside(OutsideSheet.read(pad.recipe), outsideStage),
-        Box.MAKE to make(pad),
-    )
+            ?: appliedTreatment(PadSheet.read(pad.recipe))
+        fun line(applied: String?, holds: String) = Line(applied ?: holds, applied != null)
+        return linkedMapOf(
+            Box.TREATMENT to line(treatment, TREATMENT_HOLDS),
+            Box.SHAPE to line(appliedShape(pad), SHAPE_HOLDS),
+            Box.MUTATE to line(appliedMutate(MutateSheet.read(pad.recipe)), MUTATE_OFFERS),
+            Box.OUTSIDE to line(appliedOutside(OutsideSheet.read(pad.recipe), outsideStage), OUTSIDE_HOLDS),
+            Box.MAKE to Line(make(pad), false),
+        )
+    }
 }

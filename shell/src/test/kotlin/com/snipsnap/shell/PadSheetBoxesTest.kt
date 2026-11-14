@@ -13,7 +13,7 @@ class PadSheetBoxesTest {
 
     @Test
     fun `five boxes in order, one open at a time, a tap on the open one closes it`() {
-        assertEquals(listOf("TREATMENT", "SHAPE", "OUTSIDE", "MUTATE", "MAKE"), PadSheetBoxes.ORDER.map { it.legend })
+        assertEquals(listOf("EFFECTS", "SHAPE", "RE-AMP AND ROOM", "COMBINE SOUNDS", "MAKE FROM THIS PAD"), PadSheetBoxes.ORDER.map { it.legend })
         assertEquals(PadSheetBoxes.Box.MUTATE, PadSheetBoxes.boxFor("MUTATE"))
         assertNull(PadSheetBoxes.boxFor("BENCH"))
         assertEquals(PadSheetBoxes.Box.SHAPE, PadSheetBoxes.toggle(null, PadSheetBoxes.Box.SHAPE))
@@ -22,13 +22,14 @@ class PadSheetBoxesTest {
     }
 
     @Test
-    fun `an untouched pad reads UNTOUCHED on every bench but MAKE, which names its doors`() {
+    fun `an untouched pad's benches name what is inside, and MAKE names its doors`() {
         val s = PadSheetBoxes.summaries(bare, outsideStage = null)
-        assertEquals(PadSheetBoxes.UNTOUCHED, s[PadSheetBoxes.Box.TREATMENT])
-        assertEquals(PadSheetBoxes.UNTOUCHED, s[PadSheetBoxes.Box.SHAPE])
-        assertEquals(PadSheetBoxes.UNTOUCHED, s[PadSheetBoxes.Box.MUTATE])
-        assertEquals(PadSheetBoxes.UNTOUCHED, s[PadSheetBoxes.Box.OUTSIDE])
-        assertEquals("PAD FROM ANYTHING · DE-SAMPLE · INSTRUMENT", s[PadSheetBoxes.Box.MAKE])
+        assertEquals(PadSheetBoxes.TREATMENT_HOLDS, s[PadSheetBoxes.Box.TREATMENT])
+        assertEquals(PadSheetBoxes.SHAPE_HOLDS, s[PadSheetBoxes.Box.SHAPE])
+        assertEquals(PadSheetBoxes.MUTATE_OFFERS, s[PadSheetBoxes.Box.MUTATE])
+        assertEquals(PadSheetBoxes.OUTSIDE_HOLDS, s[PadSheetBoxes.Box.OUTSIDE])
+        assertTrue(PadSheetBoxes.lines(bare, null).values.none { it.carried }, "idle words are not a carried bench")
+        assertEquals("SUSTAIN · NEAREST SYNTH · INSTRUMENT", s[PadSheetBoxes.Box.MAKE])
         for ((box, line) in s) assertTrue(line.length <= PadSheetBoxes.SUMMARY_CHARS, "$box: '$line' (${line.length})")
     }
 
@@ -39,15 +40,15 @@ class PadSheetBoxesTest {
 
         val shaped = bare.copy(attack = 0.5f, cutoff = 0.5f)
         val shape = PadSheetBoxes.shape(shaped)
-        assertEquals("ATK 200 MS · CUT 632 HZ", shape, "only the fields the pad sets")
+        assertEquals("ATK 200MS · CUTOFF 632 HZ", shape, "only the fields the pad sets")
         val fully = PadSheetBoxes.shape(bare.copy(attack = 1f, decay = 0.5f, cutoff = 1f, resonance = 1f))
         assertTrue(fully.length <= PadSheetBoxes.SUMMARY_CHARS, "$fully (${fully.length})")
         assertEquals("632 HZ", PadSheetBoxes.cutoffLabel(0.5f))
         assertEquals("20.0K", PadSheetBoxes.cutoffLabel(1f))
 
-        assertEquals("ROOM × FUNK ROOM", PadSheetBoxes.mutate(MutateSheet.Applied("ROOM", listOf("room:FUNK ROOM"))))
-        assertEquals("DRIFT × SOUL A03", PadSheetBoxes.mutate(MutateSheet.Applied("MORPH", listOf("Soul:A03"), drifted = true)))
-        assertEquals("STACK × FUNK A01 + FUNK A05", PadSheetBoxes.mutate(MutateSheet.Applied("STACK", listOf("FUNK:A01", "FUNK:A05"))))
+        assertEquals("ROOM TONE × FUNK ROOM", PadSheetBoxes.mutate(MutateSheet.Applied("ROOM", listOf("room:FUNK ROOM"))))
+        assertEquals("RANDOM BLEND × SOUL A03", PadSheetBoxes.mutate(MutateSheet.Applied("MORPH", listOf("Soul:A03"), drifted = true)))
+        assertEquals("LAYER × FUNK A01 + FUNK A05", PadSheetBoxes.mutate(MutateSheet.Applied("STACK", listOf("FUNK:A01", "FUNK:A05"))))
 
         val applied = OutsideSheet.Applied("ROOM", 23.4f, 0.87f, false)
         assertEquals(OutsideSheet.statusLine(applied), PadSheetBoxes.outside(applied, null))
@@ -66,7 +67,7 @@ class PadSheetBoxesTest {
         val two = com.snipsnap.synth.PedalBoard(listOf(pick("wahed", 0.7f), pick("driven", 1f)))
         val pad = bare.copy(recipe = com.snipsnap.synth.PadRecipe(pedals = two).toJsonValue())
         assertEquals("WAH 70% · DRIVE 100%", PadSheetBoxes.summaries(pad, null)[PadSheetBoxes.Box.TREATMENT])
-        assertTrue(PadSheetBoxes.isTouched(pad), "a board pad was UNTOUCHED on the grid")
+        assertTrue(PadSheetBoxes.isTouched(pad), "a board pad was untouched on the grid")
         // Six pedals, all heard (TOUCH after the amp, ROCK before it): the AMTs do not fit the strip, then the words do not either.
         val six = listOf("compressed", "driven", "touchwahed", "forged", "delayed", "rockwahed")
             .map { if (it == "touchwahed") com.snipsnap.synth.PedalBoard.Pick(it, 1f, com.snipsnap.synth.PedalSide.POST) else pick(it, 1f) }
@@ -88,9 +89,9 @@ class PadSheetBoxesTest {
      * so sixteen treated pads could only be told apart by holding each in
      * turn — while every strip the sheet draws already knew.
      *
-     * The trap this pins is [PadSheetBoxes.Box.MAKE]. Its strip is never
-     * UNTOUCHED, because it advertises what the box can do rather than
-     * reporting what the pad carries. "Any strip that is not UNTOUCHED"
+     * The trap this pins is [PadSheetBoxes.Box.MAKE]. Its strip always
+     * has words, because it advertises what the box can do rather than
+     * reporting what the pad carries. "Any strip with words"
      * would call every pad in every kit treated, which is the same answer
      * as marking none of them.
      */
@@ -98,13 +99,13 @@ class PadSheetBoxesTest {
     fun `touched names the benches a pad carries, and MAKE's advert is not one`() {
         assertEquals(emptySet(), PadSheetBoxes.touched(bare), "a bare pad carries nothing")
         assertTrue(!PadSheetBoxes.isTouched(bare))
-        // The bare pad's MAKE strip is non-UNTOUCHED, which is exactly what
-        // would make a naive predicate say "treated" here.
+        // Every strip reads words now, idle ones included, so a naive "has words" predicate would
+        // call a bare pad treated on all five benches; touched() asks `carried` and skips MAKE.
         assertTrue(
-            PadSheetBoxes.summaries(bare, null)[PadSheetBoxes.Box.MAKE] != PadSheetBoxes.UNTOUCHED,
-            "if MAKE ever starts reading UNTOUCHED this test stops proving anything — the point is that " +
-                "it does not, and touched() excludes it anyway.",
+            PadSheetBoxes.summaries(bare, null).values.all { it.isNotBlank() },
+            "if a strip ever goes blank the closed line says nothing at all",
         )
+        assertTrue(PadSheetBoxes.Box.MAKE !in PadSheetBoxes.touched(bare))
 
         val shaped = bare.copy(attack = 0.5f)
         assertEquals(setOf(PadSheetBoxes.Box.SHAPE), PadSheetBoxes.touched(shaped))
@@ -127,7 +128,7 @@ class PadSheetBoxesTest {
 
     @Test
     fun `the EFFECTS door says what is applied from the three benches on that screen, and the VARIATIONS door what is inside`() {
-        assertEquals(PadSheetBoxes.NOTHING_APPLIED, PadSheetBoxes.effectsLine(bare))
+        assertEquals(PadSheetBoxes.EFFECTS_HOLDS, PadSheetBoxes.effectsLine(bare))
         assertEquals(PadSheetBoxes.MUTATE_OFFERS, PadSheetBoxes.variationsLine(bare))
 
         // A pedal reads as the card does, with the joint dropped: "DELAY 70%", the way a treatment reads "CRUSH 35%".
@@ -136,19 +137,19 @@ class PadSheetBoxesTest {
         assertEquals("DELAY 70%", PadSheetBoxes.effectsLine(delayed))
 
         // SHAPE and a trip out count too; MUTATE's and MAKE's strips do not.
-        assertEquals("ATK 200 MS", PadSheetBoxes.effectsLine(bare.copy(attack = 0.5f)))
-        assertEquals("DELAY 70% · ATK 200 MS", PadSheetBoxes.effectsLine(delayed.copy(attack = 0.5f)))
+        assertEquals("ATK 200MS", PadSheetBoxes.effectsLine(bare.copy(attack = 0.5f)))
+        assertEquals("DELAY 70% · ATK 200MS", PadSheetBoxes.effectsLine(delayed.copy(attack = 0.5f)))
         assertEquals(Copy.OUTSIDE_LISTENING, PadSheetBoxes.effectsLine(bare, outsideStage = Copy.OUTSIDE_LISTENING))
         assertEquals(
-            PadSheetBoxes.NOTHING_APPLIED,
+            PadSheetBoxes.EFFECTS_HOLDS,
             PadSheetBoxes.effectsLine(bare.copy(source = bare.source + ("desampled" to "2 steps"))),
-            "MAKE's DE-SAMPLE is not on the EFFECTS screen",
+            "MAKE's FIND NEAREST SYNTH is not on the EFFECTS screen",
         )
 
         // Words that would not fit the line become a count, as the pedal strip's own do.
         val full = delayed.copy(attack = 1f, decay = 0.5f, cutoff = 1f, resonance = 1f)
         assertEquals("2 APPLIED", PadSheetBoxes.effectsLine(full))
-        for (line in listOf(PadSheetBoxes.NOTHING_APPLIED, PadSheetBoxes.MUTATE_OFFERS, PadSheetBoxes.effectsLine(delayed))) {
+        for (line in listOf(PadSheetBoxes.EFFECTS_HOLDS, PadSheetBoxes.MUTATE_OFFERS, PadSheetBoxes.effectsLine(delayed))) {
             assertTrue(line.length <= PadSheetBoxes.SUMMARY_CHARS, "a door line must fit the strip: '$line'")
         }
     }
@@ -167,5 +168,20 @@ class PadSheetBoxesTest {
         assertNull(PadSheetPage.of(Bench.SPLICE))
         assertNull(PadSheetPage.of(null))
         for (page in PadSheetPage.entries) assertTrue(page.bench in KitBench.PAD_BENCHES, "${page.name} works on one pad of one kit")
+    }
+
+    /** Clarity spec 7.3: a closed section says what is inside or its current value, never "UNTOUCHED". */
+    @Test
+    fun `no closed line ever reads UNTOUCHED, bare or busy`() {
+        val busy = bare.copy(attack = 0.5f)
+        for (pad in listOf(bare, busy)) for (stage in listOf(null, "SENDING")) {
+            for ((box, line) in PadSheetBoxes.summaries(pad, stage)) {
+                assertTrue("UNTOUCHED" !in line.uppercase(), "$box reads '$line'")
+                assertTrue(line.isNotBlank(), "$box is blank")
+            }
+        }
+        assertTrue("UNTOUCHED" !in PadSheetBoxes.effectsLine(bare))
+        assertTrue("UNTOUCHED" !in PadSheetBoxes.variationsLine(bare))
+        assertEquals("EFFECTS, SHAPE, RE-AMP AND ROOM", PadSheetBoxes.EFFECTS_HOLDS)
     }
 }

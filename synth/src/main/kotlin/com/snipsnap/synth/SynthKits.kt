@@ -11,6 +11,52 @@ import com.snipsnap.kit.ArrangedPad
  * is just a WAV like any other. Every pad carries its [PadRecipe].
  */
 object SynthKits {
+    fun sporeStation(mutation: Boolean = false) = SporeStation.performance(mutation = mutation)
+
+    /** The approved printed sixteen-pad cosmic drum bank. */
+    fun cosmicBreaks(): List<ArrangedPad> = CosmicBreaksKits.build()
+
+    /** Candidate RIVET bank; not a factory starter until the expanded kit is heard. */
+    fun rivet(size: Float? = null) = RivetKits.build(size)
+
+    /** Accepted full drum starter. Explicit hat groups survive ordinary assembly and export. */
+    fun tempest(): List<ArrangedPad?> = TempestPresets.fullKitPatches().map { patch ->
+        val recipe = PadRecipe(patch)
+        val snip = recipe.render()
+        ArrangedPad(snip, Tempest.drumClassFor(snip), recipe.toJsonValue(), displayName = patch.name,
+            source = mapOf("role" to patch.voice.name, "model" to patch.model.toString(),
+                "status" to "accepted", "factoryPreset" to patch.name),
+            muteGroup = if (patch.voice == TempestVoice.HAT) 1 else 0)
+    }
+
+    /** Candidate TEMPEST genre kits from the accepted voices; see [TempestGenreKits]. */
+    fun tempestCircuit(): List<ArrangedPad?> = TempestGenreKits.build(TempestGenreKits.Kit.CIRCUIT)
+    fun tempestFoundry(): List<ArrangedPad?> = TempestGenreKits.build(TempestGenreKits.Kit.FOUNDRY)
+    fun tempestStep(): List<ArrangedPad?> = TempestGenreKits.build(TempestGenreKits.Kit.STEP)
+
+    /** Compatibility entry point; its audio and arrangement are the accepted full starter. */
+    fun tempestFullAudition(): List<ArrangedPad?> = tempest()
+
+    /** Eight KICK notes from E1, two alternate strikes and six METAL colors, all dry model 2. */
+    fun tempestTuned(): List<ArrangedPad?> {
+        fun arranged(patch: TempestPatch, factoryName: String = patch.name): ArrangedPad {
+            val recipe = PadRecipe(patch)
+            val snip = recipe.render()
+            val midi = Tempest.midiFor(patch.macros.getValue("TUNE"))
+            return ArrangedPad(snip, Tempest.drumClassFor(snip), recipe.toJsonValue(),
+                displayName = patch.name, source = mapOf("rootMidi" to midi.toString(),
+                    "rootNote" to Scales.nameOf(midi), "factoryPreset" to factoryName,
+                    "model" to patch.model.toString()))
+        }
+        val anchor = TempestPresets.forVoice(TempestVoice.KICK).first()
+        val scale = listOf(28, 31, 33, 35, 38, 40, 43, 45).mapIndexed { i, midi ->
+            arranged(anchor.copy(name = "GROUND ${i + 1}",
+                macros = anchor.macros + ("TUNE" to (midi - 24) / 36f)), anchor.name)
+        }
+        val strikes = TempestPresets.forVoice(TempestVoice.KICK).filter { it.name in setOf("RUST", "BREAK") }
+        return scale + (strikes + TempestPresets.forVoice(TempestVoice.METAL)).map { arranged(it) }
+    }
+
     /** Candidate finite CHITIN kit, with complete pad recipes. */
     fun chitin(): List<ArrangedPad?> = ChitinKits.build()
 
@@ -96,6 +142,12 @@ object SynthKits {
 
     /** Meridian's native-note scale walk and eight dry saved journeys. */
     fun meridian(): List<ArrangedPad?> = MeridianKits.build()
+
+    /** Four existing MERIDIAN voices as finite pad captures with three native touch layers. */
+    fun meridianMaterials(): List<ArrangedPad?> = MeridianMaterialsKits.build()
+
+    /** Six finite MERIDIAN voices with three native touches and frozen v2 source history. */
+    fun meridianSix(): List<ArrangedPad?> = MeridianSixKits.build()
 
     /** Sixteen finite C-minor-pentatonic notes with complete scanned-chain recipes. */
     fun scannedChain(): List<ArrangedPad?> {
@@ -448,6 +500,59 @@ object SynthKits {
         )
     }
 
+    /** A separate listening kit; it does not replace the accepted HALOBAR starter. */
+    fun halobarGlockenspielStudy(): List<ArrangedPad?> {
+        val voice=HalobarVoice.GLOCKENSPIEL
+        val notes=listOf(72,75,77,79,82,84,87,89)
+        return listOf(false,true).flatMap { dub -> notes.map { midi ->
+            val patch=HalobarPatch("Glockenspiel ${com.snipsnap.audio.Scales.nameOf(midi)} ${if(dub)"Dub" else "Dry"}",
+                voice,Halobar.defaults(voice)+mapOf("TUNE" to Halobar.tuneForMidi(voice,midi),
+                    "SPACE" to if(dub).6f else 0f,"RETURN" to .62f))
+            pad(patch,Halobar.drumClassFor(voice,patch.macros)).copy(displayName=patch.name,oneShot=true)
+        } }
+    }
+
+    /** A separate listening kit; it does not replace the accepted HALOBAR starter. */
+    fun halobarCrotalesStudy(): List<ArrangedPad?> {
+        val voice=HalobarVoice.CROTALES
+        val notes=listOf(84,87,89,91,94,96,99,101)
+        return listOf(false,true).flatMap { dub -> notes.map { midi ->
+            val patch=HalobarPatch("Crotales ${com.snipsnap.audio.Scales.nameOf(midi)} ${if(dub)"Dub" else "Dry"}",
+                voice,Halobar.defaults(voice)+mapOf("TUNE" to Halobar.tuneForMidi(voice,midi),
+                    "SPACE" to if(dub).6f else 0f,"RETURN" to .62f))
+            pad(patch,Halobar.drumClassFor(voice,patch.macros)).copy(displayName=patch.name,oneShot=true)
+        } }
+    }
+
+    /** Six-voice candidate shelf: paired dry/dub roots, then four melodic answers. */
+    fun halobarCompleteStudy(): List<ArrangedPad?> {
+        fun landed(voice: HalobarVoice, midi: Int, dub: Boolean): ArrangedPad {
+            val family = voice.name.lowercase().replace('_', ' ').replaceFirstChar { it.uppercase() }
+            val patch = HalobarPatch("$family ${Scales.nameOf(midi)} ${if (dub) "Dub" else "Dry"}", voice,
+                Halobar.defaults(voice) + mapOf("TUNE" to Halobar.tuneForMidi(voice, midi),
+                    "SPACE" to if (dub) .6f else 0f, "RETURN" to .62f))
+            return pad(patch, Halobar.drumClassFor(voice, patch.macros)).copy(displayName = patch.name, oneShot = true)
+        }
+        return HalobarVoice.entries.flatMap { voice -> listOf(false, true).map { landed(voice, Halobar.rootMidi(voice), it) } } +
+            listOf(63, 65, 67, 70).map { landed(HalobarVoice.TUBULAR_BELLS, it, true) }
+    }
+
+    /** Eight vibraphone notes followed by eight native listening references. All tails are finite. */
+    fun halobar(): List<ArrangedPad?> {
+        fun landed(patch: HalobarPatch) = pad(patch, Halobar.drumClassFor(patch.voice, patch.macros))
+            .copy(displayName=patch.name,oneShot=true)
+        val walk = listOf(60, 63, 65, 67, 70, 72, 75, 77).map { midi ->
+            landed(HalobarPatch("Vibraphone ${com.snipsnap.audio.Scales.nameOf(midi)}", HalobarVoice.VIBRAPHONE,
+                Halobar.defaults(HalobarVoice.VIBRAPHONE) + ("TUNE" to Halobar.tuneForMidi(HalobarVoice.VIBRAPHONE,midi))))
+        }
+        val references = HalobarPresets.forVoice(HalobarVoice.MARIMBA) +
+            HalobarPresets.forVoice(HalobarVoice.XYLOPHONE)
+        return walk + references.map { patch ->
+            val family=patch.voice.name.lowercase().replaceFirstChar { it.uppercase() }
+            landed(patch.copy(name="$family ${patch.name}"))
+        }
+    }
+
     /**
      * The BORE acceptance kit: FLUTE and SAX each across a major triad and its octave
      * (A01-A08, so the pads play a chord and a scale step apart, the way [tide]'s bongos
@@ -663,7 +768,7 @@ object SynthKits {
             preset(KeelVoice.UPRIGHT, "WARM GUT"), preset(KeelVoice.UPRIGHT, "BRIGHT PICK"),                // A09 A10
             preset(KeelVoice.BELLY, "SOFT PILLOW"), preset(KeelVoice.BELLY, "TOOTH MARK"),                   // A11 A12
             preset(KeelVoice.REDUCE, "QUICK SINK"), preset(KeelVoice.REDUCE, "LOW HULL"),                     // A13 A14
-            preset(KeelVoice.UPRIGHT, "BOWED NOTE"), preset(KeelVoice.BELLY, "WARM HUSH"),                    // A15 A16 (loops)
+            preset(KeelVoice.UPRIGHT, "BOWED NOTE"), preset(KeelVoice.BELLY, "WARM CALM"),                    // A15 A16 (loops)
         )
     }
 
@@ -1107,6 +1212,55 @@ object SynthKits {
             }
     }
 
+
+    /**
+     * Three four-note rows of the accepted evolving-note model: Anchored, Evolving,
+     * then Lingering Color, each at C3, E-flat3, G3 and C4. The final row compares
+     * three excitation velocities at C3 and a short tap. These are finite samples,
+     * not held loops: a hit plays the authored note and its release once through.
+     *
+     * A01–A12 also have two genuinely softer renders, so MIDI velocity changes the
+     * source color as well as playback level. The main sample's recipe is saved;
+     * KitAssembler stores the soft samples as zones, without per-zone recipes.
+     * Rebuilding this starter regenerates all zones; editing/replaying one pad's
+     * main recipe does not regenerate its softer zones.
+     */
+    fun osteria(): List<ArrangedPad?> {
+        val presets = OsteriaPresets.original()
+        val notes = listOf(48 to "C3", 51 to "Eb3", 55 to "G3", 60 to "C4")
+        fun note(
+            base: OsteriaPatch,
+            name: String,
+            midi: Int = 48,
+            velocity: Float = 1f,
+            seconds: Double = 3.0,
+            velocityLayers: Boolean = false,
+        ): ArrangedPad {
+            val patch = base.copy(name = name, midi = midi, velocity = velocity, config = base.config.copy(seconds = seconds))
+            val recipe = PadRecipe(patch)
+            return ArrangedPad(
+                snip = recipe.render(),
+                drumClass = DrumClass.TONAL,
+                recipe = recipe.toJsonValue(),
+                oneShot = true,
+                softVariants = if (velocityLayers) listOf(.25f, .60f).map { patch.copy(velocity = it).render() } else emptyList(),
+                displayName = name,
+            )
+        }
+        val rows = listOf("Anchored Note" to "Anchored", "Evolving Note" to "Evolving", "Lingering Color" to "Lingering")
+            .flatMap { (presetName, label) ->
+                val base = presets.first { it.name == presetName }
+                notes.map { (midi, noteName) -> note(base, "$label $noteName", midi, velocityLayers = true) }
+            }
+        val evolving = presets.first { it.name == "Evolving Note" }
+        return rows + listOf(
+            note(evolving, "Evolving Soft", velocity = .25f),
+            note(evolving, "Evolving Medium", velocity = .60f),
+            note(evolving, "Evolving Hard"),
+            note(evolving, "Evolving Tap", velocity = .8f, seconds = 1.0),
+        )
+    }
+
     /**
      * The selected KEY and lower-air CHOIR settings, alongside all six voice roles.
      * Six C-minor key notes leave room for the four heard C4 MOTION settings, four
@@ -1131,6 +1285,9 @@ object SynthKits {
         }
         return notes + heardKeys + contrasts + choir
     }
+
+    /** Kept PLUCK sources and prior KEY/CHOIR choices, with saved pad endings. */
+    fun murmurKept(): List<ArrangedPad?> = MurmurKeptBank.render()
 
     /** Eight native-note lead pads followed by the accepted Round 3 source recipes. */
     fun openSky(): List<ArrangedPad?> {

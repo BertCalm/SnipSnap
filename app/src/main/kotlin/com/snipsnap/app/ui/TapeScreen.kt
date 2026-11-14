@@ -45,7 +45,6 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.onClick
-import androidx.compose.ui.semantics.onLongClick
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
@@ -87,29 +86,13 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.withTimeoutOrNull
-
-/** How long a reel has to be held before it counts as the pencil-rewind long-press. */
-private const val PENCIL_LONG_PRESS_MS = 500L
 
 /**
- * How long a synthesized TalkBack long-click holds the pencil rewind on
- * for. A real hold runs for as long as the finger stays down; a
- * semantics action has no such duration, so this is a fixed, brief
- * substitute — long enough to be audible as a nudge, short enough not
- * to run away with the tape unattended.
- */
-private const val PENCIL_A11Y_NUDGE_MS = 250L
-
-/**
- * How long a screen-reader WIND lasts, in milliseconds — [WindButton]'s
- * own [PENCIL_A11Y_NUDGE_MS], and for the same reason. `windStart` only
+ * How long a screen-reader WIND lasts, in milliseconds. `windStart` only
  * sets a target speed; the tape is moved by the step loop's per-frame
  * `step()`, so a start/stop pair with no elapsed time between them resets
  * the target before a single tick can ever observe it and the tape does
  * not move at all. The action would announce success and do nothing.
- * Shorter than the pencil's nudge because winding is much faster per
- * tick than a rewind-by-ear.
  */
 private const val WIND_A11Y_NUDGE_MS = 180L
 
@@ -204,7 +187,7 @@ private class LoadedTape(
  * The TAPE screen: drag-under-a-fixed-needle scrubbing over the newest snip,
  * else the last COMMIT's source, else (only with a kit open) the open kit's
  * longest sample — see [loadLongestTape]'s KDoc for the full priority order
- * — with the coast/snap/pencil-rewind physics driven entirely by `:shell`'s
+ * — with the coast/snap physics driven entirely by `:shell`'s
  * tested [TapeDeckModel]. This file only renders it and forwards gestures,
  * plus a minimal unity-speed [TapeVoice] for playback.
  */
@@ -393,7 +376,7 @@ private fun EmptyDeck(onNavigateSnips: () -> Unit) {
     // shelf's own empty list.
     EmptyStatePanel(
         if (armed) Copy.NO_TAPE_YET_ARMED else Copy.NO_TAPE_YET,
-        listOf(EmptyStateRoute("SNIPS ▸", onNavigateSnips)),
+        listOf(EmptyStateRoute("SAVED SAMPLES ▸", onNavigateSnips)),
     )
 }
 
@@ -765,7 +748,6 @@ private fun TapeDeckContent(
                             is TapeDeckModel.Event.SnappingToOnset ->
                                 onToast(Copy.SNAPPED)
                             TapeDeckModel.Event.HitEnd -> voice.stop()
-                            TapeDeckModel.Event.PencilDone -> onToast(Copy.PENCIL_DONE)
                             // The voice loops the same range on its own
                             // (TapeVoice.start's `loop`), gaplessly; the
                             // model's wrap needs no restart, only counting.
@@ -917,15 +899,12 @@ private fun TapeDeckContent(
             // The header says what is going on while a RE-TRIM is live:
             // which pad, which tape — in the pad's own colour, the way the
             // PAD SHEET's chip carries it, so the deck reads as that pad's.
-            title = retrim?.let { Copy.retrimHeader(it.padLabel, it.file.name) } ?: entry?.kit?.name ?: "TAPE",
+            title = retrim?.let { Copy.retrimHeader(it.padLabel, it.file.name) } ?: entry?.kit?.name ?: "SAMPLE",
             titleColor = retrim?.let {
                 (it.colorHex?.removePrefix("#")?.toIntOrNull(16) ?: Schemes.classColor(it.drumClass)).tape
             } ?: scheme.lcdInk.tape,
             model = model,
             position = position,
-            onToast = onToast,
-            onScrubStart = ::stopVoice,
-            onTouch = ::touch,
         )
         WaveformLcd(
             model,
@@ -1110,7 +1089,7 @@ private fun TapeDeckContent(
                     retrim?.let { Copy.backOnto(it.padLabel) } ?: Copy.USE_THIS_PART,
                     Modifier
                         .weight(1f)
-                        .height(Layout.PRIMARY_ACTION_H.dp),
+                        .minHeight(Layout.PRIMARY_ACTION_H.dp),
                     enabled = model.hasSelection,
                 ) {
                     val range = model.commitSelection()
@@ -1150,7 +1129,7 @@ private fun TapeDeckContent(
                     "INSTANT KIT",
                     Modifier
                         .weight(1f)
-                        .height(Layout.PRIMARY_ACTION_H.dp),
+                        .minHeight(Layout.PRIMARY_ACTION_H.dp),
                 ) {
                     // Stop the transport as well as the voice: the deck would
                     // otherwise keep rolling silently under the busy overlay.
@@ -1183,10 +1162,14 @@ private fun TapeDeckContent(
             // it was on purpose, since a RE-TRIM owning the deck is a mode
             // rather than a passing busy state.
             if (retrim == null) {
-                DeckButton(
+                // RECORD's one main button (review Q3): a filled Primary, and a plain
+                // secondary while it is busy (ActionButton drops the fill when not enabled).
+                ActionButton(
                     if (catchBusy) Copy.CATCH_BUSY else "CATCH A HIT",
-                    Modifier.fillMaxWidth().height(Layout.PRIMARY_ACTION_H.dp),
+                    scheme,
                     enabled = !catchBusy,
+                    modifier = Modifier.fillMaxWidth().minHeight(Layout.PRIMARY_ACTION_H.dp),
+                    tier = ButtonTier.Primary,
                 ) {
                     startCatch()
                 }
@@ -1314,7 +1297,7 @@ private fun ReadoutRow(model: TapeDeckModel, readoutPos: State<Long>, onToast: (
                 // Named for what the tap switches to, not Copy.ODOMETER_ON/
                 // OFF — those are toasts (full stop, said once) while this
                 // is a control name spoken every time it's found.
-                .tapeClick(label = if (model.odometer) "SWITCH TO REAL TIME" else "SWITCH TO TAPE COUNTER") {
+                .tapeClick(label = if (model.odometer) "SWITCH TO REAL TIME" else "SHOW COUNTER") {
                     model.toggleOdometer()
                     localGen++
                     onToast(if (model.odometer) Copy.ODOMETER_ON else Copy.ODOMETER_OFF)
@@ -1386,13 +1369,13 @@ private fun DeckButton(
             label,
             TapeType.pixel,
             when {
-                // `scheme.lcd` — "dark in every scheme" per Schemes.kt — is
-                // the same dark-on-accent ink the selection markers' flag
-                // labels use below, so "lit" reads the same everywhere.
-                engaged -> scheme.lcd.tape
+                // `scheme.onAccent` is the ink made for sitting on the accent fill; it is
+                // also what the selection markers' flag labels use below, so "lit"
+                // reads the same everywhere.
+                engaged -> scheme.onAccent.tape
                 enabled -> scheme.ink.tape
                 else -> scheme.ink2.tape
-            },
+            },            maxLines = 2,
         )
     }
 }
@@ -1415,8 +1398,7 @@ private fun WindButton(
             .raisedBevel(scheme)
             // A screen-reader double-tap has no hold duration, so this
             // gives the wind a real one: WIND_A11Y_NUDGE_MS of elapsed
-            // time on a coroutine, the same shape the pencil-rewind
-            // action above uses, rather than a synchronous start/stop
+            // time on a coroutine, rather than a synchronous start/stop
             // pair. That pair looked like "a brief nudge" but was not
             // one — `windStart` only sets a target speed and the tape is
             // moved by the step loop's per-frame `step()`, so stopping
@@ -1460,8 +1442,7 @@ private fun WindButton(
 }
 
 /**
- * The cassette: kit name, two reels, and the pencil-rewind gag on the left
- * one. `entry` is null when the tape loaded from a snip or last-commit
+ * The cassette: kit name and two reels. `entry` is null when the tape loaded from a snip or last-commit
  * source with no kit open (a shelf-armed capture) — the label falls back
  * to a bare "TAPE" rather than a kit name that doesn't exist yet.
  *
@@ -1480,12 +1461,8 @@ private fun CassetteRow(
     titleColor: androidx.compose.ui.graphics.Color,
     model: TapeDeckModel,
     position: () -> Double,
-    onToast: (String) -> Unit,
-    onScrubStart: () -> Unit,
-    onTouch: () -> Unit,
 ) {
     val scheme = LocalScheme.current
-    val scope = rememberCoroutineScope()
 
     Row(
         Modifier
@@ -1500,47 +1477,7 @@ private fun CassetteRow(
             fraction = { 1f - windFraction(position(), model.lengthFrames) },
             rotation = { rotationForPosition(position(), model.sampleRate) },
             scheme = scheme,
-            modifier = Modifier
-                .size(Layout.MIN_HIT_TARGET.dp)
-                // This reel had zero accessibility affordance at all
-                // (audit finding 1's "no visible affordance either"
-                // twin, finding 8) — no text child, no click action, a
-                // 500ms hold as the *only* way to reach pencil rewind.
-                // A semantics onLongClick can't hold for real, so it
-                // runs the same start/toast/stop sequence for a fixed
-                // PENCIL_A11Y_NUDGE_MS instead of however long a finger
-                // stays down.
-                .semantics {
-                    contentDescription = "REWIND PENCIL"
-                    onLongClick(label = "SPIN BACK BY EAR") {
-                        scope.launch {
-                            onScrubStart()
-                            onTouch()
-                            val started = model.pencilRewind()
-                            onToast(if (started) Copy.PENCIL_STARTED else Copy.PENCIL_AT_TOP)
-                            delay(PENCIL_A11Y_NUDGE_MS)
-                            model.pencilOff()
-                            onTouch()
-                        }
-                        true
-                    }
-                }
-                .pointerInput(model) {
-                    detectTapGestures(
-                        onPress = {
-                            val releasedEarly = withTimeoutOrNull(PENCIL_LONG_PRESS_MS) { tryAwaitRelease() }
-                            if (releasedEarly == null) {
-                                onScrubStart()
-                                onTouch()
-                                val started = model.pencilRewind()
-                                onToast(if (started) Copy.PENCIL_STARTED else Copy.PENCIL_AT_TOP)
-                                tryAwaitRelease()
-                                model.pencilOff()
-                                onTouch()
-                            }
-                        },
-                    )
-                },
+            modifier = Modifier.size(Layout.MIN_HIT_TARGET.dp),
         )
         TapeText(
             title,
@@ -1674,7 +1611,7 @@ private fun WaveformLcd(
             // the existing tap-to-seek gesture below has no accessible
             // equivalent because a synthesized click has no X position
             // to seek to, the same gap velocityFromY has for PLAY's pads.
-            .semantics { contentDescription = "TAPE POSITION" }
+            .semantics { contentDescription = "SAMPLE POSITION" }
             .pointerInput(model) {
                 awaitEachGesture {
                     // Read fresh from AwaitPointerEventScope's own `size`
@@ -1885,7 +1822,7 @@ private fun WaveformLcd(
                 // Field assignments only (no allocation) — refreshed per
                 // draw so the flags track the live scheme.
                 markerLabelPaint.textSize = flagHeight * 0.62f
-                markerLabelPaint.color = (0xFF shl 24) or scheme.lcd
+                markerLabelPaint.color = (0xFF shl 24) or scheme.onAccent
             }
             if (hasIn) {
                 // Flag to the RIGHT of the IN line: it reads into the

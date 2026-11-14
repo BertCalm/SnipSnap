@@ -89,6 +89,17 @@ contracts, dry MPC kit, musical phrases, held-loop strategy and private audition
 The original 27 recipes are preserved; the nine additions await listening.
 Physical-phone performance and MPC hardware acceptance remain separate checks.
 The supplied [`engineering specification`](WICK_SPEC.md) is preserved as the proposal.
+[`WICK_KEYGROUPS.md`](WICK_KEYGROUPS.md) covers MAKE INSTRUMENT for finite recipes
+and the held entry source.
+
+**Tempest.** [`TEMPEST_FULL_KIT.md`](TEMPEST_FULL_KIT.md) records the owner-accepted
+six-voice digital drum instrument, its 22 factory presets, the sixteen-pad starter
+with choking hats and the retained tuned kit. [`TEMPEST.md`](TEMPEST.md) and
+[`TEMPEST_R2.md`](TEMPEST_R2.md) keep the first build and the model-2 revision.
+
+**Osteria.** [`OSTERIA.md`](OSTERIA.md) records the evolving-note engine: its
+listening rounds, the owner-accepted six-voice bank, the 13 factory presets, the
+finite keygroups and the saved PLUCK STRUM, and what is still open.
 
 **Filament.** [`FILAMENT.md`](FILAMENT.md) records the THREAD/PULSE/CURL
 approved strand-routing instrument, factory and phone integration, saved

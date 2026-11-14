@@ -1,0 +1,71 @@
+package com.snipsnap.shell
+
+import com.snipsnap.audio.WavReader
+import com.snipsnap.audio.WavWriter
+import com.snipsnap.kit.Kit
+import com.snipsnap.kit.KitStore
+import com.snipsnap.synth.Meridian
+import com.snipsnap.synth.MeridianMaterialsKits
+import com.snipsnap.synth.MeridianMaterialsVelocityRecipe
+import java.io.File
+import java.nio.file.Files
+import java.security.MessageDigest
+
+/** Dedicated source binding check; the generic starter path does not gain a global disk-admission hook. */
+object MeridianMaterialsKitFiles {
+    fun validate(directory: File, kit: Kit = KitStore.load(directory)): List<MeridianMaterialsVelocityRecipe> {
+        require(!Files.isSymbolicLink(directory.toPath()) && directory.isDirectory)
+        require(kit.pads.map { it.slot }.toSet() == (1..16).toSet() && kit.pads.size == 16) { "MERIDIAN materials needs sixteen distinct declared pads" }
+        require(kit.key == null) { "MERIDIAN materials does not invent a major/minor scale" }
+        val banks = ArrayList<MeridianMaterialsVelocityRecipe>()
+        val sampleNames = linkedSetOf<String>()
+        for (pad in kit.pads.sortedBy { it.slot }) {
+            val encoded = requireNotNull(pad.source[MeridianMaterialsVelocityRecipe.SOURCE_KEY]) { "MERIDIAN materials has no independent source layers" }
+            val bank = MeridianMaterialsVelocityRecipe.fromJsonText(encoded)
+            require(bank.slot == pad.slot && pad.recipe == bank.layers.last().recipe.toJsonValue()) { "MERIDIAN materials main source differs" }
+            require(pad.oneShot && !pad.loop && pad.chain == null && pad.muteGroup == 0 && pad.tuneCoarse == 0 && pad.tuneFine == 0) {
+                "MERIDIAN materials retains finite, unretuned and unchoked pad delivery"
+            }
+            val hard = bank.hardPatch
+            val entry = MeridianMaterialsKits.entries()[pad.slot - 1]
+            val held = Meridian.isLoop(hard.macros, hard.model)
+            require(pad.drumClass == Meridian.drumClassFor(hard.voice, hard.macros, hard.model)) { "MERIDIAN materials source filing changed" }
+            val expectedSource = mapOf("engine" to hard.engine, "voice" to hard.voice.name,
+                "factoryPreset" to bank.factoryPatch.name, "model" to hard.model.toString(),
+                "seedContext" to hard.seedContext.toString(), "rootMidi" to entry.midi.toString(),
+                "registerRole" to entry.registerRole, "nativeVelocityPolicy" to "ABSOLUTE_030_065_100",
+                "playbackVelocityPolicy" to "KIT_PLAYER_GAIN_ONCE",
+                "playback" to if (held) "FINITE_HELD_CAPTURE" else "FINITE_ONE_SHOT",
+                "terminalFadeMs" to (bank.layers.last().recipe.terminalFadeMs?.toString() ?: "0"))
+            require(expectedSource.all { (key, value) -> pad.source[key] == value }) { "MERIDIAN materials pad provenance changed" }
+            require(pad.velocityLayers.size == 3 && pad.sampleFile == pad.velocityLayers.last().sampleFile)
+            for ((index, layer) in pad.velocityLayers.withIndex()) {
+                val recipe = bank.layers[index]
+                require(layer.velStart == recipe.velocityStart && layer.velEnd == recipe.velocityEnd &&
+                    layer.displayName == recipe.name) { "MERIDIAN materials velocity mapping changed" }
+                require(layer.sampleFile == File(layer.sampleFile).name && '/' !in layer.sampleFile && '\\' !in layer.sampleFile &&
+                    layer.sampleFile.endsWith(".wav") && sampleNames.add(layer.sampleFile)) { "Unsafe or duplicate MERIDIAN materials sample" }
+                val wav = File(directory, layer.sampleFile)
+                require(!Files.isSymbolicLink(wav.toPath()) && wav.isFile)
+                require(hash(wav) == recipe.wavSha256) { "MERIDIAN materials sample differs from its independent source binding" }
+                val snip = WavReader.read(wav)
+                require(snip.channels == 1 && snip.sampleRate == WavWriter.MPC_SAMPLE_RATE && snip.frameCount > 0 && snip.samples.all { it.isFinite() })
+                require(WavReader.readSmplStrict(wav) == null) { "MERIDIAN materials kit captures have no sampler-loop sheet" }
+            }
+            banks += bank
+        }
+        require(sampleNames.size == 48)
+        val actualWavs = directory.listFiles()!!.filter { it.isFile && it.extension.equals("wav", ignoreCase = true) }.map { it.name }.toSet()
+        require(actualWavs == sampleNames) { "Unexpected or missing MERIDIAN materials sample files" }
+        return banks
+    }
+
+    private fun hash(file: File): String {
+        val digest = MessageDigest.getInstance("SHA-256")
+        file.inputStream().use { input ->
+            val bytes = ByteArray(65536)
+            while (true) { val count = input.read(bytes); if (count < 0) break; digest.update(bytes, 0, count) }
+        }
+        return digest.digest().joinToString("") { "%02x".format(it) }
+    }
+}

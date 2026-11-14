@@ -157,7 +157,7 @@ class OutsideSheetTest {
         assertEquals("REAMP", applied.move)
         assertEquals(outcome.lagMs, applied.lagMs, 0.01f)
         assertEquals("REAMP", m.pad(1)!!.source["outside"])
-        assertTrue(OutsideSheet.statusLine(applied).startsWith("REAMP · 20 MS LATE · "), OutsideSheet.statusLine(applied))
+        assertTrue(OutsideSheet.statusLine(applied).startsWith("REAMP · 20 MS LATE · ", ignoreCase = true), OutsideSheet.statusLine(applied))
         assertNull(MutateSheet.read(m.pad(1)!!.recipe), "a reamp is not a mutate")
 
         OutsideSheet.undo(m, 1)
@@ -256,11 +256,11 @@ class OutsideSheetTest {
         assertNull(OutsideSheet.read(null))
         assertNull(OutsideSheet.read(JsonValue.Obj(linkedMapOf("fx" to JsonValue.Str("tape")))))
         val line = Copy.outside("REAMP", "KICK", 23.4f, 0.87f)
-        assertEquals(line.uppercase(), line)
-        assertTrue("23 MS LATER" in line && "87% SURE" in line, line)
-        assertEquals("OUTSIDE REFUSED: THE ROOM SAID NOTHING BACK.", Copy.outsideRefused("the room said nothing back."))
+        assertSentence(line)
+        assertTrue(line.contains("23 ms later") && line.contains("87% sure"), line)
+        assertEquals("RE-AMP AND ROOM refused: the room said nothing back.", Copy.outsideRefused("the room said nothing back."))
         for (l in listOf(Copy.OUTSIDE_UNDONE, Copy.OUTSIDE_NEEDS_MIC, Copy.OUTSIDE_TAPE_ROLLING, Copy.OUTSIDE_NEEDS_ONE, Copy.OUTSIDE_SENDING, Copy.OUTSIDE_LISTENING)) {
-            assertEquals(l.uppercase(), l, "TapeOS shouts: '$l'")
+            assertSentence(l)
         }
     }
 }

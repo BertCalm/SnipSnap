@@ -79,13 +79,14 @@ class InstrumentEngine(
 
     private val voices = ArrayList<Voice>()
     private var clock = 0L
+    private val cycleCursor = KeyHit.CycleCursor()
 
     /** Notes sounding now, released ones included until they fade. */
     val activeNotes: List<Int> get() = voices.filter { !it.dead }.distinctBy { it.born }.map { it.note }
 
     /** Start [note] at [velocity] 0..1; silently nothing when no zone covers it. Returns whether a voice started. */
     fun noteOn(note: Int, velocity: Float = 1f): Boolean {
-        val components = KeyHit.resolveAllByZone(instrument.instrument, note, velocity.coerceIn(0f, 1f)) { file, index ->
+        val components = KeyHit.resolveAllByZone(instrument.instrument, note, velocity.coerceIn(0f, 1f), cycleCursor) { file, index ->
             instrument.sampleFor(file, index)?.size?.toLong()
         }
         if (components.isEmpty()) return false

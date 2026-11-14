@@ -1,0 +1,18 @@
+{
+  "recipe": 2,
+  "patch": {
+    "engine": "SKIN",
+    "version": 1,
+    "name": "Snap Paper",
+    "voice": "SNARE",
+    "macros": {
+      "TUNE": 0.4699999988079071,
+      "SNAP": 0.699999988079071,
+      "DECAY": 0.4000000059604645,
+      "PUNCH": 0.7599999904632568,
+      "RATTLE": 0.6200000047683716,
+      "SIZZLE": 0.4399999976158142
+    }
+  },
+  "alias": false
+}

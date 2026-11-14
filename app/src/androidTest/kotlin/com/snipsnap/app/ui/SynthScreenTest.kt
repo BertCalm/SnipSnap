@@ -39,6 +39,7 @@ import com.snipsnap.synth.Onset
 import com.snipsnap.synth.OnsetPatch
 import com.snipsnap.synth.OnsetPresets
 import com.snipsnap.synth.OnsetVoice
+import com.snipsnap.synth.SkinPatch
 import com.snipsnap.synth.PadRecipe
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -110,6 +111,67 @@ class SynthScreenTest : ComposeScreenTest() {
         button(label).fetchSemanticsNode().config[SemanticsProperties.ProgressBarRangeInfo].current
 
     @Test
+    fun backroomSnareKeepsItsControlsAcrossNavigationAndReturnsToOriginalExplicitly() {
+        settings["engine"] = "SKIN"
+        settings["voice"] = "SNARE"
+        show()
+        activate("BACKROOM · MORE SNAP")
+        for (name in listOf("ATTACK", "BODY", "WIRE", "BRIGHTNESS"))
+            assertEquals(.5f, progress(name), 0f)
+        button("TUNE").assertDoesNotExist()
+        adjust("BODY", .8f)
+        adjust("WIRE", .25f)
+        compose.runOnIdle { generation++ }
+        pump()
+        assertEquals(.8f, progress("BODY"), 0f)
+        assertEquals(.25f, progress("WIRE"), 0f)
+        val saved = SynthDrafts.read(settings).filterIsInstance<SkinPatch>().single()
+        assertEquals(2, saved.model)
+        activate("RANDOMISE")
+        val scrambled = SynthDrafts.read(settings).filterIsInstance<SkinPatch>().single()
+        assertEquals(setOf("ATTACK", "BODY", "WIRE", "BRIGHTNESS"), scrambled.macros.keys)
+        activate("ORIGINAL")
+        button("TUNE").assertExists()
+        button("BRIGHTNESS").assertDoesNotExist()
+        assertEquals(1, SynthDrafts.read(settings).filterIsInstance<SkinPatch>().single().model)
+    }
+
+    @Test
+    fun backroomPadSavesAndReopensItsModelWithoutAddingTheTreatmentTwice() {
+        val root = shelfRoot()
+        val dir = File(root, "BACKROOM KIT").apply { check(mkdirs()) }
+        val kit = Kit("BACKROOM KIT", emptyList())
+        KitStore.save(kit, dir)
+        settings["engine"] = "SKIN"
+        settings["voice"] = "SNARE"
+        show(root, KitShelf.Entry(dir, kit))
+        activate("BACKROOM · MORE SNAP")
+        adjust("ATTACK", .75f)
+        adjust("BRIGHTNESS", .8f)
+        activate("SEND TO PAD")
+        activate("${PadBanks.tag(1)}, EMPTY")
+        waitForPadWrite("the Backroom snare", timeoutMillis = 60_000) { updatedKit.get()?.pad(1)?.recipe != null }
+        val pad = checkNotNull(KitStore.load(dir).pad(1))
+        val recipe = PadRecipe.fromJsonValue(checkNotNull(pad.recipe))
+        val saved = recipe.patch as SkinPatch
+        assertEquals(2, saved.model)
+        assertEquals(.75f, saved.macros.getValue("ATTACK"), 0f)
+        assertEquals(.8f, saved.macros.getValue("BRIGHTNESS"), 0f)
+        assertTrue(recipe.fx == null)
+        assertTrue(recipe.alias)
+        assertEquals(DrumClass.SNARE, pad.drumClass)
+        assertTrue(File(dir, pad.sampleFile).length() > 44)
+        activate("REOPEN PAD RECIPE")
+        activate("REOPEN ${PadBanks.tag(pad.slot)} ${pad.displayName}")
+        assertEquals(.75f, progress("ATTACK"), 0f)
+        assertEquals(.8f, progress("BRIGHTNESS"), 0f)
+        adjust("WIRE", .25f)
+        leaveAndReturn()
+        assertEquals(.25f, progress("WIRE"), 0f)
+        button("UPDATE PAD ${PadBanks.tag(pad.slot)}").assertExists()
+    }
+
+    @Test
     fun freshEncounterStartsAtApprovedRepliesAndKeepsThemThroughScrambleAndNavigation() {
         show()
         val initial = SynthDrafts.read(settings).filterIsInstance<OhmPatch>().single()
@@ -131,7 +193,7 @@ class SynthScreenTest : ComposeScreenTest() {
             .fetchSemanticsNodes().last()
         compose.runOnIdle { assertTrue(requireNotNull(cancel.config[SemanticsActions.OnClick].action).invoke()) }
         pump()
-        button("SCRAMBLE").performSemanticsAction(SemanticsActions.OnClick) { it() }
+        button("RANDOMISE").performSemanticsAction(SemanticsActions.OnClick) { it() }
         pump()
         val expected = OhmPatch.fromJsonText(settings.getValue("patch.OHM.STRING"))
         assertEquals(initial.copy(reply = .25f, ring = .75f, velocity = .6f,
@@ -279,7 +341,7 @@ class SynthScreenTest : ComposeScreenTest() {
         }
         adjust("ELDER", .7f)
         adjust("COMMUNE", .73f)
-        button("SCRAMBLE").performSemanticsAction(SemanticsActions.OnClick) { it() }
+        button("RANDOMISE").performSemanticsAction(SemanticsActions.OnClick) { it() }
         pump()
         val expected = OhmPatch.fromJsonText(settings.getValue("patch.OHM.STRING"))
         compose.runOnIdle {

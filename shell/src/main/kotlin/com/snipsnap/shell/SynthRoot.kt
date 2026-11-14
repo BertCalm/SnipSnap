@@ -1,5 +1,6 @@
 package com.snipsnap.shell
 
+import com.snipsnap.synth.TempestPatch
 import com.snipsnap.synth.Accord
 import com.snipsnap.synth.AccordPatch
 import com.snipsnap.synth.Aerostat
@@ -17,6 +18,7 @@ import com.snipsnap.synth.BellowsPatch
 import com.snipsnap.synth.Bore
 import com.snipsnap.synth.Chitin
 import com.snipsnap.synth.ChitinPatch
+import com.snipsnap.synth.RivetPatch
 import com.snipsnap.synth.BorePatch
 import com.snipsnap.synth.Cairn
 import com.snipsnap.synth.CairnPatch
@@ -49,14 +51,20 @@ import com.snipsnap.synth.Flotilla
 import com.snipsnap.synth.FlotillaPatch
 import com.snipsnap.synth.Fork
 import com.snipsnap.synth.ForkPatch
+import com.snipsnap.synth.Halobar
+import com.snipsnap.synth.HalobarPatch
 import com.snipsnap.synth.Glint
 import com.snipsnap.synth.GlintPatch
 import com.snipsnap.synth.Gyre
 import com.snipsnap.synth.Hydroform
 import com.snipsnap.synth.HydroformPatch
 import com.snipsnap.synth.GyrePatch
+import com.snipsnap.synth.ClutterPatch
+import com.snipsnap.synth.ScuffPatch
 import com.snipsnap.synth.Keel
 import com.snipsnap.synth.KeelPatch
+import com.snipsnap.synth.Etch
+import com.snipsnap.synth.EtchPatch
 import com.snipsnap.synth.Lacquer
 import com.snipsnap.synth.LacquerPatch
 import com.snipsnap.synth.Lattice
@@ -91,6 +99,7 @@ import com.snipsnap.synth.Orphica
 import com.snipsnap.synth.OrphicaPatch
 import com.snipsnap.synth.Osprey
 import com.snipsnap.synth.OspreyPatch
+import com.snipsnap.synth.OsteriaPatch
 import com.snipsnap.synth.Otis
 import com.snipsnap.synth.OtisPatch
 import com.snipsnap.synth.Oven
@@ -124,6 +133,9 @@ import com.snipsnap.synth.ShoalPatch
 import com.snipsnap.synth.SilkPatch
 import com.snipsnap.synth.Siren
 import com.snipsnap.synth.SirenPatch
+import com.snipsnap.synth.BackwashPatch
+import com.snipsnap.synth.BreakerPatch
+import com.snipsnap.synth.SootPatch
 import com.snipsnap.synth.SkinPatch
 import com.snipsnap.synth.Skitter
 import com.snipsnap.synth.SkitterPatch
@@ -154,6 +166,8 @@ import com.snipsnap.synth.Tonewheel
 import com.snipsnap.synth.TonewheelPatch
 import com.snipsnap.synth.Trefoil
 import com.snipsnap.synth.TrefoilPatch
+import com.snipsnap.synth.Splay
+import com.snipsnap.synth.SplayPatch
 import com.snipsnap.synth.Tremor
 import com.snipsnap.synth.TremorPatch
 import com.snipsnap.synth.Trio
@@ -246,6 +260,7 @@ object SynthRoot {
 
     /** The root of [patch], or null for an engine that has none a note name would describe. */
     fun of(patch: Patch): Control? = when (patch) {
+        is com.snipsnap.synth.FiredBronzePatch -> null // Mixed percussion kit; TUNE is relative, not a shared MIDI root.
         // ---- a saved note, TUNE (where there is one) a transposition of it ----
         is AccordPatch -> Field(patch.midi, Accord.MIN_MIDI..Accord.MAX_MIDI) { patch.copy(midi = it) }
         is AlloyPatch -> Field(patch.midi, Alloy.MIDI_MIN..Alloy.MIDI_MAX) { patch.copy(midi = it) }
@@ -253,6 +268,7 @@ object SynthRoot {
         is BellowsPatch -> Field(patch.midi, playedRange(Bellows.midiRange(patch.voice),
             patch.macros["TUNE"] ?: Bellows.defaults(patch.voice).getValue("TUNE"), Bellows.TUNE_SEMITONES)) { patch.copy(midi = it) }
         is CairnPatch -> Field(patch.midi, Cairn.MIN_MIDI..Cairn.MAX_MIDI) { patch.copy(midi = it) }
+        is SplayPatch -> Field(patch.midi, Splay.MIDI_MIN..Splay.MIDI_MAX) { patch.copy(midi = it) }
         is CausticPatch -> Field(patch.midi, CausticInstrument.MIDI_MIN..CausticInstrument.MIDI_MAX) { patch.copy(midi = it) }
         is ChamberPatch -> Field(patch.midi, Chamber.MIDI_MIN..Chamber.MIDI_MAX) { patch.copy(midi = it) }
         is CisternPatch -> Field(patch.midi, Cistern.MIDI_MIN..Cistern.MIDI_MAX) { patch.copy(midi = it) }
@@ -264,17 +280,19 @@ object SynthRoot {
         is FlockPatch -> Field(patch.midi, Flock.MIN_MIDI..Flock.MAX_MIDI) { patch.copy(midi = it) }
         is FlotillaPatch -> Field(patch.midi, Flotilla.MIDI_MIN..Flotilla.MIDI_MAX) { patch.copy(midi = it) }
         is KeelPatch -> Field(patch.midi, Keel.MIDI_MIN..Keel.MIDI_MAX) { patch.copy(midi = it) }
+        is EtchPatch -> Field(patch.midi, Etch.MIDI_MIN..Etch.MIDI_MAX) { patch.copy(midi = it) }
         is LacquerPatch -> Field(patch.midi, Lacquer.MIDI_MIN..Lacquer.MIDI_MAX) { patch.copy(midi = it) }
         is LatticePatch -> Field(patch.midi, Lattice.MIDI_MIN..Lattice.MIDI_MAX) { patch.copy(midi = it) }
         is LibrationPatch -> Field(patch.midi, Libration.MIN_MIDI..Libration.MAX_MIDI) { patch.copy(midi = it) }
         is MeridianPatch -> Field(patch.midi, Meridian.MIDI_MIN..Meridian.MIDI_MAX) { patch.copy(midi = it) }
-        is MurmurPatch -> Field(patch.midi, Murmur.MIN_MIDI..Murmur.MAX_MIDI) { patch.copy(midi = it) }
+        is MurmurPatch -> Field(patch.midi, Murmur.rootRange(patch.config)) { patch.copy(midi = it) }
         is NacrePatch -> Field(patch.midi, Nacre.MIN_MIDI..Nacre.MAX_MIDI) { patch.copy(midi = it) }
         is ObbligatoPatch -> Field(patch.midi, Obbligato.midiRange(patch.model)) { patch.copy(midi = it) }
         is OhmPatch -> Field(patch.midi, Ohm.MIDI_MIN..Ohm.MIDI_MAX) { patch.copy(midi = it) }
         is OpenSkyPatch -> Field(patch.midi, OpenSkyPatch.MIDI_MIN..OpenSkyPatch.MIDI_MAX) { patch.copy(midi = it) }
         is OrphicaPatch -> Field(patch.config.midi, Orphica.MIDI_MIN..Orphica.MIDI_MAX) { patch.copy(config = patch.config.copy(midi = it)) }
         is OspreyPatch -> Field(patch.midi, Osprey.MIDI_MIN..Osprey.MIDI_MAX) { patch.copy(midi = it) }
+        is OsteriaPatch -> Field(patch.midi, patch.rootRange) { patch.copy(midi = it) }
         is OtisPatch -> Field(patch.midi, Otis.MIDI_MIN..Otis.MIDI_MAX) { patch.copy(midi = it) }
         is OvenPatch -> Field(patch.midi, Oven.MIDI_MIN..Oven.MIDI_MAX) { patch.copy(midi = it) }
         is OverlapPatch -> Field(patch.midi, Overlap.MIN_MIDI..Overlap.MAX_MIDI) { patch.copy(midi = it) }
@@ -301,6 +319,11 @@ object SynthRoot {
         is ContourPatch -> tune(patch, { ContourEngine.midiFor(patch.voice, it) })
         is CorollaPatch -> tune(patch, { Corolla.midiFor(patch.voice, it) })
         is ForkPatch -> tune(patch, { Fork.midiFor(it) })
+        // HALOBAR has a piecewise TUNE curve, so use its exact inverse.
+        is HalobarPatch -> Field(Halobar.midiFor(patch.voice,tuneOf(patch)),
+            Halobar.minimumMidi(patch.voice)..Halobar.maximumMidi(patch.voice)) { midi ->
+            patch.copy(macros=patch.macros+("TUNE" to Halobar.tuneForMidi(patch.voice,midi)))
+        }
         is HydroformPatch -> tune(patch, { Hydroform.midiFor(patch.voice, it) })
         is GyrePatch -> tune(patch, { Gyre.midiFor(patch.voice, it) })
         is LorentzPatch -> tune(patch, { Lorentz.midiFor(patch.voice, it) })
@@ -340,7 +363,7 @@ object SynthRoot {
         is TinesPatch -> if (patch.voice == TinesVoice.KALIMBA) tune(patch, { nearestMidi(Tines.frequencyFor(patch.voice, it)) }) else null
 
         // ---- no root a note name would describe ----
-        is ThumpPatch, is SkinPatch, is OnsetPatch, is TerraPatch, is VoxPatch, is FillPatch -> null
+        is BackwashPatch, is BreakerPatch, is SootPatch, is ThumpPatch, is SkinPatch, is OnsetPatch, is TerraPatch, is VoxPatch, is FillPatch, is RivetPatch, is ScuffPatch, is ClutterPatch, is TempestPatch -> null
         // SILK's TUNE walks scale degrees, EROSION's sweeps a frequency: neither names a note.
         is SilkPatch, is ErosionPatch -> null
     }

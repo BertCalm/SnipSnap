@@ -67,7 +67,7 @@ class MercuryKeelInstrumentScreenTest : ComposeScreenTest() {
     fun mercury_opens_its_held_instrument_sheet() {
         show("MERCURY", MercuryVoice.SING.name, Mercury.defaults(MercuryVoice.SING))
         click("MAKE INSTRUMENT")
-        compose.onNodeWithText("THE GLASS'S HOLD LOOP", substring = true).assertExists()
+        compose.onNodeWithText("the glass's hold LOOP", substring = true).assertExists()
         compose.onNodeWithText("RELEASE", substring = true).assertExists()
     }
 
@@ -76,7 +76,7 @@ class MercuryKeelInstrumentScreenTest : ComposeScreenTest() {
         val voice = KeelVoice.entries.first()
         show("KEEL", voice.name, Keel.defaults(voice))
         click("MAKE INSTRUMENT")
-        compose.onNodeWithText("THEN HOLDS THE SETTLED BASS.", substring = true).assertExists()
+        compose.onNodeWithText("then holds the settled bass.", substring = true).assertExists()
         compose.onNodeWithText("RELEASE", substring = true).assertExists()
     }
 
@@ -84,7 +84,7 @@ class MercuryKeelInstrumentScreenTest : ComposeScreenTest() {
     fun arco_opens_its_own_held_instrument_sheet() {
         show("ARCO", ArcoVoice.CELLO.name, Arco.defaults(ArcoVoice.CELLO))
         click("MAKE INSTRUMENT")
-        compose.onNodeWithText("THE BOW'S OWN STROKE", substring = true).assertExists()
+        compose.onNodeWithText("the bow's own stroke", substring = true).assertExists()
         compose.onNodeWithText("RELEASE", substring = true).assertExists()
     }
 
@@ -92,7 +92,7 @@ class MercuryKeelInstrumentScreenTest : ComposeScreenTest() {
     fun bore_opens_its_own_held_instrument_sheet() {
         show("BORE", BoreVoice.FLUTE.name, Bore.defaults(BoreVoice.FLUTE))
         click("MAKE INSTRUMENT")
-        compose.onNodeWithText("THE NOTE'S OWN BREATH", substring = true).assertExists()
+        compose.onNodeWithText("the note's own breath", substring = true).assertExists()
         compose.onNodeWithText("RELEASE", substring = true).assertExists()
     }
 
@@ -100,7 +100,7 @@ class MercuryKeelInstrumentScreenTest : ComposeScreenTest() {
     fun a_shared_loop_engine_opens_its_held_instrument_sheet() {
         show("THAW", ThawVoice.BRITTLE.name, Thaw.defaults(ThawVoice.BRITTLE))
         click("MAKE INSTRUMENT")
-        compose.onNodeWithText("THIS SOUND'S HOLD LOOP", substring = true).assertExists()
+        compose.onNodeWithText("this sound's hold LOOP", substring = true).assertExists()
         compose.onNodeWithText("RELEASE", substring = true).assertExists()
     }
 }

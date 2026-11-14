@@ -167,17 +167,25 @@ class StrikeVelocityTest {
      * tilted, read off [Terra.Body] through the input hook. BOX is the
      * exception, by design: its contact law is the slap's own pulse width
      * (TerraBox.render), so its modes reach the bank untilted at every hit.
+     * So are the hand drums (SLAP, DAYAN, DARBUKA; TerraHands), for the
+     * same reason.
      */
     @Test
     fun `TERRA's bank sees the bend by v squared and the tilted modes`() {
         for (voice in TerraVoice.entries) {
-            if (voice == TerraVoice.BOX) {
-                fun gainsAt(v: Float): List<Float> {
+            if (voice == TerraVoice.BOX || voice in Terra.HAND_DRUMS) {
+                fun bodyAt(v: Float): Terra.Body {
                     var seen: Terra.Body? = null
                     Terra.renderAt(voice, Terra.defaults(voice), v) { body -> seen = body; null }
-                    return assertNotNull(seen).modes.map { it.gain }
+                    return assertNotNull(seen)
                 }
-                assertEquals(gainsAt(1f), gainsAt(.5f), "BOX's modes are not tilted by velocity")
+                val full = bodyAt(1f)
+                val soft = bodyAt(.25f)
+                assertEquals(full.modes.map { it.gain }, soft.modes.map { it.gain }, "$voice's modes are not tilted by velocity")
+                // Nor moved: the same ratios over the same fundamental, so the drum's pitch is velocity's
+                // own by construction (the root test below reads it for the other voices).
+                assertEquals(full.fundamentalHz, soft.fundamentalHz, "$voice's fundamental")
+                assertEquals(full.modes.map { it.ratio }, soft.modes.map { it.ratio }, "$voice's mode ratios")
                 continue
             }
             val macros = Terra.defaults(voice) + ("DROOP" to .8f).takeIf { "DROOP" in Terra.defaults(voice) }.let { listOfNotNull(it).toMap() }
@@ -286,6 +294,11 @@ class StrikeVelocityTest {
         // constant, SKIN's tom 1/18 s), so a hard hit's own sharp start is
         // not mistaken for a moved root.
         for (p in patches) {
+            // BOX and the hand drums are held by their modes instead (the bank test above: the same
+            // ratios over the same fundamental at every velocity). On their dense inharmonic heads the
+            // detector's reading moves with the modes' balance: DARBUKA's (0, 1) mode is 340.0 Hz at
+            // every velocity, read as 344.9 Hz hard and 337.9 soft, 35 cents apart.
+            if (p is TerraPatch && (p.voice == TerraVoice.BOX || p.voice in Terra.HAND_DRUMS)) continue
             val hardSnip = p.render()
             if (hardSnip.durationSeconds < 0.32f) continue
             val hard = Pitch.detect(hardSnip, fromSec = 0.22f, windowSec = 0.10f) ?: continue
@@ -351,7 +364,8 @@ class StrikeVelocityTest {
 
     @Test
     fun `THUMP and ONSET voices other than KICK ignore velocity`() {
-        for (voice in ThumpVoice.entries - ThumpVoice.KICK) {
+        // KICK and SUB read velocity (ThumpTest holds SUB's own velocity claims); every other voice ignores it.
+        for (voice in ThumpVoice.entries - ThumpVoice.KICK - ThumpVoice.SUB) {
             val m = Thump.defaults(voice)
             assertContentEquals(Thump.render(voice, m).samples, Thump.render(voice, m, .3f).samples, "THUMP $voice ignores a render velocity")
         }

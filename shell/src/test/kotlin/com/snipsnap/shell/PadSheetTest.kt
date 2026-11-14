@@ -1,12 +1,16 @@
 package com.snipsnap.shell
 
+import com.snipsnap.audio.Snip
 import com.snipsnap.json.JsonValue
 import com.snipsnap.kit.KitLayer
 import com.snipsnap.kit.KitPad
 import com.snipsnap.synth.Eras
+import com.snipsnap.synth.Hush
 import com.snipsnap.synth.PadRecipe
+import com.snipsnap.synth.Pump
 import com.snipsnap.synth.Room
 import com.snipsnap.synth.Treatments
+import com.snipsnap.synth.Wobble
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -129,6 +133,79 @@ class PadSheetTest {
     }
 
     @Test
+    fun `a tap of the HUSH pedal, on either sheet, shuts the pad the 12 dB under its peak the owner chose`() {
+        val chosen = 12f // the shallowest of the three gates heard on 2026-11-07, the one the gated room wanted
+        for (tap in listOf(PadSheet.DEFAULT_AMOUNT, BoardSheet.DEFAULT_AMOUNT)) {
+            val floor = Treatments.chain("hushed", tap).hush!!.getValue("FLOOR")
+            assertEquals(chosen, Hush.floorDb(floor), 1e-4f, "a tap at $tap misses the chosen gate")
+        }
+    }
+
+    @Test
+    fun `a tap of the SUB pedal, on either sheet, mixes the octave in at the DEPTH 0_5 and the Grit the owner chose`() {
+        val chosen = 0.5f // the DEPTH every clip of the drum check (2026-11-09) was heard at
+        for (tap in listOf(PadSheet.DEFAULT_AMOUNT, BoardSheet.DEFAULT_AMOUNT)) {
+            val sub = Treatments.chain("octaved", tap).octaver!!
+            assertEquals(chosen, sub.getValue("DEPTH"), 1e-6f, "a tap at $tap misses the chosen depth")
+            assertFalse("DRIVE" in sub, "a tap at $tap sets DRIVE, which its default, Grit, already is")
+        }
+    }
+
+    @Test
+    fun `a tap of the REWIND pedal, on either sheet, plays the hit back at the middle TIME with the repeats the owner chose`() {
+        val chosen = 0.5f // REPEAT 0.5, "some" of the three repeats heard at the gate (2026-11-11)
+        for (tap in listOf(PadSheet.DEFAULT_AMOUNT, BoardSheet.DEFAULT_AMOUNT)) {
+            val rewind = Treatments.chain("rewound", tap).rewind!!
+            assertEquals(chosen, rewind.getValue("REPEAT"), 1e-6f, "a tap at $tap misses the chosen repeats")
+            assertEquals(tap, rewind.getValue("MIX"), 1e-6f, "a tap at $tap is not MIX $tap")
+            assertFalse("TIME" in rewind, "a tap at $tap sets TIME, which its default, the middle the owner chose, already is")
+        }
+    }
+
+    @Test
+    fun `a tap of the TREM and FLANGE pedals, on either sheet, lands on the Gentle and Plain clips the owner chose`() {
+        // The gate (2026-11-12): TREM Gentle (DEPTH 0.5, RATE and SHAPE at their defaults), FLANGE Plain (DEPTH 0.7, RATE and FEEDBACK, none, at their defaults).
+        for (tap in listOf(PadSheet.DEFAULT_AMOUNT, BoardSheet.DEFAULT_AMOUNT)) {
+            val trem = Treatments.chain("tremoloed", tap).tremolo!!
+            assertEquals(0.5f, trem.getValue("DEPTH"), 1e-6f, "a TREM tap at $tap misses Gentle's depth")
+            assertFalse("RATE" in trem || "SHAPE" in trem, "a TREM tap at $tap sets RATE or SHAPE, which Gentle left at their defaults")
+            val flange = Treatments.chain("flanged", tap).flanger!!
+            assertEquals(0.7f, flange.getValue("DEPTH"), 1e-6f, "a FLANGE tap at $tap misses Plain's depth")
+            assertFalse("RATE" in flange || "FEEDBACK" in flange, "a FLANGE tap at $tap sets RATE or FEEDBACK, which Plain left at their defaults")
+        }
+    }
+
+    @Test
+    fun `a tap of the ROTARY pedal, on either sheet, is the Spin-up clip the owner chose at SPIN 0_7`() {
+        // The gate (2026-11-13): Spin-up (SPIN 1, SPEED 1, RAMP 1). SPEED and RAMP are left at their defaults, each its own
+        // neutral; SPIN fades toward none, so a tap swirls at the tap's own SPIN.
+        for (tap in listOf(PadSheet.DEFAULT_AMOUNT, BoardSheet.DEFAULT_AMOUNT)) {
+            val rotary = Treatments.chain("spun", tap).rotary!!
+            assertEquals(tap, rotary.getValue("SPIN"), 1e-6f, "a ROTARY tap at $tap is not SPIN $tap")
+            assertFalse("SPEED" in rotary || "RAMP" in rotary, "a ROTARY tap at $tap sets SPEED or RAMP, which Spin-up left at their defaults")
+        }
+    }
+
+    @Test
+    fun `a tap of PUMP is the Eighths clip the owner chose - pumped at AMT 0_7 on the grid's eighth`() {
+        // The gate (2026-11-13): Eighths, AMOUNT 0.7 at 1/8. The card taps at its default AMT with the default dials,
+        // so the tap is that clip with nothing of its own to set.
+        assertEquals(PadSheet.Treatment.Keyed("pumped"), PadSheet.treatmentFor("PUMP"))
+        assertEquals(0.7f, PadSheet.DEFAULT_AMOUNT)
+        assertEquals("1/8", Keyed.Dials().division)
+        val rate = 44_100
+        val held = Snip(FloatArray(3 * rate) { 0.5f * kotlin.math.sin(2.0 * Math.PI * 220.0 * it / rate).toFloat() }, 1, rate)
+        val tap = Keyed.apply("pumped", held, Keyed.Context(null, 92f), PadSheet.DEFAULT_AMOUNT).snip
+        val clip = Pump.pump(held, 92f, "1/8", 0.7f)
+        kotlin.test.assertContentEquals(clip.samples, tap.samples, "a PUMP tap is not the Eighths clip")
+        assertEquals(Wobble.DEFAULT_DIVISION, Pump.DEFAULT_DIVISION)
+        // A hit shorter than two eighths is refused in words, before anything is touched.
+        val short = Snip(FloatArray(rate / 2) { 0.5f }, 1, rate)
+        assertTrue(Keyed.refusal("pumped", short, Keyed.Context(null, 92f), PadSheet.DEFAULT_AMOUNT)!!.contains("1/8"))
+        assertFailsWith<Keyed.Refused> { Keyed.apply("pumped", short, Keyed.Context(null, 92f), PadSheet.DEFAULT_AMOUNT) }
+    }
+
+    @Test
     fun `segmentFor is eraFor's inverse for every era segment`() {
         for (segment in PadSheet.SEGMENTS - PadSheet.NONE - PadSheet.SMEAR - PadSheet.DUST) {
             val era = PadSheet.eraFor(segment)!!
@@ -150,9 +227,9 @@ class PadSheetTest {
         assertEquals(listOf("PUNCH", "RING", "DUB", "VINYL", "PHASE", "CONTOUR"), PadSheet.CHARACTER_SEGMENTS)
         assertEquals(listOf("SLAP", "WASH", "ROLL", "GATE", "ENSEMBLE", "SECTION"), PadSheet.TIME_SEGMENTS)
         assertEquals(listOf("FLIP", "STOP", "START", "PITCH"), PadSheet.TRANSPORT_SEGMENTS)
-        assertEquals(listOf("TUNE", "BODY", "WOBBLE", "ETERNAL"), PadSheet.KEYED_SEGMENTS)
-        assertEquals(listOf("DRIVE", "SUSTAIN", "WAH", "TOUCH", "ROCK", "FORGE", "DELAY", "ROOM", "FADE IN", "VIBRATO", "DIVE"), PadSheet.PEDAL_SEGMENTS)
-        assertEquals(42, PadSheet.ALL_SEGMENTS.size, "the card should hold 42 segments")
+        assertEquals(listOf("TUNE", "BODY", "WOBBLE", "ETERNAL", "PUMP"), PadSheet.KEYED_SEGMENTS)
+        assertEquals(listOf("DRIVE", "SUSTAIN", "WAH", "TOUCH", "ROCK", "FORGE", "DELAY", "ROOM", "FADE IN", "VIBRATO", "DIVE", "HUSH", "SUB", "REWIND", "TREM", "FLANGE", "ROTARY"), PadSheet.PEDAL_SEGMENTS)
+        assertEquals(49, PadSheet.ALL_SEGMENTS.size, "the card should hold 49 segments")
     }
 
     /**
@@ -163,7 +240,7 @@ class PadSheetTest {
      * anything ended up on.
      */
     @Test
-    fun `the regroup keeps every chip the card already drew, adds its seven, the merge's DUST makes twenty-nine, ENSEMBLE thirty and SECTION thirty-one the pedals' two thirty-three, the wah's three thirty-six, FORGE thirty-seven, DELAY thirty-eight ROOM thirty-nine, FADE IN forty, VIBRATO forty-one and DIVE forty-two`() {
+    fun `the regroup keeps every chip the card already drew, adds its seven, the merge's DUST makes twenty-nine, ENSEMBLE thirty and SECTION thirty-one the pedals' two thirty-three, the wah's three thirty-six, FORGE thirty-seven, DELAY thirty-eight ROOM thirty-nine, FADE IN forty, VIBRATO forty-one, DIVE forty-two, HUSH forty-three, SUB forty-four, REWIND forty-five, TREM and FLANGE forty-seven, ROTARY forty-eight and PUMP forty-nine`() {
         val expected = setOf(
             // the twenty that existed before the regroup, plus the row-one
             // DUST chip a separate branch merged in later (`readDust`,
@@ -198,9 +275,22 @@ class PadSheetTest {
             "VIBRATO",
             // DIVE's gate (2026-11-07): on the slate, behind MORE
             "DIVE",
+            // HUSH's gate (2026-11-07): on the slate, behind MORE
+            "HUSH",
+            // SUB's gate (2026-11-09): on the slate, behind MORE
+            "SUB",
+            // REWIND's gate (2026-11-11): on the slate, behind MORE
+            "REWIND",
+            // TREM and FLANGE's gate (2026-11-12): on the slate, behind MORE
+            "TREM",
+            "FLANGE",
+            // ROTARY's gate (2026-11-13): on the slate, behind MORE
+            "ROTARY",
+            // PUMP's gate (2026-11-13): on the KEYED row
+            "PUMP",
         )
         assertEquals(expected, PadSheet.ALL_SEGMENTS.toSet(), "the card's inventory changed")
-        assertEquals(42, PadSheet.ALL_SEGMENTS.size, "a chip is drawn twice or missing")
+        assertEquals(49, PadSheet.ALL_SEGMENTS.size, "a chip is drawn twice or missing")
     }
 
     @Test
@@ -351,6 +441,8 @@ class PadSheetTest {
         assertEquals(PadSheet.Applied(PadSheet.Treatment.Keyed("retuned"), 1f, "TUNE"), PadSheet.read(retuned))
         val bodied = JsonValue.Obj(linkedMapOf<String, JsonValue>("keyed" to JsonValue.Str("bodied"), "key" to JsonValue.Str("C"), "amount" to JsonValue.Num(0.5)))
         assertEquals(PadSheet.Applied(PadSheet.Treatment.Keyed("bodied"), 0.5f, "BODY"), PadSheet.read(bodied))
+        val pumped = JsonValue.Obj(linkedMapOf<String, JsonValue>("keyed" to JsonValue.Str("pumped"), "key" to JsonValue.Str("1/8 AT 92 BPM"), "amount" to JsonValue.Num(0.7), "division" to JsonValue.Str("1/8")))
+        assertEquals(PadSheet.Applied(PadSheet.Treatment.Keyed("pumped"), 0.7f, "PUMP"), PadSheet.read(pumped))
     }
 
     @Test
@@ -364,8 +456,17 @@ class PadSheetTest {
         assertEquals("ECHO", PadSheet.displayLabel("SLAP"))
         assertEquals("DRONE", PadSheet.displayLabel("ETERNAL"))
         assertEquals("SMOOTH", PadSheet.displayLabel("SKIM"))
+        // Ruling 14 and ruling 8: chips that clashed with an engine, another tool, or a second meaning.
+        assertEquals("FILTER SWEEP", PadSheet.displayLabel("CONTOUR"))
+        assertEquals("RING MOD", PadSheet.displayLabel("RING"))
+        assertEquals("TRANCE GATE", PadSheet.displayLabel("GATE"))
+        assertEquals("NOISE GATE", PadSheet.displayLabel("HUSH"))
+        assertEquals("TOUCH WAH", PadSheet.displayLabel("TOUCH"))
+        assertEquals("REVERB", PadSheet.displayLabel("ROOM"))
+        // SECTION is not renamed: open, needs a sound check.
+        assertEquals("SECTION", PadSheet.displayLabel("SECTION"))
         // Every other segment on the card draws its own id unchanged.
-        for (segment in PadSheet.ALL_SEGMENTS - setOf("TUNE", "STOP", "START", "SLAP", "ETERNAL", "SKIM")) {
+        for (segment in PadSheet.ALL_SEGMENTS - setOf("TUNE", "STOP", "START", "SLAP", "ETERNAL", "SKIM", "CONTOUR", "RING", "GATE", "HUSH", "TOUCH", "ROOM")) {
             assertEquals(segment, PadSheet.displayLabel(segment), "$segment wasn't renamed - it should draw itself")
         }
     }
@@ -478,14 +579,14 @@ class PadSheetTest {
         assertFalse(PadSheet.hasOwnWayBack(treated(ERA), "someone_else.wav", both + "someone_else.wav"), "not one of the pad's files")
 
         val mutate = obj("""{"mutate":{"mode":"morph","with":["B02"]}}""")
-        assertTrue(MutateSheet.read(mutate) != null, "test setup: a MUTATE the sheet reads")
-        assertTrue(PadSheet.hasOwnWayBack(treated(mutate), main, both), "a MUTATE: its UNDO")
+        assertTrue(MutateSheet.read(mutate) != null, "test setup: a COMBINE SOUNDS the sheet reads")
+        assertTrue(PadSheet.hasOwnWayBack(treated(mutate), main, both), "a COMBINE SOUNDS: its UNDO")
         val mutatedLayers = treated(mutate, listOf(KitLayer(soft, 1, 63), KitLayer(main, 64, 127)))
-        assertFalse(PadSheet.hasOwnWayBack(mutatedLayers, soft, both), "MUTATE's UNDO restores the main file only, never a layer")
+        assertFalse(PadSheet.hasOwnWayBack(mutatedLayers, soft, both), "COMBINE SOUNDS's UNDO restores the main file only, never a layer")
 
         val outside = obj("""{"outside":{"move":"reamp"}}""")
-        assertTrue(OutsideSheet.read(outside) != null, "test setup: an OUTSIDE the sheet reads")
-        assertTrue(PadSheet.hasOwnWayBack(treated(outside), main, both), "an OUTSIDE: its UNDO")
+        assertTrue(OutsideSheet.read(outside) != null, "test setup: an RE-AMP AND ROOM the sheet reads")
+        assertTrue(PadSheet.hasOwnWayBack(treated(outside), main, both), "an RE-AMP AND ROOM: its UNDO")
 
         val splice = obj("""{"splice":{"crossfaded":true}}""")
         assertTrue(PadSheet.hasOwnWayBack(treated(splice), main, both), "a SPLICE: UNDO SPLICE")
@@ -494,14 +595,14 @@ class PadSheetTest {
         assertFalse(PadSheet.hasOwnWayBack(splicedLayers, soft, both), "UNDO SPLICE restores the main file only, never a layer")
         assertFalse(PadSheet.hasOwnWayBack(treated(splice), main, setOf(soft)), "nothing binned under the main file, nothing to give back")
         val mutateSplice = obj("""{"mutate":{"mode":"splice","with":["B02"]}}""")
-        assertTrue(PadSheet.hasOwnWayBack(treated(mutateSplice), main, both), "MUTATE's SPLICE move: MUTATE's own UNDO")
+        assertTrue(PadSheet.hasOwnWayBack(treated(mutateSplice), main, both), "COMBINE SOUNDS's SPLICE move: COMBINE SOUNDS's own UNDO")
 
         val patch = PATCH
         val desampled = treated(patch).copy(source = mapOf("desampled" to "0.12"))
-        assertTrue(PadSheet.hasOwnWayBack(desampled, main, both), "a DE-SAMPLE: its UNDO")
+        assertTrue(PadSheet.hasOwnWayBack(desampled, main, both), "a FIND NEAREST SYNTH: its UNDO")
         val desampledLayers = treated(patch, listOf(KitLayer(soft, 1, 63), KitLayer(main, 64, 127))).copy(source = mapOf("desampled" to "0.12"))
         assertTrue(PadSheet.hasOwnWayBack(desampledLayers, main, both), "soft hits after the de-sample: SOFT HITS off, then its UNDO")
-        assertFalse(PadSheet.hasOwnWayBack(desampledLayers, soft, both), "a DE-SAMPLE's UNDO restores the main file only, never a layer")
+        assertFalse(PadSheet.hasOwnWayBack(desampledLayers, soft, both), "a FIND NEAREST SYNTH's UNDO restores the main file only, never a layer")
         assertFalse(PadSheet.hasOwnWayBack(treated(patch), main, both), "a plain synth send re-renders from its patch: no door reads the bin")
         val withFx = PadRecipe.fromJsonValue(patch).copy(fx = Treatments.chain("washed")).toJsonValue()
         assertFalse(
@@ -520,7 +621,7 @@ class PadSheetTest {
     fun `a pad is spliced only by TAPE SPLICE's own top-level key`() {
         fun obj(json: String) = com.snipsnap.json.Json.parse(json) as JsonValue.Obj
         assertTrue(PadSheet.isSpliced(obj("""{"splice":{"crossfaded":false}}""")))
-        assertFalse(PadSheet.isSpliced(obj("""{"mutate":{"mode":"splice","with":["B02"]}}""")), "MUTATE's SPLICE move has its own UNDO")
+        assertFalse(PadSheet.isSpliced(obj("""{"mutate":{"mode":"splice","with":["B02"]}}""")), "COMBINE SOUNDS's SPLICE move has its own UNDO")
         assertFalse(PadSheet.isSpliced(obj("""{"recipe":2,"patch":{"engine":"VELVET","voice":"BASS","macros":{}},"note":"splice"}""")), "the word as a value is not the key")
         assertFalse(PadSheet.isSpliced(ERA))
         assertFalse(PadSheet.isSpliced(null))

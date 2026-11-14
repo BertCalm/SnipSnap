@@ -130,9 +130,9 @@ object Desample {
      * SKIN existed.
      */
     object Voices {
-        // SPARK is a provisional listening voice. Keep its unapproved
-        // search space out of R1 and retain the legacy grid and tie order.
-        val THUMP: List<Voice> = ThumpVoice.entries.filter { it != ThumpVoice.SPARK }.map { v ->
+        // SPARK and SUB are provisional listening voices. Keep their unapproved
+        // search spaces out of R1 and retain the legacy grid and tie order.
+        val THUMP: List<Voice> = ThumpVoice.entries.filter { it != ThumpVoice.SPARK && it != ThumpVoice.SUB }.map { v ->
             Voice(
                 ThumpPatch.ENGINE, v.name,
                 Thump.macrosFor(v).map { it.name }

@@ -13,13 +13,18 @@ import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.unit.dp
+import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitPad
 import com.snipsnap.kit.KitLayer
@@ -62,7 +67,7 @@ class StrikeStripTest : ComposeScreenTest() {
         }
     }
 
-    private fun fader() = button("STRIKE STRENGTH")
+    private fun fader() = button("VELOCITY")
     private fun pad() = compose.onNodeWithContentDescription("PAD A01: SNARE")
 
     private fun stateOf(label: String): String =
@@ -79,7 +84,7 @@ class StrikeStripTest : ComposeScreenTest() {
             pad().performClick()
             pump()
             for ((i, name) in listOf("DRY", "REVERB", "ECHO").withIndex()) {
-                val layer = compose.onNodeWithContentDescription("STRIKE LAYER ${i + 1}: $name")
+                val layer = compose.onNodeWithContentDescription("VELOCITY LAYER ${i + 1}: $name")
                 if (i == index) layer.assertIsSelected() else layer.assertIsNotSelected()
                 assertReadsInFull(name)
             }
@@ -87,10 +92,10 @@ class StrikeStripTest : ComposeScreenTest() {
         compose.runOnIdle { state.releaseTouch() }
         pump()
         assertEquals(0f, state.strength, 0f)
-        compose.onNodeWithContentDescription("STRIKE LAYER 3: ECHO").assertIsSelected()
+        compose.onNodeWithContentDescription("VELOCITY LAYER 3: ECHO").assertIsSelected()
         pad().performClick()
         pump()
-        compose.onNodeWithContentDescription("STRIKE LAYER 1: DRY").assertIsSelected()
+        compose.onNodeWithContentDescription("VELOCITY LAYER 1: DRY").assertIsSelected()
     }
 
     @Test
@@ -112,14 +117,64 @@ class StrikeStripTest : ComposeScreenTest() {
     fun strip_is_optional_and_its_controls_fit_a_narrow_phone() {
         show()
         fader().assertDoesNotExist()
-        button("STRIKE STRIP").performClick()
+        button("VELOCITY STRIP").performClick()
         pump()
         fader().assertExists()
-        button("STRIKE STRIP").assertIsSelected()
-        for (label in listOf("STRIKE ON", "LEFT", "STAY", "VOL OFF")) assertReadsInFull(label)
+        button("VELOCITY STRIP").assertIsSelected()
+        for (label in listOf("STRIP ON", "LEFT", "STAY", "VOL OFF")) assertReadsInFull(label)
         val bounds = pad().fetchSemanticsNode().boundsInRoot
         val density = compose.density.density
         assertTrue("pad keeps a 48dp touch target", bounds.width >= 48f * density && bounds.height >= 48f * density)
+    }
+
+    /**
+     * 7d: PADS draws the four strip buttons inside a VELOCITY STRIP section that starts closed.
+     * Opening it names each toggle by its caption, and a toggle in it still works.
+     */
+    @Test
+    fun the_velocity_strip_section_starts_closed_names_each_toggle_and_a_toggle_still_works() {
+        setPhoneContent {
+            Column(Modifier.fillMaxSize()) { StrikeStripSection(owner.value, LocalScheme.current) }
+        }
+        // Closed: the heading and the strip's state are there, no toggle is.
+        button("EXPAND VELOCITY STRIP").assertExists()
+        compose.onAllNodesWithText("VELOCITY STRIP", useUnmergedTree = true).assertCountEquals(1)
+        compose.onNodeWithText("STRIP OFF", useUnmergedTree = true).assertExists()
+        for (label in listOf("VELOCITY STRIP", "VELOCITY STRIP THUMB SIDE", "VELOCITY STRIP ON RELEASE", "VELOCITY STRIP CHANGES VOLUME")) {
+            button(label).assertDoesNotExist()
+        }
+        for (caption in listOf("STRIP", "SIDE", "RELEASE", "LEVEL")) {
+            compose.onAllNodesWithTag("strike-caption-$caption", useUnmergedTree = true).assertCountEquals(0)
+        }
+
+        button("EXPAND VELOCITY STRIP").performClick()
+        pump()
+        // Open: every toggle is there, each under the caption saying what it sets.
+        button("COLLAPSE VELOCITY STRIP").assertExists()
+        for (caption in listOf("STRIP", "SIDE", "RELEASE", "LEVEL")) {
+            assertTrue("caption $caption is on screen", compose.onAllNodesWithTag("strike-caption-$caption", useUnmergedTree = true).fetchSemanticsNodes().size == 1)
+        }
+        for (label in listOf("VELOCITY STRIP", "VELOCITY STRIP THUMB SIDE", "VELOCITY STRIP ON RELEASE", "VELOCITY STRIP CHANGES VOLUME")) {
+            button(label).assertExists()
+        }
+        for (text in listOf("LEFT", "STAY", "VOL OFF")) {
+            compose.onNodeWithText(text, useUnmergedTree = true).assertExists()
+        }
+
+        // A toggle still works, and the closed summary follows the state.
+        button("VELOCITY STRIP").performClick()
+        pump()
+        assertTrue(state.enabled)
+        assertEquals("STRIP ON", stateOf("VELOCITY STRIP"))
+        button("VELOCITY STRIP ON RELEASE").performClick()
+        pump()
+        assertTrue(state.returns)
+        button("COLLAPSE VELOCITY STRIP").performClick()
+        pump()
+        button("VELOCITY STRIP ON RELEASE").assertDoesNotExist()
+        assertTrue("closing the section keeps the setting", state.returns)
+        // Closed again, the section's own summary now reads ON (the one remaining text of that name).
+        compose.onNodeWithText("STRIP ON", useUnmergedTree = true).assertExists()
     }
 
     /**
@@ -130,23 +185,23 @@ class StrikeStripTest : ComposeScreenTest() {
     @Test
     fun the_settings_behind_strike_say_they_wait_for_it_and_keep_their_value() {
         show()
-        val waits = "takes effect when STRIKE is on"
-        val behind = listOf("STRIKE THUMB SIDE", "STRIKE ON RELEASE", "STRIKE CHANGES VOLUME")
+        val waits = "takes effect when the VELOCITY STRIP is on"
+        val behind = listOf("VELOCITY STRIP THUMB SIDE", "VELOCITY STRIP ON RELEASE", "VELOCITY STRIP CHANGES VOLUME")
         for (label in behind) assertTrue("$label should say it waits for STRIKE", stateOf(label).endsWith(waits))
-        assertEquals("STRIKE itself never waits on the strip it turns on", "STRIKE OFF", stateOf("STRIKE STRIP"))
+        assertEquals("STRIKE itself never waits on the strip it turns on", "STRIP OFF", stateOf("VELOCITY STRIP"))
 
-        button("STRIKE ON RELEASE").performClick()
+        button("VELOCITY STRIP ON RELEASE").performClick()
         pump()
         assertTrue("a tap while the strip is off is not swallowed", state.returns)
-        button("STRIKE ON RELEASE").assertIsSelected()
-        assertEquals("RETURN, $waits", stateOf("STRIKE ON RELEASE"))
+        button("VELOCITY STRIP ON RELEASE").assertIsSelected()
+        assertEquals("RETURN, $waits", stateOf("VELOCITY STRIP ON RELEASE"))
 
-        button("STRIKE STRIP").performClick()
+        button("VELOCITY STRIP").performClick()
         pump()
         for (label in behind) assertFalse("$label still says it waits once STRIKE is on", stateOf(label).endsWith(waits))
-        assertEquals("RETURN", stateOf("STRIKE ON RELEASE"))
-        button("STRIKE ON RELEASE").assertIsSelected()
-        assertEquals("STRIKE ON", stateOf("STRIKE STRIP"))
+        assertEquals("RETURN", stateOf("VELOCITY STRIP ON RELEASE"))
+        button("VELOCITY STRIP ON RELEASE").assertIsSelected()
+        assertEquals("STRIP ON", stateOf("VELOCITY STRIP"))
     }
 
     @Test
@@ -199,7 +254,7 @@ class StrikeStripTest : ComposeScreenTest() {
         state.enabled = true
         show()
         val before = fader().fetchSemanticsNode().boundsInRoot.left
-        button("STRIKE THUMB SIDE").performClick()
+        button("VELOCITY STRIP THUMB SIDE").performClick()
         pump()
         assertTrue(fader().fetchSemanticsNode().boundsInRoot.left > before)
         fader().performSemanticsAction(SemanticsActions.SetProgress) { it(0f) }
@@ -207,11 +262,11 @@ class StrikeStripTest : ComposeScreenTest() {
         pump()
         assertEquals(1, PadHit.midiVelocity(hits.last().velocity))
         assertEquals(1f, hits.last().gainVelocity, 0.0001f)
-        button("STRIKE CHANGES VOLUME").performClick()
+        button("VELOCITY STRIP CHANGES VOLUME").performClick()
         pad().performClick()
         pump()
         assertEquals(PadHit.SOFTEST, hits.last().gainVelocity, 0.0001f)
-        button("STRIKE STRIP").performClick()
+        button("VELOCITY STRIP").performClick()
         pad().performClick()
         pump()
         assertEquals(PadHit.CENTER, hits.last().velocity, 0.0001f)

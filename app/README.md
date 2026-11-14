@@ -73,21 +73,62 @@ M0's exit test was: browse kits on a phone, tap pads, hear WAVs, flip
 schemes in Tape Properties. The player for that test was `SoundPool`
 (`PadPlayer`), since deleted. Every screen that makes a sound goes
 through `PadEngine`. PLAY's exit test passed on a phone on 2026-09-08
-(`docs/BENCH.md` A1). The FRESH TAPE menu (74 starters including NACRE, CONFLUENCE VOICES, ACCORD, STRIKE FX, CIRCUIT,
-THAW, SCOUR, NIMBUS, UNDERTOW, CISTERN, UPRIGHT BASS, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, ORIGAMI, FILAMENT, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, LATTICE, FLOCK, OVERLAP, OHM, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, MURMUR SELECTED, SCANNED CHAIN, TREFOIL, TRIO, OSPREY, OSPREY CURATED, OPENSKY, VENT, CAUSTIC, TIDAL, CHAMBER, KEEL, LIBRATION, MERIDIAN, RIME, RIME COMPLETE, OTIS, OBBLIGATO, WICK, CHORD STABS, CHORD STABS DORIAN, CHORD STABS MIXOLYDIAN, CHORD STABS BORROWED, PATIO CUMBIA, PATIO SAMBA and PATIO LATIN DUB,
+(`docs/BENCH.md` A1). The FRESH TAPE menu (129 starters including MERIDIAN MATERIALS, MERIDIAN SIX, TEMPEST, TEMPEST TUNED, TEMPEST CIRCUIT, TEMPEST FOUNDRY, TEMPEST STEP, SPLAY POPULATIONS, OSTERIA, OSTERIA SIX VOICES, ETCH, HALOBAR, HALOBAR SIX STUDY, EROSION, NACRE, CONFLUENCE VOICES, ACCORD, STRIKE FX, CIRCUIT,
+THAW, SCOUR, NIMBUS, UNDERTOW, CISTERN, UPRIGHT BASS, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, ORIGAMI, FILAMENT, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, LATTICE, FLOCK, OVERLAP, OHM, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, MURMUR SELECTED, MURMUR KEPT, SCANNED CHAIN, TREFOIL, TRIO, OSPREY, OSPREY CURATED, OPENSKY, VENT, CAUSTIC, TIDAL, CHAMBER, KEEL, LIBRATION, MERIDIAN, RIME, RIME COMPLETE, OTIS, OBBLIGATO, WICK, CHORD STABS, CHORD STABS DORIAN, CHORD STABS MIXOLYDIAN, CHORD STABS BORROWED, VELOUR CLOSE, VELOUR, VELOUR BLOOM, FIRED BRONZE, COSMIC BREAKS, TRIAD WAREHOUSE TECHNO, TRIAD SUBMERGED HOUSE, TRIAD FRACTURE MINIMAL, BACKWASH SOUL, BACKWASH PSYCH, SPORE JUNGLE, SPORE DUB, SPORE ELECTRO, GATECRASH STONE ROOM, GATECRASH MACHINE POP, GATECRASH ELECTRO FUNK, CYPHER TRAP, CYPHER DRILL, CYPHER BACKROOM, CYPHER LOWRIDER, CYPHER DUST, CYPHER FLINT, BREAKER, BREAKER DUB TANK, BREAKER TRIP HOP, MIRRORBALL PHILLY STRINGS, MIRRORBALL LOFT PARTY, MIRRORBALL MUNICH MACHINE, SOOT, SOOT DRUMLESS, SOOT BASEMENT DUB, SOOT BRUSHED NOIR and SOOT WAREHOUSE INDUSTRIAL, SCUFF DETROIT, SCUFF FLINT, PATIO CUMBIA, PATIO SAMBA, PATIO LATIN DUB,
 from `StarterKits`, rendered by
-the `:synth` engines on-device) makes the shelf useful before a capture
+the `:synth` builders on-device, including fixed sample banks) makes the shelf useful before a capture
 exists. The ordered hardware list is `docs/BENCH.md`; the notes below
 are the per-feature detail.
 
-The SYNTH source picker has 76 engines: LATTICE, ACCORD, THUMP, SCANNED CHAIN, SKIN, ONSET,
+The SYNTH source picker has 86 engines: LATTICE, ACCORD, THUMP, SCANNED CHAIN, SKIN, ONSET,
 TINES, VELVET, VOX, PLUCK, ORPHICA, TONEWHEEL, OTIS, REGISTERS, FATHOM, RESIN, TIDE, GLINT,
-SIREN, FORK, FLOTILLA, AEROSTAT, TREMOR, BALLAST, CISTERN, CIRCUIT, OBBLIGATO, ALLOY,
+SIREN, FORK, HALOBAR, FLOTILLA, AEROSTAT, TREMOR, BALLAST, CISTERN, CIRCUIT, OBBLIGATO, ALLOY,
 THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM,
 CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS,
 MURMUR, OSPREY, OPENSKY, OVERLAP, OVEN, FLOCK, VENT, CREASE, TRIO, NACRE, ORIGAMI, TREFOIL, OHM,
 MERCURY, CAUSTIC, FILAMENT, APSIS, TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME, BORE, ARCO,
-SCOUR, KEEL, CHITIN and WICK.
+SCOUR, KEEL, CHITIN, WICK, EROSION, RIVET, FIRED BRONZE, BACKWASH, SOOT, TEMPEST, SPLAY, OSTERIA and ETCH.
+
+TEMPEST exposes six accepted finite drum voices (KICK, METAL, SNARE, CLAP, TOM and HAT)
+and their 22 presets. Its 1.20-second samples offer neither HOLD nor MAKE INSTRUMENT.
+New KICK and METAL recipes save model 2 and the other voices model 3; recalled model-1
+recipes keep their renderer through edits, navigation, RANDOMISE and SAVE. FRESH TAPE →
+TEMPEST is the sixteen-pad drum kit with choking hats, and TEMPEST TUNED keeps the
+original E minor pentatonic kicks and metal colors. TEMPEST CIRCUIT, TEMPEST FOUNDRY and TEMPEST STEP
+are electro, industrial and UK garage kits built from the same accepted voices, kept by the owner on 2026-11-14.
+
+SPLAY exposes one finite TONGUE voice and its five accepted population settings.
+Its original model, root, touch and seed survive editing and navigation; positive
+HOLD is not offered. SPLAY POPULATIONS supplies five native finite pads, retaining
+the source recipes. MAKE INSTRUMENT builds finite keys with three gain-only touch
+levels and no loop. See [delivery scope](../docs/SPLAY_FINITE_DELIVERY.md).
+
+OSTERIA shows its six accepted voices (NOTE, the saved QUARTET, then BASS, PLUCK, REED,
+PAD and BOWED) and their 13 presets. ROOT, VELOCITY, ATTACK and RELEASE edit the complete
+saved performance; HOLD lengthens a finite note up to eight seconds and is not a loop.
+PLUCK switches between SINGLE NOTE and a saved STRUM (MINOR or MAJOR, DOWN or UP, a
+10–240 ms sweep). MAKE INSTRUMENT renders finite keys, C2–C6 at thirteen roots with
+three touch layers and the saved envelope, so its sheet has no RELEASE; a STRUM is
+not offered as keys. Model-1 phrase recipes stay readable and keep their articulation.
+
+ETCH shows its six voices (SAW, SQUARE, RUBBER, WHISTLE, GRIT and DUB) and their 14
+presets, every one a setting the owner heard in round 3. ROOT is the shared ROOT/OCT row;
+VELOCITY is the accent, so a harder note opens the filter further. HOLD under 0.85 sets the
+note's gate; from 0.85 the voice plays its sixteen-step line as a seamless loop. MAKE
+INSTRUMENT renders finite keys, C1–C4 at minor-third roots with three touch layers; a line
+is not offered as keys. FRESH TAPE → ETCH is the sixteen-pad bass kit (three touch zones,
+four takes per note) under BASS.
+
+RIVET supplies six industrial drum voices and sixteen accepted factory sounds.
+TUNE, STRIKE, METAL, DRIVE, SIZE and WALLS shape each finite hit; VELOCITY
+changes the strike. Saved recipes retain the renderer version and strike strength.
+FRESH TAPE → RIVET WORKSHOP / FACTORY / WAREHOUSE supplies the same sixteen
+pads in three rooms, each with soft, middle and hard layers and a shared hat mute group.
+
+BACKWASH provides five drum voices and 36 factory presets: sixteen drawn from its
+model-3 MPC kit and twenty stronger processing presets. The core sound, tighter drums, tom tunings and moving-double
+variants retain the published audio. Each voice opens with its heard default;
+TOM starts with Mid Tom. Factory selection fills the six existing controls.
 
 WICK provides PLUCK, WOOD, BREATH, BUBBLE, FLICKER and RATTLE, with six factory
 presets each. ROOT, native VELOCITY and RATTLE BODY survive preset recall,
@@ -95,8 +136,10 @@ macro edits and SEND TO PAD. Warm wire is the new RATTLE default; Hollow reed
 and Rubbed glass are saved alternatives. Older saved RATTLE bodies remain
 reproducible. HOLD's top step previews a genuine repeating cycle; a normal
 kit pad plays its buffer. FRESH TAPE → WICK supplies the dry named sixteen-pad
-kit with all three RATTLE bodies at C4. Physical phone timing and MPC loading
-remain separate acceptance checks.
+kit with all three RATTLE bodies at C4. MAKE INSTRUMENT turns a finite recipe
+with nonzero velocity into keys: native roots every minor third from C1 to C6,
+three touch layers, no loop. HOLD-loop recipes explain why it is unavailable.
+Physical phone timing and MPC loading remain separate acceptance checks.
 
 OBBLIGATO offers PHRASE and HELD playback. New phrases render native C3–C6;
 older saved finite recipes keep their original register and sound. HELD keeps
@@ -111,9 +154,10 @@ CHITIN provides SHELL bass and WING lead voices, with six candidate presets each
 HOLD extends a finite note; its maximum reads LONG NOTE. It does not offer
 seamless instrument sustain.
 
-MERIDIAN provides SWEEP, CLACK, CHIME and RASP, fourteen saved factory presets
-and seven macros. The original eight SWEEP recipes retain model 2; each new
-material voice adds a finite/held pair using model 3. ROOT
+MERIDIAN provides SWEEP, CLACK, CHIME, RASP, DRAW and LIFT, 18 saved factory presets
+and seven macros. The original eight SWEEP recipes retain model 2; each material
+voice adds a finite/held pair using model 3; DRAW and LIFT add two finite recipes
+each on model 4. ROOT
 (MIDI 36–96) and native VELOCITY preserve the complete loaded model and noise
 context; TUNE transposes relative to ROOT, with .5 as its center. Model 1 stays
 finite even at HOLD 1. SWEEP still defaults to model 2; the added voices default
@@ -122,13 +166,16 @@ Its SYNTH preview is a bounded short capture, as the caption states. SEND TO PAD
 and SPREAD always deliver finite TONAL one-shots with the authored root. Held
 captures save a terminal fade of at least 20 ms; reopened recipes retain the
 complete rack, board and pedal placement. MAKE INSTRUMENT accepts supported
-held recipes from all four voices and samples thirteen native roots, MIDI 36–72 in minor
-thirds, at three physical velocities (.30, .65, 1.0). The phone/MPC packages keep
+held recipes from every voice and samples thirteen native roots, MIDI 36–72 in minor
+thirds, at three physical velocities (.30, .65, 1.0). A finite recipe gets finite
+keys instead: minor thirds across MIDI 36–96 plus its own root, three touch layers
+and its own envelope, with no RELEASE on the sheet. The phone/MPC packages keep
 the real second-cycle loops and note-off release, including explicit NoteOn
 playback in the MPC 2 program. Neighboring keys transpose by at most one semitone,
 which also changes the sampled swing cadence. FRESH TAPE → MERIDIAN retains the
 existing sixteen-pad bank and its authored roots without assigning a global
-kit key. Physical phone timing, listening and MPC loading remain separate checks.
+kit key. MERIDIAN MATERIALS and MERIDIAN SIX are separate finite banks with three
+native touches. Physical phone timing, listening and MPC loading remain separate checks.
 See [MERIDIAN](../docs/MERIDIAN.md) for the workflow and opt-in Android benchmark.
 
 CHAMBER starts new HYBRID/AQUARIUM sounds with the wider, register-aware
@@ -862,64 +909,14 @@ logcat tag to grab when something is wrong.
   the partner. Open another kit's pad, pick the room, ROOM, then KEEP: the
   pad plays inside it with no trip. A REAMP trip leaves KEEP ROOM dim.
 
-- **WORKSHOP / SEND TO BENCH** (`docs/WORKSHOP.md`): on SETUP, tap the
-  TAPE PROPERTIES title seven times inside two seconds — the last three
-  taps count down in a toast, the seventh says WORKSHOP OPEN, and a
-  WORKSHOP section appears under HELP; it should still be there after a
-  relaunch, and CLOSE THE WORKSHOP should take it away with a toast
-  naming the seven taps. SEND TO BENCH with TEACH THE MACHINE off should
-  refuse naming the switch; with it on and nothing corrected yet, refuse
-  naming CHOP. Correct a chip on CHOP with TEACH on, SEND TO PADS, then
-  SEND TO BENCH: the chooser opens on `SnipSnap Bench <date>.zip` and
-  the toast counts the corrections and kits. Send it to yourself, unzip
-  on a laptop: `manifest.txt` names the kit and the count, and
-  `overrides.jsonl` dropped into `reference/calibration/` makes
-  `TeachLogTest` print the correction. If the chooser never appears, the
-  `FileProvider` note under SHARE / BACKUP above applies here too — it
-  is the same cache folder.
-- **The BENCH row on CHOP** (`docs/WORKSHOP.md`, WS2): with the WORKSHOP
-  open, CHOP shows CONFIRM ALL and five digits above the slices, under
-  CLASSIC / FOLD / MELODIC — check six segments fit one row at 390dp
-  without the SELECTED caption wrapping. With TEACH THE MACHINE off the
-  row is dim and the note under it names SETUP. With it on: correct one
-  chip, CONFIRM ALL (the toast counts the rest and the button stays
-  pressed), tap a star (the toast names it), step HITS once (the star
-  clears; CONFIRM ALL releases), CONFIRM ALL and a star again, SEND TO
-  PADS. Then SEND TO BENCH and unzip on a laptop: `overrides.jsonl` holds
-  the correction plus one line per confirmed chip with `label` equal to
-  `machineSaid`, and `cuts.jsonl` one line naming the mode, HITS, EAR,
-  CUT, SNAP and a `tries` of 1. Dropped into `reference/calibration/`,
-  `TeachLogTest` prints corrections and confirmations apart and
-  `CutRatingsTest` prints the setting's line.
-- **LABEL THIS HIT** (`docs/WORKSHOP.md`, WS3): with the WORKSHOP open,
-  hold a captured pad and scroll to the foot of its sheet: a sixth box,
-  BENCH, its strip reading NOT LABELLED. Open it (the other boxes close),
-  tap KICK: the toast names the pad and the label, the chip lights in the
-  pad's colour, the strip reads LABELLED KICK, and `Calibration/` beside
-  the kits holds `kick_<kit>_A01.wav`. Tap SNARE: one file, renamed. Tap
-  SNARE again: the file is gone, the strip is back to NOT LABELLED, and
-  the pad still plays. Open a starter kit's pad or a SYNTH pad: the note
-  is amber, the chips dim, and a tap refuses naming the render. Leave and
-  come back: the lit chip is still lit. Then SETUP ▸ SEND HITS TO BENCH:
-  the chooser opens on `SnipSnap Hits <date>.zip`, its manifest counts by
-  class, and the WAVs dropped into `reference/calibration/` make
-  `CalibrationCorpusTest` print them in its confusion matrix. With nothing
-  labelled it refuses naming the pad sheet. SEND TO BENCH's own zip must
-  still carry no WAV.
-- **BENCH NOTES** (`docs/WORKSHOP.md`, WS4): with the WORKSHOP open,
-  every screen's title bar ends in a NOTE chip; close the workshop and it
-  is gone. On PLAY with a kit open, tap it: a slip drops from the bar
-  reading BENCH NOTE over `PLAY · <kit>`, with the keyboard already up
-  and KEEP dim. Type two lines, KEEP: the toast reads NOTED ON PLAY.
-  Hold a pad, tap NOTE on its sheet: the slip's line now ends in the pad
-  (`KIT · <kit> · A01`). Back on an open slip closes it and keeps
-  nothing. Then SEND TO BENCH — with nothing corrected it still packs,
-  and the toast counts the notes — and unzip on a laptop: `manifest.txt`
-  ends with both notes as `→` lines stamped with the screen, the kit,
-  the pad and the time, ready to paste under a `docs/BENCH.md` row, and
-  `notes.jsonl` holds the same two lines. With the keyboard up the
-  slip's KEEP row must stay above the keys.
-- **SAVE AS PRESET** (`docs/WORKSHOP.md`, WS5 — no workshop needed): on
+- **No workshop (PR 6c, D8).** The seven taps on SETUP's title do nothing
+  now: SETUP has no WORKSHOP section, no TEACH THE MACHINE row, no SEND TO
+  BENCH or SEND HITS TO BENCH. CHOP has no CONFIRM ALL or star row, a pad
+  sheet has no BENCH box, and the title bar has no NOTE chip. A phone that
+  still has `workshop` or `teach` in its saved preferences ignores them.
+  The JVM-side pipeline stays in `:shell` with its tests, for a later
+  owner decision (`docs/WORKSHOP.md`).
+- **SAVE AS PRESET** (`docs/WORKSHOP.md`, WS5): on
   SYNTH, THUMP · KICK, the action row reads SCRAMBLE / SAVE PRESET ▸ /
   SEND TO PAD ▸ — check all three labels fit at 390dp without an
   ellipsis. Load DUSTY BOOM, drag DRIVE up, tap SAVE PRESET ▸: a slip
@@ -935,10 +932,7 @@ logcat tag to grab when something is wrong.
   caption says it replaces yours and the button reads REPLACE; tap it:
   MY KICK REPLACED, one chip, the new settings. Kill and relaunch the
   app, open SYNTH: MY KICK is still there and sounds the same. Then
-  SETUP ▸ WORKSHOP ▸ SEND TO BENCH: the toast counts 1 PRESET, and on a
-  laptop the zip holds `presets.json` and a manifest ending in a
-  `p(ThumpVoice.KICK, "MY KICK", …)` line. Back on an open slip closes
-  it and saves nothing.
+  Back on an open slip closes it and saves nothing.
 - **LIBRATION**: select GATHER, TWINS or DEPARTURE in SYNTH and audition the
   four presets per voice. Change ROOT, TOUCH and LENGTH as well as the five
   sound controls. Save under YOURS, leave and return, then SEND TO PAD: the
@@ -1004,3 +998,33 @@ The four faces were fetched from Google Fonts (open licenses — OFL /
 Apache 2.0 families). Fine for development and sideloaded test builds;
 before any public release, confirm each family's license on its Google
 Fonts page and bundle the license texts.
+
+### BACKWASH phone preview
+
+Build the separately installable ARM64 trial and its instrumentation package:
+
+```
+./gradlew --no-daemon -PbackwashPreviewBuild=true \
+  -PsnipsnapTestBuildType=backwashPreview \
+  :app:assembleBackwashPreview :app:assembleBackwashPreviewAndroidTest
+```
+
+The opt-in variant uses application ID `com.snipsnap.app.backwashpreview`,
+launcher label **SnipSnap Backwash Preview**, and Android 10+ / ARM64 support.
+It retains all sixteen model-3 BACKWASH factory presets and adds twenty model-4
+processing presets: Seasick, Clamped, Overloaded and Pushed for each voice.
+Its app data is separate from the established development package.
+
+On an attached ARM64 device, run the targeted editor test with:
+
+```
+./gradlew -PbackwashPreviewBuild=true -PsnipsnapTestBuildType=backwashPreview \
+  -Pandroid.testInstrumentationRunnerArguments.class=com.snipsnap.app.ui.NewEngineSynthScreenTest#backwashRestoresItsDrumVoiceAndSixControls \
+  :app:connectedBackwashPreviewAndroidTest
+```
+
+Manual trial: open SYNTH, choose BACKWASH, select SNARE and Tight Snare,
+confirm DAMP .90, preview the hit, and move TRAIL. Leave and return to check
+restoration. Then compare the five core voices and send a chosen sound to a
+pad. Phone render latency, playback stability and this instrumentation test
+need actual device execution; an assembled APK does not establish those results.

@@ -55,6 +55,7 @@ internal fun AquariumPerformancePanel(
     }
     Column(Modifier.fillMaxWidth().testTag("aquarium-performance-panel"), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         TapeText("AQUARIUM · LIVE KIT MIX", TapeType.lcdHeader, scheme.lcdInk.tape)
+        TapeText(com.snipsnap.shell.Copy.AQUARIUM_LINE, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
         TapeText(
             "PADS + BEAT/GROOVE + their PRINT/BOUNCE. Count-in clicks share the effects. Other players and MPC kit exports use their own routes.",
             TapeType.pixelSmall, scheme.ink2.tape, maxLines = Int.MAX_VALUE,
@@ -63,15 +64,15 @@ internal fun AquariumPerformancePanel(
             when {
                 !streamUp -> "NO STREAM · SETTINGS CAN STILL BE SAVED"
                 faulted -> "AQUARIUM FAULT · RESET TAIL OR REOPEN KIT"
-                pending -> "WAITING TO QUEUE SETTINGS…"
+                pending -> "Waiting to queue settings…"
                 !settings.enabled -> "GLOBAL BYPASS · DRY MIX"
                 settings.settings.isBypass -> "DRY · ALL SIX EFFECT MIXES ARE ZERO"
                 settings.outputGain == 0f -> "LIVE WET MIX MUTED"
                 else -> "LIVE · ${if (bpm == 0.0) "FREE TIME" else String.format(Locale.ROOT, "%.1f BPM", bpm)}"
-            }, TapeType.pixelSmall, scheme.amber.tape,
+            }, TapeType.pixelSmall, scheme.accent.tape,
             Modifier.testTag("performance-state"), maxLines = Int.MAX_VALUE,
         )
-        if (warning != null) TapeText(warning, TapeType.pixelSmall, scheme.warn.tape, maxLines = Int.MAX_VALUE)
+        if (warning != null) TapeText(warning, TapeType.pixelSmall, scheme.warnInk.tape, maxLines = Int.MAX_VALUE)
         if (status != null) TapeText(status, TapeType.pixelSmall, scheme.ink2.tape,
             Modifier.testTag("performance-status"), maxLines = Int.MAX_VALUE)
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {

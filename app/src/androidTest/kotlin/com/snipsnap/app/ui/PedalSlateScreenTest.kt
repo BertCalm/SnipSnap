@@ -113,7 +113,6 @@ class PedalSlateScreenTest : ComposeScreenTest() {
                 onKitUpdated = {},
                 onShelfAssetWritten = {},
                 appScope = appScope,
-                workshopOpen = false,
                 openBox = openBoxState,
                 onOpenBox = { openBoxState = it },
                 pedalRow = pedalRow,
@@ -251,7 +250,7 @@ class PedalSlateScreenTest : ComposeScreenTest() {
         selected("WAH").assertIsNotSelected()
         selected(PadSheet.MORE).assertIsSelected()
         assertTrue("MORE counts TOUCH", hasText(Copy.pedalMore(1)))
-        assertTrue("AMT names the pedal behind MORE", nodes(Copy.pedalAmt("TOUCH")).isNotEmpty())
+        assertTrue("AMT names the pedal behind MORE", nodes(Copy.pedalAmt(PadSheet.displayLabel("TOUCH"))).isNotEmpty())
     }
 
     @Test
@@ -264,14 +263,14 @@ class PedalSlateScreenTest : ComposeScreenTest() {
         waitForToast(Copy.treated("TOUCH", pad))
 
         activateTag("pedal-more-touchwahed-row")
-        waitFor("the PUT ON ROW prompt", timeoutMillis = 60_000) { hasText(Copy.putOnRowPrompt("TOUCH")) }
+        waitFor("the PUT ON ROW prompt", timeoutMillis = 60_000) { hasText(Copy.putOnRowPrompt(PadSheet.displayLabel("TOUCH"))) }
         val before = files(entry.dir)
         activate("FORGE")
-        waitForToast(Copy.rowSwapped("TOUCH", "FORGE"))
+        waitForToast(Copy.rowSwapped(PadSheet.displayLabel("TOUCH"), "FORGE"))
         assertEquals(listOf("driven", "compressed", "wahed", "touchwahed", "delayed"), pedalRow.keys)
         assertEquals("a row swap writes nothing", before, files(entry.dir))
-        waitFor("TOUCH on the row", timeoutMillis = 60_000) { nodes("TOUCH").isNotEmpty() }
-        selected("TOUCH").assertIsSelected()
+        waitFor("TOUCH WAH on the row", timeoutMillis = 60_000) { nodes(PadSheet.displayLabel("TOUCH")).isNotEmpty() }
+        selected(PadSheet.displayLabel("TOUCH")).assertIsSelected()
         assertTrue("FORGE left the row", nodes("FORGE").isEmpty())
         assertTrue("MORE has nothing to count", hasText(PadSheet.MORE) && !hasText(Copy.pedalMore(1)))
     }

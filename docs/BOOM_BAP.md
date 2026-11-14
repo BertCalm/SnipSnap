@@ -1,6 +1,7 @@
 # Backroom boom bap study
 
-Status: implemented audition candidate, not heard or promoted to the factory bank.
+Status: More Snap accepted by the user as the sonic baseline; MPC hardware loading
+and factory-bank promotion remain pending. The new four-bar phrase awaits listening.
 Repository baseline: `6e9959ac3a37b4a0a6167840b36a3453e6294761`.
 
 The characteristic gesture is **heavy knock → papery crack → loose metallic shuffle → short dark room tail**.
@@ -45,7 +46,7 @@ velocity → SKIN body and wire excitation → existing drum output stage
          → peak match to reference → sampler velocity gain
 ```
 
-CRUNCH supplies mild converter grain; TAPE rounds highs with small modulation;
+CRUNCH supplies converter grain; TAPE rounds highs with small modulation;
 ROOM supplies common early reflections and a short tail. These are existing
 processors. Their settings in `BoomBapKits.coloration` are audition hypotheses.
 CRUNCH's deliberate sample-rate reduction is marked by the saved recipe's alias
@@ -79,8 +80,7 @@ uses 0.25, 0.6 and 1.0 to expose the ghost-note contrast more clearly. Hardware 
 
 Listen for the snare's new ghost beside the old filtered version; the kick's
 knock after coloration; hat accents surviving darkening; and the room leaving
-space between hits. Preset promotion and a full sixteen-pad bank wait for that
-feedback. These candidate settings have not been heard.
+space between hits. Factory promotion waits for the MPC check. The user accepted the More Snap sound after auditioning successive revisions.
 
 ## Cost and limits
 
@@ -101,7 +101,7 @@ dry/processed and three-strength comparisons make those decisions audible.
 - **Verified by source:** existing drum/rack APIs and patch serialization at the baseline above.
 - **Implemented:** soft snare excitation, rack replay for velocity layers, six-pad candidate and audition generator.
 - **Measurements and tests:** recorded in the As built section below after running the Kotlin checks.
-- **Heard:** nothing in this session. Listening acceptance, phone latency and MPC hardware loading remain open.
+- **Heard:** user accepted More Snap as the sonic baseline. No assistant listening claim. The new phrase, phone latency and MPC hardware loading remain open.
 
 ## Why it is built this way
 
@@ -111,7 +111,7 @@ dry/processed and three-strength comparisons make those decisions audible.
 - One recipe table feeds the kit and audition, avoiding two drifting sets of sound settings.
 - The risky decision is how much wire energy a ghost loses. The listening comparison includes the previous behavior.
 
-## As built
+## Initial implementation validation
 
 The focused Kotlin/production-integration run passed **132 tests** (45 synth,
 87 shell), with zero failures/errors/skips. It includes `BoomBapTest`,
@@ -152,3 +152,115 @@ run completed in 57m 42s, reusing successful unchanged module results. A
 separate 19-test integration run also passed for CISTERN, MURMUR and OPEN SKY;
 those tests now verify exact native-articulation-then-rack output. Listening,
 phone latency and MPC hardware loading remain unverified.
+
+## Accepted More Snap baseline
+
+The published audition was refined in two recipe passes and accepted by the
+user on 2026-11-07. The repository now uses those exact source and per-pad
+rack settings. Twelve saved recipe fixtures and their full-hit PCM24 SHA-256
+hashes pin the accepted dry/processed sound, rather than re-authoring it from
+a description. The engine and velocity algorithms are unchanged in this pass.
+
+The shared rack uses CRUNCH BITS .16 / RATE .29 / TONE .43 / GRIT .34, TAPE
+WOBBLE .09 / DRIVE .60 / AGE .70, and ROOM SIZE .14 / WALLS .40 / DISTANCE .28.
+Only the snare gets SPIKE ATTACK .42 / SUSTAIN .50, CRUNCH TONE .55, and TAPE
+DRIVE .50 / AGE .60. Its SNAP .70 / SIZZLE .44 / PUNCH .76 provide the sharper
+edge while DECAY .40 / RATTLE .62 retain the pushed version's tail settings.
+`BoomBapKits.colorationFor` feeds both the kit and the audition, including all
+velocity layers. The kit is named `SnipSnap Backroom Snap`.
+
+The accepted two-bar groove remains unchanged. A separate four-bar dry/wet
+phrase moves a kick in bar two and adds a quiet pickup; bar four answers with
+cross-stick and two rising snare strokes into the turnaround. All events are
+recorded in `manifest.json` as `phraseEvents`. Each phrase has one common
+render gain and its own matched listening copy, preserving internal accents.
+The generator now writes 42 native/matched pairs.
+
+Why: preserve the user's chosen sound exactly, let a small rhythmic variation
+carry the development, and keep snare attack shaping separate from the other
+five pads. More fills would risk burying the pocket.
+
+Integration validation passed: **9,038 JVM tests** across nine modules, zero
+failures/errors/skips, Gradle exit status 0 (1h 30m 41s). All ten Backroom
+checks passed on the merged base, including the twelve accepted PCM24 hashes.
+The generated audition has 42 native/matched pairs. Its 92 retained audio and
+recipe files and 20 MPC program/sample files match the accepted baseline
+exactly. Both four-bar renders last 12.409 seconds including decay; native
+peaks are 0.417 dry and 0.431 processed. The ZIP passes its integrity check.
+
+The XPM declares velocity zones 1–41, 42–84 and 85–127 on all six pads;
+both hats share mute group 1. The user has not yet tested it on MPC, so
+hardware loading, ghost-velocity feel, hat choking and kick/snare balance
+remain pending. Factory registration remains absent. The new phrase is
+published for listening; browser playback was not reverified in this pass.
+
+## Backroom snare controls
+
+The accepted control studies now have an explicit editor entry: **SKIN → SNARE →
+BACKROOM · MORE SNAP**. Four controls start at 50%: ATTACK, BODY, WIRE (wire length),
+and BRIGHTNESS. Selecting ORIGINAL loads the original SKIN snare defaults;
+selecting Backroom loads More Snap. These buttons start a new recipe, so an old
+pad's external rack cannot accidentally be applied twice. Save, reopen, preview,
+scramble and navigation retain the selected model and its controls. Preset
+promotion uses the complete JSON constructor for Backroom, avoiding the original
+factory helper. Breeding retains the first parent's model and filters crossed
+controls to that model, as it already does for OHM's different control sets.
+
+SKIN SNARE `model: 2` stores the four controls and renders the original snare
+through its coordinated SPIKE → CRUNCH → TAPE → ROOM treatment. An omitted model
+remains model 1; original patches keep their JSON shape and renderer. Model 2 is
+refused for other voices. Additional user effects still run after this treatment.
+The recipe's default alias flag includes the internal CRUNCH stage.
+
+| Control | Low → high | Coordinated response |
+| --- | --- | --- |
+| Attack | rounded → sharp | Source punch, SPIKE attack/sustain, TAPE drive |
+| Body | thin/high → full/low | Source tuning, head/wire mix and decay |
+| Wire | short → long | Rattle, mix and decay, with extra early travel through the dark rack |
+| Brightness | dark → open | CRUNCH tone and TAPE age |
+
+The 150 native PCM24 pair clips at the [published pair study](https://snipsnap-backroom-audition.bertcalm.chatgpt.site/pairs/index.html)
+are pinned in `backroom-pairs.sha256`. Their provenance is the accepted site source
+commit `0430aa0ce6464ab555f568e18bfa68126584956f`. They cover five positions on each
+pair, at 25%, 60% and 100% strikes. The new renderer is checked through JSON reload
+and the production velocity-layer path against those hashes. The original kit's
+twelve hash pins remain separate. Implementation started from repo `315447328`.
+
+Body and Wire both change the source mix and decay. Away from their centre lines,
+the responses combine in odds space, preserving bounded continuous travel without
+last-slider-wins behavior. Exact centre branches retain the two heard pair
+surfaces. The short-wire/open-brightness excitation correction also stays intact.
+This four-control combination is an engineering extension: the user accepted the
+two pair studies, but has not yet heard every four-control combination.
+
+Soft hits excite the original SKIN strike model and enter the internal rack at
+the strike's level; peak matching leaves final dynamics to the sampler. Re-strike
+uses the same path with deterministic alternate noise. Each hit renders the rack once. The velocity-layer caller owns peak matching
+against its existing full-strength reference. There is no simulation or new oversampling stage. The existing SKIN and rack DSP do the work.
+
+### Why it is built this way
+
+- The recording chain belongs to this sound. Moving the source controls alone
+  through the dark chain hid too much of their response.
+- Four centred controls make the accepted sound easy to recover, while one
+  central resolver makes simultaneous edits independent of edit order.
+- A saved model keeps existing SKIN snares unchanged and carries the treatment
+  through rendering, velocity layers and re-strikes.
+- The six-pad kit remains a study awaiting MPC checks. Adding editable snare
+  controls does not promote the kit to the factory roster.
+
+Focused verification: 57 JVM tests passed (BackroomSnare, BoomBap, Skin and
+Restrike), including all 150 published pair hashes and the original kit pins.
+A standalone Kotlin probe after 30 warm-up renders measured median 18.26 ms
+(full hit) and 17.99 ms (60% strike), with p95 21.33/20.96 ms over 30 renders
+each in this cloud JVM. Android device timing is not measured. Two Compose
+regressions cover mode selection/navigation and sending/reopening a real pad;
+they require Android CI or a device, not the JVM gate.
+
+Full JVM gate on the merged base (`22ab69f22`): `./gradlew --no-daemon test`
+completed with exit status 0. The nine modules report **9,122 tests**, zero
+failures, errors or skips, including three shelf regressions for Backroom
+promotion, original SKIN promotion and breeding across both models. Completed
+module results were reused after interruptions; the final 304 CLI tests reran
+successfully. Android compilation and the two new device regressions are tracked
+in CI.

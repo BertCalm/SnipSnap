@@ -142,7 +142,7 @@ class OvenSynthScreenTest : ComposeScreenTest() {
         }
         val edited = requireNotNull(stored(factory.voice))
         assertFalse(settings.containsKey("preset.OVEN.BLOOM"))
-        invokeClick("SCRAMBLE")
+        invokeClick("RANDOMISE")
         waitFor("scrambled controls") { stored(factory.voice)?.macros != edited.macros }
         val scrambled = requireNotNull(stored(factory.voice))
         assertEquals(42, scrambled.midi)

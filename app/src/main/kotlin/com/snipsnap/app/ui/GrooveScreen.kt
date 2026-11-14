@@ -138,6 +138,9 @@ import kotlinx.coroutines.sync.withLock
  * it plays on when this screen is not up.
  */
 
+/** How many passes over the loop a BOUNCE prints: one, downbeat to downbeat. */
+private const val BOUNCE_PASSES = 1
+
 /** E's debounced disk write — one save per burst of taps, not one per tap (the PAD SHEET lesson). */
 private const val GROOVE_SAVE_DEBOUNCE_MS = 1000L
 
@@ -1065,43 +1068,26 @@ fun GrooveScreen(
                 discardBounce()
                 onToast(Copy.GROOVE_BOUNCE_PATTERN_CHANGED)
             }
+        }
 
-            // BOUNCE start/stop, ahead of the note dispatch on purpose
-            // (review's own finding): `hit()` only queues a command onto a
-            // ring the audio thread drains on its own next callback, so
-            // arming or requesting a stop AFTER this frame's notes are
-            // already queued risks the very downbeat that started the bounce
-            // (or the next pass's first note) landing on the wrong side of
-            // the boundary. Arming here, before any queueing, closes that gap
-            // as far as this frame can; `finishBounce`'s own native stop
-            // still runs on its own dispatcher a moment later regardless of
-            // where in the frame it is requested from, so this narrows the
-            // window rather than closing it outright.
-            if (bounceArmed && tick.wrapped) {
-                bounceArmed = false
-                val seconds = (tick.totalSteps / tick.stepsPerSecond).toFloat().coerceAtMost(player.maxPrintSeconds())
-                if (player.armPrint(seconds)) {
-                    bouncing = true
-                } else {
-                    onToast(Copy.GROOVE_BOUNCE_FAILED)
-                }
-            } else if (bouncing && tick.wrapped) {
-                // The ordinary end: one full pass, the same wrap that
-                // started it.
-                finishBounce()
+        // BOUNCE's start and stop are the audio thread's: the beat addresses the print to the next downbeat's
+        // frame and to the end of the last pass, so neither waits on this frame loop.
+        override fun bouncePasses() = if (bounceArmed) BOUNCE_PASSES else 0
+
+        override fun bounceStarted(armed: Boolean) {
+            bounceArmed = false
+            if (armed) {
+                bouncing = true
+            } else {
+                onToast(Copy.GROOVE_BOUNCE_FAILED)
             }
         }
 
         override fun afterNotes(tick: BeatPlayer.Tick) {
-            // The rare early-DONE case (PadEngine's own byte budget
-            // filled before the loop naturally wrapped) is checked
-            // after dispatch, not before — nothing about it is tied
-            // to a note or wrap boundary, so there is no ordering
-            // risk to close here the way there is above. Landing the
-            // shorter, already-complete take beats refusing the
-            // whole bounce over a ceiling that exists for memory,
-            // not for musical correctness.
-            if (bouncing && !tick.wrapped && player.printState() == PadEngine.PrintState.DONE) finishBounce()
+            // The print finishes itself on its stop frame (or, rarely, when PadEngine's byte budget fills
+            // first: landing the shorter, already-complete take beats refusing the whole bounce over a
+            // ceiling that exists for memory). Either way it is DONE, and this is where the screen notices.
+            if (bouncing && player.printState() == PadEngine.PrintState.DONE) finishBounce()
         }
 
         // A bounce armed or in flight when the loop ends — STOP, a kit or
@@ -1112,9 +1098,6 @@ fun GrooveScreen(
         override fun loopEnded() {
             discardBounce()
         }
-
-        // The print is armed and stopped on the frame's own wrap, so the steps go over as crossed.
-        override fun needsImmediate() = bounceArmed || bouncing
 
         override fun swapFor(slot: Int, pos: Float, barSteps: Int): ((PadHit.Hit) -> PadHit.Hit?)? {
             // Resolved here, on the caller's side of `PadEngine.hit`'s own
@@ -1941,13 +1924,13 @@ fun GrooveScreen(
                         Box(
                             Modifier
                                 .fillMaxWidth()
-                                .height(Layout.MIN_HIT_TARGET.dp)
+                                .minHeight(Layout.MIN_HIT_TARGET.dp)
                                 .background(scheme.lcd.tape, RoundedCornerShape(6.dp))
                                 .border(1.dp, scheme.amber.tape, RoundedCornerShape(6.dp))
                                 .let { m -> if (countingIn) m else m.tapeClick(label = "STOP RECORDING") { stopRecording() } },
                             contentAlignment = Alignment.Center,
                         ) {
-                            TapeText(if (countingIn) "COUNTING IN… $countInBeat" else "■ STOP RECORDING", TapeType.pixel, scheme.lcdInk.tape)
+                            TapeText(if (countingIn) "COUNTING IN… $countInBeat" else "■ STOP RECORDING", TapeType.pixel, scheme.lcdInk.tape, maxLines = 2)
                         }
                     } else {
                         // RECORD is the one filled button: the way in that needs
@@ -1972,15 +1955,15 @@ fun GrooveScreen(
                             // where they go: this one starts it from nothing,
                             // the other two fork into it.
                             GrooveActionButton("START YOURS", scheme, Modifier.weight(1f), enabled = !busy, accent = true) { startSteps() }
-                            GrooveActionButton("ORBIT ▸", scheme, Modifier.weight(1f), accent = true) {
+                            GrooveActionButton("ORBIT ▸", scheme, Modifier.weight(1f), accent = true, spoken = Copy.ORBIT_DOOR_LINE) {
                                 clearJustLanded()
                                 onOrbit()
                             }
-                            GrooveActionButton("SONG ▸", scheme, Modifier.weight(1f), accent = true) {
+                            GrooveActionButton("SONG ▸", scheme, Modifier.weight(1f), accent = true, spoken = Copy.SONG_DOOR_LINE) {
                                 clearJustLanded()
                                 onArrange(swingPercent, feel / 100f, feelTemplate)
                             }
-                            GrooveActionButton("LOOP ▸", scheme, Modifier.weight(1f), accent = true) {
+                            GrooveActionButton("LOOP ▸", scheme, Modifier.weight(1f), accent = true, spoken = Copy.LOOP_DOOR_LINE) {
                                 clearJustLanded()
                                 onLoop()
                             }
@@ -2126,7 +2109,7 @@ fun GrooveScreen(
                             // Fix 2: the beat count, same as this screen's other three "COUNTING IN…" render sites.
                             if (countingIn) "COUNTING IN… $countInBeat" else Copy.GROOVE_OVERDUBBING,
                             TapeType.pixel,
-                            scheme.amber.tape,
+                            scheme.accent.tape,
                         )
                     }
                     // WINDOW_GRID_ROWS, not BankRow — see the from-scratch
@@ -2169,7 +2152,7 @@ fun GrooveScreen(
                                 // J19: the same words as EDIT STEPS ▸ below -
                                 // it is the same fork, from the take rather than
                                 // from the program on screen.
-                                if (forkArmed) "REPLACE YOURS?" else "EDIT STEPS ▸",
+                                if (forkArmed) "REPLACE YOURS?" else "EDIT STEPS",
                                 scheme,
                                 Modifier.weight(1f),
                                 enabled = !busy,
@@ -2188,7 +2171,7 @@ fun GrooveScreen(
                         // find. Hidden whenever the post-take row is showing
                         // (`justLanded`) so there is never a second, redundant
                         // "edit this by hand" button on screen at the same time.
-                        GrooveActionButton("EDIT STEPS ▸", scheme, Modifier.fillMaxWidth(), enabled = !busy) { forkToE() }
+                        GrooveActionButton("EDIT STEPS", scheme, Modifier.fillMaxWidth(), enabled = !busy) { forkToE() }
                     }
 
                     // Batch 3, Task 1: EXPORT's own shape (named section
@@ -2417,7 +2400,7 @@ private fun ProgramSelector(
     modifier: Modifier = Modifier,
 ) {
     Column(modifier, verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        TapeText("PROGRAM · $sub", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
+        TapeText("PROGRAM · $sub", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             for (i in 0 until count) {
                 SegmentButton(
@@ -2504,7 +2487,7 @@ private fun FeelRow(
                     else -> "FEEL · LOOSE $feel% · #$seed"
                 },
                 TapeType.pixel,
-                scheme.amber.tape,
+                scheme.accent.tape,
             )
             // "RIDES A · C · D" until J18. The feel is applied to the
             // take and every program derived from it inherits it —
@@ -2539,24 +2522,27 @@ private fun ColumnScope.BeatGoTo(
         // ORBIT ▸ — the kit on rings of different lengths, one
         // needle speed: polymeter and polyrhythm from the same
         // pads this screen already has loaded.
-        GrooveActionButton("ORBIT ▸", scheme, Modifier.weight(1f), accent = true) {
+        GrooveActionButton("ORBIT ▸", scheme, Modifier.weight(1f), accent = true, spoken = Copy.ORBIT_DOOR_LINE) {
             clearJustLanded()
             onOrbit()
         }
         // SONG ▸ — the same four programs laid into a structure, not
         // just cycled: intro/theme/variation/the turn/reprise/outro,
         // one tap away from what this screen already has loaded.
-        GrooveActionButton("SONG ▸", scheme, Modifier.weight(1f), accent = true) {
+        GrooveActionButton("SONG ▸", scheme, Modifier.weight(1f), accent = true, spoken = Copy.SONG_DOOR_LINE) {
             clearJustLanded()
             onArrange(swingPercent, feel / 100f, feelTemplate)
         }
         // LOOP ▸ — the six-track grid of snips, with its own
         // engine; it used to be the shelf's door and its own
         // Activity, and is a bench inside the frame now.
-        GrooveActionButton("LOOP ▸", scheme, Modifier.weight(1f), accent = true) {
+        GrooveActionButton("LOOP ▸", scheme, Modifier.weight(1f), accent = true, spoken = Copy.LOOP_DOOR_LINE) {
             clearJustLanded()
             onLoop()
         }
+    }
+    for (line in listOf(Copy.ORBIT_DOOR_LINE, Copy.SONG_DOOR_LINE, Copy.LOOP_DOOR_LINE)) {
+        TapeText(line, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
     }
 }
 
@@ -2573,7 +2559,7 @@ private fun ColumnScope.BeatShape(
     onRecentre: () -> Unit,
     onReseed: () -> Unit,
 ) {
-    TapeText("SHAPE THE GROOVE", TapeType.pixelSmall, scheme.ink2.tape)
+    TapeText("SWING AND FEEL", TapeType.pixelSmall, scheme.ink2.tape)
     Row(
         Modifier.fillMaxWidth().height(Layout.MIN_HIT_TARGET.dp).sunkenField(scheme, 6.dp).padding(horizontal = 3.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -2581,7 +2567,7 @@ private fun ColumnScope.BeatShape(
     ) {
         SwingStepper("−", scheme, description = "SWING DOWN") { onSwingChange((swingPercent - GROOVE_SWING_STEP).coerceAtLeast(GROOVE_SWING_MIN)) }
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            TapeText("SWING $swingPercent%", TapeType.pixel, scheme.amber.tape)
+            TapeText("SWING $swingPercent%", TapeType.pixel, scheme.accent.tape)
             TapeText("RIDES SWING", TapeType.pixelSmall, scheme.ink2.tape)
         }
         SwingStepper("+", scheme, description = "SWING UP") { onSwingChange((swingPercent + GROOVE_SWING_STEP).coerceAtMost(GROOVE_SWING_MAX)) }
@@ -2663,7 +2649,7 @@ private fun ColumnScope.BeatSendOut(
         )
     }
     TapeText(
-        "SAME BREAK, FOUR FEELS — ALL FOUR DUB TO THE MPC'S CLIP LIST.",
+        "Same break, four feels — all four dub to the MPC's clip list.",
         TapeType.pixelSmall,
         scheme.ink2.tape,
         Modifier.fillMaxWidth(),
@@ -2688,7 +2674,7 @@ private fun GrooveActionButton(
         modifier
             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
             .background(scheme.field.tape, RoundedCornerShape(6.dp))
-            .border(1.dp, if (accent) scheme.accent.tape else scheme.grayEdge.tape, RoundedCornerShape(6.dp))
+            .border(1.dp, if (accent) scheme.accent.tape else scheme.edge.tape, RoundedCornerShape(6.dp))
             // Always clickable, `enabled` forwarded rather than dropped: a
             // screen reader is told this control is temporarily unavailable
             // instead of it silently vanishing from the tree (accessibility
@@ -3054,7 +3040,7 @@ private fun StepEditorOverlay(
                 }
                 Box(
                     Modifier
-                        .height(Layout.MIN_HIT_TARGET.dp)
+                        .minHeight(Layout.MIN_HIT_TARGET.dp)
                         .border(1.dp, scheme.amber.tape, RoundedCornerShape(4.dp))
                         .tapeClick(label = "DONE", onClick = onDone)
                         .padding(horizontal = 12.dp),
@@ -3083,7 +3069,7 @@ private fun StepEditorOverlay(
                             .tapeClick(label = "SELECT BAR ${bar + 1}") { onBarSelect(bar) },
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
-                        TapeText("BAR ${bar + 1}", TapeType.pixelSmall, if (selected) scheme.lcd.tape else scheme.ink2.tape)
+                        TapeText("BAR ${bar + 1}", TapeType.pixelSmall, if (selected) scheme.ink.tape else scheme.ink2.tape)
                         TapeText(if (selected) "SELECTED" else "", TapeType.pixelSmall, scheme.ink2.tape)
                     }
                 }
@@ -3144,16 +3130,16 @@ private fun StepEditorOverlay(
                                         // read as identical unlabelled
                                         // squares to a screen reader.
                                         .stepCellClick(
-                                            label = "${LANE_DRUM_WORD.getValue(lane)} STEP ${col + 1}: ${if (on) "ON" else "OFF"}",
+                                            label = stepCellLabel(LANE_DRUM_WORD.getValue(lane), col, vel),
+                                            // twin: the TAP · EDIT chip in StepEditorPanel, which makes a tap open the same detail
                                             onLongClick = { state.select(lane, step) },
-                                        ) { onEdit(toggledStep(clip, lane, step, state)) }
+                                        ) { state.tap(clip, lane, step) }
                                         .padding(1.5.dp)
                                         .background(fillColor, RoundedCornerShape(3.dp))
                                         .velocityFill(vel, laneColor)
                                         .border(
-                                            if (state.selLane == lane && state.selStep == step) 2.dp else 1.dp,
-                                            if (state.selLane == lane && state.selStep == step) scheme.amber.tape
-                                            else if (isPlayhead) scheme.lcdInk.tape else scheme.grayEdge.tape,
+                                            stepEdgeWidth(state.selLane == lane && state.selStep == step, vel),
+                                            stepEdgeColor(state.selLane == lane && state.selStep == step, isPlayhead, vel, scheme),
                                             RoundedCornerShape(3.dp),
                                         ),
                                 )
@@ -3194,11 +3180,11 @@ private fun BeatHeader(
     onTempo: ((Float) -> Unit)?,
 ) {
     Box(
-        Modifier.fillMaxWidth().height(Layout.LCD_HEADER_H.dp).lcdPanel(scheme).padding(horizontal = 12.dp),
+        Modifier.fillMaxWidth().minHeight(Layout.LCD_HEADER_H.dp).lcdPanel(scheme).padding(horizontal = 12.dp),
         contentAlignment = Alignment.CenterStart,
     ) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            TapeText("GROOVE", TapeType.lcd(23), scheme.lcdInk.tape)
+            TapeText("BEAT", TapeType.lcd(23), scheme.lcdInk.tape)
             val bpm = tempoBpm ?: KitPreview.DEFAULT_BPM
             // The meter rides along only when it is not 4/4 —
             // ORBIT's "BAR 12 · 3/4" said it, and this readout

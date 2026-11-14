@@ -52,6 +52,6 @@ object KeelPresets {
         p(KeelVoice.BELLY, "TOOTH MARK", "TUNE" to tune(7), "SETTLE" to .75f, "WEIGHT" to .35f, "GRIT" to .55f, "SLIDE" to .5f, "LENGTH" to .5f, "HOLD" to 0f), // G1
         p(KeelVoice.BELLY, "SLOW MELT", "TUNE" to tune(15), "SETTLE" to 1f, "WEIGHT" to .4f, "GRIT" to .3f, "SLIDE" to .5f, "LENGTH" to .7f, "HOLD" to .2f), // D#2
         p(KeelVoice.BELLY, "CLIMB IN", "TUNE" to tune(10), "SETTLE" to .4f, "WEIGHT" to .5f, "GRIT" to .25f, "SLIDE" to .38f, "LENGTH" to .5f, "HOLD" to 0f), // A#1
-        p(KeelVoice.BELLY, "WARM HUSH", "TUNE" to tune(12), "SETTLE" to .5f, "WEIGHT" to .5f, "GRIT" to .3f, "SLIDE" to .5f, "LENGTH" to .5f, "HOLD" to 1f), // C2
+        p(KeelVoice.BELLY, "WARM CALM", "TUNE" to tune(12), "SETTLE" to .5f, "WEIGHT" to .5f, "GRIT" to .3f, "SLIDE" to .5f, "LENGTH" to .5f, "HOLD" to 1f), // C2
     )
 }

@@ -93,7 +93,6 @@ class ConfluenceWorkshopUiTest : ComposeScreenTest() {
                 onKitUpdated = {},
                 onShelfAssetWritten = {},
                 appScope = appScope,
-                workshopOpen = false,
                 openBox = openBox,
                 onOpenBox = { openBox = it },
                 pedalRow = PedalSlate.DEFAULT,
@@ -101,16 +100,16 @@ class ConfluenceWorkshopUiTest : ComposeScreenTest() {
             )
         }
         waitFor("the original gathering's saved controls", timeoutMillis = 30_000) {
-            hasText("PAD A01") && sliderState("ROOM") == "20%"
+            hasText("PAD A01") && sliderState("REVERB") == "20%"
         }
 
         clickAction("Low voice: ROUNDED OO")
-        compose.onNode(gatheringControl("ROOM"), useUnmergedTree = true)
+        compose.onNode(gatheringControl("REVERB"), useUnmergedTree = true)
             .performSemanticsAction(SemanticsActions.SetProgress) { setProgress ->
                 assertTrue(setProgress(.70f))
             }
         pump()
-        assertEquals("70%", sliderState("ROOM"))
+        assertEquals("70%", sliderState("REVERB"))
 
         clickAction("HEAR")
         waitFor("the actual rendered preview", timeoutMillis = 120_000) {
@@ -123,8 +122,8 @@ class ConfluenceWorkshopUiTest : ComposeScreenTest() {
 
         clickAction("MAKE VARIATION → A02")
         waitFor("the saved variation and destination pad", timeoutMillis = 120_000) {
-            toasts.contains("GATHERING MADE ON A02 · ORIGINAL KEPT") &&
-                hasText("PAD A02") && sliderState("ROOM") == "70%"
+            toasts.contains("Gathering made on A02. Original kept.") &&
+                hasText("PAD A02") && sliderState("REVERB") == "70%"
         }
         val saved = KitStore.load(directory)
         val made = checkNotNull(saved.pad(2))
@@ -146,13 +145,13 @@ class ConfluenceWorkshopUiTest : ComposeScreenTest() {
 
         // Navigate away and back: the visible state must come from each pad's
         // saved source recipe, rather than the previous screen's local draft.
-        clickAction("◄ A01")
+        clickAction("PREVIOUS PAD, A01")
         waitFor("the unchanged original controls") {
-            hasText("PAD A01") && sliderState("ROOM") == "20%"
+            hasText("PAD A01") && sliderState("REVERB") == "20%"
         }
-        clickAction("A02 ►")
+        clickAction("NEXT PAD, A02")
         waitFor("the variation controls after reopening") {
-            hasText("PAD A02") && sliderState("ROOM") == "70%"
+            hasText("PAD A02") && sliderState("REVERB") == "70%"
         }
     }
 

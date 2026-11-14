@@ -207,12 +207,13 @@ object MeridianKitGenerator {
         }
         val data = File(folder, Mpc3TrackWriter.trackDataDirName(instrumentName))
         val archive = File(archiveRoot, "SnipSnap-Meridian-$slug.zip")
+        val coverage = heldKeyboardCoverage(program)
         val manifest = linkedMapOf<String, Any?>(
             "name" to instrumentName, "preset" to preset.name,
             "model" to preset.model, "seedContext" to preset.seedContext,
-            "lowNote" to 0, "highNote" to 127,
-            "nativeLowNote" to HELD_LOW, "nativeHighNote" to HELD_HIGH,
-            "noteRange" to "MIDI 0-127; outside C2-C5 the sampler transposes the nearest native root.",
+            "lowNote" to coverage.first, "highNote" to coverage.last,
+            "nativeLowNote" to keygroups.minOf { it.rootNote }, "nativeHighNote" to keygroups.maxOf { it.rootNote },
+            "noteRange" to heldKeyboardRangeText(program),
             "sampling" to "Thirteen native roots, MIDI 36-72 at minor thirds. Zone bounds record native capture spans; between roots the sampler transposes by at most one semitone.",
             "clockAdaptation" to "Fixed alignment. Each native root retains its own measured pitch-compatible swing period.",
             "velocityLayers" to nativeVelocities,
@@ -247,16 +248,15 @@ object MeridianKitGenerator {
 
             MPC 3: load $instrumentName.xty with its _[TrackData] folder beside it.
             MPC 2: load $instrumentName.xpm from that same _[TrackData] folder.
-            The program plays MIDI 0-127. Thirteen roots are natively rendered
-            from C2-C5 (MIDI 36-72) at minor thirds, each with physical velocity
-            layers .30, .65 and 1.0 across 0-42, 43-84 and 85-127.
-            Between roots the sampler transposes by at most one semitone. Outside
-            C2-C5 it transposes the nearest edge root farther; transposition also
-            changes the sampled swing cadence. At each native root, the held
-            renderer chooses its documented pitch-compatible swing period.
-            Manifest zone bounds describe native capture spans; lowNote/highNote
-            give full program coverage, with nativeLowNote/nativeHighNote recording
-            the range of the rendered roots.
+            ${heldKeyboardRangeText(program)}
+            Thirteen roots are natively rendered from C2-C5 (MIDI 36-72) at minor
+            thirds, each with physical velocity layers .30, .65 and 1.0 across
+            0-42, 43-84 and 85-127.
+            Between roots the sampler transposes by at most one semitone; that
+            small transposition also changes the sampled swing cadence. At each
+            native root, the held renderer chooses its documented pitch-compatible
+            swing period. Manifest lowNote/highNote give actual program coverage;
+            nativeLowNote/nativeHighNote give the range of the rendered roots.
             This is fixed-alignment HOLD, not a repeating material traversal.
             WAVs keep the actual second-cycle sustain loop and known MIDI root.
             recipes/ and instrument-manifest.json preserve each source and its
@@ -265,6 +265,16 @@ object MeridianKitGenerator {
         """.trimIndent() + "\n")
         zip(folder, archive)
         return manifest
+    }
+
+    /** Describe the actual bounded descriptor, never an assumed full-keyboard span. */
+    internal fun heldKeyboardCoverage(program: KeygroupProgram): IntRange =
+        program.keygroups.minOf { it.lowNote }..program.keygroups.maxOf { it.highNote }
+
+    internal fun heldKeyboardRangeText(program: KeygroupProgram): String {
+        val range = heldKeyboardCoverage(program)
+        return "The program plays MIDI ${range.first}-${range.last} " +
+            "(${Scales.nameOf(range.first)}-${Scales.nameOf(range.last)}). Notes outside that range are unmapped."
     }
 
     private fun actualMidi(patch: MeridianPatch): Int =
@@ -306,8 +316,9 @@ object MeridianKitGenerator {
         appendLine("All audio is dry mono 44.1 kHz PCM24. kit.json and recipes/ retain complete editable source recipes.")
         appendLine()
         appendLine("The two separate held keyboard ZIPs preserve genuine sampler loops and physical velocity layers:")
-        held.forEach { appendLine("${it.getValue("preset")}: ${it.getValue("archiveFile")}") }
-        appendLine("Each keyboard plays MIDI 0-127 with thirteen native roots from C2-C5 and three native velocity layers.")
+        held.forEach { appendLine("${it.getValue("preset")}: ${it.getValue("archiveFile")} " +
+            "(MIDI ${it.getValue("lowNote")}-${it.getValue("highNote")})") }
+        appendLine("The keyboards play their declared bounded ranges, with thirteen native roots from C2-C5 and three native velocity layers.")
         appendLine("Each archive includes native MPC 3 .xty, MPC 2 .xpm, shared WAVs and complete recipes.")
         appendLine("The finite-pad ZIP deliberately excludes those keyboard folders. Download each keyboard separately.")
         appendLine("Hardware load and owner listening approval of this new bank remain open.")

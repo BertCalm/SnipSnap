@@ -69,12 +69,12 @@ slides from above.
 | --- | --- |
 | REDUCE | ROUND FLOOR (C2), QUICK SINK (G1), LOW HULL (C1), GROWL LINE (F1), SCOOP UP (D#2), SETTLED HUM (C2, loop) |
 | UPRIGHT | WARM GUT (C2), MUTED THUMB (A#1), LONG NECK (D#1), BRIGHT PICK (G2), HOT WOOD (C2), BOWED NOTE (C2, loop) |
-| BELLY | SOFT PILLOW (C2), DEEP CUSHION (C1), TOOTH MARK (G1), SLOW MELT (D#2), CLIMB IN (A#1), WARM HUSH (C2, loop) |
+| BELLY | SOFT PILLOW (C2), DEEP CUSHION (C1), TOOTH MARK (G1), SLOW MELT (D#2), CLIMB IN (A#1), WARM CALM (C2, loop) |
 
 `SynthKits.keel()` is the kit. A01 to A08 walk C minor pentatonic up from C2 on REDUCE
 at its defaults. A09 and A10 are UPRIGHT's WARM GUT and BRIGHT PICK, A11 and A12
 BELLY's SOFT PILLOW and TOOTH MARK, A13 and A14 REDUCE's QUICK SINK and LOW HULL, and
-A15 and A16 the loops, BOWED NOTE (UPRIGHT) and WARM HUSH (BELLY). On the phone it is the KEEL starter on the new-kit menu.
+A15 and A16 the loops, BOWED NOTE (UPRIGHT) and WARM CALM (BELLY). On the phone it is the KEEL starter on the new-kit menu.
 `./gradlew :synth:generateKeelKit` writes it for the MPC to `testkit/keel-kit/` (not
 committed).
 

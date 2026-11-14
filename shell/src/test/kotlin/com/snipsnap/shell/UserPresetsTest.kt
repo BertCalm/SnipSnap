@@ -37,6 +37,7 @@ import com.snipsnap.synth.OrphicaMaterial
 import com.snipsnap.synth.OrphicaMode
 import com.snipsnap.synth.OrphicaPatch
 import com.snipsnap.synth.Murmur
+import com.snipsnap.synth.MurmurBody
 import com.snipsnap.synth.MurmurConfig
 import com.snipsnap.synth.MurmurFormantTarget
 import com.snipsnap.synth.MurmurPatch
@@ -310,7 +311,64 @@ class UserPresetsTest {
         val stoopValue = Regex("\\b(touch|color|shadow|wear|length|hold) = ([-0-9.E]+)f")
         for (preset in Presets.all()) {
             val line = UserPresets.rosterLine(preset)
-            if (preset is com.snipsnap.synth.WickPatch) {
+            if (preset is com.snipsnap.synth.HalobarPatch) {
+                val call = KotlinLiteral.parse(line.removeSuffix(",")) as KotlinLiteral.Call
+                assertEquals("fromJsonText", call.name)
+                assertEquals("HalobarPatch", (call.receiver as KotlinLiteral.Call).name)
+                val promoted = com.snipsnap.synth.HalobarPatch.fromJsonText((call.positional.single() as KotlinLiteral.Str).value)
+                assertEquals(preset, promoted, "HALOBAR promotion preserves the complete saved recipe")
+                assertEquals(preset.model, promoted.model)
+                assertEquals(preset.macros.mapValues { it.value.toRawBits() }, promoted.macros.mapValues { it.value.toRawBits() })
+            } else if (preset is com.snipsnap.synth.RivetPatch) {
+                val call = KotlinLiteral.parse(line.removeSuffix(",")) as KotlinLiteral.Call
+                assertEquals("fromJsonText", call.name)
+                assertEquals("RivetPatch", (call.receiver as KotlinLiteral.Call).name)
+                val promoted = com.snipsnap.synth.RivetPatch.fromJsonText((call.positional.single() as KotlinLiteral.Str).value)
+                assertEquals(preset, promoted)
+                assertEquals(preset.macros.mapValues { it.value.toRawBits() }, promoted.macros.mapValues { it.value.toRawBits() })
+            } else if (preset is com.snipsnap.synth.OsteriaPatch) {
+                val call = KotlinLiteral.parse(line.removeSuffix(",")) as KotlinLiteral.Call
+                assertEquals("fromJsonText", call.name)
+                assertEquals("OsteriaPatch", (call.receiver as KotlinLiteral.Call).name)
+                val promoted = com.snipsnap.synth.OsteriaPatch.fromJsonText((call.positional.single() as KotlinLiteral.Str).value)
+                assertEquals(preset, promoted, "${preset.name}: complete quartet configuration, articulation and native performance promotion")
+                assertEquals(preset.macros.mapValues { it.value.toRawBits() }, promoted.macros.mapValues { it.value.toRawBits() },
+                    "${preset.engine}/${preset.name}: the JSON constructor rounds no macro")
+            } else if (preset is com.snipsnap.synth.EtchPatch) {
+                val call = KotlinLiteral.parse(line.removeSuffix(",")) as KotlinLiteral.Call
+                assertEquals("fromJsonText", call.name)
+                assertEquals("EtchPatch", (call.receiver as KotlinLiteral.Call).name)
+                val promoted = com.snipsnap.synth.EtchPatch.fromJsonText((call.positional.single() as KotlinLiteral.Str).value)
+                assertEquals(preset, promoted, "${preset.name}: root, velocity and model promotion")
+                assertEquals(preset.macros.mapValues { it.value.toRawBits() }, promoted.macros.mapValues { it.value.toRawBits() })
+            } else if (preset is com.snipsnap.synth.ScuffPatch) {
+                val call = KotlinLiteral.parse(line.removeSuffix(",")) as KotlinLiteral.Call
+                assertEquals("fromJsonText", call.name)
+                assertEquals("ScuffPatch", (call.receiver as KotlinLiteral.Call).name)
+                val promoted = com.snipsnap.synth.ScuffPatch.fromJsonText((call.positional.single() as KotlinLiteral.Str).value)
+                assertEquals(preset, promoted, "${preset.name}: velocity, take and model promotion")
+                assertEquals(preset.macros.mapValues { it.value.toRawBits() }, promoted.macros.mapValues { it.value.toRawBits() })
+            } else if (preset is com.snipsnap.synth.ErosionPatch) {
+                val call = KotlinLiteral.parse(line.removeSuffix(",")) as KotlinLiteral.Call
+                assertEquals("fromJsonText", call.name)
+                assertEquals("ErosionPatch", (call.receiver as KotlinLiteral.Call).name)
+                val promoted = com.snipsnap.synth.ErosionPatch.fromJsonText((call.positional.single() as KotlinLiteral.Str).value)
+                assertEquals(preset, promoted, "${preset.name}: complete model and native touch promotion")
+                assertEquals(preset.macros.mapValues { it.value.toRawBits() }, promoted.macros.mapValues { it.value.toRawBits() })
+            } else if (preset is com.snipsnap.synth.TempestPatch) {
+                val call = KotlinLiteral.parse(line.removeSuffix(",")) as KotlinLiteral.Call
+                assertEquals("fromJsonText", call.name)
+                assertEquals("TempestPatch", (call.receiver as KotlinLiteral.Call).name)
+                val promoted = com.snipsnap.synth.TempestPatch.fromJsonText((call.positional.single() as KotlinLiteral.Str).value)
+                assertEquals(preset, promoted, "${preset.name}: complete versioned percussion promotion")
+            } else if (preset is com.snipsnap.synth.SplayPatch) {
+                val call = KotlinLiteral.parse(line.removeSuffix(",")) as KotlinLiteral.Call
+                assertEquals("fromJsonText", call.name)
+                assertEquals("SplayPatch", (call.receiver as KotlinLiteral.Call).name)
+                val promoted = com.snipsnap.synth.SplayPatch.fromJsonText((call.positional.single() as KotlinLiteral.Str).value)
+                assertEquals(preset, promoted, "${preset.name}: complete model, seed, note and touch promotion")
+                assertEquals(preset.macros.mapValues { it.value.toRawBits() }, promoted.macros.mapValues { it.value.toRawBits() })
+            } else if (preset is com.snipsnap.synth.WickPatch) {
                 val call = KotlinLiteral.parse(line.removeSuffix(",")) as KotlinLiteral.Call
                 assertEquals("fromJsonText", call.name)
                 assertEquals("WickPatch", (call.receiver as KotlinLiteral.Call).name)
@@ -739,6 +797,17 @@ class UserPresetsTest {
                 assertEquals("MurmurPresets.kt\n  $line\n", UserPresets.renderAll(listOf(saved)))
                 assertEquals(source, murmurFromRosterLine(line), "the pasteable line rebuilds model $model exactly")
             }
+            for (body in listOf(MurmurBody.STEADY_ROOT_V1, MurmurBody.HOLLOW_WIRE_V1)) {
+                val source = held.copy(voice = MurmurVoice.PLUCK, midi = 48, config = config.copy(model = 4, body = body))
+                UserPresets.save(root, source, 1L)
+                val saved = UserPresets.read(root).single { it.patch.name == source.name }
+                assertEquals(source, saved.patch)
+                assertEquals(source, murmurFromRosterLine(UserPresets.rosterLine(saved.patch)))
+                val transposed = SynthRoot.of(source)!!.at(67) as MurmurPatch
+                assertEquals(minOf(67, Murmur.rootRange(source.config).last), transposed.midi)
+                assertEquals(source.config, transposed.config, "the shared chord/root control preserves body identity")
+                assertEquals(source.velocity, transposed.velocity)
+            }
         } finally {
             root.deleteRecursively()
         }
@@ -811,6 +880,7 @@ class UserPresetsTest {
                 )
             },
             model = int(a.getValue("model")),
+            body = MurmurBody.valueOf(entry(a.getValue("body"), "MurmurBody")),
         )
     }
 
@@ -1205,6 +1275,51 @@ class UserPresetsTest {
                 assertTrue("OrphicaPatch(" in text, "ORPHICA's table accepts complete typed recipes")
                 val decoder = OrphicaPatch.Companion.javaClass.getMethod("fromJsonText", String::class.java)
                 assertEquals(OrphicaPatch::class.java, decoder.returnType, "ORPHICA promotion names its public complete-JSON constructor")
+            } else if (engine == com.snipsnap.synth.HalobarPatch.ENGINE) {
+                val decoder = com.snipsnap.synth.HalobarPatch.Companion.javaClass.getMethod("fromJsonText", String::class.java)
+                assertEquals(com.snipsnap.synth.HalobarPatch::class.java, decoder.returnType,
+                    "HALOBAR promotion retains the complete saved audio version and controls")
+                assertTrue("private val promoted:" in text, "HALOBAR promotions need a voice-filtered destination beside the accepted bank")
+                assertTrue(UserPresets.rosterLine(Presets.all().first { it.engine == engine })
+                    .startsWith("HalobarPatch.fromJsonText("))
+            } else if (engine == com.snipsnap.synth.RivetPatch.ENGINE) {
+                val decoder = com.snipsnap.synth.RivetPatch.Companion.javaClass.getMethod("fromJsonText", String::class.java)
+                assertEquals(com.snipsnap.synth.RivetPatch::class.java, decoder.returnType,
+                    "RIVET promotion retains native strike and renderer version")
+                assertTrue("private val promoted:" in text, "RIVET promotions need a destination beside the accepted bank")
+            } else if (engine == com.snipsnap.synth.EtchPatch.ENGINE) {
+                val decoder = com.snipsnap.synth.EtchPatch.Companion.javaClass.getMethod("fromJsonText", String::class.java)
+                assertEquals(com.snipsnap.synth.EtchPatch::class.java, decoder.returnType,
+                    "ETCH promotion retains the root, velocity and model version")
+                assertTrue("private val promoted:" in text, "ETCH promotions need a destination beside the heard bank")
+            } else if (engine == com.snipsnap.synth.ScuffPatch.ENGINE) {
+                val decoder = com.snipsnap.synth.ScuffPatch.Companion.javaClass.getMethod("fromJsonText", String::class.java)
+                assertEquals(com.snipsnap.synth.ScuffPatch::class.java, decoder.returnType,
+                    "SCUFF promotion retains strike velocity, take and model version")
+                assertTrue("private val promoted:" in text, "SCUFF promotions need a destination beside the accepted kits")
+            } else if (engine == com.snipsnap.synth.ErosionPatch.ENGINE) {
+                val decoder = com.snipsnap.synth.ErosionPatch.Companion.javaClass.getMethod("fromJsonText", String::class.java)
+                assertEquals(com.snipsnap.synth.ErosionPatch::class.java, decoder.returnType,
+                    "EROSION promotion names its complete constructor retaining native touch")
+                assertTrue("private val promoted:" in text, "EROSION promotions need a destination beside the accepted bank")
+            } else if (engine == com.snipsnap.synth.TempestPatch.ENGINE) {
+                val decoder = com.snipsnap.synth.TempestPatch.Companion.javaClass.getMethod("fromJsonText", String::class.java)
+                assertEquals(com.snipsnap.synth.TempestPatch::class.java, decoder.returnType,
+                    "TEMPEST promotion names its public complete-JSON constructor")
+                assertTrue("TempestPatch(" in text, "TEMPEST's table constructs complete typed recipes")
+                assertTrue(UserPresets.rosterLine(Presets.all().first { it.engine == engine }).startsWith("TempestPatch.fromJsonText("),
+                    "TEMPEST's roster line invokes its complete-JSON constructor")
+            } else if (engine == com.snipsnap.synth.SplayPatch.ENGINE) {
+                val decoder = com.snipsnap.synth.SplayPatch.Companion.javaClass.getMethod("fromJsonText", String::class.java)
+                assertEquals(com.snipsnap.synth.SplayPatch::class.java, decoder.returnType,
+                    "SPLAY promotion names its public complete-JSON constructor")
+                assertTrue("SplayPatch(" in text, "SPLAY's historical table accepts complete typed recipes")
+                val patch = Presets.all().first { it.engine == engine }
+                val call = KotlinLiteral.parse(UserPresets.rosterLine(patch).removeSuffix(",")) as KotlinLiteral.Call
+                assertEquals("fromJsonText", call.name)
+                assertEquals("SplayPatch", (call.receiver as KotlinLiteral.Call).name)
+                assertEquals(patch, com.snipsnap.synth.SplayPatch.fromJsonText((call.positional.single() as KotlinLiteral.Str).value),
+                    "SPLAY promotion retains complete model, note, native velocity, seed and controls")
             } else if (engine == com.snipsnap.synth.WickPatch.ENGINE) {
                 val decoder = com.snipsnap.synth.WickPatch.Companion.javaClass.getMethod("fromJsonText", String::class.java)
                 assertEquals(com.snipsnap.synth.WickPatch::class.java, decoder.returnType,
@@ -1217,7 +1332,7 @@ class UserPresetsTest {
             if (engine == ObbligatoPatch.ENGINE) {
                 assertEquals(listOf(ObbligatoPatch.VOICE), Presets.all().filter { it.engine == engine }.map { it.voiceName }.distinct())
             } else {
-                val enum = Class.forName("com.snipsnap.synth." + UserPresets.voiceEnum(engine))
+                val enum = Class.forName("com.snipsnap.synth." + UserPresets.voiceEnum(engine).replace('.', '$'))
                 assertTrue(enum.isEnum, "${UserPresets.voiceEnum(engine)} is the voice enum")
             }
         }
@@ -1320,21 +1435,21 @@ class UserPresetsTest {
 
     @Test
     fun `the forget lines ask first, then say where it went and how it comes back`() {
-        assertEquals("FORGET MY KICK? IT WAITS IN DELETED PRESETS FOR ${Reversal.DAYS} DAYS.", Copy.presetForgetAsk("MY KICK"))
-        assertEquals("MY KICK IS OFF THE STRIP. ${Reversal.MIND}", Copy.presetForgotten("MY KICK"))
-        assertEquals("MY KICK 2 IS BACK UNDER YOURS.", Copy.presetRestored("MY KICK 2"))
-        assertTrue("HOLD ITS CHIP TO FORGET IT" in Copy.PRESET_NAME_NOTE, "the save note says how a preset leaves: ${Copy.PRESET_NAME_NOTE}")
+        assertEquals("Forget MY KICK? It waits in DELETED PRESETS for ${Reversal.DAYS} days.", Copy.presetForgetAsk("MY KICK"))
+        assertEquals("MY KICK is off the strip. ${Reversal.MIND}", Copy.presetForgotten("MY KICK"))
+        assertEquals("MY KICK 2 is back under yours.", Copy.presetRestored("MY KICK 2"))
+        assertTrue(Copy.PRESET_NAME_NOTE.contains("HOLD ITS CHIP TO FORGET IT", ignoreCase = true), "the save note says how a preset leaves: ${Copy.PRESET_NAME_NOTE}")
         assertTrue(Reversal.BIN in Copy.PRESET_NAME_NOTE, "and for how long the bin keeps it")
-        assertTrue("STAYS" in Copy.PRESET_FORGET_FAILED && "BIN" in Copy.PRESET_RESTORE_FAILED)
+        assertTrue(Copy.PRESET_FORGET_FAILED.contains("STAYS", ignoreCase = true) && Copy.PRESET_RESTORE_FAILED.contains("TRASH", ignoreCase = true))
     }
 
     @Test
     fun `the copy lines say what happened and what is not kept`() {
-        assertEquals("MY KICK SAVED. IT IS UNDER THE FACTORY ROW ON EVERY KIT.", Copy.presetSaved("MY KICK"))
-        assertEquals("MY KICK REPLACED. THE OLD SETTINGS ARE NOT KEPT.", Copy.presetReplaced("MY KICK"))
-        assertEquals("REPLACES YOUR MY KICK. THE OLD SETTINGS ARE NOT KEPT.", Copy.presetReplaces("MY KICK"))
-        assertEquals("THE FACTORY HAS DUSTY BOOM. PICK ANOTHER NAME.", Copy.presetNameFactory("DUSTY BOOM"))
-        assertTrue("${UserPresets.MAX_NAME} LETTERS" in Copy.PRESET_NAME_NOTE, "the note says the one number the rule has: ${Copy.PRESET_NAME_NOTE}")
+        assertEquals("MY KICK saved. It is under the factory row on every kit.", Copy.presetSaved("MY KICK"))
+        assertEquals("MY KICK replaced. The old settings are not kept.", Copy.presetReplaced("MY KICK"))
+        assertEquals("Replaces your MY KICK. The old settings are not kept.", Copy.presetReplaces("MY KICK"))
+        assertEquals("The factory has DUSTY BOOM. Pick another name.", Copy.presetNameFactory("DUSTY BOOM"))
+        assertTrue(Copy.PRESET_NAME_NOTE.contains("${UserPresets.MAX_NAME} LETTERS", ignoreCase = true), "the note says the one number the rule has: ${Copy.PRESET_NAME_NOTE}")
         assertTrue(Copy.PRESET_NAME_BLANK.endsWith("."))
         assertTrue(Copy.PRESET_SAVE_FAILED.endsWith("."))
     }
@@ -1420,12 +1535,12 @@ class UserPresetsTest {
 
     @Test
     fun `the backup and landing lines count the presets beside the kits, and read as they always did without them`() {
-        assertEquals("2 KITS ON ONE FILE. PICK WHERE IT GOES.", Copy.backedUp(2, 0))
-        assertEquals("3 KITS AND 2 PRESETS ON ONE FILE. PICK WHERE IT GOES.", Copy.backedUp(3, 0, 2))
-        assertEquals("1 KIT AND 1 PRESET ON ONE FILE. 1 SKIPPED. PICK WHERE IT GOES.", Copy.backedUp(1, 1, 1))
-        assertEquals("1 KIT LANDED ON THE SHELF.", Copy.landed(1, 0))
-        assertEquals("1 KIT LANDED ON THE SHELF. 1 PRESET UNDER YOURS.", Copy.landed(1, 0, 1))
-        assertEquals("2 KITS LANDED ON THE SHELF. 3 PRESETS UNDER YOURS. 1 SKIPPED.", Copy.landed(2, 1, 3))
+        assertEquals("2 kits on one file. Pick where it goes.", Copy.backedUp(2, 0))
+        assertEquals("3 kits and 2 presets on one file. Pick where it goes.", Copy.backedUp(3, 0, 2))
+        assertEquals("1 kit and 1 preset on one file. 1 skipped. Pick where it goes.", Copy.backedUp(1, 1, 1))
+        assertEquals("1 kit landed in the LIBRARY.", Copy.landed(1, 0))
+        assertEquals("1 kit landed in the LIBRARY. 1 preset under yours.", Copy.landed(1, 0, 1))
+        assertEquals("2 kits landed in the LIBRARY. 3 presets under yours. 1 skipped.", Copy.landed(2, 1, 3))
     }
 
     /**

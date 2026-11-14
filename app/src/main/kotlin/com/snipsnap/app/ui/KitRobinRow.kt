@@ -44,7 +44,7 @@ internal fun KitRobinRow(
     // and follow it through the effect below.
     var pendingAmount by remember(kitKey) { mutableFloatStateOf(robin?.amount ?: KitRobin.DEFAULT_AMOUNT) }
     var pendingTakes by remember(kitKey) { mutableIntStateOf(robin?.takes ?: KitRobin.DEFAULT_TAKES) }
-    val classColor = scheme.amber.tape
+    val classColor = scheme.accent.tape
     val liveRobin by rememberUpdatedState(robin)
     LaunchedEffect(robin) {
         robin?.let {
@@ -117,11 +117,11 @@ internal fun KitRobinRow(
             onFractionCommit = ::commit,
         )
         StepperSlider(
-            label = "TAKES",
+            label = "ALTERNATES",
             fraction = ((pendingTakes - KitRobin.MIN_TAKES).toFloat() / (KitRobin.MAX_TAKES - KitRobin.MIN_TAKES)).coerceIn(0f, 1f),
             valueText = "%d".format(java.util.Locale.ROOT, pendingTakes),
             fillColor = classColor, scheme = scheme, enabled = !busy && on,
-            accessibilityLabel = "KIT ROUND ROBIN TAKES",
+            accessibilityLabel = "KIT ROUND ROBIN ALTERNATES",
             onFractionChange = { f ->
                 pendingTakes = KitRobin.MIN_TAKES + (f * (KitRobin.MAX_TAKES - KitRobin.MIN_TAKES)).roundToInt()
             },

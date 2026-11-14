@@ -66,28 +66,11 @@ import com.snipsnap.shell.Schemes
  *   filesystem (see `App`'s own note), so the heading and the path are
  *   drawn together once it is known rather than a heading over a guess.
  * @param cardName the card currently held, or null when none is.
- *
- * The WORKSHOP (`docs/WORKSHOP.md`) sits at the very foot, below HELP, and
- * only while [workshopOpen]: HELP is the door a player must find; this is
- * the one a player never needs. [onKnock] is every tap on the title —
- * `App` counts them and decides when the seventh opens it, so this screen
- * holds no knock state of its own.
- *
- * @param workshopOpen whether the WORKSHOP section shows.
- * @param onKnock a tap on the TAPE PROPERTIES title.
- * @param onCloseWorkshop CLOSE THE WORKSHOP.
- * @param onSendToBench SEND TO BENCH: every teach log on the phone, packed
- *   for the chooser.
- * @param onSendHitsToBench SEND HITS TO BENCH: the hits labelled on pad
- *   sheets, as audio - the one button that sends sound, under its own
- *   note, so SEND TO BENCH's never-audio promise stays whole.
  */
 @Composable
 fun PropertiesScreen(
     currentScheme: SchemeId,
     onScheme: (SchemeId) -> Unit,
-    teachEnabled: Boolean,
-    onTeach: (Boolean) -> Unit,
     /** HAPTICS: whether the motor ticks under pads, steppers and landings. ON by default; always silent while the mic is armed (`Haptics`). */
     hapticsOn: Boolean,
     onHaptics: (Boolean) -> Unit,
@@ -105,11 +88,8 @@ fun PropertiesScreen(
     filesWhere: String?,
     cardName: String?,
     onHelp: () -> Unit,
-    workshopOpen: Boolean,
-    onKnock: () -> Unit,
-    onCloseWorkshop: () -> Unit,
-    onSendToBench: () -> Unit,
-    onSendHitsToBench: () -> Unit,
+    /** The MIDI devices screen, which used to sit behind the title bar's gear. */
+    onMidiDevices: () -> Unit,
 ) {
     val scheme = LocalScheme.current
     Column(
@@ -118,14 +98,7 @@ fun PropertiesScreen(
             .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        // The knock (docs/WORKSHOP.md): seven taps here, inside two seconds
-        // of each other, open the WORKSHOP at the foot of this screen. The
-        // node is labelled with its own text, never null — LoopGrid's note
-        // on `tapeClick(label = null)` says why a nameless clickable is a
-        // defect, and a hidden door is not an excuse for one.
-        Box(Modifier.tapeClick(label = "TAPE PROPERTIES", onClick = onKnock)) {
-            TapeText("TAPE PROPERTIES", TapeType.display, scheme.ink.tape)
-        }
+        TapeText("SETTINGS", TapeType.display, scheme.ink.tape)
 
         // Every group below is a GroupBox, THIS KIT's pattern: one closed
         // line each, and LOOK - the biggest visible change on the page, and
@@ -153,44 +126,6 @@ fun PropertiesScreen(
                     SchemeRow(s, selected = s.id == currentScheme, onPick = { onScheme(s.id) })
                 }
             }
-        }
-
-        // X4.4 TEACH THE MACHINE: the consent row. Off by default; what ON
-        // sends is spelled out under it, in the copy's own words.
-        var teachOpen by rememberSaveable { mutableStateOf(false) }
-        GroupBox(
-            legend = "TEACH THE MACHINE",
-            summary = if (teachEnabled) "ON" else "OFF",
-            open = teachOpen,
-            onToggle = { teachOpen = !teachOpen },
-            scheme = scheme,
-        ) {
-            Row(
-                Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-            ) {
-                for (on in listOf(false, true)) {
-                    val selected = on == teachEnabled
-                    Box(
-                        Modifier
-                            .weight(1f)
-                            .height(44.dp)
-                            .let { if (selected) it.pressedBevel(scheme) else it.raisedBevel(scheme) }
-                            .semantics { this.selected = selected }
-                            .tapeClick(label = "TEACH THE MACHINE ${if (on) "ON" else "OFF"}") { if (!selected) onTeach(on) },
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        TapeText(if (on) "ON" else "OFF", TapeType.pixel, if (selected) scheme.ink.tape else scheme.ink2.tape)
-                    }
-                }
-            }
-            TapeText(Copy.TEACH_CONSENT, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
-            TapeText(
-                "WITH IT ON, EVERY CHIP YOU CORRECT OR CONFIRM ON CHOP IS LOGGED AS A FEATURE VECTOR AND A LABEL IN THAT KIT'S FOLDER, AND A STAR YOU GIVE THE CUTS AS A RATING WITH THE BENCH'S SETTINGS.",
-                TapeType.pixelSmall,
-                scheme.ink2.tape,
-                maxLines = 4,
-            )
         }
 
         // HAPTICS: the same two-up toggle, its own closed group. The note says
@@ -284,6 +219,18 @@ fun PropertiesScreen(
             }
         }
 
+        // MIDI DEVICES: the door to the MIDI screen, a row like HELP's below.
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .height(44.dp)
+                .raisedBevel(scheme)
+                .tapeClick(label = Copy.SETUP_MIDI_DEVICES, onClick = onMidiDevices),
+            contentAlignment = Alignment.Center,
+        ) {
+            TapeText(Copy.SETUP_MIDI_DEVICES, TapeType.pixel, scheme.accent.tape)
+        }
+
         // ---- What the app already knew and never said (finding 23) ----
 
         var formatOpen by rememberSaveable { mutableStateOf(false) }
@@ -316,7 +263,7 @@ fun PropertiesScreen(
             onToggle = { rateOpen = !rateOpen },
             scheme = scheme,
         ) {
-            TapeText(Copy.SETUP_RATE, TapeType.pixel, scheme.ink2.tape, maxLines = 1)
+            TapeText(Copy.SETUP_RATE, TapeType.pixel, scheme.ink2.tape, maxLines = 2)
             TapeText(Copy.SETUP_RATE_NOTE, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 3)
         }
 
@@ -371,50 +318,7 @@ fun PropertiesScreen(
                 .tapeClick(label = "HELP", onClick = onHelp),
             contentAlignment = Alignment.Center,
         ) {
-            TapeText("HELP ▸", TapeType.pixel, scheme.amber.tape)
-        }
-
-        // The WORKSHOP (docs/WORKSHOP.md): the developer's tools, shown only
-        // once the knock on the title has opened it, and below HELP on
-        // purpose. Everything here adds a control; nothing here hides one.
-        if (workshopOpen) {
-            TapeText("WORKSHOP", TapeType.display, scheme.ink.tape)
-            TapeText(Copy.WORKSHOP_NOTE, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
-            Box(
-                Modifier
-                    .fillMaxWidth()
-                    .height(44.dp)
-                    .raisedBevel(scheme)
-                    .tapeClick(label = "SEND TO BENCH", onClick = onSendToBench),
-                contentAlignment = Alignment.Center,
-            ) {
-                TapeText("SEND TO BENCH ▸", TapeType.pixel, scheme.ink.tape)
-            }
-            TapeText(Copy.SEND_TO_BENCH_NOTE, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 7)
-            // The one button that sends audio (docs/WORKSHOP.md, WS3), its
-            // own note under it every time, never folded into the button
-            // above: two zips, two promises.
-            Box(
-                Modifier
-                    .fillMaxWidth()
-                    .height(44.dp)
-                    .raisedBevel(scheme)
-                    .tapeClick(label = "SEND HITS TO BENCH", onClick = onSendHitsToBench),
-                contentAlignment = Alignment.Center,
-            ) {
-                TapeText("SEND HITS TO BENCH ▸", TapeType.pixel, scheme.ink.tape)
-            }
-            TapeText(Copy.SEND_HITS_NOTE, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 4)
-            Box(
-                Modifier
-                    .fillMaxWidth()
-                    .height(44.dp)
-                    .raisedBevel(scheme)
-                    .tapeClick(label = "CLOSE THE WORKSHOP", onClick = onCloseWorkshop),
-                contentAlignment = Alignment.Center,
-            ) {
-                TapeText("CLOSE THE WORKSHOP", TapeType.pixel, scheme.ink2.tape)
-            }
+            TapeText("HELP ▸", TapeType.pixel, scheme.accent.tape)
         }
 
         // The build, last and quiet: the one fact a bug report needs and

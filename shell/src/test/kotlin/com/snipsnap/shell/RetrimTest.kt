@@ -45,7 +45,7 @@ class RetrimTest {
         val ready = assertIs<Retrim.Ready>(r)
         assertEquals(tape, ready.file)
         assertEquals(Retrim.Cut(52_920, 71_442), ready.cut)
-        assertEquals("1.20–1.62s", ready.cut!!.label(44_100), "the PAD SHEET's provenance line, at the file's rate")
+        assertEquals("1.20–1.62s", ready.cut!!.label(44_100), "the PAD EDITOR's provenance line, at the file's rate")
         assertEquals(18_522, ready.cut.lengthFrames)
     }
 
@@ -151,9 +151,9 @@ class RetrimTest {
         assertEquals("DELAY", Retrim.treatmentLeft(pedals("delayed")))
         assertEquals("PEDALS", Retrim.treatmentLeft(pedals("driven", "delayed")))
         assertEquals("TOUCH", Retrim.treatmentLeft(pedals("wahed", "touchwahed")), "WAH under TOUCH is silent, so one pedal stayed")
-        assertEquals("A02 RE-CUT. THE PEDALS STAYED WITH THE OLD ONE - IT'S IN THE BIN.", Copy.retrimLanded("A02", Retrim.treatmentLeft(pedals("driven", "delayed"))))
+        assertEquals("A02 re-cut. The PEDALS stayed with the old one - it's in the trash.", Copy.retrimLanded("A02", Retrim.treatmentLeft(pedals("driven", "delayed"))))
         assertEquals(
-            "A02 RE-CUT. THE SMEAR STAYED WITH THE OLD ONE - IT'S IN THE BIN.",
+            "A02 re-cut. The SMEAR stayed with the old one - it's in the trash.",
             Copy.retrimLanded("A02", Retrim.treatmentLeft(smeared)),
         )
     }

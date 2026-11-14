@@ -11,7 +11,7 @@ import com.snipsnap.kit.KitPad
  *
  * Built on [PadSheetBoxes]' own closed-box strings so the strip and the
  * sheet never disagree about what a pad carries: the strip is those
- * summaries, minus the UNTOUCHED ones, plus the two facts the sheet's
+ * summaries, minus the benches the pad carries nothing from, plus the two facts the sheet's
  * everyday row shows (choke group, layers).
  */
 object PadStrip {
@@ -35,13 +35,13 @@ object PadStrip {
 
     const val DOOR_OPEN = "OPEN ▸"
     const val DOOR_CAPTURE = "CAPTURE ▸"
-    const val DOOR_FROM_SNIPS = "FROM SNIPS ▸"
+    const val DOOR_FROM_SNIPS = "FROM SAVED SAMPLES ▸"
 
     fun line(pad: KitPad?, slot: Int, outsideStage: String? = null): Strip {
         val id = PadBanks.tag(slot)
         if (pad == null) return Strip(id, null, EMPTY, listOf(DOOR_CAPTURE, DOOR_FROM_SNIPS))
-        // `touched`, not "any strip that is not UNTOUCHED": MAKE's strip
-        // advertises what the box can do and is never UNTOUCHED, so only
+        // `touched`, not "any strip with words": every strip reads words
+        // (what the bench holds, when idle) and MAKE's always advertises what the box can do, so only
         // the benches the sheet itself counts as carrying something are
         // read, in the sheet's own order.
         val touched = PadSheetBoxes.touched(pad, outsideStage)

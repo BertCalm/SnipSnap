@@ -8,6 +8,7 @@ import com.snipsnap.kit.ExportReadBack
 import com.snipsnap.kit.Exporters
 import com.snipsnap.kit.Finding
 import com.snipsnap.kit.Kit
+import com.snipsnap.kit.Mpc2Limits
 import com.snipsnap.kit.Preflight
 import com.snipsnap.kit.Severity
 import com.snipsnap.kit.blocked
@@ -63,7 +64,7 @@ class ExportWizardModel(
          * What the two sides of a dub hold, as the track says it and as the
          * landing box ([LandingNote.dubbed]) repeats it: one fact, one owner.
          */
-        const val DUB_SIDES = "SIDE A: PROGRAMS · SIDE B: SAMPLES"
+        const val DUB_SIDES = "PROGRAMS AND SAMPLES"
     }
 
     var stage: Stage = Stage.READY
@@ -113,6 +114,12 @@ class ExportWizardModel(
     val blocked: Boolean get() = preflight.blocked()
 
     val warnings: List<Finding> get() = preflight.filter { it.severity == Severity.WARN }
+
+    /**
+     * What the picked format cannot hold of this kit, or null: today only MPC 2's `.xpm` and a
+     * velocity × round-robin grid ([Mpc2Limits]). Shown under the format, before anything is written.
+     */
+    val formatNote: Finding? get() = Mpc2Limits.note(format, kit)
 
     // ---------- the dub ----------
 
@@ -242,21 +249,21 @@ class ExportWizardModel(
 
     val writeLabel: String
         get() = when (stage) {
-            Stage.READY -> "WRITE KIT"
-            Stage.WRITING -> "WRITING — DO NOT EJECT"
+            Stage.READY -> "EXPORT KIT"
+            Stage.WRITING -> "EXPORTING…"
             // Not "EJECT CARD ✓": nothing is ejected here, and EJECT
             // already means "stop listening" on the shelf's ArmControl
             // and "delete" on a pad's own DELETE → BIN. This button only
             // resets the wizard for another write — Copy.CARD_EJECTED
             // (the toast this fires) says exactly that.
-            Stage.COMPLETE -> "WRITE ANOTHER ✓"
+            Stage.COMPLETE -> "EXPORT ANOTHER"
         }
 
     val dubLabel: String
         get() = when (stage) {
-            Stage.READY -> "READY TO DUB"
-            Stage.WRITING -> "DUBBING…"
-            Stage.COMPLETE -> "DUB COMPLETE"
+            Stage.READY -> "READY TO EXPORT"
+            Stage.WRITING -> "EXPORTING…"
+            Stage.COMPLETE -> "EXPORT COMPLETE"
         }
 
     /**
@@ -266,6 +273,6 @@ class ExportWizardModel(
     fun dubFilesLine(filesShown: Int): String = when (stage) {
         Stage.READY -> "$DUB_SIDES · ${Copy.countOf(fileCount, "FILE", "FILES")} QUEUED"
         Stage.WRITING -> "$DUB_SIDES · ${filesShown.coerceIn(0, fileCount)} OF ${Copy.countOf(fileCount, "FILE", "FILES")}"
-        Stage.COMPLETE -> "ALL ${Copy.countOf(fileCount, "FILE", "FILES")} ON TAPE. GO MAKE THE THING."
+        Stage.COMPLETE -> "All ${Copy.countOf(fileCount, "file", "files")} written."
     }
 }

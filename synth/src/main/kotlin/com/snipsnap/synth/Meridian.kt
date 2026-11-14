@@ -13,7 +13,7 @@ import kotlin.math.sin
 import kotlin.math.sqrt
 import kotlin.random.Random
 
-enum class MeridianVoice { SWEEP, CLACK, CHIME, RASP }
+enum class MeridianVoice { SWEEP, CLACK, CHIME, RASP, DRAW, LIFT }
 
 /**
  * A maintained precessing swing touches twelve independently
@@ -33,10 +33,12 @@ enum class MeridianVoice { SWEEP, CLACK, CHIME, RASP }
  * Model 3 adds CLACK, CHIME and RASP material families. Their brighter contact
  * pulses and upper modes retain the same motion and damped modal architecture.
  * SWEEP keeps its original setup arithmetic and defaults to saved model 2.
+ * Model 4 is opt-in for DRAW and LIFT pressure gestures only. The four accepted
+ * voices retain their previous model range, defaults, seeds and signal paths.
  */
 object Meridian {
     const val RATE = Dsp.RATE
-    const val MODEL_VERSION = 3
+    const val MODEL_VERSION = 4
     const val SWEEP_MODEL_VERSION = 2
     // Model one recipes keep their original acoustic-noise identity when a
     // later model adds a held adaptation or a different rendering contract.
@@ -104,17 +106,25 @@ object Meridian {
     fun supportsModel(model: Int): Boolean = model in LEGACY_MODEL_VERSION..MODEL_VERSION
 
     /** Adding material voices must not change the default saved SWEEP identity. */
-    fun defaultModelFor(voice: MeridianVoice): Int =
-        if (voice == MeridianVoice.SWEEP) SWEEP_MODEL_VERSION else MODEL_VERSION
+    fun defaultModelFor(voice: MeridianVoice): Int = when (voice) {
+        MeridianVoice.SWEEP -> SWEEP_MODEL_VERSION
+        MeridianVoice.CLACK, MeridianVoice.CHIME, MeridianVoice.RASP -> 3
+        MeridianVoice.DRAW, MeridianVoice.LIFT -> 4
+    }
 
     fun supportsVoice(voice: MeridianVoice, model: Int): Boolean =
-        supportsModel(model) && (voice == MeridianVoice.SWEEP || model >= 3)
+        when (voice) {
+            MeridianVoice.SWEEP -> model in 1..3
+            MeridianVoice.CLACK, MeridianVoice.CHIME, MeridianVoice.RASP -> model == 3
+            MeridianVoice.DRAW, MeridianVoice.LIFT -> model == 4
+        }
 
     // The heard material studies used the same roughness performance as SWEEP.
     // Changing the object therefore keeps that seed tuple, including old SWEEP.
     internal fun noiseIdentity(voice: MeridianVoice): String = when (voice) {
         MeridianVoice.SWEEP -> voice.name
         MeridianVoice.CLACK, MeridianVoice.CHIME, MeridianVoice.RASP -> MeridianVoice.SWEEP.name
+        MeridianVoice.DRAW, MeridianVoice.LIFT -> voice.name
     }
 
     fun isLoop(macros: Map<String, Float>, model: Int = MODEL_VERSION): Boolean {
@@ -196,7 +206,8 @@ object Meridian {
         }
     }
 
-    internal fun setups(hz: Double, surface: Double, memory: Float, reach: Double, velocity: Double): Array<SurfaceSetup> {
+    internal fun setups(hz: Double, surface: Double, memory: Float, reach: Double, velocity: Double,
+        touch: Double = 0.0): Array<SurfaceSetup> {
         val restrained = doubleArrayOf(.85, .35, .13, .05)
         val base = baseT60(memory)
         return Array(SURFACES) { j ->
@@ -210,16 +221,18 @@ object Meridian {
             }
             // Drive and pickup share the participation square root, so the net
             // modal weight is gain. The constant pickup never follows the rotor.
-            val participation = DoubleArray(MODES_PER_SURFACE) { sqrt(gain[it]) }
+            val participation = DoubleArray(MODES_PER_SURFACE) { sqrt(gain[it]) * MeridianTouch.modeTilt(velocity, touch, it) }
             val pickup = DoubleArray(MODES_PER_SURFACE) { PICKUP * participation[it] }
-            val cutoff = (1400 + surface * (shape.noiseHz - 1400)) * (.65 + .35 * reach) * (.65 + .35 * velocity)
+            val cutoff = (1400 + surface * (shape.noiseHz - 1400)) * (.65 + .35 * reach) * (.65 + .35 * velocity) *
+                MeridianTouch.cutoffMul(velocity, touch)
             val alpha = 1 - exp(-2 * PI * cutoff / INTERNAL_RATE)
             val q = 1 - alpha
             // Exact stationary variance of two identical one-poles driven by
             // uniform noise (variance 1/3); hardness changes color, not random RMS.
             val noiseScale = sqrt(3 * (1 + q).pow(3) / (alpha * (1 + q * q)))
             val soft = 1 + surface * (shape.catchSoftness - 1)
-            val width = maxOf(8, ((.0035 - .002 * reach) * soft * (1.15 - .3 * velocity) * INTERNAL_RATE).roundToInt())
+            val width = maxOf(8, ((.0035 - .002 * reach) * soft * (1.15 - .3 * velocity) *
+                MeridianTouch.widthMul(velocity, touch) * INTERNAL_RATE).roundToInt())
             val pulse = DoubleArray(width + 1) { i -> sin(PI * i / width).pow(2) }
             val sum = pulse.sum()
             for (i in pulse.indices) pulse[i] /= sum
@@ -229,9 +242,12 @@ object Meridian {
 
     /** Keep the legacy material arithmetic isolated from additive voices. */
     internal fun setupsForVoice(voice: MeridianVoice, hz: Double, surface: Double,
-        memory: Float, reach: Double, velocity: Double): Array<SurfaceSetup> =
-        if (voice == MeridianVoice.SWEEP) setups(hz, surface, memory, reach, velocity)
-        else MeridianMaterials.setups(voice, hz, surface, memory, reach, velocity)
+        memory: Float, reach: Double, velocity: Double, touch: Double = 0.0): Array<SurfaceSetup> =
+        when (voice) {
+            MeridianVoice.SWEEP, MeridianVoice.DRAW -> setups(hz, surface, memory, reach, velocity, touch)
+            MeridianVoice.LIFT -> MeridianMaterials.setups(MeridianVoice.CHIME, hz, surface, memory, reach, velocity, touch)
+            else -> MeridianMaterials.setups(voice, hz, surface, memory, reach, velocity, touch)
+        }
 
     /** Raw conditioned mono at RATE, before shared leveling unless [normalize].
      * [activeSeconds]/[tailSeconds] select bounded audition windows, not a second
@@ -244,19 +260,25 @@ object Meridian {
         midi: Int = DEFAULT_MIDI, velocity: Float = 1f, seedContext: Int = 0,
         activeSeconds: Float? = null, tailSeconds: Float? = null,
         normalize: Boolean = false, taps: Boolean = false, fixedAlignment: Boolean = false,
-        pMax: Double = MeridianMotion.MAX_PRECESSION, resetOnContact: Boolean = false): Probe =
+        pMax: Double = MeridianMotion.MAX_PRECESSION, resetOnContact: Boolean = false,
+        touchShaping: Float = 0f): Probe =
         pass(voice, macros, midi, velocity, seedContext, activeSeconds, tailSeconds,
-            normalize, taps, fixedAlignment, pMax, resetOnContact, diagnostics = true)
+            normalize, taps, fixedAlignment, pMax, resetOnContact, diagnostics = true, touchShaping = touchShaping)
 
     private fun pass(voice: MeridianVoice, macros: Map<String, Float>, midi: Int, velocity: Float,
         seedContext: Int, activeOverride: Float?, tailOverride: Float?, normalize: Boolean,
         taps: Boolean, fixedAlignment: Boolean, pMax: Double, resetOnContact: Boolean,
-        diagnostics: Boolean): Probe {
+        diagnostics: Boolean, touchShaping: Float = 0f): Probe {
         require(midi in MIDI_MIN..MIDI_MAX) { "MERIDIAN midi out of $MIDI_MIN..$MIDI_MAX: $midi" }
         require(velocity.isFinite() && velocity in 0f..1f) { "MERIDIAN velocity must be in 0..1: $velocity" }
         require(activeOverride == null || activeOverride.isFinite() && activeOverride in .05f..12f)
         require(tailOverride == null || tailOverride.isFinite() && tailOverride in .15f..4f)
+        require(touchShaping.isFinite() && touchShaping in 0f..1f) { "MERIDIAN touch shaping must be in 0..1: $touchShaping" }
+        val touch = touchShaping.toDouble()
         stopIfUnwanted()
+        if (MeridianGestures.supports(voice)) return MeridianGestures.probe(voice, macros,
+            midi, velocity, seedContext, activeOverride, tailOverride, normalize, taps,
+            fixedAlignment, pMax, resetOnContact, touch)
         val m = settled(voice, macros)
         val active = activeOverride?.toDouble() ?: activeSeconds(m.getValue("HOLD"))
         val tail = tailOverride?.toDouble() ?: tailSeconds(m.getValue("MEMORY"))
@@ -266,7 +288,7 @@ object Meridian {
         val hz = frequencyFor(voice, m.getValue("TUNE"), midi).toDouble()
         val reach = m.getValue("REACH").toDouble()
         val surface = m.getValue("SURFACE").toDouble()
-        val configs = setupsForVoice(voice, hz, surface, m.getValue("MEMORY"), reach, velocity.toDouble())
+        val configs = setupsForVoice(voice, hz, surface, m.getValue("MEMORY"), reach, velocity.toDouble(), touch)
         if (!diagnostics && !taps && !resetOnContact) {
             val raw = MeridianFinite.raw(configs, motion, active, tail, reach, velocity, voice, seedContext)
             // The public path needs only audio. Keep the diagnostic path below
@@ -443,13 +465,18 @@ object Meridian {
         return out
     }
 
+    /** [touchShaping] is [MeridianTouch]'s amount for a finite render; 0 is the unshaped law. */
     fun render(voice: MeridianVoice, macros: Map<String, Float> = emptyMap(), midi: Int = DEFAULT_MIDI,
-        velocity: Float = 1f, seedContext: Int = 0, model: Int = defaultModelFor(voice)): Snip {
+        velocity: Float = 1f, seedContext: Int = 0, model: Int = defaultModelFor(voice),
+        touchShaping: Float = 0f): Snip {
         require(supportsVoice(voice, model)) { "unsupported meridian model $model for ${voice.name}" }
-        if (isLoop(macros, model)) return renderHeld(voice, macros, midi, velocity, seedContext, model).snip
+        if (isLoop(macros, model)) {
+            require(touchShaping == 0f) { "MERIDIAN touch shaping applies to finite renders only" }
+            return renderHeld(voice, macros, midi, velocity, seedContext, model).snip
+        }
         return Snip(pass(voice, macros, midi, velocity, seedContext, null, null, normalize = true,
             taps = false, fixedAlignment = false, pMax = MeridianMotion.MAX_PRECESSION,
-            resetOnContact = false, diagnostics = false).samples,
+            resetOnContact = false, diagnostics = false, touchShaping = touchShaping).samples,
             channels = 1, sampleRate = RATE)
     }
 }

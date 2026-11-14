@@ -4,6 +4,9 @@ import com.snipsnap.synth.Rime
 import com.snipsnap.synth.RimePatch
 import com.snipsnap.synth.RimeVoice
 import com.snipsnap.synth.Chamber
+import com.snipsnap.synth.Halobar
+import com.snipsnap.synth.HalobarPresets
+import com.snipsnap.synth.HalobarPatch
 import com.snipsnap.synth.Accord
 import com.snipsnap.synth.AccordPatch
 import com.snipsnap.synth.AccordVoice
@@ -121,9 +124,16 @@ class StarterKitsTest {
      * The single-engine starters with no block of their own below. Each SynthKits
      * builder lands sixteen pads through `pad(patch, drumClass)` with no chain, so
      * every pad is dry, carries its engine's patch, is filed by that engine's
-     * drumClassFor, and the sixteen reach every voice.
+     * drumClassFor, and the sixteen reach every declared starter voice.
+     * HALOBAR keeps the accepted three-voice starter; provisional studies have a separate kit.
      */
     private val oneEngineStarters: Map<String, OneEngine> = mapOf(
+        "halobar-six" to OneEngine(HalobarPatch::class.java, com.snipsnap.synth.HalobarVoice.entries.map { it.name }.toSet()) {
+            (it as HalobarPatch).let { p -> Halobar.drumClassFor(p.voice,p.macros) }
+        },
+        "halobar" to OneEngine(HalobarPatch::class.java, HalobarPresets.acceptedVoices.map { it.name }.toSet()) {
+            (it as HalobarPatch).let { p -> Halobar.drumClassFor(p.voice,p.macros) }
+        },
         "accord" to OneEngine(AccordPatch::class.java, AccordVoice.entries.map { it.name }.toSet()) {
             Accord.drumClassFor(it as AccordPatch)
         },
@@ -202,7 +212,7 @@ class StarterKitsTest {
                 assertFalse(Preflight.check(kit, dir).blocked(), "${starter.id} failed preflight")
                 // Regenerable where the engine records how: most starter pads
                 // carry recipes (not all — some treatments are render-only).
-                if (starter.id !in setOf(StarterKits.CONFLUENCE_ID, StarterKits.CONFLUENCE_VOICES_ID) + StarterKits.PATIO_IDS) {
+                if (starter.id !in setOf(StarterKits.CONFLUENCE_ID, StarterKits.CONFLUENCE_VOICES_ID, "velour-close", "velour", "velour-bloom", "triad-techno", "triad-house", "triad-minimal", "cosmic-breaks", "cosmic-jungle", "cosmic-dubstep", "spore-jungle", "spore-dub", "spore-electro", "gatecrash-stone", "gatecrash-machine", "gatecrash-electro", "cypher-trap", "cypher-drill", "cypher-backroom", "cypher-lowrider", "cypher-dust", "cypher-flint", "mirrorball-philly", "mirrorball-loft", "mirrorball-munich", "soot", "soot-drumless", "soot-dub", "soot-noir", "soot-industrial", "etch", "scuff-detroit", "scuff-flint") + StarterKits.PATIO_IDS) {
                     assertTrue(kit.pads.any { it.recipe != null }, "${starter.id}: no pad carries a recipe")
                 }
                 // Most starters fill bank A. The wordless source bank has eight pads;
@@ -210,9 +220,11 @@ class StarterKitsTest {
                 // and SCOUR fills banks B, C and D with its thunder sheet, its beam, and its disc and rod.
                 val slots = when (starter.id) {
                     in StarterKits.PATIO_IDS -> 18
+                    "spore-jungle", "spore-dub", "spore-electro", "cosmic-breaks", "cosmic-jungle", "cosmic-dubstep" -> 18
                     "scour" -> 64
                     "lucky-dip-ab" -> 32
-                    StarterKits.CONFLUENCE_ID -> 8
+                    StarterKits.CONFLUENCE_ID, "erosion" -> 8
+                    SplayDelivery.STARTER_ID -> 5
                     "vent" -> 12
                     "strike-fx" -> 4
                     else -> 16
@@ -224,16 +236,78 @@ class StarterKitsTest {
                 }
                 // CLOUD's grain clouds (A07-A16) are render-only: GRAINS has no Patch type.
                 // CONFLUENCE carries source-bank provenance instead of typed Patch recipes.
+                // Spore grids retain all nine takes as printed audio and provenance, not a single-hit recipe.
                 // Every remaining pad of every starter carries its recipe.
                 val renderOnly = kit.pads.filter { it.recipe == null }.map { it.slot }
                 val expectedRenderOnly = when (starter.id) {
                     in StarterKits.PATIO_IDS -> (1..18).toList()
+                    "spore-jungle", "spore-dub", "spore-electro", "cosmic-breaks", "cosmic-jungle", "cosmic-dubstep" -> (1..18).toList()
                     "cloud" -> (7..16).toList()
                     StarterKits.CONFLUENCE_ID -> (1..8).toList()
-                    StarterKits.CONFLUENCE_VOICES_ID -> (1..16).toList()
+                    StarterKits.CONFLUENCE_VOICES_ID, "velour-close", "velour", "velour-bloom", "triad-techno", "triad-house", "triad-minimal", "gatecrash-stone", "gatecrash-machine", "gatecrash-electro", "cypher-trap", "cypher-drill", "cypher-backroom", "cypher-lowrider", "cypher-dust", "cypher-flint", "mirrorball-philly", "mirrorball-loft", "mirrorball-munich", "soot", "soot-drumless", "soot-dub", "soot-noir", "soot-industrial", "etch", "scuff-detroit", "scuff-flint" -> (1..16).toList()
                     else -> emptyList()
                 }
                 assertEquals(expectedRenderOnly, renderOnly, "${starter.id}: pads with no recipe")
+                if (starter.id in setOf("triad-techno", "triad-house", "triad-minimal")) {
+                    for (pad in kit.pads) {
+                        assertEquals("TRIAD", pad.source["engine"])
+                        assertEquals("2", pad.source["kitVersion"])
+                        assertEquals(3, pad.chain?.zones?.size)
+                        assertEquals(listOf(4, 4, 4), pad.chain?.zones?.map { it.cycle })
+                        assertEquals(12, pad.chain?.boundaries?.size)
+                        assertTrue(pad.oneShot)
+                    }
+                }
+                if (starter.id.startsWith("cypher-")) {
+                    for (pad in kit.pads) {
+                        assertEquals("CYPHER", pad.source["engine"])
+                        assertEquals(com.snipsnap.synth.CypherKits.VERSION.toString(), pad.source["kitVersion"])
+                        assertEquals(3, pad.chain?.zones?.size)
+                        assertEquals(listOf(4, 4, 4), pad.chain?.zones?.map { it.cycle })
+                        assertTrue(pad.oneShot)
+                    }
+                }
+                if (starter.id == "soot" || starter.id.startsWith("soot-")) {
+                    for (pad in kit.pads) {
+                        assertEquals("SOOT", pad.source["engine"])
+                        assertEquals((if (starter.id == "soot") com.snipsnap.synth.SootKits.VERSION else com.snipsnap.synth.SootGenreKits.VERSION).toString(), pad.source["kitVersion"])
+                        assertEquals(3, pad.chain?.zones?.size)
+                        assertEquals(listOf(4, 4, 4), pad.chain?.zones?.map { it.cycle })
+                        assertEquals(12, pad.chain?.boundaries?.size)
+                        assertTrue(pad.oneShot)
+                    }
+                }
+                if (starter.id.startsWith("scuff-")) {
+                    for (pad in kit.pads) {
+                        assertEquals("SCUFF", pad.source["engine"])
+                        assertEquals(com.snipsnap.synth.ScuffKits.VERSION.toString(), pad.source["kitVersion"])
+                        assertEquals(com.snipsnap.synth.Scuff.MODEL_VERSION.toString(), pad.source["model"])
+                        assertEquals(3, pad.chain?.zones?.size)
+                        assertEquals(listOf(4, 4, 4), pad.chain?.zones?.map { it.cycle })
+                        assertEquals(12, pad.chain?.boundaries?.size)
+                        assertTrue(pad.oneShot)
+                    }
+                }
+                if (starter.id.startsWith("gatecrash-")) {
+                    for (pad in kit.pads) {
+                        assertEquals("GATECRASH", pad.source["engine"])
+                        assertEquals(com.snipsnap.synth.GatecrashKits.VERSION.toString(), pad.source["kitVersion"])
+                        assertEquals(3, pad.chain?.zones?.size)
+                        assertEquals(listOf(4, 4, 4), pad.chain?.zones?.map { it.cycle })
+                        assertEquals(12, pad.chain?.boundaries?.size)
+                        assertTrue(pad.oneShot)
+                    }
+                }
+                if (starter.id.startsWith("mirrorball-")) {
+                    for (pad in kit.pads) {
+                        assertEquals("MIRRORBALL", pad.source["engine"])
+                        assertEquals(com.snipsnap.synth.MirrorballKits.VERSION.toString(), pad.source["kitVersion"])
+                        assertEquals(3, pad.chain?.zones?.size)
+                        assertEquals(listOf(4, 4, 4), pad.chain?.zones?.map { it.cycle })
+                        assertEquals(12, pad.chain?.boundaries?.size)
+                        assertTrue(pad.oneShot)
+                    }
+                }
             }
             oneEngineStarters[starter.id]?.let { engine ->
                 val model = KitBuilderModel.open(dir)
@@ -572,9 +646,13 @@ class StarterKitsTest {
     @Test
     fun `starter IDs are stable, include new synth kits, and blank leads`() {
         assertEquals(
-            listOf("blank", "factory", "strike-fx", "lucky-dip", "lucky-dip-ab", "melodic", "chip", "overlap", "obbligato", "accord", "otis", "libration", "meridian", "tidal", "nacre", "ohm", "cloud", StarterKits.CONFLUENCE_ID, StarterKits.CONFLUENCE_VOICES_ID, "circuit", "thaw", "scour", "nimbus", "undertow", "suture", "revel", "tessera", "pitchwheel", "prism", "origami", "rime", "rime-complete", "filament", "chamber", "alloy", "contour", "stoop", "lacquer", "spool", "skitter", "tangle", "caustic", "crease", "lattice", "flock", "relay", "shoal", "embouchure", "bellows", "murmur", "murmur-selected", "scanned-chain", "trefoil", "trio", "osprey", "osprey-curated", "opensky", "vent", "skin", "cistern", "upright", "aerostat", "tremor", "ballast", "keel", "wick", "velocity", "chord-stabs", "chord-stabs-dorian", "chord-stabs-mixolydian", "chord-stabs-borrowed", "patio-cumbia", "patio-samba", "patio-dub"),
+            listOf("blank", "factory", "strike-fx", "lucky-dip", "lucky-dip-ab", "halobar", "halobar-six", "melodic", "chip", "overlap", "obbligato", "accord", "otis", "libration", "meridian", "tidal", "nacre", "ohm", "cloud", StarterKits.CONFLUENCE_ID, StarterKits.CONFLUENCE_VOICES_ID, "circuit", "thaw", "scour", "nimbus", "undertow", "suture", "revel", "tessera", "pitchwheel", "prism", "origami", "rime", "rime-complete", "filament", "chamber", "alloy", "contour", "stoop", "lacquer", "spool", "skitter", "tangle", "caustic", "crease", "lattice", "flock", "relay", "shoal", "embouchure", "bellows", "murmur", "murmur-selected", "scanned-chain", "trefoil", "trio", "osprey", "osprey-curated", "opensky", "vent", "skin", "cistern", "upright", "aerostat", "tremor", "ballast", "keel", "etch", "wick", "velocity", "chord-stabs", "chord-stabs-dorian", "chord-stabs-mixolydian", "chord-stabs-borrowed", "erosion", "triad-techno", "triad-house", "triad-minimal", "rivet-workshop", "rivet-factory", "rivet-warehouse", "velour-close", "velour", "velour-bloom", "backwash-soul", "backwash-psych", "fired-bronze", "spore-jungle", "spore-dub", "spore-electro", "cosmic-breaks", "cosmic-jungle", "cosmic-dubstep", "gatecrash-stone", "gatecrash-machine", "gatecrash-electro", "cypher-trap", "cypher-drill", "cypher-backroom", "cypher-lowrider", "cypher-dust", "cypher-flint", "breaker", "breaker-dub", "breaker-triphop", "mirrorball-philly", "mirrorball-loft", "mirrorball-munich", "soot", "soot-drumless", "soot-dub", "soot-noir", "soot-industrial", "murmur-kept", "scuff-detroit", "scuff-flint", "meridian-materials", "meridian-six", "tempest", "tempest-tuned", SplayDelivery.STARTER_ID, "osteria", "osteria-six-voice", "tempest-circuit", "tempest-foundry", "tempest-step", "patio-cumbia", "patio-samba", "patio-dub"),
             StarterKits.ALL.map { it.id },
         )
+        val halobar = StarterKits.byId("halobar")!!
+        assertEquals("HALOBAR", halobar.displayName)
+        assertFalse(halobar.seeded, "HALOBAR is an authored finite kit")
+        assertEquals(KeySpec.parse("Cminpent"), halobar.key)
         val chamber = StarterKits.byId("chamber")!!
         assertEquals("CHAMBER", chamber.displayName)
         assertFalse(chamber.seeded, "CHAMBER is a fixed authored kit")

@@ -12,14 +12,16 @@ import kotlin.random.Random
  * - a little softer or harder ([FORCE_SPREAD], through [StrikeVelocity]:
  *   the modes' balance, the bend and the grit move together);
  * - a little off the last spot, on TERRA ([POSITION_SPREAD] on POS, which
- *   reweights the modes by where the head is struck);
+ *   reweights the modes by where the head is struck; a voice without POS,
+ *   DAYAN, keeps its spot);
  * - with its own click or grit, since each take re-seeds the strike's noise
  *   (`take` on [Skin.render] and [Terra.render]).
  * The root and the decay are the drum's own on every take.
  *
- * Only the modal drums re-strike ([canRestrike]): SKIN's [Skin.STRUCK]
- * voices and every TERRA voice. Every take is deterministic in (patch,
- * velocity, seed, take); take 0 is the reference itself.
+ * Modal mallets and drums re-strike ([canRestrike]): SKIN's [Skin.STRUCK]
+ * voices, every TERRA voice, HALOBAR mallets, BREAKER (whose source is a
+ * struck SKIN drum), BACKWASH's model 5 and FIRED BRONZE's model 2. Every take is deterministic in
+ * (patch, velocity, seed, take); take 0 is the reference itself.
  */
 object Restrike {
     /** A take lands up to this much softer than the hit it repeats (a fraction of the velocity). Shape. */
@@ -30,7 +32,10 @@ object Restrike {
 
     /** True when [patch] has a strike model to vary, so a chain of it can re-strike. */
     fun canRestrike(patch: Patch?): Boolean =
-        (patch is SkinPatch && patch.voice in Skin.STRUCK) || patch is TerraPatch
+        (patch is SkinPatch && patch.voice in Skin.STRUCK) || patch is TerraPatch ||
+            patch is HalobarPatch || patch is BreakerPatch || patch is SootPatch || (patch is BackwashPatch && patch.model == 5) || patch is EtchPatch ||
+            (patch is ThumpPatch && patch.voice == ThumpVoice.SUB) ||
+            (patch is FiredBronzePatch && patch.model >= 2)
 
     /** The velocity and the TERRA POS offset take [take] lands with, drawn from [seed]; take 0 is (velocity, 0). */
     internal fun landing(velocity: Float, seed: Int, take: Int): Pair<Float, Float> {
@@ -50,12 +55,25 @@ object Restrike {
     fun take(patch: Patch, velocity: Float, seed: Int, take: Int): Snip? {
         require(take >= 0) { "a take is 0 or more, got $take" }
         if (!canRestrike(patch)) return null
+        if (patch is BackwashPatch) return patch.copy(take = patch.take + take).render(velocity)
+        // ETCH deals its own five-dimension takes (Etch.takeFor), accepted by ear; no extra force spread on top.
+        if (patch is EtchPatch) return patch.render(velocity.coerceIn(0f, 1f), take, seed)
         val (v, offset) = landing(velocity.coerceIn(0f, 1f), seed, take)
         return when (patch) {
-            is SkinPatch -> Skin.render(patch.voice, patch.macros, velocity = v, take = take)
+            is HalobarPatch -> Halobar.renderTake(patch.voice, patch.macros, v, seed, take, patch.model)
+            is SkinPatch -> patch.render(velocity = v, take = take)
+            // THUMP's SUB deals its settle, click, drive and slide timing out per take (Thump.SUB_TAKES).
+            is ThumpPatch -> Thump.render(patch.voice, patch.macros, velocity = v, take = take)
+            // BREAKER's source is a struck SKIN drum: each take is a fresh strike through the same chain.
+            is BreakerPatch -> patch.render(velocity = v, take = take)
+            // FIRED BRONZE model 2: each take is a fresh strike through the approved chain (FiredBronzeInstrument).
+            is FiredBronzePatch -> patch.render(v, take)
+            // SOOT's takes are fresh strikes: new noise, a moved strike position, fresh metal phases.
+            is SootPatch -> patch.render(velocity = v, take = take)
             is TerraPatch -> {
-                val pos = Terra.defaults(patch.voice).getValue("POS")
-                val moved = if (take == 0) patch.macros
+                // A voice with no POS (DAYAN's finger is always at the rim) keeps where it lands.
+                val pos = Terra.defaults(patch.voice)["POS"]
+                val moved = if (take == 0 || pos == null) patch.macros
                 else patch.macros + ("POS" to ((patch.macros["POS"] ?: pos) + offset).coerceIn(0f, 1f))
                 Terra.render(patch.voice, moved, patch.striker, velocity = v, take = take)
             }

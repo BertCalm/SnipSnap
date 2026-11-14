@@ -71,7 +71,6 @@ import com.snipsnap.audio.Snip
 import com.snipsnap.audio.WavReader
 import com.snipsnap.shell.ChopReviewModel
 import com.snipsnap.shell.Copy
-import com.snipsnap.shell.CutRatings
 import com.snipsnap.shell.Hum
 import com.snipsnap.shell.KitBuilderModel
 import com.snipsnap.shell.Ladder
@@ -81,7 +80,6 @@ import com.snipsnap.shell.PeaksPyramid
 import com.snipsnap.shell.Scheme
 import com.snipsnap.shell.Schemes
 import com.snipsnap.shell.SnipStore
-import com.snipsnap.shell.TeachLog
 import java.io.File
 import kotlin.math.max
 import kotlin.math.roundToInt
@@ -103,9 +101,6 @@ fun ChopScreen(
     entry: KitShelf.Entry?,
     lastCommit: TapeCommit?,
     shelf: KitShelf,
-    teachEnabled: Boolean,
-    /** The WORKSHOP is open (docs/WORKSHOP.md, WS2): the BENCH row — CONFIRM ALL and the stars — shows above the slices. */
-    workshopOpen: Boolean,
     onToast: (String) -> Unit,
     /** SEND TO PADS landed: the new kit, and the sentence that says what it did. The caller says it, after its own offer, so the offer does not replace it. */
     onSentToGrid: (KitShelf.Entry, String) -> Unit,
@@ -225,8 +220,6 @@ fun ChopScreen(
         shelf = shelf,
         sourceFile = file,
         initialModel = loadedModel,
-        teachEnabled = teachEnabled,
-        workshopOpen = workshopOpen,
         onToast = onToast,
         onSentToGrid = onSentToGrid,
         onLandedOnto = onLandedOnto,
@@ -244,9 +237,9 @@ fun ChopScreen(
 @Composable
 private fun EmptyChop(message: String, onNavigateTape: () -> Unit, onNavigateKits: () -> Unit) {
     val routes = if (message == Copy.EMPTY_CHOP) {
-        listOf(EmptyStateRoute("TAPE ▸", onNavigateTape), EmptyStateRoute("SHELF ▸", onNavigateKits))
+        listOf(EmptyStateRoute("SAMPLE ▸", onNavigateTape), EmptyStateRoute("LIBRARY ▸", onNavigateKits))
     } else {
-        listOf(EmptyStateRoute("TAPE ▸", onNavigateTape))
+        listOf(EmptyStateRoute("SAMPLE ▸", onNavigateTape))
     }
     EmptyStatePanel(message, routes)
 }
@@ -378,8 +371,6 @@ private fun ChopContent(
     shelf: KitShelf,
     sourceFile: File,
     initialModel: ChopReviewModel,
-    teachEnabled: Boolean,
-    workshopOpen: Boolean,
     onToast: (String) -> Unit,
     onSentToGrid: (KitShelf.Entry, String) -> Unit,
     onLandedOnto: (KitShelf.Entry, Int, String) -> Unit,
@@ -401,12 +392,6 @@ private fun ChopContent(
      * the row you were looking at off screen.
      */
     var pickerFor by remember(model) { mutableStateOf<Int?>(null) }
-    // RATE THE CUTS (docs/WORKSHOP.md, WS2): the star tapped for this chop,
-    // or none. Keyed on `model` like `pickerFor`: a re-chop or a hand edit
-    // is different cuts, and a rating of the old ones must not ride onto
-    // them - the same reason `ChopReviewModel.confirmed` does not follow a
-    // re-chop either.
-    var stars by remember(model) { mutableStateOf<Int?>(null) }
     // Row overrides mutate outside Compose's snapshot system (see above);
     // this read is what makes the whole function's composition scope —
     // slice list included — depend on `revision`, so a chip mutation
@@ -817,7 +802,7 @@ private fun ChopContent(
         Box(
             Modifier
                 .fillMaxWidth()
-                .height(Layout.LCD_HEADER_H.dp)
+                .minHeight(Layout.LCD_HEADER_H.dp)
                 .lcdPanel(scheme)
                 .padding(horizontal = 10.dp),
             contentAlignment = Alignment.CenterStart,
@@ -983,50 +968,6 @@ private fun ChopContent(
             }
         }
 
-        // The BENCH row (docs/WORKSHOP.md, WS2): CONFIRM ALL and the stars,
-        // shown only while the WORKSHOP is open. Both write at SEND, beside
-        // the corrections, and only with TEACH on - with it off the row is
-        // dim and its note names the switch, rather than tapping into
-        // nothing. Every refusal here goes through `enabled`, the screen's
-        // own rule for a control that can refuse.
-        if (workshopOpen) {
-            val benchBusy = rechopBusy || sendBusy || humming
-            TapeText(
-                if (teachEnabled) Copy.BENCH_ROW_NOTE else Copy.BENCH_ROW_TEACH_OFF,
-                TapeType.pixelSmall,
-                scheme.ink2.tape,
-                maxLines = 3,
-            )
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                // `active` once pressed: the pressed bevel and SELECTED are
-                // the record that this chop is vouched for, until the chop
-                // changes (`confirmed` lives on the model, and a re-chop or
-                // a hand edit is a new one). `revision` is what recomposes
-                // the row after the model's own flag flips.
-                SegmentButton(
-                    "CONFIRM ALL",
-                    active = model.confirmed,
-                    modifier = Modifier.weight(2f),
-                    enabled = teachEnabled && !benchBusy && !model.confirmed && model.confirmable() > 0,
-                ) {
-                    val n = model.confirmAll()
-                    revision++
-                    onToast(Copy.confirmedAll(n))
-                }
-                for (star in 1..CutRatings.STARS) {
-                    SegmentButton(
-                        "$star",
-                        active = stars == star,
-                        modifier = Modifier.weight(1f),
-                        enabled = teachEnabled && !benchBusy,
-                    ) {
-                        stars = star
-                        onToast(Copy.cutsRated(star))
-                    }
-                }
-            }
-        }
-
         LazyColumn(
             Modifier
                 .weight(1f)
@@ -1054,6 +995,7 @@ private fun ChopContent(
                         // fingers. The picker offers the same thing in
                         // words, which is finding 21's complaint about
                         // hidden long-presses answered in passing.
+                        // twin: the class picker's THE MACHINE SAID row (ClassPicker onMachine), one tap on the chip away
                         onLongPressChip = {
                             model.clearOverride(row.n - 1)
                             pickerFor = null
@@ -1110,7 +1052,7 @@ private fun ChopContent(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 TapeText(Copy.CHOP_NO_HITS_FOUND, TapeType.lcdSmall, scheme.lcdInk.tape, Modifier.weight(1f), maxLines = 2)
-                ActionButton("TRY GRID ▸", scheme, enabled = !rechopBusy && !sendBusy && !humming, onClick = ::toGrid)
+                ActionButton("TRY GRID", scheme, enabled = !rechopBusy && !sendBusy && !humming, onClick = ::toGrid)
             }
         } else {
             GridPreview(placed, scheme)
@@ -1118,7 +1060,7 @@ private fun ChopContent(
             Box(
                 Modifier
                     .fillMaxWidth()
-                    .height(Layout.LCD_HEADER_MAX_H.dp)
+                    .minHeight(Layout.LCD_HEADER_MAX_H.dp)
                     .lcdPanel(scheme)
                     .padding(horizontal = 10.dp),
                 contentAlignment = Alignment.CenterStart,
@@ -1147,7 +1089,7 @@ private fun ChopContent(
         // LAND AS: how SEND TO PADS lays the slices on the pads. CLASSIC, FOLD
         // and MELODIC change the landing, not the cut, so they sit directly
         // above the button that lands them.
-        TapeText(Copy.CHOP_LAND_AS, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
+        TapeText(Copy.CHOP_LAND_AS, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             SegmentButton("CLASSIC", active = layout == ChopLayout.CLASSIC, modifier = Modifier.weight(1f)) {
                 layout = ChopLayout.CLASSIC
@@ -1187,7 +1129,6 @@ private fun ChopContent(
                     val isMelodic = melodic
                     val isFold = fold
                     val planned = plannedName
-                    val rated = stars
                     scope.launch {
                         try {
                             val send = offMain {
@@ -1209,17 +1150,6 @@ private fun ChopContent(
                                 val kitName = if (File(shelf.root, planned).exists()) shelf.rolledName() else planned
                                 val kitDir = File(shelf.root, kitName)
                                 val builder = KitBuilderModel.fromChop(kitName, send.arranged, kitDir)
-                                if (teachEnabled) {
-                                    // The harvest (docs/WORKSHOP.md, WS2): the
-                                    // corrections, the confirmations, and the
-                                    // cut rating if a star was tapped - all
-                                    // into the kit this chop became.
-                                    val examples = current.teachHarvest()
-                                    if (examples.isNotEmpty()) {
-                                        TeachLog.append(File(kitDir, TeachLog.FILE_NAME), examples)
-                                    }
-                                    rated?.let { CutRatings.append(File(kitDir, CutRatings.FILE_NAME), listOf(CutRatings.of(current, it))) }
-                                }
                                 // THE BEAT YOU SANG (docs/CHOP_CONTROLS.md §10): a
                                 // hummed chop's own timing goes on as the new
                                 // kit's groove, on the CLASSIC layout SEND used.
@@ -1279,7 +1209,7 @@ private fun ChopContent(
         if (entry != null && landBank != null) {
             SecondaryButton(
                 if (sendBusy) "…" else "ONTO ${entry.kit.name} · BANK ${PadBanks.letter(landBank)}",
-                modifier = Modifier.fillMaxWidth().height(Layout.PRIMARY_ACTION_H.dp),
+                modifier = Modifier.fillMaxWidth().minHeight(Layout.PRIMARY_ACTION_H.dp),
                 enabled = !sendBusy && !rechopBusy && !humming && model.sliceCount > 0,
             ) {
                 if (sendBusy || rechopBusy || humming) return@SecondaryButton
@@ -1290,7 +1220,6 @@ private fun ChopContent(
                 val isMelodic = melodic
                 val isFold = fold
                 val target = entry
-                val rated = stars
                 scope.launch {
                     try {
                         val send = offMain {
@@ -1307,15 +1236,6 @@ private fun ChopContent(
                                 val m = KitBuilderModel.open(target.dir)
                                 val slots = m.landArranged(send.arranged, landBank)
                                 m.save()
-                                if (teachEnabled) {
-                                    // The same harvest SEND TO PADS logs, into
-                                    // the kit the slices landed on.
-                                    val examples = current.teachHarvest()
-                                    if (examples.isNotEmpty()) {
-                                        TeachLog.append(File(target.dir, TeachLog.FILE_NAME), examples)
-                                    }
-                                    rated?.let { CutRatings.append(File(target.dir, CutRatings.FILE_NAME), listOf(CutRatings.of(current, it))) }
-                                }
                                 KitShelf.Entry(target.dir, m.kit) to slots
                             }
                         }
@@ -1332,7 +1252,7 @@ private fun ChopContent(
                         )
                     } catch (e: Exception) {
                         if (e is kotlinx.coroutines.CancellationException) throw e
-                        onToast("LAND FAILED: ${e.message ?: e.javaClass.simpleName}")
+                        onToast(Copy.landFailed(e.message ?: e.javaClass.simpleName))
                     } finally {
                         sendBusy = false
                     }
@@ -1393,7 +1313,7 @@ private fun ClassPicker(
                 onClick = onMerge,
             )
             SecondaryButton(
-                "SPLIT AT ITS NEXT HIT",
+                "CHOP AT NEXT HIT",
                 modifier = Modifier.weight(1f).heightIn(min = Layout.MIN_HIT_TARGET.dp),
                 enabled = !busy,
                 onClick = onSplit,
@@ -1556,7 +1476,7 @@ private fun CutBench(
         model.mode is ChopReviewModel.ChopMode.Grid ||
         model.mode is ChopReviewModel.ChopMode.Ladder
     GroupBox(
-        legend = "CUT",
+        legend = "CHOP",
         summary = summary,
         open = open,
         onToggle = onToggle,
@@ -1565,7 +1485,7 @@ private fun CutBench(
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             SegmentButton("BY HITS", active = model.mode is ChopReviewModel.ChopMode.ByHits, modifier = Modifier.weight(1f), enabled = !busy && !humming, onClick = onByHits)
             SegmentButton("GRID", active = model.mode is ChopReviewModel.ChopMode.Grid || model.mode is ChopReviewModel.ChopMode.Ladder, modifier = Modifier.weight(1f), enabled = !busy && !humming, onClick = onGrid)
-            SegmentButton("GHOSTS", active = model.ghosts, modifier = Modifier.weight(1f), enabled = !busy && !humming, onClick = onGhosts)
+            SegmentButton("BETWEEN HITS", active = model.ghosts, modifier = Modifier.weight(1f), enabled = !busy && !humming, onClick = onGhosts)
             SegmentButton(
                 if (humming) "STOP" else "HUM",
                 active = humming || model.mode is ChopReviewModel.ChopMode.Hummed,
@@ -1600,7 +1520,7 @@ private fun CutBench(
                 t == null -> Copy.LADDER_NO_TEMPO
                 else -> "A PAD PER RUNG OF THE PULSE, FROM THE ONE"
             }
-            TapeText("ZOOM · THE LADDER · $caption", TapeType.pixelSmall, if (t == null && measured) scheme.ink3.tape else scheme.ink2.tape, maxLines = 1)
+            TapeText("ZOOM · THE LADDER · $caption", TapeType.pixelSmall, if (t == null && measured) scheme.ink3.tape else scheme.ink2.tape, maxLines = 2)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 SegmentButton(Ladder.COUNT_LABEL, active = ladder == null, modifier = Modifier.weight(1f), enabled = !busy) { onRung(null) }
                 for (rung in Ladder.Rung.entries) {
@@ -1609,13 +1529,13 @@ private fun CutBench(
             }
         }
         if (hits != null) {
-            TapeText("EAR · HOW HARD IT LISTENS", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
+            TapeText("EAR · HOW HARD IT LISTENS", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 for (ear in ChopReviewModel.Ear.entries) {
                     SegmentButton(ear.name, active = hits.ear == ear, modifier = Modifier.weight(1f), enabled = !busy) { onEar(ear) }
                 }
             }
-            TapeText("CUT · AGAINST THE ATTACK", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
+            TapeText("CHOP POINT · AGAINST THE ATTACK", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 for (cut in ChopReviewModel.Cut.entries) {
                     SegmentButton(cut.name, active = hits.cut == cut, modifier = Modifier.weight(1f), enabled = !busy) { onCut(cut) }
@@ -1627,7 +1547,7 @@ private fun CutBench(
                 t == null -> "NO TEMPO HEARD"
                 else -> "${t.bpm.roundToInt()} BPM"
             }
-            TapeText("SNAP · CUTS ONTO THE PULSE · $pulse", TapeType.pixelSmall, if (t == null) scheme.ink3.tape else scheme.ink2.tape, maxLines = 1)
+            TapeText("SNAP · CUTS ONTO THE PULSE · $pulse", TapeType.pixelSmall, if (t == null) scheme.ink3.tape else scheme.ink2.tape, maxLines = 2)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 for (grid in ChopReviewModel.GridSnap.entries) {
                     SegmentButton(grid.label, active = hits.grid == grid, modifier = Modifier.weight(1f), enabled = !busy) { onSnap(grid) }
@@ -1688,6 +1608,7 @@ private fun SliceRow(
                     // clearOverride). Tapping is what reclassifies, by
                     // opening the picker. TalkBack was announcing this
                     // action as the one gesture it is not.
+                    // twin: the class picker's THE MACHINE SAID row (ClassPicker onMachine), opened by a tap on this same chip
                     onLongClickLabel = "RESTORE THE MACHINE'S CALL",
                     onLongClick = { onLongPressChip() },
                     onClick = { onTapChip() },
@@ -1719,7 +1640,7 @@ private fun SliceRow(
             } else {
                 "${(row.classification.confidence * 100).toInt()}%"
             }
-            TapeText(confText, TapeType.pixelSmall, if (row.unsure) scheme.warn.tape else scheme.ink2.tape)
+            TapeText(confText, TapeType.pixelSmall, if (row.unsure) scheme.warnInk.tape else scheme.ink2.tape)
         }
     }
 }
@@ -1848,6 +1769,7 @@ internal fun SegmentButton(
                 active -> scheme.ink.tape
                 else -> scheme.ink2.tape
             },
+            maxLines = 2,
         )
         // Same reason, and `pressedBevel` above is keyed on `active` alone:
         // blanking this while busy left the bevel saying selected and the

@@ -22,6 +22,24 @@ and cuíca-inspired friction voice, with three velocity levels and four takes pe
 level. `./gradlew :shell:generatePatioPerformance` writes the compact audition and
 native MPC 3 downloads. Physical MPC loading remains unverified.
 
+EROSION's accepted eight-role percussion bank is available in factory presets,
+the SYNTH picker and FRESH TAPE, with three native touch layers. The finite
+renderer and original audition recipes are preserved. The broader
+[instrument completion programme](docs/SYNTH_COMPLETION_PROGRAM.md) tracks
+remaining voice, articulation, kit, round-robin and chord requirements;
+[Wave 1](docs/SYNTH_COMPLETION_WAVE_1.md) collects the next listening decisions.
+
+[Spore Station](docs/SPORE_STATION.md) is a candidate psychedelic drum family: Jungle (170 BPM),
+Dub (85) and Electro (130), each with 18 pads and three velocity zones × three takes.
+The published audition includes SFZ, native kits and MPC programs. MPC round robin
+remains blocked on slice-map/hardware verification. Owner listening is pending.
+
+[GATECRASH](docs/GATECRASH.md) is a family of three 1980s gated drum kits on the shelf: Stone Room, Machine Pop and Electro Funk. Each has sixteen pads with three velocity zones of four takes. The owner approved the sound on 2026-11-11 after four rounds; phone and MPC hardware playback remain unverified.
+
+[MIRRORBALL](docs/MIRRORBALL.md) is a family of three 1970s disco kits on the shelf: Philly Strings, Loft Party and Munich Machine. Every pad is printed through an FET compressor, a multi-head tape echo, then an amp, in an order the FX rack cannot make. Each has sixteen pads with three velocity zones of four takes; Philly's tambourine is synthesized, fitted to CC0 recordings. The owner approved the sound on 2026-11-12 after five rounds; phone and MPC hardware playback remain unverified.
+
+TRIAD has a [native shared-bus drum audition](docs/TRIAD.md): one hybrid groove through three processing rigs. These are listening candidates, not a factory engine or MPC program.
+
 ## The loop
 
 ```
@@ -433,7 +451,7 @@ explicit MIDI root (24–96), strike velocity and model version; TUNE is a
 relative ±12-semitone offset, neutral at 0.5, so the effective note spans
 12–108 without clamping back to the saved-root range. Seven provisional presets
 and a dry sixteen-pad C minor pentatonic kit are included, with PITCHWHEEL among
-FRESH TAPE's 74 starters. Run `./gradlew :synth:generatePitchwheelAudition`
+FRESH TAPE's 129 starters. Run `./gradlew :synth:generatePitchwheelAudition`
 for the compact first listening set, or add `-PpitchwheelFull` for the broader
 dry probes. HOLD's top step returns settled loop-only material with a
 deterministic attachment cycle and capped adhesion. The owner heard R1 as six
@@ -483,6 +501,41 @@ for the complete bank, dry samples, source comparisons and MPC 2/3 kit. The
 [implementation notes](docs/WICK.md) retain the accepted sounds and identify the
 nine additional recipes for listening. Hardware performance and MPC acceptance
 are recorded separately from software validation.
+
+RIVET makes industrial drums whose room grows from workshop to warehouse. Six
+voices and sixteen accepted factory sounds share TUNE, STRIKE, METAL, DRIVE,
+SIZE and WALLS, with saved strike velocity and finite playback. SYNTH → RIVET
+edits individual hits; FRESH TAPE supplies WORKSHOP, FACTORY and WAREHOUSE kits,
+each with sixteen pads, three strike layers and choking hats. The
+[audition and MPC downloads](https://rivet-drum-audition.bertcalm.chatgpt.site) and
+[implementation notes](docs/RIVET.md) include the pending hardware check.
+
+TEMPEST is a six-voice digital drum instrument: a pitched strike, driven filtering
+and folding, then short repeats that darken as they fade. KICK, METAL, SNARE, CLAP,
+TOM and HAT share TUNE, SOURCE, FILTER, DRIVE and SPACE; the four later voices add
+DECAY. The owner accepted all six and the 22 factory presets. FRESH TAPE → TEMPEST
+is the sixteen-pad kit with choking hats; TEMPEST TUNED keeps the original E minor
+pentatonic kicks and metal colors. TEMPEST CIRCUIT (electro), TEMPEST FOUNDRY
+(industrial) and TEMPEST STEP (UK garage) are genre kits made from new settings of
+the same accepted voices, kept by the owner on 2026-11-14. HOLD is reserved. See [TEMPEST](docs/TEMPEST_FULL_KIT.md).
+
+OSTERIA is one evolving note: four spectral layers on a fixed root drift between
+five coastal palettes, with SHORE, TENSION, WANDER, MEMORY, ROOM and HOLD. Its six
+accepted voices (NOTE, BASS, PLUCK, REED, PAD and BOWED) carry 13 factory presets.
+FRESH TAPE → OSTERIA is the original Note kit; OSTERIA SIX VOICES is the accepted
+sixteen-pad bank with three native touch layers. PLUCK can save a STRUM, and MAKE
+INSTRUMENT builds finite three-layer keys from any single-note model-2 sound.
+See [OSTERIA](docs/OSTERIA.md).
+
+VELOUR CLOSE, VELOUR and VELOUR BLOOM load the approved, trimmed Round 5 bank:
+sixteen pads, three touch layers, dry C kick/snare on A05/A06, and conga, bongo,
+recording-derived tambourine and woodblock on A13–A16. The fixed PCM keeps the
+[audition and MPC downloads](https://velour-drum-audition.bertcalm.chatgpt.site/round5/)
+intact when the shelf makes a kit. The existing Velour/Bloom boards and original
+model-1 renderer remain available. [Implementation notes](docs/VELOUR.md) distinguish
+this approved baseline from the still-open round-robin, genre-kit and hardware gates.
+The older `:synth:generateVelourKit` task reproduces the original model-1 comparison,
+not the approved Round 5 shelf bank.
 
 TANGLE is an experimental pitched engine whose two oscillators influence,
 catch and release each other. BASS, LEAD, HOLLOW, PULSE, METAL and KNOT share
@@ -1085,9 +1138,9 @@ render-time limits. Build its MPC program and replay files with:
 ./gradlew :synth:generateOtisIntegrationKit
 ```
 
-ONSET, SCANNED CHAIN, VOX, FORK, AEROSTAT, TREMOR, BALLAST, FLOTILLA, CISTERN, CIRCUIT, OBBLIGATO, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE,
-TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, LATTICE, ACCORD, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, REGISTERS, OSPREY, OPENSKY, OVEN, FLOCK, VENT, OVERLAP, TRIO, NACRE, ORIGAMI, TREFOIL, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS, TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME, OTIS, WICK, BORE, ARCO, SCOUR, KEEL, CHITIN and GRAINS round out the lineup —
-76 engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
+ONSET, SCANNED CHAIN, VOX, FORK, HALOBAR, AEROSTAT, TREMOR, BALLAST, FLOTILLA, CISTERN, CIRCUIT, OBBLIGATO, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE,
+TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, LATTICE, ACCORD, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, REGISTERS, OSPREY, OPENSKY, OVEN, FLOCK, VENT, OVERLAP, TRIO, NACRE, ORIGAMI, TREFOIL, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS, TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME, OTIS, WICK, BORE, ARCO, SCOUR, KEEL, CHITIN, EROSION, RIVET, FIRED BRONZE, BACKWASH, TEMPEST, SPLAY, OSTERIA, ETCH and GRAINS round out the lineup —
+86 engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
 since it has no voice enum and works on a source snip instead of picking
 one. VOX is formant vocal synthesis — the shopping-mall-keyboard choir,
 proudly: a VOWEL knob morphs
@@ -1259,24 +1312,47 @@ macro swaps the locked taps for six independent players, each with their own
 pitch drift, vibrato, onset, tone and level, which is the difference between
 one instrument swirled and several playing), PHASE (four allpasses
 swept by one slow sine and summed back with the dry, the notches sliding
-up and down the spectrum), ECHO (one delay line and
+up and down the spectrum), FLANGER (one short delay, 0.1 to 10 ms, swept
+by one sine on a log law and summed with the dry: a comb of notches sliding
+down and back up, the jet; DEPTH is how far down it sweeps, FEEDBACK is
+two-way, metallic above the middle, hollow below it and none at its middle
+default, and the ring dies inside the pad; the FLANGE pedal, the `flanged`
+character, is the plain sweep at DEPTH 0.7 at a tap (AMT 70), DEPTH 1 at
+AMT 100; for drums and held sounds), TREMOLO (the level
+pulses between full and 1 minus DEPTH at 1 to 12 Hz, starting at full level
+so a hit's attack is kept; SHAPE runs from a smooth sine to a square whose
+edge takes 4 ms at every rate, so it chops without clicking; the TREM
+pedal, the `tremoloed` character, is a gentle sine throb about 3.5 times a
+second at DEPTH 0.5 at a tap (AMT 70), about 0.71 at AMT 100; for held
+sounds), ROTARY (the spinning speaker: the pad is split at 800 Hz, the top
+half circles with its level and pitch rising and falling together, the low
+half sways more slowly, from the slow chorale at 0.7 Hz to the fast tremolo
+at 7 Hz; RAMP starts it at the chorale and spins it up the way a cabinet
+switched to fast does; the ROTARY pedal, the `spun` character, starts at
+the chorale and spins up to the fast speed at SPIN 0.7 at a tap (AMT 70),
+SPIN 1 at AMT 100; for held sounds), ECHO (one delay line and
 one filter, repeats darkening as they fade; its HEAD macro, turned up,
 feeds the repeats only the note's first 120 ms, so a held note's attack
 comes back as a repeat; the `delayed` character, the DELAY pedal, is its long,
 dark repeats with HEAD off, see
-[`docs/superpowers/specs/2026-10-22-delay-head-design.md`](docs/superpowers/specs/2026-10-22-delay-head-design.md)), SPRING (a Schroeder network, 1962),
+[`docs/superpowers/specs/2026-10-22-delay-head-design.md`](docs/superpowers/specs/2026-10-22-delay-head-design.md)), REWIND (a reverse delay, right after ECHO: the pad cut into windows of TIME's length from the hit's onset, each played backwards during the next, so the hit comes back swelling out of its tail into its attack, which lands at twice TIME, 240 ms to 1 s after the hit; REPEAT feeds it back, so repeats alternate backwards and forwards, each darker; MIX is the backwards copy's level; the REWIND pedal, the `rewound` character, plays the backwards attack about 0.48 s after the hit at MIX 0.7 and REPEAT 0.5 at a tap (AMT 70), MIX 1 at AMT 100; for drums and held sounds), SPRING (a Schroeder network, 1962),
 ROOM (the hit in a room: a box-shaped room's first reflections, then a sixteen-line
 bloom that settles darker; SIZE a booth to a hall, WALLS soft to hard, DISTANCE the mic,
 close lifting the bass and far dulling the top, 0 no room at all; the ROOM pedal,
 the `roomed` character, gives its default room at a tap (AMT 70), AMT moving only the mic; see
-[`docs/superpowers/specs/2026-10-31-room-section-design-brief.md`](docs/superpowers/specs/2026-10-31-room-section-design-brief.md)), REVERSE,
+[`docs/superpowers/specs/2026-10-31-room-section-design-brief.md`](docs/superpowers/specs/2026-10-31-room-section-design-brief.md)), HUSH
+(a gate, right after the room: the pad is shut to silence once it falls FLOOR under its own
+peak, over CLOSE, 300 ms to 25 ms, without chatter, and never before it has first arrived; the
+HUSH pedal, the `hushed` character, shuts it 12 dB under the peak over about 87 ms at a tap
+(AMT 70), so a snare with ROOM on it is the gated 80s snare; for tails: a dry snare is only
+shorter and a hat a stub), REVERSE,
 SMEAR (the attack taken out, the wash kept: the STN
 transient mask from `Separate` scaled by one AMOUNT knob, so a snare
 becomes the room it was struck in; a FLOOR makes it banded, so a kick
 loses its click and keeps its thump), GHOST (the tone gone too, the
 breath alone), SPIKE (the attack leaned into instead of taken away: two
 envelope followers at different speeds, their gap gained as the
-transient), VOLUME (the pad fades in: a raised-cosine rise over the first RISE x 800 ms, at most 70 percent of the pad, with the peak restored up to 12 dB, so a pad that is loudest at its start, a snare most of all, comes out quieter; the FADE IN pedal, the `eased` character, rises over 448 ms at a tap (AMT 70), 640 ms at AMT 100), FORGE (a hit formed against a die: a low shock, an all-pass
+transient), VOLUME (the pad fades in: a raised-cosine rise over the first RISE x 800 ms, at most 70 percent of the pad, with the peak restored up to 12 dB, so a pad that is loudest at its start, a snare most of all, comes out quieter; the FADE IN pedal, the `eased` character, rises over 448 ms at a tap (AMT 70), 640 ms at AMT 100), SUB (an octave down, right after VOLUME: a half-speed copy of the hit, aligned at its onset and faded at the pad's length, mixed under it and squashed into its peak; DEPTH how much, TONE how dark, HANG whether it rings on, DRIVE clean, then Fuzz, then Grit; the SUB pedal, the `octaved` character, adds it at DEPTH 0.5 driven to Grit at a tap (AMT 70); for snares and toms, since a kick's octave lands under 40 Hz), FORGE (a hit formed against a die: a low shock, an all-pass
 sweep as deep as DEPTH asks, the fast part folded and the slow part left,
 then a ceiling that closes with a flash of grit; peak-matched, no gain envelope; the FORGE chip
 on the pedal row since its listening gate, see
@@ -1289,10 +1365,12 @@ clicks, scaled to the hit's own peak, seeded once per pad), SWELL
 (the sound arrives before it strikes) and MOTION (the tape stop and the
 tape start, baked); beside the rack, WOBBLE sweeps the same filter on
 the kit's own grid, a note division at its tempo — ROLL (the hit's own
-head struck again) and GATE (the hit chopped into a square envelope)
-share that same grid, so all three land on the same beats. `FxChain` fixes the order — pitch → dive → swell → reverse → smear → ghost →
-spike → volume → eq → contour → wah → compressor → squash → forge → valve → crunch → ring →
-dub → vinyl → tape → vibrato → ensemble → phase → echo → spring → room → motion — owns
+head struck again), GATE (the hit chopped into a square envelope) and
+PUMP (the sidechain pump: the first beat untouched, then the level
+ducked on every beat and breathed back) share that same grid, so all
+four land on the same beats. `FxChain` fixes the order — pitch → dive → swell → reverse → smear → ghost →
+spike → volume → octaver → eq → contour → wah → compressor → squash → forge → valve → crunch →
+ring → dub → vinyl → tape → vibrato → ensemble → phase → flanger → tremolo → rotary → echo → rewind → spring → room → hush → motion — owns
 the total tail budget so stacked reverbs can't turn a hit into a phrase,
 and serializes per-pad next to the WAV.
 
@@ -1312,14 +1390,21 @@ KICK.
 
 That writeup is the engines on SYNTH's picker (`Engine` in `SynthScreen`):
 LATTICE, ACCORD, THUMP, SCANNED CHAIN, SKIN, ONSET, TINES, VELVET, VOX, PLUCK, ORPHICA,
-TONEWHEEL, OTIS, REGISTERS, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, AEROSTAT,
+TONEWHEEL, OTIS, REGISTERS, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, HALOBAR, FLOTILLA, AEROSTAT,
 TREMOR, BALLAST, CISTERN, CIRCUIT, OBBLIGATO, ALLOY, THAW, MURK, NIMBUS, COROLLA,
 UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL,
 SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVERLAP,
 OVEN, FLOCK, VENT, CREASE, TRIO, NACRE, ORIGAMI, TREFOIL, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS,
-TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME, BORE, ARCO, SCOUR, KEEL, CHITIN, WICK, plus GRAINS, SNAP and DRAW,
+TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME, BORE, ARCO, SCOUR, KEEL, CHITIN, WICK, EROSION, RIVET, FIRED BRONZE, BACKWASH, SOOT, TEMPEST, SPLAY, OSTERIA, ETCH, plus GRAINS, SNAP and DRAW,
 which sit beside the picker. `:synth` also holds engines that picker does not show.
-LORENTZ has a preset roster, so `snipsnap synth` renders it.
+LORENTZ and SCUFF have preset rosters, so `snipsnap synth` renders them.
+
+SPLAY offers one finite TONGUE voice with five accepted population settings
+(1, 2, 4, 8 and 16 mechanisms), not five voices. Its original model-1 and model-2
+recipes and the five provisional CLI presets remain replayable. The picker and the
+SPLAY POPULATIONS starter use those exact settings through the native recipe path.
+HOLD and phone validation remain open; see
+[finite delivery and its limits](docs/SPLAY_FINITE_DELIVERY.md).
 
 EROSION has a [native ARC/CRATER proof](docs/EROSION.md), saved touch and a
 regenerable audition. Its current contrast bank has eight playing roles, three touch
@@ -1548,7 +1633,7 @@ UI layer. What lives here:
 - **`TapeDeckModel`** — the trim screen's transport physics, ported
   coefficient-for-coefficient from the prototype that already feels right:
   drag/flick/coast/glide, spin-up, onset snap, IN/OUT swap semantics, loop
-  preview, the pencil rewind, the odometer.
+  preview, the odometer. (The pencil rewind is gone, model and all, D9.)
 - **`VoiceAllocator`** — play mode's choke/steal/note-off decisions behind
   an interface, so the Oboe layer stays thin and dumb.
 - **`ChopReviewModel` / `KitBuilderModel` / `ExportWizardModel`** — chop
@@ -1558,16 +1643,11 @@ UI layer. What lives here:
 - **`Personality`/`Delight`/`Copy`** — `docs/PERSONALITY.md` as executable
   data: the four laws gate for real (OFF silences everything; deck sounds
   hard-mute while capture is armed), all shipped copy, and the eggs.
-- **`Workshop` / `BenchExport` / `CutRatings` / `LabelledHits` /
-  `BenchNotes`** — the developer's bench inside the app
-  (`docs/WORKSHOP.md`): the knock that opens it, CHOP's CONFIRM ALL and
-  cut rating (the teach log learns when the machine was *right*, and
-  which bench settings cut well), the pad sheet's LABEL THIS HIT (a
-  capture into the calibration corpus, by ear), the title bar's NOTE (a
-  bench note stamped with the screen, the kit, the pad and the time,
-  rendered by the manifest as a line for `docs/BENCH.md`), and the two
-  hand-outs — SEND TO BENCH for the logs, the notes and the saved
-  presets, SEND HITS TO BENCH for the audio — for `reference/calibration/`.
+- **The developer's bench pipeline is gone** (`Workshop`, `TeachLog`,
+  `BenchExport`, `CutRatings`, `LabelledHits`, `BenchNotes` and
+  `ChopReviewModel`'s confirm and harvest). Removed from the UI by UI-clarity
+  spec §7.4.1, D8, and deleted from `:shell` with their tests (review Q5,
+  2026-11); `docs/WORKSHOP.md` keeps the spec as history.
 - **`UserPresets`** — SAVE AS PRESET on SYNTH (`docs/WORKSHOP.md`, WS5,
   the one tool on that list that is for every player): the player's own
   presets in `presets.json` beside the kits, the name rules (fourteen
@@ -1618,7 +1698,7 @@ in [`app/README.md`](app/README.md). CI compiles it in `android-build`.
 - [`docs/KIT_BEST_PRACTICES.md`](docs/KIT_BEST_PRACTICES.md) — pad layout, mute groups, naming, and what Akai does and doesn't document
 - [`docs/UI_DESIGN.md`](docs/UI_DESIGN.md) — the TapeOS visual language (90s desktop × cassette) and the mockup artboards in [`design/`](design/)
 - [`docs/PERSONALITY.md`](docs/PERSONALITY.md) — the delight system: voice, the four laws, gag catalog, easter eggs
-- [`docs/WORKSHOP.md`](docs/WORKSHOP.md) — the WORKSHOP: the developer's tools behind a knock on SETUP, SEND TO BENCH first, and the list after it
+- [`docs/WORKSHOP.md`](docs/WORKSHOP.md) — the WORKSHOP: the spec for the developer's tools, removed from the app (D8, code deleted), with SAVE AS PRESET, which was never behind it
 - [`docs/SYNTH_ROADMAP.md`](docs/SYNTH_ROADMAP.md) — THUMP/CRUNCH/TINES/VELVET: generate kits, not just capture them
 - [`reference/README.md`](reference/README.md) — harvesting reference programs off hardware
 
@@ -1643,3 +1723,43 @@ itself writes. Procedure in [`reference/README.md`](reference/README.md).
 MPC 2 hardware verification stays [backlogged](reference/README.md#backlog-mpc-2)
 — nobody here owns an MPC One or a 2.x Live II. Both writers are shipping
 paths the Live III has already loaded, and MPC 3 loads MPC 2 content.
+
+BACKWASH is a five-voice drum engine: a dedicated damped acoustic-style source
+through chorus, parallel compression and amp coloration. Its sixteen heard
+model-3 kit recipes are now factory presets in the picker and CLI. The MPC
+trial exports 48 strike layers in MPC 3 and MPC 2 formats with hat choking.
+The bank now includes 20 stronger processing presets alongside the 16 original
+recipes, with versioned rendering to preserve saved sounds.
+[Design, listening history and verification](docs/BACKWASH.md).
+
+BREAKER is a drum engine in progress: surf rock by way of boom bap. Backroom's accepted kick
+and snare run through record dust, a tube, a spring tank that drips, a slap echo, a compressor that
+crushes the spring back up behind each hit, and a bright combo amp. Round 1 (kick and snare) is a
+prototype outside the picker. [Design and listening rounds](docs/BREAKER.md).
+
+ETCH is a step-line bass engine in progress: a squelching sixteen-step line, a drive that glues the steps, and a
+dotted-eighth delay into a reverb, from the owner's two reference clips and pedal chain. Six voices (SAW, SQUARE,
+RUBBER, WHISTLE, GRIT, DUB); velocity is the accent; HOLD's top plays the line as a loop. Round K2 put it in the
+SYNTH picker with fourteen presets heard in round 3, finite keys from MAKE INSTRUMENT, and FRESH TAPE → ETCH (three
+touch zones, four takes per note). Model 2 lets short notes ring out, the owner's choice, so they are no longer saved as kicks. [Design, listening rounds and
+measurements](docs/ETCH.md).
+
+SOOT is a drum engine in progress: grimy street boom bap from physical models only. A membrane
+kick that sags in pitch over a tuned sub, a papery snare into a tight coil spring and a cassette
+edge, metal hats and percussion with no noise in them, and each pad printed through its own coil
+send and a dictaphone. Round 1 (eight voices) is a prototype outside the picker.
+[Design and listening rounds](docs/SOOT.md).
+
+Fired Bronze is an MPC-approved sixteen-pad skin, clay and bronze kit with four
+strike layers, a driven processor and amp, and editable source/drive controls.
+See [Fired Bronze integration](docs/FIRED_BRONZE_INTEGRATION.md).
+
+HALOBAR SIX STUDY adds a separate sixteen-pad starter covering vibraphone,
+marimba, xylophone, glockenspiel, crotales and tubular bells. The six-voice
+build also adds finite MAKE INSTRUMENT keygroups with native touch and repeat
+strikes. New bell recipes remain provisional. Combined MPC keygroup velocity
+and round robin remains open; see [the build notes](docs/HALOBAR_SIX_VOICES.md).
+
+**Cosmic Breaks** has DnB, Jungle and Dubstep FRESH TAPE kits with three velocity
+layers and four takes per layer. Each keeps a 16-hit bank and adds a finite roll
+and riser on bank B. The original DnB hits preserve the approved audition. [Source provenance, kit export and limits](docs/COSMIC_BREAKS.md).

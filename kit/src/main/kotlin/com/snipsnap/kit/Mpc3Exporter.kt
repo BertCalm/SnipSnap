@@ -54,7 +54,7 @@ object Mpc3Exporter {
         dataDir.deleteRecursively()
 
         val (slots, written) = KitExporter.buildSlots(kit, kitDir, samplesDir = dataDir)
-        val effectiveClips = clips.ifEmpty { listOfNotNull(clip) }
+        val effectiveClips = clips.ifEmpty { listOfNotNull(clip) }.map { ChanceExport.forMpc(it) }
         val program = Mpc3TrackWriter().writeTo(destRoot, DrumProgram(kit.name, slots), trackColour, effectiveClips)
         if (mpc2Twin) XpmWriter().writeTo(dataDir, DrumProgram(kit.name, slots))
         KitExporter.writeSidecar(kit, slots, dataDir)

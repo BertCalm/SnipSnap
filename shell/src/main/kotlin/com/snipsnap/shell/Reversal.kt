@@ -49,7 +49,7 @@ object Reversal {
      * uses. Rewording them belongs to the copy rewrite, which owns every
      * line that was already on screen.
      */
-    const val BIN = "THE BIN KEEPS IT $DAYS DAYS."
+    const val BIN = "The trash keeps it $DAYS days."
 
     /**
      * The same fact for the lines that name what was thrown out rather
@@ -57,10 +57,10 @@ object Reversal {
      * `snipDeleted` and `roomForgotten` already said. See [BIN] on why
      * these two keep their old wording.
      */
-    const val MIND = "$DAYS DAYS TO CHANGE YOUR MIND."
+    const val MIND = "$DAYS days to change your mind."
 
     /** A control on this screen steps it back, right now. */
-    const val UNDO = "TAP UNDO TO REVERSE THIS."
+    const val UNDO = "Tap UNDO to reverse this."
 
     /**
      * Nothing takes it back.
@@ -76,7 +76,7 @@ object Reversal {
      * uses. They still shout, because `PersonalityTest`'s laws hold for
      * every `Copy` constant and this is not the change that retires them.
      */
-    const val GONE = "THIS CANNOT BE UNDONE."
+    const val GONE = "This cannot be undone."
 
     /**
      * [GONE] with the honest recourse appended: not an undo, but the work
