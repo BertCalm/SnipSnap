@@ -59,24 +59,24 @@ CLUB = {
 AFTER_HOURS = {
     "id": "after-hours", "name": "EMBER AFTER HOURS", "bpm": 66.0,
     "character": "Three in the morning, a ballad on brushes: sweeps in slow circles, taps on 2 and 4, a riveted sizzle far "
-                 "off, a damped kick barely there, two people snapping at the back. More room, more chain.",
+                 "off, a damped kick barely there, two people snapping at the back. More room, a little chain.",
     "pads": [
-        ("A01", "Soft Kick", "KICK", {"TUNE": .45, "DAMP": .5, "BUZZ": .3, "DISTANCE": .4, "WARMTH": .65}),
-        ("A02", "Brush Tap", "BRUSH_TAP", {"BUZZ": .6, "DISTANCE": .4, "WARMTH": .65}),
-        ("A03", "Hat Foot", "HAT_FOOT", {"DAMP": .55, "TUNE": .45, "DISTANCE": .45, "WARMTH": .65}),
-        ("A04", "Slow Sweep", "BRUSH_SWEEP", {"SPEED": .1, "DISTANCE": .4, "WARMTH": .65}),
-        ("A05", "Brush Ride", "BRUSH_RIDE", {"DISTANCE": .45, "WARMTH": .65}),
-        ("A06", "Far Sizzle", "SIZZLE", {"TUNE": .3, "DAMP": .3, "DISTANCE": .6, "WARMTH": .65}),
-        ("A07", "Quick Sweep", "BRUSH_SWEEP", {"SPEED": .8, "TUNE": .4, "BUZZ": .7, "DISTANCE": .4, "WARMTH": .65}),
-        ("A08", "Soft Cross Stick", "CROSS_STICK", {"TUNE": .35, "DAMP": .55, "DISTANCE": .5, "WARMTH": .65}),
-        ("A09", "Brushed Tom", "BRUSH_TOM", {"TUNE": .65, "DISTANCE": .45, "WARMTH": .65}),
-        ("A10", "Brushed Floor", "BRUSH_TOM", {"TUNE": .3, "DAMP": .2, "DISTANCE": .45, "WARMTH": .65}),
-        ("A11", "Mallet Tom", "MALLET_TOM", {"TUNE": .45, "DAMP": .2, "DISTANCE": .5, "WARMTH": .65}),
-        ("A12", "Two Snapping", "SNAPS", {"CROWD": .2, "TUNE": .45, "DISTANCE": .6, "WARMTH": .65}),
-        ("A13", "Hat Open", "HAT_OPEN", {"DAMP": .55, "TUNE": .45, "DISTANCE": .5, "WARMTH": .65}),
-        ("A14", "Loose Brush", "BRUSH_TAP", {"TUNE": .35, "BUZZ": .95, "DAMP": .5, "DISTANCE": .45, "WARMTH": .65}),
-        ("A15", "Brush Roll", "BRUSH_ROLL", {"SPEED": .3, "DISTANCE": .45, "WARMTH": .65}),
-        ("A16", "Far Swell", "CYMBAL_SWELL", {"SPEED": .3, "TUNE": .4, "DISTANCE": .65, "WARMTH": .65}),
+        ("A01", "Soft Kick", "KICK", {"TUNE": .45, "DAMP": .5, "BUZZ": .3, "DISTANCE": .4, "WARMTH": .5}),
+        ("A02", "Brush Tap", "BRUSH_TAP", {"BUZZ": .6, "DISTANCE": .4, "WARMTH": .5}),
+        ("A03", "Hat Foot", "HAT_FOOT", {"DAMP": .55, "TUNE": .45, "DISTANCE": .45, "WARMTH": .5}),
+        ("A04", "Slow Sweep", "BRUSH_SWEEP", {"SPEED": .1, "DISTANCE": .4, "WARMTH": .5}),
+        ("A05", "Brush Ride", "BRUSH_RIDE", {"DISTANCE": .45, "WARMTH": .5}),
+        ("A06", "Far Sizzle", "SIZZLE", {"TUNE": .3, "DAMP": .3, "DISTANCE": .6, "WARMTH": .5}),
+        ("A07", "Quick Sweep", "BRUSH_SWEEP", {"SPEED": .8, "TUNE": .4, "BUZZ": .7, "DISTANCE": .4, "WARMTH": .5}),
+        ("A08", "Soft Cross Stick", "CROSS_STICK", {"TUNE": .35, "DAMP": .55, "DISTANCE": .5, "WARMTH": .5}),
+        ("A09", "Brushed Tom", "BRUSH_TOM", {"TUNE": .65, "DISTANCE": .45, "WARMTH": .5}),
+        ("A10", "Brushed Floor", "BRUSH_TOM", {"TUNE": .3, "DAMP": .2, "DISTANCE": .45, "WARMTH": .5}),
+        ("A11", "Mallet Tom", "MALLET_TOM", {"TUNE": .45, "DAMP": .2, "DISTANCE": .5, "WARMTH": .5}),
+        ("A12", "Two Snapping", "SNAPS", {"CROWD": .2, "TUNE": .45, "DISTANCE": .6, "WARMTH": .5}),
+        ("A13", "Hat Open", "HAT_OPEN", {"DAMP": .55, "TUNE": .45, "DISTANCE": .5, "WARMTH": .5}),
+        ("A14", "Loose Brush", "BRUSH_TAP", {"TUNE": .35, "BUZZ": .95, "DAMP": .5, "DISTANCE": .45, "WARMTH": .5}),
+        ("A15", "Brush Roll", "BRUSH_ROLL", {"SPEED": .3, "DISTANCE": .45, "WARMTH": .5}),
+        ("A16", "Far Swell", "CYMBAL_SWELL", {"SPEED": .3, "TUNE": .4, "DISTANCE": .65, "WARMTH": .5}),
     ],
     "feel": {"A02": 12, "A04": -10, "A03": 6},
     "groove": (
@@ -163,7 +163,8 @@ CHOKES = {"ember": {"A03": ["A04"], "A11": ["A04"]}, "after-hours": {"A03": ["A1
 
 # Groove balance by drum class (the sampler's pad levels in the audition grooves only).
 MIX = {"KICK": 1.0, "SNARE": .8, "CLAP": .5, "HAT_CLOSED": .4, "HAT_OPEN": .4, "TOM": .7, "PERC": .45}
-MIX_VOICE = {"RIDE": .42, "RIDE_BELL": .35, "BRUSH_RIDE": .4, "BRUSH_SWEEP": .55, "TAMBOURINE": .3, "CONGA": .6,
+MIX_VOICE = {"RIDE": .42, "RIDE_BELL": .35, "BRUSH_RIDE": .4, "BRUSH_SWEEP": .39,   # the owner, 2026-11-14: "Bring down the sweep a bit in the groove" (-3 dB)
+             "TAMBOURINE": .3, "CONGA": .6,
              "SNAPS": .35, "CLAPS": .45, "STICKS": .4, "BOWED_CYMBAL": .5, "SIZZLE": .38, "CYMBAL_SWELL": .5, "PRESS_ROLL": .6,
              "BRUSH_ROLL": .6, "CROSS_STICK": .5}
 

@@ -768,6 +768,14 @@ def stir_profile(v):
     return mix("spectrum"), mix("follow"), float(mix("wobble")), float(mix("sway"))
 
 
+def sweep_air_db(fc):
+    """The owner's ear over the recording (2026-11-14: "a bit too mid heavy"): the sweep is brighter than the stirs
+    it was fitted to. Up to +6 dB from 2 kHz (3 dB an octave, so +3 at 4 kHz and +6 from 8 kHz), and 1.5 dB out of
+    400 Hz to 1.3 kHz. An authored choice, not a measurement."""
+    lift = min(6.0, 3.0 * math.log2(fc / 2000.0)) if fc >= 2000 else 0.0
+    return lift - (1.5 if 400 <= fc <= 1300 else 0.0)
+
+
 def _brush_sweep(m, v, tr, n):
     """A brush circling on the snare head (round 0c: fitted). Many wires sliding at once sum to a smooth noise, so
     the sweep is band noise along the recorded stirs' spectrum at this velocity (Swirly Drums, CC0), riding the
@@ -791,7 +799,7 @@ def _brush_sweep(m, v, tr, n):
     bands = brush_fit()["bands"]
     idx = np.arange(len(bands))
     shift = (m["TUNE"] - 0.5) * 2 * 5 / 4                             # TUNE: up to 5 semitones, in third octaves
-    spectrum = np.interp(idx - shift, idx, spectrum)
+    spectrum = np.interp(idx - shift, idx, spectrum) + np.array([sweep_air_db(fc) for fc in bands])
     out = np.zeros(k)
     for i, fc in enumerate(bands):
         if fc * 2 ** (1 / 6) >= 0.49 * RATE:

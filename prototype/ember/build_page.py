@@ -180,6 +180,7 @@ LEDGER = [
     ("Wires, rivets, hat plates, jingles lift past a threshold", "literal, one-way", "a threshold on the body's own motion schedules impacts; the parts never push back on the body"),
     ("The cymbals and hats are the recorded cymbals' own resonances", "measured", "fitted to CC0 recordings (Virtuosity Drums) with BREAKER's fitter; the split into beating pairs is shape, below the fit's 5.4 Hz resolution"),
     ("Round 0's cymbals sounded like sheet metal", "heard", "the owner, 2026-11-14; replaced in round 0b"),
+    ("The sweep was overbearing and mid heavy in the groove", "heard", "the owner, 2026-11-14; round 0d: 3 dB lower in the grooves, +3 dB at 4 kHz and +6 from 8 kHz by ear, After Hours WARMTH .65 to .5"),
     ("Round 0b's sweeps sounded like hail hitting a roof", "heard", "the owner, 2026-11-14; replaced in round 0c by noise fitted to CC0 stirs and flutters (Karoryfer Swirly Drums)"),
     ("The bow locks to one cymbal mode", "analogy", "a stick-slip-shaped drive at one mode; the Kotlin can use Modes.Friction for the real solve"),
     ("The club and the 1962 chain", "analogy", "a synthetic room response (geometry-shaped early reflections, two-band tail) and a ribbon, valve and tape sketch; no real room or console was measured"),
@@ -290,14 +291,14 @@ details[open] > summary {{ margin-bottom: 8px; }}
 
 <div class="wrap">
   <header>
-    <div class="mark"><i></i><span class="eyebrow">SNIPSNAP · EMBER · ROUND 0C · PYTHON PROTOTYPE · CYMBALS AND SWEEPS REFITTED</span></div>
+    <div class="mark"><i></i><span class="eyebrow">SNIPSNAP · EMBER · ROUND 0D · PYTHON PROTOTYPE · CYMBALS AND SWEEPS REFITTED</span></div>
     <h1>EMBER Audition</h1>
     <p class="lede">A live jazz and soul drum kit in a small, warm, smoky club in 1962, built only from physical models: calfskin drums,
     a riveted ride, real brush sweeps, a hi-hat foot on 2 and 4, a table snapping its fingers, a bowed cymbal for the late set.
     Four sixteen-pad kits: EMBER (hard bop on sticks), After Hours (brushes), Soul Jazz (organ-trio backbeat) and Free (the rebellious late set).
     Nothing is sampled. These are prototype renders from a Python model, not the app. Round 0b rebuilt the cymbals and hats from
-    measurements of real cymbals; round 0c rebuilds the brush sweep and brush roll from measurements of real brush stirs. Nothing else
-    has changed sound.</p>
+    measurements of real cymbals; round 0c rebuilt the brush sweep and brush roll from measurements of real brush stirs; round 0d sets the sweep
+    3 dB lower in the grooves, brightens it, and eases After Hours' 1962 chain. Nothing else has changed sound.</p>
     <p class="gesture">A stick, a brush or a hand meets calfskin or thin bronze → the head sags back to pitch while the wires and rivets answer on their own threshold → the rest of the kit hums along → a low-ceilinged room and a warm 1962 chain close around it.</p>
     <nav><a href="#play">Play</a><a href="#cymbals">Cymbals</a><a href="#brushes">Sweeps</a>{''.join(f'<a href="#kit-{k["id"]}">{ESC(short(k["name"]))}</a>' for k in KITS)}<a href="#velocity">Velocity</a><a href="#takes">Takes</a><a href="#voices">Voices</a><a href="#macros">Controls</a><a href="#gates">Gates</a><a href="#ledger">Ledger</a></nav>
   </header>

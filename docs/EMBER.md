@@ -1,10 +1,12 @@
 # EMBER: design brief and round-0 audition
 
-Status: **round 0c, a Python prototype (2026-11-14).** The owner's listens so far:
+Status: **round 0d, a Python prototype (2026-11-14).** The owner's listens so far:
 - "Cymbals need a lot of work. Sounds like hitting sheet metal." Round 0b rebuilt every cymbal and hat from
   measurements of real cymbals.
-- "Sweeps sound like hail hitting a roof." Round 0c rebuilds the brush sweep and the brush roll from
+- "Sweeps sound like hail hitting a roof." Round 0c rebuilt the brush sweep and the brush roll from
   measurements of real brush stirs and flutters.
+- "Bring down the sweep a bit in the groove ... a bit too mid heavy." Round 0d lowers the sweep in the grooves,
+  brightens it and eases After Hours' 1962 chain.
 
 Both are below. Nothing else changed sound, and nothing else has been heard yet. No Kotlin exists. The engine
 stays in progress until every applicable owner gate has evidence (see "Gates" below and the gates entry in
@@ -24,6 +26,33 @@ Repository truth: read at `8742c5b8` (2026-11-14). APIs named here were grepped:
 `Soot.render(voice, macros, velocity, take, model)` / `Clutter.render(voice, macros, velocity, take)` as the
 drum-engine shape to copy. `EMBER` is a working name: the word is already a CIRCUIT preset ("EMBER PULSE"),
 an ALLOY preset ("Endless Ember") and a name in `shell/.../Names.kt`. It is not an engine name anywhere.
+
+## Round 0d: the sweep's level and brightness, by ear (2026-11-14)
+
+**What the owner heard** on round 0c: "Bring down the sweep a bit in the groove. It's overbearing. I think we
+need to add a bit of brightness into the sound. It is a bit too mid heavy."
+
+**Measured first.** In the After Hours groove the sweep was the loudest voice. Its energy peaked at 1 to 2 kHz
+and fell to -9 dB at 8 kHz and -20 dB at 16 kHz. The kit's WARMTH (.65) took another 2 to 5 dB off the top.
+
+**Three changes, all by ear and labelled as such:**
+- **The sweep sits 3 dB lower in the grooves.** The groove mix for BRUSH_SWEEP went from .55 to .39 (`kits.MIX_VOICE`).
+  It is the pad level a shelf kit should carry.
+- **The sweep is brighter than the stirs it was fitted to** (`sweep_air_db`):
+  - from 2 kHz up, +3 dB an octave, capped at +6 dB (so +3 at 4 kHz and +6 from 8 kHz);
+  - and 1.5 dB less from 400 Hz to 1.3 kHz.
+
+  The fit is unchanged. This is the owner's ear on top of it, not a measurement.
+- **After Hours' WARMTH goes from .65 to .5** on all sixteen pads, so the 1962 chain rolls off less of the top.
+
+**Measured after** (Python, the After Hours groove, octave bands re the loudest):
+
+| | 125 | 250 | 500 | 1k | 2k | 4k | 8k | 16k | Centroid |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Before | -3.7 | -0.2 | -4.7 | -0.8 | 0.0 | -1.5 | -8.3 | -18.4 | 3150 Hz |
+| After | -3.1 | 0.0 | -7.3 | -5.6 | -3.1 | -2.2 | -6.9 | -16.4 | 3780 Hz |
+
+The sweep alone (A04, velocity .6) now peaks at 2 to 4 kHz, with its centroid at 4074 Hz (it was 3214).
 
 ## Round 0c: the brush sweep and roll, refitted (2026-11-14)
 
@@ -255,7 +284,7 @@ room).
 | Kit | BPM | Night | What it is |
 |---|---:|---|---|
 | EMBER | 138 | the first set | hard bop on sticks: open feathered kick, high crisp snare, riveted ride, hat foot on 2 and 4, cross stick, rimshot, two toms, snaps, sticks, the elbow tom, press roll (A15), mallet swell (A16) |
-| EMBER AFTER HOURS | 66 | 3 a.m. | a ballad on brushes: slow and quick sweeps, brush taps, a brush ride and a dark far ride, brushed toms, a mallet tom, two people snapping, brush roll (A15), far swell (A16); more room, more chain |
+| EMBER AFTER HOURS | 66 | 3 a.m. | a ballad on brushes: slow and quick sweeps, brush taps, a brush ride and a riveted sizzle far off, brushed toms, a mallet tom, two people snapping, brush roll (A15), far swell (A16); more room, a little chain |
 | EMBER SOUL JAZZ | 104 | the organ-trio set | a shuffle with a fat loose backbeat, tight hats, tambourine, a table clapping, high, low and slap congas, rimshot and cross stick, snare roll (A15), the whole room clapping (A16); close mics, warmest chain |
 | EMBER FREE | 80 | the late set | the rebellious one: mallets on toms tuned wide, a bowed cymbal two ways, snares off, an elbow in the floor tom, sticks clicked, loose rattling hats, one person snapping, swell (A15), the floor tom setting the snares off (A16); further back, less chain |
 
@@ -361,7 +390,7 @@ The Kotlin port should keep both caches, keyed by the quantised control value, a
 
 ## Next rounds
 
-- **Round 0d:** the owner's listen to rounds 0b and 0c. Which voices convince, which kits are the right four (a Latin jazz kit is
+- **Round 0e:** the owner's listen to rounds 0b to 0d. Which voices convince, which kits are the right four (a Latin jazz kit is
   the obvious swap for FREE if rebellious should mean something else), the WARMTH and DISTANCE defaults.
 - **Round 1:** `Ember.kt`, `EmberPatch.kt`, the registration rows (`Patches`, `Velocity`, the roster), the
   house probes, a `DeterminismTest` canary, render-time tests; built from the picks, with Kotlin renders
