@@ -73,28 +73,29 @@ M0's exit test was: browse kits on a phone, tap pads, hear WAVs, flip
 schemes in Tape Properties. The player for that test was `SoundPool`
 (`PadPlayer`), since deleted. Every screen that makes a sound goes
 through `PadEngine`. PLAY's exit test passed on a phone on 2026-09-08
-(`docs/BENCH.md` A1). The FRESH TAPE menu (122 starters including MERIDIAN MATERIALS, MERIDIAN SIX, TEMPEST, TEMPEST TUNED, SPLAY POPULATIONS, OSTERIA, OSTERIA SIX VOICES, HALOBAR, HALOBAR SIX STUDY, EROSION, NACRE, CONFLUENCE VOICES, ACCORD, STRIKE FX, CIRCUIT,
+(`docs/BENCH.md` A1). The FRESH TAPE menu (126 starters including MERIDIAN MATERIALS, MERIDIAN SIX, TEMPEST, TEMPEST TUNED, TEMPEST CIRCUIT, TEMPEST FOUNDRY, TEMPEST STEP, SPLAY POPULATIONS, OSTERIA, OSTERIA SIX VOICES, ETCH, HALOBAR, HALOBAR SIX STUDY, EROSION, NACRE, CONFLUENCE VOICES, ACCORD, STRIKE FX, CIRCUIT,
 THAW, SCOUR, NIMBUS, UNDERTOW, CISTERN, UPRIGHT BASS, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, ORIGAMI, FILAMENT, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, LATTICE, FLOCK, OVERLAP, OHM, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, MURMUR SELECTED, MURMUR KEPT, SCANNED CHAIN, TREFOIL, TRIO, OSPREY, OSPREY CURATED, OPENSKY, VENT, CAUSTIC, TIDAL, CHAMBER, KEEL, LIBRATION, MERIDIAN, RIME, RIME COMPLETE, OTIS, OBBLIGATO, WICK, CHORD STABS, CHORD STABS DORIAN, CHORD STABS MIXOLYDIAN, CHORD STABS BORROWED, VELOUR CLOSE, VELOUR, VELOUR BLOOM, FIRED BRONZE, COSMIC BREAKS, TRIAD WAREHOUSE TECHNO, TRIAD SUBMERGED HOUSE, TRIAD FRACTURE MINIMAL, BACKWASH SOUL, BACKWASH PSYCH, SPORE JUNGLE, SPORE DUB, SPORE ELECTRO, GATECRASH STONE ROOM, GATECRASH MACHINE POP, GATECRASH ELECTRO FUNK, CYPHER TRAP, CYPHER DRILL, CYPHER BACKROOM, CYPHER LOWRIDER, CYPHER DUST, CYPHER FLINT, BREAKER, BREAKER DUB TANK, BREAKER TRIP HOP, MIRRORBALL PHILLY STRINGS, MIRRORBALL LOFT PARTY, MIRRORBALL MUNICH MACHINE, SOOT, SOOT DRUMLESS, SOOT BASEMENT DUB, SOOT BRUSHED NOIR and SOOT WAREHOUSE INDUSTRIAL, SCUFF DETROIT, SCUFF FLINT,
 from `StarterKits`, rendered by
 the `:synth` builders on-device, including fixed sample banks) makes the shelf useful before a capture
 exists. The ordered hardware list is `docs/BENCH.md`; the notes below
 are the per-feature detail.
 
-The SYNTH source picker has 85 engines: LATTICE, ACCORD, THUMP, SCANNED CHAIN, SKIN, ONSET,
+The SYNTH source picker has 86 engines: LATTICE, ACCORD, THUMP, SCANNED CHAIN, SKIN, ONSET,
 TINES, VELVET, VOX, PLUCK, ORPHICA, TONEWHEEL, OTIS, REGISTERS, FATHOM, RESIN, TIDE, GLINT,
 SIREN, FORK, HALOBAR, FLOTILLA, AEROSTAT, TREMOR, BALLAST, CISTERN, CIRCUIT, OBBLIGATO, ALLOY,
 THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM,
 CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS,
 MURMUR, OSPREY, OPENSKY, OVERLAP, OVEN, FLOCK, VENT, CREASE, TRIO, NACRE, ORIGAMI, TREFOIL, OHM,
 MERCURY, CAUSTIC, FILAMENT, APSIS, TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME, BORE, ARCO,
-SCOUR, KEEL, CHITIN, WICK, EROSION, RIVET, FIRED BRONZE, BACKWASH, SOOT, TEMPEST, SPLAY and OSTERIA.
+SCOUR, KEEL, CHITIN, WICK, EROSION, RIVET, FIRED BRONZE, BACKWASH, SOOT, TEMPEST, SPLAY, OSTERIA and ETCH.
 
 TEMPEST exposes six accepted finite drum voices (KICK, METAL, SNARE, CLAP, TOM and HAT)
 and their 22 presets. Its 1.20-second samples offer neither HOLD nor MAKE INSTRUMENT.
 New KICK and METAL recipes save model 2 and the other voices model 3; recalled model-1
 recipes keep their renderer through edits, navigation, RANDOMISE and SAVE. FRESH TAPE →
 TEMPEST is the sixteen-pad drum kit with choking hats, and TEMPEST TUNED keeps the
-original E minor pentatonic kicks and metal colors.
+original E minor pentatonic kicks and metal colors. TEMPEST CIRCUIT, TEMPEST FOUNDRY and TEMPEST STEP
+are electro, industrial and UK garage kits built from the same accepted voices, kept by the owner on 2026-11-14.
 
 SPLAY exposes one finite TONGUE voice and its five accepted population settings.
 Its original model, root, touch and seed survive editing and navigation; positive
@@ -109,6 +110,14 @@ PLUCK switches between SINGLE NOTE and a saved STRUM (MINOR or MAJOR, DOWN or UP
 10–240 ms sweep). MAKE INSTRUMENT renders finite keys, C2–C6 at thirteen roots with
 three touch layers and the saved envelope, so its sheet has no RELEASE; a STRUM is
 not offered as keys. Model-1 phrase recipes stay readable and keep their articulation.
+
+ETCH shows its six voices (SAW, SQUARE, RUBBER, WHISTLE, GRIT and DUB) and their 14
+presets, every one a setting the owner heard in round 3. ROOT is the shared ROOT/OCT row;
+VELOCITY is the accent, so a harder note opens the filter further. HOLD under 0.85 sets the
+note's gate; from 0.85 the voice plays its sixteen-step line as a seamless loop. MAKE
+INSTRUMENT renders finite keys, C1–C4 at minor-third roots with three touch layers; a line
+is not offered as keys. FRESH TAPE → ETCH is the sixteen-pad bass kit (three touch zones,
+four takes per note) under BASS.
 
 RIVET supplies six industrial drum voices and sixteen accepted factory sounds.
 TUNE, STRIKE, METAL, DRIVE, SIZE and WALLS shape each finite hit; VELOCITY

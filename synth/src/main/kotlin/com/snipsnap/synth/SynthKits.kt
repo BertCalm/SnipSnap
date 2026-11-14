@@ -29,6 +29,11 @@ object SynthKits {
             muteGroup = if (patch.voice == TempestVoice.HAT) 1 else 0)
     }
 
+    /** Candidate TEMPEST genre kits from the accepted voices; see [TempestGenreKits]. */
+    fun tempestCircuit(): List<ArrangedPad?> = TempestGenreKits.build(TempestGenreKits.Kit.CIRCUIT)
+    fun tempestFoundry(): List<ArrangedPad?> = TempestGenreKits.build(TempestGenreKits.Kit.FOUNDRY)
+    fun tempestStep(): List<ArrangedPad?> = TempestGenreKits.build(TempestGenreKits.Kit.STEP)
+
     /** Compatibility entry point; its audio and arrangement are the accepted full starter. */
     fun tempestFullAudition(): List<ArrangedPad?> = tempest()
 

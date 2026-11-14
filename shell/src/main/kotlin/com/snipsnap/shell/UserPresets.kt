@@ -469,6 +469,11 @@ object UserPresets {
             val recipe = Json.write(JsonValue.Str(patch.toJsonText())).replace("$", "\\$")
             return "OsteriaPatch.fromJsonText($recipe),"
         }
+        if (patch is com.snipsnap.synth.EtchPatch) {
+            // The root, the playing velocity and the model version live outside the macro map.
+            val recipe = Json.write(JsonValue.Str(patch.toJsonText())).replace("$", "\\$")
+            return "EtchPatch.fromJsonText($recipe),"
+        }
         if (patch is ScuffPatch) {
             // Velocity, take and model version live outside the macro map; promotion keeps the strike saved.
             val recipe = Json.write(JsonValue.Str(patch.toJsonText())).replace("$", "\\$")

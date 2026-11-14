@@ -505,6 +505,12 @@ object StarterKits {
             key = KeySpec.parse("Cminpent"),
         ) { SynthKits.keel() },
         Starter(
+            com.snipsnap.synth.EtchKits.ID, "ETCH",
+            "Squelching step-line bass: a SAW walk in C minor pentatonic, five more voices and three 130 BPM lines. Three touch zones, four takes.",
+            seeded = false, tempoBpm = com.snipsnap.synth.EtchKits.BPM.toFloat(),
+            key = KeySpec.parse("Cminpent"),
+        ) { com.snipsnap.synth.EtchKits.build() },
+        Starter(
             "wick", "WICK",
             "Six pitched voices with recovering motion and three RATTLE bodies.",
             seeded = false,
@@ -798,6 +804,21 @@ object StarterKits {
             seeded = false,
             key = KeySpec.parse("Cminpent"),
         ) { com.snipsnap.synth.OsteriaKits.sixVoice() },
+        Starter(
+            "tempest-circuit", "TEMPEST CIRCUIT",
+            "Electro TEMPEST kit: dry tight kicks, three claps, zaps, choking hats and tuned bells.",
+            seeded = false,
+        ) { SynthKits.tempestCircuit() },
+        Starter(
+            "tempest-foundry", "TEMPEST FOUNDRY",
+            "Industrial TEMPEST kit: driven kicks with echoes, metal snares, pipe toms and anvil and chain hits.",
+            seeded = false,
+        ) { SynthKits.tempestFoundry() },
+        Starter(
+            "tempest-step", "TEMPEST STEP",
+            "UK garage TEMPEST kit: short kicks, rim and ghost snares, five choking hats and pitched blips.",
+            seeded = false,
+        ) { SynthKits.tempestStep() },
     )
 
     fun byId(id: String): Starter? = ALL.firstOrNull { it.id == id }
