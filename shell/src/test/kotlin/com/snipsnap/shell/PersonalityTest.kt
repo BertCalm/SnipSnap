@@ -561,9 +561,9 @@ class PersonalityTest {
         val note = Copy.FIRST_RUN_PLACES_NOTE
 
         // One verb per stage, in the stage order, and step four is the
-        // word on EXPORT's own button rather than the one on its progress
-        // line. WRITE KIT is what a first-run user will tap.
-        assertTrue(note.startsWith("RECORD IT, CUT IT, KIT IT, WRITE IT.", ignoreCase = true), note)
+        // word on EXPORT's own stage rather than the one on its progress
+        // line. CHOP and EXPORT are the stages' own names.
+        assertTrue(note.startsWith("RECORD IT, CHOP IT, KIT IT, EXPORT IT.", ignoreCase = true), note)
         assertFalse(
             Regex("""\bDUB\b""").containsMatchIn(note),
             "DUB is the app's word for the write and stays everywhere else, but not in the one " +
@@ -600,7 +600,7 @@ class PersonalityTest {
         // that was actually open.
         val help = Places.HELP.values.flatten() + Copy.HELP_MORE
         assertTrue(help.any { it.contains("INSTANT KIT", ignoreCase = true) }, "INSTANT KIT is in no HELP list")
-        assertTrue(help.any { it.contains("CATCH ON SAMPLE", ignoreCase = true) }, "CATCH is in no HELP list")
+        assertTrue(help.any { it.contains("CATCH A HIT: hold a pad as the hit goes by.", ignoreCase = true) }, "CATCH is in no HELP list")
     }
 
     @Test

@@ -52,13 +52,13 @@ class PlacesTest {
     @Test
     fun `the first-run note keeps the four verbs and ends on the kit way in`() {
         val note = Copy.FIRST_RUN_PLACES_NOTE
-        assertTrue(note.startsWith("Record it, cut it, kit it, write it."), note)
+        assertTrue(note.startsWith("Record it, chop it, kit it, export it."), note)
         assertTrue(note.endsWith(" Or start from a kit."), note)
         // The places moved out of the note when the panel's row of places went:
         // the tab row above says them, and the buttons under the note are the way in.
         assertFalse(note.contains("SAMPLE", ignoreCase = true) || note.contains("PROJECT", ignoreCase = true), "the note repeats the tab row: $note")
         assertFalse(note.contains("TABS", ignoreCase = true), "there are no tabs in the four-place shape: $note")
-        for (word in listOf("CHOP", "EXPORT", "LIBRARY", "CREATE")) {
+        for (word in listOf("LIBRARY", "CREATE")) {
             assertFalse(Regex("""\b$word\b""", RegexOption.IGNORE_CASE).containsMatchIn(note), "$word is a stage or a place the note does not need: $note")
         }
     }

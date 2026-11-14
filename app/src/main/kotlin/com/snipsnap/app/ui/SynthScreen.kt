@@ -7476,7 +7476,7 @@ private fun ReopenPadOverlay(
                 TapeText("REOPEN PAD RECIPE", TapeType.lcdSmall, scheme.lcdInk.tape, Modifier.weight(1f))
                 LabButton("CANCEL", scheme, enabled = true, onClick = onCancel)
             }
-            TapeText("LOAD, EDIT, THEN SEND TO PAD", TapeType.lcdSmall, scheme.ink2.tape)
+            TapeText("LOAD, EDIT, THEN SEND TO PAD", TapeType.lcdSmall, scheme.lcdInk2)
             LazyColumn(Modifier.weight(1f).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 items(pads.sortedBy { it.slot }, key = { it.slot }) { pad ->
                     val patch = Breed.recipeOf(pad)?.patch
