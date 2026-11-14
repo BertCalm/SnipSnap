@@ -3594,3 +3594,10 @@ their kit, served by `Presets`; SCUFF leaves `PatchTypes.ROSTERLESS`. A saved SC
 velocity, take and model through the JSON constructor, as RIVET's does. Open: hardware playback, MPC 2's one
 take per zone, the app picker (a round of its own now that the convention no longer defers it to an SDK
 session). See [SCUFF](SCUFF.md).
+
+### SCUFF, round 5 (2026-11-14)
+
+On SYNTH's engine picker, mirroring SOOT arm for arm plus the native-factory path for its presets (a kit's pad
+loads whole, with its take and model); `EngineCatalog` under DRUMS; both READMEs count 86; an on-device test
+beside SOOT's in `NewEngineSynthScreenTest` (CI's emulator runs it). Open: hardware playback, MPC 2's one take
+per zone. See [SCUFF](SCUFF.md).
