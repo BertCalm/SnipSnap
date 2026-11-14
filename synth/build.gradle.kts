@@ -2,6 +2,18 @@ plugins {
     kotlin("jvm")
 }
 
+tasks.register<JavaExec>("generatePatioAudition") {
+    group = "distribution"
+    description = "Render PATIO's sixteen-pad study, dry/wear/amp comparisons, replay recipes and MPC XPM."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.PatioAuditionGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "1g"
+    val replay = providers.gradleProperty("patioReplay").orNull
+    if (replay == null) args(providers.gradleProperty("patioOutput").orNull ?: "${rootDir}/testkit/patio-audition")
+    else args("--replay", replay, providers.gradleProperty("patioReplayWav").get())
+}
+
 tasks.register<JavaExec>("generateFiredBronzeAudition") {
     group = "distribution"
     description = "Render the sixteen-pad Fired Bronze study, source/treatment comparisons, recipes and MPC kit."

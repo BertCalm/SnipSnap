@@ -54,6 +54,15 @@
 
 # Synth roadmap — generate kits, not just capture them
 
+**PATIO performance kits (2026-11-14).** Three starter-shelf kits (Cumbia, Samba,
+Latin dub) combine sixteen core percussion voices with an authored hand-drum roll
+and the approved cuíca replacement on B02. Every pad has three velocity zones and
+four cycling takes, preserved in saved kit chains, playback and native MPC 3
+exports. `generatePatioPerformance` writes the compact audition and downloads.
+Source recipes replay through PATIO's versioned API; ordinary patch-editor control
+and generic MPC import reconstruction are not claimed. Hardware loading remains
+open. See [PATIO.md](PATIO.md) for current status and historical listening work.
+
 **TEMPEST on the default branch (2026-11-13).** The owner-accepted six-voice digital drum instrument
 came back from the recovery backup with its 22 presets, the full drum starter with choking hats, the
 original tuned starter and the SYNTH picker. The DSP and model sources are unchanged. See

@@ -16,6 +16,12 @@ the docs disagree with each other, start at [`docs/README.md`](docs/README.md).
 
 HYDROFORM now has a registered two-voice native prototype: [DOME and BULKHEAD](docs/HYDROFORM.md), with DOME HOLD and native/Python audition comparisons. Factory presets, kits and the Android picker await the native listening gate.
 
+[PATIO](docs/PATIO.md) supplies three Latin-inspired percussion starter kits: Cumbia,
+Samba and Latin dub. Each has eighteen pads, including an authored hand-drum roll
+and cuíca-inspired friction voice, with three velocity levels and four takes per
+level. `./gradlew :shell:generatePatioPerformance` writes the compact audition and
+native MPC 3 downloads. Physical MPC loading remains unverified.
+
 EROSION's accepted eight-role percussion bank is available in factory presets,
 the SYNTH picker and FRESH TAPE, with three native touch layers. The finite
 renderer and original audition recipes are preserved. The broader
@@ -445,7 +451,7 @@ explicit MIDI root (24–96), strike velocity and model version; TUNE is a
 relative ±12-semitone offset, neutral at 0.5, so the effective note spans
 12–108 without clamping back to the saved-root range. Seven provisional presets
 and a dry sixteen-pad C minor pentatonic kit are included, with PITCHWHEEL among
-FRESH TAPE's 126 starters. Run `./gradlew :synth:generatePitchwheelAudition`
+FRESH TAPE's 129 starters. Run `./gradlew :synth:generatePitchwheelAudition`
 for the compact first listening set, or add `-PpitchwheelFull` for the broader
 dry probes. HOLD's top step returns settled loop-only material with a
 deterministic attachment cycle and capped adhesion. The owner heard R1 as six
