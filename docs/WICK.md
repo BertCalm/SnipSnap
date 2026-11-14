@@ -168,6 +168,9 @@ it in the browser; a normal exported kit pad plays its buffer once. An initial
 strike followed by a sustaining keygroup needs a separate instrument adapter.
 No Android device or MPC hardware acceptance is claimed in this round.
 
+Finite recipes now make keygroup instruments, and a held recipe's real opening
+can be kept ahead of its accepted loop; see [finite keygroups](WICK_KEYGROUPS.md).
+
 ## Render cost
 
 The performance change hoists fixed voice/stage gate coefficients out of the
@@ -267,6 +270,8 @@ judged too much like repeated hits. After the cohesion revision, the owner asked
 for a different underlying tone, liked the three source alternatives, and
 approved Warm wire as default with Hollow reed and Rubbed glass as saved variants.
 The nine factory-bank additions have not received owner listening feedback.
+The recovery backup's later keygroup notes record that the owner then accepted
+them; see [finite keygroups](WICK_KEYGROUPS.md).
 The short-window classifier can
 mislabel a late BREATH swell when the window ends before any real decay;
 its raw label and direct envelope evidence are retained in diagnostics.

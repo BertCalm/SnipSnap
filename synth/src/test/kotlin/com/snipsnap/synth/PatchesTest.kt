@@ -45,6 +45,7 @@ class PatchesTest {
         BreakerPatch("Crushed drip", BreakerVoice.SNARE, emptyMap()),
         SootPatch("Hot", SootVoice.SNARE, emptyMap()),
         HalobarPatch("Mallet dub", HalobarVoice.MARIMBA, emptyMap()),
+        TempestPatch("Legacy Strike", TempestVoice.METAL, emptyMap(), model = 1),
         HydroformPatch("Door", HydroformVoice.DOME, emptyMap()),
         RivetPatch("Industrial kick", RivetVoice.KICK),
         ChitinPatch("Chitin shell", ChitinVoice.SHELL, Chitin.defaults(ChitinVoice.SHELL)),
@@ -59,6 +60,7 @@ class PatchesTest {
         VentPresets.all().first(),
         OverlapPresets.all().first(),
         CairnPatch("Door", CairnVoice.ANSWER, emptyMap()),
+        SplayPresets.all().first(),
         WickPresets.all().first(),
         RimePresets.all().first(),
         FerryPresets.all().first(),
@@ -78,7 +80,7 @@ class PatchesTest {
             val fields = patch.toJsonValue().entries
             assertEquals(patch.macros, Patches.fromJsonValue(JsonValue.Obj(fields)).macros,
                 "${patch.engine}: complete saved controls survive the dispatcher")
-            if (patch is RivetPatch || patch is OpenSkyPatch || patch is OnsetPatch || patch is OtisPatch) {
+            if (patch is RivetPatch || patch is OpenSkyPatch || patch is OnsetPatch || patch is OtisPatch || patch is OsteriaPatch) {
                 // These formats pin complete control snapshots instead of
                 // inheriting newer voice defaults when a field is missing.
                 for (incomplete in listOf(fields - "macros", fields + ("macros" to JsonValue.Null))) {

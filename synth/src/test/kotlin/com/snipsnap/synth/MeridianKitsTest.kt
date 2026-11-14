@@ -121,8 +121,8 @@ class MeridianKitsTest {
             assertTrue(heldInstruments.isNotEmpty())
             for (entry in heldInstruments) {
                 val heldInstrument = entry.obj()
-                assertEquals(0, heldInstrument.getValue("lowNote").int())
-                assertEquals(127, heldInstrument.getValue("highNote").int())
+                assertEquals(36, heldInstrument.getValue("lowNote").int())
+                assertEquals(72, heldInstrument.getValue("highNote").int())
                 assertEquals(36, heldInstrument.getValue("nativeLowNote").int())
                 assertEquals(72, heldInstrument.getValue("nativeHighNote").int())
                 val zones = heldInstrument.getValue("zones").arr()

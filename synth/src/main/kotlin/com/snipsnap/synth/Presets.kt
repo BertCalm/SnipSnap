@@ -17,6 +17,8 @@ package com.snipsnap.synth
 object Presets {
 
     fun forVoice(engine: String, voice: String): List<Patch> = when (engine) {
+        SplayPatch.ENGINE -> SplayVoice.entries.firstOrNull { it.name == voice }
+            ?.let(SplayFactoryPresets::forVoice) ?: emptyList()
         BackwashPatch.ENGINE -> BackwashVoice.entries.firstOrNull { it.name == voice }
             ?.let(BackwashPresets::forVoice) ?: emptyList()
         HalobarPatch.ENGINE -> HalobarVoice.entries.firstOrNull { it.name == voice }
@@ -177,6 +179,10 @@ object Presets {
             val v = ThawVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
             ThawPresets.forVoice(v)
         }
+        OsteriaPatch.ENGINE -> {
+            val v = OsteriaVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
+            OsteriaPresets.forVoice(v)
+        }
         ErosionPatch.ENGINE -> {
             val v = ErosionVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
             ErosionPresets.forVoice(v)
@@ -324,6 +330,10 @@ object Presets {
             val v = KeelVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
             KeelPresets.forVoice(v)
         }
+        TempestPatch.ENGINE -> {
+            val v = TempestVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
+            TempestPresets.forVoice(v)
+        }
         else -> emptyList()
     }
 
@@ -349,7 +359,9 @@ object Presets {
     }
 
     fun all(): List<Patch> =
-        BackwashPresets.all() + HalobarPresets.all() + FiredBronzePresets.all() + RivetPresets.all() + ErosionPresets.all() + WickPresets.all() +
+        TempestPresets.all() +
+        SplayFactoryPresets.all() +
+        BackwashPresets.all() + HalobarPresets.all() + FiredBronzePresets.all() + RivetPresets.all() + OsteriaPresets.all() + ErosionPresets.all() + WickPresets.all() +
         OtisPresets.all() +
         LorentzPresets.all() +
         AccordPresets.all() +

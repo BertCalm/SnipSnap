@@ -12,6 +12,24 @@ import kotlin.test.assertTrue
  * both depend on the second half.
  */
 class DeterminismTest {
+    @Test
+    fun `TEMPEST retains both saved finite strikes and seeded noise`() {
+        for (voice in TempestVoice.entries) {
+            val patch = TempestPatch("Canary", voice, Tempest.defaults(voice) + ("SOURCE" to 1f))
+            assertContentEquals(patch.render().samples, Patches.fromJsonText(patch.toJsonText()).render().samples)
+        }
+    }
+
+    @Test fun `SPLAY recovered performance repeats its acoustic seed and trajectories exactly`() {
+        val patch = SplayPatch("Revised population canary", SplayVoice.TONGUE,
+            Splay.defaults(SplayVoice.TONGUE, model = 2) + ("POPULATION" to 3f / 99f),
+            midi = 57, velocity = .6f, seed = 41001, model = 2)
+        val first = Splay.renderDetailed(patch.voice, patch.macros, patch.midi, patch.velocity, patch.seed, patch.model)
+        val second = Splay.renderDetailed(patch.voice, patch.macros, patch.midi, patch.velocity, patch.seed, patch.model)
+        assertContentEquals(first.raw, second.raw)
+        assertContentEquals(first.snip.samples, second.snip.samples)
+    }
+
     @Test fun `TRIAD shared bus phrase replays byte for byte`() {
         val source = Triad.source(Triad.Settings(bars = 1)).mix()
         for (rig in Triad.Rig.entries) assertContentEquals(

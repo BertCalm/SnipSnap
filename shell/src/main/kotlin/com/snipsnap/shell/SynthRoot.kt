@@ -1,5 +1,6 @@
 package com.snipsnap.shell
 
+import com.snipsnap.synth.TempestPatch
 import com.snipsnap.synth.Accord
 import com.snipsnap.synth.AccordPatch
 import com.snipsnap.synth.Aerostat
@@ -97,6 +98,7 @@ import com.snipsnap.synth.Orphica
 import com.snipsnap.synth.OrphicaPatch
 import com.snipsnap.synth.Osprey
 import com.snipsnap.synth.OspreyPatch
+import com.snipsnap.synth.OsteriaPatch
 import com.snipsnap.synth.Otis
 import com.snipsnap.synth.OtisPatch
 import com.snipsnap.synth.Oven
@@ -163,6 +165,8 @@ import com.snipsnap.synth.Tonewheel
 import com.snipsnap.synth.TonewheelPatch
 import com.snipsnap.synth.Trefoil
 import com.snipsnap.synth.TrefoilPatch
+import com.snipsnap.synth.Splay
+import com.snipsnap.synth.SplayPatch
 import com.snipsnap.synth.Tremor
 import com.snipsnap.synth.TremorPatch
 import com.snipsnap.synth.Trio
@@ -263,6 +267,7 @@ object SynthRoot {
         is BellowsPatch -> Field(patch.midi, playedRange(Bellows.midiRange(patch.voice),
             patch.macros["TUNE"] ?: Bellows.defaults(patch.voice).getValue("TUNE"), Bellows.TUNE_SEMITONES)) { patch.copy(midi = it) }
         is CairnPatch -> Field(patch.midi, Cairn.MIN_MIDI..Cairn.MAX_MIDI) { patch.copy(midi = it) }
+        is SplayPatch -> Field(patch.midi, Splay.MIDI_MIN..Splay.MIDI_MAX) { patch.copy(midi = it) }
         is CausticPatch -> Field(patch.midi, CausticInstrument.MIDI_MIN..CausticInstrument.MIDI_MAX) { patch.copy(midi = it) }
         is ChamberPatch -> Field(patch.midi, Chamber.MIDI_MIN..Chamber.MIDI_MAX) { patch.copy(midi = it) }
         is CisternPatch -> Field(patch.midi, Cistern.MIDI_MIN..Cistern.MIDI_MAX) { patch.copy(midi = it) }
@@ -286,6 +291,7 @@ object SynthRoot {
         is OpenSkyPatch -> Field(patch.midi, OpenSkyPatch.MIDI_MIN..OpenSkyPatch.MIDI_MAX) { patch.copy(midi = it) }
         is OrphicaPatch -> Field(patch.config.midi, Orphica.MIDI_MIN..Orphica.MIDI_MAX) { patch.copy(config = patch.config.copy(midi = it)) }
         is OspreyPatch -> Field(patch.midi, Osprey.MIDI_MIN..Osprey.MIDI_MAX) { patch.copy(midi = it) }
+        is OsteriaPatch -> Field(patch.midi, patch.rootRange) { patch.copy(midi = it) }
         is OtisPatch -> Field(patch.midi, Otis.MIDI_MIN..Otis.MIDI_MAX) { patch.copy(midi = it) }
         is OvenPatch -> Field(patch.midi, Oven.MIDI_MIN..Oven.MIDI_MAX) { patch.copy(midi = it) }
         is OverlapPatch -> Field(patch.midi, Overlap.MIN_MIDI..Overlap.MAX_MIDI) { patch.copy(midi = it) }
@@ -356,7 +362,7 @@ object SynthRoot {
         is TinesPatch -> if (patch.voice == TinesVoice.KALIMBA) tune(patch, { nearestMidi(Tines.frequencyFor(patch.voice, it)) }) else null
 
         // ---- no root a note name would describe ----
-        is BackwashPatch, is BreakerPatch, is SootPatch, is ThumpPatch, is SkinPatch, is OnsetPatch, is TerraPatch, is VoxPatch, is FillPatch, is RivetPatch, is ScuffPatch -> null
+        is BackwashPatch, is BreakerPatch, is SootPatch, is ThumpPatch, is SkinPatch, is OnsetPatch, is TerraPatch, is VoxPatch, is FillPatch, is RivetPatch, is ScuffPatch, is TempestPatch -> null
         // SILK's TUNE walks scale degrees, EROSION's sweeps a frequency: neither names a note.
         is SilkPatch, is ErosionPatch -> null
     }

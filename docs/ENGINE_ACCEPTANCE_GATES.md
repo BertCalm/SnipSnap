@@ -424,3 +424,229 @@ references (six model 3, six Lower texture), now a text fixture in
   distinctive; the musical bank still awaits the owner's listening decision."
 - **Overall: incomplete.** The voice count, keygroups, chord tools, round robin and hardware
   playback remain open.
+
+## CAIRN SING sampler studies (from the recovery backup, 2026-11-13)
+
+CAIRN's retained-SING sampler code came back from the owner's recovery snapshot onto this
+branch, CAIRN files only. See [CAIRN_SING_SAMPLER.md](CAIRN_SING_SAMPLER.md). This entry covers
+those five studies of one SING voice. Earlier CAIRN work keeps the scope its own documents record.
+
+- **Melodic voices: fail, four of six.** KNOCK, ANSWER, TUMBLE and SING are built; GRIND and
+  VESSEL are not. The five studies are settings of one SING voice, not new voices.
+- **Presets: not yet verified.** CAIRN has no factory presets. The nine Wave 3 KEEP SING recipes
+  are source-bound inputs to the studies, not factory presets.
+- **Playable keygroups: partial.** The shell builds and validates all five keygroup packages from
+  pinned captures in JVM tests: EARLIER and MOVING over MIDI 48–72 from three native roots, the
+  GROOVE studies at C4 only. No phone entry exists, because the nine Float captures are not in
+  this repository. No phone or MPC has loaded a package.
+- **Premade kit: not yet.** None is built.
+- **Chord tools: partial.** In JVM tests, the existing chord stabs for C that fit inside 48–72 play as
+  independent notes on a MOVING package, and notes outside the range are refused. Not on a device.
+- **Articulation (HOLD): partial.** Each study loops the accepted 88,200-frame SING cycle after its
+  real predecessor, with a 220-frame intro and a 0.08 s sampler release. There is no natural
+  attack or release. The owner kept the sampler delivery on 2026-11-13 (see below).
+- **Percussion and drum gates:** not applicable. These are held melodic studies.
+- **Velocity and round robin: fail.** Sampler velocity is gain only. There are no native touch
+  layers and no round-robin takes.
+- **Sound character.** The documents record the owner's earlier CAIRN approvals: “I love the new
+  direction” for the first reconstructed audition ([CAIRN.md](CAIRN.md)), and approval of the
+  KNOCK/ANSWER HOLD direction ([SYNTH_ROADMAP.md](SYNTH_ROADMAP.md)). The nine SING recordings'
+  Wave 3 KEEP appears only in the backup's source constants (owner batch
+  `trefoil-splay-cairn-published-source-v1`, reviewed 2026-11-09), with no quoted verdict.
+  On 2026-11-13 the owner heard all five studies as playable keys (roots, in-between keys
+  and a chord for EARLIER and MOVING; C4 for each GROOVE) and kept all of them
+  ([CAIRN_SING_SAMPLER.md](CAIRN_SING_SAMPLER.md#owner-listening)).
+- **Overall: incomplete.** The Float captures' home, the phone picker, phone
+  and MPC playback, velocity layers, round robin and the remaining voices are open.
+
+## WICK (finite keygroups and held entry ported from the recovery backup, 2026-11-13)
+
+A pitched cascade of three low-pass gates with six voices. See [WICK](WICK.md) and
+[finite keygroups](WICK_KEYGROUPS.md).
+
+This port brings back two pieces of work. MAKE INSTRUMENT now builds a finite WICK recipe
+into keys: native roots every minor third from C1 to C6 plus the authored root, three
+native touch layers, no loop (`WickKeygroupMaker`, `WickPadMaker`). And
+`Wick.inspectHeldSource` keeps a held recipe's real opening ahead of its accepted loop,
+with a one-root sampler prototype (`WickHeldPadMaker`) that has no sheet or export route.
+Every existing render, preset and saved recipe is unchanged.
+
+| Gate | Status | Evidence |
+|---|---|---|
+| Six melodic voices | Pass | PLUCK, WOOD, BREATH, BUBBLE, FLICKER and RATTLE. |
+| Presets | Pass | 36 factory presets, six per voice (`WickPresets`). |
+| Playable keygroups | Partial | Finite keygroups build, validate and land on the shelf in software (`WickKeygroupMakerTest`, `WickPadMakerTest`). The sheet test (`WickFiniteInstrumentScreenTest`) has not run on a device here, and no phone or MPC has played a WICK keygroup. HOLD loops do not make keys. |
+| Premade kit | Pass in software | The WICK starter: sixteen dry pads with all six voices and the three RATTLE bodies. |
+| Chord-tool compatibility | Partial | The keygroup fixture schedules all 384 major/minor `ChordStabs` note sets through `InstrumentEngine` on synthetic PCM. No chord has been rendered from WICK samples or heard. |
+| Articulation: HOLD | Partial | Causal-recovery loops are accepted; the held entry source keeps the real opening (`WickHeldEntrySourceTest`). Native held keygroups across a range are not built. |
+| Articulation: STRUM | Not yet verified | Whether PLUCK needs STRUM is an open design question: its loop is a gate/recovery gesture, not a picked string. |
+| Percussion, drum kits | Not applicable | A melodic engine. |
+| Velocity: rendering | Pass | Velocity is native excitation; each keygroup touch layer is a separate render at .30, .65 and 1 times the authored velocity, not one sample turned down. |
+| Velocity: saving, playback, export | Pass in software | The packet's source manifest binds every WAV hash to its recipe; validation checks the phone sidecar, MPC 3 `.xty` and MPC 2 `.xpm` (`WickKeygroupMakerTest`). No phone or MPC has played it. |
+| Round robin | Not yet verified | WICK has no re-strike (`Restrike.canRestrike` is false), so no round robin exists through rendering, saving, playback or export. |
+| Hardware playback | Not verified | No phone or MPC check is recorded for the keygroups or the held entry. |
+
+- **Sound character:** [WICK](WICK.md) records the owner's acceptance of PLUCK, the revised
+  BUBBLE direction, WOOD, BREATH, FLICKER, the three-voice phrases and Warm wire as RATTLE's
+  default with Hollow reed and Rubbed glass as saved variants. It says the nine factory-bank
+  additions had no owner feedback; the backup's keygroup notes later record, "The owner has
+  now accepted WICK's nine additions". The recovery backup's backlog note records the held
+  entry's opening and sustain-handoff crops as owner KEEP and that the "held native core
+  passed"; no listening document for them came back with it.
+- **Overall: incomplete.** Device runs of the keygroups, native held keygroups, chord tools on
+  real WICK samples, the PLUCK STRUM question, round robin and hardware playback remain open.
+
+## MERIDIAN six voices (ported from the recovery backup, 2026-11-13)
+
+MERIDIAN was already on the default branch with SWEEP, CLACK, CHIME and RASP. This port adds
+model-4 DRAW and LIFT, finite keygroups, source-bound held keygroups and the MERIDIAN
+MATERIALS and MERIDIAN SIX starters. See [MERIDIAN](MERIDIAN.md#draw-lift-finite-keys-and-two-material-banks-ported-2026-11-13).
+The four earlier voices' recipes and renders are pinned against a capture made before DRAW
+and LIFT existed (`MeridianGesturesTest`).
+
+| Gate | Status | Evidence |
+|---|---|---|
+| Melodic: six voices with presets | Pass | SWEEP, CLACK, CHIME, RASP, DRAW and LIFT, 18 presets (`MeridianPresetsTest`, `MeridianSixVoiceCompatibilityTest`). |
+| Melodic: playable keygroups | Pass in software | Finite keys for every voice across MIDI 36–96, held keys C2–C5, both with three touch layers and validated source bindings (`MeridianFiniteKeygroupMakerTest`, `MeridianHeldKeygroupPackageTest`, `MeridianFinitePadMakerTest`). Not run on a device. |
+| Melodic: premade kit | Pass in software | MERIDIAN, MERIDIAN MATERIALS and MERIDIAN SIX (`MeridianKitsTest`, `MeridianMaterialsKitTest`, `MeridianSixKitTest`). The owner kept all sixteen MERIDIAN SIX pads at hard touch on 2026-11-13. |
+| Melodic: chord-tool compatibility | Partial | 384 chord-tool note sets play on finite keys built from synthetic notes (`MeridianFiniteKeygroupMakerTest`). Not checked on real MERIDIAN samples. |
+| Articulation: HOLD | Pass | Fixed-alignment HOLD at 97.5% and above for every voice; the owner kept held DRAW and LIFT on 2026-11-13. |
+| Articulation: STRUM | Not applicable | Struck and rubbed surfaces, not picked strings. |
+| Percussion: roll or riser | Not applicable | A melodic engine. |
+| Drums: genre kits | Not applicable | A melodic engine. |
+| Velocity: rendering | **Fail: owner REVISIT** | Banks and keys render three native touches, but on MERIDIAN SIX the owner heard no change between soft, medium and hard (2026-11-13). The layers are level-matched and their brightness moves at most 13 %. |
+| Velocity: saving, playback, export | Pass in software | Each layer's recipe and WAV hash is saved and replayed (`MeridianMaterialsKitTest`, `MeridianSixKitTest`). No hardware check. |
+| Round robin | Not yet verified | No MERIDIAN round robin exists. |
+| Picker | Not yet verified on a device | `MeridianSynthScreenTest`, `MeridianFiniteInstrumentScreenTest`, `MeridianHeldSourceInstrumentScreenTest` and the two starter-menu tests cover DRAW/LIFT, finite keys and the starters. None has run on a device. |
+| Hardware playback | Not verified | No phone timing, MPC load or MPC velocity check is recorded. |
+
+- **Sound character: partly accepted.** The owner kept the four DRAW/LIFT finite takes and
+  accepted the model-3 material voices earlier. On 2026-11-13 the owner kept the sixteen
+  MERIDIAN SIX pads at hard touch and the four held DRAW/LIFT presets. The bank's soft and
+  medium layers came back REVISIT ("No change between soft, medium and hard").
+- **Overall: incomplete.** Round robin, chord tools on real keys, the six-voice bank's soft and
+  medium layers (touch must change the strike, not only the level), device runs and hardware playback remain open.
+
+## TEMPEST (ported from the recovery backup, 2026-11-13)
+
+A six-voice digital drum instrument: a pitched strike, driven filtering and folding, then
+short repeats that darken as they fade. See [the full kit](TEMPEST_FULL_KIT.md),
+[model 2](TEMPEST_R2.md) and [the first build](TEMPEST.md).
+
+This port brings the whole engine back: the six engine, patch, preset and compatibility
+sources byte for byte, the 22 factory presets, the `tempest` and `tempest-tuned` starters,
+the CLI, user-preset promotion and the SYNTH picker. The accepted renders are pinned by PCM24
+hashes: sixteen full-kit pads, ten model-2 and eight model-1 files (`TempestPromotionTest`,
+`TempestTest`).
+
+| Gate | Status | Evidence |
+|---|---|---|
+| Melodic voices, keygroups, chord tools | Not applicable | A drum engine. TEMPEST TUNED is a pitched arrangement of kicks and metal, not a keygroup instrument. |
+| Articulation: HOLD, STRUM | Not applicable | Finite 1.20-second hits; HOLD is reserved and hidden in the picker. No strings. |
+| Percussion: authored roll or riser | Not yet verified | No roll or riser is authored. |
+| Drums: multiple distinct genre kits | **Fail: one kit** | The sixteen-pad TEMPEST kit (`SynthKits.tempest`). TEMPEST TUNED is the original two-voice kick and metal scale, not a second genre kit. |
+| Velocity: rendering | Partial | No TEMPEST control is a brightness macro, so a softer hit is the full render low-passed by `Velocity.soften`, not a re-strike. The starter's pads have no velocity layers. |
+| Velocity: saving, playback, export | Not yet verified | No velocity layers exist to save, play or export. |
+| Round robin | Not yet verified | TEMPEST has no re-strike (`Restrike.canRestrike` is false), so no round robin exists through rendering, saving, playback or export. |
+| Starter kit: saving and export | Pass in software | Each pad regenerates from its saved recipe byte for byte, and the hats share mute group 1. The generator writes MPC 3 and MPC 2 programs and checks them with the export read-back (`TempestKitTest`, `TempestExpansionTest`, `TempestStarterTest`). |
+| Picker | Not yet verified on a device | All six voices and 22 presets; recalled recipes keep their saved model through edits, RANDOMISE, navigation and SAVE. `TempestSynthScreenTest` covers this and has not run on a device. |
+| Hardware playback | Not verified | No phone timing, MPC load or MPC hat choke is recorded. |
+
+- **Sound character: accepted.** [TEMPEST_R2](TEMPEST_R2.md) records that the owner accepted
+  model 2 with "Sounds great, proceed as recommended." [The full kit](TEMPEST_FULL_KIT.md)
+  records that on 2026-11-07 the owner accepted the complete six-voice audition with "Sounds
+  great, proceed as recommended." Preserve these renders; this is not a phone or MPC audition.
+- **Overall: incomplete.** Genre kits, a roll or riser, velocity layers, round robin, device
+  runs of the picker and hardware playback remain open.
+
+## SPLAY (from the recovery backup, 2026-11-13)
+
+SPLAY came back from the owner's recovery snapshot onto this branch, SPLAY files only: the
+engine (models 1 and 2), its registration, the SYNTH picker entry, the SPLAY POPULATIONS starter
+and finite MAKE INSTRUMENT keys. See [SPLAY_FINITE_DELIVERY.md](SPLAY_FINITE_DELIVERY.md),
+[SPLAY_NATIVE_RECOVERY.md](SPLAY_NATIVE_RECOVERY.md) and
+[SPLAY_PRODUCTION_INTAKE.md](SPLAY_PRODUCTION_INTAKE.md).
+
+- **Melodic voices: fail, one of six.** TONGUE is the one voice. Its five population settings
+  (1, 2, 4, 8 and 16 mechanisms) are settings, not voices.
+- **Presets: pass for the one voice.** The five accepted population settings are the factory
+  presets; the five provisional recipes stay in the CLI only.
+- **Playable keygroups: partial.** In JVM tests the shell builds finite keygroups (MIDI 36–84,
+  roots every three semitones plus the saved root, three touch levels) and admits them to the
+  shelf. The SynthScreen wiring and its two Android tests have not compiled or run here (no
+  Android SDK); CI's emulator runs them. No phone or MPC has played one.
+- **Premade kit: partial.** SPLAY POPULATIONS puts the five settings on A01–A05. All five render
+  in JVM tests, with a saved-recipe replay. It is one voice, not a full melodic kit.
+- **Chord tools: not yet verified.**
+- **Articulation (HOLD): fail.** SPLAY is finite (eight seconds). Positive HOLD is refused, and
+  the instrument has no loop.
+- **Percussion and drum gates:** not applicable. SPLAY is a pitched finite instrument.
+- **Velocity and round robin: fail.** Velocity is gain only (the keygroups' three levels too).
+  There are no round-robin takes.
+- **Sound character.** The five population settings were KEEP decisions in the owner's Wave 3
+  review (2026-11-09). That is recorded only in the backup's notes and manifest
+  ([SPLAY_NATIVE_RECOVERY.md](SPLAY_NATIVE_RECOVERY.md): “All five decisions are KEEP”), with no
+  quoted verdict. The heard recordings are not in this repository; on this branch all five
+  model-2 renders reproduce their pinned raw-PCM and matched-recording SHA-256 values.
+- **Overall: incomplete.** Six voices, HOLD, timbral velocity, round robin, chord tools and phone
+  and MPC playback are open.
+
+## OSTERIA (ported from the recovery backup, 2026-11-13)
+
+One evolving note: four spectral layers on a fixed root drift between five coastal palettes,
+with remembered color. See [OSTERIA](OSTERIA.md).
+
+This port brings the whole engine back with its DSP unchanged: the six voices, 13 factory
+presets, the `osteria` and `osteria-six-voice` starters, finite keygroups through MAKE
+INSTRUMENT, the saved PLUCK STRUM, user-preset promotion and the SYNTH picker. The accepted
+bank is pinned by the owner-auditioned WAV and recipe hashes (`OsteriaPerformanceBankTest`),
+and the approved strum study by its published WAV hashes (`OsteriaStrumTest`).
+
+| Gate | Status | Evidence |
+|---|---|---|
+| Melodic: six voices with presets | Pass | NOTE (`QUARTET`), BASS, PLUCK, REED, PAD and BOWED, 13 presets (`OsteriaAcceptedDeliveryTest`, `PresetsTest`). |
+| Melodic: playable keygroups | Pass in software | Any single-note model-2 sound: thirteen roots C2–C6, three touch layers, saved envelope, no loop. Source recipes and WAV hashes are validated before the package lands, with rollback on failure (`OsteriaPadMakerTest`, `OsteriaKeygroupBankTest`, `OsteriaKeygroupTransactionTest`). Not run on a device. |
+| Melodic: premade kit | Pass in software | OSTERIA (the original Note kit) and OSTERIA SIX VOICES (sixteen pads, 48 native layers) through MPC 3 and MPC 2 export (`OsteriaKitTest`, `OsteriaPerformanceBankTest`). |
+| Melodic: chord-tool compatibility | Partial | Keys default to POLY, and STRUM takes a `ChordStabs.Stab` directly (`OsteriaStrumTest`). No chord-tool run on real OSTERIA keys is recorded. |
+| Articulation: HOLD | Partial | HOLD lengthens a finite note up to eight seconds. It is not a seamless loop or live release. |
+| Articulation: STRUM | Pass in software | PLUCK saves MINOR or MAJOR, DOWN or UP and a 10–240 ms sweep, one strike per tone. HOLD 0 matches the owner-approved WAVs byte for byte; HOLD above 0 is engineering-tested, not listened to. |
+| Percussion: roll or riser | Not applicable | A melodic engine. |
+| Drums: genre kits | Not applicable | A melodic engine. |
+| Velocity: rendering | Pass | Touch changes the excitation spectrum, attack and level, not only volume. The bank and keys render genuine soft, medium and hard layers. |
+| Velocity: saving, playback, export | Pass in software | 48 layers with their recipes in the starter and both MPC programs; the prepared WAVs apply velocity once at playback (`OsteriaPerformanceBankTest`, `OsteriaBankImportTest`). No hardware check. |
+| Round robin | Not yet verified | No OSTERIA round robin exists. |
+| Picker | Not yet verified on a device | `OsteriaSynthScreenTest` and `OsteriaStrumControlsTest` cover the six voices, saved recipes, STRUM and MAKE INSTRUMENT. Neither has run on a device. |
+| Hardware playback | Not verified | No phone timing, MPC load or MPC velocity check is recorded. |
+
+- **Sound character: accepted.** The owner accepted the six-voice bank's sound, the six STRUM
+  comparisons and six Rounded keygroup previews. Preserve these renders; HOLD extensions and
+  the other keygroup sounds have not been listened to.
+- **Overall: incomplete.** Round robin, a seamless HOLD, chord tools on real keys, device runs
+  of the picker and hardware playback remain open.
+
+## CLUTTER (round 0c, 2026-11-13)
+
+A found-sound drum engine of 22 modelled household objects, and five sixteen-pad kits from them: the CLUTTER
+kit (one each of sixteen objects) and four genre kits. Every object has loose parts (rice, a lid, a handle,
+cutlery, a rivet) that only move above a strike threshold. See [CLUTTER](CLUTTER.md). Round 0c is a Python
+prototype audition; no Kotlin exists.
+
+- **Melodic, keygroup and chord-tool gates:** not applicable. A drum engine.
+- **Articulation:** finite hits, no HOLD. Not a picked or thumbed string.
+- **Percussion: open.** The owner replaced the round-0 pot roll with a one-shot (B01 Bin Lid) on 2026-11-13:
+  "Roll becomes one shot, groove can stay". No roll exists, so this gate is not passed.
+- **Drum shelf: four genre kits authored, not on the shelf.** KITCHEN LO-FI (82 BPM), STREET BUCKET (120 BPM),
+  JUNK BOOM BAP (90 BPM) and MICROBEAT (100 BPM), chosen by the owner. They differ in which objects fill each
+  role, how they are hit, how loose and damped they are, where the phone is, and in tempo, swing and groove.
+  No pad is shared between any two; the same slot in two kits is at least 6.0 dB apart (Python). No Kotlin,
+  so nothing is on the shelf yet.
+- **Velocity and round robin:**
+  - **Rendering: measured in Python, not Kotlin.** On all 80 pads of the five kits: soft against hard at
+    matched level at least 3.9 dB; the closest two takes of any pad 1.2 dB apart. Each take replays byte for
+    byte.
+  - **Saving, playback, export: open.** Nothing to save, play or export until the Kotlin round. The
+    listening page's pad grid is a browser stand-in, not app evidence.
+- **Sound character: not heard.** Listening page published 2026-11-13, version 7:
+  <https://claude.ai/artifact/6dkeY2rrjNGUvUYvobs3v5>.
+- **Overall: incomplete.** The percussion gate, the shelf, saving, playback, export, hardware and the
+  owner's listen are open.

@@ -1,0 +1,18 @@
+{
+  "engine": "SPLAY",
+  "version": 1,
+  "name": "1 mechanism",
+  "voice": "TONGUE",
+  "macros": {
+    "TRACE": 0.6200000047683716,
+    "SEED GAP": 0.7200000286102295,
+    "ENERGY": 0.7799999713897705,
+    "CONTACT": 0.699999988079071,
+    "POPULATION": 0,
+    "HOLD": 0
+  },
+  "model": 2,
+  "midi": 60,
+  "velocity": 0.800000011920929,
+  "seed": 41001
+}

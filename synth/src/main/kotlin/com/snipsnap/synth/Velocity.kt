@@ -206,6 +206,7 @@ object Velocity {
         is ChitinPatch -> Chitin.macrosFor(patch.voice)
         is AccordPatch -> Accord.macrosFor(patch.voice)
         is ErosionPatch -> Erosion.macrosFor(patch.voice)
+        is OsteriaPatch -> Osteria.macrosFor(patch.voice)
         is RimePatch -> Rime.macrosFor(patch.voice, patch.model)
         is OtisPatch -> Otis.macrosFor(patch.voice)
         is LorentzPatch -> Lorentz.macrosFor(patch.voice)
@@ -251,6 +252,7 @@ object Velocity {
         is BorePatch -> Bore.macrosFor(patch.voice)
         is ObbligatoPatch -> Obbligato.macrosFor()
         is ArcoPatch -> Arco.macrosFor(patch.voice)
+        is TempestPatch -> Tempest.macrosFor(patch.voice)
         is MercuryPatch -> Mercury.macrosFor(patch.voice)
         is GyrePatch -> Gyre.macrosFor(patch.voice)
         is MeridianPatch -> Meridian.macrosFor(patch.voice)
@@ -297,6 +299,7 @@ object Velocity {
         is RegistersPatch -> Registers.macrosFor(patch.voice)
         is VentPatch -> Vent.macrosFor(patch.voice)
         is CairnPatch -> Cairn.macrosFor(patch.voice)
+        is SplayPatch -> Splay.macrosFor(patch.voice, patch.model)
         is WickPatch -> Wick.macrosFor(patch.voice)
         is FilamentPatch -> Filament.macrosFor(patch.voice)
         is ScannedChainPatch -> ScannedChain.macrosFor(patch.voice)
@@ -414,6 +417,7 @@ object Velocity {
         is ChitinPatch -> Chitin.render(patch.voice, patch.macros, velocity = v)
         // Touch changes excitation while the saved mechanics and acoustic profile remain intact.
         is AccordPatch -> patch.copy(velocity = v).render()
+        is OsteriaPatch -> patch.copy(velocity = v).render()
         is ErosionPatch -> patch.copy(velocity = patch.velocity * v).render()
         is RimePatch -> patch.copy(velocity = v).render()
         is OtisPatch -> patch.copy(velocity = patch.velocity * v).render()
@@ -475,6 +479,7 @@ object Velocity {
         is RegistersPatch -> patch.copy(velocity = v).render()
         is VentPatch -> patch.copy(velocity = v).render()
         is CairnPatch -> patch.copy(velocity = v).render()
+        is SplayPatch -> patch.copy(velocity = v).render()
         is WickPatch -> patch.copy(velocity = v).render()
         is FilamentPatch -> patch.copy(velocity = v).render()
         is ScannedChainPatch -> patch.copy(velocity = v).render()
@@ -512,7 +517,7 @@ object Velocity {
         is OnsetPatch -> if (patch.voice == OnsetVoice.KICK) Onset.render(patch.voice, patch.macros, patch.modelVersion, velocity = v) else null
         is SpoolPatch -> patch.copy(velocity = v).render()
         // Velocity moves a brightness macro (brightnessSpec) or softens the render.
-        is ArcoPatch, is BorePatch, is FathomPatch, is ForkPatch, is GlintPatch, is GyrePatch,
+        is TempestPatch, is ArcoPatch, is BorePatch, is FathomPatch, is ForkPatch, is GlintPatch, is GyrePatch,
         is MagnetPatch, is ResinPatch, is SilkPatch, is SirenPatch,
         is SnapPatch, is TidePatch, is TinesPatch, is TonewheelPatch,
         is VelvetPatch, is VoxPatch,

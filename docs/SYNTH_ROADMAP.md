@@ -54,6 +54,11 @@
 
 # Synth roadmap — generate kits, not just capture them
 
+**TEMPEST on the default branch (2026-11-13).** The owner-accepted six-voice digital drum instrument
+came back from the recovery backup with its 22 presets, the full drum starter with choking hats, the
+original tuned starter and the SYNTH picker. The DSP and model sources are unchanged. See
+[TEMPEST_FULL_KIT.md](TEMPEST_FULL_KIT.md).
+
 **Fired Bronze R2 dry study (2026-11-08).** The first kit was rejected by owner
 listening. Five credited tabla preview profiles now drive additive/stochastic
 synthesis; separate pressure, cavity and published-frequency gong candidates

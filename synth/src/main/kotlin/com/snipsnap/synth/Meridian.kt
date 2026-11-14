@@ -13,7 +13,7 @@ import kotlin.math.sin
 import kotlin.math.sqrt
 import kotlin.random.Random
 
-enum class MeridianVoice { SWEEP, CLACK, CHIME, RASP }
+enum class MeridianVoice { SWEEP, CLACK, CHIME, RASP, DRAW, LIFT }
 
 /**
  * A maintained precessing swing touches twelve independently
@@ -33,10 +33,12 @@ enum class MeridianVoice { SWEEP, CLACK, CHIME, RASP }
  * Model 3 adds CLACK, CHIME and RASP material families. Their brighter contact
  * pulses and upper modes retain the same motion and damped modal architecture.
  * SWEEP keeps its original setup arithmetic and defaults to saved model 2.
+ * Model 4 is opt-in for DRAW and LIFT pressure gestures only. The four accepted
+ * voices retain their previous model range, defaults, seeds and signal paths.
  */
 object Meridian {
     const val RATE = Dsp.RATE
-    const val MODEL_VERSION = 3
+    const val MODEL_VERSION = 4
     const val SWEEP_MODEL_VERSION = 2
     // Model one recipes keep their original acoustic-noise identity when a
     // later model adds a held adaptation or a different rendering contract.
@@ -104,17 +106,25 @@ object Meridian {
     fun supportsModel(model: Int): Boolean = model in LEGACY_MODEL_VERSION..MODEL_VERSION
 
     /** Adding material voices must not change the default saved SWEEP identity. */
-    fun defaultModelFor(voice: MeridianVoice): Int =
-        if (voice == MeridianVoice.SWEEP) SWEEP_MODEL_VERSION else MODEL_VERSION
+    fun defaultModelFor(voice: MeridianVoice): Int = when (voice) {
+        MeridianVoice.SWEEP -> SWEEP_MODEL_VERSION
+        MeridianVoice.CLACK, MeridianVoice.CHIME, MeridianVoice.RASP -> 3
+        MeridianVoice.DRAW, MeridianVoice.LIFT -> 4
+    }
 
     fun supportsVoice(voice: MeridianVoice, model: Int): Boolean =
-        supportsModel(model) && (voice == MeridianVoice.SWEEP || model >= 3)
+        when (voice) {
+            MeridianVoice.SWEEP -> model in 1..3
+            MeridianVoice.CLACK, MeridianVoice.CHIME, MeridianVoice.RASP -> model == 3
+            MeridianVoice.DRAW, MeridianVoice.LIFT -> model == 4
+        }
 
     // The heard material studies used the same roughness performance as SWEEP.
     // Changing the object therefore keeps that seed tuple, including old SWEEP.
     internal fun noiseIdentity(voice: MeridianVoice): String = when (voice) {
         MeridianVoice.SWEEP -> voice.name
         MeridianVoice.CLACK, MeridianVoice.CHIME, MeridianVoice.RASP -> MeridianVoice.SWEEP.name
+        MeridianVoice.DRAW, MeridianVoice.LIFT -> voice.name
     }
 
     fun isLoop(macros: Map<String, Float>, model: Int = MODEL_VERSION): Boolean {
@@ -230,8 +240,11 @@ object Meridian {
     /** Keep the legacy material arithmetic isolated from additive voices. */
     internal fun setupsForVoice(voice: MeridianVoice, hz: Double, surface: Double,
         memory: Float, reach: Double, velocity: Double): Array<SurfaceSetup> =
-        if (voice == MeridianVoice.SWEEP) setups(hz, surface, memory, reach, velocity)
-        else MeridianMaterials.setups(voice, hz, surface, memory, reach, velocity)
+        when (voice) {
+            MeridianVoice.SWEEP, MeridianVoice.DRAW -> setups(hz, surface, memory, reach, velocity)
+            MeridianVoice.LIFT -> MeridianMaterials.setups(MeridianVoice.CHIME, hz, surface, memory, reach, velocity)
+            else -> MeridianMaterials.setups(voice, hz, surface, memory, reach, velocity)
+        }
 
     /** Raw conditioned mono at RATE, before shared leveling unless [normalize].
      * [activeSeconds]/[tailSeconds] select bounded audition windows, not a second
@@ -257,6 +270,9 @@ object Meridian {
         require(activeOverride == null || activeOverride.isFinite() && activeOverride in .05f..12f)
         require(tailOverride == null || tailOverride.isFinite() && tailOverride in .15f..4f)
         stopIfUnwanted()
+        if (MeridianGestures.supports(voice)) return MeridianGestures.probe(voice, macros,
+            midi, velocity, seedContext, activeOverride, tailOverride, normalize, taps,
+            fixedAlignment, pMax, resetOnContact)
         val m = settled(voice, macros)
         val active = activeOverride?.toDouble() ?: activeSeconds(m.getValue("HOLD"))
         val tail = tailOverride?.toDouble() ?: tailSeconds(m.getValue("MEMORY"))
