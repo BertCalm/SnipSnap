@@ -671,3 +671,26 @@ prototype audition; no Kotlin exists.
   Preserve round 0c as the baseline.
 - **Overall: incomplete.** The Kotlin engine is in (round 1) and not yet heard; the kits on the shelf,
   saving, playback, export and hardware are open. The percussion gate is waived by the owner.
+
+## TERRA (promotion started 2026-11-14)
+
+TERRA is a world-percussion drum engine with 13 voices. Four are spec voices, frozen to `LegacyTerraBank`. Nine are newer voices built from the owner's listening rounds of 6–8 Nov.
+- On 2026-11-14 the owner chose to promote it from its factory exemption to a finished engine.
+- See [the promotion note](TERRA_PROMOTION.md), [TERRA BOX](TERRA_BOX.md) and [TERRA HANDS](TERRA_HANDS.md).
+- Its one kit, `TerraKits.classic()`, is not on the shelf yet. Its first full-kit verdict is round `terra-kit-1`.
+
+| Gate | Status | Evidence |
+|---|---|---|
+| Melodic voices, keygroups, chord tools | Not applicable | A drum engine. Its pitched voices (agogô, balafon, tabla) are single drum hits, not a keygroup instrument. |
+| Articulation: HOLD, STRUM | Not applicable | Finite hits, no strings. |
+| Percussion: authored roll or riser | Not yet verified | No roll or riser is authored. |
+| Drums: multiple distinct genre kits on the shelf | Fail | One kit exists, it is not on the shelf, and the owner has not yet heard it as a whole. |
+| Velocity: rendering | Pass in software | Every TERRA voice strikes at the velocity: a softer hit is a different strike, not a quieter copy ([STRIKE_VELOCITY](STRIKE_VELOCITY.md), `StrikeVelocityTest`). The classic kit's pads carry two softer strikes each. The owner has never heard soft and medium hits clearly ("Can't tell" twice, [TERRA HANDS](TERRA_HANDS.md)). |
+| Velocity: saving, playback, export | Not yet verified | No TERRA kit is on the shelf to save, play or export. |
+| Round robin | Not yet verified | TERRA can re-strike (`Restrike.canRestrike`, POS moved per take), but no shelf pad deals takes. |
+| Starter kit: saving and export | Not yet verified | `TerraKitsTest` regenerates each pad from its recipe. No starter exists. |
+| Presets and picker | Fail | No `TerraPresets.kt` and no SYNTH picker entry. |
+| Hardware playback | Not verified | No phone or MPC run is recorded. |
+
+- **Sound character: the nine newer voices were picked by the owner, as Python prototype clips.** The six classic pads on the four spec voices (A01, A04, A13–A16) were heard only at the strike-velocity gate, and no setting of theirs was picked.
+- **Overall: incomplete.** The finish path is the kit verdict, the starter, presets and the picker, genre kits, then round robin and touch.
