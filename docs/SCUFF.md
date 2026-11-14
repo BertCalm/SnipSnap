@@ -1,6 +1,6 @@
 # SCUFF: design brief and round-0 audition
 
-Status: **round 4, on the roster; sound direction (round 0b) accepted by the owner 2026-11-12; the Kotlin engine and both kits accepted from the listening page's version 5 on 2026-11-13 ("Audition is all good"); the kits' twenty-eight hits filed as the factory bank.** The Kotlin engine is `Scuff.kt`, the kits `ScuffKits.kt`. No phone or MPC has played them. The engine stays in
+Status: **round 5, on the app's SYNTH picker and the roster; sound direction (round 0b) accepted by the owner 2026-11-12; the Kotlin engine and both kits accepted from the listening page's version 5 on 2026-11-13 ("Audition is all good"); the kits' twenty-eight hits filed as the factory bank.** The Kotlin engine is `Scuff.kt`, the kits `ScuffKits.kt`. No phone or MPC has played them. The engine stays in
 progress until every applicable owner gate has evidence (see "Gates" below and the gates entry).
 
 Prototype: [`prototype/scuff/`](../prototype/scuff/) (`scuff_proto.py` is the model,
@@ -583,5 +583,33 @@ FLINT's harder SLAM keeps a mean of .0145 of its peak inside its 60 ms (37 dB do
 its second block, the round-3 finding). `ScuffPresetsTest` bounds a preset's mean at .02, a measurement with
 room, not a target; the sound is the accepted one and model version 1 does not move for it.
 
-Gates after round 4: presets and the roster pass. Open: hardware playback, the app
-picker (now a round that needs no SDK), and BOOM's octave spacing (the owner's call). Nothing new to hear: every preset is a pad already heard.
+Gates after round 4: presets and the roster pass. Open after round 4: hardware playback, MPC 2's one take per zone,
+the app picker (round 5 below), and BOOM's octave spacing (the owner's call). Nothing new to hear: every preset is a pad already heard.
+
+## As built, round 5: the app picker (2026-11-14)
+
+SCUFF is on SYNTH's engine picker, the last constant of `Engine` in `app/.../SynthScreen.kt`, added the way the
+corrected convention asks (mirror the nearest shipped engine arm for arm; CI's `android-build` compiles it and
+`emulator-tests` runs the app's UI suites; this session had no SDK). SOOT is the template, a drum engine whose
+patch carries a renderer model: the constant; the seven arms (voices, controls, defaults, scramble, render,
+drum class, patch); the saved-draft restore; a frozen draft before a macro bag, so a later restore cannot
+mistake the bag for an old model; and the live-edit list, where `withMacros` keeps a loaded patch's other
+fields. SCUFF also joins the native-factory list, which RIVET is on and SOOT is not, because its presets carry
+a strike, a take and a model outside the macro map: a chosen preset loads whole through `loadPreset`, so a
+kit's pad arrives at its first take and keeps it through edits and drafts. The ten voices are one short word
+each, so the chip labels are the enum names. `EngineCatalog` files SCUFF under DRUMS ("Dry Michigan drums,
+crushed, boxed, barked and slammed"), at the end, in the picker's order; both READMEs count 86 picker engines
+with SCUFF listed, and the root README's list of rostered engines the picker does not show is back to LORENTZ
+alone. `ConventionTest` reads all of that in both directions and `EngineCatalogTest` the entry.
+
+The on-device test, `NewEngineSynthScreenTest.scuffOpensItsKickLoadsAKitPresetAndKeepsAnEditWithItsTakeAndModel`,
+mirrors SOOT's: the kick opens selected with TUNE, DECAY, CLICK, SQUARE and SLAM and no GRIT chip (a kick does
+not take the crush, so `macrosFor` leaves it off); the preset chip FLINT KICK lands with the kit's TUNE .6,
+DECAY .3 and CLICK .8; a DECAY edit survives a rebuild of the screen; and the saved draft is a `ScuffPatch`
+with model 1, the preset's take (`ScuffPresets.TAKE`), full velocity and the edited macros. The test runs on
+CI's emulator, not here.
+
+What the picker does not do: velocity and takes have no control on the panel (a RIVET-style editor would be a
+round of its own), so an edited sound is the plain strike at take 0 unless it started from a preset, and
+SCRAMBLE draws from the engine's own ranges. Open after round 5: hardware playback, MPC 2's one take per zone,
+and BOOM's octave spacing (the owner's call).
