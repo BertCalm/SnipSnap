@@ -1252,7 +1252,7 @@ private fun ChopContent(
                         )
                     } catch (e: Exception) {
                         if (e is kotlinx.coroutines.CancellationException) throw e
-                        onToast("LAND FAILED: ${e.message ?: e.javaClass.simpleName}")
+                        onToast(Copy.landFailed(e.message ?: e.javaClass.simpleName))
                     } finally {
                         sendBusy = false
                     }

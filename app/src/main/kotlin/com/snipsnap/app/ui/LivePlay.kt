@@ -28,6 +28,13 @@ internal class LivePlay {
     var loop by mutableStateOf(false)
         private set
 
+    /**
+     * Where a queued section starts. Session UI state, set by the queue
+     * control on the screen; never written to the song file.
+     */
+    var queueMode by mutableStateOf(SongCursor.QueueMode.END_OF_PASS)
+        private set
+
     /** The section that plays when the current pass ends. */
     var queued by mutableStateOf<Int?>(null)
         private set
@@ -48,7 +55,10 @@ internal class LivePlay {
         stop()
         val frames = mix.snip.samples.size / SongCursor.CHANNELS
         val passes = mix.passes.ifEmpty { listOf(Arranger.Pass(0, 0, frames)) }
-        val c = SongCursor(mix.snip.samples, passes, from).also { it.loop = loop }
+        val c = SongCursor(mix.snip.samples, passes, from).also {
+            it.loop = loop
+            it.queueMode = queueMode
+        }
         val v = MixVoice(c, mix.snip.samples, mix.snip.sampleRate)
         cursor = c
         voice = v
@@ -77,7 +87,12 @@ internal class LivePlay {
         cursor?.loop = loop
     }
 
-    /** [section] plays when the current pass ends; queuing the one already queued takes it back. */
+    fun chooseQueueMode(mode: SongCursor.QueueMode) {
+        queueMode = mode
+        cursor?.queueMode = mode
+    }
+
+    /** [section] plays when the current pass ends (or at the next bar line, in NEXT BAR); queuing the one already queued takes it back. */
     fun queue(section: Int) {
         val c = cursor ?: return
         val next = if (queued == section) null else section

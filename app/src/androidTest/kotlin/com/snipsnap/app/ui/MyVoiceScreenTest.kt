@@ -109,7 +109,7 @@ class MyVoiceScreenTest : ComposeScreenTest() {
         assertEquals(expectedStart, savedVoice.selectionStartFrame)
         assertEquals(expectedEnd, savedVoice.selectionEndFrame)
         click("SAVE ENSEMBLE → A02")
-        waitFor("the new ordinary pad", timeoutMillis = 120_000) { toasts.contains("MY VOICE SAVED ON A02") }
+        waitFor("the new ordinary pad", timeoutMillis = 120_000) { toasts.contains("MY VOICE saved on A02.") }
         val saved = KitStore.load(directory)
         assertEquals(original, saved.pad(1))
         assertArrayEquals(originalBytes, File(directory, original.sampleFile).readBytes())
@@ -163,7 +163,7 @@ class MyVoiceScreenTest : ComposeScreenTest() {
         click("Open kit voice $title")
         waitFor("the kit-only source to reopen", timeoutMillis = 60_000) { hasText("SAVED VOICE READY") }
         click("SAVE ENSEMBLE → A02")
-        waitFor("a new pad from the kit-only source", timeoutMillis = 120_000) { toasts.contains("MY VOICE SAVED ON A02") }
+        waitFor("a new pad from the kit-only source", timeoutMillis = 120_000) { toasts.contains("MY VOICE saved on A02.") }
         val made = checkNotNull(KitStore.load(directory).pad(2))
         assertEquals(voice.id, ConfluencePersonalWorkshop.openPad(directory, made).id)
     }

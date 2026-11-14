@@ -135,6 +135,53 @@ class ButtonTierTest {
         assertEquals(listOf("ui/Chrome.kt"), screensWithoutPrimary(before))
     }
 
+    /** The four places' screen files: where each one's main button lives. */
+    private val placeScreens = mapOf(
+        "ui/TapeScreen.kt" to "RECORD: CATCH A HIT",
+        "ui/KitScreen.kt" to "PADS",
+        "ui/GrooveScreen.kt" to "BEAT: RECORD",
+        "ui/ArrangeScreen.kt" to "SONG: PLAY",
+    )
+
+    /** A place with no primary says why, in one line (review Q3, 2026-11-13). */
+    private val NO_PRIMARY_WAIVER = mapOf(
+        "ui/KitScreen.kt" to "pads are the action",
+    )
+
+    /** The place files that break the rule: no primary and no waiver, or a waiver that is not true. */
+    private fun placesBreakingPrimaryRule(files: Map<String, String>): List<String> {
+        val counts = primarySites(files).groupingBy { it }.eachCount()
+        return placeScreens.keys.mapNotNull { file ->
+            val n = counts[file] ?: 0
+            when {
+                file in NO_PRIMARY_WAIVER -> if (n != 0) "$file is waived but has $n" else null
+                n == 0 -> "$file has no primary and no waiver"
+                n > (severalPrimaries[file] ?: 1) -> "$file has $n"
+                else -> null
+            }
+        }
+    }
+
+    @Test
+    fun `law 7 - every place has one primary or is on the waiver list`() {
+        assertEquals(4, placeScreens.size)
+        assertTrue(NO_PRIMARY_WAIVER.keys.all { it in placeScreens }, "a waiver names a place file")
+        assertTrue(NO_PRIMARY_WAIVER.values.all { it.isNotBlank() }, "each waiver gives its reason")
+        assertEquals(emptyList(), placesBreakingPrimaryRule(sources()))
+    }
+
+    @Test
+    fun `law 7 reports a place with no primary and no waiver`() {
+        // The vacuous-test check: CATCH A HIT drawn as a plain button leaves RECORD with none.
+        val before = sources().toMutableMap()
+        before["ui/TapeScreen.kt"] = before.getValue("ui/TapeScreen.kt").replace(Regex("""\bButtonTier\.Primary\b"""), "ButtonTier.Secondary")
+        assertEquals(listOf("ui/TapeScreen.kt has no primary and no waiver"), placesBreakingPrimaryRule(before))
+        // A waived place that grows a primary is reported too.
+        val grown = sources().toMutableMap()
+        grown["ui/KitScreen.kt"] = grown.getValue("ui/KitScreen.kt") + "\nfun X() { ActionButton(\"B\", scheme, enabled = true, tier = ButtonTier.Primary, onClick = {}) }\n"
+        assertEquals(listOf("ui/KitScreen.kt is waived but has 1"), placesBreakingPrimaryRule(grown))
+    }
+
     @Test
     fun `law 3 - the tiers are dressed in scheme tokens, and secondary is the default`() {
         val actionButton = sources().getValue("ui/PadSheetScreen.kt").substringAfter("internal fun ActionButton(")
@@ -270,13 +317,28 @@ class ButtonTierTest {
         assertTrue("snipsRead = true" in screen)
     }
 
+    /** A line that passes "CANCEL" as the label of an ActionButton or a LabButton, the two shapes a visible CANCEL takes. */
+    private val cancelButton = Regex("""\b(ActionButton|LabButton)\(\s*"CANCEL"""")
+
+    private fun loudCancels(lines: List<String>) = lines.filter { cancelButton.containsMatchIn(it) && "ButtonTier.Text" !in it }
+
     @Test
     fun `cancel is a text button`() {
         val cancels = sources().flatMap { (name, text) ->
-            codeLines(text).filter { (_, l) -> l.contains("ActionButton(\"CANCEL\"") }.map { name to it.second }
+            codeLines(text).filter { (_, l) -> cancelButton.containsMatchIn(l) }.map { name to it.second }
         }
-        assertTrue(cancels.size >= 10, "found ${cancels.size} CANCEL buttons")
+        assertTrue(cancels.size >= 20, "found ${cancels.size} CANCEL buttons")
+        assertTrue(cancels.any { "LabButton(" in it.second }, "the LabButton shape is scanned")
         val loud = cancels.filter { "ButtonTier.Text" !in it.second }
         assertEquals(emptyList(), loud)
+    }
+
+    @Test
+    fun `the cancel law reads a LabButton CANCEL and fails when it is not a text button`() {
+        val bare = "LabButton(\"CANCEL\", scheme, enabled = true, onClick = onCancel)"
+        val ok = "LabButton(\"CANCEL\", scheme, enabled = true, tier = ButtonTier.Text, onClick = onCancel)"
+        assertEquals(listOf(bare), loudCancels(listOf(bare, ok)))
+        assertEquals(listOf("ActionButton(\"CANCEL\", scheme)"), loudCancels(listOf("ActionButton(\"CANCEL\", scheme)")))
+        assertEquals(emptyList(), loudCancels(listOf("LabButton(\"SAVE\", scheme, enabled = true) {}")))
     }
 }

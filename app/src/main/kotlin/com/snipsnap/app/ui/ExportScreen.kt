@@ -968,6 +968,9 @@ private fun ExportContent(
                             revision++
                         },
                     )
+                    // What the picked format leaves behind, under the format that leaves it (MPC 2's
+                    // `.xpm` keeps a velocity × round-robin pad's velocity layers, one take each).
+                    model.formatNote?.let { FindingsCard(listOf(it), scheme, title = "FORMAT") }
                     ArtRow(
                         knobs = model.artKnobs ?: ArtKnobs.default(scheme),
                         enabled = !session.busy,

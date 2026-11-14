@@ -56,6 +56,7 @@ import com.snipsnap.synth.ShoalPatch
 import com.snipsnap.synth.TanglePatch
 import com.snipsnap.synth.WickPatch
 import com.snipsnap.synth.RivetPatch
+import com.snipsnap.synth.ScuffPatch
 import com.snipsnap.synth.HalobarPatch
 import com.snipsnap.synth.SkinPatch
 import com.snipsnap.synth.OverlapPatch
@@ -91,7 +92,7 @@ import java.util.Locale
  * Promotion into the shipped roster stays a code change, on purpose: a
  * preset worth every player having is pasted into its engine's table by
  * hand ([rosterLine] renders the line), where the spread, blocklist and
- * identity tests judge it. SEND TO BENCH carries the file and the lines.
+ * identity tests judge it.
  *
  * FORGET follows the app's one rule for a delete: into the bin, not gone.
  * A forgotten preset moves to a `binned` list in the same file ([forget]),
@@ -442,7 +443,8 @@ object UserPresets {
      * passage, root, velocity, exact seed and render model through that constructor.
      * NACRE likewise retains its saved renderer, native root, strike, exact seed and
      * controls through the complete JSON constructor. WICK retains its selected
-     * RATTLE body, root, velocity and controls through that constructor as well.
+     * RATTLE body, root, velocity and controls through that constructor as well. SCUFF
+     * retains its strike velocity, take and model version the same way.
      * Names and embedded JSON are escaped
      * Kotlin string literals.
      */
@@ -466,6 +468,11 @@ object UserPresets {
         if (patch is OsteriaPatch) {
             val recipe = Json.write(JsonValue.Str(patch.toJsonText())).replace("$", "\\$")
             return "OsteriaPatch.fromJsonText($recipe),"
+        }
+        if (patch is ScuffPatch) {
+            // Velocity, take and model version live outside the macro map; promotion keeps the strike saved.
+            val recipe = Json.write(JsonValue.Str(patch.toJsonText())).replace("$", "\\$")
+            return "ScuffPatch.fromJsonText($recipe),"
         }
         if (patch is ErosionPatch) {
             // Native touch is outside the macro map; promotion must retain it.

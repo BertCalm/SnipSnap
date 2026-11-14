@@ -151,6 +151,8 @@ fun InstrumentsBench(
     onBack: () -> Unit,
     expansions: ExpansionStore? = null,
     onToast: (String) -> Unit = {},
+    onMakeCairnStudy: ((String) -> Unit)? = null,
+    cairnStudyEnabled: Boolean = true,
     onMakeMurmurInstrument: ((String) -> Unit)? = null,
     murmurInstrumentEnabled: Boolean = true,
     roundRobinShelf: File? = null,
@@ -201,6 +203,9 @@ fun InstrumentsBench(
             TapeText(Bench.INSTRUMENTS.label, TapeType.lcdHeader, scheme.lcdInk.tape)
             Spacer(Modifier.weight(1f))
             TapeText("${instruments.size + rrBanks.size}", TapeType.lcdSmall, scheme.amber.tape)
+        }
+        if (onMakeCairnStudy != null) {
+            CairnSingStudyPicker(enabled = cairnStudyEnabled, onMake = onMakeCairnStudy)
         }
         if (onMakeMurmurInstrument != null) {
             MurmurKeptInstrumentPicker(enabled = murmurInstrumentEnabled, onMake = onMakeMurmurInstrument)

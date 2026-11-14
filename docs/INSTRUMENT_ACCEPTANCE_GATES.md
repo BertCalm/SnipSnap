@@ -18,7 +18,10 @@ and take diversity, rather than counting differently named copies. Save/load
 and export/import checks must exercise selection and playback windows as well
 as metadata. Do not promote a single-layer fallback or a dropped take to a pass.
 An SFZ round trip does not prove MPC behavior; format and hardware limitations
-remain open gates until the relevant evidence exists. Mark genuinely inapplicable
+remain open gates until the relevant evidence exists. The one exception is the
+owner's: on 2026-11-14 they recorded MPC 2's lack of velocity × round robin on
+one pad as a format limit, not applicable to the round-robin export gate
+([MPC 2 and round robin](ENGINE_ACCEPTANCE_GATES.md#mpc-2-and-round-robin-owner-decision-2026-11-14)). Mark genuinely inapplicable
 melodic or articulation requirements as such instead of inventing controls.
 
 Current Cosmic Breaks evidence is in [COSMIC_BREAKS.md](COSMIC_BREAKS.md).
