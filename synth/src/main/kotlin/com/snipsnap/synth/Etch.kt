@@ -43,9 +43,16 @@ enum class EtchVoice { SAW, SQUARE, RUBBER, WHISTLE, GRIT, DUB }
  * hit opens the filter further, decays faster and charges the accent capacitor, so it changes the tone, not only
  * the level. Each round-robin take ([take]) moves five things a listener hears, dealt out so no two of four takes
  * share a setting.
+ *
+ * Models: 1 is the sound accepted in round 3, whose one-shots let go 7 ms after the gate. 2 (round K2, the owner's
+ * "C all", 2026-11-14) lets a one-shot ring out after the gate, 60 ms from C3 up and longer toward the low notes (180
+ * ms at C1), RUBBER at 150 ms throughout ([endingFor]), so a short low note is no longer heard as a kick. Loops are
+ * the same in both models. A recipe saved as model 1 keeps model 1's ending.
  */
 object Etch {
-    const val MODEL_VERSION = 1
+    const val MODEL_VERSION = 2
+    /** The round-3 sound: the model a recipe with no model field reads as. */
+    const val ORIGINAL_MODEL = 1
     const val MIDI_MIN = 24
     const val MIDI_MAX = 60
     const val DEFAULT_MIDI = 36
@@ -243,11 +250,25 @@ object Etch {
 
     /** The one-shot, or from [LOOP_HOLD_AT] the line as a seamless loop. [take] 0 is the plain render. */
     fun render(voice: EtchVoice, macros: Map<String, Float> = emptyMap(), midi: Int? = null, velocity: Float = 1f,
-        take: Int = 0, seed: Int = 0): Snip {
+        take: Int = 0, seed: Int = 0, model: Int = MODEL_VERSION): Snip {
+        require(model in ORIGINAL_MODEL..MODEL_VERSION) { "unsupported etch model $model" }
         val m = settled(voice, macros)
         val v = velocity.takeIf { it.isFinite() }?.coerceIn(0f, 1f) ?: 1f
-        val out = if (isLoop(m.getValue("HOLD"))) renderLoop(voice, m, midi, v, take, seed) else renderOneShot(voice, m, midi, v, take, seed)
+        val out = if (isLoop(m.getValue("HOLD"))) renderLoop(voice, m, midi, v, take, seed)
+            else renderOneShot(voice, m, midi, v, take, seed, endingFor(voice, model))
         return Snip(out, channels = 1, sampleRate = RATE)
+    }
+
+    /** Model 2's ending everywhere but RUBBER: 60 ms from C3 up, rising to 180 ms at C1. */
+    internal val LOW_RING_OUT = OneShotShape(releaseSeconds = .06, releaseLowSeconds = .18)
+    /** RUBBER's model-2 ending: its sub-octave keeps it bass-heavy up to C3, so 150 ms on every note. */
+    internal val RING_OUT = OneShotShape(releaseSeconds = .15)
+
+    /** How [voice]'s one-shots end in [model]: model 1 lets go in 7 ms; model 2 rings out (the K2 study's C). */
+    internal fun endingFor(voice: EtchVoice, model: Int): OneShotShape = when {
+        model < 2 -> OneShotShape.ACCEPTED
+        voice == EtchVoice.RUBBER -> RING_OUT
+        else -> LOW_RING_OUT
     }
 
     /**

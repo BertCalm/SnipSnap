@@ -407,7 +407,7 @@ sound, unknown and non-finite macros, velocity brighter on every voice, four dis
 The owner asked for the rest of the engine after K1: test a fix for short low notes reading as KICK, the picker,
 the factory roster, keygroups, a kit, velocity and round robin end to end, render time and these docs.
 
-**The ending study (owner's choice pending).** The app names a saved sound by what `Classifier` hears, and a
+**The ending study.** The app names a saved sound by what `Classifier` hears, and a
 bass-heavy sound only reads TONAL if it takes more than 500 ms to fall 20 dB from its peak. Over a grid of six
 voices, seven notes (C1 to C4), three velocities and six HOLD settings, 122 of 756 one-shots (16%) read as KICK or
 TOM, every one a short note: RUBBER 57, DUB 27, GRIT 24, SQUARE 8, WHISTLE 6, SAW none, and none from HOLD 0.6 up.
@@ -419,8 +419,13 @@ Three levers were measured (study-only parameters on `Etch.OneShotShape`; the ac
 - **A longer release works:** 150 ms leaves 4, 200 ms leaves 2, all RUBBER at C1 (its sub-octave sits near 16 Hz).
 Three endings are on the listening page: **A** as accepted (7 ms release, 122 readings), **B** ring-out (150 ms on
 every note, 4) and **C** low ring-out (60 ms from C3 up rising to 180 ms at C1, RUBBER on B's release, 4). B makes
-HOLD 0 fade over about 0.75 s instead of 0.1 s; C keeps it near 0.25 s from C3 up. Not heard. A chosen ending will
-be a model-2 renderer, with model-1 recipes keeping the accepted one.
+HOLD 0 fade over about 0.75 s instead of 0.1 s; C keeps it near 0.25 s from C3 up.
+
+**The owner's choice (2026-11-14): "C all".** C is model 2 (`Etch.MODEL_VERSION = 2`, `Etch.endingFor`): every voice
+rings out 60 ms from C3 up, rising to 180 ms at C1, and RUBBER rings out 150 ms on every note. New patches, the
+factory presets, the kit and the keys render model 2. A recipe saved as model 1, or saved before models were
+written, keeps model 1's 7 ms ending, byte for byte (`EtchTest`). Loops are the same in both models. On the
+classifier grid, model 2's only drum readings are RUBBER's shortest notes at C1.
 
 **The roster.** The fourteen K1 presets (each voice's note and line, SAW's busy line, SQUARE's sparse line) are
 the factory bank: every one a setting heard in round 3. `PatchTypes.PROTOTYPES` no longer lists ETCH; `Presets`

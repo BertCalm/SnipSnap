@@ -33,8 +33,8 @@ internal object EtchAuditionGenerator {
         }
     }
 
-    val RING_OUT = Etch.OneShotShape(releaseSeconds = .15)
-    val LOW_RING_OUT = Etch.OneShotShape(releaseSeconds = .06, releaseLowSeconds = .18)
+    val RING_OUT = Etch.RING_OUT
+    val LOW_RING_OUT = Etch.LOW_RING_OUT
 
     private val DRUMS = setOf(DrumClass.KICK, DrumClass.SNARE, DrumClass.CLAP, DrumClass.HAT_CLOSED, DrumClass.HAT_OPEN, DrumClass.TOM)
     val GRID_MIDI = listOf(24, 30, 36, 43, 48, 55, 60)
@@ -101,6 +101,14 @@ internal object EtchAuditionGenerator {
             val id = "${tag(p.voice)}-${p.name.lowercase().replace(' ', '-')}"
             write("presets", id, p.render(), ", \"voice\": \"${p.voice}\", \"name\": \"${p.name}\", \"class\": \"${Etch.drumClassFor(p.voice, p.macros)}\"")
         }
+        // 4. FRESH TAPE → ETCH as it lands: every pad at a middle touch (engine take 1), then SAW C2's whole grid.
+        for ((i, pad) in EtchKits.pads().withIndex()) {
+            val id = "%02d-%s".format(i + 1, pad.name.lowercase().replace(' ', '-'))
+            write("kit", id, EtchKits.render(pad, .65f, if (pad.loop) 0 else 1), ", \"name\": \"A%02d %s\"".format(i + 1, pad.name))
+        }
+        val walk = EtchKits.pads().first()
+        for (v in EtchKits.VELOCITIES) for (t in 1..EtchKits.TAKES)
+            write("grid", "zone-${"%.2f".format(v)}-take$t", EtchKits.render(walk, v, t), ", \"velocity\": $v, \"take\": $t")
         // The classifier over the whole grid, per ending.
         val readings = Ending.entries.joinToString(",\n") { e ->
             val bad = drumReadings(e)

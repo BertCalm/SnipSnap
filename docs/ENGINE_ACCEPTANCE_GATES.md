@@ -206,9 +206,10 @@ Rounds 1 to 3 were a Python audition, accepted 2026-11-12. Kotlin round K1 (2026
     (`TriadKitProof.verifyTrack`). MPC 2 keeps each zone's first take (the owner's format limit, 2026-11-14).
   - **Not covered:** loop pads have velocity zones and no takes; keys have touch layers and no takes.
 - **Sound character: direction accepted at round 3** ("I'm good with evening in audition", read as "everything").
-  Short, low notes read as KICK or TOM to the classifier (122 of 756 one-shots); three endings that fix it to 4 of
-  756 are on the K2 page for the owner's choice. Not heard.
-- **Overall: incomplete.** Open: the owner's ending choice, a listen to the Kotlin presets and kit, the chord tool,
+  Short, low notes read as KICK or TOM to the classifier (122 of 756 one-shots). The owner heard three endings on
+  the K2 page and chose C for every voice (2026-11-14): model 2 rings one-shots out, leaving 4 of 756 (RUBBER's
+  shortest C1 notes). Model-1 recipes keep the accepted ending.
+- **Overall: incomplete.** Open: a listen to the Kotlin presets and kit at model 2, the chord tool,
   phone playback of keys and kit, and an MPC.
 ## CYPHER kits and THUMP SUB (round 2, 2026-11-12)
 

@@ -1735,7 +1735,7 @@ ETCH is a step-line bass engine in progress: a squelching sixteen-step line, a d
 dotted-eighth delay into a reverb, from the owner's two reference clips and pedal chain. Six voices (SAW, SQUARE,
 RUBBER, WHISTLE, GRIT, DUB); velocity is the accent; HOLD's top plays the line as a loop. Round K2 put it in the
 SYNTH picker with fourteen presets heard in round 3, finite keys from MAKE INSTRUMENT, and FRESH TAPE → ETCH (three
-touch zones, four takes per note). How a short note ends is the owner's open choice. [Design, listening rounds and
+touch zones, four takes per note). Model 2 lets short notes ring out, the owner's choice, so they are no longer saved as kicks. [Design, listening rounds and
 measurements](docs/ETCH.md).
 
 SOOT is a drum engine in progress: grimy street boom bap from physical models only. A membrane
