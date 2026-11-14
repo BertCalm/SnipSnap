@@ -295,7 +295,7 @@ A kit family of three 1970s disco kits: Philly Strings, Loft Party and Munich Ma
   playback remain open. The owner waived SFZ and
   DecentSampler.
 
-## SOOT (five kits on the shelf, sound approved; hardware open)
+## SOOT (five kits on the shelf, sound approved, hardware confirmed: complete)
 
 A drum engine for grimy street boom bap from physical models. See [SOOT](SOOT.md).
 
@@ -322,10 +322,13 @@ A drum engine for grimy street boom bap from physical models. See [SOOT](SOOT.md
     their renders (`SootKitTest`, `SootGenreKitTest`, `:shell:generateSootKit`,
     `:shell:generateSootGenreKits`).
   - **Playback: verified in software.** `PadHit.resolve` picks the zone by velocity and deals the four
-    takes in order, then repeats. No phone has played the kit.
+    takes in order, then repeats. **Phone: pass, owner-confirmed 2026-11-14.** The owner played SOOT
+    and its starter kits and said, "Everything is good": soft-to-hard and repeated hits were right.
   - **Export: verified for MPC 3 by read-back.** The exported slices match their renders. **MPC 2: not
     applicable** ([format limit](#mpc-2-and-round-robin-owner-decision-2026-11-14)): it keeps only the first take of each zone. SFZ and DecentSampler were not generated.
-    No MPC has loaded the kit.
+    **MPC 3 on an MPC: pass, owner-confirmed 2026-11-14.** The exported kits loaded and repeated hits
+    cycled through the takes. This is the owner's report, not a slice-map capture (HH1.4 stays
+    parked), and the first report against the general MPC note above.
 - **Sound character: approved at round 2.** On 2026-11-13 the owner heard the kit read back from its
   MPC 3 export and said, "All sounds fine". How they got there:
   - **Round 0:** they picked the hits.
@@ -336,9 +339,11 @@ A drum engine for grimy street boom bap from physical models. See [SOOT](SOOT.md
     - the roll and the loop point accepted;
     - the four bars moved to the heavier dictaphone (`SootKits.VERSION` 3).
 
-  Preserve version 3 as the baseline. This is not evidence of a phone or MPC audition.
-- **Overall: incomplete.** The sound of all five kits is approved, and the software evidence is in
-  place for all of them. Still open: phone and MPC hardware playback.
+  Preserve version 3 as the baseline. The phone and MPC 3 auditions are recorded under velocity and
+  round robin above.
+- **Overall: complete (2026-11-14).** The sound of all five kits is approved, the software evidence
+  is in place for all of them, and the owner confirmed phone and MPC 3 playback. MPC 2 is not
+  applicable (format limit).
 
 ## MURMUR round robin (V2 instrument, 2026-11-13)
 
@@ -698,3 +703,27 @@ prototype audition; no Kotlin exists.
   Preserve round 0c as the baseline.
 - **Overall: incomplete.** The Kotlin engine is in (round 1) and not yet heard; the kits on the shelf,
   saving, playback, export and hardware are open. The percussion gate is waived by the owner.
+
+## EMBER (round 0, 2026-11-14, Python prototype, not heard)
+
+A drum engine for a live jazz and soul kit in a small club in 1962: calfskin drums, a riveted ride, brushes, the
+club and a 1962 chain, from physical models. Four sixteen-pad kits. See [EMBER](EMBER.md). Round 0 is a Python
+prototype and a listening page (<https://claude.ai/artifact/Xmcj5t8MYSNCQPoTKHBcdw>); no Kotlin exists.
+
+- **Melodic, keygroup and chord-tool gates:** not applicable. A drum engine.
+- **Articulation:** finite hits, no HOLD. No picked or thumbed strings.
+- **Percussion: authored, not heard.** Every kit carries a roll or riser on A15/A16: a press roll and a mallet
+  cymbal swell (EMBER), a brush roll and a far swell (AFTER HOURS), a snare roll (SOUL JAZZ), a swell (FREE).
+  Rendered in Python.
+- **Drum shelf: authored, not on the shelf.** EMBER (138 BPM), EMBER AFTER HOURS (66), EMBER SOUL JAZZ (104) and
+  EMBER FREE (80) differ in implements, drums per role, tuning, damping, looseness, microphone distance, chain and
+  tempo. No pad is identical between any two kits; the same slot in two kits is at least 2.98 dB apart (Python).
+  No Kotlin, so nothing is on the shelf.
+- **Velocity and round robin:**
+  - **Rendering: measured in Python, not Kotlin.** On all 64 pads, soft against hard at matched level differs by at
+    least 1.92 dB; the closest two of any pad's four takes are 1.19 dB apart. Velocity moves the contact, the
+    threshold parts and the swell's arc, not a filter.
+  - **Saving, playback, export: open.** The listening page's pad grid is a browser stand-in, not app evidence.
+- **Sound character: open.** Nothing has been heard.
+- **Overall: incomplete.** Round 0 asks the owner which voices and kits to keep. Kotlin (round 1), the shelf and
+  saving, playback and MPC 3 export (round 2), and phone and MPC hardware (round 3) are all open.

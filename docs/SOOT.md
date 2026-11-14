@@ -28,13 +28,15 @@ How the owner got there:
   - accepted the coil roll and the loop point;
   - moved the four bars to the heavier dictaphone (.9).
 
-Still to come:
-- nothing for the sound. The four sibling kits are approved:
+**Complete (2026-11-14).** Nothing is still to come:
+- **Sound:** the four sibling kits are approved:
   - SOOT DRUMLESS, SOOT BASEMENT DUB, SOOT BRUSHED NOIR and SOOT WAREHOUSE INDUSTRIAL
     (`SootGenreKits.kt` 2, `:shell:generateSootGenreKits`);
-  - 63 of 64 pads kept as built; Basement Dub's four bars are the steppers groove the owner picked;
-- phone and MPC hardware;
-- nothing for the picker: SOOT is on it (2026-11-13), mirroring BACKWASH, with an on-device test in
+  - 63 of 64 pads kept as built; Basement Dub's four bars are the steppers groove the owner picked.
+- **Hardware:** the owner confirmed on 2026-11-14 ("Everything is good") that:
+  - on their phone, SOOT and its starter kits play, with soft-to-hard hits and repeated hits right;
+  - on the MPC 3, the exported kits load and repeated hits cycle through the takes.
+- **Picker:** SOOT is on it (2026-11-13), mirroring BACKWASH, with an on-device test in
   `NewEngineSynthScreenTest`.
 
 ## The kit (approved 2026-11-12, re-pointed by the picks)
@@ -126,4 +128,8 @@ Round 0's harness: `python3 scripts/soot_r0/soot_r0.py` then `python3 scripts/so
 - **MPC 2: the round-robin export gate does not apply** (a format limit, recorded 2026-11-14 in
   [ENGINE_ACCEPTANCE_GATES.md](ENGINE_ACCEPTANCE_GATES.md#mpc-2-and-round-robin-owner-decision-2026-11-14)). It keeps one take per zone. SFZ and
   DecentSampler were not generated.
-- **Mono, no hardware.** Nothing has been played on a phone or an MPC.
+- **Mono.** The phone and MPC 3 checks are the owner's report (2026-11-14), not a capture. No
+  slice-map capture of an MPC 3 chain WAV exists yet (HH1.4, parked), so the general MPC note in
+  [ENGINE_ACCEPTANCE_GATES.md](ENGINE_ACCEPTANCE_GATES.md#mpc-2-and-round-robin-owner-decision-2026-11-14),
+  which expects an MPC to play each zone's first take, is unchanged. SOOT's cycling takes on the
+  owner's MPC 3 are the first report against it.
