@@ -334,6 +334,10 @@ object Presets {
             val v = TempestVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
             TempestPresets.forVoice(v)
         }
+        CairnPatch.ENGINE -> {
+            val v = CairnVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
+            CairnPresets.forVoice(v)
+        }
         else -> emptyList()
     }
 
@@ -374,5 +378,6 @@ object Presets {
             TremorPresets.all() + CircuitPresets.all() + ThawPresets.all() + ScourPresets.all() + MurkPresets.all() + NimbusPresets.all() +
             CorollaPresets.all() + UndertowPresets.all() + SuturePresets.all() + TesseraPresets.all() + PitchwheelPresets.all() +
             RevelPresets.all() + PrismPresets.all() + OrigamiPresets.all() + FilamentPresets.all() + AlloyPresets.all() + ContourPresets.all() + StoopPresets.all() + LacquerPresets.all() + SpoolPresets.all() + SkitterPresets.all() + TanglePresets.all() + FlockPresets.all() + OverlapFactoryPresets.all() + ShoalPresets.all() + RelayPresets.all() + EmbouchurePresets.all() + EmbouchurePresets.experimental() + BellowsPresets.all() + MurmurPresets.all() + OspreyPresets.all() + RegistersPresets.all() + OpenSkyPresets.all() + ScannedChainPresets.all() + OrphicaPresets.all() + OvenPresets.all() + VentKitPresets.all() + CreasePresets.patches() + TrioPresets.all() + OhmPresets.all() + CausticPresets.all() + ChamberPresets.all() + LibrationPresets.all() + KeelPresets.all() + RimePresets.all() +
-            AlloyMaterialPresets.pickerAdditions()
+            AlloyMaterialPresets.pickerAdditions() +
+            CairnPresets.all()
 }

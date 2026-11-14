@@ -442,13 +442,25 @@ those five studies of one SING voice. Earlier CAIRN work keeps the scope its own
   the owner kept VESSEL (V1–V4) and asked for a tweak to GRIND's bright, static-y top; the
   re-tuned GRIND is in round `cairn-voices-2`. The five studies are settings of one SING
   voice, not new voices.
-- **Presets: not yet verified.** CAIRN has no factory presets. The nine Wave 3 KEEP SING recipes
-  are source-bound inputs to the studies, not factory presets.
+- **Presets: partial, 24 authored, four heard.** `CairnPresets` files four factory presets per
+  voice in the shared roster (`Presets`).
+  - SING's four are kept Wave 3 recipes, renamed only, and replay their accepted PCM24 anchors
+    (`CairnPresetsTest`): SING EARLIER (`before-60`), SING MOVING (`after-60`), SING SMOOTH
+    (`groove-0`) and SING GROOVED (`groove-100`).
+  - The other twenty are new settings, not yet heard. Each pins its saved model: 5 for
+    KNOCK/ANSWER/TUMBLE, 6 for GRIND, 7 for VESSEL. GRIND's four follow its re-tune.
+- **Picker: not yet verified on a device.** CAIRN is the last engine in the SYNTH ring, with all six
+  voices, their seven controls (HOLD's top step loops), the shared ROOT row and RANDOMISE.
+  - A reopened screen restores the complete recipe from its draft or its preset name.
+  - There is no MAKE INSTRUMENT for CAIRN on this screen; the SING studies keep their own route.
+  - `CairnSynthScreenTest` has not run on a device here.
 - **Playable keygroups: partial.** The shell builds and validates all five keygroup packages from
   pinned captures in JVM tests: EARLIER and MOVING over MIDI 48–72 from three native roots, the
   GROOVE studies at C4 only. No phone entry exists, because the nine Float captures are not in
   this repository. No phone or MPC has loaded a package.
-- **Premade kit: not yet.** None is built.
+- **Premade kit: partial.** The CAIRN starter puts sixteen factory presets on the shelf (METAL
+  WOOD AND GLASS): three each of KNOCK, ANSWER and TUMBLE, the kept SING EARLIER and MOVING
+  loops, two GRIND and three VESSEL. It has not been heard as a kit.
 - **Chord tools: partial.** In JVM tests, the existing chord stabs for C that fit inside 48–72 play as
   independent notes on a MOVING package, and notes outside the range are refused. Not on a device.
 - **Articulation (HOLD): partial.** Each study loops the accepted 88,200-frame SING cycle after its
@@ -465,9 +477,10 @@ those five studies of one SING voice. Earlier CAIRN work keeps the scope its own
   On 2026-11-13 the owner heard all five studies as playable keys (roots, in-between keys
   and a chord for EARLIER and MOVING; C4 for each GROOVE) and kept all of them
   ([CAIRN_SING_SAMPLER.md](CAIRN_SING_SAMPLER.md#owner-listening)).
-- **Overall: incomplete.** The Float captures' home, the phone picker, phone
-  and MPC playback, velocity layers, round robin, factory presets and the owner's verdict on
-  the re-tuned GRIND are open.
+- **Overall: incomplete.** The Float captures' home, the phone picker for the SING studies, phone
+  and MPC playback, velocity layers, round robin, a listen to the twenty new factory presets and
+  the starter, a device run of the SYNTH picker and the owner's verdict on the re-tuned GRIND are
+  open.
 
 ## WICK (finite keygroups and held entry ported from the recovery backup, 2026-11-13)
 

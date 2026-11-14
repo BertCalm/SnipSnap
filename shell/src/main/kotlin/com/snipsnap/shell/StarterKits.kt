@@ -798,6 +798,11 @@ object StarterKits {
             seeded = false,
             key = KeySpec.parse("Cminpent"),
         ) { com.snipsnap.synth.OsteriaKits.sixVoice() },
+        Starter(
+            "cairn", "CAIRN",
+            "Stones that knock, answer, tumble, sing, grind and roll in a bowl, at C4.",
+            seeded = false,
+        ) { SynthKits.cairn() },
     )
 
     fun byId(id: String): Starter? = ALL.firstOrNull { it.id == id }

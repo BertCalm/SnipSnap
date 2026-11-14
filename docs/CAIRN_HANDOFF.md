@@ -139,7 +139,7 @@ warmed path still misses the proposed 50 ms target; cold rendering needs work.
 | [CairnPatch.kt](../synth/src/main/kotlin/com/snipsnap/synth/CairnPatch.kt) | Saved model, macros, note, velocity, cue and JSON |
 | [CairnTumble.kt](../synth/src/main/kotlin/com/snipsnap/synth/CairnTumble.kt) | Analytic flight, rebound and supported-rest behavior |
 | [CairnSing.kt](../synth/src/main/kotlin/com/snipsnap/synth/CairnSing.kt) | Regenerative energy trajectory, traction, model-5 motion and modal readout |
-| [CairnPresets.kt](../synth/src/main/kotlin/com/snipsnap/synth/CairnPresets.kt) | One provisional starting patch per voice; outside the shared factory roster |
+| [CairnPresets.kt](../synth/src/main/kotlin/com/snipsnap/synth/CairnPresets.kt) | The factory roster, four presets per voice, in the shared `Presets` roster (SING's four are kept Wave 3 recipes) |
 | [Modes.kt](../synth/src/main/kotlin/com/snipsnap/synth/Modes.kt) | Shared modal bank and uncoupled periodic-state helpers |
 | [CairnSingMotionTest.kt](../synth/src/test/kotlin/com/snipsnap/synth/CairnSingMotionTest.kt) | Independent waveform measurements, pitch, continuation, bounds and compatibility |
 | [CairnSingMotionAuditionGenerator.kt](../synth/src/test/kotlin/com/snipsnap/synth/CairnSingMotionAuditionGenerator.kt) | Production comparison, recipes, benchmarks and optional historical replay |

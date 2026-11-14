@@ -443,6 +443,7 @@ object UserPresets {
      * NACRE likewise retains its saved renderer, native root, strike, exact seed and
      * controls through the complete JSON constructor. WICK retains its selected
      * RATTLE body, root, velocity and controls through that constructor as well.
+     * CAIRN retains its root, touch, contact cue and saved model the same way.
      * Names and embedded JSON are escaped
      * Kotlin string literals.
      */
@@ -475,6 +476,11 @@ object UserPresets {
         if (patch is TempestPatch) {
             val recipe = Json.write(JsonValue.Str(patch.toJsonText())).replace("$", "\\$")
             return "TempestPatch.fromJsonText($recipe),"
+        }
+        if (patch is com.snipsnap.synth.CairnPatch) {
+            // Root, touch, contact cue and saved model live outside the macro map.
+            val recipe = Json.write(JsonValue.Str(patch.toJsonText())).replace("$", "\\$")
+            return "CairnPatch.fromJsonText($recipe),"
         }
         if (patch is com.snipsnap.synth.SplayPatch) {
             // The acoustic model, signed seed and authored note/touch are outside macros.
