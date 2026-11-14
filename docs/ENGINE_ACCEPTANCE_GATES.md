@@ -591,14 +591,16 @@ and finite MAKE INSTRUMENT keys. See [SPLAY_FINITE_DELIVERY.md](SPLAY_FINITE_DEL
   [SPLAY_WIRE_RUB.md](SPLAY_WIRE_RUB.md) and [SPLAY_AIR_BAR_SKIN.md](SPLAY_AIR_BAR_SKIN.md). All five
   are SPLAY voices in the picker and the patch format (model 3), each with its kept setting as a preset,
   the SPLAY BODIES starter and finite MAKE INSTRUMENT keys; see
-  [SPLAY_BODIES_PICKER.md](SPLAY_BODIES_PICKER.md). Their keys outside the heard range are round
-  splay-bodies-1.
+  [SPLAY_BODIES_PICKER.md](SPLAY_BODIES_PICKER.md). Their keys across C2–C6 were kept in round
+  splay-bodies-1 (B1–B5, 14 Nov).
 - **Presets: pass.** TONGUE's five accepted population settings are its factory presets, and each
   body's kept 16-mechanism setting is its one preset; the five provisional recipes stay in the CLI only.
-- **Playable keygroups: partial.** In JVM tests the shell builds finite keygroups (MIDI 36–84,
-  roots every three semitones plus the saved root, three touch levels) and admits them to the
-  shelf. The SynthScreen wiring and its two Android tests have not compiled or run here (no
-  Android SDK); CI's emulator runs them. No phone or MPC has played one.
+- **Playable keygroups: partial, owner KEEP across C2–C6.** In JVM tests the shell builds finite
+  keygroups (MIDI 36–84, roots every three semitones plus the saved root, three touch levels) and
+  admits them to the shelf, for TONGUE and for each of the five bodies. The owner kept the five
+  bodies' keys across C2–C6, at full and softest touch (round splay-bodies-1, B1–B5, 14 Nov), and
+  `SplayBodyKeysTest` pins those samples. The SynthScreen wiring and its Android tests run on CI's
+  emulator. No phone or MPC has played one.
 - **Premade kit: partial.** SPLAY POPULATIONS puts TONGUE's five settings on A01–A05, and SPLAY
   BODIES puts the five kept bodies on A01–A05 (each its kept same-settings take). Both render in JVM
   tests with saved-recipe replays. Neither is a full melodic kit.

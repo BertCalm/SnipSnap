@@ -29,12 +29,26 @@ splay-voices-1 to -3; see [SPLAY_WIRE_RUB.md](SPLAY_WIRE_RUB.md) and
 - **Heard already:**
   - Every body's default and preset render the kept same-settings take. The tests pin each one's hash.
   - The starter pads are those same takes.
-- **Not heard yet: the keys.** MAKE INSTRUMENT renders roots from C2 to C6 at touch levels .24, .52
-  and .8. The owner heard each body from C3 to C5 at .7, and at C4 at .3, .6 and 1.
-  - So the keys outside that range, and the soft and full touches across the range, are new.
-  - Round `splay-bodies-1` (B1–B5) plays each body's real key samples: C2, A2, F♯3, D♯4, C5, A5 and C6
+- **The keys, kept in round `splay-bodies-1`.** MAKE INSTRUMENT renders roots from C2 to C6 at touch
+  levels .24, .52 and .8. Before this round the owner had heard each body from C3 to C5 at .7, and at C4
+  at .3, .6 and 1.
+  - Round `splay-bodies-1` (B1–B5) played each body's real key samples: C2, A2, F♯3, D♯4, C5, A5 and C6
     at full touch, then C2, C4 and C6 at the softest touch.
-  - This branch waits for those verdicts.
+  - **KEEP on all five (14 Nov 2026), no notes.** That includes WIRE's top keys (A5, C6), which reach the
+    engine's .94 level ceiling; the owner kept them as heard.
+  - `SplayBodyKeysTest` pins those 50 key samples (ten per body) and rebuilds the five desk clips byte
+    for byte:
+
+    | Clip | PCM16 WAV SHA-256 |
+    | --- | --- |
+    | B1 WIRE | `3be596bbd93629e37d2d0a5a0a0897bb797712c176984581f2f379a0ec7a7c31` |
+    | B2 RUB | `de0dee472c8f9c96326cac94b5620384a0b12b76bac6e8aa838d78e62939b6c6` |
+    | B3 AIR | `b3e26306c797091586e39dfb6b96b3d302cbf11fd31866337503b4b6ba61e01e` |
+    | B4 BAR | `643b104416e6b9db84738360d4cd3f3083e1369641a53ba353550dc6f3d76eab` |
+    | B5 SKIN | `a6c441abc4ee3d0a83ea9fa83c99e000c6343d99f82a7e397e7acf0f46e3b009` |
+
+  - The middle touch level (.52) and the in-between roots were not on the desk. They are the same
+    engine at a note and touch between ones the owner kept.
 
 ## Still open
 
