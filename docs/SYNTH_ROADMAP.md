@@ -3639,3 +3639,10 @@ approved kits' sixty-four pads as patches (the pad's macros, struck full, take 0
 (LOFI, STREET, BOOMBAP, MICRO), served by `Presets`; CLUTTER leaves `PatchTypes.ROSTERLESS`. A saved CLUTTER
 strike promotes with its velocity, take and model through the JSON constructor, as SCUFF's does. Open: the app
 picker, hardware playback, MPC 2. See [CLUTTER](CLUTTER.md).
+
+### CLUTTER, round 4 (2026-11-14)
+
+The engine picker: CLUTTER joins SYNTH's `Engine` after ETCH, mirroring SCUFF's round 5 (SOOT's arms plus the
+native-factory path), so a kit preset loads whole with its take and model. `EngineCatalog` files it under DRUMS;
+87 picker engines. An on-device test in `NewEngineSynthScreenTest`; CI compiles and runs it. Open: hardware
+playback, MPC 2. See [CLUTTER](CLUTTER.md).

@@ -684,7 +684,7 @@ and the approved strum study by its published WAV hashes (`OsteriaStrumTest`).
 - **Overall: incomplete.** Round robin, a seamless HOLD, chord tools on real keys, device runs
   of the picker and hardware playback remain open.
 
-## CLUTTER (round 2, 2026-11-14: four genre kits on the shelf, audition approved; round 3 roster; hardware open)
+## CLUTTER (round 2, 2026-11-14: four genre kits on the shelf, audition approved; round 3 roster, round 4 picker; hardware open)
 
 A found-sound drum engine of 22 modelled household objects (`Clutter.kt`, round 1) and four sixteen-pad genre
 kits on the shelf (`ClutterKits`, round 2). Every object has loose parts (rice, a lid, a handle, cutlery, a
@@ -723,7 +723,7 @@ rivet) that only move above a strike threshold. See [CLUTTER](CLUTTER.md).
   pad above .9999 correlation). A player's saved CLUTTER strike promotes with its velocity, take and model
   through `ClutterPatch.fromJsonText`.
 - **Overall: incomplete.** Every software gate is in place and the sound is approved. Open: the MPC 2 export,
-  phone and MPC playback, the app picker. The percussion gate is waived by the owner.
+  phone and MPC playback. Round 4 put CLUTTER on SYNTH's picker (compiled and run on an emulator by CI only). The percussion gate is waived by the owner.
 
 ## EMBER (round 0, 2026-11-14, Python prototype, not heard)
 
