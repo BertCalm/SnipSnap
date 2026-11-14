@@ -1,6 +1,6 @@
 # Drumline: battery kit design and first risk prototype
 
-Status: proposed engineering handoff with a measured Python prototype. Instrument acceptance is **not passed**. No Kotlin implementation or shelf registration has been made. Nothing has been heard or approved by the owner in this session.
+Current status: Kotlin model 1 and two shelf kits are implemented; acceptance remains **in progress**. The owner preferred the revised Python cymbals. See [current implementation and evidence](../../DRUMLINE.md). The sections below retain the initial proposal and subsequent audition history.
 
 Repository truth: SnipSnap `23cde0d1c107039c23fd74ff5c3d2b359a7f6e75`, 2026-11-14. Read root AGENTS.md, repository Luthier and conventions, ENGINE_ACCEPTANCE_GATES.md and INSTRUMENT_ACCEPTANCE_GATES.md. Owner gates supersede older melodic-only conventions.
 
