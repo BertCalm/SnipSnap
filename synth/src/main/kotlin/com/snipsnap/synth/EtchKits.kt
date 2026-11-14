@@ -59,10 +59,27 @@ object EtchKits {
 
     fun render(pad: Pad, velocity: Float, take: Int): Snip = recipe(pad, velocity).render(velocity, take)
 
-    fun build(): List<ArrangedPad> = pads().map(::arranged)
+    /**
+     * The sixteen pads. Every cell is an independent pure render, so they run in parallel, the slow loop cells
+     * first, and are then assembled exactly as [arranged] assembles them: the same bytes, sooner.
+     */
+    fun build(): List<ArrangedPad> {
+        val pads = pads()
+        val cells = pads.indices.flatMap { p -> cellsOf(pads[p]).map { (v, t) -> Triple(p, v, t) } }
+            .sortedByDescending { pads[it.first].loop }
+        val rendered = cells.parallelStream().map { cell -> cell to render(pads[cell.first], cell.second, cell.third) }
+            .collect(java.util.stream.Collectors.toList()).toMap()
+        return pads.mapIndexed { p, pad -> assemble(pad) { v, t -> rendered.getValue(Triple(p, v, t)) } }
+    }
+
+    /** The (velocity, engine take) cells a pad holds, in the order [assemble] lays them out. */
+    private fun cellsOf(pad: Pad): List<Pair<Float, Int>> =
+        if (pad.loop) VELOCITIES.map { it to 0 } else VELOCITIES.flatMap { v -> (1..TAKES).map { t -> v to t } }
 
     /** One pad as the kit lands it: a velocity × take grid for a note, three velocity zones for a loop. */
-    fun arranged(pad: Pad): ArrangedPad {
+    fun arranged(pad: Pad): ArrangedPad = assemble(pad) { v, t -> render(pad, v, t) }
+
+    private fun assemble(pad: Pad, cell: (Float, Int) -> Snip): ArrangedPad {
         val source = mapOf(
             "engine" to EtchPatch.ENGINE, "kitVersion" to VERSION.toString(), "model" to Etch.MODEL_VERSION.toString(),
             "voice" to pad.preset.voice.name, "preset" to pad.preset.name, "midi" to pad.midi.toString(),
@@ -71,12 +88,12 @@ object EtchKits {
         )
         val cls = Etch.drumClassFor(pad.preset.voice, pad.preset.macros)
         return if (pad.loop) {
-            val zones = VELOCITIES.map { v -> render(pad, v, 0) }
+            val zones = VELOCITIES.map { v -> cell(v, 0) }
             ArrangedPad(zones.last(), DrumClass.LOOP, softVariants = zones.dropLast(1), displayName = pad.name,
                 // The loops choke each other, so a new line cuts the last one.
                 muteGroup = 2, source = source)
         } else {
-            val grid = VELOCITIES.map { v -> List(TAKES) { t -> render(pad, v, t + 1) } }
+            val grid = VELOCITIES.map { v -> List(TAKES) { t -> cell(v, t + 1) } }
             ArrangedPad(grid.last().first(), cls, displayName = pad.name, velocityTakes = grid,
                 // One bass: a new note cuts the last one, as a monophonic line does.
                 muteGroup = 1, source = source)

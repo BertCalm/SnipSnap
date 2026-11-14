@@ -56,6 +56,35 @@ def section(sid):
 KITS = M["kits"]
 GENRE = KITS[1:]
 
+# The kits on the shelf (round 2): pads read back from the MPC 3 export by `:shell:generateClutterKits`, copied
+# under OUT/shelf/ as MP3 listening copies (the WAVs are the proof; MP3 keeps the page light on a phone).
+shelf_html = ""
+_shelf = os.path.join(OUT, "shelf", "manifest.json")
+if os.path.exists(_shelf):
+    S = json.load(open(_shelf))
+    cards = []
+    for k in S["kits"]:
+        rows = "".join(f"""
+        <li class="clip">
+          <div class="clip-head"><span class="clip-id">A{p['slot']:02d} {ESC(p['name'])}</span><span class="clip-len">{ESC(p['class'])}</span></div>
+          <audio controls preload="none" src="shelf/{k['id']}/pad-{p['slot']:02d}.mp3"></audio>
+          <p class="clip-note">Soft, medium, hard, four takes each, in the order the pad deals them:</p>
+          <audio controls preload="none" src="shelf/{k['id']}/touch-{p['slot']:02d}.mp3"></audio>
+        </li>""" for p in k["pads"])
+        cards.append(f"""
+    <details><summary>{ESC(k['title'].upper())} · {k['bpm']} BPM · 16 PADS</summary><ul class="clips">{rows}</ul></details>""")
+    shelf_html = f"""
+  <section class="card" id="shelf">
+    <h2>On the shelf: the Kotlin kits</h2>
+    <p class="intro">Round 2. The four genre kits as the app builds them from the Kotlin engine, each pad read back from the
+    MPC 3 export through the app's own pad player: every slice was checked against its render after saving, reloading,
+    two playback cycles and the export ({sum(len(k['pads']) for k in S['kits']) * 12} slices). These are MP3 listening copies.
+    The Kotlin engine draws its random numbers differently from the Python, so every take here is a new take of the
+    same accepted object, not a copy of the one you heard.</p>
+    <p class="ask"><span class="tag">LISTEN FOR</span>Do these sound like the kits you accepted? Does any take in a strip jump out as louder or quieter than its neighbours?</p>
+    {''.join(cards)}
+  </section>"""
+
 genre_cards = []
 for k in GENRE:
     rows = "".join(
@@ -242,13 +271,14 @@ details[open] > summary {{ margin-bottom: 8px; }}
 
 <div class="wrap">
   <header>
-    <div class="mark"><i></i><span class="eyebrow">SNIPSNAP · CLUTTER · ROUND 0 · PYTHON PROTOTYPE · NOT HEARD</span></div>
+    <div class="mark"><i></i><span class="eyebrow">SNIPSNAP · CLUTTER · ROUND 2 · KITS ON THE SHELF · KOTLIN NOT HEARD</span></div>
     <h1>CLUTTER Audition</h1>
     <p class="lede">A found-sound drum engine of twenty-two modelled household objects, and five sixteen-pad kits built from them:
     the CLUTTER kit (one of each of sixteen objects) and four genre kits, Kitchen Lo-fi, Street Bucket, Junk Boom Bap and Microbeat.
-    Nothing is sampled. These are prototype renders from a Python model, not the app, and nobody has heard them yet.</p>
+    Nothing is sampled. The Python renders below are the ones you accepted on 2026-11-14; the first section is the
+    app's own Kotlin kits on the shelf, which nobody has heard yet.</p>
     <p class="gesture">A hand or a spoon hits an everyday object → its body rings → whatever is loose in it or on it rattles a moment later → the room answers, then it is still.</p>
-    <nav><a href="#play">Play</a>{''.join(f'<a href="#kit-{k["id"]}">{ESC(k["name"].replace("CLUTTER ", "").title())}</a>' for k in GENRE)}<a href="#kit">Objects</a><a href="#velocity">Velocity</a><a href="#takes">Takes</a><a href="#extras">Bank B</a><a href="#macros">Controls</a><a href="#gates">Gates</a><a href="#ledger">Ledger</a></nav>
+    <nav><a href="#play">Play</a><a href="#shelf">On the shelf</a>{''.join(f'<a href="#kit-{k["id"]}">{ESC(k["name"].replace("CLUTTER ", "").title())}</a>' for k in GENRE)}<a href="#kit">Objects</a><a href="#velocity">Velocity</a><a href="#takes">Takes</a><a href="#extras">Bank B</a><a href="#macros">Controls</a><a href="#gates">Gates</a><a href="#ledger">Ledger</a></nav>
   </header>
 
   <section class="card" id="play">
@@ -261,6 +291,7 @@ details[open] > summary {{ margin-bottom: 8px; }}
       <div class="readout"><span id="status">Tap any pad. Each pad loads on its first tap.</span><button class="load" id="loadall" type="button">LOAD THIS KIT</button></div>
     </div>
   </section>
+{shelf_html}
 {''.join(genre_cards)}
 {''.join(base_sections)}
 
