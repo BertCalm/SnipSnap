@@ -4550,15 +4550,8 @@ internal fun OsteriaPerformanceControls(
             TapeText("Lower the root to fit a strum above it.", TapeType.pixelSmall, scheme.ink2.tape)
         }
     }
-    val rootRange = patch.rootRange
-    MacroSlider(
-        label = "ROOT", value = (patch.midi - rootRange.first).toFloat() / (rootRange.last - rootRange.first).coerceAtLeast(1),
-        fillColor = classColor, scheme = scheme, readout = Scales.nameOf(patch.midi),
-        onValueChange = { value ->
-            onPatch { current -> current.copy(midi = (current.rootRange.first + value * (current.rootRange.last - current.rootRange.first))
-                .roundToInt().coerceIn(current.rootRange)) }
-        },
-    )
+    // ROOT is the shared ROOT/OCT row above the panel (SynthRoot's Field over patch.rootRange,
+    // which a strum narrows), so the panel draws no second ROOT control.
     MacroSlider(
         label = "VELOCITY", value = patch.velocity, fillColor = classColor, scheme = scheme,
         onValueChange = { value -> onPatch { current -> current.copy(velocity = value.coerceIn(0f, 1f)) } },

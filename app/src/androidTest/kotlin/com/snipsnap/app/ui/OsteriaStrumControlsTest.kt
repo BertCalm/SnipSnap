@@ -9,12 +9,18 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.snipsnap.shell.Schemes
+import com.snipsnap.shell.SynthRoot
 import com.snipsnap.synth.*
 import org.junit.Assert.*
 import org.junit.Test
 import org.junit.runner.RunWith
+import kotlin.math.roundToInt
 
-/** Actual performance controls: ordinary root/sweep/HOLD edits never strand a saved chord. */
+/**
+ * Actual performance controls: ordinary root/sweep/HOLD edits never strand a saved chord.
+ * ROOT lives in the screen's shared ROOT/OCT row, not in this panel; [rootAt] applies a
+ * fraction exactly as that row's SetProgress does, through [SynthRoot].
+ */
 @RunWith(AndroidJUnit4::class)
 class OsteriaStrumControlsTest : ComposeScreenTest() {
     private fun press(label:String) {
@@ -25,16 +31,23 @@ class OsteriaStrumControlsTest : ComposeScreenTest() {
         compose.onNodeWithContentDescription(label).performSemanticsAction(SemanticsActions.SetProgress) { assertTrue(it(value)) }
         pump()
     }
+    private fun rootAt(patch: OsteriaPatch, fraction: Float): OsteriaPatch {
+        val control = SynthRoot.of(patch)!!
+        val span = (control.range.last - control.range.first).coerceAtLeast(1)
+        return control.at((control.range.first + fraction.coerceIn(0f, 1f) * span).roundToInt()) as OsteriaPatch
+    }
+
     @Test fun explicitStrumRootBoundsAndSingleNoteReturnPreserveSource() {
         val original=OsteriaPresets.forVoice(OsteriaVoice.PLUCK).first()
         var patch by mutableStateOf(original)
         setPhoneContent { OsteriaPerformanceControls(patch,Color(0xffcc7744),Schemes.VENT) { patch=it(patch) } }
+        compose.onNodeWithContentDescription("ROOT").assertDoesNotExist()
         press("OSTERIA STRUM")
         assertEquals(listOf(0,3,7),patch.strum!!.intervals)
-        dial("ROOT",1f)
+        compose.runOnIdle { patch=rootAt(patch,1f) }; pump()
         assertEquals(77,patch.midi)
         assertTrue(patch.strum!!.notes(patch.midi).all { it in 36..84 })
-        dial("ROOT",0f)
+        compose.runOnIdle { patch=rootAt(patch,0f) }; pump()
         assertEquals(36,patch.midi)
         press("OSTERIA STRUM MAJOR")
         press("OSTERIA STRUM DIRECTION")
@@ -57,7 +70,7 @@ class OsteriaStrumControlsTest : ComposeScreenTest() {
         assertNull(patch.strum)
         assertEquals(original.config,patch.config)
         assertEquals(1,patch.toJsonValue().entries.getValue("version").int())
-        dial("ROOT",1f)
+        compose.runOnIdle { patch=rootAt(patch,1f) }; pump()
         assertEquals(84,patch.midi)
     }
 
@@ -65,7 +78,7 @@ class OsteriaStrumControlsTest : ComposeScreenTest() {
         var patch by mutableStateOf(OsteriaPresets.forVoice(OsteriaVoice.PLUCK).first().copy(
             midi=36,strum=OsteriaStrum.Articulation(listOf(0,48))))
         setPhoneContent { OsteriaPerformanceControls(patch,Color(0xffcc7744),Schemes.VENT) { patch=it(patch) } }
-        dial("ROOT",1f)
+        compose.runOnIdle { patch=rootAt(patch,1f) }; pump()
         assertEquals(36,patch.midi)
         assertEquals(listOf(36,84),patch.strum!!.notes(patch.midi))
     }
