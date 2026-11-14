@@ -139,7 +139,7 @@ object Etch {
     fun defaults(voice: EtchVoice): Map<String, Float> = macrosFor(voice).associate { it.name to it.default }
 
     /** Every macro finite and in 0..1, unknown keys dropped, absent ones at the voice's default. */
-    internal fun settled(voice: EtchVoice, macros: Map<String, Float>): Map<String, Float> =
+    fun settled(voice: EtchVoice, macros: Map<String, Float>): Map<String, Float> =
         defaults(voice).mapValues { (key, default) -> (macros[key]?.takeIf { it.isFinite() } ?: default).coerceIn(0f, 1f) }
 
     /** A roll near [near] (or near the defaults). HOLD stays under [LOOP_HOLD_AT], in the one-shot stage. */
@@ -250,12 +250,37 @@ object Etch {
         return Snip(out, channels = 1, sampleRate = RATE)
     }
 
-    private fun renderOneShot(voice: EtchVoice, m: Map<String, Float>, midi: Int?, velocity: Float, take: Int, seed: Int): FloatArray {
+    /**
+     * How a one-shot ends, for the round-K2 classifier study only: [ACCEPTED] is the accepted sound and the only
+     * shape [render] uses. [minGate] floors the held time, [releaseSeconds] is the amplifier's release time constant
+     * after the gate, and [lowLiftOct] opens the filter on low notes (full at MIDI 24, none from MIDI 48).
+     */
+    internal data class OneShotShape(val minGate: Double = 0.0, val releaseSeconds: Double = 0.007, val lowLiftOct: Double = 0.0,
+        val releaseLowSeconds: Double? = null) {
+        /** The release at [note]: [releaseSeconds] from MIDI 48 up, rising to [releaseLowSeconds] at MIDI 24 when set. */
+        fun releaseAt(note: Int): Double = releaseLowSeconds?.let { low ->
+            releaseSeconds + (low - releaseSeconds) * ((48.0 - note) / 24.0).coerceIn(0.0, 1.0)
+        } ?: releaseSeconds
+
+        companion object { val ACCEPTED = OneShotShape() }
+    }
+
+    /** A one-shot in [shape]; loops are never affected. For the classifier study. */
+    internal fun renderOneShotShaped(voice: EtchVoice, macros: Map<String, Float>, midi: Int?, velocity: Float,
+        shape: OneShotShape, take: Int = 0, seed: Int = 0): Snip {
+        val m = settled(voice, macros)
+        require(!isLoop(m.getValue("HOLD"))) { "a shaped render is a one-shot" }
+        return Snip(renderOneShot(voice, m, midi, velocity.coerceIn(0f, 1f), take, seed, shape), channels = 1, sampleRate = RATE)
+    }
+
+    private fun renderOneShot(voice: EtchVoice, m: Map<String, Float>, midi: Int?, velocity: Float, take: Int, seed: Int,
+        shape: OneShotShape = OneShotShape.ACCEPTED): FloatArray {
         val note = midiFor(m.getValue("TUNE"), midi)
-        val gate = gateSeconds(m.getValue("HOLD"))
+        val gate = maxOf(gateSeconds(m.getValue("HOLD")), shape.minGate)
         val space = m.getValue("SPACE").toDouble()
         // The release, then room for SPACE's first repeats; never past the TONAL line.
-        val seconds = min(gate + 0.45 + 0.5 * space, ONE_SHOT_MAX_SECONDS)
+        val tail = if (shape == OneShotShape.ACCEPTED) 0.45 else maxOf(0.45, 5.0 * shape.releaseAt(note))
+        val seconds = min(gate + tail + 0.5 * space, ONE_SHOT_MAX_SECONDS)
         val frames = (seconds * FS).roundToInt()
         val gateFrames = (gate * FS).roundToInt().coerceAtMost(frames)
         val c = Controls(frames)
@@ -263,6 +288,8 @@ object Etch {
         c.velocity.fill(velocity.toDouble())
         c.trig[0] = true
         for (i in 0 until gateFrames) c.gate[i] = true
+        c.releaseSeconds = shape.releaseAt(note)
+        c.cutLiftOct = shape.lowLiftOct * ((48.0 - note) / 24.0).coerceIn(0.0, 1.0)
         val raw = voiceKernel(voice, m, c, takeFor(seed, take))
         bite(raw, m.getValue("BITE").toDouble())
         var out = toOutputRate(raw)
@@ -329,6 +356,10 @@ object Etch {
         val trig = BooleanArray(n)
         val slide = BooleanArray(n)
         val velocity = DoubleArray(n)
+        /** The amplifier's release time constant after the gate (the accepted 7 ms). */
+        var releaseSeconds = 0.007
+        /** Octaves added to the cutoff for the whole render (0 in the accepted sound). */
+        var cutLiftOct = 0.0
     }
 
     // ---- the voice ---------------------------------------------------------------------------------------------
@@ -344,7 +375,7 @@ object Etch {
         val fs = FS.toDouble()
         val peak = m.getValue("PEAK").toDouble()
         val sweep = m.getValue("SWEEP").toDouble()
-        val cutOct = ln(CUT_LO * (CUT_HI / CUT_LO).pow(m.getValue("CUTOFF").toDouble()) / 20.0) / LN2
+        val cutOct = ln(CUT_LO * (CUT_HI / CUT_LO).pow(m.getValue("CUTOFF").toDouble()) / 20.0) / LN2 + c.cutLiftOct
         // Slide: a one-pole RC on the pitch CV. 100 k and 220 n is a 22 ms time constant (synth-diy, 2012, on the
         // original circuit), settled in about 66 ms.
         val aGlide = exp(-1.0 / (0.022 * fs))
@@ -354,7 +385,7 @@ object Etch {
         val aDecNorm = exp(-1.0 / (decS * fs))
         val aDecAcc = exp(-1.0 / (0.16 * fs))          // accented notes decay short, fixed
         val aAtt = exp(-1.0 / (t.attackSeconds * fs))
-        val aRel = exp(-1.0 / (0.007 * fs))
+        val aRel = exp(-1.0 / (c.releaseSeconds * fs))
         val aHold = exp(-1.0 / (2.5 * fs))             // a slow sag while held
         // The accent capacitor charges fast from the accented envelope and discharges slower, slower still at high
         // PEAK, so a run of accents climbs (x0x notes: the sweep "becomes more prominent as the Resonance pot is
