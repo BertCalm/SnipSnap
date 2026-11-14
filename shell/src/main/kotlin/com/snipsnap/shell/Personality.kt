@@ -3623,6 +3623,7 @@ object Copy {
     // engine name stays caps inside the sentence.
     fun instrumentReady(name: String): String = "$name is ready in INSTRUMENTS."
     const val MURMUR_CANCELLED = "MURMUR instrument cancelled."
+    const val CAIRN_INSTRUMENT_CANCELLED = "CAIRN instrument cancelled."
     const val KIT_BUSY_SAVE_AGAIN = "Kit is busy. Try SAVE again."
     const val PERFORMANCE_SAVE_FAILED = "Could not save the performance. Try again."
     const val LONG_PRESS_PLACE_SAMPLE = "Long-press to place this sample."
