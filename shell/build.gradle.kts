@@ -628,3 +628,23 @@ tasks.register<JavaExec>("generateMurmurRoundRobinAudition") {
     maxHeapSize = "768m"
     args("${rootDir}/testkit/murmur-rr-v2-audition")
 }
+
+tasks.register<JavaExec>("generateSporeApprovedSnare") {
+    group = "distribution"
+    description = "Render and verify the approved snare's native, SFZ and MPC3 delivery."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.SporeSnareDelivery")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "1g"
+    args(providers.gradleProperty("sporeApprovedOutput").orNull ?: "${rootDir}/testkit/spore-approved-snare")
+}
+
+tasks.register<JavaExec>("generateSporeSyntheticKits") {
+    group = "distribution"
+    description = "Render and verify all three complete sample-free Spore shelf kits."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.SporeSyntheticDelivery")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "2g"
+    args(providers.gradleProperty("sporeSyntheticOutput").orNull ?: "${rootDir}/testkit/spore-synthetic-kits")
+}

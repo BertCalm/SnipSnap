@@ -993,4 +993,16 @@ class DeterminismTest {
             )
         }
     }
+    @Test
+    fun `SPORE approved snare is byte identical for a saved soft restrike`() {
+        val p=SporeSnare.Recipe(velocity=.3,take=2)
+        assertContentEquals(p.render().samples,SporeSnare.Recipe.fromJsonText(p.toJsonText()).render().samples)
+    }
+    @Test
+    fun `SPORE approved kick and synthetic shelf recipe are deterministic`() {
+        val p=SporeKick.Recipe(velocity=.3,take=2)
+        assertContentEquals(p.render().samples,SporeKick.Recipe.fromJsonText(p.toJsonText()).render().samples)
+        val r=SporeSyntheticKits.Recipe(SporeSyntheticKits.Genre.JUNGLE,7,.65,2)
+        assertContentEquals(r.render().samples,SporeSyntheticKits.Recipe.fromJsonText(r.toJsonText()).render().samples)
+    }
 }

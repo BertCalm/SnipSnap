@@ -699,6 +699,10 @@ prototype audition; no Kotlin exists.
 - **Overall: incomplete.** The Kotlin engine is in (round 1) and not yet heard; the kits on the shelf,
   saving, playback, export and hardware are open. The percussion gate is waived by the owner.
 
+## SPORE synthetic kits (2026-11-14)
+
+The owner approved the procedural kick/snare pair. Three genre starters now contain 18 pads each, including authored rolls and risers. All 486 cells pass velocity/take source checks, saved recipe replay, native playback, SFZ import/playback and MPC 3 grid/PCM read-back. Drum shelf registration is verified in software. Melodic/keygroup/chord and string STRUM requirements do not apply to this percussion kit; individual voices are finite. The new arrangements await listening acceptance, and Android/physical MPC remain unverified. No MPC 2 fallback is included. See [the detailed ledger](superpowers/specs/2026-11-14-spore-synthetic-kits.md).
+
 ## EMBER (round 0, 2026-11-14, Python prototype, not heard)
 
 A drum engine for a live jazz and soul kit in a small club in 1962: calfskin drums, a riveted ride, brushes, the

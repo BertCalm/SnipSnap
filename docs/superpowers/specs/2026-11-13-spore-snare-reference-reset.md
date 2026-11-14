@@ -1,6 +1,6 @@
 # Spore snare reference reset
 
-Status: Python listening study, not a registered engine. The owner rejected the previous prototype's attack, body and tail. This round has not received listening acceptance.
+Status updated 2026-11-14: the owner approved this Python snare ("Ok, sound good"). The measurements below describe the original study. Kotlin port and delivery evidence are recorded in 2026-11-14-spore-approved-port-and-kick.md. This is not a completed drum engine.
 
 Repository reviewed: `010dac094964e7d21f65b289714637b7e499e55a`; study branch starts at `0b7e105e87fff1ec4ddd43532912f2afe2b9abf3`, which includes merged PR #1039. APIs inspected: `SporeMembrane.render/probe`, `Modes.Bank`, and the Luthier Python `seed_for`, `Noise`, `band_limit`, `decimate4`, `dc_block`, and `fade_tail`. The Python seed and output routines are approximations, not byte-compatible Kotlin ports.
 
