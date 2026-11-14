@@ -3612,5 +3612,7 @@ The four accepted genre kits on the shelf: `ClutterKits` (KITCHEN LO-FI 82 BPM, 
 MICROBEAT 100), sixteen one-shot pads each, three zones of four takes rendered by the engine, the hat pairs
 choking, FRESH TAPE starters under SKINS (129 starters). A zone's takes are matched in loudness, CLUTTER's own
 level law: the first-take peak law left granular takes up to 10 dB apart. Every grid proved through saving,
-playback and the MPC 3 export (768 slices). No roll: the owner waived the gate. Open: the owner's listen to the
-Kotlin kits, MPC 2, hardware, presets and the picker. See [CLUTTER](CLUTTER.md) and the gates entry.
+playback and the MPC 3 export (768 slices). No roll: the owner waived the gate. Open: MPC 2, hardware, presets and the
+picker. See [CLUTTER](CLUTTER.md) and the gates entry. The owner heard the four Kotlin kits on the listening page's version 8 (read back from the MPC 3 export) and
+answered "I approve the audition" (2026-11-14): `Clutter.MODEL_VERSION` 1 and `ClutterKits.VERSION` 1 are the
+approved baseline.

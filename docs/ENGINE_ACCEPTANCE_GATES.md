@@ -640,7 +640,7 @@ and the approved strum study by its published WAV hashes (`OsteriaStrumTest`).
 - **Overall: incomplete.** Round robin, a seamless HOLD, chord tools on real keys, device runs
   of the picker and hardware playback remain open.
 
-## CLUTTER (round 2, 2026-11-14: four genre kits on the shelf; sound accepted at round 0c; hardware open)
+## CLUTTER (round 2, 2026-11-14: four genre kits on the shelf, audition approved; hardware open)
 
 A found-sound drum engine of 22 modelled household objects (`Clutter.kt`, round 1) and four sixteen-pad genre
 kits on the shelf (`ClutterKits`, round 2). Every object has loose parts (rice, a lid, a handle, cutlery, a
@@ -669,9 +669,9 @@ rivet) that only move above a strike threshold. See [CLUTTER](CLUTTER.md).
     played the kits.
   - **Export: MPC 3 verified by read-back** for every pad of the four kits. **MPC 2: not exercised;** on the
     house's other kits it keeps one take per zone. No MPC has loaded the kits.
-- **Sound character: accepted at round 0c, Kotlin not heard.** On 2026-11-14 the owner heard the listening page
-  (version 7, <https://claude.ai/artifact/6dkeY2rrjNGUvUYvobs3v5>) and answered "All are good" and "I like it as
-  is" of Python renders. Version 8 of the page carries the four Kotlin kits, read back from the MPC 3 export; not
-  heard.
-- **Overall: incomplete.** Every software gate is in place. Open: the owner's listen to the Kotlin kits, the MPC 2
-  export, phone and MPC playback. The percussion gate is waived by the owner.
+- **Sound character: approved.** On 2026-11-14 the owner accepted the Python renders (listening page version 7,
+  <https://claude.ai/artifact/6dkeY2rrjNGUvUYvobs3v5>: "All are good", "I like it as is"), then heard version 8,
+  the four Kotlin kits read back from the MPC 3 export, and answered "I approve the audition". Preserve
+  `Clutter.MODEL_VERSION` 1 and `ClutterKits.VERSION` 1 as the baseline. Not a phone or MPC listen.
+- **Overall: incomplete.** Every software gate is in place and the sound is approved. Open: the MPC 2 export,
+  phone and MPC playback. The percussion gate is waived by the owner.

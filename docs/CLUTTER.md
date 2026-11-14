@@ -1,8 +1,8 @@
 # CLUTTER: design brief and round-0 audition
 
-Status: **round 2, the four genre kits on the shelf (2026-11-14); the Kotlin renders not yet heard.** Round 0c's
-Python renders were accepted by the owner on 2026-11-14 ("All are good", "I like it as is") and are the sound
-baseline. `Clutter.kt` ports all 22 objects (round 1); `ClutterKits` puts the four accepted genre kits on the shelf
+Status: **round 2, the four genre kits on the shelf, audition approved by the owner (2026-11-14).** Round 0c's
+Python renders were accepted by the owner on 2026-11-14 ("All are good", "I like it as is"), and the owner then
+approved the Kotlin kits' audition ("I approve the audition", listening page version 8). `Clutter.kt` ports all 22 objects (round 1); `ClutterKits` puts the four accepted genre kits on the shelf
 with their velocity and round-robin grids proved through saving, playback and the MPC 3 export (round 2). The
 engine stays in progress until every applicable owner gate has evidence (see "Gates" below).
 
@@ -307,7 +307,9 @@ The gate, in software:
 
 The listening page's version 8 puts every pad of the four Kotlin kits on the page, read back from the MPC 3 export
 through the app's pad player: the hard hit and a strip of all twelve strikes (MP3 listening copies; the WAVs are
-the proof).
+the proof). On 2026-11-14 the owner answered: "I approve the audition". Preserve `Clutter.MODEL_VERSION` 1 and
+`ClutterKits.VERSION` 1 as the approved baseline. This is a listen to the kits as the app renders and exports them,
+not on a phone or an MPC.
 
 ## Risks (where it could sound bad)
 
@@ -327,7 +329,7 @@ the proof).
 - **Percussion (roll or riser):** waived by the owner on 2026-11-14 ("I overrule that gate"). CLUTTER ships no
   roll or riser; B01 stays the Bin Lid one-shot. This is an owner exception, not a pass.
 - **Drums (several genre kits):** four, accepted by the owner as authored on 2026-11-14 ("All are good", "I like
-  it as is"), on the shelf in Kotlin since round 2. The Kotlin renders are not heard.
+  it as is"), on the shelf in Kotlin since round 2, and their Kotlin audition approved ("I approve the audition").
 - **Velocity and round robin:** rendering, saving, playback and the MPC 3 export verified in software (rounds 1
   and 2, above). The MPC 2 export, a phone and an MPC: open.
 
@@ -339,8 +341,8 @@ the proof).
   peak match per body (which would rebalance every object), and MIC keeps the prototype's kitchen sketch
   instead of the shared `Room` (a different room is a different sound; moving to `Room` is its own listen).
 - **R2 kits**: done (above).
-- **Next**: the owner's listen to the Kotlin kits; hardware (a phone, an MPC); presets and the roster (CLUTTER
-  stays in `PatchTypes.ROSTERLESS` until then); the app picker.
+- **Next**: hardware (a phone, an MPC) and the MPC 2 export; presets and the roster (CLUTTER stays in
+  `PatchTypes.ROSTERLESS` until then); the app picker. The owner approved the Kotlin kits' audition on 2026-11-14.
 
 ## Ledger
 
@@ -356,7 +358,7 @@ the proof).
 | Soft hits leave loose parts still; the rivet needs its play; the bucket's boom falls | verified in Kotlin by test | `ClutterTest` |
 | The four genre kits are on the shelf with their grids through save, playback and MPC 3 export | verified in software | `ClutterKitsTest`, `ClutterKitTest`, `generateClutterKits` (768 slices) |
 | A zone's takes are equally loud | verified by test | `ClutterKitsTest`: within 0.1 dB over 150 ms |
-| The Kotlin renders sound like the accepted ones | not heard | the owner's listen; listening page version 8 |
+| The Kotlin kits are the sound | heard, approved | the owner, 2026-11-14: "I approve the audition" (listening page version 8, read back from the MPC 3 export) |
 | Soft and hard differ on every pad; nothing rattles below the threshold | measured; by construction | velocity section |
 | Thin-ring, plate and bar ratios are the textbook ones | proposed (sourced formulas, shape damping) | `clutter_proto.py` constants |
 | The objects and the four genre kits are the sound | heard, accepted | the owner, 2026-11-14: "All are good", "I like it as is" (Python renders, listening page version 7) |
