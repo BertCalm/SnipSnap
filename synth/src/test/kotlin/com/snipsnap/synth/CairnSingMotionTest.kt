@@ -113,7 +113,9 @@ class CairnSingMotionTest {
     }
 
     @Test fun `new motion is versioned and finite songs and earlier contact voices keep their audio`() {
-        for (v in CairnVoice.entries) for (note in listOf(48, 60, 72)) {
+        // The voices that existed at models 4 and 5; GRIND and VESSEL refuse model 4.
+        val earlier = listOf(CairnVoice.KNOCK, CairnVoice.ANSWER, CairnVoice.TUMBLE, CairnVoice.SING)
+        for (v in earlier) for (note in listOf(48, 60, 72)) {
             for (hold in if (v == voice) listOf(0f, .5f, .95f) else listOf(0f, 1f)) {
                 val m = Cairn.defaults(v) + ("HOLD" to hold)
                 assertContentEquals(Cairn.render(v, m, note, model = 4).samples,
@@ -125,6 +127,6 @@ class CairnSingMotionTest {
         assertEquals(old, CairnPatch.fromJsonText(old.toJsonText()))
         assertEquals(new, CairnPatch.fromJsonText(new.toJsonText()))
         assertTrue(relative(old.render().samples, new.render().samples) > .05)
-        assertEquals(5, CairnPatch("New song", voice, held).model)
+        assertEquals(Cairn.MODEL_VERSION, CairnPatch("New song", voice, held).model)
     }
 }

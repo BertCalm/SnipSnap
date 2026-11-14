@@ -436,8 +436,10 @@ CAIRN's retained-SING sampler code came back from the owner's recovery snapshot 
 branch, CAIRN files only. See [CAIRN_SING_SAMPLER.md](CAIRN_SING_SAMPLER.md). This entry covers
 those five studies of one SING voice. Earlier CAIRN work keeps the scope its own documents record.
 
-- **Melodic voices: fail, four of six.** KNOCK, ANSWER, TUMBLE and SING are built; GRIND and
-  VESSEL are not. The five studies are settings of one SING voice, not new voices.
+- **Melodic voices: partial, six built, four heard.** KNOCK, ANSWER, TUMBLE and SING are built.
+  GRIND (model 6) and VESSEL (model 7) are now built too
+  ([CAIRN_GRIND_VESSEL.md](CAIRN_GRIND_VESSEL.md)), but are not yet heard: their first round is
+  `cairn-voices-1`. The five studies are settings of one SING voice, not new voices.
 - **Presets: not yet verified.** CAIRN has no factory presets. The nine Wave 3 KEEP SING recipes
   are source-bound inputs to the studies, not factory presets.
 - **Playable keygroups: partial.** The shell builds and validates all five keygroup packages from
@@ -462,7 +464,8 @@ those five studies of one SING voice. Earlier CAIRN work keeps the scope its own
   and a chord for EARLIER and MOVING; C4 for each GROOVE) and kept all of them
   ([CAIRN_SING_SAMPLER.md](CAIRN_SING_SAMPLER.md#owner-listening)).
 - **Overall: incomplete.** The Float captures' home, the phone picker, phone
-  and MPC playback, velocity layers, round robin and the remaining voices are open.
+  and MPC playback, velocity layers, round robin, factory presets and the owner's verdict on
+  GRIND and VESSEL are open.
 
 ## WICK (finite keygroups and held entry ported from the recovery backup, 2026-11-13)
 
