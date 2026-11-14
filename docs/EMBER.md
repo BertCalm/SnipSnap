@@ -1,12 +1,13 @@
 # EMBER: design brief and round-0 audition
 
-Status: **round 0d, a Python prototype (2026-11-14).** The owner's listens so far:
+Status: **round 0e, a Python prototype (2026-11-14).** The owner's listens so far:
 - "Cymbals need a lot of work. Sounds like hitting sheet metal." Round 0b rebuilt every cymbal and hat from
   measurements of real cymbals.
 - "Sweeps sound like hail hitting a roof." Round 0c rebuilt the brush sweep and the brush roll from
   measurements of real brush stirs and flutters.
 - "Bring down the sweep a bit in the groove ... a bit too mid heavy." Round 0d lowers the sweep in the grooves,
   brightens it and eases After Hours' 1962 chain.
+- "I meant all the kits." Round 0e brightens every kit.
 
 Both are below. Nothing else changed sound, and nothing else has been heard yet. No Kotlin exists. The engine
 stays in progress until every applicable owner gate has evidence (see "Gates" below and the gates entry in
@@ -26,6 +27,40 @@ Repository truth: read at `8742c5b8` (2026-11-14). APIs named here were grepped:
 `Soot.render(voice, macros, velocity, take, model)` / `Clutter.render(voice, macros, velocity, take)` as the
 drum-engine shape to copy. `EMBER` is a working name: the word is already a CIRCUIT preset ("EMBER PULSE"),
 an ALLOY preset ("Endless Ember") and a name in `shell/.../Names.kt`. It is not an engine name anywhere.
+
+## Round 0e: every kit brighter, by ear (2026-11-14)
+
+**What the owner said:** "I meant all the kits" (the "bit too mid heavy" of round 0d).
+
+**Measured first.** At its default (.5), the 1962 chain took about 3 dB off at 8 kHz and 5 to 6 dB at 16 kHz on
+the snare and cymbals, and lifted the low mids by about 2 dB. The FREE groove was the most mid heavy (centroid
+2257 Hz), mostly from the bowed cymbal, which locked to the ride's 732 Hz mode and was 41 dB down at 8 kHz.
+
+**Changes, all by ear and labelled as such:**
+- **The 1962 chain rolls off less top at every setting.** The ribbon's roll-off now runs 19 kHz down to 10.5 kHz
+  (it was 16 kHz down to 6.8 kHz), the tape's 19.5 kHz down to 13 kHz (it was 18 kHz down to 9 kHz), and the low
+  lift is .15 (it was .25). The valve and the tape's head bump are unchanged.
+- **WARMTH is 0.15 lower everywhere:**
+  - the voices' default goes from .5 to .35, which the EMBER kit uses;
+  - After Hours goes from .5 to .35;
+  - Soul Jazz goes from .75 to .6;
+  - Free goes from .4 to .25.
+- **Every pad gets the close mic's voicing** (`voicing`): 1.5 dB out around 600 Hz (broad) and a 2 dB high shelf
+  from 6 kHz. Measured on an impulse: -1.49 dB at 600 Hz, +0.97 at 6 kHz, +1.86 at 16 kHz.
+- **The bowed cymbal sings higher.** It locks to the ride's strongest mode between 900 Hz and 2 kHz (1379 Hz),
+  with two more upper harmonics and its bow scratch up to 10 kHz.
+
+**Measured after** (Python, each kit's groove, octave bands re the loudest; 63 Hz to 16 kHz):
+
+| Groove | Centroid before | After | 8 kHz before / after | 16 kHz before / after |
+|---|---:|---:|---:|---:|
+| EMBER | 3908 Hz | 4802 Hz | -17.7 / -15.8 | -24.4 / -20.9 |
+| After Hours | 3780 Hz | 4492 Hz | -6.9 / -4.5 | -16.4 / -12.5 |
+| Soul Jazz | 3329 Hz | 4283 Hz | -16.6 / -14.1 | -25.6 / -20.7 |
+| Free | 2257 Hz | 2838 Hz | -22.8 / -16.3 | -31.6 / -25.2 |
+
+Free's 500 Hz octave falls from -2.0 to -14.9 dB re its loudest band, and 4 kHz rises from -17.5 to -8.8. The
+toms and kicks stay as they were: a mallet on a low calf head is dark.
 
 ## Round 0d: the sweep's level and brightness, by ear (2026-11-14)
 
@@ -259,7 +294,7 @@ Five per voice (four on SNAPS, CLAPS and STICKS), each 0..1, no HOLD (finite hit
 | DAMP | .30 | a felt strip, a wallet on the snare, a finger on a cymbal, the hi-hat pedal pressure | drums, cymbals, hats, tambourine, conga, sticks |
 | BUZZ | .50 | how loose the snare wires, rivets, plates and jingles are, and how much the kit hums along. **0 takes the snares off** (exact) | drums, cymbals, hats, tambourine |
 | DISTANCE | .30 | the microphone, from over the drum (+16 dB direct) to the back of the club (-4 dB) | all |
-| WARMTH | .50 | the 1962 chain: ribbon, valve, tape. **0 is an exact bypass** | all |
+| WARMTH | .35 (.50 until round 0e) | the 1962 chain: ribbon, valve, tape. **0 is an exact bypass** | all |
 | SPEED | .50 | how fast the brush circles, the roll strokes or the swell's mallets come | sweep, rolls, swell |
 | BEND | .50 | how far the elbow presses the floor tom: 0.4 to 5 semitones | elbow tom |
 | PRESSURE | .50 | how hard the bow bites: more harmonics, more scratch | bowed cymbal |
@@ -390,7 +425,7 @@ The Kotlin port should keep both caches, keyed by the quantised control value, a
 
 ## Next rounds
 
-- **Round 0e:** the owner's listen to rounds 0b to 0d. Which voices convince, which kits are the right four (a Latin jazz kit is
+- **Round 0f:** the owner's listen to rounds 0b to 0e. Which voices convince, which kits are the right four (a Latin jazz kit is
   the obvious swap for FREE if rebellious should mean something else), the WARMTH and DISTANCE defaults.
 - **Round 1:** `Ember.kt`, `EmberPatch.kt`, the registration rows (`Patches`, `Velocity`, the roster), the
   house probes, a `DeterminismTest` canary, render-time tests; built from the picks, with Kotlin renders

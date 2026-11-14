@@ -103,7 +103,7 @@ VOICES = {
     "STICKS":       ("PERC",       0.40, ("TUNE", "DAMP", "DISTANCE", "WARMTH")),
 }
 
-DEFAULTS = {"TUNE": .5, "DAMP": .3, "BUZZ": .5, "DISTANCE": .3, "WARMTH": .5, "SPEED": .5,
+DEFAULTS = {"TUNE": .5, "DAMP": .3, "BUZZ": .5, "DISTANCE": .3, "WARMTH": .35, "SPEED": .5,
             "BEND": .5, "PRESSURE": .5, "CROWD": .4, "SLAP": .3}
 
 # Per-voice defaults (round 0b): on the fitted cymbals and hats BUZZ adds looseness beyond the recorded
@@ -584,8 +584,10 @@ def warmth_chain(x, warmth, v):
     and a soft top). WARMTH 0 is an exact bypass: the function returns its input."""
     if warmth <= 0:
         return x
-    y = lp(x, sk.exp_map(warmth, 16000, 6800), 2)
-    y = y + warmth * 0.25 * lp(y, 160, 1)
+    # Round 0e (the owner: every kit "a bit too mid heavy"): the ribbon and the tape roll off less top than at
+    # round 0 (16 kHz to 6.8 kHz, 18 to 9 kHz) and the low lift is gentler (.25). Shape, by ear.
+    y = lp(x, sk.exp_map(warmth, 19000, 10500), 2)
+    y = y + warmth * 0.15 * lp(y, 160, 1)
     pk = np.max(np.abs(y)) + 1e-12
     drive = 0.6 + 3.0 * warmth * (0.4 + 0.6 * v)
     bias = 0.18 * warmth
@@ -594,7 +596,27 @@ def warmth_chain(x, warmth, v):
     y = (1 - warmth) * y + warmth * z
     b, a = peaking(70.0, 2.8 * warmth, 0.9)
     y = signal.lfilter(b, a, y)
-    return lp(y, sk.exp_map(warmth, 18000, 9000), 1)
+    return lp(y, sk.exp_map(warmth, 19500, 13000), 1)
+
+
+def high_shelf(f0, gain_db, slope=0.7):
+    """RBJ high shelf at FS."""
+    A = 10 ** (gain_db / 40)
+    w = TAU * f0 / FS
+    al = math.sin(w) / 2 * math.sqrt((A + 1 / A) * (1 / slope - 1) + 2)
+    c, sa = math.cos(w), 2 * math.sqrt(A) * al
+    b = np.array([A * ((A + 1) + (A - 1) * c + sa), -2 * A * ((A - 1) + (A + 1) * c), A * ((A + 1) + (A - 1) * c - sa)])
+    a = np.array([(A + 1) - (A - 1) * c + sa, 2 * ((A - 1) - (A + 1) * c), (A + 1) - (A - 1) * c - sa])
+    return b / a[0], a / a[0]
+
+
+def voicing(y):
+    """Round 0e, by ear (the owner: every kit "a bit too mid heavy"): the close mic's voicing on every pad,
+    1.5 dB out around 600 Hz (broad) and a 2 dB lift from about 6 kHz. Shape, not a measurement."""
+    b, a = peaking(600.0, -1.5, 0.7)
+    y = signal.lfilter(b, a, y)
+    b, a = high_shelf(6000.0, 2.0)
+    return signal.lfilter(b, a, y)
 
 
 def peaking(f0, gain_db, q):
@@ -611,6 +633,7 @@ def finish(raw, m, v, seconds):
     n = len(raw)
     y = conv(raw, room_ir(round(m["DISTANCE"], 3)), n)
     y = warmth_chain(y, m["WARMTH"], v)
+    y = voicing(y)
     y = signal.resample_poly(y, 1, 4)
     y = y - np.mean(y)
     rc = 1 / (TAU * sk.OUTPUT_DC_HZ)
@@ -922,23 +945,24 @@ def _hat_open(m, v, tr, n):
 
 def _bowed_cymbal(m, v, tr, n):
     """A bass bow drawn across the flat ride's edge: stick-slip locks to the cymbal's strongest fitted mode
-    between 500 Hz and 1.6 kHz and the rest bloom around it. The bow is a sawtooth-like slip train at that
+    between 900 Hz and 2 kHz (1379 Hz at TUNE .5) and the rest bloom around it. The bow is a sawtooth-like slip train at that
     mode with jitter (an analogy of friction; the Kotlin can use Modes.Friction). PRESSURE: more bite,
     more harmonics, more scratch."""
     t = np.arange(n) / FS
     md = np.array(fit()["voices"]["flatride"]["modes"])
-    sel = (md[:, 0] > 500) & (md[:, 0] < 1600)
+    sel = (md[:, 0] > 900) & (md[:, 0] < 2000)          # round 0e: 500 to 1600 Hz was too middy (owner, by ear)
     f_lock = md[sel][np.argmax(md[sel, 1]), 0] * semis(m["TUNE"], 3) * tr.uniform(0.998, 1.002)
     jitter = np.cumsum(tr.normal(0, 1, n)) / FS * 0.8
     ph = TAU * f_lock * (t + jitter * 0.001)
     bite = sk.lin(m["PRESSURE"], 0.3, 1.0)
-    saw = np.sin(ph) + bite * 0.5 * np.sin(2 * ph) + bite * 0.33 * np.sin(3 * ph) + bite * 0.25 * np.sin(4 * ph + 0.3)
+    saw = (np.sin(ph) + bite * 0.5 * np.sin(2 * ph) + bite * 0.33 * np.sin(3 * ph) + bite * 0.25 * np.sin(4 * ph + 0.3)
+           + bite * 0.18 * np.sin(5 * ph + 0.7) + bite * 0.12 * np.sin(6 * ph + 1.1))   # round 0e: more upper bite
     swell = np.clip(t / (0.5 - 0.25 * v), 0, 1) ** 1.5 * np.clip((2.3 - t) / 0.35, 0, 1)
     wob = 1 + 0.15 * np.sin(TAU * 4.3 * t + tr.uniform(0, TAU))
-    scratch = band(tr.standard_normal(n), 2000, 7000) * bite * 0.03
+    scratch = band(tr.standard_normal(n), 2000, 10000) * bite * 0.06
     drive_sig = (saw * 0.004 + scratch * 0.01) * swell * wob * v
     sound = driven("flatride", dict(m, DAMP=.3), v, tr, n, drive_sig)
-    direct = lp(saw, 6000) * swell * wob * 0.25 * np.max(np.abs(sound))
+    direct = lp(saw, 10000) * swell * wob * 0.25 * np.max(np.abs(sound))
     out = sound + direct
     drive = env_follow(lp(out, 2500), 6.0)
     return out + 0.7 * RIVET_GAIN * np.max(np.abs(out)) * rivets(drive, m["BUZZ"], v * 0.6, tr, n)

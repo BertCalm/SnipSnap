@@ -726,6 +726,9 @@ prototype and a listening page (<https://claude.ai/artifact/Xmcj5t8MYSNCQPoTKHBc
   The owner then heard the sweeps as "hail hitting a roof". Round 0c fits the sweep and brush roll to CC0 brush stirs and
   flutters (Karoryfer Swirly Drums). Their clickiness (kurtosis above 2 kHz) is now 2.9 to 3.0, as recorded, where it was
   5.7 to 7.8 (Python). The owner then found the sweep overbearing and mid heavy. Round 0d sets it 3 dB lower in the
-  grooves, brightens it (+3 dB at 4 kHz, +6 from 8 kHz, by ear) and eases After Hours' WARMTH from .65 to .5. Not heard yet.
+  grooves, brightens it (+3 dB at 4 kHz, +6 from 8 kHz, by ear) and eases After Hours' WARMTH from .65 to .5. The owner
+  then asked for every kit brighter. Round 0e makes the 1962 chain roll off less top and lowers WARMTH 0.15 on every
+  kit. It also adds -1.5 dB at 600 Hz and +2 dB from 6 kHz to every pad, and makes the bowed cymbal sing at 1.4 kHz.
+  Not heard yet.
 - **Overall: incomplete.** Round 0 asks the owner which voices and kits to keep. Kotlin (round 1), the shelf and
   saving, playback and MPC 3 export (round 2), and phone and MPC hardware (round 3) are all open.
