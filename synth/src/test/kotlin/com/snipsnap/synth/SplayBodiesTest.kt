@@ -25,7 +25,7 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
- * SPLAY model 3's WIRE and RUB bodies. TONGUE's accepted sound is pinned by [SplayAcceptedBankTest]
+ * SPLAY model 3's WIRE, RUB, AIR, BAR and SKIN bodies. TONGUE's accepted sound is pinned by [SplayAcceptedBankTest]
  * (all five kept populations, raw and matched PCM) and replayed unchanged there; these tests prove the
  * new bodies only read TONGUE's mechanics and never change them.
  */
@@ -90,8 +90,8 @@ class SplayBodiesTest {
         assertEquals(listOf("TONGUE"), SplayVoice.entries.map { it.name })
     }
 
-    @Test fun `both bodies ring at the requested pitch across SPLAY's range`() {
-        for (body in SplayBody.entries) for (midi in listOf(36, 48, 60, 72, 84)) {
+    @Test fun `WIRE and RUB ring at the requested pitch across SPLAY's range`() {
+        for (body in listOf(SplayBody.WIRE, SplayBody.RUB)) for (midi in listOf(36, 48, 60, 72, 84)) {
             val r = SplayBodies.renderDetailed(body, midi = midi)
             val hz = Keys.midiHz(midi).toDouble()
             val (measured, confidence) = BowMeter.pitch(r.raw, Dsp.RATE / 2, Dsp.RATE / 2, hz.toFloat())
@@ -138,17 +138,17 @@ class SplayBodiesTest {
         }
     }
 
-    @Test fun `RUB's held loop closes and is the real motion until the window begins`() {
-        for (midi in listOf(36, 60, 84)) {
-            val held = SplayBodies.renderDetailed(SplayBody.RUB, mapOf("HOLD" to 1f), midi, .6f)
+    @Test fun `RUB's and AIR's held loops close and are the real motion until the window begins`() {
+        for (body in listOf(SplayBody.RUB, SplayBody.AIR)) for (midi in listOf(36, 60, 84)) {
+            val held = SplayBodies.renderDetailed(body, mapOf("HOLD" to 1f), midi, .6f)
             val start = assertNotNull(held.loopStart)
             assertEquals(((SplayBodies.LOOP_FROM_SECONDS + SplayBodies.HELD_CYCLES * SplayBodies.CYCLE_SECONDS) * Dsp.RATE).toInt(), held.raw.size)
             assertEquals((SplayBodies.CYCLE_SECONDS * Dsp.RATE).toInt(), held.raw.size - start, "the loop is exactly one cycle")
             val seam = Keys.seamError(held.raw, start)
-            assertTrue(seam < 1e-6, "MIDI $midi seam %.2e".format(seam))
-            assertTrue(SplayBodies.isLoop(SplayBody.RUB, mapOf("HOLD" to 1f)))
+            assertTrue(seam < 1e-6, "$body MIDI $midi seam %.2e".format(seam))
+            assertTrue(SplayBodies.isLoop(body, mapOf("HOLD" to 1f)))
             // Before the loop window the held note is the finite note, sample for sample.
-            val finite = SplayBodies.renderDetailed(SplayBody.RUB, emptyMap(), midi, .6f)
+            val finite = SplayBodies.renderDetailed(body, emptyMap(), midi, .6f)
             assertNull(finite.loopStart)
             val early = (2.5 * Dsp.RATE).toInt()
             assertContentEquals(finite.raw.copyOf(early), held.raw.copyOf(early))
@@ -168,11 +168,16 @@ class SplayBodiesTest {
             assertFailsWith<IllegalArgumentException> { SplayBodies.render(body, midi = 85) }
             assertFailsWith<IllegalArgumentException> { SplayBodies.render(body, velocity = 1.5f) }
         }
-        // RUB's rosin noise follows the acoustic seed; WIRE has none.
-        assertFalse(SplayBodies.render(SplayBody.RUB, seed = 1).samples.contentEquals(SplayBodies.render(SplayBody.RUB, seed = 2).samples))
-        assertContentEquals(SplayBodies.render(SplayBody.WIRE, seed = 1).samples, SplayBodies.render(SplayBody.WIRE, seed = 2).samples)
-        assertFailsWith<IllegalArgumentException> { SplayBodies.render(SplayBody.WIRE, mapOf("HOLD" to 1f)) }
-        assertFalse(SplayBodies.supportsHold(SplayBody.WIRE))
+        // RUB's rosin and AIR's breath follow the acoustic seed; WIRE, BAR and SKIN have no noise.
+        for (body in listOf(SplayBody.RUB, SplayBody.AIR)) {
+            assertFalse(SplayBodies.render(body, seed = 1).samples.contentEquals(SplayBodies.render(body, seed = 2).samples), "$body")
+            assertTrue(SplayBodies.supportsHold(body))
+        }
+        for (body in listOf(SplayBody.WIRE, SplayBody.BAR, SplayBody.SKIN)) {
+            assertContentEquals(SplayBodies.render(body, seed = 1).samples, SplayBodies.render(body, seed = 2).samples, "$body")
+            assertFailsWith<IllegalArgumentException> { SplayBodies.render(body, mapOf("HOLD" to 1f)) }
+            assertFalse(SplayBodies.supportsHold(body))
+        }
     }
 
     // ---- The owner's KEEP of WIRE (round splay-voices-1, 14 Nov: S2, S4, S6) ----
@@ -246,5 +251,133 @@ class SplayBodiesTest {
             all += e; if (k * Dsp.RATE.toDouble() / size > 4000) high += e
         }
         assertTrue(high / all < .03, "RUB energy above 4 kHz %.2f%%".format(100 * high / all))
+    }
+
+    // ---- RUB as heard in round splay-voices-2 (S9-S12). Not yet kept; pinned so the new bodies cannot move it. ----
+
+    @Test fun `RUB renders exactly the round-2 takes`() {
+        val m = pc16.macros
+        assertEquals("5b97c746a8dc4de33418aefd7b61f472f063eb3fc32d2a9a48368f728d2e9ce4", sha(SplayBodies.render(SplayBody.RUB, m, pc16.midi, pc16.velocity, pc16.seed).samples))
+        assertEquals(listOf("21a10a373dbda8e1479aace0ef8aff69f0175e9a9502568348e9d959b768a913", "768823cbd4864f331644f87729b5763acf2a3ee089e297419360a090f46d8f74", "58fb8a1fbf035bb7663472863f2dd81484cc0b12aa2e6d6d6dd20613ea43db7d"),
+            listOf(.3f, .6f, 1f).map { sha(SplayBodies.render(SplayBody.RUB, m, 60, it, pc16.seed).samples) })
+        assertEquals(listOf("e70b8869d808818fcf2e79ed67332fdfa25d97ad81ded035e2f56a7b6fe126e6", "2e1d1229a82421dbf5ba1d90ad0a05e4e96fe6f8d61c29b2f802fabe4361dea6", "d4de9052b240361b448fa5dd5f99060b2d4d3d45fa308168ee8b9a8daa4d669b", "fa946ea737f4167b0d31e5997d3c1d645e88f7628da2192133ff4bd54052a468", "0d262789fac36d557c20e6b9a68b64def4002ed0a5f69c3583303001921be34f", "ed908f5365467fe735aa324faad1c8d81976f83662184e04ab090b2af15734b1"),
+            phraseNotes.map { sha(SplayBodies.render(SplayBody.RUB, m, it, .7f, pc16.seed).samples) })
+        val held = SplayBodies.renderDetailed(SplayBody.RUB, m + ("HOLD" to 1f), pc16.midi, pc16.velocity, pc16.seed)
+        assertEquals("563c67f495e749918f27ba689edcff77e8a57185b21a8638b251a7f9abdaf0f1", sha(held.snip.samples))
+        assertEquals(308700, held.loopStart)
+    }
+
+    // ---- AIR, BAR and SKIN (round splay-voices-3, not yet heard) ----
+
+    private val newBodies = listOf(SplayBody.AIR, SplayBody.BAR, SplayBody.SKIN)
+
+    private fun power(x: FloatArray, from: Int, size: Int): DoubleArray {
+        val re = FloatArray(size) { (x[from + it] * (.5 - .5 * cos(2 * PI * it / (size - 1)))).toFloat() }
+        val im = FloatArray(size)
+        Fft.forward(re, im)
+        return DoubleArray(size / 2) { re[it].toDouble() * re[it] + im[it].toDouble() * im[it] }
+    }
+
+    /** The strongest spectral peak within 6% of [near], from [from] on, interpolated on the log spectrum. */
+    private fun peakHz(x: FloatArray, from: Int, near: Double): Double {
+        val size = 1 shl 16
+        val p = power(x, from, size)
+        val bin = Dsp.RATE.toDouble() / size
+        val lo = (near * .94 / bin).toInt(); val hi = (near * 1.06 / bin).toInt() + 1
+        var best = lo
+        for (k in lo..hi) if (p[k] > p[best]) best = k
+        val a = ln(p[best - 1]); val b = ln(p[best]); val c = ln(p[best + 1])
+        return (best + .5 * (a - c) / (a - 2 * b + c)) * bin
+    }
+
+    private class Shape(val high: Double, val harmonic: Double, val evenOvertones: Double)
+
+    /**
+     * From one second in: the share of energy above 4 kHz; the share of 50 Hz-10 kHz energy within 2% of
+     * a harmonic of [hz]; and the share of the near-harmonic energy above the fundamental that sits on even
+     * harmonics (TONGUE's overtones are mostly its second harmonic).
+     */
+    private fun shape(x: FloatArray, hz: Double): Shape {
+        val size = 1 shl 17
+        val p = power(x, Dsp.RATE, size)
+        val bin = Dsp.RATE.toDouble() / size
+        var all = 0.0; var high = 0.0; var band = 0.0; var harmonic = 0.0; var overtones = 0.0; var even = 0.0
+        for (k in 1 until p.size) {
+            val f = k * bin
+            all += p[k]
+            if (f > 4000) high += p[k]
+            if (f < 50 || f > 10000) continue
+            band += p[k]
+            val n = Math.round(f / hz)
+            if (n >= 1 && abs(f / (n * hz) - 1) < .02) {
+                harmonic += p[k]
+                if (n >= 2) { overtones += p[k]; if (n % 2 == 0L) even += p[k] }
+            }
+        }
+        return Shape(high / all, harmonic / band, even / overtones)
+    }
+
+    @Test fun `AIR, BAR and SKIN sit at the requested pitch across SPLAY's range`() {
+        for (body in newBodies) for (midi in listOf(36, 48, 60, 72, 84)) {
+            val hz = Keys.midiHz(midi).toDouble()
+            val raw = SplayBodies.renderDetailed(body, midi = midi).raw
+            // Once the catches have stopped, the lowest resonance (the tube, the bar's first mode, the head's
+            // (0,1) mode) rings out at the note: the bodies are tuned, whatever their overtones.
+            val tail = 1200 * ln(peakHz(raw, 6 * Dsp.RATE, hz) / hz) / ln(2.0)
+            assertTrue(abs(tail) <= 12.0, "$body MIDI $midi rings out at %.1f cents".format(tail))
+            // AIR is harmonic, so its pitch also reads during the gesture.
+            if (body == SplayBody.AIR && midi >= 48) {
+                val (measured, confidence) = BowMeter.pitch(raw, Dsp.RATE / 2, Dsp.RATE / 2, hz.toFloat())
+                val cents = 1200 * ln(measured / hz) / ln(2.0)
+                assertTrue(abs(cents) <= 12.0 && confidence > .4, "AIR MIDI $midi: %.1f cents, confidence %.2f".format(cents, confidence))
+            }
+        }
+    }
+
+    @Test fun `AIR, BAR and SKIN are new bodies, not TONGUE settings, and differ from each other`() {
+        val tongue = Splay.render(SplayVoice.TONGUE, pc16.macros, pc16.midi, pc16.velocity, pc16.seed, model = 2).samples
+        val hz = Keys.midiHz(pc16.midi).toDouble()
+        val render = newBodies.associateWith { SplayBodies.render(it, pc16.macros, pc16.midi, pc16.velocity, pc16.seed).samples }
+        val shapes = render.mapValues { shape(it.value, hz) }
+        val bright = render.mapValues { centroid(it.value, 2 * Dsp.RATE) }
+        val t = shape(tongue, hz)
+        val tBright = centroid(tongue, 2 * Dsp.RATE)
+        // TONGUE's overtones are mostly its second harmonic. AIR's tube has odd harmonics only, and the bar's and
+        // the head's overtones are inharmonic, so none of the three has TONGUE's even overtone.
+        for (body in newBodies) {
+            assertTrue(t.evenOvertones - shapes.getValue(body).evenOvertones > .6,
+                "$body even overtones %.2f, TONGUE %.2f".format(shapes.getValue(body).evenOvertones, t.evenOvertones))
+            assertTrue(shapes.getValue(body).high < .03, "$body keeps a clean top: %.2f%% above 4 kHz".format(100 * shapes.getValue(body).high))
+        }
+        // BAR and SKIN are inharmonic where TONGUE is nearly harmonic; BAR is brighter than TONGUE, SKIN darker.
+        for (body in listOf(SplayBody.BAR, SplayBody.SKIN)) assertTrue(t.harmonic - shapes.getValue(body).harmonic > .15,
+            "$body harmonic share %.2f, TONGUE %.2f".format(shapes.getValue(body).harmonic, t.harmonic))
+        assertTrue(bright.getValue(SplayBody.BAR) > 1.5 * tBright, "BAR %.0f Hz against TONGUE %.0f Hz".format(bright.getValue(SplayBody.BAR), tBright))
+        assertTrue(bright.getValue(SplayBody.SKIN) < .9 * tBright, "SKIN %.0f Hz against TONGUE %.0f Hz".format(bright.getValue(SplayBody.SKIN), tBright))
+        assertTrue(bright.getValue(SplayBody.BAR) > 2 * bright.getValue(SplayBody.SKIN), "BAR and SKIN differ in brightness")
+        // AIR is breath on a harmonic tube: much brighter than TONGUE, more harmonic than BAR, and, unlike RUB
+        // (the other held body), without even overtones. BAR and SKIN are far less harmonic than WIRE's string.
+        assertTrue(bright.getValue(SplayBody.AIR) > 2.5 * tBright)
+        assertTrue(shapes.getValue(SplayBody.AIR).harmonic > shapes.getValue(SplayBody.BAR).harmonic + .1)
+        val rub = shape(SplayBodies.render(SplayBody.RUB, pc16.macros, pc16.midi, pc16.velocity, pc16.seed).samples, hz)
+        assertTrue(rub.evenOvertones - shapes.getValue(SplayBody.AIR).evenOvertones > .3)
+        val wire = shape(SplayBodies.render(SplayBody.WIRE, pc16.macros, pc16.midi, pc16.velocity, pc16.seed).samples, hz)
+        for (body in listOf(SplayBody.BAR, SplayBody.SKIN)) assertTrue(wire.harmonic - shapes.getValue(body).harmonic > .25)
+    }
+
+    @Test fun `AIR's catches are heard as puffs`() {
+        val r = SplayBodies.renderDetailed(SplayBody.AIR, pc16.macros, pc16.midi, pc16.velocity, pc16.seed)
+        val x = r.snip.samples
+        val frame = Dsp.RATE / 200
+        val levels = DoubleArray(x.size / frame) { 20 * log10(1e-7 + rms(x, it * frame, (it + 1) * frame)) }
+        val groups = ArrayList<Double>()
+        for (t in r.events.map { it.seconds }.sorted()) if (t < 5.6 && (groups.isEmpty() || t - groups.last() > .06)) groups += t
+        val swings = groups.drop(1).map { t ->
+            val grip = ((t - .03) * 200).toInt(); val slip = ((t + .005) * 200).toInt(); val after = ((t + .05) * 200).toInt()
+            (slip until after).maxOf { levels[it] } - (grip until slip).minOf { levels[it] }
+        }.sorted()
+        val median = swings[swings.size / 2]
+        // Measured about 6.7 dB, as RUB's grip-and-slip (the kept WIRE swings about 3.1 dB).
+        assertTrue(median > 5.0, "AIR's swing around a catch is %.1f dB".format(median))
     }
 }

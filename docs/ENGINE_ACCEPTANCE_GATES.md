@@ -577,7 +577,9 @@ and finite MAKE INSTRUMENT keys. See [SPLAY_FINITE_DELIVERY.md](SPLAY_FINITE_DEL
   RUB (a rubbed resonator), are built as model 3 and tested in JVM tests, not yet registered. The
   owner kept WIRE on 14 Nov (round splay-voices-1, S2/S4/S6; its takes are pinned). RUB was a TWEAK
   ("We need a bit of a catch like gesture in the sound") and its stick-slip re-tune is round
-  splay-voices-2, not yet heard; see [SPLAY_WIRE_RUB.md](SPLAY_WIRE_RUB.md).
+  splay-voices-2, not yet heard; see [SPLAY_WIRE_RUB.md](SPLAY_WIRE_RUB.md). Three more bodies, AIR (a
+  breath-blown tube), BAR (a mallet bar) and SKIN (a drum head), are built and tested the same way and are
+  round splay-voices-3, not yet heard; see [SPLAY_AIR_BAR_SKIN.md](SPLAY_AIR_BAR_SKIN.md).
 - **Presets: pass for the one voice.** The five accepted population settings are the factory
   presets; the five provisional recipes stay in the CLI only.
 - **Playable keygroups: partial.** In JVM tests the shell builds finite keygroups (MIDI 36–84,
@@ -588,12 +590,14 @@ and finite MAKE INSTRUMENT keys. See [SPLAY_FINITE_DELIVERY.md](SPLAY_FINITE_DEL
   in JVM tests, with a saved-recipe replay. It is one voice, not a full melodic kit.
 - **Chord tools: not yet verified.**
 - **Articulation (HOLD): fail.** SPLAY is finite (eight seconds). Positive HOLD is refused, and
-  the instrument has no loop. The RUB candidate (round 2 unheard) has a measured seamless loop (a
-  real two-second window of the motion played in a circle; seam under 1e-6), not yet registered.
+  the instrument has no loop. The RUB candidate (round 2 unheard) and the AIR candidate (round 3
+  unheard) have measured seamless loops (a real two-second window of the motion played in a circle;
+  seam under 1e-6), not yet registered.
 - **Percussion and drum gates:** not applicable. SPLAY is a pitched finite instrument.
 - **Velocity and round robin: fail.** Velocity is gain only (the keygroups' three levels too).
-  There are no round-robin takes. WIRE (kept) and RUB make a softer touch a wider, duller contact
-  (soft/hard brightness .78 and .54 after level matching); neither is registered yet.
+  There are no round-robin takes. WIRE (kept), RUB, AIR, BAR and SKIN make a softer touch a duller
+  contact or darker breath (soft/hard brightness .78, .54, .35, .63 and .69 after level matching); none
+  is registered yet.
 - **Sound character.** The five population settings were KEEP decisions in the owner's Wave 3
   review (2026-11-09). That is recorded only in the backup's notes and manifest
   ([SPLAY_NATIVE_RECOVERY.md](SPLAY_NATIVE_RECOVERY.md): “All five decisions are KEEP”), with no

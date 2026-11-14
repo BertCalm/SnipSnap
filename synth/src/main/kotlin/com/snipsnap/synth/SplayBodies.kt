@@ -5,6 +5,7 @@ import java.util.concurrent.CancellationException
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.cos
+import kotlin.math.cosh
 import kotlin.math.exp
 import kotlin.math.floor
 import kotlin.math.max
@@ -12,6 +13,7 @@ import kotlin.math.min
 import kotlin.math.pow
 import kotlin.math.roundToInt
 import kotlin.math.sin
+import kotlin.math.sinh
 import kotlin.math.sqrt
 
 /**
@@ -23,8 +25,15 @@ import kotlin.math.sqrt
  *  - [RUB]: a long-memory harmonic resonator rubbed continuously by the upper arm's pressure. Each catch
  *    is a stick-slip gesture (the bow grips, the ringing ducks, then it slips and strikes), landing where
  *    the upper arm points. It sings between catches and is SPLAY's first held (HOLD) voice.
+ *  - [AIR]: a stopped tube (odd harmonics, hollow) blown by one breath stream. The upper arm's pressure
+ *    keeps a low breath going; each catch opens a valve, a puff with a tongued pop at its front. Holds.
+ *  - [BAR]: a free mallet bar (inharmonic modes 1 : 2.756 : 5.404 : 8.933 : 13.344). The catch width is
+ *    the mallet's hardness, and the upper arm moves the strike from the bar's middle toward its end.
+ *  - [SKIN]: a damped drum membrane (modes 1 : 1.594 : 2.136 : 2.296 : 2.653 : 2.918). The upper arm
+ *    moves the strike from the centre (a round boom) toward the edge (a ringing knock), and a hard
+ *    catch bends the pitch up for a moment, as a struck head does.
  */
-enum class SplayBody { WIRE, RUB }
+enum class SplayBody { WIRE, RUB, AIR, BAR, SKIN }
 
 data class SplayBodyRender(
     val snip: Snip,
@@ -37,14 +46,14 @@ data class SplayBodyRender(
 )
 
 /**
- * SPLAY model 3: the WIRE and RUB bodies. Model 3 never renders TONGUE, and TONGUE's models 1 and 2
+ * SPLAY model 3: the WIRE, RUB, AIR, BAR and SKIN bodies. Model 3 never renders TONGUE, and TONGUE's models 1 and 2
  * keep their own code, defaults and seeds: this object only reads the model-2 catch list.
  *
  * Velocity changes the contact, not just the level: a softer touch is a wider catch pulse
  * ([contactSeconds]), which is a duller, rounder hit, and on RUB a darker rub. Loudness then
  * follows velocity with TONGUE's own ×v^0.65.
  *
- * HOLD (RUB only) plays the real motion for [LOOP_FROM_SECONDS], then a [CYCLE_SECONDS] window of it
+ * HOLD (RUB and AIR) plays the real motion for [LOOP_FROM_SECONDS], then a [CYCLE_SECONDS] window of it
  * (the catches, the upper-arm pressure and the rosin noise from that window) in a circle. RUB is linear
  * and loses energy, so a repeating push settles into a repeating sound: the loop is the last of
  * [HELD_CYCLES] cycles, and its seam is measured, not crossfaded. This is a real excerpt of the motion
@@ -106,9 +115,55 @@ object SplayBodies {
     /** The loop window's last stretch is blended toward the motion that led into the window, so the circle has no jump. */
     private const val SEAM_BLEND_SECONDS = .15
 
-    fun supportsHold(body: SplayBody) = body == SplayBody.RUB
+    /** The pitch every body's per-note decay laws are quoted at (C4). */
+    private const val REFERENCE_HZ = 261.6255653005986
 
-    /** SPLAY's model-2 controls, the same defaults as TONGUE at model 2. HOLD is RUB's only. */
+    // AIR: a stopped tube, so odd harmonics only (the hollow sound), each a narrow resonance fed by breath.
+    private val AIR_HARMONICS = doubleArrayOf(1.0, 3.0, 5.0)
+    private val AIR_GAINS = doubleArrayOf(1.0, .45, .22)
+    /** The fundamental's ring at C4; a lower note rings longer, a higher shorter (nearly constant width in cents). */
+    private const val AIR_T60 = .55
+    /** The steady breath the upper arm's pressure keeps going, against a full puff (1). */
+    private const val AIR_FLOW = .20
+    private const val AIR_FLOOR = .25
+    /** A puff: the valve opens over 3 ms (hard) to 12 ms (soft) and closes with this time constant. */
+    private const val AIR_PUFF_SECONDS = .075
+    /** The tongued pop at the front of each puff, struck into the tube's resonances. */
+    private const val AIR_POP = 3.0
+    /** The breath heard outside the tube, against the tube's own sound. */
+    private const val AIR_BREATH = .035
+
+    // BAR: a free-free beam. Ratios are (beta_k / beta_1)^2.
+    private val BAR_BETA = doubleArrayOf(4.730040744862704, 7.853204624095838, 10.995607838001671, 14.137165491257464, 17.27875965739948)
+    private val BAR_RADIATION = doubleArrayOf(1.0, 1.0, .85, .60, .40)
+    /** The fundamental's ring at C4, scaled by (C4/note)^.35; each higher mode rings as 1/ratio^.6 of it. */
+    private const val BAR_T60 = 1.25
+
+    // SKIN: membrane modes (m, n) with their Bessel zeros j_mn; ratios are j_mn / j_01.
+    private val SKIN_M = intArrayOf(0, 1, 2, 0, 3, 1)
+    private val SKIN_ZERO = doubleArrayOf(2.404825557695773, 3.831705970207512, 5.135622301840683, 5.520078110286311, 6.380161895923984, 7.015586669815619)
+    private val SKIN_RADIATION = doubleArrayOf(1.0, .85, .75, .55, .65, .50)
+    private val SKIN_T60_SHARE = doubleArrayOf(1.0, .62, .50, .45, .40, .36)
+    /** The (0,1) mode's ring at C4, scaled by (C4/note)^.3: heavily damped. */
+    private const val SKIN_T60 = .50
+    /** A full catch bends the head's pitch up by this fraction (about 20 cents), falling back over [SKIN_BEND_SECONDS]. */
+    private const val SKIN_BEND = .012
+    private const val SKIN_BEND_SECONDS = .020
+
+    /**
+     * How much wider than WIRE's and RUB's a body's contact is at [velocity]. BAR's is a mallet and SKIN's a
+     * hand or felt beater: both stay on longer for a soft touch, so the touch changes the tone more than the
+     * shared contact law alone does (about 1.5x on BAR and 1.8x on SKIN between a soft and a full touch).
+     */
+    private fun contactScale(body: SplayBody, velocity: Double): Double = when (body) {
+        SplayBody.BAR -> 1.4 - .6 * velocity
+        SplayBody.SKIN -> 3.0 * (1.5 - .8 * velocity)
+        else -> 1.0
+    }
+
+    fun supportsHold(body: SplayBody) = body == SplayBody.RUB || body == SplayBody.AIR
+
+    /** SPLAY's model-2 controls, the same defaults as TONGUE at model 2. HOLD is RUB's and AIR's only. */
     fun macrosFor(body: SplayBody): List<MacroSpec> = Splay.macrosFor(SplayVoice.TONGUE, 2)
 
     fun defaults(body: SplayBody): Map<String, Float> = macrosFor(body).associate { it.name to it.default }
@@ -136,7 +191,7 @@ object SplayBodies {
         require(midi in Splay.MIDI_MIN..Splay.MIDI_MAX) { "SPLAY MIDI must be ${Splay.MIDI_MIN}..${Splay.MIDI_MAX}" }
         require(velocity.isFinite() && velocity in 0f..1f) { "SPLAY velocity must be 0..1" }
         for ((key, value) in macros) require(value.isFinite() && value in 0f..1f) { "SPLAY $key must be 0..1" }
-        require(supportsHold(body) || (macros["HOLD"] ?: 0f) == 0f) { "SPLAY $body is finite only; HOLD is RUB's" }
+        require(supportsHold(body) || (macros["HOLD"] ?: 0f) == 0f) { "SPLAY $body is finite only; HOLD is RUB's and AIR's" }
         val held = isLoop(body, macros)
         val excitation = Splay.prepareModel2Excitation(macros)
         val contact = excitation.macros.getValue("CONTACT").toDouble()
@@ -146,10 +201,13 @@ object SplayBodies {
         // A held render runs a little past its end so the decimator's kernel never reaches the buffer's edge.
         val padFrames = if (held) RATE / 10 else 0
         val frames = (seconds * INTERNAL_RATE).roundToInt() + padFrames * Dsp.OVERSAMPLE
-        val schedule = Schedule(excitation, contact, v, hz, held, frames)
+        val schedule = Schedule(excitation, contact, v, hz, held, frames, contactScale(body, v))
         val raw = when (body) {
             SplayBody.WIRE -> wire(schedule, hz, frames)
             SplayBody.RUB -> rub(schedule, excitation, hz, v, seed, held, frames)
+            SplayBody.AIR -> air(schedule, excitation, hz, v, seed, held, frames)
+            SplayBody.BAR -> bar(schedule, hz, frames)
+            SplayBody.SKIN -> skin(schedule, hz, v, frames)
         }
         Tide.bandLimit(raw, INTERNAL_RATE)
         var out = Dsp.decimate(raw, RATE)
@@ -180,14 +238,14 @@ object SplayBodies {
      * runs past the window's end wraps to its start, so the force from the second cycle on repeats exactly.
      */
     private class Schedule(e: Splay.Model2Excitation, contact: Double, velocity: Double, hz: Double,
-        val held: Boolean, val frames: Int) {
+        val held: Boolean, val frames: Int, widthScale: Double = 1.0) {
         val total = e.weights.sum()
         val cycle = (CYCLE_SECONDS * INTERNAL_RATE).roundToInt()
         val loopFrom = (LOOP_FROM_SECONDS * INTERNAL_RATE).roundToInt()
         val circularSize = if (held) cycle else 0
         /** Every pulse: the release and each catch, with its amplitude and the upper arm's point along the body. */
         val pulses = ArrayList<Pulse>()
-        val width = contactSeconds(contact, velocity, hz)
+        val width = contactSeconds(contact, velocity, hz) * widthScale
         val kernel = kernel(width * INTERNAL_RATE)
 
         /** The strongest untapered catch, so a held and a finite note grade their catches alike. */
@@ -408,6 +466,215 @@ object SplayBodies {
         }
         return out
     }
+
+    /**
+     * AIR: one breath stream through a stopped tube. The upper arm's pressure keeps a low breath going
+     * (from [AIR_FLOOR]); every catch opens a valve, a puff of breath whose front is a tongued pop struck
+     * into the tube. A harder touch blows brighter breath and overblows a little more into the upper
+     * harmonics. HOLD loops the window's pressure and breath as RUB does.
+     */
+    private fun air(s: Schedule, e: Splay.Model2Excitation, hz: Double, velocity: Double, seed: Int,
+        held: Boolean, frames: Int): FloatArray {
+        val count = AIR_HARMONICS.count { hz * it < RUB_TOP_HZ }
+        val cr = DoubleArray(count); val sr = DoubleArray(count)
+        val re = DoubleArray(count); val im = DoubleArray(count)
+        val drive = DoubleArray(count); val pass = DoubleArray(count)
+        val t60 = AIR_T60 * sqrt(REFERENCE_HZ / hz)
+        val richness = .35 + .65 * velocity
+        for (k in 0 until count) {
+            val radius = exp(-LN_1000 / (t60 / (1.0 + .35 * k) * INTERNAL_RATE))
+            val f = hz * AIR_HARMONICS[k]
+            cr[k] = radius * cos(TAU * f / INTERNAL_RATE)
+            sr[k] = radius * sin(TAU * f / INTERNAL_RATE)
+            drive[k] = AIR_GAINS[k] * richness.pow(k)
+            // Breath enters each resonance scaled so a steady tone at its centre passes at unity.
+            pass[k] = 1.0 - radius
+        }
+        // Every pulse (the release too) opens the valve and pops the tube.
+        val valve = FloatArray(frames); val valveC = FloatArray(s.circularSize)
+        val pop = FloatArray(frames); val popC = FloatArray(s.circularSize)
+        val puff = puffShape((.003 + .009 * (1.0 - velocity)) * INTERNAL_RATE, AIR_PUFF_SECONDS * INTERNAL_RATE)
+        for (pulse in s.pulses) {
+            val grade = (abs(pulse.amplitude) / s.catchScale).pow(.7).coerceAtMost(1.0)
+            s.stampShape(pulse, 0, puff, grade, valve, valveC)
+            s.stamp(pulse, 1.0, 0, pop, popC)
+        }
+        // One shared breath stream, low-passed darker for a softer touch.
+        val noise = Dsp.Noise(Dsp.seedFor("SPLAY", MODEL, "AIR", seed, "breath"))
+        val lpA = 1.0 - exp(-TAU * (700.0 + 3300.0 * velocity.pow(1.5)) / INTERNAL_RATE)
+        val noiseFrames = if (held) s.loopFrom + s.cycle else frames
+        val breath = FloatArray(noiseFrames)
+        var lp1 = 0.0; var lp2 = 0.0
+        for (i in breath.indices) {
+            lp1 += lpA * (noise.next() - lp1); lp2 += lpA * (lp1 - lp2)
+            breath[i] = lp2.toFloat()
+        }
+        val pressure = e.upperPressure
+        val control = 1.0 / e.dtSeconds
+        fun pressureAt(t: Double): Double {
+            val position = t * control
+            val k = min(position.toInt(), pressure.size - 2)
+            val mix = (position - k).coerceIn(0.0, 1.0)
+            return pressure[k] + mix * (pressure[k + 1] - pressure[k])
+        }
+        val blend = (SEAM_BLEND_SECONDS * INTERNAL_RATE).roundToInt()
+        val lagA = 1.0 - exp(-1.0 / (RUB_LAG_SECONDS * INTERNAL_RATE))
+        var lagged = pressureAt(0.0)
+        fun swell(p: Double): Double {
+            lagged += lagA * (p - lagged)
+            return AIR_FLOOR + (1.0 - AIR_FLOOR) * lagged
+        }
+        // The breath heard outside the tube loses its lowest rumble.
+        val hpA = 1.0 - exp(-TAU * 300.0 / INTERNAL_RATE)
+        var hp = 0.0
+        val out = FloatArray(frames)
+        for (i in 0 until frames) {
+            if (i % 16384 == 0) checkCancellation()
+            val flow: Double
+            val breathNow: Double
+            if (held && i >= s.loopFrom) {
+                val phase = (i - s.loopFrom) % s.cycle
+                val now = s.loopFrom + phase
+                val x = ((phase - (s.cycle - blend)).toDouble() / blend).coerceIn(0.0, 1.0)
+                val before = now - s.cycle
+                val p = (1.0 - x) * pressureAt(now.toDouble() / INTERNAL_RATE) + x * pressureAt(before.toDouble() / INTERNAL_RATE)
+                breathNow = cos(.5 * PI * x) * breath[now] + sin(.5 * PI * x) * breath[before]
+                flow = AIR_FLOW * swell(p)
+            } else {
+                val t = i.toDouble() / INTERNAL_RATE
+                val active = if (t < ACTIVE_SECONDS) smooth(t / .012) * smooth((ACTIVE_SECONDS - t) / .20) else 0.0
+                breathNow = breath[i].toDouble()
+                flow = AIR_FLOW * swell(pressureAt(t)) * active
+            }
+            val blown = breathNow * (flow + s.force(valve, valveC, i))
+            val popped = AIR_POP * s.force(pop, popC, i)
+            var sum = 0.0
+            for (k in 0 until count) {
+                val force = drive[k] * (pass[k] * blown + popped)
+                val x = cr[k] * re[k] - sr[k] * im[k]
+                im[k] = sr[k] * re[k] + cr[k] * im[k] + force
+                re[k] = x
+                sum += x
+            }
+            hp += hpA * (blown - hp)
+            out[i] = (sum + AIR_BREATH * (blown - hp)).toFloat()
+        }
+        return out
+    }
+
+    /**
+     * BAR: a free bar's inharmonic modes. Each catch is a mallet stroke: the contact width is the mallet's
+     * hardness (a softer touch is a wider, duller stroke), and the upper arm moves the stroke from the bar's
+     * middle (fundamental and third mode) toward a third along it (the 2.756 mode joins in).
+     */
+    private fun bar(s: Schedule, hz: Double, frames: Int): FloatArray {
+        val ratios = BAR_BETA.map { (it / BAR_BETA[0]).pow(2) }.filter { hz * it < RUB_TOP_HZ }
+        val count = ratios.size
+        val t1 = (BAR_T60 * (REFERENCE_HZ / hz).pow(.35)).coerceIn(.45, 2.6)
+        val cr = DoubleArray(count); val sr = DoubleArray(count)
+        val re = DoubleArray(count); val im = DoubleArray(count)
+        for (k in 0 until count) {
+            val radius = exp(-LN_1000 / (t1 / ratios[k].pow(.6) * INTERNAL_RATE))
+            cr[k] = radius * cos(TAU * hz * ratios[k] / INTERNAL_RATE)
+            sr[k] = radius * sin(TAU * hz * ratios[k] / INTERNAL_RATE)
+        }
+        val strokes = Array(count) { FloatArray(frames) }
+        val strokesC = Array(count) { FloatArray(s.circularSize) }
+        for (pulse in s.pulses) {
+            val x = .5 - .5 * (pulse.position - .05)
+            for (k in 0 until count) s.stamp(pulse, BAR_RADIATION[k] * barShape(BAR_BETA[k], x), 0, strokes[k], strokesC[k])
+        }
+        val out = FloatArray(frames)
+        for (i in 0 until frames) {
+            if (i % 16384 == 0) checkCancellation()
+            var sum = 0.0
+            for (k in 0 until count) {
+                val x = cr[k] * re[k] - sr[k] * im[k]
+                im[k] = sr[k] * re[k] + cr[k] * im[k] + s.force(strokes[k], strokesC[k], i)
+                re[k] = x
+                sum += x
+            }
+            out[i] = sum.toFloat()
+        }
+        return out
+    }
+
+    /**
+     * SKIN: a damped membrane. The upper arm moves each stroke from near the centre (the (0,1) and (0,2)
+     * modes: a round boom) toward the edge (the asymmetric modes: a ringing knock). A catch tightens the
+     * head for a moment, so its pitch jumps up by up to [SKIN_BEND] and falls back; a harder touch bends more.
+     */
+    private fun skin(s: Schedule, hz: Double, velocity: Double, frames: Int): FloatArray {
+        val count = SKIN_ZERO.indices.count { hz * SKIN_ZERO[it] / SKIN_ZERO[0] < RUB_TOP_HZ }
+        val t1 = (SKIN_T60 * (REFERENCE_HZ / hz).pow(.3)).coerceIn(.2, 1.0)
+        val radius = DoubleArray(count); val theta = DoubleArray(count)
+        val cr = DoubleArray(count); val sr = DoubleArray(count)
+        val re = DoubleArray(count); val im = DoubleArray(count)
+        for (k in 0 until count) {
+            radius[k] = exp(-LN_1000 / (t1 * SKIN_T60_SHARE[k] * INTERNAL_RATE))
+            theta[k] = TAU * hz * SKIN_ZERO[k] / SKIN_ZERO[0] / INTERNAL_RATE
+            cr[k] = radius[k] * cos(theta[k])
+            sr[k] = radius[k] * sin(theta[k])
+        }
+        val strokes = Array(count) { FloatArray(frames) }
+        val strokesC = Array(count) { FloatArray(s.circularSize) }
+        val bend = FloatArray(frames); val bendC = FloatArray(s.circularSize)
+        val bendShape = burstShape(SKIN_BEND_SECONDS * INTERNAL_RATE)
+        val depth = SKIN_BEND * (.4 + .6 * velocity)
+        for (pulse in s.pulses) {
+            val r = .25 + 1.6 * (pulse.position - .05)
+            for (k in 0 until count) {
+                s.stamp(pulse, SKIN_RADIATION[k] * besselJ(SKIN_M[k], SKIN_ZERO[k] * r), 0, strokes[k], strokesC[k])
+            }
+            val grade = (abs(pulse.amplitude) / s.catchScale).pow(.7).coerceAtMost(1.0)
+            s.stampShape(pulse, 0, bendShape, grade * depth, bend, bendC)
+        }
+        val out = FloatArray(frames)
+        for (i in 0 until frames) {
+            if (i % 16384 == 0) checkCancellation()
+            val b = min(s.force(bend, bendC, i).toDouble(), SKIN_BEND)
+            var sum = 0.0
+            for (k in 0 until count) {
+                var c = cr[k]; var sn = sr[k]
+                if (b > 0.0) {
+                    // The rotation for θ(1 + b), from θ's by angle addition with a short series for the small θb.
+                    val y = theta[k] * b
+                    val cy = 1.0 - y * y / 2.0 + y * y * y * y / 24.0
+                    val sy = y - y * y * y / 6.0
+                    c = cr[k] * cy - sr[k] * sy
+                    sn = sr[k] * cy + cr[k] * sy
+                }
+                val x = c * re[k] - sn * im[k]
+                im[k] = sn * re[k] + c * im[k] + s.force(strokes[k], strokesC[k], i)
+                re[k] = x
+                sum += x
+            }
+            out[i] = sum.toFloat()
+        }
+        return out
+    }
+
+    /** A free-free beam's mode shape at [x] along it (0 = an end, .5 = the middle), 1 at the ends. */
+    private fun barShape(beta: Double, x: Double): Double {
+        val sigma = (cosh(beta) - cos(beta)) / (sinh(beta) - sin(beta))
+        return (cosh(beta * x) + cos(beta * x) - sigma * (sinh(beta * x) + sin(beta * x))) / 2.0
+    }
+
+    /** The Bessel function J_m(x) by its power series (x here is under 6, so 40 terms are ample). */
+    private fun besselJ(m: Int, x: Double): Double {
+        var term = 1.0
+        for (j in 1..m) term *= x / 2.0 / j
+        var sum = term
+        for (k in 1..40) {
+            term *= -(x * x / 4.0) / (k * (k + m))
+            sum += term
+        }
+        return sum
+    }
+
+    /** A puff: the valve opens with time constant [rise] samples and closes with [tau], cut after 6 τ. */
+    private fun puffShape(rise: Double, tau: Double): FloatArray =
+        FloatArray((6.0 * tau).roundToInt()) { j -> ((1.0 - exp(-j / rise)) * exp(-j / tau)).toFloat() }
 
     /** How a catch at [position] along the resonator is shared between the two nearest [CATCH_POINTS]. */
     private fun anchorWeights(position: Double): DoubleArray {
