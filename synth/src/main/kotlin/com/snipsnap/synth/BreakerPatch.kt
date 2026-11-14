@@ -22,6 +22,7 @@ data class BreakerPatch(
         require(model >= 2 || voice == BreakerVoice.KICK || voice == BreakerVoice.SNARE) { "breaker model 1 has no $voice" }
         require(model >= 3 || (voice != BreakerVoice.CRASH && voice != BreakerVoice.RISER)) { "breaker model $model has no $voice" }
         require(model >= 5 || voice != BreakerVoice.BUMP) { "breaker model $model has no $voice" }
+        require(model >= 7 || voice != BreakerVoice.FILL) { "breaker model $model has no $voice" }
     }
 
     override val engine get() = ENGINE

@@ -133,6 +133,29 @@ object BreakerFillStudy {
         return Snip(out, 1, rate)
     }
 
+    /**
+     * Round 1: [f] with every stroke its own tom's full render and rig, as the owner picked ("three pads", fill A,
+     * 2026-11-14), each a fresh strike ([take] deals another set), with each tom's spring (DRIP) scaled by [drip].
+     * The owner heard the round-0 fills as "a bit too wet, not a lot".
+     */
+    fun eachOwnRig(f: Figure, drip: Float, take: Int = 0): Snip {
+        val frames = ((PRE + f.beats * BEAT + TAIL) * rate).toInt() + (Breaker.SECONDS * rate).toInt()
+        val out = FloatArray(frames)
+        f.strokes.forEachIndexed { i, s ->
+            val p = pad(s.slot)
+            val m = Breaker.settled(p.voice, p.macros, p.model)
+            val dried = m + ("DRIP" to m.getValue("DRIP") * drip)
+            val hit = Breaker.render(p.voice, dried, s.velocity, take * 100 + i + 1, p.model).samples
+            mixAt(out, hit, PRE + s.beat * BEAT, levels[s.slot - 1])
+        }
+        val peak = out.maxOf { abs(it) }
+        if (peak > .9f) for (i in out.indices) out[i] *= .9f / peak
+        return Snip(out, 1, rate)
+    }
+
+    /** The spring levels round 1 offers, as fractions of each tom's own DRIP. */
+    val ROUND1_DRIP = listOf(1f, .7f, .5f, .35f)
+
     private fun mixAt(out: FloatArray, hit: FloatArray, seconds: Double, gain: Float) {
         val o = (seconds * rate).roundToInt()
         for (k in hit.indices) if (o + k in out.indices) out[o + k] += gain * hit[k]
@@ -182,5 +205,14 @@ object BreakerFillStudy {
         val a = FIGURES.first()
         write("a_pads_alone", onPads(a))
         write("a_pads_groove", groove(onPads(a), a.beats))
+        // Round 1: the owner's pick, B, each stroke through its own tom's rig, at four springs.
+        val b = FIGURES.first { it.id == "b" }
+        for (d in ROUND1_DRIP) {
+            val tag = "r1_b_drip%03d".format(java.util.Locale.ROOT, (d * 100).roundToInt())
+            val one = eachOwnRig(b, d)
+            write("${tag}_alone", one)
+            write("${tag}_groove", groove(one, b.beats))
+            write("${tag}_again", eachOwnRig(b, d, take = 1))
+        }
     }
 }
