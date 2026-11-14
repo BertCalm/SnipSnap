@@ -3468,7 +3468,8 @@ The BREAKER kit (2026-11-12) is the first of three shelf kits:
 - **Verified in software** (`BreakerKitTest`): saving, regenerating, the pad resolver and the MPC 3
   export.
 - **Open:**
-  - MPC 2 plays each zone's first take only.
+  - MPC 2 plays each zone's first take only: a format limit, recorded as not applicable to the
+    round-robin gate on 2026-11-14.
   - The kick's takes are distinct but close (34 dB apart). The owner heard them as "one kick played
     again: fine".
   - Accepted on the open tone (2026-11-12): the balance, the pushed row, the kick and the soft-to-hard grid.

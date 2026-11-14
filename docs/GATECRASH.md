@@ -122,7 +122,8 @@ Render time, warm: a hit takes 22 to 105 ms and a phrase 206 to 256 ms. A whole 
 - **Heard on the listening page only.** The owner approved round 4 there. The page plays mono 16-bit copies of
   the exported slices in a browser. Nothing was heard on a phone or an MPC.
 - **MPC 3 is the export target that keeps the round robin.** MPC 2's grid projection keeps the velocity zones
-  but only the first take of each, so an MPC 2 export does not pass the round-robin gate. SFZ and
+  but only the first take of each: a format limit, recorded as not applicable to the round-robin gate on
+  2026-11-14 ([ENGINE_ACCEPTANCE_GATES.md](ENGINE_ACCEPTANCE_GATES.md#mpc-2-and-round-robin-owner-decision-2026-11-14)). SFZ and
   DecentSampler exports were not generated.
 - **No hardware.** Nothing here was played on a phone or loaded on an MPC.
 - **Rendered bank, not recipes.** A pad cannot be re-edited as a SYNTH patch. Changing the kits means

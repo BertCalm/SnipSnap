@@ -464,8 +464,8 @@ DROP is DIVE's move in the rack, not the engine's.
 - Playback: `PadHit.resolve` picks the zone by velocity and deals the four takes in order, then repeats; a soft
   and a hard hit never share a slice.
 - Export: the MPC 3 track's velocity ranges, base slices, cycle lengths and frame windows match, and the
-  exported PCM matches the renders. **MPC 2 does not pass:** as on every kit in this repository, its projection
-  keeps one take per zone. No MPC has loaded the kit and no phone has played it.
+  exported PCM matches the renders. **MPC 2: not applicable** (a format limit, recorded 2026-11-14 in
+  [ENGINE_ACCEPTANCE_GATES.md](ENGINE_ACCEPTANCE_GATES.md#mpc-2-and-round-robin-owner-decision-2026-11-14)): as on every kit in this repository, its projection keeps one take per zone. No MPC has loaded the kit and no phone has played it.
 
 **Gates after round 2.** Drum shelf: one of the multiple kits the gate asks for; a second genre kit (Flint, faster
 and brighter) is proposed. Roll or riser: pass in software, "Clap Riser" is on A16 and "Two Bars" on A15.
@@ -544,7 +544,7 @@ round-3 sections above each left open. Preserve `Scuff.MODEL_VERSION` 1 and `Scu
 accepted baseline; a later change to a voice or a kit is a new round against this one.
 
 What it does not close: a phone has not played the kits and no MPC has loaded the tracks (hardware playback),
-MPC 2 keeps one take per zone, SCUFF had no presets and was not on the roster (the engine stayed rosterless
+MPC 2 keeps one take per zone (a format limit, not applicable since 2026-11-14), SCUFF had no presets and was not on the roster (the engine stayed rosterless
 until this listen; round 4 below files them), the app's picker has no SCUFF entry (a round of its own), and the three BOOM pads are
 0.83 of an octave apart rather than an octave (the owner's call). The listen was through whatever the owner
 played the page on, which the page does not record.
@@ -583,5 +583,5 @@ FLINT's harder SLAM keeps a mean of .0145 of its peak inside its 60 ms (37 dB do
 its second block, the round-3 finding). `ScuffPresetsTest` bounds a preset's mean at .02, a measurement with
 room, not a target; the sound is the accepted one and model version 1 does not move for it.
 
-Gates after round 4: presets and the roster pass. Open: hardware playback, MPC 2's one take per zone, the app
+Gates after round 4: presets and the roster pass. Open: hardware playback, the app
 picker (now a round that needs no SDK), and BOOM's octave spacing (the owner's call). Nothing new to hear: every preset is a pad already heard.
