@@ -524,7 +524,7 @@ fun KitsScreen(
                     startingKit = startingKit,
                     onCatchFirst = onCatchFirst,
                     onStarters = { menuOpen = true },
-                    modifier = Modifier.fillMaxWidth().weight(1f),
+                    modifier = Modifier.fillMaxWidth(),
                 )
             } else {
                 LazyColumn(
@@ -1265,7 +1265,7 @@ private fun KitDeleteConfirmDialog(onCancel: () -> Unit, onConfirm: () -> Unit) 
         ) {
             TapeText("Delete this kit? It waits in deleted kits for 30 days.", TapeType.lcdSmall, scheme.ink.tape, maxLines = 3)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                ActionButton("CANCEL", scheme, enabled = true, modifier = Modifier.weight(1f), onClick = onCancel)
+                ActionButton("CANCEL", scheme, enabled = true, modifier = Modifier.weight(1f), tier = ButtonTier.Text, onClick = onCancel)
                 Box(
                     Modifier
                         .weight(1f)
@@ -1371,7 +1371,7 @@ internal fun KitRenameDialog(
                 )
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                ActionButton("CANCEL", scheme, enabled = true, modifier = Modifier.weight(1f), onClick = onCancel)
+                ActionButton("CANCEL", scheme, enabled = true, modifier = Modifier.weight(1f), tier = ButtonTier.Text, onClick = onCancel)
                 ActionButton("RENAME", scheme, enabled = safe, modifier = Modifier.weight(1f), onClick = { onConfirm(name) })
             }
         }
@@ -1463,9 +1463,10 @@ private fun EmptyShelfPanel(
 }
 
 /**
- * The primary action per the handoff: 52dp, rimmed, dark fill. Disabled it
- * is not the same button dimmed: the accent rim and the dark fill are what
- * say "tap me", so both go, and it draws as a disabled [ActionButton] does
+ * The primary action per the handoff: 52dp, filled with the scheme's accent,
+ * lettered in `onAccent` ([ButtonTier.Primary], at the primary's height).
+ * Disabled it is not the same button dimmed: the fill is what says "tap me",
+ * so it goes, and it draws as a disabled [ActionButton] does
  * (the raised bevel, `ink3` text) at the primary's height.
  *
  * [working] marks the control that started the job in flight: a [Spinner]
@@ -1497,14 +1498,16 @@ fun PrimaryAction(
 ) {
     val scheme = LocalScheme.current
     val ringUp = rememberRingUp(working, ringClock)
-    val rim = Modifier.border(2.dp, scheme.amber.tape, RoundedCornerShape(6.dp))
     Box(
         Modifier
             .fillMaxWidth()
             .minHeight(Layout.PRIMARY_ACTION_H.dp)
             .then(
                 if (enabled) {
-                    Modifier.background(scheme.lcd.tape, RoundedCornerShape(6.dp)).then(rim)
+                    Modifier
+                        .background(scheme.accent.tape, RoundedCornerShape(6.dp))
+                        // `edge` holds the boundary at 3:1 on the LCD panel too (see ButtonTier.kt).
+                        .border(1.dp, scheme.edge.tape, RoundedCornerShape(6.dp))
                 } else {
                     Modifier.raisedBevel(scheme)
                 },
@@ -1523,10 +1526,10 @@ fun PrimaryAction(
         // 200% font scale is "WRITING — DO NOT EJECT") the next size down,
         // so CATCH YOUR FIRST SOUND ▸ is not cut mid-word.
         val type = if (label.length > 22) TapeType.display else TapeType.displayBig
-        val ink = if (enabled) scheme.lcdInk.tape else scheme.ink3.tape
+        val ink = if (enabled) scheme.onAccent.tape else scheme.ink3.tape
         if (ringUp) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                Spinner(scheme.accent.tape, size = 18.dp)
+                Spinner(scheme.onAccent.tape, size = 18.dp)
                 // Shrinks before it pushes the ring off, so a long label at a
                 // large font scale ellipsizes rather than overflowing.
                 TapeText(label, type, ink, Modifier.weight(1f, fill = false))

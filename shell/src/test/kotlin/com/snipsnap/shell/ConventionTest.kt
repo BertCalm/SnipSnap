@@ -5579,6 +5579,50 @@ class ConventionTest {
         )
     }
 
+    // ---- Law: PADS holds the four strip buttons in a labelled VELOCITY STRIP section that starts closed (7d) ----
+
+    private val strikeSection = File("../app/src/main/kotlin/com/snipsnap/app/ui/StrikeStripSection.kt")
+
+    /**
+     * Before 7d, PADS stacked an unlabelled row of strip buttons above the grid
+     * (`StrikeControls(strike, Modifier.fillMaxWidth())` straight in KitScreen). Now KitScreen calls
+     * `StrikeStripSection`, a group box whose legend is the ledger's `VELOCITY STRIP` and whose open
+     * state starts false. Each button inside keeps its own caption (Copy.STRIKE_CAPTION_*).
+     */
+    private fun strikeSectionProblems(kitScreenCode: String, sectionCode: String, ledger: String): List<String> {
+        val problems = mutableListOf<String>()
+        if ("StrikeStripSection(" !in kitScreenCode) problems += "KitScreen no longer draws StrikeStripSection"
+        if ("StrikeControls(" in kitScreenCode) problems += "KitScreen draws StrikeControls bare, an unlabelled row above the grid"
+        if (!Regex("""var open by rememberSaveable \{ mutableStateOf\(false\) \}""").containsMatchIn(sectionCode)) {
+            problems += "the section does not start closed (`var open by rememberSaveable { mutableStateOf(false) }`)"
+        }
+        if ("StrikeControls(strike" !in sectionCode) problems += "the section does not hold StrikeControls"
+        if ("""STRIKE_STRIP_LEGEND = "VELOCITY STRIP"""" !in sectionCode) problems += "the legend is not VELOCITY STRIP"
+        if ("`VELOCITY STRIP`" !in ledger) problems += "VELOCITY STRIP is not a backticked ledger entry"
+        return problems
+    }
+
+    @Test
+    fun `law - PADS holds the strip buttons in a VELOCITY STRIP section that starts closed`() {
+        val kit = codeOnly(kitScreen.readText(Charsets.UTF_8))
+        val section = codeOnly(strikeSection.readText(Charsets.UTF_8))
+        val ledger = File("../docs/VOCABULARY.md").readText(Charsets.UTF_8)
+        assertEquals(emptyList(), strikeSectionProblems(kit, section, ledger))
+        for (caption in listOf("STRIP", "SIDE", "RELEASE", "LEVEL")) {
+            val name = "STRIKE_CAPTION_$caption"
+            assertTrue(name in codeOnly(strikeStripUi.readText(Charsets.UTF_8)), "StrikeControls lost its $caption caption ($name)")
+        }
+    }
+
+    @Test
+    fun `law - the strip section law fails on the old bare row`() {
+        val old = "StrikeControls(strike, Modifier.fillMaxWidth())"
+        val problems = strikeSectionProblems(old, "internal fun Other() {}", "")
+        assertTrue(problems.size >= 4, "the old shape should break several rules, got $problems")
+        val open = "var open by rememberSaveable { mutableStateOf(true) }"
+        assertTrue(strikeSectionProblems("StrikeStripSection(s, c)", open, "`VELOCITY STRIP`").any { "start closed" in it })
+    }
+
     // ---- Law: the strike strip shows what is on by its border, and draws its LCD marks in the LCD's ink ----
 
     private val strikeStripUi = File("../app/src/main/kotlin/com/snipsnap/app/ui/StrikeStrip.kt")

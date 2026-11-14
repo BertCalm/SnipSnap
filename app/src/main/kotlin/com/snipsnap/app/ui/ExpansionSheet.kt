@@ -322,7 +322,7 @@ internal fun ExpansionNameDialog(
                 ExpansionStore.NameCheck.Ok -> Unit
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                ActionButton("CANCEL", scheme, enabled = true, modifier = Modifier.weight(1f), onClick = onCancel)
+                ActionButton("CANCEL", scheme, enabled = true, modifier = Modifier.weight(1f), tier = ButtonTier.Text, onClick = onCancel)
                 ActionButton(confirmLabel, scheme, enabled = verdict == ExpansionStore.NameCheck.Ok, modifier = Modifier.weight(1f), onClick = { onConfirm(name) })
             }
         }

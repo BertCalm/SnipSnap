@@ -4703,7 +4703,7 @@ private fun ReplaceLayersConfirmDialog(text: String, confirmLabel: String, busy:
         ) {
             TapeText(text, TapeType.lcdSmall, scheme.ink.tape, maxLines = 3)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                ActionButton("CANCEL", scheme, enabled = !busy, modifier = Modifier.weight(1f), onClick = onCancel)
+                ActionButton("CANCEL", scheme, enabled = !busy, modifier = Modifier.weight(1f), tier = ButtonTier.Text, onClick = onCancel)
                 ActionButton(confirmLabel, scheme, enabled = !busy, modifier = Modifier.weight(1f), onClick = onConfirm)
             }
         }
@@ -5856,8 +5856,8 @@ internal fun ActionButton(
     /**
      * Lit in the LCD's second colour when [enabled] too — a state that
      * has to announce itself (KEEP ROOM the instant a trip measures a
-     * room), not merely stop being dimmed: an amber rim over the ordinary
-     * bevel, [PrimaryAction]'s own dress on a working-surface button.
+     * room), not merely stop being dimmed: an accent rim over the ordinary
+     * bevel.
      * Busy, or not yet earned, and the plain bevel and ink3 return.
      */
     lit: Boolean = false,
@@ -5902,14 +5902,24 @@ internal fun ActionButton(
      * as `KitsScreen.loadingClock`).
      */
     ringClock: () -> Long = SystemClock::uptimeMillis,
+    /**
+     * How loudly this button asks to be pressed ([ButtonTier]). [ButtonTier.Secondary],
+     * the outlined raised button, is what a call site that says nothing gets.
+     * A Primary that cannot be pressed ([enabled] false, or [dimmed]) is not the
+     * same button dimmed: the fill is what says "press me", so it goes, and the
+     * button draws as a disabled secondary does. A Text button keeps its place
+     * and goes `ink3`.
+     */
+    tier: ButtonTier = ButtonTier.Secondary,
     onClick: () -> Unit,
 ) {
     val litNow = lit && enabled
     val ringUp = rememberRingUp(working, ringClock)
+    val shown = if (tier == ButtonTier.Primary && (!enabled || dimmed)) ButtonTier.Secondary else tier
     Box(
         modifier
             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
-            .raisedBevel(scheme)
+            .tierSurface(shown, scheme)
             .let { if (litNow) it.border(2.dp, scheme.accent.tape, RoundedCornerShape(4.dp)) else it }
             // Always clickable, `enabled` forwarded rather than dropped:
             // a screen reader is told this control is temporarily
@@ -5922,10 +5932,10 @@ internal fun ActionButton(
             .padding(horizontal = 8.dp),
         contentAlignment = Alignment.Center,
     ) {
-        val ink = if (!enabled) scheme.ink3.tape else if (litNow) scheme.accent.tape else if (dimmed) scheme.ink2.tape else scheme.ink.tape
+        val ink = tierInk(shown, scheme, enabled, litNow, dimmed)
         if (ringUp) {
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                Spinner(scheme.accent.tape)
+                Spinner(if (shown == ButtonTier.Primary) scheme.onAccent.tape else scheme.accent.tape)
                 TapeText(label, TapeType.pixel, ink, Modifier.weight(1f, fill = false), maxLines = 2)
             }
         } else {

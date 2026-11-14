@@ -153,8 +153,13 @@ fun SnipsScreen(
     // stale — see that property's own note. On mount this is the load it
     // always was; every landing after that runs it again.
     val landed by LoopBounce.landed.collectAsState()
+    // False until the first read lands: an empty list before that is "not read
+    // yet", and must not draw as "no samples" (spec 4, a loading state that
+    // looks like an empty state).
+    var snipsRead by remember { mutableStateOf(false) }
     LaunchedEffect(landed) {
         snips = withContext(Dispatchers.IO) { SnipStore.listWithInfo(snipsRoot) }
+        snipsRead = true
     }
 
     // BIN door (was DELETED SNIPS, name-and-find task): `binnedCount` gates
@@ -351,19 +356,10 @@ fun SnipsScreen(
                 )
             }
 
-            if (snips.isEmpty()) {
-                Box(
-                    Modifier
-                        .fillMaxWidth()
-                        .weight(1f)
-                        .lcdPanel(scheme)
-                        .padding(14.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    // Plain, not the tape-metaphor voice (`Copy`'s own quips) —
-                    // this screen's own locked tone, per the task brief.
-                    TapeText(Copy.SNIPS_EMPTY, TapeType.lcdSmall, scheme.lcdInk.tape)
-                }
+            if (!snipsRead) {
+                LoadingPanel(Copy.SNIPS_LOADING, Modifier.fillMaxWidth())
+            } else if (snips.isEmpty()) {
+                SnipsEmpty(scheme)
             } else {
                 LazyColumn(
                     Modifier
@@ -509,6 +505,26 @@ private fun SnipRow(
 }
 
 /**
+ * Nothing saved: one plain sentence in a lit panel sized to it, not a panel the
+ * height of the screen. Its own composable so [SnipsScreen]'s method does not
+ * grow. Plain, not the tape-metaphor voice (`Copy`'s own quips): this screen's
+ * own locked tone. SAVED SAMPLES has no door of its own to a sample being made
+ * (LISTEN · MIC is the dock's, on every screen), so there is no button here.
+ */
+@Composable
+private fun SnipsEmpty(scheme: Scheme) {
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .lcdPanel(scheme)
+            .padding(14.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        TapeText(Copy.SNIPS_EMPTY, TapeType.lcdSmall, scheme.lcdInk.tape)
+    }
+}
+
+/**
  * "DELETE THIS SNIP? IT WAITS IN DELETED SNIPS FOR 30 DAYS." — replaces the
  * old "CAN'T UNDO.", which this task's own bin makes false the moment it
  * ships (a string that lies is exactly what this project's copy laws exist
@@ -550,7 +566,7 @@ private fun DeleteConfirmDialog(onCancel: () -> Unit, onConfirm: () -> Unit) {
         ) {
             TapeText("Delete this sample? It waits in deleted samples for 30 days.", TapeType.lcdSmall, scheme.ink.tape, maxLines = 3)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                ActionButton("CANCEL", scheme, enabled = true, modifier = Modifier.weight(1f), onClick = onCancel)
+                ActionButton("CANCEL", scheme, enabled = true, modifier = Modifier.weight(1f), tier = ButtonTier.Text, onClick = onCancel)
                 DeleteButton(scheme, Modifier.weight(1f), onClick = onConfirm)
             }
         }
@@ -619,7 +635,7 @@ private fun SnipRenameDialog(initialName: String, onCancel: () -> Unit, onConfir
                 )
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                ActionButton("CANCEL", scheme, enabled = true, modifier = Modifier.weight(1f), onClick = onCancel)
+                ActionButton("CANCEL", scheme, enabled = true, modifier = Modifier.weight(1f), tier = ButtonTier.Text, onClick = onCancel)
                 ActionButton("RENAME", scheme, enabled = safe, modifier = Modifier.weight(1f), onClick = { onConfirm(name) })
             }
         }

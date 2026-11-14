@@ -324,6 +324,7 @@ Back labels that do not come from `backChip`:
 | `HELP` section keys `SHELF`, `TAPE`, `PROJECT`, `MAKE`, `THE DOCK` | `Places.kt:234-265`. They follow the place names. |
 | `DECK`-side tools `READ AS GROOVE`, `COPY GROOVE`, `FIND BREAK` | See B and F, call 11. |
 | `STRIP`, `SIDE`, `RELEASE`, `LEVEL` | STRIKE STRIP captions (`Personality.kt:165-168`). Follow the strip rename. |
+| `VELOCITY STRIP` (section heading), `STRIP ON`, `STRIP OFF` | PADS' collapsible group box that holds the four strip buttons and starts closed; closed, it reads whether the strip is on (`StrikeStripSection.kt`, UI clarity 7d). Its buttons are `STRIP`/`SIDE`/`RELEASE`/`LEVEL` above. ruling 12. |
 | `ARM A CORNER`, `LATCH`, `TARGET`, `SHAPE` | SURFACE controls (`SurfaceScreen.kt:1557,1369,129,129`). Described on screen. |
 | `MIC`, `APP AUDIO` | Capture sources (`Places.kt:83,87`). |
 | `SOLO`, `DEL`, `CLEAR`, `ARP`, `THE SET`, `SECTIONS` | ORBIT ring and set controls (`OrbitScreen.kt:1423,1463,1466,2010,2020,2029`). |

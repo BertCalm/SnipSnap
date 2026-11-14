@@ -1203,7 +1203,8 @@ private fun ProjectCard(
                 readBack = emptyList(),
                 scheme = scheme,
             )
-            PrimaryAction(label = "EXPORT ANOTHER", enabled = !busy, onClick = ::writeAnother)
+            // Secondary: the kit's card above holds EXPORT's one primary.
+            ActionButton("EXPORT ANOTHER", scheme, enabled = !busy, modifier = Modifier.fillMaxWidth(), onClick = ::writeAnother)
         } else {
             val shown = read
             // One line of status, as the subtitle already is (`1 KIT · BEAT ON
@@ -1228,9 +1229,12 @@ private fun ProjectCard(
                     )
                 }
             }
-            PrimaryAction(
-                label = if (busy) "EXPORTING…" else overwriting?.let { Copy.replaceWhat(it.name) } ?: "EXPORT PROJECT",
+            // Secondary: the kit's card above holds EXPORT's one primary.
+            ActionButton(
+                if (busy) "EXPORTING…" else overwriting?.let { Copy.replaceWhat(it.name) } ?: "EXPORT PROJECT",
+                scheme,
                 enabled = !busy && shown != null && !shown.blocked,
+                modifier = Modifier.fillMaxWidth(),
                 onClick = ::writeSession,
             )
         }
