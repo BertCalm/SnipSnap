@@ -676,3 +676,27 @@ prototype audition; no Kotlin exists.
   Preserve round 0c as the baseline.
 - **Overall: incomplete.** The Kotlin engine is in (round 1) and not yet heard; the kits on the shelf,
   saving, playback, export and hardware are open. The percussion gate is waived by the owner.
+
+## EMBER (round 0, 2026-11-14, Python prototype, not heard)
+
+A drum engine for a live jazz and soul kit in a small club in 1962: calfskin drums, a riveted ride, brushes, the
+club and a 1962 chain, from physical models. Four sixteen-pad kits. See [EMBER](EMBER.md). Round 0 is a Python
+prototype and a listening page (<https://claude.ai/artifact/Xmcj5t8MYSNCQPoTKHBcdw>); no Kotlin exists.
+
+- **Melodic, keygroup and chord-tool gates:** not applicable. A drum engine.
+- **Articulation:** finite hits, no HOLD. No picked or thumbed strings.
+- **Percussion: authored, not heard.** Every kit carries a roll or riser on A15/A16: a press roll and a mallet
+  cymbal swell (EMBER), a brush roll and a far swell (AFTER HOURS), a snare roll (SOUL JAZZ), a swell (FREE).
+  Rendered in Python.
+- **Drum shelf: authored, not on the shelf.** EMBER (138 BPM), EMBER AFTER HOURS (66), EMBER SOUL JAZZ (104) and
+  EMBER FREE (80) differ in implements, drums per role, tuning, damping, looseness, microphone distance, chain and
+  tempo. No pad is identical between any two kits; the same slot in two kits is at least 2.98 dB apart (Python).
+  No Kotlin, so nothing is on the shelf.
+- **Velocity and round robin:**
+  - **Rendering: measured in Python, not Kotlin.** On all 64 pads, soft against hard at matched level differs by at
+    least 1.92 dB; the closest two of any pad's four takes are 1.19 dB apart. Velocity moves the contact, the
+    threshold parts and the swell's arc, not a filter.
+  - **Saving, playback, export: open.** The listening page's pad grid is a browser stand-in, not app evidence.
+- **Sound character: open.** Nothing has been heard.
+- **Overall: incomplete.** Round 0 asks the owner which voices and kits to keep. Kotlin (round 1), the shelf and
+  saving, playback and MPC 3 export (round 2), and phone and MPC hardware (round 3) are all open.
