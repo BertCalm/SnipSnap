@@ -37,7 +37,7 @@ object MeridianSixKitFiles {
                 "finiteRole" to if (entry.registerRole == "FACTORY") "FACTORY_FINITE" else "REGISTER_FINITE", "nativeVelocityPolicy" to "ABSOLUTE_030_065_100",
                 "playbackVelocityPolicy" to "KIT_PLAYER_GAIN_ONCE",
                 "playback" to "FINITE_ONE_SHOT", "capturePolicy" to "NATIVE_FINITE_ENDING",
-                "bankId" to MeridianSixKits.STARTER_ID, "bankVersion" to MeridianSixKits.BANK_VERSION.toString(),
+                "bankId" to MeridianSixKits.STARTER_ID, "bankVersion" to bank.bankVersion.toString(),
                 "terminalFadeMs" to (bank.layers.last().recipe.terminalFadeMs?.toString() ?: "0"))
             require(expectedSource.all { (key, value) -> pad.source[key] == value }) { "MERIDIAN six-voice pad provenance changed" }
             require(pad.velocityLayers.size == 3 && pad.sampleFile == pad.velocityLayers.last().sampleFile)

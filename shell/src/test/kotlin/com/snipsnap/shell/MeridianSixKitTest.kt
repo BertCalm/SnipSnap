@@ -74,6 +74,10 @@ class MeridianSixKitTest {
             assertEquals(index + 1, bank.slot)
             assertEquals(patches[index], bank.hardPatch)
             assertEquals(listOf(.30f, .65f, 1f), bank.layers.map { it.nativeVelocity })
+            assertEquals(MeridianSixKits.TOUCH_SHAPINGS, bank.layers.map { (it.recipe.patch as MeridianPatch).touchShaping })
+            assertEquals(listOf(MeridianSixKits.SOFT_TOUCH_SHAPING, MeridianSixKits.SOFT_TOUCH_SHAPING, 0f), MeridianSixKits.TOUCH_SHAPINGS)
+            assertEquals(MeridianSixVelocityRecipe.POLICY, bank.policy)
+            assertEquals("3", value.source["bankVersion"])
             assertEquals(listOf(1, 42, 85), bank.layers.map { it.velocityStart })
             assertEquals(listOf(41, 84, 127), bank.layers.map { it.velocityEnd })
             assertTrue(bank.layers.all { it.recipe.terminalFadeMs == null })
@@ -168,6 +172,7 @@ class MeridianSixKitTest {
             editOuter { it["future"] = JsonValue.Num(2.0) },
             editOuter { it["bankId"] = JsonValue.Str("meridian-materials") },
             editOuter { it["policy"] = JsonValue.Str("absolute-native-touch-materials-v1") },
+            editOuter { it["policy"] = JsonValue.Str(MeridianSixVelocityRecipe.POLICY_V2) },
             editOuter { it["schema"] = JsonValue.Num(3.0) },
             editOuter { it["slot"] = JsonValue.Num(8.0) },
             editOuter { it["nativeMidi"] = JsonValue.Num(45.0) },
@@ -184,6 +189,40 @@ class MeridianSixKitTest {
         )
         for ((index, value) in bad.withIndex()) assertFails("source mutation $index") { MeridianSixVelocityRecipe.fromJsonValue(value) }
         println("MERIDIAN six refused ${bad.size} hostile independent-source histories")
+    }
+
+    @Test fun `bank v2 histories without touch shaping still replay and cannot be relabelled`() {
+        val v3 = MeridianSixVelocityRecipe.fromJsonText(MeridianSixKits.buildPad(7, ::synthetic)
+            .source.getValue(MeridianSixVelocityRecipe.SOURCE_KEY))
+        fun shaped(index: Int, amount: Float) = v3.layers.mapIndexed { i, layer ->
+            if (i != index) layer else layer.copy(recipe = layer.recipe.copy(
+                patch = (layer.recipe.patch as MeridianPatch).copy(touchShaping = amount)))
+        }
+        // The synthetic fixture ignores shaping, so each layer keeps its WAV hash.
+        val unshaped = v3.layers.map { layer -> layer.copy(recipe = layer.recipe.copy(
+            patch = (layer.recipe.patch as MeridianPatch).copy(touchShaping = 0f))) }
+        val v2 = MeridianSixVelocityRecipe(7, v3.factoryPatch, unshaped, MeridianSixVelocityRecipe.POLICY_V2)
+        assertEquals(2, v2.bankVersion)
+        assertEquals(3, v3.bankVersion)
+        val text = v2.toJsonText()
+        assertFalse("touchShaping" in text)
+        assertEquals(text, MeridianSixVelocityRecipe.fromJsonText(text).toJsonText())
+        assertEquals(MeridianSixVelocityRecipe.POLICY_V2, MeridianSixVelocityRecipe.fromJsonText(text).policy)
+        assertEquals(3, v2.replay(::synthetic).size)
+        // Shaped layers cannot claim v2, and unshaped ones cannot claim v3.
+        assertFails { MeridianSixVelocityRecipe(7, v3.factoryPatch, v3.layers, MeridianSixVelocityRecipe.POLICY_V2) }
+        assertFails { MeridianSixVelocityRecipe(7, v3.factoryPatch, unshaped) }
+        assertFails { MeridianSixVelocityRecipe(7, v3.factoryPatch, v3.layers, "absolute-native-touch-six-v4") }
+        // Soft and medium share one recorded amount, and the hard layer never has one.
+        val other = if (MeridianSixKits.SOFT_TOUCH_SHAPING == .5f) 1f else .5f
+        assertFails { MeridianSixVelocityRecipe(7, v3.factoryPatch, shaped(1, other)) }
+        assertFails { MeridianSixVelocityRecipe(7, v3.factoryPatch, shaped(2, .5f)) }
+        val both = shaped(0, other).let { layers -> layers.mapIndexed { i, layer ->
+            if (i != 1) layer else layer.copy(recipe = layer.recipe.copy(patch = (layer.recipe.patch as MeridianPatch).copy(touchShaping = other)))
+        } }
+        val recorded = MeridianSixVelocityRecipe(7, v3.factoryPatch, both)
+        assertEquals(listOf(other, other, 0f), MeridianSixVelocityRecipe.fromJsonText(recorded.toJsonText()).layers
+            .map { (it.recipe.patch as MeridianPatch).touchShaping })
     }
 
     @Test fun `dedicated disk binding proof refuses changed PCM stale mapping and missing provenance`() {

@@ -519,7 +519,7 @@ and LIFT existed (`MeridianGesturesTest`).
 | Articulation: STRUM | Not applicable | Struck and rubbed surfaces, not picked strings. |
 | Percussion: roll or riser | Not applicable | A melodic engine. |
 | Drums: genre kits | Not applicable | A melodic engine. |
-| Velocity: rendering | **Fail: owner REVISIT** | Banks and keys render three native touches, but on MERIDIAN SIX the owner heard no change between soft, medium and hard (2026-11-13). The layers are level-matched and their brightness moves at most 13 %. |
+| Velocity: rendering | Pass on MERIDIAN SIX (owner KEEP); partial elsewhere | On 2026-11-13 the owner heard no change between soft, medium and hard on MERIDIAN SIX (REVISIT). Bank v3 now shapes the soft and medium strikes (`MeridianTouch`; amount `MeridianSixKits.SOFT_TOUCH_SHAPING` = 1.0, B). In meridian-touch-1 the owner kept both A (.5, T2) and B (1.0, T3) and chose B as the default (2026-11-14). Soft/hard brightness at 1.0: median .56, against .90 before. Hard layers are unchanged (`MeridianSixLayerHashTest`). The DRAW and LIFT pads barely darken (.96–.99), and MAKE INSTRUMENT keys are not shaped. |
 | Velocity: saving, playback, export | Pass in software | Each layer's recipe and WAV hash is saved and replayed (`MeridianMaterialsKitTest`, `MeridianSixKitTest`). No hardware check. |
 | Round robin | Not yet verified | No MERIDIAN round robin exists. |
 | Picker | Not yet verified on a device | `MeridianSynthScreenTest`, `MeridianFiniteInstrumentScreenTest`, `MeridianHeldSourceInstrumentScreenTest` and the two starter-menu tests cover DRAW/LIFT, finite keys and the starters. None has run on a device. |
@@ -528,9 +528,10 @@ and LIFT existed (`MeridianGesturesTest`).
 - **Sound character: partly accepted.** The owner kept the four DRAW/LIFT finite takes and
   accepted the model-3 material voices earlier. On 2026-11-13 the owner kept the sixteen
   MERIDIAN SIX pads at hard touch and the four held DRAW/LIFT presets. The bank's soft and
-  medium layers came back REVISIT ("No change between soft, medium and hard").
-- **Overall: incomplete.** Round robin, chord tools on real keys, the six-voice bank's soft and
-  medium layers (touch must change the strike, not only the level), device runs and hardware playback remain open.
+  medium layers came back REVISIT ("No change between soft, medium and hard"). On 2026-11-14
+  the owner kept both shaped versions (meridian-touch-1, A and B) and chose B, which bank v3 uses.
+- **Overall: incomplete.** Round robin, chord tools on real keys, touch on the DRAW/LIFT pads and
+  MAKE INSTRUMENT keys, device runs and hardware playback remain open.
 
 ## TEMPEST (ported from the recovery backup, 2026-11-13)
 
