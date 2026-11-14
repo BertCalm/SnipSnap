@@ -102,6 +102,7 @@ import com.snipsnap.app.ui.OrbitStep
 import com.snipsnap.app.ui.PadCaptureScreen
 import com.snipsnap.app.ui.PadSheetScreen
 import com.snipsnap.app.ui.ReleasePadEditorWhenGone
+import com.snipsnap.app.ui.rememberPadEditorKeys
 import com.snipsnap.app.ui.PREF_CARD_TREE
 import com.snipsnap.app.ui.PREF_EXPORT_FORMAT
 import com.snipsnap.app.ui.ActionButton
@@ -173,7 +174,6 @@ import com.snipsnap.shell.LandingNote
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.PadBanks
 import com.snipsnap.shell.PadEditorKeep
-import com.snipsnap.shell.PadEditorKeys
 import com.snipsnap.shell.PadSheet
 import com.snipsnap.shell.PadSheetBoxes
 import com.snipsnap.shell.PadSheetPage
@@ -552,7 +552,7 @@ fun App(shelf: KitShelf) {
     // (spec §7.3.1): the editor draws inside `padEditorHolder`, and `padEditorKeys` drops
     // what it holds when the editor leaves the stack for good or another pad is opened.
     val padEditorHolder = rememberSaveableStateHolder()
-    val padEditorKeys = remember(padEditorHolder) { PadEditorKeys(padEditorHolder::removeState) }
+    val padEditorKeys = rememberPadEditorKeys(padEditorHolder)
     ReleasePadEditorWhenGone(PadEditorKeep.inStack(location), padEditorKeys)
 
     /**

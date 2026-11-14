@@ -193,7 +193,7 @@ internal fun ScannedShapeControls(
         if (busy && source == null) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 TapeText("READING SOURCE…", TapeType.pixelSmall, scheme.accent.tape, Modifier.weight(1f))
-                LabButton("CANCEL", scheme, enabled = true) { sourceJob?.cancel() }
+                LabButton("CANCEL", scheme, enabled = true, tier = ButtonTier.Text) { sourceJob?.cancel() }
             }
         }
         if (source == null) error?.let { TapeText(it, TapeType.pixelSmall, scheme.warnInk.tape, maxLines = 4) }
@@ -324,7 +324,7 @@ private fun ScannedPadDialog(title: String, pads: List<KitPad>, onPick: (KitPad)
                     ) { onPick(pad) }
                 }
             }
-            LabButton("CANCEL", scheme, enabled = true, modifier = Modifier.fillMaxWidth(), onClick = onCancel)
+            LabButton("CANCEL", scheme, enabled = true, modifier = Modifier.fillMaxWidth(), tier = ButtonTier.Text, onClick = onCancel)
         }
     }
 }
@@ -368,7 +368,7 @@ private fun ScannedDrawDialog(initial: FloatArray, onUse: (ScannedChainShape) ->
             if (!canUse) TapeText("Draw a shape or choose SINE or SAW.", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
             error?.let { TapeText(it, TapeType.pixelSmall, scheme.warnInk.tape, maxLines = 3) }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                LabButton("CANCEL", scheme, enabled = true, modifier = Modifier.weight(1f), onClick = onCancel)
+                LabButton("CANCEL", scheme, enabled = true, modifier = Modifier.weight(1f), tier = ButtonTier.Text, onClick = onCancel)
                 LabButton("USE SHAPE", scheme, enabled = canUse, modifier = Modifier.weight(1f)) {
                     try {
                         onUse(ScannedChainShape.drawn(FloatArray(points.size) { (points[it] / 127.5f - 1f) * .35f }))
@@ -432,7 +432,7 @@ private fun ScannedSourceDialog(
             if (source.truncated) TapeText("Showing the first 30 seconds. Trim the source pad to use a later section.", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 3)
             error?.let { TapeText(it, TapeType.pixelSmall, scheme.warnInk.tape, maxLines = 5) }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                LabButton("CANCEL", scheme, enabled = !busy, modifier = Modifier.weight(1f), onClick = onCancel)
+                LabButton("CANCEL", scheme, enabled = !busy, modifier = Modifier.weight(1f), tier = ButtonTier.Text, onClick = onCancel)
                 LabButton(if (busy) "READING…" else "USE WINDOW", scheme, enabled = !busy, modifier = Modifier.weight(1f),
                     accessibilityLabel = "USE WINDOW") { onUse(startFrame, mode) }
             }
