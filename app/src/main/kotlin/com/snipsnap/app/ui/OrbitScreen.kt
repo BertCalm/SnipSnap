@@ -1035,7 +1035,7 @@ fun OrbitScreen(
     fun ringsFromGroove() {
         val s = set ?: return
         val room = OrbitSet.MAX_ORBITS - s.orbits.size
-        if (room <= 0) { onToast("EIGHT RINGS IS THE SKY — TAKE ONE OFF FIRST"); return }
+        if (room <= 0) { onToast(Copy.ORBIT_RINGS_FULL); return }
         panels.close(OrbitFold.OUT)
         scope.launch {
             val result = offMain {
@@ -1046,7 +1046,7 @@ fun OrbitScreen(
                     // the first clip meant PROG E could never reach a ring.
                     val stored = GrooveStore.load(kitDir)
                     val clip = stored.firstOrNull { GrooveEdit.isProgE(it) } ?: stored.firstOrNull()
-                        ?: throw IllegalArgumentException("NO GROOVE IN THIS KIT YET — RECORD ONE IN GROOVE FIRST")
+                        ?: throw IllegalArgumentException(Copy.ORBIT_NO_GROOVE)
                     // The destination's swing, so the import lands where the
                     // clip put it rather than taking the set's push on top.
                     clip.name to OrbitImport.rings(

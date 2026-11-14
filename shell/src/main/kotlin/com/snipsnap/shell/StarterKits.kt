@@ -121,8 +121,8 @@ object StarterKits {
             seeded = false,
         ) { ThumpKits.classic() },
         Starter(
-            "strike-fx", "STRIKE FX",
-            "Four short hits: DRY, REVERB, ECHO. Turn STRIKE ON, use STAY and VOL OFF, then tap while moving the strip.",
+            "strike-fx", "FX BY VELOCITY",
+            "Four short hits: DRY, REVERB, ECHO. Open VELOCITY STRIP, turn STRIP ON, set RELEASE to STAY and LEVEL to VOL OFF, then tap while moving the strip.",
             seeded = false,
         ) { com.snipsnap.synth.StrikeDemoKit.build() },
         Starter(

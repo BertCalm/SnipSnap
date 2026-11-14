@@ -548,7 +548,7 @@ internal fun StepDetailStrip(
                             },
                         contentAlignment = Alignment.Center,
                     ) {
-                        TapeText(name, TapeType.pixelSmall, if (chosen) scheme.lcd.tape else scheme.ink2.tape)
+                        TapeText(name, TapeType.pixelSmall, if (chosen) scheme.ink.tape else scheme.ink2.tape)
                     }
                 }
             }
@@ -637,7 +637,7 @@ private fun ShapeButton(label: String, spoken: String, chosen: Boolean, enabled:
             .padding(horizontal = 2.dp),
         contentAlignment = Alignment.Center,
     ) {
-        FitTapeText(label, TapeType.pixelSmall, if (chosen) scheme.lcd.tape else if (enabled) scheme.ink2.tape else scheme.ink3.tape)
+        FitTapeText(label, TapeType.pixelSmall, if (chosen) scheme.ink.tape else if (enabled) scheme.ink2.tape else scheme.ink3.tape)
     }
 }
 

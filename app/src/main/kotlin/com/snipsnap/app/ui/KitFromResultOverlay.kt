@@ -22,6 +22,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import com.snipsnap.app.KitShelf
 import com.snipsnap.app.theme.TapeType
+import com.snipsnap.app.theme.lcdInk2
 import com.snipsnap.app.theme.tape
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.Scheme
@@ -77,11 +78,11 @@ internal fun KitFromResultOverlay(
                 verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
                 TapeText(report.header, TapeType.pixel, scheme.lcdInk.tape, maxLines = 3)
-                TapeText(report.tableHeader, TapeType.pixelSmall, scheme.ink3.tape, maxLines = 2)
+                TapeText(report.tableHeader, TapeType.pixelSmall, scheme.lcdInk2, maxLines = 2)
                 report.rows.forEachIndexed { i, row ->
                     val ink = when (report.rowGates[i]) {
                         KitFromAnything.Gate.FAIL -> scheme.amber.tape
-                        KitFromAnything.Gate.UNMEASURED -> scheme.ink3.tape
+                        KitFromAnything.Gate.UNMEASURED -> scheme.lcdInk2
                         KitFromAnything.Gate.PASS -> scheme.lcdInk.tape
                     }
                     TapeText(row, TapeType.pixelSmall, ink, maxLines = 3)

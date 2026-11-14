@@ -61,11 +61,12 @@ object Copy {
      * different screen with its name. KIT IT is the app's own verb for
      * the step already ([orbitBounced] says "TRIM IT, CHOP IT, KIT IT").
      *
-     * **Step four is WRITE IT, not DUB IT** (persona review, P1.1). DUB is
+     * **Step four is EXPORT IT, not DUB IT** (persona review, P1.1). DUB is
      * the app's word everywhere else — the dub is what OUT calls the write
      * while it runs — but this is the one sentence whose whole job is to
      * be understood by somebody who has not used the app yet, and the word
-     * they arrive at is the one on the button: WRITE KIT.
+     * they arrive at is the stage's own: EXPORT. Step two is CHOP IT for the
+     * same reason: it is the stage's name, where CUT was a word no screen says.
      *
      * **The middle clause does not claim the walk is compulsory** (P2.4,
      * P3.2): a starter kit begins at step three, and INSTANT KIT and CATCH
@@ -87,7 +88,7 @@ object Copy {
      * its list of retired tab names, and a verb that reads as a place is
      * what that law is for.
      */
-    const val FIRST_RUN_PLACES_NOTE = "Record it, cut it, kit it, write it. Or start from a kit."
+    const val FIRST_RUN_PLACES_NOTE = "Record it, chop it, kit it, export it. Or start from a kit."
 
     /**
      * The empty shelf's second way in, a button inside the panel under the
@@ -158,9 +159,9 @@ object Copy {
     const val PADS_RESTING_LINE = "Tap a pad · it plays. Hold an empty one to catch a sound into it."
 
     /**
-     * The one word above each of the STRIKE FX buttons, saying what that button sets (E1).
-     * The buttons keep their own words - STRIKE ON/OFF, LEFT/RIGHT, STAY/RETURN, VOL ON/OFF -
-     * because a STRIKE FX starter's description names STAY and VOL OFF; these only name the
+     * The one word above each of the VELOCITY STRIP buttons, saying what that button sets (E1).
+     * The buttons keep their own words - STRIP ON/OFF, LEFT/RIGHT, STAY/RETURN, VOL ON/OFF -
+     * because the FX BY VELOCITY starter's description names STRIP ON, STAY and VOL OFF; these only name the
      * question each word answers. In the order of the row.
      *
      * STRIKE_CAPTION_STRIP is whether the strike strip is there at all. STRIKE_CAPTION_SIDE is
@@ -909,7 +910,7 @@ object Copy {
         "· The chop box: hits, ear, grid. Merge or split under a chip.",
         "· Fold on CHOP: one pad per sound, the repeats cycle under it.",
         "· Between hits on CHOP: the gaps. Hold a pad, hold the room.",
-        "· CATCH ON SAMPLE: hold a pad as the hit goes by. It lands there.",
+        "· CATCH A HIT: hold a pad as the hit goes by. It lands there.",
         // P3.2's real gap. The finding names INSTANT KIT and CATCH A HIT
         // together as the unadvertised record-to-pad path; CATCH has had
         // the line above since HELP was written and INSTANT KIT was in no
@@ -3028,6 +3029,7 @@ object Copy {
     // ---- ORBIT ----
     /** ADD RING x3 (a pad ring, a snip ring, DUPLICATE) - `OrbitSet.MAX_ORBITS` is 8; a settled fact worth stating outright, not "THE SKY". */
     const val ORBIT_RINGS_FULL = "8 rings already. ORBIT holds no more."
+    const val ORBIT_NO_GROOVE = "No groove in this kit yet. Record one on BEAT first."
     const val ORBIT_NO_PADS = "No pads on this kit."
     fun orbitFileUnreadable(name: String): String = "Could not read $name."
     const val ORBIT_NOTHING_TO_UNDO = "Nothing to undo."

@@ -554,4 +554,104 @@ class ContrastTest {
         assertEquals(1, chromeRedOnLcdFill(old).size)
         assertEquals(0, chromeRedOnLcdFill(old.replace("BinRedGlow", "BinRedOnLcd")).size)
     }
+
+    // ==================== H2-a: chosen text on pressedBevel, and chrome inks on the lcd ====================
+
+    @Test
+    fun `chosen text on a pressedBevel cell is ink, which clears AA on field in every scheme, and lcd does not`() {
+        // pressedBevel fills with `field`. The chosen word used `lcd`: a dark
+        // scheme's lcd is near its field, so the word was about 1.2:1.
+        for (s in Schemes.ALL) {
+            val ink = Scheme.contrastRatio(s.ink, s.field)
+            assertTrue(ink >= AA_TEXT, "${s.id}: ink on field = %.2f:1".format(ink))
+        }
+        // The vacuous check: the old token, as a pair, must fail in the three dark schemes.
+        val dark = listOf(Schemes.VENT, Schemes.DUSK, Schemes.PHOSPHOR)
+        for (s in dark) {
+            val bad = failures(listOf(Pair3("lcd on field", s.lcd, s.field, AA_TEXT)))
+            assertTrue(bad.isNotEmpty(), "${s.id}: lcd on field must fail (that is why chosen text is ink): ${Scheme.contrastRatio(s.lcd, s.field)}")
+            assertTrue(Scheme.contrastRatio(s.lcd, s.field) < 2.0, "${s.id}: expected the ~1.2:1 the review measured")
+        }
+    }
+
+    /** Lines that draw text in `scheme.lcd` inside a pressedBevel element (the 24 lines after it). */
+    private fun lcdTextOnPressed(text: String): List<Int> {
+        val code = codeLines(text)
+        val out = ArrayList<Int>()
+        val textLcd = Regex("""(Fit)?TapeText\(.*\bscheme\.lcd\.tape""")
+        for ((idx, pair) in code.withIndex()) {
+            if ("pressedBevel(" !in pair.second) continue
+            for ((n, l) in code.drop(idx + 1).take(24)) if (textLcd.containsMatchIn(l)) out += n
+        }
+        return out.distinct()
+    }
+
+    @Test
+    fun `no chosen cell draws its text in lcd on a pressedBevel fill`() {
+        val files = appSources()
+        assertTrue(files.size > 100, "the scan must see the app, saw ${files.size} files")
+        val hits = files.flatMap { f -> lcdTextOnPressed(f.readText()).map { "${f.name}:$it" } }
+        assertTrue(hits.isEmpty(), "scheme.lcd text on pressedBevel (use scheme.ink): $hits")
+        // Not vacuous: the three fixed sites are found as pressedBevel cells whose chosen word is ink.
+        val inkChosen = Regex("""TapeText\(.*if \((chosen|selected)\) scheme\.ink\.tape""")
+        for ((file, min) in mapOf("ui/StepEditorParts.kt" to 2, "ui/GrooveScreen.kt" to 1)) {
+            val code = codeLines(java.io.File(appSrc, file).readText())
+            val seen = code.withIndex().count { (i, p) ->
+                inkChosen.containsMatchIn(p.second) && code.subList(maxOf(0, i - 24), i).any { "pressedBevel(" in it.second }
+            }
+            assertTrue(seen >= min, "$file: expected >= $min chosen-ink words under a pressedBevel, saw $seen")
+        }
+    }
+
+    @Test
+    fun `lcd text on pressedBevel scan reports the old sites`() {
+        val old = """
+            Column(Modifier.let { if (chosen) it.pressedBevel(scheme, 4.dp) else it.sunkenField(scheme, 4.dp) }) {
+                TapeText(name, TapeType.pixelSmall, if (chosen) scheme.lcd.tape else scheme.ink2.tape)
+            }
+        """.trimIndent()
+        assertEquals(1, lcdTextOnPressed(old).size)
+        assertEquals(0, lcdTextOnPressed(old.replace("scheme.lcd.tape", "scheme.ink.tape")).size)
+        assertEquals(0, lcdTextOnPressed(old.replace("pressedBevel", "raisedBevel")).size)
+    }
+
+    @Test
+    fun `chrome ink2 and ink3 are not an lcd text pair, and the lcd screens that used them do not`() {
+        // Documented forbidden pairs: ink2 and ink3 are chrome inks and fail on
+        // the lcd in a paper scheme, which is why `lcdInk2` exists.
+        val forbidden = Schemes.ALL.flatMap { s ->
+            failures(listOf(Pair3("ink2 on lcd", s.ink2, s.lcd, AA_TEXT), Pair3("ink3 on lcd", s.ink3, s.lcd, AA_TEXT)))
+        }
+        assertTrue(forbidden.isNotEmpty(), "ink2/ink3 on lcd must fail somewhere, else lcdInk2 is not needed")
+        // The pair that replaced them clears in every scheme (textPairs holds it too).
+        for (s in Schemes.ALL) {
+            val lcdInk2 = blend(s.lcdInk, s.lcd, Schemes.LCD_INK2_ALPHA.toDouble())
+            assertTrue(Scheme.contrastRatio(lcdInk2, s.lcd) >= AA_TEXT, "${s.id}: lcdInk2 on lcd")
+        }
+        val overlay = codeLines(java.io.File(appSrc, "ui/KitFromResultOverlay.kt").readText())
+        assertTrue(overlay.any { "scheme.lcd.tape" in it.second }, "the overlay must still sit on the lcd")
+        assertTrue(overlay.none { Regex("""scheme\.ink[23]\b""").containsMatchIn(it.second) }, "KitFromResultOverlay draws chrome ink on the lcd")
+        val reopen = codeLines(java.io.File(appSrc, "ui/SynthScreen.kt").readText()).filter { "LOAD, EDIT, THEN SEND TO PAD" in it.second }
+        assertEquals(1, reopen.size)
+        assertTrue("lcdInk2" in reopen[0].second && "ink2" !in reopen[0].second.replace("lcdInk2", ""), "the REOPEN caption sits on the lcd: ${reopen[0].second}")
+    }
+
+    @Test
+    fun `a DUET chip engaged on an accent fill reads in onAccent, not lcd`() {
+        for (s in Schemes.ALL) assertTrue(Scheme.contrastRatio(s.onAccent, s.accent) >= AA_TEXT, "${s.id}: onAccent on accent")
+        // The old token fails in at least one scheme, so the swap is load-bearing.
+        assertTrue(Schemes.ALL.any { Scheme.contrastRatio(it.lcd, it.accent) < AA_TEXT }, "lcd on accent must fail somewhere")
+        val line = codeLines(java.io.File(appSrc, "ui/GrainFieldScreen.kt").readText()).filter { "if (engaged) scheme." in it.second && "TapeText(label" in it.second }
+        assertEquals(1, line.size)
+        assertTrue("scheme.onAccent.tape" in line[0].second, line[0].second)
+    }
+
+    @Test
+    fun `the selected pattern row's place number is ink2 on the field, not amber`() {
+        for (s in Schemes.ALL) assertTrue(Scheme.contrastRatio(s.ink2, s.field) >= AA_TEXT, "${s.id}: ink2 on field")
+        assertTrue(Schemes.ALL.any { Scheme.contrastRatio(it.amber, it.field) < AA_TEXT }, "amber on field must fail somewhere")
+        val line = codeLines(java.io.File(appSrc, "ui/PatternPicker.kt").readText()).filter { "\"%02d\".format" in it.second }
+        assertEquals(1, line.size)
+        assertTrue("if (now) scheme.ink2 else scheme.amber" in line[0].second, line[0].second)
+    }
 }
