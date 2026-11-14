@@ -53,6 +53,7 @@ Run:  python3 ember_proto.py OUT_DIR   (writes one WAV per voice at the defaults
 from __future__ import annotations
 
 import functools
+import json
 import math
 import os
 import sys
@@ -87,6 +88,7 @@ VOICES = {
     "RIDE":         ("PERC",       1.45, ("TUNE", "DAMP", "BUZZ", "DISTANCE", "WARMTH")),
     "RIDE_BELL":    ("PERC",       1.45, ("TUNE", "DAMP", "BUZZ", "DISTANCE", "WARMTH")),
     "BRUSH_RIDE":   ("PERC",       1.45, ("TUNE", "DAMP", "BUZZ", "DISTANCE", "WARMTH")),
+    "SIZZLE":       ("PERC",       2.20, ("TUNE", "DAMP", "DISTANCE", "WARMTH")),
     "HAT_FOOT":     ("HAT_CLOSED", 0.45, ("TUNE", "DAMP", "BUZZ", "DISTANCE", "WARMTH")),
     "HAT_CLOSED":   ("HAT_CLOSED", 0.45, ("TUNE", "DAMP", "BUZZ", "DISTANCE", "WARMTH")),
     "HAT_OPEN":     ("HAT_OPEN",   1.20, ("TUNE", "DAMP", "BUZZ", "DISTANCE", "WARMTH")),
@@ -103,6 +105,11 @@ VOICES = {
 
 DEFAULTS = {"TUNE": .5, "DAMP": .3, "BUZZ": .5, "DISTANCE": .3, "WARMTH": .5, "SPEED": .5,
             "BEND": .5, "PRESSURE": .5, "CROWD": .4, "SLAP": .3}
+
+# Per-voice defaults (round 0b): on the fitted cymbals and hats BUZZ adds looseness beyond the recorded
+# cymbal, so it starts at 0, the cymbal as recorded.
+VOICE_DEFAULTS = {v: {"BUZZ": 0.0} for v in ("RIDE", "RIDE_BELL", "BRUSH_RIDE", "BOWED_CYMBAL", "CYMBAL_SWELL",
+                                               "HAT_FOOT", "HAT_CLOSED", "HAT_OPEN")}
 
 # What each control means, per voice where it differs (the audition page reads this).
 MEANING = {
@@ -128,7 +135,8 @@ def settled(voice, macros=None):
     out = {}
     for k in macros_for(voice):
         v = (macros or {}).get(k)
-        out[k] = DEFAULTS[k] if v is None or not math.isfinite(v) else min(1.0, max(0.0, float(v)))
+        d = VOICE_DEFAULTS.get(voice, {}).get(k, DEFAULTS[k])
+        out[k] = d if v is None or not math.isfinite(v) else min(1.0, max(0.0, float(v)))
     return out
 
 
@@ -339,68 +347,183 @@ def rattlers(drive_env, count, theta_lo, theta_hi, rate_hz, ring, rng, n, kick_n
     return out
 
 
-# ------------------------------------------------------------------------------ cymbals
+# ------------------------------------------------------------------------------ cymbals (round 0b: fitted)
+#
+# Round 0's cymbals were guessed (modes placed by a formula) and the owner heard them as "hitting sheet
+# metal". Measured, they sat 11 to 34 dB from real cymbals with half the brightness. From round 0b every
+# cymbal and hat is resynthesized from a CC0 recording of a jazz club kit, the way BREAKER's approved
+# cymbals are (docs/BREAKER.md, "The cymbals"): `fit_ember_cymbals.py` runs BREAKER's fitter and writes
+# `cymbals.json` (measured numbers only; NOTICE.txt lists the recordings). The modes are rendered at
+# 44.1 kHz (a sum of sines is band-limited by construction) and upsampled into the 176.4 kHz chain.
 
-CYMBALS = {
-    # name: (low Hz, high Hz, modes, t60 low s, t60 high s, ping centre Hz, ping width octaves)  (shape)
-    "RIDE": (260.0, 17500.0, 220, 7.0, 0.9, 3600.0, 1.4),
-    "BELL": (640.0, 9000.0, 40, 3.0, 0.8, 1500.0, 1.1),
-    "HAT":  (420.0, 18500.0, 160, 1.6, 0.35, 6500.0, 1.6),
-}
+FIT_PATH = os.path.join(HERE, "cymbals.json")
 
 
 @functools.cache
-def cymbal_bands(kind, tune, damp, part):
-    """A cymbal's impulse response split in three frequency bands and four interleaved mode groups
-    (12 partial responses), cached by (kind, TUNE, DAMP). A take re-weights the groups (the stick
-    lands somewhere else), so takes cost a mix, not a rebuild. The identity of each cymbal (its
-    exact mode set) is fixed by its own seed: every ride is the same ride."""
-    lo, hi, count, tl, th, pc, pw = CYMBALS[kind]
-    r = np.random.default_rng(sk.seed_for("ember-cymbal", kind))
-    u = np.sort((np.arange(count) + r.uniform(0, 1, count)) / count) ** 0.82
-    scale = semis(tune, 4)
-    f = lo * (hi / lo) ** u * scale
-    if kind == "BELL":
-        bell = np.array([1.0, 1.52, 2.27, 2.92, 3.66, 4.48]) * 690 * scale
-        f = np.concatenate([bell, f])
-    t60 = tl * (th / tl) ** ((np.log(f / lo / scale) / np.log(hi / lo)).clip(0, 1))
-    t60 *= sk.lin(damp, 1.0, 0.18) * r.uniform(0.85, 1.15, len(f))
-    oct_from_ping = np.log2(f / (pc * scale))
-    a = np.exp(-0.5 * (oct_from_ping / pw) ** 2) * r.uniform(0.4, 1.0, len(f)) + 0.08
-    if kind == "BELL":
-        a[:6] = [1.0, 0.8, 0.7, 0.55, 0.45, 0.35]
-        a[6:] *= 0.25
-    ph = r.uniform(0, TAU, len(f))
-    group = r.integers(0, 4, len(f))
-    edges = (0, 1800 * scale, 6000 * scale, 1e9)
-    n = n_of(VOICES["CYMBAL_SWELL"][1] if part == "long" else 1.6)
-    out = {}
-    for b in range(3):
-        for g in range(4):
-            m = (f >= edges[b]) & (f < edges[b + 1]) & (group == g)
-            out[(b, g)] = modal_ir(f[m], a[m], t60[m], n, ph[m])
-    ref = sum(out.values())
-    pk = np.max(np.abs(conv(hann_force(0.25e-3, 1.0, 2000), ref, n))) or 1.0
-    return {k: v / pk for k, v in out.items()}
+def fit():
+    with open(FIT_PATH) as fh:
+        return json.load(fh)
 
 
-def cymbal(kind, tune, damp, force, take_rng, n, wash, wash_tau, long=False):
-    """Strike a cymbal: low and mid bands follow the force; the top band (the wash) grows in over
-    `wash_tau` because a real cymbal pours energy from its low modes into its high ones after a
-    hard strike (nonlinear cascade; an analogy here, not simulated). Returns (sound, drive env)."""
-    bands = cymbal_bands(kind, round(tune, 3), round(damp, 3), "long" if long else "short")
-    gains = 10 ** (take_rng.uniform(-2.5, 2.5, (3, 4)) / 20)
-    parts = []
-    for b in range(3):
-        ir = sum(gains[b, g] * bands[(b, g)] for g in range(4))
-        ir = ir[:n] if len(ir) >= n else np.pad(ir, (0, n - len(ir)))
-        parts.append(conv(force, ir, n))
-    t = np.arange(n) / FS
-    grow = 1 - np.exp(-t / wash_tau)
-    shimmer = parts[2] * (0.35 + wash * grow)
-    body = parts[0] + parts[1]
-    drive = env_follow(lp(body, 2500), 6.0)
-    return body + shimmer, drive
+@functools.cache
+def fit_band_sos(i):
+    fc = fit()["bands"][i]
+    lo, hi = fc / 2 ** (1 / 6), min(fc * 2 ** (1 / 6), RATE * 0.49)
+    return signal.butter(4, [lo / (RATE / 2), hi / (RATE / 2)], "band", output="sos")
+
+
+def soft_weight(v):
+    """0 at a full hit, 1 at the recordings' soft layer (velocity .35), a little past it below that."""
+    return float(np.clip((1.0 - v) / 0.65, 0.0, 1.3))
+
+
+def damp_factor(damp):
+    """How much faster every mode decays: DAMP .3 (the default) is the cymbal as recorded, 1 is three
+    times faster (a finger on the edge), 0 is a little longer (0.64x the decay rate). Shape."""
+    return 2.0 ** ((damp - 0.3) / 0.7 * 1.6)
+
+
+def fitted_modes(kind, tune, damp, v, tr, seconds, split_hz=None):
+    """The fitted cymbal struck once: every mode at its measured frequency, amplitude and decay, moved
+    by TUNE (3 semitones either way), DAMP and the measured soft-minus-hard tilt of its band. A take is a
+    fresh strike (BREAKER's law): up to 0.3 Hz of detune, a fresh phase, 1.6 dB rms level scatter.
+    Normalized to unit rms over its first 300 ms. With `split_hz`, returns (below, above) that frequency."""
+    m = np.array(fit()["voices"][kind]["modes"])
+    k = len(m)
+    hz = m[:, 0] * semis(tune, 3) + tr.uniform(-0.3, 0.3, k)
+    amp = m[:, 1] * 10 ** ((m[:, 3] * soft_weight(v) + tr.normal(0, 1.6, k)) / 20)
+    slope = np.minimum(m[:, 2] * damp_factor(damp), -1.0)             # dB per second
+    # Doublets: a circular plate's modes come in degenerate pairs, and hammering splits each pair by a few
+    # hertz, so a real cymbal's partials beat and shimmer instead of standing as steady lines. Each fitted
+    # mode becomes a pair 0.4 to 3 Hz apart sharing its energy. The split belongs to the cymbal (its own
+    # seed), not to the take, so every take is the same cymbal. Shape: the fit measured single peaks at
+    # 5.4 Hz resolution, which cannot see the split.
+    cr = np.random.default_rng(sk.seed_for("ember-doublets", kind))
+    split = cr.uniform(0.4, 3.0, k) * semis(tune, 3)
+    share = cr.uniform(0.2 * math.pi, 0.3 * math.pi, k)
+    hz = np.concatenate([hz, hz + split])
+    amp = np.concatenate([amp * np.cos(share), amp * np.sin(share)])
+    slope = np.concatenate([slope, slope * cr.uniform(0.9, 1.1, k)])
+    k = 2 * k
+    ph = tr.uniform(0, TAU, k)
+    n = int(round(seconds * RATE))
+    t = np.arange(n) / RATE
+    ok = hz < 0.47 * RATE
+
+    def synth(sel):
+        out = np.zeros(n)
+        idx = np.nonzero(sel & ok)[0]
+        for s0 in range(0, len(idx), 24):
+            j = idx[s0:s0 + 24]
+            lim = min(n, int(90.0 / -slope[j].max() * RATE) + 1)        # each block to -90 dB
+            out[:lim] += (amp[j, None] * 10 ** (slope[j, None] * t[None, :lim] / 20)
+                          * np.sin(TAU * hz[j, None] * t[None, :lim] + ph[j, None])).sum(0)
+        return out
+
+    if split_hz is None:
+        y = synth(np.ones(k, bool))
+        return y / (sk.rms(y[:int(0.3 * RATE)]) + 1e-20)
+    lo, hi = synth(hz < split_hz), synth(hz >= split_hz)
+    r = sk.rms((lo + hi)[:int(0.3 * RATE)]) + 1e-20
+    return lo / r, hi / r
+
+
+def stick_burst(kind, v, tr, n):
+    """The stick's own 60 ms of noise at the recording's band levels over its first 40 ms, moving toward
+    the soft recording's spectrum as velocity falls (BREAKER's law). Unit rms over 20 ms."""
+    d = fit()["voices"][kind]
+    w = min(1.0, soft_weight(v))
+    lv = (1 - w) * np.array(d["stick"]) + w * np.array(d["stickSoft"])
+    m = int(0.06 * RATE)
+    tt = np.arange(m) / RATE
+    b = np.zeros(m)
+    for i, level in enumerate(lv):
+        b += level * signal.sosfilt(fit_band_sos(i), tr.standard_normal(m))
+    b *= np.exp(-tt / 0.008) * np.minimum(1, tt / 0.0004)
+    out = np.zeros(n)
+    out[:m] = b[:n]
+    return out / (sk.rms(b[:int(0.02 * RATE)]) + 1e-20)
+
+
+def envelope_hat(kind, tune, damp, v, tr, n):
+    """A closed or pedalled hat from its fitted band envelopes: unit band noise in each third octave,
+    shaped by the recording's level in that band over time, between the hard and soft recordings.
+    TUNE slides the spectrum by up to 3 semitones; DAMP shortens it. A take is fresh noise and 1 dB of
+    band scatter."""
+    d = fit()["voices"][kind]
+    bands = fit()["bands"]
+    w = soft_weight(v)
+    lev = (1 - w) * np.array(d["hard"]) + w * np.array(d["soft"])
+    shift = (tune - 0.5) * 2 * 3 / 4                                 # third-octave bands to slide by
+    idx = np.arange(len(bands))
+    lev = np.array([np.interp(idx - shift, idx, lev[:, j]) for j in range(lev.shape[1])]).T
+    T = np.array(d["times"])
+    t = np.arange(n) / RATE * damp_factor(damp)
+    out = np.zeros(n)
+    for i, fc in enumerate(bands):
+        if fc * 2 ** (1 / 6) >= 0.49 * RATE:
+            continue
+        x = signal.sosfilt(fit_band_sos(i), tr.standard_normal(n + 2000))[2000:]
+        x /= sk.rms(x) + 1e-20
+        out += x * 10 ** ((np.interp(t, T, lev[i]) + tr.normal(0, 1.0)) / 20)
+    return out
+
+
+def residual_noise(kind, tune, damp, v, tr, n, ref_rms):
+    """The fitted residual: band noise along what the modes and stick leave out of the recording, per third
+    octave over time, between hard and soft. Bands under 200 Hz are left out: there the overhead heard the
+    kick and the room, not the cymbal. Levels are dB re the strike's rms over its first 0.5 s (`ref_rms`)."""
+    d = fit()["voices"][kind]
+    bands = fit()["bands"]
+    w = min(1.0, soft_weight(v))
+    lev = (1 - w) * np.array(d["residual"]) + w * np.array(d["residualSoft"])
+    shift = (tune - 0.5) * 2 * 3 / 4
+    idx = np.arange(len(bands))
+    lev = np.array([np.interp(idx - shift, idx, lev[:, j]) for j in range(lev.shape[1])]).T
+    T = np.array(d["times"])
+    t = np.arange(n) / RATE * damp_factor(damp)
+    out = np.zeros(n)
+    for i, fc in enumerate(bands):
+        if fc < 200 or fc * 2 ** (1 / 6) >= 0.49 * RATE:
+            continue
+        x = signal.sosfilt(fit_band_sos(i), tr.standard_normal(n + 2000))[2000:]
+        x /= sk.rms(x) + 1e-20
+        out += x * 10 ** (np.interp(t, T, lev[i]) / 20)
+    return out * ref_rms
+
+
+def to_internal(y44, n):
+    """44.1 kHz into the 176.4 kHz chain (polyphase, band-limited)."""
+    y = signal.resample_poly(y44, 4, 1)
+    return y[:n] if len(y) >= n else np.pad(y, (0, n - len(y)))
+
+
+def to_rate(x):
+    """A 176.4 kHz contact force down to 44.1 kHz, keeping each impulse's area (sum of four)."""
+    k = len(x) // 4 * 4
+    return x[:k].reshape(-1, 4).sum(1)
+
+
+def struck(kind, m, v, tr, n, burst=0.6, seconds=None):
+    """A stick strike on a fitted cymbal: the modes plus the stick, at FS. Returns (sound, drive env)."""
+    sec = seconds or n / FS
+    y = fitted_modes(kind, m.get("TUNE", .5), m.get("DAMP", .3), v, tr, sec)
+    y = y + burst * stick_burst(kind, v, tr, len(y))
+    y = y + residual_noise(kind, m.get("TUNE", .5), m.get("DAMP", .3), v, tr, len(y), sk.rms(y[:int(0.5 * RATE)]))
+    out = to_internal(y, n)
+    return out, env_follow(lp(out, 2500), 6.0)
+
+
+def driven(kind, m, v, tr, n, force, seconds=None, split_hz=None):
+    """A fitted cymbal driven by any implement's force (brush, mallet, bow): the force at 44.1 kHz
+    convolved with the struck modes. With `split_hz`, returns (below, above) at FS."""
+    sec = seconds or n / FS
+    f44 = to_rate(force)
+    k = int(round(sec * RATE))
+    ir = fitted_modes(kind, m.get("TUNE", .5), m.get("DAMP", .3), v, tr, sec, split_hz)
+    if split_hz is None:
+        return to_internal(signal.oaconvolve(f44, ir)[:k], n)
+    return tuple(to_internal(signal.oaconvolve(f44, x)[:k], n) for x in ir)
 
 
 # Threshold parts are scaled to the body they sit on, so a soft hit's wires are quieter than a hard
@@ -707,64 +830,73 @@ def _elbow_tom(m, v, tr, n):
 
 
 def _ride(m, v, tr, n):
-    force = stick(v, tr, n, width_hard=0.16e-3)
-    tick = hp(force, 3000) * 0.08
-    sound, drive = cymbal("RIDE", m["TUNE"], m["DAMP"], force, tr, n, wash=0.55 * v ** 1.8, wash_tau=0.09)
-    return sound + RIVET_GAIN * np.max(np.abs(sound)) * rivets(drive, m["BUZZ"], v, tr, n) + tick
+    """The flat ride, as fitted: a dry, spread jazz ride with no bell. BUZZ adds loose rivets on top of
+    the recorded cymbal (0, the default, is the cymbal as recorded)."""
+    sound, drive = struck("flatride", m, v, tr, n)
+    return sound + RIVET_GAIN * np.max(np.abs(sound)) * rivets(drive, m["BUZZ"], v, tr, n)
 
 
 def _ride_bell(m, v, tr, n):
-    force = stick(v, tr, n, width_hard=0.3e-3)
-    bell, drive = cymbal("BELL", m["TUNE"], m["DAMP"], force, tr, n, wash=0.15 * v ** 2, wash_tau=0.06)
-    bow, d2 = cymbal("RIDE", m["TUNE"], m["DAMP"], force * 0.25, tr, n, wash=0.4 * v ** 2, wash_tau=0.1)
-    return bell + bow + 0.6 * RIVET_GAIN * np.max(np.abs(bow)) * rivets(d2 + drive * 0.3, m["BUZZ"], v, tr, n)
+    sound, drive = struck("bell", m, v, tr, n)
+    return sound + 0.6 * RIVET_GAIN * np.max(np.abs(sound)) * rivets(drive, m["BUZZ"], v, tr, n)
+
+
+def _sizzle(m, v, tr, n):
+    """A thin crash with its rivets in, as fitted from the recording: the riveted sizzle cymbal of a 1960s
+    jazz kit, with the rivets in the recording rather than modelled."""
+    sound, _ = struck("sizzle", m, v, tr, n)
+    return sound
 
 
 def _brush_ride(m, v, tr, n):
+    """Wire brush on the flat ride: the brush's spray of wires through the fitted modes, no stick, and the
+    wires' own scrape."""
     force = brush_tap(v, tr, n)
-    sound, drive = cymbal("RIDE", m["TUNE"], m["DAMP"], force, tr, n, wash=0.6 + 0.4 * v, wash_tau=0.05)
-    return sound + 1.3 * RIVET_GAIN * np.max(np.abs(sound)) * rivets(drive, m["BUZZ"], v, tr, n)
+    sound = driven("flatride", m, v, tr, n, force)
+    k = n_of(0.03)
+    scrape = np.zeros(n)
+    scrape[:k] = tr.standard_normal(k) * np.linspace(1, 0, k) ** 2
+    sound = peak_norm(sound) + 0.08 * v * peak_norm(band(scrape, 3000, 12000))
+    drive = env_follow(lp(sound, 2500), 6.0)
+    return sound + 1.3 * RIVET_GAIN * rivets(drive, m["BUZZ"], v, tr, n)
 
 
-def _hat(m, v, tr, n, force, damp_t, rattle_rate, pop=0.0, wash=0.3):
-    """Two thin 14-inch plates. Closed, the pedal pressure (DAMP) kills the ring in tens of ms
-    and the plates chatter against each other; open, they ring and sizzle where they touch."""
-    sound, drive = cymbal("HAT", m["TUNE"], 0.0, force, tr, n, wash=wash, wash_tau=0.02)
-    t = np.arange(n) / FS
-    sound = sound * np.exp(-t / damp_t)
-    plates = int(round(sk.lin(m["BUZZ"], 1, 5)))
-    d = drive / (np.max(drive) + 1e-12) * np.exp(-t / damp_t) * (0.5 + 0.5 * v)
-    chatter = rattlers(d, plates, 0.05, 0.3, rattle_rate, [(7400, .004), (10200, .003)], tr, n, 0.8)
-    out = sound + 2.0 * RIVET_GAIN * np.max(np.abs(sound)) * chatter
-    if pop:
-        squeeze = hann_force(5e-3, 1.0, n)
-        out += pop * peak_norm(band(tr.standard_normal(n) * squeeze, 900, 4200)) * np.max(np.abs(out))
-    return out
+def _hat_chatter(sound, m, v, tr, n, rate):
+    """BUZZ on the hats: the plates looser than recorded, chattering where they touch (0 is as recorded)."""
+    count = int(round(sk.lin(m["BUZZ"], 0, 4)))
+    if count == 0:
+        return sound
+    d = env_follow(lp(sound, 4000), 3.0)
+    d = d / (np.max(d) + 1e-12) * (0.5 + 0.5 * v)
+    chatter = rattlers(d, count, 0.05, 0.3, rate, [(7400, .004), (10200, .003)], tr, n, 0.8)
+    return sound + 1.2 * RIVET_GAIN * np.max(np.abs(sound)) * chatter
 
 
 def _hat_closed(m, v, tr, n):
-    force = stick(v, tr, n, width_hard=0.15e-3)
-    return _hat(m, v, tr, n, force, sk.lin(m["DAMP"], 0.035, 0.012), 1600, wash=0.2 + 0.4 * v)
+    sound = to_internal(envelope_hat("hat_closed", m["TUNE"], m["DAMP"], v, tr, int(n / 4) + 1), n)
+    return _hat_chatter(sound, m, v, tr, n, 1600)
 
 
 def _hat_foot(m, v, tr, n):
-    """The pedal brings the plates together: an air squeeze, a short clang, the 'chick' on 2 and 4."""
-    force = hann_force(0.9e-3, v, n)
-    return _hat(m, v, tr, n, force * 0.5, sk.lin(m["DAMP"], 0.03, 0.01), 1200, pop=0.9, wash=0.1)
+    """The pedal brings the plates together, the 'chick' on 2 and 4, as fitted from the recording."""
+    sound = to_internal(envelope_hat("hat_pedal", m["TUNE"], m["DAMP"], v, tr, int(n / 4) + 1), n)
+    return _hat_chatter(sound, m, v, tr, n, 1200)
 
 
 def _hat_open(m, v, tr, n):
-    force = stick(v, tr, n, width_hard=0.18e-3)
-    return _hat(m, v, tr, n, force, sk.lin(m["DAMP"], 0.25, 0.06), 900, wash=0.6 + 0.4 * v)
+    sound, _ = struck("hat_open", m, v, tr, n)
+    return _hat_chatter(sound, m, v, tr, n, 900)
 
 
 def _bowed_cymbal(m, v, tr, n):
-    """A bass bow drawn across the ride's edge: stick-slip locks to one mode of the cymbal and the
-    rest bloom around it. The bow is a sawtooth-like slip train at that mode with jitter (an
-    analogy of friction; the Kotlin can use Modes.Friction). PRESSURE: more bite, more harmonics,
-    more scratch."""
+    """A bass bow drawn across the flat ride's edge: stick-slip locks to the cymbal's strongest fitted mode
+    between 500 Hz and 1.6 kHz and the rest bloom around it. The bow is a sawtooth-like slip train at that
+    mode with jitter (an analogy of friction; the Kotlin can use Modes.Friction). PRESSURE: more bite,
+    more harmonics, more scratch."""
     t = np.arange(n) / FS
-    f_lock = 920.0 * semis(m["TUNE"], 4) * tr.uniform(0.995, 1.005)
+    md = np.array(fit()["voices"]["flatride"]["modes"])
+    sel = (md[:, 0] > 500) & (md[:, 0] < 1600)
+    f_lock = md[sel][np.argmax(md[sel, 1]), 0] * semis(m["TUNE"], 3) * tr.uniform(0.998, 1.002)
     jitter = np.cumsum(tr.normal(0, 1, n)) / FS * 0.8
     ph = TAU * f_lock * (t + jitter * 0.001)
     bite = sk.lin(m["PRESSURE"], 0.3, 1.0)
@@ -773,14 +905,17 @@ def _bowed_cymbal(m, v, tr, n):
     wob = 1 + 0.15 * np.sin(TAU * 4.3 * t + tr.uniform(0, TAU))
     scratch = band(tr.standard_normal(n), 2000, 7000) * bite * 0.03
     drive_sig = (saw * 0.004 + scratch * 0.01) * swell * wob * v
-    sound, drive = cymbal("RIDE", m["TUNE"], 0.0, drive_sig, tr, n, wash=0.1 + 0.25 * bite, wash_tau=0.3, long=True)
+    sound = driven("flatride", dict(m, DAMP=.3), v, tr, n, drive_sig)
     direct = lp(saw, 6000) * swell * wob * 0.25 * np.max(np.abs(sound))
-    return sound + direct + 0.7 * RIVET_GAIN * np.max(np.abs(sound)) * rivets(drive, m["BUZZ"], v * 0.6, tr, n)
+    out = sound + direct
+    drive = env_follow(lp(out, 2500), 6.0)
+    return out + 0.7 * RIVET_GAIN * np.max(np.abs(out)) * rivets(drive, m["BUZZ"], v * 0.6, tr, n)
 
 
 def _cymbal_swell(m, v, tr, n):
-    """The riser: soft felt mallets rolling on the ride, from nothing to a full wash over 2.6 s.
-    The wash band follows the running intensity squared (the cascade grows with energy)."""
+    """The riser: soft felt mallets rolling on the flat ride, from nothing to a full wash over 2.6 s. The
+    modes above 6 kHz follow the running intensity squared (a cymbal's top grows with how hard it is
+    driven; an analogy, not the nonlinear cascade itself)."""
     t_end = 2.6
     rate0, rate1 = sk.lin(m["SPEED"], 9, 16), sk.lin(m["SPEED"], 15, 26)
     force = np.zeros(n)
@@ -792,13 +927,12 @@ def _cymbal_swell(m, v, tr, n):
         force += mallet(max(0.08, a), tr, n, at=tt, width_hard=2.8e-3) * (1.0 if k % 2 else 0.85)
         tt += 1.0 / sk.lin(x, rate0, rate1) * tr.uniform(0.9, 1.1)
         k += 1
-    sound, drive = cymbal("RIDE", m["TUNE"], 0.0, force, tr, n, wash=0.0, wash_tau=1.0, long=True)
-    bands = cymbal_bands("RIDE", round(m["TUNE"], 3), 0.0, "long")
-    top = sum(bands[(2, g)] for g in range(4))[:n]
     intensity = env_follow(force, 120.0)
     intensity = intensity / (np.max(intensity) + 1e-12) * v      # a soft swell never reaches the full wash
-    shimmer = conv(force * intensity ** 2, top, n)
-    body = sound + 1.5 * shimmer
+    low, top = driven("flatride", dict(m, DAMP=.3), v, tr, n, force, split_hz=6000.0)
+    top2 = driven("flatride", dict(m, DAMP=.3), v, tr, n, force * intensity ** 2, split_hz=6000.0)[1]
+    body = low + 0.4 * top + 1.6 * top2
+    drive = env_follow(lp(body, 2500), 6.0)
     return body + 0.9 * RIVET_GAIN * np.max(np.abs(body)) * rivets(drive, m["BUZZ"], v, tr, n)
 
 
@@ -924,7 +1058,7 @@ RENDER = {
     "KICK": _kick, "SNARE": _snare, "RIMSHOT": _rimshot, "CROSS_STICK": _cross_stick, "BRUSH_TAP": _brush_tap,
     "BRUSH_SWEEP": _brush_sweep, "TOM_RACK": _tom_rack, "TOM_FLOOR": _tom_floor, "ELBOW_TOM": _elbow_tom,
     "MALLET_TOM": _mallet_tom, "BRUSH_TOM": _brush_tom, "RIDE": _ride, "RIDE_BELL": _ride_bell,
-    "BRUSH_RIDE": _brush_ride, "HAT_FOOT": _hat_foot, "HAT_CLOSED": _hat_closed, "HAT_OPEN": _hat_open,
+    "BRUSH_RIDE": _brush_ride, "SIZZLE": _sizzle, "HAT_FOOT": _hat_foot, "HAT_CLOSED": _hat_closed, "HAT_OPEN": _hat_open,
     "BOWED_CYMBAL": _bowed_cymbal, "CYMBAL_SWELL": _cymbal_swell, "PRESS_ROLL": _press_roll,
     "BRUSH_ROLL": _brush_roll, "SNAPS": _snaps, "CLAPS": _claps, "TAMBOURINE": _tambourine,
     "CONGA": _conga, "STICKS": _sticks,

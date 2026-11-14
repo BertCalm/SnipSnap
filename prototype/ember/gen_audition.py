@@ -31,7 +31,7 @@ OUT = sys.argv[1] if len(sys.argv) > 1 else "ember-audition"
 RATE = e.RATE
 ZONES = {"s": 0.35, "m": 0.65, "h": 1.0}   # the three velocity zones the house kits use
 TAKES = 4
-LONG = {"BRUSH_SWEEP", "BOWED_CYMBAL", "CYMBAL_SWELL", "PRESS_ROLL", "BRUSH_ROLL"}
+LONG = {"BRUSH_SWEEP", "BOWED_CYMBAL", "CYMBAL_SWELL", "PRESS_ROLL", "BRUSH_ROLL", "SIZZLE"}
 MANIFEST: dict = {"zones": ZONES, "takes": TAKES, "sections": [], "kits": [], "checks": {},
                   "meaning": e.MEANING, "voices": {v: {"class": c, "seconds": s, "macros": list(mm)}
                                                    for v, (c, s, mm) in e.VOICES.items()}}
@@ -213,6 +213,42 @@ for voice in e.VOICES:
          f"{voice} ({e.VOICES[voice][0]}): soft then hard, at its defaults.",
          {"centroid_hz": ms.centroid(y), "soft_centroid_hz": ms.centroid(s), "decay_ms": ms.decay_ms(y),
           "soft_vs_hard_db": dist(voice, s, y)}, {"voice": voice})
+
+# ------------------------------------------------------------------------------ cymbals against their recordings
+# Round 0b: the owner heard round 0's cymbals as "hitting sheet metal". Each EMBER cymbal, dry (DISTANCE 0,
+# WARMTH 0), then the CC0 recording it was fitted to (or a take it was not fitted to). The recordings are
+# Virtuosity Drums (CC0 1.0); they go on the listening page only, never into the repository.
+
+REF = os.environ.get("EMBER_REF_WAVS")
+MANIFEST["cymbal_refs"] = []
+if REF and os.path.isdir(REF):
+    from scipy.io import wavfile
+
+    def recording(name, secs):
+        _, x = wavfile.read(os.path.join(REF, name + ".wav"))
+        x = x.astype(float)
+        a = np.abs(x)
+        i = max(0, int(np.argmax(a > .05 * a.max())) - 44)
+        x = x[i:i + int(secs * RATE)]
+        return x / np.max(np.abs(x)) * .89
+
+    dry = {"DISTANCE": 0.0, "WARMTH": 0.0}
+    for voice, name, vel, secs, held in (
+            ("RIDE", "oh_flatride_ride_vl3_rr2", 1.0, 1.4, True), ("RIDE", "oh_flatride_ride_vl1_rr1", .35, 1.4, False),
+            ("RIDE_BELL", "oh_ride_bell_vl3_rr1", 1.0, 1.4, False), ("SIZZLE", "oh_crash_sizzle_vl3_rr1", 1.0, 2.0, False),
+            ("HAT_CLOSED", "oh_hh_closed_vl4_rr1", 1.0, .4, False), ("HAT_FOOT", "oh_hh_pedal_vl3_rr1", 1.0, .4, False),
+            ("HAT_OPEN", "oh_hh_open_vl4_rr1", 1.0, 1.1, False)):
+        y = e.render(voice, dry, vel)[:int(secs * RATE)]
+        x = recording(name, secs)
+        d150, dall = ms.take_distance_db(y, x), full_distance_db(y, x)
+        item = save("cymbals", f"{voice.lower()}-{name.split('_')[-2]}-{name.split('_')[-1]}", chain([y, x], 0.5),
+                    f"{voice} at velocity {vel}, dry, then the recording {name} ({'a take the fit never saw' if held else 'the one it was fitted to'}).",
+                    {"vs_recording_db": d150, "vs_recording_whole_db": dall, "centroid_hz": ms.centroid(y), "rec_centroid_hz": ms.centroid(x)},
+                    {"voice": voice})
+        MANIFEST["cymbal_refs"].append({"voice": voice, "recording": name, "first150_db": d150, "whole_db": dall})
+    a, b = recording("oh_flatride_ride_vl3_rr1", 1.4), recording("oh_flatride_ride_vl3_rr2", 1.4)
+    MANIFEST["cymbal_real_takes_db"] = [ms.take_distance_db(a, b), full_distance_db(a, b)]
+    print("cymbal refs", MANIFEST["cymbal_refs"], MANIFEST["cymbal_real_takes_db"], flush=True)
 
 # ------------------------------------------------------------------------------ control sweeps
 

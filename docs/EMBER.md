@@ -1,6 +1,8 @@
 # EMBER: design brief and round-0 audition
 
-Status: **round 0, a Python prototype (2026-11-14). Nothing has been heard.** No Kotlin exists. The engine
+Status: **round 0b, a Python prototype (2026-11-14).** The owner's first listen: "Cymbals need a lot of work.
+Sounds like hitting sheet metal." Round 0b rebuilds every cymbal and hat from measurements of real cymbals
+(below); nothing else changed sound. Nothing else has been heard yet. No Kotlin exists. The engine
 stays in progress until every applicable owner gate has evidence (see "Gates" below and the gates entry in
 [ENGINE_ACCEPTANCE_GATES.md](ENGINE_ACCEPTANCE_GATES.md#ember-round-0-2026-11-14-python-prototype-not-heard)).
 
@@ -10,7 +12,7 @@ and their grooves, `measures.py` CLUTTER's house distance measures, `gen_auditio
 
 Listening page: <https://claude.ai/artifact/Xmcj5t8MYSNCQPoTKHBcdw> (private to the owner; published 2026-11-14). It carries a playable 4×4 pad
 grid for all four kits with three velocity layers and four round-robin takes per pad, each kit's groove,
-velocity ladders and takes for the EMBER kit, all twenty-six voices, and every control on every voice.
+velocity ladders and takes for the EMBER kit, all twenty-seven voices, every control on every voice, and (round 0b) each cymbal beside the recording it was fitted to.
 
 Repository truth: read at `8742c5b8` (2026-11-14). APIs named here were grepped: `Modes.ring`,
 `Modes.Mode(ratio, gain, t60, pan)`, `Modes.Friction(a).force(...)`, `Dsp.seedFor`, `Dsp.Noise`, `Room`
@@ -18,6 +20,67 @@ Repository truth: read at `8742c5b8` (2026-11-14). APIs named here were grepped:
 `Soot.render(voice, macros, velocity, take, model)` / `Clutter.render(voice, macros, velocity, take)` as the
 drum-engine shape to copy. `EMBER` is a working name: the word is already a CIRCUIT preset ("EMBER PULSE"),
 an ALLOY preset ("Endless Ember") and a name in `shell/.../Names.kt`. It is not an engine name anywhere.
+
+## Round 0b: the cymbals, refitted (2026-11-14)
+
+**What the owner heard:** "Cymbals need a lot of work. Sounds like hitting sheet metal."
+
+**Why.** Round 0's cymbals were guessed: 40 to 226 modes placed by a formula, with a top band that grew in
+after the strike. Measured against CC0 recordings of a jazz club kit, they sat 11 to 34 dB from the real
+cymbals (the house distance), where two takes of one real flat ride sit 6.16 dB apart over the first 150 ms.
+Their spectral centroid was half the real one's: 3.8 kHz against 7.3 kHz on the ride. The energy sat in
+low-middle modes that rang as separate tones. That is the sheet metal.
+
+**What changed.** Every cymbal and hat is now resynthesized from a recording, the way BREAKER's approved
+cymbals are (docs/BREAKER.md, "The cymbals"). `prototype/ember/fit_ember_cymbals.py` runs BREAKER's own fitter
+(`scripts/fit_breaker_cymbals.py`, imported, not copied) on cymbals BREAKER does not use, and writes
+`prototype/ember/cymbals.json`. `NOTICE.txt` beside it lists the twelve recordings and their sha256.
+- **Source:** Virtuosity Drums (CC0 1.0), `sfzinstruments/virtuosity_drums` at `9f04cf9a`, overhead mic.
+  The library describes itself as a contemporary jazz kit recorded live, "indicative of a typical setup in a
+  live club". Only fitted numbers are in the repository; no recording is.
+- **RIDE:** the library's flat ride (no bell), the dry, spread jazz ride. 400 modes. **RIDE_BELL:** its ride
+  bell, 240 modes. **SIZZLE (new voice):** a crash played with its rivets in, 396 modes. The rivets come from
+  the recording, not a model. **HAT_OPEN:** 300 modes. **HAT_CLOSED, HAT_FOOT:** too short for the 8192-point
+  modal fit, so they are each third-octave band's level over time, hard and soft, played as band noise.
+- **Velocity:** BREAKER's law. Each mode moves by its band's measured soft-minus-hard difference, and the stick
+  moves toward the soft recording's spectrum.
+- **A take:** a fresh strike (BREAKER's law): up to 0.3 Hz of detune, a fresh phase, 1.6 dB rms of level scatter.
+- **Two additions over BREAKER's renderer:**
+  - **Doublets (shape):** a hammered plate's modes come in pairs a few hertz apart, so each partial beats.
+    Each fitted mode becomes a pair 0.4 to 3 Hz apart, fixed per cymbal. The fit's 5.4 Hz resolution cannot
+    see the split.
+  - **The residual (measured):** per band and over time, what the modes and stick leave out of the recording
+    (Serra and Smith), played as band noise. It is what makes a real cymbal look diffuse rather than a set of
+    lines. It is fitted under 200 Hz but not played there, because the overhead heard the kick and the room.
+- **Implements still work:** brush, mallet and bow drive the fitted modes through EMBER's own forces, so the
+  brush ride, the bowed cymbal and the mallet swell use the real flat ride's body.
+- **BUZZ on the cymbals and hats now starts at 0,** which is the cymbal as recorded. Turning it up adds EMBER's
+  modelled loose rivets or plates on top. Kits that piled synthetic rivets on the ride now use SIZZLE:
+  - After Hours A06 is Far Sizzle;
+  - Soul Jazz A05 is Sizzle Crash;
+  - Free's bell and bow lost their synthetic rivets.
+
+**Measured** (Python, each voice dry at DISTANCE 0 and WARMTH 0, against the recording; a take the fit never
+saw is marked):
+
+| Voice | Recording | First 150 ms (dB) | Whole render (dB) |
+|---|---|---:|---:|
+| RIDE | oh_flatride_ride_vl3_rr2 (held out) | 9.27 | 10.77 |
+| RIDE | oh_flatride_ride_vl1_rr1 | 5.93 | 11.23 |
+| RIDE_BELL | oh_ride_bell_vl3_rr1 | 6.36 | 8.73 |
+| SIZZLE | oh_crash_sizzle_vl3_rr1 | 6.53 | 10.42 |
+| HAT_CLOSED | oh_hh_closed_vl4_rr1 | 5.6 | 7.54 |
+| HAT_FOOT | oh_hh_pedal_vl3_rr1 | 5.88 | 7.22 |
+| HAT_OPEN | oh_hh_open_vl4_rr1 | 5.73 | 7.7 |
+
+Two takes of one real flat ride: 6.16 dB over the first 150 ms and 8.57 dB whole. Round 0's cymbals
+against the same recordings: 11 to 34 dB. The ride's centroid is now 6.6 kHz against the recording's 7.2 to
+7.3 kHz (it was 3.8). The whole-render distances on the ride stay near 11 dB because the fit keeps each mode's
+steeper (early) decay, BREAKER's "tight" choice. The overhead recording's slow tail is mostly the room, and
+EMBER's room is DISTANCE.
+
+**Not heard.** The numbers say these are now the same kind of cymbal as real ones. Whether they still sound
+like metal sheet is the owner's listen: the page plays each EMBER cymbal, then its recording.
 
 ## What it is
 
@@ -90,7 +153,7 @@ voice, macros, velocity, take
     │   width and amount follow velocity; the take moves the strike radius and angle
     ▼
 [body: calf membrane (Bessel modes, calf loss, sag, two heads)
-       | cymbal: 40 to 226 modes in 3 bands x 4 groups [cache: kind, TUNE, DAMP]; the top band grows in (wash)
+       | cymbal: 240 to 400 modes fitted to a recording, as doublets, plus its residual (round 0b)
        | wood and steel modes (stick, hoop, sticks clicked)]
     │                         ╲
     │                          ──▶ [threshold parts: wires | rivets | hat plates | jingles]
@@ -123,12 +186,12 @@ Five per voice (four on SNAPS, CLAPS and STICKS), each 0..1, no HOLD (finite hit
 | CROWD | .40 | one person to a table of six, each their own hands and a little early or late | snaps, claps |
 | SLAP | .30 | open palm tone to a cupped, cracking slap | conga |
 
-## The voices (26)
+## The voices (27)
 
 Drums: KICK (18-inch, calf, open, felt beater, "feathered" when soft), SNARE (14-inch, calf, tuned high),
 RIMSHOT, CROSS_STICK, TOM_RACK (12-inch), TOM_FLOOR (14-inch), ELBOW_TOM, MALLET_TOM. Brushes: BRUSH_TAP,
-BRUSH_SWEEP, BRUSH_TOM, BRUSH_RIDE, BRUSH_ROLL. Cymbals: RIDE (thin, riveted), RIDE_BELL, BOWED_CYMBAL,
-CYMBAL_SWELL. Hats: HAT_FOOT (the 2-and-4 chick), HAT_CLOSED (stick), HAT_OPEN. Room and hands: SNAPS (the
+BRUSH_SWEEP, BRUSH_TOM, BRUSH_RIDE, BRUSH_ROLL. Cymbals (fitted to recordings from round 0b): RIDE (a flat ride), RIDE_BELL, SIZZLE (riveted),
+BOWED_CYMBAL, CYMBAL_SWELL. Hats: HAT_FOOT (the 2-and-4 chick), HAT_CLOSED (stick), HAT_OPEN. Room and hands: SNAPS (the
 1962 crowd snapping instead of clapping), CLAPS, TAMBOURINE, CONGA, STICKS (two sticks clicked: the count-in).
 Rolls: PRESS_ROLL.
 
@@ -154,12 +217,12 @@ bars on a triplet grid; the FREE groove is a phrase, not a pattern.
 | A02 | Snare (SNARE) | Brush Tap (BRUSH_TAP) | Fat Snare (SNARE) | Snares Off (SNARE) |
 | A03 | Hat Foot (HAT_FOOT) | Hat Foot (HAT_FOOT) | Hat Tight (HAT_CLOSED) | Mallet Tom High (MALLET_TOM) |
 | A04 | Hat Open (HAT_OPEN) | Slow Sweep (BRUSH_SWEEP) | Hat Open (HAT_OPEN) | Mallet Tom Low (MALLET_TOM) |
-| A05 | Ride (RIDE) | Brush Ride (BRUSH_RIDE) | Crash Ride (RIDE) | Bowed Cymbal (BOWED_CYMBAL) |
-| A06 | Ride Bell (RIDE_BELL) | Dark Ride (RIDE) | Tambourine (TAMBOURINE) | Bowed, Biting (BOWED_CYMBAL) |
+| A05 | Ride (RIDE) | Brush Ride (BRUSH_RIDE) | Sizzle Crash (SIZZLE) | Bowed Cymbal (BOWED_CYMBAL) |
+| A06 | Ride Bell (RIDE_BELL) | Far Sizzle (SIZZLE) | Tambourine (TAMBOURINE) | Bowed, Biting (BOWED_CYMBAL) |
 | A07 | Cross Stick (CROSS_STICK) | Quick Sweep (BRUSH_SWEEP) | Hat Foot (HAT_FOOT) | Elbow Tom (ELBOW_TOM) |
 | A08 | Rimshot (RIMSHOT) | Soft Cross Stick (CROSS_STICK) | Claps (CLAPS) | Hard Rimshot (RIMSHOT) |
 | A09 | Rack Tom (TOM_RACK) | Brushed Tom (BRUSH_TOM) | Conga High (CONGA) | Sticks (STICKS) |
-| A10 | Floor Tom (TOM_FLOOR) | Brushed Floor (BRUSH_TOM) | Conga Low (CONGA) | Bell, Loose (RIDE_BELL) |
+| A10 | Floor Tom (TOM_FLOOR) | Brushed Floor (BRUSH_TOM) | Conga Low (CONGA) | Bell, Open (RIDE_BELL) |
 | A11 | Hat Stick (HAT_CLOSED) | Mallet Tom (MALLET_TOM) | Rimshot (RIMSHOT) | Fast Sweep (BRUSH_SWEEP) |
 | A12 | Snaps (SNAPS) | Two Snapping (SNAPS) | Cross Stick (CROSS_STICK) | Loose Hats (HAT_OPEN) |
 | A13 | Sticks (STICKS) | Hat Open (HAT_OPEN) | Conga Slap (CONGA) | Hat Foot (HAT_FOOT) |
@@ -175,36 +238,36 @@ for the rolls, the swell, the bow and the sweeps). The owner heard ETCH takes at
 
 | Kit | BPM | Soft vs hard, least (dB) | Closest takes (dB) | Closest two pads (dB) |
 |---|---:|---:|---:|---|
-| EMBER | 138 | 3.03 | 1.29 | 4.53 (A10 / A14) |
+| EMBER | 138 | 2.94 | 1.61 | 4.53 (A10 / A14) |
 | EMBER AFTER HOURS | 66 | 2.16 | 1.65 | 4.1 (A09 / A11) |
 | EMBER SOUL JAZZ | 104 | 2.18 | 1.78 | 4.75 (A08 / A16) |
-| EMBER FREE | 80 | 1.92 | 1.19 | 8.06 (A03 / A07) |
+| EMBER FREE | 80 | 1.92 | 1.38 | 7.52 (A11 / A13) |
 
 Between kits, the same pad slot:
 
 | Kits | Same slot, mean (dB) | Same slot, closest (dB) | Identical pads |
 |---|---:|---:|---:|
-| ember / after-hours | 13.4 | 3.76 (A03) | 0 |
-| ember / soul-jazz | 13.4 | 4.24 (A14) | 0 |
-| ember / free | 22.4 | 6.67 (A01) | 0 |
-| after-hours / soul-jazz | 18.1 | 2.98 (A01) | 0 |
-| after-hours / free | 23.5 | 9.96 (A01) | 0 |
-| soul-jazz / free | 27.0 | 10.18 (A08) | 0 |
+| ember / after-hours | 13.1 | 4.07 (A03) | 0 |
+| ember / soul-jazz | 13.4 | 3.8 (A04) | 0 |
+| ember / free | 23.8 | 6.67 (A01) | 0 |
+| after-hours / soul-jazz | 18.4 | 2.98 (A01) | 0 |
+| after-hours / free | 25.0 | 9.96 (A01) | 0 |
+| soul-jazz / free | 27.6 | 10.18 (A08) | 0 |
 
 - **Velocity:** on all 64 pads, a soft hit (velocity .35) differs from the hard one at matched level by at least
   1.92 dB. The changes are in the stroke: on the EMBER snare the spectral centroid falls from
   about 2.5 kHz hard to about 1.3 kHz soft because the wires lift less, not because a filter closes.
-- **Round robin:** the closest two of any pad's four hard takes are 1.19 dB apart. Round 0
+- **Round robin:** the closest two of any pad's four hard takes are 1.38 dB apart. Round 0
   first measured 0.51 dB on FREE's Snares Off (copies by the house measure); a take now also scatters each head
   mode by 1.5 dB (the stick's angle and bounce), which fixed it.
 - **Health:** 768 kit renders, deterministic True, all finite, peak 0.89 (the audition
   match), DC at most 0.00056. An unknown control, a NaN control and a NaN velocity change nothing. WARMTH 0 and
   BUZZ 0 are exact bypasses of their stages.
-- **Every control moves every voice:** the weakest are TAMBOURINE.BUZZ 1.83 dB, CONGA.WARMTH 1.99 dB, ELBOW_TOM.WARMTH 2.25 dB, BRUSH_SWEEP.BUZZ 2.37 dB between 0 and 1,
-  over the whole render.
-- **Render time (Python):** median 154.6 ms a hit, mean 228.5 ms. The slowest,
-  3572.8 ms on BOWED_CYMBAL, is the first render of a cymbal at a new TUNE or DAMP building
-  its cache. Python is not the phone; the Kotlin budget is set at round 1.
+- **Every control moves every voice:** the weakest are HAT_FOOT.BUZZ 1.07 dB, HAT_CLOSED.BUZZ 1.66 dB, TAMBOURINE.BUZZ 1.83 dB, CONGA.WARMTH 1.99 dB between 0 and 1,
+  over the whole render. BUZZ on the hats only adds looseness to the recorded hat, so it moves least.
+- **Render time (Python):** median 154.3 ms a hit. The fitted cymbals are the slow ones in Python (ride about
+  1.1 s, sizzle 1.9 s, the swell and bow 2 to 5 s), because 800 sines are summed with numpy. BREAKER already renders 400
+  fitted modes in Kotlin; round 1 sets EMBER's budget there, and keeps the doublets only if they are heard.
 - **Not heard.** None of this says the kit sounds like 1962. That is the owner's listen.
 
 ## Gates
@@ -232,8 +295,9 @@ The Kotlin port should keep both caches, keyed by the quantised control value, a
 1. **The snare wires as hiss.** If the wires read as noise laid over a drum, the threshold law is wrong or
    too hot. Probe: the velocity ladder (soft should buzz less in proportion, not only in level) and the
    page's A02 against A14 on After Hours (loose wires).
-2. **The ride as a crash.** BREAKER's first ride was heard as a crash. Here the ping band leads and the wash
-   grows in with velocity squared. Probe: the ride's soft-to-hard ladder; a soft ride should be mostly ping.
+2. **The cymbals as sheet metal (heard at round 0).** Round 0b replaces guessed modes with fitted ones. Probe:
+   the page's "Cymbals against real cymbals" section, and the distances above; if a cymbal is still heard as
+   metal sheet, compare its doublets on and off before anything else.
 3. **The sweep as wind.** A brush sweep without the head and wires under it is filtered noise. Probe: the
    SPEED sweep and the velocity ladder (pressure brings the head up).
 4. **The room as reverb.** At DISTANCE .3 the club should be heard as closeness and air, not a tail. Probe:
@@ -245,7 +309,7 @@ The Kotlin port should keep both caches, keyed by the quantised control value, a
 
 ## Next rounds
 
-- **Round 0b:** the owner's listen. Which voices convince, which kits are the right four (a Latin jazz kit is
+- **Round 0c:** the owner's listen to round 0b. Which voices convince, which kits are the right four (a Latin jazz kit is
   the obvious swap for FREE if rebellious should mean something else), the WARMTH and DISTANCE defaults.
 - **Round 1:** `Ember.kt`, `EmberPatch.kt`, the registration rows (`Patches`, `Velocity`, the roster), the
   house probes, a `DeterminismTest` canary, render-time tests; built from the picks, with Kotlin renders

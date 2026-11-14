@@ -1,0 +1,41 @@
+EMBER cymbals and hats, round 0b (Python prototype)
+
+cymbals.json holds synthesis parameters fitted to twelve recordings from
+Virtuosity Drums, https://github.com/sfzinstruments/virtuosity_drums
+at commit 9f04cf9a734527edfbb0a4eee1f674e45bbf71bc, overhead mic.
+License: CC0 1.0 Universal (credited although not required).
+  Samples/oh/flatride/oh_flatride_ride_vl3_rr1.flac
+    sha256 63d1cff0d5a87a24311acc2e799e6911d8a0b958b6d98958a689fec7471ab89f
+  Samples/oh/flatride/oh_flatride_ride_vl1_rr1.flac
+    sha256 5886cdb0cfcbad9ecfec7c2f0bddfc84984812400cd324593bc1a94ff2ee2cf3
+  Samples/oh/ride/oh_ride_bell_vl3_rr1.flac
+    sha256 e9d367cb70b15377fcec2299a15b6590a93e2b8b0d789511616bcb7b8345281d
+  Samples/oh/ride/oh_ride_bell_vl1_rr1.flac
+    sha256 c1d4a6d958fe778cda3c534c3343e1072da5a69b2853a2ae0b1805e6643080e0
+  Samples/oh/crash/oh_crash_sizzle_vl3_rr1.flac
+    sha256 d49368ec3eae95879274f9dac6a1e93f64279f3bcc1c26deb04b3d0bb682bdf1
+  Samples/oh/crash/oh_crash_sizzle_vl1_rr1.flac
+    sha256 10094bc2b8637cfc2af60b8422eb7f1dee38836a8290baf3283eae9e85b5490b
+  Samples/oh/hh/oh_hh_open_vl4_rr1.flac
+    sha256 784687e70ed0adf17229a38f4347674ac4283a0dd85def26c556a5e9be3b1ffc
+  Samples/oh/hh/oh_hh_open_vl1_rr1.flac
+    sha256 bce174c48b9ab905bb48e36ecd5023f6f507d5210d220c7f2a00c21dca670121
+  Samples/oh/hh/oh_hh_closed_vl4_rr1.flac
+    sha256 163b306f52ebe55017e46a7b664b8438458bd7becc01553309a2f441c0bd452b
+  Samples/oh/hh/oh_hh_closed_vl1_rr1.flac
+    sha256 8e23666927c51d04c0e70085f746778fbac0f76638bde06ff54d88c70031c0dc
+  Samples/oh/hh/oh_hh_pedal_vl3_rr1.flac
+    sha256 5311c752a8852e48a05be2d5841bbccb5dedce5b606f49ad8168cc8c52b22235
+  Samples/oh/hh/oh_hh_pedal_vl1_rr1.flac
+    sha256 914fdab7847eacf82f016d48959ddd286c8dff9626ba9a4873a600b3d5d8f6d0
+
+Changes: decoded to mono 44.1 kHz; for the flat ride, bell, sizzle crash and
+open hat, resonances picked from an 8192-point STFT (a frequency, an amplitude
+and a decay each), one level correction per third-octave band, the stick's band
+levels over the first 40 ms, the soft recording's band levels against the hard
+one's, and the residual band levels the resonances leave out; for the closed and
+pedalled hats, each third-octave band's level over time, hard and soft. These
+are derived synthesis parameters, not recordings or PCM. The engine synthesizes
+sinusoids and band noise; it does not play back any recording, and none ships.
+Fitted by prototype/ember/fit_ember_cymbals.py with BREAKER's fitter
+(scripts/fit_breaker_cymbals.py). No endorsement is implied.
