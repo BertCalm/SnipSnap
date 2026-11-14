@@ -103,7 +103,7 @@ internal object EtchAuditionGenerator {
         }
         // 4. FRESH TAPE → ETCH as it lands: every pad at a middle touch (engine take 1), then SAW C2's whole grid.
         for ((i, pad) in EtchKits.pads().withIndex()) {
-            val id = "%02d-%s".format(i + 1, pad.name.lowercase().replace(' ', '-'))
+            val id = "%02d-%s".format(i + 1, pad.name.lowercase().replace(' ', '-').replace("#", "s"))
             write("kit", id, EtchKits.render(pad, .65f, if (pad.loop) 0 else 1), ", \"name\": \"A%02d %s\"".format(i + 1, pad.name))
         }
         val walk = EtchKits.pads().first()
