@@ -463,6 +463,15 @@ picks the zone by velocity and walks the four takes in order, then repeats; a ha
 (attack centroid, level-free) and every take is a different strike; a loop pad keeps three zones through saving.
 Not exercised: phone audio and an MPC. MPC 2 keeps each zone's first take (the owner's format limit, 2026-11-14).
 
+**Accepted (2026-11-14).** The owner heard version 8 of the page (the presets at model 2, the kit and SAW C2's
+whole grid) and accepted it: "Sounds good in audition. Proceed."
+
+**Render time.** A one-shot takes 56 to 75 ms at model 2 and a line loop 0.3 to 0.5 s (warm, the session's machine;
+`EtchKitsTest` prints them). The voice runs at 4x with several `tanh` and `exp` calls a sample, chiefly the
+cutoff's two `exp` and a `tanh`; a control-rate cutoff would cut that but changes every render, so it waits for a
+listening round. The kit build renders its 165 cells in parallel, slowest first, and assembles them exactly as the
+serial path does (`EtchKitsTest` compares every sample): 14.0 s serial, 6.8 s on four cores.
+
 ## Published audition
 
 Round 1 published 2026-11-11 as a private artifact:
@@ -478,6 +487,10 @@ The rebuilt round robin published 2026-11-12 to the same link as version 4, buil
 
 Round 3 (the tone) published 2026-11-12 to the same link as version 5, built from `c445980b`:
 96 clips, every clip re-rendered with the new tone plus a six-clip before/after section. Accepted 2026-11-12.
+
+Version 8 (2026-11-14) re-rendered the presets at model 2 and added the kit (all sixteen pads at a middle touch) and
+SAW C2's whole 3 × 4 grid: 69 clips. The owner heard it: "Sounds good in audition. Proceed." The presets, the kit and
+the grid are accepted.
 
 Round K2 published 2026-11-14 to the same link as version 7: 41 clips rendered by the Kotlin engine
 (`./gradlew :synth:generateEtchAudition`): the three endings on every voice, a pad riff of short notes on SAW,
