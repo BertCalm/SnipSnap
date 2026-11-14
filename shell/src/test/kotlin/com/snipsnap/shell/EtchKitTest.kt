@@ -1,6 +1,5 @@
 package com.snipsnap.shell
 
-import com.snipsnap.audio.FeatureExtractor
 import com.snipsnap.audio.Snip
 import com.snipsnap.audio.WavReader
 import com.snipsnap.kit.KitAssembler
@@ -9,6 +8,10 @@ import com.snipsnap.kit.Mpc3Exporter
 import com.snipsnap.synth.EtchKits
 import java.io.File
 import java.nio.file.Files
+import kotlin.math.PI
+import kotlin.math.cos
+import kotlin.math.sin
+import kotlin.math.sqrt
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -59,12 +62,28 @@ class EtchKitTest {
         } finally { dir.deleteRecursively() }
     }
 
-    /** Level-free brightness of a take's first 150 ms: the accent's filter opening, not its loudness. */
-    private fun attackCentroid(snip: Snip): Float {
-        val n = minOf(snip.frameCount, (0.15f * snip.sampleRate).toInt())
-        val head = snip.samples.copyOf(n)
-        val peak = head.maxOf { kotlin.math.abs(it) }.coerceAtLeast(1e-9f)
-        return FeatureExtractor.extract(Snip(FloatArray(n) { head[it] / peak }, 1, snip.sampleRate)).centroidHz
+    /**
+     * Brightness of a take's attack as EtchTest measures it: the magnitude-weighted centroid over 150 Hz to 5 kHz of
+     * the first 60 ms, on an even 10 Hz grid, so the fundamental (C2 is 65 Hz) and the level do not decide it.
+     */
+    private fun attackCentroid(snip: Snip): Double {
+        val x = snip.samples
+        val rate = snip.sampleRate.toDouble()
+        val n = minOf(x.size, (.06 * rate).toInt())
+        var num = 0.0; var den = 0.0
+        var f = 150.0
+        while (f < 5000.0) {
+            var re = 0.0; var im = 0.0
+            for (i in 0 until n) {
+                val w = .5 - .5 * cos(2 * PI * i / (n - 1))
+                val ph = 2 * PI * f * i / rate
+                re += x[i] * w * cos(ph); im -= x[i] * w * sin(ph)
+            }
+            val m = sqrt(re * re + im * im)
+            num += m * f; den += m
+            f += 10.0
+        }
+        return num / den
     }
 
     @Test fun `a harder zone is a brighter strike and every take is a different strike`() {
