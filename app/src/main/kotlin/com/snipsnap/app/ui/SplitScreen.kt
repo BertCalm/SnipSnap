@@ -209,7 +209,7 @@ private fun SplitDesk(
             } catch (e: CancellationException) { throw e }
             catch (e: Exception) {
                 Log.e("SplitScreen", "SPLIT FX settings not saved", e)
-                onToast("SPLIT FX SETTINGS NOT SAVED")
+                onToast(Copy.SPLIT_FX_NOT_SAVED)
             }
         }
     }
@@ -513,7 +513,7 @@ private fun SplitDesk(
             } catch (e: CancellationException) { throw e }
             catch (e: Exception) {
                 Log.e("SplitScreen", "SPLIT PRINT refused", e)
-                onToast(e.message ?: "SPLIT PRINT FAILED")
+                onToast(e.message ?: Copy.SPLIT_PRINT_FAILED)
             } finally {
                 working = false
             }

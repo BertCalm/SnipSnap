@@ -1143,7 +1143,7 @@ fun KitScreen(
                     KitMidi.TARGETS,
                     supported = true,
                     connected = true,
-                    hint = "A LEARNED PAD PLAYS NO SOUND",
+                    hint = Copy.LEARNED_PAD_NO_SOUND,
                 )
             }
         }
