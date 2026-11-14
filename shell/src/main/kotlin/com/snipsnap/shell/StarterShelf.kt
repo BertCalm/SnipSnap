@@ -20,7 +20,7 @@ object StarterShelf {
             Copy.STARTER_HEADING_START_HERE,
             listOf("blank", "factory", "velocity", "lucky-dip", "lucky-dip-ab", "strike-fx", "chip", "vent"),
         ),
-        Group(Copy.STARTER_HEADING_BASS, listOf("tempest-tuned", "keel", "upright", "contour", "ballast", "tangle")),
+        Group(Copy.STARTER_HEADING_BASS, listOf("tempest-tuned", com.snipsnap.synth.EtchKits.ID, "keel", "upright", "contour", "ballast", "tangle")),
         Group(
             Copy.STARTER_HEADING_KEYS,
             listOf(

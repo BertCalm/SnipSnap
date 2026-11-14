@@ -21,7 +21,7 @@ data class EtchPatch(
         Patches.validateMacros(this, Etch.macrosFor(voice))
         require(midi in Etch.MIDI_MIN..Etch.MIDI_MAX) { "ETCH midi out of ${Etch.MIDI_MIN}..${Etch.MIDI_MAX}: $midi" }
         require(velocity.isFinite() && velocity in 0f..1f) { "ETCH velocity out of 0..1: $velocity" }
-        require(model == Etch.MODEL_VERSION) { "unsupported etch model $model" }
+        require(model in Etch.ORIGINAL_MODEL..Etch.MODEL_VERSION) { "unsupported etch model $model" }
     }
 
     override val engine get() = ENGINE
@@ -29,7 +29,7 @@ data class EtchPatch(
     override fun render() = render(velocity)
 
     /** Take [take] of this patch at [velocity] ([Restrike.take]); take 0 is the plain render. */
-    fun render(velocity: Float, take: Int = 0, seed: Int = 0) = Etch.render(voice, macros, midi, velocity, take, seed)
+    fun render(velocity: Float, take: Int = 0, seed: Int = 0) = Etch.render(voice, macros, midi, velocity, take, seed, model)
 
     override fun withMacros(macros: Map<String, Float>) = copy(macros = macros)
 
@@ -44,13 +44,12 @@ data class EtchPatch(
     companion object {
         const val ENGINE = "ETCH"
         const val VERSION = Patches.VERSION
-        private const val ORIGINAL_MODEL = 1
 
         fun fromJsonValue(value: JsonValue): Patch {
             val obj = value.obj()
             // A missing model always means the first model, even after a future revision.
-            val model = obj["model"]?.takeUnless { it is JsonValue.Null }?.int() ?: ORIGINAL_MODEL
-            if (model != Etch.MODEL_VERSION) throw JsonException("unsupported etch model $model")
+            val model = obj["model"]?.takeUnless { it is JsonValue.Null }?.int() ?: Etch.ORIGINAL_MODEL
+            if (model !in Etch.ORIGINAL_MODEL..Etch.MODEL_VERSION) throw JsonException("unsupported etch model $model")
             return Patches.decode(value, ENGINE, { n -> EtchVoice.entries.firstOrNull { it.name == n } }) { name, voice, macros ->
                 val midi = obj["midi"]?.takeUnless { it is JsonValue.Null }?.int() ?: Etch.DEFAULT_MIDI
                 val velocity = obj["velocity"]?.takeUnless { it is JsonValue.Null }?.num()?.toFloat() ?: 1f
