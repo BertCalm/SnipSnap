@@ -402,18 +402,83 @@ sound, unknown and non-finite macros, velocity brighter on every voice, four dis
 - Render time on this machine: 51 to 88 ms per one-shot, 330 to 460 ms per line loop. A one-shot is a little over
   the house's "tens of milliseconds"; a loop needs the cache a kit pad already gives it.
 
+## Round K2 (2026-11-14)
+
+The owner asked for the rest of the engine after K1: test a fix for short low notes reading as KICK, the picker,
+the factory roster, keygroups, a kit, velocity and round robin end to end, render time and these docs.
+
+**The ending study.** The app names a saved sound by what `Classifier` hears, and a
+bass-heavy sound only reads TONAL if it takes more than 500 ms to fall 20 dB from its peak. Over a grid of six
+voices, seven notes (C1 to C4), three velocities and six HOLD settings, 122 of 756 one-shots (16%) read as KICK or
+TOM, every one a short note: RUBBER 57, DUB 27, GRIT 24, SQUARE 8, WHISTLE 6, SAW none, and none from HOLD 0.6 up.
+Three levers were measured (study-only parameters on `Etch.OneShotShape`; the accepted render is unchanged):
+- **Brighter low notes do not work.** Up to 2.5 octaves of filter lift moves the low-note centroid from 67 to 69 Hz:
+  on C1 to F#1 the fundamental itself is most of the energy.
+- **A floor on the gate helps less than a release:** a 0.30 s floor with a 30 ms release left 32 of 540 on the
+  first, five-note sweep (C1 to C3; no note from G3 up ever read as a drum), where a 100 ms release alone left 24.
+- **A longer release works:** 150 ms leaves 4, 200 ms leaves 2, all RUBBER at C1 (its sub-octave sits near 16 Hz).
+Three endings are on the listening page: **A** as accepted (7 ms release, 122 readings), **B** ring-out (150 ms on
+every note, 4) and **C** low ring-out (60 ms from C3 up rising to 180 ms at C1, RUBBER on B's release, 4). B makes
+HOLD 0 fade over about 0.75 s instead of 0.1 s; C keeps it near 0.25 s from C3 up.
+
+**The owner's choice (2026-11-14): "C all".** C is model 2 (`Etch.MODEL_VERSION = 2`, `Etch.endingFor`): every voice
+rings out 60 ms from C3 up, rising to 180 ms at C1, and RUBBER rings out 150 ms on every note. New patches, the
+factory presets, the kit and the keys render model 2. A recipe saved as model 1, or saved before models were
+written, keeps model 1's 7 ms ending, byte for byte (`EtchTest`). Loops are the same in both models. On the
+classifier grid, model 2's only drum readings are RUBBER's shortest notes at C1.
+
+**The roster.** The fourteen K1 presets (each voice's note and line, SAW's busy line, SQUARE's sparse line) are
+the factory bank: every one a setting heard in round 3. `PatchTypes.PROTOTYPES` no longer lists ETCH; `Presets`
+serves `EtchPresets`; `UserPresets` promotes a user preset as `EtchPatch.fromJsonText`, keeping the root, velocity
+and model; `EtchPresets` has a `promoted` list for those. `EtchPresetsTest` holds the preset contracts, including
+that no preset reads as a drum at its saved note and velocity.
+
+**The kit.** FRESH TAPE → ETCH, under BASS, 130 BPM, C minor pentatonic (`EtchKits`):
+- A01 to A08: SAW's note walking C minor pentatonic up from C2. A09 to A13: the other five voices' notes.
+- A14 to A16: RUBBER's line, GRIT's line and SAW's busy line, the three lines at the kit's tempo. SQUARE's and
+  DUB's lines run at 112 BPM, so they stay presets.
+- Every note pad is three velocity zones (0.30, 0.65, 1.0) by four takes (the engine's dealt takes 1 to 4); every
+  loop pad is three velocity zones with no takes, since a restarted line plays the same line and a loop render
+  costs 0.3 to 0.5 s. Notes share mute group 1 (a new note cuts the last, as a monophonic line does); loops share 2.
+- The pads carry provenance (voice, preset, note, velocities, takes) but no single recipe, as SCUFF's and the other
+  velocity-by-take kits do: one recipe re-renders take 0 at one velocity, which is not the audio a grid pad holds.
+
+**Keygroups.** MAKE INSTRUMENT renders finite keys (`EtchPadMaker`, `EtchKeygroupMaker`, after WICK's): C1 to C4,
+roots every minor third plus the authored note, three touch layers (0.30, 0.65, 1.0 of the saved velocity, so the
+accent changes the tone), no loops, and the source recipes bound to the PCM by hash. A line (HOLD from 0.85) is
+not offered as keys. The keys carry no round robin: one take per touch, as WICK's.
+
+**Chord tool: open, the owner's call.** The keys are polyphonic, and bass-register chords play every note
+(`EtchKeygroupMakerTest`), but the chord tool voices around G3 to F#4, above ETCH's C4 ceiling.
+
+**The picker.** ETCH is in SYNTH's engine list after OSTERIA (86 engines), with WICK's typed-patch handling: the
+complete recipe (root, velocity, model) survives same-frame edits, voice and engine navigation, SAVE and SEND;
+VELOCITY sits under the macros; HOLD's top reads LOOP; MAKE INSTRUMENT opens the finite keys. On-device test:
+`EtchSynthScreenTest`. The app is not compiled in a session without an Android SDK; CI's `android-build` and
+`emulator-tests` are the evidence for it.
+
+**Velocity and round robin, in software (`EtchKitTest`).** Two note pads' 3 × 4 grids survive saving, reloading,
+the app's pad resolver and the MPC 3 export, read back from the files each step wrote (`TriadKitProof`); playback
+picks the zone by velocity and walks the four takes in order, then repeats; a harder zone is a brighter strike
+(attack centroid, level-free) and every take is a different strike; a loop pad keeps three zones through saving.
+Not exercised: phone audio and an MPC. MPC 2 keeps each zone's first take (the owner's format limit, 2026-11-14).
+
 ## Published audition
 
 Round 1 published 2026-11-11 as a private artifact:
 <https://claude.ai/artifact/7TUKvRhXeFUz9fJTMsEKJn>, built from `768df8a5` (round 1); round 1b republished to the same link from `02b725f2`
 (`gen_audition.py` then `build_page.py`). 54 clips and `manifest.json`. The reference clips
-are not on the page. Owner listening is pending.
+are not on the page. Heard 2026-11-12: "That's better", then "It all seems fine from the audition."
 
 Round 2 published 2026-11-12 to the same link as version 3, built from `566bbf0b`: 88 clips
-(the 58 round-1b clips unchanged, 30 new). Owner listening of the four new voices is pending.
+(the 58 round-1b clips unchanged, 30 new). Heard 2026-11-12: the owner chose the six voices.
 
 The rebuilt round robin published 2026-11-12 to the same link as version 4, built from
-`c4dddfca`: 90 clips (15 take clips replaced, two A/B clips added). Not heard.
+`c4dddfca`: 90 clips (15 take clips replaced, two A/B clips added). Heard with round 3.
 
 Round 3 (the tone) published 2026-11-12 to the same link as version 5, built from `c445980b`:
-96 clips, every clip re-rendered with the new tone plus a six-clip before/after section. Not heard.
+96 clips, every clip re-rendered with the new tone plus a six-clip before/after section. Accepted 2026-11-12.
+
+Round K2 published 2026-11-14 to the same link as version 7: 41 clips rendered by the Kotlin engine
+(`./gradlew :synth:generateEtchAudition`): the three endings on every voice, a pad riff of short notes on SAW,
+RUBBER and DUB, and the fourteen presets. Round 3's page stays at `round3.html` with its clips. Not heard.
