@@ -15,10 +15,11 @@ import kotlin.random.Random
  * - round 2's hats, cross stick, shaker, tambourine and three toms;
  * - round 3's ride and crash, a modal synth fitted to CC0 recordings ([BreakerCymbal]);
  * - the snare riser, a roll into the spring;
- * - model 5's Bump, the spring tank kicked.
+ * - model 5's Bump, the spring tank kicked;
+ * - model 7's surf tom fill, triplets down the three toms.
  *
- * The cymbals, the riser and Bump have no drum class of their own in the classifier; they file as PERC,
- * as BACKWASH's percussion does.
+ * The cymbals, the riser, Bump and the fill have no drum class of their own in the classifier; they file
+ * as PERC, as BACKWASH's percussion does.
  */
 enum class BreakerVoice(val drumClass: DrumClass) {
     KICK(DrumClass.KICK), SNARE(DrumClass.SNARE),
@@ -26,7 +27,7 @@ enum class BreakerVoice(val drumClass: DrumClass) {
     STICK(DrumClass.PERC), SHAKER(DrumClass.PERC), TAMBOURINE(DrumClass.PERC),
     TOM_FLOOR(DrumClass.TOM), TOM_RACK(DrumClass.TOM), TOM_HIGH(DrumClass.TOM),
     RIDE(DrumClass.PERC), CRASH(DrumClass.PERC), RISER(DrumClass.PERC),
-    BUMP(DrumClass.PERC),
+    BUMP(DrumClass.PERC), FILL(DrumClass.PERC),
 }
 
 /**
@@ -56,13 +57,15 @@ enum class BreakerVoice(val drumClass: DrumClass) {
  * grit, the dwell drive. Every constant is a shape the owner heard at round 0, not a measurement of
  * the processor, the amp or a record. No samples of any record are used.
  *
- * No HOLD. Every hit is a one-shot, [SECONDS] long, under the classifier's loop threshold, with two
- * exceptions that are longer and declared PERC: the crash ([CRASH_SECONDS]) and the riser
- * ([RISER_SECONDS]).
+ * No HOLD. Every hit is a one-shot, [SECONDS] long, under the classifier's loop threshold, with four
+ * exceptions that are longer and declared PERC: the crash ([CRASH_SECONDS]), the riser
+ * ([RISER_SECONDS]), Bump ([BUMP_SECONDS]) and the fill ([FILL_SECONDS]).
  */
 object Breaker {
     /**
      * Renderer models. A save keeps the model it was made with.
+     * - **7 (the surf tom fill, 2026-11-14):** the fill arrives ([FILL]). Nothing else changes: every other
+     *   voice renders as it does on model 6.
      * - **6 (the genre kits' takes, 2026-11-13):** a later take of a kick or tom lands with a slightly
      *   different beater ([BEATER_SPREAD]): its click, punch, pitch bend and head tone move a little. Its
      *   first take, the reference, is model 5's.
@@ -78,7 +81,7 @@ object Breaker {
      *   and the slap is the round-0 95 ms. The ride is round 2's SKIN ride through the rig.
      * - **1 (round 1):** every voice through tank B, a 90 ms slap.
      */
-    const val MODEL_VERSION = 6
+    const val MODEL_VERSION = 7
 
     /** A hit's length: tails are capped here, with a [FADE_SECONDS] raised-cosine fade, so a hit never files as a LOOP (1.5 s). */
     const val SECONDS = 1.49f
@@ -94,10 +97,14 @@ object Breaker {
     const val RISER_SECONDS = 3.4f
     private const val RISER_BUILD = 2.4f
 
+    /** The fill: two beats at 92 BPM and its last stroke's whole hit after them. */
+    const val FILL_SECONDS = 2.7f
+
     fun secondsFor(voice: BreakerVoice) = when (voice) {
         BreakerVoice.CRASH -> CRASH_SECONDS
         BreakerVoice.RISER -> RISER_SECONDS
         BreakerVoice.BUMP -> BUMP_SECONDS
+        BreakerVoice.FILL -> FILL_SECONDS
         else -> SECONDS
     }
 
@@ -106,6 +113,55 @@ object Breaker {
 
     /** The voice model 5 added. Earlier models refuse it. */
     private val MODEL_5 = setOf(BreakerVoice.BUMP)
+
+    /** The voice model 7 added. Earlier models refuse it. */
+    private val MODEL_7 = setOf(BreakerVoice.FILL)
+
+    /**
+     * The surf tom fill, as the owner picked it (2026-11-14, docs/BREAKER.md, "The surf tom fill"): fill B,
+     * two beats of sixteenth-note triplets down the toms, four on the high tom, four on the rack, four on the
+     * floor, an accent on every third and the last the hardest. Each stroke is its own tom as the BREAKER kit
+     * plays it ([FILL_TOMS_MODEL]), a fresh strike through that tom's own rig: the owner heard one spring for
+     * the whole run against a spring for each hit and picked "three pads". Every BREAKER beat was heard at
+     * 92 BPM, and so was the fill; `render` has no tempo, so the fill is that long on every kit.
+     * Each stroke: when (in beats), which tom, and how hard against the pad's velocity.
+     */
+    private val FILL_STROKES: List<Triple<Double, BreakerVoice, Float>> = (0 until 12).map { i ->
+        Triple(i / 6.0, listOf(BreakerVoice.TOM_HIGH, BreakerVoice.TOM_RACK, BreakerVoice.TOM_FLOOR)[i / 4],
+            if (i == 11) 1f else if (i % 3 == 0) .9f else .6f)
+    }
+
+    /** The fill's beat, in seconds: 92 BPM, BREAKER's tempo. */
+    private const val FILL_BEAT = 60.0 / 92.0
+
+    /** The renderer the fill's toms play on: the BREAKER kit's, the toms the owner heard it with. */
+    private const val FILL_TOMS_MODEL = 5
+
+    /**
+     * The fill's DRIP at its default, the owner's pick: about a third of each tom's own spring ("4 Drier", of
+     * four from each tom's full spring down). DRIP scales every tom's spring together against the rack tom's
+     * own .45, so at this default the floor tom gets .21, the rack .1575 and the high tom .14.
+     */
+    const val FILL_DRIP = .45f * .35f
+    private const val FILL_DRIP_REF = .45f
+
+    /**
+     * The fill's strokes, summed: each its tom's whole render at its share of [m]'s spring, struck at the pad's
+     * [velocity] times its accent, and re-struck per stroke and [take] (`take * 100 + stroke + 1`, so no two
+     * strokes or takes share a strike). A softer pad strikes every tom softer, which is each tom's own
+     * velocity law, not a fader.
+     */
+    private fun tomFill(m: Map<String, Float>, velocity: Float, take: Int, frames: Int, rate: Int): FloatArray {
+        val out = FloatArray(frames)
+        FILL_STROKES.forEachIndexed { i, (beat, tom, accent) ->
+            val own = defaults(tom, FILL_TOMS_MODEL)
+            val drip = (m.getValue("DRIP") * own.getValue("DRIP") / FILL_DRIP_REF).coerceIn(0f, 1f)
+            val hit = render(tom, m.filterKeys { it in own } + ("DRIP" to drip), velocity * accent, take * 100 + i + 1, FILL_TOMS_MODEL).samples
+            val at = Math.round(beat * FILL_BEAT * rate).toInt()
+            for (k in hit.indices) if (at + k < frames) out[at + k] += hit[k]
+        }
+        return out
+    }
 
     /**
      * DAMP (model 5, shape): each drum's damping. At .5 nothing changes. Above it the drum is damped
@@ -191,6 +247,8 @@ object Breaker {
         BreakerVoice.RISER to mapOf("DUST" to .2f, "DRIP" to .6f, "SLAP" to .2f, "CRUSH" to .5f, "AMP" to .2f),
         // Bump: DRIP is how hard the tank is kicked. Like the cymbals, it skips the tube.
         BreakerVoice.BUMP to mapOf("DUST" to .2f, "DRIP" to .7f, "SLAP" to .2f, "CRUSH" to .5f, "AMP" to .3f),
+        // The fill: the toms' own rig, with the spring the owner picked (FILL_DRIP).
+        BreakerVoice.FILL to mapOf("DRIP" to FILL_DRIP, "CRUSH" to .8f),
     )
 
     private val DRY get() = mapOf("DUST" to 0f, "DRIP" to 0f, "SLAP" to 0f, "CRUSH" to 0f, "AMP" to 0f)
@@ -401,11 +459,19 @@ object Breaker {
         require(model >= 2 || voice == BreakerVoice.KICK || voice == BreakerVoice.SNARE) { "breaker model 1 has no $voice" }
         require(model >= 3 || voice !in MODEL_3) { "breaker model $model has no $voice" }
         require(model >= 5 || voice !in MODEL_5) { "breaker model $model has no $voice" }
+        require(model >= 7 || voice !in MODEL_7) { "breaker model $model has no $voice" }
         val m = settled(voice, macros, model)
         val v = velocity.takeIf { it.isFinite() }?.coerceIn(0f, 1f) ?: 1f
         val rate = Dsp.RATE
         val seconds = secondsFor(voice)
         val frames = (seconds * rate).toInt()
+        if (voice == BreakerVoice.FILL) {
+            // Each stroke has been through its own tom's rig, so the fill is only summed and levelled.
+            val out = tomFill(m, v, take, frames, rate)
+            Dsp.levelTo(out, rate, Dsp.MELODIC_LOUDNESS_TARGET)
+            Dsp.fadeTail(out)
+            return Snip(out, 1, rate)
+        }
         val cymbal = modal(voice, model)
         val riser = voice == BreakerVoice.RISER
         val bumped = voice == BreakerVoice.BUMP

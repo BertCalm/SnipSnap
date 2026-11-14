@@ -11,6 +11,7 @@ import kotlin.math.sqrt
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
@@ -57,8 +58,8 @@ class BreakerTest {
             for (m in corners) {
                 val x = Breaker.render(voice, m).samples
                 assertEquals(length, x.size, "$voice $m length")
-                // Three declared exceptions ring longer: the crash, the riser and Bump.
-                if (voice !in setOf(BreakerVoice.CRASH, BreakerVoice.RISER, BreakerVoice.BUMP)) assertTrue(length < (1.5 * rate).toInt(), "$voice stays under the loop threshold")
+                // Four declared exceptions ring longer: the crash, the riser, Bump and the fill.
+                if (voice !in setOf(BreakerVoice.CRASH, BreakerVoice.RISER, BreakerVoice.BUMP, BreakerVoice.FILL)) assertTrue(length < (1.5 * rate).toInt(), "$voice stays under the loop threshold")
                 assertTrue(x.all { it.isFinite() }, "$voice $m finite")
                 val peak = x.maxOf { abs(it) }
                 assertTrue(peak in .01f..1f, "$voice $m peak $peak")
@@ -84,9 +85,9 @@ class BreakerTest {
 
     /**
      * The drums the rig's tail claims are about. The cymbals ring longer than any tail window here, the
-     * riser is all build, and Bump is the tank itself.
+     * riser is all build, Bump is the tank itself, and the fill is still playing through every window.
      */
-    private val struckDrums = BreakerVoice.entries - setOf(BreakerVoice.RIDE, BreakerVoice.CRASH, BreakerVoice.RISER, BreakerVoice.BUMP)
+    private val struckDrums = BreakerVoice.entries - setOf(BreakerVoice.RIDE, BreakerVoice.CRASH, BreakerVoice.RISER, BreakerVoice.BUMP, BreakerVoice.FILL)
 
     @Test
     fun `CRUSH lifts the tail, and past halfway swells the kick's and snare's back up`() {
@@ -418,6 +419,69 @@ class BreakerTest {
             assertEquals(patch, back)
             assertEquals(Breaker.MODEL_VERSION, back.model)
         }
+    }
+
+    /** The fill as the owner heard it picked (`BreakerFillStudy.eachOwnRig`, each tom's DRIP at [drip] of its own), levelled. */
+    private fun fillAsHeard(drip: Float, velocity: Float = 1f, take: Int = 0): FloatArray {
+        val out = FloatArray((Breaker.FILL_SECONDS * rate).toInt())
+        val toms = listOf(BreakerVoice.TOM_HIGH, BreakerVoice.TOM_RACK, BreakerVoice.TOM_FLOOR)
+        for (i in 0 until 12) {
+            val tom = toms[i / 4]
+            val own = Breaker.defaults(tom, 5)
+            val accent = if (i == 11) 1f else if (i % 3 == 0) .9f else .6f
+            val hit = Breaker.render(tom, own + ("DRIP" to own.getValue("DRIP") * drip), velocity * accent, take * 100 + i + 1, 5).samples
+            val at = Math.round(i / 6.0 * (60.0 / 92) * rate).toInt()
+            for (k in hit.indices) if (at + k < out.size) out[at + k] += hit[k]
+        }
+        Dsp.levelTo(out, rate, Dsp.MELODIC_LOUDNESS_TARGET)
+        Dsp.fadeTail(out)
+        return out
+    }
+
+    @Test
+    fun `the fill at its defaults is the owner's pick, and DRIP moves every tom's spring together`() {
+        // Picked 2026-11-14: fill B, triplets down, each stroke the BREAKER kit's own tom through its own spring
+        // ("three pads"), the spring at about a third of each tom's ("4 Drier"). The fill's DRIP is the rack tom's
+        // share (.45 x .35); the floor's and high tom's follow in proportion.
+        val fill = Breaker.render(BreakerVoice.FILL).samples
+        val heard = fillAsHeard(.35f)
+        val err = fill.indices.maxOf { abs(fill[it] - heard[it]) }
+        println("BREAKER FILL against the pick as heard: max difference ${"%.1e".format(err)}")
+        // Not bit for bit: the fill scales the rack's .45 where the study scaled each tom's own DRIP, a last-digit
+        // difference in a float.
+        assertTrue(err < 1e-3f, "the fill is the pick ($err)")
+        // Its DRIP at the toms' own springs is the version the owner heard as too wet (level 1 of 4).
+        val wet = Breaker.render(BreakerVoice.FILL, mapOf("DRIP" to .45f)).samples
+        val asBuilt = fillAsHeard(1f)
+        assertTrue(wet.indices.maxOf { abs(wet[it] - asBuilt[it]) } < 1e-3f, "DRIP .45 is every tom's own spring")
+        fun tail(x: FloatArray) = db(rms(x, 1.5, 2.2)) - db(rms(x, 0.0, 1.3))
+        println("BREAKER FILL tail against the run: DRIP default ${"%.1f".format(tail(fill))} dB, .45 ${"%.1f".format(tail(wet))} dB")
+        assertTrue(tail(wet) > tail(fill) + 3.0, "more DRIP, more spring after the run")
+        // Earlier models never had it.
+        assertFailsWith<IllegalArgumentException> { Breaker.render(BreakerVoice.FILL, model = 6) }
+        assertFailsWith<IllegalArgumentException> { BreakerPatch("Fill", BreakerVoice.FILL, emptyMap(), 6) }
+    }
+
+    @Test
+    fun `a softer fill strikes every tom softer, and each take is a fresh run`() {
+        val full = Breaker.render(BreakerVoice.FILL).samples
+        val soft = Breaker.render(BreakerVoice.FILL, velocity = .3f).samples
+        // Each tom's own velocity law (SKIN's contact), not a fader: the run is levelled either way.
+        assertTrue(soft.indices.maxOf { abs(soft[it] - fillAsHeard(.35f, .3f)[it]) } < 1e-3f, "a softer pad strikes the toms softer")
+        val octaves = listOf(125f, 250f, 500f, 1000f, 2000f, 4000f)
+        fun shape(x: FloatArray): List<Double> { val all = db(rms(x, 0.0, 1.3)); return octaves.map { db(rms(band(x, it, 1.4f), 0.0, 1.3)) - all } }
+        val moved = shape(full).zip(shape(soft)).maxOf { (a, b) -> abs(a - b) }
+        println("BREAKER FILL 30% against full, most-moved octave at matched loudness: ${"%.1f".format(moved)} dB")
+        assertTrue(moved > 1.0, "a softer fill is another strike, not a quieter copy ($moved dB)")
+        // Every take re-strikes all twelve strokes: not a copy (more than 40 dB apart would be).
+        val patch = BreakerPatch("Fill", BreakerVoice.FILL, emptyMap())
+        val take1 = assertNotNull(Restrike.take(patch, 1f, 16, 1)).samples
+        var ab = 0.0; var aa = 0.0; var bb = 0.0
+        val n = (1.3 * rate).toInt()
+        for (i in 0 until n) { ab += full[i] * take1[i].toDouble(); aa += full[i] * full[i].toDouble(); bb += take1[i] * take1[i].toDouble() }
+        val apart = -10 * log10(2 * (1 - ab / sqrt(aa * bb)) + 1e-12)
+        println("BREAKER FILL take 1 against take 0: ${"%.1f".format(apart)} dB apart")
+        assertTrue(apart < 40.0, "a later take is a fresh run ($apart dB apart)")
     }
 
     @Test

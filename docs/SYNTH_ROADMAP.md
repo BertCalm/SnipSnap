@@ -3494,6 +3494,16 @@ The genre kits (renderer models 5 and 6, 2026-11-12 to 11-13):
 - **The final audition** (`:shell:generateBreakerAudition`, 68 clips): the owner signed off the
   sound on 2026-11-13 (every voice, every control, the edges, the presets and the three kits).
 
+The surf tom fill (renderer model 7, 2026-11-14):
+- **Picked by ear in two rounds** (`:synth:generateBreakerFillStudy`):
+  - fill B, sixteenth-note triplets down the three toms;
+  - each stroke through its own tom's spring ("three pads"), at about a third of it ("4 Drier");
+  - a fresh take heard as the same fill with fresh hits.
+- **Built:** FILL, twelve strokes of the BREAKER kit's own toms (model 5), each its own fresh strike. A
+  softer pad strikes every tom softer. DRIP scales the three springs together.
+- **Open:** where it goes on the kits (the owner's call), then saving, playback and export on a kit,
+  and hardware.
+
 ### ETCH, Kotlin round K1 (2026-11-13)
 
 Owner-requested step-line bass: an accented, sliding sixteen-step line → BITE (a clean/drive blend after a bass

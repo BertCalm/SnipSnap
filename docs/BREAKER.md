@@ -9,10 +9,10 @@ The characteristic gesture is **dusty crack → spring drip → crushed swell �
 
 ## Status
 
-Renderer model 6 (the genre kits' takes), a prototype outside the factory presets
-(`PatchTypes.PROTOTYPES`). The BREAKER kit stays on model 5, which renders it exactly as the owner
-accepted it on model 4.
-Fourteen voices; the kick and snare are built from the owner's round-0 picks.
+Renderer model 7 (the surf tom fill; model 6 brought the genre kits' takes), a prototype outside the
+factory presets (`PatchTypes.PROTOTYPES`). The BREAKER kit stays on model 5, which renders it exactly
+as the owner accepted it on model 4.
+Fifteen voices; the kick and snare are built from the owner's round-0 picks.
 
 At round 1 the owner heard:
 - the snare, its takes and a half-strength hit as theirs;
@@ -74,7 +74,7 @@ On the final audition (2026-11-13, below, "The audition") the owner signed off t
 - **The three kits side by side:** the shelf is right.
 
 Still to come:
-- the surf tom fill;
+- the surf tom fill on a kit (built as a voice, below, "The surf tom fill");
 - a phone and an MPC playing the kits.
 
 ## The kit
@@ -454,6 +454,60 @@ others), including kits already heard and accepted. Asked, the owner chose to le
 (2026-11-13): nobody has heard it as a problem, and the accepted kits stay as accepted.
 
 Model-5 saves keep their takes, and the BREAKER kit stays on model 5.
+
+## The surf tom fill (model 7)
+
+The fill is a voice of its own, FILL, picked by ear over two rounds (2026-11-14) from
+`:synth:generateBreakerFillStudy` (`BreakerFillStudy`).
+
+**Round 0: the figure.** Four fills down the BREAKER kit's own toms, each heard alone, played again
+and closing two bars of the kit at 92 BPM:
+- **A:** sixteenths down.
+- **B:** sixteenth-note triplets down.
+- **C:** a floor-tom gallop.
+- **D:** flams down.
+
+The owner's answers:
+- **The figure:** B, Triplets down.
+- **One spring or three:** fill A was also heard two ways, as one pad with one spring for the whole run, and on the
+  kit's three tom pads with a spring each. The owner picked "Three pads".
+- **The spring:** "a bit too wet, not a lot".
+
+**Round 1: the spring.** Fill B with each stroke its own tom's whole render, at four springs. Each
+tom's DRIP was scaled to 1, .7, .5 or .35 of its own. The tail, from 0.3 to 1.0 s after the run,
+measured against the run:
+
+| Spring | Tail |
+|---|---:|
+| ×1 | −5.7 dB |
+| ×.7 | −8.5 dB (round 0's one-pass B, as heard, was −8.3) |
+| ×.5 | −11.9 dB |
+| ×.35 | −16.0 dB |
+
+The owner picked ×.35 ("4 Drier") and heard a fresh take as the same fill with fresh hits ("Yes").
+
+**As built:**
+- **The figure:** twelve strokes, two beats of sixteenth-note triplets at 92 BPM: four on the high
+  tom, four on the rack, four on the floor. Every third is accented (.9 of the pad's velocity, the
+  others .6), and the last stroke is the hardest (1). `render` has no tempo, so the fill is 92 BPM
+  long on any kit: 2.7 s (`Breaker.FILL_SECONDS`), declared PERC like the riser.
+- **The toms:** each stroke is the BREAKER kit's own tom on renderer model 5, the toms the owner
+  heard it with, rendered whole through its own rig. The strokes are summed and the run is
+  levelled. Nothing passes through a second rig.
+- **The controls:** the fill's TUNE, DUST, SLAP, CRUSH, AMP and DAMP go to every stroke. DRIP scales
+  every tom's spring together against the rack tom's .45. Its default, .1575 (.45 × .35), gives the
+  floor tom .21, the rack .1575 and the high tom .14: the pick. DRIP .45 is each tom's own spring,
+  the round-1 version the owner heard as wetter.
+- **Velocity:** a softer pad strikes every tom softer, by each tom's own velocity law (SKIN's
+  contact), and the run is levelled either way.
+- **Round robin:** every take re-strikes all twelve strokes (stroke `take × 100 + stroke + 1`).
+- **Older saves:** models 1 to 6 refuse FILL. Every other voice renders on model 7 exactly as it does
+  on model 6.
+
+**Not yet:**
+- **The kit:** the fill is not on a kit. Where it goes is the owner's call.
+- **Saving, playback and export:** not verified until it is on a kit.
+- **Hardware:** no phone or MPC has played it.
 
 ## The cymbals
 
