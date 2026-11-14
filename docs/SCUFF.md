@@ -598,8 +598,8 @@ fields. SCUFF also joins the native-factory list, which RIVET is on and SOOT is 
 a strike, a take and a model outside the macro map: a chosen preset loads whole through `loadPreset`, so a
 kit's pad arrives at its first take and keeps it through edits and drafts. The ten voices are one short word
 each, so the chip labels are the enum names. `EngineCatalog` files SCUFF under DRUMS ("Dry Michigan drums,
-crushed, boxed, barked and slammed"), at the end, in the picker's order; both READMEs count 86 picker engines
-with SCUFF listed, and the root README's list of rostered engines the picker does not show is back to LORENTZ
+crushed, boxed, barked and slammed"), at the end, in the picker's order, after ETCH; both READMEs count 87
+picker engines with SCUFF listed, and the root README's list of rostered engines the picker does not show is back to LORENTZ
 alone. `ConventionTest` reads all of that in both directions and `EngineCatalogTest` the entry.
 
 The on-device test, `NewEngineSynthScreenTest.scuffOpensItsKickLoadsAKitPresetAndKeepsAnEditWithItsTakeAndModel`,

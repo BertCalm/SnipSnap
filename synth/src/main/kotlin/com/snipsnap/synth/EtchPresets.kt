@@ -1,13 +1,18 @@
 package com.snipsnap.synth
 
 /**
- * Provisional references, kept out of [Presets] while ETCH is a prototype (`PatchTypes.PROTOTYPES`). Every recipe
- * is a setting the owner heard in the accepted round-3 audition (docs/ETCH.md): each voice's default note and its
+ * The factory bank (round K2): every recipe is a setting the owner heard in the accepted round-3 audition
+ * (docs/ETCH.md), each voice's default note and its
  * line loop, plus the audition's two chain lines, line B's busy settings on SAW and line A's sparse, dark settings on
  * SQUARE. Names describe the sound; "acid" and the box's model number are on the preset blocklist.
  */
 object EtchPresets {
-    fun forVoice(voice: EtchVoice): List<EtchPatch> {
+    /** Paste complete UserPresets roster lines here; the heard round-3 settings stay fixed. */
+    private val promoted: List<EtchPatch> = listOf()
+
+    fun forVoice(voice: EtchVoice): List<EtchPatch> = factory(voice) + promoted.filter { it.voice == voice }
+
+    private fun factory(voice: EtchVoice): List<EtchPatch> {
         val d = Etch.defaults(voice)
         val base = listOf(
             EtchPatch("Note", voice, d),
