@@ -1714,6 +1714,11 @@ object Copy {
     fun songA11yPlayFrom(number: Int, name: String): String = "PLAY FROM SECTION $number, ${name.uppercase(java.util.Locale.ROOT)}"
     /** The line under the song while it plays. A sentence. */
     const val SONG_CAPTION_PLAYING = "Tap a section to play it next. It starts when the pattern playing now comes round."
+    /** The queue mode beside LOOP: a queued section starts when the pass ends, or at the next bar line. */
+    @field:CopyLabel const val SONG_QUEUE_END_OF_PASS = "END OF PASS"
+    @field:CopyLabel const val SONG_QUEUE_NEXT_BAR = "NEXT BAR"
+    /** The line under the song while it plays, in NEXT BAR. A sentence. */
+    const val SONG_CAPTION_PLAYING_BAR = "Tap a section to play it next. It starts at the next bar line."
     /** KEEP THIS ORDER with nothing played since the song last changed. */
     const val SONG_KEEP_NOTHING = "Play the song first. KEEP THIS ORDER keeps the sections in the order you played them."
     /** KEEP THIS ORDER when what was played is the song as it stands. */
