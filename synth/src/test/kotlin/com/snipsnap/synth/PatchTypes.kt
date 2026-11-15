@@ -50,14 +50,15 @@ internal object PatchTypes {
 
     /**
      * The engines with a [Patch] type but no preset roster in [Presets]: SNAP reads its
-     * table off a photo, TERRA, SILK, GYRE and MAGNET have no factory
+     * table off a photo, SILK, GYRE and MAGNET have no factory
      * presets. Named here so a new engine has to be either rostered or listed. SCUFF
-     * sat here from its Kotlin port until the owner heard its kits (2026-11-13), and
-     * CLUTTER likewise until the owner approved its kits' audition (2026-11-14). EMBER
+     * sat here from its Kotlin port until the owner heard its kits (2026-11-13),
+     * CLUTTER likewise until the owner approved its kits' audition (2026-11-14); TERRA
+     * until the owner chose to promote it and kept its classic kit (2026-11-14). EMBER
      * sits here from its Kotlin port (round 1) until its kits are heard. CALABASH sits here from its Kotlin
      * port (round 1, 2026-11-15) until its kits are on the shelf and filed as its factory bank, as CLUTTER's were.
      */
-    val ROSTERLESS: Set<String> = setOf(HydroformPatch.ENGINE, SnapPatch.ENGINE, TerraPatch.ENGINE, SilkPatch.ENGINE, GyrePatch.ENGINE, MagnetPatch.ENGINE, EmberPatch.ENGINE, CalabashPatch.ENGINE)
+    val ROSTERLESS: Set<String> = setOf(HydroformPatch.ENGINE, SnapPatch.ENGINE, SilkPatch.ENGINE, GyrePatch.ENGINE, MagnetPatch.ENGINE, EmberPatch.ENGINE, CalabashPatch.ENGINE)
 
     /**
      * The engines with a [Patch] type and provisional recipes of their own that are
@@ -73,5 +74,7 @@ internal object PatchTypes {
         HalobarPatch.ENGINE to setOf(HalobarVoice.GLOCKENSPIEL.name,HalobarVoice.CROTALES.name,HalobarVoice.TUBULAR_BELLS.name),
         VentPatch.ENGINE to setOf(VentVoice.ROUND.name, VentVoice.WIRE.name, VentVoice.TEAR.name),
         ThumpPatch.ENGINE to setOf(ThumpVoice.SPARK.name),
+        // TERRA's retired membrane: its last pad moved to TUN (2026-11-08), so it has no factory preset.
+        TerraPatch.ENGINE to setOf(TerraVoice.COMPOUND_MEMBRANE.name),
     )
 }
