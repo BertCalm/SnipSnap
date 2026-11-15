@@ -1,0 +1,19 @@
+{
+  "status": "owner-directed ta-ee hypothesis awaiting listening",
+  "variants": {
+    "small-metal": {
+      "cells": 12,
+      "delayMs": 12.0,
+      "plateDecayMs": 18.0,
+      "checksPassed": true,
+      "peak": 0.559115591133254
+    },
+    "open-metal": {
+      "cells": 12,
+      "delayMs": 21.0,
+      "plateDecayMs": 30.0,
+      "checksPassed": true,
+      "peak": 0.5591139791946526
+    }
+  }
+}

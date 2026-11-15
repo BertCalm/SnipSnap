@@ -9,6 +9,7 @@ import com.snipsnap.kit.ArrangedPad
  * Frozen, owner-approved Round 5 delivery, including the recording-derived tambourine
  * and the accepted silence trim. Loading the printed samples keeps the audition's
  * exact gain, timbral velocity layers and effect tails; it does not reapply a board.
+ * A12 now uses selected Round 7 B via [VelourRideBank]; the other fifteen pads are unchanged.
  *
  * This bank deliberately remains separate from [VelourKits]'s original model-1
  * renderer and saved boards. The three treatments are not three genre kits, and
@@ -43,7 +44,7 @@ object VelourApprovedKits {
             require(layerInfo.size == 3)
             val layers = layerInfo.map { WavReader.read(resource(it.getValue("file").str())) }
             val slot = pad.getValue("slot").int()
-            ArrangedPad(layers.last(), DrumClass.valueOf(pad.getValue("class").str()),
+            val result = ArrangedPad(layers.last(), DrumClass.valueOf(pad.getValue("class").str()),
                 level = pad.getValue("level").num().toFloat(),
                 softVariants = layers.dropLast(1), displayName = pad.getValue("name").str(),
                 layerNames = listOf("Soft", "Medium", "Hard"), muteGroup = pad.getValue("muteGroup").int(),
@@ -57,6 +58,7 @@ object VelourApprovedKits {
                     "sourceKind" to if (slot == 15) "CC0 reference-derived resynthesis" else "synthetic",
                     "reference" to if (slot == 15) manifest.getValue("reference").str() else "",
                     "referenceLicense" to if (slot == 15) "CC0-1.0" else ""))
+            if (slot == 12) VelourRideBank.replace(result, treatment) else result
         }
     }
 }

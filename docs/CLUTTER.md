@@ -350,6 +350,91 @@ pad sheet's), not knobs on the editor; SCUFF's entry made the same choice.
 with the pad's TUNE, DAMP and MIC, a DAMP edit survives a rebuild, and the saved draft keeps take 0, full velocity
 and model 1. This session has no Android SDK: CI's android-build compiles the entry and emulator-tests runs the test.
 
+## Round 5: the phone and MPC check (chosen 2026-11-15)
+
+What only a phone and an MPC can answer. Everything here already passes in software (rounds 1 to 4); this is the
+first time hands and speakers judge it. Work top to bottom and write the answer on the arrow line: a word is
+enough, and "no" with what you heard or the exact error text is worth more than "yes".
+
+**How the phone sets velocity.** A pad's touch height is its velocity: the top edge is the softest hit, the bottom
+edge is full force. CLUTTER's three zones sit at soft, medium and hard, so "soft" below means a tap near the top
+edge, "medium" the middle, "hard" the bottom edge.
+
+### H1 · The kit arrives (phone)
+
+FRESH TAPE → SKINS → CLUTTER KITCHEN LO-FI. It renders 16 pads × 3 zones × 4 takes, so it takes a while.
+
+→ it built, and roughly how long it took:
+
+→ the 4×4 grid shows sixteen pads, A01 (bottom-left) a kick:
+
+### H2 · Soft is a different hit, not a quieter one (phone)
+
+On A01 (Soft Bucket) and A02 (Rice Box Brush), play soft, medium, hard. A soft hit should sound like a gentler
+strike, duller and shorter, not the hard hit turned down. On A02 the rice lies still on a soft hit and moves from
+medium up (at this pad's RATTLE the box throws it from about 0.48 velocity; the soft zone strikes at 0.35).
+
+→ A01: three different strikes, or one sound at three levels:
+
+→ A02: the rice is still when soft and rattles at medium and hard:
+
+### H3 · Four takes, not a machine gun (phone)
+
+Hit A02 eight times at the same height, steadily. The takes rotate one, two, three, four, then repeat, so no two
+hits in a row should be the identical sound.
+
+→ every hit a little different, or the same sound repeated:
+
+→ any take that jumps out as louder or quieter than its neighbours (pad and which hit):
+
+### H4 · The hats choke (phone)
+
+Hit A04 (Loose Keys, the open hat) and let it ring, then hit A03 (Matchbox, the closed hat). The keys should stop.
+Then the same for the second pair: A08 rings, A07 cuts it.
+
+→ A03 cuts A04:
+
+→ A07 cuts A08:
+
+### H5 · The other three kits (phone)
+
+Make CLUTTER STREET BUCKET, CLUTTER JUNK BOOM BAP and CLUTTER MICROBEAT the same way and play around each one.
+On STREET BUCKET, A04 is the Bin Lid one-shot.
+
+→ all three built and play:
+
+→ anything that sounds broken (a click, a cut-off tail, a pad far too loud or quiet):
+
+### H6 · The picker (phone)
+
+SYNTH → engine CLUTTER → BUCKET. Tap the preset LOFI SOFT BUCKET, move DAMP, then leave SYNTH and come back.
+
+→ the preset sounds like the kit's A01:
+
+→ the DAMP move was still there when you came back:
+
+### H7 · MPC 3 export (phone, then the MPC)
+
+Open CLUTTER KITCHEN LO-FI → EXPORT → **MPC 3 NATIVE (.XTD)** → write it, copy it to the MPC's card, load it.
+
+→ it loads, or the MPC's exact error text:
+
+→ on the MPC's pads, A01 soft and hard are different strikes (as in H2):
+
+→ hitting A02 repeatedly rotates through four takes (as in H3):
+
+→ A03 cuts A04 on the MPC:
+
+### H8 · MPC 2 folder: the known limit (phone, then the MPC)
+
+Same kit → EXPORT → **MPC 2 FOLDER (EVERY GENERATION)**. Before it writes, the wizard should warn that MPC 2 holds
+velocity layers or round robin on a pad, not both, so each pad keeps its three zones with one take each. This
+records what happens today. It is the next round's problem, not a failure of this one.
+
+→ the warning showed before writing:
+
+→ it loads on the MPC, and soft and hard still differ:
+
 ## Risks (where it could sound bad)
 
 | Risk | What would show it | Probe or question |
@@ -381,8 +466,10 @@ and model 1. This session has no Android SDK: CI's android-build compiles the en
   instead of the shared `Room` (a different room is a different sound; moving to `Room` is its own listen).
 - **R2 kits**: done (above).
 - **R3 presets and the roster**: done (above).
-- **R4 the engine picker**: done (above), pending CI's device build and emulator run.
-- **Next**: hardware (a phone, an MPC) and the MPC 2 export. The owner approved the Kotlin kits' audition on 2026-11-14.
+- **R4 the engine picker**: done (above); CI's device build and emulator run passed (#1114).
+- **R5 hardware**: the owner chose the phone and MPC check on 2026-11-15. The checklist is below; answers go
+  on its arrow lines.
+- **Next**: the MPC 2 export. The owner approved the Kotlin kits' audition on 2026-11-14.
 
 ## Ledger
 
