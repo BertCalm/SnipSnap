@@ -985,7 +985,10 @@ def _bowed_cymbal(m, v, tr, n):
     more harmonics, more scratch."""
     t = np.arange(n) / FS
     md = np.array(fit()["voices"]["flatride"]["modes"])
-    sel = (md[:, 0] > 900) & (md[:, 0] < 2000)          # round 0e: 500 to 1600 Hz was too middy (owner, by ear)
+    # Round 0e moved the lock up from 500-1600 Hz (732 Hz: "too middy"). Round 2b brings it partway back down: 1379 Hz
+    # was "piercing ... a bit lower or pulled back a bit" (owner, 2026-11-15). 1243 Hz at TUNE .5, about two semitones
+    # under; its harmonics land on quieter modes, so 2 to 8 kHz falls 6 to 11 dB (four takes) with the bite unchanged.
+    sel = (md[:, 0] > 1000) & (md[:, 0] < 1300)
     f_lock = md[sel][np.argmax(md[sel, 1]), 0] * semis(m["TUNE"], 3) * tr.uniform(0.998, 1.002)
     jitter = np.cumsum(tr.normal(0, 1, n)) / FS * 0.8
     ph = TAU * f_lock * (t + jitter * 0.001)
