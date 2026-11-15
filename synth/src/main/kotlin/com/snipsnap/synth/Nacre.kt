@@ -11,7 +11,11 @@ import kotlin.math.exp
 import kotlin.math.roundToInt
 import kotlin.math.sqrt
 
-enum class NacreVoice { PEARL }
+/**
+ * NACRE's voices. PEARL is the paired-harp source (saved models 1 to 4). HARMONICS (model 5) and
+ * SHELL (model 6) keep PEARL's performers, bodies, sympathetic strings and water; see [NacreVoices].
+ */
+enum class NacreVoice { PEARL, HARMONICS, SHELL }
 
 /**
  * The preferred original duet -> returning paths -> rest. The frozen [NacreModel1] instrument
@@ -55,6 +59,15 @@ object Nacre {
         NacreVoice.PEARL -> listOf(MacroSpec("TOUCH", .30f, .30f), MacroSpec("DUET", .15f, .15f),
             MacroSpec("CURRENT", CORE_CURRENT, CORE_CURRENT), MacroSpec("VENUE", .15f, .15f),
             MacroSpec("BLOOM", CORE_BLOOM, CORE_BLOOM), MacroSpec("HOLD", 0f))
+        // The same six controls and defaults as PEARL; see NacreVoices.
+        NacreVoice.HARMONICS, NacreVoice.SHELL -> NacreVoices.macrosFor()
+    }
+
+    /** The saved model a new recipe of [voice] uses: PEARL's model 3, HARMONICS 5, SHELL 6. */
+    fun defaultModel(voice: NacreVoice): Int = when (voice) {
+        NacreVoice.PEARL -> MODEL_VERSION
+        NacreVoice.HARMONICS -> NacreVoices.HARMONICS_MODEL
+        NacreVoice.SHELL -> NacreVoices.SHELL_MODEL
     }
     fun defaults(voice: NacreVoice = NacreVoice.PEARL): Map<String, Float> =
         macrosFor(voice).associate { it.name to it.default }
@@ -87,10 +100,15 @@ object Nacre {
 
     fun render(voice: NacreVoice = NacreVoice.PEARL, macros: Map<String, Float> = emptyMap(),
         midi: Int = DEFAULT_MIDI, velocity: Float = 1f, seed: Long = DEFAULT_SEED): Snip =
-        play(voice, macros, midi, velocity, seed, Options(), false).snip
+        if (voice != NacreVoice.PEARL) NacreVoices.render(NacreVoices.sourceFor(voice), macros, midi, velocity, seed)
+        else play(voice, macros, midi, velocity, seed, Options(), false).snip
     internal fun inspect(voice: NacreVoice = NacreVoice.PEARL, macros: Map<String, Float> = emptyMap(),
         midi: Int = DEFAULT_MIDI, velocity: Float = 1f, seed: Long = DEFAULT_SEED,
-        options: Options = Options()): Probe = play(voice, macros, midi, velocity, seed, options, true)
+        options: Options = Options()): Probe =
+        if (voice != NacreVoice.PEARL) {
+            require(options == Options()) { "NACRE ${voice.name} has no diagnostic options" }
+            NacreVoices.inspect(NacreVoices.sourceFor(voice), macros, midi, velocity, seed)
+        } else play(voice, macros, midi, velocity, seed, options, true)
 
     /**
      * Explicit saved model 4 shares the heard profile-1 string law. The default renderer and

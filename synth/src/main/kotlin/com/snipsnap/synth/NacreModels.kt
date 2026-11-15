@@ -11,6 +11,18 @@ internal object NacreModels {
     const val LAST_MODEL_VERSION = NacreVoices.SHELL_MODEL
     fun supports(model: Int): Boolean = model in 1..LAST_MODEL_VERSION
 
+    /** PEARL saves models 1 to 4; HARMONICS only model 5 and SHELL only model 6. */
+    fun supports(voice: NacreVoice, model: Int): Boolean = when (voice) {
+        NacreVoice.PEARL -> model in 1..CONTACT_MODEL_VERSION
+        NacreVoice.HARMONICS -> model == NacreVoices.HARMONICS_MODEL
+        NacreVoice.SHELL -> model == NacreVoices.SHELL_MODEL
+    }
+
+    private fun requireSupported(voice: NacreVoice, model: Int) {
+        requireSupported(model)
+        require(supports(voice, model)) { "NACRE ${voice.name} has no saved model $model" }
+    }
+
     private fun contactControls(voice: NacreVoice, macros: Map<String, Float>): Pair<Map<String, Float>, Float> {
         val known = macrosFor(voice, CONTACT_MODEL_VERSION).map { it.name }.toSet()
         require(macros.keys.all { it in known }) { "NACRE model 4 contains unknown macros: ${macros.keys - known}" }
@@ -25,7 +37,7 @@ internal object NacreModels {
     }
 
     fun macrosFor(voice: NacreVoice, model: Int): List<MacroSpec> {
-        requireSupported(model)
+        requireSupported(voice, model)
         return when (model) {
             1 -> NacreModel1.macrosFor(voice)
             2 -> NacreModel2.macrosFor(voice)
@@ -36,7 +48,7 @@ internal object NacreModels {
     }
 
     fun defaults(voice: NacreVoice, model: Int): Map<String, Float> {
-        requireSupported(model)
+        requireSupported(voice, model)
         return when (model) {
             1 -> NacreModel1.defaults(voice)
             2 -> NacreModel2.defaults(voice)
@@ -53,7 +65,7 @@ internal object NacreModels {
         seed: Long = Nacre.DEFAULT_SEED,
         model: Int = Nacre.MODEL_VERSION,
     ): Snip {
-        requireSupported(model)
+        requireSupported(voice, model)
         return when (model) {
             1 -> NacreModel1.render(voice, macros, midi, velocity, seed)
             2 -> NacreModel2.render(voice, macros, midi, velocity, seed)
@@ -85,7 +97,7 @@ internal object NacreModels {
         model: Int = Nacre.MODEL_VERSION,
         options: Nacre.Options = Nacre.Options(),
     ): Nacre.Probe {
-        requireSupported(model)
+        requireSupported(voice, model)
         return when (model) {
             1 -> {
                 require(!options.lockStrumTiming) { "NACRE model 1 does not support the locked strum timing diagnostic" }

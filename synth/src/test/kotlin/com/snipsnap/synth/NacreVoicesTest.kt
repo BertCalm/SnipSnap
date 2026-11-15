@@ -59,9 +59,9 @@ class NacreVoicesTest {
             "Pearl Moderate Contact" to "65403955e4250f620f05a2b33ea56093a58e685743da3680001bd8ae38ccb018",
             "Pearl Strong Contact" to "48304c74c17949b3ea375803d2cec3bd11220f7edc93ed9ed167554ca01ef73c",
         )
-        assertEquals(presets.keys, NacrePresets.all().map { it.name }.toSet())
-        for (p in NacrePresets.all()) assertEquals(presets.getValue(p.name), hash(p.render().samples), "${p.name} moved")
-        val moderate = NacrePresets.all().first { it.model == 4 }
+        assertEquals(presets.keys, NacrePresets.forVoice(NacreVoice.PEARL).map { it.name }.toSet())
+        for (p in NacrePresets.forVoice(NacreVoice.PEARL)) assertEquals(presets.getValue(p.name), hash(p.render().samples), "${p.name} moved")
+        val moderate = NacrePresets.forVoice(NacreVoice.PEARL).first { it.model == 4 }
         assertEquals("969b33a8af8cbf87835e86e3001f8e082c12a022e5abf8a4bc10fb37cc10132d",
             hash(NacreModels.renderStruck(moderate.copy(velocity = .3f), NacreStrikeShape(.8, .5, .12)).samples))
     }
@@ -109,14 +109,20 @@ class NacreVoicesTest {
         assertEquals(NacreSource.HARMONICS, NacreVoices.sourceFor(5))
         assertEquals(NacreSource.SHELL, NacreVoices.sourceFor(6))
         assertFailsWith<IllegalArgumentException> { NacreVoices.sourceFor(4) }
-        for (source in NacreSource.entries) {
-            val patch = NacrePatch("study", NacreVoice.PEARL, NacreVoices.defaults(), midi = 55, velocity = .7f,
-                seed = -42L, model = source.model)
+        // BUBBLE is unheard: it has no saved model, so no recipe can select it yet.
+        assertEquals(false, NacreVoices.supports(NacreSource.BUBBLE.model))
+        assertEquals(false, NacreModels.supports(NacreSource.BUBBLE.model))
+        for (source in listOf(NacreSource.HARMONICS, NacreSource.SHELL)) {
+            val voice = NacreVoice.valueOf(source.name)
+            val patch = NacrePatch("study", voice, NacreVoices.defaults(), midi = 55, velocity = .7f, seed = -42L)
+            assertEquals(source.model, patch.model)
+            assertFailsWith<IllegalArgumentException> { patch.copy(voice = NacreVoice.PEARL) }
+            assertFailsWith<IllegalArgumentException> { patch.copy(model = 3) }
             val replayed = NacrePatch.fromJsonText(patch.toJsonText())
             assertEquals(patch, replayed)
             assertEquals(hash(NacreVoices.render(source, NacreVoices.defaults(), 55, .7f, -42L).samples),
                 hash(replayed.render().samples))
-            assertEquals(NacreVoices.macrosFor().map { it.name }, NacreModels.macrosFor(NacreVoice.PEARL, source.model).map { it.name })
+            assertEquals(NacreVoices.macrosFor().map { it.name }, NacreModels.macrosFor(voice, source.model).map { it.name })
             assertFailsWith<IllegalArgumentException> { patch.copy(macros = patch.macros + ("CONTACT" to .3f)) }
             assertFailsWith<IllegalArgumentException> { patch.copy(macros = patch.macros + ("HOLD" to .5f)) }
         }
@@ -149,8 +155,16 @@ class NacreVoicesTest {
     fun `the note is in tune across the range, SHELL measured on its ring-out`() {
         for (source in NacreSource.entries) for (midi in range) {
             val f = Keys.midiHz(midi).toDouble()
-            val window = if (source == NacreSource.SHELL) 1.5 to 3.5 else .3 to 1.5
-            val cents = M.cents(M.pitchHz(render(source, midi), window.first, window.second, f), f)
+            // BUBBLE decays within about a second, so in its full mix the delayed water returns (copies of
+            // the same tone) can pull the spectral peak: at C3 the mix reads -16 cents while the bass harp,
+            // the sympathetic strings and the BLOOM-0 mix all read within 1.1. Its direct source is measured.
+            val cents = if (source == NacreSource.BUBBLE) {
+                val bass = NacreVoices.inspect(source, emptyMap(), midi, 1f, 7L).stems.getValue("bass")
+                M.cents(M.pitchHz(bass, .05, .6, f), f)
+            } else {
+                val window = if (source == NacreSource.SHELL) 1.5 to 3.5 else .3 to 1.5
+                M.cents(M.pitchHz(render(source, midi), window.first, window.second, f), f)
+            }
             assertTrue(abs(cents) <= TUNING_CENTS, "$source MIDI $midi is $cents cents off")
         }
     }
@@ -176,20 +190,22 @@ class NacreVoicesTest {
      * clips put that question to the owner.
      */
     @Test
-    fun `each source is further from PEARL and from the other source than PEARL's own settings are apart`() {
-        val settings = NacrePresets.all().map { it.render().samples } + listOf(
+    fun `each source is further from PEARL and from the other sources than PEARL's own settings are apart`() {
+        val settings = NacrePresets.forVoice(NacreVoice.PEARL).map { it.render().samples } + listOf(
             pearl(macros = mapOf("TOUCH" to 0f)), pearl(macros = mapOf("TOUCH" to 1f)),
             pearl(macros = mapOf("DUET" to 1f)), pearl(macros = mapOf("BLOOM" to 1f)), pearl(velocity = .3f))
         var widest = 0.0
         for (i in settings.indices) for (j in i + 1 until settings.size) widest = maxOf(widest, M.toneDistance(settings[i], settings[j]))
-        val harmonics = render(NacreSource.HARMONICS)
-        val shell = render(NacreSource.SHELL)
-        for ((name, s) in listOf("HARMONICS" to harmonics, "SHELL" to shell)) {
+        val sources = NacreSource.entries.associateWith { render(it) }
+        for ((source, s) in sources) {
             val nearest = settings.minOf { M.toneDistance(s, it) }
-            assertTrue(nearest > DISTINCT_FACTOR * widest, "$name nearest PEARL setting $nearest vs PEARL's widest $widest")
+            assertTrue(nearest > DISTINCT_FACTOR * widest, "$source nearest PEARL setting $nearest vs PEARL's widest $widest")
         }
-        val between = M.toneDistance(harmonics, shell)
-        assertTrue(between > DISTINCT_FACTOR * widest, "HARMONICS vs SHELL $between vs PEARL's widest $widest")
+        val list = sources.entries.toList()
+        for (i in list.indices) for (j in i + 1 until list.size) {
+            val between = M.toneDistance(list[i].value, list[j].value)
+            assertTrue(between > DISTINCT_FACTOR * widest, "${list[i].key} vs ${list[j].key} $between vs PEARL's widest $widest")
+        }
     }
 
     @Test

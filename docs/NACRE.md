@@ -81,7 +81,7 @@ Different pads have no choke relationship. The existing MPC 2 mono-per-pad retri
 
 ## New voices: HARMONICS and SHELL
 
-Two new voices, HARMONICS (saved model 5) and SHELL (saved model 6), keep PEARL's paired performers, bodies, sympathetic strings and water but change what is played. The owner kept both on 15 Nov 2026 (round `nacre-voices-1`). They are engine only so far. See [NACRE_VOICES.md](NACRE_VOICES.md).
+Two new voices, HARMONICS (saved model 5) and SHELL (saved model 6), keep PEARL's paired performers, bodies, sympathetic strings and water but change what is played. The owner kept both on 15 Nov 2026 (round `nacre-voices-1`). They are in the SYNTH picker with four presets each. A fourth source, BUBBLE, is in the engine and unheard. See [NACRE_VOICES.md](NACRE_VOICES.md).
 
 ## Cache and cost
 

@@ -13,14 +13,17 @@ import kotlin.math.roundToInt
 import kotlin.math.sin
 import kotlin.math.sqrt
 
-/** NACRE's new sound sources, each on its own saved model. PEARL keeps models 1 to 4. */
-internal enum class NacreSource(val model: Int) { HARMONICS(5), SHELL(6) }
+/**
+ * NACRE's new sound sources. HARMONICS (5) and SHELL (6) are saved models of their voices; PEARL keeps
+ * models 1 to 4. BUBBLE (7) is unheard and engine only: no saved recipe can select it yet.
+ */
+internal enum class NacreSource(val model: Int) { HARMONICS(5), SHELL(6), BUBBLE(7) }
 
 /**
  * NACRE's second and third sound sources, built for listening round `nacre-voices-1` (14 Nov 2026).
- * Engine only: no picker entry, preset or starter. A saved [NacrePatch] reaches one by its model
- * (5 or 6); the patch's `voice` stays [NacreVoice.PEARL], the only voice entry, until the sources are
- * registered as voices of their own.
+ * They are the NACRE voices [NacreVoice.HARMONICS] (saved model 5) and [NacreVoice.SHELL] (saved
+ * model 6), in the SYNTH picker with four presets each ([NacrePresets]); the owner kept both in round
+ * nacre-voices-1.
  *
  * Both keep what the owner asked every NACRE voice to keep: the paired bass and upper performers and
  * their strum ([schedule], the same law as PEARL's), the two harp bodies, the eight sympathetic harp
@@ -52,6 +55,7 @@ internal object NacreVoices {
     /** Fixed reference output gains: hard C3 at the default controls sits near PEARL's hard C3. */
     const val HARMONICS_OUTPUT_GAIN = 4.3
     const val SHELL_OUTPUT_GAIN = 1.935
+    const val BUBBLE_OUTPUT_GAIN = 3.35
 
     private const val DURATION_SECONDS = 6f
     private const val CORE_CURRENT = .20
@@ -65,7 +69,14 @@ internal object NacreVoices {
     private val SHELL_RATIOS = doubleArrayOf(1.0, 2.41, 4.13, 6.20, 8.57)
     private val SHELL_WEIGHTS = doubleArrayOf(1.0, .70, .45, .28, .16)
 
+    /** Saved models only: BUBBLE has no saved model until the owner keeps it. */
     fun supports(model: Int): Boolean = model == HARMONICS_MODEL || model == SHELL_MODEL
+
+    fun sourceFor(voice: NacreVoice): NacreSource = when (voice) {
+        NacreVoice.HARMONICS -> NacreSource.HARMONICS
+        NacreVoice.SHELL -> NacreSource.SHELL
+        NacreVoice.PEARL -> throw IllegalArgumentException("PEARL is not one of NacreVoices' sources")
+    }
 
     fun sourceFor(model: Int): NacreSource = NacreSource.entries.firstOrNull { it.model == model }
         ?: throw IllegalArgumentException("unsupported nacre source model $model")
@@ -248,6 +259,33 @@ internal object NacreVoices {
     private class Shell(val event: Nacre.Event, val start: Int, val pulse: FloatArray,
                         val modes: Array<Resonator>, val weights: DoubleArray)
 
+    /**
+     * One bubble: a damped tone that starts below its note and glides up onto it in a few tens of
+     * milliseconds (the "bloop"), a faint octave and a short breath of noise at the onset. The glide
+     * is a fixed exponential approach to the note, so the ring-out sits exactly on pitch.
+     */
+    private class Bubble(val event: Nacre.Event, val start: Int, private val hz: Double, private val glideRatio: Double,
+                         private val glideFrames: Double, t60: Double, private val octave: Double,
+                         private val noise: FloatArray, private val rate: Int) {
+        private val decay = exp(-ln(1000.0) / (t60 * rate))
+        private val attack = (.0015 * rate).roundToInt().coerceAtLeast(1)
+        private var phase = 0.0
+        private var phase2 = 0.0
+        private var level = 1.0
+        fun next(age: Int): Double {
+            val f = hz * (1.0 - (1.0 - glideRatio) * exp(-age / glideFrames))
+            phase += TWO_PI * f / rate
+            phase2 += TWO_PI * 2.0 * f / rate
+            if (phase > TWO_PI) phase -= TWO_PI
+            if (phase2 > TWO_PI) phase2 -= TWO_PI
+            val rise = if (age < attack) .5 - .5 * cos(PI * age / attack) else 1.0
+            level *= decay
+            val tone = sin(phase) + octave * sin(phase2)
+            val breath = if (age < noise.size) noise[age].toDouble() else 0.0
+            return .28 * event.strength * (rise * level * tone + breath)
+        }
+    }
+
     /** Identical linear conditioning for the source and sympathetic streams, as PEARL's core uses. */
     private fun condition(oversampled: FloatArray): FloatArray {
         stopIfInterrupted()
@@ -322,6 +360,30 @@ internal object NacreVoices {
             kept.map { SHELL_WEIGHTS[it] }.toDoubleArray())
     }
 
+    private fun bubbles(events: List<Nacre.Event>, touch: Double, velocity: Float, seed: Long, rate: Int): List<Bubble> =
+        events.map { event ->
+            val bass = event.performer == "bass"
+            val hz = event.frequencyHz
+            // A firmer TOUCH and a harder strike start further below the note (a deeper bloop) and
+            // add more octave and breath, so a soft bubble is rounder and darker as well as quieter.
+            val glideSemitones = (.8 + 2.2 * touch) * (.4 + .6 * velocity)
+            val glideMs = 14.0 + 10.0 * (1.0 - touch)
+            val octave = (.04 + .16 * touch) * (.3 + .7 * velocity)
+            val t60 = (if (bass) 1.1 else .75) * .8.pow(event.stringId)
+            val noiseFrames = (.004 * rate).roundToInt()
+            val bandHz = minOf(hz * (2.0 + 4.0 * touch * velocity), 9000.0)
+            val low = LowPass(bandHz, rate)
+            var x = Dsp.seedFor("NACRE", NacreSource.BUBBLE.model, seed, event.performer, event.stringId, "breath")
+            val noise = FloatArray(noiseFrames) {
+                x = x * 1103515245 + 12345
+                val white = ((x ushr 8) and 0xffff) / 32768.0 - 1.0
+                val env = .5 - .5 * cos(TWO_PI * (it + 1) / (noiseFrames + 1))
+                (.35 * (.3 + .7 * velocity) * env * low.next(white)).toFloat()
+            }
+            Bubble(event, (event.timeSeconds * rate).roundToInt(), hz, 2.0.pow(-glideSemitones / 12.0),
+                glideMs / 1000.0 * rate, t60, octave, noise, rate)
+        }
+
     private fun core(source: NacreSource, touch: Double, duet: Double, midi: Int, velocity: Float,
                      seed: Long): Pair<Streams, List<Nacre.Event>> {
         val rate = Dsp.RATE * Dsp.OVERSAMPLE
@@ -332,6 +394,7 @@ internal object NacreVoices {
         val (strings, extra) = if (source == NacreSource.HARMONICS)
             harmonics(events, touch, velocity, seed, frames, rate) else emptyList<HarmonicString>() to emptyMap<String, Double>()
         val shellList = if (source == NacreSource.SHELL) shells(events, touch, velocity, rate) else emptyList()
+        val bubbleList = if (source == NacreSource.BUBBLE) bubbles(events, touch, velocity, seed, rate) else emptyList()
         val bassBody = arrayOf(138.0, 261.0, 427.0).mapIndexed { i, hz -> Mode(hz, 3.0 + i, rate) }
         val upperBody = arrayOf(397.0, 743.0, 1261.0).mapIndexed { i, hz -> Mode(hz, 2.8 + i, rate) }
         val sympathetic = Array(2) { harp -> Array(4) { id ->
@@ -373,6 +436,13 @@ internal object NacreVoices {
                 val sample = s.next(age, excitation)
                 internalPeak = maxOf(internalPeak, abs(sample))
                 if (s.event.performer == "bass") bass += sample else upper += sample
+            }
+            for (b in bubbleList) {
+                val age = i - b.start
+                if (age < 0) continue
+                val y = b.next(age)
+                internalPeak = maxOf(internalPeak, abs(y))
+                if (b.event.performer == "bass") bass += y else upper += y
             }
             for (shell in shellList) {
                 val age = i - shell.start
@@ -436,7 +506,11 @@ internal object NacreVoices {
         }
         val sympathetic = FloatArray(c.sympathetic.size) { (c.sympathetic[it] * symGain).toFloat() }
         val raw = FloatArray(sourceMix.size) { sourceMix[it] + sympathetic[it] + wet[it] }
-        val outputGain = if (source == NacreSource.HARMONICS) HARMONICS_OUTPUT_GAIN else SHELL_OUTPUT_GAIN
+        val outputGain = when (source) {
+            NacreSource.HARMONICS -> HARMONICS_OUTPUT_GAIN
+            NacreSource.SHELL -> SHELL_OUTPUT_GAIN
+            NacreSource.BUBBLE -> BUBBLE_OUTPUT_GAIN
+        }
         val native = FloatArray(raw.size) { (raw[it] * outputGain).toFloat() }
         val preGuardPeak = native.maxOf { abs(it) }
         val peakSafetyGain = if (preGuardPeak > PEAK_CEILING) (PEAK_CEILING / preGuardPeak).toDouble() else 1.0

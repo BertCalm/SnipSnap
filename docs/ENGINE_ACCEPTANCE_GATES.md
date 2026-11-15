@@ -713,7 +713,7 @@ voices, engine only so far. See [NACRE voices](NACRE_VOICES.md).
 
 | Gate | Status | Evidence |
 |---|---|---|
-| Melodic: six voices with presets | Partial: three of six | PEARL with five presets. HARMONICS and SHELL were kept by the owner on 2026-11-15 (nacre-voices-1, H1–H3 and L1–L3, all KEEP), have no presets yet and are not in the picker. Their 22 kept renders are pinned (`NacreVoicesTest`). BUBBLE is next; GROTTO and CONCH wait for a HOLD decision. |
+| Melodic: six voices with presets | Partial: three of six | PEARL with five presets. HARMONICS and SHELL were kept by the owner on 2026-11-15 (nacre-voices-1, H1–H3 and L1–L3, all KEEP); their 22 kept renders are pinned (`NacreVoicesTest`). They have four presets each, which await the owner (nacre-voices-2). BUBBLE is built in the engine and awaits the owner; GROTTO and CONCH wait for a HOLD decision. |
 | Melodic: playable keygroups | Not yet verified | No NACRE keygroups exist. |
 | Melodic: premade kit | Pass in software, PEARL only | The NACRE starter (`SynthKits.nacre()`) and the FRESH TAPE velocity bank (`NacreKitTest`, `NacreVelocityKitTest`). No kit uses HARMONICS or SHELL. |
 | Melodic: chord-tool compatibility | Not yet verified | No chord mode; the spec's expanded voicing is not built. |
@@ -724,7 +724,7 @@ voices, engine only so far. See [NACRE voices](NACRE_VOICES.md).
 | Velocity: rendering | Pass in software; partly heard | PEARL: contact soft and medium layers kept on 2026-11-13 (`nacre-strike-1`). HARMONICS and SHELL: a softer strike rings fewer upper strings or shells and is darker by at least 1 dB per step (`NacreVoicesTest`); the owner kept their soft, medium and hard clips (H1, L1). |
 | Velocity: saving, playback, export | Pass in software, PEARL only | The FRESH TAPE bank replays every layer (`NacreVelocityKitTest`). No HARMONICS or SHELL layers exist. |
 | Round robin | Not yet verified | No NACRE round robin exists. |
-| Picker | PEARL only; not yet verified on a device | `NacreSynthScreenTest` covers PEARL. HARMONICS and SHELL are not in the picker. |
+| Picker | Not yet verified on a device | PEARL, HARMONICS and SHELL are in the SYNTH picker; `NacreSynthScreenTest` reaches each voice and its presets. None of it has run on a device. |
 | Hardware playback | Not verified | No phone timing, MPC load or MPC velocity check is recorded. |
 
 - **Sound character: partly accepted.** The owner heard PEARL's first renderer as pleasant and

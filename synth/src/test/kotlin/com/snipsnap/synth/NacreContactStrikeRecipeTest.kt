@@ -20,7 +20,7 @@ import kotlin.test.assertTrue
  * recorded in docs/NACRE_CONTACT_NATIVE_VELOCITY.md; listening acceptance is a separate gate.
  */
 class NacreContactStrikeRecipeTest {
-    private fun hard(contact: Float = .35f) = NacrePresets.all().single { it.model == 4 && it.macros["CONTACT"] == contact }
+    private fun hard(contact: Float = .35f) = NacrePresets.forVoice(NacreVoice.PEARL).single { it.model == 4 && it.macros["CONTACT"] == contact }
     private fun bank(variant: NacreStrikeVariant = NacreStrikeVariant.MODERATE, hard: NacrePatch = hard()) =
         NacreContactStrikeRecipes.recipeFor(hard, variant)
     private fun bytes(samples: FloatArray): ByteArray = ByteBuffer.allocate(samples.size * 4)
@@ -145,7 +145,7 @@ class NacreContactStrikeRecipeTest {
     }
 
     private fun assertFailsWithModel3() {
-        val model3 = NacrePresets.all().first { it.model == 3 }
+        val model3 = NacrePresets.forVoice(NacreVoice.PEARL).first { it.model == 3 }
         assertFails { NacreModels.renderStruck(model3, NacreStrikeShape.DEFAULT) }
     }
 
