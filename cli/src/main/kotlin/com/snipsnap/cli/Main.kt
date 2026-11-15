@@ -195,6 +195,9 @@ object Cli {
         |                        (--rate 1/8, --bpm, --amount, --undo)
         |  pump <kit-dir> <pad>  the level ducked on every beat and breathed
         |                        back (--rate 1/8, --bpm, --amount, --undo)
+        |  onbeat <kit-dir> <pad>
+        |                        the hit echoed on the beat, darker each time,
+        |                        gone in a bar (--rate 3/16, --bpm, --amount)
         |  drift <kit-dir> <pad> one knob: the crate deals the neighbour, morph
         |                        blends toward it (--amount, --seed, --root)
         |  breed <kit-a> <kit-b> two kits' recipes crossed into a child kit,
@@ -444,6 +447,7 @@ object Cli {
                 "roll" -> RollCommand.run(args.drop(1), out)
                 "gate" -> GateCommand.run(args.drop(1), out)
                 "pump" -> PumpCommand.run(args.drop(1), out)
+                "onbeat" -> OnBeatCommand.run(args.drop(1), out)
                 "drift" -> DriftCommand.run(args.drop(1), out)
                 "breed" -> BreedCommand.run(args.drop(1), out)
                 "desample" -> DesampleCommand.run(args.drop(1), out)

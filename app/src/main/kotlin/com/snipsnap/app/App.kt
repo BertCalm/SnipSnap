@@ -1400,9 +1400,9 @@ fun App(shelf: KitShelf) {
                         }, cancelled = { cancelled.get() || !worker.isActive })
                 }
                 roomsRevision++
-                dock.say("${made.name.uppercase(java.util.Locale.ROOT)} IS READY IN INSTRUMENTS.")
+                dock.say(Copy.instrumentReady(made.name.uppercase(java.util.Locale.ROOT)))
             } catch (e: CancellationException) {
-                dock.say("CAIRN INSTRUMENT CANCELLED.")
+                dock.say(Copy.CAIRN_CANCELLED)
                 throw e
             } catch (e: com.snipsnap.shell.CairnSingRenderedCaptures.Mismatch) {
                 Log.e(TAG, "makeCairnStudy: ${e.sourceId} did not match its pinned capture", e)
@@ -4280,6 +4280,14 @@ fun App(shelf: KitShelf) {
                                 selectedSlot = nav.padsSelectedSlot,
                                 onSelectSlot = { nav.padsSelectedSlot = it },
                                 // The strip's doors: the tap twin of the hold (W#22).
+                                // CHANGE SOUND ▸ lands on the editor's EFFECTS page with its EFFECTS box
+                                // open: one tap from the grid to the effects (UX pass, 2026-11-15). The
+                                // editor sits under it, so Back goes to the pad's editor, then PADS.
+                                onChangeSound = { slot ->
+                                    openPadSheet(slot)
+                                    nav.padsOpenBox = PadSheetBoxes.Box.TREATMENT
+                                    nav.open(Bench.PAD_EFFECTS)
+                                },
                                 onOpenPad = ::openPadSheet,
                                 onCaptureInto = { slot ->
                                     padCaptureSlot = slot
@@ -4292,7 +4300,7 @@ fun App(shelf: KitShelf) {
                                 },
                                 versions = versions,
                                 busy = busy != null,
-                                // twin: the selected-pad strip's OPEN ▸ door (PadStrip.DOOR_OPEN), which calls the same openPadSheet
+                                // twin: the selected-pad strip's EDIT PAD ▸ door (PadStrip.DOOR_EDIT), which calls the same openPadSheet
                                 onLongPress = ::openPadSheet,
                                 onTakesBin = {
                                     versionsKitDir = open?.dir
@@ -4335,7 +4343,7 @@ fun App(shelf: KitShelf) {
                                     }
                                 },
                                 onEmptyTapHint = {
-                                    dock.say(if (pendingSnipAssign != null) Copy.LONG_PRESS_PLACE_SAMPLE else Copy.LONG_PRESS_CAPTURE)
+                                    dock.say(if (pendingSnipAssign != null) Copy.LONG_PRESS_PLACE_SAMPLE else Copy.EMPTY_PAD_TAPPED)
                                 },
                                 onNavigateKits = { goToScreen(AppScreen.KITS) },
                                 hasProject = project != null,

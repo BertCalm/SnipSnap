@@ -6,6 +6,8 @@ import com.snipsnap.synth.CairnVoice
 import com.snipsnap.synth.ContourEngine
 import com.snipsnap.synth.ContourPatch
 import com.snipsnap.synth.ContourVoice
+import com.snipsnap.synth.EmberPatch
+import com.snipsnap.synth.EmberVoice
 import com.snipsnap.synth.ErosionPatch
 import com.snipsnap.synth.ErosionVoice
 import com.snipsnap.synth.Fathom
@@ -22,8 +24,6 @@ import com.snipsnap.synth.Glint
 import com.snipsnap.synth.GlintPatch
 import com.snipsnap.synth.GlintVoice
 import com.snipsnap.synth.GyrePatch
-import com.snipsnap.synth.ClutterPatch
-import com.snipsnap.synth.ClutterVoice
 import com.snipsnap.synth.GyreVoice
 import com.snipsnap.synth.Keys
 import com.snipsnap.synth.MagnetPatch
@@ -92,11 +92,12 @@ class SynthRootTest {
         private val patches: List<Patch> by lazy {
             Presets.all() + listOf(
                 GyrePatch("Door", GyreVoice.FLICK, emptyMap()),
-                ClutterPatch("Bucket", ClutterVoice.BUCKET, emptyMap()),
+                EmberPatch("Kick", EmberVoice.KICK, emptyMap()),
                 MagnetPatch("Door", MagnetVoice.JANGLE, emptyMap()),
                 SilkPatch("Door", SilkVoice.OUD, emptyMap()),
                 SnapPatch("Door", SnapVoice.ORBIT, emptyMap(), IntArray(Snap.TABLE_SIZE) { (it * 255) / (Snap.TABLE_SIZE - 1) }),
                 TerraPatch("Door", TerraVoice.COMPOUND_MEMBRANE, emptyMap()),
+                com.snipsnap.synth.CalabashPatch("Door", com.snipsnap.synth.CalabashVoice.CONGA, emptyMap()),
                 ErosionPatch("Door", ErosionVoice.ARC),
                 CairnPatch("Door", CairnVoice.ANSWER, emptyMap()),
                 SplayPresets.all().first(),
@@ -110,7 +111,7 @@ class SynthRootTest {
         }
 
         /** The engines whose every patch answers null: drums, voice, scale rows, frequency sweeps. */
-        private val ROOTLESS = setOf("RIVET", "THUMP", "SKIN", "ONSET", "TERRA", "VOX", "SILK", "EROSION", "FIRED_BRONZE", "BACKWASH", "SCUFF", "HICCUP", "CLUTTER", "TEMPEST")
+        private val ROOTLESS = setOf("RIVET", "THUMP", "SKIN", "ONSET", "TERRA", "VOX", "SILK", "EROSION", "FIRED_BRONZE", "BACKWASH", "SCUFF", "HICCUP", "CLUTTER", "DRUMLINE", "EMBER", "CALABASH", "TEMPEST")
 
         private fun cents(hz: Float, midi: Int): Float = 1200f * ln(hz / Keys.midiHz(midi)) / ln(2f)
     }

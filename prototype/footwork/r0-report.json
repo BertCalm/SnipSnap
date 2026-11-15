@@ -1,0 +1,17 @@
+{
+  "baseline": "6e2e4067634a06160590b06107d2f031f48e2e32",
+  "scope": "Python sound proof only",
+  "checks": {
+    "gridCells": 96,
+    "finite": true,
+    "zeroVelocity": true,
+    "distinctTakes": true,
+    "timbralVelocity": true,
+    "deterministicReplay": true,
+    "maxPeak": 0.7000000381489877,
+    "maxAbsDc": 5.3641406591066036e-05,
+    "seconds": 5.718543841998326
+  },
+  "wavCount": 105,
+  "deliveryGates": "open"
+}

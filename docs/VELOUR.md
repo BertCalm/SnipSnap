@@ -1,5 +1,14 @@
 # Velour Close, Velour and Velour Bloom
 
+## Selected ride B (2026-11-15)
+
+The owner selected Round 7 **B / Tighter body** after reopening A12's timbre.
+A12 now loads that ride's first take in all three standard shelf kits. The optional
+round-robin builder uses its complete three-velocity/four-take grid. Every other
+pad, including the approved tambourine, retains its existing PCM and take behavior.
+The original Round 5 resource files remain intact for historical verification.
+See [the ride selection ledger](VELOUR_RIDE_B.md) for provenance and validation.
+
 ## Approved Round 5 shelf integration (2026-11-13)
 
 The owner selected the recording-derived tambourine on 2026-11-10 and accepted the
@@ -181,3 +190,10 @@ The post-restart shell test compilation exposed an existing call in
 `BeatScheduleTest` which omitted `forEachNoteDue`'s required `lap` argument.
 The same omission was present at the base commit. Supplying `0L` repairs that
 test call without changing production scheduling behavior.
+
+## Round-robin listening candidates
+
+The opt-in [Round 6 candidate](VELOUR_ROUND_ROBIN.md) adds four sample-derived
+takes per velocity using the approved bank as take 1. It does not replace the
+approved shelf defaults or close the MPC round-robin gate. Generate the full-grid
+native/SFZ/DecentSampler audition with `:synth:generateVelourRoundRobin`.

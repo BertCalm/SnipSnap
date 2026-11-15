@@ -4,7 +4,7 @@ package com.snipsnap.synth
  * Provisional references, kept out of [Presets] while the engine is a prototype
  * (`PatchTypes.PROTOTYPES`). The drums' are settings the owner heard at round 0: the high crush they
  * picked, the glue below it, and the spring opened up. The cymbals' and the riser's start from the
- * round-3 picks (dry cymbals, the tamed riser) and dial the rig in.
+ * round-3 picks (dry cymbals, the tamed riser) and dial the rig in. The fill's start from the owner's pick (2026-11-14).
  */
 object BreakerPresets {
     fun forVoice(voice: BreakerVoice): List<BreakerPatch> = when (voice) {
@@ -18,6 +18,12 @@ object BreakerPresets {
             BreakerPatch("Kicked", voice, Breaker.defaults(voice)),
             BreakerPatch("Booted", voice, Breaker.defaults(voice) + mapOf("DRIP" to 1f, "CRUSH" to .8f)),
             BreakerPatch("Nudged", voice, Breaker.defaults(voice) + mapOf("DRIP" to .35f, "DAMP" to .75f)),
+        )
+        // The fill: the owner's pick, its spring at the toms' own as first built, and pushed into the crush.
+        BreakerVoice.FILL -> listOf(
+            BreakerPatch("Triplets down", voice, Breaker.defaults(voice)),
+            BreakerPatch("Wet toms", voice, Breaker.defaults(voice) + ("DRIP" to .45f)),
+            BreakerPatch("Crushed run", voice, Breaker.defaults(voice) + mapOf("CRUSH" to 1f, "AMP" to .55f)),
         )
         BreakerVoice.RISER -> listOf(
             BreakerPatch("Tamed", voice, Breaker.defaults(voice)),

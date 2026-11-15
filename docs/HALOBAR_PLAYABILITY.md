@@ -1,5 +1,18 @@
 # HALOBAR control-edit playability
 
+The [final export build](HALOBAR_FINISH.md) retains every HALOBAR strike in
+MPC keygroups and version-5 phone sidecars. The historical build-time evidence
+below retains its original measurements and execution scope.
+
+The [owner acceptance ledger](HALOBAR_ACCEPTANCE.md) records the 2026-11-14
+"Everything passes" confirmation. The measurements below retain their original
+values; owner acceptance does not supply a new render-time measurement.
+
+The opt-in [Android render diagnostic](HALOBAR_DEVICE_BENCH.md) measures fresh
+audio, recall and control edits on a selected device. Compilation or a desktop
+run does not establish phone latency; physical playback and MPC gates remain
+separate.
+
 The new source and unmodulated-return caches reduce repeated work during control
 edits while retaining the six approved voice banks. All 408 published Float32
 fixtures and 72 additional take cases remain exact on the same JVM. The audio

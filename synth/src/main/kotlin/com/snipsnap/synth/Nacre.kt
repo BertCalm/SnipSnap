@@ -149,24 +149,24 @@ object Nacre {
     }
 
     private fun smooth(x: Double): Double = x.coerceIn(0.0, 1.0).let { it * it * (3.0 - 2.0 * it) }
-    private fun returnAmount(bloom: Float): Double = when {
+    internal fun returnAmount(bloom: Float): Double = when {
         bloom == CORE_BLOOM -> 1.0
         bloom < CORE_BLOOM -> .15 + .85 * smooth(bloom.toDouble() / CORE_BLOOM)
         else -> 1.0 + .50 * smooth((bloom.toDouble() - CORE_BLOOM) / (1.0 - CORE_BLOOM))
     }
-    private fun sympatheticAmount(bloom: Float): Double = when {
+    internal fun sympatheticAmount(bloom: Float): Double = when {
         bloom == CORE_BLOOM -> 1.0
         bloom < CORE_BLOOM -> .35 + .65 * smooth(bloom.toDouble() / CORE_BLOOM)
         else -> 1.0 + .35 * smooth((bloom.toDouble() - CORE_BLOOM) / (1.0 - CORE_BLOOM))
     }
-    private fun apertureRate(current: Float): Double = when {
+    internal fun apertureRate(current: Float): Double = when {
         current == 0f -> 0.0
         current == CORE_CURRENT -> 2.0
         else -> minOf(4.0, .5 + 1.5 * sqrt(current.toDouble() / CORE_CURRENT))
     }
-    private fun apertureDepth(current: Float): Double = .90 * smooth(current.toDouble() / CORE_CURRENT)
+    internal fun apertureDepth(current: Float): Double = .90 * smooth(current.toDouble() / CORE_CURRENT)
 
-    private fun returns(source: FloatArray, current: Float, seaweed: Boolean): FloatArray {
+    internal fun returns(source: FloatArray, current: Float, seaweed: Boolean): FloatArray {
         val delay = if (seaweed) doubleArrayOf(.22, .41, .64) else doubleArrayOf(.10, .21, .34)
         val cuts = if (seaweed) doubleArrayOf(1200.0, 900.0, 650.0) else doubleArrayOf(1600.0, 1200.0, 900.0)
         val weights = doubleArrayOf(.52, .31, .17)

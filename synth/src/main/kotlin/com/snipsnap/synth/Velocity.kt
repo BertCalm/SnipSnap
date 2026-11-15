@@ -242,6 +242,7 @@ object Velocity {
         is SkinPatch -> patch.macroSpecs()
         is BackwashPatch -> Backwash.macrosFor(patch.voice)
         is BreakerPatch -> Breaker.macrosFor(patch.voice, patch.model)
+        is DrumlinePatch -> Drumline.macrosFor(patch.voice)
         is SootPatch -> Soot.macrosFor(patch.voice, patch.model)
         is SnapPatch -> Snap.macrosFor(patch.voice)
         is GlintPatch -> Glint.macrosFor(patch.voice)
@@ -290,6 +291,8 @@ object Velocity {
         is ScuffPatch -> Scuff.macrosFor(patch.voice)
         is HiccupPatch -> Hiccup.macrosFor(patch.voice)
         is ClutterPatch -> Clutter.macrosFor(patch.voice)
+        is EmberPatch -> Ember.macrosFor(patch.voice)
+        is CalabashPatch -> Calabash.macrosFor(patch.voice)
         is TanglePatch -> Tangle.macrosFor(patch.voice)
         is OverlapPatch -> if (patch.playback == OverlapPlayback.HELD) OverlapHeld.macrosFor(patch.topology)
             else Overlap.macrosFor(patch.topology, patch.model)
@@ -475,6 +478,11 @@ object Velocity {
         is HiccupPatch -> patch.copy(velocity = v).render()
         // CLUTTER re-strikes the object: a shorter, brighter contact, and past the threshold the loose parts move.
         is ClutterPatch -> patch.copy(velocity = v).render()
+        // EMBER re-strikes the drum: a longer, darker contact when soft, and the wires and rivets only past their threshold.
+        is EmberPatch -> patch.copy(velocity = v).render()
+        // CALABASH re-strikes: a fitted voice moves toward its own soft recording, a physical one lands with a
+        // broader, slower contact and its beads, wires and squeeze answer less.
+        is CalabashPatch -> patch.copy(velocity = v).render()
         is TanglePatch -> patch.copy(velocity = v).render()
         is OverlapPatch -> patch.copy(velocity = v).render()
         is FlockPatch -> patch.copy(velocity = v).render()
@@ -513,6 +521,8 @@ object Velocity {
         is BackwashPatch -> patch.render(v)
         // BREAKER strikes its SKIN source at the velocity; the chain after it keeps the timbre that gives.
         is BreakerPatch -> patch.render(v)
+        // DRUMLINE re-excites each player through its own contact law.
+        is DrumlinePatch -> patch.render(v)
         // SOOT strikes every drum at the velocity through its own contact law (and the kick's sag).
         is SootPatch -> patch.render(v)
         is TerraPatch -> Terra.render(patch.voice, patch.macros, patch.striker, velocity = v)

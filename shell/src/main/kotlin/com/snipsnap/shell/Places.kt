@@ -248,7 +248,7 @@ object Places {
             "· HUM along on CHOP: the cuts and labels FOLLOW your mouth.",
         ),
         "PROJECT" to listOf(
-            "· PADS: tap to hear, OPEN ▸ for its bench. Raw on a strip: nothing done yet.",
+            "· PADS: tap one to hear it. CHANGE SOUND and EDIT PAD sit under the grid.",
             "· BEAT: the project's patterns. Record a take, tap steps in, or go to ORBIT.",
             "· EXPORT: write the kit, or the project as a session. The MPC opens both.",
             "· One kit is active at a time. Swap it above the grid; add more from LIBRARY.",

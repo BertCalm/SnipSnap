@@ -615,7 +615,7 @@ CONTOUR), row four what happens to it in time (SLAP · WASH · ROLL ·
 GATE · ENSEMBLE · SECTION), row five
 the machine's own transport (FLIP · STOP · START · PITCH), row six
 the keyed family that reads the kit itself (TUNE · BODY · WOBBLE ·
-ETERNAL · PUMP — `retune`, `body`, `wobble`, `eternal` and `pump`, below), and row seven
+ETERNAL · PUMP · ON BEAT — `retune`, `body`, `wobble`, `eternal`, `pump` and `onbeat`, below), and row seven
 the pedals, grouped by what an effect *is*, because a guitarist looks for a
 pedal by its name: the slate (DRIVE · SUSTAIN · WAH · TOUCH · ROCK · FORGE ·
 DELAY · ROOM · FADE IN · VIBRATO · DIVE · HUSH · SUB · REWIND · TREM · FLANGE · ROTARY — `driven`, `compressed`, `wahed`, `touchwahed`, `rockwahed`, `forged`,
@@ -1091,6 +1091,22 @@ matched, deterministic; bin-backed, `--undo` byte-identical, the recipe
 is symmetric; a pump is neither. For held sounds. On the phone it is
 PUMP on the PAD SHEET's sixth row, at `1/8` of the kit's tempo and AMT
 0.7, the owner's tap at its gate (2026-11-13).
+
+### `onbeat <kit-dir> <pad>` — the tempo delay
+
+The hit comes back on a division of the kit's bar (`--rate`, default
+`3/16`, the dotted eighth; any of WOBBLE's ladder too) at the kit's
+tempo (`--bpm` sets it first), each repeat through a 3 kHz low-pass so
+the trail darkens as it fades. `--amount 0..1` is the send: the first
+repeat's level and the feedback together (0.42 at 0.7, 0.6 at 1). The
+pad grows by its trail, at most one bar; when the bar cuts the trail,
+its last division fades out. Nothing is refused: a drum is what it is
+most for. One delay for every channel, peak matched, deterministic;
+bin-backed, `--undo` byte-identical, the recipe (the division it ran
+at, tempo, amount) riding the pad. ECHO and the DELAY and SLAP chips
+repeat in seconds; this repeats on the beat. For drums and held sounds.
+On the phone it is ON BEAT on the PAD SHEET's sixth row, at `3/16` of
+the kit's tempo and AMT 0.7, the owner's tap at its gate (2026-11-14).
 
 ### `eternal <kit-dir> <pad>` — attack kept, tail eternal
 

@@ -2,6 +2,18 @@ plugins {
     kotlin("jvm")
 }
 
+tasks.register<JavaExec>("generatePatioAudition") {
+    group = "distribution"
+    description = "Render PATIO's sixteen-pad study, dry/wear/amp comparisons, replay recipes and MPC XPM."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.PatioAuditionGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "1g"
+    val replay = providers.gradleProperty("patioReplay").orNull
+    if (replay == null) args(providers.gradleProperty("patioOutput").orNull ?: "${rootDir}/testkit/patio-audition")
+    else args("--replay", replay, providers.gradleProperty("patioReplayWav").get())
+}
+
 tasks.register<JavaExec>("generateFiredBronzeAudition") {
     group = "distribution"
     description = "Render the sixteen-pad Fired Bronze study, source/treatment comparisons, recipes and MPC kit."
@@ -3731,6 +3743,15 @@ tasks.register<JavaExec>("generatePumpAudition") {
     args("${rootDir}/testkit/pump-audition")
 }
 
+tasks.register<JavaExec>("generateOnBeatAudition") {
+    group = "distribution"
+    description = "Render ON BEAT's listening gate clips under testkit/onbeat-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.OnBeatAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/onbeat-audition")
+}
+
 /** Finite R1 source/drive/filter/memory handoff, before the owner's listening gate. */
 tasks.register<JavaExec>("generateTempestAudition") {
     group = "distribution"
@@ -3803,4 +3824,44 @@ tasks.register<JavaExec>("generateClutterAudition") {
     mainClass.set("com.snipsnap.synth.ClutterAuditionGenerator")
     workingDir = projectDir
     args(providers.gradleProperty("clutterOutput").orNull ?: "${rootDir}/testkit/clutter-audition/kotlin")
+}
+
+/** Render CALABASH's round-1 Kotlin clips under testkit/calabash-audition/kotlin/, for the Python A/B. */
+tasks.register<JavaExec>("generateCalabashAudition") {
+    group = "distribution"
+    description = "Render the CALABASH Kotlin clips (every kit pad at three zones and four takes, every voice soft and hard) under testkit/calabash-audition/kotlin/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.CalabashAuditionGenerator")
+    workingDir = projectDir
+    maxHeapSize = "3g"
+    args(providers.gradleProperty("calabashOutput").orNull ?: "${rootDir}/testkit/calabash-audition/kotlin")
+}
+
+tasks.register<JavaExec>("generateVelourRoundRobin") {
+    group = "distribution"
+    description = "Render opt-in Velour round-robin candidates and full-grid audition packages."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.VelourRoundRobinGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "1g"
+    args(providers.gradleProperty("velourRoundRobinOutput").orNull ?: "testkit/velour-round-robin")
+}
+
+tasks.register<JavaExec>("generateEtchAudition") {
+    group = "distribution"
+    description = "Render ETCH's round-K2 Kotlin clips (the one-shot ending study, a pad riff, the presets) under testkit/etch-audition/k2/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.EtchAuditionGenerator")
+    workingDir = rootDir
+    args(providers.gradleProperty("etchOutput").orNull ?: "${rootDir}/testkit/etch-audition/k2")
+}
+
+/** Render EMBER's round-1 Kotlin clips under testkit/ember-audition/kotlin/, for the Python A/B. */
+tasks.register<JavaExec>("generateEmberAudition") {
+    group = "distribution"
+    description = "Render the EMBER Kotlin clips (every voice hard, soft and at its four takes) under testkit/ember-audition/kotlin/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.EmberAuditionGenerator")
+    workingDir = projectDir
+    args(providers.gradleProperty("emberOutput").orNull ?: "${rootDir}/testkit/ember-audition/kotlin")
 }

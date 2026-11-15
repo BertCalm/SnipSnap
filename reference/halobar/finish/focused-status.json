@@ -1,0 +1,30 @@
+{
+  "state": "passed",
+  "exitCode": 0,
+  "tests": 6,
+  "sourceCommit": "96df0db50c54c04da03826a54a674b8563a41231",
+  "sourceTree": "d41d75fab5aa022b69ccc6b11530e667b52eb267",
+  "actualExecutionSourceCommit": "ce4d37761f2051def3f8dc95a11606cd2d5176b0",
+  "docRefOnlySourceUpdate": true,
+  "productionAndGradleTestSourcesUnchanged": true,
+  "modules": {
+    "xpm": {
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "kit": {
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "shell": {
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  }
+}

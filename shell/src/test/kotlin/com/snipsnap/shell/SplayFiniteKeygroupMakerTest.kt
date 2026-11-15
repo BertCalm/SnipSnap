@@ -34,7 +34,7 @@ import kotlin.test.assertTrue
 
 class SplayFiniteKeygroupMakerTest {
     private fun source(voice: SplayVoice = SplayVoice.TONGUE) = SplayFactoryPresets.forVoice(voice)
-        .first { ((it.macros["HOLD"] ?: 0f) == 0f && it.model in 1..2) }
+        .first { ((it.macros["HOLD"] ?: 0f) == 0f && Splay.supports(it.voice, it.model)) }
     private fun fixture(spec: SplayFiniteKeygroupMaker.Spec) = SplayFiniteKeygroupMaker.recipes(spec).mapValues { (cell, patch) ->
         SplayFiniteKeygroupMaker.Note(patch, Snip(FloatArray(512) { index ->
             val strength = .01f * (cell.touch + 1) + .0001f * cell.midi
@@ -47,9 +47,9 @@ class SplayFiniteKeygroupMakerTest {
 
     @Test fun `planning preserves five one voice factories and exact saved models at absolute MIDI roots`() {
         val factories = SplayFactoryPresets.all()
-        assertEquals(5, factories.size)
+        assertEquals(10, factories.size)
         assertEquals(SplayAcceptedBank.entries.map { it.patch }, SplayFiniteKeygroupMaker.factorySpecs().values.map { it.patch })
-        val finite = factories.filter { it.model in 1..2 && (it.macros["HOLD"] ?: 0f) == 0f }
+        val finite = factories.filter { Splay.supports(it.voice, it.model) && (it.macros["HOLD"] ?: 0f) == 0f }
         assertEquals(SplayVoice.entries.toSet(), finite.map { it.voice }.toSet())
         val legacy = source().copy(model = 1, macros = emptyMap())
         for (patch in finite + legacy) {
@@ -262,6 +262,9 @@ class SplayFiniteKeygroupMakerTest {
             val snip = patch.render()
             assertTrue(snip.samples.all { it.isFinite() && abs(it) <= 1f })
             assertTrue(abs(snip.samples.map { it.toDouble() }.average()) < .005)
+            // BAR and SKIN are inharmonic: autocorrelation misreads them during the gesture, so their
+            // pitch is checked on the ring-out at MIDI 36-84 in SplayBodiesTest instead.
+            if (voice == SplayVoice.BAR || voice == SplayVoice.SKIN) continue
             // Pitch.detect's upper bound is1200Hz. Reinterpret unchanged frames at
             // half rate for C7, then restore Hz; time windows address the same frames.
             val divisor = if (midi > 84) 2 else 1

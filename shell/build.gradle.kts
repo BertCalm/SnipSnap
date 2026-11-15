@@ -508,6 +508,15 @@ tasks.register<JavaExec>("generateTrefoilHeldMpc") {
     args(providers.gradleProperty("trefoilHeldMpcOutput").orNull ?: "${rootDir}/testkit/trefoil-held-mpc")
 }
 
+tasks.register<JavaExec>("generatePatioPerformance") {
+    group = "distribution"
+    description = "Build PATIO genre kits with velocity and round robin, native MPC 3 exports and playback auditions."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.PatioPerformanceGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "2g"
+}
+
 
 tasks.register<JavaExec>("generateHalobarPerformance") {
     group = "distribution"
@@ -618,6 +627,26 @@ tasks.register<JavaExec>("generateScuffKits") {
     args(providers.gradleProperty("scuffKitsOutput").orNull ?: "${rootDir}/testkit/scuff-kits")
 }
 
+tasks.register<JavaExec>("generateEmberKits") {
+    group = "distribution"
+    description = "Build the four EMBER kits, prove every velocity and round-robin grid through save, playback and MPC 3 export, and write the listening pack."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.EmberKitGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "2g"
+    args(providers.gradleProperty("emberKitsOutput").orNull ?: "${rootDir}/testkit/ember-kits")
+}
+
+tasks.register<JavaExec>("generateClutterKits") {
+    group = "distribution"
+    description = "Build the four CLUTTER genre kits, prove every velocity and round-robin grid through save, playback and MPC 3 export, and write the listening pack."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.ClutterKitGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "2g"
+    args(providers.gradleProperty("clutterKitsOutput").orNull ?: "${rootDir}/testkit/clutter-kits")
+}
+
 tasks.register<JavaExec>("generateHiccupKits") {
     group = "distribution"
     description = "Build the HICCUP kits, prove the velocity and round-robin grid through save, playback and MPC 3 export, and write the listening pack."
@@ -637,4 +666,44 @@ tasks.register<JavaExec>("generateMurmurRoundRobinAudition") {
     workingDir = projectDir
     maxHeapSize = "768m"
     args("${rootDir}/testkit/murmur-rr-v2-audition")
+}
+
+tasks.register<JavaExec>("generateDrumlineKit") {
+    group = "distribution"
+    description = "Render and verify both drumline batteries through saving, playback and MPC export."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.DrumlineKitGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "1g"
+    args(providers.gradleProperty("drumlineOutput").orNull ?: "${rootDir}/testkit/drumline-kit")
+}
+
+tasks.register<JavaExec>("generateTimberKits") {
+    group = "distribution"
+    description = "Render and verify three acoustic-instrument percussion banks, native kits, MPC exports and listening pack."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.TimberKitGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "1g"
+    args(providers.gradleProperty("timberOutput").orNull ?: "${rootDir}/testkit/timber-kits")
+}
+
+tasks.register<JavaExec>("generateSporeApprovedSnare") {
+    group = "distribution"
+    description = "Render and verify the approved snare's native, SFZ and MPC3 delivery."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.SporeSnareDelivery")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "1g"
+    args(providers.gradleProperty("sporeApprovedOutput").orNull ?: "${rootDir}/testkit/spore-approved-snare")
+}
+
+tasks.register<JavaExec>("generateSporeSyntheticKits") {
+    group = "distribution"
+    description = "Render and verify all three complete sample-free Spore shelf kits."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.SporeSyntheticDelivery")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "2g"
+    args(providers.gradleProperty("sporeSyntheticOutput").orNull ?: "${rootDir}/testkit/spore-synthetic-kits")
 }

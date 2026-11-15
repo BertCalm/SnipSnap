@@ -1,0 +1,42 @@
+{
+  "state": "passed",
+  "scope": "Python runner with isolated simulated adb; no Android execution",
+  "scenarios": [
+    {
+      "scenario": "success",
+      "exitCode": 0,
+      "reportWritten": true,
+      "stderr": ""
+    },
+    {
+      "scenario": "test-failure",
+      "exitCode": 1,
+      "reportWritten": false,
+      "stderr": "Instrumentation did not pass; inspect /tmp/halobar-runner-check-a15g1euo/report.instrumentation.log"
+    },
+    {
+      "scenario": "wrong-apk",
+      "exitCode": 2,
+      "reportWritten": false,
+      "stderr": "usage: run_halobar_device_bench.py [-h] [--adb ADB] --serial SERIAL --app-apk\n                                   APP_APK --test-apk TEST_APK [--install]\n                                   [--runs {1,2,3,4,5,6,7,8,9}]\n                                   [--allow-emulator] [--output OUTPUT]\nrun_halobar_device_bench.py: error: Installed com.snipsnap.app.brassgrow differs from /tmp/halobar-runner-check-i3mzk0yv/app.apk; use the matching APK pair"
+    },
+    {
+      "scenario": "stale",
+      "exitCode": 1,
+      "reportWritten": false,
+      "stderr": "Device report is incomplete or belongs to another run"
+    },
+    {
+      "scenario": "missing-case",
+      "exitCode": 1,
+      "reportWritten": false,
+      "stderr": "Device report is incomplete or belongs to another run"
+    },
+    {
+      "scenario": "emulator",
+      "exitCode": 2,
+      "reportWritten": false,
+      "stderr": "usage: run_halobar_device_bench.py [-h] [--adb ADB] --serial SERIAL --app-apk\n                                   APP_APK --test-apk TEST_APK [--install]\n                                   [--runs {1,2,3,4,5,6,7,8,9}]\n                                   [--allow-emulator] [--output OUTPUT]\nrun_halobar_device_bench.py: error: Selected device appears to be an emulator; --allow-emulator labels it as functional evidence"
+    }
+  ]
+}

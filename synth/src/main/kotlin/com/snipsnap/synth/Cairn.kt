@@ -6,7 +6,7 @@ import com.snipsnap.audio.Snip
 import kotlin.math.*
 import kotlin.random.Random
 
-enum class CairnVoice { KNOCK, ANSWER, TUMBLE, SING }
+enum class CairnVoice { KNOCK, ANSWER, TUMBLE, SING, GRIND, VESSEL }
 
 /**
  * Four-voice reconstruction, not the source of the earlier recorded six-voice audition.
@@ -18,6 +18,10 @@ enum class CairnVoice { KNOCK, ANSWER, TUMBLE, SING }
  * launched stone returns to a bed in successively shorter flights.
  * SING uses an averaged regenerative rubbing law in CairnSing; a single soft
  * contact opens into continuous traction, with no further impact train.
+ * GRIND (model 6) drags a stone over a ratcheted, irregular bed by a spring
+ * (CairnGrind: piecewise-exact stick-slip). VESSEL (model 7) rolls a stone
+ * around the inside of a conical bowl (CairnVessel: an averaged orbit law).
+ * Both have their own solver and readout; the earlier four paths are untouched.
  *
  * KNOCK/ANSWER mechanics are a literal, normalised linear mass/spring/damper network, advanced
  * with passive implicit midpoint steps at 2 kHz. Geometry and material constants
@@ -27,7 +31,7 @@ enum class CairnVoice { KNOCK, ANSWER, TUMBLE, SING }
  * separately. No limiter participates in the mechanical stability argument.
  */
 object Cairn {
-    const val MODEL_VERSION = 5
+    const val MODEL_VERSION = 7
     const val DEFAULT_MIDI = 60
     // R1 proves the source audition's C3..C5 span. The short C2 KNOCK is
     // classified as a tom; lower registers need a separate voicing decision.
@@ -50,6 +54,8 @@ object Cairn {
             CairnVoice.ANSWER -> floatArrayOf(.5f, .60f, .45f, .45f, .40f, .75f, 0f)
             CairnVoice.TUMBLE -> floatArrayOf(.5f, .35f, .55f, .65f, .20f, .30f, 0f)
             CairnVoice.SING -> floatArrayOf(.5f, .55f, .45f, .25f, .60f, .65f, 0f)
+            CairnVoice.GRIND -> floatArrayOf(.5f, .50f, .50f, .50f, .45f, .40f, 0f)
+            CairnVoice.VESSEL -> floatArrayOf(.5f, .40f, .50f, .35f, .45f, .55f, 0f)
         }
         return controls.mapIndexed { i, key -> MacroSpec(key, d[i], if (key == "HOLD") 0f else .5f) }
     }
@@ -67,8 +73,9 @@ object Cairn {
         Dsp.scrambleNear(settled(voice, if (near is CairnPatch) near.macros else emptyMap()), temperature, random)
             .toMutableMap().apply { this["HOLD"] = getValue("HOLD").coerceAtMost(.95f) }
 
+    /** [slipSeconds] is GRIND's slip length; every other voice leaves it at zero. */
     data class Event(val seconds: Double, val stone: Int, val groove: Int, val work: Double,
-                     val speedBefore: Double, val speedAfter: Double)
+                     val speedBefore: Double, val speedAfter: Double, val slipSeconds: Double = 0.0)
     data class State(val seconds: Double, val energy: Double, val withdrawnWork: Double,
                      val positions: List<Double>)
     /** SING's averaged traction trajectory, not a microscopic slip simulation. */
@@ -80,7 +87,10 @@ object Cairn {
                       val largestEnergyIncrease: Double, val terminalBrakeWork: Double,
                       val suppliedWork: Double = 0.0, val periodSeconds: Double = 0.0,
                       val settledCycles: Int = 0, val cycleResidual: Double = 0.0,
-                      val precedingEvents: List<Event> = emptyList(), val rubbing: Rubbing? = null)
+                      val precedingEvents: List<Event> = emptyList(), val rubbing: Rubbing? = null,
+                      val orbit: Orbit? = null)
+    /** VESSEL's averaged orbit, sampled at [rate]: rolling speed and the unwrapped orbit angle. */
+    data class Orbit(val rate: Int, val speed: List<Double>, val angle: List<Double>, val endSeconds: Double)
     data class Diagnostics(val motion: Motion, val rawPeak: Double, val rawRms: Double,
                            val maxModalEnergy: Double, val tailEnergyIncrease: Double,
                            val firstContactFrame: Int, val outputStartFrame: Int,
@@ -109,6 +119,8 @@ object Cairn {
             require(model in 1..MODEL_VERSION) { "unsupported CAIRN model $model" }
             require(voice != CairnVoice.TUMBLE || model >= 3) { "CAIRN TUMBLE requires model 3" }
             require(voice != CairnVoice.SING || model >= 4) { "CAIRN SING requires model 4" }
+            require(voice != CairnVoice.GRIND || model >= 6) { "CAIRN GRIND requires model 6" }
+            require(voice != CairnVoice.VESSEL || model >= 7) { "CAIRN VESSEL requires model 7" }
             require(model >= 2 || !isLoop(it)) {
                 "CAIRN model 1 reserves HOLD's top step"
             }
@@ -143,6 +155,12 @@ object Cairn {
     }
 
     private fun calculateMotion(key: MotionKey): Motion {
+        if (key.voice == CairnVoice.GRIND) return CairnGrind.motion(
+            key.weight.toDouble(), key.slope.toDouble(), key.groove.toDouble(), key.friction.toDouble(),
+            key.velocity.toDouble(), key.powered)
+        if (key.voice == CairnVoice.VESSEL) return CairnVessel.motion(
+            key.weight.toDouble(), key.slope.toDouble(), key.groove.toDouble(), key.friction.toDouble(),
+            key.velocity.toDouble(), key.powered)
         if (key.voice == CairnVoice.SING) return CairnSing.motion(
             key.weight.toDouble(), key.slope.toDouble(), key.groove.toDouble(), key.friction.toDouble(),
             key.body.toDouble(), key.finiteHold.toDouble(), key.velocity.toDouble(), key.powered, key.uncoupled)
@@ -277,6 +295,8 @@ object Cairn {
         val firstFrame = ((motion.events.firstOrNull()?.seconds ?: 0.0) * RATE).roundToInt()
         val cue = if (contact) (firstFrame - (.002 * RATE).roundToInt()).coerceAtLeast(0) else 0
         if (voice == CairnVoice.SING) return CairnSing.finiteFrames(requireNotNull(motion.rubbing)) - cue
+        if (voice == CairnVoice.GRIND) return max(1, CairnGrind.finiteFrames(motion, m) - cue)
+        if (voice == CairnVoice.VESSEL) return max(1, CairnVessel.finiteFrames(motion, m) - cue)
         return max(1, ceil(max(.12, last + ringSeconds(voice, m)) * RATE).toInt() - cue)
     }
     fun drumClassFor(voice: CairnVoice, macros: Map<String, Float> = emptyMap(), velocity: Float = 1f,
@@ -320,6 +340,10 @@ object Cairn {
         val hz = frequencyFor(midiFor(voice, m.getValue("TUNE"), midi)).toDouble()
         if (voice == CairnVoice.SING) return CairnSing.inspect(m, hz, velocity, startAtContact,
             options, motion, hit, (audioStart - start) / 1e6, model)
+        if (voice == CairnVoice.GRIND) return CairnGrind.inspect(m, hz, velocity, startAtContact,
+            options, motion, hit, (audioStart - start) / 1e6)
+        if (voice == CairnVoice.VESSEL) return CairnVessel.inspect(m, hz, velocity, startAtContact,
+            options, motion, hit, (audioStart - start) / 1e6)
         val held = isLoop(m)
         val period = (loopSeconds(voice) * RATE).roundToInt()
         // TUMBLE's short rings leave a nearly silent end. One real second
@@ -364,6 +388,7 @@ object Cairn {
             (1.35 - .65 * velocity) * when (voice) {
                 CairnVoice.KNOCK -> .60; CairnVoice.TUMBLE -> .45; CairnVoice.ANSWER -> 1.0
                 CairnVoice.SING -> error("SING owns its continuous excitation path")
+                CairnVoice.GRIND, CairnVoice.VESSEL -> error("$voice owns its own excitation path")
             }
         val pulseFrames = max(8, (width * internalRate).roundToInt())
         val kernel = DoubleArray(pulseFrames) { .5 - .5 * cos(2 * PI * (it + .5) / pulseFrames) }

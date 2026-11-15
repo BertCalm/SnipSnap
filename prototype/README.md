@@ -100,5 +100,26 @@ as numbers and WAVs before any Kotlin. `python3 gen_audition.py OUT && python3 b
 every pad of every kit at three velocity zones and four takes (one twelve-slot WAV per pad, which the
 page's pad grid slices), each kit's groove, the CLUTTER kit's velocity ladders and takes, bank B, and every
 control on every object, with their measurements. `compare_kotlin.py KOTLIN_DIR` measures the Kotlin port
-(`./gradlew :synth:generateClutterAudition`) against these renders object by object. Needs numpy and scipy.
-See [`../docs/CLUTTER.md`](../docs/CLUTTER.md).
+(`./gradlew :synth:generateClutterAudition`) against these renders object by object. With the shell generator's pack (`./gradlew :shell:generateClutterKits`) encoded as MP3 under `OUT/shelf/`, the
+page also carries the four kits on the shelf. Needs numpy and scipy. See [`../docs/CLUTTER.md`](../docs/CLUTTER.md).
+
+## ember/ — EMBER round-0e audition (Python harness)
+
+A live jazz and soul drum kit in a small club in 1962 (27 voices) and four sixteen-pad kits from it (`kits.py`),
+as numbers and WAVs before Kotlin. The cymbals, hats and brushes are fitted to CC0 recordings; only the fitted numbers
+are here. `python3 gen_audition.py OUT && python3 build_page.py OUT` renders every pad at three velocity zones and
+four takes, each kit's groove and every control on every voice, with their measurements. `compare_kotlin.py
+KOTLIN_DIR` measures the Kotlin port (`./gradlew :synth:generateEmberAudition`) against these renders voice by voice,
+and `export_club.py` writes the club tail the Kotlin port loads. Needs numpy and scipy. See
+[`../docs/EMBER.md`](../docs/EMBER.md).
+
+## calabash/ — CALABASH round-0 audition (Python harness)
+
+Drum kits for Afrobeat, Afrobeats, Mbalax and Afro-Cuban jazz, approved by ear on 2026-11-15: 36 voices, the hand
+drums, bells, claves, shaker and claps fitted to CC0 recordings (`fit_calabash.py`, `hands.json`, `NOTICE.txt`),
+the shekere, talking drums, sabar family and timbales physical, and four sixteen-pad kits (`kits.py`).
+`python3 gen_audition.py OUT && python3 build_page.py OUT` renders every pad at three zones and four takes, the
+grooves, the strokes, every voice and every control, and writes the listening page. `export_fixed.py` writes the
+three draws the Kotlin port takes from the prototype (the room's noise, the cymbals' pairs, the crowd);
+`compare_kotlin.py KOTLIN_DIR` measures the port (`./gradlew :synth:generateCalabashAudition`) against these renders
+pad by pad. Needs numpy, scipy and ffmpeg. See [`../docs/CALABASH.md`](../docs/CALABASH.md).
