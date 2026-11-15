@@ -821,26 +821,30 @@ TERRA is a world-percussion drum engine with 13 voices. Four are spec voices, fr
 - **Sound character: the whole classic kit is owner KEEP, as the app renders it** (`terra-kit-1`). The nine newer voices were first picked as Python prototype clips. The six spec pads (A01, A04, A13–A16) were kept as part of the full kit, over a picks-only alternative.
 - **Overall: incomplete.** The kit verdict and the starter are done. Next come presets and the picker, then genre kits, then round robin and touch.
 
-## EMBER (round 0, 2026-11-14, Python prototype, not heard)
+## EMBER (round 1 Kotlin, 2026-11-15, not heard; shelf and hardware open)
 
 A drum engine for a live jazz and soul kit in a small club in 1962: calfskin drums, a riveted ride, brushes, the
-club and a 1962 chain, from physical models. Four sixteen-pad kits. See [EMBER](EMBER.md). Round 0 is a Python
-prototype and a listening page (<https://claude.ai/artifact/Xmcj5t8MYSNCQPoTKHBcdw>); no Kotlin exists.
+club and a 1962 chain, from physical models. Four sixteen-pad kits. See [EMBER](EMBER.md). Rounds 0 to 0e are a
+Python prototype and a listening page (<https://claude.ai/artifact/Xmcj5t8MYSNCQPoTKHBcdw>). Round 1 (2026-11-15) is
+the Kotlin port, `Ember.kt`, measured against round 0e and not yet heard.
 
 - **Melodic, keygroup and chord-tool gates:** not applicable. A drum engine.
 - **Articulation:** finite hits, no HOLD. No picked or thumbed strings.
 - **Percussion: authored, not heard.** Every kit carries a roll or riser on A15/A16: a press roll and a mallet
   cymbal swell (EMBER), a brush roll and a far swell (AFTER HOURS), a snare roll (SOUL JAZZ), a swell (FREE).
-  Rendered in Python.
+  Rendered in Python. In Kotlin, `EmberTest` holds that the swell rises at least 20 dB and that both rolls grow.
 - **Drum shelf: authored, not on the shelf.** EMBER (138 BPM), EMBER AFTER HOURS (66), EMBER SOUL JAZZ (104) and
   EMBER FREE (80) differ in implements, drums per role, tuning, damping, looseness, microphone distance, chain and
   tempo. No pad is identical between any two kits; the same slot in two kits is at least 2.98 dB apart (Python).
-  No Kotlin, so nothing is on the shelf.
+  The engine is in Kotlin; the kits reach the shelf at round 2.
 - **Velocity and round robin:**
-  - **Rendering: measured in Python, not Kotlin.** On all 64 pads, soft against hard at matched level differs by at
-    least 1.92 dB; the closest two of any pad's four takes are 1.19 dB apart. Velocity moves the contact, the
-    threshold parts and the swell's arc, not a filter.
-  - **Saving, playback, export: open.** The listening page's pad grid is a browser stand-in, not app evidence.
+  - **Rendering: verified in Kotlin by test (round 1).** `EmberTest` holds that every one of the 27 voices' soft
+    and hard hits differ in shape at matched level (at least 1.8 dB), that its four takes are distinct strikes (at
+    least 1 dB), and that every take replays byte for byte (through JSON in `DeterminismTest`). Measured in Kotlin:
+    soft against hard at least 2.12 dB, the closest two takes 1.57 dB apart. (Python, on the four kits' 64 pads:
+    1.92 dB and 1.19 dB.) Velocity moves the contact, the threshold parts and the swell's arc, not a filter.
+  - **Saving, playback, export: open.** The kits are not on the shelf yet (round 2). The listening page's pad
+    grid is a browser stand-in, not app evidence.
 - **Sound character: open.** On 2026-11-14 the owner's first listen found the cymbals sounding like "hitting sheet
   metal". Round 0b rebuilds every cymbal and hat from CC0 recordings of a jazz club kit, with BREAKER's fitter. Measured
   against the recordings, they are 5.6 to 9.3 dB away over the first 150 ms, where round 0's were 11 to 34 dB and two
@@ -852,9 +856,11 @@ prototype and a listening page (<https://claude.ai/artifact/Xmcj5t8MYSNCQPoTKHBc
   then asked for every kit brighter. Round 0e makes the 1962 chain roll off less top and lowers WARMTH 0.15 on every
   kit. It also adds -1.5 dB at 600 Hz and +2 dB from 6 kHz to every pad, and makes the bowed cymbal sing at 1.4 kHz.
   On 2026-11-15 the owner heard rounds 0b to 0e on the listening page and said "Much better". That is a better
-  direction, not yet an accepted baseline. The sound-character gate stays open.
-- **Overall: incomplete.** Round 0 asks the owner which voices and kits to keep. Kotlin (round 1), the shelf and
-  saving, playback and MPC 3 export (round 2), and phone and MPC hardware (round 3) are all open.
+  direction, not yet an accepted baseline. The owner then said "Proceed", and round 1 ports round 0e to Kotlin:
+  no brightness bias (0.10 dB under Python above 4 kHz across the 27 voices), and every voice inside the spread of
+  Python's own takes. No one has heard the Kotlin renders. The sound-character gate stays open.
+- **Overall: incomplete.** The Kotlin engine is in (round 1) and not yet heard. The shelf and saving, playback and
+  MPC 3 export (round 2), and phone and MPC hardware (round 3) are open.
 
 ## DRUMLINE (native model 4 accepted, 2026-11-15)
 
