@@ -30,8 +30,8 @@ def contact(voice,velocity,take,seconds=.55):
     pulse=np.zeros(n);k=max(4,round(width*FS));pulse[:k]=np.sin(np.linspace(0,np.pi,k))**2
     pulse*=velocity**1.15/max(pulse.sum(),1e-12)
     if voice=='brush':
-        # Signed motion has two envelopes in a shuffle; a single brush traverses
-        # a fixed roughness field. No independent sample-and-hold pitch jitter.
+        # R0 limitation: envelope-shaped noise, without a spatial roughness field
+        # or signed travel. The owner rejected this sound; retained for comparison.
         duration=.065+.04*(1-velocity);mask=t<duration
         rough=rng.normal(size=n);env=np.zeros(n);env[mask]=np.sin(np.pi*t[mask]/duration)**1.5
         pulse=rough*env*velocity**1.2*.005

@@ -1,15 +1,9 @@
 package com.snipsnap.synth
 
 import com.snipsnap.audio.DrumClass
-import com.snipsnap.audio.Fft
-import kotlin.math.PI
 import kotlin.math.abs
-import kotlin.math.cos
-import kotlin.math.log10
 import kotlin.math.max
 import kotlin.math.min
-import kotlin.math.pow
-import kotlin.math.sqrt
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
@@ -119,6 +113,26 @@ class EmberTest {
         }
     }
 
+    /**
+     * Round 1b (owner: "Swell cuts abruptly"): the long voices end once they have died away, not while they still
+     * sound. Before, the swell was cut 2.2 dB under its peak and the bow and rolls 12 to 16 dB under. Now the last
+     * 100 ms before the closing 60 ms fade sit at least 40 dB under the loudest 100 ms, hard and soft, every take.
+     */
+    @Test fun `the long voices ring out instead of being cut`() {
+        val long = listOf(EmberVoice.CYMBAL_SWELL, EmberVoice.BOWED_CYMBAL, EmberVoice.PRESS_ROLL, EmberVoice.BRUSH_ROLL)
+        val cases = long.flatMap { v -> listOf(1f, 0.35f).flatMap { vel -> (0..Ember.MAX_TAKE).map { Triple(v, vel, it) } } }
+        for ((case, under) in cases.parallelStream().map { (v, vel, t) ->
+            val y = render(v, velocity = vel, take = t)
+            val end = y.size.toDouble() / Ember.RATE
+            var peak = -999.0
+            var t0 = 0.0
+            while (t0 + 0.1 <= end) { peak = max(peak, rmsDb(y, t0, t0 + 0.1)); t0 += 0.05 }
+            Triple(v, vel, t) to peak - rmsDb(y, end - 0.17, end - 0.07)
+        }.toList()) {
+            assertTrue(under >= 40.0, "${case.first} velocity ${case.second} take ${case.third} ends only $under dB under its peak")
+        }
+    }
+
     @Test fun `the patch carries velocity, take and model and refuses what it cannot render`() {
         val p = EmberPatch("Brush", EmberVoice.BRUSH_TAP, mapOf("BUZZ" to 0.8f), velocity = 0.6f, take = 2)
         val back = EmberPatch.fromJsonText(p.toJsonText())
@@ -149,61 +163,7 @@ class EmberTest {
         for (v in all) for (m in makers) assertFalse(v.name.contains(m), "$v")
     }
 
-    // ------------------------------------------------------------------ measures (prototype/ember/measures.py)
-
-    private val thirdOct = DoubleArray(22) { 80.0 * 2.0.pow(it / 3.0) }
-
-    private fun spectroDb(x: FloatArray, frameMs: Int, totalS: Double): Array<DoubleArray> {
-        val rate = Ember.RATE
-        val take = min(x.size, (totalS * rate).toInt())
-        var rms = 0.0
-        for (i in 0 until take) rms += x[i].toDouble() * x[i]
-        rms = sqrt(rms / max(1, take)) + 1e-12
-        val hop = frameMs * rate / 1000
-        val win = 4 * hop
-        var size = 1
-        while (size < win) size = size shl 1
-        val padded = DoubleArray(max(take, win + hop)) { if (it < take) x[it] / rms else 0.0 }
-        val hann = DoubleArray(win) { 0.5 - 0.5 * cos(2 * PI * it / (win - 1)) }
-        val rows = ArrayList<DoubleArray>()
-        var i = 0
-        while (i < max(1, padded.size - win)) {
-            val re = FloatArray(size); val im = FloatArray(size)
-            for (k in 0 until win) re[k] = (padded[i + k] * hann[k]).toFloat()
-            Fft.forward(re, im)
-            rows.add(DoubleArray(thirdOct.size) { b ->
-                val lo = thirdOct[b] / 2.0.pow(1.0 / 6); val hi = thirdOct[b] * 2.0.pow(1.0 / 6)
-                var e = 0.0
-                for (bin in 0..size / 2) { val f = bin.toDouble() * rate / size; if (f >= lo && f < hi) e += re[bin].toDouble().pow(2) + im[bin].toDouble().pow(2) }
-                10 * log10(e + 1e-12)
-            })
-            i += hop
-        }
-        val top = rows.maxOf { it.max() }
-        return Array(rows.size) { r -> DoubleArray(thirdOct.size) { max(rows[r][it], top - 80.0) } }
-    }
-
-    private fun rmsDiff(a: Array<DoubleArray>, b: Array<DoubleArray>): Double {
-        val n = min(a.size, b.size)
-        var s = 0.0; var c = 0
-        for (r in 0 until n) for (k in a[r].indices) { s += (a[r][k] - b[r][k]).pow(2); c++ }
-        return sqrt(s / c)
-    }
-
-    /** The take distance: the first 150 ms in 5 ms frames. */
-    private fun distanceDb(a: FloatArray, b: FloatArray) = rmsDiff(spectroDb(a, 5, 0.15), spectroDb(b, 5, 0.15))
-
-    /** The whole render in 10 ms frames: DAMP, DISTANCE and the moving voices live past the attack. */
-    private fun fullDistanceDb(a: FloatArray, b: FloatArray): Double {
-        val n = max(a.size, b.size)
-        val pa = a.copyOf(n); val pb = b.copyOf(n)
-        return rmsDiff(spectroDb(pa, 10, n.toDouble() / Ember.RATE), spectroDb(pb, 10, n.toDouble() / Ember.RATE))
-    }
-
-    private fun rmsDb(x: FloatArray, t0: Double, t1: Double): Double {
-        val a = (t0 * Ember.RATE).toInt(); val b = min(x.size, (t1 * Ember.RATE).toInt())
-        var s = 0.0
-        for (i in a until b) s += x[i].toDouble() * x[i]
-        return 10 * log10(s / max(1, b - a) + 1e-20)
-    }
+    private fun distanceDb(a: FloatArray, b: FloatArray) = EmberMeasures.distanceDb(a, b)
+    private fun fullDistanceDb(a: FloatArray, b: FloatArray) = EmberMeasures.fullDistanceDb(a, b)
+    private fun rmsDb(x: FloatArray, t0: Double, t1: Double) = EmberMeasures.rmsDb(x, t0, t1)
 }

@@ -46,6 +46,7 @@ class PatchesTest {
         DrumlinePatch("Section", DrumlineVoice.SNARE, emptyMap()),
         SootPatch("Hot", SootVoice.SNARE, emptyMap()),
         EmberPatch("Kick", EmberVoice.KICK, emptyMap()),
+        CalabashPatch("Open tone", CalabashVoice.CONGA, emptyMap()),
         HalobarPatch("Mallet dub", HalobarVoice.MARIMBA, emptyMap()),
         TempestPatch("Legacy Strike", TempestVoice.METAL, emptyMap(), model = 1),
         HydroformPatch("Door", HydroformVoice.DOME, emptyMap()),
