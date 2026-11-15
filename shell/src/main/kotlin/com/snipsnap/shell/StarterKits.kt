@@ -851,7 +851,14 @@ object StarterKits {
         Starter(genre.id, genre.title.uppercase(java.util.Locale.ROOT), "Latin percussion, three velocities and four takes per voice, with a hand-drum roll and cuica.", seeded = false) {
             com.snipsnap.synth.PatioPerformance.build(genre)
         }
-    })
+    }).plus(
+        // Appended after PATIO: the stored starter order only grows at the end.
+        Starter(
+            SplayDelivery.BODIES_STARTER_ID, "SPLAY BODIES",
+            "Five more things SPLAY's catches strike: WIRE, RUB, AIR, BAR and SKIN, each as you kept it.",
+            seeded = false,
+        ) { SplayDelivery.bodyStarterPads() },
+    )
 
     fun byId(id: String): Starter? = ALL.firstOrNull { it.id == id }
 }
