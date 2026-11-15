@@ -19,6 +19,8 @@ class CuttingsRoundTripTest {
                 val kit = starter.render(genre.title, dir)
                 assertEquals(kit, KitStore.load(dir))
                 assertEquals(20, kit.pads.size)
+                assertFalse(Preflight.check(kit, dir).blocked())
+                assertEquals((1..20).toList(), kit.pads.filter { it.recipe == null }.map { it.slot })
                 // Reuse the serialized-grid check already used by Triad; common
                 // ExportReadBack deliberately skips these chain fields.
                 val mpc3 = Mpc3Exporter.exportTrack(kit, dir, root.resolve("mpc3/${genre.id}"))

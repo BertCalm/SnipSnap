@@ -220,7 +220,8 @@ class StarterKitsTest {
                 // and SCOUR fills banks B, C and D with its thunder sheet, its beam, and its disc and rod.
                 val slots = when (starter.id) {
                     in StarterKits.PATIO_IDS -> 18
-                    "spore-jungle", "spore-dub", "spore-electro", "cuttings-pocket", "cuttings-night", "cuttings-circuit", "cosmic-breaks", "cosmic-jungle", "cosmic-dubstep" -> 18
+                    "cuttings-pocket", "cuttings-night", "cuttings-circuit" -> 20
+                    "spore-jungle", "spore-dub", "spore-electro", "cosmic-breaks", "cosmic-jungle", "cosmic-dubstep" -> 18
                     "scour" -> 64
                     "lucky-dip-ab" -> 32
                     StarterKits.CONFLUENCE_ID, "erosion" -> 8
@@ -241,7 +242,8 @@ class StarterKitsTest {
                 val renderOnly = kit.pads.filter { it.recipe == null }.map { it.slot }
                 val expectedRenderOnly = when (starter.id) {
                     in StarterKits.PATIO_IDS -> (1..18).toList()
-                    "spore-jungle", "spore-dub", "spore-electro", "cuttings-pocket", "cuttings-night", "cuttings-circuit", "cosmic-breaks", "cosmic-jungle", "cosmic-dubstep" -> (1..18).toList()
+                    "cuttings-pocket", "cuttings-night", "cuttings-circuit" -> (1..20).toList()
+                    "spore-jungle", "spore-dub", "spore-electro", "cosmic-breaks", "cosmic-jungle", "cosmic-dubstep" -> (1..18).toList()
                     "cloud" -> (7..16).toList()
                     StarterKits.CONFLUENCE_ID -> (1..8).toList()
                     StarterKits.CONFLUENCE_VOICES_ID, "velour-close", "velour", "velour-bloom", "triad-techno", "triad-house", "triad-minimal", "gatecrash-stone", "gatecrash-machine", "gatecrash-electro", "cypher-trap", "cypher-drill", "cypher-backroom", "cypher-lowrider", "cypher-dust", "cypher-flint", "mirrorball-philly", "mirrorball-loft", "mirrorball-munich", "soot", "soot-drumless", "soot-dub", "soot-noir", "soot-industrial", "etch", "scuff-detroit", "scuff-flint", "clutter-lofi", "clutter-street", "clutter-boombap", "clutter-micro" -> (1..16).toList()
