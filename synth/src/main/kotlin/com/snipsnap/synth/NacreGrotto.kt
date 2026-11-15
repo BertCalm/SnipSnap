@@ -130,6 +130,15 @@ internal object NacreGrotto {
         return BOW_SECONDS_LOW + (BOW_SECONDS_HIGH - BOW_SECONDS_LOW) * (hold / .98f).coerceIn(0f, 1f)
     }
 
+    /**
+     * The HOLD that bows a finite note for [seconds] before the lift ([bowSeconds]' inverse, in the same float arithmetic the
+     * nacre-grotto-1 desk used for its 4 s bows).
+     */
+    fun holdFor(seconds: Float): Float {
+        require(seconds in BOW_SECONDS_LOW..BOW_SECONDS_HIGH) { "a finite GROTTO bow is $BOW_SECONDS_LOW to $BOW_SECONDS_HIGH s, got $seconds" }
+        return (seconds - BOW_SECONDS_LOW) / (BOW_SECONDS_HIGH - BOW_SECONDS_LOW) * .98f
+    }
+
     /** Where GROTTO plays ARCO CELLO's grip window: TOUCH and velocity together, 0 the lightest, 1 the firmest. */
     fun gripFor(touch: Double, velocity: Float): Float = ((.15 + .85 * touch) * (.6 + .4 * velocity)).toFloat().coerceIn(0f, 1f)
 
