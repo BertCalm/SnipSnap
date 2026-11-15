@@ -1,6 +1,6 @@
 # DRUMLINE
 
-DRUMLINE is a marching battery in progress. The owner preferred the revised Python cymbals: an open crash with lingering plate ring, and progressive damping instead of an abrupt whole-signal cutoff. The native model carries those mechanisms forward. Kotlin's noise generator, filters and output leveling differ from the Python harness, so native sound approval is a separate gate.
+DRUMLINE is a marching battery in progress. The owner preferred the revised Python cymbals: an open crash with lingering plate ring, and progressive damping instead of an abrupt whole-signal cutoff. The native model carries those mechanisms forward. On 2026-11-15 the owner accepted the published native revision 4 ("Sounds good, proceed"). Preserve that sound as the approved baseline.
 
 The characteristic gesture is coordinated stick attack → independent bodies → overlapping cord/plate ring → finite release.
 
@@ -30,13 +30,13 @@ The generator writes both native kit folders, MPC 3 tracks with MPC 2 twins, ful
 | Owner gate | Current evidence |
 | --- | --- |
 | Melodic voices, keygroups, chords | Not applicable: drum battery |
-| Articulation | Finite hits and authored roll/riser implemented; native listening pending |
-| Multiple genre kits | Two authored shelf starters implemented; native listening pending |
+| Articulation | Finite hits and authored roll/riser implemented; native audition accepted |
+| Multiple genre kits | Two authored shelf starters implemented; native audition accepted |
 | Velocity and RR rendering | Passed all 21 voices and 32 authored pads; see measurements below |
 | Save/play/export software | Passed both complete grids in software; hardware remains open |
 | MPC 2 combined velocity/RR | RR exception applies per owner's 2026-11-14 decision; velocity still tested |
 | Phone and MPC hardware | Not yet verified |
-| Kotlin sound vs preferred Python | Not yet approved |
+| Kotlin sound | Native revision 4 accepted on 2026-11-15 |
 | Render budget | Host: bass 21–23 ms, snare 135 ms, crash 866 ms, roll 4.36 s; fast-render target not met |
 | Full control corners and alias-reference comparison | Not yet verified |
 | Overall | In progress; never inferred from a successful preview |
@@ -115,3 +115,13 @@ The preceding unfiltered renderer-3 local run was stopped with exit 143 to revis
 The first candidate failed the hard STREET take-2 contrast check: lower-body share 0.3194 against tenor 0.1375 fell short of the required 0.20 difference. Increasing the companion-head gain from 1.25 to 1.60 made all eighteen comparisons pass without lowering the threshold. In the revised Kotlin renders, the minimum bass-minus-tenor lower-body share is 0.2972, and the minimum increase over the previous bass is 0.3967. [Measurements](evidence/drumline/model4-bass-tenor.csv). The ordinary snare, revised rimshot, all tenors, larger basses and cymbals are byte-identical to renderer 3 at the checked touch/take; saved renderer-3 hashes also pass.
 
 The final focused run completed with exit 0 (7m 54s): eighteen source/catalog/revision checks, both complete-kit tests, and a fresh complete-kit generator. No tests were skipped or thresholds lowered. [Field grid](evidence/drumline/drumline-field-model4.csv) · [Street grid](evidence/drumline/drumline-street-model4.csv) · [Host timings](evidence/drumline/render-times-model4.csv). Full regression and device CI are tracked separately; browser and hardware playback remain untested here.
+
+## Approved factory bank, 2026-11-15
+
+After the small-bass revision, the owner approved the published native audition with "Sounds good, proceed". Source `5af588d3bc23a9d586ef4d85302ef0057e4220f3` and Site version `appgver_3e6854fff3e081919744715dfc5d2487` identify that baseline. This is listening approval; phone/MPC hardware and render-speed evidence are separate.
+
+The 32 FIELD/STREET pad recipes now appear in the factory preset bank, covering all 21 voices and articulations. Names are short kit-prefixed labels; settings and audio are unchanged. Kit recipes explicitly retain renderer 4 when a future experimental renderer is added. A checked-in manifest pins every published hard-hit PCM24 WAV, and the factory test renders each restored recipe against those hashes. Registry, name lookup and per-voice coverage checks exercise the actual factory dispatcher. The existing device picker test now recalls STREET SNARE, checks its tuning/damping, edits it and verifies the saved model.
+
+The prior full local run ended without a terminal result or recoverable process handle; it is not counted as passed. Android compilation and native CI passed for the preceding source; full JVM and emulator results still need their terminal outcomes. Factory integration triggers fresh verification. No DSP or output-stage code changes in this round.
+
+Factory integration verification completed with exit 0 (1m 16s): 98 registry, approved-audio and repository-convention checks. Every one of the 32 factory renders matches its published PCM24 WAV hash. A fresh full unfiltered JVM run and current-head device CI are required separately.

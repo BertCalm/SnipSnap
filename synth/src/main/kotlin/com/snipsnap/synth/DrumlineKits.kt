@@ -5,6 +5,8 @@ import com.snipsnap.kit.ArrangedPad
 /** Two authored batteries. Grids use the same transport as other velocity/RR kits. */
 object DrumlineKits {
     const val VERSION = 4
+    // The owner-approved kit stays on this renderer when new experimental renderers arrive.
+    const val RENDERER_MODEL = 4
     val velocities = listOf(.3f,.6f,1f)
     const val TAKES = 3
     enum class Kit(val id: String, val title: String, val bpm: Float) {
@@ -27,7 +29,7 @@ object DrumlineKits {
                 if("PLAYERS" in m)m["PLAYERS"]=if(v in setOf(DrumlineVoice.CRASH,DrumlineVoice.TOUCH))1f/3 else 3f/7
                 if(v.name.startsWith("BASS"))m["STRIKE"]=.35f
             }
-            DrumlinePatch(v.name.lowercase().replace('_',' ').replaceFirstChar { it.uppercase() },v,m)
+            DrumlinePatch(v.name.lowercase().replace('_',' ').replaceFirstChar { it.uppercase() },v,m,RENDERER_MODEL)
         }
     }
     fun build(kit: Kit): List<ArrangedPad> = patches(kit).map { patch ->
