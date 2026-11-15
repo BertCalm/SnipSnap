@@ -903,14 +903,20 @@ object StarterKits {
         Starter(genre.id, genre.title.uppercase(java.util.Locale.ROOT), "Latin percussion, three velocities and four takes per voice, with a hand-drum roll and cuica.", seeded = false) {
             com.snipsnap.synth.PatioPerformance.build(genre)
         }
-    }).plus(
+    }).plus(listOf(
         // Appended after PATIO: the stored starter order only grows at the end.
         Starter(
             SplayDelivery.BODIES_STARTER_ID, "SPLAY BODIES",
             "Five more things SPLAY's catches strike: WIRE, RUB, AIR, BAR and SKIN, each as you kept it.",
             seeded = false,
         ) { SplayDelivery.bodyStarterPads() },
-    )
+        // Opt-in beside the accepted EROSION starter, which stays as it is.
+        Starter(
+            com.snipsnap.synth.ErosionRoundRobinKits.ID, "EROSION ROUND ROBIN",
+            "The eight EROSION pads with soft, medium and hard touch and four takes on each: a repeated hit sparks differently every time.",
+            seeded = false,
+        ) { com.snipsnap.synth.ErosionRoundRobinKits.build() },
+    ))
 
     fun byId(id: String): Starter? = ALL.firstOrNull { it.id == id }
 }

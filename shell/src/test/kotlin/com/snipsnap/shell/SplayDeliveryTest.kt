@@ -80,8 +80,9 @@ class SplayDeliveryTest {
         assertFalse(starter.seeded)
         assertNull(starter.key)
         assertEquals(1, StarterShelf.GROUPS.sumOf { group -> group.ids.count { it == starter.id } })
-        // Stored starter order only grows at the end.
-        assertEquals(SplayDelivery.BODIES_STARTER_ID, StarterKits.ALL.last().id)
+        // Stored starter order only grows at the end: SPLAY BODIES was appended straight after PATIO.
+        val ids = StarterKits.ALL.map { it.id }
+        assertEquals(ids.indexOfLast { it in StarterKits.PATIO_IDS } + 1, ids.indexOf(SplayDelivery.BODIES_STARTER_ID))
         val directory = kotlin.io.path.createTempDirectory("splay-bodies-starter-").toFile()
         try {
             val kit = starter.render("Splay Bodies", directory)

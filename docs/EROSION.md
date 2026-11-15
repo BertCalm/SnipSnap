@@ -10,8 +10,8 @@ three native touches (.35/.65/1), velocity windows 1–41/42–84/85–127 and t
 original soft-to-hard peak-matching policy. It claims no musical key and leaves
 hits free to overlap. The finite renderer and `legacyEntries()` are unchanged.
 
-This is one accepted contrast kit, not the completion of the new multiple-genre,
-round-robin or optional roll/riser scope. Historical measurements below belong
+This is one accepted contrast kit, not the completion of the new multiple-genre
+or optional roll/riser scope. Round robin is the opt-in kit below. Historical measurements below belong
 to their named rounds. Current integration checks are tracked in the
 [completion programme](SYNTH_COMPLETION_PROGRAM.md).
 
@@ -33,6 +33,43 @@ Repository baseline: `d7c2379c16520df2679457679844b56d32777712`.
 The characteristic gesture is charge → irregular discharge → delayed collapse
 → thinning dust. This is a bounded energy-reservoir analogy for electrical
 discharge machining, not a plasma, heat-transfer or bubble-dynamics simulation.
+
+## Round robin, opt-in (2026-11-15)
+
+EROSION ROUND ROBIN (`erosion-round-robin`, `ErosionRoundRobinKits`) sits on the
+shelf beside the accepted EROSION starter, which is unchanged. It has the same
+eight pads and three touches, with four takes in every touch zone, dealt in
+order by the phone, the groove preview and the MPC 3 export.
+
+- **What a take is.** A take is a fresh render of the same recipe and touch. The
+  first discharge keeps its onset, energy and collapse delay. After it the
+  scheduler re-seeds (`Erosion.render(..., take)`), so the later packets land
+  with different spacing and size. Controls, kernels, filters, the output
+  stage and levelling are untouched. Soft and medium zones are peak-matched to
+  their own take's hard hit, as in the accepted kit.
+- **Take 1 is the accepted hit.** Every zone's first take is the accepted kit's
+  zone sample, sample for sample. `contrast-v1.sha256` pins the 24 accepted
+  renders and 24 kit zones as hashed before takes existed.
+- **Which renders.** The kit uses renderer takes 0, 2, 3 and 5. Renderer takes
+  1, 4, 6 and 7 moved some pad's 90%-energy time outside 0.7–1.4 times the
+  accepted hit (RASP's take 1 has a late burst at 239 ms against 66 ms).
+- **Measured, not heard.** Onsets match within 0.1 ms. Each hard take's
+  spectral shape is 0.2–1.9 dB from the accepted hit, against 7.9–20.8 dB to
+  the nearest other pad. The 90%-energy times are 0.76–1.11 times the accepted
+  hit's. These numbers describe the takes; whether they sound like one
+  instrument hit again is the owner's listen.
+- **Saved and exported.** Grid pads carry no `PadRecipe`, because a one-hit
+  recipe cannot regenerate four takes. Each pad's source keeps the accepted
+  recipe JSON and its renderer takes. The MPC 3 export carries every take.
+  MPC 2 keeps each zone's first take (the recorded
+  [format limit](ENGINE_ACCEPTANCE_GATES.md#mpc-2-and-round-robin-owner-decision-2026-11-14)),
+  and the export screen says so.
+- **Open.** The owner has not listened. The kit has not been played on a phone
+  or loaded on an MPC.
+
+The SYNTH picker's EROSION path has an emulator suite, `ErosionSynthScreenTest`:
+the eight recipes, every control, and YOURS save and recall with native touch
+kept. It runs only in CI, where there is an Android SDK.
 
 ## Identity retained
 
