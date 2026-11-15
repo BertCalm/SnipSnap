@@ -684,7 +684,7 @@ and the approved strum study by its published WAV hashes (`OsteriaStrumTest`).
 - **Overall: incomplete.** Round robin, a seamless HOLD, chord tools on real keys, device runs
   of the picker and hardware playback remain open.
 
-## CLUTTER (round 2, 2026-11-14: four genre kits on the shelf, audition approved; hardware open)
+## CLUTTER (round 2, 2026-11-14: four genre kits on the shelf, audition approved; round 3 roster, round 4 picker; hardware open)
 
 A found-sound drum engine of 22 modelled household objects (`Clutter.kt`, round 1) and four sixteen-pad genre
 kits on the shelf (`ClutterKits`, round 2). Every object has loose parts (rice, a lid, a handle, cutlery, a
@@ -717,8 +717,13 @@ rivet) that only move above a strike threshold. See [CLUTTER](CLUTTER.md).
   <https://claude.ai/artifact/6dkeY2rrjNGUvUYvobs3v5>: "All are good", "I like it as is"), then heard version 8,
   the four Kotlin kits read back from the MPC 3 export, and answered "I approve the audition". Preserve
   `Clutter.MODEL_VERSION` 1 and `ClutterKits.VERSION` 1 as the baseline. Not a phone or MPC listen.
+- **Presets and the roster: pass (round 3).** `ClutterPresets` files the four approved kits' sixty-four pads as the
+  factory bank (every object at least twice, named after the kit: LOFI, STREET, BOOMBAP, MICRO), served by `Presets`; CLUTTER is off
+  `PatchTypes.ROSTERLESS`. Each preset is a pad the owner heard (`ClutterPresetsTest` holds its shape to the kit's
+  pad above .9999 correlation). A player's saved CLUTTER strike promotes with its velocity, take and model
+  through `ClutterPatch.fromJsonText`.
 - **Overall: incomplete.** Every software gate is in place and the sound is approved. Open: the MPC 2 export,
-  phone and MPC playback. The percussion gate is waived by the owner.
+  phone and MPC playback. Round 4 put CLUTTER on SYNTH's picker (compiled and run on an emulator by CI only). The percussion gate is waived by the owner.
 
 ## EMBER (round 0, 2026-11-14, Python prototype, not heard)
 

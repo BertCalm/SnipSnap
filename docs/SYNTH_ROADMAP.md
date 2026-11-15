@@ -3649,3 +3649,18 @@ playback and the MPC 3 export (768 slices). No roll: the owner waived the gate. 
 picker. See [CLUTTER](CLUTTER.md) and the gates entry. The owner heard the four Kotlin kits on the listening page's version 8 (read back from the MPC 3 export) and
 answered "I approve the audition" (2026-11-14): `Clutter.MODEL_VERSION` 1 and `ClutterKits.VERSION` 1 are the
 approved baseline.
+
+### CLUTTER, round 3 (2026-11-14)
+
+Presets and the roster, the round the owner asked for after approving the audition: `ClutterPresets` is the four
+approved kits' sixty-four pads as patches (the pad's macros, struck full, take 0), named after their kit's tag
+(LOFI, STREET, BOOMBAP, MICRO), served by `Presets`; CLUTTER leaves `PatchTypes.ROSTERLESS`. A saved CLUTTER
+strike promotes with its velocity, take and model through the JSON constructor, as SCUFF's does. Open: the app
+picker, hardware playback, MPC 2. See [CLUTTER](CLUTTER.md).
+
+### CLUTTER, round 4 (2026-11-14)
+
+The engine picker: CLUTTER joins SYNTH's `Engine` after SCUFF, mirroring SCUFF's round 5 (SOOT's arms plus the
+native-factory path), so a kit preset loads whole with its take and model. `EngineCatalog` files it under DRUMS;
+88 picker engines. An on-device test in `NewEngineSynthScreenTest`; CI compiles and runs it. Open: hardware
+playback, MPC 2. See [CLUTTER](CLUTTER.md).
