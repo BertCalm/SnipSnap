@@ -25,6 +25,8 @@ for(let i=0;i<8;i++)await elements.kick.click();
 assert.deepEqual(calls.map(c=>c.file),[0,1,2,3,0,1,2,3].map(r=>`audio/kick_v1_r${r}_finished.wav`));
 elements.dynamic.value='2';await elements.kick.click();assert.match(calls.at(-1).file,/kick_v2_r0_finished/);
 elements.stage.value='source';elements.stage.onchange();await elements.kick.click();assert.match(calls.at(-1).file,/kick_v2_r0_source/);
+elements.stage.value='clean';elements.stage.onchange();await elements.kick.click();assert.match(calls.at(-1).file,/kick_v2_r0_clean/);
+elements.stage.value='source';elements.stage.onchange();
 elements.take.value='3';await elements.snare.click();assert.match(calls.at(-1).file,/snare_v2_r3_source/);
 const before=calls.length;await elements.sequence.onclick();
 assert.deepEqual(calls.slice(before).map(c=>c.file),[0,1,2,3,0,1,2,3].map(r=>`audio/snare_v2_r${r}_source.wav`));

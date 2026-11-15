@@ -1,4 +1,4 @@
-"""CUTTINGS R3. Adapted from Luthier proto_template.py; Python, not Kotlin.
+"""CUTTINGS R4. Adapted from Luthier proto_template.py; Python, not Kotlin.
 Original imaginary recording scenes. No external audio assets.
 Render: python3 prototype/cuttings/cuttings_proto.py /absolute/output
 """
@@ -20,13 +20,14 @@ import probes as pr
 
 RATE = 44100
 INTERNAL = RATE * 4
-VERSION = 'cuttings-r3-pocket-finds-1'
+VERSION = 'cuttings-r4-sampler-color-1'
+SOURCE_VERSION = 'cuttings-r3-pocket-finds-1'
 SEED_VERSION = 'cuttings-r1-original-scenes-1'  # preserve primary performances for A/B
 CORE = ('kick', 'snare', 'hat', 'wood')
 EXTRA = ('thump','brush','openhat','clap','rim','hand','shaker','metal','impact','cymbal')
 PHRASES = ('roll','riser')
 VOICES = CORE + EXTRA + PHRASES
-STAGES = ('source', 'splice', 'finished')
+STAGES = ('source', 'splice', 'clean', 'finished')
 NAMES = {'kick': 'Pocket / bass shadow', 'snare': 'Backbeat / borrowed room',
          'hat': 'Hat / tambourine catch', 'wood': 'Wood / library metal'}
 # Bounds and constants are artistic hypotheses, not measured acoustic models.
@@ -81,7 +82,7 @@ def modes(t, base, ratios, decay, rng, velocity):
 
 
 def found_scene(voice,dynamic,take,secondary,rate):
-    rng=np.random.default_rng(sk.seed_for(VERSION,voice,dynamic,take,secondary))
+    rng=np.random.default_rng(sk.seed_for(SOURCE_VERSION,voice,dynamic,take,secondary))
     v=(.40,.69,1.)[dynamic]
     base,ratios,decay,cutoff,noisiness,seam,end,gesture=PROFILES[voice]
     t=np.arange(int(DURATIONS[voice]*rate))/rate
@@ -243,6 +244,22 @@ def scene(voice, dynamic, take, secondary=False, rate=INTERNAL):
     return hit, context
 
 
+def sampler_color(x,rate,voice,dynamic,take):
+    """Generic early-sampler approximation, not a named hardware model.
+    Bandlimit before 22.05 kHz conversion; 12-bit TPDF quantization; mild
+    converter compression. Parallel blend retains attack and upper detail.
+    """
+    rng=np.random.default_rng(sk.seed_for(VERSION,voice,dynamic,take,'converter'))
+    band=filt(x,7800,rate)
+    low=signal.resample_poly(band,1,rate//22050)
+    low=np.tanh(low*1.65)/1.65
+    step=1/2048
+    dither=(rng.random(len(low))-rng.random(len(low)))*step
+    low=np.round((low+dither)/step)*step
+    returned=signal.resample_poly(low,rate//22050,1)[:len(x)]
+    return .50*x+.50*returned
+
+
 def render(voice, dynamic, take, rate=INTERNAL, context=True):
     """All comparison stages share performances. Only the cut/finish changes."""
     if voice in PHRASES:return phrase(voice,dynamic,take,rate,context)
@@ -266,9 +283,10 @@ def render(voice, dynamic, take, rate=INTERNAL, context=True):
         dip=np.clip((t-.029)/.002,0,1)*np.clip((.043-t)/.002,0,1)
         cut*=1-.92*dip
     cut*=crop
-    finished=filt(np.tanh(cut*1.35)/1.35, 9300,rate)
+    clean=filt(np.tanh(cut*1.35)/1.35, 9300,rate)
+    finished=sampler_color(clean,rate,voice,dynamic,take)
     stages={}
-    for name,x in zip(STAGES,(source,cut,finished)):
+    for name,x in zip(STAGES,(source,cut,clean,finished)):
         # Use the template's anti-alias/decimate/DC stages, but never normalize
         # individual dynamics or takes: that would erase performance levels.
         y=signal.resample_poly(x,1,rate//RATE)
@@ -347,7 +365,7 @@ def main(out_dir):
     manifest={'version':VERSION,'rate':RATE,'bpm':89,'names':NAMES,'voices':list(VOICES),
               'phraseBars':1,'phraseVoices':list(PHRASES),'stages':list(STAGES),'entries':entries,'comparisonGain':match,'grooves':grooves,
               'source':'Original procedural imaginary sessions; no sampled records.',
-              'status':'Python R3 audition. App, save/load, MPC export gates remain open.'}
+              'status':'Python R4 audition. App, save/load, MPC export gates remain open.'}
     (out/'manifest.json').write_text(json.dumps(manifest,indent=2)+'\n')
     # Saved manifest and WAVs must describe precisely the rendered grid.
     restored=json.loads((out/'manifest.json').read_text())
@@ -377,7 +395,7 @@ def main(out_dir):
     report={'harness':'Python, not Kotlin','variant_count':len(VOICES)*12,'stage_wavs':len(entries),
             'finite':True,'pcm_manifest_roundtrip':True,'deterministic_rerender':True,
             'max_peak':max(e['peak'] for e in entries),'max_abs_dc':max(abs(e['dc']) for e in entries),
-            'render_ms_three_stages_median':float(np.median(elapsed)),'metrics':metrics,
+            'render_ms_four_stages_median':float(np.median(elapsed)),'metrics':metrics,
             'not_verified':['phone render budget','higher-rate aliasing reference','browser audio output',
                             'SnipSnap persistence/playback','MPC export and hardware playback',
                             'genre shelf','phrase listening acceptance','owner sound acceptance']}

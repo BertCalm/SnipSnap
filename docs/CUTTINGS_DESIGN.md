@@ -162,6 +162,10 @@ Study 02 exaggerates each secondary source gesture in response to owner feedback
 
 The owner called Study 02 a better direction and asked to continue. Study 03 expands to one 16-pad prototype kit: 14 finite percussion hits plus a composed one-bar roll and rising fill, all 3 dynamics × 4 takes. The four Study 02 signatures remain byte-identical. The new audition uses four crates of four pads and an expanded groove. This is not yet multiple genre shelf kits or Kotlin/app/MPC integration; those gates and editable phrase lengths remain open. Measurements and simulated playback selection checks are in `prototype/cuttings/`.
 
+## R4 sampler color
+
+Owner requested a little old-school sample color. A parallel 22.05 kHz/12-bit converter approximation adds modest bandwidth loss, low-level quantization texture and mild peak compression. The Before sampler stage preserves all Study 03 finished samples exactly. This remains a sound-study revision, with full instrument gates open.
+
 ## Why it is built this way
 
 - Short recording scenes give each cut a believable reason to contain room, bass or percussion bleed. Adding noise to a lone drum cannot provide that history.

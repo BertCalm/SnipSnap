@@ -1,4 +1,4 @@
-# CUTTINGS R3 sound study
+# CUTTINGS R4 sound study
 
 Python prototype, not a Kotlin engine. Original generated recording scenes; no external audio assets. Adapted from the repository Luthier prototype template, with its seed, DC and measurement helpers. The renderer uses SciPy polyphase decimation, not the Kotlin output implementation.
 
@@ -11,12 +11,12 @@ Sixteen roles: the four original signature hits, ten additional percussion cuts,
 From the SnipSnap repository, with Python 3, NumPy and SciPy available:
 
 ```sh
-python3 prototype/cuttings/cuttings_proto.py /tmp/cuttings-r3
-cp prototype/cuttings/index.html prototype/cuttings/app.js /tmp/cuttings-r3/
-node prototype/cuttings/check_player.mjs /tmp/cuttings-r3
+python3 prototype/cuttings/cuttings_proto.py /tmp/cuttings-r4
+cp prototype/cuttings/index.html prototype/cuttings/app.js /tmp/cuttings-r4/
+node prototype/cuttings/check_player.mjs /tmp/cuttings-r4
 ```
 
-Serve the generated directory using the environment's supported static preview infrastructure. The page needs HTTP for its manifest and audio fetches. Download links expect `cuttings-r3-hits.zip` and `cuttings-r3-phrases.zip`. Each contains its selected `audio/` files, a manifest filtered to those files, and the full study report; package those files when distributing the page.
+Serve the generated directory using the environment's supported static preview infrastructure. The page needs HTTP for its manifest and audio fetches. Download links expect `cuttings-r4-hits.zip` and `cuttings-r4-phrases.zip`. Each contains its selected `audio/` files, a manifest filtered to those files, and the full study report; package those files when distributing the page.
 
 ## Evidence and limits
 
@@ -45,3 +45,9 @@ One 16-pad prototype kit, divided into four compact audition crates: Signature, 
 Roll and rising fill are finite one-bar phrases at 89 BPM, followed by a short release (3.0166 seconds total). The roll uses a composed rim/snare pattern and wood exit. The rise accelerates from hand drum through rim/snare subdivisions to a wood cutoff. Both have three dynamic performances and four take sequences. No infinite HOLD or live tempo-following is claimed. Editable 1/2/4-bar HOLD remains outstanding.
 
 Checks: 192 variant renders, 576 stage WAVs, monotonic velocity RMS, RMS-matched timbral velocity differences, RR diversity, deterministic re-renders and WAV-manifest integrity pass. Simulated player checks now include crate navigation and phrase-repeat spacing that prevents overlaps. Browser audio remains unverified. Download archives are split into hits and phrases, with independently complete sample manifests. Deployment is private at the same Site; `/r2/` retains the prior study. Full Kotlin/app/export gates remain open.
+
+## Study 04: restrained sampler color
+
+The owner requested a little old-school sample color. Added a generic early-sampler finish: 7.8 kHz prefilter, bandlimited conversion to 22.05 kHz, mild converter saturation, 12-bit quantization with deterministic TPDF dither, reconstructed at the internal rate, mixed 50% with the existing finished sound. This is an aesthetic approximation, not a named hardware emulation.
+
+The Before sampler comparison is byte-identical to Study 03 finished audio for all 192 performances; all 576 prior source/splice/finished samples remain recoverable unchanged. Source seeds are explicitly versioned separately from processing. Four stages now produce 768 WAVs. The same RMS-derived comparison gains preserve dynamics and allow a level-matched comparison on hits and grooves. Render, diversity, persistence-manifest and simulated player checks pass; browser audio and instrument integration gates remain open.
