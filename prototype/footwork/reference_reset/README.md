@@ -17,3 +17,11 @@ Outputs: reference/previous/candidate/touch WAVs, `model.json`, `report.json`, a
 Numerical checks cover all twelve new velocity/take cells, deterministic replay, timbral velocity, distinct normalized takes, silence at zero force, peak, DC and end fade. A closer spectral distance is a diagnostic, not a pass for perceived realism. Listening, full-voice expansion, native/Kotlin delivery and all remaining kit gates stay open.
 
 Mechanism reference: Luca Turchet, [Footstep sounds synthesis: Design, implementation, and evaluation of foot–floor interactions, surface materials, shoe types, and walkers’ features](https://www.lucaturchet.it/PUBLIC_DOWNLOADS/publications/journals/Footstep_sounds_synthesis.pdf), Applied Acoustics 107 (2016). The paper supports treating contact, shoe and surface together; this script is an independent analysis-by-synthesis experiment, not an implementation of that paper's complete physical model.
+
+## Secondary-contact study
+
+Owner hearing: the calibrated contact is closer, but missing a secondary element. The single monotonic envelope erased local re-attacks. A 1 ms energy envelope of the reference has peaks separated by roughly 5–10 ms in several strikes; this does not distinguish shoe contacts from reflections.
+
+`python3 prototype/footwork/reference_reset/contact_pair.py /path/to/output` creates tight (6.5 ms) and separated (11 ms) hypotheses. Each adds independently seeded, darker noise excitation at 0.65 nominal amplitude with deterministic timing/strength variation. These are proposed contact mechanics, not a recovered physical model. Both retain the same fixed comparison gain as the prior audition; no per-hit normalization or waveform copying occurs. All 24 cells pass the Python checks. Full-kit and listening acceptance remain open.
+
+Why it is built this way: independent excitation avoids a comb-filtered echo; a darker second contact distinguishes landing from the first click; short timing variation avoids identical machine repeats; two spacings let the owner judge the missing gesture without replacing the closer baseline.
