@@ -3720,6 +3720,6 @@ under SKINS (148 starters), each sixteen one-shot pads of three velocity zones b
 chokes as mute groups, and a roll or riser on A16. A zone's takes are matched in loudness (CLUTTER's law; the
 audition's peak-matching left them up to 4.5 dB apart on a hit). Velocity and round robin are verified through
 rendering, saving, `PadHit.resolve` playback and MPC 3 export in software (`CalabashKitsTest`, `CalabashKitTest`,
-`:shell:generateCalabashKits`: 768 slices). A kit builds in 22 to 51 s on four cores, disclosed. Not heard in
-Kotlin: the listening page's "On the shelf" section plays each kit's approved groove with the app's own strikes. See
-[CALABASH](CALABASH.md).
+`:shell:generateCalabashKits`: 768 slices). A kit builds in 22 to 51 s on four cores, disclosed. The owner heard the
+Kotlin kits (each kit's approved groove played with the app's own strikes, read back from the MPC 3 export) and
+approved them on 2026-11-15 ("I listened: approve all"). See [CALABASH](CALABASH.md).

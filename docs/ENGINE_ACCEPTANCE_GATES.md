@@ -866,7 +866,7 @@ the Kotlin port, `Ember.kt`, measured against round 0e and not yet heard.
 - **Overall: incomplete.** The Kotlin engine is in (round 1) and not yet heard. The shelf and saving, playback and
   MPC 3 export (round 2), and phone and MPC hardware (round 3) are open.
 
-## CALABASH (round 0 heard and approved, 2026-11-15; Kotlin port and kits on the shelf, not heard)
+## CALABASH (round 2, 2026-11-15: four genre kits on the shelf, Python and Kotlin approved by ear; hardware open)
 
 Four sixteen-pad drum kits for Afrobeat (Lagos, the 1970s), Afrobeats (Lagos and Accra, now), Mbalax (a sabar ensemble
 over a kit, Dakar) and Afro-Cuban jazz (New York, the 1950s). The owner asked for them on 2026-11-15 and chose four kits
@@ -875,20 +875,21 @@ resynthesized from CC0 recordings (VCSL); the shekere, talking drums, sabar drum
 no recording behind them. See [CALABASH](CALABASH.md). Round 0 is a Python prototype and a listening page
 (<https://claude.ai/artifact/8vhxM5dJriounZm38WFn8g>). The owner approved all of round 0 by ear on 2026-11-15 (below).
 Round 1 (2026-11-15) is the Kotlin port, `Calabash.kt`, measured against that prototype. Round 2 (2026-11-15) puts the four
-kits on the shelf, with a listening page of the Kotlin kits (<https://claude.ai/artifact/X54yPsKdm36A7QLQVWDed2>).
-Nobody has heard the Kotlin.
+kits on the shelf, with a listening page of the Kotlin kits (<https://claude.ai/artifact/X54yPsKdm36A7QLQVWDed2>), which
+the owner heard and approved on 2026-11-15 (below).
 
 - **Melodic, keygroup and chord-tool gates:** not applicable. Drum kits.
 - **Articulation:** finite hits, no HOLD. No picked or thumbed strings.
 - **Percussion: authored, heard (2026-11-15).** Every kit carries a roll or riser on A16: a shekere rush (AFROBEAT), a
   talking-drum call rising in pitch (AFROBEATS), a sabar stick roll into its bakk's landing (MBALAX), a timbale abanico
   into the rimshot (AFRO-CUBAN JAZZ). Rendered in Python; on the page the owner approved. On the shelf in Kotlin (round 2),
-  tagged `riser` or `roll`, through the same save, playback and export proof as every pad; not heard in Kotlin.
-- **Drum shelf: on the shelf (round 2), heard in Python.** CALABASH AFROBEAT (112 BPM), CALABASH AFROBEATS (104), CALABASH
+  tagged `riser` or `roll`, through the same save, playback and export proof as every pad; heard in Kotlin and
+  approved (2026-11-15).
+- **Drum shelf: on the shelf (round 2), approved by ear.** CALABASH AFROBEAT (112 BPM), CALABASH AFROBEATS (104), CALABASH
   MBALAX (126) and CALABASH AFRO-CUBAN JAZZ (176) are FRESH TAPE starters under SKINS. They differ in which instruments
   fill the roles, the strokes, tuning, room, era chain, swing and tempo. No pad is the same voice at the same settings
   in any two kits; the same slot in two kits is 14.6 to 23.6 dB apart on average and at least 3.99 dB (Python), and
-  differs in shape in Kotlin (`CalabashKitsTest`). The Kotlin kits have not been heard.
+  differs in shape in Kotlin (`CalabashKitsTest`). The owner heard the Kotlin kits and approved them (2026-11-15).
 - **Velocity and round robin:**
   - **Rendering: verified in Kotlin (round 1).** On all 64 pads, soft against hard at matched level differs by at least
     1.84 dB, and the closest two takes in any zone of any pad are 1.35 dB apart (the Afrobeat rimshot); `CalabashTest`
@@ -912,17 +913,22 @@ Nobody has heard the Kotlin.
   - **Export: MPC 3 verified by read-back.** Velocity ranges, base slices, cycle lengths and frame windows match, and
     the exported slices match their renders. **MPC 2: not applicable** ([format limit](#mpc-2-and-round-robin-owner-decision-2026-11-14)):
     it keeps each zone's first take. SFZ and DecentSampler were not generated. No MPC has loaded these kits.
-- **Sound character: approved at round 0.** On 2026-11-15 the owner wrote "Sounds great" and, asked whether that was
+- **Sound character: approved, Python and Kotlin.** On 2026-11-15 the owner wrote "Sounds great" and, asked whether that was
   a listen to the published page rather than a reply to the PR status, answered "I listened: approve all": all four
   kits and every voice. Preserve round 0 (`prototype/calabash` at commit `967f53f7f`) as the accepted baseline; the
   Kotlin port is judged against it. This is a listen to Python renders on the page, not evidence of a phone or MPC
   audition. Measured before the listen: the fitted voices sit 3.4 to 6.8 dB from their recordings over the first
-  150 ms, where two real takes of one drum sit 4.0 to 8.6 dB apart (Python, `check_fit.py`).
+  150 ms, where two real takes of one drum sit 4.0 to 8.6 dB apart (Python, `check_fit.py`). The same day the owner
+  heard the round-2 page of the Kotlin kits (each kit's approved groove played with the app's own strikes read back
+  from the MPC 3 export, beside the approved Python groove, and every pad's twelve strikes, the takes equal in
+  loudness), wrote "Sounds good" and, asked whether that was a listen to that page, answered "I listened: approve all". Preserve
+  `Calabash.MODEL_VERSION` 1 and `CalabashKits.VERSION` 1 as the baseline. Not a phone or MPC listen.
 - **Build time: disclosed.** A kit builds in 22 to 51 s on four cores; a one-shot renders in 60 to 350 ms and a roll in about
   3.7 s, over the house's tens of milliseconds. A phone is slower.
-- **Overall: incomplete.** The sound is approved in Python and ported (round 1); the kits are on the shelf with
-  velocity and round robin verified through rendering, saving, playback and MPC 3 export in software (round 2). Open:
-  the owner's listen to the Kotlin kits, phone and MPC hardware, presets and the picker (round 3).
+- **Overall: incomplete.** Every software gate is in place and the sound is approved by ear in Python and in Kotlin:
+  the kits are on the shelf with velocity and round robin verified through rendering, saving, playback and MPC 3
+  export in software (round 2). Open: phone and MPC hardware, the MPC 2 export (not applicable, the owner's format
+  limit), presets, the roster and the picker (round 3).
 
 ## DRUMLINE (native model 4 accepted, 2026-11-15)
 

@@ -7,8 +7,9 @@ gates. The owner chose four kits (Afrobeat and Afrobeats apart) and a round-0 pr
 they answered "I listened: approve all": all four kits and every voice. Round 0 (`prototype/calabash` at `967f53f7f`)
 is the accepted baseline the Kotlin port is judged against. Round 1 (2026-11-15) is that port, `Calabash.kt`, measured
 against the prototype pad by pad (below); round 2 puts the four kits on the shelf with their velocity and
-round-robin grids proved through saving, playback and MPC 3 export. The Kotlin has not been heard. The engine stays in progress until every applicable owner gate has evidence (see "Gates" below and the
-gates entry in [ENGINE_ACCEPTANCE_GATES.md](ENGINE_ACCEPTANCE_GATES.md#calabash-round-0-heard-and-approved-2026-11-15-kotlin-port-and-kits-on-the-shelf-not-heard)).
+round-robin grids proved through saving, playback and MPC 3 export. The owner heard the Kotlin kits on 2026-11-15 and
+approved them ("I listened: approve all"). The engine stays in progress until every applicable owner gate has evidence (see "Gates" below and the
+gates entry in [ENGINE_ACCEPTANCE_GATES.md](ENGINE_ACCEPTANCE_GATES.md#calabash-round-2-2026-11-15-four-genre-kits-on-the-shelf-python-and-kotlin-approved-by-ear-hardware-open)).
 
 Prototype: [`prototype/calabash/`](../prototype/calabash/) (`calabash_proto.py` is the model, `fitted.py` the fitted
 voices, `kits.py` the four kits and their grooves, `fit_calabash.py` and `hands.json` the fit to CC0 recordings,
@@ -28,7 +29,7 @@ BREAKER's fitted cymbals at `synth/src/main/resources/breaker/cymbals.json`. `CA
 under the shekere and under many West African resonators); it is not an engine, voice or preset name anywhere in the
 repository.
 
-## Round 1: the Kotlin port (2026-11-15, not heard)
+## Round 1: the Kotlin port (2026-11-15)
 
 The approved prototype in Kotlin, every constant its own (read at 967f53f7f): `Calabash.kt` (the 36 voices, the room,
 the era chain, the output stage), `CalabashFits.kt` (the fitted voices, from `/calabash/hands.json`, EMBER's hats
@@ -292,7 +293,7 @@ the dùndún's 2.2 (now 2.5).
 **An unknown control is ignored, a non-finite control or velocity falls back to its default, AGE 0 is an exact
 bypass:** all true.
 
-## Round 2: the kits on the shelf (2026-11-15, not heard)
+## Round 2: the kits on the shelf (2026-11-15, heard and approved)
 
 The four approved kits are FRESH TAPE starters under SKINS: CALABASH AFROBEAT (112 BPM), CALABASH AFROBEATS (104),
 CALABASH MBALAX (126) and CALABASH AFRO-CUBAN JAZZ (176), `StarterKits.ALL` 148. `CalabashKits.build(kit)` makes each
@@ -336,7 +337,9 @@ about 74 ms. Making it faster changes the approved arithmetic and waits for its 
 **Listening.** A page of its own, "CALABASH On the Shelf" (<https://claude.ai/artifact/X54yPsKdm36A7QLQVWDed2>,
 private to the owner; `prototype/calabash/shelf_grooves.py`, then `build_page.py`, which writes it beside the round-0
 page, whose 438 files leave no room under an artifact's 511): each kit's approved groove played with the app's own
-strikes read back from the MPC 3 export, beside the approved Python groove, and every pad's twelve strikes. Not heard.
+strikes read back from the MPC 3 export, beside the approved Python groove, and every pad's twelve strikes. The owner
+heard it on 2026-11-15, wrote "Sounds good" and, asked whether that was a listen to this page, answered "I listened:
+approve all". `Calabash.MODEL_VERSION` 1 and `CalabashKits.VERSION` 1 are the approved baseline.
 
 ## Gates
 
@@ -344,11 +347,11 @@ strikes read back from the MPC 3 export, beside the approved Python groove, and 
 |---|---|
 | Melodic, keygroup, chord tool | Not applicable: drum kits. |
 | Articulation | Finite hits, no HOLD; no picked or thumbed strings. |
-| Percussion: roll or riser | Authored and heard (2026-11-15): a roll or riser on every kit's A16 (shekere rush, talking call, sabar roll, abanico). On the shelf in Kotlin (round 2), not heard in Kotlin. |
-| Drums: several genre kits on the shelf | On the shelf (round 2): four FRESH TAPE starters under SKINS, distinct in instruments, strokes, tuning, room, era, swing and tempo (`CalabashKitsTest`). Heard in Python; the Kotlin kits not heard. |
+| Percussion: roll or riser | Authored and heard (2026-11-15): a roll or riser on every kit's A16 (shekere rush, talking call, sabar roll, abanico). On the shelf in Kotlin (round 2), heard and approved (2026-11-15). |
+| Drums: several genre kits on the shelf | On the shelf (round 2): four FRESH TAPE starters under SKINS, distinct in instruments, strokes, tuning, room, era, swing and tempo (`CalabashKitsTest`). Heard and approved in Python and in Kotlin (2026-11-15). |
 | Velocity and round robin, rendering | Verified in Kotlin (rounds 1 and 2): every zone a different strike, four different takes, equally loud. |
 | Velocity and round robin, saving, playback, export | Verified in software (round 2): every pad of all four kits through save, reload, `PadHit.resolve` and MPC 3 export, read back. MPC 2: not applicable (the owner's format limit). Phone and MPC hardware open. |
-| Sound character | Approved at round 0 (2026-11-15: "Sounds great", "I listened: approve all"). A listen to Python renders, not a phone or MPC. |
+| Sound character | Approved at round 0 (2026-11-15: "Sounds great", "I listened: approve all") and again in Kotlin at round 2 (2026-11-15: "Sounds good", "I listened: approve all"). Listens to the pages, not a phone or MPC. |
 
 ## Render budget
 
@@ -380,9 +383,8 @@ rolls and cymbals belong in the pad's render cache, keyed by their macros, as BR
 ## Next rounds
 
 - **Round 0: approved (2026-11-15).** No round 0b; the baseline stands as rendered.
-- **Round 1: done (2026-11-15), not heard.** The Kotlin port, above.
-- **Round 2: done (2026-11-15), not heard.** The kits on the shelf, above. The owner's listen to the Kotlin kits is
-  next.
+- **Round 1: done (2026-11-15).** The Kotlin port, above.
+- **Round 2: done (2026-11-15), heard and approved.** The kits on the shelf, above.
 - **Round 3:** presets from the accepted pads, the roster, the picker; the owner's phone and MPC.
 
 ## Why it is built this way
