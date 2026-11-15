@@ -815,6 +815,26 @@ object StarterKits {
             seeded = false, tempoBpm = com.snipsnap.synth.ClutterKits.Kit.MICRO.bpm.toFloat(),
         ) { com.snipsnap.synth.ClutterKits.build(com.snipsnap.synth.ClutterKits.Kit.MICRO) },
         Starter(
+            "ember", "EMBER",
+            "A live jazz kit in a small club in 1962, hard bop on sticks: an open calfskin kick feathered under the band, a crisp snare, a riveted ride carrying the time, a press roll and a mallet cymbal swell. Three touch zones, four takes.",
+            seeded = false, tempoBpm = com.snipsnap.synth.EmberKits.Kit.CLUB.bpm.toFloat(),
+        ) { com.snipsnap.synth.EmberKits.build(com.snipsnap.synth.EmberKits.Kit.CLUB) },
+        Starter(
+            "ember-after-hours", "EMBER AFTER HOURS",
+            "Three in the morning, a ballad on brushes: slow sweeps, taps on 2 and 4, a far sizzle, a damped kick, two people snapping at the back, a brush roll. Three touch zones, four takes.",
+            seeded = false, tempoBpm = com.snipsnap.synth.EmberKits.Kit.AFTER_HOURS.bpm.toFloat(),
+        ) { com.snipsnap.synth.EmberKits.build(com.snipsnap.synth.EmberKits.Kit.AFTER_HOURS) },
+        Starter(
+            "ember-soul-jazz", "EMBER SOUL JAZZ",
+            "The organ-trio set: a fat loose backbeat, tambourine and the room clapping, a sizzle crash, two congas, a snare roll, the 1962 chain pushed warmer. Three touch zones, four takes.",
+            seeded = false, tempoBpm = com.snipsnap.synth.EmberKits.Kit.SOUL.bpm.toFloat(),
+        ) { com.snipsnap.synth.EmberKits.build(com.snipsnap.synth.EmberKits.Kit.SOUL) },
+        Starter(
+            "ember-free", "EMBER FREE",
+            "The late set: mallets on toms tuned wide, a bowed cymbal, snares off, an elbow in the floor tom, loose rattling hats and a cymbal swell. Three touch zones, four takes.",
+            seeded = false, tempoBpm = com.snipsnap.synth.EmberKits.Kit.FREE.bpm.toFloat(),
+        ) { com.snipsnap.synth.EmberKits.build(com.snipsnap.synth.EmberKits.Kit.FREE) },
+        Starter(
             "meridian-materials", "MERIDIAN MATERIALS",
             "Sixteen finite pads across four ringing voices, with three touch levels and five held-sound captures.",
             seeded = false,

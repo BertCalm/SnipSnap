@@ -1,5 +1,14 @@
 # Velour Close, Velour and Velour Bloom
 
+## Selected ride B (2026-11-15)
+
+The owner selected Round 7 **B / Tighter body** after reopening A12's timbre.
+A12 now loads that ride's first take in all three standard shelf kits. The optional
+round-robin builder uses its complete three-velocity/four-take grid. Every other
+pad, including the approved tambourine, retains its existing PCM and take behavior.
+The original Round 5 resource files remain intact for historical verification.
+See [the ride selection ledger](VELOUR_RIDE_B.md) for provenance and validation.
+
 ## Approved Round 5 shelf integration (2026-11-13)
 
 The owner selected the recording-derived tambourine on 2026-11-10 and accepted the
