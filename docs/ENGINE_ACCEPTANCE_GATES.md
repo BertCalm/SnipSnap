@@ -704,6 +704,36 @@ and the approved strum study by its published WAV hashes (`OsteriaStrumTest`).
 - **Overall: incomplete.** Round robin, a seamless HOLD, chord tools on real keys, device runs
   of the picker and hardware playback remain open.
 
+## NACRE (HARMONICS and SHELL kept, 2026-11-15)
+
+NACRE had no section here. PEARL is its first voice: two plucked harps an octave apart in moving
+water, saved models 1 to 4, five factory presets and a FRESH TAPE velocity bank. See
+[NACRE](NACRE.md). HARMONICS (saved model 5) and SHELL (saved model 6) are its second and third
+voices, engine only so far. See [NACRE voices](NACRE_VOICES.md).
+
+| Gate | Status | Evidence |
+|---|---|---|
+| Melodic: six voices with presets | Partial: three of six | PEARL with five presets. HARMONICS and SHELL were kept by the owner on 2026-11-15 (nacre-voices-1, H1–H3 and L1–L3, all KEEP), have no presets yet and are not in the picker. Their 22 kept renders are pinned (`NacreVoicesTest`). BUBBLE is next; GROTTO and CONCH wait for a HOLD decision. |
+| Melodic: playable keygroups | Not yet verified | No NACRE keygroups exist. |
+| Melodic: premade kit | Pass in software, PEARL only | The NACRE starter (`SynthKits.nacre()`) and the FRESH TAPE velocity bank (`NacreKitTest`, `NacreVelocityKitTest`). No kit uses HARMONICS or SHELL. |
+| Melodic: chord-tool compatibility | Not yet verified | No chord mode; the spec's expanded voicing is not built. |
+| Articulation: HOLD | Fail | Every NACRE model refuses nonzero HOLD. |
+| Articulation: STRUM | Pass in software | The paired strum (DUET sets the answer and, at .65 and above, the crossing direction) is part of every voice. |
+| Percussion: roll or riser | Not applicable | A melodic engine. |
+| Drums: genre kits | Not applicable | A melodic engine. |
+| Velocity: rendering | Pass in software; partly heard | PEARL: contact soft and medium layers kept on 2026-11-13 (`nacre-strike-1`). HARMONICS and SHELL: a softer strike rings fewer upper strings or shells and is darker by at least 1 dB per step (`NacreVoicesTest`); the owner kept their soft, medium and hard clips (H1, L1). |
+| Velocity: saving, playback, export | Pass in software, PEARL only | The FRESH TAPE bank replays every layer (`NacreVelocityKitTest`). No HARMONICS or SHELL layers exist. |
+| Round robin | Not yet verified | No NACRE round robin exists. |
+| Picker | PEARL only; not yet verified on a device | `NacreSynthScreenTest` covers PEARL. HARMONICS and SHELL are not in the picker. |
+| Hardware playback | Not verified | No phone timing, MPC load or MPC velocity check is recorded. |
+
+- **Sound character: partly accepted.** The owner heard PEARL's first renderer as pleasant and
+  the timed returns as "Much better"; kept CONTACT .35 and .8 and the strike-shaped layers; and
+  kept HARMONICS and SHELL as new NACRE voices on 2026-11-15. Model 3's full range is still
+  marked as awaiting a listen in [NACRE](NACRE.md).
+- **Overall: incomplete.** Three more voices, presets and picker entries for HARMONICS and SHELL,
+  keygroups, HOLD, round robin, chord tools, device runs and hardware playback remain open.
+
 ## CLUTTER (round 2, 2026-11-14: four genre kits on the shelf, audition approved; round 3 roster, round 4 picker; hardware open)
 
 A found-sound drum engine of 22 modelled household objects (`Clutter.kt`, round 1) and four sixteen-pad genre

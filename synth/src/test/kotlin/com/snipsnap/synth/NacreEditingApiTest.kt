@@ -31,7 +31,7 @@ class NacreEditingApiTest {
 
     @Test
     fun publicModelControlApiRefusesUnsupportedSavedVersions() {
-        for (model in listOf(Int.MIN_VALUE, -1, 0, 5, Int.MAX_VALUE)) {
+        for (model in listOf(Int.MIN_VALUE, -1, 0, NacreModels.LAST_MODEL_VERSION + 1, Int.MAX_VALUE)) {
             assertFailsWith<IllegalArgumentException> { Nacre.macrosFor(NacreVoice.PEARL, model) }
             assertFailsWith<IllegalArgumentException> { Nacre.defaults(NacreVoice.PEARL, model) }
         }
