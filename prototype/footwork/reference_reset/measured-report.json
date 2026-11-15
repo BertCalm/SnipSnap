@@ -1,0 +1,84 @@
+{
+  "status": "new single tap anchor awaiting listen; full kit not revised",
+  "source": {
+    "title": "tap dancing.",
+    "creator": "Chinouk211",
+    "url": "https://freesound.org/people/Chinouk211/sounds/592705/",
+    "license": "https://creativecommons.org/licenses/by/4.0/",
+    "description": "Tap shoes on tiles in an echoing room. Public HQ MP3 preview; mono excerpts for comparison. Not labeled toe versus heel."
+  },
+  "referenceWavSha256": "d49c5f533f3edc89a462ccbeca04f11a1c278c0918f224c6b8537098d106fc61",
+  "onsetsSeconds": [
+    13.808344671201814,
+    15.992585034013606,
+    17.881814058956916,
+    18.154172335600908,
+    22.187437641723356,
+    23.037551020408163,
+    25.88421768707483,
+    31.846213151927437
+  ],
+  "trainingIndices": [
+    0,
+    2,
+    4,
+    6
+  ],
+  "holdoutIndices": [
+    1,
+    3,
+    5,
+    7
+  ],
+  "old": {
+    "flatness100to12000": 1.5285838388300285e-07,
+    "t90ms": 17.07482993197279,
+    "centroidHz": 2274.025483219125,
+    "peak": 0.162638448388548
+  },
+  "candidate": {
+    "flatness100to12000": 0.3032579903224441,
+    "t90ms": 12.222222222222223,
+    "centroidHz": 6983.473895556906,
+    "peak": 0.24510106577963034
+  },
+  "holdout": [
+    {
+      "flatness100to12000": 0.2549459824655729,
+      "t90ms": 5.759637188208617,
+      "centroidHz": 5968.4345111256725,
+      "peak": 0.248382568359375
+    },
+    {
+      "flatness100to12000": 0.31566987407638725,
+      "t90ms": 10.317460317460318,
+      "centroidHz": 3957.7578862507025,
+      "peak": 0.251434326171875
+    },
+    {
+      "flatness100to12000": 0.10133594435184283,
+      "t90ms": 8.956916099773242,
+      "centroidHz": 3601.1558621304403,
+      "peak": 0.17425537109375
+    },
+    {
+      "flatness100to12000": 0.5541008537939044,
+      "t90ms": 40.952380952380956,
+      "centroidHz": 4801.470946480655,
+      "peak": 0.223297119140625
+    }
+  ],
+  "holdoutMeanLogSpectrumDistanceDb": {
+    "old": 45.29130985975448,
+    "candidate": 14.554096244054108
+  },
+  "checks": {
+    "cells": 12,
+    "deterministic": true,
+    "velocityShapeAndLevel": true,
+    "differentTakes": true,
+    "finiteAndBounded": true,
+    "zeroVelocity": true
+  },
+  "comparisonGain": 3.1817453574462924
+}
