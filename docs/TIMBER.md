@@ -165,7 +165,7 @@ Python hard-strike references. After at most 1 ms alignment and gain fitting,
 0.9704. The winding pattern is retained, but output filters differ. Kotlin listening
 remains open, especially the bass scrapes. No byte-parity claim is made.
 
-Full repository regression is **blocked**, not green. The run of
+Historical regression at the original baseline was **blocked**, not green. The run of
 `./gradlew --no-daemon --parallel test --fail-fast` found the existing
 `PersonalityTest` sentence-case failure in `App.kt:1403` and `App.kt:1405`: two
 CAIRN messages use all caps. Both App.kt and PersonalityTest.kt are unchanged
@@ -174,3 +174,10 @@ failure, the remaining broad run was interrupted (exit 130); it is not a
 completed full-suite result. The isolated sentence-case check reproduced the same
 failure and exited 1. The interrupted broad run reported 3,160 passes and one
 failure. No Android SDK is installed here.
+
+Repository delivery (2026-11-15): merged default-branch commit `6e2e40676`,
+which includes the CAIRN sentence-case fix (`ee6f0a3f0`). The current catalogue
+has 136 starters including the three TIMBER banks. Focused validation of this merged
+revision passed 101 checks (exit 0), including the formerly failing CAIRN copy
+check and TIMBER save/playback/export. Full repository regression is being rerun;
+a clean full-suite result is not yet established. Listening and hardware gates remain open.

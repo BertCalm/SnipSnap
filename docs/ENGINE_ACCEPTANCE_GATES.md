@@ -802,6 +802,8 @@ direction, not the new Kotlin renders or hardware playback. See [TIMBER](TIMBER.
   Metadata read-back is not hardware evidence.
 - **Kotlin listening, phone performance and physical playback:** open. The new audition is available;
   no Android SDK or connected phone/MPC was used here.
-- **Repository regression:** blocked by the existing `PersonalityTest` sentence-case failure in
-  unchanged `App.kt:1403,1405` (CAIRN messages). The broad run was interrupted after confirming
-  the failure (exit 130); no clean full-suite result is claimed. Overall acceptance remains incomplete.
+- **Repository regression:** the original baseline run found a CAIRN sentence-case failure and was
+  interrupted (exit 130). Repository delivery merges `6e2e40676`, which includes that fix.
+  The merged revision passes 101 focused checks, including the former copy failure.
+  Full repository regression is being rerun; no clean full-suite result is claimed.
+  Overall acceptance remains incomplete.
