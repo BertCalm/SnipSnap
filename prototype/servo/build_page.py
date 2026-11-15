@@ -110,6 +110,35 @@ if os.path.exists(_shelf):
     {''.join(cards)}
   </section>"""
 
+# Round 1b: the owner heard the kits as "a bit weak". OUT/oomph/ holds, per kit, the same six exported pads before
+# and after the change, all at the same peak, with their measured loudness (written by hand-run tooling in the
+# session that made the change; the section is left out when the folder is absent).
+oomph_html = ""
+_oomph = os.path.join(OUT, "oomph", "oomph.json")
+if os.path.exists(_oomph):
+    O = json.load(open(_oomph))
+    cards = []
+    for k in O["kits"]:
+        rows = "".join(f"<tr><td>A{p['slot']:02d} {ESC(p['name'])}</td><td>{p['before_db']}</td><td>{p['after_db']}</td><td>+{p['gain_db']}</td></tr>" for p in k["pads"])
+        cards.append(f"""
+      <li class="clip"><div class="clip-head"><span class="clip-id">SERVO {ESC(k['title'].upper())} · BEFORE</span></div>
+        <p class="clip-note">Kick, snare, second kick, clap, tom, bass: the pads you heard.</p>
+        <audio controls preload="none" src="oomph/{k['id']}-before.mp3"></audio></li>
+      <li class="clip"><div class="clip-head"><span class="clip-id">SERVO {ESC(k['title'].upper())} · AFTER</span></div>
+        <p class="clip-note">The same six pads now, at the same peak level.</p>
+        <audio controls preload="none" src="oomph/{k['id']}-after.mp3"></audio>
+        <details><summary>Loudness at the same peak, dB</summary><div class="table-wrap"><table><tr><th>Pad</th><th>Before</th><th>After</th><th>Change</th></tr>{rows}</table></div></details></li>""")
+    oomph_html = f"""
+  <section class="card" id="oomph">
+    <h2>More oomph: before and after</h2>
+    <p class="intro">You heard the kits as a bit weak. Measured, the cause was not the rail: every drum began falling away from its
+    first millisecond, and the snare's body sat 16 dB under its attack, so at a matched peak the body played quietly. Now the kick,
+    snare and tom stand at full level for a moment before they decay, the snare has more body, every voice is driven a little further
+    into the clip, and the rail ducks the body less. Kicks are 1.2 to 2.7 dB louder at the same peak, snares 3.2 to 4.7 dB.</p>
+    <p class="ask"><span class="tag">LISTEN FOR</span>Is that enough weight, or should it go further? Did any drum lose its snap or get muddy? Which drums still feel weak?</p>
+    <ul class="clips">{''.join(cards)}</ul>
+  </section>"""
+
 kit_cards = []
 for k in KITS:
     rows = "".join(
@@ -184,7 +213,7 @@ GATES = [
     ("Velocity and round robin through saving, playback, export", "mid" if SHELF else "open",
      f"In software: all {SLICES} slices of the three kits were checked against their renders after saving, reloading, two playback cycles of the app's pad player and the MPC 3 export. MPC 2 keeps each zone's first take (your recorded format limit)." if SHELF
      else "No Kotlin yet. The page's pad grid is a browser stand-in, not the app."),
-    ("Sound", "open", "Nobody has heard any of it. Your listen."),
+    ("Sound", "open", "You heard round 1: \"They feel a bit weak.\" Round 1b adds weight and has not been heard." if oomph_html else "Nobody has heard any of it. Your listen."),
     ("Phone and MPC", "open", "Nothing has been loaded on a device."),
 ]
 gate_rows = "".join(f'<tr><td>{ESC(a)}</td><td><span class="pill {s}">{ {"na": "N/A", "mid": "MEASURED", "open": "OPEN"}[s] }</span></td><td>{ESC(b)}</td></tr>'
@@ -217,14 +246,14 @@ page = f"""<meta charset="utf-8">
 
 <div class="wrap">
   <header>
-    <div class="mark"><i></i><span class="eyebrow">SNIPSNAP · SERVO · {'ROUND 1 · KOTLIN KITS ON THE SHELF' if shelf_html else 'ROUND 0 · PYTHON PROTOTYPE'} · NOT HEARD</span></div>
+    <div class="mark"><i></i><span class="eyebrow">SNIPSNAP · SERVO · {'ROUND 1B · MORE WEIGHT, AFTER YOUR FIRST LISTEN' if oomph_html else 'ROUND 1 · KOTLIN KITS ON THE SHELF · NOT HEARD' if shelf_html else 'ROUND 0 · PYTHON PROTOTYPE · NOT HEARD'}</span></div>
     <h1>SERVO Audition</h1>
     <p class="lede">Machine drums for electro, ghetto tech and neurofunk, all running off one deliberately weak power supply.
     Every hit pulls the supply down a few milliseconds after it lands, and three things follow it: the pitch dives, the drum
     squares off against a lower ceiling, and its tone sweeps. Let the supply ring as it recovers and the tail growls.
-    Ten voices, three sixteen-pad kits. Nothing is sampled. {'The first section is the Kotlin kits as the app exports them; the rest is the Python prototype they were ported from.' if shelf_html else 'Nothing here is Kotlin yet.'} Nobody has heard any of it.</p>
+    Ten voices, three sixteen-pad kits. Nothing is sampled. {'The first section is the Kotlin kits as the app exports them; the rest is the Python prototype they were ported from.' if shelf_html else 'Nothing here is Kotlin yet.'} {'You heard round 1 as a bit weak; this is the heavier version.' if oomph_html else 'Nobody has heard any of it.'}</p>
     <p class="gesture">The trigger lands clean → the rail sags: the drum dives and flat-tops → the rail rings back: the tail growls → recovered and silent before the next sixteenth.</p>
-    <nav><a href="#play">Play</a>{'<a href="#shelf">On the shelf</a>' if shelf_html else ''}<a href="#rail">The rail</a>{''.join(f'<a href="#kit-{k["id"]}">{ESC(k["name"].replace("SERVO ", "").title())}</a>' for k in KITS)}<a href="#voices">Voices</a><a href="#velocity">Velocity</a><a href="#takes">Takes</a><a href="#macros">Controls</a><a href="#gates">Gates</a><a href="#ledger">Ledger</a></nav>
+    <nav><a href="#play">Play</a>{'<a href="#oomph">More oomph</a>' if oomph_html else ''}{'<a href="#shelf">On the shelf</a>' if shelf_html else ''}<a href="#rail">The rail</a>{''.join(f'<a href="#kit-{k["id"]}">{ESC(k["name"].replace("SERVO ", "").title())}</a>' for k in KITS)}<a href="#voices">Voices</a><a href="#velocity">Velocity</a><a href="#takes">Takes</a><a href="#macros">Controls</a><a href="#gates">Gates</a><a href="#ledger">Ledger</a></nav>
   </header>
 
   <section class="card" id="play">
@@ -238,6 +267,7 @@ page = f"""<meta charset="utf-8">
       <div class="readout"><span id="status">Tap any pad. Each pad loads on its first tap.</span><button class="load" id="loadall" type="button">LOAD THIS KIT</button></div>
     </div>
   </section>
+{oomph_html}
 {shelf_html}
 {base_sections[0]}
 {''.join(kit_cards)}
@@ -387,7 +417,7 @@ files = {}
 for root, _, names in os.walk(OUT):
     for name in names:
         rel = os.path.relpath(os.path.join(root, name), OUT)
-        if name.endswith(".mp3") or (name.endswith(".wav") and rel.startswith("pads")):
+        if name.endswith(".mp3") or (name.endswith(".wav") and rel.startswith("pads" + os.sep)):
             files[rel] = rel
 json.dump(files, open(os.path.join(OUT, "files.json"), "w"), indent=0)
 print("wrote", os.path.join(OUT, "index.html"), "and", len(files), "listening files")

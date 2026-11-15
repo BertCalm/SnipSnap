@@ -74,8 +74,9 @@ DEFAULTS = {"TUNE": 0.5, "DECAY": 0.5, "ZAP": 0.4, "SAG": 0.45, "GROWL": 0.35, "
 PITCH_OCT = 0.5     # octaves the pitch falls
 TONE_OCT = 1.6      # octaves the tone peak falls
 CEIL_DROP = 0.7     # share of the headroom lost
+SWING_DROP = 0.45   # share of the output level lost (less than the ceiling: the body ducks, but keeps its weight)
 R_MAX = 0.85        # the tanh bound on r, so pitch and ceiling can never reach zero
-PRE_LEVEL = 0.5     # a full-velocity voice peaks here before HEAT; the clip knee is at 0.5
+PRE_LEVEL = 0.7     # a full-velocity voice peaks here before HEAT; the clip knee is at 0.5, so a hard hit is always into the knee
 
 # DRAW: how much current a voice pulls (its weight on a shared rail). SENS: how deeply a voice
 # reads the sag its OWN hit causes. CROSS: how much of the sag caused by OTHER hits reaches it
@@ -109,9 +110,16 @@ def _rng(*parts) -> np.random.Generator:
     return np.random.default_rng(sk.seed_for("SERVO", MODEL_VERSION, *parts))
 
 
-def _env(n: int, t60: float, attack: float = 0.0008) -> np.ndarray:
+def _env(n: int, t60: float, attack: float = 0.0008, hold: float = 0.0) -> np.ndarray:
+    """An amplitude envelope. `hold` keeps the drum at full level for a moment before it decays:
+    the shoulder that gives a drum its weight. With no hold the body is already falling under
+    the attack from the first millisecond, and a peak-matched pad then plays its body quietly."""
     t = np.arange(n) / FS
-    return (1.0 - np.exp(-t / attack)) * np.exp(-6.908 * t / t60)
+    return (1.0 - np.exp(-t / attack)) * np.exp(-6.908 * np.maximum(t - hold, 0.0) / t60)
+
+
+def _frames_held(t60: float, hold: float) -> int:
+    return _frames(t60 + hold)
 
 
 def _frames(t60: float, cap: float = 1.45) -> int:
@@ -259,9 +267,13 @@ def _decay(m, lo, hi):
     return sk.exp_map(m["DECAY"], lo, hi)
 
 
+def _kick_hold(m):
+    return sk.lin(m["DECAY"], 0.03, 0.09)                  # a longer kick also holds longer. "shape"
+
+
 def plan_kick(m, v):
     t60 = _decay(m, 0.12, 1.1)
-    return _env(_frames(t60), t60)
+    return _env(_frames_held(t60, _kick_hold(m)), t60, hold=_kick_hold(m))
 
 
 def body_kick(m, v, take, env, r):
@@ -273,13 +285,16 @@ def body_kick(m, v, take, env, r):
     sweep = _sweep(n, sk.exp_map(m["ZAP"], 0.6, 11.0) * trig, sk.exp_map(m["ZAP"], 0.009, 0.05))
     f = root * sweep * 2.0 ** (-PITCH_OCT * r)
     x = _sine(f, 0.02 * g.random()) * env
-    x += _click(n, 0.35 * (0.9 + 0.2 * g.random()), 0.5 * v * v * trig * trig)
+    x += _click(n, 0.35 * (0.9 + 0.2 * g.random()), 0.3 * v * v * trig * trig)
     return x, ("peak", root * 2.6, 1.4, 7.0)
+
+
+SNARE_HOLD = 0.018   # the body and the wires both stand for a moment before they fall. "shape"
 
 
 def plan_snare(m, v):
     t60 = _decay(m, 0.09, 0.42)
-    return _env(_frames(t60), t60)
+    return _env(_frames_held(t60, SNARE_HOLD), t60, hold=SNARE_HOLD)
 
 
 def body_snare(m, v, take, env, r):
@@ -288,11 +303,11 @@ def body_snare(m, v, take, env, r):
     f1 = sk.exp_map(m["TUNE"], 150.0, 265.0)
     sweep = _sweep(n, sk.exp_map(m["ZAP"], 0.25, 5.0), sk.exp_map(m["ZAP"], 0.006, 0.03))
     dive = 2.0 ** (-PITCH_OCT * r)
-    body_env = _env(n, _decay(m, 0.07, 0.26))
+    body_env = _env(n, _decay(m, 0.09, 0.32), hold=SNARE_HOLD * 1.5)
     body = (_sine(f1 * sweep * dive, 0.05 * g.random()) + 0.55 * _sine(f1 * 1.83 * sweep * dive)) * body_env
     # The wires: noise, brighter and louder the harder the hit (velocity is not level alone).
     noise = _hp(_lp(g.uniform(-1, 1, n), 4500.0 + 11500.0 * v ** 0.6), 1300.0) * env
-    x = 0.7 * body + (0.55 + 0.45 * v) * 0.9 * noise + _click(n, 0.25, 0.4 * v)
+    x = 0.95 * body + (0.55 + 0.45 * v) * 1.5 * noise + _click(n, 0.25, 0.3 * v)
     return x, ("peak", 1900.0, 3.0, 12.0)
 
 
@@ -382,9 +397,12 @@ def body_bell(m, v, take, env, r):
     return x * env * strike, ("peak", base * 3.1, 2.5, 7.0)
 
 
+TOM_HOLD = 0.03
+
+
 def plan_tom(m, v):
     t60 = _decay(m, 0.12, 0.72)
-    return _env(_frames(t60), t60)
+    return _env(_frames_held(t60, TOM_HOLD), t60, hold=TOM_HOLD)
 
 
 def body_tom(m, v, take, env, r):
@@ -508,7 +526,7 @@ def heat(x, amount, r):
     u = (x * gain + 0.12 * amount * ceiling) / ceiling
     mag = np.abs(u)
     shaped = np.where(mag <= 0.5, u, np.sign(u) * (0.5 + 0.5 * np.tanh((mag - 0.5) / 0.5)))
-    return shaped * ceiling * ceiling
+    return shaped * ceiling * (1.0 - SWING_DROP * r)
 
 
 # ---------------------------------------------------------------- render

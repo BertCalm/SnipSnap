@@ -72,9 +72,12 @@ object Servo {
     private const val PITCH_OCT = 0.5
     private const val TONE_OCT = 1.6
     private const val CEIL_DROP = 0.7
+    /** Share of the output level lost at r = 1: less than the ceiling, so the body ducks but keeps its weight. */
+    private const val SWING_DROP = 0.45
     /** The tanh bound on the rail, so pitch and ceiling can never reach zero. */
     const val R_MAX = 0.85
-    private const val PRE_LEVEL = 0.5
+    /** A full-velocity voice peaks here before HEAT. The clip knee is at 0.5, so a hard hit is always into the knee. */
+    private const val PRE_LEVEL = 0.7
     private const val TONE_BLOCK = 64
     private val PRE_ROLL = (0.13 * FS).toInt()
     /** The most sag piled-up hits can cause, in units of one full kick. "shape" */
@@ -231,8 +234,18 @@ object Servo {
     private fun expMap(x: Double, lo: Double, hi: Double) = lo * (hi / lo).pow(x.coerceIn(0.0, 1.0))
     private fun noise(g: Random, n: Int) = DoubleArray(n) { g.nextDouble(-1.0, 1.0) }
 
-    private fun env(n: Int, t60: Double, attack: Double = 0.0008): DoubleArray =
-        DoubleArray(n) { val t = it.toDouble() / FS; (1.0 - exp(-t / attack)) * exp(-6.908 * t / t60) }
+    /**
+     * An amplitude envelope. [hold] keeps the drum at full level for a moment before it decays: the shoulder
+     * that gives a drum its weight. With no hold the body is already falling under the attack from the first
+     * millisecond, and a peak-matched pad then plays its body quietly (the owner's "a bit weak", 2026-11-15).
+     */
+    private fun env(n: Int, t60: Double, attack: Double = 0.0008, hold: Double = 0.0): DoubleArray =
+        DoubleArray(n) { val t = it.toDouble() / FS; (1.0 - exp(-t / attack)) * exp(-6.908 * max(t - hold, 0.0) / t60) }
+
+    // How long each drum stands at full level before it falls. "shape"
+    private fun kickHold(m: M) = lin(m.decay, 0.03, 0.09)   // a longer kick also holds longer
+    private const val SNARE_HOLD = 0.018
+    private const val TOM_HOLD = 0.03
 
     /** Length of a hit: its decay plus a margin, capped under the classifier's 1.5 s LOOP line. */
     private fun frames(t60: Double, cap: Double = 1.45): Int = (min(cap, t60 * 1.15 + 0.03) * FS).toInt()
@@ -371,13 +384,13 @@ object Servo {
     private fun decay(m: M, lo: Double, hi: Double) = expMap(m.decay, lo, hi)
 
     private fun plan(voice: ServoVoice, m: M): DoubleArray = when (voice) {
-        ServoVoice.KICK -> decay(m, 0.12, 1.1).let { env(frames(it), it) }
-        ServoVoice.SNARE -> decay(m, 0.09, 0.42).let { env(frames(it), it) }
+        ServoVoice.KICK -> decay(m, 0.12, 1.1).let { env(frames(it + kickHold(m)), it, hold = kickHold(m)) }
+        ServoVoice.SNARE -> decay(m, 0.09, 0.42).let { env(frames(it + SNARE_HOLD), it, hold = SNARE_HOLD) }
         ServoVoice.CLAP -> decay(m, 0.08, 0.36).let { env(frames(it + 0.03), it) }
         ServoVoice.HAT -> decay(m, 0.03, 0.62).let { env(frames(it), it, 0.0003) }
         ServoVoice.RIM -> decay(m, 0.025, 0.13).let { env(frames(it), it, 0.0002) }
         ServoVoice.BELL -> decay(m, 0.08, 0.62).let { env(frames(it), it, 0.0003) }
-        ServoVoice.TOM -> decay(m, 0.12, 0.72).let { env(frames(it), it) }
+        ServoVoice.TOM -> decay(m, 0.12, 0.72).let { env(frames(it + TOM_HOLD), it, hold = TOM_HOLD) }
         ServoVoice.LASER -> decay(m, 0.06, 0.55).let { env(frames(it), it, 0.0003) }
         ServoVoice.STAB -> {
             val t60 = decay(m, 0.12, 0.95)
@@ -417,19 +430,19 @@ object Servo {
                 val sw = sweep(n, expMap(m.zap, 0.6, 11.0) * trig, expMap(m.zap, 0.009, 0.05))
                 val x = sine(n, phase) { root * sw[it] * dive[it] }
                 for (i in 0 until n) x[i] *= env[i]
-                addClick(x, 0.35 * (0.9 + 0.2 * g.nextDouble()), 0.5 * v * v * trig * trig)
+                addClick(x, 0.35 * (0.9 + 0.2 * g.nextDouble()), 0.3 * v * v * trig * trig)
                 Body(x, Tone(false, root * 2.6, 1.4, 7.0))
             }
             ServoVoice.SNARE -> {
                 val f1 = expMap(m.tune, 150.0, 265.0)
                 val sw = sweep(n, expMap(m.zap, 0.25, 5.0), expMap(m.zap, 0.006, 0.03))
-                val bodyEnv = env(n, decay(m, 0.07, 0.26))
+                val bodyEnv = env(n, decay(m, 0.09, 0.32), hold = SNARE_HOLD * 1.5)
                 val a = sine(n, 0.05 * g.nextDouble()) { f1 * sw[it] * dive[it] }
                 val b = sine(n, 0.0) { f1 * 1.83 * sw[it] * dive[it] }
                 // The wires: noise, brighter and louder the harder the hit (velocity is not level alone).
                 val wires = hp(lp(noise(g, n), 4500.0 + 11500.0 * v.pow(0.6)), 1300.0)
-                val x = DoubleArray(n) { 0.7 * (a[it] + 0.55 * b[it]) * bodyEnv[it] + (0.55 + 0.45 * v) * 0.9 * wires[it] * env[it] }
-                addClick(x, 0.25, 0.4 * v)
+                val x = DoubleArray(n) { 0.95 * (a[it] + 0.55 * b[it]) * bodyEnv[it] + (0.55 + 0.45 * v) * 1.5 * wires[it] * env[it] }
+                addClick(x, 0.25, 0.3 * v)
                 Body(x, Tone(false, 1900.0, 3.0, 12.0))
             }
             ServoVoice.CLAP -> {
@@ -573,7 +586,7 @@ object Servo {
             val u = (x[it] * gain + 0.12 * amount * ceiling) / ceiling
             val mag = abs(u)
             val shaped = if (mag <= 0.5) u else sign(u) * (0.5 + 0.5 * tanh((mag - 0.5) / 0.5))
-            shaped * ceiling * ceiling
+            shaped * ceiling * (1.0 - SWING_DROP * r[it])
         }
     }
 

@@ -1,11 +1,15 @@
 # SERVO: design brief and round-0 audition
 
-Status: **round 1 (2026-11-15): the Kotlin engine and three kits on the FRESH TAPE shelf, with velocity and round
-robin proven in software through rendering, saving, playback and MPC 3 export. Not heard.** The owner's
-instruction on 2026-11-15 was "Must pass the gates", so the port did not wait for a listen to round 0; every
-sound setting is therefore still "shape". The engine stays in progress until the sound and hardware gates have
-the owner's evidence (see "Gates" and the entry in
-[ENGINE_ACCEPTANCE_GATES.md](ENGINE_ACCEPTANCE_GATES.md#servo-round-1-2026-11-15-kotlin-kits-on-the-shelf-not-heard)).
+Status: **round 1b (2026-11-15): more weight, after the owner's first listen. Round 1b is not heard.** The
+owner's listens so far:
+- Round 1 (the Kotlin kits on the listening page): "They feel a bit weak", with a request for "a bit more
+  oomph". [Round 1b](#round-1b-more-weight-2026-11-15) answers it.
+
+The Kotlin engine and three kits are on the FRESH TAPE shelf, with velocity and round robin proven in software
+through rendering, saving, playback and MPC 3 export. The owner's instruction on 2026-11-15 was "Must pass the
+gates", so the port did not wait for a listen to round 0; every sound setting is still "shape". The engine stays
+in progress until the sound and hardware gates have the owner's evidence (see "Gates" and the entry in
+[ENGINE_ACCEPTANCE_GATES.md](ENGINE_ACCEPTANCE_GATES.md#servo-round-1b-2026-11-15-kotlin-kits-on-the-shelf-first-listen-a-bit-weak)).
 What the Kotlin round built and measured is under [As built](#as-built-round-1-kotlin-2026-11-15).
 
 Prototype: [`prototype/servo/`](../prototype/servo/) (`servo_proto.py` is the model, `kits.py` the three
@@ -14,7 +18,7 @@ kits and their phrases, `measures.py` the house distance measures, `gen_audition
 is from that Python harness, not from Kotlin.
 
 Listening page: <https://claude.ai/artifact/XGH7434aQcdBcffRRnHLA8> (private to the owner; published
-2026-11-15, version 3). It opens with the Kotlin kits as read back from the MPC 3 export, then carries the
+2026-11-15, version 5). It opens with round 1b's before and after, then the Kotlin kits as read back from the MPC 3 export, then carries the
 prototype: a playable 4×4 pad grid with three velocity layers and four takes per
 pad, the rail heard on its own, each kit's groove, roll and riser, every control on every voice, the gates
 and the ledger.
@@ -193,7 +197,7 @@ inside the voice (the oscillators read it), so it cannot be a rack section over 
 | Round robin in rendering | Pass in software | Four different takes in every zone of every pad, matched in loudness within 0.04 dB; closest takes 0.59 dB (ELECTRO Rim), near the 0.5 to 0.8 dB ETCH's takes were heard as one strike |
 | Saving, playback, export | Pass in software | `ServoKitTest` and `:shell:generateServoKits`: all 576 slices of the three kits checked against their renders after save, reload, two playback cycles of the app's pad resolver and the MPC 3 track read back |
 | MPC 2 | Format limit | Each velocity zone keeps its first take ([owner decision, 2026-11-14](ENGINE_ACCEPTANCE_GATES.md#mpc-2-and-round-robin-owner-decision-2026-11-14)) |
-| Sound | **Open** | Not heard. Only the owner can close it |
+| Sound | **Open** | Round 1 heard as "a bit weak"; round 1b not heard. Only the owner can close it |
 | Phone and MPC | **Open** | Nothing loaded on a device. Only the owner can close it |
 | SYNTH picker, factory presets | Not built | Not gates. The engine is `ROSTERLESS` until the kits are heard ("presets authored blind are disposable") |
 
@@ -298,3 +302,45 @@ hit; four takes differ and replay; scramble bounds; names. `ServoKitsTest` (9): 
 match, velocity, takes, the shared rail changes the phrases, the built grid and provenance, the three kits
 differ. `ServoKitTest` (3): the grid through save, reload, playback and MPC 3; playback picks the zone by
 velocity and walks the takes in order; the kits are on the shelf once each.
+
+## Round 1b: more weight (2026-11-15)
+
+The owner heard round 1's kits: "Can we add in a bit more oomph? They feel a bit weak."
+
+**What was measured first.** The suspect was sonic risk 1, the rail ducking the body. It was not the cause:
+with the rail switched off a kick was only 1.1 to 2.1 dB louder at the same peak. The cause was in the
+voices. Every envelope began decaying from its first millisecond, so with the peak set by the attack the body
+was already 5 dB down across 20 to 120 ms on a kick. On the snare the body sat 16 dB under the attack and the
+pad measured -21.7 dB RMS at a 0.89 peak.
+
+**What changed, in the engine and the prototype alike.**
+
+| Change | From | To |
+|---|---|---|
+| KICK, SNARE and TOM hold at full level before they decay | no hold | kick 30 to 90 ms (longer with DECAY), snare 18 ms (its body 27 ms), tom 30 ms |
+| Snare body against wires | 0.7 body, 0.9 wires, body T60 70 to 260 ms | 0.95 body, 1.5 wires, body T60 90 to 320 ms |
+| Level into the clipper at full velocity | 0.5 (at the knee) | 0.7 (always into it) |
+| Output level lost to the rail at r = 1 | 0.7, the same as the ceiling | 0.45, its own constant: the body ducks less |
+| Kick and snare click | 0.5 and 0.4 | 0.3 and 0.3: the click no longer sets the peak the body is measured against |
+
+All "shape". A first attempt at the snare (body 1.1, wires 0.7) left it 9 dB short of crack between 2 and 10 kHz
+and was abandoned for the mix above, which keeps the crack within 5 dB of round 1's share.
+
+**Measured on the exported Kotlin kits, loudness over the first 250 ms at the same 0.92 peak:**
+
+| Kit | Kicks | Snares | Clap | Tom | Bass |
+|---|---|---|---|---|---|
+| ELECTRO | +2.4, +2.2 dB | +4.7 dB | +1.9 dB | +2.0 dB | +1.3 dB |
+| JIT | +1.7, +1.2 dB | +3.2 dB | +0.8 dB | +1.8 dB | +0.5 dB |
+| NEURO | +1.4, +2.7 dB | +4.3, +4.3 dB | | +1.0 dB | +0.7 dB |
+
+The port still sits inside the prototype's own take spread on every voice (kick 0.5 dB, correlation 0.997), all
+576 slices still pass the export proof, and the Python root check reads 15.0 cents at the worst corner (the
+Kotlin test's bound is 30). The tables above this section carry round 0's and round 1's numbers.
+
+`Servo.MODEL_VERSION` and `ServoKits.VERSION` stay at 1: nothing has been merged or accepted, so no saved kit
+exists that could change under its owner.
+
+**What the page asks.** Is that enough weight or should it go further; did any drum lose its snap or get muddy;
+which drums still feel weak. Further steps exist if it is not enough: a longer hold, more HEAT on the kits'
+kick and snare pads, and harmonics between 100 and 400 Hz for the kicks, where small speakers play.
