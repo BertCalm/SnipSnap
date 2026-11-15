@@ -11,7 +11,7 @@ import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 
 /**
- * HARMONICS (saved model 5) and SHELL (saved model 6), NACRE's new sources for round nacre-voices-1.
+ * HARMONICS (saved model 5), SHELL (saved model 6) and BUBBLE (saved model 7), NACRE's new sources.
  * The first test pins PEARL as rendered on the untouched base (0d57e9e80), so adding the sources
  * cannot have moved a single PEARL sample.
  */
@@ -104,15 +104,59 @@ class NacreVoicesTest {
         }
     }
 
+    /**
+     * Round nacre-voices-2 (15 Nov 2026), all KEEP, no notes. Q1 and Q2 are these eight presets at C3,
+     * 3.5 s apart. U1 to U3 are BUBBLE at its default controls and seed 7 (soft, medium and hard C3; a
+     * phrase from C2 to C5; and beside PEARL at C3 and C4), rendered here through a saved model-7
+     * recipe. Each clip is exactly these renders mixed at their onsets and written as 16-bit.
+     */
+    @Test
+    fun `the renders the owner kept in nacre-voices-2 are unchanged`() {
+        val presets = mapOf(
+            "Glass Harmonic" to "4e1a00f71c0161fbdf7c3b249e7c0faf82ca204a6246d4fd1c9e1329ec3a18fc",
+            "Soft Harmonic" to "0a15a2d813f50be2ca536afa25807039fd42ffeeff783424ca6a5eb013809541",
+            "Harmonic Kelp" to "8c7e4ba225e35c3d4f185a9b943bba4f48ff60e0f7b90764d37c4df3dfa569cd",
+            "Harmonic Ring" to "44b930b16e6dd526955643313c5ba5051ba0ed1a41e10a562f025d22d60fdee3",
+            "Shell Tap" to "d2d7992fc59a6fdbee9d1a8dff72ba9111d4fb38d2f265644936fcf6e1ad8d46",
+            "Deep Shell" to "ab6aa409b448298a774697d48917d006767b33dddd915bfe2abb5c48ad7a33c9",
+            "Shell Reef" to "47cc8d0acb2b7faf61667e3c3da71786fcef3a283da9c5aa13a78c3c6123cdc3",
+            "Shell Bloom" to "5c83bd91181a85dcbac8eb8f4b4bed107a702cd1d9f8e11c383940387566b478",
+        )
+        val kept = NacrePresets.forVoice(NacreVoice.HARMONICS) + NacrePresets.forVoice(NacreVoice.SHELL)
+        assertEquals(presets.keys.toList(), kept.map { it.name })
+        for (p in kept) assertEquals(presets.getValue(p.name), hash(p.render().samples), "${p.name} moved")
+        val bubble = mapOf(
+            "48 0.3" to "e1071693b602eb67598d0b66b7de061df98d22806a9de79f5a9e943d5db29673",
+            "48 0.65" to "fc54ff728e05b9222fb6932b6a273ce5c330ba8a73c357acd21961f37cee9657",
+            "48 1.0" to "85752e096e6e5f026755f360f5de4b5fcd364623349706a560fba7aacbd80d6b",
+            "36 0.85" to "7ffa9a9c074a723173ddcb1b9aae037d72f40e399ff74b3293e64bf6ab44f2ff",
+            "43 0.6" to "4e5b3dd019cb90dcff1b73e3d99513869b6ca8b9b686a174220293d1758c5c36",
+            "48 0.75" to "05675cd48f422f2c4b5ee3bd34404ee54fb9e51266076b9f7c71d510afd16180",
+            "55 0.55" to "0a7f2beeb8b4e894ddad63c86ed33f0c72f9d970deb1eb4d185bf468aa1de899",
+            "60 0.8" to "257ae1a10d2b52418297effe964ae52d9ea5b8edf536e29521e5ffc387b85a5a",
+            "67 0.6" to "4ffb2417158f893256628f960a6746961ed669f9def924d102edfead77223083",
+            "72 0.9" to "946cefb3e162ac9490277f28c58469cab348a83ae72835015f650e702a047616",
+            "48 0.8" to "7393d4a0dc57cf84e31d11489799f89825e57687f887216e1e6cb3bab2c1c7de",
+        )
+        for ((key, expected) in bubble) {
+            val (midi, velocity) = key.split(" ")
+            val saved = NacrePatch("kept", NacreVoice.BUBBLE, emptyMap(), midi.toInt(), velocity.toFloat(), 7L)
+            assertEquals(NacreVoices.BUBBLE_MODEL, saved.model)
+            assertEquals(expected, hash(saved.render().samples), "BUBBLE $key moved")
+            assertEquals(expected, hash(render(NacreSource.BUBBLE, midi.toInt(), velocity.toFloat())), "BUBBLE $key differs by entry point")
+        }
+        assertEquals("7df580affb2eb281014c7484c2744c591091982d873482cdf7924341a3934c3f", hash(pearl(48, .8f)), "PEARL C3 moved")
+        assertEquals("3d7bd6ea34ccae95ad976e3140002aacc4b90a604f3861625a0ba5d9311649a4", hash(pearl(60, .8f)), "PEARL C4 moved")
+    }
+
     @Test
     fun `each source is its own saved model and replays exactly from JSON`() {
         assertEquals(NacreSource.HARMONICS, NacreVoices.sourceFor(5))
         assertEquals(NacreSource.SHELL, NacreVoices.sourceFor(6))
+        assertEquals(NacreSource.BUBBLE, NacreVoices.sourceFor(7))
         assertFailsWith<IllegalArgumentException> { NacreVoices.sourceFor(4) }
-        // BUBBLE is unheard: it has no saved model, so no recipe can select it yet.
-        assertEquals(false, NacreVoices.supports(NacreSource.BUBBLE.model))
-        assertEquals(false, NacreModels.supports(NacreSource.BUBBLE.model))
-        for (source in listOf(NacreSource.HARMONICS, NacreSource.SHELL)) {
+        assertFailsWith<IllegalArgumentException> { NacreVoices.sourceFor(8) }
+        for (source in NacreSource.entries) {
             val voice = NacreVoice.valueOf(source.name)
             val patch = NacrePatch("study", voice, NacreVoices.defaults(), midi = 55, velocity = .7f, seed = -42L)
             assertEquals(source.model, patch.model)

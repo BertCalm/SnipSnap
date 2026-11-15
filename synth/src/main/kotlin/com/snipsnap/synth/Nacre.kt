@@ -12,10 +12,11 @@ import kotlin.math.roundToInt
 import kotlin.math.sqrt
 
 /**
- * NACRE's voices. PEARL is the paired-harp source (saved models 1 to 4). HARMONICS (model 5) and
- * SHELL (model 6) keep PEARL's performers, bodies, sympathetic strings and water; see [NacreVoices].
+ * NACRE's voices. PEARL is the paired-harp source (saved models 1 to 4). HARMONICS (model 5), SHELL
+ * (model 6) and BUBBLE (model 7) keep PEARL's performers, bodies, sympathetic strings and water; see
+ * [NacreVoices].
  */
-enum class NacreVoice { PEARL, HARMONICS, SHELL }
+enum class NacreVoice { PEARL, HARMONICS, SHELL, BUBBLE }
 
 /**
  * The preferred original duet -> returning paths -> rest. The frozen [NacreModel1] instrument
@@ -60,14 +61,15 @@ object Nacre {
             MacroSpec("CURRENT", CORE_CURRENT, CORE_CURRENT), MacroSpec("VENUE", .15f, .15f),
             MacroSpec("BLOOM", CORE_BLOOM, CORE_BLOOM), MacroSpec("HOLD", 0f))
         // The same six controls and defaults as PEARL; see NacreVoices.
-        NacreVoice.HARMONICS, NacreVoice.SHELL -> NacreVoices.macrosFor()
+        NacreVoice.HARMONICS, NacreVoice.SHELL, NacreVoice.BUBBLE -> NacreVoices.macrosFor()
     }
 
-    /** The saved model a new recipe of [voice] uses: PEARL's model 3, HARMONICS 5, SHELL 6. */
+    /** The saved model a new recipe of [voice] uses: PEARL's model 3, HARMONICS 5, SHELL 6, BUBBLE 7. */
     fun defaultModel(voice: NacreVoice): Int = when (voice) {
         NacreVoice.PEARL -> MODEL_VERSION
         NacreVoice.HARMONICS -> NacreVoices.HARMONICS_MODEL
         NacreVoice.SHELL -> NacreVoices.SHELL_MODEL
+        NacreVoice.BUBBLE -> NacreVoices.BUBBLE_MODEL
     }
     fun defaults(voice: NacreVoice = NacreVoice.PEARL): Map<String, Float> =
         macrosFor(voice).associate { it.name to it.default }

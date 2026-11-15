@@ -14,20 +14,20 @@ import kotlin.math.sin
 import kotlin.math.sqrt
 
 /**
- * NACRE's new sound sources. HARMONICS (5) and SHELL (6) are saved models of their voices; PEARL keeps
- * models 1 to 4. BUBBLE (7) is unheard and engine only: no saved recipe can select it yet.
+ * NACRE's new sound sources, each the one saved model of its voice: HARMONICS (5), SHELL (6) and
+ * BUBBLE (7). PEARL keeps models 1 to 4.
  */
 internal enum class NacreSource(val model: Int) { HARMONICS(5), SHELL(6), BUBBLE(7) }
 
 /**
- * NACRE's second and third sound sources, built for listening round `nacre-voices-1` (14 Nov 2026).
- * They are the NACRE voices [NacreVoice.HARMONICS] (saved model 5) and [NacreVoice.SHELL] (saved
- * model 6), in the SYNTH picker with four presets each ([NacrePresets]); the owner kept both in round
- * nacre-voices-1.
+ * NACRE's second, third and fourth sound sources. They are the NACRE voices [NacreVoice.HARMONICS]
+ * (saved model 5), [NacreVoice.SHELL] (saved model 6) and [NacreVoice.BUBBLE] (saved model 7), in the
+ * SYNTH picker with four presets each ([NacrePresets]). The owner kept HARMONICS and SHELL in round
+ * nacre-voices-1 and BUBBLE in round nacre-voices-2 (15 Nov 2026).
  *
- * Both keep what the owner asked every NACRE voice to keep: the paired bass and upper performers and
- * their strum ([schedule], the same law as PEARL's), the two harp bodies, the eight sympathetic harp
- * strings tuned to the note, and the water: PEARL's own coral and seaweed returns, VENUE, CURRENT and
+ * All three keep what the owner asked every NACRE voice to keep: the paired bass and upper performers
+ * and their strum ([schedule], the same law as PEARL's), the two harp bodies, the eight sympathetic
+ * harp strings tuned to the note, and the water: PEARL's own coral and seaweed returns, VENUE, CURRENT and
  * BLOOM ([Nacre.returns]), applied after the source exactly as model 3 applies them. Only the played
  * source changes.
  *
@@ -42,6 +42,9 @@ internal enum class NacreSource(val model: Int) { HARMONICS(5), SHELL(6), BUBBLE
  *   shell, struck by a mallet whose contact gets longer (duller) as TOUCH and velocity fall. Each
  *   mode is a damped two-pole resonator with its own decay; the lowest mode, at the note, decays
  *   slowest, so the ring-out carries the pitch.
+ * - **BUBBLE** sounds each string event as a bubble: a damped tone that starts below its note and
+ *   glides up onto it (the "bloop"), with a faint octave and a short breath of noise at the onset.
+ *   A firmer TOUCH and a harder strike start further below the note and add more octave and breath.
  *
  * Every renderer here is new; nothing in models 1 to 4 is called or changed, so their audio stays
  * byte-identical. Output uses one fixed reference gain per source and a scalar [PEAK_CEILING] guard.
@@ -50,6 +53,7 @@ internal enum class NacreSource(val model: Int) { HARMONICS(5), SHELL(6), BUBBLE
 internal object NacreVoices {
     const val HARMONICS_MODEL = 5
     const val SHELL_MODEL = 6
+    const val BUBBLE_MODEL = 7
     const val PEAK_CEILING = .94f
 
     /** Fixed reference output gains: hard C3 at the default controls sits near PEARL's hard C3. */
@@ -69,12 +73,12 @@ internal object NacreVoices {
     private val SHELL_RATIOS = doubleArrayOf(1.0, 2.41, 4.13, 6.20, 8.57)
     private val SHELL_WEIGHTS = doubleArrayOf(1.0, .70, .45, .28, .16)
 
-    /** Saved models only: BUBBLE has no saved model until the owner keeps it. */
-    fun supports(model: Int): Boolean = model == HARMONICS_MODEL || model == SHELL_MODEL
+    fun supports(model: Int): Boolean = model == HARMONICS_MODEL || model == SHELL_MODEL || model == BUBBLE_MODEL
 
     fun sourceFor(voice: NacreVoice): NacreSource = when (voice) {
         NacreVoice.HARMONICS -> NacreSource.HARMONICS
         NacreVoice.SHELL -> NacreSource.SHELL
+        NacreVoice.BUBBLE -> NacreSource.BUBBLE
         NacreVoice.PEARL -> throw IllegalArgumentException("PEARL is not one of NacreVoices' sources")
     }
 

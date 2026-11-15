@@ -7,15 +7,16 @@ internal object NacreModels {
     /** Opt-in source version; model 3 stays the default for existing and partial recipes. */
     const val CONTACT_MODEL_VERSION = 4
     const val CONTACT_MACRO = "CONTACT"
-    /** The new sound sources (HARMONICS 5, SHELL 6); see [NacreVoices]. PEARL keeps models 1 to 4. */
-    const val LAST_MODEL_VERSION = NacreVoices.SHELL_MODEL
+    /** The new sound sources (HARMONICS 5, SHELL 6, BUBBLE 7); see [NacreVoices]. PEARL keeps models 1 to 4. */
+    const val LAST_MODEL_VERSION = NacreVoices.BUBBLE_MODEL
     fun supports(model: Int): Boolean = model in 1..LAST_MODEL_VERSION
 
-    /** PEARL saves models 1 to 4; HARMONICS only model 5 and SHELL only model 6. */
+    /** PEARL saves models 1 to 4; HARMONICS only model 5, SHELL only model 6 and BUBBLE only model 7. */
     fun supports(voice: NacreVoice, model: Int): Boolean = when (voice) {
         NacreVoice.PEARL -> model in 1..CONTACT_MODEL_VERSION
         NacreVoice.HARMONICS -> model == NacreVoices.HARMONICS_MODEL
         NacreVoice.SHELL -> model == NacreVoices.SHELL_MODEL
+        NacreVoice.BUBBLE -> model == NacreVoices.BUBBLE_MODEL
     }
 
     private fun requireSupported(voice: NacreVoice, model: Int) {
@@ -126,7 +127,7 @@ internal object NacreModels {
                 }, legacy.diagnostics)
             }
             3 -> Nacre.inspect(voice, macros, midi, velocity, seed, options)
-            in NacreVoices.HARMONICS_MODEL..NacreVoices.SHELL_MODEL -> {
+            in NacreVoices.HARMONICS_MODEL..NacreVoices.BUBBLE_MODEL -> {
                 require(options == Nacre.Options()) { "NACRE model $model has no diagnostic options" }
                 NacreVoices.inspect(NacreVoices.sourceFor(model), macros, midi, velocity, seed)
             }

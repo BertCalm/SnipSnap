@@ -102,7 +102,10 @@ class NacreSynthScreenTest : ComposeScreenTest() {
     @Test
     fun shell_is_a_voice_with_its_own_presets() = voiceReachesItsPresets(NacreVoice.SHELL)
 
-    /** HARMONICS and SHELL: the voice shows, its four presets load their controls, and HOLD stays off. */
+    @Test
+    fun bubble_is_a_voice_with_its_own_presets() = voiceReachesItsPresets(NacreVoice.BUBBLE)
+
+    /** HARMONICS, SHELL and BUBBLE: the voice shows, its four presets load their controls, and HOLD stays off. */
     private fun voiceReachesItsPresets(voice: NacreVoice) {
         val settings = mutableMapOf("engine" to "NACRE", "voice" to voice.name)
         show(settings)
