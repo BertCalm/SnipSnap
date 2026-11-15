@@ -5,7 +5,7 @@ import com.snipsnap.kit.ArrangedPad
 import kotlin.math.*
 
 /** Listening candidates derived from the approved printed hits, not independent recordings.
- * Take one is untouched. Alternate contact envelopes and spectral balances keep the pitch
+ * A12 uses selected Round 7 B fitted-modal strikes. On the other pads take one is untouched. Alternate contact envelopes and spectral balances keep the pitch
  * and timing fixed. Changes fade out over the first 240 ms so late board echoes remain intact.
  * Round 6 has owner listening approval. This remains opt-in while MPC grid export
  * validation is open; it does not replace the existing factory shelf.
@@ -15,15 +15,15 @@ object VelourRoundRobinKits {
     const val TAKES = 4
 
     fun build(treatment: VelourApprovedKits.Treatment): List<ArrangedPad> =
-        VelourApprovedKits.build(treatment).map { pad ->
-            val grid = (pad.softVariants + pad.snip).map { original ->
+        VelourApprovedKits.build(treatment).mapIndexed { index, pad ->
+            val grid = if (index == 11) VelourRideBank.grid(treatment) else (pad.softVariants + pad.snip).map { original ->
                 List(TAKES) { take -> variation(original, take) }
             }
             pad.copy(snip = grid.last().first(), softVariants = emptyList(), layerNames = emptyList(),
                 velocityTakes = grid, source = pad.source + mapOf(
-                    "roundRobin" to "4 sample-derived candidates per velocity",
+                    "roundRobin" to if (index == 11) "4 fitted modal strikes per velocity" else "4 sample-derived candidates per velocity",
                     "roundRobinVersion" to VERSION.toString(),
-                    "approval" to "round6 four-take audition owner-approved"))
+                    "approval" to if (index == 11) "round7 B selected; velocity/take expansion" else "round6 four-take audition owner-approved"))
         }
 
     internal fun variation(original: Snip, take: Int): Snip {

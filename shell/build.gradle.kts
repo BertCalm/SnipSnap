@@ -627,6 +627,16 @@ tasks.register<JavaExec>("generateScuffKits") {
     args(providers.gradleProperty("scuffKitsOutput").orNull ?: "${rootDir}/testkit/scuff-kits")
 }
 
+tasks.register<JavaExec>("generateEmberKits") {
+    group = "distribution"
+    description = "Build the four EMBER kits, prove every velocity and round-robin grid through save, playback and MPC 3 export, and write the listening pack."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.EmberKitGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "2g"
+    args(providers.gradleProperty("emberKitsOutput").orNull ?: "${rootDir}/testkit/ember-kits")
+}
+
 tasks.register<JavaExec>("generateClutterKits") {
     group = "distribution"
     description = "Build the four CLUTTER genre kits, prove every velocity and round-robin grid through save, playback and MPC 3 export, and write the listening pack."

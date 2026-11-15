@@ -54,10 +54,11 @@ internal object PatchTypes {
      * presets. Named here so a new engine has to be either rostered or listed. SCUFF
      * sat here from its Kotlin port until the owner heard its kits (2026-11-13), and
      * CLUTTER likewise until the owner approved its kits' audition (2026-11-14). EMBER
-     * sits here from its Kotlin port (round 1) until its kits are heard, and SERVO from
-     * its port (2026-11-15) until the owner has heard its three kits.
+     * sits here from its Kotlin port (round 1) until its kits are heard. CALABASH sits here from its Kotlin
+     * port (round 1, 2026-11-15) until its kits are on the shelf and filed as its factory bank, as CLUTTER's were.
+     * SERVO sits here from its port (2026-11-15) until the owner accepts its three kits.
      */
-    val ROSTERLESS: Set<String> = setOf(HydroformPatch.ENGINE, SnapPatch.ENGINE, TerraPatch.ENGINE, SilkPatch.ENGINE, GyrePatch.ENGINE, MagnetPatch.ENGINE, EmberPatch.ENGINE, ServoPatch.ENGINE)
+    val ROSTERLESS: Set<String> = setOf(HydroformPatch.ENGINE, SnapPatch.ENGINE, TerraPatch.ENGINE, SilkPatch.ENGINE, GyrePatch.ENGINE, MagnetPatch.ENGINE, EmberPatch.ENGINE, CalabashPatch.ENGINE, ServoPatch.ENGINE)
 
     /**
      * The engines with a [Patch] type and provisional recipes of their own that are

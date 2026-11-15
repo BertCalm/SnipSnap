@@ -154,19 +154,60 @@ FREE = {
                ("A04", 21.8, .95), ("A16", 22.5, 1.0)],
 }
 
-GENRE = [AFTER_HOURS, SOUL, FREE]
+LATIN = {
+    "id": "latin-jazz", "name": "EMBER LATIN JAZZ", "bpm": 176.0,
+    "character": "The Afro-Cuban set, after midnight: a mambo on a 2-3 son clave. Timbales and their cascara, two bells, "
+                 "bongos playing martillo, congas in tumbao, a guiro, the bombo under it all. New percussion voices (round "
+                 "2L, the owner's ask): bell, clave, bongos and shaker fitted to CC0 recordings, timbales modelled.",
+    "pads": [
+        ("A01", "Bombo", "KICK", {"TUNE": .5, "DAMP": .45, "BUZZ": .2, "DISTANCE": .25}),
+        ("A02", "Timbale Hembra", "TIMBALE", {"TUNE": .3}),
+        ("A03", "Timbale Macho", "TIMBALE", {"TUNE": .7}),
+        ("A04", "Timbale Rimshot", "TIMBALE", {"TUNE": .7, "RIM": .9}),
+        ("A05", "Cascara", "PAILA", {}),
+        ("A06", "Mambo Bell", "COWBELL", {}),
+        ("A07", "Clave", "CLAVE", {}),
+        ("A08", "Cha-cha Bell", "COWBELL", {"TUNE": .75, "DAMP": .6}),
+        ("A09", "Bongo Macho", "BONGO_HIGH", {}),
+        ("A10", "Bongo Hembra", "BONGO_LOW", {}),
+        ("A11", "Conga Open", "CONGA", {"TUNE": .5, "SLAP": .1}),
+        ("A12", "Conga Slap", "CONGA", {"TUNE": .55, "SLAP": .9}),
+        ("A13", "Guiro Long", "GUIRO", {"SPEED": .2}),
+        ("A14", "Guiro Short", "GUIRO", {"SPEED": .95}),
+        ("A15", "Shaker", "SHAKER", {}),
+        ("A16", "Cymbal Swell", "CYMBAL_SWELL", {"SPEED": .7, "TUNE": .55, "DISTANCE": .4}),
+    ],
+    "feel": {"A09": -3, "A11": 4, "A12": 2},
+    # Straight eighths, written on the triplet grid: eighth e is step 1.5 e. Two bars, 2-3 son clave.
+    "groove": (
+        [("A07", 1.5 * e, .8) for e in (2, 4, 8, 11, 14)]                                          # clave, 2-3
+        + [("A05", 1.5 * e, .75 if e in (0, 8) else .55) for e in (0, 2, 3, 5, 7, 8, 10, 12, 13)]  # cascara
+        + [("A08", 1.5 * e, .6) for e in (0, 2, 4, 6, 8, 10, 12, 14)]                             # bell on the quarters
+        + [("A09", 1.5 * (b + e), v) for b in (0, 8) for e, v in ((0, .7), (1, .45), (2, .55), (3, .45), (4, .7), (5, .45), (6, .55))]
+        + [("A10", 1.5 * (b + 7), .75) for b in (0, 8)]                                            # martillo
+        + [("A12", 1.5 * e, .8) for e in (2, 10)] + [("A11", 1.5 * e, v) for e, v in ((6, .8), (7, .75), (14, .8), (15, .75))]
+        + [("A01", 1.5 * e, v) for e, v in ((3, .7), (6, .6), (11, .7))]                            # bombo
+        + [("A13", 1.5 * e, .7) for e in (0, 8)] + [("A14", 1.5 * e, .55) for e in (4, 6, 12)]     # guiro
+        + [("A03", 1.5 * 13, .8), ("A02", 1.5 * 14, .85), ("A04", 1.5 * 15, .95)]                  # a fill into the top
+    ),
+}
+
+GENRE = [AFTER_HOURS, SOUL, FREE, LATIN]
 ALL = [CLUB] + GENRE
 
 # Hats choke like hats: the foot (and on EMBER the stick on the closed hat) closes the open hat.
 CHOKES = {"ember": {"A03": ["A04"], "A11": ["A04"]}, "after-hours": {"A03": ["A13"]},
-          "soul-jazz": {"A03": ["A04"], "A07": ["A04"]}, "free": {"A13": ["A12"]}}
+          "soul-jazz": {"A03": ["A04"], "A07": ["A04"]}, "free": {"A13": ["A12"]},
+          "latin-jazz": {"A13": ["A14"], "A14": ["A13"]}}          # one guiro: a new stroke stops the last
 
 # Groove balance by drum class (the sampler's pad levels in the audition grooves only).
 MIX = {"KICK": 1.0, "SNARE": .8, "CLAP": .5, "HAT_CLOSED": .4, "HAT_OPEN": .4, "TOM": .7, "PERC": .45}
 MIX_VOICE = {"RIDE": .42, "RIDE_BELL": .35, "BRUSH_RIDE": .4, "BRUSH_SWEEP": .39,   # the owner, 2026-11-14: "Bring down the sweep a bit in the groove" (-3 dB)
              "TAMBOURINE": .3, "CONGA": .6,
              "SNAPS": .35, "CLAPS": .45, "STICKS": .4, "BOWED_CYMBAL": .5, "SIZZLE": .38, "CYMBAL_SWELL": .5, "PRESS_ROLL": .6,
-             "BRUSH_ROLL": .6, "CROSS_STICK": .5}
+             "BRUSH_ROLL": .6, "CROSS_STICK": .5,
+             "TIMBALE": .55, "PAILA": .4, "COWBELL": .45, "CLAVE": .45, "BONGO_HIGH": .5, "BONGO_LOW": .55,
+             "GUIRO": .35, "SHAKER": .3}
 
 
 def mix_for(voice):

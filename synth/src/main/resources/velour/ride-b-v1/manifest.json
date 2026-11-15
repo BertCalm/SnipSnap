@@ -1,0 +1,226 @@
+{
+  "version": 1,
+  "selection": "Owner selected B (Tighter body) after Round 7; soft/medium and alternate takes extend that selection.",
+  "audition": "https://velour-drum-audition.bertcalm.chatgpt.site/round7/",
+  "reference": "https://github.com/sfzinstruments/virtuosity_drums/tree/9f04cf9a734527edfbb0a4eee1f674e45bbf71bc",
+  "license": "CC0-1.0",
+  "sourceCommit": "745dca55fd84e47d3532ef68a8ac4c2a8f82cfd2",
+  "assets": [
+    {
+      "file": "close/0-0.wav",
+      "sha256": "064b10338c8a2f753b1f5eb1dc8cef24885080c9679d32b6c2305ff67b05dc43",
+      "previewSha256": "52f2d78071bb89b07fd1835c6fc8b9e584c89ab6bfb3f948e5593b5af0eb90bc",
+      "frames": 177448
+    },
+    {
+      "file": "velour/0-0.wav",
+      "sha256": "7910906ed120ed66ccfaf23f6aa41b3fde80ed9a008b83517fe98f77c10163d7",
+      "previewSha256": "75c96cc14ece4a5d556e88b582265e4ef38ca5cdb6666f37807b637ba658dfc7",
+      "frames": 204747
+    },
+    {
+      "file": "bloom/0-0.wav",
+      "sha256": "4ec4d79681d2905451657758631acd34b913237be2e8810c9698da9784d19087",
+      "previewSha256": "665e629c53db316a9d643f82b08c4a949355eecd3de27920f30960e4349d8cc7",
+      "frames": 207277
+    },
+    {
+      "file": "close/0-1.wav",
+      "sha256": "237f341a69f1a004b523dbd14edcef722acf24a61f3a51e5beefdf48ef4b6e26",
+      "previewSha256": "eeff3c791fdd208c44dc29f6016b4c3e7fbc3e9ee84702d0e5d6ef07ee001b0c",
+      "frames": 177441
+    },
+    {
+      "file": "velour/0-1.wav",
+      "sha256": "c6d922e4fa3b59aff896b299aa13f632e35c984ac144c8841c01131f50973331",
+      "previewSha256": "797f4072a7ec8e362b1295342553ebe1984b18e4a8557176beaf4b45383e7ff8",
+      "frames": 195317
+    },
+    {
+      "file": "bloom/0-1.wav",
+      "sha256": "d38c32581cf090d09c0e2c80979532c7cabbdb9e4ec8550d6ccc6c85296e15f6",
+      "previewSha256": "a72a9f9223a918f473751ebe3f61d48eb79e817f49d498bb15c8df1a6ee23f43",
+      "frames": 205994
+    },
+    {
+      "file": "close/0-2.wav",
+      "sha256": "523a342f7016443190d8ec4e60f5d6379d5d78fec2d9c1b66d6488400207e6ee",
+      "previewSha256": "30c9dca79569315343fe821519209e8045ad5e588daf432494598cf66af1b0e1",
+      "frames": 177451
+    },
+    {
+      "file": "velour/0-2.wav",
+      "sha256": "0b7243850f0f9568231afe76c118bffe2df39052b539ee0551132996b94122d2",
+      "previewSha256": "fc1edfd55ac3ad18d93c6de5863dd9076276dc480c884718bce5aebe4980305c",
+      "frames": 203614
+    },
+    {
+      "file": "bloom/0-2.wav",
+      "sha256": "b821ea19a559582fa25774759ee680e9ea01777a41ee693b3e8e0eca3d09f7dd",
+      "previewSha256": "f4388acebbac9933d457163684101e7af83870771d84caff476ff07050c03c2a",
+      "frames": 207470
+    },
+    {
+      "file": "close/0-3.wav",
+      "sha256": "91803e7ff05b211dd0256ed18e25d54c2fcafbf53017e26c96f963d4f672d88e",
+      "previewSha256": "bea83d609f7daf7450d22080c7c38f56fd49e51f062153b4caaa857c05951508",
+      "frames": 177448
+    },
+    {
+      "file": "velour/0-3.wav",
+      "sha256": "5a7328d7d478ef4810d66118306eed286c5f3a2ab0785bb934f3b8b23f9d01fd",
+      "previewSha256": "0f479056a2cfc96f7e139b21d4b44bdddf79953cddf2c8fcdcb3bb43260f7456",
+      "frames": 203618
+    },
+    {
+      "file": "bloom/0-3.wav",
+      "sha256": "72b84a788049158d06665cae8bac9b7117792efd631c93e35dec6eed20d733d7",
+      "previewSha256": "4ba1fe48349da4a80ea548d3fa23fe57367c0640db013d764f3be683951e1ab9",
+      "frames": 207967
+    },
+    {
+      "file": "close/1-0.wav",
+      "sha256": "548b1897998d2e76a92a1692251137858ba6a9994e6283f495e5567acc075a29",
+      "previewSha256": "bbf4d7af16a282c1763186a539cd8d4d7cd2c2556049e20421a7292ea281d67a",
+      "frames": 177489
+    },
+    {
+      "file": "velour/1-0.wav",
+      "sha256": "59c864050152d50b78cb47fd7ec208994ecf0c3dac92e5141a9ba7ec40bcf1fb",
+      "previewSha256": "e24a77c243144f6d263abcc760b152b07f8303a7e5f531991776350e7e0045d2",
+      "frames": 207276
+    },
+    {
+      "file": "bloom/1-0.wav",
+      "sha256": "7ef848ca561d3c33278f8130f86b8cf3143ad31c5a0eb407d01afd71874156e2",
+      "previewSha256": "0b9df63294089ac91178294510832f2cb47ce267d254a406fce3571a39b5f28a",
+      "frames": 220494
+    },
+    {
+      "file": "close/1-1.wav",
+      "sha256": "6f34e0b3e4bf7dac1065d107c68b1b12b615b3bc09c83a143575d47082c1e0af",
+      "previewSha256": "1f5159bc3d07f35fe96434e0b3d346a3976bf7ff4775840b4862a945b24b856a",
+      "frames": 177443
+    },
+    {
+      "file": "velour/1-1.wav",
+      "sha256": "9846d012c2584d550fa1ef439fc9b8865612b9d56e9921c167bf73af1963644f",
+      "previewSha256": "e108cd63aebdbde9b21454b5ef3f7da4d3c64228d9e8d051ac958f5f848edecc",
+      "frames": 205994
+    },
+    {
+      "file": "bloom/1-1.wav",
+      "sha256": "83af9cc879448fb8435dc1b51072efa619364330218f8a02b3364d2c17cb4922",
+      "previewSha256": "4355ba6b7f6c506b134c74f2085985df5df1c4f48e0b7d487dbd3c47dd7dab42",
+      "frames": 218690
+    },
+    {
+      "file": "close/1-2.wav",
+      "sha256": "ecb1db6a320b77c17fee0f17ff0e452dde5be732b73d87cf755ebfc0928f197c",
+      "previewSha256": "90462d8e60c46dc3921657a3f6b9e4d1f25a014a61a05a8a08729df5284e5380",
+      "frames": 177481
+    },
+    {
+      "file": "velour/1-2.wav",
+      "sha256": "b94a0f203abab6222f033aa0e13d5f0abe01171a184c2d8c650e49ac61a8fc4c",
+      "previewSha256": "f01cf14d5757d3b254d7125c2fafa3d90ffb3ef2b3b20a67091e0da80c614a2c",
+      "frames": 206937
+    },
+    {
+      "file": "bloom/1-2.wav",
+      "sha256": "24cb710ce00ed4796d264c680c43ec135ab467755a1b5fd44e61f0a65ace0456",
+      "previewSha256": "9838288b27090fcad3ab6b08ebf1e46456d60a46099e0656b726a6b1000a3da1",
+      "frames": 221087
+    },
+    {
+      "file": "close/1-3.wav",
+      "sha256": "a75d9d82ea2b6e4ee55eb58ec166e3f5a78862fced11985a28dc7ab09ca7ffc3",
+      "previewSha256": "8a35f6775af48f50e49d2113982b7493a630ec63315e9687cc66d9244f3c14d0",
+      "frames": 177458
+    },
+    {
+      "file": "velour/1-3.wav",
+      "sha256": "b47702ffc0e9eec657c9d2598da75bac4671875993fb4f8ab6b882481daf266c",
+      "previewSha256": "7879f040fd9a6b0a5460b2325466e0404eec5e1a051bb5e3108dc72dc290bafe",
+      "frames": 206562
+    },
+    {
+      "file": "bloom/1-3.wav",
+      "sha256": "23bdf8122615412b0a2df32e4325ca8fa12a951e636dba546d9aaf07f18aa133",
+      "previewSha256": "ebefc2c9dc53dfd56a0ffa047918fa43cadbaba47346f98763e26511793ee2fb",
+      "frames": 221351
+    },
+    {
+      "file": "close/2-0.wav",
+      "sha256": "c1f276c0fb1bab09556aefc9002fb3834b93445c09f44d5faa0afea001b15ca5",
+      "previewSha256": "e351662a1aea92518338479f446cfd164f0c62f4bb6d4b4e7367b57710d12b46",
+      "frames": 177490
+    },
+    {
+      "file": "velour/2-0.wav",
+      "sha256": "23a073f84253c8f19132c3d7d65e6321604a844b3c5602953f874f8cdec07da7",
+      "previewSha256": "3655162442d89a2dfaf5f9983f78d38bf7dd1c1f351e9b5f8a01fd994cbd7b42",
+      "frames": 217551
+    },
+    {
+      "file": "bloom/2-0.wav",
+      "sha256": "c44d635ccf9ff7221dec194a143d59a4ae61075dad57eff38a2ff35402b8ff6e",
+      "previewSha256": "a2718478cf2cf703d7542a02c60a2b8deb80f27ed485852ff0e0d0714a2deb41",
+      "frames": 223027
+    },
+    {
+      "file": "close/2-1.wav",
+      "sha256": "309932a04487f93905f5bebdf395d50065a7e7a2ee7e7a3fe0742f233c5e942d",
+      "previewSha256": "d94dda1668851e049333c176775dbc5208ca408bff61e7f37b3358bc4a599fc6",
+      "frames": 177443
+    },
+    {
+      "file": "velour/2-1.wav",
+      "sha256": "b82bf46cc65a6491821f28fc753a28ec813eb0b3532f2a2351eb132eb946e1f0",
+      "previewSha256": "508911ed84470b7bf3ded574c03b83203551d9022deae624db4d9c1a9481da10",
+      "frames": 215859
+    },
+    {
+      "file": "bloom/2-1.wav",
+      "sha256": "fc1db936da37da4bdc6e15eec06ff5d72a7a30d5f688912b85508012caf2e666",
+      "previewSha256": "cb421a1049395c22b067b97a4801afd790762cdf4090919f210520ec34e792c9",
+      "frames": 222989
+    },
+    {
+      "file": "close/2-2.wav",
+      "sha256": "56e6f473596d928dfce430a95635a472546e45cfd1507f4364e4a1b4880fa217",
+      "previewSha256": "03458b81a8a424dce2a1a119ea304b00f5e783e75722ae00553fce378ea133c6",
+      "frames": 177482
+    },
+    {
+      "file": "velour/2-2.wav",
+      "sha256": "6c77f1d0d328147c7a0d0f3202431e909922f507b29ff50c012d297b987c1ebd",
+      "previewSha256": "3596d911d70795e63af2aefd296d0b89d2aeacfcaf48ea7fb64a0fe1b08a98f3",
+      "frames": 217912
+    },
+    {
+      "file": "bloom/2-2.wav",
+      "sha256": "34a6ed61f15bd51dc0646846828d332b3b8c2e0da1f0f23497f9758b0279e92f",
+      "previewSha256": "e6a2773fa06a5b5cc8bd417c39ba8a5d43e8ca91a509b7cf3a1e86f42ee51a5e",
+      "frames": 222689
+    },
+    {
+      "file": "close/2-3.wav",
+      "sha256": "d11d47dfec82275e173afd8a19ecc0737137ea7419e9f5201220769bdb59ced7",
+      "previewSha256": "56e16a4506228bc2aac02776ca0c90f4fe44708435429fd20afb15903be2e439",
+      "frames": 177471
+    },
+    {
+      "file": "velour/2-3.wav",
+      "sha256": "59e37bc09383a434deb2c4f0c2e3dfc02f8fc5400351a36d6e35711977ea76e3",
+      "previewSha256": "d8395070340f6155e3c41780afa9ae6c2939c5dae760d0b385702a5f655d1506",
+      "frames": 220546
+    },
+    {
+      "file": "bloom/2-3.wav",
+      "sha256": "1a0f17f53b6b2e4367bdf3b3cfe79580ef778e1707737a51ebb9f16067451ce9",
+      "previewSha256": "198e44a062711e4562e23f8952e482e079bd47802a97089ec08daa5c0df02aa6",
+      "frames": 224607
+    }
+  ]
+}

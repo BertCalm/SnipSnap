@@ -3702,6 +3702,34 @@ Python: no brightness bias across the 27 voices (0.10 dB above 4 kHz); the drums
 voice inside the spread of Python's own takes. Random draws are another realisation of the same law; the club's
 tail is the prototype's own draw. See [EMBER](EMBER.md) and the gates entry. The four kits go on the shelf at round 2.
 
+### CALABASH, round 1 (2026-11-15)
+
+Drum kits for Afrobeat, Afrobeats, Mbalax and Afro-Cuban jazz, ported from the round-0 Python prototype the owner
+approved on 2026-11-15 ("Sounds great"; "I listened: approve all") to `Calabash.kt`: 36 voices, congas, bongos, bells,
+claves, shaker and claps resynthesized from CC0 recordings (VCSL), the shekere, talking drums, sabar family and
+timbales physical, STROKE switching the event, ROOM and AGE on every voice. `CalabashPatch` with velocity, take and
+model, rosterless (no presets yet), the four kits as data (`CalabashKits`). Measured against the Python with 16
+seeded hits a pad: a Kotlin hit is another take of the approved pad on all 64 pads (across minus within, median
+-0.02 dB); the room's noise, the cymbals' pairs and the crowd are the prototype's own draws. Not heard in Kotlin. See
+[CALABASH](CALABASH.md) and the gates entry. The four kits go on the shelf at round 2.
+
+### EMBER, round 1b (2026-11-15)
+
+"Swell cuts abruptly": the swell, the bowed cymbal and both rolls now ring out instead of being cut while still
+sounding (5.0, 3.6 and 3.0 s; each ends at least 40 dB under its peak, a test). The owner then heard every Kotlin
+voice beside the Python one and said "I've heard the sound and approve": `Ember.MODEL_VERSION` 1 with round 1b is the
+approved sound baseline. Open: the four kits on the shelf (round 2), phone and MPC hardware (round 3).
+
+### EMBER, round 2 (2026-11-15)
+
+The four kits on the shelf: `EmberKits` (EMBER 138 BPM, EMBER AFTER HOURS 66, EMBER SOUL JAZZ 104, EMBER FREE 80),
+sixteen one-shot pads each, generated from `prototype/ember/kits.py`, three zones of four takes rendered by the
+approved engine, each kit's hi-hat in one mute group, FRESH TAPE starters under SKINS (148 starters). A zone's takes
+are matched in loudness (the audition's peak law left hats 2 to 5 dB apart). Every grid proved through saving,
+playback and the MPC 3 export (768 slices). Every kit carries a roll or riser. Open: the owner's listen to the kits
+from the app, the Latin jazz kit and its new percussion voices (asked for 2026-11-15), presets and the picker,
+hardware. See [EMBER](EMBER.md).
+
 ### SERVO, rounds 0 and 1 (2026-11-15)
 
 Machine drums on a weak power rail for electro, ghetto tech and neurofunk: every hit sags one supply a few

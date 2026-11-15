@@ -3836,6 +3836,17 @@ tasks.register<JavaExec>("generateClutterAudition") {
     args(providers.gradleProperty("clutterOutput").orNull ?: "${rootDir}/testkit/clutter-audition/kotlin")
 }
 
+/** Render CALABASH's round-1 Kotlin clips under testkit/calabash-audition/kotlin/, for the Python A/B. */
+tasks.register<JavaExec>("generateCalabashAudition") {
+    group = "distribution"
+    description = "Render the CALABASH Kotlin clips (every kit pad at three zones and four takes, every voice soft and hard) under testkit/calabash-audition/kotlin/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.CalabashAuditionGenerator")
+    workingDir = projectDir
+    maxHeapSize = "3g"
+    args(providers.gradleProperty("calabashOutput").orNull ?: "${rootDir}/testkit/calabash-audition/kotlin")
+}
+
 tasks.register<JavaExec>("generateVelourRoundRobin") {
     group = "distribution"
     description = "Render opt-in Velour round-robin candidates and full-grid audition packages."

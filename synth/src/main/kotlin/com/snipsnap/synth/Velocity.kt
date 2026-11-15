@@ -291,6 +291,7 @@ object Velocity {
         is ScuffPatch -> Scuff.macrosFor(patch.voice)
         is ClutterPatch -> Clutter.macrosFor(patch.voice)
         is EmberPatch -> Ember.macrosFor(patch.voice)
+        is CalabashPatch -> Calabash.macrosFor(patch.voice)
         is ServoPatch -> Servo.macrosFor(patch.voice)
         is TanglePatch -> Tangle.macrosFor(patch.voice)
         is OverlapPatch -> if (patch.playback == OverlapPlayback.HELD) OverlapHeld.macrosFor(patch.topology)
@@ -477,6 +478,9 @@ object Velocity {
         is ClutterPatch -> patch.copy(velocity = v).render()
         // EMBER re-strikes the drum: a longer, darker contact when soft, and the wires and rivets only past their threshold.
         is EmberPatch -> patch.copy(velocity = v).render()
+        // CALABASH re-strikes: a fitted voice moves toward its own soft recording, a physical one lands with a
+        // broader, slower contact and its beads, wires and squeeze answer less.
+        is CalabashPatch -> patch.copy(velocity = v).render()
         // SERVO re-strikes the voice: a harder hit pulls the rail further, so it dives deeper and clips harder.
         is ServoPatch -> patch.copy(velocity = v).render()
         is TanglePatch -> patch.copy(velocity = v).render()

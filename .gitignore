@@ -771,6 +771,8 @@ testkit/backwash-acoustic-integration/
 /testkit/scuff-audition/
 /testkit/clutter-audition/
 /testkit/ember-audition/
+/testkit/ember-kits/
+/testkit/calabash-audition/
 /testkit/clutter-kits/
 /testkit/servo-kits/
 /testkit/servo-audition/

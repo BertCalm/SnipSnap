@@ -39,12 +39,13 @@ class VelourApprovedKitsTest {
                     assertTrue(snip.samples.all { it.isFinite() && abs(it) <= .951f })
                     assertEquals(0f, snip.samples.last())
                 }
-                assertEquals("pending", pad.source["roundRobin"])
+                assertEquals(if (pad.displayName == "Dark Ride") "four fitted strikes available in opt-in grid" else "pending", pad.source["roundRobin"])
             }
             assertEquals("CC0-1.0", pads[14].source["referenceLicense"])
             if (t == VelourApprovedKits.Treatment.CLOSE) {
                 assertTrue(pads[1].snip.frameCount in 14000..15000, "Close snare must not regain four seconds of padding")
-                assertTrue(pads.all { it.snip.frameCount < 44100 })
+                assertTrue(pads.filterIndexed { i, _ -> i != 11 }.all { it.snip.frameCount < 44100 })
+                assertTrue(pads[11].snip.frameCount in 44100..220500, "Selected B retains a real cymbal decay")
             }
             val untouched = VelourApprovedKits.build(t)
             pads[14].snip.samples.fill(0f)
