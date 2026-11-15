@@ -3645,7 +3645,8 @@ at round 2; the picker entry waits for a session with an SDK.
 
 On SYNTH's engine picker, mirroring SOOT arm for arm plus the native-factory path for its presets (a kit's pad
 loads whole, with its take and model); `EngineCatalog` under DRUMS, after ETCH; both READMEs count 87; an on-device test
-beside SOOT's in `NewEngineSynthScreenTest` (CI's emulator runs it). Open: hardware playback (MPC 2 round robin is not
+beside SOOT's in `NewEngineSynthScreenTest` (CI's emulator runs it). BOOM's bass pads stay a fifth and a bit apart, kept
+as heard (the owner, 2026-11-15). Open: hardware playback (MPC 2 round robin is not
 applicable since 2026-11-14, a format limit). See [SCUFF](SCUFF.md).
 
 ### CLUTTER, round 2 (2026-11-14)
