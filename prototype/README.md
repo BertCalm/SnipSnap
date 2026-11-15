@@ -103,6 +103,16 @@ control on every object, with their measurements. `compare_kotlin.py KOTLIN_DIR`
 (`./gradlew :synth:generateClutterAudition`) against these renders object by object. With the shell generator's pack (`./gradlew :shell:generateClutterKits`) encoded as MP3 under `OUT/shelf/`, the
 page also carries the four kits on the shelf. Needs numpy and scipy. See [`../docs/CLUTTER.md`](../docs/CLUTTER.md).
 
+## ember/ — EMBER round-0e audition (Python harness)
+
+A live jazz and soul drum kit in a small club in 1962 (27 voices) and four sixteen-pad kits from it (`kits.py`),
+as numbers and WAVs before Kotlin. The cymbals, hats and brushes are fitted to CC0 recordings; only the fitted numbers
+are here. `python3 gen_audition.py OUT && python3 build_page.py OUT` renders every pad at three velocity zones and
+four takes, each kit's groove and every control on every voice, with their measurements. `compare_kotlin.py
+KOTLIN_DIR` measures the Kotlin port (`./gradlew :synth:generateEmberAudition`) against these renders voice by voice,
+and `export_club.py` writes the club tail the Kotlin port loads. Needs numpy and scipy. See
+[`../docs/EMBER.md`](../docs/EMBER.md).
+
 ## calabash/ — CALABASH round-0 audition (Python harness)
 
 Drum kits for Afrobeat, Afrobeats, Mbalax and Afro-Cuban jazz, approved by ear on 2026-11-15: 36 voices, the hand

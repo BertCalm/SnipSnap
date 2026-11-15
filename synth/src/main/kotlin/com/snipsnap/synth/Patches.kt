@@ -61,6 +61,7 @@ object Patches {
             ThumpPatch.ENGINE -> ThumpPatch.fromJsonValue(value)
             ScuffPatch.ENGINE -> ScuffPatch.fromJsonValue(value)
             ClutterPatch.ENGINE -> ClutterPatch.fromJsonValue(value)
+            EmberPatch.ENGINE -> EmberPatch.fromJsonValue(value)
             CalabashPatch.ENGINE -> CalabashPatch.fromJsonValue(value)
             OnsetPatch.ENGINE -> OnsetPatch.fromJsonValue(value)
             FiredBronzePatch.ENGINE -> FiredBronzePatch.fromJsonValue(value)

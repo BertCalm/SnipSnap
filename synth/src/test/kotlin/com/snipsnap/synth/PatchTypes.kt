@@ -53,10 +53,11 @@ internal object PatchTypes {
      * table off a photo, TERRA, SILK, GYRE and MAGNET have no factory
      * presets. Named here so a new engine has to be either rostered or listed. SCUFF
      * sat here from its Kotlin port until the owner heard its kits (2026-11-13), and
-     * CLUTTER likewise until the owner approved its kits' audition (2026-11-14). CALABASH sits here from its Kotlin
+     * CLUTTER likewise until the owner approved its kits' audition (2026-11-14). EMBER
+     * sits here from its Kotlin port (round 1) until its kits are heard. CALABASH sits here from its Kotlin
      * port (round 1, 2026-11-15) until its kits are on the shelf and filed as its factory bank, as CLUTTER's were.
      */
-    val ROSTERLESS: Set<String> = setOf(HydroformPatch.ENGINE, SnapPatch.ENGINE, TerraPatch.ENGINE, SilkPatch.ENGINE, GyrePatch.ENGINE, MagnetPatch.ENGINE, CalabashPatch.ENGINE)
+    val ROSTERLESS: Set<String> = setOf(HydroformPatch.ENGINE, SnapPatch.ENGINE, TerraPatch.ENGINE, SilkPatch.ENGINE, GyrePatch.ENGINE, MagnetPatch.ENGINE, EmberPatch.ENGINE, CalabashPatch.ENGINE)
 
     /**
      * The engines with a [Patch] type and provisional recipes of their own that are
@@ -65,7 +66,7 @@ internal object PatchTypes {
      * accepting the engine means filing its recipes in [Presets] and taking it off this list. ETCH sat here from
      * its Kotlin port (K1) to round K2 (2026-11-14), when its heard round-3 settings became the factory bank.
      */
-    val PROTOTYPES: Set<String> = setOf(ChitinPatch.ENGINE, CairnPatch.ENGINE, FerryPatch.ENGINE, FillPatch.ENGINE, BreakerPatch.ENGINE, SootPatch.ENGINE)
+    val PROTOTYPES: Set<String> = setOf(ChitinPatch.ENGINE, FerryPatch.ENGINE, FillPatch.ENGINE, BreakerPatch.ENGINE, SootPatch.ENGINE)
 
     /** These voices of otherwise rostered engines await a factory-preset listening verdict. */
     val PROTOTYPE_VOICES: Map<String, Set<String>> = mapOf(

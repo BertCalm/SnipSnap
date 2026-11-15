@@ -13,10 +13,11 @@ data class SplayPatch(
     val velocity: Float = .8f,
     /** Bounded acoustic roughness only; initial mechanical spacing belongs to SEED GAP. */
     val seed: Int = 41001,
-    val model: Int = Splay.MODEL_VERSION,
+    /** TONGUE keeps models 1 and 2; WIRE, RUB, AIR, BAR and SKIN are model 3 ([Splay.BODY_MODEL]). */
+    val model: Int = Splay.defaultModel(voice),
 ) : Patch {
     init {
-        require(Splay.supportsModel(model)) { "unsupported SPLAY model $model" }
+        require(Splay.supports(voice, model)) { "unsupported SPLAY model $model for $voice" }
         Patches.validateMacros(this, Splay.macrosFor(voice, model))
         require(midi in Splay.MIDI_MIN..Splay.MIDI_MAX) { "SPLAY midi must be ${Splay.MIDI_MIN}..${Splay.MIDI_MAX}" }
         require(velocity.isFinite() && velocity in 0f..1f) { "SPLAY velocity must be 0..1" }

@@ -770,6 +770,7 @@ testkit/backwash-acoustic-integration/
 /testkit/scuff-kits/
 /testkit/scuff-audition/
 /testkit/clutter-audition/
+/testkit/ember-audition/
 /testkit/calabash-audition/
 /testkit/clutter-kits/
 /testkit/cosmic-family/
@@ -791,6 +792,11 @@ testkit/tempest-expansion/
 testkit/tempest-full-kit/
 testkit/SnipSnap Tempest Full Kit/
 testkit/SnipSnap Tempest Tuned Kit/
+
+# TIMBER generated acoustic percussion banks and audition.
+/testkit/timber-kits/
+
+/testkit/timber-v2/
 
 # Generated Velour round-robin audio and delivery packages.
 testkit/velour-round-robin/

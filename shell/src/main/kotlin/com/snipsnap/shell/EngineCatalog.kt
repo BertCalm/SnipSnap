@@ -143,11 +143,12 @@ object EngineCatalog {
         "DRUMLINE" to EngineEntry(listOf(EngineCategory.DRUMS), "Marching drum sections, split bass and ringing cymbals"),
         "SOOT" to EngineEntry(listOf(EngineCategory.DRUMS), "Grimy boom bap drums: sagging skins, a coil, detuned metal"),
         "TEMPEST" to EngineEntry(listOf(EngineCategory.DRUMS), "Digital drums, driven metal and degrading short repeats"),
-        "SPLAY" to EngineEntry(listOf(EngineCategory.BELLS, EngineCategory.PADS), "One tongue voice, five finite population settings"),
+        "SPLAY" to EngineEntry(listOf(EngineCategory.BELLS, EngineCategory.PADS), "Six bodies (tongue, wire, rub, air, bar, skin), finite notes"),
         "OSTERIA" to EngineEntry(listOf(EngineCategory.SYNTH, EngineCategory.PADS), "Evolving notes, from plucked bass to bowed color and pads"),
         "ETCH" to EngineEntry(listOf(EngineCategory.BASS, EngineCategory.SYNTH), "Squelching step-line bass with drive, delay and a room"),
         "SCUFF" to EngineEntry(listOf(EngineCategory.DRUMS), "Dry Michigan drums, crushed, boxed, barked and slammed"),
         "CLUTTER" to EngineEntry(listOf(EngineCategory.DRUMS), "Found-sound drums from household objects, struck and rattled"),
+        "CAIRN" to EngineEntry(listOf(EngineCategory.BELLS, EngineCategory.DRUMS), "Stones that knock, tumble, grind, sing and roll in a bowl"),
     )
 
     /** The entry for the engine constant [name], or null for a name the catalogue does not know. */

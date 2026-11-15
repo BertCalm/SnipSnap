@@ -1,0 +1,209 @@
+package com.snipsnap.synth
+
+import com.snipsnap.audio.DrumClass
+import com.snipsnap.audio.Fft
+import kotlin.math.PI
+import kotlin.math.abs
+import kotlin.math.cos
+import kotlin.math.log10
+import kotlin.math.max
+import kotlin.math.min
+import kotlin.math.pow
+import kotlin.math.sqrt
+import kotlin.test.Test
+import kotlin.test.assertContentEquals
+import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
+import kotlin.test.assertSame
+import kotlin.test.assertTrue
+
+/**
+ * EMBER round 1: the house probes on every voice, and the design's claims turned into tests (BUZZ 0 takes the
+ * snares off; WARMTH 0 is an exact bypass; the swell rises and the press roll crescendos; the club is built
+ * once). Distances use the prototype's measure (prototype/ember/measures.py, from CLUTTER's): the RMS difference
+ * of level-matched third-octave spectrograms, every band floored 80 dB under the loudest. Renders run in
+ * parallel: EMBER's 27 voices take 0.1 to 1.3 s each.
+ */
+class EmberTest {
+
+    private val all = EmberVoice.entries
+
+    private fun render(v: EmberVoice, macros: Map<String, Float> = emptyMap(), velocity: Float = 1f, take: Int = 0) =
+        Ember.render(v, macros, velocity, take).samples
+
+    private fun <T> each(voices: List<EmberVoice> = all, f: (EmberVoice) -> T): List<Pair<EmberVoice, T>> =
+        voices.parallelStream().map { it to f(it) }.toList()
+
+    @Test fun `every voice is finite, peak-matched, centred and as long as it says`() {
+        for ((v, y) in each { render(it) }) {
+            assertTrue(y.all { it.isFinite() }, "$v finite")
+            assertEquals(Ember.PEAK, y.maxOf { abs(it) }, 1e-4f, "$v peak")
+            assertTrue(abs(y.average()) < 0.005, "$v DC ${y.average()}")
+            assertEquals((Ember.secondsFor(v) * Ember.RATE).toInt(), y.size, "$v length")
+        }
+        // The sweep's length follows its circle: SPEED 0 is a ballad's slow stir.
+        for (speed in listOf(0f, 1f)) {
+            val m = mapOf("SPEED" to speed)
+            assertEquals((Ember.secondsFor(EmberVoice.BRUSH_SWEEP, m) * Ember.RATE).toInt(), render(EmberVoice.BRUSH_SWEEP, m).size, "sweep at SPEED $speed")
+        }
+        assertTrue(Ember.secondsFor(EmberVoice.BRUSH_SWEEP, mapOf("SPEED" to 0f)) > Ember.secondsFor(EmberVoice.BRUSH_SWEEP, mapOf("SPEED" to 1f)) + 1)
+    }
+
+    @Test fun `every take replays byte for byte and the four takes are four strikes`() {
+        for ((v, closest) in each { v ->
+            val takes = (0..Ember.MAX_TAKE).map { render(v, take = it) }
+            for ((t, y) in takes.withIndex()) assertContentEquals(y, render(v, take = t), "$v take $t replays")
+            var c = Double.MAX_VALUE
+            for (a in takes.indices) for (b in a + 1 until takes.size) c = min(c, distanceDb(takes[a], takes[b]))
+            c
+        }) {
+            // ETCH's takes that the owner heard as one strike measured 0.5 to 0.8 dB; EMBER's closest Python pair is 1.6.
+            assertTrue(closest >= 1.0, "$v closest takes $closest dB")
+        }
+    }
+
+    @Test fun `velocity changes the stroke, not only the level`() {
+        for ((v, d) in each { distanceDb(render(it, velocity = 0.35f), render(it, velocity = 1f)) }) {
+            // FIRED BRONZE's bar: every softer layer at least 1.8 dB in shape at matched loudness. The bow, whose
+            // first 150 ms is mostly its swell, is the closest (2.1 dB in the round-1 measure).
+            assertTrue(d >= 1.8, "$v soft against hard at matched level: $d dB")
+        }
+    }
+
+    @Test fun `every control moves every voice and an unknown control or a bad value changes nothing`() {
+        for ((v, moved) in each { v ->
+            val plain = render(v)
+            assertContentEquals(plain, render(v, mapOf("NOPE" to 0.9f)), "$v unknown control")
+            assertContentEquals(plain, render(v, mapOf(v.controls.first() to Float.NaN)), "$v NaN control")
+            assertContentEquals(plain, render(v, velocity = Float.NaN), "$v NaN velocity")
+            v.controls.associateWith { fullDistanceDb(render(v, mapOf(it to 0f)), render(v, mapOf(it to 1f))) }
+        }) {
+            for ((mac, d) in moved) {
+                // The foot chick is short and its plates touch only lightly: its BUZZ chatter measured 0.6 to 1.0 dB
+                // over four takes in the Python prototype too. Everything else moves at least 1 dB.
+                val bar = if (v == EmberVoice.HAT_FOOT && mac == "BUZZ") 0.5 else 1.0
+                assertTrue(d >= bar, "$v $mac moved it $d dB between 0 and 1")
+            }
+        }
+    }
+
+    @Test fun `BUZZ 0 takes the snares off and the cymbals start as recorded`() {
+        val head = DoubleArray(4000) { kotlin.math.sin(it * 0.01) }
+        assertTrue(Ember.wires(head, 0.0, EmberDsp.rngFor("t"), head.size).all { it == 0.0 }, "no wires at BUZZ 0")
+        val off = render(EmberVoice.SNARE, mapOf("BUZZ" to 0f))
+        val on = render(EmberVoice.SNARE)
+        assertTrue(fullDistanceDb(off, on) >= 2.0, "snares off against on")
+        for (v in listOf(EmberVoice.RIDE, EmberVoice.RIDE_BELL, EmberVoice.BRUSH_RIDE, EmberVoice.BOWED_CYMBAL,
+                         EmberVoice.CYMBAL_SWELL, EmberVoice.HAT_FOOT, EmberVoice.HAT_CLOSED, EmberVoice.HAT_OPEN)) {
+            assertEquals(0f, Ember.defaults(v).getValue("BUZZ"), "$v starts as recorded")
+        }
+    }
+
+    @Test fun `WARMTH 0 is an exact bypass`() {
+        val x = DoubleArray(2000) { kotlin.math.sin(it * 0.02) * 0.5 }
+        assertSame(x, Ember.warmthChain(x, 0.0, 1.0))
+        assertFalse(x.contentEquals(Ember.warmthChain(x, 0.5, 1.0)))
+    }
+
+    /** The percussion gate: a riser and two rolls. The swell grows from nothing to a wash; the press roll crescendos into its accent. */
+    @Test fun `the swell rises and the rolls crescendo`() {
+        val swell = render(EmberVoice.CYMBAL_SWELL)
+        val rise = rmsDb(swell, 2.0, 2.5) - rmsDb(swell, 0.0, 0.5)
+        assertTrue(rise >= 20.0, "the swell rises $rise dB")
+        for (v in listOf(EmberVoice.PRESS_ROLL, EmberVoice.BRUSH_ROLL)) {
+            val y = render(v)
+            val grow = rmsDb(y, 1.8, 2.3) - rmsDb(y, 0.0, 0.5)
+            assertTrue(grow >= 3.0, "$v grows $grow dB")
+            assertTrue(y.size >= (2.5 * Ember.RATE).toInt(), "$v runs past 2.5 s")
+        }
+    }
+
+    @Test fun `the patch carries velocity, take and model and refuses what it cannot render`() {
+        val p = EmberPatch("Brush", EmberVoice.BRUSH_TAP, mapOf("BUZZ" to 0.8f), velocity = 0.6f, take = 2)
+        val back = EmberPatch.fromJsonText(p.toJsonText())
+        assertEquals(p, back)
+        assertEquals("EMBER", back.engine)
+        assertContentEquals(p.render().samples, back.render().samples)
+        assertFailsWith<IllegalArgumentException> { EmberPatch("x", EmberVoice.KICK, emptyMap(), take = Ember.MAX_TAKE + 1) }
+        assertFailsWith<IllegalArgumentException> { EmberPatch("x", EmberVoice.KICK, emptyMap(), velocity = 1.5f) }
+        assertFailsWith<IllegalArgumentException> { EmberPatch("x", EmberVoice.KICK, emptyMap(), model = Ember.MODEL_VERSION + 1) }
+    }
+
+    @Test fun `every voice files as the kit role it plays`() {
+        assertEquals(setOf(EmberVoice.KICK), all.filter { Ember.drumClassFor(it) == DrumClass.KICK }.toSet())
+        assertEquals(setOf(EmberVoice.SNARE, EmberVoice.RIMSHOT, EmberVoice.BRUSH_TAP), all.filter { Ember.drumClassFor(it) == DrumClass.SNARE }.toSet())
+        assertEquals(DrumClass.HAT_OPEN, Ember.drumClassFor(EmberVoice.HAT_OPEN))
+        // Past 1.5 s, PERC, as BREAKER files its riser and crash.
+        for (v in all) if (Ember.secondsFor(v) > 1.5) assertEquals(DrumClass.PERC, Ember.drumClassFor(v), "$v")
+    }
+
+    @Test fun `the club is built once per DISTANCE and only a few are kept`() {
+        assertSame(Ember.roomIr(0.3), Ember.roomIr(0.3))
+        for (i in 0 until 3 * Ember.ROOMS_KEPT) Ember.roomIr(0.5 + i / 1000.0)
+        assertTrue(Ember.roomsHeld() <= Ember.ROOMS_KEPT, "rooms held ${Ember.roomsHeld()}")
+    }
+
+    @Test fun `no voice carries a maker's name`() {
+        val makers = listOf("ZILDJIAN", "LUDWIG", "GRETSCH", "ROGERS", "SLINGERLAND", "PAISTE", "SABIAN", "LEEDY", "K_", "AVEDIS")
+        for (v in all) for (m in makers) assertFalse(v.name.contains(m), "$v")
+    }
+
+    // ------------------------------------------------------------------ measures (prototype/ember/measures.py)
+
+    private val thirdOct = DoubleArray(22) { 80.0 * 2.0.pow(it / 3.0) }
+
+    private fun spectroDb(x: FloatArray, frameMs: Int, totalS: Double): Array<DoubleArray> {
+        val rate = Ember.RATE
+        val take = min(x.size, (totalS * rate).toInt())
+        var rms = 0.0
+        for (i in 0 until take) rms += x[i].toDouble() * x[i]
+        rms = sqrt(rms / max(1, take)) + 1e-12
+        val hop = frameMs * rate / 1000
+        val win = 4 * hop
+        var size = 1
+        while (size < win) size = size shl 1
+        val padded = DoubleArray(max(take, win + hop)) { if (it < take) x[it] / rms else 0.0 }
+        val hann = DoubleArray(win) { 0.5 - 0.5 * cos(2 * PI * it / (win - 1)) }
+        val rows = ArrayList<DoubleArray>()
+        var i = 0
+        while (i < max(1, padded.size - win)) {
+            val re = FloatArray(size); val im = FloatArray(size)
+            for (k in 0 until win) re[k] = (padded[i + k] * hann[k]).toFloat()
+            Fft.forward(re, im)
+            rows.add(DoubleArray(thirdOct.size) { b ->
+                val lo = thirdOct[b] / 2.0.pow(1.0 / 6); val hi = thirdOct[b] * 2.0.pow(1.0 / 6)
+                var e = 0.0
+                for (bin in 0..size / 2) { val f = bin.toDouble() * rate / size; if (f >= lo && f < hi) e += re[bin].toDouble().pow(2) + im[bin].toDouble().pow(2) }
+                10 * log10(e + 1e-12)
+            })
+            i += hop
+        }
+        val top = rows.maxOf { it.max() }
+        return Array(rows.size) { r -> DoubleArray(thirdOct.size) { max(rows[r][it], top - 80.0) } }
+    }
+
+    private fun rmsDiff(a: Array<DoubleArray>, b: Array<DoubleArray>): Double {
+        val n = min(a.size, b.size)
+        var s = 0.0; var c = 0
+        for (r in 0 until n) for (k in a[r].indices) { s += (a[r][k] - b[r][k]).pow(2); c++ }
+        return sqrt(s / c)
+    }
+
+    /** The take distance: the first 150 ms in 5 ms frames. */
+    private fun distanceDb(a: FloatArray, b: FloatArray) = rmsDiff(spectroDb(a, 5, 0.15), spectroDb(b, 5, 0.15))
+
+    /** The whole render in 10 ms frames: DAMP, DISTANCE and the moving voices live past the attack. */
+    private fun fullDistanceDb(a: FloatArray, b: FloatArray): Double {
+        val n = max(a.size, b.size)
+        val pa = a.copyOf(n); val pb = b.copyOf(n)
+        return rmsDiff(spectroDb(pa, 10, n.toDouble() / Ember.RATE), spectroDb(pb, 10, n.toDouble() / Ember.RATE))
+    }
+
+    private fun rmsDb(x: FloatArray, t0: Double, t1: Double): Double {
+        val a = (t0 * Ember.RATE).toInt(); val b = min(x.size, (t1 * Ember.RATE).toInt())
+        var s = 0.0
+        for (i in a until b) s += x[i].toDouble() * x[i]
+        return 10 * log10(s / max(1, b - a) + 1e-20)
+    }
+}

@@ -270,6 +270,15 @@ class DeterminismTest {
         }
     }
 
+    @Test fun `EMBER renders every voice, a soft hit and every take byte for byte through JSON`() {
+        for (voice in EmberVoice.entries) {
+            val patch = EmberPatch("Canary", voice, Ember.defaults(voice))
+            assertContentEquals(patch.render().samples, Patches.fromJsonText(patch.toJsonText()).render().samples, "$voice")
+            val struck = EmberPatch("Soft take", voice, Ember.defaults(voice), velocity = 0.4f, take = 3)
+            assertContentEquals(struck.render().samples, Patches.fromJsonText(struck.toJsonText()).render().samples, "$voice soft take 3")
+        }
+    }
+
     @Test fun `EROSION native voices replay their saved touch`() {
         for (voice in ErosionVoice.entries) {
             val patch = ErosionPatch("Canary", voice, velocity = .6f)
@@ -1026,8 +1035,24 @@ class DeterminismTest {
         }
     }
     @Test
+    fun `TIMBER finite contacts and authored articulations repeat exactly`() {
+        for (role in listOf(0, 1, 2, 4, 7, 14, 15)) {
+            val a = TimberKits.render(TimberKits.Genre.POCKET, role, .65f, 2)
+            val b = TimberKits.render(TimberKits.Genre.POCKET, role, .65f, 2)
+            assertContentEquals(a.samples, b.samples, "TIMBER role $role")
+        }
+    }
+
+    @Test
     fun `SPORE approved snare is byte identical for a saved soft restrike`() {
         val p=SporeSnare.Recipe(velocity=.3,take=2)
         assertContentEquals(p.render().samples,SporeSnare.Recipe.fromJsonText(p.toJsonText()).render().samples)
+    }
+    @Test
+    fun `SPORE approved kick and synthetic shelf recipe are deterministic`() {
+        val p=SporeKick.Recipe(velocity=.3,take=2)
+        assertContentEquals(p.render().samples,SporeKick.Recipe.fromJsonText(p.toJsonText()).render().samples)
+        val r=SporeSyntheticKits.Recipe(SporeSyntheticKits.Genre.JUNGLE,7,.65,2)
+        assertContentEquals(r.render().samples,SporeSyntheticKits.Recipe.fromJsonText(r.toJsonText()).render().samples)
     }
 }

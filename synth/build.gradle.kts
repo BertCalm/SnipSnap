@@ -3855,3 +3855,13 @@ tasks.register<JavaExec>("generateEtchAudition") {
     workingDir = rootDir
     args(providers.gradleProperty("etchOutput").orNull ?: "${rootDir}/testkit/etch-audition/k2")
 }
+
+/** Render EMBER's round-1 Kotlin clips under testkit/ember-audition/kotlin/, for the Python A/B. */
+tasks.register<JavaExec>("generateEmberAudition") {
+    group = "distribution"
+    description = "Render the EMBER Kotlin clips (every voice hard, soft and at its four takes) under testkit/ember-audition/kotlin/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.EmberAuditionGenerator")
+    workingDir = projectDir
+    args(providers.gradleProperty("emberOutput").orNull ?: "${rootDir}/testkit/ember-audition/kotlin")
+}
