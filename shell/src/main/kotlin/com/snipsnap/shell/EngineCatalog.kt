@@ -149,6 +149,7 @@ object EngineCatalog {
         "SCUFF" to EngineEntry(listOf(EngineCategory.DRUMS), "Dry Michigan drums, crushed, boxed, barked and slammed"),
         "CLUTTER" to EngineEntry(listOf(EngineCategory.DRUMS), "Found-sound drums from household objects, struck and rattled"),
         "CALABASH" to EngineEntry(listOf(EngineCategory.DRUMS), "Afrobeat, Afrobeats, mbalax and Afro-Cuban drums and hands"),
+        "TERRA" to EngineEntry(listOf(EngineCategory.DRUMS), "World hand drums, clay pots, agogo bells and a balafon"),
         "CAIRN" to EngineEntry(listOf(EngineCategory.BELLS, EngineCategory.DRUMS), "Stones that knock, tumble, grind, sing and roll in a bowl"),
     )
 
