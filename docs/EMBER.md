@@ -1,10 +1,9 @@
 # EMBER: design brief, round-0 audition and round-1 Kotlin port
 
-Status: **round 1b, the Kotlin port with the long voices ringing out (2026-11-15).** Round 0e's Python renders
-are the sound baseline: the owner heard them on 2026-11-15, said "Much better", then "Proceed". `Ember.kt` ports
-all 27 voices. On the round-1 listening page the owner heard "Swell cuts abruptly"; round 1b lets the swell, the
-bow and both rolls ring out, in the prototype and in Kotlin. The four kits are not on the shelf yet (round 2). The
-owner's listens so far:
+Status: **round 1b, the Kotlin port, sound approved by the owner on 2026-11-15** ("I've heard the sound and
+approve"). `Ember.kt` ports all 27 voices of round 0e. Round 1b lets the swell, the bow and both rolls ring out.
+`Ember.MODEL_VERSION` 1 with round 1b is the approved sound baseline: keep it when the kits are built. The four
+kits are not on the shelf yet (round 2). The owner's listens so far:
 - "Cymbals need a lot of work. Sounds like hitting sheet metal." Round 0b rebuilt every cymbal and hat from
   measurements of real cymbals.
 - "Sweeps sound like hail hitting a roof." Round 0c rebuilt the brush sweep and the brush roll from
@@ -18,10 +17,12 @@ owner's listens so far:
   against it.
 - "Swell cuts abruptly" (2026-11-15, the round-1 listening page). Round 1b lets the long voices ring out. The
   owner chose a natural ring-out of about 2.5 s for the swell, and the same treatment for the bow and both rolls.
+- "I've heard the sound and approve" (2026-11-15), after the round-1b listening page (version 2). It sets every
+  voice's Kotlin hit beside the Python one, with its soft hit and four takes. The voices' sound is approved; the
+  kits have not been heard from the Kotlin engine yet.
 
-Each round is below. Nothing else changed sound, and nothing else has been heard yet. Of the Kotlin renders, the
-owner has commented only on the swell. The engine stays in progress until every applicable owner gate has evidence (see "Gates" below and the gates entry in
-[ENGINE_ACCEPTANCE_GATES.md](ENGINE_ACCEPTANCE_GATES.md#ember-round-1-kotlin-2026-11-15-not-heard-shelf-and-hardware-open)).
+Each round is below. Nothing else changed sound. The engine stays in progress until every applicable owner gate has evidence (see "Gates" below and the gates entry in
+[ENGINE_ACCEPTANCE_GATES.md](ENGINE_ACCEPTANCE_GATES.md#ember-round-1b-kotlin-sound-approved-2026-11-15-shelf-and-hardware-open)).
 
 Prototype: [`prototype/ember/`](../prototype/ember/) (`ember_proto.py` is the model, `kits.py` the four kits
 and their grooves, `measures.py` CLUTTER's house distance measures, `gen_audition.py` renders and measures,
@@ -158,7 +159,7 @@ What is left is the fitted cymbals' 800 decaying sines (about 120 ms on the ride
 (about 80 ms) and the club's convolution at 176.4 kHz (about 65 ms). Each could be faster only by sounding
 slightly different (the room at 44.1 kHz, pruning quiet modes), so each waits for its own listen.
 
-Not heard: no one has listened to the Kotlin renders. The round-1 listening page sets every voice's Kotlin hit
+Heard since (see round 1b): the owner approved the sound on the round-1b page. The round-1 listening page sets every voice's Kotlin hit
 beside the Python hit, with its soft hit and four takes: <https://claude.ai/artifact/21zU3g4oFcDfH8GoV8gKuz>
 (private to the owner; published 2026-11-15).
 
@@ -530,7 +531,7 @@ Between kits, the same pad slot:
 | Velocity and round robin: rendering | verified in Kotlin by test (round 1) | `EmberTest`, `DeterminismTest`; see "Round 1" |
 | Velocity and round robin: saving, playback, export | open | the kits are not on the shelf yet (round 2); the page's pad grid is a browser stand-in |
 | The Kotlin port renders round 0e | measured (Python harness against Kotlin clips) | `compare_kotlin.py`: no brightness bias; 25 of 27 within Python's own four takes, the other two within 16 |
-| Sound character | open | round 0e heard as "Much better"; the Kotlin renders not heard |
+| Sound character | approved for the voices (2026-11-15) | the owner heard the round-1b listening page and approved; the kits' Kotlin audition is round 2 |
 
 ## Render budget
 

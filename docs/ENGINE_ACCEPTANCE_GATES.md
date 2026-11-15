@@ -825,7 +825,7 @@ TERRA is a world-percussion drum engine with 13 voices. Four are spec voices, fr
 
 The owner approved the procedural kick/snare pair. Three genre starters now contain 18 pads each, including authored rolls and risers. All 486 cells pass velocity/take source checks, saved recipe replay, native playback, SFZ import/playback and MPC 3 grid/PCM read-back. Drum shelf registration is verified in software. Melodic/keygroup/chord and string STRUM requirements do not apply to this percussion kit; individual voices are finite. The owner accepted the revised Jungle heel, ghost and ride on 2026-11-15 (“Better, proceed”); preserve their version-2 renders alongside the approved core pair. The owner subsequently confirmed listening to all kits and explicitly approved phone and hardware playback (“Phone and hardware approved”). Sound and device acceptance are therefore closed for Dry Jungle, Dub Breaks and Orbital Breaks. This is owner-reported device approval, separate from the automated 486-cell evidence; no device model or firmware was specified. The revision and complete starter-render regression passed. No MPC 2 fallback is included. See [the detailed ledger](superpowers/specs/2026-11-14-spore-synthetic-kits.md) and [revision acceptance](superpowers/specs/2026-11-15-spore-jungle-articulation.md).
 
-## EMBER (round 1 Kotlin, 2026-11-15, not heard; shelf and hardware open)
+## EMBER (round 1b Kotlin, sound approved 2026-11-15; shelf and hardware open)
 
 A drum engine for a live jazz and soul kit in a small club in 1962: calfskin drums, a riveted ride, brushes, the
 club and a 1962 chain, from physical models. Four sixteen-pad kits. See [EMBER](EMBER.md). Rounds 0 to 0e are a
@@ -849,7 +849,7 @@ the Kotlin port, `Ember.kt`, measured against round 0e and not yet heard.
     1.92 dB and 1.19 dB.) Velocity moves the contact, the threshold parts and the swell's arc, not a filter.
   - **Saving, playback, export: open.** The kits are not on the shelf yet (round 2). The listening page's pad
     grid is a browser stand-in, not app evidence.
-- **Sound character: open.** On 2026-11-14 the owner's first listen found the cymbals sounding like "hitting sheet
+- **Sound character: approved for the voices (2026-11-15).** On 2026-11-14 the owner's first listen found the cymbals sounding like "hitting sheet
   metal". Round 0b rebuilds every cymbal and hat from CC0 recordings of a jazz club kit, with BREAKER's fitter. Measured
   against the recordings, they are 5.6 to 9.3 dB away over the first 150 ms, where round 0's were 11 to 34 dB and two
   takes of one real ride are 6.2 dB apart (Python). A new SIZZLE voice carries the recording's rivets. Not heard yet.
@@ -864,9 +864,12 @@ the Kotlin port, `Ember.kt`, measured against round 0e and not yet heard.
   no brightness bias (0.10 dB under Python above 4 kHz across the 27 voices), and every voice inside the spread of
   Python's own takes. On the round-1 listening page the owner heard "Swell cuts abruptly". Round 1b lets the
   swell, the bow and both rolls ring out instead of being cut (each now ends at least 40 dB under its peak, a test
-  in `EmberTest`). The sound-character gate stays open.
-- **Overall: incomplete.** The Kotlin engine is in (round 1) and not yet heard. The shelf and saving, playback and
-  MPC 3 export (round 2), and phone and MPC hardware (round 3) are open.
+  in `EmberTest`). The owner then heard the round-1b listening page (version 2: every voice's Kotlin hit beside
+  the Python one, with its soft hit and four takes) and said "I've heard the sound and approve" (2026-11-15).
+  `Ember.MODEL_VERSION` 1 with round 1b is the approved sound baseline. The four kits have not been heard from the
+  Kotlin engine yet; that is round 2's listen.
+- **Overall: incomplete.** The Kotlin engine is in and its sound approved (round 1b). The shelf and saving,
+  playback and MPC 3 export (round 2), and phone and MPC hardware (round 3) are open.
 
 ## DRUMLINE (native model 4 accepted, 2026-11-15)
 

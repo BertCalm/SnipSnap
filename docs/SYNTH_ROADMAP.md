@@ -3701,3 +3701,10 @@ four takes, `EmberPatch` with velocity, take and model, rosterless (no presets y
 Python: no brightness bias across the 27 voices (0.10 dB above 4 kHz); the drums correlate 0.978 to 0.996; every
 voice inside the spread of Python's own takes. Random draws are another realisation of the same law; the club's
 tail is the prototype's own draw. See [EMBER](EMBER.md) and the gates entry. The four kits go on the shelf at round 2.
+
+### EMBER, round 1b (2026-11-15)
+
+"Swell cuts abruptly": the swell, the bowed cymbal and both rolls now ring out instead of being cut while still
+sounding (5.0, 3.6 and 3.0 s; each ends at least 40 dB under its peak, a test). The owner then heard every Kotlin
+voice beside the Python one and said "I've heard the sound and approve": `Ember.MODEL_VERSION` 1 with round 1b is the
+approved sound baseline. Open: the four kits on the shelf (round 2), phone and MPC hardware (round 3).
