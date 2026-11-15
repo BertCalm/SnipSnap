@@ -740,6 +740,16 @@ prototype and a listening page (<https://claude.ai/artifact/Xmcj5t8MYSNCQPoTKHBc
     least 1.92 dB; the closest two of any pad's four takes are 1.19 dB apart. Velocity moves the contact, the
     threshold parts and the swell's arc, not a filter.
   - **Saving, playback, export: open.** The listening page's pad grid is a browser stand-in, not app evidence.
-- **Sound character: open.** Nothing has been heard.
+- **Sound character: open.** On 2026-11-14 the owner's first listen found the cymbals sounding like "hitting sheet
+  metal". Round 0b rebuilds every cymbal and hat from CC0 recordings of a jazz club kit, with BREAKER's fitter. Measured
+  against the recordings, they are 5.6 to 9.3 dB away over the first 150 ms, where round 0's were 11 to 34 dB and two
+  takes of one real ride are 6.2 dB apart (Python). A new SIZZLE voice carries the recording's rivets. Not heard yet.
+  The owner then heard the sweeps as "hail hitting a roof". Round 0c fits the sweep and brush roll to CC0 brush stirs and
+  flutters (Karoryfer Swirly Drums). Their clickiness (kurtosis above 2 kHz) is now 2.9 to 3.0, as recorded, where it was
+  5.7 to 7.8 (Python). The owner then found the sweep overbearing and mid heavy. Round 0d sets it 3 dB lower in the
+  grooves, brightens it (+3 dB at 4 kHz, +6 from 8 kHz, by ear) and eases After Hours' WARMTH from .65 to .5. The owner
+  then asked for every kit brighter. Round 0e makes the 1962 chain roll off less top and lowers WARMTH 0.15 on every
+  kit. It also adds -1.5 dB at 600 Hz and +2 dB from 6 kHz to every pad, and makes the bowed cymbal sing at 1.4 kHz.
+  Not heard yet.
 - **Overall: incomplete.** Round 0 asks the owner which voices and kits to keep. Kotlin (round 1), the shelf and
   saving, playback and MPC 3 export (round 2), and phone and MPC hardware (round 3) are all open.
