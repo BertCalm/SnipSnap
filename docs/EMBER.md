@@ -1,8 +1,10 @@
 # EMBER: design brief, round-0 audition and round-1 Kotlin port
 
-Status: **round 1, the Kotlin port (2026-11-15), not yet heard.** Round 0e's Python renders are the sound
-baseline: the owner heard them on 2026-11-15, said "Much better", then "Proceed". `Ember.kt` ports all 27 voices;
-the four kits are not on the shelf yet (round 2). The owner's listens so far:
+Status: **round 1b, the Kotlin port with the long voices ringing out (2026-11-15).** Round 0e's Python renders
+are the sound baseline: the owner heard them on 2026-11-15, said "Much better", then "Proceed". `Ember.kt` ports
+all 27 voices. On the round-1 listening page the owner heard "Swell cuts abruptly"; round 1b lets the swell, the
+bow and both rolls ring out, in the prototype and in Kotlin. The four kits are not on the shelf yet (round 2). The
+owner's listens so far:
 - "Cymbals need a lot of work. Sounds like hitting sheet metal." Round 0b rebuilt every cymbal and hat from
   measurements of real cymbals.
 - "Sweeps sound like hail hitting a roof." Round 0c rebuilt the brush sweep and the brush roll from
@@ -12,12 +14,13 @@ the four kits are not on the shelf yet (round 2). The owner's listens so far:
 - "I meant all the kits." Round 0e brightens every kit.
 - On 2026-11-15 the owner heard rounds 0b to 0e (listening page version 12) and said "Much better". This
   records the direction improving. It is not yet an acceptance of the voices or the kits as a baseline.
-
 - "Proceed" (2026-11-15): taken as round 0e kept as the sound, and the Kotlin round (round 1, below) built
   against it.
+- "Swell cuts abruptly" (2026-11-15, the round-1 listening page). Round 1b lets the long voices ring out. The
+  owner chose a natural ring-out of about 2.5 s for the swell, and the same treatment for the bow and both rolls.
 
-Each round is below. Nothing else changed sound, and nothing else has been heard yet. No one has listened to the
-Kotlin renders. The engine stays in progress until every applicable owner gate has evidence (see "Gates" below and the gates entry in
+Each round is below. Nothing else changed sound, and nothing else has been heard yet. Of the Kotlin renders, the
+owner has commented only on the swell. The engine stays in progress until every applicable owner gate has evidence (see "Gates" below and the gates entry in
 [ENGINE_ACCEPTANCE_GATES.md](ENGINE_ACCEPTANCE_GATES.md#ember-round-1-kotlin-2026-11-15-not-heard-shelf-and-hardware-open)).
 
 Prototype: [`prototype/ember/`](../prototype/ember/) (`ember_proto.py` is the model, `kits.py` the four kits
@@ -34,6 +37,39 @@ Repository truth: read at `8742c5b8` (2026-11-14). APIs named here were grepped:
 `Soot.render(voice, macros, velocity, take, model)` / `Clutter.render(voice, macros, velocity, take)` as the
 drum-engine shape to copy. `EMBER` is a working name: the word is already a CIRCUIT preset ("EMBER PULSE"),
 an ALLOY preset ("Endless Ember") and a name in `shell/.../Names.kt`. It is not an engine name anywhere.
+
+## Round 1b: the long voices ring out (2026-11-15)
+
+**What the owner said:** "Swell cuts abruptly", on the round-1 listening page. Asked how it should end, the owner
+chose a natural ring-out of about 2.5 s after the build, and the same treatment for the bowed cymbal and both rolls.
+
+**What was wrong.** Each long voice was cut by the closing 60 ms fade while it was still sounding. The swell's
+mallets roll until 2.6 s and the wash peaks there, but the pad ended at 3.0 s, only 2.2 dB under its peak. The bow
+ended 12.6 dB under, the press roll 16.1 and the brush roll 15.0 (Python, the last 100 ms before the fade against
+the loudest 100 ms). The Python prototype had the same cut; the Kotlin port copied it.
+
+**What changed** (prototype and Kotlin together):
+- **The rolls** run 3.0 s (were 2.6). After the accent at 2.3 s they die away on their own: past 48 dB under by
+  2.8 s.
+- **The bowed cymbal** runs 3.6 s (was 2.4). Once the bow leaves (2.3 s), the cymbal takes an exponential fade
+  from 2.4 s, reaching an extra 30 dB down at the end.
+- **The swell** runs 5.0 s (was 3.0). The flat ride under it rings far longer than a pad: left alone it is still
+  only 17 dB under its peak at 7.2 s. So from 2.8 s, just after the wash peaks, it takes an exponential fade
+  reaching an extra 50 dB down at the end. An exponential fade is a straight line in dB, so it sounds like the
+  cymbal decaying faster, not like a volume knob. By ear, labelled as such: `TAILS` in the prototype and the
+  engine.
+- A longer render draws the bow's and the rolls' noise afresh (the generator runs in order), so their takes are
+  new draws of the same law. The swell's strokes are drawn before anything that depends on its length.
+
+**Measured.** Over four takes, hard and soft, the last 100 ms before the closing fade now sit 53 to 58 dB under
+the peak on the swell, 53 to 80 on the bow, 49 to 55 on the press roll and 54 to 56 on the brush roll (Python).
+Kotlin against Python (`compare_kotlin.py`): all 27 voices still inside the spread of Python's own takes.
+`EmberTest` adds a test: each of the four voices ends at least 40 dB under its peak, hard and soft, every take.
+Render time in the generator's cold run: the swell 1.15 s (was 1.24 s at 3.0 s), the bow 0.52 s, the rolls
+0.50 and 0.68 s; no slower than round 1.
+
+`Ember.MODEL_VERSION` stays 1. Nothing has saved an EMBER pad yet: the engine has no presets and no kits, and it
+is not on the picker.
 
 ## Round 1: the Kotlin port (2026-11-15)
 
@@ -408,8 +444,8 @@ BOWED_CYMBAL, CYMBAL_SWELL. Hats: HAT_FOOT (the 2-and-4 chick), HAT_CLOSED (stic
 1962 crowd snapping instead of clapping), CLAPS, TAMBOURINE, CONGA, STICKS (two sticks clicked: the count-in).
 Rolls: PRESS_ROLL.
 
-Long voices are declared PERC as BREAKER declares its riser: the rolls (2.6 s), the swell (3.0 s), the bow
-(2.4 s) and the slowest brush sweeps (a sweep is one full circle, 1.9 s at SPEED 0 down to 0.5 s, plus 0.35 s of
+Long voices are declared PERC as BREAKER declares its riser: the rolls (3.0 s since round 1b), the swell (5.0 s),
+the bow (3.6 s) and the slowest brush sweeps (a sweep is one full circle, 1.9 s at SPEED 0 down to 0.5 s, plus 0.35 s of
 room).
 
 ## The kits (four, sixteen pads each)

@@ -862,7 +862,9 @@ the Kotlin port, `Ember.kt`, measured against round 0e and not yet heard.
   On 2026-11-15 the owner heard rounds 0b to 0e on the listening page and said "Much better". That is a better
   direction, not yet an accepted baseline. The owner then said "Proceed", and round 1 ports round 0e to Kotlin:
   no brightness bias (0.10 dB under Python above 4 kHz across the 27 voices), and every voice inside the spread of
-  Python's own takes. No one has heard the Kotlin renders. The sound-character gate stays open.
+  Python's own takes. On the round-1 listening page the owner heard "Swell cuts abruptly". Round 1b lets the
+  swell, the bow and both rolls ring out instead of being cut (each now ends at least 40 dB under its peak, a test
+  in `EmberTest`). The sound-character gate stays open.
 - **Overall: incomplete.** The Kotlin engine is in (round 1) and not yet heard. The shelf and saving, playback and
   MPC 3 export (round 2), and phone and MPC hardware (round 3) are open.
 

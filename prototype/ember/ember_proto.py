@@ -92,10 +92,10 @@ VOICES = {
     "HAT_FOOT":     ("HAT_CLOSED", 0.45, ("TUNE", "DAMP", "BUZZ", "DISTANCE", "WARMTH")),
     "HAT_CLOSED":   ("HAT_CLOSED", 0.45, ("TUNE", "DAMP", "BUZZ", "DISTANCE", "WARMTH")),
     "HAT_OPEN":     ("HAT_OPEN",   1.20, ("TUNE", "DAMP", "BUZZ", "DISTANCE", "WARMTH")),
-    "BOWED_CYMBAL": ("PERC",       2.40, ("TUNE", "PRESSURE", "BUZZ", "DISTANCE", "WARMTH")),
-    "CYMBAL_SWELL": ("PERC",       3.00, ("TUNE", "SPEED", "BUZZ", "DISTANCE", "WARMTH")),
-    "PRESS_ROLL":   ("PERC",       2.60, ("TUNE", "SPEED", "BUZZ", "DISTANCE", "WARMTH")),
-    "BRUSH_ROLL":   ("PERC",       2.60, ("TUNE", "SPEED", "BUZZ", "DISTANCE", "WARMTH")),
+    "BOWED_CYMBAL": ("PERC",       3.60, ("TUNE", "PRESSURE", "BUZZ", "DISTANCE", "WARMTH")),
+    "CYMBAL_SWELL": ("PERC",       5.00, ("TUNE", "SPEED", "BUZZ", "DISTANCE", "WARMTH")),
+    "PRESS_ROLL":   ("PERC",       3.00, ("TUNE", "SPEED", "BUZZ", "DISTANCE", "WARMTH")),
+    "BRUSH_ROLL":   ("PERC",       3.00, ("TUNE", "SPEED", "BUZZ", "DISTANCE", "WARMTH")),
     "SNAPS":        ("CLAP",       0.60, ("TUNE", "CROWD", "DISTANCE", "WARMTH")),
     "CLAPS":        ("CLAP",       0.70, ("TUNE", "CROWD", "DISTANCE", "WARMTH")),
     "TAMBOURINE":   ("PERC",       0.80, ("TUNE", "DAMP", "BUZZ", "DISTANCE", "WARMTH")),
@@ -628,8 +628,18 @@ def peaking(f0, gain_db, q):
     return b / a[0], a / a[0]
 
 
-def finish(raw, m, v, seconds):
-    """DISTANCE -> WARMTH -> the house output stage, at 44.1 kHz, peak 0.89 (the audition match)."""
+# Round 1b (owner, 2026-11-15: "Swell cuts abruptly"). The long voices were cut while still sounding: the swell
+# 2.2 dB under its peak, the bow and the rolls 12 to 16 dB under. The rolls now run until they have died away on
+# their own (past -48 dB). The flat ride under the swell and the bow rings for well over 7 s, too long for a pad, so
+# once the mallets stop (2.6 s) or the bow leaves (2.3 s) the cymbal also takes an exponential fade, reaching the
+# TAILS dB at the end of the pad: a decay to the ear, not a volume knob. By ear, labelled as such. A longer render
+# also draws the bow's and the rolls' noise afresh, so their takes are new draws of the same law.
+TAILS = {"CYMBAL_SWELL": (2.8, -50.0), "BOWED_CYMBAL": (2.4, -30.0)}   # (start s, extra dB at the end of the render)
+
+
+def finish(raw, m, v, seconds, tail=None):
+    """DISTANCE -> WARMTH -> the house output stage, at 44.1 kHz, peak 0.89 (the audition match). With `tail`
+    (start s, dB), an exponential fade from start to the end of the render."""
     n = len(raw)
     y = conv(raw, room_ir(round(m["DISTANCE"], 3)), n)
     y = warmth_chain(y, m["WARMTH"], v)
@@ -641,6 +651,12 @@ def finish(raw, m, v, seconds):
     y = signal.lfilter([al, -al], [1, -al], y)
     out = int(seconds * RATE)
     y = y[:out]
+    if tail is not None:
+        start, end_db = tail
+        i0 = int(start * RATE)
+        if i0 < len(y):
+            ramp = np.arange(len(y) - i0) / max(1, len(y) - 1 - i0)
+            y[i0:] *= 10 ** (end_db * ramp / 20)
     fade = min(len(y), int(0.06 * RATE))
     y[-fade:] *= 0.5 * (1 + np.cos(np.linspace(0, math.pi, fade)))
     return peak_norm(y) * 0.89
@@ -678,7 +694,7 @@ def render(voice, macros=None, velocity=1.0, take=0):
     n = n_of(seconds + 0.05)
     tr = rng_for("ember", voice, take)       # what changes between takes
     raw = RENDER[voice](m, v, tr, n)
-    return finish(raw, m, v, seconds)
+    return finish(raw, m, v, seconds, TAILS.get(voice))
 
 
 def _kick(m, v, tr, n):
@@ -995,7 +1011,7 @@ def _cymbal_swell(m, v, tr, n):
 def _roll(m, v, tr, n, brush=False):
     """Percussion gate: an authored roll. Sticks: buzz strokes, each hand pressing three to six
     bounces into the head, the hands alternating faster as the roll crescendos into an accent.
-    Brushes: the brush version, wires on wires. 2.6 s with the accent at 2.3 s."""
+    Brushes: the brush version, wires on wires. 3.0 s, the accent at 2.3 s and its ring."""
     t_end = 2.3
     rate0, rate1 = sk.lin(m["SPEED"], 9, 14), sk.lin(m["SPEED"], 14, 22)
     force = np.zeros(n)

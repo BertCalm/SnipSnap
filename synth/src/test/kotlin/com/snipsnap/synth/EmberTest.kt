@@ -119,6 +119,26 @@ class EmberTest {
         }
     }
 
+    /**
+     * Round 1b (owner: "Swell cuts abruptly"): the long voices end once they have died away, not while they still
+     * sound. Before, the swell was cut 2.2 dB under its peak and the bow and rolls 12 to 16 dB under. Now the last
+     * 100 ms before the closing 60 ms fade sit at least 40 dB under the loudest 100 ms, hard and soft, every take.
+     */
+    @Test fun `the long voices ring out instead of being cut`() {
+        val long = listOf(EmberVoice.CYMBAL_SWELL, EmberVoice.BOWED_CYMBAL, EmberVoice.PRESS_ROLL, EmberVoice.BRUSH_ROLL)
+        val cases = long.flatMap { v -> listOf(1f, 0.35f).flatMap { vel -> (0..Ember.MAX_TAKE).map { Triple(v, vel, it) } } }
+        for ((case, under) in cases.parallelStream().map { (v, vel, t) ->
+            val y = render(v, velocity = vel, take = t)
+            val end = y.size.toDouble() / Ember.RATE
+            var peak = -999.0
+            var t0 = 0.0
+            while (t0 + 0.1 <= end) { peak = max(peak, rmsDb(y, t0, t0 + 0.1)); t0 += 0.05 }
+            Triple(v, vel, t) to peak - rmsDb(y, end - 0.17, end - 0.07)
+        }.toList()) {
+            assertTrue(under >= 40.0, "${case.first} velocity ${case.second} take ${case.third} ends only $under dB under its peak")
+        }
+    }
+
     @Test fun `the patch carries velocity, take and model and refuses what it cannot render`() {
         val p = EmberPatch("Brush", EmberVoice.BRUSH_TAP, mapOf("BUZZ" to 0.8f), velocity = 0.6f, take = 2)
         val back = EmberPatch.fromJsonText(p.toJsonText())
