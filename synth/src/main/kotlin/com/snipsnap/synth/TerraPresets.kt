@@ -6,8 +6,9 @@ package com.snipsnap.synth
  * The sixteen pads of [TerraKits.classic], which the owner kept in full (round terra-kit-1, 2026-11-14), are filed
  * here under their own names and macros, so each is the kept pad byte for byte. The other thirty-two are new settings
  * of the same voices, written out in full so no preset moves with a voice's defaults. The owner kept the forty presets
- * of the first ten voices in round terra-presets-1 (W1–W10, 2026-11-15; pinned in `TerraPresetsTest`); BAYAN's and
- * TUN's new three were reworked after that round and wait on terra-presets-2. See docs/TERRA_PROMOTION.md.
+ * of the first ten voices in round terra-presets-1 (W1–W10, 2026-11-15); BAYAN's and TUN's new three were reworked
+ * after that round, and the owner kept both reworked sets in round terra-presets-2 (Z2 and Z4, 2026-11-15). All 48 are
+ * pinned in `TerraPresetsTest`. See docs/TERRA_PROMOTION.md.
  *
  * Names describe the drum and the stroke; none names a pitch it does not have. Every name fits a pad label (14).
  */

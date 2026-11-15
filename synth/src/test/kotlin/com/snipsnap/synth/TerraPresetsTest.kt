@@ -116,4 +116,33 @@ class TerraPresetsTest {
             }
         } finally { probe.delete() }
     }
+
+    /**
+     * The PCM24 bytes of BAYAN's and TUN's reworked sets, which the owner kept in round terra-presets-2 (Z2 and Z4,
+     * 2026-11-15). With [keptRound1] this pins all 48 presets. Z2 and Z4 played exactly these renders.
+     */
+    private val keptRound2 = mapOf(
+        "Bayan Drag" to "e5dc15391d10d21d5600ad9951c78e7dcb90d8b5a5114026f10f2cf95fcfb191", // BAYAN
+        "Bayan Deep" to "929fe736329a3e06c703e96f66edd4dcdd0a04b892bb8299db16ed83e1417b98", // BAYAN
+        "Bayan Slap" to "aee1277769f2896ba4de959929848c99aad4aa97657c0fdae8147eec7e88f2c7", // BAYAN
+        "Bayan Fall Hi" to "c25209aae715fb94b64444a6006026fc29d287ed476b9d09afd798d5c50e63ac", // BAYAN
+        "Tabla Tun" to "88c9be917bbcbbd48c6c1f5a022b847dcca36ff0ced321222c40770171ec0c50", // TUN
+        "Tun Deep" to "b211fab524c0cc739b1e3d0bd54b5f5c57cd07bc0054c3618ff2a39800a8085d", // TUN
+        "Tun Muted" to "d965f85092d6c12914b25bfbf82c12bece1dee0705d69084315951088eca30b5", // TUN
+        "Tun Pure" to "8ba273e688d770d561b25c6824d7957fe33810cbb2d32ff6859e27d0b9a3f32a", // TUN
+    )
+
+    @Test fun `the eight BAYAN and TUN presets kept in terra-presets-2 retain the bytes the owner heard`() {
+        val probe = java.io.File.createTempFile("terra-preset", ".wav")
+        try {
+            val kept = listOf(TerraVoice.BAYAN, TerraVoice.TUN).flatMap { TerraPresets.forVoice(it) }
+            assertEquals(keptRound2.keys.toList(), kept.map { it.name })
+            assertEquals(TerraPicker.voices.drop(10), listOf(TerraVoice.BAYAN, TerraVoice.TUN), "the two voices after the first ten")
+            for (p in kept) {
+                com.snipsnap.audio.WavWriter.write(probe, p.render(), com.snipsnap.audio.WavWriter.BitDepth.PCM_24)
+                val actual = java.security.MessageDigest.getInstance("SHA-256").digest(probe.readBytes()).joinToString("") { "%02x".format(it.toInt() and 255) }
+                assertEquals(keptRound2.getValue(p.name), actual, "${p.voice} ${p.name} changed since the owner kept it")
+            }
+        } finally { probe.delete() }
+    }
 }
