@@ -156,7 +156,7 @@ object Copy {
      * gets its pad, and the hold on an empty one - which opens capture,
      * and showed nowhere - gets its words here (UX review P1/P3).
      */
-    const val PADS_RESTING_LINE = "Tap a pad · it plays. Hold an empty one to catch a sound into it."
+    const val PADS_RESTING_LINE = "Tap a pad to play it, then change its sound or fill it below. Holding a pad opens it too."
 
     /**
      * The one word above each of the VELOCITY STRIP buttons, saying what that button sets (E1).
@@ -526,6 +526,12 @@ object Copy {
      * a player will trust.
      */
     @field:CopyCaption const val PAD_VELOCITY_LEGEND = "Tap high on a pad for a softer hit"
+
+    /**
+     * The key to the treated marker (J36), the filled corner a pad wears once anything in its editor has
+     * changed it. The owner's UX pass (2026-11-15) found the corner had no key anywhere on screen.
+     */
+    @field:CopyCaption const val PAD_CHANGED_MARK = "A filled corner means the pad has been changed"
 
     /**
      * A pad's accessible name, when the pad carries something (J36).
@@ -1692,9 +1698,13 @@ object Copy {
     @field:CopyLabel const val SONG_BASS_OFF = "BASS OFF"
     @field:CopyLabel const val SONG_PULL_UP_ON = "PULL-UP ON"
     @field:CopyLabel const val SONG_PULL_UP_OFF = "PULL-UP OFF"
+    /** DROP: the selected section's own last bar keeps only the kick, or the bed. It and PULL-UP are exclusive at a boundary. */
+    @field:CopyLabel const val SONG_DROP_ON = "DROP ON"
+    @field:CopyLabel const val SONG_DROP_OFF = "DROP OFF"
     /** The words a section's row prints for them. */
     @field:CopyLabel const val SONG_ROW_BASS = "BASS"
     @field:CopyLabel const val SONG_ROW_PULL_UP = "PULL-UP IN"
+    @field:CopyLabel const val SONG_ROW_DROP = "DROP"
     /** BASS turned on in a kit with no Answer bassline: kept for when there is one, and said. */
     const val SONG_BASS_NONE_YET = "Bass is on, but this kit has no answer bassline yet. Make one and it plays here."
     /**
@@ -3623,10 +3633,11 @@ object Copy {
     // engine name stays caps inside the sentence.
     fun instrumentReady(name: String): String = "$name is ready in INSTRUMENTS."
     const val MURMUR_CANCELLED = "MURMUR instrument cancelled."
+    const val CAIRN_CANCELLED = "CAIRN instrument cancelled."
     const val KIT_BUSY_SAVE_AGAIN = "Kit is busy. Try SAVE again."
     const val PERFORMANCE_SAVE_FAILED = "Could not save the performance. Try again."
     const val LONG_PRESS_PLACE_SAMPLE = "Long-press to place this sample."
-    const val LONG_PRESS_CAPTURE = "Long-press to capture."
+    const val EMPTY_PAD_TAPPED = "This pad is empty. RECORD INTO PAD or FROM MY SAMPLES fills it."
     fun landFailed(why: String): String = "Land failed: $why"
     fun voicePassageSaved(pad: String): String = "Voice passage saved on $pad."
     const val VOICE_SAVED_ON_PHONE = "Voice saved on this phone."

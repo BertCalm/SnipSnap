@@ -43,7 +43,10 @@ class PatchesTest {
     private fun onePatchPerEngine(): List<Patch> = Presets.all().distinctBy { it.engine } + listOf(
         BackwashPatch("Damped hit", BackwashVoice.SNARE, emptyMap()),
         BreakerPatch("Crushed drip", BreakerVoice.SNARE, emptyMap()),
+        DrumlinePatch("Section", DrumlineVoice.SNARE, emptyMap()),
         SootPatch("Hot", SootVoice.SNARE, emptyMap()),
+        EmberPatch("Kick", EmberVoice.KICK, emptyMap()),
+        CalabashPatch("Open tone", CalabashVoice.CONGA, emptyMap()),
         HalobarPatch("Mallet dub", HalobarVoice.MARIMBA, emptyMap()),
         TempestPatch("Legacy Strike", TempestVoice.METAL, emptyMap(), model = 1),
         HydroformPatch("Door", HydroformVoice.DOME, emptyMap()),
@@ -55,7 +58,6 @@ class PatchesTest {
         TerraPatch("Door", TerraVoice.COMPOUND_MEMBRANE, emptyMap()),
         SilkPatch("Door", SilkVoice.OUD, emptyMap()),
         GyrePatch("Door", GyreVoice.FLICK, emptyMap()),
-        ClutterPatch("Bucket", ClutterVoice.BUCKET, emptyMap()),
         MagnetPatch("Door", MagnetVoice.JANGLE, emptyMap()),
         VentPresets.all().first(),
         OverlapPresets.all().first(),
@@ -68,7 +70,7 @@ class PatchesTest {
         LibrationPresets.references().first(),
         // KEEL is rostered (its factory presets all sit on the default root at full velocity); this one carries a saved note and velocity.
         KeelPatch("Octave Test", KeelVoice.UPRIGHT, mapOf("WEIGHT" to .7f, "SETTLE" to .3f), midi = 42, velocity = .6f),
-        // ETCH is a prototype (PatchTypes.PROTOTYPES): no factory presets yet, so it is hand-built here.
+        // ETCH is rostered (its factory presets sit on the default root at full velocity); this one carries a saved note and velocity.
         EtchPatch("Line Test", EtchVoice.DUB, mapOf("SPACE" to .9f, "HOLD" to .3f), midi = 41, velocity = .7f),
     )
 

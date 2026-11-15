@@ -92,9 +92,10 @@ object PadSheet {
 
     /**
      * Row six — the treatments that read the kit itself: its key, its tempo. PUMP, the sidechain pump,
-     * joined after its gate (2026-11-13): the pedal board brainstorm's idea 7 put it here.
+     * joined after its gate (2026-11-13): the pedal board brainstorm's idea 7 put it here. ONBEAT, the tempo
+     * delay (drawn ON BEAT), joined after its gate (2026-11-14), idea 2's keyed twin, and fills the row's six.
      */
-    val KEYED_SEGMENTS: List<String> = listOf(TUNE, "BODY", "WOBBLE", "ETERNAL", "PUMP")
+    val KEYED_SEGMENTS: List<String> = listOf(TUNE, "BODY", "WOBBLE", "ETERNAL", "PUMP", "ONBEAT")
 
     /**
      * The slate: every pedal the card can put on a pad, the guitar-pedal words over the rack's own
@@ -207,6 +208,8 @@ object PadSheet {
         "HUSH" to "NOISE GATE",
         "TOUCH" to "TOUCH WAH",
         "ROOM" to "REVERB",
+        // An id is one word; the chip reads as the brainstorm named it.
+        "ONBEAT" to "ON BEAT",
     )
 
     /** What the card draws for [segment] — [DISPLAY_LABELS]'s word, or the segment itself. */
@@ -302,6 +305,8 @@ object PadSheet {
         "GATE" to "gated",
         // The level ducked on every beat and breathed back, the first beat left alone.
         "PUMP" to "pumped",
+        // The hit back on the grid, each repeat darker, gone within a bar.
+        "ONBEAT" to "echoed",
     )
 
     /**

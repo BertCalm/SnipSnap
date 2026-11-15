@@ -17,8 +17,16 @@ import kotlin.math.sin
 import kotlin.math.sqrt
 import kotlin.random.Random
 
-/** The first finite listening proof, before the proposed six-voice library. */
-enum class SplayVoice { TONGUE }
+/**
+ * SPLAY's six bodies. TONGUE is the original voice (models 1 and 2); the other five are model 3's
+ * [SplayBody] renders, each kept by the owner on 14 Nov 2026 (rounds splay-voices-1 to -3).
+ */
+enum class SplayVoice {
+    TONGUE, WIRE, RUB, AIR, BAR, SKIN;
+
+    /** The model-3 body this voice strikes, or null for TONGUE. */
+    val body: SplayBody? get() = if (this == TONGUE) null else SplayBody.valueOf(name)
+}
 
 /** Causal listening controls. None changes the initial-condition family. */
 enum class SplayMode { FULL, FROZEN, UPPER_ONLY, LOWER_ONLY, SOLO_REFERENCE }
@@ -144,10 +152,22 @@ object Splay {
         return bank
     }
 
-    fun supportsModel(model: Int): Boolean = model in 1..MODEL_VERSION
+    /** The model the five [SplayBody] voices render with; TONGUE keeps models 1 and 2. */
+    const val BODY_MODEL = SplayBodies.MODEL
 
-    fun macrosFor(@Suppress("UNUSED_PARAMETER") voice: SplayVoice, model: Int = MODEL_VERSION): List<MacroSpec> {
-        require(supportsModel(model)) { "unsupported SPLAY model $model" }
+    /** Whether some SPLAY voice renders at [model]; [supports] checks a voice and model together. */
+    fun supportsModel(model: Int): Boolean = model in 1..BODY_MODEL
+
+    /** TONGUE plays models 1 and 2; every other voice plays only [BODY_MODEL]. */
+    fun supports(voice: SplayVoice, model: Int): Boolean =
+        if (voice.body == null) model in 1..MODEL_VERSION else model == BODY_MODEL
+
+    /** A new recipe's model: TONGUE's latest, or the bodies' model. */
+    fun defaultModel(voice: SplayVoice): Int = if (voice.body == null) MODEL_VERSION else BODY_MODEL
+
+    fun macrosFor(voice: SplayVoice, model: Int = defaultModel(voice)): List<MacroSpec> {
+        require(supports(voice, model)) { "unsupported SPLAY model $model for $voice" }
+        voice.body?.let { return SplayBodies.macrosFor(it) }
         return if (model == 1) listOf(
             MacroSpec("TRACE", .55f), MacroSpec("SEED GAP", .5f), MacroSpec("ENERGY", .65f),
             MacroSpec("CONTACT", .60f), MacroSpec("POPULATION", 15f / 99f), MacroSpec("HOLD", 0f, 0f),
@@ -157,11 +177,11 @@ object Splay {
         )
     }
 
-    fun defaults(voice: SplayVoice, model: Int = MODEL_VERSION): Map<String, Float> =
+    fun defaults(voice: SplayVoice, model: Int = defaultModel(voice)): Map<String, Float> =
         macrosFor(voice, model).associate { it.name to it.default }
 
     fun scramble(voice: SplayVoice, random: Random, temperature: Float = .35f, near: Patch? = null): Map<String, Float> {
-        val model = (near as? SplayPatch)?.model ?: MODEL_VERSION
+        val model = (near as? SplayPatch)?.takeIf { it.voice == voice }?.model ?: defaultModel(voice)
         val base = defaults(voice, model) + if (near?.engine == "SPLAY") near.macros else emptyMap()
         return Dsp.scrambleNear(base, temperature.coerceIn(0f, 1f), random) + ("HOLD" to 0f)
     }
@@ -210,15 +230,21 @@ object Splay {
         return result
     }
 
+    /** TONGUE renders here; the other voices render their kept [SplayBody] through [SplayBodies], finite only. */
     fun render(voice: SplayVoice, macros: Map<String, Float> = emptyMap(), midi: Int = DEFAULT_MIDI,
-        velocity: Float = .8f, seed: Int = DEFAULT_SEED, model: Int = MODEL_VERSION): Snip =
-        renderDetailed(voice, macros, midi, velocity, seed, model).snip
+        velocity: Float = .8f, seed: Int = DEFAULT_SEED, model: Int = defaultModel(voice)): Snip {
+        val body = voice.body ?: return renderDetailed(voice, macros, midi, velocity, seed, model).snip
+        require(supports(voice, model)) { "unsupported SPLAY model $model for $voice" }
+        settled(voice, macros, model)
+        return SplayBodies.render(body, macros, midi, velocity, seed)
+    }
 
     fun renderDetailed(voice: SplayVoice, macros: Map<String, Float> = emptyMap(), midi: Int = DEFAULT_MIDI,
         velocity: Float = .8f, seed: Int = DEFAULT_SEED, model: Int = MODEL_VERSION,
         mode: SplayMode = SplayMode.FULL, referenceBank: Boolean = false): SplayRender {
         checkCancellation()
-        require(supportsModel(model)) { "unsupported SPLAY model $model" }
+        require(voice == SplayVoice.TONGUE) { "SPLAY $voice renders through SplayBodies.renderDetailed" }
+        require(supports(voice, model)) { "unsupported SPLAY model $model" }
         require(midi in MIDI_MIN..MIDI_MAX) { "SPLAY MIDI must be $MIDI_MIN..$MIDI_MAX" }
         require(velocity.isFinite() && velocity in 0f..1f) { "SPLAY velocity must be 0..1" }
         val start = System.nanoTime()
@@ -249,6 +275,37 @@ object Splay {
             descriptors.events.maxOfOrNull { it.coincidenceGain } ?: 1.0,
             descriptors.events.map { it.coincidenceGain }.average().takeIf { it.isFinite() } ?: 1.0)
         return SplayRender(Snip(out, 1, RATE), raw, trace, descriptors.events, diagnostics)
+    }
+
+    /**
+     * The model-2 mechanics, handed to the model-3 bodies ([SplayBodies]) without rendering TONGUE.
+     * [events] are exactly the catches [renderDetailed] strikes TONGUE with at model 2 (coincidence
+     * gains included); [weights] is the admission; [upperPressure] is the admission-weighted mean
+     * upper-arm pressure at the 1 kHz descriptor clock, every [dtSeconds]. Nothing here depends on
+     * note, velocity, acoustic seed or body, and TONGUE's own path never calls this.
+     */
+    internal class Model2Excitation(
+        val macros: Map<String, Float>,
+        val events: List<SplayContactEvent>,
+        val weights: DoubleArray,
+        val upperPressure: DoubleArray,
+        val dtSeconds: Double,
+    )
+
+    /** See [Model2Excitation]. [macros] are SPLAY's mechanical controls; HOLD is a body control and is ignored here. */
+    internal fun prepareModel2Excitation(macros: Map<String, Float>): Model2Excitation {
+        checkCancellation()
+        val m = settled(SplayVoice.TONGUE, macros - "HOLD", 2)
+        val speed = motionSpeed(m.getValue("TRACE"))
+        val gap = gapDegrees(m.getValue("SEED GAP"))
+        val weights = populationWeights(m.getValue("POPULATION"))
+        val bank = trajectory(m.getValue("ENERGY").toDouble(), gap, speed, weights.size)
+        val described = compensateCoincidence(contacts(bank, m.getValue("CONTACT").toDouble(), SplayMode.FULL, 2), weights)
+        val total = weights.sum()
+        val pressure = DoubleArray(described.frames)
+        for (id in weights.indices) for (k in pressure.indices) pressure[k] += described.upper[id][k] * weights[id] / total
+        checkCancellation()
+        return Model2Excitation(m, described.events, weights, pressure, bank.dtSeconds)
     }
 
     private data class Contacts(

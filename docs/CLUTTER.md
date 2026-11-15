@@ -1,9 +1,12 @@
 # CLUTTER: design brief and round-0 audition
 
-Status: **round 1, the Kotlin port (2026-11-14), not yet heard.** Round 0c's Python renders were accepted by the
-owner on 2026-11-14 ("All are good", "I like it as is") and are the sound baseline. `Clutter.kt` ports all 22
-objects; the four genre kits are not on the shelf yet (round 2). The engine stays in progress until every
-applicable owner gate has evidence (see "Gates" below).
+Status: **round 4, on SYNTH's engine picker with the approved kits as its presets (2026-11-14).** Round 0c's
+Python renders were accepted by the owner on 2026-11-14 ("All are good", "I like it as is"), and the owner then
+approved the Kotlin kits' audition ("I approve the audition", listening page version 8). `Clutter.kt` ports all 22 objects (round 1); `ClutterKits` puts the four accepted genre kits on the shelf
+with their velocity and round-robin grids proved through saving, playback and the MPC 3 export (round 2);
+`ClutterPresets` files those kits' sixty-four pads as the factory bank (round 3), and SYNTH's picker
+offers the engine (round 4). The
+engine stays in progress until every applicable owner gate has evidence (see "Gates" below).
 
 Prototype: [`prototype/clutter/`](../prototype/clutter/) (`clutter_proto.py` is the model, `measures.py` the
 house distance measures, `gen_audition.py` renders and measures, `build_page.py` writes the audition page).
@@ -266,6 +269,172 @@ Local runs here excluded that one method with `-XX:CompileCommand`; nothing in t
 
 Not heard: no one has listened to the Kotlin renders. Not measured in Kotlin: render time per hit.
 
+## Round 2: the kits on the shelf (2026-11-14)
+
+`synth/.../ClutterKits.kt` holds the four accepted genre kits pad for pad, generated from
+`prototype/clutter/kits.py` so no setting was retyped: KITCHEN LO-FI (`clutter-lofi`, 82 BPM), STREET BUCKET
+(`clutter-street`, 120), JUNK BOOM BAP (`clutter-boombap`, 90) and MICROBEAT (`clutter-micro`, 100). They are
+FRESH TAPE starters under SKINS (`StarterKits`, `StarterShelf`), the shelf now 129 starters.
+
+Each pad is a grid of three velocity zones (0.35, 0.65, 1.0, the zones the accepted audition played) of four
+takes, rendered by the engine at that velocity and take; A03 chokes A04 and A07 chokes A08; every pad carries its
+provenance (engine, kit version 1, model 1, kit, role, BPM, object, zones, takes). Sixteen one-shots a kit, no
+phrases on the pads: the owner chose sixteen objects per kit, and the grooves stay on the listening page.
+
+**Level within a zone is CLUTTER's own law.** The GATECRASH and SCUFF law sets one gain from a zone's first take's
+peak and lets the takes share it. Measured on these kits with a scratch probe, that left the takes of granular
+objects 6 to 10 dB apart in peak and up to 7 dB in loudness: the peak of a sand jar, a zip or a matchbox is where a
+few grains coincided. The accepted audition peak-matched every take, so no take was heard quieter than its
+neighbours; but peak-matching a granular take makes the one with no coincidence the loudest. So every take of a
+zone is matched in loudness over its first 150 ms, and the zone is set so its highest-peaking take peaks at 0.92.
+`ClutterKitsTest` holds the four takes within 0.1 dB.
+
+The gate, in software:
+- **Rendering:** `ClutterKitsTest` holds every pad of every kit:
+  - the same bytes twice, finite, centred and silent at the end;
+  - each zone's takes equally loud, its highest peak at 0.92;
+  - a soft zone a different strike in shape, not a quieter copy;
+  - four different strikes per zone;
+  - the classes, the chokes and the provenance;
+  - the four kits four kits: different tempos, no pad the same object at the same settings, every slot different
+    in shape across kits;
+  - no maker's name;
+  - a built kit the same bytes as its pads rendered one by one.
+- **Saving, playback, export:** `ClutterKitTest` takes a kick, a hat and the bin lid through saving, reloading,
+  `PadHit.resolve` (the zone by velocity, the four takes dealt in order, then repeated) and the MPC 3 exporter,
+  read back. `./gradlew :shell:generateClutterKits` does it for every pad of all four kits: "Verified Kitchen Lo-fi:
+  16 pads, 192 slices, saved PCM + playback + MPC 3 track", the same for Street Bucket, Junk Boom Bap and
+  Microbeat. That is 768 slices, each checked against its render. Each kit builds in 4 to 7 s here.
+- **Not exercised:** the MPC 2 export (on the house's other kits it keeps one take per zone), a phone, an MPC.
+
+The listening page's version 8 puts every pad of the four Kotlin kits on the page, read back from the MPC 3 export
+through the app's pad player: the hard hit and a strip of all twelve strikes (MP3 listening copies; the WAVs are
+the proof). On 2026-11-14 the owner answered: "I approve the audition". Preserve `Clutter.MODEL_VERSION` 1 and
+`ClutterKits.VERSION` 1 as the approved baseline. This is a listen to the kits as the app renders and exports them,
+not on a phone or an MPC.
+
+## Round 3: presets and the roster (2026-11-14)
+
+The round the owner asked for after approving the audition ("Presets and picker"). `ClutterPresets` is the four
+approved kits' sixty-four pads as patches, and nothing reasoned from the knobs: each object at the pad's own
+macros, struck full, at take 0 (the kit grid's first take is the engine's take 0). Named after the kit by its
+starter id's tag, `LOFI SOFT BUCKET` to `MICRO SWITCH SLOW`: the kits' full titles would put most names past 24
+characters, and the tag still says which kit a sound came from. `Presets` serves the bank; CLUTTER leaves
+`PatchTypes.ROSTERLESS`, and `PatchesTest` and `SynthRootTest` take their CLUTTER sound from the roster. Every one of
+the 22 objects has at least two presets (the four kits between them use every object; the bucket has five).
+
+A player's saved CLUTTER strike promotes through `ClutterPatch.fromJsonText`, so its velocity, take and model
+version survive, as SCUFF's do.
+
+`ClutterPresetsTest` holds the six preset contracts:
+- each preset is the kit's pad: the preset, sent through the kit's own finish, correlates with the kit's pad
+  above .9999 (every step of that finish is linear; the preset and the pad differ only in level);
+- finite, at the engine's peak (0.89), centred, faded to zero at the engine's 25 ms fade;
+- round-trips through JSON with velocity, take and model, and re-strikes by velocity;
+- names unique, in caps, starting with the kit's tag, at most 24 characters (the longest is 23);
+- no maker's name;
+- every two presets of one object a different recipe and different bytes.
+
+## Round 4: the engine picker (2026-11-14)
+
+CLUTTER joins SYNTH's `Engine` picker as its last constant, after SCUFF, the way SCUFF's round 5 (#1107) does it: SOOT's seven `when` arms, the saved-draft restore, a frozen draft before a macro bag,
+the live-edit list, plus the native-factory path RIVET takes, because a CLUTTER preset carries a strike velocity, a
+take and a renderer model outside the macro map. A chosen kit pad loads whole and keeps its take through edits and
+drafts. The 22 object chips are their names, with the bin lid's as BIN LID. `EngineCatalog` files CLUTTER under
+DRUMS after SCUFF; both READMEs count 88 picker engines.
+
+The editor plays a preset as filed: full velocity, take 0. Velocity and the takes are the kit grid's (and the
+pad sheet's), not knobs on the editor; SCUFF's entry made the same choice.
+
+`NewEngineSynthScreenTest` gains an on-device test: the bucket opens with its five controls, LOFI SOFT BUCKET lands
+with the pad's TUNE, DAMP and MIC, a DAMP edit survives a rebuild, and the saved draft keeps take 0, full velocity
+and model 1. This session has no Android SDK: CI's android-build compiles the entry and emulator-tests runs the test.
+
+## Round 5: the phone and MPC check (chosen 2026-11-15)
+
+What only a phone and an MPC can answer. Everything here already passes in software (rounds 1 to 4); this is the
+first time hands and speakers judge it. Work top to bottom and write the answer on the arrow line: a word is
+enough, and "no" with what you heard or the exact error text is worth more than "yes".
+
+**How the phone sets velocity.** A pad's touch height is its velocity: the top edge is the softest hit, the bottom
+edge is full force. CLUTTER's three zones sit at soft, medium and hard, so "soft" below means a tap near the top
+edge, "medium" the middle, "hard" the bottom edge.
+
+### H1 · The kit arrives (phone)
+
+FRESH TAPE → SKINS → CLUTTER KITCHEN LO-FI. It renders 16 pads × 3 zones × 4 takes, so it takes a while.
+
+→ it built, and roughly how long it took:
+
+→ the 4×4 grid shows sixteen pads, A01 (bottom-left) a kick:
+
+### H2 · Soft is a different hit, not a quieter one (phone)
+
+On A01 (Soft Bucket) and A02 (Rice Box Brush), play soft, medium, hard. A soft hit should sound like a gentler
+strike, duller and shorter, not the hard hit turned down. On A02 the rice lies still on a soft hit and moves from
+medium up (at this pad's RATTLE the box throws it from about 0.48 velocity; the soft zone strikes at 0.35).
+
+→ A01: three different strikes, or one sound at three levels:
+
+→ A02: the rice is still when soft and rattles at medium and hard:
+
+### H3 · Four takes, not a machine gun (phone)
+
+Hit A02 eight times at the same height, steadily. The takes rotate one, two, three, four, then repeat, so no two
+hits in a row should be the identical sound.
+
+→ every hit a little different, or the same sound repeated:
+
+→ any take that jumps out as louder or quieter than its neighbours (pad and which hit):
+
+### H4 · The hats choke (phone)
+
+Hit A04 (Loose Keys, the open hat) and let it ring, then hit A03 (Matchbox, the closed hat). The keys should stop.
+Then the same for the second pair: A08 rings, A07 cuts it.
+
+→ A03 cuts A04:
+
+→ A07 cuts A08:
+
+### H5 · The other three kits (phone)
+
+Make CLUTTER STREET BUCKET, CLUTTER JUNK BOOM BAP and CLUTTER MICROBEAT the same way and play around each one.
+On STREET BUCKET, A04 is the Bin Lid one-shot.
+
+→ all three built and play:
+
+→ anything that sounds broken (a click, a cut-off tail, a pad far too loud or quiet):
+
+### H6 · The picker (phone)
+
+SYNTH → engine CLUTTER → BUCKET. Tap the preset LOFI SOFT BUCKET, move DAMP, then leave SYNTH and come back.
+
+→ the preset sounds like the kit's A01:
+
+→ the DAMP move was still there when you came back:
+
+### H7 · MPC 3 export (phone, then the MPC)
+
+Open CLUTTER KITCHEN LO-FI → EXPORT → **MPC 3 NATIVE (.XTD)** → write it, copy it to the MPC's card, load it.
+
+→ it loads, or the MPC's exact error text:
+
+→ on the MPC's pads, A01 soft and hard are different strikes (as in H2):
+
+→ hitting A02 repeatedly rotates through four takes (as in H3):
+
+→ A03 cuts A04 on the MPC:
+
+### H8 · MPC 2 folder: the known limit (phone, then the MPC)
+
+Same kit → EXPORT → **MPC 2 FOLDER (EVERY GENERATION)**. Before it writes, the wizard should warn that MPC 2 holds
+velocity layers or round robin on a pad, not both, so each pad keeps its three zones with one take each. This
+records what happens today. It is the next round's problem, not a failure of this one.
+
+→ the warning showed before writing:
+
+→ it loads on the MPC, and soft and hard still differ:
+
 ## Risks (where it could sound bad)
 
 | Risk | What would show it | Probe or question |
@@ -283,13 +452,10 @@ Not heard: no one has listened to the Kotlin renders. Not measured in Kotlin: re
 - **Articulation:** finite hits, no HOLD. Not a plucked string.
 - **Percussion (roll or riser):** waived by the owner on 2026-11-14 ("I overrule that gate"). CLUTTER ships no
   roll or riser; B01 stays the Bin Lid one-shot. This is an owner exception, not a pass.
-- **Drums (several genre kits):** four authored and measured in Python (Kitchen Lo-fi, Street Bucket, Junk Boom
-  Bap, Microbeat; above) and accepted by the owner as they are on 2026-11-14 ("All are good", "I like it as is").
-  Not on the shelf: no Kotlin.
-- **Velocity and round robin:** rendering verified in Kotlin by test (round 1, below): every object's soft and
-  hard hits differ in shape at matched level, its four takes are distinct strikes, and every take replays byte
-  for byte, through JSON too. Saving into a kit, playback and export: open until the kits reach the shelf
-  (round 2).
+- **Drums (several genre kits):** four, accepted by the owner as authored on 2026-11-14 ("All are good", "I like
+  it as is"), on the shelf in Kotlin since round 2, and their Kotlin audition approved ("I approve the audition").
+- **Velocity and round robin:** rendering, saving, playback and the MPC 3 export verified in software (rounds 1
+  and 2, above). The MPC 2 export, a phone and an MPC: open.
 
 ## Next rounds
 
@@ -298,9 +464,12 @@ Not heard: no one has listened to the Kotlin renders. Not measured in Kotlin: re
   the modal banks keep the prototype's sin(theta)-compensated two-pole loop instead of `Modes.ring` plus a
   peak match per body (which would rebalance every object), and MIC keeps the prototype's kitchen sketch
   instead of the shared `Room` (a different room is a different sound; moving to `Room` is its own listen).
-- **R2 kits**: the four genre kits from `kits.py` (or what the listen keeps) as `ClutterKits`, three zones of four
-  takes each, mute groups for A03/A04 and A07/A08, on the shelf under SKINS, saved and exported through
-  `PadHit.resolve` and the MPC 3 writer, as SOOT and SCUFF did.
+- **R2 kits**: done (above).
+- **R3 presets and the roster**: done (above).
+- **R4 the engine picker**: done (above); CI's device build and emulator run passed (#1114).
+- **R5 hardware**: the owner chose the phone and MPC check on 2026-11-15. The checklist is below; answers go
+  on its arrow lines.
+- **Next**: the MPC 2 export. The owner approved the Kotlin kits' audition on 2026-11-14.
 
 ## Ledger
 
@@ -314,7 +483,10 @@ Not heard: no one has listened to the Kotlin renders. Not measured in Kotlin: re
 | The bin lid's brightness is a plate's nonlinear cascade | analogy, not simulated | `binlid` in `clutter_proto.py` |
 | The Kotlin port renders the accepted objects | measured (Python harness against Kotlin clips) | `compare_kotlin.py`: no brightness bias; 17 of 22 within Python's own take spread |
 | Soft hits leave loose parts still; the rivet needs its play; the bucket's boom falls | verified in Kotlin by test | `ClutterTest` |
-| The Kotlin renders sound like the accepted ones | not heard | the owner's listen |
+| The four genre kits are on the shelf with their grids through save, playback and MPC 3 export | verified in software | `ClutterKitsTest`, `ClutterKitTest`, `generateClutterKits` (768 slices) |
+| A zone's takes are equally loud | verified by test | `ClutterKitsTest`: within 0.1 dB over 150 ms |
+| The roster is the approved kits' pads, pad for pad | verified by test | `ClutterPresetsTest`: correlation above .9999 with each kit pad |
+| The Kotlin kits are the sound | heard, approved | the owner, 2026-11-14: "I approve the audition" (listening page version 8, read back from the MPC 3 export) |
 | Soft and hard differ on every pad; nothing rattles below the threshold | measured; by construction | velocity section |
 | Thin-ring, plate and bar ratios are the textbook ones | proposed (sourced formulas, shape damping) | `clutter_proto.py` constants |
 | The objects and the four genre kits are the sound | heard, accepted | the owner, 2026-11-14: "All are good", "I like it as is" (Python renders, listening page version 7) |

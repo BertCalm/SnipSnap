@@ -29,6 +29,14 @@ object Presets {
             ?.let(RivetPresets::forVoice) ?: emptyList()
         ScuffPatch.ENGINE -> ScuffVoice.entries.firstOrNull { it.name == voice }
             ?.let(ScuffPresets::forVoice) ?: emptyList()
+        DrumlinePatch.ENGINE -> DrumlineVoice.entries.firstOrNull { it.name == voice }
+            ?.let(DrumlinePresets::forVoice) ?: emptyList()
+        ClutterPatch.ENGINE -> ClutterVoice.entries.firstOrNull { it.name == voice }
+            ?.let(ClutterPresets::forVoice) ?: emptyList()
+        EtchPatch.ENGINE -> EtchVoice.entries.firstOrNull { it.name == voice }
+            ?.let(EtchPresets::forVoice) ?: emptyList()
+        TerraPatch.ENGINE -> TerraVoice.entries.firstOrNull { it.name == voice }
+            ?.let(TerraPresets::forVoice) ?: emptyList()
         WickPatch.ENGINE -> WickVoice.entries.firstOrNull { it.name == voice }
             ?.let(WickPresets::forVoice) ?: emptyList()
         AccordPatch.ENGINE -> {
@@ -340,6 +348,10 @@ object Presets {
             val v = TempestVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
             TempestPresets.forVoice(v)
         }
+        CairnPatch.ENGINE -> {
+            val v = CairnVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
+            CairnPresets.forVoice(v)
+        }
         else -> emptyList()
     }
 
@@ -367,7 +379,7 @@ object Presets {
     fun all(): List<Patch> =
         TempestPresets.all() +
         SplayFactoryPresets.all() +
-        BristlePresets.all() + BackwashPresets.all() + HalobarPresets.all() + FiredBronzePresets.all() + RivetPresets.all() + OsteriaPresets.all() + ScuffPresets.all() + ErosionPresets.all() + WickPresets.all() +
+        BristlePresets.all() + BackwashPresets.all() + HalobarPresets.all() + FiredBronzePresets.all() + RivetPresets.all() + OsteriaPresets.all() + ScuffPresets.all() + ClutterPresets.all() + DrumlinePresets.all() + EtchPresets.all() + TerraPresets.all() + ErosionPresets.all() + WickPresets.all() +
         OtisPresets.all() +
         LorentzPresets.all() +
         AccordPresets.all() +
@@ -380,5 +392,7 @@ object Presets {
             TremorPresets.all() + CircuitPresets.all() + ThawPresets.all() + ScourPresets.all() + MurkPresets.all() + NimbusPresets.all() +
             CorollaPresets.all() + UndertowPresets.all() + SuturePresets.all() + TesseraPresets.all() + PitchwheelPresets.all() +
             RevelPresets.all() + PrismPresets.all() + OrigamiPresets.all() + FilamentPresets.all() + AlloyPresets.all() + ContourPresets.all() + StoopPresets.all() + LacquerPresets.all() + SpoolPresets.all() + SkitterPresets.all() + TanglePresets.all() + FlockPresets.all() + OverlapFactoryPresets.all() + ShoalPresets.all() + RelayPresets.all() + EmbouchurePresets.all() + EmbouchurePresets.experimental() + BellowsPresets.all() + MurmurPresets.all() + OspreyPresets.all() + RegistersPresets.all() + OpenSkyPresets.all() + ScannedChainPresets.all() + OrphicaPresets.all() + OvenPresets.all() + VentKitPresets.all() + CreasePresets.patches() + TrioPresets.all() + OhmPresets.all() + CausticPresets.all() + ChamberPresets.all() + LibrationPresets.all() + KeelPresets.all() + RimePresets.all() +
+            CairnPresets.all() +
+            // ALLOY's MATERIAL choices stay last: AlloyMaterialPickerTest reads the roster's end.
             AlloyMaterialPresets.pickerAdditions()
 }

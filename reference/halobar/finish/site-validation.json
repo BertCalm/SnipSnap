@@ -1,0 +1,15 @@
+{
+  "state": "passed",
+  "changedFiles": [
+    "tubular-bells/performance/index.html",
+    "tubular-bells/performance/review/index.html",
+    "tubular-bells/performance/review/manifest.json"
+  ],
+  "allAudioAndDownloadsUnchanged": true,
+  "players": 33,
+  "linksChecked": 37,
+  "ownerPerformanceAccepted": true,
+  "browserQaExecuted": false,
+  "browserQaReason": "Managed Sites environment has no cua_repl.js; no preview/server/browser fallback used",
+  "expandedAssetBytes": 256348537
+}

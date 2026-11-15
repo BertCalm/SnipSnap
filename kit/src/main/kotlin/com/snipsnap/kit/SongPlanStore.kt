@@ -111,6 +111,7 @@ object SongPlanStore {
                             "seed" to JsonValue.Num(s.seed.toDouble()),
                             "bass" to JsonValue.Bool(s.bass),
                             "pullUp" to JsonValue.Bool(s.pullUp),
+                            "drop" to JsonValue.Bool(s.drop),
                         ),
                     )
                 },
@@ -132,6 +133,7 @@ object SongPlanStore {
                 // A plan kept before these fields existed: what its names meant then. Same VERSION, so an older build reads this file too.
                 bass = (s["bass"] as? JsonValue.Bool)?.value ?: SectionNames.bassUnder(name),
                 pullUp = (s["pullUp"] as? JsonValue.Bool)?.value ?: SectionNames.pullsUpInto(name),
+                drop = (s["drop"] as? JsonValue.Bool)?.value ?: false,
             )
         }
         return SongPlan(seed = obj["seed"]?.int() ?: 0, sections = sections)

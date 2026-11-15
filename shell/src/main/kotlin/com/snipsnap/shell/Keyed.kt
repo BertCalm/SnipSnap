@@ -10,6 +10,7 @@ import com.snipsnap.audio.Scales
 import com.snipsnap.audio.Snip
 import com.snipsnap.audio.Tuner
 import com.snipsnap.synth.Gate
+import com.snipsnap.synth.OnBeat
 import com.snipsnap.synth.Pump
 import com.snipsnap.synth.Roll
 import com.snipsnap.synth.Wobble
@@ -37,14 +38,17 @@ import java.util.Locale
  *   roll and a filter sweep land on the same beats;
  * - **pumped** — the sidechain pump: the first division untouched, then on
  *   every beat the level ducks and breathes back up ([Pump]), on the same
- *   grid, so a pump lands under a gate or a roll.
+ *   grid, so a pump lands under a gate or a roll;
+ * - **echoed** — the tempo delay: the hit comes back on the grid, each repeat
+ *   quieter and darker, the trail gone within a bar ([OnBeat]); its own
+ *   division, since its tap is the dotted eighth the grid does not have.
  *
  * Each is `Snip → Snip` with AMOUNT how far, peak matched, and its own
  * honest refusal in words.
  */
 object Keyed {
 
-    val NAMES: List<String> = listOf("retuned", "bodied", "wobbled", "eternal", "rolled", "gated", "pumped")
+    val NAMES: List<String> = listOf("retuned", "bodied", "wobbled", "eternal", "rolled", "gated", "pumped", "echoed")
 
     /** The honest refusal: the sound is not what the treatment wants. */
     class Refused(message: String) : IllegalArgumentException(message)
@@ -58,6 +62,8 @@ object Keyed {
         val decay: Float = Body.DECAY_DEFAULT,
         /** WOBBLE, ROLL, GATE and PUMP: the note division they are synced to. */
         val division: String = Wobble.DEFAULT_DIVISION,
+        /** ON BEAT: the delay, a division of the bar ([OnBeat.DIVISIONS]); its own, so its tap is the owner's dotted eighth. */
+        val echoDivision: String = OnBeat.DEFAULT_DIVISION,
         /** ETERNAL: the tail in seconds; null takes it from AMOUNT ([Eternal.tailFor]). */
         val tail: Float? = null,
         /** ETERNAL: how much of the attack passes untouched, seconds. */
@@ -71,6 +77,9 @@ object Keyed {
     val NO_KEY: KeySpec = KeySpec(0, Scale.CHROMATIC)
 
     const val NO_KEY_LABEL = "THE NEAREST SEMITONES"
+
+    /** The division [name] runs at under [dials], the one its recipe records: ON BEAT's own, or the grid's. */
+    fun divisionFor(name: String, dials: Dials): String = if (name == "echoed") dials.echoDivision else dials.division
 
     /** A name the family knows, or an [IllegalArgumentException] naming the ones it does. */
     fun require(name: String) {
@@ -148,6 +157,10 @@ object Keyed {
                     "%s AT %d BPM".format(Locale.ROOT, dials.division, Math.round(context.bpm)),
                 )
             }
+            "echoed" -> Result(
+                OnBeat.echo(snip, context.bpm, dials.echoDivision, amount),
+                "%s AT %d BPM".format(Locale.ROOT, dials.echoDivision, Math.round(context.bpm)),
+            )
             else -> throw IllegalStateException(name)
         }
     }

@@ -1,0 +1,8 @@
+{
+  "sourceCommit": "121949b95929029738b92c7b8a8f0b622e982e89",
+  "sourceSha256": "f93bf4f12ce5808c0d63d3bc5a4ba00352b99427a9acb342625e5d88f9fa9261",
+  "compiledClasspath": "/workspace/SnipSnap/synth/build/classes/kotlin/main:/workspace/SnipSnap/audio/build/classes/kotlin/main:/workspace/SnipSnap/kit/build/classes/kotlin/main:/workspace/SnipSnap/json/build/classes/kotlin/main:/workspace/SnipSnap/xpm/build/classes/kotlin/main:/workspace/SnipSnap/mpc3/build/classes/kotlin/main:/home/agent/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-stdlib/2.0.21/618b539767b4899b4660a83006e052b63f1db551/kotlin-stdlib-2.0.21.jar",
+  "jdk": "/workspace/halobar-jdk/jdk-21.0.13+9",
+  "profileOnly": true,
+  "productionChanged": false
+}

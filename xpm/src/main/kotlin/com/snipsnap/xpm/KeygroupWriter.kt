@@ -8,7 +8,7 @@ import java.util.Locale
  * sample was recorded at, and its velocity layers (same [VelocityLayer] the
  * drum side uses).
  */
-data class Keygroup(
+data class Keygroup @JvmOverloads constructor(
     /** MIDI note range, inclusive. */
     val lowNote: Int,
     val highNote: Int,
@@ -24,6 +24,8 @@ data class Keygroup(
     val volumeRelease: Float? = null,
     /** Cycle matching samples within each velocity window. */
     val cycleLayers: Boolean = false,
+    /** Opt into the owner-tested matching-window Cycle layout, retaining every take on MPC. */
+    val mpcVelocityCycle: Boolean = false,
 ) {
     init {
         require(lowNote in 0..127 && highNote in 0..127 && lowNote <= highNote) {
@@ -38,11 +40,14 @@ data class Keygroup(
             require(groups.keys.zipWithNext().all { (a,b) -> a.second < b.first }) { "cycle windows must ascend without overlap" }
         }
         require(volumeRelease == null || (volumeRelease.isFinite() && volumeRelease in 0f..30f))
+        require(!mpcVelocityCycle || (cycleLayers && layers.map { it.velStart to it.velEnd }.distinct().size > 1)) {
+            "MPC velocity cycle requires cycling across multiple velocity windows"
+        }
     }
-    /** MPC layer cycle and velocity switching are separate modes. Combined phone grids
-     * export an honest first take per velocity window until a Slice Motion keygroup is proven. */
+    /** Legacy grids retain their first-take fallback. Only explicitly verified instruments
+     * retain matching-window cycles; ordinary full-range cycles keep their existing layout. */
     val mpcLayers: List<VelocityLayer> get() =
-        if (cycleLayers && layers.map { it.velStart to it.velEnd }.distinct().size > 1)
+        if (cycleLayers && !mpcVelocityCycle && layers.map { it.velStart to it.velEnd }.distinct().size > 1)
             layers.distinctBy { it.velStart to it.velEnd } else layers
     val mpcCycle: Boolean get() = cycleLayers && mpcLayers.size == layers.size
 }

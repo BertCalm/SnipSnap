@@ -54,6 +54,15 @@
 
 # Synth roadmap — generate kits, not just capture them
 
+**PATIO performance kits (2026-11-14).** Three starter-shelf kits (Cumbia, Samba,
+Latin dub) combine sixteen core percussion voices with an authored hand-drum roll
+and the approved cuíca replacement on B02. Every pad has three velocity zones and
+four cycling takes, preserved in saved kit chains, playback and native MPC 3
+exports. `generatePatioPerformance` writes the compact audition and downloads.
+Source recipes replay through PATIO's versioned API; ordinary patch-editor control
+and generic MPC import reconstruction are not claimed. Hardware loading remains
+open. See [PATIO.md](PATIO.md) for current status and historical listening work.
+
 **TEMPEST on the default branch (2026-11-13).** The owner-accepted six-voice digital drum instrument
 came back from the recovery backup with its 22 presets, the full drum starter with choking hats, the
 original tuned starter and the SYNTH picker. The DSP and model sources are unchanged. See
@@ -3494,6 +3503,17 @@ The genre kits (renderer models 5 and 6, 2026-11-12 to 11-13):
 - **The final audition** (`:shell:generateBreakerAudition`, 68 clips): the owner signed off the
   sound on 2026-11-13 (every voice, every control, the edges, the presets and the three kits).
 
+The surf tom fill (renderer model 7, 2026-11-14):
+- **Picked by ear in two rounds** (`:synth:generateBreakerFillStudy`):
+  - fill B, sixteenth-note triplets down the three toms;
+  - each stroke through its own tom's spring ("three pads"), at about a third of it ("4 Drier");
+  - a fresh take heard as the same fill with fresh hits.
+- **Built:** FILL, twelve strokes of the BREAKER kit's own toms (model 5), each its own fresh strike. A
+  softer pad strikes every tom softer. DRIP scales the three springs together.
+- **On the kit:** the BREAKER kit's A16, in the shaker's place beside the snare riser (the owner's
+  call, 2026-11-14). It is verified like every pad through saving, playback and the MPC 3 export.
+- **Hardware: approved by the owner (2026-11-15), "Hardware is approved".** BREAKER is complete.
+
 ### ETCH, Kotlin round K1 (2026-11-13)
 
 Owner-requested step-line bass: an accented, sliding sixteen-step line → BITE (a clean/drive blend after a bass
@@ -3502,6 +3522,18 @@ Python audition the owner accepted on 2026-11-12; K1 ports it to Kotlin with six
 the line loop at HOLD's top and round-robin takes through `Restrike`, as a prototype outside the factory presets
 and the picker. Kotlin measures within 0.4 to 2.8 dB of the accepted renders. The kit, the roster, keygroups, the
 picker and the saving, playback and export evidence follow. See [ETCH](ETCH.md).
+
+### ETCH, round K2 (2026-11-14)
+
+The roster, the picker, keys and a kit. The fourteen K1 presets, every one heard in round 3, are the factory bank.
+ETCH is in the SYNTH picker after OSTERIA with WICK's typed-patch handling (root, velocity and model survive edits,
+navigation, SAVE and SEND), a VELOCITY control and MAKE INSTRUMENT's finite keys (C1 to C4, three touch layers).
+FRESH TAPE → ETCH (BASS, 130 BPM) is a SAW walk in C minor pentatonic, five voices' notes and three lines; each
+note pad is three velocity zones by four takes, verified through saving, the pad resolver and the MPC 3 export
+(`EtchKitTest`). Short, low one-shots read as KICK or TOM (122 of 756); the owner heard three endings and chose C
+for every voice, now model 2 (4 of 756, RUBBER's shortest C1 notes; model-1 recipes keep the accepted ending).
+The owner heard the presets, the kit and SAW C2's grid at model 2 and accepted them (2026-11-14). The kit
+now renders its cells in parallel (14.0 s to 6.8 s on four cores, byte for byte). The chord tool is not applicable, the owner's decision (ETCH is a monophonic bass). Open: phone playback and an MPC. See [ETCH](ETCH.md).
 
   - The kick's takes are distinct but close (34 dB apart).
   - The owner's listen to the kit.
@@ -3551,6 +3583,9 @@ The siblings' pads await a listen; hardware remains.
 The owner kept 63 of the 64 sibling pads. They heard Basement Dub's one-drop four bars as
 incoherent, and picked a steppers groove in its place (`SootGenreKits` 2). The sound of all five SOOT
 kits is now approved, and hardware remains.
+
+On 2026-11-14 the owner confirmed phone and MPC 3 playback ("Everything is good"), with repeated hits
+cycling through the takes on the MPC 3. SOOT is complete; MPC 2 is not applicable (format limit).
 
 
 ### SCUFF, round 1 (2026-11-13)
@@ -3624,3 +3659,91 @@ hardware verification remain open; full-regression evidence is recorded in BRIST
 The owner subsequently reported the current prototype tested and approved after the Android/MPC
 testing recommendation; device details were not supplied and Android automation remains unrun.
 This is an accepted prototype, not a completed instrument.
+### TIMBER acoustic-instrument percussion banks (2026-11-14)
+
+Three genre starters from guitar, acoustic bass guitar, cello and upright body/string
+contacts: FOLK POCKET, WOOD BOOM BAP and STRING TWO STEP. Fourteen finite hits, knuckle roll,
+string-rake riser, three contact strengths and four deterministic takes per pad. Native
+save/playback and MPC 3 PCM/cycle read-back are covered by `TimberKitTest`; run
+`:shell:generateTimberKits` for the listening pack and exports. This is an authored bank,
+not a new melodic engine. Model 2 ports the owner-approved Python contact and extended-technique
+auditions, with independent body/string profiles, seven contacts and bounded take levels. Model 1
+source replay is retained. The owner confirmed “Listening and hardware approved” on 2026-11-15
+for the delivered Kotlin kits. The shared MPC slice-map implementation is unchanged; software
+regression remains pending. See [TIMBER](TIMBER.md) for the gate ledger.
+
+### SCUFF, round 5 (2026-11-14)
+
+On SYNTH's engine picker, mirroring SOOT arm for arm plus the native-factory path for its presets (a kit's pad
+loads whole, with its take and model); `EngineCatalog` under DRUMS, after ETCH; both READMEs count 87; an on-device test
+beside SOOT's in `NewEngineSynthScreenTest` (CI's emulator runs it). BOOM's bass pads stay a fifth and a bit apart, kept
+as heard (the owner, 2026-11-15). Open: hardware playback (MPC 2 round robin is not
+applicable since 2026-11-14, a format limit). See [SCUFF](SCUFF.md).
+
+### CLUTTER, round 2 (2026-11-14)
+
+The four accepted genre kits on the shelf: `ClutterKits` (KITCHEN LO-FI 82 BPM, STREET BUCKET 120, JUNK BOOM BAP 90,
+MICROBEAT 100), sixteen one-shot pads each, three zones of four takes rendered by the engine, the hat pairs
+choking, FRESH TAPE starters under SKINS (129 starters). A zone's takes are matched in loudness, CLUTTER's own
+level law: the first-take peak law left granular takes up to 10 dB apart. Every grid proved through saving,
+playback and the MPC 3 export (768 slices). No roll: the owner waived the gate. Open: MPC 2, hardware, presets and the
+picker. See [CLUTTER](CLUTTER.md) and the gates entry. The owner heard the four Kotlin kits on the listening page's version 8 (read back from the MPC 3 export) and
+answered "I approve the audition" (2026-11-14): `Clutter.MODEL_VERSION` 1 and `ClutterKits.VERSION` 1 are the
+approved baseline.
+
+### CLUTTER, round 3 (2026-11-14)
+
+Presets and the roster, the round the owner asked for after approving the audition: `ClutterPresets` is the four
+approved kits' sixty-four pads as patches (the pad's macros, struck full, take 0), named after their kit's tag
+(LOFI, STREET, BOOMBAP, MICRO), served by `Presets`; CLUTTER leaves `PatchTypes.ROSTERLESS`. A saved CLUTTER
+strike promotes with its velocity, take and model through the JSON constructor, as SCUFF's does. Open: the app
+picker, hardware playback, MPC 2. See [CLUTTER](CLUTTER.md).
+
+### CLUTTER, round 4 (2026-11-14)
+
+The engine picker: CLUTTER joins SYNTH's `Engine` after SCUFF, mirroring SCUFF's round 5 (SOOT's arms plus the
+native-factory path), so a kit preset loads whole with its take and model. `EngineCatalog` files it under DRUMS;
+88 picker engines. An on-device test in `NewEngineSynthScreenTest`; CI compiles and runs it. Open: hardware
+playback, MPC 2. See [CLUTTER](CLUTTER.md).
+
+### DRUMLINE native battery
+
+The native battery retains the preferred cymbal mechanisms and independent player sections. Model 2 adds body to basses/tenors, a separate rim clack and snare snap; saved model-1 recipes remain replayable. FIELD and STREET CADENCE have different source tuning, damping, section sizes and scored articulations, each a 3 × 3 velocity/take grid with editable versioned recipes. Implementation and gate evidence: [DRUMLINE](DRUMLINE.md). Native revision 4 was accepted on 2026-11-15; its 32 FIELD/STREET pad recipes are factory presets pinned to the heard renderer. Phone/MPC hardware, render budget and remaining numerical coverage stay open.
+
+### EMBER, round 1 (2026-11-15)
+
+A live jazz and soul drum engine for a small club in 1962, ported from the round-0e Python prototype (heard as
+"Much better", then "Proceed") to `Ember.kt`: 27 voices of calf membranes, threshold parts (wires, rivets, plates,
+jingles), cymbals, hats and brushes fitted to CC0 recordings, the club and a 1962 chain; velocity on every voice,
+four takes, `EmberPatch` with velocity, take and model, rosterless (no presets yet), no kit yet. Measured against the
+Python: no brightness bias across the 27 voices (0.10 dB above 4 kHz); the drums correlate 0.978 to 0.996; every
+voice inside the spread of Python's own takes. Random draws are another realisation of the same law; the club's
+tail is the prototype's own draw. See [EMBER](EMBER.md) and the gates entry. The four kits go on the shelf at round 2.
+
+### CALABASH, round 1 (2026-11-15)
+
+Drum kits for Afrobeat, Afrobeats, Mbalax and Afro-Cuban jazz, ported from the round-0 Python prototype the owner
+approved on 2026-11-15 ("Sounds great"; "I listened: approve all") to `Calabash.kt`: 36 voices, congas, bongos, bells,
+claves, shaker and claps resynthesized from CC0 recordings (VCSL), the shekere, talking drums, sabar family and
+timbales physical, STROKE switching the event, ROOM and AGE on every voice. `CalabashPatch` with velocity, take and
+model, rosterless (no presets yet), the four kits as data (`CalabashKits`). Measured against the Python with 16
+seeded hits a pad: a Kotlin hit is another take of the approved pad on all 64 pads (across minus within, median
+-0.02 dB); the room's noise, the cymbals' pairs and the crowd are the prototype's own draws. Not heard in Kotlin. See
+[CALABASH](CALABASH.md) and the gates entry. The four kits go on the shelf at round 2.
+
+### EMBER, round 1b (2026-11-15)
+
+"Swell cuts abruptly": the swell, the bowed cymbal and both rolls now ring out instead of being cut while still
+sounding (5.0, 3.6 and 3.0 s; each ends at least 40 dB under its peak, a test). The owner then heard every Kotlin
+voice beside the Python one and said "I've heard the sound and approve": `Ember.MODEL_VERSION` 1 with round 1b is the
+approved sound baseline. Open: the four kits on the shelf (round 2), phone and MPC hardware (round 3).
+
+### EMBER, round 2 (2026-11-15)
+
+The four kits on the shelf: `EmberKits` (EMBER 138 BPM, EMBER AFTER HOURS 66, EMBER SOUL JAZZ 104, EMBER FREE 80),
+sixteen one-shot pads each, generated from `prototype/ember/kits.py`, three zones of four takes rendered by the
+approved engine, each kit's hi-hat in one mute group, FRESH TAPE starters under SKINS (148 starters). A zone's takes
+are matched in loudness (the audition's peak law left hats 2 to 5 dB apart). Every grid proved through saving,
+playback and the MPC 3 export (768 slices). Every kit carries a roll or riser. Open: the owner's listen to the kits
+from the app, the Latin jazz kit and its new percussion voices (asked for 2026-11-15), presets and the picker,
+hardware. See [EMBER](EMBER.md).

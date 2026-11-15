@@ -200,3 +200,21 @@ Owner listening, browser audio decoding, phone timing and MPC hardware remain un
 ## Snare reference reset — 13 November 2026
 
 The owner rejected the coupled-head prototype across attack, body and tail. A separate Python study now calibrates procedural oscillators and noise envelopes against the supplied live 170 BPM clip, with disjoint calibration/check hits. It does not replace the existing Kotlin engine. See [the review, design and measured limits](superpowers/specs/2026-11-13-spore-snare-reference-reset.md) and [reproduction instructions](../scripts/spore_snare_study/README.md). The prepared audition is intended for `/snare-reset/`; publication is pending because the Sites service returned `codex_auth` without a working local Git credential helper.
+
+## Approved snare port and kick study — 14 November 2026
+
+The owner approved the reference-calibrated Python snare. `SporeSnare` now reproduces that source in Kotlin, with 17 waveform parity cases and an importable one-pad native/SFZ/MPC 3 bank preserving all three velocities and three takes. The saved-source recipe and actual offline playback are checked, alongside SFZ replay and MPC 3 grid/PCM read-back. Android and physical MPC remain unverified. A separate reference-calibrated Python kick is awaiting listening acceptance. See [the port and study ledger](superpowers/specs/2026-11-14-spore-approved-port-and-kick.md). The new audition lives at [approved-core](https://spore-station-jungle-audition.bertcalm.chatgpt.site/approved-core/); it contains direct approved/Python/Kotlin comparisons, a dry combined phrase, and separate downloads.
+
+## Approved pair and synthetic genre kits — 14 November 2026
+
+The owner accepted the kick/snare audition. The kick is now a Kotlin source, and the shared renderer preserves the approved snare. Three new 18-pad synthetic starters—Dry Jungle, Dub Breaks and Orbital Breaks—include three velocity layers, three takes, rolls and risers. All 486 cells pass saved-source replay, native playback, SFZ import/playback and MPC 3 grid/PCM checks. The expanded arrangements still need listening acceptance; Android and physical MPC remain unverified. See the [design and evidence](superpowers/specs/2026-11-14-spore-synthetic-kits.md) and [complete-kit audition](https://spore-station-jungle-audition.bertcalm.chatgpt.site/synthetic-kits/).
+
+## Dry Jungle articulation revision — 15 November 2026
+
+The owner found 01/02 and 03/04 too alike and the ride too tambourine-like. Version 2 changes only Jungle 02 (muted heel), 04 (light ghost) and 10 (struck modal ride without rivets). Approved 01/03 and the other source voices are preserved; version-1 recipes remain replayable. The [audition](https://spore-station-jungle-audition.bertcalm.chatgpt.site/synthetic-kits/) adds pair comparisons, previous/revised clips and a saved-kit ride pattern. See [the design and acceptance limits](superpowers/specs/2026-11-15-spore-jungle-articulation.md).
+
+The owner accepted the revision-2 heel, ghost and ride on 15 November with “Better, proceed”. Their renders are now the accepted baseline alongside the original kick/snare. The pending revision and complete starter-render regression passed in 17m 5s. Device playback remains open; no additional sound changes were made for acceptance.
+
+## Full-set and device acceptance — 15 November 2026
+
+The owner clarified “I listened to all kits” after “Better, proceed”, then explicitly confirmed “Phone and hardware approved”. Dry Jungle revision 2, Dub Breaks and Orbital Breaks are accepted for sound and phone/hardware playback. Preserve the published sounds and complete grids. This records the owner's device approval without inventing a device model, firmware or test procedure. The automated 486-cell render/save/playback/export checks and completed starter regression supply the separate software evidence. Product acceptance is complete for these three drumkits; latest-head CI/repository review remains a separate release check.

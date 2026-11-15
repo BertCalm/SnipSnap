@@ -113,7 +113,7 @@ class NacreKeptContactCompatibilityTest {
             assertFailsWith<JsonException> { NacrePatch.fromJsonValue(JsonValue.Obj(fields)) }
         }
         assertFailsWith<IllegalArgumentException> { patch.copy(macros = patch.macros + ("HOLD" to .1f)) }
-        assertFailsWith<IllegalArgumentException> { patch.copy(model = 5) }
+        assertFailsWith<IllegalArgumentException> { patch.copy(model = NacreModels.LAST_MODEL_VERSION + 1) }
     }
 
     @Test
