@@ -3503,7 +3503,7 @@ The surf tom fill (renderer model 7, 2026-11-14):
   softer pad strikes every tom softer. DRIP scales the three springs together.
 - **On the kit:** the BREAKER kit's A16, in the shaker's place beside the snare riser (the owner's
   call, 2026-11-14). It is verified like every pad through saving, playback and the MPC 3 export.
-- **Open:** hardware.
+- **Hardware: approved by the owner (2026-11-15), "Hardware is approved".** BREAKER is complete.
 
 ### ETCH, Kotlin round K1 (2026-11-13)
 

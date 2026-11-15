@@ -9,8 +9,8 @@ The characteristic gesture is **dusty crack → spring drip → crushed swell �
 
 ## Status
 
-Renderer model 7 (the surf tom fill; model 6 brought the genre kits' takes), a prototype outside the
-factory presets (`PatchTypes.PROTOTYPES`). The BREAKER kit stays on model 5, which renders it exactly
+**Complete (2026-11-15).** Renderer model 7 (the surf tom fill; model 6 brought the genre kits' takes),
+outside the factory presets (`PatchTypes.PROTOTYPES`). The BREAKER kit stays on model 5, which renders it exactly
 as the owner accepted it on model 4.
 Fifteen voices; the kick and snare are built from the owner's round-0 picks.
 
@@ -73,10 +73,11 @@ On the final audition (2026-11-13, below, "The audition") the owner signed off t
 - **The presets:** keep them all.
 - **The three kits side by side:** the shelf is right.
 
-Still to come:
-- a phone and an MPC playing the kits.
-
 The surf tom fill is built and on the BREAKER kit's A16 (2026-11-14, below, "The surf tom fill").
+
+**Hardware (2026-11-15):** asked to play the new A16 fill on a phone and an MPC, and told that repeated
+hits sounding like fresh takes was the last BREAKER gate, the owner answered "Hardware is approved".
+With that, every BREAKER gate is closed (docs/ENGINE_ACCEPTANCE_GATES.md, "BREAKER").
 
 ## The kit
 
@@ -149,7 +150,7 @@ How to read the two columns:
   match the kit, and its samples are the saved ones.
 - **MPC 2** plays each zone's first take only. The format can't hold velocity and round robin on one pad,
   so the owner recorded the round-robin export gate as not applicable there on 2026-11-14 ([ENGINE_ACCEPTANCE_GATES.md](ENGINE_ACCEPTANCE_GATES.md#mpc-2-and-round-robin-owner-decision-2026-11-14)).
-- **Not yet tested on hardware:** no phone or MPC has played the kit.
+- **Hardware:** the owner approved BREAKER on a phone and an MPC (2026-11-15).
 
 **Cost:** 139 slices in 34 MB of 24-bit audio. The kit takes about 15 s to deal on a desktop JVM; a
 phone has not been timed.
@@ -522,8 +523,8 @@ The owner picked ×.35 ("4 Drier") and heard a fresh take as the same fill with 
 the shaker's place, at the toms' level. Its pad saves on model 7 and is dealt like every synth drum,
 3 zones × 3 re-struck takes, through saving, the pad resolver and the MPC 3 export (`BreakerKitTest`).
 On the saved kit its closest two takes are 24.0 dB apart (a copy is more than 40) and its least-changed
-soft zone moves 2.8 dB in spectral shape. The demo groove does not play it. No phone or MPC has
-played it.
+soft zone moves 2.8 dB in spectral shape. The demo groove does not play it. The owner approved it on
+hardware (2026-11-15).
 
 ## The cymbals
 
