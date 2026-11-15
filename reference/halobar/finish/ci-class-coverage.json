@@ -1,0 +1,21 @@
+{
+  "expectedTopLevelClasses": 679,
+  "executedTopLevelClasses": 679,
+  "missingClasses": [],
+  "duplicateClasses": [],
+  "shards": {
+    "0": {
+      "classes": 219,
+      "suites": 219
+    },
+    "1": {
+      "classes": 227,
+      "suites": 227
+    },
+    "2": {
+      "classes": 233,
+      "suites": 233
+    }
+  },
+  "method": "Repository CI class-hash partition; union compared with concrete compiled JUnit test classes including inherited and nested tests"
+}

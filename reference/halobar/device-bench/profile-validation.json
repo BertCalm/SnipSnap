@@ -1,0 +1,7 @@
+{
+  "state": "passed",
+  "cases": 24,
+  "scope": "External stage-timed copy versus existing published Float32 fixture subset; six voices",
+  "productionChanged": false,
+  "androidExecuted": false
+}

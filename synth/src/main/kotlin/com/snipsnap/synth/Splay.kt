@@ -251,6 +251,37 @@ object Splay {
         return SplayRender(Snip(out, 1, RATE), raw, trace, descriptors.events, diagnostics)
     }
 
+    /**
+     * The model-2 mechanics, handed to the model-3 bodies ([SplayBodies]) without rendering TONGUE.
+     * [events] are exactly the catches [renderDetailed] strikes TONGUE with at model 2 (coincidence
+     * gains included); [weights] is the admission; [upperPressure] is the admission-weighted mean
+     * upper-arm pressure at the 1 kHz descriptor clock, every [dtSeconds]. Nothing here depends on
+     * note, velocity, acoustic seed or body, and TONGUE's own path never calls this.
+     */
+    internal class Model2Excitation(
+        val macros: Map<String, Float>,
+        val events: List<SplayContactEvent>,
+        val weights: DoubleArray,
+        val upperPressure: DoubleArray,
+        val dtSeconds: Double,
+    )
+
+    /** See [Model2Excitation]. [macros] are SPLAY's mechanical controls; HOLD is a body control and is ignored here. */
+    internal fun prepareModel2Excitation(macros: Map<String, Float>): Model2Excitation {
+        checkCancellation()
+        val m = settled(SplayVoice.TONGUE, macros - "HOLD", 2)
+        val speed = motionSpeed(m.getValue("TRACE"))
+        val gap = gapDegrees(m.getValue("SEED GAP"))
+        val weights = populationWeights(m.getValue("POPULATION"))
+        val bank = trajectory(m.getValue("ENERGY").toDouble(), gap, speed, weights.size)
+        val described = compensateCoincidence(contacts(bank, m.getValue("CONTACT").toDouble(), SplayMode.FULL, 2), weights)
+        val total = weights.sum()
+        val pressure = DoubleArray(described.frames)
+        for (id in weights.indices) for (k in pressure.indices) pressure[k] += described.upper[id][k] * weights[id] / total
+        checkCancellation()
+        return Model2Excitation(m, described.events, weights, pressure, bank.dtSeconds)
+    }
+
     private data class Contacts(
         val upper: Array<DoubleArray>, val lower: Array<DoubleArray>,
         /** Per-member, per-mode smooth excitation spectra at the descriptor clock. */

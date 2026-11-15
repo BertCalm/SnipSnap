@@ -448,8 +448,10 @@ roots every minor third plus the authored note, three touch layers (0.30, 0.65, 
 accent changes the tone), no loops, and the source recipes bound to the PCM by hash. A line (HOLD from 0.85) is
 not offered as keys. The keys carry no round robin: one take per touch, as WICK's.
 
-**Chord tool: open, the owner's call.** The keys are polyphonic, and bass-register chords play every note
-(`EtchKeygroupMakerTest`), but the chord tool voices around G3 to F#4, above ETCH's C4 ceiling.
+**Chord tool: not applicable, the owner's decision (2026-11-14).** ETCH is a monophonic bass; the chord tool voices
+around G3 to F#4, above ETCH's C4 ceiling, and widening the range would need a listening round for a feature the
+instrument does not suit. The keys stay polyphonic, and bass-register chords play every note
+(`EtchKeygroupMakerTest`).
 
 **The picker.** ETCH is in SYNTH's engine list after OSTERIA (86 engines), with WICK's typed-patch handling: the
 complete recipe (root, velocity, model) survives same-frame edits, voice and engine navigation, SAVE and SEND;
@@ -462,6 +464,15 @@ the app's pad resolver and the MPC 3 export, read back from the files each step 
 picks the zone by velocity and walks the four takes in order, then repeats; a harder zone is a brighter strike
 (attack centroid, level-free) and every take is a different strike; a loop pad keeps three zones through saving.
 Not exercised: phone audio and an MPC. MPC 2 keeps each zone's first take (the owner's format limit, 2026-11-14).
+
+**Accepted (2026-11-14).** The owner heard version 8 of the page (the presets at model 2, the kit and SAW C2's
+whole grid) and accepted it: "Sounds good in audition. Proceed."
+
+**Render time.** A one-shot takes 56 to 75 ms at model 2 and a line loop 0.3 to 0.5 s (warm, the session's machine;
+`EtchKitsTest` prints them). The voice runs at 4x with several `tanh` and `exp` calls a sample, chiefly the
+cutoff's two `exp` and a `tanh`; a control-rate cutoff would cut that but changes every render, so it waits for a
+listening round. The kit build renders its 165 cells in parallel, slowest first, and assembles them exactly as the
+serial path does (`EtchKitsTest` compares every sample): 14.0 s serial, 6.8 s on four cores.
 
 ## Published audition
 
@@ -478,6 +489,10 @@ The rebuilt round robin published 2026-11-12 to the same link as version 4, buil
 
 Round 3 (the tone) published 2026-11-12 to the same link as version 5, built from `c445980b`:
 96 clips, every clip re-rendered with the new tone plus a six-clip before/after section. Accepted 2026-11-12.
+
+Version 8 (2026-11-14) re-rendered the presets at model 2 and added the kit (all sixteen pads at a middle touch) and
+SAW C2's whole 3 × 4 grid: 69 clips. The owner heard it: "Sounds good in audition. Proceed." The presets, the kit and
+the grid are accepted.
 
 Round K2 published 2026-11-14 to the same link as version 7: 41 clips rendered by the Kotlin engine
 (`./gradlew :synth:generateEtchAudition`): the three endings on every voice, a pad riff of short notes on SAW,

@@ -1008,4 +1008,9 @@ class DeterminismTest {
             )
         }
     }
+    @Test
+    fun `SPORE approved snare is byte identical for a saved soft restrike`() {
+        val p=SporeSnare.Recipe(velocity=.3,take=2)
+        assertContentEquals(p.render().samples,SporeSnare.Recipe.fromJsonText(p.toJsonText()).render().samples)
+    }
 }

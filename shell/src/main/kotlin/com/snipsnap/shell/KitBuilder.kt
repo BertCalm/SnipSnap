@@ -1067,7 +1067,7 @@ class KitBuilderModel private constructor(
                     "amount" to com.snipsnap.json.JsonValue.Num(amount.toDouble()),
                     "seed" to com.snipsnap.json.JsonValue.Num(seed.toDouble()),
                     "decay" to com.snipsnap.json.JsonValue.Num(dials.decay.toDouble()),
-                    "division" to com.snipsnap.json.JsonValue.Str(dials.division),
+                    "division" to com.snipsnap.json.JsonValue.Str(Keyed.divisionFor(name, dials)),
                     "tail" to com.snipsnap.json.JsonValue.Num((dials.tail ?: com.snipsnap.audio.Eternal.tailFor(amount)).toDouble()),
                     "knee" to com.snipsnap.json.JsonValue.Num(dials.knee.toDouble()),
                 ),

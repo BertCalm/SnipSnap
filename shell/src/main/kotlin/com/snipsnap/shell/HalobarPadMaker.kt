@@ -78,7 +78,7 @@ object HalobarPadMaker {
             }
             Keygroup(if (index == 0) midi else (midis[index - 1] + midi) / 2 + 1,
                 if (index == midis.lastIndex) midi else (midi + midis[index + 1]) / 2,
-                midi, layers, cycleLayers = true)
+                midi, layers, cycleLayers = true, mpcVelocityCycle = true)
         }
         return KeygroupProgram(name, groups, volumeRelease = spec.releaseSeconds, explicitNoteOn = true) to samples
     }
@@ -90,6 +90,27 @@ object HalobarPadMaker {
         OneNote.writePackage(name, program, samples, destRoot, overwrite, spanKeyboard = false)
         AtomicFile.writeText(recipe, spec.toJsonText())
         return program
+    }
+
+    /** Upgrade a saved HALOBAR bank's descriptors after the owner's Cycle bench pass.
+     * Captured PCM, roots, release and voice mode are retained; no source is re-rendered. */
+    fun upgradeCycleExport(destRoot: File, name: String): KeygroupProgram {
+        require(Names.isMpcSafe(name) && name.length <= OneNote.MAX_NAME_LENGTH)
+        val recipe = File(destRoot, "$name$RECIPE_SUFFIX")
+        val spec = Spec.fromJsonText(recipe.readText())
+        val instrument = InstrumentStore.read(InstrumentStore.sidecar(destRoot, name))
+        require(instrument.name == name && instrument.zones.map { it.rootNote } == zoneMidis(spec)) {
+            "HALOBAR cycle upgrade requires its complete saved keygroup bank"
+        }
+        val program = instrument.toProgram()
+        require(program.keygroups.all { group -> group.cycleLayers && group.layers.size == LAYERS &&
+            group.layers.map { it.velStart..it.velEnd } == WINDOWS.flatMap { window -> List(TAKES) { window } } &&
+            group.layers.all { it.loopStartFrame == 0L } }) {
+            "HALOBAR cycle upgrade requires two finite three-strike velocity windows"
+        }
+        val upgraded = program.copy(keygroups = program.keygroups.map { it.copy(mpcVelocityCycle = true) })
+        if (upgraded != program) OneNote.rewriteDescriptors(destRoot, name, upgraded)
+        return upgraded
     }
     /** A short key audition plays all six root captures with real note-off between them. */
     fun preview(spec: Spec, cancelled: () -> Boolean = { false }): Snip {
