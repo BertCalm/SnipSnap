@@ -30,11 +30,13 @@ ESC = html.escape
 
 # ------------------------------------------------------------------------------ audio for the page
 
-def encode(rel, kind):
+def encode(rel, kind, site=None):
     src = os.path.join(OUT, rel)
     dst_rel = rel if kind == "wav" else rel[:-4] + ".mp3"
-    dst = os.path.join(SITE, dst_rel)
+    dst = os.path.join(site or SITE, dst_rel)
     os.makedirs(os.path.dirname(dst), exist_ok=True)
+    if os.path.exists(dst) and not os.path.exists(src):
+        return dst_rel          # the listening copy outlived its source (an OUT trimmed for disk): keep it
     if not os.path.exists(dst) or os.path.getmtime(dst) < os.path.getmtime(src):
         if kind == "wav":
             shutil.copyfile(src, dst)
@@ -251,6 +253,86 @@ QUESTIONS = [
 ]
 q_rows = "".join(f"<li>{ESC(q)}</li>" for q in QUESTIONS)
 
+# Round 2: the kits on the shelf. `shelf_grooves.py` copies the listening pack of `:shell:generateCalabashKits` (every
+# pad's twelve strikes as the app's pad player plays them back from the MPC 3 export) under OUT/shelf/ and plays each
+# kit's approved groove with them. MP3 listening copies here; the WAVs are the proof.
+shelf_html = ""
+SHELF = None
+# Its own page (OUT/shelf-site): the round-0 page already holds over 400 files, and an artifact version holds 511.
+SHELF_SITE = os.path.join(OUT, "shelf-site")
+_shelf = os.path.join(OUT, "shelf", "manifest.json")
+if os.path.exists(_shelf):
+    SHELF = json.load(open(_shelf))
+    _jobs = [(k, "groove", k["groove"]) for k in SHELF["kits"]]
+    for k in SHELF["kits"]:
+        for p in k["pads"]:
+            n = f"{p['slot']:02d}"
+            _jobs += [(p, "hard", f"shelf/{k['id']}/pad-{n}.wav"), (p, "touch", f"shelf/{k['id']}/touch-{n}.wav")]
+    with ThreadPoolExecutor(4) as ex:
+        _done = list(ex.map(lambda j: encode(j[2], "mp3", SHELF_SITE), _jobs))
+    for (obj, key, _), rel in zip(_jobs, _done):
+        obj[key] = rel
+    approved = {short(k["name"]).lower(): k for k in KITS}
+    for k in KITS:               # the approved Python grooves ride along, so the page stands alone
+        os.makedirs(os.path.dirname(os.path.join(SHELF_SITE, k["groove"])), exist_ok=True)
+        shutil.copyfile(os.path.join(SITE, k["groove"]), os.path.join(SHELF_SITE, k["groove"]))
+    cards = []
+    for sk in SHELF["kits"]:
+        py = approved.get(sk["title"].lower())
+        rows = "".join(f"""
+        <li class="clip">
+          <div class="clip-head"><span class="clip-id">A{p['slot']:02d} {ESC(p['name'])}</span><span class="clip-len">{ESC(p['class'])}</span></div>
+          <audio controls preload="none" src="{ESC(p['hard'])}"></audio>
+          <p class="clip-note">Soft, medium, hard, four takes each, in the order the pad deals them:</p>
+          <audio controls preload="none" src="{ESC(p['touch'])}"></audio>
+        </li>""" for p in sk["pads"])
+        py_clip = (f"""
+        <li class="clip"><div class="clip-head"><span class="clip-id">APPROVED PYTHON GROOVE</span><span class="clip-len">{py['groove_seconds']:.1f} s</span></div>
+          <p class="clip-note">The same pattern as you heard and approved it (round 0).</p>
+          <audio controls preload="none" src="{ESC(py['groove'])}"></audio></li>""" if py else "")
+        cards.append(f"""
+    <h3>{ESC(sk['title'].upper())} · {sk['bpm']} BPM</h3>
+    <ul class="clips">
+      <li class="clip"><div class="clip-head"><span class="clip-id">KOTLIN GROOVE</span><span class="clip-len">{sk['groove_seconds']:.1f} s</span></div>
+        <p class="clip-note">The approved two bars, played twice with the app's own strikes for this kit, read back from its MPC 3 export:
+        the next take at each hit's velocity zone, the sampler's velocity gain, the chokes, the feel and the swing.</p>
+        <audio controls preload="none" src="{ESC(sk['groove'])}"></audio></li>{py_clip}
+    </ul>
+    <details><summary>The sixteen pads, each with all twelve strikes</summary><ul class="clips">{rows}</ul></details>""")
+    _slices = sum(len(k["pads"]) for k in SHELF["kits"]) * 12
+    shelf_html = f"""
+  <section class="card" id="shelf">
+    <h2>On the shelf: the app's own kits</h2>
+    <p class="intro">Round 2. The four kits as the app builds them from the Kotlin engine (round 1), each pad read back from the MPC 3 export
+    through the app's own pad player: every one of the {_slices} strikes was checked against its render after saving, reloading, two
+    playback cycles and the export. The Kotlin engine draws its random numbers differently from the Python, so every take here is a new
+    take of the pad you approved, not a copy of the one you heard. One thing differs on purpose: the four takes in a velocity zone are now
+    equally loud (the Python set each take to the same peak, which left some takes up to 4.5 dB quieter than their neighbours), with the
+    loudest at the level you heard.</p>
+    <p class="ask"><span class="tag">LISTEN FOR</span>Does each Kotlin groove sound like the approved groove under it? In a pad's strip, does any take jump out
+    as louder or quieter than its neighbours, or any soft hit sound like a different instrument?</p>
+    {''.join(cards)}
+  </section>"""
+    LEDGER[-1] = ("The kits sound like their music", "heard (Python)", "approved by the owner on 2026-11-15: \"I listened: approve all\"")
+    SHELF_LEDGER = LEDGER[-1:] + [
+        ("The Kotlin port renders the approved pads", "measured", "16 seeded hits a pad on all 64 pads: across minus within -0.02 dB at the median, 0.76 at most; no pad's tone moves 1 dB beyond the prototype's own noise"),
+        ("Velocity and round robin through saving, playback and MPC 3 export", "verified in software", f"{_slices} strikes checked after save, reload, two playback cycles and the MPC 3 export"),
+        ("The Kotlin kits sound like the approved ones", "not heard", "your listen, above"),
+    ]
+    shelf_ledger_rows = "".join(f"<tr><td>{ESC(a)}</td><td>{ESC(b)}</td><td>{ESC(c)}</td></tr>" for a, b, c in SHELF_LEDGER)
+    ledger_rows = "".join(f"<tr><td>{ESC(a)}</td><td>{ESC(b)}</td><td>{ESC(c)}</td></tr>" for a, b, c in LEDGER)
+    SHELF_QUESTIONS = [
+        "Does each Kotlin groove sound like the approved Python groove beside it?",
+        "Does any take jump out as louder or quieter than its neighbours in a pad's strip?",
+        "Anything on the shelf you would change before these kits are filed as CALABASH's factory kits?",
+    ]
+    shelf_q_rows = "".join(f"<li>{ESC(q)}</li>" for q in SHELF_QUESTIONS)
+
+EYEBROW = "SNIPSNAP · CALABASH · ROUND 0 · PYTHON PROTOTYPE · APPROVED 2026-11-15"
+LEDE_TAIL = ("These are prototype renders from a Python model, not the app: the ones you heard and approved on 2026-11-15. "
+             "The app's own Kotlin kits have their own page.")
+SHELF_NAV = ""
+
 page = f"""<meta charset="utf-8">
 <title>CALABASH Audition</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -347,15 +429,15 @@ details[open] > summary {{ margin-bottom: 8px; }}
 
 <div class="wrap">
   <header>
-    <div class="mark"><i></i><span class="eyebrow">SNIPSNAP · CALABASH · ROUND 0 · PYTHON PROTOTYPE · NOT HEARD</span></div>
+    <div class="mark"><i></i><span class="eyebrow">{EYEBROW}</span></div>
     <h1>CALABASH Audition</h1>
     <p class="lede">Four sixteen-pad drum kits: Afrobeat (Lagos in the 1970s, live), Afrobeats (today's programmed pop), Mbalax (a sabar ensemble
     over a kit, Dakar) and Afro-Cuban jazz (New York in the 1950s). The congas, bongos, bells, claves, shaker and claps are resynthesized from
     CC0 recordings of the real instruments; the shekere, the talking drums, the sabar drums and the timbales are physical models with no recording
-    behind them. These are prototype renders from a Python model, not the app. Nothing here has been heard yet.</p>
+    behind them. {LEDE_TAIL}</p>
     <p class="gesture">A palm, fingertips or a thin stick lands on a skin, a bell or a gourd → the stroke decides which of the instrument's own resonances ring
     → the hand, the bead net or the jingles answer → the room and the era's tape close around it.</p>
-    <nav><a href="#play">Play</a>{''.join(f'<a href="#kit-{k["id"]}">{ESC(short(k["name"]))}</a>' for k in KITS)}<a href="#refs">Recordings</a><a href="#strokes">Strokes</a><a href="#velocity">Velocity</a><a href="#takes">Takes</a><a href="#voices">Voices</a><a href="#macros">Controls</a><a href="#gates">Gates</a><a href="#ledger">Ledger</a><a href="#ask">Questions</a></nav>
+    <nav><a href="#play">Play</a>{SHELF_NAV}{''.join(f'<a href="#kit-{k["id"]}">{ESC(short(k["name"]))}</a>' for k in KITS)}<a href="#refs">Recordings</a><a href="#strokes">Strokes</a><a href="#velocity">Velocity</a><a href="#takes">Takes</a><a href="#voices">Voices</a><a href="#macros">Controls</a><a href="#gates">Gates</a><a href="#ledger">Ledger</a><a href="#ask">Questions</a></nav>
   </header>
 
   <section class="card" id="play">
@@ -409,7 +491,8 @@ details[open] > summary {{ margin-bottom: 8px; }}
       {ledger_rows}
     </table></div>
     <p class="foot">Python harness at commit {ESC(COMMIT)}, not Kotlin. Regenerate with
-    <code>python3 prototype/calabash/gen_audition.py OUT</code> then <code>python3 prototype/calabash/build_page.py OUT</code>.
+    <code>python3 prototype/calabash/gen_audition.py OUT</code> then <code>python3 prototype/calabash/build_page.py OUT</code>;
+    the shelf section from <code>./gradlew :shell:generateCalabashKits</code> then <code>python3 prototype/calabash/shelf_grooves.py testkit/calabash-kits OUT</code>.
     Design notes: <code>docs/CALABASH.md</code>.</p>
   </section>
 
@@ -524,3 +607,45 @@ files = sorted(os.path.relpath(os.path.join(d, f), SITE) for d, _, fs in os.walk
 size = sum(os.path.getsize(os.path.join(SITE, f)) for f in files)
 json.dump(files, open(os.path.join(OUT, "site-files.json"), "w"))
 print("wrote", os.path.join(SITE, "index.html"), f"{len(files)} audio files, {size / 1e6:.1f} MB")
+
+# ------------------------------------------------------------------------------ round 2: the shelf page
+if SHELF:
+    style = page[page.index("<style>"):page.index("</style>") + len("</style>")]
+    shelf_page = f"""<meta charset="utf-8">
+<title>CALABASH On the Shelf</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+{style}
+
+<div class="wrap">
+  <header>
+    <div class="mark"><i></i><span class="eyebrow">SNIPSNAP · CALABASH · ROUND 2 · KITS ON THE SHELF · KOTLIN NOT HEARD</span></div>
+    <h1>CALABASH On the Shelf</h1>
+    <p class="lede">The four kits you approved on 2026-11-15 (Afrobeat, Afrobeats, Mbalax and Afro-Cuban jazz), now built by the app's own
+    Kotlin engine and on the FRESH TAPE shelf. Each kit's groove is the pattern you approved, played twice with the app's strikes, next to
+    the approved Python groove. Nobody has heard these yet.</p>
+    <p class="gesture">A palm, fingertips or a thin stick lands on a skin, a bell or a gourd → the stroke decides which of the instrument's own resonances ring
+    → the hand, the bead net or the jingles answer → the room and the era's tape close around it.</p>
+  </header>
+{shelf_html}
+  <section class="card" id="ledger">
+    <h2>Measured, verified, heard</h2>
+    <div class="table-wrap"><table>
+      <tr><th>Claim</th><th>Status</th><th>Evidence</th></tr>
+      {shelf_ledger_rows}
+    </table></div>
+    <p class="foot">Kotlin strikes from <code>./gradlew :shell:generateCalabashKits</code> at commit {ESC(COMMIT)}, read back from the MPC 3 export;
+    grooves by <code>prototype/calabash/shelf_grooves.py</code>. Design notes: <code>docs/CALABASH.md</code>.</p>
+  </section>
+
+  <section class="card" id="ask">
+    <h2>What would help most</h2>
+    <ul class="plain">{shelf_q_rows}</ul>
+  </section>
+</div>
+"""
+    os.makedirs(SHELF_SITE, exist_ok=True)
+    open(os.path.join(SHELF_SITE, "index.html"), "w").write(shelf_page)
+    sfiles = sorted(os.path.relpath(os.path.join(d, f), SHELF_SITE) for d, _, fs in os.walk(SHELF_SITE) for f in fs if f != "index.html")
+    ssize = sum(os.path.getsize(os.path.join(SHELF_SITE, f)) for f in sfiles)
+    json.dump(sfiles, open(os.path.join(OUT, "shelf-site-files.json"), "w"))
+    print("wrote", os.path.join(SHELF_SITE, "index.html"), f"{len(sfiles)} audio files, {ssize / 1e6:.1f} MB")

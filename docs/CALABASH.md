@@ -6,8 +6,9 @@ gates. The owner chose four kits (Afrobeat and Afrobeats apart) and a round-0 pr
 2026-11-15 the owner heard the listening page and wrote "Sounds great"; asked whether that was a listen to the page,
 they answered "I listened: approve all": all four kits and every voice. Round 0 (`prototype/calabash` at `967f53f7f`)
 is the accepted baseline the Kotlin port is judged against. Round 1 (2026-11-15) is that port, `Calabash.kt`, measured
-against the prototype pad by pad (below); the Kotlin has not been heard. The engine stays in progress until every applicable owner gate has evidence (see "Gates" below and the
-gates entry in [ENGINE_ACCEPTANCE_GATES.md](ENGINE_ACCEPTANCE_GATES.md#calabash-round-0-heard-and-approved-2026-11-15-round-1-kotlin-port-not-heard)).
+against the prototype pad by pad (below); round 2 puts the four kits on the shelf with their velocity and
+round-robin grids proved through saving, playback and MPC 3 export. The Kotlin has not been heard. The engine stays in progress until every applicable owner gate has evidence (see "Gates" below and the
+gates entry in [ENGINE_ACCEPTANCE_GATES.md](ENGINE_ACCEPTANCE_GATES.md#calabash-round-0-heard-and-approved-2026-11-15-kotlin-port-and-kits-on-the-shelf-not-heard)).
 
 Prototype: [`prototype/calabash/`](../prototype/calabash/) (`calabash_proto.py` is the model, `fitted.py` the fitted
 voices, `kits.py` the four kits and their grooves, `fit_calabash.py` and `hands.json` the fit to CC0 recordings,
@@ -291,16 +292,62 @@ the dùndún's 2.2 (now 2.5).
 **An unknown control is ignored, a non-finite control or velocity falls back to its default, AGE 0 is an exact
 bypass:** all true.
 
+## Round 2: the kits on the shelf (2026-11-15, not heard)
+
+The four approved kits are FRESH TAPE starters under SKINS: CALABASH AFROBEAT (112 BPM), CALABASH AFROBEATS (104),
+CALABASH MBALAX (126) and CALABASH AFRO-CUBAN JAZZ (176), `StarterKits.ALL` 148. `CalabashKits.build(kit)` makes each
+kit's sixteen one-shot pads, each a grid of three velocity zones (0.35, 0.65, 1.0, as the approved audition played) of
+four takes, all rendered by the engine (192 renders a kit, in parallel; take t is engine take t). Every pad carries its
+provenance (engine, kit, role, voice, kit version 1, model 1, velocities, takes, articulation: `finite`, or `riser`
+and `roll` on A16) and no recipe, as CLUTTER's kits; the kit is printed audio.
+
+**Chokes.** The prototype's chokes are the pads' MPC mute groups: hats close hats (Afrobeat A04 to A06, Afrobeats A07
+and A08, Mbalax A03 and A04), and strokes on one drum cut that drum's ring (Afrobeat's conga A11 and A12, Afrobeats'
+talking drum A12 and A13, Mbalax's nder A05 to A07, mbeng-mbeng A08 and A09, col A10 and A11 and tama A12 and A13,
+Afro-Cuban jazz's conga A05, A06 and A09). A mute group is mutual, where two of the prototype's were one way (Afrobeat's
+closed hat and foot cut its half-open hat): the half-open hat now cuts them too.
+
+**Level within a zone: CLUTTER's law, not the audition's.** The audition peak-matched every take at 0.89. Measured on
+the prototype's kits (`c.render`, 768 hits), that left a zone's four takes a median 1.9 dB apart in loudness over
+their first 150 ms (90th percentile 3.7), up to 4.5 dB on a hit (the Afrobeat sticks; the rimshot and the Mbalax high
+tom near 4), and 0.1 to 6.3 dB over the whole length of the rolls and risers (the abanico widest, the shekere rush
+narrowest). A pad dealing its takes in turn would sound like an uneven player. So the takes of a zone are matched in
+loudness, over their first 150 ms for a hit and over the whole phrase for a roll or riser, and the zone is set so its
+highest-peaking take peaks at 0.89, the audition's level. A take's peak is now at most 0.89 and the others sit under it
+by their crest. The sampler, not the render, makes a soft zone quieter. The scratch probe that measured this is not
+committed.
+
+**Proof.** `CalabashKitsTest` builds every kit once and holds, on every take of every zone of every pad: finite,
+peak at most 0.89 and over 0.2, centred, silent at the end; equal loudness within 0.1 dB with the zone's highest peak
+at 0.89; a soft zone as a different strike (shape distance over 0.05 from the hard one); four different strikes per
+zone; classes, chokes, provenance and A16's articulation; four distinct kits (each its own tempo, no slot the same
+voice at the same settings in two kits, the same slot different in shape); no maker names; and a built pad the same
+bytes as its takes rendered one by one. `CalabashKitTest` takes a kick (Afrobeats), a hat (Afrobeat), a conga
+(Afro-Cuban jazz) and the sabar roll (Mbalax) through saving, reloading, `PadHit.resolve` (each zone deals its four
+takes in order, then repeats) and the MPC 3 exporter, read back. `./gradlew :shell:generateCalabashKits` does every
+pad of all four kits: "Verified Afrobeat: 16 pads, 192 slices, saved PCM + playback + MPC 3 track", and the same for
+Afrobeats, Mbalax and Afro-Cuban jazz (768 slices). `StarterKitsTest` renders every starter, the four kits among them, and checks their
+grids and provenance.
+
+**Build time, disclosed.** A kit builds in 22 to 51 s (Afrobeats 22, Afrobeat 38 with the JIT still warming, Afro-Cuban jazz 44, Mbalax 51) on four cores (one machine). A roll's twelve renders are most of it: a roll is
+30 to 50 physically modelled strokes, 3.7 s a render; a one-shot is 60 to 350 ms, of which the room's convolution is
+about 74 ms. Making it faster changes the approved arithmetic and waits for its own round. A phone is slower.
+
+**Listening.** A page of its own, "CALABASH On the Shelf" (<https://claude.ai/artifact/X54yPsKdm36A7QLQVWDed2>,
+private to the owner; `prototype/calabash/shelf_grooves.py`, then `build_page.py`, which writes it beside the round-0
+page, whose 438 files leave no room under an artifact's 511): each kit's approved groove played with the app's own
+strikes read back from the MPC 3 export, beside the approved Python groove, and every pad's twelve strikes. Not heard.
+
 ## Gates
 
 | Gate | State |
 |---|---|
 | Melodic, keygroup, chord tool | Not applicable: drum kits. |
 | Articulation | Finite hits, no HOLD; no picked or thumbed strings. |
-| Percussion: roll or riser | Authored and heard (2026-11-15): a roll or riser on every kit's A16 (shekere rush, talking call, sabar roll, abanico). Python. |
-| Drums: several genre kits on the shelf | Authored, measured in Python and heard (2026-11-15), not on the shelf: no Kotlin. |
-| Velocity and round robin, rendering | Measured in Python on all 64 pads (above). Not Kotlin. |
-| Velocity and round robin, saving, playback, export | Open: no Kotlin. The page's grid is a browser stand-in. |
+| Percussion: roll or riser | Authored and heard (2026-11-15): a roll or riser on every kit's A16 (shekere rush, talking call, sabar roll, abanico). On the shelf in Kotlin (round 2), not heard in Kotlin. |
+| Drums: several genre kits on the shelf | On the shelf (round 2): four FRESH TAPE starters under SKINS, distinct in instruments, strokes, tuning, room, era, swing and tempo (`CalabashKitsTest`). Heard in Python; the Kotlin kits not heard. |
+| Velocity and round robin, rendering | Verified in Kotlin (rounds 1 and 2): every zone a different strike, four different takes, equally loud. |
+| Velocity and round robin, saving, playback, export | Verified in software (round 2): every pad of all four kits through save, reload, `PadHit.resolve` and MPC 3 export, read back. MPC 2: not applicable (the owner's format limit). Phone and MPC hardware open. |
 | Sound character | Approved at round 0 (2026-11-15: "Sounds great", "I listened: approve all"). A listen to Python renders, not a phone or MPC. |
 
 ## Render budget
@@ -334,9 +381,8 @@ rolls and cymbals belong in the pad's render cache, keyed by their macros, as BR
 
 - **Round 0: approved (2026-11-15).** No round 0b; the baseline stands as rendered.
 - **Round 1: done (2026-11-15), not heard.** The Kotlin port, above.
-- **Round 2:** the kits on the shelf (`StarterKits.ALL`, the SKINS group in `StarterShelf.GROUPS`), velocity and
-  round robin through saving, `PadHit.resolve` playback and MPC 3 export, read back. MPC 2 keeps each zone's first take
-  (the owner's format limit).
+- **Round 2: done (2026-11-15), not heard.** The kits on the shelf, above. The owner's listen to the Kotlin kits is
+  next.
 - **Round 3:** presets from the accepted pads, the roster, the picker; the owner's phone and MPC.
 
 ## Why it is built this way

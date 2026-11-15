@@ -3712,3 +3712,14 @@ model, rosterless (no presets yet), the four kits as data (`CalabashKits`). Meas
 seeded hits a pad: a Kotlin hit is another take of the approved pad on all 64 pads (across minus within, median
 -0.02 dB); the room's noise, the cymbals' pairs and the crowd are the prototype's own draws. Not heard in Kotlin. See
 [CALABASH](CALABASH.md) and the gates entry. The four kits go on the shelf at round 2.
+
+### CALABASH, round 2 (2026-11-15)
+
+The four approved kits on the shelf: CALABASH AFROBEAT, AFROBEATS, MBALAX and AFRO-CUBAN JAZZ are FRESH TAPE starters
+under SKINS (148 starters), each sixteen one-shot pads of three velocity zones by four engine takes, the prototype's
+chokes as mute groups, and a roll or riser on A16. A zone's takes are matched in loudness (CLUTTER's law; the
+audition's peak-matching left them up to 4.5 dB apart on a hit). Velocity and round robin are verified through
+rendering, saving, `PadHit.resolve` playback and MPC 3 export in software (`CalabashKitsTest`, `CalabashKitTest`,
+`:shell:generateCalabashKits`: 768 slices). A kit builds in 22 to 51 s on four cores, disclosed. Not heard in
+Kotlin: the listening page's "On the shelf" section plays each kit's approved groove with the app's own strikes. See
+[CALABASH](CALABASH.md).
