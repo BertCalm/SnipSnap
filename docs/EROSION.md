@@ -34,7 +34,7 @@ The characteristic gesture is charge → irregular discharge → delayed collaps
 → thinning dust. This is a bounded energy-reservoir analogy for electrical
 discharge machining, not a plasma, heat-transfer or bubble-dynamics simulation.
 
-## Round robin, opt-in (2026-11-15)
+## Round robin, opt-in (2026-11-15, kept by ear in erosion-rr-1)
 
 EROSION ROUND ROBIN (`erosion-round-robin`, `ErosionRoundRobinKits`) sits on the
 shelf beside the accepted EROSION starter, which is unchanged. It has the same
@@ -64,8 +64,25 @@ order by the phone, the groove preview and the MPC 3 export.
   MPC 2 keeps each zone's first take (the recorded
   [format limit](ENGINE_ACCEPTANCE_GATES.md#mpc-2-and-round-robin-owner-decision-2026-11-14)),
   and the export screen says so.
-- **Open.** The owner has not listened. The kit has not been played on a phone
-  or loaded on an MPC.
+- **Heard and kept (round erosion-rr-1, 15 Nov 2026).** The owner kept every
+  clip with no notes. F4 was the before reference and took no verdict.
+
+  | Clip | What it played | Verdict |
+  | --- | --- | --- |
+  | F1 | Each pad's four hard takes, THUD to SCAR | KEEP |
+  | F2 | Each pad's four medium takes, then its four soft takes | KEEP |
+  | F3 | WIRE, CHIP, RASP, SPLINTER and THUD: one take eight times, then the four takes in turn | KEEP |
+  | F4 | A 100 BPM groove with every hit on its first take (reference) | No verdict |
+  | F5 | The same groove with the takes dealt in turn | KEEP |
+
+  `ErosionRoundRobinPinsTest` pins the kept kit: all 96 takes (eight pads,
+  three touches, four takes) by SHA-256 of their float samples, in
+  `round-robin-v1.sha256`, with take 1 checked against `contrast-v1.sha256`.
+- **Open.** The kit has not been played on a phone or loaded on an MPC.
+  `ErosionSynthScreenTest` runs only in CI. The phone's player (`PadEngine`)
+  counts takes per pad rather than per touch zone (the known SC-02 issue), so
+  changing touch between hits can skip a take. Round-robin pads carry no
+  `PadRecipe`.
 
 The SYNTH picker's EROSION path has an emulator suite, `ErosionSynthScreenTest`:
 the eight recipes, every control, and YOURS save and recall with native touch

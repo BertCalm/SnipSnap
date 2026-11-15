@@ -25,7 +25,7 @@ native MPC 3 downloads. Physical MPC loading remains unverified.
 EROSION's accepted eight-role percussion bank is available in factory presets,
 the SYNTH picker and FRESH TAPE, with three native touch layers. The finite
 renderer and original audition recipes are preserved. EROSION ROUND ROBIN, an
-opt-in starter beside it, adds four takes per touch; it has not yet been heard. The broader
+opt-in starter beside it, adds four takes per touch; the owner kept it by ear on 15 Nov 2026. The broader
 [instrument completion programme](docs/SYNTH_COMPLETION_PROGRAM.md) tracks
 remaining voice, articulation, kit, round-robin and chord requirements;
 [Wave 1](docs/SYNTH_COMPLETION_WAVE_1.md) collects the next listening decisions.
