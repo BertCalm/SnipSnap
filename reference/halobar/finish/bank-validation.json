@@ -1,0 +1,77 @@
+{
+  "state": "passed",
+  "sourceCommit": "96df0db50c54c04da03826a54a674b8563a41231",
+  "originalArchiveSha256": "d1f0f56e2b413bcf4783b4aca1a080c447de162f31b3e65e333806b1b7e9a5b4",
+  "outputArchiveSha256": "fb49746c20915f3448309c4e2e90b461dc8d87449bb1283d5c4bb7f97bb98afb",
+  "outputBytes": 157874935,
+  "banks": [
+    {
+      "bank": "HALO CROTALES",
+      "roots": 9,
+      "captures": 54,
+      "nativeCycle": true,
+      "xpmCycle": true
+    },
+    {
+      "bank": "HALO GLOCKENSPIEL",
+      "roots": 13,
+      "captures": 78,
+      "nativeCycle": true,
+      "xpmCycle": true
+    },
+    {
+      "bank": "HALO MARIMBA",
+      "roots": 13,
+      "captures": 78,
+      "nativeCycle": true,
+      "xpmCycle": true
+    },
+    {
+      "bank": "HALO TUBULAR BELLS",
+      "roots": 13,
+      "captures": 78,
+      "nativeCycle": true,
+      "xpmCycle": true
+    },
+    {
+      "bank": "HALO VIBRAPHONE",
+      "roots": 13,
+      "captures": 78,
+      "nativeCycle": true,
+      "xpmCycle": true
+    },
+    {
+      "bank": "HALO XYLOPHONE",
+      "roots": 10,
+      "captures": 60,
+      "nativeCycle": true,
+      "xpmCycle": true
+    }
+  ],
+  "roots": 71,
+  "captures": 426,
+  "everyWavByteIdentical": true,
+  "recipesUnchanged": true,
+  "changedFiles": [
+    "HALO VIBRAPHONE.xty",
+    "HALO MARIMBA.xty",
+    "HALO VIBRAPHONE.instrument.json",
+    "HALO MARIMBA.instrument.json",
+    "HALO TUBULAR BELLS.xty",
+    "HALO CROTALES.xty",
+    "HALO XYLOPHONE.instrument.json",
+    "HALO CROTALES.instrument.json",
+    "HALO GLOCKENSPIEL.xty",
+    "HALO XYLOPHONE.xty",
+    "HALO TUBULAR BELLS.instrument.json",
+    "HALO GLOCKENSPIEL.instrument.json",
+    "HALO XYLOPHONE_[TrackData]/HALO XYLOPHONE.xpm",
+    "HALO TUBULAR BELLS_[TrackData]/HALO TUBULAR BELLS.xpm",
+    "HALO VIBRAPHONE_[TrackData]/HALO VIBRAPHONE.xpm",
+    "HALO GLOCKENSPIEL_[TrackData]/HALO GLOCKENSPIEL.xpm",
+    "HALO MARIMBA_[TrackData]/HALO MARIMBA.xpm",
+    "HALO CROTALES_[TrackData]/HALO CROTALES.xpm"
+  ],
+  "ownerHardwarePassReported": true,
+  "newHardwareExecution": false
+}

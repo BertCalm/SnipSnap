@@ -22,6 +22,12 @@ import com.snipsnap.synth.BallastPatch
 import com.snipsnap.synth.BallastVoice
 import com.snipsnap.synth.Soot
 import com.snipsnap.synth.SootPatch
+import com.snipsnap.synth.Scuff
+import com.snipsnap.synth.ScuffPatch
+import com.snipsnap.synth.ScuffPresets
+import com.snipsnap.synth.Clutter
+import com.snipsnap.synth.ClutterPatch
+import com.snipsnap.synth.ClutterPresets
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -129,6 +135,68 @@ class NewEngineSynthScreenTest : ComposeScreenTest() {
         val draft = SynthDrafts.read(settings).single { it.engine == "SOOT" && it.voiceName == "SNARE" } as SootPatch
         assertEquals(Soot.MODEL_VERSION, draft.model)
         assertEquals(.8f, draft.macros.getValue("COIL"), .0001f)
+    }
+
+    /**
+     * SCUFF on the picker (2026-11-14, round 5), mirroring SOOT with a roster: the kick opens with its
+     * five controls (the chain knobs a kick does not take stay off the panel), its preset chips are the
+     * two accepted kits' kicks, FLINT KICK lands with the kit's own TUNE, DECAY and CLICK, an edit survives
+     * a rebuild, and the saved draft keeps the preset's take and renderer model.
+     */
+    @Test
+    fun scuffOpensItsKickLoadsAKitPresetAndKeepsAnEditWithItsTakeAndModel() {
+        show("SCUFF", "KICK")
+        button("KICK").assertIsSelected()
+        for (label in listOf("TUNE", "DECAY", "CLICK", "SQUARE", "SLAM")) button(label).assertExists()
+        compose.onAllNodesWithContentDescription("GRIT").assertCountEquals(0)
+        button("PRESET FLINT KICK").performSemanticsAction(SemanticsActions.OnClick) { it() }
+        pump()
+        assertEquals(.6f, progress("TUNE"), .0001f)
+        assertEquals(.3f, progress("DECAY"), .0001f)
+        assertEquals(.8f, progress("CLICK"), .0001f)
+        adjust("DECAY", .5f)
+        compose.runOnIdle { generation++ }
+        pump()
+        assertEquals("SCUFF", settings["engine"])
+        assertEquals(.5f, progress("DECAY"), .0001f)
+        assertEquals(.6f, progress("TUNE"), .0001f)
+        assertFalse(showsLoop())
+        val draft = SynthDrafts.read(settings).single { it.engine == "SCUFF" && it.voiceName == "KICK" } as ScuffPatch
+        assertEquals(Scuff.MODEL_VERSION, draft.model)
+        assertEquals(ScuffPresets.TAKE, draft.take)
+        assertEquals(1f, draft.velocity, .0001f)
+        assertEquals(.5f, draft.macros.getValue("DECAY"), .0001f)
+        assertEquals(.6f, draft.macros.getValue("TUNE"), .0001f)
+    }
+
+    /**
+     * CLUTTER on the picker (2026-11-14, round 4), mirroring SCUFF's entry: the bucket opens with its five
+     * controls, LOFI SOFT BUCKET (the KITCHEN LO-FI kick) lands with the pad's own TUNE, DAMP and MIC, an edit
+     * survives a rebuild, and the saved draft keeps the preset's take, full velocity and renderer model.
+     */
+    @Test
+    fun clutterOpensItsBucketLoadsAKitPresetAndKeepsAnEditWithItsTakeAndModel() {
+        show("CLUTTER", "BUCKET")
+        button("BUCKET").assertIsSelected()
+        for (label in listOf("TUNE", "TOOL", "RATTLE", "DAMP", "MIC")) control(label).assertExists()
+        button("PRESET LOFI SOFT BUCKET").performSemanticsAction(SemanticsActions.OnClick) { it() }
+        pump()
+        assertEquals(.42f, progress("TUNE"), .0001f)
+        assertEquals(.45f, progress("DAMP"), .0001f)
+        assertEquals(.35f, progress("MIC"), .0001f)
+        adjust("DAMP", .6f)
+        compose.runOnIdle { generation++ }
+        pump()
+        assertEquals("CLUTTER", settings["engine"])
+        assertEquals(.6f, progress("DAMP"), .0001f)
+        assertEquals(.42f, progress("TUNE"), .0001f)
+        assertFalse(showsLoop())
+        val draft = SynthDrafts.read(settings).single { it.engine == "CLUTTER" && it.voiceName == "BUCKET" } as ClutterPatch
+        assertEquals(Clutter.MODEL_VERSION, draft.model)
+        assertEquals(ClutterPresets.TAKE, draft.take)
+        assertEquals(1f, draft.velocity, .0001f)
+        assertEquals(.6f, draft.macros.getValue("DAMP"), .0001f)
+        assertEquals(.42f, draft.macros.getValue("TUNE"), .0001f)
     }
 
     @Test
