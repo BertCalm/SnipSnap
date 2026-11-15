@@ -166,6 +166,10 @@ The owner called Study 02 a better direction and asked to continue. Study 03 exp
 
 Owner requested a little old-school sample color. A parallel 22.05 kHz/12-bit converter approximation adds modest bandwidth loss, low-level quantization texture and mild peak compression. The Before sampler stage preserves all Study 03 finished samples exactly. This remains a sound-study revision, with full instrument gates open.
 
+## Native sample-bank landing
+
+After Study 04 acceptance, the instrument landed as `CuttingsKits`: the exact approved sample bank, three authored shelf kits and 1/2/4-bar roll/riser pairs. See [CUTTINGS](CUTTINGS.md) for current implementation and gate evidence. The earlier six-control source-engine proposal remains a design option, not a shipped control panel.
+
 ## Why it is built this way
 
 - Short recording scenes give each cut a believable reason to contain room, bass or percussion bleed. Adding noise to a lone drum cannot provide that history.
