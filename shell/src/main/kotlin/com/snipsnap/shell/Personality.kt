@@ -1698,9 +1698,13 @@ object Copy {
     @field:CopyLabel const val SONG_BASS_OFF = "BASS OFF"
     @field:CopyLabel const val SONG_PULL_UP_ON = "PULL-UP ON"
     @field:CopyLabel const val SONG_PULL_UP_OFF = "PULL-UP OFF"
+    /** DROP: the selected section's own last bar keeps only the kick, or the bed. It and PULL-UP are exclusive at a boundary. */
+    @field:CopyLabel const val SONG_DROP_ON = "DROP ON"
+    @field:CopyLabel const val SONG_DROP_OFF = "DROP OFF"
     /** The words a section's row prints for them. */
     @field:CopyLabel const val SONG_ROW_BASS = "BASS"
     @field:CopyLabel const val SONG_ROW_PULL_UP = "PULL-UP IN"
+    @field:CopyLabel const val SONG_ROW_DROP = "DROP"
     /** BASS turned on in a kit with no Answer bassline: kept for when there is one, and said. */
     const val SONG_BASS_NONE_YET = "Bass is on, but this kit has no answer bassline yet. Make one and it plays here."
     /**
