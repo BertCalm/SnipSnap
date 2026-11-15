@@ -64,6 +64,21 @@ sound design and the existing build evidence.
 
 ## HALOBAR six-voice build
 
+**Export implementation, 2026-11-15:** the [final HALOBAR build](HALOBAR_FINISH.md)
+retains both velocity levels and all three takes in production native/XPM
+keygroups and version-5 saved sidecars. All 426 stock captures are unchanged.
+The owner's performance/hardware acceptance is retained; the measured 50 ms
+fresh-render goal remains unmet. The older build-time table below is historical.
+
+**Owner update, 2026-11-14:** in response to the remaining-gates status, the
+owner confirmed **"Everything passes"**. The performance examples are accepted
+and the phone/MPC checks are recorded as owner-reported pass. See the
+[current acceptance ledger](HALOBAR_ACCEPTANCE.md). The table below records
+build-time evidence before that confirmation. The subsequent
+[final export build](HALOBAR_FINISH.md) integrates combined-keygroup export
+through production writers, persistence and old-bank upgrades. The measured
+fresh-render result still exceeds 50 ms; that numerical goal remains unmet.
+
 See [implementation and evidence](HALOBAR_SIX_VOICES.md). Software validation
 for this build is recorded with the delivered artifacts; this table keeps
 unverified completion gates explicit.

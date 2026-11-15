@@ -1,0 +1,120 @@
+diff --git a/synth/src/main/kotlin/com/snipsnap/synth/Dsp.kt b/synth/src/main/kotlin/com/snipsnap/synth/Dsp.kt
+index 195866f5a..063ae9f0f 100644
+--- a/synth/src/main/kotlin/com/snipsnap/synth/Dsp.kt
++++ b/synth/src/main/kotlin/com/snipsnap/synth/Dsp.kt
+@@ -311,0 +312,50 @@ internal object Dsp {
++        companion object {
++            /** Two fresh linear low-passes with the same arithmetic as two
++             * [lowPassInPlace] passes. The second consumes the previous first-stage
++             * result, so the CPU can advance independent recurrences together.
++             * No pole, rounding order or stored sample changes; no state escapes. */
++            internal fun lowPassPairInPlace(buf: FloatArray, rate: Int, freqHz: Float, firstK: Float, secondK: Float) {
++                if (buf.isEmpty()) return
++                // Diagnostic non-finite values can choose different NaN signs
++                // when independent operations are scheduled together. Preserve
++                // their original path, also leaving enormous non-audio inputs
++                // with the reference's overflow behavior. 1e20 leaves ample
++                // Float headroom for the two stable filters' internal states.
++                if (!freqHz.isFinite() || !firstK.isFinite() || !secondK.isFinite() ||
++                    buf.any { it !in -1e20f..1e20f }) {
++                    TptSvf(rate).lowPassInPlace(buf, freqHz, firstK)
++                    TptSvf(rate).lowPassInPlace(buf, freqHz, secondK)
++                    return
++                }
++                fun coefficients(k: Float): FloatArray {
++                    val g = kotlin.math.tan(PI * (freqHz.coerceIn(10f, rate * 0.49f)) / rate).toFloat()
++                    val kk = k.coerceAtLeast(0.1f)
++                    val a1 = 1f / (1f + g * (g + kk))
++                    val a2 = g * a1
++                    return floatArrayOf(a1, a2, g * a2)
++                }
++                val a = coefficients(firstK); val b = coefficients(secondK)
++                val a1 = a[0]; val a2 = a[1]; val a3 = a[2]
++                val b1 = b[0]; val b2 = b[1]; val b3 = b[2]
++                var s1 = 0f; var s2 = 0f; var t1 = 0f; var t2 = 0f
++                val first = buf[0] - s2
++                val p = a1 * s1 + a2 * first
++                var previous = s2 + a2 * s1 + a3 * first
++                s1 = 2f * p - s1; s2 = 2f * previous - s2
++                for (i in 1 until buf.size) {
++                    val v3 = buf[i] - s2
++                    val w3 = previous - t2
++                    val v1 = a1 * s1 + a2 * v3
++                    val w1 = b1 * t1 + b2 * w3
++                    val v2 = s2 + a2 * s1 + a3 * v3
++                    val w2 = t2 + b2 * t1 + b3 * w3
++                    s1 = 2f * v1 - s1; s2 = 2f * v2 - s2
++                    t1 = 2f * w1 - t1; t2 = 2f * w2 - t2
++                    buf[i - 1] = w2
++                    previous = v2
++                }
++                val w3 = previous - t2
++                buf[buf.lastIndex] = t2 + b2 * t1 + b3 * w3
++            }
++        }
++
+diff --git a/synth/src/main/kotlin/com/snipsnap/synth/Tide.kt b/synth/src/main/kotlin/com/snipsnap/synth/Tide.kt
+index c8bc43339..092b35b0e 100644
+--- a/synth/src/main/kotlin/com/snipsnap/synth/Tide.kt
++++ b/synth/src/main/kotlin/com/snipsnap/synth/Tide.kt
+@@ -533,3 +533,3 @@ object Tide {
+-     * Each stage's cutoff and damping are fixed, so each runs
+-     * [Dsp.TptSvf.lowPassInPlace]: the same samples as [Dsp.TptSvf.process]
+-     * per sample, without recomputing the coefficients' `tan` every sample.
++     * Fixed stages run in pairs via [Dsp.TptSvf.lowPassPairInPlace]. Each
++     * filter retains its original arithmetic; adjacent stages advance one
++     * sample apart so independent recurrences can share the CPU pipeline.
+@@ -538 +538,2 @@ object Tide {
+-        for (k in BUTTERWORTH_8) Dsp.TptSvf(rate).lowPassInPlace(buf, BAND_LIMIT_HZ, k)
++        for (i in BUTTERWORTH_8.indices step 2)
++            Dsp.TptSvf.lowPassPairInPlace(buf, rate, BAND_LIMIT_HZ, BUTTERWORTH_8[i], BUTTERWORTH_8[i + 1])
+diff --git a/synth/src/test/kotlin/com/snipsnap/synth/LowPassPairTest.kt b/synth/src/test/kotlin/com/snipsnap/synth/LowPassPairTest.kt
+new file mode 100644
+index 000000000..ad9af390f
+--- /dev/null
++++ b/synth/src/test/kotlin/com/snipsnap/synth/LowPassPairTest.kt
+@@ -0,0 +1,44 @@
++package com.snipsnap.synth
++
++import kotlin.random.Random
++import kotlin.test.*
++
++class LowPassPairTest {
++    @Test fun `pipelined fresh pairs retain every reference Float bit at buffer boundaries and rate corners`() {
++        val random = Random(174)
++        val inputs = listOf(
++            floatArrayOf(), floatArrayOf(1f), floatArrayOf(-0f), floatArrayOf(1f, -.5f),
++            FloatArray(31) { if (it == 0) 1f else 0f },
++            FloatArray(1025) { random.nextFloat() * 2 - 1 },
++            FloatArray(1025) { if (it % 2 == 0) Float.MIN_VALUE else -Float.MIN_VALUE },
++            floatArrayOf(Float.POSITIVE_INFINITY, 0f, Float.NEGATIVE_INFINITY, Float.NaN),
++            floatArrayOf(Float.MAX_VALUE, -Float.MAX_VALUE, 0f, 1f),
++        )
++        for (rate in listOf(44_100, 176_400, 352_800)) for (hz in listOf(1f, 19_500f, rate.toFloat()))
++            for ((first, second) in listOf(1.9616f to 1.6629f, 1.1111f to .3902f, 0f to .7f))
++                for (input in inputs) {
++                    val expected = input.copyOf()
++                    Dsp.TptSvf(rate).lowPassInPlace(expected, hz, first)
++                    Dsp.TptSvf(rate).lowPassInPlace(expected, hz, second)
++                    val actual = input.copyOf()
++                    Dsp.TptSvf.lowPassPairInPlace(actual, rate, hz, first, second)
++                    for (i in expected.indices) assertEquals(expected[i].toRawBits(), actual[i].toRawBits(),
++                        "pair boundary/rate guard: rate=$rate cutoff=$hz size=${input.size} frame=$i")
++                }
++    }
++
++    @Test fun `eight-pole delivery filter remains exact over a ringing signal and complete tail`() {
++        val input = FloatArray(50_003) { i ->
++            (kotlin.math.sin(i * .072) * kotlin.math.exp(-i / 1900.0)).toFloat()
++        }
++        for (rate in listOf(176_400, 352_800)) {
++            val expected = input.copyOf()
++            for (k in floatArrayOf(1.9616f, 1.6629f, 1.1111f, .3902f))
++                Dsp.TptSvf(rate).lowPassInPlace(expected, Tide.BAND_LIMIT_HZ, k)
++            val actual = input.copyOf()
++            Tide.bandLimit(actual, rate)
++            assertContentEquals(expected.map { it.toRawBits() }, actual.map { it.toRawBits() },
++                "four original poles and output ordering must survive the pair schedule")
++        }
++    }
++}
