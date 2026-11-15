@@ -3605,3 +3605,22 @@ Measured against the Python: no brightness bias across the 22 objects (0.06 dB a
 deterministic objects correlate 0.93 to 0.99; random draws are another realisation of the same law. The
 owner waived the roll gate. See [CLUTTER](CLUTTER.md) and the gates entry. The four genre kits go on the shelf
 at round 2; the picker entry waits for a session with an SDK.
+
+### HICCUP, rounds 1 to 4 (2026-11-14 to 2026-11-15)
+
+A glitch drum engine: a clean hit is written into a memory and a seeded fault script re-reads it (snag, ratchet,
+buzz, cut), each re-read coarser than the last. Round 1: `Hiccup.kt` with eight voices (KICK, SNARE, CLAP,
+HAT_CLOSED, HAT_OPEN, TOM, BLIP, SQUEAK), six macros (TUNE, DECAY, TOY, FAULT, CHOP, CRUSH) and `HiccupPatch`
+with velocity, take and model, rosterless. Round 2: three kits on the shelf (`HiccupKits`: HICCUP HOP 98 BPM,
+LAB 150, SUGAR 160), sixteen pads each, three zones of four takes, a roll and a riser, proved through save,
+playback and MPC 3 export. Round 3: the groove fixes (an 18 ms attack guard, one pentatonic key over 55 Hz,
+stumbles in whole grid units, a cap; `Hiccup.MODEL_VERSION` 2, `HiccupKits.VERSION` 2), `HiccupPresets` (twenty-one
+presets, held out of the factory bank until the listen), the
+`EngineCatalog` entry (DRUMS) and the entry on SYNTH's picker, which now counts 86 engines. Heard: on 2026-11-15 the owner
+listened to an audition page of the Kotlin engine (model 2, kit 2): a four-bar groove from each of the three kits,
+every hit pad A01 to A14 of each kit at the hardest velocity zone, each kit's roll and riser, and the four
+round-robin takes of SUGAR's Pop Snare. The verdict, verbatim: "sounds check passes". Round 4: the 21 presets were
+filed in the factory bank through `Presets` and HICCUP left `PatchTypes.PROTOTYPES`, as SCUFF's presets were after its
+listen. The presets were not auditioned one by one. Open: hardware (phone and MPC) playback, MPC 2's one take per
+zone, the picker's on-device test (written, not run), and a listen to the presets individually.
+See [HICCUP](HICCUP.md) and the gates entry.

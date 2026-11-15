@@ -760,6 +760,7 @@ testkit/backwash-acoustic-integration/
 # SCUFF kits and the Kotlin audition clips: regenerate with :shell:generateScuffKits and :synth:generateScuffAudition
 /testkit/scuff-kits/
 /testkit/scuff-audition/
+/testkit/hiccup-kits/
 /testkit/clutter-audition/
 /testkit/cosmic-family/
 testkit/soot-r0/

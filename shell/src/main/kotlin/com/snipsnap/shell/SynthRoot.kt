@@ -53,6 +53,7 @@ import com.snipsnap.synth.Fork
 import com.snipsnap.synth.ForkPatch
 import com.snipsnap.synth.Halobar
 import com.snipsnap.synth.HalobarPatch
+import com.snipsnap.synth.HiccupPatch
 import com.snipsnap.synth.Glint
 import com.snipsnap.synth.GlintPatch
 import com.snipsnap.synth.Gyre
@@ -363,7 +364,7 @@ object SynthRoot {
         is TinesPatch -> if (patch.voice == TinesVoice.KALIMBA) tune(patch, { nearestMidi(Tines.frequencyFor(patch.voice, it)) }) else null
 
         // ---- no root a note name would describe ----
-        is BackwashPatch, is BreakerPatch, is SootPatch, is ThumpPatch, is SkinPatch, is OnsetPatch, is TerraPatch, is VoxPatch, is FillPatch, is RivetPatch, is ScuffPatch, is ClutterPatch, is TempestPatch -> null
+        is BackwashPatch, is BreakerPatch, is SootPatch, is ThumpPatch, is SkinPatch, is OnsetPatch, is TerraPatch, is VoxPatch, is FillPatch, is RivetPatch, is ScuffPatch, is HiccupPatch, is ClutterPatch, is TempestPatch -> null
         // SILK's TUNE walks scale degrees, EROSION's sweeps a frequency: neither names a note.
         is SilkPatch, is ErosionPatch -> null
     }

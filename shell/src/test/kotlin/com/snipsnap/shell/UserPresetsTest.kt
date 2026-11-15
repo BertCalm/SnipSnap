@@ -341,6 +341,13 @@ class UserPresetsTest {
                 val promoted = com.snipsnap.synth.ScuffPatch.fromJsonText((call.positional.single() as KotlinLiteral.Str).value)
                 assertEquals(preset, promoted, "${preset.name}: velocity, take and model promotion")
                 assertEquals(preset.macros.mapValues { it.value.toRawBits() }, promoted.macros.mapValues { it.value.toRawBits() })
+            } else if (preset is com.snipsnap.synth.HiccupPatch) {
+                val call = KotlinLiteral.parse(line.removeSuffix(",")) as KotlinLiteral.Call
+                assertEquals("fromJsonText", call.name)
+                assertEquals("HiccupPatch", (call.receiver as KotlinLiteral.Call).name)
+                val promoted = com.snipsnap.synth.HiccupPatch.fromJsonText((call.positional.single() as KotlinLiteral.Str).value)
+                assertEquals(preset, promoted, "${preset.name}: velocity, take and model promotion")
+                assertEquals(preset.macros.mapValues { it.value.toRawBits() }, promoted.macros.mapValues { it.value.toRawBits() })
             } else if (preset is com.snipsnap.synth.ErosionPatch) {
                 val call = KotlinLiteral.parse(line.removeSuffix(",")) as KotlinLiteral.Call
                 assertEquals("fromJsonText", call.name)
@@ -1285,6 +1292,11 @@ class UserPresetsTest {
                 assertEquals(com.snipsnap.synth.ScuffPatch::class.java, decoder.returnType,
                     "SCUFF promotion retains strike velocity, take and model version")
                 assertTrue("private val promoted:" in text, "SCUFF promotions need a destination beside the accepted kits")
+            } else if (engine == com.snipsnap.synth.HiccupPatch.ENGINE) {
+                val decoder = com.snipsnap.synth.HiccupPatch.Companion.javaClass.getMethod("fromJsonText", String::class.java)
+                assertEquals(com.snipsnap.synth.HiccupPatch::class.java, decoder.returnType,
+                    "HICCUP promotion retains strike velocity, take and model version")
+                assertTrue("private val promoted:" in text, "HICCUP promotions need a destination beside the accepted kits")
             } else if (engine == com.snipsnap.synth.ErosionPatch.ENGINE) {
                 val decoder = com.snipsnap.synth.ErosionPatch.Companion.javaClass.getMethod("fromJsonText", String::class.java)
                 assertEquals(com.snipsnap.synth.ErosionPatch::class.java, decoder.returnType,

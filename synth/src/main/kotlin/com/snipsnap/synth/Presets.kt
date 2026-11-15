@@ -29,6 +29,8 @@ object Presets {
             ?.let(RivetPresets::forVoice) ?: emptyList()
         ScuffPatch.ENGINE -> ScuffVoice.entries.firstOrNull { it.name == voice }
             ?.let(ScuffPresets::forVoice) ?: emptyList()
+        HiccupPatch.ENGINE -> HiccupVoice.entries.firstOrNull { it.name == voice }
+            ?.let(HiccupPresets::forVoice) ?: emptyList()
         WickPatch.ENGINE -> WickVoice.entries.firstOrNull { it.name == voice }
             ?.let(WickPresets::forVoice) ?: emptyList()
         AccordPatch.ENGINE -> {
@@ -363,7 +365,7 @@ object Presets {
     fun all(): List<Patch> =
         TempestPresets.all() +
         SplayFactoryPresets.all() +
-        BackwashPresets.all() + HalobarPresets.all() + FiredBronzePresets.all() + RivetPresets.all() + OsteriaPresets.all() + ScuffPresets.all() + ErosionPresets.all() + WickPresets.all() +
+        BackwashPresets.all() + HalobarPresets.all() + FiredBronzePresets.all() + RivetPresets.all() + OsteriaPresets.all() + ScuffPresets.all() + HiccupPresets.all() + ErosionPresets.all() + WickPresets.all() +
         OtisPresets.all() +
         LorentzPresets.all() +
         AccordPresets.all() +

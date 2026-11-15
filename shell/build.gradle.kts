@@ -618,6 +618,16 @@ tasks.register<JavaExec>("generateScuffKits") {
     args(providers.gradleProperty("scuffKitsOutput").orNull ?: "${rootDir}/testkit/scuff-kits")
 }
 
+tasks.register<JavaExec>("generateHiccupKits") {
+    group = "distribution"
+    description = "Build the HICCUP kits, prove the velocity and round-robin grid through save, playback and MPC 3 export, and write the listening pack."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.HiccupKitGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "2g"
+    args(providers.gradleProperty("hiccupKitsOutput").orNull ?: "${rootDir}/testkit/hiccup-kits")
+}
+
 /** MURMUR's C2 repeats, V1 against opt-in V2, played from real saved banks by the saved-sample player. */
 tasks.register<JavaExec>("generateMurmurRoundRobinAudition") {
     group = "distribution"
