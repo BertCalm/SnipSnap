@@ -840,6 +840,8 @@ object StarterKits {
             "UK garage TEMPEST kit: short kicks, rim and ghost snares, five choking hats and pitched blips.",
             seeded = false,
         ) { SynthKits.tempestStep() },
+        Starter("drumline-field", "DRUMLINE FIELD CADENCE", "Tight marching battery: independent snares and tenors, five bass sizes and ringing cymbals. Three touch levels and three takes.", seeded = false, tempoBpm = 120f) { com.snipsnap.synth.DrumlineKits.build(com.snipsnap.synth.DrumlineKits.Kit.FIELD) },
+        Starter("drumline-street", "DRUMLINE STREET CADENCE", "Open street battery: lower heads, smaller sections, softer mallets, split bass and an accelerating snare. Three touch levels and three takes.", seeded = false, tempoBpm = 100f) { com.snipsnap.synth.DrumlineKits.build(com.snipsnap.synth.DrumlineKits.Kit.STREET) },
     ).plus(com.snipsnap.synth.PatioPerformance.Genre.entries.map { genre ->
         Starter(genre.id, genre.title.uppercase(java.util.Locale.ROOT), "Latin percussion, three velocities and four takes per voice, with a hand-drum roll and cuica.", seeded = false) {
             com.snipsnap.synth.PatioPerformance.build(genre)

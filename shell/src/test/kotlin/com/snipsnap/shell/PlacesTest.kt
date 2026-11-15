@@ -44,7 +44,7 @@ class PlacesTest {
 
     @Test
     fun `every door label carries its own arrow`() {
-        for (door in listOf(Places.DOOR_CUT, Places.DOOR_PADS, Places.DOOR_BEAT, Places.DOOR_OUT, PadStrip.DOOR_OPEN, PadStrip.DOOR_CAPTURE, PadStrip.DOOR_FROM_SNIPS)) {
+        for (door in listOf(Places.DOOR_CUT, Places.DOOR_PADS, Places.DOOR_BEAT, Places.DOOR_OUT, PadStrip.DOOR_CHANGE_SOUND, PadStrip.DOOR_EDIT, PadStrip.DOOR_RECORD, PadStrip.DOOR_FROM_SAMPLES)) {
             assertTrue(door.endsWith(" ▸"), door)
         }
     }

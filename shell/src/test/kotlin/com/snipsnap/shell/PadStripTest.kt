@@ -14,16 +14,18 @@ class PadStripTest {
         val strip = PadStrip.line(null, slot = 8)
         assertEquals("A08", strip.id)
         assertEquals(PadStrip.EMPTY, strip.facts)
-        assertEquals(listOf(PadStrip.DOOR_CAPTURE, PadStrip.DOOR_FROM_SNIPS), strip.doors)
+        assertEquals(listOf(PadStrip.DOOR_RECORD, PadStrip.DOOR_FROM_SAMPLES), strip.doors)
+        assertEquals(listOf("RECORD INTO PAD ▸", "FROM MY SAMPLES ▸"), strip.doors, "the owner's UX pass words, 2026-11-15")
         assertEquals("A08 · EMPTY", strip.line)
     }
 
     @Test
-    fun `a raw pad says so and opens its bench`() {
+    fun `a pad with nothing done to it says so, and offers its sound and its editor`() {
         val pad = KitPad(slot = 2, sampleFile = "A02_Snare_01.wav", displayName = "snare", drumClass = DrumClass.SNARE)
         val strip = PadStrip.line(pad, 2)
-        assertEquals("A02 · snare · RAW", strip.line)
-        assertEquals(listOf(PadStrip.DOOR_OPEN), strip.doors)
+        assertEquals("A02 · snare · NO EFFECTS", strip.line)
+        assertEquals(listOf(PadStrip.DOOR_CHANGE_SOUND, PadStrip.DOOR_EDIT), strip.doors)
+        assertEquals(listOf("CHANGE SOUND ▸", "EDIT PAD ▸"), strip.doors, "change the sound first: what a new user came to do")
     }
 
     @Test

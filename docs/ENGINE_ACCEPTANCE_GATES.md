@@ -809,3 +809,15 @@ prototype and a listening page (<https://claude.ai/artifact/Xmcj5t8MYSNCQPoTKHBc
   direction, not yet an accepted baseline. The sound-character gate stays open.
 - **Overall: incomplete.** Round 0 asks the owner which voices and kits to keep. Kotlin (round 1), the shelf and
   saving, playback and MPC 3 export (round 2), and phone and MPC hardware (round 3) are all open.
+
+## DRUMLINE (native model 4 accepted, 2026-11-15)
+
+A marching battery with independent player bodies, five bass sizes and progressive cymbal hand loss. The owner preferred the revised Python cymbals, then requested fuller bass/tenors, a harder rim clack and more snare snap. Model 2 addressed those requests; the owner then found snare/rimshot too similar. Model 3 separates their rim/wire balance. The owner then found the small bass body too similar to the low tenor; model 4 revises its mallet and lower-head balance while preserving saved models 1–3. The owner accepted the native audition on 2026-11-15 ("Sounds good, proceed"). The 32 heard pad recipes are now factory presets. See [DRUMLINE](DRUMLINE.md) for reproduction and measured evidence.
+
+- Melodic, keygroup, chord and string-STRUM gates: not applicable to the battery. Hits and scored rudiments are finite.
+- Percussion: flam, double-stroke roll, accelerating riser, bass unison and split bass implemented; native audition accepted.
+- Drum shelf: FIELD and STREET CADENCE are authored sixteen-pad starters, with different section sizes, tuning, losses and scored voices. Native audition accepted.
+- Rendering/save/play/export software: both full 3 × 3 grids pass PCM checks, persisted recipe replay, boundary selection, two repeat cycles, shape/take measurements and MPC export read-back. All 21 source/articulation voices are covered between the kits. MPC 2 retains velocity; its combined velocity/RR exception applies.
+- Phone and MPC hardware: not verified for these kits.
+- Fast rendering, full control-corner and alias-reference checks: open. Measured snare/crash/roll rendering exceeds the one-shot tens-of-milliseconds target on this host.
+- Overall: incomplete. Software evidence is not native sound or device acceptance.
