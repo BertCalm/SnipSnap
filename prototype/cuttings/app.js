@@ -1,6 +1,6 @@
 'use strict';
 const $=id=>document.getElementById(id);
-let manifest, ctx, master, lastVoice='kick', generation=0;
+let manifest, ctx, master, lastVoice='kick', generation=0, currentBank=0;
 const cache=new Map(), active=new Set(), counts=new Map();
 const status=text=>$('status').textContent=text;
 function stop(){generation++;for(const s of active){try{s.stop();}catch{}}active.clear();status('Stopped.');}
@@ -28,7 +28,8 @@ async function sequence(){
   stop();const ticket=generation;const voice=lastVoice,d=+$('dynamic').value,stage=$('stage').value;
   status('Loading two take cycles…');await ready();const bs=await Promise.all([0,1,2,3].map(t=>buffer(entry(voice,d,t,stage).file)));if(ticket!==generation)return;
   const start=ctx.currentTime+.06;
-  for(let i=0;i<8;i++)play(bs[i%4],manifest.comparisonGain[voice][stage],start+i*.45);
+  const spacing=Math.max(.45,...bs.map(b=>b.duration+.08));
+  for(let i=0;i<8;i++)play(bs[i%4],manifest.comparisonGain[voice][stage],start+i*spacing);
   status(`${manifest.names[voice]} · ${['soft','medium','hard'][d]} · 1 2 3 4 / 1 2 3 4`);
 }
 async function groove(){
@@ -43,7 +44,13 @@ $('volume').oninput=()=>{if(master)master.gain.setTargetAtTime(+$('volume').valu
 // Clear cycles when changing stages, so the first A/B hit uses the same take.
 $('context').onchange=()=>{stop();status('Groove traces changed. Press Play groove.');};
 $('stage').onchange=()=>{stop();counts.clear();status('Comparison changed. Tap a pad or play the groove.');};
-document.addEventListener('keydown',e=>{if(e.key==='Escape')stop();if(e.repeat||/SELECT|INPUT|BUTTON/.test(e.target.tagName)||!manifest)return;const v=manifest.voices[+e.key-1];if(v)attempt(()=>hit(v))();});
+document.querySelectorAll('[data-bank]').forEach(button=>button.addEventListener('click',()=>{
+ stop();currentBank=+button.dataset.bank;
+ document.querySelectorAll('[data-bank]').forEach(b=>b.setAttribute('aria-pressed',String(+b.dataset.bank===currentBank)));
+ document.querySelectorAll('[data-voice]').forEach(p=>p.hidden=+p.dataset.bankId!==currentBank);
+ lastVoice=document.querySelector('.pad:not([hidden])').dataset.voice;status('Crate selected. Tap a find.');
+}));
+document.addEventListener('keydown',e=>{if(e.key==='Escape')stop();if(e.repeat||/SELECT|INPUT|BUTTON/.test(e.target.tagName)||!manifest)return;const v=[...document.querySelectorAll('.pad:not([hidden])')][+e.key-1]?.dataset.voice;if(v)attempt(()=>hit(v))();});
 fetch('manifest.json').then(r=>{if(!r.ok)throw Error('Manifest could not load');return r.json();}).then(m=>{
  manifest=m;document.querySelectorAll('button[disabled]').forEach(b=>b.disabled=false);status('Ready. Start with the groove, or tap a find.');
 }).catch(e=>status(e.message+' · Please reload.'));

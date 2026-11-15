@@ -158,6 +158,10 @@ The first four roles now have 48 modeled performances and 144 source/splice/fini
 
 Study 02 exaggerates each secondary source gesture in response to owner feedback: bass catch, snare room dropout/slap, tumbling jingle and reverse-metal/bell cut. Primary source seeds remain stable for comparison. The 48-performance grid is regenerated and checked; original Study 01 remains available at `/r1/` on the same audition site. This is still a prototype, with no new completion-gate claims.
 
+## R3 Pocket Finds prototype
+
+The owner called Study 02 a better direction and asked to continue. Study 03 expands to one 16-pad prototype kit: 14 finite percussion hits plus a composed one-bar roll and rising fill, all 3 dynamics × 4 takes. The four Study 02 signatures remain byte-identical. The new audition uses four crates of four pads and an expanded groove. This is not yet multiple genre shelf kits or Kotlin/app/MPC integration; those gates and editable phrase lengths remain open. Measurements and simulated playback selection checks are in `prototype/cuttings/`.
+
 ## Why it is built this way
 
 - Short recording scenes give each cut a believable reason to contain room, bass or percussion bleed. Adding noise to a lone drum cannot provide that history.

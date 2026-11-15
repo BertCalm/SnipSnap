@@ -1,13 +1,13 @@
 {
   "harness": "Python, not Kotlin",
-  "variant_count": 48,
-  "stage_wavs": 144,
+  "variant_count": 192,
+  "stage_wavs": 576,
   "finite": true,
   "pcm_manifest_roundtrip": true,
   "deterministic_rerender": true,
   "max_peak": 0.8369377081811908,
   "max_abs_dc": 0.00020167322640651125,
-  "render_ms_three_stages_median": 47.19630549999465,
+  "render_ms_three_stages_median": 45.29573900003925,
   "metrics": {
     "kick": {
       "velocity_rms": [
@@ -72,6 +72,198 @@
         1.20736555687575,
         0.9432602852044678
       ]
+    },
+    "thump": {
+      "velocity_rms": [
+        0.0388433013349139,
+        0.05103447467198855,
+        0.06096062800733976
+      ],
+      "max_rr_correlation_by_zone": [
+        0.9655397555184381,
+        0.9841777749159463,
+        0.9592805373690351
+      ],
+      "adjacent_velocity_spectral_distance_db": [
+        4.084021816938918,
+        4.252077222974727
+      ]
+    },
+    "brush": {
+      "velocity_rms": [
+        0.014380340377608512,
+        0.01990383806696244,
+        0.027525353529740018
+      ],
+      "max_rr_correlation_by_zone": [
+        0.3176459259427868,
+        0.3805593310280375,
+        0.3382894308905488
+      ],
+      "adjacent_velocity_spectral_distance_db": [
+        6.84153660781428,
+        6.672519988022571
+      ]
+    },
+    "openhat": {
+      "velocity_rms": [
+        0.041765911343757754,
+        0.05244661801826817,
+        0.06365069306210741
+      ],
+      "max_rr_correlation_by_zone": [
+        0.3820977423860395,
+        0.8739521898237292,
+        0.22303857707530506
+      ],
+      "adjacent_velocity_spectral_distance_db": [
+        5.476129272956918,
+        5.504518017543572
+      ]
+    },
+    "clap": {
+      "velocity_rms": [
+        0.01275506113373202,
+        0.01862926681141691,
+        0.02527003458595796
+      ],
+      "max_rr_correlation_by_zone": [
+        0.11777358234139389,
+        0.08167004010685357,
+        0.16040844843532218
+      ],
+      "adjacent_velocity_spectral_distance_db": [
+        5.516956043240827,
+        5.600002763713449
+      ]
+    },
+    "rim": {
+      "velocity_rms": [
+        0.02817784855406388,
+        0.038262746763449776,
+        0.048369241109317604
+      ],
+      "max_rr_correlation_by_zone": [
+        0.9725449723632209,
+        0.9263088565312702,
+        0.9266582722679974
+      ],
+      "adjacent_velocity_spectral_distance_db": [
+        5.9303271837093465,
+        6.177050253080745
+      ]
+    },
+    "hand": {
+      "velocity_rms": [
+        0.03978037759168607,
+        0.054555547837839904,
+        0.06462992263004691
+      ],
+      "max_rr_correlation_by_zone": [
+        0.8782059382430171,
+        0.8427301265201904,
+        0.8371061399219587
+      ],
+      "adjacent_velocity_spectral_distance_db": [
+        4.8832058925284345,
+        4.677820030328968
+      ]
+    },
+    "shaker": {
+      "velocity_rms": [
+        0.01269801607431316,
+        0.018555419825039797,
+        0.024308968233724738
+      ],
+      "max_rr_correlation_by_zone": [
+        0.1173062791853847,
+        0.16490930382313426,
+        0.14092698106105472
+      ],
+      "adjacent_velocity_spectral_distance_db": [
+        6.647776221098467,
+        6.762202798901701
+      ]
+    },
+    "metal": {
+      "velocity_rms": [
+        0.04205997022063764,
+        0.05498664285951887,
+        0.06630149161848412
+      ],
+      "max_rr_correlation_by_zone": [
+        0.7142248701614684,
+        0.7662979832235485,
+        0.6852849584273313
+      ],
+      "adjacent_velocity_spectral_distance_db": [
+        5.107600190603774,
+        4.7487362556976205
+      ]
+    },
+    "impact": {
+      "velocity_rms": [
+        0.044606236578689035,
+        0.051171031943294996,
+        0.07211149949635894
+      ],
+      "max_rr_correlation_by_zone": [
+        0.8130072256714526,
+        0.9848571680695306,
+        0.828599679753367
+      ],
+      "adjacent_velocity_spectral_distance_db": [
+        4.694419151115579,
+        4.427430030735444
+      ]
+    },
+    "cymbal": {
+      "velocity_rms": [
+        0.04172280746062902,
+        0.05243262130734677,
+        0.06485642657943216
+      ],
+      "max_rr_correlation_by_zone": [
+        0.20661320657959054,
+        0.7158079718055952,
+        0.5799223253821624
+      ],
+      "adjacent_velocity_spectral_distance_db": [
+        5.594934726822479,
+        5.127946748450828
+      ]
+    },
+    "roll": {
+      "velocity_rms": [
+        0.02777886663557015,
+        0.03732573930765831,
+        0.045705579395980356
+      ],
+      "max_rr_correlation_by_zone": [
+        0.7096132521694629,
+        0.6603634785789163,
+        0.7180540159417397
+      ],
+      "adjacent_velocity_spectral_distance_db": [
+        3.8874941535293557,
+        4.414607143747675
+      ]
+    },
+    "riser": {
+      "velocity_rms": [
+        0.028602117282469974,
+        0.03866017192089761,
+        0.04640340432588862
+      ],
+      "max_rr_correlation_by_zone": [
+        0.7182706625357543,
+        0.6876235092624495,
+        0.6548852883125924
+      ],
+      "adjacent_velocity_spectral_distance_db": [
+        3.947895304783099,
+        4.1803903340927615
+      ]
     }
   },
   "not_verified": [
@@ -81,7 +273,7 @@
     "SnipSnap persistence/playback",
     "MPC export and hardware playback",
     "genre shelf",
-    "roll/rising fill",
+    "phrase listening acceptance",
     "owner sound acceptance"
   ]
 }
