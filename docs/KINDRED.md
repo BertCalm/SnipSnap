@@ -92,7 +92,7 @@ its recipe and replays it byte for byte.
   Hats, bright cutoffs and resonant pings are left as they were, because opening them moved their velocity sweep
   above where the noise changes. Grooves against the references: under 60 Hz +0.2 dB (was +5.8), 400 Hz to 1 kHz
   −1.9 (was −5.5), 1 to 2.5 kHz −2.9 (was −5.2). The owner: "It's better. I think it was something with my
-  headphones. Let's proceed with ring 2 sounds" (read as round 2).
+  headphones. Let's proceed with ring 2 sounds", then "Round" (the owner's correction: round 2).
 - **Round K1 (Kotlin):** `Kindred.kt`, `KindredPatch.kt`, `KindredRecipes.kt`, `KindredPresets.kt` (provisional,
   `PatchTypes.PROTOTYPES`), the Patches, Velocity, Restrike and SynthRoot arms, `KindredTest`, a determinism
   canary over every voice and every recipe, and `generateKindredAudition`.

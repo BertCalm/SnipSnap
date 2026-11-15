@@ -901,7 +901,7 @@ A one-voice, eight-step analog-style percussion synth and four genre kits from i
 | Velocity and round robin: saving | Partly | A patch round-trips through JSON with velocity, take, recipe and model (`KindredTest`, `DeterminismTest`); no saved kit yet. |
 | Velocity and round robin: playback and export | Not yet verified | K2. |
 | Hardware playback | Not verified | |
-| Sound character | Python round 2 accepted | "It's better. I think it was something with my headphones. Let's proceed with ring 2 sounds" (2026-11-15). The Kotlin port matches the noise-free recipes to 0.01 dB; the noise recipes are another realisation and wait for the ear. |
+| Sound character | Python round 2 accepted | "It's better. I think it was something with my headphones. Let's proceed with ring 2 sounds", corrected by the owner to "Round" (2026-11-15). The Kotlin port matches the noise-free recipes to 0.01 dB; the noise recipes are another realisation and wait for the ear. |
 
 - **Overall: in progress.** Open: the kits on the shelf with their phrases and risers, saving, playback and MPC 3 export of the grid, the picker, the owner's listen to the Kotlin kits, hardware.
 
