@@ -275,6 +275,7 @@ clipping.
 
 Each transition is one function, (outgoing last bar, bpm) → audio over that bar. It never makes the section longer, so the grid from phase 2 holds.
 - **DROP:** the last bar keeps only the kick, or only the bed when there is one.
+  - Built 2026-11-15 on the owner's three rulings. Q1 A: the bar is re-rendered from only the kick pad's hits (`DrumClass.KICK` pads, by note), or, when the section has BASS on and the bed has a note in that bar, from only the bed; nothing from before the bar rings in, and no tail from before it comes back after it. A bar with neither is left as it is and `Mix.drops` says why. Q2 D: `PlanSection.drop` sits on the section that goes quiet and empties its OWN last bar (a pull-up sits on the section pulled into). Q3 F: DROP and PULL-UP are exclusive at a boundary (`sections[i].drop` and `sections[i+1].pullUp`); `SongPlan.withDrop` and `withPullUp` turn the other off. Off unless asked for: no default rule was invented. Changes audio only when switched on. Not yet heard on a phone.
 - **CLOSE:** a low-pass sweep over the last bar. The filter is `Dsp.TptSvf`, which `:shell` already reaches through `:synth`.
 - **REVERSE CRASH:** a crash or open-hat pad reversed into the downbeat. It is skipped and named when the kit has neither.
 

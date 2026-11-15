@@ -185,29 +185,38 @@ object Places {
     fun addPickHeader(project: String): String = "PICK A KIT FOR ${project.uppercase(Locale.ROOT)}"
 
     /**
-     * The closed THIS KIT group's second line: the tools inside that
-     * [thisKit] does not name (it names KEY, BANK B and VERSIONS). Each word is a
-     * button's or section's name inside: SPLIT, DUST ALL, BREED, SCULPT, STRETCH, ROUND ROBIN.
+     * PADS' one door to everything that changes the whole kit rather than one pad (the owner's UX pass,
+     * 2026-11-15, shared fix c): the VELOCITY STRIP, PERFORMANCE (the kit's live effects) and what THIS KIT
+     * held. They used to sit above and below the grid as three boxes, so a new user could not tell what
+     * changed one pad from what changed them all.
      */
-    @field:CopyCaption const val THIS_KIT_ALSO = "Also: SPLIT · DUST · COMBINE KITS · SCULPT · STRETCH · ROUND ROBIN"
+    @field:CopyLabel const val KIT_TOOLS = "KIT TOOLS"
 
-    /** THIS KIT's heading over REMIX BANK B. */
+    /**
+     * The closed KIT TOOLS group's second line: what it is for, then the tools inside that [kitTools] does
+     * not name (it names the strip, the live effects, KEY, BANK B and VERSIONS). Each word is a button's or
+     * section's name inside: VELOCITY STRIP, PERFORMANCE, SPLIT, DUST ALL, BREED, SCULPT, STRETCH, ROUND ROBIN.
+     */
+    @field:CopyCaption const val KIT_TOOLS_ALSO =
+        "For the whole kit: VELOCITY STRIP · PERFORMANCE · SPLIT · DUST · COMBINE KITS · SCULPT · STRETCH · ROUND ROBIN"
+
+    /** KIT TOOLS' heading over REMIX BANK B. */
     @field:CopyLabel const val KIT_BANK_B = "BANK B"
 
-    /** THIS KIT's heading over KEY, DUST ALL, SCULPT, STRETCH, ROUND ROBIN and SPLIT. */
+    /** KIT TOOLS' heading over KEY, DUST ALL, SCULPT, STRETCH, ROUND ROBIN and SPLIT. */
     @field:CopyLabel const val KIT_WHOLE_SOUND = "THE WHOLE KIT'S SOUND"
 
-    /** THIS KIT's heading over VERSIONS + BIN and BREED. */
+    /** KIT TOOLS' heading over VERSIONS + BIN and BREED. */
     @field:CopyLabel const val KIT_VERSIONS_AND_KITS = "VERSIONS AND OTHER KITS"
 
-    /** KEY's opener inside THIS KIT: a picker, so it opens a sheet (a trailing ▾). */
+    /** KEY's opener inside KIT TOOLS: a picker, so it opens a sheet (a trailing ▾). */
     @field:CopyLabel const val KEY_OPEN = "KEY ▾"
 
     /** The KEY sheet's title. */
     @field:CopyLabel const val KEY_SHEET_TITLE = "KEY"
 
     /**
-     * The closed line of a SCULPT or STRETCH section inside THIS KIT. With a pad
+     * The closed line of a SCULPT or STRETCH section inside KIT TOOLS. With a pad
      * to read from it says what GO would render: the mode, the knob's value and
      * the pad ("CLOUD · 8 S · FROM A07"). With no pad yet it says what is inside,
      * the modes ("CLOUD · SCRUB · SWARM"), never an empty or untouched word.
@@ -215,7 +224,18 @@ object Places {
     fun textureLine(modes: List<String>, mode: String, knobText: String, sourceTag: String?): String =
         if (sourceTag == null) modes.joinToString(" · ") else "$mode · ${knobText.uppercase(Locale.ROOT)} · FROM $sourceTag"
 
-    /** The closed THIS KIT group's line: what it holds, like a pad sheet box. */
+    /**
+     * The closed KIT TOOLS group's line: what it holds, like a pad sheet box. The strip and the live effects
+     * are named only when on, because only then do they change what the pads play.
+     */
+    fun kitTools(stripOn: Boolean, liveEffects: Boolean, keyLabel: String?, bankBEmpty: Boolean, versions: Int): String =
+        listOfNotNull(
+            "STRIP ON".takeIf { stripOn },
+            "LIVE EFFECTS ON".takeIf { liveEffects },
+            thisKit(keyLabel, bankBEmpty, versions),
+        ).joinToString(" · ")
+
+    /** The kit's key, bank B and versions, KIT TOOLS' closed line after the strip and the live effects. */
     fun thisKit(keyLabel: String?, bankBEmpty: Boolean, versions: Int): String {
         val parts = mutableListOf<String>()
         parts += keyLabel?.let { "KEY $it" } ?: "NO KEY"
