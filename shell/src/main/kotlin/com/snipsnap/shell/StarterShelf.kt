@@ -48,6 +48,7 @@ object StarterShelf {
             listOf(
                 "libration", "meridian", "meridian-materials", "meridian-six", "accord", "thaw", "scour", "nimbus", "suture",
                 "tessera", "pitchwheel", "chamber", "alloy", "caustic", "cistern", "filament", "erosion", SplayDelivery.STARTER_ID, SplayDelivery.BODIES_STARTER_ID,
+                "cairn",
             ),
         ),
         Group(Copy.STARTER_HEADING_SKINS, listOf("drumline-field", "drumline-street", "skin", "tremor", "revel", "triad-techno", "triad-house", "triad-minimal", "rivet-workshop", "rivet-factory", "rivet-warehouse", "velour-close", "velour", "velour-bloom", "backwash-soul", "backwash-psych", "fired-bronze", "cosmic-breaks", "cosmic-jungle", "cosmic-dubstep", "spore-jungle", "spore-dub", "spore-electro", "gatecrash-stone", "gatecrash-machine", "gatecrash-electro", "cypher-trap", "cypher-drill", "cypher-backroom", "cypher-lowrider", "cypher-dust", "cypher-flint", "breaker", "breaker-dub", "breaker-triphop", "mirrorball-philly", "mirrorball-loft", "mirrorball-munich", "soot", "soot-drumless", "soot-dub", "soot-noir", "soot-industrial", "scuff-detroit", "scuff-flint", "clutter-lofi", "clutter-street", "clutter-boombap", "clutter-micro", "tempest", "tempest-circuit", "tempest-foundry", "tempest-step", "terra") + StarterKits.PATIO_IDS.toList()),

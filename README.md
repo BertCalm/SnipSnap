@@ -218,8 +218,11 @@ compares C3–C5, common controls and dry musical roles. Earlier auditions and t
 original six-voice recordings remain available. [SING's design](docs/CAIRN_SING.md),
 [TUMBLE's mechanism](docs/CAIRN_TUMBLE.md) and the
 [KNOCK/ANSWER foundation](docs/CAIRN.md) record the distinctions and compatibility.
-Factory expansion, the remaining voices, phone/MPC timing and the Android picker
-remain deferred.
+GRIND (model 6) and VESSEL (model 7) complete the six voices
+([GRIND and VESSEL](docs/CAIRN_GRIND_VESSEL.md)). CAIRN now has a factory roster of
+four presets per voice, SING's being four of the kept Wave 3 recipes, a place at the
+end of the SYNTH picker and a CAIRN starter on the shelf. Phone/MPC timing remains
+deferred.
 
 APSIS is a pitched center with independently orbiting resonant bodies.
 PASSAGE, GRAIN and ANCHOR expose STRETCH, DISTANCE, BODIES, ALIGN,
@@ -1139,7 +1142,7 @@ render-time limits. Build its MPC program and replay files with:
 ```
 
 ONSET, SCANNED CHAIN, VOX, FORK, HALOBAR, AEROSTAT, TREMOR, BALLAST, FLOTILLA, CISTERN, CIRCUIT, OBBLIGATO, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE,
-TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, LATTICE, ACCORD, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, REGISTERS, OSPREY, OPENSKY, OVEN, FLOCK, VENT, OVERLAP, TRIO, NACRE, ORIGAMI, TREFOIL, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS, TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME, OTIS, WICK, BORE, ARCO, SCOUR, KEEL, CHITIN, EROSION, RIVET, FIRED BRONZE, BACKWASH, DRUMLINE, TEMPEST, SPLAY, OSTERIA, ETCH, SCUFF, CLUTTER and GRAINS round out the lineup —
+TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, LATTICE, ACCORD, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, REGISTERS, OSPREY, OPENSKY, OVEN, FLOCK, VENT, OVERLAP, TRIO, NACRE, ORIGAMI, TREFOIL, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS, TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME, OTIS, WICK, BORE, ARCO, SCOUR, KEEL, CHITIN, EROSION, RIVET, FIRED BRONZE, BACKWASH, DRUMLINE, TEMPEST, SPLAY, OSTERIA, ETCH, SCUFF, CLUTTER, CAIRN and GRAINS round out the lineup —
 89 engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
 since it has no voice enum and works on a source snip instead of picking
 one. VOX is formant vocal synthesis — the shopping-mall-keyboard choir,
@@ -1396,7 +1399,7 @@ TREMOR, BALLAST, CISTERN, CIRCUIT, OBBLIGATO, ALLOY, THAW, MURK, NIMBUS, COROLLA
 UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL,
 SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVERLAP,
 OVEN, FLOCK, VENT, CREASE, TRIO, NACRE, ORIGAMI, TREFOIL, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS,
-TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME, BORE, ARCO, SCOUR, KEEL, CHITIN, WICK, EROSION, RIVET, FIRED BRONZE, BACKWASH, DRUMLINE, SOOT, TEMPEST, SPLAY, OSTERIA, ETCH, SCUFF, CLUTTER, plus GRAINS, SNAP and DRAW,
+TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME, BORE, ARCO, SCOUR, KEEL, CHITIN, WICK, EROSION, RIVET, FIRED BRONZE, BACKWASH, DRUMLINE, SOOT, TEMPEST, SPLAY, OSTERIA, ETCH, SCUFF, CLUTTER, CAIRN, plus GRAINS, SNAP and DRAW,
 which sit beside the picker. `:synth` also holds engines that picker does not show.
 LORENTZ has a preset roster, so `snipsnap synth` renders it.
 

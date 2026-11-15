@@ -847,6 +847,11 @@ object StarterKits {
             "World percussion kit: udu and cajon bass, djembe, dholak, dumbek and tabla, agogo bells and a balafon key.",
             seeded = false,
         ) { com.snipsnap.synth.TerraKits.classic() },
+        Starter(
+            "cairn", "CAIRN",
+            "Stones that knock, answer, tumble, sing, grind and roll in a bowl, at C4.",
+            seeded = false,
+        ) { SynthKits.cairn() },
     ).plus(com.snipsnap.synth.PatioPerformance.Genre.entries.map { genre ->
         Starter(genre.id, genre.title.uppercase(java.util.Locale.ROOT), "Latin percussion, three velocities and four takes per voice, with a hand-drum roll and cuica.", seeded = false) {
             com.snipsnap.synth.PatioPerformance.build(genre)

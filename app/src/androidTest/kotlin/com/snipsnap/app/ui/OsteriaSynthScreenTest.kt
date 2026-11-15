@@ -102,7 +102,7 @@ class OsteriaSynthScreenTest : ComposeScreenTest() {
         pump(16)
     }
 
-    // The header's arrows step the engine ring; OSTERIA sits at its end, one step back from the first engine.
+    // The header's arrows step the engine ring; OSTERIA sits near its end, a few steps back from the first engine.
     private fun chooseOsteria() {
         repeat(128) {
             if (compose.onAllNodesWithContentDescription("ENGINE OSTERIA. CHOOSE ENGINE").fetchSemanticsNodes().isNotEmpty()) return
