@@ -24,7 +24,7 @@ Genre kits must be authored musical choices with distinct roles, balance and cha
 - **Why the format can't hold it:** an MPC 2 drum pad picks its layers one way only. Akai's MPC Software 2.7 user guide lists Layer Play as Cycle ("1, 2, 3, 4, 1, 2, 3, 4…"), Velocity or Random. Cycle takes no account of how hard the pad is hit, and Simultaneous Play fires its linked pads at every velocity. So no arrangement of pads and layers both switches by velocity and deals takes. The harvested MPC 2 kits in `reference/golden/drum/` agree: their cycling pads carry only full-range layers.
 - **What an MPC 2 export keeps:** a velocity × round-robin pad goes out as its velocity layers, each its zone's first take. A pad with round robin and no velocity layers still cycles up to four takes as `_RR` files. When a kit has such pads, the export screen says so under the format before anything is written (`Mpc2Limits`, `Mpc2LimitsTest`).
 - **Nothing else changes.** MPC 2's velocity layers are still checked, and every other format's export evidence stands as recorded.
-- **MPC 3 on an MPC is still open.** The MPC 3 read-back checks the metadata we write. An MPC finds each take in a chain WAV from a slice map stored inside the WAV, and that layout has never been captured (`docs/FEATURE_PLAN.md`, HH1.4). Until it is, an MPC most likely plays each zone's first take from the MPC 3 export too. The owner parked the capture on 2026-11-14. Every "no MPC has loaded the kit" below still stands.
+- **MPC 3 on an MPC: the owner's reports.** The MPC 3 read-back checks the metadata we write. An MPC finds each take in a chain WAV from a slice map stored inside the WAV, and that layout has never been captured (`docs/FEATURE_PLAN.md`, HH1.4); the owner parked the capture on 2026-11-14. Since then the owner has played MPC 3 exports on an MPC: SOOT's repeated hits cycled through the takes (2026-11-14), and BREAKER was approved on hardware (2026-11-15). Each engine records its own hardware result. Wherever an entry still says "no MPC has loaded the kit", that stands.
 
 ## BACKWASH acoustic integration (updated 2026-11-10)
 
@@ -106,12 +106,12 @@ own status.
 The engine remains in progress. Voice count, green tests and export file
 presence do not close the outstanding gates above.
 
-## BREAKER (sound signed off 2026-11-13; three kits on the shelf; the surf tom fill on the BREAKER kit; hardware open)
+## BREAKER (complete 2026-11-15: sound signed off, three kits and the surf tom fill on the shelf, hardware approved)
 
 - **Melodic, keygroup and chord-tool gates:** not applicable. BREAKER is a drum engine.
 - **Articulation:** finite hits, with no HOLD.
-  - **The snare riser (round 3): on the kit, verified in software.** It is twenty fresh snare strikes accelerating over 2.4 s into the spring, with a fader push after the rig. The owner picked the tamed roll on 2026-11-11 and heard the app's render as their pick. It is A15 on the BREAKER kit: saved with its grid, played through the pad resolver and exported to MPC 3 (`BreakerKitTest`). No phone or MPC has played it.
-  - **The surf tom fill (model 7): picked by ear and built, verified in rendering, not yet on a kit.** Over two rounds on 2026-11-14 the owner picked fill B, triplets down the three toms. Each stroke rings through its own tom's spring ("three pads"), at about a third of the spring ("4 Drier"). A fresh take was heard as the same fill with fresh hits ("Yes"). FILL renders that pick: twelve fresh tom strikes, a softer pad striking every tom softer, and every take re-struck (`BreakerTest`). The owner put it on the BREAKER kit's A16, in the shaker's place beside the snare riser (2026-11-14). There it is dealt 3 zones × 3 takes through saving, the pad resolver and the MPC 3 export like every pad (`BreakerKitTest`): its closest takes are 24.0 dB apart and its least-changed soft zone moves 2.8 dB. No phone or MPC has played it.
+  - **The snare riser (round 3): on the kit, verified in software.** It is twenty fresh snare strikes accelerating over 2.4 s into the spring, with a fader push after the rig. The owner picked the tamed roll on 2026-11-11 and heard the app's render as their pick. It is A15 on the BREAKER kit: saved with its grid, played through the pad resolver and exported to MPC 3 (`BreakerKitTest`). Approved on hardware with the kit (2026-11-15, below).
+  - **The surf tom fill (model 7): picked by ear and built, verified in rendering, not yet on a kit.** Over two rounds on 2026-11-14 the owner picked fill B, triplets down the three toms. Each stroke rings through its own tom's spring ("three pads"), at about a third of the spring ("4 Drier"). A fresh take was heard as the same fill with fresh hits ("Yes"). FILL renders that pick: twelve fresh tom strikes, a softer pad striking every tom softer, and every take re-struck (`BreakerTest`). The owner put it on the BREAKER kit's A16, in the shaker's place beside the snare riser (2026-11-14). There it is dealt 3 zones × 3 takes through saving, the pad resolver and the MPC 3 export like every pad (`BreakerKitTest`): its closest takes are 24.0 dB apart and its least-changed soft zone moves 2.8 dB. Approved on hardware (2026-11-15, below).
 - **Drum shelf: three kits, heard.** The BREAKER kit is on the shelf (2026-11-12), and Dub Tank and Trip hop joined it (2026-11-13), each built to a layout the owner approved first and heard by the owner. They are authored 16-pad kits with their own tempo, tuning, damping, backbeat roles and pad arrangement. `BreakerKitTest` checks them pad by pad against BREAKER: 7 and 6 pads are another drum, 4 and 6 are retuned, 7 and 11 are damped or opened, and only 3 and 2 differ in the rig alone (with the fill on BREAKER's A16 since 2026-11-14).
 - **Velocity and round robin:**
   - **Rendering: verified.** Velocity re-strikes the SKIN source, which changes its character as well as its level. `Restrike` takes are fresh, deterministic strikes (`BreakerTest`, `DeterminismTest`).
@@ -139,19 +139,20 @@ presence do not close the outstanding gates above.
     - **The kick's takes are close.** They are distinct strikes, but the crush evens out the force difference. On 2026-11-12 the owner heard them as "one kick played again: fine".
     - The tambourine at 3 × 3 measured as copies, and as one zone that was another turned down. It is fixed by giving it exactly its recordings.
   - **Saving: verified.** The kit reloads equal and regenerates from its saved recipes byte for byte.
-  - **Playback: verified in software.** `PadHit.resolve` picks the zone by velocity and deals each zone's takes in order, then repeats them. The preview mixer cycles them too. No phone has played the kit.
-  - **Export: MPC 3 verified by read-back.** The velocity ranges, slice anchors, cycle lengths and slice windows match, and the exported samples are the saved ones. **MPC 2: not applicable** ([format limit](#mpc-2-and-round-robin-owner-decision-2026-11-14)): it plays each zone's first take. No MPC has loaded the kit.
+  - **Playback: verified in software.** `PadHit.resolve` picks the zone by velocity and deals each zone's takes in order, then repeats them. The preview mixer cycles them too. Approved on hardware (2026-11-15, below).
+  - **Export: MPC 3 verified by read-back.** The velocity ranges, slice anchors, cycle lengths and slice windows match, and the exported samples are the saved ones. **MPC 2: not applicable** ([format limit](#mpc-2-and-round-robin-owner-decision-2026-11-14)): it plays each zone's first take. Approved on an MPC (2026-11-15, below).
   - **Sound character:** the drums, cymbals and riser are each accepted by ear. On 2026-11-12 the owner heard the kit as mid heavy. They picked model 4's open rig by ear, with DUST's filter opened and no amp speaker, and heard their snare, hat and kick through it as "better". On the open tone the owner accepted the kit (2026-11-12): the balance "sounds right now", all three pushed pads kept, the kick's takes "one kick played again: fine", and every pad softer in character with a fresh hit each time.
 - **The genre kits (2026-11-13): velocity and round robin through rendering, saving, playback and MPC 3 export, verified in software** (`BreakerKitTest`, the same checks as the BREAKER kit, run on all three kits).
   - **Rendering:** every pad is dealt by the shared robin from its recipe, 3 zones × 3 re-struck takes (2 × 2 on the tambourine). No two takes are copies: the closest pair is the Steppers Kick's, 37.7 dB apart. No soft zone is the hard one turned down: the least change is the Steppers Kick's, 0.5 dB.
   - **Model 6:** a later kick or tom take lands with another beater. Without it, the round robin's start trim could cut a kick's click and leave two takes as copies (the Steppers Kick, 42.4 dB). `BreakerTest` checks every genre-kit kick and tom with the click cut. The BREAKER kit stays on model 5.
   - **Saving: verified.** Each kit reloads equal.
-  - **Playback: verified in software.** No phone has played them.
-  - **Export: MPC 3 verified by read-back.** MPC 2 is not applicable, as for the BREAKER kit. No MPC has loaded them.
+  - **Playback: verified in software.** BREAKER is approved on hardware (2026-11-15, below).
+  - **Export: MPC 3 verified by read-back.** MPC 2 is not applicable, as for the BREAKER kit.
   - **Sound character, heard 2026-11-13:** the kicks hit again ("one kick played again: fine"), the High Timbale at about three semitones up (high enough, where the layout asked five), and every pad soft to hard were accepted. Both grooves were heard as too wet, and the owner picked how much echo and spring each keeps from four versions. The kits are built from the picks; only Trip hop's Second Kick keeps its touch of spring, since at a quarter its takes measured as near-copies.
   - **Decided by the owner (2026-11-13):** the shared robin's start trim, which can cut a synth strike's click on any re-struck kit, stays as it is (docs/BREAKER.md, "Model 6").
 - **The final audition (2026-11-13):** `:shell:generateBreakerAudition` renders every voice, soft to hard, every control swept, corners, edges, presets and the three kits' grooves (68 clips). Every edge render is finite and within full scale. **Sound character: signed off.** On 2026-11-13 the owner answered the published page ([BREAKER audition](https://claude.ai/artifact/TyimBbsBAwNeVRzxsSx3En)): every voice as it ships is BREAKER, every control does what its name says all the way along, nothing breaks at the edges, all the presets stay, and the shelf of three kits is right. Preserve renderer model 6 (the BREAKER kit on model 5) as the accepted baseline. This is not evidence of a phone or MPC audition.
-- **Overall: incomplete.** The sound is signed off, the three kits are on the shelf, and the surf tom fill is on the BREAKER kit. Hardware playback is open.
+- **Hardware: approved by the owner (2026-11-15).** Asked to play the BREAKER kit's new A16 fill on a phone and an MPC, and told that repeated hits sounding like fresh takes was the last BREAKER gate, the owner answered: "Hardware is approved". This is the owner's report, not a capture.
+- **Overall: complete (2026-11-15).** The sound is signed off, the three kits and the surf tom fill are on the shelf, velocity and round robin are verified through rendering, saving, playback and MPC 3 export, and the owner approved BREAKER on hardware. MPC 2 is not applicable (format limit). Preserve renderer model 7 (the BREAKER kit's pads on model 5, its fill on model 7, the genre kits on model 6) as the accepted baseline.
 
 ## FIRED BRONZE (approved on MPC 2026-11-08; round robin heard and accepted 2026-11-13; hardware open)
 
@@ -493,8 +494,12 @@ CAIRN's retained-SING sampler code came back from the owner's recovery snapshot 
 branch, CAIRN files only. See [CAIRN_SING_SAMPLER.md](CAIRN_SING_SAMPLER.md). This entry covers
 those five studies of one SING voice. Earlier CAIRN work keeps the scope its own documents record.
 
-- **Melodic voices: fail, four of six.** KNOCK, ANSWER, TUMBLE and SING are built; GRIND and
-  VESSEL are not. The five studies are settings of one SING voice, not new voices.
+- **Melodic voices: pass in software, six built, all six kept.** KNOCK, ANSWER, TUMBLE and SING
+  are built. GRIND (model 6) and VESSEL (model 7) are now built too
+  ([CAIRN_GRIND_VESSEL.md](CAIRN_GRIND_VESSEL.md)). The owner kept VESSEL (V1–V4) in round
+  `cairn-voices-1` (14 Nov 2026), and the re-tuned GRIND (G5–G9) in round `cairn-voices-2`
+  the same day, at G9's gentler scrape level. Both are pinned. The five studies are settings
+  of one SING voice, not new voices.
 - **Presets: not yet verified.** CAIRN has no factory presets. The nine Wave 3 KEEP SING recipes
   are source-bound inputs to the studies, not factory presets.
 - **Playable keygroups: partial.** The shell builds and validates all five keygroup packages from
@@ -522,7 +527,7 @@ those five studies of one SING voice. Earlier CAIRN work keeps the scope its own
   and a chord for EARLIER and MOVING; C4 for each GROOVE) and kept all of them
   ([CAIRN_SING_SAMPLER.md](CAIRN_SING_SAMPLER.md#owner-listening)).
 - **Overall: incomplete.** The Float captures' home, the phone picker, phone
-  and MPC playback, velocity layers, round robin and the remaining voices are open.
+  and MPC playback, velocity layers, round robin and factory presets are open.
 
 ## WICK (finite keygroups and held entry ported from the recovery backup, 2026-11-13)
 
@@ -770,7 +775,8 @@ prototype and a listening page (<https://claude.ai/artifact/Xmcj5t8MYSNCQPoTKHBc
   grooves, brightens it (+3 dB at 4 kHz, +6 from 8 kHz, by ear) and eases After Hours' WARMTH from .65 to .5. The owner
   then asked for every kit brighter. Round 0e makes the 1962 chain roll off less top and lowers WARMTH 0.15 on every
   kit. It also adds -1.5 dB at 600 Hz and +2 dB from 6 kHz to every pad, and makes the bowed cymbal sing at 1.4 kHz.
-  Not heard yet.
+  On 2026-11-15 the owner heard rounds 0b to 0e on the listening page and said "Much better". That is a better
+  direction, not yet an accepted baseline. The sound-character gate stays open.
 - **Overall: incomplete.** Round 0 asks the owner which voices and kits to keep. Kotlin (round 1), the shelf and
   saving, playback and MPC 3 export (round 2), and phone and MPC hardware (round 3) are all open.
 
