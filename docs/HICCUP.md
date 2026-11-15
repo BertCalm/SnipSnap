@@ -1,6 +1,6 @@
 # HICCUP: glitch drums that stumble inside the hit
 
-Status: **round 4, on SYNTH's picker (DRUMS); three kits on the shelf; twenty-one presets in the factory bank; kits and presets heard 2026-11-15, hardware unverified.** The Kotlin engine is `Hiccup.kt` (with `HiccupPatch.kt`), the kits are `HiccupKits.kt`, the presets are `HiccupPresets.kt`. On 2026-11-15 the owner listened twice to the Kotlin engine (see "The listen" below): the first listen covered the kits, the second the 21 presets and the kits' soft and medium velocity zones. No hardware has played anything. The constants marked "shape" in the spec were not changed by that listen. The engine stays in progress until every applicable owner gate has evidence (see [the gates entry](ENGINE_ACCEPTANCE_GATES.md)).
+Status: **round 4, on SYNTH's picker (DRUMS); three kits on the shelf; twenty-one presets in the factory bank; kits and presets heard 2026-11-15, hardware approved by the owner 2026-11-15.** The Kotlin engine is `Hiccup.kt` (with `HiccupPatch.kt`), the kits are `HiccupKits.kt`, the presets are `HiccupPresets.kt`. On 2026-11-15 the owner listened twice to the Kotlin engine (see "The listen" below): the first listen covered the kits, the second the 21 presets and the kits' soft and medium velocity zones. On 2026-11-15 the owner approved hardware playback on a phone and an MPC (see "Hardware" below); that is the owner's report, not a capture. The constants marked "shape" in the spec were not changed by that listen. The engine stays in progress until every applicable owner gate has evidence (see [the gates entry](ENGINE_ACCEPTANCE_GATES.md)).
 
 Design spec, with each round's "As built" section: [`docs/superpowers/specs/2026-11-14-hiccup-glitch-drum-engine-design.md`](superpowers/specs/2026-11-14-hiccup-glitch-drum-engine-design.md). Prototype: [`docs/prototypes/hiccup/`](prototypes/hiccup/). Numbers from the prototype are from Python, not Kotlin.
 
@@ -96,13 +96,17 @@ Pad layout (hit name, voice):
 
 The roll is one bar of the kit's snare, struck on eighths, then sixteenths, then thirty-seconds, with FAULT stepping from 0 up to the pad's value and velocity rising. The riser is one bar of sixteenth strikes with CHOP rising from a stutter toward a pitch, TUNE up a fifth of the knob and velocity rising, so it is the engine's own gesture stretched over a bar. Phrases are classed LOOP and are about two to three seconds long.
 
-The kits are verified in software through save, reload, playback order and MPC 3 export read-back (`HiccupKitsTest`, `HiccupKitTest`, `:shell:generateHiccupKits`). No phone or MPC has played them.
+The kits are verified in software through save, reload, playback order and MPC 3 export read-back (`HiccupKitsTest`, `HiccupKitTest`, `:shell:generateHiccupKits`). The owner approved them on a phone and an MPC on 2026-11-15 (see "Hardware" below).
 
 ## The listen
 
-On 2026-11-15 the owner listened to an audition page of the Kotlin engine (`Hiccup.MODEL_VERSION` 2, `HiccupKits.VERSION` 2): a four-bar groove from each of the three starter kits (HICCUP HOP, LAB, SUGAR), every hit pad A01 to A14 of each kit at the hardest velocity zone, each kit's roll and riser, and the four round-robin takes of SUGAR's Pop Snare. The owner's verdict, verbatim: "sounds check passes". That first page did not include the presets or the softer velocity zones; the second listen below did. No phone or MPC has played the engine or the kits, and the verdict says nothing about hardware.
+On 2026-11-15 the owner listened to an audition page of the Kotlin engine (`Hiccup.MODEL_VERSION` 2, `HiccupKits.VERSION` 2): a four-bar groove from each of the three starter kits (HICCUP HOP, LAB, SUGAR), every hit pad A01 to A14 of each kit at the hardest velocity zone, each kit's roll and riser, and the four round-robin takes of SUGAR's Pop Snare. The owner's verdict, verbatim: "sounds check passes". That first page did not include the presets or the softer velocity zones; the second listen below did. The verdict says nothing about hardware; the hardware approval came later (see "Hardware" below).
 
 Later on 2026-11-15 the owner listened to a second audition page of the Kotlin engine (`Hiccup.MODEL_VERSION` 2, `HiccupKits.VERSION` 2): all 21 factory presets, each played twice at velocity 1, take 0 (the picker's render), and, for each of the three kits (HICCUP HOP, LAB, SUGAR), every hit pad A01 to A14 struck soft, medium and hard (velocities .30, .65, 1), the first take of each zone. The three zones were played at the same peak level, as they are saved, so the listen judged the change in the drum, not loudness. The owner's verdict, verbatim: "Everything sounds good". Neither listen covered the second to fourth takes of the soft and medium zones (only SUGAR's Pop Snare takes at the hardest zone were heard), or any hardware (phone or MPC). The verdict is on the engine, the kits and the presets as heard; it does not say anything about hardware.
+
+## Hardware
+
+On 2026-11-15, told that hardware playback on a phone and an MPC was the remaining HICCUP gate, the owner said, verbatim: "Hardware is good". This is the owner's report, not a capture. MPC 2 still keeps one take per zone (the format limit under "Known limits"). Still open: the round-robin takes no listen covered, which stay unheard: the second to fourth takes of the soft and medium zones, and at the hardest zone every pad's takes except SUGAR's Pop Snare.
 
 ## The presets
 
@@ -126,7 +130,7 @@ Twenty-one presets in `HiccupPresets`, at least two on every voice, each the six
 - **MPC 2 export keeps one take per velocity layer.** It is the format's limit, not the engine's.
 - **Repeat counts are not strictly monotone in CHOP.** The budget jumps by an octave with the grid unit, so the test allows a fall of up to 15 percent between CHOP steps.
 - **Takes may be too wide for one drum.** Whether the four strata read as one drum stumbling four ways is untested.
-- **Heard so far:** the Python prototype clips and, on 2026-11-15, the page described under "The listen". The 21 presets were heard one by one in the second listen and the soft and medium zones of the three kits (first takes) were heard too; no hardware has played the kits.
+- **Heard so far:** the Python prototype clips and, on 2026-11-15, the page described under "The listen". The 21 presets were heard one by one in the second listen and the soft and medium zones of the three kits (first takes) were heard too. The round-robin takes no listen covered (the second to fourth takes of the soft and medium zones, and at the hardest zone every pad's takes except SUGAR's Pop Snare) are still unheard.
 
 ## Why it is built this way
 
@@ -138,4 +142,4 @@ Twenty-one presets in `HiccupPresets`, at least two on every voice, each the six
 
 ## Gates
 
-See [ENGINE_ACCEPTANCE_GATES.md](ENGINE_ACCEPTANCE_GATES.md#hiccup-2026-11-14-round-1-engine-round-2-kits-round-3-presets-docs-and-picker-round-4-roster-kits-heard-2026-11-15). In short: rendering, saving, playback and MPC 3 export are verified in software, the kits and the 21 presets were heard on 2026-11-15, and the picker's on-device test passed in CI's emulator job on PR #1143 on 2026-11-15; hardware playback on a phone and an MPC is open, and only the owner's devices can close it. Overall: incomplete.
+See [ENGINE_ACCEPTANCE_GATES.md](ENGINE_ACCEPTANCE_GATES.md#hiccup-2026-11-14-round-1-engine-round-2-kits-round-3-presets-docs-and-picker-round-4-roster-kits-heard-2026-11-15). In short: rendering, saving, playback and MPC 3 export are verified in software, the kits and the 21 presets were heard on 2026-11-15, and the picker's on-device test passed in CI's emulator job on PR #1143 on 2026-11-15; hardware playback on a phone and an MPC was approved by the owner on 2026-11-15 (the owner's report, not a capture). Open: the round-robin takes no listen covered, and only those; MPC 2 keeps one take per zone as a stated format limit. Overall: incomplete.

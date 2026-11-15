@@ -3748,7 +3748,9 @@ filed in the factory bank through `Presets` and HICCUP left `PatchTypes.PROTOTYP
 listen. The same day the owner listened to a second audition page (model 2, kit 2): all 21 presets, each played twice
 at velocity 1, take 0, and, for each kit, every hit pad A01 to A14 struck soft, medium and hard (velocities .30, .65,
 1), first take of each zone, at the same peak level as saved. The verdict, verbatim: "Everything sounds good". The
-picker's on-device test passed in CI's emulator job on PR #1143 on 2026-11-15. Open: hardware (phone and MPC)
-playback, which only the owner's devices can close, MPC 2's one take per zone, and the second to fourth takes of the
-soft and medium zones, which no listen covered.
+picker's on-device test passed in CI's emulator job on PR #1143 on 2026-11-15. Hardware: on 2026-11-15, told that
+playback on a phone and an MPC was the remaining gate, the owner said, verbatim: "Hardware is good" (the owner's
+report, not a capture). Open: the round-robin takes no listen covered (the second to fourth takes of the soft and
+medium zones, and at the hardest zone every pad's takes except SUGAR's Pop Snare). MPC 2 keeps one take per zone as a
+stated format limit.
 See [HICCUP](HICCUP.md) and the gates entry.
