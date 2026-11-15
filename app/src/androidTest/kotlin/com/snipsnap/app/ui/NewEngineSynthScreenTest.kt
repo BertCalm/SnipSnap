@@ -113,6 +113,25 @@ class NewEngineSynthScreenTest : ComposeScreenTest() {
         assertEquals(.72f, pushed.macros.getValue("PRESS"), .0001f)
     }
 
+    @Test
+    fun drumlineKeepsASectionEditAndItsModel() {
+        show("DRUMLINE", "SNARE")
+        button("PRESET FIELD SNARE").assertExists()
+        button("PRESET STREET SNARE").performSemanticsAction(SemanticsActions.OnClick) { it() }
+        pump()
+        assertEquals(.32f, progress("TUNE"), .0001f)
+        assertEquals(.28f, progress("DAMP"), .0001f)
+        for (label in listOf("TUNE", "STRIKE", "DAMP", "PLAYERS", "TIGHT")) control(label).assertExists()
+        adjust("DAMP", .7f)
+        compose.runOnIdle { generation++ }
+        pump()
+        assertEquals(.7f, progress("DAMP"), .0001f)
+        assertFalse(showsLoop())
+        val draft = SynthDrafts.read(settings).single { it.engine == "DRUMLINE" && it.voiceName == "SNARE" } as com.snipsnap.synth.DrumlinePatch
+        assertEquals(4, draft.model)
+        assertEquals(.32f, draft.macros.getValue("TUNE"), .0001f)
+    }
+
     /**
      * SOOT on the picker (2026-11-13): a prototype outside the factory presets, so its voices and controls
      * with no preset chips. The snare opens at the owner's pick (EDGE 1, the hot cassette), an edit survives

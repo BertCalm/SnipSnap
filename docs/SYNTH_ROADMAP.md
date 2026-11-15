@@ -3673,3 +3673,7 @@ The engine picker: CLUTTER joins SYNTH's `Engine` after SCUFF, mirroring SCUFF's
 native-factory path), so a kit preset loads whole with its take and model. `EngineCatalog` files it under DRUMS;
 88 picker engines. An on-device test in `NewEngineSynthScreenTest`; CI compiles and runs it. Open: hardware
 playback, MPC 2. See [CLUTTER](CLUTTER.md).
+
+### DRUMLINE native battery
+
+The native battery retains the preferred cymbal mechanisms and independent player sections. Model 2 adds body to basses/tenors, a separate rim clack and snare snap; saved model-1 recipes remain replayable. FIELD and STREET CADENCE have different source tuning, damping, section sizes and scored articulations, each a 3 × 3 velocity/take grid with editable versioned recipes. Implementation and gate evidence: [DRUMLINE](DRUMLINE.md). Native revision 4 was accepted on 2026-11-15; its 32 FIELD/STREET pad recipes are factory presets pinned to the heard renderer. Phone/MPC hardware, render budget and remaining numerical coverage stay open.
