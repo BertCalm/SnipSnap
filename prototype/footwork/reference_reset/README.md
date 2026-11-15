@@ -37,3 +37,18 @@ Why it is built this way: the delayed bright response supplies the ee; broad res
 ## Owner listening checkpoint
 
 After the ta-ee audition, the owner reported that it sounds like tap, although not exactly like the reference. Record this as recognizable tap character, not exact reference matching or full-kit acceptance. Small/open preference was not specified. Preserve both candidates; no sound changes were made at this checkpoint. Other voices, native integration, complete kits, articulation and velocity/round-robin delivery gates remain open.
+
+## Dance gesture family
+
+Gesture: toe contact → heel support → forward/back brush → shuffle or flap → resolving heel. `dance_gestures.py` extends the owner-recognized metallic contact; the new gestures have not been heard by the owner. Small-metal is the initial design choice, not a claimed owner preference; both previous candidates remain available.
+
+Run `OPENBLAS_NUM_THREADS=1 python3 prototype/footwork/reference_reset/dance_gestures.py /path/to/output`. Eight roles (toe, heel, forward brush, back brush, shuffle, flap, roll, riser) each render three velocities and four independent takes. A fixed family gain preserves dynamics. Shuffle combines forward/back brushes; flap combines a forward brush and toe landing. The roll alternates toe/heel, and the riser accelerates and gains force into a resolving heel. The original demonstration phrase runs at 116 BPM.
+
+The brush pressure trajectory, abrasive band and chatter are authored perceptual hypotheses, not measured spatial shoe/floor geometry. All new raw excitation is generated at 176.4 kHz and bandlimited before decimation. Finite gestures are composed at 44.1 kHz. Kotlin integration, shelf kits, native saving/playback, MPC/SFZ export and hardware gates remain open. Python timing is diagnostic only; a native port needs cached filter/envelope coefficients.
+
+Why it is built this way:
+- Toe retains the recognizable ta-ee contact rather than changing the accepted foundation.
+- Heel adds short low-frequency floor support and dampens the upper plate response so it has a different role.
+- Two brush pressure trajectories give the shuffle contrasting motions.
+- Flap ends on a discrete toe strike; shuffle ends on a reverse brush, so they differ in event structure.
+- The authored roll and riser use independently rendered contacts and a definite ending.
