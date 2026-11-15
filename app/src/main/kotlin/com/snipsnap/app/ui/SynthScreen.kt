@@ -1982,9 +1982,16 @@ fun SynthScreen(
     // it, and refreshed with the strip after every move.
     LaunchedEffect(Unit) {
         try {
-            val (live, bin) = offMain { embouchureRestore.readShelf(shelfRoot) }
-            presets.userPresets = live
-            presets.binnedPresets = bin
+            // A save, FORGET or restore that lands while this read is still
+            // off the main thread has already put a newer list on screen; the
+            // opening read must not write its older one over it.
+            val writesBefore = presets.shelfWrites
+            val (read, readBin) = offMain { embouchureRestore.readShelf(shelfRoot) }
+            if (presets.shelfWrites == writesBefore) {
+                presets.userPresets = read
+                presets.binnedPresets = readBin
+            }
+            val live = presets.userPresets
             // The YOURS presets the bag named (§3.6), now that the shelf has
             // been read: re-adopt each whole, or drop the highlight when the
             // preset was forgotten while the lab was away. Live state is
@@ -2067,6 +2074,7 @@ fun SynthScreen(
                     UserPresets.forget(shelfRoot, patch.engine, patch.voiceName, patch.name, System.currentTimeMillis())
                 }
                 val (live, bin) = offMain { UserPresets.read(shelfRoot) to UserPresets.bin(shelfRoot) }
+                presets.shelfWrites++
                 presets.userPresets = live
                 presets.binnedPresets = bin
                 if (gone == null) {
@@ -2093,6 +2101,7 @@ fun SynthScreen(
             try {
                 val back = offMain { UserPresets.unforget(shelfRoot, binned) }
                 val (live, bin) = offMain { UserPresets.read(shelfRoot) to UserPresets.bin(shelfRoot) }
+                presets.shelfWrites++
                 presets.userPresets = live
                 presets.binnedPresets = bin
                 // The name it actually landed under — a clash with a preset
@@ -2128,6 +2137,7 @@ fun SynthScreen(
                     val s = UserPresets.save(shelfRoot, patch, System.currentTimeMillis())
                     s to UserPresets.read(shelfRoot)
                 }
+                presets.shelfWrites++
                 presets.userPresets = all
                 currentPresetByVoice[savedEngine to savedVoice] = saved.name
                 embouchureRestore.pending.remove(savedEngine to savedVoice)
@@ -4860,6 +4870,11 @@ private class SynthPresetState {
     var forgetTarget by mutableStateOf<Patch?>(null)
     var binOpen by mutableStateOf(false)
     var binBusy by mutableStateOf(false)
+    /**
+     * Counts the saves, FORGETs and restores that re-read the shelf. It is read and
+     * bumped only on the main thread, and it is not snapshot state: nothing draws it.
+     */
+    var shelfWrites = 0
 }
 
 /** SPREAD's source and pending work survive recomposition together, like the other sheets. */

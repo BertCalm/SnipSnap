@@ -1,5 +1,6 @@
 package com.snipsnap.app.ui
 
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
@@ -31,6 +32,9 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.File
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * CAIRN's six stone voices on the SYNTH picker: the factory roster, every control, the shared
@@ -50,13 +54,19 @@ class CairnSynthScreenTest : ComposeScreenTest() {
         shelf.deleteRecursively()
     }
 
-    private fun show(voice: CairnVoice = CairnVoice.KNOCK) {
+    private fun show(
+        voice: CairnVoice = CairnVoice.KNOCK,
+        reader: ((File) -> Pair<List<UserPresets.Saved>, List<UserPresets.Binned>>)? = null,
+    ) {
         settings["engine"] = "CAIRN"
         settings["voice"] = voice.name
         setPhoneContent {
-            key(visit) {
-                SynthScreen(null, shelf, onToast = {}, onKitUpdated = {}, onShelfAssetWritten = {},
-                    onDroneToLoop = { _, _, _ -> }, onOpenSurface = {}, appScope = appScope, settings = settings)
+            val readShelf = reader ?: LocalSynthPresetReader.current
+            CompositionLocalProvider(LocalSynthPresetReader provides readShelf) {
+                key(visit) {
+                    SynthScreen(null, shelf, onToast = {}, onKitUpdated = {}, onShelfAssetWritten = {},
+                        onDroneToLoop = { _, _, _ -> }, onOpenSurface = {}, appScope = appScope, settings = settings)
+                }
             }
         }
         compose.onNode(hasContentDescription("ENGINE CAIRN. CHOOSE ENGINE")).assertExists()
@@ -137,11 +147,52 @@ class CairnSynthScreenTest : ComposeScreenTest() {
         assertEquals(expected.copy(name = "MY EARLIER"), saved)
         activate("PRESET SING MOVING")
         waitFor("a different kept recipe") { stored(CairnVoice.SING)?.model == 5 }
+        // The file is on disk once UserPresets.read sees it; the strip shows it only after the
+        // save's own re-read lands on the main thread, which the compose idle check does not wait for.
+        waitFor("MY EARLIER on the YOURS strip") {
+            compose.onAllNodes(yourPreset("MY EARLIER"), useUnmergedTree = true).fetchSemanticsNodes().size == 1
+        }
         val chip = compose.onNode(yourPreset("MY EARLIER"), useUnmergedTree = true).fetchSemanticsNode()
             .config.getOrNull(SemanticsActions.OnClick)!!.action!!
         compose.runOnIdle { assertTrue(chip.invoke()) }
         pump()
         waitFor("the saved recipe comes back with its model") { stored(CairnVoice.SING) == saved }
+    }
+
+    /**
+     * The opening shelf read runs off the main thread, so a save can land first. This
+     * read takes its list before the save and hands it back after, the order that
+     * once dropped a just-saved chip from the YOURS strip. The newer list must stay.
+     */
+    @Test fun a_save_that_lands_before_the_opening_shelf_read_keeps_its_chip() {
+        val reads = AtomicInteger()
+        val handedBack = AtomicInteger()
+        val release = CountDownLatch(1)
+        try {
+            show(CairnVoice.KNOCK, reader = { root ->
+                val before = UserPresets.read(root) to UserPresets.bin(root)
+                reads.incrementAndGet()
+                check(release.await(30, TimeUnit.SECONDS)) { "CAIRN preset-read latch timed out" }
+                handedBack.incrementAndGet()
+                before
+            })
+            compose.waitUntil(timeoutMillis = 5_000) { reads.get() >= 1 }
+            activate("SAVE PRESET")
+            compose.onNode(hasSetTextAction()).performTextReplacement("MY KNOCK")
+            pump()
+            activate("SAVE")
+            waitFor("saved KNOCK preset") { UserPresets.read(shelf).any { it.name == "MY KNOCK" } }
+            waitFor("MY KNOCK on the YOURS strip") {
+                compose.onAllNodes(yourPreset("MY KNOCK"), useUnmergedTree = true).fetchSemanticsNodes().size == 1
+            }
+            release.countDown()
+            waitFor("the opening read handed back its older list") { handedBack.get() == 1 }
+            repeat(8) { pump() }
+            assertEquals("the opening read wrote its older list over the save",
+                1, compose.onAllNodes(yourPreset("MY KNOCK"), useUnmergedTree = true).fetchSemanticsNodes().size)
+        } finally {
+            release.countDown()
+        }
     }
 
     @Test fun root_and_randomise_keep_the_saved_model_and_stop_hold_short_of_the_loop() {
