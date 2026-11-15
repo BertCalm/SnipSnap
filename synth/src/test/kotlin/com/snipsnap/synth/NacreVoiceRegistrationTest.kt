@@ -22,7 +22,8 @@ class NacreVoiceRegistrationTest {
 
     @Test
     fun `the voices and their saved models`() {
-        assertEquals(listOf(NacreVoice.PEARL, NacreVoice.HARMONICS, NacreVoice.SHELL, NacreVoice.BUBBLE), NacreVoice.entries)
+        assertEquals(listOf(NacreVoice.PEARL, NacreVoice.HARMONICS, NacreVoice.SHELL, NacreVoice.BUBBLE, NacreVoice.GROTTO), NacreVoice.entries)
+        assertEquals(8, Nacre.defaultModel(NacreVoice.GROTTO))
         assertEquals(3, Nacre.defaultModel(NacreVoice.PEARL))
         assertEquals(5, Nacre.defaultModel(NacreVoice.HARMONICS))
         assertEquals(6, Nacre.defaultModel(NacreVoice.SHELL))
