@@ -58,6 +58,14 @@ object SectionNames {
  * name: a copy, a move or a different name keeps them. Left out, they are
  * what the name has always meant ([SectionNames]), so a song kept before
  * they existed sounds as it did.
+ *
+ * [drop] is the other way round: it sits on the section that goes quiet,
+ * and empties that section's OWN last bar down to the kick (or the bed,
+ * when [bass] is on). A pull-up sits on the section pulled INTO. The
+ * boundary between sections i and i+1 is rewritten by `sections[i].drop`
+ * and by `sections[i+1].pullUp`, so a plan edit turns one off when it
+ * turns the other on ([SongPlan.withDrop], [SongPlan.withPullUp]). Off
+ * unless asked for.
  */
 data class PlanSection(
     val name: String,
@@ -67,6 +75,7 @@ data class PlanSection(
     val seed: Int = 0,
     val bass: Boolean = SectionNames.bassUnder(name),
     val pullUp: Boolean = SectionNames.pullsUpInto(name),
+    val drop: Boolean = false,
 ) {
     init {
         require(name.isNotBlank()) { "a section needs a name" }
@@ -124,7 +133,19 @@ data class SongPlan(val seed: Int, val sections: List<PlanSection>) {
 
     fun withBass(i: Int, on: Boolean): SongPlan? = replaced(i) { it.copy(bass = on) }
 
-    fun withPullUp(i: Int, on: Boolean): SongPlan? = replaced(i) { it.copy(pullUp = on) }
+    /** Turning a pull-up on turns off the DROP of the section before it: they would both rewrite the same boundary. */
+    fun withPullUp(i: Int, on: Boolean): SongPlan? {
+        val next = replaced(i) { it.copy(pullUp = on) } ?: return null
+        if (!on || i == 0 || !sections[i - 1].drop) return next
+        return next.copy(sections = next.sections.toMutableList().also { it[i - 1] = it[i - 1].copy(drop = false) })
+    }
+
+    /** Turning a DROP on turns off the pull-up of the section after it, the other rewrite of the same boundary. The last section has none after it. */
+    fun withDrop(i: Int, on: Boolean): SongPlan? {
+        val next = replaced(i) { it.copy(drop = on) } ?: return null
+        if (!on || !(sections.getOrNull(i + 1)?.pullUp ?: false)) return next
+        return next.copy(sections = next.sections.toMutableList().also { it[i + 1] = it[i + 1].copy(pullUp = false) })
+    }
 
     /** Every unlocked section redrawn with [newSeed]; locked ones keep the seed they have. */
     fun rerolled(newSeed: Int): SongPlan =

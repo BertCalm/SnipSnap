@@ -341,6 +341,13 @@ class UserPresetsTest {
                 val promoted = com.snipsnap.synth.EtchPatch.fromJsonText((call.positional.single() as KotlinLiteral.Str).value)
                 assertEquals(preset, promoted, "${preset.name}: root, velocity and model promotion")
                 assertEquals(preset.macros.mapValues { it.value.toRawBits() }, promoted.macros.mapValues { it.value.toRawBits() })
+            } else if (preset is com.snipsnap.synth.TerraPatch) {
+                val call = KotlinLiteral.parse(line.removeSuffix(",")) as KotlinLiteral.Call
+                assertEquals("fromJsonText", call.name)
+                assertEquals("TerraPatch", (call.receiver as KotlinLiteral.Call).name)
+                val promoted = com.snipsnap.synth.TerraPatch.fromJsonText((call.positional.single() as KotlinLiteral.Str).value)
+                assertEquals(preset, promoted, "${preset.name}: striker promotion")
+                assertEquals(preset.macros.mapValues { it.value.toRawBits() }, promoted.macros.mapValues { it.value.toRawBits() })
             } else if (preset is com.snipsnap.synth.ScuffPatch) {
                 val call = KotlinLiteral.parse(line.removeSuffix(",")) as KotlinLiteral.Call
                 assertEquals("fromJsonText", call.name)
@@ -1313,6 +1320,11 @@ class UserPresetsTest {
                 assertEquals(com.snipsnap.synth.EtchPatch::class.java, decoder.returnType,
                     "ETCH promotion retains the root, velocity and model version")
                 assertTrue("private val promoted:" in text, "ETCH promotions need a destination beside the heard bank")
+            } else if (engine == com.snipsnap.synth.TerraPatch.ENGINE) {
+                val decoder = com.snipsnap.synth.TerraPatch.Companion.javaClass.getMethod("fromJsonText", String::class.java)
+                assertEquals(com.snipsnap.synth.TerraPatch::class.java, decoder.returnType,
+                    "TERRA promotion retains a struck pad's captured striker")
+                assertTrue("private val promoted:" in text, "TERRA promotions need a destination beside the kept bank")
             } else if (engine == com.snipsnap.synth.ScuffPatch.ENGINE) {
                 val decoder = com.snipsnap.synth.ScuffPatch.Companion.javaClass.getMethod("fromJsonText", String::class.java)
                 assertEquals(com.snipsnap.synth.ScuffPatch::class.java, decoder.returnType,

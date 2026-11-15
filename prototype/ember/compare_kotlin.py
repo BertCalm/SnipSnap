@@ -50,7 +50,12 @@ def aligned_corr(a, b):
 
 
 rows = []
-for v in e.VOICES:
+# The Kotlin port covers the voices it renders; voices added to the prototype since (round 2L's Latin percussion,
+# awaiting the owner's listen) have no Kotlin clips yet and are listed, not compared.
+pending = [v for v in e.VOICES if not os.path.exists(os.path.join(KOTLIN, "hard", v.lower() + ".wav"))]
+if pending:
+    print("not in the Kotlin port yet:", ", ".join(pending))
+for v in (v for v in e.VOICES if v not in pending):
     tag = v.lower()
     kh, ks = read("hard", tag), read("soft", tag)
     kt = [read("takes", f"{tag}-take{t}") for t in range(4)]

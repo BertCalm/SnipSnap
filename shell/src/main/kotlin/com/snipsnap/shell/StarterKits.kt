@@ -815,6 +815,26 @@ object StarterKits {
             seeded = false, tempoBpm = com.snipsnap.synth.ClutterKits.Kit.MICRO.bpm.toFloat(),
         ) { com.snipsnap.synth.ClutterKits.build(com.snipsnap.synth.ClutterKits.Kit.MICRO) },
         Starter(
+            "ember", "EMBER",
+            "A live jazz kit in a small club in 1962, hard bop on sticks: an open calfskin kick feathered under the band, a crisp snare, a riveted ride carrying the time, a press roll and a mallet cymbal swell. Three touch zones, four takes.",
+            seeded = false, tempoBpm = com.snipsnap.synth.EmberKits.Kit.CLUB.bpm.toFloat(),
+        ) { com.snipsnap.synth.EmberKits.build(com.snipsnap.synth.EmberKits.Kit.CLUB) },
+        Starter(
+            "ember-after-hours", "EMBER AFTER HOURS",
+            "Three in the morning, a ballad on brushes: slow sweeps, taps on 2 and 4, a far sizzle, a damped kick, two people snapping at the back, a brush roll. Three touch zones, four takes.",
+            seeded = false, tempoBpm = com.snipsnap.synth.EmberKits.Kit.AFTER_HOURS.bpm.toFloat(),
+        ) { com.snipsnap.synth.EmberKits.build(com.snipsnap.synth.EmberKits.Kit.AFTER_HOURS) },
+        Starter(
+            "ember-soul-jazz", "EMBER SOUL JAZZ",
+            "The organ-trio set: a fat loose backbeat, tambourine and the room clapping, a sizzle crash, two congas, a snare roll, the 1962 chain pushed warmer. Three touch zones, four takes.",
+            seeded = false, tempoBpm = com.snipsnap.synth.EmberKits.Kit.SOUL.bpm.toFloat(),
+        ) { com.snipsnap.synth.EmberKits.build(com.snipsnap.synth.EmberKits.Kit.SOUL) },
+        Starter(
+            "ember-free", "EMBER FREE",
+            "The late set: mallets on toms tuned wide, a bowed cymbal, snares off, an elbow in the floor tom, loose rattling hats and a cymbal swell. Three touch zones, four takes.",
+            seeded = false, tempoBpm = com.snipsnap.synth.EmberKits.Kit.FREE.bpm.toFloat(),
+        ) { com.snipsnap.synth.EmberKits.build(com.snipsnap.synth.EmberKits.Kit.FREE) },
+        Starter(
             "meridian-materials", "MERIDIAN MATERIALS",
             "Sixteen finite pads across four ringing voices, with three touch levels and five held-sound captures.",
             seeded = false,
@@ -883,14 +903,30 @@ object StarterKits {
         Starter(genre.id, genre.title.uppercase(java.util.Locale.ROOT), "Latin percussion, three velocities and four takes per voice, with a hand-drum roll and cuica.", seeded = false) {
             com.snipsnap.synth.PatioPerformance.build(genre)
         }
-    }).plus(
+    }).plus(listOf(
         // Appended after PATIO: the stored starter order only grows at the end.
         Starter(
             SplayDelivery.BODIES_STARTER_ID, "SPLAY BODIES",
             "Five more things SPLAY's catches strike: WIRE, RUB, AIR, BAR and SKIN, each as you kept it.",
             seeded = false,
         ) { SplayDelivery.bodyStarterPads() },
-    )
+        // TERRA's three genre kits, owner KEEP in round terra-presets-1, appended after SPLAY BODIES.
+        Starter(
+            "terra-sahel", "TERRA SAHEL",
+            "West African TERRA kit: a deep udu, djembe bass, tones and slaps, two bells and a pentatonic balafon.",
+            seeded = false,
+        ) { com.snipsnap.synth.TerraGenreKits.build(com.snipsnap.synth.TerraGenreKits.Kit.SAHEL) },
+        Starter(
+            "terra-maqam", "TERRA MAQAM",
+            "Darbuka-led TERRA kit: doums, teks and kas across three heads, a clay drop and two bells.",
+            seeded = false,
+        ) { com.snipsnap.synth.TerraGenreKits.build(com.snipsnap.synth.TerraGenreKits.Kit.MAQAM) },
+        Starter(
+            "terra-punjab", "TERRA PUNJAB",
+            "Dholak and tabla TERRA kit: dholak booms, bayan bends, dayan strokes, a cajon backbeat and bells.",
+            seeded = false,
+        ) { com.snipsnap.synth.TerraGenreKits.build(com.snipsnap.synth.TerraGenreKits.Kit.PUNJAB) },
+    ))
 
     fun byId(id: String): Starter? = ALL.firstOrNull { it.id == id }
 }

@@ -1,8 +1,9 @@
 # EMBER: design brief, round-0 audition and round-1 Kotlin port
 
-Status: **round 1, the Kotlin port (2026-11-15), not yet heard.** Round 0e's Python renders are the sound
-baseline: the owner heard them on 2026-11-15, said "Much better", then "Proceed". `Ember.kt` ports all 27 voices;
-the four kits are not on the shelf yet (round 2). The owner's listens so far:
+Status: **round 2, the four kits on the shelf (2026-11-15), not yet heard from the app.** The owner approved the
+engine's sound on 2026-11-15 ("I've heard the sound and approve", round 1b): `Ember.MODEL_VERSION` 1. `EmberKits`
+puts the four kits on the shelf as FRESH TAPE starters, proved through saving, playback and MPC 3 export. The owner
+asked for a fifth kit, Latin jazz, with new percussion voices heard first in Python. The owner's listens so far:
 - "Cymbals need a lot of work. Sounds like hitting sheet metal." Round 0b rebuilt every cymbal and hat from
   measurements of real cymbals.
 - "Sweeps sound like hail hitting a roof." Round 0c rebuilt the brush sweep and the brush roll from
@@ -12,13 +13,19 @@ the four kits are not on the shelf yet (round 2). The owner's listens so far:
 - "I meant all the kits." Round 0e brightens every kit.
 - On 2026-11-15 the owner heard rounds 0b to 0e (listening page version 12) and said "Much better". This
   records the direction improving. It is not yet an acceptance of the voices or the kits as a baseline.
-
 - "Proceed" (2026-11-15): taken as round 0e kept as the sound, and the Kotlin round (round 1, below) built
   against it.
+- "Swell cuts abruptly" (2026-11-15, the round-1 listening page). Round 1b lets the long voices ring out. The
+  owner chose a natural ring-out of about 2.5 s for the swell, and the same treatment for the bow and both rolls.
+- "I've heard the sound and approve" (2026-11-15), after the round-1b listening page (version 2). It sets every
+  voice's Kotlin hit beside the Python one, with its soft hit and four takes. The voices' sound is approved; the
+  kits have not been heard from the Kotlin engine yet.
+- "Start round 2 maybe just add Latin jazz to the lineup" (2026-11-15). Asked whether Latin jazz should use the
+  approved voices or new ones, the owner chose new Latin percussion first (timbales, cowbell, clave, bongos, guiro,
+  shaker). Round 2 puts the four approved kits on the shelf; the Latin jazz kit follows its voices' listen.
 
-Each round is below. Nothing else changed sound, and nothing else has been heard yet. No one has listened to the
-Kotlin renders. The engine stays in progress until every applicable owner gate has evidence (see "Gates" below and the gates entry in
-[ENGINE_ACCEPTANCE_GATES.md](ENGINE_ACCEPTANCE_GATES.md#ember-round-1-kotlin-2026-11-15-not-heard-shelf-and-hardware-open)).
+Each round is below. Nothing else changed sound. The engine stays in progress until every applicable owner gate has evidence (see "Gates" below and the gates entry in
+[ENGINE_ACCEPTANCE_GATES.md](ENGINE_ACCEPTANCE_GATES.md#ember-round-2-four-kits-on-the-shelf-2026-11-15-listen-and-hardware-open)).
 
 Prototype: [`prototype/ember/`](../prototype/ember/) (`ember_proto.py` is the model, `kits.py` the four kits
 and their grooves, `measures.py` CLUTTER's house distance measures, `gen_audition.py` renders and measures,
@@ -34,6 +41,170 @@ Repository truth: read at `8742c5b8` (2026-11-14). APIs named here were grepped:
 `Soot.render(voice, macros, velocity, take, model)` / `Clutter.render(voice, macros, velocity, take)` as the
 drum-engine shape to copy. `EMBER` is a working name: the word is already a CIRCUIT preset ("EMBER PULSE"),
 an ALLOY preset ("Endless Ember") and a name in `shell/.../Names.kt`. It is not an engine name anywhere.
+
+## Round 2b: the bowed cymbal, lower (2026-11-15)
+
+**What the owner said:** "The bowed cymbal is piercing. Maybe it should be a bit lower or pulled back a bit."
+
+**Why it pierced.** The bow locks to one cymbal mode and stacks its harmonics on it: at round 0e's 1379 Hz they sat
+at 2.8, 4.1, 5.5 and 8.3 kHz, and on the Free kit's Bowed Cymbal pad the 4 to 8 kHz octave was only 8 dB under the
+strongest. That is where the ear is most sensitive.
+
+**What changed** (prototype and Kotlin): the lock moves to the strongest fitted mode between 1 and 1.3 kHz, 1243 Hz
+at TUNE .5, about two semitones lower. Not further: round 0d's 732 Hz was "too middy". Measured over four takes
+before choosing, as dB under the strongest band:
+
+| Version | 2-4 kHz | 4-8 kHz | 8-16 kHz |
+|---|---:|---:|---:|
+| Round 0e, as heard | -10.8 | -11.1 | -22.4 |
+| The lower lock only (chosen) | -16.8 | -21.8 | -40.8 |
+| The upper harmonics and the direct tone pulled back only | -13.4 | -15.4 | -27.8 |
+| Both | -19.0 | -27.5 | -41.2 |
+
+The lower lock does most of it by itself (its harmonics land on quieter modes), so the bow keeps its approved bite
+and the "both" version, likely dull, was not taken. On the Free kit's pad, from the app (read back from the MPC 3
+export): 2-4 kHz -5.6 to -15.4 dB, 4-8 kHz -8.0 to -22.5, 8-16 kHz -15.1 to -37.1. `Ember.MODEL_VERSION` and
+`EmberKits.VERSION` stay 1: nothing has saved an EMBER pad or kit yet.
+
+One test changed its measure, not its bar. `EmberTest`'s velocity probe looked at every voice's first 150 ms; the
+lower bow's soft and hard hits differ there by only 1.0 dB (1.5 in Python), because the bow's first 150 ms is the
+start of its draw. Over the whole render they differ by 3.1 dB (3.2 in Python). The moving voices (the sweeps, the
+rolls, the swell and the bow) are now measured over their whole render, as `EmberKits` already levels them; the bar
+stays 1.8 dB. The Kotlin bow is 2.46 dB from its nearest Python take, inside Python's own spread (1.58 to 5.17 dB
+over eight takes).
+
+## Round 2L: Latin percussion, previewed in Python (2026-11-15)
+
+**What the owner said:** "Start round 2 maybe just add Latin jazz to the lineup", then chose "New sounds first":
+timbales, cowbell, clave, bongos, guiro and shaker, heard before they go into the app.
+
+**The voices** (`prototype/ember/ember_proto.py`, eight new, 35 in all):
+- **COWBELL, CLAVE, BONGO_HIGH, BONGO_LOW**: their CC0 recordings' own resonances, attack and residual, fitted with
+  the fitter EMBER's cymbals use (`fit_ember_latin.py`; 200, 120, 160 and 160 modes). Controls TUNE, DAMP, DISTANCE,
+  WARMTH. Velocity follows each recording's soft layer, as the cymbals do.
+- **SHAKER**: the large shaker's single hit as band envelopes (as the closed hats). The library recorded one
+  dynamic, so the soft table is the hard one with its top down (1.5 dB per third-octave over 2 kHz, at most 9 dB;
+  by ear).
+- **GUIRO**: a click for every ridge the stick crosses. Measured from the recordings: the click's spectrum, the
+  ridge rate (median 52 a second, 31 to 77 across the strokes) and the stroke lengths (0.11 s short scrape to 1.22 s
+  slow). SPEED runs from the slow stroke to the short scrape; the render's length follows it. By ear: the stroke's
+  speed curve and the click's 2 to 7 ms ring.
+- **TIMBALE and PAILA**: physical models. There is no CC0 timbale recording in the libraries the repository uses.
+  The timbale is a thin, tight head (a calf membrane with a tighter head's slower high-mode loss) over a steel
+  shell, TUNE spanning the pair (about 290 Hz at .3, 380 Hz at .7) and RIM moving the stick onto the rim (the shell
+  rings, a rimshot cracks). The paila is the stick on the shell: the shell's modes, a little of the head, the
+  stick's click. Everything about both is by ear.
+
+**Measured against the recordings** (house distance over the first 150 ms; a fit is good when it sits about as far
+from its recording as a second take of the instrument does):
+- Before EMBER's chain: the cowbell 5.0 dB from its recording (another strike of it 6.4), the clave 6.7 (7.1), the
+  high bongo 4.8 (4.6), the low bongo 7.0 (5.5). Spectral centroids within 4 to 9 % of the recordings'.
+- Through the chain at the closest DISTANCE and no WARMTH: 8 to 11 dB, the extra 3 to 4 dB being the club's room
+  and the voicing every EMBER voice shares.
+- The guiro: 8.2 dB from the medium stroke, where the medium and slow strokes are 8.8 dB from each other; its
+  centroid 4.8 kHz against 4.7. The first build put every band's noise at its bandwidth's energy, which made it
+  15.9 dB away and too bright; each band is now normalized to its measured level.
+
+**The Latin jazz kit** (`kits.py` LATIN, 118 BPM): a cha-cha-chá in the small club. The first draft was a 176 BPM
+mambo on a 2-3 clave, which turned out to be nearly CALABASH's Afro-Cuban jazz kit (merged the same day: a 176 BPM
+mambo from the big band's Latin section, in a big dark studio). The owner: "We can make the Latin jazz kit just
+different than afro-cuban jazz from calabash". So EMBER's is another tempo and another dance, with a drummer's kit
+at its centre: the jazz drummer plays Latin on the kit (the clave on the snare rim, the hat foot on 2 and 4, a light
+kick) while one percussionist adds the guiro (leading: long on 1 and 3, short on the "4 and" of the cha-cha-chá), a
+cha-cha bell on the quarters, timbales, bongos, a conga on the cha-cha-chá and a shaker; a clave and the cymbal swell
+(its riser, the percussion gate) on A15/A16. Close and bright through the club's chain. The hi-hat chokes itself,
+and so does the guiro (one guiro: each stroke stops the last). Its zones use round 2's loudness law, the guiro
+matched over its whole stroke.
+
+**Sources.** VCSL (CC0 1.0), github.com/sgossner/VCSL at `c1ea7bcc`, the Mid microphone; nineteen recordings, listed
+with their sha256 in `prototype/ember/NOTICE.txt`. Only fitted numbers are in the repository (`latin.json`).
+
+**Listening page, version 5** (<https://claude.ai/artifact/21zU3g4oFcDfH8GoV8gKuz>): each new voice hard, soft, in
+four takes and at each control's ends, beside its recordings, and the Latin jazz kit as a fifth tab in the pad
+grid, with its groove. Not heard yet. Nothing here is in Kotlin: the voices are ported, and the kit goes on the
+shelf, after the owner's listen.
+
+## Round 2: the four kits on the shelf (2026-11-15)
+
+**What the owner said:** "Start round 2 maybe just add Latin jazz to the lineup". The four kits below go on the
+shelf now; Latin jazz waits for its new voices (see "Next rounds").
+
+**What was built.** `synth/.../EmberKits.kt` holds the four kits, generated pad for pad from
+`prototype/ember/kits.py` (no setting retyped): EMBER (138 BPM), EMBER AFTER HOURS (66), EMBER SOUL JAZZ (104) and
+EMBER FREE (80). Each is sixteen one-shot pads; each pad a grid of three velocity zones (0.35, 0.65, 1.0, as the
+approved audition played) of four takes, rendered by the engine. Every pad carries its provenance (engine, kit,
+kit version, model, voice, velocities, takes). They are FRESH TAPE starters under SKINS (`StarterKits`,
+`StarterShelf`; 148 starters).
+
+Three choices, each measured:
+- **The kits keep their own layout.** AutoPlace would move the rolls and the brushes; the approved kits put the
+  roll or riser on A15/A16 (the percussion gate) and the brushes where a brush player reaches. A pad's kit role is
+  its voice's class.
+- **Hats choke as one hi-hat.** The pads on a kit's hi-hat (kits.py `CHOKES`) share mute group 1: A03, A04 and A11
+  on EMBER, A03 and A13 on After Hours, A03, A04 and A07 on Soul Jazz, A12 and A13 on Free. The prototype's chokes
+  were one-way (the foot closes the open hat); an MPC mute group is mutual, as one hi-hat is.
+- **Level within a zone is CLUTTER's law, not the audition's.** The audition peak-matched every take. Measured on
+  these kits, that left a zone's takes up to 5 dB apart in loudness: the hats 2 to 5 dB, the quick sweep 4.8, the
+  bow 5.4. A hat on the eighths would jump. Now a zone's takes are matched in loudness and the zone is set so its
+  highest-peaking take peaks at 0.92. Loudness is measured over the first 150 ms for a struck pad, and over the
+  whole render for the sweeps, the rolls, the swell and the bow, whose first 150 ms is a soft start.
+
+**Proved.**
+- `EmberKitsTest`, on every pad of every kit: a built kit is the same bytes as its pads rendered one by one, twice;
+  finite, centred, under 0.98 and silent at the end; every zone's takes equally loud within 0.1 dB with the highest
+  peak at 0.92; soft against hard at least 1.8 dB apart in shape (the house measure; a waveform distance undersells
+  the elbow tom, whose deep tone keeps its phase at every velocity: 0.049 there, about 10 dB here); four different
+  strikes per zone; classes, chokes and provenance; every kit carries a roll or riser; four distinct kits; no maker
+  names.
+- `EmberKitTest` takes a kick, a hat and the 5 s swell through saving, reloading, `PadHit.resolve` and the MPC 3
+  exporter, and checks that playback picks the zone by velocity and deals the four takes in order, then repeats.
+- `./gradlew :shell:generateEmberKits` does every pad of all four kits: "Verified EMBER: 16 pads, 192 slices, saved
+  PCM + playback + MPC 3 track", and the same for the other three (768 slices). It writes the listening pack under
+  `testkit/ember-kits/` (gitignored).
+- `StarterKitsTest` and `StarterShelfTest` hold the four starters (provenance, three zones of four takes, one-shot,
+  filed once on the shelf).
+
+**Build time.** A kit builds in 14 to 22 s on this machine (four cores; its sixteen pads render in parallel),
+against CLUTTER's 4 to 7 s: one EMBER strike is 0.1 to 1.2 s of engine, and a kit is 192 strikes. On a phone,
+expect several times that when a starter is opened. Faster renders would change the sound slightly (the room at
+44.1 kHz, pruning quiet modes) and wait for their own listen.
+
+**Listening page, version 3** (<https://claude.ai/artifact/21zU3g4oFcDfH8GoV8gKuz>): the four kits as playable 4x4
+pad grids, every pad read back from the MPC 3 export, with a velocity choice, the takes dealt in order, the hi-hat
+choking, and each kit's groove played from the same samples. Not heard yet.
+
+## Round 1b: the long voices ring out (2026-11-15)
+
+**What the owner said:** "Swell cuts abruptly", on the round-1 listening page. Asked how it should end, the owner
+chose a natural ring-out of about 2.5 s after the build, and the same treatment for the bowed cymbal and both rolls.
+
+**What was wrong.** Each long voice was cut by the closing 60 ms fade while it was still sounding. The swell's
+mallets roll until 2.6 s and the wash peaks there, but the pad ended at 3.0 s, only 2.2 dB under its peak. The bow
+ended 12.6 dB under, the press roll 16.1 and the brush roll 15.0 (Python, the last 100 ms before the fade against
+the loudest 100 ms). The Python prototype had the same cut; the Kotlin port copied it.
+
+**What changed** (prototype and Kotlin together):
+- **The rolls** run 3.0 s (were 2.6). After the accent at 2.3 s they die away on their own: past 48 dB under by
+  2.8 s.
+- **The bowed cymbal** runs 3.6 s (was 2.4). Once the bow leaves (2.3 s), the cymbal takes an exponential fade
+  from 2.4 s, reaching an extra 30 dB down at the end.
+- **The swell** runs 5.0 s (was 3.0). The flat ride under it rings far longer than a pad: left alone it is still
+  only 17 dB under its peak at 7.2 s. So from 2.8 s, just after the wash peaks, it takes an exponential fade
+  reaching an extra 50 dB down at the end. An exponential fade is a straight line in dB, so it sounds like the
+  cymbal decaying faster, not like a volume knob. By ear, labelled as such: `TAILS` in the prototype and the
+  engine.
+- A longer render draws the bow's and the rolls' noise afresh (the generator runs in order), so their takes are
+  new draws of the same law. The swell's strokes are drawn before anything that depends on its length.
+
+**Measured.** Over four takes, hard and soft, the last 100 ms before the closing fade now sit 53 to 58 dB under
+the peak on the swell, 53 to 80 on the bow, 49 to 55 on the press roll and 54 to 56 on the brush roll (Python).
+Kotlin against Python (`compare_kotlin.py`): all 27 voices still inside the spread of Python's own takes.
+`EmberTest` adds a test: each of the four voices ends at least 40 dB under its peak, hard and soft, every take.
+Render time in the generator's cold run: the swell 1.15 s (was 1.24 s at 3.0 s), the bow 0.52 s, the rolls
+0.50 and 0.68 s; no slower than round 1.
+
+`Ember.MODEL_VERSION` stays 1. Nothing has saved an EMBER pad yet: the engine has no presets and no kits, and it
+is not on the picker.
 
 ## Round 1: the Kotlin port (2026-11-15)
 
@@ -122,7 +293,7 @@ What is left is the fitted cymbals' 800 decaying sines (about 120 ms on the ride
 (about 80 ms) and the club's convolution at 176.4 kHz (about 65 ms). Each could be faster only by sounding
 slightly different (the room at 44.1 kHz, pruning quiet modes), so each waits for its own listen.
 
-Not heard: no one has listened to the Kotlin renders. The round-1 listening page sets every voice's Kotlin hit
+Heard since (see round 1b): the owner approved the sound on the round-1b page. The round-1 listening page sets every voice's Kotlin hit
 beside the Python hit, with its soft hit and four takes: <https://claude.ai/artifact/21zU3g4oFcDfH8GoV8gKuz>
 (private to the owner; published 2026-11-15).
 
@@ -408,8 +579,8 @@ BOWED_CYMBAL, CYMBAL_SWELL. Hats: HAT_FOOT (the 2-and-4 chick), HAT_CLOSED (stic
 1962 crowd snapping instead of clapping), CLAPS, TAMBOURINE, CONGA, STICKS (two sticks clicked: the count-in).
 Rolls: PRESS_ROLL.
 
-Long voices are declared PERC as BREAKER declares its riser: the rolls (2.6 s), the swell (3.0 s), the bow
-(2.4 s) and the slowest brush sweeps (a sweep is one full circle, 1.9 s at SPEED 0 down to 0.5 s, plus 0.35 s of
+Long voices are declared PERC as BREAKER declares its riser: the rolls (3.0 s since round 1b), the swell (5.0 s),
+the bow (3.6 s) and the slowest brush sweeps (a sweep is one full circle, 1.9 s at SPEED 0 down to 0.5 s, plus 0.35 s of
 room).
 
 ## The kits (four, sixteen pads each)
@@ -490,11 +661,11 @@ Between kits, the same pad slot:
 | Melodic, keygroup, chord tool | not applicable | a drum engine |
 | Articulation (HOLD, STRUM) | not applicable | finite hits; no picked or thumbed strings |
 | Percussion: roll or riser | authored, not heard | press roll, brush roll, snare roll and mallet swell on A15/A16 of every kit, rendered in Python; in Kotlin the swell's rise and the rolls' growth are tests (`EmberTest`) |
-| Drums: several genre kits on the shelf | authored, not on the shelf | three genre kits beside the EMBER kit, measured in Python; the shelf is round 2 |
+| Drums: several genre kits on the shelf | on the shelf (round 2), not heard there | four FRESH TAPE starters (`EmberKits`); Latin jazz to follow |
 | Velocity and round robin: rendering | verified in Kotlin by test (round 1) | `EmberTest`, `DeterminismTest`; see "Round 1" |
-| Velocity and round robin: saving, playback, export | open | the kits are not on the shelf yet (round 2); the page's pad grid is a browser stand-in |
+| Velocity and round robin: saving, playback, export | verified in software (round 2) | `generateEmberKits`: 768 slices through save, playback and MPC 3; `EmberKitTest`; MPC 2 keeps each zone's first take (format limit) |
 | The Kotlin port renders round 0e | measured (Python harness against Kotlin clips) | `compare_kotlin.py`: no brightness bias; 25 of 27 within Python's own four takes, the other two within 16 |
-| Sound character | open | round 0e heard as "Much better"; the Kotlin renders not heard |
+| Sound character | approved for the voices (2026-11-15) | the owner heard the round-1b listening page and approved; the kits' Kotlin audition is round 2 |
 
 ## Render budget
 
@@ -527,8 +698,10 @@ every mode (a fresh phase, detune and level). The Python medians are in "Measure
   which voices convince, whether these are the right four kits (a Latin jazz kit is the obvious swap for FREE if
   rebellious should mean something else), the WARMTH and DISTANCE defaults.
 - **Round 1:** done (above). The Kotlin renders wait for the owner's ear.
-- **Round 2:** the four kits on the shelf through the shared robin, `EmberKitTest` (saving, playback through
-  `PadHit.resolve`, MPC 3 export read-back), the picker entry with its on-device test.
+- **Round 2:** done (above), but for the picker entry and presets, which follow the owner's listen to the kits.
+- **Latin percussion (owner, 2026-11-15):** previewed in Python (round 2L, above). After the owner's listen: the
+  eight voices ported to `Ember.kt` (a model version bump, since the approved voices must not change), and the Latin
+  jazz kit as the fifth kit on the shelf.
 - **Round 3:** the owner's phone and MPC 3 checks.
 
 ## Why it is built this way
