@@ -26,6 +26,7 @@ object InstrumentStore {
     const val VERSION = 2
     const val STACK_VERSION = 3
     const val CYCLE_VERSION = 4
+    const val MPC_CYCLE_VERSION = 5
 
     /**
      * The longest release a sidecar may ask for. Every writer in the shop
@@ -45,7 +46,7 @@ object InstrumentStore {
     )
 
     /** One pitch zone; the headline sample remains its hardest layer for older callers. */
-    data class Zone(
+    data class Zone @JvmOverloads constructor(
         val lowNote: Int,
         val highNote: Int,
         val rootNote: Int,
@@ -58,6 +59,7 @@ object InstrumentStore {
         val layers: List<Layer> = emptyList(),
         val release: Float? = null,
         val cycleLayers: Boolean = false,
+        val mpcVelocityCycle: Boolean = false,
     ) {
         val playableLayers: List<Layer>
             get() = layers.ifEmpty { listOf(Layer(sample, frameCount, loopStartFrame)) }
@@ -119,6 +121,7 @@ object InstrumentStore {
                     },
                     volumeRelease = zone.release,
                     cycleLayers = zone.cycleLayers,
+                    mpcVelocityCycle = zone.mpcVelocityCycle,
                 )
             },
             volumeRelease = playableRelease,
@@ -138,6 +141,7 @@ object InstrumentStore {
     /** The sidecar's JSON text for [program], without touching the disk. */
     fun render(program: KeygroupProgram, dataDirName: String): String {
         val cycling = program.keygroups.any { it.cycleLayers }
+        val mpcCycling = program.keygroups.any { it.mpcVelocityCycle }
         val extended = cycling || program.stackZones || program.keygroups.any { it.volumeRelease != null }
         val zones = program.keygroups.map { kg ->
             val layer = kg.layers.last()
@@ -160,6 +164,7 @@ object InstrumentStore {
                     }),
                 ).apply {
                     if (cycling) put("cycleLayers", JsonValue.Bool(kg.cycleLayers))
+                    if (mpcCycling) put("mpcVelocityCycle", JsonValue.Bool(kg.mpcVelocityCycle))
                     if (extended) put("release", kg.volumeRelease?.let { JsonValue.Num(it.toDouble()) } ?:
                         if (cycling) JsonValue.Null else JsonValue.Num(program.volumeRelease.toDouble()))
                 },
@@ -167,7 +172,7 @@ object InstrumentStore {
         }
         val obj = JsonValue.Obj(
             linkedMapOf<String, JsonValue>(
-                "version" to JsonValue.Num((if (cycling) CYCLE_VERSION else if (extended) STACK_VERSION else VERSION).toDouble()),
+                "version" to JsonValue.Num((if (mpcCycling) MPC_CYCLE_VERSION else if (cycling) CYCLE_VERSION else if (extended) STACK_VERSION else VERSION).toDouble()),
                 "name" to JsonValue.Str(program.name),
                 "release" to JsonValue.Num(program.volumeRelease.toDouble()),
                 "voiceMode" to JsonValue.Str(program.voiceMode.name),
@@ -179,7 +184,7 @@ object InstrumentStore {
     }
 
     /**
-     * Read v1 single-sample, v2 velocity-layer, v3 synchronized-stack or v4 cycling sidecars. Every field in the selected
+     * Read v1 single-sample, v2 velocity-layer, v3 synchronized-stack, v4 cycling or v5 MPC matching-window sidecars. Every field in the selected
      * version is required, so an interrupted write cannot silently lose its soft layers.
      *
      * And on values no writer here produces, since a sidecar is also a file a
@@ -192,7 +197,7 @@ object InstrumentStore {
     fun read(file: File): Instrument {
         val obj = Json.parse(file.readText()).obj()
         val version = obj["version"]?.int() ?: throw JsonException("instrument has no version")
-        if (version !in 1..CYCLE_VERSION) throw JsonException("unsupported instrument version $version")
+        if (version !in 1..MPC_CYCLE_VERSION) throw JsonException("unsupported instrument version $version")
         val name = obj["name"]?.str() ?: throw JsonException("instrument has no name")
         val releaseRaw = obj["release"]?.num() ?: throw JsonException("instrument has no release")
         if (!releaseRaw.isFinite() || releaseRaw < 0.0 || !releaseRaw.toFloat().isFinite()) {
@@ -207,6 +212,10 @@ object InstrumentStore {
             val o = z.obj()
             val cycling = if (version >= CYCLE_VERSION) o["cycleLayers"]?.bool()
                 ?: throw JsonException("zone has no cycleLayers") else false
+            val mpcCycling = if (version >= MPC_CYCLE_VERSION) o["mpcVelocityCycle"]?.bool()
+                ?: throw JsonException("zone has no mpcVelocityCycle") else false
+            if (mpcCycling && !cycling)
+                throw JsonException("MPC velocity cycle requires cycling across multiple velocity windows")
             val layers = if (version == 1) emptyList() else {
                 val values = (o["layers"] as? JsonValue.Arr)?.items ?: throw JsonException("zone has no velocity layers")
                 if (values.size !in 1..8) throw JsonException("a keygroup zone has 1..8 velocity layers")
@@ -237,6 +246,8 @@ object InstrumentStore {
                         throw JsonException("cycle takes must be contiguous within each velocity window")
                 }
             }
+            if (mpcCycling && (!cycling || layers.map { it.velStart to it.velEnd }.distinct().size < 2))
+                throw JsonException("MPC velocity cycle requires cycling across multiple velocity windows")
             val zone = Zone(
                 lowNote = o["low"]?.int() ?: throw JsonException("zone has no low note"),
                 highNote = o["high"]?.int() ?: throw JsonException("zone has no high note"),
@@ -246,6 +257,7 @@ object InstrumentStore {
                 loopStartFrame = o["loopStart"]?.long() ?: throw JsonException("zone has no loop start"),
                 layers = layers,
                 cycleLayers = cycling,
+                mpcVelocityCycle = mpcCycling,
                 release = if (version >= CYCLE_VERSION && o["release"] is JsonValue.Null) null else if (version >= STACK_VERSION) {
                     val r = o["release"]?.num() ?: throw JsonException("zone has no release")
                     if (!r.isFinite() || r < 0 || !r.toFloat().isFinite()) throw JsonException("invalid zone release $r")

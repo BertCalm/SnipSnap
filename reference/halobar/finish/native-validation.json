@@ -1,0 +1,8 @@
+{
+  "state": "passed",
+  "publishedCases": 408,
+  "additionalTakeCases": 72,
+  "allFloat32Exact": true,
+  "model": 1,
+  "ownerListeningApproved": true
+}

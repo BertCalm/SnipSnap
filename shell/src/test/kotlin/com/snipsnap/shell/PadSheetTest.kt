@@ -206,6 +206,25 @@ class PadSheetTest {
     }
 
     @Test
+    fun `a tap of ON BEAT is the dotted-eighth clip the owner chose - echoed at AMT 0_7 on three sixteenths`() {
+        // The gate (2026-11-14): the dotted eighth at a tap as heard. The grid's shared division is an eighth, so ON
+        // BEAT carries its own, and the card's default AMT with the default dials is that clip.
+        assertEquals(PadSheet.Treatment.Keyed("echoed"), PadSheet.treatmentFor("ONBEAT"))
+        assertEquals("ON BEAT", PadSheet.displayLabel("ONBEAT"))
+        assertEquals("3/16", Keyed.Dials().echoDivision)
+        assertEquals("1/8", Keyed.Dials().division, "ON BEAT moved the grid's shared division")
+        assertEquals("3/16", Keyed.divisionFor("echoed", Keyed.Dials()))
+        assertEquals("1/8", Keyed.divisionFor("pumped", Keyed.Dials()))
+        val snare = com.snipsnap.synth.Onset.render(com.snipsnap.synth.OnsetVoice.SNARE)
+        val done = Keyed.apply("echoed", snare, Keyed.Context(null, 92f), PadSheet.DEFAULT_AMOUNT)
+        val clip = com.snipsnap.synth.OnBeat.echo(snare, 92f, "3/16", 0.7f)
+        kotlin.test.assertContentEquals(clip.samples, done.snip.samples, "an ON BEAT tap is not the dotted-eighth clip")
+        assertEquals("3/16 AT 92 BPM", done.keyLabel)
+        // A drum is what it is most for: nothing is refused.
+        assertNull(Keyed.refusal("echoed", snare, Keyed.Context(null, 92f), PadSheet.DEFAULT_AMOUNT))
+    }
+
+    @Test
     fun `segmentFor is eraFor's inverse for every era segment`() {
         for (segment in PadSheet.SEGMENTS - PadSheet.NONE - PadSheet.SMEAR - PadSheet.DUST) {
             val era = PadSheet.eraFor(segment)!!
@@ -227,9 +246,9 @@ class PadSheetTest {
         assertEquals(listOf("PUNCH", "RING", "DUB", "VINYL", "PHASE", "CONTOUR"), PadSheet.CHARACTER_SEGMENTS)
         assertEquals(listOf("SLAP", "WASH", "ROLL", "GATE", "ENSEMBLE", "SECTION"), PadSheet.TIME_SEGMENTS)
         assertEquals(listOf("FLIP", "STOP", "START", "PITCH"), PadSheet.TRANSPORT_SEGMENTS)
-        assertEquals(listOf("TUNE", "BODY", "WOBBLE", "ETERNAL", "PUMP"), PadSheet.KEYED_SEGMENTS)
+        assertEquals(listOf("TUNE", "BODY", "WOBBLE", "ETERNAL", "PUMP", "ONBEAT"), PadSheet.KEYED_SEGMENTS)
         assertEquals(listOf("DRIVE", "SUSTAIN", "WAH", "TOUCH", "ROCK", "FORGE", "DELAY", "ROOM", "FADE IN", "VIBRATO", "DIVE", "HUSH", "SUB", "REWIND", "TREM", "FLANGE", "ROTARY"), PadSheet.PEDAL_SEGMENTS)
-        assertEquals(49, PadSheet.ALL_SEGMENTS.size, "the card should hold 49 segments")
+        assertEquals(50, PadSheet.ALL_SEGMENTS.size, "the card should hold 50 segments")
     }
 
     /**
@@ -240,7 +259,7 @@ class PadSheetTest {
      * anything ended up on.
      */
     @Test
-    fun `the regroup keeps every chip the card already drew, adds its seven, the merge's DUST makes twenty-nine, ENSEMBLE thirty and SECTION thirty-one the pedals' two thirty-three, the wah's three thirty-six, FORGE thirty-seven, DELAY thirty-eight ROOM thirty-nine, FADE IN forty, VIBRATO forty-one, DIVE forty-two, HUSH forty-three, SUB forty-four, REWIND forty-five, TREM and FLANGE forty-seven, ROTARY forty-eight and PUMP forty-nine`() {
+    fun `the regroup keeps every chip the card already drew, adds its seven, the merge's DUST makes twenty-nine, ENSEMBLE thirty and SECTION thirty-one the pedals' two thirty-three, the wah's three thirty-six, FORGE thirty-seven, DELAY thirty-eight ROOM thirty-nine, FADE IN forty, VIBRATO forty-one, DIVE forty-two, HUSH forty-three, SUB forty-four, REWIND forty-five, TREM and FLANGE forty-seven, ROTARY forty-eight, PUMP forty-nine and ON BEAT fifty`() {
         val expected = setOf(
             // the twenty that existed before the regroup, plus the row-one
             // DUST chip a separate branch merged in later (`readDust`,
@@ -288,9 +307,11 @@ class PadSheetTest {
             "ROTARY",
             // PUMP's gate (2026-11-13): on the KEYED row
             "PUMP",
+            // ON BEAT's gate (2026-11-14): on the KEYED row, its sixth
+            "ONBEAT",
         )
         assertEquals(expected, PadSheet.ALL_SEGMENTS.toSet(), "the card's inventory changed")
-        assertEquals(49, PadSheet.ALL_SEGMENTS.size, "a chip is drawn twice or missing")
+        assertEquals(50, PadSheet.ALL_SEGMENTS.size, "a chip is drawn twice or missing")
     }
 
     @Test
@@ -443,6 +464,8 @@ class PadSheetTest {
         assertEquals(PadSheet.Applied(PadSheet.Treatment.Keyed("bodied"), 0.5f, "BODY"), PadSheet.read(bodied))
         val pumped = JsonValue.Obj(linkedMapOf<String, JsonValue>("keyed" to JsonValue.Str("pumped"), "key" to JsonValue.Str("1/8 AT 92 BPM"), "amount" to JsonValue.Num(0.7), "division" to JsonValue.Str("1/8")))
         assertEquals(PadSheet.Applied(PadSheet.Treatment.Keyed("pumped"), 0.7f, "PUMP"), PadSheet.read(pumped))
+        val echoed = JsonValue.Obj(linkedMapOf<String, JsonValue>("keyed" to JsonValue.Str("echoed"), "key" to JsonValue.Str("3/16 AT 92 BPM"), "amount" to JsonValue.Num(0.7), "division" to JsonValue.Str("3/16")))
+        assertEquals(PadSheet.Applied(PadSheet.Treatment.Keyed("echoed"), 0.7f, "ONBEAT"), PadSheet.read(echoed))
     }
 
     @Test
@@ -463,10 +486,12 @@ class PadSheetTest {
         assertEquals("NOISE GATE", PadSheet.displayLabel("HUSH"))
         assertEquals("TOUCH WAH", PadSheet.displayLabel("TOUCH"))
         assertEquals("REVERB", PadSheet.displayLabel("ROOM"))
+        // An id is one word: ON BEAT's chip (2026-11-14) is ONBEAT underneath.
+        assertEquals("ON BEAT", PadSheet.displayLabel("ONBEAT"))
         // SECTION is not renamed: open, needs a sound check.
         assertEquals("SECTION", PadSheet.displayLabel("SECTION"))
         // Every other segment on the card draws its own id unchanged.
-        for (segment in PadSheet.ALL_SEGMENTS - setOf("TUNE", "STOP", "START", "SLAP", "ETERNAL", "SKIM", "CONTOUR", "RING", "GATE", "HUSH", "TOUCH", "ROOM")) {
+        for (segment in PadSheet.ALL_SEGMENTS - setOf("TUNE", "STOP", "START", "SLAP", "ETERNAL", "SKIM", "CONTOUR", "RING", "GATE", "HUSH", "TOUCH", "ROOM", "ONBEAT")) {
             assertEquals(segment, PadSheet.displayLabel(segment), "$segment wasn't renamed - it should draw itself")
         }
     }

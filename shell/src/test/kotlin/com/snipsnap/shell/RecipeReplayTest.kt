@@ -183,6 +183,25 @@ class RecipeReplayTest {
     }
 
     @Test
+    fun `an ON BEAT recipe records the division it ran at and replays at it, the grid's own left alone`() {
+        val m = twins("OnBeat")
+        m.keyedPad(1, "echoed", 0.7f, dials = Keyed.Dials(echoDivision = "1/4"))
+        val recipe = m.pad(1)!!.recipe!!
+        assertEquals("1/4", (recipe.entries["division"] as JsonValue.Str).value)
+        val plan = RecipeReplay.plan(recipe) as RecipeReplay.Plan.KeyedPlan
+        assertEquals("1/4", plan.dials.echoDivision)
+        assertEquals(Keyed.Dials().division, plan.dials.division, "an ON BEAT recipe moved the grid's division")
+        RecipeReplay.apply(m, 2, recipe, "SNARE 02")
+        assertEquals(recipe, m.pad(2)!!.recipe)
+        assertTrue(bytes(m, 1).contentEquals(bytes(m, 2)), "the replay did not land on the same quarters")
+
+        // The chip's tap, the default dials, records the dotted eighth.
+        val t = twins("OnBeatTap")
+        t.keyedPad(1, "echoed", 0.7f)
+        assertEquals("3/16", (t.pad(1)!!.recipe!!.entries["division"] as JsonValue.Str).value)
+    }
+
+    @Test
     fun `smear, a patch and a robin deal replay through their own doors`() {
         val s = twins("Smear")
         s.smearPad(1, 0.4f)

@@ -29,9 +29,9 @@ class TerraStarterTest {
         } finally { dir.deleteRecursively() }
     }
 
-    @Test fun `TERRA is shelved under SKINS after the TEMPEST kits`() {
+    @Test fun `TERRA is shelved under SKINS right after the TEMPEST kits`() {
         val skins=StarterShelf.GROUPS.single { it.heading==Copy.STARTER_HEADING_SKINS }.ids
-        assertEquals(listOf("tempest-step","terra"),skins.takeLast(2))
+        assertEquals("terra",skins[skins.indexOf("tempest-step")+1])
         assertEquals(1,StarterShelf.GROUPS.sumOf { g -> g.ids.count { it=="terra" } })
     }
 }

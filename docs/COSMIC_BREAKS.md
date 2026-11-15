@@ -179,13 +179,51 @@ presented as a full-grid export.
 | Velocity/takes through rendering and saving | Three timbres × four takes, distinct PCM, native persistence checks |
 | Velocity/takes through playback | PadHit selection/gain checks across all velocities, including after SFZ import |
 | Full-grid export | SFZ round-trip verified; DecentSampler program fields verified |
-| MPC export acceptance | **Open**: MPC 3 WAV slice map and hardware cycling are not established; MPC 2 four-slot layout cannot carry a 3 × 4 grid on one pad |
+| MPC export acceptance | **Parked by owner, 2026-11-14**: MPC 3 slice-map/hardware acceptance is unverified. MPC 2 combined velocity/RR is exempt as a format limit; velocity windows remain checked |
 
-The repository contains the PSK track but no corresponding known-working sliced
-chain WAV; `reference/live3 room take.wav` contains ordinary fmt/LIST/data chunks
-only. Closing the MPC 3 gate requires a device-saved program **and its sliced WAV**
-with known velocity/cycle settings, followed by a load/re-save/playback check.
-A limitation disclosure does not turn that gate green.
+The repository already contains the owner's MPC reference corpus and shared
+velocity/round-robin implementations. A new reference upload is not a prerequisite
+for Cosmic integration. The existing PSK program establishes the layer anchors
+and cycle descriptors; it does not establish playback of our exported slice
+boundaries. Physical MPC playback remains a separate acceptance check. The owner parked
+the MPC 3 capture and exempted MPC 2 combined velocity/RR on 2026-11-14; see
+[the recorded decision](ENGINE_ACCEPTANCE_GATES.md#mpc-2-and-round-robin-owner-decision-2026-11-14).
+There is no outstanding request for the owner to supply files for this work. A
+limitation disclosure does not turn that gate green.
+
+### Shared-export reconciliation (2026-11-14)
+
+Reviewed against default-branch source `23cde0d1c`. The distinct shared paths are:
+
+- `KitExporter` / `RobinSplit` / `XpmWriter`: unzoned pads with Robin settings
+  become up to four separate take WAVs with `ZonePlay=0`. This is the cycling-layer
+  implementation landed in `56e8c90c7`; it does not require a chain WAV slice map.
+- Cosmic's pads have three explicit velocity zones, each with four takes. They
+  intentionally do not satisfy `KitPad.isRobinChain`. Routing them through the
+  unzoned exporter would lose the authored velocity dimension.
+- `Mpc3Exporter` preserves their complete chain WAVs and emits three layer
+  descriptors with base slices 0/4/8, increment 1, and cycle length 4.
+  `Mpc3TrackWriter` still identifies the embedded slice-map work as HH1.4;
+  this is a shared export limitation, not an absent Cosmic RR implementation.
+- XPM exports preserve the full WAV but select the first take of each velocity
+  zone. A complete audio file is not proof that all of its takes are selectable.
+- Native, SFZ and DecentSampler preserve the complete grid using the existing
+  shared model/writers. Their verification does not establish MPC playback.
+
+`CosmicBreaksRoundTripTest` now reuses Triad's `verifyTrack` check on actual MPC 3
+exports for all three Cosmic genres, compares all 54 exported WAVs per format
+byte-for-byte with the saved originals, and checks all 162 XPM velocity/anchor
+windows and non-cycling mode. The existing SFZ save/import/playback checks remain.
+Validation: the Cosmic round-trip test and seven shared chain tests passed,
+alongside the existing `KitExporterTest` and `XpmWriterTest` suites (43 focused
+tests in total). A full JVM regression run was started for delivery; its result
+is pending and is not counted as a pass here.
+These are serialized-file checks, not a hardware playback claim; the common
+`ExportReadBack` chain-zone SKIP is not counted as success.
+
+The original integration PR #1029 merged on 2026-11-11. Its JVM aggregate,
+Android build and native checks passed; its emulator job failed. Those historical
+results do not claim physical MPC acceptance or an entirely green CI run.
 
 ### Why it is built this way
 

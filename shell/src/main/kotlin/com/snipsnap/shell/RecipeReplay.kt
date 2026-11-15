@@ -134,13 +134,17 @@ object RecipeReplay {
                 is PadSheet.Treatment.Character -> Plan.Character(t.name, applied.amount)
                 is PadSheet.Treatment.Keyed -> {
                     val defaults = Keyed.Dials()
+                    // The recipe's division is the one the treatment ran at: ON BEAT's own, or the grid's.
+                    val saved = (e["division"] as? JsonValue.Str)?.value
+                    val echoed = t.name == "echoed"
                     Plan.KeyedPlan(
                         name = t.name,
                         amount = applied.amount,
                         seed = (e["seed"] as? JsonValue.Num)?.value?.toLong() ?: 0L,
                         dials = Keyed.Dials(
                             decay = (e["decay"] as? JsonValue.Num)?.value?.toFloat() ?: defaults.decay,
-                            division = (e["division"] as? JsonValue.Str)?.value ?: defaults.division,
+                            division = (if (echoed) null else saved) ?: defaults.division,
+                            echoDivision = (if (echoed) saved else null) ?: defaults.echoDivision,
                             tail = (e["tail"] as? JsonValue.Num)?.value?.toFloat() ?: defaults.tail,
                             knee = (e["knee"] as? JsonValue.Num)?.value?.toFloat() ?: defaults.knee,
                         ),

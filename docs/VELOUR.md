@@ -181,3 +181,10 @@ The post-restart shell test compilation exposed an existing call in
 `BeatScheduleTest` which omitted `forEachNoteDue`'s required `lap` argument.
 The same omission was present at the base commit. Supplying `0L` repairs that
 test call without changing production scheduling behavior.
+
+## Round-robin listening candidates
+
+The opt-in [Round 6 candidate](VELOUR_ROUND_ROBIN.md) adds four sample-derived
+takes per velocity using the approved bank as take 1. It does not replace the
+approved shelf defaults or close the MPC round-robin gate. Generate the full-grid
+native/SFZ/DecentSampler audition with `:synth:generateVelourRoundRobin`.
