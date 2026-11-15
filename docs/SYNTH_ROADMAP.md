@@ -3673,3 +3673,13 @@ The engine picker: CLUTTER joins SYNTH's `Engine` after SCUFF, mirroring SCUFF's
 native-factory path), so a kit preset loads whole with its take and model. `EngineCatalog` files it under DRUMS;
 88 picker engines. An on-device test in `NewEngineSynthScreenTest`; CI compiles and runs it. Open: hardware
 playback, MPC 2. See [CLUTTER](CLUTTER.md).
+
+### EMBER, round 1 (2026-11-15)
+
+A live jazz and soul drum engine for a small club in 1962, ported from the round-0e Python prototype (heard as
+"Much better", then "Proceed") to `Ember.kt`: 27 voices of calf membranes, threshold parts (wires, rivets, plates,
+jingles), cymbals, hats and brushes fitted to CC0 recordings, the club and a 1962 chain; velocity on every voice,
+four takes, `EmberPatch` with velocity, take and model, rosterless (no presets yet), no kit yet. Measured against the
+Python: no brightness bias across the 27 voices (0.10 dB above 4 kHz); the drums correlate 0.978 to 0.996; every
+voice inside the spread of Python's own takes. Random draws are another realisation of the same law; the club's
+tail is the prototype's own draw. See [EMBER](EMBER.md) and the gates entry. The four kits go on the shelf at round 2.

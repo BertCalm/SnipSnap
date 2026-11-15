@@ -44,6 +44,7 @@ class PatchesTest {
         BackwashPatch("Damped hit", BackwashVoice.SNARE, emptyMap()),
         BreakerPatch("Crushed drip", BreakerVoice.SNARE, emptyMap()),
         SootPatch("Hot", SootVoice.SNARE, emptyMap()),
+        EmberPatch("Kick", EmberVoice.KICK, emptyMap()),
         HalobarPatch("Mallet dub", HalobarVoice.MARIMBA, emptyMap()),
         TempestPatch("Legacy Strike", TempestVoice.METAL, emptyMap(), model = 1),
         HydroformPatch("Door", HydroformVoice.DOME, emptyMap()),
