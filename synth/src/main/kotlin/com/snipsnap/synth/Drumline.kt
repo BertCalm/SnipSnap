@@ -16,12 +16,13 @@ enum class DrumlineVoice {
  * Coordinated contact -> independent heads/plates -> overlapping ring -> finite release.
  * Model 1 ports the preferred Python cymbal revision's mechanism, not its NumPy noise bytes.
  * Model 2 adds lower-head body, a separate rim contact and a short snare-wire snap.
- * Saved model-1 recipes retain their sound; the cymbal path is identical in both models.
+ * Model 3 makes rim contact dominate the rimshot and reduces its shared snare-wire tail.
+ * Saved model-1/2 recipes retain their sound; other model-2 voices are unchanged.
  * Positive modal loss bounds each oscillator. Choking progressively damps high modes first;
  * it never gates the entire plate to zero. All acoustic constants remain listening shapes.
  */
 object Drumline {
-    const val MODEL_VERSION = 2
+    const val MODEL_VERSION = 3
     private const val IDENTITY_VERSION = 1 // Keep the same players and excitation streams across revisions.
     private const val RATE = Dsp.RATE * Dsp.OVERSAMPLE
     private const val LOSS = 6.907755278982137
@@ -112,6 +113,7 @@ object Drumline {
     private fun random(noise: Dsp.Noise, lo: Double, hi: Double) = lo+(hi-lo)*(noise.next()+1)/2
     private fun strike(voice: DrumlineVoice,m: Map<String,Float>,velocity: Float,take: Int,hand: Int,model: Int): FloatArray {
         val isMetal=voice in metal;val snare=voice==DrumlineVoice.SNARE || voice==DrumlineVoice.RIMSHOT
+        val distinctRim=model >= 3 && voice == DrumlineVoice.RIMSHOT
         val family=if(isMetal)"CYMBAL" else if(snare)"SNARE" else voice.name
         val cap=if(isMetal)4 else if(snare)8 else if(voice.name.startsWith("TENOR"))4 else 1
         val count=1+((m["PLAYERS"]?:0f)*(cap-1)).roundToInt()
@@ -154,7 +156,7 @@ object Drumline {
                     val body = model >= 2 && !snare
                     val weight = if(body && k < 2) (if(k == 0) 1.3 else 1.12) else 1.0
                     val sustain = if(body) 1.0 + (if(family.startsWith("BASS")) .65+.35*index/4 else .5) / ratios[k].pow(2) else 1.0
-                    addMode(y,root*ratios[k],gains[k]*exp(-ratios[k]*(.1+1.2*(1-v)))*random(hit,if(family.startsWith("BASS")) .65 else .9,if(family.startsWith("BASS")) 1.35 else 1.1)*weight,life*sustain/ratios[k].pow(.65),force=force)
+                    addMode(y,root*ratios[k],gains[k]*exp(-ratios[k]*(.1+1.2*(1-v)))*random(hit,if(family.startsWith("BASS")) .65 else .9,if(family.startsWith("BASS")) 1.35 else 1.1)*weight*(if(distinctRim).85 else 1.0),life*sustain/ratios[k].pow(.65),force=force)
                 }
                 if(model >= 2 && !snare) {
                     // A lower companion-head resonance adds chest without a sub-octave oscillator.
@@ -167,11 +169,17 @@ object Drumline {
                 if(model >= 2 && voice == DrumlineVoice.RIMSHOT) {
                     // The stick meets the hard rim as well as the head: much shorter contact,
                     // with a compact inharmonic clack instead of only a pitched rim ring.
-                    val rimWidth=max(4,(RATE*(.00009+.00008*(1-v))).roundToInt())
+                    val rimWidth=max(4,(RATE*(if(distinctRim) .000055+.00006*(1-v) else .00009+.00008*(1-v))).roundToInt())
                     val rimForce=DoubleArray(rimWidth) { .5-.5*cos(2*PI*it/(rimWidth-1)) }
                     val rimSum=rimForce.sum();for(i in rimForce.indices)rimForce[i]/=rimSum
-                    for((f,g,l) in listOf(Triple(1750.0,1.35,.028),Triple(2950.0,1.0,.019),Triple(4700.0,.7,.013)))
-                        addMode(y,f*tilt,g*v.pow(.6),l,force=rimForce)
+                    // A rimshot must be identifiable against the ordinary snare, not just
+                    // brighter than an older rimshot. Give the hard contact a woody lower
+                    // resonance and enough decay to outlast the very first noise transient.
+                    val rimModes=if(distinctRim)
+                        listOf(Triple(1050.0,3.8,.065),Triple(1980.0,2.6,.044),Triple(3250.0,1.5,.030),Triple(5100.0,.65,.018))
+                    else listOf(Triple(1750.0,1.35,.028),Triple(2950.0,1.0,.019),Triple(4700.0,.7,.013))
+                    for((f,g,l) in rimModes)
+                        addMode(y,f*tilt*(if(distinctRim)2.0.pow(detune/1200) else 1.0),g*v.pow(.6),l,force=rimForce)
                 }
                 val contact=Dsp.OnePole(RATE);val bands=listOf(Band(1900.0,2.0),Band(3600.0,2.5),Band(6200.0,3.0))
                 val snapLow=Dsp.OnePole(RATE);val snapHigh=Dsp.OnePole(RATE)
@@ -180,8 +188,11 @@ object Drumline {
                     y[i]+=.35*(.2+m.getValue("STRIKE"))*v*contact.lp(x,(2500+8500*v).toFloat())*attack*exp(-t/.0012)
                     if(snare) {
                         val cords=.6*bands[0].at(x.toDouble())+bands[1].at(x.toDouble())+.6*bands[2].at(x.toDouble())
-                        y[i]+=3.2*v.pow(.65)*cords*exp(-LOSS*t/(life*(.75+.4*v)))*(.65+.35*sin(2*PI*root*1.07*t).pow(2))*attack
-                        if(model >= 2) {
+                        // The same wire bed was masking both voices. A rimshot still has
+                        // snare wires, but its shorter, quieter response sits behind the rim.
+                        val wireLife=if(distinctRim)life*.68 else life
+                        y[i]+=3.2*(if(distinctRim).32 else 1.0)*v.pow(.65)*cords*exp(-LOSS*t/(wireLife*(.75+.4*v)))*(.65+.35*sin(2*PI*root*1.07*t).pow(2))*attack
+                        if(model >= 2 && !distinctRim) {
                             // A brief wire/contact burst sharpens the leading edge without extending the hiss.
                             val snap=snapLow.lp(x-snapHigh.lp(x,2200f),10500f)
                             y[i]+=2.8*v.pow(.8)*snap*min(t/.00012,1.0)*exp(-t/.0035)
