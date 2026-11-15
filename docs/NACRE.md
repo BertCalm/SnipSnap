@@ -79,6 +79,10 @@ The typed `nacreVelocityLayers` source field contains all three independent sour
 
 Different pads have no choke relationship. The existing MPC 2 mono-per-pad retrigger behavior remains unchanged. Loading, same-pad repeats, distinct-pad overlap and the player's velocity curve still need a target-MPC listen. Conch, cave, chromatic keygroups and HOLD are separate future work.
 
+## New voices: HARMONICS and SHELL
+
+Two new voices, HARMONICS (saved model 5) and SHELL (saved model 6), keep PEARL's paired performers, bodies, sympathetic strings and water but change what is played. The owner kept both on 15 Nov 2026 (round `nacre-voices-1`). They are engine only so far. See [NACRE_VOICES.md](NACRE_VOICES.md).
+
 ## Cache and cost
 
 A four-entry LRU owns completed source buffers, with a retained audio bound of 25,401,600 bytes plus container overhead. Its key includes the resolved source voice, TOUCH, DUET, MIDI, physical velocity, full seed and source ablation flags. Return-only controls do not invalidate that source. New notes, strikes or strum settings can still need a cold source render.
