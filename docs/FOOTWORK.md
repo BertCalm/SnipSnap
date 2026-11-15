@@ -196,3 +196,16 @@ sounds could not be downloaded by the analysis environment (HTTP 403); no coeffi
 were fitted to those recordings and none are included in the kit. The audition compares
 previous/new at original playback gain and provides all three velocity levels and four takes.
 MPC 3's missing chain-WAV slice map remains an export blocker, not a passed RR gate.
+
+### Street Breaks identity feedback and reference study
+
+The owner subsequently rejected Street Breaks 01/02 as alike and 09–13/16 as
+unconvincing. Native model 3 is not sound-approved. The surface filter on shared
+body/object sources did not supply a separately convincing Street voice set.
+
+`prototype/footwork/street_reference/` now contains a five-source Python benchmark
+(stamp, heel, clap, chest thump and finger snap), fitted to separately labeled CC0
+recordings with held-out repeat examples. This is a source study, not native model 4.
+Its 60-cell render checks do not establish save/playback/export or listening acceptance.
+Thigh, bucket and board remain unresolved; no unsuitable body sounds are relabeled
+as substitutes. Native downloads remain the previous unapproved candidates.
