@@ -86,6 +86,8 @@ object Arranger {
         val bass: Boolean = SectionNames.bassUnder(name),
         /** A pull-up plays over the beat before it ([PlanSection.pullUp]). */
         val pullUp: Boolean = SectionNames.pullsUpInto(name),
+        /** The section's own last bar keeps only the kick, or the bed ([PlanSection.drop]). */
+        val drop: Boolean = false,
     ) {
         init {
             require(repeats >= 1) { "a section plays at least once" }
@@ -147,7 +149,7 @@ object Arranger {
      */
     fun toPlan(arrangement: Arrangement): SongPlan = SongPlan(
         seed = arrangement.seed,
-        sections = arrangement.sections.map { PlanSection(it.name, it.ref, it.repeats, it.locked, it.seed, it.bass, it.pullUp) },
+        sections = arrangement.sections.map { PlanSection(it.name, it.ref, it.repeats, it.locked, it.seed, it.bass, it.pullUp, it.drop) },
     )
 
     /**
@@ -176,7 +178,7 @@ object Arranger {
         val sections = plan.sections.map { s ->
             val clip = palette.clip(s.clip, s.seed)
             if (clip != null) {
-                Section(s.name, clip, minOf(s.repeats, maxRepeats(clip)), palette.reason(s.clip), s.clip, s.locked, s.seed, s.bass, s.pullUp)
+                Section(s.name, clip, minOf(s.repeats, maxRepeats(clip)), palette.reason(s.clip), s.clip, s.locked, s.seed, s.bass, s.pullUp, s.drop)
             } else {
                 if (s.clip !in refused) refused += s.clip
                 // A gone program of yours is not replaced by a different one of
@@ -185,7 +187,7 @@ object Arranger {
                 // the section name the old one had.
                 val draft = palette.draft(s.seed).filter { ClipRef.yoursId(s.clip) == null || ClipRef.yoursId(it.ref) == null }
                 val again = draft.firstOrNull { it.name == s.name } ?: draft.first { it.ref == ClipRef.CAPTURED }
-                again.copy(name = s.name, repeats = minOf(s.repeats, maxRepeats(again.clip)), locked = s.locked, seed = s.seed, bass = s.bass, pullUp = s.pullUp)
+                again.copy(name = s.name, repeats = minOf(s.repeats, maxRepeats(again.clip)), locked = s.locked, seed = s.seed, bass = s.bass, pullUp = s.pullUp, drop = s.drop)
             }
         }
         return Resolved(Arrangement("${kit.name} Song", plan.seed, sections), refused)
@@ -478,7 +480,20 @@ object Arranger {
      * [passes]: every time through every section's clip, in song order, on
      * the same grid. Live play ([SongCursor]) moves between passes.
      */
-    data class Mix(val snip: Snip, val sectionStarts: List<Int>, val passes: List<Pass> = emptyList())
+    data class Mix(val snip: Snip, val sectionStarts: List<Int>, val passes: List<Pass> = emptyList(), val drops: List<Drop> = emptyList())
+
+    /**
+     * What a section's DROP did: [kept] is "kick" or "bed" when its last
+     * bar was re-rendered from only that, and null when the bar was left
+     * as it was, with the [reason] either way, in words.
+     */
+    data class Drop(val section: Int, val kept: String?, val reason: String)
+
+    /** What a dropped bar keeps: the kick pad's hits, or the bed's notes. */
+    internal enum class DropKeeps { KICK, BED }
+
+    /** The ramp that ends a take cut short, frames: about 5 ms, so a cut tail does not click. */
+    private const val CUT_FADE = 220
 
     /**
      * One time through [section]'s clip: frames [start] until [end] of the
@@ -588,19 +603,74 @@ object Arranger {
         val cuts = listOf(0) + turns + listOf(plan.sections.size)
         val stretches = cuts.zipWithNext { from, to -> from until to }
 
+        // DROP: a section's own last bar re-rendered from the kick's hits, or
+        // the bed's notes, alone. The boundary into a pull-up is the pull-up's.
+        val dropReports = mutableListOf<Drop>()
+        val dropAt = HashMap<Int, DropBar>()
+        for (i in plan.sections.indices) {
+            if (!plan.sections[i].drop) continue
+            if (i + 1 in turns) {
+                dropReports += Drop(i, null, "the pull-up into the next section takes this boundary, so the last bar was left as it is")
+                continue
+            }
+            val d = dropBarOf(kit, clips[i], startPulses[i + 1], bed?.takeIf { plan.sections[i].bass })
+            if (d == null) {
+                val why = if (kit.pads.none { it.drumClass == com.snipsnap.audio.DrumClass.KICK }) "no pad in this kit is marked as a kick" else "the last bar has no kick hit"
+                dropReports += Drop(i, null, "$why and there is no bed under the section, so the last bar was left as it is")
+            } else {
+                dropAt[i] = d
+                dropReports += Drop(i, if (d.keeps == DropKeeps.BED) "bed" else "kick", "the last bar keeps only the ${if (d.keeps == DropKeeps.BED) "bed" else "kick"}")
+            }
+        }
+
         val pieces = stretches.map { range ->
             val first = range.first
             val notes = range.flatMap { i ->
                 val offset = startPulses[i] - startPulses[first]
                 clips[i].notes.map { it.copy(timePulses = it.timePulses + offset) }
             }
-            val drums = KitPreview.renderNotes(kit, kitDir, notes, startPulses[range.last + 1] - startPulses[first], bpm, allowSilence = chancy)
-            var audio = drums
+            val stretchPulses = startPulses[range.last + 1] - startPulses[first]
+            val drops = range.mapNotNull { dropAt[it] }
+            var audio = if (drops.isEmpty()) {
+                KitPreview.renderNotes(kit, kitDir, notes, stretchPulses, bpm, allowSilence = chancy)
+            } else {
+                // Each stretch of drums between drops is its own take, in this stretch's own frames, cut where
+                // the next dropped bar begins: a tail never rings into it, and none comes back after it.
+                // The dropped bar is its own take; the notes after it are rendered as they would have been.
+                var mixed = Snip(FloatArray(0), 2, KitPreview.RATE)
+                var from = 0L
+                for (d in drops) {
+                    val a = d.startPulse - startPulses[first]
+                    val cutFrame = frameAt(d.startPulse) - starts[first]
+                    val before = notes.filter { it.timePulses in from until a }
+                    if (before.isNotEmpty()) {
+                        mixed = addAt(mixed, cutAt(KitPreview.renderNotes(kit, kitDir, before, a, bpm, allowSilence = chancy), cutFrame), 0)
+                    }
+                    val barFrames = frameAt(d.endPulse) - frameAt(d.startPulse)
+                    mixed = addAt(mixed, dropBar(kit, kitDir, d.keeps, d.drums, d.bedHits, bed, d.endPulse - d.startPulse, barFrames, bpm), cutFrame)
+                    from = d.endPulse - startPulses[first]
+                }
+                val after = notes.filter { it.timePulses >= from }
+                if (after.isNotEmpty()) mixed = addAt(mixed, KitPreview.renderNotes(kit, kitDir, after, stretchPulses, bpm, allowSilence = chancy), 0)
+                mixed
+            }
             if (bed != null) {
                 for (i in range) {
-                    if (plan.sections[i].bass) {
-                        audio = addAt(audio, renderBed(bed, clips[i].lengthPulses, framesPerPulse), starts[i] - starts[first])
+                    if (!plan.sections[i].bass) continue
+                    val at = starts[i] - starts[first]
+                    // A dropped section's bed plays up to its last bar, which the drop took over.
+                    val d = dropAt[i]
+                    val layer: Snip? = if (d == null) {
+                        renderBed(bed, clips[i].lengthPulses, framesPerPulse)
+                    } else {
+                        val relStart = d.startPulse - startPulses[i]
+                        val before = bedNotes(bed.clip, clips[i].lengthPulses).filter { it.timePulses < relStart }
+                        if (before.isEmpty()) null else renderBed(bed, clips[i].lengthPulses, framesPerPulse, before)
                     }
+                    if (layer == null) continue
+                    // ...and no bed's tail rings into a bar that was dropped.
+                    val cut = drops.map { frameAt(it.startPulse) - starts[first] }.filter { it > at }.minOrNull()
+                    audio = addAt(audio, if (cut == null) layer else cutAt(layer, cut - at), at)
                 }
             }
             val next = range.last + 1
@@ -635,7 +705,7 @@ object Arranger {
                 Pass(i, frameAt(at), frameAt(at + one), lines)
             }
         }
-        return Mix(song, starts, passes)
+        return Mix(song, starts, passes, dropReports)
     }
 
     /** [KitPreview]'s own frame arithmetic, so a section boundary and a note inside it agree. */
@@ -684,7 +754,92 @@ object Arranger {
         return Snip(out, 2, seg.sampleRate)
     }
 
-    private class Bed(val sample: Snip, val rootMidi: Int, val clip: Mpc3Clip)
+    internal class Bed(val sample: Snip, val rootMidi: Int, val clip: Mpc3Clip)
+
+    /** One section's dropped bar: where it is in the song, what it keeps, and the events that bar holds (relative to its own start). */
+    private class DropBar(
+        val keeps: DropKeeps,
+        val startPulse: Long,
+        val endPulse: Long,
+        val drums: List<Mpc3Note>,
+        val bedHits: List<Mpc3Note>,
+    )
+
+    /**
+     * The last bar of [clip] (a section, already tiled), which ends at
+     * song pulse [endPulse], as a [DropBar]: the bed when [bed] is given
+     * (the section has BASS on and the kit has a bed; the bar may then be
+     * silent, which is what keeping only the bed of a bar with no bass
+     * note in it means), else the kick when a kick pad is hit in the bar,
+     * else null (nothing to keep, so the bar is left alone).
+     */
+    private fun dropBarOf(kit: Kit, clip: Mpc3Clip, endPulse: Long, bed: Bed?): DropBar? {
+        val bar = clip.pulsesPerBar.toLong()
+        val rel = clip.lengthPulses - bar
+        fun inBar(n: Mpc3Note) = n.timePulses >= rel
+        val drums = clip.notes.filter(::inBar).map { it.copy(timePulses = it.timePulses - rel) }
+        val hits = bed?.let { b -> bedNotes(b.clip, clip.lengthPulses).filter(::inBar).map { it.copy(timePulses = it.timePulses - rel) } }.orEmpty()
+        val keeps = when {
+            bed != null -> DropKeeps.BED
+            drums.any { isKick(kit, it) } -> DropKeeps.KICK
+            else -> return null
+        }
+        return DropBar(keeps, endPulse - bar, endPulse, drums, hits)
+    }
+
+    private fun isKick(kit: Kit, note: Mpc3Note): Boolean =
+        kit.pad(Mpc3Note.slotFor(note.note))?.drumClass == com.snipsnap.audio.DrumClass.KICK
+
+    /**
+     * DROP: the audio of exactly one bar, [frames] long, with only the
+     * kick pad's hits ([DropKeeps.KICK], from [drums]) or only the bed's
+     * notes ([DropKeeps.BED], from [bedHits]) in it. Both lists are the
+     * bar's own events, their times counted from the bar's start; nothing
+     * from before the bar can sound in it, because it is rendered from
+     * these alone, not gated out of a mix. Deterministic: the same events
+     * are the same audio. A note ringing past the bar's end stops with a
+     * short fade at it (the bar never makes the section longer).
+     */
+    internal fun dropBar(
+        kit: Kit,
+        kitDir: File,
+        keeps: DropKeeps,
+        drums: List<Mpc3Note>,
+        bedHits: List<Mpc3Note>,
+        bed: Bed?,
+        barPulses: Long,
+        frames: Int,
+        bpm: Float,
+    ): Snip {
+        val take = when (keeps) {
+            DropKeeps.KICK -> {
+                val kicks = drums.filter { isKick(kit, it) }
+                if (kicks.isEmpty()) Snip(FloatArray(0), 2, KitPreview.RATE)
+                else KitPreview.renderNotes(kit, kitDir, kicks, barPulses, bpm)
+            }
+            DropKeeps.BED -> {
+                require(bed != null) { "a bed drop needs a bed" }
+                renderBed(bed, barPulses, framesPerPulse(bpm), bedHits)
+            }
+        }
+        val out = FloatArray(frames * 2)
+        take.samples.copyInto(out, 0, 0, minOf(take.samples.size, out.size))
+        return cutAt(Snip(out, 2, KitPreview.RATE), frames)
+    }
+
+    /** [snip] stopped at [frame] with a short ramp down into it: nothing past it, no click at it. */
+    private fun cutAt(snip: Snip, frame: Int): Snip {
+        val n = frame.coerceIn(0, snip.frameCount)
+        val out = snip.samples.copyOf(n * 2)
+        val ramp = minOf(CUT_FADE, n)
+        for (k in 0 until ramp) {
+            val g = (ramp - k).toFloat() / ramp
+            val f = n - ramp + k
+            out[f * 2] *= g
+            out[f * 2 + 1] *= g
+        }
+        return Snip(out, 2, snip.sampleRate)
+    }
 
     private fun answerBed(kitDir: File): Bed? {
         val answer = AnswerStore.load(kitDir) ?: return null
@@ -705,9 +860,9 @@ object Arranger {
      * from the sample's root to the note it names. Its last notes ring out
      * past the section's end, as a played note does.
      */
-    private fun renderBed(bed: Bed, sectionPulses: Long, framesPerPulse: Double): Snip {
+    private fun renderBed(bed: Bed, sectionPulses: Long, framesPerPulse: Double, notes: List<Mpc3Note> = bedNotes(bed.clip, sectionPulses)): Snip {
         val cache = HashMap<Int, Snip?>()
-        val voiced = bedNotes(bed.clip, sectionPulses).mapNotNull { note ->
+        val voiced = notes.mapNotNull { note ->
             val v = if (note.note in cache) cache[note.note] else repitched(bed.sample, note.note - bed.rootMidi).also { cache[note.note] = it }
             v?.let { note to it }
         }
