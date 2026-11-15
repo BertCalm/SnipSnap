@@ -852,7 +852,8 @@ the shelf as FRESH TAPE starters.
   - **Rendering: verified in Kotlin by test (round 1).** `EmberTest` holds that every one of the 27 voices' soft
     and hard hits differ in shape at matched level (at least 1.8 dB), that its four takes are distinct strikes (at
     least 1 dB), and that every take replays byte for byte (through JSON in `DeterminismTest`). Measured in Kotlin:
-    soft against hard at least 2.12 dB, the closest two takes 1.57 dB apart. (Python, on the four kits' 64 pads:
+    soft against hard at least 2.12 dB at round 1, the closest two takes 1.57 dB apart; since round 2b (the bow
+    lowered) the moving voices are measured over their whole render, where the bow is 3.1 dB. (Python, on the four kits' 64 pads:
     1.92 dB and 1.19 dB.) Velocity moves the contact, the threshold parts and the swell's arc, not a filter.
   - **Saving, playback and MPC 3 export: verified in software (round 2).** `:shell:generateEmberKits` builds all
     four kits and proves every pad's grid through saving, reloading, `PadHit.resolve` and the MPC 3 track, read back
