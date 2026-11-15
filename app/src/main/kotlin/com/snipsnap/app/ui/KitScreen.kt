@@ -790,7 +790,8 @@ fun KitScreen(
             }
         }
 
-        StrikeStripSection(strike, scheme)
+        // The VELOCITY STRIP's settings box sits inside KIT TOOLS under the grid (UX pass, 2026-11-15):
+        // it changes how every pad plays, so it went behind the one door for the whole kit.
         StrikeLayerFeedback(strike, Modifier.fillMaxWidth())
         if (strike.enabled && kit.pads.none { it.velocityLayers.isNotEmpty() || it.chain?.zones?.isNotEmpty() == true }) {
             TapeText("FOR TONE CHANGES: ADD SOFT HITS IN PAD EDITOR", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
@@ -924,45 +925,62 @@ fun KitScreen(
             var performanceSaving by remember(entry.dir) { mutableStateOf(false) }
             var performanceStatus by remember(entry.dir) { mutableStateOf<String?>(null) }
             val performanceDirty = host.performance != host.savedPerformance || host.performanceWarning != null
+            // KIT TOOLS (UX pass, 2026-11-15, shared fix c): everything that changes the whole kit rather than
+            // one pad, behind one closed box under the grid - the VELOCITY STRIP's settings, PERFORMANCE (the
+            // kit's live effects) and what THIS KIT held. Closing it closes PERFORMANCE the way PERFORMANCE's own
+            // toggle does, so an unsaved live change is reverted rather than left playing out of sight.
             GroupBox(
-                legend = "PERFORMANCE",
-                summary = "AQUARIUM · ${if (host.performance.enabled && !host.performance.settings.isBypass) "LIVE" else "DRY"}${if (performanceDirty) " · UNSAVED" else ""}",
-                open = performanceOpen,
-                onToggle = {
-                    if (performanceOpen) host.revertPerformance()
-                    performanceOpen = !performanceOpen
-                    performanceStatus = null
-                },
-                scheme = scheme, enabled = !busy && !performanceSaving,
-                modifier = Modifier.testTag("performance-group"),
-            ) {
-                AquariumPerformancePanel(
-                    settings = host.performance, dirty = performanceDirty, busy = busy || performanceSaving,
-                    streamUp = host.up, pending = host.performancePending, faulted = host.performanceFaulted,
-                    limitedFrames = host.performanceLimitedFrames, bpm = kit.tempoBpm?.toDouble() ?: 0.0,
-                    warning = host.performanceWarning, status = performanceStatus,
-                    scheme = scheme, color = scheme.accent.tape,
-                    onChange = { host.auditionPerformance(it); performanceStatus = null },
-                    onReset = { host.auditionPerformance(host.performance, reset = true) },
-                    onSave = {
-                        performanceSaving = true
-                        performanceStatus = "SAVING PERFORMANCE…"
-                        onSavePerformance(host.performance) { error ->
-                            performanceSaving = false
-                            performanceStatus = error ?: "SAVED TO KIT"
-                        }
-                    },
-                    onRevert = { host.revertPerformance(); performanceStatus = null },
-                )
-            }
-            GroupBox(
-                legend = "THIS KIT",
-                summary = Places.thisKit(kit.key?.let { KeyPicker.label(it) }, bankBEmpty, versions),
-                also = Places.THIS_KIT_ALSO,
+                legend = Places.KIT_TOOLS,
+                summary = Places.kitTools(
+                    stripOn = strike.enabled,
+                    liveEffects = host.performance.enabled && !host.performance.settings.isBypass,
+                    keyLabel = kit.key?.let { KeyPicker.label(it) }, bankBEmpty = bankBEmpty, versions = versions,
+                ),
+                also = Places.KIT_TOOLS_ALSO,
                 open = thisKitOpen,
-                onToggle = { thisKitOpen = !thisKitOpen },
+                onToggle = {
+                    if (thisKitOpen && performanceOpen) {
+                        host.revertPerformance()
+                        performanceOpen = false
+                        performanceStatus = null
+                    }
+                    thisKitOpen = !thisKitOpen
+                },
                 scheme = scheme,
+                modifier = Modifier.testTag("kit-tools-group"),
             ) {
+                StrikeStripSection(strike, scheme)
+                GroupBox(
+                    legend = "PERFORMANCE",
+                    summary = "AQUARIUM · ${if (host.performance.enabled && !host.performance.settings.isBypass) "LIVE" else "DRY"}${if (performanceDirty) " · UNSAVED" else ""}",
+                    open = performanceOpen,
+                    onToggle = {
+                        if (performanceOpen) host.revertPerformance()
+                        performanceOpen = !performanceOpen
+                        performanceStatus = null
+                    },
+                    scheme = scheme, enabled = !busy && !performanceSaving,
+                    modifier = Modifier.testTag("performance-group"),
+                ) {
+                    AquariumPerformancePanel(
+                        settings = host.performance, dirty = performanceDirty, busy = busy || performanceSaving,
+                        streamUp = host.up, pending = host.performancePending, faulted = host.performanceFaulted,
+                        limitedFrames = host.performanceLimitedFrames, bpm = kit.tempoBpm?.toDouble() ?: 0.0,
+                        warning = host.performanceWarning, status = performanceStatus,
+                        scheme = scheme, color = scheme.accent.tape,
+                        onChange = { host.auditionPerformance(it); performanceStatus = null },
+                        onReset = { host.auditionPerformance(host.performance, reset = true) },
+                        onSave = {
+                            performanceSaving = true
+                            performanceStatus = "SAVING PERFORMANCE…"
+                            onSavePerformance(host.performance) { error ->
+                                performanceSaving = false
+                                performanceStatus = error ?: "SAVED TO KIT"
+                            }
+                        },
+                        onRevert = { host.revertPerformance(); performanceStatus = null },
+                    )
+                }
                 KitGroupHeading(Places.KIT_BANK_B)
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     // EVIL TWINS: bank B lit with seeded re-treatments of bank A; a

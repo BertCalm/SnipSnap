@@ -18,6 +18,10 @@ python3 prototype/calabash/build_page.py OUT             # OUT/site/index.html a
 - `check_fit.py`: each fit against its recording and a real second take.
 - `export_fixed.py`: writes the three draws the Kotlin port takes from this prototype (`synth/src/main/resources/calabash/`).
 - `compare_kotlin.py`: the Kotlin port against these renders, pad by pad (round 1).
+- `shelf_grooves.py`: round 2's listen. Reads the kits `./gradlew :shell:generateCalabashKits` proved through save,
+  playback and MPC 3 export (`testkit/calabash-kits`), plays each kit's approved groove with those Kotlin strikes, and
+  puts them under the page's "On the shelf" section (`python3 shelf_grooves.py testkit/calabash-kits OUT`, then
+  `build_page.py OUT`).
 - To put each fitted voice beside its recording on the page, decode the files in NOTICE.txt to mono 44.1 kHz float
   WAV and run the generator with `CALABASH_REF_WAVS=<dir>`.
 
