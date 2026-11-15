@@ -234,10 +234,16 @@ def drift(voice: str, take: int) -> tuple[float, float]:
     return 2.0 ** ((g.random() - 0.5) * 14.0 / 1200.0), 1.0 + (g.random() - 0.5) * 0.10
 
 
+TRIGGER = (1.0, 0.76, 1.24, 0.9)   # each take's trigger strength: the four are kept apart on purpose. "shape"
+
+
 def trigger(voice: str, take: int) -> float:
     """The trigger pulse that fires a voice is not the same strength twice. It sets how hard the
-    click is and how far the pitch is thrown at the start, within about a quarter either way."""
-    return 1.0 if take % 4 == 0 else 0.75 + 0.5 * _rng(voice, "trigger", take % 4).random()
+    click is and how far the pitch is thrown at the start. Each take has its own strength (weaker,
+    stronger, a little weaker) with a small seeded wobble, so no two takes land on the same one:
+    drawn freely, two of a kick's takes came out 0.5 dB apart, which is one strike heard twice."""
+    k = take % 4
+    return 1.0 if k == 0 else TRIGGER[k] + 0.08 * (_rng(voice, "trigger", k).random() - 0.5)
 
 
 PRE_ROLL = int(0.13 * FS)

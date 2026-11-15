@@ -815,6 +815,21 @@ object StarterKits {
             seeded = false, tempoBpm = com.snipsnap.synth.ClutterKits.Kit.MICRO.bpm.toFloat(),
         ) { com.snipsnap.synth.ClutterKits.build(com.snipsnap.synth.ClutterKits.Kit.MICRO) },
         Starter(
+            "servo-electro", "SERVO ELECTRO",
+            "Electro machine drums on a weak power rail: a long low boom, a snap, a cowbell and toms that fall like lasers, each hit diving as it lands. Three touch zones, four takes; a roll and a riser that sink on one shared rail.",
+            seeded = false, tempoBpm = com.snipsnap.synth.ServoKits.Kit.ELECTRO.bpm.toFloat(),
+        ) { com.snipsnap.synth.ServoKits.build(com.snipsnap.synth.ServoKits.Kit.ELECTRO) },
+        Starter(
+            "servo-jit", "SERVO JIT",
+            "Ghetto tech from the same machine, tuned up and run hot: a hard short kick, claps, rims and offbeat hats squared off against the rail and gone before the next sixteenth. Three touch zones, four takes; a roll and a riser.",
+            seeded = false, tempoBpm = com.snipsnap.synth.ServoKits.Kit.JIT.bpm.toFloat(),
+        ) { com.snipsnap.synth.ServoKits.build(com.snipsnap.synth.ServoKits.Kit.JIT) },
+        Starter(
+            "servo-neuro", "SERVO NEURO",
+            "Neurofunk on a rail that rings: a punch kick, a snare with its body near 200 Hz, growling tails and bass stabs that snarl through a moving filter. Three touch zones, four takes; a roll and a riser.",
+            seeded = false, tempoBpm = com.snipsnap.synth.ServoKits.Kit.NEURO.bpm.toFloat(),
+        ) { com.snipsnap.synth.ServoKits.build(com.snipsnap.synth.ServoKits.Kit.NEURO) },
+        Starter(
             "meridian-materials", "MERIDIAN MATERIALS",
             "Sixteen finite pads across four ringing voices, with three touch levels and five held-sound captures.",
             seeded = false,

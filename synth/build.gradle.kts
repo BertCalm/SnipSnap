@@ -3816,6 +3816,16 @@ tasks.register<JavaExec>("generateTempestTunedKit") {
     args(providers.gradleProperty("tempestTunedKitOutput").orNull ?: "${rootDir}/testkit/SnipSnap Tempest Tuned Kit", "--tuned")
 }
 
+/** Render SERVO's Kotlin clips under testkit/servo-audition/kotlin/, for the Python A/B. */
+tasks.register<JavaExec>("generateServoAudition") {
+    group = "distribution"
+    description = "Render the SERVO Kotlin clips (every voice hard, soft and at its four takes) under testkit/servo-audition/kotlin/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ServoAuditionGenerator")
+    workingDir = projectDir
+    args(providers.gradleProperty("servoOutput").orNull ?: "${rootDir}/testkit/servo-audition/kotlin")
+}
+
 /** Render CLUTTER's round-1 Kotlin clips under testkit/clutter-audition/kotlin/, for the Python A/B. */
 tasks.register<JavaExec>("generateClutterAudition") {
     group = "distribution"

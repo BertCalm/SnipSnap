@@ -2,7 +2,7 @@
 
 Every number on the page is read from the manifest the generator wrote; nothing is typed in by
 hand. The look is the house audition page's (SCUFF, ETCH, CLUTTER): page.css is their stylesheet.
-Run after gen_audition.py:   python3 build_page.py OUT_DIR
+Run after gen_audition.py:   python3 build_page.py OUT_DIR [SERVO_KITS_DIR]
 """
 from __future__ import annotations
 
@@ -64,6 +64,52 @@ KITS = M["kits"]
 C = M["checks"]
 B = M["between"]
 
+# An optional second argument is the folder `./gradlew :shell:generateServoKits` wrote: its pad and touch WAVs are
+# copied under OUT/shelf/ as MP3 (needs ffmpeg), with its manifest.
+if len(sys.argv) > 2:
+    import shutil
+    src = sys.argv[2]
+    dst = os.path.join(OUT, "shelf")
+    shutil.rmtree(dst, ignore_errors=True)
+    os.makedirs(dst)
+    shutil.copy(os.path.join(src, "manifest.json"), dst)
+    for kit_id in sorted(d for d in os.listdir(src) if os.path.isdir(os.path.join(src, d))):
+        os.makedirs(os.path.join(dst, kit_id))
+        for name in sorted(os.listdir(os.path.join(src, kit_id))):
+            if name.endswith(".wav"):
+                subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", os.path.join(src, kit_id, name), "-c:a", "libmp3lame",
+                                "-b:a", "160k", os.path.join(dst, kit_id, name[:-4] + ".mp3")], check=True)
+
+# The kits on the shelf: pads read back from the MPC 3 export by `:shell:generateServoKits`, copied under
+# OUT/shelf/ as MP3 listening copies (the WAVs are the proof; MP3 keeps the page light on a phone).
+shelf_html = ""
+_shelf = os.path.join(OUT, "shelf", "manifest.json")
+if os.path.exists(_shelf):
+    S = json.load(open(_shelf))
+    cards = []
+    for k in S["kits"]:
+        rows = "".join(f"""
+        <li class="clip">
+          <div class="clip-head"><span class="clip-id">A{p['slot']:02d} {ESC(p['name'])}</span><span class="clip-len">{ESC(p['class'])}</span></div>
+          <audio controls preload="none" src="shelf/{k['id']}/pad-{p['slot']:02d}.mp3"></audio>
+          <p class="clip-note">Soft, medium, hard, four takes each, in the order the pad deals them:</p>
+          <audio controls preload="none" src="shelf/{k['id']}/touch-{p['slot']:02d}.mp3"></audio>
+        </li>""" for p in k["pads"])
+        cards.append(f"""
+    <details><summary>SERVO {ESC(k['title'].upper())} · {k['bpm']} BPM · 16 PADS</summary><ul class="clips">{rows}</ul></details>""")
+    shelf_html = f"""
+  <section class="card" id="shelf">
+    <h2>On the shelf: the Kotlin kits</h2>
+    <p class="intro">The three kits as the app builds them from the Kotlin engine, each pad read back from the MPC 3 export
+    through the app's own pad player: every slice was checked against its render after saving, reloading, two playback
+    cycles and the export ({sum(len(k['pads']) for k in S['kits']) * 12} slices). These are MP3 listening copies. Each kit
+    is fourteen hits, then A15 a roll and A16 a riser baked on one shared rail; two pads of each prototype kit below
+    moved into those phrases. The Kotlin engine draws its random numbers differently from the Python, so every take
+    here is a new take of the same drum, not a copy of the prototype's.</p>
+    <p class="ask"><span class="tag">LISTEN FOR</span>Is each kit its genre? In a strip of twelve, does any take jump out as louder, quieter or duller than its neighbours? Do the roll and riser sink in a way you like?</p>
+    {''.join(cards)}
+  </section>"""
+
 kit_cards = []
 for k in KITS:
     rows = "".join(
@@ -124,14 +170,21 @@ between_rows = "".join(
     f"<tr><td>{ESC(p.replace('-', ' / ').upper())}</td><td>{v['mean_slot_db']}</td><td>{v['min_slot_db']} ({ESC(v['min_slot'])})</td>"
     f"<td>{len(v['identical_pads'])}</td></tr>" for p, v in B.items())
 
+SHELF = bool(shelf_html)
+SLICES = sum(len(k["pads"]) for k in S["kits"]) * 12 if SHELF else 0
 GATES = [
     ("Melodic, keygroup, chord tool", "na", "Not applicable. A drum engine; the voices are not tuned to notes."),
     ("Articulation (HOLD, STRUM)", "na", "Finite hits, no HOLD. Not a plucked string."),
-    ("Percussion: roll or riser", "mid", "A roll (B01) and a riser (B02) are authored for each kit in Python, each hit a fresh strike. Not built in Kotlin, not heard."),
-    ("Drums: several genre kits on the shelf", "mid", f"Three genre kits authored and measured in Python: no pad shared between any two, the same slot {min(v['min_slot_db'] for v in B.values())} dB apart at the closest. Not on the shelf: no Kotlin."),
-    ("Velocity in rendering", "mid", f"Measured in Python on all 48 pads: soft against hard at least {C['soft_vs_hard_min_db']} dB at matched level."),
-    ("Round robin in rendering", "mid", f"Measured in Python on all 48 pads: the closest two takes of any pad are {C['closest_takes_min_db']} dB apart."),
-    ("Velocity and round robin through saving, playback, export", "open", "No Kotlin yet. The page's pad grid is a browser stand-in, not the app."),
+    ("Percussion: roll or riser", "mid", "Each Kotlin kit has a roll (A15) and a riser (A16), every note a fresh strike on one shared rail, with the whole velocity and take grid. Not heard." if SHELF
+     else "A roll and a riser are authored for each kit in Python. Not built in Kotlin, not heard."),
+    ("Drums: several genre kits on the shelf", "mid", "Three kits are registered on the FRESH TAPE shelf, once each, at their own tempo; tests check that no role of one kit is another kit's. Not heard." if SHELF
+     else f"Three genre kits authored and measured in Python: the same slot {min(v['min_slot_db'] for v in B.values())} dB apart at the closest. Not on the shelf: no Kotlin."),
+    ("Velocity in rendering", "mid", f"Kotlin tests on every pad of every kit: a soft hit is a different hit, not a quieter copy. Python, all 48 prototype pads: soft against hard at least {C['soft_vs_hard_min_db']} dB at matched level."),
+    ("Round robin in rendering", "mid", f"Kotlin tests on every zone of every pad: four different takes, matched in loudness. Python, all 48 prototype pads: closest takes {C['closest_takes_min_db']} dB."),
+    ("Velocity and round robin through saving, playback, export", "mid" if SHELF else "open",
+     f"In software: all {SLICES} slices of the three kits were checked against their renders after saving, reloading, two playback cycles of the app's pad player and the MPC 3 export. MPC 2 keeps each zone's first take (your recorded format limit)." if SHELF
+     else "No Kotlin yet. The page's pad grid is a browser stand-in, not the app."),
+    ("Sound", "open", "Nobody has heard any of it. Your listen."),
     ("Phone and MPC", "open", "Nothing has been loaded on a device."),
 ]
 gate_rows = "".join(f'<tr><td>{ESC(a)}</td><td><span class="pill {s}">{ {"na": "N/A", "mid": "MEASURED", "open": "OPEN"}[s] }</span></td><td>{ESC(b)}</td></tr>'
@@ -164,14 +217,14 @@ page = f"""<meta charset="utf-8">
 
 <div class="wrap">
   <header>
-    <div class="mark"><i></i><span class="eyebrow">SNIPSNAP · SERVO · ROUND 0 · PYTHON PROTOTYPE · NOT HEARD</span></div>
+    <div class="mark"><i></i><span class="eyebrow">SNIPSNAP · SERVO · {'ROUND 1 · KOTLIN KITS ON THE SHELF' if shelf_html else 'ROUND 0 · PYTHON PROTOTYPE'} · NOT HEARD</span></div>
     <h1>SERVO Audition</h1>
     <p class="lede">Machine drums for electro, ghetto tech and neurofunk, all running off one deliberately weak power supply.
     Every hit pulls the supply down a few milliseconds after it lands, and three things follow it: the pitch dives, the drum
     squares off against a lower ceiling, and its tone sweeps. Let the supply ring as it recovers and the tail growls.
-    Ten voices, three sixteen-pad kits. Nothing is sampled, nothing here is Kotlin yet, and nobody has heard it.</p>
+    Ten voices, three sixteen-pad kits. Nothing is sampled. {'The first section is the Kotlin kits as the app exports them; the rest is the Python prototype they were ported from.' if shelf_html else 'Nothing here is Kotlin yet.'} Nobody has heard any of it.</p>
     <p class="gesture">The trigger lands clean → the rail sags: the drum dives and flat-tops → the rail rings back: the tail growls → recovered and silent before the next sixteenth.</p>
-    <nav><a href="#play">Play</a><a href="#rail">The rail</a>{''.join(f'<a href="#kit-{k["id"]}">{ESC(k["name"].replace("SERVO ", "").title())}</a>' for k in KITS)}<a href="#voices">Voices</a><a href="#velocity">Velocity</a><a href="#takes">Takes</a><a href="#macros">Controls</a><a href="#gates">Gates</a><a href="#ledger">Ledger</a></nav>
+    <nav><a href="#play">Play</a>{'<a href="#shelf">On the shelf</a>' if shelf_html else ''}<a href="#rail">The rail</a>{''.join(f'<a href="#kit-{k["id"]}">{ESC(k["name"].replace("SERVO ", "").title())}</a>' for k in KITS)}<a href="#voices">Voices</a><a href="#velocity">Velocity</a><a href="#takes">Takes</a><a href="#macros">Controls</a><a href="#gates">Gates</a><a href="#ledger">Ledger</a></nav>
   </header>
 
   <section class="card" id="play">
@@ -185,6 +238,7 @@ page = f"""<meta charset="utf-8">
       <div class="readout"><span id="status">Tap any pad. Each pad loads on its first tap.</span><button class="load" id="loadall" type="button">LOAD THIS KIT</button></div>
     </div>
   </section>
+{shelf_html}
 {base_sections[0]}
 {''.join(kit_cards)}
 {''.join(base_sections[1:])}
@@ -223,7 +277,7 @@ page = f"""<meta charset="utf-8">
       <tr><th>Claim</th><th>Status</th><th>Evidence</th></tr>
       {ledger_rows}
     </table></div>
-    <p class="foot">Python harness at commit {ESC(COMMIT)}, not Kotlin. Regenerate with
+    <p class="foot">The ledger's numbers are the Python harness at commit {ESC(COMMIT)}. Regenerate with
     <code>python3 prototype/servo/gen_audition.py OUT</code> then <code>python3 prototype/servo/build_page.py OUT</code>.
     Design notes: <code>docs/SERVO.md</code>.</p>
   </section>

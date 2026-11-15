@@ -3701,3 +3701,15 @@ four takes, `EmberPatch` with velocity, take and model, rosterless (no presets y
 Python: no brightness bias across the 27 voices (0.10 dB above 4 kHz); the drums correlate 0.978 to 0.996; every
 voice inside the spread of Python's own takes. Random draws are another realisation of the same law; the club's
 tail is the prototype's own draw. See [EMBER](EMBER.md) and the gates entry. The four kits go on the shelf at round 2.
+
+### SERVO, rounds 0 and 1 (2026-11-15)
+
+Machine drums on a weak power rail for electro, ghetto tech and neurofunk: every hit sags one supply a few
+milliseconds after it lands, and pitch, output swing and a resonant tone peak all read that one state. Round 0
+was the brief, a Python prototype and a listening page; the owner then said "Must pass the gates", so round 1
+ported it to `Servo.kt` unheard (ten voices, six macros, velocity, four takes, rosterless) and put three kits on
+the FRESH TAPE shelf under SKINS: SERVO ELECTRO (126), SERVO JIT (156) and SERVO NEURO (174), fourteen hits, a
+roll and a riser each, the phrases baked on one shared rail. Every voice's Kotlin hit sits inside the spread of
+the prototype's own takes; all 576 slices pass save, reload, playback and MPC 3 read-back. A zone's takes are
+matched in loudness (CLUTTER's law): on the first-take law a take fired on a sagging rail came out up to 5.3 dB
+down. Sound and hardware gates are open: nobody has heard it. See [SERVO](SERVO.md) and the gates entry.

@@ -1,15 +1,21 @@
 # SERVO: design brief and round-0 audition
 
-Status: **round 0, a Python prototype (2026-11-15). Not heard.** No Kotlin exists. The engine stays in
-progress until every applicable owner gate has evidence (see "Gates" below and the gates entry in
-[ENGINE_ACCEPTANCE_GATES.md](ENGINE_ACCEPTANCE_GATES.md#servo-round-0-2026-11-15-python-prototype-not-heard)).
+Status: **round 1 (2026-11-15): the Kotlin engine and three kits on the FRESH TAPE shelf, with velocity and round
+robin proven in software through rendering, saving, playback and MPC 3 export. Not heard.** The owner's
+instruction on 2026-11-15 was "Must pass the gates", so the port did not wait for a listen to round 0; every
+sound setting is therefore still "shape". The engine stays in progress until the sound and hardware gates have
+the owner's evidence (see "Gates" and the entry in
+[ENGINE_ACCEPTANCE_GATES.md](ENGINE_ACCEPTANCE_GATES.md#servo-round-1-2026-11-15-kotlin-kits-on-the-shelf-not-heard)).
+What the Kotlin round built and measured is under [As built](#as-built-round-1-kotlin-2026-11-15).
 
 Prototype: [`prototype/servo/`](../prototype/servo/) (`servo_proto.py` is the model, `kits.py` the three
 kits and their phrases, `measures.py` the house distance measures, `gen_audition.py` renders and measures,
-`build_page.py` writes the audition page). Every number below is from that Python harness, not from Kotlin.
+`build_page.py` writes the audition page, `compare_kotlin.py` measures the port). Every number above "As built"
+is from that Python harness, not from Kotlin.
 
 Listening page: <https://claude.ai/artifact/XGH7434aQcdBcffRRnHLA8> (private to the owner; published
-2026-11-15, version 1). It carries a playable 4×4 pad grid with three velocity layers and four takes per
+2026-11-15, version 3). It opens with the Kotlin kits as read back from the MPC 3 export, then carries the
+prototype: a playable 4×4 pad grid with three velocity layers and four takes per
 pad, the rail heard on its own, each kit's groove, roll and riser, every control on every voice, the gates
 and the ledger.
 
@@ -132,7 +138,7 @@ against NEURO). No pad is shared. Each kit has sixteen one-shots, B01 a roll and
 tables are in `kits.py` and on the listening page.
 
 **The shared rail.** Each groove, roll and riser is rendered twice: on one rail, and with every hit on its
-own. They differ by 1.4 to 2.2 dB on the house measure. One-shot pads cannot affect each other on an MPC,
+own. They differ by 1.4 to 2.1 dB on the house measure. One-shot pads cannot affect each other on an MPC,
 so only baked phrase pads carry the shared rail. That is a limit of the format, stated, not solved.
 
 ## Velocity and round robin
@@ -141,8 +147,7 @@ so only baked phrase pads carry the shared rail. That is a limit of the format, 
   more, and its strike changes too.
 - **Round robin** is the machine's own kind. Take 1 fires on a rested rail. Takes 2 to 4 fire as if
   another hit landed 30 to 90 ms earlier, with the trigger a quarter stronger or weaker, the tuning within
-  7 cents and the decay within 5 percent. Closest takes across the 48 pads: 0.98 dB (ELECTRO A12, the
-  rim). ETCH's takes heard as one strike measured 0.5 to 0.8 dB, so the rim and the kick are near the
+  7 cents and the decay within 5 percent. Closest takes across the 48 pads: 1.03 dB (the ELECTRO rim). ETCH's takes heard as one strike measured 0.5 to 0.8 dB, so the rim and the kick are near the
   line: the listening page asks about them.
 
 ## Render budget
@@ -182,12 +187,15 @@ inside the voice (the oscillators read it), so it cannot be a rack section over 
 |---|---|---|
 | Melodic, keygroup, chord tool | N/A | A drum engine |
 | Articulation (HOLD, STRUM) | N/A | Finite hits |
-| Percussion: roll or riser | Open | Authored for each kit in Python; no Kotlin, not heard |
-| Drums: several genre kits on the shelf | Open | Three authored and measured in Python; not on the shelf |
-| Velocity and round robin in rendering | Open | Measured in Python on all 48 pads (3.2 dB and 0.98 dB at the least) |
-| Velocity and round robin through saving, playback, export | Open | No Kotlin |
-| Sound | Open | Not heard |
-| Phone and MPC | Open | Nothing loaded on a device |
+| Percussion: roll or riser | Built, not heard | A15 Roll and A16 Riser on every kit, each note a fresh strike on one shared rail, with the whole 3 × 4 grid (`ServoKitsTest`) |
+| Drums: several genre kits on the shelf | Built, not heard | `servo-electro`, `servo-jit`, `servo-neuro` registered once each in `StarterKits` and `StarterShelf` (SKINS) at 126, 156 and 174 BPM; `ServoKitsTest` proves no role of one kit is another's |
+| Velocity in rendering | Pass in software | `ServoTest`, `ServoKitsTest`: a soft hit is a different hit on every voice and every pad; exported pads measure at least 1.5 dB soft against hard at matched level (the ELECTRO riser), 2.2 dB on a one-shot |
+| Round robin in rendering | Pass in software | Four different takes in every zone of every pad, matched in loudness within 0.04 dB; closest takes 0.59 dB (ELECTRO Rim), near the 0.5 to 0.8 dB ETCH's takes were heard as one strike |
+| Saving, playback, export | Pass in software | `ServoKitTest` and `:shell:generateServoKits`: all 576 slices of the three kits checked against their renders after save, reload, two playback cycles of the app's pad resolver and the MPC 3 track read back |
+| MPC 2 | Format limit | Each velocity zone keeps its first take ([owner decision, 2026-11-14](ENGINE_ACCEPTANCE_GATES.md#mpc-2-and-round-robin-owner-decision-2026-11-14)) |
+| Sound | **Open** | Not heard. Only the owner can close it |
+| Phone and MPC | **Open** | Nothing loaded on a device. Only the owner can close it |
+| SYNTH picker, factory presets | Not built | Not gates. The engine is `ROSTERLESS` until the kits are heard ("presets authored blind are disposable") |
 
 ## Verified / measured / proposed / heard
 
@@ -198,6 +206,7 @@ inside the voice (the oscillators read it), so it cannot be a rack section over 
   dB); an unknown control, a NaN control and a NaN velocity change nothing; velocity 0 is silent.
 - **Proposed:** every constant ("shape"), the three kits' settings, the Kotlin landing, the render budget
   on a phone.
+- **Measured (Kotlin):** see "As built".
 - **Heard:** nothing. The author cannot play audio.
 
 ## What to judge first on the listening page
@@ -221,3 +230,71 @@ inside the voice (the oscillators read it), so it cannot be a rack section over 
 - **The risky decision is letting the body duck under its own transient.** It is what gives the punch and
   the growl, and it is also the thing most likely to make a kick sound thin. SAG at 0 switches the whole
   mechanism off exactly, so the plain machine drum is always one knob away.
+
+## As built: round 1, Kotlin (2026-11-15)
+
+Built at the owner's word ("Must pass the gates") without a listen to round 0. Read at `2036a8da`.
+
+**What exists.** `Servo.kt` (ten voices, six macros, velocity and four takes, `phraseRails` for a shared rail),
+`ServoPatch.kt` (velocity, take and model version on the patch), `ServoKits.kt` (three kits), the `Patches`,
+`Velocity` and `SynthRoot` arms, three `StarterKits` entries in one `StarterShelf` group, `ServoTest`,
+`ServoKitsTest`, the shell's `ServoKitTest`, a `DeterminismTest` canary through JSON, hand-built entries in
+`PatchesTest`, `PadRecipeTest` and `SynthRootTest`, `ServoAuditionGenerator` (`:synth:generateServoAudition`)
+and `ServoKitGenerator` (`:shell:generateServoKits`). The engine is in `PatchTypes.ROSTERLESS`.
+
+**What changed against the round-0 design.**
+
+- **Sixteen pads are fourteen hits, a roll and a riser** (the SCUFF and GATECRASH shape), not sixteen hits plus a
+  bank B. Two parts of each prototype kit play only inside the phrases (ELECTRO: Robot Tom and Crash; JIT: Clave
+  and Short Crash; NEURO: Low Rim and Crash). NEURO's A12 is the Snarl Stab in place of the Low Rim.
+- **Takes are matched in loudness within a zone** (CLUTTER's law), not levelled by the first take (SCUFF's law).
+  Measured with the first-take law, a take that fires on a rail already down came out up to 5.3 dB lower in
+  peak (ELECTRO's Tick Hat, soft zone): the rail sets the output swing. A pad whose takes step in level reads as
+  an uneven pad, so the level is matched and the duller attack is kept. Sonic risk 4 was real and is half
+  answered: the level, not the character.
+- **Each take has its own trigger strength** (1, 0.76, 1.24, 0.9, with a small seeded wobble). Drawn freely, two
+  takes of ELECTRO's Short Kick measured 0.52 dB apart on the exported kit. The prototype carries the same law.
+- **Phrases are a bar and two bars**, not two and four beats, so each files as a LOOP (over 1.5 s) as the house
+  kits' phrases do.
+
+**The port against the prototype** (`compare_kotlin.py`, the house distance): every voice's hard hit sits within
+the spread of the prototype's own four takes.
+
+| Voice | Kotlin to nearest Python take, dB | Python's own takes, dB | Correlation | Soft vs hard, Kotlin / Python, dB |
+|---|---:|---|---:|---|
+| KICK | 0.6 | 2.1 to 3.3 | 0.997 | 9.0 / 8.9 |
+| SNARE | 2.6 | 2.4 to 2.8 | 0.808 | 3.7 / 3.8 |
+| CLAP | 4.3 | 4.4 to 5.2 | 0.214 | 7.5 / 5.9 |
+| HAT | 2.3 | 2.4 to 4.7 | -0.384 | 7.1 / 7.7 |
+| RIM | 1.4 | 1.3 to 1.8 | 0.997 | 8.1 / 7.1 |
+| BELL | 1.5 | 1.1 to 2.0 | 0.899 | 5.8 / 5.4 |
+| TOM | 0.9 | 2.1 to 3.8 | 0.999 | 9.9 / 10.0 |
+| LASER | 1.4 | 1.3 to 3.1 | -0.871 | 5.2 / 5.0 |
+| STAB | 9.5 | 5.6 to 15.3 | -0.817 | 6.4 / 11.8 |
+| CRASH | 3.0 | 3.2 to 4.0 | -0.169 | 11.1 / 11.1 |
+
+Correlation is low or negative wherever a voice is noise or starts on a free-running phase (the draws differ);
+the sine voices correlate 0.997 to 0.999. The STAB's two saws start on random phases, so its takes are far
+apart in both models and its soft-against-hard figure moves with the draw.
+
+**Disclosed, not fixed.**
+
+- Kotlin's `Random` replaces numpy's generator, and the house band limit and decimator replace the prototype's.
+- The TONE stage keeps the prototype's block-wise coefficients (64 frames at 4×) so the two agree; a per-sample
+  `Dsp.TptSvf` would be better behaved under modulation and is a sound change for a later round.
+- The closest takes on the exported kits are 0.59 dB apart (ELECTRO Rim), inside the band ETCH's takes were
+  heard as one strike. A machine rim barely varies; whether it should vary more is the owner's call.
+- Soft against hard on the phrase pads is 1.5 to 1.9 dB at matched level: a phrase's notes already span
+  velocities, so its zones differ less than a single hit's.
+- Aliasing is still not measured against a higher-rate reference.
+- A kit builds in 8 to 12 s on the development JVM (the two phrases are 50 notes for each of twelve cells); a
+  single hit renders in 4 to 17 ms, the crash in 40 ms (JIT warmed, one run). No phone timing exists.
+
+**Tests.** `ServoTest` (10): finite, centred, under the LOOP line, silent tail; peak match and class; every control
+moves every voice and an unknown or NaN one changes nothing; SAG 0 makes GROWL a bit-exact no-op and GROWL
+matters with the rail on; the rail stays inside its bound at the worst corner on every take; the tail is within
+30 cents of the TUNE root at every SAG × GROWL corner while the sag does lower the body; soft is a different
+hit; four takes differ and replay; scramble bounds; names. `ServoKitsTest` (9): determinism, bounds, loudness
+match, velocity, takes, the shared rail changes the phrases, the built grid and provenance, the three kits
+differ. `ServoKitTest` (3): the grid through save, reload, playback and MPC 3; playback picks the zone by
+velocity and walks the takes in order; the kits are on the shelf once each.

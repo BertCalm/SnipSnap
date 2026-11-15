@@ -637,6 +637,16 @@ tasks.register<JavaExec>("generateClutterKits") {
     args(providers.gradleProperty("clutterKitsOutput").orNull ?: "${rootDir}/testkit/clutter-kits")
 }
 
+tasks.register<JavaExec>("generateServoKits") {
+    group = "distribution"
+    description = "Build the three SERVO genre kits, prove every velocity and round-robin grid through save, playback and MPC 3 export, and write the listening pack."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.ServoKitGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "2g"
+    args(providers.gradleProperty("servoKitsOutput").orNull ?: "${rootDir}/testkit/servo-kits")
+}
+
 /** MURMUR's C2 repeats, V1 against opt-in V2, played from real saved banks by the saved-sample player. */
 tasks.register<JavaExec>("generateMurmurRoundRobinAudition") {
     group = "distribution"
