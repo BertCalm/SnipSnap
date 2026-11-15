@@ -477,6 +477,11 @@ object UserPresets {
             val recipe = Json.write(JsonValue.Str(patch.toJsonText())).replace("$", "\\$")
             return "EtchPatch.fromJsonText($recipe),"
         }
+        if (patch is com.snipsnap.synth.TerraPatch) {
+            // A struck TERRA pad carries its captured striker outside the macro map; promotion keeps it.
+            val recipe = Json.write(JsonValue.Str(patch.toJsonText())).replace("$", "\\$")
+            return "TerraPatch.fromJsonText($recipe),"
+        }
         if (patch is ScuffPatch) {
             // Velocity, take and model version live outside the macro map; promotion keeps the strike saved.
             val recipe = Json.write(JsonValue.Str(patch.toJsonText())).replace("$", "\\$")

@@ -3826,6 +3826,17 @@ tasks.register<JavaExec>("generateClutterAudition") {
     args(providers.gradleProperty("clutterOutput").orNull ?: "${rootDir}/testkit/clutter-audition/kotlin")
 }
 
+/** Render CALABASH's round-1 Kotlin clips under testkit/calabash-audition/kotlin/, for the Python A/B. */
+tasks.register<JavaExec>("generateCalabashAudition") {
+    group = "distribution"
+    description = "Render the CALABASH Kotlin clips (every kit pad at three zones and four takes, every voice soft and hard) under testkit/calabash-audition/kotlin/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.CalabashAuditionGenerator")
+    workingDir = projectDir
+    maxHeapSize = "3g"
+    args(providers.gradleProperty("calabashOutput").orNull ?: "${rootDir}/testkit/calabash-audition/kotlin")
+}
+
 tasks.register<JavaExec>("generateVelourRoundRobin") {
     group = "distribution"
     description = "Render opt-in Velour round-robin candidates and full-grid audition packages."
@@ -3853,4 +3864,26 @@ tasks.register<JavaExec>("generateEmberAudition") {
     mainClass.set("com.snipsnap.synth.EmberAuditionGenerator")
     workingDir = projectDir
     args(providers.gradleProperty("emberOutput").orNull ?: "${rootDir}/testkit/ember-audition/kotlin")
+}
+
+/** Compare isolated host timings and raw float hashes before/after renderer maintenance. */
+tasks.register<JavaExec>("benchmarkDrumline") {
+    group = "verification"
+    description = "Measure warm drumline renders and fingerprint their unquantized PCM."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.DrumlineRenderBenchmark")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "1g"
+    args(providers.gradleProperty("drumlineBenchmarkOutput").orNull ?: "testkit/drumline-render-benchmark.csv")
+}
+
+/** Full numerical corner coverage is explicit: scored figures make this a long-running audit. */
+tasks.register<JavaExec>("auditDrumlineCorners") {
+    group = "verification"
+    description = "Audit every drumline control corner at minimum/full touch, plus default-center replay."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.DrumlineCornerSweep")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "1g"
+    args(providers.gradleProperty("drumlineCornerOutput").orNull ?: "testkit/drumline-corners.csv")
 }

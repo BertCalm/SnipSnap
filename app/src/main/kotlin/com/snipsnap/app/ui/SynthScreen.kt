@@ -196,6 +196,10 @@ import com.snipsnap.synth.WickVoice
 import com.snipsnap.synth.Etch
 import com.snipsnap.synth.EtchPatch
 import com.snipsnap.synth.EtchVoice
+import com.snipsnap.synth.Terra
+import com.snipsnap.synth.TerraPatch
+import com.snipsnap.synth.TerraPicker
+import com.snipsnap.synth.TerraVoice
 import com.snipsnap.synth.Patches
 import com.snipsnap.synth.ScannedChain
 import com.snipsnap.synth.ScannedChainPatch
@@ -6476,7 +6480,7 @@ private enum class ObbligatoVoice { AIR_REED }
  */
 private enum class Engine {
     LATTICE, ACCORD,
-    THUMP, SCANNED_CHAIN, SKIN, ONSET, TINES, VELVET, VOX, PLUCK, ORPHICA, TONEWHEEL, OTIS, REGISTERS, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, HALOBAR, FLOTILLA, AEROSTAT, TREMOR, BALLAST, CISTERN, CIRCUIT, OBBLIGATO, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVERLAP, OVEN, FLOCK, VENT, CREASE, TRIO, NACRE, ORIGAMI, TREFOIL, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS, TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME, BORE, ARCO, SCOUR, KEEL, CHITIN, WICK, EROSION, RIVET, FIRED_BRONZE, BACKWASH, DRUMLINE, SOOT, TEMPEST, SPLAY, OSTERIA, ETCH, SCUFF, CLUTTER, CAIRN;
+    THUMP, SCANNED_CHAIN, SKIN, ONSET, TINES, VELVET, VOX, PLUCK, ORPHICA, TONEWHEEL, OTIS, REGISTERS, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, HALOBAR, FLOTILLA, AEROSTAT, TREMOR, BALLAST, CISTERN, CIRCUIT, OBBLIGATO, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVERLAP, OVEN, FLOCK, VENT, CREASE, TRIO, NACRE, ORIGAMI, TREFOIL, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS, TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME, BORE, ARCO, SCOUR, KEEL, CHITIN, WICK, EROSION, RIVET, FIRED_BRONZE, BACKWASH, DRUMLINE, SOOT, TEMPEST, SPLAY, OSTERIA, ETCH, SCUFF, CLUTTER, TERRA, CAIRN;
     val displayName: String get() = name.replace('_', ' ')
 
     /** The engine after this one in the enum's order, wrapping from the last back to the first. */
@@ -6510,6 +6514,7 @@ private enum class Engine {
         TEMPEST -> TempestVoice.entries
         WICK -> WickVoice.entries
         ETCH -> EtchVoice.entries
+        TERRA -> TerraPicker.voices
         OTIS -> OtisVoice.entries
         REGISTERS -> RegistersVoice.entries
         FATHOM -> FathomVoice.entries
@@ -6607,6 +6612,7 @@ private enum class Engine {
         TEMPEST -> Tempest.macrosFor(voice as TempestVoice).filterNot { it.name == "HOLD" }
         WICK -> Wick.macrosFor(voice as WickVoice)
         ETCH -> Etch.macrosFor(voice as EtchVoice)
+        TERRA -> Terra.macrosFor(voice as TerraVoice)
         OTIS -> Otis.macrosFor(voice as OtisVoice)
         REGISTERS -> Registers.macrosFor(voice as RegistersVoice)
         FATHOM -> Fathom.macrosFor(voice as FathomVoice)
@@ -6700,6 +6706,7 @@ private enum class Engine {
         TEMPEST -> Tempest.defaults(voice as TempestVoice)
         WICK -> Wick.defaults(voice as WickVoice)
         ETCH -> Etch.defaults(voice as EtchVoice)
+        TERRA -> Terra.defaults(voice as TerraVoice)
         OTIS -> Otis.defaults(voice as OtisVoice)
         REGISTERS -> Registers.defaults(voice as RegistersVoice)
         FATHOM -> Fathom.defaults(voice as FathomVoice)
@@ -6795,6 +6802,7 @@ private enum class Engine {
         TEMPEST -> Tempest.scramble(voice as TempestVoice, random)
         WICK -> Wick.scramble(voice as WickVoice, random)
         ETCH -> Etch.scramble(voice as EtchVoice, random)
+        TERRA -> TerraPicker.scramble(voice as TerraVoice, random)
         OTIS -> Otis.scramble(voice as OtisVoice, random)
         REGISTERS -> Registers.scramble(voice as RegistersVoice, random)
         FATHOM -> Fathom.scramble(voice as FathomVoice, random)
@@ -6900,6 +6908,7 @@ private enum class Engine {
         TEMPEST -> Tempest.render(voice as TempestVoice, macros)
         WICK -> Wick.render(voice as WickVoice, macros)
         ETCH -> Etch.render(voice as EtchVoice, macros)
+        TERRA -> Terra.render(voice as TerraVoice, macros)
         OTIS -> Otis.render(voice as OtisVoice, macros)
         REGISTERS -> Registers.render(voice as RegistersVoice, macros)
         FATHOM -> Fathom.render(voice as FathomVoice, macros)
@@ -6997,6 +7006,7 @@ private enum class Engine {
         TEMPEST -> Tempest.drumClassFor(voice as TempestVoice, macros)
         WICK -> Wick.drumClassFor(voice as WickVoice, macros)
         ETCH -> Etch.drumClassFor(voice as EtchVoice, macros)
+        TERRA -> TerraPicker.drumClassFor(voice as TerraVoice, macros)
         OTIS -> Otis.drumClassFor(voice as OtisVoice, macros)
         REGISTERS -> Registers.drumClassFor(voice as RegistersVoice, macros)
         FATHOM -> Fathom.drumClassFor(voice as FathomVoice, macros)
@@ -7093,6 +7103,7 @@ private enum class Engine {
         TEMPEST -> TempestPatch(name, voice as TempestVoice, macros)
         WICK -> WickPatch(name, voice as WickVoice, macros)
         ETCH -> EtchPatch(name, voice as EtchVoice, macros)
+        TERRA -> TerraPatch(name, voice as TerraVoice, macros)
         OTIS -> OtisPatch(name, voice as OtisVoice, macros)
         REGISTERS -> RegistersPatch(name, voice as RegistersVoice, macros)
         FATHOM -> FathomPatch(name, voice as FathomVoice, macros)
@@ -7194,7 +7205,8 @@ private fun uiPaletteClass(engine: Engine, voice: Enum<*>): DrumClass =
         TempestVoice.CLAP -> DrumClass.CLAP
         TempestVoice.TOM -> DrumClass.TOM
         TempestVoice.HAT -> DrumClass.HAT_CLOSED
-    } else engine.drumClass(voice)
+    } else if (engine == Engine.TERRA) TerraPicker.roleClass(voice as TerraVoice)
+    else engine.drumClass(voice)
 
 // ---------- voice ↔ drum class ----------
 //
@@ -7309,6 +7321,7 @@ private val GlintVoice.drumClass: DrumClass
  * raw enum name — underscores and all, and liable to be ellipsized.
  */
 private fun chipLabel(engine: Engine, voice: Enum<*>): String = when (engine) {
+    Engine.TERRA -> TerraPicker.chipLabel(voice as TerraVoice)
     Engine.OTIS -> if (voice == OtisVoice.HARP) "BLUES HARP" else voice.name
     Engine.RIVET -> when (voice as RivetVoice) {
         RivetVoice.HAT_CLOSED -> "HAT CL"
