@@ -780,3 +780,8 @@ testkit/tempest-expansion/
 testkit/tempest-full-kit/
 testkit/SnipSnap Tempest Full Kit/
 testkit/SnipSnap Tempest Tuned Kit/
+
+# TIMBER generated acoustic percussion banks and audition.
+/testkit/timber-kits/
+
+/testkit/timber-v2/

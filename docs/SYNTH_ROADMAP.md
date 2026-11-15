@@ -3605,3 +3605,15 @@ Measured against the Python: no brightness bias across the 22 objects (0.06 dB a
 deterministic objects correlate 0.93 to 0.99; random draws are another realisation of the same law. The
 owner waived the roll gate. See [CLUTTER](CLUTTER.md) and the gates entry. The four genre kits go on the shelf
 at round 2; the picker entry waits for a session with an SDK.
+
+### TIMBER acoustic-instrument percussion banks (2026-11-14)
+
+Three genre starters from guitar, acoustic bass guitar, cello and upright body/string
+contacts: FOLK POCKET, WOOD BOOM BAP and STRING TWO STEP. Fourteen finite hits, knuckle roll,
+string-rake riser, three contact strengths and four deterministic takes per pad. Native
+save/playback and MPC 3 PCM/cycle read-back are covered by `TimberKitTest`; run
+`:shell:generateTimberKits` for the listening pack and exports. This is an authored bank,
+not a new melodic engine. Model 2 ports the owner-approved Python contact and extended-technique
+auditions, with independent body/string profiles, seven contacts and bounded take levels. Model 1
+source replay is retained. Kotlin listening, device shelf/playback, MPC 3 chain re-import and
+hardware slice-map playback remain open. See [TIMBER](TIMBER.md) for the gate ledger.

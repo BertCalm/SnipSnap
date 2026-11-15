@@ -564,6 +564,21 @@ object StarterKits {
             seeded = false,
         ) { com.snipsnap.synth.ErosionKits.contrast() },
         Starter(
+            "timber-pocket", "TIMBER FOLK POCKET",
+            "Guitar, acoustic bass, cello and upright percussion. Three strike levels, four takes, a roll and a riser.",
+            seeded = false, tempoBpm = 92f,
+        ) { com.snipsnap.synth.TimberKits.build(com.snipsnap.synth.TimberKits.Genre.POCKET) },
+        Starter(
+            "timber-boom-bap", "TIMBER WOOD BOOM BAP",
+            "Guitar, acoustic bass, cello and upright percussion. Three strike levels, four takes, a roll and a riser.",
+            seeded = false, tempoBpm = 86f,
+        ) { com.snipsnap.synth.TimberKits.build(com.snipsnap.synth.TimberKits.Genre.BOOM_BAP) },
+        Starter(
+            "timber-two-step", "TIMBER STRING TWO STEP",
+            "Guitar, acoustic bass, cello and upright percussion. Three strike levels, four takes, a roll and a riser.",
+            seeded = false, tempoBpm = 132f,
+        ) { com.snipsnap.synth.TimberKits.build(com.snipsnap.synth.TimberKits.Genre.TWO_STEP) },
+        Starter(
             "triad-techno", "TRIAD WAREHOUSE TECHNO",
             "Hybrid drums, hand percussion, rolls and shared-bus phrases. Three touch zones and four takes per zone.",
             seeded = false, tempoBpm = 128f,

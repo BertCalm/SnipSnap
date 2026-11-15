@@ -628,3 +628,13 @@ tasks.register<JavaExec>("generateMurmurRoundRobinAudition") {
     maxHeapSize = "768m"
     args("${rootDir}/testkit/murmur-rr-v2-audition")
 }
+
+tasks.register<JavaExec>("generateTimberKits") {
+    group = "distribution"
+    description = "Render and verify three acoustic-instrument percussion banks, native kits, MPC exports and listening pack."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.TimberKitGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "1g"
+    args(providers.gradleProperty("timberOutput").orNull ?: "${rootDir}/testkit/timber-kits")
+}

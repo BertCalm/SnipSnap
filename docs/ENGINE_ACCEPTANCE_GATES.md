@@ -671,3 +671,29 @@ prototype audition; no Kotlin exists.
   Preserve round 0c as the baseline.
 - **Overall: incomplete.** The Kotlin engine is in (round 1) and not yet heard; the kits on the shelf,
   saving, playback, export and hardware are open. The percussion gate is waived by the owner.
+
+## TIMBER acoustic percussion integration
+
+TIMBER's model 2 Kotlin bank ports the owner-approved Python acoustic contact and extended-technique
+studies: four instruments and seven techniques. The owner accepted the first audition with
+“Sounds pretty good” and the extension with “Sound good, continue.” This accepts the Python sound
+direction, not the new Kotlin renders or hardware playback. See [TIMBER](TIMBER.md) and the
+[audition page](https://chatgpt.com/space/page_5e535f7b68ec8191800c4c3b66444f32).
+
+- **Melodic keys/chords/HOLD/STRUM:** not applicable to finite percussion banks.
+- **Drum shelf:** three registered genre starters, FOLK POCKET, WOOD BOOM BAP and STRING TWO STEP,
+  with different core instruments, tuning, damping, saved levels and groove arrangements.
+- **Percussion:** each kit includes an accelerating knuckle roll and a string-rake riser, printed
+  as finite phrases with full tails. They do not claim seamless sustain.
+- **Velocity and round robin in software:** 100 focused checks pass, covering 336 dry contact
+  variants, 576 kit variants, all saved PCM, source replay, velocity boundaries, two take cycles,
+  pad levels, choke groups and MPC 3 PCM/cycle read-back. Model 1 source replay is retained.
+- **MPC 2:** all 144 first-take velocity windows pass read-back. The owner's combined velocity/RR
+  format exception applies; no combined round-robin claim is made.
+- **MPC 3 hardware:** open. The existing chain-WAV slice-map capture is still parked by the owner.
+  Metadata read-back is not hardware evidence.
+- **Kotlin listening, phone performance and physical playback:** open. The new audition is available;
+  no Android SDK or connected phone/MPC was used here.
+- **Repository regression:** blocked by the existing `PersonalityTest` sentence-case failure in
+  unchanged `App.kt:1403,1405` (CAIRN messages). The broad run was interrupted after confirming
+  the failure (exit 130); no clean full-suite result is claimed. Overall acceptance remains incomplete.
