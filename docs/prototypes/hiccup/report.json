@@ -1,0 +1,237 @@
+{
+  "renders": [
+    {
+      "name": "KICK",
+      "frames": 57537,
+      "seconds": 1.3047,
+      "finite": true,
+      "peak": 0.4678,
+      "dc": -1.2e-05,
+      "rms": 0.1,
+      "loudness_proxy": 0.0864,
+      "pitch_hz": 59.36,
+      "pitch_confidence": 1.0,
+      "centroid_hz": 250.4,
+      "decay_to_-60dB_s": 1.29,
+      "never_grows": true,
+      "later_over_attack": 0.884,
+      "partials_above_0.95_nyquist": 7,
+      "events": 2,
+      "alias_proxy_raw": 0.00065
+    },
+    {
+      "name": "SNARE",
+      "frames": 38273,
+      "seconds": 0.8679,
+      "finite": true,
+      "peak": 0.7527,
+      "dc": -1.5e-05,
+      "rms": 0.1,
+      "loudness_proxy": 0.0992,
+      "pitch_hz": 66.22,
+      "pitch_confidence": 0.369,
+      "centroid_hz": 3558.2,
+      "decay_to_-60dB_s": 0.85,
+      "never_grows": true,
+      "later_over_attack": 0.779,
+      "partials_above_0.95_nyquist": 183,
+      "events": 1,
+      "alias_proxy_raw": 0.0557
+    },
+    {
+      "name": "HAT",
+      "frames": 28078,
+      "seconds": 0.6367,
+      "finite": true,
+      "peak": 0.99,
+      "dc": -5e-06,
+      "rms": 0.0694,
+      "loudness_proxy": 0.0692,
+      "pitch_hz": 117.54,
+      "pitch_confidence": 0.153,
+      "centroid_hz": 6282.8,
+      "decay_to_-60dB_s": 0.61,
+      "never_grows": true,
+      "later_over_attack": 0.681,
+      "partials_above_0.95_nyquist": 205,
+      "events": 2,
+      "alias_proxy_raw": 0.10633
+    },
+    {
+      "name": "CLAP",
+      "frames": 52016,
+      "seconds": 1.1795,
+      "finite": true,
+      "peak": 0.8006,
+      "dc": -1e-06,
+      "rms": 0.1,
+      "loudness_proxy": 0.1,
+      "pitch_hz": 80.2,
+      "pitch_confidence": 1.0,
+      "centroid_hz": 2873.1,
+      "decay_to_-60dB_s": 1.16,
+      "never_grows": false,
+      "later_over_attack": 2.101,
+      "partials_above_0.95_nyquist": 163,
+      "events": 3,
+      "alias_proxy_raw": 0.03093
+    },
+    {
+      "name": "BLIP",
+      "frames": 36428,
+      "seconds": 0.826,
+      "finite": true,
+      "peak": 0.408,
+      "dc": -8e-06,
+      "rms": 0.1,
+      "loudness_proxy": 0.0997,
+      "pitch_hz": 328.22,
+      "pitch_confidence": 0.422,
+      "centroid_hz": 554.0,
+      "decay_to_-60dB_s": 0.81,
+      "never_grows": true,
+      "later_over_attack": 0.797,
+      "partials_above_0.95_nyquist": 0,
+      "events": 2,
+      "alias_proxy_raw": 0.00166
+    },
+    {
+      "name": "SQUEAK",
+      "frames": 22002,
+      "seconds": 0.4989,
+      "finite": true,
+      "peak": 0.264,
+      "dc": 0.0,
+      "rms": 0.1,
+      "loudness_proxy": 0.1,
+      "pitch_hz": 1199.25,
+      "pitch_confidence": 0.862,
+      "centroid_hz": 2542.5,
+      "decay_to_-60dB_s": 0.45,
+      "never_grows": false,
+      "later_over_attack": 2.65,
+      "partials_above_0.95_nyquist": 90,
+      "events": 2,
+      "alias_proxy_raw": 0.02313
+    }
+  ],
+  "macro_activity_dB": {
+    "KICK": {
+      "TUNE": 6.84,
+      "DECAY": 1.07,
+      "TOY": 7.93,
+      "FAULT": 27.95,
+      "CHOP": 8.95,
+      "CRUSH": 21.84
+    },
+    "SNARE": {
+      "TUNE": 3.01,
+      "DECAY": 5.8,
+      "TOY": 8.44,
+      "FAULT": 6.97,
+      "CHOP": 5.24,
+      "CRUSH": 8.43
+    },
+    "HAT": {
+      "TUNE": 1.3,
+      "DECAY": 9.63,
+      "TOY": 10.54,
+      "FAULT": 8.66,
+      "CHOP": 4.02,
+      "CRUSH": 14.23
+    }
+  },
+  "checks": {
+    "python_ms_per_voice": 29.7,
+    "fault0_crush0_max_abs_error_vs_dry": {
+      "KICK": 1.1102230246251565e-16,
+      "SNARE": 1.1102230246251565e-16,
+      "HAT": 5.551115123125783e-17,
+      "CLAP": 5.551115123125783e-17,
+      "BLIP": 0.0,
+      "SQUEAK": 1.1102230246251565e-16
+    },
+    "fault_monotone_subset": true,
+    "events_at_fault_0_.25_.5_.75_1": {
+      "KICK": [
+        0,
+        2,
+        3,
+        4,
+        5
+      ],
+      "SNARE": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "HAT": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "CLAP": [
+        0,
+        2,
+        3,
+        3,
+        4
+      ],
+      "BLIP": [
+        0,
+        2,
+        3,
+        4,
+        5
+      ],
+      "SQUEAK": [
+        0,
+        1,
+        3,
+        4,
+        5
+      ]
+    },
+    "deterministic": true,
+    "max_seconds": 1.42,
+    "crush_effect_dB_at_fault_0_and_1": [
+      6.68,
+      7.97
+    ],
+    "rr_take_pair_rms_difference": [
+      1.434,
+      1.418,
+      1.402
+    ],
+    "rr_take_centroid_hz": [
+      3558.0,
+      3341.0,
+      3453.0,
+      3633.0
+    ],
+    "rr_take_seconds": [
+      0.868,
+      0.86,
+      0.876,
+      0.865
+    ],
+    "velocity_centroid_hz_.2_.5_.8_1": [
+      133.0,
+      178.0,
+      228.0,
+      250.0
+    ],
+    "velocity_events_.2_.5_.8_1": [
+      2,
+      2,
+      2,
+      2
+    ],
+    "corners_finite_and_dc_under_0.01": true,
+    "corners_raw_peak": 1.002
+  }
+}

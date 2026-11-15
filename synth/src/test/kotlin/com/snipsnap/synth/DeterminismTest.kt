@@ -261,6 +261,17 @@ class DeterminismTest {
         }
     }
 
+    @Test fun `HICCUP renders every voice, a soft hit and every take byte for byte through JSON`() {
+        for (voice in HiccupVoice.entries) {
+            val patch = HiccupPatch("Canary", voice, Hiccup.defaults(voice))
+            assertContentEquals(patch.render().samples, Patches.fromJsonText(patch.toJsonText()).render().samples, "$voice")
+            for (take in 0..Hiccup.MAX_TAKE) {
+                val struck = HiccupPatch("Soft take", voice, Hiccup.defaults(voice), velocity = 0.6f, take = take)
+                assertContentEquals(struck.render().samples, Patches.fromJsonText(struck.toJsonText()).render().samples, "$voice soft take $take")
+            }
+        }
+    }
+
     @Test fun `CLUTTER renders every object, a soft hit and every take byte for byte through JSON`() {
         for (voice in ClutterVoice.entries) {
             val patch = ClutterPatch("Canary", voice, Clutter.defaults(voice))
