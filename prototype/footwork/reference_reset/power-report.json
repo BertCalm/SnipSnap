@@ -1,0 +1,69 @@
+{
+  "status": "gesture family awaiting owner listening; native delivery gates open",
+  "gain": 2.0,
+  "weight": 1.0,
+  "voices": {
+    "toe": {
+      "cells": 12,
+      "checksPassed": true,
+      "peak": 0.48494105815357536,
+      "meanRenderMsIncludingVerification": 68.43327112498325
+    },
+    "heel": {
+      "cells": 12,
+      "checksPassed": true,
+      "peak": 0.6092088247495586,
+      "meanRenderMsIncludingVerification": 74.67683495830595
+    },
+    "brush-forward": {
+      "cells": 12,
+      "checksPassed": true,
+      "peak": 0.2613103699320877,
+      "meanRenderMsIncludingVerification": 81.41033875002297
+    },
+    "brush-back": {
+      "cells": 12,
+      "checksPassed": true,
+      "peak": 0.2835299843519844,
+      "meanRenderMsIncludingVerification": 78.43595887500972
+    },
+    "shuffle": {
+      "cells": 12,
+      "checksPassed": true,
+      "peak": 0.2829969618263447,
+      "meanRenderMsIncludingVerification": 156.86166545826077
+    },
+    "flap": {
+      "cells": 12,
+      "checksPassed": true,
+      "peak": 0.548231486118674,
+      "meanRenderMsIncludingVerification": 126.97691083333969
+    },
+    "roll": {
+      "cells": 12,
+      "checksPassed": true,
+      "peak": 0.6812637178758626,
+      "meanRenderMsIncludingVerification": 1052.2551731249525
+    },
+    "riser": {
+      "cells": 12,
+      "checksPassed": true,
+      "peak": 0.7594331462446074,
+      "meanRenderMsIncludingVerification": 1925.5997965416707
+    }
+  },
+  "cells": 96,
+  "normalizedPairCorrelations": {
+    "toe/heel": 0.799056827963335,
+    "brush-forward/brush-back": 0.2696651939347644,
+    "shuffle/flap": 0.18524945895883146
+  },
+  "phraseBpm": 116,
+  "comparison": {
+    "method": "whole-phrase RMS; not perceptual loudness matching",
+    "newPhraseGainForComparison": 0.5185935643938769,
+    "old100to700HzEnergyFraction": 0.09005346335054015,
+    "new100to700HzEnergyFraction": 0.6738754001686144,
+    "baselineRegression": "all eight default full-force take-0 WAVs match within PCM quantization"
+  }
+}

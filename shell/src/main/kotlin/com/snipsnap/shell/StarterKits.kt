@@ -830,6 +830,26 @@ object StarterKits {
             seeded = false, tempoBpm = com.snipsnap.synth.ServoKits.Kit.NEURO.bpm.toFloat(),
         ) { com.snipsnap.synth.ServoKits.build(com.snipsnap.synth.ServoKits.Kit.NEURO) },
         Starter(
+            "calabash-afrobeat", "CALABASH AFROBEAT",
+            "Lagos in the 1970s, a big band's rhythm section live in one room: a round kick, a tight high snare, hats opening and closing, two congas and a tumba, a shekere, sticks and a bell, on warm sixteen-track tape. Three touch zones, four takes; a shekere riser.",
+            seeded = false, tempoBpm = com.snipsnap.synth.CalabashKits.Kit.AFROBEAT.bpm.toFloat(),
+        ) { com.snipsnap.synth.CalabashKits.build(com.snipsnap.synth.CalabashKits.Kit.AFROBEAT) },
+        Starter(
+            "calabash-afrobeats", "CALABASH AFROBEATS",
+            "Today's Lagos and Accra pop, programmed close and dry: a deep round kick, a crisp rim, a clap and snaps, a swung shaker, congas, a talking drum and a high bell. Three touch zones, four takes; a talking-drum riser.",
+            seeded = false, tempoBpm = com.snipsnap.synth.CalabashKits.Kit.AFROBEATS.bpm.toFloat(),
+        ) { com.snipsnap.synth.CalabashKits.build(com.snipsnap.synth.CalabashKits.Kit.AFROBEATS) },
+        Starter(
+            "calabash-mbalax", "CALABASH MBALAX",
+            "Dakar's dance bands: a sabar ensemble over a kit, the nder's stick and hand, the mbeng-mbeng and the col beneath, a tama talking over it and a high cracking snare, in a bright live room. Three touch zones, four takes; a sabar roll.",
+            seeded = false, tempoBpm = com.snipsnap.synth.CalabashKits.Kit.MBALAX.bpm.toFloat(),
+        ) { com.snipsnap.synth.CalabashKits.build(com.snipsnap.synth.CalabashKits.Kit.MBALAX) },
+        Starter(
+            "calabash-afrocuban", "CALABASH AFRO-CUBAN JAZZ",
+            "New York in the 1950s, a Latin section beside a jazz drummer: congas, bongos, timbales and paila, a mambo bell, a clave, a ride and an open kick, heard across a big studio through valve and tape. Three touch zones, four takes; an abanico.",
+            seeded = false, tempoBpm = com.snipsnap.synth.CalabashKits.Kit.AFROCUBAN.bpm.toFloat(),
+        ) { com.snipsnap.synth.CalabashKits.build(com.snipsnap.synth.CalabashKits.Kit.AFROCUBAN) },
+        Starter(
             "ember", "EMBER",
             "A live jazz kit in a small club in 1962, hard bop on sticks: an open calfskin kick feathered under the band, a crisp snare, a riveted ride carrying the time, a press roll and a mallet cymbal swell. Three touch zones, four takes.",
             seeded = false, tempoBpm = com.snipsnap.synth.EmberKits.Kit.CLUB.bpm.toFloat(),

@@ -98,7 +98,6 @@ class SynthRootTest {
                 SilkPatch("Door", SilkVoice.OUD, emptyMap()),
                 SnapPatch("Door", SnapVoice.ORBIT, emptyMap(), IntArray(Snap.TABLE_SIZE) { (it * 255) / (Snap.TABLE_SIZE - 1) }),
                 TerraPatch("Door", TerraVoice.COMPOUND_MEMBRANE, emptyMap()),
-                com.snipsnap.synth.CalabashPatch("Door", com.snipsnap.synth.CalabashVoice.CONGA, emptyMap()),
                 ErosionPatch("Door", ErosionVoice.ARC),
                 CairnPatch("Door", CairnVoice.ANSWER, emptyMap()),
                 SplayPresets.all().first(),

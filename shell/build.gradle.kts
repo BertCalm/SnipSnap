@@ -657,6 +657,16 @@ tasks.register<JavaExec>("generateServoKits") {
     args(providers.gradleProperty("servoKitsOutput").orNull ?: "${rootDir}/testkit/servo-kits")
 }
 
+tasks.register<JavaExec>("generateCalabashKits") {
+    group = "distribution"
+    description = "Build the four CALABASH genre kits, prove every velocity and round-robin grid through save, playback and MPC 3 export, and write the listening pack."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.CalabashKitGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "3g"
+    args(providers.gradleProperty("calabashKitsOutput").orNull ?: "${rootDir}/testkit/calabash-kits")
+}
+
 /** MURMUR's C2 repeats, V1 against opt-in V2, played from real saved banks by the saved-sample player. */
 tasks.register<JavaExec>("generateMurmurRoundRobinAudition") {
     group = "distribution"
