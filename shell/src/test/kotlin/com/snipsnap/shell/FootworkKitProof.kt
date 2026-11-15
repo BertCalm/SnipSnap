@@ -6,7 +6,7 @@ import com.snipsnap.synth.*
 import java.io.File
 import kotlin.math.*
 
-/** Full-cell evidence for FOOTWORK; compares decoded windows, not only metadata counts. */
+/** Native/SFZ full-cell proof plus MPC 3 PCM/cycle-field read-back. MPC slice maps remain absent. */
 object FootworkKitProof {
     private fun rms(x: FloatArray)=sqrt(x.sumOf { it.toDouble()*it }/x.size)
     private fun difference(a: FloatArray,b: FloatArray): Double {
@@ -34,6 +34,7 @@ object FootworkKitProof {
     fun roundTrip(pads: List<ArrangedPad>,kit: Kit,dir: File,folder: File) {
         check(KitStore.load(dir)==kit)
         TriadKitProof.verify(kit,dir,pads)
+        // The shared exporter omits MPC slice maps (HH1.4). These checks do NOT prove hardware cycling.
         val exported=Mpc3Exporter.exportTrack(kit,dir,File(folder,"mpc"))
         TriadKitProof.verifyTrack(exported.program,kit)
         for(pad in kit.pads) {

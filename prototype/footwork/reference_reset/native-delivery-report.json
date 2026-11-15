@@ -1,31 +1,38 @@
 {
-  "model": 1,
+  "model": 2,
   "kits": [
     {
       "id": "footwork-tap-jazz",
       "cells": 216,
-      "maxStoredPeak": 0.8629204034805298,
+      "maxStoredPeak": 0.7479046583175659,
       "maxWithinZoneRmsSpreadDb": 4.705546068046483,
-      "savePlaybackSfzMpc3": "passed",
-      "buildAndProofMs": 52446
+      "nativeAndSfz": "passed",
+      "mpc3PcmAndCycleFields": "passed",
+      "mpc3RoundRobin": "open_missing_slice_map",
+      "buildAndProofMs": 57169
     },
     {
       "id": "footwork-street-breaks",
       "cells": 216,
-      "maxStoredPeak": 0.8895177841186523,
-      "maxWithinZoneRmsSpreadDb": 1.4656694213287889,
-      "savePlaybackSfzMpc3": "passed",
-      "buildAndProofMs": 52156
+      "maxStoredPeak": 0.759958028793335,
+      "maxWithinZoneRmsSpreadDb": 2.0345350716588917,
+      "nativeAndSfz": "passed",
+      "mpc3PcmAndCycleFields": "passed",
+      "mpc3RoundRobin": "open_missing_slice_map",
+      "buildAndProofMs": 52703
     },
     {
       "id": "footwork-industrial-stepping",
       "cells": 216,
-      "maxStoredPeak": 0.5820461511611938,
+      "maxStoredPeak": 0.5626689195632935,
       "maxWithinZoneRmsSpreadDb": 2.2754402232132684,
-      "savePlaybackSfzMpc3": "passed",
-      "buildAndProofMs": 52238
+      "nativeAndSfz": "passed",
+      "mpc3PcmAndCycleFields": "passed",
+      "mpc3RoundRobin": "open_missing_slice_map",
+      "buildAndProofMs": 54097
     }
   ],
   "nativeListening": "pending",
-  "phoneAndMpcHardware": "pending"
+  "phoneAndMpcHardware": "pending",
+  "mpc3RoundRobin": "open_missing_slice_map"
 }

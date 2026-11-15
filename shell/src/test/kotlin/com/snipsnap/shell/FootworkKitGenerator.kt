@@ -13,8 +13,8 @@ object FootworkKitGenerator {
         val root=File(args.firstOrNull() ?: "testkit/footwork-native").absoluteFile
         require(!root.exists() || root.listFiles().isNullOrEmpty()) { "Use a new empty output directory: $root" }
         root.mkdirs()
-        val manifest=StringBuilder("{\"model\":1,\"nativeListening\":\"pending\",\"kits\":[")
-        val proof=StringBuilder("kit,pads,cells,source_checks,saved_pcm,playback_all_velocities,SFZ,MPC3\n")
+        val manifest=StringBuilder("{\"model\":${Footwork.VERSION},\"nativeListening\":\"pending\",\"mpc3RoundRobin\":\"open_missing_slice_map\",\"kits\":[")
+        val proof=StringBuilder("kit,pads,cells,source_checks,saved_pcm,playback_all_velocities,SFZ,MPC3_PCM_and_cycle_fields,MPC3_round_robin\n")
         for((k,genre) in FootworkKits.Kit.entries.withIndex()) {
             val folder=File(root,genre.id).apply { mkdirs() }; val dir=File(folder,"native")
             val start=System.nanoTime(); val pads=FootworkKits.build(genre)
@@ -52,8 +52,8 @@ object FootworkKitGenerator {
             }
             write("phrase.wav",phrase)
             manifest.append("],\"buildAndProofMs\":${(System.nanoTime()-start)/1000000}}")
-            proof.append("${genre.id},18,216,passed,passed,passed,passed,passed\n")
-            println("Verified ${genre.id}: 216 cells + save/playback/SFZ/MPC3")
+            proof.append("${genre.id},18,216,passed,passed,passed,passed,passed,open_missing_slice_map\n")
+            println("Verified ${genre.id}: 216 cells + native/SFZ; MPC3 PCM and cycle fields only, slice-map gate open")
         }
         manifest.append("]}"); File(root,"manifest.json").writeText(manifest.toString()); File(root,"verification.csv").writeText(proof.toString())
     }

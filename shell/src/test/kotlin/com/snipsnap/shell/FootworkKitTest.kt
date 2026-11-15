@@ -6,7 +6,7 @@ import kotlin.io.path.createTempDirectory
 import kotlin.test.*
 
 class FootworkKitTest {
-    @Test fun `all 648 cells retain source dynamics saved PCM velocity windows and repeat cycles through both exports`() {
+    @Test fun `all 648 cells retain native and SFZ cycling while MPC3 retains audio and cycle fields`() {
         val root=createTempDirectory("footwork-proof").toFile()
         try {
             for(genre in FootworkKits.Kit.entries) {

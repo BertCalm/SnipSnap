@@ -18,7 +18,7 @@ enum class FootworkVoice {
  * No reference PCM, per-hit peak normalization, room convolution, or shared mutable noise state.
  */
 object Footwork {
-    const val VERSION = 1
+    const val VERSION = 2
     private const val FS = Dsp.RATE * 4
     private const val RATE = Dsp.RATE
     private const val N = 38808 // 220 ms at 4x
@@ -29,7 +29,7 @@ object Footwork {
         fun gaussian(): Double = sqrt(-2*ln(uniform(1e-9,1.0))) * cos(2*PI*uniform(0.0,1.0))
         fun samples(n: Int) = DoubleArray(n) { gaussian() }
     }
-    private fun noise(tag: String, take: Int) = Noise(Dsp.seedFor("FOOTWORK", VERSION, tag, take))
+    private fun noise(tag: String, take: Int) = Noise(Dsp.seedFor("FOOTWORK", 1, tag, take))
     private fun filter(x: DoubleArray, sos: Array<DoubleArray>): DoubleArray {
         var y=x.copyOf()
         for (c in sos) {
@@ -128,7 +128,23 @@ object Footwork {
         if(voice==FootworkVoice.CLAP) for(i in raw.indices) raw[i]*=.45
         return finish(down(raw))
     }
-    private fun atom(voice: FootworkVoice,v: Double,take: Int): DoubleArray = when(voice) {
+    private fun atom(voice: FootworkVoice,v: Double,take: Int,model: Int=VERSION): DoubleArray {
+        if(model>=2 && voice==FootworkVoice.STAMP) {
+            val y=metal(v,take+600,.55); for(i in y.indices) y[i]*=.25
+            weight(y,v,take,.85)
+            // Heel-to-sole load transfer is a fresh short impact, not a gain-only heel variant.
+            return weight(y,v,take+1000,.4,.018)
+        }
+        if(model>=2 && voice==FootworkVoice.BALL) {
+            val rng=noise("forefoot",take); val grains=band(rng.samples(N),120,1800)
+            val f=340+rng.uniform(-18.0,18.0)
+            val raw=DoubleArray(N) { i -> val t=i.toDouble()/FS
+                (.40*grains[i]*v.pow(1.3)+.14*sin(2*PI*f*t)*v.pow(1.1))*exp(-t/.010)*minOf(1.0,t/.0005)
+            }
+            val y=down(raw); add(y,metal(v,take+800),.20)
+            return weight(y,v,take,.35)
+        }
+        return when(voice) {
         FootworkVoice.TOE -> weight(metal(v,take),v,take,.7)
         FootworkVoice.HEEL,FootworkVoice.STAMP,FootworkVoice.BALL -> {
             val heel=filter(metal(v,take+400,.25),FootworkData.heelLowpass)
@@ -142,9 +158,10 @@ object Footwork {
         FootworkVoice.BRUSH_FORWARD,FootworkVoice.BRUSH_BACK,FootworkVoice.BROOM -> brush(v,take,voice==FootworkVoice.BRUSH_BACK,voice==FootworkVoice.BROOM)
         FootworkVoice.CLAP,FootworkVoice.THIGH,FootworkVoice.CHEST,FootworkVoice.CLICK -> skin(voice,v,take)
         else -> error("not an atomic foot/body voice: $voice")
+        }
     }
     private data class Event(val at: Double,val voice: FootworkVoice,val force: Double)
-    private fun gesture(voice: FootworkVoice,v: Double,take: Int,kit: FootworkKits.Kit): DoubleArray {
+    private fun gesture(voice: FootworkVoice,v: Double,take: Int,kit: FootworkKits.Kit,model: Int): DoubleArray {
         val events=mutableListOf<Event>(); val seconds=when(voice) {
             FootworkVoice.SHUFFLE,FootworkVoice.FLAP -> { events+=Event(0.0,FootworkVoice.BRUSH_FORWARD,.8); events+=Event(.095,if(voice==FootworkVoice.SHUFFLE) FootworkVoice.BRUSH_BACK else FootworkVoice.TOE,1.0); .42 }
             FootworkVoice.ROLL -> { for(i in 0..15) events+=Event(i*.115,if(i%2==0) FootworkVoice.TOE else FootworkVoice.HEEL,if(i%4==0) 1.0 else .72); events+=Event(2.0,FootworkVoice.HEEL,1.0); 2.4 }
@@ -155,7 +172,7 @@ object Footwork {
             }
         }
         val y=DoubleArray((seconds*RATE).roundToInt())
-        for((i,e) in events.withIndex()) add(y,surface(atom(e.voice,v*e.force,take*67+i),kit,e.voice),delay=e.at)
+        for((i,e) in events.withIndex()) add(y,surface(atom(e.voice,v*e.force,take*67+i,model),kit,e.voice),delay=e.at)
         return finish(y)
     }
     private fun surface(x: DoubleArray,kit: FootworkKits.Kit,voice: FootworkVoice): DoubleArray {
@@ -181,13 +198,13 @@ object Footwork {
         val g=objectGains.getOrPut(kit to voice) { .30 / Clutter.renderRaw(source,macros,1f,0).maxOf { abs(it) }.coerceAtLeast(1e-9f) }
         return Clutter.renderRaw(source,macros,v.toFloat(),take%4).map { it*g*v.pow(1.15) }.toDoubleArray()
     }
-    fun render(voice: FootworkVoice,velocity: Float=1f,take: Int=0,kit: FootworkKits.Kit=FootworkKits.Kit.TAP): Snip {
-        require(velocity.isFinite() && velocity in 0f..1f && take in 0..3)
+    fun render(voice: FootworkVoice,velocity: Float=1f,take: Int=0,kit: FootworkKits.Kit=FootworkKits.Kit.TAP,model: Int=VERSION): Snip {
+        require(velocity.isFinite() && velocity in 0f..1f && take in 0..3 && model in 1..VERSION)
         val v=velocity.toDouble()
         val y=when(voice) {
-            FootworkVoice.SHUFFLE,FootworkVoice.FLAP,FootworkVoice.ROLL,FootworkVoice.RISER -> gesture(voice,v,take,kit)
+            FootworkVoice.SHUFFLE,FootworkVoice.FLAP,FootworkVoice.ROLL,FootworkVoice.RISER -> gesture(voice,v,take,kit,model)
             FootworkVoice.BUCKET,FootworkVoice.METAL,FootworkVoice.BOARD -> objectSound(voice,v,take,kit)
-            else -> surface(atom(voice,v,take),kit,voice)
+            else -> surface(atom(voice,v,take,model),kit,voice)
         }
         val out=FloatArray(y.size) { if(velocity==0f) 0f else (y[it]*GAIN*(if(kit==FootworkKits.Kit.TAP) 1.0 else .85)).toFloat() }
         require(out.all { it.isFinite() && abs(it)<.98f }) { "FOOTWORK peak budget exceeded: $kit $voice $velocity $take peak=${out.maxOf { abs(it) }}" }

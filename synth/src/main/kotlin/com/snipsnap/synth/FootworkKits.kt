@@ -6,7 +6,7 @@ import com.snipsnap.kit.ArrangedPad
 
 /** Three full-dynamics dance kits. Every role, including roll/riser, carries a complete 3 x 4 grid. */
 object FootworkKits {
-    const val VERSION = 1
+    const val VERSION = 2
     const val TAKES = 4
     val velocities = listOf(.30f,.65f,1f)
     enum class Kit(val id: String,val title: String,val bpm: Int) {

@@ -22,4 +22,17 @@ class FootworkTest {
             }
         }
     }
+    @Test fun `stamp heel toe and ball have different normalized attacks and v1 remains replayable`() {
+        for(kit in FootworkKits.Kit.entries) {
+            val voices=listOf(FootworkVoice.STAMP,FootworkVoice.HEEL,FootworkVoice.TOE,FootworkVoice.BALL)
+            val x=voices.map { Footwork.render(it,1f,0,kit).samples }
+            for(i in 0..2) for(j in i+1..3) {
+                val ea=sqrt(x[i].sumOf { it.toDouble()*it }); val eb=sqrt(x[j].sumOf { it.toDouble()*it })
+                val correlation=x[i].indices.sumOf { x[i][it].toDouble()*x[j][it] }/ea/eb
+                assertTrue(abs(correlation)<.92,"$kit ${voices[i]} ${voices[j]} $correlation")
+            }
+        }
+        for(voice in listOf(FootworkVoice.TOE,FootworkVoice.HEEL,FootworkVoice.BRUSH_FORWARD,FootworkVoice.BRUSH_BACK))
+            assertContentEquals(Footwork.render(voice,.65f,2,model=1).samples,Footwork.render(voice,.65f,2,model=2).samples)
+    }
 }
