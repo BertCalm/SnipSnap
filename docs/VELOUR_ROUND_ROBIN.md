@@ -1,4 +1,9 @@
-# Velour round-robin candidates
+# Velour round-robin grids
+
+Current A12 exception: the owner selected [Round 7 B](VELOUR_RIDE_B.md). Its
+fitted-modal strikes replace the old ride in the shelf and optional grid. All
+nonride source hits and variations remain unchanged. The Round 6 account below
+is historical for A12; its velocity/take implementation remains the path in use.
 
 Baseline inspected: `23cde0d1c` (2026-11-14). The approved Round 5 shelf bank
 remains unchanged. `VelourRoundRobinKits.build(treatment)` is an opt-in listening

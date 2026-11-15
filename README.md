@@ -527,10 +527,11 @@ sixteen-pad bank with three native touch layers. PLUCK can save a STRUM, and MAK
 INSTRUMENT builds finite three-layer keys from any single-note model-2 sound.
 See [OSTERIA](docs/OSTERIA.md).
 
-VELOUR CLOSE, VELOUR and VELOUR BLOOM load the approved, trimmed Round 5 bank:
+VELOUR CLOSE, VELOUR and VELOUR BLOOM load the approved, trimmed bank with the
+selected Round 7 B ride at A12:
 sixteen pads, three touch layers, dry C kick/snare on A05/A06, and conga, bongo,
 recording-derived tambourine and woodblock on A13–A16. The fixed PCM keeps the
-[audition and MPC downloads](https://velour-drum-audition.bertcalm.chatgpt.site/round5/)
+[audition and MPC downloads](https://velour-drum-audition.bertcalm.chatgpt.site/round7/)
 intact when the shelf makes a kit. The existing Velour/Bloom boards and original
 model-1 renderer remain available. [Implementation notes](docs/VELOUR.md) distinguish
 this approved baseline from the still-open round-robin, genre-kit and hardware gates.
