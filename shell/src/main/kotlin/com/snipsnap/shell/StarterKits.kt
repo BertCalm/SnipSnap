@@ -918,14 +918,30 @@ object StarterKits {
         Starter(genre.id, genre.title.uppercase(java.util.Locale.ROOT), "Latin percussion, three velocities and four takes per voice, with a hand-drum roll and cuica.", seeded = false) {
             com.snipsnap.synth.PatioPerformance.build(genre)
         }
-    }).plus(
+    }).plus(listOf(
         // Appended after PATIO: the stored starter order only grows at the end.
         Starter(
             SplayDelivery.BODIES_STARTER_ID, "SPLAY BODIES",
             "Five more things SPLAY's catches strike: WIRE, RUB, AIR, BAR and SKIN, each as you kept it.",
             seeded = false,
         ) { SplayDelivery.bodyStarterPads() },
-    )
+        // TERRA's three genre kits, owner KEEP in round terra-presets-1, appended after SPLAY BODIES.
+        Starter(
+            "terra-sahel", "TERRA SAHEL",
+            "West African TERRA kit: a deep udu, djembe bass, tones and slaps, two bells and a pentatonic balafon.",
+            seeded = false,
+        ) { com.snipsnap.synth.TerraGenreKits.build(com.snipsnap.synth.TerraGenreKits.Kit.SAHEL) },
+        Starter(
+            "terra-maqam", "TERRA MAQAM",
+            "Darbuka-led TERRA kit: doums, teks and kas across three heads, a clay drop and two bells.",
+            seeded = false,
+        ) { com.snipsnap.synth.TerraGenreKits.build(com.snipsnap.synth.TerraGenreKits.Kit.MAQAM) },
+        Starter(
+            "terra-punjab", "TERRA PUNJAB",
+            "Dholak and tabla TERRA kit: dholak booms, bayan bends, dayan strokes, a cajon backbeat and bells.",
+            seeded = false,
+        ) { com.snipsnap.synth.TerraGenreKits.build(com.snipsnap.synth.TerraGenreKits.Kit.PUNJAB) },
+    ))
 
     fun byId(id: String): Starter? = ALL.firstOrNull { it.id == id }
 }

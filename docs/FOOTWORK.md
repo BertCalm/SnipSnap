@@ -1,6 +1,6 @@
 # FOOTWORK: percussive dance and street-object drumkits
 
-Status: R0 sound rejected by the owner: “Doesn't really sound like the real sounds”. A new reference-calibrated tap anchor is awaiting listening. Full instrument acceptance remains open. Source assumption: entirely synthesized; no performance recordings are used. Working name FOOTWORK; the stage production named in the brief is a research reference, not a kit name.
+Status: R0 sound rejected by the owner: “Doesn't really sound like the real sounds”. The owner now recognizes the metallic ta-ee study as tap; exact reference matching remains approximate. Neither small nor open variant was singled out. Full instrument acceptance remains open. Source assumption: entirely synthesized; no performance recordings are used. Working name FOOTWORK; the stage production named in the brief is a research reference, not a kit name.
 
 Repository baseline: `6e2e4067634a06160590b06107d2f031f48e2e32`. APIs inspected: `Clutter.render`, `Clutter.renderRaw`, `ClutterKits`, `Modes.ring`, `Dsp.seedFor`, `ArrangedPad.velocityTakes`, `StarterKits`, `StarterShelf`. The registry contains 99 `*Patch.ENGINE` cases at this baseline; the older inventory is not used as the current count.
 
@@ -127,7 +127,7 @@ R1 ports accepted contact behavior, adds the remaining body/object roles and mac
 - **Verified:** repository paths and APIs above; existing CLUTTER footprint and kit calibration; legal 3×4 grid dimensions in `ArrangedPad`; current owner gate definitions.
 - **Measured:** R0 passes 96-cell source checks: every cell deterministically replays; every layer has four different normalized waveforms; every take changes timbre and level across velocity. Maximum peak is 0.700001 or less and maximum absolute DC is below 0.000054. All 105 WAV headers/hashes and ZIP integrity pass. See `prototype/footwork/r0-report.json`. These are Python source/render checks only.
 - **Proposed:** all genre layouts, new control surface, render-budget targets, remaining voices and Kotlin integration.
-- **Heard:** the owner rejected R0 for failing to resemble the real sounds. The new single tap anchor is not yet approved.
+- **Heard:** the owner rejected R0 for failing to resemble the real sounds. After the metallic ta-ee revision, the owner said it “sounds like tap to me,” while noting the reference match is not exact. This passes recognizable tap character only; neither variant was selected, and other voices and full-kit acceptance remain open.
 
 ## Reference reset after the first listen
 
