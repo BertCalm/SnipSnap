@@ -35,4 +35,13 @@ class FootworkTest {
         for(voice in listOf(FootworkVoice.TOE,FootworkVoice.HEEL,FootworkVoice.BRUSH_FORWARD,FootworkVoice.BRUSH_BACK))
             assertContentEquals(Footwork.render(voice,.65f,2,model=1).samples,Footwork.render(voice,.65f,2,model=2).samples)
     }
+    @Test fun `identity revision preserves unflagged single gestures across the touch grid`() {
+        val retained=listOf(FootworkVoice.STAMP,FootworkVoice.TOE,FootworkVoice.BALL,
+            FootworkVoice.BRUSH_FORWARD,FootworkVoice.BRUSH_BACK,FootworkVoice.SHUFFLE,
+            FootworkVoice.FLAP,FootworkVoice.BROOM,FootworkVoice.METAL)
+        for(voice in retained) for(v in FootworkKits.velocities) for(take in 0..3)
+            assertContentEquals(Footwork.render(voice,v,take,model=2).samples,
+                Footwork.render(voice,v,take,model=3).samples,"$voice $v $take")
+    }
+
 }

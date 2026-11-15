@@ -18,7 +18,7 @@ enum class FootworkVoice {
  * No reference PCM, per-hit peak normalization, room convolution, or shared mutable noise state.
  */
 object Footwork {
-    const val VERSION = 2
+    const val VERSION = 3
     private const val FS = Dsp.RATE * 4
     private const val RATE = Dsp.RATE
     private const val N = 38808 // 220 ms at 4x
@@ -128,7 +128,95 @@ object Footwork {
         if(voice==FootworkVoice.CLAP) for(i in raw.indices) raw[i]*=.45
         return finish(down(raw))
     }
+    // Model 3 uses separate contact/resonance recipes. These are authored hypotheses,
+    // not fits to recordings: failed reference downloads must not become calibration claims.
+    private fun identity(voice: FootworkVoice,v: Double,take: Int): DoubleArray {
+        val rng=noise("identity-${voice.name}",take)
+        val grains=rng.samples(N)
+        val out=DoubleArray(N)
+        // A contact pulse excites broad resonances; overlapping envelopes preserve the
+        // hand/finger arrival sequence instead of a single shared sine-plus-hiss envelope.
+        fun contact(at: Double,decay: Double,gain: Double,freq: Double,q: Double) {
+            val filtered=peakBand(grains,freq*(.8+.2*v)*(1+rng.uniform(-.025,.025)),q)
+            val start=((at+rng.uniform(0.0,.00025))*FS).toInt()
+            for(i in start until N) {
+                val t=(i-start).toDouble()/FS
+                out[i]+=gain*filtered[i]*(1-exp(-t/.00012))*exp(-t/(decay*(1.15-.15*v)))*v.pow(1.25)
+            }
+        }
+        fun mode(freq: Double,decay: Double,gain: Double,at: Double=0.0) {
+            val f=freq*(1+rng.uniform(-.018,.018)); val start=(at*FS).toInt()
+            val phase=rng.uniform(-.25,.25)
+            for(i in start until N) {
+                val t=(i-start).toDouble()/FS
+                out[i]+=gain*sin(2*PI*f*t+phase)*(1-exp(-t/.0003))*exp(-t/decay)*v.pow(1.12)
+            }
+        }
+        when(voice) {
+            FootworkVoice.HEEL -> {
+                // Loaded heel: brief hard tap, low wooden block response, almost no
+                // delayed free-plate chatter. Toe retains the earlier ta-ee mechanism.
+                contact(0.0,.0025,.65,2100.0,.6)
+                contact(.003,.004,.35,850.0,.8)
+                mode(205.0,.014,.13); mode(610.0,.009,.095); mode(1130.0,.005,.055)
+                contact(.006,.002,.10,4200.0,2.0)
+            }
+            FootworkVoice.CLAP -> {
+                // Finger edges meet before the palm/cupped-air impulse; no synthetic
+                // repeated equally-spaced clap bursts or sustained tonal component.
+                contact(0.0,.002,.50,3100.0,.65)
+                contact(.0013,.006,.55,1450.0,.55)
+                contact(.0028,.013,.34,1050.0,1.6)
+                contact(.001,.003,.24,6500.0,.7)
+            }
+            FootworkVoice.THIGH -> {
+                // Broad palm slap and smaller finger slap; the fleshy body is heavily
+                // damped so its bright crack remains separate from the chest thud.
+                contact(0.0,.0035,.75,2600.0,.55)
+                contact(.0018,.006,.48,800.0,.65)
+                contact(.004,.002,.26,4200.0,.8)
+                mode(245.0,.007,.095); mode(460.0,.004,.055)
+            }
+            FootworkVoice.CHEST -> {
+                contact(0.0,.003,.35,1800.0,.6)
+                contact(.001,.016,.85,240.0,.6)
+                contact(.003,.009,.32,620.0,.7)
+                mode(112.0,.023,.11); mode(185.0,.014,.055)
+            }
+            FootworkVoice.CLICK -> {
+                // The finger hits the palm: broadband crack plus a short hand-cavity
+                // pop. Remove the former 1750-Hz sine which read as a pitched tick.
+                contact(0.0,.0011,1.05,4700.0,.6)
+                contact(.0006,.0035,.70,1700.0,.8)
+                contact(.0014,.004,.32,760.0,1.1)
+            }
+            FootworkVoice.BUCKET -> {
+                // Inverted plastic bucket: broad hand attack, flexing base and
+                // inharmonic wall modes. No tuned Clutter preset reuse.
+                contact(0.0,.0035,.55,2200.0,.65)
+                contact(.001,.012,.45,650.0,.8)
+                mode(172.0,.075,.12); mode(287.0,.050,.09)
+                mode(463.0,.037,.065); mode(793.0,.022,.045)
+                mode(1247.0,.014,.025)
+            }
+            FootworkVoice.BOARD -> {
+                // Hard wood knock: several inharmonic flexural modes and a separate
+                // early floor contact, rather than one damped drum-like fundamental.
+                contact(0.0,.0018,.65,3400.0,.6)
+                contact(.007,.0025,.30,1800.0,.65)
+                mode(430.0,.020,.12); mode(1187.0,.013,.085)
+                mode(2331.0,.008,.06); mode(3860.0,.004,.035)
+                mode(198.0,.011,.065,.007)
+            }
+            else -> error("no identity recipe: $voice")
+        }
+        // Fixed headroom shared by every velocity and take; never normalize hits.
+        for(i in out.indices) out[i]*=.45
+        return finish(down(out))
+    }
     private fun atom(voice: FootworkVoice,v: Double,take: Int,model: Int=VERSION): DoubleArray {
+        if(model>=3 && voice in listOf(FootworkVoice.HEEL,FootworkVoice.CLAP,FootworkVoice.THIGH,FootworkVoice.CHEST,FootworkVoice.CLICK))
+            return identity(voice,v,take)
         if(model>=2 && voice==FootworkVoice.STAMP) {
             val y=metal(v,take+600,.55); for(i in y.indices) y[i]*=.25
             weight(y,v,take,.85)
@@ -203,7 +291,7 @@ object Footwork {
         val v=velocity.toDouble()
         val y=when(voice) {
             FootworkVoice.SHUFFLE,FootworkVoice.FLAP,FootworkVoice.ROLL,FootworkVoice.RISER -> gesture(voice,v,take,kit,model)
-            FootworkVoice.BUCKET,FootworkVoice.METAL,FootworkVoice.BOARD -> objectSound(voice,v,take,kit)
+            FootworkVoice.BUCKET,FootworkVoice.METAL,FootworkVoice.BOARD -> if(model>=3 && voice!=FootworkVoice.METAL) surface(identity(voice,v,take),kit,voice) else objectSound(voice,v,take,kit)
             else -> surface(atom(voice,v,take,model),kit,voice)
         }
         val out=FloatArray(y.size) { if(velocity==0f) 0f else (y[it]*GAIN*(if(kit==FootworkKits.Kit.TAP) 1.0 else .85)).toFloat() }

@@ -166,3 +166,33 @@ Generation is reproducible into a new empty directory with `./gradlew --offline 
 - Existing object models provide the stage ensemble while development effort goes into the missing dancer.
 - Fixed source calibration preserves the relationship between light steps and heavy landings.
 - Explicit gate evidence prevents a convincing browser demo from being mistaken for a complete sampler instrument.
+
+### Model 3: pad identity revision
+
+Owner feedback on model 2: Tap Jazz 02 Heel and 03 Toe sound alike; 09 Hand Clap,
+10 Thigh Slap, 11 Chest Pat, 12 Finger Click, 13 Bucket and 16 Board do not evoke
+their labels convincingly. Numerical attack separation did not establish perceptual identity.
+
+Model 3 replaces Heel with a short loaded knock and reduces its free metallic response;
+Toe keeps the earlier ta-ee source. Clap models finger-edge then cupped-palm contact;
+thigh uses a bright palm/finger slap with heavily damped body; chest uses a broad low
+body response; finger click uses a broadband crack and short palm cavity response with
+no sustained sine. Bucket now uses a hand transient plus inharmonic plastic base/wall
+modes; Board uses hard contact and multiple short wood modes with a secondary floor
+contact. These two roles no longer reuse the Clutter presets. Loose Metal still does.
+Roll and riser inherit the new heel. The other unflagged single gestures are unchanged.
+
+Why it is built this way:
+
+- Different arrival times and resonance families give each action its own mechanism.
+- The heel drops most delayed plate chatter so toe can retain that defining response.
+- Contact brightness and duration change with force; fixed gain preserves full dynamics.
+- Seeded arrival and mode variation supply four repeat takes without storing recordings.
+- Realism is the unresolved risk: these are authored hypotheses, not calibrated physical replicas.
+
+Verified source baseline before revision: `3a1d28ce`. Model 1 and 2 remain explicitly
+renderable with their existing seed law. The public reference pages researched for body
+sounds could not be downloaded by the analysis environment (HTTP 403); no coefficients
+were fitted to those recordings and none are included in the kit. The audition compares
+previous/new at original playback gain and provides all three velocity levels and four takes.
+MPC 3's missing chain-WAV slice map remains an export blocker, not a passed RR gate.
