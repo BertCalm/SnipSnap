@@ -60,6 +60,7 @@ object Patches {
             ApsisPatch.ENGINE -> ApsisPatch.fromJsonValue(value)
             ThumpPatch.ENGINE -> ThumpPatch.fromJsonValue(value)
             ScuffPatch.ENGINE -> ScuffPatch.fromJsonValue(value)
+            KindredPatch.ENGINE -> KindredPatch.fromJsonValue(value)
             ClutterPatch.ENGINE -> ClutterPatch.fromJsonValue(value)
             EmberPatch.ENGINE -> EmberPatch.fromJsonValue(value)
             CalabashPatch.ENGINE -> CalabashPatch.fromJsonValue(value)

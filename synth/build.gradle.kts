@@ -3715,6 +3715,16 @@ tasks.register<JavaExec>("generateSporeMembraneAudition") {
     args(providers.gradleProperty("sporePrototypeOutput").orNull ?: "${rootDir}/testkit/spore-synthesis")
 }
 
+/** Render KINDRED's round-K1 Kotlin clips under testkit/kindred-audition/kotlin/, for the Python A/B and the listening page. */
+tasks.register<JavaExec>("generateKindredAudition") {
+    group = "distribution"
+    description = "Render the KINDRED Kotlin clips (every kit recipe, soft hits, takes) under testkit/kindred-audition/kotlin/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.KindredAuditionGenerator")
+    workingDir = projectDir
+    args(providers.gradleProperty("kindredOutput").orNull ?: "${rootDir}/testkit/kindred-audition/kotlin")
+}
+
 /** Render SCUFF's round-1 Kotlin clips under testkit/scuff-audition/kotlin/, for the Python A/B and the listening page. */
 tasks.register<JavaExec>("generateScuffAudition") {
     group = "distribution"

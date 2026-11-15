@@ -250,6 +250,17 @@ class DeterminismTest {
         }
     }
 
+    @Test fun `KINDRED renders every voice, every kit recipe, a soft hit and a later take byte for byte through JSON`() {
+        for (voice in KindredVoice.entries) {
+            val patch = KindredPatch("Canary", voice, Kindred.defaults(voice))
+            assertContentEquals(patch.render().samples, Patches.fromJsonText(patch.toJsonText()).render().samples, "$voice")
+        }
+        for (recipe in KindredRecipes.ALL) {
+            val struck = KindredPatch.of(recipe, velocity = 0.6f, take = 3)
+            assertContentEquals(struck.render().samples, Patches.fromJsonText(struck.toJsonText()).render().samples, "${recipe.id} soft take 3")
+        }
+    }
+
     @Test fun `CALABASH renders every voice, a soft hit and a later take byte for byte through JSON`() {
         for (voice in CalabashVoice.entries) {
             // The four rolls render seconds each; their strokes are the voices' own, so one hard take covers them.

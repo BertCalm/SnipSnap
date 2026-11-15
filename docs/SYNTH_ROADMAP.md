@@ -3729,3 +3729,17 @@ are matched in loudness (the audition's peak law left hats 2 to 5 dB apart). Eve
 playback and the MPC 3 export (768 slices). Every kit carries a roll or riser. Open: the owner's listen to the kits
 from the app, the Latin jazz kit and its new percussion voices (asked for 2026-11-15), presets and the picker,
 hardware. See [EMBER](EMBER.md).
+
+### KINDRED, rounds 0 to K1 (2026-11-15)
+
+A one-voice, eight-step analog-style percussion synth from the owner's DFAM reference clips: two VCOs with a shared
+pitch-decay envelope, FM and hard sync, noise, a four-pole tanh ladder (LP or HP), three decays; a new step re-strikes
+the same voice and cuts the last tail. Rounds 0 to 2 were Python (`prototype/kindred/`): six voices, then four
+sixteen-pad genre kits (TECHNO 132, INDUSTRIAL 100, ELECTRO 124, AMBIENT 84), then model 2 after the owner heard
+round 1 as "a small radio speaker" (kicks settle near 58 Hz with an open ladder and an octave square, fitted to the
+reference kick; the grooves' 400 Hz to 2.5 kHz deficit fell from 5.5 to 1.9 to 2.9 dB). The owner accepted round 2.
+Round K1 is the Kotlin port: `Kindred.kt`, `KindredPatch` (velocity, take, recipe, model), the 56 recipes generated
+from the prototype's kit table, provisional presets under `PatchTypes.PROTOTYPES`, `KindredTest`, a determinism
+canary. The noise-free recipes match the Python to 0.01 dB (correlation 0.972 to 1.000); the noise recipes are
+another realisation (up to 2.54 dB). 40.7 ms a pad, warm. Nothing in Kotlin heard. Open: the kits on the shelf with
+their phrases and risers (K2), the picker, hardware. See [KINDRED](KINDRED.md).
