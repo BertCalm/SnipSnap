@@ -10,10 +10,10 @@ import kotlin.test.assertTrue
 class SplayFactoryRegistrationTest {
     @Test fun `factory dispatcher serves five original accepted inputs under one voice`() {
         val factory = Presets.forVoice("SPLAY", "TONGUE")
-        assertEquals(listOf("TONGUE"), SplayVoice.entries.map { it.name })
+        assertEquals(listOf("TONGUE", "WIRE", "RUB", "AIR", "BAR", "SKIN"), SplayVoice.entries.map { it.name })
         assertEquals(listOf("1 mechanism", "2 mechanisms", "4 mechanisms", "8 mechanisms", "16 mechanisms"),
             factory.map { it.name })
-        assertEquals(factory, Presets.all().filter { it.engine == SplayPatch.ENGINE })
+        assertEquals(factory, Presets.all().filter { it.engine == SplayPatch.ENGINE && it.voiceName == "TONGUE" })
         assertTrue(Presets.forVoice("SPLAY", "POPULATION_16").isEmpty())
         for ((index, id) in listOf("pc-1", "pc-2", "pc-4", "pc-8", "pc-16").withIndex()) {
             val source = requireNotNull(javaClass.getResourceAsStream("/splay-accepted/$id.patch.json"))
