@@ -3755,3 +3755,23 @@ The picker: CALABASH sits in SYNTH's engine picker after CLUTTER, before CAIRN (
 factory path keeps a preset's velocity, take and model; a frozen draft keeps them through edits), filed under DRUMS
 in `EngineCatalog`; 91 picker engines. An on-device test in `NewEngineSynthScreenTest` loads AFROBEAT CONGA OPEN and
 keeps an edit with its take and model; CI compiles and runs it (no SDK here). See [CALABASH](CALABASH.md).
+
+### SERVO, rounds 0 and 1 (2026-11-15)
+
+Machine drums on a weak power rail for electro, ghetto tech and neurofunk: every hit sags one supply a few
+milliseconds after it lands, and pitch, output swing and a resonant tone peak all read that one state. Round 0
+was the brief, a Python prototype and a listening page; the owner then said "Must pass the gates", so round 1
+ported it to `Servo.kt` unheard (ten voices, six macros, velocity, four takes, rosterless) and put three kits on
+the FRESH TAPE shelf under SKINS: SERVO ELECTRO (126), SERVO JIT (156) and SERVO NEURO (174), fourteen hits, a
+roll and a riser each, the phrases baked on one shared rail. Every voice's Kotlin hit sits inside the spread of
+the prototype's own takes; all 576 slices pass save, reload, playback and MPC 3 read-back. A zone's takes are
+matched in loudness (CLUTTER's law): on the first-take law a take fired on a sagging rail came out up to 5.3 dB
+down. Sound and hardware gates are open: nobody has heard it. See [SERVO](SERVO.md) and the gates entry.
+
+### SERVO, accepted (2026-11-15)
+
+The owner heard round 1 as "a bit weak"; round 1b gave the kick, snare and tom a held shoulder, the snare more
+body, and every voice more drive (kicks 1.2 to 2.7 dB, snares 3.2 to 4.7 dB louder at the same peak). The owner
+then wrote "Sound approved, phone and MPC good, merge". Model 1 and kit version 1 are the approved baseline.
+Open, not gates: factory presets from the accepted pads, and the SYNTH picker. See [SERVO](SERVO.md).
+

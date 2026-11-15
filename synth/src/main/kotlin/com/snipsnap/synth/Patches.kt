@@ -63,6 +63,7 @@ object Patches {
             ClutterPatch.ENGINE -> ClutterPatch.fromJsonValue(value)
             EmberPatch.ENGINE -> EmberPatch.fromJsonValue(value)
             CalabashPatch.ENGINE -> CalabashPatch.fromJsonValue(value)
+            ServoPatch.ENGINE -> ServoPatch.fromJsonValue(value)
             OnsetPatch.ENGINE -> OnsetPatch.fromJsonValue(value)
             FiredBronzePatch.ENGINE -> FiredBronzePatch.fromJsonValue(value)
             SkinPatch.ENGINE -> SkinPatch.fromJsonValue(value)
