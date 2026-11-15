@@ -381,6 +381,7 @@ object UserPresets {
 
     /** The voice enum a roster line names: `THUMP` → `ThumpVoice`, `TONEWHEEL` → `TonewheelVoice`. */
     fun voiceEnum(engine: String): String = when (engine.uppercase(Locale.ROOT)) {
+        com.snipsnap.synth.BristlePatch.ENGINE -> "Bristle.Route"
         com.snipsnap.synth.FiredBronzePatch.ENGINE -> "FiredBronzeDryKit.Pad"
         ScannedChainPatch.ENGINE -> "ScannedChainVoice"
         OrphicaPatch.ENGINE -> "OrphicaMaterial"
@@ -639,6 +640,10 @@ object UserPresets {
             val routes = m.routes.joinToString(", ") { "SpoolRoute(${it.source}, ${it.destination}, ${it.gain}f)" }
             val machine = "SpoolMachine(roster = listOf($roster), gateSeconds = ${m.gateSeconds}f, sourceSeconds = ${m.sourceSeconds}f, motorTorque = ${m.motorTorque}f, returnSeconds = ${m.returnSeconds}f, headOffsets = listOf($heads), spliceSchedule = listOf($splices), routes = listOf($routes), holdMode = SpoolHoldMode.${m.holdMode}, seed = ${m.seed}, writeDelaySamples = ${m.writeDelaySamples}, reengage = ${m.reengage})"
             return "SpoolPatch(\"$name\", SpoolVoice.${patch.voice}, mapOf($macros), machine = $machine, velocity = ${patch.velocity}f, model = ${patch.model}),"
+        }
+        if (patch is com.snipsnap.synth.BristlePatch) {
+            val recipe = Json.write(JsonValue.Str(patch.toJsonText())).replace("$", "\\$")
+            return "BristlePatch.fromJsonText($recipe),"
         }
         if (patch is OhmPatch && patch.model >= 3) {
             // The legacy factory helper constructs model 2 before a following copy/let.

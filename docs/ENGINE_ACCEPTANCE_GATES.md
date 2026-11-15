@@ -671,3 +671,30 @@ prototype audition; no Kotlin exists.
   Preserve round 0c as the baseline.
 - **Overall: incomplete.** The Kotlin engine is in (round 1) and not yet heard; the kits on the shelf,
   saving, playback, export and hardware are open. The percussion gate is waived by the owner.
+
+
+## BRISTLE (finite, held and round-robin prototype, 2026-11-15)
+
+See [BRISTLE](BRISTLE.md) for source preservation, current verification and reproduction commands.
+The owner accepted both A/B routes and later reported the current prototype **“Tested and approved”**
+after the Android/MPC testing recommendation. This is owner-reported acceptance, not an automated
+device-test result; device models and versions were not supplied. See the acceptance record in BRISTLE.md.
+
+- **Six musical voices: implemented, owner retained all six.** ROUND, PULSE, HOLLOW, REED, WIRE and FOLD each have a distinct source mechanism and a preset. The owner answered “we can keep all” to the six-voice audition. A/B remain the two accepted factory anchors. Pairwise harmonic-balance and macro-response checks pass (`BristleVoicesTest`).
+- **Playable keygroups: pass in software.** Finite and held C1–C3, three timbral touch layers, 75 samples per voice/mode or 150 with two takes. All twelve new-voice packages render and validate.
+  `BristleKeygroupMakerTest` validates samples, mapping, reference playback and source bindings; subsequent owner testing is recorded above.
+- **Premade kit: implemented, listening pending.** BRISTLE is a sixteen-pad BASS shelf starter: eight bass-walk notes, six new voices and A/B. Phone save/readback preserves three touches × two takes. The portable MPC delivery uses a three-touch first-take main program plus three fixed-touch cycling companions.
+- **Chord tools: partial, software range checked.** `BristleChordPlan` preserves every interval with whole-octave transposition: 956 of 960 authored voicings fit C1–C3. Four B add-nine cases are explicitly refused. Six held chord playback/release checks pass; live chord UI and hardware checks remain open.
+- **Sustained articulation: pass in software, owner approved.** Opt-in SUSTAIN KEYS preserves the
+  opening gesture, loops a measured steady region and releases on note-off. Existing finite HOLD
+  behavior remains unchanged. `BristleHeldTest` and `BristleHeldInstrumentTest` cover seams, pitch,
+  three touches, package readback, repeated wraps and release.
+- **Timbral velocity: rendered.** Touch changes spectrum, onset and amplitude. Round-2 tests exercise
+  saving, reference playback selection and actual MPC3/MPC2 descriptors; results are in BRISTLE.md.
+- **Round robin: partial.** Two genuine takes per touch, saved phone cycling and fixed-touch MPC
+  companion programs are implemented. Combined velocity × round robin in one MPC keygroup
+  remains open; the main MPC program keeps the first take per touch. The generic MPC 3 pad-chain writer also lacks the embedded WAV slice map; the portable starter avoids that path using separate WAV files. A fallback does not close this gate. See rounds 4–5 in BRISTLE.md.
+- **STRUM, percussion rolls and drum genre kits: not applicable.** A synthesized melodic bass.
+- **Picker and physical playback: owner-reported tested and approved.** Android automation remains
+  unrun here; no SDK or independently measured device results are available.
+- **Overall: incomplete.** Finite and held prototype integration is present, not full engine completion.

@@ -813,6 +813,11 @@ object StarterKits {
             "UK garage TEMPEST kit: short kicks, rim and ghost snares, five choking hats and pitched blips.",
             seeded = false,
         ) { SynthKits.tempestStep() },
+        Starter(
+            "bristle", "BRISTLE",
+            "Bass walk, six new source voices and the approved A/B routes. Three touch levels, two takes per pad.",
+            seeded = false, key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.bristle() },
     )
 
     fun byId(id: String): Starter? = ALL.firstOrNull { it.id == id }

@@ -3804,3 +3804,12 @@ tasks.register<JavaExec>("generateClutterAudition") {
     workingDir = projectDir
     args(providers.gradleProperty("clutterOutput").orNull ?: "${rootDir}/testkit/clutter-audition/kotlin")
 }
+
+tasks.register<JavaExec>("generateBristleAudition") {
+    group = "distribution"
+    description = "Render both accepted Bristle routes, saved study recipes and bass velocity layers."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.BristleAuditionGenerator")
+    workingDir = rootProject.projectDir
+    args(providers.gradleProperty("bristleOutput").orNull ?: "${rootDir}/testkit/bristle-kotlin")
+}

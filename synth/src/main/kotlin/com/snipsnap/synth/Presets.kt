@@ -181,6 +181,10 @@ object Presets {
             val v = ThawVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
             ThawPresets.forVoice(v)
         }
+        BristlePatch.ENGINE -> {
+            val v = Bristle.Route.entries.firstOrNull { it.name == voice } ?: return emptyList()
+            BristlePresets.forVoice(v)
+        }
         OsteriaPatch.ENGINE -> {
             val v = OsteriaVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
             OsteriaPresets.forVoice(v)
@@ -363,7 +367,7 @@ object Presets {
     fun all(): List<Patch> =
         TempestPresets.all() +
         SplayFactoryPresets.all() +
-        BackwashPresets.all() + HalobarPresets.all() + FiredBronzePresets.all() + RivetPresets.all() + OsteriaPresets.all() + ScuffPresets.all() + ErosionPresets.all() + WickPresets.all() +
+        BristlePresets.all() + BackwashPresets.all() + HalobarPresets.all() + FiredBronzePresets.all() + RivetPresets.all() + OsteriaPresets.all() + ScuffPresets.all() + ErosionPresets.all() + WickPresets.all() +
         OtisPresets.all() +
         LorentzPresets.all() +
         AccordPresets.all() +

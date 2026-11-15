@@ -206,6 +206,7 @@ object Velocity {
         is ChitinPatch -> Chitin.macrosFor(patch.voice)
         is AccordPatch -> Accord.macrosFor(patch.voice)
         is ErosionPatch -> Erosion.macrosFor(patch.voice)
+        is BristlePatch -> Bristle.macrosFor(patch.voice)
         is OsteriaPatch -> Osteria.macrosFor(patch.voice)
         is RimePatch -> Rime.macrosFor(patch.voice, patch.model)
         is OtisPatch -> Otis.macrosFor(patch.voice)
@@ -418,6 +419,7 @@ object Velocity {
         is ChitinPatch -> Chitin.render(patch.voice, patch.macros, velocity = v)
         // Touch changes excitation while the saved mechanics and acoustic profile remain intact.
         is AccordPatch -> patch.copy(velocity = v).render()
+        is BristlePatch -> patch.copy(velocity = v).render()
         is OsteriaPatch -> patch.copy(velocity = v).render()
         is ErosionPatch -> patch.copy(velocity = patch.velocity * v).render()
         is RimePatch -> patch.copy(velocity = v).render()

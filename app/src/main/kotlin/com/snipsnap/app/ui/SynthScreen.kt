@@ -293,6 +293,9 @@ import com.snipsnap.shell.SplayDelivery
 import com.snipsnap.shell.SplayFinitePadMaker
 import com.snipsnap.synth.Erosion
 import com.snipsnap.synth.ErosionVoice
+import com.snipsnap.synth.Bristle
+import com.snipsnap.synth.BristlePatch
+import com.snipsnap.shell.BristlePadMaker
 import com.snipsnap.synth.Osteria
 import com.snipsnap.synth.OsteriaStrum
 import com.snipsnap.synth.OsteriaPatch
@@ -942,7 +945,7 @@ fun SynthScreen(
                                 it.name == settings[presetSettingsKey(e, v)]
                             } as? OrphicaPatch)
                     } else null
-                    val nativeFactory = if (e == Engine.TEMPEST || e == Engine.SPLAY || e == Engine.OSTERIA || e == Engine.HALOBAR || e == Engine.EROSION || e == Engine.CHITIN || e == Engine.CAUSTIC || e == Engine.ACCORD || e == Engine.RIME || e == Engine.FILAMENT || e == Engine.CHAMBER || e == Engine.TREMOR || e == Engine.RELAY || e == Engine.NACRE || e == Engine.MERIDIAN || e == Engine.OTIS || e == Engine.OHM || e == Engine.WICK || e == Engine.RIVET || e == Engine.MURMUR) {
+                    val nativeFactory = if (e == Engine.TEMPEST || e == Engine.BRISTLE || e == Engine.SPLAY || e == Engine.OSTERIA || e == Engine.HALOBAR || e == Engine.EROSION || e == Engine.CHITIN || e == Engine.CAUSTIC || e == Engine.ACCORD || e == Engine.RIME || e == Engine.FILAMENT || e == Engine.CHAMBER || e == Engine.TREMOR || e == Engine.RELAY || e == Engine.NACRE || e == Engine.MERIDIAN || e == Engine.OTIS || e == Engine.OHM || e == Engine.WICK || e == Engine.RIVET || e == Engine.MURMUR) {
                         factoryPresets(e, v).firstOrNull {
                             it.name == settings[presetSettingsKey(e, v)]
                         }
@@ -967,6 +970,7 @@ fun SynthScreen(
                         else if (e == Engine.RIME) seed.seededDrafts.filterIsInstance<RimePatch>().firstOrNull { it.voice == v }
                         else if (e == Engine.OTIS) seed.seededDrafts.firstOrNull { it is OtisPatch && it.voice == v }
                         else if (e == Engine.SPLAY) seed.seededDrafts.filterIsInstance<SplayPatch>().firstOrNull { it.voice == v }
+                        else if (e == Engine.BRISTLE) seed.seededDrafts.firstOrNull { it is BristlePatch && it.voice == v }
                         else if (e == Engine.OSTERIA) seed.seededDrafts.firstOrNull { it is OsteriaPatch && it.voice == v }
                         else if (e == Engine.HALOBAR) seed.seededDrafts.firstOrNull { it is HalobarPatch && it.voice == v }
                         else if (e == Engine.EROSION) seed.seededDrafts.firstOrNull { it is ErosionPatch && it.voice == v }
@@ -1187,7 +1191,7 @@ fun SynthScreen(
         // existing draft format, including a last-frame macro edit before navigation.
         if (patch is CausticPatch) CausticEditing.edited(patch, macros = macrosByVoice.getValue(pair))
         else if (patch is SkinPatch) patch.withMacros(macrosByVoice.getValue(pair))
-        else if (patch is TempestPatch || patch is SplayPatch || patch is OsteriaPatch || patch is BackwashPatch || patch is SootPatch || patch is HalobarPatch || patch is ErosionPatch || patch is OnsetPatch || patch is AccordPatch || patch is LibrationPatch || patch is RimePatch || patch is OtisPatch || patch is RivetPatch || patch is WickPatch || patch is FilamentPatch || patch is TidalPatch || patch is TremorPatch || patch is ChamberPatch ||
+        else if (patch is BristlePatch || patch is TempestPatch || patch is SplayPatch || patch is OsteriaPatch || patch is BackwashPatch || patch is SootPatch || patch is HalobarPatch || patch is ErosionPatch || patch is OnsetPatch || patch is AccordPatch || patch is LibrationPatch || patch is RimePatch || patch is OtisPatch || patch is RivetPatch || patch is WickPatch || patch is FilamentPatch || patch is TidalPatch || patch is TremorPatch || patch is ChamberPatch ||
             patch is PrismPatch || patch is NacrePatch || patch is OverlapPatch || patch is ObbligatoPatch || patch is RelayPatch || patch is MurmurPatch ||
             patch is PluckPatch && patch.voice == PluckVoice.UPRIGHT)
             patch.withMacros(macrosByVoice.getValue(pair)) else patch
@@ -1275,6 +1279,12 @@ fun SynthScreen(
             val controls = macrosByVoice.getValue(engine to voice)
             return current?.let { Patches.edited(it, name, controls) }
                 ?: OsteriaPatch(name, voice as OsteriaVoice, controls)
+        }
+        if (engine == Engine.BRISTLE) {
+            val current = loadedPatchesByVoice[engine to voice] as? BristlePatch
+            val controls = macrosByVoice.getValue(engine to voice)
+            return current?.let { Patches.edited(it, name, controls) }
+                ?: BristlePatch(name, voice as Bristle.Route, controls)
         }
         if (engine == Engine.OHM) {
             // Reply, Ring and native performance edits can share a frame with SAVE or SEND.
@@ -2183,7 +2193,7 @@ fun SynthScreen(
             shimmerDelayMillis = RENDER_SHIMMER_DELAY_MS,
             onRendering = { rendering = it },
             render = {
-                val sourcePatch = if (loadedPatch != null || engine == Engine.TEMPEST || engine == Engine.SPLAY || engine == Engine.OSTERIA || engine == Engine.ACCORD || engine == Engine.WICK || engine == Engine.RIME || engine == Engine.PRISM || engine == Engine.ORIGAMI || engine == Engine.OPENSKY || engine == Engine.FILAMENT || engine == Engine.TIDAL || engine == Engine.TREMOR || engine == Engine.RELAY || engine == Engine.CHAMBER || engine == Engine.NACRE || engine == Engine.LIBRATION)
+                val sourcePatch = if (loadedPatch != null || engine == Engine.BRISTLE || engine == Engine.TEMPEST || engine == Engine.SPLAY || engine == Engine.OSTERIA || engine == Engine.ACCORD || engine == Engine.WICK || engine == Engine.RIME || engine == Engine.PRISM || engine == Engine.ORIGAMI || engine == Engine.OPENSKY || engine == Engine.FILAMENT || engine == Engine.TIDAL || engine == Engine.TREMOR || engine == Engine.RELAY || engine == Engine.CHAMBER || engine == Engine.NACRE || engine == Engine.LIBRATION)
                     buildCurrentPatch(engine.patchDisplayName(voice)) else null
                 // The bench's hit strength is audition-only. Saving, SEND and
                 // the instrument maker all keep the patch's authored velocity.
@@ -2531,10 +2541,13 @@ fun SynthScreen(
     // the package is written once every zone
     // has landed, so a CANCEL mid-render leaves nothing on the shelf.
     var makingInstrument by remember { mutableStateOf(false) }
-    val heldSheet = remember { HeldSheetState() }
+    val heldSheet = remember { HeldSheetState().apply {
+        holdBristleSustain = settings["bristle.sustain"] == "true"
+        bristleRoundRobin = settings["bristle.roundrobin"] == "true"
+    } }
     // The name MAKE will land under, read off the shelf when the sheet opens
     // so the sheet can say it; MAKE asks the shelf again at write time.
-    val supportsHeldInstrument = (engine == Engine.SPLAY && !embouchureRestore.waitsForRecipe(engine, voice)) || engine == Engine.WICK || engine == Engine.HALOBAR || engine == Engine.CAUSTIC || engine == Engine.LIBRATION || engine == Engine.RIME || (engine == Engine.TIDAL && !embouchureRestore.pending.containsKey(engine to voice)) || engine == Engine.CREASE || engine == Engine.ORPHICA || engine == Engine.RESIN || engine == Engine.SIREN || engine == Engine.GLINT || engine == Engine.REGISTERS || engine == Engine.BELLOWS || engine == Engine.CONTOUR || engine == Engine.BALLAST || engine == Engine.MERIDIAN || engine == Engine.MERCURY || engine == Engine.KEEL || engine == Engine.ARCO ||
+    val supportsHeldInstrument = engine == Engine.BRISTLE || (engine == Engine.SPLAY && !embouchureRestore.waitsForRecipe(engine, voice)) || engine == Engine.WICK || engine == Engine.HALOBAR || engine == Engine.CAUSTIC || engine == Engine.LIBRATION || engine == Engine.RIME || (engine == Engine.TIDAL && !embouchureRestore.pending.containsKey(engine to voice)) || engine == Engine.CREASE || engine == Engine.ORPHICA || engine == Engine.RESIN || engine == Engine.SIREN || engine == Engine.GLINT || engine == Engine.REGISTERS || engine == Engine.BELLOWS || engine == Engine.CONTOUR || engine == Engine.BALLAST || engine == Engine.MERIDIAN || engine == Engine.MERCURY || engine == Engine.KEEL || engine == Engine.ARCO ||
         (engine == Engine.OPENSKY && OpenSkyPadMaker.supports(voice as OpenSkyVoice)) ||
         (engine == Engine.ORIGAMI && OrigamiPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as OrigamiPatch)) ||
         (engine == Engine.FLOCK && FlockPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as FlockPatch)) ||
@@ -2551,6 +2564,7 @@ fun SynthScreen(
         (LoopPadMaker.offers(engine.name) && !embouchureRestore.pending.containsKey(engine to voice) &&
             LoopPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice))))
     val heldInstrumentReady = when (engine) {
+        Engine.BRISTLE -> BristlePadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as BristlePatch)
         Engine.SPLAY -> !embouchureRestore.waitsForRecipe(engine, voice) &&
             SplayFinitePadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as SplayPatch)
         Engine.MURMUR -> (buildCurrentPatch(engine.patchDisplayName(voice)) as MurmurPatch).let {
@@ -2568,7 +2582,9 @@ fun SynthScreen(
         Engine.PRISM -> !prismMotionStudio.sourceBusy
         else -> true
     }
-    val holdBase = currentPresetByVoice[engine to voice] ?: "${engine.name} ${voice.name}"
+    val holdBase = (currentPresetByVoice[engine to voice] ?: "${engine.name} ${voice.name}") +
+        (if (engine == Engine.BRISTLE && heldSheet.holdBristleSustain) " HELD" else "") +
+        (if (engine == Engine.BRISTLE && heldSheet.bristleRoundRobin) " RR" else "")
     val instrumentsDir = File(shelfRoot, KitShelf.INSTRUMENTS_DIR)
     LaunchedEffect(makingInstrument, holdBase) {
         if (!makingInstrument) return@LaunchedEffect
@@ -2609,6 +2625,11 @@ fun SynthScreen(
             val patch = buildCurrentPatch(loadedPatchesByVoice[engine to voice]?.name
                 ?: currentPresetByVoice[engine to voice] ?: engine.patchDisplayName(voice)) as OsteriaPatch
             if (OsteriaPadMaker.supports(patch)) HeldSpec.Osteria(OsteriaPadMaker.Spec(patch)) else null
+        }
+        Engine.BRISTLE -> {
+            val patch = buildCurrentPatch(loadedPatchesByVoice[engine to voice]?.name
+                ?: currentPresetByVoice[engine to voice] ?: engine.patchDisplayName(voice)) as BristlePatch
+            if (BristlePadMaker.supports(patch)) HeldSpec.Bristle(BristlePadMaker.spec(patch, heldSheet.holdBristleSustain, heldSheet.bristleRelease, if (heldSheet.bristleRoundRobin) 2 else 1)) else null
         }
         Engine.LATTICE -> {
             val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as LatticePatch
@@ -2821,7 +2842,7 @@ fun SynthScreen(
         heldSheet.holdJob = appScope.launch {
             try {
                 // CANCEL cancels this job; the render asks and stops.
-                val heard = if (spec is HeldSpec.Libration || spec is HeldSpec.Ohm || spec is HeldSpec.Tidal || spec is HeldSpec.Flock || spec is HeldSpec.Overlap || spec is HeldSpec.Wick || spec is HeldSpec.Osteria || spec is HeldSpec.Trefoil || spec is HeldSpec.Filament || spec is HeldSpec.Lattice || spec is HeldSpec.Meridian || spec is HeldSpec.MeridianFinite || spec is SplayFiniteHeldSpec || spec is PrismHeldSpec || spec is ObbligatoHeldSpec) {
+                val heard = if (spec is HeldSpec.Libration || spec is HeldSpec.Ohm || spec is HeldSpec.Tidal || spec is HeldSpec.Flock || spec is HeldSpec.Overlap || spec is HeldSpec.Wick || spec is HeldSpec.Bristle || spec is HeldSpec.Osteria || spec is HeldSpec.Trefoil || spec is HeldSpec.Filament || spec is HeldSpec.Lattice || spec is HeldSpec.Meridian || spec is HeldSpec.MeridianFinite || spec is SplayFiniteHeldSpec || spec is PrismHeldSpec || spec is ObbligatoHeldSpec) {
                     val renderJob = coroutineContext[Job]
                     offMainInterruptible(Dispatchers.Default) {
                         spec.previewPlayback { renderJob?.isActive == false || Thread.currentThread().isInterrupted }
@@ -2854,6 +2875,7 @@ fun SynthScreen(
         val spec = heldSpec() ?: return
         sampleHeldPreview?.silence()
         if (spec is PrismHeldSpec) { prismMotionStudio.cancelPreview(); manualAudition.pending = false; voicePlayer?.stop() }
+        if (spec is HeldSpec.Bristle) { manualAudition.pending = false; voicePlayer?.stop() }
         val base = holdBase
         val midis = spec.zoneMidis
         heldSheet.holdTotal = midis.size * spec.progressPerZone
@@ -2864,7 +2886,7 @@ fun SynthScreen(
                 // throws must surface here as an exception this catch sees,
                 // not fail the app's own scope.
                 val notes = coroutineScope {
-                    if (spec is HeldSpec.OpenSky || spec is HeldSpec.Bellows || spec is HeldSpec.Crease || spec is HeldSpec.Contour || spec is HeldSpec.Origami || spec is HeldSpec.Flock || spec is HeldSpec.Caustic || spec is HeldSpec.Libration || spec is HeldSpec.Ohm || spec is HeldSpec.Filament || spec is HeldSpec.Lattice || spec is HeldSpec.Tidal || spec is HeldSpec.Ballast || spec is HeldSpec.Overlap || spec is HeldSpec.Wick || spec is HeldSpec.Osteria || spec is HeldSpec.Trefoil || spec is HeldSpec.Meridian || spec is HeldSpec.MeridianFinite || spec is SplayFiniteHeldSpec || spec is HeldSpec.Mercury || spec is HeldSpec.Keel || spec is HeldSpec.Arco || spec is HeldSpec.Bore || spec is HeldSpec.Loop || spec is PrismHeldSpec || spec is ObbligatoHeldSpec) {
+                    if (spec is HeldSpec.OpenSky || spec is HeldSpec.Bellows || spec is HeldSpec.Crease || spec is HeldSpec.Contour || spec is HeldSpec.Origami || spec is HeldSpec.Flock || spec is HeldSpec.Caustic || spec is HeldSpec.Libration || spec is HeldSpec.Ohm || spec is HeldSpec.Filament || spec is HeldSpec.Lattice || spec is HeldSpec.Tidal || spec is HeldSpec.Ballast || spec is HeldSpec.Overlap || spec is HeldSpec.Wick || spec is HeldSpec.Bristle || spec is HeldSpec.Osteria || spec is HeldSpec.Trefoil || spec is HeldSpec.Meridian || spec is HeldSpec.MeridianFinite || spec is SplayFiniteHeldSpec || spec is HeldSpec.Mercury || spec is HeldSpec.Keel || spec is HeldSpec.Arco || spec is HeldSpec.Bore || spec is HeldSpec.Loop || spec is PrismHeldSpec || spec is ObbligatoHeldSpec) {
                         // OPENSKY has larger wet state, BELLOWS has three
                         // velocity layers, CREASE evolves its attack and
                         // held control history, CONTOUR spans seventeen zones,
@@ -2881,7 +2903,7 @@ fun SynthScreen(
                         // independent oversampled states at once. CANCEL stays live;
                         // the counter advances after each note's samples finish.
                         midis.map { midi ->
-                            val note = if (spec is HeldSpec.Caustic || spec is HeldSpec.Libration || spec is HeldSpec.Ohm || spec is HeldSpec.Tidal || spec is HeldSpec.Flock || spec is HeldSpec.Overlap || spec is HeldSpec.Wick || spec is HeldSpec.Osteria || spec is HeldSpec.Trefoil || spec is HeldSpec.Filament || spec is HeldSpec.Lattice || spec is HeldSpec.Meridian || spec is HeldSpec.MeridianFinite || spec is SplayFiniteHeldSpec || spec is HeldSpec.Mercury || spec is HeldSpec.Keel || spec is HeldSpec.Arco || spec is HeldSpec.Bore || spec is HeldSpec.Loop || spec is PrismHeldSpec || spec is ObbligatoHeldSpec) {
+                            val note = if (spec is HeldSpec.Caustic || spec is HeldSpec.Libration || spec is HeldSpec.Ohm || spec is HeldSpec.Tidal || spec is HeldSpec.Flock || spec is HeldSpec.Overlap || spec is HeldSpec.Wick || spec is HeldSpec.Bristle || spec is HeldSpec.Osteria || spec is HeldSpec.Trefoil || spec is HeldSpec.Filament || spec is HeldSpec.Lattice || spec is HeldSpec.Meridian || spec is HeldSpec.MeridianFinite || spec is SplayFiniteHeldSpec || spec is HeldSpec.Mercury || spec is HeldSpec.Keel || spec is HeldSpec.Arco || spec is HeldSpec.Bore || spec is HeldSpec.Loop || spec is PrismHeldSpec || spec is ObbligatoHeldSpec) {
                                 val renderJob = coroutineContext[Job]
                                 offMainInterruptible(Dispatchers.Default) {
                                     spec.renderZone(midi) { renderJob?.isActive == false || Thread.currentThread().isInterrupted }
@@ -2932,6 +2954,10 @@ fun SynthScreen(
                 !heldSheet.murmurSelected && !murmurDelivery.inFlight) return
         murmurDelivery.invalidate()
         sampleHeldPreview?.silence()
+        if (engine == Engine.BRISTLE) {
+            manualAudition.pending = false
+            voicePlayer?.stop()
+        }
         if (heldSheet.prismPatch != null) {
             prismMotionStudio.cancelPreview()
             manualAudition.pending = false
@@ -3766,6 +3792,72 @@ fun SynthScreen(
                     )
                 }
 
+                if (engine == Engine.BRISTLE) {
+                    val bass = buildCurrentPatch(loadedPatch?.name ?: engine.patchDisplayName(voice)) as BristlePatch
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        ActionButton("SINGLE TAKE", scheme, lit = !heldSheet.bristleRoundRobin,
+                            accessibilityLabel = "BRISTLE SINGLE TAKE", modifier = Modifier.weight(1f)) {
+                            heldSheet.bristleRoundRobin = false; settings["bristle.roundrobin"] = "false"
+                        }
+                        ActionButton("ROUND ROBIN", scheme, lit = heldSheet.bristleRoundRobin,
+                            accessibilityLabel = "BRISTLE ROUND ROBIN", modifier = Modifier.weight(1f)) {
+                            heldSheet.bristleRoundRobin = true; settings["bristle.roundrobin"] = "true"
+                        }
+                    }
+                    if (heldSheet.bristleRoundRobin) TapeText(
+                        "MPC cycling uses separate soft, medium and hard programs.",
+                        TapeType.pixelSmall, scheme.ink2.tape, maxLines = 3)
+
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        ActionButton("FINITE KEYS", scheme, lit = !heldSheet.holdBristleSustain,
+                            accessibilityLabel = "BRISTLE FINITE KEYS", modifier = Modifier.weight(1f)) {
+                            heldSheet.holdBristleSustain = false
+                            settings["bristle.sustain"] = "false"
+                        }
+                        ActionButton("SUSTAIN KEYS", scheme, lit = heldSheet.holdBristleSustain,
+                            accessibilityLabel = "BRISTLE SUSTAIN KEYS", modifier = Modifier.weight(1f)) {
+                            heldSheet.holdBristleSustain = true
+                            settings["bristle.sustain"] = "true"
+                        }
+                    }
+                    MacroSlider(
+                        label = "VELOCITY", value = bass.velocity,
+                        fillColor = classColor, scheme = scheme,
+                        onValueChange = { value ->
+                            currentPresetByVoice.remove(engine to voice)
+                            loadedPatchesByVoice[engine to voice] =
+                                (buildCurrentPatch(engine.patchDisplayName(voice)) as BristlePatch)
+                                    .copy(velocity = value.coerceIn(0f, 1f))
+                            settings.remove(presetSettingsKey(engine, voice))
+                            SynthDrafts.write(settings, currentDrafts())
+                        },
+                    )
+                    for ((label, amount) in listOf("COMP" to bass.effects.compress, "FUZZ" to bass.effects.fuzz)) {
+                        MacroSlider(
+                            label = label, value = amount, fillColor = classColor, scheme = scheme,
+                            onValueChange = { value ->
+                                if (engine == Engine.BRISTLE && voice == bass.voice && value.isFinite()) {
+                                    val current = buildCurrentPatch(bass.name) as BristlePatch
+                                    val effects = if (label == "COMP") current.effects.copy(compress = value.coerceIn(0f, 1f))
+                                        else current.effects.copy(fuzz = value.coerceIn(0f, 1f))
+                                    currentPresetByVoice.remove(engine to voice)
+                                    loadedPatchesByVoice[engine to voice] = current.copy(effects = effects)
+                                    settings.remove(presetSettingsKey(engine, voice))
+                                    SynthDrafts.write(settings, currentDrafts())
+                                }
+                            },
+                        )
+                    }
+                    TapeText("COMP holds up the body. FUZZ adds rasp around the clean bass.",
+                        TapeType.pixelSmall, scheme.ink2.tape, maxLines = 3)
+                    TapeText(
+                        if (bass.velocity == 0f) BristlePadMaker.UNSUPPORTED_NOTE
+                        else if (heldSheet.holdBristleSustain) "MAKE INSTRUMENT will sustain until key release. The saved finite sound stays unchanged."
+                        else "HOLD sets note length. A smooths the grit; B adds edge after filtering.",
+                        TapeType.pixelSmall, scheme.ink2.tape, maxLines = 3,
+                    )
+                }
+
                 if (engine == Engine.SPLAY) {
                     TapeText(
                         if (embouchureRestore.waitsForRecipe(engine, voice)) {
@@ -4312,7 +4404,8 @@ fun SynthScreen(
                     scheme = scheme,
                     onAttack = { heldSheet.holdAttack = it },
                     onRelease = { fraction ->
-                        if (engine == Engine.FLOCK) updateFlockPatch {
+                        if (engine == Engine.BRISTLE) heldSheet.bristleRelease = fraction
+                        else if (engine == Engine.FLOCK) updateFlockPatch {
                             it.copy(releaseSeconds = FlockPadMaker.RELEASE.value(fraction)
                                 .coerceIn(FlockPadMaker.RELEASE.lo, FlockPadMaker.RELEASE.hi))
                         } else if (engine == Engine.TREFOIL) updateTrefoilPatch {
@@ -4415,7 +4508,7 @@ private fun hasPlayingExtras(engine: Engine, voice: Enum<*>, loadedPatch: Patch?
         Engine.NACRE, Engine.RIME, Engine.CAUSTIC, Engine.CREASE, Engine.MURMUR, Engine.ACCORD,
         Engine.APSIS, Engine.OVEN, Engine.FILAMENT, Engine.RELAY, Engine.VENT, Engine.OSPREY,
         Engine.OPENSKY, Engine.REGISTERS, Engine.TRIO, Engine.TREFOIL, Engine.OBBLIGATO,
-        Engine.MERIDIAN, Engine.WICK, Engine.RIVET, Engine.TEMPEST, Engine.SPLAY, Engine.OSTERIA -> true
+        Engine.MERIDIAN, Engine.WICK, Engine.RIVET, Engine.TEMPEST, Engine.SPLAY, Engine.OSTERIA, Engine.BRISTLE -> true
         else -> loadedPatch is EmbouchurePatch && loadedPatch.model == Embouchure.BRASS_GROW_MODEL
     }
 
@@ -4806,6 +4899,9 @@ private class PadChooserState {
  * SynthScreen's single method sits at the register limit ART's verifier accepts.
  */
 private class HeldSheetState {
+    var holdBristleSustain by mutableStateOf(false)
+    var bristleRoundRobin by mutableStateOf(false)
+    var bristleRelease by mutableStateOf(BristlePadMaker.RELEASE.defaultFraction)
     var holdAttack by mutableStateOf(ResinPadMaker.ATTACK.defaultFraction)
     var holdRelease by mutableStateOf(ResinPadMaker.RELEASE.defaultFraction)
     var meridianHoldRelease by mutableStateOf(MeridianPadMaker.RELEASE.defaultFraction)
@@ -5633,6 +5729,23 @@ internal sealed interface HeldSpec {
             MeridianFinitePadMaker.export(name, spec, notes, destRoot)
     }
 
+    class Bristle(private val spec: BristlePadMaker.Spec) : HeldSpec {
+        override val zoneMidis get() = BristlePadMaker.zoneMidis(spec)
+        override val hasAttack get() = false
+        override val hasRelease get() = spec.held
+        override val releaseFraction get() = if (spec.held) BristlePadMaker.RELEASE.fraction(spec.releaseSeconds) else null
+        override fun shelfNote(name: String) = if (name.isEmpty()) "" else "Lands in the LIBRARY as $name, playable on keyboard."
+        override val progressPerZone get() = 3 * spec.takes
+        override val knobLabel get() = if (spec.held)
+            String.format(Locale.ROOT, "KEY RELEASE %.2f SECONDS · THREE TOUCH LAYERS", spec.releaseSeconds)
+        else "FINITE BASS ENVELOPE · THREE TOUCH LAYERS"
+        override val instrumentNote get() = BristlePadMaker.instrumentNote(spec)
+        override fun renderZone(midi: Int, cancelled: () -> Boolean) = BristlePadMaker.renderZone(spec, midi, cancelled)
+        override fun preview(cancelled: () -> Boolean) = BristlePadMaker.preview(spec, cancelled)
+        override fun export(name: String, notes: List<List<KeyNote>>, destRoot: File) =
+            BristlePadMaker.export(name, spec, notes, destRoot)
+    }
+
     class Meridian(private val spec: MeridianPadMaker.Spec) : HeldSpec {
         override val zoneMidis get() = MeridianPadMaker.zoneMidis(spec)
         override val hasAttack get() = false
@@ -6341,7 +6454,7 @@ private enum class ObbligatoVoice { AIR_REED }
  */
 private enum class Engine {
     LATTICE, ACCORD,
-    THUMP, SCANNED_CHAIN, SKIN, ONSET, TINES, VELVET, VOX, PLUCK, ORPHICA, TONEWHEEL, OTIS, REGISTERS, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, HALOBAR, FLOTILLA, AEROSTAT, TREMOR, BALLAST, CISTERN, CIRCUIT, OBBLIGATO, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVERLAP, OVEN, FLOCK, VENT, CREASE, TRIO, NACRE, ORIGAMI, TREFOIL, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS, TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME, BORE, ARCO, SCOUR, KEEL, CHITIN, WICK, EROSION, RIVET, FIRED_BRONZE, BACKWASH, SOOT, TEMPEST, SPLAY, OSTERIA;
+    THUMP, SCANNED_CHAIN, SKIN, ONSET, TINES, VELVET, VOX, PLUCK, ORPHICA, TONEWHEEL, OTIS, REGISTERS, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, HALOBAR, FLOTILLA, AEROSTAT, TREMOR, BALLAST, CISTERN, CIRCUIT, OBBLIGATO, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVERLAP, OVEN, FLOCK, VENT, CREASE, TRIO, NACRE, ORIGAMI, TREFOIL, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS, TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME, BORE, ARCO, SCOUR, KEEL, CHITIN, WICK, EROSION, RIVET, FIRED_BRONZE, BACKWASH, SOOT, TEMPEST, SPLAY, OSTERIA, BRISTLE;
     val displayName: String get() = name.replace('_', ' ')
 
     /** The engine after this one in the enum's order, wrapping from the last back to the first. */
@@ -6440,6 +6553,7 @@ private enum class Engine {
         SCOUR -> ScourVoice.entries
         EROSION -> ErosionVoice.entries
         OSTERIA -> OsteriaVoice.entries
+        BRISTLE -> Bristle.Route.entries
         KEEL -> KeelVoice.entries
     }
 
@@ -6523,6 +6637,7 @@ private enum class Engine {
         SCOUR -> Scour.macrosFor(voice as ScourVoice)
         EROSION -> Erosion.macrosFor(voice as ErosionVoice)
         OSTERIA -> Osteria.macrosFor(voice as OsteriaVoice)
+        BRISTLE -> Bristle.macrosFor(voice as Bristle.Route)
         KEEL -> Keel.macrosFor(voice as KeelVoice)
         FILAMENT -> Filament.macrosFor(voice as FilamentVoice)
         TIDAL -> Tidal.macrosFor(voice as TidalVoice).filterNot { it.name == "HOLD" }
@@ -6611,6 +6726,7 @@ private enum class Engine {
         SCOUR -> Scour.defaults(voice as ScourVoice)
         EROSION -> Erosion.defaults(voice as ErosionVoice)
         OSTERIA -> Osteria.defaults(voice as OsteriaVoice)
+        BRISTLE -> Bristle.defaults(voice as Bristle.Route)
         KEEL -> Keel.defaults(voice as KeelVoice)
         FILAMENT -> Filament.defaults(voice as FilamentVoice)
         TIDAL -> Tidal.defaults(voice as TidalVoice)
@@ -6703,6 +6819,7 @@ private enum class Engine {
         SCOUR -> Scour.scramble(voice as ScourVoice, random)
         EROSION -> Erosion.scramble(voice as ErosionVoice, random)
         OSTERIA -> Osteria.scramble(voice as OsteriaVoice, random)
+        BRISTLE -> Bristle.scramble(voice as Bristle.Route, random)
         KEEL -> Keel.scramble(voice as KeelVoice, random)
         FILAMENT -> Filament.scramble(voice as FilamentVoice, random)
         TIDAL -> Tidal.scramble(voice as TidalVoice, random)
@@ -6801,6 +6918,7 @@ private enum class Engine {
         SCOUR -> Scour.render(voice as ScourVoice, macros)
         EROSION -> Erosion.render(voice as ErosionVoice, macros)
         OSTERIA -> Osteria.render(voice as OsteriaVoice, macros)
+        BRISTLE -> Bristle.render(voice as Bristle.Route, macros)
         KEEL -> Keel.render(voice as KeelVoice, macros)
         FILAMENT -> Filament.render(voice as FilamentVoice, macros)
         TIDAL -> Tidal.render(voice as TidalVoice, macros)
@@ -6896,6 +7014,7 @@ private enum class Engine {
         SCOUR -> Scour.drumClassFor(voice as ScourVoice, macros)
         EROSION -> Erosion.drumClassFor(voice as ErosionVoice, macros)
         OSTERIA -> Osteria.drumClassFor(voice as OsteriaVoice, macros)
+        BRISTLE -> Bristle.drumClassFor(voice as Bristle.Route, macros)
         KEEL -> Keel.drumClassFor(voice as KeelVoice, macros)
         FILAMENT -> Filament.drumClassFor(voice as FilamentVoice, macros)
         TIDAL -> Tidal.drumClassFor(voice as TidalVoice, macros)
@@ -6985,6 +7104,7 @@ private enum class Engine {
         SCOUR -> ScourPatch(name, voice as ScourVoice, macros)
         EROSION -> ErosionPatch(name, voice as ErosionVoice, macros)
         OSTERIA -> OsteriaPatch(name, voice as OsteriaVoice, macros)
+        BRISTLE -> BristlePatch(name, voice as Bristle.Route, macros)
         KEEL -> KeelPatch(name, voice as KeelVoice, macros)
         FILAMENT -> FilamentPatch(name, voice as FilamentVoice, macros)
         TIDAL -> TidalPatch(name, voice as TidalVoice, macros)
