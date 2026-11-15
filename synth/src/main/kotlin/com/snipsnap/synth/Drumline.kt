@@ -17,12 +17,13 @@ enum class DrumlineVoice {
  * Model 1 ports the preferred Python cymbal revision's mechanism, not its NumPy noise bytes.
  * Model 2 adds lower-head body, a separate rim contact and a short snare-wire snap.
  * Model 3 makes rim contact dominate the rimshot and reduces its shared snare-wire tail.
- * Saved model-1/2 recipes retain their sound; other model-2 voices are unchanged.
+ * Model 4 gives the smallest bass a broader mallet and stronger lower-head body.
+ * Saved model-1/2/3 recipes retain their sound; unrelated voices are unchanged.
  * Positive modal loss bounds each oscillator. Choking progressively damps high modes first;
  * it never gates the entire plate to zero. All acoustic constants remain listening shapes.
  */
 object Drumline {
-    const val MODEL_VERSION = 3
+    const val MODEL_VERSION = 4
     private const val IDENTITY_VERSION = 1 // Keep the same players and excitation streams across revisions.
     private const val RATE = Dsp.RATE * Dsp.OVERSAMPLE
     private const val LOSS = 6.907755278982137
@@ -114,6 +115,7 @@ object Drumline {
     private fun strike(voice: DrumlineVoice,m: Map<String,Float>,velocity: Float,take: Int,hand: Int,model: Int): FloatArray {
         val isMetal=voice in metal;val snare=voice==DrumlineVoice.SNARE || voice==DrumlineVoice.RIMSHOT
         val distinctRim=model >= 3 && voice == DrumlineVoice.RIMSHOT
+        val smallBass=model >= 4 && voice == DrumlineVoice.BASS_1
         val family=if(isMetal)"CYMBAL" else if(snare)"SNARE" else voice.name
         val cap=if(isMetal)4 else if(snare)8 else if(voice.name.startsWith("TENOR"))4 else 1
         val count=1+((m["PLAYERS"]?:0f)*(cap-1)).roundToInt()
@@ -147,14 +149,16 @@ object Drumline {
                 val life=(if(snare).21 else if(voice.name.startsWith("TENOR")) .28+index*.035 else .43+index*.075)*damp
                 val ratios=doubleArrayOf(1.0,1.594,2.136,2.296,2.653,2.918,3.156,3.50,4.06,4.61)
                 val gains=doubleArrayOf(1.0,.62,.42,.23,.18,.13,.09,.07,.05,.03)
-                val width=(.00018+.00065*(1-m.getValue("STRIKE")))*(1.65-.8*v)*random(hit,.92,1.08)*(if(family.startsWith("BASS"))5 else 1)
+                val width=(.00018+.00065*(1-m.getValue("STRIKE")))*(1.65-.8*v)*random(hit,.92,1.08)*(if(family.startsWith("BASS"))5 else 1)*(if(smallBass)1.5 else 1.0)
                 val force=DoubleArray(max(4,(width*RATE).roundToInt())) { .5-.5*cos(2*PI*it/(max(4,(width*RATE).roundToInt())-1)) }
                 val sum=force.sum();for(i in force.indices)force[i]/=sum
                 for(k in ratios.indices) {
                     // Let the lowest membrane modes carry a body after the stick/mallet leaves.
                     // Higher modes keep their old losses, so extra fullness does not become a long bright ring.
                     val body = model >= 2 && !snare
-                    val weight = if(body && k < 2) (if(k == 0) 1.3 else 1.12) else 1.0
+                    // A broader mallet favors the paired lower heads over the tenor-like upper ring.
+                    val weight = (if(body && k < 2) (if(k == 0) 1.3 else 1.12) else 1.0) *
+                        (if(smallBass && k > 0) .45 else 1.0)
                     val sustain = if(body) 1.0 + (if(family.startsWith("BASS")) .65+.35*index/4 else .5) / ratios[k].pow(2) else 1.0
                     addMode(y,root*ratios[k],gains[k]*exp(-ratios[k]*(.1+1.2*(1-v)))*random(hit,if(family.startsWith("BASS")) .65 else .9,if(family.startsWith("BASS")) 1.35 else 1.1)*weight*(if(distinctRim).85 else 1.0),life*sustain/ratios[k].pow(.65),force=force)
                 }
@@ -163,7 +167,7 @@ object Drumline {
                     // It follows the same finite mallet force and positive losses as the main head.
                     // On the largest basses, favor the main head over a barely audible sub-bass companion.
                     val companionWeight=if(family.startsWith("BASS")) (root/145).coerceIn(.35,1.0) else 1.0
-                    addMode(y,root*.78,.38*(.6+.4*v)*companionWeight,life*1.25,force=force)
+                    addMode(y,root*(if(smallBass).70 else .78),(if(smallBass)1.6 else .38)*(.6+.4*v)*companionWeight,life*1.25,force=force)
                 }
                 if(voice==DrumlineVoice.RIMSHOT)for((f,g,l) in listOf(Triple(1250.0,.55,.055),Triple(2180.0,.38,.035),Triple(3380.0,.22,.022)))addMode(y,f*tilt,g*v.pow(.4),l)
                 if(model >= 2 && voice == DrumlineVoice.RIMSHOT) {

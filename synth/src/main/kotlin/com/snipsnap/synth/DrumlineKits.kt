@@ -4,7 +4,7 @@ import com.snipsnap.kit.ArrangedPad
 
 /** Two authored batteries. Grids use the same transport as other velocity/RR kits. */
 object DrumlineKits {
-    const val VERSION = 3
+    const val VERSION = 4
     val velocities = listOf(.3f,.6f,1f)
     const val TAKES = 3
     enum class Kit(val id: String, val title: String, val bpm: Float) {

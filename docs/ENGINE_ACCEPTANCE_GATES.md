@@ -780,9 +780,9 @@ prototype and a listening page (<https://claude.ai/artifact/Xmcj5t8MYSNCQPoTKHBc
 - **Overall: incomplete.** Round 0 asks the owner which voices and kits to keep. Kotlin (round 1), the shelf and
   saving, playback and MPC 3 export (round 2), and phone and MPC hardware (round 3) are all open.
 
-## DRUMLINE (native model 3 candidate, 2026-11-15)
+## DRUMLINE (native model 4 candidate, 2026-11-15)
 
-A marching battery with independent player bodies, five bass sizes and progressive cymbal hand loss. The owner preferred the revised Python cymbals, then requested fuller bass/tenors, a harder rim clack and more snare snap. Model 2 addressed those requests; the owner then found snare/rimshot too similar. Model 3 separates their rim/wire balance and preserves saved models 1 and 2. Listening remains open. See [DRUMLINE](DRUMLINE.md) for reproduction and measured evidence.
+A marching battery with independent player bodies, five bass sizes and progressive cymbal hand loss. The owner preferred the revised Python cymbals, then requested fuller bass/tenors, a harder rim clack and more snare snap. Model 2 addressed those requests; the owner then found snare/rimshot too similar. Model 3 separates their rim/wire balance. The owner then found the small bass body too similar to the low tenor; model 4 revises its mallet and lower-head balance while preserving saved models 1–3. Listening remains open. See [DRUMLINE](DRUMLINE.md) for reproduction and measured evidence.
 
 - Melodic, keygroup, chord and string-STRUM gates: not applicable to the battery. Hits and scored rudiments are finite.
 - Percussion: flam, double-stroke roll, accelerating riser, bass unison and split bass implemented; native listening open.
