@@ -1,0 +1,87 @@
+{
+  "harness": "Python, not Kotlin",
+  "variant_count": 48,
+  "stage_wavs": 144,
+  "finite": true,
+  "pcm_manifest_roundtrip": true,
+  "deterministic_rerender": true,
+  "max_peak": 0.8369377081811908,
+  "max_abs_dc": 0.00020167322640651125,
+  "render_ms_three_stages_median": 46.15374900001257,
+  "metrics": {
+    "kick": {
+      "velocity_rms": [
+        0.06506915796802819,
+        0.07853079464227736,
+        0.09361274066067558
+      ],
+      "max_rr_correlation_by_zone": [
+        0.9933726204339232,
+        0.9777768035874039,
+        0.9722142869828277
+      ],
+      "adjacent_velocity_spectral_distance_db": [
+        5.535642976013475,
+        4.816884917372459
+      ]
+    },
+    "snare": {
+      "velocity_rms": [
+        0.03558787244426243,
+        0.05088428688783834,
+        0.06465162176614846
+      ],
+      "max_rr_correlation_by_zone": [
+        0.6189766251323375,
+        0.5411699188354981,
+        0.4800203513058547
+      ],
+      "adjacent_velocity_spectral_distance_db": [
+        5.708447552634703,
+        5.920769539750472
+      ]
+    },
+    "hat": {
+      "velocity_rms": [
+        0.017894953321104294,
+        0.024536729981613558,
+        0.029651935955810428
+      ],
+      "max_rr_correlation_by_zone": [
+        0.9166189272843352,
+        0.9104208831206064,
+        0.9258772196575589
+      ],
+      "adjacent_velocity_spectral_distance_db": [
+        6.277075164707253,
+        6.299649339561744
+      ]
+    },
+    "wood": {
+      "velocity_rms": [
+        0.043943671687489826,
+        0.05653986315667132,
+        0.06643762401213096
+      ],
+      "max_rr_correlation_by_zone": [
+        0.986095014791008,
+        0.9638133300926987,
+        0.9762540306780298
+      ],
+      "adjacent_velocity_spectral_distance_db": [
+        3.611826670003566,
+        3.8301163088169794
+      ]
+    }
+  },
+  "not_verified": [
+    "phone render budget",
+    "higher-rate aliasing reference",
+    "browser audio output",
+    "SnipSnap persistence/playback",
+    "MPC export and hardware playback",
+    "genre shelf",
+    "roll/rising fill",
+    "owner sound acceptance"
+  ]
+}
