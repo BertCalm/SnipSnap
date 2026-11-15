@@ -795,6 +795,21 @@ object StarterKits {
             seeded = false, tempoBpm = com.snipsnap.synth.ScuffKits.Kit.FLINT.bpm.toFloat(),
         ) { com.snipsnap.synth.ScuffKits.build(com.snipsnap.synth.ScuffKits.Kit.FLINT) },
         Starter(
+            "footwork-tap-jazz", "FOOTWORK TAP JAZZ",
+            "Weighted metallic tap, heel support, two-way brushes and body percussion on a close stage. Eighteen pads with authored roll and riser; three touch zones and four takes. Full dynamics.",
+            seeded = false, tempoBpm = com.snipsnap.synth.FootworkKits.Kit.TAP.bpm.toFloat(),
+        ) { com.snipsnap.synth.FootworkKits.build(com.snipsnap.synth.FootworkKits.Kit.TAP) },
+        Starter(
+            "footwork-street-breaks", "FOOTWORK STREET BREAKS",
+            "Damped street footwork, low body impacts and palm-and-stick objects. Eighteen pads with authored roll and riser; three touch zones and four takes. Full dynamics.",
+            seeded = false, tempoBpm = com.snipsnap.synth.FootworkKits.Kit.STREET.bpm.toFloat(),
+        ) { com.snipsnap.synth.FootworkKits.build(com.snipsnap.synth.FootworkKits.Kit.STREET) },
+        Starter(
+            "footwork-industrial-stepping", "FOOTWORK INDUSTRIAL STEPPING",
+            "Hard plate steps, braced-deck knocks and loose metal objects. Eighteen pads with authored roll and riser; three touch zones and four takes. Full dynamics.",
+            seeded = false, tempoBpm = com.snipsnap.synth.FootworkKits.Kit.INDUSTRIAL.bpm.toFloat(),
+        ) { com.snipsnap.synth.FootworkKits.build(com.snipsnap.synth.FootworkKits.Kit.INDUSTRIAL) },
+        Starter(
             "clutter-lofi", "CLUTTER KITCHEN LO-FI",
             "Found-sound lo-fi from modelled household objects: a soft bucket, a box of rice brushed, a matchbox and loose keys, struck by palms and wooden spoons with the kitchen in every hit. Three touch zones, four takes.",
             seeded = false, tempoBpm = com.snipsnap.synth.ClutterKits.Kit.LOFI.bpm.toFloat(),

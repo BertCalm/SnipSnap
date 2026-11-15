@@ -707,3 +707,13 @@ tasks.register<JavaExec>("generateSporeSyntheticKits") {
     maxHeapSize = "2g"
     args(providers.gradleProperty("sporeSyntheticOutput").orNull ?: "${rootDir}/testkit/spore-synthetic-kits")
 }
+
+tasks.register<JavaExec>("generateFootworkKits") {
+    group = "distribution"
+    description = "Render and verify the full-dynamics FOOTWORK kits and native audition."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.FootworkKitGenerator")
+    workingDir = rootDir
+    maxHeapSize = "2g"
+    args(providers.gradleProperty("footworkOutput").orNull ?: "${rootDir}/testkit/footwork-native")
+}

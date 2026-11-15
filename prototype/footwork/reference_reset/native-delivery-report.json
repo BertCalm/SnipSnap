@@ -1,0 +1,31 @@
+{
+  "model": 1,
+  "kits": [
+    {
+      "id": "footwork-tap-jazz",
+      "cells": 216,
+      "maxStoredPeak": 0.8629204034805298,
+      "maxWithinZoneRmsSpreadDb": 4.705546068046483,
+      "savePlaybackSfzMpc3": "passed",
+      "buildAndProofMs": 52446
+    },
+    {
+      "id": "footwork-street-breaks",
+      "cells": 216,
+      "maxStoredPeak": 0.8895177841186523,
+      "maxWithinZoneRmsSpreadDb": 1.4656694213287889,
+      "savePlaybackSfzMpc3": "passed",
+      "buildAndProofMs": 52156
+    },
+    {
+      "id": "footwork-industrial-stepping",
+      "cells": 216,
+      "maxStoredPeak": 0.5820461511611938,
+      "maxWithinZoneRmsSpreadDb": 2.2754402232132684,
+      "savePlaybackSfzMpc3": "passed",
+      "buildAndProofMs": 52238
+    }
+  ],
+  "nativeListening": "pending",
+  "phoneAndMpcHardware": "pending"
+}

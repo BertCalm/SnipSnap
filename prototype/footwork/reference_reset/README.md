@@ -58,3 +58,7 @@ Why it is built this way:
 Owner requested more heft and power. Render with `OPENBLAS_NUM_THREADS=1 python3 prototype/footwork/reference_reset/dance_gestures.py /path/to/output 1`. The default weight remains zero to preserve the previous family. Weight adds short, damped 155/390 Hz support and a broad 120–1800 Hz impact under the existing contact. Toe receives 70% of the heel support; brushes receive 25% late in the sweep. These are authored perceptual weights, not a physical shoe measurement. All composites inherit their constituent contact weights.
 
 Why it is built this way: the short low body supplies mass; the low-mid knock helps carry impact on small speakers; the accepted metallic contact remains separate; finite damping avoids a long bass or room tail. The phrase comparison uses one whole-phrase RMS scalar, not per-hit normalization or a perceptual loudness claim. The heavier family remains unapproved and full delivery gates remain open.
+
+## Selected direction and native continuation
+
+The owner selected full dynamics. The frozen Python source remains the comparison reference. `native_coefficients.py` regenerates Kotlin coefficient data (no reference PCM); `native_parity.py` compares native saved Tap Jazz contacts against Python. The source uses different deterministic Gaussian draws and the house decimator, so approval of the Python direction is not claimed as native sound approval. See `docs/FOOTWORK.md` for the velocity-anchor compensation law and all native delivery gates.
