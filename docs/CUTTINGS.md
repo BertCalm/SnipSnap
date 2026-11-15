@@ -55,7 +55,11 @@ Do not call the instrument complete until the applicable target playback/export 
 
 ## Software run evidence
 
+The [factory audition](https://cuttings-audition.bertcalm.chatgpt.site/factory/) presents all three kits, five banks of four pads, dynamic levels and selectable/cycling takes. The [Study 04 comparison](https://cuttings-audition.bertcalm.chatgpt.site/) remains available. All 192 original Pocket listening samples match the accepted Study 04 PCM exactly.
+
 On 2026-11-15, the focused native bank tests, three-genre round-trip test and `generateCuttingsKits` completed successfully (Gradle exit 0). All three saved kits and their export files were generated. The factory-page simulation passes kit switching, labels, dynamic/take selection, cycle reset, five pad banks, non-overlapping long phrases, groove selection and Stop. These are software checks, not browser audio or hardware playback proof.
+
+The final scoped validation completed with exit 0 (`BUILD SUCCESSFUL`, 2m 41s): `CuttingsKitsTest`, `CuttingsRoundTripTest` (including all twenty pads' preflight), `ConventionTest`, the stable starter-ID fixture, and the full CLI tests. The kit, audio, JSON, loop, MPC 3 and XPM test tasks were also included and reported up-to-date. Earlier broad shell/synth runs were interrupted; they are not recorded as full-suite passes. The broad shell run exposed outdated roster/count fixtures, which were corrected and covered by the final focused run.
 
 ## Why it is built this way
 
