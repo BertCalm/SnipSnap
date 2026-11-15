@@ -40,7 +40,7 @@ remains blocked on slice-map/hardware verification. Owner listening is pending.
 
 TRIAD has a [native shared-bus drum audition](docs/TRIAD.md): one hybrid groove through three processing rigs. These are listening candidates, not a factory engine or MPC program.
 
-[TIMBER](docs/TIMBER.md) adds three proposed acoustic-instrument percussion banks: Folk Pocket, Wood Boom Bap and String Two Step. Guitar, acoustic bass guitar, cello and upright contacts fill sixteen pads, with three strike levels, four takes, a roll and a riser. Owner listening, device playback and MPC chain round-trip gates remain open.
+[TIMBER](docs/TIMBER.md) adds three acoustic-instrument percussion banks: Folk Pocket, Wood Boom Bap and String Two Step. Guitar, acoustic bass guitar, cello and upright contacts fill sixteen pads, with three strike levels, four takes, a roll and a riser. The owner approved listening and hardware on 2026-11-15; full software regression remains pending.
 
 ## The loop
 

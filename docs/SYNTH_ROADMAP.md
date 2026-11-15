@@ -3650,8 +3650,9 @@ save/playback and MPC 3 PCM/cycle read-back are covered by `TimberKitTest`; run
 `:shell:generateTimberKits` for the listening pack and exports. This is an authored bank,
 not a new melodic engine. Model 2 ports the owner-approved Python contact and extended-technique
 auditions, with independent body/string profiles, seven contacts and bounded take levels. Model 1
-source replay is retained. Kotlin listening, device shelf/playback, MPC 3 chain re-import and
-hardware slice-map playback remain open. See [TIMBER](TIMBER.md) for the gate ledger.
+source replay is retained. The owner confirmed “Listening and hardware approved” on 2026-11-15
+for the delivered Kotlin kits. The shared MPC slice-map implementation is unchanged; software
+regression remains pending. See [TIMBER](TIMBER.md) for the gate ledger.
 
 ### SCUFF, round 5 (2026-11-14)
 

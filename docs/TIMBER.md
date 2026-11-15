@@ -3,8 +3,9 @@
 Repository baseline: `23cde0d1c107039c23fd74ff5c3d2b359a7f6e75`, plus local TIMBER changes.
 Model 2 ports the owner-approved Python round 2 and extended-technique auditions into Kotlin.
 The owner accepted the first audition with “Sounds pretty good” and the extension with
-“Sound good, continue.” This is approval of Python sound direction, not Kotlin or hardware playback.
-Overall instrument acceptance remains open.
+“Sound good, continue.” On 2026-11-15 the owner then confirmed **“Listening and hardware approved”**
+for the delivered Kotlin kits. TIMBER listening and hardware acceptance are owner-approved.
+Full software regression remains pending; this approval is not a CI result.
 
 The characteristic gesture is **contact → body and strings → damped resonance → silence**.
 
@@ -61,8 +62,8 @@ or limiter. The three velocity layers change contact shape and collision strengt
 level. Four deterministic takes vary contact position, width, timing and texture travel.
 
 This is a mechanism port, not byte parity with scipy: house filters, decimation, noise and
-floating-point output differ. Python remains the accepted sound reference; the Kotlin pack
-provides the next listening comparison. Direct stochastic clicks use `Dsp.Noise` and `Dsp.seedFor`. The winding surface
+floating-point output differ. Python remains the original sound reference; the delivered Kotlin pack
+is now owner-approved. Direct stochastic clicks use `Dsp.Noise` and `Dsp.seedFor`. The winding surface
 variations in `TimberScrapeTexture` retain the approved Python ridge pattern across runtimes;
 these are procedural model coordinates, not recorded samples.
 
@@ -95,8 +96,9 @@ take count, tempo and articulation; pad balance is stored in the kit itself.
 
 MPC 2 retains the first take of each velocity layer under the owner's format exception. MPC 3
 exports all chain PCM and cycle descriptors. The repository's missing MPC chain-WAV slice map
-and hardware capture remain open, as explicitly parked by the owner. Metadata checks do not
-establish hardware round robin. No change here claims to resolve that shared limitation.
+remains a shared implementation limitation. The owner's 2026-11-15 hardware approval closes
+TIMBER's hardware acceptance gate; it does not supply a new slice-map capture or change the
+export implementation. Metadata checks alone do not establish hardware round robin.
 
 ## Validation and delivery
 
@@ -124,11 +126,11 @@ and `verification.csv`. The Python verifier checks MPC 2 windows and audition as
 
 | Gate | Status |
 | --- | --- |
-| Sound direction | Python round 2 and extension accepted by owner; Kotlin listening open |
-| Multiple genre kits and percussion phrases | Implemented; software checks recorded below; device shelf unverified |
+| Sound direction | Python direction and Kotlin listening approved by owner (2026-11-15) |
+| Multiple genre kits and percussion phrases | Implemented; software checks below; owner hardware approval (2026-11-15) |
 | Velocity and round robin rendering | Implemented; software checks recorded below |
-| Saving and playback | Software checks recorded below; physical phone audio unverified |
-| MPC 3 export | PCM/metadata checks recorded below; chain slice-map and hardware gate open |
+| Saving and playback | Software checks below; owner hardware approval (2026-11-15) |
+| MPC 3 export | PCM/metadata checks below; owner hardware approval; shared slice-map limitation unchanged |
 | MPC 2 combined velocity and RR | Owner format exception; velocity export still checked |
 | Melodic keys/chords, melodic HOLD/STRUM | Not applicable to finite percussion banks |
 | Repository regression | Final command outcome recorded below |
@@ -162,8 +164,8 @@ and the complete native/MPC export archive, with no additional leveling.
 `compare_timber_ports.py` measures the 28 dry Kotlin contacts against the accepted
 Python hard-strike references. After at most 1 ms alignment and gain fitting,
 24 impact/rake comparisons correlate above 0.94; scrapes range from 0.7940 to
-0.9704. The winding pattern is retained, but output filters differ. Kotlin listening
-remains open, especially the bass scrapes. No byte-parity claim is made.
+0.9704. The winding pattern is retained, but output filters differ. The owner approved Kotlin listening
+on 2026-11-15, including the delivered bass scrapes. No byte-parity claim is made.
 
 Historical regression at the original baseline was **blocked**, not green. The run of
 `./gradlew --no-daemon --parallel test --fail-fast` found the existing
@@ -179,5 +181,6 @@ Repository delivery (2026-11-15): merged default-branch commit `6e2e40676`,
 which includes the CAIRN sentence-case fix (`ee6f0a3f0`). The current catalogue
 has 136 starters including the three TIMBER banks. Focused validation of this merged
 revision passed 101 checks (exit 0), including the formerly failing CAIRN copy
-check and TIMBER save/playback/export. Full repository regression is being rerun;
-a clean full-suite result is not yet established. Listening and hardware gates remain open.
+check and TIMBER save/playback/export. The local full-regression rerun has no recoverable completion result;
+a clean full-suite result is not yet established. PR #1122 CI remains the active
+software gate. Listening and hardware are owner-approved (2026-11-15).
