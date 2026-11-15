@@ -10,7 +10,7 @@ import kotlin.math.*
  * the entire source grid, including gestures, rather than masquerading as a single Patch.
  */
 object SporeSyntheticKits {
-    const val VERSION=1
+    const val VERSION=2
     enum class Genre(val id:String,val title:String,val bpm:Int) {
         JUNGLE("spore-synth-jungle","Spore Dry Jungle",170),
         DUB("spore-synth-dub","Spore Dub Breaks",85),
@@ -32,8 +32,8 @@ object SporeSyntheticKits {
         return names.mapIndexed { i,n -> Part(n,if(g!=Genre.JUNGLE && i in listOf(3,11))DrumClass.PERC else kinds[i],levels[i],if(i in 6..7)1 else 0) }
     }
     data class Recipe(val genre:Genre,val pad:Int,val velocity:Double=1.0,val take:Int=0,val version:Int=VERSION) {
-        init { require(pad in 0..17 && take>=0 && velocity.isFinite() && velocity in 0.0..1.0 && version==VERSION) }
-        fun render():Snip=renderPad(genre,pad,velocity,take)
+        init { require(pad in 0..17 && take>=0 && velocity.isFinite() && velocity in 0.0..1.0 && version in 1..VERSION) }
+        fun render():Snip=renderPad(genre,pad,velocity,take,version)
         fun toJsonText():String=Json.write(JsonValue.Obj(mapOf("source" to JsonValue.Str("SporeSyntheticKits"),
             "version" to JsonValue.Num(version.toDouble()),"genre" to JsonValue.Str(genre.name),"pad" to JsonValue.Num(pad.toDouble()),
             "velocity" to JsonValue.Num(velocity),"take" to JsonValue.Num(take.toDouble()))))
@@ -47,6 +47,12 @@ object SporeSyntheticKits {
         }
     }
     private fun scale(s:Snip,gain:Double)=s.copy(samples=FloatArray(s.samples.size) { (s.samples[it]*gain).toFloat() })
+    private fun damped(s:Snip,cutoff:Float,decay:Double):Snip {
+        val lp=Dsp.FixedOnePole(cutoff)
+        val a=FloatArray(s.frameCount) { i->(lp.lp(s.samples[i])*exp(-i/(Dsp.RATE*decay))).toFloat() }
+        Dsp.fadeTail(a)
+        return Snip(a,1,Dsp.RATE)
+    }
     private fun bounded(s:Snip,seconds:Double=1.35):Snip {
         val n=min(s.frameCount,(seconds*Dsp.RATE).roundToInt());val a=s.samples.copyOf(n)
         Dsp.fadeTail(a);check(a.all { it.isFinite() } && a.maxOf { abs(it) }<1.001f)
@@ -85,11 +91,18 @@ object SporeSyntheticKits {
             phase=if(pad==14)mapOf("RATE" to .2f,"DEPTH" to .45f,"FEEDBACK" to .12f)else null)
         return bounded(scale(fx.process(s),.70))
     }
-    fun renderPad(g:Genre,pad:Int,velocity:Double=1.0,take:Int=0):Snip {
+    fun renderPad(g:Genre,pad:Int,velocity:Double=1.0,take:Int=0,version:Int=VERSION):Snip {
+        require(version in 1..VERSION)
         require(pad in 0..17 && velocity.isFinite() && velocity in 0.0..1.0 && take>=0)
         if(pad>=16)return gesture(g,pad==17,velocity,take)
         val v=velocity;val t=take;val dark=g==Genre.DUB;val bright=g==Genre.BROKEN
         val kc=kickControls(g);val sc=snareControls(g)
+        if(g==Genre.JUNGLE && version>=2)when(pad) {
+            // Quiet touch and damping change the source itself, even in raw solo playback.
+            1->return damped(SporeKick.render(SporeKick.Controls(tune=.20,strike=.08,body=.05,click=.05),v*.60,t),1500f,.032)
+            3->return damped(SporeSnare.render(SporeSnare.Controls(tune=.72,strike=.10,body=.05,wires=.08),v*.48,t),4200f,.022)
+            9->return SporeRide.render(v,t)
+        }
         // The two Jungle anchor pads are exact accepted sources; no extra gain, EQ or fade.
         if(pad==0)return SporeKick.render(kc,v,t)
         if(pad==2)return SporeSnare.render(sc,v,t)

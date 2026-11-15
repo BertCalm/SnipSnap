@@ -122,6 +122,17 @@ object SporeSyntheticDelivery {
             val probe=Mpc3Clip("Core touch",4,(0..17).map { n->Mpc3Note(Mpc3Note.noteFor(if(n<9)1 else 3),n*480L,SporeSyntheticKits.velocities[n%9/3].toFloat()) })
             val touch=KitPreview.render(loaded,native,probe,g.bpm.toFloat());check(touch.peak()<1)
             WavWriter.write(File(audio,"${g.id}-touch.wav"),touch,WavWriter.BitDepth.PCM_24)
+            if(g==SporeSyntheticKits.Genre.JUNGLE) {
+                val notes=mutableListOf<Mpc3Note>()
+                for(i in 0..15) notes+=Mpc3Note(Mpc3Note.noteFor(10),i*480L,if(i%2==0).8f else .5f)
+                for(i in 0..3) {
+                    notes+=Mpc3Note(Mpc3Note.noteFor(1),i*1920L,.8f)
+                    notes+=Mpc3Note(Mpc3Note.noteFor(3),i*1920L+960,.75f)
+                }
+                val ride=KitPreview.render(loaded,native,Mpc3Clip("Ride over dry core",2,notes.sortedBy{it.timePulses}),g.bpm.toFloat())
+                val rideGain=min(1f,.9f/ride.peak())
+                WavWriter.write(File(audio,"${g.id}-ride-context.wav"),ride.copy(samples=FloatArray(ride.samples.size){ride.samples[it]*rideGain}),WavWriter.BitDepth.PCM_24)
+            }
             val downloads=mutableMapOf<String,String>()
             for(format in listOf("Native","SFZ","MPC3")) {
                 val folder=File(base,format)
@@ -132,7 +143,7 @@ object SporeSyntheticDelivery {
                 "downloads" to downloads,"gridCells" to 162,"nativeRecipeReplay" to true,"nativePlayback" to true,"hatChoke" to true,"sfzGridPcmAndPlayback" to true,"mpc3GridAndPcm" to true,"hardware" to "unverified","renderVerifySeconds" to (System.nanoTime()-started)/1e9)
             println("PASS ${g.id}: 162 cells, saved source/playback, hats, SFZ and MPC3. Exports archived.")
         }
-        File(root,"manifest.json").writeText(Json.write(json(mapOf("status" to "approved core; new kit arrangements awaiting listen","kits" to records,
+        File(root,"manifest.json").writeText(Json.write(json(mapOf("recipeVersion" to SporeSyntheticKits.VERSION,"status" to "approved core; new kit arrangements awaiting listen","kits" to records,
             "kickModelSha256" to SporeKick.MODEL_SHA256,"snareModelSha256" to SporeSnare.MODEL_SHA256,
             "audioSha256" to audio.listFiles()!!.filter{it.extension=="wav"}.associate { it.name to hash(it) }))))
     }

@@ -208,3 +208,7 @@ The owner approved the reference-calibrated Python snare. `SporeSnare` now repro
 ## Approved pair and synthetic genre kits — 14 November 2026
 
 The owner accepted the kick/snare audition. The kick is now a Kotlin source, and the shared renderer preserves the approved snare. Three new 18-pad synthetic starters—Dry Jungle, Dub Breaks and Orbital Breaks—include three velocity layers, three takes, rolls and risers. All 486 cells pass saved-source replay, native playback, SFZ import/playback and MPC 3 grid/PCM checks. The expanded arrangements still need listening acceptance; Android and physical MPC remain unverified. See the [design and evidence](superpowers/specs/2026-11-14-spore-synthetic-kits.md) and [complete-kit audition](https://spore-station-jungle-audition.bertcalm.chatgpt.site/synthetic-kits/).
+
+## Dry Jungle articulation revision — 15 November 2026
+
+The owner found 01/02 and 03/04 too alike and the ride too tambourine-like. Version 2 changes only Jungle 02 (muted heel), 04 (light ghost) and 10 (struck modal ride without rivets). Approved 01/03 and the other source voices are preserved; version-1 recipes remain replayable. The [audition](https://spore-station-jungle-audition.bertcalm.chatgpt.site/synthetic-kits/) adds pair comparisons, previous/revised clips and a saved-kit ride pattern. See [the design and acceptance limits](superpowers/specs/2026-11-15-spore-jungle-articulation.md).
