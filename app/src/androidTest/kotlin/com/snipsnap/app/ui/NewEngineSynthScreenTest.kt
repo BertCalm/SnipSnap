@@ -20,6 +20,8 @@ import com.snipsnap.synth.Ballast
 import com.snipsnap.synth.BackwashPatch
 import com.snipsnap.synth.BallastPatch
 import com.snipsnap.synth.BallastVoice
+import com.snipsnap.synth.Hiccup
+import com.snipsnap.synth.HiccupPatch
 import com.snipsnap.synth.Soot
 import com.snipsnap.synth.SootPatch
 import com.snipsnap.synth.Scuff
@@ -242,6 +244,27 @@ class NewEngineSynthScreenTest : ComposeScreenTest() {
         assertEquals(1f, draft.velocity, .0001f)
         assertEquals(.6f, draft.macros.getValue("DAMP"), .0001f)
         assertEquals(.42f, draft.macros.getValue("TUNE"), .0001f)
+    }
+
+    /**
+     * HICCUP on the picker (2026-11-15), with its presets in the factory bank. The snare opens with its six
+     * controls at their defaults, an edit survives a rebuild, and the saved draft keeps its renderer model.
+     */
+    @Test
+    fun hiccupOpensItsSnareAtItsDefaultsAndKeepsAnEditAndItsModel() {
+        show("HICCUP", "SNARE")
+        button("SNARE").assertIsSelected()
+        for (label in listOf("TUNE", "DECAY", "TOY", "FAULT", "CHOP", "CRUSH")) control(label).assertExists()
+        assertEquals(Hiccup.defaults(com.snipsnap.synth.HiccupVoice.SNARE).getValue("FAULT"), progress("FAULT"), .0001f)
+        adjust("FAULT", .8f)
+        compose.runOnIdle { generation++ }
+        pump()
+        assertEquals("HICCUP", settings["engine"])
+        assertEquals(.8f, progress("FAULT"), .0001f)
+        assertFalse(showsLoop())
+        val draft = SynthDrafts.read(settings).single { it.engine == "HICCUP" && it.voiceName == "SNARE" } as HiccupPatch
+        assertEquals(Hiccup.MODEL_VERSION, draft.model)
+        assertEquals(.8f, draft.macros.getValue("FAULT"), .0001f)
     }
 
     /**

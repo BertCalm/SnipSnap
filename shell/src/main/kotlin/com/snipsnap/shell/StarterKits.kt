@@ -40,7 +40,8 @@ import java.io.File
  * MIRRORBALL starters are built the same way, each pad printed through an FET compressor,
  * a multi-head tape echo and an amp.
  * SCUFF's starter is the same shape, every strike rendered by the SCUFF engine at a velocity and a take, its two
- * phrases through one bus clipper.
+ * phrases through one bus clipper. The HICCUP kits are the same shape, every strike rendered by the HICCUP engine at a
+ * velocity and a take, with a roll and a riser phrase and no bus.
  * CLOUD's GRAINS clouds (A07-A16) carry no recipe;
  * only its VOX pads (A01-A06) do, as `SynthKits.cloud` says. LUCKY DIP
  * A/B's bank-B twins carry fx-only recipes (`Shuffle.withRemixBank`), the
@@ -810,6 +811,21 @@ object StarterKits {
             seeded = false, tempoBpm = com.snipsnap.synth.FootworkKits.Kit.INDUSTRIAL.bpm.toFloat(),
         ) { com.snipsnap.synth.FootworkKits.build(com.snipsnap.synth.FootworkKits.Kit.INDUSTRIAL) },
         Starter(
+            "hiccup-hop", "HICCUP HOP",
+            "Glitch hop drums that trip over themselves. Three touch zones, four takes; a stumbling roll and a clap riser.",
+            seeded = false, tempoBpm = com.snipsnap.synth.HiccupKits.Kit.HOP.bpm.toFloat(),
+        ) { com.snipsnap.synth.HiccupKits.build(com.snipsnap.synth.HiccupKits.Kit.HOP) },
+        Starter(
+            "hiccup-lab", "HICCUP LAB",
+            "IDM drums whose stutters turn into notes. Three touch zones, four takes; a shattering roll and a blip riser.",
+            seeded = false, tempoBpm = com.snipsnap.synth.HiccupKits.Kit.LAB.bpm.toFloat(),
+        ) { com.snipsnap.synth.HiccupKits.build(com.snipsnap.synth.HiccupKits.Kit.LAB) },
+        Starter(
+            "hiccup-sugar", "HICCUP SUGAR",
+            "Hyperpop toy drums, bright and broken. Three touch zones, four takes; a popping roll and a coin riser.",
+            seeded = false, tempoBpm = com.snipsnap.synth.HiccupKits.Kit.SUGAR.bpm.toFloat(),
+        ) { com.snipsnap.synth.HiccupKits.build(com.snipsnap.synth.HiccupKits.Kit.SUGAR) },
+        Starter(
             "clutter-lofi", "CLUTTER KITCHEN LO-FI",
             "Found-sound lo-fi from modelled household objects: a soft bucket, a box of rice brushed, a matchbox and loose keys, struck by palms and wooden spoons with the kitchen in every hit. Three touch zones, four takes.",
             seeded = false, tempoBpm = com.snipsnap.synth.ClutterKits.Kit.LOFI.bpm.toFloat(),
@@ -829,6 +845,21 @@ object StarterKits {
             "Tiny modelled objects tuned up and damped, the phone almost touching: a light switch, a zip, a sand jar, a mug and a can, clicky and detailed. Three touch zones, four takes.",
             seeded = false, tempoBpm = com.snipsnap.synth.ClutterKits.Kit.MICRO.bpm.toFloat(),
         ) { com.snipsnap.synth.ClutterKits.build(com.snipsnap.synth.ClutterKits.Kit.MICRO) },
+        Starter(
+            "servo-electro", "SERVO ELECTRO",
+            "Electro machine drums on a weak power rail: a long low boom, a snap, a cowbell and toms that fall like lasers, each hit diving as it lands. Three touch zones, four takes; a roll and a riser that sink on one shared rail.",
+            seeded = false, tempoBpm = com.snipsnap.synth.ServoKits.Kit.ELECTRO.bpm.toFloat(),
+        ) { com.snipsnap.synth.ServoKits.build(com.snipsnap.synth.ServoKits.Kit.ELECTRO) },
+        Starter(
+            "servo-jit", "SERVO JIT",
+            "Ghetto tech from the same machine, tuned up and run hot: a hard short kick, claps, rims and offbeat hats squared off against the rail and gone before the next sixteenth. Three touch zones, four takes; a roll and a riser.",
+            seeded = false, tempoBpm = com.snipsnap.synth.ServoKits.Kit.JIT.bpm.toFloat(),
+        ) { com.snipsnap.synth.ServoKits.build(com.snipsnap.synth.ServoKits.Kit.JIT) },
+        Starter(
+            "servo-neuro", "SERVO NEURO",
+            "Neurofunk on a rail that rings: a punch kick, a snare with its body near 200 Hz, growling tails and bass stabs that snarl through a moving filter. Three touch zones, four takes; a roll and a riser.",
+            seeded = false, tempoBpm = com.snipsnap.synth.ServoKits.Kit.NEURO.bpm.toFloat(),
+        ) { com.snipsnap.synth.ServoKits.build(com.snipsnap.synth.ServoKits.Kit.NEURO) },
         Starter(
             "calabash-afrobeat", "CALABASH AFROBEAT",
             "Lagos in the 1970s, a big band's rhythm section live in one room: a round kick, a tight high snare, hats opening and closing, two congas and a tumba, a shekere, sticks and a bell, on warm sixteen-track tape. Three touch zones, four takes; a shekere riser.",
