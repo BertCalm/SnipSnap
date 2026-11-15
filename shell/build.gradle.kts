@@ -647,6 +647,16 @@ tasks.register<JavaExec>("generateClutterKits") {
     args(providers.gradleProperty("clutterKitsOutput").orNull ?: "${rootDir}/testkit/clutter-kits")
 }
 
+tasks.register<JavaExec>("generateCalabashKits") {
+    group = "distribution"
+    description = "Build the four CALABASH genre kits, prove every velocity and round-robin grid through save, playback and MPC 3 export, and write the listening pack."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.CalabashKitGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "3g"
+    args(providers.gradleProperty("calabashKitsOutput").orNull ?: "${rootDir}/testkit/calabash-kits")
+}
+
 tasks.register<JavaExec>("generateHiccupKits") {
     group = "distribution"
     description = "Build the HICCUP kits, prove the velocity and round-robin grid through save, playback and MPC 3 export, and write the listening pack."

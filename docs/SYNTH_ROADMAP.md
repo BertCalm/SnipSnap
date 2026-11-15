@@ -3730,6 +3730,32 @@ playback and the MPC 3 export (768 slices). Every kit carries a roll or riser. O
 from the app, the Latin jazz kit and its new percussion voices (asked for 2026-11-15), presets and the picker,
 hardware. See [EMBER](EMBER.md).
 
+### CALABASH, round 2 (2026-11-15)
+
+The four approved kits on the shelf: CALABASH AFROBEAT, AFROBEATS, MBALAX and AFRO-CUBAN JAZZ are FRESH TAPE starters
+under SKINS (148 starters), each sixteen one-shot pads of three velocity zones by four engine takes, the prototype's
+chokes as mute groups, and a roll or riser on A16. A zone's takes are matched in loudness (CLUTTER's law; the
+audition's peak-matching left them up to 4.5 dB apart on a hit). Velocity and round robin are verified through
+rendering, saving, `PadHit.resolve` playback and MPC 3 export in software (`CalabashKitsTest`, `CalabashKitTest`,
+`:shell:generateCalabashKits`: 768 slices). A kit builds in 22 to 51 s on four cores, disclosed. The owner heard the
+Kotlin kits (each kit's approved groove played with the app's own strikes, read back from the MPC 3 export) and
+approved them on 2026-11-15 ("I listened: approve all"). See [CALABASH](CALABASH.md).
+
+### CALABASH, round 3 (2026-11-15)
+
+The roster: `CalabashPresets` files the sixty-four pads of the four approved kits as CALABASH's factory bank, each the
+pad's own macros struck full at take 0, named after its kit (AFROBEAT, AFROBEATS, MBALAX, AFROCUBAN; one name
+shortened to 24 letters). CALABASH leaves `PatchTypes.ROSTERLESS`; a saved strike promotes with its velocity, take
+and model. Thirty-five of thirty-six voices have a preset (the low agogo bell is in no kit). `CalabashPresetsTest`
+holds the preset contracts. The picker is round 4. See [CALABASH](CALABASH.md).
+
+### CALABASH, round 4 (2026-11-15)
+
+The picker: CALABASH sits in SYNTH's engine picker after CLUTTER, before CAIRN (which closes the ring), wired as CLUTTER's round 4 (the native
+factory path keeps a preset's velocity, take and model; a frozen draft keeps them through edits), filed under DRUMS
+in `EngineCatalog`; 91 picker engines. An on-device test in `NewEngineSynthScreenTest` loads AFROBEAT CONGA OPEN and
+keeps an edit with its take and model; CI compiles and runs it (no SDK here). See [CALABASH](CALABASH.md).
+
 ### HICCUP, rounds 1 to 4 (2026-11-14 to 2026-11-15)
 
 A glitch drum engine: a clean hit is written into a memory and a seeded fault script re-reads it (snag, ratchet,
@@ -3740,7 +3766,7 @@ LAB 150, SUGAR 160), sixteen pads each, three zones of four takes, a roll and a 
 playback and MPC 3 export. Round 3: the groove fixes (an 18 ms attack guard, one pentatonic key over 55 Hz,
 stumbles in whole grid units, a cap; `Hiccup.MODEL_VERSION` 2, `HiccupKits.VERSION` 2), `HiccupPresets` (twenty-one
 presets, held out of the factory bank until the listen), the
-`EngineCatalog` entry (DRUMS) and the entry on SYNTH's picker (91 engines once merged with the other new engines). Heard: on 2026-11-15 the owner
+`EngineCatalog` entry (DRUMS) and the entry on SYNTH's picker (93 engines with CALABASH merged). Heard: on 2026-11-15 the owner
 listened to an audition page of the Kotlin engine (model 2, kit 2): a four-bar groove from each of the three kits,
 every hit pad A01 to A14 of each kit at the hardest velocity zone, each kit's roll and riser, and the four
 round-robin takes of SUGAR's Pop Snare. The verdict, verbatim: "sounds check passes". Round 4: the 21 presets were
