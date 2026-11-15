@@ -25,3 +25,11 @@ Owner hearing: the calibrated contact is closer, but missing a secondary element
 `python3 prototype/footwork/reference_reset/contact_pair.py /path/to/output` creates tight (6.5 ms) and separated (11 ms) hypotheses. Each adds independently seeded, darker noise excitation at 0.65 nominal amplitude with deterministic timing/strength variation. These are proposed contact mechanics, not a recovered physical model. Both retain the same fixed comparison gain as the prior audition; no per-hit normalization or waveform copying occurs. All 24 cells pass the Python checks. Full-kit and listening acceptance remain open.
 
 Why it is built this way: independent excitation avoids a comb-filtered echo; a darker second contact distinguishes landing from the first click; short timing variation avoids identical machine repeats; two spacings let the owner judge the missing gesture without replacing the closer baseline.
+
+## Ta-ee metallic response
+
+Owner clarified the gesture as “ta-ee ta-ee like a tiny horseshoe clap.” `metal_contact.py` preserves the dry primary contact and adds a delayed, brighter plate response: four broad resonant noise bands, a low-level inharmonic ring and a tiny independently excited tick. Small/open variants use 12/21 ms onset and 18/30 ms plate decay. These are proposed perceptual parameters, not measured shoe geometry. Run `python3 prototype/footwork/reference_reset/metal_contact.py /path/to/output`.
+
+All 24 Python velocity/take cells pass deterministic, finite, bounded, DC/end-fade, silence, variation and velocity checks. The page includes repeated phrases to judge the owner's two-syllable gesture. Full-kit gates remain open.
+
+Why it is built this way: the delayed bright response supplies the ee; broad resonances keep it from becoming a pure bell; short damping keeps the metal small and dry; independent excitation and deterministic variation avoid a repeated-copy echo.
