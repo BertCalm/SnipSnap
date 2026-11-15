@@ -281,6 +281,15 @@ class DeterminismTest {
         }
     }
 
+    @Test fun `SERVO renders every voice, a soft hit and every take byte for byte through JSON`() {
+        for (voice in ServoVoice.entries) {
+            val patch = ServoPatch("Canary", voice, Servo.defaults(voice))
+            assertContentEquals(patch.render().samples, Patches.fromJsonText(patch.toJsonText()).render().samples, "$voice")
+            val struck = ServoPatch("Soft take", voice, Servo.defaults(voice), velocity = 0.4f, take = 3)
+            assertContentEquals(struck.render().samples, Patches.fromJsonText(struck.toJsonText()).render().samples, "$voice soft take 3")
+        }
+    }
+
     @Test fun `EMBER renders every voice, a soft hit and every take byte for byte through JSON`() {
         for (voice in EmberVoice.entries) {
             val patch = EmberPatch("Canary", voice, Ember.defaults(voice))

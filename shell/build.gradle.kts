@@ -647,6 +647,16 @@ tasks.register<JavaExec>("generateClutterKits") {
     args(providers.gradleProperty("clutterKitsOutput").orNull ?: "${rootDir}/testkit/clutter-kits")
 }
 
+tasks.register<JavaExec>("generateServoKits") {
+    group = "distribution"
+    description = "Build the three SERVO genre kits, prove every velocity and round-robin grid through save, playback and MPC 3 export, and write the listening pack."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.ServoKitGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "2g"
+    args(providers.gradleProperty("servoKitsOutput").orNull ?: "${rootDir}/testkit/servo-kits")
+}
+
 tasks.register<JavaExec>("generateCalabashKits") {
     group = "distribution"
     description = "Build the four CALABASH genre kits, prove every velocity and round-robin grid through save, playback and MPC 3 export, and write the listening pack."

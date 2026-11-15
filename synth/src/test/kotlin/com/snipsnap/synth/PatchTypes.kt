@@ -59,7 +59,7 @@ internal object PatchTypes {
      * port (round 1, 2026-11-15) until the owner approved its kits on the shelf (2026-11-15) and they became its
      * factory bank, as CLUTTER's did.
      */
-    val ROSTERLESS: Set<String> = setOf(HydroformPatch.ENGINE, SnapPatch.ENGINE, SilkPatch.ENGINE, GyrePatch.ENGINE, MagnetPatch.ENGINE, EmberPatch.ENGINE)
+    val ROSTERLESS: Set<String> = setOf(HydroformPatch.ENGINE, SnapPatch.ENGINE, SilkPatch.ENGINE, GyrePatch.ENGINE, MagnetPatch.ENGINE, EmberPatch.ENGINE, ServoPatch.ENGINE)
 
     /**
      * The engines with a [Patch] type and provisional recipes of their own that are
