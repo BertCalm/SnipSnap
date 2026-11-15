@@ -825,31 +825,42 @@ TERRA is a world-percussion drum engine with 13 voices. Four are spec voices, fr
 
 The owner approved the procedural kick/snare pair. Three genre starters now contain 18 pads each, including authored rolls and risers. All 486 cells pass velocity/take source checks, saved recipe replay, native playback, SFZ import/playback and MPC 3 grid/PCM read-back. Drum shelf registration is verified in software. Melodic/keygroup/chord and string STRUM requirements do not apply to this percussion kit; individual voices are finite. The owner accepted the revised Jungle heel, ghost and ride on 2026-11-15 (“Better, proceed”); preserve their version-2 renders alongside the approved core pair. The owner subsequently confirmed listening to all kits and explicitly approved phone and hardware playback (“Phone and hardware approved”). Sound and device acceptance are therefore closed for Dry Jungle, Dub Breaks and Orbital Breaks. This is owner-reported device approval, separate from the automated 486-cell evidence; no device model or firmware was specified. The revision and complete starter-render regression passed. No MPC 2 fallback is included. See [the detailed ledger](superpowers/specs/2026-11-14-spore-synthetic-kits.md) and [revision acceptance](superpowers/specs/2026-11-15-spore-jungle-articulation.md).
 
-## EMBER (round 1 Kotlin, 2026-11-15, not heard; shelf and hardware open)
+## EMBER (round 2, four kits on the shelf 2026-11-15; listen and hardware open)
 
 A drum engine for a live jazz and soul kit in a small club in 1962: calfskin drums, a riveted ride, brushes, the
 club and a 1962 chain, from physical models. Four sixteen-pad kits. See [EMBER](EMBER.md). Rounds 0 to 0e are a
 Python prototype and a listening page (<https://claude.ai/artifact/Xmcj5t8MYSNCQPoTKHBcdw>). Round 1 (2026-11-15) is
-the Kotlin port, `Ember.kt`, measured against round 0e and not yet heard.
+the Kotlin port, `Ember.kt`; the owner approved its sound at round 1b. Round 2 (2026-11-15) puts the four kits on
+the shelf as FRESH TAPE starters.
 
 - **Melodic, keygroup and chord-tool gates:** not applicable. A drum engine.
 - **Articulation:** finite hits, no HOLD. No picked or thumbed strings.
-- **Percussion: authored, not heard.** Every kit carries a roll or riser on A15/A16: a press roll and a mallet
-  cymbal swell (EMBER), a brush roll and a far swell (AFTER HOURS), a snare roll (SOUL JAZZ), a swell (FREE).
-  Rendered in Python. In Kotlin, `EmberTest` holds that the swell rises at least 20 dB and that both rolls grow.
-- **Drum shelf: authored, not on the shelf.** EMBER (138 BPM), EMBER AFTER HOURS (66), EMBER SOUL JAZZ (104) and
-  EMBER FREE (80) differ in implements, drums per role, tuning, damping, looseness, microphone distance, chain and
-  tempo. No pad is identical between any two kits; the same slot in two kits is at least 2.98 dB apart (Python).
-  The engine is in Kotlin; the kits reach the shelf at round 2.
+- **Percussion: on the kits, verified in software.** Every kit carries a roll or riser on A15/A16: a press roll
+  and a mallet cymbal swell (EMBER), a brush roll and a far swell (AFTER HOURS), a snare roll (SOUL JAZZ), a swell
+  (FREE). The owner heard and approved them as voices (round 1b, with their ring-out). `EmberTest` holds that the
+  swell rises at least 20 dB and that both rolls grow; `EmberKitsTest` that every kit carries one. Not yet heard
+  on the kits from the app.
+- **Drum shelf: on the shelf (round 2), not yet heard there.** EMBER (138 BPM), EMBER AFTER HOURS (66), EMBER SOUL
+  JAZZ (104) and EMBER FREE (80) are FRESH TAPE starters under SKINS (148 starters), built by `EmberKits` pad for pad
+  from `prototype/ember/kits.py`. They differ in implements, drums per role, tuning, damping, looseness, microphone
+  distance, chain and tempo. No pad is the same voice at the same settings in two kits, and the same slot differs
+  in shape between any two (`EmberKitsTest`). A fifth kit, Latin jazz, waits on new percussion voices the owner
+  asked for (timbales, cowbell, clave, bongos, guiro, shaker), heard in Python before Kotlin.
 - **Velocity and round robin:**
   - **Rendering: verified in Kotlin by test (round 1).** `EmberTest` holds that every one of the 27 voices' soft
     and hard hits differ in shape at matched level (at least 1.8 dB), that its four takes are distinct strikes (at
     least 1 dB), and that every take replays byte for byte (through JSON in `DeterminismTest`). Measured in Kotlin:
     soft against hard at least 2.12 dB, the closest two takes 1.57 dB apart. (Python, on the four kits' 64 pads:
     1.92 dB and 1.19 dB.) Velocity moves the contact, the threshold parts and the swell's arc, not a filter.
-  - **Saving, playback, export: open.** The kits are not on the shelf yet (round 2). The listening page's pad
-    grid is a browser stand-in, not app evidence.
-- **Sound character: open.** On 2026-11-14 the owner's first listen found the cymbals sounding like "hitting sheet
+  - **Saving, playback and MPC 3 export: verified in software (round 2).** `:shell:generateEmberKits` builds all
+    four kits and proves every pad's grid through saving, reloading, `PadHit.resolve` and the MPC 3 track, read back
+    from the files each step wrote: 64 pads, 768 slices ("Verified EMBER: 16 pads, 192 slices, saved PCM + playback
+    + MPC 3 track", and the same for the other three). `EmberKitTest` holds a kick, a hat and the 5 s swell through
+    the same steps, and that playback picks the zone by velocity and deals the four takes in order, then repeats.
+    Within a zone the takes are matched in loudness (equal within 0.1 dB, the highest peak at 0.92). **MPC 2: not
+    applicable** ([format limit](#mpc-2-and-round-robin-owner-decision-2026-11-14)): it keeps each zone's first take.
+    No phone or MPC has played the kits.
+- **Sound character: approved for the voices (2026-11-15).** On 2026-11-14 the owner's first listen found the cymbals sounding like "hitting sheet
   metal". Round 0b rebuilds every cymbal and hat from CC0 recordings of a jazz club kit, with BREAKER's fitter. Measured
   against the recordings, they are 5.6 to 9.3 dB away over the first 150 ms, where round 0's were 11 to 34 dB and two
   takes of one real ride are 6.2 dB apart (Python). A new SIZZLE voice carries the recording's rivets. Not heard yet.
@@ -862,9 +873,16 @@ the Kotlin port, `Ember.kt`, measured against round 0e and not yet heard.
   On 2026-11-15 the owner heard rounds 0b to 0e on the listening page and said "Much better". That is a better
   direction, not yet an accepted baseline. The owner then said "Proceed", and round 1 ports round 0e to Kotlin:
   no brightness bias (0.10 dB under Python above 4 kHz across the 27 voices), and every voice inside the spread of
-  Python's own takes. No one has heard the Kotlin renders. The sound-character gate stays open.
-- **Overall: incomplete.** The Kotlin engine is in (round 1) and not yet heard. The shelf and saving, playback and
-  MPC 3 export (round 2), and phone and MPC hardware (round 3) are open.
+  Python's own takes. On the round-1 listening page the owner heard "Swell cuts abruptly". Round 1b lets the
+  swell, the bow and both rolls ring out instead of being cut (each now ends at least 40 dB under its peak, a test
+  in `EmberTest`). The owner then heard the round-1b listening page (version 2: every voice's Kotlin hit beside
+  the Python one, with its soft hit and four takes) and said "I've heard the sound and approve" (2026-11-15).
+  `Ember.MODEL_VERSION` 1 with round 1b is the approved sound baseline. The four kits have not been heard from the
+  Kotlin engine yet; that is round 2's listen.
+- **Overall: incomplete.** The engine's sound is approved (round 1b) and the four kits are on the shelf, proved
+  through saving, playback and MPC 3 export in software (round 2). Open: the owner's listen to the kits from the
+  app (the listening page, version 3, plays them from the MPC 3 export), the Latin jazz kit and its new voices,
+  presets and the picker, and phone and MPC hardware (round 3).
 
 ## CALABASH (round 0 heard and approved, 2026-11-15; round 1 Kotlin port, not heard)
 
