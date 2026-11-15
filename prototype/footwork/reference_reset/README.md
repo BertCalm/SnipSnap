@@ -33,3 +33,7 @@ Owner clarified the gesture as “ta-ee ta-ee like a tiny horseshoe clap.” `me
 All 24 Python velocity/take cells pass deterministic, finite, bounded, DC/end-fade, silence, variation and velocity checks. The page includes repeated phrases to judge the owner's two-syllable gesture. Full-kit gates remain open.
 
 Why it is built this way: the delayed bright response supplies the ee; broad resonances keep it from becoming a pure bell; short damping keeps the metal small and dry; independent excitation and deterministic variation avoid a repeated-copy echo.
+
+## Owner listening checkpoint
+
+After the ta-ee audition, the owner reported that it sounds like tap, although not exactly like the reference. Record this as recognizable tap character, not exact reference matching or full-kit acceptance. Small/open preference was not specified. Preserve both candidates; no sound changes were made at this checkpoint. Other voices, native integration, complete kits, articulation and velocity/round-robin delivery gates remain open.

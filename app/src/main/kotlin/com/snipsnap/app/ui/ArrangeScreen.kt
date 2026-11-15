@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -482,6 +483,7 @@ private fun SongEditor(keeper: SongKeeper, section: Arranger.Section?, index: In
             val pullUp = section?.pullUp == true
             ActionButton(if (bass) Copy.SONG_BASS_ON else Copy.SONG_BASS_OFF, scheme, enabled = !busy && section != null, lit = bass, modifier = Modifier.weight(1f)) { keeper.toggleBass() }
             ActionButton(if (pullUp) Copy.SONG_PULL_UP_ON else Copy.SONG_PULL_UP_OFF, scheme, enabled = !busy && section != null && index > 0, lit = pullUp, modifier = Modifier.weight(1f)) { keeper.togglePullUp() }
+            SongDropButton(section?.drop == true, enabled = !busy && section != null, keeper = keeper, scheme = scheme)
         }
         if (picking && section != null && !busy) {
             ClipPicker(keeper.picks, current = section.ref, names = keeper.names) { ref ->
@@ -500,6 +502,12 @@ private fun SongEditor(keeper: SongKeeper, section: Arranger.Section?, index: In
             ) { keeper.undo() }
         }
     }
+}
+
+/** DROP's toggle, its own composable so SongEditor does not grow past the dex register limit. It names its state in words, like BASS and PULL-UP. */
+@Composable
+private fun RowScope.SongDropButton(on: Boolean, enabled: Boolean, keeper: SongKeeper, scheme: Scheme) {
+    ActionButton(if (on) Copy.SONG_DROP_ON else Copy.SONG_DROP_OFF, scheme, enabled = enabled, lit = on, modifier = Modifier.weight(1f)) { keeper.toggleDrop() }
 }
 
 /** Every clip the kit can play, as chips in a row that scrolls. The one in use is lit and says NOW. */
@@ -558,6 +566,7 @@ private fun SectionRow(
                     (if (section.locked) ", ${Copy.SONG_LOCKED}" else "") +
                     (if (section.bass) ", ${Copy.SONG_ROW_BASS}" else "") +
                     (if (section.pullUp && index > 0) ", ${Copy.SONG_ROW_PULL_UP}" else "") +
+                    (if (section.drop) ", ${Copy.SONG_ROW_DROP}" else "") +
                     (if (next) ", ${Copy.SONG_ROW_NEXT}" else ""),
             ) { onTap() }
             .padding(horizontal = 10.dp, vertical = 8.dp),
@@ -578,6 +587,7 @@ private fun SectionRow(
                         Copy.SONG_LOCKED.takeIf { section.locked },
                         Copy.SONG_ROW_BASS.takeIf { section.bass },
                         Copy.SONG_ROW_PULL_UP.takeIf { section.pullUp && index > 0 },
+                        Copy.SONG_ROW_DROP.takeIf { section.drop },
                     ).joinToString(" · "),
                     TapeType.pixelSmall,
                     scheme.ink2.tape,

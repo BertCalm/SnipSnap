@@ -159,6 +159,29 @@ class NewEngineSynthScreenTest : ComposeScreenTest() {
     }
 
     /**
+     * TERRA on the picker (2026-11-14): the kept classic kit's pads are its factory presets. DJEMBE opens, its
+     * kept open tone loads with STROKE at 1, an edit survives a rebuild, and the retired membrane is not offered.
+     */
+    @Test
+    fun terraLoadsTheKeptDjembeOpenAndKeepsAnEdit() {
+        show("TERRA", "DJEMBE")
+        button("DJEMBE").assertIsSelected()
+        button("MEMBRANE").assertDoesNotExist()
+        for (label in listOf("TUNE", "DECAY", "FORCE", "STROKE", "THUMP")) control(label).assertExists()
+        button("PRESET Djembe Open").performSemanticsAction(SemanticsActions.OnClick) { it() }
+        pump()
+        assertEquals(1f, progress("STROKE"), .0001f)
+        adjust("THUMP", .7f)
+        compose.runOnIdle { generation++ }
+        pump()
+        assertEquals("TERRA", settings["engine"])
+        assertEquals("DJEMBE", settings["voice"])
+        assertEquals(.7f, progress("THUMP"), .0001f)
+        assertEquals(1f, progress("STROKE"), .0001f)
+        assertFalse(showsLoop())
+    }
+
+    /**
      * SCUFF on the picker (2026-11-14, round 5), mirroring SOOT with a roster: the kick opens with its
      * five controls (the chain knobs a kick does not take stay off the panel), its preset chips are the
      * two accepted kits' kicks, FLINT KICK lands with the kit's own TUNE, DECAY and CLICK, an edit survives

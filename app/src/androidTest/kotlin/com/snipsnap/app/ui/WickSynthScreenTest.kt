@@ -94,9 +94,16 @@ class WickSynthScreenTest : ComposeScreenTest() {
     }
 
     private fun activateUserPreset(name: String) {
-        val action = compose.onNode(SemanticsMatcher("YOUR PRESET $name") {
+        val target = SemanticsMatcher("YOUR PRESET $name") {
             it.config.getOrNull(SemanticsActions.OnClick)?.label == "YOUR PRESET $name"
-        }, useUnmergedTree = true).fetchSemanticsNode().config.getOrNull(SemanticsActions.OnClick)!!.action!!
+        }
+        // The file is written off-main before savePreset publishes its list to Compose (ETCH's suite waits the
+        // same way). Wait for the actual recall control, not only for the disk file to exist.
+        waitFor("YOUR PRESET $name recall control") {
+            compose.onAllNodes(target, useUnmergedTree = true).fetchSemanticsNodes().size == 1
+        }
+        val action = compose.onNode(target, useUnmergedTree = true)
+            .fetchSemanticsNode().config.getOrNull(SemanticsActions.OnClick)!!.action!!
         compose.runOnIdle { assertTrue(action.invoke()) }
         pump()
     }
