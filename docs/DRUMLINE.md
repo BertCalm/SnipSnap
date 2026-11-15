@@ -38,7 +38,8 @@ The generator writes both native kit folders, MPC 3 tracks with MPC 2 twins, ful
 | Phone and MPC hardware | Not yet verified |
 | Kotlin sound | Native revision 4 accepted on 2026-11-15 |
 | Render budget | Host: bass 21–23 ms, snare 135 ms, crash 866 ms, roll 4.36 s; fast-render target not met |
-| Full control corners and alias-reference comparison | Not yet verified |
+| Numerical control corners | Passed 1,029 current-renderer cases: all binary macro corners at touch endpoints, plus default-center replay |
+| Alias-reference comparison | Not yet verified |
 | Overall | In progress; never inferred from a successful preview |
 
 ## Why it is built this way
@@ -125,3 +126,31 @@ The 32 FIELD/STREET pad recipes now appear in the factory preset bank, covering 
 The prior full local run ended without a terminal result or recoverable process handle; it is not counted as passed. Android compilation and native CI passed for the preceding source; full JVM and emulator results still need their terminal outcomes. Factory integration triggers fresh verification. No DSP or output-stage code changes in this round.
 
 Factory integration verification completed with exit 0 (1m 16s): 98 registry, approved-audio and repository-convention checks. Every one of the 32 factory renders matches its published PCM24 WAV hash. A fresh full unfiltered JVM run and current-head device CI are required separately.
+
+## Render cost review, 2026-11-15
+
+Reviewed merged source `2036a8da1df325e5e0c6fa0ce3f5a7b662a0af1f` after native sound approval. The fixed-cutoff contact, wire-snap, cymbal wash and final DC filters were recomputing their coefficients per sample. The snare sample loop also repeated strike-constant powers and macro lookups. This round uses the existing `Dsp.FixedOnePole` and hoists those strike constants, retaining the same floating-point operation order. Filter states remain private to each render/player. No sample cache, tail truncation, denormal flushing, mode removal, model-version change or new sound settings are introduced.
+
+The standalone `:synth:benchmarkDrumline` task runs without test workers. It warms each case once, reports the median of three renders, and fingerprints raw little-endian Float bits after rendering. `-PdrumlineBenchmarkOutput=/absolute/path.csv` selects the output. The comparison spans all 21 voices/figures at default hard touch/take 0 and damped soft touch/take 2. All 42 raw fingerprints are identical before and after. The before fingerprints are also pinned as a regression test; the separate 32 approved factory PCM24 hashes and saved-model checks remain in force.
+
+In the sequential host comparison, median default snare rendering fell from 195 to 131 ms, roll from 6092 to 3657 ms, and riser from 5454 to 3494 ms. Bass one-shots were about 19 ms and tenors 44–46 ms after the change. Crash remains about 873 ms; the roughly 3% change there is too small to treat as a substantial improvement on a shared host. [All timings and raw hashes](evidence/drumline/render-speed-model4.csv). These are host measurements with limited warm-up, not phone timings or CI time thresholds.
+
+Why: a fixed filter needs one coefficient calculation, not a new exponential for every sample. A strike's contact gain and wire parameters also stay fixed while that strike decays. Reusing those values removes work without changing the synthesis. The next bottleneck remains the many modal/sample updates, particularly for cymbals; this round does not claim a profile of subnormal arithmetic or change it.
+
+**Render-speed gate remains open.** The long figures and cymbals still exceed the intended budget, and phone behavior is unverified. This is a measured, sample-identical reduction in CPU work, not an all-gates-passed claim. The published audition and downloadable audio need no regeneration because the approved sound is unchanged.
+
+The first focused verification passed 119 checks with exit 0, including raw-sample identity, approved factory WAVs, legacy models, complete kits, preset promotion and root classification. Full regression is tracked separately.
+
+After merging default branch `f1842eb48`, 145 focused checks passed with exit 0 (1m 10s). The merge left the drumline and shared DSP code unchanged. A stranded EMBER KDoc found by the repository convention test was moved back to its function; no EMBER behavior changed. Full unfiltered JVM and CI verification are tracked separately.
+
+## Complete numerical corner audit, 2026-11-15
+
+The expanded audit is `./gradlew --no-daemon :synth:auditDrumlineCorners`, with optional `-PdrumlineCornerOutput=/absolute/path.csv`. It enumerates every binary corner of every exposed control for all 21 voices and finite figures, at minimum supported touch 0.05 and full touch 1.0. Corner bits follow `macrosFor`: TUNE, STRIKE, DAMP, then PLAYERS and TIGHT where present. Each voice also has a default-control case at touch 0.6, take 1, rendered twice to verify deterministic replay. Corner takes rotate through 0/1/2; this audit is not a replacement for the separately verified full velocity/take grids.
+
+There are 504 macro corners, 1,008 endpoint renders and 21 center cases: 1,029 measured cases in total. Recipes pass through JSON before rendering. Every result must be mono 44.1 kHz, nonempty, finite, peak-bounded to 1, nonsilent above 0.01 peak, below 0.005 absolute mean, and finish at zero. The checker itself has negative controls for nonfinite, clipped, silent, biased and unfinished signals. This is numerical health coverage of the current renderer's control endpoints, not a proof of every continuous intermediate setting, macro audibility, alias suppression or device behavior.
+
+The current base already fixes the `EMBER` random-name collision by using `BRAZIER` in the random-name pool. That fix is merged into this branch; the engine/starter name stays EMBER. The naming assertion is preserved.
+
+A 120-second Java Flight Recorder sample taken during the corner audit found `Drumline.addMode` as the top frame in 5,123 of 6,973 main-thread execution samples (73.5%); `strike` accounted for 1,501 samples. [Aggregated samples](evidence/drumline/corner-cpu-profile.csv). This is a sampled profile of that portion of the audit, not a per-voice benchmark or evidence of denormal arithmetic. It identifies the modal recurrence loop as the next optimization candidate; this round does not alter it. Corner CSV render times include instrumentation overhead and are not substitutes for the isolated before/after benchmark.
+
+The audit and its focused checks completed with exit 0 in 10 minutes. All 1,029 cases passed: largest absolute peak 0.99000007, largest absolute mean 0.00005806, lowest peak 0.4880. All results were finite mono 44.1 kHz and ended at zero; every center case replayed exactly. [Complete per-case evidence](evidence/drumline/model4-control-corners.csv). The accompanying 103 tests passed with zero failures or skips, including the naming/convention suites, checker negative controls, all 32 approved factory WAV hashes and all 42 raw-sample fingerprints. This closes the current-renderer numerical binary-corner coverage item; it does not close alias-reference, performance or phone/MPC gates.

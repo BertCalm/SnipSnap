@@ -937,7 +937,8 @@ A marching battery with independent player bodies, five bass sizes and progressi
 - Drum shelf: FIELD and STREET CADENCE are authored sixteen-pad starters, with different section sizes, tuning, losses and scored voices. Native audition accepted.
 - Rendering/save/play/export software: both full 3 × 3 grids pass PCM checks, persisted recipe replay, boundary selection, two repeat cycles, shape/take measurements and MPC export read-back. All 21 source/articulation voices are covered between the kits. MPC 2 retains velocity; its combined velocity/RR exception applies.
 - Phone and MPC hardware: not verified for these kits.
-- Fast rendering, full control-corner and alias-reference checks: open. Measured snare/crash/roll rendering exceeds the one-shot tens-of-milliseconds target on this host.
+- Numerical control corners: pass for renderer 4, 1,029 cases covering all binary macro corners at minimum/full touch plus default-center deterministic replay. Finite, peak, DC and tail bounds passed; see the complete evidence in [DRUMLINE](DRUMLINE.md).
+- Fast rendering and alias-reference checks: open. Measured snare/crash/roll rendering exceeds the one-shot tens-of-milliseconds target on this host.
 - Overall: incomplete. Software evidence is not native sound or device acceptance.
 
 ## TIMBER acoustic percussion integration
