@@ -21,7 +21,7 @@ The genre arrangements change source allocation, backbeat role, tuning, envelope
 - `synth/src/main/resources/cuttings/v1/` holds 192 accepted Study 04 mono 44.1 kHz WAVs and a manifest with SHA-256 hashes. The bank is approximately 13.3 MB. Each of sixteen source roles has three distinct strike levels and four alternate performances per level.
 - `CuttingsKits` loads owned buffers, arranges the three genres, and composes the longer phrases. Genre transposition uses band-limited cubic sampling; positive pitch changes receive an eighth-order 8.5 kHz prefilter. Pocket's original samples bypass all reprocessing.
 - `StarterKits` and `StarterShelf` expose the three fixed kits. `ArrangedPad.velocityTakes` carries the complete grid into the shared save/playback/export path. These are rendered banks with provenance, not synthetic recipes that only reconstruct one anchor hit.
-- `scripts/freeze-cuttings-bank.py` freezes only the exact `cuttings-r4-sampler-color-1` version. The Python renderer and its source seeds remain in `prototype/cuttings/`.
+- `scripts/freeze-cuttings-bank.py` freezes only the exact `cuttings-r4-sampler-color-1` version and rejects changes to an already-frozen v1 manifest before copying any samples. The Python renderer and its source seeds remain in `prototype/cuttings/`.
 
 ## Reproduce and verify
 

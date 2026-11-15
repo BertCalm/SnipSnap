@@ -14,7 +14,12 @@ dst=root/'synth/src/main/resources/cuttings/v1';dst.mkdir(parents=True,exist_ok=
 rows=[]
 for e in selected:
  f=src/e['file'];name=f.name
- shutil.copyfile(f,dst/name)
  rows.append({**{k:e[k] for k in ('voice','dynamic','take','frames','pcm_sha256')},'file':name,'sha256':hashlib.sha256(f.read_bytes()).hexdigest()})
-(dst/'manifest.json').write_text(json.dumps({'version':1,'sourceVersion':m['version'],'voices':m['voices'],'names':m['names'],'entries':rows},indent=2)+'\n')
+candidate={'version':1,'sourceVersion':m['version'],'voices':m['voices'],'names':m['names'],'entries':rows}
+if (dst/'manifest.json').exists():
+ if json.loads((dst/'manifest.json').read_text())!=candidate:
+  raise ValueError('Accepted v1 bank differs: create a new bank version instead of overwriting it.')
+for e in selected:
+ shutil.copyfile(src/e['file'],dst/Path(e['file']).name)
+(dst/'manifest.json').write_text(json.dumps(candidate,indent=2)+'\n')
 print('Frozen 192 approved Study 04 performances.')
