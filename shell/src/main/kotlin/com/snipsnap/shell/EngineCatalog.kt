@@ -145,12 +145,12 @@ object EngineCatalog {
         "TEMPEST" to EngineEntry(listOf(EngineCategory.DRUMS), "Digital drums, driven metal and degrading short repeats"),
         "SPLAY" to EngineEntry(listOf(EngineCategory.BELLS, EngineCategory.PADS), "Six bodies (tongue, wire, rub, air, bar, skin), finite notes"),
         "OSTERIA" to EngineEntry(listOf(EngineCategory.SYNTH, EngineCategory.PADS), "Evolving notes, from plucked bass to bowed color and pads"),
-        "BRISTLE" to EngineEntry(listOf(EngineCategory.BASS, EngineCategory.SYNTH), "Six bass source voices and the approved A/B grit routes"),
         "ETCH" to EngineEntry(listOf(EngineCategory.BASS, EngineCategory.SYNTH), "Squelching step-line bass with drive, delay and a room"),
         "SCUFF" to EngineEntry(listOf(EngineCategory.DRUMS), "Dry Michigan drums, crushed, boxed, barked and slammed"),
         "CLUTTER" to EngineEntry(listOf(EngineCategory.DRUMS), "Found-sound drums from household objects, struck and rattled"),
         "TERRA" to EngineEntry(listOf(EngineCategory.DRUMS), "World hand drums, clay pots, agogo bells and a balafon"),
         "CAIRN" to EngineEntry(listOf(EngineCategory.BELLS, EngineCategory.DRUMS), "Stones that knock, tumble, grind, sing and roll in a bowl"),
+        "BRISTLE" to EngineEntry(listOf(EngineCategory.BASS, EngineCategory.SYNTH), "Six bass source voices and the approved A/B grit routes"),
     )
 
     /** The entry for the engine constant [name], or null for a name the catalogue does not know. */

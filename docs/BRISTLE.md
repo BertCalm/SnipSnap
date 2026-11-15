@@ -540,3 +540,23 @@ samples and three fixed-touch cycling companions, validated after writing. The l
 page offers 40 clips: dry, COMP 70%, FUZZ 70%, both at 70%, and actual exported held playback
 for all eight voices. No extra preview gain is applied. These new effects await the owner's
 listening judgment. The existing private Site is reused at `/effects.html`.
+
+## Parameter integration and review build
+
+The owner subsequently said “Sounds great. Can we add as parameters” and authorized proceeding.
+COMP and FUZZ are adjustable 0–1 controls on every BRISTLE voice, default off, persisted with the
+complete source patch. The listening clips' 70% setting is an example, not a fixed app setting.
+
+The pre-effects broad regression finished across nine JVM modules: 10,117 tests, three failures
+and no errors/skips. Two failures were Bristle integration omissions: the explicit preset sum
+omitted the eight Bristle presets, and the shared macros test needed Bristle's strict saved-map
+contract. The roster expectation now includes Bristle, the strict-format test covers its missing
+map refusal, and malformed maps produce the common dispatcher diagnostic. The third failure
+was the unchanged baseline CAIRN sentence-case issue documented above. This is a failed historical
+run, not a claim that the current branch has a green full regression.
+
+The prototype branch now incorporates upstream `9d6ad1a5` through a merge, retaining the newer
+engine and starter registrations alongside Bristle. Current validation and Android build results
+will be recorded in the review PR. Physical MPC velocity/cycle acceptance remains open.
+
+Current merged-branch focused validation completed with exit 0: synth: 16 tests, shell: 90 tests, zero failures. This includes both shared integration fixes and the effects save/export tests. A fresh unfiltered JVM regression is being run on this merged source.
