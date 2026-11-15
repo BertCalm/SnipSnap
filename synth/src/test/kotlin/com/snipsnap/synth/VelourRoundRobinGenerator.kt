@@ -27,8 +27,9 @@ object VelourRoundRobinGenerator {
                 val ds = DecentSamplerWriter.write(kit, folder, scratch)
                 File(folder, "${kit.name}.dspreset").writeText(ds.readText().replace("path=\"Samples/", "path=\""))
             } finally { scratch.deleteRecursively() }
-            File(folder, "READ ME.txt").writeText("Velour round-robin listening candidates v1. 16 pads, three velocities, four takes each. Take 1 is the approved Round 5 sample. Alternates are sample-derived contact/tone variations, not new recordings. Native kit.json, SFZ and DecentSampler contain the full grid. MPC cycling is NOT established; no MPC compatibility fallback is supplied. Hats share choke group 1. CC0 tambourine source attribution: see REFERENCE-LICENSE.txt.\n")
+            File(folder, "READ ME.txt").writeText("Velour round-robin listening candidates v1. 16 pads, three velocities, four takes each. A12 uses selected Round 7 B with four fitted-modal strikes. Other pads retain the approved Round 5 sample as take 1 and Round 6 sample-derived alternates. Native kit.json, SFZ and DecentSampler contain the full grid. MPC cycling is NOT established; no MPC compatibility fallback is supplied. Hats share choke group 1. CC0 tambourine source attribution: see REFERENCE-LICENSE.txt.\n")
             File(folder, "REFERENCE-LICENSE.txt").writeBytes(VelourApprovedKits.resource("REFERENCE-LICENSE.txt"))
+            File(folder, "RIDE-REFERENCE-LICENSE.txt").writeBytes(VelourRideBank.resource("REFERENCE-LICENSE.txt"))
             ZipOutputStream(File(root, "${t.id}-rr.zip").outputStream().buffered()).use { zip ->
                 folder.walkTopDown().filter { it.isFile }.sortedBy { it.path }.forEach { file ->
                     zip.putNextEntry(ZipEntry(file.relativeTo(root).invariantSeparatorsPath).apply { time = 0 })
