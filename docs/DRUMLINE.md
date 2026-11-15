@@ -125,3 +125,17 @@ The 32 FIELD/STREET pad recipes now appear in the factory preset bank, covering 
 The prior full local run ended without a terminal result or recoverable process handle; it is not counted as passed. Android compilation and native CI passed for the preceding source; full JVM and emulator results still need their terminal outcomes. Factory integration triggers fresh verification. No DSP or output-stage code changes in this round.
 
 Factory integration verification completed with exit 0 (1m 16s): 98 registry, approved-audio and repository-convention checks. Every one of the 32 factory renders matches its published PCM24 WAV hash. A fresh full unfiltered JVM run and current-head device CI are required separately.
+
+## Render cost review, 2026-11-15
+
+Reviewed merged source `2036a8da1df325e5e0c6fa0ce3f5a7b662a0af1f` after native sound approval. The fixed-cutoff contact, wire-snap, cymbal wash and final DC filters were recomputing their coefficients per sample. The snare sample loop also repeated strike-constant powers and macro lookups. This round uses the existing `Dsp.FixedOnePole` and hoists those strike constants, retaining the same floating-point operation order. Filter states remain private to each render/player. No sample cache, tail truncation, denormal flushing, mode removal, model-version change or new sound settings are introduced.
+
+The standalone `:synth:benchmarkDrumline` task runs without test workers. It warms each case once, reports the median of three renders, and fingerprints raw little-endian Float bits after rendering. `-PdrumlineBenchmarkOutput=/absolute/path.csv` selects the output. The comparison spans all 21 voices/figures at default hard touch/take 0 and damped soft touch/take 2. All 42 raw fingerprints are identical before and after. The before fingerprints are also pinned as a regression test; the separate 32 approved factory PCM24 hashes and saved-model checks remain in force.
+
+In the sequential host comparison, median default snare rendering fell from 195 to 131 ms, roll from 6092 to 3657 ms, and riser from 5454 to 3494 ms. Bass one-shots were about 19 ms and tenors 44–46 ms after the change. Crash remains about 873 ms; the roughly 3% change there is too small to treat as a substantial improvement on a shared host. [All timings and raw hashes](evidence/drumline/render-speed-model4.csv). These are host measurements with limited warm-up, not phone timings or CI time thresholds.
+
+Why: a fixed filter needs one coefficient calculation, not a new exponential for every sample. A strike's contact gain and wire parameters also stay fixed while that strike decays. Reusing those values removes work without changing the synthesis. The next bottleneck remains the many modal/sample updates, particularly for cymbals; this round does not claim a profile of subnormal arithmetic or change it.
+
+**Render-speed gate remains open.** The long figures and cymbals still exceed the intended budget, and phone behavior is unverified. This is a measured, sample-identical reduction in CPU work, not an all-gates-passed claim. The published audition and downloadable audio need no regeneration because the approved sound is unchanged.
+
+The first focused verification passed 119 checks with exit 0, including raw-sample identity, approved factory WAVs, legacy models, complete kits, preset promotion and root classification. Full regression is tracked separately.

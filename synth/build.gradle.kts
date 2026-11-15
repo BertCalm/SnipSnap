@@ -3854,3 +3854,14 @@ tasks.register<JavaExec>("generateEmberAudition") {
     workingDir = projectDir
     args(providers.gradleProperty("emberOutput").orNull ?: "${rootDir}/testkit/ember-audition/kotlin")
 }
+
+/** Compare isolated host timings and raw float hashes before/after renderer maintenance. */
+tasks.register<JavaExec>("benchmarkDrumline") {
+    group = "verification"
+    description = "Measure warm drumline renders and fingerprint their unquantized PCM."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.DrumlineRenderBenchmark")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "1g"
+    args(providers.gradleProperty("drumlineBenchmarkOutput").orNull ?: "testkit/drumline-render-benchmark.csv")
+}
