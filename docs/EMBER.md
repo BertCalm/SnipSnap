@@ -42,6 +42,37 @@ Repository truth: read at `8742c5b8` (2026-11-14). APIs named here were grepped:
 drum-engine shape to copy. `EMBER` is a working name: the word is already a CIRCUIT preset ("EMBER PULSE"),
 an ALLOY preset ("Endless Ember") and a name in `shell/.../Names.kt`. It is not an engine name anywhere.
 
+## Round 2b: the bowed cymbal, lower (2026-11-15)
+
+**What the owner said:** "The bowed cymbal is piercing. Maybe it should be a bit lower or pulled back a bit."
+
+**Why it pierced.** The bow locks to one cymbal mode and stacks its harmonics on it: at round 0e's 1379 Hz they sat
+at 2.8, 4.1, 5.5 and 8.3 kHz, and on the Free kit's Bowed Cymbal pad the 4 to 8 kHz octave was only 8 dB under the
+strongest. That is where the ear is most sensitive.
+
+**What changed** (prototype and Kotlin): the lock moves to the strongest fitted mode between 1 and 1.3 kHz, 1243 Hz
+at TUNE .5, about two semitones lower. Not further: round 0d's 732 Hz was "too middy". Measured over four takes
+before choosing, as dB under the strongest band:
+
+| Version | 2-4 kHz | 4-8 kHz | 8-16 kHz |
+|---|---:|---:|---:|
+| Round 0e, as heard | -10.8 | -11.1 | -22.4 |
+| The lower lock only (chosen) | -16.8 | -21.8 | -40.8 |
+| The upper harmonics and the direct tone pulled back only | -13.4 | -15.4 | -27.8 |
+| Both | -19.0 | -27.5 | -41.2 |
+
+The lower lock does most of it by itself (its harmonics land on quieter modes), so the bow keeps its approved bite
+and the "both" version, likely dull, was not taken. On the Free kit's pad, from the app (read back from the MPC 3
+export): 2-4 kHz -5.6 to -15.4 dB, 4-8 kHz -8.0 to -22.5, 8-16 kHz -15.1 to -37.1. `Ember.MODEL_VERSION` and
+`EmberKits.VERSION` stay 1: nothing has saved an EMBER pad or kit yet.
+
+One test changed its measure, not its bar. `EmberTest`'s velocity probe looked at every voice's first 150 ms; the
+lower bow's soft and hard hits differ there by only 1.0 dB (1.5 in Python), because the bow's first 150 ms is the
+start of its draw. Over the whole render they differ by 3.1 dB (3.2 in Python). The moving voices (the sweeps, the
+rolls, the swell and the bow) are now measured over their whole render, as `EmberKits` already levels them; the bar
+stays 1.8 dB. The Kotlin bow is 2.46 dB from its nearest Python take, inside Python's own spread (1.58 to 5.17 dB
+over eight takes).
+
 ## Round 2L: Latin percussion, previewed in Python (2026-11-15)
 
 **What the owner said:** "Start round 2 maybe just add Latin jazz to the lineup", then chose "New sounds first":
@@ -74,15 +105,21 @@ from its recording as a second take of the instrument does):
   centroid 4.8 kHz against 4.7. The first build put every band's noise at its bandwidth's energy, which made it
   15.9 dB away and too bright; each band is now normalized to its measured level.
 
-**The Latin jazz kit** (`kits.py` LATIN, 176 BPM): a mambo on a 2-3 son clave. Bombo, two timbales and a rimshot,
-cascara, a mambo bell and a smaller cha-cha bell, clave, the bongos in martillo, congas open and slapped in tumbao,
-a long and a short guiro (one guiro: each stroke stops the last), a shaker, and the cymbal swell as its riser (the
-percussion gate). Its zones use round 2's loudness law, the guiro matched over its whole stroke.
+**The Latin jazz kit** (`kits.py` LATIN, 118 BPM): a cha-cha-chá in the small club. The first draft was a 176 BPM
+mambo on a 2-3 clave, which turned out to be nearly CALABASH's Afro-Cuban jazz kit (merged the same day: a 176 BPM
+mambo from the big band's Latin section, in a big dark studio). The owner: "We can make the Latin jazz kit just
+different than afro-cuban jazz from calabash". So EMBER's is another tempo and another dance, with a drummer's kit
+at its centre: the jazz drummer plays Latin on the kit (the clave on the snare rim, the hat foot on 2 and 4, a light
+kick) while one percussionist adds the guiro (leading: long on 1 and 3, short on the "4 and" of the cha-cha-chá), a
+cha-cha bell on the quarters, timbales, bongos, a conga on the cha-cha-chá and a shaker; a clave and the cymbal swell
+(its riser, the percussion gate) on A15/A16. Close and bright through the club's chain. The hi-hat chokes itself,
+and so does the guiro (one guiro: each stroke stops the last). Its zones use round 2's loudness law, the guiro
+matched over its whole stroke.
 
 **Sources.** VCSL (CC0 1.0), github.com/sgossner/VCSL at `c1ea7bcc`, the Mid microphone; nineteen recordings, listed
 with their sha256 in `prototype/ember/NOTICE.txt`. Only fitted numbers are in the repository (`latin.json`).
 
-**Listening page, version 4** (<https://claude.ai/artifact/21zU3g4oFcDfH8GoV8gKuz>): each new voice hard, soft, in
+**Listening page, version 5** (<https://claude.ai/artifact/21zU3g4oFcDfH8GoV8gKuz>): each new voice hard, soft, in
 four takes and at each control's ends, beside its recordings, and the Latin jazz kit as a fifth tab in the pad
 grid, with its groove. Not heard yet. Nothing here is in Kotlin: the voices are ported, and the kit goes on the
 shelf, after the owner's listen.
