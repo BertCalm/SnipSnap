@@ -641,4 +641,23 @@ class NavigationTest {
         while (nav.back()) seen += nav.location
         assertFalse(kitPage in seen, "the page is gone from the history: $seen")
     }
+
+    /**
+     * The pad strip's CHANGE SOUND ▸ (UX pass, 2026-11-15) opens the pad editor and then its EFFECTS page in one tap,
+     * the way App's `onChangeSound` does: two benches over PADS, the most the clarity spec allows, and Back walks
+     * out through the editor to the grid, the same two steps EDIT PAD ▸ then EFFECTS ▸ would have taken in.
+     */
+    @Test
+    fun `change sound lands on the pad's effects, with the editor under it, and Back walks out to the pads`() {
+        val nav = Navigation()
+        nav.go(Place.PROJECT)
+        nav.open(Bench.PAD_SHEET)
+        nav.open(Bench.PAD_EFFECTS)
+        assertEquals(Location(Place.PROJECT, Stage.PADS, listOf(Bench.PAD_SHEET, Bench.PAD_EFFECTS)), nav.location)
+        assertEquals(PadSheetPage.EFFECTS, PadSheetPage.of(nav.location.top))
+        assertTrue(nav.back())
+        assertEquals(PadSheetPage.EDITOR, PadSheetPage.of(nav.location.top), "Back lands on the pad's editor")
+        assertTrue(nav.back())
+        assertEquals(Location(Place.PROJECT, Stage.PADS), nav.location, "then on the pads")
+    }
 }

@@ -157,11 +157,13 @@ fun KitScreen(
     /** The pad the strip reads, or null before any is tapped. Tapping selects; the strip names it. */
     selectedSlot: Int?,
     onSelectSlot: (Int) -> Unit,
-    /** The strip's OPEN ▸: the tap door into PAD SHEET for this slot. */
+    /** The strip's CHANGE SOUND ▸: the pad editor's EFFECTS page, its EFFECTS box open. */
+    onChangeSound: (Int) -> Unit,
+    /** The strip's EDIT PAD ▸: the tap door into the pad editor for this slot. */
     onOpenPad: (Int) -> Unit,
-    /** The strip's CAPTURE ▸ on an empty pad: PAD CAPTURE aimed at this slot. */
+    /** The strip's RECORD INTO PAD ▸ on an empty pad: PAD CAPTURE aimed at this slot. */
     onCaptureInto: (Int) -> Unit,
-    /** The strip's FROM SNIPS ▸ on an empty pad: SNIPS in pick mode aimed at this slot. */
+    /** The strip's FROM MY SAMPLES ▸ on an empty pad: SAMPLES in pick mode aimed at this slot. */
     onFromSnips: (Int) -> Unit,
     /** How many versions the kit holds, for THIS KIT's closed line. */
     versions: Int,
@@ -818,7 +820,7 @@ fun KitScreen(
                                     haptics.pad(touch.velocity)
                                     onSelectSlot(s)
                                 },
-                                // twin: the selected-pad strip's OPEN ▸ door (PadStrip.DOOR_OPEN), which opens the same PAD SHEET
+                                // twin: the selected-pad strip's EDIT PAD ▸ door (PadStrip.DOOR_EDIT), which opens the same PAD SHEET
                                 onLongPress = onLongPress,
                                 onEmptyLongPress = onEmptyLongPress,
                                 // An empty pad is selectable too: its strip is
@@ -838,12 +840,13 @@ fun KitScreen(
         // the tap door into PAD SHEET that the September UAT's findings 4
         // and 5 asked for. It replaces the first of the two legend lines
         // that used to sit here ("HOLD A PAD ..."): the hold stays exactly
-        // as it was, but a permanent OPEN ▸ door now says what a hold does,
+        // as it was, but a permanent EDIT PAD ▸ door now says what a hold does,
         // so the sentence is no longer the only teacher. Before any pad is
         // tapped the strip rests on STRIP_RESTING_LINE.
         PadStripLine(
             slot = selectedSlot,
             pad = selectedSlot?.let { kit.pad(it) },
+            onChangeSound = onChangeSound,
             onOpen = onOpenPad,
             onCapture = onCaptureInto,
             onFromSnips = onFromSnips,
@@ -1083,6 +1086,8 @@ fun KitScreen(
             // that can be dismissed is a feature that can be lost. The one
             // legend left: the strip carries the other.
             TapeText(Copy.PAD_VELOCITY_LEGEND, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
+            // The key to the treated marker's corner (J36), which had none on screen (UX pass, 2026-11-15).
+            TapeText(Copy.PAD_CHANGED_MARK, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
             // Where the kit came from (persona review, P4.4). The same move as
             // the two lines above: always there, cannot be dismissed. The
             // finding was that provenance is good and reachable only by
@@ -1207,42 +1212,47 @@ private fun KitLearnChip(showing: Boolean, onToggle: () -> Unit) {
 
 /**
  * The pad strip: one line for the selected pad from [PadStrip.line], then
- * one door chip per entry in its doors - OPEN ▸ for a filled pad, CAPTURE ▸
- * and FROM SNIPS ▸ for an empty one. Dispatches on the door's own label,
- * the same strings `PadStrip` hands out. A row at least a hit target tall
- * in both states, so selecting a pad never moves the page under the thumb.
+ * its doors side by side under it, each half the width - CHANGE SOUND ▸ and
+ * EDIT PAD ▸ for a filled pad, RECORD INTO PAD ▸ and FROM MY SAMPLES ▸ for an
+ * empty one. Dispatches on the door's own label, the same strings `PadStrip`
+ * hands out. The doors sit on their own row (the owner's UX pass, 2026-11-15)
+ * so they are big enough to read as the way in and never squeeze the line.
+ * Before any pad is tapped the strip is one resting line at least a hit
+ * target tall.
  */
 @Composable
 private fun PadStripLine(
     slot: Int?,
     pad: KitPad?,
+    onChangeSound: (Int) -> Unit,
     onOpen: (Int) -> Unit,
     onCapture: (Int) -> Unit,
     onFromSnips: (Int) -> Unit,
 ) {
     val scheme = LocalScheme.current
-    Row(
-        Modifier.fillMaxWidth().heightIn(min = Layout.MIN_HIT_TARGET.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-    ) {
-        if (slot == null) {
+    if (slot == null) {
+        Row(Modifier.fillMaxWidth().heightIn(min = Layout.MIN_HIT_TARGET.dp), verticalAlignment = Alignment.CenterVertically) {
             // `Copy.PADS_RESTING_LINE`: what the strip reads before any pad
             // has been tapped. ink2, not ink3 (3.85:1 on paper), and two
             // lines, because the hold hint is the half nobody can guess.
             TapeText(Copy.PADS_RESTING_LINE, TapeType.pixelSmall, scheme.ink2.tape, Modifier.weight(1f), maxLines = 2)
-            return@Row
         }
-        val strip = PadStrip.line(pad, slot)
-        TapeText(PadStrip.oneLine(strip), TapeType.pixelSmall, scheme.ink2.tape, Modifier.weight(1f), maxLines = 2)
-        for (door in strip.doors) {
-            DoorChip(door, onClick = {
-                when (door) {
-                    PadStrip.DOOR_OPEN -> onOpen(slot)
-                    PadStrip.DOOR_CAPTURE -> onCapture(slot)
-                    PadStrip.DOOR_FROM_SNIPS -> onFromSnips(slot)
-                }
-            })
+        return
+    }
+    val strip = PadStrip.line(pad, slot)
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        TapeText(PadStrip.oneLine(strip), TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            for (door in strip.doors) {
+                DoorChip(door, modifier = Modifier.weight(1f), onClick = {
+                    when (door) {
+                        PadStrip.DOOR_CHANGE_SOUND -> onChangeSound(slot)
+                        PadStrip.DOOR_EDIT -> onOpen(slot)
+                        PadStrip.DOOR_RECORD -> onCapture(slot)
+                        PadStrip.DOOR_FROM_SAMPLES -> onFromSnips(slot)
+                    }
+                })
+            }
         }
     }
 }
@@ -1608,7 +1618,7 @@ private fun PadCell(
                     contentDescription = "PAD $tag: EMPTY"
                     this.selected = selected
                     onClick(label = "HINT") { onEmptyTapHint(slot); true }
-                    // twin: the selected empty pad's CAPTURE ▸ door in the strip (PadStrip.DOOR_CAPTURE), which opens the same capture
+                    // twin: the selected empty pad's RECORD INTO PAD ▸ door in the strip (PadStrip.DOOR_RECORD), which opens the same capture
                     onLongClick(label = "CAPTURE A SAMPLE") { onEmptyLongPress(slot); true }
                 }
                 // Same long-press timing as the filled path below, but a
@@ -1618,7 +1628,7 @@ private fun PadCell(
                 .pointerInput(slot) {
                     while (true) {
                         val down = awaitPointerEventScope { awaitFirstDown(requireUnconsumed = false) }
-                        // twin: the selected empty pad's CAPTURE ▸ door in the strip (PadStrip.DOOR_CAPTURE)
+                        // twin: the selected empty pad's RECORD INTO PAD ▸ door in the strip (PadStrip.DOOR_RECORD)
                         val longPress = scope.launch {
                             delay(LONG_PRESS_MS)
                             onEmptyLongPress(slot)
@@ -1717,7 +1727,7 @@ private fun PadCell(
                 // this used at first, was a third disagreement with the
                 // rest of the app.
                 onClick(label = "PLAY") { onTap(slot, PadHit.CENTER); true }
-                // twin: the selected-pad strip's OPEN ▸ door (PadStrip.DOOR_OPEN), which opens the same PAD SHEET
+                // twin: the selected-pad strip's EDIT PAD ▸ door (PadStrip.DOOR_EDIT), which opens the same PAD SHEET
                 onLongClick(label = "OPEN PAD EDITOR") { onLongPress(slot); true }
             }
             // The press fires the hit immediately — a pad that waited for
@@ -1735,7 +1745,7 @@ private fun PadCell(
                         glow.snapTo(1f)
                         glow.animateTo(0f, tween(Motion.PAD_GLOW_MS))
                     }
-                    // twin: the selected-pad strip's OPEN ▸ door (PadStrip.DOOR_OPEN)
+                    // twin: the selected-pad strip's EDIT PAD ▸ door (PadStrip.DOOR_EDIT)
                     val longPressJob = scope.launch {
                         delay(LONG_PRESS_MS)
                         onLongPress(slot)

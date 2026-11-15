@@ -1,5 +1,7 @@
 # SnipSnap UI clarity: one modern look, one grammar, plain words
 
+> **Status 2026-11-15:** the pad strip's doors are now CHANGE SOUND ▸ and EDIT PAD ▸ (filled) and RECORD INTO PAD ▸ and FROM MY SAMPLES ▸ (empty), and RAW reads NO EFFECTS; see [`UX_PASS_2026_11.md`](../../UX_PASS_2026_11.md).
+
 *Design, 2026-10-27. Written after a studio review on 2026-10-26: an
 emulator walk of a debug build in both modern schemes, plus three code
 audits of the default branch at `f6a47dba3`. File and line references
