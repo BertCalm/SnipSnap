@@ -810,21 +810,22 @@ prototype and a listening page (<https://claude.ai/artifact/Xmcj5t8MYSNCQPoTKHBc
 - **Overall: incomplete.** Round 0 asks the owner which voices and kits to keep. Kotlin (round 1), the shelf and
   saving, playback and MPC 3 export (round 2), and phone and MPC hardware (round 3) are all open.
 
-## CALABASH (round 0, 2026-11-15, Python prototype, not heard)
+## CALABASH (round 0, 2026-11-15, Python prototype, heard and approved)
 
 Four sixteen-pad drum kits for Afrobeat (Lagos, the 1970s), Afrobeats (Lagos and Accra, now), Mbalax (a sabar ensemble
 over a kit, Dakar) and Afro-Cuban jazz (New York, the 1950s). The owner asked for them on 2026-11-15 and chose four kits
 (Afrobeat and Afrobeats apart) and a round-0 prototype first. Congas, bongos, bells, claves, shaker and claps are
 resynthesized from CC0 recordings (VCSL); the shekere, talking drums, sabar drums and timbales are physical models with
 no recording behind them. See [CALABASH](CALABASH.md). Round 0 is a Python prototype and a listening page
-(<https://claude.ai/artifact/8vhxM5dJriounZm38WFn8g>); no Kotlin exists.
+(<https://claude.ai/artifact/8vhxM5dJriounZm38WFn8g>); no Kotlin exists yet. The owner approved all of round 0 by ear on
+2026-11-15 (below).
 
 - **Melodic, keygroup and chord-tool gates:** not applicable. Drum kits.
 - **Articulation:** finite hits, no HOLD. No picked or thumbed strings.
-- **Percussion: authored, not heard.** Every kit carries a roll or riser on A16: a shekere rush (AFROBEAT), a
+- **Percussion: authored, heard (2026-11-15).** Every kit carries a roll or riser on A16: a shekere rush (AFROBEAT), a
   talking-drum call rising in pitch (AFROBEATS), a sabar stick roll into its bakk's landing (MBALAX), a timbale abanico
-  into the rimshot (AFRO-CUBAN JAZZ). Rendered in Python.
-- **Drum shelf: authored, not on the shelf.** CALABASH AFROBEAT (112 BPM), CALABASH AFROBEATS (104), CALABASH MBALAX
+  into the rimshot (AFRO-CUBAN JAZZ). Rendered in Python; on the page the owner approved.
+- **Drum shelf: authored and heard, not on the shelf.** CALABASH AFROBEAT (112 BPM), CALABASH AFROBEATS (104), CALABASH MBALAX
   (126) and CALABASH AFRO-CUBAN JAZZ (176) differ in which instruments fill the roles, the strokes, tuning, room, era
   chain, swing and tempo. No pad is the same voice at the same settings in any two kits; the same slot in two kits is
   14.6 to 23.6 dB apart on average and at least 3.99 dB (Python). No Kotlin, so nothing is on the shelf.
@@ -834,11 +835,14 @@ no recording behind them. See [CALABASH](CALABASH.md). Round 0 is a Python proto
     toward their own soft recordings and the physical ones' contact, threshold and squeeze, not a filter. The
     programmed kick's takes are small moves of its sweep and tick, weaker than a re-strike (disclosed, as for THUMP).
   - **Saving, playback, export: open.** The listening page's pad grid is a browser stand-in, not app evidence.
-- **Sound character: open.** Nothing has been heard. The fitted voices sit 3.4 to 6.8 dB from their recordings over
-  the first 150 ms, where two real takes of one drum sit 4.0 to 8.6 dB apart (Python, `check_fit.py`); the slaps and the
-  unrecorded instruments have no such check.
-- **Overall: incomplete.** Round 0 asks the owner which voices and kits to keep. Kotlin (round 1), the shelf and saving,
-  playback and MPC 3 export (round 2), and phone and MPC hardware (round 3) are all open.
+- **Sound character: approved at round 0.** On 2026-11-15 the owner wrote "Sounds great" and, asked whether that was
+  a listen to the published page rather than a reply to the PR status, answered "I listened: approve all": all four
+  kits and every voice. Preserve round 0 (`prototype/calabash` at commit `967f53f7f`) as the accepted baseline; the
+  Kotlin port is judged against it. This is a listen to Python renders on the page, not evidence of a phone or MPC
+  audition. Measured before the listen: the fitted voices sit 3.4 to 6.8 dB from their recordings over the first
+  150 ms, where two real takes of one drum sit 4.0 to 8.6 dB apart (Python, `check_fit.py`).
+- **Overall: incomplete.** The sound is approved. Kotlin (round 1), the shelf and saving, playback and MPC 3 export
+  (round 2), and phone and MPC hardware (round 3) are open.
 
 ## DRUMLINE (native model 4 accepted, 2026-11-15)
 

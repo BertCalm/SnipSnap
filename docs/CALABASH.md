@@ -1,10 +1,12 @@
 # CALABASH: design brief and round-0 audition
 
-Status: **round 0, a Python prototype (2026-11-15), not heard.** Four sixteen-pad drum kits the owner asked for on
-2026-11-15: Afrobeat, Afrobeats, Mbalax and Afro-Cuban jazz, "distinct, versatile", following the acceptance gates.
-The owner chose four kits (Afrobeat and Afrobeats apart) and a round-0 prototype before any Kotlin. No Kotlin
-exists. The engine stays in progress until every applicable owner gate has evidence (see "Gates" below and the
-gates entry in [ENGINE_ACCEPTANCE_GATES.md](ENGINE_ACCEPTANCE_GATES.md#calabash-round-0-2026-11-15-python-prototype-not-heard)).
+Status: **round 0, a Python prototype (2026-11-15), heard and approved.** Four sixteen-pad drum kits the owner asked
+for on 2026-11-15: Afrobeat, Afrobeats, Mbalax and Afro-Cuban jazz, "distinct, versatile", following the acceptance
+gates. The owner chose four kits (Afrobeat and Afrobeats apart) and a round-0 prototype before any Kotlin. On
+2026-11-15 the owner heard the listening page and wrote "Sounds great"; asked whether that was a listen to the page,
+they answered "I listened: approve all": all four kits and every voice. Round 0 (`prototype/calabash` at `967f53f7f`)
+is the accepted baseline the Kotlin port is judged against. No Kotlin exists yet. The engine stays in progress until every applicable owner gate has evidence (see "Gates" below and the
+gates entry in [ENGINE_ACCEPTANCE_GATES.md](ENGINE_ACCEPTANCE_GATES.md#calabash-round-0-2026-11-15-python-prototype-heard-and-approved)).
 
 Prototype: [`prototype/calabash/`](../prototype/calabash/) (`calabash_proto.py` is the model, `fitted.py` the fitted
 voices, `kits.py` the four kits and their grooves, `fit_calabash.py` and `hands.json` the fit to CC0 recordings,
@@ -255,11 +257,11 @@ bypass:** all true.
 |---|---|
 | Melodic, keygroup, chord tool | Not applicable: drum kits. |
 | Articulation | Finite hits, no HOLD; no picked or thumbed strings. |
-| Percussion: roll or riser | Authored, not heard: a roll or riser on every kit's A16 (shekere rush, talking call, sabar roll, abanico). Python. |
-| Drums: several genre kits on the shelf | Authored and measured in Python, not on the shelf: no Kotlin. |
+| Percussion: roll or riser | Authored and heard (2026-11-15): a roll or riser on every kit's A16 (shekere rush, talking call, sabar roll, abanico). Python. |
+| Drums: several genre kits on the shelf | Authored, measured in Python and heard (2026-11-15), not on the shelf: no Kotlin. |
 | Velocity and round robin, rendering | Measured in Python on all 64 pads (above). Not Kotlin. |
 | Velocity and round robin, saving, playback, export | Open: no Kotlin. The page's grid is a browser stand-in. |
-| Sound character | Open: the owner's listen. |
+| Sound character | Approved at round 0 (2026-11-15: "Sounds great", "I listened: approve all"). A listen to Python renders, not a phone or MPC. |
 
 ## Render budget
 
@@ -290,8 +292,7 @@ rolls and cymbals belong in the pad's render cache, keyed by their macros, as BR
 
 ## Next rounds
 
-- **Round 0b and on:** the owner's listen, per kit and per voice, then refits or re-voicing; a recorded slap if one
-  can be found under CC0.
+- **Round 0: approved (2026-11-15).** No round 0b; the baseline stands as rendered.
 - **Round 1:** Kotlin. `Calabash.kt` in the drum-engine shape (`render(voice, macros, velocity, take, model)`, as
   `Soot.render`), `CalabashPatch.kt`, a `Patches` arm, two `Velocity` arms, `hands.json` as a synth resource beside
   `breaker/cymbals.json`, a `DeterminismTest` canary, `CalabashTest` with the probe set.
