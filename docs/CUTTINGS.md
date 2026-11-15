@@ -67,3 +67,9 @@ The final scoped validation completed with exit 0 (`BUILD SUCCESSFUL`, 2m 41s): 
 - Source-role changes and composed grooves give the genres different musical jobs while retaining the shared collage identity.
 - Separate duration pads keep the full roll/riser performance, velocity layers and round robins intact through export.
 - Hardware evidence stays separate because correct sample files and metadata alone cannot prove an MPC selects the intended take.
+
+## Groove compression study
+
+The factory audition offers Original, Glue and Squeeze for each whole groove. Pads and native kit exports remain the accepted uncompressed bank. `scripts/audition-cuttings-compression.py` renders soft-knee feed-forward compression after the groove mix: Glue uses a -20 dBFS threshold, 3.5:1 ratio, 8 dB knee, 12 ms attack and 140 ms release; Squeeze uses -26 dBFS, 8:1, 6 dB, 3 ms and 90 ms. Attack/release smooth gain reduction in dB.
+
+Decoded listening WAVs match full-file RMS within 0.01 dB per kit, with peaks below 0.89. This is RMS matching, not a perceptual loudness guarantee. Maximum measured reduction is 2.0–4.1 dB for Glue and 8.9–11.8 dB for Squeeze. A common comparison level leaves headroom without a limiter. The unprocessed groove file is preserved. The player simulation checks selection of all three versions; actual browser audio and owner listening remain unverified. Compression is an audition experiment, not yet a native processing/export feature.

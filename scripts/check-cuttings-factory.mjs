@@ -5,7 +5,7 @@ for(const id of ['cuttings-pocket','cuttings-night','cuttings-circuit']){
  const m=JSON.parse(fs.readFileSync(path.join(root,id,'manifest.json')));
  for(const e of m.entries)lengths.set(id+'/'+e.file,e.frames/44100);
 }
-function el(id){return elements[id]??={value:({kit:'cuttings-pocket',stage:'finished',dynamic:'1',take:'cycle',volume:'.75'})[id]??'',checked:true,textContent:'',disabled:false,dataset:{},hidden:false,classList:{add(){},remove(){}},setAttribute(k,v){this[k]=v;},addEventListener(k,f){this[k]=f;},querySelector(k){return el(id+'/'+k);}};}
+function el(id){return elements[id]??={value:({kit:'cuttings-pocket',stage:'finished',dynamic:'1',take:'cycle',volume:'.75',compression:'finished'})[id]??'',checked:true,textContent:'',disabled:false,dataset:{},hidden:false,classList:{add(){},remove(){}},setAttribute(k,v){this[k]=v;},addEventListener(k,f){this[k]=f;},querySelector(k){return el(id+'/'+k);}};}
 const pads=Array.from({length:20},(_,i)=>{const p=el('p'+String(i+1).padStart(2,'0'));p.dataset={voice:'p'+String(i+1).padStart(2,'0'),bankId:String(Math.floor(i/4))};p.hidden=i>=4;return p;});
 const banks=Array.from({length:5},(_,i)=>{const b=el('bank'+i);b.dataset.bank=String(i);return b;});
 function select(q){if(q==='[data-bank]')return banks;if(q==='[data-voice]')return pads;if(q==='.pad:not([hidden])')return pads.filter(p=>!p.hidden);if(q==='[data-voice],#groove,#sequence')return [...pads,el('groove'),el('sequence')];return [];}
@@ -20,5 +20,6 @@ elements.dynamic.value='2';elements.take.value='3';await elements.p02.click();as
 banks[4].click();assert.equal(pads.filter(p=>!p.hidden).length,4);await elements.p20.click();const start=calls.length;await elements.sequence.onclick();
 for(let i=1;i<8;i++)assert.ok(calls[start+i].at-calls[start+i-1].at>=lengths.get(calls[start+i-1].file));
 elements.kit.value='cuttings-circuit';await elements.kit.onchange();await elements.groove.onclick();assert.equal(calls.at(-1).file,'cuttings-circuit/audio/groove.wav');assert.match(elements.status.textContent,/124 BPM/);
+for(const mode of ['glue','squeeze','finished']){elements.compression.value=mode;elements.compression.onchange();await elements.groove.onclick();assert.equal(calls.at(-1).file,`cuttings-circuit/audio/groove${mode==='finished'?'':'_'+mode}.wav`);}
 elements.stop.onclick();assert.ok(calls.every(c=>c.source.stopped));
 console.log('PASS: native kit switching, labels, velocity/take selection, RR reset, five pad banks, long-phrase spacing, genre groove and Stop. Simulated browser only.');

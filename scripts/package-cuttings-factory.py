@@ -1,6 +1,6 @@
 """Package Kotlin generator output as a compact audition under the existing Site."""
 from pathlib import Path
-import json,shutil,sys,wave
+import json,shutil,sys,wave,subprocess
 import numpy as np
 root=Path(__file__).resolve().parents[1]
 src=Path(sys.argv[1]);dst=Path(sys.argv[2]);dst.mkdir(parents=True,exist_ok=True)
@@ -58,3 +58,5 @@ $('kit').onchange=loadKit;loadKit();
 '''
 (dst/'app.js').write_text(js)
 print('Packaged three actual saved-kit auditions, 720 variant WAVs.')
+
+subprocess.run([sys.executable,str(root/'scripts/audition-cuttings-compression.py'),str(dst)],check=True)
