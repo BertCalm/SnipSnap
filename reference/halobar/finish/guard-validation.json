@@ -1,0 +1,27 @@
+{
+  "state": "passed",
+  "productionMutated": false,
+  "rows": [
+    {
+      "guard": "optin",
+      "retainedExitCode": 0,
+      "mutantExitCode": 1,
+      "diagnostic": "HALOBAR six-strike export guard",
+      "mutantStderr": "Exception in thread \"main\" java.lang.AssertionError: HALOBAR six-strike export guard\n\tat ExportPolicyOracle.main(ExportPolicyOracle.java:26)"
+    },
+    {
+      "guard": "persist",
+      "retainedExitCode": 0,
+      "mutantExitCode": 1,
+      "diagnostic": "HALOBAR persisted export policy guard",
+      "mutantStderr": "Exception in thread \"main\" java.lang.AssertionError: HALOBAR persisted export policy guard\n\tat ExportPolicyOracle.main(ExportPolicyOracle.java:31)"
+    },
+    {
+      "guard": "native",
+      "retainedExitCode": 0,
+      "mutantExitCode": 1,
+      "diagnostic": "HALOBAR native window order guard",
+      "mutantStderr": "Exception in thread \"main\" java.lang.AssertionError: HALOBAR native window order guard\n\tat ExportPolicyOracle.main(ExportPolicyOracle.java:39)"
+    }
+  ]
+}

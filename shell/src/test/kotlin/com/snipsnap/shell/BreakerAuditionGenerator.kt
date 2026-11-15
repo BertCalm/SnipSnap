@@ -81,6 +81,7 @@ object BreakerAuditionGenerator {
     /** How long a strike of [voice] plays in a strip: a drum's whole hit, a long voice's first two seconds. */
     private fun window(voice: BreakerVoice) = when (voice) {
         BreakerVoice.CRASH, BreakerVoice.RISER, BreakerVoice.BUMP, BreakerVoice.RIDE -> 2.0
+        BreakerVoice.FILL -> Breaker.FILL_SECONDS.toDouble()
         else -> 1.0
     }
 

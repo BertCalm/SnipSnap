@@ -1,0 +1,22 @@
+{
+  "state": "passed",
+  "executionSourceCommit": "96df0db50c54c04da03826a54a674b8563a41231",
+  "executionSourceTree": "d41d75fab5aa022b69ccc6b11530e667b52eb267",
+  "model": 1,
+  "productionDspUnchanged": true,
+  "voiceBanksAndPerformanceAcceptedByOwner": true,
+  "ownerHardwarePassReported": true,
+  "newAgentHardwareExecution": false,
+  "combinedKeygroupExportIntegrated": true,
+  "sidecarVersion": 5,
+  "roots": 71,
+  "captures": 426,
+  "everyStockWavAndRecipeUnchanged": true,
+  "publishedFloat32Cases": 408,
+  "additionalTakeCases": 72,
+  "localJvmTests": 10112,
+  "synthesisClasses": 679,
+  "fresh50MsTargetMet": false,
+  "latencyWaiverInferred": false,
+  "discardedFilterShipped": false
+}

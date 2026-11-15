@@ -1,9 +1,15 @@
 # HALOBAR six voices and performance
 
-Status: the owner heard and approved the glockenspiel, crotales and tubular-bell
-banks on 2026-11-12. Bank listening approval is complete. Device playback and
-MPC acceptance remain open; the software evidence below records the delivered
-build.
+The [final export build](HALOBAR_FINISH.md) retains every HALOBAR strike in
+MPC keygroups and version-5 phone sidecars. The historical build-time evidence
+below retains its original measurements and execution scope.
+
+Status: the owner confirmed **"Everything passes"** on 2026-11-14 after the
+status check listed the remaining listening, phone/MPC and playability items.
+Performance examples are accepted; hardware checks are owner-reported pass.
+See the [current acceptance ledger](HALOBAR_ACCEPTANCE.md) for the exact scope
+and the remaining production-export and measured-latency follow-ups. The
+build-time evidence and pending statuses below retain their historical context.
 
 ## Owner bank approval, 2026-11-12
 
@@ -93,17 +99,18 @@ window. Both the phone player and the JVM reference player use it. Opening a
 new phone instrument resets its cursor. Sample files, roots and finite note-off
 behavior survive a package reload.
 
-MPC layer Cycle and Velocity are separate play modes. A combined phone grid
-exports its first take per velocity window to XPM and MPC 3 keygroups. A
-single-window cycle can use ordinary layer Cycle. The six captures stay in the
-phone sidecar/package. **Combined velocity × round robin in MPC keygroups is
-open.** Existing drum-pad Slice Motion is a separate, corpus-derived scheme;
-its WAV slice-map/hardware gate does not prove keygroup behavior. Never infer a
-passing export gate from the presence of six WAVs.
+HALOBAR now exports matching-window Cycle with all six captures: two velocity
+windows and three ordered strikes per window. Native MPC windows are hard-first
+without reversing the strikes; XPM retains soft-first windows. Version-5 phone
+sidecars preserve the explicit policy through saved-program edits. Older banks
+can upgrade descriptors while retaining every WAV byte. Other instruments
+retain their existing policy. See the [final export evidence](HALOBAR_FINISH.md).
+The drum-pad Slice Motion WAV-map gate remains a separate concern; it was not
+used to implement this six-layer keygroup layout.
 
 Manual reference: [MPC Software User Guide, Keygroup Play Modes](https://cdn.inmusicbrands.com/akai/MM28M20/MPCSoftware-UserGuide-v2.8.pdf).
-The Cycle/Velocity distinction is documented; combination behavior has not been
-verified on hardware.
+The Cycle/Velocity distinction is documented. The owner reported passing the
+combined diagnostic on 2026-11-14; no universal firmware claim is inferred.
 
 ## Chords, kit and percussion gestures
 

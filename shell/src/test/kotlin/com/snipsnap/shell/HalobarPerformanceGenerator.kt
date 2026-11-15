@@ -86,10 +86,12 @@ object HalobarPerformanceGenerator {
                     sidecar, instrument, rise, 2.8)
             }
         }
-        val manifest = mapOf("engine" to "HALOBAR", "status" to "Software audition, owner listening pending",
+        val manifest = mapOf("engine" to "HALOBAR", "status" to "Owner accepted; production MPC velocity and repeat export",
             "keygroupModel" to 1, "touchLevels" to 2, "takesPerLevel" to 3, "seed" to 17,
             "finiteSamples" to true, "phoneRoundRobin" to true,
-            "mpcKeygroupRoundRobin" to false, "mpcFallback" to "First take per velocity level; other captures retained for phone playback",
+            "mpcKeygroupRoundRobin" to true, "mpcFallback" to null,
+            "mpcLayout" to "Matching-window Cycle: three strikes in each of two velocity windows",
+            "ownerListeningApproved" to true, "ownerHardwarePassReported" to true, "ownerApprovalDate" to "2026-11-14",
             "devicePlaybackVerified" to false, "mpcHardwareLoadingVerified" to false, "clips" to rows)
         File(root, "manifest.json").writeText(Json.write(json(manifest)))
         val cards = rows.joinToString("\n") { row ->
@@ -101,7 +103,7 @@ object HalobarPerformanceGenerator {
 <nav><a href="../">← Tubular bells</a></nav><h1>Six voices, playable keys</h1>
 <p>These performances reload the actual exported PCM24 keygroup WAVs. Every voice has two touch levels and three distinct native mallet strikes per level. Soft-three/hard-three lets you compare successive takes. Chords use the existing chord tool's voicings, moved into each instrument's register.</p>
 <p>The authored rolls accelerate with alternating touch. The risers climb a minor pentatonic scale. These are finite performances; HOLD controls the ring of each strike.</p>
-<p>Phone keygroups preserve velocity and round robin in the saved sidecar. MPC keygroups currently export the first take of each touch level. Combined MPC keygroup round robin remains open. Device playback, hardware loading and owner listening remain unverified.</p>
+<p>Phone and MPC keygroups retain both touch levels and all three strikes per level. The owner accepted the kit, chords, releases, rolls and risers and reported passing the phone/MPC checks on 14 November 2026. Hardware results are owner-reported; this generator does not execute a hardware test.</p>
 $cards<p><a href="manifest.json">Performance event scores and status</a></p>
 <script>const ps=[...document.querySelectorAll('audio')];ps.forEach(p=>p.addEventListener('play',()=>ps.forEach(q=>{if(p!==q)q.pause()})));</script></html>""")
         ZipOutputStream(File(root, "HALOBAR-Six-Keygroups.zip").outputStream()).use { zip ->

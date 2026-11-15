@@ -101,6 +101,7 @@ object StarterKits {
         }
     }
 
+    val PATIO_IDS = com.snipsnap.synth.PatioPerformance.Genre.entries.map { it.id }.toSet()
     val ALL: List<Starter> = listOf(
         // displayName is "EMPTY GRID", not "BLANK" — the other
         // entries are all pre-composed kits, and a plain "BLANK" reads as
@@ -696,7 +697,7 @@ object StarterKits {
         ) { com.snipsnap.synth.CypherKits.build(com.snipsnap.synth.CypherKits.Kit.FLINT) },
         Starter(
             com.snipsnap.synth.BreakerKits.ID, "BREAKER",
-            "Surf rock by way of boom bap: dusty drums through a spring tank, a crush and a surf amp. Three touch zones, three takes; a snare riser.",
+            "Surf rock by way of boom bap: dusty drums through a spring tank, a crush and a surf amp. Three touch zones, three takes; a snare riser and a surf tom fill.",
             seeded = false, tempoBpm = com.snipsnap.synth.BreakerKits.BPM,
         ) { com.snipsnap.synth.BreakerKits.build() },
         Starter(
@@ -839,6 +840,12 @@ object StarterKits {
             "UK garage TEMPEST kit: short kicks, rim and ghost snares, five choking hats and pitched blips.",
             seeded = false,
         ) { SynthKits.tempestStep() },
+    ).plus(com.snipsnap.synth.PatioPerformance.Genre.entries.map { genre ->
+        Starter(genre.id, genre.title.uppercase(java.util.Locale.ROOT), "Latin percussion, three velocities and four takes per voice, with a hand-drum roll and cuica.", seeded = false) {
+            com.snipsnap.synth.PatioPerformance.build(genre)
+        }
+    }).plus(
+        // Appended after PATIO: the stored starter order only grows at the end.
         Starter(
             SplayDelivery.BODIES_STARTER_ID, "SPLAY BODIES",
             "Five more things SPLAY's catches strike: WIRE, RUB, AIR, BAR and SKIN, each as you kept it.",

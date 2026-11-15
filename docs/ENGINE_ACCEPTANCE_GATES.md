@@ -64,6 +64,21 @@ sound design and the existing build evidence.
 
 ## HALOBAR six-voice build
 
+**Export implementation, 2026-11-15:** the [final HALOBAR build](HALOBAR_FINISH.md)
+retains both velocity levels and all three takes in production native/XPM
+keygroups and version-5 saved sidecars. All 426 stock captures are unchanged.
+The owner's performance/hardware acceptance is retained; the measured 50 ms
+fresh-render goal remains unmet. The older build-time table below is historical.
+
+**Owner update, 2026-11-14:** in response to the remaining-gates status, the
+owner confirmed **"Everything passes"**. The performance examples are accepted
+and the phone/MPC checks are recorded as owner-reported pass. See the
+[current acceptance ledger](HALOBAR_ACCEPTANCE.md). The table below records
+build-time evidence before that confirmation. The subsequent
+[final export build](HALOBAR_FINISH.md) integrates combined-keygroup export
+through production writers, persistence and old-bank upgrades. The measured
+fresh-render result still exceeds 50 ms; that numerical goal remains unmet.
+
 See [implementation and evidence](HALOBAR_SIX_VOICES.md). Software validation
 for this build is recorded with the delivered artifacts; this table keeps
 unverified completion gates explicit.
@@ -91,13 +106,13 @@ own status.
 The engine remains in progress. Voice count, green tests and export file
 presence do not close the outstanding gates above.
 
-## BREAKER (sound signed off 2026-11-13; three kits on the shelf; the surf tom fill and hardware open)
+## BREAKER (sound signed off 2026-11-13; three kits on the shelf; the surf tom fill on the BREAKER kit; hardware open)
 
 - **Melodic, keygroup and chord-tool gates:** not applicable. BREAKER is a drum engine.
 - **Articulation:** finite hits, with no HOLD.
   - **The snare riser (round 3): on the kit, verified in software.** It is twenty fresh snare strikes accelerating over 2.4 s into the spring, with a fader push after the rig. The owner picked the tamed roll on 2026-11-11 and heard the app's render as their pick. It is A15 on the BREAKER kit: saved with its grid, played through the pad resolver and exported to MPC 3 (`BreakerKitTest`). No phone or MPC has played it.
-  - **The surf tom fill:** not yet built.
-- **Drum shelf: three kits, heard.** The BREAKER kit is on the shelf (2026-11-12), and Dub Tank and Trip hop joined it (2026-11-13), each built to a layout the owner approved first and heard by the owner. They are authored 16-pad kits with their own tempo, tuning, damping, backbeat roles and pad arrangement. `BreakerKitTest` checks them pad by pad against BREAKER: 7 and 5 pads are another drum, 4 and 6 are retuned, 7 and 11 are damped or opened, and only 3 in each differ in the rig alone.
+  - **The surf tom fill (model 7): picked by ear and built, verified in rendering, not yet on a kit.** Over two rounds on 2026-11-14 the owner picked fill B, triplets down the three toms. Each stroke rings through its own tom's spring ("three pads"), at about a third of the spring ("4 Drier"). A fresh take was heard as the same fill with fresh hits ("Yes"). FILL renders that pick: twelve fresh tom strikes, a softer pad striking every tom softer, and every take re-struck (`BreakerTest`). The owner put it on the BREAKER kit's A16, in the shaker's place beside the snare riser (2026-11-14). There it is dealt 3 zones × 3 takes through saving, the pad resolver and the MPC 3 export like every pad (`BreakerKitTest`): its closest takes are 24.0 dB apart and its least-changed soft zone moves 2.8 dB. No phone or MPC has played it.
+- **Drum shelf: three kits, heard.** The BREAKER kit is on the shelf (2026-11-12), and Dub Tank and Trip hop joined it (2026-11-13), each built to a layout the owner approved first and heard by the owner. They are authored 16-pad kits with their own tempo, tuning, damping, backbeat roles and pad arrangement. `BreakerKitTest` checks them pad by pad against BREAKER: 7 and 6 pads are another drum, 4 and 6 are retuned, 7 and 11 are damped or opened, and only 3 and 2 differ in the rig alone (with the fill on BREAKER's A16 since 2026-11-14).
 - **Velocity and round robin:**
   - **Rendering: verified.** Velocity re-strikes the SKIN source, which changes its character as well as its level. `Restrike` takes are fresh, deterministic strikes (`BreakerTest`, `DeterminismTest`).
   - **Saving: partly verified.** A patch round-trips through JSON with its model. A saved kit has not been tested yet.
@@ -136,7 +151,7 @@ presence do not close the outstanding gates above.
   - **Sound character, heard 2026-11-13:** the kicks hit again ("one kick played again: fine"), the High Timbale at about three semitones up (high enough, where the layout asked five), and every pad soft to hard were accepted. Both grooves were heard as too wet, and the owner picked how much echo and spring each keeps from four versions. The kits are built from the picks; only Trip hop's Second Kick keeps its touch of spring, since at a quarter its takes measured as near-copies.
   - **Decided by the owner (2026-11-13):** the shared robin's start trim, which can cut a synth strike's click on any re-struck kit, stays as it is (docs/BREAKER.md, "Model 6").
 - **The final audition (2026-11-13):** `:shell:generateBreakerAudition` renders every voice, soft to hard, every control swept, corners, edges, presets and the three kits' grooves (68 clips). Every edge render is finite and within full scale. **Sound character: signed off.** On 2026-11-13 the owner answered the published page ([BREAKER audition](https://claude.ai/artifact/TyimBbsBAwNeVRzxsSx3En)): every voice as it ships is BREAKER, every control does what its name says all the way along, nothing breaks at the edges, all the presets stay, and the shelf of three kits is right. Preserve renderer model 6 (the BREAKER kit on model 5) as the accepted baseline. This is not evidence of a phone or MPC audition.
-- **Overall: incomplete.** The sound is signed off and the three kits are on the shelf. Hardware playback is open, and the surf tom fill is not built.
+- **Overall: incomplete.** The sound is signed off, the three kits are on the shelf, and the surf tom fill is on the BREAKER kit. Hardware playback is open.
 
 ## FIRED BRONZE (approved on MPC 2026-11-08; round robin heard and accepted 2026-11-13; hardware open)
 
@@ -241,7 +256,7 @@ Hip-hop drum kits in the GATECRASH shape, six built: TRAP, DRILL, BACKROOM, LOWR
 - **THUMP SUB as a voice:** six macros, velocity and takes through `Thump.render`, `Velocity` and `Restrike`. The classifier reads a long sub as TONAL; the default reads KICK; no setting makes a LOOP (`ThumpSubTest`). Round 2 made its length its DECAY alone (velocity moves drive, click and settle), so the robin's windows never change with the touch.
 - **Overall:** every software gate passes and all six kits are approved by ear; phone and MPC playback wait for the owner's devices; MPC 2 cannot carry the round robin, a format limit the owner recorded on 2026-11-14.
 
-## SCUFF (rounds 0 and 0b, 2026-11-12; round 1 Kotlin, round 2 and 3 kits, heard, round 4 roster, 2026-11-13)
+## SCUFF (rounds 0 and 0b, 2026-11-12; round 1 Kotlin, round 2 and 3 kits, heard, round 4 roster, 2026-11-13; round 5 picker, 2026-11-14)
 
 A dry Michigan drum kit and its chain (GRIT, LOCKER, BARK, SLAM). See [SCUFF](SCUFF.md).
 Rounds 0 and 0b are Python prototype auditions; no Kotlin exists. Round 0b answered the owner's note "more character in general" (written before listening): every voice gained a mechanism, BARK went from under 1 dB of effect to 3 to 5 dB, and every pad ends at a tail gate.
@@ -258,7 +273,7 @@ Rounds 0 and 0b are Python prototype auditions; no Kotlin exists. Round 0b answe
 - **Sound character:** direction accepted. On 2026-11-12 the owner responded to the published round-0b audition, "Sounds good, please merge." Preserve round 0b as the accepted baseline; this is a listen to Python renders. The round-1 Kotlin port measures as the same waveform on the five deterministic voices (0.05 to 0.17 dB, correlation 0.997 to 1.000) and as another take on the four noise voices. On 2026-11-13, after the round-3 merge, the owner heard the page's version 5 (every pad of both kits cut from the exported MPC 3 tracks, the velocity strips, the phrases and the round-1 Kotlin section) and said, "Audition is all good." Preserve `Scuff.MODEL_VERSION` 1 and `ScuffKits.VERSION` 1 as the accepted baseline. This is a listen to the page, not evidence of a phone or MPC audition.
 - **Presets and the roster: pass (round 4).** `ScuffPresets` files the two accepted kits' twenty-eight hits as the factory bank (every voice at least twice, named after the kit), served by `Presets`; SCUFF is off `PatchTypes.ROSTERLESS`. Each preset is a pad the owner heard, through the engine's own finish (`ScuffPresetsTest` holds the shape to the kit's pad above .995 correlation). A player's saved SCUFF strike promotes with its velocity, take and model through `ScuffPatch.fromJsonText`.
 - **Classifier:** the Kotlin kick reads PERC (its click and knock lift the 93 ms centroid past the sub-kick rule) and the crushed hat reads SNARE; `drumClassFor` files them KICK and HAT_CLOSED. Disclosed in [SCUFF](SCUFF.md), held by `ScuffTest`.
-- **Overall: incomplete, every software gate in place and the sound heard.** Round 3 has the engine, the patch, two distinct kits on the shelf with their risers, and velocity and round robin proved through rendering, saving, playback and MPC 3 export in software; the owner accepted the engine and both kits by ear on 2026-11-13, and round 4 filed those kits as the roster. Hardware playback and the app picker (a round of its own; the convention no longer defers it to an SDK session) remain open.
+- **Overall: incomplete, every software gate in place and the sound heard.** Round 3 has the engine, the patch, two distinct kits on the shelf with their risers, and velocity and round robin proved through rendering, saving, playback and MPC 3 export in software; the owner accepted the engine and both kits by ear on 2026-11-13, round 4 filed those kits as the roster, and round 5 put the engine on the app's SYNTH picker with an on-device test (run by CI's emulator, not heard or seen by the owner). Hardware playback remains open; MPC 2 round robin is not applicable (the owner's format-limit decision of 2026-11-14, above).
 
 ## MIRRORBALL kits (sound approved 2026-11-12, hardware open)
 
@@ -690,7 +705,7 @@ and the approved strum study by its published WAV hashes (`OsteriaStrumTest`).
 - **Overall: incomplete.** Round robin, a seamless HOLD, chord tools on real keys, device runs
   of the picker and hardware playback remain open.
 
-## CLUTTER (round 2, 2026-11-14: four genre kits on the shelf, audition approved; hardware open)
+## CLUTTER (round 2, 2026-11-14: four genre kits on the shelf, audition approved; round 3 roster, round 4 picker; hardware open)
 
 A found-sound drum engine of 22 modelled household objects (`Clutter.kt`, round 1) and four sixteen-pad genre
 kits on the shelf (`ClutterKits`, round 2). Every object has loose parts (rice, a lid, a handle, cutlery, a
@@ -723,8 +738,13 @@ rivet) that only move above a strike threshold. See [CLUTTER](CLUTTER.md).
   <https://claude.ai/artifact/6dkeY2rrjNGUvUYvobs3v5>: "All are good", "I like it as is"), then heard version 8,
   the four Kotlin kits read back from the MPC 3 export, and answered "I approve the audition". Preserve
   `Clutter.MODEL_VERSION` 1 and `ClutterKits.VERSION` 1 as the baseline. Not a phone or MPC listen.
+- **Presets and the roster: pass (round 3).** `ClutterPresets` files the four approved kits' sixty-four pads as the
+  factory bank (every object at least twice, named after the kit: LOFI, STREET, BOOMBAP, MICRO), served by `Presets`; CLUTTER is off
+  `PatchTypes.ROSTERLESS`. Each preset is a pad the owner heard (`ClutterPresetsTest` holds its shape to the kit's
+  pad above .9999 correlation). A player's saved CLUTTER strike promotes with its velocity, take and model
+  through `ClutterPatch.fromJsonText`.
 - **Overall: incomplete.** Every software gate is in place and the sound is approved. Open: the MPC 2 export,
-  phone and MPC playback. The percussion gate is waived by the owner.
+  phone and MPC playback. Round 4 put CLUTTER on SYNTH's picker (compiled and run on an emulator by CI only). The percussion gate is waived by the owner.
 
 ## EMBER (round 0, 2026-11-14, Python prototype, not heard)
 
@@ -746,6 +766,16 @@ prototype and a listening page (<https://claude.ai/artifact/Xmcj5t8MYSNCQPoTKHBc
     least 1.92 dB; the closest two of any pad's four takes are 1.19 dB apart. Velocity moves the contact, the
     threshold parts and the swell's arc, not a filter.
   - **Saving, playback, export: open.** The listening page's pad grid is a browser stand-in, not app evidence.
-- **Sound character: open.** Nothing has been heard.
+- **Sound character: open.** On 2026-11-14 the owner's first listen found the cymbals sounding like "hitting sheet
+  metal". Round 0b rebuilds every cymbal and hat from CC0 recordings of a jazz club kit, with BREAKER's fitter. Measured
+  against the recordings, they are 5.6 to 9.3 dB away over the first 150 ms, where round 0's were 11 to 34 dB and two
+  takes of one real ride are 6.2 dB apart (Python). A new SIZZLE voice carries the recording's rivets. Not heard yet.
+  The owner then heard the sweeps as "hail hitting a roof". Round 0c fits the sweep and brush roll to CC0 brush stirs and
+  flutters (Karoryfer Swirly Drums). Their clickiness (kurtosis above 2 kHz) is now 2.9 to 3.0, as recorded, where it was
+  5.7 to 7.8 (Python). The owner then found the sweep overbearing and mid heavy. Round 0d sets it 3 dB lower in the
+  grooves, brightens it (+3 dB at 4 kHz, +6 from 8 kHz, by ear) and eases After Hours' WARMTH from .65 to .5. The owner
+  then asked for every kit brighter. Round 0e makes the 1962 chain roll off less top and lowers WARMTH 0.15 on every
+  kit. It also adds -1.5 dB at 600 Hz and +2 dB from 6 kHz to every pad, and makes the bowed cymbal sing at 1.4 kHz.
+  Not heard yet.
 - **Overall: incomplete.** Round 0 asks the owner which voices and kits to keep. Kotlin (round 1), the shelf and
   saving, playback and MPC 3 export (round 2), and phone and MPC hardware (round 3) are all open.
