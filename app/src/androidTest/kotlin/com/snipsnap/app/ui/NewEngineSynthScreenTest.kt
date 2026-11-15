@@ -20,6 +20,8 @@ import com.snipsnap.synth.Ballast
 import com.snipsnap.synth.BackwashPatch
 import com.snipsnap.synth.BallastPatch
 import com.snipsnap.synth.BallastVoice
+import com.snipsnap.synth.Hiccup
+import com.snipsnap.synth.HiccupPatch
 import com.snipsnap.synth.Soot
 import com.snipsnap.synth.SootPatch
 import com.snipsnap.synth.Scuff
@@ -28,6 +30,9 @@ import com.snipsnap.synth.ScuffPresets
 import com.snipsnap.synth.Clutter
 import com.snipsnap.synth.ClutterPatch
 import com.snipsnap.synth.ClutterPresets
+import com.snipsnap.synth.Calabash
+import com.snipsnap.synth.CalabashPatch
+import com.snipsnap.synth.CalabashPresets
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -239,6 +244,57 @@ class NewEngineSynthScreenTest : ComposeScreenTest() {
         assertEquals(1f, draft.velocity, .0001f)
         assertEquals(.6f, draft.macros.getValue("DAMP"), .0001f)
         assertEquals(.42f, draft.macros.getValue("TUNE"), .0001f)
+    }
+
+    /**
+     * HICCUP on the picker (2026-11-15), with its presets in the factory bank. The snare opens with its six
+     * controls at their defaults, an edit survives a rebuild, and the saved draft keeps its renderer model.
+     */
+    @Test
+    fun hiccupOpensItsSnareAtItsDefaultsAndKeepsAnEditAndItsModel() {
+        show("HICCUP", "SNARE")
+        button("SNARE").assertIsSelected()
+        for (label in listOf("TUNE", "DECAY", "TOY", "FAULT", "CHOP", "CRUSH")) control(label).assertExists()
+        assertEquals(Hiccup.defaults(com.snipsnap.synth.HiccupVoice.SNARE).getValue("FAULT"), progress("FAULT"), .0001f)
+        adjust("FAULT", .8f)
+        compose.runOnIdle { generation++ }
+        pump()
+        assertEquals("HICCUP", settings["engine"])
+        assertEquals(.8f, progress("FAULT"), .0001f)
+        assertFalse(showsLoop())
+        val draft = SynthDrafts.read(settings).single { it.engine == "HICCUP" && it.voiceName == "SNARE" } as HiccupPatch
+        assertEquals(Hiccup.MODEL_VERSION, draft.model)
+        assertEquals(.8f, draft.macros.getValue("FAULT"), .0001f)
+    }
+
+    /**
+     * CALABASH on the picker (2026-11-15, round 4), mirroring CLUTTER's entry: the conga opens with its five controls,
+     * AFROBEAT CONGA OPEN (the first of its presets, the AFROBEAT kit's A11) lands with the pad's ROOM, AGE and open
+     * STROKE, an edit survives a rebuild, and the saved draft keeps the preset's take, full velocity and model.
+     */
+    @Test
+    fun calabashOpensItsCongaLoadsAKitPresetAndKeepsAnEditWithItsTakeAndModel() {
+        show("CALABASH", "CONGA")
+        button("CONGA").assertIsSelected()
+        for (label in listOf("TUNE", "DAMP", "STROKE", "ROOM", "AGE")) control(label).assertExists()
+        button("PRESET AFROBEAT CONGA OPEN").performSemanticsAction(SemanticsActions.OnClick) { it() }
+        pump()
+        assertEquals(.3f, progress("ROOM"), .0001f)
+        assertEquals(.55f, progress("AGE"), .0001f)
+        assertEquals(1f / 3f, progress("STROKE"), .0001f)
+        adjust("DAMP", .6f)
+        compose.runOnIdle { generation++ }
+        pump()
+        assertEquals("CALABASH", settings["engine"])
+        assertEquals(.6f, progress("DAMP"), .0001f)
+        assertEquals(.3f, progress("ROOM"), .0001f)
+        assertFalse(showsLoop())
+        val draft = SynthDrafts.read(settings).single { it.engine == "CALABASH" && it.voiceName == "CONGA" } as CalabashPatch
+        assertEquals(Calabash.MODEL_VERSION, draft.model)
+        assertEquals(CalabashPresets.TAKE, draft.take)
+        assertEquals(1f, draft.velocity, .0001f)
+        assertEquals(.6f, draft.macros.getValue("DAMP"), .0001f)
+        assertEquals(.55f, draft.macros.getValue("AGE"), .0001f)
     }
 
     @Test

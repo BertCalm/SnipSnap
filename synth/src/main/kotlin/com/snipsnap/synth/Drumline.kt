@@ -59,9 +59,21 @@ object Drumline {
         else -> listOf(Event(0.0,voice,1f))
     }
     fun render(voice: DrumlineVoice, macros: Map<String,Float> = emptyMap(), velocity: Float = 1f, take: Int = 0, model: Int = MODEL_VERSION): Snip {
+        val raw=renderRaw(voice,macros,velocity,take,model)
+        Tide.bandLimit(raw,RATE)
+        val out=Dsp.decimate(raw,Dsp.RATE)
+        val mean=out.average().toFloat(); val hp=Dsp.FixedOnePole(20f,Dsp.RATE)
+        for(i in out.indices) { val x=out[i]-mean;out[i]=x-hp.lp(x) }
+        Dsp.levelTo(out,Dsp.RATE,Dsp.MELODIC_LOUDNESS_TARGET)
+        Dsp.fadeTail(out)
+        return Snip(out,1,Dsp.RATE)
+    }
+    /** Internal-rate signal before the shared output stage, exposed for spectral audits. */
+    internal fun renderRaw(voice: DrumlineVoice, macros: Map<String,Float> = emptyMap(), velocity: Float = 1f,
+                           take: Int = 0, model: Int = MODEL_VERSION): FloatArray {
         require(model in 1..MODEL_VERSION && take >= 0)
         val m=settled(voice,macros); val v=velocity.takeIf { it.isFinite() }?.coerceIn(.05f,1f) ?: 1f
-        val raw=if(voice !in figures) strike(voice,m,v,take,0,model) else {
+        return if(voice !in figures) strike(voice,m,v,take,0,model) else {
             val score=score(voice)
             val out=FloatArray(((score.maxOf { it.seconds }+1.3)*RATE).roundToInt())
             for((i,e) in score.withIndex()) {
@@ -71,13 +83,6 @@ object Drumline {
             }
             out
         }
-        Tide.bandLimit(raw,RATE)
-        val out=Dsp.decimate(raw,Dsp.RATE)
-        val mean=out.average().toFloat(); val hp=Dsp.FixedOnePole(20f,Dsp.RATE)
-        for(i in out.indices) { val x=out[i]-mean;out[i]=x-hp.lp(x) }
-        Dsp.levelTo(out,Dsp.RATE,Dsp.MELODIC_LOUDNESS_TARGET)
-        Dsp.fadeTail(out)
-        return Snip(out,1,Dsp.RATE)
     }
     /** Integral of smoothstep hand contact; its derivative is nonnegative. */
     internal fun contactIntegral(t: Double, start: Double, width: Double = .14): Double {
