@@ -5,8 +5,8 @@ characteristic gesture is unchanged: **common release â†’ coordinated catches â†
 bounded decay**. The pendulums and the catch times are exactly model 2's. Only the body the catches
 strike is new.
 
-Status: implemented in `SplayBodies.kt` and tested in JVM tests. **Not registered** in the SYNTH
-picker, the patch format, the starters or MAKE INSTRUMENT yet.
+Status: implemented in `SplayBodies.kt` and tested in JVM tests. Registered as SPLAY voices (picker,
+patch, starter, keys): see [SPLAY_BODIES_PICKER.md](SPLAY_BODIES_PICKER.md).
 
 ## Owner listening
 

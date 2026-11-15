@@ -453,7 +453,7 @@ around G3 to F#4, above ETCH's C4 ceiling, and widening the range would need a l
 instrument does not suit. The keys stay polyphonic, and bass-register chords play every note
 (`EtchKeygroupMakerTest`).
 
-**The picker.** ETCH is in SYNTH's engine list after OSTERIA (86 engines), with WICK's typed-patch handling: the
+**The picker.** ETCH is in SYNTH's engine list after OSTERIA (89 engines), with WICK's typed-patch handling: the
 complete recipe (root, velocity, model) survives same-frame edits, voice and engine navigation, SAVE and SEND;
 VELOCITY sits under the macros; HOLD's top reads LOOP; MAKE INSTRUMENT opens the finite keys. On-device test:
 `EtchSynthScreenTest`. The app is not compiled in a session without an Android SDK; CI's `android-build` and

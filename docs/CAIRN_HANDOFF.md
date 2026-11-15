@@ -139,7 +139,7 @@ warmed path still misses the proposed 50 ms target; cold rendering needs work.
 | [CairnPatch.kt](../synth/src/main/kotlin/com/snipsnap/synth/CairnPatch.kt) | Saved model, macros, note, velocity, cue and JSON |
 | [CairnTumble.kt](../synth/src/main/kotlin/com/snipsnap/synth/CairnTumble.kt) | Analytic flight, rebound and supported-rest behavior |
 | [CairnSing.kt](../synth/src/main/kotlin/com/snipsnap/synth/CairnSing.kt) | Regenerative energy trajectory, traction, model-5 motion and modal readout |
-| [CairnPresets.kt](../synth/src/main/kotlin/com/snipsnap/synth/CairnPresets.kt) | One provisional starting patch per voice; outside the shared factory roster |
+| [CairnPresets.kt](../synth/src/main/kotlin/com/snipsnap/synth/CairnPresets.kt) | The factory roster, four presets per voice, in the shared `Presets` roster (SING's four are kept Wave 3 recipes) |
 | [Modes.kt](../synth/src/main/kotlin/com/snipsnap/synth/Modes.kt) | Shared modal bank and uncoupled periodic-state helpers |
 | [CairnSingMotionTest.kt](../synth/src/test/kotlin/com/snipsnap/synth/CairnSingMotionTest.kt) | Independent waveform measurements, pitch, continuation, bounds and compatibility |
 | [CairnSingMotionAuditionGenerator.kt](../synth/src/test/kotlin/com/snipsnap/synth/CairnSingMotionAuditionGenerator.kt) | Production comparison, recipes, benchmarks and optional historical replay |
@@ -150,9 +150,10 @@ warmed path still misses the proposed 50 ms target; cold rendering needs work.
 The older documents describe historical milestones and may list a now-built
 voice as pending. Use this overview and `CAIRN_SING_MOTION.md` for current status.
 Recipe dispatch and velocity integration exist in `Patches.kt` and `Velocity.kt`;
-the shell also preserves Cairn's explicit note. Cairn remains in the prototype
-roster. A finished four-voice factory bank, starter kit and Android picker are
-still separate work.
+the shell also preserves Cairn's explicit note. Cairn has left the prototype
+roster: its 24 factory presets, the CAIRN starter kit and its SYNTH picker entry
+are built, and the owner kept the presets and the starter in round
+`cairn-presets-1` (14 Nov 2026). Device runs remain.
 
 ## Reproduce and extend
 

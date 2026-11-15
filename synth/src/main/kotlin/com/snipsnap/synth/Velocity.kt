@@ -290,6 +290,7 @@ object Velocity {
         is SkitterPatch -> Skitter.macrosFor(patch.voice)
         is ScuffPatch -> Scuff.macrosFor(patch.voice)
         is ClutterPatch -> Clutter.macrosFor(patch.voice)
+        is EmberPatch -> Ember.macrosFor(patch.voice)
         is TanglePatch -> Tangle.macrosFor(patch.voice)
         is OverlapPatch -> if (patch.playback == OverlapPlayback.HELD) OverlapHeld.macrosFor(patch.topology)
             else Overlap.macrosFor(patch.topology, patch.model)
@@ -473,6 +474,8 @@ object Velocity {
         is ScuffPatch -> patch.copy(velocity = v).render()
         // CLUTTER re-strikes the object: a shorter, brighter contact, and past the threshold the loose parts move.
         is ClutterPatch -> patch.copy(velocity = v).render()
+        // EMBER re-strikes the drum: a longer, darker contact when soft, and the wires and rivets only past their threshold.
+        is EmberPatch -> patch.copy(velocity = v).render()
         is TanglePatch -> patch.copy(velocity = v).render()
         is OverlapPatch -> patch.copy(velocity = v).render()
         is FlockPatch -> patch.copy(velocity = v).render()

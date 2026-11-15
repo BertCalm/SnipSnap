@@ -113,7 +113,7 @@ class SplaySynthScreenTest : ComposeScreenTest() {
             for (action in listOf("RANDOMISE", "SAVE PRESET", "SEND TO PAD", "SPREAD ACROSS PADS", "AUDITION")) {
                 button(action).assertIsNotEnabled()
             }
-            button("PRESET ${SplayFactoryPresets.all().first().name}").assertIsEnabled()
+            button("PRESET ${SplayFactoryPresets.forVoice(SplayVoice.TONGUE).first().name}").assertIsEnabled()
             // A queued accessibility callback must obey the same guard as a fresh tap.
             for (action in listOf("RANDOMISE", "SAVE PRESET", "SEND TO PAD")) {
                 button(action).performSemanticsAction(SemanticsActions.OnClick) { it() }
@@ -158,7 +158,7 @@ class SplaySynthScreenTest : ComposeScreenTest() {
         button("CONTACT").assertDoesNotExist()
         button("MAKE INSTRUMENT").assertDoesNotExist()
         assertEquals(saved, UserPresets.read(shelf).single().patch)
-        val factory = SplayFactoryPresets.all().first()
+        val factory = SplayFactoryPresets.forVoice(SplayVoice.TONGUE).first()
         activate("PRESET ${factory.name}")
         waitFor("explicit factory choice after failed read") { draft() == factory }
         assertRoot(factory.midi)
@@ -177,7 +177,8 @@ class SplaySynthScreenTest : ComposeScreenTest() {
                 UserPresets.read(root) to UserPresets.bin(root)
             }
             compose.waitUntil(timeoutMillis = 5_000) { reads.get() >= 1 }
-            val factory = SplayFactoryPresets.all().last()
+            // TONGUE's last factory setting: this screen shows TONGUE, and the bodies' presets follow it in all().
+            val factory = SplayFactoryPresets.forVoice(SplayVoice.TONGUE).last()
             activate("PRESET ${factory.name}")
             waitFor("factory choice while read is delayed") { draft() == factory }
             release.countDown()

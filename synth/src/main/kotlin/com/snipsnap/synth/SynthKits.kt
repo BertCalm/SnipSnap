@@ -37,6 +37,34 @@ object SynthKits {
     /** Compatibility entry point; its audio and arrangement are the accepted full starter. */
     fun tempestFullAudition(): List<ArrangedPad?> = tempest()
 
+    /**
+     * The CAIRN starter: sixteen factory presets at their saved roots, all six voices.
+     * - A01–A03 KNOCK, A04–A06 ANSWER and A07–A09 TUMBLE are finite strikes.
+     * - A10–A11 are two of the kept SING recipes (EARLIER and MOVING), which are loops.
+     * - A12–A13 GRIND (at its kept G9 scrape level) and A14–A16 VESSEL.
+     * Every pad keeps its complete recipe (root, touch, cue and model) and is filed by
+     * [Cairn.drumClassFor] under that recipe's own model. The owner kept this starter in
+     * round cairn-presets-1 (14 Nov 2026); `CairnPresetsTest` pins its sixteen pads.
+     */
+    fun cairn(): List<ArrangedPad?> {
+        val names = listOf(
+            "KNOCK", "KNOCK HEAVY", "KNOCK RING",
+            "ANSWER", "ANSWER LIGHT", "ANSWER WIDE",
+            "TUMBLE", "TUMBLE LONG", "TUMBLE PEBBLE",
+            "SING EARLIER", "SING MOVING",
+            "GRIND", "GRIND COARSE",
+            "VESSEL", "VESSEL DEEP", "VESSEL SMALL",
+        )
+        return names.map { name ->
+            val patch = CairnPresets.all().first { it.name == name }
+            val recipe = PadRecipe(patch)
+            ArrangedPad(recipe.render(),
+                Cairn.drumClassFor(patch.voice, patch.macros, patch.velocity, patch.startAtContact, patch.model),
+                recipe.toJsonValue(), displayName = patch.name,
+                source = mapOf("voice" to patch.voice.name, "model" to patch.model.toString(), "factoryPreset" to patch.name))
+        }
+    }
+
     /** Eight KICK notes from E1, two alternate strikes and six METAL colors, all dry model 2. */
     fun tempestTuned(): List<ArrangedPad?> {
         fun arranged(patch: TempestPatch, factoryName: String = patch.name): ArrangedPad {
