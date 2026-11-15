@@ -200,3 +200,24 @@ Why it is built this way: approved PCM is frozen to avoid accidental regression;
 new strikes carry source variation before processing; authored gestures give
 percussion a real beginning and ending; dry and processed comparisons expose
 whether effects help the source rather than hide it.
+
+## Round 5: stronger knee-mic contrast
+
+Owner: “Dry and knee mic sound the same.” The old grooves measured about 1.9 dB
+below dry RMS, with a substantial dry contribution. `knee_v2.py` now uses 20%
+dry / 80% processed signal, 135–3400 Hz band colour with added mid-body, short
+reflections, 4x saturation, and 5:1 compression with 1.5 ms RMS detection and
+90 ms gain recovery. This is an effect recipe, not a physical microphone model.
+
+The revised groove comparisons match dry RMS; compression in the processed bus
+averages 8.2–8.6 dB during detector-active passages, with maxima near 17.2 dB.
+All 580 dry/cassette pad and groove WAVs remain hash-identical. All 288 revised
+knee pad files pass peak, DC, take diversity and velocity-layer mean-energy
+ordering. The two corresponding SFZ packages and all browser mappings were
+checked. The treatment has not yet been approved by listening.
+
+Why it is built this way: less dry blend exposes the coloured mic signal;
+compression changes the transient/body relation; matched groove RMS reduces
+volume bias. The first stronger-ratio experiment slightly inverted rimshot
+layer energy, so the final 5:1 ratio retains dynamic ordering without changing
+any synthesized source or weakening the check.
