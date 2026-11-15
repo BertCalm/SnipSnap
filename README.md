@@ -1427,8 +1427,11 @@ are in the picker and the preset roster, and each but FLOTILLA and REGISTERS has
 the CLI's `--midi` and `--velocity` options set their note and strike energy directly
 (each one's `--midi` range is in [`docs/CLI.md`](docs/CLI.md)'s `synth` section).
 TERRA, SILK, GYRE and MAGNET are in the module, with kits or voices, and
-no roster entry. VENT, the Rössler-attractor synth (separate from the TapeOS
-scheme of that name), brings clean model-2 PULSE, COIL and PLUME to the picker
+no roster entry. TERRA's sixteen-pad world-percussion kit, which the owner
+kept in full on 2026-11-14, is FRESH TAPE's TERRA starter; its presets and
+picker entry come next ([`docs/TERRA_PROMOTION.md`](docs/TERRA_PROMOTION.md)).
+VENT, the Rössler-attractor synth (separate from the TapeOS scheme of that
+name), brings clean model-2 PULSE, COIL and PLUME to the picker
 and factory roster. FRESH TAPE's VENT kit has twelve dry pads in C minor
 pentatonic: a bass, short note, percussive hit and long texture per voice,
 leaving four capture slots free. The CLI renders those same four recipes per
