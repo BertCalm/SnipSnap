@@ -67,9 +67,15 @@ class BreakerKitTest {
                 assertEquals(List(zoneCount) { takes }, zones.map { it.cycle })
                 assertEquals(zoneCount * takes, chain.boundaries.size)
                 // The pad keeps its sound's recipe, so it stays an editable BREAKER pad, on its kit's model:
-                // BREAKER as the owner accepted it (5), the genre kits with model 6's beater.
+                // BREAKER as the owner accepted it (5), the genre kits with model 6's beater. The surf tom fill
+                // exists only from model 7.
                 assertEquals(patch, Breed.recipeOf(pad)?.patch, "$which ${pad.displayName}")
-                assertEquals(if (which == BreakerKits.Kit.BREAKER) 5 else 6, patch.model, "$which ${pad.displayName}")
+                val model = when {
+                    patch.voice == BreakerVoice.FILL -> Breaker.FILL_MODEL
+                    which == BreakerKits.Kit.BREAKER -> 5
+                    else -> 6
+                }
+                assertEquals(model, patch.model, "$which ${pad.displayName}")
                 assertEquals(Breaker.drumClassFor(patch.voice), pad.drumClass)
                 assertTrue(pad.oneShot)
             }

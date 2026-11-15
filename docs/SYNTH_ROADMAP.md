@@ -54,6 +54,15 @@
 
 # Synth roadmap — generate kits, not just capture them
 
+**PATIO performance kits (2026-11-14).** Three starter-shelf kits (Cumbia, Samba,
+Latin dub) combine sixteen core percussion voices with an authored hand-drum roll
+and the approved cuíca replacement on B02. Every pad has three velocity zones and
+four cycling takes, preserved in saved kit chains, playback and native MPC 3
+exports. `generatePatioPerformance` writes the compact audition and downloads.
+Source recipes replay through PATIO's versioned API; ordinary patch-editor control
+and generic MPC import reconstruction are not claimed. Hardware loading remains
+open. See [PATIO.md](PATIO.md) for current status and historical listening work.
+
 **TEMPEST on the default branch (2026-11-13).** The owner-accepted six-voice digital drum instrument
 came back from the recovery backup with its 22 presets, the full drum starter with choking hats, the
 original tuned starter and the SYNTH picker. The DSP and model sources are unchanged. See
@@ -3494,6 +3503,17 @@ The genre kits (renderer models 5 and 6, 2026-11-12 to 11-13):
 - **The final audition** (`:shell:generateBreakerAudition`, 68 clips): the owner signed off the
   sound on 2026-11-13 (every voice, every control, the edges, the presets and the three kits).
 
+The surf tom fill (renderer model 7, 2026-11-14):
+- **Picked by ear in two rounds** (`:synth:generateBreakerFillStudy`):
+  - fill B, sixteenth-note triplets down the three toms;
+  - each stroke through its own tom's spring ("three pads"), at about a third of it ("4 Drier");
+  - a fresh take heard as the same fill with fresh hits.
+- **Built:** FILL, twelve strokes of the BREAKER kit's own toms (model 5), each its own fresh strike. A
+  softer pad strikes every tom softer. DRIP scales the three springs together.
+- **On the kit:** the BREAKER kit's A16, in the shaker's place beside the snare riser (the owner's
+  call, 2026-11-14). It is verified like every pad through saving, playback and the MPC 3 export.
+- **Hardware: approved by the owner (2026-11-15), "Hardware is approved".** BREAKER is complete.
+
 ### ETCH, Kotlin round K1 (2026-11-13)
 
 Owner-requested step-line bass: an accented, sliding sixteen-step line → BITE (a clean/drive blend after a bass
@@ -3502,6 +3522,18 @@ Python audition the owner accepted on 2026-11-12; K1 ports it to Kotlin with six
 the line loop at HOLD's top and round-robin takes through `Restrike`, as a prototype outside the factory presets
 and the picker. Kotlin measures within 0.4 to 2.8 dB of the accepted renders. The kit, the roster, keygroups, the
 picker and the saving, playback and export evidence follow. See [ETCH](ETCH.md).
+
+### ETCH, round K2 (2026-11-14)
+
+The roster, the picker, keys and a kit. The fourteen K1 presets, every one heard in round 3, are the factory bank.
+ETCH is in the SYNTH picker after OSTERIA with WICK's typed-patch handling (root, velocity and model survive edits,
+navigation, SAVE and SEND), a VELOCITY control and MAKE INSTRUMENT's finite keys (C1 to C4, three touch layers).
+FRESH TAPE → ETCH (BASS, 130 BPM) is a SAW walk in C minor pentatonic, five voices' notes and three lines; each
+note pad is three velocity zones by four takes, verified through saving, the pad resolver and the MPC 3 export
+(`EtchKitTest`). Short, low one-shots read as KICK or TOM (122 of 756); the owner heard three endings and chose C
+for every voice, now model 2 (4 of 756, RUBBER's shortest C1 notes; model-1 recipes keep the accepted ending).
+The owner heard the presets, the kit and SAW C2's grid at model 2 and accepted them (2026-11-14). The kit
+now renders its cells in parallel (14.0 s to 6.8 s on four cores, byte for byte). The chord tool is not applicable, the owner's decision (ETCH is a monophonic bass). Open: phone playback and an MPC. See [ETCH](ETCH.md).
 
   - The kick's takes are distinct but close (34 dB apart).
   - The owner's listen to the kit.
@@ -3551,6 +3583,9 @@ The siblings' pads await a listen; hardware remains.
 The owner kept 63 of the 64 sibling pads. They heard Basement Dub's one-drop four bars as
 incoherent, and picked a steppers groove in its place (`SootGenreKits` 2). The sound of all five SOOT
 kits is now approved, and hardware remains.
+
+On 2026-11-14 the owner confirmed phone and MPC 3 playback ("Everything is good"), with repeated hits
+cycling through the takes on the MPC 3. SOOT is complete; MPC 2 is not applicable (format limit).
 
 
 ### SCUFF, round 1 (2026-11-13)
@@ -3617,3 +3652,36 @@ not a new melodic engine. Model 2 ports the owner-approved Python contact and ex
 auditions, with independent body/string profiles, seven contacts and bounded take levels. Model 1
 source replay is retained. Kotlin listening, device shelf/playback, MPC 3 chain re-import and
 hardware slice-map playback remain open. See [TIMBER](TIMBER.md) for the gate ledger.
+
+### SCUFF, round 5 (2026-11-14)
+
+On SYNTH's engine picker, mirroring SOOT arm for arm plus the native-factory path for its presets (a kit's pad
+loads whole, with its take and model); `EngineCatalog` under DRUMS, after ETCH; both READMEs count 87; an on-device test
+beside SOOT's in `NewEngineSynthScreenTest` (CI's emulator runs it). Open: hardware playback (MPC 2 round robin is not
+applicable since 2026-11-14, a format limit). See [SCUFF](SCUFF.md).
+
+### CLUTTER, round 2 (2026-11-14)
+
+The four accepted genre kits on the shelf: `ClutterKits` (KITCHEN LO-FI 82 BPM, STREET BUCKET 120, JUNK BOOM BAP 90,
+MICROBEAT 100), sixteen one-shot pads each, three zones of four takes rendered by the engine, the hat pairs
+choking, FRESH TAPE starters under SKINS (129 starters). A zone's takes are matched in loudness, CLUTTER's own
+level law: the first-take peak law left granular takes up to 10 dB apart. Every grid proved through saving,
+playback and the MPC 3 export (768 slices). No roll: the owner waived the gate. Open: MPC 2, hardware, presets and the
+picker. See [CLUTTER](CLUTTER.md) and the gates entry. The owner heard the four Kotlin kits on the listening page's version 8 (read back from the MPC 3 export) and
+answered "I approve the audition" (2026-11-14): `Clutter.MODEL_VERSION` 1 and `ClutterKits.VERSION` 1 are the
+approved baseline.
+
+### CLUTTER, round 3 (2026-11-14)
+
+Presets and the roster, the round the owner asked for after approving the audition: `ClutterPresets` is the four
+approved kits' sixty-four pads as patches (the pad's macros, struck full, take 0), named after their kit's tag
+(LOFI, STREET, BOOMBAP, MICRO), served by `Presets`; CLUTTER leaves `PatchTypes.ROSTERLESS`. A saved CLUTTER
+strike promotes with its velocity, take and model through the JSON constructor, as SCUFF's does. Open: the app
+picker, hardware playback, MPC 2. See [CLUTTER](CLUTTER.md).
+
+### CLUTTER, round 4 (2026-11-14)
+
+The engine picker: CLUTTER joins SYNTH's `Engine` after SCUFF, mirroring SCUFF's round 5 (SOOT's arms plus the
+native-factory path), so a kit preset loads whole with its take and model. `EngineCatalog` files it under DRUMS;
+88 picker engines. An on-device test in `NewEngineSynthScreenTest`; CI compiles and runs it. Open: hardware
+playback, MPC 2. See [CLUTTER](CLUTTER.md).

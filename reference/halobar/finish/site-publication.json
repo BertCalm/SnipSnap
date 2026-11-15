@@ -1,0 +1,20 @@
+{
+  "id": "appgdep_6af8c4a2145881918f27605dafdb41ef",
+  "project_id": "appgprj_6aeff45f943881919e9b885aa356bfa6",
+  "title": "HALOBAR Native Audition",
+  "version_id": "appgprj_6aeff45f943881919e9b885aa356bfa6~appgver_5a151c06c740819190a81dc1dc806da8",
+  "type": "publish",
+  "status": "succeeded",
+  "url": "https://halobar-native-audition.bertcalm.chatgpt.site",
+  "has_mcp": false,
+  "screenshot_asset_pointer": null,
+  "provider_deployment_id": "site---6aeff45f943881919e9b885aa356bfa6",
+  "failure_message": null,
+  "env_set_revision": 0,
+  "updated_at": "2026-11-14T20:29:31.845220+00:00",
+  "sourceCommit": "4ac7d9d4a270c2a75dcbe1a1498599eb3c3168db",
+  "reviewUrl": "https://halobar-native-audition.bertcalm.chatgpt.site/tubular-bells/performance/review/",
+  "audience": "owner-only",
+  "audioAndDownloadsUnchanged": true,
+  "browserQaExecuted": false
+}

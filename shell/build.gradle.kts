@@ -508,6 +508,15 @@ tasks.register<JavaExec>("generateTrefoilHeldMpc") {
     args(providers.gradleProperty("trefoilHeldMpcOutput").orNull ?: "${rootDir}/testkit/trefoil-held-mpc")
 }
 
+tasks.register<JavaExec>("generatePatioPerformance") {
+    group = "distribution"
+    description = "Build PATIO genre kits with velocity and round robin, native MPC 3 exports and playback auditions."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.PatioPerformanceGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "2g"
+}
+
 
 tasks.register<JavaExec>("generateHalobarPerformance") {
     group = "distribution"
@@ -618,6 +627,16 @@ tasks.register<JavaExec>("generateScuffKits") {
     args(providers.gradleProperty("scuffKitsOutput").orNull ?: "${rootDir}/testkit/scuff-kits")
 }
 
+tasks.register<JavaExec>("generateClutterKits") {
+    group = "distribution"
+    description = "Build the four CLUTTER genre kits, prove every velocity and round-robin grid through save, playback and MPC 3 export, and write the listening pack."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.ClutterKitGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "2g"
+    args(providers.gradleProperty("clutterKitsOutput").orNull ?: "${rootDir}/testkit/clutter-kits")
+}
+
 /** MURMUR's C2 repeats, V1 against opt-in V2, played from real saved banks by the saved-sample player. */
 tasks.register<JavaExec>("generateMurmurRoundRobinAudition") {
     group = "distribution"
@@ -637,4 +656,14 @@ tasks.register<JavaExec>("generateTimberKits") {
     workingDir = rootProject.projectDir
     maxHeapSize = "1g"
     args(providers.gradleProperty("timberOutput").orNull ?: "${rootDir}/testkit/timber-kits")
+}
+
+tasks.register<JavaExec>("generateSporeApprovedSnare") {
+    group = "distribution"
+    description = "Render and verify the approved snare's native, SFZ and MPC3 delivery."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.SporeSnareDelivery")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "1g"
+    args(providers.gradleProperty("sporeApprovedOutput").orNull ?: "${rootDir}/testkit/spore-approved-snare")
 }
