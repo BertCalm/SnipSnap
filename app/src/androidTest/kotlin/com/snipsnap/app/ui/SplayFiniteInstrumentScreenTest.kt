@@ -38,9 +38,9 @@ class SplayFiniteInstrumentScreenTest : ComposeScreenTest() {
         roots.forEach { it.deleteRecursively() }
     }
 
-    private fun source() = SplayFactoryPresets.all().first().copy(
+    private fun source() = SplayFactoryPresets.forVoice(SplayVoice.TONGUE).first().copy(
         name = "EDITED OLD TONGUE", model = 1, midi = 55, velocity = .37f, seed = Int.MIN_VALUE,
-        macros = SplayFactoryPresets.all().first().macros + ("CONTACT" to .29f))
+        macros = SplayFactoryPresets.forVoice(SplayVoice.TONGUE).first().macros + ("CONTACT" to .29f))
 
     private fun show(patch: SplayPatch): MutableMap<String, String> {
         val root = File(InstrumentationRegistry.getInstrumentation().targetContext.cacheDir,
@@ -94,10 +94,10 @@ class SplayFiniteInstrumentScreenTest : ComposeScreenTest() {
     }
 
     @Test fun eachAcceptedFactoryChoiceOpensFiniteInstrumentWithoutChangingItsOneVoiceRecipe() {
-        val factories = SplayFactoryPresets.all()
+        val factories = SplayFactoryPresets.forVoice(SplayVoice.TONGUE)
         val settings = show(factories.first())
         assertEquals(5, factories.size)
-        assertEquals(setOf(SplayVoice.TONGUE), factories.map { it.voice }.toSet())
+        assertEquals(10, SplayFactoryPresets.all().size)
         for (patch in factories) {
             press("PRESET ${patch.name}")
             waitFor("factory SPLAY recipe ${patch.name}") {
@@ -111,6 +111,28 @@ class SplayFiniteInstrumentScreenTest : ComposeScreenTest() {
             assertEquals(patch, SynthDrafts.read(settings).filterIsInstance<SplayPatch>().single())
         }
     }
+
+    /** Each kept body opens as its own SPLAY voice, with its kept setting as its preset, and makes finite keys. */
+    private fun keptBodyOpensFiniteInstrument(voice: SplayVoice) {
+        val patch = SplayFactoryPresets.forVoice(voice).single()
+        assertEquals(3, patch.model)
+        val settings = show(patch)
+        button("PRESET ${patch.name}").assertExists()
+        press("PRESET ${patch.name}")
+        waitFor("kept $voice recipe") { SynthDrafts.read(settings).filterIsInstance<SplayPatch>().singleOrNull() == patch }
+        button("MAKE INSTRUMENT").assertIsEnabled()
+        press("MAKE INSTRUMENT")
+        compose.onNodeWithText(SplayFinitePadMaker.instrumentNote(SplayFinitePadMaker.Spec(patch))).assertExists()
+        button("RELEASE").assertDoesNotExist()
+        cancelSheet()
+        assertEquals(patch, SynthDrafts.read(settings).filterIsInstance<SplayPatch>().single())
+    }
+
+    @Test fun keptWireOpensFiniteInstrument() = keptBodyOpensFiniteInstrument(SplayVoice.WIRE)
+    @Test fun keptRubOpensFiniteInstrument() = keptBodyOpensFiniteInstrument(SplayVoice.RUB)
+    @Test fun keptAirOpensFiniteInstrument() = keptBodyOpensFiniteInstrument(SplayVoice.AIR)
+    @Test fun keptBarOpensFiniteInstrument() = keptBodyOpensFiniteInstrument(SplayVoice.BAR)
+    @Test fun keptSkinOpensFiniteInstrument() = keptBodyOpensFiniteInstrument(SplayVoice.SKIN)
 
     @Test fun zeroExcitationExplainsUnavailableInstrumentAndKeepsTheSavedPerformance() {
         val patch = source().copy(velocity = 0f)

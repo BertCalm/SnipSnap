@@ -58,8 +58,11 @@ class SplayAcceptedBankTest {
             assertEquals(0f, entry.patch.macros.getValue("HOLD"))
         }
         assertEquals(SplayAcceptedBank.entries.map { it.patch },
-            Presets.all().filter { it.engine == SplayPatch.ENGINE },
-            "Only the five exact KEEP populations enter the factory roster")
+            Presets.all().filter { it.engine == SplayPatch.ENGINE && it.voiceName == SplayVoice.TONGUE.name },
+            "Only the five exact KEEP populations enter TONGUE's factory roster")
+        // The other SPLAY factory presets are the five kept bodies, one each (SplayBodyRegistrationTest).
+        assertEquals(SplayVoice.entries.filter { it.body != null }.map { it.name },
+            Presets.all().filter { it.engine == SplayPatch.ENGINE && it.voiceName != SplayVoice.TONGUE.name }.map { it.voiceName })
     }
 
     @Test fun `recovered raw and matched PCM replay every kept population without native normalization substitution`() {

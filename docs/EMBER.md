@@ -1,6 +1,8 @@
-# EMBER: design brief and round-0 audition
+# EMBER: design brief, round-0 audition and round-1 Kotlin port
 
-Status: **round 0e, a Python prototype (2026-11-14), heard 2026-11-15: "Much better".** The owner's listens so far:
+Status: **round 1, the Kotlin port (2026-11-15), not yet heard.** Round 0e's Python renders are the sound
+baseline: the owner heard them on 2026-11-15, said "Much better", then "Proceed". `Ember.kt` ports all 27 voices;
+the four kits are not on the shelf yet (round 2). The owner's listens so far:
 - "Cymbals need a lot of work. Sounds like hitting sheet metal." Round 0b rebuilt every cymbal and hat from
   measurements of real cymbals.
 - "Sweeps sound like hail hitting a roof." Round 0c rebuilt the brush sweep and the brush roll from
@@ -11,9 +13,12 @@ Status: **round 0e, a Python prototype (2026-11-14), heard 2026-11-15: "Much bet
 - On 2026-11-15 the owner heard rounds 0b to 0e (listening page version 12) and said "Much better". This
   records the direction improving. It is not yet an acceptance of the voices or the kits as a baseline.
 
-Both are below. Nothing else changed sound, and nothing else has been heard yet. No Kotlin exists. The engine
-stays in progress until every applicable owner gate has evidence (see "Gates" below and the gates entry in
-[ENGINE_ACCEPTANCE_GATES.md](ENGINE_ACCEPTANCE_GATES.md#ember-round-0-2026-11-14-python-prototype-not-heard)).
+- "Proceed" (2026-11-15): taken as round 0e kept as the sound, and the Kotlin round (round 1, below) built
+  against it.
+
+Each round is below. Nothing else changed sound, and nothing else has been heard yet. No one has listened to the
+Kotlin renders. The engine stays in progress until every applicable owner gate has evidence (see "Gates" below and the gates entry in
+[ENGINE_ACCEPTANCE_GATES.md](ENGINE_ACCEPTANCE_GATES.md#ember-round-1-kotlin-2026-11-15-not-heard-shelf-and-hardware-open)).
 
 Prototype: [`prototype/ember/`](../prototype/ember/) (`ember_proto.py` is the model, `kits.py` the four kits
 and their grooves, `measures.py` CLUTTER's house distance measures, `gen_audition.py` renders and measures,
@@ -29,6 +34,97 @@ Repository truth: read at `8742c5b8` (2026-11-14). APIs named here were grepped:
 `Soot.render(voice, macros, velocity, take, model)` / `Clutter.render(voice, macros, velocity, take)` as the
 drum-engine shape to copy. `EMBER` is a working name: the word is already a CIRCUIT preset ("EMBER PULSE"),
 an ALLOY preset ("Endless Ember") and a name in `shell/.../Names.kt`. It is not an engine name anywhere.
+
+## Round 1: the Kotlin port (2026-11-15)
+
+**What the owner said:** "Much better", then "Proceed". Round 0e is the sound the port is held to.
+
+**What was built.** `synth/.../Ember.kt` ports all 27 voices with every round-0e constant: the calf membrane, the
+threshold parts, the implements, the fitted cymbals, hats and brushes, the club, the chain and the voicing.
+`EmberDsp.kt` holds the stand-ins for the numpy and scipy calls the prototype makes. `EmberPatch` saves velocity,
+take (0 to 3) and `MODEL_VERSION` 1. The fits ship as numbers in `synth/src/main/resources/ember/` (`cymbals.json`,
+`brushes.json`, `club_tail.f32`, with `NOTICE.txt`); no recording ships. Registered in `Patches`, the two
+`Velocity` arms (a velocity re-strikes the voice) and `SynthRoot` (rootless, as the other drum engines);
+`PatchTypes.ROSTERLESS` until presets follow the kits; hand-built entries in `PatchesTest`, `PadRecipeTest` and
+`SynthRootTest`; a `DeterminismTest` canary through JSON; `EmberTest`. `./gradlew :synth:generateEmberAudition`
+writes every voice hard, soft and at its four takes; `prototype/ember/compare_kotlin.py` measures them against the
+Python renders.
+
+**The same arithmetic, checked:**
+- scipy's `butter` (low, high and band, orders 1 to 4) through its analog prototype and the bilinear transform,
+  matched against scipy's coefficients. The band-pass pairs its zeros into sections differently; it is the same
+  filter.
+- The way in, 44.1 to 176.4 kHz: scipy's `resample_poly(y, 4, 1)` itself, the same 81-tap Kaiser (beta 5)
+  low-pass run polyphase. Within 2e-15 of scipy on a test signal.
+- **The club's tail is the prototype's own draw**, not a new one. Close up, the tail carries most of a drum's low
+  end, and Kotlin's own draw put the rack tom's 250 Hz octave 2.8 dB under what the owner heard.
+  `prototype/ember/export_club.py` writes Python's tail at 44.1 kHz (39,690 samples, `club_tail.f32`) and checks
+  that it rebuilds the room exactly; Kotlin brings it back to 176.4 kHz.
+
+**What could not be the same arithmetic, disclosed:**
+- **Random draws.** Kotlin's `Random` (seeded by `Dsp.seedFor`) in place of numpy's generator, with Box-Muller
+  normals and Marsaglia-Tsang gammas. Every strike scatter, noise band, brush grain and loose part is another
+  realisation of the same law, so a Kotlin take is a new take of the voice, not a copy of a Python one. This
+  includes each cymbal's fixed doublet pairs. Most voices average that out over hundreds of modes; the bowed
+  cymbal does not (below).
+- **The way out.** The house `Tide.bandLimit` and `Dsp.decimate` in place of scipy's `resample_poly(y, 1, 4)`, as
+  every house engine does.
+- **The room convolution** uses the house single-precision FFT, where numpy works in double. It is covered by
+  the comparison below, not measured on its own.
+
+**Measured against the Python** (`compare_kotlin.py`, Python harness; distances are the house measure):
+- **No brightness bias.** Averaged over each voice's four takes, Kotlin's share of energy above 4 kHz is
+  0.10 dB under Python's across the 27 voices (median 0.30 dB under). The widest: the bowed cymbal 3.2 dB over,
+  the conga 1.7 dB and the brush ride 1.6 dB under.
+- **The drums are the same waveform:** correlation 0.978 to 0.996 on the kick, the four toms, the elbow tom and
+  the conga, 0.90 on the sticks. The rest are noise-driven or random-struck and correlate as two takes do.
+- **25 of 27 hard hits sit inside the spread of Python's own four takes.** The other two sit inside the spread
+  of 16 Python takes:
+  - **The bowed cymbal.** A narrow bow tone excites only a few modes, so where the doublets fall matters. Its
+    2 kHz band swings 6 dB from take to take in both models. Kotlin's nearest Python take is 2.45 dB away;
+    Python's 16 takes lie 1.26 to 6.26 dB apart.
+  - **The swell.** Its first 150 ms is almost silent, so the 16-bit Kotlin clips' quantisation noise filled the
+    top bands. With the Python renders quantised the same way, Kotlin's nearest take is 4.06 dB away and its
+    median 6.16 dB. Python's own median is 5.80 dB. CLUTTER's round 1 found the same effect.
+- **Velocity and takes in Kotlin** (the comparison script): soft against hard at least 2.12 dB (the bow, whose
+  first 150 ms is its swell), the closest two takes of any voice 1.57 dB (the rack tom). Python's own: 1.92 and
+  1.38 dB on the kits' 64 pads.
+
+**`EmberTest`** holds the probes on all 27 voices:
+- finite, peak-matched, DC under 0.005, exactly `secondsFor` long (the sweep's length follows SPEED);
+- every take replays byte for byte, and the closest two of four takes are at least 1 dB apart;
+- soft (0.35) against hard (1.0) at least 1.8 dB in shape at matched level (FIRED BRONZE's bar);
+- every control moves every voice by at least 1 dB over the whole render, and an unknown control, a NaN control
+  or a NaN velocity changes nothing. The foot hat's BUZZ has its own bar of 0.5 dB: the chick is short and its
+  plates touch lightly. It measured 0.6 to 1.0 dB over four Python takes too.
+- the patch round-trips through JSON and refuses a take, velocity or model it cannot render; every voice files as
+  its kit role (past 1.5 s, PERC); no voice carries a maker's name.
+
+The design's claims as tests:
+- BUZZ 0 takes the snares off (no wires at all), and the cymbals and hats start at BUZZ 0, as recorded.
+- WARMTH 0 is an exact bypass (the chain returns its input).
+- The percussion gate: the swell rises at least 20 dB from its first half second to 2 to 2.5 s; the press roll
+  and the brush roll grow and run past 2.5 s.
+- The club is built once per DISTANCE, and only four rooms and their spectra are kept. A room is 1.3 MB and a
+  spectrum 2 to 8 MB, so a DISTANCE sweep must not keep every value it passed.
+
+**Render time** (Kotlin, this machine, JIT warmed): median 191 ms a hit across the 27 voices (two
+warm-up renders, then the middle of three). The hats 68 to 73 ms, the drums 88 to 306 ms (the kick slowest), the
+stick-struck cymbals 195 to 277 ms, the sizzle and the bow about 435 ms, the brush roll 524 ms and the swell 914 ms.
+BREAKER on the same machine: ride 91 ms, crash 181 ms, riser 218 ms. So EMBER's hits run one to four times
+BREAKER's, and its long moving voices are the slowest pads it has. Two changes made the port this fast. Neither
+moved the comparison with Python: every number above read the same, to 0.1 dB, before and after them.
+- **The way in** had been the house resampler, 371 of the ride's 665 ms. scipy's own polyphase filter is both
+  the prototype's arithmetic and about a hundred times faster here (4 ms).
+- **Strokes accumulate** into one force buffer in the rolls and the swell, instead of a full-length buffer per
+  stroke, and dB curves go through `exp` rather than `pow` (the press roll 716 to 389 ms before the resampler change).
+What is left is the fitted cymbals' 800 decaying sines (about 120 ms on the ride), their residual band noise
+(about 80 ms) and the club's convolution at 176.4 kHz (about 65 ms). Each could be faster only by sounding
+slightly different (the room at 44.1 kHz, pruning quiet modes), so each waits for its own listen.
+
+Not heard: no one has listened to the Kotlin renders. The round-1 listening page sets every voice's Kotlin hit
+beside the Python hit, with its soft hit and four takes: <https://claude.ai/artifact/21zU3g4oFcDfH8GoV8gKuz>
+(private to the owner; published 2026-11-15).
 
 ## Round 0e: every kit brighter, by ear (2026-11-14)
 
@@ -393,19 +489,19 @@ Between kits, the same pad slot:
 |---|---|---|
 | Melodic, keygroup, chord tool | not applicable | a drum engine |
 | Articulation (HOLD, STRUM) | not applicable | finite hits; no picked or thumbed strings |
-| Percussion: roll or riser | authored, not heard | press roll, brush roll, snare roll and mallet swell on A15/A16 of every kit, rendered in Python |
-| Drums: several genre kits on the shelf | authored, not on the shelf | three genre kits beside the EMBER kit, measured in Python; no Kotlin |
-| Velocity and round robin: rendering | measured in Python | see "Measured" |
-| Velocity and round robin: saving, playback, export | open | no Kotlin; the page's pad grid is a browser stand-in |
-| Sound character | open | not heard |
+| Percussion: roll or riser | authored, not heard | press roll, brush roll, snare roll and mallet swell on A15/A16 of every kit, rendered in Python; in Kotlin the swell's rise and the rolls' growth are tests (`EmberTest`) |
+| Drums: several genre kits on the shelf | authored, not on the shelf | three genre kits beside the EMBER kit, measured in Python; the shelf is round 2 |
+| Velocity and round robin: rendering | verified in Kotlin by test (round 1) | `EmberTest`, `DeterminismTest`; see "Round 1" |
+| Velocity and round robin: saving, playback, export | open | the kits are not on the shelf yet (round 2); the page's pad grid is a browser stand-in |
+| The Kotlin port renders round 0e | measured (Python harness against Kotlin clips) | `compare_kotlin.py`: no brightness bias; 25 of 27 within Python's own four takes, the other two within 16 |
+| Sound character | open | round 0e heard as "Much better"; the Kotlin renders not heard |
 
 ## Render budget
 
-Python medians are in "Measured". The cymbal responses (three bands × four mode groups) are cached by kind,
-TUNE and DAMP, so a take or a velocity is a re-mix and one convolution, not a rebuild; the room is cached by
-DISTANCE. The first render of a cymbal at a new TUNE or DAMP pays the build (the slowest render in the run).
-The Kotlin port should keep both caches, keyed by the quantised control value, and build modes with
-`Modes.ring` per mode group rather than one sine per sample per mode.
+Kotlin, round 1 (see "Round 1" for the numbers): the median hit takes 191 ms warmed, the swell 0.9 s. The club is
+cached for the four most recent DISTANCE values, with its spectrum per FFT size; the fits and the club's tail load
+once. The fitted modes are built per hit with a rotating phasor (no `sin` per sample), because every take re-strikes
+every mode (a fresh phase, detune and level). The Python medians are in "Measured".
 
 ## Sonic risks (where this would sound bad)
 
@@ -427,11 +523,10 @@ The Kotlin port should keep both caches, keyed by the quantised control value, a
 
 ## Next rounds
 
-- **Round 0f:** the owner's listen to rounds 0b to 0e. Which voices convince, which kits are the right four (a Latin jazz kit is
-  the obvious swap for FREE if rebellious should mean something else), the WARMTH and DISTANCE defaults.
-- **Round 1:** `Ember.kt`, `EmberPatch.kt`, the registration rows (`Patches`, `Velocity`, the roster), the
-  house probes, a `DeterminismTest` canary, render-time tests; built from the picks, with Kotlin renders
-  compared to the accepted Python renders.
+- **Round 0f:** the owner heard rounds 0b to 0e ("Much better", then "Proceed", 2026-11-15). Still open from it:
+  which voices convince, whether these are the right four kits (a Latin jazz kit is the obvious swap for FREE if
+  rebellious should mean something else), the WARMTH and DISTANCE defaults.
+- **Round 1:** done (above). The Kotlin renders wait for the owner's ear.
 - **Round 2:** the four kits on the shelf through the shared robin, `EmberKitTest` (saving, playback through
   `PadHit.resolve`, MPC 3 export read-back), the picker entry with its on-device test.
 - **Round 3:** the owner's phone and MPC 3 checks.

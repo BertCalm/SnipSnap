@@ -406,7 +406,7 @@ object SynthCommand {
                 LatticePatch.ENGINE -> Lattice.macrosFor(LatticeVoice.valueOf(voice))
                 OrigamiPatch.ENGINE -> Origami.macrosFor(OrigamiVoice.valueOf(voice))
                 CausticPatch.ENGINE -> CausticInstrument.macrosFor(CausticVoice.valueOf(voice))
-                SplayPatch.ENGINE -> Splay.macrosFor(SplayVoice.valueOf(voice), (savedPatch as? SplayPatch)?.model ?: Splay.MODEL_VERSION)
+                SplayPatch.ENGINE -> SplayVoice.valueOf(voice).let { v -> Splay.macrosFor(v, (savedPatch as? SplayPatch)?.takeIf { it.voice == v }?.model ?: Splay.defaultModel(v)) }
                 "PLUCK" -> if (voice == "UPRIGHT") Pluck.macrosFor(PluckVoice.UPRIGHT)
                     else throw CliError("--macros for PLUCK requires UPRIGHT")
                 ObbligatoPatch.ENGINE -> Obbligato.macrosFor()
@@ -578,13 +578,16 @@ object SynthCommand {
                 OhmPatch.ENGINE -> Ohm.MODEL_VERSION
                 MeridianPatch.ENGINE -> Meridian.MODEL_VERSION
                 ObbligatoPatch.ENGINE -> Obbligato.MAX_MODEL
-                SplayPatch.ENGINE -> Splay.MODEL_VERSION
+                SplayPatch.ENGINE -> Splay.BODY_MODEL
                 else -> throw CliError("--model is only supported by TEMPEST, OBBLIGATO, MERIDIAN, RIME, OSPREY, CREASE, TIDAL, CAUSTIC, OHM, FERRY and SPLAY, got $engine")
             }
             val selected = raw.toIntOrNull()?.takeIf { it in 1..lastModel }
                 ?: throw CliError("--model wants 1..$lastModel, got '$raw'")
             if (engine == TempestPatch.ENGINE && !Tempest.supports(TempestVoice.valueOf(voice), selected))
                 throw CliError("TEMPEST $voice requires model 3; got $selected")
+            if (engine == SplayPatch.ENGINE && !Splay.supports(SplayVoice.valueOf(voice), selected))
+                throw CliError(if (voice == "TONGUE") "SPLAY TONGUE plays models 1 and 2; got $selected"
+                    else "SPLAY $voice requires model ${Splay.BODY_MODEL}; got $selected")
             selected
         }
         val wantsOhmReplyRing = engine == OhmPatch.ENGINE &&
