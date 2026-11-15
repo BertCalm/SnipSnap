@@ -102,3 +102,14 @@ page's pad grid slices), each kit's groove, the CLUTTER kit's velocity ladders a
 control on every object, with their measurements. `compare_kotlin.py KOTLIN_DIR` measures the Kotlin port
 (`./gradlew :synth:generateClutterAudition`) against these renders object by object. With the shell generator's pack (`./gradlew :shell:generateClutterKits`) encoded as MP3 under `OUT/shelf/`, the
 page also carries the four kits on the shelf. Needs numpy and scipy. See [`../docs/CLUTTER.md`](../docs/CLUTTER.md).
+
+## calabash/ — CALABASH round-0 audition (Python harness)
+
+Drum kits for Afrobeat, Afrobeats, Mbalax and Afro-Cuban jazz, approved by ear on 2026-11-15: 36 voices, the hand
+drums, bells, claves, shaker and claps fitted to CC0 recordings (`fit_calabash.py`, `hands.json`, `NOTICE.txt`),
+the shekere, talking drums, sabar family and timbales physical, and four sixteen-pad kits (`kits.py`).
+`python3 gen_audition.py OUT && python3 build_page.py OUT` renders every pad at three zones and four takes, the
+grooves, the strokes, every voice and every control, and writes the listening page. `export_fixed.py` writes the
+three draws the Kotlin port takes from the prototype (the room's noise, the cymbals' pairs, the crowd);
+`compare_kotlin.py KOTLIN_DIR` measures the port (`./gradlew :synth:generateCalabashAudition`) against these renders
+pad by pad. Needs numpy, scipy and ffmpeg. See [`../docs/CALABASH.md`](../docs/CALABASH.md).

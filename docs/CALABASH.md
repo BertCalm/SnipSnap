@@ -5,8 +5,9 @@ for on 2026-11-15: Afrobeat, Afrobeats, Mbalax and Afro-Cuban jazz, "distinct, v
 gates. The owner chose four kits (Afrobeat and Afrobeats apart) and a round-0 prototype before any Kotlin. On
 2026-11-15 the owner heard the listening page and wrote "Sounds great"; asked whether that was a listen to the page,
 they answered "I listened: approve all": all four kits and every voice. Round 0 (`prototype/calabash` at `967f53f7f`)
-is the accepted baseline the Kotlin port is judged against. No Kotlin exists yet. The engine stays in progress until every applicable owner gate has evidence (see "Gates" below and the
-gates entry in [ENGINE_ACCEPTANCE_GATES.md](ENGINE_ACCEPTANCE_GATES.md#calabash-round-0-2026-11-15-python-prototype-heard-and-approved)).
+is the accepted baseline the Kotlin port is judged against. Round 1 (2026-11-15) is that port, `Calabash.kt`, measured
+against the prototype pad by pad (below); the Kotlin has not been heard. The engine stays in progress until every applicable owner gate has evidence (see "Gates" below and the
+gates entry in [ENGINE_ACCEPTANCE_GATES.md](ENGINE_ACCEPTANCE_GATES.md#calabash-round-0-heard-and-approved-2026-11-15-round-1-kotlin-port-not-heard)).
 
 Prototype: [`prototype/calabash/`](../prototype/calabash/) (`calabash_proto.py` is the model, `fitted.py` the fitted
 voices, `kits.py` the four kits and their grooves, `fit_calabash.py` and `hands.json` the fit to CC0 recordings,
@@ -25,6 +26,45 @@ drum-engine shape to copy, `Velocity.macroSpecsFor` / `touchedRender`, `PatchTyp
 BREAKER's fitted cymbals at `synth/src/main/resources/breaker/cymbals.json`. `CALABASH` is a working name (the gourd
 under the shekere and under many West African resonators); it is not an engine, voice or preset name anywhere in the
 repository.
+
+## Round 1: the Kotlin port (2026-11-15, not heard)
+
+The approved prototype in Kotlin, every constant its own (read at 967f53f7f): `Calabash.kt` (the 36 voices, the room,
+the era chain, the output stage), `CalabashFits.kt` (the fitted voices, from `/calabash/hands.json`, EMBER's hats
+from `/calabash/hats.json`, BREAKER's approved ride and crash from `/breaker/cymbals.json`), `CalabashDsp.kt` (the
+scipy and numpy operations the prototype is made of), `CalabashPatch.kt` (voice, macros, velocity, take, model),
+`CalabashKits.kt` (the four kits' sixty-four pads as data; on the shelf at round 2). Registered in `Patches`,
+`Velocity` (both arms: a soft hit re-strikes), `SynthRoot` (rootless, as every drum engine is) and the test rosters;
+rosterless until its kits are on the shelf and filed as its factory bank, as CLUTTER was.
+
+**What cannot be the same arithmetic, and what is.** Every per-take draw comes from Kotlin's generator, not numpy's,
+so a Kotlin hit is another take of the approved pad, never the same samples (as CLUTTER's and SCUFF's ports). Three
+draws are made once, not per take, and colour every hit of a voice or kit alike: the room's noise, the cymbals'
+beating pairs, the snapping crowd. The first A/B found them: with each language drawing its own room, a Kotlin hit sat
+about 5 dB from a Python hit where two Python hits sat 3.3 dB apart, on every pad. The two rooms differed by 1.1 dB
+rms a third octave (up to 3.9 dB in one band). So the port now uses the prototype's own values, written by
+`prototype/calabash/export_fixed.py`: `/calabash/room_noise.f32` (502 740 standard normals, the room's whole stream,
+2 MB) and `/calabash/fixed.json`. The Kotlin room matches the prototype's to 4e-10 of its peak. The filters are scipy's
+designs exactly and the 4x resampler is `resample_poly`'s (`CalabashDspTest` holds them to scipy's numbers); the
+membrane matched the prototype's to 1e-5 of its peak on a fixed strike. The output decimation is the house's
+(`Tide.bandLimit`, `Dsp.decimate`), which matched scipy's `resample_poly(1, 4)` to 0.02 % rms on a test sweep.
+
+**Measured against the prototype** (`prototype/calabash/compare_kotlin.py`, all 64 kit pads, hard, 16 seeded hits a
+side through `Calabash.renderSeeded`; the house distance, the whole render for the rolls and cymbals):
+
+| | Result |
+|---|---|
+| A Kotlin hit against a Python hit, beside two Python hits and two Kotlin hits (medians) | across minus within: median -0.02 dB over the 64 pads, largest 0.76 dB (the Afrobeats talking call, whose own takes sit 11 to 13 dB apart) |
+| Tone: the 16 hits' mean third-octave spectrum, Kotlin minus Python, bands within 30 dB of the loudest | largest 4.2 dB (the Afrobeat kick at 806 Hz, where two halves of the Python hits differ by 3.7); no pad more than 1 dB beyond what its Python hits move by chance |
+| Velocity in Kotlin, soft against hard, take 0 | at least 1.84 dB (the talking call; the prototype's least was the same pad, 1.84) |
+| Round robin in Kotlin, closest two of four takes in any zone | at least 1.35 dB (the Afrobeat rimshot; the prototype's least was 1.83) |
+
+The 840 kit and voice clips render in 1 min 40 s on four threads (one machine): a one-shot's median is 180 ms, the
+rolls 1.6 to 4.2 s, the ride and crash about 0.4 s. That is over the house's "tens of milliseconds"; a pad caches its
+renders, and the kits are built once. Every hit is deterministic and survives a JSON round trip (`DeterminismTest`);
+`CalabashTest` holds the probe set (finite, peak, DC, length, every control moves, unknown and non-finite values
+change nothing, velocity re-strikes, four distinct takes, STROKE switches the event, the talking drum rises as it is
+squeezed, AGE 0 is a bypass, the fixed draws are the prototype's, the kits are the approved ones).
 
 ## What it is
 
@@ -293,9 +333,7 @@ rolls and cymbals belong in the pad's render cache, keyed by their macros, as BR
 ## Next rounds
 
 - **Round 0: approved (2026-11-15).** No round 0b; the baseline stands as rendered.
-- **Round 1:** Kotlin. `Calabash.kt` in the drum-engine shape (`render(voice, macros, velocity, take, model)`, as
-  `Soot.render`), `CalabashPatch.kt`, a `Patches` arm, two `Velocity` arms, `hands.json` as a synth resource beside
-  `breaker/cymbals.json`, a `DeterminismTest` canary, `CalabashTest` with the probe set.
+- **Round 1: done (2026-11-15), not heard.** The Kotlin port, above.
 - **Round 2:** the kits on the shelf (`StarterKits.ALL`, the SKINS group in `StarterShelf.GROUPS`), velocity and
   round robin through saving, `PadHit.resolve` playback and MPC 3 export, read back. MPC 2 keeps each zone's first take
   (the owner's format limit).

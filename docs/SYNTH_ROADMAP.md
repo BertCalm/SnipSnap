@@ -3677,3 +3677,14 @@ playback, MPC 2. See [CLUTTER](CLUTTER.md).
 ### DRUMLINE native battery
 
 The native battery retains the preferred cymbal mechanisms and independent player sections. Model 2 adds body to basses/tenors, a separate rim clack and snare snap; saved model-1 recipes remain replayable. FIELD and STREET CADENCE have different source tuning, damping, section sizes and scored articulations, each a 3 × 3 velocity/take grid with editable versioned recipes. Implementation and gate evidence: [DRUMLINE](DRUMLINE.md). Native revision 4 was accepted on 2026-11-15; its 32 FIELD/STREET pad recipes are factory presets pinned to the heard renderer. Phone/MPC hardware, render budget and remaining numerical coverage stay open.
+
+### CALABASH, round 1 (2026-11-15)
+
+Drum kits for Afrobeat, Afrobeats, Mbalax and Afro-Cuban jazz, ported from the round-0 Python prototype the owner
+approved on 2026-11-15 ("Sounds great"; "I listened: approve all") to `Calabash.kt`: 36 voices, congas, bongos, bells,
+claves, shaker and claps resynthesized from CC0 recordings (VCSL), the shekere, talking drums, sabar family and
+timbales physical, STROKE switching the event, ROOM and AGE on every voice. `CalabashPatch` with velocity, take and
+model, rosterless (no presets yet), the four kits as data (`CalabashKits`). Measured against the Python with 16
+seeded hits a pad: a Kotlin hit is another take of the approved pad on all 64 pads (across minus within, median
+-0.02 dB); the room's noise, the cymbals' pairs and the crowd are the prototype's own draws. Not heard in Kotlin. See
+[CALABASH](CALABASH.md) and the gates entry. The four kits go on the shelf at round 2.

@@ -71,6 +71,7 @@ class PadRecipeTest {
         GyrePatch("Drawn Test", GyreVoice.DRAWN, mapOf("TOUCH" to 0.6f, "BODY" to 0.7f)),
         ScuffPatch("Rim Test", ScuffVoice.RIM, mapOf("BITE" to 0.4f), velocity = 0.7f, take = 2),
         ClutterPatch("Pot Test", ClutterVoice.POT, mapOf("RATTLE" to 0.8f), velocity = 0.7f, take = 2),
+        CalabashPatch("Slap Test", CalabashVoice.CONGA, mapOf("STROKE" to 1f), velocity = 0.7f, take = 2),
         MeridianPatch("Swing Test", MeridianVoice.SWEEP, mapOf("MEMORY" to .6f), midi = 57, velocity = .6f, seedContext = 41),
         MagnetPatch("Jangle Test", MagnetVoice.JANGLE, mapOf("MUTE" to 0.4f)),
         AerostatPatch("Float Test", AerostatVoice.FLOAT, mapOf("STRIKE" to 0.7f)),

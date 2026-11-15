@@ -16,6 +16,8 @@ python3 prototype/calabash/build_page.py OUT             # OUT/site/index.html a
 - `fit_calabash.py`, `hands.json`, `NOTICE.txt`: the hand drums, bells, claves, shaker and claps fitted to CC0
   recordings (VCSL). Only the fitted numbers are here; NOTICE.txt lists the 52 files and their sha256.
 - `check_fit.py`: each fit against its recording and a real second take.
+- `export_fixed.py`: writes the three draws the Kotlin port takes from this prototype (`synth/src/main/resources/calabash/`).
+- `compare_kotlin.py`: the Kotlin port against these renders, pad by pad (round 1).
 - To put each fitted voice beside its recording on the page, decode the files in NOTICE.txt to mono 44.1 kHz float
   WAV and run the generator with `CALABASH_REF_WAVS=<dir>`.
 
