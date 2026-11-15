@@ -16,7 +16,7 @@ cp prototype/cuttings/index.html prototype/cuttings/app.js /tmp/cuttings-r3/
 node prototype/cuttings/check_player.mjs /tmp/cuttings-r3
 ```
 
-Serve the generated directory using the environment's supported static preview infrastructure. The page needs HTTP for its manifest and audio fetches. The download link expects a `cuttings-r2.zip` containing `audio/`, `manifest.json` and `report.json`; package those files when distributing the page.
+Serve the generated directory using the environment's supported static preview infrastructure. The page needs HTTP for its manifest and audio fetches. Download links expect `cuttings-r3-hits.zip` and `cuttings-r3-phrases.zip`. Each contains its selected `audio/` files, a manifest filtered to those files, and the full study report; package those files when distributing the page.
 
 ## Evidence and limits
 
