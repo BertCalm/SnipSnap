@@ -25,8 +25,8 @@ import java.util.concurrent.CancellationException
  * Native finite SPLAY notes as source-bound, polyphonic keygroups.
  * The complete authored performance survives at its saved MIDI root; other roots
  * render the same finite patch at their explicit MIDI note. The DSP/model/defaults
- * are unchanged. Five kept settings remain ONE TONGUE voice; HOLD and additional
- * distinct voices remain separate work.
+ * are unchanged. Five kept settings remain ONE TONGUE voice; the five model-3 bodies
+ * (WIRE, RUB, AIR, BAR, SKIN) build the same finite keys. HOLD remains separate work.
  */
 object SplayFiniteKeygroupMaker {
     val TOUCHES = listOf(.30f, .65f, 1f)
@@ -39,7 +39,7 @@ object SplayFiniteKeygroupMaker {
     }
 
     fun supports(patch: SplayPatch): Boolean = patch.velocity > 0f &&
-        ((patch.macros["HOLD"] ?: 0f) == 0f && patch.model in 1..2) &&
+        ((patch.macros["HOLD"] ?: 0f) == 0f && Splay.supports(patch.voice, patch.model)) &&
         patch.midi in Splay.MIDI_MIN..Splay.MIDI_MAX
 
     data class Spec(
@@ -49,8 +49,8 @@ object SplayFiniteKeygroupMaker {
         val releaseSeconds: Float = .35f,
     ) {
         init {
-            require(((patch.macros["HOLD"] ?: 0f) == 0f && patch.model in 1..2)) {
-                "SPLAY finite keygroups require saved models 1/2 and HOLD 0; sustain remains separate"
+            require((patch.macros["HOLD"] ?: 0f) == 0f && Splay.supports(patch.voice, patch.model)) {
+                "SPLAY finite keygroups require a saved model the voice plays and HOLD 0; sustain remains separate"
             }
             require(patch.velocity > 0f) { "SPLAY keygroups need a nonzero authored excitation" }
             require(lowMidi in Splay.MIDI_MIN..Splay.MIDI_MAX && highMidi in lowMidi..Splay.MIDI_MAX)
