@@ -2,7 +2,7 @@
 
 Version 1.0 · 2026-11-14
 
-Status: built through round 4 (engine, three kits, presets in the factory bank). The Kotlin kits were heard on 2026-11-15 (see the ledger); the presets were not heard one by one and no hardware has played anything. This section's original text, written before the Kotlin existed, follows.
+Status: built through round 4 (engine, three kits, presets in the factory bank). The Kotlin kits were heard on 2026-11-15 (see the ledger); a second listen the same day covered the 21 presets and the kits' soft and medium zones, and no hardware has played anything. This section's original text, written before the Kotlin existed, follows.
 
 Repository truth: read on `origin/claude/mobile-mpc-drum-sampler-t58x74` at `23cde0d1c`. APIs grepped there: `Dsp.seedFor`, `Dsp.Noise`, `Tide.bandLimit`, `Dsp.decimate`, `Dsp.normalize`, `Dsp.fadeTail`, `Scuff.takeFor`, `ScuffPatch`, `ArrangedPad.velocityTakes`, `StarterKits.Starter`, `StarterShelf.GROUPS`, `Velocity.macroSpecsFor`, `Velocity.touchedRender`, `PatchTypes.ROSTERLESS`, `SynthRoot`. SCUFF (`Scuff.kt`, `ScuffPatch.kt`, `ScuffKits.kt`) is the template for every surface this spec does not describe.
 
@@ -203,7 +203,8 @@ Later rounds: `HiccupKits.kt`, `StarterKits.ALL` entries, `StarterShelf` SKINS g
 | Kit characters, all constants | proposed, "shape" | none |
 | The drum classifier files ratcheted hits correctly | not verified | needs the Kotlin `Classifier` |
 | Any of it sounds good | heard in part (2026-11-15) | The owner listened to an audition page of the Kotlin engine (model 2, kit 2): a four-bar groove from each of the three kits, every hit pad A01 to A14 of each kit at the hardest velocity zone, each kit's roll and riser, and the four round-robin takes of SUGAR's Pop Snare. Verdict, verbatim: "sounds check passes". |
-| The 21 presets sound good | not heard | Not auditioned one by one. Filed in the factory bank after the kit listen (round 4). |
+| The 21 presets sound good | heard (2026-11-15) | Filed in the factory bank after the kit listen (round 4), then heard in a second listen the same day: all 21, each played twice at velocity 1, take 0. Verdict, verbatim: "Everything sounds good". |
+| The softer velocity zones sound good | heard in part (2026-11-15) | The second listen played every hit pad A01 to A14 of each kit soft, medium and hard (velocities .30, .65, 1), first take of each zone, at the same peak level as saved. Verdict, verbatim: "Everything sounds good". The second to fourth takes of those zones were not heard. |
 | Hardware (phone, MPC) playback | not verified | No device has played the engine or the kits. |
 
 ## 17. Why it is built this way
@@ -319,10 +320,10 @@ Measured (`HiccupTest`, `HiccupKitsTest`):
 - Smallest take-against-take distance in a zone .652 (was .602); smallest soft-against-hard distance .205 (was .307); floors .005 and .05 unchanged.
 - Total repeats at FAULT .8, CHOP 0 to 1 in quarters: KICK 2, 14, 89, 379, 378. The count is no longer strictly monotone in CHOP (the budget jumps by an octave with the unit); `repeat count at fixed FAULT rises as CHOP rises` now allows a fall of up to 15% between steps (worst measured: TOM 381 to 352) and still asserts the last count exceeds the first.
 
-Not verified at round 3: any sound. Nobody had yet heard the Kotlin output. The 2026-11-15 listen (see the ledger) included a four-bar groove from each kit and the verdict "sounds check passes"; it was not a test of the earlier "incoherent" complaint against a recorded baseline, and the presets and hardware remain unheard.
+Not verified at round 3: any sound. Nobody had yet heard the Kotlin output. The 2026-11-15 listen (see the ledger) included a four-bar groove from each kit and the verdict "sounds check passes"; it was not a test of the earlier "incoherent" complaint against a recorded baseline, and the presets and hardware were unheard at that point (the presets were heard later the same day, see round 4 as built).
 
 ## Round 4 as built, 2026-11-15
 
-The owner listened to an audition page of the Kotlin engine (model 2, kit 2): a four-bar groove from each of the three kits, every hit pad A01 to A14 of each kit at the hardest velocity zone, each kit's roll and riser, and the four round-robin takes of SUGAR's Pop Snare. Verdict, verbatim: "sounds check passes". The 21 presets were not auditioned one by one. Hardware playback is unverified.
+The owner listened to an audition page of the Kotlin engine (model 2, kit 2): a four-bar groove from each of the three kits, every hit pad A01 to A14 of each kit at the hardest velocity zone, each kit's roll and riser, and the four round-robin takes of SUGAR's Pop Snare. Verdict, verbatim: "sounds check passes". The 21 presets were not on that page. A second audition page the same day (model 2, kit 2) held all 21 presets, each played twice at velocity 1, take 0 (the picker's render), and, for each kit, every hit pad A01 to A14 struck soft, medium and hard (velocities .30, .65, 1), first take of each zone, at the same peak level as saved. Verdict, verbatim: "Everything sounds good". Not covered by either listen: the second to fourth takes of the soft and medium zones, and any hardware. The picker's on-device test passed in CI's emulator job on PR #1143 on 2026-11-15. Hardware playback is unverified.
 
 Done: `Presets.all()` and `Presets.forVoice` serve `HiccupPresets`; HICCUP left `PatchTypes.PROTOTYPES` (SCUFF's pattern); a saved strike promotes through `HiccupPatch.fromJsonText` so velocity, take and model survive. The "shape" constants were not changed.

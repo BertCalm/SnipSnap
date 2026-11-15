@@ -9,10 +9,10 @@ import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 
 /**
- * HICCUP's authored presets, filed in the factory bank after the owner's listen of 2026-11-15. That listen
- * covered the three kits, not these presets one by one. SCUFF's preset contracts that apply to authored
- * settings: sanity, determinism, round trip, names, blocklist, distinctness. Nothing here claims a preset
- * sounds good.
+ * HICCUP's authored presets, filed in the factory bank after the owner's first listen of 2026-11-15, which
+ * covered the three kits. A second listen that day covered these presets one by one. SCUFF's preset
+ * contracts that apply to authored settings: sanity, determinism, round trip, names, blocklist,
+ * distinctness. Nothing here claims a preset sounds good.
  */
 class HiccupPresetsTest {
     private val bank = HiccupPresets.all()

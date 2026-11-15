@@ -3745,6 +3745,10 @@ listened to an audition page of the Kotlin engine (model 2, kit 2): a four-bar g
 every hit pad A01 to A14 of each kit at the hardest velocity zone, each kit's roll and riser, and the four
 round-robin takes of SUGAR's Pop Snare. The verdict, verbatim: "sounds check passes". Round 4: the 21 presets were
 filed in the factory bank through `Presets` and HICCUP left `PatchTypes.PROTOTYPES`, as SCUFF's presets were after its
-listen. The presets were not auditioned one by one. Open: hardware (phone and MPC) playback, MPC 2's one take per
-zone, the picker's on-device test (written, not run), and a listen to the presets individually.
+listen. The same day the owner listened to a second audition page (model 2, kit 2): all 21 presets, each played twice
+at velocity 1, take 0, and, for each kit, every hit pad A01 to A14 struck soft, medium and hard (velocities .30, .65,
+1), first take of each zone, at the same peak level as saved. The verdict, verbatim: "Everything sounds good". The
+picker's on-device test passed in CI's emulator job on PR #1143 on 2026-11-15. Open: hardware (phone and MPC)
+playback, which only the owner's devices can close, MPC 2's one take per zone, and the second to fourth takes of the
+soft and medium zones, which no listen covered.
 See [HICCUP](HICCUP.md) and the gates entry.

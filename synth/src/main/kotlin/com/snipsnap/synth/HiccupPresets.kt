@@ -1,11 +1,10 @@
 package com.snipsnap.synth
 
 /**
- * Provisional references, kept out of [Presets] while HICCUP is a prototype (`PatchTypes.PROTOTYPES`).
- * The settings are authored from the design spec's macro contract, not picked by ear: nobody has heard the
- * engine, so the owner's listen decides which of these stay. Twenty-one hits, at least two on every voice.
- * Each is [Hiccup.defaults] with the six macros set, struck full at take 0, the plain render the picker
- * also plays. Names are mixed case, as SOOT's are.
+ * The settings are authored from the design spec's macro contract, not picked by ear, and filed in the
+ * factory bank through [Presets]. The owner heard them one by one on 2026-11-15 ("Everything sounds good").
+ * Twenty-one hits, at least two on every voice. Each is [Hiccup.defaults] with the six macros set, struck
+ * full at take 0, the plain render the picker also plays. Names are mixed case, as SOOT's are.
  */
 object HiccupPresets {
     /** Paste complete UserPresets roster lines here; the authored hits stay fixed. */
