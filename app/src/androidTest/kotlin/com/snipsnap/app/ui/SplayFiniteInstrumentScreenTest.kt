@@ -38,9 +38,9 @@ class SplayFiniteInstrumentScreenTest : ComposeScreenTest() {
         roots.forEach { it.deleteRecursively() }
     }
 
-    private fun source() = SplayFactoryPresets.all().first().copy(
+    private fun source() = SplayFactoryPresets.forVoice(SplayVoice.TONGUE).first().copy(
         name = "EDITED OLD TONGUE", model = 1, midi = 55, velocity = .37f, seed = Int.MIN_VALUE,
-        macros = SplayFactoryPresets.all().first().macros + ("CONTACT" to .29f))
+        macros = SplayFactoryPresets.forVoice(SplayVoice.TONGUE).first().macros + ("CONTACT" to .29f))
 
     private fun show(patch: SplayPatch): MutableMap<String, String> {
         val root = File(InstrumentationRegistry.getInstrumentation().targetContext.cacheDir,
