@@ -68,8 +68,10 @@ The final scoped validation completed with exit 0 (`BUILD SUCCESSFUL`, 2m 41s): 
 - Separate duration pads keep the full roll/riser performance, velocity layers and round robins intact through export.
 - Hardware evidence stays separate because correct sample files and metadata alone cannot prove an MPC selects the intended take.
 
-## Groove compression study
+## Groove compression study 2
 
-The factory audition offers Original, Glue and Squeeze for each whole groove. Pads and native kit exports remain the accepted uncompressed bank. `scripts/audition-cuttings-compression.py` renders soft-knee feed-forward compression after the groove mix: Glue uses a -20 dBFS threshold, 3.5:1 ratio, 8 dB knee, 12 ms attack and 140 ms release; Squeeze uses -26 dBFS, 8:1, 6 dB, 3 ms and 90 ms. Attack/release smooth gain reduction in dB.
+The owner found the first study too subtle. Its sample-by-sample gain-reduction averaging missed short peaks. The revision follows a peak envelope before the dB/ratio law and uses 2 ms lookahead to catch splice clicks. Glue uses -24 dBFS, 4.5:1, a 6 dB knee, 0.4 ms attack and 90 ms release. Squeeze uses -34 dBFS, 12:1, a 6 dB knee, 0.1 ms attack and 55 ms release. Squeeze reduces crest factor by 3.3–5.8 dB versus Original across the three grooves.
 
-Decoded listening WAVs match full-file RMS within 0.01 dB per kit, with peaks below 0.89. This is RMS matching, not a perceptual loudness guarantee. Maximum measured reduction is 2.0–4.1 dB for Glue and 8.9–11.8 dB for Squeeze. A common comparison level leaves headroom without a limiter. The unprocessed groove file is preserved. The player simulation checks selection of all three versions; actual browser audio and owner listening remain unverified. Compression is an audition experiment, not yet a native processing/export feature.
+`scripts/audition-cuttings-compression.py` renders the whole groove and installs synchronized looping playback through `patch-cuttings-compression-player.py`. Three buffers start together; switching crossfades their gains without restarting. Stop and kit changes stop all three. Versioned assets and uncached manifest loading avoid reusing the prior study. Simulated player checks cover selection, synchronized starts, looping, gain routing and Stop. Browser audio remains unverified.
+
+Decoded WAVs are finite, below clipping and RMS-matched within 0.01 dB per kit. This is full-file RMS matching, not a perceptual loudness guarantee. Original grooves, pads, native kits and exports remain unchanged. Compression is an audition experiment awaiting owner listening, not a native processing/export feature.
