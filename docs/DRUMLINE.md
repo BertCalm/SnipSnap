@@ -139,3 +139,5 @@ Why: a fixed filter needs one coefficient calculation, not a new exponential for
 **Render-speed gate remains open.** The long figures and cymbals still exceed the intended budget, and phone behavior is unverified. This is a measured, sample-identical reduction in CPU work, not an all-gates-passed claim. The published audition and downloadable audio need no regeneration because the approved sound is unchanged.
 
 The first focused verification passed 119 checks with exit 0, including raw-sample identity, approved factory WAVs, legacy models, complete kits, preset promotion and root classification. Full regression is tracked separately.
+
+After merging default branch `f1842eb48`, 145 focused checks passed with exit 0 (1m 10s). The merge left the drumline and shared DSP code unchanged. A stranded EMBER KDoc found by the repository convention test was moved back to its function; no EMBER behavior changed. Full unfiltered JVM and CI verification are tracked separately.
