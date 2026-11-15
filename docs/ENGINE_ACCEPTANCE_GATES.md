@@ -928,8 +928,8 @@ the owner heard and approved on 2026-11-15 (below).
 - **Overall: incomplete.** Every software gate is in place and the sound is approved by ear in Python and in Kotlin:
   the kits are on the shelf with velocity and round robin verified through rendering, saving, playback and MPC 3
   export in software (round 2), and the sixty-four approved pads are CALABASH's factory presets (round 3,
-  `CalabashPresetsTest`). Open: phone and MPC hardware, the MPC 2 export (not applicable, the owner's format limit),
-  and the picker (round 4).
+  `CalabashPresetsTest`), on SYNTH's engine picker (round 4, an on-device test run by CI's emulator, not seen by the
+  owner). Open: phone and MPC hardware; the MPC 2 export is not applicable (the owner's format limit).
 
 ## DRUMLINE (native model 4 accepted, 2026-11-15)
 

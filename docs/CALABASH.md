@@ -363,6 +363,20 @@ by its level law. Nothing is reasoned from the knobs. `Presets` serves them, CAL
   after their kit, within 24 letters and no maker's name; every two presets of a voice different recipes and sounds.
   `PatchesTest` and `SynthRootTest` now take their CALABASH sound from the roster.
 
+## Round 4: the picker (2026-11-15)
+
+CALABASH joins SYNTH's engine picker as its last constant, after CAIRN, wired the way CLUTTER's round 4 was: every
+arm of the `Engine` enum (voices, controls, defaults, SCRAMBLE, render, class, patch), the saved-draft restore, a
+frozen draft before a macro bag and the live-edit list, and the native-factory path, because a CALABASH preset
+carries its strike velocity, take and model outside the macro map. A chosen kit pad loads whole and keeps its take
+through edits and drafts. The voice chips are their names with spaces (DEEP KICK, BIG BELL, TALKING CALL), the hats
+HAT CL and HAT OP as elsewhere. `EngineCatalog` files CALABASH under DRUMS; both READMEs count 91 picker engines.
+
+`NewEngineSynthScreenTest` gains an on-device test: the conga opens with its five controls, AFROBEAT CONGA OPEN lands
+with the pad's ROOM, AGE and open STROKE, a DAMP edit survives a rebuild, and the saved draft keeps take 0, full
+velocity and model 1. This session has no Android SDK: CI's `android-build` compiles the entry and `emulator-tests`
+runs the test. Not seen on a phone.
+
 ## Gates
 
 | Gate | State |
@@ -408,7 +422,7 @@ rolls and cymbals belong in the pad's render cache, keyed by their macros, as BR
 - **Round 1: done (2026-11-15).** The Kotlin port, above.
 - **Round 2: done (2026-11-15), heard and approved.** The kits on the shelf, above.
 - **Round 3: done (2026-11-15).** The roster, above.
-- **Round 4:** the engine picker; the owner's phone and MPC.
+- **Round 4: done (2026-11-15).** The picker, above. Next: the owner's phone and MPC.
 
 ## Why it is built this way
 

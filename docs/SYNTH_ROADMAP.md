@@ -3731,3 +3731,10 @@ pad's own macros struck full at take 0, named after its kit (AFROBEAT, AFROBEATS
 shortened to 24 letters). CALABASH leaves `PatchTypes.ROSTERLESS`; a saved strike promotes with its velocity, take
 and model. Thirty-five of thirty-six voices have a preset (the low agogo bell is in no kit). `CalabashPresetsTest`
 holds the preset contracts. The picker is round 4. See [CALABASH](CALABASH.md).
+
+### CALABASH, round 4 (2026-11-15)
+
+The picker: CALABASH is SYNTH's engine picker's last constant, after CAIRN, wired as CLUTTER's round 4 (the native
+factory path keeps a preset's velocity, take and model; a frozen draft keeps them through edits), filed under DRUMS
+in `EngineCatalog`; 91 picker engines. An on-device test in `NewEngineSynthScreenTest` loads AFROBEAT CONGA OPEN and
+keeps an edit with its take and model; CI compiles and runs it (no SDK here). See [CALABASH](CALABASH.md).
