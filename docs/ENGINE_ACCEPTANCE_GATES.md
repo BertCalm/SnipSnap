@@ -795,7 +795,8 @@ rivet) that only move above a strike threshold. See [CLUTTER](CLUTTER.md).
   pad above .9999 correlation). A player's saved CLUTTER strike promotes with its velocity, take and model
   through `ClutterPatch.fromJsonText`.
 - **Overall: incomplete.** Every software gate is in place and the sound is approved. Open: the MPC 2 export,
-  phone and MPC playback. Round 4 put CLUTTER on SYNTH's picker (compiled and run on an emulator by CI only). The percussion gate is waived by the owner.
+  phone and MPC playback. Round 4 put CLUTTER on SYNTH's picker (compiled and run on an emulator by CI only).
+  The owner chose the phone and MPC check next (2026-11-15); its checklist is round 5 in [CLUTTER](CLUTTER.md). The percussion gate is waived by the owner.
 
 ## TERRA (promotion started 2026-11-14)
 
