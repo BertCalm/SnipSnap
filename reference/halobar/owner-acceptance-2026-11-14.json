@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-11-14",
+  "source": "Owner message in this conversation, replying to the HALOBAR status check",
+  "quote": "Everything passes",
+  "precedingStatusOutstandingItems": [
+    "Physical phone/MPC checks",
+    "Combined MPC velocity × round robin",
+    "50 ms fresh-render target",
+    "Performance-example verdict"
+  ],
+  "ownerSignOff": "pass",
+  "voiceBankApproval": "retained",
+  "performanceExamples": {
+    "status": "owner-accepted",
+    "scope": ["premade kit", "chords", "note releases and finite HOLD", "rolls", "risers"]
+  },
+  "hardwareChecks": {
+    "status": "owner-reported pass",
+    "scope": "Phone/MPC and combined velocity/repeat checks listed in the preceding status",
+    "deviceModel": null,
+    "mpcModel": null,
+    "firmware": null,
+    "testedProgramIdentity": null,
+    "logsSupplied": false,
+    "agentExecutedInstrumentation": false
+  },
+  "playability": {
+    "ownerOverallPassRecorded": true,
+    "newTimingDataSupplied": false,
+    "lastMeasuredDesktopFreshMedianRangeMs": [130, 301],
+    "measured50MsTargetClosed": false,
+    "latencyWaiverInferred": false
+  },
+  "productionExport": {
+    "changedByThisConfirmation": false,
+    "combinedKeygroupModeEnabled": false,
+    "firstTakeFallbackCountsAsRoundRobinPass": false,
+    "followUp": "Integrate and verify the combined candidate through the production export path"
+  },
+  "historicalArtifactsModified": false,
+  "engineeringClosure": "Production combined-export integration and measured fresh-render target remain open"
+}

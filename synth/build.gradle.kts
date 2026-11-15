@@ -3731,6 +3731,15 @@ tasks.register<JavaExec>("generatePumpAudition") {
     args("${rootDir}/testkit/pump-audition")
 }
 
+tasks.register<JavaExec>("generateOnBeatAudition") {
+    group = "distribution"
+    description = "Render ON BEAT's listening gate clips under testkit/onbeat-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.OnBeatAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/onbeat-audition")
+}
+
 /** Finite R1 source/drive/filter/memory handoff, before the owner's listening gate. */
 tasks.register<JavaExec>("generateTempestAudition") {
     group = "distribution"
@@ -3803,6 +3812,16 @@ tasks.register<JavaExec>("generateClutterAudition") {
     mainClass.set("com.snipsnap.synth.ClutterAuditionGenerator")
     workingDir = projectDir
     args(providers.gradleProperty("clutterOutput").orNull ?: "${rootDir}/testkit/clutter-audition/kotlin")
+}
+
+tasks.register<JavaExec>("generateVelourRoundRobin") {
+    group = "distribution"
+    description = "Render opt-in Velour round-robin candidates and full-grid audition packages."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.VelourRoundRobinGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "1g"
+    args(providers.gradleProperty("velourRoundRobinOutput").orNull ?: "testkit/velour-round-robin")
 }
 
 tasks.register<JavaExec>("generateEtchAudition") {

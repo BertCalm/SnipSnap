@@ -3494,6 +3494,17 @@ The genre kits (renderer models 5 and 6, 2026-11-12 to 11-13):
 - **The final audition** (`:shell:generateBreakerAudition`, 68 clips): the owner signed off the
   sound on 2026-11-13 (every voice, every control, the edges, the presets and the three kits).
 
+The surf tom fill (renderer model 7, 2026-11-14):
+- **Picked by ear in two rounds** (`:synth:generateBreakerFillStudy`):
+  - fill B, sixteenth-note triplets down the three toms;
+  - each stroke through its own tom's spring ("three pads"), at about a third of it ("4 Drier");
+  - a fresh take heard as the same fill with fresh hits.
+- **Built:** FILL, twelve strokes of the BREAKER kit's own toms (model 5), each its own fresh strike. A
+  softer pad strikes every tom softer. DRIP scales the three springs together.
+- **On the kit:** the BREAKER kit's A16, in the shaker's place beside the snare riser (the owner's
+  call, 2026-11-14). It is verified like every pad through saving, playback and the MPC 3 export.
+- **Open:** hardware.
+
 ### ETCH, Kotlin round K1 (2026-11-13)
 
 Owner-requested step-line bass: an accented, sliding sixteen-step line → BITE (a clean/drive blend after a bass
@@ -3639,6 +3650,21 @@ picker. See [CLUTTER](CLUTTER.md) and the gates entry. The owner heard the four 
 answered "I approve the audition" (2026-11-14): `Clutter.MODEL_VERSION` 1 and `ClutterKits.VERSION` 1 are the
 approved baseline.
 
+### CLUTTER, round 3 (2026-11-14)
+
+Presets and the roster, the round the owner asked for after approving the audition: `ClutterPresets` is the four
+approved kits' sixty-four pads as patches (the pad's macros, struck full, take 0), named after their kit's tag
+(LOFI, STREET, BOOMBAP, MICRO), served by `Presets`; CLUTTER leaves `PatchTypes.ROSTERLESS`. A saved CLUTTER
+strike promotes with its velocity, take and model through the JSON constructor, as SCUFF's does. Open: the app
+picker, hardware playback, MPC 2. See [CLUTTER](CLUTTER.md).
+
+### CLUTTER, round 4 (2026-11-14)
+
+The engine picker: CLUTTER joins SYNTH's `Engine` after SCUFF, mirroring SCUFF's round 5 (SOOT's arms plus the
+native-factory path), so a kit preset loads whole with its take and model. `EngineCatalog` files it under DRUMS;
+88 picker engines. An on-device test in `NewEngineSynthScreenTest`; CI compiles and runs it. Open: hardware
+playback, MPC 2. See [CLUTTER](CLUTTER.md).
+
 ### DRUMLINE native battery
 
-Model 1 ports the preferred cymbal mechanisms and independent player sections into native synthesis. FIELD and STREET CADENCE have different source tuning, damping, section sizes and scored articulations, each a 3 × 3 velocity/take grid with editable versioned recipes. Implementation and gate evidence: [DRUMLINE](DRUMLINE.md). Native listening and phone/MPC hardware remain open.
+The native battery retains the preferred cymbal mechanisms and independent player sections. Model 2 adds body to basses/tenors, a separate rim clack and snare snap; saved model-1 recipes remain replayable. FIELD and STREET CADENCE have different source tuning, damping, section sizes and scored articulations, each a 3 × 3 velocity/take grid with editable versioned recipes. Implementation and gate evidence: [DRUMLINE](DRUMLINE.md). Native listening and phone/MPC hardware remain open.

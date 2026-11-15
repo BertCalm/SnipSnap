@@ -147,6 +147,7 @@ object EngineCatalog {
         "OSTERIA" to EngineEntry(listOf(EngineCategory.SYNTH, EngineCategory.PADS), "Evolving notes, from plucked bass to bowed color and pads"),
         "ETCH" to EngineEntry(listOf(EngineCategory.BASS, EngineCategory.SYNTH), "Squelching step-line bass with drive, delay and a room"),
         "SCUFF" to EngineEntry(listOf(EngineCategory.DRUMS), "Dry Michigan drums, crushed, boxed, barked and slammed"),
+        "CLUTTER" to EngineEntry(listOf(EngineCategory.DRUMS), "Found-sound drums from household objects, struck and rattled"),
     )
 
     /** The entry for the engine constant [name], or null for a name the catalogue does not know. */

@@ -9,10 +9,10 @@ The characteristic gesture is **dusty crack → spring drip → crushed swell �
 
 ## Status
 
-Renderer model 6 (the genre kits' takes), a prototype outside the factory presets
-(`PatchTypes.PROTOTYPES`). The BREAKER kit stays on model 5, which renders it exactly as the owner
-accepted it on model 4.
-Fourteen voices; the kick and snare are built from the owner's round-0 picks.
+Renderer model 7 (the surf tom fill; model 6 brought the genre kits' takes), a prototype outside the
+factory presets (`PatchTypes.PROTOTYPES`). The BREAKER kit stays on model 5, which renders it exactly
+as the owner accepted it on model 4.
+Fifteen voices; the kick and snare are built from the owner's round-0 picks.
 
 At round 1 the owner heard:
 - the snare, its takes and a half-strength hit as theirs;
@@ -74,8 +74,9 @@ On the final audition (2026-11-13, below, "The audition") the owner signed off t
 - **The three kits side by side:** the shelf is right.
 
 Still to come:
-- the surf tom fill;
 - a phone and an MPC playing the kits.
+
+The surf tom fill is built and on the BREAKER kit's A16 (2026-11-14, below, "The surf tom fill").
 
 ## The kit
 
@@ -84,7 +85,7 @@ The BREAKER starter (`BreakerKits`, `StarterKits` id `breaker`, under SKINS on t
 
 | | | | |
 |---|---|---|---|
-| A13 Ride | A14 Crash (rings 3.2 s) | A15 Snare Riser | A16 Shaker |
+| A13 Ride | A14 Crash (rings 3.2 s) | A15 Snare Riser | A16 Surf Tom Fill |
 | A09 Floor Tom | A10 Rack Tom | A11 High Tom | A12 Crushed Snare |
 | A05 Crushed Boom | A06 Drip Snare | A07 Cross Stick | A08 Tambourine |
 | A01 Boom | A02 Bap | A03 Closed Hat | A04 Open Hat (chokes A03) |
@@ -96,7 +97,10 @@ The BREAKER starter (`BreakerKits`, `StarterKits` id `breaker`, under SKINS on t
   - A06 Drip Snare: the snare at DRIP .9, SLAP .35;
   - A12 Crushed Snare: the snare at CRUSH 1, DUST .5, AMP .55, DRIP .35.
 - **Levels** come from the balance the owner heard in the round-3 beats: Boom .90, Bap .80, the
-  hats and shaker .35, the toms .70, the ride .27 and the crash .32.
+  hats .35, the toms .70, the ride .27 and the crash .32. The surf tom fill sits at the toms' .70.
+- **A16** was the shaker until 2026-11-14, when the owner put the surf tom fill there, beside the
+  snare riser (below, "The surf tom fill"). The fill's pad saves on renderer model 7, the only
+  model with it; the rest of the kit stays on model 5.
 - **Chokes:** only the open hat chokes the closed one. The cymbals never choke.
 
 **Velocity and round robin.** The shared robin (`Robin.apply`, as the BACKWASH kits) deals each pad
@@ -216,14 +220,15 @@ except for one pad (below).
   - at .025, 39.7 dB, a hair under a copy;
   - at .1, 35.6 dB.
 
-**Not BREAKER at other settings** (`BreakerKitTest`, pad by pad against the BREAKER kit):
+**Not BREAKER at other settings** (`BreakerKitTest`, pad by pad against the BREAKER kit, since the
+fill took BREAKER's A16 on 2026-11-14; before that, Trip hop's A16 shaker matched BREAKER's, 5 and 3):
 
 | | Dub Tank | Trip hop |
 |---|---:|---:|
-| Pads that are another drum | 7 | 5 |
+| Pads that are another drum | 7 | 6 |
 | Same drum, retuned | 4 | 6 |
 | Damped or opened (DAMP off .5) | 7 | 11 |
-| Same drum and tuning, only the rig moved | 3 | 3 |
+| Same drum and tuning, only the rig moved | 3 | 2 |
 
 **The grid**, measured on the saved kits as for BREAKER above:
 
@@ -454,6 +459,71 @@ others), including kits already heard and accepted. Asked, the owner chose to le
 (2026-11-13): nobody has heard it as a problem, and the accepted kits stay as accepted.
 
 Model-5 saves keep their takes, and the BREAKER kit stays on model 5.
+
+## The surf tom fill (model 7)
+
+The fill is a voice of its own, FILL, picked by ear over two rounds (2026-11-14) from
+`:synth:generateBreakerFillStudy` (`BreakerFillStudy`).
+
+**Round 0: the figure.** Four fills down the BREAKER kit's own toms, each heard alone, played again
+and closing two bars of the kit at 92 BPM:
+- **A:** sixteenths down.
+- **B:** sixteenth-note triplets down.
+- **C:** a floor-tom gallop.
+- **D:** flams down.
+
+The owner's answers:
+- **The figure:** B, Triplets down.
+- **One spring or three:** fill A was also heard two ways, as one pad with one spring for the whole run, and on the
+  kit's three tom pads with a spring each. The owner picked "Three pads".
+- **The spring:** "a bit too wet, not a lot".
+
+**Round 1: the spring.** Fill B with each stroke its own tom's whole render, at four springs. Each
+tom's DRIP was scaled to 1, .7, .5 or .35 of its own. The tail, from 0.3 to 1.0 s after the run,
+measured against the run:
+
+| Spring | Tail |
+|---|---:|
+| ×1 | −5.7 dB |
+| ×.7 | −8.5 dB (round 0's one-pass B, as heard, was −8.3) |
+| ×.5 | −11.9 dB |
+| ×.35 | −16.0 dB |
+
+The owner picked ×.35 ("4 Drier") and heard a fresh take as the same fill with fresh hits ("Yes").
+
+**As built:**
+- **The figure:** twelve strokes, two beats of sixteenth-note triplets at 92 BPM: four on the high
+  tom, four on the rack, four on the floor. Every third is accented (.9 of the pad's velocity, the
+  others .6), and the last stroke is the hardest (1). `render` has no tempo, so the fill is 92 BPM
+  long on any kit: 2.7 s (`Breaker.FILL_SECONDS`), declared PERC like the riser.
+- **The toms:** each stroke is the BREAKER kit's own tom on renderer model 5, the toms the owner
+  heard it with, rendered whole through its own rig. The strokes are summed and the run is
+  levelled. Nothing passes through a second rig.
+- **The controls:** the fill's TUNE, DUST, SLAP, CRUSH, AMP and DAMP go to every stroke. DRIP scales
+  every tom's spring together against the rack tom's .45. Its default, .1575 (.45 × .35), gives the
+  floor tom .21, the rack .1575 and the high tom .14: the pick. DRIP .45 is each tom's own spring,
+  the round-1 version the owner heard as wetter.
+- **Velocity:** a softer pad strikes every tom softer, by each tom's own velocity law (SKIN's
+  contact), and the run is levelled either way.
+- **Round robin:** every take re-strikes all twelve strokes (stroke `take × 100 + stroke + 1`).
+- **Older saves:** models 1 to 6 refuse FILL. Every other voice renders on model 7 exactly as it does
+  on model 6.
+- **Render cost:** twelve whole tom renders, about 1 s one after another on a desktop JVM, against
+  the riser's 0.4 s and a drum's 0.1 s. The strokes are independent, so they render in parallel and
+  are summed in stroke order, so the result is the same however they finish: 0.45 s on a 4-core
+  desktop JVM.
+- **Measured** (`BreakerTest`):
+  - the default fill against the pick as heard: a 1.7e-5 maximum difference;
+  - the spring after the run: −11.3 dB at the default against −4.1 dB at DRIP .45;
+  - a 30% fill against a full one, at matched loudness: its most-moved octave moves 2.7 dB;
+  - a second take against the first: 11.0 dB apart.
+
+**On the kit (2026-11-14):** the owner put it on the BREAKER kit's A16, beside the snare riser, in
+the shaker's place, at the toms' level. Its pad saves on model 7 and is dealt like every synth drum,
+3 zones × 3 re-struck takes, through saving, the pad resolver and the MPC 3 export (`BreakerKitTest`).
+On the saved kit its closest two takes are 24.0 dB apart (a copy is more than 40) and its least-changed
+soft zone moves 2.8 dB in spectral shape. The demo groove does not play it. No phone or MPC has
+played it.
 
 ## The cymbals
 

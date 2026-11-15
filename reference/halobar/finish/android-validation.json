@@ -1,0 +1,32 @@
+{
+  "state": "passed",
+  "buildExitCode": 0,
+  "sourceCommit": "96df0db50c54c04da03826a54a674b8563a41231",
+  "benchmarkSourceSha256": "a396b7094aca41daafd1b4b2e1773564f0269c7272e7320a78a6976ebb6dfea0",
+  "matchingSignerSha256": "f0016744e80fd3fd21ad2607f0753f37968e621080863dd2aaa64c6182567478",
+  "apks": [
+    {
+      "kind": "app",
+      "package": "com.snipsnap.app.brassgrow",
+      "file": "/workspace/SnipSnap/app/build/outputs/apk/debug/app-debug.apk",
+      "bytes": 244953711,
+      "sha256": "97dfdf9b2663bec99e2d04c33b65174984148ab3fe2d9e4614cafbe8c8a70a15",
+      "v2Verified": true,
+      "dexMarkerPresent": true
+    },
+    {
+      "kind": "test",
+      "package": "com.snipsnap.app.brassgrow.test",
+      "file": "/workspace/SnipSnap/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk",
+      "bytes": 7780462,
+      "sha256": "fa7665a81f11698b6ee6c02bf5008037d2f77a6e5439ea6d34470b355bfb3b90",
+      "v2Verified": true,
+      "dexMarkerPresent": true
+    }
+  ],
+  "discardedFilterAbsent": true,
+  "androidExecuted": false,
+  "physicalPlaybackVerified": false,
+  "mpcVerified": false,
+  "fullJvmSuiteRerun": false
+}

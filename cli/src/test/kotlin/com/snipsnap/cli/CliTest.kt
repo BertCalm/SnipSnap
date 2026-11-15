@@ -1456,7 +1456,7 @@ class CliTest {
     }
 
     @Test
-    fun `roll, gate and pump each want a kit and a pad`() {
+    fun `roll, gate, pump and onbeat each want a kit and a pad`() {
         val sink = PrintStream(ByteArrayOutputStream())
         val rollErr = assertFailsWith<CliError> { RollCommand.run(emptyList(), sink) }
         assertTrue(rollErr.message!!.contains("roll"), "the error does not name the verb: ${rollErr.message}")
@@ -1464,13 +1464,15 @@ class CliTest {
         assertTrue(gateErr.message!!.contains("gate"), "the error does not name the verb: ${gateErr.message}")
         val pumpErr = assertFailsWith<CliError> { PumpCommand.run(emptyList(), sink) }
         assertTrue(pumpErr.message!!.contains("pump"), "the error does not name the verb: ${pumpErr.message}")
+        val onBeatErr = assertFailsWith<CliError> { OnBeatCommand.run(emptyList(), sink) }
+        assertTrue(onBeatErr.message!!.contains("onbeat"), "the error does not name the verb: ${onBeatErr.message}")
     }
 
     @Test
-    fun `roll, gate and pump refuse a folder that is not a kit`() {
+    fun `roll, gate, pump and onbeat refuse a folder that is not a kit`() {
         val sink = PrintStream(ByteArrayOutputStream())
         val notAKit = createTempDirectory("not-a-kit").toFile()
-        for (run in listOf(RollCommand::run, GateCommand::run, PumpCommand::run)) {
+        for (run in listOf(RollCommand::run, GateCommand::run, PumpCommand::run, OnBeatCommand::run)) {
             val err = assertFailsWith<CliError> { run(listOf(notAKit.path, "A01"), sink) }
             assertTrue(err.message!!.contains("kit.json"), "the error does not say why: ${err.message}")
         }
@@ -1567,6 +1569,36 @@ class CliTest {
         val (shortCode, _, shortErr) = cli("pump", kitDir.path, "A03", "--rate", "1/2", "--bpm", "60")
         assertTrue(shortCode != 0 && "shorter than 2 divisions of 1/2" in shortErr, shortErr)
         assertTrue(pad3Before.contentEquals(pad3File.readBytes()), "a refusal touches nothing")
+    }
+
+    @Test
+    fun `onbeat echoes the pad on the dotted eighth from the terminal, records its division, and undoes`() {
+        val wav = writeBreak(File(temp, "ob.wav"))
+        val out = File(temp, "ob-out")
+        assertEquals(0, cli("chop", wav.path, "--out", out.path, "--name", "OB", "--grid", "4").first)
+        val kitDir = File(out, "OB")
+        val padFile = File(kitDir, KitStore.load(kitDir).pad(1)!!.sampleFile)
+        val before = padFile.readBytes()
+
+        // No --rate: the owner's tap, three sixteenths, 450 ms at 100 BPM.
+        val (code, stdout, stderr) = cli("onbeat", kitDir.path, "A01", "--bpm", "100")
+        assertEquals(0, code, "stderr: $stderr")
+        assertContains(stdout, "echoed at 3/16 at 100 bpm (450 ms a repeat)")
+        assertTrue(padFile.readBytes().size > before.size, "the trail did not lengthen the pad")
+        val recipe = KitStore.load(kitDir).pad(1)!!.recipe!!.entries
+        assertEquals("echoed", (recipe["keyed"] as com.snipsnap.json.JsonValue.Str).value)
+        assertEquals("3/16", (recipe["division"] as com.snipsnap.json.JsonValue.Str).value, "the recipe forgot the division it ran at")
+
+        assertEquals(0, cli("onbeat", kitDir.path, "A01", "--undo").first)
+        assertTrue(before.contentEquals(padFile.readBytes()))
+
+        // Any of the grid's divisions too.
+        val (eighthCode, eighthOut, eighthErr) = cli("onbeat", kitDir.path, "A01", "--rate", "1/8", "--amount", "0.7")
+        assertEquals(0, eighthCode, "stderr: $eighthErr")
+        assertContains(eighthOut, "echoed at 1/8 at 100 bpm (300 ms a repeat) at 0.70")
+
+        val (rateCode, _, rateErr) = cli("onbeat", kitDir.path, "A01", "--rate", "1/3")
+        assertTrue(rateCode != 0 && "--rate wants" in rateErr && "3/16" in rateErr, rateErr)
     }
 
     @Test
