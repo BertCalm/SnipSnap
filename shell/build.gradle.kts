@@ -658,6 +658,16 @@ tasks.register<JavaExec>("generateDrumlineKit") {
     args(providers.gradleProperty("drumlineOutput").orNull ?: "${rootDir}/testkit/drumline-kit")
 }
 
+tasks.register<JavaExec>("generateTimberKits") {
+    group = "distribution"
+    description = "Render and verify three acoustic-instrument percussion banks, native kits, MPC exports and listening pack."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.TimberKitGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "1g"
+    args(providers.gradleProperty("timberOutput").orNull ?: "${rootDir}/testkit/timber-kits")
+}
+
 tasks.register<JavaExec>("generateSporeApprovedSnare") {
     group = "distribution"
     description = "Render and verify the approved snare's native, SFZ and MPC3 delivery."

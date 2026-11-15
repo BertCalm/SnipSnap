@@ -792,6 +792,11 @@ testkit/tempest-full-kit/
 testkit/SnipSnap Tempest Full Kit/
 testkit/SnipSnap Tempest Tuned Kit/
 
+# TIMBER generated acoustic percussion banks and audition.
+/testkit/timber-kits/
+
+/testkit/timber-v2/
+
 # Generated Velour round-robin audio and delivery packages.
 testkit/velour-round-robin/
 testkit/etch-audition/

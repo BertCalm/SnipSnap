@@ -3641,6 +3641,19 @@ deterministic objects correlate 0.93 to 0.99; random draws are another realisati
 owner waived the roll gate. See [CLUTTER](CLUTTER.md) and the gates entry. The four genre kits go on the shelf
 at round 2; the picker entry waits for a session with an SDK.
 
+### TIMBER acoustic-instrument percussion banks (2026-11-14)
+
+Three genre starters from guitar, acoustic bass guitar, cello and upright body/string
+contacts: FOLK POCKET, WOOD BOOM BAP and STRING TWO STEP. Fourteen finite hits, knuckle roll,
+string-rake riser, three contact strengths and four deterministic takes per pad. Native
+save/playback and MPC 3 PCM/cycle read-back are covered by `TimberKitTest`; run
+`:shell:generateTimberKits` for the listening pack and exports. This is an authored bank,
+not a new melodic engine. Model 2 ports the owner-approved Python contact and extended-technique
+auditions, with independent body/string profiles, seven contacts and bounded take levels. Model 1
+source replay is retained. The owner confirmed “Listening and hardware approved” on 2026-11-15
+for the delivered Kotlin kits. The shared MPC slice-map implementation is unchanged; software
+regression remains pending. See [TIMBER](TIMBER.md) for the gate ledger.
+
 ### SCUFF, round 5 (2026-11-14)
 
 On SYNTH's engine picker, mirroring SOOT arm for arm plus the native-factory path for its presets (a kit's pad

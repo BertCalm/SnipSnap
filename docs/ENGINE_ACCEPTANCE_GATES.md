@@ -873,3 +873,33 @@ A marching battery with independent player bodies, five bass sizes and progressi
 - Phone and MPC hardware: not verified for these kits.
 - Fast rendering, full control-corner and alias-reference checks: open. Measured snare/crash/roll rendering exceeds the one-shot tens-of-milliseconds target on this host.
 - Overall: incomplete. Software evidence is not native sound or device acceptance.
+
+## TIMBER acoustic percussion integration
+
+TIMBER's model 2 Kotlin bank ports the owner-approved Python acoustic contact and extended-technique
+studies: four instruments and seven techniques. The owner accepted the first audition with
+“Sounds pretty good” and the extension with “Sound good, continue.” On 2026-11-15 the owner
+confirmed **“Listening and hardware approved”** for the delivered Kotlin kits. These are
+owner-confirmed listening and hardware gates, not newly measured automated results. See [TIMBER](TIMBER.md) and the
+[audition page](https://chatgpt.com/space/page_5e535f7b68ec8191800c4c3b66444f32).
+
+- **Melodic keys/chords/HOLD/STRUM:** not applicable to finite percussion banks.
+- **Drum shelf:** three registered genre starters, FOLK POCKET, WOOD BOOM BAP and STRING TWO STEP,
+  with different core instruments, tuning, damping, saved levels and groove arrangements.
+- **Percussion:** each kit includes an accelerating knuckle roll and a string-rake riser, printed
+  as finite phrases with full tails. They do not claim seamless sustain.
+- **Velocity and round robin in software:** 100 focused checks pass, covering 336 dry contact
+  variants, 576 kit variants, all saved PCM, source replay, velocity boundaries, two take cycles,
+  pad levels, choke groups and MPC 3 PCM/cycle read-back. Model 1 source replay is retained.
+- **MPC 2:** all 144 first-take velocity windows pass read-back. The owner's combined velocity/RR
+  format exception applies; no combined round-robin claim is made.
+- **MPC 3 hardware:** owner-approved on 2026-11-15. The shared chain-WAV slice-map limitation
+  and missing capture are unchanged; no exporter fix is claimed by this approval.
+- **Kotlin listening and phone/MPC hardware acceptance:** owner-approved on 2026-11-15.
+  No new device measurements or independently observed hardware results were produced here.
+- **Repository regression:** the original baseline run found a CAIRN sentence-case failure and was
+  interrupted (exit 130). Repository delivery merges `6e2e40676`, which includes that fix.
+  The merged revision passes 101 focused checks, including the former copy failure.
+  The local full-regression rerun has no recoverable completion result; PR #1122 CI remains
+  pending. Listening and hardware gates are closed by owner approval; software regression
+  remains the outstanding gate.

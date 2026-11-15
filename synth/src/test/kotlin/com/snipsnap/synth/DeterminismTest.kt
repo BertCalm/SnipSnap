@@ -1024,6 +1024,15 @@ class DeterminismTest {
         }
     }
     @Test
+    fun `TIMBER finite contacts and authored articulations repeat exactly`() {
+        for (role in listOf(0, 1, 2, 4, 7, 14, 15)) {
+            val a = TimberKits.render(TimberKits.Genre.POCKET, role, .65f, 2)
+            val b = TimberKits.render(TimberKits.Genre.POCKET, role, .65f, 2)
+            assertContentEquals(a.samples, b.samples, "TIMBER role $role")
+        }
+    }
+
+    @Test
     fun `SPORE approved snare is byte identical for a saved soft restrike`() {
         val p=SporeSnare.Recipe(velocity=.3,take=2)
         assertContentEquals(p.render().samples,SporeSnare.Recipe.fromJsonText(p.toJsonText()).render().samples)
