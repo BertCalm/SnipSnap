@@ -3751,7 +3751,7 @@ holds the preset contracts. The picker is round 4. See [CALABASH](CALABASH.md).
 
 ### CALABASH, round 4 (2026-11-15)
 
-The picker: CALABASH is SYNTH's engine picker's last constant, after CAIRN, wired as CLUTTER's round 4 (the native
+The picker: CALABASH sits in SYNTH's engine picker after CLUTTER, before CAIRN (which closes the ring), wired as CLUTTER's round 4 (the native
 factory path keeps a preset's velocity, take and model; a frozen draft keeps them through edits), filed under DRUMS
 in `EngineCatalog`; 91 picker engines. An on-device test in `NewEngineSynthScreenTest` loads AFROBEAT CONGA OPEN and
 keeps an edit with its take and model; CI compiles and runs it (no SDK here). See [CALABASH](CALABASH.md).

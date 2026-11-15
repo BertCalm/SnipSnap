@@ -365,7 +365,7 @@ by its level law. Nothing is reasoned from the knobs. `Presets` serves them, CAL
 
 ## Round 4: the picker (2026-11-15)
 
-CALABASH joins SYNTH's engine picker as its last constant, after CAIRN, wired the way CLUTTER's round 4 was: every
+CALABASH joins SYNTH's engine picker after CLUTTER and before CAIRN (which closes the engine ring), wired the way CLUTTER's round 4 was: every
 arm of the `Engine` enum (voices, controls, defaults, SCRAMBLE, render, class, patch), the saved-draft restore, a
 frozen draft before a macro bag and the live-edit list, and the native-factory path, because a CALABASH preset
 carries its strike velocity, take and model outside the macro map. A chosen kit pad loads whole and keeps its take

@@ -148,8 +148,8 @@ object EngineCatalog {
         "ETCH" to EngineEntry(listOf(EngineCategory.BASS, EngineCategory.SYNTH), "Squelching step-line bass with drive, delay and a room"),
         "SCUFF" to EngineEntry(listOf(EngineCategory.DRUMS), "Dry Michigan drums, crushed, boxed, barked and slammed"),
         "CLUTTER" to EngineEntry(listOf(EngineCategory.DRUMS), "Found-sound drums from household objects, struck and rattled"),
-        "CAIRN" to EngineEntry(listOf(EngineCategory.BELLS, EngineCategory.DRUMS), "Stones that knock, tumble, grind, sing and roll in a bowl"),
         "CALABASH" to EngineEntry(listOf(EngineCategory.DRUMS), "Afrobeat, Afrobeats, mbalax and Afro-Cuban drums and hands"),
+        "CAIRN" to EngineEntry(listOf(EngineCategory.BELLS, EngineCategory.DRUMS), "Stones that knock, tumble, grind, sing and roll in a bowl"),
     )
 
     /** The entry for the engine constant [name], or null for a name the catalogue does not know. */
