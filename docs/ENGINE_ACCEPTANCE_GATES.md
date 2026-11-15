@@ -1009,3 +1009,15 @@ owner-confirmed listening and hardware gates, not newly measured automated resul
   The local full-regression rerun has no recoverable completion result; PR #1122 CI remains
   pending. Listening and hardware gates are closed by owner approval; software regression
   remains the outstanding gate.
+
+## East African fitted synthesis banks
+
+See [East African fitted synthesis](EAST_AFRICA.md). Five genre starters, 22 pads
+each, three velocity zones and three alternate takes, with hand rolls and
+shaker risers. The owner approved the fitted Python audition on 2026-11-15
+(“It's much better. Proceed”). Native Kotlin noise differs; its listening gate
+and phone/MPC hardware gates remain open. Focused software checks pass for all 990 variants and all five kit workflows;
+repository regression is tracked in the delivery PR checks. Native C++ checks
+pass (8 suites).
+MPC2 retains the first take per zone under the owner's format exception.
+Melodic/keygroup/chord/STRUM gates do not apply to these finite drum banks.

@@ -12,6 +12,14 @@ import kotlin.test.assertTrue
  * both depend on the second half.
  */
 class DeterminismTest {
+    @Test fun `East Africa fitted percussion log bass and phrases repeat exactly`() {
+        for(role in listOf(0,2,5,12,14,15,21)) {
+            val a=EastAfricaKits.render(EastAfricaKits.Genre.SINGELI,role,.64f,2)
+            val b=EastAfricaKits.render(EastAfricaKits.Genre.SINGELI,role,.64f,2)
+            assertContentEquals(a.samples,b.samples)
+        }
+    }
+
     @Test fun `DRUMLINE keeps section and take identities deterministic`() {
         for (voice in listOf(DrumlineVoice.SNARE, DrumlineVoice.CRASH, DrumlineVoice.ROLL)) {
             assertContentEquals(Drumline.render(voice, take = 2).samples, Drumline.render(voice, take = 2).samples)

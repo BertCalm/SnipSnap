@@ -3775,3 +3775,10 @@ body, and every voice more drive (kicks 1.2 to 2.7 dB, snares 3.2 to 4.7 dB loud
 then wrote "Sound approved, phone and MPC good, merge". Model 1 and kit version 1 are the approved baseline.
 Open, not gates: factory presets from the accepted pads, and the SYNTH picker. See [SERVO](SERVO.md).
 
+
+### East African fitted synthesis banks, 2026-11-15
+
+Five curated shelf kits retain the accepted fitted modal/noise palette and FM
+logs: 22 sounds × 3 velocity zones × 3 takes per kit. This is a bank family,
+not a new picker engine. Native listening and hardware gates remain open;
+see [implementation and evidence](EAST_AFRICA.md).

@@ -717,3 +717,13 @@ tasks.register<JavaExec>("generateSporeSyntheticKits") {
     maxHeapSize = "2g"
     args(providers.gradleProperty("sporeSyntheticOutput").orNull ?: "${rootDir}/testkit/spore-synthetic-kits")
 }
+
+tasks.register<JavaExec>("generateEastAfricaKits") {
+    group = "distribution"
+    description = "Render five fitted-synthesis banks with native/MPC exports and saved-PCM auditions."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.EastAfricaKitGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "1g"
+    args(providers.gradleProperty("eastAfricaOutput").orNull ?: "${rootDir}/testkit/east-africa-kits")
+}

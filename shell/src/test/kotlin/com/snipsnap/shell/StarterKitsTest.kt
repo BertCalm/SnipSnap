@@ -212,7 +212,7 @@ class StarterKitsTest {
                 assertFalse(Preflight.check(kit, dir).blocked(), "${starter.id} failed preflight")
                 // Regenerable where the engine records how: most starter pads
                 // carry recipes (not all — some treatments are render-only).
-                if (starter.id !in setOf(StarterKits.CONFLUENCE_ID, StarterKits.CONFLUENCE_VOICES_ID, "velour-close", "velour", "velour-bloom", "timber-pocket", "timber-boom-bap", "timber-two-step", "triad-techno", "triad-house", "triad-minimal", "cosmic-breaks", "cosmic-jungle", "cosmic-dubstep", "spore-synth-jungle", "spore-synth-dub", "spore-synth-broken", "spore-jungle", "spore-dub", "spore-electro", "gatecrash-stone", "gatecrash-machine", "gatecrash-electro", "cypher-trap", "cypher-drill", "cypher-backroom", "cypher-lowrider", "cypher-dust", "cypher-flint", "mirrorball-philly", "mirrorball-loft", "mirrorball-munich", "soot", "soot-drumless", "soot-dub", "soot-noir", "soot-industrial", "etch", "scuff-detroit", "scuff-flint", "clutter-lofi", "clutter-street", "clutter-boombap", "clutter-micro", "servo-electro", "servo-jit", "servo-neuro", "calabash-afrobeat", "calabash-afrobeats", "calabash-mbalax", "calabash-afrocuban", "ember", "ember-after-hours", "ember-soul-jazz", "ember-free") + StarterKits.PATIO_IDS) {
+                if (starter.id !in setOf(StarterKits.CONFLUENCE_ID, StarterKits.CONFLUENCE_VOICES_ID, "velour-close", "velour", "velour-bloom", "timber-pocket", "timber-boom-bap", "timber-two-step", "triad-techno", "triad-house", "triad-minimal", "cosmic-breaks", "cosmic-jungle", "cosmic-dubstep", "spore-synth-jungle", "spore-synth-dub", "spore-synth-broken", "spore-jungle", "spore-dub", "spore-electro", "gatecrash-stone", "gatecrash-machine", "gatecrash-electro", "cypher-trap", "cypher-drill", "cypher-backroom", "cypher-lowrider", "cypher-dust", "cypher-flint", "mirrorball-philly", "mirrorball-loft", "mirrorball-munich", "soot", "soot-drumless", "soot-dub", "soot-noir", "soot-industrial", "etch", "scuff-detroit", "scuff-flint", "clutter-lofi", "clutter-street", "clutter-boombap", "clutter-micro", "servo-electro", "servo-jit", "servo-neuro", "calabash-afrobeat", "calabash-afrobeats", "calabash-mbalax", "calabash-afrocuban", "ember", "ember-after-hours", "ember-soul-jazz", "ember-free") + StarterKits.PATIO_IDS + com.snipsnap.synth.EastAfricaKits.Genre.entries.map { it.id }) {
                     assertTrue(kit.pads.any { it.recipe != null }, "${starter.id}: no pad carries a recipe")
                 }
                 if(starter.id.startsWith("spore-synth-")) for(pad in kit.pads) {
@@ -227,6 +227,7 @@ class StarterKitsTest {
                 // VENT leaves four capture slots free; the A/B dip fills bank B with a twin of each,
                 // and SCOUR fills banks B, C and D with its thunder sheet, its beam, and its disc and rod.
                 val slots = when (starter.id) {
+                    in com.snipsnap.synth.EastAfricaKits.Genre.entries.map { it.id } -> 22
                     in StarterKits.PATIO_IDS -> 18
                     "spore-synth-jungle", "spore-synth-dub", "spore-synth-broken", "spore-jungle", "spore-dub", "spore-electro", "cosmic-breaks", "cosmic-jungle", "cosmic-dubstep" -> 18
                     "scour" -> 64
@@ -249,6 +250,7 @@ class StarterKitsTest {
                 // Every remaining pad of every starter carries its recipe.
                 val renderOnly = kit.pads.filter { it.recipe == null }.map { it.slot }
                 val expectedRenderOnly = when (starter.id) {
+                    in com.snipsnap.synth.EastAfricaKits.Genre.entries.map { it.id } -> (1..22).toList()
                     in StarterKits.PATIO_IDS -> (1..18).toList()
                     "spore-synth-jungle", "spore-synth-dub", "spore-synth-broken", "spore-jungle", "spore-dub", "spore-electro", "cosmic-breaks", "cosmic-jungle", "cosmic-dubstep" -> (1..18).toList()
                     "cloud" -> (7..16).toList()
@@ -264,6 +266,15 @@ class StarterKitsTest {
                         assertEquals(3, pad.chain?.zones?.size)
                         assertEquals(listOf(4, 4, 4), pad.chain?.zones?.map { it.cycle })
                         assertEquals(12, pad.chain?.boundaries?.size)
+                        assertTrue(pad.oneShot)
+                    }
+                }
+                if (starter.id in com.snipsnap.synth.EastAfricaKits.Genre.entries.map { it.id }) {
+                    for (pad in kit.pads) {
+                        assertEquals("EAST_AFRICA", pad.source["engine"])
+                        assertEquals(com.snipsnap.synth.EastAfricaKits.VERSION.toString(), pad.source["model"])
+                        assertEquals(listOf(3, 3, 3), pad.chain?.zones?.map { it.cycle })
+                        assertEquals(9, pad.chain?.boundaries?.size)
                         assertTrue(pad.oneShot)
                     }
                 }

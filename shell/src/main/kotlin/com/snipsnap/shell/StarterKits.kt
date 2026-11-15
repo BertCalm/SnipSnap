@@ -571,6 +571,31 @@ object StarterKits {
             seeded = false,
         ) { com.snipsnap.synth.ErosionKits.contrast() },
         Starter(
+            "east-africa-bongo-flava", "BONGO FLAVA",
+            "Fitted-synthesis drums, hand percussion, wood, metal and log bass. Twenty-two pads, three touch levels and three takes.",
+            seeded = false, tempoBpm = 100f,
+        ) { com.snipsnap.synth.EastAfricaKits.build(com.snipsnap.synth.EastAfricaKits.Genre.BONGO_FLAVA) },
+        Starter(
+            "east-africa-singeli", "SINGELI",
+            "Fitted-synthesis drums, hand percussion, wood, metal and log bass. Twenty-two pads, three touch levels and three takes.",
+            seeded = false, tempoBpm = 200f,
+        ) { com.snipsnap.synth.EastAfricaKits.build(com.snipsnap.synth.EastAfricaKits.Genre.SINGELI) },
+        Starter(
+            "east-africa-bongopiano", "BONGOPIANO",
+            "Fitted-synthesis drums, hand percussion, wood, metal and log bass. Twenty-two pads, three touch levels and three takes.",
+            seeded = false, tempoBpm = 112f,
+        ) { com.snipsnap.synth.EastAfricaKits.build(com.snipsnap.synth.EastAfricaKits.Genre.BONGOPIANO) },
+        Starter(
+            "east-africa-genge", "GENGE",
+            "Fitted-synthesis drums, hand percussion, wood, metal and log bass. Twenty-two pads, three touch levels and three takes.",
+            seeded = false, tempoBpm = 96f,
+        ) { com.snipsnap.synth.EastAfricaKits.build(com.snipsnap.synth.EastAfricaKits.Genre.GENGE) },
+        Starter(
+            "east-africa-kapuka", "KAPUKA",
+            "Fitted-synthesis drums, hand percussion, wood, metal and log bass. Twenty-two pads, three touch levels and three takes.",
+            seeded = false, tempoBpm = 108f,
+        ) { com.snipsnap.synth.EastAfricaKits.build(com.snipsnap.synth.EastAfricaKits.Genre.KAPUKA) },
+        Starter(
             "timber-pocket", "TIMBER FOLK POCKET",
             "Guitar, acoustic bass, cello and upright percussion. Three strike levels, four takes, a roll and a riser.",
             seeded = false, tempoBpm = 92f,
