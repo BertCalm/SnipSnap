@@ -1,6 +1,6 @@
 # EMBER: design brief and round-0 audition
 
-Status: **round 0e, a Python prototype (2026-11-14).** The owner's listens so far:
+Status: **round 0e, a Python prototype (2026-11-14), heard 2026-11-15: "Much better".** The owner's listens so far:
 - "Cymbals need a lot of work. Sounds like hitting sheet metal." Round 0b rebuilt every cymbal and hat from
   measurements of real cymbals.
 - "Sweeps sound like hail hitting a roof." Round 0c rebuilt the brush sweep and the brush roll from
@@ -8,6 +8,8 @@ Status: **round 0e, a Python prototype (2026-11-14).** The owner's listens so fa
 - "Bring down the sweep a bit in the groove ... a bit too mid heavy." Round 0d lowers the sweep in the grooves,
   brightens it and eases After Hours' 1962 chain.
 - "I meant all the kits." Round 0e brightens every kit.
+- On 2026-11-15 the owner heard rounds 0b to 0e (listening page version 12) and said "Much better". This
+  records the direction improving. It is not yet an acceptance of the voices or the kits as a baseline.
 
 Both are below. Nothing else changed sound, and nothing else has been heard yet. No Kotlin exists. The engine
 stays in progress until every applicable owner gate has evidence (see "Gates" below and the gates entry in
