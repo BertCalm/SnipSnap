@@ -54,7 +54,7 @@ internal fun AquariumPerformancePanel(
         }
     }
     Column(Modifier.fillMaxWidth().testTag("aquarium-performance-panel"), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        TapeText("AQUARIUM · LIVE KIT MIX", TapeType.lcdHeader, scheme.lcdInk.tape)
+        TapeText("LIVE KIT EFFECTS · SIX IN ONE", TapeType.lcdHeader, scheme.lcdInk.tape)
         TapeText(com.snipsnap.shell.Copy.AQUARIUM_LINE, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
         TapeText(
             "PADS + BEAT/GROOVE + their PRINT/BOUNCE. Count-in clicks share the effects. Other players and MPC kit exports use their own routes.",
@@ -78,7 +78,7 @@ internal fun AquariumPerformancePanel(
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             ActionButton(
                 if (settings.enabled) "LIVE ON" else "BYPASSED", scheme, enabled = !busy, lit = settings.enabled,
-                accessibilityLabel = "${if (settings.enabled) "Bypass" else "Enable"} Aquarium performance",
+                accessibilityLabel = "${if (settings.enabled) "Bypass" else "Enable"} live kit effects",
                 modifier = Modifier.weight(1f).testTag("performance-enable").semantics { selected = settings.enabled },
                 onClick = { onChange(settings.copy(enabled = !settings.enabled)) },
             )
@@ -88,7 +88,7 @@ internal fun AquariumPerformancePanel(
         val gainText = if (settings.outputGain == 0f) "MUTE" else
             String.format(Locale.ROOT, "%.1f dB", 20.0 * log10(settings.outputGain.toDouble()))
         Column(Modifier.testTag("performance-output").semantics(mergeDescendants = true) {
-            contentDescription = "Aquarium performance output"
+            contentDescription = "Live kit effects output"
             stateDescription = gainText
         }) {
             StepperSlider("OUTPUT", settings.outputGain, gainText, color, scheme, !busy,

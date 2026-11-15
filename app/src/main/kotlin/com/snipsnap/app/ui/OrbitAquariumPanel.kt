@@ -37,7 +37,7 @@ internal fun OrbitAquariumPanel(set: OrbitSet, route: OrbitAquarium.Route, schem
         TapeText(when {
             faulted -> "AQUARIUM FAULT · RESET TAIL OR RESTART PLAY"
             !set.aquariumFromKit -> "KIT FX OFF"
-            !route.settings.enabled -> "DRY · KIT PERFORMANCE IS BYPASSED"
+            !route.settings.enabled -> "DRY · LIVE KIT EFFECTS ARE OFF"
             route.settings.settings.isBypass -> "DRY · ALL SIX EFFECT MIXES ARE ZERO"
             route.settings.outputGain == 0f -> "WET MIX MUTED"
             playing -> "STEREO KIT FX LIVE"
@@ -60,7 +60,7 @@ internal fun OrbitAquariumPanel(set: OrbitSet, route: OrbitAquarium.Route, schem
                 modifier = Modifier.weight(1f), accessibilityLabel = "Lengthen ORBIT FX bounce tail",
                 onClick = { onChange(set.copy(aquariumTailSeconds = tails.firstOrNull { it > set.aquariumTailSeconds } ?: 30f)) })
         }
-        TapeText("Saved KIT → PERFORMANCE sound at ORBIT tempo. Mix and tapped pads have separate FX history. BOUNCE starts fresh for one turn plus the chosen zero-input tail; taps are excluded. The ending can cut a long tail, and a wet bounce can have a loop seam. CLIP TO KIT carries notes only.",
+        TapeText("Saved KIT TOOLS → LIVE KIT EFFECTS sound at ORBIT tempo. Mix and tapped pads have separate FX history. BOUNCE starts fresh for one turn plus the chosen zero-input tail; taps are excluded. The ending can cut a long tail, and a wet bounce can have a loop seam. CLIP TO KIT carries notes only.",
             TapeType.pixelSmall, scheme.ink2.tape, maxLines = Int.MAX_VALUE)
         TapeText("SAVED SAMPLES keeps the stereo file; SAMPLE edits in mono. A wet bounce already contains FX. Playing it through KIT FX applies them again.",
             TapeType.pixelSmall, scheme.ink2.tape, maxLines = Int.MAX_VALUE)

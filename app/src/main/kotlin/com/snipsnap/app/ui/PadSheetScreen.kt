@@ -122,6 +122,7 @@ import com.snipsnap.shell.ChopReviewModel
 import com.snipsnap.shell.Copy
 import com.snipsnap.shell.ConfluenceWorkshop
 import com.snipsnap.shell.DustPrints
+import com.snipsnap.shell.EffectsMenu
 import com.snipsnap.shell.KitBuilderModel
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.Mutate
@@ -1439,7 +1440,7 @@ fun PadSheetScreen(
     // ---- Compound boards: staged edits over one preserved source ----
     fun boardFailure(action: String, e: Exception) {
         if (e is IllegalArgumentException || e is IllegalStateException || e is JsonException) {
-            onToast(e.message ?: "${selectedBoardType.name} could not use this pad")
+            onToast(e.message ?: "${PadSheet.boardLabel(selectedBoardType)} could not use this pad")
         } else {
             failure(action, e)
         }
@@ -1456,7 +1457,7 @@ fun PadSheetScreen(
         val recipeToHear = BoardRecipe(typeToHear, amountToHear, pendingObliterate.takeIf { typeToHear == BoardType.OBLITERATE })
         applyingSegment = null
         busy = true
-        boardAction = if (original) "HEAR ORIGINAL" else "HEAR ${typeToHear.name}"
+        boardAction = if (original) "HEAR ORIGINAL" else "HEAR ${PadSheet.boardLabel(typeToHear)}"
         voice?.release()
         voice = null
         val boardJob = jobs.beginJob(Copy.WORKING_BUSY)
@@ -1468,7 +1469,7 @@ fun PadSheetScreen(
                         val current = fresh.kit.pad(targetSlot)
                         check(current != null && current.sampleFile == p.sampleFile &&
                             current.recipe == p.recipe && current.velocityLayers == p.velocityLayers) {
-                            "This pad changed. Open it again before hearing ${typeToHear.name}"
+                            "This pad changed. Open it again before hearing ${PadSheet.boardLabel(typeToHear)}"
                         }
                         // A robin pad previews from take one's pre-print sound (PrintedPadStore.preview).
                         BoardSheet.preview(fresh, targetSlot, recipeToHear)
@@ -1483,7 +1484,7 @@ fun PadSheetScreen(
                 }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
-                boardFailure("HEAR ${typeToHear.name}", e)
+                boardFailure("HEAR ${PadSheet.boardLabel(typeToHear)}", e)
             } finally {
                 boardAction = null
                 busy = false
@@ -1501,7 +1502,7 @@ fun PadSheetScreen(
         val amountToKeep = pendingBoardAmount
         val typeToKeep = selectedBoardType
         val recipeToKeep = BoardRecipe(typeToKeep, amountToKeep, pendingObliterate.takeIf { typeToKeep == BoardType.OBLITERATE })
-        val activeName = BoardSheet.read(p.recipe)?.type?.name ?: typeToKeep.name
+        val activeName = (BoardSheet.read(p.recipe)?.type ?: typeToKeep).let(PadSheet::boardLabel)
         val stalePads = pendingMetadataSlots.associateWith { m.kit.pad(it) }
         applyingSegment = null
         busy = true
@@ -1540,14 +1541,14 @@ fun PadSheetScreen(
                 onKitUpdated(fresh.kit)
                 onToast(
                     if (!applied) Copy.BIN_ITEM_GONE else when (action) {
-                        "KEEP" -> if (amountToKeep == 0f) "Original kept on ${p.displayName}" else "${typeToKeep.name} kept on ${p.displayName}"
+                        "KEEP" -> if (amountToKeep == 0f) "Original kept on ${p.displayName}" else "${PadSheet.boardLabel(typeToKeep)} kept on ${p.displayName}"
                         "REMOVE" -> "$activeName removed from ${p.displayName}"
                         else -> "Board change undone on ${p.displayName}"
                     },
                 )
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
-                boardFailure("$action ${typeToKeep.name}", e)
+                boardFailure("$action ${PadSheet.boardLabel(typeToKeep)}", e)
             } finally {
                 boardAction = null
                 busy = false
@@ -1607,7 +1608,7 @@ fun PadSheetScreen(
             } catch (error: Exception) {
                 if (error is CancellationException) throw error
                 if (request == aquariumGeneration && scope.isActive && liveSlot == targetSlot && liveKitDir == kitDir) {
-                    aquariumFailure("PREVIEW AQUARIUM", error)
+                    aquariumFailure("PREVIEW ${PadSheet.CHAIN_LABEL}", error)
                 }
             } finally {
                 if (request == aquariumGeneration) {
@@ -1660,13 +1661,13 @@ fun PadSheetScreen(
                 }
                 onKitUpdated(fresh.kit)
                 onToast(when (action) {
-                    "KEEP" -> if (recipe.isBypass) "Original restored on ${expected.displayName}" else "Aquarium kept on ${expected.displayName}"
-                    "REMOVE" -> "Aquarium removed from ${expected.displayName}"
-                    else -> "Aquarium change undone on ${expected.displayName}"
+                    "KEEP" -> if (recipe.isBypass) "Original restored on ${expected.displayName}" else "Effect chain kept on ${expected.displayName}"
+                    "REMOVE" -> "Effect chain removed from ${expected.displayName}"
+                    else -> "Effect chain change undone on ${expected.displayName}"
                 })
             } catch (error: Exception) {
                 if (error is CancellationException) throw error
-                if (scope.isActive && liveKitDir == kitDir && liveSlot == targetSlot) aquariumFailure("$action AQUARIUM", error)
+                if (scope.isActive && liveKitDir == kitDir && liveSlot == targetSlot) aquariumFailure("$action ${PadSheet.CHAIN_LABEL}", error)
                 else onToast(error.message ?: "Aquarium could not save this pad")
             } finally {
                 aquariumAction = null
@@ -2739,7 +2740,7 @@ fun PadSheetScreen(
                         }
                     } catch (e: Exception) {
                         if (e is CancellationException) throw e
-                        if (e is Outside.Refused) onToast(Copy.outsideRefused(e.message ?: "the room said no")) else failure("RE-AMP AND ROOM", e)
+                        if (e is Outside.Refused) onToast(Copy.outsideRefused(e.message ?: "the room said no")) else failure("SPEAKER AND ROOM", e)
                     } finally {
                         outsideStage = null
                         busy = false
@@ -2752,7 +2753,7 @@ fun PadSheetScreen(
                 // which now runs inside the `appScope` handoff above, not here —
                 // this capture-phase catch only ever sees a mic/IO failure.
                 if (e is CancellationException) throw e
-                failure("RE-AMP AND ROOM", e)
+                failure("SPEAKER AND ROOM", e)
             } finally {
                 if (!handedOff) {
                     outsideStage = null
@@ -3371,6 +3372,102 @@ fun PadSheetScreen(
         onOpenBox(PadSheetBoxes.toggle(openBoxKind, box)?.name)
     }
 
+    // A chip's tap, and a list row's for a segment: the one door both draw (the effects list, direction B).
+    fun tapSegment(seg: String) {
+        val placing = pedalPlacing
+        pedalPlacing = null
+        when {
+            // A PUT ON ROW in waiting: a tap on one of the row's five swaps it in that
+            // place, and any other tap only cancels the wait.
+            placing != null -> {
+                if (seg in pedalRow.words) {
+                    val outgoing = pedalRow.keys[pedalRow.words.indexOf(seg)]
+                    runCatching { PedalSlate.putOnRow(pedalRow, placing, outgoing) }.onSuccess { row ->
+                        onPedalRowChange(row)
+                        onToast(Copy.rowSwapped(PadSheet.displayLabel(Pedals.byKey(placing).word), PadSheet.displayLabel(seg)))
+                    }
+                }
+            }
+            seg == PadSheet.MORE -> {
+                pedalMoreOpen = !pedalMoreOpen
+            }
+            // No `applyingSegment` for NONE: the busy header reads
+            // "TREATMENT · <segment>…", and a restore out of the bin
+            // is a file copy, not the second-and-a-bit of DSP that
+            // header exists to explain. `busy` still greys the card.
+            seg == PadSheet.NONE -> {
+                unTreat()
+            }
+            // A pedal on the row: on if the card shows it off, off if lit. Said as
+            // On or Off rather than a toggle, so a late second tap does nothing.
+            seg in pedalRow.words -> {
+                val chip = pedalCard.chips.first { it.word == seg }
+                applyPedal(if (chip.lit) PedalSlate.Gesture.Off(chip.key) else PedalSlate.Gesture.On(chip.key))
+            }
+            else -> {
+                applyingSegment = seg
+                applyTreatment(seg, pendingAmt)
+            }
+        }
+    }
+
+    // AMT re-runs the treatment at the new amount, which is the
+    // same second-and-a-bit of work a chip tap starts - so it
+    // records the segment too. Finding 14 is about the treatment
+    // path, not only the taps that begin at a chip. On a pad with
+    // pedals it moves the marked pedal alone, and 0 takes it off.
+    fun commitAmount() {
+        pedalPlacing = null
+        val marked = pedalCard.marked
+        if (marked != null) {
+            applyPedal(PedalSlate.Gesture.Amount(marked, pendingAmt))
+        } else {
+            activeSegment?.let { seg ->
+                applyingSegment = seg
+                applyTreatment(seg, pendingAmt)
+            }
+        }
+    }
+
+    // The effects list (direction B): what the pad carries now, the stepper's name, and a row's tap,
+    // routed through the door its chip, pedal line, board or box already takes.
+    val effectsOnNow = remember(pad) { EffectsMenu.onNow(pad) }
+    val effectsAmountLabel = pedalCard.marked?.let { Copy.pedalAmt(PadSheet.displayLabel(Pedals.byKey(it).word)) }
+        ?: activeSegment?.let { Copy.pedalAmt(PadSheet.displayLabel(it)) }
+        ?: "AMT"
+    var boardPicked by remember(entry.dir, slot) { mutableStateOf(false) }
+    var buttonsOpen by remember(entry.dir) { mutableStateOf(false) }
+    fun pickEffect(target: EffectsMenu.Target) {
+        if (busy) return
+        when (target) {
+            is EffectsMenu.Target.Segment -> tapSegment(target.id)
+            is EffectsMenu.Target.Pedal -> {
+                pedalPlacing = null
+                val key = Pedals.byWord(target.word)?.key ?: return
+                val on = PadSheet.readPedals(pad.recipe)?.picks?.any { it.key == key } == true
+                applyPedal(if (on) PedalSlate.Gesture.Off(key) else PedalSlate.Gesture.On(key))
+            }
+            is EffectsMenu.Target.Board -> {
+                voice?.release()
+                voice = null
+                selectedBoardType = target.type
+                boardPicked = true
+            }
+            is EffectsMenu.Target.Outside -> {
+                outsideMove = target.move.name
+                if (openBoxKind != PadSheetBoxes.Box.OUTSIDE) tapBox(PadSheetBoxes.Box.OUTSIDE)
+            }
+            EffectsMenu.Target.Chain -> {
+                stopAquariumPreview()
+                aquariumError = null
+                pedalMoreOpen = false
+                pedalPlacing = null
+                aquariumOpen = true
+            }
+            EffectsMenu.Target.Shape -> if (openBoxKind != PadSheetBoxes.Box.SHAPE) tapBox(PadSheetBoxes.Box.SHAPE)
+        }
+    }
+
     // DUST FROM ▸ (docs/DUST.md §5): borrow another tape's dust. The shelf's
     // tapes open inline on the TREATMENT bench, newest first; a pick runs
     // the DUST door at the card's AMT with that tape, and since the recipe
@@ -3726,7 +3823,24 @@ fun PadSheetScreen(
                 )
             }
             if (!aquariumOpen) {
-            BoardCard(
+            // Direction B (docs/UX_PASS_2026_11.md): the effects as a list by what you want, each with
+            // its line, first. A row takes the same door its chip, pedal line, board or box does.
+            EffectsList(
+                onNow = effectsOnNow,
+                amountLabel = effectsAmountLabel,
+                amountEnabled = activeSegment != null || hasPedals,
+                amountFraction = pendingAmt,
+                amountText = "${(pendingAmt * 100).roundToInt()}%",
+                padColor = classColor,
+                scheme = scheme,
+                busy = busy,
+                onPick = ::pickEffect,
+                onAmountChange = { f -> pendingAmt = (f * 20f).roundToInt() / 20f },
+                onAmountCommit = ::commitAmount,
+            )
+            // A board stages on its card until KEEP: drawn once a list row picks one, while the pad
+            // carries one, or with the buttons.
+            if (boardPicked || boardApplied != null || buttonsOpen) BoardCard(
                 type = selectedBoardType,
                 amount = pendingBoardAmount,
                 obliterate = pendingObliterate,
@@ -3751,7 +3865,7 @@ fun PadSheetScreen(
                 onRemove = {
                     when {
                         boardApplied == null -> onToast("No board to remove")
-                        boardApplied.type != selectedBoardType -> onToast("Select ${boardApplied.type.name} to remove it")
+                        boardApplied.type != selectedBoardType -> onToast("Select ${PadSheet.boardLabel(boardApplied.type)} to remove it")
                         else -> commitBoard("REMOVE")
                     }
                 },
@@ -3760,6 +3874,15 @@ fun PadSheetScreen(
                     else if (!boardUndoAvailable) onToast("No board change to undo") else commitBoard("UNDO")
                 },
             )
+            // Today's chips, pedal row, MORE and COPY/PASTE: nothing deleted, behind one closed section.
+            GroupBox(
+                legend = EffectsMenu.BUTTONS_HEADING,
+                summary = EffectsMenu.BUTTONS_HOLDS,
+                open = buttonsOpen,
+                onToggle = { buttonsOpen = !buttonsOpen },
+                scheme = scheme,
+                enabled = !busy,
+            ) {
             // Which segment the user just tapped, so the card can say what it
             // is working on (September UAT, finding 14). Read only while
             // `busy` is true - see `applying` below - so an applyTreatment
@@ -3784,43 +3907,7 @@ fun PadSheetScreen(
                 scheme = scheme,
                 busy = busy,
                 applying = applyingSegment.takeIf { busy },
-                onSegmentTap = { seg ->
-                    val placing = pedalPlacing
-                    pedalPlacing = null
-                    when {
-                        // A PUT ON ROW in waiting: a tap on one of the row's five swaps it in that
-                        // place, and any other tap only cancels the wait.
-                        placing != null -> {
-                            if (seg in pedalRow.words) {
-                                val outgoing = pedalRow.keys[pedalRow.words.indexOf(seg)]
-                                runCatching { PedalSlate.putOnRow(pedalRow, placing, outgoing) }.onSuccess { row ->
-                                    onPedalRowChange(row)
-                                    onToast(Copy.rowSwapped(PadSheet.displayLabel(Pedals.byKey(placing).word), PadSheet.displayLabel(seg)))
-                                }
-                            }
-                        }
-                        seg == PadSheet.MORE -> {
-                            pedalMoreOpen = !pedalMoreOpen
-                        }
-                        // No `applyingSegment` for NONE: the busy header reads
-                        // "TREATMENT · <segment>…", and a restore out of the bin
-                        // is a file copy, not the second-and-a-bit of DSP that
-                        // header exists to explain. `busy` still greys the card.
-                        seg == PadSheet.NONE -> {
-                            unTreat()
-                        }
-                        // A pedal on the row: on if the card shows it off, off if lit. Said as
-                        // On or Off rather than a toggle, so a late second tap does nothing.
-                        seg in pedalRow.words -> {
-                            val chip = pedalCard.chips.first { it.word == seg }
-                            applyPedal(if (chip.lit) PedalSlate.Gesture.Off(chip.key) else PedalSlate.Gesture.On(chip.key))
-                        }
-                        else -> {
-                            applyingSegment = seg
-                            applyTreatment(seg, pendingAmt)
-                        }
-                    }
-                },
+                onSegmentTap = ::tapSegment,
                 onAmountChange = { f -> pendingAmt = (f * 20f).roundToInt() / 20f },
                 afterRowOne = {
                 // The tape this pad's dust comes from — or would come from — and
@@ -3843,23 +3930,7 @@ fun PadSheetScreen(
                     },
                 )
                 },
-                // AMT re-runs the treatment at the new amount, which is the
-                // same second-and-a-bit of work a chip tap starts - so it
-                // records the segment too. Finding 14 is about the treatment
-                // path, not only the taps that begin at a chip. On a pad with
-                // pedals it moves the marked pedal alone, and 0 takes it off.
-                onAmountCommit = {
-                    pedalPlacing = null
-                    val marked = pedalCard.marked
-                    if (marked != null) {
-                        applyPedal(PedalSlate.Gesture.Amount(marked, pendingAmt))
-                    } else {
-                        activeSegment?.let { seg ->
-                            applyingSegment = seg
-                            applyTreatment(seg, pendingAmt)
-                        }
-                    }
-                },
+                onAmountCommit = ::commitAmount,
             )
             // MORE's list: every pedal, ON or OFF, the AMT mark, the side, and PUT ON ROW.
             if (pedalMoreOpen) {
@@ -3931,6 +4002,7 @@ fun PadSheetScreen(
                 Modifier.fillMaxWidth(),
                 maxLines = 2,
             )
+            }
             }
             }
 
@@ -4932,9 +5004,11 @@ private fun BoardCard(
     onUndo: () -> Unit,
 ) {
     val selectedIsActive = applied?.type == type
+    // The owner's names (2026-11-15): drawn and spoken by PadSheet.boardLabel; BoardType.name stays the files' prefix.
+    val shown = PadSheet.boardLabel(type)
     Column(
         Modifier.fillMaxWidth().padding(bottom = 12.dp).semantics {
-            contentDescription = type.name
+            contentDescription = shown
             stateDescription = if (canUndo) "Undo available" else "No undo"
         },
         verticalArrangement = Arrangement.spacedBy(6.dp),
@@ -4943,29 +5017,24 @@ private fun BoardCard(
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 for (choice in choices) {
                     ActionButton(
-                        choice.name.replace('_', ' '), scheme, enabled = !busy, lit = type == choice,
-                        accessibilityLabel = "Choose ${choice.name.replace('_', ' ')}",
+                        PadSheet.boardLabel(choice), scheme, enabled = !busy, lit = type == choice,
+                        accessibilityLabel = "Choose ${PadSheet.boardLabel(choice)}",
                         modifier = Modifier.weight(1f), onClick = { onTypeChange(choice) },
                     )
                 }
             }
         }
         TapeText(
-            when (type) {
-                BoardType.WIDE -> "WIDE · STEREO CHARACTER"
-                BoardType.RUSH -> "RUSH · SWELL & MOTION"
-                BoardType.OBLITERATE -> "OBLITERATE · HALO & DESTRUCTION"
-                BoardType.VELOUR -> "VELOUR · DRUMS IN SPACE"
-                BoardType.VELOUR_BLOOM -> "VELOUR BLOOM · DEEPER SPACE"
-            },
+            // The list's own line for this board (EffectsMenu), so the card and the list say one thing.
+            EffectsMenu.entryFor(EffectsMenu.Target.Board(type)).line,
             TapeType.pixel, scheme.ink.tape, maxLines = 2,
         )
         TapeText(
             when {
                 action != null -> "$action…"
                 chainPad -> Copy.ROBIN_FOREIGN
-                selectedIsActive -> "${type.name} kept at ${(applied!!.amount * 100).roundToInt()}%"
-                applied != null -> "${applied.type.name} is active. KEEP replaces it from the original."
+                selectedIsActive -> "$shown kept at ${(applied!!.amount * 100).roundToInt()}%"
+                applied != null -> "${PadSheet.boardLabel(applied.type)} is active. KEEP replaces it from the original."
                 type == BoardType.WIDE -> "Hear a wider sound before keeping it"
                 type == BoardType.OBLITERATE -> "Hear the octave halo, fuzz and chopped fragments before keeping them"
                 type == BoardType.VELOUR || type == BoardType.VELOUR_BLOOM -> "Hear the fragments and ambience through an amp before keeping them"
@@ -4995,12 +5064,12 @@ private fun BoardCard(
                 modifier = Modifier.weight(1f), onClick = onHearOriginal,
             )
             ActionButton(
-                "HEAR ${type.name}", scheme, enabled = !busy, dimmed = chainPad,
+                "HEAR $shown", scheme, enabled = !busy, dimmed = chainPad,
                 modifier = Modifier.weight(1f), onClick = onHearBoard,
             )
         }
         TapeText(
-            if (applied != null && !selectedIsActive) "Select ${applied.type.name} to REMOVE it. UNDO reverses the last kept edit."
+            if (applied != null && !selectedIsActive) "Select ${PadSheet.boardLabel(applied.type)} to REMOVE it. UNDO reverses the last kept edit."
             else "Nothing changes until KEEP. UNDO reverses the last kept edit.",
             TapeType.pixelSmall, scheme.ink3.tape, maxLines = 3,
         )
@@ -5050,7 +5119,7 @@ private fun ObliterateBoardControls(
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             for (division in listOf(4, 8, 16, 32)) {
                 ActionButton("1/$division", scheme, enabled = !busy, lit = settings.division == division,
-                    accessibilityLabel = "OBLITERATE division 1/$division", modifier = Modifier.weight(1f),
+                    accessibilityLabel = "FUZZ HALO division 1/$division", modifier = Modifier.weight(1f),
                     onClick = { onChange { current -> current.copy(division = division) } })
             }
         }
@@ -5058,7 +5127,7 @@ private fun ObliterateBoardControls(
             for (pitched in listOf(true, false)) {
                 val label = if (pitched) "OCTAVE" else "UNPITCHED"
                 ActionButton(label, scheme, enabled = !busy, lit = settings.pitched == pitched,
-                    accessibilityLabel = "OBLITERATE $label", modifier = Modifier.weight(1f),
+                    accessibilityLabel = "FUZZ HALO $label", modifier = Modifier.weight(1f),
                     onClick = { onChange { current -> current.copy(pitched = pitched) } })
             }
         }
@@ -5810,11 +5879,11 @@ private fun OutsideCard(
                         .raisedBevel(scheme, fill = if (selected) padColor.copy(alpha = 0.85f) else null)
                         // Always clickable, `!busy` forwarded rather than
                         // dropped (accessibility audit finding 12).
-                        .tapeClick(label = m, enabled = !busy) { onMove(m) }
+                        .tapeClick(label = PadSheet.moveLabel(m), enabled = !busy) { onMove(m) }
                         .padding(horizontal = 4.dp),
                     contentAlignment = Alignment.Center,
                 ) {
-                    TapeText(m, TapeType.pixel, if (busy) scheme.ink3.tape else if (selected) scheme.titleInk.tape else scheme.ink2.tape)
+                    TapeText(PadSheet.moveLabel(m), TapeType.pixel, if (busy) scheme.ink3.tape else if (selected) scheme.titleInk.tape else scheme.ink2.tape)
                 }
             }
         }
