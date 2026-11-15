@@ -435,7 +435,9 @@ pack under `testkit/scuff-kits/` (gitignored). Run on 2026-11-13: "Verified Detr
 
 The three bass hits are not an octave apart: BOOM's TUNE spans 45 to 80 Hz, 0.83 of an octave, so "Boom High"
 is a fifth-and-a-bit above "Boom". The brief's octave jumps need either a second BOOM voice an octave up or a
-wider TUNE; proposed for the owner's call.
+wider TUNE; proposed for the owner's call. Decided 2026-11-15: the owner kept the spacing as heard. The kits were
+accepted with it, so BOOM's TUNE range, its model version and the three pads stay as they are; a true octave would
+have meant a wider TUNE under a new model version or an eleventh voice, and neither was wanted.
 
 **Velocity and takes.** Every hit is `Scuff.renderPad(voice, macros, velocity, take + 1)`: the engine strikes
 at the zone's velocity (.30, .65, 1) and deals the take itself, so a zone is a different strike and a take
@@ -546,7 +548,7 @@ accepted baseline; a later change to a voice or a kit is a new round against thi
 What it does not close: a phone has not played the kits and no MPC has loaded the tracks (hardware playback),
 MPC 2 keeps one take per zone (a format limit, not applicable since 2026-11-14), SCUFF had no presets and was not on the roster (the engine stayed rosterless
 until this listen; round 4 below files them), the app's picker has no SCUFF entry (a round of its own), and the three BOOM pads are
-0.83 of an octave apart rather than an octave (the owner's call). The listen was through whatever the owner
+0.83 of an octave apart rather than an octave (kept as heard by the owner's decision of 2026-11-15). The listen was through whatever the owner
 played the page on, which the page does not record.
 
 ## As built, round 4: presets and the roster (2026-11-13)
@@ -611,5 +613,5 @@ CI's emulator, not here.
 
 What the picker does not do: velocity and takes have no control on the panel (a RIVET-style editor would be a
 round of its own), so an edited sound is the plain strike at take 0 unless it started from a preset, and
-SCRAMBLE draws from the engine's own ranges. Open after round 5: hardware playback and BOOM's octave spacing (the owner's
-call); MPC 2 round robin is not applicable, a format limit the owner recorded on 2026-11-14.
+SCRAMBLE draws from the engine's own ranges. Open after round 5: hardware playback. BOOM's octave spacing is settled: the
+owner kept the fifth-and-a-bit as heard (2026-11-15). MPC 2 round robin is not applicable, a format limit the owner recorded on 2026-11-14.

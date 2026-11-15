@@ -5,7 +5,7 @@ These are the last three bodies from the SPLAY voices design. They build on
 model 2's (`Splay.prepareModel2Excitation`), and only the body the catches strike changes. They live in
 `SplayBodies` as `SplayBody.AIR`, `BAR` and `SKIN`.
 
-Like WIRE and RUB, they are not yet in the picker, patch format, starters or keygroups.
+Like WIRE and RUB, they are registered as SPLAY voices: see [SPLAY_BODIES_PICKER.md](SPLAY_BODIES_PICKER.md).
 
 ## Owner listening
 
@@ -134,7 +134,7 @@ Only listening decides it, which is why the round asks the question directly.
 
 ## Still open
 
-- **Registration:** none of the three is registered, and nothing here reaches the phone.
+- **Registration:** done in [SPLAY_BODIES_PICKER.md](SPLAY_BODIES_PICKER.md); held keys are not.
 - **Render cost:** a warm C4 render measured 77 ms (BAR), 141 ms (SKIN) and 367 ms (AIR) on this
   machine. That is a JVM number, not a phone measurement.
 

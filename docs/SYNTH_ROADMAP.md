@@ -3641,11 +3641,25 @@ deterministic objects correlate 0.93 to 0.99; random draws are another realisati
 owner waived the roll gate. See [CLUTTER](CLUTTER.md) and the gates entry. The four genre kits go on the shelf
 at round 2; the picker entry waits for a session with an SDK.
 
+### TIMBER acoustic-instrument percussion banks (2026-11-14)
+
+Three genre starters from guitar, acoustic bass guitar, cello and upright body/string
+contacts: FOLK POCKET, WOOD BOOM BAP and STRING TWO STEP. Fourteen finite hits, knuckle roll,
+string-rake riser, three contact strengths and four deterministic takes per pad. Native
+save/playback and MPC 3 PCM/cycle read-back are covered by `TimberKitTest`; run
+`:shell:generateTimberKits` for the listening pack and exports. This is an authored bank,
+not a new melodic engine. Model 2 ports the owner-approved Python contact and extended-technique
+auditions, with independent body/string profiles, seven contacts and bounded take levels. Model 1
+source replay is retained. The owner confirmed “Listening and hardware approved” on 2026-11-15
+for the delivered Kotlin kits. The shared MPC slice-map implementation is unchanged; software
+regression remains pending. See [TIMBER](TIMBER.md) for the gate ledger.
+
 ### SCUFF, round 5 (2026-11-14)
 
 On SYNTH's engine picker, mirroring SOOT arm for arm plus the native-factory path for its presets (a kit's pad
 loads whole, with its take and model); `EngineCatalog` under DRUMS, after ETCH; both READMEs count 87; an on-device test
-beside SOOT's in `NewEngineSynthScreenTest` (CI's emulator runs it). Open: hardware playback (MPC 2 round robin is not
+beside SOOT's in `NewEngineSynthScreenTest` (CI's emulator runs it). BOOM's bass pads stay a fifth and a bit apart, kept
+as heard (the owner, 2026-11-15). Open: hardware playback (MPC 2 round robin is not
 applicable since 2026-11-14, a format limit). See [SCUFF](SCUFF.md).
 
 ### CLUTTER, round 2 (2026-11-14)
@@ -3673,3 +3687,17 @@ The engine picker: CLUTTER joins SYNTH's `Engine` after SCUFF, mirroring SCUFF's
 native-factory path), so a kit preset loads whole with its take and model. `EngineCatalog` files it under DRUMS;
 88 picker engines. An on-device test in `NewEngineSynthScreenTest`; CI compiles and runs it. Open: hardware
 playback, MPC 2. See [CLUTTER](CLUTTER.md).
+
+### DRUMLINE native battery
+
+The native battery retains the preferred cymbal mechanisms and independent player sections. Model 2 adds body to basses/tenors, a separate rim clack and snare snap; saved model-1 recipes remain replayable. FIELD and STREET CADENCE have different source tuning, damping, section sizes and scored articulations, each a 3 × 3 velocity/take grid with editable versioned recipes. Implementation and gate evidence: [DRUMLINE](DRUMLINE.md). Native revision 4 was accepted on 2026-11-15; its 32 FIELD/STREET pad recipes are factory presets pinned to the heard renderer. Phone/MPC hardware, render budget and remaining numerical coverage stay open.
+
+### EMBER, round 1 (2026-11-15)
+
+A live jazz and soul drum engine for a small club in 1962, ported from the round-0e Python prototype (heard as
+"Much better", then "Proceed") to `Ember.kt`: 27 voices of calf membranes, threshold parts (wires, rivets, plates,
+jingles), cymbals, hats and brushes fitted to CC0 recordings, the club and a 1962 chain; velocity on every voice,
+four takes, `EmberPatch` with velocity, take and model, rosterless (no presets yet), no kit yet. Measured against the
+Python: no brightness bias across the 27 voices (0.10 dB above 4 kHz); the drums correlate 0.978 to 0.996; every
+voice inside the spread of Python's own takes. Random draws are another realisation of the same law; the club's
+tail is the prototype's own draw. See [EMBER](EMBER.md) and the gates entry. The four kits go on the shelf at round 2.

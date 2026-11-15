@@ -274,7 +274,7 @@ Rounds 0 and 0b are Python prototype auditions; no Kotlin exists. Round 0b answe
 - **Sound character:** direction accepted. On 2026-11-12 the owner responded to the published round-0b audition, "Sounds good, please merge." Preserve round 0b as the accepted baseline; this is a listen to Python renders. The round-1 Kotlin port measures as the same waveform on the five deterministic voices (0.05 to 0.17 dB, correlation 0.997 to 1.000) and as another take on the four noise voices. On 2026-11-13, after the round-3 merge, the owner heard the page's version 5 (every pad of both kits cut from the exported MPC 3 tracks, the velocity strips, the phrases and the round-1 Kotlin section) and said, "Audition is all good." Preserve `Scuff.MODEL_VERSION` 1 and `ScuffKits.VERSION` 1 as the accepted baseline. This is a listen to the page, not evidence of a phone or MPC audition.
 - **Presets and the roster: pass (round 4).** `ScuffPresets` files the two accepted kits' twenty-eight hits as the factory bank (every voice at least twice, named after the kit), served by `Presets`; SCUFF is off `PatchTypes.ROSTERLESS`. Each preset is a pad the owner heard, through the engine's own finish (`ScuffPresetsTest` holds the shape to the kit's pad above .995 correlation). A player's saved SCUFF strike promotes with its velocity, take and model through `ScuffPatch.fromJsonText`.
 - **Classifier:** the Kotlin kick reads PERC (its click and knock lift the 93 ms centroid past the sub-kick rule) and the crushed hat reads SNARE; `drumClassFor` files them KICK and HAT_CLOSED. Disclosed in [SCUFF](SCUFF.md), held by `ScuffTest`.
-- **Overall: incomplete, every software gate in place and the sound heard.** Round 3 has the engine, the patch, two distinct kits on the shelf with their risers, and velocity and round robin proved through rendering, saving, playback and MPC 3 export in software; the owner accepted the engine and both kits by ear on 2026-11-13, round 4 filed those kits as the roster, and round 5 put the engine on the app's SYNTH picker with an on-device test (run by CI's emulator, not heard or seen by the owner). Hardware playback remains open; MPC 2 round robin is not applicable (the owner's format-limit decision of 2026-11-14, above).
+- **Overall: incomplete, every software gate in place and the sound heard.** Round 3 has the engine, the patch, two distinct kits on the shelf with their risers, and velocity and round robin proved through rendering, saving, playback and MPC 3 export in software; the owner accepted the engine and both kits by ear on 2026-11-13, round 4 filed those kits as the roster, and round 5 put the engine on the app's SYNTH picker with an on-device test (run by CI's emulator, not heard or seen by the owner). Hardware playback remains open; MPC 2 round robin is not applicable (the owner's format-limit decision of 2026-11-14, above); BOOM's octave spacing is settled by the owner's decision of 2026-11-15 to keep the kits' bass pads as heard, a fifth and a bit apart.
 
 ## MIRRORBALL kits (sound approved 2026-11-12, hardware open)
 
@@ -500,8 +500,21 @@ those five studies of one SING voice. Earlier CAIRN work keeps the scope its own
   `cairn-voices-1` (14 Nov 2026), and the re-tuned GRIND (G5–G9) in round `cairn-voices-2`
   the same day, at G9's gentler scrape level. Both are pinned. The five studies are settings
   of one SING voice, not new voices.
-- **Presets: not yet verified.** CAIRN has no factory presets. The nine Wave 3 KEEP SING recipes
-  are source-bound inputs to the studies, not factory presets.
+- **Presets: pass in software, 24 authored, owner KEEP.** `CairnPresets` files four factory
+  presets per voice in the shared roster (`Presets`). The owner kept all of them in round
+  `cairn-presets-1` (P1–P5, 14 Nov 2026), and `CairnPresetsTest` pins every one's render.
+  - SING's four are kept Wave 3 recipes, renamed only, and replay their accepted PCM24 anchors
+    (`CairnPresetsTest`): SING EARLIER (`before-60`), SING MOVING (`after-60`), SING SMOOTH
+    (`groove-0`) and SING GROOVED (`groove-100`).
+  - The other twenty are new settings. Each pins its saved model: 5 for KNOCK/ANSWER/TUMBLE,
+    6 for GRIND, 7 for VESSEL. GRIND's and VESSEL's eight are renders the owner had already
+    kept in `cairn-voices-1` and `-2`; KNOCK's, ANSWER's and TUMBLE's twelve were first heard
+    in `cairn-presets-1`.
+- **Picker: not yet verified on a device.** CAIRN is the last engine in the SYNTH ring, with all six
+  voices, their seven controls (HOLD's top step loops), the shared ROOT row and RANDOMISE.
+  - A reopened screen restores the complete recipe from its draft or its preset name.
+  - There is no MAKE INSTRUMENT for CAIRN on this screen; the SING studies keep their own route.
+  - `CairnSynthScreenTest` has not run on a device here.
 - **Playable keygroups: partial.** The shell builds and validates all five keygroup packages from
   pinned captures in JVM tests: EARLIER and MOVING over MIDI 48–72 from three native roots, the
   GROOVE studies at C4 only. Since 2026-11-14 the phone offers them under MAKE › INSTRUMENTS ›
@@ -509,7 +522,10 @@ those five studies of one SING voice. Earlier CAIRN work keeps the scope its own
   matches its pinned SHA-256 (`CairnSingRenderedCaptures`); the captures are not in this
   repository. `CairnSingRenderOnDeviceTest` checks the renders on the emulator. No physical phone
   or MPC has loaded a package.
-- **Premade kit: not yet.** None is built.
+- **Premade kit: pass in software, owner KEEP.** The CAIRN starter puts sixteen factory
+  presets on the shelf (METAL WOOD AND GLASS): three each of KNOCK, ANSWER and TUMBLE, the kept SING EARLIER and MOVING
+  loops, two GRIND and three VESSEL. The owner kept it as a kit in round `cairn-presets-1` (P6),
+  and `CairnPresetsTest` pins its sixteen pads. No phone or MPC has played it.
 - **Chord tools: partial.** In JVM tests, the existing chord stabs for C that fit inside 48–72 play as
   independent notes on a MOVING package, and notes outside the range are refused. Not on a device.
 - **Articulation (HOLD): partial.** Each study loops the accepted 88,200-frame SING cycle after its
@@ -526,8 +542,8 @@ those five studies of one SING voice. Earlier CAIRN work keeps the scope its own
   On 2026-11-13 the owner heard all five studies as playable keys (roots, in-between keys
   and a chord for EARLIER and MOVING; C4 for each GROOVE) and kept all of them
   ([CAIRN_SING_SAMPLER.md](CAIRN_SING_SAMPLER.md#owner-listening)).
-- **Overall: incomplete.** The Float captures' home, the phone picker, phone
-  and MPC playback, velocity layers, round robin and factory presets are open.
+- **Overall: incomplete.** Physical phone and MPC playback, velocity layers, round robin and a
+  device run of the SYNTH picker are open.
 
 ## WICK (finite keygroups and held entry ported from the recovery backup, 2026-11-13)
 
@@ -638,21 +654,27 @@ and finite MAKE INSTRUMENT keys. See [SPLAY_FINITE_DELIVERY.md](SPLAY_FINITE_DEL
 [SPLAY_NATIVE_RECOVERY.md](SPLAY_NATIVE_RECOVERY.md) and
 [SPLAY_PRODUCTION_INTAKE.md](SPLAY_PRODUCTION_INTAKE.md).
 
-- **Melodic voices: partial, six bodies kept, one registered.** TONGUE is the one registered voice.
+- **Melodic voices: pass in software, six bodies kept and registered.** TONGUE was the one voice.
   Its five population settings (1, 2, 4, 8 and 16 mechanisms) are settings, not voices. Five further
   bodies are built as model 3 and kept by the owner on 14 Nov, with every heard take pinned: WIRE (a
   string, round splay-voices-1), RUB (a rubbed resonator with a stick-slip catch, round splay-voices-2)
   and AIR (a breath-blown tube), BAR (a mallet bar) and SKIN (a drum head) (round splay-voices-3). See
-  [SPLAY_WIRE_RUB.md](SPLAY_WIRE_RUB.md) and [SPLAY_AIR_BAR_SKIN.md](SPLAY_AIR_BAR_SKIN.md). None is in
-  the picker, patch format, starters or keygroups yet.
-- **Presets: pass for the one voice.** The five accepted population settings are the factory
-  presets; the five provisional recipes stay in the CLI only.
-- **Playable keygroups: partial.** In JVM tests the shell builds finite keygroups (MIDI 36–84,
-  roots every three semitones plus the saved root, three touch levels) and admits them to the
-  shelf. The SynthScreen wiring and its two Android tests have not compiled or run here (no
-  Android SDK); CI's emulator runs them. No phone or MPC has played one.
-- **Premade kit: partial.** SPLAY POPULATIONS puts the five settings on A01–A05. All five render
-  in JVM tests, with a saved-recipe replay. It is one voice, not a full melodic kit.
+  [SPLAY_WIRE_RUB.md](SPLAY_WIRE_RUB.md) and [SPLAY_AIR_BAR_SKIN.md](SPLAY_AIR_BAR_SKIN.md). All five
+  are SPLAY voices in the picker and the patch format (model 3), each with its kept setting as a preset,
+  the SPLAY BODIES starter and finite MAKE INSTRUMENT keys; see
+  [SPLAY_BODIES_PICKER.md](SPLAY_BODIES_PICKER.md). Their keys across C2–C6 were kept in round
+  splay-bodies-1 (B1–B5, 14 Nov).
+- **Presets: pass.** TONGUE's five accepted population settings are its factory presets, and each
+  body's kept 16-mechanism setting is its one preset; the five provisional recipes stay in the CLI only.
+- **Playable keygroups: partial, owner KEEP across C2–C6.** In JVM tests the shell builds finite
+  keygroups (MIDI 36–84, roots every three semitones plus the saved root, three touch levels) and
+  admits them to the shelf, for TONGUE and for each of the five bodies. The owner kept the five
+  bodies' keys across C2–C6, at full and softest touch (round splay-bodies-1, B1–B5, 14 Nov), and
+  `SplayBodyKeysTest` pins those samples. The SynthScreen wiring and its Android tests run on CI's
+  emulator. No phone or MPC has played one.
+- **Premade kit: partial.** SPLAY POPULATIONS puts TONGUE's five settings on A01–A05, and SPLAY
+  BODIES puts the five kept bodies on A01–A05 (each its kept same-settings take). Both render in JVM
+  tests with saved-recipe replays. Neither is a full melodic kit.
 - **Chord tools: not yet verified.**
 - **Articulation (HOLD): fail.** SPLAY is finite (eight seconds). Positive HOLD is refused, and
   the instrument has no loop. RUB and AIR (both kept, including their held-loop clips S12 and S16)
@@ -662,7 +684,7 @@ and finite MAKE INSTRUMENT keys. See [SPLAY_FINITE_DELIVERY.md](SPLAY_FINITE_DEL
 - **Velocity and round robin: fail.** Velocity is gain only (the keygroups' three levels too).
   There are no round-robin takes. WIRE (kept), RUB, AIR, BAR and SKIN make a softer touch a duller
   contact or darker breath (soft/hard brightness .78, .54, .35, .63 and .69 after level matching); all
-  five are kept, none is registered yet.
+  five are kept and registered, but the keys' three levels are still gain-only.
 - **Sound character.** The five population settings were KEEP decisions in the owner's Wave 3
   review (2026-11-09). That is recorded only in the backup's notes and manifest
   ([SPLAY_NATIVE_RECOVERY.md](SPLAY_NATIVE_RECOVERY.md): “All five decisions are KEEP”), with no
@@ -703,6 +725,36 @@ and the approved strum study by its published WAV hashes (`OsteriaStrumTest`).
   the other keygroup sounds have not been listened to.
 - **Overall: incomplete.** Round robin, a seamless HOLD, chord tools on real keys, device runs
   of the picker and hardware playback remain open.
+
+## NACRE (HARMONICS and SHELL kept, 2026-11-15)
+
+NACRE had no section here. PEARL is its first voice: two plucked harps an octave apart in moving
+water, saved models 1 to 4, five factory presets and a FRESH TAPE velocity bank. See
+[NACRE](NACRE.md). HARMONICS (saved model 5) and SHELL (saved model 6) are its second and third
+voices, engine only so far. See [NACRE voices](NACRE_VOICES.md).
+
+| Gate | Status | Evidence |
+|---|---|---|
+| Melodic: six voices with presets | Partial: three of six | PEARL with five presets. HARMONICS and SHELL were kept by the owner on 2026-11-15 (nacre-voices-1, H1–H3 and L1–L3, all KEEP), have no presets yet and are not in the picker. Their 22 kept renders are pinned (`NacreVoicesTest`). BUBBLE is next; GROTTO and CONCH wait for a HOLD decision. |
+| Melodic: playable keygroups | Not yet verified | No NACRE keygroups exist. |
+| Melodic: premade kit | Pass in software, PEARL only | The NACRE starter (`SynthKits.nacre()`) and the FRESH TAPE velocity bank (`NacreKitTest`, `NacreVelocityKitTest`). No kit uses HARMONICS or SHELL. |
+| Melodic: chord-tool compatibility | Not yet verified | No chord mode; the spec's expanded voicing is not built. |
+| Articulation: HOLD | Fail | Every NACRE model refuses nonzero HOLD. |
+| Articulation: STRUM | Pass in software | The paired strum (DUET sets the answer and, at .65 and above, the crossing direction) is part of every voice. |
+| Percussion: roll or riser | Not applicable | A melodic engine. |
+| Drums: genre kits | Not applicable | A melodic engine. |
+| Velocity: rendering | Pass in software; partly heard | PEARL: contact soft and medium layers kept on 2026-11-13 (`nacre-strike-1`). HARMONICS and SHELL: a softer strike rings fewer upper strings or shells and is darker by at least 1 dB per step (`NacreVoicesTest`); the owner kept their soft, medium and hard clips (H1, L1). |
+| Velocity: saving, playback, export | Pass in software, PEARL only | The FRESH TAPE bank replays every layer (`NacreVelocityKitTest`). No HARMONICS or SHELL layers exist. |
+| Round robin | Not yet verified | No NACRE round robin exists. |
+| Picker | PEARL only; not yet verified on a device | `NacreSynthScreenTest` covers PEARL. HARMONICS and SHELL are not in the picker. |
+| Hardware playback | Not verified | No phone timing, MPC load or MPC velocity check is recorded. |
+
+- **Sound character: partly accepted.** The owner heard PEARL's first renderer as pleasant and
+  the timed returns as "Much better"; kept CONTACT .35 and .8 and the strike-shaped layers; and
+  kept HARMONICS and SHELL as new NACRE voices on 2026-11-15. Model 3's full range is still
+  marked as awaiting a listen in [NACRE](NACRE.md).
+- **Overall: incomplete.** Three more voices, presets and picker entries for HARMONICS and SHELL,
+  keygroups, HOLD, round robin, chord tools, device runs and hardware playback remain open.
 
 ## CLUTTER (round 2, 2026-11-14: four genre kits on the shelf, audition approved; round 3 roster, round 4 picker; hardware open)
 
@@ -764,32 +816,40 @@ TERRA is a world-percussion drum engine with 13 voices. Four are spec voices, fr
 | Round robin | Not yet verified | TERRA can re-strike (`Restrike.canRestrike`, POS moved per take), but no shelf pad deals takes. |
 | Starter kit: saving and export | Pass in software | The `terra` starter: every pad regenerates from its saved recipe, the kit reloads from `KitStore`, and MPC 3 and MPC 2 exports read back clean (`TerraStarterTest`, `TerraKitsTest`). |
 | Presets | Pass in software | `TerraPresets`: 48 presets, four on each of the twelve playing voices, all owner KEEP: W1–W10 in `terra-presets-1` and BAYAN's and TUN's reworked sets (Z2, Z4) in `terra-presets-2`, both 2026-11-15. `TerraPresetsTest` pins all 48 renders; Z2 and Z4 rebuild byte-identical to the desk. Not heard on a phone or MPC. |
-| Picker | Not yet verified on a device | TERRA is in the SYNTH picker (after ETCH) and `EngineCatalog` (DRUMS) with the twelve playing voices and their presets. `NewEngineSynthScreenTest` recalls the kept Djembe Open; the app side is compiled by CI only and has not run on a device. |
+| Picker | Not yet verified on a device | TERRA is in the SYNTH picker and `EngineCatalog` (DRUMS), after CLUTTER and before CAIRN, with the twelve playing voices and their presets. `NewEngineSynthScreenTest` recalls the kept Djembe Open; the app side is compiled by CI only and has not run on a device. |
 | Hardware playback | Not verified | No phone or MPC run is recorded. |
 
 - **Sound character: the whole classic kit is owner KEEP, as the app renders it** (`terra-kit-1`). The nine newer voices were first picked as Python prototype clips. The six spec pads (A01, A04, A13–A16) were kept as part of the full kit, over a picks-only alternative.
 - **Overall: incomplete.** The kit verdict, the starter, the three genre kits and all 48 presets are owner KEEP and pass in software. The picker is not yet verified on a device; round robin and touch come after.
 
-## EMBER (round 0, 2026-11-14, Python prototype, not heard)
+## SPORE synthetic kits (2026-11-14)
+
+The owner approved the procedural kick/snare pair. Three genre starters now contain 18 pads each, including authored rolls and risers. All 486 cells pass velocity/take source checks, saved recipe replay, native playback, SFZ import/playback and MPC 3 grid/PCM read-back. Drum shelf registration is verified in software. Melodic/keygroup/chord and string STRUM requirements do not apply to this percussion kit; individual voices are finite. The owner accepted the revised Jungle heel, ghost and ride on 2026-11-15 (“Better, proceed”); preserve their version-2 renders alongside the approved core pair. The owner subsequently confirmed listening to all kits and explicitly approved phone and hardware playback (“Phone and hardware approved”). Sound and device acceptance are therefore closed for Dry Jungle, Dub Breaks and Orbital Breaks. This is owner-reported device approval, separate from the automated 486-cell evidence; no device model or firmware was specified. The revision and complete starter-render regression passed. No MPC 2 fallback is included. See [the detailed ledger](superpowers/specs/2026-11-14-spore-synthetic-kits.md) and [revision acceptance](superpowers/specs/2026-11-15-spore-jungle-articulation.md).
+
+## EMBER (round 1 Kotlin, 2026-11-15, not heard; shelf and hardware open)
 
 A drum engine for a live jazz and soul kit in a small club in 1962: calfskin drums, a riveted ride, brushes, the
-club and a 1962 chain, from physical models. Four sixteen-pad kits. See [EMBER](EMBER.md). Round 0 is a Python
-prototype and a listening page (<https://claude.ai/artifact/Xmcj5t8MYSNCQPoTKHBcdw>); no Kotlin exists.
+club and a 1962 chain, from physical models. Four sixteen-pad kits. See [EMBER](EMBER.md). Rounds 0 to 0e are a
+Python prototype and a listening page (<https://claude.ai/artifact/Xmcj5t8MYSNCQPoTKHBcdw>). Round 1 (2026-11-15) is
+the Kotlin port, `Ember.kt`, measured against round 0e and not yet heard.
 
 - **Melodic, keygroup and chord-tool gates:** not applicable. A drum engine.
 - **Articulation:** finite hits, no HOLD. No picked or thumbed strings.
 - **Percussion: authored, not heard.** Every kit carries a roll or riser on A15/A16: a press roll and a mallet
   cymbal swell (EMBER), a brush roll and a far swell (AFTER HOURS), a snare roll (SOUL JAZZ), a swell (FREE).
-  Rendered in Python.
+  Rendered in Python. In Kotlin, `EmberTest` holds that the swell rises at least 20 dB and that both rolls grow.
 - **Drum shelf: authored, not on the shelf.** EMBER (138 BPM), EMBER AFTER HOURS (66), EMBER SOUL JAZZ (104) and
   EMBER FREE (80) differ in implements, drums per role, tuning, damping, looseness, microphone distance, chain and
   tempo. No pad is identical between any two kits; the same slot in two kits is at least 2.98 dB apart (Python).
-  No Kotlin, so nothing is on the shelf.
+  The engine is in Kotlin; the kits reach the shelf at round 2.
 - **Velocity and round robin:**
-  - **Rendering: measured in Python, not Kotlin.** On all 64 pads, soft against hard at matched level differs by at
-    least 1.92 dB; the closest two of any pad's four takes are 1.19 dB apart. Velocity moves the contact, the
-    threshold parts and the swell's arc, not a filter.
-  - **Saving, playback, export: open.** The listening page's pad grid is a browser stand-in, not app evidence.
+  - **Rendering: verified in Kotlin by test (round 1).** `EmberTest` holds that every one of the 27 voices' soft
+    and hard hits differ in shape at matched level (at least 1.8 dB), that its four takes are distinct strikes (at
+    least 1 dB), and that every take replays byte for byte (through JSON in `DeterminismTest`). Measured in Kotlin:
+    soft against hard at least 2.12 dB, the closest two takes 1.57 dB apart. (Python, on the four kits' 64 pads:
+    1.92 dB and 1.19 dB.) Velocity moves the contact, the threshold parts and the swell's arc, not a filter.
+  - **Saving, playback, export: open.** The kits are not on the shelf yet (round 2). The listening page's pad
+    grid is a browser stand-in, not app evidence.
 - **Sound character: open.** On 2026-11-14 the owner's first listen found the cymbals sounding like "hitting sheet
   metal". Round 0b rebuilds every cymbal and hat from CC0 recordings of a jazz club kit, with BREAKER's fitter. Measured
   against the recordings, they are 5.6 to 9.3 dB away over the first 150 ms, where round 0's were 11 to 34 dB and two
@@ -801,6 +861,50 @@ prototype and a listening page (<https://claude.ai/artifact/Xmcj5t8MYSNCQPoTKHBc
   then asked for every kit brighter. Round 0e makes the 1962 chain roll off less top and lowers WARMTH 0.15 on every
   kit. It also adds -1.5 dB at 600 Hz and +2 dB from 6 kHz to every pad, and makes the bowed cymbal sing at 1.4 kHz.
   On 2026-11-15 the owner heard rounds 0b to 0e on the listening page and said "Much better". That is a better
-  direction, not yet an accepted baseline. The sound-character gate stays open.
-- **Overall: incomplete.** Round 0 asks the owner which voices and kits to keep. Kotlin (round 1), the shelf and
-  saving, playback and MPC 3 export (round 2), and phone and MPC hardware (round 3) are all open.
+  direction, not yet an accepted baseline. The owner then said "Proceed", and round 1 ports round 0e to Kotlin:
+  no brightness bias (0.10 dB under Python above 4 kHz across the 27 voices), and every voice inside the spread of
+  Python's own takes. No one has heard the Kotlin renders. The sound-character gate stays open.
+- **Overall: incomplete.** The Kotlin engine is in (round 1) and not yet heard. The shelf and saving, playback and
+  MPC 3 export (round 2), and phone and MPC hardware (round 3) are open.
+
+## DRUMLINE (native model 4 accepted, 2026-11-15)
+
+A marching battery with independent player bodies, five bass sizes and progressive cymbal hand loss. The owner preferred the revised Python cymbals, then requested fuller bass/tenors, a harder rim clack and more snare snap. Model 2 addressed those requests; the owner then found snare/rimshot too similar. Model 3 separates their rim/wire balance. The owner then found the small bass body too similar to the low tenor; model 4 revises its mallet and lower-head balance while preserving saved models 1–3. The owner accepted the native audition on 2026-11-15 ("Sounds good, proceed"). The 32 heard pad recipes are now factory presets. See [DRUMLINE](DRUMLINE.md) for reproduction and measured evidence.
+
+- Melodic, keygroup, chord and string-STRUM gates: not applicable to the battery. Hits and scored rudiments are finite.
+- Percussion: flam, double-stroke roll, accelerating riser, bass unison and split bass implemented; native audition accepted.
+- Drum shelf: FIELD and STREET CADENCE are authored sixteen-pad starters, with different section sizes, tuning, losses and scored voices. Native audition accepted.
+- Rendering/save/play/export software: both full 3 × 3 grids pass PCM checks, persisted recipe replay, boundary selection, two repeat cycles, shape/take measurements and MPC export read-back. All 21 source/articulation voices are covered between the kits. MPC 2 retains velocity; its combined velocity/RR exception applies.
+- Phone and MPC hardware: not verified for these kits.
+- Fast rendering, full control-corner and alias-reference checks: open. Measured snare/crash/roll rendering exceeds the one-shot tens-of-milliseconds target on this host.
+- Overall: incomplete. Software evidence is not native sound or device acceptance.
+
+## TIMBER acoustic percussion integration
+
+TIMBER's model 2 Kotlin bank ports the owner-approved Python acoustic contact and extended-technique
+studies: four instruments and seven techniques. The owner accepted the first audition with
+“Sounds pretty good” and the extension with “Sound good, continue.” On 2026-11-15 the owner
+confirmed **“Listening and hardware approved”** for the delivered Kotlin kits. These are
+owner-confirmed listening and hardware gates, not newly measured automated results. See [TIMBER](TIMBER.md) and the
+[audition page](https://chatgpt.com/space/page_5e535f7b68ec8191800c4c3b66444f32).
+
+- **Melodic keys/chords/HOLD/STRUM:** not applicable to finite percussion banks.
+- **Drum shelf:** three registered genre starters, FOLK POCKET, WOOD BOOM BAP and STRING TWO STEP,
+  with different core instruments, tuning, damping, saved levels and groove arrangements.
+- **Percussion:** each kit includes an accelerating knuckle roll and a string-rake riser, printed
+  as finite phrases with full tails. They do not claim seamless sustain.
+- **Velocity and round robin in software:** 100 focused checks pass, covering 336 dry contact
+  variants, 576 kit variants, all saved PCM, source replay, velocity boundaries, two take cycles,
+  pad levels, choke groups and MPC 3 PCM/cycle read-back. Model 1 source replay is retained.
+- **MPC 2:** all 144 first-take velocity windows pass read-back. The owner's combined velocity/RR
+  format exception applies; no combined round-robin claim is made.
+- **MPC 3 hardware:** owner-approved on 2026-11-15. The shared chain-WAV slice-map limitation
+  and missing capture are unchanged; no exporter fix is claimed by this approval.
+- **Kotlin listening and phone/MPC hardware acceptance:** owner-approved on 2026-11-15.
+  No new device measurements or independently observed hardware results were produced here.
+- **Repository regression:** the original baseline run found a CAIRN sentence-case failure and was
+  interrupted (exit 130). Repository delivery merges `6e2e40676`, which includes that fix.
+  The merged revision passes 101 focused checks, including the former copy failure.
+  The local full-regression rerun has no recoverable completion result; PR #1122 CI remains
+  pending. Listening and hardware gates are closed by owner approval; software regression
+  remains the outstanding gate.

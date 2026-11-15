@@ -212,19 +212,28 @@ class StarterKitsTest {
                 assertFalse(Preflight.check(kit, dir).blocked(), "${starter.id} failed preflight")
                 // Regenerable where the engine records how: most starter pads
                 // carry recipes (not all — some treatments are render-only).
-                if (starter.id !in setOf(StarterKits.CONFLUENCE_ID, StarterKits.CONFLUENCE_VOICES_ID, "velour-close", "velour", "velour-bloom", "triad-techno", "triad-house", "triad-minimal", "cosmic-breaks", "cosmic-jungle", "cosmic-dubstep", "spore-jungle", "spore-dub", "spore-electro", "gatecrash-stone", "gatecrash-machine", "gatecrash-electro", "cypher-trap", "cypher-drill", "cypher-backroom", "cypher-lowrider", "cypher-dust", "cypher-flint", "mirrorball-philly", "mirrorball-loft", "mirrorball-munich", "soot", "soot-drumless", "soot-dub", "soot-noir", "soot-industrial", "etch", "scuff-detroit", "scuff-flint", "clutter-lofi", "clutter-street", "clutter-boombap", "clutter-micro") + StarterKits.PATIO_IDS) {
+                if (starter.id !in setOf(StarterKits.CONFLUENCE_ID, StarterKits.CONFLUENCE_VOICES_ID, "velour-close", "velour", "velour-bloom", "timber-pocket", "timber-boom-bap", "timber-two-step", "triad-techno", "triad-house", "triad-minimal", "cosmic-breaks", "cosmic-jungle", "cosmic-dubstep", "spore-synth-jungle", "spore-synth-dub", "spore-synth-broken", "spore-jungle", "spore-dub", "spore-electro", "gatecrash-stone", "gatecrash-machine", "gatecrash-electro", "cypher-trap", "cypher-drill", "cypher-backroom", "cypher-lowrider", "cypher-dust", "cypher-flint", "mirrorball-philly", "mirrorball-loft", "mirrorball-munich", "soot", "soot-drumless", "soot-dub", "soot-noir", "soot-industrial", "etch", "scuff-detroit", "scuff-flint", "clutter-lofi", "clutter-street", "clutter-boombap", "clutter-micro") + StarterKits.PATIO_IDS) {
                     assertTrue(kit.pads.any { it.recipe != null }, "${starter.id}: no pad carries a recipe")
                 }
+                if(starter.id.startsWith("spore-synth-")) for(pad in kit.pads) {
+                    val source=com.snipsnap.synth.SporeSyntheticKits.Recipe.fromJsonText(pad.source.getValue("sourceRecipe"))
+                    assertEquals(starter.id,source.genre.id)
+                    assertEquals(pad.slot-1,source.pad)
+                    assertEquals(3,pad.chain!!.zones!!.size)
+                    assertTrue(pad.chain!!.zones!!.all { it.cycle==3 })
+                }
+
                 // Most starters fill bank A. The wordless source bank has eight pads;
                 // VENT leaves four capture slots free; the A/B dip fills bank B with a twin of each,
                 // and SCOUR fills banks B, C and D with its thunder sheet, its beam, and its disc and rod.
                 val slots = when (starter.id) {
                     in StarterKits.PATIO_IDS -> 18
-                    "spore-jungle", "spore-dub", "spore-electro", "cosmic-breaks", "cosmic-jungle", "cosmic-dubstep" -> 18
+                    "spore-synth-jungle", "spore-synth-dub", "spore-synth-broken", "spore-jungle", "spore-dub", "spore-electro", "cosmic-breaks", "cosmic-jungle", "cosmic-dubstep" -> 18
                     "scour" -> 64
                     "lucky-dip-ab" -> 32
                     StarterKits.CONFLUENCE_ID, "erosion" -> 8
                     SplayDelivery.STARTER_ID -> 5
+                    SplayDelivery.BODIES_STARTER_ID -> 5
                     "vent" -> 12
                     "strike-fx" -> 4
                     else -> 16
@@ -241,10 +250,10 @@ class StarterKitsTest {
                 val renderOnly = kit.pads.filter { it.recipe == null }.map { it.slot }
                 val expectedRenderOnly = when (starter.id) {
                     in StarterKits.PATIO_IDS -> (1..18).toList()
-                    "spore-jungle", "spore-dub", "spore-electro", "cosmic-breaks", "cosmic-jungle", "cosmic-dubstep" -> (1..18).toList()
+                    "spore-synth-jungle", "spore-synth-dub", "spore-synth-broken", "spore-jungle", "spore-dub", "spore-electro", "cosmic-breaks", "cosmic-jungle", "cosmic-dubstep" -> (1..18).toList()
                     "cloud" -> (7..16).toList()
                     StarterKits.CONFLUENCE_ID -> (1..8).toList()
-                    StarterKits.CONFLUENCE_VOICES_ID, "velour-close", "velour", "velour-bloom", "triad-techno", "triad-house", "triad-minimal", "gatecrash-stone", "gatecrash-machine", "gatecrash-electro", "cypher-trap", "cypher-drill", "cypher-backroom", "cypher-lowrider", "cypher-dust", "cypher-flint", "mirrorball-philly", "mirrorball-loft", "mirrorball-munich", "soot", "soot-drumless", "soot-dub", "soot-noir", "soot-industrial", "etch", "scuff-detroit", "scuff-flint", "clutter-lofi", "clutter-street", "clutter-boombap", "clutter-micro" -> (1..16).toList()
+                    StarterKits.CONFLUENCE_VOICES_ID, "velour-close", "velour", "velour-bloom", "timber-pocket", "timber-boom-bap", "timber-two-step", "triad-techno", "triad-house", "triad-minimal", "gatecrash-stone", "gatecrash-machine", "gatecrash-electro", "cypher-trap", "cypher-drill", "cypher-backroom", "cypher-lowrider", "cypher-dust", "cypher-flint", "mirrorball-philly", "mirrorball-loft", "mirrorball-munich", "soot", "soot-drumless", "soot-dub", "soot-noir", "soot-industrial", "etch", "scuff-detroit", "scuff-flint", "clutter-lofi", "clutter-street", "clutter-boombap", "clutter-micro" -> (1..16).toList()
                     else -> emptyList()
                 }
                 assertEquals(expectedRenderOnly, renderOnly, "${starter.id}: pads with no recipe")
@@ -252,6 +261,16 @@ class StarterKitsTest {
                     for (pad in kit.pads) {
                         assertEquals("TRIAD", pad.source["engine"])
                         assertEquals("2", pad.source["kitVersion"])
+                        assertEquals(3, pad.chain?.zones?.size)
+                        assertEquals(listOf(4, 4, 4), pad.chain?.zones?.map { it.cycle })
+                        assertEquals(12, pad.chain?.boundaries?.size)
+                        assertTrue(pad.oneShot)
+                    }
+                }
+                if (starter.id.startsWith("timber-")) {
+                    for (pad in kit.pads) {
+                        assertEquals("TIMBER", pad.source["engine"])
+                        assertEquals(com.snipsnap.synth.TimberKits.VERSION.toString(), pad.source["model"])
                         assertEquals(3, pad.chain?.zones?.size)
                         assertEquals(listOf(4, 4, 4), pad.chain?.zones?.map { it.cycle })
                         assertEquals(12, pad.chain?.boundaries?.size)
@@ -657,7 +676,7 @@ class StarterKitsTest {
     @Test
     fun `starter IDs are stable, include new synth kits, and blank leads`() {
         assertEquals(
-            listOf("blank", "factory", "strike-fx", "lucky-dip", "lucky-dip-ab", "halobar", "halobar-six", "melodic", "chip", "overlap", "obbligato", "accord", "otis", "libration", "meridian", "tidal", "nacre", "ohm", "cloud", StarterKits.CONFLUENCE_ID, StarterKits.CONFLUENCE_VOICES_ID, "circuit", "thaw", "scour", "nimbus", "undertow", "suture", "revel", "tessera", "pitchwheel", "prism", "origami", "rime", "rime-complete", "filament", "chamber", "alloy", "contour", "stoop", "lacquer", "spool", "skitter", "tangle", "caustic", "crease", "lattice", "flock", "relay", "shoal", "embouchure", "bellows", "murmur", "murmur-selected", "scanned-chain", "trefoil", "trio", "osprey", "osprey-curated", "opensky", "vent", "skin", "cistern", "upright", "aerostat", "tremor", "ballast", "keel", "etch", "wick", "velocity", "chord-stabs", "chord-stabs-dorian", "chord-stabs-mixolydian", "chord-stabs-borrowed", "erosion", "triad-techno", "triad-house", "triad-minimal", "rivet-workshop", "rivet-factory", "rivet-warehouse", "velour-close", "velour", "velour-bloom", "backwash-soul", "backwash-psych", "fired-bronze", "spore-jungle", "spore-dub", "spore-electro", "cosmic-breaks", "cosmic-jungle", "cosmic-dubstep", "gatecrash-stone", "gatecrash-machine", "gatecrash-electro", "cypher-trap", "cypher-drill", "cypher-backroom", "cypher-lowrider", "cypher-dust", "cypher-flint", "breaker", "breaker-dub", "breaker-triphop", "mirrorball-philly", "mirrorball-loft", "mirrorball-munich", "soot", "soot-drumless", "soot-dub", "soot-noir", "soot-industrial", "murmur-kept", "scuff-detroit", "scuff-flint", "clutter-lofi", "clutter-street", "clutter-boombap", "clutter-micro", "meridian-materials", "meridian-six", "tempest", "tempest-tuned", SplayDelivery.STARTER_ID, "osteria", "osteria-six-voice", "tempest-circuit", "tempest-foundry", "tempest-step", "terra", "terra-sahel", "terra-maqam", "terra-punjab", "patio-cumbia", "patio-samba", "patio-dub"),
+            listOf("blank", "factory", "strike-fx", "lucky-dip", "lucky-dip-ab", "halobar", "halobar-six", "melodic", "chip", "overlap", "obbligato", "accord", "otis", "libration", "meridian", "tidal", "nacre", "ohm", "cloud", StarterKits.CONFLUENCE_ID, StarterKits.CONFLUENCE_VOICES_ID, "circuit", "thaw", "scour", "nimbus", "undertow", "suture", "revel", "tessera", "pitchwheel", "prism", "origami", "rime", "rime-complete", "filament", "chamber", "alloy", "contour", "stoop", "lacquer", "spool", "skitter", "tangle", "caustic", "crease", "lattice", "flock", "relay", "shoal", "embouchure", "bellows", "murmur", "murmur-selected", "scanned-chain", "trefoil", "trio", "osprey", "osprey-curated", "opensky", "vent", "skin", "cistern", "upright", "aerostat", "tremor", "ballast", "keel", "etch", "wick", "velocity", "chord-stabs", "chord-stabs-dorian", "chord-stabs-mixolydian", "chord-stabs-borrowed", "erosion", "timber-pocket", "timber-boom-bap", "timber-two-step", "triad-techno", "triad-house", "triad-minimal", "rivet-workshop", "rivet-factory", "rivet-warehouse", "velour-close", "velour", "velour-bloom", "backwash-soul", "backwash-psych", "fired-bronze", "spore-synth-jungle", "spore-synth-dub", "spore-synth-broken", "spore-jungle", "spore-dub", "spore-electro", "cosmic-breaks", "cosmic-jungle", "cosmic-dubstep", "gatecrash-stone", "gatecrash-machine", "gatecrash-electro", "cypher-trap", "cypher-drill", "cypher-backroom", "cypher-lowrider", "cypher-dust", "cypher-flint", "breaker", "breaker-dub", "breaker-triphop", "mirrorball-philly", "mirrorball-loft", "mirrorball-munich", "soot", "soot-drumless", "soot-dub", "soot-noir", "soot-industrial", "murmur-kept", "scuff-detroit", "scuff-flint", "clutter-lofi", "clutter-street", "clutter-boombap", "clutter-micro", "meridian-materials", "meridian-six", "tempest", "tempest-tuned", SplayDelivery.STARTER_ID, "osteria", "osteria-six-voice", "tempest-circuit", "tempest-foundry", "tempest-step", "drumline-field", "drumline-street", "terra", "cairn", "patio-cumbia", "patio-samba", "patio-dub", SplayDelivery.BODIES_STARTER_ID, "terra-sahel", "terra-maqam", "terra-punjab"),
             StarterKits.ALL.map { it.id },
         )
         val halobar = StarterKits.byId("halobar")!!
