@@ -65,9 +65,9 @@ Pitches were measured as the strongest spectral peak, from 20 ms into each pad's
 
 1. **Kit verdict:** done. Round `terra-kit-1`, KEEP in full (2026-11-14).
 2. **Starter:** done. The `terra` starter, with its pads pinned by hash, exact replay from saved recipes and MPC 3/MPC 2 export read-back.
-3. **Presets:** a factory preset set from the kept pads and the owner's picks.
-4. **Picker:** a SYNTH picker entry for TERRA's voices and presets.
-5. **Genre kits:** more sixteen-pad kits from the kept voices, as TEMPEST did.
+3. **Presets:** round `terra-presets-1` (2026-11-15) kept the forty presets of the first ten voices (W1–W10), pinned in `TerraPresetsTest`. BAYAN's and TUN's sets were TWEAK ("All similar", "Too similar"); their three new presets each were reworked to move to the ends of two or more macros (pitch five semitones either way, the ring half or twice as long, the contact soft or hard, the fall or knock on or off) and wait on round `terra-presets-2`. `TerraPresets` holds four presets on each of the twelve playing voices (48). Sixteen are the kept classic pads, recipe for recipe and sample for sample; the other 32 are new settings and have not been heard. The retired COMPOUND_MEMBRANE has none. TERRA leaves `PatchTypes.ROSTERLESS`, which ends the factory exemption the master plan recorded.
+4. **Picker:** built, shipping with the presets. TERRA follows ETCH in the SYNTH picker and `EngineCatalog` (DRUMS), with the twelve playing voices; RANDOMISE moves a voice's defaults, and SEND files the class the classifier hears (`TerraPicker`). User presets promote through `TerraPatch.fromJsonText`, so a struck pad keeps its striker. The app side is compiled only by CI's `android-build`, and `NewEngineSynthScreenTest` checks the DJEMBE preset recall on the emulator.
+5. **Genre kits:** kept. Round `terra-presets-1` kept all three kits and grooves (X1–X3, Y1–Y3), and `TerraGenreKitsTest` pins every pad and softer strike. `TerraGenreKits` adds TERRA SAHEL (West African, a G major pentatonic balafon), TERRA MAQAM (darbuka-led) and TERRA PUNJAB (dholak and tabla), each a starter under SKINS after TERRA. Every pad is a new recipe, none shared between kits or with the classic kit, and the balafon keys are measured against their names (`TerraGenreKitsTest`).
 6. **Round robin and touch:** the starter's pads re-striking through saving, playback and export. Soft and medium hits get heard clearly.
 
 The gates are recorded in [the acceptance gates](ENGINE_ACCEPTANCE_GATES.md#terra-promotion-started-2026-11-14).

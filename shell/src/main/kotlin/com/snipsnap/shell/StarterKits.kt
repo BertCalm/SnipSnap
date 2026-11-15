@@ -845,6 +845,21 @@ object StarterKits {
             "World percussion kit: udu and cajon bass, djembe, dholak, dumbek and tabla, agogo bells and a balafon key.",
             seeded = false,
         ) { com.snipsnap.synth.TerraKits.classic() },
+        Starter(
+            "terra-sahel", "TERRA SAHEL",
+            "West African TERRA kit: a deep udu, djembe bass, tones and slaps, two bells and a pentatonic balafon.",
+            seeded = false,
+        ) { com.snipsnap.synth.TerraGenreKits.build(com.snipsnap.synth.TerraGenreKits.Kit.SAHEL) },
+        Starter(
+            "terra-maqam", "TERRA MAQAM",
+            "Darbuka-led TERRA kit: doums, teks and kas across three heads, a clay drop and two bells.",
+            seeded = false,
+        ) { com.snipsnap.synth.TerraGenreKits.build(com.snipsnap.synth.TerraGenreKits.Kit.MAQAM) },
+        Starter(
+            "terra-punjab", "TERRA PUNJAB",
+            "Dholak and tabla TERRA kit: dholak booms, bayan bends, dayan strokes, a cajon backbeat and bells.",
+            seeded = false,
+        ) { com.snipsnap.synth.TerraGenreKits.build(com.snipsnap.synth.TerraGenreKits.Kit.PUNJAB) },
     ).plus(com.snipsnap.synth.PatioPerformance.Genre.entries.map { genre ->
         Starter(genre.id, genre.title.uppercase(java.util.Locale.ROOT), "Latin percussion, three velocities and four takes per voice, with a hand-drum roll and cuica.", seeded = false) {
             com.snipsnap.synth.PatioPerformance.build(genre)
