@@ -3795,7 +3795,9 @@ at velocity 1, take 0, and, for each kit, every hit pad A01 to A14 struck soft, 
 1), first take of each zone, at the same peak level as saved. The verdict, verbatim: "Everything sounds good". The
 picker's on-device test passed in CI's emulator job on PR #1143 on 2026-11-15. Hardware: on 2026-11-15, told that
 playback on a phone and an MPC was the remaining gate, the owner said, verbatim: "Hardware is good" (the owner's
-report, not a capture). Open: the round-robin takes no listen covered (the second to fourth takes of the soft and
-medium zones, and at the hardest zone every pad's takes except SUGAR's Pop Snare). MPC 2 keeps one take per zone as a
-stated format limit.
+report, not a capture). Third listen (model 2, kit 2): for each kit and each velocity zone (soft .30, medium .65,
+hard 1), every hit pad A01 to A14 with its four round-robin takes played back to back in dealt order (nine clips),
+asking whether any take sounded like a different drum or four sounded the same. The verdict, verbatim: "Takes are
+good". Every take of every hit pad has been heard. Complete (2026-11-15), accepted sound `Hiccup.MODEL_VERSION` 2 with
+`HiccupKits.VERSION` 2. MPC 2 is not applicable (format limit): it keeps one take per zone.
 See [HICCUP](HICCUP.md) and the gates entry.
