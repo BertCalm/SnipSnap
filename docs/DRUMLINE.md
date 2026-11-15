@@ -39,7 +39,7 @@ The generator writes both native kit folders, MPC 3 tracks with MPC 2 twins, ful
 | Kotlin sound | Native revision 4 accepted on 2026-11-15 |
 | Render budget | Host: bass 21–23 ms, snare 135 ms, crash 866 ms, roll 4.36 s; fast-render target not met |
 | Numerical control corners | Passed 1,029 current-renderer cases: all binary macro corners at touch endpoints, plus default-center replay |
-| Alias-reference comparison | Not yet verified |
+| Alias-reference comparison | Output-decimator contribution measured in 63 cases; internal-rate/higher-rate comparison remains open |
 | Overall | In progress; never inferred from a successful preview |
 
 ## Why it is built this way
@@ -154,3 +154,19 @@ The current base already fixes the `EMBER` random-name collision by using `BRAZI
 A 120-second Java Flight Recorder sample taken during the corner audit found `Drumline.addMode` as the top frame in 5,123 of 6,973 main-thread execution samples (73.5%); `strike` accounted for 1,501 samples. [Aggregated samples](evidence/drumline/corner-cpu-profile.csv). This is a sampled profile of that portion of the audit, not a per-voice benchmark or evidence of denormal arithmetic. It identifies the modal recurrence loop as the next optimization candidate; this round does not alter it. Corner CSV render times include instrumentation overhead and are not substitutes for the isolated before/after benchmark.
 
 The audit and its focused checks completed with exit 0 in 10 minutes. All 1,029 cases passed: largest absolute peak 0.99000007, largest absolute mean 0.00005806, lowest peak 0.4880. All results were finite mono 44.1 kHz and ended at zero; every center case replayed exactly. [Complete per-case evidence](evidence/drumline/model4-control-corners.csv). The accompanying 103 tests passed with zero failures or skips, including the naming/convention suites, checker negative controls, all 32 approved factory WAV hashes and all 42 raw-sample fingerprints. This closes the current-renderer numerical binary-corner coverage item; it does not close alias-reference, performance or phone/MPC gates.
+
+## Output-decimation alias audit, 2026-11-15
+
+The follow-up starts from `9d6ad1a5fa01eb36c6d33cc5fd694b5f01a6ff30`, after PR #1144 merged with all seven checks passing. It extracts the existing internal-rate rendering into an internal helper without changing arithmetic, seeds, parameters or output processing. Approved factory WAV hashes, raw float fingerprints and saved-renderer compatibility tests guard the accepted sound.
+
+Run `./gradlew --no-daemon :synth:auditDrumlineAliases`, optionally with `-PdrumlineAliasOutput=/absolute/path.csv`. The 63 cases cover all 21 voices/figures at default settings and two full-touch, high-tuning, hard-contact, maximum-player settings: open and damped. Defaults use take 0; the bright cases use take 2. This is a targeted spectral stress set, not an exhaustive alias audit of every control/velocity/take combination.
+
+The measurement starts after the production 176.4 kHz Butterworth band limit. It adds 4,096 silent frames before the signal and at least as many after it, then pads to a power of two. An FFT projection keeps only frequencies strictly above the 22.05 kHz output Nyquist limit. Passing that component through the production two-stage decimator measures its output contribution relative to the energy of the full padded signal through the same decimator. The CSV reports this energy ratio as `10 log10` in dB over the whole output band, and separately for only the folded component between 20 Hz and 18 kHz (still relative to total output energy). Parseval normalization keeps spectral and time-domain energies in the same units. Another column bypasses the antialias FIRs and retains every fourth sample; the final column records FFT forward/inverse reconstruction error.
+
+The independent spectral projection avoids treating ordinary passband/phase differences between filters as aliasing. Controls verify that a smooth 3 kHz tone remains below the projection floor, and that an equal-energy 30 kHz tone folds to 14.1 kHz at approximately 0 dB relative to the 3 kHz signal when filtering is bypassed. The production decimator must suppress that control below -60 dB. These are diagnostic controls, not a claim that -60 dB defines perceptual acceptance of the drumline.
+
+Scope limits: zero padding removes the production buffer-edge renormalization from the measurement; finite-window spectral projection and Float FFT error remain. This audit measures the output decimator's contribution before DC removal, leveling and tail fading. It does not establish aliases already generated at the internal sample rate, a higher-rate reference for the complete synthesizer, perceptual inaudibility, or phone/MPC acceptance. The overall alias-reference gate remains open.
+
+All 63 cases completed with exit 0. The largest whole-band contribution was -41.86 dB (bright/damped flam); the largest 20 Hz–18 kHz contribution was -78.08 dB (bright/damped snare), both relative to total output energy. Thus the larger measured contribution lies above 18 kHz. The worst FFT reconstruction residual was -134.71 dB. [Complete measurements](evidence/drumline/output-decimation-alias.csv). These are measured ratios, not a listening verdict or a universal pass threshold.
+
+The 25 focused drumline tests passed with zero failures or skips, including all 32 approved WAV hashes, 42 raw float fingerprints, older saved-renderer compatibility and the diagnostic controls. After adding the separate frequency-band measurement, both diagnostic controls and all 63 audit cases passed again (exit 0). Full repository regression is tracked separately in the follow-up PR; this round does not claim a device or all-gates pass.

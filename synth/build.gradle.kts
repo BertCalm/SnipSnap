@@ -3887,3 +3887,13 @@ tasks.register<JavaExec>("auditDrumlineCorners") {
     maxHeapSize = "1g"
     args(providers.gradleProperty("drumlineCornerOutput").orNull ?: "testkit/drumline-corners.csv")
 }
+
+tasks.register<JavaExec>("auditDrumlineAliases") {
+    group = "verification"
+    description = "Measure the drumline output decimator's out-of-band contribution."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.DrumlineAliasAudit")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "1g"
+    args(providers.gradleProperty("drumlineAliasOutput").orNull ?: "testkit/drumline-alias.csv")
+}
