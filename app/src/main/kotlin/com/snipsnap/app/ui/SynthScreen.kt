@@ -3909,11 +3909,11 @@ fun SynthScreen(
                 if (engine == Engine.BRISTLE) {
                     val bass = buildCurrentPatch(loadedPatch?.name ?: engine.patchDisplayName(voice)) as BristlePatch
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        ActionButton("SINGLE TAKE", scheme, lit = !heldSheet.bristleRoundRobin,
+                        ActionButton("SINGLE TAKE", scheme, enabled = true, lit = !heldSheet.bristleRoundRobin,
                             accessibilityLabel = "BRISTLE SINGLE TAKE", modifier = Modifier.weight(1f)) {
                             heldSheet.bristleRoundRobin = false; settings["bristle.roundrobin"] = "false"
                         }
-                        ActionButton("ROUND ROBIN", scheme, lit = heldSheet.bristleRoundRobin,
+                        ActionButton("ROUND ROBIN", scheme, enabled = true, lit = heldSheet.bristleRoundRobin,
                             accessibilityLabel = "BRISTLE ROUND ROBIN", modifier = Modifier.weight(1f)) {
                             heldSheet.bristleRoundRobin = true; settings["bristle.roundrobin"] = "true"
                         }
@@ -3923,12 +3923,12 @@ fun SynthScreen(
                         TapeType.pixelSmall, scheme.ink2.tape, maxLines = 3)
 
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        ActionButton("FINITE KEYS", scheme, lit = !heldSheet.holdBristleSustain,
+                        ActionButton("FINITE KEYS", scheme, enabled = true, lit = !heldSheet.holdBristleSustain,
                             accessibilityLabel = "BRISTLE FINITE KEYS", modifier = Modifier.weight(1f)) {
                             heldSheet.holdBristleSustain = false
                             settings["bristle.sustain"] = "false"
                         }
-                        ActionButton("SUSTAIN KEYS", scheme, lit = heldSheet.holdBristleSustain,
+                        ActionButton("SUSTAIN KEYS", scheme, enabled = true, lit = heldSheet.holdBristleSustain,
                             accessibilityLabel = "BRISTLE SUSTAIN KEYS", modifier = Modifier.weight(1f)) {
                             heldSheet.holdBristleSustain = true
                             settings["bristle.sustain"] = "true"
