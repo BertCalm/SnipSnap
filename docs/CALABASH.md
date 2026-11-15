@@ -341,6 +341,28 @@ strikes read back from the MPC 3 export, beside the approved Python groove, and 
 heard it on 2026-11-15, wrote "Sounds good" and, asked whether that was a listen to this page, answered "I listened:
 approve all". `Calabash.MODEL_VERSION` 1 and `CalabashKits.VERSION` 1 are the approved baseline.
 
+## Round 3: the roster (2026-11-15)
+
+After approving the Kotlin kits the owner chose round 3. `CalabashPresets` files the sixty-four pads of the four
+approved kits as CALABASH's factory bank: each voice at the pad's own macros (completed by `Calabash.settled`), struck
+full, at take 0 (the kit grid's first take), so a preset is byte for byte the engine render the kit's hard zone scales
+by its level law. Nothing is reasoned from the knobs. `Presets` serves them, CALABASH leaves
+`PatchTypes.ROSTERLESS`, and `snipsnap synth` renders them.
+
+- **Names:** "<kit tag> <pad>" in caps, the tag being the starter id without "calabash-" (AFROBEAT, AFROBEATS,
+  MBALAX, AFROCUBAN). One name would pass a preset list's 24 letters, so AFROBEATS TALKING DRUM FALL is filed as
+  AFROBEATS TALKING FALL; the kit keeps its pad name.
+- **Coverage:** thirty-five of the thirty-six voices are in a kit, eighteen of them once. The low agogo bell is in
+  none and has no preset: it opens at its defaults.
+- **Promotion:** a saved CALABASH strike promotes through `CalabashPatch.fromJsonText`, so its velocity, take and
+  model survive (`UserPresets`, `UserPresetsTest`), into `CalabashPresets`' `promoted` list beside the approved kits.
+- **Proof:** `CalabashPresetsTest` holds CLUTTER's preset contracts: the bank is every pad of the four kits at its own
+  settings, each preset the engine's render of that pad byte for byte and the kit's pad the same shape (correlation
+  over 0.999999 on a kick, a conga and the sabar roll); registration; finite, at the engine's 0.89, centred, faded to
+  zero; a JSON round trip with velocity, take and model, and a softer strike as another sound; unique caps names
+  after their kit, within 24 letters and no maker's name; every two presets of a voice different recipes and sounds.
+  `PatchesTest` and `SynthRootTest` now take their CALABASH sound from the roster.
+
 ## Gates
 
 | Gate | State |
@@ -385,7 +407,8 @@ rolls and cymbals belong in the pad's render cache, keyed by their macros, as BR
 - **Round 0: approved (2026-11-15).** No round 0b; the baseline stands as rendered.
 - **Round 1: done (2026-11-15).** The Kotlin port, above.
 - **Round 2: done (2026-11-15), heard and approved.** The kits on the shelf, above.
-- **Round 3:** presets from the accepted pads, the roster, the picker; the owner's phone and MPC.
+- **Round 3: done (2026-11-15).** The roster, above.
+- **Round 4:** the engine picker; the owner's phone and MPC.
 
 ## Why it is built this way
 

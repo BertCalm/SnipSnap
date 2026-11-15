@@ -3723,3 +3723,11 @@ rendering, saving, `PadHit.resolve` playback and MPC 3 export in software (`Cala
 `:shell:generateCalabashKits`: 768 slices). A kit builds in 22 to 51 s on four cores, disclosed. The owner heard the
 Kotlin kits (each kit's approved groove played with the app's own strikes, read back from the MPC 3 export) and
 approved them on 2026-11-15 ("I listened: approve all"). See [CALABASH](CALABASH.md).
+
+### CALABASH, round 3 (2026-11-15)
+
+The roster: `CalabashPresets` files the sixty-four pads of the four approved kits as CALABASH's factory bank, each the
+pad's own macros struck full at take 0, named after its kit (AFROBEAT, AFROBEATS, MBALAX, AFROCUBAN; one name
+shortened to 24 letters). CALABASH leaves `PatchTypes.ROSTERLESS`; a saved strike promotes with its velocity, take
+and model. Thirty-five of thirty-six voices have a preset (the low agogo bell is in no kit). `CalabashPresetsTest`
+holds the preset contracts. The picker is round 4. See [CALABASH](CALABASH.md).
