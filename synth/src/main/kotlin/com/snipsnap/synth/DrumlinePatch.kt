@@ -15,7 +15,7 @@ data class DrumlinePatch(
 ) : Patch {
     init {
         Patches.validateMacros(this, Drumline.macrosFor(voice))
-        require(model == Drumline.MODEL_VERSION) { "unsupported drumline model $model" }
+        require(model in 1..Drumline.MODEL_VERSION) { "unsupported drumline model $model" }
     }
 
     override val engine get() = ENGINE
@@ -39,7 +39,7 @@ data class DrumlinePatch(
 
         fun fromJsonValue(value: JsonValue): Patch =
             Patches.decode(value, ENGINE, { n -> DrumlineVoice.entries.firstOrNull { it.name == n } }) { name, voice, macros ->
-                DrumlinePatch(name, voice, macros, value.obj()["model"]?.int() ?: Drumline.MODEL_VERSION)
+                DrumlinePatch(name, voice, macros, value.obj()["model"]?.int() ?: 1)
             }
 
         fun fromJsonText(text: String): DrumlinePatch = fromJsonValue(Json.parse(text)) as DrumlinePatch

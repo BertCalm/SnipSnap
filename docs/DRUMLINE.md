@@ -6,7 +6,7 @@ The characteristic gesture is coordinated stick attack → independent bodies �
 
 ## What is implemented
 
-Model 1 has 16 source voices: snare, rimshot, six tenor sizes, five bass sizes, crash, choke and touch. Five finite articulations add flam, double-stroke roll, accelerating riser, bass unison and split bass. Defaults are six snare players, three tenor players, one player per bass size and three cymbal players. Player identity remains fixed across takes; each take re-excites the same bodies with fresh force, contact and noise. All synthesis is procedural and mono; no recordings ship.
+The renderer has 16 source voices: snare, rimshot, six tenor sizes, five bass sizes, crash, choke and touch. Five finite articulations add flam, double-stroke roll, accelerating riser, bass unison and split bass. Defaults are six snare players, three tenor players, one player per bass size and three cymbal players. Player identity remains fixed across takes; each take re-excites the same bodies with fresh force, contact and noise. All synthesis is procedural and mono; no recordings ship.
 
 TUNE moves body frequencies; STRIKE changes contact width or metal excitation bandwidth; DAMP changes modal losses. Multi-player voices also expose PLAYERS and TIGHT. The bass line has separate size voices rather than a knob which duplicates its lowest drum. All articulations are finite; HOLD and STRUM are not applicable. Long cymbal decays and scored rudiments retain authored PERC roles rather than being shortened to satisfy the capture classifier's duration heuristic.
 
@@ -48,7 +48,7 @@ The generator writes both native kit folders, MPC 3 tracks with MPC 2 twins, ful
 - Progressive, frequency-dependent hand loss lets cymbals darken and settle instead of hitting a mute wall.
 - Saved recipes and the shared kit grid keep the sound and repeat pool together through normal app operations.
 
-[Native audition and downloadable kits](https://snipsnap-drumline-audition.bertcalm.chatgpt.site/kotlin.html) · [Preferred Python cymbals](https://snipsnap-drumline-audition.bertcalm.chatgpt.site/)
+[Native audition and downloadable kits](https://snipsnap-drumline-audition.bertcalm.chatgpt.site/kotlin.html) · [Preferred Python cymbals](https://snipsnap-drumline-audition.bertcalm.chatgpt.site/python.html)
 
 ## Verified native round
 
@@ -61,3 +61,21 @@ Local full regression attempts after merging default branch `42b37f6` exposed st
 Recorded host evidence: [field grid](evidence/drumline/drumline-field.csv), [street grid](evidence/drumline/drumline-street.csv), and [render times](evidence/drumline/render-times.csv). Timings are warmed single renders under Temurin 21.0.13 on the shared Linux host; they are not phone estimates.
 
 `DrumlinePresets` exposes the exact field/street kit settings as 32 named audition references. They cover all 21 voices and remain outside the factory preset bank pending native listening. No extra sound settings were invented to satisfy the registry.
+
+
+## Body and attack revision, 2026-11-15
+
+Reviewed against `6406291`, whose full JVM, Android build, native and emulator checks passed. The owner asked for more bass/tenor body, an actual rim clack and more snare snap. This is a sound revision within the existing battery, not a new engine or a claim of native approval.
+
+Model 2 gives the lowest bass and tenor modes more weight and slower positive losses, plus a lower companion-head mode at 0.78 times the head frequency. Upper modes still settle quickly. Larger bass sizes favor the main head over the very low companion; the first candidate did not give the largest bass enough measured body at a soft strike. A short raised-cosine contact drives three extra rim resonances; a brief band-limited noise burst gives the snare wires an earlier leading edge without lengthening their hiss. The constants are listening shapes, not measured drum geometry. The added companion head is a modal approximation, not a coupled air-cavity solver.
+
+The cymbal signal path and player/excitation seeds stay fixed. Model-1 recipes remain supported, and recipes with no model field decode as model 1. New patches and kit version 2 use model 2. The audition includes six previous/revised comparisons at the same controls, alongside both regenerated complete kits. The common house leveler is retained; different transient and decay shapes can still change perceived loudness.
+
+Why these changes: body should persist after the mallet or stick leaves; the rim needs its own hard contact rather than just a brighter head; snare snap should lead the wire decay rather than add a long noise tail. Each new mode has positive loss. The listening risk is excess boom or a clack that dominates the head, which the comparisons are intended to expose.
+
+
+The final focused run completed with exit 0 (5m 1s): twelve renderer/catalog/revision tests, the two up-to-date complete-kit tests from the preceding run on the same production code, and a fresh complete-kit generator. The revision tests cover 33 bass/tenor voice × velocity comparisons, six snare/rim touch comparisons averaged over three takes, 144 control combinations across the revised drum families, seven published model-1 WAV hashes, missing-version recipe decoding, and cymbal equality across renderer revisions. The full unfiltered JVM suite was then started separately; its completion is not implied by the focused pass. Current branch CI is linked above.
+
+In the Kotlin harness, the filtered low-band late/early energy ratio increases by 1.55–2.28 times across all six tenors and five bass sizes at three touch levels (40–140 ms against 0–25 ms, nominal 35–850 Hz one-pole band). Snare/rim upper attack energy normalized to the first 150 ms increases by 1.72–2.97 times (first 8 ms, nominal 1.5–10 kHz band, three takes averaged). These ratios describe attack/decay shape, not perceived loudness or a listening verdict. [Measurements](evidence/drumline/model2-body-attack.csv).
+
+The regenerated field and street grids retain take diversity: maximum correlation 0.999481 and 0.999499; minimum velocity shape movement 0.990 and 1.327 dB. The original thresholds remain in force. [Field](evidence/drumline/drumline-field-model2.csv) · [Street](evidence/drumline/drumline-street-model2.csv). Warm host timings are approximately 21 ms for bass, 49–52 ms for tenors, 184 ms for snare, 210 ms for rimshot, 860 ms for crash and 6.15 s for the roll; [recorded timings](evidence/drumline/render-times-model2.csv) were taken during a shared-host build and are not isolated benchmarks or phone estimates. The render budget remains open. Full control coverage, alias-reference comparison, native listening and device gates also remain open.

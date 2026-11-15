@@ -20,7 +20,7 @@ class DrumlineTest {
         val v=DrumlineVoice.SNARE;val a=Drumline.render(v).samples
         assertContentEquals(a,Drumline.render(v,mapOf("UNKNOWN" to 1f)).samples)
         assertContentEquals(a,Drumline.render(v,mapOf("DAMP" to Float.NaN)).samples)
-        assertFailsWith<IllegalArgumentException> { DrumlinePatch("Bad",v,emptyMap(),2) }
+        assertFailsWith<IllegalArgumentException> { DrumlinePatch("Bad",v,emptyMap(),Drumline.MODEL_VERSION+1) }
     }
     @Test fun `fresh takes and softer strokes change the waveform beyond a gain`() {
         fun likeness(a: FloatArray,b: FloatArray): Double {

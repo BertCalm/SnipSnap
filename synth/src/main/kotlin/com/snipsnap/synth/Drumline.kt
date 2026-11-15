@@ -15,11 +15,14 @@ enum class DrumlineVoice {
 /**
  * Coordinated contact -> independent heads/plates -> overlapping ring -> finite release.
  * Model 1 ports the preferred Python cymbal revision's mechanism, not its NumPy noise bytes.
+ * Model 2 adds lower-head body, a separate rim contact and a short snare-wire snap.
+ * Saved model-1 recipes retain their sound; the cymbal path is identical in both models.
  * Positive modal loss bounds each oscillator. Choking progressively damps high modes first;
  * it never gates the entire plate to zero. All acoustic constants remain listening shapes.
  */
 object Drumline {
-    const val MODEL_VERSION = 1
+    const val MODEL_VERSION = 2
+    private const val IDENTITY_VERSION = 1 // Keep the same players and excitation streams across revisions.
     private const val RATE = Dsp.RATE * Dsp.OVERSAMPLE
     private const val LOSS = 6.907755278982137
     private val metal = setOf(DrumlineVoice.CRASH, DrumlineVoice.CHOKE, DrumlineVoice.TOUCH)
@@ -54,13 +57,13 @@ object Drumline {
         else -> listOf(Event(0.0,voice,1f))
     }
     fun render(voice: DrumlineVoice, macros: Map<String,Float> = emptyMap(), velocity: Float = 1f, take: Int = 0, model: Int = MODEL_VERSION): Snip {
-        require(model == MODEL_VERSION && take >= 0)
+        require(model in 1..MODEL_VERSION && take >= 0)
         val m=settled(voice,macros); val v=velocity.takeIf { it.isFinite() }?.coerceIn(.05f,1f) ?: 1f
-        val raw=if(voice !in figures) strike(voice,m,v,take,0) else {
+        val raw=if(voice !in figures) strike(voice,m,v,take,0,model) else {
             val score=score(voice)
             val out=FloatArray(((score.maxOf { it.seconds }+1.3)*RATE).roundToInt())
             for((i,e) in score.withIndex()) {
-                val hit=strike(e.voice,settled(e.voice,m),v*e.strength,take*64+i,e.hand)
+                val hit=strike(e.voice,settled(e.voice,m),v*e.strength,take*64+i,e.hand,model)
                 val at=(e.seconds*RATE).roundToInt();val gain=if(voice==DrumlineVoice.BASS_UNISON) 1/sqrt(5.0) else 1.0
                 for(k in 0 until minOf(hit.size,out.size-at)) out[at+k]+=(hit[k]*gain).toFloat()
             }
@@ -107,7 +110,7 @@ object Drumline {
         fun at(x: Double): Double { val y=b*x-b*x2-a1*y1-a2*y2;x2=x1;x1=x;y2=y1;y1=y;return y }
     }
     private fun random(noise: Dsp.Noise, lo: Double, hi: Double) = lo+(hi-lo)*(noise.next()+1)/2
-    private fun strike(voice: DrumlineVoice,m: Map<String,Float>,velocity: Float,take: Int,hand: Int): FloatArray {
+    private fun strike(voice: DrumlineVoice,m: Map<String,Float>,velocity: Float,take: Int,hand: Int,model: Int): FloatArray {
         val isMetal=voice in metal;val snare=voice==DrumlineVoice.SNARE || voice==DrumlineVoice.RIMSHOT
         val family=if(isMetal)"CYMBAL" else if(snare)"SNARE" else voice.name
         val cap=if(isMetal)4 else if(snare)8 else if(voice.name.startsWith("TENOR"))4 else 1
@@ -116,9 +119,9 @@ object Drumline {
         val duration=when(voice) { DrumlineVoice.CRASH -> 4.5*damp;DrumlineVoice.CHOKE -> 1.4;DrumlineVoice.TOUCH -> .9*damp;else -> 1.2 }
         val out=FloatArray((duration*RATE).roundToInt())
         for(player in 0 until count) {
-            val identity=Dsp.Noise(Dsp.seedFor("DRUMLINE",MODEL_VERSION,family,player))
-            val hit=Dsp.Noise(Dsp.seedFor("DRUMLINE",MODEL_VERSION,family,player,take,hand))
-            val noise=Dsp.Noise(Dsp.seedFor("DRUMLINE_NOISE",MODEL_VERSION,family,player,take,hand))
+            val identity=Dsp.Noise(Dsp.seedFor("DRUMLINE",IDENTITY_VERSION,family,player))
+            val hit=Dsp.Noise(Dsp.seedFor("DRUMLINE",IDENTITY_VERSION,family,player,take,hand))
+            val noise=Dsp.Noise(Dsp.seedFor("DRUMLINE_NOISE",IDENTITY_VERSION,family,player,take,hand))
             val detune=random(identity,-6.0,6.0)
             val delay=if(player==0)0 else (random(hit,.0005,.002+.010*(1-(m["TIGHT"]?:.8f)).pow(2))*RATE).roundToInt()
             val v=min(1.0,velocity*random(hit,.96,1.02));val n=out.size-delay;val y=DoubleArray(n)
@@ -145,15 +148,44 @@ object Drumline {
                 val width=(.00018+.00065*(1-m.getValue("STRIKE")))*(1.65-.8*v)*random(hit,.92,1.08)*(if(family.startsWith("BASS"))5 else 1)
                 val force=DoubleArray(max(4,(width*RATE).roundToInt())) { .5-.5*cos(2*PI*it/(max(4,(width*RATE).roundToInt())-1)) }
                 val sum=force.sum();for(i in force.indices)force[i]/=sum
-                for(k in ratios.indices)addMode(y,root*ratios[k],gains[k]*exp(-ratios[k]*(.1+1.2*(1-v)))*random(hit,if(family.startsWith("BASS")) .65 else .9,if(family.startsWith("BASS")) 1.35 else 1.1),life/ratios[k].pow(.65),force=force)
+                for(k in ratios.indices) {
+                    // Let the lowest membrane modes carry a body after the stick/mallet leaves.
+                    // Higher modes keep their old losses, so extra fullness does not become a long bright ring.
+                    val body = model >= 2 && !snare
+                    val weight = if(body && k < 2) (if(k == 0) 1.3 else 1.12) else 1.0
+                    val sustain = if(body) 1.0 + (if(family.startsWith("BASS")) .65+.35*index/4 else .5) / ratios[k].pow(2) else 1.0
+                    addMode(y,root*ratios[k],gains[k]*exp(-ratios[k]*(.1+1.2*(1-v)))*random(hit,if(family.startsWith("BASS")) .65 else .9,if(family.startsWith("BASS")) 1.35 else 1.1)*weight,life*sustain/ratios[k].pow(.65),force=force)
+                }
+                if(model >= 2 && !snare) {
+                    // A lower companion-head resonance adds chest without a sub-octave oscillator.
+                    // It follows the same finite mallet force and positive losses as the main head.
+                    // On the largest basses, favor the main head over a barely audible sub-bass companion.
+                    val companionWeight=if(family.startsWith("BASS")) (root/145).coerceIn(.35,1.0) else 1.0
+                    addMode(y,root*.78,.38*(.6+.4*v)*companionWeight,life*1.25,force=force)
+                }
                 if(voice==DrumlineVoice.RIMSHOT)for((f,g,l) in listOf(Triple(1250.0,.55,.055),Triple(2180.0,.38,.035),Triple(3380.0,.22,.022)))addMode(y,f*tilt,g*v.pow(.4),l)
+                if(model >= 2 && voice == DrumlineVoice.RIMSHOT) {
+                    // The stick meets the hard rim as well as the head: much shorter contact,
+                    // with a compact inharmonic clack instead of only a pitched rim ring.
+                    val rimWidth=max(4,(RATE*(.00009+.00008*(1-v))).roundToInt())
+                    val rimForce=DoubleArray(rimWidth) { .5-.5*cos(2*PI*it/(rimWidth-1)) }
+                    val rimSum=rimForce.sum();for(i in rimForce.indices)rimForce[i]/=rimSum
+                    for((f,g,l) in listOf(Triple(1750.0,1.35,.028),Triple(2950.0,1.0,.019),Triple(4700.0,.7,.013)))
+                        addMode(y,f*tilt,g*v.pow(.6),l,force=rimForce)
+                }
                 val contact=Dsp.OnePole(RATE);val bands=listOf(Band(1900.0,2.0),Band(3600.0,2.5),Band(6200.0,3.0))
+                val snapLow=Dsp.OnePole(RATE);val snapHigh=Dsp.OnePole(RATE)
                 for(i in y.indices) {
                     val t=i.toDouble()/RATE;val x=noise.next();val attack=min(t/.0007,1.0)
                     y[i]+=.35*(.2+m.getValue("STRIKE"))*v*contact.lp(x,(2500+8500*v).toFloat())*attack*exp(-t/.0012)
                     if(snare) {
                         val cords=.6*bands[0].at(x.toDouble())+bands[1].at(x.toDouble())+.6*bands[2].at(x.toDouble())
                         y[i]+=3.2*v.pow(.65)*cords*exp(-LOSS*t/(life*(.75+.4*v)))*(.65+.35*sin(2*PI*root*1.07*t).pow(2))*attack
+                        if(model >= 2) {
+                            // A brief wire/contact burst sharpens the leading edge without extending the hiss.
+                            val snap=snapLow.lp(x-snapHigh.lp(x,2200f),10500f)
+                            y[i]+=2.8*v.pow(.8)*snap*min(t/.00012,1.0)*exp(-t/.0035)
+                        }
                     }
                 }
             }
