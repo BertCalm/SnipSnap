@@ -92,19 +92,29 @@ VOICES = {
     "HAT_FOOT":     ("HAT_CLOSED", 0.45, ("TUNE", "DAMP", "BUZZ", "DISTANCE", "WARMTH")),
     "HAT_CLOSED":   ("HAT_CLOSED", 0.45, ("TUNE", "DAMP", "BUZZ", "DISTANCE", "WARMTH")),
     "HAT_OPEN":     ("HAT_OPEN",   1.20, ("TUNE", "DAMP", "BUZZ", "DISTANCE", "WARMTH")),
-    "BOWED_CYMBAL": ("PERC",       2.40, ("TUNE", "PRESSURE", "BUZZ", "DISTANCE", "WARMTH")),
-    "CYMBAL_SWELL": ("PERC",       3.00, ("TUNE", "SPEED", "BUZZ", "DISTANCE", "WARMTH")),
-    "PRESS_ROLL":   ("PERC",       2.60, ("TUNE", "SPEED", "BUZZ", "DISTANCE", "WARMTH")),
-    "BRUSH_ROLL":   ("PERC",       2.60, ("TUNE", "SPEED", "BUZZ", "DISTANCE", "WARMTH")),
+    "BOWED_CYMBAL": ("PERC",       3.60, ("TUNE", "PRESSURE", "BUZZ", "DISTANCE", "WARMTH")),
+    "CYMBAL_SWELL": ("PERC",       5.00, ("TUNE", "SPEED", "BUZZ", "DISTANCE", "WARMTH")),
+    "PRESS_ROLL":   ("PERC",       3.00, ("TUNE", "SPEED", "BUZZ", "DISTANCE", "WARMTH")),
+    "BRUSH_ROLL":   ("PERC",       3.00, ("TUNE", "SPEED", "BUZZ", "DISTANCE", "WARMTH")),
     "SNAPS":        ("CLAP",       0.60, ("TUNE", "CROWD", "DISTANCE", "WARMTH")),
     "CLAPS":        ("CLAP",       0.70, ("TUNE", "CROWD", "DISTANCE", "WARMTH")),
     "TAMBOURINE":   ("PERC",       0.80, ("TUNE", "DAMP", "BUZZ", "DISTANCE", "WARMTH")),
     "CONGA":        ("PERC",       0.90, ("TUNE", "DAMP", "SLAP", "DISTANCE", "WARMTH")),
     "STICKS":       ("PERC",       0.40, ("TUNE", "DAMP", "DISTANCE", "WARMTH")),
+    # Latin percussion (owner, 2026-11-15: "New sounds first"). Cowbell, clave, bongos and shaker are fitted to CC0
+    # recordings (latin.json, VCSL); the timbales and their shell are physical models (no CC0 timbale recording).
+    "TIMBALE":      ("TOM",        1.10, ("TUNE", "DAMP", "RIM", "DISTANCE", "WARMTH")),
+    "PAILA":        ("PERC",       0.60, ("TUNE", "DAMP", "DISTANCE", "WARMTH")),
+    "COWBELL":      ("PERC",       0.80, ("TUNE", "DAMP", "DISTANCE", "WARMTH")),
+    "CLAVE":        ("PERC",       0.60, ("TUNE", "DAMP", "DISTANCE", "WARMTH")),
+    "BONGO_HIGH":   ("PERC",       0.80, ("TUNE", "DAMP", "DISTANCE", "WARMTH")),
+    "BONGO_LOW":    ("PERC",       0.90, ("TUNE", "DAMP", "DISTANCE", "WARMTH")),
+    "GUIRO":        ("PERC",       1.60, ("TUNE", "SPEED", "DISTANCE", "WARMTH")),
+    "SHAKER":       ("PERC",       0.60, ("TUNE", "DAMP", "DISTANCE", "WARMTH")),
 }
 
 DEFAULTS = {"TUNE": .5, "DAMP": .3, "BUZZ": .5, "DISTANCE": .3, "WARMTH": .35, "SPEED": .5,
-            "BEND": .5, "PRESSURE": .5, "CROWD": .4, "SLAP": .3}
+            "BEND": .5, "PRESSURE": .5, "CROWD": .4, "SLAP": .3, "RIM": .2}
 
 # Per-voice defaults (round 0b): on the fitted cymbals and hats BUZZ adds looseness beyond the recorded
 # cymbal, so it starts at 0, the cymbal as recorded.
@@ -118,7 +128,8 @@ MEANING = {
     "BUZZ": "how loose the snare wires, rivets, plates and jingles are, and how much the kit hums along",
     "DISTANCE": "the microphone, from over the drum to the back of the club",
     "WARMTH": "the 1962 chain: ribbon mic, valve preamp, tape (0 is a clean modern mic)",
-    "SPEED": "how fast the brush circles, the roll strokes or the mallets come",
+    "SPEED": "how fast the brush circles, the roll strokes or the mallets come; on the guiro, a long slow scrape to a short one",
+    "RIM": "the stick on the timbale's head to a rimshot on its steel rim",
     "BEND": "how far the elbow presses the head after the hit",
     "PRESSURE": "how hard the bow bites the cymbal edge",
     "CROWD": "one person to a table of six, each a little early or late",
@@ -357,12 +368,18 @@ def rattlers(drive_env, count, theta_lo, theta_hi, rate_hz, ring, rng, n, kick_n
 # 44.1 kHz (a sum of sines is band-limited by construction) and upsampled into the 176.4 kHz chain.
 
 FIT_PATH = os.path.join(HERE, "cymbals.json")
+LATIN_PATH = os.path.join(HERE, "latin.json")      # the Latin percussion's fits (fit_ember_latin.py), same bands
 
 
 @functools.cache
 def fit():
+    """The cymbal fits and the Latin percussion's, one table of voices over the same third-octave bands."""
     with open(FIT_PATH) as fh:
-        return json.load(fh)
+        d = json.load(fh)
+    with open(LATIN_PATH) as fh:
+        lat = json.load(fh)
+    assert lat["bands"] == d["bands"], "latin.json and cymbals.json must share their bands"
+    return dict(d, voices={**d["voices"], **lat["voices"]}, guiro=lat["guiro"])
 
 
 @functools.cache
@@ -628,8 +645,18 @@ def peaking(f0, gain_db, q):
     return b / a[0], a / a[0]
 
 
-def finish(raw, m, v, seconds):
-    """DISTANCE -> WARMTH -> the house output stage, at 44.1 kHz, peak 0.89 (the audition match)."""
+# Round 1b (owner, 2026-11-15: "Swell cuts abruptly"). The long voices were cut while still sounding: the swell
+# 2.2 dB under its peak, the bow and the rolls 12 to 16 dB under. The rolls now run until they have died away on
+# their own (past -48 dB). The flat ride under the swell and the bow rings for well over 7 s, too long for a pad, so
+# once the mallets stop (2.6 s) or the bow leaves (2.3 s) the cymbal also takes an exponential fade, reaching the
+# TAILS dB at the end of the pad: a decay to the ear, not a volume knob. By ear, labelled as such. A longer render
+# also draws the bow's and the rolls' noise afresh, so their takes are new draws of the same law.
+TAILS = {"CYMBAL_SWELL": (2.8, -50.0), "BOWED_CYMBAL": (2.4, -30.0)}   # (start s, extra dB at the end of the render)
+
+
+def finish(raw, m, v, seconds, tail=None):
+    """DISTANCE -> WARMTH -> the house output stage, at 44.1 kHz, peak 0.89 (the audition match). With `tail`
+    (start s, dB), an exponential fade from start to the end of the render."""
     n = len(raw)
     y = conv(raw, room_ir(round(m["DISTANCE"], 3)), n)
     y = warmth_chain(y, m["WARMTH"], v)
@@ -641,6 +668,12 @@ def finish(raw, m, v, seconds):
     y = signal.lfilter([al, -al], [1, -al], y)
     out = int(seconds * RATE)
     y = y[:out]
+    if tail is not None:
+        start, end_db = tail
+        i0 = int(start * RATE)
+        if i0 < len(y):
+            ramp = np.arange(len(y) - i0) / max(1, len(y) - 1 - i0)
+            y[i0:] *= 10 ** (end_db * ramp / 20)
     fade = min(len(y), int(0.06 * RATE))
     y[-fade:] *= 0.5 * (1 + np.cos(np.linspace(0, math.pi, fade)))
     return peak_norm(y) * 0.89
@@ -678,7 +711,7 @@ def render(voice, macros=None, velocity=1.0, take=0):
     n = n_of(seconds + 0.05)
     tr = rng_for("ember", voice, take)       # what changes between takes
     raw = RENDER[voice](m, v, tr, n)
-    return finish(raw, m, v, seconds)
+    return finish(raw, m, v, seconds, TAILS.get(voice))
 
 
 def _kick(m, v, tr, n):
@@ -765,6 +798,8 @@ def seconds_for(voice, m):
     """Render length. Fixed per voice, except the sweep, whose length follows its circle."""
     if voice == "BRUSH_SWEEP":
         return round(sweep_seconds(m["SPEED"]) + 0.35, 3)
+    if voice == "GUIRO":
+        return round(guiro_stroke(m["SPEED"]) + 0.35, 3)
     return VOICES[voice][1]
 
 
@@ -995,7 +1030,7 @@ def _cymbal_swell(m, v, tr, n):
 def _roll(m, v, tr, n, brush=False):
     """Percussion gate: an authored roll. Sticks: buzz strokes, each hand pressing three to six
     bounces into the head, the hands alternating faster as the roll crescendos into an accent.
-    Brushes: the brush version, wires on wires. 2.6 s with the accent at 2.3 s."""
+    Brushes: the brush version, wires on wires. 3.0 s, the accent at 2.3 s and its ring."""
     t_end = 2.3
     rate0, rate1 = sk.lin(m["SPEED"], 9, 14), sk.lin(m["SPEED"], 14, 22)
     force = np.zeros(n)
@@ -1146,6 +1181,114 @@ def _sticks(m, v, tr, n):
     return out + hp(force, 3000) * 0.4
 
 
+# ------------------------------------------------------------------------------ Latin percussion (round 2L)
+#
+# The owner asked for a Latin jazz kit with new voices (2026-11-15). The cowbell, the clave, both bongos and the
+# shaker are their CC0 recordings' own resonances or band envelopes (latin.json, fit_ember_latin.py, VCSL). The
+# timbales and the paila are physical models: no CC0 timbale recording exists in the libraries the repository uses.
+
+def _timbale(m, v, tr, n):
+    """A timbale: a thin, tight head over a steel shell, struck with a thin stick near the edge, so it rings high
+    and bright. TUNE spans the pair (the hembra about 290 Hz at .3, the macho about 380 Hz at .7; shape). RIM moves
+    the stick onto the steel rim: the shell rings and a rimshot cracks. The head's high modes live longer than
+    calf's (alpha 0.75, a tighter head; shape); the shell's modes are a 14-inch steel cylinder's, by ear."""
+    f1 = 330.0 * semis(m["TUNE"], 6)
+    rim = m["RIM"]
+    force = stick(v, tr, n, width_hard=0.2e-3)
+    t1 = sk.lin(m["DAMP"], 0.9, 0.12)
+    out = _drum(f1, t1, 0.75, v, tr, n, 0.62, force * (1 - 0.45 * rim), m, sag_max=0.02)
+    k = semis(m["TUNE"], 3)
+    shell_hz = [hz * k for hz in (1180, 1720, 2350, 3110, 3960, 5230)]
+    shell_ir = modal_ir(shell_hz, [1, .8, .7, .5, .35, .25], [t1 * x for x in (.42, .36, .3, .25, .2, .16)], n,
+                        phases=tr.uniform(0, TAU, 6))
+    shell = conv(force, peak_norm(shell_ir), n)
+    crack = hp(force, 3000)
+    head = np.max(np.abs(out)) + 1e-12
+    return out + head * ((0.1 + 0.55 * rim) * shell / (np.max(np.abs(shell)) + 1e-12)
+                         + 0.5 * rim * crack / (np.max(np.abs(crack)) + 1e-12))
+
+
+def _paila(m, v, tr, n):
+    """Cascara: the stick on the timbale's steel shell. The shell's modes (as the timbale's, louder and brighter),
+    a little of the head answering, and the stick's click. DAMP is the player's other hand on the head."""
+    k = semis(m["TUNE"], 4)
+    force = stick(v, tr, n, width_hard=0.16e-3)
+    t = sk.lin(m["DAMP"], 0.45, 0.06)
+    hz = [x * k for x in (980, 1530, 2190, 2960, 3870, 5100, 6650)]
+    amp = [x * 10 ** (tr.normal(0, 1.2) / 20) for x in (.7, 1, .9, .7, .5, .35, .22)]
+    shell = conv(force, peak_norm(modal_ir(hz, amp, [t * x for x in (1, .8, .65, .5, .4, .3, .22)], n,
+                                           phases=tr.uniform(0, TAU, 7))), n)
+    head = conv(force, peak_norm(membrane_ir(330.0 * semis(m["TUNE"], 6), n, 0.25, 0.75, 0.9, tr.uniform(0, math.pi))), n)
+    click = hp(force, 2500)
+    pk = np.max(np.abs(shell)) + 1e-12
+    return shell + pk * (0.12 * head / (np.max(np.abs(head)) + 1e-12) + 0.35 * click / (np.max(np.abs(click)) + 1e-12))
+
+
+def _fitted(kind):
+    """A fitted hand or stick instrument struck once: its recording's modes, its attack and its residual."""
+    def render(m, v, tr, n):
+        sound, _ = struck(kind, m, v, tr, n)
+        return sound
+    render.__doc__ = f"The recorded {kind.replace('_', ' ')}'s own resonances, attack and residual (latin.json)."
+    return render
+
+
+def _shaker(m, v, tr, n):
+    """The large shaker's single hit from its fitted band envelopes (as the closed hats). Soft throws the seeds
+    less hard: the soft table is the hard one with its top down (fit_ember_latin.py, by ear)."""
+    return to_internal(envelope_hat("shaker", m["TUNE"], m["DAMP"], v, tr, int(n / 4) + 1), n)
+
+
+def guiro_stroke(speed):
+    """The stroke's length: the recordings' slow, medium and fast strokes and the short scrape (latin.json), from
+    SPEED 0 to 1."""
+    s = fit()["guiro"]["strokes"]
+    return float(np.interp(speed, [0, 1 / 3, 2 / 3, 1], [s["slow"], s["med"], s["fast"], s["hit"]]))
+
+
+def _guiro(m, v, tr, n):
+    """A guiro scraped once: a click for every ridge the stick crosses, at the measured ridge rate (median 52 a
+    second), a little slow at the start, quickest mid-stroke, easing at the end, each click a burst at the measured
+    click spectrum. TUNE slides the spectrum; a softer stroke presses less (fewer highs, quieter). Shape: the
+    stroke's speed curve and the click's 2 to 7 ms ring."""
+    g = fit()["guiro"]
+    bands = fit()["bands"]
+    k = int(n / 4) + 1
+    length = guiro_stroke(m["SPEED"])
+    base = g["rate"] * sk.lin(m["SPEED"], 0.85, 1.25)
+    lv = np.array(g["click"], dtype=float)
+    shift = (m["TUNE"] - 0.5) * 2 * 3 / 4
+    idx = np.arange(len(bands))
+    lv = np.interp(idx - shift, idx, lv)
+    w = min(1.0, soft_weight(v))
+    lv = lv * 10 ** (-w * np.clip((idx - 12) * 1.5, 0, 9) / 20)          # soft: less top over 2 kHz
+    kl = int(0.008 * RATE)
+    tk = np.arange(kl) / RATE
+    kernels = []
+    for _ in range(6):
+        c = np.zeros(kl)
+        for i, fc in enumerate(bands):
+            if fc * 2 ** (1 / 6) >= 0.49 * RATE:
+                continue
+            tau = float(np.interp(fc, [125, 16000], [0.007, 0.002]))
+            seg = signal.sosfilt(fit_band_sos(i), tr.standard_normal(kl)) * np.exp(-tk / tau)
+            c += lv[i] * seg / (np.sqrt(np.sum(seg ** 2)) + 1e-20)      # each band's energy at its measured level
+        kernels.append(c / (np.max(np.abs(c)) + 1e-12))
+    out = np.zeros(k)
+    t = 0.0
+    while t < length:
+        x = t / max(length, 1e-6)
+        a = np.sin(math.pi * min(1.0, 0.15 + 0.85 * x)) ** 0.5 * 10 ** (tr.normal(0, 2.0) / 20)
+        i = int(t * RATE)
+        c = kernels[tr.integers(0, len(kernels))]
+        e = min(kl, k - i)
+        if e > 0:
+            out[i:i + e] += a * c[:e]
+        rate = base * (0.75 + 0.45 * math.sin(math.pi * x)) * (1 + tr.normal(0, 0.12))
+        t += 1.0 / max(rate, 5.0)
+    return to_internal(out * v ** 1.2, n)
+
+
 RENDER = {
     "KICK": _kick, "SNARE": _snare, "RIMSHOT": _rimshot, "CROSS_STICK": _cross_stick, "BRUSH_TAP": _brush_tap,
     "BRUSH_SWEEP": _brush_sweep, "TOM_RACK": _tom_rack, "TOM_FLOOR": _tom_floor, "ELBOW_TOM": _elbow_tom,
@@ -1154,6 +1297,8 @@ RENDER = {
     "BOWED_CYMBAL": _bowed_cymbal, "CYMBAL_SWELL": _cymbal_swell, "PRESS_ROLL": _press_roll,
     "BRUSH_ROLL": _brush_roll, "SNAPS": _snaps, "CLAPS": _claps, "TAMBOURINE": _tambourine,
     "CONGA": _conga, "STICKS": _sticks,
+    "TIMBALE": _timbale, "PAILA": _paila, "COWBELL": _fitted("cowbell"), "CLAVE": _fitted("clave"),
+    "BONGO_HIGH": _fitted("bongo_high"), "BONGO_LOW": _fitted("bongo_low"), "GUIRO": _guiro, "SHAKER": _shaker,
 }
 assert set(RENDER) == set(VOICES)
 

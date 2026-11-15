@@ -97,6 +97,7 @@ class SynthRootTest {
                 SilkPatch("Door", SilkVoice.OUD, emptyMap()),
                 SnapPatch("Door", SnapVoice.ORBIT, emptyMap(), IntArray(Snap.TABLE_SIZE) { (it * 255) / (Snap.TABLE_SIZE - 1) }),
                 TerraPatch("Door", TerraVoice.COMPOUND_MEMBRANE, emptyMap()),
+                com.snipsnap.synth.CalabashPatch("Door", com.snipsnap.synth.CalabashVoice.CONGA, emptyMap()),
                 ErosionPatch("Door", ErosionVoice.ARC),
                 CairnPatch("Door", CairnVoice.ANSWER, emptyMap()),
                 SplayPresets.all().first(),
@@ -110,7 +111,7 @@ class SynthRootTest {
         }
 
         /** The engines whose every patch answers null: drums, voice, scale rows, frequency sweeps. */
-        private val ROOTLESS = setOf("RIVET", "THUMP", "SKIN", "ONSET", "TERRA", "VOX", "SILK", "EROSION", "FIRED_BRONZE", "BACKWASH", "SCUFF", "CLUTTER", "DRUMLINE", "EMBER", "TEMPEST")
+        private val ROOTLESS = setOf("RIVET", "THUMP", "SKIN", "ONSET", "TERRA", "VOX", "SILK", "EROSION", "FIRED_BRONZE", "BACKWASH", "SCUFF", "CLUTTER", "DRUMLINE", "EMBER", "CALABASH", "TEMPEST")
 
         private fun cents(hz: Float, midi: Int): Float = 1200f * ln(hz / Keys.midiHz(midi)) / ln(2f)
     }

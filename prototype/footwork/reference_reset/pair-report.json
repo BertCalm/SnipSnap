@@ -1,0 +1,22 @@
+{
+  "status": "secondary-contact hypothesis awaiting listening",
+  "sourceCommitBase": "eb72e27bf102b625f35523b054ee6e62a57c8084",
+  "variants": {
+    "tight": {
+      "nominalSpacingMs": 6.5,
+      "spacingVariationPercent": 12,
+      "secondaryAmplitude": 0.65,
+      "cells": 12,
+      "checksPassed": true,
+      "peakAfterComparisonGain": 0.651096716536
+    },
+    "separated": {
+      "nominalSpacingMs": 11.0,
+      "spacingVariationPercent": 12,
+      "secondaryAmplitude": 0.65,
+      "cells": 12,
+      "checksPassed": true,
+      "peakAfterComparisonGain": 0.651096716660155
+    }
+  }
+}
