@@ -1,4 +1,4 @@
-# CUTTINGS R1 sound study
+# CUTTINGS R2 sound study
 
 Python prototype, not a Kotlin engine. Original generated recording scenes; no external audio assets. Adapted from the repository Luthier prototype template, with its seed, DC and measurement helpers. The renderer uses SciPy polyphase decimation, not the Kotlin output implementation.
 
@@ -11,12 +11,12 @@ Four roles: kick/bass shadow, snare/clap room, hat/tambourine catch, wood/metal 
 From the SnipSnap repository, with Python 3, NumPy and SciPy available:
 
 ```sh
-python3 prototype/cuttings/cuttings_proto.py /tmp/cuttings-r1
-cp prototype/cuttings/index.html prototype/cuttings/app.js /tmp/cuttings-r1/
-node prototype/cuttings/check_player.mjs /tmp/cuttings-r1
+python3 prototype/cuttings/cuttings_proto.py /tmp/cuttings-r2
+cp prototype/cuttings/index.html prototype/cuttings/app.js /tmp/cuttings-r2/
+node prototype/cuttings/check_player.mjs /tmp/cuttings-r2
 ```
 
-Serve the generated directory using the environment's supported static preview infrastructure. The page needs HTTP for its manifest and audio fetches. The download link expects a `cuttings-r1.zip` containing `audio/`, `manifest.json` and `report.json`; package those files when distributing the page.
+Serve the generated directory using the environment's supported static preview infrastructure. The page needs HTTP for its manifest and audio fetches. The download link expects a `cuttings-r2.zip` containing `audio/`, `manifest.json` and `report.json`; package those files when distributing the page.
 
 ## Evidence and limits
 
@@ -33,3 +33,7 @@ The timing measurement is a desktop cold render of three stages, not a phone ben
 - Separate room and context material gives each fragment a recording identity before common processing.
 - Smooth body/tail replacement preserves the playable onset while exposing a different source.
 - Dynamic excitation and alternate strike positions vary performances without randomly replacing the pad's identity.
+
+## Study 02 revision
+
+Owner requested more distinct, unique, exaggerated character. Retained primary source performances and added a bent bass catch, a snare room dropout and late slap, three descending jingle catches, and reverse-metal pickup into a damped bell. These changes occur before common finishing. `revision-comparison.json` records RMS-matched spectral differences from Study 01, not a listening verdict. All 48 variant and player-selection checks pass again. The original published study remains under `/r1/` on the audition site. Browser audio and full instrument gates remain unverified.

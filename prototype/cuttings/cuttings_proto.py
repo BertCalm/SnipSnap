@@ -1,4 +1,4 @@
-"""CUTTINGS R1. Adapted from Luthier proto_template.py; Python, not Kotlin.
+"""CUTTINGS R2. Adapted from Luthier proto_template.py; Python, not Kotlin.
 Original imaginary recording scenes. No external audio assets.
 Render: python3 prototype/cuttings/cuttings_proto.py /absolute/output
 """
@@ -20,7 +20,8 @@ import probes as pr
 
 RATE = 44100
 INTERNAL = RATE * 4
-VERSION = 'cuttings-r1-original-scenes-1'
+VERSION = 'cuttings-r2-exaggerated-cuts-1'
+SEED_VERSION = 'cuttings-r1-original-scenes-1'  # preserve primary performances for A/B
 VOICES = ('kick', 'snare', 'hat', 'wood')
 STAGES = ('source', 'splice', 'finished')
 NAMES = {'kick': 'Pocket / bass shadow', 'snare': 'Backbeat / borrowed room',
@@ -58,7 +59,7 @@ def modes(t, base, ratios, decay, rng, velocity):
 
 
 def scene(voice, dynamic, take, secondary=False, rate=INTERNAL):
-    rng = np.random.default_rng(sk.seed_for(VERSION, voice, dynamic, take, secondary))
+    rng = np.random.default_rng(sk.seed_for(SEED_VERSION, voice, dynamic, take, secondary))
     v = (.40, .69, 1.0)[dynamic]
     t = np.arange(int(DURATIONS[voice]*rate)) / rate
     noise = rng.normal(0, 1, len(t))
@@ -102,6 +103,39 @@ def scene(voice, dynamic, take, secondary=False, rate=INTERNAL):
         if secondary:
             u=np.maximum(0,t-.033)
             context = .16*(t>.033)*(np.sin(2*np.pi*702*u)+.35*np.sin(2*np.pi*1137*u))*np.exp(-u/.090)
+    if secondary:
+        # R2: authored, role-specific finds. Distinction comes from source
+        # articulation and time edits, before the common finish stage.
+        if voice == 'kick':
+            u=np.maximum(0,t-.047)
+            env=(t>.047)*(1-np.exp(-u/.0015))*np.exp(-u/.065)
+            phase=2*np.pi*(82.41*u+105*.012*(1-np.exp(-u/.012)))
+            bass=np.sin(phase)+.35*np.sin(2*phase)+.16*np.sin(3*phase)
+            context=.33*env*bass
+            # Tiny second muted-string catch is an intentional source fragment.
+            w=np.maximum(0,t-.132)
+            context+=.11*(t>.132)*(1-np.exp(-w/.001))*np.exp(-w/.022)*np.sin(2*np.pi*164.82*w)
+        elif voice == 'snare':
+            # A late, band-limited handclap blooms in a different room.
+            u=np.maximum(0,t-.045)
+            cl=filt(filt(noise,700,rate,'highpass'),2900,rate)
+            hit=.30*hit+.95*cl*(t>.045)*(1-np.exp(-u/.001))*np.exp(-u/.052)
+            context=.16*(t>.047)*(1-np.exp(-u/.002))*np.exp(-u/.065)*(np.sin(2*np.pi*311*u)+.5*np.sin(2*np.pi*466*u))
+        elif voice == 'hat':
+            # Three descending jingle catches, then a decisive crop.
+            context=np.zeros_like(t)
+            for delay,freq,gain in ((.014,5100,.24),(.041,3800,.20),(.077,2750,.16)):
+                u=np.maximum(0,t-delay)
+                env=(t>delay)*(1-np.exp(-u/.0007))*np.exp(-u/.011)
+                context+=gain*env*(np.sin(2*np.pi*freq*u)+.6*np.sin(2*np.pi*freq*1.413*u))
+            hit*=.55
+        else:
+            # A reversed metal pickup folds into a lower damped bell cut.
+            u=np.maximum(0,t-.083)
+            reverse=np.exp(-np.abs(t-.079)/.016)*(t<.083)
+            context=.23*reverse*(np.sin(2*np.pi*1223*t)+.4*np.sin(2*np.pi*1793*t))
+            context+=.30*(t>.083)*(1-np.exp(-u/.001))*np.exp(-u/.060)*(np.sin(2*np.pi*523*u)+.45*np.sin(2*np.pi*831*u))
+            hit*=.45
     hit *= attack * (.42+.58*v)
     context *= .55+.45*v
     hit = room(hit, rate, 1.45 if secondary else .48, .23 if secondary else .08,
@@ -124,12 +158,16 @@ def render(voice, dynamic, take, rate=INTERNAL, context=True):
     # Smooth 3 ms insertion: onset stays from A; B owns part of the tail.
     gate=np.clip((t-start)/.003,0,1)
     gate=.5-.5*np.cos(np.pi*gate)
-    amount={'kick':.35,'snare':.76,'hat':.72,'wood':.77}[voice]
+    amount={'kick':.60,'snare':.94,'hat':.88,'wood':.91}[voice]
     source=a+ac
     cut=a*(1-amount*gate)+b*amount*gate+ac*(1-gate)*.5+bc*gate
     # Slightly shortened crop makes the borrowed room end decisively.
     end={'kick':.38,'snare':.285,'hat':.114,'wood':.242}[voice]
     crop=np.clip((end-t)/.006,0,1)
+    if voice=='snare':
+        # A short smooth room dropout exposes the edit without a digital click.
+        dip=np.clip((t-.029)/.002,0,1)*np.clip((.043-t)/.002,0,1)
+        cut*=1-.92*dip
     cut*=crop
     finished=filt(np.tanh(cut*1.35)/1.35, 9300,rate)
     stages={}
@@ -208,7 +246,7 @@ def main(out_dir):
     manifest={'version':VERSION,'rate':RATE,'bpm':89,'names':NAMES,'voices':list(VOICES),
               'stages':list(STAGES),'entries':entries,'comparisonGain':match,'grooves':grooves,
               'source':'Original procedural imaginary sessions; no sampled records.',
-              'status':'Python R1 audition. App, save/load, MPC export gates remain open.'}
+              'status':'Python R2 audition. App, save/load, MPC export gates remain open.'}
     (out/'manifest.json').write_text(json.dumps(manifest,indent=2)+'\n')
     # Saved manifest and WAVs must describe precisely the rendered grid.
     restored=json.loads((out/'manifest.json').read_text())

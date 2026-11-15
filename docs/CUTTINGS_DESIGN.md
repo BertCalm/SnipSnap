@@ -154,6 +154,10 @@ First audition should fit one screen: four pad buttons, dynamic and take selecto
 
 The first four roles now have 48 modeled performances and 144 source/splice/finished WAVs. A four-bar groove has matched-level stage comparisons and musical-context bypass. The compact audition is at https://cuttings-audition.bertcalm.chatgpt.site. Source, measurements and player selection checks are in `prototype/cuttings/`. This implements the identity proof only: six editable macros, full genre kits, phrases and Kotlin/app/MPC integration remain outstanding. The initial source choice remains original procedural imaginary sessions.
 
+## R2 character revision
+
+Study 02 exaggerates each secondary source gesture in response to owner feedback: bass catch, snare room dropout/slap, tumbling jingle and reverse-metal/bell cut. Primary source seeds remain stable for comparison. The 48-performance grid is regenerated and checked; original Study 01 remains available at `/r1/` on the same audition site. This is still a prototype, with no new completion-gate claims.
+
 ## Why it is built this way
 
 - Short recording scenes give each cut a believable reason to contain room, bass or percussion bleed. Adding noise to a lone drum cannot provide that history.
