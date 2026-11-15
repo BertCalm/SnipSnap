@@ -821,6 +821,10 @@ TERRA is a world-percussion drum engine with 13 voices. Four are spec voices, fr
 - **Sound character: the whole classic kit is owner KEEP, as the app renders it** (`terra-kit-1`). The nine newer voices were first picked as Python prototype clips. The six spec pads (A01, A04, A13–A16) were kept as part of the full kit, over a picks-only alternative.
 - **Overall: incomplete.** The kit verdict and the starter are done. Next come presets and the picker, then genre kits, then round robin and touch.
 
+## SPORE synthetic kits (2026-11-14)
+
+The owner approved the procedural kick/snare pair. Three genre starters now contain 18 pads each, including authored rolls and risers. All 486 cells pass velocity/take source checks, saved recipe replay, native playback, SFZ import/playback and MPC 3 grid/PCM read-back. Drum shelf registration is verified in software. Melodic/keygroup/chord and string STRUM requirements do not apply to this percussion kit; individual voices are finite. The owner accepted the revised Jungle heel, ghost and ride on 2026-11-15 (“Better, proceed”); preserve their version-2 renders alongside the approved core pair. The owner subsequently confirmed listening to all kits and explicitly approved phone and hardware playback (“Phone and hardware approved”). Sound and device acceptance are therefore closed for Dry Jungle, Dub Breaks and Orbital Breaks. This is owner-reported device approval, separate from the automated 486-cell evidence; no device model or firmware was specified. The revision and complete starter-render regression passed. No MPC 2 fallback is included. See [the detailed ledger](superpowers/specs/2026-11-14-spore-synthetic-kits.md) and [revision acceptance](superpowers/specs/2026-11-15-spore-jungle-articulation.md).
+
 ## EMBER (round 1 Kotlin, 2026-11-15, not heard; shelf and hardware open)
 
 A drum engine for a live jazz and soul kit in a small club in 1962: calfskin drums, a riveted ride, brushes, the
