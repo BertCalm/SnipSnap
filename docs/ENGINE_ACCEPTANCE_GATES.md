@@ -940,20 +940,20 @@ A marching battery with independent player bodies, five bass sizes and progressi
 - Fast rendering, full control-corner and alias-reference checks: open. Measured snare/crash/roll rendering exceeds the one-shot tens-of-milliseconds target on this host.
 - Overall: incomplete. Software evidence is not native sound or device acceptance.
 
-## SERVO round 1b (2026-11-15): Kotlin kits on the shelf, first listen "a bit weak"
+## SERVO round 1b (2026-11-15): accepted
 
 Machine drums on a weak power rail, in three kits for electro, ghetto tech and neurofunk. See
-[SERVO](SERVO.md). The owner's instruction was "Must pass the gates"; the software gates below have evidence,
-and the two that need the owner do not.
+[SERVO](SERVO.md). The owner's instruction was "Must pass the gates". On 2026-11-15 the owner wrote "Sound
+approved, phone and MPC good, merge".
 
 - Melodic/keygroup/chord-tool and HOLD/STRUM gates: not applicable to this drum engine.
-- Percussion roll/riser: every kit has an authored Roll (A15) and Riser (A16), each note a fresh strike on one shared rail, with the full velocity and take grid. Built and tested; not heard.
-- Drum shelf: SERVO ELECTRO, SERVO JIT and SERVO NEURO are registered once each on the FRESH TAPE shelf at 126, 156 and 174 BPM. They differ in tuning, length, roles, tempo and rail; `ServoKitsTest` checks no role of one kit is another's. Not heard.
+- Percussion roll/riser: **pass.** Every kit has an authored Roll (A15) and Riser (A16), each note a fresh strike on one shared rail, with the full velocity and take grid; approved with the kits.
+- Drum shelf: SERVO ELECTRO, SERVO JIT and SERVO NEURO are registered once each on the FRESH TAPE shelf at 126, 156 and 174 BPM. They differ in tuning, length, roles, tempo and rail; `ServoKitsTest` checks no role of one kit is another's. **Pass**: approved by the owner.
 - Velocity/round robin in software: all 576 slices pass `:shell:generateServoKits` (PCM against the render after save, reload, two playback cycles of the pad resolver, and the MPC 3 track read back). A softer zone is a different hit on every pad; every zone holds four different takes matched in loudness. The closest takes measure 0.59 dB apart (ELECTRO Rim), near the level ETCH's takes were heard as one strike.
 - MPC 2: each velocity zone keeps its first take; the round-robin export gate does not apply ([format limit](#mpc-2-and-round-robin-owner-decision-2026-11-14)).
-- Sound: **open.** The owner heard round 1 on 2026-11-15: "Can we add in a bit more oomph? They feel a bit weak." Round 1b adds weight (kicks 1.2 to 2.7 dB and snares 3.2 to 4.7 dB louder at the same peak) and has not been heard. This is a direction, not an acceptance.
-- Phone and MPC hardware: **open.** Nothing has been loaded on a device.
-- **Overall: incomplete.** Software evidence is not sound or device acceptance; those two gates are the owner's to close.
+- Sound: **pass.** The owner heard round 1 as "a bit weak"; round 1b added weight (kicks 1.2 to 2.7 dB and snares 3.2 to 4.7 dB louder at the same peak) and the owner approved it on 2026-11-15. It is the accepted baseline.
+- Phone and MPC hardware: **pass, owner-reported** (2026-11-15: "phone and MPC good"). No device measurement was made by the implementing session.
+- **Overall: every applicable gate passes.** Not gates and not done: factory presets from the accepted pads and a SYNTH picker entry.
 
 ## TIMBER acoustic percussion integration
 

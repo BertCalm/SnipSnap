@@ -1,9 +1,11 @@
 # SERVO: design brief and round-0 audition
 
-Status: **round 1b (2026-11-15): more weight, after the owner's first listen. Round 1b is not heard.** The
-owner's listens so far:
+Status: **accepted (2026-11-15). The owner approved round 1b's sound and reported the phone and MPC checks
+good.** The owner's listens:
 - Round 1 (the Kotlin kits on the listening page): "They feel a bit weak", with a request for "a bit more
   oomph". [Round 1b](#round-1b-more-weight-2026-11-15) answers it.
+- Round 1b: "Sound approved, phone and MPC good, merge" (2026-11-15). `Servo.MODEL_VERSION` 1 and
+  `ServoKits.VERSION` 1 with round 1b are the approved baseline: bump either for any change to a pad's audio.
 
 The Kotlin engine and three kits are on the FRESH TAPE shelf, with velocity and round robin proven in software
 through rendering, saving, playback and MPC 3 export. The owner's instruction on 2026-11-15 was "Must pass the
@@ -197,9 +199,9 @@ inside the voice (the oscillators read it), so it cannot be a rack section over 
 | Round robin in rendering | Pass in software | Four different takes in every zone of every pad, matched in loudness within 0.04 dB; closest takes 0.59 dB (ELECTRO Rim), near the 0.5 to 0.8 dB ETCH's takes were heard as one strike |
 | Saving, playback, export | Pass in software | `ServoKitTest` and `:shell:generateServoKits`: all 576 slices of the three kits checked against their renders after save, reload, two playback cycles of the app's pad resolver and the MPC 3 track read back |
 | MPC 2 | Format limit | Each velocity zone keeps its first take ([owner decision, 2026-11-14](ENGINE_ACCEPTANCE_GATES.md#mpc-2-and-round-robin-owner-decision-2026-11-14)) |
-| Sound | **Open** | Round 1 heard as "a bit weak"; round 1b not heard. Only the owner can close it |
-| Phone and MPC | **Open** | Nothing loaded on a device. Only the owner can close it |
-| SYNTH picker, factory presets | Not built | Not gates. The engine is `ROSTERLESS` until the kits are heard ("presets authored blind are disposable") |
+| Sound | **Pass** | Round 1 heard as "a bit weak"; round 1b approved by the owner, 2026-11-15 |
+| Phone and MPC | **Pass** | Owner-reported, 2026-11-15: "phone and MPC good". No device measurement was made in this session |
+| SYNTH picker, factory presets | Not built | Not gates. The kits are now accepted, so their pads can be filed as the factory bank and the engine put on the picker (the CLUTTER rounds 3 and 4 shape); not done here |
 
 ## Verified / measured / proposed / heard
 

@@ -3741,3 +3741,11 @@ roll and a riser each, the phrases baked on one shared rail. Every voice's Kotli
 the prototype's own takes; all 576 slices pass save, reload, playback and MPC 3 read-back. A zone's takes are
 matched in loudness (CLUTTER's law): on the first-take law a take fired on a sagging rail came out up to 5.3 dB
 down. Sound and hardware gates are open: nobody has heard it. See [SERVO](SERVO.md) and the gates entry.
+
+### SERVO, accepted (2026-11-15)
+
+The owner heard round 1 as "a bit weak"; round 1b gave the kick, snare and tom a held shoulder, the snare more
+body, and every voice more drive (kicks 1.2 to 2.7 dB, snares 3.2 to 4.7 dB louder at the same peak). The owner
+then wrote "Sound approved, phone and MPC good, merge". Model 1 and kit version 1 are the approved baseline.
+Open, not gates: factory presets from the accepted pads, and the SYNTH picker. See [SERVO](SERVO.md).
+
