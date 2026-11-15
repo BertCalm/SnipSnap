@@ -3876,3 +3876,14 @@ tasks.register<JavaExec>("benchmarkDrumline") {
     maxHeapSize = "1g"
     args(providers.gradleProperty("drumlineBenchmarkOutput").orNull ?: "testkit/drumline-render-benchmark.csv")
 }
+
+/** Full numerical corner coverage is explicit: scored figures make this a long-running audit. */
+tasks.register<JavaExec>("auditDrumlineCorners") {
+    group = "verification"
+    description = "Audit every drumline control corner at minimum/full touch, plus default-center replay."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.DrumlineCornerSweep")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "1g"
+    args(providers.gradleProperty("drumlineCornerOutput").orNull ?: "testkit/drumline-corners.csv")
+}
