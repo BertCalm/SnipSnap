@@ -794,3 +794,6 @@ testkit/SnipSnap Tempest Tuned Kit/
 # Generated Velour round-robin audio and delivery packages.
 testkit/velour-round-robin/
 testkit/etch-audition/
+
+# CUTTINGS generated native kits and export/audition bundles
+/testkit/cuttings-kits/
