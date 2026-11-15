@@ -447,7 +447,7 @@ object UserPresets {
      * controls through the complete JSON constructor. WICK retains its selected
      * RATTLE body, root, velocity and controls through that constructor as well. SCUFF
      * retains its strike velocity, take and model version the same way, and CLUTTER
-     * its object's strike velocity, take and model version; CAIRN its root,
+     * its object's strike velocity, take and model version, as does CALABASH; CAIRN its root,
      * touch, contact cue and saved model.
      * Names and embedded JSON are escaped
      * Kotlin string literals.
@@ -497,6 +497,11 @@ object UserPresets {
             // Velocity, take and model version live outside the macro map, as SCUFF's do.
             val recipe = Json.write(JsonValue.Str(patch.toJsonText())).replace("$", "\\$")
             return "ClutterPatch.fromJsonText($recipe),"
+        }
+        if (patch is com.snipsnap.synth.CalabashPatch) {
+            // Velocity, take and model version live outside the macro map, as CLUTTER's do.
+            val recipe = Json.write(JsonValue.Str(patch.toJsonText())).replace("$", "\\$")
+            return "CalabashPatch.fromJsonText($recipe),"
         }
         if (patch is ErosionPatch) {
             // Native touch is outside the macro map; promotion must retain it.

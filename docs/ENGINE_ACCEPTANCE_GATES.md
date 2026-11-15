@@ -887,7 +887,7 @@ the shelf as FRESH TAPE starters.
   app (the listening page, version 3, plays them from the MPC 3 export), the Latin jazz kit and its new voices,
   presets and the picker, and phone and MPC hardware (round 3).
 
-## CALABASH (round 0 heard and approved, 2026-11-15; round 1 Kotlin port, not heard)
+## CALABASH (round 2, 2026-11-15: four genre kits on the shelf, Python and Kotlin approved by ear; hardware open)
 
 Four sixteen-pad drum kits for Afrobeat (Lagos, the 1970s), Afrobeats (Lagos and Accra, now), Mbalax (a sabar ensemble
 over a kit, Dakar) and Afro-Cuban jazz (New York, the 1950s). The owner asked for them on 2026-11-15 and chose four kits
@@ -895,17 +895,22 @@ over a kit, Dakar) and Afro-Cuban jazz (New York, the 1950s). The owner asked fo
 resynthesized from CC0 recordings (VCSL); the shekere, talking drums, sabar drums and timbales are physical models with
 no recording behind them. See [CALABASH](CALABASH.md). Round 0 is a Python prototype and a listening page
 (<https://claude.ai/artifact/8vhxM5dJriounZm38WFn8g>). The owner approved all of round 0 by ear on 2026-11-15 (below).
-Round 1 (2026-11-15) is the Kotlin port, `Calabash.kt`, measured against that prototype; nobody has heard it.
+Round 1 (2026-11-15) is the Kotlin port, `Calabash.kt`, measured against that prototype. Round 2 (2026-11-15) puts the four
+kits on the shelf, with a listening page of the Kotlin kits (<https://claude.ai/artifact/X54yPsKdm36A7QLQVWDed2>), which
+the owner heard and approved on 2026-11-15 (below).
 
 - **Melodic, keygroup and chord-tool gates:** not applicable. Drum kits.
 - **Articulation:** finite hits, no HOLD. No picked or thumbed strings.
 - **Percussion: authored, heard (2026-11-15).** Every kit carries a roll or riser on A16: a shekere rush (AFROBEAT), a
   talking-drum call rising in pitch (AFROBEATS), a sabar stick roll into its bakk's landing (MBALAX), a timbale abanico
-  into the rimshot (AFRO-CUBAN JAZZ). Rendered in Python; on the page the owner approved.
-- **Drum shelf: authored and heard, not on the shelf.** CALABASH AFROBEAT (112 BPM), CALABASH AFROBEATS (104), CALABASH MBALAX
-  (126) and CALABASH AFRO-CUBAN JAZZ (176) differ in which instruments fill the roles, the strokes, tuning, room, era
-  chain, swing and tempo. No pad is the same voice at the same settings in any two kits; the same slot in two kits is
-  14.6 to 23.6 dB apart on average and at least 3.99 dB (Python). No Kotlin, so nothing is on the shelf.
+  into the rimshot (AFRO-CUBAN JAZZ). Rendered in Python; on the page the owner approved. On the shelf in Kotlin (round 2),
+  tagged `riser` or `roll`, through the same save, playback and export proof as every pad; heard in Kotlin and
+  approved (2026-11-15).
+- **Drum shelf: on the shelf (round 2), approved by ear.** CALABASH AFROBEAT (112 BPM), CALABASH AFROBEATS (104), CALABASH
+  MBALAX (126) and CALABASH AFRO-CUBAN JAZZ (176) are FRESH TAPE starters under SKINS. They differ in which instruments
+  fill the roles, the strokes, tuning, room, era chain, swing and tempo. No pad is the same voice at the same settings
+  in any two kits; the same slot in two kits is 14.6 to 23.6 dB apart on average and at least 3.99 dB (Python), and
+  differs in shape in Kotlin (`CalabashKitsTest`). The owner heard the Kotlin kits and approved them (2026-11-15).
 - **Velocity and round robin:**
   - **Rendering: verified in Kotlin (round 1).** On all 64 pads, soft against hard at matched level differs by at least
     1.84 dB, and the closest two takes in any zone of any pad are 1.35 dB apart (the Afrobeat rimshot); `CalabashTest`
@@ -915,18 +920,37 @@ Round 1 (2026-11-15) is the Kotlin port, `Calabash.kt`, measured against that pr
     chance (`prototype/calabash/compare_kotlin.py`). The prototype measured 1.84 and 1.83 dB. Velocity moves the fitted voices
     toward their own soft recordings and the physical ones' contact, threshold and squeeze, not a filter. The
     programmed kick's takes are small moves of its sweep and tick, weaker than a re-strike (disclosed, as for THUMP).
-  - **Saving: partly verified.** A patch round-trips through JSON with its velocity, take and model and renders byte
-    for byte (`DeterminismTest`, `CalabashTest`). A saved kit waits for the shelf.
-  - **Playback and export: open.** The kits go on the shelf at round 2; the listening page's pad grid is a browser
-    stand-in, not app evidence.
-- **Sound character: approved at round 0.** On 2026-11-15 the owner wrote "Sounds great" and, asked whether that was
+  - **Kit grids (round 2): verified in rendering.** Every pad is three zones of four engine takes. In every zone of
+    every pad the four takes are different strikes, equally loud within 0.1 dB (over 150 ms, or a roll's whole
+    length), with the zone's highest peak at the audition's 0.89; the soft zone is a different strike from the hard one
+    (`CalabashKitsTest`). The audition peak-matched each take, which measured left takes up to 4.5 dB apart in
+    loudness on a hit and 6.3 dB on a roll; the equal-loudness law is CLUTTER's.
+  - **Saving: verified in software.** A patch round-trips through JSON with its velocity, take and model and renders
+    byte for byte (`DeterminismTest`, `CalabashTest`). Each kit reloads equal and every saved slice matches its render
+    (`CalabashKitTest`, `:shell:generateCalabashKits`: 768 slices).
+  - **Playback: verified in software.** `PadHit.resolve` picks the zone by velocity and deals the four takes in order,
+    then repeats, on a kick, a hat, a conga and the sabar roll (`CalabashKitTest`) and two cycles of every zone of every
+    pad (the generator). Chokes are the prototype's, as mute groups. No phone has played these kits.
+  - **Export: MPC 3 verified by read-back.** Velocity ranges, base slices, cycle lengths and frame windows match, and
+    the exported slices match their renders. **MPC 2: not applicable** ([format limit](#mpc-2-and-round-robin-owner-decision-2026-11-14)):
+    it keeps each zone's first take. SFZ and DecentSampler were not generated. No MPC has loaded these kits.
+- **Sound character: approved, Python and Kotlin.** On 2026-11-15 the owner wrote "Sounds great" and, asked whether that was
   a listen to the published page rather than a reply to the PR status, answered "I listened: approve all": all four
   kits and every voice. Preserve round 0 (`prototype/calabash` at commit `967f53f7f`) as the accepted baseline; the
   Kotlin port is judged against it. This is a listen to Python renders on the page, not evidence of a phone or MPC
   audition. Measured before the listen: the fitted voices sit 3.4 to 6.8 dB from their recordings over the first
-  150 ms, where two real takes of one drum sit 4.0 to 8.6 dB apart (Python, `check_fit.py`).
-- **Overall: incomplete.** The sound is approved and ported (round 1, not heard in Kotlin). The shelf and saving,
-  playback and MPC 3 export (round 2), and phone and MPC hardware (round 3) are open.
+  150 ms, where two real takes of one drum sit 4.0 to 8.6 dB apart (Python, `check_fit.py`). The same day the owner
+  heard the round-2 page of the Kotlin kits (each kit's approved groove played with the app's own strikes read back
+  from the MPC 3 export, beside the approved Python groove, and every pad's twelve strikes, the takes equal in
+  loudness), wrote "Sounds good" and, asked whether that was a listen to that page, answered "I listened: approve all". Preserve
+  `Calabash.MODEL_VERSION` 1 and `CalabashKits.VERSION` 1 as the baseline. Not a phone or MPC listen.
+- **Build time: disclosed.** A kit builds in 22 to 51 s on four cores; a one-shot renders in 60 to 350 ms and a roll in about
+  3.7 s, over the house's tens of milliseconds. A phone is slower.
+- **Overall: incomplete.** Every software gate is in place and the sound is approved by ear in Python and in Kotlin:
+  the kits are on the shelf with velocity and round robin verified through rendering, saving, playback and MPC 3
+  export in software (round 2), and the sixty-four approved pads are CALABASH's factory presets (round 3,
+  `CalabashPresetsTest`), on SYNTH's engine picker (round 4, an on-device test run by CI's emulator, not seen by the
+  owner). Open: phone and MPC hardware; the MPC 2 export is not applicable (the owner's format limit).
 
 ## DRUMLINE (native model 4 accepted, 2026-11-15)
 
