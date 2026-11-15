@@ -85,9 +85,8 @@ class SplayBodiesTest {
         val after = cases.map { (m, model) -> sha(Splay.renderDetailed(SplayVoice.TONGUE, m, model = model).raw) }
         assertEquals(before, after)
         // TONGUE stays on models 1 and 2; model 3 is the bodies' alone.
-        assertFalse(Splay.supportsModel(SplayBodies.MODEL))
+        assertFalse(Splay.supports(SplayVoice.TONGUE, SplayBodies.MODEL))
         assertEquals(2, Splay.MODEL_VERSION)
-        assertEquals(listOf("TONGUE"), SplayVoice.entries.map { it.name })
     }
 
     @Test fun `WIRE and RUB ring at the requested pitch across SPLAY's range`() {
