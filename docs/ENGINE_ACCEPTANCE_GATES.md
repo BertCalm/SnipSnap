@@ -821,3 +821,15 @@ A marching battery with independent player bodies, five bass sizes and progressi
 - Phone and MPC hardware: not verified for these kits.
 - Fast rendering, full control-corner and alias-reference checks: open. Measured snare/crash/roll rendering exceeds the one-shot tens-of-milliseconds target on this host.
 - Overall: incomplete. Software evidence is not native sound or device acceptance.
+
+## SERVO round 0 (2026-11-15): Python prototype, not heard
+
+Machine drums on a weak power rail, in three kits for electro, ghetto tech and neurofunk. See
+[SERVO](SERVO.md). No Kotlin exists; every number is from the Python harness in `prototype/servo/`.
+
+- Melodic/keygroup/chord-tool and HOLD/STRUM gates: not applicable to this drum engine.
+- Percussion roll/riser: authored for each kit in Python (B01, B02), each hit a fresh strike on one shared rail. Open: no Kotlin, not heard.
+- Drum shelf: SERVO ELECTRO, SERVO JIT and SERVO NEURO are authored and measured in Python (no shared pad; the same slot 5.9 dB apart at the closest). Open: not on the shelf.
+- Velocity/round robin: measured in Python on all 48 pads (soft against hard at least 3.2 dB at matched level; closest takes 0.98 dB). Open through rendering in Kotlin, saving, playback and export.
+- Sound, phone and MPC: open. Nothing has been heard or loaded on a device.
+- Overall: incomplete. A Python proof and a listening page close no gate.
