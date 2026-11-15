@@ -221,9 +221,8 @@ class NewEngineSynthScreenTest : ComposeScreenTest() {
     }
 
     /**
-     * HICCUP on the picker (2026-11-15): a prototype outside the factory presets, so its voices and controls
-     * with no preset chips. The snare opens with its six controls at their defaults, an edit survives a
-     * rebuild, and the saved draft keeps its renderer model.
+     * HICCUP on the picker (2026-11-15), with its presets in the factory bank. The snare opens with its six
+     * controls at their defaults, an edit survives a rebuild, and the saved draft keeps its renderer model.
      */
     @Test
     fun hiccupOpensItsSnareAtItsDefaultsAndKeepsAnEditAndItsModel() {
