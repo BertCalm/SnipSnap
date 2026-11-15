@@ -12,6 +12,21 @@ import kotlin.test.assertTrue
  * both depend on the second half.
  */
 class DeterminismTest {
+    @Test fun `PATIO hand strokes are deterministic`() {
+        for (stroke in PatioHand.Stroke.entries) assertContentEquals(PatioHand.render(stroke).samples, PatioHand.render(stroke).samples)
+    }
+
+    @Test fun `PATIO character contact studies are deterministic`() {
+        for (voice in PatioCharacter.Voice.entries) {
+            assertContentEquals(PatioCharacter.render(voice).samples, PatioCharacter.render(voice).samples)
+        }
+    }
+
+    @Test fun `PATIO contact study and ordered wear chain replay byte for byte`() {
+        val recipe = PatioStudy.recipes().single { it.id == "scrape-long" }
+        assertContentEquals(recipe.render().samples, PatioStudy.fromJsonText(recipe.toJsonText()).render().samples)
+    }
+
     @Test
     fun `TEMPEST retains both saved finite strikes and seeded noise`() {
         for (voice in TempestVoice.entries) {

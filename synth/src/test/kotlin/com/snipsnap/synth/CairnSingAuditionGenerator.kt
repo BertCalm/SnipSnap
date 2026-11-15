@@ -33,7 +33,7 @@ object CairnSingAuditionGenerator {
         fun add(id:String,section:String,voice:CairnVoice,m:Map<String,Float>,note:Int=60,velocity:Float=1f,isolated:Boolean=false) {
             cases+=Case(id,section,CairnPatch(id,voice,m,note,velocity,model=4),isolated)
         }
-        for(voice in CairnVoice.entries) for(held in listOf(false,true)) {
+        for(voice in CairnVoice.entries.filter { it <= CairnVoice.SING }) for(held in listOf(false,true)) {
             val mode=if(held)"hold" else "shot";val flag=if(held)1f else 0f
             for(note in listOf(48,60,72)) add("${voice.name.lowercase()}-$mode-$note","Voices",voice,
                 Cairn.defaults(voice)+("HOLD" to flag),note)
