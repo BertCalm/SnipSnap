@@ -212,3 +212,5 @@ The owner accepted the kick/snare audition. The kick is now a Kotlin source, and
 ## Dry Jungle articulation revision — 15 November 2026
 
 The owner found 01/02 and 03/04 too alike and the ride too tambourine-like. Version 2 changes only Jungle 02 (muted heel), 04 (light ghost) and 10 (struck modal ride without rivets). Approved 01/03 and the other source voices are preserved; version-1 recipes remain replayable. The [audition](https://spore-station-jungle-audition.bertcalm.chatgpt.site/synthetic-kits/) adds pair comparisons, previous/revised clips and a saved-kit ride pattern. See [the design and acceptance limits](superpowers/specs/2026-11-15-spore-jungle-articulation.md).
+
+The owner accepted the revision-2 heel, ghost and ride on 15 November with “Better, proceed”. Their renders are now the accepted baseline alongside the original kick/snare. The pending revision and complete starter-render regression passed in 17m 5s. Device playback remains open; no additional sound changes were made for acceptance.

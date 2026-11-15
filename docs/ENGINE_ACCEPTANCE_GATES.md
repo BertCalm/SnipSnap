@@ -701,7 +701,7 @@ prototype audition; no Kotlin exists.
 
 ## SPORE synthetic kits (2026-11-14)
 
-The owner approved the procedural kick/snare pair. Three genre starters now contain 18 pads each, including authored rolls and risers. All 486 cells pass velocity/take source checks, saved recipe replay, native playback, SFZ import/playback and MPC 3 grid/PCM read-back. Drum shelf registration is verified in software. Melodic/keygroup/chord and string STRUM requirements do not apply to this percussion kit; individual voices are finite. The new arrangements await listening acceptance, and Android/physical MPC remain unverified. No MPC 2 fallback is included. See [the detailed ledger](superpowers/specs/2026-11-14-spore-synthetic-kits.md).
+The owner approved the procedural kick/snare pair. Three genre starters now contain 18 pads each, including authored rolls and risers. All 486 cells pass velocity/take source checks, saved recipe replay, native playback, SFZ import/playback and MPC 3 grid/PCM read-back. Drum shelf registration is verified in software. Melodic/keygroup/chord and string STRUM requirements do not apply to this percussion kit; individual voices are finite. The owner accepted the revised Jungle heel, ghost and ride on 2026-11-15 (“Better, proceed”); preserve their version-2 renders alongside the approved core pair. Other expanded arrangements have no separate listening verdict recorded, and Android/physical MPC remain unverified. The revision and complete starter-render regression passed. No MPC 2 fallback is included. See [the detailed ledger](superpowers/specs/2026-11-14-spore-synthetic-kits.md) and [revision acceptance](superpowers/specs/2026-11-15-spore-jungle-articulation.md).
 
 ## EMBER (round 0, 2026-11-14, Python prototype, not heard)
 

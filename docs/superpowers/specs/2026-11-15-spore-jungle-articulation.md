@@ -28,7 +28,9 @@ The audition adds raw 01→02 and 03→04 alternations, previous/revised buttons
 
 The prior broad regression run exposed three integration omissions: starter counts in the READMEs, the exact starter-ID expectation, and the test's assumption that every synthesizer starter has an editable single-hit Patch. Counts and IDs now include the three synthetic kits; tests validate their actual whole-grid source recipes and nine-cell chains instead of inventing Patch metadata. This is an integration correction, not a waived gate.
 
-Owner acceptance is pending for the three revised sounds. Browser audio decoding, phone timing and physical MPC playback remain unverified. The approved kick/snare parity remains an independent gate.
+The owner accepted this revision on 15 November 2026 with “Better, proceed”. Freeze Jungle 02, 04 and 10 at recipe version 2 alongside the previously approved 01/03 anchors. This acceptance applies to the revised sounds, not an unperformed phone/MPC check or a separate verdict on every Dub/Orbital voice. Automated browser audio decoding, phone timing and physical MPC playback remain unverified.
+
+The pending Gradle run finished successfully in 17m 5s: all `SporeJungleRevisionTest` and `StarterKitsTest` cases passed, including rendering every starter, the exact starter ID list, legacy PCM replay and unchanged-source checks. The earlier focused core/source, shelf/convention and 486-cell delivery checks also passed. This closes the identified local regression failures; it is not a claim of a fresh full-suite CI result on the latest PR head.
 
 ## Measured revision renders
 
