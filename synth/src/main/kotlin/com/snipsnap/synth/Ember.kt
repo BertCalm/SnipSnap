@@ -682,7 +682,6 @@ object Ember {
     /** By ear (round 0e): the close mic's voicing on every pad, 1.5 dB out around 600 Hz and a 2 dB shelf from 6 kHz. */
     internal fun voicing(y: DoubleArray): DoubleArray = EmberDsp.highShelf(6000.0, 2.0, FSD).run(EmberDsp.peaking(600.0, -1.5, 0.7, FSD).run(y))
 
-    /** DISTANCE, WARMTH, voicing, then the house band limit and decimator, DC out, the cut and a 60 ms fade. */
     /**
      * Round 1b (owner, 2026-11-15: "Swell cuts abruptly"): the long voices were cut while still sounding. The rolls
      * now run until they have died away on their own; the flat ride under the swell and the bow rings for well
@@ -691,6 +690,7 @@ object Ember {
      */
     private val TAILS by lazy { mapOf(EmberVoice.CYMBAL_SWELL to (2.8 to -50.0), EmberVoice.BOWED_CYMBAL to (2.4 to -30.0)) }
 
+    /** DISTANCE, WARMTH, voicing, then the house band limit and decimator, DC out, the cut and a 60 ms fade (and the [TAILS] decay). */
     internal fun finish(raw: DoubleArray, m: Map<String, Double>, v: Double, seconds: Double, tail: Pair<Double, Double>? = null): FloatArray {
         val n = raw.size
         val room = roomIr(m.getValue("DISTANCE"))
