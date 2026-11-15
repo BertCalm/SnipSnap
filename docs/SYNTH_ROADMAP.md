@@ -3775,6 +3775,31 @@ body, and every voice more drive (kicks 1.2 to 2.7 dB, snares 3.2 to 4.7 dB loud
 then wrote "Sound approved, phone and MPC good, merge". Model 1 and kit version 1 are the approved baseline.
 Open, not gates: factory presets from the accepted pads, and the SYNTH picker. See [SERVO](SERVO.md).
 
+### HICCUP, rounds 1 to 4 (2026-11-14 to 2026-11-15)
+
+A glitch drum engine: a clean hit is written into a memory and a seeded fault script re-reads it (snag, ratchet,
+buzz, cut), each re-read coarser than the last. Round 1: `Hiccup.kt` with eight voices (KICK, SNARE, CLAP,
+HAT_CLOSED, HAT_OPEN, TOM, BLIP, SQUEAK), six macros (TUNE, DECAY, TOY, FAULT, CHOP, CRUSH) and `HiccupPatch`
+with velocity, take and model, rosterless. Round 2: three kits on the shelf (`HiccupKits`: HICCUP HOP 98 BPM,
+LAB 150, SUGAR 160), sixteen pads each, three zones of four takes, a roll and a riser, proved through save,
+playback and MPC 3 export. Round 3: the groove fixes (an 18 ms attack guard, one pentatonic key over 55 Hz,
+stumbles in whole grid units, a cap; `Hiccup.MODEL_VERSION` 2, `HiccupKits.VERSION` 2), `HiccupPresets` (twenty-one
+presets, held out of the factory bank until the listen), the
+`EngineCatalog` entry (DRUMS) and the entry on SYNTH's picker (93 engines with CALABASH merged). Heard: on 2026-11-15 the owner
+listened to an audition page of the Kotlin engine (model 2, kit 2): a four-bar groove from each of the three kits,
+every hit pad A01 to A14 of each kit at the hardest velocity zone, each kit's roll and riser, and the four
+round-robin takes of SUGAR's Pop Snare. The verdict, verbatim: "sounds check passes". Round 4: the 21 presets were
+filed in the factory bank through `Presets` and HICCUP left `PatchTypes.PROTOTYPES`, as SCUFF's presets were after its
+listen. The same day the owner listened to a second audition page (model 2, kit 2): all 21 presets, each played twice
+at velocity 1, take 0, and, for each kit, every hit pad A01 to A14 struck soft, medium and hard (velocities .30, .65,
+1), first take of each zone, at the same peak level as saved. The verdict, verbatim: "Everything sounds good". The
+picker's on-device test passed in CI's emulator job on PR #1143 on 2026-11-15. Hardware: on 2026-11-15, told that
+playback on a phone and an MPC was the remaining gate, the owner said, verbatim: "Hardware is good" (the owner's
+report, not a capture). Open: the round-robin takes no listen covered (the second to fourth takes of the soft and
+medium zones, and at the hardest zone every pad's takes except SUGAR's Pop Snare). MPC 2 keeps one take per zone as a
+stated format limit.
+See [HICCUP](HICCUP.md) and the gates entry.
+
 
 ### East African fitted synthesis banks, 2026-11-15
 

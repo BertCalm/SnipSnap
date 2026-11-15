@@ -40,7 +40,8 @@ import java.io.File
  * MIRRORBALL starters are built the same way, each pad printed through an FET compressor,
  * a multi-head tape echo and an amp.
  * SCUFF's starter is the same shape, every strike rendered by the SCUFF engine at a velocity and a take, its two
- * phrases through one bus clipper.
+ * phrases through one bus clipper. The HICCUP kits are the same shape, every strike rendered by the HICCUP engine at a
+ * velocity and a take, with a roll and a riser phrase and no bus.
  * CLOUD's GRAINS clouds (A07-A16) carry no recipe;
  * only its VOX pads (A01-A06) do, as `SynthKits.cloud` says. LUCKY DIP
  * A/B's bank-B twins carry fx-only recipes (`Shuffle.withRemixBank`), the
@@ -819,6 +820,21 @@ object StarterKits {
             "The faster, brighter Michigan kit: a higher, shorter kick, a tighter clap, bright hats, short hard bass hits and three stank rims, crushed and slammed harder. Three touch zones, four takes; frantic two bars and a rim riser.",
             seeded = false, tempoBpm = com.snipsnap.synth.ScuffKits.Kit.FLINT.bpm.toFloat(),
         ) { com.snipsnap.synth.ScuffKits.build(com.snipsnap.synth.ScuffKits.Kit.FLINT) },
+        Starter(
+            "hiccup-hop", "HICCUP HOP",
+            "Glitch hop drums that trip over themselves. Three touch zones, four takes; a stumbling roll and a clap riser.",
+            seeded = false, tempoBpm = com.snipsnap.synth.HiccupKits.Kit.HOP.bpm.toFloat(),
+        ) { com.snipsnap.synth.HiccupKits.build(com.snipsnap.synth.HiccupKits.Kit.HOP) },
+        Starter(
+            "hiccup-lab", "HICCUP LAB",
+            "IDM drums whose stutters turn into notes. Three touch zones, four takes; a shattering roll and a blip riser.",
+            seeded = false, tempoBpm = com.snipsnap.synth.HiccupKits.Kit.LAB.bpm.toFloat(),
+        ) { com.snipsnap.synth.HiccupKits.build(com.snipsnap.synth.HiccupKits.Kit.LAB) },
+        Starter(
+            "hiccup-sugar", "HICCUP SUGAR",
+            "Hyperpop toy drums, bright and broken. Three touch zones, four takes; a popping roll and a coin riser.",
+            seeded = false, tempoBpm = com.snipsnap.synth.HiccupKits.Kit.SUGAR.bpm.toFloat(),
+        ) { com.snipsnap.synth.HiccupKits.build(com.snipsnap.synth.HiccupKits.Kit.SUGAR) },
         Starter(
             "clutter-lofi", "CLUTTER KITCHEN LO-FI",
             "Found-sound lo-fi from modelled household objects: a soft bucket, a box of rice brushed, a matchbox and loose keys, struck by palms and wooden spoons with the kitchen in every hit. Three touch zones, four takes.",

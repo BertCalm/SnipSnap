@@ -61,6 +61,8 @@ User-supplied music clips guide the arrangements only and are not kit sources.
 ## Replay and verification
 
 Baseline repository inspected: `f4a3ad59d00d53f71d0b481b35c01b2a1fa66b2a`.
+Integration merged current base `508f62437a63c9df37b2df3827fbda3310ddb613`
+(HICCUP and the DRUMLINE audit) without changing this synthesis model.
 Earlier Python study inspected `494af88e6545f8ee03ced33cf2dad4598fc67248`.
 
 ```sh
@@ -134,7 +136,9 @@ export; splitting accommodates the Page's per-file upload limit.
   cycle read-back, MPC2 first-take windows, and SFZ imported playback. SFZ gain
   preserves its existing 0.001 dB text precision rather than bit identity.
 - Repository regression: tracked in the delivery PR checks. The first local full
-  run exposed the two README starter counts (158 → 163); both were corrected.
+  run exposed the two README starter counts (158 → 163); both were corrected. After merging HICCUP, the combined count is 166.
+  That first run lost its execution session before a completion status was
+  available, so it is not claimed as a full-regression pass.
   There is no Android SDK in this workspace; Android build/emulator evidence
   comes from CI, not the local JVM command.
 - Phone and MPC hardware: open.
