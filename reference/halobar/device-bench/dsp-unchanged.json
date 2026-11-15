@@ -1,0 +1,31 @@
+{
+  "baseCommit": "23cde0d1c107039c23fd74ff5c3d2b359a7f6e75",
+  "comparedWith": "121949b95929029738b92c7b8a8f0b622e982e89",
+  "rows": [
+    {
+      "path": "synth/src/main/kotlin/com/snipsnap/synth/Halobar.kt",
+      "sha256": "f93bf4f12ce5808c0d63d3bc5a4ba00352b99427a9acb342625e5d88f9fa9261",
+      "unchanged": true
+    },
+    {
+      "path": "synth/src/main/kotlin/com/snipsnap/synth/Dsp.kt",
+      "sha256": "4879e47fc26f1ee776aac06e564ab2a35feae7694c5002f6f67c788e8e3da010",
+      "unchanged": true
+    },
+    {
+      "path": "synth/src/main/kotlin/com/snipsnap/synth/Tide.kt",
+      "sha256": "461ec00993c85aa2bd1109c9338ff400b3a913796f70e67528e261467090900a",
+      "unchanged": true
+    },
+    {
+      "path": "audio/src/main/kotlin/com/snipsnap/audio/Fft.kt",
+      "sha256": "d602b0432df78637eef361f0d7d69c073fd59080a892bb43bc17ef5b151bc4bd",
+      "unchanged": true
+    },
+    {
+      "path": "audio/src/main/kotlin/com/snipsnap/audio/Resampler.kt",
+      "sha256": "0aa138386de1c6f6f9d8e2281a3219d70b1d3c0dc2d93846f5c001ae519ba4f4",
+      "unchanged": true
+    }
+  ]
+}

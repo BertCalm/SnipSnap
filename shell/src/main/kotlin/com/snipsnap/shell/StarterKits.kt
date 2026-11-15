@@ -101,6 +101,7 @@ object StarterKits {
         }
     }
 
+    val PATIO_IDS = com.snipsnap.synth.PatioPerformance.Genre.entries.map { it.id }.toSet()
     val ALL: List<Starter> = listOf(
         // displayName is "EMPTY GRID", not "BLANK" — the other
         // entries are all pre-composed kits, and a plain "BLANK" reads as
@@ -696,7 +697,7 @@ object StarterKits {
         ) { com.snipsnap.synth.CypherKits.build(com.snipsnap.synth.CypherKits.Kit.FLINT) },
         Starter(
             com.snipsnap.synth.BreakerKits.ID, "BREAKER",
-            "Surf rock by way of boom bap: dusty drums through a spring tank, a crush and a surf amp. Three touch zones, three takes; a snare riser.",
+            "Surf rock by way of boom bap: dusty drums through a spring tank, a crush and a surf amp. Three touch zones, three takes; a snare riser and a surf tom fill.",
             seeded = false, tempoBpm = com.snipsnap.synth.BreakerKits.BPM,
         ) { com.snipsnap.synth.BreakerKits.build() },
         Starter(
@@ -767,6 +768,26 @@ object StarterKits {
             seeded = false, tempoBpm = com.snipsnap.synth.ScuffKits.Kit.FLINT.bpm.toFloat(),
         ) { com.snipsnap.synth.ScuffKits.build(com.snipsnap.synth.ScuffKits.Kit.FLINT) },
         Starter(
+            "clutter-lofi", "CLUTTER KITCHEN LO-FI",
+            "Found-sound lo-fi from modelled household objects: a soft bucket, a box of rice brushed, a matchbox and loose keys, struck by palms and wooden spoons with the kitchen in every hit. Three touch zones, four takes.",
+            seeded = false, tempoBpm = com.snipsnap.synth.ClutterKits.Kit.LOFI.bpm.toFloat(),
+        ) { com.snipsnap.synth.ClutterKits.build(com.snipsnap.synth.ClutterKits.Kit.LOFI) },
+        Starter(
+            "clutter-street", "CLUTTER STREET BUCKET",
+            "A busker drumline from modelled junk: a big bucket and its rim, a bin lid crash, pans and a ladle, everything loose and ringing, close and dry. Three touch zones, four takes.",
+            seeded = false, tempoBpm = com.snipsnap.synth.ClutterKits.Kit.STREET.bpm.toFloat(),
+        ) { com.snipsnap.synth.ClutterKits.build(com.snipsnap.synth.ClutterKits.Kit.STREET) },
+        Starter(
+            "clutter-boombap", "CLUTTER JUNK BOOM BAP",
+            "Rap drums from modelled junk: a suitcase and a heel for the knock, a paper bag and a slammed book for the crack, tight jar and matchbox hats. Three touch zones, four takes.",
+            seeded = false, tempoBpm = com.snipsnap.synth.ClutterKits.Kit.BOOMBAP.bpm.toFloat(),
+        ) { com.snipsnap.synth.ClutterKits.build(com.snipsnap.synth.ClutterKits.Kit.BOOMBAP) },
+        Starter(
+            "clutter-micro", "CLUTTER MICROBEAT",
+            "Tiny modelled objects tuned up and damped, the phone almost touching: a light switch, a zip, a sand jar, a mug and a can, clicky and detailed. Three touch zones, four takes.",
+            seeded = false, tempoBpm = com.snipsnap.synth.ClutterKits.Kit.MICRO.bpm.toFloat(),
+        ) { com.snipsnap.synth.ClutterKits.build(com.snipsnap.synth.ClutterKits.Kit.MICRO) },
+        Starter(
             "meridian-materials", "MERIDIAN MATERIALS",
             "Sixteen finite pads across four ringing voices, with three touch levels and five held-sound captures.",
             seeded = false,
@@ -824,7 +845,11 @@ object StarterKits {
             "Stones that knock, answer, tumble, sing, grind and roll in a bowl, at C4.",
             seeded = false,
         ) { SynthKits.cairn() },
-    )
+    ).plus(com.snipsnap.synth.PatioPerformance.Genre.entries.map { genre ->
+        Starter(genre.id, genre.title.uppercase(java.util.Locale.ROOT), "Latin percussion, three velocities and four takes per voice, with a hand-drum roll and cuica.", seeded = false) {
+            com.snipsnap.synth.PatioPerformance.build(genre)
+        }
+    })
 
     fun byId(id: String): Starter? = ALL.firstOrNull { it.id == id }
 }

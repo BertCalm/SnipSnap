@@ -737,7 +737,12 @@ class Mpc3TrackWriter(
      */
     private fun keygroupZone(kg: Keygroup?, release: Double): J {
         val filled = kg != null
-        val zones = if (kg?.mpcCycle == true) kg.mpcLayers else kg?.mpcLayers?.asReversed() ?: emptyList()
+        // Native velocity windows run hard-first. Reverse window groups, not
+        // strikes within a group: the owner-tested HALOBAR bank is hard 1/2/3,
+        // soft 1/2/3, while legacy full-range Cycle ordering stays unchanged.
+        val zones = if (kg?.mpcCycle == true)
+            kg.mpcLayers.groupBy { it.velStart to it.velEnd }.values.toList().asReversed().flatten()
+        else kg?.mpcLayers?.asReversed() ?: emptyList()
         return instrumentShell(
             coarseTune = 0,
             fineTune = 0,

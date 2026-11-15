@@ -57,6 +57,7 @@ import com.snipsnap.synth.TanglePatch
 import com.snipsnap.synth.WickPatch
 import com.snipsnap.synth.RivetPatch
 import com.snipsnap.synth.ScuffPatch
+import com.snipsnap.synth.ClutterPatch
 import com.snipsnap.synth.HalobarPatch
 import com.snipsnap.synth.SkinPatch
 import com.snipsnap.synth.OverlapPatch
@@ -444,7 +445,8 @@ object UserPresets {
      * NACRE likewise retains its saved renderer, native root, strike, exact seed and
      * controls through the complete JSON constructor. WICK retains its selected
      * RATTLE body, root, velocity and controls through that constructor as well. SCUFF
-     * retains its strike velocity, take and model version the same way, and CAIRN its root,
+     * retains its strike velocity, take and model version the same way, and CLUTTER
+     * its object's strike velocity, take and model version; CAIRN its root,
      * touch, contact cue and saved model.
      * Names and embedded JSON are escaped
      * Kotlin string literals.
@@ -479,6 +481,11 @@ object UserPresets {
             // Velocity, take and model version live outside the macro map; promotion keeps the strike saved.
             val recipe = Json.write(JsonValue.Str(patch.toJsonText())).replace("$", "\\$")
             return "ScuffPatch.fromJsonText($recipe),"
+        }
+        if (patch is ClutterPatch) {
+            // Velocity, take and model version live outside the macro map, as SCUFF's do.
+            val recipe = Json.write(JsonValue.Str(patch.toJsonText())).replace("$", "\\$")
+            return "ClutterPatch.fromJsonText($recipe),"
         }
         if (patch is ErosionPatch) {
             // Native touch is outside the macro map; promotion must retain it.

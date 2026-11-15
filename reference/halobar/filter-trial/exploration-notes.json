@@ -1,0 +1,16 @@
+{
+  "scope": "Exploratory only; not the production confirmation",
+  "variants": [
+    "original",
+    "paired filters",
+    "FIR32 unroll",
+    "paired filters plus FIR32 unroll"
+  ],
+  "discarded": [
+    "FIR32 unroll",
+    "paired filters plus FIR32 unroll"
+  ],
+  "productionResamplerChanged": false,
+  "finalBaseRound": "Overlapped the independent baseline compilation and is excluded from performance claims; a later isolated ABBA run provides confirmation",
+  "prototypeDifference": "Production pair adds a reference fallback for non-finite coefficients/samples and huge diagnostic values after the strict corner test found a NaN-sign difference"
+}
