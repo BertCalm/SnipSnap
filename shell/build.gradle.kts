@@ -648,6 +648,16 @@ tasks.register<JavaExec>("generateMurmurRoundRobinAudition") {
     args("${rootDir}/testkit/murmur-rr-v2-audition")
 }
 
+tasks.register<JavaExec>("generateDrumlineKit") {
+    group = "distribution"
+    description = "Render and verify both drumline batteries through saving, playback and MPC export."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.DrumlineKitGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "1g"
+    args(providers.gradleProperty("drumlineOutput").orNull ?: "${rootDir}/testkit/drumline-kit")
+}
+
 tasks.register<JavaExec>("generateSporeApprovedSnare") {
     group = "distribution"
     description = "Render and verify the approved snare's native, SFZ and MPC3 delivery."

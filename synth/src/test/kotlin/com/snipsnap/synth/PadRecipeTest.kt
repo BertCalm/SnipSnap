@@ -39,6 +39,7 @@ class PadRecipeTest {
     private fun handBuiltPatches(): List<Patch> = listOf(
         BackwashPatch("Damped hit", BackwashVoice.SNARE, emptyMap()),
         BreakerPatch("Crushed drip", BreakerVoice.SNARE, emptyMap()),
+        DrumlinePatch("Section", DrumlineVoice.SNARE, emptyMap()),
         SootPatch("Hot", SootVoice.SNARE, emptyMap()),
         HalobarPatch("Mallet dub", HalobarVoice.MARIMBA, emptyMap()),
         TempestPatch("Legacy Strike", TempestVoice.METAL, emptyMap(), model = 1),

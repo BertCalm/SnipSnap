@@ -7,7 +7,9 @@ internal object NacreModels {
     /** Opt-in source version; model 3 stays the default for existing and partial recipes. */
     const val CONTACT_MODEL_VERSION = 4
     const val CONTACT_MACRO = "CONTACT"
-    fun supports(model: Int): Boolean = model in 1..CONTACT_MODEL_VERSION
+    /** The new sound sources (HARMONICS 5, SHELL 6); see [NacreVoices]. PEARL keeps models 1 to 4. */
+    const val LAST_MODEL_VERSION = NacreVoices.SHELL_MODEL
+    fun supports(model: Int): Boolean = model in 1..LAST_MODEL_VERSION
 
     private fun contactControls(voice: NacreVoice, macros: Map<String, Float>): Pair<Map<String, Float>, Float> {
         val known = macrosFor(voice, CONTACT_MODEL_VERSION).map { it.name }.toSet()
@@ -28,7 +30,8 @@ internal object NacreModels {
             1 -> NacreModel1.macrosFor(voice)
             2 -> NacreModel2.macrosFor(voice)
             3 -> Nacre.macrosFor(voice)
-            else -> Nacre.macrosFor(voice).let { it.dropLast(1) + MacroSpec(CONTACT_MACRO, 0f, 0f) + it.last() }
+            CONTACT_MODEL_VERSION -> Nacre.macrosFor(voice).let { it.dropLast(1) + MacroSpec(CONTACT_MACRO, 0f, 0f) + it.last() }
+            else -> NacreVoices.macrosFor()
         }
     }
 
@@ -55,9 +58,10 @@ internal object NacreModels {
             1 -> NacreModel1.render(voice, macros, midi, velocity, seed)
             2 -> NacreModel2.render(voice, macros, midi, velocity, seed)
             3 -> Nacre.render(voice, macros, midi, velocity, seed)
-            else -> contactControls(voice, macros).let { (source, loss) ->
+            CONTACT_MODEL_VERSION -> contactControls(voice, macros).let { (source, loss) ->
                 Nacre.renderContactProfile(voice, source, midi, velocity, seed, loss)
             }
+            else -> NacreVoices.render(NacreVoices.sourceFor(model), macros, midi, velocity, seed)
         }
     }
 
@@ -110,6 +114,10 @@ internal object NacreModels {
                 }, legacy.diagnostics)
             }
             3 -> Nacre.inspect(voice, macros, midi, velocity, seed, options)
+            in NacreVoices.HARMONICS_MODEL..NacreVoices.SHELL_MODEL -> {
+                require(options == Nacre.Options()) { "NACRE model $model has no diagnostic options" }
+                NacreVoices.inspect(NacreVoices.sourceFor(model), macros, midi, velocity, seed)
+            }
             else -> contactControls(voice, macros).let { (source, loss) ->
                 val probe = Nacre.inspectContactStudy(voice, source, midi, velocity, seed, options, loss)
                 probe.copy(diagnostics = (probe.diagnostics - "contactStudyRegisteredOrSaved") + linkedMapOf(

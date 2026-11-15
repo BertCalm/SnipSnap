@@ -12,6 +12,12 @@ import kotlin.test.assertTrue
  * both depend on the second half.
  */
 class DeterminismTest {
+    @Test fun `DRUMLINE keeps section and take identities deterministic`() {
+        for (voice in listOf(DrumlineVoice.SNARE, DrumlineVoice.CRASH, DrumlineVoice.ROLL)) {
+            assertContentEquals(Drumline.render(voice, take = 2).samples, Drumline.render(voice, take = 2).samples)
+        }
+    }
+
     @Test fun `PATIO hand strokes are deterministic`() {
         for (stroke in PatioHand.Stroke.entries) assertContentEquals(PatioHand.render(stroke).samples, PatioHand.render(stroke).samples)
     }

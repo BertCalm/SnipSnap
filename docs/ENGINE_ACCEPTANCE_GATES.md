@@ -704,6 +704,36 @@ and the approved strum study by its published WAV hashes (`OsteriaStrumTest`).
 - **Overall: incomplete.** Round robin, a seamless HOLD, chord tools on real keys, device runs
   of the picker and hardware playback remain open.
 
+## NACRE (HARMONICS and SHELL kept, 2026-11-15)
+
+NACRE had no section here. PEARL is its first voice: two plucked harps an octave apart in moving
+water, saved models 1 to 4, five factory presets and a FRESH TAPE velocity bank. See
+[NACRE](NACRE.md). HARMONICS (saved model 5) and SHELL (saved model 6) are its second and third
+voices, engine only so far. See [NACRE voices](NACRE_VOICES.md).
+
+| Gate | Status | Evidence |
+|---|---|---|
+| Melodic: six voices with presets | Partial: three of six | PEARL with five presets. HARMONICS and SHELL were kept by the owner on 2026-11-15 (nacre-voices-1, H1–H3 and L1–L3, all KEEP), have no presets yet and are not in the picker. Their 22 kept renders are pinned (`NacreVoicesTest`). BUBBLE is next; GROTTO and CONCH wait for a HOLD decision. |
+| Melodic: playable keygroups | Not yet verified | No NACRE keygroups exist. |
+| Melodic: premade kit | Pass in software, PEARL only | The NACRE starter (`SynthKits.nacre()`) and the FRESH TAPE velocity bank (`NacreKitTest`, `NacreVelocityKitTest`). No kit uses HARMONICS or SHELL. |
+| Melodic: chord-tool compatibility | Not yet verified | No chord mode; the spec's expanded voicing is not built. |
+| Articulation: HOLD | Fail | Every NACRE model refuses nonzero HOLD. |
+| Articulation: STRUM | Pass in software | The paired strum (DUET sets the answer and, at .65 and above, the crossing direction) is part of every voice. |
+| Percussion: roll or riser | Not applicable | A melodic engine. |
+| Drums: genre kits | Not applicable | A melodic engine. |
+| Velocity: rendering | Pass in software; partly heard | PEARL: contact soft and medium layers kept on 2026-11-13 (`nacre-strike-1`). HARMONICS and SHELL: a softer strike rings fewer upper strings or shells and is darker by at least 1 dB per step (`NacreVoicesTest`); the owner kept their soft, medium and hard clips (H1, L1). |
+| Velocity: saving, playback, export | Pass in software, PEARL only | The FRESH TAPE bank replays every layer (`NacreVelocityKitTest`). No HARMONICS or SHELL layers exist. |
+| Round robin | Not yet verified | No NACRE round robin exists. |
+| Picker | PEARL only; not yet verified on a device | `NacreSynthScreenTest` covers PEARL. HARMONICS and SHELL are not in the picker. |
+| Hardware playback | Not verified | No phone timing, MPC load or MPC velocity check is recorded. |
+
+- **Sound character: partly accepted.** The owner heard PEARL's first renderer as pleasant and
+  the timed returns as "Much better"; kept CONTACT .35 and .8 and the strike-shaped layers; and
+  kept HARMONICS and SHELL as new NACRE voices on 2026-11-15. Model 3's full range is still
+  marked as awaiting a listen in [NACRE](NACRE.md).
+- **Overall: incomplete.** Three more voices, presets and picker entries for HARMONICS and SHELL,
+  keygroups, HOLD, round robin, chord tools, device runs and hardware playback remain open.
+
 ## CLUTTER (round 2, 2026-11-14: four genre kits on the shelf, audition approved; round 3 roster, round 4 picker; hardware open)
 
 A found-sound drum engine of 22 modelled household objects (`Clutter.kt`, round 1) and four sixteen-pad genre
@@ -809,3 +839,15 @@ no recording behind them. See [CALABASH](CALABASH.md). Round 0 is a Python proto
   unrecorded instruments have no such check.
 - **Overall: incomplete.** Round 0 asks the owner which voices and kits to keep. Kotlin (round 1), the shelf and saving,
   playback and MPC 3 export (round 2), and phone and MPC hardware (round 3) are all open.
+
+## DRUMLINE (native model 4 accepted, 2026-11-15)
+
+A marching battery with independent player bodies, five bass sizes and progressive cymbal hand loss. The owner preferred the revised Python cymbals, then requested fuller bass/tenors, a harder rim clack and more snare snap. Model 2 addressed those requests; the owner then found snare/rimshot too similar. Model 3 separates their rim/wire balance. The owner then found the small bass body too similar to the low tenor; model 4 revises its mallet and lower-head balance while preserving saved models 1–3. The owner accepted the native audition on 2026-11-15 ("Sounds good, proceed"). The 32 heard pad recipes are now factory presets. See [DRUMLINE](DRUMLINE.md) for reproduction and measured evidence.
+
+- Melodic, keygroup, chord and string-STRUM gates: not applicable to the battery. Hits and scored rudiments are finite.
+- Percussion: flam, double-stroke roll, accelerating riser, bass unison and split bass implemented; native audition accepted.
+- Drum shelf: FIELD and STREET CADENCE are authored sixteen-pad starters, with different section sizes, tuning, losses and scored voices. Native audition accepted.
+- Rendering/save/play/export software: both full 3 × 3 grids pass PCM checks, persisted recipe replay, boundary selection, two repeat cycles, shape/take measurements and MPC export read-back. All 21 source/articulation voices are covered between the kits. MPC 2 retains velocity; its combined velocity/RR exception applies.
+- Phone and MPC hardware: not verified for these kits.
+- Fast rendering, full control-corner and alias-reference checks: open. Measured snare/crash/roll rendering exceeds the one-shot tens-of-milliseconds target on this host.
+- Overall: incomplete. Software evidence is not native sound or device acceptance.
