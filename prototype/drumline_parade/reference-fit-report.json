@@ -1,0 +1,29 @@
+{
+  "scope": "Fit-set matched-attack band-envelope MAE, 200\u201312800 Hz, first 150 ms; not held-out realism or alias evidence",
+  "results": [
+    {
+      "pad": "cymbal_crash",
+      "previous_error_db": 6.058878644588566,
+      "measured_error_db": 5.019750654877563,
+      "scaled_reference_control_db": 2.6879083754082738e-14
+    },
+    {
+      "pad": "rimshot",
+      "previous_error_db": 17.669458879016336,
+      "measured_error_db": 1.70074693478945,
+      "scaled_reference_control_db": 7.597097554220714e-15
+    },
+    {
+      "pad": "cross_stick",
+      "previous_error_db": 33.7359290128294,
+      "measured_error_db": 2.2452192705928504,
+      "scaled_reference_control_db": 5.0578277949295856e-14
+    },
+    {
+      "pad": "stick_click",
+      "previous_error_db": 44.89886687614649,
+      "measured_error_db": 2.203799111910026,
+      "scaled_reference_control_db": 2.0254068692485963e-14
+    }
+  ]
+}

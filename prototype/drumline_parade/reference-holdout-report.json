@@ -1,0 +1,26 @@
+[
+  {
+    "pad": "cymbal_crash",
+    "reference": "crash_alt.wav",
+    "previous_error_db": 5.515085948804175,
+    "measured_error_db": 5.130826206793851
+  },
+  {
+    "pad": "rimshot",
+    "reference": "snaremic_snare_rimshot_vl11.wav",
+    "previous_error_db": 17.432063424023614,
+    "measured_error_db": 2.6492467919325415
+  },
+  {
+    "pad": "cross_stick",
+    "reference": "snaremic_snare_crossstick_vl15.wav",
+    "previous_error_db": 34.27823808189247,
+    "measured_error_db": 2.5717841858160444
+  },
+  {
+    "pad": "stick_click",
+    "reference": "stick_alt.wav",
+    "previous_error_db": 44.48707625249325,
+    "measured_error_db": 3.322672773560678
+  }
+]
