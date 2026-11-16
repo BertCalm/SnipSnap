@@ -1,0 +1,12 @@
+{
+  "unchanged_grid_wavs": 279,
+  "changed_pads": 1,
+  "comparisons": [
+    {
+      "kit": "second-line",
+      "pad": "cymbal_crash",
+      "before_late_early_db": -7.656321657147021,
+      "after_late_early_db": -2.6642102433962407
+    }
+  ]
+}

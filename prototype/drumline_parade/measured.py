@@ -28,6 +28,9 @@ def cymbal(v,take,seconds):
 
 def render(p,v,take,legacy):
  name,fam,root,life,count,width=p
+ if name=='cymbal_crash':
+  import crash_wash
+  return crash_wash.render(v,take)
  if fam=='metal':
   seconds=.8 if name=='cymbal_touch' else 4.5
   y=cymbal(v if name!='cymbal_touch' else v*.5,take,seconds).copy()

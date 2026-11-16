@@ -16,7 +16,7 @@ def main():
  for kit,(_,pads) in study.KITS.items():
   for i,p in enumerate(pads):
    name,fam=p[:2]
-   if fam not in ('metal','wood','rim','rim_dry'):
+   if name!='cymbal_crash':
     for v in [.3,.6,1.]:
      for take in range(3):
       path=f'{kit}/{i+1:02}_{name}_v{v}_t{take}.wav'
@@ -35,6 +35,6 @@ def main():
  report={'unchanged_grid_wavs':unchanged,'changed_pads':len(rows),'comparisons':rows}
  (out/'report.json').write_text(json.dumps(report,indent=2))
  page=a.current/'index.html';s=page.read_text();pos=s.index('<section>')
- s=s[:pos]+'<section><h2>Cymbal, rim and stick revision</h2><p>Matched-level comparisons. The complete kits below use the revised sounds.</p><div class="grid">'+''.join(cards)+'</div></section>'+s[pos:];page.write_text(s.replace('.wav"', '.wav?revision=3"').replace('.zip"', '.zip?revision=3"'))
+ s=s[:pos]+'<section><h2>Crash wash revision</h2><p>Matched-level comparisons. The complete kits below use the revised sounds.</p><div class="grid">'+''.join(cards)+'</div></section>'+s[pos:];page.write_text(s.replace('.wav"', '.wav?revision=4"').replace('.zip"', '.zip?revision=4"'))
  print(json.dumps(report))
 if __name__=='__main__':main()
