@@ -83,7 +83,7 @@ class NacreSynthScreenTest : ComposeScreenTest() {
         press("NEXT ENGINE")
         compose.onNodeWithContentDescription("ENGINE NACRE. CHOOSE ENGINE").assertExists()
         compose.onNodeWithContentDescription("PEARL").assertExists()
-        for (preset in NacrePresets.all()) {
+        for (preset in NacrePresets.forVoice(NacreVoice.PEARL)) {
             press("PRESET ${preset.name}")
             for ((name, value) in preset.macros) {
                 if (name != "HOLD") assertEquals(value, progress(name), .00001f)
@@ -97,8 +97,36 @@ class NacreSynthScreenTest : ComposeScreenTest() {
     }
 
     @Test
+    fun harmonics_is_a_voice_with_its_own_presets() = voiceReachesItsPresets(NacreVoice.HARMONICS)
+
+    @Test
+    fun shell_is_a_voice_with_its_own_presets() = voiceReachesItsPresets(NacreVoice.SHELL)
+
+    @Test
+    fun bubble_is_a_voice_with_its_own_presets() = voiceReachesItsPresets(NacreVoice.BUBBLE)
+
+    /** HARMONICS, SHELL and BUBBLE: the voice shows, its four presets load their controls, and HOLD stays off. */
+    private fun voiceReachesItsPresets(voice: NacreVoice) {
+        val settings = mutableMapOf("engine" to "NACRE", "voice" to voice.name)
+        show(settings)
+        compose.onNodeWithContentDescription(voice.name).assertExists()
+        val presets = NacrePresets.forVoice(voice)
+        assertEquals(4, presets.size)
+        for (preset in presets) {
+            press("PRESET ${preset.name}")
+            for ((name, value) in preset.macros) {
+                if (name != "HOLD") assertEquals(value, progress(name), .00001f)
+            }
+            assertRoot(preset.midi)
+            assertEquals(preset.velocity, progress("VELOCITY"), .00001f)
+        }
+        compose.onNodeWithContentDescription("CONTACT", useUnmergedTree = true).assertDoesNotExist()
+        assertFiniteControls()
+    }
+
+    @Test
     fun saved_contact_control_survives_macro_edit_scramble_and_recreation() {
-        val saved = NacrePresets.all().last().copy(midi = 57, velocity = .37f,
+        val saved = NacrePresets.forVoice(NacreVoice.PEARL).last().copy(midi = 57, velocity = .37f,
             seed = Long.MIN_VALUE + 19)
         val settings = mutableMapOf("engine" to "NACRE", "voice" to "PEARL")
         SynthDrafts.write(settings, listOf(saved))
@@ -132,8 +160,8 @@ class NacreSynthScreenTest : ComposeScreenTest() {
         val settings = mutableMapOf("engine" to "NACRE", "voice" to "PEARL")
         show(settings)
         compose.onNodeWithContentDescription("CONTACT", useUnmergedTree = true).assertDoesNotExist()
-        val close = NacrePresets.all().first()
-        for (contact in NacrePresets.all().filter { it.model == 4 }) {
+        val close = NacrePresets.forVoice(NacreVoice.PEARL).first()
+        for (contact in NacrePresets.forVoice(NacreVoice.PEARL).filter { it.model == 4 }) {
             press("PRESET ${contact.name}")
             assertEquals(contact.macros.getValue("CONTACT"), progress("CONTACT"), .00001f)
             press("PRESET ${close.name}")

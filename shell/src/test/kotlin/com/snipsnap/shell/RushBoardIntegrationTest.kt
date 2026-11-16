@@ -255,16 +255,16 @@ class RushBoardIntegrationTest {
         val dry = (2..3).associateWith { slot -> File(m.kitDir, m.pad(slot)!!.sampleFile).readBytes() }
         val rush = BoardSheet.apply(m, 1, .7f, BoardType.RUSH)
         val wrapper = assertNotNull(rush.recipe)
-        assertEquals("RUSH 70%", KitDiff.recipeName(wrapper))
+        assertEquals("RISING ECHOES 70%", KitDiff.recipeName(wrapper))
         val clip = assertNotNull(RecipeReplay.clip(wrapper, "Replay", 1))
         assertEquals(wrapper, clip.recipe)
-        assertEquals("RUSH 70%", clip.word)
+        assertEquals("RISING ECHOES 70%", clip.word)
         assertEquals("REPLAY A01", clip.from)
-        assertEquals("RUSH · 70%", PadSheetBoxes.summaries(rush, null)[PadSheetBoxes.Box.TREATMENT])
+        assertEquals("RISING ECHOES · 70%", PadSheetBoxes.summaries(rush, null)[PadSheetBoxes.Box.TREATMENT])
         assertEquals(setOf(PadSheetBoxes.Box.TREATMENT, PadSheetBoxes.Box.SHAPE), PadSheetBoxes.touched(rush))
         val typed = PadRecipe(board = BoardRecipe(BoardType.RUSH, .7f)).toJsonValue()
-        assertEquals("RUSH 70%", KitDiff.recipeName(typed))
-        assertEquals("RUSH 70%", assertNotNull(RecipeReplay.clip(typed, "Typed", 1)).word)
+        assertEquals("RISING ECHOES 70%", KitDiff.recipeName(typed))
+        assertEquals("RISING ECHOES 70%", assertNotNull(RecipeReplay.clip(typed, "Typed", 1)).word)
         // Pasting onto a WIDE destination must also render that destination's dry baseline.
         BoardSheet.apply(m, 3, .7f)
         for ((slot, recipe) in listOf(2 to wrapper, 3 to typed)) {
@@ -273,7 +273,7 @@ class RushBoardIntegrationTest {
             assertEquals(.7f, plan.amount)
             val done = RecipeReplay.apply(m, slot, recipe, "DESTINATION $slot")
             assertEquals(BoardType.RUSH, BoardSheet.read(done.pad.recipe)?.type)
-            assertTrue(done.toast.contains("RUSH", ignoreCase = true))
+            assertTrue(done.toast.contains("RISING ECHOES", ignoreCase = true))
             assertTrue(done.toast.contains("ORIGINAL KEPT", ignoreCase = true))
             val expected = BoardRecipe(BoardType.RUSH, .7f).process(WavReader.read(dry.getValue(slot)))
             assertContentEquals(encoded(expected), File(m.kitDir, done.pad.sampleFile).readBytes())
@@ -340,23 +340,23 @@ class RushBoardIntegrationTest {
             val missingTake = KitBuilderModel.BinEntry("main.wav", 0L, File(m.kitDir, "missing-old-take.wav"))
             val spread = Spread.plan(kit, 60f, Spread.Options(60, Scale.MAJOR, padCount = 4, bank = 1, replaceFull = true))
             val refusals = listOf<Pair<String, () -> Unit>>(
-                Copy.boardRemoveBeforeSoftHits("RUSH") to { m.addGhostLayers(1) },
-                Copy.boardRemoveBeforeSoftHits("RUSH") to { m.clearGhostLayers(1) },
-                Copy.boardRemoveBeforeStack("RUSH") to { m.stackTakes(1, listOf(missingTake)) },
-                Copy.boardRemoveBeforeSpread("RUSH") to {
+                Copy.boardRemoveBeforeSoftHits("RISING ECHOES") to { m.addGhostLayers(1) },
+                Copy.boardRemoveBeforeSoftHits("RISING ECHOES") to { m.clearGhostLayers(1) },
+                Copy.boardRemoveBeforeStack("RISING ECHOES") to { m.stackTakes(1, listOf(missingTake)) },
+                Copy.boardRemoveBeforeSpread("RISING ECHOES") to {
                     Spread.apply(
                         m, WavReader.read(File(m.kitDir, rush.sampleFile)), spread,
                         Spread.Sound("Rush", rush.drumClass, "#19645B", recipe = rush.recipe, like = rush),
                     )
                 },
                 // Asked before the layered refusal too: a print over soft hits names the print.
-                Copy.boardRemoveBeforeSplice("RUSH") to { m.splicePad(1, hit(), 1200, hit(440.0), 1800) },
-                Copy.boardRemoveBeforeDesample("RUSH") to { m.desamplePad(1, evenIfFar = true) },
+                Copy.boardRemoveBeforeSplice("RISING ECHOES") to { m.splicePad(1, hit(), 1200, hit(440.0), 1800) },
+                Copy.boardRemoveBeforeDesample("RISING ECHOES") to { m.desamplePad(1, evenIfFar = true) },
             )
             for ((message, action) in refusals) {
                 val error = assertFailsWith<IllegalArgumentException> { action() }
                 assertEquals(message, error.message)
-                assertTrue(message.contains("RUSH", ignoreCase = true))
+                assertTrue(message.contains("RISING ECHOES", ignoreCase = true))
                 assertEquals(kit, m.kit)
                 assertEquals(before, files(m.kitDir), "a refused edit must leave every audio, source and undo file unchanged")
                 assertTrue(BoardSheet.canUndo(m, 1))

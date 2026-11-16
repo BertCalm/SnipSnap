@@ -55,7 +55,7 @@ class NacreStarterPackTest {
                 "Coral Reply", "Coral Reply", "Kelp Passage", "Kelp Passage")
             val midis = listOf(48, 51, 53, 55, 58, 60, 63, 65) + List(8) { 48 }
             val velocities = List(10) { .65f } + listOf(.30f, 1f, .30f, 1f, .30f, 1f)
-            val starts = NacrePresets.all().associateBy { it.name }
+            val starts = NacrePresets.forVoice(NacreVoice.PEARL).associateBy { it.name }
             val manifest = Json.parse(File(destination, "manifest.json").readText()).obj()
             assertEquals(16, manifest.getValue("padCount").int())
             assertEquals("PadRecipe.render", manifest.getValue("renderSource").str())

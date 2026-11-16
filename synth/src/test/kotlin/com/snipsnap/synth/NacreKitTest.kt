@@ -25,7 +25,7 @@ class NacreKitTest {
         )
         val midis = listOf(48, 51, 53, 55, 58, 60, 63, 65) + List(8) { 48 }
         val velocities = List(10) { .65f } + listOf(.30f, 1f, .30f, 1f, .30f, 1f)
-        val presets = NacrePresets.all().associateBy { it.name }
+        val presets = NacrePresets.forVoice(NacreVoice.PEARL).associateBy { it.name }
         val patches = pads.mapIndexed { index, pad ->
             val label = "A%02d".format(java.util.Locale.ROOT, index + 1)
             val recipe = PadRecipe.fromJsonValue(requireNotNull(pad.recipe))
