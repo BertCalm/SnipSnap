@@ -10,11 +10,13 @@ import kotlin.math.*
 object DrumlineAliasAudit {
     private const val RATE = Dsp.RATE * Dsp.OVERSAMPLE
     data class Measurement(val foldedDb: Double, val folded20To18kDb: Double, val bypassDb: Double, val reconstructionDb: Double)
-    private fun energy(x: FloatArray) = x.sumOf { it.toDouble()*it }
-    private fun db(ratio: Double) = 10*log10(max(1e-30,ratio))
+    internal fun energy(x: FloatArray) = x.sumOf { it.toDouble()*it }
+    internal fun db(ratio: Double) = 10*log10(max(1e-30,ratio))
 
-    private fun bandEnergy(x: FloatArray): Double {
-        val re=x.copyOf();val im=FloatArray(x.size)
+    internal fun bandEnergy(x: FloatArray): Double {
+        var size=1
+        while(size < x.size)size*=2
+        val re=x.copyOf(size);val im=FloatArray(size)
         Fft.forward(re,im)
         var sum=0.0
         for(k in re.indices) {
