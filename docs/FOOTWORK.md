@@ -240,3 +240,15 @@ a turnaround; related roll/build studies use the same vocabulary. There are 36
 phrase/gesture cells and 48 single-contact cells. Render assertions and PCM16
 round-trip checks pass. Six Street/Industrial audition WAV hashes are unchanged.
 This remains an audition study; native models and kit downloads are not promoted.
+
+### Tap weight and connected-timing follow-up
+
+The owner finds the refined Tap too weak and lacking human feel. The wording was
+interpreted as strike naturalness and/or rhythm, with clarification requested.
+`prototype/footwork/tap_weight_feel/` restores the native contact body removed by
+the previous toe filtering, firms landing accents and authors connected movement
+offsets. Per-foot/contact repeat counters replace global event-index cycling.
+A same-contact/old-grid comparison isolates timing. No measured-human timing or
+realism claim is made. The 36 gesture and 48 contact cells pass source assertions;
+Street/Industrial retained audio hashes remain unchanged. Native kits stay at
+model 3 and the source/delivery acceptance gates remain open.
