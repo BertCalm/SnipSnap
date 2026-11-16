@@ -35,6 +35,6 @@ def main():
  report={'unchanged_grid_wavs':unchanged,'changed_pads':len(rows),'comparisons':rows}
  (out/'report.json').write_text(json.dumps(report,indent=2))
  page=a.current/'index.html';s=page.read_text();pos=s.index('<section>')
- s=s[:pos]+'<section><h2>Cymbal, rim and stick revision</h2><p>Matched-level comparisons. The complete kits below use the revised sounds.</p><div class="grid">'+''.join(cards)+'</div></section>'+s[pos:];page.write_text(s.replace('.wav"', '.wav?revision=2"').replace('.zip"', '.zip?revision=2"'))
+ s=s[:pos]+'<section><h2>Cymbal, rim and stick revision</h2><p>Matched-level comparisons. The complete kits below use the revised sounds.</p><div class="grid">'+''.join(cards)+'</div></section>'+s[pos:];page.write_text(s.replace('.wav"', '.wav?revision=3"').replace('.zip"', '.zip?revision=3"'))
  print(json.dumps(report))
 if __name__=='__main__':main()

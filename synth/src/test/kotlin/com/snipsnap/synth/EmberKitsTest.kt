@@ -115,6 +115,7 @@ class EmberKitsTest {
                 assertEquals(EmberKits.VERSION.toString(), pad.source["kitVersion"])
                 assertEquals(Ember.MODEL_VERSION.toString(), pad.source["model"])
                 assertEquals(EmberKits.muteGroup(kit, role), pad.muteGroup, "${kit.name} role $role")
+                if (pad.muteGroup == 2) assertEquals(EmberVoice.GUIRO, EmberKits.pads(kit)[role].voice, "${kit.name} role $role: group 2 is the guiro")
             }
         }
     }
@@ -128,7 +129,7 @@ class EmberKitsTest {
         }
     }
 
-    @Test fun `the four kits are four kits`() {
+    @Test fun `the five kits are five kits`() {
         assertEquals(Kit.entries.size, Kit.entries.map { it.bpm }.toSet().size, "each kit has its own tempo")
         for (kit in Kit.entries) {
             val names = EmberKits.pads(kit).map { it.name }
@@ -152,6 +153,8 @@ class EmberKitsTest {
         assertEquals(EmberVoice.BRUSH_SWEEP, EmberKits.pads(Kit.AFTER_HOURS)[3].voice)
         assertEquals("The Room Claps", EmberKits.pads(Kit.SOUL)[15].name)
         assertEquals(mapOf("BUZZ" to 0f, "TUNE" to .6f, "DAMP" to .1f, "DISTANCE" to .45f, "WARMTH" to .25f), EmberKits.pads(Kit.FREE)[1].macros)
+        assertEquals(EmberVoice.GUIRO, EmberKits.pads(Kit.LATIN)[5].voice)
+        assertEquals(mapOf("SPEED" to .95f), EmberKits.pads(Kit.LATIN)[6].macros)
     }
 
     @Test fun `no kit or pad is named after a maker`() {
