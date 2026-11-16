@@ -1,0 +1,9 @@
+{
+  "unaffected_gesture_cells_identical": 48,
+  "core_contact_cells_identical": 24,
+  "raw_energy_ratio": 1.0586201527061367,
+  "comparison_gain": 0.9719186623865217,
+  "nominal_forward_ms": 110,
+  "nominal_return_ms": 90,
+  "return_start_ms": 85
+}

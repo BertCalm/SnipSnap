@@ -289,3 +289,10 @@ study checks. Gestures carry explicit foot/contact/time/force plans, with pickup
 motion rather than alternating heels in the roll. These are authored hypotheses,
 not extracted dancer motion or approved articulation. Native versions and all
 unresolved acceptance gates remain unchanged; Street/Industrial audio is retained.
+
+The owner subsequently finds the shuffle too abrupt. A shuffle-only revision
+extends forward/return travel to 110/90 ms, starts the return at 85 ms and uses
+zero-slope pressure envelopes. Fixed source gain balances the longer travel.
+The other 48 gesture cells and all 24 core contact cells remain PCM-identical.
+An energy-matched shuffle comparison and the affected phrase are published for
+listening; no native model or acceptance gate is promoted.

@@ -56,3 +56,19 @@ python3 prototype/footwork/tap_connected/build.py /tmp/footwork-tap-connected
 The renderer needs only the adjacent numeric contact model. The invariance check
 also reads the previous audition's two dynamics WAVs from the local Site checkout.
 No uploaded reference recording is read or incorporated into synthesis.
+
+## Shuffle revision after listening
+
+The owner finds the shuffle too abrupt. The original forward/return durations
+were 62/43 ms, with the return starting at 92 ms: about 30 ms without active
+travel between the two strokes. Shuffle-only sources now use 110/90 ms travel,
+return at 85 ms, and squared-sine pressure envelopes with zero endpoint slope.
+Their nominal 25 ms overlap smooths the reversal. A fixed 0.70 source gain
+balances the extra travel energy across all strengths and takes.
+
+Only shuffle and its occurrence in the short phrase change. All 48 flap,
+ball-change, roll and build cells remain PCM-identical, as do the 24 core toe/heel
+cells. The audition retains the previous shuffle and adds an energy-matched
+comparison. These are authored duration/envelope changes; smoother perceived
+motion still requires listening. The report's peak supersedes the first study's
+peak above; source/native acceptance is not inferred from the checks.

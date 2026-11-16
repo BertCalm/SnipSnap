@@ -23,16 +23,22 @@ def contact(role,v,take):
     # firmer, making the two sounds in a shuffle separate gestures.
     rng=np.random.default_rng(core.sk.seed_for('FOOTWORK-TRAVEL',1,role,take))
     n=round(.16*FS);t=np.arange(n)/FS
-    duration=(.062 if role=='brush' else .043)*(1+rng.uniform(-.07,.07))
+    smooth=role.startswith('shuffle_')
+    forward=role in ['brush','shuffle_brush']
+    duration=((.110 if forward else .090) if smooth else (.062 if forward else .043))*(1+rng.uniform(-.07,.07))
     phase=np.clip(t/duration,0,1)
-    env=np.sin(np.pi*phase)**(1.3 if role=='brush' else .8)
-    h=core.response(MODEL['voices']['toe'],(1.55 if role=='brush' else 1.85)*(1+rng.uniform(-.025,.025)))
+    # Shuffle-only raised-cosine pressure has zero slope at entry/exit. Longer
+    # travel overlaps the reversal instead of leaving a 30ms gap between bursts.
+    env=np.sin(np.pi*phase)**(2. if smooth else (1.3 if forward else .8))
+    h=core.response(MODEL['voices']['toe'],(1.55 if forward else 1.85)*(1+rng.uniform(-.025,.025)))
     noise=rng.normal(size=n+len(h))
     texture=signal.fftconvolve(noise,h)[len(h):len(h)+n]
     texture=signal.sosfilt(signal.butter(2,[330,7200],fs=FS,btype='bandpass',output='sos'),texture)
     # Pressure moves through the scrape; irregular grains modulate that travel.
     grains=np.interp(t,np.linspace(0,n/FS,16),rng.uniform(.55,1.3,16))
-    raw=texture*env*grains*v**1.35*(.30 if role=='brush' else .36)
+    raw=texture*env*grains*v**1.35*(.30 if forward else .36)
+    # Fixed shuffle-only gain balances the longer travel; never level each hit.
+    if smooth:raw*=.70
     return core.sk.fade_tail(core.sk.dc_block(core.sk.decimate4(core.sk.band_limit(raw,FS)),RATE),RATE)
 
 def event(events,t,role,force,foot):
@@ -41,7 +47,7 @@ def event(events,t,role,force,foot):
 def gesture(events,kind,t,foot,force=1.,spacing=1.):
     other='R' if foot=='L' else 'L'
     shapes={
-        'shuffle':[(0,'brush',.70,foot),(.092,'spank',.82,foot)],
+        'shuffle':[(0,'shuffle_brush',.70,foot),(.085,'shuffle_spank',.82,foot)],
         'flap':[(0,'brush',.65,foot),(.075,'toe',1.,foot)],
         'ball_change':[(0,'toe',.65,foot),(.112,'toe',1.,other),(.169,'heel',.55,other)],
         'pickup':[(0,'brush',.62,foot),(.078,'spank',.75,foot),(.164,'toe',1.,foot)],
