@@ -21,7 +21,7 @@ with zipfile.ZipFile(p/'open-road-acoustic.zip') as z:
    assert len(hashes)==9
    assert energies[0]<energies[1]<energies[2],(mode,voice,energies)
    report[mode+'/'+voice]={'level_rms_db':[round(20*np.log10(e),2) for e in energies],'latest_onset_ms':round(max(onsets)*1000,2)}
-  regions=(p/mode/'kit.sfz').read_text().splitlines()[1:];assert len(regions)==36
+  regions=[line for line in (p/mode/'kit.sfz').read_text().splitlines() if line.startswith('<region>')];assert len(regions)==36
   for velocity in range(1,128):
    for key in (36,38,42,46):
     matches=[]

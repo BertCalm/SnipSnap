@@ -1,6 +1,6 @@
 # SIDEROOM: five acoustic drum-kit studies
 
-Status: R1 rejected by the owner for drum-machine character. R2 recorded acoustic core is the current listening study. No SnipSnap shelf, native serialization or hardware completion claim. Source inspected at `4ecab4c9f`; isolated implementation starts from `e7ccfef58` on `claude/sideroom-study`.
+Status: R1 rejected by the owner for drum-machine character. R2 recorded acoustic core was approved for sound. R3 tests sample-derived synthesis against it. No SnipSnap shelf, native serialization or hardware completion claim. Source inspected at `4ecab4c9f`; isolated implementation starts from `e7ccfef58` on `claude/sideroom-study`.
 
 The characteristic gesture is **stick or beater contact → head/metal response → wire or shell after-sound → damping to silence**. Each kit chooses a different physical balance within that gesture.
 
@@ -91,3 +91,16 @@ Three dynamic levels × three recorded alternatives × four instruments × two t
 Rebuild: `python3 prototype/sideroom/acoustic.py /absolute/output`, then copy `acoustic.html` as `index.html` and `acoustic.js` to the output. Requires numpy, scipy and ffmpeg. The source cache is `/workspace/shared/sideroom-acoustic-cache`. Validate with `check-acoustic.py OUTPUT` and `node prototype/sideroom/check-acoustic-player.mjs OUTPUT`.
 
 Verified: 72 PCM files, ordered dynamics, distinct file hashes, endpoint/peak bounds, ZIP byte equality and complete SFZ velocity/RR regions. Simulated player tests cover pad selection, explicit/cycling takes, velocity, hat choke, treatment position and stop. Browser audio, real SFZ playback and MPC/phone playback remain unverified. No native shelf, save/export, full-family or roll/riser gate is closed by this smaller study. The previous R1 gate table describes historical prototype evidence, not acceptance.
+
+
+## R3: synthesis from measured acoustic descriptors
+
+The owner approved R2's acoustic sound and asked whether synthesis can create it. R3 uses analysis-based spectral resynthesis, not a claimed physically exact drum simulation. The approved Open Road recordings remain the comparator on the same compact audition page.
+
+Offline analysis averages magnitude spectra across three recorded hits at each of three velocities. It stores frequency/time magnitude-envelope knots and energy targets in JSON, without waveform samples or original phase. Runtime interpolates these envelopes over fresh seeded noise STFTs. Kick/snare low resonance peaks receive continuous sinusoidal phase, while the high-frequency texture remains stochastic. Seeded tuning, spectral tilt and time-stretch variation produce new strikes. This is a sample-derived model: it must not be described as independently invented acoustic physics or as playing the original samples. The CC0 attribution/provenance remains with the model and comparator.
+
+The gesture is measured contact spectrum → evolving body/wire/metal resonances → measured decay contour, with fresh excitation each time. Native controls, physical collision behavior, additional kits and native integration are not implemented. This linear band-limited spectral prototype runs at 44.1 kHz without a nonlinear stage requiring oversampling. Serialized models are precomputed once; later native work can cache rendered grids by model/version, velocity, take and accepted controls. No native tens-of-ms claim is made.
+
+Build: `python3 prototype/sideroom/resynth.py R2_OUTPUT R3_OUTPUT`; copy `resynth.html` as `index.html` and the shared `acoustic.js`. Verify with `check-acoustic.py R3_OUTPUT`, `check-resynth.py R3_OUTPUT`, and `node prototype/sideroom/check-acoustic-player.mjs R3_OUTPUT`.
+
+Measured in this environment: 1,415,951-byte model, median Python render 20.65 ms, maximum 143.08 ms. First-0.5-second mean RMS across takes is within 0.3 dB of the acoustic comparator for all twelve voice/velocity combinations. This establishes energy agreement, not perceptual fidelity. Verified 36 deterministic repeat renders, audio-read-free synthesis, normalized alternate-strike differences, 72 saved comparison WAVs, ordered dynamics, ZIP equality, SFZ regions and simulated player behavior. Actual browser/sampler listening is not established by these checks. All full-family/native/hardware gates remain open as recorded above.
