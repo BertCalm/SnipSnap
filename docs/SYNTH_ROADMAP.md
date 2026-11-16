@@ -22,6 +22,10 @@
 > three velocity zones × three takes, raw/matched comparisons and sampler downloads.
 > Velocity × round robin is preserved in SnipSnap and SFZ. MPC slice-map/hardware acceptance remains pending. See [Spore Station](SPORE_STATION.md).
 
+> SPLINTER breakcore kit (2026-11-15): one 18-pad starter at 200 BPM on the approved Spore kick and
+> snare, with a new edit stage (speed, chop, retrigger, stretch, clip). 162 cells verified through
+> saving, playback, SFZ and MPC 3. Groove heard 2026-11-15: fine; hardware open. See [SPLINTER](SPLINTER.md).
+
 > TRIAD first listening gate (2026-11-09): one generated hybrid drum groove through
 > shared compression/drive, dynamics/tape, or crush/grains. Native finite audition;
 > presets, HOLD, phone controls and MPC program export remain outside this gate.
@@ -3855,3 +3859,19 @@ Fourteen one-shots per kit as three zones of four fresh strikes, an A15 phrase (
 kit's eight steps) and an A16 riser; pad levels carry the round-2 groove balance. Every grid proved through saving,
 playback and MPC 3 export (768 slices); each groove from the export measures within 1 dB of the accepted Python groove
 in every band. Nothing in Kotlin heard. Open: the owner's listen, presets, the picker, hardware. See [KINDRED](KINDRED.md).
+
+### SERVO, presets and picker (2026-11-16)
+
+`ServoPresets` files the forty-two hits of the three approved kits as SERVO's factory bank (each the pad's own
+macros struck full at take 0, named after its kit), and SERVO leaves `PatchTypes.ROSTERLESS`. CRASH, heard only in
+the phrases, has no preset. SERVO sits on SYNTH's picker after BRISTLE, before CAIRN, under DRUMS; 95 picker engines.
+An on-device test loads ELECTRO BOOM KICK and keeps an edit with its take and model; CI compiles and runs it. See
+[SERVO](SERVO.md).
+
+
+### Soul and rock acoustic factory kits
+
+Three owner-approved synthesized banks, delivered as exact frozen PCM rather than
+a new engine: SOUL POCKET, ROADHOUSE ROCK and OPEN ROOM ROCK. Forty-eight pads,
+432 velocity/take variants, hat chokes, rolls and swells. See [SOUL_ROCK](SOUL_ROCK.md)
+for software evidence and the remaining phone/MPC gate.

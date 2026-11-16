@@ -768,6 +768,16 @@ tasks.register<JavaExec>("generateSporeApprovedSnare") {
     args(providers.gradleProperty("sporeApprovedOutput").orNull ?: "${rootDir}/testkit/spore-approved-snare")
 }
 
+tasks.register<JavaExec>("generateSplinterKit") {
+    group = "distribution"
+    description = "Render and verify the SPLINTER breakcore shelf kit, with its listening files and archives."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.SplinterDelivery")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "2g"
+    args(providers.gradleProperty("splinterOutput").orNull ?: "${rootDir}/testkit/splinter-breakcore")
+}
+
 tasks.register<JavaExec>("generateCuttingsKits") {
     group = "distribution"
     description = "Build CUTTINGS genre kits, verify saved grids and MPC metadata, and render their actual playback windows."
@@ -806,4 +816,14 @@ tasks.register<JavaExec>("generateFootworkKits") {
     workingDir = rootDir
     maxHeapSize = "2g"
     args(providers.gradleProperty("footworkOutput").orNull ?: "${rootDir}/testkit/footwork-native")
+}
+
+ tasks.register<JavaExec>("generateSoulRockKits") {
+    group = "distribution"
+    description = "Export the three approved Soul Rock banks and verify every saved and MPC 3 strike."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.SoulRockKitGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "2g"
+    args(providers.gradleProperty("soulRockOutput").orNull ?: "${rootDir}/testkit/soul-rock-kits")
 }

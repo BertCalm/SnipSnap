@@ -47,7 +47,6 @@ class PatchesTest {
         SootPatch("Hot", SootVoice.SNARE, emptyMap()),
         KindredPatch.of(KindredRecipes.ALL.first(), velocity = 0.6f, take = 2),
         EmberPatch("Kick", EmberVoice.KICK, emptyMap()),
-        ServoPatch("Kick", ServoVoice.KICK, emptyMap()),
         HalobarPatch("Mallet dub", HalobarVoice.MARIMBA, emptyMap()),
         TempestPatch("Legacy Strike", TempestVoice.METAL, emptyMap(), model = 1),
         HydroformPatch("Door", HydroformVoice.DOME, emptyMap()),

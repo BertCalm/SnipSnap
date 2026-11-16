@@ -641,6 +641,12 @@ object StarterKits {
             "Industrial drums with long warehouse reflections. The same sources, with room to ring.",
             seeded = false,
         ) { SynthKits.rivet(1f) },
+        Starter("soul-rock-pocket", "SOUL POCKET", "Close acoustic soul drums, tambourine and claps. Three velocity layers and three strikes, with a roll and swell.", seeded = false, tempoBpm = 108f) { com.snipsnap.synth.SoulRockKits.build(com.snipsnap.synth.SoulRockKits.Choice.SOUL) },
+        Starter("soul-rock-roadhouse", "ROADHOUSE ROCK", "Full acoustic rock drums, open hats and cowbell. Three velocity layers and three strikes, with a roll and swell.", seeded = false, tempoBpm = 134f) { com.snipsnap.synth.SoulRockKits.build(com.snipsnap.synth.SoulRockKits.Choice.ROADHOUSE) },
+        Starter("soul-rock-open-room", "OPEN ROOM ROCK", "Open acoustic rock drums, ride and three tom colors. Three velocity layers and three strikes, with a roll and swell.", seeded = false, tempoBpm = 89f) { com.snipsnap.synth.SoulRockKits.build(com.snipsnap.synth.SoulRockKits.Choice.OPEN_ROOM) },
+        Starter("knee-break-boom-bap", "KNEE BREAK BOOM BAP", "Compact kick and rimshot shells with dry cymbals. Three velocity layers and three strikes per layer.", seeded = false, tempoBpm = 90f) { com.snipsnap.synth.KneeBreakGenreKits.build(com.snipsnap.synth.KneeBreakGenreKits.Choice.BOOM_BAP) },
+        Starter("knee-break-trip-hop", "KNEE BREAK TRIP HOP", "Lower tuning and long filtered cassette tails. Three velocity layers and three strikes per layer.", seeded = false, tempoBpm = 76f) { com.snipsnap.synth.KneeBreakGenreKits.build(com.snipsnap.synth.KneeBreakGenreKits.Choice.TRIP_HOP) },
+        Starter("knee-break-funk", "KNEE BREAK FUNK BREAKS", "Tight dry drums with raised snare and hat tuning. Three velocity layers and three strikes per layer.", seeded = false, tempoBpm = 108f) { com.snipsnap.synth.KneeBreakGenreKits.build(com.snipsnap.synth.KneeBreakGenreKits.Choice.FUNK) },
         Starter("knee-break-body", "KNEE BREAK BODY", "Fitted synth drums, percussion and finite snare gestures. Three velocity layers and three strikes per layer.", seeded = false, tempoBpm = com.snipsnap.synth.KneeBreakKits.TEMPO) { com.snipsnap.synth.KneeBreakKits.build(com.snipsnap.synth.KneeBreakKits.Choice.BODY) },
         Starter("knee-break-knee", "KNEE BREAK KNEE", "Fitted synth drums, percussion and finite snare gestures. Three velocity layers and three strikes per layer.", seeded = false, tempoBpm = com.snipsnap.synth.KneeBreakKits.TEMPO) { com.snipsnap.synth.KneeBreakKits.build(com.snipsnap.synth.KneeBreakKits.Choice.KNEE) },
         Starter("knee-break-cassette", "KNEE BREAK CASSETTE", "Fitted synth drums, percussion and finite snare gestures. Three velocity layers and three strikes per layer.", seeded = false, tempoBpm = com.snipsnap.synth.KneeBreakKits.TEMPO) { com.snipsnap.synth.KneeBreakKits.build(com.snipsnap.synth.KneeBreakKits.Choice.CASSETTE) },
@@ -680,6 +686,10 @@ object StarterKits {
         Starter("spore-synth-dub", "SPORE DUB BREAKS",
             "Deep kick, low snare, cross-stick and hand percussion. Dark echo answers and triplet roll.", seeded=false, tempoBpm=85f) {
             com.snipsnap.synth.SporeSyntheticKits.arranged(com.snipsnap.synth.SporeSyntheticKits.Genre.DUB)
+        },
+        Starter(com.snipsnap.synth.Splinter.ID, "SPLINTER BREAKCORE",
+            "Sped-up break hits, clipped and gabber kicks, chopped slices, stutters and a stretched snare. Snare rush and riser.", seeded=false, tempoBpm=com.snipsnap.synth.Splinter.BPM.toFloat()) {
+            com.snipsnap.synth.Splinter.arranged()
         },
         Starter("spore-synth-broken", "SPORE ORBITAL BREAKS",
             "Short kick, wire clap, higher toms and metallic percussion. Reverse-metal accents and accelerating riser.", seeded=false, tempoBpm=155f) {

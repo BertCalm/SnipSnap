@@ -862,6 +862,10 @@ TERRA is a world-percussion drum engine with 13 voices. Four are spec voices, fr
 
 The owner approved the procedural kick/snare pair. Three genre starters now contain 18 pads each, including authored rolls and risers. All 486 cells pass velocity/take source checks, saved recipe replay, native playback, SFZ import/playback and MPC 3 grid/PCM read-back. Drum shelf registration is verified in software. Melodic/keygroup/chord and string STRUM requirements do not apply to this percussion kit; individual voices are finite. The owner accepted the revised Jungle heel, ghost and ride on 2026-11-15 (“Better, proceed”); preserve their version-2 renders alongside the approved core pair. The owner subsequently confirmed listening to all kits and explicitly approved phone and hardware playback (“Phone and hardware approved”). Sound and device acceptance are therefore closed for Dry Jungle, Dub Breaks and Orbital Breaks. This is owner-reported device approval, separate from the automated 486-cell evidence; no device model or firmware was specified. The revision and complete starter-render regression passed. No MPC 2 fallback is included. See [the detailed ledger](superpowers/specs/2026-11-14-spore-synthetic-kits.md) and [revision acceptance](superpowers/specs/2026-11-15-spore-jungle-articulation.md).
 
+## SPLINTER breakcore kit (2026-11-15, groove heard: fine)
+
+One 18-pad starter at 200 BPM, `splinter-breakcore`, built on the approved Spore kick and snare with a new edit stage (speed, chop, retrigger, stretch, oversampled clip). Sixteen voices plus an authored snare rush and riser; three velocities and three takes on every pad. All 162 cells pass velocity and take source checks, saved recipe replay, native playback including take wrap and hat choke, SFZ import and MPC 3 grid and PCM read-back (`SplinterTest`, `SplinterDeliveryTest`). Melodic, keygroup, chord and STRUM gates do not apply. The multiple-genre-kits gate is met by the Spore family's shelf, not by this kit alone. No MPC 2 export, under the 2026-11-14 ruling. The owner heard the groove on 2026-11-15 and called it fine; per-pad verdicts are open. **Open: no phone or MPC has played it.** See [SPLINTER](SPLINTER.md).
+
 ## EMBER (round 2, four kits on the shelf 2026-11-15; listen and hardware open)
 
 A drum engine for a live jazz and soul kit in a small club in 1962: calfskin drums, a riveted ride, brushes, the
@@ -1040,7 +1044,7 @@ approved, phone and MPC good, merge".
 - MPC 2: each velocity zone keeps its first take; the round-robin export gate does not apply ([format limit](#mpc-2-and-round-robin-owner-decision-2026-11-14)).
 - Sound: **pass.** The owner heard round 1 as "a bit weak"; round 1b added weight (kicks 1.2 to 2.7 dB and snares 3.2 to 4.7 dB louder at the same peak) and the owner approved it on 2026-11-15. It is the accepted baseline.
 - Phone and MPC hardware: **pass, owner-reported** (2026-11-15: "phone and MPC good"). No device measurement was made by the implementing session.
-- **Overall: every applicable gate passes.** Not gates and not done: factory presets from the accepted pads and a SYNTH picker entry.
+- **Overall: every applicable gate passes.** Not gates: the 42 approved hits are the factory bank and SERVO is on the SYNTH picker (2026-11-16).
 
 ## TIMBER acoustic percussion integration
 
@@ -1110,3 +1114,15 @@ device-test result; device models and versions were not supplied. See the accept
 - **Picker and physical playback: owner-reported tested and approved.** Android automation remains
   unrun here; no SDK or independently measured device results are available.
 - **Overall: incomplete.** Finite and held prototype integration is present, not full engine completion.
+
+## Soul and rock acoustic collection
+
+See [SOUL_ROCK](SOUL_ROCK.md). Three sixteen-pad factory banks preserve the
+owner-approved synthesized audition (2026-11-16, “It all sounds great, proceed”).
+All 432 original PCM files are pinned by hash. Each kit has three velocity zones,
+three alternate strikes, hat chokes, a finite roll and a cymbal swell. These are
+frozen synthesis assets, not a new editable engine. Save, playback and export
+software proof is in `SoulRockRoundTripTest`; full regression is tracked in the
+PR. Phone/MPC acceptance remains open for this collection. Melodic/keygroup/chord
+and string-articulation gates do not apply; the existing MPC 2 format exception
+applies. Sizzle remains the approved voice, not a newly claimed crash model.
