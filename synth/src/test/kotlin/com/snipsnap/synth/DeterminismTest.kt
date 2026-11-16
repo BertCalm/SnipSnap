@@ -1101,4 +1101,12 @@ class DeterminismTest {
         val r=SporeSyntheticKits.Recipe(SporeSyntheticKits.Genre.JUNGLE,7,.65,2)
         assertContentEquals(r.render().samples,SporeSyntheticKits.Recipe.fromJsonText(r.toJsonText()).render().samples)
     }
+
+    @Test
+    fun `SPLINTER saved recipes are deterministic for a hit, an edit and a gesture`() {
+        for (pad in listOf(2, 12, 16)) {
+            val r = Splinter.Recipe(pad, .65, 2)
+            assertContentEquals(r.render().samples, Splinter.Recipe.fromJsonText(r.toJsonText()).render().samples, "pad $pad")
+        }
+    }
 }
