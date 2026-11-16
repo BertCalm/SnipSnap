@@ -746,35 +746,38 @@ and the approved strum study by its published WAV hashes (`OsteriaStrumTest`).
 - **Overall: incomplete.** Round robin, a seamless HOLD, chord tools on real keys, device runs
   of the picker and hardware playback remain open.
 
-## NACRE (HARMONICS and SHELL kept, 2026-11-15)
+## NACRE (HARMONICS, SHELL and BUBBLE kept, 2026-11-15)
 
 NACRE had no section here. PEARL is its first voice: two plucked harps an octave apart in moving
 water, saved models 1 to 4, five factory presets and a FRESH TAPE velocity bank. See
-[NACRE](NACRE.md). HARMONICS (saved model 5) and SHELL (saved model 6) are its second and third
-voices, engine only so far. See [NACRE voices](NACRE_VOICES.md).
+[NACRE](NACRE.md). HARMONICS (saved model 5), SHELL (saved model 6) and BUBBLE (saved model 7) are
+its second to fourth voices, in the SYNTH picker with four presets each. See
+[NACRE voices](NACRE_VOICES.md).
 
 | Gate | Status | Evidence |
 |---|---|---|
-| Melodic: six voices with presets | Partial: three of six | PEARL with five presets. HARMONICS and SHELL were kept by the owner on 2026-11-15 (nacre-voices-1, H1–H3 and L1–L3, all KEEP), have no presets yet and are not in the picker. Their 22 kept renders are pinned (`NacreVoicesTest`). BUBBLE is next; GROTTO and CONCH wait for a HOLD decision. |
+| Melodic: six voices with presets | Partial: four of six (PEARL, HARMONICS, SHELL, BUBBLE) | PEARL with five presets. The owner kept HARMONICS and SHELL on 2026-11-15 (nacre-voices-1, H1–H3 and L1–L3, all KEEP), then their eight presets and BUBBLE (nacre-voices-2, Q1, Q2 and U1–U3, all KEEP). Every kept render is pinned (`NacreVoicesTest`). Presets pass in software for the heard ones: PEARL's five, the eight HARMONICS and SHELL presets, and Bubble Drop. BUBBLE's other three presets (Soft Bubble, Bubble Stream, Bubble Burst) are not yet heard; a small round is proposed. GROTTO and CONCH still wait for a HOLD decision. |
 | Melodic: playable keygroups | Not yet verified | No NACRE keygroups exist. |
-| Melodic: premade kit | Pass in software, PEARL only | The NACRE starter (`SynthKits.nacre()`) and the FRESH TAPE velocity bank (`NacreKitTest`, `NacreVelocityKitTest`). No kit uses HARMONICS or SHELL. |
+| Melodic: premade kit | Pass in software, PEARL only | The NACRE starter (`SynthKits.nacre()`) and the FRESH TAPE velocity bank (`NacreKitTest`, `NacreVelocityKitTest`). No kit uses HARMONICS, SHELL or BUBBLE. |
 | Melodic: chord-tool compatibility | Not yet verified | No chord mode; the spec's expanded voicing is not built. |
 | Articulation: HOLD | Fail | Every NACRE model refuses nonzero HOLD. |
 | Articulation: STRUM | Pass in software | The paired strum (DUET sets the answer and, at .65 and above, the crossing direction) is part of every voice. |
 | Percussion: roll or riser | Not applicable | A melodic engine. |
 | Drums: genre kits | Not applicable | A melodic engine. |
-| Velocity: rendering | Pass in software; partly heard | PEARL: contact soft and medium layers kept on 2026-11-13 (`nacre-strike-1`). HARMONICS and SHELL: a softer strike rings fewer upper strings or shells and is darker by at least 1 dB per step (`NacreVoicesTest`); the owner kept their soft, medium and hard clips (H1, L1). |
-| Velocity: saving, playback, export | Pass in software, PEARL only | The FRESH TAPE bank replays every layer (`NacreVelocityKitTest`). No HARMONICS or SHELL layers exist. |
+| Velocity: rendering | Pass in software; partly heard | PEARL: contact soft and medium layers kept on 2026-11-13 (`nacre-strike-1`). HARMONICS, SHELL and BUBBLE: a softer strike rings fewer upper strings, shells or bubbles and is darker by at least 1 dB per step (`NacreVoicesTest`); the owner kept their soft, medium and hard clips (H1, L1, U1). |
+| Velocity: saving, playback, export | Pass in software, PEARL only | The FRESH TAPE bank replays every layer (`NacreVelocityKitTest`). No HARMONICS, SHELL or BUBBLE layers exist. |
 | Round robin | Not yet verified | No NACRE round robin exists. |
-| Picker | PEARL only; not yet verified on a device | `NacreSynthScreenTest` covers PEARL. HARMONICS and SHELL are not in the picker. |
+| Picker | Not yet verified on a device | PEARL, HARMONICS, SHELL and BUBBLE are in the SYNTH picker; `NacreSynthScreenTest` reaches each voice and its presets. None of it has run on a device. |
 | Hardware playback | Not verified | No phone timing, MPC load or MPC velocity check is recorded. |
 
 - **Sound character: partly accepted.** The owner heard PEARL's first renderer as pleasant and
   the timed returns as "Much better"; kept CONTACT .35 and .8 and the strike-shaped layers; and
-  kept HARMONICS and SHELL as new NACRE voices on 2026-11-15. Model 3's full range is still
-  marked as awaiting a listen in [NACRE](NACRE.md).
-- **Overall: incomplete.** Three more voices, presets and picker entries for HARMONICS and SHELL,
-  keygroups, HOLD, round robin, chord tools, device runs and hardware playback remain open.
+  kept HARMONICS, SHELL and BUBBLE as new NACRE voices, and the eight HARMONICS and SHELL presets,
+  on 2026-11-15. Three BUBBLE presets and model 3's full range (see [NACRE](NACRE.md)) still await
+  a listen.
+- **Overall: incomplete.** Two more voices (GROTTO and CONCH, which wait for a HOLD decision), a
+  listen to three BUBBLE presets, keygroups, HOLD, round robin, chord tools, device runs and
+  hardware playback remain open.
 
 ## CLUTTER (round 2, 2026-11-14: four genre kits on the shelf, audition approved; round 3 roster, round 4 picker; hardware open)
 

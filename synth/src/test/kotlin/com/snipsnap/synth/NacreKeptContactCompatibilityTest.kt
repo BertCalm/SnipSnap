@@ -37,7 +37,7 @@ class NacreKeptContactCompatibilityTest {
         samples.forEach { buffer.putInt(it.toRawBits()) }
         return digest(buffer.array())
     }
-    private fun kept() = NacrePresets.all().filter { it.model == NacreModels.CONTACT_MODEL_VERSION }
+    private fun kept() = NacrePresets.forVoice(NacreVoice.PEARL).filter { it.model == NacreModels.CONTACT_MODEL_VERSION }
 
     @Test
     fun `kept model four recipes reproduce independent full raw final and PCM24 witnesses`() {
@@ -66,7 +66,7 @@ class NacreKeptContactCompatibilityTest {
 
     @Test
     fun `contact zero is the independent accepted model three source without changing defaults`() {
-        val old = NacrePresets.all().first()
+        val old = NacrePresets.forVoice(NacreVoice.PEARL).first()
         assertEquals(3, Nacre.MODEL_VERSION)
         assertEquals(3, old.model)
         assertFalse("CONTACT" in old.macros)
@@ -140,7 +140,7 @@ class NacreKeptContactCompatibilityTest {
 
     @Test
     fun `legacy velocity policy refuses contact models while factory discovery keeps five settings one voice`() {
-        val presets = NacrePresets.all()
+        val presets = NacrePresets.forVoice(NacreVoice.PEARL)
         assertEquals(listOf("Pearl Close", "Coral Reply", "Kelp Passage", "Pearl Moderate Contact", "Pearl Strong Contact"), presets.map { it.name })
         assertEquals(1, presets.map { it.voice }.toSet().size)
         assertEquals(presets, Presets.forVoice("NACRE", "PEARL"))
