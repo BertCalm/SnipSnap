@@ -3372,8 +3372,13 @@ fun PadSheetScreen(
         onOpenBox(PadSheetBoxes.toggle(openBoxKind, box)?.name)
     }
 
+    // These three are lambda values, not local funs, on purpose. A reference to a local fun
+    // (::commitAmount) equals every other reference to it whatever it captured, so a child that
+    // keeps its callback in rememberUpdatedState (StepperSlider does) never takes the new one and
+    // runs the first composition's: no pedal marked yet, the first pendingAmt. A lambda is a new,
+    // unequal object whenever what it reads changes, as main's inline lambdas were.
     // A chip's tap, and a list row's for a segment: the one door both draw (the effects list, direction B).
-    fun tapSegment(seg: String) {
+    val tapSegment: (String) -> Unit = { seg ->
         val placing = pedalPlacing
         pedalPlacing = null
         when {
@@ -3416,7 +3421,7 @@ fun PadSheetScreen(
     // records the segment too. Finding 14 is about the treatment
     // path, not only the taps that begin at a chip. On a pad with
     // pedals it moves the marked pedal alone, and 0 takes it off.
-    fun commitAmount() {
+    val commitAmount: () -> Unit = {
         pedalPlacing = null
         val marked = pedalCard.marked
         if (marked != null) {
@@ -3437,13 +3442,13 @@ fun PadSheetScreen(
         ?: "AMT"
     var boardPicked by remember(entry.dir, slot) { mutableStateOf(false) }
     var buttonsOpen by remember(entry.dir) { mutableStateOf(false) }
-    fun pickEffect(target: EffectsMenu.Target) {
-        if (busy) return
+    val pickEffect: (EffectsMenu.Target) -> Unit = pick@{ target ->
+        if (busy) return@pick
         when (target) {
             is EffectsMenu.Target.Segment -> tapSegment(target.id)
             is EffectsMenu.Target.Pedal -> {
                 pedalPlacing = null
-                val key = Pedals.byWord(target.word)?.key ?: return
+                val key = Pedals.byWord(target.word)?.key ?: return@pick
                 val on = PadSheet.readPedals(pad.recipe)?.picks?.any { it.key == key } == true
                 applyPedal(if (on) PedalSlate.Gesture.Off(key) else PedalSlate.Gesture.On(key))
             }
@@ -3834,9 +3839,9 @@ fun PadSheetScreen(
                 padColor = classColor,
                 scheme = scheme,
                 busy = busy,
-                onPick = ::pickEffect,
+                onPick = pickEffect,
                 onAmountChange = { f -> pendingAmt = (f * 20f).roundToInt() / 20f },
-                onAmountCommit = ::commitAmount,
+                onAmountCommit = commitAmount,
             )
             // A board stages on its card until KEEP: drawn once a list row picks one, while the pad
             // carries one, or with the buttons.
@@ -3907,7 +3912,7 @@ fun PadSheetScreen(
                 scheme = scheme,
                 busy = busy,
                 applying = applyingSegment.takeIf { busy },
-                onSegmentTap = ::tapSegment,
+                onSegmentTap = tapSegment,
                 onAmountChange = { f -> pendingAmt = (f * 20f).roundToInt() / 20f },
                 afterRowOne = {
                 // The tape this pad's dust comes from — or would come from — and
@@ -3930,7 +3935,7 @@ fun PadSheetScreen(
                     },
                 )
                 },
-                onAmountCommit = ::commitAmount,
+                onAmountCommit = commitAmount,
             )
             // MORE's list: every pedal, ON or OFF, the AMT mark, the side, and PUT ON ROW.
             if (pedalMoreOpen) {
