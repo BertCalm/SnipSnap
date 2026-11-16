@@ -104,3 +104,14 @@ The gesture is measured contact spectrum → evolving body/wire/metal resonances
 Build: `python3 prototype/sideroom/resynth.py R2_OUTPUT R3_OUTPUT`; copy `resynth.html` as `index.html` and the shared `acoustic.js`. Verify with `check-acoustic.py R3_OUTPUT`, `check-resynth.py R3_OUTPUT`, and `node prototype/sideroom/check-acoustic-player.mjs R3_OUTPUT`.
 
 Measured in this environment: 1,415,951-byte model, median Python render 20.65 ms, maximum 143.08 ms. First-0.5-second mean RMS across takes is within 0.3 dB of the acoustic comparator for all twelve voice/velocity combinations. This establishes energy agreement, not perceptual fidelity. Verified 36 deterministic repeat renders, audio-read-free synthesis, normalized alternate-strike differences, 72 saved comparison WAVs, ordered dynamics, ZIP equality, SFZ regions and simulated player behavior. Actual browser/sampler listening is not established by these checks. All full-family/native/hardware gates remain open as recorded above.
+
+
+## R4: contact, wires and metallic modes
+
+The owner called R3 a better direction and asked to continue. R4 retains R3 and the approved R2 acoustic bank as selectable comparators. The current renderer builds with `python3 prototype/sideroom/resynth.py R2_OUTPUT R4_OUTPUT R3_OUTPUT`; the R3 renderer remains available at commit `cca4590b9`.
+
+A second 256-sample analysis window captures the first 65 ms at 1 ms envelope landmarks. Fresh noise shaped by that descriptor replaces upper-frequency contact over the first 32 ms, while the kick/snare low body remains continuous. Snare upper energy gets irregular, seeded 1.8 ms wire-contact bursts that fade over 160 ms. These bursts are an authored collision analogy, not source waveform recovery. Each hat velocity profile has 40 measured inharmonic modes from an 8192-sample analysis. Continuous oscillators carry 24% of the nominal component energy alongside stochastic wash. The final result is calibrated to the measured dynamic energy; no original phase or waveform is stored in the model. A final 18 kHz low-pass restrains the upper spectrum.
+
+The site offers Refined synth, Previous synth and Acoustic with the same authored groove and complete grids. Each mode retains three levels and three takes; 108 WAV performances total. The same file/export checks pass, plus runtime audio-read isolation, determinism, meaningful normalized take differences and simulated player checks. Actual browser/device audio remains unverified by automation.
+
+Measured: 2,616,902-byte parameter model, Python median render 27.72 ms and maximum 425.03 ms, with no peak safety attenuation required. Long open-hat tails cost more; pre-rendered grids remain the proposed native cache strategy. Full-family and native gates remain open. This round tests texture development, not completion or an assertion of acoustic equivalence.

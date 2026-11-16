@@ -8,3 +8,6 @@ for(const pad of pads){for(let i=0;i<4;i++){await pad.onclick();assert.equal(sou
 await pads[3].onclick();let open=sounds.at(-1);await pads[2].onclick();assert(open.paused);
 nodes['#level'].value='2';nodes['#take'].value='2';await pads[0].onclick();assert.equal(sounds.at(-1).src,`${first}/kick-2-2.wav`);
 nodes['#groove'].onclick();await Promise.resolve();nodes['#player'].currentTime=4;nodes['#mode'].value=second;nodes['#mode'].onchange();assert.equal(nodes['#player'].currentTime,4);assert.equal(nodes['#player'].src,`${second}/groove.wav`);nodes['#stop'].onclick();assert(sounds.every(s=>s.paused));console.log('PASS: pad routing, RR cycling, explicit take, level, choke, treatment position, stop (simulated audio)');
+
+for(const mode of manifest.modes){nodes['#mode'].value=mode;nodes['#mode'].onchange();await pads[1].onclick();assert.equal(sounds.at(-1).src,`${mode}/snare-2-2.wav`);assert.equal(nodes['#player'].src,`${mode}/groove.wav`)}
+nodes['#stop'].onclick();assert(sounds.every(s=>s.paused));console.log('PASS: every comparison treatment routes its own pads and groove');

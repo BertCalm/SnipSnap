@@ -3,7 +3,7 @@ from pathlib import Path
 import numpy as np
 from scipy.io import wavfile
 p=Path(sys.argv[1]);m=json.loads((p/'manifest.json').read_text());report={}
-assert len(m['files'])==72
+assert len(m['files'])==len(m['modes'])*len(m['voices'])*len(m['levels'])*m['takes']
 with zipfile.ZipFile(p/'open-road-acoustic.zip') as z:
  for mode in m['modes']:
   for voice in m['voices']:
