@@ -182,9 +182,9 @@ class ErosionSynthScreenTest : ComposeScreenTest() {
         dial("SLAG", .5f)
         val edited = soft.copy(macros = soft.macros + ("SLAG" to .5f))
         waitFor("edit keeps the soft touch") { stored(ErosionVoice.CRATER) == edited }
-        saveAs("MY SOFTER DROPS")
-        val resaved = UserPresets.read(shelf).single { it.name == "MY SOFTER DROPS" }.patch as ErosionPatch
-        assertEquals(edited.copy(name = "MY SOFTER DROPS"), resaved)
+        saveAs("SOFTER DROPS")
+        val resaved = UserPresets.read(shelf).single { it.name == "SOFTER DROPS" }.patch as ErosionPatch
+        assertEquals(edited.copy(name = "SOFTER DROPS"), resaved)
         assertEquals(.35f.toRawBits(), resaved.velocity.toRawBits())
     }
 }
