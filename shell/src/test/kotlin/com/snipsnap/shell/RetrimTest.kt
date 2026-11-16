@@ -143,17 +143,17 @@ class RetrimTest {
                 mapOf("verb" to com.snipsnap.json.JsonValue.Str("smear"), "amount" to com.snipsnap.json.JsonValue.Num(0.3)),
             ),
         )
-        assertEquals("SMEAR", Retrim.treatmentLeft(smeared), "PadSheet.read can't see SMEAR on purpose; this must")
+        assertEquals("BLUR", Retrim.treatmentLeft(smeared), "PadSheet.read can't see SMEAR on purpose; this must, by its drawn name")
         // A pedal board rides its own key, which PadSheet.read does not see either: one pedal by its word, several as PEDALS.
         fun pedals(vararg keys: String) = bare.copy(
             recipe = com.snipsnap.synth.PadRecipe(pedals = com.snipsnap.synth.PedalBoard(keys.map { com.snipsnap.synth.PedalBoard.Pick(it, 0.7f) })).toJsonValue(),
         )
-        assertEquals("DELAY", Retrim.treatmentLeft(pedals("delayed")))
+        assertEquals("LONG ECHO", Retrim.treatmentLeft(pedals("delayed")))
         assertEquals("PEDALS", Retrim.treatmentLeft(pedals("driven", "delayed")))
-        assertEquals("TOUCH", Retrim.treatmentLeft(pedals("wahed", "touchwahed")), "WAH under TOUCH is silent, so one pedal stayed")
+        assertEquals("WAH BY HIT", Retrim.treatmentLeft(pedals("wahed", "touchwahed")), "WAH under TOUCH is silent, so one pedal stayed")
         assertEquals("A02 re-cut. The PEDALS stayed with the old one - it's in the trash.", Copy.retrimLanded("A02", Retrim.treatmentLeft(pedals("driven", "delayed"))))
         assertEquals(
-            "A02 re-cut. The SMEAR stayed with the old one - it's in the trash.",
+            "A02 re-cut. The BLUR stayed with the old one - it's in the trash.",
             Copy.retrimLanded("A02", Retrim.treatmentLeft(smeared)),
         )
     }

@@ -572,6 +572,31 @@ object StarterKits {
             seeded = false,
         ) { com.snipsnap.synth.ErosionKits.contrast() },
         Starter(
+            "east-africa-bongo-flava", "BONGO FLAVA",
+            "Fitted-synthesis drums, hand percussion, wood, metal and log bass. Twenty-two pads, three touch levels and three takes.",
+            seeded = false, tempoBpm = 100f,
+        ) { com.snipsnap.synth.EastAfricaKits.build(com.snipsnap.synth.EastAfricaKits.Genre.BONGO_FLAVA) },
+        Starter(
+            "east-africa-singeli", "SINGELI",
+            "Fitted-synthesis drums, hand percussion, wood, metal and log bass. Twenty-two pads, three touch levels and three takes.",
+            seeded = false, tempoBpm = 200f,
+        ) { com.snipsnap.synth.EastAfricaKits.build(com.snipsnap.synth.EastAfricaKits.Genre.SINGELI) },
+        Starter(
+            "east-africa-bongopiano", "BONGOPIANO",
+            "Fitted-synthesis drums, hand percussion, wood, metal and log bass. Twenty-two pads, three touch levels and three takes.",
+            seeded = false, tempoBpm = 112f,
+        ) { com.snipsnap.synth.EastAfricaKits.build(com.snipsnap.synth.EastAfricaKits.Genre.BONGOPIANO) },
+        Starter(
+            "east-africa-genge", "GENGE",
+            "Fitted-synthesis drums, hand percussion, wood, metal and log bass. Twenty-two pads, three touch levels and three takes.",
+            seeded = false, tempoBpm = 96f,
+        ) { com.snipsnap.synth.EastAfricaKits.build(com.snipsnap.synth.EastAfricaKits.Genre.GENGE) },
+        Starter(
+            "east-africa-kapuka", "KAPUKA",
+            "Fitted-synthesis drums, hand percussion, wood, metal and log bass. Twenty-two pads, three touch levels and three takes.",
+            seeded = false, tempoBpm = 108f,
+        ) { com.snipsnap.synth.EastAfricaKits.build(com.snipsnap.synth.EastAfricaKits.Genre.KAPUKA) },
+        Starter(
             "timber-pocket", "TIMBER FOLK POCKET",
             "Guitar, acoustic bass, cello and upright percussion. Three strike levels, four takes, a roll and a riser.",
             seeded = false, tempoBpm = 92f,
@@ -802,6 +827,21 @@ object StarterKits {
             seeded = false, tempoBpm = com.snipsnap.synth.ScuffKits.Kit.FLINT.bpm.toFloat(),
         ) { com.snipsnap.synth.ScuffKits.build(com.snipsnap.synth.ScuffKits.Kit.FLINT) },
         Starter(
+            "footwork-tap-jazz", "FOOTWORK TAP JAZZ",
+            "Weighted metallic tap, heel support, two-way brushes and body percussion on a close stage. Eighteen pads with authored roll and riser; three touch zones and four takes. Full dynamics.",
+            seeded = false, tempoBpm = com.snipsnap.synth.FootworkKits.Kit.TAP.bpm.toFloat(),
+        ) { com.snipsnap.synth.FootworkKits.build(com.snipsnap.synth.FootworkKits.Kit.TAP) },
+        Starter(
+            "footwork-street-breaks", "FOOTWORK STREET BREAKS",
+            "Damped street footwork, low body impacts and palm-and-stick objects. Eighteen pads with authored roll and riser; three touch zones and four takes. Full dynamics.",
+            seeded = false, tempoBpm = com.snipsnap.synth.FootworkKits.Kit.STREET.bpm.toFloat(),
+        ) { com.snipsnap.synth.FootworkKits.build(com.snipsnap.synth.FootworkKits.Kit.STREET) },
+        Starter(
+            "footwork-industrial-stepping", "FOOTWORK INDUSTRIAL STEPPING",
+            "Hard plate steps, braced-deck knocks and loose metal objects. Eighteen pads with authored roll and riser; three touch zones and four takes. Full dynamics.",
+            seeded = false, tempoBpm = com.snipsnap.synth.FootworkKits.Kit.INDUSTRIAL.bpm.toFloat(),
+        ) { com.snipsnap.synth.FootworkKits.build(com.snipsnap.synth.FootworkKits.Kit.INDUSTRIAL) },
+        Starter(
             "hiccup-hop", "HICCUP HOP",
             "Glitch hop drums that trip over themselves. Three touch zones, four takes; a stumbling roll and a clap riser.",
             seeded = false, tempoBpm = com.snipsnap.synth.HiccupKits.Kit.HOP.bpm.toFloat(),
@@ -944,6 +984,11 @@ object StarterKits {
             "UK garage TEMPEST kit: short kicks, rim and ghost snares, five choking hats and pitched blips.",
             seeded = false,
         ) { SynthKits.tempestStep() },
+        Starter(
+            "bristle", "BRISTLE",
+            "Bass walk, six new source voices and the approved A/B routes. Three touch levels, two takes per pad.",
+            seeded = false, key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.bristle() },
         Starter("drumline-field", "DRUMLINE FIELD CADENCE", "Tight marching battery: independent snares and tenors, five bass sizes and ringing cymbals. Three touch levels and three takes.", seeded = false, tempoBpm = 120f) { com.snipsnap.synth.DrumlineKits.build(com.snipsnap.synth.DrumlineKits.Kit.FIELD) },
         Starter("drumline-street", "DRUMLINE STREET CADENCE", "Open street battery: lower heads, smaller sections, softer mallets, split bass and an accelerating snare. Three touch levels and three takes.", seeded = false, tempoBpm = 100f) { com.snipsnap.synth.DrumlineKits.build(com.snipsnap.synth.DrumlineKits.Kit.STREET) },
         Starter(

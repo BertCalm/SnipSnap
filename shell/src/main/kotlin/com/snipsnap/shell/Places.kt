@@ -198,7 +198,7 @@ object Places {
      * section's name inside: VELOCITY STRIP, PERFORMANCE, SPLIT, DUST ALL, BREED, SCULPT, STRETCH, ROUND ROBIN.
      */
     @field:CopyCaption const val KIT_TOOLS_ALSO =
-        "For the whole kit: VELOCITY STRIP · PERFORMANCE · SPLIT · DUST · COMBINE KITS · SCULPT · STRETCH · ROUND ROBIN"
+        "For the whole kit: VELOCITY STRIP · LIVE KIT EFFECTS · SPLIT · DUST · COMBINE KITS · SCULPT · STRETCH · ROUND ROBIN"
 
     /** KIT TOOLS' heading over REMIX BANK B. */
     @field:CopyLabel const val KIT_BANK_B = "BANK B"

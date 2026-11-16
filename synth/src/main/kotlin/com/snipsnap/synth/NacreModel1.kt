@@ -52,6 +52,7 @@ internal object NacreModel1 {
             MacroSpec("BLOOM", .35f, neutral = .35f),
             MacroSpec("HOLD", 0f),
         )
+        else -> throw IllegalArgumentException("NACRE model 1 is PEARL only, not ${voice.name}")
     }
 
     fun defaults(voice: NacreVoice = NacreVoice.PEARL): Map<String, Float> =

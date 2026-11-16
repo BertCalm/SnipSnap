@@ -6001,7 +6001,7 @@ class ConventionTest {
         "CHOP ▸", "PADS ▸", "BEAT ▸", "EXPORT ▸", // Places.DOOR_*: the stage doors
         "OPEN ▸", // a project row's OPEN
         "CHANGE SOUND ▸", "EDIT PAD ▸", "RECORD INTO PAD ▸", "FROM MY SAMPLES ▸", // the pad strip's doors (UX pass, 2026-11-15)
-        "EXPORT ▸", "EFFECTS ▸", "VARIATIONS ▸", "USE THIS PART ▸", // Copy: doors to EXPORT, the pad editor's two screens, and TAPE's next screen
+        "EXPORT ▸", "EFFECTS ▸", "MIX WITH ANOTHER SOUND ▸", "USE THIS PART ▸", // Copy: doors to EXPORT, the pad editor's two screens, and TAPE's next screen
         "COMBINE KITS · MIX TWO KITS ▸", // lands on the shelf to pick the partner kit
         "LIBRARY ▸", "SAMPLE ▸", "SAVED SAMPLES ▸", // the empty-state routes
         "MIDI DEVICES ▸", // SETTINGS' door to the MIDI devices screen
@@ -6037,7 +6037,7 @@ class ConventionTest {
     /** Help prose where `▸` reads as "then", naming a path through the app: a path, not a control, so it keeps the arrow. */
     private val GLYPH_PATHS = listOf(
         "RE-TRIM ▸: CHOP", "MAKE BANK B VARIATIONS ▸ fills an empty BANK B", "COMBINE KITS ▸ cross a kit's recipes", "MAKE BANK B VARIATIONS ▸ fills it here", // HELP lines naming the button then what
-        "VERSIONS ▸ rolls back", "COMBINE SOUNDS ▸ ROOM TONE", "ROOM ▸ SEND", // toasts and lines naming a menu path
+        "VERSIONS ▸ rolls back", "COMBINE SOUNDS ▸ ROOM TONE", "REAL ROOM ▸ SEND", // toasts and lines naming a menu path
         "CLIP ▸ KIT writes one", // ORBIT's section line
     )
     // ---- Type scale and the 11 sp floor (clarity spec section 7.5, PR 7a) ----

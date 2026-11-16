@@ -3836,6 +3836,15 @@ tasks.register<JavaExec>("generateClutterAudition") {
     args(providers.gradleProperty("clutterOutput").orNull ?: "${rootDir}/testkit/clutter-audition/kotlin")
 }
 
+tasks.register<JavaExec>("generateBristleAudition") {
+    group = "distribution"
+    description = "Render both accepted Bristle routes, saved study recipes and bass velocity layers."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.BristleAuditionGenerator")
+    workingDir = rootProject.projectDir
+    args(providers.gradleProperty("bristleOutput").orNull ?: "${rootDir}/testkit/bristle-kotlin")
+}
+
 /** Render CALABASH's round-1 Kotlin clips under testkit/calabash-audition/kotlin/, for the Python A/B. */
 tasks.register<JavaExec>("generateCalabashAudition") {
     group = "distribution"
@@ -3915,4 +3924,14 @@ tasks.register<JavaExec>("generateKneeBreakKits") {
     mainClass.set("com.snipsnap.synth.KneeBreakKitGenerator")
     workingDir = rootProject.projectDir
     maxHeapSize = "1g"
+}
+
+tasks.register<JavaExec>("auditDrumlineEdgeReference") {
+    group = "verification"
+    description = "Compare actual drumline output edges against a spectral-projection reference."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.DrumlineEdgeReference")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "1g"
+    args(providers.gradleProperty("drumlineEdgeOutput").orNull ?: "testkit/drumline-edge-reference.csv")
 }

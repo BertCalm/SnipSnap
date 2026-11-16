@@ -134,7 +134,7 @@ class DustPrintsTest {
 
         val dusted = m.dustPad(1, 0.6f, tape.name, print)
         assertEquals(PadSheet.Dusted(0.6f, tape.name), PadSheet.readDust(dusted.recipe))
-        assertEquals("DUST", Retrim.treatmentLeft(dusted))
+        assertEquals("OLD RECORDING", Retrim.treatmentLeft(dusted))
         val once = File(dir, dusted.sampleFile).readBytes()
         assertTrue(!once.contentEquals(before), "the file changed")
         assertEquals(PadSheet.UnTreat.READY, PadSheet.unTreatState(dusted, m.binContents().map { it.originalName }.toSet()), "the original sleeps in the bin")

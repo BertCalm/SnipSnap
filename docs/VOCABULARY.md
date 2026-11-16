@@ -229,7 +229,7 @@ Every label in `Navigation.kt`. The last column says where the name went: the ap
 |---|---|---|---|---|
 | `PAD SHEET` | `PAD` | PROJECT | Edit one pad. | Proposed `PAD EDITOR` (B) |
 | `EFFECTS` | `EFFECTS` | PROJECT | The pad editor's effects page. | Keep |
-| `VARIATIONS` | `VARIATIONS` | PROJECT | The pad editor's variations page. | Keep |
+| `MIX WITH ANOTHER SOUND` | `MIX` | PROJECT | The pad editor's second page: COMBINE SOUNDS. | Renamed from `VARIATIONS` (owner, 2026-11-15): `VARIATIONS` also named bank B's twins |
 | `GRAIN FIELD` | `GRAIN FIELD` | PROJECT | Play a pad as grains. | Keep with line (B) |
 | `SPLICE` | `SPLICE` | PROJECT | Join two earlier takes of a pad at one cut. | Keep (primary use) |
 | `STACK THE TAKES` | `STACK` | PROJECT | Layer earlier versions as hit zones. | Proposed `STACK VERSIONS` (B) |
@@ -308,8 +308,8 @@ Back labels that do not come from `backChip`:
 | `EXPANSION`, `XPN` | An MPC expansion pack and its single-file form (`Personality.kt:644,716`). |
 | `KEYGROUP`, `DRUM` | MPC program types shown by inspect file (`XRayScreen.kt:137`). |
 | `ONE-SHOT`, `CHOKE GRP` | Pad play modes (`PadSheetScreen.kt:3511,3515`). `CHOKE GRP` is proposed `CHOKE GROUP` in B. |
-| `PERFORMANCE` | The kit's live effect mix group, inside `KIT TOOLS` since 2026-11-15. |
-| `KIT TOOLS` | PADS' one closed group under the grid for everything that changes the whole kit: the `VELOCITY STRIP` settings, `PERFORMANCE` and the tools `THIS KIT` held (`Places.KIT_TOOLS`; was `THIS KIT`, renamed in the owner's UX pass, 2026-11-15, `docs/UX_PASS_2026_11.md`). |
+| `LIVE KIT EFFECTS` | The kit's live effect mix group, inside `KIT TOOLS` (was `PERFORMANCE` over an `AQUARIUM` line; renamed by the owner, 2026-11-15). |
+| `KIT TOOLS` | PADS' one closed group under the grid for everything that changes the whole kit: the `VELOCITY STRIP` settings, `LIVE KIT EFFECTS` and the tools `THIS KIT` held (`Places.KIT_TOOLS`; was `THIS KIT`, renamed in the owner's UX pass, 2026-11-15, `docs/UX_PASS_2026_11.md`). |
 | `KEY`, `IN KEY` | The kit's musical key, and retuning tonal pads to it (`Places.kt:201`, `PadSheet.kt:189`). |
 | `ROUND ROBIN` | Alternate hits so repeats vary (`PadSheetScreen.kt:1765`). |
 | `PLAY`, `STOP`, `BPM`, `SWING`, `TEMPO`, `BAR`, `STEPS` | Transport and timing words (`GrooveScreen.kt:223`, `Places.kt:63`). |
@@ -429,55 +429,72 @@ The picker groups engines into nine kinds (`EngineCatalog.kt:14-24`): `DRUMS & P
 | `FIRED BRONZE` | DRUMS & PERCUSSION | Skin, clay and bronze through a driven processor and amp | `docs/FIRED_BRONZE.md` |
 | `BACKWASH` | DRUMS & PERCUSSION | Damped drums with wavering tails and warm amp grit | `docs/BACKWASH.md` |
 
-### E2. Characters (treatment chips) and pedals
+### E2. Effects: the drawn name, the code word, the group (owner, 2026-11-15)
 
-Character names keep their names. Descriptions come from the comments beside each entry in `PadSheet.kt` (lines 206-293) and `Pedals.kt` (lines 118-178). Chips whose drawn word differs from the code word are listed with the drawn word first.
+The owner's rename list and direction B's groups (`docs/UX_PASS_2026_11.md`), checked against the DSP by Luthier at `fec4631ef`. Display words only: the code word is what recipes, saved pedal rows, seeds, file names and MPC exports keep. The names live in `PadSheet.displayLabel`, `PadSheet.boardLabel` and `PadSheet.moveLabel`; the groups and lines in `EffectsMenu.kt`. START HERE, for drums: `PUNCH`, `HARD CLIP`, `SHARPER HIT`, `ROOM REVERB`, `QUICK ECHO`, `CRUSH`, `SUB`, `REVERSE`.
 
-| Chip | Row | What it does |
-|---|---|---|
-| `CRUSH` | WEAR | Twelve-bit, 26 kHz sampler crunch. The crunchiest age. |
-| `TAPE` | WEAR | Tape age. |
-| `DIRT` | WEAR | Twelve-bit with companding and an 11 kHz lid. Gritty and warm. |
-| `SMEAR` | WEAR | A destructive smear. Not verified what it sounds like. |
-| `DUST` | WEAR | The tape's own hiss and room under the pad (`docs/DUST.md`). |
-| `SWELL` | TRANSIENT | The sound arrives before it strikes. |
-| `TAIL` | TRANSIENT | The attack gone, the wash kept. |
-| `SMOOTH` (code `SKIM`) | TRANSIENT | The click goes, the thump stays. |
-| `GHOST` | TRANSIENT | The tone and attack gone, the breath kept. |
-| `SPIKE` | TRANSIENT | The attack leaned on rather than taken away. |
-| `PUNCH` | COLOUR | Squashed into crunch, so the transient pops. |
-| `RING` | COLOUR | Multiplied by a sine: metal, bells, radio. |
-| `DUB` | COLOUR | A dub of a dub of a dub: generation loss. |
-| `VINYL` | COLOUR | The record under the hit. |
-| `PHASE` | COLOUR | Four swept allpass stages. |
-| `CONTOUR` | COLOUR | The ladder filter's contour swept from the hit's onset. |
-| `ECHO` (code `SLAP`) | TIME | One tape-delay repeat. |
-| `WASH` | TIME | The spring reverb, generously. |
-| `ROLL` | TIME | The hit's own head struck again on the kit's grid. |
-| `GATE` | TIME | The hit chopped on the kit's grid. |
-| `ENSEMBLE` | TIME | Three swimming taps off the finished tone, like a string machine's back half. |
-| `SECTION` | TIME | The same section as six independent players. |
-| `FLIP` | PLAYBACK | Reversed. Amount only grades the spring tail. |
-| `SPIN DOWN` (code `STOP`) | PLAYBACK | The tape capstan lets go. |
-| `SPIN UP` (code `START`) | PLAYBACK | The reel spins up. |
-| `PITCH` | PLAYBACK | Pitch is speed. Amount fades back toward the original. |
-| `IN KEY` (code `TUNE`) | FOLLOWS THE KIT | Every partial retuned to the kit's key. |
-| `BODY` | FOLLOWS THE KIT | Resonators tuned to the key, struck by the hit. |
-| `WOBBLE` | FOLLOWS THE KIT | A filter sweep on the kit's own grid. |
-| `DRONE` (code `ETERNAL`) | FOLLOWS THE KIT | The attack kept, the tail slowed toward forever. |
-| `DRIVE` | PEDALS | A drive pedal: the valve amp at the top of its gain (`Pedals.kt:118`). |
-| `SUSTAIN` | PEDALS | A compressor (`Pedals.kt:121`). |
-| `WAH` | PEDALS | An automatic wah (`Pedals.kt:125`). |
-| `TOUCH` | PEDALS | A wah that follows how hard you hit (`Pedals.kt:126`). |
-| `ROCK` | PEDALS | The rock wah voicing (`Pedals.kt:127`). |
-| `FORGE` | PEDALS | A power boost before the amp, "more powerful without distorting" (`Pedals.kt:130`). |
-| `DELAY` | PEDALS | A delay with long, dark repeats (`Pedals.kt:145`). |
-| `ROOM` | PEDALS | A drum-room reverb, last in the chain (`Pedals.kt:149`). |
-| `FADE IN` | PEDALS | The sound rises over about 450 ms (`Pedals.kt:153`). |
-| `VIBRATO` | PEDALS | Pitch wobble for held sounds (`Pedals.kt:158`). |
-| `DIVE` | PEDALS | A whammy dive down an octave for held sounds (`Pedals.kt:163`). |
-| `HUSH` | PEDALS | A noise gate that shuts the tail (`Pedals.kt:169`). |
-| `SUB` | PEDALS | An octave-down copy under the hit (`Pedals.kt:175`). |
+| Drawn | Code word | Group | Line |
+|---|---|---|---|
+| `PUNCH` | PUNCH | HIT HARDER | Lets the hit snap through and adds a little grit |
+| `HARD CLIP` | FORGE (pedal) | HIT HARDER | Adds a thump and clips it loud and solid |
+| `SHARPER HIT` | SPIKE | HIT HARDER | Sharpens the start of the hit |
+| `SQUEEZE` | SUSTAIN (pedal) | HIT HARDER | Evens the level so it rings out longer |
+| `CUT TAIL` | HUSH (pedal) | HIT HARDER | Cuts the tail off once it gets quiet |
+| `CRUSH` | CRUSH | DIRTY OR OLD | The grainy sound of an old 12-bit sampler |
+| `TAPE` | TAPE | DIRTY OR OLD | Soft, warm and a little wobbly, like cassette |
+| `DIRT` | DIRT | DIRTY OR OLD | The warm grit of an old drum machine |
+| `DRIVE` | DRIVE (pedal) | DIRTY OR OLD | Overdrives it like a cranked guitar amp |
+| `VINYL` | VINYL | DIRTY OR OLD | Crackle, rumble and hiss under it |
+| `OLD RECORDING` | DUST | DIRTY OR OLD | Adds the hiss and room of a real recording |
+| `WORN COPY` | DUB | DIRTY OR OLD | Like a copy of a copy of a tape |
+| `ROOM REVERB` | ROOM (pedal) | ECHO AND SPACE | Puts it in a drum room |
+| `QUICK ECHO` | SLAP | ECHO AND SPACE | One quick bounce right after the hit |
+| `BIG REVERB` | WASH | ECHO AND SPACE | A big, washy reverb |
+| `LONG ECHO` | DELAY (pedal) | ECHO AND SPACE | A trail of echoes that fade and darken |
+| `BACKWARDS ECHO` | REWIND (pedal) | ECHO AND SPACE | The hit, then a backwards copy that swells up after it |
+| `DREAMY SPACE` | VELOUR (board) | ECHO AND SPACE | Chorus, echoes and grains in a room, through an amp |
+| `DEEP SPACE` | VELOUR_BLOOM (board) | ECHO AND SPACE | Bigger room, more scattered grains, more amp |
+| `REAL ROOM` | ROOM (outside move) | ECHO AND SPACE | Measures your room with a sweep and puts it in there |
+| `FLANGER` | FLANGE (pedal) | MOVEMENT | A jet-plane whoosh |
+| `SWIRL` | PHASE | MOVEMENT | A slow, swirling sweep |
+| `WIDE` | WIDE (board) | MOVEMENT | Tape warmth, chorus and a little reverb, in stereo |
+| `THICKEN` | ENSEMBLE | MOVEMENT | Thickens it into a slow, swirling chorus |
+| `SIX PLAYERS` | SECTION | MOVEMENT | Sounds like six players at once |
+| `TREMOLO` | TREM (pedal) | MOVEMENT | The volume pulses |
+| `VIBRATO` | VIBRATO (pedal) | MOVEMENT | The pitch wavers |
+| `SPIN SPEAKER` | ROTARY (pedal) | MOVEMENT | A spinning organ speaker that speeds up |
+| `FILTER SWEEP` | CONTOUR | FILTER AND WAH | A synth filter that closes down after the hit |
+| `WAH BY HIT` | TOUCH (pedal) | FILTER AND WAH | A wah that opens on the hit and closes as it fades |
+| `WAH` | WAH (pedal) | FILTER AND WAH | A wah-wah that sweeps on its own |
+| `ONE WAH` | ROCK (pedal) | FILTER AND WAH | One wah up and back, then it rests |
+| `BEAT ECHO` | ONBEAT | IN TIME WITH THE BEAT | Repeats that land on the beat, darker each time |
+| `WOBBLE` | WOBBLE | IN TIME WITH THE BEAT | A filter that opens and closes in time |
+| `ROLL` | ROLL | IN TIME WITH THE BEAT | Repeats the start of it in time, like a roll |
+| `CHOP IN TIME` | GATE | IN TIME WITH THE BEAT | Chops it into a rhythm |
+| `PUMP` | PUMP | IN TIME WITH THE BEAT | Ducks on every beat and swells back up |
+| `REVERSE` | FLIP | PITCH AND REVERSE | Plays it backwards |
+| `SUB` | SUB (pedal) | PITCH AND REVERSE | Adds a gritty copy an octave below |
+| `SLOWER` | PITCH | PITCH AND REVERSE | Plays it slower and lower |
+| `PITCH DROP` | DIVE (pedal) | PITCH AND REVERSE | The pitch drops an octave and stays down |
+| `SPIN DOWN` | STOP | PITCH AND REVERSE | Slows to a stop, like a turntable |
+| `SPIN UP` | START | PITCH AND REVERSE | Spins up into the sound |
+| `IN KEY` | TUNE | PITCH AND REVERSE | Pulls a note into the kit's key (not for drums) |
+| `NO CLICK` | SKIM | SOFTER OR LONGER | Takes the click off, keeps the thump |
+| `SWELL` | SWELL | SOFTER OR LONGER | A reverse swell rises into the hit |
+| `RING ONLY` | TAIL | SOFTER OR LONGER | Removes the hit, keeps the ring |
+| `BREATH` | GHOST | SOFTER OR LONGER | Only the breath of it is left |
+| `BLUR` | SMEAR | SOFTER OR LONGER | Slows and blurs the tone, keeps the attack |
+| `ENDLESS` | ETERNAL | SOFTER OR LONGER | Keeps the hit and stretches its tail out for ages |
+| `FADE IN` | FADE IN (pedal) | SOFTER OR LONGER | Rises in from silence |
+| `METAL` | RING | STRANGE | Metallic, like a bell or a radio |
+| `RINGING BODY` | BODY | STRANGE | Gives it a ringing body in the kit's key |
+| `FUZZ HALO` | OBLITERATE (board) | STRANGE | An octave halo, fuzz and chopped fragments |
+| `RISING ECHOES` | RUSH (board) | STRANGE | Swells in, distorts, and echoes back a fifth higher |
+| `THROUGH SPEAKER` | REAMP (outside move) | STRANGE | Plays it out loud or through a pedal, records it back |
+| `EFFECT CHAIN` | the per-pad Aquarium | Its own page | Six effects in one, with ready-made starting points |
+| `SHAPE` | the SHAPE box | Its own page | How it starts and fades, and how bright it is |
+
+Retired drawn words (2026-11-15): `ECHO` (now `QUICK ECHO`), `DELAY`, `ON BEAT`, `REWIND`, `WASH`, `REVERB`, `VELOUR`, `VELOUR BLOOM`, `RE-AMP`, `SMEAR`, `TAIL`, `SMOOTH`, `GHOST`, `SPIKE`, `DUB`, `DUST`, `RING MOD`, `PHASE`, `ENSEMBLE`, `SECTION` (the chip), `TRANCE GATE`, `FLIP`, `PITCH` (the chip), `BODY`, `DRONE`, `SUSTAIN` (the pedal), `FORGE`, `TOUCH WAH`, `ROCK`, `DIVE`, `NOISE GATE`, `TREM`, `FLANGE`, `ROTARY`, `RUSH`, `OBLITERATE`, `AQUARIUM` (the per-pad box; the CHAMBER voice and the ORBIT, SPLIT and SURFACE panels keep it) and `PERFORMANCE` (the kit's live effects, now `LIVE KIT EFFECTS`). `FREEZE` stays KIT TOOLS' own; the effect that holds a tail is `ENDLESS`. `SUSTAIN ANY SOUND` keeps `SUSTAIN`.
 
 ---
 
@@ -499,3 +516,11 @@ The owner took the recommended option (A) on all 14 decisions, with one exceptio
 12. **STRIKE.** `VELOCITY STRIP` and `FX BY VELOCITY`.
 13. **Tape metaphors in prose.** Rewritten with the `SAMPLE` rename: `LISTENING`, `NEW SAMPLE`, `SHOW COUNTER`, and the other "on tape" prose.
 14. **Chips that clash.** `CONTOUR` becomes `FILTER SWEEP`, `RING` becomes `RING MOD`, `GATE` becomes `TRANCE GATE`, and the pedal `HUSH` becomes `NOISE GATE`. **Exception: the chip `SECTION` is not renamed to `SIX PLAYERS`.** It stays `SECTION` for now. Open: needs a sound check for a better name. The song and ARRANGE uses of `SECTION` keep their name, as does everything else that clashes outside the chip row. `FORK TO YOURS` becomes `COPY TO YOURS` and CHOP `GHOSTS` becomes `BETWEEN HITS` under the same rule.
+
+### Rulings, 2026-11-15 (the UX pass)
+
+- **Ruling 8, amended.** The box is `SPEAKER AND ROOM`; its two moves draw `THROUGH SPEAKER` and `REAL ROOM`. The pedal draws `ROOM REVERB`.
+- **Ruling 9, amended.** The per-pad `AQUARIUM` draws `EFFECT CHAIN`; the kit's live one, `PERFORMANCE`, draws `LIVE KIT EFFECTS`. Code, files and test tags keep `AQUARIUM`.
+- **Ruling 14, amended.** `SECTION` (the chip) is `SIX PLAYERS`; `FILTER SWEEP` stays; `RING MOD` is `METAL`, `TRANCE GATE` `CHOP IN TIME`, `NOISE GATE` `CUT TAIL` (it shortens a hit; it does not clean noise).
+- **The pad editor's second door** is `MIX WITH ANOTHER SOUND ▸`, back name `MIX`; its closed line names what is inside (`LAYER, JOIN, BLEND, BORROW TONE AND MORE`).
+- Every other effect rename is in E2.

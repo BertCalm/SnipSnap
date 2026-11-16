@@ -183,37 +183,95 @@ object PadSheet {
      * The card's own display words for a segment — a language-only layer on
      * top of [ALL_SEGMENTS]. The segment string itself stays the id every
      * other door (`onSegmentTap`, [treatmentFor], [read]'s `Applied.segment`,
-     * and the shell's own tests) reads and writes; only [displayLabel]'s
-     * output is drawn on the chip. A segment absent here draws its own id
-     * unchanged (e.g. CRUSH, TAPE, DIRT, SMEAR, TAIL, GHOST, FLIP, DUB,
-     * SWELL, BODY, WOBBLE — none of those needed a friendlier word).
+     * recipes, saved pedal rows, seeds and the shell's own tests) reads and
+     * writes; only [displayLabel]'s output is drawn. A segment absent here
+     * draws its own id unchanged (CRUSH, TAPE, DIRT, VINYL, PUNCH, SWELL,
+     * ROLL, WOBBLE, PUMP, DRIVE, WAH, FADE IN, VIBRATO, SUB: the owner kept
+     * those, 2026-11-15).
+     *
+     * The owner's rename list (docs/UX_PASS_2026_11.md, 2026-11-15): one
+     * plain name per idea, checked against the DSP by Luthier, drawn
+     * everywhere a chip, a pedal line, a toast or a summary names the
+     * effect, and in [EffectsMenu]'s list.
      */
     private val DISPLAY_LABELS: Map<String, String> = mapOf(
-        // The keyed family's key-snap treatment: the card's own word for "retuned".
-        "TUNE" to "IN KEY",
-        // The capstan release / spin-up pair, not a DAW's STOP/START.
+        // Row one, wear.
+        SMEAR to "BLUR",
+        DUST to "OLD RECORDING",
+        // Row two, the hit's arrival and body.
+        TAIL to "RING ONLY",
+        "SKIM" to "NO CLICK",
+        "GHOST" to "BREATH",
+        "SPIKE" to "SHARPER HIT",
+        // Row three, colour. CONTOUR kept ruling 14's FILTER SWEEP.
+        "RING" to "METAL",
+        "DUB" to "WORN COPY",
+        "PHASE" to "SWIRL",
+        "CONTOUR" to "FILTER SWEEP",
+        // Row four, time: the echo family and the reverbs get one family name each.
+        "SLAP" to "QUICK ECHO",
+        "WASH" to "BIG REVERB",
+        "GATE" to "CHOP IN TIME",
+        "ENSEMBLE" to "THICKEN",
+        "SECTION" to "SIX PLAYERS",
+        // Row five, the transport. STOP/START kept the capstan words, not a DAW's.
+        "FLIP" to "REVERSE",
         "STOP" to "SPIN DOWN",
         "START" to "SPIN UP",
-        // One tape-delay repeat.
-        "SLAP" to "ECHO",
-        // The attack kept, the tail stretched toward forever.
-        "ETERNAL" to "DRONE",
-        // The banded smear: click gone, thump kept.
-        "SKIM" to "SMOOTH",
-        // Names that clashed with an engine or another tool (vocabulary ledger, ruling 14), and the pedal
-        // words that said two things (ruling 8). The ids are what recipes and tests use; only the drawn word changes.
-        "CONTOUR" to "FILTER SWEEP",
-        "RING" to "RING MOD",
-        "GATE" to "TRANCE GATE",
-        "HUSH" to "NOISE GATE",
-        "TOUCH" to "TOUCH WAH",
-        "ROOM" to "REVERB",
-        // An id is one word; the chip reads as the brainstorm named it.
-        "ONBEAT" to "ON BEAT",
+        "PITCH" to "SLOWER",
+        // Row six, what follows the kit. ETERNAL is ENDLESS, not FREEZE: KIT TOOLS' FREEZE is another tool.
+        TUNE to "IN KEY",
+        "BODY" to "RINGING BODY",
+        "ETERNAL" to "ENDLESS",
+        // An id is one word; the chip reads as two.
+        "ONBEAT" to "BEAT ECHO",
+        // The pedals. HUSH shortens a hit rather than cleaning noise, hence CUT TAIL (Luthier, 2026-11-15).
+        "SUSTAIN" to "SQUEEZE",
+        "TOUCH" to "WAH BY HIT",
+        "ROCK" to "ONE WAH",
+        "FORGE" to "HARD CLIP",
+        "DELAY" to "LONG ECHO",
+        "ROOM" to "ROOM REVERB",
+        "DIVE" to "PITCH DROP",
+        "HUSH" to "CUT TAIL",
+        "REWIND" to "BACKWARDS ECHO",
+        "TREM" to "TREMOLO",
+        "FLANGE" to "FLANGER",
+        "ROTARY" to "SPIN SPEAKER",
     )
 
     /** What the card draws for [segment] — [DISPLAY_LABELS]'s word, or the segment itself. */
     fun displayLabel(segment: String): String = DISPLAY_LABELS[segment] ?: segment
+
+    /**
+     * What a board draws (the owner's names, 2026-11-15). Display only: [com.snipsnap.synth.BoardType.name]
+     * stays the printed file's prefix (`PrintedPadStore`, the MPC export's WAV names) and its `id` the saved
+     * word, so a kept board and its files never change name.
+     */
+    fun boardLabel(type: com.snipsnap.synth.BoardType): String = when (type) {
+        com.snipsnap.synth.BoardType.WIDE -> "WIDE"
+        com.snipsnap.synth.BoardType.RUSH -> "RISING ECHOES"
+        com.snipsnap.synth.BoardType.OBLITERATE -> "FUZZ HALO"
+        // VELOUR adds no width (Luthier, 2026-11-15), so not WIDE SPACE.
+        com.snipsnap.synth.BoardType.VELOUR -> "DREAMY SPACE"
+        com.snipsnap.synth.BoardType.VELOUR_BLOOM -> "DEEP SPACE"
+    }
+
+    /** What an outside move draws. Display only: the enum's name is saved in the recipe's `move`. */
+    fun moveLabel(move: OutsideSheet.Move): String = when (move) {
+        OutsideSheet.Move.REAMP -> "THROUGH SPEAKER"
+        OutsideSheet.Move.ROOM -> "REAL ROOM"
+    }
+
+    /** [moveLabel] for a saved move's name (`OutsideSheet.Applied.move`); a name no move has draws itself. */
+    fun moveLabel(name: String): String =
+        OutsideSheet.Move.entries.firstOrNull { it.name == name.uppercase() }?.let { moveLabel(it) } ?: name
+
+    /**
+     * The per-pad Aquarium's drawn name (the owner's rename, 2026-11-15). Display only: AQUARIUM stays the
+     * printed file's prefix and the test tags' word.
+     */
+    const val CHAIN_LABEL = "EFFECT CHAIN"
 
     /** What a segment does when tapped: age the pad, or run it through a chain. */
     sealed interface Treatment {

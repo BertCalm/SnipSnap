@@ -1,0 +1,1089 @@
+{
+  "status": "72 statistical contact comparisons pass; independent noise, not sample equality or listening acceptance",
+  "cells": [
+    {
+      "voice": "toe",
+      "velocity": 0.3,
+      "take": 0,
+      "python": {
+        "rms": 0.010370427728066024,
+        "lowEnergyFraction": 0.6369188121588972,
+        "t90ms": 28.095238095238095
+      },
+      "native": {
+        "rms": 0.011471515845823408,
+        "lowEnergyFraction": 0.5806672231901463,
+        "t90ms": 25.4421768707483
+      }
+    },
+    {
+      "voice": "toe",
+      "velocity": 0.3,
+      "take": 1,
+      "python": {
+        "rms": 0.010782232877418405,
+        "lowEnergyFraction": 0.5950069865366324,
+        "t90ms": 26.780045351473923
+      },
+      "native": {
+        "rms": 0.010965678529106557,
+        "lowEnergyFraction": 0.5986855540300098,
+        "t90ms": 27.77777777777778
+      }
+    },
+    {
+      "voice": "toe",
+      "velocity": 0.3,
+      "take": 2,
+      "python": {
+        "rms": 0.01035890130479276,
+        "lowEnergyFraction": 0.6335517641582656,
+        "t90ms": 29.65986394557823
+      },
+      "native": {
+        "rms": 0.010610162301018914,
+        "lowEnergyFraction": 0.6006900658275196,
+        "t90ms": 28.02721088435374
+      }
+    },
+    {
+      "voice": "toe",
+      "velocity": 0.3,
+      "take": 3,
+      "python": {
+        "rms": 0.010837638429861627,
+        "lowEnergyFraction": 0.6115207420949522,
+        "t90ms": 26.984126984126984
+      },
+      "native": {
+        "rms": 0.010750735230073643,
+        "lowEnergyFraction": 0.6012230475624617,
+        "t90ms": 27.07482993197279
+      }
+    },
+    {
+      "voice": "toe",
+      "velocity": 0.65,
+      "take": 0,
+      "python": {
+        "rms": 0.02830754204557207,
+        "lowEnergyFraction": 0.6528707511211408,
+        "t90ms": 27.823129251700678
+      },
+      "native": {
+        "rms": 0.03110124616843479,
+        "lowEnergyFraction": 0.5939060285705794,
+        "t90ms": 25.14739229024943
+      }
+    },
+    {
+      "voice": "toe",
+      "velocity": 0.65,
+      "take": 1,
+      "python": {
+        "rms": 0.029318082742285322,
+        "lowEnergyFraction": 0.611062470337075,
+        "t90ms": 26.712018140589567
+      },
+      "native": {
+        "rms": 0.02983456025535243,
+        "lowEnergyFraction": 0.6125847914356028,
+        "t90ms": 27.346938775510203
+      }
+    },
+    {
+      "voice": "toe",
+      "velocity": 0.65,
+      "take": 2,
+      "python": {
+        "rms": 0.028168060186891043,
+        "lowEnergyFraction": 0.6476285382436132,
+        "t90ms": 29.387755102040817
+      },
+      "native": {
+        "rms": 0.02890036656846665,
+        "lowEnergyFraction": 0.61642394031511,
+        "t90ms": 27.98185941043084
+      }
+    },
+    {
+      "voice": "toe",
+      "velocity": 0.65,
+      "take": 3,
+      "python": {
+        "rms": 0.029383210903136305,
+        "lowEnergyFraction": 0.6250256389751675,
+        "t90ms": 27.029478458049887
+      },
+      "native": {
+        "rms": 0.029342943471460006,
+        "lowEnergyFraction": 0.6178560797506244,
+        "t90ms": 26.780045351473923
+      }
+    },
+    {
+      "voice": "toe",
+      "velocity": 1.0,
+      "take": 0,
+      "python": {
+        "rms": 0.05004156548400582,
+        "lowEnergyFraction": 0.6579837038708457,
+        "t90ms": 27.369614512471653
+      },
+      "native": {
+        "rms": 0.05470308926598588,
+        "lowEnergyFraction": 0.5975132856264443,
+        "t90ms": 24.71655328798186
+      }
+    },
+    {
+      "voice": "toe",
+      "velocity": 1.0,
+      "take": 1,
+      "python": {
+        "rms": 0.051600265193611605,
+        "lowEnergyFraction": 0.6170332339112038,
+        "t90ms": 26.621315192743765
+      },
+      "native": {
+        "rms": 0.05260083567593506,
+        "lowEnergyFraction": 0.6166080096110781,
+        "t90ms": 27.006802721088434
+      }
+    },
+    {
+      "voice": "toe",
+      "velocity": 1.0,
+      "take": 2,
+      "python": {
+        "rms": 0.04963942595173382,
+        "lowEnergyFraction": 0.6516243129426486,
+        "t90ms": 28.526077097505667
+      },
+      "native": {
+        "rms": 0.050987242027042114,
+        "lowEnergyFraction": 0.6220014149094207,
+        "t90ms": 27.64172335600907
+      }
+    },
+    {
+      "voice": "toe",
+      "velocity": 1.0,
+      "take": 3,
+      "python": {
+        "rms": 0.05156809063635409,
+        "lowEnergyFraction": 0.6291658048264653,
+        "t90ms": 26.984126984126984
+      },
+      "native": {
+        "rms": 0.05183235055330748,
+        "lowEnergyFraction": 0.6236478523967515,
+        "t90ms": 26.643990929705215
+      }
+    },
+    {
+      "voice": "heel",
+      "velocity": 0.3,
+      "take": 0,
+      "python": {
+        "rms": 0.014015485402227228,
+        "lowEnergyFraction": 0.8663851390714473,
+        "t90ms": 25.555555555555554
+      },
+      "native": {
+        "rms": 0.015595916891049595,
+        "lowEnergyFraction": 0.8611985505636431,
+        "t90ms": 23.219954648526077
+      }
+    },
+    {
+      "voice": "heel",
+      "velocity": 0.3,
+      "take": 1,
+      "python": {
+        "rms": 0.01437323572060676,
+        "lowEnergyFraction": 0.86326606285767,
+        "t90ms": 26.099773242630384
+      },
+      "native": {
+        "rms": 0.015019448447777866,
+        "lowEnergyFraction": 0.8646417157966401,
+        "t90ms": 23.537414965986393
+      }
+    },
+    {
+      "voice": "heel",
+      "velocity": 0.3,
+      "take": 2,
+      "python": {
+        "rms": 0.014030036311826158,
+        "lowEnergyFraction": 0.8835621045707684,
+        "t90ms": 26.666666666666664
+      },
+      "native": {
+        "rms": 0.014075243818079203,
+        "lowEnergyFraction": 0.8924441402320883,
+        "t90ms": 24.875283446712018
+      }
+    },
+    {
+      "voice": "heel",
+      "velocity": 0.3,
+      "take": 3,
+      "python": {
+        "rms": 0.01486120391452304,
+        "lowEnergyFraction": 0.8525061473052737,
+        "t90ms": 25.238095238095237
+      },
+      "native": {
+        "rms": 0.01510971487873163,
+        "lowEnergyFraction": 0.8565876539166891,
+        "t90ms": 23.80952380952381
+      }
+    },
+    {
+      "voice": "heel",
+      "velocity": 0.65,
+      "take": 0,
+      "python": {
+        "rms": 0.037625173250791795,
+        "lowEnergyFraction": 0.8735111747835825,
+        "t90ms": 25.759637188208615
+      },
+      "native": {
+        "rms": 0.041675740360144285,
+        "lowEnergyFraction": 0.867694645842049,
+        "t90ms": 23.69614512471655
+      }
+    },
+    {
+      "voice": "heel",
+      "velocity": 0.65,
+      "take": 1,
+      "python": {
+        "rms": 0.03862303061352081,
+        "lowEnergyFraction": 0.869949181268028,
+        "t90ms": 26.303854875283445
+      },
+      "native": {
+        "rms": 0.040139802014923544,
+        "lowEnergyFraction": 0.87153273587365,
+        "t90ms": 24.5124716553288
+      }
+    },
+    {
+      "voice": "heel",
+      "velocity": 0.65,
+      "take": 2,
+      "python": {
+        "rms": 0.03743240327581742,
+        "lowEnergyFraction": 0.8885121161747306,
+        "t90ms": 26.825396825396826
+      },
+      "native": {
+        "rms": 0.037758895798427235,
+        "lowEnergyFraction": 0.896367501378551,
+        "t90ms": 25.170068027210885
+      }
+    },
+    {
+      "voice": "heel",
+      "velocity": 0.65,
+      "take": 3,
+      "python": {
+        "rms": 0.03985643554440671,
+        "lowEnergyFraction": 0.8608090549622003,
+        "t90ms": 25.62358276643991
+      },
+      "native": {
+        "rms": 0.04028410322932629,
+        "lowEnergyFraction": 0.8627589767145115,
+        "t90ms": 24.240362811791382
+      }
+    },
+    {
+      "voice": "heel",
+      "velocity": 1.0,
+      "take": 0,
+      "python": {
+        "rms": 0.06536500603354434,
+        "lowEnergyFraction": 0.877252657250173,
+        "t90ms": 26.00907029478458
+      },
+      "native": {
+        "rms": 0.07220715369317017,
+        "lowEnergyFraction": 0.8710577380275257,
+        "t90ms": 23.764172335600907
+      }
+    },
+    {
+      "voice": "heel",
+      "velocity": 1.0,
+      "take": 1,
+      "python": {
+        "rms": 0.06714062388056614,
+        "lowEnergyFraction": 0.8732951656520372,
+        "t90ms": 26.53061224489796
+      },
+      "native": {
+        "rms": 0.0695434367794575,
+        "lowEnergyFraction": 0.8748912686622843,
+        "t90ms": 25.215419501133788
+      }
+    },
+    {
+      "voice": "heel",
+      "velocity": 1.0,
+      "take": 2,
+      "python": {
+        "rms": 0.06479696108517473,
+        "lowEnergyFraction": 0.8909194630223303,
+        "t90ms": 26.89342403628118
+      },
+      "native": {
+        "rms": 0.0655629160038449,
+        "lowEnergyFraction": 0.8983464599856684,
+        "t90ms": 25.238095238095237
+      }
+    },
+    {
+      "voice": "heel",
+      "velocity": 1.0,
+      "take": 3,
+      "python": {
+        "rms": 0.06918225018405358,
+        "lowEnergyFraction": 0.8651032408620919,
+        "t90ms": 26.16780045351474
+      },
+      "native": {
+        "rms": 0.06971519432292199,
+        "lowEnergyFraction": 0.8659935895531223,
+        "t90ms": 24.331065759637188
+      }
+    },
+    {
+      "voice": "brush-forward",
+      "velocity": 0.3,
+      "take": 0,
+      "python": {
+        "rms": 0.00621168095035492,
+        "lowEnergyFraction": 0.2734720991708206,
+        "t90ms": 62.811791383219955
+      },
+      "native": {
+        "rms": 0.006524942960472432,
+        "lowEnergyFraction": 0.296051443470975,
+        "t90ms": 61.70068027210884
+      }
+    },
+    {
+      "voice": "brush-forward",
+      "velocity": 0.3,
+      "take": 1,
+      "python": {
+        "rms": 0.006310100295312245,
+        "lowEnergyFraction": 0.27674243298421025,
+        "t90ms": 62.42630385487528
+      },
+      "native": {
+        "rms": 0.006354900612530461,
+        "lowEnergyFraction": 0.2986450855604744,
+        "t90ms": 63.265306122448976
+      }
+    },
+    {
+      "voice": "brush-forward",
+      "velocity": 0.3,
+      "take": 2,
+      "python": {
+        "rms": 0.006088878464878395,
+        "lowEnergyFraction": 0.2614352466321938,
+        "t90ms": 63.6281179138322
+      },
+      "native": {
+        "rms": 0.006464635702601883,
+        "lowEnergyFraction": 0.2487213098554001,
+        "t90ms": 61.224489795918366
+      }
+    },
+    {
+      "voice": "brush-forward",
+      "velocity": 0.3,
+      "take": 3,
+      "python": {
+        "rms": 0.006214635223760335,
+        "lowEnergyFraction": 0.2857853932572256,
+        "t90ms": 63.40136054421769
+      },
+      "native": {
+        "rms": 0.006281581661138556,
+        "lowEnergyFraction": 0.2898993100014805,
+        "t90ms": 61.29251700680272
+      }
+    },
+    {
+      "voice": "brush-forward",
+      "velocity": 0.65,
+      "take": 0,
+      "python": {
+        "rms": 0.01611113670878465,
+        "lowEnergyFraction": 0.3013838361441257,
+        "t90ms": 63.17460317460317
+      },
+      "native": {
+        "rms": 0.016928715593913193,
+        "lowEnergyFraction": 0.3240926599067928,
+        "t90ms": 62.49433106575964
+      }
+    },
+    {
+      "voice": "brush-forward",
+      "velocity": 0.65,
+      "take": 1,
+      "python": {
+        "rms": 0.016346241194049094,
+        "lowEnergyFraction": 0.30414844675604485,
+        "t90ms": 63.083900226757365
+      },
+      "native": {
+        "rms": 0.016466345605294253,
+        "lowEnergyFraction": 0.32614413726185526,
+        "t90ms": 63.53741496598639
+      }
+    },
+    {
+      "voice": "brush-forward",
+      "velocity": 0.65,
+      "take": 2,
+      "python": {
+        "rms": 0.015796903017238087,
+        "lowEnergyFraction": 0.28767880773352433,
+        "t90ms": 64.21768707482993
+      },
+      "native": {
+        "rms": 0.016732779505912183,
+        "lowEnergyFraction": 0.2749856545061459,
+        "t90ms": 61.51927437641723
+      }
+    },
+    {
+      "voice": "brush-forward",
+      "velocity": 0.65,
+      "take": 3,
+      "python": {
+        "rms": 0.01613424156256884,
+        "lowEnergyFraction": 0.3152059966777916,
+        "t90ms": 63.6281179138322
+      },
+      "native": {
+        "rms": 0.016283357442800423,
+        "lowEnergyFraction": 0.3183352423755515,
+        "t90ms": 61.67800453514739
+      }
+    },
+    {
+      "voice": "brush-forward",
+      "velocity": 1.0,
+      "take": 0,
+      "python": {
+        "rms": 0.027477777428332437,
+        "lowEnergyFraction": 0.31656403515186154,
+        "t90ms": 63.44671201814059
+      },
+      "native": {
+        "rms": 0.028868185851142068,
+        "lowEnergyFraction": 0.33950817371486663,
+        "t90ms": 62.6530612244898
+      }
+    },
+    {
+      "voice": "brush-forward",
+      "velocity": 1.0,
+      "take": 1,
+      "python": {
+        "rms": 0.027847000618545344,
+        "lowEnergyFraction": 0.3191505367097574,
+        "t90ms": 63.151927437641724
+      },
+      "native": {
+        "rms": 0.028058994833835546,
+        "lowEnergyFraction": 0.34108556561778486,
+        "t90ms": 63.65079365079365
+      }
+    },
+    {
+      "voice": "brush-forward",
+      "velocity": 1.0,
+      "take": 2,
+      "python": {
+        "rms": 0.02693304177675942,
+        "lowEnergyFraction": 0.3021972709417078,
+        "t90ms": 64.26303854875283
+      },
+      "native": {
+        "rms": 0.028505120784880603,
+        "lowEnergyFraction": 0.28943388690252536,
+        "t90ms": 61.609977324263035
+      }
+    },
+    {
+      "voice": "brush-forward",
+      "velocity": 1.0,
+      "take": 3,
+      "python": {
+        "rms": 0.02750822910064819,
+        "lowEnergyFraction": 0.33152617884695246,
+        "t90ms": 63.69614512471655
+      },
+      "native": {
+        "rms": 0.027752149936173295,
+        "lowEnergyFraction": 0.3341492836305628,
+        "t90ms": 62.10884353741496
+      }
+    },
+    {
+      "voice": "brush-back",
+      "velocity": 0.3,
+      "take": 0,
+      "python": {
+        "rms": 0.00722287921868483,
+        "lowEnergyFraction": 0.2063118237468577,
+        "t90ms": 51.904761904761905
+      },
+      "native": {
+        "rms": 0.007253043076621594,
+        "lowEnergyFraction": 0.2480055767217694,
+        "t90ms": 51.269841269841265
+      }
+    },
+    {
+      "voice": "brush-back",
+      "velocity": 0.3,
+      "take": 1,
+      "python": {
+        "rms": 0.007050407689037655,
+        "lowEnergyFraction": 0.21868354331628959,
+        "t90ms": 52.58503401360544
+      },
+      "native": {
+        "rms": 0.007056667078873921,
+        "lowEnergyFraction": 0.22831542248629771,
+        "t90ms": 52.87981859410431
+      }
+    },
+    {
+      "voice": "brush-back",
+      "velocity": 0.3,
+      "take": 2,
+      "python": {
+        "rms": 0.007139122605387726,
+        "lowEnergyFraction": 0.19324412492387227,
+        "t90ms": 53.46938775510204
+      },
+      "native": {
+        "rms": 0.00703858853880325,
+        "lowEnergyFraction": 0.2185560059253112,
+        "t90ms": 52.290249433106574
+      }
+    },
+    {
+      "voice": "brush-back",
+      "velocity": 0.3,
+      "take": 3,
+      "python": {
+        "rms": 0.007281131523690689,
+        "lowEnergyFraction": 0.22086018911037408,
+        "t90ms": 52.01814058956916
+      },
+      "native": {
+        "rms": 0.006913808358722007,
+        "lowEnergyFraction": 0.24892327377486267,
+        "t90ms": 52.290249433106574
+      }
+    },
+    {
+      "voice": "brush-back",
+      "velocity": 0.65,
+      "take": 0,
+      "python": {
+        "rms": 0.018618831686033593,
+        "lowEnergyFraction": 0.23108677768863528,
+        "t90ms": 52.471655328798185
+      },
+      "native": {
+        "rms": 0.018724837786227074,
+        "lowEnergyFraction": 0.27496931378614725,
+        "t90ms": 51.74603174603175
+      }
+    },
+    {
+      "voice": "brush-back",
+      "velocity": 0.65,
+      "take": 1,
+      "python": {
+        "rms": 0.018195545200205922,
+        "lowEnergyFraction": 0.24453287803894297,
+        "t90ms": 53.764172335600904
+      },
+      "native": {
+        "rms": 0.01822826974139247,
+        "lowEnergyFraction": 0.25553478441238314,
+        "t90ms": 53.832199546485256
+      }
+    },
+    {
+      "voice": "brush-back",
+      "velocity": 0.65,
+      "take": 2,
+      "python": {
+        "rms": 0.018390522927876955,
+        "lowEnergyFraction": 0.21543612734414627,
+        "t90ms": 54.24036281179138
+      },
+      "native": {
+        "rms": 0.01814702276941514,
+        "lowEnergyFraction": 0.24441436976764355,
+        "t90ms": 54.12698412698413
+      }
+    },
+    {
+      "voice": "brush-back",
+      "velocity": 0.65,
+      "take": 3,
+      "python": {
+        "rms": 0.0187758164644029,
+        "lowEnergyFraction": 0.24642507304322223,
+        "t90ms": 52.63038548752834
+      },
+      "native": {
+        "rms": 0.01785805419810082,
+        "lowEnergyFraction": 0.2764368383899437,
+        "t90ms": 53.51473922902494
+      }
+    },
+    {
+      "voice": "brush-back",
+      "velocity": 1.0,
+      "take": 0,
+      "python": {
+        "rms": 0.03162230094941705,
+        "lowEnergyFraction": 0.24481760041540912,
+        "t90ms": 52.993197278911566
+      },
+      "native": {
+        "rms": 0.03183401338342446,
+        "lowEnergyFraction": 0.28971754331861865,
+        "t90ms": 52.131519274376416
+      }
+    },
+    {
+      "voice": "brush-back",
+      "velocity": 1.0,
+      "take": 1,
+      "python": {
+        "rms": 0.03092142811973342,
+        "lowEnergyFraction": 0.25896637630619024,
+        "t90ms": 54.08163265306122
+      },
+      "native": {
+        "rms": 0.031012861366805027,
+        "lowEnergyFraction": 0.270543942966922,
+        "t90ms": 54.01360544217687
+      }
+    },
+    {
+      "voice": "brush-back",
+      "velocity": 1.0,
+      "take": 2,
+      "python": {
+        "rms": 0.03121852808361839,
+        "lowEnergyFraction": 0.22759191027328182,
+        "t90ms": 54.399092970521544
+      },
+      "native": {
+        "rms": 0.030830873566620506,
+        "lowEnergyFraction": 0.2588492805693973,
+        "t90ms": 54.71655328798186
+      }
+    },
+    {
+      "voice": "brush-back",
+      "velocity": 1.0,
+      "take": 3,
+      "python": {
+        "rms": 0.03188250250528184,
+        "lowEnergyFraction": 0.2607524180968649,
+        "t90ms": 53.17460317460317
+      },
+      "native": {
+        "rms": 0.030369806043198402,
+        "lowEnergyFraction": 0.29159945950800087,
+        "t90ms": 53.74149659863945
+      }
+    },
+    {
+      "voice": "shuffle",
+      "velocity": 0.3,
+      "take": 0,
+      "python": {
+        "rms": 0.006126524691917987,
+        "lowEnergyFraction": 0.21973366923117185,
+        "t90ms": 143.92290249433105
+      },
+      "native": {
+        "rms": 0.0062373655529122315,
+        "lowEnergyFraction": 0.23426068423797425,
+        "t90ms": 143.31065759637187
+      }
+    },
+    {
+      "voice": "shuffle",
+      "velocity": 0.3,
+      "take": 1,
+      "python": {
+        "rms": 0.006228677425738958,
+        "lowEnergyFraction": 0.2192097918140524,
+        "t90ms": 143.1972789115646
+      },
+      "native": {
+        "rms": 0.006541311381714201,
+        "lowEnergyFraction": 0.22521782851851305,
+        "t90ms": 142.83446712018142
+      }
+    },
+    {
+      "voice": "shuffle",
+      "velocity": 0.3,
+      "take": 2,
+      "python": {
+        "rms": 0.006103863818953913,
+        "lowEnergyFraction": 0.2220779507418789,
+        "t90ms": 143.9455782312925
+      },
+      "native": {
+        "rms": 0.0061270492934162495,
+        "lowEnergyFraction": 0.23572481924475616,
+        "t90ms": 143.28798185941042
+      }
+    },
+    {
+      "voice": "shuffle",
+      "velocity": 0.3,
+      "take": 3,
+      "python": {
+        "rms": 0.006222552221192251,
+        "lowEnergyFraction": 0.22276581060909806,
+        "t90ms": 143.8095238095238
+      },
+      "native": {
+        "rms": 0.00620362187735635,
+        "lowEnergyFraction": 0.21368890623430212,
+        "t90ms": 143.03854875283446
+      }
+    },
+    {
+      "voice": "shuffle",
+      "velocity": 0.65,
+      "take": 0,
+      "python": {
+        "rms": 0.015827836718229384,
+        "lowEnergyFraction": 0.2452702692221694,
+        "t90ms": 145.01133786848072
+      },
+      "native": {
+        "rms": 0.016125433464919393,
+        "lowEnergyFraction": 0.2608454210939827,
+        "t90ms": 144.6031746031746
+      }
+    },
+    {
+      "voice": "shuffle",
+      "velocity": 0.65,
+      "take": 1,
+      "python": {
+        "rms": 0.016079793058428316,
+        "lowEnergyFraction": 0.24513060792862462,
+        "t90ms": 144.17233560090702
+      },
+      "native": {
+        "rms": 0.016882677529153383,
+        "lowEnergyFraction": 0.25143779811693034,
+        "t90ms": 143.5374149659864
+      }
+    },
+    {
+      "voice": "shuffle",
+      "velocity": 0.65,
+      "take": 2,
+      "python": {
+        "rms": 0.01576273161410584,
+        "lowEnergyFraction": 0.24712653861002934,
+        "t90ms": 144.4671201814059
+      },
+      "native": {
+        "rms": 0.01582071272877789,
+        "lowEnergyFraction": 0.2619572059843714,
+        "t90ms": 144.19501133786846
+      }
+    },
+    {
+      "voice": "shuffle",
+      "velocity": 0.65,
+      "take": 3,
+      "python": {
+        "rms": 0.016073759900189798,
+        "lowEnergyFraction": 0.24811956184852582,
+        "t90ms": 144.30839002267572
+      },
+      "native": {
+        "rms": 0.01601706438528171,
+        "lowEnergyFraction": 0.23909847503405282,
+        "t90ms": 143.6281179138322
+      }
+    },
+    {
+      "voice": "shuffle",
+      "velocity": 1.0,
+      "take": 0,
+      "python": {
+        "rms": 0.02691416881402825,
+        "lowEnergyFraction": 0.25961852547334,
+        "t90ms": 145.5328798185941
+      },
+      "native": {
+        "rms": 0.027442176835464974,
+        "lowEnergyFraction": 0.2756836561615714,
+        "t90ms": 144.80725623582765
+      }
+    },
+    {
+      "voice": "shuffle",
+      "velocity": 1.0,
+      "take": 1,
+      "python": {
+        "rms": 0.027327211439346587,
+        "lowEnergyFraction": 0.25978892090139355,
+        "t90ms": 144.85260770975057
+      },
+      "native": {
+        "rms": 0.02868976074109759,
+        "lowEnergyFraction": 0.26634481677738714,
+        "t90ms": 144.67120181405895
+      }
+    },
+    {
+      "voice": "shuffle",
+      "velocity": 1.0,
+      "take": 2,
+      "python": {
+        "rms": 0.02679149900499327,
+        "lowEnergyFraction": 0.2611394461732787,
+        "t90ms": 145.19274376417232
+      },
+      "native": {
+        "rms": 0.026900124574302027,
+        "lowEnergyFraction": 0.27655505312246986,
+        "t90ms": 145.10204081632654
+      }
+    },
+    {
+      "voice": "shuffle",
+      "velocity": 1.0,
+      "take": 3,
+      "python": {
+        "rms": 0.02732479466671073,
+        "lowEnergyFraction": 0.26231921441289197,
+        "t90ms": 144.48979591836735
+      },
+      "native": {
+        "rms": 0.027227894853874283,
+        "lowEnergyFraction": 0.2535988669973379,
+        "t90ms": 143.9002267573696
+      }
+    },
+    {
+      "voice": "flap",
+      "velocity": 0.3,
+      "take": 0,
+      "python": {
+        "rms": 0.00851820090799485,
+        "lowEnergyFraction": 0.5693603689015669,
+        "t90ms": 119.59183673469387
+      },
+      "native": {
+        "rms": 0.00855773208848431,
+        "lowEnergyFraction": 0.5623454375746365,
+        "t90ms": 121.04308390022675
+      }
+    },
+    {
+      "voice": "flap",
+      "velocity": 0.3,
+      "take": 1,
+      "python": {
+        "rms": 0.008367576055458296,
+        "lowEnergyFraction": 0.5488025453040989,
+        "t90ms": 120.1360544217687
+      },
+      "native": {
+        "rms": 0.008930719823326577,
+        "lowEnergyFraction": 0.6248360747531315,
+        "t90ms": 120.0
+      }
+    },
+    {
+      "voice": "flap",
+      "velocity": 0.3,
+      "take": 2,
+      "python": {
+        "rms": 0.008416958715434748,
+        "lowEnergyFraction": 0.5708969169061578,
+        "t90ms": 120.86167800453515
+      },
+      "native": {
+        "rms": 0.008503336491534612,
+        "lowEnergyFraction": 0.6022335242086773,
+        "t90ms": 121.49659863945578
+      }
+    },
+    {
+      "voice": "flap",
+      "velocity": 0.3,
+      "take": 3,
+      "python": {
+        "rms": 0.008391268876646268,
+        "lowEnergyFraction": 0.5678827517127754,
+        "t90ms": 120.86167800453515
+      },
+      "native": {
+        "rms": 0.008665213523122063,
+        "lowEnergyFraction": 0.5381354330231128,
+        "t90ms": 120.65759637188208
+      }
+    },
+    {
+      "voice": "flap",
+      "velocity": 0.65,
+      "take": 0,
+      "python": {
+        "rms": 0.022989532174454083,
+        "lowEnergyFraction": 0.5834943565056739,
+        "t90ms": 119.59183673469387
+      },
+      "native": {
+        "rms": 0.023088139494331555,
+        "lowEnergyFraction": 0.5763333665241814,
+        "t90ms": 121.0204081632653
+      }
+    },
+    {
+      "voice": "flap",
+      "velocity": 0.65,
+      "take": 1,
+      "python": {
+        "rms": 0.0225808349101406,
+        "lowEnergyFraction": 0.564071929061773,
+        "t90ms": 120.15873015873015
+      },
+      "native": {
+        "rms": 0.024101290467139803,
+        "lowEnergyFraction": 0.6362121182600131,
+        "t90ms": 120.0
+      }
+    },
+    {
+      "voice": "flap",
+      "velocity": 0.65,
+      "take": 2,
+      "python": {
+        "rms": 0.022770879376819445,
+        "lowEnergyFraction": 0.5857741249630241,
+        "t90ms": 120.86167800453515
+      },
+      "native": {
+        "rms": 0.022922672097706133,
+        "lowEnergyFraction": 0.615901439160033,
+        "t90ms": 121.54195011337868
+      }
+    },
+    {
+      "voice": "flap",
+      "velocity": 0.65,
+      "take": 3,
+      "python": {
+        "rms": 0.022708213233575743,
+        "lowEnergyFraction": 0.584112488724925,
+        "t90ms": 120.86167800453515
+      },
+      "native": {
+        "rms": 0.02337201204204124,
+        "lowEnergyFraction": 0.5522182206357744,
+        "t90ms": 120.52154195011337
+      }
+    },
+    {
+      "voice": "flap",
+      "velocity": 1.0,
+      "take": 0,
+      "python": {
+        "rms": 0.04026945326726912,
+        "lowEnergyFraction": 0.5828826404612498,
+        "t90ms": 119.47845804988661
+      },
+      "native": {
+        "rms": 0.04049612021814736,
+        "lowEnergyFraction": 0.5740316600292353,
+        "t90ms": 120.9750566893424
+      }
+    },
+    {
+      "voice": "flap",
+      "velocity": 1.0,
+      "take": 1,
+      "python": {
+        "rms": 0.03961384614832369,
+        "lowEnergyFraction": 0.5625300870555321,
+        "t90ms": 120.11337868480726
+      },
+      "native": {
+        "rms": 0.042213990247445765,
+        "lowEnergyFraction": 0.6327063853752231,
+        "t90ms": 119.9546485260771
+      }
+    },
+    {
+      "voice": "flap",
+      "velocity": 1.0,
+      "take": 2,
+      "python": {
+        "rms": 0.039984098787560755,
+        "lowEnergyFraction": 0.584343884570179,
+        "t90ms": 120.81632653061224
+      },
+      "native": {
+        "rms": 0.04013435284582309,
+        "lowEnergyFraction": 0.6139329128990356,
+        "t90ms": 121.38321995464852
+      }
+    },
+    {
+      "voice": "flap",
+      "velocity": 1.0,
+      "take": 3,
+      "python": {
+        "rms": 0.0398592466429657,
+        "lowEnergyFraction": 0.5839774994794,
+        "t90ms": 120.83900226757369
+      },
+      "native": {
+        "rms": 0.041010874091130564,
+        "lowEnergyFraction": 0.5494909284151853,
+        "t90ms": 120.2267573696145
+      }
+    }
+  ],
+  "maxRmsRatio": 1.1127632360539734,
+  "minRmsRatio": 0.9495513624807466,
+  "maxLowFractionError": 0.07603352944903263,
+  "maxT90ErrorMs": 2.698412698412696
+}
