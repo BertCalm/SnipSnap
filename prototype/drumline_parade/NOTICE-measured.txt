@@ -1,0 +1,46 @@
+Parade study revision 3: measured acoustic references
+
+Virtuosity Drums, Versilian Studios; drummer Austin McMahon. CC0 1.0.
+https://github.com/sfzinstruments/virtuosity_drums
+Pinned source: 9f04cf9a734527edfbb0a4eee1f674e45bbf71bc.
+Crash: Samples/oh/crash/oh_crash_crash_vl3_rr1.flac (hard),
+sha256 28ac4dc5c130175555ef54009f9186e418a664c544c1f996058b5acd3b85ccb9.
+Soft: Samples/oh/crash/oh_crash_crash_vl1_rr1.flac,
+sha256 3307ad060004db51990b81b80badc0d26c90dae87e7b0f9b9ebcf099224fd823.
+Cymbal synthesis reuses BREAKER's measured modes and stick spectra through
+CALABASH/EMBER's existing Python helpers. See prototype/ember/NOTICE.txt and
+scripts/fit_breaker_cymbals.py. Choke/touch are derived damping gestures, not
+fits to recorded chokes/touches.
+
+Rimshot and cross-stick reference WAVs already live in the repository under
+synth/src/main/resources/spore-station/v7, under the same CC0 source and its
+NOTICE.txt/provenance.json. Hard/soft choices and exact hashes are recorded in
+measured-contacts.json. The new coefficients are fitted by SnipSnap's CALABASH
+fitter: frequencies, two decay slopes, velocity spectral differences and
+residual noise envelopes. No PCM or phases are stored in that fitted file.
+
+VCSL, Versilian Studios LLC. CC0 1.0.
+https://github.com/sgossner/VCSL
+Pinned source: c1ea7bcc3c7309650ab0da9d15c9cd1fbc4a4c7e.
+Stick contact: Membranophones/Struck Membranophones/Snare Drum, Modern 3/
+Snare4_stick_v3_rr1_Mid.wav,
+sha256 ce808a9081f309cca28538b172014e44f8eafe2f944403147446741be76df3bf.
+Alternate take: Snare4_stick_v3_rr2_Mid.wav,
+sha256 e19aa92d557f90405cb14f9a4d1cef469c2196fe6bb23dcf2603c355a16f0ae9.
+The library labels this articulation "stick"; exact free-stick geometry is
+not independently verified. Only one velocity level is available here, so its
+soft-contact spectrum is a proposed contact-width law, not a measured layer.
+
+The audition separately includes CC0 recorded reference clips for comparison,
+trimmed/aligned and level matched. Synthesized pad grids contain fresh modes
+and band noise, not playback of those recordings. The samba rim variants are
+adaptations of the snare fit; they are not measured caixa/repinique recordings.
+No endorsement is implied. All Python results remain audition evidence, not
+native Kotlin, hardware or listening approval.
+
+Held-out comparison controls (not used to fit coefficients):
+Virtuosity crash: Samples/oh/crash/oh_crash_crash_vl3_rr2.flac,
+sha256 a9a13b01c169505ade812614fbd5b929006884ac2fa9fc13be2c72028ba1779f.
+Repository rimshot vl11 and crossstick vl15 from the same v7 bank; these are
+adjacent recorded dynamic hits, not dedicated same-velocity round robins.
+VCSL stick rr2, identified above, is a dedicated alternate take.
