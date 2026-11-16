@@ -1,6 +1,6 @@
 # SIDEROOM: five acoustic drum-kit studies
 
-Status: Python sound prototype R1, awaiting listening. No SnipSnap shelf, native serialization or hardware completion claim. Source inspected at `4ecab4c9f`; isolated implementation starts from `e7ccfef58` on `claude/sideroom-study`.
+Status: R1 rejected by the owner for drum-machine character. R2 recorded acoustic core is the current listening study. No SnipSnap shelf, native serialization or hardware completion claim. Source inspected at `4ecab4c9f`; isolated implementation starts from `e7ccfef58` on `claude/sideroom-study`.
 
 The characteristic gesture is **stick or beater contact → head/metal response → wire or shell after-sound → damping to silence**. Each kit chooses a different physical balance within that gesture.
 
@@ -78,3 +78,16 @@ The private first-listen page is https://sideroom-audition.bertcalm.chatgpt.site
 ## R1 run evidence
 
 On 2026-11-16, the Python renderer and both validation programs exited 0. All 600 PCM performances pass file, dynamics, take-diversity and finite-output checks. Minimum pairwise normalized seven-band spectral distances across the five kits are 0.0442 for kick, 0.0854 for snare and 0.0448 for closed hat. These measurements show numerical differentiation, not perceived authenticity. Rendering the complete bank, fills and grooves took 81.98 seconds in this environment. The simulated player passes kit selection, three banks, velocity selection, cycling, hat choke, spaced phrase comparisons and Stop. Actual browser audio and sampler/device playback have not been verified.
+
+
+## R2: recorded acoustic core
+
+The owner rejected the synthesized source character. R2 replaces the audition with four recorded instruments and two treatments: minimally cleaned source and Open Road. These are candidate sources, not a claimed match to the song recording. The other four kits remain deferred until the core is accepted.
+
+Sources are Virtuosity Drums / Versilian Studios, performed by Austin McMahon, CC0 1.0, pinned at `9f04cf9a734527edfbb0a4eee1f674e45bbf71bc`. Downloaded source bytes are checked against Git blob hashes; provenance includes SHA256 hashes and exact selection URLs. No commercial reference recording is sampled. Kick close mic, snare close mic and overhead hats are used without combining mic positions.
+
+Three dynamic levels × three recorded alternatives × four instruments × two treatments produce 72 WAVs. Kick/hats use source levels 2, 3, 4 and original RR 1–3. Snare uses adjacent original recorded strengths 13–15, 23–25, 32–34 as authored RR groups, not purported same-dynamic source round robins. One fixed gain per instrument preserves the recorded dynamics. Source treatment adds 22 Hz cleanup and endpoint fades; Open Road adds broad low-pass filtering and gentle kick/snare tail attenuation. Treatment matching uses energy over the complete instrument grid, never per-hit normalization. Linear filtering runs at 44.1 kHz; this recording study does not need a nonlinear oversampled synthesizer stage.
+
+Rebuild: `python3 prototype/sideroom/acoustic.py /absolute/output`, then copy `acoustic.html` as `index.html` and `acoustic.js` to the output. Requires numpy, scipy and ffmpeg. The source cache is `/workspace/shared/sideroom-acoustic-cache`. Validate with `check-acoustic.py OUTPUT` and `node prototype/sideroom/check-acoustic-player.mjs OUTPUT`.
+
+Verified: 72 PCM files, ordered dynamics, distinct file hashes, endpoint/peak bounds, ZIP byte equality and complete SFZ velocity/RR regions. Simulated player tests cover pad selection, explicit/cycling takes, velocity, hat choke, treatment position and stop. Browser audio, real SFZ playback and MPC/phone playback remain unverified. No native shelf, save/export, full-family or roll/riser gate is closed by this smaller study. The previous R1 gate table describes historical prototype evidence, not acceptance.
