@@ -90,3 +90,50 @@ the dB each band moves per dB of overall level, and the overall level's spread a
 250 ms, for each of four dynamic levels and for the flutter. These are derived synthesis
 parameters, not recordings or PCM; the engine synthesizes band noise and plays back none of
 them. Fitted by prototype/ember/fit_ember_brushes.py. No endorsement is implied.
+
+
+EMBER Latin percussion, round 2L (Python prototype)
+
+latin.json holds synthesis parameters fitted to recordings from the Versilian
+Community Sample Library (VCSL), https://github.com/sgossner/VCSL
+at commit c1ea7bcc3c7309650ab0da9d15c9cd1fbc4a4c7e, the "Mid" microphone.
+License: CC0 1.0 Universal (credited although not required). The recordings do
+not ship; fit_ember_latin.py reads them decoded to mono 44.1 kHz.
+  Idiophones/Struck Idiophones/Cowbells/Cowbell1_Hit_v4_rr1_Mid.wav
+    sha256 e32a7a646bddfbc63595de9f64e3e435999c932ebadf0fe98759e754096002a0 (cowbell_hard)
+  Idiophones/Struck Idiophones/Cowbells/Cowbell1_Hit_v2_rr1_Mid.wav
+    sha256 6820d8f2abebe1d3e4dba262ad628d833ab04ade72dd2711b0cf4d2a58fa780d (cowbell_soft)
+  Idiophones/Struck Idiophones/Cowbells/Cowbell1_Hit_v3_rr1_Mid.wav
+    sha256 36e9243e18b299bde0ebbb108c65846ddb5d46b35a61655fa18a0327e3390e87 (cowbell_mid)
+  Idiophones/Struck Idiophones/Claves/Claves1_Hit_v3_rr1_Mid.wav
+    sha256 12285f65ed125f4140d1e8a86b2d6a08bf3283b7bf30c10d68290b8e8230a927 (clave_hard)
+  Idiophones/Struck Idiophones/Claves/Claves1_Hit_v1_rr1_Mid.wav
+    sha256 19379cc794b9e50d4dc55200238e27091bedab63b7370eb625490c7a96631b34 (clave_soft)
+  Idiophones/Struck Idiophones/Claves/Claves1_Hit_v2_rr1_Mid.wav
+    sha256 bcabe27330761309eb4b4f6207e6e3b4be59815df86449ac05bfb9b81f19efc9 (clave_mid)
+  Membranophones/Struck Membranophones/Bongos/BongoH_Hit1_v3_rr1_Mid.wav
+    sha256 e93ed5c0fbafc3f122ced7c56c3f08021d8616e96c81c42aa62c5f368111d001 (bongo_high_hard)
+  Membranophones/Struck Membranophones/Bongos/BongoH_Hit1_v3_rr2_Mid.wav
+    sha256 e0c143a2d32aca5430ffe2254c699b772ecfeaf6eef9d4c414365b538f693916 (bongo_high_hard2)
+  Membranophones/Struck Membranophones/Bongos/BongoH_Hit1_v1_rr2_Mid.wav
+    sha256 4905c0cee5db34c8edfc49aa51d93f4a7d2a823190eaa12d2500515639a42cf3 (bongo_high_soft)
+  Membranophones/Struck Membranophones/Bongos/BongoL_Hit1_v3_rr1_Mid.wav
+    sha256 07986a1bc54b31dafd9c7dc250e42a613977b320b33b2e4652d21332064de4eb (bongo_low_hard)
+  Membranophones/Struck Membranophones/Bongos/BongoL_Hit1_v3_rr2_Mid.wav
+    sha256 da93f8eba020d57ec57c27505f4132c346900aee6a5f76e9754d01c93658a226 (bongo_low_hard2)
+  Membranophones/Struck Membranophones/Bongos/BongoL_Hit1_v1_rr1_Mid.wav
+    sha256 746f5c4d37cf956c083f0c98b74dd7b6f7daeda6405d7b1534bbc56f1b741e4a (bongo_low_soft)
+  Idiophones/Struck Idiophones/Guiro/Guiro_Med_rr1_Mid.wav
+    sha256 b32a7fd5b8a9971ebe85313df3e7be72134c2c1eaf243d21a28dc48b77deb44c (guiro_med)
+  Idiophones/Struck Idiophones/Guiro/Guiro_Slow_rr2_Mid.wav
+    sha256 4097a3437503d6a98fa7f0c1070bcc6a0516b834eaa8a999a1f745428544680d (guiro_slow)
+  Idiophones/Struck Idiophones/Guiro/Guiro_Fast_rr1_Mid.wav
+    sha256 fb601ba7bf1decb62c6cbe38f4f74807e4067dcdcc967e028bd0ec75053c2c28 (guiro_fast)
+  Idiophones/Struck Idiophones/Guiro/Guiro_Hit_rr1_Mid.wav
+    sha256 e7d4bf1c28521e3410d710688a576f2fe5f6c5339e754417ae3c1a46a386cf42 (guiro_hit)
+  Idiophones/Struck Idiophones/Guiro/Guiro_Hit_rr2_Mid.wav
+    sha256 499ccec0034748c4c7995133be0c9960787ec8f604c8aa98cd4edd28515af7d8 (guiro_hit2)
+  Idiophones/Struck Idiophones/Shaker, Large/LShaker_Hit_rr1_Mid.wav
+    sha256 0d3d62742a6c01ec8b8812faee945eaa2e75bfe02f83df3cc622ba7f00213ddf (shaker_hard)
+  Idiophones/Struck Idiophones/Shaker, Large/LShaker_Hit_rr2_Mid.wav
+    sha256 cb8491cc4bf7ac760109d45de445a7a21fd70217575f503e2ce4873bcd4cf1f9 (shaker_hard2)

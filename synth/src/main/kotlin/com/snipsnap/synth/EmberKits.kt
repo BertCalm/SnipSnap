@@ -8,15 +8,19 @@ import kotlin.math.max
 import kotlin.math.sqrt
 
 /**
- * The EMBER kits: the club kit and three genre kits from one night in 1962, sixteen pads each, generated pad for pad
+ * The EMBER kits: the club kit and four genre kits from one night in 1962, sixteen pads each, generated pad for pad
  * from `prototype/ember/kits.py`. EMBER round 2 (docs/EMBER.md). The owner approved the voices' sound on 2026-11-15
- * ("I've heard the sound and approve", round 1b); the kits are the four the owner heard in Python at round 0e.
+ * ("I've heard the sound and approve", round 1b), and all five kits from the app's MPC 3 export, the Latin jazz kit and its
+ * new voices included, on 2026-11-16 ("All sound great"). The Latin kit joined at round 3L.
  *
  * - [Kit.CLUB], 138 BPM: hard bop on sticks. An open kick feathered under the band, a high crisp snare, the riveted
  *   ride carrying the time, the hat foot on 2 and 4.
  * - [Kit.AFTER_HOURS], 66 BPM: a ballad on brushes. Slow sweeps, taps on 2 and 4, a far sizzle, two people snapping.
  * - [Kit.SOUL], 104 BPM: the organ-trio set. A fat loose backbeat, tambourine and claps, congas, the chain warmer.
  * - [Kit.FREE], 80 BPM: the late set. Mallets on toms tuned wide, a bowed cymbal, snares off, an elbow in the floor tom.
+ * - [Kit.LATIN], 118 BPM: a cha-cha-cha in the small club (round 3L, the owner's ask, made to differ from CALABASH's
+ *   Afro-Cuban jazz). The jazz drummer plays Latin on the kit while one percussionist adds the guiro, which leads, a
+ *   cha-cha bell, timbales, bongos, a conga and a shaker: the round-3L voices.
  *
  * Each pad is a grid of three velocity zones of four takes, rendered by the engine ([Ember] takes a velocity and a
  * take): a softer zone is a softer stroke (the stick's contact, the wires, the swell's arc), and a take is another
@@ -28,7 +32,8 @@ import kotlin.math.sqrt
  *
  * The pads keep the kits' own layout, not AutoPlace's: the approved kits put the roll or riser on A15/A16 (the
  * percussion gate) and the brushes where a brush player reaches. Hats choke as one hi-hat: each kit's pads on the
- * same hi-hat share a mute group (`CHOKES` in kits.py, made mutual as MPC mute groups are).
+ * same hi-hat share a mute group (`CHOKES` in kits.py, made mutual as MPC mute groups are), and so do the Latin kit's
+ * two guiro pads (group 2): one guiro, so a new stroke stops the last.
  */
 object EmberKits {
     /** Bump when a pad's audio changes; saved kits carry the version they were printed with. */
@@ -39,6 +44,7 @@ object EmberKits {
         AFTER_HOURS("ember-after-hours", "EMBER After Hours", 66),
         SOUL("ember-soul-jazz", "EMBER Soul Jazz", 104),
         FREE("ember-free", "EMBER Free", 80),
+        LATIN("ember-latin-jazz", "EMBER Latin Jazz", 118),
     }
 
     val velocities = listOf(.35f, .65f, 1f)
@@ -49,23 +55,28 @@ object EmberKits {
     /** The span over which a struck pad's takes are matched in loudness: where a hit's loudness lives. "shape" */
     const val LEVEL_WINDOW_S = .15f
     /** The moving voices, matched over the whole render: their first 150 ms is a soft start, not their level. */
-    val WHOLE = setOf(EmberVoice.BRUSH_SWEEP, EmberVoice.PRESS_ROLL, EmberVoice.BRUSH_ROLL, EmberVoice.CYMBAL_SWELL, EmberVoice.BOWED_CYMBAL)
+    val WHOLE = setOf(EmberVoice.BRUSH_SWEEP, EmberVoice.PRESS_ROLL, EmberVoice.BRUSH_ROLL, EmberVoice.CYMBAL_SWELL, EmberVoice.BOWED_CYMBAL, EmberVoice.GUIRO)
 
     /** One pad: its name, the voice, and the voice's settings. Its kit role is the voice's own class. */
     class Pad(val name: String, val voice: EmberVoice, val macros: Map<String, Float>)
 
-    /** The pads on one hi-hat choke one another (kits.py `CHOKES`): 1 for the kit's hat, 0 for everything else. */
-    fun muteGroup(kit: Kit, role: Int): Int = if (role in hats.getValue(kit)) 1 else 0
+    /** The pads on one hi-hat choke one another (kits.py `CHOKES`): 1 for the kit's hat, 2 for the Latin kit's one guiro, 0 for everything else. */
+    fun muteGroup(kit: Kit, role: Int): Int = when {
+        role in hats.getValue(kit) -> 1
+        kit == Kit.LATIN && role in setOf(5, 6) -> 2    // A06 guiro long, A07 guiro short: a new stroke stops the last
+        else -> 0
+    }
 
     private val hats = mapOf(
         Kit.CLUB to setOf(2, 3, 10),        // A03 foot, A04 open, A11 stick on the closed hat
         Kit.AFTER_HOURS to setOf(2, 12),    // A03 foot, A13 open
         Kit.SOUL to setOf(2, 3, 6),         // A03 tight, A04 open, A07 foot
         Kit.FREE to setOf(11, 12),          // A12 loose hats, A13 foot
+        Kit.LATIN to setOf(2, 3),           // A03 foot, A04 open
     )
 
     fun pads(kit: Kit): List<Pad> = when (kit) {
-        Kit.CLUB -> clubPads; Kit.AFTER_HOURS -> afterHoursPads; Kit.SOUL -> soulPads; Kit.FREE -> freePads
+        Kit.CLUB -> clubPads; Kit.AFTER_HOURS -> afterHoursPads; Kit.SOUL -> soulPads; Kit.FREE -> freePads; Kit.LATIN -> latinPads
     }
 
     /** Every pad of [kit]. The pads render in parallel: one strike is 0.1 to 1.2 s of engine. */
@@ -208,5 +219,24 @@ object EmberKits {
         Pad("One Snapping", EmberVoice.SNAPS, mapOf("CROWD" to 0.0f, "TUNE" to 0.6f, "DISTANCE" to 0.35f, "WARMTH" to 0.25f)),
         Pad("Swell", EmberVoice.CYMBAL_SWELL, mapOf("SPEED" to 0.8f, "TUNE" to 0.3f, "DISTANCE" to 0.55f, "WARMTH" to 0.25f)),
         Pad("Floor Tom, Snares On", EmberVoice.TOM_FLOOR, mapOf("TUNE" to 0.2f, "DAMP" to 0.0f, "BUZZ" to 1.0f, "DISTANCE" to 0.5f, "WARMTH" to 0.25f)),
+    )
+
+    private val latinPads = listOf(
+        Pad("Kick", EmberVoice.KICK, mapOf("TUNE" to 0.55f, "DAMP" to 0.45f, "BUZZ" to 0.25f)),
+        Pad("Rim Clave", EmberVoice.CROSS_STICK, mapOf("TUNE" to 0.55f, "DAMP" to 0.4f)),
+        Pad("Hat Foot", EmberVoice.HAT_FOOT, mapOf("TUNE" to 0.55f)),
+        Pad("Hat Open", EmberVoice.HAT_OPEN, mapOf("TUNE" to 0.55f, "DAMP" to 0.45f)),
+        Pad("Cha-cha Bell", EmberVoice.COWBELL, mapOf("TUNE" to 0.7f, "DAMP" to 0.5f)),
+        Pad("Guiro Long", EmberVoice.GUIRO, mapOf("SPEED" to 0.25f)),
+        Pad("Guiro Short", EmberVoice.GUIRO, mapOf("SPEED" to 0.95f)),
+        Pad("Timbale Macho", EmberVoice.TIMBALE, mapOf("TUNE" to 0.7f)),
+        Pad("Timbale Hembra", EmberVoice.TIMBALE, mapOf("TUNE" to 0.3f)),
+        Pad("Cascara", EmberVoice.PAILA, emptyMap()),
+        Pad("Bongo Macho", EmberVoice.BONGO_HIGH, emptyMap()),
+        Pad("Bongo Hembra", EmberVoice.BONGO_LOW, emptyMap()),
+        Pad("Conga", EmberVoice.CONGA, mapOf("TUNE" to 0.5f, "SLAP" to 0.15f)),
+        Pad("Shaker", EmberVoice.SHAKER, emptyMap()),
+        Pad("Clave", EmberVoice.CLAVE, emptyMap()),
+        Pad("Cymbal Swell", EmberVoice.CYMBAL_SWELL, mapOf("SPEED" to 0.6f, "TUNE" to 0.55f)),
     )
 }
