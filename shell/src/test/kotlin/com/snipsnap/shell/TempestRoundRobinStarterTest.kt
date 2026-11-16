@@ -113,8 +113,17 @@ class TempestRoundRobinStarterTest {
             }
 
             // MPC 2 has no Slice Motion: each pad is windowed to its first take, the accepted hit.
-            // No velocity layers exist here, so the velocity-and-round-robin note does not apply.
+            // No velocity layers exist here, so the velocity-and-round-robin sentence does not apply;
+            // the export screen says instead, before anything is written, that every pad keeps one take.
             assertTrue(Mpc2Limits.gridPads(saved).isEmpty())
+            assertEquals(saved.pads, Mpc2Limits.firstTakePads(saved))
+            for (format in listOf(ExportFormat.PROGRAM_FOLDER, ExportFormat.EXPANSION, ExportFormat.XPN)) {
+                assertEquals(
+                    "MPC 2 has no Slice Motion to deal a pad's takes: 16 pads keep their first take only. MPC 3 native deals every take.",
+                    assertNotNull(ExportWizardModel(saved, dir).apply { setFormat(format) }.formatNote, "$format").message,
+                )
+            }
+            assertNull(ExportWizardModel(saved, dir).apply { setFormat(ExportFormat.MPC3_TRACK) }.formatNote, "MPC 3 native deals every take")
             val folder = Exporters.export(ExportFormat.PROGRAM_FOLDER, saved, dir, root.resolve("mpc2"))
             assertFalse(ExportReadBack.verify(saved, folder).blocked())
             val xpm = folder.primary.let { if (it.isDirectory) it.walk().first { f -> f.name.endsWith(".xpm") } else it }.readText()
