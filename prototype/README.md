@@ -122,4 +122,5 @@ the shekere, talking drums, sabar family and timbales physical, and four sixteen
 grooves, the strokes, every voice and every control, and writes the listening page. `export_fixed.py` writes the
 three draws the Kotlin port takes from the prototype (the room's noise, the cymbals' pairs, the crowd);
 `compare_kotlin.py KOTLIN_DIR` measures the port (`./gradlew :synth:generateCalabashAudition`) against these renders
-pad by pad. Needs numpy, scipy and ffmpeg. See [`../docs/CALABASH.md`](../docs/CALABASH.md).
+pad by pad. `shelf_grooves.py` puts the kits on the shelf (`:shell:generateCalabashKits`) on the page beside the
+approved grooves. Needs numpy, scipy and ffmpeg. See [`../docs/CALABASH.md`](../docs/CALABASH.md).

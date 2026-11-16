@@ -196,6 +196,13 @@ internal class SongKeeper(
         edit(if (now) Copy.SONG_PULL_UP_ON else Copy.SONG_PULL_UP_OFF, k.withPullUp(selected, now) ?: return)
     }
 
+    /** The selected section's own last bar kept to the kick (or the bed), on or off. It turns off the pull-up into the next section: both would rewrite that boundary. */
+    fun toggleDrop() {
+        val k = kept ?: return
+        val now = !(k.sections.getOrNull(selected)?.drop ?: return)
+        edit(if (now) Copy.SONG_DROP_ON else Copy.SONG_DROP_OFF, k.withDrop(selected, now) ?: return)
+    }
+
     fun toggleLock() {
         val k = kept ?: return
         val now = !(k.sections.getOrNull(selected)?.locked ?: return)

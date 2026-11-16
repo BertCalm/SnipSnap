@@ -308,15 +308,15 @@ Back labels that do not come from `backChip`:
 | `EXPANSION`, `XPN` | An MPC expansion pack and its single-file form (`Personality.kt:644,716`). |
 | `KEYGROUP`, `DRUM` | MPC program types shown by inspect file (`XRayScreen.kt:137`). |
 | `ONE-SHOT`, `CHOKE GRP` | Pad play modes (`PadSheetScreen.kt:3511,3515`). `CHOKE GRP` is proposed `CHOKE GROUP` in B. |
-| `PERFORMANCE` | The kit's live effect mix group (`KitScreen.kt:925`). |
-| `THIS KIT` | The kit-wide tools group (`KitScreen.kt:956`). |
+| `PERFORMANCE` | The kit's live effect mix group, inside `KIT TOOLS` since 2026-11-15. |
+| `KIT TOOLS` | PADS' one closed group under the grid for everything that changes the whole kit: the `VELOCITY STRIP` settings, `PERFORMANCE` and the tools `THIS KIT` held (`Places.KIT_TOOLS`; was `THIS KIT`, renamed in the owner's UX pass, 2026-11-15, `docs/UX_PASS_2026_11.md`). |
 | `KEY`, `IN KEY` | The kit's musical key, and retuning tonal pads to it (`Places.kt:201`, `PadSheet.kt:189`). |
 | `ROUND ROBIN` | Alternate hits so repeats vary (`PadSheetScreen.kt:1765`). |
 | `PLAY`, `STOP`, `BPM`, `SWING`, `TEMPO`, `BAR`, `STEPS` | Transport and timing words (`GrooveScreen.kt:223`, `Places.kt:63`). |
 | `INSTANT KIT`, `USE THIS PART ▸`, `IN`, `OUT` (marks) | Deck actions: one-tap chop, take the selection to CHOP, the selection's start and end (`Personality.kt:468`). |
 | `BY HITS`, `GRID`, `AUTO`, `MERGE`, `RE-CHOP` | Chop controls (`ChopScreen.kt:1486,1487,1506,1310,926`). |
 | `START YOURS`, `EDIT STEPS`, `CHART`, `SHARE`, `MIDI EXPORT` | Beat controls (`GrooveScreen.kt:1957,2155,1414,1359`; `Places.kt:74`). |
-| `+ SECTION`, `LOCK`, `UNLOCK`, `REROLL ⚄`, `PLAY`, `STOP`, `LOOP ON/OFF`, `BASS ON/OFF`, `PULL-UP` | Song controls (`Personality.kt:1672-1735`). |
+| `+ SECTION`, `LOCK`, `UNLOCK`, `REROLL ⚄`, `PLAY`, `STOP`, `LOOP ON/OFF`, `BASS ON/OFF`, `PULL-UP`, `DROP ON/OFF` | Song controls (`Personality.kt:1672-1735`). |
 | `VOICE`, `PRESETS`, `PLAYING`, `USE THIS SOUND` | SYNTH section headings (`Personality.kt:666-672`). |
 | `START HERE`, `BASS`, `KEYS AND CHORDS`, `PLUCKS AND STRINGS`, `BREATH AND REEDS`, `VOICES`, `METAL WOOD AND GLASS`, `SKINS`, `MOVING AND STRANGE` | Starter list headings (`Personality.kt:674-682`). |
 | `SEND TO PAD`, `SAVE AS PRESET`, `FORGET` | Synth send, preset save and delete (`SnapScreen.kt:1054`, `SynthScreen.kt:4879`, `Personality.kt:635`). |
@@ -324,7 +324,7 @@ Back labels that do not come from `backChip`:
 | `HELP` section keys `SHELF`, `TAPE`, `PROJECT`, `MAKE`, `THE DOCK` | `Places.kt:234-265`. They follow the place names. |
 | `DECK`-side tools `READ AS GROOVE`, `COPY GROOVE`, `FIND BREAK` | See B and F, call 11. |
 | `STRIP`, `SIDE`, `RELEASE`, `LEVEL` | STRIKE STRIP captions (`Personality.kt:165-168`). Follow the strip rename. |
-| `VELOCITY STRIP` (section heading), `STRIP ON`, `STRIP OFF` | PADS' collapsible group box that holds the four strip buttons and starts closed; closed, it reads whether the strip is on (`StrikeStripSection.kt`, UI clarity 7d). Its buttons are `STRIP`/`SIDE`/`RELEASE`/`LEVEL` above. ruling 12. |
+| `VELOCITY STRIP` (section heading), `STRIP ON`, `STRIP OFF` | PADS' collapsible group box, inside `KIT TOOLS` since 2026-11-15, that holds the four strip buttons and starts closed; closed, it reads whether the strip is on (`StrikeStripSection.kt`, UI clarity 7d). Its buttons are `STRIP`/`SIDE`/`RELEASE`/`LEVEL` above. ruling 12. |
 | `ARM A CORNER`, `LATCH`, `TARGET`, `SHAPE` | SURFACE controls (`SurfaceScreen.kt:1557,1369,129,129`). Described on screen. |
 | `MIC`, `APP AUDIO` | Capture sources (`Places.kt:83,87`). |
 | `SOLO`, `DEL`, `CLEAR`, `ARP`, `THE SET`, `SECTIONS` | ORBIT ring and set controls (`OrbitScreen.kt:1423,1463,1466,2010,2020,2029`). |

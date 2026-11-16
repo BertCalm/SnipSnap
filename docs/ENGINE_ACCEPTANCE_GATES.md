@@ -180,7 +180,7 @@ A kit family of three 1980s gated drum kits: Stone Room, Machine Pop and Electro
 
 - **Melodic, keygroup and chord-tool gates:** not applicable. These are drum kits.
 - **Articulation:** finite hits, with no HOLD. Each kit has an authored fill on A15 and an accelerating build on A16. The build is the roll and riser for this family.
-- **Drum shelf: pass in software, not heard.** Three authored 16-pad kits are on the shelf under SKINS. They differ in source drums, tunings, pad roles (six, four and three toms), tempo and the mechanism that makes the space, not only in effect strength. `GatecrashTest` checks each of those differences. The owner chose the three genres on 2026-11-10.
+- **Drum shelf: pass in software; the three kits heard 2026-11-15.** Three authored 16-pad kits are on the shelf under SKINS. They differ in source drums, tunings, pad roles (six, four and three toms), tempo and the mechanism that makes the space, not only in effect strength. `GatecrashTest` checks each of those differences. The owner chose the three genres on 2026-11-10.
 - **Velocity and round robin:**
   - **Rendering: verified.** Three zones of four takes per pad. The closest pair of takes is the stone kick's at the soft zone (41 dB apart), which is weak. All 42 hits measure duller at the soft zone, and the toms at least 1.5 dB drier for their level, so a zone is not a volume change. Every take differs from the others in its zone. SKIN's kick, snare and toms are fresh strikes. THUMP, ONSET and SKIN's hats and shaker cannot be re-struck from outside, so their takes are small control moves on the same noise. That is weaker than a re-strike and is disclosed.
   - **Saving: verified.** A saved kit reloads equal, and all 576 saved slices match their renders (`:shell:generateGatecrashKits`, `GatecrashKitTest`).
@@ -275,6 +275,26 @@ Rounds 0 and 0b are Python prototype auditions; no Kotlin exists. Round 0b answe
 - **Presets and the roster: pass (round 4).** `ScuffPresets` files the two accepted kits' twenty-eight hits as the factory bank (every voice at least twice, named after the kit), served by `Presets`; SCUFF is off `PatchTypes.ROSTERLESS`. Each preset is a pad the owner heard, through the engine's own finish (`ScuffPresetsTest` holds the shape to the kit's pad above .995 correlation). A player's saved SCUFF strike promotes with its velocity, take and model through `ScuffPatch.fromJsonText`.
 - **Classifier:** the Kotlin kick reads PERC (its click and knock lift the 93 ms centroid past the sub-kick rule) and the crushed hat reads SNARE; `drumClassFor` files them KICK and HAT_CLOSED. Disclosed in [SCUFF](SCUFF.md), held by `ScuffTest`.
 - **Overall: incomplete, every software gate in place and the sound heard.** Round 3 has the engine, the patch, two distinct kits on the shelf with their risers, and velocity and round robin proved through rendering, saving, playback and MPC 3 export in software; the owner accepted the engine and both kits by ear on 2026-11-13, round 4 filed those kits as the roster, and round 5 put the engine on the app's SYNTH picker with an on-device test (run by CI's emulator, not heard or seen by the owner). Hardware playback remains open; MPC 2 round robin is not applicable (the owner's format-limit decision of 2026-11-14, above); BOOM's octave spacing is settled by the owner's decision of 2026-11-15 to keep the kits' bass pads as heard, a fifth and a bit apart.
+
+## HICCUP (2026-11-14; round 1 engine, round 2 kits, round 3 presets, docs and picker, round 4 roster; kits heard 2026-11-15)
+
+A glitch drum engine: a clean hit is written into a memory and a seeded fault script re-reads it (snag, ratchet, buzz, cut), each re-read coarser than the last. Spec: `docs/superpowers/specs/2026-11-14-hiccup-glitch-drum-engine-design.md`, with its "As built" section.
+
+- **Melodic, keygroup and chord-tool gates:** not applicable. A drum engine.
+- **Articulation:** finite hits, no HOLD.
+- **Rendering: verified in Kotlin by test (round 1).** `HiccupTest`: deterministic, finite, DC under 0.005, the FAULT 0 plus CRUSH 0 identity bit for bit, FAULT only adds events, takes keep the slot set, every macro changes the render, CRUSH matters more at FAULT 1 (by relative RMS), repeat count rises with CHOP. Heard as part of the 2026-11-15 listen below.
+- **Classifier: partial, disclosed.** `HiccupTest` asserts every drum voice files as its own class dry, KICK, SNARE, CLAP and TOM at FAULT 0 with the default TOY and CRUSH, and both hats at FAULT 0 and CRUSH 0. At the default CRUSH the hats file SNARE, and at the default FAULT KICK and TOM file PERC; kits assign class by voice, not by the classifier. The table is in the spec.
+- **Percussion (roll and riser): pass in software; each kit's roll and riser heard 2026-11-15.** Each kit's A15 is a one-bar snare roll (FAULT stepping up, eighths to thirty-seconds) and A16 a one-bar riser (CHOP rising from .15 to 1, TUNE up .20); `HiccupKitsTest`.
+- **Drum shelf: pass in software; the kits were heard 2026-11-15.** HICCUP HOP (98 BPM), HICCUP LAB (150) and HICCUP SUGAR (160) are on the shelf under SKINS, sixteen pads each. `HiccupKitsTest` holds every pair of kits to at least 12 differing pads and no shared kick or snare; `HiccupKitTest` holds each kit on the shelf once at its authored tempo.
+- **Velocity and round robin:**
+  - **Rendering: verified in Kotlin by test.** `HiccupTest` and `HiccupKitsTest`: a soft hit differs from a hard one after peak normalization, and every zone holds four different strikes.
+  - **Saving: verified in software.** A HICCUP patch saves velocity, take and model and replays byte for byte through JSON (`DeterminismTest`). Kits reload equal (`HiccupKitTest`, `:shell:generateHiccupKits`).
+  - **Playback: verified in software.** `PadHit.resolve` picks the zone by velocity and deals the four takes in order, then repeats (`HiccupKitTest`). Approved on hardware (2026-11-15, below). The soft and medium zones were heard on 2026-11-15, first take of each zone, at the same peak level as saved; their second to fourth takes were not.
+  - **Export: MPC 3 verified by read-back in software** (`HiccupKitTest`, the generator). **MPC 2: not applicable** ([format limit](#mpc-2-and-round-robin-owner-decision-2026-11-14)): it keeps one take per zone. Approved on hardware (2026-11-15, below).
+- **Hardware: approved by the owner (2026-11-15).** On 2026-11-15, told that hardware playback on a phone and an MPC was the remaining HICCUP gate, the owner said: "Hardware is good". This is the owner's report, not a capture. MPC 2 still keeps one take per zone (the format limit above).
+- **Sound character: pass for the engine, the three kits and the 21 presets as heard.** On 2026-11-15 the owner listened to an audition page of the Kotlin engine (`Hiccup.MODEL_VERSION` 2, `HiccupKits.VERSION` 2): a four-bar groove from each of the three starter kits (HICCUP HOP, LAB, SUGAR), every hit pad A01 to A14 of each kit at the hardest velocity zone, each kit's roll and riser, and the four round-robin takes of SUGAR's Pop Snare. The owner's verdict, verbatim: "sounds check passes". The same day the owner listened to a second audition page of the Kotlin engine (`Hiccup.MODEL_VERSION` 2, `HiccupKits.VERSION` 2): all 21 factory presets, each played twice at velocity 1, take 0 (the picker's render), and, for each of the three kits (HICCUP HOP, LAB, SUGAR), every hit pad A01 to A14 struck soft, medium and hard (velocities .30, .65, 1), the first take of each zone. The three zones were played at the same peak level, as they are saved, so the listen judged the change in the drum, not loudness. The owner's verdict, verbatim: "Everything sounds good". This is a listen to pages, not to a phone or an MPC. Neither listen covered the second to fourth takes of the soft and medium zones (only SUGAR's Pop Snare takes at the hardest zone were heard), or any hardware (phone or MPC). Preserve model version 2 and kit version 2 as the baseline the listens covered.
+- **Presets, docs page, catalog and app picker: done (round 4 roster), presets heard 2026-11-15.** `HiccupPresets` holds twenty-one presets (every voice at least twice, take 0, velocity 1), filed in the factory bank through `Presets` and off `PatchTypes.PROTOTYPES`, as SCUFF's were after its listen; `HiccupPresetsTest` holds them finite, bounded, non-silent, deterministic, distinct and named without a maker's name. A saved HICCUP strike promotes with its velocity, take and model through `HiccupPatch.fromJsonText` (`UserPresetsTest`). [HICCUP](HICCUP.md) is the docs page. `EngineCatalog` files HICCUP under DRUMS and it is on SYNTH's picker, with a test in `NewEngineSynthScreenTest`: the `emulator-tests` job on PR #1143 ran the on-device suite, which contains `NewEngineSynthScreenTest.hiccupOpensItsSnareAtItsDefaultsAndKeepsAnEditAndItsModel`, and it passed in CI's emulator job on 2026-11-15.
+- **Overall: incomplete.** Every software gate is in place, and the engine, the three kits and the 21 presets were heard and passed on 2026-11-15; the presets are in the factory bank and the picker's on-device test passed in CI's emulator job. Hardware playback on a phone and an MPC was approved by the owner on 2026-11-15 (the owner's report, not a capture). Still open, and the only reason this stays incomplete: the round-robin takes no listen covered: the second to fourth takes of the soft and medium zones, and at the hardest zone every pad's but SUGAR's Pop Snare. MPC 2 keeps one take per zone as a stated format limit.
 
 ## MIRRORBALL kits (sound approved 2026-11-12, hardware open)
 
@@ -803,7 +823,7 @@ rivet) that only move above a strike threshold. See [CLUTTER](CLUTTER.md).
 TERRA is a world-percussion drum engine with 13 voices. Four are spec voices, frozen to `LegacyTerraBank`. Nine are newer voices built from the owner's listening rounds of 6–8 Nov.
 - On 2026-11-14 the owner chose to promote it from its factory exemption to a finished engine.
 - See [the promotion note](TERRA_PROMOTION.md), [TERRA BOX](TERRA_BOX.md) and [TERRA HANDS](TERRA_HANDS.md).
-- Its one kit, `TerraKits.classic()`, was kept in full by the owner in round `terra-kit-1` (2026-11-14; E1 and E2 KEEP, "Full kit" over the picks-only version) and is now the `terra` starter.
+- Its classic kit, `TerraKits.classic()`, was kept in full by the owner in round `terra-kit-1` (2026-11-14; E1 and E2 KEEP, "Full kit" over the picks-only version) and is now the `terra` starter.
 
 | Gate | Status | Evidence |
 |---|---|---|
@@ -811,16 +831,17 @@ TERRA is a world-percussion drum engine with 13 voices. Four are spec voices, fr
 | Articulation: HOLD, STRUM | Not applicable | Finite hits, no strings. |
 | Percussion: authored roll or riser | Not yet verified | No roll or riser is authored. |
 | Drums: premade kit | Pass | The classic 16-pad kit, owner KEEP in full (`terra-kit-1`, 2026-11-14), on the shelf as `terra`. `TerraKitsTest` pins all 16 pads and their softer strikes. |
-| Drums: multiple distinct genre kits on the shelf | Fail | One kit. Genre kits come after presets and the picker. |
+| Drums: multiple distinct genre kits on the shelf | Pass in software | Four kits: the classic kit and TERRA SAHEL, MAQAM and PUNJAB, all owner KEEP (`terra-kit-1`; `terra-presets-1`, X1–X3 and Y1–Y3). `TerraGenreKitsTest`: no recipe shared between any two kits or with the classic kit, so no shared kick or snare; balafon keys within 15 cents of their names; every pad pinned; MPC 3 and MPC 2 read-back. |
 | Velocity: rendering | Pass in software | Every TERRA voice strikes at the velocity: a softer hit is a different strike, not a quieter copy ([STRIKE_VELOCITY](STRIKE_VELOCITY.md), `StrikeVelocityTest`). The classic kit's pads carry two softer strikes each. The owner has never heard soft and medium hits clearly ("Can't tell" twice, [TERRA HANDS](TERRA_HANDS.md)). |
 | Velocity: saving, playback, export | Pass in software | The `terra` starter saves each pad's two softer strikes as velocity zones under the hard one, and they survive `KitStore` and MPC 3/MPC 2 export read-back (`TerraStarterTest`, `TerraKitsTest`). Not heard on a phone or MPC. |
 | Round robin | Not yet verified | TERRA can re-strike (`Restrike.canRestrike`, POS moved per take), but no shelf pad deals takes. |
 | Starter kit: saving and export | Pass in software | The `terra` starter: every pad regenerates from its saved recipe, the kit reloads from `KitStore`, and MPC 3 and MPC 2 exports read back clean (`TerraStarterTest`, `TerraKitsTest`). |
-| Presets and picker | Fail | No `TerraPresets.kt` and no SYNTH picker entry. |
+| Presets | Pass in software | `TerraPresets`: 48 presets, four on each of the twelve playing voices, all owner KEEP: W1–W10 in `terra-presets-1` and BAYAN's and TUN's reworked sets (Z2, Z4) in `terra-presets-2`, both 2026-11-15. `TerraPresetsTest` pins all 48 renders; Z2 and Z4 rebuild byte-identical to the desk. Not heard on a phone or MPC. |
+| Picker | Not yet verified on a device | TERRA is in the SYNTH picker and `EngineCatalog` (DRUMS), after CLUTTER and before CAIRN, with the twelve playing voices and their presets. `NewEngineSynthScreenTest` recalls the kept Djembe Open; the app side is compiled by CI only and has not run on a device. |
 | Hardware playback | Not verified | No phone or MPC run is recorded. |
 
 - **Sound character: the whole classic kit is owner KEEP, as the app renders it** (`terra-kit-1`). The nine newer voices were first picked as Python prototype clips. The six spec pads (A01, A04, A13–A16) were kept as part of the full kit, over a picks-only alternative.
-- **Overall: incomplete.** The kit verdict and the starter are done. Next come presets and the picker, then genre kits, then round robin and touch.
+- **Overall: incomplete.** The kit verdict, the starter, the three genre kits and all 48 presets are owner KEEP and pass in software. The picker is not yet verified on a device; round robin and touch come after.
 
 ## SPORE synthetic kits (2026-11-14)
 
@@ -851,7 +872,8 @@ the shelf as FRESH TAPE starters.
   - **Rendering: verified in Kotlin by test (round 1).** `EmberTest` holds that every one of the 27 voices' soft
     and hard hits differ in shape at matched level (at least 1.8 dB), that its four takes are distinct strikes (at
     least 1 dB), and that every take replays byte for byte (through JSON in `DeterminismTest`). Measured in Kotlin:
-    soft against hard at least 2.12 dB, the closest two takes 1.57 dB apart. (Python, on the four kits' 64 pads:
+    soft against hard at least 2.12 dB at round 1, the closest two takes 1.57 dB apart; since round 2b (the bow
+    lowered) the moving voices are measured over their whole render, where the bow is 3.1 dB. (Python, on the four kits' 64 pads:
     1.92 dB and 1.19 dB.) Velocity moves the contact, the threshold parts and the swell's arc, not a filter.
   - **Saving, playback and MPC 3 export: verified in software (round 2).** `:shell:generateEmberKits` builds all
     four kits and proves every pad's grid through saving, reloading, `PadHit.resolve` and the MPC 3 track, read back
@@ -885,7 +907,7 @@ the shelf as FRESH TAPE starters.
   app (the listening page, version 3, plays them from the MPC 3 export), the Latin jazz kit and its new voices,
   presets and the picker, and phone and MPC hardware (round 3).
 
-## CALABASH (round 0 heard and approved, 2026-11-15; round 1 Kotlin port, not heard)
+## CALABASH (round 2, 2026-11-15: four genre kits on the shelf, Python and Kotlin approved by ear; hardware open)
 
 Four sixteen-pad drum kits for Afrobeat (Lagos, the 1970s), Afrobeats (Lagos and Accra, now), Mbalax (a sabar ensemble
 over a kit, Dakar) and Afro-Cuban jazz (New York, the 1950s). The owner asked for them on 2026-11-15 and chose four kits
@@ -893,17 +915,22 @@ over a kit, Dakar) and Afro-Cuban jazz (New York, the 1950s). The owner asked fo
 resynthesized from CC0 recordings (VCSL); the shekere, talking drums, sabar drums and timbales are physical models with
 no recording behind them. See [CALABASH](CALABASH.md). Round 0 is a Python prototype and a listening page
 (<https://claude.ai/artifact/8vhxM5dJriounZm38WFn8g>). The owner approved all of round 0 by ear on 2026-11-15 (below).
-Round 1 (2026-11-15) is the Kotlin port, `Calabash.kt`, measured against that prototype; nobody has heard it.
+Round 1 (2026-11-15) is the Kotlin port, `Calabash.kt`, measured against that prototype. Round 2 (2026-11-15) puts the four
+kits on the shelf, with a listening page of the Kotlin kits (<https://claude.ai/artifact/X54yPsKdm36A7QLQVWDed2>), which
+the owner heard and approved on 2026-11-15 (below).
 
 - **Melodic, keygroup and chord-tool gates:** not applicable. Drum kits.
 - **Articulation:** finite hits, no HOLD. No picked or thumbed strings.
 - **Percussion: authored, heard (2026-11-15).** Every kit carries a roll or riser on A16: a shekere rush (AFROBEAT), a
   talking-drum call rising in pitch (AFROBEATS), a sabar stick roll into its bakk's landing (MBALAX), a timbale abanico
-  into the rimshot (AFRO-CUBAN JAZZ). Rendered in Python; on the page the owner approved.
-- **Drum shelf: authored and heard, not on the shelf.** CALABASH AFROBEAT (112 BPM), CALABASH AFROBEATS (104), CALABASH MBALAX
-  (126) and CALABASH AFRO-CUBAN JAZZ (176) differ in which instruments fill the roles, the strokes, tuning, room, era
-  chain, swing and tempo. No pad is the same voice at the same settings in any two kits; the same slot in two kits is
-  14.6 to 23.6 dB apart on average and at least 3.99 dB (Python). No Kotlin, so nothing is on the shelf.
+  into the rimshot (AFRO-CUBAN JAZZ). Rendered in Python; on the page the owner approved. On the shelf in Kotlin (round 2),
+  tagged `riser` or `roll`, through the same save, playback and export proof as every pad; heard in Kotlin and
+  approved (2026-11-15).
+- **Drum shelf: on the shelf (round 2), approved by ear.** CALABASH AFROBEAT (112 BPM), CALABASH AFROBEATS (104), CALABASH
+  MBALAX (126) and CALABASH AFRO-CUBAN JAZZ (176) are FRESH TAPE starters under SKINS. They differ in which instruments
+  fill the roles, the strokes, tuning, room, era chain, swing and tempo. No pad is the same voice at the same settings
+  in any two kits; the same slot in two kits is 14.6 to 23.6 dB apart on average and at least 3.99 dB (Python), and
+  differs in shape in Kotlin (`CalabashKitsTest`). The owner heard the Kotlin kits and approved them (2026-11-15).
 - **Velocity and round robin:**
   - **Rendering: verified in Kotlin (round 1).** On all 64 pads, soft against hard at matched level differs by at least
     1.84 dB, and the closest two takes in any zone of any pad are 1.35 dB apart (the Afrobeat rimshot); `CalabashTest`
@@ -913,18 +940,37 @@ Round 1 (2026-11-15) is the Kotlin port, `Calabash.kt`, measured against that pr
     chance (`prototype/calabash/compare_kotlin.py`). The prototype measured 1.84 and 1.83 dB. Velocity moves the fitted voices
     toward their own soft recordings and the physical ones' contact, threshold and squeeze, not a filter. The
     programmed kick's takes are small moves of its sweep and tick, weaker than a re-strike (disclosed, as for THUMP).
-  - **Saving: partly verified.** A patch round-trips through JSON with its velocity, take and model and renders byte
-    for byte (`DeterminismTest`, `CalabashTest`). A saved kit waits for the shelf.
-  - **Playback and export: open.** The kits go on the shelf at round 2; the listening page's pad grid is a browser
-    stand-in, not app evidence.
-- **Sound character: approved at round 0.** On 2026-11-15 the owner wrote "Sounds great" and, asked whether that was
+  - **Kit grids (round 2): verified in rendering.** Every pad is three zones of four engine takes. In every zone of
+    every pad the four takes are different strikes, equally loud within 0.1 dB (over 150 ms, or a roll's whole
+    length), with the zone's highest peak at the audition's 0.89; the soft zone is a different strike from the hard one
+    (`CalabashKitsTest`). The audition peak-matched each take, which measured left takes up to 4.5 dB apart in
+    loudness on a hit and 6.3 dB on a roll; the equal-loudness law is CLUTTER's.
+  - **Saving: verified in software.** A patch round-trips through JSON with its velocity, take and model and renders
+    byte for byte (`DeterminismTest`, `CalabashTest`). Each kit reloads equal and every saved slice matches its render
+    (`CalabashKitTest`, `:shell:generateCalabashKits`: 768 slices).
+  - **Playback: verified in software.** `PadHit.resolve` picks the zone by velocity and deals the four takes in order,
+    then repeats, on a kick, a hat, a conga and the sabar roll (`CalabashKitTest`) and two cycles of every zone of every
+    pad (the generator). Chokes are the prototype's, as mute groups. No phone has played these kits.
+  - **Export: MPC 3 verified by read-back.** Velocity ranges, base slices, cycle lengths and frame windows match, and
+    the exported slices match their renders. **MPC 2: not applicable** ([format limit](#mpc-2-and-round-robin-owner-decision-2026-11-14)):
+    it keeps each zone's first take. SFZ and DecentSampler were not generated. No MPC has loaded these kits.
+- **Sound character: approved, Python and Kotlin.** On 2026-11-15 the owner wrote "Sounds great" and, asked whether that was
   a listen to the published page rather than a reply to the PR status, answered "I listened: approve all": all four
   kits and every voice. Preserve round 0 (`prototype/calabash` at commit `967f53f7f`) as the accepted baseline; the
   Kotlin port is judged against it. This is a listen to Python renders on the page, not evidence of a phone or MPC
   audition. Measured before the listen: the fitted voices sit 3.4 to 6.8 dB from their recordings over the first
-  150 ms, where two real takes of one drum sit 4.0 to 8.6 dB apart (Python, `check_fit.py`).
-- **Overall: incomplete.** The sound is approved and ported (round 1, not heard in Kotlin). The shelf and saving,
-  playback and MPC 3 export (round 2), and phone and MPC hardware (round 3) are open.
+  150 ms, where two real takes of one drum sit 4.0 to 8.6 dB apart (Python, `check_fit.py`). The same day the owner
+  heard the round-2 page of the Kotlin kits (each kit's approved groove played with the app's own strikes read back
+  from the MPC 3 export, beside the approved Python groove, and every pad's twelve strikes, the takes equal in
+  loudness), wrote "Sounds good" and, asked whether that was a listen to that page, answered "I listened: approve all". Preserve
+  `Calabash.MODEL_VERSION` 1 and `CalabashKits.VERSION` 1 as the baseline. Not a phone or MPC listen.
+- **Build time: disclosed.** A kit builds in 22 to 51 s on four cores; a one-shot renders in 60 to 350 ms and a roll in about
+  3.7 s, over the house's tens of milliseconds. A phone is slower.
+- **Overall: incomplete.** Every software gate is in place and the sound is approved by ear in Python and in Kotlin:
+  the kits are on the shelf with velocity and round robin verified through rendering, saving, playback and MPC 3
+  export in software (round 2), and the sixty-four approved pads are CALABASH's factory presets (round 3,
+  `CalabashPresetsTest`), on SYNTH's engine picker (round 4, an on-device test run by CI's emulator, not seen by the
+  owner). Open: phone and MPC hardware; the MPC 2 export is not applicable (the owner's format limit).
 
 ## DRUMLINE (native model 4 accepted, 2026-11-15)
 
@@ -935,8 +981,24 @@ A marching battery with independent player bodies, five bass sizes and progressi
 - Drum shelf: FIELD and STREET CADENCE are authored sixteen-pad starters, with different section sizes, tuning, losses and scored voices. Native audition accepted.
 - Rendering/save/play/export software: both full 3 × 3 grids pass PCM checks, persisted recipe replay, boundary selection, two repeat cycles, shape/take measurements and MPC export read-back. All 21 source/articulation voices are covered between the kits. MPC 2 retains velocity; its combined velocity/RR exception applies.
 - Phone and MPC hardware: not verified for these kits.
-- Fast rendering, full control-corner and alias-reference checks: open. Measured snare/crash/roll rendering exceeds the one-shot tens-of-milliseconds target on this host.
+- Numerical control corners: pass for renderer 4, 1,029 cases covering all binary macro corners at minimum/full touch plus default-center deterministic replay. Finite, peak, DC and tail bounds passed; see the complete evidence in [DRUMLINE](DRUMLINE.md).
+- Fast rendering and alias-reference checks: open. Measured snare/crash/roll rendering exceeds the one-shot tens-of-milliseconds target on this host.
 - Overall: incomplete. Software evidence is not native sound or device acceptance.
+
+## SERVO round 1b (2026-11-15): accepted
+
+Machine drums on a weak power rail, in three kits for electro, ghetto tech and neurofunk. See
+[SERVO](SERVO.md). The owner's instruction was "Must pass the gates". On 2026-11-15 the owner wrote "Sound
+approved, phone and MPC good, merge".
+
+- Melodic/keygroup/chord-tool and HOLD/STRUM gates: not applicable to this drum engine.
+- Percussion roll/riser: **pass.** Every kit has an authored Roll (A15) and Riser (A16), each note a fresh strike on one shared rail, with the full velocity and take grid; approved with the kits.
+- Drum shelf: SERVO ELECTRO, SERVO JIT and SERVO NEURO are registered once each on the FRESH TAPE shelf at 126, 156 and 174 BPM. They differ in tuning, length, roles, tempo and rail; `ServoKitsTest` checks no role of one kit is another's. **Pass**: approved by the owner.
+- Velocity/round robin in software: all 576 slices pass `:shell:generateServoKits` (PCM against the render after save, reload, two playback cycles of the pad resolver, and the MPC 3 track read back). A softer zone is a different hit on every pad; every zone holds four different takes matched in loudness. The closest takes measure 0.59 dB apart (ELECTRO Rim), near the level ETCH's takes were heard as one strike.
+- MPC 2: each velocity zone keeps its first take; the round-robin export gate does not apply ([format limit](#mpc-2-and-round-robin-owner-decision-2026-11-14)).
+- Sound: **pass.** The owner heard round 1 as "a bit weak"; round 1b added weight (kicks 1.2 to 2.7 dB and snares 3.2 to 4.7 dB louder at the same peak) and the owner approved it on 2026-11-15. It is the accepted baseline.
+- Phone and MPC hardware: **pass, owner-reported** (2026-11-15: "phone and MPC good"). No device measurement was made by the implementing session.
+- **Overall: every applicable gate passes.** Not gates and not done: factory presets from the accepted pads and a SYNTH picker entry.
 
 ## TIMBER acoustic percussion integration
 
