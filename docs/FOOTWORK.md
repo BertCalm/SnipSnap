@@ -252,3 +252,14 @@ A same-contact/old-grid comparison isolates timing. No measured-human timing or
 realism claim is made. The 36 gesture and 48 contact cells pass source assertions;
 Street/Industrial retained audio hashes remain unchanged. Native kits stay at
 model 3 and the source/delivery acceptance gates remain open.
+
+### Full-weight tap impact
+
+The owner still requests more human oomph and weight. `prototype/footwork/tap_impact/`
+adds a finite pressure-driven, damped support response and broad contact knock
+beneath toe/heel. Prior timing, force accents, per-foot take selection and brush
+PCM are retained exactly. This is an authored mechanical analogy, not a measured
+human-weight model. The 36 gesture and 24 impact-contact cells pass source checks;
+new phrase peaks remain below 0.77. The same-gain comparison retains the added
+impact, with a separate energy-matched comparison for timbre. Street/Industrial
+remain unchanged. Native model/kit versions and outstanding gates remain unchanged.
