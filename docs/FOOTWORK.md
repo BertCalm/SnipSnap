@@ -278,3 +278,14 @@ new and previous strikes at equal 120 ms energy and provides 3-velocity × 4-rep
 strips. All 24 source/save-strip checks pass. No new groove or native release is
 introduced; the preferred Street/Industrial phrase audio is retained byte-for-byte.
 All unresolved source, kit-identity, performance and delivery gates remain open.
+
+### Connected tap gestures from the preferred source direction
+
+The owner calls the reference-guided contacts “Better” and asks to continue.
+`prototype/footwork/tap_connected/` preserves all 24 toe/heel PCM cells exactly,
+adds authored sliding/return excitation, and develops shuffle, flap, ball-change,
+phrase, roll and build candidates. Seventy-two Python render/save cells pass the
+study checks. Gestures carry explicit foot/contact/time/force plans, with pickup
+motion rather than alternating heels in the roll. These are authored hypotheses,
+not extracted dancer motion or approved articulation. Native versions and all
+unresolved acceptance gates remain unchanged; Street/Industrial audio is retained.
