@@ -456,7 +456,7 @@ explicit MIDI root (24–96), strike velocity and model version; TUNE is a
 relative ±12-semitone offset, neutral at 0.5, so the effective note spans
 12–108 without clamping back to the saved-root range. Seven provisional presets
 and a dry sixteen-pad C minor pentatonic kit are included, with PITCHWHEEL among
-FRESH TAPE's 161 starters. Run `./gradlew :synth:generatePitchwheelAudition`
+FRESH TAPE's 167 starters. Run `./gradlew :synth:generatePitchwheelAudition`
 for the compact first listening set, or add `-PpitchwheelFull` for the broader
 dry probes. HOLD's top step returns settled loop-only material with a
 deterministic attachment cycle and capped adhesion. The owner heard R1 as six
@@ -1778,3 +1778,10 @@ layers and four takes per layer. Each keeps a 16-hit bank and adds a finite roll
 and riser on bank B. The original DnB hits preserve the approved audition. [Source provenance, kit export and limits](docs/COSMIC_BREAKS.md).
 
 DRUMLINE adds a versioned marching battery and FIELD/STREET CADENCE shelf kits, with independent players, finite rudiments and velocity/take grids. Native listening, device timing and hardware acceptance remain open. See [DRUMLINE](docs/DRUMLINE.md).
+
+KNEE BREAK supplies six FRESH TAPE kit variants: Body and Tighter, each dry,
+through the revised knee-mic treatment, or through cassette/delay. Their frozen
+oscillator/noise synth renders preserve the audition, with three velocity layers
+and three strikes per pad, including a finite roll and riser. They are rendered
+kit assets, not a new editable synthesis engine. See [Knee Break](docs/KNEE_BREAK.md)
+and the [audition](https://knee-break-audition.bertcalm.chatgpt.site).

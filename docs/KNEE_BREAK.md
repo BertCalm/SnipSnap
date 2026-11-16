@@ -214,10 +214,41 @@ averages 8.2–8.6 dB during detector-active passages, with maxima near 17.2 dB.
 All 580 dry/cassette pad and groove WAVs remain hash-identical. All 288 revised
 knee pad files pass peak, DC, take diversity and velocity-layer mean-energy
 ordering. The two corresponding SFZ packages and all browser mappings were
-checked. The treatment has not yet been approved by listening.
+checked. The owner subsequently accepted this direction: “Better, proceed in this direction.”
 
 Why it is built this way: less dry blend exposes the coloured mic signal;
 compression changes the transient/body relation; matched groove RMS reduces
 volume bias. The first stronger-ratio experiment slightly inverted rimshot
 layer energy, so the final 5:1 ratio retains dynamic ordering without changing
 any synthesized source or weakening the check.
+
+## Native kit integration (in review)
+
+After accepting the revised knee direction, the owner authorized continuing.
+`KneeBreakKits` freezes the exact synthetic audition deliveries in gzipped WAV
+resources. This is the kit-delivery layer, not an editable Kotlin port of the
+oscillator model: no new engine or sound-control picker is claimed. The original
+Python synthesis, numeric models and processing remain the reproduction sources.
+Each new kit owns its decoded buffers and uses the shared 3-zone × 3-strike grid.
+Six FRESH TAPE entries preserve Body/Tighter with dry, revised knee and cassette.
+They remain treatment variants rather than six distinct genre kits.
+
+The import script verifies every source SHA before lossless compression. The
+resource manifest records frames, SHA, source model and published Site commit.
+`KneeBreakKitsTest` checks all 864 assets, grid shape, ownership, finite gestures
+and velocity ordering. `KneeBreakRoundTripTest` follows saving/reloading, all MIDI
+velocities and nine repeated hits per pad, SFZ export/import, and MPC 3 read-back
+using the existing independent track verifier. The generator writes native,
+SFZ, DecentSampler and MPC 3 packages with an MPC 2 twin. MPC 2's combined
+velocity/RR limit remains the owner's documented format exception: first take
+per velocity. Hardware playback is a separate unresolved verification step.
+
+The factory mixer level is .65, matching the audition pad player. No board is
+applied on load: the effects are already printed. The shared-bus groove demo is
+still a separate comparison, not a claim of a live cross-pad effect in these kits.
+Focused Kotlin checks and kit generation passed on 2026-11-16 (Gradle exit 0).
+The independent native audit matched all 864 chain windows exactly after the
+repository PCM16-to-PCM24 conversion, and verified all six ZIP contents.
+The full JVM suite was launched separately; its result is not implied here.
+Browser control checks passed all 864 selections and six download mappings.
+Hardware playback and the distinct-genre shelf gate remain open.

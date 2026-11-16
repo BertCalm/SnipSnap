@@ -616,6 +616,12 @@ object StarterKits {
             "Industrial drums with long warehouse reflections. The same sources, with room to ring.",
             seeded = false,
         ) { SynthKits.rivet(1f) },
+        Starter("knee-break-body", "KNEE BREAK BODY", "Fitted synth drums, percussion and finite snare gestures. Three velocity layers and three strikes per layer.", seeded = false, tempoBpm = com.snipsnap.synth.KneeBreakKits.TEMPO) { com.snipsnap.synth.KneeBreakKits.build(com.snipsnap.synth.KneeBreakKits.Choice.BODY) },
+        Starter("knee-break-knee", "KNEE BREAK KNEE", "Fitted synth drums, percussion and finite snare gestures. Three velocity layers and three strikes per layer.", seeded = false, tempoBpm = com.snipsnap.synth.KneeBreakKits.TEMPO) { com.snipsnap.synth.KneeBreakKits.build(com.snipsnap.synth.KneeBreakKits.Choice.KNEE) },
+        Starter("knee-break-cassette", "KNEE BREAK CASSETTE", "Fitted synth drums, percussion and finite snare gestures. Three velocity layers and three strikes per layer.", seeded = false, tempoBpm = com.snipsnap.synth.KneeBreakKits.TEMPO) { com.snipsnap.synth.KneeBreakKits.build(com.snipsnap.synth.KneeBreakKits.Choice.CASSETTE) },
+        Starter("knee-break-tight", "KNEE BREAK TIGHT", "Fitted synth drums, percussion and finite snare gestures. Three velocity layers and three strikes per layer.", seeded = false, tempoBpm = com.snipsnap.synth.KneeBreakKits.TEMPO) { com.snipsnap.synth.KneeBreakKits.build(com.snipsnap.synth.KneeBreakKits.Choice.TIGHT) },
+        Starter("knee-break-tight-knee", "KNEE BREAK TIGHT KNEE", "Fitted synth drums, percussion and finite snare gestures. Three velocity layers and three strikes per layer.", seeded = false, tempoBpm = com.snipsnap.synth.KneeBreakKits.TEMPO) { com.snipsnap.synth.KneeBreakKits.build(com.snipsnap.synth.KneeBreakKits.Choice.TIGHT_KNEE) },
+        Starter("knee-break-tight-cassette", "KNEE BREAK TIGHT CASSETTE", "Fitted synth drums, percussion and finite snare gestures. Three velocity layers and three strikes per layer.", seeded = false, tempoBpm = com.snipsnap.synth.KneeBreakKits.TEMPO) { com.snipsnap.synth.KneeBreakKits.build(com.snipsnap.synth.KneeBreakKits.Choice.TIGHT_CASSETTE) },
         Starter(
             "velour-close", "VELOUR CLOSE",
             "Close drums and percussion through a warm amp. Three touch layers, with short natural tails.",
