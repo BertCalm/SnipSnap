@@ -22,6 +22,10 @@
 > three velocity zones × three takes, raw/matched comparisons and sampler downloads.
 > Velocity × round robin is preserved in SnipSnap and SFZ. MPC slice-map/hardware acceptance remains pending. See [Spore Station](SPORE_STATION.md).
 
+> SPLINTER breakcore kit (2026-11-15): one 18-pad starter at 200 BPM on the approved Spore kick and
+> snare, with a new edit stage (speed, chop, retrigger, stretch, clip). 162 cells verified through
+> saving, playback, SFZ and MPC 3. Groove heard 2026-11-15: fine; hardware open. See [SPLINTER](SPLINTER.md).
+
 > TRIAD first listening gate (2026-11-09): one generated hybrid drum groove through
 > shared compression/drive, dynamics/tape, or crush/grains. Native finite audition;
 > presets, HOLD, phone controls and MPC program export remain outside this gate.

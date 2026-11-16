@@ -649,6 +649,10 @@ object StarterKits {
             "Deep kick, low snare, cross-stick and hand percussion. Dark echo answers and triplet roll.", seeded=false, tempoBpm=85f) {
             com.snipsnap.synth.SporeSyntheticKits.arranged(com.snipsnap.synth.SporeSyntheticKits.Genre.DUB)
         },
+        Starter(com.snipsnap.synth.Splinter.ID, "SPLINTER BREAKCORE",
+            "Sped-up break hits, clipped and gabber kicks, chopped slices, stutters and a stretched snare. Snare rush and riser.", seeded=false, tempoBpm=com.snipsnap.synth.Splinter.BPM.toFloat()) {
+            com.snipsnap.synth.Splinter.arranged()
+        },
         Starter("spore-synth-broken", "SPORE ORBITAL BREAKS",
             "Short kick, wire clap, higher toms and metallic percussion. Reverse-metal accents and accelerating riser.", seeded=false, tempoBpm=155f) {
             com.snipsnap.synth.SporeSyntheticKits.arranged(com.snipsnap.synth.SporeSyntheticKits.Genre.BROKEN)

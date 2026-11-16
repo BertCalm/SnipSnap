@@ -678,6 +678,16 @@ tasks.register<JavaExec>("generateSporeApprovedSnare") {
     args(providers.gradleProperty("sporeApprovedOutput").orNull ?: "${rootDir}/testkit/spore-approved-snare")
 }
 
+tasks.register<JavaExec>("generateSplinterKit") {
+    group = "distribution"
+    description = "Render and verify the SPLINTER breakcore shelf kit, with its listening files and archives."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.SplinterDelivery")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "2g"
+    args(providers.gradleProperty("splinterOutput").orNull ?: "${rootDir}/testkit/splinter-breakcore")
+}
+
 tasks.register<JavaExec>("generateSporeSyntheticKits") {
     group = "distribution"
     description = "Render and verify all three complete sample-free Spore shelf kits."
