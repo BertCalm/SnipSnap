@@ -12,6 +12,13 @@ import kotlin.test.assertTrue
  * both depend on the second half.
  */
 class DeterminismTest {
+    @Test fun `Bristle study routes replay their saved touch exactly`() {
+        for (route in Bristle.Route.entries) {
+            val r = Bristle.Recipe(route, 36, .65f, mapOf("SLIDE" to .3f))
+            assertContentEquals(r.render().samples, Bristle.Recipe.fromJsonText(r.toJsonText()).render().samples)
+        }
+    }
+
     @Test fun `DRUMLINE keeps section and take identities deterministic`() {
         for (voice in listOf(DrumlineVoice.SNARE, DrumlineVoice.CRASH, DrumlineVoice.ROLL)) {
             assertContentEquals(Drumline.render(voice, take = 2).samples, Drumline.render(voice, take = 2).samples)

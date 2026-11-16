@@ -3641,6 +3641,24 @@ deterministic objects correlate 0.93 to 0.99; random draws are another realisati
 owner waived the roll gate. See [CLUTTER](CLUTTER.md) and the gates entry. The four genre kits go on the shelf
 at round 2; the picker entry waits for a session with an SDK.
 
+### Bristle bass prototype (2026-11-14, in progress)
+
+The owner kept both Python A/B routes and authorized Kotlin and app/instrument integration.
+[Bristle](BRISTLE.md) preserves the two orders in one DSP core, registers saved patches and the
+BRISTLE picker entry, and provides finite C1–C3 instruments with three timbral touch layers per
+semitone. Round 3 adds opt-in SUSTAIN KEYS with measured loops and note-off release; the two
+finite packages remain byte-identical. Round 4 adds optional two-take pools and separate
+fixed-touch MPC cycling programs. Round 5 adds six distinct owner-retained voices, twelve validated
+finite/held two-take keygroups and a sixteen-pad shelf starter. Chord planning fits 956 of 960
+voicings by whole-octave transposition and refuses four B add-nine cases outside C1–C3.
+Combined velocity × round robin in one MPC keygroup remains open; generic MPC 3 pad chains
+also lack the embedded WAV slice map. The portable starter instead supplies three-touch first-take
+programs plus separate fixed-touch cycling programs. Optional COMP and FUZZ controls now accompany
+all eight voices, default off; their new comparisons await listening. Live chord UI and
+hardware verification remain open; full-regression evidence is recorded in BRISTLE.md.
+The owner subsequently reported the current prototype tested and approved after the Android/MPC
+testing recommendation; device details were not supplied and Android automation remains unrun.
+This is an accepted prototype, not a completed instrument.
 ### TIMBER acoustic-instrument percussion banks (2026-11-14)
 
 Three genre starters from guitar, acoustic bass guitar, cello and upright body/string

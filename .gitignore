@@ -798,6 +798,11 @@ testkit/tempest-full-kit/
 testkit/SnipSnap Tempest Full Kit/
 testkit/SnipSnap Tempest Tuned Kit/
 
+# Bristle study output is regenerated from its versioned recipes.
+/testkit/bristle-r0/
+/testkit/bristle-kotlin/
+
+/testkit/bristle-instruments/
 # TIMBER generated acoustic percussion banks and audition.
 /testkit/timber-kits/
 
