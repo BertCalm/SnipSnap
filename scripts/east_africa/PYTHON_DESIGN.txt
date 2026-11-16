@@ -1,0 +1,56 @@
+Reference-calibrated synthesis revision
+Status: Python audition candidate. The previous synthesized version was rejected as insufficiently close to the original. Here "original" means the recorded kit the user liked, as stated at the start of this round. No source-song excerpts are sampled or fitted.
+Repo read: SnipSnap 494af88e6545f8ee03ced33cf2dad4598fc67248.
+
+The characteristic gesture is measured contact envelope -> sparse resonances and shaped fresh noise -> measured frequency-dependent decay -> silence.
+
+WHAT CHANGED
+The previous model assumed ideal membrane ratios, broad metal distributions and decay constants. That made it numerically sound without establishing similarity to the chosen recordings. This revision fits a bounded, compact synthesis model to the existing CC0 drum/hand/wood/metal references. The two log-bass voices remain FM. Genre arrangements, including the revised Singeli score, are retained.
+
+This is analysis-informed modal/noise resynthesis. Recordings are used OFFLINE to estimate parameters. Runtime synthesis uses oscillators and fresh deterministic noise, not sample playback, a sampled attack, a residual waveform, a sampled impulse response or an encoded spectrogram. It is not claimed to be a first-principles physical simulation.
+
+FIT CONTRACT
+18 recorded sound roles, three dynamic zones. Fit uses recorded take 0 only. Recorded take 1 is the held-out comparison; fitting and gain calibration never read it.
+Each layer stores at most 12 resonance modes: frequency, exponential loss time, amplitude and initial phase. Prominent separated spectral peaks supply candidate frequencies; a small bounded decay grid and least-squares amplitudes select a sparse tonal model.
+The unmodelled residual is used ONLY during calibration to estimate ten broad-band analytical noise envelopes. Each band stores five scalar envelope parameters: amplitude, attack, fast decay, slow decay and blend. There are no residual audio samples in the exported model. A scalar tail duration follows the reference's 99.95% cumulative energy plus a short margin. The noise is newly generated on each synthesis take.
+The model JSON is bounded by these counts. It contains no per-frame data, dense FFT coefficients, wavetables or source-audio bytes. Calibration provenance identifies source WAVs and hashes. Source recordings are not included in pure synthesis kit downloads.
+
+RENDER
+model layer -> up to 12 cosine modes with smooth onset and exponential loss
+           + 10 independent fresh-noise bands with analytic envelopes
+           -> measured tail gate -> 18 kHz low-pass at 4x -> downsample
+           -> DC high-pass -> final fade -> fixed layer calibration -> common bank gain.
+Frequency and damping controls modify the analytic model. STRIKE modifies onset and spectral tilt. Discrete velocity zones select separately fitted parameter sets. Within-zone velocity scales energy. Three deterministic takes vary phase, mode frequency very slightly, amplitude modestly and stochastic noise. Future native integration must preserve actual zone/take selection rather than treating differently named files as proof.
+No feedback solver. Every mode has positive decay; frequencies above 17.5 kHz are omitted. Noise filters are stable Butterworth sections. Source waveforms are never a render input. This linear statistical model is not a proof of complete alias rejection; native alias/performance checks remain open.
+
+CACHE AND COST
+Filter coefficients/power normalization are cached by band edges and render rate. A bounded six-entry noise cache, keyed by voice/take/tuning/rate/length, reuses freshly generated stochastic carriers across velocity-zone renders. It holds no recorded material. Tail-aware active rendering avoids calculating already-silent portions; output is padded to a stable 1.2 seconds for single hits. Low-amplitude exponential calculations are floored far below PCM resolution to avoid unnecessary numerical work. See manifest.json for measured Python render times; no Android performance claim.
+
+MEASUREMENT
+Evaluation compares three-zone held-out recorded take 1 with procedural take 1 for all 18 fitted voices. Coarse spectral energy in nine fixed bands and time-energy in seven fixed windows are normalized before log-distance calculation. They measure spectral balance and temporal energy distribution independently of overall gain. The same metric and reference are used for the previous synth and the revised synth.
+See evaluation.json for all 54 rows, including regressions. The measured aggregate is substantially closer, but this is not a perceptual listening score, not waveform identity, and not proof that each metric improved for every voice. Log bass and phrase pads are excluded from this held-out metric because they are not individually recorded target hits.
+
+LANDING AND OPTIONS
+Selected DISTIL: fit compact modal/noise voice parameters to the chosen recorded character. Clear strike gesture, modest mechanism novelty, one audition round, lower guesswork but remaining stochastic/phase realism risk.
+STACK alternative: EQ the prior synth. Cheap, but wrong resonances and envelope shape persist.
+COUPLE alternative: fit a bidirectional skin/cavity/contact simulation. Richer physical control, much higher solver/identification cost and no guarantee of matching this production target.
+This is a voice/kit candidate of the existing modal-percussion family (nearest SKIN and TERRA), not grounds for another engine solely because the presets serve these genres. No Kotlin integration or APIs are introduced here.
+
+GATES AND LIMITS
+Verified/measured: generated-bank persistence and repeatability, velocity ordering, take diversity, numerical health, three control effects, independent loop preroll comparison, held-out feature comparison, file/package integrity. Exact results in the reports.
+Proposed: audible closeness, realism and genre fit. Previous listening approval belongs to the recorded bank; it does not transfer to this revision.
+Native shelf, Android performance, sampler velocity/RR selection, save/load windows, playback and export/import, MPC and hardware gates remain open. WAV ZIPs are delivery artifacts, not mapped MPC programs. Individual strikes and two phrase pads remain finite. String STRUM and six-voice melodic/chord requirements do not apply.
+
+COMPARISON
+The main comparison plays original recorded Singeli, previous synthesized Singeli, revised fitted-model Singeli. All use the authored repeating-pocket score; passages have equal length and RMS matching with common peak headroom. A separate isolated comparison follows the same original/previous/revised order for selected voices. Only those labelled comparison files contain recorded audio. All ordinary groove and pad-bank files are synthesis renders.
+
+WHY IT IS BUILT THIS WAY
+1. Fitting actual resonance and loss parameters addresses the source mismatch rather than merely adding complexity.
+2. Sparse modal synthesis retains identifiable ring, while fresh shaped noise supplies impact/wire/metal detail without sampled attacks.
+3. A held-out take checks whether the model captures instrument character beyond the one fitted performance.
+4. Keeping the same beat and matching comparison energy makes sound differences easier to judge.
+5. The key risk is that coarse feature agreement can still miss perceptual details; listening remains decisive.
+
+REPLAY AND CREDIT
+Python with NumPy and SciPy. Included compact models, calibration and score JSONs are enough to run build.py, verify.py, other_probes.py and package.py. fit.py/evaluate.py are optional calibration/research stages requiring the recorded references at documented paths. compare.py requires earlier audition files to build labelled comparisons.
+Calibrated from CC0 Virtuosity Drums by Versilian Studios, performer Austin McMahon, and VSCO Community Edition by Sam Gossner and Simon Dalzell, cutting Elan Hickler / Soundemote. Exact paths/hashes in calibration-provenance.json; license texts are included. No uploaded reference music was used as a source.

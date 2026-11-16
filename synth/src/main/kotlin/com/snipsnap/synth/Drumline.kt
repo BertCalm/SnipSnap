@@ -59,9 +59,21 @@ object Drumline {
         else -> listOf(Event(0.0,voice,1f))
     }
     fun render(voice: DrumlineVoice, macros: Map<String,Float> = emptyMap(), velocity: Float = 1f, take: Int = 0, model: Int = MODEL_VERSION): Snip {
+        val raw=renderRaw(voice,macros,velocity,take,model)
+        Tide.bandLimit(raw,RATE)
+        val out=Dsp.decimate(raw,Dsp.RATE)
+        val mean=out.average().toFloat(); val hp=Dsp.FixedOnePole(20f,Dsp.RATE)
+        for(i in out.indices) { val x=out[i]-mean;out[i]=x-hp.lp(x) }
+        Dsp.levelTo(out,Dsp.RATE,Dsp.MELODIC_LOUDNESS_TARGET)
+        Dsp.fadeTail(out)
+        return Snip(out,1,Dsp.RATE)
+    }
+    /** Internal-rate signal before the shared output stage, exposed for spectral audits. */
+    internal fun renderRaw(voice: DrumlineVoice, macros: Map<String,Float> = emptyMap(), velocity: Float = 1f,
+                           take: Int = 0, model: Int = MODEL_VERSION): FloatArray {
         require(model in 1..MODEL_VERSION && take >= 0)
         val m=settled(voice,macros); val v=velocity.takeIf { it.isFinite() }?.coerceIn(.05f,1f) ?: 1f
-        val raw=if(voice !in figures) strike(voice,m,v,take,0,model) else {
+        return if(voice !in figures) strike(voice,m,v,take,0,model) else {
             val score=score(voice)
             val out=FloatArray(((score.maxOf { it.seconds }+1.3)*RATE).roundToInt())
             for((i,e) in score.withIndex()) {
@@ -71,13 +83,6 @@ object Drumline {
             }
             out
         }
-        Tide.bandLimit(raw,RATE)
-        val out=Dsp.decimate(raw,Dsp.RATE)
-        val mean=out.average().toFloat(); val hp=Dsp.OnePole(Dsp.RATE)
-        for(i in out.indices) { val x=out[i]-mean;out[i]=x-hp.lp(x,20f) }
-        Dsp.levelTo(out,Dsp.RATE,Dsp.MELODIC_LOUDNESS_TARGET)
-        Dsp.fadeTail(out)
-        return Snip(out,1,Dsp.RATE)
     }
     /** Integral of smoothstep hand contact; its derivative is nonnegative. */
     internal fun contactIntegral(t: Double, start: Double, width: Double = .14): Double {
@@ -137,9 +142,9 @@ object Drumline {
                     val life=(1+2.2*exp(-f/2300))*(1+.65*ring)*damp*(if(voice==DrumlineVoice.TOUCH).18 else 1.0)
                     addMode(y,f,g,life,random(hit,-PI,PI),chokeStart=if(voice==DrumlineVoice.CHOKE).18+player*.008 else null)
                 }
-                val low=Dsp.OnePole(RATE);val high=Dsp.OnePole(RATE)
+                val low=Dsp.FixedOnePole(12000f,RATE);val high=Dsp.FixedOnePole(1800f,RATE)
                 for(i in y.indices) {
-                    val t=i.toDouble()/RATE;val x=noise.next();val h=x-high.lp(x,1800f);val wash=low.lp(h,12000f)
+                    val t=i.toDouble()/RATE;val x=noise.next();val h=x-high.lp(x);val wash=low.lp(h)
                     val loss=if(voice==DrumlineVoice.CHOKE)contactIntegral(t,.18+player*.008) else 0.0
                     y[i]=(y[i]+.55*v*wash*exp(-t/(if(voice==DrumlineVoice.TOUCH).045 else .12)-35*loss))*min(t/.0007,1.0)
                 }
@@ -185,21 +190,28 @@ object Drumline {
                     for((f,g,l) in rimModes)
                         addMode(y,f*tilt*(if(distinctRim)2.0.pow(detune/1200) else 1.0),g*v.pow(.6),l,force=rimForce)
                 }
-                val contact=Dsp.OnePole(RATE);val bands=listOf(Band(1900.0,2.0),Band(3600.0,2.5),Band(6200.0,3.0))
-                val snapLow=Dsp.OnePole(RATE);val snapHigh=Dsp.OnePole(RATE)
+                val contact=Dsp.FixedOnePole((2500+8500*v).toFloat(),RATE);val bands=listOf(Band(1900.0,2.0),Band(3600.0,2.5),Band(6200.0,3.0))
+                val snapLow=Dsp.FixedOnePole(10500f,RATE);val snapHigh=Dsp.FixedOnePole(2200f,RATE)
+                // These quantities are constant for this strike. Keep the exact arithmetic
+                // order while avoiding map lookups, powers and filter setup per sample.
+                val contactGain=.35*(.2+m.getValue("STRIKE"))*v
+                val wireLife=if(distinctRim)life*.68 else life
+                val wireGain=3.2*(if(distinctRim).32 else 1.0)*v.pow(.65)
+                val wireDecay=wireLife*(.75+.4*v)
+                val wireRate=2*PI*root*1.07
+                val snapGain=2.8*v.pow(.8)
                 for(i in y.indices) {
                     val t=i.toDouble()/RATE;val x=noise.next();val attack=min(t/.0007,1.0)
-                    y[i]+=.35*(.2+m.getValue("STRIKE"))*v*contact.lp(x,(2500+8500*v).toFloat())*attack*exp(-t/.0012)
+                    y[i]+=contactGain*contact.lp(x)*attack*exp(-t/.0012)
                     if(snare) {
                         val cords=.6*bands[0].at(x.toDouble())+bands[1].at(x.toDouble())+.6*bands[2].at(x.toDouble())
                         // The same wire bed was masking both voices. A rimshot still has
                         // snare wires, but its shorter, quieter response sits behind the rim.
-                        val wireLife=if(distinctRim)life*.68 else life
-                        y[i]+=3.2*(if(distinctRim).32 else 1.0)*v.pow(.65)*cords*exp(-LOSS*t/(wireLife*(.75+.4*v)))*(.65+.35*sin(2*PI*root*1.07*t).pow(2))*attack
+                        y[i]+=wireGain*cords*exp(-LOSS*t/wireDecay)*(.65+.35*sin(wireRate*t).pow(2))*attack
                         if(model >= 2 && !distinctRim) {
                             // A brief wire/contact burst sharpens the leading edge without extending the hiss.
-                            val snap=snapLow.lp(x-snapHigh.lp(x,2200f),10500f)
-                            y[i]+=2.8*v.pow(.8)*snap*min(t/.00012,1.0)*exp(-t/.0035)
+                            val snap=snapLow.lp(x-snapHigh.lp(x))
+                            y[i]+=snapGain*snap*min(t/.00012,1.0)*exp(-t/.0035)
                         }
                     }
                 }

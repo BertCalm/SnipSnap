@@ -59,8 +59,8 @@ enum class EmberVoice(val drumClass: DrumClass, internal val seconds: Double, in
     BRUSH_TOM(DrumClass.TOM, 1.20, EMBER_DRUM), RIDE(DrumClass.PERC, 1.45, EMBER_DRUM), RIDE_BELL(DrumClass.PERC, 1.45, EMBER_DRUM),
     BRUSH_RIDE(DrumClass.PERC, 1.45, EMBER_DRUM), SIZZLE(DrumClass.PERC, 2.20, listOf("TUNE", "DAMP", "DISTANCE", "WARMTH")),
     HAT_FOOT(DrumClass.HAT_CLOSED, 0.45, EMBER_DRUM), HAT_CLOSED(DrumClass.HAT_CLOSED, 0.45, EMBER_DRUM), HAT_OPEN(DrumClass.HAT_OPEN, 1.20, EMBER_DRUM),
-    BOWED_CYMBAL(DrumClass.PERC, 2.40, listOf("TUNE", "PRESSURE", "BUZZ", "DISTANCE", "WARMTH")), CYMBAL_SWELL(DrumClass.PERC, 3.00, EMBER_MOVING),
-    PRESS_ROLL(DrumClass.PERC, 2.60, EMBER_MOVING), BRUSH_ROLL(DrumClass.PERC, 2.60, EMBER_MOVING),
+    BOWED_CYMBAL(DrumClass.PERC, 3.60, listOf("TUNE", "PRESSURE", "BUZZ", "DISTANCE", "WARMTH")), CYMBAL_SWELL(DrumClass.PERC, 5.00, EMBER_MOVING),
+    PRESS_ROLL(DrumClass.PERC, 3.00, EMBER_MOVING), BRUSH_ROLL(DrumClass.PERC, 3.00, EMBER_MOVING),
     SNAPS(DrumClass.CLAP, 0.60, EMBER_CROWDS), CLAPS(DrumClass.CLAP, 0.70, EMBER_CROWDS), TAMBOURINE(DrumClass.PERC, 0.80, EMBER_DRUM),
     CONGA(DrumClass.PERC, 0.90, listOf("TUNE", "DAMP", "SLAP", "DISTANCE", "WARMTH")), STICKS(DrumClass.PERC, 0.40, listOf("TUNE", "DAMP", "DISTANCE", "WARMTH")),
 }
@@ -196,7 +196,7 @@ object Ember {
             EmberVoice.CONGA -> conga(m, v, tr, n)
             EmberVoice.STICKS -> sticks(m, v, tr, n)
         }
-        return finish(raw, m, v, seconds)
+        return finish(raw, m, v, seconds, TAILS[voice])
     }
 
     // ------------------------------------------------------------------ implements
@@ -682,8 +682,16 @@ object Ember {
     /** By ear (round 0e): the close mic's voicing on every pad, 1.5 dB out around 600 Hz and a 2 dB shelf from 6 kHz. */
     internal fun voicing(y: DoubleArray): DoubleArray = EmberDsp.highShelf(6000.0, 2.0, FSD).run(EmberDsp.peaking(600.0, -1.5, 0.7, FSD).run(y))
 
-    /** DISTANCE, WARMTH, voicing, then the house band limit and decimator, DC out, the cut and a 60 ms fade. */
-    internal fun finish(raw: DoubleArray, m: Map<String, Double>, v: Double, seconds: Double): FloatArray {
+    /**
+     * Round 1b (owner, 2026-11-15: "Swell cuts abruptly"): the long voices were cut while still sounding. The rolls
+     * now run until they have died away on their own; the flat ride under the swell and the bow rings for well
+     * over 7 s, so once the mallets stop or the bow leaves, it also takes an exponential fade reaching this many
+     * dB at the end of the pad (start s to dB). A decay to the ear, by ear; the prototype's `TAILS`.
+     */
+    private val TAILS by lazy { mapOf(EmberVoice.CYMBAL_SWELL to (2.8 to -50.0), EmberVoice.BOWED_CYMBAL to (2.4 to -30.0)) }
+
+    /** DISTANCE, WARMTH, voicing, then the house band limit and decimator, DC out, the cut and a 60 ms fade (and the [TAILS] decay). */
+    internal fun finish(raw: DoubleArray, m: Map<String, Double>, v: Double, seconds: Double, tail: Pair<Double, Double>? = null): FloatArray {
         val n = raw.size
         val room = roomIr(m.getValue("DISTANCE"))
         val size = EmberDsp.fftSize(n + room.size - 1)
@@ -702,6 +710,11 @@ object Ember {
         val out = FloatArray(len)
         var px = 0.0; var py = 0.0
         for (i in 0 until len) { val x = dec[i] - mean; py = alpha * (py + x - px); px = x; out[i] = py.toFloat() }
+        if (tail != null) {
+            val i0 = (tail.first * RATED).toInt()
+            val span = max(1, len - 1 - i0)
+            for (i in i0 until len) out[i] = (out[i] * exp(tail.second * DB * (i - i0) / span)).toFloat()
+        }
         val fade = min(len, (0.06 * RATED).toInt())
         for (q in 0 until fade) { val g = 0.5 * (1 + cos(PI * q / (fade - 1).coerceAtLeast(1))); out[len - fade + q] = (out[len - fade + q] * g).toFloat() }
         return out
@@ -869,13 +882,15 @@ object Ember {
     }
 
     /**
-     * A bass bow across the flat ride's edge: stick-slip locks to the strongest fitted mode between 900 Hz and
-     * 2 kHz (round 0e) and the rest bloom around it. A sawtooth-like slip train with jitter (an analogy of friction).
+     * A bass bow across the flat ride's edge: stick-slip locks to the strongest fitted mode between 1 and 1.3 kHz
+     * and the rest bloom around it. Round 0e had moved the lock up to 900 Hz to 2 kHz (1379 Hz) from a "too middy"
+     * 732 Hz; round 2b brings it partway down to 1243 Hz ("piercing ... a bit lower or pulled back a bit", owner,
+     * 2026-11-15): its harmonics land on quieter modes, so 2 to 8 kHz falls 6 to 11 dB with the bite unchanged. A sawtooth-like slip train with jitter (an analogy of friction).
      * PRESSURE: more bite, more harmonics, more scratch.
      */
     private fun bowedCymbal(m: Map<String, Double>, v: Double, tr: Rng, n: Int): DoubleArray {
         val md = cymbalFit.voices.getValue("flatride").modes
-        val lock = md.filter { it[0] > 900 && it[0] < 2000 }.maxBy { it[1] }[0]
+        val lock = md.filter { it[0] > 1000 && it[0] < 1300 }.maxBy { it[1] }[0]
         val fLock = lock * semis(m.getValue("TUNE"), 3.0) * tr.uniform(0.998, 1.002)
         val bite = lin(m.getValue("PRESSURE"), 0.3, 1.0)
         val wobPh = tr.uniform(0.0, 2 * PI)

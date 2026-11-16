@@ -29,9 +29,28 @@ class TerraStarterTest {
         } finally { dir.deleteRecursively() }
     }
 
-    @Test fun `TERRA is shelved under SKINS right after the TEMPEST kits`() {
+    @Test fun `TERRA is shelved under SKINS right after the TEMPEST kits, its genre kits after it`() {
         val skins=StarterShelf.GROUPS.single { it.heading==Copy.STARTER_HEADING_SKINS }.ids
-        assertEquals("terra",skins[skins.indexOf("tempest-step")+1])
-        assertEquals(1,StarterShelf.GROUPS.sumOf { g -> g.ids.count { it=="terra" } })
+        val at=skins.indexOf("tempest-step")
+        assertEquals(listOf("tempest-step","terra","terra-sahel","terra-maqam","terra-punjab"),skins.subList(at,at+5))
+        for (id in listOf("terra","terra-sahel","terra-maqam","terra-punjab"))
+            assertEquals(1,StarterShelf.GROUPS.sumOf { g -> g.ids.count { it==id } },id)
+    }
+
+    @Test fun `the three genre starters render their kept kits with soft strikes`() {
+        for (genre in TerraGenreKits.Kit.entries) {
+            val dir=kotlin.io.path.createTempDirectory(genre.id).toFile()
+            try {
+                val starter=assertNotNull(StarterKits.byId(genre.id))
+                assertEquals(genre.displayName,starter.displayName)
+                assertFalse(starter.seeded)
+                val kit=starter.render("${genre.displayName} Test",dir)
+                assertNull(kit.key)
+                assertEquals(16,kit.pads.size)
+                assertEquals(TerraGenreKits.patches(genre),kit.pads.map { PadRecipe.fromJsonValue(it.recipe!!).patch })
+                assertTrue(kit.pads.all { it.oneShot && !it.loop && it.velocityLayers.size==3 })
+                assertEquals(kit,KitStore.load(dir))
+            } finally { dir.deleteRecursively() }
+        }
     }
 }

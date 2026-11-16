@@ -81,6 +81,17 @@ and WAVs before any Kotlin. `python3 gen_audition.py OUT && python3 build_page.p
 54 level-matched clips with their measurements and writes the audition page. Needs numpy,
 scipy and numba. See [`../docs/ETCH.md`](../docs/ETCH.md).
 
+## kindred/ — KINDRED round-2 audition (Python harness)
+
+A one-voice, eight-step analog-style percussion synth (two oscillators with a shared pitch-decay
+envelope, FM and hard sync, noise, a four-pole ladder, three decays), built from the owner's DFAM
+reference clips, and four sixteen-pad genre kits made from that one voice (TECHNO, INDUSTRIAL,
+ELECTRO, AMBIENT). `kindred_proto.py` is the voice; `KINDRED_MODEL=2 python3 kindred_kits.py OUT`
+renders every pad at three velocities and four takes, each kit's A15 phrase, A16 riser, groove and
+walk, with a JSON report. `KINDRED_MODEL=2 python3 groove_ltas.py OUT` measures the grooves' band
+balance against the reference clips' median. Model 2 is the sound the owner accepted on 2026-11-15
+(round 1 was heard as "a small radio speaker"); see docs/KINDRED.md. Needs numpy, scipy and numba.
+
 ## scuff/ — SCUFF round-0b audition (Python harness)
 
 A dry Michigan drum kit (ten voices) and the chain that makes it (GRIT, LOCKER, BARK, SLAM),
@@ -112,3 +123,15 @@ four takes, each kit's groove and every control on every voice, with their measu
 KOTLIN_DIR` measures the Kotlin port (`./gradlew :synth:generateEmberAudition`) against these renders voice by voice,
 and `export_club.py` writes the club tail the Kotlin port loads. Needs numpy and scipy. See
 [`../docs/EMBER.md`](../docs/EMBER.md).
+
+## calabash/ — CALABASH round-0 audition (Python harness)
+
+Drum kits for Afrobeat, Afrobeats, Mbalax and Afro-Cuban jazz, approved by ear on 2026-11-15: 36 voices, the hand
+drums, bells, claves, shaker and claps fitted to CC0 recordings (`fit_calabash.py`, `hands.json`, `NOTICE.txt`),
+the shekere, talking drums, sabar family and timbales physical, and four sixteen-pad kits (`kits.py`).
+`python3 gen_audition.py OUT && python3 build_page.py OUT` renders every pad at three zones and four takes, the
+grooves, the strokes, every voice and every control, and writes the listening page. `export_fixed.py` writes the
+three draws the Kotlin port takes from the prototype (the room's noise, the cymbals' pairs, the crowd);
+`compare_kotlin.py KOTLIN_DIR` measures the port (`./gradlew :synth:generateCalabashAudition`) against these renders
+pad by pad. `shelf_grooves.py` puts the kits on the shelf (`:shell:generateCalabashKits`) on the page beside the
+approved grooves. Needs numpy, scipy and ffmpeg. See [`../docs/CALABASH.md`](../docs/CALABASH.md).

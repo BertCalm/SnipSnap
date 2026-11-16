@@ -45,7 +45,9 @@ class PatchesTest {
         BreakerPatch("Crushed drip", BreakerVoice.SNARE, emptyMap()),
         DrumlinePatch("Section", DrumlineVoice.SNARE, emptyMap()),
         SootPatch("Hot", SootVoice.SNARE, emptyMap()),
+        KindredPatch.of(KindredRecipes.ALL.first(), velocity = 0.6f, take = 2),
         EmberPatch("Kick", EmberVoice.KICK, emptyMap()),
+        ServoPatch("Kick", ServoVoice.KICK, emptyMap()),
         HalobarPatch("Mallet dub", HalobarVoice.MARIMBA, emptyMap()),
         TempestPatch("Legacy Strike", TempestVoice.METAL, emptyMap(), model = 1),
         HydroformPatch("Door", HydroformVoice.DOME, emptyMap()),
@@ -81,7 +83,7 @@ class PatchesTest {
             val fields = patch.toJsonValue().entries
             assertEquals(patch.macros, Patches.fromJsonValue(JsonValue.Obj(fields)).macros,
                 "${patch.engine}: complete saved controls survive the dispatcher")
-            if (patch is RivetPatch || patch is OpenSkyPatch || patch is OnsetPatch || patch is OtisPatch || patch is OsteriaPatch) {
+            if (patch is BristlePatch || patch is RivetPatch || patch is OpenSkyPatch || patch is OnsetPatch || patch is OtisPatch || patch is OsteriaPatch) {
                 // These formats pin complete control snapshots instead of
                 // inheriting newer voice defaults when a field is missing.
                 for (incomplete in listOf(fields - "macros", fields + ("macros" to JsonValue.Null))) {

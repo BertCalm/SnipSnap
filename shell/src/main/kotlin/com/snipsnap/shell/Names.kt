@@ -42,7 +42,7 @@ object Names {
         "INGOT", "FOIL", "TIN", "LATTEN", "BILLET", "ANVIL", "BULLION", "CARBIDE",
         "TUNGSTEN", "CADMIUM", "SLAG",
         // light
-        "FLARE", "GLOW", "BEAM", "DAWN", "DUSK", "SHEEN", "LUSTER", "GLEAM", "EMBER", "FLICKER",
+        "FLARE", "GLOW", "BEAM", "DAWN", "DUSK", "SHEEN", "LUSTER", "GLEAM", "BRAZIER", "FLICKER",
         "LANTERN", "GLIMMER", "TWILIGHT", "STROBE", "CANDLE", "TORCH", "DAZZLE", "HALOGEN",
         "FLASH", "SPECTRUM", "RAINBOW", "LASER", "SUNSET", "DIMMER",
         // geology

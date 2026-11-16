@@ -3645,6 +3645,24 @@ deterministic objects correlate 0.93 to 0.99; random draws are another realisati
 owner waived the roll gate. See [CLUTTER](CLUTTER.md) and the gates entry. The four genre kits go on the shelf
 at round 2; the picker entry waits for a session with an SDK.
 
+### Bristle bass prototype (2026-11-14, in progress)
+
+The owner kept both Python A/B routes and authorized Kotlin and app/instrument integration.
+[Bristle](BRISTLE.md) preserves the two orders in one DSP core, registers saved patches and the
+BRISTLE picker entry, and provides finite C1–C3 instruments with three timbral touch layers per
+semitone. Round 3 adds opt-in SUSTAIN KEYS with measured loops and note-off release; the two
+finite packages remain byte-identical. Round 4 adds optional two-take pools and separate
+fixed-touch MPC cycling programs. Round 5 adds six distinct owner-retained voices, twelve validated
+finite/held two-take keygroups and a sixteen-pad shelf starter. Chord planning fits 956 of 960
+voicings by whole-octave transposition and refuses four B add-nine cases outside C1–C3.
+Combined velocity × round robin in one MPC keygroup remains open; generic MPC 3 pad chains
+also lack the embedded WAV slice map. The portable starter instead supplies three-touch first-take
+programs plus separate fixed-touch cycling programs. Optional COMP and FUZZ controls now accompany
+all eight voices, default off; their new comparisons await listening. Live chord UI and
+hardware verification remain open; full-regression evidence is recorded in BRISTLE.md.
+The owner subsequently reported the current prototype tested and approved after the Android/MPC
+testing recommendation; device details were not supplied and Android automation remains unrun.
+This is an accepted prototype, not a completed instrument.
 ### TIMBER acoustic-instrument percussion banks (2026-11-14)
 
 Three genre starters from guitar, acoustic bass guitar, cello and upright body/string
@@ -3705,3 +3723,131 @@ four takes, `EmberPatch` with velocity, take and model, rosterless (no presets y
 Python: no brightness bias across the 27 voices (0.10 dB above 4 kHz); the drums correlate 0.978 to 0.996; every
 voice inside the spread of Python's own takes. Random draws are another realisation of the same law; the club's
 tail is the prototype's own draw. See [EMBER](EMBER.md) and the gates entry. The four kits go on the shelf at round 2.
+
+### CALABASH, round 1 (2026-11-15)
+
+Drum kits for Afrobeat, Afrobeats, Mbalax and Afro-Cuban jazz, ported from the round-0 Python prototype the owner
+approved on 2026-11-15 ("Sounds great"; "I listened: approve all") to `Calabash.kt`: 36 voices, congas, bongos, bells,
+claves, shaker and claps resynthesized from CC0 recordings (VCSL), the shekere, talking drums, sabar family and
+timbales physical, STROKE switching the event, ROOM and AGE on every voice. `CalabashPatch` with velocity, take and
+model, rosterless (no presets yet), the four kits as data (`CalabashKits`). Measured against the Python with 16
+seeded hits a pad: a Kotlin hit is another take of the approved pad on all 64 pads (across minus within, median
+-0.02 dB); the room's noise, the cymbals' pairs and the crowd are the prototype's own draws. Not heard in Kotlin. See
+[CALABASH](CALABASH.md) and the gates entry. The four kits go on the shelf at round 2.
+
+### EMBER, round 1b (2026-11-15)
+
+"Swell cuts abruptly": the swell, the bowed cymbal and both rolls now ring out instead of being cut while still
+sounding (5.0, 3.6 and 3.0 s; each ends at least 40 dB under its peak, a test). The owner then heard every Kotlin
+voice beside the Python one and said "I've heard the sound and approve": `Ember.MODEL_VERSION` 1 with round 1b is the
+approved sound baseline. Open: the four kits on the shelf (round 2), phone and MPC hardware (round 3).
+
+### EMBER, round 2 (2026-11-15)
+
+The four kits on the shelf: `EmberKits` (EMBER 138 BPM, EMBER AFTER HOURS 66, EMBER SOUL JAZZ 104, EMBER FREE 80),
+sixteen one-shot pads each, generated from `prototype/ember/kits.py`, three zones of four takes rendered by the
+approved engine, each kit's hi-hat in one mute group, FRESH TAPE starters under SKINS (148 starters). A zone's takes
+are matched in loudness (the audition's peak law left hats 2 to 5 dB apart). Every grid proved through saving,
+playback and the MPC 3 export (768 slices). Every kit carries a roll or riser. Open: the owner's listen to the kits
+from the app, the Latin jazz kit and its new percussion voices (asked for 2026-11-15), presets and the picker,
+hardware. See [EMBER](EMBER.md).
+
+### KINDRED, rounds 0 to K1 (2026-11-15)
+
+A one-voice, eight-step analog-style percussion synth from the owner's DFAM reference clips: two VCOs with a shared
+pitch-decay envelope, FM and hard sync, noise, a four-pole tanh ladder (LP or HP), three decays; a new step re-strikes
+the same voice and cuts the last tail. Rounds 0 to 2 were Python (`prototype/kindred/`): six voices, then four
+sixteen-pad genre kits (TECHNO 132, INDUSTRIAL 100, ELECTRO 124, AMBIENT 84), then model 2 after the owner heard
+round 1 as "a small radio speaker" (kicks settle near 58 Hz with an open ladder and an octave square, fitted to the
+reference kick; the grooves' 400 Hz to 2.5 kHz deficit fell from 5.5 to 1.9 to 2.9 dB). The owner accepted round 2.
+Round K1 is the Kotlin port: `Kindred.kt`, `KindredPatch` (velocity, take, recipe, model), the 56 recipes generated
+from the prototype's kit table, provisional presets under `PatchTypes.PROTOTYPES`, `KindredTest`, a determinism
+canary. The noise-free recipes match the Python to 0.01 dB (correlation 0.972 to 1.000); the noise recipes are
+another realisation (up to 2.54 dB). 40.7 ms a pad, warm. Nothing in Kotlin heard. Open: the kits on the shelf with
+their phrases and risers (K2), the picker, hardware. See [KINDRED](KINDRED.md).
+### CALABASH, round 2 (2026-11-15)
+
+The four approved kits on the shelf: CALABASH AFROBEAT, AFROBEATS, MBALAX and AFRO-CUBAN JAZZ are FRESH TAPE starters
+under SKINS (148 starters), each sixteen one-shot pads of three velocity zones by four engine takes, the prototype's
+chokes as mute groups, and a roll or riser on A16. A zone's takes are matched in loudness (CLUTTER's law; the
+audition's peak-matching left them up to 4.5 dB apart on a hit). Velocity and round robin are verified through
+rendering, saving, `PadHit.resolve` playback and MPC 3 export in software (`CalabashKitsTest`, `CalabashKitTest`,
+`:shell:generateCalabashKits`: 768 slices). A kit builds in 22 to 51 s on four cores, disclosed. The owner heard the
+Kotlin kits (each kit's approved groove played with the app's own strikes, read back from the MPC 3 export) and
+approved them on 2026-11-15 ("I listened: approve all"). See [CALABASH](CALABASH.md).
+
+### CALABASH, round 3 (2026-11-15)
+
+The roster: `CalabashPresets` files the sixty-four pads of the four approved kits as CALABASH's factory bank, each the
+pad's own macros struck full at take 0, named after its kit (AFROBEAT, AFROBEATS, MBALAX, AFROCUBAN; one name
+shortened to 24 letters). CALABASH leaves `PatchTypes.ROSTERLESS`; a saved strike promotes with its velocity, take
+and model. Thirty-five of thirty-six voices have a preset (the low agogo bell is in no kit). `CalabashPresetsTest`
+holds the preset contracts. The picker is round 4. See [CALABASH](CALABASH.md).
+
+### CALABASH, round 4 (2026-11-15)
+
+The picker: CALABASH sits in SYNTH's engine picker after CLUTTER, before CAIRN (which closes the ring), wired as CLUTTER's round 4 (the native
+factory path keeps a preset's velocity, take and model; a frozen draft keeps them through edits), filed under DRUMS
+in `EngineCatalog`; 91 picker engines. An on-device test in `NewEngineSynthScreenTest` loads AFROBEAT CONGA OPEN and
+keeps an edit with its take and model; CI compiles and runs it (no SDK here). See [CALABASH](CALABASH.md).
+
+### CALABASH, complete (2026-11-15)
+
+The owner's phone and MPC checks: asked to load a CALABASH kit from FRESH TAPE and play soft, hard and repeated hits,
+try CALABASH in the SYNTH picker with a preset, and load an MPC 3 export on the MPC, the owner answered "Last checks
+are good". Every applicable gate has its evidence; MPC 2 is not applicable (the owner's format limit). See
+[CALABASH](CALABASH.md) and the gates entry.
+
+### SERVO, rounds 0 and 1 (2026-11-15)
+
+Machine drums on a weak power rail for electro, ghetto tech and neurofunk: every hit sags one supply a few
+milliseconds after it lands, and pitch, output swing and a resonant tone peak all read that one state. Round 0
+was the brief, a Python prototype and a listening page; the owner then said "Must pass the gates", so round 1
+ported it to `Servo.kt` unheard (ten voices, six macros, velocity, four takes, rosterless) and put three kits on
+the FRESH TAPE shelf under SKINS: SERVO ELECTRO (126), SERVO JIT (156) and SERVO NEURO (174), fourteen hits, a
+roll and a riser each, the phrases baked on one shared rail. Every voice's Kotlin hit sits inside the spread of
+the prototype's own takes; all 576 slices pass save, reload, playback and MPC 3 read-back. A zone's takes are
+matched in loudness (CLUTTER's law): on the first-take law a take fired on a sagging rail came out up to 5.3 dB
+down. Sound and hardware gates are open: nobody has heard it. See [SERVO](SERVO.md) and the gates entry.
+
+### SERVO, accepted (2026-11-15)
+
+The owner heard round 1 as "a bit weak"; round 1b gave the kick, snare and tom a held shoulder, the snare more
+body, and every voice more drive (kicks 1.2 to 2.7 dB, snares 3.2 to 4.7 dB louder at the same peak). The owner
+then wrote "Sound approved, phone and MPC good, merge". Model 1 and kit version 1 are the approved baseline.
+Open, not gates: factory presets from the accepted pads, and the SYNTH picker. See [SERVO](SERVO.md).
+
+### HICCUP, rounds 1 to 4 (2026-11-14 to 2026-11-15)
+
+A glitch drum engine: a clean hit is written into a memory and a seeded fault script re-reads it (snag, ratchet,
+buzz, cut), each re-read coarser than the last. Round 1: `Hiccup.kt` with eight voices (KICK, SNARE, CLAP,
+HAT_CLOSED, HAT_OPEN, TOM, BLIP, SQUEAK), six macros (TUNE, DECAY, TOY, FAULT, CHOP, CRUSH) and `HiccupPatch`
+with velocity, take and model, rosterless. Round 2: three kits on the shelf (`HiccupKits`: HICCUP HOP 98 BPM,
+LAB 150, SUGAR 160), sixteen pads each, three zones of four takes, a roll and a riser, proved through save,
+playback and MPC 3 export. Round 3: the groove fixes (an 18 ms attack guard, one pentatonic key over 55 Hz,
+stumbles in whole grid units, a cap; `Hiccup.MODEL_VERSION` 2, `HiccupKits.VERSION` 2), `HiccupPresets` (twenty-one
+presets, held out of the factory bank until the listen), the
+`EngineCatalog` entry (DRUMS) and the entry on SYNTH's picker (93 engines with CALABASH merged). Heard: on 2026-11-15 the owner
+listened to an audition page of the Kotlin engine (model 2, kit 2): a four-bar groove from each of the three kits,
+every hit pad A01 to A14 of each kit at the hardest velocity zone, each kit's roll and riser, and the four
+round-robin takes of SUGAR's Pop Snare. The verdict, verbatim: "sounds check passes". Round 4: the 21 presets were
+filed in the factory bank through `Presets` and HICCUP left `PatchTypes.PROTOTYPES`, as SCUFF's presets were after its
+listen. The same day the owner listened to a second audition page (model 2, kit 2): all 21 presets, each played twice
+at velocity 1, take 0, and, for each kit, every hit pad A01 to A14 struck soft, medium and hard (velocities .30, .65,
+1), first take of each zone, at the same peak level as saved. The verdict, verbatim: "Everything sounds good". The
+picker's on-device test passed in CI's emulator job on PR #1143 on 2026-11-15. Hardware: on 2026-11-15, told that
+playback on a phone and an MPC was the remaining gate, the owner said, verbatim: "Hardware is good" (the owner's
+report, not a capture). Third listen (model 2, kit 2): for each kit and each velocity zone (soft .30, medium .65,
+hard 1), every hit pad A01 to A14 with its four round-robin takes played back to back in dealt order (nine clips),
+asking whether any take sounded like a different drum or four sounded the same. The verdict, verbatim: "Takes are
+good". Every take of every hit pad has been heard. Complete (2026-11-15), accepted sound `Hiccup.MODEL_VERSION` 2 with
+`HiccupKits.VERSION` 2. MPC 2 is not applicable (format limit): it keeps one take per zone.
+See [HICCUP](HICCUP.md) and the gates entry.
+
+
+### East African fitted synthesis banks, 2026-11-15
+
+Five curated shelf kits retain the accepted fitted modal/noise palette and FM
+logs: 22 sounds × 3 velocity zones × 3 takes per kit. This is a bank family,
+not a new picker engine. Native listening and hardware gates remain open;
+see [implementation and evidence](EAST_AFRICA.md).

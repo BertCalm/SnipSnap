@@ -151,7 +151,7 @@ object NacrePlayableAuditionGenerator {
 
     private fun requests(base: Map<String, Float>): List<Request> = buildList {
         for ((id, title) in listOf("pearl_close" to "Pearl Close", "coral_reply" to "Coral Reply", "kelp_passage" to "Kelp Passage")) {
-            val preset = NacrePresets.all().single { it.name == title && it.model == MODEL }
+            val preset = NacrePresets.forVoice(NacreVoice.PEARL).single { it.name == title && it.model == MODEL }
             check(preset.midi == 48 && preset.velocity == 1f && preset.seed == SEED)
             add(Request("preset_$id", preset.name, "presets",
                 "Ordinary production starting patch: VENUE ${preset.macros.getValue("VENUE")}, BLOOM ${preset.macros.getValue("BLOOM")}, MIDI 48, velocity 1, seed 7.",
