@@ -1,0 +1,2645 @@
+{
+  "status": "Python recipe prototype; not factory presets or an accepted reference match",
+  "source_commit": "4ead7cd350ab6fabb116a2ee01896ad9fff49f8f",
+  "kits": [
+    {
+      "name": "soul-pocket",
+      "bpm": 108,
+      "pads": [
+        {
+          "pad": 1,
+          "voice": "KICK",
+          "macros": {
+            "TUNE": 0.7379529026326582,
+            "DAMP": 0.7,
+            "BUZZ": 0.4,
+            "DISTANCE": 0.12,
+            "WARMTH": 0.35
+          },
+          "variants": [
+            "soul-pocket/A01-kick-v1-t1.wav",
+            "soul-pocket/A01-kick-v1-t2.wav",
+            "soul-pocket/A01-kick-v1-t3.wav",
+            "soul-pocket/A01-kick-v2-t1.wav",
+            "soul-pocket/A01-kick-v2-t2.wav",
+            "soul-pocket/A01-kick-v2-t3.wav",
+            "soul-pocket/A01-kick-v3-t1.wav",
+            "soul-pocket/A01-kick-v3-t2.wav",
+            "soul-pocket/A01-kick-v3-t3.wav"
+          ],
+          "soft_hard_residual_db": -3.2514954218825878,
+          "take_residual_db": -17.413728727631543,
+          "tuning_evidence": {
+            "method": "Match strongest 35\u2013160 Hz peak of first 120ms to median of low-band-dominant reference events; provisional, overlapping sources possible",
+            "target_hz": 83.441162109375,
+            "before_hz": 83.441162109375,
+            "after_hz": 83.441162109375,
+            "old_tune": 0.7379529026326582
+          }
+        },
+        {
+          "pad": 2,
+          "voice": "SNARE",
+          "macros": {
+            "TUNE": 0.53,
+            "DAMP": 0.7,
+            "BUZZ": 0.4,
+            "DISTANCE": 0.12,
+            "WARMTH": 0.35
+          },
+          "variants": [
+            "soul-pocket/A02-snare-v1-t1.wav",
+            "soul-pocket/A02-snare-v1-t2.wav",
+            "soul-pocket/A02-snare-v1-t3.wav",
+            "soul-pocket/A02-snare-v2-t1.wav",
+            "soul-pocket/A02-snare-v2-t2.wav",
+            "soul-pocket/A02-snare-v2-t3.wav",
+            "soul-pocket/A02-snare-v3-t1.wav",
+            "soul-pocket/A02-snare-v3-t2.wav",
+            "soul-pocket/A02-snare-v3-t3.wav"
+          ],
+          "soft_hard_residual_db": -3.1924301432908493,
+          "take_residual_db": -2.2062028099580475
+        },
+        {
+          "pad": 3,
+          "voice": "RIMSHOT",
+          "macros": {
+            "TUNE": 0.53,
+            "DAMP": 0.7,
+            "BUZZ": 0.4,
+            "DISTANCE": 0.12,
+            "WARMTH": 0.35
+          },
+          "variants": [
+            "soul-pocket/A03-rimshot-v1-t1.wav",
+            "soul-pocket/A03-rimshot-v1-t2.wav",
+            "soul-pocket/A03-rimshot-v1-t3.wav",
+            "soul-pocket/A03-rimshot-v2-t1.wav",
+            "soul-pocket/A03-rimshot-v2-t2.wav",
+            "soul-pocket/A03-rimshot-v2-t3.wav",
+            "soul-pocket/A03-rimshot-v3-t1.wav",
+            "soul-pocket/A03-rimshot-v3-t2.wav",
+            "soul-pocket/A03-rimshot-v3-t3.wav"
+          ],
+          "soft_hard_residual_db": -6.227419366140289,
+          "take_residual_db": -7.14909281989722
+        },
+        {
+          "pad": 4,
+          "voice": "CROSS_STICK",
+          "macros": {
+            "TUNE": 0.53,
+            "DAMP": 0.7,
+            "BUZZ": 0.4,
+            "DISTANCE": 0.12,
+            "WARMTH": 0.35
+          },
+          "variants": [
+            "soul-pocket/A04-cross_stick-v1-t1.wav",
+            "soul-pocket/A04-cross_stick-v1-t2.wav",
+            "soul-pocket/A04-cross_stick-v1-t3.wav",
+            "soul-pocket/A04-cross_stick-v2-t1.wav",
+            "soul-pocket/A04-cross_stick-v2-t2.wav",
+            "soul-pocket/A04-cross_stick-v2-t3.wav",
+            "soul-pocket/A04-cross_stick-v3-t1.wav",
+            "soul-pocket/A04-cross_stick-v3-t2.wav",
+            "soul-pocket/A04-cross_stick-v3-t3.wav"
+          ],
+          "soft_hard_residual_db": -11.472374622316401,
+          "take_residual_db": -8.28718654927337
+        },
+        {
+          "pad": 5,
+          "voice": "HAT_CLOSED",
+          "macros": {
+            "TUNE": 0.53,
+            "DAMP": 0.7,
+            "BUZZ": 0,
+            "DISTANCE": 0.12,
+            "WARMTH": 0.35
+          },
+          "variants": [
+            "soul-pocket/A05-hat_closed-v1-t1.wav",
+            "soul-pocket/A05-hat_closed-v1-t2.wav",
+            "soul-pocket/A05-hat_closed-v1-t3.wav",
+            "soul-pocket/A05-hat_closed-v2-t1.wav",
+            "soul-pocket/A05-hat_closed-v2-t2.wav",
+            "soul-pocket/A05-hat_closed-v2-t3.wav",
+            "soul-pocket/A05-hat_closed-v3-t1.wav",
+            "soul-pocket/A05-hat_closed-v3-t2.wav",
+            "soul-pocket/A05-hat_closed-v3-t3.wav"
+          ],
+          "soft_hard_residual_db": -4.6320820146158255,
+          "take_residual_db": -0.00039306908608058
+        },
+        {
+          "pad": 6,
+          "voice": "HAT_OPEN",
+          "macros": {
+            "TUNE": 0.53,
+            "DAMP": 0.7,
+            "BUZZ": 0,
+            "DISTANCE": 0.12,
+            "WARMTH": 0.35
+          },
+          "variants": [
+            "soul-pocket/A06-hat_open-v1-t1.wav",
+            "soul-pocket/A06-hat_open-v1-t2.wav",
+            "soul-pocket/A06-hat_open-v1-t3.wav",
+            "soul-pocket/A06-hat_open-v2-t1.wav",
+            "soul-pocket/A06-hat_open-v2-t2.wav",
+            "soul-pocket/A06-hat_open-v2-t3.wav",
+            "soul-pocket/A06-hat_open-v3-t1.wav",
+            "soul-pocket/A06-hat_open-v3-t2.wav",
+            "soul-pocket/A06-hat_open-v3-t3.wav"
+          ],
+          "soft_hard_residual_db": -3.8667118708338966,
+          "take_residual_db": -0.17128522441914584
+        },
+        {
+          "pad": 7,
+          "voice": "HAT_FOOT",
+          "macros": {
+            "TUNE": 0.53,
+            "DAMP": 0.7,
+            "BUZZ": 0,
+            "DISTANCE": 0.12,
+            "WARMTH": 0.35
+          },
+          "variants": [
+            "soul-pocket/A07-hat_foot-v1-t1.wav",
+            "soul-pocket/A07-hat_foot-v1-t2.wav",
+            "soul-pocket/A07-hat_foot-v1-t3.wav",
+            "soul-pocket/A07-hat_foot-v2-t1.wav",
+            "soul-pocket/A07-hat_foot-v2-t2.wav",
+            "soul-pocket/A07-hat_foot-v2-t3.wav",
+            "soul-pocket/A07-hat_foot-v3-t1.wav",
+            "soul-pocket/A07-hat_foot-v3-t2.wav",
+            "soul-pocket/A07-hat_foot-v3-t3.wav"
+          ],
+          "soft_hard_residual_db": -3.238292973253014,
+          "take_residual_db": -0.8920044975208868
+        },
+        {
+          "pad": 8,
+          "voice": "TOM_RACK",
+          "macros": {
+            "TUNE": 0.53,
+            "DAMP": 0.58,
+            "BUZZ": 0.4,
+            "DISTANCE": 0.12,
+            "WARMTH": 0.35
+          },
+          "variants": [
+            "soul-pocket/A08-tom_rack-v1-t1.wav",
+            "soul-pocket/A08-tom_rack-v1-t2.wav",
+            "soul-pocket/A08-tom_rack-v1-t3.wav",
+            "soul-pocket/A08-tom_rack-v2-t1.wav",
+            "soul-pocket/A08-tom_rack-v2-t2.wav",
+            "soul-pocket/A08-tom_rack-v2-t3.wav",
+            "soul-pocket/A08-tom_rack-v3-t1.wav",
+            "soul-pocket/A08-tom_rack-v3-t2.wav",
+            "soul-pocket/A08-tom_rack-v3-t3.wav"
+          ],
+          "soft_hard_residual_db": -1.90901983780756,
+          "take_residual_db": -19.227352772958536
+        },
+        {
+          "pad": 9,
+          "voice": "TOM_FLOOR",
+          "macros": {
+            "TUNE": 0.53,
+            "DAMP": 0.58,
+            "BUZZ": 0.4,
+            "DISTANCE": 0.12,
+            "WARMTH": 0.35
+          },
+          "variants": [
+            "soul-pocket/A09-tom_floor-v1-t1.wav",
+            "soul-pocket/A09-tom_floor-v1-t2.wav",
+            "soul-pocket/A09-tom_floor-v1-t3.wav",
+            "soul-pocket/A09-tom_floor-v2-t1.wav",
+            "soul-pocket/A09-tom_floor-v2-t2.wav",
+            "soul-pocket/A09-tom_floor-v2-t3.wav",
+            "soul-pocket/A09-tom_floor-v3-t1.wav",
+            "soul-pocket/A09-tom_floor-v3-t2.wav",
+            "soul-pocket/A09-tom_floor-v3-t3.wav"
+          ],
+          "soft_hard_residual_db": -3.7432435807087323,
+          "take_residual_db": -21.01998578096715
+        },
+        {
+          "pad": 10,
+          "voice": "RIDE",
+          "macros": {
+            "TUNE": 0.53,
+            "DAMP": 0.7,
+            "BUZZ": 0,
+            "DISTANCE": 0.12,
+            "WARMTH": 0.35
+          },
+          "variants": [
+            "soul-pocket/A10-ride-v1-t1.wav",
+            "soul-pocket/A10-ride-v1-t2.wav",
+            "soul-pocket/A10-ride-v1-t3.wav",
+            "soul-pocket/A10-ride-v2-t1.wav",
+            "soul-pocket/A10-ride-v2-t2.wav",
+            "soul-pocket/A10-ride-v2-t3.wav",
+            "soul-pocket/A10-ride-v3-t1.wav",
+            "soul-pocket/A10-ride-v3-t2.wav",
+            "soul-pocket/A10-ride-v3-t3.wav"
+          ],
+          "soft_hard_residual_db": -9.115698331854556,
+          "take_residual_db": -0.12335439655410922
+        },
+        {
+          "pad": 11,
+          "voice": "RIDE_BELL",
+          "macros": {
+            "TUNE": 0.53,
+            "DAMP": 0.7,
+            "BUZZ": 0,
+            "DISTANCE": 0.12,
+            "WARMTH": 0.35
+          },
+          "variants": [
+            "soul-pocket/A11-ride_bell-v1-t1.wav",
+            "soul-pocket/A11-ride_bell-v1-t2.wav",
+            "soul-pocket/A11-ride_bell-v1-t3.wav",
+            "soul-pocket/A11-ride_bell-v2-t1.wav",
+            "soul-pocket/A11-ride_bell-v2-t2.wav",
+            "soul-pocket/A11-ride_bell-v2-t3.wav",
+            "soul-pocket/A11-ride_bell-v3-t1.wav",
+            "soul-pocket/A11-ride_bell-v3-t2.wav",
+            "soul-pocket/A11-ride_bell-v3-t3.wav"
+          ],
+          "soft_hard_residual_db": -1.9177601104755815,
+          "take_residual_db": -0.015145930347957162
+        },
+        {
+          "pad": 12,
+          "voice": "SIZZLE",
+          "macros": {
+            "TUNE": 0.53,
+            "DAMP": 0.7,
+            "BUZZ": 0.4,
+            "DISTANCE": 0.12,
+            "WARMTH": 0.35
+          },
+          "variants": [
+            "soul-pocket/A12-sizzle-v1-t1.wav",
+            "soul-pocket/A12-sizzle-v1-t2.wav",
+            "soul-pocket/A12-sizzle-v1-t3.wav",
+            "soul-pocket/A12-sizzle-v2-t1.wav",
+            "soul-pocket/A12-sizzle-v2-t2.wav",
+            "soul-pocket/A12-sizzle-v2-t3.wav",
+            "soul-pocket/A12-sizzle-v3-t1.wav",
+            "soul-pocket/A12-sizzle-v3-t2.wav",
+            "soul-pocket/A12-sizzle-v3-t3.wav"
+          ],
+          "soft_hard_residual_db": -6.042896756447002,
+          "take_residual_db": -5.082000067682122e-05
+        },
+        {
+          "pad": 13,
+          "voice": "TAMBOURINE",
+          "macros": {
+            "TUNE": 0.53,
+            "DAMP": 0.7,
+            "BUZZ": 0.4,
+            "DISTANCE": 0.12,
+            "WARMTH": 0.35
+          },
+          "variants": [
+            "soul-pocket/A13-tambourine-v1-t1.wav",
+            "soul-pocket/A13-tambourine-v1-t2.wav",
+            "soul-pocket/A13-tambourine-v1-t3.wav",
+            "soul-pocket/A13-tambourine-v2-t1.wav",
+            "soul-pocket/A13-tambourine-v2-t2.wav",
+            "soul-pocket/A13-tambourine-v2-t3.wav",
+            "soul-pocket/A13-tambourine-v3-t1.wav",
+            "soul-pocket/A13-tambourine-v3-t2.wav",
+            "soul-pocket/A13-tambourine-v3-t3.wav"
+          ],
+          "soft_hard_residual_db": -0.0005825204743440614,
+          "take_residual_db": -0.2168876322498396
+        },
+        {
+          "pad": 14,
+          "voice": "CLAPS",
+          "macros": {
+            "TUNE": 0.53,
+            "DAMP": 0.7,
+            "BUZZ": 0.4,
+            "DISTANCE": 0.12,
+            "WARMTH": 0.35
+          },
+          "variants": [
+            "soul-pocket/A14-claps-v1-t1.wav",
+            "soul-pocket/A14-claps-v1-t2.wav",
+            "soul-pocket/A14-claps-v1-t3.wav",
+            "soul-pocket/A14-claps-v2-t1.wav",
+            "soul-pocket/A14-claps-v2-t2.wav",
+            "soul-pocket/A14-claps-v2-t3.wav",
+            "soul-pocket/A14-claps-v3-t1.wav",
+            "soul-pocket/A14-claps-v3-t2.wav",
+            "soul-pocket/A14-claps-v3-t3.wav"
+          ],
+          "soft_hard_residual_db": -4.7485907995566725,
+          "take_residual_db": -0.012144072768103888
+        },
+        {
+          "pad": 15,
+          "voice": "PRESS_ROLL",
+          "macros": {
+            "TUNE": 0.53,
+            "DAMP": 0.7,
+            "BUZZ": 0.4,
+            "DISTANCE": 0.12,
+            "WARMTH": 0.35,
+            "SPEED": 0.58
+          },
+          "variants": [
+            "soul-pocket/A15-press_roll-v1-t1.wav",
+            "soul-pocket/A15-press_roll-v1-t2.wav",
+            "soul-pocket/A15-press_roll-v1-t3.wav",
+            "soul-pocket/A15-press_roll-v2-t1.wav",
+            "soul-pocket/A15-press_roll-v2-t2.wav",
+            "soul-pocket/A15-press_roll-v2-t3.wav",
+            "soul-pocket/A15-press_roll-v3-t1.wav",
+            "soul-pocket/A15-press_roll-v3-t2.wav",
+            "soul-pocket/A15-press_roll-v3-t3.wav"
+          ],
+          "soft_hard_residual_db": -2.3660636637561137,
+          "take_residual_db": -0.027201604677222997
+        },
+        {
+          "pad": 16,
+          "voice": "CYMBAL_SWELL",
+          "macros": {
+            "TUNE": 0.53,
+            "DAMP": 0.7,
+            "BUZZ": 0.4,
+            "DISTANCE": 0.12,
+            "WARMTH": 0.35,
+            "SPEED": 0.58
+          },
+          "variants": [
+            "soul-pocket/A16-cymbal_swell-v1-t1.wav",
+            "soul-pocket/A16-cymbal_swell-v1-t2.wav",
+            "soul-pocket/A16-cymbal_swell-v1-t3.wav",
+            "soul-pocket/A16-cymbal_swell-v2-t1.wav",
+            "soul-pocket/A16-cymbal_swell-v2-t2.wav",
+            "soul-pocket/A16-cymbal_swell-v2-t3.wav",
+            "soul-pocket/A16-cymbal_swell-v3-t1.wav",
+            "soul-pocket/A16-cymbal_swell-v3-t2.wav",
+            "soul-pocket/A16-cymbal_swell-v3-t3.wav"
+          ],
+          "soft_hard_residual_db": -0.6276973443799322,
+          "take_residual_db": -0.17134367692789515
+        }
+      ],
+      "events": [
+        [
+          0,
+          0,
+          2,
+          0.88
+        ],
+        [
+          0,
+          4,
+          2,
+          0.32
+        ],
+        [
+          2,
+          4,
+          1,
+          0.32
+        ],
+        [
+          2,
+          12,
+          1,
+          0.3
+        ],
+        [
+          3,
+          1,
+          0,
+          0.45
+        ],
+        [
+          4,
+          1,
+          2,
+          0.78
+        ],
+        [
+          4,
+          4,
+          2,
+          0.32
+        ],
+        [
+          6,
+          0,
+          2,
+          0.88
+        ],
+        [
+          6,
+          4,
+          1,
+          0.32
+        ],
+        [
+          6,
+          12,
+          1,
+          0.3
+        ],
+        [
+          8,
+          0,
+          2,
+          0.88
+        ],
+        [
+          8,
+          4,
+          2,
+          0.32
+        ],
+        [
+          10,
+          1,
+          0,
+          0.45
+        ],
+        [
+          10,
+          4,
+          1,
+          0.32
+        ],
+        [
+          10,
+          12,
+          1,
+          0.3
+        ],
+        [
+          11,
+          0,
+          2,
+          0.88
+        ],
+        [
+          12,
+          1,
+          2,
+          0.78
+        ],
+        [
+          12,
+          4,
+          2,
+          0.32
+        ],
+        [
+          14,
+          4,
+          1,
+          0.32
+        ],
+        [
+          14,
+          12,
+          1,
+          0.3
+        ],
+        [
+          15,
+          1,
+          0,
+          0.45
+        ],
+        [
+          16,
+          0,
+          2,
+          0.88
+        ],
+        [
+          16,
+          4,
+          2,
+          0.32
+        ],
+        [
+          18,
+          4,
+          1,
+          0.32
+        ],
+        [
+          18,
+          12,
+          1,
+          0.3
+        ],
+        [
+          19,
+          1,
+          0,
+          0.45
+        ],
+        [
+          20,
+          1,
+          2,
+          0.78
+        ],
+        [
+          20,
+          4,
+          2,
+          0.32
+        ],
+        [
+          22,
+          0,
+          2,
+          0.88
+        ],
+        [
+          22,
+          4,
+          1,
+          0.32
+        ],
+        [
+          22,
+          12,
+          1,
+          0.3
+        ],
+        [
+          24,
+          0,
+          2,
+          0.88
+        ],
+        [
+          24,
+          4,
+          2,
+          0.32
+        ],
+        [
+          26,
+          1,
+          0,
+          0.45
+        ],
+        [
+          26,
+          4,
+          1,
+          0.32
+        ],
+        [
+          26,
+          12,
+          1,
+          0.3
+        ],
+        [
+          27,
+          0,
+          2,
+          0.88
+        ],
+        [
+          28,
+          1,
+          2,
+          0.78
+        ],
+        [
+          28,
+          4,
+          2,
+          0.32
+        ],
+        [
+          30,
+          4,
+          1,
+          0.32
+        ],
+        [
+          30,
+          12,
+          1,
+          0.3
+        ],
+        [
+          31,
+          1,
+          0,
+          0.45
+        ],
+        [
+          32,
+          0,
+          2,
+          0.88
+        ],
+        [
+          32,
+          4,
+          2,
+          0.32
+        ],
+        [
+          34,
+          4,
+          1,
+          0.32
+        ],
+        [
+          34,
+          12,
+          1,
+          0.3
+        ],
+        [
+          35,
+          1,
+          0,
+          0.45
+        ],
+        [
+          36,
+          1,
+          2,
+          0.78
+        ],
+        [
+          36,
+          4,
+          2,
+          0.32
+        ],
+        [
+          38,
+          0,
+          2,
+          0.88
+        ],
+        [
+          38,
+          4,
+          1,
+          0.32
+        ],
+        [
+          38,
+          12,
+          1,
+          0.3
+        ],
+        [
+          40,
+          0,
+          2,
+          0.88
+        ],
+        [
+          40,
+          4,
+          2,
+          0.32
+        ],
+        [
+          42,
+          1,
+          0,
+          0.45
+        ],
+        [
+          42,
+          4,
+          1,
+          0.32
+        ],
+        [
+          42,
+          12,
+          1,
+          0.3
+        ],
+        [
+          43,
+          0,
+          2,
+          0.88
+        ],
+        [
+          44,
+          1,
+          2,
+          0.78
+        ],
+        [
+          44,
+          4,
+          2,
+          0.32
+        ],
+        [
+          46,
+          4,
+          1,
+          0.32
+        ],
+        [
+          46,
+          12,
+          1,
+          0.3
+        ],
+        [
+          47,
+          1,
+          0,
+          0.45
+        ],
+        [
+          48,
+          0,
+          2,
+          0.88
+        ],
+        [
+          48,
+          4,
+          2,
+          0.32
+        ],
+        [
+          50,
+          4,
+          1,
+          0.32
+        ],
+        [
+          50,
+          12,
+          1,
+          0.3
+        ],
+        [
+          51,
+          1,
+          0,
+          0.45
+        ],
+        [
+          52,
+          1,
+          2,
+          0.78
+        ],
+        [
+          52,
+          4,
+          2,
+          0.32
+        ],
+        [
+          54,
+          0,
+          2,
+          0.88
+        ],
+        [
+          54,
+          4,
+          1,
+          0.32
+        ],
+        [
+          54,
+          12,
+          1,
+          0.3
+        ],
+        [
+          56,
+          0,
+          2,
+          0.88
+        ],
+        [
+          56,
+          4,
+          2,
+          0.32
+        ],
+        [
+          58,
+          1,
+          0,
+          0.45
+        ],
+        [
+          58,
+          4,
+          1,
+          0.32
+        ],
+        [
+          58,
+          12,
+          1,
+          0.3
+        ],
+        [
+          59,
+          0,
+          2,
+          0.88
+        ],
+        [
+          60,
+          1,
+          2,
+          0.78
+        ],
+        [
+          60,
+          4,
+          2,
+          0.32
+        ],
+        [
+          60,
+          7,
+          2,
+          0.65
+        ],
+        [
+          61,
+          7,
+          2,
+          0.65
+        ],
+        [
+          62,
+          4,
+          1,
+          0.32
+        ],
+        [
+          62,
+          8,
+          2,
+          0.65
+        ],
+        [
+          62,
+          12,
+          1,
+          0.3
+        ],
+        [
+          63,
+          1,
+          0,
+          0.45
+        ],
+        [
+          63,
+          8,
+          2,
+          0.65
+        ]
+      ],
+      "groove_gain": 0.9562026157313068,
+      "render_seconds": 228.87799791100406,
+      "audition_hat_choke": true,
+      "true_peak_gain": 1
+    },
+    {
+      "name": "roadhouse-rock",
+      "bpm": 134,
+      "pads": [
+        {
+          "pad": 1,
+          "voice": "KICK",
+          "macros": {
+            "TUNE": 0.045891409571936936,
+            "DAMP": 0.36,
+            "BUZZ": 0.64,
+            "DISTANCE": 0.26,
+            "WARMTH": 0.2
+          },
+          "variants": [
+            "roadhouse-rock/A01-kick-v1-t1.wav",
+            "roadhouse-rock/A01-kick-v1-t2.wav",
+            "roadhouse-rock/A01-kick-v1-t3.wav",
+            "roadhouse-rock/A01-kick-v2-t1.wav",
+            "roadhouse-rock/A01-kick-v2-t2.wav",
+            "roadhouse-rock/A01-kick-v2-t3.wav",
+            "roadhouse-rock/A01-kick-v3-t1.wav",
+            "roadhouse-rock/A01-kick-v3-t2.wav",
+            "roadhouse-rock/A01-kick-v3-t3.wav"
+          ],
+          "soft_hard_residual_db": -4.53805612665585,
+          "take_residual_db": -15.93298518280031,
+          "tuning_evidence": {
+            "method": "Match strongest 35\u2013160 Hz peak of first 120ms to median of low-band-dominant reference events; provisional, overlapping sources possible",
+            "target_hz": 49.7955322265625,
+            "before_hz": 110.357666015625,
+            "after_hz": 53.8330078125,
+            "old_tune": 0.0
+          }
+        },
+        {
+          "pad": 2,
+          "voice": "SNARE",
+          "macros": {
+            "TUNE": 0.36,
+            "DAMP": 0.36,
+            "BUZZ": 0.64,
+            "DISTANCE": 0.26,
+            "WARMTH": 0.2
+          },
+          "variants": [
+            "roadhouse-rock/A02-snare-v1-t1.wav",
+            "roadhouse-rock/A02-snare-v1-t2.wav",
+            "roadhouse-rock/A02-snare-v1-t3.wav",
+            "roadhouse-rock/A02-snare-v2-t1.wav",
+            "roadhouse-rock/A02-snare-v2-t2.wav",
+            "roadhouse-rock/A02-snare-v2-t3.wav",
+            "roadhouse-rock/A02-snare-v3-t1.wav",
+            "roadhouse-rock/A02-snare-v3-t2.wav",
+            "roadhouse-rock/A02-snare-v3-t3.wav"
+          ],
+          "soft_hard_residual_db": -3.0076167998408914,
+          "take_residual_db": -2.8627160129060853
+        },
+        {
+          "pad": 3,
+          "voice": "RIMSHOT",
+          "macros": {
+            "TUNE": 0.36,
+            "DAMP": 0.36,
+            "BUZZ": 0.64,
+            "DISTANCE": 0.26,
+            "WARMTH": 0.2
+          },
+          "variants": [
+            "roadhouse-rock/A03-rimshot-v1-t1.wav",
+            "roadhouse-rock/A03-rimshot-v1-t2.wav",
+            "roadhouse-rock/A03-rimshot-v1-t3.wav",
+            "roadhouse-rock/A03-rimshot-v2-t1.wav",
+            "roadhouse-rock/A03-rimshot-v2-t2.wav",
+            "roadhouse-rock/A03-rimshot-v2-t3.wav",
+            "roadhouse-rock/A03-rimshot-v3-t1.wav",
+            "roadhouse-rock/A03-rimshot-v3-t2.wav",
+            "roadhouse-rock/A03-rimshot-v3-t3.wav"
+          ],
+          "soft_hard_residual_db": -4.197189566432904,
+          "take_residual_db": -5.495983879025324
+        },
+        {
+          "pad": 4,
+          "voice": "CROSS_STICK",
+          "macros": {
+            "TUNE": 0.36,
+            "DAMP": 0.36,
+            "BUZZ": 0.64,
+            "DISTANCE": 0.26,
+            "WARMTH": 0.2
+          },
+          "variants": [
+            "roadhouse-rock/A04-cross_stick-v1-t1.wav",
+            "roadhouse-rock/A04-cross_stick-v1-t2.wav",
+            "roadhouse-rock/A04-cross_stick-v1-t3.wav",
+            "roadhouse-rock/A04-cross_stick-v2-t1.wav",
+            "roadhouse-rock/A04-cross_stick-v2-t2.wav",
+            "roadhouse-rock/A04-cross_stick-v2-t3.wav",
+            "roadhouse-rock/A04-cross_stick-v3-t1.wav",
+            "roadhouse-rock/A04-cross_stick-v3-t2.wav",
+            "roadhouse-rock/A04-cross_stick-v3-t3.wav"
+          ],
+          "soft_hard_residual_db": -11.610515485518246,
+          "take_residual_db": -8.766450622650087
+        },
+        {
+          "pad": 5,
+          "voice": "HAT_CLOSED",
+          "macros": {
+            "TUNE": 0.36,
+            "DAMP": 0.36,
+            "BUZZ": 0,
+            "DISTANCE": 0.26,
+            "WARMTH": 0.2
+          },
+          "variants": [
+            "roadhouse-rock/A05-hat_closed-v1-t1.wav",
+            "roadhouse-rock/A05-hat_closed-v1-t2.wav",
+            "roadhouse-rock/A05-hat_closed-v1-t3.wav",
+            "roadhouse-rock/A05-hat_closed-v2-t1.wav",
+            "roadhouse-rock/A05-hat_closed-v2-t2.wav",
+            "roadhouse-rock/A05-hat_closed-v2-t3.wav",
+            "roadhouse-rock/A05-hat_closed-v3-t1.wav",
+            "roadhouse-rock/A05-hat_closed-v3-t2.wav",
+            "roadhouse-rock/A05-hat_closed-v3-t3.wav"
+          ],
+          "soft_hard_residual_db": -4.474204009797712,
+          "take_residual_db": -0.015578719519892283
+        },
+        {
+          "pad": 6,
+          "voice": "HAT_OPEN",
+          "macros": {
+            "TUNE": 0.36,
+            "DAMP": 0.36,
+            "BUZZ": 0,
+            "DISTANCE": 0.26,
+            "WARMTH": 0.2
+          },
+          "variants": [
+            "roadhouse-rock/A06-hat_open-v1-t1.wav",
+            "roadhouse-rock/A06-hat_open-v1-t2.wav",
+            "roadhouse-rock/A06-hat_open-v1-t3.wav",
+            "roadhouse-rock/A06-hat_open-v2-t1.wav",
+            "roadhouse-rock/A06-hat_open-v2-t2.wav",
+            "roadhouse-rock/A06-hat_open-v2-t3.wav",
+            "roadhouse-rock/A06-hat_open-v3-t1.wav",
+            "roadhouse-rock/A06-hat_open-v3-t2.wav",
+            "roadhouse-rock/A06-hat_open-v3-t3.wav"
+          ],
+          "soft_hard_residual_db": -3.390646175736667,
+          "take_residual_db": -0.28947301344453075
+        },
+        {
+          "pad": 7,
+          "voice": "HAT_FOOT",
+          "macros": {
+            "TUNE": 0.36,
+            "DAMP": 0.36,
+            "BUZZ": 0,
+            "DISTANCE": 0.26,
+            "WARMTH": 0.2
+          },
+          "variants": [
+            "roadhouse-rock/A07-hat_foot-v1-t1.wav",
+            "roadhouse-rock/A07-hat_foot-v1-t2.wav",
+            "roadhouse-rock/A07-hat_foot-v1-t3.wav",
+            "roadhouse-rock/A07-hat_foot-v2-t1.wav",
+            "roadhouse-rock/A07-hat_foot-v2-t2.wav",
+            "roadhouse-rock/A07-hat_foot-v2-t3.wav",
+            "roadhouse-rock/A07-hat_foot-v3-t1.wav",
+            "roadhouse-rock/A07-hat_foot-v3-t2.wav",
+            "roadhouse-rock/A07-hat_foot-v3-t3.wav"
+          ],
+          "soft_hard_residual_db": -3.593987830193819,
+          "take_residual_db": -0.027234007228971315
+        },
+        {
+          "pad": 8,
+          "voice": "TOM_RACK",
+          "macros": {
+            "TUNE": 0.36,
+            "DAMP": 0.24,
+            "BUZZ": 0.64,
+            "DISTANCE": 0.26,
+            "WARMTH": 0.2
+          },
+          "variants": [
+            "roadhouse-rock/A08-tom_rack-v1-t1.wav",
+            "roadhouse-rock/A08-tom_rack-v1-t2.wav",
+            "roadhouse-rock/A08-tom_rack-v1-t3.wav",
+            "roadhouse-rock/A08-tom_rack-v2-t1.wav",
+            "roadhouse-rock/A08-tom_rack-v2-t2.wav",
+            "roadhouse-rock/A08-tom_rack-v2-t3.wav",
+            "roadhouse-rock/A08-tom_rack-v3-t1.wav",
+            "roadhouse-rock/A08-tom_rack-v3-t2.wav",
+            "roadhouse-rock/A08-tom_rack-v3-t3.wav"
+          ],
+          "soft_hard_residual_db": -1.5668919728120065,
+          "take_residual_db": -12.12537629481515
+        },
+        {
+          "pad": 9,
+          "voice": "TOM_FLOOR",
+          "macros": {
+            "TUNE": 0.36,
+            "DAMP": 0.24,
+            "BUZZ": 0.64,
+            "DISTANCE": 0.26,
+            "WARMTH": 0.2
+          },
+          "variants": [
+            "roadhouse-rock/A09-tom_floor-v1-t1.wav",
+            "roadhouse-rock/A09-tom_floor-v1-t2.wav",
+            "roadhouse-rock/A09-tom_floor-v1-t3.wav",
+            "roadhouse-rock/A09-tom_floor-v2-t1.wav",
+            "roadhouse-rock/A09-tom_floor-v2-t2.wav",
+            "roadhouse-rock/A09-tom_floor-v2-t3.wav",
+            "roadhouse-rock/A09-tom_floor-v3-t1.wav",
+            "roadhouse-rock/A09-tom_floor-v3-t2.wav",
+            "roadhouse-rock/A09-tom_floor-v3-t3.wav"
+          ],
+          "soft_hard_residual_db": -3.202612385711289,
+          "take_residual_db": -17.788743847662175
+        },
+        {
+          "pad": 10,
+          "voice": "RIDE",
+          "macros": {
+            "TUNE": 0.36,
+            "DAMP": 0.36,
+            "BUZZ": 0,
+            "DISTANCE": 0.26,
+            "WARMTH": 0.2
+          },
+          "variants": [
+            "roadhouse-rock/A10-ride-v1-t1.wav",
+            "roadhouse-rock/A10-ride-v1-t2.wav",
+            "roadhouse-rock/A10-ride-v1-t3.wav",
+            "roadhouse-rock/A10-ride-v2-t1.wav",
+            "roadhouse-rock/A10-ride-v2-t2.wav",
+            "roadhouse-rock/A10-ride-v2-t3.wav",
+            "roadhouse-rock/A10-ride-v3-t1.wav",
+            "roadhouse-rock/A10-ride-v3-t2.wav",
+            "roadhouse-rock/A10-ride-v3-t3.wav"
+          ],
+          "soft_hard_residual_db": -9.813988986184253,
+          "take_residual_db": -0.007603006581870208
+        },
+        {
+          "pad": 11,
+          "voice": "RIDE_BELL",
+          "macros": {
+            "TUNE": 0.36,
+            "DAMP": 0.36,
+            "BUZZ": 0,
+            "DISTANCE": 0.26,
+            "WARMTH": 0.2
+          },
+          "variants": [
+            "roadhouse-rock/A11-ride_bell-v1-t1.wav",
+            "roadhouse-rock/A11-ride_bell-v1-t2.wav",
+            "roadhouse-rock/A11-ride_bell-v1-t3.wav",
+            "roadhouse-rock/A11-ride_bell-v2-t1.wav",
+            "roadhouse-rock/A11-ride_bell-v2-t2.wav",
+            "roadhouse-rock/A11-ride_bell-v2-t3.wav",
+            "roadhouse-rock/A11-ride_bell-v3-t1.wav",
+            "roadhouse-rock/A11-ride_bell-v3-t2.wav",
+            "roadhouse-rock/A11-ride_bell-v3-t3.wav"
+          ],
+          "soft_hard_residual_db": -1.861813128127734,
+          "take_residual_db": -0.004132004370583179
+        },
+        {
+          "pad": 12,
+          "voice": "SIZZLE",
+          "macros": {
+            "TUNE": 0.36,
+            "DAMP": 0.36,
+            "BUZZ": 0.64,
+            "DISTANCE": 0.26,
+            "WARMTH": 0.2
+          },
+          "variants": [
+            "roadhouse-rock/A12-sizzle-v1-t1.wav",
+            "roadhouse-rock/A12-sizzle-v1-t2.wav",
+            "roadhouse-rock/A12-sizzle-v1-t3.wav",
+            "roadhouse-rock/A12-sizzle-v2-t1.wav",
+            "roadhouse-rock/A12-sizzle-v2-t2.wav",
+            "roadhouse-rock/A12-sizzle-v2-t3.wav",
+            "roadhouse-rock/A12-sizzle-v3-t1.wav",
+            "roadhouse-rock/A12-sizzle-v3-t2.wav",
+            "roadhouse-rock/A12-sizzle-v3-t3.wav"
+          ],
+          "soft_hard_residual_db": -5.457068315860965,
+          "take_residual_db": -0.00019948509272873244
+        },
+        {
+          "pad": 13,
+          "voice": "TAMBOURINE",
+          "macros": {
+            "TUNE": 0.36,
+            "DAMP": 0.36,
+            "BUZZ": 0.64,
+            "DISTANCE": 0.26,
+            "WARMTH": 0.2
+          },
+          "variants": [
+            "roadhouse-rock/A13-tambourine-v1-t1.wav",
+            "roadhouse-rock/A13-tambourine-v1-t2.wav",
+            "roadhouse-rock/A13-tambourine-v1-t3.wav",
+            "roadhouse-rock/A13-tambourine-v2-t1.wav",
+            "roadhouse-rock/A13-tambourine-v2-t2.wav",
+            "roadhouse-rock/A13-tambourine-v2-t3.wav",
+            "roadhouse-rock/A13-tambourine-v3-t1.wav",
+            "roadhouse-rock/A13-tambourine-v3-t2.wav",
+            "roadhouse-rock/A13-tambourine-v3-t3.wav"
+          ],
+          "soft_hard_residual_db": -0.07850856681334133,
+          "take_residual_db": -0.4093883945303057
+        },
+        {
+          "pad": 14,
+          "voice": "COWBELL",
+          "macros": {
+            "TUNE": 0.36,
+            "DAMP": 0.36,
+            "BUZZ": 0.64,
+            "DISTANCE": 0.26,
+            "WARMTH": 0.2
+          },
+          "variants": [
+            "roadhouse-rock/A14-cowbell-v1-t1.wav",
+            "roadhouse-rock/A14-cowbell-v1-t2.wav",
+            "roadhouse-rock/A14-cowbell-v1-t3.wav",
+            "roadhouse-rock/A14-cowbell-v2-t1.wav",
+            "roadhouse-rock/A14-cowbell-v2-t2.wav",
+            "roadhouse-rock/A14-cowbell-v2-t3.wav",
+            "roadhouse-rock/A14-cowbell-v3-t1.wav",
+            "roadhouse-rock/A14-cowbell-v3-t2.wav",
+            "roadhouse-rock/A14-cowbell-v3-t3.wav"
+          ],
+          "soft_hard_residual_db": -6.692187252369738,
+          "take_residual_db": -3.152648904680826
+        },
+        {
+          "pad": 15,
+          "voice": "PRESS_ROLL",
+          "macros": {
+            "TUNE": 0.36,
+            "DAMP": 0.36,
+            "BUZZ": 0.64,
+            "DISTANCE": 0.26,
+            "WARMTH": 0.2,
+            "SPEED": 0.65
+          },
+          "variants": [
+            "roadhouse-rock/A15-press_roll-v1-t1.wav",
+            "roadhouse-rock/A15-press_roll-v1-t2.wav",
+            "roadhouse-rock/A15-press_roll-v1-t3.wav",
+            "roadhouse-rock/A15-press_roll-v2-t1.wav",
+            "roadhouse-rock/A15-press_roll-v2-t2.wav",
+            "roadhouse-rock/A15-press_roll-v2-t3.wav",
+            "roadhouse-rock/A15-press_roll-v3-t1.wav",
+            "roadhouse-rock/A15-press_roll-v3-t2.wav",
+            "roadhouse-rock/A15-press_roll-v3-t3.wav"
+          ],
+          "soft_hard_residual_db": -2.416175184903482,
+          "take_residual_db": -0.18741835195234657
+        },
+        {
+          "pad": 16,
+          "voice": "CYMBAL_SWELL",
+          "macros": {
+            "TUNE": 0.36,
+            "DAMP": 0.36,
+            "BUZZ": 0.64,
+            "DISTANCE": 0.26,
+            "WARMTH": 0.2,
+            "SPEED": 0.65
+          },
+          "variants": [
+            "roadhouse-rock/A16-cymbal_swell-v1-t1.wav",
+            "roadhouse-rock/A16-cymbal_swell-v1-t2.wav",
+            "roadhouse-rock/A16-cymbal_swell-v1-t3.wav",
+            "roadhouse-rock/A16-cymbal_swell-v2-t1.wav",
+            "roadhouse-rock/A16-cymbal_swell-v2-t2.wav",
+            "roadhouse-rock/A16-cymbal_swell-v2-t3.wav",
+            "roadhouse-rock/A16-cymbal_swell-v3-t1.wav",
+            "roadhouse-rock/A16-cymbal_swell-v3-t2.wav",
+            "roadhouse-rock/A16-cymbal_swell-v3-t3.wav"
+          ],
+          "soft_hard_residual_db": -0.5121819915524707,
+          "take_residual_db": -4.1651144505182303e-07
+        }
+      ],
+      "events": [
+        [
+          0,
+          0,
+          2,
+          0.88
+        ],
+        [
+          0,
+          4,
+          2,
+          0.32
+        ],
+        [
+          2,
+          4,
+          1,
+          0.32
+        ],
+        [
+          3,
+          0,
+          2,
+          0.88
+        ],
+        [
+          4,
+          1,
+          2,
+          0.78
+        ],
+        [
+          4,
+          4,
+          2,
+          0.32
+        ],
+        [
+          6,
+          4,
+          1,
+          0.32
+        ],
+        [
+          8,
+          0,
+          2,
+          0.88
+        ],
+        [
+          8,
+          4,
+          2,
+          0.32
+        ],
+        [
+          10,
+          0,
+          2,
+          0.88
+        ],
+        [
+          10,
+          4,
+          1,
+          0.32
+        ],
+        [
+          11,
+          1,
+          0,
+          0.45
+        ],
+        [
+          12,
+          1,
+          2,
+          0.78
+        ],
+        [
+          12,
+          4,
+          2,
+          0.32
+        ],
+        [
+          14,
+          4,
+          1,
+          0.32
+        ],
+        [
+          14,
+          5,
+          1,
+          0.25
+        ],
+        [
+          15,
+          1,
+          0,
+          0.45
+        ],
+        [
+          16,
+          0,
+          2,
+          0.88
+        ],
+        [
+          16,
+          4,
+          2,
+          0.32
+        ],
+        [
+          18,
+          4,
+          1,
+          0.32
+        ],
+        [
+          19,
+          0,
+          2,
+          0.88
+        ],
+        [
+          20,
+          1,
+          2,
+          0.78
+        ],
+        [
+          20,
+          4,
+          2,
+          0.32
+        ],
+        [
+          22,
+          4,
+          1,
+          0.32
+        ],
+        [
+          24,
+          0,
+          2,
+          0.88
+        ],
+        [
+          24,
+          4,
+          2,
+          0.32
+        ],
+        [
+          26,
+          0,
+          2,
+          0.88
+        ],
+        [
+          26,
+          4,
+          1,
+          0.32
+        ],
+        [
+          27,
+          1,
+          0,
+          0.45
+        ],
+        [
+          28,
+          1,
+          2,
+          0.78
+        ],
+        [
+          28,
+          4,
+          2,
+          0.32
+        ],
+        [
+          30,
+          4,
+          1,
+          0.32
+        ],
+        [
+          30,
+          5,
+          1,
+          0.25
+        ],
+        [
+          31,
+          1,
+          0,
+          0.45
+        ],
+        [
+          32,
+          0,
+          2,
+          0.88
+        ],
+        [
+          32,
+          4,
+          2,
+          0.32
+        ],
+        [
+          34,
+          4,
+          1,
+          0.32
+        ],
+        [
+          35,
+          0,
+          2,
+          0.88
+        ],
+        [
+          36,
+          1,
+          2,
+          0.78
+        ],
+        [
+          36,
+          4,
+          2,
+          0.32
+        ],
+        [
+          38,
+          4,
+          1,
+          0.32
+        ],
+        [
+          40,
+          0,
+          2,
+          0.88
+        ],
+        [
+          40,
+          4,
+          2,
+          0.32
+        ],
+        [
+          42,
+          0,
+          2,
+          0.88
+        ],
+        [
+          42,
+          4,
+          1,
+          0.32
+        ],
+        [
+          43,
+          1,
+          0,
+          0.45
+        ],
+        [
+          44,
+          1,
+          2,
+          0.78
+        ],
+        [
+          44,
+          4,
+          2,
+          0.32
+        ],
+        [
+          46,
+          4,
+          1,
+          0.32
+        ],
+        [
+          46,
+          5,
+          1,
+          0.25
+        ],
+        [
+          47,
+          1,
+          0,
+          0.45
+        ],
+        [
+          48,
+          0,
+          2,
+          0.88
+        ],
+        [
+          48,
+          4,
+          2,
+          0.32
+        ],
+        [
+          50,
+          4,
+          1,
+          0.32
+        ],
+        [
+          51,
+          0,
+          2,
+          0.88
+        ],
+        [
+          52,
+          1,
+          2,
+          0.78
+        ],
+        [
+          52,
+          4,
+          2,
+          0.32
+        ],
+        [
+          54,
+          4,
+          1,
+          0.32
+        ],
+        [
+          56,
+          0,
+          2,
+          0.88
+        ],
+        [
+          56,
+          4,
+          2,
+          0.32
+        ],
+        [
+          58,
+          0,
+          2,
+          0.88
+        ],
+        [
+          58,
+          4,
+          1,
+          0.32
+        ],
+        [
+          59,
+          1,
+          0,
+          0.45
+        ],
+        [
+          60,
+          1,
+          2,
+          0.78
+        ],
+        [
+          60,
+          4,
+          2,
+          0.32
+        ],
+        [
+          60,
+          7,
+          2,
+          0.65
+        ],
+        [
+          61,
+          7,
+          2,
+          0.65
+        ],
+        [
+          62,
+          4,
+          1,
+          0.32
+        ],
+        [
+          62,
+          5,
+          1,
+          0.25
+        ],
+        [
+          62,
+          8,
+          2,
+          0.65
+        ],
+        [
+          63,
+          1,
+          0,
+          0.45
+        ],
+        [
+          63,
+          8,
+          2,
+          0.65
+        ]
+      ],
+      "groove_gain": 0.9772550890883673,
+      "render_seconds": 238.850747151002,
+      "audition_hat_choke": true,
+      "true_peak_gain": 1
+    },
+    {
+      "name": "open-room-rock",
+      "bpm": 89,
+      "pads": [
+        {
+          "pad": 1,
+          "voice": "KICK",
+          "macros": {
+            "TUNE": 0.5165835283663676,
+            "DAMP": 0.18,
+            "BUZZ": 0.55,
+            "DISTANCE": 0.4,
+            "WARMTH": 0.12
+          },
+          "variants": [
+            "open-room-rock/A01-kick-v1-t1.wav",
+            "open-room-rock/A01-kick-v1-t2.wav",
+            "open-room-rock/A01-kick-v1-t3.wav",
+            "open-room-rock/A01-kick-v2-t1.wav",
+            "open-room-rock/A01-kick-v2-t2.wav",
+            "open-room-rock/A01-kick-v2-t3.wav",
+            "open-room-rock/A01-kick-v3-t1.wav",
+            "open-room-rock/A01-kick-v3-t2.wav",
+            "open-room-rock/A01-kick-v3-t3.wav"
+          ],
+          "soft_hard_residual_db": -2.3746635405641667,
+          "take_residual_db": -16.095005967625802,
+          "tuning_evidence": {
+            "method": "Match strongest 35\u2013160 Hz peak of first 120ms to median of low-band-dominant reference events; provisional, overlapping sources possible",
+            "target_hz": 69.98291015625,
+            "before_hz": 69.98291015625,
+            "after_hz": 69.98291015625,
+            "old_tune": 0.5165835283663676
+          }
+        },
+        {
+          "pad": 2,
+          "voice": "SNARE",
+          "macros": {
+            "TUNE": 0.46,
+            "DAMP": 0.18,
+            "BUZZ": 0.55,
+            "DISTANCE": 0.4,
+            "WARMTH": 0.12
+          },
+          "variants": [
+            "open-room-rock/A02-snare-v1-t1.wav",
+            "open-room-rock/A02-snare-v1-t2.wav",
+            "open-room-rock/A02-snare-v1-t3.wav",
+            "open-room-rock/A02-snare-v2-t1.wav",
+            "open-room-rock/A02-snare-v2-t2.wav",
+            "open-room-rock/A02-snare-v2-t3.wav",
+            "open-room-rock/A02-snare-v3-t1.wav",
+            "open-room-rock/A02-snare-v3-t2.wav",
+            "open-room-rock/A02-snare-v3-t3.wav"
+          ],
+          "soft_hard_residual_db": -2.1468790397827417,
+          "take_residual_db": -2.6904910875530703
+        },
+        {
+          "pad": 3,
+          "voice": "RIMSHOT",
+          "macros": {
+            "TUNE": 0.46,
+            "DAMP": 0.18,
+            "BUZZ": 0.55,
+            "DISTANCE": 0.4,
+            "WARMTH": 0.12
+          },
+          "variants": [
+            "open-room-rock/A03-rimshot-v1-t1.wav",
+            "open-room-rock/A03-rimshot-v1-t2.wav",
+            "open-room-rock/A03-rimshot-v1-t3.wav",
+            "open-room-rock/A03-rimshot-v2-t1.wav",
+            "open-room-rock/A03-rimshot-v2-t2.wav",
+            "open-room-rock/A03-rimshot-v2-t3.wav",
+            "open-room-rock/A03-rimshot-v3-t1.wav",
+            "open-room-rock/A03-rimshot-v3-t2.wav",
+            "open-room-rock/A03-rimshot-v3-t3.wav"
+          ],
+          "soft_hard_residual_db": -3.5952462197513633,
+          "take_residual_db": -5.718110192058647
+        },
+        {
+          "pad": 4,
+          "voice": "CROSS_STICK",
+          "macros": {
+            "TUNE": 0.46,
+            "DAMP": 0.18,
+            "BUZZ": 0.55,
+            "DISTANCE": 0.4,
+            "WARMTH": 0.12
+          },
+          "variants": [
+            "open-room-rock/A04-cross_stick-v1-t1.wav",
+            "open-room-rock/A04-cross_stick-v1-t2.wav",
+            "open-room-rock/A04-cross_stick-v1-t3.wav",
+            "open-room-rock/A04-cross_stick-v2-t1.wav",
+            "open-room-rock/A04-cross_stick-v2-t2.wav",
+            "open-room-rock/A04-cross_stick-v2-t3.wav",
+            "open-room-rock/A04-cross_stick-v3-t1.wav",
+            "open-room-rock/A04-cross_stick-v3-t2.wav",
+            "open-room-rock/A04-cross_stick-v3-t3.wav"
+          ],
+          "soft_hard_residual_db": -11.100655520544972,
+          "take_residual_db": -8.688858608280826
+        },
+        {
+          "pad": 5,
+          "voice": "HAT_CLOSED",
+          "macros": {
+            "TUNE": 0.46,
+            "DAMP": 0.18,
+            "BUZZ": 0,
+            "DISTANCE": 0.4,
+            "WARMTH": 0.12
+          },
+          "variants": [
+            "open-room-rock/A05-hat_closed-v1-t1.wav",
+            "open-room-rock/A05-hat_closed-v1-t2.wav",
+            "open-room-rock/A05-hat_closed-v1-t3.wav",
+            "open-room-rock/A05-hat_closed-v2-t1.wav",
+            "open-room-rock/A05-hat_closed-v2-t2.wav",
+            "open-room-rock/A05-hat_closed-v2-t3.wav",
+            "open-room-rock/A05-hat_closed-v3-t1.wav",
+            "open-room-rock/A05-hat_closed-v3-t2.wav",
+            "open-room-rock/A05-hat_closed-v3-t3.wav"
+          ],
+          "soft_hard_residual_db": -4.073016549236435,
+          "take_residual_db": -0.027717505039032073
+        },
+        {
+          "pad": 6,
+          "voice": "HAT_OPEN",
+          "macros": {
+            "TUNE": 0.46,
+            "DAMP": 0.18,
+            "BUZZ": 0,
+            "DISTANCE": 0.4,
+            "WARMTH": 0.12
+          },
+          "variants": [
+            "open-room-rock/A06-hat_open-v1-t1.wav",
+            "open-room-rock/A06-hat_open-v1-t2.wav",
+            "open-room-rock/A06-hat_open-v1-t3.wav",
+            "open-room-rock/A06-hat_open-v2-t1.wav",
+            "open-room-rock/A06-hat_open-v2-t2.wav",
+            "open-room-rock/A06-hat_open-v2-t3.wav",
+            "open-room-rock/A06-hat_open-v3-t1.wav",
+            "open-room-rock/A06-hat_open-v3-t2.wav",
+            "open-room-rock/A06-hat_open-v3-t3.wav"
+          ],
+          "soft_hard_residual_db": -3.22293976792124,
+          "take_residual_db": -0.14092035469096525
+        },
+        {
+          "pad": 7,
+          "voice": "HAT_FOOT",
+          "macros": {
+            "TUNE": 0.46,
+            "DAMP": 0.18,
+            "BUZZ": 0,
+            "DISTANCE": 0.4,
+            "WARMTH": 0.12
+          },
+          "variants": [
+            "open-room-rock/A07-hat_foot-v1-t1.wav",
+            "open-room-rock/A07-hat_foot-v1-t2.wav",
+            "open-room-rock/A07-hat_foot-v1-t3.wav",
+            "open-room-rock/A07-hat_foot-v2-t1.wav",
+            "open-room-rock/A07-hat_foot-v2-t2.wav",
+            "open-room-rock/A07-hat_foot-v2-t3.wav",
+            "open-room-rock/A07-hat_foot-v3-t1.wav",
+            "open-room-rock/A07-hat_foot-v3-t2.wav",
+            "open-room-rock/A07-hat_foot-v3-t3.wav"
+          ],
+          "soft_hard_residual_db": -2.854227982169253,
+          "take_residual_db": -0.37879762966725466
+        },
+        {
+          "pad": 8,
+          "voice": "TOM_RACK",
+          "macros": {
+            "TUNE": 0.46,
+            "DAMP": 0.06,
+            "BUZZ": 0.55,
+            "DISTANCE": 0.4,
+            "WARMTH": 0.12
+          },
+          "variants": [
+            "open-room-rock/A08-tom_rack-v1-t1.wav",
+            "open-room-rock/A08-tom_rack-v1-t2.wav",
+            "open-room-rock/A08-tom_rack-v1-t3.wav",
+            "open-room-rock/A08-tom_rack-v2-t1.wav",
+            "open-room-rock/A08-tom_rack-v2-t2.wav",
+            "open-room-rock/A08-tom_rack-v2-t3.wav",
+            "open-room-rock/A08-tom_rack-v3-t1.wav",
+            "open-room-rock/A08-tom_rack-v3-t2.wav",
+            "open-room-rock/A08-tom_rack-v3-t3.wav"
+          ],
+          "soft_hard_residual_db": -0.729743440058636,
+          "take_residual_db": -15.52816767876013
+        },
+        {
+          "pad": 9,
+          "voice": "TOM_FLOOR",
+          "macros": {
+            "TUNE": 0.46,
+            "DAMP": 0.06,
+            "BUZZ": 0.55,
+            "DISTANCE": 0.4,
+            "WARMTH": 0.12
+          },
+          "variants": [
+            "open-room-rock/A09-tom_floor-v1-t1.wav",
+            "open-room-rock/A09-tom_floor-v1-t2.wav",
+            "open-room-rock/A09-tom_floor-v1-t3.wav",
+            "open-room-rock/A09-tom_floor-v2-t1.wav",
+            "open-room-rock/A09-tom_floor-v2-t2.wav",
+            "open-room-rock/A09-tom_floor-v2-t3.wav",
+            "open-room-rock/A09-tom_floor-v3-t1.wav",
+            "open-room-rock/A09-tom_floor-v3-t2.wav",
+            "open-room-rock/A09-tom_floor-v3-t3.wav"
+          ],
+          "soft_hard_residual_db": -4.298120535968145,
+          "take_residual_db": -17.21454407659461
+        },
+        {
+          "pad": 10,
+          "voice": "RIDE",
+          "macros": {
+            "TUNE": 0.46,
+            "DAMP": 0.18,
+            "BUZZ": 0,
+            "DISTANCE": 0.4,
+            "WARMTH": 0.12
+          },
+          "variants": [
+            "open-room-rock/A10-ride-v1-t1.wav",
+            "open-room-rock/A10-ride-v1-t2.wav",
+            "open-room-rock/A10-ride-v1-t3.wav",
+            "open-room-rock/A10-ride-v2-t1.wav",
+            "open-room-rock/A10-ride-v2-t2.wav",
+            "open-room-rock/A10-ride-v2-t3.wav",
+            "open-room-rock/A10-ride-v3-t1.wav",
+            "open-room-rock/A10-ride-v3-t2.wav",
+            "open-room-rock/A10-ride-v3-t3.wav"
+          ],
+          "soft_hard_residual_db": -9.375236512434338,
+          "take_residual_db": -0.01313525951281138
+        },
+        {
+          "pad": 11,
+          "voice": "RIDE_BELL",
+          "macros": {
+            "TUNE": 0.46,
+            "DAMP": 0.18,
+            "BUZZ": 0,
+            "DISTANCE": 0.4,
+            "WARMTH": 0.12
+          },
+          "variants": [
+            "open-room-rock/A11-ride_bell-v1-t1.wav",
+            "open-room-rock/A11-ride_bell-v1-t2.wav",
+            "open-room-rock/A11-ride_bell-v1-t3.wav",
+            "open-room-rock/A11-ride_bell-v2-t1.wav",
+            "open-room-rock/A11-ride_bell-v2-t2.wav",
+            "open-room-rock/A11-ride_bell-v2-t3.wav",
+            "open-room-rock/A11-ride_bell-v3-t1.wav",
+            "open-room-rock/A11-ride_bell-v3-t2.wav",
+            "open-room-rock/A11-ride_bell-v3-t3.wav"
+          ],
+          "soft_hard_residual_db": -1.4751663049471775,
+          "take_residual_db": -0.00036426337850695243
+        },
+        {
+          "pad": 12,
+          "voice": "SIZZLE",
+          "macros": {
+            "TUNE": 0.46,
+            "DAMP": 0.18,
+            "BUZZ": 0.55,
+            "DISTANCE": 0.4,
+            "WARMTH": 0.12
+          },
+          "variants": [
+            "open-room-rock/A12-sizzle-v1-t1.wav",
+            "open-room-rock/A12-sizzle-v1-t2.wav",
+            "open-room-rock/A12-sizzle-v1-t3.wav",
+            "open-room-rock/A12-sizzle-v2-t1.wav",
+            "open-room-rock/A12-sizzle-v2-t2.wav",
+            "open-room-rock/A12-sizzle-v2-t3.wav",
+            "open-room-rock/A12-sizzle-v3-t1.wav",
+            "open-room-rock/A12-sizzle-v3-t2.wav",
+            "open-room-rock/A12-sizzle-v3-t3.wav"
+          ],
+          "soft_hard_residual_db": -4.592892081200095,
+          "take_residual_db": -0.016144195315340316
+        },
+        {
+          "pad": 13,
+          "voice": "TAMBOURINE",
+          "macros": {
+            "TUNE": 0.46,
+            "DAMP": 0.18,
+            "BUZZ": 0.55,
+            "DISTANCE": 0.4,
+            "WARMTH": 0.12
+          },
+          "variants": [
+            "open-room-rock/A13-tambourine-v1-t1.wav",
+            "open-room-rock/A13-tambourine-v1-t2.wav",
+            "open-room-rock/A13-tambourine-v1-t3.wav",
+            "open-room-rock/A13-tambourine-v2-t1.wav",
+            "open-room-rock/A13-tambourine-v2-t2.wav",
+            "open-room-rock/A13-tambourine-v2-t3.wav",
+            "open-room-rock/A13-tambourine-v3-t1.wav",
+            "open-room-rock/A13-tambourine-v3-t2.wav",
+            "open-room-rock/A13-tambourine-v3-t3.wav"
+          ],
+          "soft_hard_residual_db": -0.1202974857819118,
+          "take_residual_db": -0.3001879666480689
+        },
+        {
+          "pad": 14,
+          "voice": "TOM_RACK",
+          "macros": {
+            "TUNE": 0.74,
+            "DAMP": 0.18,
+            "BUZZ": 0.55,
+            "DISTANCE": 0.4,
+            "WARMTH": 0.12
+          },
+          "variants": [
+            "open-room-rock/A14-tom_rack-v1-t1.wav",
+            "open-room-rock/A14-tom_rack-v1-t2.wav",
+            "open-room-rock/A14-tom_rack-v1-t3.wav",
+            "open-room-rock/A14-tom_rack-v2-t1.wav",
+            "open-room-rock/A14-tom_rack-v2-t2.wav",
+            "open-room-rock/A14-tom_rack-v2-t3.wav",
+            "open-room-rock/A14-tom_rack-v3-t1.wav",
+            "open-room-rock/A14-tom_rack-v3-t2.wav",
+            "open-room-rock/A14-tom_rack-v3-t3.wav"
+          ],
+          "soft_hard_residual_db": -1.8864901494171935,
+          "take_residual_db": -14.794648382544995
+        },
+        {
+          "pad": 15,
+          "voice": "PRESS_ROLL",
+          "macros": {
+            "TUNE": 0.46,
+            "DAMP": 0.18,
+            "BUZZ": 0.55,
+            "DISTANCE": 0.4,
+            "WARMTH": 0.12,
+            "SPEED": 0.4
+          },
+          "variants": [
+            "open-room-rock/A15-press_roll-v1-t1.wav",
+            "open-room-rock/A15-press_roll-v1-t2.wav",
+            "open-room-rock/A15-press_roll-v1-t3.wav",
+            "open-room-rock/A15-press_roll-v2-t1.wav",
+            "open-room-rock/A15-press_roll-v2-t2.wav",
+            "open-room-rock/A15-press_roll-v2-t3.wav",
+            "open-room-rock/A15-press_roll-v3-t1.wav",
+            "open-room-rock/A15-press_roll-v3-t2.wav",
+            "open-room-rock/A15-press_roll-v3-t3.wav"
+          ],
+          "soft_hard_residual_db": -2.4792136329810734,
+          "take_residual_db": -0.020567147154256532
+        },
+        {
+          "pad": 16,
+          "voice": "CYMBAL_SWELL",
+          "macros": {
+            "TUNE": 0.46,
+            "DAMP": 0.18,
+            "BUZZ": 0.55,
+            "DISTANCE": 0.4,
+            "WARMTH": 0.12,
+            "SPEED": 0.4
+          },
+          "variants": [
+            "open-room-rock/A16-cymbal_swell-v1-t1.wav",
+            "open-room-rock/A16-cymbal_swell-v1-t2.wav",
+            "open-room-rock/A16-cymbal_swell-v1-t3.wav",
+            "open-room-rock/A16-cymbal_swell-v2-t1.wav",
+            "open-room-rock/A16-cymbal_swell-v2-t2.wav",
+            "open-room-rock/A16-cymbal_swell-v2-t3.wav",
+            "open-room-rock/A16-cymbal_swell-v3-t1.wav",
+            "open-room-rock/A16-cymbal_swell-v3-t2.wav",
+            "open-room-rock/A16-cymbal_swell-v3-t3.wav"
+          ],
+          "soft_hard_residual_db": -0.5174552703424802,
+          "take_residual_db": -0.7473372959430645
+        }
+      ],
+      "events": [
+        [
+          0,
+          0,
+          2,
+          0.88
+        ],
+        [
+          0,
+          9,
+          2,
+          0.32
+        ],
+        [
+          2,
+          9,
+          1,
+          0.32
+        ],
+        [
+          4,
+          1,
+          2,
+          0.78
+        ],
+        [
+          4,
+          9,
+          2,
+          0.32
+        ],
+        [
+          6,
+          9,
+          1,
+          0.32
+        ],
+        [
+          7,
+          0,
+          2,
+          0.88
+        ],
+        [
+          8,
+          0,
+          2,
+          0.88
+        ],
+        [
+          8,
+          9,
+          2,
+          0.32
+        ],
+        [
+          10,
+          9,
+          1,
+          0.32
+        ],
+        [
+          11,
+          1,
+          0,
+          0.45
+        ],
+        [
+          12,
+          1,
+          2,
+          0.78
+        ],
+        [
+          12,
+          9,
+          2,
+          0.32
+        ],
+        [
+          14,
+          0,
+          2,
+          0.88
+        ],
+        [
+          14,
+          9,
+          1,
+          0.32
+        ],
+        [
+          15,
+          1,
+          0,
+          0.45
+        ],
+        [
+          16,
+          0,
+          2,
+          0.88
+        ],
+        [
+          16,
+          9,
+          2,
+          0.32
+        ],
+        [
+          18,
+          9,
+          1,
+          0.32
+        ],
+        [
+          20,
+          1,
+          2,
+          0.78
+        ],
+        [
+          20,
+          9,
+          2,
+          0.32
+        ],
+        [
+          22,
+          9,
+          1,
+          0.32
+        ],
+        [
+          23,
+          0,
+          2,
+          0.88
+        ],
+        [
+          24,
+          0,
+          2,
+          0.88
+        ],
+        [
+          24,
+          9,
+          2,
+          0.32
+        ],
+        [
+          26,
+          9,
+          1,
+          0.32
+        ],
+        [
+          27,
+          1,
+          0,
+          0.45
+        ],
+        [
+          28,
+          1,
+          2,
+          0.78
+        ],
+        [
+          28,
+          9,
+          2,
+          0.32
+        ],
+        [
+          30,
+          0,
+          2,
+          0.88
+        ],
+        [
+          30,
+          9,
+          1,
+          0.32
+        ],
+        [
+          31,
+          1,
+          0,
+          0.45
+        ],
+        [
+          32,
+          0,
+          2,
+          0.88
+        ],
+        [
+          32,
+          9,
+          2,
+          0.32
+        ],
+        [
+          34,
+          9,
+          1,
+          0.32
+        ],
+        [
+          36,
+          1,
+          2,
+          0.78
+        ],
+        [
+          36,
+          9,
+          2,
+          0.32
+        ],
+        [
+          38,
+          9,
+          1,
+          0.32
+        ],
+        [
+          39,
+          0,
+          2,
+          0.88
+        ],
+        [
+          40,
+          0,
+          2,
+          0.88
+        ],
+        [
+          40,
+          9,
+          2,
+          0.32
+        ],
+        [
+          42,
+          9,
+          1,
+          0.32
+        ],
+        [
+          43,
+          1,
+          0,
+          0.45
+        ],
+        [
+          44,
+          1,
+          2,
+          0.78
+        ],
+        [
+          44,
+          9,
+          2,
+          0.32
+        ],
+        [
+          46,
+          0,
+          2,
+          0.88
+        ],
+        [
+          46,
+          9,
+          1,
+          0.32
+        ],
+        [
+          47,
+          1,
+          0,
+          0.45
+        ],
+        [
+          48,
+          0,
+          2,
+          0.88
+        ],
+        [
+          48,
+          9,
+          2,
+          0.32
+        ],
+        [
+          50,
+          9,
+          1,
+          0.32
+        ],
+        [
+          52,
+          1,
+          2,
+          0.78
+        ],
+        [
+          52,
+          9,
+          2,
+          0.32
+        ],
+        [
+          54,
+          9,
+          1,
+          0.32
+        ],
+        [
+          55,
+          0,
+          2,
+          0.88
+        ],
+        [
+          56,
+          0,
+          2,
+          0.88
+        ],
+        [
+          56,
+          9,
+          2,
+          0.32
+        ],
+        [
+          58,
+          9,
+          1,
+          0.32
+        ],
+        [
+          59,
+          1,
+          0,
+          0.45
+        ],
+        [
+          60,
+          1,
+          2,
+          0.78
+        ],
+        [
+          60,
+          7,
+          2,
+          0.65
+        ],
+        [
+          60,
+          9,
+          2,
+          0.32
+        ],
+        [
+          61,
+          7,
+          2,
+          0.65
+        ],
+        [
+          62,
+          0,
+          2,
+          0.88
+        ],
+        [
+          62,
+          8,
+          2,
+          0.65
+        ],
+        [
+          62,
+          9,
+          1,
+          0.32
+        ],
+        [
+          63,
+          1,
+          0,
+          0.45
+        ],
+        [
+          63,
+          8,
+          2,
+          0.65
+        ]
+      ],
+      "groove_gain": 0.9111182689342734,
+      "render_seconds": 229.06272384700424,
+      "audition_hat_choke": true,
+      "true_peak_gain": 1
+    }
+  ],
+  "verification": {
+    "variants": 432,
+    "sample_peak": 0.879974365234375,
+    "max_abs_dc": 2.279476243622449e-05,
+    "max_tail_rms": 0.0006746657521255205,
+    "min_soft_hard_residual_db": -11.610515485518246,
+    "min_take_residual_db": -21.01998578096715,
+    "scope": "Python and PCM16 readback. Estimated 4x true peak verified separately in verification.json; full alias-reference, native integration and hardware checks remain open."
+  },
+  "audition_output": [
+    {
+      "file": "open-room-rock-pads.wav",
+      "estimated_true_peak_before": 0.7765495608754148,
+      "gain": 1
+    },
+    {
+      "file": "open-room-rock-groove.wav",
+      "estimated_true_peak_before": 0.9176229218556062,
+      "gain": 1
+    },
+    {
+      "file": "roadhouse-rock-pads.wav",
+      "estimated_true_peak_before": 0.8279372015598913,
+      "gain": 1
+    },
+    {
+      "file": "soul-pocket-pads.wav",
+      "estimated_true_peak_before": 0.7530580580860539,
+      "gain": 1
+    },
+    {
+      "file": "soul-pocket-touch.wav",
+      "estimated_true_peak_before": 0.8805039891900469,
+      "gain": 1
+    },
+    {
+      "file": "open-room-rock-touch.wav",
+      "estimated_true_peak_before": 0.8805039891900469,
+      "gain": 1
+    },
+    {
+      "file": "roadhouse-rock-groove.wav",
+      "estimated_true_peak_before": 0.8987527944064992,
+      "gain": 1
+    },
+    {
+      "file": "roadhouse-rock-touch.wav",
+      "estimated_true_peak_before": 0.8848221342464972,
+      "gain": 1
+    },
+    {
+      "file": "soul-pocket-groove.wav",
+      "estimated_true_peak_before": 0.8982531550805545,
+      "gain": 1
+    }
+  ]
+}

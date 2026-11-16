@@ -758,6 +758,16 @@ tasks.register<JavaExec>("generateSporeApprovedSnare") {
     args(providers.gradleProperty("sporeApprovedOutput").orNull ?: "${rootDir}/testkit/spore-approved-snare")
 }
 
+tasks.register<JavaExec>("generateCuttingsKits") {
+    group = "distribution"
+    description = "Build CUTTINGS genre kits, verify saved grids and MPC metadata, and render their actual playback windows."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.CuttingsKitGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "2g"
+    args(providers.gradleProperty("cuttingsOutput").orNull ?: "${rootDir}/testkit/cuttings-kits")
+}
+
 tasks.register<JavaExec>("generateSporeSyntheticKits") {
     group = "distribution"
     description = "Render and verify all three complete sample-free Spore shelf kits."
@@ -766,4 +776,34 @@ tasks.register<JavaExec>("generateSporeSyntheticKits") {
     workingDir = rootProject.projectDir
     maxHeapSize = "2g"
     args(providers.gradleProperty("sporeSyntheticOutput").orNull ?: "${rootDir}/testkit/spore-synthetic-kits")
+}
+
+tasks.register<JavaExec>("generateEastAfricaKits") {
+    group = "distribution"
+    description = "Render five fitted-synthesis banks with native/MPC exports and saved-PCM auditions."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.EastAfricaKitGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "1g"
+    args(providers.gradleProperty("eastAfricaOutput").orNull ?: "${rootDir}/testkit/east-africa-kits")
+}
+
+tasks.register<JavaExec>("generateFootworkKits") {
+    group = "distribution"
+    description = "Render and verify the full-dynamics FOOTWORK kits and native audition."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.FootworkKitGenerator")
+    workingDir = rootDir
+    maxHeapSize = "2g"
+    args(providers.gradleProperty("footworkOutput").orNull ?: "${rootDir}/testkit/footwork-native")
+}
+
+ tasks.register<JavaExec>("generateSoulRockKits") {
+    group = "distribution"
+    description = "Export the three approved Soul Rock banks and verify every saved and MPC 3 strike."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.SoulRockKitGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "2g"
+    args(providers.gradleProperty("soulRockOutput").orNull ?: "${rootDir}/testkit/soul-rock-kits")
 }

@@ -26,6 +26,18 @@ Genre kits must be authored musical choices with distinct roles, balance and cha
 - **Nothing else changes.** MPC 2's velocity layers are still checked, and every other format's export evidence stands as recorded.
 - **MPC 3 on an MPC: the owner's reports.** The MPC 3 read-back checks the metadata we write. An MPC finds each take in a chain WAV from a slice map stored inside the WAV, and that layout has never been captured (`docs/FEATURE_PLAN.md`, HH1.4); the owner parked the capture on 2026-11-14. Since then the owner has played MPC 3 exports on an MPC: SOOT's repeated hits cycled through the takes (2026-11-14), and BREAKER was approved on hardware (2026-11-15). Each engine records its own hardware result. Wherever an entry still says "no MPC has loaded the kit", that stands.
 
+## CUTTINGS sample-bank integration (2026-11-15)
+
+- **Sound:** owner accepted Study 04 sampler color. Pocket Finds preserves the accepted sixteen source grids exactly. Night Fragments, Cut Circuit and extended phrases await listening acceptance.
+- **Drums:** three shelf kits implemented: Pocket Finds (89 BPM boom-bap), Night Fragments (76 BPM trip-hop) and Cut Circuit (124 BPM big beat). They change source roles/order, tuning, damping and groove arrangement, not only effects strength.
+- **Articulation:** fourteen finite hits plus one-, two- and four-bar roll/riser pairs, twenty pads per kit. Duration is selected by pad. Phrases are printed at saved kit tempo; no live tempo-following claim.
+- **Velocity/RR:** each pad has three timbral velocity levels and four alternate performances. `CuttingsKitsTest` verifies source hashes, exact accepted PCM, genre variation, dynamics, diversity, endpoints and phrase duration. `CuttingsRoundTripTest` passes save/load, SFZ round trip, all 127 velocity values and nine successive playback windows per pad, exported PCM and MPC 2/3 metadata checks for all three kits.
+- **Generator:** `:shell:generateCuttingsKits` completed for all three kits, verifying saved PCM and two cycles per zone and writing native, SFZ, MPC 2 and MPC 3 files. The factory audition plays windows extracted from those saved files.
+- **Still open:** physical phone and MPC playback, the shared MPC 3 embedded slice-map hardware evidence, and listening acceptance of the new arrangements. MPC 2's combined velocity/RR limitation retains the owner's exception. This is not an engine-complete claim.
+- **Melodic/keygroups/chord tools and STRUM:** not applicable to this fixed percussion bank.
+
+Details and reproducible commands: [CUTTINGS](CUTTINGS.md).
+
 ## BACKWASH acoustic integration (updated 2026-11-10)
 
 - Melodic/keygroup/chord-tool gate: not applicable to this drum engine.
@@ -911,6 +923,25 @@ the shelf as FRESH TAPE starters.
   app (the listening page, version 3, plays them from the MPC 3 export), the Latin jazz kit and its new voices,
   presets and the picker, and phone and MPC hardware (round 3).
 
+## KINDRED (rounds 0 to 2 heard in Python, round 2 accepted 2026-11-15; round K1 Kotlin port, not heard)
+
+A one-voice, eight-step analog-style percussion synth and four genre kits from it. See [KINDRED](KINDRED.md).
+
+| Gate | Status | Evidence |
+|---|---|---|
+| Melodic voices, keygroups, premade kit, chord tools | Not applicable | A drum engine. |
+| Articulation: HOLD, STRUM | Not applicable | Finite hits; the eight-step phrase is a kit pad (A15), not HOLD. |
+| Percussion: roll or riser | Not yet built in Kotlin | Each kit's A16 riser and A15 phrase were heard in Python at round 2; K2 renders them in Kotlin. |
+| Drums: multiple distinct genre kits on the shelf | Not yet | Four kits (TECHNO, INDUSTRIAL, ELECTRO, AMBIENT) accepted by ear in Python; every one-shot slot differs between every pair by at least 2.15 dB of shape, and they differ in tempo, tuning, voices and grooves. K2 puts them on the shelf. |
+| Velocity: rendering | Pass in Kotlin, not heard | Every recipe's soft and hard hits differ by at least 1.96 dB of level-matched shape (`KindredTest`). |
+| Round robin: rendering | Pass in Kotlin, not heard | Four takes per recipe, none a copy, each deterministic; `Restrike` deals them. |
+| Velocity and round robin: saving | Partly | A patch round-trips through JSON with velocity, take, recipe and model (`KindredTest`, `DeterminismTest`); no saved kit yet. |
+| Velocity and round robin: playback and export | Not yet verified | K2. |
+| Hardware playback | Not verified | |
+| Sound character | Python round 2 accepted | "It's better. I think it was something with my headphones. Let's proceed with ring 2 sounds", corrected by the owner to "Round" (2026-11-15). The Kotlin port matches the noise-free recipes to 0.01 dB; the noise recipes are another realisation and wait for the ear. |
+
+- **Overall: in progress.** Open: the kits on the shelf with their phrases and risers, saving, playback and MPC 3 export of the grid, the picker, the owner's listen to the Kotlin kits, hardware.
+
 ## CALABASH (complete, 2026-11-15: four genre kits on the shelf, approved by ear and on phone and MPC 3)
 
 Four sixteen-pad drum kits for Afrobeat (Lagos, the 1970s), Afrobeats (Lagos and Accra, now), Mbalax (a sabar ensemble
@@ -1042,6 +1073,18 @@ owner-confirmed listening and hardware gates, not newly measured automated resul
   pending. Listening and hardware gates are closed by owner approval; software regression
   remains the outstanding gate.
 
+## East African fitted synthesis banks
+
+See [East African fitted synthesis](EAST_AFRICA.md). Five genre starters, 22 pads
+each, three velocity zones and three alternate takes, with hand rolls and
+shaker risers. The owner approved the fitted Python audition on 2026-11-15
+(“It's much better. Proceed”). Native Kotlin noise differs; its listening gate
+and phone/MPC hardware gates remain open. Focused software checks pass for all 990 variants and all five kit workflows;
+repository regression is tracked in the delivery PR checks. Native C++ checks
+pass (8 suites).
+MPC2 retains the first take per zone under the owner's format exception.
+Melodic/keygroup/chord/STRUM gates do not apply to these finite drum banks.
+
 
 ## BRISTLE (finite, held and round-robin prototype, 2026-11-15)
 
@@ -1068,3 +1111,15 @@ device-test result; device models and versions were not supplied. See the accept
 - **Picker and physical playback: owner-reported tested and approved.** Android automation remains
   unrun here; no SDK or independently measured device results are available.
 - **Overall: incomplete.** Finite and held prototype integration is present, not full engine completion.
+
+## Soul and rock acoustic collection
+
+See [SOUL_ROCK](SOUL_ROCK.md). Three sixteen-pad factory banks preserve the
+owner-approved synthesized audition (2026-11-16, “It all sounds great, proceed”).
+All 432 original PCM files are pinned by hash. Each kit has three velocity zones,
+three alternate strikes, hat chokes, a finite roll and a cymbal swell. These are
+frozen synthesis assets, not a new editable engine. Save, playback and export
+software proof is in `SoulRockRoundTripTest`; full regression is tracked in the
+PR. Phone/MPC acceptance remains open for this collection. Melodic/keygroup/chord
+and string-articulation gates do not apply; the existing MPC 2 format exception
+applies. Sizzle remains the approved voice, not a newly claimed crash model.

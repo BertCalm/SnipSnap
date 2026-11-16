@@ -1,0 +1,852 @@
+{
+  "bongo-flava": [
+    {
+      "voice": "muted-tap",
+      "beat": 0.25,
+      "zone": 0,
+      "take": 0,
+      "gain": 0.65
+    },
+    {
+      "voice": "clave",
+      "beat": 1.5,
+      "zone": 1,
+      "take": 0,
+      "gain": 0.5
+    },
+    {
+      "voice": "muted-tap",
+      "beat": 1.75,
+      "zone": 1,
+      "take": 1,
+      "gain": 0.65
+    },
+    {
+      "voice": "open-conga",
+      "beat": 2.25,
+      "zone": 1,
+      "take": 0,
+      "gain": 0.65
+    },
+    {
+      "voice": "muted-tap",
+      "beat": 3.25,
+      "zone": 0,
+      "take": 0,
+      "gain": 0.65
+    },
+    {
+      "voice": "wood-knock",
+      "beat": 3.75,
+      "zone": 1,
+      "take": 0,
+      "gain": 0.5
+    },
+    {
+      "voice": "muted-tap",
+      "beat": 4.25,
+      "zone": 0,
+      "take": 1,
+      "gain": 0.65
+    },
+    {
+      "voice": "clave",
+      "beat": 5.5,
+      "zone": 1,
+      "take": 1,
+      "gain": 0.5
+    },
+    {
+      "voice": "muted-tap",
+      "beat": 5.75,
+      "zone": 1,
+      "take": 0,
+      "gain": 0.65
+    },
+    {
+      "voice": "open-conga",
+      "beat": 6.25,
+      "zone": 1,
+      "take": 1,
+      "gain": 0.65
+    },
+    {
+      "voice": "metal-low",
+      "beat": 6.75,
+      "zone": 1,
+      "take": 0,
+      "gain": 0.55
+    },
+    {
+      "voice": "muted-tap",
+      "beat": 7.25,
+      "zone": 0,
+      "take": 1,
+      "gain": 0.65
+    },
+    {
+      "voice": "metal-high",
+      "beat": 7.5,
+      "zone": 1,
+      "take": 0,
+      "gain": 0.5
+    },
+    {
+      "voice": "wood-knock",
+      "beat": 7.75,
+      "zone": 1,
+      "take": 1,
+      "gain": 0.5
+    },
+    {
+      "voice": "muted-tap",
+      "beat": 8.25,
+      "zone": 0,
+      "take": 0,
+      "gain": 0.65
+    },
+    {
+      "voice": "clave",
+      "beat": 9.5,
+      "zone": 1,
+      "take": 0,
+      "gain": 0.5
+    },
+    {
+      "voice": "muted-tap",
+      "beat": 9.75,
+      "zone": 1,
+      "take": 1,
+      "gain": 0.65
+    },
+    {
+      "voice": "open-conga",
+      "beat": 10.25,
+      "zone": 1,
+      "take": 0,
+      "gain": 0.65
+    },
+    {
+      "voice": "muted-tap",
+      "beat": 11.25,
+      "zone": 0,
+      "take": 0,
+      "gain": 0.65
+    },
+    {
+      "voice": "wood-knock",
+      "beat": 11.75,
+      "zone": 1,
+      "take": 0,
+      "gain": 0.5
+    },
+    {
+      "voice": "muted-tap",
+      "beat": 12.25,
+      "zone": 0,
+      "take": 1,
+      "gain": 0.65
+    },
+    {
+      "voice": "clave",
+      "beat": 13.5,
+      "zone": 1,
+      "take": 1,
+      "gain": 0.5
+    },
+    {
+      "voice": "muted-tap",
+      "beat": 13.75,
+      "zone": 1,
+      "take": 0,
+      "gain": 0.65
+    },
+    {
+      "voice": "open-conga",
+      "beat": 14.25,
+      "zone": 1,
+      "take": 1,
+      "gain": 0.65
+    },
+    {
+      "voice": "metal-low",
+      "beat": 14.75,
+      "zone": 1,
+      "take": 1,
+      "gain": 0.55
+    },
+    {
+      "voice": "muted-tap",
+      "beat": 15.25,
+      "zone": 0,
+      "take": 1,
+      "gain": 0.65
+    },
+    {
+      "voice": "metal-high",
+      "beat": 15.5,
+      "zone": 1,
+      "take": 1,
+      "gain": 0.5
+    },
+    {
+      "voice": "wood-knock",
+      "beat": 15.75,
+      "zone": 1,
+      "take": 1,
+      "gain": 0.5
+    }
+  ],
+  "singeli": [
+    {
+      "voice": "clave",
+      "beat": 0.25,
+      "zone": 1,
+      "take": 0,
+      "gain": 0.6
+    },
+    {
+      "voice": "muted-tap",
+      "beat": 1.125,
+      "zone": 0,
+      "take": 0,
+      "gain": 0.55
+    },
+    {
+      "voice": "clave",
+      "beat": 1.75,
+      "zone": 1,
+      "take": 1,
+      "gain": 0.6
+    },
+    {
+      "voice": "wood-knock",
+      "beat": 2.5,
+      "zone": 1,
+      "take": 0,
+      "gain": 0.6
+    },
+    {
+      "voice": "open-conga",
+      "beat": 3.125,
+      "zone": 1,
+      "take": 0,
+      "gain": 0.45
+    },
+    {
+      "voice": "wood-knock",
+      "beat": 3.25,
+      "zone": 1,
+      "take": 1,
+      "gain": 0.6
+    },
+    {
+      "voice": "clave",
+      "beat": 4.25,
+      "zone": 1,
+      "take": 0,
+      "gain": 0.6
+    },
+    {
+      "voice": "metal-low",
+      "beat": 4.5,
+      "zone": 1,
+      "take": 0,
+      "gain": 0.6
+    },
+    {
+      "voice": "muted-tap",
+      "beat": 5.125,
+      "zone": 0,
+      "take": 1,
+      "gain": 0.55
+    },
+    {
+      "voice": "clave",
+      "beat": 5.75,
+      "zone": 1,
+      "take": 1,
+      "gain": 0.6
+    },
+    {
+      "voice": "wood-knock",
+      "beat": 6.5,
+      "zone": 1,
+      "take": 0,
+      "gain": 0.6
+    },
+    {
+      "voice": "metal-high",
+      "beat": 6.5,
+      "zone": 1,
+      "take": 0,
+      "gain": 0.6
+    },
+    {
+      "voice": "open-conga",
+      "beat": 7.125,
+      "zone": 1,
+      "take": 1,
+      "gain": 0.45
+    },
+    {
+      "voice": "wood-knock",
+      "beat": 7.25,
+      "zone": 1,
+      "take": 1,
+      "gain": 0.6
+    },
+    {
+      "voice": "clave",
+      "beat": 8.25,
+      "zone": 1,
+      "take": 0,
+      "gain": 0.6
+    },
+    {
+      "voice": "muted-tap",
+      "beat": 9.125,
+      "zone": 0,
+      "take": 0,
+      "gain": 0.55
+    },
+    {
+      "voice": "clave",
+      "beat": 9.75,
+      "zone": 1,
+      "take": 1,
+      "gain": 0.6
+    },
+    {
+      "voice": "wood-knock",
+      "beat": 10.5,
+      "zone": 1,
+      "take": 0,
+      "gain": 0.6
+    },
+    {
+      "voice": "open-conga",
+      "beat": 11.125,
+      "zone": 1,
+      "take": 0,
+      "gain": 0.45
+    },
+    {
+      "voice": "wood-knock",
+      "beat": 11.25,
+      "zone": 1,
+      "take": 1,
+      "gain": 0.6
+    },
+    {
+      "voice": "clave",
+      "beat": 12.25,
+      "zone": 1,
+      "take": 0,
+      "gain": 0.6
+    },
+    {
+      "voice": "metal-low",
+      "beat": 12.5,
+      "zone": 1,
+      "take": 1,
+      "gain": 0.6
+    },
+    {
+      "voice": "muted-tap",
+      "beat": 13.125,
+      "zone": 0,
+      "take": 1,
+      "gain": 0.55
+    },
+    {
+      "voice": "clave",
+      "beat": 13.75,
+      "zone": 1,
+      "take": 1,
+      "gain": 0.6
+    },
+    {
+      "voice": "wood-knock",
+      "beat": 14.5,
+      "zone": 1,
+      "take": 0,
+      "gain": 0.6
+    },
+    {
+      "voice": "metal-high",
+      "beat": 14.5,
+      "zone": 1,
+      "take": 1,
+      "gain": 0.6
+    },
+    {
+      "voice": "open-conga",
+      "beat": 15.125,
+      "zone": 1,
+      "take": 1,
+      "gain": 0.45
+    },
+    {
+      "voice": "wood-knock",
+      "beat": 15.25,
+      "zone": 1,
+      "take": 1,
+      "gain": 0.6
+    }
+  ],
+  "bongopiano": [
+    {
+      "voice": "muted-tap",
+      "beat": 0.25,
+      "zone": 0,
+      "take": 0,
+      "gain": 0.55
+    },
+    {
+      "voice": "muted-tap",
+      "beat": 0.375,
+      "zone": 1,
+      "take": 1,
+      "gain": 0.55
+    },
+    {
+      "voice": "wood-knock",
+      "beat": 0.5,
+      "zone": 1,
+      "take": 0,
+      "gain": 0.45
+    },
+    {
+      "voice": "open-conga",
+      "beat": 1.5,
+      "zone": 1,
+      "take": 0,
+      "gain": 0.55
+    },
+    {
+      "voice": "muted-tap",
+      "beat": 2.875,
+      "zone": 0,
+      "take": 0,
+      "gain": 0.55
+    },
+    {
+      "voice": "open-conga",
+      "beat": 3.25,
+      "zone": 2,
+      "take": 1,
+      "gain": 0.55
+    },
+    {
+      "voice": "muted-tap",
+      "beat": 4.25,
+      "zone": 0,
+      "take": 1,
+      "gain": 0.55
+    },
+    {
+      "voice": "muted-tap",
+      "beat": 4.375,
+      "zone": 1,
+      "take": 0,
+      "gain": 0.55
+    },
+    {
+      "voice": "wood-knock",
+      "beat": 4.5,
+      "zone": 1,
+      "take": 1,
+      "gain": 0.45
+    },
+    {
+      "voice": "open-conga",
+      "beat": 5.5,
+      "zone": 1,
+      "take": 0,
+      "gain": 0.55
+    },
+    {
+      "voice": "metal-high",
+      "beat": 6,
+      "zone": 0,
+      "take": 0,
+      "gain": 0.45
+    },
+    {
+      "voice": "muted-tap",
+      "beat": 6.875,
+      "zone": 0,
+      "take": 1,
+      "gain": 0.55
+    },
+    {
+      "voice": "open-conga",
+      "beat": 7.25,
+      "zone": 2,
+      "take": 1,
+      "gain": 0.55
+    },
+    {
+      "voice": "metal-low",
+      "beat": 7.75,
+      "zone": 1,
+      "take": 0,
+      "gain": 0.45
+    },
+    {
+      "voice": "muted-tap",
+      "beat": 8.25,
+      "zone": 0,
+      "take": 0,
+      "gain": 0.55
+    },
+    {
+      "voice": "muted-tap",
+      "beat": 8.375,
+      "zone": 1,
+      "take": 1,
+      "gain": 0.55
+    },
+    {
+      "voice": "wood-knock",
+      "beat": 8.5,
+      "zone": 1,
+      "take": 0,
+      "gain": 0.45
+    },
+    {
+      "voice": "open-conga",
+      "beat": 9.5,
+      "zone": 1,
+      "take": 0,
+      "gain": 0.55
+    },
+    {
+      "voice": "muted-tap",
+      "beat": 10.875,
+      "zone": 0,
+      "take": 0,
+      "gain": 0.55
+    },
+    {
+      "voice": "open-conga",
+      "beat": 11.25,
+      "zone": 2,
+      "take": 1,
+      "gain": 0.55
+    },
+    {
+      "voice": "muted-tap",
+      "beat": 12.25,
+      "zone": 0,
+      "take": 1,
+      "gain": 0.55
+    },
+    {
+      "voice": "muted-tap",
+      "beat": 12.375,
+      "zone": 1,
+      "take": 0,
+      "gain": 0.55
+    },
+    {
+      "voice": "wood-knock",
+      "beat": 12.5,
+      "zone": 1,
+      "take": 1,
+      "gain": 0.45
+    },
+    {
+      "voice": "open-conga",
+      "beat": 13.5,
+      "zone": 1,
+      "take": 0,
+      "gain": 0.55
+    },
+    {
+      "voice": "metal-high",
+      "beat": 14,
+      "zone": 0,
+      "take": 1,
+      "gain": 0.45
+    },
+    {
+      "voice": "muted-tap",
+      "beat": 14.875,
+      "zone": 0,
+      "take": 1,
+      "gain": 0.55
+    },
+    {
+      "voice": "open-conga",
+      "beat": 15.25,
+      "zone": 2,
+      "take": 1,
+      "gain": 0.55
+    },
+    {
+      "voice": "metal-low",
+      "beat": 15.75,
+      "zone": 1,
+      "take": 1,
+      "gain": 0.45
+    }
+  ],
+  "genge": [
+    {
+      "voice": "wood-knock",
+      "beat": 0.5,
+      "zone": 1,
+      "take": 0,
+      "gain": 0.55
+    },
+    {
+      "voice": "clave",
+      "beat": 2.75,
+      "zone": 0,
+      "take": 0,
+      "gain": 0.5
+    },
+    {
+      "voice": "wood-knock",
+      "beat": 4.5,
+      "zone": 1,
+      "take": 1,
+      "gain": 0.55
+    },
+    {
+      "voice": "metal-low",
+      "beat": 6.5,
+      "zone": 0,
+      "take": 0,
+      "gain": 0.5
+    },
+    {
+      "voice": "clave",
+      "beat": 6.75,
+      "zone": 0,
+      "take": 1,
+      "gain": 0.5
+    },
+    {
+      "voice": "muted-tap",
+      "beat": 7.375,
+      "zone": 0,
+      "take": 0,
+      "gain": 0.5
+    },
+    {
+      "voice": "open-conga",
+      "beat": 7.5,
+      "zone": 1,
+      "take": 0,
+      "gain": 0.5
+    },
+    {
+      "voice": "metal-high",
+      "beat": 7.75,
+      "zone": 1,
+      "take": 0,
+      "gain": 0.5
+    },
+    {
+      "voice": "wood-knock",
+      "beat": 8.5,
+      "zone": 1,
+      "take": 0,
+      "gain": 0.55
+    },
+    {
+      "voice": "clave",
+      "beat": 10.75,
+      "zone": 0,
+      "take": 0,
+      "gain": 0.5
+    },
+    {
+      "voice": "wood-knock",
+      "beat": 12.5,
+      "zone": 1,
+      "take": 1,
+      "gain": 0.55
+    },
+    {
+      "voice": "metal-low",
+      "beat": 14.5,
+      "zone": 0,
+      "take": 1,
+      "gain": 0.5
+    },
+    {
+      "voice": "clave",
+      "beat": 14.75,
+      "zone": 0,
+      "take": 1,
+      "gain": 0.5
+    },
+    {
+      "voice": "muted-tap",
+      "beat": 15.375,
+      "zone": 0,
+      "take": 1,
+      "gain": 0.5
+    },
+    {
+      "voice": "open-conga",
+      "beat": 15.5,
+      "zone": 1,
+      "take": 1,
+      "gain": 0.5
+    },
+    {
+      "voice": "metal-high",
+      "beat": 15.75,
+      "zone": 1,
+      "take": 1,
+      "gain": 0.5
+    }
+  ],
+  "kapuka": [
+    {
+      "voice": "clave",
+      "beat": 0.75,
+      "zone": 1,
+      "take": 0,
+      "gain": 0.6
+    },
+    {
+      "voice": "muted-tap",
+      "beat": 1.625,
+      "zone": 0,
+      "take": 0,
+      "gain": 0.5
+    },
+    {
+      "voice": "open-conga",
+      "beat": 1.75,
+      "zone": 1,
+      "take": 0,
+      "gain": 0.6
+    },
+    {
+      "voice": "wood-knock",
+      "beat": 2.25,
+      "zone": 1,
+      "take": 0,
+      "gain": 0.5
+    },
+    {
+      "voice": "metal-low",
+      "beat": 4.25,
+      "zone": 1,
+      "take": 0,
+      "gain": 0.6
+    },
+    {
+      "voice": "clave",
+      "beat": 4.75,
+      "zone": 1,
+      "take": 1,
+      "gain": 0.6
+    },
+    {
+      "voice": "muted-tap",
+      "beat": 5.625,
+      "zone": 0,
+      "take": 1,
+      "gain": 0.5
+    },
+    {
+      "voice": "open-conga",
+      "beat": 5.75,
+      "zone": 1,
+      "take": 1,
+      "gain": 0.6
+    },
+    {
+      "voice": "wood-knock",
+      "beat": 6.25,
+      "zone": 1,
+      "take": 1,
+      "gain": 0.5
+    },
+    {
+      "voice": "metal-high",
+      "beat": 6.75,
+      "zone": 1,
+      "take": 0,
+      "gain": 0.55
+    },
+    {
+      "voice": "clave",
+      "beat": 8.75,
+      "zone": 1,
+      "take": 0,
+      "gain": 0.6
+    },
+    {
+      "voice": "muted-tap",
+      "beat": 9.625,
+      "zone": 0,
+      "take": 0,
+      "gain": 0.5
+    },
+    {
+      "voice": "open-conga",
+      "beat": 9.75,
+      "zone": 1,
+      "take": 0,
+      "gain": 0.6
+    },
+    {
+      "voice": "wood-knock",
+      "beat": 10.25,
+      "zone": 1,
+      "take": 0,
+      "gain": 0.5
+    },
+    {
+      "voice": "metal-low",
+      "beat": 12.25,
+      "zone": 1,
+      "take": 1,
+      "gain": 0.6
+    },
+    {
+      "voice": "clave",
+      "beat": 12.75,
+      "zone": 1,
+      "take": 1,
+      "gain": 0.6
+    },
+    {
+      "voice": "muted-tap",
+      "beat": 13.625,
+      "zone": 0,
+      "take": 1,
+      "gain": 0.5
+    },
+    {
+      "voice": "open-conga",
+      "beat": 13.75,
+      "zone": 1,
+      "take": 1,
+      "gain": 0.6
+    },
+    {
+      "voice": "wood-knock",
+      "beat": 14.25,
+      "zone": 1,
+      "take": 1,
+      "gain": 0.5
+    },
+    {
+      "voice": "metal-high",
+      "beat": 14.75,
+      "zone": 1,
+      "take": 1,
+      "gain": 0.55
+    }
+  ]
+}

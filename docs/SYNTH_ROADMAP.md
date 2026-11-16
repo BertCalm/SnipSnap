@@ -3748,6 +3748,19 @@ playback and the MPC 3 export (768 slices). Every kit carries a roll or riser. O
 from the app, the Latin jazz kit and its new percussion voices (asked for 2026-11-15), presets and the picker,
 hardware. See [EMBER](EMBER.md).
 
+### KINDRED, rounds 0 to K1 (2026-11-15)
+
+A one-voice, eight-step analog-style percussion synth from the owner's DFAM reference clips: two VCOs with a shared
+pitch-decay envelope, FM and hard sync, noise, a four-pole tanh ladder (LP or HP), three decays; a new step re-strikes
+the same voice and cuts the last tail. Rounds 0 to 2 were Python (`prototype/kindred/`): six voices, then four
+sixteen-pad genre kits (TECHNO 132, INDUSTRIAL 100, ELECTRO 124, AMBIENT 84), then model 2 after the owner heard
+round 1 as "a small radio speaker" (kicks settle near 58 Hz with an open ladder and an octave square, fitted to the
+reference kick; the grooves' 400 Hz to 2.5 kHz deficit fell from 5.5 to 1.9 to 2.9 dB). The owner accepted round 2.
+Round K1 is the Kotlin port: `Kindred.kt`, `KindredPatch` (velocity, take, recipe, model), the 56 recipes generated
+from the prototype's kit table, provisional presets under `PatchTypes.PROTOTYPES`, `KindredTest`, a determinism
+canary. The noise-free recipes match the Python to 0.01 dB (correlation 0.972 to 1.000); the noise recipes are
+another realisation (up to 2.54 dB). 40.7 ms a pad, warm. Nothing in Kotlin heard. Open: the kits on the shelf with
+their phrases and risers (K2), the picker, hardware. See [KINDRED](KINDRED.md).
 ### CALABASH, round 2 (2026-11-15)
 
 The four approved kits on the shelf: CALABASH AFROBEAT, AFROBEATS, MBALAX and AFRO-CUBAN JAZZ are FRESH TAPE starters
@@ -3826,3 +3839,18 @@ asking whether any take sounded like a different drum or four sounded the same. 
 good". Every take of every hit pad has been heard. Complete (2026-11-15), accepted sound `Hiccup.MODEL_VERSION` 2 with
 `HiccupKits.VERSION` 2. MPC 2 is not applicable (format limit): it keeps one take per zone.
 See [HICCUP](HICCUP.md) and the gates entry.
+
+
+### East African fitted synthesis banks, 2026-11-15
+
+Five curated shelf kits retain the accepted fitted modal/noise palette and FM
+logs: 22 sounds × 3 velocity zones × 3 takes per kit. This is a bank family,
+not a new picker engine. Native listening and hardware gates remain open;
+see [implementation and evidence](EAST_AFRICA.md).
+
+### Soul and rock acoustic factory kits
+
+Three owner-approved synthesized banks, delivered as exact frozen PCM rather than
+a new engine: SOUL POCKET, ROADHOUSE ROCK and OPEN ROOM ROCK. Forty-eight pads,
+432 velocity/take variants, hat chokes, rolls and swells. See [SOUL_ROCK](SOUL_ROCK.md)
+for software evidence and the remaining phone/MPC gate.
