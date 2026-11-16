@@ -105,6 +105,10 @@ class BristleSynthScreenTest : ComposeScreenTest() {
         press("B")
         press("NEXT ENGINE")
         press("PREVIOUS ENGINE")
+        // Arriving on an engine always starts on its first voice (SynthScreen.arrive); the saved B
+        // draft is reached by choosing B again, which must show B's edit, not A's.
+        button("A").assertIsSelected()
+        press("B")
         button("B").assertIsSelected()
         val restored = SynthDrafts.read(settings).filterIsInstance<BristlePatch>().single { it.voice == Bristle.Route.B }
         assertEquals(patch.midi, restored.midi)
