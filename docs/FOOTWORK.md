@@ -225,3 +225,18 @@ parts, syncopation, ghost notes, rests and multi-contact tap phrases. Twenty-fou
 new gesture velocity/repeat cells pass the study checks. The native source models,
 kit downloads and exported roll/riser remain previous candidates; neither source
 realism nor independent kit identity is claimed fixed by new arrangements.
+
+### Tap refinement after phrase feedback
+
+The owner clarified that the new phrase studies, not the recorded-reference
+buttons, were closer: Tap is weakest; Street and Industrial are pretty good.
+Those two exact phrase studies are retained as the working direction, without
+converting that feedback into approval of every source voice or delivery gate.
+
+`prototype/footwork/tap_refinement/` revises only Tap: role-specific contact shaping
+preserves the toe's delayed plate, restores the heel knock and exposes complete
+brush/spank motion. A one-dancer event plan adds call/answer, a quiet passage and
+a turnaround; related roll/build studies use the same vocabulary. There are 36
+phrase/gesture cells and 48 single-contact cells. Render assertions and PCM16
+round-trip checks pass. Six Street/Industrial audition WAV hashes are unchanged.
+This remains an audition study; native models and kit downloads are not promoted.
