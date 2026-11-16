@@ -6001,13 +6001,14 @@ class ConventionTest {
         "CHOP ▸", "PADS ▸", "BEAT ▸", "EXPORT ▸", // Places.DOOR_*: the stage doors
         "OPEN ▸", // a project row's OPEN
         "CHANGE SOUND ▸", "EDIT PAD ▸", "RECORD INTO PAD ▸", "FROM MY SAMPLES ▸", // the pad strip's doors (UX pass, 2026-11-15)
-        "EXPORT ▸", "EFFECTS ▸", "MIX WITH ANOTHER SOUND ▸", "USE THIS PART ▸", // Copy: doors to EXPORT, the pad editor's two screens, and TAPE's next screen
+        "EXPORT ▸", "MIX WITH ANOTHER SOUND ▸", "USE THIS PART ▸", // Copy: doors to EXPORT, the pad editor's MIX screen, and TAPE's next screen
+        "LAYERS AND TAKES ▸", "TRIM AND SPLICE ▸", "MAKE FROM THIS PAD ▸", "HEAR IT IN THE BEAT ▸", // the short pad page's doors (2026-11-16)
         "COMBINE KITS · MIX TWO KITS ▸", // lands on the shelf to pick the partner kit
         "LIBRARY ▸", "SAMPLE ▸", "SAVED SAMPLES ▸", // the empty-state routes
         "MIDI DEVICES ▸", // SETTINGS' door to the MIDI devices screen
         "${'$'}{bench.label} ▸", "MY VOICE ▸", "KEYBOARD ▸", // MAKE's rows
         "ORBIT ▸", "LOOP ▸", "SONG ▸", // GROOVE's doors to the other beat benches
-        "STACK ▸", "SPLICE ▸", "GRAIN · PLAY THIS SOUND AS GRAINS ▸", "AUDITION ▸", "RE-TRIM ▸", // the pad editor's tool screens
+        "STACK ▸", "SPLICE ▸", "GRAIN · PLAY THIS SOUND AS GRAINS ▸", "RE-TRIM ▸", // the pad editor's tool screens
         "VERSIONS · RESTORE ▸", "SPLIT · SINES · TRANSIENT · AIR ▸", // THIS KIT's two screens
         "BEAT WRITERS · BOUNCE · MIDI · CHART ▸", // EXPORT's way to the BEAT stage
         "TRASH · ${'$'}binnedCount WAITING ▸", "LOOP · ${'$'}loopTracks OF ${'$'}{Session.TRACK_COUNT} TRACKS ▸", // the shelf's BIN and LOOP rows

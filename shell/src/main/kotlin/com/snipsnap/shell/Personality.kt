@@ -2134,15 +2134,28 @@ object Copy {
     const val UNDO_LAYERED = "SOFT HITS is on: this pad has layers. Undo wants ONE SAMPLE - turn SOFT HITS off first."
 
     /**
-     * The pad editor's two doors to its own screens (`▸` is "opens a screen"): the closed line under each
-     * says what is applied or what is inside ([PadSheetBoxes.effectsLine], [PadSheetBoxes.variationsLine]).
+     * The short pad page's six doors (the owner's mockup, 2026-11-16; `▸` is "opens a screen"): the closed line
+     * under each says what is applied or what is inside ([PadSheetBoxes.effectsLine], [PadSheetBoxes.variationsLine],
+     * [PadSheetBoxes.layersLine], [PadSheetBoxes.TRIM_HOLDS], the MAKE box's own summary, [PadSheetBoxes.beatLine]).
+     * The first reads CHANGE SOUND, as the pad strip's door to the same screen does.
      */
-    @field:CopyLabel const val PAD_EFFECTS_DOOR = "EFFECTS ▸"
+    @field:CopyLabel const val PAD_EFFECTS_DOOR = "CHANGE SOUND ▸"
     @field:CopyLabel const val PAD_VARIATIONS_DOOR = "MIX WITH ANOTHER SOUND ▸"
+    @field:CopyLabel const val PAD_LAYERS_DOOR = "LAYERS AND TAKES ▸"
+    @field:CopyLabel const val PAD_TRIM_DOOR = "TRIM AND SPLICE ▸"
+    @field:CopyLabel const val PAD_MAKE_DOOR = "MAKE FROM THIS PAD ▸"
+    /** AUDITION ▸, renamed for what it does: GROOVE plays this pad against its other version. */
+    @field:CopyLabel const val PAD_BEAT_DOOR = "HEAR IT IN THE BEAT ▸"
 
-    /** The words over the EFFECTS and VARIATIONS screens, the screens' own titles. */
+    /** The words over the editor's screens, the screens' own titles. */
     @field:CopyLabel const val PAD_EFFECTS_TITLE = "EFFECTS"
     @field:CopyLabel const val PAD_VARIATIONS_TITLE = "MIX WITH ANOTHER SOUND"
+    @field:CopyLabel const val PAD_LAYERS_TITLE = "LAYERS AND TAKES"
+    @field:CopyLabel const val PAD_TRIM_TITLE = "TRIM AND SPLICE"
+    @field:CopyLabel const val PAD_MAKE_TITLE = "MAKE FROM THIS PAD"
+
+    /** Over ONE-SHOT and CHOKE GROUP on the short pad page: the one thing left above the doors that is not a level. */
+    @field:CopyLabel const val PAD_HOW_IT_PLAYS = "HOW IT PLAYS"
 
     /**
      * Each per-tool UNDO on the pad editor, named in full: the sheet draws several (and says one failure

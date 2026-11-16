@@ -20,6 +20,7 @@ import com.snipsnap.kit.KitStore
 import com.snipsnap.shell.ConfluenceWorkshop
 import com.snipsnap.shell.KitBuilderModel
 import com.snipsnap.shell.PadSheetBoxes
+import com.snipsnap.shell.PadSheetPage
 import com.snipsnap.shell.PedalSlate
 import com.snipsnap.shell.StarterKits
 import com.snipsnap.synth.ConfluenceAssemblyRecipe
@@ -84,6 +85,8 @@ class ConfluenceWorkshopUiTest : ComposeScreenTest() {
                 slot = currentSlot,
                 backLabel = "◄ PADS",
                 onSlotChange = { currentSlot = it },
+                // The gathering card is in the MAKE box, behind MAKE FROM THIS PAD on the short pad page (2026-11-16).
+                page = PadSheetPage.MAKE,
                 onBack = {},
                 onToast = { toasts += it },
                 onNavigateTape = {},
@@ -100,7 +103,7 @@ class ConfluenceWorkshopUiTest : ComposeScreenTest() {
             )
         }
         waitFor("the original gathering's saved controls", timeoutMillis = 30_000) {
-            hasText("PAD A01") && sliderState("REVERB") == "20%"
+            currentSlot == 1 && sliderState("REVERB") == "20%"
         }
 
         clickAction("Low voice: ROUNDED OO")
@@ -123,7 +126,7 @@ class ConfluenceWorkshopUiTest : ComposeScreenTest() {
         clickAction("MAKE VARIATION → A02")
         waitFor("the saved variation and destination pad", timeoutMillis = 120_000) {
             toasts.contains("Gathering made on A02. Original kept.") &&
-                hasText("PAD A02") && sliderState("REVERB") == "70%"
+                currentSlot == 2 && sliderState("REVERB") == "70%"
         }
         val saved = KitStore.load(directory)
         val made = checkNotNull(saved.pad(2))
@@ -147,11 +150,11 @@ class ConfluenceWorkshopUiTest : ComposeScreenTest() {
         // saved source recipe, rather than the previous screen's local draft.
         clickAction("PREVIOUS PAD, A01")
         waitFor("the unchanged original controls") {
-            hasText("PAD A01") && sliderState("REVERB") == "20%"
+            currentSlot == 1 && sliderState("REVERB") == "20%"
         }
         clickAction("NEXT PAD, A02")
         waitFor("the variation controls after reopening") {
-            hasText("PAD A02") && sliderState("REVERB") == "70%"
+            currentSlot == 2 && sliderState("REVERB") == "70%"
         }
     }
 

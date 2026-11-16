@@ -23,6 +23,7 @@ import com.snipsnap.kit.KitStore
 import com.snipsnap.shell.Copy
 import com.snipsnap.shell.KitBuilderModel
 import com.snipsnap.shell.PadBanks
+import com.snipsnap.shell.PadSheetPage
 import com.snipsnap.shell.PedalSlate
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -55,6 +56,7 @@ class StrikeFxSectionTest : ComposeScreenTest() {
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private val kitDirs = mutableListOf<File>()
     private var sheetShown by mutableStateOf(true)
+    private var pageState by mutableStateOf(PadSheetPage.EDITOR)
     private val toasts = mutableListOf<String>()
     private val heard = mutableListOf<Int>()
 
@@ -83,6 +85,7 @@ class StrikeFxSectionTest : ComposeScreenTest() {
 
     private fun show(entry: KitShelf.Entry) {
         sheetShown = true
+        pageState = PadSheetPage.EDITOR
         setPhoneContent {
             if (sheetShown) {
                 PadSheetScreen(
@@ -90,7 +93,9 @@ class StrikeFxSectionTest : ComposeScreenTest() {
                     slot = 1,
                     backLabel = "◄ PADS",
                     onSlotChange = {},
-                    onBack = {},
+                    page = pageState,
+                    onOpenPage = { pageState = it },
+                    onBack = { pageState = PadSheetPage.EDITOR },
                     onToast = { toasts += it },
                     onStrikeHeard = { heard += it },
                     onNavigateTape = {},
@@ -109,6 +114,11 @@ class StrikeFxSectionTest : ComposeScreenTest() {
         }
         waitFor("the pad header") {
             compose.onAllNodesWithText("PAD ${PadBanks.tag(1)}", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
+        }
+        // FX BY VELOCITY and SOFT HITS are behind LAYERS AND TAKES on the short pad page (2026-11-16).
+        pageState = PadSheetPage.LAYERS
+        waitFor("LAYERS AND TAKES") {
+            compose.onAllNodesWithText(Copy.PAD_LAYERS_TITLE, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
         }
     }
 

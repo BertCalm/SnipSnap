@@ -257,6 +257,15 @@ enum class Bench(val home: Place, val label: String, val backName: String = labe
      * [PAD_EFFECTS]. Was VARIATIONS, which also named bank B's twins (the owner's rename, 2026-11-15).
      */
     PAD_VARIATIONS(Place.PROJECT, "MIX WITH ANOTHER SOUND", backName = "MIX"),
+    /**
+     * The short pad page's three new screens (the owner's mockup, 2026-11-16): what the editor held below
+     * HOW IT PLAYS, each behind a labelled door and drawn like [PAD_EFFECTS]. LAYERS AND TAKES holds SOFT
+     * HITS, ROUND ROBIN and STACK ▸; TRIM AND SPLICE holds RE-TRIM ▸, SPLICE ▸ and their undos; MAKE FROM
+     * THIS PAD holds the MAKE box.
+     */
+    PAD_LAYERS(Place.PROJECT, "LAYERS AND TAKES", backName = "LAYERS"),
+    PAD_TRIM(Place.PROJECT, "TRIM AND SPLICE", backName = "TRIM"),
+    PAD_MAKE(Place.PROJECT, "MAKE FROM THIS PAD", backName = "MAKE"),
     GRAIN_FIELD(Place.PROJECT, "GRAIN FIELD"),
     SPLICE(Place.PROJECT, "SPLICE"),
     STACK(Place.PROJECT, "STACK VERSIONS", backName = "STACK"),
