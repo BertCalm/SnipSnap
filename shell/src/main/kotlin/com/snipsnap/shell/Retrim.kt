@@ -67,11 +67,11 @@ sealed class Retrim {
          * (the picks it plays, [PedalSlate.audible]); null when the pad carried none.
          */
         fun treatmentLeft(pad: KitPad): String? {
-            if (PadSheet.readSmear(pad.recipe) != null) return "SMEAR"
-            if (PadSheet.readDust(pad.recipe) != null) return "DUST"
+            if (PadSheet.readSmear(pad.recipe) != null) return PadSheet.displayLabel(PadSheet.SMEAR)
+            if (PadSheet.readDust(pad.recipe) != null) return PadSheet.displayLabel(PadSheet.DUST)
             PadSheet.readPedals(pad.recipe)?.let { board ->
                 val heard = PedalSlate.audible(board.picks)
-                if (heard.isNotEmpty()) return heard.singleOrNull()?.entry?.word ?: "PEDALS"
+                if (heard.isNotEmpty()) return heard.singleOrNull()?.entry?.word?.let(PadSheet::displayLabel) ?: "PEDALS"
             }
             val applied = PadSheet.read(pad.recipe) ?: return null
             return applied.segment?.let(PadSheet::displayLabel) ?: applied.treatment.name.uppercase()

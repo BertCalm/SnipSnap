@@ -5,6 +5,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import com.snipsnap.app.theme.tape
+import com.snipsnap.shell.PadSheet
 import com.snipsnap.shell.Scheme
 
 /**
@@ -25,7 +26,7 @@ internal fun AquariumSection(
     content: @Composable ColumnScope.() -> Unit,
 ) {
     GroupBoxCore(
-        legend = "AQUARIUM",
+        legend = PadSheet.CHAIN_LABEL,
         summary = summary,
         open = open,
         onToggle = onToggle,

@@ -254,7 +254,7 @@ class MutateWordsTest {
         assertEquals("KEEP", MutateSheet.KEEP_LABEL)
         assertEquals("RANDOM BLEND · SAVES", MutateSheet.DRIFT_LABEL)
         assertEquals("RANDOM PARTNER · PICK ONE FROM THE LIBRARY", MutateSheet.ROULETTE_LABEL)
-        assertEquals("NO ROOM YET · MAKE ONE IN RE-AMP AND ROOM", MutateSheet.NO_ROOM_LINE)
+        assertEquals("NO ROOM YET · MAKE ONE IN SPEAKER AND ROOM", MutateSheet.NO_ROOM_LINE)
         assertEquals("NO OTHER KIT IN THE LIBRARY", MutateSheet.NO_OTHER_KIT_LINE)
         for ((name, text) in rows) {
             // The card's labels are caps; its move lines and the BECOME line are sentences (sentence case).
@@ -286,7 +286,7 @@ class MutateWordsTest {
             MutateSheet.NO_ROOM_LINE, MutateSheet.NO_OTHER_KIT_LINE, MutateSheet.deadKnobLine,
         ) + Mutate.Mode.values().flatMap { listOfNotNull(MutateSheet.outcomeLine(it, 1f), MutateSheet.knobMeaning(it), MutateSheet.becomeMeaning(it)) }
         for (text in labels + MutateSheet.KEEP_LABEL) {
-            assertTrue(!text.contains("KEEP ROOM", ignoreCase = true), "'$text' says KEEP ROOM, RE-AMP AND ROOM's button, on the card whose commit verb is KEEP")
+            assertTrue(!text.contains("KEEP ROOM", ignoreCase = true), "'$text' says KEEP ROOM, SPEAKER AND ROOM's button, on the card whose commit verb is KEEP")
             assertOneMeaning("'$text'", text)
         }
         val keepers = labels.filter { Regex("""\bKEEP\b""").containsMatchIn(it) }

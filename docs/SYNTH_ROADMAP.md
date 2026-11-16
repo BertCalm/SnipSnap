@@ -3641,6 +3641,24 @@ deterministic objects correlate 0.93 to 0.99; random draws are another realisati
 owner waived the roll gate. See [CLUTTER](CLUTTER.md) and the gates entry. The four genre kits go on the shelf
 at round 2; the picker entry waits for a session with an SDK.
 
+### Bristle bass prototype (2026-11-14, in progress)
+
+The owner kept both Python A/B routes and authorized Kotlin and app/instrument integration.
+[Bristle](BRISTLE.md) preserves the two orders in one DSP core, registers saved patches and the
+BRISTLE picker entry, and provides finite C1–C3 instruments with three timbral touch layers per
+semitone. Round 3 adds opt-in SUSTAIN KEYS with measured loops and note-off release; the two
+finite packages remain byte-identical. Round 4 adds optional two-take pools and separate
+fixed-touch MPC cycling programs. Round 5 adds six distinct owner-retained voices, twelve validated
+finite/held two-take keygroups and a sixteen-pad shelf starter. Chord planning fits 956 of 960
+voicings by whole-octave transposition and refuses four B add-nine cases outside C1–C3.
+Combined velocity × round robin in one MPC keygroup remains open; generic MPC 3 pad chains
+also lack the embedded WAV slice map. The portable starter instead supplies three-touch first-take
+programs plus separate fixed-touch cycling programs. Optional COMP and FUZZ controls now accompany
+all eight voices, default off; their new comparisons await listening. Live chord UI and
+hardware verification remain open; full-regression evidence is recorded in BRISTLE.md.
+The owner subsequently reported the current prototype tested and approved after the Android/MPC
+testing recommendation; device details were not supplied and Android automation remains unrun.
+This is an accepted prototype, not a completed instrument.
 ### TIMBER acoustic-instrument percussion banks (2026-11-14)
 
 Three genre starters from guitar, acoustic bass guitar, cello and upright body/string
@@ -3756,6 +3774,13 @@ factory path keeps a preset's velocity, take and model; a frozen draft keeps the
 in `EngineCatalog`; 91 picker engines. An on-device test in `NewEngineSynthScreenTest` loads AFROBEAT CONGA OPEN and
 keeps an edit with its take and model; CI compiles and runs it (no SDK here). See [CALABASH](CALABASH.md).
 
+### CALABASH, complete (2026-11-15)
+
+The owner's phone and MPC checks: asked to load a CALABASH kit from FRESH TAPE and play soft, hard and repeated hits,
+try CALABASH in the SYNTH picker with a preset, and load an MPC 3 export on the MPC, the owner answered "Last checks
+are good". Every applicable gate has its evidence; MPC 2 is not applicable (the owner's format limit). See
+[CALABASH](CALABASH.md) and the gates entry.
+
 ### SERVO, rounds 0 and 1 (2026-11-15)
 
 Machine drums on a weak power rail for electro, ghetto tech and neurofunk: every hit sags one supply a few
@@ -3795,7 +3820,9 @@ at velocity 1, take 0, and, for each kit, every hit pad A01 to A14 struck soft, 
 1), first take of each zone, at the same peak level as saved. The verdict, verbatim: "Everything sounds good". The
 picker's on-device test passed in CI's emulator job on PR #1143 on 2026-11-15. Hardware: on 2026-11-15, told that
 playback on a phone and an MPC was the remaining gate, the owner said, verbatim: "Hardware is good" (the owner's
-report, not a capture). Open: the round-robin takes no listen covered (the second to fourth takes of the soft and
-medium zones, and at the hardest zone every pad's takes except SUGAR's Pop Snare). MPC 2 keeps one take per zone as a
-stated format limit.
+report, not a capture). Third listen (model 2, kit 2): for each kit and each velocity zone (soft .30, medium .65,
+hard 1), every hit pad A01 to A14 with its four round-robin takes played back to back in dealt order (nine clips),
+asking whether any take sounded like a different drum or four sounded the same. The verdict, verbatim: "Takes are
+good". Every take of every hit pad has been heard. Complete (2026-11-15), accepted sound `Hiccup.MODEL_VERSION` 2 with
+`HiccupKits.VERSION` 2. MPC 2 is not applicable (format limit): it keeps one take per zone.
 See [HICCUP](HICCUP.md) and the gates entry.

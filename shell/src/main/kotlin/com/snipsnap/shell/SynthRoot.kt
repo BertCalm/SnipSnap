@@ -81,6 +81,8 @@ import com.snipsnap.synth.MagnetPatch
 import com.snipsnap.synth.Mercury
 import com.snipsnap.synth.MercuryPatch
 import com.snipsnap.synth.Meridian
+import com.snipsnap.synth.Bristle
+import com.snipsnap.synth.BristlePatch
 import com.snipsnap.synth.MeridianPatch
 import com.snipsnap.synth.Murk
 import com.snipsnap.synth.MurkPatch
@@ -287,6 +289,7 @@ object SynthRoot {
         is LacquerPatch -> Field(patch.midi, Lacquer.MIDI_MIN..Lacquer.MIDI_MAX) { patch.copy(midi = it) }
         is LatticePatch -> Field(patch.midi, Lattice.MIDI_MIN..Lattice.MIDI_MAX) { patch.copy(midi = it) }
         is LibrationPatch -> Field(patch.midi, Libration.MIN_MIDI..Libration.MAX_MIDI) { patch.copy(midi = it) }
+        is BristlePatch -> Field(patch.midi, Bristle.MIDI_MIN..Bristle.MIDI_MAX) { patch.copy(midi = it) }
         is MeridianPatch -> Field(patch.midi, Meridian.MIDI_MIN..Meridian.MIDI_MAX) { patch.copy(midi = it) }
         is MurmurPatch -> Field(patch.midi, Murmur.rootRange(patch.config)) { patch.copy(midi = it) }
         is NacrePatch -> Field(patch.midi, Nacre.midiRange(patch.voice)) { patch.copy(midi = it) }
