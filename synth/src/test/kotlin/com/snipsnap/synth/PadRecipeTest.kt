@@ -41,6 +41,7 @@ class PadRecipeTest {
         BreakerPatch("Crushed drip", BreakerVoice.SNARE, emptyMap()),
         DrumlinePatch("Section", DrumlineVoice.SNARE, emptyMap()),
         SootPatch("Hot", SootVoice.SNARE, emptyMap()),
+        KindredPatch.of(KindredRecipes.ALL.first(), velocity = 0.6f, take = 2),
         HalobarPatch("Mallet dub", HalobarVoice.MARIMBA, emptyMap()),
         TempestPatch("Legacy Strike", TempestVoice.METAL, emptyMap(), model = 1),
         HydroformPatch("Saved impact", HydroformVoice.BULKHEAD, mapOf("YIELD" to .3f), velocity = .6f),

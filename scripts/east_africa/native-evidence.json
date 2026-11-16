@@ -1,0 +1,82 @@
+{
+  "scope": "Kotlin exported PCM, 990 variants; estimated true peak at 4x. Stationary noise-filter alias bound is not a full transient alias certification.",
+  "variants": 990,
+  "estimated_true_peak_4x": 0.9194618113148516,
+  "max_abs_dc": 1.9380844459331855e-05,
+  "max_last_10ms_rms": 0.0005665389998567226,
+  "worst_stationary_noise_fraction_above_output_nyquist": 2.1638257411585826e-05,
+  "sha256": {
+    "synth/src/main/resources/east-africa/calibration.json": "0ba55c6225aae6eaef5c7d728cad82a993718dad66496c2e15290e334f93b125",
+    "synth/src/main/resources/east-africa/models.json": "a8091be931d83b8ec667c7c64d868d09cbfc82c1fe9955c0315b0a35b0b323ec",
+    "synth/src/main/resources/east-africa/native.json": "777a35c535016d6528592e8deb43f4175c92386f5ad74ede5151d65577de39d0",
+    "synth/src/main/kotlin/com/snipsnap/synth/EastAfricaKits.kt": "88677aaead39ca269646a13f698a3fa131125e4351116812d4696383eb88182f",
+    "synth/src/main/kotlin/com/snipsnap/synth/EastAfricaModel.kt": "d9247221f96b18969caacf2b3facfd8b6c8cd378e4aa0fa36c502ce97d4a113c"
+  },
+  "python_port_comparison": {
+    "scope": "Kotlin synthesis with house noise; Python approval does not imply PCM parity or hardware approval.",
+    "comparison_scope": "900 single hits; noise texture is not PCM identical. Spectral bands and normalized time energy, not perceived similarity.",
+    "variants": 990,
+    "max_peak": 0.9188768863677979,
+    "max_dc": 1.9380844459331855e-05,
+    "spectral_db": {
+      "mean": 1.0107438858395572,
+      "p95": 2.0232973049005376,
+      "max": 3.1015121100222895
+    },
+    "envelope_db": {
+      "mean": 0.5289136695797048,
+      "p95": 1.315154508194511,
+      "max": 2.465661979339608
+    },
+    "mean_absolute_rms_delta_db": 0.3900946393194212,
+    "largest_rms_delta": {
+      "kit": "singeli",
+      "voice": "closed-hat",
+      "zone": 1,
+      "take": 2,
+      "spectral_db": 2.5505731127801305,
+      "envelope_db": 1.3144837899412882,
+      "rms_delta_db": -3.2217918202779345
+    }
+  },
+  "bank_render_times": [
+    {
+      "genre": "bongo-flava",
+      "variants": "198",
+      "render_ms": "14723.342591",
+      "save_playback_mpc3": "pass"
+    },
+    {
+      "genre": "singeli",
+      "variants": "198",
+      "render_ms": "8751.483111",
+      "save_playback_mpc3": "pass"
+    },
+    {
+      "genre": "bongopiano",
+      "variants": "198",
+      "render_ms": "18885.095992",
+      "save_playback_mpc3": "pass"
+    },
+    {
+      "genre": "genge",
+      "variants": "198",
+      "render_ms": "10413.654308",
+      "save_playback_mpc3": "pass"
+    },
+    {
+      "genre": "kapuka",
+      "variants": "198",
+      "render_ms": "12323.456318",
+      "save_playback_mpc3": "pass"
+    }
+  ],
+  "focused_jvm": "Passed: EastAfricaKitsTest (990 variants), EastAfricaRoundTripTest (all 5 workflows), StarterShelfTest.",
+  "native_cpp": "Source audit and 8 CTest suites passed.",
+  "full_regression": "Tracked separately in delivery PR checks; not established by this focused evidence file.",
+  "listening": "Python fitted bank approved by owner 2026-11-15; native Kotlin listening and phone/MPC hardware remain open.",
+  "retained_python_replay": {
+    "wavs": 998,
+    "sha256_mismatches": 0
+  }
+}

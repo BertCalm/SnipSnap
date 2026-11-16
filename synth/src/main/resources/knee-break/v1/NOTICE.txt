@@ -1,0 +1,1 @@
+Knee Break R4 synthesized sources. Measured numeric models derive from Virtuosity Drums by Versilian Studios and Karoryfer Samples, performed by Austin McMahon. CC0 1.0. Upstream https://github.com/sfzinstruments/virtuosity_drums/tree/9f04cf9a734527edfbb0a4eee1f674e45bbf71bc . Original shaker and woodblock synthesis. No user-video audio is included.
