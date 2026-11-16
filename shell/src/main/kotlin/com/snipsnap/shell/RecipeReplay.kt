@@ -199,7 +199,7 @@ object RecipeReplay {
             is Plan.Board -> Done(BoardSheet.apply(model, slot, p.recipe), Copy.replayedBoard(word, padName))
             is Plan.Aquarium -> {
                 val renderer = requireNotNull(aquariumRenderer) { PrintedPads.AQUARIUM_RENDERER_REQUIRED }
-                Done(AquariumPadSheet.apply(model, slot, p.recipe, renderer), Copy.replayedBoard("AQUARIUM", padName))
+                Done(AquariumPadSheet.apply(model, slot, p.recipe, renderer), Copy.replayedBoard(PadSheet.CHAIN_LABEL, padName))
             }
             is Plan.Pedals -> Done(model.pedalPad(slot, p.board), Copy.replayed(word, padName))
             is Plan.KeyedPlan -> {

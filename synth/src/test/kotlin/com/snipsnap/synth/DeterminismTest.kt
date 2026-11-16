@@ -12,6 +12,21 @@ import kotlin.test.assertTrue
  * both depend on the second half.
  */
 class DeterminismTest {
+    @Test fun `East Africa fitted percussion log bass and phrases repeat exactly`() {
+        for(role in listOf(0,2,5,12,14,15,21)) {
+            val a=EastAfricaKits.render(EastAfricaKits.Genre.SINGELI,role,.64f,2)
+            val b=EastAfricaKits.render(EastAfricaKits.Genre.SINGELI,role,.64f,2)
+            assertContentEquals(a.samples,b.samples)
+        }
+    }
+
+    @Test fun `Bristle study routes replay their saved touch exactly`() {
+        for (route in Bristle.Route.entries) {
+            val r = Bristle.Recipe(route, 36, .65f, mapOf("SLIDE" to .3f))
+            assertContentEquals(r.render().samples, Bristle.Recipe.fromJsonText(r.toJsonText()).render().samples)
+        }
+    }
+
     @Test fun `DRUMLINE keeps section and take identities deterministic`() {
         for (voice in listOf(DrumlineVoice.SNARE, DrumlineVoice.CRASH, DrumlineVoice.ROLL)) {
             assertContentEquals(Drumline.render(voice, take = 2).samples, Drumline.render(voice, take = 2).samples)
@@ -250,6 +265,17 @@ class DeterminismTest {
         }
     }
 
+    @Test fun `KINDRED renders every voice, every kit recipe, a soft hit and a later take byte for byte through JSON`() {
+        for (voice in KindredVoice.entries) {
+            val patch = KindredPatch("Canary", voice, Kindred.defaults(voice))
+            assertContentEquals(patch.render().samples, Patches.fromJsonText(patch.toJsonText()).render().samples, "$voice")
+        }
+        for (recipe in KindredRecipes.ALL) {
+            val struck = KindredPatch.of(recipe, velocity = 0.6f, take = 3)
+            assertContentEquals(struck.render().samples, Patches.fromJsonText(struck.toJsonText()).render().samples, "${recipe.id} soft take 3")
+        }
+    }
+
     @Test fun `CALABASH renders every voice, a soft hit and a later take byte for byte through JSON`() {
         for (voice in CalabashVoice.entries) {
             // The four rolls render seconds each; their strokes are the voices' own, so one hard take covers them.
@@ -353,7 +379,7 @@ class DeterminismTest {
         for (voice in NacreVoice.entries) {
             val patch = NacrePatch("Nacre canary", voice,
                 Nacre.defaults(voice) + mapOf("VENUE" to 1f, "BLOOM" to .65f),
-                midi = 57, velocity = .65f, seed = 9_007_199_254_740_993L, model = 3)
+                midi = 57, velocity = .65f, seed = 9_007_199_254_740_993L, model = Nacre.defaultModel(voice))
             Nacre.clearCoreCache()
             val original = patch.render().samples
             Nacre.clearCoreCache()
@@ -364,7 +390,7 @@ class DeterminismTest {
 
     @Test
     fun `NACRE strike-shaped v2 layers reproduce across cold source caches and a saved policy`() {
-        val hard = NacrePresets.all().first { it.model == 4 }.copy(midi = 55, seed = -3L)
+        val hard = NacrePresets.forVoice(NacreVoice.PEARL).first { it.model == 4 }.copy(midi = 55, seed = -3L)
         val bank = NacreContactStrikeRecipes.recipeFor(hard, NacreStrikeVariant.STRONG)
         Nacre.clearCoreCache()
         val original = bank.layers.first().render().samples

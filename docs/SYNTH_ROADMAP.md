@@ -3641,6 +3641,24 @@ deterministic objects correlate 0.93 to 0.99; random draws are another realisati
 owner waived the roll gate. See [CLUTTER](CLUTTER.md) and the gates entry. The four genre kits go on the shelf
 at round 2; the picker entry waits for a session with an SDK.
 
+### Bristle bass prototype (2026-11-14, in progress)
+
+The owner kept both Python A/B routes and authorized Kotlin and app/instrument integration.
+[Bristle](BRISTLE.md) preserves the two orders in one DSP core, registers saved patches and the
+BRISTLE picker entry, and provides finite C1–C3 instruments with three timbral touch layers per
+semitone. Round 3 adds opt-in SUSTAIN KEYS with measured loops and note-off release; the two
+finite packages remain byte-identical. Round 4 adds optional two-take pools and separate
+fixed-touch MPC cycling programs. Round 5 adds six distinct owner-retained voices, twelve validated
+finite/held two-take keygroups and a sixteen-pad shelf starter. Chord planning fits 956 of 960
+voicings by whole-octave transposition and refuses four B add-nine cases outside C1–C3.
+Combined velocity × round robin in one MPC keygroup remains open; generic MPC 3 pad chains
+also lack the embedded WAV slice map. The portable starter instead supplies three-touch first-take
+programs plus separate fixed-touch cycling programs. Optional COMP and FUZZ controls now accompany
+all eight voices, default off; their new comparisons await listening. Live chord UI and
+hardware verification remain open; full-regression evidence is recorded in BRISTLE.md.
+The owner subsequently reported the current prototype tested and approved after the Android/MPC
+testing recommendation; device details were not supplied and Android automation remains unrun.
+This is an accepted prototype, not a completed instrument.
 ### TIMBER acoustic-instrument percussion banks (2026-11-14)
 
 Three genre starters from guitar, acoustic bass guitar, cello and upright body/string
@@ -3730,6 +3748,19 @@ playback and the MPC 3 export (768 slices). Every kit carries a roll or riser. O
 from the app, the Latin jazz kit and its new percussion voices (asked for 2026-11-15), presets and the picker,
 hardware. See [EMBER](EMBER.md).
 
+### KINDRED, rounds 0 to K1 (2026-11-15)
+
+A one-voice, eight-step analog-style percussion synth from the owner's DFAM reference clips: two VCOs with a shared
+pitch-decay envelope, FM and hard sync, noise, a four-pole tanh ladder (LP or HP), three decays; a new step re-strikes
+the same voice and cuts the last tail. Rounds 0 to 2 were Python (`prototype/kindred/`): six voices, then four
+sixteen-pad genre kits (TECHNO 132, INDUSTRIAL 100, ELECTRO 124, AMBIENT 84), then model 2 after the owner heard
+round 1 as "a small radio speaker" (kicks settle near 58 Hz with an open ladder and an octave square, fitted to the
+reference kick; the grooves' 400 Hz to 2.5 kHz deficit fell from 5.5 to 1.9 to 2.9 dB). The owner accepted round 2.
+Round K1 is the Kotlin port: `Kindred.kt`, `KindredPatch` (velocity, take, recipe, model), the 56 recipes generated
+from the prototype's kit table, provisional presets under `PatchTypes.PROTOTYPES`, `KindredTest`, a determinism
+canary. The noise-free recipes match the Python to 0.01 dB (correlation 0.972 to 1.000); the noise recipes are
+another realisation (up to 2.54 dB). 40.7 ms a pad, warm. Nothing in Kotlin heard. Open: the kits on the shelf with
+their phrases and risers (K2), the picker, hardware. See [KINDRED](KINDRED.md).
 ### CALABASH, round 2 (2026-11-15)
 
 The four approved kits on the shelf: CALABASH AFROBEAT, AFROBEATS, MBALAX and AFRO-CUBAN JAZZ are FRESH TAPE starters
@@ -3755,6 +3786,13 @@ The picker: CALABASH sits in SYNTH's engine picker after CLUTTER, before CAIRN (
 factory path keeps a preset's velocity, take and model; a frozen draft keeps them through edits), filed under DRUMS
 in `EngineCatalog`; 91 picker engines. An on-device test in `NewEngineSynthScreenTest` loads AFROBEAT CONGA OPEN and
 keeps an edit with its take and model; CI compiles and runs it (no SDK here). See [CALABASH](CALABASH.md).
+
+### CALABASH, complete (2026-11-15)
+
+The owner's phone and MPC checks: asked to load a CALABASH kit from FRESH TAPE and play soft, hard and repeated hits,
+try CALABASH in the SYNTH picker with a preset, and load an MPC 3 export on the MPC, the owner answered "Last checks
+are good". Every applicable gate has its evidence; MPC 2 is not applicable (the owner's format limit). See
+[CALABASH](CALABASH.md) and the gates entry.
 
 ### SERVO, rounds 0 and 1 (2026-11-15)
 
@@ -3795,7 +3833,24 @@ at velocity 1, take 0, and, for each kit, every hit pad A01 to A14 struck soft, 
 1), first take of each zone, at the same peak level as saved. The verdict, verbatim: "Everything sounds good". The
 picker's on-device test passed in CI's emulator job on PR #1143 on 2026-11-15. Hardware: on 2026-11-15, told that
 playback on a phone and an MPC was the remaining gate, the owner said, verbatim: "Hardware is good" (the owner's
-report, not a capture). Open: the round-robin takes no listen covered (the second to fourth takes of the soft and
-medium zones, and at the hardest zone every pad's takes except SUGAR's Pop Snare). MPC 2 keeps one take per zone as a
-stated format limit.
+report, not a capture). Third listen (model 2, kit 2): for each kit and each velocity zone (soft .30, medium .65,
+hard 1), every hit pad A01 to A14 with its four round-robin takes played back to back in dealt order (nine clips),
+asking whether any take sounded like a different drum or four sounded the same. The verdict, verbatim: "Takes are
+good". Every take of every hit pad has been heard. Complete (2026-11-15), accepted sound `Hiccup.MODEL_VERSION` 2 with
+`HiccupKits.VERSION` 2. MPC 2 is not applicable (format limit): it keeps one take per zone.
 See [HICCUP](HICCUP.md) and the gates entry.
+
+
+### East African fitted synthesis banks, 2026-11-15
+
+Five curated shelf kits retain the accepted fitted modal/noise palette and FM
+logs: 22 sounds × 3 velocity zones × 3 takes per kit. This is a bank family,
+not a new picker engine. Native listening and hardware gates remain open;
+see [implementation and evidence](EAST_AFRICA.md).
+
+### Soul and rock acoustic factory kits
+
+Three owner-approved synthesized banks, delivered as exact frozen PCM rather than
+a new engine: SOUL POCKET, ROADHOUSE ROCK and OPEN ROOM ROCK. Forty-eight pads,
+432 velocity/take variants, hat chokes, rolls and swells. See [SOUL_ROCK](SOUL_ROCK.md)
+for software evidence and the remaining phone/MPC gate.

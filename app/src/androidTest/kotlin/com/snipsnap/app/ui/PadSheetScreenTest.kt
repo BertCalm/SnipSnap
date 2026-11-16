@@ -24,6 +24,8 @@ import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitPad
 import com.snipsnap.kit.KitStore
 import com.snipsnap.shell.Copy
+import com.snipsnap.shell.EffectsMenu
+import com.snipsnap.synth.BoardType
 import com.snipsnap.shell.PadBanks
 import com.snipsnap.shell.PadSheetBoxes
 import com.snipsnap.shell.PadSheetPage
@@ -416,8 +418,10 @@ class PadSheetScreenTest : ComposeScreenTest() {
     private fun showTheBoardCard() {
         show(padSheetKit(listOf(1)), slot = 1, openBox = PadSheetBoxes.Box.TREATMENT.name)
         activate(Copy.PAD_EFFECTS_DOOR)
+        // The board card sits with the buttons under the effects list (direction B, 2026-11-15).
+        activate("EXPAND ${EffectsMenu.BUTTONS_HEADING}")
         waitFor("the board card", timeoutMillis = 60_000) {
-            compose.onAllNodesWithText("WIDE · STEREO CHARACTER", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
+            compose.onAllNodesWithText(EffectsMenu.entryFor(EffectsMenu.Target.Board(BoardType.WIDE)).line, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
         }
     }
 

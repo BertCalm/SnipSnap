@@ -14,7 +14,7 @@ import kotlin.test.assertTrue
 class NacrePresetTest {
     @Test
     fun `three starting recipes preserve the accepted source controls and their return settings`() {
-        val presets = NacrePresets.all().take(3)
+        val presets = NacrePresets.forVoice(NacreVoice.PEARL).take(3)
         assertEquals(listOf("Pearl Close", "Coral Reply", "Kelp Passage"), presets.map { it.name })
         assertEquals(presets.size, presets.map { it.name }.toSet().size)
         assertEquals(presets, NacrePresets.forVoice(NacreVoice.PEARL).take(3))
@@ -44,7 +44,7 @@ class NacrePresetTest {
             "Kelp Passage" to "14fa2b8dfcbc4fb5fcd036b15b081d1b695e30201986cd69370592214cfc3303",
         )
         val renders = mutableListOf<FloatArray>()
-        for (patch in NacrePresets.all().take(3)) {
+        for (patch in NacrePresets.forVoice(NacreVoice.PEARL).take(3)) {
             val restored = Patches.fromJsonText(patch.toJsonText())
             assertEquals(patch, restored)
             val rendered = patch.render()
@@ -70,11 +70,11 @@ class NacrePresetTest {
     fun `factory discovery serves retained and kept contact recipes and lands them dry`() {
         val expected = NacrePresets.all()
         assertEquals(expected, Presets.all().filterIsInstance<NacrePatch>())
-        assertEquals(expected, Presets.forVoice("NACRE", "PEARL"))
+        for (voice in NacreVoice.entries) assertEquals(expected.filter { it.voice == voice }, Presets.forVoice("NACRE", voice.name))
         assertFalse(NacrePatch.ENGINE in PatchTypes.PROTOTYPES)
         for (patch in expected) {
-            assertEquals(patch, Presets.byName("NACRE", "PEARL", patch.name))
-            assertNull(Presets.landingFor("NACRE", "PEARL", patch.macros))
+            assertEquals(patch, Presets.byName("NACRE", patch.voice.name, patch.name))
+            assertNull(Presets.landingFor("NACRE", patch.voice.name, patch.macros))
         }
         assertTrue(Presets.forVoice("NACRE", "UNKNOWN").isEmpty())
         assertNull(Presets.byName("NACRE", "PEARL", "Missing"))
@@ -82,7 +82,7 @@ class NacrePresetTest {
 
     @Test
     fun `restoring an older same-name recipe retains its renderer and native performance`() {
-        val factory = NacrePresets.all().first()
+        val factory = NacrePresets.forVoice(NacreVoice.PEARL).first()
         for (model in listOf(1, 2)) {
             val legacy = factory.copy(model = model, macros = NacreModels.defaults(factory.voice, model),
                 midi = 43, velocity = .42f, seed = Long.MIN_VALUE + 17)

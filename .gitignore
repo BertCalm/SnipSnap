@@ -798,6 +798,11 @@ testkit/tempest-full-kit/
 testkit/SnipSnap Tempest Full Kit/
 testkit/SnipSnap Tempest Tuned Kit/
 
+# Bristle study output is regenerated from its versioned recipes.
+/testkit/bristle-r0/
+/testkit/bristle-kotlin/
+
+/testkit/bristle-instruments/
 # TIMBER generated acoustic percussion banks and audition.
 /testkit/timber-kits/
 
@@ -807,5 +812,26 @@ testkit/SnipSnap Tempest Tuned Kit/
 testkit/velour-round-robin/
 testkit/etch-audition/
 
+# CUTTINGS generated native kits and export/audition bundles
+/testkit/cuttings-kits/
 # Reproducible native drumline audition and exported kits.
 /testkit/drumline-kit/
+/testkit/kindred-audition/
+
+# Regenerable fitted-synthesis banks and export auditions.
+/testkit/east-africa-kits/
+
+/scripts/east_africa/audio/
+/scripts/east_africa/manifest.json
+
+/testkit/footwork-native/
+
+/testkit/soul-rock-kits/
+/prototype/soul-rock/*-*.wav
+/prototype/soul-rock/*.zip
+
+/prototype/soul-rock/soul-pocket/
+/prototype/soul-rock/roadhouse-rock/
+/prototype/soul-rock/open-room-rock/
+/prototype/soul-rock/index.html
+/prototype/soul-rock/checks.json

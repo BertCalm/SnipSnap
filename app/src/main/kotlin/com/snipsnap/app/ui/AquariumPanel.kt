@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import com.snipsnap.app.theme.TapeType
 import com.snipsnap.app.theme.lcdPanel
 import com.snipsnap.app.theme.tape
+import com.snipsnap.shell.PadSheet
 import com.snipsnap.shell.Scheme
 import com.snipsnap.synth.AquariumControl
 import com.snipsnap.synth.AquariumControls
@@ -78,20 +79,20 @@ internal fun AquariumPanel(
         ) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 TapeText(
-                    "AQUARIUM · PAD", TapeType.lcdHeader, scheme.lcdInk.tape,
+                    "${PadSheet.CHAIN_LABEL} · SIX IN ONE", TapeType.lcdHeader, scheme.lcdInk.tape,
                     Modifier.weight(1f), maxLines = 2,
                 )
                 Spacer(Modifier.width(8.dp))
                 ActionButton(
                     "CLOSE", scheme, enabled = enabled,
-                    accessibilityLabel = "Close Aquarium",
+                    accessibilityLabel = "Close effect chain",
                     modifier = Modifier.testTag("aquarium-cancel"), onClick = onCancel,
                 )
             }
             TapeText(sourceStatus, TapeType.pixelSmall, scheme.lcdInk.tape, maxLines = Int.MAX_VALUE)
             TapeText(
                 when {
-                    busy -> status ?: "SAVING AQUARIUM…"
+                    busy -> status ?: "SAVING ${PadSheet.CHAIN_LABEL}…"
                     previewing -> "RENDERING PREVIEW…"
                     editor.render.isBypass -> "DRY · ALL SIX EFFECTS BYPASSED"
                     else -> editor.presetId?.let { AquariumControls.preset(it).name } ?: "CUSTOM SETTINGS"

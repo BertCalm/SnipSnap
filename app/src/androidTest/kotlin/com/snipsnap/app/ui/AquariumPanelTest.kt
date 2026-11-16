@@ -283,7 +283,7 @@ class AquariumPanelTest : ComposeScreenTest() {
     fun phone_width_actions_have_complete_labels_touch_targets_and_busy_semantics() {
         showPanel(AquariumEditor(context()).selectPreset("full"))
         revealPanelAction("aquarium-cancel")
-        assertReadsInFull("AQUARIUM · PAD")
+        assertReadsInFull("EFFECT CHAIN · SIX IN ONE")
         // A section folds with CLOSE. The old "◄ PAD" chip was the back-label waiver this panel left behind.
         assertReadsInFull("CLOSE")
         tagged("aquarium-cancel").assertHeightIsAtLeast(44.dp)

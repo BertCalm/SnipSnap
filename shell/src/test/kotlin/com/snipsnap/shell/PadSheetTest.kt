@@ -210,7 +210,7 @@ class PadSheetTest {
         // The gate (2026-11-14): the dotted eighth at a tap as heard. The grid's shared division is an eighth, so ON
         // BEAT carries its own, and the card's default AMT with the default dials is that clip.
         assertEquals(PadSheet.Treatment.Keyed("echoed"), PadSheet.treatmentFor("ONBEAT"))
-        assertEquals("ON BEAT", PadSheet.displayLabel("ONBEAT"))
+        assertEquals("BEAT ECHO", PadSheet.displayLabel("ONBEAT"))
         assertEquals("3/16", Keyed.Dials().echoDivision)
         assertEquals("1/8", Keyed.Dials().division, "ON BEAT moved the grid's shared division")
         assertEquals("3/16", Keyed.divisionFor("echoed", Keyed.Dials()))
@@ -470,30 +470,36 @@ class PadSheetTest {
 
     @Test
     fun `displayLabel speaks the card's renamed chips, and every id it doesn't rename unchanged`() {
-        // The seven chips the language pass renamed - the card's own word,
-        // not the segment id every other door (onSegmentTap, treatmentFor,
-        // read's Applied.segment) still reads and writes.
-        assertEquals("IN KEY", PadSheet.displayLabel("TUNE"))
-        assertEquals("SPIN DOWN", PadSheet.displayLabel("STOP"))
-        assertEquals("SPIN UP", PadSheet.displayLabel("START"))
-        assertEquals("ECHO", PadSheet.displayLabel("SLAP"))
-        assertEquals("DRONE", PadSheet.displayLabel("ETERNAL"))
-        assertEquals("SMOOTH", PadSheet.displayLabel("SKIM"))
-        // Ruling 14 and ruling 8: chips that clashed with an engine, another tool, or a second meaning.
-        assertEquals("FILTER SWEEP", PadSheet.displayLabel("CONTOUR"))
-        assertEquals("RING MOD", PadSheet.displayLabel("RING"))
-        assertEquals("TRANCE GATE", PadSheet.displayLabel("GATE"))
-        assertEquals("NOISE GATE", PadSheet.displayLabel("HUSH"))
-        assertEquals("TOUCH WAH", PadSheet.displayLabel("TOUCH"))
-        assertEquals("REVERB", PadSheet.displayLabel("ROOM"))
-        // An id is one word: ON BEAT's chip (2026-11-14) is ONBEAT underneath.
-        assertEquals("ON BEAT", PadSheet.displayLabel("ONBEAT"))
-        // SECTION is not renamed: open, needs a sound check.
-        assertEquals("SECTION", PadSheet.displayLabel("SECTION"))
-        // Every other segment on the card draws its own id unchanged.
-        for (segment in PadSheet.ALL_SEGMENTS - setOf("TUNE", "STOP", "START", "SLAP", "ETERNAL", "SKIM", "CONTOUR", "RING", "GATE", "HUSH", "TOUCH", "ROOM", "ONBEAT")) {
+        // The owner's rename list (2026-11-15, docs/UX_PASS_2026_11.md): the drawn word, not the
+        // segment id every other door (onSegmentTap, treatmentFor, read's Applied.segment, recipes,
+        // saved pedal rows) still reads and writes.
+        val renamed = mapOf(
+            // Rows one to six.
+            PadSheet.SMEAR to "BLUR", PadSheet.DUST to "OLD RECORDING",
+            PadSheet.TAIL to "RING ONLY", "SKIM" to "NO CLICK", "GHOST" to "BREATH", "SPIKE" to "SHARPER HIT",
+            "RING" to "METAL", "DUB" to "WORN COPY", "PHASE" to "SWIRL", "CONTOUR" to "FILTER SWEEP",
+            "SLAP" to "QUICK ECHO", "WASH" to "BIG REVERB", "GATE" to "CHOP IN TIME", "ENSEMBLE" to "THICKEN",
+            "SECTION" to "SIX PLAYERS",
+            "FLIP" to "REVERSE", "STOP" to "SPIN DOWN", "START" to "SPIN UP", "PITCH" to "SLOWER",
+            PadSheet.TUNE to "IN KEY", "BODY" to "RINGING BODY", "ETERNAL" to "ENDLESS", "ONBEAT" to "BEAT ECHO",
+            // The pedals.
+            "SUSTAIN" to "SQUEEZE", "TOUCH" to "WAH BY HIT", "ROCK" to "ONE WAH", "FORGE" to "HARD CLIP",
+            "DELAY" to "LONG ECHO", "ROOM" to "ROOM REVERB", "DIVE" to "PITCH DROP", "HUSH" to "CUT TAIL",
+            "REWIND" to "BACKWARDS ECHO", "TREM" to "TREMOLO", "FLANGE" to "FLANGER", "ROTARY" to "SPIN SPEAKER",
+        )
+        for ((id, word) in renamed) assertEquals(word, PadSheet.displayLabel(id), id)
+        // Every other segment on the card draws its own id unchanged: the ones the owner kept.
+        val kept = PadSheet.ALL_SEGMENTS - renamed.keys
+        assertEquals(
+            setOf("NONE", "CRUSH", "TAPE", "DIRT", "SWELL", "PUNCH", "VINYL", "ROLL", "WOBBLE", "PUMP", "DRIVE", "WAH", "FADE IN", "VIBRATO", "SUB"),
+            kept.toSet(),
+        )
+        for (segment in kept) {
             assertEquals(segment, PadSheet.displayLabel(segment), "$segment wasn't renamed - it should draw itself")
         }
+        // No two segments draw one word.
+        val drawn = PadSheet.ALL_SEGMENTS.map(PadSheet::displayLabel)
+        assertEquals(drawn.size, drawn.distinct().size, "two chips share a word: $drawn")
     }
 
     // ---- NONE, the un-treat (September UAT, finding 13) ----
@@ -610,8 +616,8 @@ class PadSheetTest {
         assertFalse(PadSheet.hasOwnWayBack(mutatedLayers, soft, both), "COMBINE SOUNDS's UNDO restores the main file only, never a layer")
 
         val outside = obj("""{"outside":{"move":"reamp"}}""")
-        assertTrue(OutsideSheet.read(outside) != null, "test setup: an RE-AMP AND ROOM the sheet reads")
-        assertTrue(PadSheet.hasOwnWayBack(treated(outside), main, both), "an RE-AMP AND ROOM: its UNDO")
+        assertTrue(OutsideSheet.read(outside) != null, "test setup: an SPEAKER AND ROOM the sheet reads")
+        assertTrue(PadSheet.hasOwnWayBack(treated(outside), main, both), "an SPEAKER AND ROOM: its UNDO")
 
         val splice = obj("""{"splice":{"crossfaded":true}}""")
         assertTrue(PadSheet.hasOwnWayBack(treated(splice), main, both), "a SPLICE: UNDO SPLICE")
