@@ -21,10 +21,10 @@ import kotlin.math.abs
 import kotlin.test.*
 
 /**
- * The owner's velocity and round-robin gate, in software, for the opt-in TERRA round robin: the
- * grid through the shelf, saving, reloading, the app's pad resolver, the groove preview and both
- * MPC exports, read back from the files each step wrote. MPC 2 keeps each zone's first take (the
- * recorded format limit); MPC 3 carries every take.
+ * The owner's velocity and round-robin gate, in software, for the opt-in TERRA round robin, kept by
+ * ear in terra-rr-1 (16 Nov 2026): the grid through the shelf, saving, reloading, the app's pad
+ * resolver, the groove preview and both MPC exports, read back from the files each step wrote.
+ * MPC 2 keeps each zone's first take (the recorded format limit); MPC 3 carries every take.
  */
 class TerraRoundRobinStarterTest {
     @Test fun `the round robin is on the shelf once, right after the kept TERRA starter, which is unchanged`() {

@@ -5,7 +5,8 @@ import kotlin.math.*
 
 /**
  * Descriptive measurements for TERRA's round-robin takes. They describe, they do not judge:
- * whether a take sounds like the same drum struck again is the owner's listen.
+ * whether a take sounds like the same drum struck again is the owner's listen. The owner kept the
+ * kit's takes by ear in terra-rr-1 (16 Nov 2026).
  */
 internal object TerraRoundRobinMeasure {
     private const val FRAME = 2048

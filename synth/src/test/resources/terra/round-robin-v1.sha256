@@ -1,4 +1,4 @@
-# TERRA ROUND ROBIN v1, renderer takes per pad in TerraRoundRobinKits.STRIKES: slot, zone (0 soft, 1 medium, 2 hard), take, frames, SHA-256 of the float samples (little-endian)
+# TERRA ROUND ROBIN v1, as kept by ear in terra-rr-1 (16 Nov 2026), renderer takes per pad in TerraRoundRobinKits.STRIKES: slot, zone (0 soft, 1 medium, 2 hard), take, frames, SHA-256 of the float samples (little-endian)
 take A01 0 0 21609 e927f6875b1c0d68bae47f8146e855597525a8f3375441bce658837101c46e96
 take A01 0 1 21609 620f748a96430aaab59fd3bae840d2563cb24346c4053d0ced6a288043e99844
 take A01 0 2 21609 815529f1088f03b3062f94578cf457c9de171cb91e29f60efdf07204a708747b

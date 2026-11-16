@@ -7,10 +7,10 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 
 /**
- * The TERRA ROUND ROBIN kit as rendered for round terra-rr-1: every take of every pad and touch,
- * hashed over its float samples (little-endian), in `round-robin-v1.sha256`. Take 0 of each zone is
- * also held to the kept kit by TerraRoundRobinKitsTest. A failure here means the takes' audio
- * changed; re-listen before re-pinning.
+ * The TERRA ROUND ROBIN kit as the owner kept it by ear in terra-rr-1 (16 Nov 2026): every take of
+ * every pad and touch, hashed over its float samples (little-endian), in `round-robin-v1.sha256`.
+ * Take 0 of each zone is also held to the kept kit by TerraRoundRobinKitsTest. A failure here means
+ * the kept audio changed; re-listen before re-pinning.
  */
 class TerraRoundRobinPinsTest {
     private fun sha(x: FloatArray): String {
@@ -26,7 +26,7 @@ class TerraRoundRobinPinsTest {
             .associate { f -> Triple(f[1], f[2].toInt(), f[3].toInt()) to (f[4].toInt() to f[5]) }
     }
 
-    @Test fun `every take of the round robin kit hashes as it did when rendered for the round`() {
+    @Test fun `every take of the round robin kit hashes as the owner kept it`() {
         assertEquals(1, TerraRoundRobinKits.VERSION)
         assertEquals(16 * 3 * TerraRoundRobinKits.TAKES, pinned.size)
         val built = TerraRoundRobinKits.build()

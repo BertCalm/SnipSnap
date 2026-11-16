@@ -1445,7 +1445,7 @@ presets each, the sixteen kept pads among them. TERRA SAHEL, TERRA MAQAM and
 TERRA PUNJAB are genre kits from the same voices, kept by the owner
 ([`docs/TERRA_PROMOTION.md`](docs/TERRA_PROMOTION.md)). TERRA ROUND ROBIN, an
 opt-in starter beside TERRA, deals four takes per touch on the same sixteen
-pads; it awaits the owner's listen.
+pads; the owner kept it by ear in terra-rr-1 (16 Nov 2026).
 VENT, the Rössler-attractor synth (separate from the TapeOS scheme of that
 name), brings clean model-2 PULSE, COIL and PLUME to the picker
 and factory roster. FRESH TAPE's VENT kit has twelve dry pads in C minor

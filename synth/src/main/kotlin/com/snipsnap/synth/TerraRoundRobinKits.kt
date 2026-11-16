@@ -7,6 +7,7 @@ import com.snipsnap.kit.ArrangedPad
  * Opt-in round robin for the kept classic TERRA kit ([TerraKits.classic]): the sixteen pads, three
  * touches (the kit's two softer strikes and the hard hit), [TAKES] takes per touch. Take 0 is the
  * kept kit's zone sample, sample for sample: [build] takes it from [TerraKits.classic] itself.
+ * The kit was kept by ear in terra-rr-1 (16 Nov 2026); TerraRoundRobinPinsTest pins every take.
  *
  * A later take is a genuine re-render of the same recipe at the same touch, the drum struck again
  * ([strike]). What changes is what a player's next stroke changes on that drum, per family:
