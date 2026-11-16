@@ -37,7 +37,8 @@ def analyze(path):
 @functools.lru_cache(maxsize=1)
 def data():return json.loads(TABLE.read_text())
 
-def render(v,take):
+@functools.lru_cache(maxsize=12)
+def _render(v,take):
  # Imports happen only while rendering, so the fitting CLI needs no synthesis state.
  import measured
  d=data();rng=np.random.default_rng(sk.seed_for('PARADE_CRASH_WASH',take))
@@ -56,6 +57,10 @@ def render(v,take):
   y+=np.sqrt(1-fraction)*tonal+np.sqrt(fraction)*noise*env
  y*=np.minimum(t/.0004,1)*v
  return signal.resample_poly(y,4,1)
+
+def render(v,take):
+ # Callers may damp or trim their copy without changing a later strike.
+ return _render(v,take).copy()
 
 if __name__=='__main__':
  ap=argparse.ArgumentParser();ap.add_argument('--fit',type=Path,required=True);a=ap.parse_args()
