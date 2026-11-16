@@ -938,6 +938,11 @@ object StarterKits {
             seeded = false, tempoBpm = com.snipsnap.synth.EmberKits.Kit.FREE.bpm.toFloat(),
         ) { com.snipsnap.synth.EmberKits.build(com.snipsnap.synth.EmberKits.Kit.FREE) },
         Starter(
+            "ember-latin-jazz", "EMBER LATIN JAZZ",
+            "A cha-cha-cha in the small club, 1962: the jazz drummer plays Latin on the kit (the clave on the rim, the hat foot) while a percussionist adds the guiro, a cha-cha bell, timbales, bongos, a conga and a shaker. Three touch zones, four takes.",
+            seeded = false, tempoBpm = com.snipsnap.synth.EmberKits.Kit.LATIN.bpm.toFloat(),
+        ) { com.snipsnap.synth.EmberKits.build(com.snipsnap.synth.EmberKits.Kit.LATIN) },
+        Starter(
             "meridian-materials", "MERIDIAN MATERIALS",
             "Sixteen finite pads across four ringing voices, with three touch levels and five held-sound captures.",
             seeded = false,

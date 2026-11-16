@@ -3847,3 +3847,13 @@ Five curated shelf kits retain the accepted fitted modal/noise palette and FM
 logs: 22 sounds × 3 velocity zones × 3 takes per kit. This is a bank family,
 not a new picker engine. Native listening and hardware gates remain open;
 see [implementation and evidence](EAST_AFRICA.md).
+
+### EMBER, rounds 2b and 3L (2026-11-15 to 16)
+
+The bowed cymbal locks two semitones lower ("piercing"). The Latin jazz kit became a 118 BPM cha-cha-chá in the small
+club, to differ from CALABASH's Afro-Cuban jazz. "Free sounds possessed with evil" was the listening page's own bug
+(its pad grids clipped; the kits were never affected), fixed at version 6, after which the owner said "All sound
+great". Round 3L ports the eight Latin voices to `Ember.kt` (35 voices; the cowbell, clave, bongos and shaker fitted
+to CC0 VCSL recordings, the timbale and paila modelled, the guiro a click per ridge), every one inside Python's own
+take spread, and puts EMBER LATIN JAZZ on the shelf as the fifth kit (180 starters; 960 slices proved through save,
+playback and MPC 3). Open: presets and the picker, hardware. See [EMBER](EMBER.md).

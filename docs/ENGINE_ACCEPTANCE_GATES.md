@@ -862,27 +862,28 @@ TERRA is a world-percussion drum engine with 13 voices. Four are spec voices, fr
 
 The owner approved the procedural kick/snare pair. Three genre starters now contain 18 pads each, including authored rolls and risers. All 486 cells pass velocity/take source checks, saved recipe replay, native playback, SFZ import/playback and MPC 3 grid/PCM read-back. Drum shelf registration is verified in software. Melodic/keygroup/chord and string STRUM requirements do not apply to this percussion kit; individual voices are finite. The owner accepted the revised Jungle heel, ghost and ride on 2026-11-15 (“Better, proceed”); preserve their version-2 renders alongside the approved core pair. The owner subsequently confirmed listening to all kits and explicitly approved phone and hardware playback (“Phone and hardware approved”). Sound and device acceptance are therefore closed for Dry Jungle, Dub Breaks and Orbital Breaks. This is owner-reported device approval, separate from the automated 486-cell evidence; no device model or firmware was specified. The revision and complete starter-render regression passed. No MPC 2 fallback is included. See [the detailed ledger](superpowers/specs/2026-11-14-spore-synthetic-kits.md) and [revision acceptance](superpowers/specs/2026-11-15-spore-jungle-articulation.md).
 
-## EMBER (round 2, four kits on the shelf 2026-11-15; listen and hardware open)
+## EMBER (round 3L, five kits on the shelf, sound approved 2026-11-16; hardware open)
 
 A drum engine for a live jazz and soul kit in a small club in 1962: calfskin drums, a riveted ride, brushes, the
-club and a 1962 chain, from physical models. Four sixteen-pad kits. See [EMBER](EMBER.md). Rounds 0 to 0e are a
+club and a 1962 chain, from physical models, and Latin percussion fitted to CC0 recordings. Five sixteen-pad kits. See [EMBER](EMBER.md). Rounds 0 to 0e are a
 Python prototype and a listening page (<https://claude.ai/artifact/Xmcj5t8MYSNCQPoTKHBcdw>). Round 1 (2026-11-15) is
 the Kotlin port, `Ember.kt`; the owner approved its sound at round 1b. Round 2 (2026-11-15) puts the four kits on
-the shelf as FRESH TAPE starters.
+the shelf as FRESH TAPE starters. Round 3L (2026-11-16) ports the eight Latin percussion voices and adds the Latin jazz
+kit, after the owner heard all five kits and the new voices and said "All sound great".
 
 - **Melodic, keygroup and chord-tool gates:** not applicable. A drum engine.
 - **Articulation:** finite hits, no HOLD. No picked or thumbed strings.
 - **Percussion: on the kits, verified in software.** Every kit carries a roll or riser on A15/A16: a press roll
   and a mallet cymbal swell (EMBER), a brush roll and a far swell (AFTER HOURS), a snare roll (SOUL JAZZ), a swell
-  (FREE). The owner heard and approved them as voices (round 1b, with their ring-out). `EmberTest` holds that the
-  swell rises at least 20 dB and that both rolls grow; `EmberKitsTest` that every kit carries one. Not yet heard
-  on the kits from the app.
-- **Drum shelf: on the shelf (round 2), not yet heard there.** EMBER (138 BPM), EMBER AFTER HOURS (66), EMBER SOUL
-  JAZZ (104) and EMBER FREE (80) are FRESH TAPE starters under SKINS (148 starters), built by `EmberKits` pad for pad
-  from `prototype/ember/kits.py`. They differ in implements, drums per role, tuning, damping, looseness, microphone
+  (FREE), a cymbal swell (LATIN JAZZ). The owner heard and approved them as voices (round 1b, with their ring-out)
+  and on the kits from the app's export ("All sound great", 2026-11-16). `EmberTest` holds that the swell rises at
+  least 20 dB and that both rolls grow; `EmberKitsTest` that every kit carries one.
+- **Drum shelf: on the shelf, approved (2026-11-16).** EMBER (138 BPM), EMBER AFTER HOURS (66), EMBER SOUL JAZZ (104),
+  EMBER FREE (80) and EMBER LATIN JAZZ (118, a cha-cha-chá, made to differ from CALABASH's Afro-Cuban jazz) are FRESH
+  TAPE starters under SKINS (180 starters), built by `EmberKits` pad for pad from `prototype/ember/kits.py`. The owner
+  heard all five from the app's MPC 3 export (Latin as its Python preview) and said "All sound great". They differ in implements, drums per role, tuning, damping, looseness, microphone
   distance, chain and tempo. No pad is the same voice at the same settings in two kits, and the same slot differs
-  in shape between any two (`EmberKitsTest`). A fifth kit, Latin jazz, waits on new percussion voices the owner
-  asked for (timbales, cowbell, clave, bongos, guiro, shaker), heard in Python before Kotlin.
+  in shape between any two (`EmberKitsTest`).
 - **Velocity and round robin:**
   - **Rendering: verified in Kotlin by test (round 1).** `EmberTest` holds that every one of the 27 voices' soft
     and hard hits differ in shape at matched level (at least 1.8 dB), that its four takes are distinct strikes (at
@@ -890,15 +891,15 @@ the shelf as FRESH TAPE starters.
     soft against hard at least 2.12 dB at round 1, the closest two takes 1.57 dB apart; since round 2b (the bow
     lowered) the moving voices are measured over their whole render, where the bow is 3.1 dB. (Python, on the four kits' 64 pads:
     1.92 dB and 1.19 dB.) Velocity moves the contact, the threshold parts and the swell's arc, not a filter.
-  - **Saving, playback and MPC 3 export: verified in software (round 2).** `:shell:generateEmberKits` builds all
-    four kits and proves every pad's grid through saving, reloading, `PadHit.resolve` and the MPC 3 track, read back
-    from the files each step wrote: 64 pads, 768 slices ("Verified EMBER: 16 pads, 192 slices, saved PCM + playback
-    + MPC 3 track", and the same for the other three). `EmberKitTest` holds a kick, a hat and the 5 s swell through
+  - **Saving, playback and MPC 3 export: verified in software (rounds 2 and 3L).** `:shell:generateEmberKits` builds
+    all five kits and proves every pad's grid through saving, reloading, `PadHit.resolve` and the MPC 3 track, read
+    back from the files each step wrote: 80 pads, 960 slices ("Verified EMBER Latin Jazz: 16 pads, 192 slices, saved
+    PCM + playback + MPC 3 track", and the same for the other four). `EmberKitTest` holds a kick, a hat and the 5 s swell through
     the same steps, and that playback picks the zone by velocity and deals the four takes in order, then repeats.
     Within a zone the takes are matched in loudness (equal within 0.1 dB, the highest peak at 0.92). **MPC 2: not
     applicable** ([format limit](#mpc-2-and-round-robin-owner-decision-2026-11-14)): it keeps each zone's first take.
     No phone or MPC has played the kits.
-- **Sound character: approved for the voices (2026-11-15).** On 2026-11-14 the owner's first listen found the cymbals sounding like "hitting sheet
+- **Sound character: approved (voices 2026-11-15; the five kits and the Latin voices 2026-11-16).** On 2026-11-14 the owner's first listen found the cymbals sounding like "hitting sheet
   metal". Round 0b rebuilds every cymbal and hat from CC0 recordings of a jazz club kit, with BREAKER's fitter. Measured
   against the recordings, they are 5.6 to 9.3 dB away over the first 150 ms, where round 0's were 11 to 34 dB and two
   takes of one real ride are 6.2 dB apart (Python). A new SIZZLE voice carries the recording's rivets. Not heard yet.
@@ -915,12 +916,12 @@ the shelf as FRESH TAPE starters.
   swell, the bow and both rolls ring out instead of being cut (each now ends at least 40 dB under its peak, a test
   in `EmberTest`). The owner then heard the round-1b listening page (version 2: every voice's Kotlin hit beside
   the Python one, with its soft hit and four takes) and said "I've heard the sound and approve" (2026-11-15).
-  `Ember.MODEL_VERSION` 1 with round 1b is the approved sound baseline. The four kits have not been heard from the
-  Kotlin engine yet; that is round 2's listen.
-- **Overall: incomplete.** The engine's sound is approved (round 1b) and the four kits are on the shelf, proved
-  through saving, playback and MPC 3 export in software (round 2). Open: the owner's listen to the kits from the
-  app (the listening page, version 3, plays them from the MPC 3 export), the Latin jazz kit and its new voices,
-  presets and the picker, and phone and MPC hardware (round 3).
+  `Ember.MODEL_VERSION` 1 with round 1b is the approved sound baseline. Round 2b lowered the bowed cymbal ("piercing").
+  The owner then heard "Free sounds possessed with evil": the listening page had played the kits' grids clipped (its
+  script misread the export's 32-bit samples), not the kit; version 6 fixed the page. Hearing version 6, the five kits
+  from the app's export, the Latin voices and the Latin jazz kit, the owner said "All sound great" (2026-11-16).
+- **Overall: incomplete.** The sound is approved and the five kits are on the shelf, proved through saving,
+  playback and MPC 3 export in software (rounds 2 and 3L). Open: presets and the picker, and phone and MPC hardware.
 
 ## KINDRED (rounds 0 to 2 heard in Python, round 2 accepted 2026-11-15; round K1 Kotlin port, not heard)
 
