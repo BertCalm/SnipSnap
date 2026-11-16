@@ -71,6 +71,10 @@ R1 supplies five studies, ten pads each, with three levels and four alternate pe
 - All takes and dynamic levels travel with the study files, avoiding a convincing preview built from only one hard hit.
 - Finite phrases keep authored articulation inspectable. The uncertain part is acoustic realism, particularly cymbal wash and snare wires; listening decides that.
 
+## Audition
+
+The private first-listen page is https://sideroom-audition.bertcalm.chatgpt.site . One kit selector, three banks and four visible pads keep the comparison compact. Each kit has a direct ZIP download containing its WAV grid and SFZ program.
+
 ## R1 run evidence
 
 On 2026-11-16, the Python renderer and both validation programs exited 0. All 600 PCM performances pass file, dynamics, take-diversity and finite-output checks. Minimum pairwise normalized seven-band spectral distances across the five kits are 0.0442 for kick, 0.0854 for snare and 0.0448 for closed hat. These measurements show numerical differentiation, not perceived authenticity. Rendering the complete bank, fills and grooves took 81.98 seconds in this environment. The simulated player passes kit selection, three banks, velocity selection, cycling, hat choke, spaced phrase comparisons and Stop. Actual browser audio and sampler/device playback have not been verified.
