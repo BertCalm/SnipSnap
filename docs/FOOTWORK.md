@@ -209,3 +209,19 @@ recordings with held-out repeat examples. This is a source study, not native mod
 Its 60-cell render checks do not establish save/playback/export or listening acceptance.
 Thigh, bucket and board remain unresolved; no unsuitable body sounds are relabeled
 as substitutes. Native downloads remain the previous unapproved candidates.
+
+### Industrial, kit contrast and performance rejection
+
+The owner reports that Industrial shares Street's failed source identities, all
+three kits are extremely similar, grooves sound sequential, and roll/riser sound
+like alternating stomps. Source identity, three-distinct-kit and tap-articulation
+acceptance are failed, not satisfied by the earlier transport tests.
+
+The code audit confirms one shared pad-role map with surface filtering, a groove
+generator with one integer-beat hit at a time, and toe/heel alternation for both
+roll and riser. `prototype/footwork/performance_reset/` documents replacement kit
+contracts and renders separate arrangement/gesture studies. These add overlapping
+parts, syncopation, ghost notes, rests and multi-contact tap phrases. Twenty-four
+new gesture velocity/repeat cells pass the study checks. The native source models,
+kit downloads and exported roll/riser remain previous candidates; neither source
+realism nor independent kit identity is claimed fixed by new arrangements.
