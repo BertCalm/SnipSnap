@@ -20,6 +20,7 @@ class KneeBreakRoundTripTest {
                 assertEquals(1,StarterShelf.GROUPS.count { t.id in it.ids })
                 val kit = starter.render(t.title,dir)
                 assertEquals(kit, KitStore.load(dir))
+                assertFalse(Preflight.check(kit, dir).blocked(), t.id)
                 val sfz = SfzWriter.write(kit, dir, root.resolve("export-${t.id}"))
                 val imported = SfzImporter.import(sfz, root.resolve("import-${t.id}"))
                 val exported = Mpc3Exporter.exportTrack(kit,dir,root.resolve("mpc-${t.id}"),mpc2Twin=true)
@@ -29,6 +30,12 @@ class KneeBreakRoundTripTest {
                 assertTrue(imported.skipped.isEmpty())
                 assertEquals(16, imported.kit.pads.size)
                 for ((i, pad) in kit.pads.withIndex()) {
+                    assertNull(pad.recipe)
+                    assertEquals("knee-break", pad.source["factory"])
+                    assertEquals(KneeBreakKits.VERSION.toString(), pad.source["bankVersion"])
+                    assertEquals(t.body, pad.source["body"])
+                    assertEquals(t.treatment, pad.source["treatment"])
+                    assertTrue(pad.oneShot)
                     val back = imported.kit.pads[i]
                     assertNull(pad.recipe, "Frozen audition assets must not claim an editable synth recipe")
                     assertEquals("knee-break", pad.source["factory"])
