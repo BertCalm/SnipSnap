@@ -256,3 +256,41 @@ test also checks preflight, render-only status, and saved source provenance for
 every pad. Full-suite status is tracked on PR #1154; no full pass is implied here.
 Browser control checks passed all 864 selections and six download mappings.
 Hardware playback and the distinct-genre shelf gate remain open.
+
+## Owner verification and genre candidates (2026-11-16)
+
+PR #1154 merged as `ab54ffe8b` after all JVM, Android, native and emulator
+CI checks passed. Following the explicit MPC checklist (velocity response,
+rotating strikes, hat choking, rolls and risers), the owner replied
+“Verified, proceed.” Record hardware acceptance for the original six bundles;
+do not transfer it to later genre candidates or infer a device/firmware version.
+
+The next audition offers boom-bap (90 BPM), trip-hop (76 BPM) and funk breaks
+(108 BPM). These are kit arrangements of the accepted synthesized assets,
+not a new engine. `prototype/knee-break/genre_audition.py` renders the candidates
+from the versioned frozen bank. Each pad retains all three layers and strikes.
+Boom-bap combines knee-mic shells with dry cymbals, lower kicks, raised rimshots
+and short tails. Trip-hop lowers tuning, retains longer filtered cassette tails
+and uses knee-mic kicks. Funk uses the tighter dry bank, raised snare/hat tuning
+and ghost-note detail. Finite rolls and risers remain on pads 15 and 16.
+
+The characteristic gestures are swung kick/rimshot interplay, sparse half-time
+backbeats, and syncopated sixteenth-note ghosting respectively. The same 94 BPM
+pattern is supplied for all three so rhythmic differences do not conceal sound
+changes. Both groove comparison sets are RMS-matched independently.
+
+Why it is built this way: the accepted sources anchor the timbre; per-pad choices
+create a useful kit balance instead of one effect over every drum; band-limited
+resampling changes tuning without a second synthesis implementation; preserving
+all nine source strikes avoids collapsing the instrument to a static sample.
+Nearest existing shelf families are BREAKER and VELOUR. This work extends the
+owner-approved Knee Break source identity rather than claiming a new synthesis
+mechanism those families lack. Controls and editable-engine macros are not added.
+
+Python checks passed for 432 files, all 48 velocity-energy orderings and all
+144 three-take groups. Maximum absolute peak is 0.693076; maximum absolute DC
+is 0.000001306. ZIP WAV bytes match the loose files. Browser control simulation
+checks every selection, three tempo schedules, repeat/cycle, cancellation and
+package links. Direct browser listening is unavailable. These candidates are
+not yet listening-approved, native shelf entries or MPC-verified: the distinct
+genre shelf gate remains open until accepted candidates are integrated.
