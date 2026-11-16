@@ -26,6 +26,18 @@ Genre kits must be authored musical choices with distinct roles, balance and cha
 - **Nothing else changes.** MPC 2's velocity layers are still checked, and every other format's export evidence stands as recorded.
 - **MPC 3 on an MPC: the owner's reports.** The MPC 3 read-back checks the metadata we write. An MPC finds each take in a chain WAV from a slice map stored inside the WAV, and that layout has never been captured (`docs/FEATURE_PLAN.md`, HH1.4); the owner parked the capture on 2026-11-14. Since then the owner has played MPC 3 exports on an MPC: SOOT's repeated hits cycled through the takes (2026-11-14), and BREAKER was approved on hardware (2026-11-15). Each engine records its own hardware result. Wherever an entry still says "no MPC has loaded the kit", that stands.
 
+## CUTTINGS sample-bank integration (2026-11-15)
+
+- **Sound:** owner accepted Study 04 sampler color. Pocket Finds preserves the accepted sixteen source grids exactly. Night Fragments, Cut Circuit and extended phrases await listening acceptance.
+- **Drums:** three shelf kits implemented: Pocket Finds (89 BPM boom-bap), Night Fragments (76 BPM trip-hop) and Cut Circuit (124 BPM big beat). They change source roles/order, tuning, damping and groove arrangement, not only effects strength.
+- **Articulation:** fourteen finite hits plus one-, two- and four-bar roll/riser pairs, twenty pads per kit. Duration is selected by pad. Phrases are printed at saved kit tempo; no live tempo-following claim.
+- **Velocity/RR:** each pad has three timbral velocity levels and four alternate performances. `CuttingsKitsTest` verifies source hashes, exact accepted PCM, genre variation, dynamics, diversity, endpoints and phrase duration. `CuttingsRoundTripTest` passes save/load, SFZ round trip, all 127 velocity values and nine successive playback windows per pad, exported PCM and MPC 2/3 metadata checks for all three kits.
+- **Generator:** `:shell:generateCuttingsKits` completed for all three kits, verifying saved PCM and two cycles per zone and writing native, SFZ, MPC 2 and MPC 3 files. The factory audition plays windows extracted from those saved files.
+- **Still open:** physical phone and MPC playback, the shared MPC 3 embedded slice-map hardware evidence, and listening acceptance of the new arrangements. MPC 2's combined velocity/RR limitation retains the owner's exception. This is not an engine-complete claim.
+- **Melodic/keygroups/chord tools and STRUM:** not applicable to this fixed percussion bank.
+
+Details and reproducible commands: [CUTTINGS](CUTTINGS.md).
+
 ## BACKWASH acoustic integration (updated 2026-11-10)
 
 - Melodic/keygroup/chord-tool gate: not applicable to this drum engine.

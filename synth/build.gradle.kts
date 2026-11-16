@@ -3945,3 +3945,12 @@ tasks.register<JavaExec>("auditDrumlineEdgeReference") {
     maxHeapSize = "1g"
     args(providers.gradleProperty("drumlineEdgeOutput").orNull ?: "testkit/drumline-edge-reference.csv")
 }
+
+ tasks.register<JavaExec>("generateKneeBreakGenreKits") {
+    group = "verification"
+    description = "Generate the three approved Knee Break genre kits and sampler bundles."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.KneeBreakGenreKitGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "1g"
+}
