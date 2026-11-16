@@ -81,6 +81,7 @@ internal object NacreVoices {
         NacreVoice.BUBBLE -> NacreSource.BUBBLE
         NacreVoice.PEARL -> throw IllegalArgumentException("PEARL is not one of NacreVoices' sources")
         NacreVoice.GROTTO -> throw IllegalArgumentException("GROTTO is not one of NacreVoices' sources; see NacreGrotto")
+        NacreVoice.CONCH -> throw IllegalArgumentException("CONCH is not one of NacreVoices' sources; see NacreConch")
     }
 
     fun sourceFor(model: Int): NacreSource = NacreSource.entries.firstOrNull { it.model == model }
@@ -143,10 +144,16 @@ internal object NacreVoices {
     internal val FIELD_HZ = .28 + 2.1 * CORE_CURRENT.pow(1.3)
     internal fun fieldPhase(model: Int, seed: Long): Double = .4 + .5 * variation(model, seed, "water", 0, "phase")
 
+    /**
+     * PEARL's answering offset at [duet], in seconds: how much later the upper harp answers the bass (negative near the top,
+     * where the bass answers instead). [schedule] plays it; CONCH ([NacreConch]) scales it for its upper shell's breath.
+     */
+    internal fun answerOffset(duet: Double): Double = .006 + .22 * duet.pow(1.45) - .42 * smooth((duet - .72) / .28)
+
     /** PEARL's paired strum: a continuous answering offset, one direction per complete gesture. */
     private fun schedule(source: NacreSource, touch: Double, duet: Double, f0: Double, velocity: Float,
                          seed: Long, water: Field): List<Nacre.Event> {
-        val offset = .006 + .22 * duet.pow(1.45) - .42 * smooth((duet - .72) / .28)
+        val offset = answerOffset(duet)
         val bassOrigin = .018 + if (offset < 0.0) -offset else 0.0
         val upperOrigin = .018 + if (offset > 0.0) offset else 0.0
         val spacing = (.008 + .052 * duet) * (1.0 - .14 * touch)

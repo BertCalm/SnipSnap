@@ -6572,9 +6572,10 @@ private enum class Engine {
         TIDAL -> TidalVoice.entries
         CHAMBER -> ChamberVoice.entries
         MERIDIAN -> MeridianVoice.entries
-        // NACRE GROTTO (saved model 8) stays in the roster and the CLI until the owner hears round
-        // nacre-grotto-1, MERCURY's shape; it needs its HOLD arm and preview loop before it is offered here.
-        NACRE -> NacreVoice.entries.filter { it != NacreVoice.GROTTO }
+        // NACRE GROTTO (saved model 8) and CONCH (saved model 9) stay in the roster and the CLI until the owner
+        // hears rounds nacre-grotto-1 and nacre-conch-1, MERCURY's shape; each needs its HOLD arm and preview
+        // loop before it is offered here.
+        NACRE -> NacreVoice.entries.filter { it != NacreVoice.GROTTO && it != NacreVoice.CONCH }
         BORE -> BoreVoice.entries
         ARCO -> ArcoVoice.entries
         SCOUR -> ScourVoice.entries

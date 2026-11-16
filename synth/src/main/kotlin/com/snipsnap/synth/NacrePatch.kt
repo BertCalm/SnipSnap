@@ -8,8 +8,8 @@ import com.snipsnap.json.JsonValue
  * A reproducible NACRE gesture. Root, strike energy, model and exact seed travel beside the
  * controls; string, current and venue states are rebuilt on render. The saved model selects its
  * original synthesis and control defaults. Finite models (1 to 7) refuse HOLD rather than saving
- * an unsupported loop; only GROTTO's model 8 has a held loop, so only it saves a nonzero HOLD.
- * GROTTO plays C2 to C4 ([Nacre.midiRange]).
+ * an unsupported loop; only GROTTO's model 8 and CONCH's model 9 have a held loop, so only they save
+ * a nonzero HOLD. GROTTO plays C2 to C4 and CONCH C2 to C5 ([Nacre.midiRange]).
  */
 data class NacrePatch(
     override val name: String,

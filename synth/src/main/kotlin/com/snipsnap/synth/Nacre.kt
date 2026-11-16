@@ -14,10 +14,11 @@ import kotlin.math.sqrt
 /**
  * NACRE's voices. PEARL is the paired-harp source (saved models 1 to 4). HARMONICS (model 5), SHELL
  * (model 6) and BUBBLE (model 7) keep PEARL's performers, bodies, sympathetic strings and water; see
- * [NacreVoices]. GROTTO (model 8) bows the bass harp's string under glassy glints in the same water,
- * plays C2 to C4, and is the one voice with a real held loop at HOLD's top step; see [NacreGrotto].
+ * [NacreVoices]. GROTTO (model 8) bows the bass harp's string under glassy glints in the same water and
+ * plays C2 to C4; see [NacreGrotto]. CONCH (model 9) blows a pair of shells, an octave apart, and plays
+ * C2 to C5; see [NacreConch]. GROTTO and CONCH are the two voices with a real held loop at HOLD's top step.
  */
-enum class NacreVoice { PEARL, HARMONICS, SHELL, BUBBLE, GROTTO }
+enum class NacreVoice { PEARL, HARMONICS, SHELL, BUBBLE, GROTTO, CONCH }
 
 /**
  * The preferred original duet -> returning paths -> rest. The frozen [NacreModel1] instrument
@@ -64,27 +65,39 @@ object Nacre {
         // The same six controls and defaults as PEARL; see NacreVoices.
         NacreVoice.HARMONICS, NacreVoice.SHELL, NacreVoice.BUBBLE -> NacreVoices.macrosFor()
         NacreVoice.GROTTO -> NacreGrotto.macrosFor()
+        NacreVoice.CONCH -> NacreConch.macrosFor()
     }
 
-    /** The saved model a new recipe of [voice] uses: PEARL's model 3, HARMONICS 5, SHELL 6, BUBBLE 7, GROTTO 8. */
+    /** The saved model a new recipe of [voice] uses: PEARL's model 3, HARMONICS 5, SHELL 6, BUBBLE 7, GROTTO 8, CONCH 9. */
     fun defaultModel(voice: NacreVoice): Int = when (voice) {
         NacreVoice.PEARL -> MODEL_VERSION
         NacreVoice.HARMONICS -> NacreVoices.HARMONICS_MODEL
         NacreVoice.SHELL -> NacreVoices.SHELL_MODEL
         NacreVoice.BUBBLE -> NacreVoices.BUBBLE_MODEL
         NacreVoice.GROTTO -> NacreGrotto.MODEL
+        NacreVoice.CONCH -> NacreConch.MODEL
     }
 
-    /** The notes [voice] plays: NACRE's E1 to C5, except GROTTO's bowed C2 to C4 (the bow's measured range). */
-    fun midiRange(voice: NacreVoice): IntRange =
-        if (voice == NacreVoice.GROTTO) NacreGrotto.MIN_MIDI..NacreGrotto.MAX_MIDI else MIN_MIDI..MAX_MIDI
+    /** The notes [voice] plays: NACRE's E1 to C5, except GROTTO's bowed C2 to C4 (the bow's measured range) and CONCH's C2 to C5. */
+    fun midiRange(voice: NacreVoice): IntRange = when (voice) {
+        NacreVoice.GROTTO -> NacreGrotto.MIN_MIDI..NacreGrotto.MAX_MIDI
+        NacreVoice.CONCH -> NacreConch.MIN_MIDI..NacreConch.MAX_MIDI
+        else -> MIN_MIDI..MAX_MIDI
+    }
 
     /** The note a new [voice] recipe starts on: C3, except GROTTO's C2. */
-    fun defaultMidi(voice: NacreVoice): Int = if (voice == NacreVoice.GROTTO) NacreGrotto.DEFAULT_MIDI else DEFAULT_MIDI
+    fun defaultMidi(voice: NacreVoice): Int = when (voice) {
+        NacreVoice.GROTTO -> NacreGrotto.DEFAULT_MIDI
+        NacreVoice.CONCH -> NacreConch.DEFAULT_MIDI
+        else -> DEFAULT_MIDI
+    }
 
-    /** Whether [macros] hold [voice]'s loop: only GROTTO has one (HOLD's top step); every other voice is finite. */
-    fun isLoop(voice: NacreVoice, macros: Map<String, Float> = emptyMap()): Boolean =
-        voice == NacreVoice.GROTTO && NacreGrotto.isLoop(macros)
+    /** Whether [macros] hold [voice]'s loop: only GROTTO and CONCH have one (HOLD's top step); every other voice is finite. */
+    fun isLoop(voice: NacreVoice, macros: Map<String, Float> = emptyMap()): Boolean = when (voice) {
+        NacreVoice.GROTTO -> NacreGrotto.isLoop(macros)
+        NacreVoice.CONCH -> NacreConch.isLoop(macros)
+        else -> false
+    }
     fun defaults(voice: NacreVoice = NacreVoice.PEARL): Map<String, Float> =
         macrosFor(voice).associate { it.name to it.default }
 
@@ -103,9 +116,12 @@ object Nacre {
         require(m.getValue("HOLD") == 0f) { "NACRE's paired-strum instrument is finite; HOLD must be 0. Held gestures are not implemented." }
         return m
     }
-    /** TONAL for every finite voice; GROTTO's held loop is a LOOP. */
-    fun drumClassFor(voice: NacreVoice, macros: Map<String, Float> = emptyMap()): DrumClass =
-        if (voice == NacreVoice.GROTTO) NacreGrotto.drumClassFor(macros) else DrumClass.TONAL
+    /** TONAL for every finite voice; GROTTO's and CONCH's held loops are LOOPs. */
+    fun drumClassFor(voice: NacreVoice, macros: Map<String, Float> = emptyMap()): DrumClass = when (voice) {
+        NacreVoice.GROTTO -> NacreGrotto.drumClassFor(macros)
+        NacreVoice.CONCH -> NacreConch.drumClassFor(macros)
+        else -> DrumClass.TONAL
+    }
 
     internal data class Options(val muteBassPlucks: Boolean = false, val muteUpperPlucks: Boolean = false,
         val disableCrossHarp: Boolean = false, val postCurrentOnly: Boolean = false,
@@ -118,6 +134,7 @@ object Nacre {
     fun render(voice: NacreVoice = NacreVoice.PEARL, macros: Map<String, Float> = emptyMap(),
         midi: Int = DEFAULT_MIDI, velocity: Float = 1f, seed: Long = DEFAULT_SEED): Snip =
         if (voice == NacreVoice.GROTTO) NacreGrotto.render(macros, midi, velocity, seed)
+        else if (voice == NacreVoice.CONCH) NacreConch.render(macros, midi, velocity, seed)
         else if (voice != NacreVoice.PEARL) NacreVoices.render(NacreVoices.sourceFor(voice), macros, midi, velocity, seed)
         else play(voice, macros, midi, velocity, seed, Options(), false).snip
     internal fun inspect(voice: NacreVoice = NacreVoice.PEARL, macros: Map<String, Float> = emptyMap(),
@@ -126,6 +143,7 @@ object Nacre {
         if (voice != NacreVoice.PEARL) {
             require(options == Options()) { "NACRE ${voice.name} has no diagnostic options" }
             if (voice == NacreVoice.GROTTO) NacreGrotto.inspect(macros, midi, velocity, seed)
+            else if (voice == NacreVoice.CONCH) NacreConch.inspect(macros, midi, velocity, seed)
             else NacreVoices.inspect(NacreVoices.sourceFor(voice), macros, midi, velocity, seed)
         } else play(voice, macros, midi, velocity, seed, options, true)
 
@@ -166,6 +184,7 @@ object Nacre {
     internal fun clearCoreCache() {
         cores.clear()
         NacreGrotto.clearCaches()
+        NacreConch.clearCaches()
     }
 
     private fun stopIfInterrupted() {

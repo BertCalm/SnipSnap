@@ -7,21 +7,22 @@ internal object NacreModels {
     /** Opt-in source version; model 3 stays the default for existing and partial recipes. */
     const val CONTACT_MODEL_VERSION = 4
     const val CONTACT_MACRO = "CONTACT"
-    /** The new sound sources (HARMONICS 5, SHELL 6, BUBBLE 7, see [NacreVoices]; GROTTO 8, see [NacreGrotto]). PEARL keeps models 1 to 4. */
-    const val LAST_MODEL_VERSION = NacreGrotto.MODEL
+    /** The new sound sources (HARMONICS 5, SHELL 6, BUBBLE 7, see [NacreVoices]; GROTTO 8, see [NacreGrotto]; CONCH 9, see [NacreConch]). PEARL keeps models 1 to 4. */
+    const val LAST_MODEL_VERSION = NacreConch.MODEL
     fun supports(model: Int): Boolean = model in 1..LAST_MODEL_VERSION
 
-    /** PEARL saves models 1 to 4; HARMONICS only model 5, SHELL only model 6, BUBBLE only model 7 and GROTTO only model 8. */
+    /** PEARL saves models 1 to 4; HARMONICS only model 5, SHELL only model 6, BUBBLE only model 7, GROTTO only model 8 and CONCH only model 9. */
     fun supports(voice: NacreVoice, model: Int): Boolean = when (voice) {
         NacreVoice.PEARL -> model in 1..CONTACT_MODEL_VERSION
         NacreVoice.HARMONICS -> model == NacreVoices.HARMONICS_MODEL
         NacreVoice.SHELL -> model == NacreVoices.SHELL_MODEL
         NacreVoice.BUBBLE -> model == NacreVoices.BUBBLE_MODEL
         NacreVoice.GROTTO -> model == NacreGrotto.MODEL
+        NacreVoice.CONCH -> model == NacreConch.MODEL
     }
 
-    /** Whether saved model [model] has a real held loop, so may save a nonzero HOLD: only GROTTO's model 8. Models 1 to 7 are finite. */
-    fun supportsHold(model: Int): Boolean = model == NacreGrotto.MODEL
+    /** Whether saved model [model] has a real held loop, so may save a nonzero HOLD: only GROTTO's model 8 and CONCH's 9. Models 1 to 7 are finite. */
+    fun supportsHold(model: Int): Boolean = model == NacreGrotto.MODEL || model == NacreConch.MODEL
 
     private fun requireSupported(voice: NacreVoice, model: Int) {
         requireSupported(model)
@@ -49,6 +50,7 @@ internal object NacreModels {
             3 -> Nacre.macrosFor(voice)
             CONTACT_MODEL_VERSION -> Nacre.macrosFor(voice).let { it.dropLast(1) + MacroSpec(CONTACT_MACRO, 0f, 0f) + it.last() }
             NacreGrotto.MODEL -> NacreGrotto.macrosFor()
+            NacreConch.MODEL -> NacreConch.macrosFor()
             else -> NacreVoices.macrosFor()
         }
     }
@@ -80,6 +82,7 @@ internal object NacreModels {
                 Nacre.renderContactProfile(voice, source, midi, velocity, seed, loss)
             }
             NacreGrotto.MODEL -> NacreGrotto.render(macros, midi, velocity, seed)
+            NacreConch.MODEL -> NacreConch.render(macros, midi, velocity, seed)
             else -> NacreVoices.render(NacreVoices.sourceFor(model), macros, midi, velocity, seed)
         }
     }
@@ -140,6 +143,10 @@ internal object NacreModels {
             NacreGrotto.MODEL -> {
                 require(options == Nacre.Options()) { "NACRE model $model has no diagnostic options" }
                 NacreGrotto.inspect(macros, midi, velocity, seed)
+            }
+            NacreConch.MODEL -> {
+                require(options == Nacre.Options()) { "NACRE model $model has no diagnostic options" }
+                NacreConch.inspect(macros, midi, velocity, seed)
             }
             else -> contactControls(voice, macros).let { (source, loss) ->
                 val probe = Nacre.inspectContactStudy(voice, source, midi, velocity, seed, options, loss)
