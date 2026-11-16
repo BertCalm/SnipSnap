@@ -249,6 +249,10 @@ still a separate comparison, not a claim of a live cross-pad effect in these kit
 Focused Kotlin checks and kit generation passed on 2026-11-16 (Gradle exit 0).
 The independent native audit matched all 864 chain windows exactly after the
 repository PCM16-to-PCM24 conversion, and verified all six ZIP contents.
-The full JVM suite was launched separately; its result is not implied here.
+The first full JVM run failed two shell registry assertions: the explicit
+starter-ID list omitted the six kits, and the render-only roster omitted their
+frozen pads. Both rosters now include the six exact IDs. The focused round-trip
+test also checks preflight, render-only status, and saved source provenance for
+every pad. Full-suite status is tracked on PR #1154; no full pass is implied here.
 Browser control checks passed all 864 selections and six download mappings.
 Hardware playback and the distinct-genre shelf gate remain open.
