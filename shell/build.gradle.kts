@@ -758,6 +758,16 @@ tasks.register<JavaExec>("generateSporeApprovedSnare") {
     args(providers.gradleProperty("sporeApprovedOutput").orNull ?: "${rootDir}/testkit/spore-approved-snare")
 }
 
+tasks.register<JavaExec>("generateCuttingsKits") {
+    group = "distribution"
+    description = "Build CUTTINGS genre kits, verify saved grids and MPC metadata, and render their actual playback windows."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.CuttingsKitGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "2g"
+    args(providers.gradleProperty("cuttingsOutput").orNull ?: "${rootDir}/testkit/cuttings-kits")
+}
+
 tasks.register<JavaExec>("generateSporeSyntheticKits") {
     group = "distribution"
     description = "Render and verify all three complete sample-free Spore shelf kits."

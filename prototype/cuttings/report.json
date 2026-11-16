@@ -1,0 +1,279 @@
+{
+  "harness": "Python, not Kotlin",
+  "variant_count": 192,
+  "stage_wavs": 768,
+  "finite": true,
+  "pcm_manifest_roundtrip": true,
+  "deterministic_rerender": true,
+  "max_peak": 0.8369377081811908,
+  "max_abs_dc": 0.00020167322640651125,
+  "render_ms_four_stages_median": 61.43387550037005,
+  "metrics": {
+    "kick": {
+      "velocity_rms": [
+        0.06745570073166096,
+        0.08001820934520915,
+        0.09293141330383935
+      ],
+      "max_rr_correlation_by_zone": [
+        0.9895815877599087,
+        0.9793603595269456,
+        0.9743709947270169
+      ],
+      "adjacent_velocity_spectral_distance_db": [
+        2.5440188073406786,
+        2.670905665274409
+      ]
+    },
+    "snare": {
+      "velocity_rms": [
+        0.03438451410871042,
+        0.04587798746468842,
+        0.053978203450724516
+      ],
+      "max_rr_correlation_by_zone": [
+        0.6865596446501591,
+        0.6638444582968306,
+        0.5811996185874491
+      ],
+      "adjacent_velocity_spectral_distance_db": [
+        5.596873738930963,
+        6.374714103839747
+      ]
+    },
+    "hat": {
+      "velocity_rms": [
+        0.01806682816856306,
+        0.02393707994347715,
+        0.028149058929651527
+      ],
+      "max_rr_correlation_by_zone": [
+        0.9633892246289796,
+        0.9596259495100433,
+        0.9622277652465772
+      ],
+      "adjacent_velocity_spectral_distance_db": [
+        5.906562166392666,
+        6.051152670255954
+      ]
+    },
+    "wood": {
+      "velocity_rms": [
+        0.04120748808692194,
+        0.05134285308003251,
+        0.06029108000254092
+      ],
+      "max_rr_correlation_by_zone": [
+        0.9944837654290613,
+        0.971356287778387,
+        0.9789628030715486
+      ],
+      "adjacent_velocity_spectral_distance_db": [
+        1.9267061125629903,
+        1.6492006065496578
+      ]
+    },
+    "thump": {
+      "velocity_rms": [
+        0.037987889953428194,
+        0.04914704142376084,
+        0.05801819246618494
+      ],
+      "max_rr_correlation_by_zone": [
+        0.9656488184115416,
+        0.9844155090725486,
+        0.9596080946106136
+      ],
+      "adjacent_velocity_spectral_distance_db": [
+        3.2172593561074327,
+        3.0338536976689925
+      ]
+    },
+    "brush": {
+      "velocity_rms": [
+        0.013841730729400287,
+        0.018950690272526795,
+        0.02603940663512459
+      ],
+      "max_rr_correlation_by_zone": [
+        0.33207199212841804,
+        0.40087975538002096,
+        0.35804668829972436
+      ],
+      "adjacent_velocity_spectral_distance_db": [
+        6.501599595550657,
+        6.424503269700492
+      ]
+    },
+    "openhat": {
+      "velocity_rms": [
+        0.03945242015793716,
+        0.04885819828223065,
+        0.05833471531044884
+      ],
+      "max_rr_correlation_by_zone": [
+        0.37417598618379355,
+        0.8750083591667394,
+        0.2174761764756287
+      ],
+      "adjacent_velocity_spectral_distance_db": [
+        5.403217108719374,
+        5.478347246339618
+      ]
+    },
+    "clap": {
+      "velocity_rms": [
+        0.012278569189631204,
+        0.017762281446259312,
+        0.02395929597021968
+      ],
+      "max_rr_correlation_by_zone": [
+        0.118399756578716,
+        0.08322933344333582,
+        0.15983334979283761
+      ],
+      "adjacent_velocity_spectral_distance_db": [
+        5.155985613355819,
+        5.3223220301373875
+      ]
+    },
+    "rim": {
+      "velocity_rms": [
+        0.027674373937868004,
+        0.037089003079114904,
+        0.04628581656922688
+      ],
+      "max_rr_correlation_by_zone": [
+        0.9731570643469567,
+        0.9270233091195019,
+        0.9280185302159205
+      ],
+      "adjacent_velocity_spectral_distance_db": [
+        4.322008785819035,
+        5.051063367065898
+      ]
+    },
+    "hand": {
+      "velocity_rms": [
+        0.0389338767518415,
+        0.052608359083083485,
+        0.06144148823561538
+      ],
+      "max_rr_correlation_by_zone": [
+        0.8775825428353217,
+        0.8393774213973741,
+        0.8343469868666024
+      ],
+      "adjacent_velocity_spectral_distance_db": [
+        3.8441426761331425,
+        3.8896886481114366
+      ]
+    },
+    "shaker": {
+      "velocity_rms": [
+        0.011537201703689562,
+        0.016646948239800136,
+        0.021551213571144423
+      ],
+      "max_rr_correlation_by_zone": [
+        0.1423132611273155,
+        0.20523298502722076,
+        0.15256771590419224
+      ],
+      "adjacent_velocity_spectral_distance_db": [
+        6.505826927525093,
+        6.632424027392171
+      ]
+    },
+    "metal": {
+      "velocity_rms": [
+        0.04076516979142981,
+        0.05246151563365578,
+        0.06237075958389552
+      ],
+      "max_rr_correlation_by_zone": [
+        0.7119309657447498,
+        0.7635591314269615,
+        0.68998775280493
+      ],
+      "adjacent_velocity_spectral_distance_db": [
+        4.564160186592659,
+        4.386295315660155
+      ]
+    },
+    "impact": {
+      "velocity_rms": [
+        0.043582138534774974,
+        0.049618773467158414,
+        0.06852097326894158
+      ],
+      "max_rr_correlation_by_zone": [
+        0.8129976437121267,
+        0.9850688246725037,
+        0.8316833244650779
+      ],
+      "adjacent_velocity_spectral_distance_db": [
+        3.378285357225661,
+        3.4905632968850067
+      ]
+    },
+    "cymbal": {
+      "velocity_rms": [
+        0.040103461968894194,
+        0.04972875089963771,
+        0.06059707681962046
+      ],
+      "max_rr_correlation_by_zone": [
+        0.2202271736798285,
+        0.7332748946372428,
+        0.5917190265874287
+      ],
+      "adjacent_velocity_spectral_distance_db": [
+        5.58999254723336,
+        5.107778120959557
+      ]
+    },
+    "roll": {
+      "velocity_rms": [
+        0.02702939219709829,
+        0.03568436360935697,
+        0.042998383218850716
+      ],
+      "max_rr_correlation_by_zone": [
+        0.720663928654441,
+        0.6729538628607726,
+        0.7363646383234943
+      ],
+      "adjacent_velocity_spectral_distance_db": [
+        3.910794763184026,
+        4.477267741168468
+      ]
+    },
+    "riser": {
+      "velocity_rms": [
+        0.02771361398043653,
+        0.03673279365256564,
+        0.04327499581336652
+      ],
+      "max_rr_correlation_by_zone": [
+        0.7317740287440849,
+        0.7041934628959124,
+        0.6764519380864504
+      ],
+      "adjacent_velocity_spectral_distance_db": [
+        3.9917850112437403,
+        4.271940473108632
+      ]
+    }
+  },
+  "not_verified": [
+    "phone render budget",
+    "higher-rate aliasing reference",
+    "browser audio output",
+    "SnipSnap persistence/playback",
+    "MPC export and hardware playback",
+    "genre shelf",
+    "phrase listening acceptance",
+    "owner sound acceptance"
+  ]
+}
