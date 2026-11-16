@@ -47,7 +47,7 @@ object StarterShelf {
             Copy.STARTER_HEADING_METAL,
             listOf(
                 "libration", "meridian", "meridian-materials", "meridian-six", "accord", "thaw", "scour", "nimbus", "suture",
-                "tessera", "pitchwheel", "chamber", "alloy", "caustic", "cistern", "filament", "erosion", SplayDelivery.STARTER_ID, SplayDelivery.BODIES_STARTER_ID,
+                "tessera", "pitchwheel", "chamber", "alloy", "caustic", "cistern", "filament", "erosion", com.snipsnap.synth.ErosionRoundRobinKits.ID, SplayDelivery.STARTER_ID, SplayDelivery.BODIES_STARTER_ID,
                 "cairn",
             ),
         ),
