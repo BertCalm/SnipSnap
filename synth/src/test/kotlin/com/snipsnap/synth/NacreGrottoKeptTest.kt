@@ -135,6 +135,8 @@ class NacreGrottoKeptTest {
         assertEquals(listOf("Grotto Glints", "Grotto Kelp"), loops.map { it.name })
         assertTrue(loops.all { it.macros["HOLD"] == 1f && Nacre.drumClassFor(it.voice, it.macros) == com.snipsnap.audio.DrumClass.LOOP })
         assertTrue(finite.all { it.macros["HOLD"] == bow4 })
-        assertFalse(NacrePresets.all().filter { it.voice != NacreVoice.GROTTO }.any { (it.macros["HOLD"] ?: 0f) != 0f })
+        // Only the held voices (GROTTO and CONCH) save a HOLD; every finite voice's preset keeps it at 0.
+        assertFalse(NacrePresets.all().filter { it.voice != NacreVoice.GROTTO && it.voice != NacreVoice.CONCH }
+            .any { (it.macros["HOLD"] ?: 0f) != 0f })
     }
 }

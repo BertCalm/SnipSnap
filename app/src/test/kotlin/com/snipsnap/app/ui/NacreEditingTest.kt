@@ -76,9 +76,10 @@ class NacreEditingTest {
     }
 
     @Test
-    fun onlyGrottoShowsHoldAndItsHeldPresetsKeepTheLoopThroughScrambleAndReplay() {
+    fun onlyGrottoAndConchShowHoldAndGrottosHeldPresetsKeepTheLoopThroughScrambleAndReplay() {
         for (voice in NacreVoice.entries) for (preset in NacrePresets.forVoice(voice)) {
-            assertEquals(voice == NacreVoice.GROTTO, NacreEditing.macrosFor(preset).any { it.name == "HOLD" }, preset.name)
+            assertEquals(voice == NacreVoice.GROTTO || voice == NacreVoice.CONCH,
+                NacreEditing.macrosFor(preset).any { it.name == "HOLD" }, preset.name)
         }
         val held = NacrePresets.forVoice(NacreVoice.GROTTO).single { it.name == "Grotto Glints" }
         assertEquals(1f, NacreEditing.controls(held).getValue("HOLD"))
@@ -92,5 +93,24 @@ class NacreEditingTest {
         assertEquals(saved, PadRecipe.fromJsonText(PadRecipe(saved).toJsonText()).patch)
         val finite = NacrePresets.forVoice(NacreVoice.GROTTO).single { it.name == "Grotto Bow" }
         assertFalse(Nacre.isLoop(finite.voice, NacreEditing.controls(finite)))
+    }
+
+    @Test
+    fun conchsHeldPresetsKeepTheLoopThroughScrambleAndReplay() {
+        assertTrue(NacreEditing.showsHold(NacreVoice.CONCH))
+        val held = NacrePresets.forVoice(NacreVoice.CONCH).single { it.name == "Conch Lean" }
+        assertEquals(1f, NacreEditing.controls(held).getValue("HOLD"))
+        assertTrue(Nacre.isLoop(held.voice, NacreEditing.controls(held)))
+        val generated = Nacre.defaults(held.voice) + mapOf("TOUCH" to .42f, "BLOOM" to .61f, "HOLD" to 0f)
+        val scrambled = NacreEditing.scrambledControls(held, generated)
+        assertEquals(1f, scrambled.getValue("HOLD"), "RANDOMISE must not drop a held loop")
+        assertEquals(.61f, scrambled.getValue("BLOOM"))
+        val saved = Patches.edited(held, "MY HELD CONCH", scrambled) as NacrePatch
+        assertEquals(saved, Patches.fromJsonText(saved.toJsonText()))
+        assertEquals(saved, PadRecipe.fromJsonText(PadRecipe(saved).toJsonText()).patch)
+        val finite = NacrePresets.forVoice(NacreVoice.CONCH).single { it.name == "Conch Breath" }
+        assertFalse(Nacre.isLoop(finite.voice, NacreEditing.controls(finite)))
+        assertEquals(finite.macros.getValue("HOLD"), NacreEditing.scrambledControls(finite, generated).getValue("HOLD"),
+            "RANDOMISE keeps a finite breath's length")
     }
 }

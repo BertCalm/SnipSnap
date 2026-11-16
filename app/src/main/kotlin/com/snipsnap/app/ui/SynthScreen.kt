@@ -1066,7 +1066,7 @@ fun SynthScreen(
                         else -> embouchureRestore.macrosFor(e, v, settings) ?: defaults.mapValues { (name, fallback) ->
                             // Finite voices reserve HOLD: a stale
                             // navigation value must not leave the voice stuck.
-                            if ((e == Engine.ACCORD || e == Engine.CHAMBER || (e == Engine.NACRE && v != NacreVoice.GROTTO) || e == Engine.LIBRATION || e == Engine.RIVET || e == Engine.TEMPEST || e == Engine.SPLAY) && name == "HOLD") fallback
+                            if ((e == Engine.ACCORD || e == Engine.CHAMBER || (e == Engine.NACRE && v != NacreVoice.GROTTO && v != NacreVoice.CONCH) || e == Engine.LIBRATION || e == Engine.RIVET || e == Engine.TEMPEST || e == Engine.SPLAY) && name == "HOLD") fallback
                             else if (e == Engine.TIDAL && name == "HOLD") {
                                 if (settings[macroSettingsKey(e, v, name)]?.toFloatOrNull() == 1f) 1f else 0f
                             } else settings[macroSettingsKey(e, v, name)]?.toFloatOrNull()
@@ -2263,7 +2263,7 @@ fun SynthScreen(
             engine == Engine.APSIS && Apsis.isLoop(macros["HOLD"] ?: 0f) -> 0 until heard.frameCount
             engine == Engine.TIDAL && Tidal.isHeld(macros["HOLD"] ?: 0f) -> 0 until heard.frameCount
             engine == Engine.LIBRATION && LibrationKeys.isHeld(macros["HOLD"] ?: 0f) -> 0 until heard.frameCount
-            // GROTTO's top HOLD step renders exactly one seamless loop.
+            // GROTTO's and CONCH's top HOLD step renders exactly one seamless loop.
             engine == Engine.NACRE && Nacre.isLoop(voice as NacreVoice, macros) -> 0 until heard.frameCount
             engine == Engine.PRISM -> prismMotionStudio.loopFor(target)
             engine == Engine.CAUSTIC && CausticInstrument.isLoop(voice as CausticVoice, macros,
@@ -6731,7 +6731,8 @@ private enum class Engine {
         TIDAL -> TidalVoice.entries
         CHAMBER -> ChamberVoice.entries
         MERIDIAN -> MeridianVoice.entries
-        // GROTTO (saved model 8) joined after BUBBLE once the owner kept round nacre-grotto-1 (15 Nov 2026).
+        // GROTTO (saved model 8) joined after BUBBLE once the owner kept round nacre-grotto-1 (15 Nov 2026);
+        // CONCH (saved model 9) followed GROTTO once the owner kept round nacre-conch-1 (16 Nov 2026).
         NACRE -> NacreVoice.entries
         BORE -> BoreVoice.entries
         ARCO -> ArcoVoice.entries
@@ -6839,8 +6840,8 @@ private enum class Engine {
         TIDAL -> Tidal.macrosFor(voice as TidalVoice).filterNot { it.name == "HOLD" }
         CHAMBER -> Chamber.macrosFor(voice as ChamberVoice).filter { it.name != "HOLD" }
         MERIDIAN -> Meridian.macrosFor(voice as MeridianVoice)
-        // Only GROTTO has a held loop, so only GROTTO shows HOLD; the finite voices keep it hidden at 0.
-        NACRE -> Nacre.macrosFor(voice as NacreVoice).filter { it.name != "HOLD" || voice == NacreVoice.GROTTO }
+        // Only GROTTO and CONCH have a held loop, so only they show HOLD; the finite voices keep it hidden at 0.
+        NACRE -> Nacre.macrosFor(voice as NacreVoice).filter { it.name != "HOLD" || voice == NacreVoice.GROTTO || voice == NacreVoice.CONCH }
     }
 
     fun defaults(voice: Enum<*>): Map<String, Float> = when (this) {
@@ -8023,6 +8024,7 @@ private fun NacreNoteControls(
     )
     TapeText(
         if (patch.voice == NacreVoice.GROTTO) "Bowed bass string · C2–C4 · the top hold step loops."
+        else if (patch.voice == NacreVoice.CONCH) "Blown shell pair · C2–C5 · the top hold step loops."
         else "Paired harp · finite strum · space follows the note.",
         TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2,
     )

@@ -100,7 +100,8 @@ object Cli {
         |                        (HALOBAR: VIBRAPHONE/MARIMBA/XYLOPHONE/GLOCKENSPIEL/CROTALES/TUBULAR_BELLS;
         |                         --midi 48..84 (xylophone 57..84; glockenspiel 60..96; crotales 84..108);
         |                         --velocity 0..1 --macros SPACE=.7,RETURN=.6 --patch recipe.patch; finite notes)
-        |                        (NACRE: PEARL/HARMONICS/SHELL/BUBBLE/GROTTO; --midi 28..72, GROTTO 36..60; --velocity 0..1; only GROTTO holds)
+        |                        (NACRE: PEARL/HARMONICS/SHELL/BUBBLE/GROTTO/CONCH; --midi 28..72, GROTTO 36..60, CONCH 36..72;
+        |                         --velocity 0..1; only GROTTO and CONCH hold)
         |                        (TEMPEST: six voices and 22 factory presets; KICK/METAL model 2, others model 3;
         |                         --patch recipe.patch --macros SOURCE=.5,SPACE=.75; new voices add DECAY; HOLD reserved)
         |                        (FERRY prototype: PASSAGE; --midi 36..72 --velocity 0..1;

@@ -22,14 +22,16 @@ class NacreVoiceRegistrationTest {
 
     @Test
     fun `the voices and their saved models`() {
-        assertEquals(listOf(NacreVoice.PEARL, NacreVoice.HARMONICS, NacreVoice.SHELL, NacreVoice.BUBBLE, NacreVoice.GROTTO), NacreVoice.entries)
+        assertEquals(listOf(NacreVoice.PEARL, NacreVoice.HARMONICS, NacreVoice.SHELL, NacreVoice.BUBBLE, NacreVoice.GROTTO,
+            NacreVoice.CONCH), NacreVoice.entries)
         assertEquals(8, Nacre.defaultModel(NacreVoice.GROTTO))
+        assertEquals(9, Nacre.defaultModel(NacreVoice.CONCH))
         assertEquals(3, Nacre.defaultModel(NacreVoice.PEARL))
         assertEquals(5, Nacre.defaultModel(NacreVoice.HARMONICS))
         assertEquals(6, Nacre.defaultModel(NacreVoice.SHELL))
         assertEquals(7, Nacre.defaultModel(NacreVoice.BUBBLE))
-        for (model in 1..8) assertEquals(model in 1..4, NacreModels.supports(NacreVoice.PEARL, model), "PEARL model $model")
-        for (voice in voices) for (model in 1..8) {
+        for (model in 1..9) assertEquals(model in 1..4, NacreModels.supports(NacreVoice.PEARL, model), "PEARL model $model")
+        for (voice in voices) for (model in 1..9) {
             assertEquals(model == Nacre.defaultModel(voice), NacreModels.supports(voice, model), "$voice model $model")
         }
         assertFailsWith<IllegalArgumentException> { NacrePatch("x", NacreVoice.PEARL, emptyMap(), model = 5) }

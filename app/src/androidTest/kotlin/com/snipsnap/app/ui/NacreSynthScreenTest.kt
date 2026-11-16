@@ -33,8 +33,8 @@ import org.junit.runner.RunWith
 import java.io.File
 
 /**
- * The finite harp keeps its note, strike, seed and saved rendition through bench edits; GROTTO, the one held voice,
- * shows HOLD and saves and recalls a held loop.
+ * The finite harp keeps its note, strike, seed and saved rendition through bench edits; GROTTO and CONCH, the two held
+ * voices, show HOLD and save and recall a held loop.
  */
 @RunWith(AndroidJUnit4::class)
 class NacreSynthScreenTest : ComposeScreenTest() {
@@ -223,6 +223,78 @@ class NacreSynthScreenTest : ComposeScreenTest() {
         pump()
         assertEquals(1f, progress("HOLD"), .00001f)
         compose.runOnIdle { assertEquals(recalled, stored(NacreVoice.GROTTO)) }
+    }
+
+    private fun conch(name: String): NacrePatch = NacrePresets.forVoice(NacreVoice.CONCH).single { it.name == name }
+
+    @Test
+    fun conch_follows_grotto_shows_hold_and_loads_its_four_presets() {
+        val settings = mutableMapOf("engine" to "NACRE", "voice" to "GROTTO")
+        currentSettings = settings
+        show(settings)
+        holdSlider().assertExists()
+        press("CONCH")
+        waitFor("CONCH selected") { settings["voice"] == "CONCH" }
+        holdSlider().assertExists()
+        val presets = NacrePresets.forVoice(NacreVoice.CONCH)
+        assertEquals(listOf("Conch Breath", "Soft Conch", "Conch Lean", "Conch Bloom"), presets.map { it.name })
+        for (preset in presets) {
+            press("PRESET ${preset.name}")
+            waitFor("${preset.name} complete recipe") { stored(NacreVoice.CONCH) == preset }
+            // HOLD included: CONCH's finite breaths and its held loops are both saved controls.
+            for ((name, value) in preset.macros) assertEquals(value, progress(name), .00001f)
+            assertRoot(preset.midi)
+            assertEquals(preset.velocity, progress("VELOCITY"), .00001f)
+        }
+        compose.onNodeWithContentDescription("CONTACT", useUnmergedTree = true).assertDoesNotExist()
+        press("PEARL")
+        holdSlider().assertDoesNotExist()
+    }
+
+    @Test
+    fun a_held_conch_preset_saves_recalls_and_survives_recreation() {
+        val settings = mutableMapOf("engine" to "NACRE", "voice" to "CONCH")
+        currentSettings = settings
+        show(settings)
+        val lean = conch("Conch Lean")
+        press("PRESET ${lean.name}")
+        waitFor("held Conch Lean") { stored(NacreVoice.CONCH) == lean }
+        assertEquals(1f, progress("HOLD"), .00001f)
+        dial("BLOOM", .52f)
+        val expected = lean.copy(macros = lean.macros + ("BLOOM" to .52f))
+        waitFor("held edit keeps the loop") {
+            stored(NacreVoice.CONCH)?.let { it.macros == expected.macros && it.seed == lean.seed } == true
+        }
+
+        press("SAVE PRESET")
+        compose.onNode(hasSetTextAction()).performTextReplacement("MY HELD CONCH")
+        pump()
+        press("SAVE")
+        waitFor("saved held CONCH preset", timeoutMillis = 30_000) {
+            UserPresets.read(shelf).any { it.name == "MY HELD CONCH" }
+        }
+        assertEquals(expected.copy(name = "MY HELD CONCH"),
+            UserPresets.read(shelf).single { it.name == "MY HELD CONCH" }.patch)
+
+        val breath = conch("Conch Breath")
+        press("PRESET ${breath.name}")
+        waitFor("finite Conch Breath") { stored(NacreVoice.CONCH) == breath }
+        assertEquals(breath.macros.getValue("HOLD"), progress("HOLD"), .00001f)
+
+        activateUserPreset("MY HELD CONCH")
+        waitFor("held CONCH recalled") { stored(NacreVoice.CONCH)?.macros == expected.macros }
+        assertEquals(1f, progress("HOLD"), .00001f)
+        assertEquals(.52f, progress("BLOOM"), .00001f)
+        assertEquals(lean.macros.getValue("DUET"), progress("DUET"), .00001f)
+        val recalled = requireNotNull(stored(NacreVoice.CONCH))
+        assertEquals(lean.seed, recalled.seed)
+        assertEquals(lean.midi, recalled.midi)
+        assertTrue(Nacre.isLoop(recalled.voice, recalled.macros))
+
+        compose.runOnIdle { generation++ }
+        pump()
+        assertEquals(1f, progress("HOLD"), .00001f)
+        compose.runOnIdle { assertEquals(recalled, stored(NacreVoice.CONCH)) }
     }
 
     @Test
