@@ -80,6 +80,24 @@ object KindredRecipes {
         Recipe("AMBIENT_A14", "Swell", KindredVoice.BELL, KindredRole.PERC, mapOf("TUNE" to 0.4f, "LENGTH" to 0.8f), 0.3f) { it.copy(fm = 0.6, atk = 0.1) },
     )
 
+    /**
+     * Each kit's tempo, its A15 phrase (which pad's voice, sixteenths or eighths, eight steps of semitones and
+     * velocity, whether the steps retune VCO 2 only) and its A16 riser (which pad, steps a second from start to end,
+     * how long, the acceleration curve's exponent, a glide in semitones), as heard at round 2.
+     */
+    class KitSpec(
+        val name: String, val bpm: Int,
+        val phrasePad: Int, val phraseDiv: Int, val phraseToVco2: Boolean, val phraseSteps: List<Pair<Double, Double>>,
+        val riserPad: Int, val riserStart: Double, val riserEnd: Double, val riserSeconds: Double, val riserCurve: Double, val riserGlide: Double,
+    )
+
+    val KITS: List<KitSpec> = listOf(
+        KitSpec("TECHNO", 132, phrasePad = 0, phraseDiv = 4, phraseToVco2 = false, phraseSteps = listOf(0.0 to 1.0, 12.0 to 0.35, 0.0 to 0.6, 7.0 to 0.45, 0.0 to 1.0, 12.0 to 0.3, 3.0 to 0.7, 19.0 to 0.4), riserPad = 1, riserStart = 4.0, riserEnd = 48.0, riserSeconds = 2.4, riserCurve = 1.3, riserGlide = 0.0),
+        KitSpec("INDUSTRIAL", 100, phrasePad = 6, phraseDiv = 4, phraseToVco2 = false, phraseSteps = listOf(0.0 to 1.0, -5.0 to 0.55, 7.0 to 0.8, 0.0 to 0.0, -12.0 to 1.0, 5.0 to 0.45, 0.0 to 0.7, 12.0 to 0.6), riserPad = 6, riserStart = 8.0, riserEnd = 320.0, riserSeconds = 2.4, riserCurve = 1.6, riserGlide = 0.0),
+        KitSpec("ELECTRO", 124, phrasePad = 12, phraseDiv = 4, phraseToVco2 = true, phraseSteps = listOf(0.0 to 1.0, 0.0 to 0.4, 10.0 to 0.75, 0.0 to 0.0, 5.0 to 1.0, 17.0 to 0.5, 0.0 to 0.65, 12.0 to 0.8), riserPad = 7, riserStart = 4.0, riserEnd = 40.0, riserSeconds = 2.4, riserCurve = 1.4, riserGlide = 12.0),
+        KitSpec("AMBIENT", 84, phrasePad = 5, phraseDiv = 2, phraseToVco2 = false, phraseSteps = listOf(0.0 to 1.0, 7.0 to 0.5, 12.0 to 0.7, 0.0 to 0.0, 5.0 to 0.8, 3.0 to 0.4, 10.0 to 0.6, 0.0 to 0.0), riserPad = 12, riserStart = 3.0, riserEnd = 160.0, riserSeconds = 2.4, riserCurve = 1.8, riserGlide = 0.0),
+    )
+
     private val BY_ID = ALL.associateBy { it.id }
 
     fun byId(id: String): Recipe = BY_ID[id] ?: throw IllegalArgumentException("no KINDRED recipe $id")

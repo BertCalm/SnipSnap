@@ -90,7 +90,9 @@ ELECTRO, AMBIENT). `kindred_proto.py` is the voice; `KINDRED_MODEL=2 python3 kin
 renders every pad at three velocities and four takes, each kit's A15 phrase, A16 riser, groove and
 walk, with a JSON report. `KINDRED_MODEL=2 python3 groove_ltas.py OUT` measures the grooves' band
 balance against the reference clips' median. Model 2 is the sound the owner accepted on 2026-11-15
-(round 1 was heard as "a small radio speaker"); see docs/KINDRED.md. Needs numpy, scipy and numba.
+(round 1 was heard as "a small radio speaker"); see docs/KINDRED.md. `gen_recipes_kt.py` writes the Kotlin
+recipes and kit specs from the kit table; `compare_kotlin.py` A/Bs the Kotlin pads; `build_k2_page.py` cuts the K2
+listening clips from `./gradlew :shell:generateKindredKits`. Needs numpy, scipy and numba.
 
 ## scuff/ — SCUFF round-0b audition (Python harness)
 
