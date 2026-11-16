@@ -274,8 +274,8 @@ import kotlin.random.Random
  * explicitly choose --model 5 for HOLD or --instrument [--release S]. Held keys
  * retain the unfolding opening before periodic sustain across nine native roots.
  * WICK offers 36 shared factory recipes across PLUCK/WOOD/BREATH/BUBBLE/FLICKER/RATTLE; saved RATTLE body choices survive note and velocity overrides.
- * NACRE offers finite PEARL, HARMONICS, SHELL and BUBBLE presets and GROTTO's bowed bass (C2 to C4, two of its four
- * presets held loops) with native note and velocity.
+ * NACRE offers finite PEARL, HARMONICS, SHELL and BUBBLE presets, GROTTO's bowed bass (C2 to C4) and CONCH's blown
+ * shell pair (C2 to C5), each with two of its four presets held loops, with native note and velocity.
  * FILAMENT exposes twelve approved THREAD/PULSE/CURL factory recipes with saved geometry and note/velocity overrides.
  * ORPHICA accepts `--seed N` for repeatable string excitation and grains, preserving all 64 bits.
  * Its `--midi N` resets relative TUNE to neutral and also sets the sampled root with --instrument;

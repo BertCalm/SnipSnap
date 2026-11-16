@@ -1,11 +1,13 @@
-# NACRE's new sources: HARMONICS, SHELL, BUBBLE and GROTTO
+# NACRE's new sources: HARMONICS, SHELL, BUBBLE, GROTTO and CONCH
 
-Status: **kept by the owner** as new NACRE voices, in three rounds on 15 Nov 2026, each all KEEP with no notes:
+Status: **kept by the owner** as new NACRE voices, in five rounds on 15 and 16 Nov 2026, each all KEEP with no notes:
 - **`nacre-voices-1`** (H1, H2, H3, L1, L2 and L3): HARMONICS and SHELL.
 - **`nacre-voices-2`** (Q1, Q2, U1, U2 and U3): the eight HARMONICS and SHELL presets, and BUBBLE.
+- **`nacre-voices-3`** (Q3): BUBBLE's four presets.
 - **`nacre-grotto-1`** (D1 to D10): GROTTO, the bowed bass string with a real held loop (see [GROTTO](#grotto-model-8)).
+- **`nacre-conch-1`** (O1 to O11, 16 Nov 2026): CONCH, the pair of blown shells with a real held loop (see [CONCH](#conch-model-9)).
 
-Every render behind those clips is pinned (`NacreVoicesTest`, `NacreGrottoKeptTest`). All four are NACRE voices in the SYNTH picker (`NacreVoice.HARMONICS`, `NacreVoice.SHELL`, `NacreVoice.BUBBLE`, `NacreVoice.GROTTO`) with four presets each. BUBBLE's first preset, Bubble Drop, is the sound the owner kept; its other three presets are **not yet heard** (see [Still open](#still-open)). There is no starter or kit yet. See [NACRE.md](NACRE.md) for PEARL and the design notes this follows.
+Every render behind those clips is pinned (`NacreVoicesTest`, `NacreGrottoKeptTest`, `NacreConchKeptTest`). All five are NACRE voices in the SYNTH picker (`NacreVoice.HARMONICS`, `NacreVoice.SHELL`, `NacreVoice.BUBBLE`, `NacreVoice.GROTTO`, `NacreVoice.CONCH`) with four presets each, and every one of those twenty presets is a sound the owner heard and kept. There is no starter or kit yet. See [NACRE.md](NACRE.md) for PEARL and the design notes this follows.
 
 ## What the owner asked for
 
@@ -14,7 +16,9 @@ From the NACRE voice design (14 Nov 2026):
 - **The first round is HARMONICS and SHELL.**
 - **GROTTO and CONCH** waited for a HOLD decision. The owner decided it on 15 Nov 2026: real held loops on GROTTO and CONCH only, opening with NACRE's own slow swell; PEARL, HARMONICS, SHELL and BUBBLE stay one-shot and byte-identical.
 - **BUBBLE** came next, in round `nacre-voices-2`, and was kept.
-- **GROTTO** followed, in round `nacre-grotto-1`, and was kept in full. CONCH is not built.
+- **GROTTO** followed, in round `nacre-grotto-1`, and was kept in full.
+- **BUBBLE's presets** were heard in round `nacre-voices-3` and kept.
+- **CONCH** came last, in round `nacre-conch-1`, and was kept in full. NACRE now has its six voices.
 
 ## Saved models
 
@@ -24,11 +28,12 @@ From the NACRE voice design (14 Nov 2026):
 | 5 | HARMONICS | Harp harmonics: a finger touches each string's midpoint at the pluck. |
 | 6 | SHELL | Small struck modal shells instead of strings. |
 | 7 | BUBBLE | A pitched bubble that glides up onto its note. |
-| 8 | GROTTO | A bowed bass string under quiet glassy glints, C2 to C4, the only voice with HOLD. |
+| 8 | GROTTO | A bowed bass string under quiet glassy glints, C2 to C4, with a real held loop. |
+| 9 | CONCH | A pair of blown shells an octave apart, C2 to C5, with a real held loop. |
 
 - **How a saved recipe chooses a source:** an ordinary `NacrePatch` whose `voice` is `HARMONICS` (model 5), `SHELL` (model 6) or `BUBBLE` (model 7). Each voice has exactly one saved model: `Nacre.defaultModel(voice)` gives it, `NacreModels.supports(voice, model)` checks the pair, and a mismatch is refused. PEARL keeps models 1–4.
-- **Controls:** the same six as model 3 (TOUCH, DUET, CURRENT, VENUE, BLOOM, HOLD), with PEARL's defaults. CONTACT is refused. HOLD must be 0 on models 5 to 7; only GROTTO's model 8 saves a nonzero HOLD (`NacreModels.supportsHold`).
-- **Code:** HARMONICS, SHELL and BUBBLE live in `NacreVoices.kt`; GROTTO in `NacreGrotto.kt`, with its held clock in `NacreHeld.kt`. `NacreModels` routes models 5, 6 and 7 to `NacreVoices` and model 8 to `NacreGrotto`; nothing in models 1–4 is called or changed. Making BUBBLE a saved model changed no sample: its renders match the desk clips byte for byte.
+- **Controls:** the same six as model 3 (TOUCH, DUET, CURRENT, VENUE, BLOOM, HOLD), with PEARL's defaults. CONTACT is refused. HOLD must be 0 on models 5 to 7; only GROTTO's model 8 and CONCH's model 9 save a nonzero HOLD (`NacreModels.supportsHold`).
+- **Code:** HARMONICS, SHELL and BUBBLE live in `NacreVoices.kt`; GROTTO in `NacreGrotto.kt` and CONCH in `NacreConch.kt`, with their held clock in `NacreHeld.kt`. `NacreModels` routes models 5, 6 and 7 to `NacreVoices`, model 8 to `NacreGrotto` and model 9 to `NacreConch`; nothing in models 1–4 is called or changed. Making BUBBLE a saved model changed no sample: its renders match the desk clips byte for byte.
 
 ## What every source keeps from PEARL
 
@@ -104,9 +109,45 @@ A bow drives the bass harp's root string; NACRE's harps, sympathetic strings and
 
 Everything not named is at the default controls, velocity .8 and seed 7.
 
+## CONCH (model 9)
+
+Two shells blown together, the second an octave above the first: the soft, hollow breath across a shell's opening the owner chose on 15 Nov 2026, not a lip-buzzed blast. NACRE's harps, sympathetic strings and water run after the shells, as on the other voices.
+
+- **The shell:** a jet across the mouth of a vessel. A `Modes.Bank` holds the cavity's mode at the note and three weak, inharmonic spiral-chamber modes (2.3, 3.8 and 5.4 times the note); a delayed jet, bounded by `tanh`, reads the cavity and drives the bank. Only the cavity is in the jet's loop, so the chamber colours the tone without sounding a pitch of its own. CONCH plays MIDI 36 to 72 (C2 to C5); a patch outside that range is refused.
+- **The breath:** TOUCH and velocity set one breath pressure: level, how hard the jet saturates, how far its flow reaches up the spectrum, its edge tone, the chamber and the hiss. So a harder breath is brighter as well as louder. The breath comes in with NACRE's own slow swell, 0.55 to 1.4 s (slower at a lighter TOUCH).
+- **The pair:** the bass shell sounds into the bass harp and the upper shell an octave above into the upper harp. They meet only downstream, in NACRE's linear chain. DUET sets how much later the upper shell's breath enters (PEARL's answering law, scaled to a breath). From DUET .65 the shells lean against each other: the upper shell gets one whole period more than the octave in each loop (two from .85), a slow beat of exactly that many cycles per loop.
+- **HOLD:**
+  - Below .99 it sets a finite breath of 2.5 s (HOLD 0) to 8 s (.98). The breath then fades over 0.3 s and the shells and strings ring for 3 s.
+  - The top step is a loop of whole periods of both shells in whole frames, about 3.71 s, two swells of the water, on GROTTO's held clock (`NacreHeld`). Each shell closes on its own by ARCO's retune route (`LoopRetune`); the chain after them closes by settling. A loop whose seam is over the house bar is refused by name, never crossfaded.
+  - A finite note is the held note, sample for sample, until its breath begins to fade.
+  - `NacrePatch.render()` returns the loop alone at the top step (class LOOP); `NacreConch.renderKey` returns the note's own breath and warm-up with the loop marked after it.
+- **Two changes from the design:**
+  - **The breath's hiss is heard beside the jet, not fed into it.** The hiss is a seeded noise exactly one loop long, coloured by the shell's own modes and laid beside the tone, so it can't unlock the loop (the design's named fallback). Turbulence reaches the cavity only while the breath swells in: that is what starts the jet, and it is gone before the loop.
+  - **The sympathetic strings are lifted for CONCH** (`SYMPATHETIC_LIFT` 2, tilted up further below C3), as GROTTO's are under its bow. A shell's near-sinusoid gives the bass harp's body little to answer at C2, where the strings measured 25 dB under the shells, against 15 dB from C3 up.
+- **Level:** a fixed reference gain (`OUTPUT_GAIN` .55), so level follows velocity as on every NACRE voice.
+- **Measured on the round's held C3** (velocity .8, seed 7): 163,842 frames (3.715 s; 486 periods of the bass shell, 972 of the upper), seams 5.4e-9 before and 1.0e-8 after, cycle error 6.4e-9, one retune pass per shell. Held C2: 243 periods; held C4: 163,673 frames, 971 periods. The worst seam in the round was 1.7e-7 (DUET .80, whose upper shell has 973 periods: one beat a loop). Only O10, the matched A/B, was turned down (1.68 dB) to stay under .94.
+
+### Round `nacre-conch-1` (16 Nov 2026, all KEEP, no notes)
+
+| Clip | What it played |
+| --- | --- |
+| O1 | C3 finite, default controls, a 4 s breath |
+| O2 | C3, TOUCH .15, .30 and .70, 4 s breaths |
+| O3 | Held C3 at DUET .15, .50 and .80, each from its first breath, then the loop once more |
+| O4 | Held C3 from its first breath, then the loop three times |
+| O5 | The held loop alone, eight times end to end |
+| O6 | C2, C4 and C5, 4 s breaths |
+| O7 | Held C2, then held C4, each loop twice |
+| O8 | Held C3 at VENUE 0 and 1, then BLOOM .15 and .70, each loop twice |
+| O9 | C3 soft, medium and hard (velocity .35, .65, 1), 4 s breaths |
+| O10 | CONCH held beside BORE FLUTE, EMBOUCHURE WHISTLE, OBBLIGATO and NACRE BUBBLE at C4, then beside OBBLIGATO at C3, matched in loudness |
+| O11 | A short overlapping phrase, C3, E3, G3, C4, G3, at HOLD 0 (2.5 s breaths) |
+
+Everything not named is at the default controls, velocity .8 and seed 7.
+
 ## Presets
 
-Four per voice. HARMONICS, SHELL and BUBBLE are at C3, velocity 1, seed 7; GROTTO's are at C2, velocity .8, seed 7, as round `nacre-grotto-1` played them. The first of each is the voice's default sound, the one the owner kept.
+Four per voice, every one heard and kept. HARMONICS, SHELL and BUBBLE are at C3, velocity 1, seed 7; GROTTO's are at C2 and CONCH's at C3, velocity .8, seed 7, as rounds `nacre-grotto-1` and `nacre-conch-1` played them. The first of each is the voice's default sound.
 
 | Voice | Preset | TOUCH | DUET | CURRENT | VENUE | BLOOM | Heard |
 | --- | --- | ---: | ---: | ---: | ---: | ---: | --- |
@@ -119,17 +160,25 @@ Four per voice. HARMONICS, SHELL and BUBBLE are at C3, velocity 1, seed 7; GROTT
 | SHELL | Shell Reef | .30 | .15 | .30 | 0 | .55 | kept (Q2) |
 | SHELL | Shell Bloom | .60 | .15 | .20 | .60 | .80 | kept (Q2) |
 | BUBBLE | Bubble Drop | .30 | .15 | .20 | .15 | .35 | kept (U1–U3) |
-| BUBBLE | Soft Bubble | .10 | .15 | .20 | .15 | .45 | **not yet heard** |
-| BUBBLE | Bubble Stream | .30 | .55 | .35 | .60 | .50 | **not yet heard** |
-| BUBBLE | Bubble Burst | .80 | .15 | .20 | .15 | .70 | **not yet heard** |
+| BUBBLE | Soft Bubble | .10 | .15 | .20 | .15 | .45 | kept (Q3) |
+| BUBBLE | Bubble Stream | .30 | .55 | .35 | .60 | .50 | kept (Q3) |
+| BUBBLE | Bubble Burst | .80 | .15 | .20 | .15 | .70 | kept (Q3) |
 | GROTTO | Grotto Bow | .30 | .15 | .20 | .15 | .35 | kept (D1); a 4 s bow |
 | GROTTO | Soft Grotto | .15 | .15 | .20 | .15 | .35 | kept (D2, the light bow); a 4 s bow |
 | GROTTO | Grotto Glints | .30 | .55 | .20 | .15 | .35 | kept (D6, the most glints); held loop |
 | GROTTO | Grotto Kelp | .30 | .15 | .20 | 1 | .35 | kept (D7, the far seaweed); held loop |
+| CONCH | Conch Breath | .30 | .15 | .20 | .15 | .35 | kept (O1); a 4 s breath |
+| CONCH | Soft Conch | .15 | .15 | .20 | .15 | .35 | kept (O2, the light breath); a 4 s breath |
+| CONCH | Conch Lean | .30 | .80 | .20 | .15 | .35 | kept (O3, the slow lean); held loop |
+| CONCH | Conch Bloom | .30 | .15 | .20 | .15 | .70 | kept (O8, the most bloom); held loop |
 
 Every GROTTO preset is one of the renders the owner kept, sample for sample (`NacreGrottoKeptTest`); none adds an unheard setting. The 4 s bow is HOLD `NacreGrotto.holdFor(4f)` (about .267), the same value the desk used, and the held two use HOLD 1, the held recipe of D4 and D5.
 
-BUBBLE's new three:
+CONCH's presets follow the same rule (`NacreConchKeptTest`): each is one of the renders the owner kept, sample for sample. The 4 s breath is HOLD `NacreConch.holdFor(4f)` (about .267), the value the desk used, and the held two use HOLD 1, the held recipe of O4 and O5.
+
+BUBBLE's four presets were heard together in round `nacre-voices-3` (Q3: the four at C3, 3.5 s apart, as Q1 and Q2 were) and kept; their renders are pinned in `NacreVoicesTest`.
+
+BUBBLE's other three:
 - **Soft Bubble:** a light touch. A shallower, rounder bloop with less octave and breath, and a little more bloom.
 - **Bubble Stream:** DUET .55 spreads the two harps' bubbles apart into a trickle, in moving, wetter water.
 - **Bubble Burst:** a firm touch. The deepest bloop, with the most octave and breath, and a long bloom.
@@ -162,12 +211,15 @@ Measured at C3 against Bubble Drop (software only): Soft Bubble is 3.6 dB darker
   - On the phone, `NacreSynthScreenTest` reaches each voice and its presets (not yet run on a device).
 - **BUBBLE's pitch** is measured on the direct bass harp (0.05–0.6 s): its tone decays within about a second, so in the full mix the delayed water returns, copies of the same tone, pull the spectral peak. At C3 the mix reads −16 cents while the bass harp, the sympathetic strings and the BLOOM-0 mix read −0.1, −0.1 and +1.1.
 - **GROTTO** (`NacreGrottoTest`, `NacreHoldRefusalTest`, `NacreGrottoKeptTest`): the held loop closes under the house seam at C2, C3 and C4, soft and hard and at the TOUCH × DUET corners, with no wrap step bigger than the loop's own; every note from C2 to C4 settles within 0.05 cents of its plan; the bow speaks in Helmholtz motion (one slip a period); a finite note is the held note until the lift; DUET 0 has no glints; the sympathetic strings and the water stay within 18 dB of the bow on the loop; models 1 to 7 refuse HOLD in the renderer, the patch and JSON.
+- **CONCH** (`NacreConchTest`, `NacreHoldRefusalTest`, `NacreConchKeptTest`): the held loop closes without a click from C2 to C5, soft and hard and at the TOUCH × DUET corners; the loop played eight times end to end is the real next lap; every note settles in tune, both shells, at its own octave; a finite note is the held note until the breath fades; DUET moves the upper shell's answer and, from .65, makes a whole-cycle beat; the sympathetic strings and the water are still heard under a held breath; velocity and TOUCH change the breath's colour, not only its level; the shells stay bounded; GROTTO's kept renders don't move.
 - **Kept renders,** pinned by SHA-256:
   - the 22 renders behind H1–H3 and L1–L3 (`nacre-voices-1`);
   - the eight HARMONICS and SHELL presets behind Q1 and Q2 (`nacre-voices-2`);
   - the renders behind U1–U3 (`nacre-voices-2`): eleven BUBBLE notes, through a saved model-7 recipe, and PEARL at C3 and C4.
+  - BUBBLE's four presets behind Q3 (`nacre-voices-3`).
   - every GROTTO render behind D1 to D10 (`nacre-grotto-1`): the finite notes, the held key and its loop, and each held setting's loop; and the four GROTTO presets against them.
-  - For all three rounds, a git-excluded scratch test re-rendered every desk clip and found it identical to the published WAV, byte for byte.
+  - every CONCH render behind O1 to O11 (`nacre-conch-1`): the finite notes, the held C3's key and its loop, each held setting's loop, the held C2 and C4, and O10's BORE, EMBOUCHURE, OBBLIGATO and BUBBLE references; and the four CONCH presets against them.
+  - For every round, a git-excluded scratch test re-rendered every desk clip and found it identical to the published WAV, byte for byte.
 
 ## Measured (C3, defaults, seed 7)
 
@@ -188,13 +240,12 @@ Measured at C3 against Bubble Drop (software only): Soft Bubble is 3.6 dB darker
 
 - **Heard:**
   - HARMONICS and SHELL: soft, medium and hard at C3; a phrase from C2 to C5; a side-by-side with PEARL at C3 and C4; and all eight presets at C3.
-  - BUBBLE: the same first three kinds of clip, at its default controls (Bubble Drop).
+  - BUBBLE: the same first three kinds of clip, at its default controls (Bubble Drop), and all four presets at C3 (Q3).
+  - GROTTO and CONCH: their rounds in full (see each voice above).
   - Other notes, touches and settings have not been heard.
-- **Not yet heard: three BUBBLE presets** (Soft Bubble, Bubble Stream, Bubble Burst). They pass in software, but no one has listened to them. A small follow-up round, `nacre-voices-3`, is proposed: one clip of the four BUBBLE presets at C3, 3.5 s apart, as Q1 and Q2 were. Nothing waits on it.
-- **GROTTO on the phone and the MPC:** the picker shows GROTTO after BUBBLE with HOLD, plays a held preview as a loop, and saves and recalls a held recipe (`NacreSynthScreenTest`, not yet run on a device). Not heard on a phone. No MPC check yet: the loop's wrap, release on key-up and MPC 2's mono-per-pad retrigger on a held pad. The CLI marks a held render's WAV as one whole `smpl` loop.
+- **GROTTO and CONCH on the phone and the MPC:** the picker shows GROTTO after BUBBLE and CONCH after GROTTO, each with HOLD, plays a held preview as a loop, and saves and recalls a held recipe (`NacreSynthScreenTest`, not yet run on a device). Neither has been heard on a phone. No MPC check yet: the loop's wrap, release on key-up and MPC 2's mono-per-pad retrigger on a held pad. The CLI marks a held render's WAV as one whole `smpl` loop.
 - **Not built:**
-  - CONCH;
-  - a starter or kit for HARMONICS, SHELL, BUBBLE and GROTTO;
+  - a starter or kit for HARMONICS, SHELL, BUBBLE, GROTTO and CONCH;
   - velocity layers and round robin;
-  - keygroups (GROTTO's shared loop-zone route, or a NACRE maker that keeps the stroke, is the owner's call);
+  - keygroups (for GROTTO and CONCH, the shared loop-zone route, or a NACRE maker that keeps the stroke or breath, is the owner's call);
   - the spec's conch and cave venues.

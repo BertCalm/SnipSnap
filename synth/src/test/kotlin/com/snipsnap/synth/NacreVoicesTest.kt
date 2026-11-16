@@ -149,6 +149,27 @@ class NacreVoicesTest {
         assertEquals("3d7bd6ea34ccae95ad976e3140002aacc4b90a604f3861625a0ba5d9311649a4", hash(pearl(60, .8f)), "PEARL C4 moved")
     }
 
+    /**
+     * Round nacre-voices-3 (15 Nov 2026), KEEP, no notes. Q3 is BUBBLE's four presets at C3, 3.5 s apart: each
+     * preset's render, summed at its onset with no trim (peak .94) and written as 16-bit. A git-excluded scratch test
+     * rebuilt Q3 from these renders and matched the desk WAV byte for byte. Bubble Drop is also U1's hard C3.
+     */
+    @Test
+    fun `the renders the owner kept in nacre-voices-3 are unchanged`() {
+        val presets = mapOf(
+            "Bubble Drop" to "85752e096e6e5f026755f360f5de4b5fcd364623349706a560fba7aacbd80d6b",
+            "Soft Bubble" to "0d7e426aea204d251954b40d51426e167c2d2ac7a53a3b08db568ec7b325b5b2",
+            "Bubble Stream" to "2413fb15089d6701a0d71eedacc27d54c3e8705d95f9266ed6a8f71048019a9f",
+            "Bubble Burst" to "00fb93ed828e8b62c454df4af8d18f02a7c8ac01dbcffb27539308270d8a9414",
+        )
+        val kept = NacrePresets.forVoice(NacreVoice.BUBBLE)
+        assertEquals(presets.keys.toList(), kept.map { it.name })
+        for (p in kept) {
+            assertEquals(48, p.midi, "${p.name} was heard at C3")
+            assertEquals(presets.getValue(p.name), hash(p.render().samples), "${p.name} moved")
+        }
+    }
+
     @Test
     fun `each source is its own saved model and replays exactly from JSON`() {
         assertEquals(NacreSource.HARMONICS, NacreVoices.sourceFor(5))

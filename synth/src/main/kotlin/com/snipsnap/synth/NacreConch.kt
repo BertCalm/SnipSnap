@@ -191,6 +191,17 @@ internal object NacreConch {
         return BREATH_SECONDS_LOW + (BREATH_SECONDS_HIGH - BREATH_SECONDS_LOW) * (hold / .98f).coerceIn(0f, 1f)
     }
 
+    /**
+     * The HOLD that breathes a finite note for [seconds] before the fade ([breathSeconds]' inverse, in the same float
+     * arithmetic the nacre-conch-1 desk used for its 4 s breaths).
+     */
+    fun holdFor(seconds: Float): Float {
+        require(seconds in BREATH_SECONDS_LOW..BREATH_SECONDS_HIGH) {
+            "a finite CONCH breath is $BREATH_SECONDS_LOW to $BREATH_SECONDS_HIGH s, got $seconds"
+        }
+        return (seconds - BREATH_SECONDS_LOW) / (BREATH_SECONDS_HIGH - BREATH_SECONDS_LOW) * .98f
+    }
+
     /** The breath pressure, 0 the lightest and 1 the firmest: TOUCH and velocity together. */
     fun pressureFor(touch: Double, velocity: Float): Double = ((.30 + .70 * touch.pow(.8)) * (.40 + .60 * velocity)).coerceIn(0.0, 1.0)
 

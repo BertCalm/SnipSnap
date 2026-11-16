@@ -746,38 +746,39 @@ and the approved strum study by its published WAV hashes (`OsteriaStrumTest`).
 - **Overall: incomplete.** Round robin, a seamless HOLD, chord tools on real keys, device runs
   of the picker and hardware playback remain open.
 
-## NACRE (HARMONICS, SHELL, BUBBLE and GROTTO kept, 2026-11-15)
+## NACRE (HARMONICS, SHELL, BUBBLE and GROTTO kept 2026-11-15, CONCH kept 2026-11-16)
 
 NACRE had no section here. PEARL is its first voice: two plucked harps an octave apart in moving
 water, saved models 1 to 4, five factory presets and a FRESH TAPE velocity bank. See
-[NACRE](NACRE.md). HARMONICS (saved model 5), SHELL (saved model 6), BUBBLE (saved model 7) and
-GROTTO (saved model 8, a bowed bass string with a real held loop) are its second to fifth voices, in
-the SYNTH picker with four presets each. See [NACRE voices](NACRE_VOICES.md).
+[NACRE](NACRE.md). HARMONICS (saved model 5), SHELL (saved model 6), BUBBLE (saved model 7),
+GROTTO (saved model 8, a bowed bass string with a real held loop) and CONCH (saved model 9, a pair of
+blown shells with a real held loop) are its second to sixth voices, in the SYNTH picker with four
+presets each. See [NACRE voices](NACRE_VOICES.md).
 
 | Gate | Status | Evidence |
 |---|---|---|
-| Melodic: six voices with presets | Partial: five of six (PEARL, HARMONICS, SHELL, BUBBLE, GROTTO) | PEARL with five presets. The owner kept HARMONICS and SHELL on 2026-11-15 (nacre-voices-1, H1–H3 and L1–L3, all KEEP), then their eight presets and BUBBLE (nacre-voices-2, Q1, Q2 and U1–U3, all KEEP), then GROTTO (nacre-grotto-1, D1–D10, all KEEP). Every kept render is pinned (`NacreVoicesTest`, `NacreGrottoKeptTest`). Presets pass in software for the heard ones: PEARL's five, the eight HARMONICS and SHELL presets, Bubble Drop and all four GROTTO presets, each a kept render (Grotto Bow D1, Soft Grotto D2, Grotto Glints D6, Grotto Kelp D7). BUBBLE's other three presets (Soft Bubble, Bubble Stream, Bubble Burst) are not yet heard; a small round is proposed. CONCH is not built. |
+| Melodic: six voices with presets | Pass in software: six of six (PEARL, HARMONICS, SHELL, BUBBLE, GROTTO, CONCH) | PEARL with five presets. The owner kept HARMONICS and SHELL on 2026-11-15 (nacre-voices-1, H1–H3 and L1–L3, all KEEP), then their eight presets and BUBBLE (nacre-voices-2, Q1, Q2 and U1–U3, all KEEP), then BUBBLE's four presets (nacre-voices-3, Q3, KEEP), then GROTTO (nacre-grotto-1, D1–D10, all KEEP), and on 2026-11-16 CONCH (nacre-conch-1, O1–O11, all KEEP). Every kept render is pinned (`NacreVoicesTest`, `NacreGrottoKeptTest`, `NacreConchKeptTest`). Every preset of every voice is a heard, kept sound: PEARL's five, the eight HARMONICS and SHELL presets, BUBBLE's four, and GROTTO's and CONCH's four each, each a kept render (Grotto Bow D1, Soft Grotto D2, Grotto Glints D6, Grotto Kelp D7; Conch Breath O1, Soft Conch O2, Conch Lean O3, Conch Bloom O8). |
 | Melodic: playable keygroups | Not yet verified | No NACRE keygroups exist. |
-| Melodic: premade kit | Pass in software, PEARL only | The NACRE starter (`SynthKits.nacre()`) and the FRESH TAPE velocity bank (`NacreKitTest`, `NacreVelocityKitTest`). No kit uses HARMONICS, SHELL or BUBBLE. |
+| Melodic: premade kit | Pass in software, PEARL only | The NACRE starter (`SynthKits.nacre()`) and the FRESH TAPE velocity bank (`NacreKitTest`, `NacreVelocityKitTest`). No kit uses HARMONICS, SHELL, BUBBLE, GROTTO or CONCH. |
 | Melodic: chord-tool compatibility | Not yet verified | No chord mode; the spec's expanded voicing is not built. |
-| Articulation: HOLD | Pass in software on GROTTO (owner KEEP, nacre-grotto-1) | GROTTO's top HOLD step is a seamless loop of whole periods in whole frames, opening with NACRE's slow swell; it closes under the house seam at C2, C3 and C4 (`NacreGrottoTest`), and the owner kept the held attack, the loop eight times end to end and four held water settings (D4–D7). Below the top step HOLD sets a finite 2.5–8 s bow. By the owner's decision PEARL, HARMONICS, SHELL and BUBBLE stay finite and refuse HOLD (`NacreHoldRefusalTest`). Not yet checked on a phone or MPC. |
+| Articulation: HOLD | Pass in software on GROTTO and CONCH (owner KEEP, nacre-grotto-1 and nacre-conch-1) | GROTTO's and CONCH's top HOLD step is a seamless loop of whole periods in whole frames, opening with NACRE's slow swell. GROTTO's closes under the house seam at C2, C3 and C4 (`NacreGrottoTest`), and the owner kept the held attack, the loop eight times end to end and four held water settings (D4–D7). CONCH's closes at C2 to C5, both shells, with the DUET lean's whole-cycle beat (`NacreConchTest`), and the owner kept the held attack, the loop eight times end to end, held C2 and C4, three DUET settings and four held water settings (O3–O5, O7, O8). Below the top step HOLD sets a finite 2.5–8 s bow or breath. By the owner's decision PEARL, HARMONICS, SHELL and BUBBLE stay finite and refuse HOLD (`NacreHoldRefusalTest`). Not yet checked on a phone or MPC. |
 | Articulation: STRUM | Pass in software | The paired strum (DUET sets the answer and, at .65 and above, the crossing direction) is part of every voice. |
 | Percussion: roll or riser | Not applicable | A melodic engine. |
 | Drums: genre kits | Not applicable | A melodic engine. |
-| Velocity: rendering | Pass in software; partly heard | PEARL: contact soft and medium layers kept on 2026-11-13 (`nacre-strike-1`). HARMONICS, SHELL and BUBBLE: a softer strike rings fewer upper strings, shells or bubbles and is darker by at least 1 dB per step (`NacreVoicesTest`); the owner kept their soft, medium and hard clips (H1, L1, U1). GROTTO: a harder note presses harder on a brighter string and is brighter, not only louder (`NacreGrottoTest`); the owner kept its soft, medium and hard C2 (D8). |
-| Velocity: saving, playback, export | Pass in software, PEARL only | The FRESH TAPE bank replays every layer (`NacreVelocityKitTest`). No HARMONICS, SHELL or BUBBLE layers exist. |
+| Velocity: rendering | Pass in software; partly heard | PEARL: contact soft and medium layers kept on 2026-11-13 (`nacre-strike-1`). HARMONICS, SHELL and BUBBLE: a softer strike rings fewer upper strings, shells or bubbles and is darker by at least 1 dB per step (`NacreVoicesTest`); the owner kept their soft, medium and hard clips (H1, L1, U1). GROTTO: a harder note presses harder on a brighter string and is brighter, not only louder (`NacreGrottoTest`); the owner kept its soft, medium and hard C2 (D8). CONCH: a harder breath is brighter and breathier, not only louder (`NacreConchTest`); the owner kept its soft, medium and hard C3 (O9). |
+| Velocity: saving, playback, export | Pass in software, PEARL only | The FRESH TAPE bank replays every layer (`NacreVelocityKitTest`). No HARMONICS, SHELL, BUBBLE, GROTTO or CONCH layers exist. |
 | Round robin | Not yet verified | No NACRE round robin exists. |
-| Picker | Not yet verified on a device | PEARL, HARMONICS, SHELL, BUBBLE and GROTTO are in the SYNTH picker; `NacreSynthScreenTest` reaches each voice and its presets, shows HOLD only on GROTTO and saves and recalls a held GROTTO preset. None of it has run on a device. |
+| Picker | Not yet verified on a device | PEARL, HARMONICS, SHELL, BUBBLE, GROTTO and CONCH are in the SYNTH picker; `NacreSynthScreenTest` reaches each voice and its presets, shows HOLD only on GROTTO and CONCH, and saves and recalls a held GROTTO preset and a held CONCH preset. None of it has run on a device. |
 | Hardware playback | Not verified | No phone timing, MPC load or MPC velocity check is recorded. |
 
 - **Sound character: partly accepted.** The owner heard PEARL's first renderer as pleasant and
   the timed returns as "Much better"; kept CONTACT .35 and .8 and the strike-shaped layers; and
   kept HARMONICS, SHELL, BUBBLE and GROTTO as new NACRE voices, and the eight HARMONICS and SHELL
-  presets, on 2026-11-15. Three BUBBLE presets and model 3's full range (see [NACRE](NACRE.md)) still await
-  a listen.
-- **Overall: incomplete.** A sixth voice (CONCH), a listen to three BUBBLE presets, keygroups
-  (GROTTO's held loop included), round robin, chord tools, device runs and hardware playback,
-  including GROTTO's loop on an MPC, remain open.
+  presets and BUBBLE's four, on 2026-11-15, and CONCH on 2026-11-16. Model 3's full range (see
+  [NACRE](NACRE.md)) still awaits a listen.
+- **Overall: incomplete.** Keygroups (GROTTO's and CONCH's held loops included), round robin, chord
+  tools, device runs and hardware playback, including GROTTO's and CONCH's loops on an MPC, remain
+  open.
 
 ## CLUTTER (round 2, 2026-11-14: four genre kits on the shelf, audition approved; round 3 roster, round 4 picker; hardware open)
 
