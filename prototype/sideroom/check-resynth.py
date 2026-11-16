@@ -7,7 +7,7 @@ p=Path(sys.argv[1]);model=json.loads((p/'synthesis-model.json').read_text())
 def forbidden(*args,**kwargs):raise AssertionError('Runtime attempted to read an audio file')
 resynth.wavfile.read=forbidden
 report={}
-for voice in resynth.VOICES:
+for voice in model["voices"]:
  levels=[]
  for level in range(3):
   hits=[resynth.render(model,voice,level,rr)[0] for rr in range(3)]

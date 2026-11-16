@@ -40,7 +40,7 @@ def analyze(root):
    attack=np.array([np.interp(attack_times,at,row) for row in attack_mag])
    # Stable narrow spectral peaks from a longer window describe metallic modes.
    modes=[]
-   if voice in ('hat','openhat'):
+   if voice in ('hat','openhat','ride','crash'):
     spectra=[]
     for x in hits:
      mf,mt,mz=signal.stft(x,RATE,nperseg=8192,noverlap=6144)
@@ -73,7 +73,7 @@ def render(model,voice,level,take):
  mag=np.array([np.interp(f/pitch,m['frequencies'],col,right=0) for col in env.T]).T
  tilt=(np.maximum(f,100)/2000)**r.uniform(-.035,.035);mag*=tilt[:,None]
  phase=z/np.maximum(abs(z),1e-15)
- if voice in ('kick','snare'):
+ if voice in ('kick','snare','tom','floor'):
   # Low-frequency resonances get coherent oscillator phase, not fresh random phase each frame.
   # Fractional peak refinement reduces bin-pitched ringing; high bands remain stochastic.
   average=np.mean(mag[:,(t>.015)&(t<.18)]**2,axis=1)
@@ -87,7 +87,7 @@ def render(model,voice,level,take):
     phase[k]=np.exp(1j*(2*np.pi*hz*t+initial+(k-p)*np.pi))
  _,x=signal.istft(mag*phase,RATE,nperseg=NFFT,noverlap=NFFT-HOP)
  x=x[:n]
- if voice in ('hat','openhat') and m.get('metal_modes'):
+ if voice in ('hat','openhat','ride','crash') and m.get('metal_modes'):
   # Explicit inharmonic oscillators supply persistent metal; retain the stochastic wash.
   tm=np.arange(n)/RATE;metal=np.zeros(n)
   for mode in m['metal_modes']:

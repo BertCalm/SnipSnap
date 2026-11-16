@@ -1,6 +1,6 @@
 # SIDEROOM: five acoustic drum-kit studies
 
-Status: R1 rejected by the owner for drum-machine character. R2 recorded acoustic core was approved for sound. R3 tests sample-derived synthesis against it. No SnipSnap shelf, native serialization or hardware completion claim. Source inspected at `4ecab4c9f`; isolated implementation starts from `e7ccfef58` on `claude/sideroom-study`.
+Status: R1 rejected by the owner for drum-machine character. R2 recorded acoustic core was approved for sound. R4 synthesis was approved for sound. R5 extends that core to an eight-instrument listening kit. No SnipSnap shelf, native serialization or hardware completion claim. Source inspected at `4ecab4c9f`; isolated implementation starts from `e7ccfef58` on `claude/sideroom-study`.
 
 The characteristic gesture is **stick or beater contact → head/metal response → wire or shell after-sound → damping to silence**. Each kit chooses a different physical balance within that gesture.
 
@@ -115,3 +115,16 @@ A second 256-sample analysis window captures the first 65 ms at 1 ms envelope la
 The site offers Refined synth, Previous synth and Acoustic with the same authored groove and complete grids. Each mode retains three levels and three takes; 108 WAV performances total. The same file/export checks pass, plus runtime audio-read isolation, determinism, meaningful normalized take differences and simulated player checks. Actual browser/device audio remains unverified by automation.
 
 Measured: 2,616,902-byte parameter model, Python median render 27.72 ms and maximum 425.03 ms, with no peak safety attenuation required. Long open-hat tails cost more; pre-rendered grids remain the proposed native cache strategy. Full-family and native gates remain open. This round tests texture development, not completion or an assertion of acoustic equivalence.
+
+
+## R5: eight-instrument Open Road kit
+
+The owner approved R4 and asked to continue on this path. R5 adds rack tom, floor tom, ride and crash using the same descriptor-driven synthesis. Core synth and acoustic files are copied byte-for-byte from R4; the core descriptor profiles are unchanged. The new source analysis uses the same pinned Virtuosity Drums CC0 repository. Toms use the mid microphone, adjacent dynamics 4–6, 9–11 and 14–16; ride/crash use overhead dynamics 1–3 with recorded RR 1–3. These are new targets awaiting approval, not a claim to reproduce the commercial song's exact kit.
+
+The drum-body phase treatment extends to toms. The forty-mode metallic oscillator/wash treatment extends to ride and crash. Source tails are bounded at four seconds for toms and ten for cymbals, with fifty-millisecond ending fades. Native rendering uses no source audio reads; this remains a Python spectral-synthesis prototype. Generated alternates and three measured velocity profiles exist for every new voice.
+
+The page exposes four pads at a time in Toms & cymbals / Approved core banks. The four-bar groove moves from hats to ride, then a tom fill and crash. A separate short fill provides a direct articulation comparison. These two example phrases do not close the eventual authored roll/riser or native articulation gates.
+
+Build: `python3 prototype/sideroom/expansion.py R4_OUTPUT R5_OUTPUT`; copy `expanded.html` as `index.html` and `expanded.js`. Tests: `check-acoustic.py OUTPUT`, `check-resynth.py OUTPUT` and `node prototype/sideroom/check-expanded-player.mjs OUTPUT`. The pinned source index is `expansion-sources.json`; downloaded FLAC Git blob hashes are verified by the shared acoustic fetcher and SHA256 provenance is retained.
+
+Verified: 144 WAV performances across synth and acoustic modes, all 72 core comparison files byte-identical to R4, monotonic velocity energy, generated take differences, deterministic rerenders, endpoint and peak bounds, complete eight-note SFZ velocity/RR mappings, ZIP byte equality, and simulated routing of every performance through both pad banks. Real browser/device/sampler audio remains unverified. Median new-voice Python render was 162.85 ms, maximum 427.46 ms. Native work needs cached banks; no native latency claim. Other genre kits, native shelf/save/playback/export and hardware gates remain open.
