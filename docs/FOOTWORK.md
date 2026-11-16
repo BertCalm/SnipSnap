@@ -263,3 +263,18 @@ human-weight model. The 36 gesture and 24 impact-contact cells pass source check
 new phrase peaks remain below 0.77. The same-gain comparison retains the added
 impact, with a separate energy-matched comparison for timbre. Street/Industrial
 remain unchanged. Native model/kit versions and outstanding gates remain unchanged.
+
+### Owner-reference isolated contact rebuild
+
+The owner reports that the preceding impact study still lacks weight/fullness
+and supplies five performance recordings. `prototype/footwork/tap_contact_fit/`
+measures all five, then fits two provisional contact groups from the solo clip.
+Fresh excitation drives one magnitude-fitted minimum-phase response per candidate;
+no reference PCM or recorded phase enters synthesis. Toe/heel names are intended
+pad roles, not verified labels for the reference events. Room and capture effects
+remain confounds. Six unused same-recording events provide a limited spectral
+comparison, not a realism pass. The owner-private page compares isolated reference,
+new and previous strikes at equal 120 ms energy and provides 3-velocity × 4-repeat
+strips. All 24 source/save-strip checks pass. No new groove or native release is
+introduced; the preferred Street/Industrial phrase audio is retained byte-for-byte.
+All unresolved source, kit-identity, performance and delivery gates remain open.
