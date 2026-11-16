@@ -13,8 +13,16 @@ object PrintedPads {
         "boardPad" in it || "aquariumPad" in it
     } ?: false
 
-    /** Existing board labels remain unchanged; Aquarium never invents an AMT readout. */
+    /**
+     * The printed pad's name as the copy draws it (EFFECT CHAIN, DREAMY SPACE: the owner's names,
+     * 2026-11-15). Aquarium never invents an AMT readout. Not for file names: [fileLabel].
+     */
     fun label(recipe: JsonValue.Obj?): String =
+        if (recipe?.entries?.containsKey("aquariumPad") == true) PadSheet.CHAIN_LABEL
+        else BoardSheet.read(recipe)?.type?.let(PadSheet::boardLabel) ?: "BOARD"
+
+    /** The word a printed pad's derived files carry (AQUARIUM, VELOUR_BLOOM): unchanged by any rename, so files keep their names. */
+    fun fileLabel(recipe: JsonValue.Obj?): String =
         if (recipe?.entries?.containsKey("aquariumPad") == true) "AQUARIUM"
         else BoardSheet.read(recipe)?.type?.name ?: "BOARD"
 

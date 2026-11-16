@@ -1160,4 +1160,163 @@ class ArrangerTest {
         assertEquals(SongPlan.MAX_SECTIONS, cut.plan.sections.size)
         assertEquals(3, cut.left)
     }
+
+    // ---- DROP: the last bar keeps only the kick, or the bed --------------------------------
+
+    private val dropBar = Mpc3Clip.PULSES_PER_BAR
+    private val dropS16 = Mpc3Clip.PULSES_PER_16TH
+
+    /** A kit with the kick, snare and closed hat of [model], and a 12 s PERC pad on slot 5 (note 40) that rings across any bar it is struck in. */
+    private fun dropModel(name: String): KitBuilderModel {
+        val m = model(name)
+        val rate = 44_100
+        m.assign(5, Snip(FloatArray(12 * rate) { 0.3f * sin(2 * PI * 220.0 * it / rate).toFloat() }, 1, rate), DrumClass.PERC)
+        m.save()
+        return m
+    }
+
+    /** Section "a": two bars, the kick on every bar's one; [extras] adds the long pad in bar one and a snare and a hat in bar two. Then "b": a kick on its downbeat. */
+    private fun dropSong(extras: Boolean, drop: Boolean, bass: Boolean = false, dropLast: Boolean = false): Arranger.Arrangement {
+        val notes = mutableListOf(Mpc3Note(36, 0, 0.9f), Mpc3Note(36, dropBar, 0.9f))
+        if (extras) notes += listOf(Mpc3Note(40, 0, 0.9f), Mpc3Note(37, dropBar + 4 * dropS16, 0.9f), Mpc3Note(38, dropBar + 8 * dropS16, 0.9f))
+        val a = Arranger.Section("a", Mpc3Clip("A", 2, notes), 1, "r", bass = bass, pullUp = false, drop = drop)
+        val b = Arranger.Section("b", Mpc3Clip("B", 1, listOf(Mpc3Note(36, 0, 0.9f))), 1, "r", bass = false, pullUp = false, drop = dropLast)
+        return Arranger.Arrangement("Drop", 0, listOf(a, b))
+    }
+
+    private fun window(mix: Arranger.Mix, from: Int, to: Int) = mix.snip.samples.copyOfRange(from * 2, to * 2)
+
+    private fun dropFrames(m: KitBuilderModel, mix: Arranger.Mix): Pair<Int, Int> {
+        val fpp = 60.0 / com.snipsnap.kit.KitPreview.playedBpm(m.kit.tempoBpm) * com.snipsnap.kit.KitPreview.RATE / 960
+        return (dropBar * fpp).roundToInt() to mix.sectionStarts[1]
+    }
+
+    private fun energy(x: FloatArray): Double = x.sumOf { it.toDouble() * it }
+
+    @Test
+    fun `DROP keeps only the kick in the last bar, and no tail from before it rings in`() {
+        val m = dropModel("DropKick")
+        val full = Arranger.mixdown(m.kit, m.kitDir, dropSong(extras = true, drop = true))
+        val kickOnly = Arranger.mixdown(m.kit, m.kitDir, dropSong(extras = false, drop = true))
+        val (from, to) = dropFrames(m, full)
+        assertEquals(listOf("kick"), full.drops.map { it.kept })
+        // A hat, a snare, and a pad struck a whole bar earlier and still ringing: none of it in the bar. The same bar, bit for bit, as one that never had them.
+        assertTrue(window(full, from, to).contentEquals(window(kickOnly, from, to)), "only the kick is in the dropped bar")
+        assertTrue(energy(window(kickOnly, from, to)) > 1e-3, "and the kick is there")
+        // Nothing outside the bar changes: before it, the song is the song without DROP (bar one's pad and all, up to the ramp into the cut)...
+        val plainFull = Arranger.mixdown(m.kit, m.kitDir, dropSong(extras = true, drop = false))
+        val ramp = 220
+        assertTrue(window(full, 0, from - ramp).contentEquals(window(plainFull, 0, from - ramp)), "the bars before the drop are as they were")
+        // ...and after it, the pad's 12 s tail does not come back under section b: it is what a song without the pad plays.
+        assertTrue(window(full, to, full.snip.frameCount).contentEquals(window(kickOnly, to, kickOnly.snip.frameCount)), "no tail from before the drop returns after it")
+        // Control: without DROP the same window does hold them.
+        val plain = Arranger.mixdown(m.kit, m.kitDir, dropSong(extras = true, drop = false))
+        assertTrue(energy(window(plain, from, to)) > 2 * energy(window(full, from, to)), "the extras are audible when DROP is off")
+        assertTrue(plain.drops.isEmpty())
+    }
+
+    @Test
+    fun `DROP never lengthens the section, and the next downbeat lands on the same sample`() {
+        val m = dropModel("DropGrid")
+        for (dropLast in listOf(false, true)) {
+            val plain = Arranger.mixdown(m.kit, m.kitDir, dropSong(extras = true, drop = false))
+            val dropped = Arranger.mixdown(m.kit, m.kitDir, dropSong(extras = true, drop = true, dropLast = dropLast))
+            assertEquals(plain.sectionStarts, dropped.sectionStarts)
+            assertEquals(plain.passes, dropped.passes)
+            assertEquals(plain.snip.frameCount, dropped.snip.frameCount, "the song is as long as it was")
+            // The kick on b's downbeat sounds from the sample it sounds from on its own; nothing before it in the dropped bar's last few ms.
+            val alone = Arranger.mixdown(m.kit, m.kitDir, Arranger.Arrangement("B", 0, listOf(dropSong(false, false).sections[1])))
+            val onset = (0 until alone.snip.frameCount).first { abs(alone.snip.samples[it * 2]) > 1e-4f }
+            val at = dropped.sectionStarts[1]
+            val first = (at - 200 until dropped.snip.frameCount).first { abs(dropped.snip.samples[it * 2]) > 1e-4f }
+            assertEquals(at + onset, first, "b's downbeat, sample for sample")
+        }
+    }
+
+    @Test
+    fun `DROP with the bed keeps only the bed, and the tail of an earlier bed note does not ring in`() {
+        val m = dropModel("DropBed")
+        val rate = 44_100
+        WavWriter.write(File(m.kitDir, "bass.wav"), Snip(FloatArray(12 * rate) { 0.4f * sin(2 * PI * 110.0 * it / rate).toFloat() }, 1, rate))
+        fun mixWith(bassClip: Mpc3Clip, extras: Boolean, drop: Boolean): Arranger.Mix {
+            AnswerStore.save(m.kitDir, AnswerStore.StoredAnswer(0, "Drop Answer", "bass.wav", bassClip))
+            return Arranger.mixdown(m.kit, m.kitDir, dropSong(extras = extras, drop = drop, bass = true))
+        }
+        // A one-bar line sounds in both bars of "a" (and its 12 s note from bar one rings into bar two). A two-bar line that holds a note in bar two only does not.
+        val everyBar = Mpc3Clip("Bass", 1, listOf(Mpc3Note(45, 0, 0.9f)))
+        val lastBarOnly = Mpc3Clip("Bass", 2, listOf(Mpc3Note(45, dropBar, 0.9f)))
+        val a = mixWith(everyBar, extras = true, drop = true)
+        val b = mixWith(lastBarOnly, extras = false, drop = true)
+        val (from, to) = dropFrames(m, a)
+        assertEquals(listOf("bed"), a.drops.map { it.kept })
+        assertTrue(window(a, from, to).contentEquals(window(b, from, to)), "the bed's own bar and nothing else: no kick, no pad, no tail of bar one's bass note")
+        assertTrue(energy(window(b, from, to)) > 1.0, "the bed is there")
+        // Control: without DROP, bar one's note still rings under bar two.
+        val plainA = mixWith(everyBar, extras = true, drop = false)
+        val plainB = mixWith(lastBarOnly, extras = false, drop = false)
+        assertTrue(!window(plainA, from, to).contentEquals(window(plainB, from, to)))
+        // Section a had BASS on, so it was not the kick that stayed.
+        assertTrue(energy(window(a, from, to)) > 0.0)
+    }
+
+    @Test
+    fun `DROP with no kick hit and no bed in the last bar leaves it alone and says why`() {
+        val m = dropModel("DropNone")
+        val noKick = Arranger.Section("a", Mpc3Clip("A", 2, listOf(Mpc3Note(36, 0, 0.9f), Mpc3Note(38, dropBar, 0.9f))), 1, "r", bass = false, pullUp = false, drop = true)
+        val song = Arranger.Arrangement("D", 0, listOf(noKick, dropSong(false, false).sections[1]))
+        val dropped = Arranger.mixdown(m.kit, m.kitDir, song)
+        val plain = Arranger.mixdown(m.kit, m.kitDir, song.copy(sections = song.sections.map { it.copy(drop = false) }))
+        assertTrue(dropped.snip.samples.contentEquals(plain.snip.samples), "the bar is as it was")
+        assertEquals(listOf(null), dropped.drops.map { it.kept })
+        assertTrue(dropped.drops.single().reason.contains("left as it is"), dropped.drops.single().reason)
+    }
+
+    @Test
+    fun `a pull-up into the next section takes the boundary from a DROP in a hand-edited song`() {
+        val m = dropModel("DropClash")
+        val s = dropSong(extras = true, drop = true)
+        val clash = s.copy(sections = listOf(s.sections[0], s.sections[1].copy(pullUp = true)))
+        val withDrop = Arranger.mixdown(m.kit, m.kitDir, clash)
+        val without = Arranger.mixdown(m.kit, m.kitDir, clash.copy(sections = clash.sections.map { it.copy(drop = false) }))
+        assertTrue(withDrop.snip.samples.contentEquals(without.snip.samples), "the pull-up plays, the drop does not")
+        assertEquals(null, withDrop.drops.single().kept)
+    }
+
+    @Test
+    fun `DROP is deterministic, and the plan carries it through resolve and back`() {
+        val m = dropModel("DropPlan")
+        val a = Arranger.mixdown(m.kit, m.kitDir, dropSong(extras = true, drop = true))
+        val b = Arranger.mixdown(m.kit, m.kitDir, dropSong(extras = true, drop = true))
+        assertTrue(a.snip.samples.contentEquals(b.snip.samples))
+        for (seed in listOf(3, 11)) {
+            val seeded = Arranger.toPlan(Arranger.arrange(m.kit, m.kitDir, seed = seed)).withDrop(1, true)!!.withDrop(2, true)!!
+            val x = Arranger.mixdown(m.kit, m.kitDir, Arranger.resolve(m.kit, m.kitDir, seeded).arrangement)
+            val y = Arranger.mixdown(m.kit, m.kitDir, Arranger.resolve(m.kit, m.kitDir, seeded).arrangement)
+            assertTrue(x.snip.samples.contentEquals(y.snip.samples), "seed $seed: the same plan with DROP is the same audio")
+            assertEquals(x.drops, y.drops)
+        }
+        val plan = Arranger.toPlan(Arranger.arrange(m.kit, m.kitDir, seed = 0)).withDrop(1, true)!!
+        val resolved = Arranger.resolve(m.kit, m.kitDir, plan).arrangement
+        assertEquals(plan.sections.map { it.drop }, resolved.sections.map { it.drop })
+        assertEquals(plan.sections.map { it.drop }, Arranger.toPlan(resolved).sections.map { it.drop })
+        // A section planned again after a refusal keeps its drop too.
+        val gone = SongPlan(0, listOf(PlanSection("theme", "gone-clip", drop = true), PlanSection("reprise", ClipRef.CAPTURED)))
+        assertTrue(Arranger.resolve(m.kit, m.kitDir, gone).arrangement.sections[0].drop)
+    }
+
+    @Test
+    fun `the dropped bar is exactly one bar long, and a kick ringing past it stops at its end`() {
+        val m = dropModel("DropPure")
+        val bpm = com.snipsnap.kit.KitPreview.playedBpm(m.kit.tempoBpm)
+        val frames = (dropBar * 60.0 / bpm * com.snipsnap.kit.KitPreview.RATE / 960).roundToInt()
+        // A kick on the bar's last 16th, whose body is longer than the 16th left.
+        val bar = Arranger.dropBar(m.kit, m.kitDir, Arranger.DropKeeps.KICK, listOf(Mpc3Note(36, 15 * dropS16, 1f), Mpc3Note(38, 0, 1f)), emptyList(), null, dropBar, frames, bpm)
+        assertEquals(frames, bar.frameCount)
+        assertEquals(0f, bar.samples[(frames - 1) * 2], 0.05f, "ramped down into the bar's end")
+        // The hat that was not a kick is not in it; the same bar from the kick alone is the same audio.
+        val kickAlone = Arranger.dropBar(m.kit, m.kitDir, Arranger.DropKeeps.KICK, listOf(Mpc3Note(36, 15 * dropS16, 1f)), emptyList(), null, dropBar, frames, bpm)
+        assertTrue(bar.samples.contentEquals(kickAlone.samples))
+        val kickFrame = (15 * dropS16 * 60.0 / bpm * com.snipsnap.kit.KitPreview.RATE / 960).roundToInt()
+        assertTrue(energy(bar.samples.copyOfRange(0, (kickFrame - 1) * 2)) < 1e-12, "silent before the kick")
+    }
 }

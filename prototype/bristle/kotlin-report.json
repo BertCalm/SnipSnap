@@ -1,0 +1,26 @@
+{
+  "A": {
+    "raw_relative_error_db": -128.34704590947484,
+    "raw_max_abs_error": 1.713183207519009e-06,
+    "soft_hard_centroid_ratio": 0.9150756876378581,
+    "range_soft_hard_centroid_ratio": [
+      0.8887552635495195,
+      0.9287949802786285
+    ],
+    "all_25_notes_rms_rises_with_touch": true
+  },
+  "B": {
+    "raw_relative_error_db": -126.12453748436819,
+    "raw_max_abs_error": 2.924503589248062e-06,
+    "soft_hard_centroid_ratio": 0.8746655339891581,
+    "range_soft_hard_centroid_ratio": [
+      0.8445271195705724,
+      0.8887215996552148
+    ],
+    "all_25_notes_rms_rises_with_touch": true
+  },
+  "workstation_median_ms": 66.122946,
+  "saved_recipe_replay": true,
+  "wav_4x_interpolated_peak_max": 0.8721063129388412,
+  "wav_max_abs_dc": 3.0031096097293084e-05
+}

@@ -70,6 +70,10 @@ class PlacesTest {
         assertEquals(Places.NO_KITS, Places.switcher(Project("P")))
         assertEquals("KEY Am · BANK B EMPTY · 3 VERSIONS", Places.thisKit("Am", bankBEmpty = true, versions = 3))
         assertEquals("NO KEY · BANK B IN USE · 1 VERSION", Places.thisKit(null, bankBEmpty = false, versions = 1))
+        // KIT TOOLS names the strip and the live effects only when they change what the pads play.
+        assertEquals("NO KEY · BANK B IN USE · 1 VERSION", Places.kitTools(false, false, null, bankBEmpty = false, versions = 1))
+        assertEquals("STRIP ON · LIVE EFFECTS ON · KEY Am · BANK B EMPTY · 3 VERSIONS", Places.kitTools(true, true, "Am", bankBEmpty = true, versions = 3))
+        assertEquals("KIT TOOLS", Places.KIT_TOOLS)
     }
 
     @Test

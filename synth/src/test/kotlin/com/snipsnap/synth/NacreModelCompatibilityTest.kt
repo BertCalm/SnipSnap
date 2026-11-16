@@ -148,9 +148,9 @@ class NacreModelCompatibilityTest {
 
     @Test
     fun `model validation keeps retained versions plus opt in contact and refuses unsupported versions`() {
-        // Models 5 and 6 are the HARMONICS and SHELL sources (NacreVoicesTest covers them).
-        for (model in listOf(1, 2, 3, 4, 5, 6)) assertTrue(NacreModels.supports(model), "lost saved model $model")
-        for (model in listOf(Int.MIN_VALUE, -1, 0, 7, Int.MAX_VALUE)) {
+        // Models 5, 6 and 7 are the HARMONICS, SHELL and BUBBLE sources (NacreVoicesTest covers them).
+        for (model in listOf(1, 2, 3, 4, 5, 6, 7)) assertTrue(NacreModels.supports(model), "lost saved model $model")
+        for (model in listOf(Int.MIN_VALUE, -1, 0, 8, Int.MAX_VALUE)) {
             assertFalse(NacreModels.supports(model), "accepted unsupported model $model")
         }
         assertFailsWith<IllegalArgumentException> {

@@ -24,6 +24,7 @@ import com.snipsnap.kit.RobinSettings
 import com.snipsnap.kit.isRobinChain
 import com.snipsnap.shell.BoardSheet
 import com.snipsnap.shell.Copy
+import com.snipsnap.shell.EffectsMenu
 import com.snipsnap.shell.KitBuilderModel
 import com.snipsnap.shell.PadBanks
 import com.snipsnap.shell.PadSheetPage
@@ -198,8 +199,9 @@ class PadSheetRobinTest : ComposeScreenTest() {
         m.save()
 
         show(KitShelf.Entry(entry.dir, KitStore.load(entry.dir)), openBox = "TREATMENT")
-        // KEEP is the board card's, on EFFECTS.
+        // KEEP is the board card's, on EFFECTS, with the buttons under the effects list (direction B, 2026-11-15).
         activate(Copy.PAD_EFFECTS_DOOR)
+        activate("EXPAND ${EffectsMenu.BUTTONS_HEADING}")
         assertFalse("no refusal text on a robin pad", hasText("Undo round-robin", substring = true))
         assertFalse("KEEP is enabled", isDisabled("KEEP"))
         activate("KEEP")

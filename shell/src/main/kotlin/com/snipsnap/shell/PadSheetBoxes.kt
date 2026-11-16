@@ -27,7 +27,7 @@ object PadSheetBoxes {
     enum class Box(val legend: String) {
         TREATMENT("EFFECTS"),
         SHAPE("SHAPE"),
-        OUTSIDE("RE-AMP AND ROOM"),
+        OUTSIDE("SPEAKER AND ROOM"),
         MUTATE("COMBINE SOUNDS"),
         MAKE("MAKE FROM THIS PAD"),
     }
@@ -46,14 +46,14 @@ object PadSheetBoxes {
         Box.MAKE -> PadSheetPage.EDITOR
     }
 
-    /** What the TREATMENT strip reads when the pad carries no treatment: the rows' first words. */
-    const val TREATMENT_HOLDS = "CRUSH, TAPE, DIRT, PEDALS"
+    /** What the TREATMENT strip reads when the pad carries no treatment: the effects list's first names (START HERE). */
+    const val TREATMENT_HOLDS = "PUNCH, HARD CLIP, ROOM REVERB AND MORE"
 
     /** What the SHAPE strip reads when the pad sets no shape field: the four knobs. */
     const val SHAPE_HOLDS = "ATTACK, DECAY, CUTOFF, RESONANCE"
 
     /** What the OUTSIDE strip reads when the pad has made no trip: the card's two moves. */
-    const val OUTSIDE_HOLDS = "RE-AMP, ROOM"
+    const val OUTSIDE_HOLDS = "THROUGH SPEAKER, REAL ROOM"
 
     /** One closed line and whether the pad carries anything from that bench ([text] is for the eye only). */
     data class Line(val text: String, val carried: Boolean)
@@ -70,7 +70,9 @@ object PadSheetBoxes {
     fun treatment(applied: PadSheet.Applied?): String = appliedTreatment(applied) ?: TREATMENT_HOLDS
 
     private fun appliedTreatment(applied: PadSheet.Applied?): String? = applied?.let {
-        "${(it.segment ?: it.treatment.name).uppercase(Locale.ROOT)} · ${(it.amount * 100).roundToInt()}%"
+        // The drawn word (QUICK ECHO), never the id (SLAP): the strip says what the list says.
+        val word = it.segment?.let(PadSheet::displayLabel) ?: it.treatment.name.uppercase(Locale.ROOT)
+        "$word · ${(it.amount * 100).roundToInt()}%"
     }
 
     /**
@@ -80,10 +82,11 @@ object PadSheetBoxes {
      * when even the words would not.
      */
     fun pedals(picks: List<com.snipsnap.synth.PedalBoard.Pick>): String {
-        picks.singleOrNull()?.let { return "${it.entry.word} · ${(it.amount * 100).roundToInt()}%" }
-        val full = picks.joinToString(" · ") { "${it.entry.word} ${(it.amount * 100).roundToInt()}%" }
+        fun shown(pick: com.snipsnap.synth.PedalBoard.Pick) = PadSheet.displayLabel(pick.entry.word)
+        picks.singleOrNull()?.let { return "${shown(it)} · ${(it.amount * 100).roundToInt()}%" }
+        val full = picks.joinToString(" · ") { "${shown(it)} ${(it.amount * 100).roundToInt()}%" }
         if (full.length <= SUMMARY_CHARS) return full
-        val words = picks.joinToString(" · ") { it.entry.word }
+        val words = picks.joinToString(" · ") { shown(it) }
         return if (words.length <= SUMMARY_CHARS) words else "${picks.size} PEDALS"
     }
 
@@ -178,7 +181,7 @@ object PadSheetBoxes {
     }
 
     /**
-     * The closed line of the editor's `VARIATIONS ▸` door: what is inside. MUTATE is what the screen holds,
+     * The closed line of the editor's `MIX WITH ANOTHER SOUND ▸` door: what is inside. MUTATE is what the screen holds,
      * so it reads what MUTATE has done to the pad ("MUTATE · ROOM × FUNK ROOM"), or what it can do.
      */
     fun variationsLine(pad: KitPad): String {
@@ -188,10 +191,10 @@ object PadSheetBoxes {
     }
 
     /** What the EFFECTS door reads when the pad carries no treatment, shape or trip: the three benches on the screen. */
-    const val EFFECTS_HOLDS = "EFFECTS, SHAPE, RE-AMP AND ROOM"
+    const val EFFECTS_HOLDS = "EFFECTS, SHAPE, SPEAKER AND ROOM"
 
     /** What the VARIATIONS door reads when the pad carries no mutate: what the screen holds. */
-    const val MUTATE_OFFERS = "MIX WITH ANOTHER SOUND"
+    const val MUTATE_OFFERS = "LAYER, JOIN, BLEND, BORROW TONE AND MORE"
 
     /** "CRUSH · 35%" read as the door says it, "CRUSH 35%": a name, the joint, a percentage that ends the strip. */
     private val AMOUNT_JOINT = Regex("""^(.*) · (\d+%)$""")
@@ -202,8 +205,8 @@ object PadSheetBoxes {
 
     /** Every strip at once, in [ORDER], with whether the pad carries anything from that bench. */
     fun lines(pad: KitPad, outsideStage: String?): Map<Box, Line> {
-        val treatment = AquariumPadSheet.read(pad.recipe)?.let { "AQUARIUM" }
-            ?: BoardSheet.read(pad.recipe)?.let { "${it.type.name} · ${(it.amount * 100).roundToInt()}%" }
+        val treatment = AquariumPadSheet.read(pad.recipe)?.let { PadSheet.CHAIN_LABEL }
+            ?: BoardSheet.read(pad.recipe)?.let { "${PadSheet.boardLabel(it.type)} · ${(it.amount * 100).roundToInt()}%" }
             ?: pad.recipe?.takeIf(PrintedPads::has)?.let { "${PrintedPads.label(it)} · CHECK RECIPE" }
             ?: PadSheet.readPedals(pad.recipe)?.let { PedalSlate.audible(it.picks) }?.takeIf { it.isNotEmpty() }?.let(::pedals)
             ?: appliedTreatment(PadSheet.read(pad.recipe))

@@ -22,7 +22,7 @@ class NacreVelocityKitTest {
         val pads = SynthKits.nacreVelocity().map { requireNotNull(it) }
         assertEquals(16, pads.size)
         assertEquals(16, pads.map { it.displayName }.distinct().size)
-        val starts = NacrePresets.all().associateBy { it.name }
+        val starts = NacrePresets.forVoice(NacreVoice.PEARL).associateBy { it.name }
         val names = List(8) { "Pearl Close" } + List(4) { "Coral Reply" } + List(4) { "Kelp Passage" }
         val notes = listOf(48, 51, 53, 55, 58, 60, 63, 65, 48, 51, 55, 60, 48, 51, 55, 60)
         val velocities = listOf(.30f, .65f, 1f)
@@ -104,8 +104,8 @@ class NacreVelocityKitTest {
 
     @Test
     fun `complete layer metadata keeps the exact long seed and owns its control maps`() {
-        val controls = NacrePresets.all().first().macros.toMutableMap()
-        val hard = NacrePresets.all().first().copy(name = "Long seed", midi = 60,
+        val controls = NacrePresets.forVoice(NacreVoice.PEARL).first().macros.toMutableMap()
+        val hard = NacrePresets.forVoice(NacreVoice.PEARL).first().copy(name = "Long seed", midi = 60,
             seed = Long.MAX_VALUE, macros = controls)
         val bank = NacreVelocityKits.recipeFor(hard)
         controls["VENUE"] = 1f
