@@ -167,9 +167,17 @@ object Terra {
      * its strike pulse with less grit, and drives the buzz and the cavity
      * less. Full velocity (the default) is TERRA's render, bit for bit; the
      * factory sound is the hard hit.
+     *
+     * [take] is which hit of a re-struck run this is: take 0 (the default)
+     * is this render, bit for bit; a later take re-seeds every noise the
+     * voice draws (grit, smack, snap, tick, thud, wires, buzz, clack, the
+     * fitted drums' residual) and leaves the drum itself as it is
+     * ([Restrike], [TerraRoundRobinKits]).
      */
-    fun render(voice: TerraVoice, macros: Map<String, Float> = emptyMap(), velocity: Float = 1f): Snip =
-        renderAt(voice, macros, velocity, inputsFor = null)
+    fun render(voice: TerraVoice, macros: Map<String, Float> = emptyMap(), velocity: Float = 1f, take: Int = 0): Snip {
+        require(take >= 0) { "a TERRA take is 0 or more, got $take" }
+        return renderAt(voice, macros, velocity, take, inputsFor = null)
+    }
 
     /** Which hit of a re-struck run ([Restrike]): take 0 is today's seeds; any other re-seeds the strike pulse's grit and the buzz. */
     private fun seedOf(seed: Int, take: Int): Int = if (take == 0) seed else Dsp.seedFor("TERRA", seed, take)
@@ -301,6 +309,23 @@ object Terra {
         require(inputs?.pitch == null) { "$voice has no droop line for a pitch curve to bend" }
         if (fitted) return TerraFitted.render(voice, m, rate, velocity, seedOf(noise, take), inputs?.level, headOnly)
         return TerraHands.render(voice, m, rate, velocity, structure, seedOf(noise, take), inputs?.level, headOnly)
+    }
+
+    /**
+     * A fitted hand drum ([FITTED_HANDS]: DJEMBE, DHOLAK, BAYAN, TUN) struck again as take [take] for
+     * TERRA ROUND ROBIN ([TerraRoundRobinKits]): [render]'s take, its residual wash re-drawn, but each
+     * band held to the energy the kept take 0 realised ([TerraFitted.render]'s keptNoiseSeed), so the
+     * grain changes and the stroke's balance does not. Take 0 is [render], bit for bit. [render]'s own
+     * later takes (re-struck chains) are unchanged.
+     */
+    internal fun renderFittedTake(voice: TerraVoice, macros: Map<String, Float>, velocity: Float, take: Int): Snip {
+        require(voice in FITTED_HANDS) { "$voice is not a fitted TERRA hand drum" }
+        require(take >= 0) { "a TERRA take is 0 or more, got $take" }
+        if (take == 0) return render(voice, macros, velocity)
+        val m = settled(voice, macros)
+        val rate = RATE * Dsp.OVERSAMPLE
+        val noise = handSeeds(voice).second
+        return Snip(TerraBox.finish(TerraFitted.render(voice, m, rate, velocity, seedOf(noise, take), keptNoiseSeed = noise), rate), channels = 1, sampleRate = RATE)
     }
 
     /**

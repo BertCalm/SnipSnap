@@ -1034,6 +1034,12 @@ object StarterKits {
             "Dholak and tabla TERRA kit: dholak booms, bayan bends, dayan strokes, a cajon backbeat and bells.",
             seeded = false,
         ) { com.snipsnap.synth.TerraGenreKits.build(com.snipsnap.synth.TerraGenreKits.Kit.PUNJAB) },
+        // Opt-in beside the kept TERRA starter, which stays as it is; appended after TERRA PUNJAB.
+        Starter(
+            com.snipsnap.synth.TerraRoundRobinKits.ID, "TERRA ROUND ROBIN",
+            "The sixteen TERRA pads with soft, medium and hard touch and four takes on each: a repeated hit lands a little differently every time.",
+            seeded = false,
+        ) { com.snipsnap.synth.TerraRoundRobinKits.build() },
     ))
 
     fun byId(id: String): Starter? = ALL.firstOrNull { it.id == id }
