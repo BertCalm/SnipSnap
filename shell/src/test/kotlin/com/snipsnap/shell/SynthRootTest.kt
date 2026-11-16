@@ -29,6 +29,7 @@ import com.snipsnap.synth.Keys
 import com.snipsnap.synth.MagnetPatch
 import com.snipsnap.synth.MagnetVoice
 import com.snipsnap.synth.NacrePresets
+import com.snipsnap.synth.NacreVoice
 import com.snipsnap.synth.Origami
 import com.snipsnap.synth.OrigamiPatch
 import com.snipsnap.synth.OrigamiVoice
@@ -93,17 +94,17 @@ class SynthRootTest {
             Presets.all() + listOf(
                 GyrePatch("Door", GyreVoice.FLICK, emptyMap()),
                 EmberPatch("Kick", EmberVoice.KICK, emptyMap()),
+                com.snipsnap.synth.ServoPatch("Kick", com.snipsnap.synth.ServoVoice.KICK, emptyMap()),
                 com.snipsnap.synth.KindredPatch.of(com.snipsnap.synth.KindredRecipes.ALL.first()),
                 MagnetPatch("Door", MagnetVoice.JANGLE, emptyMap()),
                 SilkPatch("Door", SilkVoice.OUD, emptyMap()),
                 SnapPatch("Door", SnapVoice.ORBIT, emptyMap(), IntArray(Snap.TABLE_SIZE) { (it * 255) / (Snap.TABLE_SIZE - 1) }),
                 TerraPatch("Door", TerraVoice.COMPOUND_MEMBRANE, emptyMap()),
-                com.snipsnap.synth.CalabashPatch("Door", com.snipsnap.synth.CalabashVoice.CONGA, emptyMap()),
                 ErosionPatch("Door", ErosionVoice.ARC),
                 CairnPatch("Door", CairnVoice.ANSWER, emptyMap()),
                 SplayPresets.all().first(),
                 WickPresets.all().first(),
-                NacrePresets.all().first(),
+                NacrePresets.forVoice(NacreVoice.PEARL).first(),
                 FerryPresets.all().first(),
                 *HalobarPresets.all().toTypedArray(),
                 HalobarPatch("Glockenspiel Study", HalobarVoice.GLOCKENSPIEL, emptyMap()),
@@ -112,7 +113,7 @@ class SynthRootTest {
         }
 
         /** The engines whose every patch answers null: drums, voice, scale rows, frequency sweeps. */
-        private val ROOTLESS = setOf("RIVET", "THUMP", "SKIN", "ONSET", "TERRA", "VOX", "SILK", "EROSION", "FIRED_BRONZE", "BACKWASH", "SCUFF", "KINDRED", "CLUTTER", "DRUMLINE", "EMBER", "CALABASH", "TEMPEST")
+        private val ROOTLESS = setOf("RIVET", "THUMP", "SKIN", "ONSET", "TERRA", "VOX", "SILK", "EROSION", "FIRED_BRONZE", "BACKWASH", "SCUFF", "KINDRED", "HICCUP", "CLUTTER", "DRUMLINE", "EMBER", "CALABASH", "SERVO", "TEMPEST")
 
         private fun cents(hz: Float, midi: Int): Float = 1200f * ln(hz / Keys.midiHz(midi)) / ln(2f)
     }

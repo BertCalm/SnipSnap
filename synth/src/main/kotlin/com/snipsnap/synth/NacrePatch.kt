@@ -17,10 +17,11 @@ data class NacrePatch(
     val midi: Int = Nacre.DEFAULT_MIDI,
     val velocity: Float = 1f,
     val seed: Long = Nacre.DEFAULT_SEED,
-    val model: Int = Nacre.MODEL_VERSION,
+    val model: Int = Nacre.defaultModel(voice),
 ) : Patch {
     init {
         require(NacreModels.supports(model)) { "unsupported nacre model $model" }
+        require(NacreModels.supports(voice, model)) { "NACRE ${voice.name} has no saved model $model" }
         Patches.validateMacros(this, NacreModels.macrosFor(voice, model))
         require(midi in Nacre.MIN_MIDI..Nacre.MAX_MIDI) {
             "NACRE midi must be ${Nacre.MIN_MIDI}..${Nacre.MAX_MIDI}"

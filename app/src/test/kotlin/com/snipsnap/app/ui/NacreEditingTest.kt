@@ -32,7 +32,7 @@ class NacreEditingTest {
 
     @Test
     fun keptContactRecipesProvideTheirSavedSliderValues() {
-        val kept = NacrePresets.all().filter { it.model == 4 }
+        val kept = NacrePresets.forVoice(NacreVoice.PEARL).filter { it.model == 4 }
         assertEquals(listOf(.35f, .8f), kept.map { it.macros.getValue("CONTACT") })
         for (patch in kept) {
             assertEquals(patch.macros, NacreEditing.controls(patch))
@@ -44,7 +44,7 @@ class NacreEditingTest {
 
     @Test
     fun scrambleRetainsContactAndAllControlsAcrossSavedRecipeRoundTrip() {
-        val patch = NacrePresets.all().last().copy(midi = 55, velocity = .43f,
+        val patch = NacrePresets.forVoice(NacreVoice.PEARL).last().copy(midi = 55, velocity = .43f,
             seed = Long.MAX_VALUE - 23)
         // The existing finite gesture scramble knows the original six controls only.
         val generated = Nacre.defaults(patch.voice) + mapOf("TOUCH" to .42f, "DUET" to .73f, "BLOOM" to .64f)
@@ -61,7 +61,7 @@ class NacreEditingTest {
 
     @Test
     fun legacyControlsReturnAfterContactAndNeverAcquireIgnoredContact() {
-        val contact = NacrePresets.all().last()
+        val contact = NacrePresets.forVoice(NacreVoice.PEARL).last()
         assertTrue(NacreEditing.macrosFor(contact).any { it.name == "CONTACT" })
         for (model in 1..3) {
             val legacy = NacrePatch("Saved legacy $model", NacreVoice.PEARL,

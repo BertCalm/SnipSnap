@@ -11,6 +11,8 @@ import com.snipsnap.kit.ArrangedPad
  * is just a WAV like any other. Every pad carries its [PadRecipe].
  */
 object SynthKits {
+    fun bristle(): List<ArrangedPad> = BristleKits.build()
+
     fun sporeStation(mutation: Boolean = false) = SporeStation.performance(mutation = mutation)
 
     /** The approved printed sixteen-pad cosmic drum bank. */

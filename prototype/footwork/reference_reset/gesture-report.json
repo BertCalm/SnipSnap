@@ -1,0 +1,61 @@
+{
+  "status": "gesture family awaiting owner listening; native delivery gates open",
+  "gain": 2.0,
+  "voices": {
+    "toe": {
+      "cells": 12,
+      "checksPassed": true,
+      "peak": 0.35145212977194823,
+      "meanRenderMsIncludingVerification": 59.53847716667345
+    },
+    "heel": {
+      "cells": 12,
+      "checksPassed": true,
+      "peak": 0.25434409552561543,
+      "meanRenderMsIncludingVerification": 65.78852920832408
+    },
+    "brush-forward": {
+      "cells": 12,
+      "checksPassed": true,
+      "peak": 0.20284847960033395,
+      "meanRenderMsIncludingVerification": 71.25325720835463
+    },
+    "brush-back": {
+      "cells": 12,
+      "checksPassed": true,
+      "peak": 0.28377088302665143,
+      "meanRenderMsIncludingVerification": 65.29784433329648
+    },
+    "shuffle": {
+      "cells": 12,
+      "checksPassed": true,
+      "peak": 0.28020849619990384,
+      "meanRenderMsIncludingVerification": 135.09402041669696
+    },
+    "flap": {
+      "cells": 12,
+      "checksPassed": true,
+      "peak": 0.39651277227006226,
+      "meanRenderMsIncludingVerification": 106.70528841668177
+    },
+    "roll": {
+      "cells": 12,
+      "checksPassed": true,
+      "peak": 0.383480287229473,
+      "meanRenderMsIncludingVerification": 913.1025324583485
+    },
+    "riser": {
+      "cells": 12,
+      "checksPassed": true,
+      "peak": 0.35287445259675365,
+      "meanRenderMsIncludingVerification": 1711.8348777917163
+    }
+  },
+  "cells": 96,
+  "normalizedPairCorrelations": {
+    "toe/heel": -0.02990235805632045,
+    "brush-forward/brush-back": -0.0020757657282545754,
+    "shuffle/flap": 0.32239876194809913
+  },
+  "phraseBpm": 116
+}

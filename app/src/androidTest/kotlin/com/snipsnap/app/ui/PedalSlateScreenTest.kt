@@ -26,6 +26,7 @@ import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitPad
 import com.snipsnap.kit.KitStore
 import com.snipsnap.shell.Copy
+import com.snipsnap.shell.EffectsMenu
 import com.snipsnap.shell.KitBuilderModel
 import com.snipsnap.shell.PadBanks
 import com.snipsnap.shell.PadSheet
@@ -122,8 +123,13 @@ class PedalSlateScreenTest : ComposeScreenTest() {
         waitFor("the pad sheet", timeoutMillis = 60_000) { hasText("PAD ${PadBanks.tag(1)}") }
         // The slate is on EFFECTS, one door from the editor.
         activate(Copy.PAD_EFFECTS_DOOR)
+        // The chip rows sit behind ALL AS BUTTONS under the effects list (direction B, 2026-11-15).
+        activate("EXPAND ${EffectsMenu.BUTTONS_HEADING}")
         waitFor("row seven's MORE", timeoutMillis = 60_000) { nodes(PadSheet.MORE).isNotEmpty() }
     }
+
+    /** The word a pedal is drawn and spoken as (the owner's names, 2026-11-15): the chip, its toasts and its AMT say this. */
+    private fun shown(word: String) = PadSheet.displayLabel(word)
 
     private fun padName(entry: KitShelf.Entry) = entry.kit.pad(1)!!.displayName
 
@@ -188,24 +194,24 @@ class PedalSlateScreenTest : ComposeScreenTest() {
         show(entry)
         val pad = padName(entry)
 
-        activate("DRIVE")
-        waitForToast(Copy.treated("DRIVE", pad))
-        activate("DELAY")
-        waitForToast(Copy.treated("DELAY", pad))
+        activate(shown("DRIVE"))
+        waitForToast(Copy.treated(shown("DRIVE"), pad))
+        activate(shown("DELAY"))
+        waitForToast(Copy.treated(shown("DELAY"), pad))
         assertEquals(listOf("driven", "delayed"), savedKeys(entry))
-        selected("DRIVE").assertIsSelected()
-        selected("DELAY").assertIsSelected()
-        selected("WAH").assertIsNotSelected()
+        selected(shown("DRIVE")).assertIsSelected()
+        selected(shown("DELAY")).assertIsSelected()
+        selected(shown("WAH")).assertIsNotSelected()
         selected(PadSheet.MORE).assertIsNotSelected()
         selected(PadSheet.NONE).assertIsNotSelected()
-        assertEquals("70%", amountText(Copy.pedalAmt("DELAY")))
+        assertEquals("70%", amountText(Copy.pedalAmt(shown("DELAY"))))
 
-        activate("DELAY")
-        waitForToast(Copy.pedalOff("DELAY", pad, "DRIVE"))
+        activate(shown("DELAY"))
+        waitForToast(Copy.pedalOff(shown("DELAY"), pad, shown("DRIVE")))
         assertEquals(listOf("driven"), savedKeys(entry))
-        selected("DELAY").assertIsNotSelected()
+        selected(shown("DELAY")).assertIsNotSelected()
 
-        activate("DRIVE")
+        activate(shown("DRIVE"))
         waitForToast(Copy.unTreated(pad))
         assertNull(KitStore.load(entry.dir).pad(1)?.recipe)
         assertTrue("the original, byte for byte", original.contentEquals(File(entry.dir, "hit1.wav").readBytes()))
@@ -217,18 +223,18 @@ class PedalSlateScreenTest : ComposeScreenTest() {
         val entry = kit()
         show(entry)
         val pad = padName(entry)
-        activate("DRIVE")
-        waitForToast(Copy.treated("DRIVE", pad))
-        activate("DELAY")
-        waitForToast(Copy.treated("DELAY", pad))
+        activate(shown("DRIVE"))
+        waitForToast(Copy.treated(shown("DRIVE"), pad))
+        activate(shown("DELAY"))
+        waitForToast(Copy.treated(shown("DELAY"), pad))
 
-        dialAmount(Copy.pedalAmt("DELAY"), 0f)
-        waitForToast(Copy.pedalOff("DELAY", pad, "DRIVE"))
+        dialAmount(Copy.pedalAmt(shown("DELAY")), 0f)
+        waitForToast(Copy.pedalOff(shown("DELAY"), pad, shown("DRIVE")))
         // Both were at 70: the stepper must reload for DRIVE rather than keep reading 0.
-        waitFor("AMT to name DRIVE", timeoutMillis = 60_000) { nodes(Copy.pedalAmt("DRIVE")).isNotEmpty() }
-        assertEquals("70%", amountText(Copy.pedalAmt("DRIVE")))
+        waitFor("AMT to name DRIVE", timeoutMillis = 60_000) { nodes(Copy.pedalAmt(shown("DRIVE"))).isNotEmpty() }
+        assertEquals("70%", amountText(Copy.pedalAmt(shown("DRIVE"))))
 
-        dialAmount(Copy.pedalAmt("DRIVE"), 1f)
+        dialAmount(Copy.pedalAmt(shown("DRIVE")), 1f)
         waitFor("DRIVE at 100 on disk", timeoutMillis = 60_000) {
             PedalSlate.boardOf(KitStore.load(entry.dir).pad(1)?.recipe)?.picks?.singleOrNull()?.amount == 1f
         }
@@ -239,15 +245,15 @@ class PedalSlateScreenTest : ComposeScreenTest() {
         val entry = kit()
         show(entry)
         val pad = padName(entry)
-        activate("WAH")
-        waitForToast(Copy.treated("WAH", pad))
+        activate(shown("WAH"))
+        waitForToast(Copy.treated(shown("WAH"), pad))
 
         activate(PadSheet.MORE)
         waitFor("MORE's list", timeoutMillis = 60_000) { compose.onAllNodesWithTag("pedal-more-list", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
         activateTag("pedal-more-touchwahed")
-        waitForToast(Copy.pedalReplaced("TOUCH", listOf("WAH"), pad))
+        waitForToast(Copy.pedalReplaced(shown("TOUCH"), listOf(shown("WAH")), pad))
         assertEquals(listOf("touchwahed"), savedKeys(entry))
-        selected("WAH").assertIsNotSelected()
+        selected(shown("WAH")).assertIsNotSelected()
         selected(PadSheet.MORE).assertIsSelected()
         assertTrue("MORE counts TOUCH", hasText(Copy.pedalMore(1)))
         assertTrue("AMT names the pedal behind MORE", nodes(Copy.pedalAmt(PadSheet.displayLabel("TOUCH"))).isNotEmpty())
@@ -260,18 +266,18 @@ class PedalSlateScreenTest : ComposeScreenTest() {
         val pad = padName(entry)
         activate(PadSheet.MORE)
         activateTag("pedal-more-touchwahed")
-        waitForToast(Copy.treated("TOUCH", pad))
+        waitForToast(Copy.treated(shown("TOUCH"), pad))
 
         activateTag("pedal-more-touchwahed-row")
         waitFor("the PUT ON ROW prompt", timeoutMillis = 60_000) { hasText(Copy.putOnRowPrompt(PadSheet.displayLabel("TOUCH"))) }
         val before = files(entry.dir)
-        activate("FORGE")
-        waitForToast(Copy.rowSwapped(PadSheet.displayLabel("TOUCH"), "FORGE"))
+        activate(shown("FORGE"))
+        waitForToast(Copy.rowSwapped(PadSheet.displayLabel("TOUCH"), shown("FORGE")))
         assertEquals(listOf("driven", "compressed", "wahed", "touchwahed", "delayed"), pedalRow.keys)
         assertEquals("a row swap writes nothing", before, files(entry.dir))
         waitFor("TOUCH WAH on the row", timeoutMillis = 60_000) { nodes(PadSheet.displayLabel("TOUCH")).isNotEmpty() }
         selected(PadSheet.displayLabel("TOUCH")).assertIsSelected()
-        assertTrue("FORGE left the row", nodes("FORGE").isEmpty())
+        assertTrue("FORGE left the row", nodes(shown("FORGE")).isEmpty())
         assertTrue("MORE has nothing to count", hasText(PadSheet.MORE) && !hasText(Copy.pedalMore(1)))
     }
 
@@ -287,17 +293,17 @@ class PedalSlateScreenTest : ComposeScreenTest() {
         assertEquals("opening MORE writes nothing", before, files(entry.dir))
 
         activateTag("pedal-more-rockwahed-row")
-        waitFor("the PUT ON ROW prompt", timeoutMillis = 60_000) { hasText(Copy.putOnRowPrompt("ROCK")) }
+        waitFor("the PUT ON ROW prompt", timeoutMillis = 60_000) { hasText(Copy.putOnRowPrompt(shown("ROCK"))) }
         // NONE is not live on a clean pad, so the other tap is MORE itself: it cancels and does nothing else.
         activate(PadSheet.MORE)
-        waitFor("the prompt to go", timeoutMillis = 60_000) { !hasText(Copy.putOnRowPrompt("ROCK")) }
+        waitFor("the prompt to go", timeoutMillis = 60_000) { !hasText(Copy.putOnRowPrompt(shown("ROCK"))) }
         assertTrue("the cancelling tap left MORE's list open", compose.onAllNodesWithTag("pedal-more-list", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty())
         assertEquals("the cancel left the row alone", PedalSlate.DEFAULT, pedalRow)
 
-        activate("FORGE")
-        waitForToast(Copy.treated("FORGE", pad))
+        activate(shown("FORGE"))
+        waitForToast(Copy.treated(shown("FORGE"), pad))
         assertEquals(listOf("forged"), savedKeys(entry))
-        assertFalse(toasts.any { it == Copy.rowSwapped("ROCK", "FORGE") })
+        assertFalse(toasts.any { it == Copy.rowSwapped(shown("ROCK"), shown("FORGE")) })
     }
 
     @Test
@@ -305,14 +311,14 @@ class PedalSlateScreenTest : ComposeScreenTest() {
         val entry = kit()
         show(entry)
         val pad = padName(entry)
-        activate("SUSTAIN")
-        waitForToast(Copy.treated("SUSTAIN", pad))
+        activate(shown("SUSTAIN"))
+        waitForToast(Copy.treated(shown("SUSTAIN"), pad))
         activate(PadSheet.MORE)
         activateTag("pedal-more-compressed-side")
-        waitForToast(Copy.pedalSide("SUSTAIN", false, pad))
+        waitForToast(Copy.pedalSide(shown("SUSTAIN"), false, pad))
         val pick = PedalSlate.boardOf(KitStore.load(entry.dir).pad(1)?.recipe)?.picks?.single()
         assertEquals(PedalSide.POST, pick?.side)
-        selected("SUSTAIN").assertIsSelected()
+        selected(shown("SUSTAIN")).assertIsSelected()
     }
 
     @Test
@@ -320,14 +326,14 @@ class PedalSlateScreenTest : ComposeScreenTest() {
         val entry = kit()
         show(entry)
         val pad = padName(entry)
-        activate("DRIVE")
-        waitForToast(Copy.treated("DRIVE", pad))
+        activate(shown("DRIVE"))
+        waitForToast(Copy.treated(shown("DRIVE"), pad))
         // The bin emptied by hand: the original DRIVE rendered from is gone. Age alone no longer
         // does this, since the bin keeps a pad's original for as long as the pad needs it.
         KitBuilderModel.open(entry.dir).emptyBin()
         val before = files(entry.dir)
 
-        activate("DELAY")
+        activate(shown("DELAY"))
         waitForToast(Copy.PEDALS_NOT_BINNED)
         assertEquals(listOf("driven"), savedKeys(entry))
         toasts.clear()
@@ -336,7 +342,7 @@ class PedalSlateScreenTest : ComposeScreenTest() {
         waitForToast(Copy.PEDALS_NOT_BINNED)
         assertEquals(listOf("driven"), savedKeys(entry))
         assertEquals("nothing was touched", before, files(entry.dir))
-        selected("DRIVE").assertIsSelected()
+        selected(shown("DRIVE")).assertIsSelected()
     }
 
     /**
@@ -384,17 +390,17 @@ class PedalSlateScreenTest : ComposeScreenTest() {
         val original = File(entry.dir, "hit1.wav").readBytes()
         show(entry)
         val pad = padName(entry)
-        activate("SUSTAIN")
-        waitForToast(Copy.treated("SUSTAIN", pad))
-        activate("DELAY")
-        waitForToast(Copy.treated("DELAY", pad))
+        activate(shown("SUSTAIN"))
+        waitForToast(Copy.treated(shown("SUSTAIN"), pad))
+        activate(shown("DELAY"))
+        waitForToast(Copy.treated(shown("DELAY"), pad))
         selected(PadSheet.NONE).assertIsNotSelected()
 
         activate(PadSheet.NONE)
         waitForToast(Copy.unTreated(pad))
         assertNull(KitStore.load(entry.dir).pad(1)?.recipe)
         assertTrue("the original, byte for byte", original.contentEquals(File(entry.dir, "hit1.wav").readBytes()))
-        selected("SUSTAIN").assertIsNotSelected()
-        selected("DELAY").assertIsNotSelected()
+        selected(shown("SUSTAIN")).assertIsNotSelected()
+        selected(shown("DELAY")).assertIsNotSelected()
     }
 }

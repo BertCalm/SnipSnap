@@ -39,7 +39,7 @@ object NacreStrikeAuditionGenerator {
                 { NacreContactStrikeRecipes.recipeFor(it, variant).renderAllLayers() }, variant.shapes)
         }
         val results = ArrayList<JsonValue>()
-        for (hard in NacrePresets.all().filter { it.model == NacreContactVelocityRecipes.MODEL }) {
+        for (hard in NacrePresets.forVoice(NacreVoice.PEARL).filter { it.model == NacreContactVelocityRecipes.MODEL }) {
             require(hard.midi == 48 && hard.velocity == 1f) { "the audition plays the saved C3 hard reference" }
             val contact = hard.macros.getValue(NacreModels.CONTACT_MACRO)
             val contactTag = "%03d".format(java.util.Locale.ROOT, (contact * 100).roundToInt())

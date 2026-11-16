@@ -341,7 +341,7 @@ object Breed {
         val names = mutableMapOf(pad.sampleFile to assigned.sampleFile)
         val layers = pad.velocityLayers.mapIndexed { index, layer ->
             val name = names.getOrPut(layer.sampleFile) {
-                val board = PrintedPads.label(pad.recipe).lowercase(java.util.Locale.ROOT)
+                val board = PrintedPads.fileLabel(pad.recipe).lowercase(java.util.Locale.ROOT)
                 val stem = assigned.sampleFile.substringBeforeLast('.') + "_${board}_layer_${index + 1}"
                 var candidate = "$stem.wav"
                 var suffix = 2

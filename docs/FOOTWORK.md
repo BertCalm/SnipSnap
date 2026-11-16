@@ -137,6 +137,10 @@ The revised experiment starts with one tap-shoe contact against a credited recor
 
 The audition now exposes recorded reference, rejected model and new candidate separately. Owner listening, not spectrum distance, decides whether this is a useful contact source. The full kit will not inherit an approval from this single anchor.
 
+## Gesture-family audition
+
+The Python study now supplies toe, heel, forward/back brushes, shuffle, flap, an authored roll and an accelerating riser, plus an original 116 BPM phrase. These extend the recognizable ta-ee source but remain unapproved as distinct gestures. Small-metal is a provisional construction choice; the owner did not select between small/open. This is not the planned three-kit shelf delivery. Native velocity/round-robin persistence, playback and export remain open. See `prototype/footwork/reference_reset/dance_gestures.py` and its generated report for the current prototype evidence.
+
 ## Why it is built this way
 
 - Shoe contact and floor support are separate, so toe, heel and stamp can differ in attack and body instead of just pitch or level.

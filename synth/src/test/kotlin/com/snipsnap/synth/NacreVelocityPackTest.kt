@@ -55,7 +55,7 @@ class NacreVelocityPackTest {
             val mpc2Triggers = listOf(37, 36, 42, 82, 40, 38, 46, 44, 48, 47, 45, 43, 49, 55, 51, 53)
             val midis = listOf(48, 51, 53, 55, 58, 60, 63, 65, 48, 51, 55, 60, 48, 51, 55, 60)
             val presetNames = List(8) { "Pearl Close" } + List(4) { "Coral Reply" } + List(4) { "Kelp Passage" }
-            val starts = NacrePresets.all().associateBy { it.name }
+            val starts = NacrePresets.forVoice(NacreVoice.PEARL).associateBy { it.name }
             val manifest = Json.parse(File(destination, "manifest.json").readText()).obj()
             assertEquals(16, manifest.getValue("padCount").int())
             assertEquals(48, manifest.getValue("sampleCount").int())
