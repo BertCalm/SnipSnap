@@ -17,8 +17,8 @@ class PlacesTest {
     }
 
     @Test
-    fun `help has one section per place and one for the dock, in lines that fit`() {
-        assertEquals(Places.PLACES + "THE DOCK", Places.HELP.keys.toList())
+    fun `help has one section per place, one on a pad's sound and one for the dock, in lines that fit`() {
+        assertEquals(Places.PLACES + Places.PAD_SOUND + "THE DOCK", Places.HELP.keys.toList())
         for ((section, lines) in Places.HELP) {
             assertTrue(lines.size in 3..5, "$section: three to five lines, not ${lines.size}")
             for (line in lines) {
