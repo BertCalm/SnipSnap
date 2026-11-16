@@ -823,3 +823,13 @@ testkit/etch-audition/
 /scripts/east_africa/manifest.json
 
 /testkit/footwork-native/
+
+/testkit/soul-rock-kits/
+/prototype/soul-rock/*-*.wav
+/prototype/soul-rock/*.zip
+
+/prototype/soul-rock/soul-pocket/
+/prototype/soul-rock/roadhouse-rock/
+/prototype/soul-rock/open-room-rock/
+/prototype/soul-rock/index.html
+/prototype/soul-rock/checks.json

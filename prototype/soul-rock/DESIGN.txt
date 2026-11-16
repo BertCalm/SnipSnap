@@ -1,0 +1,72 @@
+ACOUSTIC DRUM COLLECTION: FIRST STUDY
+Status: reference analysis and Python recipe prototype. No listening approval, native integration or hardware acceptance claimed.
+Repository read: 4ead7cd350ab6fabb116a2ee01896ad9fff49f8f.
+
+The characteristic gesture is stick/beater contact -> head and shell response -> wire or cymbal wash -> natural room decay.
+
+REFERENCE REGISTER
+1. Screen 213622: Stevie Wonder, Signed, Sealed, Delivered (title visible; trailing title truncated).
+2. Screen 214418: Thin Lizzy, Cowboy Song (Drums Only).
+3–6. Screens 214834, 214917, 215154, 215240: Argent, Hold Your Head Up (Drums Only).
+Screen titles identify the uploads, not authentication of the original studio stems or drummer/equipment credits. No original recordings are included in the generated instruments.
+All six files decode successfully: approximately 127.45 seconds combined. analysis.json preserves input hashes, event times and measurements.
+
+MEASURED
+Positive log-STFT flux with an 85 ms minimum onset spacing finds 103, 105, 150, 154, 80 and 100 candidate transients respectively. These are candidate attacks, not counts of confirmed drum strikes.
+Strongest 70–170 BPM pulse candidates: 108, 134, 88.5, 87, 91.5 and 89.5 BPM. Fills, overlap and half/double-time ambiguity prevent treating these as exact song tempos. The last four are not four different kit identities.
+Band measurements use 90 ms windows after candidates. They mix simultaneous instruments and recording artifacts. No isolated snare frequency, drum diameter, mic model or decay constant has been inferred from a whole-mix statistic. A separate provisional kick diagnostic uses low-band-dominant candidate events: median spectral peaks about 83.4 Hz for reference 1, 49.8 Hz for reference 2, and 70.0 Hz for references 3–6. These are not authenticated kick fundamentals. refine.py adjusts only the kick TUNE toward those targets and reports the before/after output peak.
+
+LANDING AND NEAREST SIBLINGS
+This is a kit/recipe family first, not a justified new engine. EMBER already supplies dynamic acoustic heads, wires, hats, rides, percussion and finite rolls. BREAKER already supplies rock drums and fitted crash/ride voices but adds a surf/processor signal chain that is not an automatic match to these references. Both source files were read. Neither currently establishes a measured match to these six clips.
+The prototype invokes the existing EMBER Python renderer directly. It does not modify that renderer or any existing accepted kit. Ember.render exists in Kotlin; the Python counterpart is ember_proto.render. Native noise differs and requires a separate audition if these recipes are ported.
+
+THREE DIRECTIONS
+Strong: DISTIL, three acoustic recipe kits. Clear strike/decay gesture; modest novelty in roles and balance; lowest implementation risk; first audition then reference fitting then integration. Chosen because the collection needs convincing drum detail more than a novel mechanism.
+Alternate A: STACK, one dry acoustic kit through three era-specific processing chains. Clear gesture and cheap to prototype, but low novelty and substantial risk of merely recoloring one kit. Not sufficient alone for the distinct genre-kit gate.
+Alternate B: COUPLE, shared head/wire/room response across an ensemble. Greater behavioral novelty and realistic sympathetic motion, but high render/state/export risk: independent sampler pads cannot generally share live synthesis state. Defer until the basic collection works.
+
+PROVISIONAL KITS
+Soul Pocket, 108 BPM: more damping, closer perspective, tambourine and claps as complementary colors.
+Roadhouse Rock, 134 BPM: lower drum tuning, stronger wire response, more open hats, cowbell color.
+Open Room Rock, 89 BPM: less damping, farther perspective, ride-led groove and additional high tom color.
+These are authored hypotheses motivated by the reference families, not fully fitted timbre parameters. Kick tuning receives the explicitly provisional spectral-target adjustment described above; other settings remain hypotheses. Original four-bar auditions are not transcriptions of the songs.
+
+PAD MAP
+01 kick, 02 snare, 03 rimshot, 04 cross stick, 05 closed hat, 06 open hat, 07 pedal hat, 08 rack tom, 09 floor tom, 10 ride, 11 ride bell, 12 sizzle, 13 tambourine, 14 kit color (claps/cowbell/high tom), 15 press roll, 16 cymbal swell.
+A true crash is still needed. Sizzle is explicitly a placeholder, not a successful crash recreation. Tambourine/cowbell/claps are proposed colors, not claimed identifications of instruments in the supplied recordings.
+Three velocity zones and three freshly synthesized takes per pad: 432 variants. Softness changes the model excitation and wire response, with an additional velocity level law. Takes are equalized in RMS within a zone. Final prototypes have a conservative common zone peak ceiling; all are finite.
+
+SIGNAL FLOW
+velocity + take + recipe
+ -> EMBER contact/membrane/wire or fitted cymbal synthesis at 176.4 kHz
+ -> EMBER room and warmth + output decimation/DC/tail
+ -> take RMS equalization within velocity zone + velocity level
+ -> mono 44.1 kHz PCM.
+The synthesizer reads existing scalar models and generates noise; it never reads the six reference WAVs. EMBER cymbal models derive from CC0 recordings, documented in prototype/EMBER-NOTICE.txt. This is synthesis informed by those prior fits, not live sample playback and not newly fitted to the supplied recordings.
+
+RECIPE CONTROLS (not a new engine macro contract)
+TUNE: existing voice-dependent head tension/cymbal size law. Initial defaults .53/.36/.46 for the three kits; high tom .74. Kick-only refinements and measured evidence are stored in manifest.json.
+DAMP: existing head/cymbal loss law. Defaults .70/.36/.18, toms .12 lower. Check with TUNE for pitch/decay interaction.
+BUZZ: wire/sympathetic response .40/.64/.55, 0 on fitted hats/ride. Check soft and hard excitation, not only gain.
+DISTANCE: microphone/room perspective .12/.26/.40; compare dry attack against late energy.
+WARMTH: existing recording-chain shaping .35/.20/.12; check with DISTANCE so the room does not obscure attack.
+All values are proposed shapes, not measured studio settings. No HOLD or STRUM for these finite drum pads. Rolls and swells ring out.
+
+RENDER BUDGET
+The prototype records complete bank render time in manifest.json. Native one-shot target remains tens of milliseconds on a phone, not established here. Cache rendered variants by model version, voice, every recipe parameter, velocity and take. Build immutable banks outside playback, with progress reporting. Do not rebuild an entire bank on pad trigger. Python timings are not phone timings.
+
+GATES AND NEXT PROOF
+Reference analysis: completed, machine measurements only.
+Numerical and replay checks: see prototype/manifest.json and checks.json. Finite/peak/DC/tail and gain-matched residuals are prototype evidence, not proof of perceptual fidelity. The prototype also asserts deterministic repeated renders.
+Sound: unapproved. Compare kick, snare, hats and cymbals against short labeled reference contexts, then fit the mismatched attack/body/decay components. Need a true crash and controlled hat choking before a final kit.
+Native rendering, stable source identity, shelf registration, save/load, playback velocity/take selection, MPC3 export/import and hardware: not yet verified for this new collection. MPC2's owner-approved combined velocity/round-robin exception still applies, not an exemption for MPC3.
+Full software regression: not applicable to this isolated Python study; no production code changed. Must run before a native delivery.
+Melodic/keygroup/chord/STRUM: not applicable to finite drum banks.
+No approval from earlier East African or TIMBER work carries over.
+
+WHY IT IS BUILT THIS WAY
+1. Three kits preserve the different roles and balance of the source families; four Argent excerpts help describe one kit rather than inflating the collection.
+2. Existing acoustic synthesis retains head movement, wire response and detailed cymbal models, avoiding another generic oscillator/noise drum design.
+3. Separate dynamics and takes make playing repeat notes less mechanical; simple gain copies would miss that requirement.
+4. Dry attacks and tails must be judged separately. Extra room cannot repair an inaccurate snare body or cymbal spectrum.
+5. The principal risk is source mismatch: EMBER begins with calf-head/jazz assumptions, which may not capture these soul/rock recordings. This prototype exposes that risk before a native engine commitment.

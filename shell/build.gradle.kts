@@ -787,3 +787,13 @@ tasks.register<JavaExec>("generateFootworkKits") {
     maxHeapSize = "2g"
     args(providers.gradleProperty("footworkOutput").orNull ?: "${rootDir}/testkit/footwork-native")
 }
+
+ tasks.register<JavaExec>("generateSoulRockKits") {
+    group = "distribution"
+    description = "Export the three approved Soul Rock banks and verify every saved and MPC 3 strike."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.SoulRockKitGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "2g"
+    args(providers.gradleProperty("soulRockOutput").orNull ?: "${rootDir}/testkit/soul-rock-kits")
+}
