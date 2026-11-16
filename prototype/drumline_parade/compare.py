@@ -17,7 +17,7 @@ def main():
  for kit,(_,pads) in study.KITS.items():
   for i,p in enumerate(pads):
    name,fam=p[:2]
-   if kit!='second-line' or name not in ('bass_open','bass_muted','snare_center','snare_ghost','snare_drag','snare_flam','press_buzz','snare_roll','turnaround'):
+   if kit!='samba-bateria':
     for v in [.3,.6,1.]:
      for take in range(3):
       path=f'{kit}/{i+1:02}_{name}_v{v}_t{take}.wav'
@@ -44,6 +44,6 @@ def main():
  report={'unchanged_grid_wavs':unchanged,'changed_pads':len(rows),'comparisons':rows}
  (out/'report.json').write_text(json.dumps(report,indent=2))
  page=a.current/'index.html';s=page.read_text();pos=s.index('<section>')
- s=s[:pos]+'<section><h2>Second Line snare and bass revision</h2><p>Matched-level comparisons. The complete kits below use the revised sounds.</p><div class="grid">'+''.join(cards)+'</div></section>'+s[pos:];page.write_text(s.replace('.wav"', '.wav?revision=6"').replace('.zip"', '.zip?revision=6"'))
+ s=s[:pos]+'<section><h2>Samba Bateria instrument revision</h2><p>Matched-level comparisons. The complete kits below use the revised sounds.</p><div class="grid">'+''.join(cards)+'</div></section>'+s[pos:];page.write_text(s.replace('.wav"', '.wav?revision=7"').replace('.zip"', '.zip?revision=7"'))
  print(json.dumps(report))
 if __name__=='__main__':main()

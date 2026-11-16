@@ -86,6 +86,9 @@ def raw_legacy(p,v,take):
  return out
 
 def raw(p,v,take):
+ if p[0] in {q[0] for q in SAMBA}:
+  import samba
+  return samba.render(p,v,take)
  if p[1] in ('metal','wood','rim','rim_dry'):
   import measured
   return measured.render(p,v,take,raw_legacy)
@@ -147,6 +150,6 @@ def main():
   sections.append(f'<section><h2>{kit.replace("-"," ").title()}</h2><p>{bpm} BPM · 16 pads · 3 velocity levels × 3 takes</p><audio controls preload="none" src="{kit}/groove.wav"></audio><p><a href="{kit}-study-wavs.zip">Download study WAVs and recipes</a></p><div class="grid">'+''.join(cards)+'</div></section>')
  with (dest/'metrics.csv').open('w') as f:
   w=csv.writer(f,lineterminator="\n");w.writerow(['kit','pad','players','hard_take_correlation','normalized_velocity_difference','hard_peak']);w.writerows(rows)
- (dest/'index.html').write_text('''<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Two new parade kits · Listening study</title><style>body{background:#10191c;color:#f3eee2;font:17px system-ui;margin:0 auto;padding:32px;max-width:1200px}h1,h2{color:#f0bd65}a{color:#7ce0d2}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}article{padding:16px;background:#1d2b30;border-radius:12px}audio{max-width:100%;width:100%}section{margin:40px 0}p{line-height:1.5}</style><h1>Second Line & Samba Bateria</h1><p>Sixth listening round: more snare pop and a deeper, fuller bass in Second Line. Second Line uses a compact snare/bass/cymbal rhythm section. The Rio-style bateria uses distinct surdo roles, caixa and tamborim sections, repinique calls, chocalho and agogô.</p><p>These are new Python sound studies, not the approved Kotlin Field/Street kits. Grooves are authored sketches, not transcriptions of a particular band or samba school. Downloaded WAVs are not MPC program files.</p>'''+''.join(sections)+'</html>')
+ (dest/'index.html').write_text('''<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Two new parade kits · Listening study</title><style>body{background:#10191c;color:#f3eee2;font:17px system-ui;margin:0 auto;padding:32px;max-width:1200px}h1,h2{color:#f0bd65}a{color:#7ce0d2}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}article{padding:16px;background:#1d2b30;border-radius:12px}audio{max-width:100%;width:100%}section{margin:40px 0}p{line-height:1.5}</style><h1>Second Line & Samba Bateria</h1><p>Seventh listening round: distinct Samba drum bodies, hand damping, jingle collisions and reference-fitted agogô bells. Second Line uses a compact snare/bass/cymbal rhythm section. The Rio-style bateria uses distinct surdo roles, caixa and tamborim sections, repinique calls, chocalho and agogô.</p><p>These are new Python sound studies, not the approved Kotlin Field/Street kits. Grooves are authored sketches, not transcriptions of a particular band or samba school. Downloaded WAVs are not MPC program files.</p>'''+''.join(sections)+'</html>')
  print(json.dumps({'pads':len(rows),'grid_renders':len(rows)*9,'max_take_correlation':max(r[3] for r in rows),'min_velocity_difference':min(r[4] for r in rows)}))
 if __name__=='__main__':main()
