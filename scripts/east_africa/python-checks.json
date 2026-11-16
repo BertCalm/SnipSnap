@@ -1,0 +1,791 @@
+{
+  "status": "Python candidate audio gates passed",
+  "variants": 990,
+  "deterministic_rerenders": 990,
+  "velocity_order_failures": [],
+  "true_peak_estimate_4x": 0.858708571368404,
+  "max_abs_dc": 1.938143014367205e-05,
+  "max_last10ms_rms": 0.00053485727699765,
+  "closest_take_residual_db": -43.19530569286204,
+  "closest_soft_hard_residual_db": -26.50162933092774,
+  "recorded_audio_loaders_in_generator": false,
+  "rows": [
+    {
+      "kit": "bongo-flava",
+      "voice": "deep-kick",
+      "velocity_ordered": true,
+      "closest_take_residual_db": -9.600457031256374,
+      "soft_hard_residual_db": -0.0926105597557781
+    },
+    {
+      "kit": "bongo-flava",
+      "voice": "tight-kick",
+      "velocity_ordered": true,
+      "closest_take_residual_db": -9.299278665944751,
+      "soft_hard_residual_db": -1.5783678915867325
+    },
+    {
+      "kit": "bongo-flava",
+      "voice": "snare",
+      "velocity_ordered": true,
+      "closest_take_residual_db": -5.482234269683625,
+      "soft_hard_residual_db": -3.3005175696173197
+    },
+    {
+      "kit": "bongo-flava",
+      "voice": "rimshot",
+      "velocity_ordered": true,
+      "closest_take_residual_db": -4.227143252765701,
+      "soft_hard_residual_db": -0.10627571152504804
+    },
+    {
+      "kit": "bongo-flava",
+      "voice": "rim",
+      "velocity_ordered": true,
+      "closest_take_residual_db": -1.2643345683855054,
+      "soft_hard_residual_db": -1.3622155733845112
+    },
+    {
+      "kit": "bongo-flava",
+      "voice": "closed-hat",
+      "velocity_ordered": true,
+      "closest_take_residual_db": -0.46336813964067103,
+      "soft_hard_residual_db": -2.0367596496826406
+    },
+    {
+      "kit": "bongo-flava",
+      "voice": "open-hat",
+      "velocity_ordered": true,
+      "closest_take_residual_db": -0.1909755395526238,
+      "soft_hard_residual_db": -3.5077814374232226
+    },
+    {
+      "kit": "bongo-flava",
+      "voice": "shaker",
+      "velocity_ordered": true,
+      "closest_take_residual_db": -0.0532974038662722,
+      "soft_hard_residual_db": -4.790273915313302
+    },
+    {
+      "kit": "bongo-flava",
+      "voice": "low-bongo",
+      "velocity_ordered": true,
+      "closest_take_residual_db": -0.9982867026050678,
+      "soft_hard_residual_db": -23.2105625623646
+    },
+    {
+      "kit": "bongo-flava",
+      "voice": "high-bongo",
+      "velocity_ordered": true,
+      "closest_take_residual_db": -0.11139673167631234,
+      "soft_hard_residual_db": -25.453029189369104
+    },
+    {
+      "kit": "bongo-flava",
+      "voice": "conga",
+      "velocity_ordered": true,
+      "closest_take_residual_db": -9.324638074962168,
+      "soft_hard_residual_db": -7.706885807198766
+    },
+    {
+      "kit": "bongo-flava",
+      "voice": "bell",
+      "velocity_ordered": true,
+      "closest_take_residual_db": -10.409271393596317,
+      "soft_hard_residual_db": -2.576263526136762
+    },
+    {
+      "kit": "bongo-flava",
+      "voice": "low-log",
+      "velocity_ordered": true,
+      "closest_take_residual_db": -42.19491954000354,
+      "soft_hard_residual_db": -10.906463574501107
+    },
+    {
+      "kit": "bongo-flava",
+      "voice": "high-log",
+      "velocity_ordered": true,
+      "closest_take_residual_db": -42.27043942953244,
+      "soft_hard_residual_db": -10.731050064024426
+    },
+    {
+      "kit": "bongo-flava",
+      "voice": "hand-roll",
+      "velocity_ordered": true,
+      "closest_take_residual_db": -1.593504716431326,
+      "soft_hard_residual_db": -11.771972286172545
+    },
+    {
+      "kit": "bongo-flava",
+      "voice": "shaker-rise",
+      "velocity_ordered": true,
+      "closest_take_residual_db": -0.02476437418394442,
+      "soft_hard_residual_db": -4.654677014582182
+    },
+    {
+      "kit": "bongo-flava",
+      "voice": "muted-tap",
+      "velocity_ordered": true,
+      "closest_take_residual_db": -0.2586913111512939,
+      "soft_hard_residual_db": -4.337975471567368
+    },
+    {
+      "kit": "bongo-flava",
+      "voice": "open-conga",
+      "velocity_ordered": true,
+      "closest_take_residual_db": -9.97242493691817,
+      "soft_hard_residual_db": -7.322391694752946
+    },
+    {
+      "kit": "bongo-flava",
+      "voice": "clave",
+      "velocity_ordered": true,
+      "closest_take_residual_db": -0.6653277423319552,
+      "soft_hard_residual_db": -1.9399099146654284
+    },
+    {
+      "kit": "bongo-flava",
+      "voice": "wood-knock",
+      "velocity_ordered": true,
+      "closest_take_residual_db": -1.343659288541164,
+      "soft_hard_residual_db": -2.1119660324457
+    },
+    {
+      "kit": "bongo-flava",
+      "voice": "metal-low",
+      "velocity_ordered": true,
+      "closest_take_residual_db": -10.427001146855076,
+      "soft_hard_residual_db": -2.2735529932486798
+    },
+    {
+      "kit": "bongo-flava",
+      "voice": "metal-high",
+      "velocity_ordered": true,
+      "closest_take_residual_db": -9.373979350834539,
+      "soft_hard_residual_db": -2.571555896263207
+    },
+    {
+      "kit": "singeli",
+      "voice": "deep-kick",
+      "velocity_ordered": true,
+      "closest_take_residual_db": -12.441859649933672,
+      "soft_hard_residual_db": -0.2119805584376598
+    },
+    {
+      "kit": "singeli",
+      "voice": "tight-kick",
+      "velocity_ordered": true,
+      "closest_take_residual_db": -13.213061788832972,
+      "soft_hard_residual_db": -1.4882841904098698
+    },
+    {
+      "kit": "singeli",
+      "voice": "snare",
+      "velocity_ordered": true,
+      "closest_take_residual_db": -9.128142732225083,
+      "soft_hard_residual_db": -3.731455735381317
+    },
+    {
+      "kit": "singeli",
+      "voice": "rimshot",
+      "velocity_ordered": true,
+      "closest_take_residual_db": -5.280656851671594,
+      "soft_hard_residual_db": -0.0731963802973705
+    },
+    {
+      "kit": "singeli",
+      "voice": "rim",
+      "velocity_ordered": true,
+      "closest_take_residual_db": -3.465658493724495,
+      "soft_hard_residual_db": -0.6586817989945328
+    },
+    {
+      "kit": "singeli",
+      "voice": "closed-hat",
+      "velocity_ordered": true,
+      "closest_take_residual_db": -0.8328135023133837,
+      "soft_hard_residual_db": -2.103175748655846
+    },
+    {
+      "kit": "singeli",
+      "voice": "open-hat",
+      "velocity_ordered": true,
+      "closest_take_residual_db": -0.1370825223583983,
+      "soft_hard_residual_db": -3.4914427903691143
+    },
+    {
+      "kit": "singeli",
+      "voice": "shaker",
+      "velocity_ordered": true,
+      "closest_take_residual_db": -0.4279022627985092,
+      "soft_hard_residual_db": -2.9983706685666442
+    },
+    {
+      "kit": "singeli",
+      "voice": "low-bongo",
+      "velocity_ordered": true,
+      "closest_take_residual_db": -2.110621343978163,
+      "soft_hard_residual_db": -21.222033506584257
+    },
+    {
+      "kit": "singeli",
+      "voice": "high-bongo",
+      "velocity_ordered": true,
+      "closest_take_residual_db": -0.7936204816473935,
+      "soft_hard_residual_db": -23.32653300303275
+    },
+    {
+      "kit": "singeli",
+      "voice": "conga",
+      "velocity_ordered": true,
+      "closest_take_residual_db": -13.020942787406018,
+      "soft_hard_residual_db": -7.86489675921882
+    },
+    {
+      "kit": "singeli",
+      "voice": "bell",
+      "velocity_ordered": true,
+      "closest_take_residual_db": -11.950822036433948,
+      "soft_hard_residual_db": -3.4906596990535936
+    },
+    {
+      "kit": "singeli",
+      "voice": "low-log",
+      "velocity_ordered": true,
+      "closest_take_residual_db": -41.18643406282786,
+      "soft_hard_residual_db": -8.454134222290769
+    },
+    {
+      "kit": "singeli",
+      "voice": "high-log",
+      "velocity_ordered": true,
+      "closest_take_residual_db": -41.25535109236515,
+      "soft_hard_residual_db": -8.322882740348973
+    },
+    {
+      "kit": "singeli",
+      "voice": "hand-roll",
+      "velocity_ordered": true,
+      "closest_take_residual_db": -4.060250929032011,
+      "soft_hard_residual_db": -10.303871893455748
+    },
+    {
+      "kit": "singeli",
+      "voice": "shaker-rise",
+      "velocity_ordered": true,
+      "closest_take_residual_db": -0.2444841507299731,
+      "soft_hard_residual_db": -2.6951267944231954
+    },
+    {
+      "kit": "singeli",
+      "voice": "muted-tap",
+      "velocity_ordered": true,
+      "closest_take_residual_db": -0.9389783904972832,
+      "soft_hard_residual_db": -2.914167493005972
+    },
+    {
+      "kit": "singeli",
+      "voice": "open-conga",
+      "velocity_ordered": true,
+      "closest_take_residual_db": -13.593336153544534,
+      "soft_hard_residual_db": -7.4158861789213795
+    },
+    {
+      "kit": "singeli",
+      "voice": "clave",
+      "velocity_ordered": true,
+      "closest_take_residual_db": -2.164516433396858,
+      "soft_hard_residual_db": -0.5261808331710074
+    },
+    {
+      "kit": "singeli",
+      "voice": "wood-knock",
+      "velocity_ordered": true,
+      "closest_take_residual_db": -2.064402086122059,
+      "soft_hard_residual_db": -1.61335499098967
+    },
+    {
+      "kit": "singeli",
+      "voice": "metal-low",
+      "velocity_ordered": true,
+      "closest_take_residual_db": -13.07968481055357,
+      "soft_hard_residual_db": -3.4998642998224696
+    },
+    {
+      "kit": "singeli",
+      "voice": "metal-high",
+      "velocity_ordered": true,
+      "closest_take_residual_db": -13.04039624734401,
+      "soft_hard_residual_db": -3.2531595820954267
+    },
+    {
+      "kit": "bongopiano",
+      "voice": "deep-kick",
+      "velocity_ordered": true,
+      "closest_take_residual_db": -8.518547507114295,
+      "soft_hard_residual_db": -0.05216571507347585
+    },
+    {
+      "kit": "bongopiano",
+      "voice": "tight-kick",
+      "velocity_ordered": true,
+      "closest_take_residual_db": -10.15798827680985,
+      "soft_hard_residual_db": -1.660177901027926
+    },
+    {
+      "kit": "bongopiano",
+      "voice": "snare",
+      "velocity_ordered": true,
+      "closest_take_residual_db": -3.428458341627125,
+      "soft_hard_residual_db": -3.49474304136767
+    },
+    {
+      "kit": "bongopiano",
+      "voice": "rimshot",
+      "velocity_ordered": true,
+      "closest_take_residual_db": -4.27128708328592,
+      "soft_hard_residual_db": -0.15278490471293826
+    },
+    {
+      "kit": "bongopiano",
+      "voice": "rim",
+      "velocity_ordered": true,
+      "closest_take_residual_db": -0.903863284843895,
+      "soft_hard_residual_db": -2.0167845581411976
+    },
+    {
+      "kit": "bongopiano",
+      "voice": "closed-hat",
+      "velocity_ordered": true,
+      "closest_take_residual_db": -0.2782705494787753,
+      "soft_hard_residual_db": -2.2991385497623167
+    },
+    {
+      "kit": "bongopiano",
+      "voice": "open-hat",
+      "velocity_ordered": true,
+      "closest_take_residual_db": -0.08011772345299803,
+      "soft_hard_residual_db": -3.6554984939931807
+    },
+    {
+      "kit": "bongopiano",
+      "voice": "shaker",
+      "velocity_ordered": true,
+      "closest_take_residual_db": -0.020737962586709423,
+      "soft_hard_residual_db": -5.982078859116887
+    },
+    {
+      "kit": "bongopiano",
+      "voice": "low-bongo",
+      "velocity_ordered": true,
+      "closest_take_residual_db": -0.5837890907940217,
+      "soft_hard_residual_db": -23.833370007741866
+    },
+    {
+      "kit": "bongopiano",
+      "voice": "high-bongo",
+      "velocity_ordered": true,
+      "closest_take_residual_db": -0.008658379743510865,
+      "soft_hard_residual_db": -26.50162933092774
+    },
+    {
+      "kit": "bongopiano",
+      "voice": "conga",
+      "velocity_ordered": true,
+      "closest_take_residual_db": -8.059252383046724,
+      "soft_hard_residual_db": -7.243653078900216
+    },
+    {
+      "kit": "bongopiano",
+      "voice": "bell",
+      "velocity_ordered": true,
+      "closest_take_residual_db": -9.942950739505607,
+      "soft_hard_residual_db": -1.395819131143263
+    },
+    {
+      "kit": "bongopiano",
+      "voice": "low-log",
+      "velocity_ordered": true,
+      "closest_take_residual_db": -43.11146126899048,
+      "soft_hard_residual_db": -12.492449298748756
+    },
+    {
+      "kit": "bongopiano",
+      "voice": "high-log",
+      "velocity_ordered": true,
+      "closest_take_residual_db": -43.19530569286204,
+      "soft_hard_residual_db": -12.31081086585923
+    },
+    {
+      "kit": "bongopiano",
+      "voice": "hand-roll",
+      "velocity_ordered": true,
+      "closest_take_residual_db": -0.8424910667682834,
+      "soft_hard_residual_db": -11.863124413742543
+    },
+    {
+      "kit": "bongopiano",
+      "voice": "shaker-rise",
+      "velocity_ordered": true,
+      "closest_take_residual_db": -0.008813900952533637,
+      "soft_hard_residual_db": -5.540032342044913
+    },
+    {
+      "kit": "bongopiano",
+      "voice": "muted-tap",
+      "velocity_ordered": true,
+      "closest_take_residual_db": -0.09995490143078094,
+      "soft_hard_residual_db": -4.274421614998129
+    },
+    {
+      "kit": "bongopiano",
+      "voice": "open-conga",
+      "velocity_ordered": true,
+      "closest_take_residual_db": -8.562167283138201,
+      "soft_hard_residual_db": -7.231030614354865
+    },
+    {
+      "kit": "bongopiano",
+      "voice": "clave",
+      "velocity_ordered": true,
+      "closest_take_residual_db": -0.24425824693542889,
+      "soft_hard_residual_db": -3.2857914752586304
+    },
+    {
+      "kit": "bongopiano",
+      "voice": "wood-knock",
+      "velocity_ordered": true,
+      "closest_take_residual_db": -0.31119791152940185,
+      "soft_hard_residual_db": -2.153064009226449
+    },
+    {
+      "kit": "bongopiano",
+      "voice": "metal-low",
+      "velocity_ordered": true,
+      "closest_take_residual_db": -8.951587255482856,
+      "soft_hard_residual_db": -1.3916516633856446
+    },
+    {
+      "kit": "bongopiano",
+      "voice": "metal-high",
+      "velocity_ordered": true,
+      "closest_take_residual_db": -7.418912998240814,
+      "soft_hard_residual_db": -1.3292905341431347
+    },
+    {
+      "kit": "genge",
+      "voice": "deep-kick",
+      "velocity_ordered": true,
+      "closest_take_residual_db": -12.02942112194819,
+      "soft_hard_residual_db": -0.20646807590211838
+    },
+    {
+      "kit": "genge",
+      "voice": "tight-kick",
+      "velocity_ordered": true,
+      "closest_take_residual_db": -11.504310647070785,
+      "soft_hard_residual_db": -1.5226456178886225
+    },
+    {
+      "kit": "genge",
+      "voice": "snare",
+      "velocity_ordered": true,
+      "closest_take_residual_db": -6.463701791923425,
+      "soft_hard_residual_db": -3.508631171644959
+    },
+    {
+      "kit": "genge",
+      "voice": "rimshot",
+      "velocity_ordered": true,
+      "closest_take_residual_db": -4.66467213360761,
+      "soft_hard_residual_db": -0.009511232279202631
+    },
+    {
+      "kit": "genge",
+      "voice": "rim",
+      "velocity_ordered": true,
+      "closest_take_residual_db": -2.140523016843931,
+      "soft_hard_residual_db": -0.8664579169246812
+    },
+    {
+      "kit": "genge",
+      "voice": "closed-hat",
+      "velocity_ordered": true,
+      "closest_take_residual_db": -0.3086765671666496,
+      "soft_hard_residual_db": -2.1519322386720168
+    },
+    {
+      "kit": "genge",
+      "voice": "open-hat",
+      "velocity_ordered": true,
+      "closest_take_residual_db": -0.11630404969129424,
+      "soft_hard_residual_db": -3.4333193345332775
+    },
+    {
+      "kit": "genge",
+      "voice": "shaker",
+      "velocity_ordered": true,
+      "closest_take_residual_db": -0.06508243380461119,
+      "soft_hard_residual_db": -4.124478771864171
+    },
+    {
+      "kit": "genge",
+      "voice": "low-bongo",
+      "velocity_ordered": true,
+      "closest_take_residual_db": -0.9937210144071955,
+      "soft_hard_residual_db": -22.293676446132768
+    },
+    {
+      "kit": "genge",
+      "voice": "high-bongo",
+      "velocity_ordered": true,
+      "closest_take_residual_db": -0.7044111505910589,
+      "soft_hard_residual_db": -24.577710010478903
+    },
+    {
+      "kit": "genge",
+      "voice": "conga",
+      "velocity_ordered": true,
+      "closest_take_residual_db": -11.240458376490123,
+      "soft_hard_residual_db": -8.355060287874121
+    },
+    {
+      "kit": "genge",
+      "voice": "bell",
+      "velocity_ordered": true,
+      "closest_take_residual_db": -11.570337511425919,
+      "soft_hard_residual_db": -3.115884654158765
+    },
+    {
+      "kit": "genge",
+      "voice": "low-log",
+      "velocity_ordered": true,
+      "closest_take_residual_db": -41.620438551446604,
+      "soft_hard_residual_db": -9.725159669898884
+    },
+    {
+      "kit": "genge",
+      "voice": "high-log",
+      "velocity_ordered": true,
+      "closest_take_residual_db": -41.701245665359934,
+      "soft_hard_residual_db": -9.548447841564295
+    },
+    {
+      "kit": "genge",
+      "voice": "hand-roll",
+      "velocity_ordered": true,
+      "closest_take_residual_db": -2.5610220833887305,
+      "soft_hard_residual_db": -11.161896573687057
+    },
+    {
+      "kit": "genge",
+      "voice": "shaker-rise",
+      "velocity_ordered": true,
+      "closest_take_residual_db": -0.017663472500153675,
+      "soft_hard_residual_db": -3.9651998383794442
+    },
+    {
+      "kit": "genge",
+      "voice": "muted-tap",
+      "velocity_ordered": true,
+      "closest_take_residual_db": -0.30080211974614074,
+      "soft_hard_residual_db": -3.390639892797016
+    },
+    {
+      "kit": "genge",
+      "voice": "open-conga",
+      "velocity_ordered": true,
+      "closest_take_residual_db": -10.712989591777049,
+      "soft_hard_residual_db": -8.072817757460834
+    },
+    {
+      "kit": "genge",
+      "voice": "clave",
+      "velocity_ordered": true,
+      "closest_take_residual_db": -1.5878978770888157,
+      "soft_hard_residual_db": -1.307266742023834
+    },
+    {
+      "kit": "genge",
+      "voice": "wood-knock",
+      "velocity_ordered": true,
+      "closest_take_residual_db": -1.7955795778896615,
+      "soft_hard_residual_db": -1.838882193037934
+    },
+    {
+      "kit": "genge",
+      "voice": "metal-low",
+      "velocity_ordered": true,
+      "closest_take_residual_db": -11.512511833648178,
+      "soft_hard_residual_db": -2.760447999242767
+    },
+    {
+      "kit": "genge",
+      "voice": "metal-high",
+      "velocity_ordered": true,
+      "closest_take_residual_db": -10.87477046837786,
+      "soft_hard_residual_db": -3.3180151891952785
+    },
+    {
+      "kit": "kapuka",
+      "voice": "deep-kick",
+      "velocity_ordered": true,
+      "closest_take_residual_db": -10.23184302448948,
+      "soft_hard_residual_db": -0.12062210984613025
+    },
+    {
+      "kit": "kapuka",
+      "voice": "tight-kick",
+      "velocity_ordered": true,
+      "closest_take_residual_db": -10.415852085549698,
+      "soft_hard_residual_db": -1.4849939006811532
+    },
+    {
+      "kit": "kapuka",
+      "voice": "snare",
+      "velocity_ordered": true,
+      "closest_take_residual_db": -6.294597377390901,
+      "soft_hard_residual_db": -3.970895977157958
+    },
+    {
+      "kit": "kapuka",
+      "voice": "rimshot",
+      "velocity_ordered": true,
+      "closest_take_residual_db": -4.577750404697227,
+      "soft_hard_residual_db": -0.2917314082889535
+    },
+    {
+      "kit": "kapuka",
+      "voice": "rim",
+      "velocity_ordered": true,
+      "closest_take_residual_db": -2.3335658901044827,
+      "soft_hard_residual_db": -1.3122853722641064
+    },
+    {
+      "kit": "kapuka",
+      "voice": "closed-hat",
+      "velocity_ordered": true,
+      "closest_take_residual_db": -0.5939113630296659,
+      "soft_hard_residual_db": -2.215816401381893
+    },
+    {
+      "kit": "kapuka",
+      "voice": "open-hat",
+      "velocity_ordered": true,
+      "closest_take_residual_db": -0.20231425881665197,
+      "soft_hard_residual_db": -3.725481091186431
+    },
+    {
+      "kit": "kapuka",
+      "voice": "shaker",
+      "velocity_ordered": true,
+      "closest_take_residual_db": -0.08858092572086629,
+      "soft_hard_residual_db": -4.599693029255866
+    },
+    {
+      "kit": "kapuka",
+      "voice": "low-bongo",
+      "velocity_ordered": true,
+      "closest_take_residual_db": -2.1752339745766043,
+      "soft_hard_residual_db": -23.2880911202261
+    },
+    {
+      "kit": "kapuka",
+      "voice": "high-bongo",
+      "velocity_ordered": true,
+      "closest_take_residual_db": -0.8692986003628025,
+      "soft_hard_residual_db": -26.35725749678617
+    },
+    {
+      "kit": "kapuka",
+      "voice": "conga",
+      "velocity_ordered": true,
+      "closest_take_residual_db": -10.940171819795436,
+      "soft_hard_residual_db": -7.443695045776298
+    },
+    {
+      "kit": "kapuka",
+      "voice": "bell",
+      "velocity_ordered": true,
+      "closest_take_residual_db": -11.026589927485572,
+      "soft_hard_residual_db": -2.3652545421640827
+    },
+    {
+      "kit": "kapuka",
+      "voice": "low-log",
+      "velocity_ordered": true,
+      "closest_take_residual_db": -41.95766282014195,
+      "soft_hard_residual_db": -10.387861437656865
+    },
+    {
+      "kit": "kapuka",
+      "voice": "high-log",
+      "velocity_ordered": true,
+      "closest_take_residual_db": -42.02370896336227,
+      "soft_hard_residual_db": -10.225711466264036
+    },
+    {
+      "kit": "kapuka",
+      "voice": "hand-roll",
+      "velocity_ordered": true,
+      "closest_take_residual_db": -2.9002534388852252,
+      "soft_hard_residual_db": -11.834205395937092
+    },
+    {
+      "kit": "kapuka",
+      "voice": "shaker-rise",
+      "velocity_ordered": true,
+      "closest_take_residual_db": -0.07498471881300656,
+      "soft_hard_residual_db": -4.245010820886887
+    },
+    {
+      "kit": "kapuka",
+      "voice": "muted-tap",
+      "velocity_ordered": true,
+      "closest_take_residual_db": -0.2937137596202882,
+      "soft_hard_residual_db": -3.5088025056829912
+    },
+    {
+      "kit": "kapuka",
+      "voice": "open-conga",
+      "velocity_ordered": true,
+      "closest_take_residual_db": -11.127769017617709,
+      "soft_hard_residual_db": -7.761450359076607
+    },
+    {
+      "kit": "kapuka",
+      "voice": "clave",
+      "velocity_ordered": true,
+      "closest_take_residual_db": -1.0250221628067373,
+      "soft_hard_residual_db": -1.5619574509687582
+    },
+    {
+      "kit": "kapuka",
+      "voice": "wood-knock",
+      "velocity_ordered": true,
+      "closest_take_residual_db": -1.426204778849376,
+      "soft_hard_residual_db": -2.1758246241976793
+    },
+    {
+      "kit": "kapuka",
+      "voice": "metal-low",
+      "velocity_ordered": true,
+      "closest_take_residual_db": -11.025328624435758,
+      "soft_hard_residual_db": -2.4805893285713507
+    },
+    {
+      "kit": "kapuka",
+      "voice": "metal-high",
+      "velocity_ordered": true,
+      "closest_take_residual_db": -10.336886851111943,
+      "soft_hard_residual_db": -2.125908783743213
+    }
+  ],
+  "aliasing_status": "Mode frequencies bounded; 4x render and 18 kHz output filter. No complete aliasing certification.",
+  "verified_module_sha256": "f52619d1483684bf4284554672922b0e33a535dd95874c19e2a200082a2e5cd1",
+  "generator_and_parameter_hashes": {
+    "model.py": "a5d85c2ac9aede33a465ea60954760faad7466ba22dcf14176272963aabe44d9",
+    "models.json": "a8091be931d83b8ec667c7c64d868d09cbfc82c1fe9955c0315b0a35b0b323ec",
+    "calibration.json": "0ba55c6225aae6eaef5c7d728cad82a993718dad66496c2e15290e334f93b125"
+  }
+}

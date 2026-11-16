@@ -30,7 +30,14 @@ class KneeBreakRoundTripTest {
                 assertEquals(16, imported.kit.pads.size)
                 for ((i, pad) in kit.pads.withIndex()) {
                     val back = imported.kit.pads[i]
+                    assertNull(pad.recipe, "Frozen audition assets must not claim an editable synth recipe")
+                    assertEquals("knee-break", pad.source["factory"])
+                    assertEquals("frozen oscillator/noise synthesis", pad.source["sourceKind"])
+                    assertEquals(t.body, pad.source["body"])
+                    assertEquals(t.treatment, pad.source["treatment"])
                     val chain = assertNotNull(pad.chain)
+                    assertEquals(3, chain.zones!!.size)
+                    assertTrue(chain.zones!!.all { it.cycle == 3 })
                     assertEquals(chain, back.chain)
                     assertEquals(pad.muteGroup, back.muteGroup)
                     val wav = WavReader.read(dir.resolve(pad.sampleFile))

@@ -512,7 +512,7 @@ object MutateSheet {
     const val ROULETTE_LABEL = "RANDOM PARTNER · PICK ONE FROM THE LIBRARY"
 
     /** The partner panel's room row with no room kept (drawn from round M2). It avoids KEEP ROOM: KEEP is the card's commit verb. */
-    const val NO_ROOM_LINE = "NO ROOM YET · MAKE ONE IN RE-AMP AND ROOM"
+    const val NO_ROOM_LINE = "NO ROOM YET · MAKE ONE IN SPEAKER AND ROOM"
 
     /** The partner panel's other-kit row on a one-kit shelf (drawn from round M2). */
     const val NO_OTHER_KIT_LINE = "NO OTHER KIT IN THE LIBRARY"

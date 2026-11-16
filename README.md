@@ -40,6 +40,8 @@ remains blocked on slice-map/hardware verification. Owner listening is pending.
 
 TRIAD has a [native shared-bus drum audition](docs/TRIAD.md): one hybrid groove through three processing rigs. These are listening candidates, not a factory engine or MPC program.
 
+[East African fitted synthesis](docs/EAST_AFRICA.md) adds five 22-pad starters for Bongo Flava, Singeli, Bongopiano, Genge and Kapuka. Each carries three strike levels and three alternate takes, including finite rolls and risers. The Python sound is approved; native listening and hardware checks remain open.
+
 [TIMBER](docs/TIMBER.md) adds three acoustic-instrument percussion banks: Folk Pocket, Wood Boom Bap and String Two Step. Guitar, acoustic bass guitar, cello and upright contacts fill sixteen pads, with three strike levels, four takes, a roll and a riser. The owner approved listening and hardware on 2026-11-15; full software regression remains pending.
 
 ## The loop
@@ -456,7 +458,7 @@ explicit MIDI root (24–96), strike velocity and model version; TUNE is a
 relative ±12-semitone offset, neutral at 0.5, so the effective note spans
 12–108 without clamping back to the saved-root range. Seven provisional presets
 and a dry sixteen-pad C minor pentatonic kit are included, with PITCHWHEEL among
-FRESH TAPE's 167 starters. Run `./gradlew :synth:generatePitchwheelAudition`
+FRESH TAPE's 176 starters. Run `./gradlew :synth:generatePitchwheelAudition`
 for the compact first listening set, or add `-PpitchwheelFull` for the broader
 dry probes. HOLD's top step returns settled loop-only material with a
 deterministic attachment cycle and capped adhesion. The owner heard R1 as six
@@ -1145,8 +1147,8 @@ render-time limits. Build its MPC program and replay files with:
 ```
 
 ONSET, SCANNED CHAIN, VOX, FORK, HALOBAR, AEROSTAT, TREMOR, BALLAST, FLOTILLA, CISTERN, CIRCUIT, OBBLIGATO, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE,
-TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, LATTICE, ACCORD, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, REGISTERS, OSPREY, OPENSKY, OVEN, FLOCK, VENT, OVERLAP, TRIO, NACRE, ORIGAMI, TREFOIL, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS, TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME, OTIS, WICK, BORE, ARCO, SCOUR, KEEL, CHITIN, EROSION, RIVET, FIRED BRONZE, BACKWASH, DRUMLINE, HICCUP, TEMPEST, SPLAY, OSTERIA, ETCH, SCUFF, CLUTTER, CALABASH, TERRA, CAIRN and GRAINS round out the lineup —
-93 engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
+TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, LATTICE, ACCORD, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, REGISTERS, OSPREY, OPENSKY, OVEN, FLOCK, VENT, OVERLAP, TRIO, NACRE, ORIGAMI, TREFOIL, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS, TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME, OTIS, WICK, BORE, ARCO, SCOUR, KEEL, CHITIN, EROSION, RIVET, FIRED BRONZE, BACKWASH, DRUMLINE, HICCUP, TEMPEST, SPLAY, OSTERIA, ETCH, SCUFF, CLUTTER, CALABASH, TERRA, BRISTLE, CAIRN and GRAINS round out the lineup —
+94 engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
 since it has no voice enum and works on a source snip instead of picking
 one. VOX is formant vocal synthesis — the shopping-mall-keyboard choir,
 proudly: a VOWEL knob morphs
@@ -1402,7 +1404,7 @@ TREMOR, BALLAST, CISTERN, CIRCUIT, OBBLIGATO, ALLOY, THAW, MURK, NIMBUS, COROLLA
 UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL,
 SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVERLAP,
 OVEN, FLOCK, VENT, CREASE, TRIO, NACRE, ORIGAMI, TREFOIL, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS,
-TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME, BORE, ARCO, SCOUR, KEEL, CHITIN, WICK, EROSION, RIVET, FIRED BRONZE, BACKWASH, DRUMLINE, SOOT, HICCUP, TEMPEST, SPLAY, OSTERIA, ETCH, SCUFF, CLUTTER, CALABASH, TERRA, CAIRN, plus GRAINS, SNAP and DRAW,
+TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME, BORE, ARCO, SCOUR, KEEL, CHITIN, WICK, EROSION, RIVET, FIRED BRONZE, BACKWASH, DRUMLINE, SOOT, HICCUP, TEMPEST, SPLAY, OSTERIA, ETCH, SCUFF, CLUTTER, CALABASH, TERRA, BRISTLE, CAIRN, plus GRAINS, SNAP and DRAW,
 which sit beside the picker. `:synth` also holds engines that picker does not show.
 LORENTZ has a preset roster, so `snipsnap synth` renders it.
 
@@ -1777,6 +1779,13 @@ and round robin remains open; see [the build notes](docs/HALOBAR_SIX_VOICES.md).
 layers and four takes per layer. Each keeps a 16-hit bank and adds a finite roll
 and riser on bank B. The original DnB hits preserve the approved audition. [Source provenance, kit export and limits](docs/COSMIC_BREAKS.md).
 
+
+BRISTLE is the in-progress bass adaptation with two accepted routes: A drives the
+saw before filtering; B drives it after filtering. Both keep a clean fundamental.
+The SYNTH picker saves seven controls and offers finite or opt-in sustained C1–C3 instruments
+with three timbral touch layers per note. SUSTAIN KEYS adds a note-off RELEASE control;
+the accepted finite packages remain unchanged. See [BRISTLE](docs/BRISTLE.md) for evidence
+and remaining acceptance gates.
 DRUMLINE adds a versioned marching battery and FIELD/STREET CADENCE shelf kits, with independent players, finite rudiments and velocity/take grids. Native listening, device timing and hardware acceptance remain open. See [DRUMLINE](docs/DRUMLINE.md).
 
 KNEE BREAK supplies six FRESH TAPE kit variants: Body and Tighter, each dry,

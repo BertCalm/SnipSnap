@@ -29,6 +29,7 @@ import com.snipsnap.synth.Keys
 import com.snipsnap.synth.MagnetPatch
 import com.snipsnap.synth.MagnetVoice
 import com.snipsnap.synth.NacrePresets
+import com.snipsnap.synth.NacreVoice
 import com.snipsnap.synth.Origami
 import com.snipsnap.synth.OrigamiPatch
 import com.snipsnap.synth.OrigamiVoice
@@ -102,7 +103,7 @@ class SynthRootTest {
                 CairnPatch("Door", CairnVoice.ANSWER, emptyMap()),
                 SplayPresets.all().first(),
                 WickPresets.all().first(),
-                NacrePresets.all().first(),
+                NacrePresets.forVoice(NacreVoice.PEARL).first(),
                 FerryPresets.all().first(),
                 *HalobarPresets.all().toTypedArray(),
                 HalobarPatch("Glockenspiel Study", HalobarVoice.GLOCKENSPIEL, emptyMap()),
