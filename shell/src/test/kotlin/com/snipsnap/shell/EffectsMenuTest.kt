@@ -125,4 +125,26 @@ class EffectsMenuTest {
             if (t is EffectsMenu.Target.Segment) assertFalse(t.id in keyed, "${e.name} reads the kit's tempo or key")
         }
     }
+
+    @Test
+    fun `an effect or a pedal is heard before it is kept, and nothing else is`() {
+        for (entry in EffectsMenu.ALL) {
+            val heardFirst = entry.target is EffectsMenu.Target.Segment || entry.target is EffectsMenu.Target.Pedal
+            assertEquals(heardFirst, EffectsMenu.tries(entry.target), entry.name)
+        }
+        assertTrue(EffectsMenu.START_HERE.all { EffectsMenu.tries(it.target) }, "every starter is heard first")
+        assertFalse(EffectsMenu.tries(EffectsMenu.Target.Board(BoardType.WIDE)), "a board already stages until KEEP")
+        assertFalse(EffectsMenu.tries(EffectsMenu.Target.Chain))
+        assertFalse(EffectsMenu.tries(EffectsMenu.Target.Shape))
+    }
+
+    @Test
+    fun `the keep bar names what it keeps and fits a row`() {
+        for (entry in EffectsMenu.ALL.filter { EffectsMenu.tries(it.target) }) {
+            val keep = EffectsMenu.keepLabel(entry.name)
+            assertTrue(keep.startsWith("KEEP ") && keep.endsWith(entry.name), keep)
+            assertTrue(keep.length <= MutateSheet.ROW_CHARS, "too long for the bar: $keep")
+        }
+        assertTrue(EffectsMenu.TRY_LINE.contains("KEEP"), "the line says what keeps it")
+    }
 }
