@@ -59,4 +59,5 @@ $('kit').onchange=loadKit;loadKit();
 (dst/'app.js').write_text(js)
 print('Packaged three actual saved-kit auditions, 720 variant WAVs.')
 
-subprocess.run([sys.executable,str(root/'scripts/audition-cuttings-compression.py'),str(dst)],check=True)
+# Native generated audio is authoritative; do not reprocess it in Python.
+subprocess.run([sys.executable,str(root/'scripts/patch-cuttings-compression-player.py'),str(dst)],check=True)

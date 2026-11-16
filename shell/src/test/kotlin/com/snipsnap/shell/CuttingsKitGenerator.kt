@@ -5,6 +5,7 @@ import com.snipsnap.audio.WavReader
 import com.snipsnap.audio.WavWriter
 import com.snipsnap.kit.*
 import com.snipsnap.synth.CuttingsKits
+import com.snipsnap.synth.CuttingsBus
 import com.snipsnap.audio.WavWriter.MPC_SAMPLE_RATE as RATE
 import java.io.File
 import kotlin.math.*
@@ -61,8 +62,17 @@ object CuttingsKitGenerator {
             }
             check(out.all { it.isFinite() && abs(it)<1f })
             WavWriter.write(File(audio,"groove.wav"),Snip(out,1,RATE))
+            val bus=CuttingsBus.comparisons(out)
+            for (mode in listOf("glue", "squeeze"))
+                WavWriter.write(File(audio,"groove_${mode}_v2.wav"),Snip(bus.getValue(mode),1,RATE))
+            // Portable full-mix bounce alongside each kit, never fake per-pad bus processing.
+            val mixes=File(folder,"mixes").apply { mkdirs() }
+            WavWriter.write(File(mixes,"${genre.id}-glue.wav"),Snip(bus.getValue("glue"),1,RATE))
+            File(mixes,"README.txt").writeText("Default: Glue, CUTTINGS bus v${CuttingsBus.VERSION}. Full mixed performance, 24-bit mono 44.1 kHz. Fixed ${genre.bpm} BPM, four bars plus decay tail. Editable native/SFZ/MPC pads remain original; no live bus compressor is installed.\n")
+            val originalPeak=out.maxOf { abs(it) }
+            val originalGain=if(originalPeak==0f)1f else bus.getValue("finished").maxOf { abs(it) }/originalPeak
             val voices=kit.pads.joinToString(",") { "\"p%02d\"".format(it.slot) }
-            File(folder,"manifest.json").writeText("""{"version":"cuttings-native-1","title":"${genre.title}","bpm":${genre.bpm},"voices":[$voices],"names":{${names.joinToString(",")}},"stages":["finished"],"entries":[${entries.joinToString(",")}],"comparisonGain":{${gains.joinToString(",")}},"grooves":{"finished":{"file":"audio/groove.wav","gain":1}}}""")
+            File(folder,"manifest.json").writeText("""{"version":"cuttings-native-1","title":"${genre.title}","bpm":${genre.bpm},"voices":[$voices],"names":{${names.joinToString(",")}},"stages":["finished"],"entries":[${entries.joinToString(",")}],"comparisonGain":{${gains.joinToString(",")}},"grooves":{"finished":{"file":"audio/groove.wav","gain":$originalGain},"glue":{"file":"audio/groove_glue_v2.wav","gain":1},"squeeze":{"file":"audio/groove_squeeze_v2.wav","gain":1}},"defaultCompression":"glue","busVersion":2}""")
             proof.append("${genre.id},20,3,4,verified,verified,verified,verified\n")
             println("${genre.title}: saved and verified 20 grids; wrote 240 audition WAVs and native/SFZ/MPC exports")
         }
