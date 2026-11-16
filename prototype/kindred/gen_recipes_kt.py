@@ -22,6 +22,14 @@ for kit, K in kk.KITS.items():
         macs = ", ".join(f'"{k}" to {float(v)}f' for k, v in mac.items())
         rows.append(f'        Recipe("{kit}_A{i + 1:02d}", "{p["name"]}", KindredVoice.{p["base"]}, KindredRole.{ROLE[p["cls"]]}, '
                     f'mapOf({macs}), {float(p["mix"])}f)' + (f" {{ it.copy({shape}) }}" if shape else ""))
+kits = []
+for kit, K in kk.KITS.items():
+    ph, rz = K["phrase"], K["riser"]
+    steps = ", ".join(f"{float(a)} to {float(b)}" for a, b in ph["steps"])
+    kits.append(f'        KitSpec("{kit}", {K["bpm"]}, phrasePad = {ph["pad"]}, phraseDiv = {ph["div"]}, phraseToVco2 = {str(bool(ph.get("to2", False))).lower()}, '
+                f'phraseSteps = listOf({steps}), riserPad = {rz["pad"]}, riserStart = {float(rz["start"])}, riserEnd = {float(rz["end"])}, '
+                f'riserSeconds = {float(rz["seconds"])}, riserCurve = {float(rz["curve"])}, riserGlide = {float(rz.get("glide", 0))})')
+
 src = f'''package com.snipsnap.synth
 
 /**
@@ -47,6 +55,21 @@ object KindredRecipes {{
 
     val ALL: List<Recipe> = listOf(
 {",\n".join(rows)},
+    )
+
+    /**
+     * Each kit's tempo, its A15 phrase (which pad's voice, sixteenths or eighths, eight steps of semitones and
+     * velocity, whether the steps retune VCO 2 only) and its A16 riser (which pad, steps a second from start to end,
+     * how long, the acceleration curve's exponent, a glide in semitones), as heard at round 2.
+     */
+    class KitSpec(
+        val name: String, val bpm: Int,
+        val phrasePad: Int, val phraseDiv: Int, val phraseToVco2: Boolean, val phraseSteps: List<Pair<Double, Double>>,
+        val riserPad: Int, val riserStart: Double, val riserEnd: Double, val riserSeconds: Double, val riserCurve: Double, val riserGlide: Double,
+    )
+
+    val KITS: List<KitSpec> = listOf(
+{",\n".join(kits)},
     )
 
     private val BY_ID = ALL.associateBy {{ it.id }}

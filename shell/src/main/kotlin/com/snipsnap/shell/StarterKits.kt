@@ -833,6 +833,26 @@ object StarterKits {
             seeded = false, tempoBpm = com.snipsnap.synth.ScuffKits.Kit.FLINT.bpm.toFloat(),
         ) { com.snipsnap.synth.ScuffKits.build(com.snipsnap.synth.ScuffKits.Kit.FLINT) },
         Starter(
+            "kindred-techno", "KINDRED TECHNO",
+            "Warehouse techno from one analog-style voice: a punchy kick with a short pitch dive, tight hats, a rumble, ride, cowbell and a sub hit. Three touch zones, four fresh strikes; an eight-step kick phrase and a clap riser.",
+            seeded = false, tempoBpm = com.snipsnap.synth.KindredKits.Kit.TECHNO.bpm.toFloat(),
+        ) { com.snipsnap.synth.KindredKits.build(com.snipsnap.synth.KindredKits.Kit.TECHNO) },
+        Starter(
+            "kindred-industrial", "KINDRED INDUSTRIAL",
+            "Industrial and EBM from one analog-style voice: driven square waves, long pitch dives, anvil, pipe, hammer, steam and grind. Three touch zones, four fresh strikes; an eight-step zap phrase and a riser that turns into a tone.",
+            seeded = false, tempoBpm = com.snipsnap.synth.KindredKits.Kit.INDUSTRIAL.bpm.toFloat(),
+        ) { com.snipsnap.synth.KindredKits.build(com.snipsnap.synth.KindredKits.Kit.INDUSTRIAL) },
+        Starter(
+            "kindred-electro", "KINDRED ELECTRO",
+            "Electro and breaks from one analog-style voice: a long round boom, snappy snare and clap, cowbell, three toms, lasers up and down, a conga. Three touch zones, four fresh strikes; an FM conga phrase and a rising tom roll.",
+            seeded = false, tempoBpm = com.snipsnap.synth.KindredKits.Kit.ELECTRO.bpm.toFloat(),
+        ) { com.snipsnap.synth.KindredKits.build(com.snipsnap.synth.KindredKits.Kit.ELECTRO) },
+        Starter(
+            "kindred-ambient", "KINDRED AMBIENT",
+            "Ambient and downtempo from one analog-style voice: a soft kick, brush, FM bells, wood, a water drop, glass, breath and swell. Three touch zones, four fresh strikes; an eight-step bell phrase and a pluck riser that becomes a tone.",
+            seeded = false, tempoBpm = com.snipsnap.synth.KindredKits.Kit.AMBIENT.bpm.toFloat(),
+        ) { com.snipsnap.synth.KindredKits.build(com.snipsnap.synth.KindredKits.Kit.AMBIENT) },
+        Starter(
             "footwork-tap-jazz", "FOOTWORK TAP JAZZ",
             "Weighted metallic tap, heel support, two-way brushes and body percussion on a close stage. Eighteen pads with authored roll and riser; three touch zones and four takes. Full dynamics.",
             seeded = false, tempoBpm = com.snipsnap.synth.FootworkKits.Kit.TAP.bpm.toFloat(),

@@ -3847,3 +3847,11 @@ Five curated shelf kits retain the accepted fitted modal/noise palette and FM
 logs: 22 sounds × 3 velocity zones × 3 takes per kit. This is a bank family,
 not a new picker engine. Native listening and hardware gates remain open;
 see [implementation and evidence](EAST_AFRICA.md).
+
+### KINDRED, round K2 (2026-11-16)
+
+The four kits on the shelf: `KindredKits` (TECHNO 132, INDUSTRIAL 100, ELECTRO 124, AMBIENT 84), SKINS starters.
+Fourteen one-shots per kit as three zones of four fresh strikes, an A15 phrase (two bars of one voice re-struck by the
+kit's eight steps) and an A16 riser; pad levels carry the round-2 groove balance. Every grid proved through saving,
+playback and MPC 3 export (768 slices); each groove from the export measures within 1 dB of the accepted Python groove
+in every band. Nothing in Kotlin heard. Open: the owner's listen, presets, the picker, hardware. See [KINDRED](KINDRED.md).

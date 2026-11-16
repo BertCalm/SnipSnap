@@ -922,7 +922,7 @@ the shelf as FRESH TAPE starters.
   app (the listening page, version 3, plays them from the MPC 3 export), the Latin jazz kit and its new voices,
   presets and the picker, and phone and MPC hardware (round 3).
 
-## KINDRED (rounds 0 to 2 heard in Python, round 2 accepted 2026-11-15; round K1 Kotlin port, not heard)
+## KINDRED (rounds 0 to 2 heard in Python, round 2 accepted 2026-11-15; K1 port merged; K2 kits on the shelf 2026-11-16, not heard)
 
 A one-voice, eight-step analog-style percussion synth and four genre kits from it. See [KINDRED](KINDRED.md).
 
@@ -930,16 +930,16 @@ A one-voice, eight-step analog-style percussion synth and four genre kits from i
 |---|---|---|
 | Melodic voices, keygroups, premade kit, chord tools | Not applicable | A drum engine. |
 | Articulation: HOLD, STRUM | Not applicable | Finite hits; the eight-step phrase is a kit pad (A15), not HOLD. |
-| Percussion: roll or riser | Not yet built in Kotlin | Each kit's A16 riser and A15 phrase were heard in Python at round 2; K2 renders them in Kotlin. |
-| Drums: multiple distinct genre kits on the shelf | Not yet | Four kits (TECHNO, INDUSTRIAL, ELECTRO, AMBIENT) accepted by ear in Python; every one-shot slot differs between every pair by at least 2.15 dB of shape, and they differ in tempo, tuning, voices and grooves. K2 puts them on the shelf. |
+| Percussion: roll or riser | Pass in software, not heard in Kotlin | Every kit carries its A16 riser and A15 phrase (two bars of one voice), rendered by the engine (`KindredKits`). |
+| Drums: multiple distinct genre kits on the shelf | Pass in software | Four kits on the shelf under SKINS (`kindred-techno`, `-industrial`, `-electro`, `-ambient`), accepted by ear in Python. In Kotlin every pair differs on all fourteen one-shot slots by over 2 dB (least 2.90), and in tempo, tuning, voices, phrase and riser (`KindredKitsTest`). |
 | Velocity: rendering | Pass in Kotlin, not heard | Every recipe's soft and hard hits differ by at least 1.96 dB of level-matched shape (`KindredTest`). |
 | Round robin: rendering | Pass in Kotlin, not heard | Four takes per recipe, none a copy, each deterministic; `Restrike` deals them. |
-| Velocity and round robin: saving | Partly | A patch round-trips through JSON with velocity, take, recipe and model (`KindredTest`, `DeterminismTest`); no saved kit yet. |
-| Velocity and round robin: playback and export | Not yet verified | K2. |
+| Velocity and round robin: saving | Pass in software | Each kit reloads equal and every saved slice matches its render; patches round-trip with velocity, take, recipe and model (`KindredKitTest`, `:shell:generateKindredKits`, `DeterminismTest`). |
+| Velocity and round robin: playback and export | Pass in software; MPC 2 not applicable ([format limit](#mpc-2-and-round-robin-owner-decision-2026-11-14)) | `PadHit.resolve` picks the zone by velocity and walks four takes in order, then repeats; the MPC 3 export reads back: 768 slices. A soft zone is at least 1.74 dB apart in shape; the closest takes are 12.4 dB apart (a copy is over 40). No phone or MPC has played them. |
 | Hardware playback | Not verified | |
 | Sound character | Python round 2 accepted | "It's better. I think it was something with my headphones. Let's proceed with ring 2 sounds", corrected by the owner to "Round" (2026-11-15). The Kotlin port matches the noise-free recipes to 0.01 dB; the noise recipes are another realisation and wait for the ear. |
 
-- **Overall: in progress.** Open: the kits on the shelf with their phrases and risers, saving, playback and MPC 3 export of the grid, the picker, the owner's listen to the Kotlin kits, hardware.
+- **Overall: in progress.** The software gates pass at K2. Open: the owner's listen to the Kotlin kits (each groove measures within 1 dB of the accepted round-2 groove in every band), the presets into the factory roster after it, the picker, hardware.
 
 ## CALABASH (complete, 2026-11-15: four genre kits on the shelf, approved by ear and on phone and MPC 3)
 

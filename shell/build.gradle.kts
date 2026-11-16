@@ -627,6 +627,16 @@ tasks.register<JavaExec>("generateScuffKits") {
     args(providers.gradleProperty("scuffKitsOutput").orNull ?: "${rootDir}/testkit/scuff-kits")
 }
 
+tasks.register<JavaExec>("generateKindredKits") {
+    group = "distribution"
+    description = "Build the four KINDRED kits, prove the velocity and round-robin grid through save, playback and MPC 3 export, and write the listening pack."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.KindredKitGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "2g"
+    args(providers.gradleProperty("kindredKitsOutput").orNull ?: "${rootDir}/testkit/kindred-kits")
+}
+
 tasks.register<JavaExec>("generateEmberKits") {
     group = "distribution"
     description = "Build the four EMBER kits, prove every velocity and round-robin grid through save, playback and MPC 3 export, and write the listening pack."
