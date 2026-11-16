@@ -237,7 +237,11 @@ object Kindred {
      * Render [voice] (or its [recipe]) hit at [velocity] as take [take]. Take 0 is the reference strike: the
      * oscillators start at phases 0 and 0.25 with no drift, as the prototype's take 0 does.
      */
-    fun render(voice: KindredVoice, macros: Map<String, Float> = emptyMap(), velocity: Float = 1f, take: Int = 0, recipe: String? = null): Snip {
+    fun render(voice: KindredVoice, macros: Map<String, Float> = emptyMap(), velocity: Float = 1f, take: Int = 0, recipe: String? = null): Snip =
+        Snip(finish(padRaw(voice, macros, velocity, take, recipe)), channels = 1, sampleRate = RATE)
+
+    /** One pad strike at 4x, before the output stage: what [render] finishes and a kit levels by zone. */
+    internal fun padRaw(voice: KindredVoice, macros: Map<String, Float>, velocity: Float, take: Int, recipe: String?): DoubleArray {
         require(take in 0..MAX_TAKE) { "KINDRED take out of 0..$MAX_TAKE: $take" }
         val q = shapeFor(voice, macros, recipe)
         val id = recipe ?: voice.name
@@ -247,9 +251,11 @@ object Kindred {
             val jitter = if (take == 0) 1.0 else 1.0 + (rng.nextDouble() * .3 - .15)
             Trigger((dt * jitter * FS).toInt(), 0.0, v * g)
         }
-        val raw = strike(q, triggers, (q.seconds * FS).toInt(), take, id)
-        return Snip(finish(raw), channels = 1, sampleRate = RATE)
+        return strike(q, triggers, (q.seconds * FS).toInt(), take, id)
     }
+
+    /** The internal rate, for a kit that schedules strikes in 4x samples. */
+    internal const val INTERNAL_RATE = FS
 
     /** The voice run over [triggers] for [n] samples at 4x, with take [take]'s phases, drift and decays. */
     internal fun strike(q: Shape, triggers: List<Trigger>, n: Int, take: Int, id: String): DoubleArray {

@@ -45,9 +45,10 @@ import kotlin.random.Random
 private val EMBER_DRUM = listOf("TUNE", "DAMP", "BUZZ", "DISTANCE", "WARMTH")
 private val EMBER_MOVING = listOf("TUNE", "SPEED", "BUZZ", "DISTANCE", "WARMTH")
 private val EMBER_CROWDS = listOf("TUNE", "CROWD", "DISTANCE", "WARMTH")
+private val EMBER_FITTED = listOf("TUNE", "DAMP", "DISTANCE", "WARMTH")
 
 /**
- * EMBER's 27 voices, each filed as the kit role it plays, with its render length and its controls. The roll,
+ * EMBER's 35 voices (27, and round 3L's eight Latin percussion voices), each filed as the kit role it plays, with its render length and its controls. The roll,
  * the swell, the bow, the sizzle and the slowest sweeps run past 1.5 s and are declared PERC, as BREAKER
  * declares its riser and crash.
  */
@@ -63,6 +64,13 @@ enum class EmberVoice(val drumClass: DrumClass, internal val seconds: Double, in
     PRESS_ROLL(DrumClass.PERC, 3.00, EMBER_MOVING), BRUSH_ROLL(DrumClass.PERC, 3.00, EMBER_MOVING),
     SNAPS(DrumClass.CLAP, 0.60, EMBER_CROWDS), CLAPS(DrumClass.CLAP, 0.70, EMBER_CROWDS), TAMBOURINE(DrumClass.PERC, 0.80, EMBER_DRUM),
     CONGA(DrumClass.PERC, 0.90, listOf("TUNE", "DAMP", "SLAP", "DISTANCE", "WARMTH")), STICKS(DrumClass.PERC, 0.40, listOf("TUNE", "DAMP", "DISTANCE", "WARMTH")),
+    // Latin percussion (round 3L; the owner's ask, heard in Python at round 2L and approved 2026-11-16). The cowbell,
+    // clave, bongos and shaker are fitted to CC0 recordings (resources/ember/latin.json, VCSL); the timbale and its
+    // shell (the paila) are physical models; the guiro is a click per ridge at the measured rate and spectrum.
+    TIMBALE(DrumClass.TOM, 1.10, listOf("TUNE", "DAMP", "RIM", "DISTANCE", "WARMTH")), PAILA(DrumClass.PERC, 0.60, EMBER_FITTED),
+    COWBELL(DrumClass.PERC, 0.80, EMBER_FITTED), CLAVE(DrumClass.PERC, 0.60, EMBER_FITTED),
+    BONGO_HIGH(DrumClass.PERC, 0.80, EMBER_FITTED), BONGO_LOW(DrumClass.PERC, 0.90, EMBER_FITTED),
+    GUIRO(DrumClass.PERC, 1.60, listOf("TUNE", "SPEED", "DISTANCE", "WARMTH")), SHAKER(DrumClass.PERC, 0.60, EMBER_FITTED),
 }
 
 /**
@@ -117,7 +125,7 @@ object Ember {
 
     private val DEFAULTS = mapOf(
         "TUNE" to .5f, "DAMP" to .3f, "BUZZ" to .5f, "DISTANCE" to .3f, "WARMTH" to .35f, "SPEED" to .5f,
-        "BEND" to .5f, "PRESSURE" to .5f, "CROWD" to .4f, "SLAP" to .3f,
+        "BEND" to .5f, "PRESSURE" to .5f, "CROWD" to .4f, "SLAP" to .3f, "RIM" to .2f,
     )
     /** On the fitted cymbals and hats BUZZ adds looseness beyond the recorded cymbal, so it starts at 0. */
     private val BUZZ_ZERO by lazy { setOf(EmberVoice.RIDE, EmberVoice.RIDE_BELL, EmberVoice.BRUSH_RIDE, EmberVoice.BOWED_CYMBAL,
@@ -148,10 +156,12 @@ object Ember {
     /** One full brush circle: 1.9 s at SPEED 0 (a ballad's slow stir) to 0.5 s. */
     internal fun sweepSeconds(speed: Double) = lin(speed, 1.9, 0.5)
 
-    /** Render length: fixed per voice, except the sweep, whose length follows its circle. */
-    fun secondsFor(voice: EmberVoice, macros: Map<String, Float> = emptyMap()): Double =
-        if (voice == EmberVoice.BRUSH_SWEEP) round((sweepSeconds(settled(voice, macros).getValue("SPEED").toDouble()) + 0.35) * 1000) / 1000
-        else voice.seconds
+    /** Render length: fixed per voice, except the sweep and the guiro, whose lengths follow their stroke. */
+    fun secondsFor(voice: EmberVoice, macros: Map<String, Float> = emptyMap()): Double = when (voice) {
+        EmberVoice.BRUSH_SWEEP -> round((sweepSeconds(settled(voice, macros).getValue("SPEED").toDouble()) + 0.35) * 1000) / 1000
+        EmberVoice.GUIRO -> round((guiroStroke(settled(voice, macros).getValue("SPEED").toDouble()) + 0.35) * 1000) / 1000
+        else -> voice.seconds
+    }
 
     /** One hit at 44.1 kHz: [velocity] 0..1 is the stroke, [take] 0..[MAX_TAKE] is which of four strikes. */
     fun render(voice: EmberVoice, macros: Map<String, Float> = emptyMap(), velocity: Float = 1f, take: Int = 0): Snip {
@@ -195,6 +205,14 @@ object Ember {
             EmberVoice.TAMBOURINE -> tambourine(m, v, tr, n)
             EmberVoice.CONGA -> conga(m, v, tr, n)
             EmberVoice.STICKS -> sticks(m, v, tr, n)
+            EmberVoice.TIMBALE -> timbale(m, v, tr, n)
+            EmberVoice.PAILA -> paila(m, v, tr, n)
+            EmberVoice.COWBELL -> struck("cowbell", m, v, tr, n).first
+            EmberVoice.CLAVE -> struck("clave", m, v, tr, n).first
+            EmberVoice.BONGO_HIGH -> struck("bongo_high", m, v, tr, n).first
+            EmberVoice.BONGO_LOW -> struck("bongo_low", m, v, tr, n).first
+            EmberVoice.GUIRO -> guiro(m, v, tr, n)
+            EmberVoice.SHAKER -> toInternal(envelopeHat("shaker", m.getValue("TUNE"), m.getValue("DAMP"), v, tr, n / 4 + 1), n)
         }
         return finish(raw, m, v, seconds, TAILS[voice])
     }
@@ -354,15 +372,29 @@ object Ember {
     private fun nums(v: JsonValue?) = v?.arr()?.map { it.num() }?.toDoubleArray() ?: DoubleArray(0)
     private fun rows(v: JsonValue?) = v?.arr()?.map { nums(it) } ?: emptyList()
 
+    private fun fitRoot(path: String) = Json.parse(checkNotNull(javaClass.getResourceAsStream(path)) { "Missing EMBER fits $path" }
+        .bufferedReader().use { it.readText() }).obj()
+
+    /** The cymbal fits (cymbals.json) and the Latin percussion's (latin.json), one table over the same third-octave bands. */
     private val cymbalFit: CymbalFit by lazy {
-        val text = checkNotNull(javaClass.getResourceAsStream("/ember/cymbals.json")) { "Missing EMBER cymbal fits" }.bufferedReader().use { it.readText() }
-        val root = Json.parse(text).obj()
-        val voices = root.getValue("voices").obj().mapValues { (_, jv) ->
+        val roots = listOf(fitRoot("/ember/cymbals.json"), fitRoot("/ember/latin.json"))
+        val bands = nums(roots[0]["bands"])
+        check(nums(roots[1]["bands"]).contentEquals(bands)) { "latin.json and cymbals.json must share their bands" }
+        val voices = roots.flatMap { r -> r.getValue("voices").obj().entries }.associate { (name, jv) ->
             val o = jv.obj()
-            FitVoice(rows(o["modes"]), nums(o["stick"]), nums(o["stickSoft"]), nums(o["times"]), rows(o["hard"]), rows(o["soft"]),
+            name to FitVoice(rows(o["modes"]), nums(o["stick"]), nums(o["stickSoft"]), nums(o["times"]), rows(o["hard"]), rows(o["soft"]),
                 rows(o["residual"]), rows(o["residualSoft"]))
         }
-        CymbalFit(nums(root["bands"]), voices)
+        CymbalFit(bands, voices)
+    }
+
+    /** The guiro's measured click spectrum (band levels), ridge rate and stroke lengths (latin.json, `guiro`). */
+    private class GuiroFit(val click: DoubleArray, val rate: Double, val strokes: DoubleArray)
+
+    private val guiroFit: GuiroFit by lazy {
+        val g = fitRoot("/ember/latin.json").getValue("guiro").obj()
+        val st = g.getValue("strokes").obj()
+        GuiroFit(nums(g["click"]), g.getValue("rate").num(), doubleArrayOf(st.getValue("slow").num(), st.getValue("med").num(), st.getValue("fast").num(), st.getValue("hit").num()))
     }
 
     private val bandSos = ConcurrentHashMap<Int, EmberDsp.Sos>()
@@ -1066,5 +1098,103 @@ object Ember {
         }
         add(out, hp(force, 3000.0, FSD), 0.4)
         return out
+    }
+
+    // ------------------------------------------------------------------ Latin percussion (round 3L)
+
+    /**
+     * A timbale: a thin, tight head over a steel shell, struck with a thin stick near the edge, so it rings high and
+     * bright. TUNE spans the pair (the hembra about 290 Hz at .3, the macho about 380 Hz at .7; shape). RIM moves the
+     * stick onto the steel rim: the shell rings and a rimshot cracks. A tighter head's slower high-mode loss (alpha
+     * 0.75); the shell's modes are a 14-inch steel cylinder's, by ear. No CC0 timbale recording exists to fit.
+     */
+    private fun timbale(m: Map<String, Double>, v: Double, tr: Rng, n: Int): DoubleArray {
+        val f1 = 330.0 * semis(m.getValue("TUNE"), 6.0)
+        val rim = m.getValue("RIM")
+        val force = stick(v, tr, n, widthHard = 0.2e-3)
+        val t1 = lin(m.getValue("DAMP"), 0.9, 0.12)
+        val r = (0.62 + tr.normal(0.0, 0.05)).coerceIn(0.0, 0.95)
+        val ang = tr.uniform(0.0, PI)
+        val ir = peakNorm(membraneIr(f1, n, t1, 0.75, r, ang, sag = 0.02 * v * v, sagTau = 0.04 + 0.02 * tr.random()))
+        val out = conv(DoubleArray(n) { force[it] * (1 - 0.45 * rim) }, ir, n)
+        val k = semis(m.getValue("TUNE"), 3.0)
+        val shellHz = doubleArrayOf(1180.0, 1720.0, 2350.0, 3110.0, 3960.0, 5230.0).map { it * k }.toDoubleArray()
+        val shellT = doubleArrayOf(.42, .36, .3, .25, .2, .16).map { it * t1 }.toDoubleArray()
+        val shellIr = modalIr(shellHz, doubleArrayOf(1.0, .8, .7, .5, .35, .25), shellT, n, FSD, tr.uniform(0.0, 2 * PI, 6))
+        val shell = conv(force, peakNorm(shellIr), n)
+        val crack = hp(force, 3000.0, FSD)
+        val head = peakOf(out) + 1e-12
+        add(out, shell, head * (0.1 + 0.55 * rim) / (peakOf(shell) + 1e-12))
+        add(out, crack, head * 0.5 * rim / (peakOf(crack) + 1e-12))
+        return out
+    }
+
+    /** Cascara: the stick on the timbale's steel shell. The shell's modes, a little of the head answering, the stick's click. DAMP is the other hand on the head. */
+    private fun paila(m: Map<String, Double>, v: Double, tr: Rng, n: Int): DoubleArray {
+        val k = semis(m.getValue("TUNE"), 4.0)
+        val force = stick(v, tr, n, widthHard = 0.16e-3)
+        val t = lin(m.getValue("DAMP"), 0.45, 0.06)
+        val hz = doubleArrayOf(980.0, 1530.0, 2190.0, 2960.0, 3870.0, 5100.0, 6650.0).map { it * k }.toDoubleArray()
+        val amp = doubleArrayOf(.7, 1.0, .9, .7, .5, .35, .22).map { it * 10.0.pow(tr.normal(0.0, 1.2) / 20) }.toDoubleArray()
+        val ts = doubleArrayOf(1.0, .8, .65, .5, .4, .3, .22).map { it * t }.toDoubleArray()
+        val shell = conv(force, peakNorm(modalIr(hz, amp, ts, n, FSD, tr.uniform(0.0, 2 * PI, 7))), n)
+        val head = conv(force, peakNorm(membraneIr(330.0 * semis(m.getValue("TUNE"), 6.0), n, 0.25, 0.75, 0.9, tr.uniform(0.0, PI))), n)
+        val click = hp(force, 2500.0, FSD)
+        val pk = peakOf(shell) + 1e-12
+        add(shell, head, pk * 0.12 / (peakOf(head) + 1e-12))
+        add(shell, click, pk * 0.35 / (peakOf(click) + 1e-12))
+        return shell
+    }
+
+    /** The guiro stroke's length: the recordings' slow, medium and fast strokes and the short scrape, from SPEED 0 to 1. */
+    internal fun guiroStroke(speed: Double): Double = interp(speed, doubleArrayOf(0.0, 1.0 / 3, 2.0 / 3, 1.0), guiroFit.strokes)
+
+    /**
+     * A guiro scraped once: a click for every ridge the stick crosses, at the measured ridge rate, a little slow at
+     * the start, quickest mid-stroke, easing at the end; each click a burst at the measured click spectrum, each
+     * band at its measured energy. TUNE slides the spectrum; a softer stroke presses less (fewer highs, quieter).
+     * Shape: the stroke's speed curve and the click's 2 to 7 ms ring.
+     */
+    private fun guiro(m: Map<String, Double>, v: Double, tr: Rng, n: Int): DoubleArray {
+        val g = guiroFit
+        val bands = cymbalFit.bands
+        val k = n / 4 + 1
+        val length = guiroStroke(m.getValue("SPEED"))
+        val base = g.rate * lin(m.getValue("SPEED"), 0.85, 1.25)
+        val shift = (m.getValue("TUNE") - 0.5) * 2 * 3 / 4
+        val idx = DoubleArray(bands.size) { it.toDouble() }
+        val w = min(1.0, softWeight(v))
+        val lv = DoubleArray(bands.size) { i ->
+            interp(i - shift, idx, g.click) * 10.0.pow(-w * ((i - 12) * 1.5).coerceIn(0.0, 9.0) / 20)
+        }
+        val kl = (0.008 * RATED).toInt()
+        val kernels = List(6) {
+            val c = DoubleArray(kl)
+            for ((i, fc) in bands.withIndex()) {
+                if (fc * 2.0.pow(1.0 / 6) >= 0.49 * RATED) continue
+                val tau = interp(fc, doubleArrayOf(125.0, 16000.0), doubleArrayOf(0.007, 0.002))
+                val seg = fitBand(i).run(tr.normals(kl))
+                for (j in 0 until kl) seg[j] *= exp(-j / RATED / tau)
+                val e = sqrt(seg.sumOf { it * it }) + 1e-20
+                for (j in 0 until kl) c[j] += lv[i] * seg[j] / e
+            }
+            val p = peakOf(c) + 1e-12
+            DoubleArray(kl) { c[it] / p }
+        }
+        val out = DoubleArray(k)
+        var t = 0.0
+        while (t < length) {
+            val x = t / max(length, 1e-6)
+            val a = sin(PI * min(1.0, 0.15 + 0.85 * x)).pow(0.5) * 10.0.pow(tr.normal(0.0, 2.0) / 20)
+            val i = (t * RATED).toInt()
+            val c = kernels[tr.int(0, kernels.size)]
+            val e = min(kl, k - i)
+            for (j in 0 until max(0, e)) out[i + j] += a * c[j]
+            val rate = base * (0.75 + 0.45 * sin(PI * x)) * (1 + tr.normal(0.0, 0.12))
+            t += 1.0 / max(rate, 5.0)
+        }
+        val gain = v.pow(1.2)
+        for (j in out.indices) out[j] *= gain
+        return toInternal(out, n)
     }
 }
