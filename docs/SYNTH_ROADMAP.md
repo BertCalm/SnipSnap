@@ -3847,3 +3847,10 @@ Five curated shelf kits retain the accepted fitted modal/noise palette and FM
 logs: 22 sounds × 3 velocity zones × 3 takes per kit. This is a bank family,
 not a new picker engine. Native listening and hardware gates remain open;
 see [implementation and evidence](EAST_AFRICA.md).
+
+### Soul and rock acoustic factory kits
+
+Three owner-approved synthesized banks, delivered as exact frozen PCM rather than
+a new engine: SOUL POCKET, ROADHOUSE ROCK and OPEN ROOM ROCK. Forty-eight pads,
+432 velocity/take variants, hat chokes, rolls and swells. See [SOUL_ROCK](SOUL_ROCK.md)
+for software evidence and the remaining phone/MPC gate.
