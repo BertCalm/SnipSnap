@@ -3856,3 +3856,10 @@ the phrases, has no preset. SERVO sits on SYNTH's picker after BRISTLE, before C
 An on-device test loads ELECTRO BOOM KICK and keeps an edit with its take and model; CI compiles and runs it. See
 [SERVO](SERVO.md).
 
+
+### Soul and rock acoustic factory kits
+
+Three owner-approved synthesized banks, delivered as exact frozen PCM rather than
+a new engine: SOUL POCKET, ROADHOUSE ROCK and OPEN ROOM ROCK. Forty-eight pads,
+432 velocity/take variants, hat chokes, rolls and swells. See [SOUL_ROCK](SOUL_ROCK.md)
+for software evidence and the remaining phone/MPC gate.
