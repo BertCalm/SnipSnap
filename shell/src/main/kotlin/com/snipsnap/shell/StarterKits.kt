@@ -1034,6 +1034,12 @@ object StarterKits {
             "Dholak and tabla TERRA kit: dholak booms, bayan bends, dayan strokes, a cajon backbeat and bells.",
             seeded = false,
         ) { com.snipsnap.synth.TerraGenreKits.build(com.snipsnap.synth.TerraGenreKits.Kit.PUNJAB) },
+        // Opt-in beside the accepted TEMPEST starter, which stays as it is; appended after TERRA PUNJAB.
+        Starter(
+            com.snipsnap.synth.TempestRoundRobinKits.ID, "TEMPEST ROUND ROBIN",
+            "The sixteen TEMPEST pads with four takes each: repeated hats, snares and claps vary like a real drum machine's.",
+            seeded = false,
+        ) { com.snipsnap.synth.TempestRoundRobinKits.build() },
     ))
 
     fun byId(id: String): Starter? = ALL.firstOrNull { it.id == id }

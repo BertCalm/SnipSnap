@@ -260,6 +260,64 @@ unchanged).
   recipes, and MPC 3 / MPC 2 export read-back. A new pad's source records status `kept` and
   round `tempest-kits-1`; reused factory presets stay `accepted`.
 
+## Round robin, opt-in (2026-11-16, awaiting the owner's listen in tempest-rr-1)
+
+TEMPEST ROUND ROBIN (`tempest-round-robin`, `TempestRoundRobinKits`) sits on the shelf
+right after the accepted TEMPEST starter, which is unchanged. It has the same sixteen pads
+in the same order, each with four takes, dealt in turn by the phone, the groove preview and
+the MPC 3 export. Only the main kit has takes this round; the genre kits can follow if the
+owner keeps it.
+
+- **What a take is.** A take is a fresh render of the same recipe (`Tempest.render(...,
+  take)`). It re-rolls only what an analog drum machine leaves to chance between strokes
+  (`Tempest.Takes`). Pitch, envelopes, filters, drive, the repeats (SPACE), the output stage
+  and levelling are untouched.
+
+  | Voice | What is random in TEMPEST | What a real machine varies | What a take changes |
+  |---|---|---|---|
+  | KICK (GROUND, BREAK) | Only the source's grit noise, 2.6% of the source at SOURCE .22, under a low lowpass | Almost nothing: the drum is triggered from rest | A fresh noise seed. Nothing else, so the kick is almost identical |
+  | TOM (LOW, MID, HIGH) | A noise share of 8% × SOURCE (2% at .25) beside a pitched body | Almost nothing: the tuned body is triggered from rest | A fresh noise seed. The body is untouched |
+  | SNARE (START, CRACK) | The wire noise; the two-sine body is fixed | The noise source runs freely, so the wires differ every hit; the body does not | A fresh noise seed. The body is untouched |
+  | CLAP (START, SPREAD) | The burst noise; three bursts and the release sit at fixed spacing | The noise, and slight spacing differences between the burst pulses | A fresh noise seed, and the second and third bursts and the release each move by up to 4% of the burst spacing (up to 0.72 ms on CLAP START and 1.07 ms on CLAP SPREAD). The first burst stays at 0 |
+  | HAT (CLOSED, OPEN, NOISE) | The noise share (36–80%); six cluster partials all start at phase 0 | The noise, and the free-running oscillators' phases | A fresh noise seed, and each cluster partial starts at a random phase within ±45° |
+  | METAL (SHARD, GRAIN, BURR, TRAIL) | The source's grit noise, 7.8–12% of the source | The free-running oscillators' relative phase | A fresh noise seed, and the two inharmonic partials start within ±0.25 rad (about ±14°) of the harmonic ones |
+
+- **Take 1 is the accepted hit.** Every pad's first take is the accepted pad, sample for
+  sample. `tempest/accepted-v1.sha256` holds the float-sample hashes of all 112 accepted
+  TEMPEST renders, taken on the base before takes existed: the 22 presets, the TEMPEST,
+  CIRCUIT, FOUNDRY, STEP and TUNED kits, and each voice's default at every model.
+  `TempestRoundRobinKitsTest` re-renders every one at take 0. Model 1 has no takes.
+- **Which renders.** The kit uses renderer takes 0, 2, 5 and 8. A take passes the screen when,
+  on all sixteen pads, it keeps the accepted onset (within 0.25 ms), stays within 2 dB of the
+  accepted hit's spectral shape and keeps its 90%-energy time within 0.7 to 1.4 times the
+  accepted one. Of renderer takes 1 to 24, nine passed (2, 5, 8, 9, 12, 15, 17, 21 and 23) and
+  the kit keeps the first three. The other fifteen failed only on spectral shape, each on a
+  snare or a clap whose fresh noise moved the shape 2.0 to 2.5 dB.
+- **The shape measure.** Shape is compared over the bands within 30 dB of the hit's strongest
+  band (`TempestRoundRobinMeasure.audibleDistance`). EROSION's all-band measure also counts
+  bands 40 dB or more under the main band; a fresh noise draw swings those by several dB, so a
+  hat or snare take that changes only its noise read up to 5.5 dB there. Both are logged.
+- **Measured, not heard.** Across the kit's takes, onsets match within 0.16 ms, the shape is
+  0.0–1.74 dB from the accepted hit and the 90%-energy time is 0.955–1.016 times the accepted
+  one. By a phase-blind measure (frame-by-frame band levels, `TempestRoundRobinMeasure.texture`)
+  a take differs from the accepted hit by 0.00–0.01 dB on kicks and toms, 0.36–0.83 dB on
+  metal, 0.91–1.62 dB on hats, 1.90–2.26 dB on snares and 2.11–2.29 dB on claps.
+  These numbers describe the takes; whether they sound like one pad struck again is the
+  owner's listen.
+- **Choke.** The hats keep mute group 1. In the groove preview a closed hat still cuts a
+  ringing open hat on every take, and both MPC exports write mute group 1 for the hats
+  (`TempestRoundRobinStarterTest`).
+- **Saved and exported.** TEMPEST has one touch, so each pad is a single-zone chain of four
+  takes, not a velocity grid. Pads carry no `PadRecipe`, because a one-hit recipe cannot
+  regenerate four takes; each pad's source keeps the accepted recipe JSON and its renderer
+  takes. The MPC 3 export carries every take (Slice Motion, cycle 4). MPC 2 has no Slice
+  Motion, so its `.xpm` windows each pad to its first take, the accepted hit. The export
+  screen's MPC 2 note covers only velocity-and-round-robin grids, so it does not appear for
+  this kit.
+- **Open.** Round tempest-rr-1 awaits the owner's verdict; until then the takes are not
+  pinned as kept, only as rendered for listening (`TempestRoundRobinPinsTest`,
+  `round-robin-v1.sha256`). Nothing has been played on a phone or loaded on an MPC.
+
 ## Verified / measured / proposed / heard
 
 Verified: source/patch dispatch, supported-model policy and real APIs at base `df675d0` plus

@@ -666,7 +666,7 @@ hashes: sixteen full-kit pads, ten model-2 and eight model-1 files (`TempestProm
 | Drums: multiple distinct genre kits | Pass: four kits, owner KEEP of the three new ones on 2026-11-14 | The accepted sixteen-pad TEMPEST kit (`SynthKits.tempest`), plus three genre kits from the same voices: TEMPEST CIRCUIT (electro), TEMPEST FOUNDRY (industrial) and TEMPEST STEP (UK garage), in [the full kit](TEMPEST_FULL_KIT.md#genre-kits-kept-2026-11-14). The owner kept all six clips of round tempest-kits-1 (pad walks and grooves). `TempestGenreKitsTest` pins every pad's PCM24 hash and proves distinct role balances, no shared kick or snare, at least 12 different pads between any two kits, and the hat choke group. TEMPEST TUNED is the original two-voice kick and metal scale, not a genre kit. |
 | Velocity: rendering | Partial | No TEMPEST control is a brightness macro, so a softer hit is the full render low-passed by `Velocity.soften`, not a re-strike. The starter's pads have no velocity layers. |
 | Velocity: saving, playback, export | Not yet verified | No velocity layers exist to save, play or export. |
-| Round robin | Not yet verified | TEMPEST has no re-strike (`Restrike.canRestrike` is false), so no round robin exists through rendering, saving, playback or export. |
+| Round robin | Built for the main kit, in software; awaiting the owner's listen (round tempest-rr-1, 2026-11-16) | TEMPEST ROUND ROBIN (`TempestRoundRobinKits`), an opt-in starter after TEMPEST, gives each of the sixteen pads four takes. **Rendering:** `Tempest.render(..., take)` re-rolls only what an analog machine leaves to chance: every voice's noise seed, METAL's and HAT's oscillator start phases, and CLAP's burst spacing; kicks, toms and snare bodies stay fixed. Take 0 matches all 112 accepted renders' float hashes taken before takes existed, and every take is pinned (`TempestRoundRobinKitsTest`, `TempestRoundRobinPinsTest`). **Saving, playback, export:** each pad is a single-zone chain (one touch); it saves and reloads, the pad resolver and the groove preview deal takes 1–4 in turn, a closed hat still cuts an open hat, MPC 3 deals every take by Slice Motion, and MPC 2 windows each pad to its first take (`TempestRoundRobinStarterTest`). The genre kits have no takes yet. `Restrike.canRestrike` is still false: the app's own ROBIN does not re-strike TEMPEST. |
 | Starter kit: saving and export | Pass in software | Each pad regenerates from its saved recipe byte for byte, and the hats share mute group 1. The generator writes MPC 3 and MPC 2 programs and checks them with the export read-back (`TempestKitTest`, `TempestExpansionTest`, `TempestStarterTest`). |
 | Picker | Not yet verified on a device | All six voices and 22 presets; recalled recipes keep their saved model through edits, RANDOMISE, navigation and SAVE. `TempestSynthScreenTest` covers this and has not run on a device. |
 | Hardware playback | Not verified | No phone timing, MPC load or MPC hat choke is recorded. |
@@ -675,8 +675,9 @@ hashes: sixteen full-kit pads, ten model-2 and eight model-1 files (`TempestProm
   model 2 with "Sounds great, proceed as recommended." [The full kit](TEMPEST_FULL_KIT.md)
   records that on 2026-11-07 the owner accepted the complete six-voice audition with "Sounds
   great, proceed as recommended." Preserve these renders; this is not a phone or MPC audition.
-- **Overall: incomplete.** A roll or riser, velocity layers, round robin, device
-  runs of the picker and hardware playback remain open.
+- **Overall: incomplete.** A roll or riser, velocity layers, the owner's verdict on round
+  robin (and takes for the genre kits), device runs of the picker and hardware playback
+  remain open.
 
 ## SPLAY (from the recovery backup, 2026-11-13)
 
