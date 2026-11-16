@@ -74,4 +74,23 @@ class NacreEditingTest {
         }
         assertEquals(.8f, NacreEditing.controls(contact).getValue("CONTACT"))
     }
+
+    @Test
+    fun onlyGrottoShowsHoldAndItsHeldPresetsKeepTheLoopThroughScrambleAndReplay() {
+        for (voice in NacreVoice.entries) for (preset in NacrePresets.forVoice(voice)) {
+            assertEquals(voice == NacreVoice.GROTTO, NacreEditing.macrosFor(preset).any { it.name == "HOLD" }, preset.name)
+        }
+        val held = NacrePresets.forVoice(NacreVoice.GROTTO).single { it.name == "Grotto Glints" }
+        assertEquals(1f, NacreEditing.controls(held).getValue("HOLD"))
+        assertTrue(Nacre.isLoop(held.voice, NacreEditing.controls(held)))
+        val generated = Nacre.defaults(held.voice) + mapOf("TOUCH" to .42f, "DUET" to .73f, "HOLD" to 0f)
+        val scrambled = NacreEditing.scrambledControls(held, generated)
+        assertEquals(1f, scrambled.getValue("HOLD"), "RANDOMISE must not drop a held loop")
+        assertEquals(.73f, scrambled.getValue("DUET"))
+        val saved = Patches.edited(held, "MY HELD GROTTO", scrambled) as NacrePatch
+        assertEquals(saved, Patches.fromJsonText(saved.toJsonText()))
+        assertEquals(saved, PadRecipe.fromJsonText(PadRecipe(saved).toJsonText()).patch)
+        val finite = NacrePresets.forVoice(NacreVoice.GROTTO).single { it.name == "Grotto Bow" }
+        assertFalse(Nacre.isLoop(finite.voice, NacreEditing.controls(finite)))
+    }
 }

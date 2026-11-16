@@ -1394,15 +1394,6 @@ object Arco {
      */
     internal val LOOP_ATTACK_SECONDS get() = attackSeconds(0.5f)
 
-    /**
-     * The most times the loop's pitch is corrected so its whole periods fill its whole frames, and how close to
-     * 1 the measured length over the wanted one must be to stop early (BORE's numbers, which hold at ARCO's top
-     * note too: 3e-7 of a two second loop is about a tenth of a raw sample, 0.0005 of a period at A5, ERHU's top,
-     * where a period is 200 raw samples).
-     */
-    private const val LOOP_PASSES = 5
-    private const val LOOP_CONVERGED = 3e-7
-
     /** Frames of steady stretch kept past the loop, so the long-lag measurement has samples to look at. */
     private const val LOOP_PAD_FRAMES = 2048
 
@@ -1419,30 +1410,9 @@ object Arco {
     /** The frames a LOOP's stretch is warmed up for before the kept loop begins: [LOOP_WARMUP_SECONDS] or [LOOP_WARMUP_PERIODS] periods of [hz], the longer. A held key ([renderHeldMeasured]) warms up the same, once or twice over. */
     internal fun warmFramesFor(hz: Float): Int = Math.round(max(LOOP_WARMUP_SECONDS, LOOP_WARMUP_PERIODS / hz) * RATE)
 
-    /** A stretch after [retuned]: the raw string, the pitch that was played to get it, and how many corrections it took (0 when the planned pitch already closed). */
-    internal class Retuned(val raw: FloatArray, val tunedHz: Double, val passes: Int)
-
-    /**
-     * BORE's route to a loop that closes by period, the one place it runs: [render] the stretch at [target], measure the *played* length of the
-     * plan's whole periods after [warm] frames ([Bore.measureLoopSamples]), and render again at `tuned * ratio`, up to [LOOP_PASSES] times, until
-     * the ratio is within [LOOP_CONVERGED] of 1. A LOOP ([renderLoopMeasured]) and a held key ([renderHeldMeasured]) both run it, each with its
-     * own stretch, so the two cannot retune differently.
-     */
-    private fun retuned(target: Float, plan: Bore.LoopPlan, warm: Int, render: (Float) -> FloatArray): Retuned {
-        val over = Dsp.OVERSAMPLE
-        val wanted = plan.frames.toDouble() * over
-        var tuned = target.toDouble()
-        var raw = render(tuned.toFloat())
-        var passes = 0
-        for (pass in 1..LOOP_PASSES) {
-            val ratio = Bore.measureLoopSamples(raw, warm * over, wanted, plan.periods) / wanted
-            if (abs(ratio - 1.0) < LOOP_CONVERGED) break
-            tuned *= ratio
-            raw = render(tuned.toFloat())
-            passes = pass
-        }
-        return Retuned(raw, tuned, passes)
-    }
+    /** ARCO's retune, lifted unchanged to [LoopRetune] so NACRE GROTTO's held bow closes by the same route: one copy, not two. */
+    private fun retuned(target: Float, plan: Bore.LoopPlan, warm: Int, render: (Float) -> FloatArray): LoopRetune.Retuned =
+        LoopRetune.retuned(target, plan, warm, render)
 
     /** The steady stretch: a short stroke, then constant velocity and pressure to the end. No bite, no vibrato (the LOOP adds its own after the retune, [loopVibrato]), no stop. */
     internal fun stretch(voice: ArcoVoice, macros: Map<String, Float>, tuned: Float, warmFrames: Int, frames: Int): FloatArray {
@@ -1741,7 +1711,7 @@ object Arco {
      * The finish of a held key from its conditioned stretch: where its loop starts, its level, BODY's lift above the knee, the peak, and the
      * seam read on the file that ships. See [renderHeldMeasured].
      */
-    private fun heldFrom(conditioned: FloatArray, voice: ArcoVoice, body: Float, warm: Int, frames: Int, r: Retuned): HeldRender {
+    private fun heldFrom(conditioned: FloatArray, voice: ArcoVoice, body: Float, warm: Int, frames: Int, r: LoopRetune.Retuned): HeldRender {
         val base = warm + SEAM_FRAMES
         fun loopStartIn(buf: FloatArray): Int =
             base + Siren.bestCut(buf.copyOfRange(base, base + HELD_CUT_SEARCH_FRAMES), HELD_CUT_SEARCH_FRAMES)

@@ -62,12 +62,12 @@ internal object NacreVoices {
     const val BUBBLE_OUTPUT_GAIN = 3.35
 
     private const val DURATION_SECONDS = 6f
-    private const val CORE_CURRENT = .20
-    private const val CORE_BLOOM = .35
+    internal const val CORE_CURRENT = .20
+    internal const val CORE_BLOOM = .35
     private const val STRINGS_PER_HARP = 4
     private const val CONTROL_BLOCK = 32
     private const val TWO_PI = 2.0 * PI
-    private val RATIOS = doubleArrayOf(1.0, 2.0, 4.0, 8.0)
+    internal val RATIOS = doubleArrayOf(1.0, 2.0, 4.0, 8.0)
 
     /** SHELL's modes: slightly stretched, so the shell reads as a struck object with a clear note. */
     private val SHELL_RATIOS = doubleArrayOf(1.0, 2.41, 4.13, 6.20, 8.57)
@@ -80,6 +80,7 @@ internal object NacreVoices {
         NacreVoice.SHELL -> NacreSource.SHELL
         NacreVoice.BUBBLE -> NacreSource.BUBBLE
         NacreVoice.PEARL -> throw IllegalArgumentException("PEARL is not one of NacreVoices' sources")
+        NacreVoice.GROTTO -> throw IllegalArgumentException("GROTTO is not one of NacreVoices' sources; see NacreGrotto")
     }
 
     fun sourceFor(model: Int): NacreSource = NacreSource.entries.firstOrNull { it.model == model }
@@ -98,11 +99,11 @@ internal object NacreVoices {
                 velocity: Float = 1f, seed: Long = Nacre.DEFAULT_SEED): Nacre.Probe =
         play(source, macros, midi, velocity, seed, record = true)
 
-    private fun stopIfInterrupted() {
+    internal fun stopIfInterrupted() {
         if (Thread.currentThread().isInterrupted) throw CancellationException("NACRE render cancelled")
     }
 
-    private fun smooth(x: Double): Double = x.coerceIn(0.0, 1.0).let { it * it * (3.0 - 2.0 * it) }
+    internal fun smooth(x: Double): Double = x.coerceIn(0.0, 1.0).let { it * it * (3.0 - 2.0 * it) }
 
     private fun settled(macros: Map<String, Float>): Map<String, Float> {
         val defaults = defaults()
@@ -116,11 +117,15 @@ internal object NacreVoices {
 
     /** Stable ID-derived variations, in each source's own seed space. */
     private fun variation(source: NacreSource, seed: Long, performer: String, id: Int, purpose: String): Double =
-        ((Dsp.seedFor("NACRE", source.model, seed, performer, id, purpose).toLong() and 0xffffffffL) /
+        variation(source.model, seed, performer, id, purpose)
+
+    /** The same variation in saved model [model]'s seed space (GROTTO, model 8, draws its own). */
+    internal fun variation(model: Int, seed: Long, performer: String, id: Int, purpose: String): Double =
+        ((Dsp.seedFor("NACRE", model, seed, performer, id, purpose).toLong() and 0xffffffffL) /
             4294967295.0) * 2.0 - 1.0
 
     /** PEARL's internal water at its core CURRENT .20: related slow components at fixed positions. */
-    private class Field(val depth: Double, val hz: Double, val phase: Double) {
+    internal class Field(val depth: Double, val hz: Double, val phase: Double) {
         fun at(seconds: Double, position: Double): Double {
             val p = TWO_PI * hz * seconds + phase
             return (.78 * sin(p + position) + .22 * sin(2.0 * p - .63 * position + .4)).coerceIn(-1.0, 1.0)
@@ -128,10 +133,15 @@ internal object NacreVoices {
     }
 
     private fun field(source: NacreSource, seed: Long) = Field(
-        depth = 1.0 - exp(-3.2 * CORE_CURRENT),
-        hz = .28 + 2.1 * CORE_CURRENT.pow(1.3),
-        phase = .4 + .5 * variation(source, seed, "water", 0, "phase"),
+        depth = FIELD_DEPTH,
+        hz = FIELD_HZ,
+        phase = fieldPhase(source.model, seed),
     )
+
+    /** The internal water's depth and rate at CORE_CURRENT .20 (0.539 Hz), and its phase in saved model [model]'s seed space. */
+    internal val FIELD_DEPTH = 1.0 - exp(-3.2 * CORE_CURRENT)
+    internal val FIELD_HZ = .28 + 2.1 * CORE_CURRENT.pow(1.3)
+    internal fun fieldPhase(model: Int, seed: Long): Double = .4 + .5 * variation(model, seed, "water", 0, "phase")
 
     /** PEARL's paired strum: a continuous answering offset, one direction per complete gesture. */
     private fun schedule(source: NacreSource, touch: Double, duet: Double, f0: Double, velocity: Float,
@@ -164,7 +174,7 @@ internal object NacreVoices {
     }
 
     /** Static constant-peak bandpass, as PEARL's bodies and sympathetic strings use. */
-    private class Mode(hz: Double, q: Double, rate: Int) {
+    internal class Mode(hz: Double, q: Double, rate: Int) {
         private val w = TWO_PI * hz / rate
         private val alpha = sin(w) / (2.0 * q)
         private val b = alpha / (1.0 + alpha)
@@ -181,7 +191,7 @@ internal object NacreVoices {
         }
     }
 
-    private class LowPass(hz: Double, rate: Int) {
+    internal class LowPass(hz: Double, rate: Int) {
         private val a = 1.0 - exp(-TWO_PI * hz / rate)
         private var state = 0.0
         fun next(x: Double): Double { state += a * (x - state); return state }
@@ -204,7 +214,7 @@ internal object NacreVoices {
     }
 
     /** One harmonic string: PEARL's loop, tuned an octave down, with a timed midpoint touch. */
-    private class HarmonicString(
+    internal class HarmonicString(
         val event: Nacre.Event,
         val start: Int,
         val burst: FloatArray,
@@ -222,6 +232,13 @@ internal object NacreVoices {
         private val fingerA = 1.0 - exp(-TWO_PI * fingerHz / rate)
         private var finger = 0.0
         var peakTouch = 0.0; private set
+
+        /** PEARL's water loading: a nonnegative per-period loss, fixed phase-bearing coefficients. [flow] is the water at this string's harp. */
+        fun loadWater(flow: Double, depth: Double) {
+            val loading = .35 + .65 * (.5 + .5 * flow)
+            val amount = depth * (if (event.stringId == 0) .28 else .90)
+            loop.gain(exp(-amount * loading * ln(1000.0) / (t60 * stringHz)).toFloat().coerceIn(0f, 1f))
+        }
 
         private fun touch(age: Int): Double = when {
             age < touchFrames -> 1.0
@@ -290,8 +307,54 @@ internal object NacreVoices {
         }
     }
 
+    /** How much of the other harp's body reaches a harp's sympathetic strings, given the water [flow] at it: PEARL's cross-harp law. */
+    internal fun crossFor(depth: Double, flow: Double): Double = 1.0 - .72 * depth * (.5 + .5 * flow)
+
+    /**
+     * The two harps every non-PEARL source plays into: the bass and upper bodies (three static modes each), the eight
+     * sympathetic strings at the note's octaves, driven one way by both bodies with the other harp's share scaled by the
+     * water ([crossFor]), and the dry-plus-body mix of each harp. [next] takes one sample of each performer's source;
+     * [bass], [upper] and [sympathetic] are then that sample's three streams ([sympathetic] before [sympatheticGain]).
+     */
+    internal class Harps(f0: Double, rate: Int) {
+        private val bassBody = arrayOf(138.0, 261.0, 427.0).mapIndexed { i, hz -> Mode(hz, 3.0 + i, rate) }
+        private val upperBody = arrayOf(397.0, 743.0, 1261.0).mapIndexed { i, hz -> Mode(hz, 2.8 + i, rate) }
+        private val strings = Array(2) { harp -> Array(4) { id ->
+            val hz = f0 * (if (harp == 0) 1.0 else 2.0) * RATIOS[id]
+            val t60 = (.85 + 2.25 * CORE_BLOOM) * .85.pow(id)
+            Mode(hz, PI * hz * t60 / ln(1000.0), rate)
+        } }
+        private var previousBassBody = 0.0
+        private var previousUpperBody = 0.0
+        val sympatheticGain = .10 + 2.0 * CORE_BLOOM.pow(.72)
+        private val cross = .20 + .48 * CORE_BLOOM
+        var bass = 0.0; private set
+        var upper = 0.0; private set
+        var sympathetic = 0.0; private set
+
+        fun next(bassSource: Double, upperSource: Double, crossBass: Double, crossUpper: Double) {
+            var bBody = 0.0
+            var uBody = 0.0
+            for (mode in bassBody) bBody += mode.next(bassSource) / bassBody.size
+            for (mode in upperBody) uBody += mode.next(upperSource) / upperBody.size
+            val bDrive = .62 * previousBassBody + cross * crossBass * previousUpperBody
+            val uDrive = .62 * previousUpperBody + cross * crossUpper * previousBassBody
+            var sym = 0.0
+            for (id in 0 until 4) {
+                val weight = .65.pow(id) / 2.35
+                sym += weight * strings[0][id].next(bDrive)
+                sym += .82 * weight * strings[1][id].next(uDrive)
+            }
+            previousBassBody = bBody
+            previousUpperBody = uBody
+            bass = .92 * bassSource + .26 * bBody
+            upper = .92 * upperSource + .22 * uBody
+            sympathetic = sym
+        }
+    }
+
     /** Identical linear conditioning for the source and sympathetic streams, as PEARL's core uses. */
-    private fun condition(oversampled: FloatArray): FloatArray {
+    internal fun condition(oversampled: FloatArray): FloatArray {
         stopIfInterrupted()
         Tide.bandLimit(oversampled, Dsp.RATE * Dsp.OVERSAMPLE)
         val out = Dsp.decimate(oversampled, Dsp.RATE)
@@ -307,44 +370,56 @@ internal object NacreVoices {
     private fun harmonics(events: List<Nacre.Event>, touch: Double, velocity: Float, seed: Long,
                           frames: Int, rate: Int): Pair<List<HarmonicString>, Map<String, Double>> {
         val strings = events.map { event ->
-            val bass = event.performer == "bass"
-            val hz = event.frequencyHz
-            val stringHz = hz / 2.0
-            // A harmonic is far purer than a pluck: the loop keeps only a few partials of the sounding
-            // note (PEARL's keeps six to twenty-one), brighter for a firmer TOUCH and a harder strike.
-            val brightness = (2.2 + 2.8 * touch) * (.8 + .2 * velocity)
-            val loopHz = (hz * brightness).coerceAtMost(if (bass) 7000.0 else 10500.0).toFloat()
-            val t60 = 1.25 * (if (bass) 3.1 + 1.1 * CORE_BLOOM else 2.2 + .9 * CORE_BLOOM) * .76.pow(event.stringId)
-            val feedback = 10.0.pow(-3.0 / (t60 * stringHz)).coerceAtMost(.9995)
-            val tuning = Strings.tune(stringHz.toFloat(), loopHz, rate)
-            val loop = Strings.Loop(tuning.n, tuning.a, feedback.toFloat(), loopHz, rate)
-            val pickHz = (if (bass) 2200.0 + 5700.0 * touch else 4300.0 + 8200.0 * touch) * (.7 + .3 * velocity)
-            // Plucked near the touched midpoint's quarter, the way a harpist plays a harmonic.
-            val pickPosition = .25 + .02 * variation(NacreSource.HARMONICS, seed, event.performer, event.stringId, "pick")
-            val burst = Strings.pluckExciter(tuning.n, stringHz.toFloat(), pickHz.toFloat(), pickPosition.toFloat(),
-                Dsp.seedFor("NACRE", NacreSource.HARMONICS.model, seed, event.performer, event.stringId, "pluck"), rate, frames)
-            var peak = 0f
-            for (sample in burst) peak = maxOf(peak, abs(sample))
-            // A softer strike has less pick noise against the pitched tone.
-            val foundation = 1.0 - (if (event.stringId == 0) .25 else .35) * (.3 + .7 * velocity)
-            val pickNoise = LowPass(minOf(pickHz, 3.0 * hz), rate)
-            val edgeFrames = minOf((.00035 * rate).roundToInt(), (burst.size - 1) / 3).coerceAtLeast(1)
-            for (i in burst.indices) {
-                val noise = if (peak > 1e-9f) burst[i] / peak else 0f
-                val displacement = sin(TWO_PI * hz * i / rate)
-                val envelope = smooth(i.toDouble() / edgeFrames) * smooth((burst.lastIndex - i).toDouble() / edgeFrames)
-                burst[i] = (.28 * event.strength * envelope *
-                    ((1.0 - foundation) * pickNoise.next(noise.toDouble()) + foundation * displacement)).toFloat()
-            }
-            val periodFrames = rate / stringHz
-            // A softer touch rests longer and with a broader finger: a purer, duller harmonic.
-            val touchFrames = ((3.0 + 3.0 * (1.0 - touch)) * periodFrames).roundToInt()
-            val releaseFrames = periodFrames.roundToInt().coerceAtLeast(1)
-            val fingerHz = hz * (1.5 + 4.5 * touch) * (.35 + .65 * velocity)
-            HarmonicString(event, (event.timeSeconds * rate).roundToInt(), burst, loop, t60, stringHz,
-                touchFrames, releaseFrames, rate / hz, fingerHz, rate)
+            harmonicString(event, (event.timeSeconds * rate).roundToInt(), touch, velocity,
+                variation(NacreSource.HARMONICS, seed, event.performer, event.stringId, "pick"),
+                Dsp.seedFor("NACRE", NacreSource.HARMONICS.model, seed, event.performer, event.stringId, "pluck"), frames, rate)
         }
         return strings to linkedMapOf("harmonicTouchPoint" to .5)
+    }
+
+    /**
+     * One HARMONICS string for [event], starting at raw frame [start]: its loop, its pick burst ([pluckSeed], with the pick
+     * placed [pickVariation] from the quarter point) and its timed midpoint touch. HARMONICS plays one per strum event;
+     * GROTTO ([NacreGrotto]) plays its glints with it, from its own seed space.
+     */
+    internal fun harmonicString(event: Nacre.Event, start: Int, touch: Double, velocity: Float, pickVariation: Double,
+                                pluckSeed: Int, frames: Int, rate: Int): HarmonicString {
+        val bass = event.performer == "bass"
+        val hz = event.frequencyHz
+        val stringHz = hz / 2.0
+        // A harmonic is far purer than a pluck: the loop keeps only a few partials of the sounding
+        // note (PEARL's keeps six to twenty-one), brighter for a firmer TOUCH and a harder strike.
+        val brightness = (2.2 + 2.8 * touch) * (.8 + .2 * velocity)
+        val loopHz = (hz * brightness).coerceAtMost(if (bass) 7000.0 else 10500.0).toFloat()
+        val t60 = 1.25 * (if (bass) 3.1 + 1.1 * CORE_BLOOM else 2.2 + .9 * CORE_BLOOM) * .76.pow(event.stringId)
+        val feedback = 10.0.pow(-3.0 / (t60 * stringHz)).coerceAtMost(.9995)
+        val tuning = Strings.tune(stringHz.toFloat(), loopHz, rate)
+        val loop = Strings.Loop(tuning.n, tuning.a, feedback.toFloat(), loopHz, rate)
+        val pickHz = (if (bass) 2200.0 + 5700.0 * touch else 4300.0 + 8200.0 * touch) * (.7 + .3 * velocity)
+        // Plucked near the touched midpoint's quarter, the way a harpist plays a harmonic.
+        val pickPosition = .25 + .02 * pickVariation
+        val burst = Strings.pluckExciter(tuning.n, stringHz.toFloat(), pickHz.toFloat(), pickPosition.toFloat(),
+            pluckSeed, rate, frames)
+        var peak = 0f
+        for (sample in burst) peak = maxOf(peak, abs(sample))
+        // A softer strike has less pick noise against the pitched tone.
+        val foundation = 1.0 - (if (event.stringId == 0) .25 else .35) * (.3 + .7 * velocity)
+        val pickNoise = LowPass(minOf(pickHz, 3.0 * hz), rate)
+        val edgeFrames = minOf((.00035 * rate).roundToInt(), (burst.size - 1) / 3).coerceAtLeast(1)
+        for (i in burst.indices) {
+            val noise = if (peak > 1e-9f) burst[i] / peak else 0f
+            val displacement = sin(TWO_PI * hz * i / rate)
+            val envelope = smooth(i.toDouble() / edgeFrames) * smooth((burst.lastIndex - i).toDouble() / edgeFrames)
+            burst[i] = (.28 * event.strength * envelope *
+                ((1.0 - foundation) * pickNoise.next(noise.toDouble()) + foundation * displacement)).toFloat()
+        }
+        val periodFrames = rate / stringHz
+        // A softer touch rests longer and with a broader finger: a purer, duller harmonic.
+        val touchFrames = ((3.0 + 3.0 * (1.0 - touch)) * periodFrames).roundToInt()
+        val releaseFrames = periodFrames.roundToInt().coerceAtLeast(1)
+        val fingerHz = hz * (1.5 + 4.5 * touch) * (.35 + .65 * velocity)
+        return HarmonicString(event, start, burst, loop, t60, stringHz,
+            touchFrames, releaseFrames, rate / hz, fingerHz, rate)
     }
 
     private fun shells(events: List<Nacre.Event>, touch: Double, velocity: Float, rate: Int): List<Shell> = events.map { event ->
@@ -399,38 +474,22 @@ internal object NacreVoices {
             harmonics(events, touch, velocity, seed, frames, rate) else emptyList<HarmonicString>() to emptyMap<String, Double>()
         val shellList = if (source == NacreSource.SHELL) shells(events, touch, velocity, rate) else emptyList()
         val bubbleList = if (source == NacreSource.BUBBLE) bubbles(events, touch, velocity, seed, rate) else emptyList()
-        val bassBody = arrayOf(138.0, 261.0, 427.0).mapIndexed { i, hz -> Mode(hz, 3.0 + i, rate) }
-        val upperBody = arrayOf(397.0, 743.0, 1261.0).mapIndexed { i, hz -> Mode(hz, 2.8 + i, rate) }
-        val sympathetic = Array(2) { harp -> Array(4) { id ->
-            val hz = f0 * (if (harp == 0) 1.0 else 2.0) * RATIOS[id]
-            val t60 = (.85 + 2.25 * CORE_BLOOM) * .85.pow(id)
-            Mode(hz, PI * hz * t60 / ln(1000.0), rate)
-        } }
+        val harps = Harps(f0, rate)
         val bassOut = FloatArray(frames)
         val upperOut = FloatArray(frames)
         val symOut = FloatArray(frames)
-        var previousBassBody = 0.0
-        var previousUpperBody = 0.0
         var crossBass = 1.0
         var crossUpper = 1.0
         var internalPeak = 0.0
-        val sympatheticGain = .10 + 2.0 * CORE_BLOOM.pow(.72)
-        val cross = .20 + .48 * CORE_BLOOM
         for (i in 0 until frames) {
             if (i % 32768 == 0) stopIfInterrupted()
             if (i % CONTROL_BLOCK == 0) {
                 val time = i.toDouble() / rate
                 val bassFlow = water.at(time, .2)
                 val upperFlow = water.at(time, 1.9)
-                crossBass = 1.0 - .72 * water.depth * (.5 + .5 * bassFlow)
-                crossUpper = 1.0 - .72 * water.depth * (.5 + .5 * upperFlow)
-                for (s in strings) {
-                    val flow = if (s.event.performer == "bass") bassFlow else upperFlow
-                    val loading = .35 + .65 * (.5 + .5 * flow)
-                    val amount = water.depth * (if (s.event.stringId == 0) .28 else .90)
-                    // PEARL's water loading: a nonnegative per-period loss, fixed phase-bearing coefficients.
-                    s.loop.gain(exp(-amount * loading * ln(1000.0) / (s.t60 * s.stringHz)).toFloat().coerceIn(0f, 1f))
-                }
+                crossBass = crossFor(water.depth, bassFlow)
+                crossUpper = crossFor(water.depth, upperFlow)
+                for (s in strings) s.loadWater(if (s.event.performer == "bass") bassFlow else upperFlow, water.depth)
             }
             var bass = 0.0
             var upper = 0.0
@@ -457,26 +516,14 @@ internal object NacreVoices {
                 internalPeak = maxOf(internalPeak, abs(y))
                 if (shell.event.performer == "bass") bass += y else upper += y
             }
-            var bBody = 0.0
-            var uBody = 0.0
-            for (mode in bassBody) bBody += mode.next(bass) / bassBody.size
-            for (mode in upperBody) uBody += mode.next(upper) / upperBody.size
-            val bDrive = .62 * previousBassBody + cross * crossBass * previousUpperBody
-            val uDrive = .62 * previousUpperBody + cross * crossUpper * previousBassBody
-            var sym = 0.0
-            for (id in 0 until 4) {
-                val weight = .65.pow(id) / 2.35
-                sym += weight * sympathetic[0][id].next(bDrive)
-                sym += .82 * weight * sympathetic[1][id].next(uDrive)
-            }
-            previousBassBody = bBody
-            previousUpperBody = uBody
-            val b = .92 * bass + .26 * bBody
-            val u = .92 * upper + .22 * uBody
+            harps.next(bass, upper, crossBass, crossUpper)
+            val b = harps.bass
+            val u = harps.upper
+            val sym = harps.sympathetic
             check(b.isFinite() && u.isFinite() && sym.isFinite()) { "NACRE ${source.name} nonfinite state at frame $i" }
             bassOut[i] = b.toFloat()
             upperOut[i] = u.toFloat()
-            symOut[i] = (sym * sympatheticGain).toFloat()
+            symOut[i] = (sym * harps.sympatheticGain).toFloat()
         }
         val diagnostics = LinkedHashMap<String, Double>(extra)
         diagnostics["internalSourcePeak"] = internalPeak
