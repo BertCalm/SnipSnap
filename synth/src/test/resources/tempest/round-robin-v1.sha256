@@ -1,4 +1,4 @@
-# TEMPEST ROUND ROBIN v1 as rendered for listening round tempest-rr-1 (16 Nov 2026), renderer takes 0,2,5,8.
+# TEMPEST ROUND ROBIN v1 as kept by ear in round tempest-rr-1 (16 Nov 2026), renderer takes 0,2,5,8.
 # take pad take frames sha256(float32 little-endian samples) name. Take 0 is the accepted pad (accepted-v1.sha256).
 take A01 0 52920 57902318993a24ab8ae530409a58b00e92304ba5098a31af5ff7dd325b19d40d GROUND
 take A01 1 52920 c9c2d4ca456dc2686965741bbb4d7ee7dfdbe15afcc235d88c550c4067a75ea3 GROUND

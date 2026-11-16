@@ -260,13 +260,12 @@ unchanged).
   recipes, and MPC 3 / MPC 2 export read-back. A new pad's source records status `kept` and
   round `tempest-kits-1`; reused factory presets stay `accepted`.
 
-## Round robin, opt-in (2026-11-16, awaiting the owner's listen in tempest-rr-1)
+## Round robin, opt-in (2026-11-16, kept by ear in tempest-rr-1)
 
 TEMPEST ROUND ROBIN (`tempest-round-robin`, `TempestRoundRobinKits`) sits on the shelf
 right after the accepted TEMPEST starter, which is unchanged. It has the same sixteen pads
 in the same order, each with four takes, dealt in turn by the phone, the groove preview and
-the MPC 3 export. Only the main kit has takes this round; the genre kits can follow if the
-owner keeps it.
+the MPC 3 export. Only the main kit has takes; the genre kits have none yet.
 
 - **What a take is.** A take is a fresh render of the same recipe (`Tempest.render(...,
   take)`). It re-rolls only what an analog drum machine leaves to chance between strokes
@@ -302,8 +301,8 @@ owner keeps it.
   one. By a phase-blind measure (frame-by-frame band levels, `TempestRoundRobinMeasure.texture`)
   a take differs from the accepted hit by 0.00–0.01 dB on kicks and toms, 0.36–0.83 dB on
   metal, 0.91–1.62 dB on hats, 1.90–2.26 dB on snares and 2.11–2.29 dB on claps.
-  These numbers describe the takes; whether they sound like one pad struck again is the
-  owner's listen.
+  These numbers describe the takes; whether they sound like one pad struck again was the
+  owner's listen, recorded below.
 - **Choke.** The hats keep mute group 1. In the groove preview a closed hat still cuts a
   ringing open hat on every take, and both MPC exports write mute group 1 for the hats
   (`TempestRoundRobinStarterTest`).
@@ -312,11 +311,29 @@ owner keeps it.
   regenerate four takes; each pad's source keeps the accepted recipe JSON and its renderer
   takes. The MPC 3 export carries every take (Slice Motion, cycle 4). MPC 2 has no Slice
   Motion, so its `.xpm` windows each pad to its first take, the accepted hit. The export
-  screen's MPC 2 note covers only velocity-and-round-robin grids, so it does not appear for
-  this kit.
-- **Open.** Round tempest-rr-1 awaits the owner's verdict; until then the takes are not
-  pinned as kept, only as rendered for listening (`TempestRoundRobinPinsTest`,
-  `round-robin-v1.sha256`). Nothing has been played on a phone or loaded on an MPC.
+  screen says so under the format before anything is written (`Mpc2Limits`): "MPC 2 has no
+  Slice Motion to deal a pad's takes: 16 pads keep their first take only. MPC 3 native deals
+  every take."
+- **Heard and kept (round tempest-rr-1, 16 Nov 2026).** The owner kept every clip with no
+  notes. A4 was the before reference and took no verdict. The clips were rendered through the
+  app's own groove preview from saved kit folders, 24-bit; A2 was played at the desk as a
+  16-bit copy of its 24-bit render.
+
+  | Clip | What it played | Verdict |
+  | --- | --- | --- |
+  | A1 | Each pad's four takes struck hard, half a second apart, GROUND to TRAIL | KEEP |
+  | A2 | Each pad's four takes struck medium, then its four takes struck soft | KEEP |
+  | A3 | HAT CLOSED, SNARE START, CLAP START and HAT NOISE: the accepted kit's one take eight times, then the four takes in turn | KEEP |
+  | A4 | A four-bar 120 BPM groove with every hit on its first take (reference) | No verdict |
+  | A5 | The same groove with the takes dealt in turn | KEEP |
+
+  `TempestRoundRobinPinsTest` pins the kept kit: all 64 takes (sixteen pads, four takes) by
+  SHA-256 of their float samples, in `round-robin-v1.sha256`, with take 1 checked against
+  `accepted-v1.sha256`.
+- **Open.** Nothing has been played on a phone or loaded on an MPC. The phone's player
+  (`PadEngine`) counts takes per pad (the known SC-02 issue). The genre kits have no takes.
+  `Restrike.canRestrike` is still false for TEMPEST, so the app's own ROBIN does not
+  re-strike it. Round-robin pads carry no `PadRecipe`.
 
 ## Verified / measured / proposed / heard
 

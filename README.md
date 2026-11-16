@@ -528,8 +528,8 @@ is the sixteen-pad kit with choking hats; TEMPEST TUNED keeps the original E min
 pentatonic kicks and metal colors. TEMPEST CIRCUIT (electro), TEMPEST FOUNDRY
 (industrial) and TEMPEST STEP (UK garage) are genre kits made from new settings of
 the same accepted voices, kept by the owner on 2026-11-14. TEMPEST ROUND ROBIN, an
-opt-in starter beside TEMPEST, gives each of its sixteen pads four takes; it awaits
-the owner's listen (round tempest-rr-1). HOLD is reserved. See [TEMPEST](docs/TEMPEST_FULL_KIT.md).
+opt-in starter beside TEMPEST, gives each of its sixteen pads four takes; the owner
+kept it by ear on 16 Nov 2026 (round tempest-rr-1). HOLD is reserved. See [TEMPEST](docs/TEMPEST_FULL_KIT.md).
 
 OSTERIA is one evolving note: four spectral layers on a fixed root drift between
 five coastal palettes, with SHORE, TENSION, WANDER, MEMORY, ROOM and HOLD. Its six
