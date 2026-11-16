@@ -210,6 +210,51 @@ class SongPlanStoreTest {
     }
 
     @Test
+    fun `a section's DROP is off unless asked for, and survives a save and a copy`() {
+        assertFalse(plan().sections.any { it.drop }, "the arranger's names turn no drop on")
+        assertFalse(plan().added(ClipRef.CAPTURED)!!.sections.last().drop)
+        val p = plan().withDrop(1, true)!!
+        SongPlanStore.save(dir, "Kitchen", p)
+        val back = SongPlanStore.load(dir, "Kitchen")!!
+        assertEquals(p, back)
+        assertEquals(listOf(false, true, false, false), back.sections.map { it.drop })
+        assertTrue(back.duplicated(1)!!.sections[2].drop, "a copy keeps the drop")
+        assertNull(plan().withDrop(99, true))
+    }
+
+    @Test
+    fun `a song kept before DROP existed loads with it off`() {
+        File(dir, SongPlanStore.FILE_NAME).writeText(
+            """{"version":1,"plans":{"Kitchen":{"seed":0,"sections":[""" +
+                """{"name":"theme","clip":"captured","bass":true,"pullUp":false},{"name":"the turn","clip":"fill","bass":false,"pullUp":true}]}}}""",
+        )
+        val p = SongPlanStore.load(dir, "Kitchen")!!
+        assertEquals(listOf(false, false), p.sections.map { it.drop })
+        assertEquals(listOf(false, true), p.sections.map { it.pullUp }, "the old fields are as they were")
+    }
+
+    @Test
+    fun `DROP and PULL-UP are exclusive at one boundary, whichever is turned on last`() {
+        // The boundary between sections 1 and 2 is rewritten by sections[1].drop and by sections[2].pullUp.
+        val base = SongPlan(0, listOf(PlanSection("a", ClipRef.CAPTURED, pullUp = false), PlanSection("b", ClipRef.CAPTURED, pullUp = false), PlanSection("c", ClipRef.CAPTURED, pullUp = false)))
+        val pulled = base.withPullUp(2, true)!!
+        val dropped = pulled.withDrop(1, true)!!
+        assertEquals(listOf(false, true, false), dropped.sections.map { it.drop })
+        assertEquals(listOf(false, false, false), dropped.sections.map { it.pullUp }, "the drop took the boundary from the pull-up")
+        val back = dropped.withPullUp(2, true)!!
+        assertEquals(listOf(false, false, false), back.sections.map { it.drop }, "the pull-up took it back")
+        assertEquals(listOf(false, false, true), back.sections.map { it.pullUp })
+        // Another boundary is not touched: section 1's own pull-up is into the boundary before it, and its drop is the one after.
+        val other = base.withPullUp(1, true)!!.withDrop(1, true)!!
+        assertTrue(other.sections[1].drop && other.sections[1].pullUp)
+        assertEquals(listOf(false, false, false), dropped.withDrop(1, false)!!.sections.map { it.drop })
+        assertEquals(listOf(false, false, false), dropped.withDrop(1, false)!!.sections.map { it.pullUp })
+        // The last section's drop has no pull-up after it to clash with.
+        val last = pulled.withDrop(2, true)!!
+        assertTrue(last.sections[2].drop && last.sections[2].pullUp, "a pull-up into the last section is the boundary before it, not after")
+    }
+
+    @Test
     fun `yours references round-trip their number`() {
         assertEquals(2, ClipRef.yoursId(ClipRef.yours(2)))
         assertNull(ClipRef.yoursId("captured"))

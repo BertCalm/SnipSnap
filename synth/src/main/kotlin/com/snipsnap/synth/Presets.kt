@@ -31,10 +31,16 @@ object Presets {
             ?.let(ScuffPresets::forVoice) ?: emptyList()
         DrumlinePatch.ENGINE -> DrumlineVoice.entries.firstOrNull { it.name == voice }
             ?.let(DrumlinePresets::forVoice) ?: emptyList()
+        CalabashPatch.ENGINE -> CalabashVoice.entries.firstOrNull { it.name == voice }
+            ?.let(CalabashPresets::forVoice) ?: emptyList()
         ClutterPatch.ENGINE -> ClutterVoice.entries.firstOrNull { it.name == voice }
             ?.let(ClutterPresets::forVoice) ?: emptyList()
         EtchPatch.ENGINE -> EtchVoice.entries.firstOrNull { it.name == voice }
             ?.let(EtchPresets::forVoice) ?: emptyList()
+        HiccupPatch.ENGINE -> HiccupVoice.entries.firstOrNull { it.name == voice }
+            ?.let(HiccupPresets::forVoice) ?: emptyList()
+        TerraPatch.ENGINE -> TerraVoice.entries.firstOrNull { it.name == voice }
+            ?.let(TerraPresets::forVoice) ?: emptyList()
         WickPatch.ENGINE -> WickVoice.entries.firstOrNull { it.name == voice }
             ?.let(WickPresets::forVoice) ?: emptyList()
         AccordPatch.ENGINE -> {
@@ -186,6 +192,10 @@ object Presets {
         ThawPatch.ENGINE -> {
             val v = ThawVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
             ThawPresets.forVoice(v)
+        }
+        BristlePatch.ENGINE -> {
+            val v = Bristle.Route.entries.firstOrNull { it.name == voice } ?: return emptyList()
+            BristlePresets.forVoice(v)
         }
         OsteriaPatch.ENGINE -> {
             val v = OsteriaVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
@@ -373,7 +383,7 @@ object Presets {
     fun all(): List<Patch> =
         TempestPresets.all() +
         SplayFactoryPresets.all() +
-        BackwashPresets.all() + HalobarPresets.all() + FiredBronzePresets.all() + RivetPresets.all() + OsteriaPresets.all() + ScuffPresets.all() + ClutterPresets.all() + DrumlinePresets.all() + EtchPresets.all() + ErosionPresets.all() + WickPresets.all() +
+        BristlePresets.all() + BackwashPresets.all() + HalobarPresets.all() + FiredBronzePresets.all() + RivetPresets.all() + OsteriaPresets.all() + ScuffPresets.all() + HiccupPresets.all() + ClutterPresets.all() + CalabashPresets.all() + DrumlinePresets.all() + EtchPresets.all() + TerraPresets.all() + ErosionPresets.all() + WickPresets.all() +
         OtisPresets.all() +
         LorentzPresets.all() +
         AccordPresets.all() +

@@ -206,6 +206,7 @@ object Velocity {
         is ChitinPatch -> Chitin.macrosFor(patch.voice)
         is AccordPatch -> Accord.macrosFor(patch.voice)
         is ErosionPatch -> Erosion.macrosFor(patch.voice)
+        is BristlePatch -> Bristle.macrosFor(patch.voice)
         is OsteriaPatch -> Osteria.macrosFor(patch.voice)
         is RimePatch -> Rime.macrosFor(patch.voice, patch.model)
         is OtisPatch -> Otis.macrosFor(patch.voice)
@@ -289,8 +290,11 @@ object Velocity {
         is LacquerPatch -> Lacquer.macrosFor(patch.voice)
         is SkitterPatch -> Skitter.macrosFor(patch.voice)
         is ScuffPatch -> Scuff.macrosFor(patch.voice)
+        is HiccupPatch -> Hiccup.macrosFor(patch.voice)
         is ClutterPatch -> Clutter.macrosFor(patch.voice)
         is EmberPatch -> Ember.macrosFor(patch.voice)
+        is CalabashPatch -> Calabash.macrosFor(patch.voice)
+        is ServoPatch -> Servo.macrosFor(patch.voice)
         is TanglePatch -> Tangle.macrosFor(patch.voice)
         is OverlapPatch -> if (patch.playback == OverlapPlayback.HELD) OverlapHeld.macrosFor(patch.topology)
             else Overlap.macrosFor(patch.topology, patch.model)
@@ -420,6 +424,7 @@ object Velocity {
         is ChitinPatch -> Chitin.render(patch.voice, patch.macros, velocity = v)
         // Touch changes excitation while the saved mechanics and acoustic profile remain intact.
         is AccordPatch -> patch.copy(velocity = v).render()
+        is BristlePatch -> patch.copy(velocity = v).render()
         is OsteriaPatch -> patch.copy(velocity = v).render()
         is ErosionPatch -> patch.copy(velocity = patch.velocity * v).render()
         is RimePatch -> patch.copy(velocity = v).render()
@@ -472,10 +477,17 @@ object Velocity {
         is SkitterPatch -> patch.copy(velocity = v).render()
         // SCUFF re-strikes every voice: the kick drops deeper, the clap loses a tap, GRIT bites deeper.
         is ScuffPatch -> patch.copy(velocity = v).render()
+        // HICCUP re-strikes the hit: contact hardness moves the source and how readily the fault script stumbles.
+        is HiccupPatch -> patch.copy(velocity = v).render()
         // CLUTTER re-strikes the object: a shorter, brighter contact, and past the threshold the loose parts move.
         is ClutterPatch -> patch.copy(velocity = v).render()
         // EMBER re-strikes the drum: a longer, darker contact when soft, and the wires and rivets only past their threshold.
         is EmberPatch -> patch.copy(velocity = v).render()
+        // CALABASH re-strikes: a fitted voice moves toward its own soft recording, a physical one lands with a
+        // broader, slower contact and its beads, wires and squeeze answer less.
+        is CalabashPatch -> patch.copy(velocity = v).render()
+        // SERVO re-strikes the voice: a harder hit pulls the rail further, so it dives deeper and clips harder.
+        is ServoPatch -> patch.copy(velocity = v).render()
         is TanglePatch -> patch.copy(velocity = v).render()
         is OverlapPatch -> patch.copy(velocity = v).render()
         is FlockPatch -> patch.copy(velocity = v).render()
