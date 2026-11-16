@@ -341,6 +341,13 @@ class UserPresetsTest {
                 val promoted = com.snipsnap.synth.EtchPatch.fromJsonText((call.positional.single() as KotlinLiteral.Str).value)
                 assertEquals(preset, promoted, "${preset.name}: root, velocity and model promotion")
                 assertEquals(preset.macros.mapValues { it.value.toRawBits() }, promoted.macros.mapValues { it.value.toRawBits() })
+            } else if (preset is com.snipsnap.synth.TerraPatch) {
+                val call = KotlinLiteral.parse(line.removeSuffix(",")) as KotlinLiteral.Call
+                assertEquals("fromJsonText", call.name)
+                assertEquals("TerraPatch", (call.receiver as KotlinLiteral.Call).name)
+                val promoted = com.snipsnap.synth.TerraPatch.fromJsonText((call.positional.single() as KotlinLiteral.Str).value)
+                assertEquals(preset, promoted, "${preset.name}: striker promotion")
+                assertEquals(preset.macros.mapValues { it.value.toRawBits() }, promoted.macros.mapValues { it.value.toRawBits() })
             } else if (preset is com.snipsnap.synth.ScuffPatch) {
                 val call = KotlinLiteral.parse(line.removeSuffix(",")) as KotlinLiteral.Call
                 assertEquals("fromJsonText", call.name)
@@ -348,11 +355,32 @@ class UserPresetsTest {
                 val promoted = com.snipsnap.synth.ScuffPatch.fromJsonText((call.positional.single() as KotlinLiteral.Str).value)
                 assertEquals(preset, promoted, "${preset.name}: velocity, take and model promotion")
                 assertEquals(preset.macros.mapValues { it.value.toRawBits() }, promoted.macros.mapValues { it.value.toRawBits() })
+            } else if (preset is com.snipsnap.synth.DrumlinePatch) {
+                val call = KotlinLiteral.parse(line.removeSuffix(",")) as KotlinLiteral.Call
+                assertEquals("fromJsonText", call.name)
+                assertEquals("DrumlinePatch", (call.receiver as KotlinLiteral.Call).name)
+                val promoted = com.snipsnap.synth.DrumlinePatch.fromJsonText((call.positional.single() as KotlinLiteral.Str).value)
+                assertEquals(preset, promoted, "${preset.name}: model promotion")
+                assertEquals(preset.macros.mapValues { it.value.toRawBits() }, promoted.macros.mapValues { it.value.toRawBits() })
             } else if (preset is com.snipsnap.synth.ClutterPatch) {
                 val call = KotlinLiteral.parse(line.removeSuffix(",")) as KotlinLiteral.Call
                 assertEquals("fromJsonText", call.name)
                 assertEquals("ClutterPatch", (call.receiver as KotlinLiteral.Call).name)
                 val promoted = com.snipsnap.synth.ClutterPatch.fromJsonText((call.positional.single() as KotlinLiteral.Str).value)
+                assertEquals(preset, promoted, "${preset.name}: velocity, take and model promotion")
+                assertEquals(preset.macros.mapValues { it.value.toRawBits() }, promoted.macros.mapValues { it.value.toRawBits() })
+            } else if (preset is com.snipsnap.synth.HiccupPatch) {
+                val call = KotlinLiteral.parse(line.removeSuffix(",")) as KotlinLiteral.Call
+                assertEquals("fromJsonText", call.name)
+                assertEquals("HiccupPatch", (call.receiver as KotlinLiteral.Call).name)
+                val promoted = com.snipsnap.synth.HiccupPatch.fromJsonText((call.positional.single() as KotlinLiteral.Str).value)
+                assertEquals(preset, promoted, "${preset.name}: velocity, take and model promotion")
+                assertEquals(preset.macros.mapValues { it.value.toRawBits() }, promoted.macros.mapValues { it.value.toRawBits() })
+            } else if (preset is com.snipsnap.synth.CalabashPatch) {
+                val call = KotlinLiteral.parse(line.removeSuffix(",")) as KotlinLiteral.Call
+                assertEquals("fromJsonText", call.name)
+                assertEquals("CalabashPatch", (call.receiver as KotlinLiteral.Call).name)
+                val promoted = com.snipsnap.synth.CalabashPatch.fromJsonText((call.positional.single() as KotlinLiteral.Str).value)
                 assertEquals(preset, promoted, "${preset.name}: velocity, take and model promotion")
                 assertEquals(preset.macros.mapValues { it.value.toRawBits() }, promoted.macros.mapValues { it.value.toRawBits() })
             } else if (preset is com.snipsnap.synth.ErosionPatch) {
@@ -368,6 +396,13 @@ class UserPresetsTest {
                 assertEquals("TempestPatch", (call.receiver as KotlinLiteral.Call).name)
                 val promoted = com.snipsnap.synth.TempestPatch.fromJsonText((call.positional.single() as KotlinLiteral.Str).value)
                 assertEquals(preset, promoted, "${preset.name}: complete versioned percussion promotion")
+            } else if (preset is com.snipsnap.synth.CairnPatch) {
+                val call = KotlinLiteral.parse(line.removeSuffix(",")) as KotlinLiteral.Call
+                assertEquals("fromJsonText", call.name)
+                assertEquals("CairnPatch", (call.receiver as KotlinLiteral.Call).name)
+                val promoted = com.snipsnap.synth.CairnPatch.fromJsonText((call.positional.single() as KotlinLiteral.Str).value)
+                assertEquals(preset, promoted, "${preset.name}: complete root, touch, cue and model promotion")
+                assertEquals(preset.macros.mapValues { it.value.toRawBits() }, promoted.macros.mapValues { it.value.toRawBits() })
             } else if (preset is com.snipsnap.synth.SplayPatch) {
                 val call = KotlinLiteral.parse(line.removeSuffix(",")) as KotlinLiteral.Call
                 assertEquals("fromJsonText", call.name)
@@ -485,6 +520,14 @@ class UserPresetsTest {
                     "${preset.engine}/${preset.name}: the JSON constructor rounds no macro")
                 assertEquals(preset.reply.toRawBits(), promoted.reply.toRawBits(), "${preset.name}: REPLY is exact")
                 assertEquals(preset.ring.toRawBits(), promoted.ring.toRawBits(), "${preset.name}: RING is exact")
+            } else if (preset is com.snipsnap.synth.BristlePatch) {
+                val call = KotlinLiteral.parse(line.dropLast(1)) as KotlinLiteral.Call
+                assertEquals("fromJsonText", call.name)
+                assertEquals("BristlePatch", (call.receiver as KotlinLiteral.Call).name)
+                val promoted = com.snipsnap.synth.BristlePatch.fromJsonText((call.positional.single() as KotlinLiteral.Str).value)
+                assertEquals(preset, promoted, "${preset.name}: complete root, touch, take and renderer promotion")
+                assertEquals(preset.macros.mapValues { it.value.toRawBits() }, promoted.macros.mapValues { it.value.toRawBits() },
+                    "${preset.name}: the JSON constructor rounds no macro")
             } else if (preset is TrioPatch) {
                 val call = KotlinLiteral.parse(line.dropLast(1)) as KotlinLiteral.Call
                 assertEquals("fromJsonText", call.name)
@@ -1289,6 +1332,12 @@ class UserPresetsTest {
                 assertTrue("private val promoted:" in text, "HALOBAR promotions need a voice-filtered destination beside the accepted bank")
                 assertTrue(UserPresets.rosterLine(Presets.all().first { it.engine == engine })
                     .startsWith("HalobarPatch.fromJsonText("))
+            } else if (engine == com.snipsnap.synth.BristlePatch.ENGINE) {
+                val decoder = com.snipsnap.synth.BristlePatch.Companion.javaClass.getMethod("fromJsonText", String::class.java)
+                assertEquals(com.snipsnap.synth.BristlePatch::class.java, decoder.returnType)
+                assertTrue("private val promoted:" in text, "BRISTLE promotions need a voice-filtered destination beside the anchors")
+                assertTrue("promoted.filter { it.voice == voice }" in text)
+                assertTrue(UserPresets.rosterLine(Presets.all().first { it.engine == engine }).startsWith("BristlePatch.fromJsonText("))
             } else if (engine == com.snipsnap.synth.RivetPatch.ENGINE) {
                 val decoder = com.snipsnap.synth.RivetPatch.Companion.javaClass.getMethod("fromJsonText", String::class.java)
                 assertEquals(com.snipsnap.synth.RivetPatch::class.java, decoder.returnType,
@@ -1299,16 +1348,40 @@ class UserPresetsTest {
                 assertEquals(com.snipsnap.synth.EtchPatch::class.java, decoder.returnType,
                     "ETCH promotion retains the root, velocity and model version")
                 assertTrue("private val promoted:" in text, "ETCH promotions need a destination beside the heard bank")
+            } else if (engine == com.snipsnap.synth.TerraPatch.ENGINE) {
+                val decoder = com.snipsnap.synth.TerraPatch.Companion.javaClass.getMethod("fromJsonText", String::class.java)
+                assertEquals(com.snipsnap.synth.TerraPatch::class.java, decoder.returnType,
+                    "TERRA promotion retains a struck pad's captured striker")
+                assertTrue("private val promoted:" in text, "TERRA promotions need a destination beside the kept bank")
             } else if (engine == com.snipsnap.synth.ScuffPatch.ENGINE) {
                 val decoder = com.snipsnap.synth.ScuffPatch.Companion.javaClass.getMethod("fromJsonText", String::class.java)
                 assertEquals(com.snipsnap.synth.ScuffPatch::class.java, decoder.returnType,
                     "SCUFF promotion retains strike velocity, take and model version")
                 assertTrue("private val promoted:" in text, "SCUFF promotions need a destination beside the accepted kits")
+            } else if (engine == com.snipsnap.synth.DrumlinePatch.ENGINE) {
+                val decoder = com.snipsnap.synth.DrumlinePatch.Companion.javaClass.getMethod("fromJsonText", String::class.java)
+                assertEquals(com.snipsnap.synth.DrumlinePatch::class.java, decoder.returnType,
+                    "DRUMLINE promotion retains the renderer model")
+                assertTrue("private val promoted:" in text, "DRUMLINE promotions need a destination beside the accepted kits")
+                val patch = Presets.all().first { it.engine == engine }
+                assertTrue(UserPresets.rosterLine(patch).startsWith("DrumlinePatch.fromJsonText("))
             } else if (engine == com.snipsnap.synth.ClutterPatch.ENGINE) {
                 val decoder = com.snipsnap.synth.ClutterPatch.Companion.javaClass.getMethod("fromJsonText", String::class.java)
                 assertEquals(com.snipsnap.synth.ClutterPatch::class.java, decoder.returnType,
                     "CLUTTER promotion retains strike velocity, take and model version")
                 assertTrue("private val promoted:" in text, "CLUTTER promotions need a destination beside the accepted kits")
+            } else if (engine == com.snipsnap.synth.HiccupPatch.ENGINE) {
+                val decoder = com.snipsnap.synth.HiccupPatch.Companion.javaClass.getMethod("fromJsonText", String::class.java)
+                assertEquals(com.snipsnap.synth.HiccupPatch::class.java, decoder.returnType,
+                    "HICCUP promotion retains strike velocity, take and model version")
+                assertTrue("private val promoted:" in text, "HICCUP promotions need a destination beside the accepted kits")
+            } else if (engine == com.snipsnap.synth.CalabashPatch.ENGINE) {
+                val decoder = com.snipsnap.synth.CalabashPatch.Companion.javaClass.getMethod("fromJsonText", String::class.java)
+                assertEquals(com.snipsnap.synth.CalabashPatch::class.java, decoder.returnType,
+                    "CALABASH promotion retains strike velocity, take and model version")
+                assertTrue("private val promoted:" in text, "CALABASH promotions need a destination beside the approved kits")
+                val patch = Presets.all().first { it.engine == engine }
+                assertTrue(UserPresets.rosterLine(patch).startsWith("CalabashPatch.fromJsonText("))
             } else if (engine == com.snipsnap.synth.ErosionPatch.ENGINE) {
                 val decoder = com.snipsnap.synth.ErosionPatch.Companion.javaClass.getMethod("fromJsonText", String::class.java)
                 assertEquals(com.snipsnap.synth.ErosionPatch::class.java, decoder.returnType,
@@ -1321,6 +1394,13 @@ class UserPresetsTest {
                 assertTrue("TempestPatch(" in text, "TEMPEST's table constructs complete typed recipes")
                 assertTrue(UserPresets.rosterLine(Presets.all().first { it.engine == engine }).startsWith("TempestPatch.fromJsonText("),
                     "TEMPEST's roster line invokes its complete-JSON constructor")
+            } else if (engine == com.snipsnap.synth.CairnPatch.ENGINE) {
+                val decoder = com.snipsnap.synth.CairnPatch.Companion.javaClass.getMethod("fromJsonText", String::class.java)
+                assertEquals(com.snipsnap.synth.CairnPatch::class.java, decoder.returnType,
+                    "CAIRN promotion names its public complete-JSON constructor")
+                assertTrue("private val promoted:" in text, "CAIRN promotions need a destination beside the kept SING recipes")
+                assertTrue(UserPresets.rosterLine(Presets.all().first { it.engine == engine }).startsWith("CairnPatch.fromJsonText("),
+                    "CAIRN's roster line invokes its complete-JSON constructor")
             } else if (engine == com.snipsnap.synth.SplayPatch.ENGINE) {
                 val decoder = com.snipsnap.synth.SplayPatch.Companion.javaClass.getMethod("fromJsonText", String::class.java)
                 assertEquals(com.snipsnap.synth.SplayPatch::class.java, decoder.returnType,

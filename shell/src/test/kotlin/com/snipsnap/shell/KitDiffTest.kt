@@ -77,7 +77,7 @@ class KitDiffTest {
         assertEquals(listOf("A01 TREATED: CRUSH 35%"), texts(kit(plain), kit(crushed)))
 
         val smeared = plain.copy(recipe = obj("treatment" to JsonValue.Str("smeared"), "amount" to JsonValue.Num(0.5)))
-        assertEquals(listOf("A01 CRUSH 35% → TAIL 50%"), texts(kit(crushed), kit(smeared)))
+        assertEquals(listOf("A01 CRUSH 35% → RING ONLY 50%"), texts(kit(crushed), kit(smeared)))
 
         val retuned = plain.copy(recipe = obj("keyed" to JsonValue.Str("retuned"), "amount" to JsonValue.Num(0.4)))
         assertEquals("IN KEY 40%", KitDiff.recipeName(retuned.recipe!!), "the card's display word, not the segment id")
@@ -88,13 +88,13 @@ class KitDiffTest {
     @Test
     fun `recipes no card reads back still get a short honest word`() {
         assertEquals("COMBINED: BLEND", KitDiff.recipeName(obj("mutate" to obj("mode" to JsonValue.Str("morph")))))
-        assertEquals("RE-AMP AND ROOM: REAMP", KitDiff.recipeName(obj("outside" to obj("move" to JsonValue.Str("reamp")))))
+        assertEquals("SPEAKER AND ROOM: THROUGH SPEAKER", KitDiff.recipeName(obj("outside" to obj("move" to JsonValue.Str("reamp")))))
         assertEquals("ROUND ROBIN ×4", KitDiff.recipeName(obj("robin" to obj("takes" to JsonValue.Num(4.0)))))
         assertEquals("SPLICED", KitDiff.recipeName(obj("splice" to obj("crossfaded" to JsonValue.Bool(false)))))
         assertEquals("DOCTORED: SUB-CARVE", KitDiff.recipeName(obj("doctor" to JsonValue.Str("sub-carve"))))
         assertEquals("CLEANED", KitDiff.recipeName(obj("clean" to obj())))
         assertEquals("SCULPTED: FREEZE", KitDiff.recipeName(obj("sculpt" to obj("mode" to JsonValue.Str("freeze")))))
-        assertEquals("SMEAR", KitDiff.recipeName(obj("verb" to JsonValue.Str("smear"), "amount" to JsonValue.Num(0.2))))
+        assertEquals("BLUR", KitDiff.recipeName(obj("verb" to JsonValue.Str("smear"), "amount" to JsonValue.Num(0.2))))
         assertEquals("SYNTH PATCH", KitDiff.recipeName(obj("patch" to obj())))
         assertEquals("RECIPE", KitDiff.recipeName(obj("somethingNew" to JsonValue.Bool(true))), "unknown shapes are still reported, just not named")
     }

@@ -74,6 +74,39 @@ class SplayDeliveryTest {
         assertEquals(listOf(EngineCategory.BELLS, EngineCategory.PADS), assertNotNull(EngineCatalog.entry("SPLAY")).categories)
     }
 
+    @Test fun `SPLAY BODIES puts the five kept bodies on A01-A05, each its kept same-settings take`() {
+        val starter = assertNotNull(StarterKits.byId(SplayDelivery.BODIES_STARTER_ID))
+        assertEquals("SPLAY BODIES", starter.displayName)
+        assertFalse(starter.seeded)
+        assertNull(starter.key)
+        assertEquals(1, StarterShelf.GROUPS.sumOf { group -> group.ids.count { it == starter.id } })
+        // Stored starter order only grows at the end: SPLAY BODIES was appended after the PATIO kits, and later
+        // starters (TERRA's genre kits) are appended after it, so pin its place rather than demand it stays last.
+        val ids = StarterKits.ALL.map { it.id }
+        assertEquals(StarterKits.PATIO_IDS.last(), ids[ids.indexOf(SplayDelivery.BODIES_STARTER_ID) - 1])
+        val directory = kotlin.io.path.createTempDirectory("splay-bodies-starter-").toFile()
+        try {
+            val kit = starter.render("Splay Bodies", directory)
+            assertEquals((1..5).toList(), kit.pads.map { it.slot })
+            val patches = kit.pads.map { PadRecipe.fromJsonValue(it.recipe!!).patch as SplayPatch }
+            assertEquals(SplayDelivery.bodyPatches(), patches)
+            assertEquals(listOf("WIRE", "RUB", "AIR", "BAR", "SKIN"), patches.map { it.voice.name })
+            assertTrue(patches.all { it.model == 3 && it.midi == 60 && it.velocity == .8f && it.seed == 41001 })
+            assertFalse(Preflight.check(kit, directory).blocked())
+            assertEquals(kit, KitStore.load(directory))
+            for ((pad, patch) in kit.pads.zip(patches)) {
+                assertTrue(pad.oneShot && !pad.loop)
+                assertEquals("kept", pad.source["status"])
+                assertEquals(patch.voice.name, pad.source["voice"])
+                val replay = File(directory, "replay-${patch.voice}.wav")
+                WavWriter.write(replay, patch.render())
+                assertContentEquals(File(directory, pad.sampleFile).readBytes(), replay.readBytes())
+            }
+        } finally {
+            directory.deleteRecursively()
+        }
+    }
+
     /** Five actual starter renders plus one saved-recipe replay; separate from the four pure methods. */
     @Test fun `actual starter writes five finite native pads and replays its saved recipe without a hidden gain policy`() {
         val directory = kotlin.io.path.createTempDirectory("splay-finite-starter-").toFile()

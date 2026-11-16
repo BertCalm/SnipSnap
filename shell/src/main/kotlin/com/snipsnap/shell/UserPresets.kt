@@ -58,6 +58,7 @@ import com.snipsnap.synth.WickPatch
 import com.snipsnap.synth.RivetPatch
 import com.snipsnap.synth.ScuffPatch
 import com.snipsnap.synth.ClutterPatch
+import com.snipsnap.synth.HiccupPatch
 import com.snipsnap.synth.HalobarPatch
 import com.snipsnap.synth.SkinPatch
 import com.snipsnap.synth.OverlapPatch
@@ -382,6 +383,7 @@ object UserPresets {
 
     /** The voice enum a roster line names: `THUMP` → `ThumpVoice`, `TONEWHEEL` → `TonewheelVoice`. */
     fun voiceEnum(engine: String): String = when (engine.uppercase(Locale.ROOT)) {
+        com.snipsnap.synth.BristlePatch.ENGINE -> "Bristle.Route"
         com.snipsnap.synth.FiredBronzePatch.ENGINE -> "FiredBronzeDryKit.Pad"
         ScannedChainPatch.ENGINE -> "ScannedChainVoice"
         OrphicaPatch.ENGINE -> "OrphicaMaterial"
@@ -445,8 +447,9 @@ object UserPresets {
      * NACRE likewise retains its saved renderer, native root, strike, exact seed and
      * controls through the complete JSON constructor. WICK retains its selected
      * RATTLE body, root, velocity and controls through that constructor as well. SCUFF
-     * retains its strike velocity, take and model version the same way, and CLUTTER
-     * its object's strike velocity, take and model version.
+     * retains its strike velocity, take and model version the same way, as does HICCUP, and CLUTTER
+     * its object's strike velocity, take and model version, as does CALABASH; CAIRN its root,
+     * touch, contact cue and saved model.
      * Names and embedded JSON are escaped
      * Kotlin string literals.
      */
@@ -476,15 +479,35 @@ object UserPresets {
             val recipe = Json.write(JsonValue.Str(patch.toJsonText())).replace("$", "\\$")
             return "EtchPatch.fromJsonText($recipe),"
         }
+        if (patch is com.snipsnap.synth.TerraPatch) {
+            // A struck TERRA pad carries its captured striker outside the macro map; promotion keeps it.
+            val recipe = Json.write(JsonValue.Str(patch.toJsonText())).replace("$", "\\$")
+            return "TerraPatch.fromJsonText($recipe),"
+        }
         if (patch is ScuffPatch) {
             // Velocity, take and model version live outside the macro map; promotion keeps the strike saved.
             val recipe = Json.write(JsonValue.Str(patch.toJsonText())).replace("$", "\\$")
             return "ScuffPatch.fromJsonText($recipe),"
         }
+        if (patch is com.snipsnap.synth.DrumlinePatch) {
+            // The renderer model lives outside the macro map; promotion keeps the battery as heard.
+            val recipe = Json.write(JsonValue.Str(patch.toJsonText())).replace("$", "\\$")
+            return "DrumlinePatch.fromJsonText($recipe),"
+        }
         if (patch is ClutterPatch) {
             // Velocity, take and model version live outside the macro map, as SCUFF's do.
             val recipe = Json.write(JsonValue.Str(patch.toJsonText())).replace("$", "\\$")
             return "ClutterPatch.fromJsonText($recipe),"
+        }
+        if (patch is HiccupPatch) {
+            // Velocity, take and model version live outside the macro map; promotion keeps the strike saved.
+            val recipe = Json.write(JsonValue.Str(patch.toJsonText())).replace("$", "\\$")
+            return "HiccupPatch.fromJsonText($recipe),"
+        }
+        if (patch is com.snipsnap.synth.CalabashPatch) {
+            // Velocity, take and model version live outside the macro map, as CLUTTER's do.
+            val recipe = Json.write(JsonValue.Str(patch.toJsonText())).replace("$", "\\$")
+            return "CalabashPatch.fromJsonText($recipe),"
         }
         if (patch is ErosionPatch) {
             // Native touch is outside the macro map; promotion must retain it.
@@ -494,6 +517,11 @@ object UserPresets {
         if (patch is TempestPatch) {
             val recipe = Json.write(JsonValue.Str(patch.toJsonText())).replace("$", "\\$")
             return "TempestPatch.fromJsonText($recipe),"
+        }
+        if (patch is com.snipsnap.synth.CairnPatch) {
+            // Root, touch, contact cue and saved model live outside the macro map.
+            val recipe = Json.write(JsonValue.Str(patch.toJsonText())).replace("$", "\\$")
+            return "CairnPatch.fromJsonText($recipe),"
         }
         if (patch is com.snipsnap.synth.SplayPatch) {
             // The acoustic model, signed seed and authored note/touch are outside macros.
@@ -651,6 +679,10 @@ object UserPresets {
             val routes = m.routes.joinToString(", ") { "SpoolRoute(${it.source}, ${it.destination}, ${it.gain}f)" }
             val machine = "SpoolMachine(roster = listOf($roster), gateSeconds = ${m.gateSeconds}f, sourceSeconds = ${m.sourceSeconds}f, motorTorque = ${m.motorTorque}f, returnSeconds = ${m.returnSeconds}f, headOffsets = listOf($heads), spliceSchedule = listOf($splices), routes = listOf($routes), holdMode = SpoolHoldMode.${m.holdMode}, seed = ${m.seed}, writeDelaySamples = ${m.writeDelaySamples}, reengage = ${m.reengage})"
             return "SpoolPatch(\"$name\", SpoolVoice.${patch.voice}, mapOf($macros), machine = $machine, velocity = ${patch.velocity}f, model = ${patch.model}),"
+        }
+        if (patch is com.snipsnap.synth.BristlePatch) {
+            val recipe = Json.write(JsonValue.Str(patch.toJsonText())).replace("$", "\\$")
+            return "BristlePatch.fromJsonText($recipe),"
         }
         if (patch is OhmPatch && patch.model >= 3) {
             // The legacy factory helper constructs model 2 before a following copy/let.

@@ -274,7 +274,7 @@ import kotlin.random.Random
  * explicitly choose --model 5 for HOLD or --instrument [--release S]. Held keys
  * retain the unfolding opening before periodic sustain across nine native roots.
  * WICK offers 36 shared factory recipes across PLUCK/WOOD/BREATH/BUBBLE/FLICKER/RATTLE; saved RATTLE body choices survive note and velocity overrides.
- * NACRE offers three playable finite PEARL starting points with native note and velocity.
+ * NACRE offers finite PEARL, HARMONICS, SHELL and BUBBLE presets with native note and velocity.
  * FILAMENT exposes twelve approved THREAD/PULSE/CURL factory recipes with saved geometry and note/velocity overrides.
  * ORPHICA accepts `--seed N` for repeatable string excitation and grains, preserving all 64 bits.
  * Its `--midi N` resets relative TUNE to neutral and also sets the sampled root with --instrument;
@@ -406,7 +406,7 @@ object SynthCommand {
                 LatticePatch.ENGINE -> Lattice.macrosFor(LatticeVoice.valueOf(voice))
                 OrigamiPatch.ENGINE -> Origami.macrosFor(OrigamiVoice.valueOf(voice))
                 CausticPatch.ENGINE -> CausticInstrument.macrosFor(CausticVoice.valueOf(voice))
-                SplayPatch.ENGINE -> Splay.macrosFor(SplayVoice.valueOf(voice), (savedPatch as? SplayPatch)?.model ?: Splay.MODEL_VERSION)
+                SplayPatch.ENGINE -> SplayVoice.valueOf(voice).let { v -> Splay.macrosFor(v, (savedPatch as? SplayPatch)?.takeIf { it.voice == v }?.model ?: Splay.defaultModel(v)) }
                 "PLUCK" -> if (voice == "UPRIGHT") Pluck.macrosFor(PluckVoice.UPRIGHT)
                     else throw CliError("--macros for PLUCK requires UPRIGHT")
                 ObbligatoPatch.ENGINE -> Obbligato.macrosFor()
@@ -578,13 +578,16 @@ object SynthCommand {
                 OhmPatch.ENGINE -> Ohm.MODEL_VERSION
                 MeridianPatch.ENGINE -> Meridian.MODEL_VERSION
                 ObbligatoPatch.ENGINE -> Obbligato.MAX_MODEL
-                SplayPatch.ENGINE -> Splay.MODEL_VERSION
+                SplayPatch.ENGINE -> Splay.BODY_MODEL
                 else -> throw CliError("--model is only supported by TEMPEST, OBBLIGATO, MERIDIAN, RIME, OSPREY, CREASE, TIDAL, CAUSTIC, OHM, FERRY and SPLAY, got $engine")
             }
             val selected = raw.toIntOrNull()?.takeIf { it in 1..lastModel }
                 ?: throw CliError("--model wants 1..$lastModel, got '$raw'")
             if (engine == TempestPatch.ENGINE && !Tempest.supports(TempestVoice.valueOf(voice), selected))
                 throw CliError("TEMPEST $voice requires model 3; got $selected")
+            if (engine == SplayPatch.ENGINE && !Splay.supports(SplayVoice.valueOf(voice), selected))
+                throw CliError(if (voice == "TONGUE") "SPLAY TONGUE plays models 1 and 2; got $selected"
+                    else "SPLAY $voice requires model ${Splay.BODY_MODEL}; got $selected")
             selected
         }
         val wantsOhmReplyRing = engine == OhmPatch.ENGINE &&

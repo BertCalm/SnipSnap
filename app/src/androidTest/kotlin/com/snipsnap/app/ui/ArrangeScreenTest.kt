@@ -228,6 +228,16 @@ class ArrangeScreenTest : ComposeScreenTest() {
         waitFor("the row to say PULL-UP IN", timeoutMillis = 30_000) {
             runCatching { compose.onNodeWithContentDescription("SECTION 2:", substring = true).assertContentDescriptionContains(Copy.SONG_ROW_PULL_UP, substring = true) }.isSuccess
         }
+
+        // A DROP on the first section is the boundary the second's pull-up rewrites: turning it on turns the pull-up off.
+        compose.onNodeWithContentDescription("SECTION 1:", substring = true).performClick()
+        pump()
+        button(Copy.SONG_DROP_OFF).assertIsEnabled().performClick()
+        waitFor("the drop to be kept and the pull-up into the next section turned off", timeoutMillis = 30_000) {
+            val s = SongPlanStore.load(projectDir, entry.dir.name)?.sections
+            s != null && s[0].drop && !s[1].pullUp
+        }
+        waitFor("the button to say DROP ON", timeoutMillis = 30_000) { runCatching { button(Copy.SONG_DROP_ON).assertExists() }.isSuccess }
     }
 
     @Test

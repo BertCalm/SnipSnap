@@ -103,14 +103,14 @@ object KitDiff {
      * "RECIPE" — a change is still reported, just not named.
      */
     fun recipeName(recipe: JsonValue.Obj): String {
-        AquariumPadSheet.read(recipe)?.let { return "AQUARIUM" }
-        BoardSheet.read(recipe)?.let { return "${it.type.name} ${(it.amount * 100).roundToInt()}%" }
+        AquariumPadSheet.read(recipe)?.let { return PadSheet.CHAIN_LABEL }
+        BoardSheet.read(recipe)?.let { return "${PadSheet.boardLabel(it.type)} ${(it.amount * 100).roundToInt()}%" }
         // Typed source recipes can also end in a board. Name that last
         // treatment just as replay does, rather than calling it RECIPE or
         // SYNTH PATCH after the parser has already recognized its type.
         if ("recipe" in recipe.entries && "board" in recipe.entries) {
             runCatching { PadRecipe.fromJsonValue(recipe).board }.getOrNull()?.let {
-                return "${it.type.name} ${(it.amount * 100).roundToInt()}%"
+                return "${PadSheet.boardLabel(it.type)} ${(it.amount * 100).roundToInt()}%"
             }
         }
         // A pedal board names every pick, AMT and side, in chain order: the
@@ -130,7 +130,7 @@ object KitDiff {
         runCatching { com.snipsnap.synth.KitFromAnything.Recipe.fromJsonValue(recipe) }.getOrNull()?.let {
             return "KIT FROM ANYTHING ${it.slot.label.uppercase()} (${it.genre.label.uppercase()}, ${it.key.label.uppercase()})"
         }
-        OutsideSheet.read(recipe)?.let { return "RE-AMP AND ROOM: ${it.move}" }
+        OutsideSheet.read(recipe)?.let { return "${PadSheetBoxes.Box.OUTSIDE.legend}: ${PadSheet.moveLabel(it.move)}" }
         val e = recipe.entries
         (e["robin"] as? JsonValue.Obj)?.let { r ->
             val takes = (r.entries["takes"] as? JsonValue.Num)?.value?.toInt()
@@ -143,7 +143,8 @@ object KitDiff {
             val mode = (s.entries["mode"] as? JsonValue.Str)?.value
             return if (mode != null) "SCULPTED: ${mode.uppercase()}" else "SCULPTED"
         }
-        (e["verb"] as? JsonValue.Str)?.let { return it.value.uppercase() }
+        // SMEAR and DUST, by the names the list draws (BLUR, OLD RECORDING).
+        (e["verb"] as? JsonValue.Str)?.let { return PadSheet.displayLabel(it.value.uppercase()) }
         if ("patch" in e) return "SYNTH PATCH"
         return "RECIPE"
     }

@@ -154,19 +154,62 @@ FREE = {
                ("A04", 21.8, .95), ("A16", 22.5, 1.0)],
 }
 
-GENRE = [AFTER_HOURS, SOUL, FREE]
+LATIN = {
+    "id": "latin-jazz", "name": "EMBER LATIN JAZZ", "bpm": 118.0,
+    "character": "Cha-cha-cha in the small club, 1962: the jazz drummer plays Latin on the kit (the clave on the snare "
+                 "rim, the hat foot on 2 and 4, a light kick) while one percussionist adds the guiro, a cha-cha bell, "
+                 "timbales, bongos and a conga. Close and bright through the club's warm chain. Made to differ from "
+                 "CALABASH's Afro-Cuban jazz (a 176 BPM mambo, the big band's Latin section in a big dark studio): "
+                 "another tempo, another dance, a drummer's kit at the centre and the guiro leading.",
+    "pads": [
+        ("A01", "Kick", "KICK", {"TUNE": .55, "DAMP": .45, "BUZZ": .25}),
+        ("A02", "Rim Clave", "CROSS_STICK", {"TUNE": .55, "DAMP": .4}),
+        ("A03", "Hat Foot", "HAT_FOOT", {"TUNE": .55}),
+        ("A04", "Hat Open", "HAT_OPEN", {"TUNE": .55, "DAMP": .45}),
+        ("A05", "Cha-cha Bell", "COWBELL", {"TUNE": .7, "DAMP": .5}),
+        ("A06", "Guiro Long", "GUIRO", {"SPEED": .25}),
+        ("A07", "Guiro Short", "GUIRO", {"SPEED": .95}),
+        ("A08", "Timbale Macho", "TIMBALE", {"TUNE": .7}),
+        ("A09", "Timbale Hembra", "TIMBALE", {"TUNE": .3}),
+        ("A10", "Cascara", "PAILA", {}),
+        ("A11", "Bongo Macho", "BONGO_HIGH", {}),
+        ("A12", "Bongo Hembra", "BONGO_LOW", {}),
+        ("A13", "Conga", "CONGA", {"TUNE": .5, "SLAP": .15}),
+        ("A14", "Shaker", "SHAKER", {}),
+        ("A15", "Clave", "CLAVE", {}),
+        ("A16", "Cymbal Swell", "CYMBAL_SWELL", {"SPEED": .6, "TUNE": .55}),
+    ],
+    "feel": {"A06": -4, "A13": 6, "A02": 3},
+    # Straight eighths on the triplet grid: eighth e is step 1.5 e. Two bars; the cha-cha-cha is "4 and 1".
+    "groove": (
+        [("A05", 1.5 * e, .75 if e % 4 == 0 else .55) for e in range(0, 16, 2)]                    # bell on the quarters
+        + [("A06", 1.5 * e, .7) for e in (0, 4, 8, 12)] + [("A07", 1.5 * e, .5) for e in (2, 6, 7, 10, 14, 15)]  # guiro
+        + [("A02", 1.5 * e, .7) for e in (2, 4, 8, 11, 14)]                                         # rim clave, 2-3
+        + [("A03", 1.5 * e, .5) for e in (2, 6, 10, 14)]                                            # hat foot, 2 and 4
+        + [("A01", 1.5 * e, v) for e, v in ((0, .55), (4, .4), (8, .55), (12, .4))]                  # a light kick
+        + [("A11", 1.5 * (b + e), v) for b in (0, 8) for e, v in ((0, .6), (1, .35), (2, .45), (3, .35), (4, .6), (5, .35))]
+        + [("A12", 1.5 * (b + e), .6) for b in (0, 8) for e in (6, 7)]                              # bongos
+        + [("A13", 1.5 * e, .75) for e in (6, 7, 14, 15)]                                            # conga on the cha-cha-cha
+        + [("A08", 1.5 * 13, .7), ("A09", 1.5 * 14, .75), ("A09", 1.5 * 15, .8)]                    # timbales: cha-cha-cha
+    ),
+}
+
+GENRE = [AFTER_HOURS, SOUL, FREE, LATIN]
 ALL = [CLUB] + GENRE
 
 # Hats choke like hats: the foot (and on EMBER the stick on the closed hat) closes the open hat.
 CHOKES = {"ember": {"A03": ["A04"], "A11": ["A04"]}, "after-hours": {"A03": ["A13"]},
-          "soul-jazz": {"A03": ["A04"], "A07": ["A04"]}, "free": {"A13": ["A12"]}}
+          "soul-jazz": {"A03": ["A04"], "A07": ["A04"]}, "free": {"A13": ["A12"]},
+          "latin-jazz": {"A03": ["A04"], "A06": ["A07"], "A07": ["A06"]}}   # one hi-hat; one guiro (a new stroke stops the last)
 
 # Groove balance by drum class (the sampler's pad levels in the audition grooves only).
 MIX = {"KICK": 1.0, "SNARE": .8, "CLAP": .5, "HAT_CLOSED": .4, "HAT_OPEN": .4, "TOM": .7, "PERC": .45}
 MIX_VOICE = {"RIDE": .42, "RIDE_BELL": .35, "BRUSH_RIDE": .4, "BRUSH_SWEEP": .39,   # the owner, 2026-11-14: "Bring down the sweep a bit in the groove" (-3 dB)
              "TAMBOURINE": .3, "CONGA": .6,
              "SNAPS": .35, "CLAPS": .45, "STICKS": .4, "BOWED_CYMBAL": .5, "SIZZLE": .38, "CYMBAL_SWELL": .5, "PRESS_ROLL": .6,
-             "BRUSH_ROLL": .6, "CROSS_STICK": .5}
+             "BRUSH_ROLL": .6, "CROSS_STICK": .5,
+             "TIMBALE": .55, "PAILA": .4, "COWBELL": .45, "CLAVE": .45, "BONGO_HIGH": .5, "BONGO_LOW": .55,
+             "GUIRO": .35, "SHAKER": .3}
 
 
 def mix_for(voice):

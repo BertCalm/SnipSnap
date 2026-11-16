@@ -12,6 +12,19 @@ import kotlin.test.assertTrue
  * both depend on the second half.
  */
 class DeterminismTest {
+    @Test fun `Bristle study routes replay their saved touch exactly`() {
+        for (route in Bristle.Route.entries) {
+            val r = Bristle.Recipe(route, 36, .65f, mapOf("SLIDE" to .3f))
+            assertContentEquals(r.render().samples, Bristle.Recipe.fromJsonText(r.toJsonText()).render().samples)
+        }
+    }
+
+    @Test fun `DRUMLINE keeps section and take identities deterministic`() {
+        for (voice in listOf(DrumlineVoice.SNARE, DrumlineVoice.CRASH, DrumlineVoice.ROLL)) {
+            assertContentEquals(Drumline.render(voice, take = 2).samples, Drumline.render(voice, take = 2).samples)
+        }
+    }
+
     @Test fun `PATIO hand strokes are deterministic`() {
         for (stroke in PatioHand.Stroke.entries) assertContentEquals(PatioHand.render(stroke).samples, PatioHand.render(stroke).samples)
     }
@@ -244,11 +257,51 @@ class DeterminismTest {
         }
     }
 
+    @Test fun `CALABASH renders every voice, a soft hit and a later take byte for byte through JSON`() {
+        for (voice in CalabashVoice.entries) {
+            // The four rolls render seconds each; their strokes are the voices' own, so one hard take covers them.
+            val patch = CalabashPatch("Canary", voice, Calabash.defaults(voice))
+            assertContentEquals(patch.render().samples, Patches.fromJsonText(patch.toJsonText()).render().samples, "$voice")
+            if (voice.seconds > 2.0) continue
+            val struck = CalabashPatch("Soft take", voice, Calabash.defaults(voice), velocity = 0.4f, take = 3)
+            assertContentEquals(struck.render().samples, Patches.fromJsonText(struck.toJsonText()).render().samples, "$voice soft take 3")
+        }
+    }
+
+    @Test fun `HICCUP renders every voice, a soft hit and every take byte for byte through JSON`() {
+        for (voice in HiccupVoice.entries) {
+            val patch = HiccupPatch("Canary", voice, Hiccup.defaults(voice))
+            assertContentEquals(patch.render().samples, Patches.fromJsonText(patch.toJsonText()).render().samples, "$voice")
+            for (take in 0..Hiccup.MAX_TAKE) {
+                val struck = HiccupPatch("Soft take", voice, Hiccup.defaults(voice), velocity = 0.6f, take = take)
+                assertContentEquals(struck.render().samples, Patches.fromJsonText(struck.toJsonText()).render().samples, "$voice soft take $take")
+            }
+        }
+    }
+
     @Test fun `CLUTTER renders every object, a soft hit and every take byte for byte through JSON`() {
         for (voice in ClutterVoice.entries) {
             val patch = ClutterPatch("Canary", voice, Clutter.defaults(voice))
             assertContentEquals(patch.render().samples, Patches.fromJsonText(patch.toJsonText()).render().samples, "$voice")
             val struck = ClutterPatch("Soft take", voice, Clutter.defaults(voice), velocity = 0.4f, take = 3)
+            assertContentEquals(struck.render().samples, Patches.fromJsonText(struck.toJsonText()).render().samples, "$voice soft take 3")
+        }
+    }
+
+    @Test fun `SERVO renders every voice, a soft hit and every take byte for byte through JSON`() {
+        for (voice in ServoVoice.entries) {
+            val patch = ServoPatch("Canary", voice, Servo.defaults(voice))
+            assertContentEquals(patch.render().samples, Patches.fromJsonText(patch.toJsonText()).render().samples, "$voice")
+            val struck = ServoPatch("Soft take", voice, Servo.defaults(voice), velocity = 0.4f, take = 3)
+            assertContentEquals(struck.render().samples, Patches.fromJsonText(struck.toJsonText()).render().samples, "$voice soft take 3")
+        }
+    }
+
+    @Test fun `EMBER renders every voice, a soft hit and every take byte for byte through JSON`() {
+        for (voice in EmberVoice.entries) {
+            val patch = EmberPatch("Canary", voice, Ember.defaults(voice))
+            assertContentEquals(patch.render().samples, Patches.fromJsonText(patch.toJsonText()).render().samples, "$voice")
+            val struck = EmberPatch("Soft take", voice, Ember.defaults(voice), velocity = 0.4f, take = 3)
             assertContentEquals(struck.render().samples, Patches.fromJsonText(struck.toJsonText()).render().samples, "$voice soft take 3")
         }
     }
@@ -307,7 +360,7 @@ class DeterminismTest {
         for (voice in NacreVoice.entries) {
             val patch = NacrePatch("Nacre canary", voice,
                 Nacre.defaults(voice) + mapOf("VENUE" to 1f, "BLOOM" to .65f),
-                midi = 57, velocity = .65f, seed = 9_007_199_254_740_993L, model = 3)
+                midi = 57, velocity = .65f, seed = 9_007_199_254_740_993L, model = Nacre.defaultModel(voice))
             Nacre.clearCoreCache()
             val original = patch.render().samples
             Nacre.clearCoreCache()
@@ -318,7 +371,7 @@ class DeterminismTest {
 
     @Test
     fun `NACRE strike-shaped v2 layers reproduce across cold source caches and a saved policy`() {
-        val hard = NacrePresets.all().first { it.model == 4 }.copy(midi = 55, seed = -3L)
+        val hard = NacrePresets.forVoice(NacreVoice.PEARL).first { it.model == 4 }.copy(midi = 55, seed = -3L)
         val bank = NacreContactStrikeRecipes.recipeFor(hard, NacreStrikeVariant.STRONG)
         Nacre.clearCoreCache()
         val original = bank.layers.first().render().samples
@@ -1009,8 +1062,24 @@ class DeterminismTest {
         }
     }
     @Test
+    fun `TIMBER finite contacts and authored articulations repeat exactly`() {
+        for (role in listOf(0, 1, 2, 4, 7, 14, 15)) {
+            val a = TimberKits.render(TimberKits.Genre.POCKET, role, .65f, 2)
+            val b = TimberKits.render(TimberKits.Genre.POCKET, role, .65f, 2)
+            assertContentEquals(a.samples, b.samples, "TIMBER role $role")
+        }
+    }
+
+    @Test
     fun `SPORE approved snare is byte identical for a saved soft restrike`() {
         val p=SporeSnare.Recipe(velocity=.3,take=2)
         assertContentEquals(p.render().samples,SporeSnare.Recipe.fromJsonText(p.toJsonText()).render().samples)
+    }
+    @Test
+    fun `SPORE approved kick and synthetic shelf recipe are deterministic`() {
+        val p=SporeKick.Recipe(velocity=.3,take=2)
+        assertContentEquals(p.render().samples,SporeKick.Recipe.fromJsonText(p.toJsonText()).render().samples)
+        val r=SporeSyntheticKits.Recipe(SporeSyntheticKits.Genre.JUNGLE,7,.65,2)
+        assertContentEquals(r.render().samples,SporeSyntheticKits.Recipe.fromJsonText(r.toJsonText()).render().samples)
     }
 }

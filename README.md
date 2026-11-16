@@ -40,6 +40,8 @@ remains blocked on slice-map/hardware verification. Owner listening is pending.
 
 TRIAD has a [native shared-bus drum audition](docs/TRIAD.md): one hybrid groove through three processing rigs. These are listening candidates, not a factory engine or MPC program.
 
+[TIMBER](docs/TIMBER.md) adds three acoustic-instrument percussion banks: Folk Pocket, Wood Boom Bap and String Two Step. Guitar, acoustic bass guitar, cello and upright contacts fill sixteen pads, with three strike levels, four takes, a roll and a riser. The owner approved listening and hardware on 2026-11-15; full software regression remains pending.
+
 ## The loop
 
 ```
@@ -218,8 +220,11 @@ compares C3–C5, common controls and dry musical roles. Earlier auditions and t
 original six-voice recordings remain available. [SING's design](docs/CAIRN_SING.md),
 [TUMBLE's mechanism](docs/CAIRN_TUMBLE.md) and the
 [KNOCK/ANSWER foundation](docs/CAIRN.md) record the distinctions and compatibility.
-Factory expansion, the remaining voices, phone/MPC timing and the Android picker
-remain deferred.
+GRIND (model 6) and VESSEL (model 7) complete the six voices
+([GRIND and VESSEL](docs/CAIRN_GRIND_VESSEL.md)). CAIRN now has a factory roster of
+four presets per voice, SING's being four of the kept Wave 3 recipes, a place at the
+end of the SYNTH picker and a CAIRN starter on the shelf. Phone/MPC timing remains
+deferred.
 
 APSIS is a pitched center with independently orbiting resonant bodies.
 PASSAGE, GRAIN and ANCHOR expose STRETCH, DISTANCE, BODIES, ALIGN,
@@ -451,7 +456,7 @@ explicit MIDI root (24–96), strike velocity and model version; TUNE is a
 relative ±12-semitone offset, neutral at 0.5, so the effective note spans
 12–108 without clamping back to the saved-root range. Seven provisional presets
 and a dry sixteen-pad C minor pentatonic kit are included, with PITCHWHEEL among
-FRESH TAPE's 136 starters. Run `./gradlew :synth:generatePitchwheelAudition`
+FRESH TAPE's 165 starters. Run `./gradlew :synth:generatePitchwheelAudition`
 for the compact first listening set, or add `-PpitchwheelFull` for the broader
 dry probes. HOLD's top step returns settled loop-only material with a
 deterministic attachment cycle and capped adhesion. The owner heard R1 as six
@@ -527,10 +532,11 @@ sixteen-pad bank with three native touch layers. PLUCK can save a STRUM, and MAK
 INSTRUMENT builds finite three-layer keys from any single-note model-2 sound.
 See [OSTERIA](docs/OSTERIA.md).
 
-VELOUR CLOSE, VELOUR and VELOUR BLOOM load the approved, trimmed Round 5 bank:
+VELOUR CLOSE, VELOUR and VELOUR BLOOM load the approved, trimmed bank with the
+selected Round 7 B ride at A12:
 sixteen pads, three touch layers, dry C kick/snare on A05/A06, and conga, bongo,
 recording-derived tambourine and woodblock on A13–A16. The fixed PCM keeps the
-[audition and MPC downloads](https://velour-drum-audition.bertcalm.chatgpt.site/round5/)
+[audition and MPC downloads](https://velour-drum-audition.bertcalm.chatgpt.site/round7/)
 intact when the shelf makes a kit. The existing Velour/Bloom boards and original
 model-1 renderer remain available. [Implementation notes](docs/VELOUR.md) distinguish
 this approved baseline from the still-open round-robin, genre-kit and hardware gates.
@@ -1139,8 +1145,8 @@ render-time limits. Build its MPC program and replay files with:
 ```
 
 ONSET, SCANNED CHAIN, VOX, FORK, HALOBAR, AEROSTAT, TREMOR, BALLAST, FLOTILLA, CISTERN, CIRCUIT, OBBLIGATO, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE,
-TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, LATTICE, ACCORD, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, REGISTERS, OSPREY, OPENSKY, OVEN, FLOCK, VENT, OVERLAP, TRIO, NACRE, ORIGAMI, TREFOIL, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS, TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME, OTIS, WICK, BORE, ARCO, SCOUR, KEEL, CHITIN, EROSION, RIVET, FIRED BRONZE, BACKWASH, TEMPEST, SPLAY, OSTERIA, ETCH, SCUFF, CLUTTER and GRAINS round out the lineup —
-88 engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
+TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, LATTICE, ACCORD, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, REGISTERS, OSPREY, OPENSKY, OVEN, FLOCK, VENT, OVERLAP, TRIO, NACRE, ORIGAMI, TREFOIL, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS, TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME, OTIS, WICK, BORE, ARCO, SCOUR, KEEL, CHITIN, EROSION, RIVET, FIRED BRONZE, BACKWASH, DRUMLINE, HICCUP, TEMPEST, SPLAY, OSTERIA, ETCH, SCUFF, CLUTTER, CALABASH, TERRA, BRISTLE, CAIRN and GRAINS round out the lineup —
+94 engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
 since it has no voice enum and works on a source snip instead of picking
 one. VOX is formant vocal synthesis — the shopping-mall-keyboard choir,
 proudly: a VOWEL knob morphs
@@ -1396,7 +1402,7 @@ TREMOR, BALLAST, CISTERN, CIRCUIT, OBBLIGATO, ALLOY, THAW, MURK, NIMBUS, COROLLA
 UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL,
 SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVERLAP,
 OVEN, FLOCK, VENT, CREASE, TRIO, NACRE, ORIGAMI, TREFOIL, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS,
-TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME, BORE, ARCO, SCOUR, KEEL, CHITIN, WICK, EROSION, RIVET, FIRED BRONZE, BACKWASH, SOOT, TEMPEST, SPLAY, OSTERIA, ETCH, SCUFF, CLUTTER, plus GRAINS, SNAP and DRAW,
+TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME, BORE, ARCO, SCOUR, KEEL, CHITIN, WICK, EROSION, RIVET, FIRED BRONZE, BACKWASH, DRUMLINE, SOOT, HICCUP, TEMPEST, SPLAY, OSTERIA, ETCH, SCUFF, CLUTTER, CALABASH, TERRA, BRISTLE, CAIRN, plus GRAINS, SNAP and DRAW,
 which sit beside the picker. `:synth` also holds engines that picker does not show.
 LORENTZ has a preset roster, so `snipsnap synth` renders it.
 
@@ -1426,9 +1432,15 @@ ALLOY, CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL, PRISM, REGISTERS, CONTOUR,
 are in the picker and the preset roster, and each but FLOTILLA and REGISTERS has a starter kit;
 the CLI's `--midi` and `--velocity` options set their note and strike energy directly
 (each one's `--midi` range is in [`docs/CLI.md`](docs/CLI.md)'s `synth` section).
-TERRA, SILK, GYRE and MAGNET are in the module, with kits or voices, and
-no roster entry. VENT, the Rössler-attractor synth (separate from the TapeOS
-scheme of that name), brings clean model-2 PULSE, COIL and PLUME to the picker
+SILK, GYRE and MAGNET are in the module, with kits or voices, and
+no roster entry. TERRA left that list on 2026-11-14: its sixteen-pad
+world-percussion kit, which the owner kept in full, is FRESH TAPE's TERRA
+starter, and its twelve playing voices are in the picker with four factory
+presets each, the sixteen kept pads among them. TERRA SAHEL, TERRA MAQAM and
+TERRA PUNJAB are genre kits from the same voices, kept by the owner
+([`docs/TERRA_PROMOTION.md`](docs/TERRA_PROMOTION.md)).
+VENT, the Rössler-attractor synth (separate from the TapeOS scheme of that
+name), brings clean model-2 PULSE, COIL and PLUME to the picker
 and factory roster. FRESH TAPE's VENT kit has twelve dry pads in C minor
 pentatonic: a bass, short note, percussive hit and long texture per voice,
 leaving four capture slots free. The CLI renders those same four recipes per
@@ -1764,3 +1776,12 @@ and round robin remains open; see [the build notes](docs/HALOBAR_SIX_VOICES.md).
 **Cosmic Breaks** has DnB, Jungle and Dubstep FRESH TAPE kits with three velocity
 layers and four takes per layer. Each keeps a 16-hit bank and adds a finite roll
 and riser on bank B. The original DnB hits preserve the approved audition. [Source provenance, kit export and limits](docs/COSMIC_BREAKS.md).
+
+
+BRISTLE is the in-progress bass adaptation with two accepted routes: A drives the
+saw before filtering; B drives it after filtering. Both keep a clean fundamental.
+The SYNTH picker saves seven controls and offers finite or opt-in sustained C1–C3 instruments
+with three timbral touch layers per note. SUSTAIN KEYS adds a note-off RELEASE control;
+the accepted finite packages remain unchanged. See [BRISTLE](docs/BRISTLE.md) for evidence
+and remaining acceptance gates.
+DRUMLINE adds a versioned marching battery and FIELD/STREET CADENCE shelf kits, with independent players, finite rudiments and velocity/take grids. Native listening, device timing and hardware acceptance remain open. See [DRUMLINE](docs/DRUMLINE.md).

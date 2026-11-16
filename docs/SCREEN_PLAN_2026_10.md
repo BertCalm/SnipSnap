@@ -1,5 +1,7 @@
 # The screen plan — every screen in the four-place shape
 
+> **Status 2026-11-15:** the pad strip's doors are now CHANGE SOUND ▸ and EDIT PAD ▸ (filled) and RECORD INTO PAD ▸ and FROM MY SAMPLES ▸ (empty), and RAW reads NO EFFECTS; see [`UX_PASS_2026_11.md`](UX_PASS_2026_11.md).
+
 *Written 2026-10-14 for the SDK session that will build the shape in
 [`MODERN_SHAPE.md`](MODERN_SHAPE.md) under the decisions in
 [`DIRECTION_2026_10.md`](DIRECTION_2026_10.md). Every page below was

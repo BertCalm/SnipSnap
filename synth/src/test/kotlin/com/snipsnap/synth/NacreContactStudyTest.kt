@@ -34,7 +34,7 @@ class NacreContactStudyTest {
             assertEquals(1.0, p.diagnostics.getValue("peakSafetyGain"))
         }
         assertEquals(3, Nacre.MODEL_VERSION)
-        assertEquals(false, NacreModels.supports(5))
+        assertEquals(false, NacreModels.supports(NacreModels.LAST_MODEL_VERSION + 1))
     }
 
     @Test

@@ -53,6 +53,7 @@ import com.snipsnap.synth.Fork
 import com.snipsnap.synth.ForkPatch
 import com.snipsnap.synth.Halobar
 import com.snipsnap.synth.HalobarPatch
+import com.snipsnap.synth.HiccupPatch
 import com.snipsnap.synth.Glint
 import com.snipsnap.synth.GlintPatch
 import com.snipsnap.synth.Gyre
@@ -60,6 +61,8 @@ import com.snipsnap.synth.Hydroform
 import com.snipsnap.synth.HydroformPatch
 import com.snipsnap.synth.GyrePatch
 import com.snipsnap.synth.ClutterPatch
+import com.snipsnap.synth.EmberPatch
+import com.snipsnap.synth.ServoPatch
 import com.snipsnap.synth.ScuffPatch
 import com.snipsnap.synth.Keel
 import com.snipsnap.synth.KeelPatch
@@ -78,6 +81,8 @@ import com.snipsnap.synth.MagnetPatch
 import com.snipsnap.synth.Mercury
 import com.snipsnap.synth.MercuryPatch
 import com.snipsnap.synth.Meridian
+import com.snipsnap.synth.Bristle
+import com.snipsnap.synth.BristlePatch
 import com.snipsnap.synth.MeridianPatch
 import com.snipsnap.synth.Murk
 import com.snipsnap.synth.MurkPatch
@@ -284,6 +289,7 @@ object SynthRoot {
         is LacquerPatch -> Field(patch.midi, Lacquer.MIDI_MIN..Lacquer.MIDI_MAX) { patch.copy(midi = it) }
         is LatticePatch -> Field(patch.midi, Lattice.MIDI_MIN..Lattice.MIDI_MAX) { patch.copy(midi = it) }
         is LibrationPatch -> Field(patch.midi, Libration.MIN_MIDI..Libration.MAX_MIDI) { patch.copy(midi = it) }
+        is BristlePatch -> Field(patch.midi, Bristle.MIDI_MIN..Bristle.MIDI_MAX) { patch.copy(midi = it) }
         is MeridianPatch -> Field(patch.midi, Meridian.MIDI_MIN..Meridian.MIDI_MAX) { patch.copy(midi = it) }
         is MurmurPatch -> Field(patch.midi, Murmur.rootRange(patch.config)) { patch.copy(midi = it) }
         is NacrePatch -> Field(patch.midi, Nacre.MIN_MIDI..Nacre.MAX_MIDI) { patch.copy(midi = it) }
@@ -363,7 +369,7 @@ object SynthRoot {
         is TinesPatch -> if (patch.voice == TinesVoice.KALIMBA) tune(patch, { nearestMidi(Tines.frequencyFor(patch.voice, it)) }) else null
 
         // ---- no root a note name would describe ----
-        is BackwashPatch, is BreakerPatch, is SootPatch, is ThumpPatch, is SkinPatch, is OnsetPatch, is TerraPatch, is VoxPatch, is FillPatch, is RivetPatch, is ScuffPatch, is ClutterPatch, is TempestPatch -> null
+        is com.snipsnap.synth.DrumlinePatch, is ServoPatch, is BackwashPatch, is BreakerPatch, is SootPatch, is ThumpPatch, is SkinPatch, is OnsetPatch, is TerraPatch, is VoxPatch, is FillPatch, is RivetPatch, is ScuffPatch, is HiccupPatch, is ClutterPatch, is EmberPatch, is com.snipsnap.synth.CalabashPatch, is TempestPatch -> null
         // SILK's TUNE walks scale degrees, EROSION's sweeps a frequency: neither names a note.
         is SilkPatch, is ErosionPatch -> null
     }

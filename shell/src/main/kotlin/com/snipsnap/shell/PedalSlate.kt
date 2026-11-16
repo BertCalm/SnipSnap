@@ -449,7 +449,7 @@ object PedalSlate {
             is Gesture.Flip -> {
                 val entry = Pedals.byKey(gesture.key)
                 require(gesture.to in entry.sides) {
-                    "${entry.word} cannot sit on the ${gesture.to.id} side - it sits ${entry.sides.joinToString(" or ") { it.id }}"
+                    "${PadSheet.displayLabel(entry.word)} cannot sit on the ${gesture.to.id} side - it sits ${entry.sides.joinToString(" or ") { it.id }}"
                 }
                 if (at < 0 || picks[at].side == gesture.to) return Change.Same
                 settle(picks.filterIndexed { i, _ -> i != at } + picks[at].copy(side = gesture.to))
@@ -531,7 +531,8 @@ object PedalSlate {
         }
     }
 
-    private fun wordOf(key: String): String = Pedals.entries.firstOrNull { it.key == key }?.word ?: key.uppercase()
+    /** The name a toast says for [key]: the drawn word (LONG ECHO), never the id (DELAY). */
+    private fun wordOf(key: String): String = Pedals.entries.firstOrNull { it.key == key }?.word?.let(PadSheet::displayLabel) ?: key.uppercase()
 
     /**
      * The line that says what [land] did with [gesture] on the pad named [pad]: a pedal on (in place
