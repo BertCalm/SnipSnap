@@ -862,6 +862,10 @@ TERRA is a world-percussion drum engine with 13 voices. Four are spec voices, fr
 
 The owner approved the procedural kick/snare pair. Three genre starters now contain 18 pads each, including authored rolls and risers. All 486 cells pass velocity/take source checks, saved recipe replay, native playback, SFZ import/playback and MPC 3 grid/PCM read-back. Drum shelf registration is verified in software. Melodic/keygroup/chord and string STRUM requirements do not apply to this percussion kit; individual voices are finite. The owner accepted the revised Jungle heel, ghost and ride on 2026-11-15 (“Better, proceed”); preserve their version-2 renders alongside the approved core pair. The owner subsequently confirmed listening to all kits and explicitly approved phone and hardware playback (“Phone and hardware approved”). Sound and device acceptance are therefore closed for Dry Jungle, Dub Breaks and Orbital Breaks. This is owner-reported device approval, separate from the automated 486-cell evidence; no device model or firmware was specified. The revision and complete starter-render regression passed. No MPC 2 fallback is included. See [the detailed ledger](superpowers/specs/2026-11-14-spore-synthetic-kits.md) and [revision acceptance](superpowers/specs/2026-11-15-spore-jungle-articulation.md).
 
+## SPLINTER breakcore kit (2026-11-15, groove heard: fine)
+
+One 18-pad starter at 200 BPM, `splinter-breakcore`, built on the approved Spore kick and snare with a new edit stage (speed, chop, retrigger, stretch, oversampled clip). Sixteen voices plus an authored snare rush and riser; three velocities and three takes on every pad. All 162 cells pass velocity and take source checks, saved recipe replay, native playback including take wrap and hat choke, SFZ import and MPC 3 grid and PCM read-back (`SplinterTest`, `SplinterDeliveryTest`). Melodic, keygroup, chord and STRUM gates do not apply. The multiple-genre-kits gate is met by the Spore family's shelf, not by this kit alone. No MPC 2 export, under the 2026-11-14 ruling. The owner heard the groove on 2026-11-15 and called it fine; per-pad verdicts are open. **Open: no phone or MPC has played it.** See [SPLINTER](SPLINTER.md).
+
 ## EMBER (round 3L, five kits on the shelf, sound approved 2026-11-16; hardware open)
 
 A drum engine for a live jazz and soul kit in a small club in 1962: calfskin drums, a riveted ride, brushes, the
@@ -923,7 +927,7 @@ kit, after the owner heard all five kits and the new voices and said "All sound 
 - **Overall: incomplete.** The sound is approved and the five kits are on the shelf, proved through saving,
   playback and MPC 3 export in software (rounds 2 and 3L). Open: presets and the picker, and phone and MPC hardware.
 
-## KINDRED (rounds 0 to 2 heard in Python, round 2 accepted 2026-11-15; round K1 Kotlin port, not heard)
+## KINDRED (rounds 0 to 2 heard in Python, round 2 accepted 2026-11-15; K1 port merged; K2 kits on the shelf 2026-11-16, not heard)
 
 A one-voice, eight-step analog-style percussion synth and four genre kits from it. See [KINDRED](KINDRED.md).
 
@@ -931,16 +935,16 @@ A one-voice, eight-step analog-style percussion synth and four genre kits from i
 |---|---|---|
 | Melodic voices, keygroups, premade kit, chord tools | Not applicable | A drum engine. |
 | Articulation: HOLD, STRUM | Not applicable | Finite hits; the eight-step phrase is a kit pad (A15), not HOLD. |
-| Percussion: roll or riser | Not yet built in Kotlin | Each kit's A16 riser and A15 phrase were heard in Python at round 2; K2 renders them in Kotlin. |
-| Drums: multiple distinct genre kits on the shelf | Not yet | Four kits (TECHNO, INDUSTRIAL, ELECTRO, AMBIENT) accepted by ear in Python; every one-shot slot differs between every pair by at least 2.15 dB of shape, and they differ in tempo, tuning, voices and grooves. K2 puts them on the shelf. |
+| Percussion: roll or riser | Pass in software, not heard in Kotlin | Every kit carries its A16 riser and A15 phrase (two bars of one voice), rendered by the engine (`KindredKits`). |
+| Drums: multiple distinct genre kits on the shelf | Pass in software | Four kits on the shelf under SKINS (`kindred-techno`, `-industrial`, `-electro`, `-ambient`), accepted by ear in Python. In Kotlin every pair differs on all fourteen one-shot slots by over 2 dB (least 2.90), and in tempo, tuning, voices, phrase and riser (`KindredKitsTest`). |
 | Velocity: rendering | Pass in Kotlin, not heard | Every recipe's soft and hard hits differ by at least 1.96 dB of level-matched shape (`KindredTest`). |
 | Round robin: rendering | Pass in Kotlin, not heard | Four takes per recipe, none a copy, each deterministic; `Restrike` deals them. |
-| Velocity and round robin: saving | Partly | A patch round-trips through JSON with velocity, take, recipe and model (`KindredTest`, `DeterminismTest`); no saved kit yet. |
-| Velocity and round robin: playback and export | Not yet verified | K2. |
+| Velocity and round robin: saving | Pass in software | Each kit reloads equal and every saved slice matches its render; patches round-trip with velocity, take, recipe and model (`KindredKitTest`, `:shell:generateKindredKits`, `DeterminismTest`). |
+| Velocity and round robin: playback and export | Pass in software; MPC 2 not applicable ([format limit](#mpc-2-and-round-robin-owner-decision-2026-11-14)) | `PadHit.resolve` picks the zone by velocity and walks four takes in order, then repeats; the MPC 3 export reads back: 768 slices. A soft zone is at least 1.74 dB apart in shape; the closest takes are 12.4 dB apart (a copy is over 40). No phone or MPC has played them. |
 | Hardware playback | Not verified | |
 | Sound character | Python round 2 accepted | "It's better. I think it was something with my headphones. Let's proceed with ring 2 sounds", corrected by the owner to "Round" (2026-11-15). The Kotlin port matches the noise-free recipes to 0.01 dB; the noise recipes are another realisation and wait for the ear. |
 
-- **Overall: in progress.** Open: the kits on the shelf with their phrases and risers, saving, playback and MPC 3 export of the grid, the picker, the owner's listen to the Kotlin kits, hardware.
+- **Overall: in progress.** The software gates pass at K2. Open: the owner's listen to the Kotlin kits (each groove measures within 1 dB of the accepted round-2 groove in every band), the presets into the factory roster after it, the picker, hardware.
 
 ## CALABASH (complete, 2026-11-15: four genre kits on the shelf, approved by ear and on phone and MPC 3)
 
@@ -1041,7 +1045,7 @@ approved, phone and MPC good, merge".
 - MPC 2: each velocity zone keeps its first take; the round-robin export gate does not apply ([format limit](#mpc-2-and-round-robin-owner-decision-2026-11-14)).
 - Sound: **pass.** The owner heard round 1 as "a bit weak"; round 1b added weight (kicks 1.2 to 2.7 dB and snares 3.2 to 4.7 dB louder at the same peak) and the owner approved it on 2026-11-15. It is the accepted baseline.
 - Phone and MPC hardware: **pass, owner-reported** (2026-11-15: "phone and MPC good"). No device measurement was made by the implementing session.
-- **Overall: every applicable gate passes.** Not gates and not done: factory presets from the accepted pads and a SYNTH picker entry.
+- **Overall: every applicable gate passes.** Not gates: the 42 approved hits are the factory bank and SERVO is on the SYNTH picker (2026-11-16).
 
 ## TIMBER acoustic percussion integration
 
@@ -1111,3 +1115,15 @@ device-test result; device models and versions were not supplied. See the accept
 - **Picker and physical playback: owner-reported tested and approved.** Android automation remains
   unrun here; no SDK or independently measured device results are available.
 - **Overall: incomplete.** Finite and held prototype integration is present, not full engine completion.
+
+## Soul and rock acoustic collection
+
+See [SOUL_ROCK](SOUL_ROCK.md). Three sixteen-pad factory banks preserve the
+owner-approved synthesized audition (2026-11-16, “It all sounds great, proceed”).
+All 432 original PCM files are pinned by hash. Each kit has three velocity zones,
+three alternate strikes, hat chokes, a finite roll and a cymbal swell. These are
+frozen synthesis assets, not a new editable engine. Save, playback and export
+software proof is in `SoulRockRoundTripTest`; full regression is tracked in the
+PR. Phone/MPC acceptance remains open for this collection. Melodic/keygroup/chord
+and string-articulation gates do not apply; the existing MPC 2 format exception
+applies. Sizzle remains the approved voice, not a newly claimed crash model.

@@ -816,6 +816,7 @@ testkit/etch-audition/
 /testkit/cuttings-kits/
 # Reproducible native drumline audition and exported kits.
 /testkit/drumline-kit/
+testkit/splinter-breakcore/
 /testkit/kindred-audition/
 
 # Regenerable fitted-synthesis banks and export auditions.
@@ -825,3 +826,15 @@ testkit/etch-audition/
 /scripts/east_africa/manifest.json
 
 /testkit/footwork-native/
+/testkit/kindred-kits/
+
+
+/testkit/soul-rock-kits/
+/prototype/soul-rock/*-*.wav
+/prototype/soul-rock/*.zip
+
+/prototype/soul-rock/soul-pocket/
+/prototype/soul-rock/roadhouse-rock/
+/prototype/soul-rock/open-room-rock/
+/prototype/soul-rock/index.html
+/prototype/soul-rock/checks.json

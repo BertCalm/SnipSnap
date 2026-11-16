@@ -22,6 +22,10 @@
 > three velocity zones × three takes, raw/matched comparisons and sampler downloads.
 > Velocity × round robin is preserved in SnipSnap and SFZ. MPC slice-map/hardware acceptance remains pending. See [Spore Station](SPORE_STATION.md).
 
+> SPLINTER breakcore kit (2026-11-15): one 18-pad starter at 200 BPM on the approved Spore kick and
+> snare, with a new edit stage (speed, chop, retrigger, stretch, clip). 162 cells verified through
+> saving, playback, SFZ and MPC 3. Groove heard 2026-11-15: fine; hardware open. See [SPLINTER](SPLINTER.md).
+
 > TRIAD first listening gate (2026-11-09): one generated hybrid drum groove through
 > shared compression/drive, dynamics/tape, or crush/grains. Native finite audition;
 > presets, HOLD, phone controls and MPC program export remain outside this gate.
@@ -3855,5 +3859,29 @@ club, to differ from CALABASH's Afro-Cuban jazz. "Free sounds possessed with evi
 (its pad grids clipped; the kits were never affected), fixed at version 6, after which the owner said "All sound
 great". Round 3L ports the eight Latin voices to `Ember.kt` (35 voices; the cowbell, clave, bongos and shaker fitted
 to CC0 VCSL recordings, the timbale and paila modelled, the guiro a click per ridge), every one inside Python's own
-take spread, and puts EMBER LATIN JAZZ on the shelf as the fifth kit (180 starters; 960 slices proved through save,
+take spread, and puts EMBER LATIN JAZZ on the shelf as the fifth kit (191 starters; 960 slices proved through save,
 playback and MPC 3). Open: presets and the picker, hardware. See [EMBER](EMBER.md).
+
+### KINDRED, round K2 (2026-11-16)
+
+The four kits on the shelf: `KindredKits` (TECHNO 132, INDUSTRIAL 100, ELECTRO 124, AMBIENT 84), SKINS starters.
+Fourteen one-shots per kit as three zones of four fresh strikes, an A15 phrase (two bars of one voice re-struck by the
+kit's eight steps) and an A16 riser; pad levels carry the round-2 groove balance. Every grid proved through saving,
+playback and MPC 3 export (768 slices); each groove from the export measures within 1 dB of the accepted Python groove
+in every band. Nothing in Kotlin heard. Open: the owner's listen, presets, the picker, hardware. See [KINDRED](KINDRED.md).
+
+### SERVO, presets and picker (2026-11-16)
+
+`ServoPresets` files the forty-two hits of the three approved kits as SERVO's factory bank (each the pad's own
+macros struck full at take 0, named after its kit), and SERVO leaves `PatchTypes.ROSTERLESS`. CRASH, heard only in
+the phrases, has no preset. SERVO sits on SYNTH's picker after BRISTLE, before CAIRN, under DRUMS; 95 picker engines.
+An on-device test loads ELECTRO BOOM KICK and keeps an edit with its take and model; CI compiles and runs it. See
+[SERVO](SERVO.md).
+
+
+### Soul and rock acoustic factory kits
+
+Three owner-approved synthesized banks, delivered as exact frozen PCM rather than
+a new engine: SOUL POCKET, ROADHOUSE ROCK and OPEN ROOM ROCK. Forty-eight pads,
+432 velocity/take variants, hat chokes, rolls and swells. See [SOUL_ROCK](SOUL_ROCK.md)
+for software evidence and the remaining phone/MPC gate.
