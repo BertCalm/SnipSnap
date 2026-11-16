@@ -815,3 +815,11 @@ testkit/etch-audition/
 # Reproducible native drumline audition and exported kits.
 /testkit/drumline-kit/
 /testkit/kindred-audition/
+
+# Regenerable fitted-synthesis banks and export auditions.
+/testkit/east-africa-kits/
+
+/scripts/east_africa/audio/
+/scripts/east_africa/manifest.json
+
+/testkit/footwork-native/

@@ -3927,6 +3927,15 @@ tasks.register<JavaExec>("auditDrumlineAliases") {
     args(providers.gradleProperty("drumlineAliasOutput").orNull ?: "testkit/drumline-alias.csv")
 }
 
+tasks.register<JavaExec>("generateKneeBreakKits") {
+    group = "distribution"
+    description = "Package the audition-preserving Knee Break synth banks and velocity/strike grids."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.KneeBreakKitGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "1g"
+}
+
 tasks.register<JavaExec>("auditDrumlineEdgeReference") {
     group = "verification"
     description = "Compare actual drumline output edges against a spectral-projection reference."
