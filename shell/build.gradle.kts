@@ -688,6 +688,46 @@ tasks.register<JavaExec>("generateMurmurRoundRobinAudition") {
     args("${rootDir}/testkit/murmur-rr-v2-audition")
 }
 
+// Uses the app's finite maker and validates the actual exported descriptors and PCM.
+tasks.register<JavaExec>("generateBristleInstruments") {
+    group = "distribution"
+    description = "Render both accepted Bristle routes as finite three-touch C1–C3 instruments."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.BristleInstrumentGenerator")
+    workingDir = rootProject.projectDir
+    args(providers.gradleProperty("bristleInstrumentOutput").orNull ?: "${rootDir}/testkit/bristle-instruments")
+}
+
+// Same exported-PCM audition path, with two takes in each of the three touch pools.
+tasks.register<JavaExec>("generateBristleRoundRobin") {
+    group = "distribution"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.BristleInstrumentGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "2g"
+    args(providers.gradleProperty("bristleInstrumentOutput").orNull ?: "${rootDir}/testkit/bristle-roundrobin", "rr")
+}
+
+// Six new bass voices, source-bound starter and chord examples; approved A/B stay separate.
+tasks.register<JavaExec>("generateBristleVoices") {
+    group = "distribution"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.BristleVoicesGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "2g"
+    args(providers.gradleProperty("bristleVoicesOutput").orNull ?: "${rootDir}/testkit/bristle-six-voices")
+}
+
+/** Optional BRISTLE compression/fuzz comparisons and complete effected keygroups. */
+tasks.register<JavaExec>("generateBristleEffects") {
+    group = "distribution"
+    description = "Render BRISTLE dry/compression/fuzz comparisons and validated effected instruments."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.BristleEffectsGenerator")
+    maxHeapSize = "2g"
+    args(providers.gradleProperty("bristleEffectsOutput").getOrElse("${rootDir}/testkit/bristle-effects"))
+}
+
 tasks.register<JavaExec>("generateDrumlineKit") {
     group = "distribution"
     description = "Render and verify both drumline batteries through saving, playback and MPC export."
@@ -736,4 +776,14 @@ tasks.register<JavaExec>("generateEastAfricaKits") {
     workingDir = rootProject.projectDir
     maxHeapSize = "1g"
     args(providers.gradleProperty("eastAfricaOutput").orNull ?: "${rootDir}/testkit/east-africa-kits")
+}
+
+tasks.register<JavaExec>("generateFootworkKits") {
+    group = "distribution"
+    description = "Render and verify the full-dynamics FOOTWORK kits and native audition."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.FootworkKitGenerator")
+    workingDir = rootDir
+    maxHeapSize = "2g"
+    args(providers.gradleProperty("footworkOutput").orNull ?: "${rootDir}/testkit/footwork-native")
 }

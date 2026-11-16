@@ -205,7 +205,7 @@ object OutsideSheet {
     /** "23 MS LATE · 87% SURE", with the flip named when there was one — the card's status line. */
     fun statusLine(applied: Applied): String {
         val flip = if (applied.inverted) " · FLIPPED BACK" else ""
-        return "${applied.move} · ${applied.lagMs.roundToInt()} MS LATE · ${(applied.confidence * 100).roundToInt()}% SURE$flip"
+        return "${PadSheet.moveLabel(applied.move)} · ${applied.lagMs.roundToInt()} MS LATE · ${(applied.confidence * 100).roundToInt()}% SURE$flip"
     }
 
     /** Back inside: the original out of the bin, the recipe and the stamps cleared. */

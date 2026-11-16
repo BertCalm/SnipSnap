@@ -1,6 +1,10 @@
-# NACRE's new sources: HARMONICS and SHELL
+# NACRE's new sources: HARMONICS, SHELL and BUBBLE
 
-Status: **kept by the owner** as new NACRE voices (round `nacre-voices-1`, 15 Nov 2026: H1, H2, H3, L1, L2 and L3 all KEEP, no notes). The 22 renders behind those clips are pinned (`NacreVoicesTest`). The code is engine only so far: there is no picker entry, preset, starter or kit yet. See [NACRE.md](NACRE.md) for PEARL and the design notes this follows.
+Status: **kept by the owner** as new NACRE voices, in two rounds on 15 Nov 2026, each all KEEP with no notes:
+- **`nacre-voices-1`** (H1, H2, H3, L1, L2 and L3): HARMONICS and SHELL.
+- **`nacre-voices-2`** (Q1, Q2, U1, U2 and U3): the eight HARMONICS and SHELL presets, and BUBBLE.
+
+Every render behind those clips is pinned (`NacreVoicesTest`). All three are NACRE voices in the SYNTH picker (`NacreVoice.HARMONICS`, `NacreVoice.SHELL`, `NacreVoice.BUBBLE`) with four presets each. BUBBLE's first preset, Bubble Drop, is the sound the owner kept; its other three presets are **not yet heard** (see [Still open](#still-open)). There is no starter or kit yet. See [NACRE.md](NACRE.md) for PEARL and the design notes this follows.
 
 ## What the owner asked for
 
@@ -8,7 +12,7 @@ From the NACRE voice design (14 Nov 2026):
 - **New sources are allowed.** Each keeps NACRE's sympathetic harp strings and its water.
 - **The first round is HARMONICS and SHELL.**
 - **GROTTO and CONCH** wait for a HOLD decision.
-- **BUBBLE** is left for a later round.
+- **BUBBLE** came next, in round `nacre-voices-2`, and was kept.
 
 ## Saved models
 
@@ -17,10 +21,11 @@ From the NACRE voice design (14 Nov 2026):
 | 1–4 | PEARL | Unchanged. Model 3 is the default; model 4 adds CONTACT and strike shapes. |
 | 5 | HARMONICS | Harp harmonics: a finger touches each string's midpoint at the pluck. |
 | 6 | SHELL | Small struck modal shells instead of strings. |
+| 7 | BUBBLE | A pitched bubble that glides up onto its note. |
 
-- **How a saved recipe chooses a source:** an ordinary `NacrePatch` with `model = 5` or `6`. Its `voice` stays `PEARL`, the only voice entry, until the sources are registered as voices of their own.
+- **How a saved recipe chooses a source:** an ordinary `NacrePatch` whose `voice` is `HARMONICS` (model 5), `SHELL` (model 6) or `BUBBLE` (model 7). Each voice has exactly one saved model: `Nacre.defaultModel(voice)` gives it, `NacreModels.supports(voice, model)` checks the pair, and a mismatch is refused. PEARL keeps models 1–4.
 - **Controls:** the same six as model 3 (TOUCH, DUET, CURRENT, VENUE, BLOOM, HOLD), with PEARL's defaults. HOLD must be 0, and CONTACT is refused.
-- **Code:** both live in `NacreVoices.kt`. `NacreModels` routes models 5 and 6 to it; nothing in models 1–4 is called or changed.
+- **Code:** all three live in `NacreVoices.kt`. `NacreModels` routes models 5, 6 and 7 to it; nothing in models 1–4 is called or changed. Making BUBBLE a saved model changed no sample: its renders match the desk clips byte for byte.
 
 ## What every source keeps from PEARL
 
@@ -53,15 +58,49 @@ A harpist plays a harmonic by plucking with a finger resting lightly on the stri
 - **Decay:** each mode is a damped two-pole resonator. A mode's decay shortens with its ratio^.45 from 2.6 s (bass) or 1.9 s (upper), falling by .8 per string up the harp. The lowest mode, at the note, rings longest, so the ring-out carries the pitch.
 - **The mallet:** a raised-cosine contact. It lasts longer, so it sounds duller, at a softer TOUCH and velocity: (.12 + .9 × (1 − TOUCH)) × (1.8 − .8 × velocity) ms.
 
+## BUBBLE (model 7)
+
+- **The source:** each string event is a bubble, a damped tone that starts below its note and glides up onto it (the "bloop"), with a faint octave and a short breath of noise at the onset.
+- **The glide:** 0.8 to 3 semitones, deeper at a firmer TOUCH and a harder strike. It approaches the note exponentially over 14–24 ms, so the ring-out is on pitch.
+- **Decay:** 1.1 s (bass) and 0.75 s (upper), falling by .8 per string up the harp.
+- **Softer is darker:** a softer strike has a shallower glide, less octave and a darker, quieter breath, on top of the shared law that rings fewer upper strings.
+- **What it keeps from PEARL:** the paired performers, bodies, sympathetic strings and water, as HARMONICS and SHELL do.
+
+## Presets
+
+Four per voice, all at C3, velocity 1, seed 7. The first of each is the voice's default sound, the one the owner kept.
+
+| Voice | Preset | TOUCH | DUET | CURRENT | VENUE | BLOOM | Heard |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | --- |
+| HARMONICS | Glass Harmonic | .30 | .15 | .20 | .15 | .35 | kept (H1–H3, Q1) |
+| HARMONICS | Soft Harmonic | .10 | .15 | .20 | .15 | .45 | kept (Q1) |
+| HARMONICS | Harmonic Kelp | .30 | .15 | .35 | 1 | .50 | kept (Q1) |
+| HARMONICS | Harmonic Ring | .70 | .15 | .20 | .15 | .70 | kept (Q1) |
+| SHELL | Shell Tap | .30 | .15 | .20 | .15 | .35 | kept (L1–L3, Q2) |
+| SHELL | Deep Shell | .15 | .15 | .20 | .15 | .60 | kept (Q2) |
+| SHELL | Shell Reef | .30 | .15 | .30 | 0 | .55 | kept (Q2) |
+| SHELL | Shell Bloom | .60 | .15 | .20 | .60 | .80 | kept (Q2) |
+| BUBBLE | Bubble Drop | .30 | .15 | .20 | .15 | .35 | kept (U1–U3) |
+| BUBBLE | Soft Bubble | .10 | .15 | .20 | .15 | .45 | **not yet heard** |
+| BUBBLE | Bubble Stream | .30 | .55 | .35 | .60 | .50 | **not yet heard** |
+| BUBBLE | Bubble Burst | .80 | .15 | .20 | .15 | .70 | **not yet heard** |
+
+BUBBLE's new three:
+- **Soft Bubble:** a light touch. A shallower, rounder bloop with less octave and breath, and a little more bloom.
+- **Bubble Stream:** DUET .55 spreads the two harps' bubbles apart into a trickle, in moving, wetter water.
+- **Bubble Burst:** a firm touch. The deepest bloop, with the most octave and breath, and a long bloom.
+
+Measured at C3 against Bubble Drop (software only): Soft Bubble is 3.6 dB darker and about 3 dB quieter, but its ring-out timbre is close (0.62 on the ring-out measure, under PEARL's widest pair of 0.81), so it differs mostly in the strike. Bubble Stream (4.6) and Bubble Burst (2.2) are further apart. Bubble Burst, 6.5 dB brighter, reaches the .94 peak guard.
+
 ## Level
 
-- **Fixed reference gain:** each source has one output gain (`HARMONICS_OUTPUT_GAIN` 4.3, `SHELL_OUTPUT_GAIN` 1.935). They were set once, so that hard C3 at the default controls has PEARL's level: RMS over the first 2 s is 0.0998 (HARMONICS), 0.0999 (SHELL) and 0.0999 (PEARL). They are not matched per patch, so velocity and TOUCH keep their effect on level.
+- **Fixed reference gain:** each source has one output gain (`HARMONICS_OUTPUT_GAIN` 4.3, `SHELL_OUTPUT_GAIN` 1.935, `BUBBLE_OUTPUT_GAIN` 3.35). They were set once, so that hard C3 at the default controls has PEARL's level: RMS over the first 2 s is 0.0998 (HARMONICS), 0.0999 (SHELL), 0.0999 (BUBBLE) and 0.0999 (PEARL). They are not matched per patch, so velocity and TOUCH keep their effect on level.
 - **Peak guard:** a scalar guard holds peaks at or under .94.
 
-## Tests (`NacreVoicesTest`)
+## Tests (`NacreVoicesTest`, `NacreVoiceRegistrationTest`)
 
 - **PEARL unchanged:** every PEARL model (1–4) at three notes and strikes, all five presets and a strike-shaped layer render byte for byte as on the untouched base (0d57e9e80).
-- **Saved models:** 5 and 6 replay exactly from JSON and refuse CONTACT and HOLD.
+- **Saved models:** 5, 6 and 7 replay exactly from JSON and refuse CONTACT and HOLD.
 - **Determinism:** renders repeat exactly, and the seed is a real input.
 - **Peak:** at or under .94 at MIDI 28, 36, 48, 60 and 72, with the loudest settings.
 - **Pitch:** within 8 cents at MIDI 36, 48, 60 and 72. HARMONICS is measured 0.3–1.5 s, SHELL on its ring-out at 1.5–3.5 s.
@@ -69,9 +108,20 @@ A harpist plays a harmonic by plucking with a finger resting lightly on the stri
 - **A new voice, not a setting:**
   - The measure is timbre on the ring-out: semitone-band power from 0.5 to 3 s, in dB against the strongest band, floored at −45 dB.
   - Each source must be further from every PEARL setting (presets, TOUCH 0/1, DUET 1, BLOOM 1, a soft strike) than the widest pair of PEARL settings is apart, with a margin.
-  - The same margin applies between HARMONICS and SHELL.
+  - The same margin applies between each pair of HARMONICS, SHELL and BUBBLE.
 - **Render budget:** a cold render takes under 20 s.
-- **Kept renders:** the 22 renders behind H1–H3 and L1–L3 are pinned by SHA-256; the desk WAVs were checked byte for byte against a fresh render.
+- **Registration:**
+  - The four voice entries and their saved models.
+  - Every entry point (`Nacre.render`, `NacrePatch`, `NacreVoices`) renders the same.
+  - Four presets per voice, names of 14 letters or fewer, JSON replay and roster lookup.
+  - The first preset is the kept default sound (pinned hash), and no two presets render the same.
+  - On the phone, `NacreSynthScreenTest` reaches each voice and its presets (not yet run on a device).
+- **BUBBLE's pitch** is measured on the direct bass harp (0.05–0.6 s): its tone decays within about a second, so in the full mix the delayed water returns, copies of the same tone, pull the spectral peak. At C3 the mix reads −16 cents while the bass harp, the sympathetic strings and the BLOOM-0 mix read −0.1, −0.1 and +1.1.
+- **Kept renders,** pinned by SHA-256:
+  - the 22 renders behind H1–H3 and L1–L3 (`nacre-voices-1`);
+  - the eight HARMONICS and SHELL presets behind Q1 and Q2 (`nacre-voices-2`);
+  - the renders behind U1–U3 (`nacre-voices-2`): eleven BUBBLE notes, through a saved model-7 recipe, and PEARL at C3 and C4.
+  - For both rounds, a git-excluded scratch test re-rendered every desk clip and found it identical to the published WAV, byte for byte.
 
 ## Measured (C3, defaults, seed 7)
 
@@ -85,13 +135,19 @@ A harpist plays a harmonic by plucking with a finger resting lightly on the stri
 | Cold render | 0.4–1.0 s | 0.3–0.4 s | |
 
 - HARMONICS and SHELL are 4.34 apart on the same measure.
+- BUBBLE at C3: brightness soft / medium / hard −30.9 / −25.5 / −20.9 dB; peak at hard C3 0.80. Its pitch is under Tests.
 - The first half second is different. There, PEARL's DUET and TOUCH settings differ from each other as much as these sources differ from PEARL, because DUET moves the strum. So the numbers alone don't settle "new voice or PEARL setting". The owner's ears did: both were kept as new voices.
 
 ## Still open
 
-- **Heard:** the owner kept both as new voices: soft, medium and hard at C3; a phrase from C2 to C5; and a side-by-side with PEARL at C3 and C4. Other notes, touches and settings have not been heard.
+- **Heard:**
+  - HARMONICS and SHELL: soft, medium and hard at C3; a phrase from C2 to C5; a side-by-side with PEARL at C3 and C4; and all eight presets at C3.
+  - BUBBLE: the same first three kinds of clip, at its default controls (Bubble Drop).
+  - Other notes, touches and settings have not been heard.
+- **Not yet heard: three BUBBLE presets** (Soft Bubble, Bubble Stream, Bubble Burst). They pass in software, but no one has listened to them. A small follow-up round, `nacre-voices-3`, is proposed: one clip of the four BUBBLE presets at C3, 3.5 s apart, as Q1 and Q2 were. Nothing waits on it.
 - **Not built:**
-  - registration as NACRE voices (picker, presets, starter, kit);
+  - GROTTO and CONCH, which wait for a HOLD decision;
+  - a starter or kit for HARMONICS, SHELL and BUBBLE;
   - velocity layers and round robin;
   - keygroups and HOLD;
   - the spec's conch and cave venues.

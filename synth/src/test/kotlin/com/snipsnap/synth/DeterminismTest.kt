@@ -20,6 +20,13 @@ class DeterminismTest {
         }
     }
 
+    @Test fun `Bristle study routes replay their saved touch exactly`() {
+        for (route in Bristle.Route.entries) {
+            val r = Bristle.Recipe(route, 36, .65f, mapOf("SLIDE" to .3f))
+            assertContentEquals(r.render().samples, Bristle.Recipe.fromJsonText(r.toJsonText()).render().samples)
+        }
+    }
+
     @Test fun `DRUMLINE keeps section and take identities deterministic`() {
         for (voice in listOf(DrumlineVoice.SNARE, DrumlineVoice.CRASH, DrumlineVoice.ROLL)) {
             assertContentEquals(Drumline.render(voice, take = 2).samples, Drumline.render(voice, take = 2).samples)
@@ -361,7 +368,7 @@ class DeterminismTest {
         for (voice in NacreVoice.entries) {
             val patch = NacrePatch("Nacre canary", voice,
                 Nacre.defaults(voice) + mapOf("VENUE" to 1f, "BLOOM" to .65f),
-                midi = 57, velocity = .65f, seed = 9_007_199_254_740_993L, model = 3)
+                midi = 57, velocity = .65f, seed = 9_007_199_254_740_993L, model = Nacre.defaultModel(voice))
             Nacre.clearCoreCache()
             val original = patch.render().samples
             Nacre.clearCoreCache()
@@ -372,7 +379,7 @@ class DeterminismTest {
 
     @Test
     fun `NACRE strike-shaped v2 layers reproduce across cold source caches and a saved policy`() {
-        val hard = NacrePresets.all().first { it.model == 4 }.copy(midi = 55, seed = -3L)
+        val hard = NacrePresets.forVoice(NacreVoice.PEARL).first { it.model == 4 }.copy(midi = 55, seed = -3L)
         val bank = NacreContactStrikeRecipes.recipeFor(hard, NacreStrikeVariant.STRONG)
         Nacre.clearCoreCache()
         val original = bank.layers.first().render().samples

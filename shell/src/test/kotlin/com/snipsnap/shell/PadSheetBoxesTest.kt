@@ -13,7 +13,7 @@ class PadSheetBoxesTest {
 
     @Test
     fun `five boxes in order, one open at a time, a tap on the open one closes it`() {
-        assertEquals(listOf("EFFECTS", "SHAPE", "RE-AMP AND ROOM", "COMBINE SOUNDS", "MAKE FROM THIS PAD"), PadSheetBoxes.ORDER.map { it.legend })
+        assertEquals(listOf("EFFECTS", "SHAPE", "SPEAKER AND ROOM", "COMBINE SOUNDS", "MAKE FROM THIS PAD"), PadSheetBoxes.ORDER.map { it.legend })
         assertEquals(PadSheetBoxes.Box.MUTATE, PadSheetBoxes.boxFor("MUTATE"))
         assertNull(PadSheetBoxes.boxFor("BENCH"))
         assertEquals(PadSheetBoxes.Box.SHAPE, PadSheetBoxes.toggle(null, PadSheetBoxes.Box.SHAPE))
@@ -52,7 +52,7 @@ class PadSheetBoxesTest {
 
         val applied = OutsideSheet.Applied("ROOM", 23.4f, 0.87f, false)
         assertEquals(OutsideSheet.statusLine(applied), PadSheetBoxes.outside(applied, null))
-        assertEquals("ROOM · 23 MS LATE · 87% SURE", PadSheetBoxes.outside(applied, null))
+        assertEquals("REAL ROOM · 23 MS LATE · 87% SURE", PadSheetBoxes.outside(applied, null))
         assertEquals(Copy.OUTSIDE_LISTENING, PadSheetBoxes.outside(applied, Copy.OUTSIDE_LISTENING), "the trip's stage wins while it is out")
 
         assertEquals("A PATCH NOW, 12% AWAY", PadSheetBoxes.make(bare.copy(source = mapOf("desampled" to "12%"))))
@@ -74,14 +74,14 @@ class PadSheetBoxesTest {
         assertEquals(six, PedalSlate.audible(six), "the fixture's six are all heard")
         assertEquals("6 PEDALS", PadSheetBoxes.pedals(six))
         val four = listOf("compressed", "driven", "touchwahed", "delayed").map { pick(it, 1f) }
-        assertEquals("SUSTAIN · DRIVE · TOUCH · DELAY", PadSheetBoxes.pedals(four))
+        assertEquals("SQUEEZE · DRIVE · WAH BY HIT · LONG ECHO", PadSheetBoxes.pedals(four))
         for (b in listOf(two.picks, four, six)) assertTrue(PadSheetBoxes.pedals(b).length <= PadSheetBoxes.SUMMARY_CHARS)
-        // One pedal reads as a chip does, so the same DELAY at 70 reads one way whichever door made it.
-        assertEquals("DELAY · 70%", PadSheetBoxes.pedals(listOf(pick("delayed", 0.7f))))
+        // One pedal reads as a chip does, so the same LONG ECHO at 70 reads one way whichever door made it.
+        assertEquals("LONG ECHO · 70%", PadSheetBoxes.pedals(listOf(pick("delayed", 0.7f))))
         // The strip names only what plays: WAH under TOUCH on one side is silent, and so is a pick at AMT 0.
         val shadowed = com.snipsnap.synth.PedalBoard(listOf(pick("wahed", 0.7f), pick("touchwahed", 0.7f), pick("driven", 0f)))
         val shadowedPad = bare.copy(recipe = com.snipsnap.synth.PadRecipe(pedals = shadowed).toJsonValue())
-        assertEquals("TOUCH · 70%", PadSheetBoxes.summaries(shadowedPad, null)[PadSheetBoxes.Box.TREATMENT])
+        assertEquals("WAH BY HIT · 70%", PadSheetBoxes.summaries(shadowedPad, null)[PadSheetBoxes.Box.TREATMENT])
     }
 
     /**
@@ -131,14 +131,14 @@ class PadSheetBoxesTest {
         assertEquals(PadSheetBoxes.EFFECTS_HOLDS, PadSheetBoxes.effectsLine(bare))
         assertEquals(PadSheetBoxes.MUTATE_OFFERS, PadSheetBoxes.variationsLine(bare))
 
-        // A pedal reads as the card does, with the joint dropped: "DELAY 70%", the way a treatment reads "CRUSH 35%".
+        // A pedal reads as the card does, with the joint dropped: "LONG ECHO 70%", the way a treatment reads "CRUSH 35%".
         val pedal = com.snipsnap.synth.PedalBoard(listOf(com.snipsnap.synth.PedalBoard.Pick("delayed", 0.7f)))
         val delayed = bare.copy(recipe = com.snipsnap.synth.PadRecipe(pedals = pedal).toJsonValue())
-        assertEquals("DELAY 70%", PadSheetBoxes.effectsLine(delayed))
+        assertEquals("LONG ECHO 70%", PadSheetBoxes.effectsLine(delayed))
 
         // SHAPE and a trip out count too; MUTATE's and MAKE's strips do not.
         assertEquals("ATK 200MS", PadSheetBoxes.effectsLine(bare.copy(attack = 0.5f)))
-        assertEquals("DELAY 70% · ATK 200MS", PadSheetBoxes.effectsLine(delayed.copy(attack = 0.5f)))
+        assertEquals("LONG ECHO 70% · ATK 200MS", PadSheetBoxes.effectsLine(delayed.copy(attack = 0.5f)))
         assertEquals(Copy.OUTSIDE_LISTENING, PadSheetBoxes.effectsLine(bare, outsideStage = Copy.OUTSIDE_LISTENING))
         assertEquals(
             PadSheetBoxes.EFFECTS_HOLDS,
@@ -182,6 +182,8 @@ class PadSheetBoxesTest {
         }
         assertTrue("UNTOUCHED" !in PadSheetBoxes.effectsLine(bare))
         assertTrue("UNTOUCHED" !in PadSheetBoxes.variationsLine(bare))
-        assertEquals("EFFECTS, SHAPE, RE-AMP AND ROOM", PadSheetBoxes.EFFECTS_HOLDS)
+        assertEquals("EFFECTS, SHAPE, SPEAKER AND ROOM", PadSheetBoxes.EFFECTS_HOLDS)
+        // The MIX WITH ANOTHER SOUND door's line says what is inside, not its own name again.
+        assertTrue(PadSheetBoxes.MUTATE_OFFERS !in Copy.PAD_VARIATIONS_DOOR, PadSheetBoxes.MUTATE_OFFERS)
     }
 }

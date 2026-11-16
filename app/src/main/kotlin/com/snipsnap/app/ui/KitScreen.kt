@@ -951,8 +951,8 @@ fun KitScreen(
             ) {
                 StrikeStripSection(strike, scheme)
                 GroupBox(
-                    legend = "PERFORMANCE",
-                    summary = "AQUARIUM · ${if (host.performance.enabled && !host.performance.settings.isBypass) "LIVE" else "DRY"}${if (performanceDirty) " · UNSAVED" else ""}",
+                    legend = "LIVE KIT EFFECTS",
+                    summary = "${if (host.performance.enabled && !host.performance.settings.isBypass) "ON" else "OFF"}${if (performanceDirty) " · UNSAVED" else ""}",
                     open = performanceOpen,
                     onToggle = {
                         if (performanceOpen) host.revertPerformance()
@@ -972,7 +972,7 @@ fun KitScreen(
                         onReset = { host.auditionPerformance(host.performance, reset = true) },
                         onSave = {
                             performanceSaving = true
-                            performanceStatus = "SAVING PERFORMANCE…"
+                            performanceStatus = "SAVING LIVE KIT EFFECTS…"
                             onSavePerformance(host.performance) { error ->
                                 performanceSaving = false
                                 performanceStatus = error ?: "SAVED TO KIT"
