@@ -201,7 +201,7 @@ inside the voice (the oscillators read it), so it cannot be a rack section over 
 | MPC 2 | Format limit | Each velocity zone keeps its first take ([owner decision, 2026-11-14](ENGINE_ACCEPTANCE_GATES.md#mpc-2-and-round-robin-owner-decision-2026-11-14)) |
 | Sound | **Pass** | Round 1 heard as "a bit weak"; round 1b approved by the owner, 2026-11-15 |
 | Phone and MPC | **Pass** | Owner-reported, 2026-11-15: "phone and MPC good". No device measurement was made in this session |
-| SYNTH picker, factory presets | Not built | Not gates. The kits are now accepted, so their pads can be filed as the factory bank and the engine put on the picker (the CLUTTER rounds 3 and 4 shape); not done here |
+| SYNTH picker, factory presets | Built (2026-11-16) | Not gates. The 42 approved hits are the factory bank and SERVO is on the picker; see "Presets and picker" |
 
 ## Verified / measured / proposed / heard
 
@@ -346,3 +346,27 @@ exists that could change under its owner.
 **What the page asks.** Is that enough weight or should it go further; did any drum lose its snap or get muddy;
 which drums still feel weak. Further steps exist if it is not enough: a longer hold, more HEAT on the kits'
 kick and snare pads, and harmonics between 100 and 400 Hz for the kicks, where small speakers play.
+
+## Presets and picker (2026-11-16)
+
+The owner said "Proceed" to the two follow-ups the acceptance left open.
+
+**The factory bank.** `ServoPresets` files the forty-two hits of the three approved kits, fourteen a kit, as
+SERVO's presets. Each is the voice at the pad's own macros, struck full, at take 0 (the kit grid's first take), so
+a preset is byte for byte the engine render the kit's hard zone finishes. Names are the kit tag and the pad name:
+ELECTRO BOOM KICK, JIT HARD KICK, NEURO REESE STAB; every one fits 24 letters. The roll and riser are phrases on a
+shared rail, not voices, so they are not presets. Nine of ten voices have one: CRASH plays only inside the
+phrases, so the picker offers it at its defaults. SERVO leaves `PatchTypes.ROSTERLESS`, and a saved strike promotes
+through `ServoPatch.fromJsonText` with its velocity, take and model. `ServoPresetsTest` holds CLUTTER's preset
+contracts: identity, registration, sanity, round trip, names and distinctness.
+
+**The picker.** SERVO is on SYNTH's engine picker after BRISTLE, before CAIRN (which closes the ring), wired as
+CALABASH's round 4: every arm of the `Engine` enum, the saved-draft restore, a frozen draft beside the live edits,
+and the native-factory path, because a preset carries its strike outside the macro map. `EngineCatalog` files it
+under DRUMS. Both READMEs count 95 picker engines. An on-device test in `NewEngineSynthScreenTest` opens the kick
+with its six controls, loads ELECTRO BOOM KICK, keeps a HEAT edit through a rebuild, and checks the saved draft's
+take, velocity and model.
+
+This session has no Android SDK: CI's `android-build` compiles the picker entry and `emulator-tests` runs the
+on-device test.
+

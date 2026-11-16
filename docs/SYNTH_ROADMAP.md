@@ -3851,3 +3851,19 @@ Five curated shelf kits retain the accepted fitted modal/noise palette and FM
 logs: 22 sounds × 3 velocity zones × 3 takes per kit. This is a bank family,
 not a new picker engine. Native listening and hardware gates remain open;
 see [implementation and evidence](EAST_AFRICA.md).
+
+### SERVO, presets and picker (2026-11-16)
+
+`ServoPresets` files the forty-two hits of the three approved kits as SERVO's factory bank (each the pad's own
+macros struck full at take 0, named after its kit), and SERVO leaves `PatchTypes.ROSTERLESS`. CRASH, heard only in
+the phrases, has no preset. SERVO sits on SYNTH's picker after BRISTLE, before CAIRN, under DRUMS; 95 picker engines.
+An on-device test loads ELECTRO BOOM KICK and keeps an edit with its take and model; CI compiles and runs it. See
+[SERVO](SERVO.md).
+
+
+### Soul and rock acoustic factory kits
+
+Three owner-approved synthesized banks, delivered as exact frozen PCM rather than
+a new engine: SOUL POCKET, ROADHOUSE ROCK and OPEN ROOM ROCK. Forty-eight pads,
+432 velocity/take variants, hat chokes, rolls and swells. See [SOUL_ROCK](SOUL_ROCK.md)
+for software evidence and the remaining phone/MPC gate.

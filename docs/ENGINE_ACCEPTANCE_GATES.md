@@ -1044,7 +1044,7 @@ approved, phone and MPC good, merge".
 - MPC 2: each velocity zone keeps its first take; the round-robin export gate does not apply ([format limit](#mpc-2-and-round-robin-owner-decision-2026-11-14)).
 - Sound: **pass.** The owner heard round 1 as "a bit weak"; round 1b added weight (kicks 1.2 to 2.7 dB and snares 3.2 to 4.7 dB louder at the same peak) and the owner approved it on 2026-11-15. It is the accepted baseline.
 - Phone and MPC hardware: **pass, owner-reported** (2026-11-15: "phone and MPC good"). No device measurement was made by the implementing session.
-- **Overall: every applicable gate passes.** Not gates and not done: factory presets from the accepted pads and a SYNTH picker entry.
+- **Overall: every applicable gate passes.** Not gates: the 42 approved hits are the factory bank and SERVO is on the SYNTH picker (2026-11-16).
 
 ## TIMBER acoustic percussion integration
 
@@ -1114,3 +1114,15 @@ device-test result; device models and versions were not supplied. See the accept
 - **Picker and physical playback: owner-reported tested and approved.** Android automation remains
   unrun here; no SDK or independently measured device results are available.
 - **Overall: incomplete.** Finite and held prototype integration is present, not full engine completion.
+
+## Soul and rock acoustic collection
+
+See [SOUL_ROCK](SOUL_ROCK.md). Three sixteen-pad factory banks preserve the
+owner-approved synthesized audition (2026-11-16, “It all sounds great, proceed”).
+All 432 original PCM files are pinned by hash. Each kit has three velocity zones,
+three alternate strikes, hat chokes, a finite roll and a cymbal swell. These are
+frozen synthesis assets, not a new editable engine. Save, playback and export
+software proof is in `SoulRockRoundTripTest`; full regression is tracked in the
+PR. Phone/MPC acceptance remains open for this collection. Melodic/keygroup/chord
+and string-articulation gates do not apply; the existing MPC 2 format exception
+applies. Sizzle remains the approved voice, not a newly claimed crash model.

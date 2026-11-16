@@ -1,0 +1,4814 @@
+{
+  "status": "Python recipe prototype; not factory presets or an accepted reference match",
+  "source_commit": "4ead7cd350ab6fabb116a2ee01896ad9fff49f8f",
+  "kits": [
+    {
+      "name": "soul-pocket",
+      "bpm": 108,
+      "pads": [
+        {
+          "pad": 1,
+          "voice": "KICK",
+          "macros": {
+            "TUNE": 0.7379529026326582,
+            "DAMP": 0.7,
+            "BUZZ": 0.4,
+            "DISTANCE": 0.12,
+            "WARMTH": 0.35
+          },
+          "variants": [
+            "soul-pocket/A01-kick-v1-t1.wav",
+            "soul-pocket/A01-kick-v1-t2.wav",
+            "soul-pocket/A01-kick-v1-t3.wav",
+            "soul-pocket/A01-kick-v2-t1.wav",
+            "soul-pocket/A01-kick-v2-t2.wav",
+            "soul-pocket/A01-kick-v2-t3.wav",
+            "soul-pocket/A01-kick-v3-t1.wav",
+            "soul-pocket/A01-kick-v3-t2.wav",
+            "soul-pocket/A01-kick-v3-t3.wav"
+          ],
+          "soft_hard_residual_db": -3.2514954218825878,
+          "take_residual_db": -17.413728727631543,
+          "tuning_evidence": {
+            "method": "Match strongest 35\u2013160 Hz peak of first 120ms to median of low-band-dominant reference events; provisional, overlapping sources possible",
+            "target_hz": 83.441162109375,
+            "before_hz": 83.441162109375,
+            "after_hz": 83.441162109375,
+            "old_tune": 0.7379529026326582
+          }
+        },
+        {
+          "pad": 2,
+          "voice": "SNARE",
+          "macros": {
+            "TUNE": 0.53,
+            "DAMP": 0.7,
+            "BUZZ": 0.4,
+            "DISTANCE": 0.12,
+            "WARMTH": 0.35
+          },
+          "variants": [
+            "soul-pocket/A02-snare-v1-t1.wav",
+            "soul-pocket/A02-snare-v1-t2.wav",
+            "soul-pocket/A02-snare-v1-t3.wav",
+            "soul-pocket/A02-snare-v2-t1.wav",
+            "soul-pocket/A02-snare-v2-t2.wav",
+            "soul-pocket/A02-snare-v2-t3.wav",
+            "soul-pocket/A02-snare-v3-t1.wav",
+            "soul-pocket/A02-snare-v3-t2.wav",
+            "soul-pocket/A02-snare-v3-t3.wav"
+          ],
+          "soft_hard_residual_db": -3.1924301432908493,
+          "take_residual_db": -2.2062028099580475
+        },
+        {
+          "pad": 3,
+          "voice": "RIMSHOT",
+          "macros": {
+            "TUNE": 0.53,
+            "DAMP": 0.7,
+            "BUZZ": 0.4,
+            "DISTANCE": 0.12,
+            "WARMTH": 0.35
+          },
+          "variants": [
+            "soul-pocket/A03-rimshot-v1-t1.wav",
+            "soul-pocket/A03-rimshot-v1-t2.wav",
+            "soul-pocket/A03-rimshot-v1-t3.wav",
+            "soul-pocket/A03-rimshot-v2-t1.wav",
+            "soul-pocket/A03-rimshot-v2-t2.wav",
+            "soul-pocket/A03-rimshot-v2-t3.wav",
+            "soul-pocket/A03-rimshot-v3-t1.wav",
+            "soul-pocket/A03-rimshot-v3-t2.wav",
+            "soul-pocket/A03-rimshot-v3-t3.wav"
+          ],
+          "soft_hard_residual_db": -6.227419366140289,
+          "take_residual_db": -7.14909281989722
+        },
+        {
+          "pad": 4,
+          "voice": "CROSS_STICK",
+          "macros": {
+            "TUNE": 0.53,
+            "DAMP": 0.7,
+            "BUZZ": 0.4,
+            "DISTANCE": 0.12,
+            "WARMTH": 0.35
+          },
+          "variants": [
+            "soul-pocket/A04-cross_stick-v1-t1.wav",
+            "soul-pocket/A04-cross_stick-v1-t2.wav",
+            "soul-pocket/A04-cross_stick-v1-t3.wav",
+            "soul-pocket/A04-cross_stick-v2-t1.wav",
+            "soul-pocket/A04-cross_stick-v2-t2.wav",
+            "soul-pocket/A04-cross_stick-v2-t3.wav",
+            "soul-pocket/A04-cross_stick-v3-t1.wav",
+            "soul-pocket/A04-cross_stick-v3-t2.wav",
+            "soul-pocket/A04-cross_stick-v3-t3.wav"
+          ],
+          "soft_hard_residual_db": -11.472374622316401,
+          "take_residual_db": -8.28718654927337
+        },
+        {
+          "pad": 5,
+          "voice": "HAT_CLOSED",
+          "macros": {
+            "TUNE": 0.53,
+            "DAMP": 0.7,
+            "BUZZ": 0,
+            "DISTANCE": 0.12,
+            "WARMTH": 0.35
+          },
+          "variants": [
+            "soul-pocket/A05-hat_closed-v1-t1.wav",
+            "soul-pocket/A05-hat_closed-v1-t2.wav",
+            "soul-pocket/A05-hat_closed-v1-t3.wav",
+            "soul-pocket/A05-hat_closed-v2-t1.wav",
+            "soul-pocket/A05-hat_closed-v2-t2.wav",
+            "soul-pocket/A05-hat_closed-v2-t3.wav",
+            "soul-pocket/A05-hat_closed-v3-t1.wav",
+            "soul-pocket/A05-hat_closed-v3-t2.wav",
+            "soul-pocket/A05-hat_closed-v3-t3.wav"
+          ],
+          "soft_hard_residual_db": -4.6320820146158255,
+          "take_residual_db": -0.00039306908608058
+        },
+        {
+          "pad": 6,
+          "voice": "HAT_OPEN",
+          "macros": {
+            "TUNE": 0.53,
+            "DAMP": 0.7,
+            "BUZZ": 0,
+            "DISTANCE": 0.12,
+            "WARMTH": 0.35
+          },
+          "variants": [
+            "soul-pocket/A06-hat_open-v1-t1.wav",
+            "soul-pocket/A06-hat_open-v1-t2.wav",
+            "soul-pocket/A06-hat_open-v1-t3.wav",
+            "soul-pocket/A06-hat_open-v2-t1.wav",
+            "soul-pocket/A06-hat_open-v2-t2.wav",
+            "soul-pocket/A06-hat_open-v2-t3.wav",
+            "soul-pocket/A06-hat_open-v3-t1.wav",
+            "soul-pocket/A06-hat_open-v3-t2.wav",
+            "soul-pocket/A06-hat_open-v3-t3.wav"
+          ],
+          "soft_hard_residual_db": -3.8667118708338966,
+          "take_residual_db": -0.17128522441914584
+        },
+        {
+          "pad": 7,
+          "voice": "HAT_FOOT",
+          "macros": {
+            "TUNE": 0.53,
+            "DAMP": 0.7,
+            "BUZZ": 0,
+            "DISTANCE": 0.12,
+            "WARMTH": 0.35
+          },
+          "variants": [
+            "soul-pocket/A07-hat_foot-v1-t1.wav",
+            "soul-pocket/A07-hat_foot-v1-t2.wav",
+            "soul-pocket/A07-hat_foot-v1-t3.wav",
+            "soul-pocket/A07-hat_foot-v2-t1.wav",
+            "soul-pocket/A07-hat_foot-v2-t2.wav",
+            "soul-pocket/A07-hat_foot-v2-t3.wav",
+            "soul-pocket/A07-hat_foot-v3-t1.wav",
+            "soul-pocket/A07-hat_foot-v3-t2.wav",
+            "soul-pocket/A07-hat_foot-v3-t3.wav"
+          ],
+          "soft_hard_residual_db": -3.238292973253014,
+          "take_residual_db": -0.8920044975208868
+        },
+        {
+          "pad": 8,
+          "voice": "TOM_RACK",
+          "macros": {
+            "TUNE": 0.53,
+            "DAMP": 0.58,
+            "BUZZ": 0.4,
+            "DISTANCE": 0.12,
+            "WARMTH": 0.35
+          },
+          "variants": [
+            "soul-pocket/A08-tom_rack-v1-t1.wav",
+            "soul-pocket/A08-tom_rack-v1-t2.wav",
+            "soul-pocket/A08-tom_rack-v1-t3.wav",
+            "soul-pocket/A08-tom_rack-v2-t1.wav",
+            "soul-pocket/A08-tom_rack-v2-t2.wav",
+            "soul-pocket/A08-tom_rack-v2-t3.wav",
+            "soul-pocket/A08-tom_rack-v3-t1.wav",
+            "soul-pocket/A08-tom_rack-v3-t2.wav",
+            "soul-pocket/A08-tom_rack-v3-t3.wav"
+          ],
+          "soft_hard_residual_db": -1.90901983780756,
+          "take_residual_db": -19.227352772958536
+        },
+        {
+          "pad": 9,
+          "voice": "TOM_FLOOR",
+          "macros": {
+            "TUNE": 0.53,
+            "DAMP": 0.58,
+            "BUZZ": 0.4,
+            "DISTANCE": 0.12,
+            "WARMTH": 0.35
+          },
+          "variants": [
+            "soul-pocket/A09-tom_floor-v1-t1.wav",
+            "soul-pocket/A09-tom_floor-v1-t2.wav",
+            "soul-pocket/A09-tom_floor-v1-t3.wav",
+            "soul-pocket/A09-tom_floor-v2-t1.wav",
+            "soul-pocket/A09-tom_floor-v2-t2.wav",
+            "soul-pocket/A09-tom_floor-v2-t3.wav",
+            "soul-pocket/A09-tom_floor-v3-t1.wav",
+            "soul-pocket/A09-tom_floor-v3-t2.wav",
+            "soul-pocket/A09-tom_floor-v3-t3.wav"
+          ],
+          "soft_hard_residual_db": -3.7432435807087323,
+          "take_residual_db": -21.01998578096715
+        },
+        {
+          "pad": 10,
+          "voice": "RIDE",
+          "macros": {
+            "TUNE": 0.53,
+            "DAMP": 0.7,
+            "BUZZ": 0,
+            "DISTANCE": 0.12,
+            "WARMTH": 0.35
+          },
+          "variants": [
+            "soul-pocket/A10-ride-v1-t1.wav",
+            "soul-pocket/A10-ride-v1-t2.wav",
+            "soul-pocket/A10-ride-v1-t3.wav",
+            "soul-pocket/A10-ride-v2-t1.wav",
+            "soul-pocket/A10-ride-v2-t2.wav",
+            "soul-pocket/A10-ride-v2-t3.wav",
+            "soul-pocket/A10-ride-v3-t1.wav",
+            "soul-pocket/A10-ride-v3-t2.wav",
+            "soul-pocket/A10-ride-v3-t3.wav"
+          ],
+          "soft_hard_residual_db": -9.115698331854556,
+          "take_residual_db": -0.12335439655410922
+        },
+        {
+          "pad": 11,
+          "voice": "RIDE_BELL",
+          "macros": {
+            "TUNE": 0.53,
+            "DAMP": 0.7,
+            "BUZZ": 0,
+            "DISTANCE": 0.12,
+            "WARMTH": 0.35
+          },
+          "variants": [
+            "soul-pocket/A11-ride_bell-v1-t1.wav",
+            "soul-pocket/A11-ride_bell-v1-t2.wav",
+            "soul-pocket/A11-ride_bell-v1-t3.wav",
+            "soul-pocket/A11-ride_bell-v2-t1.wav",
+            "soul-pocket/A11-ride_bell-v2-t2.wav",
+            "soul-pocket/A11-ride_bell-v2-t3.wav",
+            "soul-pocket/A11-ride_bell-v3-t1.wav",
+            "soul-pocket/A11-ride_bell-v3-t2.wav",
+            "soul-pocket/A11-ride_bell-v3-t3.wav"
+          ],
+          "soft_hard_residual_db": -1.9177601104755815,
+          "take_residual_db": -0.015145930347957162
+        },
+        {
+          "pad": 12,
+          "voice": "SIZZLE",
+          "macros": {
+            "TUNE": 0.53,
+            "DAMP": 0.7,
+            "BUZZ": 0.4,
+            "DISTANCE": 0.12,
+            "WARMTH": 0.35
+          },
+          "variants": [
+            "soul-pocket/A12-sizzle-v1-t1.wav",
+            "soul-pocket/A12-sizzle-v1-t2.wav",
+            "soul-pocket/A12-sizzle-v1-t3.wav",
+            "soul-pocket/A12-sizzle-v2-t1.wav",
+            "soul-pocket/A12-sizzle-v2-t2.wav",
+            "soul-pocket/A12-sizzle-v2-t3.wav",
+            "soul-pocket/A12-sizzle-v3-t1.wav",
+            "soul-pocket/A12-sizzle-v3-t2.wav",
+            "soul-pocket/A12-sizzle-v3-t3.wav"
+          ],
+          "soft_hard_residual_db": -6.042896756447002,
+          "take_residual_db": -5.082000067682122e-05
+        },
+        {
+          "pad": 13,
+          "voice": "TAMBOURINE",
+          "macros": {
+            "TUNE": 0.53,
+            "DAMP": 0.7,
+            "BUZZ": 0.4,
+            "DISTANCE": 0.12,
+            "WARMTH": 0.35
+          },
+          "variants": [
+            "soul-pocket/A13-tambourine-v1-t1.wav",
+            "soul-pocket/A13-tambourine-v1-t2.wav",
+            "soul-pocket/A13-tambourine-v1-t3.wav",
+            "soul-pocket/A13-tambourine-v2-t1.wav",
+            "soul-pocket/A13-tambourine-v2-t2.wav",
+            "soul-pocket/A13-tambourine-v2-t3.wav",
+            "soul-pocket/A13-tambourine-v3-t1.wav",
+            "soul-pocket/A13-tambourine-v3-t2.wav",
+            "soul-pocket/A13-tambourine-v3-t3.wav"
+          ],
+          "soft_hard_residual_db": -0.0005825204743440614,
+          "take_residual_db": -0.2168876322498396
+        },
+        {
+          "pad": 14,
+          "voice": "CLAPS",
+          "macros": {
+            "TUNE": 0.53,
+            "DAMP": 0.7,
+            "BUZZ": 0.4,
+            "DISTANCE": 0.12,
+            "WARMTH": 0.35
+          },
+          "variants": [
+            "soul-pocket/A14-claps-v1-t1.wav",
+            "soul-pocket/A14-claps-v1-t2.wav",
+            "soul-pocket/A14-claps-v1-t3.wav",
+            "soul-pocket/A14-claps-v2-t1.wav",
+            "soul-pocket/A14-claps-v2-t2.wav",
+            "soul-pocket/A14-claps-v2-t3.wav",
+            "soul-pocket/A14-claps-v3-t1.wav",
+            "soul-pocket/A14-claps-v3-t2.wav",
+            "soul-pocket/A14-claps-v3-t3.wav"
+          ],
+          "soft_hard_residual_db": -4.7485907995566725,
+          "take_residual_db": -0.012144072768103888
+        },
+        {
+          "pad": 15,
+          "voice": "PRESS_ROLL",
+          "macros": {
+            "TUNE": 0.53,
+            "DAMP": 0.7,
+            "BUZZ": 0.4,
+            "DISTANCE": 0.12,
+            "WARMTH": 0.35,
+            "SPEED": 0.58
+          },
+          "variants": [
+            "soul-pocket/A15-press_roll-v1-t1.wav",
+            "soul-pocket/A15-press_roll-v1-t2.wav",
+            "soul-pocket/A15-press_roll-v1-t3.wav",
+            "soul-pocket/A15-press_roll-v2-t1.wav",
+            "soul-pocket/A15-press_roll-v2-t2.wav",
+            "soul-pocket/A15-press_roll-v2-t3.wav",
+            "soul-pocket/A15-press_roll-v3-t1.wav",
+            "soul-pocket/A15-press_roll-v3-t2.wav",
+            "soul-pocket/A15-press_roll-v3-t3.wav"
+          ],
+          "soft_hard_residual_db": -2.3660636637561137,
+          "take_residual_db": -0.027201604677222997
+        },
+        {
+          "pad": 16,
+          "voice": "CYMBAL_SWELL",
+          "macros": {
+            "TUNE": 0.53,
+            "DAMP": 0.7,
+            "BUZZ": 0.4,
+            "DISTANCE": 0.12,
+            "WARMTH": 0.35,
+            "SPEED": 0.58
+          },
+          "variants": [
+            "soul-pocket/A16-cymbal_swell-v1-t1.wav",
+            "soul-pocket/A16-cymbal_swell-v1-t2.wav",
+            "soul-pocket/A16-cymbal_swell-v1-t3.wav",
+            "soul-pocket/A16-cymbal_swell-v2-t1.wav",
+            "soul-pocket/A16-cymbal_swell-v2-t2.wav",
+            "soul-pocket/A16-cymbal_swell-v2-t3.wav",
+            "soul-pocket/A16-cymbal_swell-v3-t1.wav",
+            "soul-pocket/A16-cymbal_swell-v3-t2.wav",
+            "soul-pocket/A16-cymbal_swell-v3-t3.wav"
+          ],
+          "soft_hard_residual_db": -0.6276973443799322,
+          "take_residual_db": -0.17134367692789515
+        }
+      ],
+      "events": [
+        [
+          0,
+          0,
+          2,
+          0.88
+        ],
+        [
+          0,
+          4,
+          2,
+          0.32
+        ],
+        [
+          2,
+          4,
+          1,
+          0.32
+        ],
+        [
+          2,
+          12,
+          1,
+          0.3
+        ],
+        [
+          3,
+          1,
+          0,
+          0.45
+        ],
+        [
+          4,
+          1,
+          2,
+          0.78
+        ],
+        [
+          4,
+          4,
+          2,
+          0.32
+        ],
+        [
+          6,
+          0,
+          2,
+          0.88
+        ],
+        [
+          6,
+          4,
+          1,
+          0.32
+        ],
+        [
+          6,
+          12,
+          1,
+          0.3
+        ],
+        [
+          8,
+          0,
+          2,
+          0.88
+        ],
+        [
+          8,
+          4,
+          2,
+          0.32
+        ],
+        [
+          10,
+          1,
+          0,
+          0.45
+        ],
+        [
+          10,
+          4,
+          1,
+          0.32
+        ],
+        [
+          10,
+          12,
+          1,
+          0.3
+        ],
+        [
+          11,
+          0,
+          2,
+          0.88
+        ],
+        [
+          12,
+          1,
+          2,
+          0.78
+        ],
+        [
+          12,
+          4,
+          2,
+          0.32
+        ],
+        [
+          14,
+          4,
+          1,
+          0.32
+        ],
+        [
+          14,
+          12,
+          1,
+          0.3
+        ],
+        [
+          15,
+          1,
+          0,
+          0.45
+        ],
+        [
+          16,
+          0,
+          2,
+          0.88
+        ],
+        [
+          16,
+          4,
+          2,
+          0.32
+        ],
+        [
+          18,
+          4,
+          1,
+          0.32
+        ],
+        [
+          18,
+          12,
+          1,
+          0.3
+        ],
+        [
+          19,
+          1,
+          0,
+          0.45
+        ],
+        [
+          20,
+          1,
+          2,
+          0.78
+        ],
+        [
+          20,
+          4,
+          2,
+          0.32
+        ],
+        [
+          22,
+          0,
+          2,
+          0.88
+        ],
+        [
+          22,
+          4,
+          1,
+          0.32
+        ],
+        [
+          22,
+          12,
+          1,
+          0.3
+        ],
+        [
+          24,
+          0,
+          2,
+          0.88
+        ],
+        [
+          24,
+          4,
+          2,
+          0.32
+        ],
+        [
+          26,
+          1,
+          0,
+          0.45
+        ],
+        [
+          26,
+          4,
+          1,
+          0.32
+        ],
+        [
+          26,
+          12,
+          1,
+          0.3
+        ],
+        [
+          27,
+          0,
+          2,
+          0.88
+        ],
+        [
+          28,
+          1,
+          2,
+          0.78
+        ],
+        [
+          28,
+          4,
+          2,
+          0.32
+        ],
+        [
+          30,
+          4,
+          1,
+          0.32
+        ],
+        [
+          30,
+          12,
+          1,
+          0.3
+        ],
+        [
+          31,
+          1,
+          0,
+          0.45
+        ],
+        [
+          32,
+          0,
+          2,
+          0.88
+        ],
+        [
+          32,
+          4,
+          2,
+          0.32
+        ],
+        [
+          34,
+          4,
+          1,
+          0.32
+        ],
+        [
+          34,
+          12,
+          1,
+          0.3
+        ],
+        [
+          35,
+          1,
+          0,
+          0.45
+        ],
+        [
+          36,
+          1,
+          2,
+          0.78
+        ],
+        [
+          36,
+          4,
+          2,
+          0.32
+        ],
+        [
+          38,
+          0,
+          2,
+          0.88
+        ],
+        [
+          38,
+          4,
+          1,
+          0.32
+        ],
+        [
+          38,
+          12,
+          1,
+          0.3
+        ],
+        [
+          40,
+          0,
+          2,
+          0.88
+        ],
+        [
+          40,
+          4,
+          2,
+          0.32
+        ],
+        [
+          42,
+          1,
+          0,
+          0.45
+        ],
+        [
+          42,
+          4,
+          1,
+          0.32
+        ],
+        [
+          42,
+          12,
+          1,
+          0.3
+        ],
+        [
+          43,
+          0,
+          2,
+          0.88
+        ],
+        [
+          44,
+          1,
+          2,
+          0.78
+        ],
+        [
+          44,
+          4,
+          2,
+          0.32
+        ],
+        [
+          46,
+          4,
+          1,
+          0.32
+        ],
+        [
+          46,
+          12,
+          1,
+          0.3
+        ],
+        [
+          47,
+          1,
+          0,
+          0.45
+        ],
+        [
+          48,
+          0,
+          2,
+          0.88
+        ],
+        [
+          48,
+          4,
+          2,
+          0.32
+        ],
+        [
+          50,
+          4,
+          1,
+          0.32
+        ],
+        [
+          50,
+          12,
+          1,
+          0.3
+        ],
+        [
+          51,
+          1,
+          0,
+          0.45
+        ],
+        [
+          52,
+          1,
+          2,
+          0.78
+        ],
+        [
+          52,
+          4,
+          2,
+          0.32
+        ],
+        [
+          54,
+          0,
+          2,
+          0.88
+        ],
+        [
+          54,
+          4,
+          1,
+          0.32
+        ],
+        [
+          54,
+          12,
+          1,
+          0.3
+        ],
+        [
+          56,
+          0,
+          2,
+          0.88
+        ],
+        [
+          56,
+          4,
+          2,
+          0.32
+        ],
+        [
+          58,
+          1,
+          0,
+          0.45
+        ],
+        [
+          58,
+          4,
+          1,
+          0.32
+        ],
+        [
+          58,
+          12,
+          1,
+          0.3
+        ],
+        [
+          59,
+          0,
+          2,
+          0.88
+        ],
+        [
+          60,
+          1,
+          2,
+          0.78
+        ],
+        [
+          60,
+          4,
+          2,
+          0.32
+        ],
+        [
+          60,
+          7,
+          2,
+          0.65
+        ],
+        [
+          61,
+          7,
+          2,
+          0.65
+        ],
+        [
+          62,
+          4,
+          1,
+          0.32
+        ],
+        [
+          62,
+          8,
+          2,
+          0.65
+        ],
+        [
+          62,
+          12,
+          1,
+          0.3
+        ],
+        [
+          63,
+          1,
+          0,
+          0.45
+        ],
+        [
+          63,
+          8,
+          2,
+          0.65
+        ]
+      ],
+      "groove_gain": 0.9562026157313068,
+      "render_seconds": 228.87799791100406,
+      "audition_hat_choke": true,
+      "true_peak_gain": 1
+    },
+    {
+      "name": "roadhouse-rock",
+      "bpm": 134,
+      "pads": [
+        {
+          "pad": 1,
+          "voice": "KICK",
+          "macros": {
+            "TUNE": 0.045891409571936936,
+            "DAMP": 0.36,
+            "BUZZ": 0.64,
+            "DISTANCE": 0.26,
+            "WARMTH": 0.2
+          },
+          "variants": [
+            "roadhouse-rock/A01-kick-v1-t1.wav",
+            "roadhouse-rock/A01-kick-v1-t2.wav",
+            "roadhouse-rock/A01-kick-v1-t3.wav",
+            "roadhouse-rock/A01-kick-v2-t1.wav",
+            "roadhouse-rock/A01-kick-v2-t2.wav",
+            "roadhouse-rock/A01-kick-v2-t3.wav",
+            "roadhouse-rock/A01-kick-v3-t1.wav",
+            "roadhouse-rock/A01-kick-v3-t2.wav",
+            "roadhouse-rock/A01-kick-v3-t3.wav"
+          ],
+          "soft_hard_residual_db": -4.53805612665585,
+          "take_residual_db": -15.93298518280031,
+          "tuning_evidence": {
+            "method": "Match strongest 35\u2013160 Hz peak of first 120ms to median of low-band-dominant reference events; provisional, overlapping sources possible",
+            "target_hz": 49.7955322265625,
+            "before_hz": 110.357666015625,
+            "after_hz": 53.8330078125,
+            "old_tune": 0.0
+          }
+        },
+        {
+          "pad": 2,
+          "voice": "SNARE",
+          "macros": {
+            "TUNE": 0.36,
+            "DAMP": 0.36,
+            "BUZZ": 0.64,
+            "DISTANCE": 0.26,
+            "WARMTH": 0.2
+          },
+          "variants": [
+            "roadhouse-rock/A02-snare-v1-t1.wav",
+            "roadhouse-rock/A02-snare-v1-t2.wav",
+            "roadhouse-rock/A02-snare-v1-t3.wav",
+            "roadhouse-rock/A02-snare-v2-t1.wav",
+            "roadhouse-rock/A02-snare-v2-t2.wav",
+            "roadhouse-rock/A02-snare-v2-t3.wav",
+            "roadhouse-rock/A02-snare-v3-t1.wav",
+            "roadhouse-rock/A02-snare-v3-t2.wav",
+            "roadhouse-rock/A02-snare-v3-t3.wav"
+          ],
+          "soft_hard_residual_db": -3.0076167998408914,
+          "take_residual_db": -2.8627160129060853
+        },
+        {
+          "pad": 3,
+          "voice": "RIMSHOT",
+          "macros": {
+            "TUNE": 0.36,
+            "DAMP": 0.36,
+            "BUZZ": 0.64,
+            "DISTANCE": 0.26,
+            "WARMTH": 0.2
+          },
+          "variants": [
+            "roadhouse-rock/A03-rimshot-v1-t1.wav",
+            "roadhouse-rock/A03-rimshot-v1-t2.wav",
+            "roadhouse-rock/A03-rimshot-v1-t3.wav",
+            "roadhouse-rock/A03-rimshot-v2-t1.wav",
+            "roadhouse-rock/A03-rimshot-v2-t2.wav",
+            "roadhouse-rock/A03-rimshot-v2-t3.wav",
+            "roadhouse-rock/A03-rimshot-v3-t1.wav",
+            "roadhouse-rock/A03-rimshot-v3-t2.wav",
+            "roadhouse-rock/A03-rimshot-v3-t3.wav"
+          ],
+          "soft_hard_residual_db": -4.197189566432904,
+          "take_residual_db": -5.495983879025324
+        },
+        {
+          "pad": 4,
+          "voice": "CROSS_STICK",
+          "macros": {
+            "TUNE": 0.36,
+            "DAMP": 0.36,
+            "BUZZ": 0.64,
+            "DISTANCE": 0.26,
+            "WARMTH": 0.2
+          },
+          "variants": [
+            "roadhouse-rock/A04-cross_stick-v1-t1.wav",
+            "roadhouse-rock/A04-cross_stick-v1-t2.wav",
+            "roadhouse-rock/A04-cross_stick-v1-t3.wav",
+            "roadhouse-rock/A04-cross_stick-v2-t1.wav",
+            "roadhouse-rock/A04-cross_stick-v2-t2.wav",
+            "roadhouse-rock/A04-cross_stick-v2-t3.wav",
+            "roadhouse-rock/A04-cross_stick-v3-t1.wav",
+            "roadhouse-rock/A04-cross_stick-v3-t2.wav",
+            "roadhouse-rock/A04-cross_stick-v3-t3.wav"
+          ],
+          "soft_hard_residual_db": -11.610515485518246,
+          "take_residual_db": -8.766450622650087
+        },
+        {
+          "pad": 5,
+          "voice": "HAT_CLOSED",
+          "macros": {
+            "TUNE": 0.36,
+            "DAMP": 0.36,
+            "BUZZ": 0,
+            "DISTANCE": 0.26,
+            "WARMTH": 0.2
+          },
+          "variants": [
+            "roadhouse-rock/A05-hat_closed-v1-t1.wav",
+            "roadhouse-rock/A05-hat_closed-v1-t2.wav",
+            "roadhouse-rock/A05-hat_closed-v1-t3.wav",
+            "roadhouse-rock/A05-hat_closed-v2-t1.wav",
+            "roadhouse-rock/A05-hat_closed-v2-t2.wav",
+            "roadhouse-rock/A05-hat_closed-v2-t3.wav",
+            "roadhouse-rock/A05-hat_closed-v3-t1.wav",
+            "roadhouse-rock/A05-hat_closed-v3-t2.wav",
+            "roadhouse-rock/A05-hat_closed-v3-t3.wav"
+          ],
+          "soft_hard_residual_db": -4.474204009797712,
+          "take_residual_db": -0.015578719519892283
+        },
+        {
+          "pad": 6,
+          "voice": "HAT_OPEN",
+          "macros": {
+            "TUNE": 0.36,
+            "DAMP": 0.36,
+            "BUZZ": 0,
+            "DISTANCE": 0.26,
+            "WARMTH": 0.2
+          },
+          "variants": [
+            "roadhouse-rock/A06-hat_open-v1-t1.wav",
+            "roadhouse-rock/A06-hat_open-v1-t2.wav",
+            "roadhouse-rock/A06-hat_open-v1-t3.wav",
+            "roadhouse-rock/A06-hat_open-v2-t1.wav",
+            "roadhouse-rock/A06-hat_open-v2-t2.wav",
+            "roadhouse-rock/A06-hat_open-v2-t3.wav",
+            "roadhouse-rock/A06-hat_open-v3-t1.wav",
+            "roadhouse-rock/A06-hat_open-v3-t2.wav",
+            "roadhouse-rock/A06-hat_open-v3-t3.wav"
+          ],
+          "soft_hard_residual_db": -3.390646175736667,
+          "take_residual_db": -0.28947301344453075
+        },
+        {
+          "pad": 7,
+          "voice": "HAT_FOOT",
+          "macros": {
+            "TUNE": 0.36,
+            "DAMP": 0.36,
+            "BUZZ": 0,
+            "DISTANCE": 0.26,
+            "WARMTH": 0.2
+          },
+          "variants": [
+            "roadhouse-rock/A07-hat_foot-v1-t1.wav",
+            "roadhouse-rock/A07-hat_foot-v1-t2.wav",
+            "roadhouse-rock/A07-hat_foot-v1-t3.wav",
+            "roadhouse-rock/A07-hat_foot-v2-t1.wav",
+            "roadhouse-rock/A07-hat_foot-v2-t2.wav",
+            "roadhouse-rock/A07-hat_foot-v2-t3.wav",
+            "roadhouse-rock/A07-hat_foot-v3-t1.wav",
+            "roadhouse-rock/A07-hat_foot-v3-t2.wav",
+            "roadhouse-rock/A07-hat_foot-v3-t3.wav"
+          ],
+          "soft_hard_residual_db": -3.593987830193819,
+          "take_residual_db": -0.027234007228971315
+        },
+        {
+          "pad": 8,
+          "voice": "TOM_RACK",
+          "macros": {
+            "TUNE": 0.36,
+            "DAMP": 0.24,
+            "BUZZ": 0.64,
+            "DISTANCE": 0.26,
+            "WARMTH": 0.2
+          },
+          "variants": [
+            "roadhouse-rock/A08-tom_rack-v1-t1.wav",
+            "roadhouse-rock/A08-tom_rack-v1-t2.wav",
+            "roadhouse-rock/A08-tom_rack-v1-t3.wav",
+            "roadhouse-rock/A08-tom_rack-v2-t1.wav",
+            "roadhouse-rock/A08-tom_rack-v2-t2.wav",
+            "roadhouse-rock/A08-tom_rack-v2-t3.wav",
+            "roadhouse-rock/A08-tom_rack-v3-t1.wav",
+            "roadhouse-rock/A08-tom_rack-v3-t2.wav",
+            "roadhouse-rock/A08-tom_rack-v3-t3.wav"
+          ],
+          "soft_hard_residual_db": -1.5668919728120065,
+          "take_residual_db": -12.12537629481515
+        },
+        {
+          "pad": 9,
+          "voice": "TOM_FLOOR",
+          "macros": {
+            "TUNE": 0.36,
+            "DAMP": 0.24,
+            "BUZZ": 0.64,
+            "DISTANCE": 0.26,
+            "WARMTH": 0.2
+          },
+          "variants": [
+            "roadhouse-rock/A09-tom_floor-v1-t1.wav",
+            "roadhouse-rock/A09-tom_floor-v1-t2.wav",
+            "roadhouse-rock/A09-tom_floor-v1-t3.wav",
+            "roadhouse-rock/A09-tom_floor-v2-t1.wav",
+            "roadhouse-rock/A09-tom_floor-v2-t2.wav",
+            "roadhouse-rock/A09-tom_floor-v2-t3.wav",
+            "roadhouse-rock/A09-tom_floor-v3-t1.wav",
+            "roadhouse-rock/A09-tom_floor-v3-t2.wav",
+            "roadhouse-rock/A09-tom_floor-v3-t3.wav"
+          ],
+          "soft_hard_residual_db": -3.202612385711289,
+          "take_residual_db": -17.788743847662175
+        },
+        {
+          "pad": 10,
+          "voice": "RIDE",
+          "macros": {
+            "TUNE": 0.36,
+            "DAMP": 0.36,
+            "BUZZ": 0,
+            "DISTANCE": 0.26,
+            "WARMTH": 0.2
+          },
+          "variants": [
+            "roadhouse-rock/A10-ride-v1-t1.wav",
+            "roadhouse-rock/A10-ride-v1-t2.wav",
+            "roadhouse-rock/A10-ride-v1-t3.wav",
+            "roadhouse-rock/A10-ride-v2-t1.wav",
+            "roadhouse-rock/A10-ride-v2-t2.wav",
+            "roadhouse-rock/A10-ride-v2-t3.wav",
+            "roadhouse-rock/A10-ride-v3-t1.wav",
+            "roadhouse-rock/A10-ride-v3-t2.wav",
+            "roadhouse-rock/A10-ride-v3-t3.wav"
+          ],
+          "soft_hard_residual_db": -9.813988986184253,
+          "take_residual_db": -0.007603006581870208
+        },
+        {
+          "pad": 11,
+          "voice": "RIDE_BELL",
+          "macros": {
+            "TUNE": 0.36,
+            "DAMP": 0.36,
+            "BUZZ": 0,
+            "DISTANCE": 0.26,
+            "WARMTH": 0.2
+          },
+          "variants": [
+            "roadhouse-rock/A11-ride_bell-v1-t1.wav",
+            "roadhouse-rock/A11-ride_bell-v1-t2.wav",
+            "roadhouse-rock/A11-ride_bell-v1-t3.wav",
+            "roadhouse-rock/A11-ride_bell-v2-t1.wav",
+            "roadhouse-rock/A11-ride_bell-v2-t2.wav",
+            "roadhouse-rock/A11-ride_bell-v2-t3.wav",
+            "roadhouse-rock/A11-ride_bell-v3-t1.wav",
+            "roadhouse-rock/A11-ride_bell-v3-t2.wav",
+            "roadhouse-rock/A11-ride_bell-v3-t3.wav"
+          ],
+          "soft_hard_residual_db": -1.861813128127734,
+          "take_residual_db": -0.004132004370583179
+        },
+        {
+          "pad": 12,
+          "voice": "SIZZLE",
+          "macros": {
+            "TUNE": 0.36,
+            "DAMP": 0.36,
+            "BUZZ": 0.64,
+            "DISTANCE": 0.26,
+            "WARMTH": 0.2
+          },
+          "variants": [
+            "roadhouse-rock/A12-sizzle-v1-t1.wav",
+            "roadhouse-rock/A12-sizzle-v1-t2.wav",
+            "roadhouse-rock/A12-sizzle-v1-t3.wav",
+            "roadhouse-rock/A12-sizzle-v2-t1.wav",
+            "roadhouse-rock/A12-sizzle-v2-t2.wav",
+            "roadhouse-rock/A12-sizzle-v2-t3.wav",
+            "roadhouse-rock/A12-sizzle-v3-t1.wav",
+            "roadhouse-rock/A12-sizzle-v3-t2.wav",
+            "roadhouse-rock/A12-sizzle-v3-t3.wav"
+          ],
+          "soft_hard_residual_db": -5.457068315860965,
+          "take_residual_db": -0.00019948509272873244
+        },
+        {
+          "pad": 13,
+          "voice": "TAMBOURINE",
+          "macros": {
+            "TUNE": 0.36,
+            "DAMP": 0.36,
+            "BUZZ": 0.64,
+            "DISTANCE": 0.26,
+            "WARMTH": 0.2
+          },
+          "variants": [
+            "roadhouse-rock/A13-tambourine-v1-t1.wav",
+            "roadhouse-rock/A13-tambourine-v1-t2.wav",
+            "roadhouse-rock/A13-tambourine-v1-t3.wav",
+            "roadhouse-rock/A13-tambourine-v2-t1.wav",
+            "roadhouse-rock/A13-tambourine-v2-t2.wav",
+            "roadhouse-rock/A13-tambourine-v2-t3.wav",
+            "roadhouse-rock/A13-tambourine-v3-t1.wav",
+            "roadhouse-rock/A13-tambourine-v3-t2.wav",
+            "roadhouse-rock/A13-tambourine-v3-t3.wav"
+          ],
+          "soft_hard_residual_db": -0.07850856681334133,
+          "take_residual_db": -0.4093883945303057
+        },
+        {
+          "pad": 14,
+          "voice": "COWBELL",
+          "macros": {
+            "TUNE": 0.36,
+            "DAMP": 0.36,
+            "BUZZ": 0.64,
+            "DISTANCE": 0.26,
+            "WARMTH": 0.2
+          },
+          "variants": [
+            "roadhouse-rock/A14-cowbell-v1-t1.wav",
+            "roadhouse-rock/A14-cowbell-v1-t2.wav",
+            "roadhouse-rock/A14-cowbell-v1-t3.wav",
+            "roadhouse-rock/A14-cowbell-v2-t1.wav",
+            "roadhouse-rock/A14-cowbell-v2-t2.wav",
+            "roadhouse-rock/A14-cowbell-v2-t3.wav",
+            "roadhouse-rock/A14-cowbell-v3-t1.wav",
+            "roadhouse-rock/A14-cowbell-v3-t2.wav",
+            "roadhouse-rock/A14-cowbell-v3-t3.wav"
+          ],
+          "soft_hard_residual_db": -6.692187252369738,
+          "take_residual_db": -3.152648904680826
+        },
+        {
+          "pad": 15,
+          "voice": "PRESS_ROLL",
+          "macros": {
+            "TUNE": 0.36,
+            "DAMP": 0.36,
+            "BUZZ": 0.64,
+            "DISTANCE": 0.26,
+            "WARMTH": 0.2,
+            "SPEED": 0.65
+          },
+          "variants": [
+            "roadhouse-rock/A15-press_roll-v1-t1.wav",
+            "roadhouse-rock/A15-press_roll-v1-t2.wav",
+            "roadhouse-rock/A15-press_roll-v1-t3.wav",
+            "roadhouse-rock/A15-press_roll-v2-t1.wav",
+            "roadhouse-rock/A15-press_roll-v2-t2.wav",
+            "roadhouse-rock/A15-press_roll-v2-t3.wav",
+            "roadhouse-rock/A15-press_roll-v3-t1.wav",
+            "roadhouse-rock/A15-press_roll-v3-t2.wav",
+            "roadhouse-rock/A15-press_roll-v3-t3.wav"
+          ],
+          "soft_hard_residual_db": -2.416175184903482,
+          "take_residual_db": -0.18741835195234657
+        },
+        {
+          "pad": 16,
+          "voice": "CYMBAL_SWELL",
+          "macros": {
+            "TUNE": 0.36,
+            "DAMP": 0.36,
+            "BUZZ": 0.64,
+            "DISTANCE": 0.26,
+            "WARMTH": 0.2,
+            "SPEED": 0.65
+          },
+          "variants": [
+            "roadhouse-rock/A16-cymbal_swell-v1-t1.wav",
+            "roadhouse-rock/A16-cymbal_swell-v1-t2.wav",
+            "roadhouse-rock/A16-cymbal_swell-v1-t3.wav",
+            "roadhouse-rock/A16-cymbal_swell-v2-t1.wav",
+            "roadhouse-rock/A16-cymbal_swell-v2-t2.wav",
+            "roadhouse-rock/A16-cymbal_swell-v2-t3.wav",
+            "roadhouse-rock/A16-cymbal_swell-v3-t1.wav",
+            "roadhouse-rock/A16-cymbal_swell-v3-t2.wav",
+            "roadhouse-rock/A16-cymbal_swell-v3-t3.wav"
+          ],
+          "soft_hard_residual_db": -0.5121819915524707,
+          "take_residual_db": -4.1651144505182303e-07
+        }
+      ],
+      "events": [
+        [
+          0,
+          0,
+          2,
+          0.88
+        ],
+        [
+          0,
+          4,
+          2,
+          0.32
+        ],
+        [
+          2,
+          4,
+          1,
+          0.32
+        ],
+        [
+          3,
+          0,
+          2,
+          0.88
+        ],
+        [
+          4,
+          1,
+          2,
+          0.78
+        ],
+        [
+          4,
+          4,
+          2,
+          0.32
+        ],
+        [
+          6,
+          4,
+          1,
+          0.32
+        ],
+        [
+          8,
+          0,
+          2,
+          0.88
+        ],
+        [
+          8,
+          4,
+          2,
+          0.32
+        ],
+        [
+          10,
+          0,
+          2,
+          0.88
+        ],
+        [
+          10,
+          4,
+          1,
+          0.32
+        ],
+        [
+          11,
+          1,
+          0,
+          0.45
+        ],
+        [
+          12,
+          1,
+          2,
+          0.78
+        ],
+        [
+          12,
+          4,
+          2,
+          0.32
+        ],
+        [
+          14,
+          4,
+          1,
+          0.32
+        ],
+        [
+          14,
+          5,
+          1,
+          0.25
+        ],
+        [
+          15,
+          1,
+          0,
+          0.45
+        ],
+        [
+          16,
+          0,
+          2,
+          0.88
+        ],
+        [
+          16,
+          4,
+          2,
+          0.32
+        ],
+        [
+          18,
+          4,
+          1,
+          0.32
+        ],
+        [
+          19,
+          0,
+          2,
+          0.88
+        ],
+        [
+          20,
+          1,
+          2,
+          0.78
+        ],
+        [
+          20,
+          4,
+          2,
+          0.32
+        ],
+        [
+          22,
+          4,
+          1,
+          0.32
+        ],
+        [
+          24,
+          0,
+          2,
+          0.88
+        ],
+        [
+          24,
+          4,
+          2,
+          0.32
+        ],
+        [
+          26,
+          0,
+          2,
+          0.88
+        ],
+        [
+          26,
+          4,
+          1,
+          0.32
+        ],
+        [
+          27,
+          1,
+          0,
+          0.45
+        ],
+        [
+          28,
+          1,
+          2,
+          0.78
+        ],
+        [
+          28,
+          4,
+          2,
+          0.32
+        ],
+        [
+          30,
+          4,
+          1,
+          0.32
+        ],
+        [
+          30,
+          5,
+          1,
+          0.25
+        ],
+        [
+          31,
+          1,
+          0,
+          0.45
+        ],
+        [
+          32,
+          0,
+          2,
+          0.88
+        ],
+        [
+          32,
+          4,
+          2,
+          0.32
+        ],
+        [
+          34,
+          4,
+          1,
+          0.32
+        ],
+        [
+          35,
+          0,
+          2,
+          0.88
+        ],
+        [
+          36,
+          1,
+          2,
+          0.78
+        ],
+        [
+          36,
+          4,
+          2,
+          0.32
+        ],
+        [
+          38,
+          4,
+          1,
+          0.32
+        ],
+        [
+          40,
+          0,
+          2,
+          0.88
+        ],
+        [
+          40,
+          4,
+          2,
+          0.32
+        ],
+        [
+          42,
+          0,
+          2,
+          0.88
+        ],
+        [
+          42,
+          4,
+          1,
+          0.32
+        ],
+        [
+          43,
+          1,
+          0,
+          0.45
+        ],
+        [
+          44,
+          1,
+          2,
+          0.78
+        ],
+        [
+          44,
+          4,
+          2,
+          0.32
+        ],
+        [
+          46,
+          4,
+          1,
+          0.32
+        ],
+        [
+          46,
+          5,
+          1,
+          0.25
+        ],
+        [
+          47,
+          1,
+          0,
+          0.45
+        ],
+        [
+          48,
+          0,
+          2,
+          0.88
+        ],
+        [
+          48,
+          4,
+          2,
+          0.32
+        ],
+        [
+          50,
+          4,
+          1,
+          0.32
+        ],
+        [
+          51,
+          0,
+          2,
+          0.88
+        ],
+        [
+          52,
+          1,
+          2,
+          0.78
+        ],
+        [
+          52,
+          4,
+          2,
+          0.32
+        ],
+        [
+          54,
+          4,
+          1,
+          0.32
+        ],
+        [
+          56,
+          0,
+          2,
+          0.88
+        ],
+        [
+          56,
+          4,
+          2,
+          0.32
+        ],
+        [
+          58,
+          0,
+          2,
+          0.88
+        ],
+        [
+          58,
+          4,
+          1,
+          0.32
+        ],
+        [
+          59,
+          1,
+          0,
+          0.45
+        ],
+        [
+          60,
+          1,
+          2,
+          0.78
+        ],
+        [
+          60,
+          4,
+          2,
+          0.32
+        ],
+        [
+          60,
+          7,
+          2,
+          0.65
+        ],
+        [
+          61,
+          7,
+          2,
+          0.65
+        ],
+        [
+          62,
+          4,
+          1,
+          0.32
+        ],
+        [
+          62,
+          5,
+          1,
+          0.25
+        ],
+        [
+          62,
+          8,
+          2,
+          0.65
+        ],
+        [
+          63,
+          1,
+          0,
+          0.45
+        ],
+        [
+          63,
+          8,
+          2,
+          0.65
+        ]
+      ],
+      "groove_gain": 0.9772550890883673,
+      "render_seconds": 238.850747151002,
+      "audition_hat_choke": true,
+      "true_peak_gain": 1
+    },
+    {
+      "name": "open-room-rock",
+      "bpm": 89,
+      "pads": [
+        {
+          "pad": 1,
+          "voice": "KICK",
+          "macros": {
+            "TUNE": 0.5165835283663676,
+            "DAMP": 0.18,
+            "BUZZ": 0.55,
+            "DISTANCE": 0.4,
+            "WARMTH": 0.12
+          },
+          "variants": [
+            "open-room-rock/A01-kick-v1-t1.wav",
+            "open-room-rock/A01-kick-v1-t2.wav",
+            "open-room-rock/A01-kick-v1-t3.wav",
+            "open-room-rock/A01-kick-v2-t1.wav",
+            "open-room-rock/A01-kick-v2-t2.wav",
+            "open-room-rock/A01-kick-v2-t3.wav",
+            "open-room-rock/A01-kick-v3-t1.wav",
+            "open-room-rock/A01-kick-v3-t2.wav",
+            "open-room-rock/A01-kick-v3-t3.wav"
+          ],
+          "soft_hard_residual_db": -2.3746635405641667,
+          "take_residual_db": -16.095005967625802,
+          "tuning_evidence": {
+            "method": "Match strongest 35\u2013160 Hz peak of first 120ms to median of low-band-dominant reference events; provisional, overlapping sources possible",
+            "target_hz": 69.98291015625,
+            "before_hz": 69.98291015625,
+            "after_hz": 69.98291015625,
+            "old_tune": 0.5165835283663676
+          }
+        },
+        {
+          "pad": 2,
+          "voice": "SNARE",
+          "macros": {
+            "TUNE": 0.46,
+            "DAMP": 0.18,
+            "BUZZ": 0.55,
+            "DISTANCE": 0.4,
+            "WARMTH": 0.12
+          },
+          "variants": [
+            "open-room-rock/A02-snare-v1-t1.wav",
+            "open-room-rock/A02-snare-v1-t2.wav",
+            "open-room-rock/A02-snare-v1-t3.wav",
+            "open-room-rock/A02-snare-v2-t1.wav",
+            "open-room-rock/A02-snare-v2-t2.wav",
+            "open-room-rock/A02-snare-v2-t3.wav",
+            "open-room-rock/A02-snare-v3-t1.wav",
+            "open-room-rock/A02-snare-v3-t2.wav",
+            "open-room-rock/A02-snare-v3-t3.wav"
+          ],
+          "soft_hard_residual_db": -2.1468790397827417,
+          "take_residual_db": -2.6904910875530703
+        },
+        {
+          "pad": 3,
+          "voice": "RIMSHOT",
+          "macros": {
+            "TUNE": 0.46,
+            "DAMP": 0.18,
+            "BUZZ": 0.55,
+            "DISTANCE": 0.4,
+            "WARMTH": 0.12
+          },
+          "variants": [
+            "open-room-rock/A03-rimshot-v1-t1.wav",
+            "open-room-rock/A03-rimshot-v1-t2.wav",
+            "open-room-rock/A03-rimshot-v1-t3.wav",
+            "open-room-rock/A03-rimshot-v2-t1.wav",
+            "open-room-rock/A03-rimshot-v2-t2.wav",
+            "open-room-rock/A03-rimshot-v2-t3.wav",
+            "open-room-rock/A03-rimshot-v3-t1.wav",
+            "open-room-rock/A03-rimshot-v3-t2.wav",
+            "open-room-rock/A03-rimshot-v3-t3.wav"
+          ],
+          "soft_hard_residual_db": -3.5952462197513633,
+          "take_residual_db": -5.718110192058647
+        },
+        {
+          "pad": 4,
+          "voice": "CROSS_STICK",
+          "macros": {
+            "TUNE": 0.46,
+            "DAMP": 0.18,
+            "BUZZ": 0.55,
+            "DISTANCE": 0.4,
+            "WARMTH": 0.12
+          },
+          "variants": [
+            "open-room-rock/A04-cross_stick-v1-t1.wav",
+            "open-room-rock/A04-cross_stick-v1-t2.wav",
+            "open-room-rock/A04-cross_stick-v1-t3.wav",
+            "open-room-rock/A04-cross_stick-v2-t1.wav",
+            "open-room-rock/A04-cross_stick-v2-t2.wav",
+            "open-room-rock/A04-cross_stick-v2-t3.wav",
+            "open-room-rock/A04-cross_stick-v3-t1.wav",
+            "open-room-rock/A04-cross_stick-v3-t2.wav",
+            "open-room-rock/A04-cross_stick-v3-t3.wav"
+          ],
+          "soft_hard_residual_db": -11.100655520544972,
+          "take_residual_db": -8.688858608280826
+        },
+        {
+          "pad": 5,
+          "voice": "HAT_CLOSED",
+          "macros": {
+            "TUNE": 0.46,
+            "DAMP": 0.18,
+            "BUZZ": 0,
+            "DISTANCE": 0.4,
+            "WARMTH": 0.12
+          },
+          "variants": [
+            "open-room-rock/A05-hat_closed-v1-t1.wav",
+            "open-room-rock/A05-hat_closed-v1-t2.wav",
+            "open-room-rock/A05-hat_closed-v1-t3.wav",
+            "open-room-rock/A05-hat_closed-v2-t1.wav",
+            "open-room-rock/A05-hat_closed-v2-t2.wav",
+            "open-room-rock/A05-hat_closed-v2-t3.wav",
+            "open-room-rock/A05-hat_closed-v3-t1.wav",
+            "open-room-rock/A05-hat_closed-v3-t2.wav",
+            "open-room-rock/A05-hat_closed-v3-t3.wav"
+          ],
+          "soft_hard_residual_db": -4.073016549236435,
+          "take_residual_db": -0.027717505039032073
+        },
+        {
+          "pad": 6,
+          "voice": "HAT_OPEN",
+          "macros": {
+            "TUNE": 0.46,
+            "DAMP": 0.18,
+            "BUZZ": 0,
+            "DISTANCE": 0.4,
+            "WARMTH": 0.12
+          },
+          "variants": [
+            "open-room-rock/A06-hat_open-v1-t1.wav",
+            "open-room-rock/A06-hat_open-v1-t2.wav",
+            "open-room-rock/A06-hat_open-v1-t3.wav",
+            "open-room-rock/A06-hat_open-v2-t1.wav",
+            "open-room-rock/A06-hat_open-v2-t2.wav",
+            "open-room-rock/A06-hat_open-v2-t3.wav",
+            "open-room-rock/A06-hat_open-v3-t1.wav",
+            "open-room-rock/A06-hat_open-v3-t2.wav",
+            "open-room-rock/A06-hat_open-v3-t3.wav"
+          ],
+          "soft_hard_residual_db": -3.22293976792124,
+          "take_residual_db": -0.14092035469096525
+        },
+        {
+          "pad": 7,
+          "voice": "HAT_FOOT",
+          "macros": {
+            "TUNE": 0.46,
+            "DAMP": 0.18,
+            "BUZZ": 0,
+            "DISTANCE": 0.4,
+            "WARMTH": 0.12
+          },
+          "variants": [
+            "open-room-rock/A07-hat_foot-v1-t1.wav",
+            "open-room-rock/A07-hat_foot-v1-t2.wav",
+            "open-room-rock/A07-hat_foot-v1-t3.wav",
+            "open-room-rock/A07-hat_foot-v2-t1.wav",
+            "open-room-rock/A07-hat_foot-v2-t2.wav",
+            "open-room-rock/A07-hat_foot-v2-t3.wav",
+            "open-room-rock/A07-hat_foot-v3-t1.wav",
+            "open-room-rock/A07-hat_foot-v3-t2.wav",
+            "open-room-rock/A07-hat_foot-v3-t3.wav"
+          ],
+          "soft_hard_residual_db": -2.854227982169253,
+          "take_residual_db": -0.37879762966725466
+        },
+        {
+          "pad": 8,
+          "voice": "TOM_RACK",
+          "macros": {
+            "TUNE": 0.46,
+            "DAMP": 0.06,
+            "BUZZ": 0.55,
+            "DISTANCE": 0.4,
+            "WARMTH": 0.12
+          },
+          "variants": [
+            "open-room-rock/A08-tom_rack-v1-t1.wav",
+            "open-room-rock/A08-tom_rack-v1-t2.wav",
+            "open-room-rock/A08-tom_rack-v1-t3.wav",
+            "open-room-rock/A08-tom_rack-v2-t1.wav",
+            "open-room-rock/A08-tom_rack-v2-t2.wav",
+            "open-room-rock/A08-tom_rack-v2-t3.wav",
+            "open-room-rock/A08-tom_rack-v3-t1.wav",
+            "open-room-rock/A08-tom_rack-v3-t2.wav",
+            "open-room-rock/A08-tom_rack-v3-t3.wav"
+          ],
+          "soft_hard_residual_db": -0.729743440058636,
+          "take_residual_db": -15.52816767876013
+        },
+        {
+          "pad": 9,
+          "voice": "TOM_FLOOR",
+          "macros": {
+            "TUNE": 0.46,
+            "DAMP": 0.06,
+            "BUZZ": 0.55,
+            "DISTANCE": 0.4,
+            "WARMTH": 0.12
+          },
+          "variants": [
+            "open-room-rock/A09-tom_floor-v1-t1.wav",
+            "open-room-rock/A09-tom_floor-v1-t2.wav",
+            "open-room-rock/A09-tom_floor-v1-t3.wav",
+            "open-room-rock/A09-tom_floor-v2-t1.wav",
+            "open-room-rock/A09-tom_floor-v2-t2.wav",
+            "open-room-rock/A09-tom_floor-v2-t3.wav",
+            "open-room-rock/A09-tom_floor-v3-t1.wav",
+            "open-room-rock/A09-tom_floor-v3-t2.wav",
+            "open-room-rock/A09-tom_floor-v3-t3.wav"
+          ],
+          "soft_hard_residual_db": -4.298120535968145,
+          "take_residual_db": -17.21454407659461
+        },
+        {
+          "pad": 10,
+          "voice": "RIDE",
+          "macros": {
+            "TUNE": 0.46,
+            "DAMP": 0.18,
+            "BUZZ": 0,
+            "DISTANCE": 0.4,
+            "WARMTH": 0.12
+          },
+          "variants": [
+            "open-room-rock/A10-ride-v1-t1.wav",
+            "open-room-rock/A10-ride-v1-t2.wav",
+            "open-room-rock/A10-ride-v1-t3.wav",
+            "open-room-rock/A10-ride-v2-t1.wav",
+            "open-room-rock/A10-ride-v2-t2.wav",
+            "open-room-rock/A10-ride-v2-t3.wav",
+            "open-room-rock/A10-ride-v3-t1.wav",
+            "open-room-rock/A10-ride-v3-t2.wav",
+            "open-room-rock/A10-ride-v3-t3.wav"
+          ],
+          "soft_hard_residual_db": -9.375236512434338,
+          "take_residual_db": -0.01313525951281138
+        },
+        {
+          "pad": 11,
+          "voice": "RIDE_BELL",
+          "macros": {
+            "TUNE": 0.46,
+            "DAMP": 0.18,
+            "BUZZ": 0,
+            "DISTANCE": 0.4,
+            "WARMTH": 0.12
+          },
+          "variants": [
+            "open-room-rock/A11-ride_bell-v1-t1.wav",
+            "open-room-rock/A11-ride_bell-v1-t2.wav",
+            "open-room-rock/A11-ride_bell-v1-t3.wav",
+            "open-room-rock/A11-ride_bell-v2-t1.wav",
+            "open-room-rock/A11-ride_bell-v2-t2.wav",
+            "open-room-rock/A11-ride_bell-v2-t3.wav",
+            "open-room-rock/A11-ride_bell-v3-t1.wav",
+            "open-room-rock/A11-ride_bell-v3-t2.wav",
+            "open-room-rock/A11-ride_bell-v3-t3.wav"
+          ],
+          "soft_hard_residual_db": -1.4751663049471775,
+          "take_residual_db": -0.00036426337850695243
+        },
+        {
+          "pad": 12,
+          "voice": "SIZZLE",
+          "macros": {
+            "TUNE": 0.46,
+            "DAMP": 0.18,
+            "BUZZ": 0.55,
+            "DISTANCE": 0.4,
+            "WARMTH": 0.12
+          },
+          "variants": [
+            "open-room-rock/A12-sizzle-v1-t1.wav",
+            "open-room-rock/A12-sizzle-v1-t2.wav",
+            "open-room-rock/A12-sizzle-v1-t3.wav",
+            "open-room-rock/A12-sizzle-v2-t1.wav",
+            "open-room-rock/A12-sizzle-v2-t2.wav",
+            "open-room-rock/A12-sizzle-v2-t3.wav",
+            "open-room-rock/A12-sizzle-v3-t1.wav",
+            "open-room-rock/A12-sizzle-v3-t2.wav",
+            "open-room-rock/A12-sizzle-v3-t3.wav"
+          ],
+          "soft_hard_residual_db": -4.592892081200095,
+          "take_residual_db": -0.016144195315340316
+        },
+        {
+          "pad": 13,
+          "voice": "TAMBOURINE",
+          "macros": {
+            "TUNE": 0.46,
+            "DAMP": 0.18,
+            "BUZZ": 0.55,
+            "DISTANCE": 0.4,
+            "WARMTH": 0.12
+          },
+          "variants": [
+            "open-room-rock/A13-tambourine-v1-t1.wav",
+            "open-room-rock/A13-tambourine-v1-t2.wav",
+            "open-room-rock/A13-tambourine-v1-t3.wav",
+            "open-room-rock/A13-tambourine-v2-t1.wav",
+            "open-room-rock/A13-tambourine-v2-t2.wav",
+            "open-room-rock/A13-tambourine-v2-t3.wav",
+            "open-room-rock/A13-tambourine-v3-t1.wav",
+            "open-room-rock/A13-tambourine-v3-t2.wav",
+            "open-room-rock/A13-tambourine-v3-t3.wav"
+          ],
+          "soft_hard_residual_db": -0.1202974857819118,
+          "take_residual_db": -0.3001879666480689
+        },
+        {
+          "pad": 14,
+          "voice": "TOM_RACK",
+          "macros": {
+            "TUNE": 0.74,
+            "DAMP": 0.18,
+            "BUZZ": 0.55,
+            "DISTANCE": 0.4,
+            "WARMTH": 0.12
+          },
+          "variants": [
+            "open-room-rock/A14-tom_rack-v1-t1.wav",
+            "open-room-rock/A14-tom_rack-v1-t2.wav",
+            "open-room-rock/A14-tom_rack-v1-t3.wav",
+            "open-room-rock/A14-tom_rack-v2-t1.wav",
+            "open-room-rock/A14-tom_rack-v2-t2.wav",
+            "open-room-rock/A14-tom_rack-v2-t3.wav",
+            "open-room-rock/A14-tom_rack-v3-t1.wav",
+            "open-room-rock/A14-tom_rack-v3-t2.wav",
+            "open-room-rock/A14-tom_rack-v3-t3.wav"
+          ],
+          "soft_hard_residual_db": -1.8864901494171935,
+          "take_residual_db": -14.794648382544995
+        },
+        {
+          "pad": 15,
+          "voice": "PRESS_ROLL",
+          "macros": {
+            "TUNE": 0.46,
+            "DAMP": 0.18,
+            "BUZZ": 0.55,
+            "DISTANCE": 0.4,
+            "WARMTH": 0.12,
+            "SPEED": 0.4
+          },
+          "variants": [
+            "open-room-rock/A15-press_roll-v1-t1.wav",
+            "open-room-rock/A15-press_roll-v1-t2.wav",
+            "open-room-rock/A15-press_roll-v1-t3.wav",
+            "open-room-rock/A15-press_roll-v2-t1.wav",
+            "open-room-rock/A15-press_roll-v2-t2.wav",
+            "open-room-rock/A15-press_roll-v2-t3.wav",
+            "open-room-rock/A15-press_roll-v3-t1.wav",
+            "open-room-rock/A15-press_roll-v3-t2.wav",
+            "open-room-rock/A15-press_roll-v3-t3.wav"
+          ],
+          "soft_hard_residual_db": -2.4792136329810734,
+          "take_residual_db": -0.020567147154256532
+        },
+        {
+          "pad": 16,
+          "voice": "CYMBAL_SWELL",
+          "macros": {
+            "TUNE": 0.46,
+            "DAMP": 0.18,
+            "BUZZ": 0.55,
+            "DISTANCE": 0.4,
+            "WARMTH": 0.12,
+            "SPEED": 0.4
+          },
+          "variants": [
+            "open-room-rock/A16-cymbal_swell-v1-t1.wav",
+            "open-room-rock/A16-cymbal_swell-v1-t2.wav",
+            "open-room-rock/A16-cymbal_swell-v1-t3.wav",
+            "open-room-rock/A16-cymbal_swell-v2-t1.wav",
+            "open-room-rock/A16-cymbal_swell-v2-t2.wav",
+            "open-room-rock/A16-cymbal_swell-v2-t3.wav",
+            "open-room-rock/A16-cymbal_swell-v3-t1.wav",
+            "open-room-rock/A16-cymbal_swell-v3-t2.wav",
+            "open-room-rock/A16-cymbal_swell-v3-t3.wav"
+          ],
+          "soft_hard_residual_db": -0.5174552703424802,
+          "take_residual_db": -0.7473372959430645
+        }
+      ],
+      "events": [
+        [
+          0,
+          0,
+          2,
+          0.88
+        ],
+        [
+          0,
+          9,
+          2,
+          0.32
+        ],
+        [
+          2,
+          9,
+          1,
+          0.32
+        ],
+        [
+          4,
+          1,
+          2,
+          0.78
+        ],
+        [
+          4,
+          9,
+          2,
+          0.32
+        ],
+        [
+          6,
+          9,
+          1,
+          0.32
+        ],
+        [
+          7,
+          0,
+          2,
+          0.88
+        ],
+        [
+          8,
+          0,
+          2,
+          0.88
+        ],
+        [
+          8,
+          9,
+          2,
+          0.32
+        ],
+        [
+          10,
+          9,
+          1,
+          0.32
+        ],
+        [
+          11,
+          1,
+          0,
+          0.45
+        ],
+        [
+          12,
+          1,
+          2,
+          0.78
+        ],
+        [
+          12,
+          9,
+          2,
+          0.32
+        ],
+        [
+          14,
+          0,
+          2,
+          0.88
+        ],
+        [
+          14,
+          9,
+          1,
+          0.32
+        ],
+        [
+          15,
+          1,
+          0,
+          0.45
+        ],
+        [
+          16,
+          0,
+          2,
+          0.88
+        ],
+        [
+          16,
+          9,
+          2,
+          0.32
+        ],
+        [
+          18,
+          9,
+          1,
+          0.32
+        ],
+        [
+          20,
+          1,
+          2,
+          0.78
+        ],
+        [
+          20,
+          9,
+          2,
+          0.32
+        ],
+        [
+          22,
+          9,
+          1,
+          0.32
+        ],
+        [
+          23,
+          0,
+          2,
+          0.88
+        ],
+        [
+          24,
+          0,
+          2,
+          0.88
+        ],
+        [
+          24,
+          9,
+          2,
+          0.32
+        ],
+        [
+          26,
+          9,
+          1,
+          0.32
+        ],
+        [
+          27,
+          1,
+          0,
+          0.45
+        ],
+        [
+          28,
+          1,
+          2,
+          0.78
+        ],
+        [
+          28,
+          9,
+          2,
+          0.32
+        ],
+        [
+          30,
+          0,
+          2,
+          0.88
+        ],
+        [
+          30,
+          9,
+          1,
+          0.32
+        ],
+        [
+          31,
+          1,
+          0,
+          0.45
+        ],
+        [
+          32,
+          0,
+          2,
+          0.88
+        ],
+        [
+          32,
+          9,
+          2,
+          0.32
+        ],
+        [
+          34,
+          9,
+          1,
+          0.32
+        ],
+        [
+          36,
+          1,
+          2,
+          0.78
+        ],
+        [
+          36,
+          9,
+          2,
+          0.32
+        ],
+        [
+          38,
+          9,
+          1,
+          0.32
+        ],
+        [
+          39,
+          0,
+          2,
+          0.88
+        ],
+        [
+          40,
+          0,
+          2,
+          0.88
+        ],
+        [
+          40,
+          9,
+          2,
+          0.32
+        ],
+        [
+          42,
+          9,
+          1,
+          0.32
+        ],
+        [
+          43,
+          1,
+          0,
+          0.45
+        ],
+        [
+          44,
+          1,
+          2,
+          0.78
+        ],
+        [
+          44,
+          9,
+          2,
+          0.32
+        ],
+        [
+          46,
+          0,
+          2,
+          0.88
+        ],
+        [
+          46,
+          9,
+          1,
+          0.32
+        ],
+        [
+          47,
+          1,
+          0,
+          0.45
+        ],
+        [
+          48,
+          0,
+          2,
+          0.88
+        ],
+        [
+          48,
+          9,
+          2,
+          0.32
+        ],
+        [
+          50,
+          9,
+          1,
+          0.32
+        ],
+        [
+          52,
+          1,
+          2,
+          0.78
+        ],
+        [
+          52,
+          9,
+          2,
+          0.32
+        ],
+        [
+          54,
+          9,
+          1,
+          0.32
+        ],
+        [
+          55,
+          0,
+          2,
+          0.88
+        ],
+        [
+          56,
+          0,
+          2,
+          0.88
+        ],
+        [
+          56,
+          9,
+          2,
+          0.32
+        ],
+        [
+          58,
+          9,
+          1,
+          0.32
+        ],
+        [
+          59,
+          1,
+          0,
+          0.45
+        ],
+        [
+          60,
+          1,
+          2,
+          0.78
+        ],
+        [
+          60,
+          7,
+          2,
+          0.65
+        ],
+        [
+          60,
+          9,
+          2,
+          0.32
+        ],
+        [
+          61,
+          7,
+          2,
+          0.65
+        ],
+        [
+          62,
+          0,
+          2,
+          0.88
+        ],
+        [
+          62,
+          8,
+          2,
+          0.65
+        ],
+        [
+          62,
+          9,
+          1,
+          0.32
+        ],
+        [
+          63,
+          1,
+          0,
+          0.45
+        ],
+        [
+          63,
+          8,
+          2,
+          0.65
+        ]
+      ],
+      "groove_gain": 0.9111182689342734,
+      "render_seconds": 229.06272384700424,
+      "audition_hat_choke": true,
+      "true_peak_gain": 1
+    }
+  ],
+  "verification": {
+    "variants": 432,
+    "sample_peak": 0.879974365234375,
+    "max_abs_dc": 2.279476243622449e-05,
+    "max_tail_rms": 0.0006746657521255205,
+    "min_soft_hard_residual_db": -11.610515485518246,
+    "min_take_residual_db": -21.01998578096715,
+    "scope": "Python and PCM16 readback. Estimated 4x true peak verified separately in verification.json; full alias-reference, native integration and hardware checks remain open."
+  },
+  "audition_output": [
+    {
+      "file": "open-room-rock-pads.wav",
+      "estimated_true_peak_before": 0.7765495608754148,
+      "gain": 1
+    },
+    {
+      "file": "open-room-rock-groove.wav",
+      "estimated_true_peak_before": 0.9176229218556062,
+      "gain": 1
+    },
+    {
+      "file": "roadhouse-rock-pads.wav",
+      "estimated_true_peak_before": 0.8279372015598913,
+      "gain": 1
+    },
+    {
+      "file": "soul-pocket-pads.wav",
+      "estimated_true_peak_before": 0.7530580580860539,
+      "gain": 1
+    },
+    {
+      "file": "soul-pocket-touch.wav",
+      "estimated_true_peak_before": 0.8805039891900469,
+      "gain": 1
+    },
+    {
+      "file": "open-room-rock-touch.wav",
+      "estimated_true_peak_before": 0.8805039891900469,
+      "gain": 1
+    },
+    {
+      "file": "roadhouse-rock-groove.wav",
+      "estimated_true_peak_before": 0.8987527944064992,
+      "gain": 1
+    },
+    {
+      "file": "roadhouse-rock-touch.wav",
+      "estimated_true_peak_before": 0.8848221342464972,
+      "gain": 1
+    },
+    {
+      "file": "soul-pocket-groove.wav",
+      "estimated_true_peak_before": 0.8982531550805545,
+      "gain": 1
+    }
+  ],
+  "version": 1,
+  "approval": {
+    "date": "2026-11-16",
+    "quote": "It all sounds great, proceed",
+    "scope": "Published Python audition; phone and MPC hardware not yet approved for this collection"
+  },
+  "audition": "https://chatgpt.com/space/page_b74b130ffbc0819181b5a1e9e4530fc5",
+  "samples": [
+    {
+      "file": "soul-pocket/1-0-0.wav.gz",
+      "sha256": "0a789724cbc0e455c814342435827c2e871caf2c5812b44594030aab361a6400",
+      "frames": 52920
+    },
+    {
+      "file": "soul-pocket/1-0-1.wav.gz",
+      "sha256": "2820ab90fd2b58a05ec355b8150ac6af8776c3ff60ff0b9f52e69982c9215c14",
+      "frames": 52920
+    },
+    {
+      "file": "soul-pocket/1-0-2.wav.gz",
+      "sha256": "3abfb197f59d533ab43b5fc8e72621b8143d580ed1c9751f06dddb168e65d078",
+      "frames": 52920
+    },
+    {
+      "file": "soul-pocket/1-1-0.wav.gz",
+      "sha256": "53dbfdec750e6579f8ae0d2df662744730916ed7a124375035e7f489d14821d7",
+      "frames": 52920
+    },
+    {
+      "file": "soul-pocket/1-1-1.wav.gz",
+      "sha256": "2b042e076a19fd9b4b0cbab10321b36c67e8801034b86a2a5790347e1bc4edf2",
+      "frames": 52920
+    },
+    {
+      "file": "soul-pocket/1-1-2.wav.gz",
+      "sha256": "d2f8f6f56e134b139a0a10fd1138702863d0c0ae7b8d21aff1ed1395763e0e42",
+      "frames": 52920
+    },
+    {
+      "file": "soul-pocket/1-2-0.wav.gz",
+      "sha256": "8462dc48ed5ae0688e635217bb21459cd8065f39247503518f9a2a1175cc550f",
+      "frames": 52920
+    },
+    {
+      "file": "soul-pocket/1-2-1.wav.gz",
+      "sha256": "f92084212a07ecf46e676351e54dc61d56be130be3ac0db2a07eac12b9c5f770",
+      "frames": 52920
+    },
+    {
+      "file": "soul-pocket/1-2-2.wav.gz",
+      "sha256": "72e6da97beb6ed24918a3638d7c4703888f17377d0adeb4447d328076f7fccb5",
+      "frames": 52920
+    },
+    {
+      "file": "soul-pocket/2-0-0.wav.gz",
+      "sha256": "aa7a1539cad6756c808f656899398955086846da480918b9e2a8f7a66f9b3918",
+      "frames": 39690
+    },
+    {
+      "file": "soul-pocket/2-0-1.wav.gz",
+      "sha256": "a1797072160283ef8c2b415a0974b9f1c504c6cb01d2e2f0b603a6010fd90747",
+      "frames": 39690
+    },
+    {
+      "file": "soul-pocket/2-0-2.wav.gz",
+      "sha256": "df0ce68e0ef46995545e192e4ee4bb15c84465aa371edc64795eea2173d94f9c",
+      "frames": 39690
+    },
+    {
+      "file": "soul-pocket/2-1-0.wav.gz",
+      "sha256": "4993133f7923196d8c3839d3a3158cbc7ee2bf6fa34bec032d7bd8018be3e2dc",
+      "frames": 39690
+    },
+    {
+      "file": "soul-pocket/2-1-1.wav.gz",
+      "sha256": "af8f99424cb5ae988a5f6f0a0e975162c81339bf90a93d0b561167742c5c03e2",
+      "frames": 39690
+    },
+    {
+      "file": "soul-pocket/2-1-2.wav.gz",
+      "sha256": "ace77bdb41c930b50b978edcdbfc9af48c1b97db5e5e623b678a7e4cacfe4297",
+      "frames": 39690
+    },
+    {
+      "file": "soul-pocket/2-2-0.wav.gz",
+      "sha256": "7e833b06c87d82e5236f4621ca2ff1db674c663b61c2a4c87a5d1295851c2aa9",
+      "frames": 39690
+    },
+    {
+      "file": "soul-pocket/2-2-1.wav.gz",
+      "sha256": "35140a01a3455763ab445cb4764105cda91d55be50dbb69bd3c543503f64ab00",
+      "frames": 39690
+    },
+    {
+      "file": "soul-pocket/2-2-2.wav.gz",
+      "sha256": "a76ebe0424582d0d479aaaf5b6ba9716d3202abdf280b5164d9f6f426f42ec43",
+      "frames": 39690
+    },
+    {
+      "file": "soul-pocket/3-0-0.wav.gz",
+      "sha256": "ed0edc3365845de576d133b78fd0d0a6583db14b5fa68c46d681a507663ce01f",
+      "frames": 39690
+    },
+    {
+      "file": "soul-pocket/3-0-1.wav.gz",
+      "sha256": "d33e3eac76cd5dcb80bac4ef1514a0fe264bf6f74adbd136a5628459a855a3a9",
+      "frames": 39690
+    },
+    {
+      "file": "soul-pocket/3-0-2.wav.gz",
+      "sha256": "01ff985bb811244b34b26ad994c0efa95132c52cade26f7bd2500ee9edeb85ed",
+      "frames": 39690
+    },
+    {
+      "file": "soul-pocket/3-1-0.wav.gz",
+      "sha256": "97c3456b4bfb88033ddc76281a4bf4aee818e03fcbfef2aabff11f6157b4fea4",
+      "frames": 39690
+    },
+    {
+      "file": "soul-pocket/3-1-1.wav.gz",
+      "sha256": "3c1802403cebea25b9c3907729ab23d48d6fd9d198b5f282d4c9b0f8c14801a0",
+      "frames": 39690
+    },
+    {
+      "file": "soul-pocket/3-1-2.wav.gz",
+      "sha256": "2364ecde8da4258e74ef91f814ae9e426e7f17439a91f8559a831432faaa53ee",
+      "frames": 39690
+    },
+    {
+      "file": "soul-pocket/3-2-0.wav.gz",
+      "sha256": "47e56a3be9aca958e99554dbc5b932f13a5e2e5ab01eda4086040fdc16275d0a",
+      "frames": 39690
+    },
+    {
+      "file": "soul-pocket/3-2-1.wav.gz",
+      "sha256": "5639b5a14a5df02e80bd98e44c22da1ff0a1121ed3b4e91726da7c62f8ba07f4",
+      "frames": 39690
+    },
+    {
+      "file": "soul-pocket/3-2-2.wav.gz",
+      "sha256": "f34db227aea145a6b1a48f1059dcf83b66ff4ca69351a8a79b8838a64ffb28ab",
+      "frames": 39690
+    },
+    {
+      "file": "soul-pocket/4-0-0.wav.gz",
+      "sha256": "b18ccd6d1a76c4cc55fead0a3c12e68d9e40f8f70c139051d81336bf3388f0f9",
+      "frames": 24255
+    },
+    {
+      "file": "soul-pocket/4-0-1.wav.gz",
+      "sha256": "6601c5154918426837d82b103fef1d1cb18800a235b4b3c70f0bef034b2ddb9f",
+      "frames": 24255
+    },
+    {
+      "file": "soul-pocket/4-0-2.wav.gz",
+      "sha256": "98836a7b9ae140c1dac63bcab7e5b5fb73bafb1f5a32250674a06873af708a41",
+      "frames": 24255
+    },
+    {
+      "file": "soul-pocket/4-1-0.wav.gz",
+      "sha256": "9c82c1d9bdbc5fabd0f94077098dc7b12434b336304e9a24507f747a981770cf",
+      "frames": 24255
+    },
+    {
+      "file": "soul-pocket/4-1-1.wav.gz",
+      "sha256": "fc4f06d6bc8e778d0d02af287664302c944a21e30fb18593eb22e6a6ca7a4d76",
+      "frames": 24255
+    },
+    {
+      "file": "soul-pocket/4-1-2.wav.gz",
+      "sha256": "bcc19a3ba325d4626b0a4e6ac8b2b75ecd36455e164bbe0e0543128c73e04051",
+      "frames": 24255
+    },
+    {
+      "file": "soul-pocket/4-2-0.wav.gz",
+      "sha256": "d6956489d502f751d74656968954c51d0b36b9ac26eb9a1e92a6012736514391",
+      "frames": 24255
+    },
+    {
+      "file": "soul-pocket/4-2-1.wav.gz",
+      "sha256": "62a9956a73c53542880962d2bab4ec0b8f4a389fb76b72b229c3b2bcf4515209",
+      "frames": 24255
+    },
+    {
+      "file": "soul-pocket/4-2-2.wav.gz",
+      "sha256": "c3182b1a6e8dc56fb76d262022024bc70a09b5879f9c36497dd6a9444f4fea75",
+      "frames": 24255
+    },
+    {
+      "file": "soul-pocket/5-0-0.wav.gz",
+      "sha256": "801dd3eeaa00824c236c28525f4a7d61be3d4a04572bb85685469ecb4c8efe9b",
+      "frames": 19845
+    },
+    {
+      "file": "soul-pocket/5-0-1.wav.gz",
+      "sha256": "3178694ee58f7af1433539c30e41c3cb2cba03325d17e41074c04d691052d598",
+      "frames": 19845
+    },
+    {
+      "file": "soul-pocket/5-0-2.wav.gz",
+      "sha256": "db4a6576ac9302df827c4029524fb2d2234d5cfdcd930fbf363d77b11fa02169",
+      "frames": 19845
+    },
+    {
+      "file": "soul-pocket/5-1-0.wav.gz",
+      "sha256": "23d4da1ffb3e49c1b90fc9eed574f52d907a8f0dd7cc113764e75375ba4b5fc3",
+      "frames": 19845
+    },
+    {
+      "file": "soul-pocket/5-1-1.wav.gz",
+      "sha256": "1e30f0bfb643aea7f2465d56940d0585a11ad6432ec08b313be5b1dc2763cf85",
+      "frames": 19845
+    },
+    {
+      "file": "soul-pocket/5-1-2.wav.gz",
+      "sha256": "b51c974342372dfa820062758c5e8438f08217afc7d059b35799410b17090a34",
+      "frames": 19845
+    },
+    {
+      "file": "soul-pocket/5-2-0.wav.gz",
+      "sha256": "2a2343fef84a7bef555a1bab9d21cc3b1a63e57f5d3153ee2d8b98f723c4ae27",
+      "frames": 19845
+    },
+    {
+      "file": "soul-pocket/5-2-1.wav.gz",
+      "sha256": "c1adbbf7993a683544891b50676b3a04ab7785f8eeada3d6f7dabe12270252c4",
+      "frames": 19845
+    },
+    {
+      "file": "soul-pocket/5-2-2.wav.gz",
+      "sha256": "4fa26ee47cd48a14f0f331afb1359908bc6f3a071d0060f27629285df55aa3d9",
+      "frames": 19845
+    },
+    {
+      "file": "soul-pocket/6-0-0.wav.gz",
+      "sha256": "d2ceda5f750b25f3dd26445d5eee97225d3941634b390db3d9bda8b9dfde200f",
+      "frames": 52920
+    },
+    {
+      "file": "soul-pocket/6-0-1.wav.gz",
+      "sha256": "e00d90272f8f72761f21d3600315ac4943fc3d0cd201646f8320f4032ae6656a",
+      "frames": 52920
+    },
+    {
+      "file": "soul-pocket/6-0-2.wav.gz",
+      "sha256": "a5ec03fbf58e0d4e4e1feff2163e49c99eec4103f80cbb2c55c6b029a1fb2e3f",
+      "frames": 52920
+    },
+    {
+      "file": "soul-pocket/6-1-0.wav.gz",
+      "sha256": "bd88ddeda600264d58d2568f7914d4a7e38bebad6824e188bd8bfd82d4415cee",
+      "frames": 52920
+    },
+    {
+      "file": "soul-pocket/6-1-1.wav.gz",
+      "sha256": "e755031afaf4ad2bac18f4f53b8ac5aacc303862b26ae4dde46d36d5f80fdeab",
+      "frames": 52920
+    },
+    {
+      "file": "soul-pocket/6-1-2.wav.gz",
+      "sha256": "26ec27fc21711e7f337e7a542daf74286f9c5447df2ef37108176966c1d8f726",
+      "frames": 52920
+    },
+    {
+      "file": "soul-pocket/6-2-0.wav.gz",
+      "sha256": "f2315a44ae6095f5c4aa7bf77d7aae843db839d71ba227b5eafc0232241030ae",
+      "frames": 52920
+    },
+    {
+      "file": "soul-pocket/6-2-1.wav.gz",
+      "sha256": "8712c5db95850be0450f2980e9035ac2451eaeddfd4df4ee6195eb1542a47c47",
+      "frames": 52920
+    },
+    {
+      "file": "soul-pocket/6-2-2.wav.gz",
+      "sha256": "6944dadb018564c7d26ce6de186667308d644845dddd90e175efad8cd5e841de",
+      "frames": 52920
+    },
+    {
+      "file": "soul-pocket/7-0-0.wav.gz",
+      "sha256": "83500ebeb206debc4caee525605fb137da7b6554e8630927057349a1b26a5b85",
+      "frames": 19845
+    },
+    {
+      "file": "soul-pocket/7-0-1.wav.gz",
+      "sha256": "01e7baa2dc5653a6f281677867d81e7c56578170122fa6f267712caac35daba7",
+      "frames": 19845
+    },
+    {
+      "file": "soul-pocket/7-0-2.wav.gz",
+      "sha256": "ee3e167a3c09f23d7952c4a62c8e3de81de88c2b61d9b9aeaf3c640fb021244f",
+      "frames": 19845
+    },
+    {
+      "file": "soul-pocket/7-1-0.wav.gz",
+      "sha256": "263ed0a9fd885f0d46c0a493cc3299e58f39d1dd9423fa7e9ad3fc1e50a6442b",
+      "frames": 19845
+    },
+    {
+      "file": "soul-pocket/7-1-1.wav.gz",
+      "sha256": "e003513ccac67d5dea5b94ee1dc41d7d358ac4b37428cad65209b421e9d2eb13",
+      "frames": 19845
+    },
+    {
+      "file": "soul-pocket/7-1-2.wav.gz",
+      "sha256": "7e7086fce4439e99c2f2b27a40b9506cd56afca1601f48e5df5557fe45f041a9",
+      "frames": 19845
+    },
+    {
+      "file": "soul-pocket/7-2-0.wav.gz",
+      "sha256": "e67a97c85c32ea74a7e6588d1535b1c5ddfdc66e0b19bc216cde041f2a117779",
+      "frames": 19845
+    },
+    {
+      "file": "soul-pocket/7-2-1.wav.gz",
+      "sha256": "aad5407c6bf39a2d73c656446bfa0550c1d10dff0aefe9c7800691d57b80d533",
+      "frames": 19845
+    },
+    {
+      "file": "soul-pocket/7-2-2.wav.gz",
+      "sha256": "d13e21741ae5b63bc2e18e00ece1a4fb5fcdb5819f7e20c6a031bd87f6ee1a8b",
+      "frames": 19845
+    },
+    {
+      "file": "soul-pocket/8-0-0.wav.gz",
+      "sha256": "a8ce5fc5c7c8a1444ae029b8ab49b64b7977b0229cc9ee1dd2478f2194e8f461",
+      "frames": 57330
+    },
+    {
+      "file": "soul-pocket/8-0-1.wav.gz",
+      "sha256": "d74013b36999dc82a6e77117cff217d218ec560e6ffcba2fcf9781b91ed09199",
+      "frames": 57330
+    },
+    {
+      "file": "soul-pocket/8-0-2.wav.gz",
+      "sha256": "247f1ce86c2ba00b1dc7ccc56911a3b6e8ea5e91438ec6831438ad692e6e9a6c",
+      "frames": 57330
+    },
+    {
+      "file": "soul-pocket/8-1-0.wav.gz",
+      "sha256": "672ac352bd65297634a59a4a51d8080081cd61604d138cb4f274cd2dbae89eb1",
+      "frames": 57330
+    },
+    {
+      "file": "soul-pocket/8-1-1.wav.gz",
+      "sha256": "40c9fefa7e933fd1044dd45f6323bf80070e76da7ea782a3f84218f8adbabb98",
+      "frames": 57330
+    },
+    {
+      "file": "soul-pocket/8-1-2.wav.gz",
+      "sha256": "63e2ede64c582dcb75155fc726fdf414d23b0535d6ed1fb4e613de964841c446",
+      "frames": 57330
+    },
+    {
+      "file": "soul-pocket/8-2-0.wav.gz",
+      "sha256": "00e04e97f785e24c8c274ea1d8482f994ed19bc8822b094b129583909bcbdc31",
+      "frames": 57330
+    },
+    {
+      "file": "soul-pocket/8-2-1.wav.gz",
+      "sha256": "63e5767291d6fa518a20ef6819e6828c84436077be620a90dd8a53c3340c6ef6",
+      "frames": 57330
+    },
+    {
+      "file": "soul-pocket/8-2-2.wav.gz",
+      "sha256": "c2ec9003c3a6e4f9c8df9ef6c0ef375121776060fdb3cb816b81cd5a24de2983",
+      "frames": 57330
+    },
+    {
+      "file": "soul-pocket/9-0-0.wav.gz",
+      "sha256": "c77a0c39e9f1bc74a785bbdfb06fdc3e23f4e89ba2e8df3c7448c8fa8247f880",
+      "frames": 61739
+    },
+    {
+      "file": "soul-pocket/9-0-1.wav.gz",
+      "sha256": "7437b73cff9de65e7cd81ecd13b074a0336ccd51e883d57b85ccdc508bab4051",
+      "frames": 61739
+    },
+    {
+      "file": "soul-pocket/9-0-2.wav.gz",
+      "sha256": "0a43c314907011b03b831aea372805a60a5d332ab9d41b286d2c3d5279182688",
+      "frames": 61739
+    },
+    {
+      "file": "soul-pocket/9-1-0.wav.gz",
+      "sha256": "2f958e54346f3c9d9a3c852b98a3014622ac3e371a3ce5ca32b5a9267f5c3eca",
+      "frames": 61739
+    },
+    {
+      "file": "soul-pocket/9-1-1.wav.gz",
+      "sha256": "d77d3dc3d8911ba80480e19c75479b5a5386b8922b409c161b009bd906fa2233",
+      "frames": 61739
+    },
+    {
+      "file": "soul-pocket/9-1-2.wav.gz",
+      "sha256": "d1754dba83f741456c70a104755b4ace5b6c2860f0a15c52e1afd366ad009c51",
+      "frames": 61739
+    },
+    {
+      "file": "soul-pocket/9-2-0.wav.gz",
+      "sha256": "5437678e68e5344f26079f9273adb38eb836f042611896cc824bab3132ecff16",
+      "frames": 61739
+    },
+    {
+      "file": "soul-pocket/9-2-1.wav.gz",
+      "sha256": "93cc5b922adf5d0c62f01745c39aa2b4e545e8d06c02dfefb792e3da3d1917ef",
+      "frames": 61739
+    },
+    {
+      "file": "soul-pocket/9-2-2.wav.gz",
+      "sha256": "93758bd4439c5d8f780a7f9175f2dc529a8f46c5aaa53a7e87a723e817e7f9c7",
+      "frames": 61739
+    },
+    {
+      "file": "soul-pocket/10-0-0.wav.gz",
+      "sha256": "ed5da9a13fb03e785ca70f8f77195046476ad3b80f881770bb8b8732ce1b2843",
+      "frames": 63945
+    },
+    {
+      "file": "soul-pocket/10-0-1.wav.gz",
+      "sha256": "6566f6d5439e63ec0be4c0340f67dba5d0f4c78663d7842a49fe5eaa750ea964",
+      "frames": 63945
+    },
+    {
+      "file": "soul-pocket/10-0-2.wav.gz",
+      "sha256": "086c258108ac765e18051464371b0795b44de62569527578a5a7ef11fcab511f",
+      "frames": 63945
+    },
+    {
+      "file": "soul-pocket/10-1-0.wav.gz",
+      "sha256": "9e3700f3a61cf3f49c044418a14578c4e05b6f42fbffe9dcd0787bbb93f5c232",
+      "frames": 63945
+    },
+    {
+      "file": "soul-pocket/10-1-1.wav.gz",
+      "sha256": "cf5acc4b871ec2b02036becf7c8e7892309cdf5659b0fedb235af5bc4c95cc61",
+      "frames": 63945
+    },
+    {
+      "file": "soul-pocket/10-1-2.wav.gz",
+      "sha256": "26f3c6908d0f616b54e9200a6ab9af3a8b507228aa787b4ba36d3f004bf55d20",
+      "frames": 63945
+    },
+    {
+      "file": "soul-pocket/10-2-0.wav.gz",
+      "sha256": "b2936e92d62fdbfcb8c67d6e567840296f08bc176a4205338188ffa1a6d58e4b",
+      "frames": 63945
+    },
+    {
+      "file": "soul-pocket/10-2-1.wav.gz",
+      "sha256": "1a7a09692d452368609f6d4da761a886cc4b2b457c1cc08150956af11f04bd75",
+      "frames": 63945
+    },
+    {
+      "file": "soul-pocket/10-2-2.wav.gz",
+      "sha256": "ec6346037c718445396d7f637710e34ca69906bb1db26aedb57665683752ad09",
+      "frames": 63945
+    },
+    {
+      "file": "soul-pocket/11-0-0.wav.gz",
+      "sha256": "7bfede7385169ceb6d791beb4b8d3d990e33df5e29ed135a57d87547f751387f",
+      "frames": 63945
+    },
+    {
+      "file": "soul-pocket/11-0-1.wav.gz",
+      "sha256": "418f14bd3a0f48be3f7c47c12f3db87973504454f9e2d9cf79769cad4c562ff7",
+      "frames": 63945
+    },
+    {
+      "file": "soul-pocket/11-0-2.wav.gz",
+      "sha256": "dbf8518e6162f32f7acf0780f9c910e49bab2cee363337e955d6bd18620a1698",
+      "frames": 63945
+    },
+    {
+      "file": "soul-pocket/11-1-0.wav.gz",
+      "sha256": "65137e6caa57a874dfe79842e9fc4c452d484b5e4373e5077aec0e84ee089ac7",
+      "frames": 63945
+    },
+    {
+      "file": "soul-pocket/11-1-1.wav.gz",
+      "sha256": "9f16d71bb0184100db0ef103095f58fefa3cc76335ab0321ac7b8d68bd4abc23",
+      "frames": 63945
+    },
+    {
+      "file": "soul-pocket/11-1-2.wav.gz",
+      "sha256": "5613bd882f2ed6138205b0a9bae3d842e524802b64aa6cd94ca24027cdd2cd66",
+      "frames": 63945
+    },
+    {
+      "file": "soul-pocket/11-2-0.wav.gz",
+      "sha256": "0f6a37eb51b8819c4c5f78a270f6e32bcdd1bd31f0551d8f956dc330b7b09a1c",
+      "frames": 63945
+    },
+    {
+      "file": "soul-pocket/11-2-1.wav.gz",
+      "sha256": "d57ae6a666b5aca3e698de0af8d2f367485bcc859609596b82d09b592aedb5e0",
+      "frames": 63945
+    },
+    {
+      "file": "soul-pocket/11-2-2.wav.gz",
+      "sha256": "85bbb492577c01fac1a6875d4f39844131585c347d97f639496e3073a4da3a2e",
+      "frames": 63945
+    },
+    {
+      "file": "soul-pocket/12-0-0.wav.gz",
+      "sha256": "4a634015da4861728aa1f8a725586a72e648a5ff38ee528c751f56512610c211",
+      "frames": 97020
+    },
+    {
+      "file": "soul-pocket/12-0-1.wav.gz",
+      "sha256": "4904b0d527bc82278da2fc6a94b3f237e6a2d4b5f1c30d920fe98f08293c201a",
+      "frames": 97020
+    },
+    {
+      "file": "soul-pocket/12-0-2.wav.gz",
+      "sha256": "d3024158a0136faaa6bacd4663c9035d4134051f2c7c732342962dc8579e02a0",
+      "frames": 97020
+    },
+    {
+      "file": "soul-pocket/12-1-0.wav.gz",
+      "sha256": "2e1739ef21289c68cfe42407da8e92ff3230870c55c7bbc98dfa42c9fa6d7915",
+      "frames": 97020
+    },
+    {
+      "file": "soul-pocket/12-1-1.wav.gz",
+      "sha256": "2797bfb0f4ce5853791ba1ea01717af9c3da656152c5681671c85feccd9ec893",
+      "frames": 97020
+    },
+    {
+      "file": "soul-pocket/12-1-2.wav.gz",
+      "sha256": "e676c50593d65ff9cfa479682c367b280db934d786b5cf6169ceedb55aea1542",
+      "frames": 97020
+    },
+    {
+      "file": "soul-pocket/12-2-0.wav.gz",
+      "sha256": "09f9e3680aa07c8d8eb8e600d1cdd5c724c60aea36d5ee20ca4b43ee2662dc66",
+      "frames": 97020
+    },
+    {
+      "file": "soul-pocket/12-2-1.wav.gz",
+      "sha256": "ccf73dac4e59417dfd3931f47787b720f9c0d97ee1018330adf543055f98664c",
+      "frames": 97020
+    },
+    {
+      "file": "soul-pocket/12-2-2.wav.gz",
+      "sha256": "b1e42dbaa398c4d4377260aab0fe6df2f2703cfc438d60fbc86ab587dfb406b9",
+      "frames": 97020
+    },
+    {
+      "file": "soul-pocket/13-0-0.wav.gz",
+      "sha256": "77d66e80a460efc91ad00e7177bb5281856ac039d467b69039dac612132c1a6f",
+      "frames": 35280
+    },
+    {
+      "file": "soul-pocket/13-0-1.wav.gz",
+      "sha256": "9532eb54c979999373180cc75ce712dfdc067af7d02b125875922f0946248e61",
+      "frames": 35280
+    },
+    {
+      "file": "soul-pocket/13-0-2.wav.gz",
+      "sha256": "6c2ebe10c8eb4fe4a4aabfe87d85825e398eced0bd1fdd4870b78383a58db598",
+      "frames": 35280
+    },
+    {
+      "file": "soul-pocket/13-1-0.wav.gz",
+      "sha256": "42565eeb1ff2a0fdc0bbd7d01375ac1ce2b3fa4ea302d7c842310a991af601a9",
+      "frames": 35280
+    },
+    {
+      "file": "soul-pocket/13-1-1.wav.gz",
+      "sha256": "40cdb16bca60186007cf9cd3641ba046cabe11945a40388cee3a371098fa4acc",
+      "frames": 35280
+    },
+    {
+      "file": "soul-pocket/13-1-2.wav.gz",
+      "sha256": "fd041308e1fae6455f35d6cf0b87e6299377d97a00e89bc141dab6265c190662",
+      "frames": 35280
+    },
+    {
+      "file": "soul-pocket/13-2-0.wav.gz",
+      "sha256": "789af5c088bdc0c387e4d3ef91a8a249e227268f85b980b44bfcff2ff16024b9",
+      "frames": 35280
+    },
+    {
+      "file": "soul-pocket/13-2-1.wav.gz",
+      "sha256": "033302a17b43f7292eb8b6f146267234b22045a436863d82d4cc6ddb50a7f6e1",
+      "frames": 35280
+    },
+    {
+      "file": "soul-pocket/13-2-2.wav.gz",
+      "sha256": "20844d00f8671331abdf63a013db2b26aec6c862def23b277865ef9aa80b56f4",
+      "frames": 35280
+    },
+    {
+      "file": "soul-pocket/14-0-0.wav.gz",
+      "sha256": "847cd3c94be32f037f0a83167cd4e7eecb1cc6beafda4ab193bc22d8d6293e79",
+      "frames": 30869
+    },
+    {
+      "file": "soul-pocket/14-0-1.wav.gz",
+      "sha256": "f0e170ce1c4cfc82df20332a2c5bdb2a6911c19490c7aa5ee4294dce27550e68",
+      "frames": 30869
+    },
+    {
+      "file": "soul-pocket/14-0-2.wav.gz",
+      "sha256": "e2c11c1f880be9dce7c490a24ee615b06455d9c0d740fde9d41955344c562246",
+      "frames": 30869
+    },
+    {
+      "file": "soul-pocket/14-1-0.wav.gz",
+      "sha256": "83585b7a9181280f319b5aca9577ec12e4fc13312d702138a612b6701f483301",
+      "frames": 30869
+    },
+    {
+      "file": "soul-pocket/14-1-1.wav.gz",
+      "sha256": "6507e5d0541699331913dcca00df8290cb60928b4c19b80716eb0e8570736ed3",
+      "frames": 30869
+    },
+    {
+      "file": "soul-pocket/14-1-2.wav.gz",
+      "sha256": "3b389963fc22e9290b96788037914bb53e80b30ee0e20155d54347d31bc75dff",
+      "frames": 30869
+    },
+    {
+      "file": "soul-pocket/14-2-0.wav.gz",
+      "sha256": "3777f7b76ddeaf98c21b4105191565332f01e34b50321af2cccf722d6a7f8b90",
+      "frames": 30869
+    },
+    {
+      "file": "soul-pocket/14-2-1.wav.gz",
+      "sha256": "2e76390b6731edaa73174977c1cb149fe8d74c7397ef4c67f8a1961210218814",
+      "frames": 30869
+    },
+    {
+      "file": "soul-pocket/14-2-2.wav.gz",
+      "sha256": "c4d4b7e9d64854a6345437dfae55f53f8ceae4b1d080ead3b174203bed651df5",
+      "frames": 30869
+    },
+    {
+      "file": "soul-pocket/15-0-0.wav.gz",
+      "sha256": "2fe77a874751d34ea8b0b9c18c494a9a185cfbeae00ccc5ad5ffe907821688e3",
+      "frames": 132300
+    },
+    {
+      "file": "soul-pocket/15-0-1.wav.gz",
+      "sha256": "fe5fc87844856641db64c2d0ae387ada062208220d2a5631dcf4ac7511f463a6",
+      "frames": 132300
+    },
+    {
+      "file": "soul-pocket/15-0-2.wav.gz",
+      "sha256": "b519479bed1f43af0c9c648118b65ae5d30c86403b2b3df0391f750824438a51",
+      "frames": 132300
+    },
+    {
+      "file": "soul-pocket/15-1-0.wav.gz",
+      "sha256": "053dbcc82a4bf3ab0b9af961232fd17fff036b607d9d06805b43d330cf285662",
+      "frames": 132300
+    },
+    {
+      "file": "soul-pocket/15-1-1.wav.gz",
+      "sha256": "d30cc05cc00fc8edbdc341f45078422414c073538e70be24230befd559671f36",
+      "frames": 132300
+    },
+    {
+      "file": "soul-pocket/15-1-2.wav.gz",
+      "sha256": "aacc01f867fa7d110c8f1e89ce7e90b59cc77fa472d92990f3746beeca5d2db4",
+      "frames": 132300
+    },
+    {
+      "file": "soul-pocket/15-2-0.wav.gz",
+      "sha256": "b7fa59ec2422c3b2ad79db794cc483de0ecd615ba0738bf8b3335fafec36d0ef",
+      "frames": 132300
+    },
+    {
+      "file": "soul-pocket/15-2-1.wav.gz",
+      "sha256": "ac8c8278466ca08ac55c88fbbb1c72d755c1b7a955e79fb5a1b6dd87fd2fc26e",
+      "frames": 132300
+    },
+    {
+      "file": "soul-pocket/15-2-2.wav.gz",
+      "sha256": "2677394a9cb761ae2d2e74ce5b499bb048a795663ab1403027f2daa6d99f3beb",
+      "frames": 132300
+    },
+    {
+      "file": "soul-pocket/16-0-0.wav.gz",
+      "sha256": "722059f15604cbc234b61861fb4adfc63d398e3c34d045c2bb021ae54bf8bdfe",
+      "frames": 220500
+    },
+    {
+      "file": "soul-pocket/16-0-1.wav.gz",
+      "sha256": "1403a4dd608abb0218ed073f45c4f8871d06a0f772781201ac99a83a663bd7f3",
+      "frames": 220500
+    },
+    {
+      "file": "soul-pocket/16-0-2.wav.gz",
+      "sha256": "9eb1212b4670919e848d8d5521e3f0b12485c1a5dd41422852112e0d18cba0b3",
+      "frames": 220500
+    },
+    {
+      "file": "soul-pocket/16-1-0.wav.gz",
+      "sha256": "7d6f082d47bb1a73f8e0b38016e09b0b931a4aa1316c913ecf06726d4d429925",
+      "frames": 220500
+    },
+    {
+      "file": "soul-pocket/16-1-1.wav.gz",
+      "sha256": "0ab9acb70074060432efbeb4cc1bf36fa35bdd0535368f52067551ad59738412",
+      "frames": 220500
+    },
+    {
+      "file": "soul-pocket/16-1-2.wav.gz",
+      "sha256": "d3b8ef5e8a1ddacffe71c1848d00a2a9b6400e32f4077206520748d49f22e4ef",
+      "frames": 220500
+    },
+    {
+      "file": "soul-pocket/16-2-0.wav.gz",
+      "sha256": "a5c27c368c197c4453c6006e8c1123f80a791ba5bef555564ed5e909ea70a7c6",
+      "frames": 220500
+    },
+    {
+      "file": "soul-pocket/16-2-1.wav.gz",
+      "sha256": "d759384956a5ec70941a419c8c0abc61b6365dd85c16c8e53a244afe04fa1fdb",
+      "frames": 220500
+    },
+    {
+      "file": "soul-pocket/16-2-2.wav.gz",
+      "sha256": "66f57d5f25018c338b63991f04a426c102f8854de14153b650fe35790f2d8539",
+      "frames": 220500
+    },
+    {
+      "file": "roadhouse-rock/1-0-0.wav.gz",
+      "sha256": "da566901e59da214b4ccc852721095a651a122acadb6c07c131db9c0739b9925",
+      "frames": 52920
+    },
+    {
+      "file": "roadhouse-rock/1-0-1.wav.gz",
+      "sha256": "43a29fb11c0bce2b6eb2be2c99a7370245a9eb11770c7dc01c8cf379042d0328",
+      "frames": 52920
+    },
+    {
+      "file": "roadhouse-rock/1-0-2.wav.gz",
+      "sha256": "5def1bb155dfb84e8f7145ec93fe2acc71f851fd5046497308bf007da3bb5808",
+      "frames": 52920
+    },
+    {
+      "file": "roadhouse-rock/1-1-0.wav.gz",
+      "sha256": "ca40b31d8bf718703d0294df33b6d242a66830ec3bcf4e3b2a586a6e2fe7cf2a",
+      "frames": 52920
+    },
+    {
+      "file": "roadhouse-rock/1-1-1.wav.gz",
+      "sha256": "dfb6cfac92cf4ad278b84d9fe48a4db1758be716932b196233707613038cb25e",
+      "frames": 52920
+    },
+    {
+      "file": "roadhouse-rock/1-1-2.wav.gz",
+      "sha256": "d45cab19a7e6abeeb6d4698b9ab9cdeace079b711c261a5a7e3c5f8c16b5e556",
+      "frames": 52920
+    },
+    {
+      "file": "roadhouse-rock/1-2-0.wav.gz",
+      "sha256": "8227385edf6a505c128b0bc0ad1d56e693b11bf5b57cc5b1c9815f8e5ff73e60",
+      "frames": 52920
+    },
+    {
+      "file": "roadhouse-rock/1-2-1.wav.gz",
+      "sha256": "f33f01c2902062473d00c1754b2f3a246d684169f49833437de85b1b80031fad",
+      "frames": 52920
+    },
+    {
+      "file": "roadhouse-rock/1-2-2.wav.gz",
+      "sha256": "039b03a4cf7a6d3eb981ad281afc72d0cb6d59d9ca677f36c0d2dccb890c7970",
+      "frames": 52920
+    },
+    {
+      "file": "roadhouse-rock/2-0-0.wav.gz",
+      "sha256": "62c0069b793408b33480df1e6006fee2f64eb7a6ed6c4d82f6f6447614b83b07",
+      "frames": 39690
+    },
+    {
+      "file": "roadhouse-rock/2-0-1.wav.gz",
+      "sha256": "7152a9449678bfd851abab41370d64b0fefde92b8e28ac7e6a557e11af8fbf04",
+      "frames": 39690
+    },
+    {
+      "file": "roadhouse-rock/2-0-2.wav.gz",
+      "sha256": "004aef197ac528afeccb46bc67f2b9a85fb6f56da8808e120191af792f67c85f",
+      "frames": 39690
+    },
+    {
+      "file": "roadhouse-rock/2-1-0.wav.gz",
+      "sha256": "08c822f4154d9b93c47ecc2d7884d14b44942746531ab1479e4895b49ea4952f",
+      "frames": 39690
+    },
+    {
+      "file": "roadhouse-rock/2-1-1.wav.gz",
+      "sha256": "e7d8246850eae6f0ba7241e8ae7e0947d16c9b29f15ddc04f711f228057a6540",
+      "frames": 39690
+    },
+    {
+      "file": "roadhouse-rock/2-1-2.wav.gz",
+      "sha256": "114b6b4638fd871d153ebfb3038649971455e6113366917f577037682a05205f",
+      "frames": 39690
+    },
+    {
+      "file": "roadhouse-rock/2-2-0.wav.gz",
+      "sha256": "4228748c1e177e0d08cc23180f8fcb8a5bf8ca4d936611134cd1e5beb5440256",
+      "frames": 39690
+    },
+    {
+      "file": "roadhouse-rock/2-2-1.wav.gz",
+      "sha256": "e2939313e58bd312c0d86a13a35b8589fcecddfd57b98307814999f26e7c0008",
+      "frames": 39690
+    },
+    {
+      "file": "roadhouse-rock/2-2-2.wav.gz",
+      "sha256": "2658d15eac88c00029e568691aa6c0cda135e8d67307dced120f07b9cdaed0b2",
+      "frames": 39690
+    },
+    {
+      "file": "roadhouse-rock/3-0-0.wav.gz",
+      "sha256": "e3efdac58c335df83a55c782ffde7eb6f2225459b27d86860c6f2a52b39c510d",
+      "frames": 39690
+    },
+    {
+      "file": "roadhouse-rock/3-0-1.wav.gz",
+      "sha256": "4e4b36be3c5784f5ad149d305a7f63cdc10ea5443f79f9272a8f4afacf8ab777",
+      "frames": 39690
+    },
+    {
+      "file": "roadhouse-rock/3-0-2.wav.gz",
+      "sha256": "f8ab08df0b70d589acb115e2938963ea2348d9cb29c69c96e9298c992a22011b",
+      "frames": 39690
+    },
+    {
+      "file": "roadhouse-rock/3-1-0.wav.gz",
+      "sha256": "0dd2eefad3743ba1d654cbea228ab4ca433fa1e940494a26ec98fb05194da3f5",
+      "frames": 39690
+    },
+    {
+      "file": "roadhouse-rock/3-1-1.wav.gz",
+      "sha256": "619018a802265c76ae28f8343d5d23190d804fdf779612eea0d9f193f69a4b9e",
+      "frames": 39690
+    },
+    {
+      "file": "roadhouse-rock/3-1-2.wav.gz",
+      "sha256": "9f63b172b7d94acced2dc3123d768ca2144b7ba43e8a945b109a7a98e072ce41",
+      "frames": 39690
+    },
+    {
+      "file": "roadhouse-rock/3-2-0.wav.gz",
+      "sha256": "4904ad8496a304c29a0c45cc8abef0142c9b8f0bfe8cdb98134c219f6ff230fe",
+      "frames": 39690
+    },
+    {
+      "file": "roadhouse-rock/3-2-1.wav.gz",
+      "sha256": "f38ae5bd0c10393a9e2884e0dea5493d53130d3a77ebdd9ce75a6ecbdeb92217",
+      "frames": 39690
+    },
+    {
+      "file": "roadhouse-rock/3-2-2.wav.gz",
+      "sha256": "3b1fb757455bd22720a804a40ac2de1dbe3eb1d158b4a649597671fbf53fd2f8",
+      "frames": 39690
+    },
+    {
+      "file": "roadhouse-rock/4-0-0.wav.gz",
+      "sha256": "2064621f0334413696c7ecb91ccc57d42d1989c8a54f5bb09bb7de46992382b5",
+      "frames": 24255
+    },
+    {
+      "file": "roadhouse-rock/4-0-1.wav.gz",
+      "sha256": "b9e9cd81a7ed96ab87d892e1542df70e4a13c07190fefea9099beeee1ce9ee21",
+      "frames": 24255
+    },
+    {
+      "file": "roadhouse-rock/4-0-2.wav.gz",
+      "sha256": "d3780a3f0694e68f42294778dd62274974f6cbf3f54d83671e20d9a50f70bf1b",
+      "frames": 24255
+    },
+    {
+      "file": "roadhouse-rock/4-1-0.wav.gz",
+      "sha256": "a5b875fda48cbd152bd427f4f2334ca2dab4f7ea5a62f7826a2c0ff2447633b7",
+      "frames": 24255
+    },
+    {
+      "file": "roadhouse-rock/4-1-1.wav.gz",
+      "sha256": "1d07ac87b594393467aabffa9a0e64a47ebb627af270b460b52759417b080b38",
+      "frames": 24255
+    },
+    {
+      "file": "roadhouse-rock/4-1-2.wav.gz",
+      "sha256": "4f2b571be47c7451e55dccff9ba7bc4787d740ec2e3ad8acd9a389acfe3f48c0",
+      "frames": 24255
+    },
+    {
+      "file": "roadhouse-rock/4-2-0.wav.gz",
+      "sha256": "41ea9ffc5fb655e9bef4681d55fb01fbe7aeb53819e535781344e3d3057552b1",
+      "frames": 24255
+    },
+    {
+      "file": "roadhouse-rock/4-2-1.wav.gz",
+      "sha256": "f34ae59547f677d691e0f97d78b09282ee0846351c454a0c93d191bfc542d117",
+      "frames": 24255
+    },
+    {
+      "file": "roadhouse-rock/4-2-2.wav.gz",
+      "sha256": "00f1d595af5a214a0040876fe5ff488e0714cf2c9d7ac6a4204f714048250b42",
+      "frames": 24255
+    },
+    {
+      "file": "roadhouse-rock/5-0-0.wav.gz",
+      "sha256": "23ecbd852a6457fac0405a2df953c2ff782c0cea81a83a3705366b32834e7a1c",
+      "frames": 19845
+    },
+    {
+      "file": "roadhouse-rock/5-0-1.wav.gz",
+      "sha256": "2277558ef1fe4fc4d0d03d799f263e36f04ecc746c921ad897bbb120559c4e99",
+      "frames": 19845
+    },
+    {
+      "file": "roadhouse-rock/5-0-2.wav.gz",
+      "sha256": "435b5db3cf964ffd53a914be8c845b24dd33f4e1c6ee9fd0f15a62ba1cf1a88f",
+      "frames": 19845
+    },
+    {
+      "file": "roadhouse-rock/5-1-0.wav.gz",
+      "sha256": "7c2ab72e804b80916ee1e0399e562533a78b7f234471ef9dba8e9f0a56da2fed",
+      "frames": 19845
+    },
+    {
+      "file": "roadhouse-rock/5-1-1.wav.gz",
+      "sha256": "71a6d10550d67d7b4a44546c663f34748ff749bb83ca390db8463112da3db649",
+      "frames": 19845
+    },
+    {
+      "file": "roadhouse-rock/5-1-2.wav.gz",
+      "sha256": "742d91cc277037dc307bb33edbf032911b49bc110ae5df6bc0a9ca7ad7dc6ce3",
+      "frames": 19845
+    },
+    {
+      "file": "roadhouse-rock/5-2-0.wav.gz",
+      "sha256": "5e467a2f9fbd367e2c00bfc6756c87c80e2e287a551131a81ffd73fa787b43dc",
+      "frames": 19845
+    },
+    {
+      "file": "roadhouse-rock/5-2-1.wav.gz",
+      "sha256": "1ce91c12cf41ba373bf38c4d1de4bb6f30ca7f209c288719bc01e859ae547537",
+      "frames": 19845
+    },
+    {
+      "file": "roadhouse-rock/5-2-2.wav.gz",
+      "sha256": "ebf7f97b1f9e3c3d77227de91cd7fe8238a41158ce74afbcc8ab70fa3139167e",
+      "frames": 19845
+    },
+    {
+      "file": "roadhouse-rock/6-0-0.wav.gz",
+      "sha256": "72e14ea246322360437a15618dabc37114894c97a0f6da7ed63623ff419e403a",
+      "frames": 52920
+    },
+    {
+      "file": "roadhouse-rock/6-0-1.wav.gz",
+      "sha256": "5f72e848efbf0f244dc7f2f25301ca3a2e53c108b9291282eaaffd53646f0cd7",
+      "frames": 52920
+    },
+    {
+      "file": "roadhouse-rock/6-0-2.wav.gz",
+      "sha256": "65eb023750ba79f8817eea512fc698131496fbef34cbccecd558a155e25b19a0",
+      "frames": 52920
+    },
+    {
+      "file": "roadhouse-rock/6-1-0.wav.gz",
+      "sha256": "5a10beb64954fe819f8336c636f0f4b0822eb42aa40a2559565f688e7a9b9ef6",
+      "frames": 52920
+    },
+    {
+      "file": "roadhouse-rock/6-1-1.wav.gz",
+      "sha256": "a11ffc5c5c1c85d691ca66c9b0a0bb1a4ccadffaf25ba0da2955d46460e3e1fb",
+      "frames": 52920
+    },
+    {
+      "file": "roadhouse-rock/6-1-2.wav.gz",
+      "sha256": "a2c3ddea33c6e9b5013b5908545fff3d2926321c55adee8b1e90f203ef920aab",
+      "frames": 52920
+    },
+    {
+      "file": "roadhouse-rock/6-2-0.wav.gz",
+      "sha256": "0f5dce8497014e52f4ab99ea512990b34da2b8e35502343f58e4e42d026bd944",
+      "frames": 52920
+    },
+    {
+      "file": "roadhouse-rock/6-2-1.wav.gz",
+      "sha256": "e283e2c7b0b04c39bbd86b08bb71c0331e12c26b71a3a028f45e2ba75ca460e6",
+      "frames": 52920
+    },
+    {
+      "file": "roadhouse-rock/6-2-2.wav.gz",
+      "sha256": "7820648c03ac25480ea7fae158f77ec43da837de9323aec1c9d1e3e3a5105963",
+      "frames": 52920
+    },
+    {
+      "file": "roadhouse-rock/7-0-0.wav.gz",
+      "sha256": "768869475cc83875ebb5c2c844b6592c55ea6a3c4acfdc148c7836f6ce79614a",
+      "frames": 19845
+    },
+    {
+      "file": "roadhouse-rock/7-0-1.wav.gz",
+      "sha256": "30625410b0a616df4b7462b8c1f3086ab608e8715557713bb258b31730ed1972",
+      "frames": 19845
+    },
+    {
+      "file": "roadhouse-rock/7-0-2.wav.gz",
+      "sha256": "39704ccec1551f27409aff4c555081c59ece6218ddca4a078f54ecdd8d17719d",
+      "frames": 19845
+    },
+    {
+      "file": "roadhouse-rock/7-1-0.wav.gz",
+      "sha256": "3064571f16be3af9bd43a9fc76ad37f6fc4a9a3e973e031350197fdc7daafb40",
+      "frames": 19845
+    },
+    {
+      "file": "roadhouse-rock/7-1-1.wav.gz",
+      "sha256": "624c929150468bb630f2065288001bc45ca861a1becf336cd627a4e8f528aedd",
+      "frames": 19845
+    },
+    {
+      "file": "roadhouse-rock/7-1-2.wav.gz",
+      "sha256": "e35f3467edd712bc0054a1e770770f32574f4f56c89a17ce47ae5ecb3a51f974",
+      "frames": 19845
+    },
+    {
+      "file": "roadhouse-rock/7-2-0.wav.gz",
+      "sha256": "3bf98e2c4e23166e9930a2c8e0d6d1c6450a8af214df828387ec3d6b0b38d30f",
+      "frames": 19845
+    },
+    {
+      "file": "roadhouse-rock/7-2-1.wav.gz",
+      "sha256": "24cec23187420f96fef9fc3892b4ad40286930454a1b130e4e82086905d8e1cf",
+      "frames": 19845
+    },
+    {
+      "file": "roadhouse-rock/7-2-2.wav.gz",
+      "sha256": "a5383438e8cf69801952d4491f66028f75d83265d3222151a6f936d6ec359de1",
+      "frames": 19845
+    },
+    {
+      "file": "roadhouse-rock/8-0-0.wav.gz",
+      "sha256": "a4f1e2d4272b4301ac0075b4dc4ff295748912a74667e17b7e46d991ec80323a",
+      "frames": 57330
+    },
+    {
+      "file": "roadhouse-rock/8-0-1.wav.gz",
+      "sha256": "c539c0618c54e7f1cdd0b5b16b7659789223775d06c2e11572608ba7b837de15",
+      "frames": 57330
+    },
+    {
+      "file": "roadhouse-rock/8-0-2.wav.gz",
+      "sha256": "00b0b7076e7733cc84c02705362f185752e02c8bc6369eac003aa4f419abc4b4",
+      "frames": 57330
+    },
+    {
+      "file": "roadhouse-rock/8-1-0.wav.gz",
+      "sha256": "fd07825d25372c2d072fda804820354f978a81cf0c882a76d26adad271ab3b00",
+      "frames": 57330
+    },
+    {
+      "file": "roadhouse-rock/8-1-1.wav.gz",
+      "sha256": "c682fa4c39b83dd35cbe768881fa077a924203355decebbd3c21baac0c909453",
+      "frames": 57330
+    },
+    {
+      "file": "roadhouse-rock/8-1-2.wav.gz",
+      "sha256": "75889dc9694229232c6b0d1f3869117d4bd31e0f8dd6b93b3eb8e245978d2d2d",
+      "frames": 57330
+    },
+    {
+      "file": "roadhouse-rock/8-2-0.wav.gz",
+      "sha256": "be171c0437b1ad5f01f1dea44dab9413ede211f64d8ada0d3e937150f0617159",
+      "frames": 57330
+    },
+    {
+      "file": "roadhouse-rock/8-2-1.wav.gz",
+      "sha256": "aa07d0be7d1a8ce3f4b65dea2948c6175470ff154704543eaaecff352a0498fb",
+      "frames": 57330
+    },
+    {
+      "file": "roadhouse-rock/8-2-2.wav.gz",
+      "sha256": "ab12869e35429e672938061ae7daaa0d17b9199ad0cfded517091283309f3284",
+      "frames": 57330
+    },
+    {
+      "file": "roadhouse-rock/9-0-0.wav.gz",
+      "sha256": "585338b575808f93c94e5e4b1855d8d333f6ee71a869667ee02088c4eb7e606e",
+      "frames": 61739
+    },
+    {
+      "file": "roadhouse-rock/9-0-1.wav.gz",
+      "sha256": "f98e7bcb9221fc6b9a693d7402145ea33da2527c1740be2741115158903e57c2",
+      "frames": 61739
+    },
+    {
+      "file": "roadhouse-rock/9-0-2.wav.gz",
+      "sha256": "d5faa638c51105b54b53de71fc4c2be9fd52dc79ea4fe75edd960f14b493674a",
+      "frames": 61739
+    },
+    {
+      "file": "roadhouse-rock/9-1-0.wav.gz",
+      "sha256": "2f3c22eb125cb163e5d9e3f469dbb231aa0a5978f2142b2d2e3555e52751c6e8",
+      "frames": 61739
+    },
+    {
+      "file": "roadhouse-rock/9-1-1.wav.gz",
+      "sha256": "a2f2b5c08130cc87b9ebaa8be0525bee7ae8e03a718134f9c67e192866154240",
+      "frames": 61739
+    },
+    {
+      "file": "roadhouse-rock/9-1-2.wav.gz",
+      "sha256": "eb55b2b92baa42538446033f1e4ef6e92aa90b757f683288454b7702b1b68164",
+      "frames": 61739
+    },
+    {
+      "file": "roadhouse-rock/9-2-0.wav.gz",
+      "sha256": "9cf43fcb13cb71bd2f22456df45ee65802dd15fd4f1d44b817f81a2ad493205a",
+      "frames": 61739
+    },
+    {
+      "file": "roadhouse-rock/9-2-1.wav.gz",
+      "sha256": "79b09034116879137dd29eea5681722e86e5ad963b51c29ad3fcc3de7206ae28",
+      "frames": 61739
+    },
+    {
+      "file": "roadhouse-rock/9-2-2.wav.gz",
+      "sha256": "67252da5f614abef30e88770b5bc7a79466baa01685f1ef651202073617a238a",
+      "frames": 61739
+    },
+    {
+      "file": "roadhouse-rock/10-0-0.wav.gz",
+      "sha256": "3246873bf00ee97a39747450a836d716cada34fe6b5c6b97e5c6d154dab8b6a1",
+      "frames": 63945
+    },
+    {
+      "file": "roadhouse-rock/10-0-1.wav.gz",
+      "sha256": "123ae2bad0a265ff86681da2b1995275481bca645dd0aa2810b1658dedec725e",
+      "frames": 63945
+    },
+    {
+      "file": "roadhouse-rock/10-0-2.wav.gz",
+      "sha256": "ae29c4ad970202b143e9f0a23b088b0d34868d885f7861bffcc66f2df1bea897",
+      "frames": 63945
+    },
+    {
+      "file": "roadhouse-rock/10-1-0.wav.gz",
+      "sha256": "cb97a204762bcc733fb16125c0e979ba8ac3f7e72b18d6e32cb7353389e3cfdb",
+      "frames": 63945
+    },
+    {
+      "file": "roadhouse-rock/10-1-1.wav.gz",
+      "sha256": "b9f594d39c0af41643b63426e5a63e5d6262b731a2bef8ed935fcf8ce39f91bc",
+      "frames": 63945
+    },
+    {
+      "file": "roadhouse-rock/10-1-2.wav.gz",
+      "sha256": "7f8650a4349dd87c1249d87612f757bb011579b973356ac0c2a0ecd9175439bc",
+      "frames": 63945
+    },
+    {
+      "file": "roadhouse-rock/10-2-0.wav.gz",
+      "sha256": "a04c6ca9133bc6bbadd72626a049bf5889bdd09af54fd44e05ccd8df1314b0eb",
+      "frames": 63945
+    },
+    {
+      "file": "roadhouse-rock/10-2-1.wav.gz",
+      "sha256": "1a88f8e397656b86d89a879afed2afc4e42cd57b23ff63f59f844931d656dc0c",
+      "frames": 63945
+    },
+    {
+      "file": "roadhouse-rock/10-2-2.wav.gz",
+      "sha256": "77786cc6192a5d1d3624b1fb7b1f0f5a8f36a1c20522b9f6b4a9ad7e3482796f",
+      "frames": 63945
+    },
+    {
+      "file": "roadhouse-rock/11-0-0.wav.gz",
+      "sha256": "b9d40b6eea96155163d2b0650eb337f9fee23d8300428431732d6e3136279148",
+      "frames": 63945
+    },
+    {
+      "file": "roadhouse-rock/11-0-1.wav.gz",
+      "sha256": "d354fe90a054a81b843b97b614c23709cca0a9c905861a299b20cc99e0f984d1",
+      "frames": 63945
+    },
+    {
+      "file": "roadhouse-rock/11-0-2.wav.gz",
+      "sha256": "421d2c91df8bcfec16a884335b441b5f349fc5ca7a45da150bc4e42bb4bce628",
+      "frames": 63945
+    },
+    {
+      "file": "roadhouse-rock/11-1-0.wav.gz",
+      "sha256": "cac124c1d9e61af4c7822c321035ead0e1c9b2d28771b621082e2e961f33d138",
+      "frames": 63945
+    },
+    {
+      "file": "roadhouse-rock/11-1-1.wav.gz",
+      "sha256": "590eed7d8fcca2788aec40f5409928a03c944335072f94442d96ea42a31e24a8",
+      "frames": 63945
+    },
+    {
+      "file": "roadhouse-rock/11-1-2.wav.gz",
+      "sha256": "59b9b8935fe5a5d70b6cded73990fa84ecb194bb1e8067254ba23dc3ded29d53",
+      "frames": 63945
+    },
+    {
+      "file": "roadhouse-rock/11-2-0.wav.gz",
+      "sha256": "8af1848eea83e2d5456440c75e0d8cc75e886a3e19fd659f052ede0044d86a86",
+      "frames": 63945
+    },
+    {
+      "file": "roadhouse-rock/11-2-1.wav.gz",
+      "sha256": "45f43f646f554350ddbcb90451b80850dc6d97a346389b7c6eb36613d5f7e974",
+      "frames": 63945
+    },
+    {
+      "file": "roadhouse-rock/11-2-2.wav.gz",
+      "sha256": "1308f2029eb173d3cc82be02d49ab6174e8ab03911c9deba66e37e537a6791b7",
+      "frames": 63945
+    },
+    {
+      "file": "roadhouse-rock/12-0-0.wav.gz",
+      "sha256": "bee712340dde3dfb42af6bef6970ac0f015a9b1d30bf4e7512e915de5ff252af",
+      "frames": 97020
+    },
+    {
+      "file": "roadhouse-rock/12-0-1.wav.gz",
+      "sha256": "62b43b8728356b8b451310bace8aa29d0d5f789e41fa9eafef28cb1dad1cbd48",
+      "frames": 97020
+    },
+    {
+      "file": "roadhouse-rock/12-0-2.wav.gz",
+      "sha256": "c4afa82bd608eba8bf8ecb27a536e9cd970c82999d299ed41c2efb6c7f40f0e0",
+      "frames": 97020
+    },
+    {
+      "file": "roadhouse-rock/12-1-0.wav.gz",
+      "sha256": "40ee9fc1011e1b43ea4fdc928382a38e2dcf5edd286fcd55a9ab776ca60f827f",
+      "frames": 97020
+    },
+    {
+      "file": "roadhouse-rock/12-1-1.wav.gz",
+      "sha256": "301ab95e862d74acf8501617d9313f6188106904434af92d5fef79a91b8de794",
+      "frames": 97020
+    },
+    {
+      "file": "roadhouse-rock/12-1-2.wav.gz",
+      "sha256": "7c98bfdadb2e8c6b626286e47bdfe6fb97229f56f55c39b1def5f259364157a3",
+      "frames": 97020
+    },
+    {
+      "file": "roadhouse-rock/12-2-0.wav.gz",
+      "sha256": "8140297558da92ff3708abd14845a286d2fb8c4dd29d86aef39e0b1b4c8f8b88",
+      "frames": 97020
+    },
+    {
+      "file": "roadhouse-rock/12-2-1.wav.gz",
+      "sha256": "527dc444bf7db0a0c693cf07c992b64556c0586abdc4e0d125d46a1126d5bcc4",
+      "frames": 97020
+    },
+    {
+      "file": "roadhouse-rock/12-2-2.wav.gz",
+      "sha256": "d2f331536254df644aa5e130066846b0883929f693d733ca449dd8f1d2030a2f",
+      "frames": 97020
+    },
+    {
+      "file": "roadhouse-rock/13-0-0.wav.gz",
+      "sha256": "383178f14bdb224811eb21bcc868dfafe8b1dd8c64bf8e758b756e5fa7bbee5c",
+      "frames": 35280
+    },
+    {
+      "file": "roadhouse-rock/13-0-1.wav.gz",
+      "sha256": "3d803c62352a03020650dfc9dc99d13d08c2714ab3aa99cd0a7dce42e893f337",
+      "frames": 35280
+    },
+    {
+      "file": "roadhouse-rock/13-0-2.wav.gz",
+      "sha256": "ec19ab2eac55c7c8a23ccccb6aa03c2b8a85580a90bb4b0beb5a79140acf7de0",
+      "frames": 35280
+    },
+    {
+      "file": "roadhouse-rock/13-1-0.wav.gz",
+      "sha256": "c6a22306721a3795877d604eed56d7c39b1307a4f4cb6a7df5d26550217f422c",
+      "frames": 35280
+    },
+    {
+      "file": "roadhouse-rock/13-1-1.wav.gz",
+      "sha256": "dc5910ed96377059576c783bec3ff532a37391ed2ca9eb7ad725b736089cd5ac",
+      "frames": 35280
+    },
+    {
+      "file": "roadhouse-rock/13-1-2.wav.gz",
+      "sha256": "c80ff4918ffada91f58b4c3c679ba6a633e04dc24fd4ded9733cee26e40590af",
+      "frames": 35280
+    },
+    {
+      "file": "roadhouse-rock/13-2-0.wav.gz",
+      "sha256": "884842a4653830bb4cef793ac8e427bc288957e72de7ba0a304b6b4cedca3bc7",
+      "frames": 35280
+    },
+    {
+      "file": "roadhouse-rock/13-2-1.wav.gz",
+      "sha256": "393d4dd3c0c47abaa88be0a293b9266b3c99834ee0f9b0e48e1dfecd15fa5c2e",
+      "frames": 35280
+    },
+    {
+      "file": "roadhouse-rock/13-2-2.wav.gz",
+      "sha256": "316470d3f8adef2dc6390c85f17eadc4839e4df5286c107d039d09ba0d8590c9",
+      "frames": 35280
+    },
+    {
+      "file": "roadhouse-rock/14-0-0.wav.gz",
+      "sha256": "5746fdebe8774cd10e3c7b9a5f84115d6dc27ae4699188b77f0ed08dce2bf2c4",
+      "frames": 35280
+    },
+    {
+      "file": "roadhouse-rock/14-0-1.wav.gz",
+      "sha256": "3eaa75ef073df906aae59211a0bba26edb517de3b43bd63d968c3157fa228498",
+      "frames": 35280
+    },
+    {
+      "file": "roadhouse-rock/14-0-2.wav.gz",
+      "sha256": "d2835c86afc3f8adf8c6185dc634fb386a33e69051d3c61ed551595ec4c51755",
+      "frames": 35280
+    },
+    {
+      "file": "roadhouse-rock/14-1-0.wav.gz",
+      "sha256": "8e15b7535b5faa0ea32613d2d761a0f27ea0859bc7319790253b062680e61add",
+      "frames": 35280
+    },
+    {
+      "file": "roadhouse-rock/14-1-1.wav.gz",
+      "sha256": "5f69ab052b7f71192b402e87c4e080ef39e557cfcd8613a942e2260b13cbe76e",
+      "frames": 35280
+    },
+    {
+      "file": "roadhouse-rock/14-1-2.wav.gz",
+      "sha256": "17e5b951998b0a8e673045bfdaeaf92821f3f577d33d1e21bf000248487adecc",
+      "frames": 35280
+    },
+    {
+      "file": "roadhouse-rock/14-2-0.wav.gz",
+      "sha256": "b2cfae70e24d5df6f97d93cfcd9c3b6c36de20d329f2f74a3f24097cf977f601",
+      "frames": 35280
+    },
+    {
+      "file": "roadhouse-rock/14-2-1.wav.gz",
+      "sha256": "34340865e2b7a71776cc839914eeb1d85b3fc3498216735affd05bec2056e334",
+      "frames": 35280
+    },
+    {
+      "file": "roadhouse-rock/14-2-2.wav.gz",
+      "sha256": "c1160696b36f620268bcfa91d275c01b7d5eaac41841a8cd72ecee991c9ea8fb",
+      "frames": 35280
+    },
+    {
+      "file": "roadhouse-rock/15-0-0.wav.gz",
+      "sha256": "11778c755a44eadb86e3ad28c5fe16fcda70ab58a1635d620223a7d551cb0dff",
+      "frames": 132300
+    },
+    {
+      "file": "roadhouse-rock/15-0-1.wav.gz",
+      "sha256": "14cabbdcca1c915be9e4a970614918165e49adf15785aaa1a3b4d620899db6d2",
+      "frames": 132300
+    },
+    {
+      "file": "roadhouse-rock/15-0-2.wav.gz",
+      "sha256": "05041cd224477fb320360e31559af3f0dcac74ec7cd41ff9c31f835cb8d532e7",
+      "frames": 132300
+    },
+    {
+      "file": "roadhouse-rock/15-1-0.wav.gz",
+      "sha256": "7c95518a588fcaa521cc7a74caf1024f692c9ece14618c728f882942790d90c1",
+      "frames": 132300
+    },
+    {
+      "file": "roadhouse-rock/15-1-1.wav.gz",
+      "sha256": "65504fc838c6e280e45ac27f2dcc1eed27d84d9f29d8d4a956e943dd70123712",
+      "frames": 132300
+    },
+    {
+      "file": "roadhouse-rock/15-1-2.wav.gz",
+      "sha256": "43bb7c7e2d1c3fe08a02676af092848ac0d08687cbb70bf6461f80dfa0c3d449",
+      "frames": 132300
+    },
+    {
+      "file": "roadhouse-rock/15-2-0.wav.gz",
+      "sha256": "46f0979de292b40a8de4044b4b69a6ef4ca603dfd3a8ffa428ef2ba405882d89",
+      "frames": 132300
+    },
+    {
+      "file": "roadhouse-rock/15-2-1.wav.gz",
+      "sha256": "b0e8053e392abe83802f425681806f95d4ba48592893397f45be5a8072c23ea9",
+      "frames": 132300
+    },
+    {
+      "file": "roadhouse-rock/15-2-2.wav.gz",
+      "sha256": "5153b5958fdd7ab5a9750f8e6120151fb62bb188d75a82837dbc5e104d012993",
+      "frames": 132300
+    },
+    {
+      "file": "roadhouse-rock/16-0-0.wav.gz",
+      "sha256": "e8fd93dc6d4cf497f8909d34ea6b4a52e8aaa3e7914cc7a097f9b2a7f752e7cc",
+      "frames": 220500
+    },
+    {
+      "file": "roadhouse-rock/16-0-1.wav.gz",
+      "sha256": "bf8b4ceb8f1184fb0d4dcacf829306c8f8303d4c4271defe7d7ee4ad1095b797",
+      "frames": 220500
+    },
+    {
+      "file": "roadhouse-rock/16-0-2.wav.gz",
+      "sha256": "350abf0802ca2f505dbda3a744f121b09149c00a510d9cb2674d8dfb2007b38a",
+      "frames": 220500
+    },
+    {
+      "file": "roadhouse-rock/16-1-0.wav.gz",
+      "sha256": "d81d1a4b0dde7fe179bb27bdfa17da11b00d0cacf7bc063e156cab223524bde7",
+      "frames": 220500
+    },
+    {
+      "file": "roadhouse-rock/16-1-1.wav.gz",
+      "sha256": "130457470bd1119fb1973f10ab1ff611616e886fb519195adb3fbf4b1d6dbb10",
+      "frames": 220500
+    },
+    {
+      "file": "roadhouse-rock/16-1-2.wav.gz",
+      "sha256": "fe72971f1d2227724ddb82e7daa7d66f81f296da5fcc65bd6f19626d713d0476",
+      "frames": 220500
+    },
+    {
+      "file": "roadhouse-rock/16-2-0.wav.gz",
+      "sha256": "90b05e7fcd725440c710362750264e20cd29dec755dc3fdf148927e0731de326",
+      "frames": 220500
+    },
+    {
+      "file": "roadhouse-rock/16-2-1.wav.gz",
+      "sha256": "a564fe24d5e3e6f1b55753a810ea2b4b5f2c42564279317d747f5eca6daa57cd",
+      "frames": 220500
+    },
+    {
+      "file": "roadhouse-rock/16-2-2.wav.gz",
+      "sha256": "88440e935f518cf0e4cda60e134d971ac03ae2e0b160bbdb11a19cce09074d32",
+      "frames": 220500
+    },
+    {
+      "file": "open-room-rock/1-0-0.wav.gz",
+      "sha256": "04152d80c397d7a689af539d0e017af65c58e264913ce49f78fea52a7a50d012",
+      "frames": 52920
+    },
+    {
+      "file": "open-room-rock/1-0-1.wav.gz",
+      "sha256": "f6095cd218217a2e09eba6ff44599f786a4d20d0acfe12d285c287e910c258a4",
+      "frames": 52920
+    },
+    {
+      "file": "open-room-rock/1-0-2.wav.gz",
+      "sha256": "73ae9b5ed058a51df7475456fd5d5c798fd43808de6549017cff6e49a070d99a",
+      "frames": 52920
+    },
+    {
+      "file": "open-room-rock/1-1-0.wav.gz",
+      "sha256": "05c66f84e2c8e1aec60b8af02898d96b2f8c8c34155c49cdf36981bb093597b2",
+      "frames": 52920
+    },
+    {
+      "file": "open-room-rock/1-1-1.wav.gz",
+      "sha256": "9d2d900183e969d36b453d0ebdf45a7f782ce06ab7b15ef3b6a516a82e2641bf",
+      "frames": 52920
+    },
+    {
+      "file": "open-room-rock/1-1-2.wav.gz",
+      "sha256": "23e91b1095636bbfd66e060d487d9db88ad90656d5e6b9c9545145d837ba0a19",
+      "frames": 52920
+    },
+    {
+      "file": "open-room-rock/1-2-0.wav.gz",
+      "sha256": "bf9b341f4acb0ea3dc4c89e99bb8f6910b8b8fa709bdfc0e96c4ede6cc4a5aca",
+      "frames": 52920
+    },
+    {
+      "file": "open-room-rock/1-2-1.wav.gz",
+      "sha256": "620ceca36c41ee443d86efbe98bff688165c660c1da5e5551bd95a276de2dc4f",
+      "frames": 52920
+    },
+    {
+      "file": "open-room-rock/1-2-2.wav.gz",
+      "sha256": "46b691eaa7bc49f088f86628145ab71b9599dd2095ff7d4f7a4d101ca21b249b",
+      "frames": 52920
+    },
+    {
+      "file": "open-room-rock/2-0-0.wav.gz",
+      "sha256": "735e8424f8d0cb187584adcd11905f5b4c07cbe3fcbc2032299ae6c850b7a395",
+      "frames": 39690
+    },
+    {
+      "file": "open-room-rock/2-0-1.wav.gz",
+      "sha256": "72217825352db56394e93f31a28a64a3ff0afdde234796360ace5e419e69d286",
+      "frames": 39690
+    },
+    {
+      "file": "open-room-rock/2-0-2.wav.gz",
+      "sha256": "a9d6190b619cd65e71cefccf4d09e981c2b60b90bf017a5dcede9259914990b1",
+      "frames": 39690
+    },
+    {
+      "file": "open-room-rock/2-1-0.wav.gz",
+      "sha256": "fdf5f64c6be52c3f74fb216ac3b8f93d9e45547b96623e6e34c41ee318d44bac",
+      "frames": 39690
+    },
+    {
+      "file": "open-room-rock/2-1-1.wav.gz",
+      "sha256": "26bc80d1c9c1307d52c94afcb8c956ccf56ae59c3cc84823120a363e36ba9429",
+      "frames": 39690
+    },
+    {
+      "file": "open-room-rock/2-1-2.wav.gz",
+      "sha256": "db61c6b58f997c5f2cb89667c4f945157706818b8312f83ab41b7cd1975aa87b",
+      "frames": 39690
+    },
+    {
+      "file": "open-room-rock/2-2-0.wav.gz",
+      "sha256": "0700d379c1b99c497a259de48c4fff72f05cc2ef900de1fd93df7816061f6ae3",
+      "frames": 39690
+    },
+    {
+      "file": "open-room-rock/2-2-1.wav.gz",
+      "sha256": "c6992ca01d3c15d58fe63852830a59b2e4f58fb5b016542cdb309c8ffa85627f",
+      "frames": 39690
+    },
+    {
+      "file": "open-room-rock/2-2-2.wav.gz",
+      "sha256": "bdd384ebc7e7de34a5b2497886140a08c12185d66abaa36986b61cd6fd97e6c2",
+      "frames": 39690
+    },
+    {
+      "file": "open-room-rock/3-0-0.wav.gz",
+      "sha256": "32293bc20343a8530239f073339a0400fbeaed382f791fddb3ca99b73875e4bb",
+      "frames": 39690
+    },
+    {
+      "file": "open-room-rock/3-0-1.wav.gz",
+      "sha256": "48c8d85794b141247ea6443d41a5d0b310021f3a77c8ad9f28a6148c8915df99",
+      "frames": 39690
+    },
+    {
+      "file": "open-room-rock/3-0-2.wav.gz",
+      "sha256": "f1018d582bfeef6b6d20db1a865b3d4b538e79ba507fe91744340275fd91e52b",
+      "frames": 39690
+    },
+    {
+      "file": "open-room-rock/3-1-0.wav.gz",
+      "sha256": "7717209051af7403c126c270e34417b96ac9a10e72d3ad7f3d40d52295e28d97",
+      "frames": 39690
+    },
+    {
+      "file": "open-room-rock/3-1-1.wav.gz",
+      "sha256": "1ab02db1f78cf98c31bb22591a80c7fbdc765a4924c13faa5278e98f2af28edd",
+      "frames": 39690
+    },
+    {
+      "file": "open-room-rock/3-1-2.wav.gz",
+      "sha256": "5df0a9af587bc972d76da2da4d3bfabf3be28620ee8182c1ca0882e22f072e51",
+      "frames": 39690
+    },
+    {
+      "file": "open-room-rock/3-2-0.wav.gz",
+      "sha256": "d7a98343edd78da3021539dba0358d0569c3630f6d1699e4ea37d571ac0444f4",
+      "frames": 39690
+    },
+    {
+      "file": "open-room-rock/3-2-1.wav.gz",
+      "sha256": "0fd9a1fbfecd076170e40f26ab11deef8b8a3239a65fdc2994cda486d9131df0",
+      "frames": 39690
+    },
+    {
+      "file": "open-room-rock/3-2-2.wav.gz",
+      "sha256": "f185deda6cc71707a8417048f739e26e327c92d115a2736000cc85c4ad6f91f6",
+      "frames": 39690
+    },
+    {
+      "file": "open-room-rock/4-0-0.wav.gz",
+      "sha256": "aa1be982283c67b8a54da4a43006527d970be2aa1687e9dbce3f6e1e63520f6e",
+      "frames": 24255
+    },
+    {
+      "file": "open-room-rock/4-0-1.wav.gz",
+      "sha256": "655bd6d4bdc5e39ed91f317504449f274871cba32978d19917ca4bc237e88af0",
+      "frames": 24255
+    },
+    {
+      "file": "open-room-rock/4-0-2.wav.gz",
+      "sha256": "a7ed35bd2900184a267b2148547caf3e8d3e790f2a5986b7aed1cfe969018c02",
+      "frames": 24255
+    },
+    {
+      "file": "open-room-rock/4-1-0.wav.gz",
+      "sha256": "d1739f69a41ca3ae1df33421996f4840ff30f5c01aa496204edb2cb4ca6fe9c7",
+      "frames": 24255
+    },
+    {
+      "file": "open-room-rock/4-1-1.wav.gz",
+      "sha256": "ce59d8ff06aa08c90b023198c06349242fb780065dc0fa88cef57efab635248c",
+      "frames": 24255
+    },
+    {
+      "file": "open-room-rock/4-1-2.wav.gz",
+      "sha256": "e7735e24943ee2a0838adb2ff6126ab3cc19022d36ac72ef3d12ac8c9a102936",
+      "frames": 24255
+    },
+    {
+      "file": "open-room-rock/4-2-0.wav.gz",
+      "sha256": "168e35f08349b75cdb18f39608d8a6589a7a4eade54043a1e5ce787260d70373",
+      "frames": 24255
+    },
+    {
+      "file": "open-room-rock/4-2-1.wav.gz",
+      "sha256": "535eb2fd811fa13156867cba6b783332553bce102f54b50fa3c737977fa404c8",
+      "frames": 24255
+    },
+    {
+      "file": "open-room-rock/4-2-2.wav.gz",
+      "sha256": "6905a9f9d4509cffa522496c643c6c86277ec27d60d313efdc283c5619d5e5d4",
+      "frames": 24255
+    },
+    {
+      "file": "open-room-rock/5-0-0.wav.gz",
+      "sha256": "a8ad6582482782daaef7ba12ba372bf3a4c78e04add220e0235faff8ccd09e58",
+      "frames": 19845
+    },
+    {
+      "file": "open-room-rock/5-0-1.wav.gz",
+      "sha256": "aa925434647dda008ba562f1d85107016465e142e3cc931a8ed2ef97606ef9fe",
+      "frames": 19845
+    },
+    {
+      "file": "open-room-rock/5-0-2.wav.gz",
+      "sha256": "e9ee4f03785e8de6f00e43321ee4b7fa5510f7e6902f4f9f54622a5be2210fd7",
+      "frames": 19845
+    },
+    {
+      "file": "open-room-rock/5-1-0.wav.gz",
+      "sha256": "ba586715c5fb91a234204e5601149f900b5e4ccae997c91621a1e4f5b17e2f91",
+      "frames": 19845
+    },
+    {
+      "file": "open-room-rock/5-1-1.wav.gz",
+      "sha256": "3f7bbfb5bee7e67ab2c94c7109cceb1744b4a1fe50529489b0e685e6285bb29b",
+      "frames": 19845
+    },
+    {
+      "file": "open-room-rock/5-1-2.wav.gz",
+      "sha256": "7aac8bfa76578c4d7a6d1fee43897599553e892693e47bc567d6765156d0bbac",
+      "frames": 19845
+    },
+    {
+      "file": "open-room-rock/5-2-0.wav.gz",
+      "sha256": "0e3a9179fd502086e545105e72162a70562fa36610e453e8d781ba86082c2125",
+      "frames": 19845
+    },
+    {
+      "file": "open-room-rock/5-2-1.wav.gz",
+      "sha256": "23c7f8f23a59b67b9df62d9827c0be054fb2f66ff5e0f6b6de88399fdb558a35",
+      "frames": 19845
+    },
+    {
+      "file": "open-room-rock/5-2-2.wav.gz",
+      "sha256": "15fbed4d008218844e901b3011c1cb49ba62e4209048e94209b7e6bc08d6ea5a",
+      "frames": 19845
+    },
+    {
+      "file": "open-room-rock/6-0-0.wav.gz",
+      "sha256": "938d4d55648faae760153570f5e1178e752d5c6f0b7f9369de94a7ce2d4a83a0",
+      "frames": 52920
+    },
+    {
+      "file": "open-room-rock/6-0-1.wav.gz",
+      "sha256": "00ed134e1f0c19b606cbbf9c60efa15ce4106b8365e93ad6cde27c3549e9925e",
+      "frames": 52920
+    },
+    {
+      "file": "open-room-rock/6-0-2.wav.gz",
+      "sha256": "f33640dfb2371ddca1fc275a139e48dac174f91cf9970957e5ed89ca93e8637e",
+      "frames": 52920
+    },
+    {
+      "file": "open-room-rock/6-1-0.wav.gz",
+      "sha256": "a25c81a6161eb0f29c0fb920f5c553bd23fa8e4db7b373c0de78986a6ed2e505",
+      "frames": 52920
+    },
+    {
+      "file": "open-room-rock/6-1-1.wav.gz",
+      "sha256": "b319f3a7bae5947a1d87ba93b3926705cbd091c2bf7a9bfd8c7d91b69fef3eb1",
+      "frames": 52920
+    },
+    {
+      "file": "open-room-rock/6-1-2.wav.gz",
+      "sha256": "8ecf62a4f69ab4ebed860e03c0bee738d1bad113362c18bc16ebb676bb984c4e",
+      "frames": 52920
+    },
+    {
+      "file": "open-room-rock/6-2-0.wav.gz",
+      "sha256": "1de6726aa5da72b7bb83e4dcdc0e6e501c08369bf109fc256e5b338151702bcd",
+      "frames": 52920
+    },
+    {
+      "file": "open-room-rock/6-2-1.wav.gz",
+      "sha256": "3a6feb540b585498b694595ec95c6b53f1e3af04548f4d332fbd65df26c9df69",
+      "frames": 52920
+    },
+    {
+      "file": "open-room-rock/6-2-2.wav.gz",
+      "sha256": "842cfd314d94d132a6118587bd6cd61df07927c060d484f09cdca4e1a1bb7e78",
+      "frames": 52920
+    },
+    {
+      "file": "open-room-rock/7-0-0.wav.gz",
+      "sha256": "d6409e840df6777b18bebef6f3b59a2340e1d1a63eef263d9c9cdc27d054ea6e",
+      "frames": 19845
+    },
+    {
+      "file": "open-room-rock/7-0-1.wav.gz",
+      "sha256": "21b53b37dbc31e4f4283d83ff91c3106b6d863bf416a9099f48a22ac3a10c85c",
+      "frames": 19845
+    },
+    {
+      "file": "open-room-rock/7-0-2.wav.gz",
+      "sha256": "32c508b09be81544f8f801a34c4ce22c27ba8cb48bf1227493b24c04d930b7f0",
+      "frames": 19845
+    },
+    {
+      "file": "open-room-rock/7-1-0.wav.gz",
+      "sha256": "8b0b77f820ac342a313809174c125d55f20d8d450bdc51ebe1b4506a61d09416",
+      "frames": 19845
+    },
+    {
+      "file": "open-room-rock/7-1-1.wav.gz",
+      "sha256": "394fc9725f411f24038fc47392d6f676cefddc5684979734de7e1511645d3b88",
+      "frames": 19845
+    },
+    {
+      "file": "open-room-rock/7-1-2.wav.gz",
+      "sha256": "965070f41ef77534c7c34e952889d929a6eea03c0ca05a94b1aa688d7e959e69",
+      "frames": 19845
+    },
+    {
+      "file": "open-room-rock/7-2-0.wav.gz",
+      "sha256": "8d5cee850057eea563dc560cf104e06228430a02763b1838cae11af4b5484690",
+      "frames": 19845
+    },
+    {
+      "file": "open-room-rock/7-2-1.wav.gz",
+      "sha256": "2cde237a36834d493c49e65bf628713b9658185450fc54405600be22aee2ec14",
+      "frames": 19845
+    },
+    {
+      "file": "open-room-rock/7-2-2.wav.gz",
+      "sha256": "4a566845b717a69ea5c3008eda4adb90d09111f0794831b35807c8f23811df63",
+      "frames": 19845
+    },
+    {
+      "file": "open-room-rock/8-0-0.wav.gz",
+      "sha256": "880d5f4e11710fa8f53816972de1420efb8c9f27540742f54734f0f525077343",
+      "frames": 57330
+    },
+    {
+      "file": "open-room-rock/8-0-1.wav.gz",
+      "sha256": "a500e173becd079dbab2fc8ad771defc1235cd00955805eb18b9bd381c2635b4",
+      "frames": 57330
+    },
+    {
+      "file": "open-room-rock/8-0-2.wav.gz",
+      "sha256": "52c7bb6ea85e6f042f8221c63a8fc9d7f241c13f3519770b9942abea9c441de1",
+      "frames": 57330
+    },
+    {
+      "file": "open-room-rock/8-1-0.wav.gz",
+      "sha256": "f985a84ff1516c0352168fb98c2d8ce7c9a3d6915a9890f2827342e8be380c69",
+      "frames": 57330
+    },
+    {
+      "file": "open-room-rock/8-1-1.wav.gz",
+      "sha256": "5eb6e80ee212931760da153e8e43c95a2f7fb90cb3f57619cab97034bcf7acde",
+      "frames": 57330
+    },
+    {
+      "file": "open-room-rock/8-1-2.wav.gz",
+      "sha256": "5d3a43422e7c1e9e50da84a27c5476ec1c9987e6b39aba3c254ce631c419cead",
+      "frames": 57330
+    },
+    {
+      "file": "open-room-rock/8-2-0.wav.gz",
+      "sha256": "63b277ee7182ade83fa4d0055faa1446bfb1c30405a4f83afa240abb8ae610d1",
+      "frames": 57330
+    },
+    {
+      "file": "open-room-rock/8-2-1.wav.gz",
+      "sha256": "2368c612d33ad218570fa407c0da2ab47aba35b6959cc3e6788051f502a8cc6f",
+      "frames": 57330
+    },
+    {
+      "file": "open-room-rock/8-2-2.wav.gz",
+      "sha256": "93a42ba019047d89ce1c34b61586b15751bcc687631bebf59a76ca151500eb6b",
+      "frames": 57330
+    },
+    {
+      "file": "open-room-rock/9-0-0.wav.gz",
+      "sha256": "2f5056bf80ff72e047ebf341a88abd1d9714b7c3f741a7ff743a25de08a042d7",
+      "frames": 61739
+    },
+    {
+      "file": "open-room-rock/9-0-1.wav.gz",
+      "sha256": "76e781d60a8723f2d9bc4508079f463cd5ef3721be2f60236359072f29db07ea",
+      "frames": 61739
+    },
+    {
+      "file": "open-room-rock/9-0-2.wav.gz",
+      "sha256": "de4683498d52aa328f65a7a2dd29f182e48c86b8aa4baaa6b5cd1f12183bb463",
+      "frames": 61739
+    },
+    {
+      "file": "open-room-rock/9-1-0.wav.gz",
+      "sha256": "aafc408d028e3e5816edae153f2ba1868f24f3254ce223afab1ffe2a8b1ac661",
+      "frames": 61739
+    },
+    {
+      "file": "open-room-rock/9-1-1.wav.gz",
+      "sha256": "310d92ca2188c1dfdeb348cefb6f8b38872be7ac8d24719f1f1ad4be67f214ab",
+      "frames": 61739
+    },
+    {
+      "file": "open-room-rock/9-1-2.wav.gz",
+      "sha256": "c0da65be494058fb04c4037129be99f3d8ce602026c9354da64a88954a05c4af",
+      "frames": 61739
+    },
+    {
+      "file": "open-room-rock/9-2-0.wav.gz",
+      "sha256": "cac4d14765cbf147f849eee1eae22512563eb6ced3ca7d25d3fafd73523865c7",
+      "frames": 61739
+    },
+    {
+      "file": "open-room-rock/9-2-1.wav.gz",
+      "sha256": "d7ba5e4d76f820b3250bbdf3b179e28b75d88bf00bb0c6956aeddc07e90fa1fa",
+      "frames": 61739
+    },
+    {
+      "file": "open-room-rock/9-2-2.wav.gz",
+      "sha256": "26c453973c75e14e8a30ef40232c82a1d752bf7e2e2cb176cb513b6b2d163c94",
+      "frames": 61739
+    },
+    {
+      "file": "open-room-rock/10-0-0.wav.gz",
+      "sha256": "1495bceee26d1b0a91432ed4e089f09a42dc86f3c1a0e2be213921150af7e69f",
+      "frames": 63945
+    },
+    {
+      "file": "open-room-rock/10-0-1.wav.gz",
+      "sha256": "16ca5fe28522c16b6f7e0d4e3dddadca5c2e2bd8ac6ec4485e0dc61d4e1cb033",
+      "frames": 63945
+    },
+    {
+      "file": "open-room-rock/10-0-2.wav.gz",
+      "sha256": "6914504def413f1cfac8ce76f22a6a494b924ddec0f1c73cf9f9379002bfed72",
+      "frames": 63945
+    },
+    {
+      "file": "open-room-rock/10-1-0.wav.gz",
+      "sha256": "60aaac8476056f37633d4d2107877b93b1c0680e367546d7523aee792b8f149a",
+      "frames": 63945
+    },
+    {
+      "file": "open-room-rock/10-1-1.wav.gz",
+      "sha256": "a6ba68e5fc7ad3365aab9b7c072e9afc8aa5c03a34c2494f0e5dbdfc51a30525",
+      "frames": 63945
+    },
+    {
+      "file": "open-room-rock/10-1-2.wav.gz",
+      "sha256": "928c85c6aefa0be32e787fa4b9a1896dd2713663a869376e9c5b2987b6b7fb8f",
+      "frames": 63945
+    },
+    {
+      "file": "open-room-rock/10-2-0.wav.gz",
+      "sha256": "884c63af52b5eeb18ef7549a63a895809b3da577295ad5a190ae6cb4b47e0cf2",
+      "frames": 63945
+    },
+    {
+      "file": "open-room-rock/10-2-1.wav.gz",
+      "sha256": "34c055b18a5519e04beafbed88df36c4350a51d387169f6cc3516b5fad5b90b5",
+      "frames": 63945
+    },
+    {
+      "file": "open-room-rock/10-2-2.wav.gz",
+      "sha256": "a296024be29ad1339a53f117135996fcf171877cc3383eea637a7d751f017b37",
+      "frames": 63945
+    },
+    {
+      "file": "open-room-rock/11-0-0.wav.gz",
+      "sha256": "f674db2ef7fd7e72e9574fc6a0e62d3d4851f21601a122199c99e785196c8171",
+      "frames": 63945
+    },
+    {
+      "file": "open-room-rock/11-0-1.wav.gz",
+      "sha256": "786d2c6bcffd4f8cc93d8f386901cdc3abbfb422bb10f0a60e72be71e5017a73",
+      "frames": 63945
+    },
+    {
+      "file": "open-room-rock/11-0-2.wav.gz",
+      "sha256": "657f5d7b93560fd5971946565d0fc2310321b153f8b24ddca584d248a353cff1",
+      "frames": 63945
+    },
+    {
+      "file": "open-room-rock/11-1-0.wav.gz",
+      "sha256": "f483ea3247aeb0cd37519e9f1b05bc3f0582a9b0d4804b89688c1321ca3e6b90",
+      "frames": 63945
+    },
+    {
+      "file": "open-room-rock/11-1-1.wav.gz",
+      "sha256": "14b9840997388877a64d3c710f95d80fcea9a9b84108a0e42202ebb50eff2328",
+      "frames": 63945
+    },
+    {
+      "file": "open-room-rock/11-1-2.wav.gz",
+      "sha256": "8c251cb6c9379efea72e12e2cf1e1745ebf1fe6d04fbe7ccbf155fc8db1a78f7",
+      "frames": 63945
+    },
+    {
+      "file": "open-room-rock/11-2-0.wav.gz",
+      "sha256": "e2affbdc203dd971d39ab3a39aa09c8c7577affaf97c33785d9101435b7cade2",
+      "frames": 63945
+    },
+    {
+      "file": "open-room-rock/11-2-1.wav.gz",
+      "sha256": "bd824800eb60ad04ae0c0d683c6d1464885dfb86e17081d9cc40585518a9c0f3",
+      "frames": 63945
+    },
+    {
+      "file": "open-room-rock/11-2-2.wav.gz",
+      "sha256": "b244878504511f4961514afbc12398afbb867952a12c856c8e907dc17f489c22",
+      "frames": 63945
+    },
+    {
+      "file": "open-room-rock/12-0-0.wav.gz",
+      "sha256": "64c8a3ebced8f9d857147f8c64ef6068b7381913f752ba0103692b174f167623",
+      "frames": 97020
+    },
+    {
+      "file": "open-room-rock/12-0-1.wav.gz",
+      "sha256": "d3e0a73e1580c365a9ad649c2816a818fd082eec2ca59f8eb68e66dba0ad4f31",
+      "frames": 97020
+    },
+    {
+      "file": "open-room-rock/12-0-2.wav.gz",
+      "sha256": "1b5a89e50a8b477ac9d6c28990e5d020d3a147232fb28d4929cb6b1df4ec525f",
+      "frames": 97020
+    },
+    {
+      "file": "open-room-rock/12-1-0.wav.gz",
+      "sha256": "b7c481bc1929d22ba2bcc20eb147ba3ad723c5d1e09cada6b79695580b403fa2",
+      "frames": 97020
+    },
+    {
+      "file": "open-room-rock/12-1-1.wav.gz",
+      "sha256": "adc78b48152e662c2debfaad3e69deef7181a46da4a7701e2362c257f2ca3ec3",
+      "frames": 97020
+    },
+    {
+      "file": "open-room-rock/12-1-2.wav.gz",
+      "sha256": "606e70f24c95805910515b88ea1e75c2c6e707553f906d8064cdba099996cf42",
+      "frames": 97020
+    },
+    {
+      "file": "open-room-rock/12-2-0.wav.gz",
+      "sha256": "b57fa04136a3236ed4251c87fe3cd9d197fdc56e9fd9cdb256b67b4a9f4574fe",
+      "frames": 97020
+    },
+    {
+      "file": "open-room-rock/12-2-1.wav.gz",
+      "sha256": "e7b3d9537a7a6a095247c3a4db2bc023711cabe0a770edd794472476b6ef4efe",
+      "frames": 97020
+    },
+    {
+      "file": "open-room-rock/12-2-2.wav.gz",
+      "sha256": "a04ea8fb90441751e6d2fafcef85dfbc2c3286f15f058ee0103a9783509f4c42",
+      "frames": 97020
+    },
+    {
+      "file": "open-room-rock/13-0-0.wav.gz",
+      "sha256": "d567bcc16f4d143ed5036163a36c4bf9abed5523b317b69418f62e251724110a",
+      "frames": 35280
+    },
+    {
+      "file": "open-room-rock/13-0-1.wav.gz",
+      "sha256": "ed04fd24cfa2d6f7650d8822405ee00aed6e6ef76b7d958b42186be3e9776d09",
+      "frames": 35280
+    },
+    {
+      "file": "open-room-rock/13-0-2.wav.gz",
+      "sha256": "cf14e3d2aa6b5dbea8181687f10ae0df826fc20a11f172e915f94ec6e1746e88",
+      "frames": 35280
+    },
+    {
+      "file": "open-room-rock/13-1-0.wav.gz",
+      "sha256": "e6f1f79ef5b004c8577b475a22dcbc340ca88e9d4632fe636488437321d1814e",
+      "frames": 35280
+    },
+    {
+      "file": "open-room-rock/13-1-1.wav.gz",
+      "sha256": "5f084c705837f97ed159a182742dce72ca5462a1c9623152f80a9f1570b522b1",
+      "frames": 35280
+    },
+    {
+      "file": "open-room-rock/13-1-2.wav.gz",
+      "sha256": "73d13f80d7551e1ec4cbbf4463f3723382b5bbef521e1bce7835cc717f775c09",
+      "frames": 35280
+    },
+    {
+      "file": "open-room-rock/13-2-0.wav.gz",
+      "sha256": "ab959ded7e9e5149189bddcb5a0a8dda879a4cb95b6b6f45817ab34432cc8163",
+      "frames": 35280
+    },
+    {
+      "file": "open-room-rock/13-2-1.wav.gz",
+      "sha256": "44c456fb9270adc7f8e4e0cd9ce2d533e92ac7886d9fc3b5d7e126a11cebf756",
+      "frames": 35280
+    },
+    {
+      "file": "open-room-rock/13-2-2.wav.gz",
+      "sha256": "09b2cd53af7e92acecbaff40c1a44871c411ba4891327100a947485e3ad77aeb",
+      "frames": 35280
+    },
+    {
+      "file": "open-room-rock/14-0-0.wav.gz",
+      "sha256": "c0450f7b59406a54eae1f1de0379aa2912f6ff8009b8ea516ab2d17eb6b66cc1",
+      "frames": 57330
+    },
+    {
+      "file": "open-room-rock/14-0-1.wav.gz",
+      "sha256": "fe32969cf229f25492be70c569f8319dd57e2dea2715fb5f7c46ecfde835e1b2",
+      "frames": 57330
+    },
+    {
+      "file": "open-room-rock/14-0-2.wav.gz",
+      "sha256": "125c682ea0fedf3be9665be2a01e89886a160cf197403753d88ea4874957b844",
+      "frames": 57330
+    },
+    {
+      "file": "open-room-rock/14-1-0.wav.gz",
+      "sha256": "276f20e113f044107c704353987273e52be6b64cd54151d082bda36333b4b032",
+      "frames": 57330
+    },
+    {
+      "file": "open-room-rock/14-1-1.wav.gz",
+      "sha256": "da786d2eb55e87394e8614ebb7f6ed1b33a297f099f680734a77f0bf12002ed0",
+      "frames": 57330
+    },
+    {
+      "file": "open-room-rock/14-1-2.wav.gz",
+      "sha256": "40032c012a386a8f6c93e676878e4bd8104a67a22aa8c0ef2125afa6e243a350",
+      "frames": 57330
+    },
+    {
+      "file": "open-room-rock/14-2-0.wav.gz",
+      "sha256": "172ee4a9f080536c7592f766875bb32f58419dba57eb6a56c60ccd26c7e7d36a",
+      "frames": 57330
+    },
+    {
+      "file": "open-room-rock/14-2-1.wav.gz",
+      "sha256": "af6e8f7a6e43810e5cbf18a69d23ed27444cd8573a338e362accabb3503e592a",
+      "frames": 57330
+    },
+    {
+      "file": "open-room-rock/14-2-2.wav.gz",
+      "sha256": "74ce06bb3cc686a4551f84f74588399312e715da641db0bac955a8b6c4715621",
+      "frames": 57330
+    },
+    {
+      "file": "open-room-rock/15-0-0.wav.gz",
+      "sha256": "dfed9fdc9b46d5ab4bc07d6c68aee659d1b4c035d5dde29ba92e94a15f75b99c",
+      "frames": 132300
+    },
+    {
+      "file": "open-room-rock/15-0-1.wav.gz",
+      "sha256": "3730464ae9b08871744fd576953e3599203abded469022a57c791074f86b355a",
+      "frames": 132300
+    },
+    {
+      "file": "open-room-rock/15-0-2.wav.gz",
+      "sha256": "47345079ab0d088b95dbe797b9529c1b84abf006f10c9ff483c3bfbfc46334c9",
+      "frames": 132300
+    },
+    {
+      "file": "open-room-rock/15-1-0.wav.gz",
+      "sha256": "991090826e9fbc4c44522cde152a95ce4ecdfbdb8b24ce0b90632fffb2d7abd9",
+      "frames": 132300
+    },
+    {
+      "file": "open-room-rock/15-1-1.wav.gz",
+      "sha256": "78f425abc10a21113b688b804ae0c8972d141941bf1ac5f8b652b00f6b43e63f",
+      "frames": 132300
+    },
+    {
+      "file": "open-room-rock/15-1-2.wav.gz",
+      "sha256": "753421b7d8c13b997e34510b15e0db1a02ab1a345a947f7a1355862152a2c2a9",
+      "frames": 132300
+    },
+    {
+      "file": "open-room-rock/15-2-0.wav.gz",
+      "sha256": "3fed795e4d5ad99e0104ebeed8ae9b627884a108665a140096a47f0516fd7b07",
+      "frames": 132300
+    },
+    {
+      "file": "open-room-rock/15-2-1.wav.gz",
+      "sha256": "137152fd1a9d8fe818d5b7a4156bb8330353edb5b631f42eee250ec6b9a7e18b",
+      "frames": 132300
+    },
+    {
+      "file": "open-room-rock/15-2-2.wav.gz",
+      "sha256": "5e067dce55fe0b1e45b9ed2ae2894dac3bb5ea4da6d958f34929fa5a8273b828",
+      "frames": 132300
+    },
+    {
+      "file": "open-room-rock/16-0-0.wav.gz",
+      "sha256": "c8193d484e79af8dc7c304aae80cc3aea4b8da3513c3ee547766286781835c3e",
+      "frames": 220500
+    },
+    {
+      "file": "open-room-rock/16-0-1.wav.gz",
+      "sha256": "5cb49cdf59935f4f62a9231f6b9e693cdfdb8b12c8189cecfd44222571fd0efb",
+      "frames": 220500
+    },
+    {
+      "file": "open-room-rock/16-0-2.wav.gz",
+      "sha256": "32713c7e7911a63883197a8acebbf9b6d2e4545b5a43a57a222459f614902b26",
+      "frames": 220500
+    },
+    {
+      "file": "open-room-rock/16-1-0.wav.gz",
+      "sha256": "34926bf86809c9c8a96f0c685dde6816893451b351e7a3b378c5d866b3501ed2",
+      "frames": 220500
+    },
+    {
+      "file": "open-room-rock/16-1-1.wav.gz",
+      "sha256": "4bdd0ee1abac241691ec4b08f6b0a2cfd5ef5a19b11b84618c6dd9ac1de3927e",
+      "frames": 220500
+    },
+    {
+      "file": "open-room-rock/16-1-2.wav.gz",
+      "sha256": "150365d766f568752c7b430bad790397b3c6afbec50fa9768375428c96e90854",
+      "frames": 220500
+    },
+    {
+      "file": "open-room-rock/16-2-0.wav.gz",
+      "sha256": "b2d699eeb2c9dce82b38a9d2c64cd6455efc342a0ad3c730d8a8351444b904b8",
+      "frames": 220500
+    },
+    {
+      "file": "open-room-rock/16-2-1.wav.gz",
+      "sha256": "c1363f0b478cd8eb074d11e80b2cf4546c816ed7d0c5205a0ce3270275fc53f1",
+      "frames": 220500
+    },
+    {
+      "file": "open-room-rock/16-2-2.wav.gz",
+      "sha256": "f4c97f432ace194919a39f8e70beca3c257c06d41c47b7beebc0529ed6ae3afa",
+      "frames": 220500
+    }
+  ]
+}
