@@ -1040,7 +1040,7 @@ approved, phone and MPC good, merge".
 - MPC 2: each velocity zone keeps its first take; the round-robin export gate does not apply ([format limit](#mpc-2-and-round-robin-owner-decision-2026-11-14)).
 - Sound: **pass.** The owner heard round 1 as "a bit weak"; round 1b added weight (kicks 1.2 to 2.7 dB and snares 3.2 to 4.7 dB louder at the same peak) and the owner approved it on 2026-11-15. It is the accepted baseline.
 - Phone and MPC hardware: **pass, owner-reported** (2026-11-15: "phone and MPC good"). No device measurement was made by the implementing session.
-- **Overall: every applicable gate passes.** Not gates and not done: factory presets from the accepted pads and a SYNTH picker entry.
+- **Overall: every applicable gate passes.** Not gates: the 42 approved hits are the factory bank and SERVO is on the SYNTH picker (2026-11-16).
 
 ## TIMBER acoustic percussion integration
 
