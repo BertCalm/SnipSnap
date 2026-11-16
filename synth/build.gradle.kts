@@ -3916,3 +3916,13 @@ tasks.register<JavaExec>("auditDrumlineAliases") {
     maxHeapSize = "1g"
     args(providers.gradleProperty("drumlineAliasOutput").orNull ?: "testkit/drumline-alias.csv")
 }
+
+tasks.register<JavaExec>("auditDrumlineEdgeReference") {
+    group = "verification"
+    description = "Compare actual drumline output edges against a spectral-projection reference."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.DrumlineEdgeReference")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "1g"
+    args(providers.gradleProperty("drumlineEdgeOutput").orNull ?: "testkit/drumline-edge-reference.csv")
+}
