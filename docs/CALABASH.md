@@ -1,6 +1,6 @@
 # CALABASH: design brief and round-0 audition
 
-Status: **round 0, a Python prototype (2026-11-15), heard and approved.** Four sixteen-pad drum kits the owner asked
+Status: **complete (2026-11-15): approved by ear in Python and in Kotlin, and on the phone and the MPC.** Four sixteen-pad drum kits the owner asked
 for on 2026-11-15: Afrobeat, Afrobeats, Mbalax and Afro-Cuban jazz, "distinct, versatile", following the acceptance
 gates. The owner chose four kits (Afrobeat and Afrobeats apart) and a round-0 prototype before any Kotlin. On
 2026-11-15 the owner heard the listening page and wrote "Sounds great"; asked whether that was a listen to the page,
@@ -8,8 +8,10 @@ they answered "I listened: approve all": all four kits and every voice. Round 0 
 is the accepted baseline the Kotlin port is judged against. Round 1 (2026-11-15) is that port, `Calabash.kt`, measured
 against the prototype pad by pad (below); round 2 puts the four kits on the shelf with their velocity and
 round-robin grids proved through saving, playback and MPC 3 export. The owner heard the Kotlin kits on 2026-11-15 and
-approved them ("I listened: approve all"). The engine stays in progress until every applicable owner gate has evidence (see "Gates" below and the
-gates entry in [ENGINE_ACCEPTANCE_GATES.md](ENGINE_ACCEPTANCE_GATES.md#calabash-round-2-2026-11-15-four-genre-kits-on-the-shelf-python-and-kotlin-approved-by-ear-hardware-open)).
+approved them ("I listened: approve all"). Rounds 3 and 4 filed the kits as its presets and put it on SYNTH's
+picker, and the owner then approved the phone and the MPC 3 export ("Last checks are good", 2026-11-15): every
+applicable owner gate has its evidence (see "Gates" below and the
+gates entry in [ENGINE_ACCEPTANCE_GATES.md](ENGINE_ACCEPTANCE_GATES.md#calabash-complete-2026-11-15-four-genre-kits-on-the-shelf-approved-by-ear-and-on-phone-and-mpc-3)).
 
 Prototype: [`prototype/calabash/`](../prototype/calabash/) (`calabash_proto.py` is the model, `fitted.py` the fitted
 voices, `kits.py` the four kits and their grooves, `fit_calabash.py` and `hands.json` the fit to CC0 recordings,
@@ -386,7 +388,8 @@ runs the test. Not seen on a phone.
 | Percussion: roll or riser | Authored and heard (2026-11-15): a roll or riser on every kit's A16 (shekere rush, talking call, sabar roll, abanico). On the shelf in Kotlin (round 2), heard and approved (2026-11-15). |
 | Drums: several genre kits on the shelf | On the shelf (round 2): four FRESH TAPE starters under SKINS, distinct in instruments, strokes, tuning, room, era, swing and tempo (`CalabashKitsTest`). Heard and approved in Python and in Kotlin (2026-11-15). |
 | Velocity and round robin, rendering | Verified in Kotlin (rounds 1 and 2): every zone a different strike, four different takes, equally loud. |
-| Velocity and round robin, saving, playback, export | Verified in software (round 2): every pad of all four kits through save, reload, `PadHit.resolve` and MPC 3 export, read back. MPC 2: not applicable (the owner's format limit). Phone and MPC hardware open. |
+| Velocity and round robin, saving, playback, export | Verified in software (round 2): every pad of all four kits through save, reload, `PadHit.resolve` and MPC 3 export, read back. MPC 2: not applicable (the owner's format limit). Phone and MPC 3 on the MPC: approved by the owner (2026-11-15, "Last checks are good"; no device measurement). |
+| Phone and MPC | Approved by the owner (2026-11-15): asked to load a kit on the phone, play soft, hard and repeated hits, try the SYNTH picker and a preset, and to load an MPC 3 export on the MPC and play the same, the owner answered "Last checks are good". |
 | Sound character | Approved at round 0 (2026-11-15: "Sounds great", "I listened: approve all") and again in Kotlin at round 2 (2026-11-15: "Sounds good", "I listened: approve all"). Listens to the pages, not a phone or MPC. |
 
 ## Render budget
@@ -422,7 +425,8 @@ rolls and cymbals belong in the pad's render cache, keyed by their macros, as BR
 - **Round 1: done (2026-11-15).** The Kotlin port, above.
 - **Round 2: done (2026-11-15), heard and approved.** The kits on the shelf, above.
 - **Round 3: done (2026-11-15).** The roster, above.
-- **Round 4: done (2026-11-15).** The picker, above. Next: the owner's phone and MPC.
+- **Round 4: done (2026-11-15).** The picker, above.
+- **Hardware: approved (2026-11-15).** The owner's phone and MPC checks: "Last checks are good". CALABASH is complete.
 
 ## Why it is built this way
 

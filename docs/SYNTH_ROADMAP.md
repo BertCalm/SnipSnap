@@ -3774,6 +3774,13 @@ factory path keeps a preset's velocity, take and model; a frozen draft keeps the
 in `EngineCatalog`; 91 picker engines. An on-device test in `NewEngineSynthScreenTest` loads AFROBEAT CONGA OPEN and
 keeps an edit with its take and model; CI compiles and runs it (no SDK here). See [CALABASH](CALABASH.md).
 
+### CALABASH, complete (2026-11-15)
+
+The owner's phone and MPC checks: asked to load a CALABASH kit from FRESH TAPE and play soft, hard and repeated hits,
+try CALABASH in the SYNTH picker with a preset, and load an MPC 3 export on the MPC, the owner answered "Last checks
+are good". Every applicable gate has its evidence; MPC 2 is not applicable (the owner's format limit). See
+[CALABASH](CALABASH.md) and the gates entry.
+
 ### SERVO, rounds 0 and 1 (2026-11-15)
 
 Machine drums on a weak power rail for electro, ghetto tech and neurofunk: every hit sags one supply a few
