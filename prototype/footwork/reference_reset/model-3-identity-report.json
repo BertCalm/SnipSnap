@@ -1,0 +1,47 @@
+{
+  "2": {
+    "unchanged": false,
+    "peak": 0.3444575071334839,
+    "rms": 0.021399396827270482
+  },
+  "3": {
+    "unchanged": true,
+    "peak": 0.5134812593460083,
+    "rms": 0.05470308926598588
+  },
+  "9": {
+    "unchanged": false,
+    "peak": 0.5467654466629028,
+    "rms": 0.0224835833050397
+  },
+  "10": {
+    "unchanged": false,
+    "peak": 0.37396442890167236,
+    "rms": 0.020863060012277963
+  },
+  "11": {
+    "unchanged": false,
+    "peak": 0.3681519031524658,
+    "rms": 0.02754623128852858
+  },
+  "12": {
+    "unchanged": false,
+    "peak": 0.35731709003448486,
+    "rms": 0.017202889620628298
+  },
+  "13": {
+    "unchanged": false,
+    "peak": 0.27090632915496826,
+    "rms": 0.04027534631049149
+  },
+  "16": {
+    "unchanged": false,
+    "peak": 0.4027191400527954,
+    "rms": 0.02387020693818849
+  },
+  "heelToeCorrelation": 0.07929310085989089,
+  "scope": "Tap Jazz full-velocity take 0, saved native playback WAV",
+  "listening": "pending",
+  "sourceTests": "4 FootworkTest tests passed; retained 108-cell Tap Jazz single-gesture grid byte-identical to model 2",
+  "mpc3RoundRobin": "open_missing_slice_map"
+}

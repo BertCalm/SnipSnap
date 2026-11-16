@@ -1,0 +1,147 @@
+{
+  "scope": "Python study, 5 roles x 3 velocity levels x 4 takes; no native/save/export claim",
+  "sourceCommit": "4ac9d8966679c648b62fa10a188179e186b97f24",
+  "roles": {
+    "1": {
+      "name": "Stamp",
+      "training": [
+        "stomp_l_vl1_rr1.wav",
+        "stomp_l_vl1_rr2.wav",
+        "stomp_l_vl1_rr3.wav",
+        "stomp_l_vl2_rr1.wav",
+        "stomp_l_vl2_rr2.wav",
+        "stomp_l_vl2_rr3.wav"
+      ],
+      "holdout": [
+        "stomp_l_vl1_rr4.wav",
+        "stomp_l_vl2_rr4.wav"
+      ],
+      "reference": {
+        "peak": 0.6493001615490601,
+        "rms": 0.09648097775011832,
+        "centroidHz": 451.0181983355611,
+        "t90ms": 134.10430839002268
+      },
+      "candidate": {
+        "peak": 0.6462738854602557,
+        "rms": 0.0964809777501183,
+        "centroidHz": 810.311131131459,
+        "t90ms": 137.07482993197277
+      },
+      "cellsPassed": 12
+    },
+    "2": {
+      "name": "Heel",
+      "training": [
+        "heel_l_vl1_rr1.wav",
+        "heel_l_vl1_rr2.wav",
+        "heel_l_vl1_rr3.wav",
+        "heel_l_vl2_rr1.wav",
+        "heel_l_vl2_rr2.wav",
+        "heel_l_vl2_rr3.wav"
+      ],
+      "holdout": [
+        "heel_l_vl1_rr4.wav",
+        "heel_l_vl2_rr4.wav"
+      ],
+      "reference": {
+        "peak": 0.5374115988991853,
+        "rms": 0.11599432801170281,
+        "centroidHz": 264.02731984012854,
+        "t90ms": 186.25850340136054
+      },
+      "candidate": {
+        "peak": 0.6500000000000001,
+        "rms": 0.1159943280117028,
+        "centroidHz": 364.22954991929726,
+        "t90ms": 192.01814058956916
+      },
+      "cellsPassed": 12
+    },
+    "9": {
+      "name": "Hand clap",
+      "training": [
+        "handclap_vl1_rr1.wav",
+        "handclap_vl1_rr2.wav",
+        "handclap_vl1_rr3.wav",
+        "handclap_vl2_rr1.wav",
+        "handclap_vl2_rr2.wav",
+        "handclap_vl2_rr3.wav"
+      ],
+      "holdout": [
+        "handclap_vl1_rr4.wav",
+        "handclap_vl2_rr4.wav"
+      ],
+      "reference": {
+        "peak": 0.8914900491147018,
+        "rms": 0.04551241843152494,
+        "centroidHz": 2807.081158450651,
+        "t90ms": 98.39002267573696
+      },
+      "candidate": {
+        "peak": 0.5739653105851485,
+        "rms": 0.04551241843152493,
+        "centroidHz": 2683.782753542819,
+        "t90ms": 107.57369614512471
+      },
+      "cellsPassed": 12
+    },
+    "11": {
+      "name": "Chest thump",
+      "training": [
+        "chestthump_l_vl1_rr1.wav",
+        "chestthump_l_vl1_rr2.wav",
+        "chestthump_l_vl1_rr3.wav",
+        "chestthump_l_vl2_rr1.wav",
+        "chestthump_l_vl2_rr2.wav",
+        "chestthump_l_vl2_rr3.wav"
+      ],
+      "holdout": [
+        "chestthump_l_vl1_rr4.wav",
+        "chestthump_l_vl2_rr4.wav"
+      ],
+      "reference": {
+        "peak": 0.9010896488271414,
+        "rms": 0.044641992137880185,
+        "centroidHz": 3013.226100434304,
+        "t90ms": 89.50113378684807
+      },
+      "candidate": {
+        "peak": 0.49843556884747847,
+        "rms": 0.04464199213788017,
+        "centroidHz": 2077.1115277047597,
+        "t90ms": 89.9092970521542
+      },
+      "cellsPassed": 12
+    },
+    "12": {
+      "name": "Finger snap",
+      "training": [
+        "snap_l_rr1.wav",
+        "snap_l_rr2.wav",
+        "snap_l_rr3.wav"
+      ],
+      "holdout": [
+        "snap_l_rr4.wav"
+      ],
+      "reference": {
+        "peak": 0.8714548826452838,
+        "rms": 0.03077877052165246,
+        "centroidHz": 3678.5727320968986,
+        "t90ms": 86.73469387755102
+      },
+      "candidate": {
+        "peak": 0.34139840426359874,
+        "rms": 0.03077877052165246,
+        "centroidHz": 3644.734570272339,
+        "t90ms": 97.12018140589569
+      },
+      "cellsPassed": 12
+    }
+  },
+  "unresolved": [
+    10,
+    13,
+    16
+  ]
+}

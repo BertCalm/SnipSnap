@@ -1,0 +1,434 @@
+[
+  {
+    "voice": "deep-kick",
+    "zone": 0,
+    "training_take": 0,
+    "path": "/workspace/east-africa-drum-study-r1/audio/bongo-flava/01-deep-kick-v1-r1.wav",
+    "sha256": "06e0bb587246779f46d415f85400acef539542d0b2b0b118949d975f536f01bf",
+    "holdout": "/workspace/east-africa-drum-study-r1/audio/bongo-flava/01-deep-kick-v1-r2.wav"
+  },
+  {
+    "voice": "deep-kick",
+    "zone": 1,
+    "training_take": 0,
+    "path": "/workspace/east-africa-drum-study-r1/audio/bongo-flava/01-deep-kick-v2-r1.wav",
+    "sha256": "b67e649654856a1d9ea5a65fa4ea04eb768ef75d0a5545af845d14d3e0ff771f",
+    "holdout": "/workspace/east-africa-drum-study-r1/audio/bongo-flava/01-deep-kick-v2-r2.wav"
+  },
+  {
+    "voice": "deep-kick",
+    "zone": 2,
+    "training_take": 0,
+    "path": "/workspace/east-africa-drum-study-r1/audio/bongo-flava/01-deep-kick-v3-r1.wav",
+    "sha256": "ccba68cd3a2640b9ba8113180628cd3a8aa523fb141f73bfe3a15e707594ab07",
+    "holdout": "/workspace/east-africa-drum-study-r1/audio/bongo-flava/01-deep-kick-v3-r2.wav"
+  },
+  {
+    "voice": "tight-kick",
+    "zone": 0,
+    "training_take": 0,
+    "path": "/workspace/east-africa-drum-study-r1/audio/bongo-flava/02-tight-kick-v1-r1.wav",
+    "sha256": "90c14f7a0654ccfe24506e1e31e7329f5c9a51c978dd7e0d3946fa326d6f6908",
+    "holdout": "/workspace/east-africa-drum-study-r1/audio/bongo-flava/02-tight-kick-v1-r2.wav"
+  },
+  {
+    "voice": "tight-kick",
+    "zone": 1,
+    "training_take": 0,
+    "path": "/workspace/east-africa-drum-study-r1/audio/bongo-flava/02-tight-kick-v2-r1.wav",
+    "sha256": "2ee6bcc62e2ae5198d1325713bf410fe665943e81a4fcfda220299d70f9679c2",
+    "holdout": "/workspace/east-africa-drum-study-r1/audio/bongo-flava/02-tight-kick-v2-r2.wav"
+  },
+  {
+    "voice": "tight-kick",
+    "zone": 2,
+    "training_take": 0,
+    "path": "/workspace/east-africa-drum-study-r1/audio/bongo-flava/02-tight-kick-v3-r1.wav",
+    "sha256": "419a26185d98e9b977ded4e37b3a47adaf47dae48d0333cde1400f13d98513d3",
+    "holdout": "/workspace/east-africa-drum-study-r1/audio/bongo-flava/02-tight-kick-v3-r2.wav"
+  },
+  {
+    "voice": "snare",
+    "zone": 0,
+    "training_take": 0,
+    "path": "/workspace/east-africa-drum-study-r1/audio/bongo-flava/03-snare-v1-r1.wav",
+    "sha256": "cf94f573ff13d9c480642813c76c3bccc35615ea132f695b8928181ff65c6292",
+    "holdout": "/workspace/east-africa-drum-study-r1/audio/bongo-flava/03-snare-v1-r2.wav"
+  },
+  {
+    "voice": "snare",
+    "zone": 1,
+    "training_take": 0,
+    "path": "/workspace/east-africa-drum-study-r1/audio/bongo-flava/03-snare-v2-r1.wav",
+    "sha256": "525a51e6cbce74b8a94c320e3e1e110ff2fb2d1ef8efe2e0a13a8b23148cb28c",
+    "holdout": "/workspace/east-africa-drum-study-r1/audio/bongo-flava/03-snare-v2-r2.wav"
+  },
+  {
+    "voice": "snare",
+    "zone": 2,
+    "training_take": 0,
+    "path": "/workspace/east-africa-drum-study-r1/audio/bongo-flava/03-snare-v3-r1.wav",
+    "sha256": "4e89d373f808a745cfbd0b0b254a2615540ce5db135856c83dd50d2aeea2022c",
+    "holdout": "/workspace/east-africa-drum-study-r1/audio/bongo-flava/03-snare-v3-r2.wav"
+  },
+  {
+    "voice": "rimshot",
+    "zone": 0,
+    "training_take": 0,
+    "path": "/workspace/east-africa-drum-study-r1/audio/bongo-flava/04-rimshot-v1-r1.wav",
+    "sha256": "b51b52450e262cd607e105948c9d88e8bde0e46f6a09ca436cc36466cc1ca353",
+    "holdout": "/workspace/east-africa-drum-study-r1/audio/bongo-flava/04-rimshot-v1-r2.wav"
+  },
+  {
+    "voice": "rimshot",
+    "zone": 1,
+    "training_take": 0,
+    "path": "/workspace/east-africa-drum-study-r1/audio/bongo-flava/04-rimshot-v2-r1.wav",
+    "sha256": "1d33a575e4b55c50994dbaeaa3f440e52bb5bec87e214db9187c37bfaa72ed04",
+    "holdout": "/workspace/east-africa-drum-study-r1/audio/bongo-flava/04-rimshot-v2-r2.wav"
+  },
+  {
+    "voice": "rimshot",
+    "zone": 2,
+    "training_take": 0,
+    "path": "/workspace/east-africa-drum-study-r1/audio/bongo-flava/04-rimshot-v3-r1.wav",
+    "sha256": "c48cc56bcc499802d593e1bb89e99acee8db82b179e87c7a97d2d4a1f31366db",
+    "holdout": "/workspace/east-africa-drum-study-r1/audio/bongo-flava/04-rimshot-v3-r2.wav"
+  },
+  {
+    "voice": "rim",
+    "zone": 0,
+    "training_take": 0,
+    "path": "/workspace/east-africa-drum-study-r1/audio/bongo-flava/05-rim-v1-r1.wav",
+    "sha256": "9c8ea2d01b4dd8c686d9580d8fa1d90dbbf04b3109e2b518d0354b4ec36bb61c",
+    "holdout": "/workspace/east-africa-drum-study-r1/audio/bongo-flava/05-rim-v1-r2.wav"
+  },
+  {
+    "voice": "rim",
+    "zone": 1,
+    "training_take": 0,
+    "path": "/workspace/east-africa-drum-study-r1/audio/bongo-flava/05-rim-v2-r1.wav",
+    "sha256": "72920a067f2aa7d00a3eb542a96b29dacb8f6acdf51cac4611400c3b98a9e99d",
+    "holdout": "/workspace/east-africa-drum-study-r1/audio/bongo-flava/05-rim-v2-r2.wav"
+  },
+  {
+    "voice": "rim",
+    "zone": 2,
+    "training_take": 0,
+    "path": "/workspace/east-africa-drum-study-r1/audio/bongo-flava/05-rim-v3-r1.wav",
+    "sha256": "613425e97c64c4bd3172e1dd9f32b715bdfcbaab553ef9e65af44ed2165bd574",
+    "holdout": "/workspace/east-africa-drum-study-r1/audio/bongo-flava/05-rim-v3-r2.wav"
+  },
+  {
+    "voice": "closed-hat",
+    "zone": 0,
+    "training_take": 0,
+    "path": "/workspace/east-africa-drum-study-r1/audio/bongo-flava/06-closed-hat-v1-r1.wav",
+    "sha256": "09ee127a84e2db8e3e9499829c4c9f3678b2b414f660524287a87785914944e4",
+    "holdout": "/workspace/east-africa-drum-study-r1/audio/bongo-flava/06-closed-hat-v1-r2.wav"
+  },
+  {
+    "voice": "closed-hat",
+    "zone": 1,
+    "training_take": 0,
+    "path": "/workspace/east-africa-drum-study-r1/audio/bongo-flava/06-closed-hat-v2-r1.wav",
+    "sha256": "c8c4de2fb2a488619c0f0365d5d253c4f20a3c1634068d0fe656b5cbf0badb63",
+    "holdout": "/workspace/east-africa-drum-study-r1/audio/bongo-flava/06-closed-hat-v2-r2.wav"
+  },
+  {
+    "voice": "closed-hat",
+    "zone": 2,
+    "training_take": 0,
+    "path": "/workspace/east-africa-drum-study-r1/audio/bongo-flava/06-closed-hat-v3-r1.wav",
+    "sha256": "f21fb003c7fd61d4cb54ee04efd15016a0d65fff096db2b676a224d2e993f8b2",
+    "holdout": "/workspace/east-africa-drum-study-r1/audio/bongo-flava/06-closed-hat-v3-r2.wav"
+  },
+  {
+    "voice": "open-hat",
+    "zone": 0,
+    "training_take": 0,
+    "path": "/workspace/east-africa-drum-study-r1/audio/bongo-flava/07-open-hat-v1-r1.wav",
+    "sha256": "fad6d8c62198bcbb3b016f3b5bfa08a28c74c656a5517359e04080f170b778a5",
+    "holdout": "/workspace/east-africa-drum-study-r1/audio/bongo-flava/07-open-hat-v1-r2.wav"
+  },
+  {
+    "voice": "open-hat",
+    "zone": 1,
+    "training_take": 0,
+    "path": "/workspace/east-africa-drum-study-r1/audio/bongo-flava/07-open-hat-v2-r1.wav",
+    "sha256": "322df9a68b76d7a68a589be7b41411b7b9c172abb582a4b4760ba92c36717c67",
+    "holdout": "/workspace/east-africa-drum-study-r1/audio/bongo-flava/07-open-hat-v2-r2.wav"
+  },
+  {
+    "voice": "open-hat",
+    "zone": 2,
+    "training_take": 0,
+    "path": "/workspace/east-africa-drum-study-r1/audio/bongo-flava/07-open-hat-v3-r1.wav",
+    "sha256": "8cc671a34832a2febe2bb95613b73e62dcb5bb6925f37565dc8092efb4fb8457",
+    "holdout": "/workspace/east-africa-drum-study-r1/audio/bongo-flava/07-open-hat-v3-r2.wav"
+  },
+  {
+    "voice": "shaker",
+    "zone": 0,
+    "training_take": 0,
+    "path": "/workspace/east-africa-drum-study-r1/audio/bongo-flava/08-shaker-v1-r1.wav",
+    "sha256": "df963a46a5b80da15b1083125120bdb226bc483e831593fc1f88a4ab3840ad17",
+    "holdout": "/workspace/east-africa-drum-study-r1/audio/bongo-flava/08-shaker-v1-r2.wav"
+  },
+  {
+    "voice": "shaker",
+    "zone": 1,
+    "training_take": 0,
+    "path": "/workspace/east-africa-drum-study-r1/audio/bongo-flava/08-shaker-v2-r1.wav",
+    "sha256": "c3b6fadc3d486c6a7f955bdd818ddf24ed886039a512f6115d7081068b2eeb10",
+    "holdout": "/workspace/east-africa-drum-study-r1/audio/bongo-flava/08-shaker-v2-r2.wav"
+  },
+  {
+    "voice": "shaker",
+    "zone": 2,
+    "training_take": 0,
+    "path": "/workspace/east-africa-drum-study-r1/audio/bongo-flava/08-shaker-v3-r1.wav",
+    "sha256": "f9573f93cc02dae7d73fadd483d211420369293c857bff6a304d71563743f2cd",
+    "holdout": "/workspace/east-africa-drum-study-r1/audio/bongo-flava/08-shaker-v3-r2.wav"
+  },
+  {
+    "voice": "low-bongo",
+    "zone": 0,
+    "training_take": 0,
+    "path": "/workspace/east-africa-drum-study-r1/audio/bongo-flava/09-low-bongo-v1-r1.wav",
+    "sha256": "770216d78b043b0da1e188e9a8372d9f54645102f905a0e52a7d6112b77aa8c8",
+    "holdout": "/workspace/east-africa-drum-study-r1/audio/bongo-flava/09-low-bongo-v1-r2.wav"
+  },
+  {
+    "voice": "low-bongo",
+    "zone": 1,
+    "training_take": 0,
+    "path": "/workspace/east-africa-drum-study-r1/audio/bongo-flava/09-low-bongo-v2-r1.wav",
+    "sha256": "0c2cdd719e98c699c9556fe3331693ee6375fecdd7658be7aa37b4460e90d2b0",
+    "holdout": "/workspace/east-africa-drum-study-r1/audio/bongo-flava/09-low-bongo-v2-r2.wav"
+  },
+  {
+    "voice": "low-bongo",
+    "zone": 2,
+    "training_take": 0,
+    "path": "/workspace/east-africa-drum-study-r1/audio/bongo-flava/09-low-bongo-v3-r1.wav",
+    "sha256": "4782e760058ce1abd6997f341f8bc16b5f167f74d974e966f6484e8d58eaec97",
+    "holdout": "/workspace/east-africa-drum-study-r1/audio/bongo-flava/09-low-bongo-v3-r2.wav"
+  },
+  {
+    "voice": "high-bongo",
+    "zone": 0,
+    "training_take": 0,
+    "path": "/workspace/east-africa-drum-study-r1/audio/bongo-flava/10-high-bongo-v1-r1.wav",
+    "sha256": "92dd31f98e5373cea645e4cddd3754a6e0c945fea1a06aa64f1163fe22328da0",
+    "holdout": "/workspace/east-africa-drum-study-r1/audio/bongo-flava/10-high-bongo-v1-r2.wav"
+  },
+  {
+    "voice": "high-bongo",
+    "zone": 1,
+    "training_take": 0,
+    "path": "/workspace/east-africa-drum-study-r1/audio/bongo-flava/10-high-bongo-v2-r1.wav",
+    "sha256": "1adde51512b47475e78aa3f0cb1e6c1774bc132ebc3e4d596a4c1dd03721a10e",
+    "holdout": "/workspace/east-africa-drum-study-r1/audio/bongo-flava/10-high-bongo-v2-r2.wav"
+  },
+  {
+    "voice": "high-bongo",
+    "zone": 2,
+    "training_take": 0,
+    "path": "/workspace/east-africa-drum-study-r1/audio/bongo-flava/10-high-bongo-v3-r1.wav",
+    "sha256": "1c06f9a427ced8ad58a5339431d39916ed2f4bfb0da3d90c2fe12f8e75a82199",
+    "holdout": "/workspace/east-africa-drum-study-r1/audio/bongo-flava/10-high-bongo-v3-r2.wav"
+  },
+  {
+    "voice": "conga",
+    "zone": 0,
+    "training_take": 0,
+    "path": "/workspace/east-africa-drum-study-r1/audio/bongo-flava/11-conga-v1-r1.wav",
+    "sha256": "96715660cd235079ba322754e07ef34c2093331f51cb14668a199f98534df255",
+    "holdout": "/workspace/east-africa-drum-study-r1/audio/bongo-flava/11-conga-v1-r2.wav"
+  },
+  {
+    "voice": "conga",
+    "zone": 1,
+    "training_take": 0,
+    "path": "/workspace/east-africa-drum-study-r1/audio/bongo-flava/11-conga-v2-r1.wav",
+    "sha256": "8fedb8e121049b84a5fd731d94fa04b944d4b57157fb301573bb8cd9c950b8e7",
+    "holdout": "/workspace/east-africa-drum-study-r1/audio/bongo-flava/11-conga-v2-r2.wav"
+  },
+  {
+    "voice": "conga",
+    "zone": 2,
+    "training_take": 0,
+    "path": "/workspace/east-africa-drum-study-r1/audio/bongo-flava/11-conga-v3-r1.wav",
+    "sha256": "fca48cbd2adfb2c926a48669428aa6ffae2e95c5bf32c15bff5bc018e64c2ccb",
+    "holdout": "/workspace/east-africa-drum-study-r1/audio/bongo-flava/11-conga-v3-r2.wav"
+  },
+  {
+    "voice": "bell",
+    "zone": 0,
+    "training_take": 0,
+    "path": "/workspace/east-africa-drum-study-r1/audio/bongo-flava/12-bell-v1-r1.wav",
+    "sha256": "4379a9e6f6836726079deac957b6791c29c9287dd933a90199ee00997e4215ed",
+    "holdout": "/workspace/east-africa-drum-study-r1/audio/bongo-flava/12-bell-v1-r2.wav"
+  },
+  {
+    "voice": "bell",
+    "zone": 1,
+    "training_take": 0,
+    "path": "/workspace/east-africa-drum-study-r1/audio/bongo-flava/12-bell-v2-r1.wav",
+    "sha256": "3d46164c9126341c0a21dd78afd84ac3600dda31d4da663c7d0566f539e68b6e",
+    "holdout": "/workspace/east-africa-drum-study-r1/audio/bongo-flava/12-bell-v2-r2.wav"
+  },
+  {
+    "voice": "bell",
+    "zone": 2,
+    "training_take": 0,
+    "path": "/workspace/east-africa-drum-study-r1/audio/bongo-flava/12-bell-v3-r1.wav",
+    "sha256": "b11ddb11d2f70201fc040073c9e23b1a08add4839da929016c36aba7365ec625",
+    "holdout": "/workspace/east-africa-drum-study-r1/audio/bongo-flava/12-bell-v3-r2.wav"
+  },
+  {
+    "voice": "muted-tap",
+    "zone": 0,
+    "training_take": 0,
+    "path": "/workspace/east-africa-color/audio/palette/muted-tap-v1-r1.wav",
+    "sha256": "3a074b7f3d3673a9d7d4229e99fcebb5930598b4cc5bea751dc8f5c78285d9dd",
+    "holdout": "/workspace/east-africa-color/audio/palette/muted-tap-v1-r2.wav"
+  },
+  {
+    "voice": "muted-tap",
+    "zone": 1,
+    "training_take": 0,
+    "path": "/workspace/east-africa-color/audio/palette/muted-tap-v2-r1.wav",
+    "sha256": "ef7b31cede07f7bfc2d9a410b853559f6267db478d7fae1406995b0c25eb7c8e",
+    "holdout": "/workspace/east-africa-color/audio/palette/muted-tap-v2-r2.wav"
+  },
+  {
+    "voice": "muted-tap",
+    "zone": 2,
+    "training_take": 0,
+    "path": "/workspace/east-africa-color/audio/palette/muted-tap-v3-r1.wav",
+    "sha256": "1cf6463482bbf91d800ec54201af4f8de3290c39a354efb55c208b75f4fdc0aa",
+    "holdout": "/workspace/east-africa-color/audio/palette/muted-tap-v3-r2.wav"
+  },
+  {
+    "voice": "open-conga",
+    "zone": 0,
+    "training_take": 0,
+    "path": "/workspace/east-africa-color/audio/palette/open-conga-v1-r1.wav",
+    "sha256": "8c2533bed28220a8e1592ce6318dc9b59654cd0cb9c3c158a8e8f8cc45539d82",
+    "holdout": "/workspace/east-africa-color/audio/palette/open-conga-v1-r2.wav"
+  },
+  {
+    "voice": "open-conga",
+    "zone": 1,
+    "training_take": 0,
+    "path": "/workspace/east-africa-color/audio/palette/open-conga-v2-r1.wav",
+    "sha256": "46c0c97b45bdd164f86381b4b0f18883ffd2f1501a82ea08f27fc7bef78b716a",
+    "holdout": "/workspace/east-africa-color/audio/palette/open-conga-v2-r2.wav"
+  },
+  {
+    "voice": "open-conga",
+    "zone": 2,
+    "training_take": 0,
+    "path": "/workspace/east-africa-color/audio/palette/open-conga-v3-r1.wav",
+    "sha256": "08a3110435bd2efec5c58d90e2245041e79784a036d6ea5533e528647999315f",
+    "holdout": "/workspace/east-africa-color/audio/palette/open-conga-v3-r2.wav"
+  },
+  {
+    "voice": "clave",
+    "zone": 0,
+    "training_take": 0,
+    "path": "/workspace/east-africa-color/audio/palette/clave-v1-r1.wav",
+    "sha256": "11496b7d5b85e2fd56a79e13e3703836b261c51ce0f0c9d1e4c2add8f0ac98b1",
+    "holdout": "/workspace/east-africa-color/audio/palette/clave-v1-r2.wav"
+  },
+  {
+    "voice": "clave",
+    "zone": 1,
+    "training_take": 0,
+    "path": "/workspace/east-africa-color/audio/palette/clave-v2-r1.wav",
+    "sha256": "0537cbce3a1ab9b4818d5728b2812dd4aaccfa7b18e748b3e22ff7448c32af58",
+    "holdout": "/workspace/east-africa-color/audio/palette/clave-v2-r2.wav"
+  },
+  {
+    "voice": "clave",
+    "zone": 2,
+    "training_take": 0,
+    "path": "/workspace/east-africa-color/audio/palette/clave-v3-r1.wav",
+    "sha256": "048b7b80297cf07848456756b4739eee962e64aecc8f68a438a1d86f0e95d048",
+    "holdout": "/workspace/east-africa-color/audio/palette/clave-v3-r2.wav"
+  },
+  {
+    "voice": "wood-knock",
+    "zone": 0,
+    "training_take": 0,
+    "path": "/workspace/east-africa-color/audio/palette/wood-knock-v1-r1.wav",
+    "sha256": "ecebfd32456527e3f6a125ef822323bab8589afe8e487df7da6dc42666acf7db",
+    "holdout": "/workspace/east-africa-color/audio/palette/wood-knock-v1-r2.wav"
+  },
+  {
+    "voice": "wood-knock",
+    "zone": 1,
+    "training_take": 0,
+    "path": "/workspace/east-africa-color/audio/palette/wood-knock-v2-r1.wav",
+    "sha256": "1da91869a6f1849ba1c1a0a22692423aa8b6f97b7e5ca7a0e6f17487581a3b8c",
+    "holdout": "/workspace/east-africa-color/audio/palette/wood-knock-v2-r2.wav"
+  },
+  {
+    "voice": "wood-knock",
+    "zone": 2,
+    "training_take": 0,
+    "path": "/workspace/east-africa-color/audio/palette/wood-knock-v3-r1.wav",
+    "sha256": "dcfa9d2d68145b6b37e61acdb858fbafae9e40eae47ff4c5396212eca45c8650",
+    "holdout": "/workspace/east-africa-color/audio/palette/wood-knock-v3-r2.wav"
+  },
+  {
+    "voice": "metal-low",
+    "zone": 0,
+    "training_take": 0,
+    "path": "/workspace/east-africa-color/audio/palette/metal-low-v1-r1.wav",
+    "sha256": "1d0dca0de109b83c9fd5b2731186430c0be3be02e4f092d774ba036a2bae0352",
+    "holdout": "/workspace/east-africa-color/audio/palette/metal-low-v1-r2.wav"
+  },
+  {
+    "voice": "metal-low",
+    "zone": 1,
+    "training_take": 0,
+    "path": "/workspace/east-africa-color/audio/palette/metal-low-v2-r1.wav",
+    "sha256": "daf76dd2bc086833deced1688244f709346dcf01fe277815720bc55034055606",
+    "holdout": "/workspace/east-africa-color/audio/palette/metal-low-v2-r2.wav"
+  },
+  {
+    "voice": "metal-low",
+    "zone": 2,
+    "training_take": 0,
+    "path": "/workspace/east-africa-color/audio/palette/metal-low-v3-r1.wav",
+    "sha256": "c1ef53cacb4f273dec60a27c0b8cd88dd91ae7b8ec3e9ef0deed04e1cbf07b80",
+    "holdout": "/workspace/east-africa-color/audio/palette/metal-low-v3-r2.wav"
+  },
+  {
+    "voice": "metal-high",
+    "zone": 0,
+    "training_take": 0,
+    "path": "/workspace/east-africa-color/audio/palette/metal-high-v1-r1.wav",
+    "sha256": "844f018aadd5714a7993f68f3f3dcc184d298206778c910f9b957ccb4ad2df32",
+    "holdout": "/workspace/east-africa-color/audio/palette/metal-high-v1-r2.wav"
+  },
+  {
+    "voice": "metal-high",
+    "zone": 1,
+    "training_take": 0,
+    "path": "/workspace/east-africa-color/audio/palette/metal-high-v2-r1.wav",
+    "sha256": "988d1d90bb2caca317ebb36f77bc359ab82eb6ea4523c5bacd9babd7dc21be85",
+    "holdout": "/workspace/east-africa-color/audio/palette/metal-high-v2-r2.wav"
+  },
+  {
+    "voice": "metal-high",
+    "zone": 2,
+    "training_take": 0,
+    "path": "/workspace/east-africa-color/audio/palette/metal-high-v3-r1.wav",
+    "sha256": "e940645ab0ffe00d194b3146e704494b55952030a4800d81e1081f58275672fe",
+    "holdout": "/workspace/east-africa-color/audio/palette/metal-high-v3-r2.wav"
+  }
+]
