@@ -703,6 +703,12 @@ object StarterKits {
             "Short synthetic drums, bright wires and metallic accents. Three touch zones and three takes; B01 roll and B02 riser.",
             seeded = false, tempoBpm = 130f,
         ) { com.snipsnap.synth.SporeStation.performance(com.snipsnap.synth.SporeStation.Genre.ELECTRO) },
+        Starter("cuttings-pocket", "CUTTINGS POCKET FINDS", "Boom-bap collage with bass catches, borrowed rooms and sampler grain. Three layers, four takes; 1/2/4-bar fills.",
+            seeded = false, tempoBpm = 89f) { com.snipsnap.synth.CuttingsKits.build(com.snipsnap.synth.CuttingsKits.Genre.POCKET) },
+        Starter("cuttings-night", "CUTTINGS NIGHT FRAGMENTS", "Trip-hop felt kicks, brush backbeats and hand percussion. Three layers, four takes; 1/2/4-bar fills.",
+            seeded = false, tempoBpm = 76f) { com.snipsnap.synth.CuttingsKits.build(com.snipsnap.synth.CuttingsKits.Genre.NIGHT) },
+        Starter("cuttings-circuit", "CUTTINGS CUT CIRCUIT", "Big-beat clap backbeats, alternating kicks and abrupt metal cuts. Three layers, four takes; 1/2/4-bar fills.",
+            seeded = false, tempoBpm = 124f) { com.snipsnap.synth.CuttingsKits.build(com.snipsnap.synth.CuttingsKits.Genre.CIRCUIT) },
         Starter(
             "cosmic-breaks", "COSMIC BREAKS",
             "Sixteen cosmic drums, glitches and rides. Three strike layers, four takes each.",
