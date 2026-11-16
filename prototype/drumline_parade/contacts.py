@@ -57,7 +57,9 @@ def render(p,v,take,legacy):
  for player in range(count):
   identity=np.random.default_rng(sk.seed_for('PARADE_RIM_BODY',name,player))
   rng=np.random.default_rng(sk.seed_for('PARADE_RIM_CONTACT',name,player,take))
-  offset=0 if player==0 else round(rng.uniform(.0004,.006)*R)
+  onset=np.random.default_rng(sk.seed_for('PARADE_HIT',name,player,take))
+  # Rim and membrane belong to the same strike: retain the body's player onset.
+  offset=0 if player==0 else round(onset.uniform(.0004,.006)*R)
   t=np.arange(len(y)-offset)/R;clack=np.zeros(len(t))
   force=np.hanning(max(4,round(.00012*(1.5-.7*v)*R)));force/=force.sum()
   for f in np.array([920,1370,1890,2480,3150,4020,5170,6430,8100])*identity.uniform(.98,1.02,9):
