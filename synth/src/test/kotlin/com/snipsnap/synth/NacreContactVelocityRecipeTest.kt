@@ -22,7 +22,7 @@ import kotlin.test.assertTrue
 
 /** Source/ownership/replay contracts; fresh native soft/medium listening remains separate. */
 class NacreContactVelocityRecipeTest {
-    private fun hard() = NacrePresets.all().first { it.model == 4 }
+    private fun hard() = NacrePresets.forVoice(NacreVoice.PEARL).first { it.model == 4 }
     private fun bank() = NacreContactVelocityRecipes.recipeFor(hard())
     private fun replacement(layer: NacreContactVelocityLayerRecipe, name: String = layer.name,
         start: Int = layer.velocityStart, end: Int = layer.velocityEnd, gain: Float = layer.samplingGain,
@@ -60,7 +60,7 @@ class NacreContactVelocityRecipeTest {
 
     @Test
     fun modelFourPolicyKeepsAcceptedHardAndAuthorsCanonicalNativeTouchLayers() {
-        for (hard in NacrePresets.all().filter { it.model == 4 }) {
+        for (hard in NacrePresets.forVoice(NacreVoice.PEARL).filter { it.model == 4 }) {
             val bank = NacreContactVelocityRecipes.recipeFor(hard)
             assertEquals(hard, bank.hardPatch)
             assertEquals(1f, bank.layers.last().samplingGain)
@@ -89,7 +89,7 @@ class NacreContactVelocityRecipeTest {
         assertEquals("nacreContactVelocityLayers", NacreContactVelocityRecipe.SOURCE_KEY)
         assertEquals("native-velocity-and-touch-effort-v1", NacreVelocityRecipe.POLICY)
         assertEquals("nacreVelocityLayers", NacreVelocityRecipe.SOURCE_KEY)
-        val oldHard = NacrePresets.all().first()
+        val oldHard = NacrePresets.forVoice(NacreVoice.PEARL).first()
         val old = NacreVelocityKits.recipeFor(oldHard)
         assertEquals(oldHard, old.hardPatch)
         assertEquals(old, NacreVelocityRecipe.fromJsonText(old.toJsonText()))
@@ -99,7 +99,7 @@ class NacreContactVelocityRecipeTest {
         // A fixed saved v1 document catches decoder/serializer drift independently of writer roundtrip.
         val fixture = """{"schemaVersion":1,"engine":"NACRE","policy":"native-velocity-touch-contact-model4-v1","policyVersion":1,"layers":[{"name":"Soft","velocityStart":1,"velocityEnd":41,"samplingGain":5.802050590515137,"recipe":{"recipe":2,"patch":{"engine":"NACRE","version":1,"name":"Saved contact fixture","voice":"PEARL","macros":{"TOUCH":0.05000000074505806,"DUET":0.15000000596046448,"CURRENT":0.20000000298023224,"VENUE":0.0,"BLOOM":0.15000000596046448,"HOLD":0.0,"CONTACT":0.3499999940395355},"model":4,"midi":48,"velocity":0.30000001192092896,"seed":"7"},"alias":false}},{"name":"Medium","velocityStart":42,"velocityEnd":84,"samplingGain":1.8642224073410034,"recipe":{"recipe":2,"patch":{"engine":"NACRE","version":1,"name":"Saved contact fixture","voice":"PEARL","macros":{"TOUCH":0.18000000715255737,"DUET":0.15000000596046448,"CURRENT":0.20000000298023224,"VENUE":0.0,"BLOOM":0.15000000596046448,"HOLD":0.0,"CONTACT":0.3499999940395355},"model":4,"midi":48,"velocity":0.6499999761581421,"seed":"7"},"alias":false}},{"name":"Hard","velocityStart":85,"velocityEnd":127,"samplingGain":1.0,"recipe":{"recipe":2,"patch":{"engine":"NACRE","version":1,"name":"Saved contact fixture","voice":"PEARL","macros":{"TOUCH":0.30000001192092896,"DUET":0.15000000596046448,"CURRENT":0.20000000298023224,"VENUE":0.0,"BLOOM":0.15000000596046448,"HOLD":0.0,"CONTACT":0.3499999940395355},"model":4,"midi":48,"velocity":1.0,"seed":"7"},"alias":false}}]}"""
         val saved = NacreContactVelocityRecipe.fromJsonText(fixture)
-        assertEquals(NacrePresets.all().first { it.model == 4 }.copy(name = "Saved contact fixture"), saved.hardPatch)
+        assertEquals(NacrePresets.forVoice(NacreVoice.PEARL).first { it.model == 4 }.copy(name = "Saved contact fixture"), saved.hardPatch)
         assertEquals(Json.parse(fixture), saved.toJsonValue())
 
     }
@@ -221,7 +221,7 @@ class NacreContactVelocityRecipeTest {
         val captures = mutableListOf<Capture>()
         var nativeRenderInvocations = 0
         for ((contact, witness) in expected) {
-            val hard = NacrePresets.all().single { it.model == 4 && it.macros["CONTACT"] == contact }
+            val hard = NacrePresets.forVoice(NacreVoice.PEARL).single { it.model == 4 && it.macros["CONTACT"] == contact }
             assertEquals(48, hard.midi); assertEquals(7L, hard.seed)
             val bank = NacreContactVelocityRecipes.recipeFor(hard); val natives = mutableListOf<Snip>()
             val output = bank.renderAllLayers { patch -> nativeRenderInvocations++; patch.render().also { natives += it } }

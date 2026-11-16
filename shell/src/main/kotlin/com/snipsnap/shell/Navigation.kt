@@ -252,8 +252,11 @@ enum class Bench(val home: Place, val label: String, val backName: String = labe
      * out in flight, the Aquarium's draft, the pedal slate) only while the same call site stays composed.
      */
     PAD_EFFECTS(Place.PROJECT, "EFFECTS"),
-    /** The pad editor's VARIATIONS screen (MUTATE), opened by the editor's `VARIATIONS ▸` door; drawn like [PAD_EFFECTS]. */
-    PAD_VARIATIONS(Place.PROJECT, "VARIATIONS"),
+    /**
+     * The pad editor's second screen (MUTATE), opened by the editor's `MIX WITH ANOTHER SOUND ▸` door; drawn like
+     * [PAD_EFFECTS]. Was VARIATIONS, which also named bank B's twins (the owner's rename, 2026-11-15).
+     */
+    PAD_VARIATIONS(Place.PROJECT, "MIX WITH ANOTHER SOUND", backName = "MIX"),
     GRAIN_FIELD(Place.PROJECT, "GRAIN FIELD"),
     SPLICE(Place.PROJECT, "SPLICE"),
     STACK(Place.PROJECT, "STACK VERSIONS", backName = "STACK"),

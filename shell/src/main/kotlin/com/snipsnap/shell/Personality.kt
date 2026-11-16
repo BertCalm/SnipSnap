@@ -2138,11 +2138,11 @@ object Copy {
      * says what is applied or what is inside ([PadSheetBoxes.effectsLine], [PadSheetBoxes.variationsLine]).
      */
     @field:CopyLabel const val PAD_EFFECTS_DOOR = "EFFECTS ▸"
-    @field:CopyLabel const val PAD_VARIATIONS_DOOR = "VARIATIONS ▸"
+    @field:CopyLabel const val PAD_VARIATIONS_DOOR = "MIX WITH ANOTHER SOUND ▸"
 
     /** The words over the EFFECTS and VARIATIONS screens, the screens' own titles. */
     @field:CopyLabel const val PAD_EFFECTS_TITLE = "EFFECTS"
-    @field:CopyLabel const val PAD_VARIATIONS_TITLE = "VARIATIONS"
+    @field:CopyLabel const val PAD_VARIATIONS_TITLE = "MIX WITH ANOTHER SOUND"
 
     /**
      * Each per-tool UNDO on the pad editor, named in full: the sheet draws several (and says one failure
@@ -2152,7 +2152,7 @@ object Copy {
     @field:CopyLabel const val UNDO_MUTATE = "UNDO COMBINE"
     @field:CopyLabel const val UNDO_SPLICE = "UNDO SPLICE"
     @field:CopyLabel const val UNDO_DESAMPLE = "UNDO NEAREST SYNTH"
-    @field:CopyLabel const val UNDO_OUTSIDE = "UNDO RE-AMP AND ROOM"
+    @field:CopyLabel const val UNDO_OUTSIDE = "UNDO SPEAKER AND ROOM"
     @field:CopyLabel const val UNDO_BOARD = "UNDO BOARD"
     /** A FILE: the picked file cannot be a partner; [reason] the decoder's or the holder's own words. */
     fun fileRefused(reason: String): String = "Not a partner: ${reason.trimEnd('.')}."
@@ -2176,7 +2176,7 @@ object Copy {
     fun replayNeedsPartner(move: String, partners: List<String>): String =
         "COMBINE SOUNDS ($move with ${partners.joinToString(" + ").ifEmpty { "?" }}) needs its partner - not carried."
     const val REPLAY_SPLICE = "Join names no VERSIONS - not replayable."
-    const val REPLAY_OUTSIDE = "RE-AMP AND ROOM was a room, not a setting - not replayable."
+    const val REPLAY_OUTSIDE = "SPEAKER AND ROOM was a room, not a setting - not replayable."
     const val REPLAY_KITFROM = "Kit from anything belongs to its own source - make a kit from the sound instead."
     /** CLEAN, THE DOCTOR and SCULPT are readings of that exact sound, not settings for another. */
     fun replayMeasured(what: String): String = "$what was a measurement of that sound, not a setting - not replayable."
@@ -2253,7 +2253,7 @@ object Copy {
     const val STACK_TAKE_UNREADABLE = "That take won't read any more. It stays out of the stack."
     /** The screen's standing caveat: layers lock every single-sample door until cleared, and clearing deletes the copies. */
     const val STACK_LOCKS =
-        "A stacked pad is layered. Treat, COMBINE SOUNDS, SPLICE and RE-AMP AND ROOM wait until SOFT HITS is cleared - and clearing deletes the copies."
+        "A stacked pad is layered. Treat, COMBINE SOUNDS, SPLICE and SPEAKER AND ROOM wait until SOFT HITS is cleared - and clearing deletes the copies."
     /** Shown, not fixed: no auto-gain, ever. */
     const val STACK_NO_GAIN = "Levels are shown, not fixed. No auto-gain - the MPC's velocity curve owns loudness."
     /** KEEP: how many real takes now sit under LIVE, and what that costs. */
@@ -2307,18 +2307,18 @@ object Copy {
     // ---- PAD SHEET: outside ----
     /** OUTSIDE: the pad went out the jack and came back; [lagMs] the trip, [confidence] how surely the return was found. */
     fun outside(move: String, pad: String, lagMs: Float, confidence: Float): String =
-        "$move: $pad went out and came back ${Math.round(lagMs)} ms later, ${Math.round(confidence * 100)}% sure. Original is in the trash."
+        "${PadSheet.moveLabel(move)}: $pad went out and came back ${Math.round(lagMs)} ms later, ${Math.round(confidence * 100)}% sure. Original is in the trash."
     /** OUTSIDE's honest refusal, [reason] in the verb's own words ("the room said nothing back"). */
-    fun outsideRefused(reason: String): String = "RE-AMP AND ROOM refused: ${reason.trimEnd('.')}."
+    fun outsideRefused(reason: String): String = "SPEAKER AND ROOM refused: ${reason.trimEnd('.')}."
     const val OUTSIDE_UNDONE = "Back inside. The original is back from the trash."
-    const val OUTSIDE_NEEDS_MIC = "RE-AMP AND ROOM needs the mic. Press LISTEN once in LIBRARY to grant it."
-    const val OUTSIDE_TAPE_ROLLING = "Listening is on. Stop listening first - RE-AMP AND ROOM wants the mic to itself."
-    const val OUTSIDE_NEEDS_ONE = "SOFT HITS on. RE-AMP AND ROOM wants ONE SAMPLE - clear them first."
+    const val OUTSIDE_NEEDS_MIC = "SPEAKER AND ROOM needs the mic. Press LISTEN once in LIBRARY to grant it."
+    const val OUTSIDE_TAPE_ROLLING = "Listening is on. Stop listening first - SPEAKER AND ROOM wants the mic to itself."
+    const val OUTSIDE_NEEDS_ONE = "SOFT HITS on. SPEAKER AND ROOM wants ONE SAMPLE - clear them first."
     const val OUTSIDE_SENDING = "Sending… Turn it up."
     const val OUTSIDE_LISTENING = "Listening for the room…"
     /** KEEP ROOM: the measured room is on the shelf under [name], for any pad through MUTATE ▸ ROOM. */
     fun roomKept(name: String): String = "$name is in the LIBRARY. Any pad can play in it - COMBINE SOUNDS ▸ ROOM TONE."
-    const val ROOM_NONE_TO_KEEP = "No room measured yet. Send a sweep out first - ROOM ▸ SEND."
+    const val ROOM_NONE_TO_KEEP = "No room measured yet. Send a sweep out first - REAL ROOM ▸ SEND."
     /** FORGET → BIN on the shelf: the room sleeps in the bin, like every delete. */
     fun roomForgotten(name: String): String = "$name is in the trash. ${Reversal.MIND}"
     /** RESTORE on a binned room: back on the shelf under [name]. */

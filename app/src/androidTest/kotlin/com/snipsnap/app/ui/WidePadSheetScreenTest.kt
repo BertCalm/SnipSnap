@@ -28,7 +28,9 @@ import com.snipsnap.kit.KitPad
 import com.snipsnap.kit.KitStore
 import com.snipsnap.shell.BoardSheet
 import com.snipsnap.shell.Copy
+import com.snipsnap.shell.EffectsMenu
 import com.snipsnap.shell.PadBanks
+import com.snipsnap.shell.PadSheet
 import com.snipsnap.shell.PadSheetBoxes
 import com.snipsnap.shell.PadSheetPage
 import com.snipsnap.shell.PedalSlate
@@ -135,8 +137,14 @@ class WidePadSheetScreenTest : ComposeScreenTest() {
         waitForText("PAD ${PadBanks.tag(currentSlot)}")
         // The board card is on EFFECTS, one door from the editor.
         activate(Copy.PAD_EFFECTS_DOOR)
-        waitForText("WIDE · STEREO CHARACTER")
+        // The board card sits with the buttons under the effects list (direction B, 2026-11-15).
+        activate("EXPAND ${EffectsMenu.BUTTONS_HEADING}")
+        waitForText(line(BoardType.WIDE))
     }
+
+    /** A board's drawn name and its card's line (the owner's names, 2026-11-15); `BoardType.name` stays the files' word. */
+    private fun shown(type: BoardType) = PadSheet.boardLabel(type)
+    private fun line(type: BoardType) = EffectsMenu.entryFor(EffectsMenu.Target.Board(type)).line
 
     private fun waitForText(text: String) {
         waitFor("the text \"$text\"", timeoutMillis = 60_000) {
@@ -145,7 +153,7 @@ class WidePadSheetScreenTest : ComposeScreenTest() {
     }
 
     private fun boardAmount(type: BoardType = BoardType.WIDE) = compose.onNode(
-        hasContentDescription("AMT") and hasAnyAncestor(hasContentDescription(type.name)),
+        hasContentDescription("AMT") and hasAnyAncestor(hasContentDescription(shown(type))),
         useUnmergedTree = true,
     )
 
@@ -175,13 +183,13 @@ class WidePadSheetScreenTest : ComposeScreenTest() {
         waitFor("KEEP to report its saved amount", timeoutMillis = 60_000) {
             BoardSheet.read(lastUpdatedKit?.pad(1)?.recipe) == BoardSheet.Applied(amount, type)
         }
-        waitForText("${type.name} kept at ${(amount * 100).toInt()}%")
+        waitForText("${shown(type)} kept at ${(amount * 100).toInt()}%")
     }
 
     private fun waitForUndo(type: BoardType = BoardType.WIDE) {
         // A board change can replace this scope on the next frame; absence means keep waiting.
         waitFor("${type.name}'s undo availability check", timeoutMillis = 60_000) {
-            val card = compose.onAllNodesWithContentDescription(type.name, useUnmergedTree = true)
+            val card = compose.onAllNodesWithContentDescription(shown(type), useUnmergedTree = true)
                 .fetchSemanticsNodes().singleOrNull()
             card?.config?.getOrNull(SemanticsProperties.StateDescription) == "Undo available"
         }
@@ -267,8 +275,8 @@ class WidePadSheetScreenTest : ComposeScreenTest() {
         val wideAudio = File(entry.dir, wide.sampleFile).readBytes()
         val beforeSelection = files(entry.dir)
 
-        activate("Choose RUSH")
-        waitForText("RUSH · SWELL & MOTION")
+        activate("Choose ${shown(BoardType.RUSH)}")
+        waitForText(line(BoardType.RUSH))
         dialAmount(.55f, BoardType.RUSH)
 
         assertEquals("55%", amountText(BoardType.RUSH))
@@ -287,7 +295,7 @@ class WidePadSheetScreenTest : ComposeScreenTest() {
         assertEquals("70%", amountText())
         activate("PREVIOUS PAD, ${PadBanks.tag(1)}")
         waitForText("◄ PADS ${PadBanks.tag(1)}")
-        waitForText("RUSH · SWELL & MOTION")
+        waitForText(line(BoardType.RUSH))
         assertEquals("55%", amountText(BoardType.RUSH))
         assertEquals(rush, savedPad(entry))
         waitForUndo(BoardType.RUSH)
@@ -297,7 +305,7 @@ class WidePadSheetScreenTest : ComposeScreenTest() {
         assertArrayEquals(wideAudio, File(entry.dir, savedPad(entry).sampleFile).readBytes())
         assertEquals("35%", amountText())
 
-        activate("Choose RUSH")
+        activate("Choose ${shown(BoardType.RUSH)}")
         dialAmount(.55f, BoardType.RUSH)
         activate("KEEP")
         waitForKept(.55f, BoardType.RUSH)
@@ -321,20 +329,20 @@ class WidePadSheetScreenTest : ComposeScreenTest() {
         val originalAudio = File(entry.dir, original.sampleFile).readBytes()
         show(entry)
         val before = files(entry.dir)
-        activate("Choose OBLITERATE")
-        waitForText("OBLITERATE · HALO & DESTRUCTION")
+        activate("Choose ${shown(BoardType.OBLITERATE)}")
+        waitForText(line(BoardType.OBLITERATE))
         assertEquals("35%", amountText(BoardType.OBLITERATE))
         activate("CLOCK & PATTERN")
         fun dial(label: String) = requireNotNull(compose.onNode(
-            hasContentDescription(label) and hasAnyAncestor(hasContentDescription("OBLITERATE")), useUnmergedTree = true,
+            hasContentDescription(label) and hasAnyAncestor(hasContentDescription(shown(BoardType.OBLITERATE))), useUnmergedTree = true,
         ).fetchSemanticsNode().config[SemanticsActions.SetProgress].action)
         val shimmer = dial("SHIMMER")
         val bpm = dial("BPM")
         // Invoke both mounted callbacks before recomposition. Neither may erase the other's edit.
         compose.runOnIdle { assertTrue(shimmer(.6f)); assertTrue(bpm(.29f)) }
         pump()
-        activate("OBLITERATE division 1/8")
-        activate("OBLITERATE UNPITCHED")
+        activate("${shown(BoardType.OBLITERATE)} division 1/8")
+        activate("${shown(BoardType.OBLITERATE)} UNPITCHED")
         val newPattern = requireNotNull(compose.onNodeWithContentDescription("NEW PATTERN", useUnmergedTree = true)
             .fetchSemanticsNode().config[SemanticsActions.OnClick].action)
         compose.runOnIdle { repeat(2) { assertTrue(newPattern()) } }
@@ -346,13 +354,13 @@ class WidePadSheetScreenTest : ComposeScreenTest() {
         waitFor("complete OBLITERATE settings to be saved", timeoutMillis = 60_000) {
             BoardSheet.read(lastUpdatedKit?.pad(1)?.recipe)?.recipe == expected
         }
-        waitForText("OBLITERATE kept at 35%")
+        waitForText("${shown(BoardType.OBLITERATE)} kept at 35%")
         val kept = savedPad(entry)
         assertEquals(expected, BoardSheet.read(kept.recipe)!!.recipe)
         activate("NEXT PAD, ${PadBanks.tag(2)}")
         waitForText("◄ PADS ${PadBanks.tag(2)}")
         activate("PREVIOUS PAD, ${PadBanks.tag(1)}")
-        waitForText("OBLITERATE kept at 35%")
+        waitForText("${shown(BoardType.OBLITERATE)} kept at 35%")
         waitForText("98 BPM · 1/8 · UNPITCHED")
         activate("REMOVE")
         waitFor("OBLITERATE removal", timeoutMillis = 60_000) { lastUpdatedKit?.pad(1) == original }

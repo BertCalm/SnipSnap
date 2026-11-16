@@ -49,7 +49,7 @@ internal fun SplitAquariumPanel(settings: SplitAquarium.Settings, route: SplitAq
                 faulted -> "AQUARIUM FAULT · RESET TAIL OR RETRY PLAY"
                 pending -> "Waiting to queue settings…"
                 !settings.fromKit -> "KIT FX OFF"
-                !route.sound.enabled -> "DRY · KIT PERFORMANCE IS BYPASSED"
+                !route.sound.enabled -> "DRY · LIVE KIT EFFECTS ARE OFF"
                 route.sound.settings.isBypass -> "DRY · ALL SIX EFFECT MIXES ARE ZERO"
                 route.sound.outputGain == 0f -> "WET MIX MUTED"
                 else -> "STEREO KIT FX READY"
@@ -65,7 +65,7 @@ internal fun SplitAquariumPanel(settings: SplitAquarium.Settings, route: SplitAq
                     modifier = Modifier.weight(1f), accessibilityLabel = "Lengthen SPLIT FX print tail",
                     onClick = { onChange(settings.copy(tailSeconds = tails.firstOrNull { it > settings.tailSeconds } ?: 30f)) })
             }
-            TapeText("Saved for this kit. Uses KIT → PERFORMANCE sound and kit tempo on SPLIT’s own stereo mix.",
+            TapeText("Saved for this kit. Uses KIT TOOLS → LIVE KIT EFFECTS sound and kit tempo on SPLIT’s own stereo mix.",
                 TapeType.pixelSmall, scheme.ink2.tape, maxLines = Int.MAX_VALUE)
             TapeText("PRINT starts fresh for one pass plus the chosen FX tail. It does not capture a running loop’s history. Hot mixes clip before KIT FX; wet output is protected. Long tails can be cut and a wet print can have a loop seam.",
                 TapeType.pixelSmall, scheme.ink2.tape, maxLines = Int.MAX_VALUE)

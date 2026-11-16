@@ -1,0 +1,1090 @@
+{
+  "status": "Python harness, not Kotlin; not heard",
+  "commit": "23cde0d1c107039c23fd74ff5c3d2b359a7f6e75",
+  "macros": {
+    "TUNE": 0.5,
+    "WEIGHT": 0.55,
+    "GRIT": 0.55,
+    "DARK": 0.55,
+    "BITE": 0.25,
+    "SLIDE": 0.0,
+    "HOLD": 0.5
+  },
+  "renders": [
+    {
+      "name": "A_note_24",
+      "frames": 44100,
+      "seconds": 1.0,
+      "finite": true,
+      "peak": 0.3337,
+      "dc": 1.1e-05,
+      "rms": 0.1,
+      "loudness_proxy": 0.0219,
+      "pitch_hz": 32.70036461492503,
+      "pitch_confidence": 0.9994728344999165,
+      "centroid_hz": 39.9,
+      "decay_to_-60dB_s": 0.49,
+      "never_grows": true,
+      "later_over_attack": 0.866,
+      "partials_above_0.95_nyquist": 0,
+      "cents_from_ref": -0.14987581924062804,
+      "raw_peak": 1.0698702369806024,
+      "raw_above_output_nyquist": 1.9338262408075256e-12
+    },
+    {
+      "name": "A_note_36",
+      "frames": 44100,
+      "seconds": 1.0,
+      "finite": true,
+      "peak": 0.267,
+      "dc": 3e-06,
+      "rms": 0.1,
+      "loudness_proxy": 0.0439,
+      "pitch_hz": 65.40321483936968,
+      "pitch_confidence": 0.99986325055161,
+      "centroid_hz": 75.4,
+      "decay_to_-60dB_s": 0.48,
+      "never_grows": true,
+      "later_over_attack": 0.831,
+      "partials_above_0.95_nyquist": 0,
+      "cents_from_ref": -0.08408006875027532,
+      "raw_peak": 1.0695145894251954,
+      "raw_above_output_nyquist": 2.5985392537780274e-11
+    },
+    {
+      "name": "A_note_48",
+      "frames": 44100,
+      "seconds": 1.0,
+      "finite": true,
+      "peak": 0.2465,
+      "dc": -0.0,
+      "rms": 0.1,
+      "loudness_proxy": 0.0869,
+      "pitch_hz": 130.80689543309978,
+      "pitch_confidence": 0.9999601514458075,
+      "centroid_hz": 146.3,
+      "decay_to_-60dB_s": 0.47000000000000003,
+      "never_grows": true,
+      "later_over_attack": 0.94,
+      "partials_above_0.95_nyquist": 0,
+      "cents_from_ref": -0.07791578176732189,
+      "raw_peak": 1.0698468868759246,
+      "raw_above_output_nyquist": 2.860618932233853e-10
+    },
+    {
+      "name": "A_slide",
+      "frames": 44100,
+      "seconds": 1.0,
+      "finite": true,
+      "peak": 0.2856,
+      "dc": 7e-06,
+      "rms": 0.1,
+      "loudness_proxy": 0.0406,
+      "pitch_hz": 65.40356687737174,
+      "pitch_confidence": 0.9998635511213655,
+      "centroid_hz": 71.7,
+      "decay_to_-60dB_s": 0.48,
+      "never_grows": true,
+      "later_over_attack": 0.973,
+      "partials_above_0.95_nyquist": 0,
+      "cents_from_ref": -0.07476158896276097,
+      "raw_peak": 1.0712415547533904,
+      "raw_above_output_nyquist": 2.6068117423287553e-11
+    },
+    {
+      "name": "B_note_24",
+      "frames": 44100,
+      "seconds": 1.0,
+      "finite": true,
+      "peak": 0.3126,
+      "dc": 1e-05,
+      "rms": 0.1,
+      "loudness_proxy": 0.0227,
+      "pitch_hz": 32.70012256886115,
+      "pitch_confidence": 0.9994656417039072,
+      "centroid_hz": 43.8,
+      "decay_to_-60dB_s": 0.49,
+      "never_grows": true,
+      "later_over_attack": 0.866,
+      "partials_above_0.95_nyquist": 0,
+      "cents_from_ref": -0.1626903533606357,
+      "raw_peak": 1.069799853984201,
+      "raw_above_output_nyquist": 1.2192156301541877e-16
+    },
+    {
+      "name": "B_note_36",
+      "frames": 44100,
+      "seconds": 1.0,
+      "finite": true,
+      "peak": 0.2487,
+      "dc": 1e-06,
+      "rms": 0.1,
+      "loudness_proxy": 0.0442,
+      "pitch_hz": 65.40273412128558,
+      "pitch_confidence": 0.999853975227972,
+      "centroid_hz": 81.6,
+      "decay_to_-60dB_s": 0.48,
+      "never_grows": true,
+      "later_over_attack": 0.829,
+      "partials_above_0.95_nyquist": 0,
+      "cents_from_ref": -0.09680480370017881,
+      "raw_peak": 1.0693748723561116,
+      "raw_above_output_nyquist": 1.9032313895735e-14
+    },
+    {
+      "name": "B_note_48",
+      "frames": 44100,
+      "seconds": 1.0,
+      "finite": true,
+      "peak": 0.2475,
+      "dc": -3e-06,
+      "rms": 0.1,
+      "loudness_proxy": 0.087,
+      "pitch_hz": 130.80818100509,
+      "pitch_confidence": 0.9999563821795565,
+      "centroid_hz": 157.8,
+      "decay_to_-60dB_s": 0.47000000000000003,
+      "never_grows": true,
+      "later_over_attack": 0.941,
+      "partials_above_0.95_nyquist": 0,
+      "cents_from_ref": -0.0609012730293284,
+      "raw_peak": 1.0694463665373692,
+      "raw_above_output_nyquist": 9.699898660994728e-11
+    },
+    {
+      "name": "B_slide",
+      "frames": 44100,
+      "seconds": 1.0,
+      "finite": true,
+      "peak": 0.2606,
+      "dc": 5e-06,
+      "rms": 0.1,
+      "loudness_proxy": 0.041,
+      "pitch_hz": 65.40319094586029,
+      "pitch_confidence": 0.9998547941381754,
+      "centroid_hz": 77.7,
+      "decay_to_-60dB_s": 0.48,
+      "never_grows": true,
+      "later_over_attack": 0.972,
+      "partials_above_0.95_nyquist": 0,
+      "cents_from_ref": -0.0847125340605452,
+      "raw_peak": 1.0711857283871558,
+      "raw_above_output_nyquist": 1.656414512833118e-14
+    },
+    {
+      "name": "A_saw_only",
+      "frames": 44100,
+      "seconds": 1.0,
+      "finite": true,
+      "peak": 0.3371,
+      "dc": 3e-06,
+      "rms": 0.1,
+      "loudness_proxy": 0.0505,
+      "pitch_hz": 65.40184239654145,
+      "pitch_confidence": 0.9998557112613994,
+      "centroid_hz": 92.4,
+      "decay_to_-60dB_s": 0.47000000000000003,
+      "never_grows": true,
+      "later_over_attack": 0.842,
+      "partials_above_0.95_nyquist": 0,
+      "cents_from_ref": -0.12040924141245755,
+      "raw_peak": 0.7013776834568662,
+      "raw_above_output_nyquist": 7.085983766140509e-11
+    },
+    {
+      "name": "A_saturated_sine",
+      "frames": 44100,
+      "seconds": 1.0,
+      "finite": true,
+      "peak": 0.2722,
+      "dc": 3e-06,
+      "rms": 0.1,
+      "loudness_proxy": 0.0477,
+      "pitch_hz": 65.40242953883374,
+      "pitch_confidence": 0.9998633351686459,
+      "centroid_hz": 79.8,
+      "decay_to_-60dB_s": 0.48,
+      "never_grows": true,
+      "later_over_attack": 0.894,
+      "partials_above_0.95_nyquist": 0,
+      "cents_from_ref": -0.10486723023761936,
+      "raw_peak": 0.5974852702236377,
+      "raw_above_output_nyquist": 4.429134628711055e-18
+    },
+    {
+      "name": "A_pulse_plus_sine",
+      "frames": 44100,
+      "seconds": 1.0,
+      "finite": true,
+      "peak": 0.2678,
+      "dc": 3e-06,
+      "rms": 0.1,
+      "loudness_proxy": 0.0463,
+      "pitch_hz": 65.40280640792881,
+      "pitch_confidence": 0.9998604269284082,
+      "centroid_hz": 81.9,
+      "decay_to_-60dB_s": 0.48,
+      "never_grows": true,
+      "later_over_attack": 0.886,
+      "partials_above_0.95_nyquist": 0,
+      "cents_from_ref": -0.0948913511423385,
+      "raw_peak": 1.0893915804195522,
+      "raw_above_output_nyquist": 4.602448198454934e-11
+    },
+    {
+      "name": "A_WEIGHT_0",
+      "frames": 44100,
+      "seconds": 1.0,
+      "finite": true,
+      "peak": 0.3371,
+      "dc": 3e-06,
+      "rms": 0.1,
+      "loudness_proxy": 0.0505,
+      "pitch_hz": 65.40184239654145,
+      "pitch_confidence": 0.9998557112613994,
+      "centroid_hz": 92.4,
+      "decay_to_-60dB_s": 0.47000000000000003,
+      "never_grows": true,
+      "later_over_attack": 0.842,
+      "partials_above_0.95_nyquist": 0,
+      "cents_from_ref": -0.12040924141245755,
+      "raw_peak": 0.7013776834568662,
+      "raw_above_output_nyquist": 7.085983766140509e-11
+    },
+    {
+      "name": "A_WEIGHT_1",
+      "frames": 44100,
+      "seconds": 1.0,
+      "finite": true,
+      "peak": 0.2554,
+      "dc": 3e-06,
+      "rms": 0.1,
+      "loudness_proxy": 0.042,
+      "pitch_hz": 65.40420407696884,
+      "pitch_confidence": 0.9998652465358654,
+      "centroid_hz": 71.0,
+      "decay_to_-60dB_s": 0.48,
+      "never_grows": true,
+      "later_over_attack": 0.828,
+      "partials_above_0.95_nyquist": 0,
+      "cents_from_ref": -0.05789498187202496,
+      "raw_peak": 1.4721120086731627,
+      "raw_above_output_nyquist": 1.4675809549616603e-11
+    },
+    {
+      "name": "A_GRIT_0",
+      "frames": 44100,
+      "seconds": 1.0,
+      "finite": true,
+      "peak": 0.3044,
+      "dc": 3e-06,
+      "rms": 0.1,
+      "loudness_proxy": 0.0471,
+      "pitch_hz": 65.4030229335518,
+      "pitch_confidence": 0.9998611097481378,
+      "centroid_hz": 81.4,
+      "decay_to_-60dB_s": 0.47000000000000003,
+      "never_grows": true,
+      "later_over_attack": 0.821,
+      "partials_above_0.95_nyquist": 0,
+      "cents_from_ref": -0.0891598553382273,
+      "raw_peak": 0.8954459726211009,
+      "raw_above_output_nyquist": 3.494140913798592e-11
+    },
+    {
+      "name": "A_GRIT_1",
+      "frames": 44100,
+      "seconds": 1.0,
+      "finite": true,
+      "peak": 0.2526,
+      "dc": 3e-06,
+      "rms": 0.1,
+      "loudness_proxy": 0.0446,
+      "pitch_hz": 65.40302805842525,
+      "pitch_confidence": 0.9998629771317938,
+      "centroid_hz": 76.6,
+      "decay_to_-60dB_s": 0.48,
+      "never_grows": true,
+      "later_over_attack": 0.866,
+      "partials_above_0.95_nyquist": 0,
+      "cents_from_ref": -0.08902419868711134,
+      "raw_peak": 1.0893862469915967,
+      "raw_above_output_nyquist": 2.4443671952807335e-11
+    },
+    {
+      "name": "A_DARK_0",
+      "frames": 44100,
+      "seconds": 1.0,
+      "finite": true,
+      "peak": 0.2515,
+      "dc": 3e-06,
+      "rms": 0.1,
+      "loudness_proxy": 0.0445,
+      "pitch_hz": 65.40548668223516,
+      "pitch_confidence": 0.9998530492358136,
+      "centroid_hz": 85.2,
+      "decay_to_-60dB_s": 0.48,
+      "never_grows": true,
+      "later_over_attack": 0.844,
+      "partials_above_0.95_nyquist": 0,
+      "cents_from_ref": -0.023945052080831284,
+      "raw_peak": 1.0654051880546447,
+      "raw_above_output_nyquist": 7.765229333885517e-09
+    },
+    {
+      "name": "A_DARK_1",
+      "frames": 44100,
+      "seconds": 1.0,
+      "finite": true,
+      "peak": 0.2884,
+      "dc": 4e-06,
+      "rms": 0.1,
+      "loudness_proxy": 0.0415,
+      "pitch_hz": 65.397923275682,
+      "pitch_confidence": 0.9998623486414434,
+      "centroid_hz": 68.1,
+      "decay_to_-60dB_s": 0.48,
+      "never_grows": true,
+      "later_over_attack": 0.836,
+      "partials_above_0.95_nyquist": 0,
+      "cents_from_ref": -0.22415431223049728,
+      "raw_peak": 1.1427693409827884,
+      "raw_above_output_nyquist": 2.549566710281383e-13
+    },
+    {
+      "name": "A_BITE_0",
+      "frames": 44100,
+      "seconds": 1.0,
+      "finite": true,
+      "peak": 0.2708,
+      "dc": 4e-06,
+      "rms": 0.1,
+      "loudness_proxy": 0.0438,
+      "pitch_hz": 65.40680556383279,
+      "pitch_confidence": 0.9998653870403096,
+      "centroid_hz": 75.0,
+      "decay_to_-60dB_s": 0.48,
+      "never_grows": true,
+      "later_over_attack": 0.83,
+      "partials_above_0.95_nyquist": 0,
+      "cents_from_ref": 0.010964400071734307,
+      "raw_peak": 1.0713897326353672,
+      "raw_above_output_nyquist": 1.997780217325153e-11
+    },
+    {
+      "name": "A_BITE_1",
+      "frames": 44100,
+      "seconds": 1.0,
+      "finite": true,
+      "peak": 0.258,
+      "dc": 3e-06,
+      "rms": 0.1,
+      "loudness_proxy": 0.044,
+      "pitch_hz": 65.39289823926887,
+      "pitch_confidence": 0.999854157346733,
+      "centroid_hz": 76.4,
+      "decay_to_-60dB_s": 0.48,
+      "never_grows": true,
+      "later_over_attack": 0.834,
+      "partials_above_0.95_nyquist": 0,
+      "cents_from_ref": -0.35718374104997513,
+      "raw_peak": 1.0661805932772166,
+      "raw_above_output_nyquist": 1.3254515671629542e-10
+    },
+    {
+      "name": "A_SLIDE_0",
+      "frames": 44100,
+      "seconds": 1.0,
+      "finite": true,
+      "peak": 0.267,
+      "dc": 3e-06,
+      "rms": 0.1,
+      "loudness_proxy": 0.0439,
+      "pitch_hz": 65.40321483936968,
+      "pitch_confidence": 0.99986325055161,
+      "centroid_hz": 75.4,
+      "decay_to_-60dB_s": 0.48,
+      "never_grows": true,
+      "later_over_attack": 0.831,
+      "partials_above_0.95_nyquist": 0,
+      "cents_from_ref": -0.08408006875027532,
+      "raw_peak": 1.0695145894251954,
+      "raw_above_output_nyquist": 2.5985392537780274e-11
+    },
+    {
+      "name": "A_SLIDE_1",
+      "frames": 44100,
+      "seconds": 1.0,
+      "finite": true,
+      "peak": 0.2984,
+      "dc": 1e-05,
+      "rms": 0.1,
+      "loudness_proxy": 0.0399,
+      "pitch_hz": 65.40262497537215,
+      "pitch_confidence": 0.9998630068108767,
+      "centroid_hz": 70.2,
+      "decay_to_-60dB_s": 0.47000000000000003,
+      "never_grows": true,
+      "later_over_attack": 0.981,
+      "partials_above_0.95_nyquist": 0,
+      "cents_from_ref": -0.0996939379520969,
+      "raw_peak": 1.0690791308515404,
+      "raw_above_output_nyquist": 2.4120738091255117e-11
+    },
+    {
+      "name": "A_HOLD_0",
+      "frames": 44100,
+      "seconds": 1.0,
+      "finite": true,
+      "peak": 0.4165,
+      "dc": 6e-06,
+      "rms": 0.1,
+      "loudness_proxy": 0.044,
+      "pitch_hz": 65.37100207190343,
+      "pitch_confidence": 0.9998384537486393,
+      "centroid_hz": 75.7,
+      "decay_to_-60dB_s": 0.18,
+      "never_grows": true,
+      "later_over_attack": 0.831,
+      "partials_above_0.95_nyquist": 0,
+      "cents_from_ref": -0.9369674696052264,
+      "raw_peak": 1.0695145894251954,
+      "raw_above_output_nyquist": 3.2267608391393726e-11
+    },
+    {
+      "name": "A_HOLD_1",
+      "frames": 44100,
+      "seconds": 1.0,
+      "finite": true,
+      "peak": 0.2329,
+      "dc": 3e-06,
+      "rms": 0.1,
+      "loudness_proxy": 0.0438,
+      "pitch_hz": 65.40321483936982,
+      "pitch_confidence": 0.9998632505516181,
+      "centroid_hz": 75.3,
+      "decay_to_-60dB_s": 0.77,
+      "never_grows": true,
+      "later_over_attack": 0.831,
+      "partials_above_0.95_nyquist": 0,
+      "cents_from_ref": -0.08408006874643104,
+      "raw_peak": 1.0695145894251954,
+      "raw_above_output_nyquist": 2.4917801768289828e-11
+    }
+  ],
+  "macro_activity_dB": {
+    "WEIGHT": 3.8843366380919884,
+    "GRIT": 1.7944241527166755,
+    "DARK": 21.757816362144958,
+    "BITE": 4.4192684414019014,
+    "SLIDE": 6.723316761884034,
+    "HOLD": 1.6807426097547444
+  },
+  "checks": {
+    "deterministic": true,
+    "nonfinite_defaults": true,
+    "corner_count": 32,
+    "raw_corner_max": 1.5769412748614255,
+    "filter_decay_extremes": true
+  },
+  "limits": [
+    "RMS matching is not Kotlin Loudness.of",
+    "No reference recording analyzed",
+    "No HOLD loop, velocity/RR, keygroup, phone or MPC integration"
+  ],
+  "macro_low_mid_activity_dB": {
+    "WEIGHT": 1.0473885699854752,
+    "GRIT": 0.5118868380983327,
+    "DARK": 6.803951003951677,
+    "BITE": 0.8559970739484998,
+    "SLIDE": 1.941892746615403,
+    "HOLD": 0.768220199925876
+  },
+  "rate_reference_error_db": {
+    "A": -48.420137216235204,
+    "B": -62.1179913370339
+  },
+  "render_ms_python": {
+    "median": 458.01903399996036,
+    "max": 609.5071000000303,
+    "includes_output": true
+  },
+  "manifest": [
+    {
+      "name": "A_note_24",
+      "group": "Notes",
+      "recipe": {
+        "route": "A",
+        "midi": 24,
+        "macros": {
+          "TUNE": 0.5,
+          "WEIGHT": 0.55,
+          "GRIT": 0.55,
+          "DARK": 0.55,
+          "BITE": 0.25,
+          "SLIDE": 0.0,
+          "HOLD": 0.5
+        },
+        "source": "saw",
+        "support": true
+      },
+      "sha256": "bb37b8b91debde79172c2ba7c888b7d8514843360b297d78c31d03da14b23cc0"
+    },
+    {
+      "name": "A_note_36",
+      "group": "Notes",
+      "recipe": {
+        "route": "A",
+        "midi": 36,
+        "macros": {
+          "TUNE": 0.5,
+          "WEIGHT": 0.55,
+          "GRIT": 0.55,
+          "DARK": 0.55,
+          "BITE": 0.25,
+          "SLIDE": 0.0,
+          "HOLD": 0.5
+        },
+        "source": "saw",
+        "support": true
+      },
+      "sha256": "e42888a8deac5819a9bf45c38a330873703cb923dcafea2bff388d61d5b90a4e"
+    },
+    {
+      "name": "A_note_48",
+      "group": "Notes",
+      "recipe": {
+        "route": "A",
+        "midi": 48,
+        "macros": {
+          "TUNE": 0.5,
+          "WEIGHT": 0.55,
+          "GRIT": 0.55,
+          "DARK": 0.55,
+          "BITE": 0.25,
+          "SLIDE": 0.0,
+          "HOLD": 0.5
+        },
+        "source": "saw",
+        "support": true
+      },
+      "sha256": "7cb3c8cc6709a507eb6540dbedec5c9a5ed752a8ef1b2f767e20e1a47b734d84"
+    },
+    {
+      "name": "A_slide",
+      "group": "Slides",
+      "recipe": {
+        "route": "A",
+        "midi": 36,
+        "macros": {
+          "TUNE": 0.5,
+          "WEIGHT": 0.55,
+          "GRIT": 0.55,
+          "DARK": 0.55,
+          "BITE": 0.25,
+          "SLIDE": 0.65,
+          "HOLD": 0.5
+        },
+        "source": "saw",
+        "support": true
+      },
+      "sha256": "d9caa53dccbe993630934a762ee0d1f43da3e6e45d9525e3c1565b1b369545e2"
+    },
+    {
+      "name": "B_note_24",
+      "group": "Notes",
+      "recipe": {
+        "route": "B",
+        "midi": 24,
+        "macros": {
+          "TUNE": 0.5,
+          "WEIGHT": 0.55,
+          "GRIT": 0.55,
+          "DARK": 0.55,
+          "BITE": 0.25,
+          "SLIDE": 0.0,
+          "HOLD": 0.5
+        },
+        "source": "saw",
+        "support": true
+      },
+      "sha256": "a74b8db4947c11b333e7ab9d9417959abd7f9bd066705d2152d8615ece801e1e"
+    },
+    {
+      "name": "B_note_36",
+      "group": "Notes",
+      "recipe": {
+        "route": "B",
+        "midi": 36,
+        "macros": {
+          "TUNE": 0.5,
+          "WEIGHT": 0.55,
+          "GRIT": 0.55,
+          "DARK": 0.55,
+          "BITE": 0.25,
+          "SLIDE": 0.0,
+          "HOLD": 0.5
+        },
+        "source": "saw",
+        "support": true
+      },
+      "sha256": "7a9d888252786e2c29a0138d91c0f8e076bd60809616a130bece4eeef33ab9c9"
+    },
+    {
+      "name": "B_note_48",
+      "group": "Notes",
+      "recipe": {
+        "route": "B",
+        "midi": 48,
+        "macros": {
+          "TUNE": 0.5,
+          "WEIGHT": 0.55,
+          "GRIT": 0.55,
+          "DARK": 0.55,
+          "BITE": 0.25,
+          "SLIDE": 0.0,
+          "HOLD": 0.5
+        },
+        "source": "saw",
+        "support": true
+      },
+      "sha256": "88b97221b8aeebe55a61a62e39a7d49a7b88564ece80b3b63dbb9068029ae702"
+    },
+    {
+      "name": "B_slide",
+      "group": "Slides",
+      "recipe": {
+        "route": "B",
+        "midi": 36,
+        "macros": {
+          "TUNE": 0.5,
+          "WEIGHT": 0.55,
+          "GRIT": 0.55,
+          "DARK": 0.55,
+          "BITE": 0.25,
+          "SLIDE": 0.65,
+          "HOLD": 0.5
+        },
+        "source": "saw",
+        "support": true
+      },
+      "sha256": "7632290f4c41aba70533520c534ed1de918fb5e2f343ef93de91c9b50387c1f4"
+    },
+    {
+      "name": "A_saw_only",
+      "group": "Sources",
+      "recipe": {
+        "route": "A",
+        "midi": 36,
+        "macros": {
+          "TUNE": 0.5,
+          "WEIGHT": 0.55,
+          "GRIT": 0.55,
+          "DARK": 0.55,
+          "BITE": 0.25,
+          "SLIDE": 0.0,
+          "HOLD": 0.5
+        },
+        "source": "saw",
+        "support": false
+      },
+      "sha256": "15894de9eb336e8c2100e7bbef8508f38547c243d8f723f192c86a9b1a61dc36"
+    },
+    {
+      "name": "A_saturated_sine",
+      "group": "Sources",
+      "recipe": {
+        "route": "A",
+        "midi": 36,
+        "macros": {
+          "TUNE": 0.5,
+          "WEIGHT": 0.55,
+          "GRIT": 0.55,
+          "DARK": 0.55,
+          "BITE": 0.25,
+          "SLIDE": 0.0,
+          "HOLD": 0.5
+        },
+        "source": "sine",
+        "support": false
+      },
+      "sha256": "3a4cdbc86c3e7610aff00deba38fc6cea2fe2cac9ce0d8d471d10c6055b14245"
+    },
+    {
+      "name": "A_pulse_plus_sine",
+      "group": "Sources",
+      "recipe": {
+        "route": "A",
+        "midi": 36,
+        "macros": {
+          "TUNE": 0.5,
+          "WEIGHT": 0.55,
+          "GRIT": 0.55,
+          "DARK": 0.55,
+          "BITE": 0.25,
+          "SLIDE": 0.0,
+          "HOLD": 0.5
+        },
+        "source": "pulse",
+        "support": true
+      },
+      "sha256": "223d8725795a36315127e69d1458e66bb9aa9e93e537654ef661669fbe9119ee"
+    },
+    {
+      "name": "A_phrase",
+      "group": "Start here",
+      "recipe": {
+        "score": [
+          [
+            0,
+            36,
+            0.32,
+            0
+          ],
+          [
+            0.48,
+            36,
+            0.18,
+            0
+          ],
+          [
+            0.72,
+            39,
+            0.24,
+            0
+          ],
+          [
+            1.12,
+            36,
+            0.4,
+            0.55
+          ],
+          [
+            1.78,
+            34,
+            0.25,
+            0
+          ],
+          [
+            2.18,
+            36,
+            0.35,
+            0
+          ],
+          [
+            2.72,
+            43,
+            0.22,
+            0.4
+          ],
+          [
+            3.12,
+            36,
+            0.48,
+            0
+          ]
+        ],
+        "bpm": null
+      },
+      "sha256": "a1b3cd776c1d778f7fa764d48b8c3d56be21d002015b455d1c6af6c0ccd8fa48"
+    },
+    {
+      "name": "B_phrase",
+      "group": "Start here",
+      "recipe": {
+        "score": [
+          [
+            0,
+            36,
+            0.32,
+            0
+          ],
+          [
+            0.48,
+            36,
+            0.18,
+            0
+          ],
+          [
+            0.72,
+            39,
+            0.24,
+            0
+          ],
+          [
+            1.12,
+            36,
+            0.4,
+            0.55
+          ],
+          [
+            1.78,
+            34,
+            0.25,
+            0
+          ],
+          [
+            2.18,
+            36,
+            0.35,
+            0
+          ],
+          [
+            2.72,
+            43,
+            0.22,
+            0.4
+          ],
+          [
+            3.12,
+            36,
+            0.48,
+            0
+          ]
+        ],
+        "bpm": null
+      },
+      "sha256": "8f86047ac1369e910abd973506c3bfffa12669787eec8045149c46454f2a5e63"
+    },
+    {
+      "name": "A_WEIGHT_0",
+      "group": "Control extremes",
+      "recipe": {
+        "route": "A",
+        "midi": 36,
+        "macros": {
+          "TUNE": 0.5,
+          "WEIGHT": 0.0,
+          "GRIT": 0.55,
+          "DARK": 0.55,
+          "BITE": 0.25,
+          "SLIDE": 0.0,
+          "HOLD": 0.5
+        },
+        "source": "saw",
+        "support": true
+      },
+      "sha256": "15894de9eb336e8c2100e7bbef8508f38547c243d8f723f192c86a9b1a61dc36"
+    },
+    {
+      "name": "A_WEIGHT_1",
+      "group": "Control extremes",
+      "recipe": {
+        "route": "A",
+        "midi": 36,
+        "macros": {
+          "TUNE": 0.5,
+          "WEIGHT": 1.0,
+          "GRIT": 0.55,
+          "DARK": 0.55,
+          "BITE": 0.25,
+          "SLIDE": 0.0,
+          "HOLD": 0.5
+        },
+        "source": "saw",
+        "support": true
+      },
+      "sha256": "a5ae8d5ac1cb32d37f3c1be64bf9e7a0c45e05d10723cf0cdf598cb848bb97c2"
+    },
+    {
+      "name": "A_GRIT_0",
+      "group": "Control extremes",
+      "recipe": {
+        "route": "A",
+        "midi": 36,
+        "macros": {
+          "TUNE": 0.5,
+          "WEIGHT": 0.55,
+          "GRIT": 0.0,
+          "DARK": 0.55,
+          "BITE": 0.25,
+          "SLIDE": 0.0,
+          "HOLD": 0.5
+        },
+        "source": "saw",
+        "support": true
+      },
+      "sha256": "56a5c9ee9de76b2f7743549f8282cdcda7ac5d41929d70a24289daabd3d01b02"
+    },
+    {
+      "name": "A_GRIT_1",
+      "group": "Control extremes",
+      "recipe": {
+        "route": "A",
+        "midi": 36,
+        "macros": {
+          "TUNE": 0.5,
+          "WEIGHT": 0.55,
+          "GRIT": 1.0,
+          "DARK": 0.55,
+          "BITE": 0.25,
+          "SLIDE": 0.0,
+          "HOLD": 0.5
+        },
+        "source": "saw",
+        "support": true
+      },
+      "sha256": "c4c55619d43b8c26bca26c031942c8fa29f012ce624241d0185e6d454736ac13"
+    },
+    {
+      "name": "A_DARK_0",
+      "group": "Control extremes",
+      "recipe": {
+        "route": "A",
+        "midi": 36,
+        "macros": {
+          "TUNE": 0.5,
+          "WEIGHT": 0.55,
+          "GRIT": 0.55,
+          "DARK": 0.0,
+          "BITE": 0.25,
+          "SLIDE": 0.0,
+          "HOLD": 0.5
+        },
+        "source": "saw",
+        "support": true
+      },
+      "sha256": "e2671159f13c6db2ab9c69ccc12c7b40e8274b1f3283c0f520e8497531a203cc"
+    },
+    {
+      "name": "A_DARK_1",
+      "group": "Control extremes",
+      "recipe": {
+        "route": "A",
+        "midi": 36,
+        "macros": {
+          "TUNE": 0.5,
+          "WEIGHT": 0.55,
+          "GRIT": 0.55,
+          "DARK": 1.0,
+          "BITE": 0.25,
+          "SLIDE": 0.0,
+          "HOLD": 0.5
+        },
+        "source": "saw",
+        "support": true
+      },
+      "sha256": "4e2ffb3792592b6bb10ba032d7c4ab7bcc89d6e1451c7874d8bb98cc7d2a7203"
+    },
+    {
+      "name": "A_BITE_0",
+      "group": "Control extremes",
+      "recipe": {
+        "route": "A",
+        "midi": 36,
+        "macros": {
+          "TUNE": 0.5,
+          "WEIGHT": 0.55,
+          "GRIT": 0.55,
+          "DARK": 0.55,
+          "BITE": 0.0,
+          "SLIDE": 0.0,
+          "HOLD": 0.5
+        },
+        "source": "saw",
+        "support": true
+      },
+      "sha256": "32f50b2aa5b27824af05f467bfd844c907d18c1ac22e6bd4d68e8f7af4f71cb4"
+    },
+    {
+      "name": "A_BITE_1",
+      "group": "Control extremes",
+      "recipe": {
+        "route": "A",
+        "midi": 36,
+        "macros": {
+          "TUNE": 0.5,
+          "WEIGHT": 0.55,
+          "GRIT": 0.55,
+          "DARK": 0.55,
+          "BITE": 1.0,
+          "SLIDE": 0.0,
+          "HOLD": 0.5
+        },
+        "source": "saw",
+        "support": true
+      },
+      "sha256": "40e80c5484d975e22f8f6e3d21c07bfdb90e2bb256577b6ee4fc0b51d5836dc2"
+    },
+    {
+      "name": "A_SLIDE_0",
+      "group": "Control extremes",
+      "recipe": {
+        "route": "A",
+        "midi": 36,
+        "macros": {
+          "TUNE": 0.5,
+          "WEIGHT": 0.55,
+          "GRIT": 0.55,
+          "DARK": 0.55,
+          "BITE": 0.25,
+          "SLIDE": 0.0,
+          "HOLD": 0.5
+        },
+        "source": "saw",
+        "support": true
+      },
+      "sha256": "e42888a8deac5819a9bf45c38a330873703cb923dcafea2bff388d61d5b90a4e"
+    },
+    {
+      "name": "A_SLIDE_1",
+      "group": "Control extremes",
+      "recipe": {
+        "route": "A",
+        "midi": 36,
+        "macros": {
+          "TUNE": 0.5,
+          "WEIGHT": 0.55,
+          "GRIT": 0.55,
+          "DARK": 0.55,
+          "BITE": 0.25,
+          "SLIDE": 1.0,
+          "HOLD": 0.5
+        },
+        "source": "saw",
+        "support": true
+      },
+      "sha256": "225f6c510b7b978e8b0b2b8f113872a62d6d39d85ed67a12fd9f9d46c991a0bf"
+    },
+    {
+      "name": "A_HOLD_0",
+      "group": "Control extremes",
+      "recipe": {
+        "route": "A",
+        "midi": 36,
+        "macros": {
+          "TUNE": 0.5,
+          "WEIGHT": 0.55,
+          "GRIT": 0.55,
+          "DARK": 0.55,
+          "BITE": 0.25,
+          "SLIDE": 0.0,
+          "HOLD": 0.0
+        },
+        "source": "saw",
+        "support": true
+      },
+      "sha256": "fc0f218cb7b0cb7641ce6c10230a4aa2324796d516b546b8f63a531661ab3cce"
+    },
+    {
+      "name": "A_HOLD_1",
+      "group": "Control extremes",
+      "recipe": {
+        "route": "A",
+        "midi": 36,
+        "macros": {
+          "TUNE": 0.5,
+          "WEIGHT": 0.55,
+          "GRIT": 0.55,
+          "DARK": 0.55,
+          "BITE": 0.25,
+          "SLIDE": 0.0,
+          "HOLD": 1.0
+        },
+        "source": "saw",
+        "support": true
+      },
+      "sha256": "67db83de0bada62640b2a38c33fa763157fe0eec19875ecb460744ec285fda73"
+    }
+  ]
+}
