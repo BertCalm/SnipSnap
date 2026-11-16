@@ -45,6 +45,7 @@ class PatchesTest {
         BreakerPatch("Crushed drip", BreakerVoice.SNARE, emptyMap()),
         DrumlinePatch("Section", DrumlineVoice.SNARE, emptyMap()),
         SootPatch("Hot", SootVoice.SNARE, emptyMap()),
+        KindredPatch.of(KindredRecipes.ALL.first(), velocity = 0.6f, take = 2),
         EmberPatch("Kick", EmberVoice.KICK, emptyMap()),
         ServoPatch("Kick", ServoVoice.KICK, emptyMap()),
         HalobarPatch("Mallet dub", HalobarVoice.MARIMBA, emptyMap()),

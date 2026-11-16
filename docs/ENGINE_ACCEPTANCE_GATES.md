@@ -922,6 +922,25 @@ the shelf as FRESH TAPE starters.
   app (the listening page, version 3, plays them from the MPC 3 export), the Latin jazz kit and its new voices,
   presets and the picker, and phone and MPC hardware (round 3).
 
+## KINDRED (rounds 0 to 2 heard in Python, round 2 accepted 2026-11-15; round K1 Kotlin port, not heard)
+
+A one-voice, eight-step analog-style percussion synth and four genre kits from it. See [KINDRED](KINDRED.md).
+
+| Gate | Status | Evidence |
+|---|---|---|
+| Melodic voices, keygroups, premade kit, chord tools | Not applicable | A drum engine. |
+| Articulation: HOLD, STRUM | Not applicable | Finite hits; the eight-step phrase is a kit pad (A15), not HOLD. |
+| Percussion: roll or riser | Not yet built in Kotlin | Each kit's A16 riser and A15 phrase were heard in Python at round 2; K2 renders them in Kotlin. |
+| Drums: multiple distinct genre kits on the shelf | Not yet | Four kits (TECHNO, INDUSTRIAL, ELECTRO, AMBIENT) accepted by ear in Python; every one-shot slot differs between every pair by at least 2.15 dB of shape, and they differ in tempo, tuning, voices and grooves. K2 puts them on the shelf. |
+| Velocity: rendering | Pass in Kotlin, not heard | Every recipe's soft and hard hits differ by at least 1.96 dB of level-matched shape (`KindredTest`). |
+| Round robin: rendering | Pass in Kotlin, not heard | Four takes per recipe, none a copy, each deterministic; `Restrike` deals them. |
+| Velocity and round robin: saving | Partly | A patch round-trips through JSON with velocity, take, recipe and model (`KindredTest`, `DeterminismTest`); no saved kit yet. |
+| Velocity and round robin: playback and export | Not yet verified | K2. |
+| Hardware playback | Not verified | |
+| Sound character | Python round 2 accepted | "It's better. I think it was something with my headphones. Let's proceed with ring 2 sounds", corrected by the owner to "Round" (2026-11-15). The Kotlin port matches the noise-free recipes to 0.01 dB; the noise recipes are another realisation and wait for the ear. |
+
+- **Overall: in progress.** Open: the kits on the shelf with their phrases and risers, saving, playback and MPC 3 export of the grid, the picker, the owner's listen to the Kotlin kits, hardware.
+
 ## CALABASH (complete, 2026-11-15: four genre kits on the shelf, approved by ear and on phone and MPC 3)
 
 Four sixteen-pad drum kits for Afrobeat (Lagos, the 1970s), Afrobeats (Lagos and Accra, now), Mbalax (a sabar ensemble
@@ -1052,6 +1071,18 @@ owner-confirmed listening and hardware gates, not newly measured automated resul
   The local full-regression rerun has no recoverable completion result; PR #1122 CI remains
   pending. Listening and hardware gates are closed by owner approval; software regression
   remains the outstanding gate.
+
+## East African fitted synthesis banks
+
+See [East African fitted synthesis](EAST_AFRICA.md). Five genre starters, 22 pads
+each, three velocity zones and three alternate takes, with hand rolls and
+shaker risers. The owner approved the fitted Python audition on 2026-11-15
+(“It's much better. Proceed”). Native Kotlin noise differs; its listening gate
+and phone/MPC hardware gates remain open. Focused software checks pass for all 990 variants and all five kit workflows;
+repository regression is tracked in the delivery PR checks. Native C++ checks
+pass (8 suites).
+MPC2 retains the first take per zone under the owner's format exception.
+Melodic/keygroup/chord/STRUM gates do not apply to these finite drum banks.
 
 
 ## BRISTLE (finite, held and round-robin prototype, 2026-11-15)

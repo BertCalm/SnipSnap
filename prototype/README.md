@@ -81,6 +81,17 @@ and WAVs before any Kotlin. `python3 gen_audition.py OUT && python3 build_page.p
 54 level-matched clips with their measurements and writes the audition page. Needs numpy,
 scipy and numba. See [`../docs/ETCH.md`](../docs/ETCH.md).
 
+## kindred/ — KINDRED round-2 audition (Python harness)
+
+A one-voice, eight-step analog-style percussion synth (two oscillators with a shared pitch-decay
+envelope, FM and hard sync, noise, a four-pole ladder, three decays), built from the owner's DFAM
+reference clips, and four sixteen-pad genre kits made from that one voice (TECHNO, INDUSTRIAL,
+ELECTRO, AMBIENT). `kindred_proto.py` is the voice; `KINDRED_MODEL=2 python3 kindred_kits.py OUT`
+renders every pad at three velocities and four takes, each kit's A15 phrase, A16 riser, groove and
+walk, with a JSON report. `KINDRED_MODEL=2 python3 groove_ltas.py OUT` measures the grooves' band
+balance against the reference clips' median. Model 2 is the sound the owner accepted on 2026-11-15
+(round 1 was heard as "a small radio speaker"); see docs/KINDRED.md. Needs numpy, scipy and numba.
+
 ## scuff/ — SCUFF round-0b audition (Python harness)
 
 A dry Michigan drum kit (ten voices) and the chain that makes it (GRIT, LOCKER, BARK, SLAM),

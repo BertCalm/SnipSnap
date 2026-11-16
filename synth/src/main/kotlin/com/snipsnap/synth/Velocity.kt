@@ -290,6 +290,7 @@ object Velocity {
         is LacquerPatch -> Lacquer.macrosFor(patch.voice)
         is SkitterPatch -> Skitter.macrosFor(patch.voice)
         is ScuffPatch -> Scuff.macrosFor(patch.voice)
+        is KindredPatch -> Kindred.macrosFor(patch.voice)
         is HiccupPatch -> Hiccup.macrosFor(patch.voice)
         is ClutterPatch -> Clutter.macrosFor(patch.voice)
         is EmberPatch -> Ember.macrosFor(patch.voice)
@@ -477,6 +478,8 @@ object Velocity {
         is SkitterPatch -> patch.copy(velocity = v).render()
         // SCUFF re-strikes every voice: the kick drops deeper, the clap loses a tap, GRIT bites deeper.
         is ScuffPatch -> patch.copy(velocity = v).render()
+        // KINDRED re-strikes the voice: velocity sets the VCA, the filter envelope, part of the dive and the ladder drive.
+        is KindredPatch -> patch.copy(velocity = v).render()
         // HICCUP re-strikes the hit: contact hardness moves the source and how readily the fault script stumbles.
         is HiccupPatch -> patch.copy(velocity = v).render()
         // CLUTTER re-strikes the object: a shorter, brighter contact, and past the threshold the loose parts move.

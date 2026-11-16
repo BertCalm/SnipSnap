@@ -12,6 +12,14 @@ import kotlin.test.assertTrue
  * both depend on the second half.
  */
 class DeterminismTest {
+    @Test fun `East Africa fitted percussion log bass and phrases repeat exactly`() {
+        for(role in listOf(0,2,5,12,14,15,21)) {
+            val a=EastAfricaKits.render(EastAfricaKits.Genre.SINGELI,role,.64f,2)
+            val b=EastAfricaKits.render(EastAfricaKits.Genre.SINGELI,role,.64f,2)
+            assertContentEquals(a.samples,b.samples)
+        }
+    }
+
     @Test fun `Bristle study routes replay their saved touch exactly`() {
         for (route in Bristle.Route.entries) {
             val r = Bristle.Recipe(route, 36, .65f, mapOf("SLIDE" to .3f))
@@ -254,6 +262,17 @@ class DeterminismTest {
             assertContentEquals(patch.render().samples, Patches.fromJsonText(patch.toJsonText()).render().samples, "$voice")
             val struck = ScuffPatch("Soft take", voice, Scuff.defaults(voice), velocity = 0.6f, take = 3)
             assertContentEquals(struck.render().samples, Patches.fromJsonText(struck.toJsonText()).render().samples, "$voice soft take 3")
+        }
+    }
+
+    @Test fun `KINDRED renders every voice, every kit recipe, a soft hit and a later take byte for byte through JSON`() {
+        for (voice in KindredVoice.entries) {
+            val patch = KindredPatch("Canary", voice, Kindred.defaults(voice))
+            assertContentEquals(patch.render().samples, Patches.fromJsonText(patch.toJsonText()).render().samples, "$voice")
+        }
+        for (recipe in KindredRecipes.ALL) {
+            val struck = KindredPatch.of(recipe, velocity = 0.6f, take = 3)
+            assertContentEquals(struck.render().samples, Patches.fromJsonText(struck.toJsonText()).render().samples, "${recipe.id} soft take 3")
         }
     }
 

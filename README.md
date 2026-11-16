@@ -40,6 +40,8 @@ remains blocked on slice-map/hardware verification. Owner listening is pending.
 
 TRIAD has a [native shared-bus drum audition](docs/TRIAD.md): one hybrid groove through three processing rigs. These are listening candidates, not a factory engine or MPC program.
 
+[East African fitted synthesis](docs/EAST_AFRICA.md) adds five 22-pad starters for Bongo Flava, Singeli, Bongopiano, Genge and Kapuka. Each carries three strike levels and three alternate takes, including finite rolls and risers. The Python sound is approved; native listening and hardware checks remain open.
+
 [TIMBER](docs/TIMBER.md) adds three acoustic-instrument percussion banks: Folk Pocket, Wood Boom Bap and String Two Step. Guitar, acoustic bass guitar, cello and upright contacts fill sixteen pads, with three strike levels, four takes, a roll and a riser. The owner approved listening and hardware on 2026-11-15; full software regression remains pending.
 
 ## The loop
@@ -456,7 +458,7 @@ explicit MIDI root (24–96), strike velocity and model version; TUNE is a
 relative ±12-semitone offset, neutral at 0.5, so the effective note spans
 12–108 without clamping back to the saved-root range. Seven provisional presets
 and a dry sixteen-pad C minor pentatonic kit are included, with PITCHWHEEL among
-FRESH TAPE's 165 starters. Run `./gradlew :synth:generatePitchwheelAudition`
+FRESH TAPE's 179 starters. Run `./gradlew :synth:generatePitchwheelAudition`
 for the compact first listening set, or add `-PpitchwheelFull` for the broader
 dry probes. HOLD's top step returns settled loop-only material with a
 deterministic attachment cycle and capped adhesion. The owner heard R1 as six
@@ -1785,3 +1787,10 @@ with three timbral touch layers per note. SUSTAIN KEYS adds a note-off RELEASE c
 the accepted finite packages remain unchanged. See [BRISTLE](docs/BRISTLE.md) for evidence
 and remaining acceptance gates.
 DRUMLINE adds a versioned marching battery and FIELD/STREET CADENCE shelf kits, with independent players, finite rudiments and velocity/take grids. Native listening, device timing and hardware acceptance remain open. See [DRUMLINE](docs/DRUMLINE.md).
+
+KNEE BREAK supplies six FRESH TAPE kit variants: Body and Tighter, each dry,
+through the revised knee-mic treatment, or through cassette/delay. Their frozen
+oscillator/noise synth renders preserve the audition, with three velocity layers
+and three strikes per pad, including a finite roll and riser. They are rendered
+kit assets, not a new editable synthesis engine. See [Knee Break](docs/KNEE_BREAK.md)
+and the [audition](https://knee-break-audition.bertcalm.chatgpt.site).

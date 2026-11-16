@@ -1,0 +1,657 @@
+{
+  "scope": "Held-out recorded take 1; fitting used take 0. Coarse log-band and log-time energy errors, dB. Lower is better; not a perceptual realism score.",
+  "rows": [
+    {
+      "voice": "deep-kick",
+      "zone": 0,
+      "previous": {
+        "spectral_db": 2.343402242557479,
+        "envelope_db": 8.44192113187403
+      },
+      "revised": {
+        "spectral_db": 2.0194650793452475,
+        "envelope_db": 5.652730501386918
+      }
+    },
+    {
+      "voice": "deep-kick",
+      "zone": 1,
+      "previous": {
+        "spectral_db": 2.119033589942396,
+        "envelope_db": 4.671653111390419
+      },
+      "revised": {
+        "spectral_db": 0.7430791946825483,
+        "envelope_db": 1.9015884804533953
+      }
+    },
+    {
+      "voice": "deep-kick",
+      "zone": 2,
+      "previous": {
+        "spectral_db": 3.283387333025308,
+        "envelope_db": 5.918252218214731
+      },
+      "revised": {
+        "spectral_db": 3.761498675873131,
+        "envelope_db": 1.2772913458351665
+      }
+    },
+    {
+      "voice": "tight-kick",
+      "zone": 0,
+      "previous": {
+        "spectral_db": 2.611105109022479,
+        "envelope_db": 5.458125346704656
+      },
+      "revised": {
+        "spectral_db": 1.7990355135818936,
+        "envelope_db": 5.473885135513278
+      }
+    },
+    {
+      "voice": "tight-kick",
+      "zone": 1,
+      "previous": {
+        "spectral_db": 3.611832378123547,
+        "envelope_db": 3.643867885423195
+      },
+      "revised": {
+        "spectral_db": 4.005382326484801,
+        "envelope_db": 3.7147480091689036
+      }
+    },
+    {
+      "voice": "tight-kick",
+      "zone": 2,
+      "previous": {
+        "spectral_db": 3.524953391563354,
+        "envelope_db": 4.2153586944180494
+      },
+      "revised": {
+        "spectral_db": 4.141598556014106,
+        "envelope_db": 2.2889809872227036
+      }
+    },
+    {
+      "voice": "snare",
+      "zone": 0,
+      "previous": {
+        "spectral_db": 7.954358042413547,
+        "envelope_db": 6.233452105145895
+      },
+      "revised": {
+        "spectral_db": 2.2216465796910874,
+        "envelope_db": 1.9132193286318535
+      }
+    },
+    {
+      "voice": "snare",
+      "zone": 1,
+      "previous": {
+        "spectral_db": 8.6830380135286,
+        "envelope_db": 6.1255939636994565
+      },
+      "revised": {
+        "spectral_db": 2.2802778199185876,
+        "envelope_db": 1.763843725362021
+      }
+    },
+    {
+      "voice": "snare",
+      "zone": 2,
+      "previous": {
+        "spectral_db": 9.758772147298558,
+        "envelope_db": 5.860224964309606
+      },
+      "revised": {
+        "spectral_db": 3.2421509351394846,
+        "envelope_db": 1.9018823326317735
+      }
+    },
+    {
+      "voice": "rimshot",
+      "zone": 0,
+      "previous": {
+        "spectral_db": 10.463766655206951,
+        "envelope_db": 3.620526017725975
+      },
+      "revised": {
+        "spectral_db": 5.065438860671607,
+        "envelope_db": 1.030742646283062
+      }
+    },
+    {
+      "voice": "rimshot",
+      "zone": 1,
+      "previous": {
+        "spectral_db": 11.000470396852824,
+        "envelope_db": 1.9847893465288193
+      },
+      "revised": {
+        "spectral_db": 4.111662284147783,
+        "envelope_db": 0.64755635096448
+      }
+    },
+    {
+      "voice": "rimshot",
+      "zone": 2,
+      "previous": {
+        "spectral_db": 10.397081804993231,
+        "envelope_db": 2.1895355408267045
+      },
+      "revised": {
+        "spectral_db": 5.902803098122793,
+        "envelope_db": 2.372293327604114
+      }
+    },
+    {
+      "voice": "rim",
+      "zone": 0,
+      "previous": {
+        "spectral_db": 14.1498300147472,
+        "envelope_db": 4.463862123525147
+      },
+      "revised": {
+        "spectral_db": 2.1968791382954618,
+        "envelope_db": 2.927717094904758
+      }
+    },
+    {
+      "voice": "rim",
+      "zone": 1,
+      "previous": {
+        "spectral_db": 13.882547996900382,
+        "envelope_db": 6.953674945056861
+      },
+      "revised": {
+        "spectral_db": 2.96194043810457,
+        "envelope_db": 1.3631849390007056
+      }
+    },
+    {
+      "voice": "rim",
+      "zone": 2,
+      "previous": {
+        "spectral_db": 13.904192859450353,
+        "envelope_db": 6.802695601801083
+      },
+      "revised": {
+        "spectral_db": 2.4827933019360557,
+        "envelope_db": 1.1935883834724461
+      }
+    },
+    {
+      "voice": "closed-hat",
+      "zone": 0,
+      "previous": {
+        "spectral_db": 16.94277888674186,
+        "envelope_db": 2.6628524930199338
+      },
+      "revised": {
+        "spectral_db": 1.886943823114696,
+        "envelope_db": 0.25924219059588893
+      }
+    },
+    {
+      "voice": "closed-hat",
+      "zone": 1,
+      "previous": {
+        "spectral_db": 15.93478774195404,
+        "envelope_db": 2.897892457758093
+      },
+      "revised": {
+        "spectral_db": 5.234914092095686,
+        "envelope_db": 3.428141939576364
+      }
+    },
+    {
+      "voice": "closed-hat",
+      "zone": 2,
+      "previous": {
+        "spectral_db": 14.953318761327353,
+        "envelope_db": 1.5972833317348605
+      },
+      "revised": {
+        "spectral_db": 1.5302592412673874,
+        "envelope_db": 1.1641515950631576
+      }
+    },
+    {
+      "voice": "open-hat",
+      "zone": 0,
+      "previous": {
+        "spectral_db": 16.333567473932373,
+        "envelope_db": 2.0690377727051077
+      },
+      "revised": {
+        "spectral_db": 2.023375527489637,
+        "envelope_db": 2.501191503394065
+      }
+    },
+    {
+      "voice": "open-hat",
+      "zone": 1,
+      "previous": {
+        "spectral_db": 16.04940433501717,
+        "envelope_db": 2.1300993627419076
+      },
+      "revised": {
+        "spectral_db": 1.274422486012751,
+        "envelope_db": 0.540291494446126
+      }
+    },
+    {
+      "voice": "open-hat",
+      "zone": 2,
+      "previous": {
+        "spectral_db": 14.679913573442796,
+        "envelope_db": 1.4437681794752284
+      },
+      "revised": {
+        "spectral_db": 1.1791008658852702,
+        "envelope_db": 1.2607898130093191
+      }
+    },
+    {
+      "voice": "shaker",
+      "zone": 0,
+      "previous": {
+        "spectral_db": 8.100089004201262,
+        "envelope_db": 7.379092866349699
+      },
+      "revised": {
+        "spectral_db": 4.579996318842098,
+        "envelope_db": 3.4094171256216605
+      }
+    },
+    {
+      "voice": "shaker",
+      "zone": 1,
+      "previous": {
+        "spectral_db": 9.496415117245167,
+        "envelope_db": 6.312459079634077
+      },
+      "revised": {
+        "spectral_db": 5.011799861932285,
+        "envelope_db": 3.8775115958059447
+      }
+    },
+    {
+      "voice": "shaker",
+      "zone": 2,
+      "previous": {
+        "spectral_db": 11.380731707101576,
+        "envelope_db": 5.679066220758427
+      },
+      "revised": {
+        "spectral_db": 5.049166310310523,
+        "envelope_db": 4.306936758981539
+      }
+    },
+    {
+      "voice": "low-bongo",
+      "zone": 0,
+      "previous": {
+        "spectral_db": 9.511997682710492,
+        "envelope_db": 3.505672902980043
+      },
+      "revised": {
+        "spectral_db": 5.259458506076801,
+        "envelope_db": 2.509542612706169
+      }
+    },
+    {
+      "voice": "low-bongo",
+      "zone": 1,
+      "previous": {
+        "spectral_db": 10.446455246633995,
+        "envelope_db": 3.4664103470705396
+      },
+      "revised": {
+        "spectral_db": 5.489844130803438,
+        "envelope_db": 2.487523577654511
+      }
+    },
+    {
+      "voice": "low-bongo",
+      "zone": 2,
+      "previous": {
+        "spectral_db": 11.018827181590813,
+        "envelope_db": 3.4248466174109944
+      },
+      "revised": {
+        "spectral_db": 5.035082285420277,
+        "envelope_db": 2.470266087651971
+      }
+    },
+    {
+      "voice": "high-bongo",
+      "zone": 0,
+      "previous": {
+        "spectral_db": 12.085212704788693,
+        "envelope_db": 2.92805564254341
+      },
+      "revised": {
+        "spectral_db": 6.516508136832007,
+        "envelope_db": 2.205947402337405
+      }
+    },
+    {
+      "voice": "high-bongo",
+      "zone": 1,
+      "previous": {
+        "spectral_db": 12.825642975752281,
+        "envelope_db": 2.9354133104122746
+      },
+      "revised": {
+        "spectral_db": 7.3542942681794905,
+        "envelope_db": 2.2180449230905888
+      }
+    },
+    {
+      "voice": "high-bongo",
+      "zone": 2,
+      "previous": {
+        "spectral_db": 11.138930137655981,
+        "envelope_db": 2.9683251540848477
+      },
+      "revised": {
+        "spectral_db": 7.133438428921519,
+        "envelope_db": 2.228895896456442
+      }
+    },
+    {
+      "voice": "conga",
+      "zone": 0,
+      "previous": {
+        "spectral_db": 4.769182973474225,
+        "envelope_db": 5.405039261735346
+      },
+      "revised": {
+        "spectral_db": 5.0237401569139974,
+        "envelope_db": 1.2226091030379178
+      }
+    },
+    {
+      "voice": "conga",
+      "zone": 1,
+      "previous": {
+        "spectral_db": 6.856276968880826,
+        "envelope_db": 5.47886084910906
+      },
+      "revised": {
+        "spectral_db": 1.3720065206936942,
+        "envelope_db": 0.9043430937427092
+      }
+    },
+    {
+      "voice": "conga",
+      "zone": 2,
+      "previous": {
+        "spectral_db": 7.633450050598321,
+        "envelope_db": 4.615265498870491
+      },
+      "revised": {
+        "spectral_db": 3.121210373850694,
+        "envelope_db": 2.5526480894646286
+      }
+    },
+    {
+      "voice": "bell",
+      "zone": 0,
+      "previous": {
+        "spectral_db": 17.93457805468971,
+        "envelope_db": 8.628557779949762
+      },
+      "revised": {
+        "spectral_db": 3.999996826532345,
+        "envelope_db": 1.7464535889572639
+      }
+    },
+    {
+      "voice": "bell",
+      "zone": 1,
+      "previous": {
+        "spectral_db": 16.576513957845336,
+        "envelope_db": 10.931985130919742
+      },
+      "revised": {
+        "spectral_db": 5.25330828382795,
+        "envelope_db": 1.0230277137680939
+      }
+    },
+    {
+      "voice": "bell",
+      "zone": 2,
+      "previous": {
+        "spectral_db": 14.294911096300496,
+        "envelope_db": 10.978832121836986
+      },
+      "revised": {
+        "spectral_db": 5.807475258560976,
+        "envelope_db": 0.8882204881257595
+      }
+    },
+    {
+      "voice": "muted-tap",
+      "zone": 0,
+      "previous": {
+        "spectral_db": 23.49748527975301,
+        "envelope_db": 4.00859424150046
+      },
+      "revised": {
+        "spectral_db": 3.250740455546056,
+        "envelope_db": 1.4018404092262873
+      }
+    },
+    {
+      "voice": "muted-tap",
+      "zone": 1,
+      "previous": {
+        "spectral_db": 25.166222198904237,
+        "envelope_db": 4.950451159695393
+      },
+      "revised": {
+        "spectral_db": 2.330530918499205,
+        "envelope_db": 1.9067710019899415
+      }
+    },
+    {
+      "voice": "muted-tap",
+      "zone": 2,
+      "previous": {
+        "spectral_db": 25.313106204119116,
+        "envelope_db": 5.2582370993988965
+      },
+      "revised": {
+        "spectral_db": 1.5948800373818108,
+        "envelope_db": 2.163415313093487
+      }
+    },
+    {
+      "voice": "open-conga",
+      "zone": 0,
+      "previous": {
+        "spectral_db": 4.971457770936402,
+        "envelope_db": 8.207278162386245
+      },
+      "revised": {
+        "spectral_db": 5.0834408394140205,
+        "envelope_db": 1.462614310071024
+      }
+    },
+    {
+      "voice": "open-conga",
+      "zone": 1,
+      "previous": {
+        "spectral_db": 7.128616942271346,
+        "envelope_db": 8.307738170140325
+      },
+      "revised": {
+        "spectral_db": 1.3962799211682042,
+        "envelope_db": 0.8022540658105707
+      }
+    },
+    {
+      "voice": "open-conga",
+      "zone": 2,
+      "previous": {
+        "spectral_db": 7.896179453575649,
+        "envelope_db": 7.765248693185762
+      },
+      "revised": {
+        "spectral_db": 3.070552014980668,
+        "envelope_db": 2.3582111188262798
+      }
+    },
+    {
+      "voice": "clave",
+      "zone": 0,
+      "previous": {
+        "spectral_db": 13.873789479491329,
+        "envelope_db": 7.4538874686841154
+      },
+      "revised": {
+        "spectral_db": 4.645870308518099,
+        "envelope_db": 4.871676806986474
+      }
+    },
+    {
+      "voice": "clave",
+      "zone": 1,
+      "previous": {
+        "spectral_db": 17.2749184930338,
+        "envelope_db": 7.882370865625895
+      },
+      "revised": {
+        "spectral_db": 3.9115929844747575,
+        "envelope_db": 5.012529763367499
+      }
+    },
+    {
+      "voice": "clave",
+      "zone": 2,
+      "previous": {
+        "spectral_db": 15.304037990301456,
+        "envelope_db": 8.053565359482489
+      },
+      "revised": {
+        "spectral_db": 2.7172411198124213,
+        "envelope_db": 5.041398846346345
+      }
+    },
+    {
+      "voice": "wood-knock",
+      "zone": 0,
+      "previous": {
+        "spectral_db": 9.894428389068501,
+        "envelope_db": 7.243974068273848
+      },
+      "revised": {
+        "spectral_db": 7.951686571082622,
+        "envelope_db": 4.3181226457394795
+      }
+    },
+    {
+      "voice": "wood-knock",
+      "zone": 1,
+      "previous": {
+        "spectral_db": 11.289912219762813,
+        "envelope_db": 6.126657828030228
+      },
+      "revised": {
+        "spectral_db": 6.161846898722697,
+        "envelope_db": 3.1921249525282653
+      }
+    },
+    {
+      "voice": "wood-knock",
+      "zone": 2,
+      "previous": {
+        "spectral_db": 13.405869688163307,
+        "envelope_db": 6.63257979767495
+      },
+      "revised": {
+        "spectral_db": 5.184465580909637,
+        "envelope_db": 2.6303148017750155
+      }
+    },
+    {
+      "voice": "metal-low",
+      "zone": 0,
+      "previous": {
+        "spectral_db": 18.11864508872763,
+        "envelope_db": 9.785131118847938
+      },
+      "revised": {
+        "spectral_db": 3.9151766399746597,
+        "envelope_db": 1.4554402860456925
+      }
+    },
+    {
+      "voice": "metal-low",
+      "zone": 1,
+      "previous": {
+        "spectral_db": 16.67458662681711,
+        "envelope_db": 11.420935920822718
+      },
+      "revised": {
+        "spectral_db": 4.588012816814387,
+        "envelope_db": 1.8007996951268288
+      }
+    },
+    {
+      "voice": "metal-low",
+      "zone": 2,
+      "previous": {
+        "spectral_db": 14.263378922037155,
+        "envelope_db": 11.52812118752728
+      },
+      "revised": {
+        "spectral_db": 6.346847674515895,
+        "envelope_db": 0.451894161035123
+      }
+    },
+    {
+      "voice": "metal-high",
+      "zone": 0,
+      "previous": {
+        "spectral_db": 22.636186925555506,
+        "envelope_db": 12.158087534814786
+      },
+      "revised": {
+        "spectral_db": 3.214585506659851,
+        "envelope_db": 0.5695793677755451
+      }
+    },
+    {
+      "voice": "metal-high",
+      "zone": 1,
+      "previous": {
+        "spectral_db": 21.30522468329775,
+        "envelope_db": 13.241836412309627
+      },
+      "revised": {
+        "spectral_db": 7.149754825671405,
+        "envelope_db": 0.7665191634472609
+      }
+    },
+    {
+      "voice": "metal-high",
+      "zone": 2,
+      "previous": {
+        "spectral_db": 18.44807852711665,
+        "envelope_db": 13.399383557773408
+      },
+      "revised": {
+        "spectral_db": 4.399626408608409,
+        "envelope_db": 1.074431675049255
+      }
+    }
+  ],
+  "previous_mean_spectral_db": 12.279868194267475,
+  "revised_mean_spectral_db": 3.944168982006065,
+  "previous_mean_envelope_db": 6.063822741183701,
+  "revised_mean_envelope_db": 2.2205256956696937
+}
