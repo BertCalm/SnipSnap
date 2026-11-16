@@ -1,0 +1,1265 @@
+{
+  "scope": "Arrangement and processed-articulation study, not native kit replacement",
+  "sourceModel": 3,
+  "newGestureCells": 24,
+  "sourceIdentity": "open",
+  "MPC3_RR": "open_missing_slice_map",
+  "plans": {
+    "tap": {
+      "bpm": 124,
+      "events": [
+        {
+          "at": 0.0,
+          "pad": 2,
+          "velocity": 0.4,
+          "light": true,
+          "limb": "L"
+        },
+        {
+          "at": 0.324194,
+          "pad": 5,
+          "velocity": 0.45,
+          "light": true,
+          "limb": "R"
+        },
+        {
+          "at": 0.401613,
+          "pad": 6,
+          "velocity": 0.55,
+          "light": true,
+          "limb": "R"
+        },
+        {
+          "at": 0.483871,
+          "pad": 3,
+          "velocity": 0.65,
+          "light": true,
+          "limb": "R"
+        },
+        {
+          "at": 0.967742,
+          "pad": 2,
+          "velocity": 0.4,
+          "light": true,
+          "limb": "L"
+        },
+        {
+          "at": 1.291935,
+          "pad": 5,
+          "velocity": 0.45,
+          "light": true,
+          "limb": "R"
+        },
+        {
+          "at": 1.369355,
+          "pad": 6,
+          "velocity": 0.55,
+          "light": true,
+          "limb": "R"
+        },
+        {
+          "at": 1.451613,
+          "pad": 3,
+          "velocity": 0.65,
+          "light": true,
+          "limb": "R"
+        },
+        {
+          "at": 1.935484,
+          "pad": 2,
+          "velocity": 0.4,
+          "light": true,
+          "limb": "L"
+        },
+        {
+          "at": 2.259677,
+          "pad": 5,
+          "velocity": 0.45,
+          "light": true,
+          "limb": "R"
+        },
+        {
+          "at": 2.337097,
+          "pad": 6,
+          "velocity": 0.55,
+          "light": true,
+          "limb": "R"
+        },
+        {
+          "at": 2.419355,
+          "pad": 3,
+          "velocity": 0.65,
+          "light": true,
+          "limb": "R"
+        },
+        {
+          "at": 2.743548,
+          "pad": 5,
+          "velocity": 0.45,
+          "light": true,
+          "limb": "R"
+        },
+        {
+          "at": 2.820968,
+          "pad": 6,
+          "velocity": 0.55,
+          "light": true,
+          "limb": "R"
+        },
+        {
+          "at": 2.903226,
+          "pad": 2,
+          "velocity": 0.4,
+          "light": true,
+          "limb": "L"
+        },
+        {
+          "at": 3.145161,
+          "pad": 3,
+          "velocity": 0.5,
+          "light": true,
+          "limb": "L"
+        },
+        {
+          "at": 3.266129,
+          "pad": 3,
+          "velocity": 0.65,
+          "light": true,
+          "limb": "R"
+        },
+        {
+          "at": 3.387097,
+          "pad": 3,
+          "velocity": 0.65,
+          "light": true,
+          "limb": "R"
+        },
+        {
+          "at": 3.387097,
+          "pad": 2,
+          "velocity": 0.45,
+          "light": true,
+          "limb": "L"
+        },
+        {
+          "at": 3.508065,
+          "pad": 2,
+          "velocity": 0.75,
+          "light": true,
+          "limb": "R"
+        },
+        {
+          "at": 3.870968,
+          "pad": 2,
+          "velocity": 0.4,
+          "light": true,
+          "limb": "L"
+        },
+        {
+          "at": 4.195161,
+          "pad": 5,
+          "velocity": 0.45,
+          "light": true,
+          "limb": "R"
+        },
+        {
+          "at": 4.272581,
+          "pad": 6,
+          "velocity": 0.55,
+          "light": true,
+          "limb": "R"
+        },
+        {
+          "at": 4.354839,
+          "pad": 3,
+          "velocity": 0.65,
+          "light": true,
+          "limb": "R"
+        },
+        {
+          "at": 4.83871,
+          "pad": 2,
+          "velocity": 0.4,
+          "light": true,
+          "limb": "L"
+        },
+        {
+          "at": 5.162903,
+          "pad": 5,
+          "velocity": 0.45,
+          "light": true,
+          "limb": "R"
+        },
+        {
+          "at": 5.240323,
+          "pad": 6,
+          "velocity": 0.55,
+          "light": true,
+          "limb": "R"
+        },
+        {
+          "at": 5.322581,
+          "pad": 3,
+          "velocity": 0.65,
+          "light": true,
+          "limb": "R"
+        },
+        {
+          "at": 5.646774,
+          "pad": 12,
+          "velocity": 0.4,
+          "light": false,
+          "limb": "ensemble"
+        },
+        {
+          "at": 5.806452,
+          "pad": 2,
+          "velocity": 0.4,
+          "light": true,
+          "limb": "L"
+        },
+        {
+          "at": 6.130645,
+          "pad": 5,
+          "velocity": 0.45,
+          "light": true,
+          "limb": "R"
+        },
+        {
+          "at": 6.208065,
+          "pad": 6,
+          "velocity": 0.55,
+          "light": true,
+          "limb": "R"
+        },
+        {
+          "at": 6.290323,
+          "pad": 3,
+          "velocity": 0.65,
+          "light": true,
+          "limb": "R"
+        },
+        {
+          "at": 6.614516,
+          "pad": 5,
+          "velocity": 0.45,
+          "light": true,
+          "limb": "R"
+        },
+        {
+          "at": 6.691935,
+          "pad": 6,
+          "velocity": 0.55,
+          "light": true,
+          "limb": "R"
+        },
+        {
+          "at": 6.774194,
+          "pad": 2,
+          "velocity": 0.4,
+          "light": true,
+          "limb": "L"
+        },
+        {
+          "at": 7.016129,
+          "pad": 3,
+          "velocity": 0.5,
+          "light": true,
+          "limb": "L"
+        },
+        {
+          "at": 7.137097,
+          "pad": 3,
+          "velocity": 0.65,
+          "light": true,
+          "limb": "R"
+        },
+        {
+          "at": 7.258065,
+          "pad": 3,
+          "velocity": 0.65,
+          "light": true,
+          "limb": "R"
+        },
+        {
+          "at": 7.258065,
+          "pad": 2,
+          "velocity": 0.45,
+          "light": true,
+          "limb": "L"
+        },
+        {
+          "at": 7.379032,
+          "pad": 2,
+          "velocity": 0.75,
+          "light": true,
+          "limb": "R"
+        }
+      ],
+      "duration": 8.241935483870968,
+      "eventCount": 41,
+      "peak": 0.318145751953125
+    },
+    "street": {
+      "bpm": 106,
+      "events": [
+        {
+          "at": 0.0,
+          "pad": 1,
+          "velocity": 0.95,
+          "light": false,
+          "limb": "ensemble"
+        },
+        {
+          "at": 0.283019,
+          "pad": 12,
+          "velocity": 0.4,
+          "light": false,
+          "limb": "ensemble"
+        },
+        {
+          "at": 0.424528,
+          "pad": 9,
+          "velocity": 0.3,
+          "light": false,
+          "limb": "ensemble"
+        },
+        {
+          "at": 0.583019,
+          "pad": 9,
+          "velocity": 0.9,
+          "light": false,
+          "limb": "ensemble"
+        },
+        {
+          "at": 0.849057,
+          "pad": 12,
+          "velocity": 0.4,
+          "light": false,
+          "limb": "ensemble"
+        },
+        {
+          "at": 0.990566,
+          "pad": 1,
+          "velocity": 0.65,
+          "light": false,
+          "limb": "ensemble"
+        },
+        {
+          "at": 1.415094,
+          "pad": 1,
+          "velocity": 0.85,
+          "light": false,
+          "limb": "ensemble"
+        },
+        {
+          "at": 1.415094,
+          "pad": 12,
+          "velocity": 0.4,
+          "light": false,
+          "limb": "ensemble"
+        },
+        {
+          "at": 1.556604,
+          "pad": 9,
+          "velocity": 0.3,
+          "light": false,
+          "limb": "ensemble"
+        },
+        {
+          "at": 1.715094,
+          "pad": 9,
+          "velocity": 0.9,
+          "light": false,
+          "limb": "ensemble"
+        },
+        {
+          "at": 1.981132,
+          "pad": 12,
+          "velocity": 0.4,
+          "light": false,
+          "limb": "ensemble"
+        },
+        {
+          "at": 2.264151,
+          "pad": 1,
+          "velocity": 0.95,
+          "light": false,
+          "limb": "ensemble"
+        },
+        {
+          "at": 2.54717,
+          "pad": 12,
+          "velocity": 0.4,
+          "light": false,
+          "limb": "ensemble"
+        },
+        {
+          "at": 2.84717,
+          "pad": 9,
+          "velocity": 0.9,
+          "light": false,
+          "limb": "ensemble"
+        },
+        {
+          "at": 3.113208,
+          "pad": 12,
+          "velocity": 0.4,
+          "light": false,
+          "limb": "ensemble"
+        },
+        {
+          "at": 3.113208,
+          "pad": 9,
+          "velocity": 0.3,
+          "light": false,
+          "limb": "ensemble"
+        },
+        {
+          "at": 3.254717,
+          "pad": 1,
+          "velocity": 0.65,
+          "light": false,
+          "limb": "ensemble"
+        },
+        {
+          "at": 3.679245,
+          "pad": 1,
+          "velocity": 0.85,
+          "light": false,
+          "limb": "ensemble"
+        },
+        {
+          "at": 3.679245,
+          "pad": 12,
+          "velocity": 0.4,
+          "light": false,
+          "limb": "ensemble"
+        },
+        {
+          "at": 3.979245,
+          "pad": 9,
+          "velocity": 0.9,
+          "light": false,
+          "limb": "ensemble"
+        },
+        {
+          "at": 4.245283,
+          "pad": 12,
+          "velocity": 0.4,
+          "light": false,
+          "limb": "ensemble"
+        },
+        {
+          "at": 4.386792,
+          "pad": 9,
+          "velocity": 0.3,
+          "light": false,
+          "limb": "ensemble"
+        },
+        {
+          "at": 4.528302,
+          "pad": 1,
+          "velocity": 0.95,
+          "light": false,
+          "limb": "ensemble"
+        },
+        {
+          "at": 4.811321,
+          "pad": 12,
+          "velocity": 0.4,
+          "light": false,
+          "limb": "ensemble"
+        },
+        {
+          "at": 4.95283,
+          "pad": 9,
+          "velocity": 0.3,
+          "light": false,
+          "limb": "ensemble"
+        },
+        {
+          "at": 5.111321,
+          "pad": 9,
+          "velocity": 0.9,
+          "light": false,
+          "limb": "ensemble"
+        },
+        {
+          "at": 5.377358,
+          "pad": 12,
+          "velocity": 0.4,
+          "light": false,
+          "limb": "ensemble"
+        },
+        {
+          "at": 5.518868,
+          "pad": 1,
+          "velocity": 0.65,
+          "light": false,
+          "limb": "ensemble"
+        },
+        {
+          "at": 5.943396,
+          "pad": 1,
+          "velocity": 0.85,
+          "light": false,
+          "limb": "ensemble"
+        },
+        {
+          "at": 5.943396,
+          "pad": 12,
+          "velocity": 0.4,
+          "light": false,
+          "limb": "ensemble"
+        },
+        {
+          "at": 6.084906,
+          "pad": 9,
+          "velocity": 0.3,
+          "light": false,
+          "limb": "ensemble"
+        },
+        {
+          "at": 6.243396,
+          "pad": 9,
+          "velocity": 0.9,
+          "light": false,
+          "limb": "ensemble"
+        },
+        {
+          "at": 6.509434,
+          "pad": 12,
+          "velocity": 0.4,
+          "light": false,
+          "limb": "ensemble"
+        },
+        {
+          "at": 6.792453,
+          "pad": 1,
+          "velocity": 0.95,
+          "light": false,
+          "limb": "ensemble"
+        },
+        {
+          "at": 7.075472,
+          "pad": 12,
+          "velocity": 0.4,
+          "light": false,
+          "limb": "ensemble"
+        },
+        {
+          "at": 7.375472,
+          "pad": 9,
+          "velocity": 0.9,
+          "light": false,
+          "limb": "ensemble"
+        },
+        {
+          "at": 7.641509,
+          "pad": 12,
+          "velocity": 0.4,
+          "light": false,
+          "limb": "ensemble"
+        },
+        {
+          "at": 7.641509,
+          "pad": 9,
+          "velocity": 0.3,
+          "light": false,
+          "limb": "ensemble"
+        },
+        {
+          "at": 7.783019,
+          "pad": 1,
+          "velocity": 0.65,
+          "light": false,
+          "limb": "ensemble"
+        },
+        {
+          "at": 8.207547,
+          "pad": 1,
+          "velocity": 0.85,
+          "light": false,
+          "limb": "ensemble"
+        },
+        {
+          "at": 8.207547,
+          "pad": 12,
+          "velocity": 0.4,
+          "light": false,
+          "limb": "ensemble"
+        },
+        {
+          "at": 8.507547,
+          "pad": 9,
+          "velocity": 0.9,
+          "light": false,
+          "limb": "ensemble"
+        },
+        {
+          "at": 8.773585,
+          "pad": 12,
+          "velocity": 0.4,
+          "light": false,
+          "limb": "ensemble"
+        },
+        {
+          "at": 8.773585,
+          "pad": 11,
+          "velocity": 0.5,
+          "light": false,
+          "limb": "ensemble"
+        },
+        {
+          "at": 8.915094,
+          "pad": 9,
+          "velocity": 0.3,
+          "light": false,
+          "limb": "ensemble"
+        }
+      ],
+      "duration": 9.556603773584905,
+      "eventCount": 45,
+      "peak": 0.67919921875
+    },
+    "industrial": {
+      "bpm": 132,
+      "events": [
+        {
+          "at": 0.0,
+          "pad": 1,
+          "velocity": 1,
+          "light": false,
+          "limb": "ensemble"
+        },
+        {
+          "at": 0.0,
+          "pad": 15,
+          "velocity": 0.65,
+          "light": false,
+          "limb": "ensemble"
+        },
+        {
+          "at": 0.340909,
+          "pad": 15,
+          "velocity": 0.45,
+          "light": false,
+          "limb": "ensemble"
+        },
+        {
+          "at": 0.454545,
+          "pad": 14,
+          "velocity": 0.65,
+          "light": false,
+          "limb": "ensemble"
+        },
+        {
+          "at": 0.681818,
+          "pad": 1,
+          "velocity": 0.75,
+          "light": false,
+          "limb": "ensemble"
+        },
+        {
+          "at": 0.681818,
+          "pad": 15,
+          "velocity": 0.8,
+          "light": false,
+          "limb": "ensemble"
+        },
+        {
+          "at": 0.909091,
+          "pad": 15,
+          "velocity": 0.5,
+          "light": false,
+          "limb": "ensemble"
+        },
+        {
+          "at": 1.25,
+          "pad": 15,
+          "velocity": 0.65,
+          "light": false,
+          "limb": "ensemble"
+        },
+        {
+          "at": 1.363636,
+          "pad": 1,
+          "velocity": 0.9,
+          "light": false,
+          "limb": "ensemble"
+        },
+        {
+          "at": 1.363636,
+          "pad": 14,
+          "velocity": 0.65,
+          "light": false,
+          "limb": "ensemble"
+        },
+        {
+          "at": 1.590909,
+          "pad": 15,
+          "velocity": 0.85,
+          "light": false,
+          "limb": "ensemble"
+        },
+        {
+          "at": 1.818182,
+          "pad": 1,
+          "velocity": 1,
+          "light": false,
+          "limb": "ensemble"
+        },
+        {
+          "at": 1.818182,
+          "pad": 15,
+          "velocity": 0.65,
+          "light": false,
+          "limb": "ensemble"
+        },
+        {
+          "at": 2.159091,
+          "pad": 15,
+          "velocity": 0.45,
+          "light": false,
+          "limb": "ensemble"
+        },
+        {
+          "at": 2.272727,
+          "pad": 14,
+          "velocity": 0.65,
+          "light": false,
+          "limb": "ensemble"
+        },
+        {
+          "at": 2.5,
+          "pad": 1,
+          "velocity": 0.75,
+          "light": false,
+          "limb": "ensemble"
+        },
+        {
+          "at": 2.5,
+          "pad": 15,
+          "velocity": 0.8,
+          "light": false,
+          "limb": "ensemble"
+        },
+        {
+          "at": 2.727273,
+          "pad": 15,
+          "velocity": 0.5,
+          "light": false,
+          "limb": "ensemble"
+        },
+        {
+          "at": 3.068182,
+          "pad": 15,
+          "velocity": 0.65,
+          "light": false,
+          "limb": "ensemble"
+        },
+        {
+          "at": 3.181818,
+          "pad": 1,
+          "velocity": 0.9,
+          "light": false,
+          "limb": "ensemble"
+        },
+        {
+          "at": 3.181818,
+          "pad": 14,
+          "velocity": 0.65,
+          "light": false,
+          "limb": "ensemble"
+        },
+        {
+          "at": 3.409091,
+          "pad": 15,
+          "velocity": 0.85,
+          "light": false,
+          "limb": "ensemble"
+        },
+        {
+          "at": 3.636364,
+          "pad": 1,
+          "velocity": 1,
+          "light": false,
+          "limb": "ensemble"
+        },
+        {
+          "at": 3.636364,
+          "pad": 15,
+          "velocity": 0.65,
+          "light": false,
+          "limb": "ensemble"
+        },
+        {
+          "at": 3.977273,
+          "pad": 15,
+          "velocity": 0.45,
+          "light": false,
+          "limb": "ensemble"
+        },
+        {
+          "at": 4.090909,
+          "pad": 14,
+          "velocity": 0.65,
+          "light": false,
+          "limb": "ensemble"
+        },
+        {
+          "at": 4.318182,
+          "pad": 1,
+          "velocity": 0.75,
+          "light": false,
+          "limb": "ensemble"
+        },
+        {
+          "at": 4.318182,
+          "pad": 15,
+          "velocity": 0.8,
+          "light": false,
+          "limb": "ensemble"
+        },
+        {
+          "at": 4.545455,
+          "pad": 15,
+          "velocity": 0.5,
+          "light": false,
+          "limb": "ensemble"
+        },
+        {
+          "at": 4.886364,
+          "pad": 15,
+          "velocity": 0.65,
+          "light": false,
+          "limb": "ensemble"
+        },
+        {
+          "at": 5.0,
+          "pad": 1,
+          "velocity": 0.9,
+          "light": false,
+          "limb": "ensemble"
+        },
+        {
+          "at": 5.0,
+          "pad": 14,
+          "velocity": 0.65,
+          "light": false,
+          "limb": "ensemble"
+        },
+        {
+          "at": 5.227273,
+          "pad": 15,
+          "velocity": 0.85,
+          "light": false,
+          "limb": "ensemble"
+        },
+        {
+          "at": 5.454545,
+          "pad": 1,
+          "velocity": 1,
+          "light": false,
+          "limb": "ensemble"
+        },
+        {
+          "at": 5.454545,
+          "pad": 15,
+          "velocity": 0.65,
+          "light": false,
+          "limb": "ensemble"
+        },
+        {
+          "at": 5.795455,
+          "pad": 15,
+          "velocity": 0.45,
+          "light": false,
+          "limb": "ensemble"
+        },
+        {
+          "at": 5.909091,
+          "pad": 14,
+          "velocity": 0.65,
+          "light": false,
+          "limb": "ensemble"
+        },
+        {
+          "at": 6.136364,
+          "pad": 1,
+          "velocity": 0.75,
+          "light": false,
+          "limb": "ensemble"
+        },
+        {
+          "at": 6.136364,
+          "pad": 15,
+          "velocity": 0.8,
+          "light": false,
+          "limb": "ensemble"
+        },
+        {
+          "at": 6.363636,
+          "pad": 15,
+          "velocity": 0.5,
+          "light": false,
+          "limb": "ensemble"
+        },
+        {
+          "at": 6.590909,
+          "pad": 15,
+          "velocity": 0.45,
+          "light": false,
+          "limb": "ensemble"
+        },
+        {
+          "at": 6.704545,
+          "pad": 15,
+          "velocity": 0.65,
+          "light": false,
+          "limb": "ensemble"
+        },
+        {
+          "at": 6.704545,
+          "pad": 15,
+          "velocity": 0.5,
+          "light": false,
+          "limb": "ensemble"
+        },
+        {
+          "at": 6.818182,
+          "pad": 1,
+          "velocity": 0.9,
+          "light": false,
+          "limb": "ensemble"
+        },
+        {
+          "at": 6.818182,
+          "pad": 14,
+          "velocity": 0.65,
+          "light": false,
+          "limb": "ensemble"
+        },
+        {
+          "at": 6.931818,
+          "pad": 15,
+          "velocity": 0.6000000000000001,
+          "light": false,
+          "limb": "ensemble"
+        },
+        {
+          "at": 7.045455,
+          "pad": 15,
+          "velocity": 0.85,
+          "light": false,
+          "limb": "ensemble"
+        },
+        {
+          "at": 7.045455,
+          "pad": 15,
+          "velocity": 0.65,
+          "light": false,
+          "limb": "ensemble"
+        },
+        {
+          "at": 7.159091,
+          "pad": 15,
+          "velocity": 0.7,
+          "light": false,
+          "limb": "ensemble"
+        }
+      ],
+      "duration": 7.7727272727272725,
+      "eventCount": 49,
+      "peak": 0.563446044921875
+    },
+    "tap-roll": {
+      "events": [
+        {
+          "at": 0.0,
+          "pad": 3,
+          "velocity": 0.55,
+          "light": true,
+          "limb": "L"
+        },
+        {
+          "at": 0.115,
+          "pad": 3,
+          "velocity": 0.7,
+          "light": true,
+          "limb": "R"
+        },
+        {
+          "at": 0.23,
+          "pad": 2,
+          "velocity": 0.35,
+          "light": true,
+          "limb": "L"
+        },
+        {
+          "at": 0.345,
+          "pad": 2,
+          "velocity": 0.6,
+          "light": true,
+          "limb": "R"
+        },
+        {
+          "at": 0.58,
+          "pad": 3,
+          "velocity": 0.55,
+          "light": true,
+          "limb": "L"
+        },
+        {
+          "at": 0.685,
+          "pad": 3,
+          "velocity": 0.7,
+          "light": true,
+          "limb": "R"
+        },
+        {
+          "at": 0.79,
+          "pad": 2,
+          "velocity": 0.35,
+          "light": true,
+          "limb": "L"
+        },
+        {
+          "at": 0.895,
+          "pad": 2,
+          "velocity": 0.6,
+          "light": true,
+          "limb": "R"
+        },
+        {
+          "at": 1.15,
+          "pad": 3,
+          "velocity": 0.55,
+          "light": true,
+          "limb": "L"
+        },
+        {
+          "at": 1.24,
+          "pad": 3,
+          "velocity": 0.7,
+          "light": true,
+          "limb": "R"
+        },
+        {
+          "at": 1.33,
+          "pad": 2,
+          "velocity": 0.35,
+          "light": true,
+          "limb": "L"
+        },
+        {
+          "at": 1.42,
+          "pad": 2,
+          "velocity": 0.6,
+          "light": true,
+          "limb": "R"
+        },
+        {
+          "at": 1.67,
+          "pad": 3,
+          "velocity": 0.55,
+          "light": true,
+          "limb": "L"
+        },
+        {
+          "at": 1.75,
+          "pad": 3,
+          "velocity": 0.7,
+          "light": true,
+          "limb": "R"
+        },
+        {
+          "at": 1.83,
+          "pad": 2,
+          "velocity": 0.35,
+          "light": true,
+          "limb": "L"
+        },
+        {
+          "at": 1.91,
+          "pad": 2,
+          "velocity": 0.6,
+          "light": true,
+          "limb": "R"
+        },
+        {
+          "at": 2.12,
+          "pad": 5,
+          "velocity": 0.45,
+          "light": true,
+          "limb": "L"
+        },
+        {
+          "at": 2.21,
+          "pad": 6,
+          "velocity": 0.55,
+          "light": true,
+          "limb": "L"
+        },
+        {
+          "at": 2.32,
+          "pad": 3,
+          "velocity": 0.8,
+          "light": true,
+          "limb": "L"
+        }
+      ],
+      "duration": 2.8,
+      "eventCount": 19,
+      "peak": 0.26885986328125
+    },
+    "tap-riser": {
+      "events": [
+        {
+          "at": 0.0,
+          "pad": 5,
+          "velocity": 0.35,
+          "light": true,
+          "limb": "L"
+        },
+        {
+          "at": 0.16,
+          "pad": 6,
+          "velocity": 0.35,
+          "light": true,
+          "limb": "L"
+        },
+        {
+          "at": 0.32,
+          "pad": 3,
+          "velocity": 0.44999999999999996,
+          "light": true,
+          "limb": "L"
+        },
+        {
+          "at": 0.48,
+          "pad": 2,
+          "velocity": 0.35,
+          "light": true,
+          "limb": "L"
+        },
+        {
+          "at": 0.76,
+          "pad": 5,
+          "velocity": 0.44999999999999996,
+          "light": true,
+          "limb": "R"
+        },
+        {
+          "at": 0.89,
+          "pad": 6,
+          "velocity": 0.44999999999999996,
+          "light": true,
+          "limb": "R"
+        },
+        {
+          "at": 1.02,
+          "pad": 3,
+          "velocity": 0.5499999999999999,
+          "light": true,
+          "limb": "R"
+        },
+        {
+          "at": 1.15,
+          "pad": 2,
+          "velocity": 0.44999999999999996,
+          "light": true,
+          "limb": "R"
+        },
+        {
+          "at": 1.38,
+          "pad": 5,
+          "velocity": 0.55,
+          "light": true,
+          "limb": "L"
+        },
+        {
+          "at": 1.485,
+          "pad": 6,
+          "velocity": 0.55,
+          "light": true,
+          "limb": "L"
+        },
+        {
+          "at": 1.59,
+          "pad": 3,
+          "velocity": 0.65,
+          "light": true,
+          "limb": "L"
+        },
+        {
+          "at": 1.695,
+          "pad": 2,
+          "velocity": 0.55,
+          "light": true,
+          "limb": "L"
+        },
+        {
+          "at": 1.89,
+          "pad": 5,
+          "velocity": 0.65,
+          "light": true,
+          "limb": "R"
+        },
+        {
+          "at": 1.97,
+          "pad": 6,
+          "velocity": 0.65,
+          "light": true,
+          "limb": "R"
+        },
+        {
+          "at": 2.05,
+          "pad": 3,
+          "velocity": 0.75,
+          "light": true,
+          "limb": "R"
+        },
+        {
+          "at": 2.13,
+          "pad": 2,
+          "velocity": 0.65,
+          "light": true,
+          "limb": "R"
+        },
+        {
+          "at": 2.42,
+          "pad": 5,
+          "velocity": 0.65,
+          "light": true,
+          "limb": "R"
+        },
+        {
+          "at": 2.5,
+          "pad": 6,
+          "velocity": 0.7,
+          "light": true,
+          "limb": "R"
+        },
+        {
+          "at": 2.63,
+          "pad": 3,
+          "velocity": 0.9,
+          "light": true,
+          "limb": "R"
+        },
+        {
+          "at": 2.74,
+          "pad": 2,
+          "velocity": 0.55,
+          "light": true,
+          "limb": "R"
+        }
+      ],
+      "duration": 3.2,
+      "eventCount": 20,
+      "peak": 0.354766845703125
+    }
+  }
+}
