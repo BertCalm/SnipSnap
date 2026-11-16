@@ -1,5 +1,6 @@
 package com.snipsnap.synth
 
+import com.snipsnap.audio.WavWriter
 import kotlin.math.*
 
 /** Offline whole-mix compression from the accepted CUTTINGS second audition.
@@ -30,7 +31,7 @@ object CuttingsBus {
         }
         val results = linkedMapOf("finished" to input.map { it.toDouble() }.toDoubleArray())
         for (mode in Mode.entries) {
-            val attack = exp(-1 / (44100 * mode.attack)); val release = exp(-1 / (44100 * mode.release))
+            val attack = exp(-1 / (WavWriter.MPC_SAMPLE_RATE * mode.attack)); val release = exp(-1 / (WavWriter.MPC_SAMPLE_RATE * mode.release))
             var envelope = 0.0
             results[mode.name.lowercase()] = DoubleArray(input.size) { i ->
                 val coefficient = if (detector[i] > envelope) attack else release
