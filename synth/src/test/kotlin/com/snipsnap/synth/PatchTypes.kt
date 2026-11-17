@@ -69,7 +69,7 @@ internal object PatchTypes {
      * accepting the engine means filing its recipes in [Presets] and taking it off this list. ETCH sat here from
      * its Kotlin port (K1) to round K2 (2026-11-14), when its heard round-3 settings became the factory bank.
      */
-    val PROTOTYPES: Set<String> = setOf(ChitinPatch.ENGINE, FerryPatch.ENGINE, FillPatch.ENGINE, BreakerPatch.ENGINE, SootPatch.ENGINE, KindredPatch.ENGINE)
+    val PROTOTYPES: Set<String> = setOf(SambaPatch.ENGINE, ChitinPatch.ENGINE, FerryPatch.ENGINE, FillPatch.ENGINE, BreakerPatch.ENGINE, SootPatch.ENGINE, KindredPatch.ENGINE)
 
     /** These voices of otherwise rostered engines await a factory-preset listening verdict. */
     val PROTOTYPE_VOICES: Map<String, Set<String>> = mapOf(

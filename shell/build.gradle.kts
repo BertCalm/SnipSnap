@@ -838,3 +838,12 @@ tasks.register<JavaExec>("verifyParadeStudyTransport") {
     args(providers.gradleProperty("paradeInput").getOrElse("${rootDir}/testkit/parade-study"),
         providers.gradleProperty("paradeOutput").getOrElse("${rootDir}/testkit/parade-transport"))
 }
+
+tasks.register<JavaExec>("verifyNativeSambaKit") {
+    group = "verification"
+    description = "Regenerate native Samba recipes and verify save/load, playback and MPC export."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.SambaKitProof")
+    maxHeapSize = "1g"
+    args(providers.gradleProperty("nativeSambaKitOutput").getOrElse("${rootDir}/testkit/native-samba-kit"))
+}

@@ -489,6 +489,11 @@ object UserPresets {
             val recipe = Json.write(JsonValue.Str(patch.toJsonText())).replace("$", "\\$")
             return "ScuffPatch.fromJsonText($recipe),"
         }
+        if (patch is com.snipsnap.synth.SambaPatch) {
+            // The renderer model lives outside the macro map; promotion keeps the battery as heard.
+            val recipe = Json.write(JsonValue.Str(patch.toJsonText())).replace("$", "\\$")
+            return "SambaPatch.fromJsonText($recipe),"
+        }
         if (patch is com.snipsnap.synth.DrumlinePatch) {
             // The renderer model lives outside the macro map; promotion keeps the battery as heard.
             val recipe = Json.write(JsonValue.Str(patch.toJsonText())).replace("$", "\\$")

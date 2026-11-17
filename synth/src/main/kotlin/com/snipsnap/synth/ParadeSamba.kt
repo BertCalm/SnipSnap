@@ -8,7 +8,7 @@ import kotlin.math.*
  * RNG and house output differ from Python, so this requires listening rather than a byte-parity claim.
  * TUNE moves the body ±6 semitones; STRIKE changes contact brightness; DAMP changes decay rates.
  */
-internal object ParadeSamba {
+object ParadeSamba {
     const val MODEL = 1
     private const val R = Dsp.RATE * Dsp.OVERSAMPLE
     enum class Voice(val root: Double, val players: Int, val widthMs: Double) {
