@@ -19,7 +19,7 @@ The source's original CURRENT 0.20, BLOOM 0.35 and VENUE 0.15 stay pinned. TOUCH
 | CURRENT | 0.20 | Coral early/late path balance and seaweed aperture speed/depth. Zero freezes return alignment; the reference maps to 2 Hz and 0.90 aperture depth. |
 | VENUE | 0.15 | A continuous convex blend between coral at 0 and seaweed at 1. |
 | BLOOM | 0.35 | Existing linear sympathetic contribution and return amount, with the heard balance pinned at the reference. Decay laws stay fixed. |
-| HOLD | 0 | Reserved/refused: every nonzero value is rejected. |
+| HOLD | 0 | Reserved/refused on PEARL (models 1–4) and on HARMONICS, SHELL and BUBBLE: every nonzero value is rejected. Only GROTTO (model 8) and CONCH (model 9) hold; see [NACRE_VOICES.md](NACRE_VOICES.md#grotto-model-8) and [CONCH](NACRE_VOICES.md#conch-model-9). |
 
 Coral delays are 100/210/340 ms with 1600/1200/900 Hz absorption. Seaweed delays are 220/410/640 ms with 1200/900/650 Hz absorption. Reference path weights are 0.52/0.31/0.17. These are shaped listening parameters, not measured underwater acoustics. At the reference controls, endpoint Float mixes and PCM24 WAVs are pinned against the actual published preferred study.
 
@@ -27,9 +27,9 @@ Return gain uses the fixed reference calibration `0.8930654093975182`; it is not
 
 ## Saved recipes and playback
 
-An ordinary `NacrePatch` carries model, voice, macros, MIDI 28–72, velocity 0–1 and exact seed. JSON replay, `PadRecipe`, macro editing and native velocity rendering preserve the saved revision. The first two renderers and the second model's historical six-preset bank are frozen; the old audition task is explicitly pinned to that bank.
+An ordinary `NacrePatch` carries model, voice, macros, MIDI 28–72 (GROTTO 36–60, CONCH 36–72), velocity 0–1 and exact seed. JSON replay, `PadRecipe`, macro editing and native velocity rendering preserve the saved revision. The first two renderers and the second model's historical six-preset bank are frozen; the old audition task is explicitly pinned to that bank.
 
-The Android picker exposes PEARL, the three starting sounds, root and strike controls. Loaded old patches keep their saved model, note, velocity and seed through edits and recreation. Nonzero HOLD remains unavailable. The app renders audio offline and plays that result; this is not a live string solver.
+The Android picker exposes PEARL, the three starting sounds, root and strike controls. Loaded old patches keep their saved model, note, velocity and seed through edits and recreation. Nonzero HOLD remains unavailable on every finite voice; only GROTTO and CONCH show HOLD, and their top step previews as a loop. The app renders audio offline and plays that result; this is not a live string solver.
 
 CLI example:
 
@@ -77,11 +77,11 @@ This is not peak or RMS matching. It leaves the accepted hard file unchanged; al
 
 The typed `nacreVelocityLayers` source field contains all three independent source recipes, velocity windows and sampling gains. It survives ordinary sidecar and backup source-metadata round trips. Generic one-source editing and REPLAY refuse layered targets; they do not rebuild only the hard file and leave stale softer samples. Full-bank replay uses the explicit layer bundle. Standalone MPC sidecars additionally fingerprint every delivered velocity-layer WAV through optional `rawVelocitySha256` metadata; older sidecars without this field remain readable.
 
-Different pads have no choke relationship. The existing MPC 2 mono-per-pad retrigger behavior remains unchanged. Loading, same-pad repeats, distinct-pad overlap and the player's velocity curve still need a target-MPC listen. Conch, cave, chromatic keygroups and HOLD are separate future work.
+Different pads have no choke relationship. The existing MPC 2 mono-per-pad retrigger behavior remains unchanged. Loading, same-pad repeats, distinct-pad overlap and the player's velocity curve still need a target-MPC listen. Conch, cave and chromatic keygroups are separate future work; GROTTO's and CONCH's held loops have no MPC check yet.
 
-## New voices: HARMONICS, SHELL and BUBBLE
+## New voices: HARMONICS, SHELL, BUBBLE, GROTTO and CONCH
 
-Three new voices, HARMONICS (saved model 5), SHELL (saved model 6) and BUBBLE (saved model 7), keep PEARL's paired performers, bodies, sympathetic strings and water but change what is played. The owner kept HARMONICS and SHELL on 15 Nov 2026 (round `nacre-voices-1`), then their presets and BUBBLE (round `nacre-voices-2`). All three are in the SYNTH picker with four presets each; three of BUBBLE's presets are not yet heard. See [NACRE_VOICES.md](NACRE_VOICES.md).
+Five new voices, HARMONICS (saved model 5), SHELL (saved model 6), BUBBLE (saved model 7), GROTTO (saved model 8) and CONCH (saved model 9), keep PEARL's bodies, sympathetic strings and water but change what is played. The owner kept HARMONICS and SHELL on 15 Nov 2026 (round `nacre-voices-1`), then their presets and BUBBLE (round `nacre-voices-2`), then BUBBLE's presets (round `nacre-voices-3`, Q3), then GROTTO in full (round `nacre-grotto-1`, D1–D10), and on 16 Nov 2026 CONCH in full (round `nacre-conch-1`, O1–O11). GROTTO is a bowed bass string under glassy glints, C2 to C4; CONCH is a pair of blown shells an octave apart, C2 to C5. They are the two NACRE voices with a real held loop. All five are in the SYNTH picker with four presets each, and every preset is a sound the owner kept. See [NACRE_VOICES.md](NACRE_VOICES.md).
 
 ## Cache and cost
 

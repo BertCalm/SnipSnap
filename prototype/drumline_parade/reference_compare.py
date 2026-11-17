@@ -33,12 +33,14 @@ def main():
   refs={'cymbal_crash':a.references/'crash_alt.wav','rimshot':core/'snaremic_snare_rimshot_vl11.wav','cross_stick':core/'snaremic_snare_crossstick_vl15.wav','stick_click':a.references/'stick_alt.wav'}
   rows=[]
   for name,p in refs.items():
+   if name!='cymbal_crash':continue
    target=bands(load(p));mask=target>np.max(target)-45
    def error(folder):return float(np.mean(np.abs(bands(load(folder/'second-line'/f'{name}.wav'))-target)[mask]))
    rows.append({'pad':name,'reference':p.name,'previous_error_db':error(a.previous),'measured_error_db':error(a.current)})
   (a.current/'reference-holdout-report.json').write_text(json.dumps(rows,indent=2)+'\n');print(json.dumps(rows));return
  dest=a.current/'references';dest.mkdir(exist_ok=True);cards=[];rows=[]
  for name,path in refs.items():
+  if name!='cymbal_crash':continue
   ref=load(path);old=load(a.previous/'second-line'/f'{name}.wav');new=load(a.current/'second-line'/f'{name}.wav')
   target=bands(ref);mask=target>np.max(target)-45
   def err(x):return float(np.mean(np.abs(bands(x)-target)[mask]))
@@ -46,11 +48,11 @@ def main():
   gain=.9/max(np.max(np.abs(x)) for x in [ref,old,new]);players=[]
   for label,x,title in [('recording',ref,'Recorded reference'),('previous',old,'Previous synthesis'),('measured',new,'Measured-model candidate')]:
    sk.write_wav(str(dest/f'{name}-{label}.wav'),x*gain)
-   players.append(f'<p>{title}</p><audio controls preload="none" src="references/{name}-{label}.wav?revision=3"></audio>')
+   players.append(f'<p>{title}</p><audio controls preload="none" src="references/{name}-{label}.wav?revision=4"></audio>')
   cards.append(f'<article><h3>{name.replace("_"," ").title()}</h3>'+''.join(players)+'</article>')
  report={'scope':'Fit-set matched-attack band-envelope MAE, 200–12800 Hz, first 150 ms; not held-out realism or alias evidence','results':rows}
  (dest/'report.json').write_text(json.dumps(report,indent=2)+'\n');(dest/'NOTICE.txt').write_text((Path(__file__).parent/'NOTICE-measured.txt').read_text())
  page=a.current/'index.html';s=page.read_text();i=s.index('<section>')
- s=s[:i]+'''<section><h2>Against real acoustic references</h2><p>Recorded reference → previous synthesis → measured-model candidate. Matched attack levels. The recording is a comparison control; the candidate is synthesized.</p><p>The crash, snare rimshot and cross-stick use measured soft/hard data. Stick softness is modeled from one recorded level. Samba rim variants, cymbal choke and touch are adaptations, not instrument-specific recorded fits.</p><p><a href="references/NOTICE.txt">Reference sources and credits</a></p><div class="grid">'''+''.join(cards)+'</div></section>'+s[i:];page.write_text(s)
+ s=s[:i]+'''<section><h2>Crash against the acoustic reference</h2><p>Recorded reference → previous synthesis → measured-model candidate. Matched attack levels. The recording is a comparison control; the candidate is synthesized.</p><p>This round changes the crash only. Its broad wash follows measured hard/soft crash spectra and decays. The other 31 pads retain revision 3.</p><p><a href="references/NOTICE.txt">Reference sources and credits</a></p><div class="grid">'''+''.join(cards)+'</div></section>'+s[i:];page.write_text(s)
  print(json.dumps(report))
 if __name__=='__main__':main()

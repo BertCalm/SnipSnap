@@ -11,7 +11,7 @@ import java.util.zip.GZIPInputStream
  * Each build owns its buffers; decoding cannot mutate a later build or the approved resources.
  */
 object SoulRockKits {
-    const val VERSION = 1
+    const val VERSION = 2
     const val TAKES = 3
     const val PADS = 16
     enum class Choice(val id: String, val title: String, val bpm: Int, internal val bank: String) {
@@ -23,7 +23,11 @@ object SoulRockKits {
     internal fun resource(name: String): ByteArray {
         require(name in setOf("manifest.json", "NOTICE.txt") ||
             Regex("(soul-pocket|roadhouse-rock|open-room-rock)/(?:[1-9]|1[0-6])-[0-2]-[0-2]\\.wav\\.gz").matches(name))
-        return requireNotNull(javaClass.getResourceAsStream("/soul-rock/v$VERSION/$name")) {
+        // Version 2 changes only the accepted Roadhouse snare. Missing v2 assets must
+        // fail rather than silently falling back to an obsolete snare.
+        val assetVersion = if (name in setOf("manifest.json", "NOTICE.txt") ||
+            name.startsWith("roadhouse-rock/2-")) VERSION else 1
+        return requireNotNull(javaClass.getResourceAsStream("/soul-rock/v$assetVersion/$name")) {
             "Missing Soul Rock asset: $name"
         }.use { stream -> if (name.endsWith(".gz")) GZIPInputStream(stream).use { it.readBytes() } else stream.readBytes() }
     }
@@ -57,7 +61,8 @@ object SoulRockKits {
                     put("sourceKind", "frozen acoustic synthesis"); put("rendered", "true")
                     put("zones", "3"); put("takes", TAKES.toString()); put("articulation", "finite")
                     put("audition", manifest.getValue("audition").str())
-                    put("approval", "Python audition approved 2026-11-16; hardware open")
+                    put("approval", recipe["approval"]?.str() ?: "Python audition approved 2026-11-16; hardware open")
+                    recipe["sourceModel"]?.let { put("sourceModel", it.str()) }
                     for ((key, value) in recipe.getValue("macros").obj()) put("synthesis.$key", value.num().toString())
                 })
         }

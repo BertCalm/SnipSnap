@@ -274,7 +274,8 @@ import kotlin.random.Random
  * explicitly choose --model 5 for HOLD or --instrument [--release S]. Held keys
  * retain the unfolding opening before periodic sustain across nine native roots.
  * WICK offers 36 shared factory recipes across PLUCK/WOOD/BREATH/BUBBLE/FLICKER/RATTLE; saved RATTLE body choices survive note and velocity overrides.
- * NACRE offers finite PEARL, HARMONICS, SHELL and BUBBLE presets with native note and velocity.
+ * NACRE offers finite PEARL, HARMONICS, SHELL and BUBBLE presets, GROTTO's bowed bass (C2 to C4) and CONCH's blown
+ * shell pair (C2 to C5), each with two of its four presets held loops, with native note and velocity.
  * FILAMENT exposes twelve approved THREAD/PULSE/CURL factory recipes with saved geometry and note/velocity overrides.
  * ORPHICA accepts `--seed N` for repeatable string excitation and grains, preserving all 64 bits.
  * Its `--midi N` resets relative TUNE to neutral and also sets the sampled root with --instrument;
@@ -512,7 +513,8 @@ object SynthCommand {
                 FilamentPatch.ENGINE -> Filament.MIN_MIDI..Filament.MAX_MIDI
                 ChamberPatch.ENGINE -> Chamber.MIDI_MIN..Chamber.MIDI_MAX
                 TidalPatch.ENGINE -> Tidal.MIN_MIDI..Tidal.MAX_MIDI
-                NacrePatch.ENGINE -> Nacre.MIN_MIDI..Nacre.MAX_MIDI
+                NacrePatch.ENGINE -> NacreVoice.entries.firstOrNull { it.name == voice }?.let(Nacre::midiRange)
+                    ?: (Nacre.MIN_MIDI..Nacre.MAX_MIDI)
                 FerryPatch.ENGINE -> Ferry.MIN_MIDI..Ferry.MAX_MIDI
                 OhmPatch.ENGINE -> 48..72
                 PrismPatch.ENGINE -> {
@@ -1044,6 +1046,9 @@ object SynthCommand {
                 ?: (patch as? CausticPatch)?.takeIf {
                     CausticInstrument.isLoop(it.voice, it.macros, it.model)
                 }?.let { SmplChunk(it.midi, SmplChunk.Loop(0, snip.frameCount.toLong())) }
+                // GROTTO's held render is exactly one seamless loop, so the lone WAV loops whole.
+                ?: (patch as? NacrePatch)?.takeIf { Nacre.isLoop(it.voice, it.macros) }
+                    ?.let { SmplChunk(it.midi, SmplChunk.Loop(0, snip.frameCount.toLong())) }
             FileOutputStream(file).buffered().use { WavWriter.write(it, snip, smpl = sampler) }
             if (patch is TempestPatch || patch is HalobarPatch || patch is ChitinPatch || patch is LorentzPatch || patch is MeridianPatch || patch is RimePatch || patch is OtisPatch || patch is FerryPatch || patch is ApsisPatch || patch is ObbligatoPatch || patch is TidalPatch || patch is LatticePatch || patch is SplayPatch ||
                 patch is PluckPatch && patch.voice == PluckVoice.UPRIGHT) {

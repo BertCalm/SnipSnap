@@ -13,6 +13,7 @@ import com.snipsnap.kit.Preflight
 import com.snipsnap.kit.blocked
 import com.snipsnap.mpc3.Mpc3Clip
 import com.snipsnap.mpc3.Mpc3Note
+import com.snipsnap.synth.ErosionRoundRobinKits
 import com.snipsnap.synth.TerraKits
 import com.snipsnap.synth.TerraRoundRobinKits
 import java.io.File
@@ -35,10 +36,10 @@ class TerraRoundRobinStarterTest {
         val group = StarterShelf.GROUPS.single { TerraRoundRobinKits.ID in it.ids }
         assertEquals(1, StarterShelf.GROUPS.sumOf { g -> g.ids.count { it == TerraRoundRobinKits.ID } })
         assertEquals(group.ids.indexOf("terra") + 1, group.ids.indexOf(TerraRoundRobinKits.ID))
-        // Stored starter order only grows at the end: TERRA ROUND ROBIN was appended after TERRA's genre kits.
+        // Stored starter order only grows at the end: TERRA ROUND ROBIN was appended after EROSION ROUND ROBIN.
         // Later starters are appended after it, so pin its place rather than demand it stays last.
         val ids = StarterKits.ALL.map { it.id }
-        assertEquals("terra-punjab", ids[ids.indexOf(TerraRoundRobinKits.ID) - 1], "the stored starter order only grows at the end")
+        assertEquals(ErosionRoundRobinKits.ID, ids[ids.indexOf(TerraRoundRobinKits.ID) - 1], "the stored starter order only grows at the end")
     }
 
     @Test fun `every take survives saving reloading playback preview and both MPC exports`() {
