@@ -929,7 +929,7 @@ owner's "Proceed") files the five kits' 80 pads as EMBER's factory presets and p
 - **Presets and picker: in software (round 4).** `EmberPresets` files the 80 approved pads as presets, each the
   pad's own macros struck full at take 0, byte for byte the engine render the kit's hard zone scales
   (`EmberPresetsTest`); EMBER has left `PatchTypes.ROSTERLESS`. EMBER is on SYNTH's picker after SERVO, under DRUMS
-  (96 picker engines). An on-device test in `NewEngineSynthScreenTest` loads CLUB KICK and keeps an edit with its
+  (97 picker engines with SAMBA, which landed alongside). An on-device test in `NewEngineSynthScreenTest` loads CLUB KICK and keeps an edit with its
   take and model; CI compiles and runs it. No phone has opened it by hand.
 - **Overall: incomplete.** The sound is approved, the five kits are on the shelf, proved through saving, playback and
   MPC 3 export in software (rounds 2 and 3L), and their pads are the presets on the picker (round 4). Open: phone and

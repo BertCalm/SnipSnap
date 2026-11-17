@@ -87,7 +87,7 @@ the `Engine` enum, the saved-draft restore, a frozen draft where no recipe is lo
 native-factory path, because an EMBER preset carries its strike velocity, take and model outside the macro map. The
 voice chips are the voice names with spaces (TOM RACK, BRUSH SWEEP, BONGO HIGH); the stick hat reads HAT CL and the
 open hat HAT OP, as on the other drum engines. `EngineCatalog` files EMBER under DRUMS ("A 1962 jazz club: sticks,
-brushes, mallets and Latin hands"); both READMEs count 96 picker engines. The app README's starter list had lost EMBER
+brushes, mallets and Latin hands"); both READMEs count 97 picker engines (SAMBA landed on the base at the same time and sits after EMBER, before CAIRN). The app README's starter list had lost EMBER
 LATIN JAZZ in a merge; it is back.
 
 `NewEngineSynthScreenTest` gains an on-device test: the kick opens with its five controls, CLUB KICK lands with the

@@ -125,6 +125,20 @@ class NewEngineSynthScreenTest : ComposeScreenTest() {
     }
 
     @Test
+    fun sambaKeepsContactEditsAndRendererModel() {
+        show("SAMBA", "CAIXA")
+        for (label in listOf("TUNE", "STRIKE", "DAMP")) control(label).assertExists()
+        adjust("DAMP", .7f)
+        compose.runOnIdle { generation++ }
+        pump()
+        assertEquals(.7f, progress("DAMP"), .0001f)
+        assertFalse(showsLoop())
+        val draft = SynthDrafts.read(settings).single { it.engine == "SAMBA" && it.voiceName == "CAIXA" } as com.snipsnap.synth.SambaPatch
+        assertEquals(1, draft.model)
+        assertEquals(.7f, draft.macros.getValue("DAMP"), .0001f)
+    }
+
+    @Test
     fun drumlineKeepsASectionEditAndItsModel() {
         show("DRUMLINE", "SNARE")
         button("PRESET FIELD SNARE").assertExists()

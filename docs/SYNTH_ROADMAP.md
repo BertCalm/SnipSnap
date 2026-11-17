@@ -3883,7 +3883,7 @@ An on-device test loads ELECTRO BOOM KICK and keeps an edit with its take and mo
 `EmberPresets` files the eighty pads of the five approved kits as EMBER's factory bank (each the pad's own macros
 struck full at take 0, named after its kit: CLUB, AFTER HOURS, SOUL JAZZ, FREE, LATIN JAZZ; five names shortened to
 fit 24 letters), and EMBER leaves `PatchTypes.ROSTERLESS`. Every one of the 35 voices has a preset. EMBER sits on
-SYNTH's picker after SERVO, before CAIRN, under DRUMS; 96 picker engines. An on-device test loads CLUB KICK and keeps
+SYNTH's picker after SERVO, before SAMBA and CAIRN, under DRUMS; 97 picker engines with SAMBA. An on-device test loads CLUB KICK and keeps
 an edit with its take and model; CI compiles and runs it. Open: phone and MPC hardware. See [EMBER](EMBER.md).
 
 

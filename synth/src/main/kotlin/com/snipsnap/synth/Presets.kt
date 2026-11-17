@@ -29,6 +29,7 @@ object Presets {
             ?.let(RivetPresets::forVoice) ?: emptyList()
         ScuffPatch.ENGINE -> ScuffVoice.entries.firstOrNull { it.name == voice }
             ?.let(ScuffPresets::forVoice) ?: emptyList()
+        SambaPatch.ENGINE -> ParadeSamba.Voice.entries.firstOrNull { it.name == voice }?.let(SambaPresets::forVoice) ?: emptyList()
         DrumlinePatch.ENGINE -> DrumlineVoice.entries.firstOrNull { it.name == voice }
             ?.let(DrumlinePresets::forVoice) ?: emptyList()
         CalabashPatch.ENGINE -> CalabashVoice.entries.firstOrNull { it.name == voice }
@@ -387,7 +388,7 @@ object Presets {
     fun all(): List<Patch> =
         TempestPresets.all() +
         SplayFactoryPresets.all() +
-        BristlePresets.all() + BackwashPresets.all() + HalobarPresets.all() + FiredBronzePresets.all() + RivetPresets.all() + OsteriaPresets.all() + ScuffPresets.all() + HiccupPresets.all() + ClutterPresets.all() + CalabashPresets.all() + ServoPresets.all() + EmberPresets.all() + DrumlinePresets.all() + EtchPresets.all() + TerraPresets.all() + ErosionPresets.all() + WickPresets.all() +
+        BristlePresets.all() + BackwashPresets.all() + HalobarPresets.all() + FiredBronzePresets.all() + RivetPresets.all() + OsteriaPresets.all() + ScuffPresets.all() + HiccupPresets.all() + ClutterPresets.all() + CalabashPresets.all() + ServoPresets.all() + EmberPresets.all() + SambaPresets.all() + DrumlinePresets.all() + EtchPresets.all() + TerraPresets.all() + ErosionPresets.all() + WickPresets.all() +
         OtisPresets.all() +
         LorentzPresets.all() +
         AccordPresets.all() +

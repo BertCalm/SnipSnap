@@ -355,6 +355,13 @@ class UserPresetsTest {
                 val promoted = com.snipsnap.synth.ScuffPatch.fromJsonText((call.positional.single() as KotlinLiteral.Str).value)
                 assertEquals(preset, promoted, "${preset.name}: velocity, take and model promotion")
                 assertEquals(preset.macros.mapValues { it.value.toRawBits() }, promoted.macros.mapValues { it.value.toRawBits() })
+            } else if (preset is com.snipsnap.synth.SambaPatch) {
+                val call = KotlinLiteral.parse(line.removeSuffix(",")) as KotlinLiteral.Call
+                assertEquals("fromJsonText", call.name)
+                assertEquals("SambaPatch", (call.receiver as KotlinLiteral.Call).name)
+                val promoted = com.snipsnap.synth.SambaPatch.fromJsonText((call.positional.single() as KotlinLiteral.Str).value)
+                assertEquals(preset, promoted, "${preset.name}: model promotion")
+                assertEquals(preset.macros.mapValues { it.value.toRawBits() }, promoted.macros.mapValues { it.value.toRawBits() })
             } else if (preset is com.snipsnap.synth.DrumlinePatch) {
                 val call = KotlinLiteral.parse(line.removeSuffix(",")) as KotlinLiteral.Call
                 assertEquals("fromJsonText", call.name)
@@ -1372,6 +1379,13 @@ class UserPresetsTest {
                 assertEquals(com.snipsnap.synth.ScuffPatch::class.java, decoder.returnType,
                     "SCUFF promotion retains strike velocity, take and model version")
                 assertTrue("private val promoted:" in text, "SCUFF promotions need a destination beside the accepted kits")
+            } else if (engine == com.snipsnap.synth.SambaPatch.ENGINE) {
+                val decoder = com.snipsnap.synth.SambaPatch.Companion.javaClass.getMethod("fromJsonText", String::class.java)
+                assertEquals(com.snipsnap.synth.SambaPatch::class.java, decoder.returnType,
+                    "SAMBA promotion retains the renderer model")
+                assertTrue("private val promoted:" in text, "SAMBA promotions need a destination beside the accepted kits")
+                val patch = Presets.all().first { it.engine == engine }
+                assertTrue(UserPresets.rosterLine(patch).startsWith("SambaPatch.fromJsonText("))
             } else if (engine == com.snipsnap.synth.DrumlinePatch.ENGINE) {
                 val decoder = com.snipsnap.synth.DrumlinePatch.Companion.javaClass.getMethod("fromJsonText", String::class.java)
                 assertEquals(com.snipsnap.synth.DrumlinePatch::class.java, decoder.returnType,
