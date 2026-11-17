@@ -43,6 +43,7 @@ def mix(bank,fill=False):
   for i,v in enumerate(['snare','tom','tom','floor','floor','floor','snare','floor']):events.append(((14+i*.25)*beat,v,2 if i%2==0 else 1,.8))
   events.extend([(0,'crash',1,.65),(16*beat,'crash',2,.7),(16*beat,'kick',2,.9)])
   length=16*beat+10
+ length=max(length,max(tm+max(len(bank[v,l,r]) for r in range(3))/44100 for tm,v,l,g in events))
  out=np.zeros(round(length*44100));ordered=sorted(events)
  for tm,v,l,gain in ordered:
   rr=counts[v]%3;counts[v]+=1;x=bank[v,l,rr].copy()*gain

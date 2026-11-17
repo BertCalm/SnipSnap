@@ -39,9 +39,13 @@ def main(approved,out,config=None):
    layer['energy']*=.88 if voice in ('kick','tom','floor') else 1.0
  model['version']=4;model['kit']=kit;model['recipe']=recipe
  (out/'synthesis-model.json').write_text(json.dumps(model,separators=(',',':')));model=json.loads((out/'synthesis-model.json').read_text())
- shutil.copy(base,out/'open-road-model.json')
- if config:shutil.copy(approved/'synthesis-model.json',out/'tight-pocket-model.json')
- manifest={'revision':config.get('revision','R6 two synthesized genre kits'),'levels':['Soft','Medium','Hard'],'takes':3,'modes':[kit]+previous,'voices':list(RECIPE),'keys':expansion.KEYS,'files':{}}
+ model_files={kit:'synthesis-model.json'}
+ prior_manifest=json.loads((approved/'manifest.json').read_text())
+ for prev in previous:
+  fallback='synthesis-model.json' if prev==prior_manifest['modes'][0] or not config else prev+'-model.json'
+  source_model=prior_manifest.get('models',{}).get(prev,fallback)
+  target_model=prev+'-model.json';shutil.copy(approved/source_model,out/target_model);model_files[prev]=target_model
+ manifest={'revision':config.get('revision','R6 two synthesized genre kits'),'levels':['Soft','Medium','Hard'],'takes':3,'modes':[kit]+previous,'voices':list(RECIPE),'keys':expansion.KEYS,'files':{},'models':model_files}
  banks={m:{} for m in manifest['modes']};timings=[]
  for v in RECIPE:
   for l in range(3):
@@ -65,7 +69,8 @@ def main(approved,out,config=None):
  for phrase in ('groove','fill'):
   mixes={mode:expansion.mix(bank,phrase=='fill') for mode,bank in banks.items()}
   g=.85/max(np.max(abs(x)) for x in mixes.values())
-  for mode,x in mixes.items():write(out/mode/f'{phrase}.wav',x*g)
+  length=max(map(len,mixes.values()))
+  for mode,x in mixes.items():write(out/mode/f'{phrase}.wav',np.pad(x,(0,length-len(x)))*g)
  (out/'manifest.json').write_text(json.dumps(manifest,indent=2))
  for name in ('CC0.txt','NOTICE.txt'):shutil.copy(approved/name,out/name)
  (out/'NOTICE.txt').write_text((out/'NOTICE.txt').read_text()+f'Adds {kit}: {articulation}-snare source descriptors plus authored tuning/decay changes. Listening kits use synthesis. No source waveforms in runtime models.\n')

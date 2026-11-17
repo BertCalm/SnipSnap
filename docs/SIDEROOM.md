@@ -1,6 +1,6 @@
 # SIDEROOM: five acoustic drum-kit studies
 
-Status: R1 rejected by the owner for drum-machine character. R2 recorded acoustic core was approved for sound. R4 synthesis was approved for sound. R5 eight-instrument Open Road was approved. R6 Tight Pocket was approved. R7 introduces Angular alongside both approved kits. No SnipSnap shelf, native serialization or hardware completion claim. Source inspected at `4ecab4c9f`; isolated implementation starts from `e7ccfef58` on `claude/sideroom-study`.
+Status: R1 rejected by the owner for drum-machine character. R2 recorded acoustic core was approved for sound. R4 synthesis was approved for sound. R5 eight-instrument Open Road was approved. R6 Tight Pocket was approved. R7 Angular was approved. R8 introduces High Voltage alongside all three approved kits. No SnipSnap shelf, native serialization or hardware completion claim. Source inspected at `4ecab4c9f`; isolated implementation starts from `e7ccfef58` on `claude/sideroom-study`.
 
 The characteristic gesture is **stick or beater contact → head/metal response → wire or shell after-sound → damping to silence**. Each kit chooses a different physical balance within that gesture.
 
@@ -154,3 +154,18 @@ Build: `python3 prototype/sideroom/angular.py R6_OUTPUT R7_OUTPUT`, then `python
 Verified: 216 performances and all player routes, complete SFZ velocity/RR selection, runtime audio-read isolation, deterministic synthesis, monotonic dynamics, generated take variation and all 144 approved pad files byte-identical to R6. Representative hard-take low-spectrum maxima measured at 75.4 Hz for Angular kick and 418.6 Hz for Angular snare, versus 91.5/267.8 for Tight Pocket and 86.1/230.1 for Open Road. These are spectrum peaks, not asserted physical fundamentals or proof of perceived character. Median new render 22.10 ms, maximum 255.44 ms; no extra peak calibration required.
 
 Angular awaits listening approval. High Voltage and Deep Pocket are still unbuilt in this accepted synthesis path; the native shelf, serialization/playback/export, authored articulation and hardware gates remain open. All genre references are listening/design targets, not sampled commercial audio or claimed equipment reconstructions.
+
+
+## R8: High Voltage
+
+The owner approved Angular. High Voltage is the fourth candidate, guided by the I Believe in a Thing Called Love reference: lower shells, a broad off-center snare, and longer cymbal sustain. Three previously approved kit grids and models are retained byte-for-byte. The shared family builder now carries an explicit kit-to-model manifest mapping, fixing the prior two-kit-specific model-copy assumption before it could mislabel a model in the fourth-kit package.
+
+`voltage-sources.json` pins off-center snare source levels 13–15, 23–25 and 32–34 from the same CC0 Virtuosity Drums commit. This is distinct from Open Road's center strike, Tight Pocket's muted strike and Angular's rimshot. Other source descriptors start from Open Road, with authored pitch ratios .82–.96 and decay ratios 1.12–1.40. Runtime remains generated noise/oscillator synthesis from magnitude descriptors; no source waveform playback. These are design choices, not measurements of the reference's equipment.
+
+Build: `python3 prototype/sideroom/voltage.py R7_OUTPUT R8_OUTPUT`, then `package-family.py R8_OUTPUT`. The same family page and test commands apply. Mixer output now accommodates complete selected hit tails, and comparison phrases are padded to the longest kit so switching playback position remains valid. This does not change approved pad PCM. Deploy individual kit ZIPs, not the oversized combined ZIP.
+
+Verified: 288 saved performance routes, complete eight-note SFZ dynamic/RR mapping, finite/peak/endpoint checks, ordered dynamics, deterministic sample-free runtime, generated take variation, per-kit ZIP byte equality, 216 approved pad files and all three prior descriptor models unchanged. Simulated controls cover all four kits, both banks, fill, hat choke and stop; actual browser/device/sampler audio remains unverified by automation. All phrase durations match across kits and end cleanly.
+
+Representative hard-take 90%-energy times: High Voltage kick .116 s versus Open Road .097; snare .094 versus .035; floor tom .352 versus .262; crash 1.313 versus .929. These support the intended longer decay; listening decides the character. Median new Python render 55.14 ms, maximum 717.72 ms. Long tails require cached native renders rather than a promised interactive latency.
+
+High Voltage awaits listening approval. Deep Pocket is the remaining family sound study. Native shelf, save/playback/export integration, complete authored articulation and hardware acceptance remain open.
