@@ -178,7 +178,7 @@ into the factory roster after that listen, and phone and MPC hardware.
 ## Round K3: the picker (2026-11-17)
 
 KINDRED joins SYNTH's engine picker after SERVO, before CAIRN, under DRUMS in `EngineCatalog` ("One analog voice
-re-struck: kicks that dive, zaps, FM toms, metal"), wired as SERVO's entry was: every arm of the `Engine` enum, the
+re-struck: diving kicks, zaps, FM toms"), wired as SERVO's entry was: every arm of the `Engine` enum, the
 saved-draft restore, a frozen draft before a macro bag, the live-edit list, and the native-factory path, because a
 KINDRED patch carries its strike velocity, take, kit recipe and model outside the macro map. Its presets come from
 `KindredPresets` (as CHITIN's come from its own, outside `Presets`): the 56 kit pads, named in capitals after their
