@@ -1128,3 +1128,11 @@ software proof is in `SoulRockRoundTripTest`; full regression is tracked in the
 PR. Phone/MPC acceptance remains open for this collection. Melodic/keygroup/chord
 and string-articulation gates do not apply; the existing MPC 2 format exception
 applies. Sizzle remains the approved voice, not a newly claimed crash model.
+
+### Soul Rock Roadhouse coupled snare revision (2026-11-17)
+
+Owner accepted **Stronger snare snap and rattle**: “Ok. I can live with that”.
+Version 2 preserves its nine exact strikes on Roadhouse pad 2, with three velocity
+layers and three natural alternate strikes. Other kit pads retain original PCM.
+The revised snare is frozen synthesis, not a newly registered editable engine.
+Phone and MPC hardware acceptance remains open for this revision. See `SOUL_ROCK.md`.

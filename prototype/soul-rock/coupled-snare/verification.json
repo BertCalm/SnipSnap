@@ -1,0 +1,337 @@
+{
+  "scope": "Python/C++ prototype; one snare, no factory replacement",
+  "renders": [
+    {
+      "velocity": 0.34,
+      "take": 0,
+      "render_seconds": 0.26007927699538413,
+      "initial_energy": 0.0003251250000000001,
+      "max_energy": 0.0003251250000000001,
+      "late_energy": 2.8497253699459004e-10,
+      "wire_rms": 0.0004006624435780121,
+      "wire_attack_rms": 0.001998033801971135,
+      "wire_tail_rms": 0.00030194142306777684,
+      "contacts": 6187
+    },
+    {
+      "velocity": 0.34,
+      "take": 1,
+      "render_seconds": 0.19439032800437417,
+      "initial_energy": 0.000325125,
+      "max_energy": 0.000325125,
+      "late_energy": 3.7695504104886775e-10,
+      "wire_rms": 0.0003048993425560911,
+      "wire_attack_rms": 0.0014669850633583185,
+      "wire_tail_rms": 0.00025184778078396957,
+      "contacts": 7214
+    },
+    {
+      "velocity": 0.34,
+      "take": 2,
+      "render_seconds": 0.19703599100466818,
+      "initial_energy": 0.000325125,
+      "max_energy": 0.000325125,
+      "late_energy": 4.3331394318534707e-10,
+      "wire_rms": 0.0002476994937378743,
+      "wire_attack_rms": 0.0012333776620140607,
+      "wire_tail_rms": 0.00018105197665813796,
+      "contacts": 6063
+    },
+    {
+      "velocity": 0.64,
+      "take": 0,
+      "render_seconds": 0.21568718000344234,
+      "initial_energy": 0.0011520000000000002,
+      "max_energy": 0.0011520000000000002,
+      "late_energy": 6.74203263437024e-10,
+      "wire_rms": 0.0008307094195916072,
+      "wire_attack_rms": 0.003960338162383531,
+      "wire_tail_rms": 0.0005908378693136189,
+      "contacts": 8837
+    },
+    {
+      "velocity": 0.64,
+      "take": 1,
+      "render_seconds": 0.19621754300169414,
+      "initial_energy": 0.0011519999999999998,
+      "max_energy": 0.0011519999999999998,
+      "late_energy": 9.748695682229858e-10,
+      "wire_rms": 0.0007091642376944995,
+      "wire_attack_rms": 0.0034372049907203514,
+      "wire_tail_rms": 0.0005675953677852343,
+      "contacts": 8845
+    },
+    {
+      "velocity": 0.64,
+      "take": 2,
+      "render_seconds": 0.19808001600176794,
+      "initial_energy": 0.0011519999999999998,
+      "max_energy": 0.0011519999999999998,
+      "late_energy": 1.0573222636724488e-09,
+      "wire_rms": 0.0006239509753676491,
+      "wire_attack_rms": 0.003106041086588882,
+      "wire_tail_rms": 0.0005419082517792178,
+      "contacts": 7903
+    },
+    {
+      "velocity": 1.0,
+      "take": 0,
+      "render_seconds": 0.20729266999842366,
+      "initial_energy": 0.0028124999999999995,
+      "max_energy": 0.0028124999999999995,
+      "late_energy": 1.266117066373175e-09,
+      "wire_rms": 0.0012979538003349497,
+      "wire_attack_rms": 0.006406512963756972,
+      "wire_tail_rms": 0.001025843487828727,
+      "contacts": 11310
+    },
+    {
+      "velocity": 1.0,
+      "take": 1,
+      "render_seconds": 0.19012629800272407,
+      "initial_energy": 0.0028125,
+      "max_energy": 0.0028125,
+      "late_energy": 1.9632457023862367e-09,
+      "wire_rms": 0.0011800027846012992,
+      "wire_attack_rms": 0.005770689325270396,
+      "wire_tail_rms": 0.0008660025602846273,
+      "contacts": 10572
+    },
+    {
+      "velocity": 1.0,
+      "take": 2,
+      "render_seconds": 0.1992700760019943,
+      "initial_energy": 0.0028124999999999986,
+      "max_energy": 0.0028124999999999986,
+      "late_energy": 2.170561180919962e-09,
+      "wire_rms": 0.0010376363190452624,
+      "wire_attack_rms": 0.005191863492881286,
+      "wire_tail_rms": 0.0006084335821842696,
+      "contacts": 8995
+    }
+  ],
+  "ablation": {
+    "uncoupled": {
+      "render_seconds": 0.2199793399995542,
+      "initial_energy": 0.0028124999999999995,
+      "max_energy": 0.0028124999999999995,
+      "late_energy": 8.466975971337165e-08,
+      "wire_rms": 0.0,
+      "wire_attack_rms": 0.0,
+      "wire_tail_rms": 0.0,
+      "contacts": 0
+    },
+    "wires_off": {
+      "render_seconds": 0.19739934199606068,
+      "initial_energy": 0.0028124999999999995,
+      "max_energy": 0.0028124999999999995,
+      "late_energy": 6.9483337254904954e-09,
+      "wire_rms": 0.0,
+      "wire_attack_rms": 0.0,
+      "wire_tail_rms": 0.0,
+      "contacts": 0
+    }
+  },
+  "gain": 3.4920037195668416,
+  "files": [
+    {
+      "name": "snare-v3-t1.wav",
+      "sha256": "81b073e8781c1d366f84930abf744e60d1256469b4f63ebb7ac36b8a6a1f2be2"
+    },
+    {
+      "name": "snare-v2-t2.wav",
+      "sha256": "71297fbc64c6b8258a7bd44aca82e09e5e7494014b2d9fde0e0dd168fff37235"
+    },
+    {
+      "name": "isolated-before-after.wav",
+      "sha256": "1d0375fe97d416b4d0750097f6427d9370ac6e5ad9cfcdb3dae5bbefd56cf177"
+    },
+    {
+      "name": "snare-v2-t3.wav",
+      "sha256": "900f4386ed59289d6067c8ec679661c58b34e5d9df0fce2932d18591010ea860"
+    },
+    {
+      "name": "soft-medium-hard.wav",
+      "sha256": "3857c27a695574f2763d1541a9279192b9485abf495983920b930e9028ae2eb8"
+    },
+    {
+      "name": "snare-v3-t2.wav",
+      "sha256": "028ac59d41d97ce731d8c26c747e37ce53ec6b4a617451dcf36d5594dfc91926"
+    },
+    {
+      "name": "snare-v2-t1.wav",
+      "sha256": "57f5476b144ebf8f3602913f5a74fd1927dc8ad5e97107466c18563c6055f17a"
+    },
+    {
+      "name": "groove-before-after.wav",
+      "sha256": "c4ab2368eec7fe60b312ae5b60abfd63b88c1b5e59b6ddfd3681878bee1722ec"
+    },
+    {
+      "name": "snare-v1-t3.wav",
+      "sha256": "c24e9b969344fb329f501cf8a3a19afd9199458916cb1b89078000e9b8d53b9f"
+    },
+    {
+      "name": "snare-v3-t3.wav",
+      "sha256": "3d34553be79faa3d5aac79172a5fadc5c320ff771b36986d461d27f163881422"
+    },
+    {
+      "name": "snare-v1-t2.wav",
+      "sha256": "419997696db6186a68a5195d27ea7df868116eff9a8d50ecf49a650cf9e7b7c5"
+    },
+    {
+      "name": "snare-v1-t1.wav",
+      "sha256": "9c28c7df3b55851048d5809ec29a45f5b304ad6857025424994e9647667b5dda"
+    },
+    {
+      "name": "wires-off-on.wav",
+      "sha256": "e1f34e91f5a1df587d2a41a40dff10bf219c2c12b6983f810d594300bd85adcc"
+    }
+  ],
+  "coupling_corners": [
+    {
+      "coupling": 0.3,
+      "wires": 0.5,
+      "render_seconds": 0.2570388419990195,
+      "initial_energy": 0.0028124999999999995,
+      "max_energy": 0.0028124999999999995,
+      "late_energy": 1.5401390026030704e-08,
+      "wire_rms": 0.0006105862978052504,
+      "wire_attack_rms": 0.0029461250734114618,
+      "wire_tail_rms": 0.00043878877653703553,
+      "contacts": 10300
+    },
+    {
+      "coupling": 0.3,
+      "wires": 1.5,
+      "render_seconds": 0.19777817399881314,
+      "initial_energy": 0.0028124999999999995,
+      "max_energy": 0.0028124999999999995,
+      "late_energy": 1.0820914816070325e-08,
+      "wire_rms": 0.0007116699743655665,
+      "wire_attack_rms": 0.0030911806443198707,
+      "wire_tail_rms": 0.0008266071279045455,
+      "contacts": 9531
+    },
+    {
+      "coupling": 1.2,
+      "wires": 0.5,
+      "render_seconds": 0.26051135399757186,
+      "initial_energy": 0.0028124999999999995,
+      "max_energy": 0.0028124999999999995,
+      "late_energy": 2.5444340901958386e-10,
+      "wire_rms": 0.0013712207305585141,
+      "wire_attack_rms": 0.006800426050539081,
+      "wire_tail_rms": 0.0010917618409119593,
+      "contacts": 12772
+    },
+    {
+      "coupling": 1.2,
+      "wires": 1.5,
+      "render_seconds": 0.2497449630027404,
+      "initial_energy": 0.0028124999999999995,
+      "max_energy": 0.0028124999999999995,
+      "late_energy": 2.6851856583402423e-10,
+      "wire_rms": 0.0014759625808905387,
+      "wire_attack_rms": 0.007502700303096797,
+      "wire_tail_rms": 0.0012068604389973384,
+      "contacts": 11534
+    }
+  ],
+  "audio_checks": [
+    {
+      "file": "snare-v3-t1.wav",
+      "true_peak_4x": 0.8799671514846927,
+      "dc": -6.177560542446146e-05,
+      "tail_rms": 0.0
+    },
+    {
+      "file": "snare-v2-t2.wav",
+      "true_peak_4x": 0.3698404236894028,
+      "dc": -3.7698739829738715e-05,
+      "tail_rms": 0.0
+    },
+    {
+      "file": "isolated-before-after.wav",
+      "true_peak_4x": 0.8799671514846927,
+      "dc": -7.403407875763257e-05,
+      "tail_rms": 0.0
+    },
+    {
+      "file": "snare-v2-t3.wav",
+      "true_peak_4x": 0.3622604849747356,
+      "dc": -3.577998878291847e-05,
+      "tail_rms": 0.0
+    },
+    {
+      "file": "soft-medium-hard.wav",
+      "true_peak_4x": 0.8799671514846927,
+      "dc": -3.2792630245429725e-05,
+      "tail_rms": 0.0
+    },
+    {
+      "file": "snare-v3-t2.wav",
+      "true_peak_4x": 0.7370961618542867,
+      "dc": -6.021921523107349e-05,
+      "tail_rms": 0.0
+    },
+    {
+      "file": "snare-v2-t1.wav",
+      "true_peak_4x": 0.49432852541913386,
+      "dc": -3.897832659342146e-05,
+      "tail_rms": 0.0
+    },
+    {
+      "file": "groove-before-after.wav",
+      "true_peak_4x": 0.8799579987039438,
+      "dc": -6.981773699541677e-05,
+      "tail_rms": 0.0
+    },
+    {
+      "file": "snare-v1-t3.wav",
+      "true_peak_4x": 0.12319901560803131,
+      "dc": -1.806645657789631e-05,
+      "tail_rms": 0.0
+    },
+    {
+      "file": "snare-v3-t3.wav",
+      "true_peak_4x": 0.6595519726082297,
+      "dc": -5.681830763792259e-05,
+      "tail_rms": 0.0
+    },
+    {
+      "file": "snare-v1-t2.wav",
+      "true_peak_4x": 0.1450614185599805,
+      "dc": -1.9216449008580707e-05,
+      "tail_rms": 0.0
+    },
+    {
+      "file": "snare-v1-t1.wav",
+      "true_peak_4x": 0.19455504165251103,
+      "dc": -2.0241250797193876e-05,
+      "tail_rms": 0.0
+    },
+    {
+      "file": "wires-off-on.wav",
+      "true_peak_4x": 0.8799671514846927,
+      "dc": -4.9067932586696537e-05,
+      "tail_rms": 0.0
+    }
+  ],
+  "matched_rms_spectral_comparison": [
+    {
+      "take": 1,
+      "attack_band_change_db": 8.238123510287036,
+      "trailing_band_change_db": 21.90439930760796
+    },
+    {
+      "take": 2,
+      "attack_band_change_db": 10.465870872591921,
+      "trailing_band_change_db": 22.344611521061246
+    },
+    {
+      "take": 3,
+      "attack_band_change_db": 11.045573139692213,
+      "trailing_band_change_db": 23.325971981389056
+    }
+  ]
+}
