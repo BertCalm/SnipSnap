@@ -827,3 +827,23 @@ tasks.register<JavaExec>("generateFootworkKits") {
     maxHeapSize = "2g"
     args(providers.gradleProperty("soulRockOutput").orNull ?: "${rootDir}/testkit/soul-rock-kits")
 }
+
+tasks.register<JavaExec>("verifyParadeStudyTransport") {
+    group = "verification"
+    description = "Verify pinned parade audition PCM through native kit saving, selection and MPC export."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.ParadeKitTransport")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "1g"
+    args(providers.gradleProperty("paradeInput").getOrElse("${rootDir}/testkit/parade-study"),
+        providers.gradleProperty("paradeOutput").getOrElse("${rootDir}/testkit/parade-transport"))
+}
+
+tasks.register<JavaExec>("verifyNativeSambaKit") {
+    group = "verification"
+    description = "Regenerate native Samba recipes and verify save/load, playback and MPC export."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.SambaKitProof")
+    maxHeapSize = "1g"
+    args(providers.gradleProperty("nativeSambaKitOutput").getOrElse("${rootDir}/testkit/native-samba-kit"))
+}

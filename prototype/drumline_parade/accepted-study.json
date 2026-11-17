@@ -1,0 +1,4141 @@
+{
+  "revision": 8,
+  "sourceCommit": "e86712f64",
+  "status": "Audition reference hits retained; transport proof input, not native synthesis",
+  "kits": [
+    {
+      "id": "second-line",
+      "bpm": 104,
+      "pads": [
+        {
+          "name": "bass_open",
+          "family": "skin",
+          "players": 1,
+          "grid": [
+            [
+              {
+                "file": "second-line/01_bass_open_v0.3_t0.wav",
+                "sha256": "08ed05b7a1b284e5a378072b5da9377529e5127b8f05c15bf9037bf01c7212d4"
+              },
+              {
+                "file": "second-line/01_bass_open_v0.3_t1.wav",
+                "sha256": "135e665120a6b1640d47346919c39bb59b3b89b979e96b215aa2ae32fd3ac8e7"
+              },
+              {
+                "file": "second-line/01_bass_open_v0.3_t2.wav",
+                "sha256": "57dd7a192241231a3d86480ac8a80c107effae12fdf17c123a517c7f16dec63d"
+              }
+            ],
+            [
+              {
+                "file": "second-line/01_bass_open_v0.6_t0.wav",
+                "sha256": "3e86d438d33b413a77208c7062e3d43080de2d599e323dbfdca334395ca8197d"
+              },
+              {
+                "file": "second-line/01_bass_open_v0.6_t1.wav",
+                "sha256": "164d1bd5e77ef3049f4d96d1fc57cb80142af9c710d229dc56b1b631da4d8f0d"
+              },
+              {
+                "file": "second-line/01_bass_open_v0.6_t2.wav",
+                "sha256": "330c1808c90f71581a9d48509d646626d5b66901e9a554cfacb3d0b814bf2492"
+              }
+            ],
+            [
+              {
+                "file": "second-line/01_bass_open_v1.0_t0.wav",
+                "sha256": "b232a0c20c4d1c83018de28aec106d7a4e7cd60c7eaac3008ee823b041b425e5"
+              },
+              {
+                "file": "second-line/01_bass_open_v1.0_t1.wav",
+                "sha256": "9112e53e9b57b056d4b572eda67bb01469de47fba40460788cdb830b255e5d56"
+              },
+              {
+                "file": "second-line/01_bass_open_v1.0_t2.wav",
+                "sha256": "0709815c98666f2bd1bcd5b638347ad1e5c5892e387ac2689b7b27d0a082c094"
+              }
+            ]
+          ]
+        },
+        {
+          "name": "bass_muted",
+          "family": "skin",
+          "players": 1,
+          "grid": [
+            [
+              {
+                "file": "second-line/02_bass_muted_v0.3_t0.wav",
+                "sha256": "fe620251aaae51a8c437d700c4fa837089dd0c59c949c9e3c709b83902b251b0"
+              },
+              {
+                "file": "second-line/02_bass_muted_v0.3_t1.wav",
+                "sha256": "a834b69b15e698c222f9a9f282d7bba63708e30fc99a0642fad64064eae4c0d0"
+              },
+              {
+                "file": "second-line/02_bass_muted_v0.3_t2.wav",
+                "sha256": "4982d9bff06ac9389d4cf1965edae327ba6b0f2adf7666f6d337bd343a14b444"
+              }
+            ],
+            [
+              {
+                "file": "second-line/02_bass_muted_v0.6_t0.wav",
+                "sha256": "5f959cad783528891471435334706df9b68817762cf98bc89c7085a3f13f27da"
+              },
+              {
+                "file": "second-line/02_bass_muted_v0.6_t1.wav",
+                "sha256": "054f915fd1294188f6b7965f227775375284d0f79b181f02990b3f0a53890bc5"
+              },
+              {
+                "file": "second-line/02_bass_muted_v0.6_t2.wav",
+                "sha256": "cd9d659553d8ab85ea4424b3f5db537b4c8d7fe31e3df2e4de132d7774ddf7ea"
+              }
+            ],
+            [
+              {
+                "file": "second-line/02_bass_muted_v1.0_t0.wav",
+                "sha256": "f7210bfc624e2295063480147ae5cf67f1d1089a55b14ed6f788eb20e4df04fd"
+              },
+              {
+                "file": "second-line/02_bass_muted_v1.0_t1.wav",
+                "sha256": "0e36c30af7bee6271040ca5675d6c834e2cf9380f0448c8e7d0d7cc8e060c480"
+              },
+              {
+                "file": "second-line/02_bass_muted_v1.0_t2.wav",
+                "sha256": "a451364e6a9db5b58251f8bc9936d1a95511f943a5fe53a7de59064446f6c05a"
+              }
+            ]
+          ]
+        },
+        {
+          "name": "snare_center",
+          "family": "wire",
+          "players": 1,
+          "grid": [
+            [
+              {
+                "file": "second-line/03_snare_center_v0.3_t0.wav",
+                "sha256": "619e045d7dd0c9baec9b89e76be30fe6495ece049f860c17557ddae3417609a8"
+              },
+              {
+                "file": "second-line/03_snare_center_v0.3_t1.wav",
+                "sha256": "09f98e3cab620406bc2b2fdf2be314da441f59a7ec2a6cf9a6a656a85ce7d374"
+              },
+              {
+                "file": "second-line/03_snare_center_v0.3_t2.wav",
+                "sha256": "70faa8a6646524129b442a360f95d94c6ad892985d24e4b4b7dc339838c54405"
+              }
+            ],
+            [
+              {
+                "file": "second-line/03_snare_center_v0.6_t0.wav",
+                "sha256": "f228f32b3bd31dfbe7a46253d4de99c6beb5d6260353d21b30a90817e06954a2"
+              },
+              {
+                "file": "second-line/03_snare_center_v0.6_t1.wav",
+                "sha256": "ea17aac810703e5152ed3b6dde07335e9a728901bfddd36229b961bf6f8f37fa"
+              },
+              {
+                "file": "second-line/03_snare_center_v0.6_t2.wav",
+                "sha256": "300afd5ccee861585b1267b540a64a47aef3f784148dfa0e452c37a9c254db77"
+              }
+            ],
+            [
+              {
+                "file": "second-line/03_snare_center_v1.0_t0.wav",
+                "sha256": "0fe79d86ed41976d598d0ae6c15d7a3a2f3136ec51af4afbbeee6e2f2893fca6"
+              },
+              {
+                "file": "second-line/03_snare_center_v1.0_t1.wav",
+                "sha256": "e28e7e877356cfbdbac49b85ecfa343708d840878deae08da662ce6db9ac1695"
+              },
+              {
+                "file": "second-line/03_snare_center_v1.0_t2.wav",
+                "sha256": "78e46928132be43c8486df3dd5d2926bb6ab29029d879ccba855dec52e9895a3"
+              }
+            ]
+          ]
+        },
+        {
+          "name": "snare_ghost",
+          "family": "wire",
+          "players": 1,
+          "grid": [
+            [
+              {
+                "file": "second-line/04_snare_ghost_v0.3_t0.wav",
+                "sha256": "27c8a0f2162d447a16371090bf9f33eb4939dbf86758256a351bc3a9afb5ca7b"
+              },
+              {
+                "file": "second-line/04_snare_ghost_v0.3_t1.wav",
+                "sha256": "6d51607e96ca45c11612ba2b5f7964a5e0447989c16e4278100032af3555a91d"
+              },
+              {
+                "file": "second-line/04_snare_ghost_v0.3_t2.wav",
+                "sha256": "0fc8ada44937f560252a4606f480c27ed4c1e4c4f7c8b4af825e1b399f892f4d"
+              }
+            ],
+            [
+              {
+                "file": "second-line/04_snare_ghost_v0.6_t0.wav",
+                "sha256": "ed770124033505217a6e328c5669c671d829210b9005e9f7f10dd2ace7b7c278"
+              },
+              {
+                "file": "second-line/04_snare_ghost_v0.6_t1.wav",
+                "sha256": "35e974eae9a7df41f79971de4ae74e191132c53e6d2ea905e3daace83465b271"
+              },
+              {
+                "file": "second-line/04_snare_ghost_v0.6_t2.wav",
+                "sha256": "4cedc0b9c1030d2e7b4cb0ae7ed09daee8085374ac5ae1b0ab5e51f297bd8f34"
+              }
+            ],
+            [
+              {
+                "file": "second-line/04_snare_ghost_v1.0_t0.wav",
+                "sha256": "bd7f90e5f7928a29071536c3230bc2b13ac4ef573bfc8b9dda5ebc947428a3fa"
+              },
+              {
+                "file": "second-line/04_snare_ghost_v1.0_t1.wav",
+                "sha256": "b8d2e72477ebea471136971f02890fe67f6739ccfbdf75a0c26920f530891d55"
+              },
+              {
+                "file": "second-line/04_snare_ghost_v1.0_t2.wav",
+                "sha256": "1816d989ad5e10f006853ae623fbaafb6242c6e0ec6c3f8d8aecddd1f2d9723a"
+              }
+            ]
+          ]
+        },
+        {
+          "name": "rimshot",
+          "family": "rim",
+          "players": 1,
+          "grid": [
+            [
+              {
+                "file": "second-line/05_rimshot_v0.3_t0.wav",
+                "sha256": "8fc9151d89f5ae8cbceb2efe0b355b45911ddf5326176bb40441fe372ea103dd"
+              },
+              {
+                "file": "second-line/05_rimshot_v0.3_t1.wav",
+                "sha256": "8da1fb1eab046cb124ec2cece90d247e782c6e39fe266d7bf00d5c55276c774f"
+              },
+              {
+                "file": "second-line/05_rimshot_v0.3_t2.wav",
+                "sha256": "fbb634abb23bbe706bbba1b27f13e577bb4c4148a3875a3676f97e5a5aa695ac"
+              }
+            ],
+            [
+              {
+                "file": "second-line/05_rimshot_v0.6_t0.wav",
+                "sha256": "09d0014eed428554cc03a90566cb6d833ea08ba41b9135a7a7665bd9771ed30c"
+              },
+              {
+                "file": "second-line/05_rimshot_v0.6_t1.wav",
+                "sha256": "bc32093e3659a2c1961214acc757e04b333f56c3ae0e2c184c6110a1cf416cbf"
+              },
+              {
+                "file": "second-line/05_rimshot_v0.6_t2.wav",
+                "sha256": "ed854c67c2395174440e359c20f8acedce871457c70e59be128c210c2130c5c4"
+              }
+            ],
+            [
+              {
+                "file": "second-line/05_rimshot_v1.0_t0.wav",
+                "sha256": "5f65fdd8f9ddef90d02e2b2c3b3bde1a8f073a7e2c141b0f85d66f61810d0830"
+              },
+              {
+                "file": "second-line/05_rimshot_v1.0_t1.wav",
+                "sha256": "4608324f105c64284ecdd4873a5a651fe82e05b84074e7d1b74f3219afddba7a"
+              },
+              {
+                "file": "second-line/05_rimshot_v1.0_t2.wav",
+                "sha256": "cd054a149770ba6fc244b958b3dbc40a382bbb883d6982f8f5bb910801760900"
+              }
+            ]
+          ]
+        },
+        {
+          "name": "cross_stick",
+          "family": "wood",
+          "players": 1,
+          "grid": [
+            [
+              {
+                "file": "second-line/06_cross_stick_v0.3_t0.wav",
+                "sha256": "f408c7c42eef419b70369a987529ec358cd08e98acc3b0630a30d06c80a7266d"
+              },
+              {
+                "file": "second-line/06_cross_stick_v0.3_t1.wav",
+                "sha256": "73cdbafdd92390dfb98384160b4bdad887fb0bddc05046ed0cd50e4f5055dba8"
+              },
+              {
+                "file": "second-line/06_cross_stick_v0.3_t2.wav",
+                "sha256": "0e195a7bd21f42059c27a428bddb8ac991d01c4cebb003ea841db56413227feb"
+              }
+            ],
+            [
+              {
+                "file": "second-line/06_cross_stick_v0.6_t0.wav",
+                "sha256": "2d6bd1a7c0ceb3e99e675b4b706689f401396df71f75e19b421e3a242209449e"
+              },
+              {
+                "file": "second-line/06_cross_stick_v0.6_t1.wav",
+                "sha256": "2717e5f5bfe7a68b1d9cadddd71f1697f9698974abfac00c22af38e8e5df4041"
+              },
+              {
+                "file": "second-line/06_cross_stick_v0.6_t2.wav",
+                "sha256": "1cfc26aa1350f070ed77f2ed6d7920a1841a64b0978f784c5a7a3b364214f4ae"
+              }
+            ],
+            [
+              {
+                "file": "second-line/06_cross_stick_v1.0_t0.wav",
+                "sha256": "78cbdd285a9439938249725989bab9fa1fda7faa8d432c95d299e1f5dee59d17"
+              },
+              {
+                "file": "second-line/06_cross_stick_v1.0_t1.wav",
+                "sha256": "c94740936027baadedfaa2e39b09356cbb4a4e132a287d3b29301c27a87ab0a6"
+              },
+              {
+                "file": "second-line/06_cross_stick_v1.0_t2.wav",
+                "sha256": "5535da03dad7ff5e1446b75b525f3c8dbdfd3c156c663df7a09b44f83c2dbcff"
+              }
+            ]
+          ]
+        },
+        {
+          "name": "snare_drag",
+          "family": "drag",
+          "players": 1,
+          "grid": [
+            [
+              {
+                "file": "second-line/07_snare_drag_v0.3_t0.wav",
+                "sha256": "5884ebdf0ff0a22ba5cb580aa421c6e53bb467805ae698d44a7bad46f4c0abd0"
+              },
+              {
+                "file": "second-line/07_snare_drag_v0.3_t1.wav",
+                "sha256": "8fcc5443287346fca87cdc81cd0e8d0ac23588baa24e668bc237489ceacadca3"
+              },
+              {
+                "file": "second-line/07_snare_drag_v0.3_t2.wav",
+                "sha256": "197031e03351b2751498c8b609f0c5dc5b4404a4d9cead08600c2d454f33ca5c"
+              }
+            ],
+            [
+              {
+                "file": "second-line/07_snare_drag_v0.6_t0.wav",
+                "sha256": "b387ffc385270d3b0dfc6cbbaa5b2a1e99c87bf823ed36e87d2af1e2b71c0ed9"
+              },
+              {
+                "file": "second-line/07_snare_drag_v0.6_t1.wav",
+                "sha256": "dd9fbc1cc033727348470b06022d0c0b7dc537f7263b998e9fe32be50a46dd5f"
+              },
+              {
+                "file": "second-line/07_snare_drag_v0.6_t2.wav",
+                "sha256": "e10b94819e04f14065c2a1a04f9c261ed1afebf704cba7a62cf005ea5b532e64"
+              }
+            ],
+            [
+              {
+                "file": "second-line/07_snare_drag_v1.0_t0.wav",
+                "sha256": "c3358e1ae581b3c2e0ecd5d3f049ecd9a9f2c1fae749b5d0eed8d60fef02c872"
+              },
+              {
+                "file": "second-line/07_snare_drag_v1.0_t1.wav",
+                "sha256": "983661e07d8f34e6b13950c30d5fe1193b86d1adb7dfe673532b12e7654a3db9"
+              },
+              {
+                "file": "second-line/07_snare_drag_v1.0_t2.wav",
+                "sha256": "a45111a12bd1f5ba0bb0800c379472d5d70ba0fde26c25ff750505689a2febd5"
+              }
+            ]
+          ]
+        },
+        {
+          "name": "snare_flam",
+          "family": "flam",
+          "players": 1,
+          "grid": [
+            [
+              {
+                "file": "second-line/08_snare_flam_v0.3_t0.wav",
+                "sha256": "316d26bbdfbf33bf42cc6721313f224dde76e504d347668e3b22a2c20c9f2597"
+              },
+              {
+                "file": "second-line/08_snare_flam_v0.3_t1.wav",
+                "sha256": "bb6d0c41b73143499b9d2cdfc3e8aa77ecaea97e6cd2a9a4772a0ae411ba5397"
+              },
+              {
+                "file": "second-line/08_snare_flam_v0.3_t2.wav",
+                "sha256": "da758ac3bd7414460eb13b3e9ae734f6468b2b9abd3ffd857ea079b4a36342cd"
+              }
+            ],
+            [
+              {
+                "file": "second-line/08_snare_flam_v0.6_t0.wav",
+                "sha256": "ca3da3597fe202b3f90373098bd8969ad2012baa27be2387ca7daa3d4b6038f9"
+              },
+              {
+                "file": "second-line/08_snare_flam_v0.6_t1.wav",
+                "sha256": "8ae62d43933c199ef954899cb4d3a01229bd2e7175418f3a688e9d902720f887"
+              },
+              {
+                "file": "second-line/08_snare_flam_v0.6_t2.wav",
+                "sha256": "0b7589db25703187a7b460d8f78b7652784a5d2a4590c9ba29f9983e97f8c72d"
+              }
+            ],
+            [
+              {
+                "file": "second-line/08_snare_flam_v1.0_t0.wav",
+                "sha256": "6a605476b034c048a995c4c0722353702f6007c194b0f69431042644cafaae14"
+              },
+              {
+                "file": "second-line/08_snare_flam_v1.0_t1.wav",
+                "sha256": "d5c5ce5ced8868567f6385d0410d6a402af2fa58101b94d1816eec4c4df3e1f8"
+              },
+              {
+                "file": "second-line/08_snare_flam_v1.0_t2.wav",
+                "sha256": "2ed2c7af033ccd023deb9626d97d55f4c7a0b4f2454a78140172681ffc4472ca"
+              }
+            ]
+          ]
+        },
+        {
+          "name": "press_buzz",
+          "family": "buzz",
+          "players": 1,
+          "grid": [
+            [
+              {
+                "file": "second-line/09_press_buzz_v0.3_t0.wav",
+                "sha256": "b2960a4d1d67312f3f7b5f8c1f8c3d2109b50628bebab5bb5a2c9945abc7241c"
+              },
+              {
+                "file": "second-line/09_press_buzz_v0.3_t1.wav",
+                "sha256": "374be4a7221ff8f2b7810dc16f291e2ea5d16774e4a1a31d0c0f59d0f9eeb04f"
+              },
+              {
+                "file": "second-line/09_press_buzz_v0.3_t2.wav",
+                "sha256": "0c2c7fa5716d22841a63b156decb51fe4e1d6dc1ed1dd029c3198c312f690fb6"
+              }
+            ],
+            [
+              {
+                "file": "second-line/09_press_buzz_v0.6_t0.wav",
+                "sha256": "ab7d60113f18aef92ff6a7deff080f2af8505f358f89e34929326c34c8350ef2"
+              },
+              {
+                "file": "second-line/09_press_buzz_v0.6_t1.wav",
+                "sha256": "01f6731b8188d3ef299102c363ad7def08619c048472cdb0a9e5029476dda3f5"
+              },
+              {
+                "file": "second-line/09_press_buzz_v0.6_t2.wav",
+                "sha256": "6f6c6a0d168f07721ccb5d379b02edf408db00387adf7ab0c463b54ad27822e8"
+              }
+            ],
+            [
+              {
+                "file": "second-line/09_press_buzz_v1.0_t0.wav",
+                "sha256": "bceabae2647aabeee943716552c20803e815d67574ff7302f51aa52f8c7c3f46"
+              },
+              {
+                "file": "second-line/09_press_buzz_v1.0_t1.wav",
+                "sha256": "761a9be766870cb40117da7b4ca2c90c3f792a47bf87814518a05eeffcb1584f"
+              },
+              {
+                "file": "second-line/09_press_buzz_v1.0_t2.wav",
+                "sha256": "6d6c940017ce4464fe660bbb4e751d921f6901dc457fbbbfd65dbb7c314722ac"
+              }
+            ]
+          ]
+        },
+        {
+          "name": "snare_roll",
+          "family": "roll",
+          "players": 1,
+          "grid": [
+            [
+              {
+                "file": "second-line/10_snare_roll_v0.3_t0.wav",
+                "sha256": "02a419f3a2c5cbe82b0eaf4f28baba48b4ddddac3b98baed0e7d0e52eda4df05"
+              },
+              {
+                "file": "second-line/10_snare_roll_v0.3_t1.wav",
+                "sha256": "2aae2642653094be3c645a18323e755d14cad6bd64dfad172341a45784ddde68"
+              },
+              {
+                "file": "second-line/10_snare_roll_v0.3_t2.wav",
+                "sha256": "f01f26b0cc5dc1ca110cf725639758520fcbf51be283372ec9d28ef361de8ff7"
+              }
+            ],
+            [
+              {
+                "file": "second-line/10_snare_roll_v0.6_t0.wav",
+                "sha256": "674087ac455d15ac1f60d2a599e863a1050db7e55edd53d9030fd0490c0512fe"
+              },
+              {
+                "file": "second-line/10_snare_roll_v0.6_t1.wav",
+                "sha256": "fbf680e6246301a55562dc093ead15685b75725b25507ae265941ef2e48cd922"
+              },
+              {
+                "file": "second-line/10_snare_roll_v0.6_t2.wav",
+                "sha256": "7ccfc1e251aa83f002abae9714d8a615e64b5a01ec672e2d85e928370d288911"
+              }
+            ],
+            [
+              {
+                "file": "second-line/10_snare_roll_v1.0_t0.wav",
+                "sha256": "385a242f28d81a2e4130709afb99a574a766e1b89db17b819a68d3af515f730f"
+              },
+              {
+                "file": "second-line/10_snare_roll_v1.0_t1.wav",
+                "sha256": "99af10b584c9f183879cf9e4a0207a374553720d20eadae198178be31d67806f"
+              },
+              {
+                "file": "second-line/10_snare_roll_v1.0_t2.wav",
+                "sha256": "83d3e5729f9151a0de1190994afd5102dc080b811d2cc9084968e39155874334"
+              }
+            ]
+          ]
+        },
+        {
+          "name": "cymbal_crash",
+          "family": "metal",
+          "players": 1,
+          "grid": [
+            [
+              {
+                "file": "second-line/11_cymbal_crash_v0.3_t0.wav",
+                "sha256": "85b6e2e73781a2c3a2c3da33dcc0056a12b0cfde2ddd6fd0917723ce43305761"
+              },
+              {
+                "file": "second-line/11_cymbal_crash_v0.3_t1.wav",
+                "sha256": "979d83d37b998cabd51a8af76e73daea1e33f60789ccb3336e4ab1e92b43710a"
+              },
+              {
+                "file": "second-line/11_cymbal_crash_v0.3_t2.wav",
+                "sha256": "21ae3a40dc5d34d249e3de4eb252025f44f94a11173af2bdc64c1a4a86be7ab5"
+              }
+            ],
+            [
+              {
+                "file": "second-line/11_cymbal_crash_v0.6_t0.wav",
+                "sha256": "7536f2c8f130fa0693126cc40eb5f7d20c01728b853bc4e0bb932a7c368e5cef"
+              },
+              {
+                "file": "second-line/11_cymbal_crash_v0.6_t1.wav",
+                "sha256": "7e5bce6343bf17a350a5d36752c86eab37a16cf3baf3b7f9b0f8cefbe06ac27e"
+              },
+              {
+                "file": "second-line/11_cymbal_crash_v0.6_t2.wav",
+                "sha256": "d53e50014c95138bc837fc1fba55d5ede9fb4b8750bc4c3e376058e3a3baae2f"
+              }
+            ],
+            [
+              {
+                "file": "second-line/11_cymbal_crash_v1.0_t0.wav",
+                "sha256": "1f67e1327261dd6095159c6943bcc95701894d78eb8c18b94de69147b8779dd7"
+              },
+              {
+                "file": "second-line/11_cymbal_crash_v1.0_t1.wav",
+                "sha256": "6665ab10fcfd01766e83223498f58bbe69c5533c2a55dd328d019ed1de62790e"
+              },
+              {
+                "file": "second-line/11_cymbal_crash_v1.0_t2.wav",
+                "sha256": "5ec5f968d94a5a02db0e9f6b8b9f2ec415b2724c179bb6eb3f04b04d47eec724"
+              }
+            ]
+          ]
+        },
+        {
+          "name": "cymbal_choke",
+          "family": "metal",
+          "players": 1,
+          "grid": [
+            [
+              {
+                "file": "second-line/12_cymbal_choke_v0.3_t0.wav",
+                "sha256": "f39913fdcf05cd04c76fe519a1bf34b0e79d4f15af404b7b1e2f177641f201a5"
+              },
+              {
+                "file": "second-line/12_cymbal_choke_v0.3_t1.wav",
+                "sha256": "b37f0972e47d012f301aec3b8f6a528da02c7b349ec10a0111138dbe07c9ecda"
+              },
+              {
+                "file": "second-line/12_cymbal_choke_v0.3_t2.wav",
+                "sha256": "ed9597cadd0a8016c1f8b8ff2c2f935354b0d907cbab538b4ab34b85b9e349ea"
+              }
+            ],
+            [
+              {
+                "file": "second-line/12_cymbal_choke_v0.6_t0.wav",
+                "sha256": "c39a2f65ec8947cef83567f4d5223d8907b68f64eadbe9fb864a6aa0f163079f"
+              },
+              {
+                "file": "second-line/12_cymbal_choke_v0.6_t1.wav",
+                "sha256": "7984d858682145d6164d052e761e552281cd292299dcbdcd06fb70638a9c1789"
+              },
+              {
+                "file": "second-line/12_cymbal_choke_v0.6_t2.wav",
+                "sha256": "1af99cef0057dea25a2a41790e7a45e7309bbedf8e9c6b22836c878c7fbaf17c"
+              }
+            ],
+            [
+              {
+                "file": "second-line/12_cymbal_choke_v1.0_t0.wav",
+                "sha256": "2dcffc7fbb9d0ba10ca0281f60c68bdca76a85d4a1990936cf0a60c9af0fed7d"
+              },
+              {
+                "file": "second-line/12_cymbal_choke_v1.0_t1.wav",
+                "sha256": "43ef44d0cb74ff79b8facd936af441b221ba5b7d5e74e1df0d05c38f1769e7a1"
+              },
+              {
+                "file": "second-line/12_cymbal_choke_v1.0_t2.wav",
+                "sha256": "dd53a76f378a245d71a371ea41fa5e7d9e932af5bfd89d3e4d985b729c0ad0d2"
+              }
+            ]
+          ]
+        },
+        {
+          "name": "cymbal_touch",
+          "family": "metal",
+          "players": 1,
+          "grid": [
+            [
+              {
+                "file": "second-line/13_cymbal_touch_v0.3_t0.wav",
+                "sha256": "f31ee7881938f610da4406ce6d11b3bd16672d87ffa17baf4ea105c11dceef91"
+              },
+              {
+                "file": "second-line/13_cymbal_touch_v0.3_t1.wav",
+                "sha256": "9064ceab94d26b8099b8ac44d2c6070662e60fc69dbc48b5a91b7e181a901f91"
+              },
+              {
+                "file": "second-line/13_cymbal_touch_v0.3_t2.wav",
+                "sha256": "a9af3321a37e95872c74734430316b39620095b6b724d4c55b5329638f20c242"
+              }
+            ],
+            [
+              {
+                "file": "second-line/13_cymbal_touch_v0.6_t0.wav",
+                "sha256": "f7de9611fa40de0853cc307f467d75d2823c3eb39d1f0f58aa69a8d4745ce402"
+              },
+              {
+                "file": "second-line/13_cymbal_touch_v0.6_t1.wav",
+                "sha256": "d96770197b54159c47046febefb656d9e184ae64cdb6fdb3bcf1da50030c455d"
+              },
+              {
+                "file": "second-line/13_cymbal_touch_v0.6_t2.wav",
+                "sha256": "67c97606223b79ace61b747061f49fc4d3e06906118530c1f9f984bd0b655bf5"
+              }
+            ],
+            [
+              {
+                "file": "second-line/13_cymbal_touch_v1.0_t0.wav",
+                "sha256": "91297038c212038bbb2a153923d773c2f19a5d72f1f60a08912be20ea573b72f"
+              },
+              {
+                "file": "second-line/13_cymbal_touch_v1.0_t1.wav",
+                "sha256": "319aa6886b3a5dc0bd5912fd90ba77e08c519b7e503163d9000d5b63d60a1223"
+              },
+              {
+                "file": "second-line/13_cymbal_touch_v1.0_t2.wav",
+                "sha256": "f734da207df36f3982806f83689e9bc51d9f7f14b12e25e26dd0b9b27d308e8e"
+              }
+            ]
+          ]
+        },
+        {
+          "name": "bell",
+          "family": "bell",
+          "players": 1,
+          "grid": [
+            [
+              {
+                "file": "second-line/14_bell_v0.3_t0.wav",
+                "sha256": "10e6ada1dfe5c34365e11223620db9e6c17f58a478a071375c7df075d681ef6c"
+              },
+              {
+                "file": "second-line/14_bell_v0.3_t1.wav",
+                "sha256": "7d0e3b0d516a512134fede080783a092263cbc4b5a88981056fcecb01e0b3e7c"
+              },
+              {
+                "file": "second-line/14_bell_v0.3_t2.wav",
+                "sha256": "d4c2321caf167c6c813cc9c0961eeb830ac8243cf040548b7f665fce5309c5d8"
+              }
+            ],
+            [
+              {
+                "file": "second-line/14_bell_v0.6_t0.wav",
+                "sha256": "c3f56d99df7ea4befa454cebabbbd0e03abe4967fc9bf0dac1d7f82c0d452bde"
+              },
+              {
+                "file": "second-line/14_bell_v0.6_t1.wav",
+                "sha256": "98aa0fa243b54e3ca2e76d789a6589fdc367083bb73c7a386ea9de0d9b00c4a1"
+              },
+              {
+                "file": "second-line/14_bell_v0.6_t2.wav",
+                "sha256": "fe76485f86817e914040b212b4950e690fe62efef3b8073a454241a635cb0604"
+              }
+            ],
+            [
+              {
+                "file": "second-line/14_bell_v1.0_t0.wav",
+                "sha256": "2773027afb4e223e95d26f1ac3d5bb22094cf534f41a08a399379ab9ca7d6831"
+              },
+              {
+                "file": "second-line/14_bell_v1.0_t1.wav",
+                "sha256": "5c019813217e20bc1b8824eeff57c8aa0cca3c49350148c3d12afd1eaf034ea9"
+              },
+              {
+                "file": "second-line/14_bell_v1.0_t2.wav",
+                "sha256": "1856491e1bea6fc67772d8f786bcdde08ce6be39eea5d2e9fcd78f223c2c937a"
+              }
+            ]
+          ]
+        },
+        {
+          "name": "stick_click",
+          "family": "wood",
+          "players": 1,
+          "grid": [
+            [
+              {
+                "file": "second-line/15_stick_click_v0.3_t0.wav",
+                "sha256": "668e6fc71ef5feffc6231435c43933ed3843ac84369591ed68d82bdb323d0f32"
+              },
+              {
+                "file": "second-line/15_stick_click_v0.3_t1.wav",
+                "sha256": "e45c489613e280e8ac7df3ced54e1dfd8316fd24ecfb470156c54b8bc9ba2abe"
+              },
+              {
+                "file": "second-line/15_stick_click_v0.3_t2.wav",
+                "sha256": "8e7d1173e4b415e4fbc3d888656b8e54ac3cefa67a5632af46d716470f0246df"
+              }
+            ],
+            [
+              {
+                "file": "second-line/15_stick_click_v0.6_t0.wav",
+                "sha256": "cd056eac3fc5e1458062c20aac578b702fc08d60f5c4427342036168e9dbab19"
+              },
+              {
+                "file": "second-line/15_stick_click_v0.6_t1.wav",
+                "sha256": "07a4d83ba8401b369479da4ccea58f1494cc7c248c8216aa34ea00ed55751e92"
+              },
+              {
+                "file": "second-line/15_stick_click_v0.6_t2.wav",
+                "sha256": "c5e91302b6c6568b2375503350bfd912de392067abd7055ab0edc37bea6ecb98"
+              }
+            ],
+            [
+              {
+                "file": "second-line/15_stick_click_v1.0_t0.wav",
+                "sha256": "9015c20489220475b717285ed45bba72505fd8e3f465602cd8c344933c2b3699"
+              },
+              {
+                "file": "second-line/15_stick_click_v1.0_t1.wav",
+                "sha256": "2edff39c070b1ea5a2d0d37044669949bf694a398a81762c2cea6e3c4ef1e9e6"
+              },
+              {
+                "file": "second-line/15_stick_click_v1.0_t2.wav",
+                "sha256": "eda78fcd7be57422782400727139d0519e0902c23f48205ff60141e6ce15ae58"
+              }
+            ]
+          ]
+        },
+        {
+          "name": "turnaround",
+          "family": "turn",
+          "players": 1,
+          "grid": [
+            [
+              {
+                "file": "second-line/16_turnaround_v0.3_t0.wav",
+                "sha256": "2992b44493dbf4ffdcafa234374113b208aec3c75de96708f23b6c62164fe814"
+              },
+              {
+                "file": "second-line/16_turnaround_v0.3_t1.wav",
+                "sha256": "2e270e1b0e3489defdbc05a7805f719dd74183b585f858c2ffe5e41538f51225"
+              },
+              {
+                "file": "second-line/16_turnaround_v0.3_t2.wav",
+                "sha256": "16577fb5ee5556fb59a18110ebb8ad44650e544f6c275cfe6b7d60420442c157"
+              }
+            ],
+            [
+              {
+                "file": "second-line/16_turnaround_v0.6_t0.wav",
+                "sha256": "52569cef2face246b9f2ee8766cfc613e1d09c161f4f407e22fe57b6270749db"
+              },
+              {
+                "file": "second-line/16_turnaround_v0.6_t1.wav",
+                "sha256": "1442d455a1a13725207ec8c6e407ac101143a3374822734de1aed97090963914"
+              },
+              {
+                "file": "second-line/16_turnaround_v0.6_t2.wav",
+                "sha256": "390ecb9d02369681a2155569a912d437acddda5e3a7e2a92fa66a15c7ad41629"
+              }
+            ],
+            [
+              {
+                "file": "second-line/16_turnaround_v1.0_t0.wav",
+                "sha256": "e6dc9bb9709343d84018c1a87e5214e318ceff410848639968d8c061097c8b08"
+              },
+              {
+                "file": "second-line/16_turnaround_v1.0_t1.wav",
+                "sha256": "9701f3e8aee585cfdb9084c5b00fe6e003104e8865f77be201f2356b5abbd9ab"
+              },
+              {
+                "file": "second-line/16_turnaround_v1.0_t2.wav",
+                "sha256": "fd415a4bc5c7a080ee20a83997f28e4b71c1ae1ab44b092ae7c285ce8fada762"
+              }
+            ]
+          ]
+        }
+      ],
+      "events": [
+        [
+          0,
+          0,
+          0.8
+        ],
+        [
+          1.5,
+          0,
+          0.55
+        ],
+        [
+          2,
+          0,
+          0.8
+        ],
+        [
+          3.5,
+          0,
+          0.55
+        ],
+        [
+          1,
+          2,
+          1
+        ],
+        [
+          3,
+          2,
+          1
+        ],
+        [
+          0.75,
+          3,
+          0.35
+        ],
+        [
+          1.75,
+          3,
+          0.35
+        ],
+        [
+          2.5,
+          3,
+          0.35
+        ],
+        [
+          3.75,
+          3,
+          0.35
+        ],
+        [
+          0.5,
+          5,
+          0.5
+        ],
+        [
+          2.75,
+          4,
+          0.75
+        ],
+        [
+          0,
+          12,
+          0.6
+        ],
+        [
+          4,
+          0,
+          0.8
+        ],
+        [
+          5.5,
+          0,
+          0.55
+        ],
+        [
+          6,
+          0,
+          0.8
+        ],
+        [
+          7.5,
+          0,
+          0.55
+        ],
+        [
+          5,
+          2,
+          1
+        ],
+        [
+          7,
+          2,
+          1
+        ],
+        [
+          4.75,
+          3,
+          0.35
+        ],
+        [
+          5.75,
+          3,
+          0.35
+        ],
+        [
+          6.5,
+          3,
+          0.35
+        ],
+        [
+          7.75,
+          3,
+          0.35
+        ],
+        [
+          4.5,
+          5,
+          0.5
+        ],
+        [
+          6.75,
+          4,
+          0.75
+        ],
+        [
+          4,
+          12,
+          0.6
+        ],
+        [
+          8,
+          0,
+          0.8
+        ],
+        [
+          9.5,
+          0,
+          0.55
+        ],
+        [
+          10,
+          0,
+          0.8
+        ],
+        [
+          11.5,
+          0,
+          0.55
+        ],
+        [
+          9,
+          2,
+          1
+        ],
+        [
+          11,
+          2,
+          1
+        ],
+        [
+          8.75,
+          3,
+          0.35
+        ],
+        [
+          9.75,
+          3,
+          0.35
+        ],
+        [
+          10.5,
+          3,
+          0.35
+        ],
+        [
+          11.75,
+          3,
+          0.35
+        ],
+        [
+          8.5,
+          5,
+          0.5
+        ],
+        [
+          10.75,
+          4,
+          0.75
+        ],
+        [
+          8,
+          12,
+          0.6
+        ],
+        [
+          12,
+          0,
+          0.8
+        ],
+        [
+          13.5,
+          0,
+          0.55
+        ],
+        [
+          14,
+          0,
+          0.8
+        ],
+        [
+          15.5,
+          0,
+          0.55
+        ],
+        [
+          13,
+          2,
+          1
+        ],
+        [
+          15,
+          2,
+          1
+        ],
+        [
+          12.75,
+          3,
+          0.35
+        ],
+        [
+          13.75,
+          3,
+          0.35
+        ],
+        [
+          14.5,
+          3,
+          0.35
+        ],
+        [
+          15.75,
+          3,
+          0.35
+        ],
+        [
+          12.5,
+          5,
+          0.5
+        ],
+        [
+          14.75,
+          4,
+          0.75
+        ],
+        [
+          12,
+          12,
+          0.6
+        ],
+        [
+          15,
+          6,
+          0.8
+        ],
+        [
+          16,
+          0,
+          0.8
+        ],
+        [
+          17.5,
+          0,
+          0.55
+        ],
+        [
+          18,
+          0,
+          0.8
+        ],
+        [
+          19.5,
+          0,
+          0.55
+        ],
+        [
+          17,
+          2,
+          1
+        ],
+        [
+          19,
+          2,
+          1
+        ],
+        [
+          16.75,
+          3,
+          0.35
+        ],
+        [
+          17.75,
+          3,
+          0.35
+        ],
+        [
+          18.5,
+          3,
+          0.35
+        ],
+        [
+          19.75,
+          3,
+          0.35
+        ],
+        [
+          16.5,
+          5,
+          0.5
+        ],
+        [
+          18.75,
+          4,
+          0.75
+        ],
+        [
+          16,
+          12,
+          0.6
+        ],
+        [
+          20,
+          0,
+          0.8
+        ],
+        [
+          21.5,
+          0,
+          0.55
+        ],
+        [
+          22,
+          0,
+          0.8
+        ],
+        [
+          23.5,
+          0,
+          0.55
+        ],
+        [
+          21,
+          2,
+          1
+        ],
+        [
+          23,
+          2,
+          1
+        ],
+        [
+          20.75,
+          3,
+          0.35
+        ],
+        [
+          21.75,
+          3,
+          0.35
+        ],
+        [
+          22.5,
+          3,
+          0.35
+        ],
+        [
+          23.75,
+          3,
+          0.35
+        ],
+        [
+          20.5,
+          5,
+          0.5
+        ],
+        [
+          22.75,
+          4,
+          0.75
+        ],
+        [
+          20,
+          12,
+          0.6
+        ],
+        [
+          24,
+          0,
+          0.8
+        ],
+        [
+          25.5,
+          0,
+          0.55
+        ],
+        [
+          26,
+          0,
+          0.8
+        ],
+        [
+          27.5,
+          0,
+          0.55
+        ],
+        [
+          25,
+          2,
+          1
+        ],
+        [
+          27,
+          2,
+          1
+        ],
+        [
+          24.75,
+          3,
+          0.35
+        ],
+        [
+          25.75,
+          3,
+          0.35
+        ],
+        [
+          26.5,
+          3,
+          0.35
+        ],
+        [
+          27.75,
+          3,
+          0.35
+        ],
+        [
+          24.5,
+          5,
+          0.5
+        ],
+        [
+          26.75,
+          4,
+          0.75
+        ],
+        [
+          24,
+          12,
+          0.6
+        ],
+        [
+          28,
+          0,
+          0.8
+        ],
+        [
+          29.5,
+          0,
+          0.55
+        ],
+        [
+          30,
+          0,
+          0.8
+        ],
+        [
+          31.5,
+          0,
+          0.55
+        ],
+        [
+          29,
+          2,
+          1
+        ],
+        [
+          31,
+          2,
+          1
+        ],
+        [
+          28.75,
+          3,
+          0.35
+        ],
+        [
+          29.75,
+          3,
+          0.35
+        ],
+        [
+          30.5,
+          3,
+          0.35
+        ],
+        [
+          31.75,
+          3,
+          0.35
+        ],
+        [
+          28.5,
+          5,
+          0.5
+        ],
+        [
+          30.75,
+          4,
+          0.75
+        ],
+        [
+          28,
+          12,
+          0.6
+        ],
+        [
+          31,
+          6,
+          0.8
+        ]
+      ]
+    },
+    {
+      "id": "samba-bateria",
+      "bpm": 140,
+      "pads": [
+        {
+          "name": "surdo_low_open",
+          "family": "skin",
+          "players": 2,
+          "grid": [
+            [
+              {
+                "file": "samba-bateria/01_surdo_low_open_v0.3_t0.wav",
+                "sha256": "2427157e06cbd2b9b74ee4a27463cc83d0e9c5aeefa94c802a8ce84d2a180fb0"
+              },
+              {
+                "file": "samba-bateria/01_surdo_low_open_v0.3_t1.wav",
+                "sha256": "64b99ef57729be8cf0c2641841db9c1d31de0bc9312dfe0c3776b2aa1c703a78"
+              },
+              {
+                "file": "samba-bateria/01_surdo_low_open_v0.3_t2.wav",
+                "sha256": "2afddb66fb5713d0e5847327c04d825a1f2f602883f5d02efd8a1ba0d89d46a1"
+              }
+            ],
+            [
+              {
+                "file": "samba-bateria/01_surdo_low_open_v0.6_t0.wav",
+                "sha256": "66a3803c462cc7e958932ae2cee01ae441e20fa82219e16ada83a79c64a2367f"
+              },
+              {
+                "file": "samba-bateria/01_surdo_low_open_v0.6_t1.wav",
+                "sha256": "9580e3c08e649037813176f39364aab97e4d9f7123bf757500df4ff54f0ffae1"
+              },
+              {
+                "file": "samba-bateria/01_surdo_low_open_v0.6_t2.wav",
+                "sha256": "58e2875ad745cb7ee3c1c7fbf3523268bc2112e448c0a92397ab0254204137f0"
+              }
+            ],
+            [
+              {
+                "file": "samba-bateria/01_surdo_low_open_v1.0_t0.wav",
+                "sha256": "0746814f4135e649b97ec74b3ae2c605024a286151b88fb8d4e0e8b1035691ef"
+              },
+              {
+                "file": "samba-bateria/01_surdo_low_open_v1.0_t1.wav",
+                "sha256": "a4fb0f8f872e2ced3e438e73321f1927566f50352945dcedb331a25e8b0fcc14"
+              },
+              {
+                "file": "samba-bateria/01_surdo_low_open_v1.0_t2.wav",
+                "sha256": "4f49ff8c9d86fe37c4a27c6d09d69cb6d58824d14c10588eb135837a30ef4edd"
+              }
+            ]
+          ]
+        },
+        {
+          "name": "surdo_low_muted",
+          "family": "skin",
+          "players": 2,
+          "grid": [
+            [
+              {
+                "file": "samba-bateria/02_surdo_low_muted_v0.3_t0.wav",
+                "sha256": "edbba65fe6b6f3d53e0911eb894b887f3bd9f9263f8b147038fb98862e792fe9"
+              },
+              {
+                "file": "samba-bateria/02_surdo_low_muted_v0.3_t1.wav",
+                "sha256": "774b6580b0f9d9de1b27c055883fc186171501c80639ed2f846877bd21d70e80"
+              },
+              {
+                "file": "samba-bateria/02_surdo_low_muted_v0.3_t2.wav",
+                "sha256": "f838b3c564b47ef887def8f16c258bc2737c2c36f6e5e219d70c87588b2996b2"
+              }
+            ],
+            [
+              {
+                "file": "samba-bateria/02_surdo_low_muted_v0.6_t0.wav",
+                "sha256": "17c807e76c5e6a35f70530c587ea5a376e6dcb9e89cbdd75b0c8b939d486293b"
+              },
+              {
+                "file": "samba-bateria/02_surdo_low_muted_v0.6_t1.wav",
+                "sha256": "ca8036dddcce614b9362a2168bad9d493562fefb0b5ea2412cf6174cd0d0fa31"
+              },
+              {
+                "file": "samba-bateria/02_surdo_low_muted_v0.6_t2.wav",
+                "sha256": "cc72a2fb51636b18b1e6473205a02a6f1fc1cfb5bcd10176770cd7e401cdb7b2"
+              }
+            ],
+            [
+              {
+                "file": "samba-bateria/02_surdo_low_muted_v1.0_t0.wav",
+                "sha256": "45d0739f6287a4706f7e02542d65b498daabfddd4bb9a72afb7279b19d485f54"
+              },
+              {
+                "file": "samba-bateria/02_surdo_low_muted_v1.0_t1.wav",
+                "sha256": "9744e07423a2cd52df60c80ce574404fe5a959b01cd323a3e45acab9e67b65da"
+              },
+              {
+                "file": "samba-bateria/02_surdo_low_muted_v1.0_t2.wav",
+                "sha256": "e685a01ab31ac06f8485ed22a188c8c89fc8e27598ba91ee4ae5902254127a99"
+              }
+            ]
+          ]
+        },
+        {
+          "name": "surdo_mid_open",
+          "family": "skin",
+          "players": 2,
+          "grid": [
+            [
+              {
+                "file": "samba-bateria/03_surdo_mid_open_v0.3_t0.wav",
+                "sha256": "4efdc716f942419733c8edbc960e5254ef7518ea6c5f0bd938d81450824260b3"
+              },
+              {
+                "file": "samba-bateria/03_surdo_mid_open_v0.3_t1.wav",
+                "sha256": "7925f4b07570b8a576d9a97992f0f554f7a8380609898d44b02533ad859812b5"
+              },
+              {
+                "file": "samba-bateria/03_surdo_mid_open_v0.3_t2.wav",
+                "sha256": "a98b54461c7d3d2284a0b5939d84d421fe597542622f0280b6ffb4bd27055bde"
+              }
+            ],
+            [
+              {
+                "file": "samba-bateria/03_surdo_mid_open_v0.6_t0.wav",
+                "sha256": "e13330862654043da07cfdcd2b69ac3030db9d9ce994b755985b82b68389fe28"
+              },
+              {
+                "file": "samba-bateria/03_surdo_mid_open_v0.6_t1.wav",
+                "sha256": "935a8f5fee11b54007fc735f86e82a7bb2185eab45387438be6bfd86d682767c"
+              },
+              {
+                "file": "samba-bateria/03_surdo_mid_open_v0.6_t2.wav",
+                "sha256": "a950766e59b586fb05eebab0d7cd1f63ea9e158085487c5257b20dc9f598ce69"
+              }
+            ],
+            [
+              {
+                "file": "samba-bateria/03_surdo_mid_open_v1.0_t0.wav",
+                "sha256": "9722454d77ea008ddb2884a67628162edcfacbc83d209b0a06ed6d0ccf279702"
+              },
+              {
+                "file": "samba-bateria/03_surdo_mid_open_v1.0_t1.wav",
+                "sha256": "7845a8cd11d36c8d5c148261cadece81846b543ecb057e86f1899ccc1a8f9562"
+              },
+              {
+                "file": "samba-bateria/03_surdo_mid_open_v1.0_t2.wav",
+                "sha256": "a381847232f35f270f5c138b97735c2d8b1ded3c39d8c22f44864111e6f1badf"
+              }
+            ]
+          ]
+        },
+        {
+          "name": "surdo_mid_muted",
+          "family": "skin",
+          "players": 2,
+          "grid": [
+            [
+              {
+                "file": "samba-bateria/04_surdo_mid_muted_v0.3_t0.wav",
+                "sha256": "328fe62e3240e24a00a9f5ae43c602df6a7df4eb3002f6136ec2129d4a642ebe"
+              },
+              {
+                "file": "samba-bateria/04_surdo_mid_muted_v0.3_t1.wav",
+                "sha256": "b20af28c063590faae7d03cc0ed5193d048bacf853a5d4e0c3cc9c531cb0a5f6"
+              },
+              {
+                "file": "samba-bateria/04_surdo_mid_muted_v0.3_t2.wav",
+                "sha256": "76701c5eeeaa12d0f2b65c1f2ee64852c4fb79f2e0b0295089dfb985073bf8c7"
+              }
+            ],
+            [
+              {
+                "file": "samba-bateria/04_surdo_mid_muted_v0.6_t0.wav",
+                "sha256": "df4bc28b584480a9ee6c99a0d53edbf9f5896871ce4ae66a2a9949a95c9224bd"
+              },
+              {
+                "file": "samba-bateria/04_surdo_mid_muted_v0.6_t1.wav",
+                "sha256": "6f45ffb1c2a9fa31e4bda9bdcace3b264e54d8dcf052d3455df43074508d1998"
+              },
+              {
+                "file": "samba-bateria/04_surdo_mid_muted_v0.6_t2.wav",
+                "sha256": "b717498cc0cbd2447a3620f5811cd01ba405122b5c46cbd712c79f4f5d943119"
+              }
+            ],
+            [
+              {
+                "file": "samba-bateria/04_surdo_mid_muted_v1.0_t0.wav",
+                "sha256": "9e9743d163030f5f9bb846dd506770afac7d619d7f48c0636a37861d2cf040a3"
+              },
+              {
+                "file": "samba-bateria/04_surdo_mid_muted_v1.0_t1.wav",
+                "sha256": "9352939f40974568f7ed3f86352e4f7bd8263abc4c2baf64df1c06102027e442"
+              },
+              {
+                "file": "samba-bateria/04_surdo_mid_muted_v1.0_t2.wav",
+                "sha256": "cc8fda01c190a68285462986c14723f8b16a5483558dbe5b384098ccb6fa97e9"
+              }
+            ]
+          ]
+        },
+        {
+          "name": "surdo_cutter",
+          "family": "skin",
+          "players": 2,
+          "grid": [
+            [
+              {
+                "file": "samba-bateria/05_surdo_cutter_v0.3_t0.wav",
+                "sha256": "0c359cd59ee26819bb8ab79bf8047fbd9966b891f774b76ac192ff5d51de9b3b"
+              },
+              {
+                "file": "samba-bateria/05_surdo_cutter_v0.3_t1.wav",
+                "sha256": "19ea15e04e8f713d82f4e7c978025ac3a5603f1166cecfb4ef07ef3f008e1523"
+              },
+              {
+                "file": "samba-bateria/05_surdo_cutter_v0.3_t2.wav",
+                "sha256": "10e9590c48cdc2d54637e5090d097b2240c3dbafe76d9369442c5c7d87973e15"
+              }
+            ],
+            [
+              {
+                "file": "samba-bateria/05_surdo_cutter_v0.6_t0.wav",
+                "sha256": "c35569d47744f7676204178e1d3929751ebb27932b27ef05f60cbd7fcf87a1e7"
+              },
+              {
+                "file": "samba-bateria/05_surdo_cutter_v0.6_t1.wav",
+                "sha256": "701c671caaf314dde7cc5ea3657369710588ba00c95a95cdb92b6d9c8de3cd30"
+              },
+              {
+                "file": "samba-bateria/05_surdo_cutter_v0.6_t2.wav",
+                "sha256": "aac6dfde49d44663134488af754df9811f3c2da9364bf0dc87d52909f9abfa81"
+              }
+            ],
+            [
+              {
+                "file": "samba-bateria/05_surdo_cutter_v1.0_t0.wav",
+                "sha256": "965989f567a050d37fe40a5f40ed3027a5775557f20c5696f3839b6392bcaef2"
+              },
+              {
+                "file": "samba-bateria/05_surdo_cutter_v1.0_t1.wav",
+                "sha256": "087ead1a59b98a8196cf853abd89c2fa75bc7ed1e1938c6d3443c09f6398748e"
+              },
+              {
+                "file": "samba-bateria/05_surdo_cutter_v1.0_t2.wav",
+                "sha256": "c35bd308c87557ab716f2dcbfae037eacd2d4822780a614bb6616b8fcdf3a8a7"
+              }
+            ]
+          ]
+        },
+        {
+          "name": "caixa",
+          "family": "wire",
+          "players": 4,
+          "grid": [
+            [
+              {
+                "file": "samba-bateria/06_caixa_v0.3_t0.wav",
+                "sha256": "d025bbea36c0c36619600e986bc1f6eb28e9c39ea68778dbd67685ff877bbb0e"
+              },
+              {
+                "file": "samba-bateria/06_caixa_v0.3_t1.wav",
+                "sha256": "d70a022387512a4e5628a39c6ca56c3d73cbbd030c3924e5435882f2059266e0"
+              },
+              {
+                "file": "samba-bateria/06_caixa_v0.3_t2.wav",
+                "sha256": "35ceef0db4071c0fb0912df490dc017c7afa92aefd10703172cb4dfb27033f3a"
+              }
+            ],
+            [
+              {
+                "file": "samba-bateria/06_caixa_v0.6_t0.wav",
+                "sha256": "58684fad7d483803f9829849773ba828e867470ce1ca76ea4f0953191e6893c9"
+              },
+              {
+                "file": "samba-bateria/06_caixa_v0.6_t1.wav",
+                "sha256": "6ee3f7005bcc8dafd3e18496d5fdc672d9ae4eabc2928f580ca1bf32f02b276d"
+              },
+              {
+                "file": "samba-bateria/06_caixa_v0.6_t2.wav",
+                "sha256": "c0030c6d61403afd1946efcc224c60703fee169a6de8c02c84ed32082dc2d31f"
+              }
+            ],
+            [
+              {
+                "file": "samba-bateria/06_caixa_v1.0_t0.wav",
+                "sha256": "0457628ce74e3ce7382fe39afe60efed95fb46da9c9d3451e552cdbe885d6cc3"
+              },
+              {
+                "file": "samba-bateria/06_caixa_v1.0_t1.wav",
+                "sha256": "9e890d783e82a9afe6a4583bbecd7940c9354cadb78f1287216fb99082d48519"
+              },
+              {
+                "file": "samba-bateria/06_caixa_v1.0_t2.wav",
+                "sha256": "524bc642852fe1184225b009b40d904c0dae5aef8af1f4930cd319544eec80c7"
+              }
+            ]
+          ]
+        },
+        {
+          "name": "caixa_rim",
+          "family": "rim",
+          "players": 4,
+          "grid": [
+            [
+              {
+                "file": "samba-bateria/07_caixa_rim_v0.3_t0.wav",
+                "sha256": "e556fefd20534c868cedf7628748af7542561a147714d00cfd6bd6400ada6f1d"
+              },
+              {
+                "file": "samba-bateria/07_caixa_rim_v0.3_t1.wav",
+                "sha256": "03d5e21863a91686478fb9baae7326203e563d0184a6ac67ea41c8edb1907e72"
+              },
+              {
+                "file": "samba-bateria/07_caixa_rim_v0.3_t2.wav",
+                "sha256": "1dc5e7d1c517d1f3e2d6d6543e62c3c5f20406419c655bb877468a5824719503"
+              }
+            ],
+            [
+              {
+                "file": "samba-bateria/07_caixa_rim_v0.6_t0.wav",
+                "sha256": "e51eb12834fccadffabfd47ba21f1df5cc948973026fcbb4c6e8cfce05bfd1c1"
+              },
+              {
+                "file": "samba-bateria/07_caixa_rim_v0.6_t1.wav",
+                "sha256": "aa636ed27a732a8e381b729a26109f90c2f59b1634fc250c77c723f993fb32a3"
+              },
+              {
+                "file": "samba-bateria/07_caixa_rim_v0.6_t2.wav",
+                "sha256": "3cca26a7dd74620dbf77a6a5360f5d4cdaf015c149c3f3a71723e78217a68a80"
+              }
+            ],
+            [
+              {
+                "file": "samba-bateria/07_caixa_rim_v1.0_t0.wav",
+                "sha256": "e07c671386ea91aa0472dbdc69115e0c3b1ab783404df8d2a7c61d5fa914c8ab"
+              },
+              {
+                "file": "samba-bateria/07_caixa_rim_v1.0_t1.wav",
+                "sha256": "8d00ede2e977e994963dea4732880a1a05b9b6ab020782d6f195534c150cbbbe"
+              },
+              {
+                "file": "samba-bateria/07_caixa_rim_v1.0_t2.wav",
+                "sha256": "812a63decc36e6628f2cade0227ddbc9439adf048854b80ff9025c99ba919d1d"
+              }
+            ]
+          ]
+        },
+        {
+          "name": "repinique_open",
+          "family": "skin",
+          "players": 1,
+          "grid": [
+            [
+              {
+                "file": "samba-bateria/08_repinique_open_v0.3_t0.wav",
+                "sha256": "cd16b6a7be7b51594ff2c4e8c6d5699e9f9cc2632ec490934b89217f4f7d64a5"
+              },
+              {
+                "file": "samba-bateria/08_repinique_open_v0.3_t1.wav",
+                "sha256": "2c205c659b9b7c6dfa5404bf944fa360e4018e8e60b74d61d4906eb7610bb5bb"
+              },
+              {
+                "file": "samba-bateria/08_repinique_open_v0.3_t2.wav",
+                "sha256": "8be9f2e1113fb5131243b7d00f3ed6eb20e58eafc30b1b027251926bb0529b18"
+              }
+            ],
+            [
+              {
+                "file": "samba-bateria/08_repinique_open_v0.6_t0.wav",
+                "sha256": "e1e4617df91cdc91b8a797b1dd5e5f9e2de525b603b4075b2977d3331a1e6684"
+              },
+              {
+                "file": "samba-bateria/08_repinique_open_v0.6_t1.wav",
+                "sha256": "712d0b965252584851cd5f392db44feede5308ac243cb07b48d5e72eade7f597"
+              },
+              {
+                "file": "samba-bateria/08_repinique_open_v0.6_t2.wav",
+                "sha256": "a09bf9c21b04d154672e83e1cc4e7b05440743a987a8070d1f6f8a76f8b1f980"
+              }
+            ],
+            [
+              {
+                "file": "samba-bateria/08_repinique_open_v1.0_t0.wav",
+                "sha256": "f4fa085da5bfb6798f47227b64303253d7e4499d1052ef51eb91cd54979ba0bf"
+              },
+              {
+                "file": "samba-bateria/08_repinique_open_v1.0_t1.wav",
+                "sha256": "158bdb805ab0ea85a74149253c0c84b866843bf5382f8f5d2be7afd572e1c0e5"
+              },
+              {
+                "file": "samba-bateria/08_repinique_open_v1.0_t2.wav",
+                "sha256": "d6b140992c17f04ac30ca63a449facbc1af098e0c79c3d414bfda230f87a966b"
+              }
+            ]
+          ]
+        },
+        {
+          "name": "repinique_rim",
+          "family": "rim_dry",
+          "players": 1,
+          "grid": [
+            [
+              {
+                "file": "samba-bateria/09_repinique_rim_v0.3_t0.wav",
+                "sha256": "485cd6be98cbb1031b1eff6d1538cfb6672326a96d597bb972cfe923369f492a"
+              },
+              {
+                "file": "samba-bateria/09_repinique_rim_v0.3_t1.wav",
+                "sha256": "f12086fff0379e25ee61738d0dbd92bc2b7ef9fbf58ef9f33b4fa05a25a80a16"
+              },
+              {
+                "file": "samba-bateria/09_repinique_rim_v0.3_t2.wav",
+                "sha256": "004baff50028af627c81076905c98909276a0724fd9e748df6ed782b98c30f4d"
+              }
+            ],
+            [
+              {
+                "file": "samba-bateria/09_repinique_rim_v0.6_t0.wav",
+                "sha256": "0565a152b5592c46a41c1bcd95a9d599a0c72c8a3988a0619fe74220cfd96967"
+              },
+              {
+                "file": "samba-bateria/09_repinique_rim_v0.6_t1.wav",
+                "sha256": "fc04f3f93b8009ac8fb21f842bb692f5828a4b49b76ef769dc498daba76f8afd"
+              },
+              {
+                "file": "samba-bateria/09_repinique_rim_v0.6_t2.wav",
+                "sha256": "a57a5eb8a1c107b23fb703280d949a3c6ee945445d06d2739cb7c57078021062"
+              }
+            ],
+            [
+              {
+                "file": "samba-bateria/09_repinique_rim_v1.0_t0.wav",
+                "sha256": "2196f7b1db037a0b251f64455b0eabdbd65ca46befb440df62894be789029dc3"
+              },
+              {
+                "file": "samba-bateria/09_repinique_rim_v1.0_t1.wav",
+                "sha256": "1473c44624f167324b29da9e064bbf77732e7da04430f11b3296e8afc7f3afc4"
+              },
+              {
+                "file": "samba-bateria/09_repinique_rim_v1.0_t2.wav",
+                "sha256": "2f16fd8df245f8579ac82c161168c33a5e09a469717baa004c867de2be942531"
+              }
+            ]
+          ]
+        },
+        {
+          "name": "tamborim_open",
+          "family": "skin",
+          "players": 6,
+          "grid": [
+            [
+              {
+                "file": "samba-bateria/10_tamborim_open_v0.3_t0.wav",
+                "sha256": "78ec45da65fe39e78d12d746c92eb3a6c768ca5bb302c3417b4b3fdbbb73e33b"
+              },
+              {
+                "file": "samba-bateria/10_tamborim_open_v0.3_t1.wav",
+                "sha256": "d4fd15a7dd5f0012c382ae26e474e7cb656fce451cb1bb0f1ed1e5b9efa7d8bb"
+              },
+              {
+                "file": "samba-bateria/10_tamborim_open_v0.3_t2.wav",
+                "sha256": "9fdd776e4d8a976a2453f8d5217bf4a43ce13a7df9ed8508469d41e9dc8b6092"
+              }
+            ],
+            [
+              {
+                "file": "samba-bateria/10_tamborim_open_v0.6_t0.wav",
+                "sha256": "d190f11f01db83bcd747875bbf6ee46dd8df4cac9d175d324c56a9b52bdbee4a"
+              },
+              {
+                "file": "samba-bateria/10_tamborim_open_v0.6_t1.wav",
+                "sha256": "bb38652d543c04a61763410a2a97277bf463ac8fdb23f71a7551a18de28b592e"
+              },
+              {
+                "file": "samba-bateria/10_tamborim_open_v0.6_t2.wav",
+                "sha256": "935818e310efe0f9bb7b0e8e6a5f448d13eb54da1b18c3fdfc9761e34be85fa9"
+              }
+            ],
+            [
+              {
+                "file": "samba-bateria/10_tamborim_open_v1.0_t0.wav",
+                "sha256": "a60e0bce567bc20d5f1321dc21a71fcda95f3e90c931d55958f3c5b418a5f120"
+              },
+              {
+                "file": "samba-bateria/10_tamborim_open_v1.0_t1.wav",
+                "sha256": "fe01e694944594df2a13f5f063c4339887887ea85fbe4472cdaac5ffa31cd11f"
+              },
+              {
+                "file": "samba-bateria/10_tamborim_open_v1.0_t2.wav",
+                "sha256": "824590628ba1bc3c3fdf06db539e5d642ad1b32033f718249ee71d4fa2daf559"
+              }
+            ]
+          ]
+        },
+        {
+          "name": "tamborim_muted",
+          "family": "skin",
+          "players": 6,
+          "grid": [
+            [
+              {
+                "file": "samba-bateria/11_tamborim_muted_v0.3_t0.wav",
+                "sha256": "7a3bb35aa83b29044100900f217dc97454ed073e0deae3c1237f4ec4fc2ab61b"
+              },
+              {
+                "file": "samba-bateria/11_tamborim_muted_v0.3_t1.wav",
+                "sha256": "7a78aaf555b976fcc38f20fd063062c904cb885939c8844c3a3d8c520c277f01"
+              },
+              {
+                "file": "samba-bateria/11_tamborim_muted_v0.3_t2.wav",
+                "sha256": "63bae598899dff5eeef9c12d67d8c957a573e2301bfe898f49f39ea5e3186c8b"
+              }
+            ],
+            [
+              {
+                "file": "samba-bateria/11_tamborim_muted_v0.6_t0.wav",
+                "sha256": "2c48a5700a673f6ea180787d44a7f548b7f991c86eaaec5cfbe13291e7814541"
+              },
+              {
+                "file": "samba-bateria/11_tamborim_muted_v0.6_t1.wav",
+                "sha256": "277c3a25d4ebdfb122f8c5b35e7d5e2df4c872bd132d04d2bd5d64c453d6c73b"
+              },
+              {
+                "file": "samba-bateria/11_tamborim_muted_v0.6_t2.wav",
+                "sha256": "225802b6367c5484f87a1f69b787fb0dc9b04c72d6a724b3da449c71b4ded2f6"
+              }
+            ],
+            [
+              {
+                "file": "samba-bateria/11_tamborim_muted_v1.0_t0.wav",
+                "sha256": "d90597bd46c924ed4b30783a4334df210f0472bbb83fe151373f55a8a15614a2"
+              },
+              {
+                "file": "samba-bateria/11_tamborim_muted_v1.0_t1.wav",
+                "sha256": "f17c78bc14960f28cebb144bfba82022e7ca031db64b7569fc9a7e15a1a5e4f6"
+              },
+              {
+                "file": "samba-bateria/11_tamborim_muted_v1.0_t2.wav",
+                "sha256": "051c5fe895874f841735ca4bc84a5439a2c61fe058653e9027b6d8b28408db06"
+              }
+            ]
+          ]
+        },
+        {
+          "name": "chocalho_forward",
+          "family": "rattle",
+          "players": 3,
+          "grid": [
+            [
+              {
+                "file": "samba-bateria/12_chocalho_forward_v0.3_t0.wav",
+                "sha256": "f5ffb844bf1dfefc7abe167d4db3e724f9e3bfbceeb559e66d7bdf14cd89daa2"
+              },
+              {
+                "file": "samba-bateria/12_chocalho_forward_v0.3_t1.wav",
+                "sha256": "e3e4af82e705a296e54ea75bb6d6601d01c95f98c328b6d6efbbe81d028f9ba2"
+              },
+              {
+                "file": "samba-bateria/12_chocalho_forward_v0.3_t2.wav",
+                "sha256": "b345117caf4f779a59048b391c5c10591b2b147b4059dc76f035d0dd72dc7195"
+              }
+            ],
+            [
+              {
+                "file": "samba-bateria/12_chocalho_forward_v0.6_t0.wav",
+                "sha256": "30dce838ec40f7a9fa1a4b15e0bf34bd438af098dee167f44d2504b5d47d97b9"
+              },
+              {
+                "file": "samba-bateria/12_chocalho_forward_v0.6_t1.wav",
+                "sha256": "3473e09c8c287dc5c71fd11c13efef6ba4341c4c871cc638b8359bb21542926e"
+              },
+              {
+                "file": "samba-bateria/12_chocalho_forward_v0.6_t2.wav",
+                "sha256": "e2e7e05f7b5917a9493ed685978fba71e2108e9aabff66cba370cd4253406a2d"
+              }
+            ],
+            [
+              {
+                "file": "samba-bateria/12_chocalho_forward_v1.0_t0.wav",
+                "sha256": "f6e098695c95fca6a9bec2723041cd603667c554725fe984e6df23921cb8757b"
+              },
+              {
+                "file": "samba-bateria/12_chocalho_forward_v1.0_t1.wav",
+                "sha256": "78bd041f8ea29342cf80c24ece7f5a93ec812413c3494b2f1c66b6443f4b2d2c"
+              },
+              {
+                "file": "samba-bateria/12_chocalho_forward_v1.0_t2.wav",
+                "sha256": "1e7819fa094fbe246e18387c73d8b0b51fd054d4a47a7ccdf8de75b26cc98384"
+              }
+            ]
+          ]
+        },
+        {
+          "name": "chocalho_back",
+          "family": "rattle",
+          "players": 3,
+          "grid": [
+            [
+              {
+                "file": "samba-bateria/13_chocalho_back_v0.3_t0.wav",
+                "sha256": "060e726dac693c9c6bafa6883851286faeadf2e6237a96e0403584d00df73018"
+              },
+              {
+                "file": "samba-bateria/13_chocalho_back_v0.3_t1.wav",
+                "sha256": "211bfe822c1edfc449da6ca283d870f004da641551a1f440c69a852d116eee21"
+              },
+              {
+                "file": "samba-bateria/13_chocalho_back_v0.3_t2.wav",
+                "sha256": "0955ce6566d1f8ba859d661fbea0115d98537ee4084869acd46a17a7c7337140"
+              }
+            ],
+            [
+              {
+                "file": "samba-bateria/13_chocalho_back_v0.6_t0.wav",
+                "sha256": "ac06f18a5c1c85ca904044a724f39bc6b00a5c1d43e807404420d43f3f8fb7c3"
+              },
+              {
+                "file": "samba-bateria/13_chocalho_back_v0.6_t1.wav",
+                "sha256": "585d98050d84d1c9d726263d5ff8f0db356883ddd5ae4a9a5796a504e810fe66"
+              },
+              {
+                "file": "samba-bateria/13_chocalho_back_v0.6_t2.wav",
+                "sha256": "f09afa5a5bf50595123079403445d0f75444b2adda31b421e179933ba1a3c405"
+              }
+            ],
+            [
+              {
+                "file": "samba-bateria/13_chocalho_back_v1.0_t0.wav",
+                "sha256": "41c337a5ec8c5611c8571dff51e39ff3060e7546d9c1444f2b217e29162fa6ca"
+              },
+              {
+                "file": "samba-bateria/13_chocalho_back_v1.0_t1.wav",
+                "sha256": "4f7de20c957b5afcffb9a96fe33e5329de56ebd4abc819dd58d00d3e3dcc62e8"
+              },
+              {
+                "file": "samba-bateria/13_chocalho_back_v1.0_t2.wav",
+                "sha256": "6ce475c22d4d1f0043b513af031607eb5334001bbc48d40de2ec36efb6ecc1a7"
+              }
+            ]
+          ]
+        },
+        {
+          "name": "agogo_low",
+          "family": "bell",
+          "players": 1,
+          "grid": [
+            [
+              {
+                "file": "samba-bateria/14_agogo_low_v0.3_t0.wav",
+                "sha256": "cdefb5abff926677982340b3ff7ea398dd33f03457f2e234de03a66aed228ab6"
+              },
+              {
+                "file": "samba-bateria/14_agogo_low_v0.3_t1.wav",
+                "sha256": "c6b0470eb035fb4262b830e421d28560a5abdc9ae4ed7d5a6d9a909f6321a07c"
+              },
+              {
+                "file": "samba-bateria/14_agogo_low_v0.3_t2.wav",
+                "sha256": "762136f9e89c2de3093f84fc105c736008e9958abf8b8b7f41dff57f9bc33a94"
+              }
+            ],
+            [
+              {
+                "file": "samba-bateria/14_agogo_low_v0.6_t0.wav",
+                "sha256": "8835d85897e987b8c21e91996dd5a9dc4b6df32428353567e5ba767468d4d7ed"
+              },
+              {
+                "file": "samba-bateria/14_agogo_low_v0.6_t1.wav",
+                "sha256": "fa230a0ce2b479ddf97264b163def4607c5c464ae68e8bd0502bc0ad4ffacfb6"
+              },
+              {
+                "file": "samba-bateria/14_agogo_low_v0.6_t2.wav",
+                "sha256": "4ecce1074f588ef9d01da65c4db398ebfcf8734365dd7300cc9833d63be3cdaa"
+              }
+            ],
+            [
+              {
+                "file": "samba-bateria/14_agogo_low_v1.0_t0.wav",
+                "sha256": "0a82e431123d239e2db478fae2e2a44a1700ae65fa56d262963637bb21c18323"
+              },
+              {
+                "file": "samba-bateria/14_agogo_low_v1.0_t1.wav",
+                "sha256": "ee3164b53f3fb56c34d63bc00259c67583aae96c0d6d5b6486a62f07b9981f73"
+              },
+              {
+                "file": "samba-bateria/14_agogo_low_v1.0_t2.wav",
+                "sha256": "51541ec0e4c11672857d062988f07baad75d52c21e6c610d6c4f4dfee6c303ed"
+              }
+            ]
+          ]
+        },
+        {
+          "name": "agogo_high",
+          "family": "bell",
+          "players": 1,
+          "grid": [
+            [
+              {
+                "file": "samba-bateria/15_agogo_high_v0.3_t0.wav",
+                "sha256": "a1d7155f6cd749626b91d839249910aa48ae24d64eb1a8d8d1de71d0a8202138"
+              },
+              {
+                "file": "samba-bateria/15_agogo_high_v0.3_t1.wav",
+                "sha256": "08222cc53e05b881090492d09080e01fe4e6d62d8fa8adcedff3b73fd02b91f2"
+              },
+              {
+                "file": "samba-bateria/15_agogo_high_v0.3_t2.wav",
+                "sha256": "befe1a88764d394accbdc9bf896d8be719256ad3f8a5e5160eacd48ece65f38b"
+              }
+            ],
+            [
+              {
+                "file": "samba-bateria/15_agogo_high_v0.6_t0.wav",
+                "sha256": "2b7f13affd183beeb79601baccadb306c09b43e9313ecd6bd726d02ae8b5e72f"
+              },
+              {
+                "file": "samba-bateria/15_agogo_high_v0.6_t1.wav",
+                "sha256": "4e84a88785615a2ad8ad37f93574b74686c6a5cafe6b3b697bc5aadf9dd83260"
+              },
+              {
+                "file": "samba-bateria/15_agogo_high_v0.6_t2.wav",
+                "sha256": "7cac53a57e86cda78f0fa96bcd70a833b77d8429d128f4124c4b30cc0170bbbf"
+              }
+            ],
+            [
+              {
+                "file": "samba-bateria/15_agogo_high_v1.0_t0.wav",
+                "sha256": "75af81939095da0347a8c2a25d0f6a417e17fd15c90fc06eaa32a81c6b0a967f"
+              },
+              {
+                "file": "samba-bateria/15_agogo_high_v1.0_t1.wav",
+                "sha256": "e893239e0ea28fb3b182f0e872fffe96b3087ac5f951aa3c529e753d2bfa5ad0"
+              },
+              {
+                "file": "samba-bateria/15_agogo_high_v1.0_t2.wav",
+                "sha256": "66271b54cdc4ac4669df17c55864009938a7d76d016761f6f19eba980a2ec416"
+              }
+            ]
+          ]
+        },
+        {
+          "name": "repinique_call",
+          "family": "call",
+          "players": 1,
+          "grid": [
+            [
+              {
+                "file": "samba-bateria/16_repinique_call_v0.3_t0.wav",
+                "sha256": "6c28208caf43d11a0761ef1c95513caf0976e92abd179e50aff3203f5b95c324"
+              },
+              {
+                "file": "samba-bateria/16_repinique_call_v0.3_t1.wav",
+                "sha256": "0d7f140081464c91930b3a5f370e53b115f33470a2e5aebc0c95173d895b4467"
+              },
+              {
+                "file": "samba-bateria/16_repinique_call_v0.3_t2.wav",
+                "sha256": "225445a5962645d0e620da94e4d3cc8b35bcbf9dfe730190de26154cc40ef130"
+              }
+            ],
+            [
+              {
+                "file": "samba-bateria/16_repinique_call_v0.6_t0.wav",
+                "sha256": "a686120fefe530ff073ef7c7489275defd16538cac3f257dcc466e8b90466809"
+              },
+              {
+                "file": "samba-bateria/16_repinique_call_v0.6_t1.wav",
+                "sha256": "2d077a67f46892a7ce074924430415de3eba110969d1c824beb6814d98a39f24"
+              },
+              {
+                "file": "samba-bateria/16_repinique_call_v0.6_t2.wav",
+                "sha256": "2677770b8dd34554a1e3bafe9694cb88fe19de67d9e74a109289c3ba41db0450"
+              }
+            ],
+            [
+              {
+                "file": "samba-bateria/16_repinique_call_v1.0_t0.wav",
+                "sha256": "a64f76a3d5e1ef93d13f967db76b2d03b89bd6bbc2b3281f60efa6f60bbfe5cb"
+              },
+              {
+                "file": "samba-bateria/16_repinique_call_v1.0_t1.wav",
+                "sha256": "c5481904be9e9fea9b2a121cabc8256bc61e124e51cab666b73ca75acfe7828c"
+              },
+              {
+                "file": "samba-bateria/16_repinique_call_v1.0_t2.wav",
+                "sha256": "cafe9ee15bd51456b5ce52ab14c434a9a8b044f412e254d7e0489f02b772b669"
+              }
+            ]
+          ]
+        }
+      ],
+      "events": [
+        [
+          1,
+          0,
+          1
+        ],
+        [
+          3,
+          0,
+          1
+        ],
+        [
+          0,
+          2,
+          0.8
+        ],
+        [
+          2,
+          2,
+          0.8
+        ],
+        [
+          0.75,
+          4,
+          0.7
+        ],
+        [
+          2.5,
+          4,
+          0.7
+        ],
+        [
+          3.75,
+          4,
+          0.7
+        ],
+        [
+          0.0,
+          5,
+          0.85
+        ],
+        [
+          0.0,
+          11,
+          0.55
+        ],
+        [
+          0.25,
+          5,
+          0.35
+        ],
+        [
+          0.25,
+          12,
+          0.35
+        ],
+        [
+          0.5,
+          5,
+          0.35
+        ],
+        [
+          0.5,
+          11,
+          0.55
+        ],
+        [
+          0.75,
+          5,
+          0.85
+        ],
+        [
+          0.75,
+          12,
+          0.35
+        ],
+        [
+          1.0,
+          5,
+          0.85
+        ],
+        [
+          1.0,
+          11,
+          0.55
+        ],
+        [
+          1.25,
+          5,
+          0.35
+        ],
+        [
+          1.25,
+          12,
+          0.35
+        ],
+        [
+          1.5,
+          5,
+          0.35
+        ],
+        [
+          1.5,
+          11,
+          0.55
+        ],
+        [
+          1.75,
+          5,
+          0.85
+        ],
+        [
+          1.75,
+          12,
+          0.35
+        ],
+        [
+          2.0,
+          5,
+          0.85
+        ],
+        [
+          2.0,
+          11,
+          0.55
+        ],
+        [
+          2.25,
+          5,
+          0.35
+        ],
+        [
+          2.25,
+          12,
+          0.35
+        ],
+        [
+          2.5,
+          5,
+          0.35
+        ],
+        [
+          2.5,
+          11,
+          0.55
+        ],
+        [
+          2.75,
+          5,
+          0.85
+        ],
+        [
+          2.75,
+          12,
+          0.35
+        ],
+        [
+          3.0,
+          5,
+          0.85
+        ],
+        [
+          3.0,
+          11,
+          0.55
+        ],
+        [
+          3.25,
+          5,
+          0.35
+        ],
+        [
+          3.25,
+          12,
+          0.35
+        ],
+        [
+          3.5,
+          5,
+          0.35
+        ],
+        [
+          3.5,
+          11,
+          0.55
+        ],
+        [
+          3.75,
+          5,
+          0.85
+        ],
+        [
+          3.75,
+          12,
+          0.35
+        ],
+        [
+          0.0,
+          9,
+          0.7
+        ],
+        [
+          0.75,
+          9,
+          0.7
+        ],
+        [
+          1.5,
+          9,
+          0.7
+        ],
+        [
+          2.0,
+          9,
+          0.7
+        ],
+        [
+          2.75,
+          9,
+          0.7
+        ],
+        [
+          3.5,
+          9,
+          0.7
+        ],
+        [
+          0,
+          13,
+          0.6
+        ],
+        [
+          0.75,
+          14,
+          0.6
+        ],
+        [
+          1.5,
+          13,
+          0.6
+        ],
+        [
+          2.5,
+          14,
+          0.6
+        ],
+        [
+          3.25,
+          13,
+          0.6
+        ],
+        [
+          5,
+          0,
+          1
+        ],
+        [
+          7,
+          0,
+          1
+        ],
+        [
+          4,
+          2,
+          0.8
+        ],
+        [
+          6,
+          2,
+          0.8
+        ],
+        [
+          4.75,
+          4,
+          0.7
+        ],
+        [
+          6.5,
+          4,
+          0.7
+        ],
+        [
+          7.75,
+          4,
+          0.7
+        ],
+        [
+          4.0,
+          5,
+          0.85
+        ],
+        [
+          4.0,
+          11,
+          0.55
+        ],
+        [
+          4.25,
+          5,
+          0.35
+        ],
+        [
+          4.25,
+          12,
+          0.35
+        ],
+        [
+          4.5,
+          5,
+          0.35
+        ],
+        [
+          4.5,
+          11,
+          0.55
+        ],
+        [
+          4.75,
+          5,
+          0.85
+        ],
+        [
+          4.75,
+          12,
+          0.35
+        ],
+        [
+          5.0,
+          5,
+          0.85
+        ],
+        [
+          5.0,
+          11,
+          0.55
+        ],
+        [
+          5.25,
+          5,
+          0.35
+        ],
+        [
+          5.25,
+          12,
+          0.35
+        ],
+        [
+          5.5,
+          5,
+          0.35
+        ],
+        [
+          5.5,
+          11,
+          0.55
+        ],
+        [
+          5.75,
+          5,
+          0.85
+        ],
+        [
+          5.75,
+          12,
+          0.35
+        ],
+        [
+          6.0,
+          5,
+          0.85
+        ],
+        [
+          6.0,
+          11,
+          0.55
+        ],
+        [
+          6.25,
+          5,
+          0.35
+        ],
+        [
+          6.25,
+          12,
+          0.35
+        ],
+        [
+          6.5,
+          5,
+          0.35
+        ],
+        [
+          6.5,
+          11,
+          0.55
+        ],
+        [
+          6.75,
+          5,
+          0.85
+        ],
+        [
+          6.75,
+          12,
+          0.35
+        ],
+        [
+          7.0,
+          5,
+          0.85
+        ],
+        [
+          7.0,
+          11,
+          0.55
+        ],
+        [
+          7.25,
+          5,
+          0.35
+        ],
+        [
+          7.25,
+          12,
+          0.35
+        ],
+        [
+          7.5,
+          5,
+          0.35
+        ],
+        [
+          7.5,
+          11,
+          0.55
+        ],
+        [
+          7.75,
+          5,
+          0.85
+        ],
+        [
+          7.75,
+          12,
+          0.35
+        ],
+        [
+          4.0,
+          9,
+          0.7
+        ],
+        [
+          4.75,
+          9,
+          0.7
+        ],
+        [
+          5.5,
+          9,
+          0.7
+        ],
+        [
+          6.0,
+          9,
+          0.7
+        ],
+        [
+          6.75,
+          9,
+          0.7
+        ],
+        [
+          7.5,
+          9,
+          0.7
+        ],
+        [
+          4,
+          13,
+          0.6
+        ],
+        [
+          4.75,
+          14,
+          0.6
+        ],
+        [
+          5.5,
+          13,
+          0.6
+        ],
+        [
+          6.5,
+          14,
+          0.6
+        ],
+        [
+          7.25,
+          13,
+          0.6
+        ],
+        [
+          9,
+          0,
+          1
+        ],
+        [
+          11,
+          0,
+          1
+        ],
+        [
+          8,
+          2,
+          0.8
+        ],
+        [
+          10,
+          2,
+          0.8
+        ],
+        [
+          8.75,
+          4,
+          0.7
+        ],
+        [
+          10.5,
+          4,
+          0.7
+        ],
+        [
+          11.75,
+          4,
+          0.7
+        ],
+        [
+          8.0,
+          5,
+          0.85
+        ],
+        [
+          8.0,
+          11,
+          0.55
+        ],
+        [
+          8.25,
+          5,
+          0.35
+        ],
+        [
+          8.25,
+          12,
+          0.35
+        ],
+        [
+          8.5,
+          5,
+          0.35
+        ],
+        [
+          8.5,
+          11,
+          0.55
+        ],
+        [
+          8.75,
+          5,
+          0.85
+        ],
+        [
+          8.75,
+          12,
+          0.35
+        ],
+        [
+          9.0,
+          5,
+          0.85
+        ],
+        [
+          9.0,
+          11,
+          0.55
+        ],
+        [
+          9.25,
+          5,
+          0.35
+        ],
+        [
+          9.25,
+          12,
+          0.35
+        ],
+        [
+          9.5,
+          5,
+          0.35
+        ],
+        [
+          9.5,
+          11,
+          0.55
+        ],
+        [
+          9.75,
+          5,
+          0.85
+        ],
+        [
+          9.75,
+          12,
+          0.35
+        ],
+        [
+          10.0,
+          5,
+          0.85
+        ],
+        [
+          10.0,
+          11,
+          0.55
+        ],
+        [
+          10.25,
+          5,
+          0.35
+        ],
+        [
+          10.25,
+          12,
+          0.35
+        ],
+        [
+          10.5,
+          5,
+          0.35
+        ],
+        [
+          10.5,
+          11,
+          0.55
+        ],
+        [
+          10.75,
+          5,
+          0.85
+        ],
+        [
+          10.75,
+          12,
+          0.35
+        ],
+        [
+          11.0,
+          5,
+          0.85
+        ],
+        [
+          11.0,
+          11,
+          0.55
+        ],
+        [
+          11.25,
+          5,
+          0.35
+        ],
+        [
+          11.25,
+          12,
+          0.35
+        ],
+        [
+          11.5,
+          5,
+          0.35
+        ],
+        [
+          11.5,
+          11,
+          0.55
+        ],
+        [
+          11.75,
+          5,
+          0.85
+        ],
+        [
+          11.75,
+          12,
+          0.35
+        ],
+        [
+          8.0,
+          9,
+          0.7
+        ],
+        [
+          8.75,
+          9,
+          0.7
+        ],
+        [
+          9.5,
+          9,
+          0.7
+        ],
+        [
+          10.0,
+          9,
+          0.7
+        ],
+        [
+          10.75,
+          9,
+          0.7
+        ],
+        [
+          11.5,
+          9,
+          0.7
+        ],
+        [
+          8,
+          13,
+          0.6
+        ],
+        [
+          8.75,
+          14,
+          0.6
+        ],
+        [
+          9.5,
+          13,
+          0.6
+        ],
+        [
+          10.5,
+          14,
+          0.6
+        ],
+        [
+          11.25,
+          13,
+          0.6
+        ],
+        [
+          13,
+          0,
+          1
+        ],
+        [
+          15,
+          0,
+          1
+        ],
+        [
+          12,
+          2,
+          0.8
+        ],
+        [
+          14,
+          2,
+          0.8
+        ],
+        [
+          12.75,
+          4,
+          0.7
+        ],
+        [
+          14.5,
+          4,
+          0.7
+        ],
+        [
+          15.75,
+          4,
+          0.7
+        ],
+        [
+          12.0,
+          5,
+          0.85
+        ],
+        [
+          12.0,
+          11,
+          0.55
+        ],
+        [
+          12.25,
+          5,
+          0.35
+        ],
+        [
+          12.25,
+          12,
+          0.35
+        ],
+        [
+          12.5,
+          5,
+          0.35
+        ],
+        [
+          12.5,
+          11,
+          0.55
+        ],
+        [
+          12.75,
+          5,
+          0.85
+        ],
+        [
+          12.75,
+          12,
+          0.35
+        ],
+        [
+          13.0,
+          5,
+          0.85
+        ],
+        [
+          13.0,
+          11,
+          0.55
+        ],
+        [
+          13.25,
+          5,
+          0.35
+        ],
+        [
+          13.25,
+          12,
+          0.35
+        ],
+        [
+          13.5,
+          5,
+          0.35
+        ],
+        [
+          13.5,
+          11,
+          0.55
+        ],
+        [
+          13.75,
+          5,
+          0.85
+        ],
+        [
+          13.75,
+          12,
+          0.35
+        ],
+        [
+          14.0,
+          5,
+          0.85
+        ],
+        [
+          14.0,
+          11,
+          0.55
+        ],
+        [
+          14.25,
+          5,
+          0.35
+        ],
+        [
+          14.25,
+          12,
+          0.35
+        ],
+        [
+          14.5,
+          5,
+          0.35
+        ],
+        [
+          14.5,
+          11,
+          0.55
+        ],
+        [
+          14.75,
+          5,
+          0.85
+        ],
+        [
+          14.75,
+          12,
+          0.35
+        ],
+        [
+          15.0,
+          5,
+          0.85
+        ],
+        [
+          15.0,
+          11,
+          0.55
+        ],
+        [
+          15.25,
+          5,
+          0.35
+        ],
+        [
+          15.25,
+          12,
+          0.35
+        ],
+        [
+          15.5,
+          5,
+          0.35
+        ],
+        [
+          15.5,
+          11,
+          0.55
+        ],
+        [
+          15.75,
+          5,
+          0.85
+        ],
+        [
+          15.75,
+          12,
+          0.35
+        ],
+        [
+          12.0,
+          9,
+          0.7
+        ],
+        [
+          12.75,
+          9,
+          0.7
+        ],
+        [
+          13.5,
+          9,
+          0.7
+        ],
+        [
+          14.0,
+          9,
+          0.7
+        ],
+        [
+          14.75,
+          9,
+          0.7
+        ],
+        [
+          15.5,
+          9,
+          0.7
+        ],
+        [
+          12,
+          13,
+          0.6
+        ],
+        [
+          12.75,
+          14,
+          0.6
+        ],
+        [
+          13.5,
+          13,
+          0.6
+        ],
+        [
+          14.5,
+          14,
+          0.6
+        ],
+        [
+          15.25,
+          13,
+          0.6
+        ],
+        [
+          15,
+          7,
+          0.85
+        ],
+        [
+          15.5,
+          8,
+          0.7
+        ],
+        [
+          17,
+          0,
+          1
+        ],
+        [
+          19,
+          0,
+          1
+        ],
+        [
+          16,
+          2,
+          0.8
+        ],
+        [
+          18,
+          2,
+          0.8
+        ],
+        [
+          16.75,
+          4,
+          0.7
+        ],
+        [
+          18.5,
+          4,
+          0.7
+        ],
+        [
+          19.75,
+          4,
+          0.7
+        ],
+        [
+          16.0,
+          5,
+          0.85
+        ],
+        [
+          16.0,
+          11,
+          0.55
+        ],
+        [
+          16.25,
+          5,
+          0.35
+        ],
+        [
+          16.25,
+          12,
+          0.35
+        ],
+        [
+          16.5,
+          5,
+          0.35
+        ],
+        [
+          16.5,
+          11,
+          0.55
+        ],
+        [
+          16.75,
+          5,
+          0.85
+        ],
+        [
+          16.75,
+          12,
+          0.35
+        ],
+        [
+          17.0,
+          5,
+          0.85
+        ],
+        [
+          17.0,
+          11,
+          0.55
+        ],
+        [
+          17.25,
+          5,
+          0.35
+        ],
+        [
+          17.25,
+          12,
+          0.35
+        ],
+        [
+          17.5,
+          5,
+          0.35
+        ],
+        [
+          17.5,
+          11,
+          0.55
+        ],
+        [
+          17.75,
+          5,
+          0.85
+        ],
+        [
+          17.75,
+          12,
+          0.35
+        ],
+        [
+          18.0,
+          5,
+          0.85
+        ],
+        [
+          18.0,
+          11,
+          0.55
+        ],
+        [
+          18.25,
+          5,
+          0.35
+        ],
+        [
+          18.25,
+          12,
+          0.35
+        ],
+        [
+          18.5,
+          5,
+          0.35
+        ],
+        [
+          18.5,
+          11,
+          0.55
+        ],
+        [
+          18.75,
+          5,
+          0.85
+        ],
+        [
+          18.75,
+          12,
+          0.35
+        ],
+        [
+          19.0,
+          5,
+          0.85
+        ],
+        [
+          19.0,
+          11,
+          0.55
+        ],
+        [
+          19.25,
+          5,
+          0.35
+        ],
+        [
+          19.25,
+          12,
+          0.35
+        ],
+        [
+          19.5,
+          5,
+          0.35
+        ],
+        [
+          19.5,
+          11,
+          0.55
+        ],
+        [
+          19.75,
+          5,
+          0.85
+        ],
+        [
+          19.75,
+          12,
+          0.35
+        ],
+        [
+          16.0,
+          9,
+          0.7
+        ],
+        [
+          16.75,
+          9,
+          0.7
+        ],
+        [
+          17.5,
+          9,
+          0.7
+        ],
+        [
+          18.0,
+          9,
+          0.7
+        ],
+        [
+          18.75,
+          9,
+          0.7
+        ],
+        [
+          19.5,
+          9,
+          0.7
+        ],
+        [
+          16,
+          13,
+          0.6
+        ],
+        [
+          16.75,
+          14,
+          0.6
+        ],
+        [
+          17.5,
+          13,
+          0.6
+        ],
+        [
+          18.5,
+          14,
+          0.6
+        ],
+        [
+          19.25,
+          13,
+          0.6
+        ],
+        [
+          21,
+          0,
+          1
+        ],
+        [
+          23,
+          0,
+          1
+        ],
+        [
+          20,
+          2,
+          0.8
+        ],
+        [
+          22,
+          2,
+          0.8
+        ],
+        [
+          20.75,
+          4,
+          0.7
+        ],
+        [
+          22.5,
+          4,
+          0.7
+        ],
+        [
+          23.75,
+          4,
+          0.7
+        ],
+        [
+          20.0,
+          5,
+          0.85
+        ],
+        [
+          20.0,
+          11,
+          0.55
+        ],
+        [
+          20.25,
+          5,
+          0.35
+        ],
+        [
+          20.25,
+          12,
+          0.35
+        ],
+        [
+          20.5,
+          5,
+          0.35
+        ],
+        [
+          20.5,
+          11,
+          0.55
+        ],
+        [
+          20.75,
+          5,
+          0.85
+        ],
+        [
+          20.75,
+          12,
+          0.35
+        ],
+        [
+          21.0,
+          5,
+          0.85
+        ],
+        [
+          21.0,
+          11,
+          0.55
+        ],
+        [
+          21.25,
+          5,
+          0.35
+        ],
+        [
+          21.25,
+          12,
+          0.35
+        ],
+        [
+          21.5,
+          5,
+          0.35
+        ],
+        [
+          21.5,
+          11,
+          0.55
+        ],
+        [
+          21.75,
+          5,
+          0.85
+        ],
+        [
+          21.75,
+          12,
+          0.35
+        ],
+        [
+          22.0,
+          5,
+          0.85
+        ],
+        [
+          22.0,
+          11,
+          0.55
+        ],
+        [
+          22.25,
+          5,
+          0.35
+        ],
+        [
+          22.25,
+          12,
+          0.35
+        ],
+        [
+          22.5,
+          5,
+          0.35
+        ],
+        [
+          22.5,
+          11,
+          0.55
+        ],
+        [
+          22.75,
+          5,
+          0.85
+        ],
+        [
+          22.75,
+          12,
+          0.35
+        ],
+        [
+          23.0,
+          5,
+          0.85
+        ],
+        [
+          23.0,
+          11,
+          0.55
+        ],
+        [
+          23.25,
+          5,
+          0.35
+        ],
+        [
+          23.25,
+          12,
+          0.35
+        ],
+        [
+          23.5,
+          5,
+          0.35
+        ],
+        [
+          23.5,
+          11,
+          0.55
+        ],
+        [
+          23.75,
+          5,
+          0.85
+        ],
+        [
+          23.75,
+          12,
+          0.35
+        ],
+        [
+          20.0,
+          9,
+          0.7
+        ],
+        [
+          20.75,
+          9,
+          0.7
+        ],
+        [
+          21.5,
+          9,
+          0.7
+        ],
+        [
+          22.0,
+          9,
+          0.7
+        ],
+        [
+          22.75,
+          9,
+          0.7
+        ],
+        [
+          23.5,
+          9,
+          0.7
+        ],
+        [
+          20,
+          13,
+          0.6
+        ],
+        [
+          20.75,
+          14,
+          0.6
+        ],
+        [
+          21.5,
+          13,
+          0.6
+        ],
+        [
+          22.5,
+          14,
+          0.6
+        ],
+        [
+          23.25,
+          13,
+          0.6
+        ],
+        [
+          25,
+          0,
+          1
+        ],
+        [
+          27,
+          0,
+          1
+        ],
+        [
+          24,
+          2,
+          0.8
+        ],
+        [
+          26,
+          2,
+          0.8
+        ],
+        [
+          24.75,
+          4,
+          0.7
+        ],
+        [
+          26.5,
+          4,
+          0.7
+        ],
+        [
+          27.75,
+          4,
+          0.7
+        ],
+        [
+          24.0,
+          5,
+          0.85
+        ],
+        [
+          24.0,
+          11,
+          0.55
+        ],
+        [
+          24.25,
+          5,
+          0.35
+        ],
+        [
+          24.25,
+          12,
+          0.35
+        ],
+        [
+          24.5,
+          5,
+          0.35
+        ],
+        [
+          24.5,
+          11,
+          0.55
+        ],
+        [
+          24.75,
+          5,
+          0.85
+        ],
+        [
+          24.75,
+          12,
+          0.35
+        ],
+        [
+          25.0,
+          5,
+          0.85
+        ],
+        [
+          25.0,
+          11,
+          0.55
+        ],
+        [
+          25.25,
+          5,
+          0.35
+        ],
+        [
+          25.25,
+          12,
+          0.35
+        ],
+        [
+          25.5,
+          5,
+          0.35
+        ],
+        [
+          25.5,
+          11,
+          0.55
+        ],
+        [
+          25.75,
+          5,
+          0.85
+        ],
+        [
+          25.75,
+          12,
+          0.35
+        ],
+        [
+          26.0,
+          5,
+          0.85
+        ],
+        [
+          26.0,
+          11,
+          0.55
+        ],
+        [
+          26.25,
+          5,
+          0.35
+        ],
+        [
+          26.25,
+          12,
+          0.35
+        ],
+        [
+          26.5,
+          5,
+          0.35
+        ],
+        [
+          26.5,
+          11,
+          0.55
+        ],
+        [
+          26.75,
+          5,
+          0.85
+        ],
+        [
+          26.75,
+          12,
+          0.35
+        ],
+        [
+          27.0,
+          5,
+          0.85
+        ],
+        [
+          27.0,
+          11,
+          0.55
+        ],
+        [
+          27.25,
+          5,
+          0.35
+        ],
+        [
+          27.25,
+          12,
+          0.35
+        ],
+        [
+          27.5,
+          5,
+          0.35
+        ],
+        [
+          27.5,
+          11,
+          0.55
+        ],
+        [
+          27.75,
+          5,
+          0.85
+        ],
+        [
+          27.75,
+          12,
+          0.35
+        ],
+        [
+          24.0,
+          9,
+          0.7
+        ],
+        [
+          24.75,
+          9,
+          0.7
+        ],
+        [
+          25.5,
+          9,
+          0.7
+        ],
+        [
+          26.0,
+          9,
+          0.7
+        ],
+        [
+          26.75,
+          9,
+          0.7
+        ],
+        [
+          27.5,
+          9,
+          0.7
+        ],
+        [
+          24,
+          13,
+          0.6
+        ],
+        [
+          24.75,
+          14,
+          0.6
+        ],
+        [
+          25.5,
+          13,
+          0.6
+        ],
+        [
+          26.5,
+          14,
+          0.6
+        ],
+        [
+          27.25,
+          13,
+          0.6
+        ],
+        [
+          29,
+          0,
+          1
+        ],
+        [
+          31,
+          0,
+          1
+        ],
+        [
+          28,
+          2,
+          0.8
+        ],
+        [
+          30,
+          2,
+          0.8
+        ],
+        [
+          28.75,
+          4,
+          0.7
+        ],
+        [
+          30.5,
+          4,
+          0.7
+        ],
+        [
+          31.75,
+          4,
+          0.7
+        ],
+        [
+          28.0,
+          5,
+          0.85
+        ],
+        [
+          28.0,
+          11,
+          0.55
+        ],
+        [
+          28.25,
+          5,
+          0.35
+        ],
+        [
+          28.25,
+          12,
+          0.35
+        ],
+        [
+          28.5,
+          5,
+          0.35
+        ],
+        [
+          28.5,
+          11,
+          0.55
+        ],
+        [
+          28.75,
+          5,
+          0.85
+        ],
+        [
+          28.75,
+          12,
+          0.35
+        ],
+        [
+          29.0,
+          5,
+          0.85
+        ],
+        [
+          29.0,
+          11,
+          0.55
+        ],
+        [
+          29.25,
+          5,
+          0.35
+        ],
+        [
+          29.25,
+          12,
+          0.35
+        ],
+        [
+          29.5,
+          5,
+          0.35
+        ],
+        [
+          29.5,
+          11,
+          0.55
+        ],
+        [
+          29.75,
+          5,
+          0.85
+        ],
+        [
+          29.75,
+          12,
+          0.35
+        ],
+        [
+          30.0,
+          5,
+          0.85
+        ],
+        [
+          30.0,
+          11,
+          0.55
+        ],
+        [
+          30.25,
+          5,
+          0.35
+        ],
+        [
+          30.25,
+          12,
+          0.35
+        ],
+        [
+          30.5,
+          5,
+          0.35
+        ],
+        [
+          30.5,
+          11,
+          0.55
+        ],
+        [
+          30.75,
+          5,
+          0.85
+        ],
+        [
+          30.75,
+          12,
+          0.35
+        ],
+        [
+          31.0,
+          5,
+          0.85
+        ],
+        [
+          31.0,
+          11,
+          0.55
+        ],
+        [
+          31.25,
+          5,
+          0.35
+        ],
+        [
+          31.25,
+          12,
+          0.35
+        ],
+        [
+          31.5,
+          5,
+          0.35
+        ],
+        [
+          31.5,
+          11,
+          0.55
+        ],
+        [
+          31.75,
+          5,
+          0.85
+        ],
+        [
+          31.75,
+          12,
+          0.35
+        ],
+        [
+          28.0,
+          9,
+          0.7
+        ],
+        [
+          28.75,
+          9,
+          0.7
+        ],
+        [
+          29.5,
+          9,
+          0.7
+        ],
+        [
+          30.0,
+          9,
+          0.7
+        ],
+        [
+          30.75,
+          9,
+          0.7
+        ],
+        [
+          31.5,
+          9,
+          0.7
+        ],
+        [
+          28,
+          13,
+          0.6
+        ],
+        [
+          28.75,
+          14,
+          0.6
+        ],
+        [
+          29.5,
+          13,
+          0.6
+        ],
+        [
+          30.5,
+          14,
+          0.6
+        ],
+        [
+          31.25,
+          13,
+          0.6
+        ],
+        [
+          31,
+          7,
+          0.85
+        ],
+        [
+          31.5,
+          8,
+          0.7
+        ]
+      ]
+    }
+  ]
+}

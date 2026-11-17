@@ -1,0 +1,6 @@
+{
+  "grid_files": 144,
+  "identical_pcm16_files": 144,
+  "max_pcm16_lsb_difference": 0,
+  "scope": "Direct versus existing convolution helper; candidate audio, not Python parity"
+}
