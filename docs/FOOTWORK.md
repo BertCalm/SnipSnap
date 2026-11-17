@@ -296,3 +296,10 @@ zero-slope pressure envelopes. Fixed source gain balances the longer travel.
 The other 48 gesture cells and all 24 core contact cells remain PCM-identical.
 An energy-matched shuffle comparison and the affected phrase are published for
 listening; no native model or acceptance gate is promoted.
+
+The owner then asks to continue. Smooth brush/return sources now carry into the
+pickup figures in phrase, roll and build. Travel duration scales with pickup
+spacing without changing filter pitch, keeping the planted toe distinct. All
+36 isolated gesture cells and 24 core contact cells remain PCM-identical to the
+prior revision. The 72-cell Python checks pass again. Native/export gates remain
+open; the earlier full JVM command has now completed successfully.
