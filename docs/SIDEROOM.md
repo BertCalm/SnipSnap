@@ -1,6 +1,6 @@
 # SIDEROOM: five acoustic drum-kit studies
 
-Status: R1 rejected by the owner for drum-machine character. R2 recorded acoustic core was approved for sound. R4 synthesis was approved for sound. R5 eight-instrument Open Road was approved. R6 introduces the second kit, Tight Pocket. No SnipSnap shelf, native serialization or hardware completion claim. Source inspected at `4ecab4c9f`; isolated implementation starts from `e7ccfef58` on `claude/sideroom-study`.
+Status: R1 rejected by the owner for drum-machine character. R2 recorded acoustic core was approved for sound. R4 synthesis was approved for sound. R5 eight-instrument Open Road was approved. R6 Tight Pocket was approved. R7 introduces Angular alongside both approved kits. No SnipSnap shelf, native serialization or hardware completion claim. Source inspected at `4ecab4c9f`; isolated implementation starts from `e7ccfef58` on `claude/sideroom-study`.
 
 The characteristic gesture is **stick or beater contact → head/metal response → wire or shell after-sound → damping to silence**. Each kit chooses a different physical balance within that gesture.
 
@@ -141,3 +141,16 @@ Build: `python3 prototype/sideroom/pocket.py R5_OUTPUT R6_OUTPUT`; copy `family.
 Verified: 144 saved performances, 72 unchanged approved pads, three ordered velocities and three distinct generated takes per voice, deterministic/audio-read-free synthesis, complete SFZ mappings, ZIP byte equality, and simulated player routes. A representative hard-take energy-decay probe (time containing 90% of energy) falls from .097 to .060 s for kick, .035 to .024 s for snare, and .498 to .286 s for open hat. All eight Tight Pocket instruments measure shorter. These measures do not establish perceptual approval or exact reference matching.
 
 Tight Pocket awaits listening approval. Angular, High Voltage and Deep Pocket remain unbuilt in the accepted synthesis approach. Native shelf, save/playback/export integration, authored roll/riser requirements and hardware checks remain open; two listening kits do not close those gates.
+
+
+## R7: Angular
+
+The owner approved Tight Pocket and asked to proceed. Angular is the third candidate, guided by the Fashion reference: lower dry kick, high rimshot snare, short toms and precise metal. The R6 builder now accepts an explicit kit configuration, so this kit shares the descriptor/synthesis/export path instead of duplicating it. `angular.py` supplies the configuration; R6 defaults remain supported.
+
+A separate snare rimshot analysis uses original source levels 3–5, 6–8 and 10–12 from the same pinned CC0 library. `angular-sources.json` pins the downloaded blob hashes; provenance stores source SHA256 and URLs. Angular uses the accepted Open Road base descriptors, not compounded Tight Pocket transformations. Authored frequency ratios range .88–1.25 and decay ratios .46–.62. The rimshot has its own three recorded dynamic groups; synthesis generates new alternate strikes.
+
+Build: `python3 prototype/sideroom/angular.py R6_OUTPUT R7_OUTPUT`, then `python3 prototype/sideroom/package-family.py R7_OUTPUT`. Copy `family.html` as `index.html` and `family.js`. Deploy all output except the combined `open-road-acoustic.zip`, which exceeds Sites' 32 MiB blob limit. Three individual ZIPs include each kit's full WAV grid, SFZ, source notice/license, parameter model and filtered manifest; their WAV bytes are checked against the rendered files.
+
+Verified: 216 performances and all player routes, complete SFZ velocity/RR selection, runtime audio-read isolation, deterministic synthesis, monotonic dynamics, generated take variation and all 144 approved pad files byte-identical to R6. Representative hard-take low-spectrum maxima measured at 75.4 Hz for Angular kick and 418.6 Hz for Angular snare, versus 91.5/267.8 for Tight Pocket and 86.1/230.1 for Open Road. These are spectrum peaks, not asserted physical fundamentals or proof of perceived character. Median new render 22.10 ms, maximum 255.44 ms; no extra peak calibration required.
+
+Angular awaits listening approval. High Voltage and Deep Pocket are still unbuilt in this accepted synthesis path; the native shelf, serialization/playback/export, authored articulation and hardware gates remain open. All genre references are listening/design targets, not sampled commercial audio or claimed equipment reconstructions.
