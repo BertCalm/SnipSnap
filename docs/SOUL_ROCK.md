@@ -95,3 +95,26 @@ It verifies the saved PCM, actual playback windows and actual exported track.
 - Three kits carry distinct tuning, damping, perspective and complementary roles.
 - Full strike grids preserve dynamic timbre and alternate takes through export.
 - Baking the room and long swell avoids expensive synthesis during playback.
+
+## Accepted coupled snare, version 2
+
+On 17 November 2026 the owner accepted **Stronger snare snap and rattle**:
+“Ok. I can live with that”. Version 2 changes only Roadhouse pad 2 to the exact
+nine accepted coupled-head/contact-wire renders. Soul Pocket, Open Room and all
+other Roadhouse pads retain version 1 PCM. Existing saved kits remain unchanged;
+newly built Roadhouse starters use the accepted snare.
+
+The snare retains natural take-level differences (largest measured zone spread
+3.835 dB); equalizing those takes would alter the accepted audio. Its source metadata
+identifies the coupled model and does not carry obsolete EMBER macro settings.
+Version 2 resolves its nine snare resources explicitly and fails if one is missing;
+all other strikes resolve to the immutable version 1 bank. Exact accepted hashes are
+pinned independently in the test. Model source and prototype probes are retained in
+`prototype/soul-rock/coupled-snare`. This remains frozen synthesis, not an editable
+Kotlin engine. Phone/MPC hardware acceptance for this revision remains open.
+
+Revision validation: `SoulRockKitsTest` and `SoulRockRoundTripTest` passed (four
+focused tests). The generator verified all 48 pads / 432 strikes through saved PCM,
+playback cycles and MPC 3 metadata/PCM read-back. All six download ZIP parts passed
+CRC and payload checks. Full repository regression/CI is tracked on the revision PR;
+these local checks do not imply Android or physical MPC acceptance.

@@ -36,7 +36,10 @@ class SoulRockKitsTest {
                 val energies = p.velocityTakes.map { row ->
                     assertEquals(3,row.size)
                     val rms = row.map { rms(it.samples) }
-                    assertTrue(20*log10(rms.max()/rms.min()) < .01, "$choice pad $i take levels")
+                    // The accepted coupled snare retains natural strike-level variation.
+                    // Its exact PCM is pinned above; every other pad remains take-levelled.
+                    val spreadLimit = if (choice == SoulRockKits.Choice.ROADHOUSE && i == 1) 4.0 else .01
+                    assertTrue(20*log10(rms.max()/rms.min()) < spreadLimit, "$choice pad $i take levels")
                     for (t in 1..2) assertTrue(residual(row[0].samples,row[t].samples) > .005, "$choice pad $i take $t")
                     rms.average()
                 }
@@ -48,6 +51,26 @@ class SoulRockKitsTest {
             assertTrue(b[0].velocityTakes[0][0].peak() > .01f)
             assertTrue(b[14].snip.frameCount > 44100 && b[15].snip.frameCount > 44100)
         }
+    }
+    @Test fun `accepted coupled snare bytes and source identity are pinned`() {
+        val expected = mapOf(
+            "roadhouse-rock/2-0-0.wav.gz" to "9c28c7df3b55851048d5809ec29a45f5b304ad6857025424994e9647667b5dda",
+            "roadhouse-rock/2-0-1.wav.gz" to "419997696db6186a68a5195d27ea7df868116eff9a8d50ecf49a650cf9e7b7c5",
+            "roadhouse-rock/2-0-2.wav.gz" to "c24e9b969344fb329f501cf8a3a19afd9199458916cb1b89078000e9b8d53b9f",
+            "roadhouse-rock/2-1-0.wav.gz" to "57f5476b144ebf8f3602913f5a74fd1927dc8ad5e97107466c18563c6055f17a",
+            "roadhouse-rock/2-1-1.wav.gz" to "71297fbc64c6b8258a7bd44aca82e09e5e7494014b2d9fde0e0dd168fff37235",
+            "roadhouse-rock/2-1-2.wav.gz" to "900f4386ed59289d6067c8ec679661c58b34e5d9df0fce2932d18591010ea860",
+            "roadhouse-rock/2-2-0.wav.gz" to "81b073e8781c1d366f84930abf744e60d1256469b4f63ebb7ac36b8a6a1f2be2",
+            "roadhouse-rock/2-2-1.wav.gz" to "028ac59d41d97ce731d8c26c747e37ce53ec6b4a617451dcf36d5594dfc91926",
+            "roadhouse-rock/2-2-2.wav.gz" to "3d34553be79faa3d5aac79172a5fadc5c320ff771b36986d461d27f163881422"
+        )
+        for ((name, hash) in expected) {
+            val actual = MessageDigest.getInstance("SHA-256").digest(SoulRockKits.resource(name)).joinToString("") { "%02x".format(it) }
+            assertEquals(hash, actual)
+        }
+        val snare = SoulRockKits.build(SoulRockKits.Choice.ROADHOUSE)[1]
+        assertEquals("coupled-snare-snap-rattle", snare.source["sourceModel"])
+        assertTrue(snare.source.keys.none { it.startsWith("synthesis.") })
     }
     private fun rms(x: FloatArray) = sqrt(x.sumOf { it.toDouble()*it }/x.size)
     private fun residual(a: FloatArray,b: FloatArray): Double {
