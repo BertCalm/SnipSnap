@@ -248,7 +248,7 @@ Plan:
 1. **Freeze first, in its own commit, before any DSP change.** Add a
    `CircuitFrozenModelTest` in the `FilamentCharacterTest.kt:71-95` pattern: SHA-256 of the
    float PCM (or PCM24 bytes) for each voice's default finite render, the two HOLD presets
-   EMBER PULSE and HELD CIRCLE, and the ceremony (`Circuit.inspectCeremony()`). It must pass
+   WARM PULSE and HELD CIRCLE, and the ceremony (`Circuit.inspectCeremony()`). It must pass
    on today's code. That commit is the evidence that model 1 is what was published.
 2. Add `model: Int = Circuit.MODEL_VERSION` to `CircuitPatch` with
    `ORIGINAL_MODEL = 1`, `MODEL_VERSION = 2`; JSON without `model` decodes as 1; JSON with an

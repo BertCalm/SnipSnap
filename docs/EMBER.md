@@ -49,8 +49,10 @@ Repository truth: read at `8742c5b8` (2026-11-14). APIs named here were grepped:
 `Modes.Mode(ratio, gain, t60, pan)`, `Modes.Friction(a).force(...)`, `Dsp.seedFor`, `Dsp.Noise`, `Room`
 (`synth/.../Room.kt`), `BreakerChain.spring`/`Tank`, `PadHit.resolve` (`shell/.../PadHit.kt`), and
 `Soot.render(voice, macros, velocity, take, model)` / `Clutter.render(voice, macros, velocity, take)` as the
-drum-engine shape to copy. `EMBER` is a working name: the word is already a CIRCUIT preset ("EMBER PULSE"),
-an ALLOY preset ("Endless Ember") and a name in `shell/.../Names.kt`. It is not an engine name anywhere.
+drum-engine shape to copy. `EMBER` is a working name: the word was already a CIRCUIT preset ("EMBER PULSE"),
+an ALLOY preset ("Endless Ember") and a name in `shell/.../Names.kt`. It was not an engine name anywhere.
+Round 4 renamed the CIRCUIT preset to WARM PULSE (same settings, same bytes), because CIRCUIT's roster test
+refuses a preset name that uses an engine's name.
 
 ## Round 4: the presets and the picker (2026-11-17)
 

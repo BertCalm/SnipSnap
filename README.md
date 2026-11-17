@@ -1027,7 +1027,7 @@ bit-identical to their baselines.
 
 Six voices, seven macros, fifteen dry presets and the existing sixteen-pad
 kit use the current patch, recipe and app workflows. New C4 ROOT presets
-FIRE CIRCLE, NIGHT REPLY and EMBER PULSE explore close soft pressure, wider
+FIRE CIRCLE, NIGHT REPLY and WARM PULSE explore close soft pressure, wider
 finite returns and a settled recurring pulse. Existing presets and kit notes
 are retained. HOLD at .99 returns settled loop material. V2 passed 90 native
 render guards, 209/209 artifact checks and 36/36 transition checks; held listening
