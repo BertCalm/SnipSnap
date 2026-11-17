@@ -1,0 +1,11 @@
+{
+  "scope": "Fit-set matched-attack band-envelope MAE, 200\u201312800 Hz, first 150 ms; not held-out realism or alias evidence",
+  "results": [
+    {
+      "pad": "cymbal_crash",
+      "previous_error_db": 5.019750654877563,
+      "measured_error_db": 1.9878421465212766,
+      "scaled_reference_control_db": 2.6879083754082738e-14
+    }
+  ]
+}

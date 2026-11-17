@@ -45,9 +45,9 @@ class TempestRoundRobinStarterTest {
         val group = StarterShelf.GROUPS.single { TempestRoundRobinKits.ID in it.ids }
         assertEquals(1, StarterShelf.GROUPS.sumOf { g -> g.ids.count { it == TempestRoundRobinKits.ID } })
         assertEquals(group.ids.indexOf("tempest") + 1, group.ids.indexOf(TempestRoundRobinKits.ID))
-        // Stored starter order only grows at the end: TEMPEST ROUND ROBIN was appended after TERRA's genre kits.
+        // Stored starter order only grows at the end: TEMPEST ROUND ROBIN was appended after EROSION ROUND ROBIN.
         val ids = StarterKits.ALL.map { it.id }
-        assertEquals("terra-punjab", ids[ids.indexOf(TempestRoundRobinKits.ID) - 1], "the stored starter order only grows at the end")
+        assertEquals(com.snipsnap.synth.ErosionRoundRobinKits.ID, ids[ids.indexOf(TempestRoundRobinKits.ID) - 1], "the stored starter order only grows at the end")
     }
 
     @Test fun `every take survives saving reloading playback the preview and both MPC exports`() {

@@ -1168,8 +1168,11 @@ object Bore {
     /** A periodic LOOP's shape: [periods] whole periods of the note in [frames] whole frames at [RATE]. ARCO's loop is one; BORE's is cut from a held one-shot and closes by a blend ([renderLoopMeasured]). */
     internal data class LoopPlan(val periods: Int, val frames: Int)
 
-    internal fun planLoop(hz: Float): LoopPlan {
-        val periods = ceil(LOOP_SECONDS * hz).toInt().coerceAtLeast(1)
+    internal fun planLoop(hz: Float): LoopPlan = planLoop(hz, LOOP_SECONDS)
+
+    /** The same plan for a loop at least [seconds] long (NACRE GROTTO's held loop is about two of its water's swells, [NacreHeld]). */
+    internal fun planLoop(hz: Float, seconds: Float): LoopPlan {
+        val periods = ceil(seconds * hz).toInt().coerceAtLeast(1)
         return LoopPlan(periods, Math.round(periods * RATE.toDouble() / hz).toInt())
     }
 

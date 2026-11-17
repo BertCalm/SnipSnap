@@ -1,0 +1,1131 @@
+{
+  "scope": "Python connected gestures, not native kit/export",
+  "plans": {
+    "shuffle": {
+      "duration": 0.68,
+      "events": [
+        {
+          "seconds": 0.04,
+          "role": "shuffle_brush",
+          "force": 0.7,
+          "foot": "L"
+        },
+        {
+          "seconds": 0.125,
+          "role": "shuffle_spank",
+          "force": 0.82,
+          "foot": "L"
+        }
+      ]
+    },
+    "flap": {
+      "duration": 0.68,
+      "events": [
+        {
+          "seconds": 0.04,
+          "role": "brush",
+          "force": 0.65,
+          "foot": "L"
+        },
+        {
+          "seconds": 0.115,
+          "role": "toe",
+          "force": 1.0,
+          "foot": "L"
+        }
+      ]
+    },
+    "ball_change": {
+      "duration": 0.68,
+      "events": [
+        {
+          "seconds": 0.04,
+          "role": "toe",
+          "force": 0.65,
+          "foot": "L"
+        },
+        {
+          "seconds": 0.152,
+          "role": "toe",
+          "force": 1.0,
+          "foot": "R"
+        },
+        {
+          "seconds": 0.209,
+          "role": "heel",
+          "force": 0.55,
+          "foot": "R"
+        }
+      ]
+    },
+    "phrase": {
+      "duration": 4.585714285714285,
+      "bpm": 112,
+      "events": [
+        {
+          "seconds": 0.04,
+          "role": "brush",
+          "force": 0.5828,
+          "foot": "L"
+        },
+        {
+          "seconds": 0.118,
+          "role": "spank",
+          "force": 0.705,
+          "foot": "L"
+        },
+        {
+          "seconds": 0.204,
+          "role": "toe",
+          "force": 0.94,
+          "foot": "L"
+        },
+        {
+          "seconds": 0.441786,
+          "role": "heel",
+          "force": 0.63,
+          "foot": "L"
+        },
+        {
+          "seconds": 0.709643,
+          "role": "brush",
+          "force": 0.559,
+          "foot": "R"
+        },
+        {
+          "seconds": 0.784643,
+          "role": "toe",
+          "force": 0.86,
+          "foot": "R"
+        },
+        {
+          "seconds": 1.245357,
+          "role": "toe",
+          "force": 0.5980000000000001,
+          "foot": "L"
+        },
+        {
+          "seconds": 1.357357,
+          "role": "toe",
+          "force": 0.92,
+          "foot": "R"
+        },
+        {
+          "seconds": 1.414357,
+          "role": "heel",
+          "force": 0.5060000000000001,
+          "foot": "R"
+        },
+        {
+          "seconds": 1.781071,
+          "role": "shuffle_brush",
+          "force": 0.44799999999999995,
+          "foot": "R"
+        },
+        {
+          "seconds": 1.866071,
+          "role": "shuffle_spank",
+          "force": 0.5247999999999999,
+          "foot": "R"
+        },
+        {
+          "seconds": 2.182857,
+          "role": "brush",
+          "force": 0.507,
+          "foot": "R"
+        },
+        {
+          "seconds": 2.257857,
+          "role": "toe",
+          "force": 0.78,
+          "foot": "R"
+        },
+        {
+          "seconds": 2.718571,
+          "role": "brush",
+          "force": 0.5456,
+          "foot": "L"
+        },
+        {
+          "seconds": 2.796571,
+          "role": "spank",
+          "force": 0.66,
+          "foot": "L"
+        },
+        {
+          "seconds": 2.882571,
+          "role": "toe",
+          "force": 0.88,
+          "foot": "L"
+        },
+        {
+          "seconds": 3.254286,
+          "role": "toe",
+          "force": 0.65,
+          "foot": "R"
+        },
+        {
+          "seconds": 3.366286,
+          "role": "toe",
+          "force": 1.0,
+          "foot": "L"
+        },
+        {
+          "seconds": 3.423286,
+          "role": "heel",
+          "force": 0.55,
+          "foot": "L"
+        },
+        {
+          "seconds": 3.79,
+          "role": "toe",
+          "force": 0.76,
+          "foot": "L"
+        },
+        {
+          "seconds": 3.923929,
+          "role": "heel",
+          "force": 0.57,
+          "foot": "L"
+        }
+      ]
+    },
+    "roll": {
+      "duration": 2.55,
+      "events": [
+        {
+          "seconds": 0.04,
+          "role": "brush",
+          "force": 0.44639999999999996,
+          "foot": "L"
+        },
+        {
+          "seconds": 0.0946,
+          "role": "spank",
+          "force": 0.54,
+          "foot": "L"
+        },
+        {
+          "seconds": 0.1548,
+          "role": "toe",
+          "force": 0.72,
+          "foot": "L"
+        },
+        {
+          "seconds": 0.4,
+          "role": "brush",
+          "force": 0.4712,
+          "foot": "R"
+        },
+        {
+          "seconds": 0.4546,
+          "role": "spank",
+          "force": 0.5700000000000001,
+          "foot": "R"
+        },
+        {
+          "seconds": 0.5148,
+          "role": "toe",
+          "force": 0.76,
+          "foot": "R"
+        },
+        {
+          "seconds": 0.76,
+          "role": "brush",
+          "force": 0.49599999999999994,
+          "foot": "L"
+        },
+        {
+          "seconds": 0.8146,
+          "role": "spank",
+          "force": 0.6,
+          "foot": "L"
+        },
+        {
+          "seconds": 0.8748,
+          "role": "toe",
+          "force": 0.7999999999999999,
+          "foot": "L"
+        },
+        {
+          "seconds": 1.005,
+          "role": "heel",
+          "force": 0.57,
+          "foot": "L"
+        },
+        {
+          "seconds": 1.12,
+          "role": "brush",
+          "force": 0.44639999999999996,
+          "foot": "R"
+        },
+        {
+          "seconds": 1.1746,
+          "role": "spank",
+          "force": 0.54,
+          "foot": "R"
+        },
+        {
+          "seconds": 1.2348,
+          "role": "toe",
+          "force": 0.72,
+          "foot": "R"
+        },
+        {
+          "seconds": 1.48,
+          "role": "brush",
+          "force": 0.4712,
+          "foot": "L"
+        },
+        {
+          "seconds": 1.5346,
+          "role": "spank",
+          "force": 0.5700000000000001,
+          "foot": "L"
+        },
+        {
+          "seconds": 1.5948,
+          "role": "toe",
+          "force": 0.76,
+          "foot": "L"
+        },
+        {
+          "seconds": 1.84,
+          "role": "brush",
+          "force": 0.49599999999999994,
+          "foot": "R"
+        },
+        {
+          "seconds": 1.8946,
+          "role": "spank",
+          "force": 0.6,
+          "foot": "R"
+        },
+        {
+          "seconds": 1.9548,
+          "role": "toe",
+          "force": 0.7999999999999999,
+          "foot": "R"
+        },
+        {
+          "seconds": 2.085,
+          "role": "heel",
+          "force": 0.57,
+          "foot": "R"
+        }
+      ]
+    },
+    "build": {
+      "duration": 3.175,
+      "events": [
+        {
+          "seconds": 0.04,
+          "role": "brush",
+          "force": 0.2728,
+          "foot": "L"
+        },
+        {
+          "seconds": 0.1219,
+          "role": "spank",
+          "force": 0.33,
+          "foot": "L"
+        },
+        {
+          "seconds": 0.2122,
+          "role": "toe",
+          "force": 0.44,
+          "foot": "L"
+        },
+        {
+          "seconds": 0.5,
+          "role": "brush",
+          "force": 0.31930000000000003,
+          "foot": "R"
+        },
+        {
+          "seconds": 0.57683,
+          "role": "spank",
+          "force": 0.38625,
+          "foot": "R"
+        },
+        {
+          "seconds": 0.66154,
+          "role": "toe",
+          "force": 0.515,
+          "foot": "R"
+        },
+        {
+          "seconds": 0.925,
+          "role": "brush",
+          "force": 0.36579999999999996,
+          "foot": "L"
+        },
+        {
+          "seconds": 0.99676,
+          "role": "spank",
+          "force": 0.4425,
+          "foot": "L"
+        },
+        {
+          "seconds": 1.07588,
+          "role": "toe",
+          "force": 0.59,
+          "foot": "L"
+        },
+        {
+          "seconds": 1.315,
+          "role": "brush",
+          "force": 0.4123,
+          "foot": "R"
+        },
+        {
+          "seconds": 1.38169,
+          "role": "spank",
+          "force": 0.49875,
+          "foot": "R"
+        },
+        {
+          "seconds": 1.45522,
+          "role": "toe",
+          "force": 0.665,
+          "foot": "R"
+        },
+        {
+          "seconds": 1.67,
+          "role": "brush",
+          "force": 0.4588,
+          "foot": "L"
+        },
+        {
+          "seconds": 1.73162,
+          "role": "spank",
+          "force": 0.5549999999999999,
+          "foot": "L"
+        },
+        {
+          "seconds": 1.79956,
+          "role": "toe",
+          "force": 0.74,
+          "foot": "L"
+        },
+        {
+          "seconds": 1.99,
+          "role": "brush",
+          "force": 0.5053,
+          "foot": "R"
+        },
+        {
+          "seconds": 2.04655,
+          "role": "spank",
+          "force": 0.61125,
+          "foot": "R"
+        },
+        {
+          "seconds": 2.1089,
+          "role": "toe",
+          "force": 0.815,
+          "foot": "R"
+        },
+        {
+          "seconds": 2.275,
+          "role": "brush",
+          "force": 0.5518,
+          "foot": "L"
+        },
+        {
+          "seconds": 2.32648,
+          "role": "spank",
+          "force": 0.6675,
+          "foot": "L"
+        },
+        {
+          "seconds": 2.38324,
+          "role": "toe",
+          "force": 0.8899999999999999,
+          "foot": "L"
+        },
+        {
+          "seconds": 2.605,
+          "role": "toe",
+          "force": 0.65,
+          "foot": "L"
+        },
+        {
+          "seconds": 2.7002,
+          "role": "toe",
+          "force": 1.0,
+          "foot": "R"
+        },
+        {
+          "seconds": 2.74865,
+          "role": "heel",
+          "force": 0.55,
+          "foot": "R"
+        }
+      ]
+    }
+  },
+  "contact_model_sha256": "6cb93fdf7b287d0035e86d7614a5f98514bdee06867bd820d2dd3b8fc2b01955",
+  "gain": 0.82,
+  "cells": [
+    {
+      "gesture": "shuffle",
+      "velocity": 0.3,
+      "take": 0,
+      "peak": 0.08023695577220756,
+      "rms": 0.007821243565894318
+    },
+    {
+      "gesture": "shuffle",
+      "velocity": 0.3,
+      "take": 1,
+      "peak": 0.09933312529931426,
+      "rms": 0.008530057263989945
+    },
+    {
+      "gesture": "shuffle",
+      "velocity": 0.3,
+      "take": 2,
+      "peak": 0.06129135592104905,
+      "rms": 0.006402406701918118
+    },
+    {
+      "gesture": "shuffle",
+      "velocity": 0.3,
+      "take": 3,
+      "peak": 0.09931669795555222,
+      "rms": 0.008327176135173328
+    },
+    {
+      "gesture": "shuffle",
+      "velocity": 0.65,
+      "take": 0,
+      "peak": 0.2278734778046497,
+      "rms": 0.022212382747638027
+    },
+    {
+      "gesture": "shuffle",
+      "velocity": 0.65,
+      "take": 1,
+      "peak": 0.2821067238321148,
+      "rms": 0.024225418274050323
+    },
+    {
+      "gesture": "shuffle",
+      "velocity": 0.65,
+      "take": 2,
+      "peak": 0.17406785063909183,
+      "rms": 0.018182876798414446
+    },
+    {
+      "gesture": "shuffle",
+      "velocity": 0.65,
+      "take": 3,
+      "peak": 0.28206007006866957,
+      "rms": 0.023649234544751985
+    },
+    {
+      "gesture": "shuffle",
+      "velocity": 1.0,
+      "take": 0,
+      "peak": 0.4076249411528922,
+      "rms": 0.03973398439169613
+    },
+    {
+      "gesture": "shuffle",
+      "velocity": 1.0,
+      "take": 1,
+      "peak": 0.5046385292784367,
+      "rms": 0.043334945310438674
+    },
+    {
+      "gesture": "shuffle",
+      "velocity": 1.0,
+      "take": 2,
+      "peak": 0.31137628677523227,
+      "rms": 0.03252591813821318
+    },
+    {
+      "gesture": "shuffle",
+      "velocity": 1.0,
+      "take": 3,
+      "peak": 0.5045550740305412,
+      "rms": 0.04230425555658398
+    },
+    {
+      "gesture": "flap",
+      "velocity": 0.3,
+      "take": 0,
+      "peak": 0.09488251610517129,
+      "rms": 0.006647515484342228
+    },
+    {
+      "gesture": "flap",
+      "velocity": 0.3,
+      "take": 1,
+      "peak": 0.11698071400347389,
+      "rms": 0.009236453924430786
+    },
+    {
+      "gesture": "flap",
+      "velocity": 0.3,
+      "take": 2,
+      "peak": 0.09591557250004146,
+      "rms": 0.006508303779593484
+    },
+    {
+      "gesture": "flap",
+      "velocity": 0.3,
+      "take": 3,
+      "peak": 0.09149159819273987,
+      "rms": 0.00708046518691465
+    },
+    {
+      "gesture": "flap",
+      "velocity": 0.65,
+      "take": 0,
+      "peak": 0.26579305067541387,
+      "rms": 0.018809486427262347
+    },
+    {
+      "gesture": "flap",
+      "velocity": 0.65,
+      "take": 1,
+      "peak": 0.3332692611581492,
+      "rms": 0.02590587285816171
+    },
+    {
+      "gesture": "flap",
+      "velocity": 0.65,
+      "take": 2,
+      "peak": 0.27764717245692055,
+      "rms": 0.018483865904917983
+    },
+    {
+      "gesture": "flap",
+      "velocity": 0.65,
+      "take": 3,
+      "peak": 0.24811613944907734,
+      "rms": 0.020096829703502146
+    },
+    {
+      "gesture": "flap",
+      "velocity": 1.0,
+      "take": 0,
+      "peak": 0.45711420593413105,
+      "rms": 0.03347395413276378
+    },
+    {
+      "gesture": "flap",
+      "velocity": 1.0,
+      "take": 1,
+      "peak": 0.5830745717378644,
+      "rms": 0.04514174384045826
+    },
+    {
+      "gesture": "flap",
+      "velocity": 1.0,
+      "take": 2,
+      "peak": 0.49163865723927347,
+      "rms": 0.03320427423262579
+    },
+    {
+      "gesture": "flap",
+      "velocity": 1.0,
+      "take": 3,
+      "peak": 0.43127146414044026,
+      "rms": 0.0361231459462062
+    },
+    {
+      "gesture": "ball_change",
+      "velocity": 0.3,
+      "take": 0,
+      "peak": 0.09512889247501274,
+      "rms": 0.007673986682210664
+    },
+    {
+      "gesture": "ball_change",
+      "velocity": 0.3,
+      "take": 1,
+      "peak": 0.09260092398252683,
+      "rms": 0.007303110077234955
+    },
+    {
+      "gesture": "ball_change",
+      "velocity": 0.3,
+      "take": 2,
+      "peak": 0.09573540097921579,
+      "rms": 0.007038654643371397
+    },
+    {
+      "gesture": "ball_change",
+      "velocity": 0.3,
+      "take": 3,
+      "peak": 0.1151258030216805,
+      "rms": 0.00835446237917211
+    },
+    {
+      "gesture": "ball_change",
+      "velocity": 0.65,
+      "take": 0,
+      "peak": 0.2758139219663571,
+      "rms": 0.021830240477114442
+    },
+    {
+      "gesture": "ball_change",
+      "velocity": 0.65,
+      "take": 1,
+      "peak": 0.25110602255870235,
+      "rms": 0.020612910929549366
+    },
+    {
+      "gesture": "ball_change",
+      "velocity": 0.65,
+      "take": 2,
+      "peak": 0.2680232445761272,
+      "rms": 0.019886460807866678
+    },
+    {
+      "gesture": "ball_change",
+      "velocity": 0.65,
+      "take": 3,
+      "peak": 0.3278609410965273,
+      "rms": 0.023353359170816455
+    },
+    {
+      "gesture": "ball_change",
+      "velocity": 1.0,
+      "take": 0,
+      "peak": 0.4890848054624544,
+      "rms": 0.039283837571793614
+    },
+    {
+      "gesture": "ball_change",
+      "velocity": 1.0,
+      "take": 1,
+      "peak": 0.4363280676785292,
+      "rms": 0.036786195941940054
+    },
+    {
+      "gesture": "ball_change",
+      "velocity": 1.0,
+      "take": 2,
+      "peak": 0.4605781329896131,
+      "rms": 0.035403095684094665
+    },
+    {
+      "gesture": "ball_change",
+      "velocity": 1.0,
+      "take": 3,
+      "peak": 0.5731448339652124,
+      "rms": 0.04047511844828594
+    },
+    {
+      "gesture": "phrase",
+      "velocity": 0.3,
+      "take": 0,
+      "peak": 0.09260092398252683,
+      "rms": 0.007094137128305489
+    },
+    {
+      "gesture": "phrase",
+      "velocity": 0.3,
+      "take": 1,
+      "peak": 0.1075690545424277,
+      "rms": 0.007545550292097157
+    },
+    {
+      "gesture": "phrase",
+      "velocity": 0.3,
+      "take": 2,
+      "peak": 0.1151258030216805,
+      "rms": 0.007616476732811838
+    },
+    {
+      "gesture": "phrase",
+      "velocity": 0.3,
+      "take": 3,
+      "peak": 0.09836698742675604,
+      "rms": 0.007372548252064686
+    },
+    {
+      "gesture": "phrase",
+      "velocity": 0.65,
+      "take": 0,
+      "peak": 0.25110602255870235,
+      "rms": 0.020107536140538246
+    },
+    {
+      "gesture": "phrase",
+      "velocity": 0.65,
+      "take": 1,
+      "peak": 0.3067594353785097,
+      "rms": 0.02130171005450556
+    },
+    {
+      "gesture": "phrase",
+      "velocity": 0.65,
+      "take": 2,
+      "peak": 0.3278609410965273,
+      "rms": 0.021510802762504635
+    },
+    {
+      "gesture": "phrase",
+      "velocity": 0.65,
+      "take": 3,
+      "peak": 0.28063889336555553,
+      "rms": 0.020838355814601087
+    },
+    {
+      "gesture": "phrase",
+      "velocity": 1.0,
+      "take": 0,
+      "peak": 0.4363280676785292,
+      "rms": 0.03596753018591452
+    },
+    {
+      "gesture": "phrase",
+      "velocity": 1.0,
+      "take": 1,
+      "peak": 0.5385323411061945,
+      "rms": 0.03777772586664203
+    },
+    {
+      "gesture": "phrase",
+      "velocity": 1.0,
+      "take": 2,
+      "peak": 0.5731448339652124,
+      "rms": 0.03812763136268268
+    },
+    {
+      "gesture": "phrase",
+      "velocity": 1.0,
+      "take": 3,
+      "peak": 0.49502667436420206,
+      "rms": 0.037073237202422366
+    },
+    {
+      "gesture": "roll",
+      "velocity": 0.3,
+      "take": 0,
+      "peak": 0.08642902325050975,
+      "rms": 0.008429245696240262
+    },
+    {
+      "gesture": "roll",
+      "velocity": 0.3,
+      "take": 1,
+      "peak": 0.08642902325050975,
+      "rms": 0.0086030853231127
+    },
+    {
+      "gesture": "roll",
+      "velocity": 0.3,
+      "take": 2,
+      "peak": 0.07521039937492975,
+      "rms": 0.008368152386668132
+    },
+    {
+      "gesture": "roll",
+      "velocity": 0.3,
+      "take": 3,
+      "peak": 0.08061698620905196,
+      "rms": 0.008615287581178344
+    },
+    {
+      "gesture": "roll",
+      "velocity": 0.65,
+      "take": 0,
+      "peak": 0.24670203372661204,
+      "rms": 0.02388585320263299
+    },
+    {
+      "gesture": "roll",
+      "velocity": 0.65,
+      "take": 1,
+      "peak": 0.24670203372661204,
+      "rms": 0.024347028006058122
+    },
+    {
+      "gesture": "roll",
+      "velocity": 0.65,
+      "take": 2,
+      "peak": 0.21493032881469007,
+      "rms": 0.02372427714957525
+    },
+    {
+      "gesture": "roll",
+      "velocity": 0.65,
+      "take": 3,
+      "peak": 0.23021171171675103,
+      "rms": 0.024380105514674125
+    },
+    {
+      "gesture": "roll",
+      "velocity": 1.0,
+      "take": 0,
+      "peak": 0.4376874946678889,
+      "rms": 0.042617784871449876
+    },
+    {
+      "gesture": "roll",
+      "velocity": 1.0,
+      "take": 1,
+      "peak": 0.4376874946678889,
+      "rms": 0.04335444468655098
+    },
+    {
+      "gesture": "roll",
+      "velocity": 1.0,
+      "take": 2,
+      "peak": 0.38319751764280385,
+      "rms": 0.04238733618838611
+    },
+    {
+      "gesture": "roll",
+      "velocity": 1.0,
+      "take": 3,
+      "peak": 0.4094819167479913,
+      "rms": 0.04340914656166344
+    },
+    {
+      "gesture": "build",
+      "velocity": 0.3,
+      "take": 0,
+      "peak": 0.11678943606022167,
+      "rms": 0.007880125420827085
+    },
+    {
+      "gesture": "build",
+      "velocity": 0.3,
+      "take": 1,
+      "peak": 0.0944283027446579,
+      "rms": 0.007723983635878388
+    },
+    {
+      "gesture": "build",
+      "velocity": 0.3,
+      "take": 2,
+      "peak": 0.0998945737312648,
+      "rms": 0.0075684456709435586
+    },
+    {
+      "gesture": "build",
+      "velocity": 0.3,
+      "take": 3,
+      "peak": 0.0923522103213036,
+      "rms": 0.007418285848691858
+    },
+    {
+      "gesture": "build",
+      "velocity": 0.65,
+      "take": 0,
+      "peak": 0.33249256125691284,
+      "rms": 0.022265631638670617
+    },
+    {
+      "gesture": "build",
+      "velocity": 0.65,
+      "take": 1,
+      "peak": 0.2734282037023352,
+      "rms": 0.02185770272493257
+    },
+    {
+      "gesture": "build",
+      "velocity": 0.65,
+      "take": 2,
+      "peak": 0.28498464927328426,
+      "rms": 0.021413689638594052
+    },
+    {
+      "gesture": "build",
+      "velocity": 0.65,
+      "take": 3,
+      "peak": 0.25877488614338773,
+      "rms": 0.021011454121381945
+    },
+    {
+      "gesture": "build",
+      "velocity": 1.0,
+      "take": 0,
+      "peak": 0.5813142760075273,
+      "rms": 0.03953141169499884
+    },
+    {
+      "gesture": "build",
+      "velocity": 1.0,
+      "take": 1,
+      "peak": 0.48415507713086287,
+      "rms": 0.03893308021424756
+    },
+    {
+      "gesture": "build",
+      "velocity": 1.0,
+      "take": 2,
+      "peak": 0.502359191577611,
+      "rms": 0.03811636385974969
+    },
+    {
+      "gesture": "build",
+      "velocity": 1.0,
+      "take": 3,
+      "peak": 0.44516824700393504,
+      "rms": 0.037489428487540534
+    }
+  ],
+  "core_invariance": [
+    {
+      "role": "toe",
+      "velocity": 0.3,
+      "take": 0,
+      "pcm_identical": true
+    },
+    {
+      "role": "toe",
+      "velocity": 0.3,
+      "take": 1,
+      "pcm_identical": true
+    },
+    {
+      "role": "toe",
+      "velocity": 0.3,
+      "take": 2,
+      "pcm_identical": true
+    },
+    {
+      "role": "toe",
+      "velocity": 0.3,
+      "take": 3,
+      "pcm_identical": true
+    },
+    {
+      "role": "toe",
+      "velocity": 0.65,
+      "take": 0,
+      "pcm_identical": true
+    },
+    {
+      "role": "toe",
+      "velocity": 0.65,
+      "take": 1,
+      "pcm_identical": true
+    },
+    {
+      "role": "toe",
+      "velocity": 0.65,
+      "take": 2,
+      "pcm_identical": true
+    },
+    {
+      "role": "toe",
+      "velocity": 0.65,
+      "take": 3,
+      "pcm_identical": true
+    },
+    {
+      "role": "toe",
+      "velocity": 1.0,
+      "take": 0,
+      "pcm_identical": true
+    },
+    {
+      "role": "toe",
+      "velocity": 1.0,
+      "take": 1,
+      "pcm_identical": true
+    },
+    {
+      "role": "toe",
+      "velocity": 1.0,
+      "take": 2,
+      "pcm_identical": true
+    },
+    {
+      "role": "toe",
+      "velocity": 1.0,
+      "take": 3,
+      "pcm_identical": true
+    },
+    {
+      "role": "heel",
+      "velocity": 0.3,
+      "take": 0,
+      "pcm_identical": true
+    },
+    {
+      "role": "heel",
+      "velocity": 0.3,
+      "take": 1,
+      "pcm_identical": true
+    },
+    {
+      "role": "heel",
+      "velocity": 0.3,
+      "take": 2,
+      "pcm_identical": true
+    },
+    {
+      "role": "heel",
+      "velocity": 0.3,
+      "take": 3,
+      "pcm_identical": true
+    },
+    {
+      "role": "heel",
+      "velocity": 0.65,
+      "take": 0,
+      "pcm_identical": true
+    },
+    {
+      "role": "heel",
+      "velocity": 0.65,
+      "take": 1,
+      "pcm_identical": true
+    },
+    {
+      "role": "heel",
+      "velocity": 0.65,
+      "take": 2,
+      "pcm_identical": true
+    },
+    {
+      "role": "heel",
+      "velocity": 0.65,
+      "take": 3,
+      "pcm_identical": true
+    },
+    {
+      "role": "heel",
+      "velocity": 1.0,
+      "take": 0,
+      "pcm_identical": true
+    },
+    {
+      "role": "heel",
+      "velocity": 1.0,
+      "take": 1,
+      "pcm_identical": true
+    },
+    {
+      "role": "heel",
+      "velocity": 1.0,
+      "take": 2,
+      "pcm_identical": true
+    },
+    {
+      "role": "heel",
+      "velocity": 1.0,
+      "take": 3,
+      "pcm_identical": true
+    }
+  ],
+  "checks": [
+    "72 finite/headroom/DC/tail cells",
+    "72 deterministic rerenders",
+    "72 PCM16 round trips",
+    "velocity-zero silence",
+    "increasing three-level energy",
+    "four distinct takes per level",
+    "24 toe/heel PCM cells identical to prior audition"
+  ]
+}

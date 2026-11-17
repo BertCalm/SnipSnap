@@ -1,5 +1,6 @@
 package com.snipsnap.cli
 
+import com.snipsnap.audio.SmplChunk
 import com.snipsnap.audio.WavWriter
 import com.snipsnap.synth.Nacre
 import com.snipsnap.synth.NacrePresets
@@ -62,6 +63,70 @@ class NacreSynthCommandTest {
             ))
             assertTrue("no such engine/voice: NACRE UNKNOWN" in errors.toString())
             assertFalse(dir.exists())
+        } finally {
+            temp.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `GROTTO plays C2 to C4 and its held preset renders as saved`() {
+        val temp = kotlin.io.path.createTempDirectory("nacre-cli-grotto").toFile()
+        try {
+            val refused = File(temp, "not-created")
+            for (value in listOf("35", "61")) {
+                val errors = ByteArrayOutputStream()
+                assertEquals(2, Cli.run(
+                    arrayOf("synth", "NACRE", "GROTTO", "--midi", value, "--out", refused.path),
+                    PrintStream(ByteArrayOutputStream()), PrintStream(errors),
+                ), "GROTTO --midi $value")
+                assertTrue("--midi" in errors.toString())
+            }
+            assertFalse(refused.exists())
+            val presets = NacrePresets.forVoice(NacreVoice.GROTTO)
+            val held = presets.single { it.name == "Grotto Glints" }
+            val dir = File(temp, "out")
+            assertEquals(0, SynthCommand.run(
+                listOf("NACRE", "GROTTO", "--preset", (presets.indexOf(held) + 1).toString(), "--out", dir.path),
+                PrintStream(ByteArrayOutputStream()),
+            ))
+            val wav = dir.listFiles { file -> file.extension == "wav" }!!.single()
+            val loop = held.render()
+            val encoded = ByteArrayOutputStream().also {
+                WavWriter.write(it, loop, smpl = SmplChunk(held.midi, SmplChunk.Loop(0, loop.frameCount.toLong())))
+            }.toByteArray()
+            assertContentEquals(encoded, wav.readBytes(), "the held preset must render its saved loop, marked as one whole loop")
+        } finally {
+            temp.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `CONCH plays C2 to C5 and its held preset renders as saved`() {
+        val temp = kotlin.io.path.createTempDirectory("nacre-cli-conch").toFile()
+        try {
+            val refused = File(temp, "not-created")
+            for (value in listOf("35", "73")) {
+                val errors = ByteArrayOutputStream()
+                assertEquals(2, Cli.run(
+                    arrayOf("synth", "NACRE", "CONCH", "--midi", value, "--out", refused.path),
+                    PrintStream(ByteArrayOutputStream()), PrintStream(errors),
+                ), "CONCH --midi $value")
+                assertTrue("--midi" in errors.toString())
+            }
+            assertFalse(refused.exists())
+            val presets = NacrePresets.forVoice(NacreVoice.CONCH)
+            val held = presets.single { it.name == "Conch Lean" }
+            val dir = File(temp, "out")
+            assertEquals(0, SynthCommand.run(
+                listOf("NACRE", "CONCH", "--preset", (presets.indexOf(held) + 1).toString(), "--out", dir.path),
+                PrintStream(ByteArrayOutputStream()),
+            ))
+            val wav = dir.listFiles { file -> file.extension == "wav" }!!.single()
+            val loop = held.render()
+            val encoded = ByteArrayOutputStream().also {
+                WavWriter.write(it, loop, smpl = SmplChunk(held.midi, SmplChunk.Loop(0, loop.frameCount.toLong())))
+            }.toByteArray()
+            assertContentEquals(encoded, wav.readBytes(), "the held preset must render its saved loop, marked as one whole loop")
         } finally {
             temp.deleteRecursively()
         }

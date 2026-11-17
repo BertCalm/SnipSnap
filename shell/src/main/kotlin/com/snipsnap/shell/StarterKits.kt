@@ -1069,7 +1069,13 @@ object StarterKits {
             "Dholak and tabla TERRA kit: dholak booms, bayan bends, dayan strokes, a cajon backbeat and bells.",
             seeded = false,
         ) { com.snipsnap.synth.TerraGenreKits.build(com.snipsnap.synth.TerraGenreKits.Kit.PUNJAB) },
-        // Opt-in beside the accepted TEMPEST starter, which stays as it is; appended after TERRA PUNJAB.
+        // Opt-in beside the accepted EROSION starter, which stays as it is; appended after TERRA PUNJAB.
+        Starter(
+            com.snipsnap.synth.ErosionRoundRobinKits.ID, "EROSION ROUND ROBIN",
+            "The eight EROSION pads with soft, medium and hard touch and four takes on each: a repeated hit sparks differently every time.",
+            seeded = false,
+        ) { com.snipsnap.synth.ErosionRoundRobinKits.build() },
+        // Opt-in beside the accepted TEMPEST starter, which stays as it is; appended after EROSION ROUND ROBIN.
         Starter(
             com.snipsnap.synth.TempestRoundRobinKits.ID, "TEMPEST ROUND ROBIN",
             "The sixteen TEMPEST pads with four takes each: repeated hats, snares and claps vary like a real drum machine's.",

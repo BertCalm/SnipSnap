@@ -32,6 +32,10 @@ class SoulRockRoundTripTest {
                 for ((i, pad) in kit.pads.withIndex()) {
                     assertNull(pad.recipe)
                     assertEquals("soul-rock", pad.source["factory"])
+                    if (t == SoulRockKits.Choice.ROADHOUSE && pad.slot == 2) {
+                        assertEquals("coupled-snare-snap-rattle", pad.source["sourceModel"])
+                        assertTrue(pad.source.keys.none { it.startsWith("synthesis.") })
+                    }
                     assertEquals(SoulRockKits.VERSION.toString(), pad.source["bankVersion"])
                     assertNotNull(pad.source["kit"])
                     assertTrue(pad.oneShot)

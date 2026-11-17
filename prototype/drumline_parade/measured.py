@@ -29,16 +29,19 @@ def cymbal(v,take,seconds):
 def render(p,v,take,legacy):
  name,fam,root,life,count,width=p
  if fam=='metal':
-  seconds=.8 if name=='cymbal_touch' else 4.5
-  y=cymbal(v if name!='cymbal_touch' else v*.5,take,seconds).copy()
-  if name=='cymbal_choke':y=y[:round(1.4*sk.INTERNAL)]
-  if name!='cymbal_crash':
-   t=np.arange(len(y))/sk.INTERNAL
-   lo=signal.sosfilt(signal.butter(2,1800,fs=sk.INTERNAL,output='sos'),y)
-   start=.18 if name=='cymbal_choke' else .045
-   envelope=loss(t,start,.14 if name=='cymbal_choke' else .06)
-   y=lo*np.exp(-20*envelope)+(y-lo)*np.exp(-55*envelope)
-  return y*v
+  import crash_wash
+  y=crash_wash.render(v*.5 if name=='cymbal_touch' else v,take)
+  if name=='cymbal_crash':return y
+  seconds=.8 if name=='cymbal_touch' else 1.4
+  y=y[:round(seconds*sk.INTERNAL)]
+  t=np.arange(len(y))/sk.INTERNAL
+  lo=signal.sosfilt(signal.butter(2,1800,fs=sk.INTERNAL,output='sos'),y)
+  start=.18 if name=='cymbal_choke' else .045
+  envelope=loss(t,start,.14 if name=='cymbal_choke' else .06)
+  active=t>=start
+  # Preserve the source strike exactly until contact; high bands settle first.
+  y[active]=lo[active]*np.exp(-20*envelope[active])+(y[active]-lo[active])*np.exp(-55*envelope[active])
+  return y
  key=name if fam=='wood' else 'rimshot'
  out=np.zeros(round(1.2*sk.INTERNAL))
  for player in range(count):
