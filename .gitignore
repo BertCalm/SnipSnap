@@ -814,3 +814,6 @@ testkit/etch-audition/
 
 # Reproducible native drumline audition and exported kits.
 /testkit/drumline-kit/
+
+# Reproducible SIDEROOM native audition and exported kits.
+/testkit/sideroom-native/
