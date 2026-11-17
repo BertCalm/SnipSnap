@@ -17,7 +17,8 @@ def main(approved,out,config=None):
  lookup={Path(s['path']).stem:(s,x,h) for s,x,h in data};hits=[];provenance=[]
  for l in range(3):
   for rr in range(3):
-   name=f'snaremic_snare_{articulation}_vl{levels[l]+rr}';s,x,h=lookup[name]
+   strike=config.get('layer_articulations',[articulation]*3)[l]
+   name=f'snaremic_snare_{strike}_vl{levels[l]+rr}';s,x,h=lookup[name]
    x=signal.sosfilt(signal.butter(2,22,fs=44100,btype='highpass',output='sos'),x)
    x[:44]*=np.linspace(0,1,44);x[-882:]*=np.linspace(1,0,882)
    hits.append((l,rr,x));provenance.append({'level':l,'take':rr,'url':acoustic.URL+s['path'],'git_blob':s['sha'],'source_sha256':h})
@@ -53,6 +54,8 @@ def main(approved,out,config=None):
     x,ms=resynth.render(model,v,l,r);assert np.array_equal(x,resynth.render(model,v,l,r)[0]);timings.append(ms);banks[kit][v,l,r]=x
     for prev in previous:banks[prev][v,l,r]=resynth.read(approved/(prev if config else 'synth')/f'{v}-{l}-{r}.wav')
  calibration={v:min(1,.90/max(np.max(abs(x)) for (w,l,r),x in banks[kit].items() if w==v)) for v in RECIPE}
+ model['output_gain']=calibration
+ (out/'synthesis-model.json').write_text(json.dumps(model,separators=(',',':')))
  def write(p,x):
   assert np.isfinite(x).all() and np.max(abs(x))<.99;p.parent.mkdir(parents=True,exist_ok=True);wavfile.write(p,44100,np.rint(x*32767).astype(np.int16))
  for mode,bank in banks.items():

@@ -127,6 +127,7 @@ def render(model,voice,level,take):
  x[:44]*=np.linspace(0,1,44);x[-882:]*=np.linspace(1,0,882)
  # Preserve measured velocity energies; scale is determined by model, not peak normalization.
  x*=np.sqrt(m['energy']/max(np.sum(x*x),1e-15))*r.uniform(.97,1.03)
+ x*=model.get('output_gain',{}).get(voice,1.0)
  return x,(time.perf_counter()-start)*1000
 
 def groove(bank):

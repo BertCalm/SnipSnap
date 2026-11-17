@@ -4,7 +4,7 @@ from pathlib import Path
 p=Path(sys.argv[1]);m=json.loads((p/'manifest.json').read_text())
 models=m.get('models',{'angular':'synthesis-model.json','tight-pocket':'tight-pocket-model.json','open-road':'open-road-model.json'})
 for kit in m['modes']:
- selected={**m,'modes':[kit],'files':{k:v for k,v in m['files'].items() if k.startswith(kit+'/')}}
+ selected={**m,'modes':[kit],'models':{kit:models[kit]},'files':{k:v for k,v in m['files'].items() if k.startswith(kit+'/')}}
  archive=p/(kit+'.zip')
  with zipfile.ZipFile(archive,'w',zipfile.ZIP_DEFLATED) as z:
   for f in sorted((p/kit).rglob('*')):

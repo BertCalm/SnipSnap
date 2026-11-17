@@ -21,3 +21,5 @@ for(const button of document.querySelectorAll('[data-voice]'))button.onclick=asy
 
 const banks={new:[['tom','Rack tom','Stick / head / shell'],['floor','Floor tom','Low body / sustain'],['ride','Ride','Tip / ringing metal'],['crash','Crash','Impact / spreading wash']],core:[['kick','Kick','Beater / head / body'],['snare','Snare','Stick / shell / wires'],['hat','Closed hat','Contact / metal'],['openhat','Open hat','Wash / natural tail']]};
 document.querySelector('#bank').onchange=()=>{const bank=banks[document.querySelector('#bank').value];document.querySelectorAll('[data-voice]').forEach((button,i)=>{button.dataset.voice=bank[i][0];button.firstChild.textContent=bank[i][1];button.querySelector('span').textContent=bank[i][2]});status.textContent='Pad bank changed.'};
+
+document.querySelector('#pocket').onclick=()=>{phrase='pocket';player.src=grooveUrl();player.currentTime=0;playGroove()};

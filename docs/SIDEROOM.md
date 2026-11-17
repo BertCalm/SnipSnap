@@ -1,6 +1,6 @@
 # SIDEROOM: five acoustic drum-kit studies
 
-Status: R1 rejected by the owner for drum-machine character. R2 recorded acoustic core was approved for sound. R4 synthesis was approved for sound. R5 eight-instrument Open Road was approved. R6 Tight Pocket was approved. R7 Angular was approved. R8 introduces High Voltage alongside all three approved kits. No SnipSnap shelf, native serialization or hardware completion claim. Source inspected at `4ecab4c9f`; isolated implementation starts from `e7ccfef58` on `claude/sideroom-study`.
+Status: R1 rejected by the owner for drum-machine character. R2 recorded acoustic core was approved for sound. R4 synthesis was approved for sound. R5 eight-instrument Open Road was approved. R6 Tight Pocket was approved. R7 Angular was approved. R8 High Voltage was approved. R9 introduces Deep Pocket, completing the five sound-study candidates. No SnipSnap shelf, native serialization or hardware completion claim. Source inspected at `4ecab4c9f`; isolated implementation starts from `e7ccfef58` on `claude/sideroom-study`.
 
 The characteristic gesture is **stick or beater contact → head/metal response → wire or shell after-sound → damping to silence**. Each kit chooses a different physical balance within that gesture.
 
@@ -169,3 +169,18 @@ Verified: 288 saved performance routes, complete eight-note SFZ dynamic/RR mappi
 Representative hard-take 90%-energy times: High Voltage kick .116 s versus Open Road .097; snare .094 versus .035; floor tom .352 versus .262; crash 1.313 versus .929. These support the intended longer decay; listening decides the character. Median new Python render 55.14 ms, maximum 717.72 ms. Long tails require cached native renders rather than a promised interactive latency.
 
 High Voltage awaits listening approval. Deep Pocket is the remaining family sound study. Native shelf, save/playback/export integration, complete authored articulation and hardware acceptance remain open.
+
+
+## R9: Deep Pocket and full five-kit audition
+
+The owner approved High Voltage. Deep Pocket is the fifth candidate, guided by Get on Top: firm kick, high snare bite, ghost-note sensitivity and active hats. Three snare layers intentionally use different original articulations: center levels 13–15 for soft strikes, off-center 23–25 for medium, rimshot 10–12 for accents. The source index and SHA256/blob provenance retain this distinction. These are measured velocity descriptors with newly generated alternates, not commercial song samples or original waveform playback.
+
+Authored tuning/decay ratios are in `deep.py`. The high-tuned snare has more sustain than Angular; the kick remains firmer and shorter than Open Road. The new Pocket groove uses an original syncopated kick pattern, ghost notes and opening/closing hats. It is rendered identically in event timing and level for all five kits. Original groove and fill remain selectable. No phrase is a transcription or claim of matching reference tempo.
+
+Build: `python3 prototype/sideroom/deep.py R8_OUTPUT R9_OUTPUT`; run `pocket-groove.py`, then `package-family.py`. Copy `family.html`/`family.js`, then use `stage-family.py R9_OUTPUT SITE_DIST`. The staging helper compresses prior loose model JSON losslessly, records gzip encoding and model paths in the website manifest, and checks the deployment size limit. Per-kit ZIPs retain plain original model JSON with a kit-specific model mapping. No audio is recompressed or changed by this staging step.
+
+A fixed output-gain field is now retained in new model serialization and honored by synthesis. Deep Pocket snare needs 0.989767 fixed attenuation for headroom; all its velocity/take differences remain intact. This closes the prototype mismatch between raw model rerender and calibrated PCM export. It does not claim native KitStore completion.
+
+Verified: all 360 sample routes, three ordered velocities and three distinct alternate strikes per instrument, finite/peak/endpoint checks, complete SFZ regions, deterministic audio-read-free synthesis, per-kit ZIP byte equality, simulated Pocket groove routing and hat choke. All 288 approved pads and four prior models are unchanged. Rerendering all 72 Deep Pocket performances from saved parameters exactly reproduces exported PCM. All comparison phrases have matched lengths and clean endings. Median new Python render 29.27 ms, maximum 404.11 ms; native caching remains necessary for long tails.
+
+All five requested sound-study candidates now exist. Deep Pocket still awaits listening approval. Native shelf/registration, save/playback/export round trips, complete authored roll/riser behavior where appropriate, and phone/MPC checks remain open. The Python audition and SFZ simulation do not close these gates.
