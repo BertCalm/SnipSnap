@@ -19,6 +19,8 @@ object ParadeSamba {
         CHOCALHO_FORWARD(2600.0,3,.3), CHOCALHO_BACK(3100.0,3,.3),
         AGOGO_LOW(580.0,1,.4), AGOGO_HIGH(870.0,1,.4), REPINIQUE_CALL(285.0,1,.4)
     }
+    /** Public entry point for picker randomization; DSP internals stay within synth. */
+    fun scramble(random: kotlin.random.Random) = Dsp.scrambleNear(defaults(), .35f, random)
     fun defaults() = mapOf("TUNE" to .5f, "STRIKE" to .5f, "DAMP" to .5f)
     fun settled(m: Map<String, Float>) = defaults().mapValues { (k,v) -> m[k]?.takeIf { it.isFinite() }?.coerceIn(0f,1f) ?: v }
     data class Recipe(val voice: Voice, val macros: Map<String,Float> = defaults(), val velocity: Float = 1f, val take: Int = 0, val model: Int = MODEL) {

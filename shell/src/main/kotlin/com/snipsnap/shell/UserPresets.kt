@@ -383,6 +383,7 @@ object UserPresets {
 
     /** The voice enum a roster line names: `THUMP` → `ThumpVoice`, `TONEWHEEL` → `TonewheelVoice`. */
     fun voiceEnum(engine: String): String = when (engine.uppercase(Locale.ROOT)) {
+        com.snipsnap.synth.SambaPatch.ENGINE -> "ParadeSamba.Voice"
         com.snipsnap.synth.BristlePatch.ENGINE -> "Bristle.Route"
         com.snipsnap.synth.FiredBronzePatch.ENGINE -> "FiredBronzeDryKit.Pad"
         ScannedChainPatch.ENGINE -> "ScannedChainVoice"

@@ -6962,7 +6962,7 @@ private enum class Engine {
         FIRED_BRONZE -> FiredBronzeInstrument.scramble(random)
         SKIN -> Skin.scramble(voice as SkinVoice, random)
         BACKWASH -> Backwash.scramble(voice as BackwashVoice, random)
-        SAMBA -> com.snipsnap.synth.Dsp.scrambleNear(ParadeSamba.defaults(), .35f, random)
+        SAMBA -> ParadeSamba.scramble(random)
         DRUMLINE -> Drumline.scramble(voice as DrumlineVoice, random)
         SOOT -> Soot.scramble(voice as SootVoice, random)
         CLUTTER -> Clutter.scramble(voice as ClutterVoice, random)
