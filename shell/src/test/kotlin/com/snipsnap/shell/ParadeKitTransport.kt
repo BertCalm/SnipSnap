@@ -95,6 +95,7 @@ object ParadeKitTransport {
             println("$id checked: 144 pinned WAVs, $hits selection checks, native save/load and MPC exports")
         }
         check(diversityFailures.isEmpty()) { diversityFailures.joinToString("\n") }
+        File(output, "PASS.txt").writeText("Both kits pass transport and diversity; hardware and native synthesis remain unverified.\n")
         println("Both kits PASS all transport and diversity checks")
     }
 }
