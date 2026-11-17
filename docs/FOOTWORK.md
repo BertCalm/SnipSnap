@@ -303,3 +303,18 @@ spacing without changing filter pitch, keeping the planted toe distinct. All
 36 isolated gesture cells and 24 core contact cells remain PCM-identical to the
 prior revision. The 72-cell Python checks pass again. Native/export gates remain
 open; the earlier full JVM command has now completed successfully.
+
+### Native model 4 Tap port
+
+Model/kit version 4 ports the reference-guided heel/toe, smooth brushes, shuffle,
+flap and pickup-based roll/riser to Kotlin. Coarse numeric fits generate a fresh
+minimum-phase response; no reference PCM enters the renderer. The RNG and house
+filters differ from Python, and soft brushes gain small pressure-dependent shape
+changes after the native proof caught amplitude-only dynamics.
+
+Six focused synth tests and the 648-cell native/SFZ proof pass. All 552 untouched
+role/velocity/take cells retain model-3 PCM; earlier models remain replayable.
+Saved playback-window auditions and a separately labeled source phrase accompany
+the candidate. See `prototype/footwork/native_v4/` for reproduction and measured
+parity. Native listening/device acceptance, unapproved source/kit identities and
+the MPC 3 slice-map export blocker remain open.
