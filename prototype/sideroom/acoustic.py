@@ -1,5 +1,5 @@
 """Reproducible CC0 recorded-core study. No commercial reference audio used."""
-import concurrent.futures, hashlib, json, subprocess, sys, urllib.request
+import concurrent.futures, hashlib, json, subprocess, sys, time, urllib.request, urllib.error
 from pathlib import Path
 import numpy as np
 from scipy.io import wavfile
@@ -11,7 +11,13 @@ CACHE=Path('/workspace/shared/sideroom-acoustic-cache'); CACHE.mkdir(parents=Tru
 SOURCES=json.loads((ROOT/'acoustic-sources.json').read_text())
 def fetch(s):
  p=CACHE/Path(s['path']).name
- if not p.exists(): p.write_bytes(urllib.request.urlopen(URL+s['path'],timeout=60).read())
+ if not p.exists():
+  for attempt in range(4):
+   try:
+    data=urllib.request.urlopen(URL+s['path'],timeout=60).read();p.write_bytes(data);break
+   except (urllib.error.URLError,TimeoutError):
+    if attempt==3:raise
+    time.sleep(attempt+1)
  b=p.read_bytes(); assert hashlib.sha1(b'blob '+str(len(b)).encode()+b'\0'+b).hexdigest()==s['sha'],p
  raw=subprocess.check_output(['ffmpeg','-v','error','-i',str(p),'-f','f32le','-ac','1','-ar','44100','-'])
  x=np.frombuffer(raw,dtype='<f4').astype(float)

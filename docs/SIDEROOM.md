@@ -1,6 +1,6 @@
 # SIDEROOM: five acoustic drum-kit studies
 
-Status: R1 rejected by the owner for drum-machine character. R2 recorded acoustic core was approved for sound. R4 synthesis was approved for sound. R5 extends that core to an eight-instrument listening kit. No SnipSnap shelf, native serialization or hardware completion claim. Source inspected at `4ecab4c9f`; isolated implementation starts from `e7ccfef58` on `claude/sideroom-study`.
+Status: R1 rejected by the owner for drum-machine character. R2 recorded acoustic core was approved for sound. R4 synthesis was approved for sound. R5 eight-instrument Open Road was approved. R6 introduces the second kit, Tight Pocket. No SnipSnap shelf, native serialization or hardware completion claim. Source inspected at `4ecab4c9f`; isolated implementation starts from `e7ccfef58` on `claude/sideroom-study`.
 
 The characteristic gesture is **stick or beater contact → head/metal response → wire or shell after-sound → damping to silence**. Each kit chooses a different physical balance within that gesture.
 
@@ -128,3 +128,16 @@ The page exposes four pads at a time in Toms & cymbals / Approved core banks. Th
 Build: `python3 prototype/sideroom/expansion.py R4_OUTPUT R5_OUTPUT`; copy `expanded.html` as `index.html` and `expanded.js`. Tests: `check-acoustic.py OUTPUT`, `check-resynth.py OUTPUT` and `node prototype/sideroom/check-expanded-player.mjs OUTPUT`. The pinned source index is `expansion-sources.json`; downloaded FLAC Git blob hashes are verified by the shared acoustic fetcher and SHA256 provenance is retained.
 
 Verified: 144 WAV performances across synth and acoustic modes, all 72 core comparison files byte-identical to R4, monotonic velocity energy, generated take differences, deterministic rerenders, endpoint and peak bounds, complete eight-note SFZ velocity/RR mappings, ZIP byte equality, and simulated routing of every performance through both pad banks. Real browser/device/sampler audio remains unverified. Median new-voice Python render was 162.85 ms, maximum 427.46 ms. Native work needs cached banks; no native latency claim. Other genre kits, native shelf/save/playback/export and hardware gates remain open.
+
+
+## R6: Tight Pocket alongside approved Open Road
+
+The owner approved R5. R6 preserves all 72 Open Road synth pad files byte-for-byte and adds an eight-instrument Tight Pocket candidate aimed at the Train in Vain reference. Both selectable kits are synthesized. The same groove/fill and 100 BPM tempo isolate timbre differences. The previous acoustic comparator remains in R5 assets/history.
+
+Tight Pocket analyzes a separate hand-muted snare articulation from the same pinned CC0 library: adjacent source levels 4–6, 9–11 and 14–16, verified by blob hash and recorded in `pocket-sources.json` and provenance. Other instruments adapt accepted descriptors with authored tuning ratios (1.03–1.14), decay ratios (.56–.83), and gentle frequency-dependent excitation weights. Changes happen in the parameter model before generating new noise/oscillator strikes. No exact commercial reference equipment match is asserted. The shared download helper now retries transient source-network failures.
+
+Build: `python3 prototype/sideroom/pocket.py R5_OUTPUT R6_OUTPUT`; copy `family.html` as `index.html` and `family.js`. Tests: `check-acoustic.py OUTPUT`, `check-resynth.py OUTPUT`, and `node prototype/sideroom/check-family-player.mjs OUTPUT`. Both models, complete WAV grids, SFZ mappings and provenance travel in the package. Median new Python render was 23.27 ms, maximum 318.25 ms; no extra peak calibration was required.
+
+Verified: 144 saved performances, 72 unchanged approved pads, three ordered velocities and three distinct generated takes per voice, deterministic/audio-read-free synthesis, complete SFZ mappings, ZIP byte equality, and simulated player routes. A representative hard-take energy-decay probe (time containing 90% of energy) falls from .097 to .060 s for kick, .035 to .024 s for snare, and .498 to .286 s for open hat. All eight Tight Pocket instruments measure shorter. These measures do not establish perceptual approval or exact reference matching.
+
+Tight Pocket awaits listening approval. Angular, High Voltage and Deep Pocket remain unbuilt in the accepted synthesis approach. Native shelf, save/playback/export integration, authored roll/riser requirements and hardware checks remain open; two listening kits do not close those gates.
