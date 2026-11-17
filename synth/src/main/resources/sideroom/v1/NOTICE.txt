@@ -1,0 +1,9 @@
+Virtuosity Drums / Versilian Studios; drummer Austin McMahon. CC0 1.0. Source: https://github.com/sfzinstruments/virtuosity_drums
+Conversion: mono 44.1 kHz PCM16; fixed instrument calibration, 22 Hz high-pass and endpoint fades. Open Road adds low-pass and gentle kick/snare tail damping, with energy matching across each full instrument grid. No song audio sampled. See provenance.json.
+R4 synth: averaged magnitude-envelope parameters derived from these CC0 sources; generated oscillator phase and noise, no original waveform playback. Acoustic comparator retains R2 Open Road recordings.
+R5 adds synthesized rack/floor toms, ride and crash from the same pinned CC0 library. All new source selections and conversion details are in provenance.json.
+R6 adds Tight Pocket: muted-snare source descriptors plus authored tuning/decay changes. Both listening kits use synthesis. Source waveforms are not embedded in runtime models.
+Adds angular: rimshot-snare source descriptors plus authored tuning/decay changes. Listening kits use synthesis. No source waveforms in runtime models.
+Adds high-voltage: offcenter-snare source descriptors plus authored tuning/decay changes. Listening kits use synthesis. No source waveforms in runtime models.
+Adds deep-pocket: velocity-dependent-snare source descriptors plus authored tuning/decay changes. Listening kits use synthesis. No source waveforms in runtime models.
+Native SIDEROOM v1 contains approved synthesized PCM, not the acoustic source recordings. Models and their original provenance are retained. Kotlin replays the fixed bank and authors finite phrases; the Python spectral renderer remains the regeneration tool.

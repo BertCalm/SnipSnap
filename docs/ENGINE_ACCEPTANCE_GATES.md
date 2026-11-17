@@ -1067,3 +1067,7 @@ device-test result; device models and versions were not supplied. See the accept
 - **Picker and physical playback: owner-reported tested and approved.** Android automation remains
   unrun here; no SDK or independently measured device results are available.
 - **Overall: incomplete.** Finite and held prototype integration is present, not full engine completion.
+
+### SIDEROOM — cached synthesized drum family
+
+Five distinct approved kits are implemented on the SKINS shelf with ten pads each. Three velocity layers × three takes survive native rendering, saving, replay and playback; authored finite rolls/risers are implemented but await owner listening approval. Focused software tests verify all 450 variants and MPC export read-back. **Export/hardware gate remains open:** MPC2 keeps the first take per layer, and generic MPC3 chain metadata checks do not establish physical slice/round-robin playback or resolve the existing embedded WAV slice-map limitation. No Android build/device check is claimed. Melodic voices, keygroups, chord tools and string STRUM do not apply. This is a versioned cached-synthesis bank, not an editable Kotlin spectral engine. See [SIDEROOM](SIDEROOM.md) for build steps and evidence.

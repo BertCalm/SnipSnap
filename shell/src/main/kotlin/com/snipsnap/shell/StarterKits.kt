@@ -102,6 +102,7 @@ object StarterKits {
         }
     }
 
+    val SIDEROOM_IDS = com.snipsnap.synth.SideroomKits.Kit.entries.map { it.id }.toSet()
     val PATIO_IDS = com.snipsnap.synth.PatioPerformance.Genre.entries.map { it.id }.toSet()
     val ALL: List<Starter> = listOf(
         // displayName is "EMPTY GRID", not "BLANK" — the other
@@ -982,7 +983,11 @@ object StarterKits {
             "Dholak and tabla TERRA kit: dholak booms, bayan bends, dayan strokes, a cajon backbeat and bells.",
             seeded = false,
         ) { com.snipsnap.synth.TerraGenreKits.build(com.snipsnap.synth.TerraGenreKits.Kit.PUNJAB) },
-    ))
+    )) + com.snipsnap.synth.SideroomKits.Kit.entries.map { kit ->
+        Starter(kit.id, "SIDEROOM ${kit.title.uppercase(java.util.Locale.ROOT)}",
+            "Synthesized ${kit.title} drums: eight instruments, a snare roll and a tom riser. Three strike strengths and three alternate hits.",
+            seeded = false, tempoBpm = kit.bpm.toFloat()) { com.snipsnap.synth.SideroomKits.build(kit) }
+    }
 
     fun byId(id: String): Starter? = ALL.firstOrNull { it.id == id }
 }
