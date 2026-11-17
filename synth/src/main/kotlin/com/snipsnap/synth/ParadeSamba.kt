@@ -4,7 +4,7 @@ import com.snipsnap.audio.Snip
 import com.snipsnap.json.*
 import kotlin.math.*
 
-/** Native audition candidate, not a registered Patch or factory bank. Model 1 ports samba.py's mechanisms.
+/** Native Samba renderer. Model 1 ports samba.py's auditioned mechanisms.
  * RNG and house output differ from Python, so this requires listening rather than a byte-parity claim.
  * TUNE moves the body ±6 semitones; STRIKE changes contact brightness; DAMP changes decay rates.
  */

@@ -3,7 +3,7 @@ package com.snipsnap.synth
 import com.snipsnap.audio.DrumClass
 import com.snipsnap.kit.ArrangedPad
 
-/** Provisional native kit, available to verification tooling before factory promotion. */
+/** Native Samba kit, sharing its saved model-1 recipes with the factory bank. */
 object SambaKits {
     const val BPM = 140f
     fun patches() = ParadeSamba.Voice.entries.map { voice ->
