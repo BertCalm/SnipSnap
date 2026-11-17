@@ -173,4 +173,20 @@ Measured (`KindredKitsTest`, `KindredKitTest`, `:shell:generateKindredKits`, `pr
   the round-2 Python groove in every band from under 60 Hz to over 6 kHz.
 
 Open: the owner's listen to the Kotlin kits ([K2 page](https://claude.ai/artifact/7ZrWVzzezn5uktr2fBm2Yf)), presets
-into the factory roster after that listen, the picker entry, and phone and MPC hardware.
+into the factory roster after that listen, and phone and MPC hardware.
+
+## Round K3: the picker (2026-11-17)
+
+KINDRED joins SYNTH's engine picker after SERVO, before CAIRN, under DRUMS in `EngineCatalog` ("One analog voice
+re-struck: kicks that dive, zaps, FM toms, metal"), wired as SERVO's entry was: every arm of the `Engine` enum, the
+saved-draft restore, a frozen draft before a macro bag, the live-edit list, and the native-factory path, because a
+KINDRED patch carries its strike velocity, take, kit recipe and model outside the macro map. Its presets come from
+`KindredPresets` (as CHITIN's come from its own, outside `Presets`): the 56 kit pads, named in capitals after their
+kit ("TECHNO KICK", "INDUSTRIAL HAMMER"), provisional until the owner hears the Kotlin kits. The FMTOM chip reads
+FM TOM. `UserPresets.rosterLine` promotes a KINDRED patch through its complete JSON so the recipe survives. Both
+READMEs count 96 picker engines.
+
+`NewEngineSynthScreenTest` gains an on-device test: the kick opens with its six controls; TECHNO KICK lands with the
+pad's LENGTH; a TONE edit survives a rebuild; the saved draft keeps the kit recipe, take 0, full velocity and model.
+This session has no Android SDK: CI's `android-build` compiles the entry and `emulator-tests` runs the test.
+`ConventionTest` (picker against catalogue, README counts), `UserPresetsTest` and `SynthRootTest` pass.

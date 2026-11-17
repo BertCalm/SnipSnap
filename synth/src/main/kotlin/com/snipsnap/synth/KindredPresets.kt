@@ -8,9 +8,9 @@ package com.snipsnap.synth
  */
 object KindredPresets {
     fun forVoice(voice: KindredVoice): List<KindredPatch> {
+        // Named "<KIT> <PAD>" in capitals, as SERVO's are, so a sound says which kit it came from.
         val pads = KindredRecipes.ALL.filter { it.voice == voice }.map { r ->
-            val kit = r.id.substringBefore('_').lowercase().replaceFirstChar { it.uppercase() }
-            KindredPatch.of(r).copy(name = "$kit ${r.name}")
+            KindredPatch.of(r).copy(name = "${r.id.substringBefore('_')} ${r.name}".uppercase())
         }
         return pads.ifEmpty { listOf(KindredPatch(voice.name.lowercase().replaceFirstChar { it.uppercase() }, voice, Kindred.defaults(voice))) }
     }

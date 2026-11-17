@@ -36,6 +36,8 @@ import com.snipsnap.synth.CalabashPresets
 import com.snipsnap.synth.Servo
 import com.snipsnap.synth.ServoPatch
 import com.snipsnap.synth.ServoPresets
+import com.snipsnap.synth.Kindred
+import com.snipsnap.synth.KindredPatch
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -328,6 +330,36 @@ class NewEngineSynthScreenTest : ComposeScreenTest() {
         assertEquals(1f, draft.velocity, .0001f)
         assertEquals(.6f, draft.macros.getValue("HEAT"), .0001f)
         assertEquals(.15f, draft.macros.getValue("GROWL"), .0001f)
+    }
+
+    /**
+     * KINDRED on the picker (2026-11-17), mirroring SERVO's entry: the kick opens with its six controls, TECHNO KICK
+     * (the first of its provisional presets, the TECHNO kit's A01) lands with the pad's LENGTH, an edit survives a
+     * rebuild, and the saved draft keeps the pad's kit recipe, take 0, full velocity and model.
+     */
+    @Test
+    fun kindredOpensItsKickLoadsAKitPadAndKeepsAnEditWithItsRecipeAndModel() {
+        show("KINDRED", "KICK")
+        button("KICK").assertIsSelected()
+        for (label in listOf("TUNE", "DIVE", "CLANG", "NOISE", "TONE", "LENGTH")) control(label).assertExists()
+        button("PRESET TECHNO KICK").performSemanticsAction(SemanticsActions.OnClick) { it() }
+        pump()
+        assertEquals(.42f, progress("LENGTH"), .0001f)
+        assertEquals(.5f, progress("DIVE"), .0001f)
+        adjust("TONE", .6f)
+        compose.runOnIdle { generation++ }
+        pump()
+        assertEquals("KINDRED", settings["engine"])
+        assertEquals(.6f, progress("TONE"), .0001f)
+        assertEquals(.42f, progress("LENGTH"), .0001f)
+        assertFalse(showsLoop())
+        val draft = SynthDrafts.read(settings).single { it.engine == "KINDRED" && it.voiceName == "KICK" } as KindredPatch
+        assertEquals(Kindred.MODEL_VERSION, draft.model)
+        assertEquals("TECHNO_A01", draft.recipe)
+        assertEquals(0, draft.take)
+        assertEquals(1f, draft.velocity, .0001f)
+        assertEquals(.6f, draft.macros.getValue("TONE"), .0001f)
+        assertEquals(.42f, draft.macros.getValue("LENGTH"), .0001f)
     }
 
     @Test

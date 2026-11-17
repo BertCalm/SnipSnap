@@ -945,7 +945,7 @@ A one-voice, eight-step analog-style percussion synth and four genre kits from i
 | Hardware playback | Not verified | |
 | Sound character | Python round 2 accepted | "It's better. I think it was something with my headphones. Let's proceed with ring 2 sounds", corrected by the owner to "Round" (2026-11-15). The Kotlin port matches the noise-free recipes to 0.01 dB; the noise recipes are another realisation and wait for the ear. |
 
-- **Overall: in progress.** The software gates pass at K2. Open: the owner's listen to the Kotlin kits (each groove measures within 1 dB of the accepted round-2 groove in every band), the presets into the factory roster after it, the picker, hardware.
+- **Overall: in progress.** The software gates pass at K2, and KINDRED is on SYNTH's picker at K3 (2026-11-17) with its 56 kit pads as provisional presets. Open: the owner's listen to the Kotlin kits (each groove measures within 1 dB of the accepted round-2 groove in every band), the presets into the factory roster after it, hardware.
 
 ## CALABASH (complete, 2026-11-15: four genre kits on the shelf, approved by ear and on phone and MPC 3)
 

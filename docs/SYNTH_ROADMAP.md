@@ -3885,3 +3885,10 @@ Three owner-approved synthesized banks, delivered as exact frozen PCM rather tha
 a new engine: SOUL POCKET, ROADHOUSE ROCK and OPEN ROOM ROCK. Forty-eight pads,
 432 velocity/take variants, hat chokes, rolls and swells. See [SOUL_ROCK](SOUL_ROCK.md)
 for software evidence and the remaining phone/MPC gate.
+
+### KINDRED, round K3 (2026-11-17)
+
+KINDRED on SYNTH's engine picker after SERVO, before CAIRN, under DRUMS; 96 picker engines. Its presets are the 56
+kit pads from `KindredPresets`, provisional until the owner hears the Kotlin kits, loading whole with their recipe,
+take and model. An on-device test opens the kick, loads TECHNO KICK, keeps a TONE edit and the recipe through a
+rebuild. Compiled and run by CI (no SDK in the session). Open: the owner's listen, the factory roster, hardware.
