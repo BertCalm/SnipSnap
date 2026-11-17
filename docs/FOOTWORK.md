@@ -318,3 +318,14 @@ Saved playback-window auditions and a separately labeled source phrase accompany
 the candidate. See `prototype/footwork/native_v4/` for reproduction and measured
 parity. Native listening/device acceptance, unapproved source/kit identities and
 the MPC 3 slice-map export blocker remain open.
+
+### Native naturalness rejection and brush reset
+
+The owner finds the brushes unnatural and everything stiff/mechanical. Native
+model 4 is not sound-approved. `prototype/footwork/brush_motion/` replaces the
+brush experiment's stationary noise swell with speed-spaced microcontacts,
+variable pressure and quieter rubbing excitation. A short phrase separately
+tests shared timing/force/travel curves. These are authored analogies, not measured
+human movement. Forty-eight Python source/save cells pass, with source and timing
+comparisons for listening. Native kit/model versions and all outstanding gates
+remain unchanged. Delivery correctness does not establish naturalness.
