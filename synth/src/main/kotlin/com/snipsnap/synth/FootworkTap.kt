@@ -1,7 +1,6 @@
 package com.snipsnap.synth
 
 import com.snipsnap.audio.Fft
-import com.snipsnap.audio.WavWriter
 import kotlin.math.*
 
 /** Model 4 Tap-only port of the reference-guided Python studies.
@@ -10,7 +9,7 @@ import kotlin.math.*
  */
 internal object FootworkTap {
     private const val FS=176400
-    private const val RATE=WavWriter.MPC_SAMPLE_RATE
+    private const val RATE=Dsp.RATE
     private class Noise(role: Int,take: Int) {
         private val source=Dsp.Noise(Dsp.seedFor("FOOTWORK-TAP",4,role,take))
         fun uniform(a: Double,b: Double)=a+(source.next().toDouble()+1)*.5*(b-a)
