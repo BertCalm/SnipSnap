@@ -54,8 +54,15 @@ object RiddimKitGenerator {
                 val hard = play(pad.slot, 1f, 0)
                 write("pad-$n.wav", hard)
                 run {
-                    // Soft, medium, hard: four takes each, in the order the pad deals them.
-                    val clips = RiddimKits.velocities.flatMap { v -> List(RiddimKits.TAKES) { t -> play(pad.slot, v, t) } }
+                    // Soft, medium, hard: four takes each, in the order the pad deals them. Each zone is struck at the
+                    // middle of its own MIDI range, as RiddimKitTest plays it. The render forces (0.35, 0.65, 1.0)
+                    // are not the playback velocities: the sampler splits 0..127 into equal zones, and 0.35 x 127 = 44
+                    // lands in the middle zone, so a strip struck at the render forces plays mid, mid, hard.
+                    val zones = requireNotNull(pad.chain).zones
+                    val clips = zones.flatMap { z ->
+                        val v = (z.velStart + z.velEnd) / 2f / 127f
+                        List(RiddimKits.TAKES) { t -> play(pad.slot, v, t) }
+                    }
                     val stride = clips.maxOf { it.size } + RATE / 8
                     val strip = FloatArray(stride * clips.size)
                     clips.forEachIndexed { i, x -> x.copyInto(strip, i * stride) }
