@@ -1,0 +1,90 @@
+{
+  "bpm": 120,
+  "meter": "4/4",
+  "count_in_beats": 4,
+  "pattern_bars": 2,
+  "repetitions": 2,
+  "events": [
+    [
+      0,
+      "toe",
+      0.9
+    ],
+    [
+      0.75,
+      "toe",
+      0.35
+    ],
+    [
+      1,
+      "heel",
+      0.55
+    ],
+    [
+      1.5,
+      "toe",
+      0.65
+    ],
+    [
+      2,
+      "toe",
+      0.9
+    ],
+    [
+      2.75,
+      "toe",
+      0.35
+    ],
+    [
+      3,
+      "heel",
+      0.55
+    ],
+    [
+      4,
+      "toe",
+      0.9
+    ],
+    [
+      4.75,
+      "toe",
+      0.35
+    ],
+    [
+      5,
+      "heel",
+      0.55
+    ],
+    [
+      5.5,
+      "toe",
+      0.65
+    ],
+    [
+      6,
+      "toe",
+      0.9
+    ],
+    [
+      6.75,
+      "toe",
+      0.35
+    ],
+    [
+      7,
+      "heel",
+      0.55
+    ],
+    [
+      7.5,
+      "toe",
+      0.45
+    ],
+    [
+      7.75,
+      "toe",
+      0.65
+    ]
+  ],
+  "scope": "Authored rhythm study; preferred contact coefficients unchanged; no brush or dancer-motion realism claim"
+}

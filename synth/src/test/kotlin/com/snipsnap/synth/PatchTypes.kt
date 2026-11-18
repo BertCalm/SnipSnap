@@ -55,12 +55,13 @@ internal object PatchTypes {
      * sat here from its Kotlin port until the owner heard its kits (2026-11-13),
      * CLUTTER likewise until the owner approved its kits' audition (2026-11-14); TERRA
      * until the owner chose to promote it and kept its classic kit (2026-11-14). EMBER
-     * sits here from its Kotlin port (round 1) until its kits are heard. CALABASH sat here from its Kotlin
+     * sat here from its Kotlin port (round 1) until the owner approved its five kits (2026-11-16, "All sound great")
+     * and their pads became its factory bank. CALABASH sat here from its Kotlin
      * port (round 1, 2026-11-15) until the owner approved its kits on the shelf (2026-11-15) and they became its
      * factory bank, as CLUTTER's did. SERVO sat here from its port until the owner approved its kits (2026-11-15)
      * and their hits became its factory bank.
      */
-    val ROSTERLESS: Set<String> = setOf(HydroformPatch.ENGINE, SnapPatch.ENGINE, SilkPatch.ENGINE, GyrePatch.ENGINE, MagnetPatch.ENGINE, EmberPatch.ENGINE)
+    val ROSTERLESS: Set<String> = setOf(HydroformPatch.ENGINE, SnapPatch.ENGINE, SilkPatch.ENGINE, GyrePatch.ENGINE, MagnetPatch.ENGINE)
 
     /**
      * The engines with a [Patch] type and provisional recipes of their own that are
