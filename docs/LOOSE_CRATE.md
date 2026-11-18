@@ -1,18 +1,23 @@
 # LOOSE CRATE
 
-A planned family of drum kits after one producer's loose, dusty, sub-heavy beat-tape drums. LOOSE CRATE is a
-working name. No kit, pad or preset name may use the producer's name, his album titles or his label
-(`PresetTestSupport.trademarkBlocklist`; round 1 adds those terms to it).
+Four drum kits after one producer's loose, dusty, sub-heavy beat-tape drums. LOOSE CRATE is a working name.
+No kit, pad or preset name may use the producer's name, his aliases, album titles or label: `LooseCrateKitsTest`
+checks every name against `PresetTestSupport.trademarkBlocklist` and against those terms.
 
 The characteristic gesture is **kick hums under the bar → snare lands loose, flammed or bouncing → hats drag
 behind → a dark, rumbling bed with the top cut off**.
 
 ## Status
 
-**Round 0 rendered, not yet heard.** Seven candidate hits and one four-bar groove, rendered in Kotlin from the
-engines as they stand and measured against the owner's reference files. Nothing is on the shelf, nothing is
-registered, and no setting has been heard. The [listening page](https://claude.ai/artifact/DaKKJX6p18cMbitmFKDVQn)
-is private to the owner's account.
+**Round 1 built, not yet heard.** The four kits are on FRESH TAPE's SKINS shelf (`LooseCrateKits`,
+`StarterKits`), with their velocity and round-robin grids proven in software through save, reload, playback
+and MPC 3, SFZ and DecentSampler export. Of their sounds, the owner has heard only round 0's two hum kicks
+("Both sound great", 2026-11-18); the owner then said "Continue" without answering round 0's other questions,
+so round 0's other sounds stand as provisionally accepted. Nothing has been played on a phone or an MPC.
+
+Listening pages (private to the owner's account): [round 1](https://claude.ai/artifact/WgYApFNJqJTjEiv6XGgnn6),
+the four kits read back from their MPC 3 export; [round 0](https://claude.ai/artifact/DaKKJX6p18cMbitmFKDVQn),
+the candidates and the first groove.
 
 Repository truth: read at `afb0fa98` (2026-11-18). APIs used were grepped: `KitStrikes` (in `Cypher.kt`),
 `Cypher.Note`, `Cypher.humanised`, `Cypher.phraseRaw`, `CypherKits.touch`, `CypherKits.render`, `Skin.render`,
@@ -123,20 +128,75 @@ Disclosed, not fixed:
   that reason.
 - TAPE's 5 ms base delay puts 5 ms of silence before every printed pad. CYPHER DUST's printed pads have it too.
 
+## Round 1 (as built)
+
+`LooseCrateKits` holds the four kits in CYPHER's shape. Each has fourteen hits, then A15 a roll that speeds up into
+a landing (strikes at beats × (i / count)^0.6 over two beats) and A16 a four-bar groove. Every pad has three
+velocity zones (0.30, 0.65, 1) of four takes, each zone levelled to one peak (0.92); the sampler turns
+velocity into gain. Chokes: hats (1), the roll and the groove (2), the hum kick and the subs (3).
+
+```sh
+./gradlew --no-daemon :synth:test --tests '*LooseCrateKitsTest' :shell:test --tests '*LooseCrateKitTest'
+./gradlew --no-daemon :shell:generateLooseCrateKits      # → testkit/loose-crate-kits/ (gitignored)
+```
+
+| Kit | Tempo | Print | Pads |
+|---|---|---|---|
+| HUMMIN | 88 | crate (round 0's) | Hum Kick, Flam Snare, Dark Hat, Dark Open Hat, Hum Sub, Bounce Snare, Thud Kick, Ghost Snare, Rim, Shaker, Dark Ride, Low Tom, Knock, Slap Snare; Flam Roll; Hummin Groove |
+| CLOTH | 82 | close: 14-bit, full rate, light tape, no record under the hits | Drop Kick, Bounce Snare, Tight Hat, Open Hat, Short Kick, Tight Flam, Cross Stick, Ghost Snare, Low Tom, High Tom, Shaker, Ride, Swish, Slap; Bounce Roll; Cloth Groove |
+| HAZE | 84 | haze: coarser, the tape wobbling most | Haze Kick (ONSET), Lazy Flam, Haze Hat, Haze Open Hat, Wash, Haze Ride, Bell, Metal, Low Sub, High Tom, Low Tom, Shaker, Rim, Ghost Flam; Ghost Roll; Haze Groove |
+| RITUAL | 86 | dub: the darkest top, the deepest rumble | Thud Kick, Slap Snare, Ritual Hat, Ritual Open Hat, Sub Drop, Rimshot, Low Tom, Doum, Hand Slap, Shaker, Low Bell, Knock, Ghost Slap, High Thud; Slap Roll; Ritual Groove |
+
+HUMMIN's pads 1, 2, 3, 5, 6, 7 and 14 are round 0's strikes through round 0's print: the round-0 generator now
+renders them from `LooseCrateKits`, and its 33 files are byte-identical to the ones the owner heard.
+
+Measured on the exported files (Python probes; the groove's references in brackets):
+
+| Groove | Crest factor | 95% of energy below | Loop-point step (largest step before it) |
+|---|---|---|---|
+| HUMMIN | 10.9 dB (10.8 to 12.6) | 161 Hz (221 to 334) | 0.0029 (0.034) |
+| CLOTH | 18.8 dB (15.6) | 5.7 kHz (3.0 k) | 0.0003 (0.0014) |
+| HAZE | 15.6 dB (11.4 to 17.8) | 4.3 kHz (0.2 to 6.0 k) | 0.0035 (0.0058) |
+| RITUAL | 16.0 dB (12.8 to 13.1) | 1.2 kHz (161 to 872) | 0.0009 (0.0028) |
+
+What changed while building, measured:
+- **The loop seam.** Round 0 printed the groove once and stepped 0.005 at the wrap. The groove is now
+  printed twice end to end and the second pass kept, its last 20 ms crossfaded into the first pass, which runs
+  straight on into the kept pass's first frame. `every groove is bar-exact and closes on itself` holds it.
+- **The print brightened soft hits.** Fed in at its zone's level, a soft hit's 12-bit grain was relatively
+  louder, and every low or woody drum's soft zone measured brighter than its hard one (the thud kick 264 →
+  244 → 244 Hz onset centroid, soft to hard; CLOTH's near-clean converter showed none). Every pad now enters
+  its print at 0.9. `the print never makes a softer hit brighter` holds it; reverting the level alone fails
+  it on HUMMIN's thud kick (soft 351 Hz, hard 311 Hz). Hard hits already entered at 0.9, so round 0 did not move.
+- **A soft doum's takes were nearly alike** (0.0015 apart, under the family's 0.005): TERRA's re-seeded
+  strike barely changes a quiet hit, so a take also nudges FORCE and DECAY.
+- **HAZE's first kick was RITUAL's drum** (a SKIN kick 0.18 from the thud): it is ONSET's now.
+
+Disclosed, not fixed:
+- **Build time.** A kit builds in 31 to 85 seconds on this machine (`:shell:generateLooseCrateKits`), and the
+  phone builds a starter when it is picked. Not measured on a phone.
+- **Small velocity changes.** The rims, the cross stick and the toms change by 1 to 3 percent in onset
+  centroid from soft to hard. They pass the shape test (a different strike) but may sound only quieter.
+- **RITUAL is brighter than its references** (95 percent of its energy under 1.2 kHz, against 161 to 872 Hz):
+  its short thud carries less sub than the reference loops' kicks.
+- A printed one-shot carries its print's VINYL bed to the end of its render buffer, and pads' beds add when
+  they overlap; CLOTH's hits carry none.
+
 ## Gates
 
 | Gate | Status |
 |---|---|
 | Melodic, keygroups, chord tools, STRUM | Not applicable: drum kits |
-| Drums: multiple distinct genre kits on the shelf | Not yet: four planned, none built |
-| Percussion: roll/riser | Not yet: a flam roll is planned per kit |
-| Velocity and round robin: rendering | Partly: three zones and four fresh takes per candidate render; velocity is timbral except the thud kick (above) |
-| Velocity and round robin: saving, playback, export | Not yet: no kit exists |
+| Drums: multiple distinct genre kits on the shelf | Built, not heard: four kits under SKINS. `LooseCrateKitsTest` holds every pair to at least six different pad names and a different kick and main snare, dry (shape distance over 0.5), and the four prints differ |
+| Percussion: roll/riser | Built, not heard: one accelerating roll per kit (A15) |
+| Velocity and round robin: rendering | Pass in software: every soft zone is a different strike from the hard one and never brighter; every zone holds four different strikes (`LooseCrateKitsTest`) |
+| Velocity and round robin: saving, playback, export | Pass in software: `LooseCrateKitTest` and `:shell:generateLooseCrateKits` (all four kits, 192 slices each: saved PCM, reload, the pad resolver walking the takes, MPC 3 track, SFZ, DecentSampler). MPC 2 is not written (the owner's format limit). Not played on a phone or an MPC |
 
 ## Ledger
 
-- **Verified**: the APIs above, by grep at `afb0fa98`; `LooseCrateRound0Test` (four tests) passes.
+- **Verified**: the APIs above, by grep at `afb0fa98`; `LooseCrateRound0Test` (4), `LooseCrateKitsTest` (11) and
+  `LooseCrateKitTest` (3) pass; `:shell:generateLooseCrateKits` verifies all four kits.
 - **Measured**: every number in the round-0 tables, Python probes on the Kotlin renders and on the reference
   files.
-- **Proposed**: every macro setting, the print, the four kits, the multi-strike offsets.
-- **Heard**: nothing yet.
+- **Proposed**: every setting outside round 0's candidates, the four prints, the rolls and grooves.
+- **Heard**: round 0's two hum kicks ("Both sound great", 2026-11-18). Nothing else.

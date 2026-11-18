@@ -12,7 +12,7 @@ import com.snipsnap.app.theme.tape
 import com.snipsnap.shell.Scheme
 
 /**
- * One door row on the pad editor to a screen of its own (`EFFECTS ▸`, `VARIATIONS ▸`): the [label], whose
+ * One door row on the pad editor to a screen of its own (the short pad page's six): the [label], whose
  * `▸` says it opens a screen, and under it the closed [line] saying what is applied or what is inside
  * ([com.snipsnap.shell.PadSheetBoxes.effectsLine], [com.snipsnap.shell.PadSheetBoxes.variationsLine]).
  * Always drawn, greyed while the sheet is busy ([enabled] false), so the editor does not rearrange
@@ -22,9 +22,17 @@ import com.snipsnap.shell.Scheme
  * past the dex register limit's comfort, and an inline Column here would compile into it.
  */
 @Composable
-internal fun PageDoor(label: String, line: String, scheme: Scheme, enabled: Boolean, onClick: () -> Unit) {
+internal fun PageDoor(
+    label: String,
+    line: String,
+    scheme: Scheme,
+    enabled: Boolean,
+    /** Drawn dimmed but still tappable when the screen behind it has nothing to work on yet; it says why. */
+    dimmed: Boolean = false,
+    onClick: () -> Unit,
+) {
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-        ActionButton(label, scheme, enabled = enabled, modifier = Modifier.fillMaxWidth(), onClick = onClick)
+        ActionButton(label, scheme, enabled = enabled, dimmed = dimmed, modifier = Modifier.fillMaxWidth(), onClick = onClick)
         TapeText(line, TapeType.pixelSmall, scheme.ink2.tape, Modifier.fillMaxWidth(), maxLines = 2)
     }
 }

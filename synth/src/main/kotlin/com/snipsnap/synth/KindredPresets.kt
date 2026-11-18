@@ -1,19 +1,35 @@
 package com.snipsnap.synth
 
 /**
- * Provisional references, kept out of [Presets] while the engine is a prototype (`PatchTypes.PROTOTYPES`).
- * They are the 56 one-shots of the four genre kits the owner accepted by ear at round 2 in the Python harness
- * (2026-11-15), filed under the voice that plays them and named after their kit. The Kotlin renders have not been
- * heard yet; accepting them is what moves KINDRED into the factory roster.
+ * KINDRED's factory bank: the fifty-six one-shots of the four approved genre kits as patches.
+ *
+ * The engine stayed a prototype until the owner heard its kits from the app. On 2026-11-18 they answered the K2
+ * listening page and the hardware check with "Approved, approved", so the roster is those pads and nothing reasoned
+ * from the knobs: each pad's voice, kit recipe and macros, struck full, as the kit grid's first take (engine take 0).
+ * A preset renders through the engine's own output stage; the kit's pad is the same strike through the kit's level
+ * law.
+ *
+ * Each kit is fourteen one-shots, then a phrase and a riser. The two phrases are many strikes of one voice, not a
+ * pad's recipe, so they are not presets.
+ *
+ * Named "<KIT> <PAD>" in capitals, as SERVO's are (TECHNO KICK, INDUSTRIAL HAMMER), so a sound says which kit it came
+ * from. Every one of the fifteen voices plays at least one pad.
  */
 object KindredPresets {
-    fun forVoice(voice: KindredVoice): List<KindredPatch> {
-        val pads = KindredRecipes.ALL.filter { it.voice == voice }.map { r ->
-            val kit = r.id.substringBefore('_').lowercase().replaceFirstChar { it.uppercase() }
-            KindredPatch.of(r).copy(name = "$kit ${r.name}")
-        }
-        return pads.ifEmpty { listOf(KindredPatch(voice.name.lowercase().replaceFirstChar { it.uppercase() }, voice, Kindred.defaults(voice))) }
-    }
+    /** Paste complete UserPresets roster lines here; the approved kits stay fixed. */
+    private val promoted: List<KindredPatch> = listOf()
 
-    fun all(): List<KindredPatch> = KindredVoice.entries.flatMap(::forVoice)
+    /** The take a preset is filed at: the kit grid's first take, which is the engine's take 0. */
+    const val TAKE = 0
+
+    fun forVoice(voice: KindredVoice): List<KindredPatch> = all().filter { it.voice == voice }
+
+    fun all(): List<KindredPatch> = KindredKits.Kit.entries.flatMap(::kitPatches) + promoted
+
+    /** The kit's tag in a preset name: its recipe prefix (TECHNO, INDUSTRIAL, ELECTRO, AMBIENT). */
+    fun tag(kit: KindredKits.Kit): String = kit.spec.name
+
+    fun kitPatches(kit: KindredKits.Kit): List<KindredPatch> = KindredKits.recipes(kit).map { r ->
+        KindredPatch.of(r, velocity = 1f, take = TAKE).copy(name = "${tag(kit)} ${r.name}".uppercase())
+    }
 }

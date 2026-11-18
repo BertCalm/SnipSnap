@@ -46,7 +46,6 @@ class PatchesTest {
         SambaPatch("Samba", ParadeSamba.Voice.CAIXA, emptyMap()),
         DrumlinePatch("Section", DrumlineVoice.SNARE, emptyMap()),
         SootPatch("Hot", SootVoice.SNARE, emptyMap()),
-        KindredPatch.of(KindredRecipes.ALL.first(), velocity = 0.6f, take = 2),
         RiddimPatch("Kick", RiddimVoice.KICK, emptyMap()),
         HalobarPatch("Mallet dub", HalobarVoice.MARIMBA, emptyMap()),
         TempestPatch("Legacy Strike", TempestVoice.METAL, emptyMap(), model = 1),

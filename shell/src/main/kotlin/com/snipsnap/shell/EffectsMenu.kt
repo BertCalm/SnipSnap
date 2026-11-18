@@ -78,6 +78,23 @@ object EffectsMenu {
     /** That section's closed line: what is inside. */
     const val BUTTONS_HOLDS = "THE CHIP ROWS, PEDALS, MORE, COPY AND PASTE"
 
+    // ---- Try before you keep (fix e; the owner chose "hear it, then KEEP", 2026-11-16) ----
+
+    /** The tried row's word, where an ON row says its AMT. */
+    const val HEARING = "HEARING"
+
+    /** The bar under the tried row: what it means, and its two buttons. */
+    const val TRY_LINE = "The pad plays as before until KEEP."
+    const val TRY_CANCEL = "CANCEL"
+    fun keepLabel(name: String): String = "KEEP $name"
+
+    /**
+     * Whether a row's tap is heard before it is kept: an effect or a pedal, which change the pad's
+     * sound in one tap. A board already stages on its card until KEEP; an outside move, the chain
+     * and SHAPE open pages of their own, so a tap on them only opens.
+     */
+    fun tries(target: Target): Boolean = target is Target.Segment || target is Target.Pedal
+
     /** The nine groups, top to bottom; then the two pages of their own ([PAGES]). */
     val GROUPS: List<Group> = listOf(
         Group(

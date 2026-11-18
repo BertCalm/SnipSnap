@@ -92,7 +92,6 @@ class SynthRootTest {
             Presets.all() + listOf(
                 GyrePatch("Door", GyreVoice.FLICK, emptyMap()),
                 com.snipsnap.synth.RiddimPatch("Kick", com.snipsnap.synth.RiddimVoice.KICK, emptyMap()),
-                com.snipsnap.synth.KindredPatch.of(com.snipsnap.synth.KindredRecipes.ALL.first()),
                 MagnetPatch("Door", MagnetVoice.JANGLE, emptyMap()),
                 SilkPatch("Door", SilkVoice.OUD, emptyMap()),
                 SnapPatch("Door", SnapVoice.ORBIT, emptyMap(), IntArray(Snap.TABLE_SIZE) { (it * 255) / (Snap.TABLE_SIZE - 1) }),

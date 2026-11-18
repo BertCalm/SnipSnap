@@ -1,6 +1,7 @@
 package com.snipsnap.shell
 
 import com.snipsnap.kit.KitPad
+import com.snipsnap.kit.isRobinChain
 import com.snipsnap.kit.PadShape
 import java.util.Locale
 import kotlin.math.roundToInt
@@ -35,7 +36,8 @@ object PadSheetBoxes {
     /**
      * Box order, top to bottom, as the pad editor draws them: TREATMENT, SHAPE and OUTSIDE on the EFFECTS
      * screen (OUTSIDE plays the pad out through a speaker or pedal and records it back over the pad's sound,
-     * so it is an effect), MUTATE on the VARIATIONS screen, then MAKE on the editor itself.
+     * so it is an effect), MUTATE on the MIX WITH ANOTHER SOUND screen, then MAKE on its own MAKE FROM THIS
+     * PAD screen (the short pad page, 2026-11-16).
      */
     val ORDER: List<Box> = Box.values().toList()
 
@@ -43,7 +45,7 @@ object PadSheetBoxes {
     fun page(box: Box): PadSheetPage = when (box) {
         Box.TREATMENT, Box.SHAPE, Box.OUTSIDE -> PadSheetPage.EFFECTS
         Box.MUTATE -> PadSheetPage.VARIATIONS
-        Box.MAKE -> PadSheetPage.EDITOR
+        Box.MAKE -> PadSheetPage.MAKE
     }
 
     /** What the TREATMENT strip reads when the pad carries no treatment: the effects list's first names (START HERE). */
@@ -189,6 +191,30 @@ object PadSheetBoxes {
         val full = "COMBINE SOUNDS · $applied"
         return if (full.length <= SUMMARY_CHARS) full else "COMBINE SOUNDS · APPLIED"
     }
+
+    /**
+     * The closed line of the editor's `LAYERS AND TAKES ▸` door (the short pad page, 2026-11-16): ROUND ROBIN ON
+     * for a robin pad, how many sounds a layered pad plays, else what the screen holds.
+     */
+    fun layersLine(pad: KitPad): String = when {
+        pad.isRobinChain -> "ROUND ROBIN ON"
+        pad.velocityLayers.isNotEmpty() -> "LAYERED · ${pad.velocityLayers.size} SOUNDS"
+        else -> LAYERS_HOLDS
+    }
+
+    /** What the LAYERS AND TAKES door reads on a single-sound pad: what the screen holds. */
+    const val LAYERS_HOLDS = "SOFT HITS, ROUND ROBIN, STACK"
+
+    /** The closed line of the `TRIM AND SPLICE ▸` door: what the screen holds. */
+    const val TRIM_HOLDS = "WHERE IT STARTS AND ENDS, AND SPLICING"
+
+    /**
+     * The closed line of the `HEAR IT IN THE BEAT ▸` door (AUDITION, renamed on the short pad page): it plays
+     * this pad against its other version in a beat, so with no other version it says what it is waiting for.
+     */
+    fun beatLine(hasOtherVersion: Boolean): String = if (hasOtherVersion) BEAT_READY else BEAT_WAITING
+    const val BEAT_READY = "THIS PAD BESIDE ITS OTHER VERSION, IN A BEAT"
+    const val BEAT_WAITING = "ONCE THERE IS A SECOND VERSION OF THIS PAD"
 
     /** What the EFFECTS door reads when the pad carries no treatment, shape or trip: the three benches on the screen. */
     const val EFFECTS_HOLDS = "EFFECTS, SHAPE, SPEAKER AND ROOM"

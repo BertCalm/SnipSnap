@@ -2,10 +2,9 @@
 
 A one-voice, eight-step analog-style percussion synth, and four genre kits made from that one voice.
 
-Status: round K2 (2026-11-16). The Kotlin engine, patch and recipes are built and tested (K1, merged in #1156),
-and the four kits are on the shelf with velocity and round robin proved through saving, playback and MPC 3 export
-in software (K2). The sound direction was accepted by ear on the Python round-2 renders; no Kotlin render has been
-heard yet.
+Status: complete (2026-11-18). The engine, the four kits on the shelf, the picker entry and the factory bank are
+built; the owner approved the Kotlin kits and the hardware ("Approved, approved", 2026-11-18). MPC 2 cannot carry
+velocity x round robin on one pad (the owner's format limit).
 
 The characteristic gesture: **a strike → the pitch dives from a zap into a body → the ladder closes over the
 harmonics → the next step re-strikes the same voice at its own height and force.**
@@ -173,4 +172,33 @@ Measured (`KindredKitsTest`, `KindredKitTest`, `:shell:generateKindredKits`, `pr
   the round-2 Python groove in every band from under 60 Hz to over 6 kHz.
 
 Open: the owner's listen to the Kotlin kits ([K2 page](https://claude.ai/artifact/7ZrWVzzezn5uktr2fBm2Yf)), presets
-into the factory roster after that listen, the picker entry, and phone and MPC hardware.
+into the factory roster after that listen, and phone and MPC hardware.
+
+## Round K3: the picker (2026-11-17)
+
+KINDRED joins SYNTH's engine picker after SERVO, before CAIRN, under DRUMS in `EngineCatalog` ("One analog voice
+re-struck: diving kicks, zaps, FM toms"), wired as SERVO's entry was: every arm of the `Engine` enum, the
+saved-draft restore, a frozen draft before a macro bag, the live-edit list, and the native-factory path, because a
+KINDRED patch carries its strike velocity, take, kit recipe and model outside the macro map. Its presets come from
+`KindredPresets` (as CHITIN's come from its own, outside `Presets`): the 56 kit pads, named in capitals after their
+kit ("TECHNO KICK", "INDUSTRIAL HAMMER"), provisional until the owner hears the Kotlin kits. The FMTOM chip reads
+FM TOM. `UserPresets.rosterLine` promotes a KINDRED patch through its complete JSON so the recipe survives. Both
+READMEs count 96 picker engines.
+
+`NewEngineSynthScreenTest` gains an on-device test: the kick opens with its six controls; TECHNO KICK lands with the
+pad's LENGTH; a TONE edit survives a rebuild; the saved draft keeps the kit recipe, take 0, full velocity and model.
+This session has no Android SDK: CI's `android-build` compiles the entry and `emulator-tests` runs the test.
+`ConventionTest` (picker against catalogue, README counts), `UserPresetsTest` and `SynthRootTest` pass.
+
+## Round K4: the factory bank (2026-11-18)
+
+Asked to listen to the K2 page and to check the kits on phone and MPC, the owner answered "Approved, approved",
+read as both: the Kotlin kits by ear, and the hardware. KINDRED leaves `PatchTypes.PROTOTYPES`: `KindredPresets` is
+now its factory bank, the 56 one-shots of the four kits as patches (each pad's voice, recipe and macros, struck full,
+take 0), served by `Presets` like every rostered engine, so the picker no longer needs its own source. The phrase
+and riser pads are many strikes of one voice and are not presets. `KindredPresetsTest` holds SERVO's contracts:
+the bank is the kits pad for pad, each preset is the kit's pad (correlation over 0.999 after the kit's finish),
+registration, sanity, round trip with velocity, take, recipe and model, names (unique, caps, kit-tagged, at most 24
+letters, no maker's name), and distinctness (two presets of a voice differ in recipe and in bytes; SERVO's macro
+distance does not apply, because a recipe changes the circuit as well as the macros). `UserPresets` promotion has
+a destination (`promoted`) and its `UserPresetsTest` branches.

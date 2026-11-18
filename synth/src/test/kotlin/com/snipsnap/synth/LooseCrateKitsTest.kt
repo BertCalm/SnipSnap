@@ -40,6 +40,28 @@ class LooseCrateKitsTest {
         return high / max(all, 1e-18)
     }
 
+    /**
+     * The magnitude-weighted spectral centroid of the first 50 ms after the onset: the probe StrikeVelocityTest
+     * uses, since a power-weighted centroid (or one band split) hides a drum's overtones and a hat's darkening.
+     */
+    private fun onsetCentroid(x: FloatArray): Double {
+        val peak = x.maxOf { abs(it) }
+        val on = x.indexOfFirst { abs(it) > peak * .05f }
+        val n = min((.05f * rate).toInt(), x.size - on)
+        var num = 0.0
+        var den = 0.0
+        for (k in 1 until n / 2) {
+            var re = 0.0
+            var im = 0.0
+            val w = 2 * Math.PI * k / n
+            for (i in 0 until n) { val hann = .5 - .5 * Math.cos(2 * Math.PI * i / n); re += x[on + i] * hann * Math.cos(w * i); im -= x[on + i] * hann * Math.sin(w * i) }
+            val mag = sqrt(re * re + im * im)
+            num += mag * k * rate / n
+            den += mag
+        }
+        return num / max(den, 1e-18)
+    }
+
     private fun rendered(kit: Kit, role: Int, velocity: Float, take: Int): Snip =
         renders.getOrPut(listOf(kit, role, velocity, take)) { LooseCrateKits.render(kit, role, velocity, take) }
 
@@ -89,6 +111,18 @@ class LooseCrateKitsTest {
             val hard = LooseCrateKits.dry(kit, role, 1f, 0).samples
             val soft = LooseCrateKits.dry(kit, role, .3f, 0).samples
             assertTrue(brightness(soft) < brightness(hard), "${kit.name} role $role: soft is not duller than hard")
+        }
+    }
+
+    @Test fun `the print never makes a softer hit brighter`() {
+        // Fed in at its zone's level, a soft hit's converter grain was relatively louder and a 12-bit print
+        // brightened every low or woody drum's soft zone. Every pad now enters the print at one level.
+        for (kit in Kit.entries) for (role in 0 until LooseCrateKits.HITS) {
+            if (role in subs(kit)) continue
+            val hard = rendered(kit, role, 1f, 0).samples
+            val soft = rendered(kit, role, .3f, 0).samples
+            val (cs, ch) = onsetCentroid(soft) to onsetCentroid(hard)
+            assertTrue(cs <= ch * 1.005, "${kit.name} role $role: printed soft onset centroid $cs Hz against hard $ch Hz")
         }
     }
 

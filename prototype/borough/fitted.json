@@ -1,0 +1,930 @@
+{
+ "drums_baxter": {
+  "hat": {
+   "params": {
+    "metal_hz": 362.4492,
+    "metal": 0.5864,
+    "bp_hz": 11053.2817,
+    "hp_hz": 2656.0526,
+    "decay_ms": 95.6352,
+    "drive": 0.0801,
+    "lp": 1392.207,
+    "tilt": -9.1401
+   },
+   "residual_db": 6.825,
+   "evals": 2368,
+   "seconds": 112.1,
+   "occurrences": 8
+  },
+  "kick": {
+   "params": {
+    "f0": 40.569,
+    "sweep": 3.4002,
+    "sweep_ms": 7.7705,
+    "decay_ms": 310.5542,
+    "tail_ms": 715.123,
+    "tail_mix": 0.4293,
+    "shell": 0.5878,
+    "shell_ratio": 2.2371,
+    "click": 0.1424,
+    "click_hz": 2610.8515,
+    "skin": 0.2457,
+    "skin_ms": 78.3814,
+    "drive": 0.5048,
+    "lp": 10776.1214,
+    "tilt": -3.8977
+   },
+   "residual_db": 7.67,
+   "evals": 4736,
+   "seconds": 228.0,
+   "occurrences": 20
+  },
+  "snare": {
+   "params": {
+    "f1": 181.0029,
+    "r2": 2.1116,
+    "m2": 0.11,
+    "mode_ms": 34.1776,
+    "wire": 0.5665,
+    "wire_lo": 819.1104,
+    "wire_hi": 13167.1793,
+    "wire_ms": 28.0187,
+    "rattle": 0.018,
+    "click": 1.2151,
+    "drive": 0.902,
+    "lp": 3183.1961,
+    "tilt": -1.7961
+   },
+   "residual_db": 10.105,
+   "evals": 4736,
+   "seconds": 247.0,
+   "occurrences": 8
+  }
+ },
+ "drums_full_berry": {
+  "kick": {
+   "params": {
+    "f0": 44.1865,
+    "sweep": 2.8789,
+    "sweep_ms": 20.1595,
+    "decay_ms": 307.6276,
+    "tail_ms": 758.9036,
+    "tail_mix": 0.4473,
+    "shell": 0.3077,
+    "shell_ratio": 2.277,
+    "click": 0.6599,
+    "click_hz": 5275.456,
+    "skin": 0.4534,
+    "skin_ms": 7.8621,
+    "drive": 0.6913,
+    "lp": 1405.482,
+    "tilt": -11.4327
+   },
+   "residual_db": 8.416,
+   "evals": 4736,
+   "seconds": 222.0,
+   "occurrences": 12
+  },
+  "hat": {
+   "params": {
+    "metal_hz": 531.808,
+    "metal": 0.457,
+    "bp_hz": 11911.8253,
+    "hp_hz": 1550.5071,
+    "decay_ms": 61.2607,
+    "drive": 0.0213,
+    "lp": 1664.9046,
+    "tilt": -3.89
+   },
+   "residual_db": 5.359,
+   "evals": 2368,
+   "seconds": 85.2,
+   "occurrences": 6
+  },
+  "snare": {
+   "params": {
+    "f1": 227.415,
+    "r2": 2.074,
+    "m2": 0.3117,
+    "mode_ms": 22.6098,
+    "wire": 0.2074,
+    "wire_lo": 790.2636,
+    "wire_hi": 13516.6017,
+    "wire_ms": 35.9672,
+    "rattle": 0.0107,
+    "click": 1.2866,
+    "drive": 0.9737,
+    "lp": 8087.9732,
+    "tilt": -9.7667
+   },
+   "residual_db": 5.418,
+   "evals": 4736,
+   "seconds": 227.7,
+   "occurrences": 8
+  }
+ },
+ "drum_tops_claps_rogers": {
+  "hat": {
+   "params": {
+    "metal_hz": 377.0838,
+    "metal": 0.7022,
+    "bp_hz": 11114.9348,
+    "hp_hz": 1552.5174,
+    "decay_ms": 36.4528,
+    "drive": 0.0866,
+    "lp": 1248.5045,
+    "tilt": -11.8106
+   },
+   "residual_db": 6.634,
+   "evals": 2368,
+   "seconds": 72.3,
+   "occurrences": 4
+  },
+  "kick": {
+   "params": {
+    "f0": 100.4215,
+    "sweep": 3.3079,
+    "sweep_ms": 67.0518,
+    "decay_ms": 42.44,
+    "tail_ms": 87.7222,
+    "tail_mix": 0.0113,
+    "shell": 0.3853,
+    "shell_ratio": 1.6532,
+    "click": 0.4518,
+    "click_hz": 1385.7133,
+    "skin": 1.0735,
+    "skin_ms": 40.0723,
+    "drive": 0.8654,
+    "lp": 15124.2858,
+    "tilt": 4.462
+   },
+   "residual_db": 8.474,
+   "evals": 4736,
+   "seconds": 154.8,
+   "occurrences": 20
+  },
+  "snare": {
+   "params": {
+    "f1": 321.1627,
+    "r2": 2.0249,
+    "m2": 0.6793,
+    "mode_ms": 17.6949,
+    "wire": 2.8241,
+    "wire_lo": 238.7882,
+    "wire_hi": 3207.7773,
+    "wire_ms": 32.1577,
+    "rattle": 0.0783,
+    "click": 0.5392,
+    "drive": 0.043,
+    "lp": 15315.2626,
+    "tilt": 5.7016
+   },
+   "residual_db": 9.352,
+   "evals": 4736,
+   "seconds": 210.6,
+   "occurrences": 7
+  }
+ },
+ "drum_tops_surf": {
+  "kick": {
+   "params": {
+    "f0": 114.0949,
+    "sweep": 2.6449,
+    "sweep_ms": 78.3964,
+    "decay_ms": 362.125,
+    "tail_ms": 240.4057,
+    "tail_mix": 0.2694,
+    "shell": 0.334,
+    "shell_ratio": 1.5442,
+    "click": 0.3891,
+    "click_hz": 1681.8022,
+    "skin": 0.9768,
+    "skin_ms": 117.0334,
+    "drive": 0.9144,
+    "lp": 9481.3499,
+    "tilt": -7.2951
+   },
+   "residual_db": 7.796,
+   "evals": 4736,
+   "seconds": 134.7,
+   "occurrences": 3
+  },
+  "hat": {
+   "params": {
+    "metal_hz": 362.3738,
+    "metal": 0.7751,
+    "bp_hz": 9907.3984,
+    "hp_hz": 3488.5967,
+    "decay_ms": 241.5477,
+    "drive": 0.7228,
+    "lp": 1298.6121,
+    "tilt": -2.2754
+   },
+   "residual_db": 10.896,
+   "evals": 2368,
+   "seconds": 122.7,
+   "occurrences": 6
+  },
+  "snare": {
+   "params": {
+    "f1": 214.7576,
+    "r2": 1.5935,
+    "m2": 0.1461,
+    "mode_ms": 166.844,
+    "wire": 2.9331,
+    "wire_lo": 285.4686,
+    "wire_hi": 3540.2752,
+    "wire_ms": 31.5431,
+    "rattle": 0.0693,
+    "click": 0.4367,
+    "drive": 0.9356,
+    "lp": 7068.082,
+    "tilt": -11.0189
+   },
+   "residual_db": 10.102,
+   "evals": 4736,
+   "seconds": 235.8,
+   "occurrences": 8
+  }
+ },
+ "drums_full_ditmas": {
+  "kick": {
+   "params": {
+    "f0": 45.5315,
+    "sweep": 1.5612,
+    "sweep_ms": 12.1977,
+    "decay_ms": 288.2854,
+    "tail_ms": 104.9058,
+    "tail_mix": 0.3983,
+    "shell": 0.499,
+    "shell_ratio": 2.3427,
+    "click": 0.1891,
+    "click_hz": 957.3812,
+    "skin": 0.3564,
+    "skin_ms": 47.4381,
+    "drive": 0.4782,
+    "lp": 10671.093,
+    "tilt": -4.576
+   },
+   "residual_db": 5.3,
+   "evals": 4736,
+   "seconds": 145.5,
+   "occurrences": 15
+  },
+  "hat": {
+   "params": {
+    "metal_hz": 417.6499,
+    "metal": 0.6901,
+    "bp_hz": 11804.176,
+    "hp_hz": 3022.5879,
+    "decay_ms": 52.1646,
+    "drive": 0.1166,
+    "lp": 1415.6061,
+    "tilt": -9.7643
+   },
+   "residual_db": 5.623,
+   "evals": 2368,
+   "seconds": 94.5,
+   "occurrences": 4
+  },
+  "snare": {
+   "params": {
+    "f1": 314.3997,
+    "r2": 1.5748,
+    "m2": 0.3571,
+    "mode_ms": 21.8561,
+    "wire": 2.4482,
+    "wire_lo": 246.0061,
+    "wire_hi": 3059.5692,
+    "wire_ms": 30.0808,
+    "rattle": 0.0171,
+    "click": 0.211,
+    "drive": 0.3162,
+    "lp": 14389.4978,
+    "tilt": 3.5844
+   },
+   "residual_db": 7.777,
+   "evals": 4736,
+   "seconds": 225.4,
+   "occurrences": 8
+  }
+ },
+ "drums_full_decatur": {
+  "kick": {
+   "params": {
+    "f0": 42.3288,
+    "sweep": 1.7717,
+    "sweep_ms": 26.004,
+    "decay_ms": 160.9807,
+    "tail_ms": 183.7198,
+    "tail_mix": 0.3537,
+    "shell": 0.3065,
+    "shell_ratio": 1.901,
+    "click": 0.2486,
+    "click_hz": 1227.1938,
+    "skin": 0.062,
+    "skin_ms": 39.8823,
+    "drive": 0.7565,
+    "lp": 5633.087,
+    "tilt": -10.2771
+   },
+   "residual_db": 4.52,
+   "evals": 4736,
+   "seconds": 193.7,
+   "occurrences": 9
+  },
+  "snare": {
+   "params": {
+    "f1": 228.8788,
+    "r2": 2.0751,
+    "m2": 0.1923,
+    "mode_ms": 27.6269,
+    "wire": 0.4855,
+    "wire_lo": 219.7164,
+    "wire_hi": 7342.3602,
+    "wire_ms": 29.1496,
+    "rattle": 0.0294,
+    "click": 1.1851,
+    "drive": 0.9947,
+    "lp": 15322.6407,
+    "tilt": -9.516
+   },
+   "residual_db": 9.799,
+   "evals": 4736,
+   "seconds": 329.2,
+   "occurrences": 8
+  }
+ },
+ "drums_full_driggs": {
+  "kick": {
+   "params": {
+    "f0": 39.8262,
+    "sweep": 2.7272,
+    "sweep_ms": 13.5486,
+    "decay_ms": 279.2799,
+    "tail_ms": 148.3343,
+    "tail_mix": 0.1917,
+    "shell": 0.5977,
+    "shell_ratio": 2.4752,
+    "click": 0.6554,
+    "click_hz": 1796.3102,
+    "skin": 0.266,
+    "skin_ms": 110.108,
+    "drive": 0.6647,
+    "lp": 3225.0741,
+    "tilt": -10.4341
+   },
+   "residual_db": 7.455,
+   "evals": 4736,
+   "seconds": 240.0,
+   "occurrences": 16
+  },
+  "hat": {
+   "params": {
+    "metal_hz": 592.3015,
+    "metal": 0.7312,
+    "bp_hz": 8969.9249,
+    "hp_hz": 5247.6508,
+    "decay_ms": 128.9187,
+    "drive": 0.0021,
+    "lp": 1258.7485,
+    "tilt": -11.9914
+   },
+   "residual_db": 7.559,
+   "evals": 2368,
+   "seconds": 135.6,
+   "occurrences": 2
+  },
+  "snare": {
+   "params": {
+    "f1": 180.3466,
+    "r2": 1.9103,
+    "m2": 0.6565,
+    "mode_ms": 27.0928,
+    "wire": 0.3771,
+    "wire_lo": 1338.1985,
+    "wire_hi": 6309.2597,
+    "wire_ms": 40.2232,
+    "rattle": 0.009,
+    "click": 1.032,
+    "drive": 0.9372,
+    "lp": 9218.895,
+    "tilt": -11.3513
+   },
+   "residual_db": 5.709,
+   "evals": 4736,
+   "seconds": 335.3,
+   "occurrences": 8
+  }
+ },
+ "drums_full_halsey": {
+  "hat": {
+   "params": {
+    "metal_hz": 378.8658,
+    "metal": 0.6299,
+    "bp_hz": 10509.6233,
+    "hp_hz": 1834.1709,
+    "decay_ms": 85.0124,
+    "drive": 0.1183,
+    "lp": 1250.1898,
+    "tilt": -4.3488
+   },
+   "residual_db": 6.198,
+   "evals": 2368,
+   "seconds": 131.4,
+   "occurrences": 8
+  },
+  "kick": {
+   "params": {
+    "f0": 45.4985,
+    "sweep": 3.0927,
+    "sweep_ms": 13.4257,
+    "decay_ms": 232.4446,
+    "tail_ms": 328.8714,
+    "tail_mix": 0.3765,
+    "shell": 0.4977,
+    "shell_ratio": 2.4626,
+    "click": 1.0714,
+    "click_hz": 2182.6097,
+    "skin": 0.493,
+    "skin_ms": 105.5851,
+    "drive": 0.9537,
+    "lp": 13103.5338,
+    "tilt": 0.0754
+   },
+   "residual_db": 8.067,
+   "evals": 4736,
+   "seconds": 272.0,
+   "occurrences": 15
+  },
+  "snare": {
+   "params": {
+    "f1": 227.5003,
+    "r2": 2.0772,
+    "m2": 0.4366,
+    "mode_ms": 31.058,
+    "wire": 0.2568,
+    "wire_lo": 1142.1785,
+    "wire_hi": 12108.5888,
+    "wire_ms": 40.1284,
+    "rattle": 0.0233,
+    "click": 0.3714,
+    "drive": 0.9878,
+    "lp": 6639.5138,
+    "tilt": -3.526
+   },
+   "residual_db": 7.467,
+   "evals": 4736,
+   "seconds": 271.7,
+   "occurrences": 8
+  }
+ },
+ "drums_full_hudson": {
+  "hat": {
+   "params": {
+    "metal_hz": 546.6882,
+    "metal": 0.6393,
+    "bp_hz": 11645.5234,
+    "hp_hz": 2285.2781,
+    "decay_ms": 77.3363,
+    "drive": 0.0342,
+    "lp": 1376.4072,
+    "tilt": -1.097
+   },
+   "residual_db": 5.323,
+   "evals": 2368,
+   "seconds": 137.2,
+   "occurrences": 9
+  },
+  "kick": {
+   "params": {
+    "f0": 42.8793,
+    "sweep": 2.8542,
+    "sweep_ms": 24.9801,
+    "decay_ms": 184.9762,
+    "tail_ms": 165.1446,
+    "tail_mix": 0.266,
+    "shell": 0.5814,
+    "shell_ratio": 1.9118,
+    "click": 0.4037,
+    "click_hz": 4747.9778,
+    "skin": 0.4323,
+    "skin_ms": 10.4075,
+    "drive": 0.2319,
+    "lp": 6979.5084,
+    "tilt": 0.0097
+   },
+   "residual_db": 5.8,
+   "evals": 4736,
+   "seconds": 268.3,
+   "occurrences": 12
+  },
+  "snare": {
+   "params": {
+    "f1": 318.4888,
+    "r2": 2.0106,
+    "m2": 0.3237,
+    "mode_ms": 22.3866,
+    "wire": 0.2296,
+    "wire_lo": 656.2035,
+    "wire_hi": 14153.8622,
+    "wire_ms": 23.0745,
+    "rattle": 0.0407,
+    "click": 0.2052,
+    "drive": 0.907,
+    "lp": 15757.3561,
+    "tilt": 2.1771
+   },
+   "residual_db": 7.378,
+   "evals": 4736,
+   "seconds": 267.6,
+   "occurrences": 8
+  }
+ },
+ "drums_full_kingston": {
+  "kick": {
+   "params": {
+    "f0": 54.6899,
+    "sweep": 3.8949,
+    "sweep_ms": 10.8986,
+    "decay_ms": 260.7034,
+    "tail_ms": 135.6931,
+    "tail_mix": 0.4064,
+    "shell": 0.4194,
+    "shell_ratio": 2.3693,
+    "click": 0.1715,
+    "click_hz": 4902.6056,
+    "skin": 0.2937,
+    "skin_ms": 57.7286,
+    "drive": 0.2578,
+    "lp": 2835.1432,
+    "tilt": -6.1005
+   },
+   "residual_db": 5.757,
+   "evals": 4736,
+   "seconds": 280.9,
+   "occurrences": 16
+  },
+  "snare": {
+   "params": {
+    "f1": 224.1767,
+    "r2": 2.2213,
+    "m2": 0.2442,
+    "mode_ms": 37.5171,
+    "wire": 0.3104,
+    "wire_lo": 229.0707,
+    "wire_hi": 11700.499,
+    "wire_ms": 59.4432,
+    "rattle": 0.0833,
+    "click": 1.1818,
+    "drive": 0.5462,
+    "lp": 6483.3483,
+    "tilt": -9.2293
+   },
+   "residual_db": 8.498,
+   "evals": 4736,
+   "seconds": 361.0,
+   "occurrences": 8
+  }
+ },
+ "drums_howard": {
+  "kick": {
+   "params": {
+    "f0": 55.8545,
+    "sweep": 2.5689,
+    "sweep_ms": 13.0559,
+    "decay_ms": 139.0004,
+    "tail_ms": 185.3349,
+    "tail_mix": 0.1921,
+    "shell": 0.5093,
+    "shell_ratio": 2.2329,
+    "click": 0.4986,
+    "click_hz": 3985.0429,
+    "skin": 0.2962,
+    "skin_ms": 44.5339,
+    "drive": 0.3766,
+    "lp": 9349.5393,
+    "tilt": -4.5314
+   },
+   "residual_db": 5.652,
+   "evals": 4736,
+   "seconds": 272.7,
+   "occurrences": 9
+  },
+  "hat": {
+   "params": {
+    "metal_hz": 509.7543,
+    "metal": 0.852,
+    "bp_hz": 11957.491,
+    "hp_hz": 2982.7323,
+    "decay_ms": 242.1445,
+    "drive": 0.6913,
+    "lp": 1288.9961,
+    "tilt": -7.2229
+   },
+   "residual_db": 11.345,
+   "evals": 2368,
+   "seconds": 168.8,
+   "occurrences": 4
+  },
+  "snare": {
+   "params": {
+    "f1": 219.8421,
+    "r2": 1.8243,
+    "m2": 0.1635,
+    "mode_ms": 135.3055,
+    "wire": 1.7464,
+    "wire_lo": 215.7303,
+    "wire_hi": 7167.1802,
+    "wire_ms": 34.0761,
+    "rattle": 0.16,
+    "click": 1.2864,
+    "drive": 0.7469,
+    "lp": 5779.4092,
+    "tilt": -11.8887
+   },
+   "residual_db": 9.694,
+   "evals": 4736,
+   "seconds": 342.9,
+   "occurrences": 8
+  }
+ },
+ "drums_keap": {
+  "hat": {
+   "params": {
+    "metal_hz": 337.9413,
+    "metal": 0.5885,
+    "bp_hz": 11343.7466,
+    "hp_hz": 1545.1907,
+    "decay_ms": 96.5929,
+    "drive": 0.0008,
+    "lp": 1552.298,
+    "tilt": 2.5285
+   },
+   "residual_db": 7.107,
+   "evals": 2368,
+   "seconds": 130.4,
+   "occurrences": 6
+  },
+  "kick": {
+   "params": {
+    "f0": 53.2719,
+    "sweep": 3.3741,
+    "sweep_ms": 6.2311,
+    "decay_ms": 47.1046,
+    "tail_ms": 119.9138,
+    "tail_mix": 0.0729,
+    "shell": 0.0526,
+    "shell_ratio": 1.4511,
+    "click": 0.7877,
+    "click_hz": 4062.1276,
+    "skin": 0.0265,
+    "skin_ms": 15.5437,
+    "drive": 0.8617,
+    "lp": 1251.6399,
+    "tilt": -11.2844
+   },
+   "residual_db": 5.823,
+   "evals": 4736,
+   "seconds": 273.5,
+   "occurrences": 12
+  },
+  "snare": {
+   "params": {
+    "f1": 280.6548,
+    "r2": 2.3877,
+    "m2": 0.1223,
+    "mode_ms": 26.2305,
+    "wire": 0.2532,
+    "wire_lo": 843.7871,
+    "wire_hi": 14127.7289,
+    "wire_ms": 26.6269,
+    "rattle": 0.1126,
+    "click": 1.0669,
+    "drive": 0.9983,
+    "lp": 12987.5791,
+    "tilt": -10.8734
+   },
+   "residual_db": 10.335,
+   "evals": 4736,
+   "seconds": 327.8,
+   "occurrences": 8
+  }
+ },
+ "drums_lafayette": {
+  "kick": {
+   "params": {
+    "f0": 39.2991,
+    "sweep": 3.9055,
+    "sweep_ms": 38.6163,
+    "decay_ms": 126.1497,
+    "tail_ms": 87.6562,
+    "tail_mix": 0.2462,
+    "shell": 0.3681,
+    "shell_ratio": 1.919,
+    "click": 0.0111,
+    "click_hz": 3675.0672,
+    "skin": 0.1218,
+    "skin_ms": 33.5108,
+    "drive": 0.3753,
+    "lp": 4662.622,
+    "tilt": -10.0117
+   },
+   "residual_db": 4.524,
+   "evals": 4736,
+   "seconds": 202.5,
+   "occurrences": 25
+  },
+  "snare": {
+   "params": {
+    "f1": 224.8762,
+    "r2": 2.1342,
+    "m2": 0.1848,
+    "mode_ms": 15.5742,
+    "wire": 0.2239,
+    "wire_lo": 1282.1692,
+    "wire_hi": 9233.3476,
+    "wire_ms": 31.2577,
+    "rattle": 0.0106,
+    "click": 0.0304,
+    "drive": 0.9598,
+    "lp": 6626.3794,
+    "tilt": -9.1876
+   },
+   "residual_db": 6.551,
+   "evals": 4736,
+   "seconds": 259.9,
+   "occurrences": 8
+  }
+ },
+ "drums_mercer_cranked": {
+  "kick": {
+   "params": {
+    "f0": 61.6968,
+    "sweep": 1.4387,
+    "sweep_ms": 6.5198,
+    "decay_ms": 367.2611,
+    "tail_ms": 667.2085,
+    "tail_mix": 0.2338,
+    "shell": 0.4922,
+    "shell_ratio": 2.0149,
+    "click": 0.3329,
+    "click_hz": 801.4374,
+    "skin": 1.1342,
+    "skin_ms": 16.7305,
+    "drive": 0.1508,
+    "lp": 8459.1686,
+    "tilt": -0.9468
+   },
+   "residual_db": 6.629,
+   "evals": 4736,
+   "seconds": 201.5,
+   "occurrences": 15
+  },
+  "hat": {
+   "params": {
+    "metal_hz": 407.9582,
+    "metal": 0.8938,
+    "bp_hz": 10999.9541,
+    "hp_hz": 8007.2625,
+    "decay_ms": 158.0908,
+    "drive": 0.1418,
+    "lp": 1355.6046,
+    "tilt": -8.3763
+   },
+   "residual_db": 6.412,
+   "evals": 2368,
+   "seconds": 128.0,
+   "occurrences": 4
+  },
+  "snare": {
+   "params": {
+    "f1": 230.8169,
+    "r2": 1.605,
+    "m2": 0.1909,
+    "mode_ms": 41.2367,
+    "wire": 0.2207,
+    "wire_lo": 257.886,
+    "wire_hi": 9283.8481,
+    "wire_ms": 38.229,
+    "rattle": 0.0647,
+    "click": 1.3798,
+    "drive": 0.649,
+    "lp": 6298.9313,
+    "tilt": -7.8659
+   },
+   "residual_db": 6.611,
+   "evals": 4736,
+   "seconds": 265.0,
+   "occurrences": 8
+  }
+ },
+ "drums_ride_moffat_rims": {
+  "hat": {
+   "params": {
+    "metal_hz": 574.1814,
+    "metal": 0.4648,
+    "bp_hz": 3195.877,
+    "hp_hz": 2083.6975,
+    "decay_ms": 170.4016,
+    "drive": 0.701,
+    "lp": 15612.8187,
+    "tilt": -0.8365
+   },
+   "residual_db": 3.301,
+   "evals": 2368,
+   "seconds": 124.9,
+   "occurrences": 4
+  },
+  "snare": {
+   "params": {
+    "f1": 277.0538,
+    "r2": 2.2001,
+    "m2": 0.6331,
+    "mode_ms": 17.9827,
+    "wire": 0.2347,
+    "wire_lo": 1695.4836,
+    "wire_hi": 9942.6371,
+    "wire_ms": 20.9667,
+    "rattle": 0.2679,
+    "click": 1.0124,
+    "drive": 0.8429,
+    "lp": 7039.2282,
+    "tilt": -7.1939
+   },
+   "residual_db": 7.479,
+   "evals": 4736,
+   "seconds": 256.3,
+   "occurrences": 4
+  },
+  "kick": {
+   "params": {
+    "f0": 42.2519,
+    "sweep": 2.7981,
+    "sweep_ms": 22.5396,
+    "decay_ms": 121.2789,
+    "tail_ms": 139.0843,
+    "tail_mix": 0.3138,
+    "shell": 0.5949,
+    "shell_ratio": 2.4249,
+    "click": 0.0563,
+    "click_hz": 2608.189,
+    "skin": 0.2065,
+    "skin_ms": 33.12,
+    "drive": 0.1661,
+    "lp": 5423.9485,
+    "tilt": 1.1061
+   },
+   "residual_db": 6.09,
+   "evals": 4736,
+   "seconds": 266.4,
+   "occurrences": 8
+  }
+ },
+ "texture_goner_rivington": {
+  "kick": {
+   "params": {
+    "f0": 68.3972,
+    "sweep": 1.2737,
+    "sweep_ms": 30.1448,
+    "decay_ms": 137.3659,
+    "tail_ms": 409.0014,
+    "tail_mix": 0.4661,
+    "shell": 0.5765,
+    "shell_ratio": 2.3745,
+    "click": 1.194,
+    "click_hz": 3475.2543,
+    "skin": 0.9329,
+    "skin_ms": 105.1158,
+    "drive": 0.6291,
+    "lp": 10262.6569,
+    "tilt": -0.6047
+   },
+   "residual_db": 7.295,
+   "evals": 4736,
+   "seconds": 194.2,
+   "occurrences": 14
+  },
+  "snare": {
+   "params": {
+    "f1": 327.7749,
+    "r2": 2.0961,
+    "m2": 0.9829,
+    "mode_ms": 87.0933,
+    "wire": 2.6945,
+    "wire_lo": 2758.0491,
+    "wire_hi": 3011.075,
+    "wire_ms": 29.906,
+    "rattle": 0.4067,
+    "click": 0.4553,
+    "drive": 0.0755,
+    "lp": 9491.5958,
+    "tilt": 5.6394
+   },
+   "residual_db": 9.375,
+   "evals": 4736,
+   "seconds": 373.1,
+   "occurrences": 16
+  }
+ }
+}
