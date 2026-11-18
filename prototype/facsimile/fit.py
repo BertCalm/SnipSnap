@@ -95,8 +95,35 @@ def target_for(takes: np.ndarray, template: np.ndarray, clean_s: float,
         tgt[b, pk:] = np.minimum.accumulate(tgt[b, pk:])
     if low_share > CHOKE_LOW_SHARE:
         uncut(tgt)
+    else:
+        no_stall(tgt)
     keep_falling(tgt)
     return np.maximum(tgt, FLOOR_DB)
+
+
+STALL_AFTER_DB = 20.0   # a hat or snare that has fallen this far ...
+STALL_DB_S = 30.0       # ... and then falls slower than this over the next 100 ms has hit the
+                        # template floor, not a ring: it keeps falling at FLOOR_SLOPE_DB_S
+
+
+def no_stall(tgt: np.ndarray) -> None:
+    """For drums that are not low-heavy: a weak NMFD component's floor sits only 30 to 50 dB
+    under its peak, above keep_falling's threshold, and leaves a hat or snare sustaining. Find
+    where the drum, having fallen STALL_AFTER_DB, stops falling, and continue its fall from
+    there. A low-heavy drum (an 808, a boom tom) may ring low for a long time and is left as
+    measured."""
+    total = 10 * np.log10((10 ** (tgt / 10)).sum(0) + 1e-30)
+    pk = int(np.argmax(total))
+    for i in range(pk + 1, len(GRID)):
+        if total[i] > total[pk] - STALL_AFTER_DB:
+            continue
+        j = int(np.searchsorted(GRID, GRID[i] + 0.1))
+        if j >= len(GRID):
+            return
+        if (total[i] - total[j]) / (GRID[j] - GRID[i]) < STALL_DB_S:
+            ceiling = tgt[:, i:i + 1] - FLOOR_SLOPE_DB_S * (GRID[i:] - GRID[i])[None, :]
+            tgt[:, i:] = np.minimum(tgt[:, i:], ceiling)
+            return
 
 
 FLOOR_AFTER_DB = 40.0   # once the drum is this far below its peak ...

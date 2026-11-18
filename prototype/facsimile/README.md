@@ -80,6 +80,10 @@ templates (all derived from reference PCM), and every rendered WAV or MP3.
   level check and fixed before anything was published.
 - Tails under the template's floor: once a drum is 40 dB under its peak it must keep falling at
   60 dB/s or faster. NMFD leaves a flat plateau 45 to 60 dB down where no hit shows a late tail.
+  For a drum that is not low-heavy, the floor can sit only 30 to 50 dB down, so a second rule
+  applies: once it has fallen 20 dB, if it then falls slower than 30 dB/s over 100 ms, it keeps
+  falling at 60 dB/s from there. Low-heavy drums (808s, boom toms) are left to ring as measured,
+  which is why a few of them are 1.4 s long.
 - Some NMFD components are artifacts (a kick's sub re-fired on its own). The grooves use every
   component, so nothing in the reference goes missing; the pads use only the drums named in
   `kits.json`.
