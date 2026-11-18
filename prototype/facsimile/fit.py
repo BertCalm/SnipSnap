@@ -240,33 +240,86 @@ def glide_envelope(tt, amp, template, f_end) -> np.ndarray:
     return np.maximum(env, FLOOR_DB)
 
 
+STEADY_PROMINENCE_DB = 12.0       # a ringing tone stands this far proud of its neighbourhood
+HIGH_STEADY_PROMINENCE_DB = 18.0  # above HIGH_HZ noise peaks of a repeated sample reach 12 dB
+HIGH_HZ = 2000.0
+STABLE_PROMINENCE_DB = 8.0        # ... and is still this proud in at least 2 of 3 time slices
+STABLE_FROM_HZ = 1000.0           # (checked from here up: a 48 ms slice blurs a low tone's peak
+                                  # wider than its neighbourhood, and the false peaks are high)
+
+
+def _median_spectrum(takes, a, b, nfft):
+    return np.median([20 * np.log10(np.abs(np.fft.rfft(h[a:b] * np.hanning(b - a), nfft)) + 1e-12)
+                      for h in takes], axis=0)
+
+
+def _prominence(sp, f):
+    """Level over the +-1/6 octave neighbourhood median, on a log-frequency resample."""
+    lf = np.geomspace(30, 14_000, 2400)
+    ls = np.interp(lf, f, sp)
+    w = int(2400 / np.log2(14_000 / 30) / 6)
+    return lf, ls, ls - signal.medfilt(ls, 2 * w + 1), w
+
+
 def steady_peaks(takes: np.ndarray, clean_s: float, exclude: list[float]) -> list[dict]:
-    """Ringing tones: peaks at least 12 dB proud of their +-1/6 octave neighbourhood in the
-    median (in dB, across hits) spectrum of the first 150 ms."""
+    """Ringing tones: peaks proud of their neighbourhood in the median (across hits) spectrum
+    of the first 150 ms, which also RING: still proud in at least two of three consecutive
+    slices of that window. A noise peak sits in one moment's spectrum and not the next; when a
+    loop repeats one sample, the median across hits cannot remove it, and rendered as a sine it
+    rides the noise like ring modulation (heard on the long shaker, 2026-11-18)."""
     a = PRE + int(0.005 * RATE)
     b = PRE + int(max(0.03, min(clean_s, 0.15)) * RATE)
     if b - a < 512:
         return []
     nfft = 1 << 15
-    sp = np.median([20 * np.log10(np.abs(np.fft.rfft(h[a:b] * np.hanning(b - a), nfft)) + 1e-12)
-                    for h in takes], axis=0)
     f = np.fft.rfftfreq(nfft, 1 / RATE)
-    # neighbourhood level: median over +-1/6 octave, computed on a log-frequency resample
-    lf = np.geomspace(30, 14_000, 2400)
-    ls = np.interp(lf, f, sp)
-    w = int(2400 / np.log2(14_000 / 30) / 6)
-    base = signal.medfilt(ls, 2 * w + 1)
-    prom = ls - base
-    pk, pr = signal.find_peaks(prom, height=12, distance=w)
+    med = _median_spectrum(takes, a, b, nfft)
+    power = 10 ** (med / 10)
+    lobe = max(2, int(2 * nfft / (b - a)))       # half the Hann main lobe, in bins
+    lf, ls, prom, w = _prominence(med, f)
+    edges = np.linspace(a, b, 4).astype(int)
+    slices = [_prominence(_median_spectrum(takes, edges[i], edges[i + 1], nfft), f)[2]
+              for i in range(3)] if (b - a) // 3 >= 512 else None
+    pk, _ = signal.find_peaks(prom, height=STEADY_PROMINENCE_DB, distance=w)
     peaks = []
     top = ls[pk].max() if len(pk) else 0
+    tol = max(1, int(2400 / np.log2(14_000 / 30) / 24))   # +-1/24 octave
     for i in sorted(pk, key=lambda i: -ls[i]):
         if ls[i] < top - 30 or len(peaks) >= 10:
             break
+        if lf[i] > HIGH_HZ and prom[i] < HIGH_STEADY_PROMINENCE_DB:
+            continue
         if any(abs(np.log2(lf[i] / e)) < 0.08 for e in exclude):
             continue
-        peaks.append(dict(hz=float(lf[i]), prominence_db=float(prom[i])))
+        if lf[i] >= STABLE_FROM_HZ:
+            if slices is None:
+                continue  # too short to show that it rings: leave it to the noise
+            held = sum(sl[max(0, i - tol):i + tol + 1].max() >= STABLE_PROMINENCE_DB
+                       for sl in slices)
+            if held < 2:
+                continue
+        # the tone's real share of its band's energy, read off the spectrum: the peak's main
+        # lobe against the whole band. Sized from prominence instead, a tone took up to 90% of
+        # its band and stood out 8 dB more than the reference's own ring did.
+        k = int(np.argmin(np.abs(f - lf[i])))
+        band = int(np.clip(np.searchsorted(BAND_EDGES, lf[i]) - 1, 0, len(BAND_EDGES) - 2))
+        in_band = (f >= BAND_EDGES[band]) & (f < BAND_EDGES[band + 1])
+        share = float(power[max(0, k - lobe):k + lobe + 1].sum() / (power[in_band].sum() + 1e-30))
+        peaks.append(dict(hz=float(lf[i]), prominence_db=float(prom[i]),
+                          share=float(np.clip(share, 0.02, 0.9))))
     return peaks
+
+
+def strike_shape(env_db: np.ndarray) -> np.ndarray:
+    """A struck sound's loudness in one band: it rises to its peak within the first 14 ms and
+    then only falls. Corrected point by point, the loop otherwise zigzags 15 to 30 dB between
+    grid points a few ms apart, and that fast loudness switching adds buzzy sidebands, a kind
+    of ring modulation."""
+    e = np.array(env_db, dtype=float)
+    pk = int(np.argmax(e[:8]))
+    e[:pk + 1] = np.maximum.accumulate(e[:pk + 1])
+    e[pk:] = np.minimum.accumulate(e[pk:])
+    return e
 
 
 # ---------- the fit ----------
@@ -330,7 +383,8 @@ def fit_drum(drum: dict, work: Path) -> tuple[dict, dict]:
     for p in steady_peaks(takes, clean, exclude):
         partials.append(dict(kind="steady", f0=p["hz"], f1=p["hz"], tau_s=0.0,
                              phase=float(np.random.default_rng(int(p["hz"])).uniform(0, 6.28)),
-                             lock_phase=False, prominence_db=p["prominence_db"]))
+                             lock_phase=False, prominence_db=p["prominence_db"],
+                             share=p["share"]))
 
     # initial split of each band's target between partials in it and noise
     noise_db = target.copy()
@@ -344,7 +398,7 @@ def fit_drum(drum: dict, work: Path) -> tuple[dict, dict]:
             rest = np.maximum(band_pow - sine_pow, band_pow * 0.05)
             noise_db[bt, cols] = 10 * np.log10(rest)
             continue
-        share = float(np.clip(1 - 10 ** (-p["prominence_db"] / 10), 0.3, 0.9))
+        share = p["share"]
         # a sine of amplitude A has power A^2/2: so the band power P maps to A = sqrt(2 P share)
         p["env_db"] = target[bt, cols] + 10 * np.log10(2 * share)
         noise_db[bt, cols] = np.minimum(noise_db[bt, cols],
@@ -352,6 +406,7 @@ def fit_drum(drum: dict, work: Path) -> tuple[dict, dict]:
         pk = int(np.argmax(p["env_db"]))
         p["env_db"][pk:] = np.minimum.accumulate(p["env_db"][pk:])
 
+    noise_db = np.array([strike_shape(r) for r in noise_db])
     model = dict(id=drum["id"], length_s=round(length, 3), partials=partials,
                  noise_db=noise_db,
                  velocity=dict(tilt_db_per_oct=-2.5, decay_loss=0.15, glide_depth_loss=0.3,
@@ -379,8 +434,8 @@ def fit_drum(drum: dict, work: Path) -> tuple[dict, dict]:
         corr = DAMPING * np.clip(err, -18, 18)
         corr[~live] = np.minimum(corr[~live], 0)   # never boost what the target says is quiet
         corr[:, ends] = 0
-        model["noise_db"] = np.clip(np.asarray(model["noise_db"]) + corr, FLOOR_DB,
-                                    peak_db + CAP_OVER_PEAK_DB)
+        model["noise_db"] = np.array([strike_shape(r) for r in np.clip(
+            np.asarray(model["noise_db"]) + corr, FLOOR_DB, peak_db + CAP_OVER_PEAK_DB)])
         model["noise_db"][:, ends] = FLOOR_DB
         for p in partials:
             bt = band_index_over_time(p)
