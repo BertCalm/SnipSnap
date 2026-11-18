@@ -38,6 +38,10 @@ remains blocked on slice-map/hardware verification. Owner listening is pending.
 [SPLINTER](docs/SPLINTER.md) is a breakcore kit at 200 BPM: sped-up break hits, chopped slices,
 a stutter, a stretched snare, clipped and gabber kicks, a snare rush and a riser. Not heard yet.
 
+[SHATTER, SOUNDCLASH and REDLINE](docs/BREAKCORE_FAMILY.md) complete the breakcore family: a break cut at its own hits (180 BPM),
+a sound system of subs, reese, siren and rewind (175), and speedcore with tuned kicks (250). The owner heard
+their grooves and pads on 2026-11-18 and kept them; per-pad verdicts and device playback are open.
+
 [GATECRASH](docs/GATECRASH.md) is a family of three 1980s gated drum kits on the shelf: Stone Room, Machine Pop and Electro Funk. Each has sixteen pads with three velocity zones of four takes. The owner approved the sound on 2026-11-11 after four rounds; phone and MPC hardware playback remain unverified.
 
 [MIRRORBALL](docs/MIRRORBALL.md) is a family of three 1970s disco kits on the shelf: Philly Strings, Loft Party and Munich Machine. Every pad is printed through an FET compressor, a multi-head tape echo, then an amp, in an order the FX rack cannot make. Each has sixteen pads with three velocity zones of four takes; Philly's tambourine is synthesized, fitted to CC0 recordings. The owner approved the sound on 2026-11-12 after five rounds; phone and MPC hardware playback remain unverified.
@@ -462,7 +466,7 @@ explicit MIDI root (24–96), strike velocity and model version; TUNE is a
 relative ±12-semitone offset, neutral at 0.5, so the effective note spans
 12–108 without clamping back to the saved-root range. Seven provisional presets
 and a dry sixteen-pad C minor pentatonic kit are included, with PITCHWHEEL among
-FRESH TAPE's 202 starters. Run `./gradlew :synth:generatePitchwheelAudition`
+FRESH TAPE's 205 starters. Run `./gradlew :synth:generatePitchwheelAudition`
 for the compact first listening set, or add `-PpitchwheelFull` for the broader
 dry probes. HOLD's top step returns settled loop-only material with a
 deterministic attachment cycle and capped adhesion. The owner heard R1 as six
