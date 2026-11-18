@@ -948,6 +948,21 @@ object StarterKits {
             seeded = false, tempoBpm = com.snipsnap.synth.CalabashKits.Kit.AFROCUBAN.bpm.toFloat(),
         ) { com.snipsnap.synth.CalabashKits.build(com.snipsnap.synth.CalabashKits.Kit.AFROCUBAN) },
         Starter(
+            "riddim-clave-dancehall", "RIDDIM CLAVE DANCEHALL",
+            "Bright, tight dancehall on the 3-2 clave: a punch kick and a digital rimshot, a clap, choked hats, a shaker, claves, sticks and a cowbell, and four tuned woods in F sharp minor. Three touch zones, four takes; a rim roll.",
+            seeded = false, tempoBpm = com.snipsnap.synth.RiddimKits.Kit.CLAVE_DANCEHALL.bpm.toFloat(),
+        ) { com.snipsnap.synth.RiddimKits.build(com.snipsnap.synth.RiddimKits.Kit.CLAVE_DANCEHALL) },
+        Starter(
+            "riddim-dembow", "RIDDIM DEMBOW",
+            "Deep and heavy dembow: a driven sub kick, a lower snare and a wide clap, darker hats, a conga, a bongo, a talking drum and a low bronze bar that wobbles. Three touch zones, four takes; a snare roll.",
+            seeded = false, tempoBpm = com.snipsnap.synth.RiddimKits.Kit.DEMBOW.bpm.toFloat(),
+        ) { com.snipsnap.synth.RiddimKits.build(com.snipsnap.synth.RiddimKits.Kit.DEMBOW) },
+        Starter(
+            "riddim-boom-riddim", "RIDDIM BOOM RIDDIM",
+            "The kick is the bass: six tuned booms from F1 to E flat 2, one sliding, that cut each other off like one bass voice, with a ringing rim, choked hats, a clap and bronze bars in F minor. Three touch zones, four takes; a hat riser.",
+            seeded = false, tempoBpm = com.snipsnap.synth.RiddimKits.Kit.BOOM_RIDDIM.bpm.toFloat(),
+        ) { com.snipsnap.synth.RiddimKits.build(com.snipsnap.synth.RiddimKits.Kit.BOOM_RIDDIM) },
+        Starter(
             "ember", "EMBER",
             "A live jazz kit in a small club in 1962, hard bop on sticks: an open calfskin kick feathered under the band, a crisp snare, a riveted ride carrying the time, a press roll and a mallet cymbal swell. Three touch zones, four takes.",
             seeded = false, tempoBpm = com.snipsnap.synth.EmberKits.Kit.CLUB.bpm.toFloat(),
