@@ -1102,6 +1102,12 @@ object StarterKits {
             "The sixteen TERRA pads with soft, medium and hard touch and four takes on each: a repeated hit lands a little differently every time.",
             seeded = false,
         ) { com.snipsnap.synth.TerraRoundRobinKits.build() },
+        // Opt-in beside the accepted TEMPEST starter, which stays as it is; appended after TERRA ROUND ROBIN.
+        Starter(
+            com.snipsnap.synth.TempestRoundRobinKits.ID, "TEMPEST ROUND ROBIN",
+            "The sixteen TEMPEST pads with four takes each: repeated hats, snares and claps vary like a real drum machine's.",
+            seeded = false,
+        ) { com.snipsnap.synth.TempestRoundRobinKits.build() },
     ))
 
     fun byId(id: String): Starter? = ALL.firstOrNull { it.id == id }

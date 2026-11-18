@@ -46,11 +46,12 @@ internal object TempestPercussion {
     }
 
     /** Constant-rate unit-circle rotation: no trigonometric calls in the hat's sample loop.
-     * Double state bounds numerical drift over the finite 1.2-second render. */
-    private class Cluster(base: Double, source: Double, rate: Int) {
+     * Double state bounds numerical drift over the finite 1.2-second render. Every partial starts
+     * at phase 0 unless a round-robin take gives [phases], one start phase per partial. */
+    private class Cluster(base: Double, source: Double, rate: Int, phases: DoubleArray? = null) {
         private val ratios = doubleArrayOf(1.0, 1.342, 1.681, 1.940, 2.318, 2.703)
-        private val re = DoubleArray(6) { 1.0 }
-        private val im = DoubleArray(6)
+        private val re = if (phases == null) DoubleArray(6) { 1.0 } else DoubleArray(6) { cos(phases[it]) }
+        private val im = if (phases == null) DoubleArray(6) else DoubleArray(6) { sin(phases[it]) }
         private val cr = DoubleArray(6) { cos(2*PI*base*ratios[it].pow(.8 + .2*source)/rate) }
         private val ci = DoubleArray(6) { sin(2*PI*base*ratios[it].pow(.8 + .2*source)/rate) }
         fun step(): Double {
@@ -71,9 +72,11 @@ internal object TempestPercussion {
         return a*a*(3-2*a)*exp(-t/tau)
     }
 
+    /** [take] 0 is the accepted render; a later take re-rolls what [Tempest.Takes] lists. */
     internal fun synthesize(voice: TempestVoice, macros: Map<String, Float>, rate: Int,
-                            preDriveCapture: FloatArray? = null): FloatArray {
+                            preDriveCapture: FloatArray? = null, take: Int = 0): FloatArray {
         require(voice in Tempest.EXPANSION_VOICES)
+        require(take >= 0) { "TEMPEST take must not be negative" }
         require(rate >= Dsp.RATE && rate % Dsp.RATE == 0)
         require(preDriveCapture == null || preDriveCapture.size == Tempest.OUTPUT_FRAMES*(rate/Dsp.RATE))
         val m = Tempest.settled(voice, macros)
@@ -84,8 +87,13 @@ internal object TempestPercussion {
         val amount = m.getValue("DRIVE").toDouble()
         val voltage = driveVoltageFor(voice, source, filter)
         val root = Tempest.frequencyFor(tune.toFloat()).toDouble()
-        val noise = ClockNoise(Dsp.seedFor("TEMPEST", 3, voice.name, Tempest.midiFor(tune.toFloat())), rate/Dsp.RATE)
-        val cluster = if (voice == TempestVoice.HAT) Cluster(1600.0*4.0.pow(tune), source, rate) else null
+        val midi = Tempest.midiFor(tune.toFloat())
+        val noise = ClockNoise(if (take == 0) Dsp.seedFor("TEMPEST", 3, voice.name, midi)
+            else Tempest.Takes.seed(3, voice, midi, take, "noise"), rate/Dsp.RATE)
+        val cluster = if (voice != TempestVoice.HAT) null
+            else if (take == 0) Cluster(1600.0*4.0.pow(tune), source, rate)
+            else Cluster(1600.0*4.0.pow(tune), source, rate,
+                Tempest.Takes.spread(6, Tempest.Takes.seed(3, voice, midi, take, "phase"), Tempest.Takes.HAT_PHASE))
         val tau = when (voice) {
             TempestVoice.SNARE -> .020*16.0.pow(decay)
             TempestVoice.CLAP -> .025*9.0.pow(decay)
@@ -119,6 +127,9 @@ internal object TempestPercussion {
         var amp = 1.0
         var contour = 1.0
         val spacing = .008 + .022*source
+        // A clap take keeps its first burst at 0 and moves the second, third and release a little.
+        val burstShift = if (take == 0 || voice != TempestVoice.CLAP) null
+            else Tempest.Takes.spread(3, Tempest.Takes.seed(3, voice, midi, take, "bursts"), Tempest.Takes.CLAP_JITTER*spacing)
         return FloatArray(Tempest.OUTPUT_FRAMES*(rate/Dsp.RATE)) { i ->
             val t = i.toDouble()/rate
             val white = noise.step(i)
@@ -141,8 +152,10 @@ internal object TempestPercussion {
                 TempestVoice.CLAP -> {
                     // SOURCE continuously spreads three short strikes; the fourth is the release.
                     // Summed fixed gains preserve their relative attack energy across renders.
-                    val bursts = (0..2).sumOf { n -> .23*strike(t-n*spacing, .0035+.004*source) }
-                    val tail = .48*strike(t-3*spacing, tau, .001)
+                    val bursts = if (burstShift == null) (0..2).sumOf { n -> .23*strike(t-n*spacing, .0035+.004*source) }
+                        else (0..2).sumOf { n -> .23*strike(t-n*spacing-(if (n == 0) 0.0 else burstShift[n-1]), .0035+.004*source) }
+                    val tail = if (burstShift == null) .48*strike(t-3*spacing, tau, .001)
+                        else .48*strike(t-3*spacing-burstShift[2], tau, .001)
                     val color = (.92-.12*source)*bright + (.08+.12*source)*sin(2*PI*root*17*t)
                     color*(bursts+tail)
                 }
