@@ -4,9 +4,16 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.semantics.SemanticsNode
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.assertContentDescriptionContains
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.hasContentDescription
+import androidx.compose.ui.test.isSelected
+import androidx.compose.ui.test.onAllNodesWithContentDescription
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -237,7 +244,71 @@ class ArrangeScreenTest : ComposeScreenTest() {
             val s = SongPlanStore.load(projectDir, entry.dir.name)?.sections
             s != null && s[0].drop && !s[1].pullUp
         }
-        waitFor("the button to say DROP ON", timeoutMillis = 30_000) { runCatching { button(Copy.SONG_DROP_ON).assertExists() }.isSuccess }
+        waitFor("the button to say DROP ON", timeoutMillis = 30_000, diagnose = { dropDiagnosis(projectDir, entry.dir.name) }) {
+            runCatching { button(Copy.SONG_DROP_ON).assertExists() }.isSuccess
+        }
+    }
+
+    /**
+     * What the store and the screen said when DROP's label did not turn, for
+     * the wait above: it timed out twice on CI (16 and 18 Nov) with the drop
+     * already kept on disk and no layout failure in logcat, so the layout
+     * after the edit either never landed or landed without being redrawn.
+     *
+     * The first block is the screen as the wait left it. Then SECTION 2 and
+     * SECTION 1 are tapped again, which makes SONG recompose and read
+     * `SongKeeper.plan` afresh, and the screen is read a second time:
+     * - DROP ON only after the round trip: the layout had landed and the
+     *   screen was never told (a lost recomposition), not a lost layout;
+     * - DROP OFF both times, rows without the drop: the layout never landed
+     *   (`SongKeeper`'s "layout N:" lines in logcat say whether it finished);
+     * - a selected row other than SECTION 1: the label was read off another row.
+     */
+    private fun dropDiagnosis(projectDir: File, folder: String): String {
+        fun read(name: String, value: () -> Any?): String =
+            "  $name: " + runCatching { value() }.getOrElse { "unreadable (${it.javaClass.simpleName}: ${it.message})" }
+
+        fun descriptionOf(node: SemanticsNode): String = node.config.getOrNull(SemanticsProperties.ContentDescription)?.joinToString() ?: "?"
+
+        // The rows are named "SECTION n: ..."; PLAY's spoken name ("PLAY FROM SECTION n, ...") also holds "SECTION ".
+        fun rowDescriptions(selectedOnly: Boolean = false): List<String> =
+            compose.onAllNodes(if (selectedOnly) hasContentDescription("SECTION ", substring = true) and isSelected() else hasContentDescription("SECTION ", substring = true))
+                .fetchSemanticsNodes(atLeastOneRootRequired = false).map(::descriptionOf).filter { it.startsWith("SECTION ") }
+
+        fun screen(): List<String> {
+            val rows = runCatching { rowDescriptions() }.getOrDefault(emptyList())
+            val planning = runCatching { compose.onAllNodesWithText("PLANNING…").fetchSemanticsNodes(atLeastOneRootRequired = false).isNotEmpty() }.getOrDefault(false)
+            return listOf(
+                read("DROP label") {
+                    listOf(Copy.SONG_DROP_ON, Copy.SONG_DROP_OFF)
+                        .filter { compose.onAllNodesWithContentDescription(it).fetchSemanticsNodes(atLeastOneRootRequired = false).isNotEmpty() }
+                        .ifEmpty { listOf("none") }.joinToString()
+                },
+                read("rows that say ${Copy.SONG_ROW_DROP}") {
+                    rows.filter { it.split(", ").contains(Copy.SONG_ROW_DROP) }.map { it.substringBefore(":") }.ifEmpty { listOf("none") }.joinToString()
+                },
+                read("selected row") { rowDescriptions(selectedOnly = true).map { it.substringBefore(":") }.ifEmpty { listOf("none") }.joinToString() },
+                read("refusal view showing") { rows.isEmpty() && !planning },
+                read("PLANNING… showing") { planning },
+                read("row 1") { rows.firstOrNull { it.startsWith("SECTION 1:") } ?: "not on screen" },
+                read("row 2") { rows.firstOrNull { it.startsWith("SECTION 2:") } ?: "not on screen" },
+            )
+        }
+
+        val stored = runCatching { SongPlanStore.load(projectDir, folder) }
+        val lines = mutableListOf("what the store and the screen said:")
+        lines += read("kept section 1 DROP") { stored.getOrThrow()?.sections?.getOrNull(0)?.drop ?: "nothing kept" }
+        lines += read("kept section 2 PULL-UP") { stored.getOrThrow()?.sections?.getOrNull(1)?.pullUp ?: "nothing kept" }
+        lines += screen()
+        lines += "after tapping SECTION 2 then SECTION 1, which makes SONG read its plan again:"
+        lines += runCatching {
+            compose.onNodeWithContentDescription("SECTION 2:", substring = true).performClick()
+            pump()
+            compose.onNodeWithContentDescription("SECTION 1:", substring = true).performClick()
+            pump()
+            screen()
+        }.getOrElse { listOf("  the round trip could not be made (${it.javaClass.simpleName}: ${it.message})") }
+        return lines.joinToString("\n")
     }
 
     @Test
