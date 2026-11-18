@@ -168,10 +168,6 @@ internal object KitStrikes {
     const val ONSET_MODEL = 4
 
     /**
-     * Two strikes as one drum: each peak-normalised, summed at [weightA] and [weightB], then normalised
-     * again. They share an onset, so the sum reads as one hit rather than two.
-     */
-    /**
      * One pad that is several strikes of one drum: strike i lands [offsetsMs]\[i] after the first, at
      * [weights]\[i] of the pad's velocity (its timbre struck that softly, and its level scaled by the same
      * weight). A flam and a bouncing snare are both this, and the rack's shortest echo (60 ms) is far too
@@ -193,6 +189,10 @@ internal object KitStrikes {
         }
     }
 
+    /**
+     * Two strikes as one drum: each peak-normalised, summed at [weightA] and [weightB], then normalised
+     * again. They share an onset, so the sum reads as one hit rather than two.
+     */
     fun layered(a: Strike, weightA: Float, b: Strike, weightB: Float): Strike = { v, t, semis ->
         val x = normalised(a(v, t, semis))
         val y = normalised(b(v, t, semis))
