@@ -88,6 +88,8 @@ object Arranger {
         val pullUp: Boolean = SectionNames.pullsUpInto(name),
         /** The section's own last bar keeps only the kick, or the bed ([PlanSection.drop]). */
         val drop: Boolean = false,
+        /** The lanes left out of it ([PlanSection.mutes]); the [clip] still holds their hits, so un-muting needs no new layout. */
+        val mutes: Set<String> = emptySet(),
     ) {
         init {
             require(repeats >= 1) { "a section plays at least once" }
@@ -149,7 +151,7 @@ object Arranger {
      */
     fun toPlan(arrangement: Arrangement): SongPlan = SongPlan(
         seed = arrangement.seed,
-        sections = arrangement.sections.map { PlanSection(it.name, it.ref, it.repeats, it.locked, it.seed, it.bass, it.pullUp, it.drop) },
+        sections = arrangement.sections.map { PlanSection(it.name, it.ref, it.repeats, it.locked, it.seed, it.bass, it.pullUp, it.drop, it.mutes) },
     )
 
     /**
@@ -178,7 +180,7 @@ object Arranger {
         val sections = plan.sections.map { s ->
             val clip = palette.clip(s.clip, s.seed)
             if (clip != null) {
-                Section(s.name, clip, minOf(s.repeats, maxRepeats(clip)), palette.reason(s.clip), s.clip, s.locked, s.seed, s.bass, s.pullUp, s.drop)
+                Section(s.name, clip, minOf(s.repeats, maxRepeats(clip)), palette.reason(s.clip), s.clip, s.locked, s.seed, s.bass, s.pullUp, s.drop, s.mutes)
             } else {
                 if (s.clip !in refused) refused += s.clip
                 // A gone program of yours is not replaced by a different one of
@@ -187,7 +189,7 @@ object Arranger {
                 // the section name the old one had.
                 val draft = palette.draft(s.seed).filter { ClipRef.yoursId(s.clip) == null || ClipRef.yoursId(it.ref) == null }
                 val again = draft.firstOrNull { it.name == s.name } ?: draft.first { it.ref == ClipRef.CAPTURED }
-                again.copy(name = s.name, repeats = minOf(s.repeats, maxRepeats(again.clip)), locked = s.locked, seed = s.seed, bass = s.bass, pullUp = s.pullUp, drop = s.drop)
+                again.copy(name = s.name, repeats = minOf(s.repeats, maxRepeats(again.clip)), locked = s.locked, seed = s.seed, bass = s.bass, pullUp = s.pullUp, drop = s.drop, mutes = s.mutes)
             }
         }
         return Resolved(Arrangement("${kit.name} Song", plan.seed, sections), refused)
@@ -489,6 +491,21 @@ object Arranger {
      */
     data class Drop(val section: Int, val kept: String?, val reason: String)
 
+    /**
+     * The pad slots [clip] plays, in order: the lanes a section can mute
+     * ([PlanSection.padLane] makes each one's key).
+     */
+    fun lanes(clip: Mpc3Clip): List<Int> = clip.notes.map { Mpc3Note.slotFor(it.note) }.distinct().sorted()
+
+    /**
+     * [clip] without the hits of the pad lanes in [mutes]: a muted lane is
+     * not played, so it neither sounds nor chokes anything. Its length and
+     * bar are the clip's own. With no pad lane muted it is [clip] itself.
+     */
+    internal fun withoutMuted(clip: Mpc3Clip, mutes: Set<String>): Mpc3Clip =
+        if (mutes.none { it.startsWith("pad:") }) clip
+        else clip.copy(notes = clip.notes.filter { PlanSection.padLane(Mpc3Note.slotFor(it.note)) !in mutes })
+
     /** What a dropped bar keeps: the kick pad's hits, or the bed's notes. */
     internal enum class DropKeeps { KICK, BED }
 
@@ -587,7 +604,9 @@ object Arranger {
         val bed = answerBed(kitDir)
 
         // Rolled per repeat here (the WAV is what the song sounds like); the .xpj under WRITE keeps the chances for the MPC to roll.
-        val clips = plan.sections.map { tiled(it.clip, it.repeats) }
+        val unmuted = plan.sections.map { tiled(it.clip, it.repeats) }
+        // A muted lane's hits are left out before anything else reads the clip: they are not played, so they cannot choke or ring.
+        val clips = unmuted.mapIndexed { i, c -> withoutMuted(c, plan.sections[i].mutes) }
         // A stretch whose every hit rolled silent is a stretch of silence, not a kit that cannot play the clip.
         val chancy = plan.sections.any { StepChance.hasChance(it.clip) }
         // Counted in pulses and turned into a frame once per boundary, so
@@ -613,8 +632,16 @@ object Arranger {
                 dropReports += Drop(i, null, "the pull-up into the next section takes this boundary, so the last bar was left as it is")
                 continue
             }
-            val d = dropBarOf(kit, clips[i], startPulses[i + 1], bed?.takeIf { plan.sections[i].bass })
+            val bedHere = bed?.takeIf { plan.sections[i].bass && PlanSection.BED_LANE !in plan.sections[i].mutes }
+            val d = dropBarOf(kit, clips[i], startPulses[i + 1], bedHere)
             if (d == null) {
+                // The kick is in the bar but muted: DROP keeps only the kick, and there is none to keep, so the bar is silent.
+                val silenced = dropBarOf(kit, unmuted[i], startPulses[i + 1], null)
+                if (silenced != null) {
+                    dropAt[i] = DropBar(DropKeeps.KICK, silenced.startPulse, silenced.endPulse, emptyList(), emptyList())
+                    dropReports += Drop(i, "kick", "the last bar keeps only the kick, which is muted in this section, so the bar is silent")
+                    continue
+                }
                 val why = if (kit.pads.none { it.drumClass == com.snipsnap.audio.DrumClass.KICK }) "no pad in this kit is marked as a kick" else "the last bar has no kick hit"
                 dropReports += Drop(i, null, "$why and there is no bed under the section, so the last bar was left as it is")
             } else {
@@ -623,6 +650,8 @@ object Arranger {
             }
         }
 
+        // A stretch whose every hit is muted is a stretch of silence, as one whose hits all rolled out is.
+        fun anyMuted(range: IntRange) = range.any { plan.sections[it].mutes.isNotEmpty() }
         val pieces = stretches.map { range ->
             val first = range.first
             val notes = range.flatMap { i ->
@@ -632,7 +661,7 @@ object Arranger {
             val stretchPulses = startPulses[range.last + 1] - startPulses[first]
             val drops = range.mapNotNull { dropAt[it] }
             var audio = if (drops.isEmpty()) {
-                KitPreview.renderNotes(kit, kitDir, notes, stretchPulses, bpm, allowSilence = chancy)
+                KitPreview.renderNotes(kit, kitDir, notes, stretchPulses, bpm, allowSilence = chancy || anyMuted(range))
             } else {
                 // Each stretch of drums between drops is its own take, in this stretch's own frames, cut where
                 // the next dropped bar begins: a tail never rings into it, and none comes back after it.
@@ -656,7 +685,7 @@ object Arranger {
             }
             if (bed != null) {
                 for (i in range) {
-                    if (!plan.sections[i].bass) continue
+                    if (!plan.sections[i].bass || PlanSection.BED_LANE in plan.sections[i].mutes) continue
                     val at = starts[i] - starts[first]
                     // A dropped section's bed plays up to its last bar, which the drop took over.
                     val d = dropAt[i]
@@ -692,7 +721,7 @@ object Arranger {
         // own length is no guide: a long pad struck earlier in it rings on
         // inside the take, and would hold the tape stop back.
         val last = plan.sections.lastIndex
-        val songEnd = starts[last] + KitPreview.renderNotes(kit, kitDir, clips[last].notes, clips[last].lengthPulses, bpm, allowSilence = chancy).frameCount
+        val songEnd = starts[last] + KitPreview.renderNotes(kit, kitDir, unmuted[last].notes, unmuted[last].lengthPulses, bpm, allowSilence = chancy).frameCount
         val song = BeatTape.tapeStop(Snip(out.copyOf(songEnd * 2), 2, KitPreview.RATE))
         SongBus.ceiling(song.samples)
         val passes = plan.sections.indices.flatMap { i ->
