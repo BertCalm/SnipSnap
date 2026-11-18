@@ -170,8 +170,8 @@ class PersonalityTest {
         for (tag in listOf("M0", "M1", "M2", "M3", "M4", "M5", "SKELETON", "ARRIVES WITH", "NOT RECORDED")) {
             assertFalse(all.contains(tag), "HELP still talks about the build, not the app: found \"$tag\"")
         }
-        // The places, in the order a user walks them, then the dock.
-        assertEquals(Places.PLACES + "THE DOCK", Places.HELP.keys.toList())
+        // The places, in the order a user walks them, then a pad's sound, then the dock.
+        assertEquals(Places.PLACES + Places.PAD_SOUND + "THE DOCK", Places.HELP.keys.toList())
         // Every line is a line, not a paragraph: HELP renders on a phone.
         // Two limits, deliberately not one: the drawn sections are held to
         // `Places.HELP_LINE_CHARS` (80), which `PlacesTest` pins and the

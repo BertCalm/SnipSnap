@@ -70,7 +70,7 @@ object CircuitPlayableGenerator {
             Case("root-held", "ROOT held default", null, defaults + ("HOLD" to 1f)),
             preset("fire-circle", "FIRE CIRCLE"),
             preset("night-reply", "NIGHT REPLY"),
-            preset("ember-pulse", "EMBER PULSE"),
+            preset("warm-pulse", "WARM PULSE"),
         )
         require(!File(out, "playable.json").exists() && cases.none { File(out, it.id).exists() }) {
             "Preserve existing playable artifacts; choose a new output directory"

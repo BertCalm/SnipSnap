@@ -35,14 +35,15 @@ import com.snipsnap.shell.Places
  * they were holding did not exist yet.
  *
  * It rotted because it lived here, where nothing could test it. The words
- * are in [Places.HELP] now — one short section per place and one for the
- * dock (`docs/SCREEN_PLAN_2026_10.md` §3.7), held to the app as built by
+ * are in [Places.HELP] now — one short section per place, one for the
+ * dock (`docs/SCREEN_PLAN_2026_10.md` §3.7) and one on changing a pad's sound
+ * ([Places.PAD_SOUND], the November UX pass), held to the app as built by
  * `PlacesTest` and the HELP line-length law; the first section's first
  * line names the MPC, so the front door says who the app is for. This
  * composable only draws them. It scrolls because a phone in one hand is
  * short, and it is one tap from every screen now, behind the gear.
  *
- * The sections are group boxes, THIS KIT's pattern, so a wall of small type is five
+ * The sections are group boxes, THIS KIT's pattern, so a wall of small type is six
  * closed lines and the one that matters is open. [cameFrom] is the place
  * that was under the gear - the gear opens from any place - and its section
  * starts open; the others start closed, and a tap opens or shuts any of them.

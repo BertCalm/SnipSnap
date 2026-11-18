@@ -76,7 +76,7 @@ class CircuitIntegrationTest {
         val added = listOf(
             stored(CircuitVoice.ROOT, "FIRE CIRCLE", 1f, .50f, .25f, .10f, .20f, .50f),
             stored(CircuitVoice.ROOT, "NIGHT REPLY", 1f, .48f, .50f, .20f, .20f, .70f, .55f),
-            stored(CircuitVoice.ROOT, "EMBER PULSE", 1f, .60f, .32f, .25f, .27f, .45f, 1f),
+            stored(CircuitVoice.ROOT, "WARM PULSE", 1f, .60f, .32f, .25f, .27f, .45f, 1f),
         )
         val addedNames = added.map { it.name }.toSet()
         assertEquals(legacy, presets.filterNot { it.name in addedNames }, "all twelve saved settings and their relative order survive")

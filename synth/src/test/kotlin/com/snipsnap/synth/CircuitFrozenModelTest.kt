@@ -46,7 +46,7 @@ class CircuitFrozenModelTest {
     @Test
     fun `model 1 factory presets render the published bytes`() {
         val presets = CircuitVoice.entries.map { CircuitPresets.forVoice(it).first() } +
-            listOf("EMBER PULSE", "HELD CIRCLE").map { name -> CircuitPresets.all().single { it.name == name } }
+            listOf("WARM PULSE", "HELD CIRCLE").map { name -> CircuitPresets.all().single { it.name == name } }
         check(presets.map { patch -> "preset ${patch.name}" to { patch.render().samples } }, mapOf(
             // THREE BREATHS stores ROOT's own defaults, so it shares the default ROOT fingerprint.
             "preset THREE BREATHS" to "618c935b03ac22e5a9f48a1b0c4a8d01858237873c872b7c5a8d4c2c1f37c3b1",
@@ -55,7 +55,7 @@ class CircuitFrozenModelTest {
             "preset CHEST GESTURE" to "d494d6e5cab1aeec527c68948ea5125ce2332010c2babc1182bb87bab05dc4e5",
             "preset WIDE CIRCLE" to "fd3ea401bb31643aabd1c4497fa7d50c3a7c88e7505fff49028de7187e613628",
             "preset FAST GATHER" to "c8498f218e28d791d7d16d8df85fac7c6a0533c891bc21db87cd73dc9ca66d7c",
-            "preset EMBER PULSE" to "b68a21e0e7ea06bdf8b5c25fbdd2c50df5766f4615840f37c61a619a0a53c007",
+            "preset WARM PULSE" to "b68a21e0e7ea06bdf8b5c25fbdd2c50df5766f4615840f37c61a619a0a53c007",
             "preset HELD CIRCLE" to "814fabbd00db8fc88481a38ffbc4a711fe62b359d71c045e35299dd492c8741c",
         ))
     }

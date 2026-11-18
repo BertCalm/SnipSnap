@@ -171,6 +171,7 @@ import com.snipsnap.shell.InstantKit
 import com.snipsnap.shell.KitBench
 import com.snipsnap.shell.KitBuilderModel
 import com.snipsnap.shell.LandingNote
+import com.snipsnap.shell.LastOpen
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.PadBanks
 import com.snipsnap.shell.PadEditorKeep
@@ -3256,6 +3257,37 @@ fun App(shelf: KitShelf) {
             val landed = kits.firstOrNull { it.dir == entry.dir } ?: entry
             open = landed
             landPickedKit(landed)
+        }
+    }
+
+    // Open on the pads (docs/UX_PASS_2026_11.md, the owner's "yes, when a kit is open"): a
+    // cold start reopens the project that was open with a kit on its grid, on PADS, through
+    // [openProject], the same landing its row gives. Once per start, after the kit list is
+    // read, and only from where a cold start lands (the library, nothing open, no share
+    // waiting, nothing busy), so it never pulls a user away from somewhere they went.
+    // `startPicked` also holds the write below back until the pick has read the old value:
+    // `project` starts null, and writing that first would forget it before it was read.
+    var startPicked by remember { mutableStateOf(false) }
+    LaunchedEffect(kitsLoaded) {
+        if (!kitsLoaded || startPicked) return@LaunchedEffect
+        val saved = runCatching { prefs.getString(LastOpen.PREFS_KEY, null) }.getOrNull()
+        val rows = if (saved == null) emptyList() else withContext(Dispatchers.IO) {
+            runCatching { shelfModel.projects() }
+                .onFailure { Log.e(TAG, "open on the pads: projects unreadable", it) }
+                .getOrDefault(emptyList())
+        }
+        val last = LastOpen.pick(saved, rows.map { it.project }, kits.map { it.dir.name }.toSet())
+        val atStart = nav.location.place == Place.SHELF && nav.location.top == null
+        if (last != null && atStart && project == null && shared == null && busy == null) openProject(last)
+        startPicked = true
+    }
+    val rememberedProject = LastOpen.toSave(project, open?.dir?.name)
+    LaunchedEffect(startPicked, rememberedProject) {
+        if (!startPicked) return@LaunchedEffect
+        runCatching {
+            prefs.edit().apply {
+                if (rememberedProject == null) remove(LastOpen.PREFS_KEY) else putString(LastOpen.PREFS_KEY, rememberedProject)
+            }.apply()
         }
     }
 

@@ -1,0 +1,488 @@
+{
+  "scope": "Python brush/movement hypotheses; native model 4 remains rejected for naturalness",
+  "cells": [
+    {
+      "role": "shuffle_brush",
+      "cell": 0,
+      "peak": 0.10233739992945691,
+      "rms": 0.009697601171342066
+    },
+    {
+      "role": "shuffle_brush",
+      "cell": 1,
+      "peak": 0.12371552006519956,
+      "rms": 0.011203546964100683
+    },
+    {
+      "role": "shuffle_brush",
+      "cell": 2,
+      "peak": 0.11829125314476968,
+      "rms": 0.01125509082538063
+    },
+    {
+      "role": "shuffle_brush",
+      "cell": 3,
+      "peak": 0.09600207760484324,
+      "rms": 0.006510592415764436
+    },
+    {
+      "role": "shuffle_brush",
+      "cell": 4,
+      "peak": 0.27863915978293863,
+      "rms": 0.028505446063644784
+    },
+    {
+      "role": "shuffle_brush",
+      "cell": 5,
+      "peak": 0.33551822342734666,
+      "rms": 0.03153190326650087
+    },
+    {
+      "role": "shuffle_brush",
+      "cell": 6,
+      "peak": 0.32566232323238936,
+      "rms": 0.03226679602076968
+    },
+    {
+      "role": "shuffle_brush",
+      "cell": 7,
+      "peak": 0.26352803512159806,
+      "rms": 0.018274271641509528
+    },
+    {
+      "role": "shuffle_brush",
+      "cell": 8,
+      "peak": 0.5125837539536504,
+      "rms": 0.05137827781626798
+    },
+    {
+      "role": "shuffle_brush",
+      "cell": 9,
+      "peak": 0.5606494085380147,
+      "rms": 0.05657882503685725
+    },
+    {
+      "role": "shuffle_brush",
+      "cell": 10,
+      "peak": 0.5938358337448811,
+      "rms": 0.059159851899984545
+    },
+    {
+      "role": "shuffle_brush",
+      "cell": 11,
+      "peak": 0.46290600911779484,
+      "rms": 0.03329103116102277
+    },
+    {
+      "role": "shuffle_spank",
+      "cell": 0,
+      "peak": 0.10085042140832709,
+      "rms": 0.010718426847930231
+    },
+    {
+      "role": "shuffle_spank",
+      "cell": 1,
+      "peak": 0.12600272278399527,
+      "rms": 0.01069295448754522
+    },
+    {
+      "role": "shuffle_spank",
+      "cell": 2,
+      "peak": 0.11324779116860438,
+      "rms": 0.011269476118445414
+    },
+    {
+      "role": "shuffle_spank",
+      "cell": 3,
+      "peak": 0.12187036743700261,
+      "rms": 0.010656460991631452
+    },
+    {
+      "role": "shuffle_spank",
+      "cell": 4,
+      "peak": 0.2920894119692092,
+      "rms": 0.030653953543876653
+    },
+    {
+      "role": "shuffle_spank",
+      "cell": 5,
+      "peak": 0.331114112261887,
+      "rms": 0.029715812050671798
+    },
+    {
+      "role": "shuffle_spank",
+      "cell": 6,
+      "peak": 0.306752971113061,
+      "rms": 0.03245552518269523
+    },
+    {
+      "role": "shuffle_spank",
+      "cell": 7,
+      "peak": 0.3403301932463662,
+      "rms": 0.029387500913015282
+    },
+    {
+      "role": "shuffle_spank",
+      "cell": 8,
+      "peak": 0.5740667877343779,
+      "rms": 0.05583668667043729
+    },
+    {
+      "role": "shuffle_spank",
+      "cell": 9,
+      "peak": 0.6050755792899305,
+      "rms": 0.05554193960078529
+    },
+    {
+      "role": "shuffle_spank",
+      "cell": 10,
+      "peak": 0.5314226330326137,
+      "rms": 0.05859022235068467
+    },
+    {
+      "role": "shuffle_spank",
+      "cell": 11,
+      "peak": 0.6225973722806322,
+      "rms": 0.050645743310056786
+    },
+    {
+      "role": "shuffle",
+      "velocity": 0.3,
+      "take": 0,
+      "peak": 0.0626201497649912
+    },
+    {
+      "role": "shuffle",
+      "velocity": 0.3,
+      "take": 1,
+      "peak": 0.0805410498495962
+    },
+    {
+      "role": "shuffle",
+      "velocity": 0.3,
+      "take": 2,
+      "peak": 0.06623646863752884
+    },
+    {
+      "role": "shuffle",
+      "velocity": 0.3,
+      "take": 3,
+      "peak": 0.06761219207473226
+    },
+    {
+      "role": "shuffle",
+      "velocity": 0.65,
+      "take": 0,
+      "peak": 0.17726557745131452
+    },
+    {
+      "role": "shuffle",
+      "velocity": 0.65,
+      "take": 1,
+      "peak": 0.2207677972399857
+    },
+    {
+      "role": "shuffle",
+      "velocity": 0.65,
+      "take": 2,
+      "peak": 0.18077424924232965
+    },
+    {
+      "role": "shuffle",
+      "velocity": 0.65,
+      "take": 3,
+      "peak": 0.19059011329722106
+    },
+    {
+      "role": "shuffle",
+      "velocity": 1.0,
+      "take": 0,
+      "peak": 0.3158550609604412
+    },
+    {
+      "role": "shuffle",
+      "velocity": 1.0,
+      "take": 1,
+      "peak": 0.3762317317720533
+    },
+    {
+      "role": "shuffle",
+      "velocity": 1.0,
+      "take": 2,
+      "peak": 0.3250203114904695
+    },
+    {
+      "role": "shuffle",
+      "velocity": 1.0,
+      "take": 3,
+      "peak": 0.3386301286637958
+    },
+    {
+      "role": "phrase",
+      "velocity": 0.3,
+      "take": 0,
+      "peak": 0.0843626196026474
+    },
+    {
+      "role": "phrase",
+      "velocity": 0.3,
+      "take": 1,
+      "peak": 0.09825309602970356
+    },
+    {
+      "role": "phrase",
+      "velocity": 0.3,
+      "take": 2,
+      "peak": 0.1142955065721544
+    },
+    {
+      "role": "phrase",
+      "velocity": 0.3,
+      "take": 3,
+      "peak": 0.0969137119057542
+    },
+    {
+      "role": "phrase",
+      "velocity": 0.65,
+      "take": 0,
+      "peak": 0.2381636240163611
+    },
+    {
+      "role": "phrase",
+      "velocity": 0.65,
+      "take": 1,
+      "peak": 0.2806233501756815
+    },
+    {
+      "role": "phrase",
+      "velocity": 0.65,
+      "take": 2,
+      "peak": 0.3256547108490644
+    },
+    {
+      "role": "phrase",
+      "velocity": 0.65,
+      "take": 3,
+      "peak": 0.28274553514561446
+    },
+    {
+      "role": "phrase",
+      "velocity": 1.0,
+      "take": 0,
+      "peak": 0.423135611133969
+    },
+    {
+      "role": "phrase",
+      "velocity": 1.0,
+      "take": 1,
+      "peak": 0.4937974744582278
+    },
+    {
+      "role": "phrase",
+      "velocity": 1.0,
+      "take": 2,
+      "peak": 0.570465274072726
+    },
+    {
+      "role": "phrase",
+      "velocity": 1.0,
+      "take": 3,
+      "peak": 0.49568425499525304
+    }
+  ],
+  "shuffle_events": [
+    {
+      "seconds": 0.04105513737073655,
+      "force": 0.6993132152478632,
+      "travel": 1.007444258522264,
+      "role": "shuffle_brush",
+      "foot": "L",
+      "take": 0
+    },
+    {
+      "seconds": 0.12821356339722376,
+      "force": 0.812376536029917,
+      "travel": 1.0226272495522897,
+      "role": "shuffle_spank",
+      "foot": "L",
+      "take": 0
+    }
+  ],
+  "phrase_events": [
+    {
+      "seconds": 0.04105513737073655,
+      "force": 0.5822282026377924,
+      "travel": 1.007444258522264,
+      "role": "shuffle_brush",
+      "foot": "L",
+      "take": 0
+    },
+    {
+      "seconds": 0.12821356339722376,
+      "force": 0.6984456803671848,
+      "travel": 1.0226272495522897,
+      "role": "shuffle_spank",
+      "foot": "L",
+      "take": 0
+    },
+    {
+      "seconds": 0.21511974832402653,
+      "force": 0.916803661679958,
+      "travel": 1.0359087171189791,
+      "role": "toe",
+      "foot": "L",
+      "take": 0
+    },
+    {
+      "seconds": 0.449737792098098,
+      "force": 0.580638828529593,
+      "travel": 1.0548081882338143,
+      "role": "heel",
+      "foot": "L",
+      "take": 0
+    },
+    {
+      "seconds": 0.7153530465248557,
+      "force": 0.5044827468601133,
+      "travel": 1.0385222178030027,
+      "role": "brush",
+      "foot": "R",
+      "take": 2
+    },
+    {
+      "seconds": 0.7888028268870981,
+      "force": 0.783318765849599,
+      "travel": 1.0279498553154864,
+      "role": "toe",
+      "foot": "R",
+      "take": 2
+    },
+    {
+      "seconds": 1.2387276382278183,
+      "force": 0.5966984311239852,
+      "travel": 0.9551089440924565,
+      "role": "toe",
+      "foot": "L",
+      "take": 1
+    },
+    {
+      "seconds": 1.3495563180193557,
+      "force": 0.918686827699133,
+      "travel": 0.9467028528511922,
+      "role": "toe",
+      "foot": "R",
+      "take": 3
+    },
+    {
+      "seconds": 1.4063619544542043,
+      "force": 0.5027299768824807,
+      "travel": 0.9451044355783953,
+      "role": "heel",
+      "foot": "R",
+      "take": 2
+    },
+    {
+      "seconds": 1.778005158011472,
+      "force": 0.41050409925940473,
+      "travel": 0.9784083806799386,
+      "role": "shuffle_brush",
+      "foot": "R",
+      "take": 2
+    },
+    {
+      "seconds": 1.8651752729243871,
+      "force": 0.4744945040495653,
+      "travel": 0.9936800116723179,
+      "role": "shuffle_spank",
+      "foot": "R",
+      "take": 2
+    },
+    {
+      "seconds": 2.1892956497128884,
+      "force": 0.47144704884460426,
+      "travel": 1.0449506664034773,
+      "role": "brush",
+      "foot": "R",
+      "take": 3
+    },
+    {
+      "seconds": 2.265264201227165,
+      "force": 0.7391655223232467,
+      "travel": 1.0514181230232644,
+      "role": "toe",
+      "foot": "R",
+      "take": 0
+    },
+    {
+      "seconds": 2.721939582458732,
+      "force": 0.540997759120458,
+      "travel": 1.0226018586558971,
+      "role": "shuffle_brush",
+      "foot": "L",
+      "take": 1
+    },
+    {
+      "seconds": 2.804794482907687,
+      "force": 0.6451118226418572,
+      "travel": 1.0081914654057085,
+      "role": "shuffle_spank",
+      "foot": "L",
+      "take": 1
+    },
+    {
+      "seconds": 2.88755334894377,
+      "force": 0.8439200619621802,
+      "travel": 0.9931872767055079,
+      "role": "toe",
+      "foot": "L",
+      "take": 2
+    },
+    {
+      "seconds": 3.2465037425666696,
+      "force": 0.5850046400522231,
+      "travel": 0.9468426509984946,
+      "role": "toe",
+      "foot": "R",
+      "take": 1
+    },
+    {
+      "seconds": 3.3583604463508396,
+      "force": 0.9067020062616606,
+      "travel": 0.9453343554575155,
+      "role": "toe",
+      "foot": "L",
+      "take": 3
+    },
+    {
+      "seconds": 3.415704860272812,
+      "force": 0.5033580900206968,
+      "travel": 0.9474557698246884,
+      "role": "heel",
+      "foot": "L",
+      "take": 1
+    },
+    {
+      "seconds": 3.7897354930454616,
+      "force": 0.754730192489041,
+      "travel": 0.998133432723332,
+      "role": "toe",
+      "foot": "L",
+      "take": 0
+    },
+    {
+      "seconds": 3.927116595904107,
+      "force": 0.5697555801376419,
+      "travel": 1.0224452495539555,
+      "role": "heel",
+      "foot": "L",
+      "take": 2
+    }
+  ],
+  "checks": [
+    "48 deterministic/dynamic/repeat cells",
+    "zero velocity",
+    "PCM16 round trips",
+    "finite/headroom/DC/tail"
+  ],
+  "peak": 0.6225973722806322
+}
