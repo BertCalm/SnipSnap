@@ -11,6 +11,7 @@ import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 /**
@@ -195,6 +196,32 @@ class LooseCrateKitsTest {
             // Every kick has the snare wires under it.
             assertEquals(kicks.size, notes.count { it.part == LooseCrateKits.WIRES }, "${kit.name} wires")
         }
+    }
+
+    /**
+     * Round 3: "Crate cloth could use a bit of warmth or compression in the bass" (the owner). CLOTH's print squeezes
+     * its bass alone: on CLOTH's own groove, before the print, the squeeze lowers the bass crest (peak against RMS
+     * under 200 Hz) by at least 2 dB and leaves the band above it untouched. The reference's bass crest measured 17.9
+     * dB, round 2's CLOTH groove 21.4 (Python probes, docs/LOOSE_CRATE.md).
+     */
+    @Test fun `CLOTH's print presses its bass into body and leaves the rest alone`() {
+        val print = LooseCrateKits.printOf(Kit.CLOTH)
+        assertNotNull(print.bassSqueeze)
+        assertNotNull(print.valve)
+        val plain = LooseCrateKits.Print(print.name, print.crunch, print.tape, print.hitVinyl, print.grooveVinyl, print.valve, bassSqueeze = null)
+        val bare = LooseCrateKits.Print(print.name, print.crunch, print.tape, print.hitVinyl, print.grooveVinyl)
+        val dry = LooseCrateKits.dry(Kit.CLOTH, LooseCrateKits.GROOVE, 1f, 0).samples
+        fun low(s: FloatArray): FloatArray {
+            val a = Dsp.FixedOnePole(200f); val b = Dsp.FixedOnePole(200f); val c = Dsp.FixedOnePole(200f); val d = Dsp.FixedOnePole(200f)
+            return FloatArray(s.size) { d.lp(c.lp(b.lp(a.lp(s[it])))) }
+        }
+        fun crest(s: FloatArray) = 20 * kotlin.math.log10(s.maxOf { abs(it) } / sqrt(s.sumOf { it.toDouble() * it } / s.size))
+        val full = crest(low(print.apply(dry, phrase = true)))
+        val noSqueeze = crest(low(plain.apply(dry, phrase = true)))
+        val round2 = crest(low(bare.apply(dry, phrase = true)))
+        println("CLOTH bass crest: round 2 print $round2 dB, with the tube $noSqueeze dB, with the tube and the squeeze $full dB")
+        assertTrue(full <= round2 - 2.0, "bass crest $round2 dB in round 2's print, $full with round 3's")
+        assertTrue(full < noSqueeze, "the squeeze does nothing: $noSqueeze dB without it, $full with it")
     }
 
     @Test fun `HUMMIN opens with round 0's sounds as they were heard`() {
