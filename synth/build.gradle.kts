@@ -4024,3 +4024,13 @@ tasks.register<JavaExec>("generateLooseCrateRound2a") {
     maxHeapSize = "1g"
     args(listOfNotNull(providers.gradleProperty("looseCrateRound2aOutput").orNull ?: "${rootDir}/testkit/loose-crate-round2a", providers.gradleProperty("looseCrateRound2aMode").orNull))
 }
+
+tasks.register<JavaExec>("generateLooseCrateExpansionRound0") {
+    group = "distribution"
+    description = "Render LOOSE CRATE's expansion round 0: a groove and key hits for BLUE, SPEED and RAGA."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.LooseCrateExpansionRound0Generator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "1g"
+    args(providers.gradleProperty("looseCrateExpansionOutput").orNull ?: "${rootDir}/testkit/loose-crate-expansion-round0")
+}
