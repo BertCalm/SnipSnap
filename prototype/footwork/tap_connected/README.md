@@ -72,3 +72,20 @@ cells. The audition retains the previous shuffle and adds an energy-matched
 comparison. These are authored duration/envelope changes; smoother perceived
 motion still requires listening. The report's peak supersedes the first study's
 peak above; source/native acceptance is not inferred from the checks.
+
+## Smoother pickups in phrase, roll and build
+
+After the owner's “Ok. Continue”, the same smooth forward/return sources now
+drive the pickup gestures. The landing stays a separate, unchanged toe source.
+At faster rates the travel envelope shortens with the event spacing; filter
+frequencies stay fixed. This prevents a long return from washing across the next
+landing. The nominal pickup is forward at 0, return at 85 ms, toe at 170 ms.
+
+The 36 isolated shuffle/flap/ball-change cells remain PCM-identical to the prior
+revision, as do all 24 toe/heel cells. The three performance plans retain their
+phrasing and accents; pickup contact sources and internal timing change.
+All 72 render/save cells are checked again, including dynamics and repeats.
+The page offers previous, new, equal-energy new, and soft/medium versions for
+each affected performance. These remain source studies pending listening, not
+native kit or export promotion. The earlier complete JVM run finished successfully;
+that result validates its unchanged JVM code, not the new Python audio's realism.
