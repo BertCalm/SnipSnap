@@ -1096,7 +1096,13 @@ object StarterKits {
             "The eight EROSION pads with soft, medium and hard touch and four takes on each: a repeated hit sparks differently every time.",
             seeded = false,
         ) { com.snipsnap.synth.ErosionRoundRobinKits.build() },
-        // Opt-in beside the accepted TEMPEST starter, which stays as it is; appended after EROSION ROUND ROBIN.
+        // Opt-in beside the kept TERRA starter, which stays as it is; appended after EROSION ROUND ROBIN.
+        Starter(
+            com.snipsnap.synth.TerraRoundRobinKits.ID, "TERRA ROUND ROBIN",
+            "The sixteen TERRA pads with soft, medium and hard touch and four takes on each: a repeated hit lands a little differently every time.",
+            seeded = false,
+        ) { com.snipsnap.synth.TerraRoundRobinKits.build() },
+        // Opt-in beside the accepted TEMPEST starter, which stays as it is; appended after TERRA ROUND ROBIN.
         Starter(
             com.snipsnap.synth.TempestRoundRobinKits.ID, "TEMPEST ROUND ROBIN",
             "The sixteen TEMPEST pads with four takes each: repeated hats, snares and claps vary like a real drum machine's.",

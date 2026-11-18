@@ -357,9 +357,14 @@ internal object TerraFitted {
      * the residual's noise (each take its own); the skin's split pairs are each stroke's own.
      * [level] is HIT's curve per [bodyModes] mode; under HIT the partials are scaled by the
      * unstruck drum's peak, so the colouring reaches the residual in proportion.
+     *
+     * [keptNoiseSeed], when given, holds each residual band to the energy it has under that seed
+     * (the kept take's): the wash is re-drawn, grain by grain, at the levels the kept hit realised,
+     * rather than at a fresh draw's own (a short band's energy swings by several dB from seed to
+     * seed). TERRA ROUND ROBIN's takes use it ([Terra.renderFittedTake]); null is today's render.
      */
     fun render(voice: TerraVoice, m: Map<String, Float>, rate: Int, velocity: Float, noiseSeed: Int,
-               level: Array<FloatArray>? = null, headOnly: Boolean = false): FloatArray {
+               level: Array<FloatArray>? = null, headOnly: Boolean = false, keptNoiseSeed: Int? = null): FloatArray {
         val v = StrikeVelocity.settled(velocity).toDouble()
         val frames = frames(rate)
         val tune = tuneRatio(m); val decay = decayScale(m); val wScale = widthScale(m)
@@ -413,7 +418,7 @@ internal object TerraFitted {
                 val unstruck = DoubleArray(frames) { (if (refPeak > 1e-12) ref[it] / refPeak * st.bodyGain else 0.0) + (if (skinPeak > 1e-12) skin[it] / skinPeak * st.skinLevel * v * v else 0.0) }
                 TerraBox.lowpass(TerraBox.lowpass(FloatArray(frames) { unstruck[it].toFloat() }, 20000f, rate), 20000f, rate).maxOf { abs(it) }.toDouble()
             }
-            val res = residual(st, pl, decay, rate, frames, noiseSeed * 31 + si * 977, v)
+            val res = residual(st, pl, decay, rate, frames, noiseSeed * 31 + si * 977, v, keptNoiseSeed?.let { it * 31 + si * 977 })
             // the velocity law (the full hit is the stroke as picked): a softer hand drives the head's
             // notes in proportion (v), the skin's short upper modes as v^2, and the residual's bands by
             // their own exponents (bandExponent): steeper the higher the band, so a soft hit is darker
@@ -580,7 +585,7 @@ internal object TerraFitted {
      * noise's variance, 1/3, times the filter's impulse energy, cached per band), so a band stops
      * once it has decayed 140 dB.
      */
-    private fun residual(st: Stroke, pl: Played, decay: Double, rate: Int, frames: Int, seed: Int, velocity: Double): DoubleArray {
+    private fun residual(st: Stroke, pl: Played, decay: Double, rate: Int, frames: Int, seed: Int, velocity: Double, keptSeed: Int? = null): DoubleArray {
         val low = Dsp.RATE
         val lowFrames = frames / (rate / low) + 2
         val sum = DoubleArray(lowFrames)
@@ -597,8 +602,17 @@ internal object TerraFitted {
             var x = DoubleArray(n) { noise.next().toDouble() }
             for (sec in sections) x = biquad(x, sec)
             val step = exp(-6.9078 / (tSeconds * low))
+            // A round-robin take: this band at the energy it has under the kept seed (render's keptNoiseSeed).
+            val gain = if (keptSeed == null || keptSeed == seed) g else {
+                val keptNoise = Dsp.Noise(keptSeed + i * 7919)
+                var y = DoubleArray(n) { keptNoise.next().toDouble() }
+                for (sec in sections) y = biquad(y, sec)
+                var ex = 0.0; var ey = 0.0; var e = 1.0
+                for (k in 0 until n) { ex += x[k] * x[k] * e * e; ey += y[k] * y[k] * e * e; e *= step }
+                if (ex > 0.0) g * sqrt(ey / ex) else g
+            }
             var env = 1.0
-            for (k in 0 until n) { sum[k] += g * x[k] * env; env *= step }
+            for (k in 0 until n) { sum[k] += gain * x[k] * env; env *= step }
         }
         val up = rate / low
         return DoubleArray(frames) { k ->

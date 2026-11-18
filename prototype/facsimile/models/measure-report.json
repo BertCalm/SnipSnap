@@ -1,0 +1,654 @@
+{
+ "loops": {
+  "102": {
+   "band_distance_db": 9.13,
+   "shifted_16th_reference_db": 17.14,
+   "balance_db": 6.16,
+   "balance_by_band": [
+    20.8,
+    19.9,
+    19.3,
+    14.2,
+    7.0,
+    3.7,
+    3.9,
+    5.2,
+    3.9,
+    1.1,
+    2.9,
+    5.5,
+    3.4,
+    2.4,
+    0.7,
+    -1.2,
+    -0.6,
+    -2.6,
+    -4.5,
+    -5.3,
+    -4.6,
+    -4.4,
+    -5.7,
+    -4.7,
+    -6.5,
+    -6.2
+   ],
+   "level_db": -4.58
+  },
+  "103": {
+   "band_distance_db": 10.62,
+   "shifted_16th_reference_db": 17.41,
+   "balance_db": 4.01,
+   "balance_by_band": [
+    -4.6,
+    -10.4,
+    -7.5,
+    -4.0,
+    -0.5,
+    -4.9,
+    -2.8,
+    -1.3,
+    1.3,
+    1.3,
+    2.0,
+    2.3,
+    -0.7,
+    2.8,
+    1.1,
+    -2.9,
+    -3.4,
+    -4.4,
+    -6.3,
+    -4.2,
+    -5.3,
+    -6.8,
+    -5.2,
+    -6.9,
+    -5.9,
+    -5.4
+   ],
+   "level_db": -4.88
+  },
+  "106": {
+   "band_distance_db": 10.0,
+   "shifted_16th_reference_db": 18.75,
+   "balance_db": 3.29,
+   "balance_by_band": [
+    0.6,
+    -3.1,
+    -2.0,
+    0.4,
+    1.1,
+    -1.1,
+    0.4,
+    5.9,
+    0.5,
+    2.2,
+    1.9,
+    -1.3,
+    -4.0,
+    -2.4,
+    -4.1,
+    -3.7,
+    -6.6,
+    -4.4,
+    -4.3,
+    -3.7,
+    -4.7,
+    -4.4,
+    -3.8,
+    -4.3,
+    -5.1,
+    -9.6
+   ],
+   "level_db": -0.85
+  },
+  "113": {
+   "band_distance_db": 9.07,
+   "shifted_16th_reference_db": 12.36,
+   "balance_db": 4.02,
+   "balance_by_band": [
+    7.9,
+    2.5,
+    0.3,
+    -0.2,
+    -0.4,
+    0.9,
+    0.6,
+    -0.4,
+    -3.1,
+    -0.9,
+    -3.7,
+    -2.8,
+    -4.3,
+    -6.2,
+    -3.8,
+    -6.7,
+    -3.7,
+    -5.4,
+    -6.1,
+    -6.8,
+    -6.6,
+    -7.7,
+    -9.1,
+    -7.7,
+    -5.3,
+    -1.4
+   ],
+   "level_db": -0.63
+  },
+  "127": {
+   "band_distance_db": 9.01,
+   "shifted_16th_reference_db": 23.4,
+   "balance_db": 3.76,
+   "balance_by_band": [
+    -8.3,
+    -10.3,
+    -7.6,
+    -1.0,
+    -1.3,
+    1.3,
+    -1.3,
+    2.1,
+    -1.4,
+    2.5,
+    1.2,
+    1.7,
+    -3.5,
+    -0.9,
+    -2.0,
+    -3.7,
+    -2.5,
+    -3.1,
+    -3.6,
+    -4.8,
+    -4.4,
+    -6.7,
+    -5.7,
+    -7.2,
+    -6.5,
+    -3.6
+   ],
+   "level_db": -2.83
+  },
+  "134": {
+   "band_distance_db": 11.82,
+   "shifted_16th_reference_db": 12.73,
+   "balance_db": 6.69,
+   "balance_by_band": [
+    -5.1,
+    -5.0,
+    -4.4,
+    2.0,
+    -5.6,
+    -7.3,
+    -5.0,
+    -2.8,
+    -4.5,
+    -4.4,
+    -5.1,
+    -7.3,
+    -5.0,
+    -4.6,
+    -5.9,
+    -5.1,
+    -5.4,
+    -8.0,
+    -8.7,
+    -9.6,
+    -10.2,
+    -9.8,
+    -11.6,
+    -9.6,
+    -10.3,
+    -11.3
+   ],
+   "level_db": -4.74
+  },
+  "154": {
+   "band_distance_db": 8.24,
+   "shifted_16th_reference_db": 16.81,
+   "balance_db": 4.45,
+   "balance_by_band": [
+    0.9,
+    1.0,
+    1.4,
+    -4.0,
+    -1.5,
+    -4.1,
+    -4.7,
+    -1.2,
+    -3.9,
+    -4.1,
+    -4.3,
+    -14.5,
+    -13.2,
+    -7.8,
+    -5.8,
+    -4.3,
+    -4.0,
+    -8.2,
+    -1.2,
+    -2.8,
+    -4.5,
+    -2.4,
+    -3.4,
+    -3.3,
+    -4.0,
+    -5.2
+   ],
+   "level_db": -0.7
+  },
+  "163": {
+   "band_distance_db": 9.45,
+   "shifted_16th_reference_db": 8.98,
+   "balance_db": 6.0,
+   "balance_by_band": [
+    -0.5,
+    -5.1,
+    -5.7,
+    -8.3,
+    -3.9,
+    -4.8,
+    -3.6,
+    -4.5,
+    -8.4,
+    -7.2,
+    -7.4,
+    -6.6,
+    -6.4,
+    -5.9,
+    -8.4,
+    -6.6,
+    -8.6,
+    -10.7,
+    -7.9,
+    -8.6,
+    -6.8,
+    -4.3,
+    -2.1,
+    -4.3,
+    -1.4,
+    -8.1
+   ],
+   "level_db": -5.29
+  },
+  "90": {
+   "band_distance_db": 6.71,
+   "shifted_16th_reference_db": 17.59,
+   "balance_db": 2.79,
+   "balance_by_band": [
+    -7.5,
+    -5.0,
+    -6.3,
+    -4.7,
+    -2.9,
+    -0.1,
+    1.8,
+    1.1,
+    0.8,
+    0.5,
+    3.1,
+    0.1,
+    1.6,
+    -0.6,
+    0.4,
+    -2.0,
+    -4.1,
+    -3.7,
+    -3.8,
+    -2.0,
+    -3.0,
+    -3.3,
+    -3.9,
+    -3.5,
+    -2.9,
+    -3.9
+   ],
+   "level_db": -0.8
+  }
+ },
+ "drums": {
+  "102-d0": {
+   "fit_distance_4x_db": 3.99,
+   "reference_own_hits_db": 9.43,
+   "velocity_shape_db": 3.26,
+   "closest_takes_db": -2.4
+  },
+  "102-d1": {
+   "fit_distance_4x_db": 4.56,
+   "reference_own_hits_db": 9.24,
+   "velocity_shape_db": 4.17,
+   "closest_takes_db": -1.6
+  },
+  "102-d2": {
+   "fit_distance_4x_db": 4.16,
+   "reference_own_hits_db": 13.47,
+   "velocity_shape_db": 4.07,
+   "closest_takes_db": -2.3
+  },
+  "102-d3": {
+   "fit_distance_4x_db": 4.18,
+   "reference_own_hits_db": 4.35,
+   "velocity_shape_db": 3.91,
+   "closest_takes_db": -2.6
+  },
+  "102-d4": {
+   "fit_distance_4x_db": 4.13,
+   "reference_own_hits_db": 15.98,
+   "velocity_shape_db": 3.98,
+   "closest_takes_db": -2.1
+  },
+  "102-d5": {
+   "fit_distance_4x_db": 3.25,
+   "reference_own_hits_db": 4.06,
+   "velocity_shape_db": 2.59,
+   "closest_takes_db": -1.0
+  },
+  "103-d0": {
+   "fit_distance_4x_db": 4.43,
+   "reference_own_hits_db": 5.45,
+   "velocity_shape_db": 3.13,
+   "closest_takes_db": -2.5
+  },
+  "103-d1": {
+   "fit_distance_4x_db": 7.84,
+   "reference_own_hits_db": 7.55,
+   "velocity_shape_db": 3.8,
+   "closest_takes_db": 2.4
+  },
+  "103-d2": {
+   "fit_distance_4x_db": 4.27,
+   "reference_own_hits_db": 12.16,
+   "velocity_shape_db": 3.14,
+   "closest_takes_db": -1.5
+  },
+  "103-d3": {
+   "fit_distance_4x_db": 5.46,
+   "reference_own_hits_db": 14.95,
+   "velocity_shape_db": 1.84,
+   "closest_takes_db": -2.7
+  },
+  "103-d4": {
+   "fit_distance_4x_db": 5.03,
+   "reference_own_hits_db": 4.24,
+   "velocity_shape_db": 3.07,
+   "closest_takes_db": 0.2
+  },
+  "106-d0": {
+   "fit_distance_4x_db": 3.87,
+   "reference_own_hits_db": 16.61,
+   "velocity_shape_db": 3.08,
+   "closest_takes_db": -2.6
+  },
+  "106-d1": {
+   "fit_distance_4x_db": 3.54,
+   "reference_own_hits_db": 15.3,
+   "velocity_shape_db": 3.08,
+   "closest_takes_db": -1.4
+  },
+  "106-d2": {
+   "fit_distance_4x_db": 3.71,
+   "reference_own_hits_db": 5.61,
+   "velocity_shape_db": 3.22,
+   "closest_takes_db": -1.8
+  },
+  "106-d3": {
+   "fit_distance_4x_db": 4.33,
+   "reference_own_hits_db": 1.24,
+   "velocity_shape_db": 3.73,
+   "closest_takes_db": 0.4
+  },
+  "106-d4": {
+   "fit_distance_4x_db": 4.86,
+   "reference_own_hits_db": 3.81,
+   "velocity_shape_db": 2.0,
+   "closest_takes_db": -2.7
+  },
+  "106-d5": {
+   "fit_distance_4x_db": 3.92,
+   "reference_own_hits_db": 6.46,
+   "velocity_shape_db": 2.81,
+   "closest_takes_db": -1.0
+  },
+  "113-d0": {
+   "fit_distance_4x_db": 4.16,
+   "reference_own_hits_db": 3.58,
+   "velocity_shape_db": 3.03,
+   "closest_takes_db": -0.5
+  },
+  "113-d1": {
+   "fit_distance_4x_db": 6.44,
+   "reference_own_hits_db": 5.49,
+   "velocity_shape_db": 1.86,
+   "closest_takes_db": 1.6
+  },
+  "113-d2": {
+   "fit_distance_4x_db": 4.04,
+   "reference_own_hits_db": 23.97,
+   "velocity_shape_db": 3.32,
+   "closest_takes_db": -3.1
+  },
+  "113-d3": {
+   "fit_distance_4x_db": 4.24,
+   "reference_own_hits_db": 16.61,
+   "velocity_shape_db": 2.99,
+   "closest_takes_db": -2.2
+  },
+  "113-d4": {
+   "fit_distance_4x_db": 4.0,
+   "reference_own_hits_db": 15.47,
+   "velocity_shape_db": 3.33,
+   "closest_takes_db": 1.2
+  },
+  "113-d5": {
+   "fit_distance_4x_db": 6.46,
+   "reference_own_hits_db": 9.07,
+   "velocity_shape_db": 3.88,
+   "closest_takes_db": 4.2
+  },
+  "113-d6": {
+   "fit_distance_4x_db": 5.57,
+   "reference_own_hits_db": 15.03,
+   "velocity_shape_db": 3.69,
+   "closest_takes_db": 0.6
+  },
+  "127-d0": {
+   "fit_distance_4x_db": 4.28,
+   "reference_own_hits_db": 3.13,
+   "velocity_shape_db": 4.04,
+   "closest_takes_db": 3.5
+  },
+  "127-d1": {
+   "fit_distance_4x_db": 7.64,
+   "reference_own_hits_db": 11.72,
+   "velocity_shape_db": 1.58,
+   "closest_takes_db": 2.8
+  },
+  "127-d2": {
+   "fit_distance_4x_db": 5.13,
+   "reference_own_hits_db": 10.6,
+   "velocity_shape_db": 3.22,
+   "closest_takes_db": -3.1
+  },
+  "127-d3": {
+   "fit_distance_4x_db": 4.61,
+   "reference_own_hits_db": 6.9,
+   "velocity_shape_db": 3.13,
+   "closest_takes_db": -0.9
+  },
+  "127-d4": {
+   "fit_distance_4x_db": 3.75,
+   "reference_own_hits_db": 16.46,
+   "velocity_shape_db": 3.33,
+   "closest_takes_db": -2.1
+  },
+  "127-d5": {
+   "fit_distance_4x_db": 3.66,
+   "reference_own_hits_db": 16.99,
+   "velocity_shape_db": 2.76,
+   "closest_takes_db": 2.3
+  },
+  "134-d0": {
+   "fit_distance_4x_db": 4.41,
+   "reference_own_hits_db": 15.94,
+   "velocity_shape_db": 3.46,
+   "closest_takes_db": -2.3
+  },
+  "134-d1": {
+   "fit_distance_4x_db": 4.26,
+   "reference_own_hits_db": 13.41,
+   "velocity_shape_db": 2.95,
+   "closest_takes_db": 1.2
+  },
+  "134-d2": {
+   "fit_distance_4x_db": 3.89,
+   "reference_own_hits_db": 26.17,
+   "velocity_shape_db": 3.79,
+   "closest_takes_db": -2.4
+  },
+  "134-d3": {
+   "fit_distance_4x_db": 3.69,
+   "reference_own_hits_db": 7.64,
+   "velocity_shape_db": 2.8,
+   "closest_takes_db": -0.2
+  },
+  "134-d4": {
+   "fit_distance_4x_db": 4.02,
+   "reference_own_hits_db": 9.35,
+   "velocity_shape_db": 2.84,
+   "closest_takes_db": 0.8
+  },
+  "134-d5": {
+   "fit_distance_4x_db": 4.92,
+   "reference_own_hits_db": 7.59,
+   "velocity_shape_db": 2.85,
+   "closest_takes_db": 7.9
+  },
+  "134-d6": {
+   "fit_distance_4x_db": 9.09,
+   "reference_own_hits_db": 4.42,
+   "velocity_shape_db": 1.53,
+   "closest_takes_db": 3.2
+  },
+  "154-d0": {
+   "fit_distance_4x_db": 4.89,
+   "reference_own_hits_db": 7.09,
+   "velocity_shape_db": 2.67,
+   "closest_takes_db": 2.8
+  },
+  "154-d1": {
+   "fit_distance_4x_db": 4.5,
+   "reference_own_hits_db": 10.59,
+   "velocity_shape_db": 3.54,
+   "closest_takes_db": -2.1
+  },
+  "154-d2": {
+   "fit_distance_4x_db": 3.96,
+   "reference_own_hits_db": 5.0,
+   "velocity_shape_db": 1.89,
+   "closest_takes_db": -0.8
+  },
+  "154-d3": {
+   "fit_distance_4x_db": 4.12,
+   "reference_own_hits_db": 8.6,
+   "velocity_shape_db": 3.1,
+   "closest_takes_db": 3.4
+  },
+  "154-d4": {
+   "fit_distance_4x_db": 5.24,
+   "reference_own_hits_db": 4.96,
+   "velocity_shape_db": 2.4,
+   "closest_takes_db": -2.9
+  },
+  "154-d5": {
+   "fit_distance_4x_db": 4.2,
+   "reference_own_hits_db": 8.11,
+   "velocity_shape_db": 2.57,
+   "closest_takes_db": 1.5
+  },
+  "163-d0": {
+   "fit_distance_4x_db": 5.99,
+   "reference_own_hits_db": 11.23,
+   "velocity_shape_db": 2.52,
+   "closest_takes_db": 0.7
+  },
+  "163-d1": {
+   "fit_distance_4x_db": 3.93,
+   "reference_own_hits_db": 10.93,
+   "velocity_shape_db": 2.95,
+   "closest_takes_db": -0.9
+  },
+  "163-d2": {
+   "fit_distance_4x_db": 4.08,
+   "reference_own_hits_db": 20.72,
+   "velocity_shape_db": 3.35,
+   "closest_takes_db": -2.9
+  },
+  "163-d3": {
+   "fit_distance_4x_db": 3.88,
+   "reference_own_hits_db": 10.77,
+   "velocity_shape_db": 3.23,
+   "closest_takes_db": -1.7
+  },
+  "163-d4": {
+   "fit_distance_4x_db": 4.39,
+   "reference_own_hits_db": 8.19,
+   "velocity_shape_db": 2.89,
+   "closest_takes_db": -2.3
+  },
+  "163-d5": {
+   "fit_distance_4x_db": 5.7,
+   "reference_own_hits_db": 8.38,
+   "velocity_shape_db": 1.34,
+   "closest_takes_db": 2.8
+  },
+  "163-d6": {
+   "fit_distance_4x_db": 4.11,
+   "reference_own_hits_db": 14.01,
+   "velocity_shape_db": 2.93,
+   "closest_takes_db": 0.7
+  },
+  "163-d7": {
+   "fit_distance_4x_db": 3.64,
+   "reference_own_hits_db": 12.1,
+   "velocity_shape_db": 3.54,
+   "closest_takes_db": -1.1
+  },
+  "90-d0": {
+   "fit_distance_4x_db": 3.92,
+   "reference_own_hits_db": 1.57,
+   "velocity_shape_db": 2.7,
+   "closest_takes_db": -2.7
+  },
+  "90-d1": {
+   "fit_distance_4x_db": 5.93,
+   "reference_own_hits_db": 10.2,
+   "velocity_shape_db": 1.9,
+   "closest_takes_db": 2.4
+  },
+  "90-d2": {
+   "fit_distance_4x_db": 3.14,
+   "reference_own_hits_db": 10.67,
+   "velocity_shape_db": 3.25,
+   "closest_takes_db": -2.4
+  },
+  "90-d3": {
+   "fit_distance_4x_db": 3.67,
+   "reference_own_hits_db": 6.46,
+   "velocity_shape_db": 3.25,
+   "closest_takes_db": -2.5
+  },
+  "90-d4": {
+   "fit_distance_4x_db": 5.48,
+   "reference_own_hits_db": 9.28,
+   "velocity_shape_db": 2.29,
+   "closest_takes_db": -1.7
+  },
+  "90-d5": {
+   "fit_distance_4x_db": 6.44,
+   "reference_own_hits_db": 4.23,
+   "velocity_shape_db": 1.53,
+   "closest_takes_db": 2.0
+  }
+ }
+}
