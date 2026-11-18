@@ -92,7 +92,7 @@ function draw(){
   const order=[13,14,15,16,9,10,11,12,5,6,7,8,1,2,3,4];
   $('bank').replaceChildren(...order.map(n=>{const c=cells.find(x=>x[0]===n);const d=document.createElement('div');d.className='pad'+(c[2]?' perc':'');d.innerHTML=`<b>A${String(n).padStart(2,'0')}</b><span></span>`;d.lastChild.textContent=c[1];return d}));
 }
-function play(){const src=`audio/${kit}${stack?'+'+stack:'-groove'}.mp3`;const a=$('player');a.src=src}
+function play(){const src=`audio/${kit}${stack?'-with-'+stack:'-groove'}.mp3`;const a=$('player');a.src=src}
 draw();play();
 for(const s of M.stacks){const d=document.createElement('div');d.innerHTML=`<h3></h3><audio controls preload="none" src="audio/stack-${s.id}-pads.mp3"></audio>`;d.querySelector('h3').textContent=`${s.name} · ${s.pads.map(p=>p.label.toLowerCase()).join(', ')}`;$('stacklist').append(d)}
 for(const k of M.kits){
@@ -127,7 +127,7 @@ def main(out):
     man = json.loads((out / 'manifest.json').read_text())
     for w in sorted((out / 'demo').glob('*.wav')):
         subprocess.run(['ffmpeg', '-v', 'error', '-y', '-i', str(w), '-codec:a', 'libmp3lame', '-b:a', '160k',
-                        str(page / 'audio' / (w.stem + '.mp3'))], check=True)
+                        str(page / 'audio' / (w.stem.replace('+', '-with-') + '.mp3'))], check=True)
     slim = dict(kits=[{k: v for k, v in kit.items() if k != 'pads'} | {'pads': [dict(pad=p['pad'], label=p['label'], params=p['params']) for p in kit['pads']]} for kit in man['kits']],
                 stacks=[dict(id=s['id'], name=s['name'], pads=[dict(pad=p['pad'], label=p['label']) for p in s['pads']]) for s in man['stacks']],
                 listen=LISTEN)

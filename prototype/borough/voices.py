@@ -94,9 +94,11 @@ def finish(x):
 
 # ---------------------------------------------------------------- drums
 
-def kick(p, vel=1.0, rng=None, seconds=1.2):
+def kick(p, vel=1.0, rng=None, seconds=0.75):
     """Swept sine body with a two-stage decay, a second (shell) mode, a beater click and a skin
-    noise layer. Velocity narrows the sweep and darkens the click (a softer beater contacts longer)."""
+    noise layer. Velocity narrows the sweep and darkens the click (a softer beater contacts longer).
+    Length 0.75 s: the fit only sees the first 0.06 to 0.66 s (the next hit masks the rest in the
+    loops), and drive lifts an unconstrained tail, so the pad ends with finish()'s release."""
     rng = rng or rng_for('kick')
     t = _t(seconds)
     ratio = 1 + (p['sweep'] - 1) * (0.55 + 0.45 * vel)
