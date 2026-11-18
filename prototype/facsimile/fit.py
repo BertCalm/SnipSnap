@@ -112,7 +112,7 @@ def target_for(takes: np.ndarray, template: np.ndarray, clean_s: float,
 
 
 STALL_AFTER_DB = 20.0   # a hat or snare that has fallen this far ...
-STALL_DB_S = 30.0       # ... and then falls slower than this over the next 100 ms has hit the
+STALL_DB_S = 8.0        # ... and then falls slower than this over the next 100 ms has hit the
                         # template floor, not a ring: it keeps falling at FLOOR_SLOPE_DB_S
 
 

@@ -73,7 +73,9 @@ templates (all derived from reference PCM), and every rendered WAV or MP3.
   zap scored better than the tonal sweep that is actually there. The ear decides that.
 - The replicas are mono, as the house renders. The references' stereo width is not replicated.
 - 808 tails: the references choke each 808 note with the next, so the full tail was never heard.
-  The fit continues the decay it measured before the cut; the grooves choke as a sampler does.
+  The fit continues the decay it measured before the cut. Whether a groove chokes its 808s was
+  decided by measurement, not assumed: only loop 154's 808 measured closer choked; the 808s of
+  loops 127, 134 and 163 measured 1.9 to 4.4 dB closer ringing over each other.
   The rule only fires for a low-heavy drum (over half its energy under 150 Hz) that was falling
   slower than 150 dB/s before a 25 dB drop inside 35 ms. Applied to every drum, it gave hats
   1.4 s washes and made two grooves 8 to 20 dB too loud; that bug was caught by the groove
@@ -81,7 +83,7 @@ templates (all derived from reference PCM), and every rendered WAV or MP3.
 - Tails under the template's floor: once a drum is 40 dB under its peak it must keep falling at
   60 dB/s or faster. NMFD leaves a flat plateau 45 to 60 dB down where no hit shows a late tail.
   For a drum that is not low-heavy, the floor can sit only 30 to 50 dB down, so a second rule
-  applies: once it has fallen 20 dB, if it then falls slower than 30 dB/s over 100 ms, it keeps
+  applies: once it has fallen 20 dB, if it then falls slower than 8 dB/s over 100 ms, it keeps
   falling at 60 dB/s from there. Low-heavy drums (808s, boom toms) are left to ring as measured,
   which is why a few of them are 1.4 s long.
 - Some NMFD components are artifacts (a kick's sub re-fired on its own). The grooves use every
