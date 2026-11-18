@@ -27,6 +27,7 @@ testkit/filament-thread-keys/
 testkit/filament-pulse-keys/
 testkit/filament-curl-keys/
 testkit/filament-held-keys/
+testkit/loose-crate-round0/
 testkit/filament-thread-touch-keys/
 testkit/filament-pulse-touch-keys/
 testkit/filament-curl-touch-keys/
