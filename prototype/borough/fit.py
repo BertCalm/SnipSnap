@@ -74,7 +74,7 @@ if __name__ == '__main__':
         if only and loop not in only:
             continue
         for role in ('kick', 'snare', 'hat'):
-            if r.get(role):
+            if r.get(role) and role not in fitted.get(loop, {}):   # resume: skip finished fits
                 jobs.append((loop, role, r[role]))
     with Pool(4) as pool:
         for loop, role, res in pool.imap_unordered(fit_one, jobs):
