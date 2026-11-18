@@ -1136,3 +1136,23 @@ Version 2 preserves its nine exact strikes on Roadhouse pad 2, with three veloci
 layers and three natural alternate strikes. Other kit pads retain original PCM.
 The revised snare is frozen synthesis, not a newly registered editable engine.
 Phone and MPC hardware acceptance remains open for this revision. See `SOUL_ROCK.md`.
+
+## RIDDIM (round 2, 2026-11-18: three kits on the shelf, Kotlin not yet heard, hardware open)
+
+Dancehall drum kits synthesized to targets measured from the owner's reference loops, with CALABASH's approved
+percussion on the same grids. See [RIDDIM](RIDDIM.md).
+
+- **Melodic, keygroup and chord-tool gates:** not applicable. Drum kits.
+- **Articulation:** finite hits, no HOLD.
+- **Percussion: authored, heard in Python (2026-11-18).** Each kit's A16 is a one-bar roll or riser at the kit's tempo:
+  a rim roll (Clave Dancehall), a snare roll (Dembow), a hat riser (Boom Riddim). The owner approved them with the kits
+  in round 1.
+- **Drum shelf: three kits on the shelf.** RIDDIM CLAVE DANCEHALL (102 BPM), RIDDIM DEMBOW (95) and RIDDIM BOOM RIDDIM
+  (100) differ in voices, tuning, decay, pad roles and tempo; `RiddimKitsTest` pins which slots they share.
+- **Velocity/round robin: verified in software through rendering, saving, playback and MPC 3 export for every pad of
+  all three kits** (`RiddimKitsTest`, `RiddimKitTest`, `:shell:generateRiddimKits`). Three zones of four takes per pad.
+  MPC 2 is not applicable (format limit). No phone or MPC has played the kits.
+- **Sound character:** round 0 and round 1 heard in Python; round 1 approved ("Approved", 2026-11-18). The Kotlin kits'
+  listening page is published and not yet heard.
+- **Overall: incomplete.** Open: the owner's listen to the Kotlin kits, phone and MPC playback.
+

@@ -129,10 +129,45 @@ controls fall back; roll lengths at their tempo, acceleration and crescendo; byt
   riser strikes about 40 hats). The one-shots meet the tens-of-milliseconds rule except the open hat; the rolls are
   phrases and do not.
 
+## Round 2b: the three kits on the shelf (2026-11-18)
+
+`RiddimKits.kt` ports round 1's layouts pad for pad. A pad strikes either a RIDDIM voice or one of CALABASH's
+approved voices at its defaults, as the prototype did, so drums and percussion share one grid; each pad's `source`
+names its own engine and model, and `family` is RIDDIM. Each pad is three velocity zones (render forces 0.35, 0.65,
+1.0) of four takes. A16 is the roll or riser at the kit's tempo through SPEED. The hats share mute group 1 on every
+kit; Boom Riddim's six booms share group 2, one bass voice. The shelf entries are FRESH TAPE starters under SKINS, after
+CALABASH: RIDDIM CLAVE DANCEHALL (102 BPM), RIDDIM DEMBOW (95) and RIDDIM BOOM RIDDIM (100).
+
+**Changed against the prototype:** zone level follows CALABASH's law (every take of a zone matched in loudness over
+150 ms, or the whole phrase for a roll, the zone's highest peak at 0.89) where the prototype peak-matched each take.
+
+**Velocity and round robin, verified in software for every pad of all three kits:**
+- Rendering: `RiddimKitsTest` (finite, centred, ends in silence; equal loudness within a zone; a softer zone is a
+  different strike, not a scaled copy; four different strikes per zone; classes, chokes, provenance; the roll at the
+  kit's tempo; the three kits differ in 13 or more of 16 slots, sharing only the open hat and clap (Clave Dancehall and
+  Boom Riddim) and the shaker and cowbell (Clave Dancehall and Dembow), as approved).
+- Saving, playback, export: `RiddimKitTest` takes each whole kit through `KitAssembler`, `KitStore.load` (equal),
+  `TriadKitProof.verify` (every slice against its take), `PadHit.resolve` (each zone at its mid velocity deals four
+  starts in order and repeats; soft and hard differ) and `Mpc3Exporter` with `TriadKitProof.verifyTrack` read-back.
+  `:shell:generateRiddimKits` repeats the proof on the exported track data and writes the listening pack: all 48 pads,
+  192 slices per kit, verified (`verification.csv`). MPC 2 is not applicable (the owner's format decision, 2026-11-14).
+- Measured on the export (`shelf_grooves.py`): every RIDDIM pad darkens at each softer zone; the closest two takes on
+  any pad are 37.4 dB apart (Wood A3; a copy is above 40). The reused CALABASH shaker, claves, cowbell and high bongo
+  do not darken on this measure, as disclosed in round 1.
+- `StarterKitsTest` (7 tests, 37 minutes here) and `StarterShelfTest` pass with the three kits.
+
+**Found and fixed on the way:** the kit generator copied from CALABASH struck its listening strip at the render forces,
+but the sampler splits MIDI velocity into equal zones, so 0.35 (MIDI 44) plays the middle zone and the strip read mid,
+mid, hard. RIDDIM's generator now strikes each zone at its own mid velocity. CALABASH's generator has the same
+mislabel in its listening pack (its kits and tests are unaffected); not changed here.
+
+Listening page of the Kotlin kits, cut from the verified export, with the approved grooves played on them:
+<https://claude.ai/artifact/LAmftedd8ziuoPE9ZPQdhQ>. Not yet heard.
+
 ## Open
 
-- Round 2b: the Kotlin port and the shelf (velocity and round robin through rendering, saving, playback and
-  export), and the wider kits.
+- The owner's listen to the Kotlin kits, then phone and MPC playback.
+- The wider kits (swung Brazilian funk, swung West African, wood and metal), a preset roster, and the picker.
 
 ## Ledger
 
@@ -141,6 +176,7 @@ controls fall back; roll lengths at their tempo, acceleration and crescendo; byt
 - **Measured:** the tables above, Python harness.
 - **Proposed:** every constant in `riddim_proto.py` is a shape value until heard.
 - **Heard:** round 0's palette, "pretty good so far" (2026-11-18); round 1's three kits, "Approved" (2026-11-18).
+  The Kotlin kits (round 2) not yet; no phone or MPC has played them.
 
 ## Why it is built this way
 
