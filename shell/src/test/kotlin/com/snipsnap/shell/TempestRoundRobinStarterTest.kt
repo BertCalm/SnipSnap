@@ -31,7 +31,7 @@ import kotlin.test.*
  * The round-robin gate, in software, for the opt-in TEMPEST round robin: the kit through the shelf,
  * saving, reloading, the app's pad resolver, the groove preview (hat choke included) and both MPC
  * exports, read back from the files each step wrote. TEMPEST has one touch, so each pad is a plain
- * single-zone chain: MPC 3 deals every take by Slice Motion, and MPC 2, which has no Slice Motion,
+ * single-zone chain: MPC 3 carries every take with Slice Motion set to deal them (the WAV's slice map is still bench-blocked, so map-less firmware plays the first take), and MPC 2, which has no Slice Motion,
  * windows the pad to its first take, the accepted hit.
  */
 class TempestRoundRobinStarterTest {
@@ -96,7 +96,7 @@ class TempestRoundRobinStarterTest {
 
             preview(saved, dir, pads)
 
-            // MPC 3 native deals every take: one layer per pad, slice 0 first, stepping through four.
+            // MPC 3 native carries every take: one layer per pad, slice 0 first, Slice Motion stepping through four.
             val track = Mpc3Exporter.exportTrack(saved, dir, root.resolve("mpc3"))
             val data = track.samples.first().parentFile
             assertFalse(ExportReadBack.verify(saved, ExportOutcome(ExportFormat.MPC3_TRACK, track.program, data, track.findings)).blocked())
@@ -119,11 +119,11 @@ class TempestRoundRobinStarterTest {
             assertEquals(saved.pads, Mpc2Limits.firstTakePads(saved))
             for (format in listOf(ExportFormat.PROGRAM_FOLDER, ExportFormat.EXPANSION, ExportFormat.XPN)) {
                 assertEquals(
-                    "MPC 2 has no Slice Motion to deal a pad's takes: 16 pads keep their first take only. MPC 3 native deals every take.",
+                    "MPC 2 has no Slice Motion to deal a pad's takes: 16 pads keep their first take only. MPC 3 native carries every take.",
                     assertNotNull(ExportWizardModel(saved, dir).apply { setFormat(format) }.formatNote, "$format").message,
                 )
             }
-            assertNull(ExportWizardModel(saved, dir).apply { setFormat(ExportFormat.MPC3_TRACK) }.formatNote, "MPC 3 native deals every take")
+            assertNull(ExportWizardModel(saved, dir).apply { setFormat(ExportFormat.MPC3_TRACK) }.formatNote, "MPC 3 native carries every take")
             val folder = Exporters.export(ExportFormat.PROGRAM_FOLDER, saved, dir, root.resolve("mpc2"))
             assertFalse(ExportReadBack.verify(saved, folder).blocked())
             val xpm = folder.primary.let { if (it.isDirectory) it.walk().first { f -> f.name.endsWith(".xpm") } else it }.readText()

@@ -309,11 +309,12 @@ the MPC 3 export. Only the main kit has takes; the genre kits have none yet.
 - **Saved and exported.** TEMPEST has one touch, so each pad is a single-zone chain of four
   takes, not a velocity grid. Pads carry no `PadRecipe`, because a one-hit recipe cannot
   regenerate four takes; each pad's source keeps the accepted recipe JSON and its renderer
-  takes. The MPC 3 export carries every take (Slice Motion, cycle 4). MPC 2 has no Slice
-  Motion, so its `.xpm` windows each pad to its first take, the accepted hit. The export
-  screen says so under the format before anything is written (`Mpc2Limits`): "MPC 2 has no
-  Slice Motion to deal a pad's takes: 16 pads keep their first take only. MPC 3 native deals
-  every take."
+  takes. The MPC 3 export carries every take (Slice Motion, cycle 4); the chain WAV's slice
+  map is still bench-blocked, so firmware without it plays the first take, and dealing on
+  hardware is unverified. MPC 2 has no Slice Motion, so its `.xpm` windows each pad to its
+  first take, the accepted hit. The export screen says so under the format before anything
+  is written (`Mpc2Limits`): "MPC 2 has no Slice Motion to deal a pad's takes: 16 pads keep
+  their first take only. MPC 3 native carries every take."
 - **Heard and kept (round tempest-rr-1, 16 Nov 2026).** The owner kept every clip with no
   notes. A4 was the before reference and took no verdict. The clips were rendered through the
   app's own groove preview from saved kit folders, 24-bit; A2 was played at the desk as a

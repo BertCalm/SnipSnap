@@ -50,7 +50,7 @@ object Mpc2Limits {
             val pads = if (m == 1) "1 pad keeps its first take" else "$m pads keep their first take"
             "MPC 2 has no Slice Motion to deal a pad's takes: $pads only. "
         }
-        val mpc3 = if (m == 0) "MPC 3 native keeps both." else if (n == 0) "MPC 3 native deals every take." else "MPC 3 native keeps both and deals every take."
+        val mpc3 = if (m == 0) "MPC 3 native keeps both." else if (n == 0) "MPC 3 native carries every take." else "MPC 3 native keeps both and carries every take."
         return Finding(Severity.WARN, listOfNotNull(grid, chains).joinToString("") + mpc3)
     }
 }

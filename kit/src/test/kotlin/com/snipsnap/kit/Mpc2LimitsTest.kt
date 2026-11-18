@@ -74,7 +74,7 @@ class Mpc2LimitsTest {
             if (format in xpm) {
                 assertEquals(Severity.WARN, assertNotNull(note, "$format").severity)
                 assertEquals(
-                    "MPC 2 has no Slice Motion to deal a pad's takes: 2 pads keep their first take only. MPC 3 native deals every take.",
+                    "MPC 2 has no Slice Motion to deal a pad's takes: 2 pads keep their first take only. MPC 3 native carries every take.",
                     note.message,
                 )
             } else {
@@ -88,7 +88,7 @@ class Mpc2LimitsTest {
         assertEquals(
             "MPC 2 holds velocity layers or round robin on a pad, not both: 1 pad keeps its velocity layers, one take each. " +
                 "MPC 2 has no Slice Motion to deal a pad's takes: 2 pads keep their first take only. " +
-                "MPC 3 native keeps both and deals every take.",
+                "MPC 3 native keeps both and carries every take.",
             both.message,
         )
     }
