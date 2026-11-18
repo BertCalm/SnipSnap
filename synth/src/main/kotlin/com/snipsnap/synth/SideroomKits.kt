@@ -10,10 +10,10 @@ import kotlin.math.*
 
 /** Versioned cache of approved spectral-synth renders, not acoustic sample playback.
  * Python resynth regenerates the bank from magnitude models; Kotlin replays it exactly
- * and authors finite roll/riser scores. No editable Kotlin spectral-engine claim.
+ * and authors finite roll/fill scores (with legacy riser replay). No editable Kotlin spectral-engine claim.
  */
 object SideroomKits {
-    const val VERSION = 1
+    const val VERSION = 2
     const val TAKES = 3
     const val PADS = 10
     val velocities = listOf(.25f, .6f, 1f)
@@ -26,7 +26,7 @@ object SideroomKits {
         val id get() = "sideroom-$slug"
     }
     val voices = listOf("kick", "snare", "hat", "openhat", "tom", "floor", "ride", "crash")
-    val names = listOf("Kick", "Snare", "Closed Hat", "Open Hat", "Rack Tom", "Floor Tom", "Ride", "Crash", "Snare Roll", "Tom Riser")
+    val names = listOf("Kick", "Snare", "Closed Hat", "Open Hat", "Rack Tom", "Floor Tom", "Ride", "Crash", "Snare Roll", "Drum Fill")
     private fun bytes(name: String) = checkNotNull(javaClass.getResourceAsStream("/sideroom/v1/$name")) { "Missing SIDEROOM v1 $name" }.use { it.readBytes() }
     private val hashes by lazy { bytes("index.csv").toString(Charsets.UTF_8).lineSequence().drop(1).filter { it.isNotBlank() }.associate { val p=it.split(','); p[0] to p[1] } }
     private val cache = object : LinkedHashMap<String, Snip>(16,.75f,true) {
@@ -47,22 +47,24 @@ object SideroomKits {
         val midi=(velocity*127).roundToInt()
         return if(midi<42) 0 else if(midi<85) 1 else 2
     }
-    fun render(kit: Kit, role: Int, velocity: Float, take: Int): Snip {
+    fun render(kit: Kit, role: Int, velocity: Float, take: Int, model: Int = VERSION): Snip {
+        require(model in 1..VERSION)
         require(role in 0 until PADS && take in 0 until TAKES)
         val z=layer(velocity)
         if(role<8) return hit(kit,role,z,take)
-        val raw=phrase(kit,role,z,take)
-        val gain=phraseGain(kit,role)
+        val raw=phrase(kit,role,z,take,model)
+        val gain=phraseGain(kit,role,model)
         for(i in raw.indices) raw[i]*=gain
         return Snip(raw,1,Dsp.RATE)
     }
-    private val phraseGains=mutableMapOf<Pair<Kit,Int>,Float>()
-    @Synchronized private fun phraseGain(kit: Kit, role: Int)=phraseGains.getOrPut(kit to role) {
+    private val phraseGains=mutableMapOf<Triple<Kit,Int,Int>,Float>()
+    @Synchronized private fun phraseGain(kit: Kit, role: Int, model: Int)=phraseGains.getOrPut(Triple(kit,role,model)) {
         var peak=0f
-        for(z in 0..2) for(t in 0..2) for(x in phrase(kit,role,z,t)) peak=max(peak,abs(x))
+        for(z in 0..2) for(t in 0..2) for(x in phrase(kit,role,z,t,model)) peak=max(peak,abs(x))
         min(1f,.86f/peak.coerceAtLeast(1e-9f))
     }
-    private fun phrase(kit: Kit, role: Int, layer: Int, take: Int): FloatArray {
+    private fun phrase(kit: Kit, role: Int, layer: Int, take: Int, model: Int): FloatArray {
+        if(role==9 && model>=2) return fill(kit,layer,take)
         val beat=60.0/kit.bpm
         data class Event(val at: Int, val samples: FloatArray, val gain: Float)
         val events=mutableListOf<Event>()
@@ -81,15 +83,39 @@ object SideroomKits {
         Dsp.fadeTail(out)
         return out
     }
-    fun source(kit: Kit, role: Int)=mapOf("engine" to "SIDEROOM", "model" to VERSION.toString(), "kit" to kit.name,
+    // A scored bar, with rests and a descending tom answer. No accelerating build
+    // or automatic crash: the next downbeat belongs to the player's groove.
+    private fun fill(kit: Kit, layer: Int, take: Int): FloatArray {
+        // Sixteenth-note slots: S = snare, t = rack tom, F = floor tom, . = rest.
+        val score=when(kit) {
+            Kit.OPEN_ROAD -> "S.S.SS..tt..FF.F"
+            Kit.TIGHT_POCKET -> "S..SS.S...tt.F.S"
+            Kit.ANGULAR -> "S..t..S.F..t.F.S"
+            Kit.HIGH_VOLTAGE -> "SS..SS..ttttFFFF"
+            Kit.DEEP_POCKET -> "S.SS..S.tt.S.F.F"
+        }
+        val step=60.0/kit.bpm/4*Dsp.RATE
+        val events=score.withIndex().filter { it.value!='.' }.mapIndexed { strike, (slot, symbol) ->
+            val voice=when(symbol) { 'S'->1; 't'->4; else->5 }
+            val accent=slot%4==0 || slot==15
+            val gain=if(accent) .68f else if(slot%2==0) .52f else .34f
+            Triple((slot*step).roundToInt(),hit(kit,voice,layer,(take+strike)%TAKES).samples,gain)
+        }
+        val out=FloatArray(events.maxOf { it.first+it.second.size })
+        for((at,samples,gain) in events) for(i in samples.indices) out[at+i]+=samples[i]*gain
+        Dsp.fadeTail(out)
+        return out
+    }
+    fun source(kit: Kit, role: Int, model: Int = VERSION)=mapOf("engine" to "SIDEROOM", "model" to model.toString(), "kit" to kit.name,
         "role" to role.toString(), "velocities" to velocities.joinToString(","), "takes" to TAKES.toString(),
-        "articulation" to if(role==8) "roll" else if(role==9) "riser" else "finite", "sourceType" to "cached-spectral-synthesis")
+        "articulation" to if(role==8) "roll" else if(role==9) (if(model==1) "riser" else "fill") else "finite", "sourceType" to "cached-spectral-synthesis")
     fun replay(source: Map<String,String>): List<List<Snip>> {
-        require(source["engine"]=="SIDEROOM" && source["model"]==VERSION.toString())
+        val model=source["model"]?.toIntOrNull()
+        require(source["engine"]=="SIDEROOM" && model!=null && model in 1..VERSION)
         require(source["velocities"]==velocities.joinToString(",") && source["takes"]==TAKES.toString())
         val kit=Kit.valueOf(source.getValue("kit"));val role=source.getValue("role").toInt()
-        require(source==this.source(kit,role)) { "SIDEROOM source metadata changed" }
-        return velocities.map { v -> List(TAKES) { t -> render(kit,role,v,t) } }
+        require(source==this.source(kit,role,model)) { "SIDEROOM source metadata changed" }
+        return velocities.map { v -> List(TAKES) { t -> render(kit,role,v,t,model) } }
     }
     fun build(kit: Kit): List<ArrangedPad> = List(PADS) { role ->
         val grid=replay(source(kit,role))

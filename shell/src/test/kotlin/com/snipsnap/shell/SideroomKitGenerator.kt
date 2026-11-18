@@ -24,7 +24,7 @@ object SideroomKitGenerator {
             check(findings.none { it.severity==Severity.FAIL }) { findings.toString() }
             for(role in 8..9) for(z in 0..2) for(t in 0..2) {
                 val snip=pads[role].velocityTakes[z][t]
-                WavWriter.write(File(folder,"${if(role==8)"roll" else "riser"}-$z-$t.wav"),snip)
+                WavWriter.write(File(folder,"${if(role==8)"roll" else "drumfill"}-$z-$t.wav"),snip)
             }
             proof.append("${g.slug},10,3,3,pass,2,pass,pass,no_failures\n")
             println("SIDEROOM ${g.title}: 90 variants through native save/playback and MPC export")

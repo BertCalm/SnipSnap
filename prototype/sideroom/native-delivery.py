@@ -23,7 +23,7 @@ for folder in sorted(src.iterdir()):
    assert int(layer.findtext('SliceStart'))==start;assert int(layer.findtext('SliceEnd'))==end
    assert layer.findtext('SampleName')+'.wav'==pad['sample']
  shutil.copy(program,data/program.name)
- text='SIDEROOM native kit. Open the .xtd on MPC 3 and keep its _[TrackData] folder alongside it. The data folder also contains the MPC 2 .xpm. MPC 3 keeps three velocity zones and three cycling takes. MPC 2 selects the first take of each velocity zone, per its documented format limit. Ten pads: eight approved synthesized hits, a new finite snare roll and tom riser. Native software read-back passes; these new phrases and phone/MPC hardware playback await owner verification. No commercial reference audio sampled.\n'
+ text='SIDEROOM native kit. Open the .xtd on MPC 3 and keep its _[TrackData] folder alongside it. The data folder also contains the MPC 2 .xpm. MPC 3 keeps three velocity zones and three cycling takes. MPC 2 selects the first take of each velocity zone, per its documented format limit. Ten pads: eight approved synthesized hits, an approved snare roll and new one-bar drum fill. Native software read-back passes; the new fill and phone/MPC hardware playback await owner verification. No commercial reference audio sampled.\n'
  archive=out/(folder.name+'-native.zip')
  with zipfile.ZipFile(archive,'w',zipfile.ZIP_DEFLATED,compresslevel=9) as z:
   for p in sorted(mpc3.rglob('*')):
@@ -35,7 +35,7 @@ for folder in sorted(src.iterdir()):
    if p.is_file():assert z.read(str(p.relative_to(mpc3)))==p.read_bytes()
  assert archive.stat().st_size<25*1024**2,archive
  # Listening copies of the phrases, PCM16 only; full MPC delivery retains native PCM24.
- for role in ['roll','riser']:
+ for role in ['roll','drumfill']:
   for level in range(3):
    for take in range(3):
     f=folder/f'{role}-{level}-{take}.wav';sr,x=wavfile.read(f)

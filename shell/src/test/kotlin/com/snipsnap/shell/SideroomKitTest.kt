@@ -58,6 +58,21 @@ class SideroomKitTest {
         assertFailsWith<IllegalArgumentException>{SideroomKits.replay(SideroomKits.source(g,0)+("model" to "999"))}
         assertFailsWith<IllegalArgumentException>{SideroomKits.replay(SideroomKits.source(g,0)+("takes" to "1"))}
     }
+    @Test fun `fill revision preserves approved roll and legacy replay`() {
+        for(g in SideroomKits.Kit.entries) {
+            for(v in SideroomKits.velocities) for(t in 0..2) {
+                assertContentEquals(SideroomKits.render(g,8,v,t,1).samples,SideroomKits.render(g,8,v,t).samples)
+            }
+            val old=SideroomKits.replay(SideroomKits.source(g,9,1))
+            val fresh=SideroomKits.replay(SideroomKits.source(g,9))
+            assertEquals("fill",SideroomKits.source(g,9)["articulation"])
+            assertEquals("riser",SideroomKits.source(g,9,1)["articulation"])
+            for(z in 0..2) for(t in 0..2) {
+                assertContentEquals(SideroomKits.render(g,9,SideroomKits.velocities[z],t,1).samples,old[z][t].samples)
+                assertTrue(fresh[z][t].frameCount < old[z][t].frameCount,"fill must replace the long build")
+            }
+        }
+    }
     private fun distance(a:FloatArray,b:FloatArray):Double {
         var aa=0.0;var bb=0.0;var ab=0.0
         for(i in 0 until max(a.size,b.size)) { val x=a.getOrElse(i){0f}.toDouble();val y=b.getOrElse(i){0f}.toDouble();aa+=x*x;bb+=y*y;ab+=x*y }

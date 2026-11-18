@@ -10,7 +10,7 @@ kits=['deep-pocket','high-voltage','angular','tight-pocket','open-road']
 required=[source/n for n in ['delivery-checks.json','verification.csv']]
 for kit in kits:
  required.append(source/(kit+'-native.zip'))
- required.extend(source/kit/f'{role}-{z}-{t}.wav' for role in ['roll','riser'] for z in range(3) for t in range(3))
+ required.extend(source/kit/f'{role}-{z}-{t}.wav' for role in ['roll','drumfill'] for z in range(3) for t in range(3))
  required.extend(grooves/kit/(name+'.wav') for name in ['groove','pocket','fill'])
 assert all(p.is_file() for p in required),'Missing native delivery or comparison groove'
 assert all(p.stat().st_size<=25*1024**2 for p in required),'File exceeds host limit'

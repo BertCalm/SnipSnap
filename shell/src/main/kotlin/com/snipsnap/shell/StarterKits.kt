@@ -985,7 +985,7 @@ object StarterKits {
         ) { com.snipsnap.synth.TerraGenreKits.build(com.snipsnap.synth.TerraGenreKits.Kit.PUNJAB) },
     )) + com.snipsnap.synth.SideroomKits.Kit.entries.map { kit ->
         Starter(kit.id, "SIDEROOM ${kit.title.uppercase(java.util.Locale.ROOT)}",
-            "Synthesized ${kit.title} drums: eight instruments, a snare roll and a tom riser. Three strike strengths and three alternate hits.",
+            "Synthesized ${kit.title} drums: eight instruments, a snare roll and a drum fill. Three strike strengths and three alternate hits.",
             seeded = false, tempoBpm = kit.bpm.toFloat()) { com.snipsnap.synth.SideroomKits.build(kit) }
     }
 
