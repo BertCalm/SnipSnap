@@ -462,7 +462,7 @@ explicit MIDI root (24–96), strike velocity and model version; TUNE is a
 relative ±12-semitone offset, neutral at 0.5, so the effective note spans
 12–108 without clamping back to the saved-root range. Seven provisional presets
 and a dry sixteen-pad C minor pentatonic kit are included, with PITCHWHEEL among
-FRESH TAPE's 199 starters. Run `./gradlew :synth:generatePitchwheelAudition`
+FRESH TAPE's 202 starters. Run `./gradlew :synth:generatePitchwheelAudition`
 for the compact first listening set, or add `-PpitchwheelFull` for the broader
 dry probes. HOLD's top step returns settled loop-only material with a
 deterministic attachment cycle and capped adhesion. The owner heard R1 as six
@@ -528,9 +528,7 @@ DECAY. The owner accepted all six and the 22 factory presets. FRESH TAPE → TEM
 is the sixteen-pad kit with choking hats; TEMPEST TUNED keeps the original E minor
 pentatonic kicks and metal colors. TEMPEST CIRCUIT (electro), TEMPEST FOUNDRY
 (industrial) and TEMPEST STEP (UK garage) are genre kits made from new settings of
-the same accepted voices, kept by the owner on 2026-11-14. TEMPEST ROUND ROBIN, an
-opt-in starter beside TEMPEST, gives each of its sixteen pads four takes; the owner
-kept it by ear on 16 Nov 2026 (round tempest-rr-1). HOLD is reserved. See [TEMPEST](docs/TEMPEST_FULL_KIT.md).
+the same accepted voices, kept by the owner on 2026-11-14. HOLD is reserved. See [TEMPEST](docs/TEMPEST_FULL_KIT.md).
 
 OSTERIA is one evolving note: four spectral layers on a fixed root drift between
 five coastal palettes, with SHORE, TENSION, WANDER, MEMORY, ROOM and HOLD. Its six
