@@ -1,0 +1,14 @@
+{
+  "phrase": {
+    "previous": "shuffle-smooth/phrase.wav",
+    "matching_gain": 0.9936553084317169
+  },
+  "roll": {
+    "previous": "tap-connected/roll.wav",
+    "matching_gain": 1.0932853697819684
+  },
+  "build": {
+    "previous": "tap-connected/build.wav",
+    "matching_gain": 1.0837917888296829
+  }
+}

@@ -22,6 +22,7 @@ class PresetsTest {
         for (voice in ClutterVoice.entries) assertEquals(ClutterPresets.forVoice(voice), Presets.forVoice("CLUTTER", voice.name))
         for (voice in CalabashVoice.entries) assertEquals(CalabashPresets.forVoice(voice), Presets.forVoice("CALABASH", voice.name))
         for (voice in ServoVoice.entries) assertEquals(ServoPresets.forVoice(voice), Presets.forVoice("SERVO", voice.name))
+        for (voice in EmberVoice.entries) assertEquals(EmberPresets.forVoice(voice), Presets.forVoice("EMBER", voice.name))
         for (voice in EtchVoice.entries) assertEquals(EtchPresets.forVoice(voice), Presets.forVoice("ETCH", voice.name))
         for (voice in TerraVoice.entries) assertEquals(TerraPresets.forVoice(voice), Presets.forVoice("TERRA", voice.name))
         for (voice in NacreVoice.entries) assertEquals(NacrePresets.forVoice(voice), Presets.forVoice("NACRE", voice.name))
@@ -172,7 +173,7 @@ class PresetsTest {
 
     @Test
     fun `all sums every registered engine's roster with nothing lost or duplicated`() {
-        val expected = BristlePresets.all() + TempestPresets.all() + SplayFactoryPresets.all() + BackwashPresets.all() + HalobarPresets.all() + FiredBronzePresets.all() + RivetPresets.all() + EtchPresets.all() + TerraPresets.all() + ScuffPresets.all() + HiccupPresets.all() + ClutterPresets.all() + CalabashPresets.all() + ServoPresets.all() + DrumlinePresets.all() + ErosionPresets.all() + LorentzPresets.all() + AccordPresets.all() + OtisPresets.all() + TrefoilPresets.all() + ApsisPresets.all() + NacrePresets.all() + ThumpPresets.all() + OnsetPresets.all() + TinesPresets.all() + PluckPresets.all() +
+        val expected = BristlePresets.all() + TempestPresets.all() + SplayFactoryPresets.all() + BackwashPresets.all() + HalobarPresets.all() + FiredBronzePresets.all() + RivetPresets.all() + EtchPresets.all() + TerraPresets.all() + ScuffPresets.all() + HiccupPresets.all() + ClutterPresets.all() + CalabashPresets.all() + ServoPresets.all() + EmberPresets.all() + SambaPresets.all() + DrumlinePresets.all() + ErosionPresets.all() + LorentzPresets.all() + AccordPresets.all() + OtisPresets.all() + TrefoilPresets.all() + ApsisPresets.all() + NacrePresets.all() + ThumpPresets.all() + OnsetPresets.all() + TinesPresets.all() + PluckPresets.all() +
             VelvetPresets.all() + FathomPresets.all() + TonewheelPresets.all() + VoxPresets.all() +
             SkinPresets.all() + MeridianPresets.all() + ResinPresets.all() + TidePresets.all() + GlintPresets.all() + SirenPresets.all() + ForkPresets.all() +
             BorePresets.all() + ObbligatoPresets.all() + ArcoPresets.all() + MercuryPresets.all() +

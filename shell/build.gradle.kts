@@ -598,6 +598,16 @@ tasks.register<JavaExec>("generateCypherKits") {
     args(providers.gradleProperty("cypherOutput").orNull ?: "${rootDir}/testkit/cypher-kits")
 }
 
+tasks.register<JavaExec>("generateLooseCrateKits") {
+    group = "distribution"
+    description = "Build the LOOSE CRATE kits, prove the velocity and round-robin grid through save, playback and MPC 3 export, and write the listening pack."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.LooseCrateKitGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "2g"
+    args(providers.gradleProperty("looseCrateKitsOutput").orNull ?: "${rootDir}/testkit/loose-crate-kits")
+}
+
 tasks.register<JavaExec>("generateMirrorballKits") {
     group = "distribution"
     description = "Build the three MIRRORBALL disco kits, prove the velocity and round-robin grid through save, playback and MPC 3 export, and write the listening pack."
@@ -826,4 +836,24 @@ tasks.register<JavaExec>("generateFootworkKits") {
     workingDir = rootProject.projectDir
     maxHeapSize = "2g"
     args(providers.gradleProperty("soulRockOutput").orNull ?: "${rootDir}/testkit/soul-rock-kits")
+}
+
+tasks.register<JavaExec>("verifyParadeStudyTransport") {
+    group = "verification"
+    description = "Verify pinned parade audition PCM through native kit saving, selection and MPC export."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.ParadeKitTransport")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "1g"
+    args(providers.gradleProperty("paradeInput").getOrElse("${rootDir}/testkit/parade-study"),
+        providers.gradleProperty("paradeOutput").getOrElse("${rootDir}/testkit/parade-transport"))
+}
+
+tasks.register<JavaExec>("verifyNativeSambaKit") {
+    group = "verification"
+    description = "Regenerate native Samba recipes and verify save/load, playback and MPC export."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.SambaKitProof")
+    maxHeapSize = "1g"
+    args(providers.gradleProperty("nativeSambaKitOutput").getOrElse("${rootDir}/testkit/native-samba-kit"))
 }

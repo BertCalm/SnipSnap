@@ -16,7 +16,7 @@ RATE=core.RATE;FS=core.FS;VEL=[.3,.65,1.]
 MODEL=json.loads((SOURCE/'model.json').read_text())
 
 @lru_cache(maxsize=4096)
-def contact(role,v,take):
+def contact(role,v,take,travel=1.):
     if role in ['toe','heel']:return core.render(MODEL,role,v,take)
     # Sliding contact has a finite travel envelope through the same shoe response.
     # It is not a quiet planted toe repeated rapidly. The return is shorter and
@@ -26,6 +26,7 @@ def contact(role,v,take):
     smooth=role.startswith('shuffle_')
     forward=role in ['brush','shuffle_brush']
     duration=((.110 if forward else .090) if smooth else (.062 if forward else .043))*(1+rng.uniform(-.07,.07))
+    duration*=travel
     phase=np.clip(t/duration,0,1)
     # Shuffle-only raised-cosine pressure has zero slope at entry/exit. Longer
     # travel overlaps the reversal instead of leaving a 30ms gap between bursts.
@@ -41,8 +42,8 @@ def contact(role,v,take):
     if smooth:raw*=.70
     return core.sk.fade_tail(core.sk.dc_block(core.sk.decimate4(core.sk.band_limit(raw,FS)),RATE),RATE)
 
-def event(events,t,role,force,foot):
-    events.append(dict(seconds=round(t,6),role=role,force=force,foot=foot))
+def event(events,t,role,force,foot,travel=1.):
+    events.append(dict(seconds=round(t,6),role=role,force=force,foot=foot,travel=travel))
 
 def gesture(events,kind,t,foot,force=1.,spacing=1.):
     other='R' if foot=='L' else 'L'
@@ -50,9 +51,12 @@ def gesture(events,kind,t,foot,force=1.,spacing=1.):
         'shuffle':[(0,'shuffle_brush',.70,foot),(.085,'shuffle_spank',.82,foot)],
         'flap':[(0,'brush',.65,foot),(.075,'toe',1.,foot)],
         'ball_change':[(0,'toe',.65,foot),(.112,'toe',1.,other),(.169,'heel',.55,other)],
-        'pickup':[(0,'brush',.62,foot),(.078,'spank',.75,foot),(.164,'toe',1.,foot)],
+        'pickup':[(0,'shuffle_brush',.62,foot),(.085,'shuffle_spank',.75,foot),(.170,'toe',1.,foot)],
     }
-    for offset,role,level,f in shapes[kind]:event(events,t+offset*spacing,role,force*level,f)
+    # Faster pickups shorten the travel envelope with the event spacing, leaving
+    # the filter pitch unchanged and keeping the planted toe separate.
+    for offset,role,level,f in shapes[kind]:
+        event(events,t+offset*spacing,role,force*level,f,spacing if kind=='pickup' else 1.)
 
 def plans():
     p={}
@@ -94,7 +98,7 @@ def render(name,v,take):
     for e in p['events']:
         key=(e['role'],e['foot']);rr=(counts.get(key,0)+take+(2 if e['foot']=='R' else 0))%4
         counts[key]=counts.get(key,0)+1
-        x=contact(e['role'],float(e['force']*v),rr)
+        x=contact(e['role'],float(e['force']*v),rr,e['travel'])
         at=round(e['seconds']*RATE);n=min(len(x),len(y)-at)
         y[at:at+n]+=GAIN*x[:n]
     return core.sk.fade_tail(y,RATE)
