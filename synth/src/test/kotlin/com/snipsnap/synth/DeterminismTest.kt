@@ -1118,4 +1118,28 @@ class DeterminismTest {
             assertContentEquals(r.render().samples, Splinter.Recipe.fromJsonText(r.toJsonText()).render().samples, "pad $pad")
         }
     }
+
+    @Test
+    fun `SHATTER saved recipes are deterministic for a slice, a repeat and a rush`() {
+        for (pad in listOf(0, 11, 16)) {
+            val r = Breakcore.Recipe(Shatter, pad, .65, 2)
+            assertContentEquals(r.render().samples, Breakcore.Recipe.fromJsonText(r.toJsonText()).render().samples, "pad $pad")
+        }
+    }
+
+    @Test
+    fun `SOUNDCLASH saved recipes are deterministic for a sub, a reese and a rewind`() {
+        for (pad in listOf(1, 5, 9)) {
+            val r = Breakcore.Recipe(Soundclash, pad, .65, 2)
+            assertContentEquals(r.render().samples, Breakcore.Recipe.fromJsonText(r.toJsonText()).render().samples, "pad $pad")
+        }
+    }
+
+    @Test
+    fun `REDLINE saved recipes are deterministic for a tuned kick, a scream and a roll`() {
+        for (pad in listOf(1, 11, 16)) {
+            val r = Breakcore.Recipe(Redline, pad, .65, 2)
+            assertContentEquals(r.render().samples, Breakcore.Recipe.fromJsonText(r.toJsonText()).render().samples, "pad $pad")
+        }
+    }
 }

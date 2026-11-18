@@ -691,6 +691,18 @@ object StarterKits {
             "Sped-up break hits, clipped and gabber kicks, chopped slices, stutters and a stretched snare. Snare rush and riser.", seeded=false, tempoBpm=com.snipsnap.synth.Splinter.BPM.toFloat()) {
             com.snipsnap.synth.Splinter.arranged()
         },
+        Starter(com.snipsnap.synth.Shatter.id, "SHATTER BREAKCORE",
+            "One two-bar break cut into sixteen slices, each carrying the room of its neighbours. Slice repeat and break rush.", seeded=false, tempoBpm=com.snipsnap.synth.Shatter.bpm.toFloat()) {
+            com.snipsnap.synth.Breakcore.arranged(com.snipsnap.synth.Shatter)
+        },
+        Starter(com.snipsnap.synth.Soundclash.id, "SOUNDCLASH BREAKCORE",
+            "Slam kick, subs, reese, siren, horn, rewind and echo throws. Dub roll and siren rise.", seeded=false, tempoBpm=com.snipsnap.synth.Soundclash.bpm.toFloat()) {
+            com.snipsnap.synth.Breakcore.arranged(com.snipsnap.synth.Soundclash)
+        },
+        Starter(com.snipsnap.synth.Redline.id, "REDLINE BREAKCORE",
+            "Speedcore at 250 BPM: tuned terror kicks, clipped noise snares and hats, a scream and feedback stab. Snare roll and scream rise.", seeded=false, tempoBpm=com.snipsnap.synth.Redline.bpm.toFloat()) {
+            com.snipsnap.synth.Breakcore.arranged(com.snipsnap.synth.Redline)
+        },
         Starter("spore-synth-broken", "SPORE ORBITAL BREAKS",
             "Short kick, wire clap, higher toms and metallic percussion. Reverse-metal accents and accelerating riser.", seeded=false, tempoBpm=155f) {
             com.snipsnap.synth.SporeSyntheticKits.arranged(com.snipsnap.synth.SporeSyntheticKits.Genre.BROKEN)

@@ -808,6 +808,18 @@ tasks.register<JavaExec>("generateCuttingsKits") {
     args(providers.gradleProperty("cuttingsOutput").orNull ?: "${rootDir}/testkit/cuttings-kits")
 }
 
+for (kitName in listOf("shatter", "soundclash", "redline")) {
+    tasks.register<JavaExec>("generate${kitName.replaceFirstChar { it.uppercase() }}Kit") {
+        group = "distribution"
+        description = "Render and verify the ${kitName.uppercase()} breakcore shelf kit, with its listening files and archives."
+        classpath = sourceSets["test"].runtimeClasspath
+        mainClass.set("com.snipsnap.shell.BreakcoreFamilyDelivery")
+        workingDir = rootProject.projectDir
+        maxHeapSize = "2g"
+        args(kitName, providers.gradleProperty("${kitName}Output").orNull ?: "${rootDir}/testkit/${kitName}-breakcore")
+    }
+}
+
 tasks.register<JavaExec>("generateSporeSyntheticKits") {
     group = "distribution"
     description = "Render and verify all three complete sample-free Spore shelf kits."

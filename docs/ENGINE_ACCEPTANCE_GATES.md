@@ -867,6 +867,10 @@ The owner approved the procedural kick/snare pair. Three genre starters now cont
 
 One 18-pad starter at 200 BPM, `splinter-breakcore`, built on the approved Spore kick and snare with a new edit stage (speed, chop, retrigger, stretch, oversampled clip). Sixteen voices plus an authored snare rush and riser; three velocities and three takes on every pad. All 162 cells pass velocity and take source checks, saved recipe replay, native playback including take wrap and hat choke, SFZ import and MPC 3 grid and PCM read-back (`SplinterTest`, `SplinterDeliveryTest`). Melodic, keygroup, chord and STRUM gates do not apply. The multiple-genre-kits gate is met by the Spore family's shelf, not by this kit alone. No MPC 2 export, under the 2026-11-14 ruling. The owner heard the groove on 2026-11-15 and called it fine; per-pad verdicts are open. **Open: no phone or MPC has played it.** See [SPLINTER](SPLINTER.md).
 
+## SHATTER, SOUNDCLASH and REDLINE breakcore kits (2026-11-18, grooves and pads heard: kept)
+
+Three 18-pad starters that complete the breakcore family with SPLINTER: `shatter-breakcore` (180 BPM, one played break cut at its own hits), `soundclash-breakcore` (175, subs, reese, siren, rewind and echo) and `redline-breakcore` (250, tuned speedcore kicks, noise and scream). Sixteen voices plus an authored roll and riser each; three velocities and three takes on every pad. All 162 cells of each kit pass velocity and take source checks, saved recipe replay, native playback including take wrap (and hat choke where the kit has one), SFZ import and MPC 3 grid and PCM read-back (`BreakcoreFamilyTest`, `BreakcoreDeliveryTest`). Melodic, keygroup, chord and STRUM gates do not apply. No MPC 2 export, under the 2026-11-14 ruling. The owner auditioned all three kits' grooves and pads on 2026-11-18 and kept them as built; per-pad verdicts are open. **Open: no phone or MPC has played them.** See [BREAKCORE_FAMILY](BREAKCORE_FAMILY.md).
+
 ## EMBER (round 4, five kits on the shelf, presets and picker, sound approved 2026-11-16; hardware open)
 
 A drum engine for a live jazz and soul kit in a small club in 1962: calfskin drums, a riveted ride, brushes, the
