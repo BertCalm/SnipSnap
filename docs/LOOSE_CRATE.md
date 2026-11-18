@@ -9,11 +9,11 @@ behind → a dark, rumbling bed with the top cut off**.
 
 ## Status
 
-**Round 2 built, not yet heard.** The four kits are on FRESH TAPE's SKINS shelf (`LooseCrateKits` version 2,
+**Round 3 built, not yet heard.** The four kits are on FRESH TAPE's SKINS shelf (`LooseCrateKits` version 3,
 `StarterKits`), with their velocity and round-robin grids proven in software through save, reload, playback and MPC 3,
 SFZ and DecentSampler export. The owner heard round 1 ("Sounds pretty good", then "It's a bit drum machine like"),
-heard round 2a's two treatments and chose A (2026-11-18). Round 2 carries A to every kit's groove and roll. Only
-HUMMIN's groove has been heard as built (it is round 2a's A). Nothing has been played on a phone or an MPC.
+chose round 2a's treatment A, and heard round 2 as "Better. Crate cloth could use a bit of warmth or compression in
+the bass" (2026-11-18). Round 3 changes CLOTH's print only. Nothing has been played on a phone or an MPC.
 
 Listening pages (private to the owner's account): [round 1](https://claude.ai/artifact/WgYApFNJqJTjEiv6XGgnn6),
 the four kits read back from their MPC 3 export; [round 0](https://claude.ai/artifact/DaKKJX6p18cMbitmFKDVQn),
@@ -257,6 +257,29 @@ groove and roll goes through a room. Not measured on a phone.
 
 [Round 2 listening page](https://claude.ai/artifact/V66JmBdrMha3TvJLuLhdwh) (private to the owner).
 
+## Round 3: CLOTH's bass (as built, not yet heard)
+
+"Better. Crate cloth could use a bit of warmth or compression in the bass" (the owner, 2026-11-18). Measured against
+the cloth reference (Python probes): round 2's CLOTH groove had a spikier bass, its crest (peak against RMS under
+200 Hz) 21.4 dB against the reference's 17.9, and its kicks were nearly sine, the Drop Kick 40.6 dB down between 200
+and 500 Hz and 62 dB down above 500 Hz.
+
+CLOTH's print (`LooseCrateKits.CLOSE`, kit version 3) gains two stages after the converter, so every CLOTH pad,
+groove and roll carries them:
+- **Warmth:** VALVE with its speaker off (DRIVE .50, SAG .15, TONE .40, CAB 0): the harmonics a sine-like kick lacks.
+  At DRIVE .25 the kick's 200 to 500 Hz moved under 1 dB; at .50 the Drop Kick's rose 6.6 dB (-34.0).
+- **Compression in the bass:** `squeezeBass`, COMPRESSOR (AMOUNT .80, ATTACK .35, RECOVER .55) on the band under
+  180 Hz alone, split by two one-poles so the rest passes untouched.
+
+Measured in Kotlin on the groove through each print (`CLOTH's print presses its bass into body and leaves the rest
+alone`): bass crest 21.1 dB through round 2's print, 19.2 with the tube, 17.9 with the tube and the squeeze, the
+reference's 17.9. The test holds both: the full print at least 2 dB under round 2's, and the squeeze below the tube
+alone.
+
+Disclosed, not asked for: the groove's 0.5 to 2 kHz still sits near -22 dB against the reference's -12.4. That band
+is the reference snare's crack and beater knock, not the bass; CLOTH's bounce snare is a deep body and wires with
+little between. Left for the owner to call.
+
 ## Gates
 
 | Gate | Status |
@@ -275,4 +298,5 @@ groove and roll goes through a room. Not measured on a phone.
   files.
 - **Proposed**: every setting outside round 0's candidates, the four prints, the rolls and grooves.
 - **Heard**: round 0's two hum kicks ("Both sound great"); round 1's kits ("Sounds pretty good", "It's a bit drum
-  machine like"); round 2a, choosing A (all 2026-11-18). Round 2's CLOTH, HAZE and RITUAL grooves are not heard.
+  machine like"); round 2a, choosing A; round 2 ("Better. Crate cloth could use a bit of warmth or compression in the
+  bass") (all 2026-11-18). Round 3's CLOTH is not heard.
