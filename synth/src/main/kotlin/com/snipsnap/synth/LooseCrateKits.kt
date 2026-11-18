@@ -60,7 +60,7 @@ object LooseCrateKits {
     /** Where every zone's first take peaks, as CYPHER's do. */
     const val PAD_PEAK = .92f
 
-    /** The most a print is fed: CRUNCH and TAPE match their input's peak and then clamp, so a sum over 1 would be squared off. */
+    /** The level every pad is fed to its print at: CRUNCH and TAPE match their input's peak and then clamp, so a sum over 1 would be squared off. */
     const val HEADROOM = .9f
 
     /**
@@ -75,9 +75,17 @@ object LooseCrateKits {
         val hitVinyl: Map<String, Float>?,
         val grooveVinyl: Map<String, Float>?,
     ) {
+        /**
+         * Every pad enters the print at [HEADROOM]. Round 1 first fed a softer zone in softer, so the converter
+         * would hear it softer: but CRUNCH's grain is a fixed size, so it was relatively louder on a quiet hit,
+         * and the soft zone of every low or woody drum through a 12-bit print measured brighter than the hard
+         * one (the thud kick's onset centroid 264, 244, 244 Hz soft to hard; CLOTH's near-clean converter
+         * showed none). Fed at one level, the softness is the strike's own (duller, `LooseCrateKitsTest`). A
+         * hard hit already entered at [HEADROOM], so round 0's heard sounds do not move.
+         */
         fun apply(x: FloatArray, phrase: Boolean): FloatArray {
             val peak = x.maxOfOrNull { abs(it) } ?: 0f
-            val k = if (peak > HEADROOM) HEADROOM / peak else 1f
+            val k = if (peak > 1e-9f) HEADROOM / peak else 1f
             val fed = Snip(FloatArray(x.size) { x[it] * k }, 1, Dsp.RATE)
             val taped = Tape.process(Crunch.process(fed, crunch), tape)
             val vinyl = if (phrase) grooveVinyl else hitVinyl
