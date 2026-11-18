@@ -771,6 +771,26 @@ object StarterKits {
             seeded = false, tempoBpm = com.snipsnap.synth.CypherKits.Kit.FLINT.bpm.toFloat(),
         ) { com.snipsnap.synth.CypherKits.build(com.snipsnap.synth.CypherKits.Kit.FLINT) },
         Starter(
+            "loose-crate-hummin", "LOOSE CRATE HUMMIN",
+            "Beat-tape boom bap built around a kick that hums: a flam snare, a bouncing snare, dark hats that drag, a record's rumble under everything. Three touch zones, four takes; a flam roll and a loose four-bar groove.",
+            seeded = false, tempoBpm = com.snipsnap.synth.LooseCrateKits.Kit.HUMMIN.bpm.toFloat(),
+        ) { com.snipsnap.synth.LooseCrateKits.build(com.snipsnap.synth.LooseCrateKits.Kit.HUMMIN) },
+        Starter(
+            "loose-crate-cloth", "LOOSE CRATE CLOTH",
+            "Dry and close: a kick that drops an octave, the deep bouncing snare, tight hats, clean gaps. Three touch zones, four takes; a bounce roll and a tight four-bar groove.",
+            seeded = false, tempoBpm = com.snipsnap.synth.LooseCrateKits.Kit.CLOTH.bpm.toFloat(),
+        ) { com.snipsnap.synth.LooseCrateKits.build(com.snipsnap.synth.LooseCrateKits.Kit.CLOTH) },
+        Starter(
+            "loose-crate-haze", "LOOSE CRATE HAZE",
+            "Half-time haze: a lazy flam, a washing cymbal, bells and metal, the tape wobbling and the top cut hardest. Three touch zones, four takes; a ghost roll and a half-time four-bar groove.",
+            seeded = false, tempoBpm = com.snipsnap.synth.LooseCrateKits.Kit.HAZE.bpm.toFloat(),
+        ) { com.snipsnap.synth.LooseCrateKits.build(com.snipsnap.synth.LooseCrateKits.Kit.HAZE) },
+        Starter(
+            "loose-crate-ritual", "LOOSE CRATE RITUAL",
+            "Sparse and dub-leaning: a short sub thud, a high slap, hand drums and a sub that drops. Three touch zones, four takes; a slap roll and a one-drop four-bar groove.",
+            seeded = false, tempoBpm = com.snipsnap.synth.LooseCrateKits.Kit.RITUAL.bpm.toFloat(),
+        ) { com.snipsnap.synth.LooseCrateKits.build(com.snipsnap.synth.LooseCrateKits.Kit.RITUAL) },
+        Starter(
             com.snipsnap.synth.BreakerKits.ID, "BREAKER",
             "Surf rock by way of boom bap: dusty drums through a spring tank, a crush and a surf amp. Three touch zones, three takes; a snare riser and a surf tom fill.",
             seeded = false, tempoBpm = com.snipsnap.synth.BreakerKits.BPM,

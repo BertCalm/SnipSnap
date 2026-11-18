@@ -397,6 +397,13 @@ class UserPresetsTest {
                 val promoted = com.snipsnap.synth.ServoPatch.fromJsonText((call.positional.single() as KotlinLiteral.Str).value)
                 assertEquals(preset, promoted, "${preset.name}: velocity, take and model promotion")
                 assertEquals(preset.macros.mapValues { it.value.toRawBits() }, promoted.macros.mapValues { it.value.toRawBits() })
+            } else if (preset is com.snipsnap.synth.EmberPatch) {
+                val call = KotlinLiteral.parse(line.removeSuffix(",")) as KotlinLiteral.Call
+                assertEquals("fromJsonText", call.name)
+                assertEquals("EmberPatch", (call.receiver as KotlinLiteral.Call).name)
+                val promoted = com.snipsnap.synth.EmberPatch.fromJsonText((call.positional.single() as KotlinLiteral.Str).value)
+                assertEquals(preset, promoted, "${preset.name}: velocity, take and model promotion")
+                assertEquals(preset.macros.mapValues { it.value.toRawBits() }, promoted.macros.mapValues { it.value.toRawBits() })
             } else if (preset is com.snipsnap.synth.KindredPatch) {
                 val call = KotlinLiteral.parse(line.removeSuffix(",")) as KotlinLiteral.Call
                 assertEquals("fromJsonText", call.name)
@@ -1417,6 +1424,13 @@ class UserPresetsTest {
                 assertTrue("private val promoted:" in text, "SERVO promotions need a destination beside the approved kits")
                 val patch = Presets.all().first { it.engine == engine }
                 assertTrue(UserPresets.rosterLine(patch).startsWith("ServoPatch.fromJsonText("))
+            } else if (engine == com.snipsnap.synth.EmberPatch.ENGINE) {
+                val decoder = com.snipsnap.synth.EmberPatch.Companion.javaClass.getMethod("fromJsonText", String::class.java)
+                assertEquals(com.snipsnap.synth.EmberPatch::class.java, decoder.returnType,
+                    "EMBER promotion retains strike velocity, take and model version")
+                assertTrue("private val promoted:" in text, "EMBER promotions need a destination beside the approved kits")
+                val patch = Presets.all().first { it.engine == engine }
+                assertTrue(UserPresets.rosterLine(patch).startsWith("EmberPatch.fromJsonText("))
             } else if (engine == com.snipsnap.synth.KindredPatch.ENGINE) {
                 val decoder = com.snipsnap.synth.KindredPatch.Companion.javaClass.getMethod("fromJsonText", String::class.java)
                 assertEquals(com.snipsnap.synth.KindredPatch::class.java, decoder.returnType,

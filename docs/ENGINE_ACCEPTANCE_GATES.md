@@ -867,14 +867,15 @@ The owner approved the procedural kick/snare pair. Three genre starters now cont
 
 One 18-pad starter at 200 BPM, `splinter-breakcore`, built on the approved Spore kick and snare with a new edit stage (speed, chop, retrigger, stretch, oversampled clip). Sixteen voices plus an authored snare rush and riser; three velocities and three takes on every pad. All 162 cells pass velocity and take source checks, saved recipe replay, native playback including take wrap and hat choke, SFZ import and MPC 3 grid and PCM read-back (`SplinterTest`, `SplinterDeliveryTest`). Melodic, keygroup, chord and STRUM gates do not apply. The multiple-genre-kits gate is met by the Spore family's shelf, not by this kit alone. No MPC 2 export, under the 2026-11-14 ruling. The owner heard the groove on 2026-11-15 and called it fine; per-pad verdicts are open. **Open: no phone or MPC has played it.** See [SPLINTER](SPLINTER.md).
 
-## EMBER (round 3L, five kits on the shelf, sound approved 2026-11-16; hardware open)
+## EMBER (round 4, five kits on the shelf, presets and picker, sound approved 2026-11-16; hardware open)
 
 A drum engine for a live jazz and soul kit in a small club in 1962: calfskin drums, a riveted ride, brushes, the
 club and a 1962 chain, from physical models, and Latin percussion fitted to CC0 recordings. Five sixteen-pad kits. See [EMBER](EMBER.md). Rounds 0 to 0e are a
 Python prototype and a listening page (<https://claude.ai/artifact/Xmcj5t8MYSNCQPoTKHBcdw>). Round 1 (2026-11-15) is
 the Kotlin port, `Ember.kt`; the owner approved its sound at round 1b. Round 2 (2026-11-15) puts the four kits on
 the shelf as FRESH TAPE starters. Round 3L (2026-11-16) ports the eight Latin percussion voices and adds the Latin jazz
-kit, after the owner heard all five kits and the new voices and said "All sound great".
+kit, after the owner heard all five kits and the new voices and said "All sound great". Round 4 (2026-11-17, the
+owner's "Proceed") files the five kits' 80 pads as EMBER's factory presets and puts EMBER on SYNTH's engine picker.
 
 - **Melodic, keygroup and chord-tool gates:** not applicable. A drum engine.
 - **Articulation:** finite hits, no HOLD. No picked or thumbed strings.
@@ -885,7 +886,7 @@ kit, after the owner heard all five kits and the new voices and said "All sound 
   least 20 dB and that both rolls grow; `EmberKitsTest` that every kit carries one.
 - **Drum shelf: on the shelf, approved (2026-11-16).** EMBER (138 BPM), EMBER AFTER HOURS (66), EMBER SOUL JAZZ (104),
   EMBER FREE (80) and EMBER LATIN JAZZ (118, a cha-cha-chá, made to differ from CALABASH's Afro-Cuban jazz) are FRESH
-  TAPE starters under SKINS (180 starters), built by `EmberKits` pad for pad from `prototype/ember/kits.py`. The owner
+  TAPE starters under SKINS, built by `EmberKits` pad for pad from `prototype/ember/kits.py`. The owner
   heard all five from the app's MPC 3 export (Latin as its Python preview) and said "All sound great". They differ in implements, drums per role, tuning, damping, looseness, microphone
   distance, chain and tempo. No pad is the same voice at the same settings in two kits, and the same slot differs
   in shape between any two (`EmberKitsTest`).
@@ -925,8 +926,14 @@ kit, after the owner heard all five kits and the new voices and said "All sound 
   The owner then heard "Free sounds possessed with evil": the listening page had played the kits' grids clipped (its
   script misread the export's 32-bit samples), not the kit; version 6 fixed the page. Hearing version 6, the five kits
   from the app's export, the Latin voices and the Latin jazz kit, the owner said "All sound great" (2026-11-16).
-- **Overall: incomplete.** The sound is approved and the five kits are on the shelf, proved through saving,
-  playback and MPC 3 export in software (rounds 2 and 3L). Open: presets and the picker, and phone and MPC hardware.
+- **Presets and picker: in software (round 4).** `EmberPresets` files the 80 approved pads as presets, each the
+  pad's own macros struck full at take 0, byte for byte the engine render the kit's hard zone scales
+  (`EmberPresetsTest`); EMBER has left `PatchTypes.ROSTERLESS`. EMBER is on SYNTH's picker after SERVO, under DRUMS
+  (97 picker engines with SAMBA, which landed alongside). An on-device test in `NewEngineSynthScreenTest` loads CLUB KICK and keeps an edit with its
+  take and model; CI compiles and runs it. No phone has opened it by hand.
+- **Overall: incomplete.** The sound is approved, the five kits are on the shelf, proved through saving, playback and
+  MPC 3 export in software (rounds 2 and 3L), and their pads are the presets on the picker (round 4). Open: phone and
+  MPC hardware.
 
 ## KINDRED (complete 2026-11-18: four kits on the shelf, on the picker, factory bank filed, kits and hardware approved)
 

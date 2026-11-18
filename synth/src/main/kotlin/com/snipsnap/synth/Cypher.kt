@@ -168,6 +168,28 @@ internal object KitStrikes {
     const val ONSET_MODEL = 4
 
     /**
+     * One pad that is several strikes of one drum: strike i lands [offsetsMs]\[i] after the first, at
+     * [weights]\[i] of the pad's velocity (its timbre struck that softly, and its level scaled by the same
+     * weight). A flam and a bouncing snare are both this, and the rack's shortest echo (60 ms) is far too
+     * long for either. Every strike is a fresh take of the engine: [single] renders one strike at a velocity
+     * and an engine take, and engine take 0 (a drum's authored strike) is never used, so no two strikes inside
+     * a pad, and no two takes of a pad, share audio. From LOOSE CRATE round 0 (`docs/LOOSE_CRATE.md`).
+     */
+    fun multi(offsetsMs: List<Float>, weights: List<Float>, single: (velocity: Float, engineTake: Int) -> FloatArray): Strike {
+        require(offsetsMs.size == weights.size && offsetsMs.isNotEmpty() && offsetsMs.first() == 0f)
+        return { v, t, _ ->
+            val strikes = offsetsMs.indices.map { i -> single((v * weights[i]).coerceIn(.05f, 1f), 1 + t * 16 + i) }
+            val starts = offsetsMs.map { Math.round(it * Dsp.RATE / 1000f) }
+            val out = FloatArray(starts.indices.maxOf { starts[it] + strikes[it].size })
+            for (i in strikes.indices) {
+                val k = peakOf(strikes[i]).let { if (it > 1e-9f) weights[i] / it else 0f }
+                for (j in strikes[i].indices) out[starts[i] + j] += strikes[i][j] * k
+            }
+            out
+        }
+    }
+
+    /**
      * Two strikes as one drum: each peak-normalised, summed at [weightA] and [weightB], then normalised
      * again. They share an onset, so the sum reads as one hit rather than two.
      */
