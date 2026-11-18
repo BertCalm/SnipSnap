@@ -174,8 +174,8 @@ def groove(kit, bank, stack=None, sbank=None, bars=4):
                   3 if c == 'K' else 4 if c in 'Sgr' else 5, 6 if c == 'S' else 0)
         for pad, steps, v, in_bars in OVER.get(kit['id'], []):
             if bar in in_bars:
-                for s in steps:
-                    place(('k', pad), bar * 16 + s, v, .5, 5)
+                for s in steps:   # the ride rings 1.4 s, so eighths pile up: it sits lower than a hat
+                    place(('k', pad), bar * 16 + s, v, .32 if pad in (2, 3) else .5, 5)
         if bar == 3:
             place(('k', 9), bar * 16 + 13, .9, .8, 4); place(('k', 10), bar * 16 + 14, .7, .7, 4)
         if stack is not None:

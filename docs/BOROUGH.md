@@ -109,6 +109,28 @@ python3 verify.py OUT targets.json fitted_r1.json
 python3 build_page.py OUT [ROUND0_OUT]                         # optional before/after players
 ```
 
+### Round 1.1: RIDE & RIMS gets a ride
+
+**What the owner heard.** "Better. But rides and rims doesn't have any rides." Correct. RIDE &
+RIMS' A03 was EMBER's closed hat fitted toward the ride loop's cymbal, and the demo groove's ride
+notes fell back to that hat, or played nothing when a perc stack was chosen.
+
+**What changed.** A ride kit (`kits.py` `ride=True`) now puts EMBER's ride on A03 and its bell on
+A04, through the same record chain; the pedal hat stays on A08 (the foot keeps 2 and 4 under a
+ride), and the closed and open hats leave this kit. `fit.py` fits a `ride` role against the loop's
+cymbal descriptor (`BOROUGH_ROLES=ride`, `ROLE_TARGET`). The groove gets an over-lane: eighths on
+the ride with the quarters leaning in, the bell to close every other bar, the pedal hat under the
+rims; it plays with or without a stack, 10 dB under a hat lane because a ride's 1.4 s ring piles
+up on eighths.
+
+**Results (Python harness).** Ride fit on drums_ride_moffat_rims: 4.60 dB (the closed hat it
+replaces: 5.68 dB); the shipped A03 re-scores at 5.24 dB (was 6.50 dB). The fit chose a nearly
+fully damped, dark (4.7 kHz low-pass), driven ride: the descriptor only sees the 0.31 s between
+strokes, never the full ring, so the pad may sound shorter than a ride left to ring. It still
+rings 1.35 s above -30 dB. Verification unchanged: 792 WAVs, 0 failures, timbral velocity on
+88 of 88 pads. Listening page version 3: the RIDE & RIMS before player is the round 1 groove
+with the hat stand-in.
+
 ## What the loops measured (Python harness)
 
 Measured by `prototype/borough/extract.py` at mono 44.1 kHz. Whole-loop statistics include every
@@ -177,7 +199,7 @@ Shape constants, not measured mechanics.
 | CRANKED | 90 | mercer cranked, lafayette | the highest, longest kick (62 Hz, little sweep) against a 39 Hz partner |
 | WAX | 80 | baxter, halsey | slow and darkest: snare low-passed at 3.2 kHz, heavy drive |
 | DRY ROOM | 90 | keap, howard | gated: a 47 ms kick body, silence between hits |
-| RIDE & RIMS | 90 | ride moffat rims, ditmas | short rim-led snare, a ride-like cymbal in the hat slot, the most swing |
+| RIDE & RIMS | 90 | ride moffat rims, ditmas | short rim-led snare, a ride and ride bell on A03-A04 (from round 1.1), the most swing |
 
 Drum pads A01-A12: KICK, SNARE, HAT, OPEN HAT, KICK 2, SNARE 2, RIM, PEDAL HAT, GHOST, TOM LO,
 TOM HI, SNARE ROLL. Fitted: A01, A02, A03, A05, A06. Derived from a fitted parent (proposed,
