@@ -462,7 +462,7 @@ explicit MIDI root (24–96), strike velocity and model version; TUNE is a
 relative ±12-semitone offset, neutral at 0.5, so the effective note spans
 12–108 without clamping back to the saved-root range. Seven provisional presets
 and a dry sixteen-pad C minor pentatonic kit are included, with PITCHWHEEL among
-FRESH TAPE's 202 starters. Run `./gradlew :synth:generatePitchwheelAudition`
+FRESH TAPE's 205 starters. Run `./gradlew :synth:generatePitchwheelAudition`
 for the compact first listening set, or add `-PpitchwheelFull` for the broader
 dry probes. HOLD's top step returns settled loop-only material with a
 deterministic attachment cycle and capped adhesion. The owner heard R1 as six
@@ -1451,7 +1451,9 @@ presets each, the sixteen kept pads among them. TERRA SAHEL, TERRA MAQAM and
 TERRA PUNJAB are genre kits from the same voices, kept by the owner
 ([`docs/TERRA_PROMOTION.md`](docs/TERRA_PROMOTION.md)). TERRA ROUND ROBIN, an
 opt-in starter beside TERRA, deals four takes per touch on the same sixteen
-pads; the owner kept it by ear in terra-rr-1 (16 Nov 2026).
+pads; the owner kept it by ear in terra-rr-1 (16 Nov 2026). SAHEL TAKES, MAQAM
+TAKES and PUNJAB TAKES do the same for the three genre kits, each beside its kit
+(listening round genre-rr-1).
 VENT, the Rössler-attractor synth (separate from the TapeOS scheme of that
 name), brings clean model-2 PULSE, COIL and PLUME to the picker
 and factory roster. FRESH TAPE's VENT kit has twelve dry pads in C minor
