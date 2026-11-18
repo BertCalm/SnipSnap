@@ -30,12 +30,10 @@ object KitBench {
 
     /**
      * The benches that work on one filled pad of one kit: the pad editor, its
-     * two pages (EFFECTS and VARIATIONS) and the three tools it opens over
-     * itself. They share the editor's kit and slot, so they share its verdict.
+     * pages ([PadSheetPage]) and the three tools it opens over itself. They
+     * share the editor's kit and slot, so they share its verdict.
      */
-    val PAD_BENCHES: Set<Bench> = setOf(
-        Bench.PAD_SHEET, Bench.PAD_EFFECTS, Bench.PAD_VARIATIONS, Bench.GRAIN_FIELD, Bench.SPLICE, Bench.STACK,
-    )
+    val PAD_BENCHES: Set<Bench> = PadSheetPage.entries.map { it.bench }.toSet() + setOf(Bench.GRAIN_FIELD, Bench.SPLICE, Bench.STACK)
 
     /**
      * The verdict for [bench] on arrival.

@@ -205,7 +205,7 @@ fun PadSheetScreen(
     backLabel: String,
     onSlotChange: (Int) -> Unit,
     /**
-     * Which of the editor's three pages to draw (`Bench.PAD_SHEET`, `PAD_EFFECTS`, `PAD_VARIATIONS`): one
+     * Which of the editor's pages to draw ([PadSheetPage]: the editor and the screens behind its doors): one
      * composable, so the state EFFECTS and VARIATIONS work on survives the trip from the editor and back.
      * [onBack] is Back from whichever page is up, and [backLabel] names where it lands.
      */
@@ -214,6 +214,8 @@ fun PadSheetScreen(
     onOpenEffects: () -> Unit = {},
     /** `VARIATIONS ▸`: opens the VARIATIONS page over the editor. */
     onOpenVariations: () -> Unit = {},
+    /** The short pad page's other doors: LAYERS AND TAKES, TRIM AND SPLICE and MAKE FROM THIS PAD open their page over the editor. */
+    onOpenPage: (PadSheetPage) -> Unit = {},
     onBack: () -> Unit,
     onToast: (String) -> Unit,
     onNavigateTape: () -> Unit,
@@ -3647,6 +3649,9 @@ fun PadSheetScreen(
                 PadSheetPage.EDITOR -> "PAD ${padTag(slot)}"
                 PadSheetPage.EFFECTS -> Copy.PAD_EFFECTS_TITLE
                 PadSheetPage.VARIATIONS -> Copy.PAD_VARIATIONS_TITLE
+                PadSheetPage.LAYERS -> Copy.PAD_LAYERS_TITLE
+                PadSheetPage.TRIM -> Copy.PAD_TRIM_TITLE
+                PadSheetPage.MAKE -> Copy.PAD_MAKE_TITLE
             },
             onBack = ::requestBack,
             onHit = {
@@ -3724,6 +3729,7 @@ fun PadSheetScreen(
                 },
             )
 
+            SectionHeading(Copy.PAD_HOW_IT_PLAYS, scheme)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 ToggleChip("ONE-SHOT", pad.oneShot, classColor, scheme, enabled = !busy, modifier = Modifier.weight(1f)) {
                     editPadMetadata { m -> m.update(slot) { p -> p.copy(oneShot = !p.oneShot) } }
@@ -3749,7 +3755,28 @@ fun PadSheetScreen(
                 }
             }
 
-            SectionHeading("LAYERS", scheme)
+            // The short pad page (the owner's mockup, 2026-11-16): the levels and how it plays, then six labelled
+            // doors, each a screen of its own (`PadSheetPage`) with a closed line saying what is applied or inside.
+            // Nothing left the editor: what sat below HOW IT PLAYS is behind LAYERS, TRIM and MAKE, and AUDITION
+            // is HEAR IT IN THE BEAT. MAKE's door opens its box too, since the box is all that page holds.
+            SectionHeading("CHANGE IT", scheme)
+            PageDoor(Copy.PAD_EFFECTS_DOOR, PadSheetBoxes.effectsLine(pad, outsideStage), scheme, !busy, onClick = onOpenEffects)
+            PageDoor(Copy.PAD_VARIATIONS_DOOR, PadSheetBoxes.variationsLine(pad), scheme, !busy, onClick = onOpenVariations)
+            PageDoor(Copy.PAD_LAYERS_DOOR, PadSheetBoxes.layersLine(pad), scheme, !busy) { onOpenPage(PadSheetPage.LAYERS) }
+            PageDoor(Copy.PAD_TRIM_DOOR, PadSheetBoxes.TRIM_HOLDS, scheme, !busy) { onOpenPage(PadSheetPage.TRIM) }
+            PageDoor(Copy.PAD_MAKE_DOOR, boxes.getValue(PadSheetBoxes.Box.MAKE), scheme, !busy) {
+                if (openBoxKind != PadSheetBoxes.Box.MAKE) tapBox(PadSheetBoxes.Box.MAKE)
+                onOpenPage(PadSheetPage.MAKE)
+            }
+            // AUDITION ▸ (spec decision 2), renamed for what it does: dimmed rather than hidden with no other
+            // version to compare against, "still tappable, the destination explains why".
+            PageDoor(
+                Copy.PAD_BEAT_DOOR, PadSheetBoxes.beatLine(auditionSibling != null), scheme, !busy,
+                dimmed = auditionSibling == null, onClick = { onAudition(slot) },
+            )
+            }
+
+            if (page == PadSheetPage.LAYERS) PadPageBody {
             TapeText(Copy.LAYERS_RULE, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
             // ROUND ROBIN: the pad plays a different take each hit. Edits above and below still work on
             // the original; the takes re-render from it.
@@ -3839,7 +3866,9 @@ fun PadSheetScreen(
                 onClick = { if (pad.isRobinChain) onToast(Copy.ROBIN_NO_LAYERS) else onStack(slot) },
             )
 
-            SectionHeading("EDIT", scheme)
+            }
+
+            if (page == PadSheetPage.TRIM) PadPageBody {
             ActionButton("RE-TRIM ▸", scheme, enabled = !busy, modifier = Modifier.fillMaxWidth(), onClick = onNavigateTape)
             // Dimmed, not disabled, when there's no prior take yet - same
             // "still tappable, the destination explains why" convention as
@@ -3872,11 +3901,6 @@ fun PadSheetScreen(
                     onClick = ::onUnsplice,
                 )
             }
-
-            // EFFECTS and VARIATIONS are screens of their own (`PadSheetPage`), one door row each:
-            // the name with a ▸, and a closed line saying what is applied or what is inside.
-            PageDoor(Copy.PAD_EFFECTS_DOOR, PadSheetBoxes.effectsLine(pad, outsideStage), scheme, !busy, onOpenEffects)
-            PageDoor(Copy.PAD_VARIATIONS_DOOR, PadSheetBoxes.variationsLine(pad), scheme, !busy, onOpenVariations)
             }
 
             if (page == PadSheetPage.EFFECTS) PadPageBody {
@@ -4261,8 +4285,7 @@ fun PadSheetScreen(
             }
             }
 
-            if (page == PadSheetPage.EDITOR) PadPageBody {
-            SectionHeading("MAKE FROM THIS PAD", scheme)
+            if (page == PadSheetPage.MAKE) PadPageBody {
             GroupBox(
                 legend = PadSheetBoxes.Box.MAKE.legend,
                 summary = boxes.getValue(PadSheetBoxes.Box.MAKE),
@@ -4398,21 +4421,10 @@ fun PadSheetScreen(
                 onClick = ::openSpread,
             )
             }
+            }
 
-            SectionHeading("TRY IN THE BEAT", scheme)
-            // AUDITION ▸ (spec decision 2): offered whenever a MAKE PAD ▸
-            // sibling exists to compare against - dimmed rather than hidden,
-            // same "still tappable, the destination explains why" convention
-            // as MAKE INSTRUMENT above, so the card never rearranges itself
-            // pad to pad.
-            ActionButton(
-                "AUDITION ▸",
-                scheme,
-                enabled = !busy,
-                dimmed = auditionSibling == null,
-                modifier = Modifier.fillMaxWidth(),
-                onClick = { onAudition(slot) },
-            )
+            // EJECT stays at the foot of the editor; AUDITION is the HEAR IT IN THE BEAT ▸ door above.
+            if (page == PadSheetPage.EDITOR) PadPageBody {
             DeleteButton(scheme, enabled = !busy, onClick = ::onEject)
             }
         }
