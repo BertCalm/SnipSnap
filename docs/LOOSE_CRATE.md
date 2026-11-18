@@ -305,7 +305,16 @@ Measured (Python probes): SPEED's hum kick rises from 53.8 to 73.3 Hz and shorte
 bends from 103 to 90 Hz; BLUE's groove never goes quiet (quietest tenth 12.5 dB under the loudest), from the ride,
 which rings over a second six times a bar; easing the brush sweep from .35 to .20 moved it under 1 dB.
 
-[Expansion round 0 listening page](https://claude.ai/artifact/Q3rZ8po8ZaeJs9E4tNd86s) (private to the owner).
+**Round 0b, BLUE's brushes.** "The brush snare is too harsh and overbearing" (the owner, 2026-11-18). Round 0 had
+set the brush tap's mic close and its warmth off (DISTANCE 0, WARMTH 0) and struck the backbeat at .90 and .95. It
+now takes EMBER's approved "Brush Tap" exactly (BUZZ .6, DISTANCE .4, WARMTH .35) and lays the backbeat in at .45
+and .50. Measured on dry stems on one scale (the brush taps alone against the rest of the kit): peaks 7.0 dB down
+(round 0: 4.0) and the 2 to 6 kHz band 7.6 dB down (round 0: 4.3); the overall energy is unchanged (6.2 dB down),
+since the softer tap rings longer. A first try at .65 moved the groove under 1 dB: a hit's level follows its
+velocity gently (`touch`), and the room's compressor evens it again. The tap's centroid fell from 1,109 to 768 Hz.
+
+[Expansion round 0 listening page](https://claude.ai/artifact/Q3rZ8po8ZaeJs9E4tNd86s) (private to the owner; round 0b
+beside round 0 for BLUE).
 
 ## Gates
 
