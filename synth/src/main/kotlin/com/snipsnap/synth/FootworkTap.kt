@@ -9,7 +9,7 @@ import kotlin.math.*
  */
 internal object FootworkTap {
     private const val FS=176400
-    private const val RATE=44100
+    private const val RATE=Dsp.RATE
     private class Noise(role: Int,take: Int) {
         private val source=Dsp.Noise(Dsp.seedFor("FOOTWORK-TAP",4,role,take))
         fun uniform(a: Double,b: Double)=a+(source.next().toDouble()+1)*.5*(b-a)
