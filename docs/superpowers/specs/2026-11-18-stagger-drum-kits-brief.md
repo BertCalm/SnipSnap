@@ -1,7 +1,7 @@
 # STAGGER: design brief for a muffled-kick, drunk-clock boom-bap kit family
 
 Status: concept with a round-0 Python prototype. Nothing rendered in Kotlin, nothing heard.
-Repository truth: read at `8daaf2ef` (2026-11-18). APIs named below were grepped: `CypherKits` (`Part`,
+Repository truth: read at `8daaf2ef` (2026-11-18); the branch then took the default branch at `22d9e522` (the breakcore family, PRs 1204 and 1205), which adds a `Shatter.kt` that is a chopped-break kit, not a glass sound, so the glass source below is named GLASS to keep clear of it. APIs named below were grepped: `CypherKits` (`Part`,
 `Phrase`, `Print`, `build`, `render`, `touch`, `velocities`, `TAKES`), `KitStrikes` in `Cypher.kt`
 (`thumpKick`, `skinStruck`, `skinTouched`, `terra`, `tines`, `cymbal`, `multi`, `layered`, `struck`,
 `finish`), `Cypher.Note` (`offsetMs` clamped to +-60), `Cypher.behind`, `Cypher.humanised`,
@@ -35,7 +35,7 @@ foley in place of fills: timpani rolls, a dark gong, glass breaking, a laser zap
 all pitched down through a 12-bit converter so the converter's own grain comes down into the band a
 phone plays. Everything but two small things is authoring over shipped engines and prints. The two
 new things are one feel law (`staggered`, a shared mean-reverting drift plus a per-part bias) and one
-sound source (a glass shatter, which no engine makes).
+sound source (GLASS, a pane breaking, which no engine makes).
 
 ## Why it earns a shelf row (the sibling check)
 
@@ -44,7 +44,7 @@ sound source (a glass shatter, which no engine makes).
 | A kick with the click filtered off, driven so a phone still hears it | THUMP KICK (CLICK 0 still leaves the sine's own attack; no low-pass), SKIN KICK (TONE darkens, no two-pole roll-off), LOOSE CRATE's `squeezeBass` (a compressor under 180 Hz, not a filter) | roll the kick off at 250 to 350 Hz with harmonics put back *before* the filter; nothing in the roster prints a kick that way |
 | The kick late, the snare early, the lag breathing | `Cypher.behind` (one fixed offset per part), `Cypher.humanised` (every note independent), `Cypher.swung` | a lag that is correlated from note to note: measured, `humanised` has a lag-one autocorrelation of -0.10, a drift has 0.74 (§ the prototype) |
 | Foley with the converter's grain pitched down into the audible band | `FxChain` runs PITCH (Speed) first, CRUNCH later, by design (`Speed.kt`: "it runs first, so ... the whole rack all see the pitched sound") | a sampler's order, converter *then* pitch: measured on a zap, the sampler order puts its loudest image at 10.5 kHz, the rack's at 19.7 kHz, and 2.3 times the energy from 6 to 16 kHz |
-| Glass breaking | nothing (grep "shatter": two preset names, ORPHICA and SCOUR) | a scattered cascade of tiny ringing shards |
+| Glass breaking | nothing (grep "shatter": two preset names, ORPHICA and SCOUR, and since `22d9e522` the breakcore family's SHATTER kit, a chopped break) | a scattered cascade of tiny ringing shards |
 | Timpani, gong, zap, crash | SKIN TOM and TERRA COMPOUND_MEMBRANE at low TUNE; FIRED BRONZE KEMPUL "Dark Gong"; TINES ZAP and THUMP SPARK; BREAKER's CRASH | nothing; reused, printed through the foley converter |
 | Dusty, loose boom bap | CYPHER DUST (unquantized break, tape driven hard), SOOT (dictaphone grime), LOOSE CRATE (the humming kick, flams, dragging hats, record rumble, approved 2026-11-18) | none of them muffles the kick while leaving the snare sharp, none has the asymmetric drunk clock, none carries foley as pads |
 
@@ -62,7 +62,7 @@ kit, role, velocity v, take t
 [Part: engine strike]──(dry hit @44.1 kHz, peak = touch(v))──▶[pad print]──▶[kit print]──▶[zone gain]──▶[finish]
    SKIN / THUMP / TERRA /           one of:                        CRUNCH 12-bit, 26 kHz hold,
    TINES / FIRED BRONZE /           none (the snare, the rim: dry)  TONE dark, GRIT low
-   BREAKER crash / SHATTER          MUFFLE: tanh(3x) → 2-pole LP   → TAPE light (WOBBLE .06, DRIVE .15, AGE .55)
+   BREAKER crash / GLASS            MUFFLE: tanh(3x) → 2-pole LP   → TAPE light (WOBBLE .06, DRIVE .15, AGE .55)
    or PUNCH (whoosh + thud)         FOLEY: Eras sp1200 → Speed     (foley pads skip the kit's CRUNCH:
                                     (SEMITONES -5, -7 or -9)        their print already converted them)
 
@@ -89,7 +89,7 @@ a kit-side `Print` that composes the two sections in the sampler's order, the wa
 | Kit (working name) | Tempo | Identity | Pads (A01 to A14) | A15 | A16 |
 |---|---|---|---|---|---|
 | CARDBOARD | 89 | the profile itself: boxy kick, dry crack, whisper hat | Box Kick (THUMP KICK, CLICK 0, MUFFLE 300 Hz), Crack Snare (SKIN SNARE, SNAP .8, SIZZLE .7, DECAY .3, dry), Whisper Hat (SKIN HAT_CLOSED, TONE .3, DECAY .15), Rim (THUMP RIM, dry), Low Box Kick (MUFFLE 250 Hz, TUNE low), Cross Stick (SKIN STICK), Paper Snare (SKIN SNARE, soft zone's wires, as a pad), Shaker (SKIN SHAKER, dark), Dead Tom (SKIN TOM, MUFFLE 400 Hz), Timpani (SKIN TOM, TUNE .15, DECAY .8, FOLEY -5), Dark Gong (FIRED BRONZE KEMPUL, FOLEY -5, faded under 1.5 s), Zap (TINES ZAP, FOLEY -7), Punch (whoosh + thud, FOLEY -5), Clap (THUMP CLAP, dry, short) | Timpani roll: `ratchet` at 1/32 over two beats, weight .3 to 1, into the gong | two bars, `staggered`; hats at .25; the kick and snare carry the bar |
-| MATINEE | 84 | the cinematic kit: half the pads are effects | Box Kick, Crack Snare, Rim, Whisper Hat, then ten foley pads: two timpani (FOLEY -5 and -9), Gong, Crash-Gong (BREAKER CRASH, 1.4 s, FOLEY -9), Shatter (take-dealt, FOLEY -5), Low Shatter (FOLEY -9), Zap, Low Zap (THUMP SPARK, FOLEY -7), Punch, Stab (TERRA TUNED_BAR, BUZZ .6, FOLEY -7) | Riser: the timpani roll crescendo over a whole bar (`ratchet`, 1/16 then 1/32) landing on the crash-gong | two bars, `staggered`; a shatter on the and of four, a zap pickup into bar two |
+| MATINEE | 84 | the cinematic kit: half the pads are effects | Box Kick, Crack Snare, Rim, Whisper Hat, then ten foley pads: two timpani (FOLEY -5 and -9), Gong, Crash-Gong (BREAKER CRASH, 1.4 s, FOLEY -9), Glass (take-dealt, FOLEY -5), Low Glass (FOLEY -9), Zap, Low Zap (THUMP SPARK, FOLEY -7), Punch, Stab (TERRA TUNED_BAR, BUZZ .6, FOLEY -7) | Riser: the timpani roll crescendo over a whole bar (`ratchet`, 1/16 then 1/32) landing on the crash-gong | two bars, `staggered`; a glass break on the and of four, a zap pickup into bar two |
 | STUMBLE | 93 | the drunkest clock; a rim in the snare's place; no hats in the groove | Hum Kick (SKIN KICK over THUMP SUB, MUFFLE 350 Hz, drive 4), Rimshot (THUMP RIM, TUNE .85, dry), Crack Snare, Ghost Snare (`softer` .4), Shaker (whisper), Open Box (SKIN HAT_OPEN, dark, short), Low Tom (MUFFLE 400 Hz), Knock (TERRA SLAP, BOWL 0), Timpani, Gong, Punch, Zap, Clap, Bell (TINES BELL, FOLEY -7) | A dragging snare roll: `ratchet` with `staggered` on the roll itself (every stroke a little late) | two bars, `staggered` at the widest law; no hat part at all, the shaker at .2 |
 
 A fourth kit, the dusty-loop side (record rumble under a humming kick), was considered and left out: it
@@ -116,10 +116,10 @@ Every setting in the table is a shape value. Pad names are placeholders for the 
 **Strong: DISTIL and JUXTAPOSE, a kit family (as above).** The profile's three parts become three
 kit-side mechanisms: a per-pad MUFFLE print, a `staggered` feel law beside `behind` and `humanised`
 in `Cypher.kt`, and a FOLEY print that composes the converter and the transport in the sampler's
-order. One new source (the shatter) and one new strike (the punch: two different sources at an
+order. One new source (GLASS) and one new strike (the punch: two different sources at an
 offset, which `KitStrikes.layered` almost does and `multi` does for one drum). Gesture clarity: high.
 Novelty: the contrast print, the drunk clock and foley-as-pads are each absent from the shelf. Risk:
-low; everything but the shatter is shipped code. Cost: one synth file, one feel function, two shell
+low; everything but GLASS is shipped code. Cost: one synth file, one feel function, two shell
 test files, one Gradle task, three starter rows. Wins because the brief is three sounds, not three
 engines, and this is the shape the owner has approved three times.
 
@@ -160,7 +160,7 @@ entry; a round of its own.
 
 LOOSE CRATE's kits build in 31 to 107 s on the build machine (every groove through a room), and the
 phone builds a starter when it is picked. STAGGER's pads cost the same shape; the FOLEY print adds two
-resamples (cheap); the shatter is 28 shards of three two-pole modes over 0.7 s at the internal rate,
+resamples (cheap); GLASS is 28 shards of three two-pole modes over 0.7 s at the internal rate,
 which the Python harness rendered in well under a second per take. No solver, no cache story needed.
 The Kotlin round 0 measures the per-pad time as LOOSE CRATE did.
 
@@ -215,9 +215,9 @@ The predicted image for low content is 44,100 - 26,040 = 18,060 Hz, and 12,054 H
 the timpani measured 18,119 and 11,995. On a bright effect the sampler order carries 2.3 times the
 upper-band energy and puts the grain at 10 kHz, which is the "grainy, metallic, lower sample rate" of
 the profile. On a dark effect the order is inaudible. So FOLEY is a kit-side print in the sampler's
-order, and it matters most on the zaps, the shatter and the punch.
+order, and it matters most on the zaps, the glass and the punch.
 
-**4. The glass shatter and the punch.** Three takes of the shatter are three different panes (peak
+**4. The glass break and the punch.** Three takes of GLASS (the prototype calls it `shatter`) are three different panes (peak
 normalised cross-correlation 0.07 and 0.05 between takes; a copy is 1, the family's "another hit" line
 is under 0.5), the same take twice is byte-identical, 0.7 s, centroid 4,755 Hz, rising to 6,038 Hz
 through the converter at -5 (the images added the metal). The punch's whoosh leads its thud by 114 ms,
@@ -230,7 +230,7 @@ so the pad's onset is the swing, not the hit, which is the cartoon.
 2. `Cypher.staggered(notes, biasMs: Map<Int, Float>, wobbleMs, rho, seed)` beside `humanised`, drift
    centred over the loop, clamped to `Note`'s +-60. Adding a function does not move CYPHER's or LOOSE
    CRATE's audio, so `Cypher.VERSION` stays.
-3. The shatter and the punch as private sources in `StaggerKits` (as SLIDE began inside CYPHER);
+3. GLASS and the punch as private sources in `StaggerKits` (as SLIDE began inside CYPHER);
    `KitStrikes.layeredAt(a, b, offsetMs)` only if `layered` plus `multi` cannot make the punch.
 4. **Lift, do not copy:** `LooseCrateKits.Room`, `played` and `printed` (the print-twice seam) are
    what STAGGER's grooves need. A private helper copied between kit files is the roster's recurring
@@ -250,7 +250,7 @@ so the pad's onset is the swing, not the hit, which is the cartoon.
 
 - **Round 0 (this brief):** the Python numbers above; the owner picks the kits and the clock's width.
 - **Round 1:** the Kotlin candidates (CARDBOARD's fourteen hits, its groove three ways, the Box Kick at
-  three cutoffs, the shatter at three pitches), a listening page. Gate: the owner's ear.
+  three cutoffs, the glass break at three pitches), a listening page. Gate: the owner's ear.
 - **Round 2:** three kits, the generator, the gates table. Gate: "multiple distinct genre kits", velocity
   and round robin through rendering, saving, playback and MPC 3 export in software.
 - **Round 3:** the owner's phone and MPC.
@@ -266,7 +266,7 @@ so the pad's onset is the swing, not the hit, which is the cartoon.
 | A low-pass at 250 to 400 Hz with a tanh ahead of it keeps over 1 percent in 150 to 400 Hz | measured | `report.json`, Python, not Kotlin |
 | `staggered` has lag-one autocorrelation 0.74 against `humanised`'s -0.10 | measured | `report.json` |
 | The sampler order carries 2.3 times the 6 to 16 kHz energy of the rack order on a zap | measured | `report.json` |
-| Three shatter takes correlate under 0.1 | measured | `report.json` |
+| Three GLASS takes correlate under 0.1 | measured | `report.json` |
 | Every table setting, the three kits, the pad lists | proposed | nothing rendered in Kotlin |
 | The kick reads as boxy and the clock as drunk | heard? | not heard; round 1's page |
 
