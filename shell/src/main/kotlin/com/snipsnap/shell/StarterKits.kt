@@ -1108,6 +1108,22 @@ object StarterKits {
             "The sixteen TEMPEST pads with four takes each: repeated hats, snares and claps vary like a real drum machine's.",
             seeded = false,
         ) { com.snipsnap.synth.TempestRoundRobinKits.build() },
+        // Opt-in beside each kept TEMPEST genre starter, which stays as it is; appended after TEMPEST ROUND ROBIN.
+        Starter(
+            com.snipsnap.synth.TempestGenreRoundRobinKits.Kit.CIRCUIT.id, "CIRCUIT TAKES",
+            "The sixteen TEMPEST CIRCUIT pads with four takes each: repeated hats, claps and zaps vary like a real drum machine's.",
+            seeded = false,
+        ) { com.snipsnap.synth.TempestGenreRoundRobinKits.build(com.snipsnap.synth.TempestGenreRoundRobinKits.Kit.CIRCUIT) },
+        Starter(
+            com.snipsnap.synth.TempestGenreRoundRobinKits.Kit.FOUNDRY.id, "FOUNDRY TAKES",
+            "The sixteen TEMPEST FOUNDRY pads with four takes each: repeated snares, pipes and metal vary like a real drum machine's.",
+            seeded = false,
+        ) { com.snipsnap.synth.TempestGenreRoundRobinKits.build(com.snipsnap.synth.TempestGenreRoundRobinKits.Kit.FOUNDRY) },
+        Starter(
+            com.snipsnap.synth.TempestGenreRoundRobinKits.Kit.STEP.id, "STEP TAKES",
+            "The sixteen TEMPEST STEP pads with four takes each: repeated hats, rims and claps vary like a real drum machine's.",
+            seeded = false,
+        ) { com.snipsnap.synth.TempestGenreRoundRobinKits.build(com.snipsnap.synth.TempestGenreRoundRobinKits.Kit.STEP) },
     ))
 
     fun byId(id: String): Starter? = ALL.firstOrNull { it.id == id }

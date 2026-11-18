@@ -31,8 +31,8 @@ class TerraStarterTest {
 
     @Test fun `TERRA is shelved under SKINS right after the TEMPEST kits, its round robin and genre kits after it`() {
         val skins=StarterShelf.GROUPS.single { it.heading==Copy.STARTER_HEADING_SKINS }.ids
-        val at=skins.indexOf("tempest-step")
-        assertEquals(listOf("tempest-step","terra",TerraRoundRobinKits.ID,"terra-sahel","terra-maqam","terra-punjab"),skins.subList(at,at+6))
+        val at=skins.indexOf(TempestGenreRoundRobinKits.Kit.STEP.id)
+        assertEquals(listOf(TempestGenreRoundRobinKits.Kit.STEP.id,"terra",TerraRoundRobinKits.ID,"terra-sahel","terra-maqam","terra-punjab"),skins.subList(at,at+6))
         for (id in listOf("terra",TerraRoundRobinKits.ID,"terra-sahel","terra-maqam","terra-punjab"))
             assertEquals(1,StarterShelf.GROUPS.sumOf { g -> g.ids.count { it==id } },id)
     }
