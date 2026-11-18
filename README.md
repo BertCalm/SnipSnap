@@ -6,6 +6,8 @@ and exporting a drum kit your Akai MPC can load.
 
 > You heard it. You snipped it. It's on pad A03.
 
+[Sunroom](docs/SUNROOM.md) adds three studio-pop factory kits with the approved brush, woodblock and cymbal models, three touch levels and three alternate outputs. These are frozen synthesis banks; phone/MPC acceptance and the crescendo's timbral-velocity gate remain open.
+
 **Status:** a tested pure-Kotlin core — capture buffer, cleanup DSP, the
 synth engines, and writers for both MPC generations, **hardware-verified on
 an MPC Live III** (native `.xtd` and compatibility `.xpm` kits load and

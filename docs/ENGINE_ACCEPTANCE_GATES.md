@@ -1156,3 +1156,16 @@ Four drum kits after the owner's beat-tape reference loops, in the CYPHER shape:
 | Velocity and round robin: rendering | Pass in software | Soft zones are different strikes and never brighter; four different strikes per zone |
 | Velocity and round robin: saving, playback, export | Pass in software | Save, reload, pad resolver, MPC 3, SFZ and DecentSampler for all 64 pads; MPC 2 not written (format limit). No phone or MPC playback yet |
 
+
+## Sunroom studio-pop factory collection (2026-11-18)
+
+See [SUNROOM](SUNROOM.md). The owner approved the assembled R10 audition with
+“Sounds much better, continue.” Three distinct 16-pad kits on SKINS preserve
+432 approved printed synthesis/resynthesis WAVs, three velocity zones and
+three alternate outputs, including finite roll/riser gestures. This is a
+factory bank, not an editable engine. Software evidence is in `SunroomKitsTest`
+and `SunroomRoundTripTest`. The Psych cymbal crescendo has level-only dynamics;
+its timbral-velocity gate remains open. Phone/MPC hardware acceptance is not
+claimed; the shared MPC 3 slice-map limitation is unchanged. MPC 2's combined
+velocity/RR exception applies. Melodic/keygroup/chord/HOLD/STRUM gates do not
+apply to these finite drum kits. Overall completion remains open.

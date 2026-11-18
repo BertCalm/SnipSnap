@@ -4003,3 +4003,13 @@ tasks.named<org.gradle.language.jvm.tasks.ProcessResources>("processResources") 
         from(rootProject.file("prototype/drumline_parade/$name")) { into("parade") }
     }
 }
+
+ tasks.register<JavaExec>("generateSunroomKits") {
+    group = "distribution"
+    description = "Export three approved Sunroom factory kits with velocity and alternate-take grids."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.SunroomKitGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "1g"
+    args(providers.gradleProperty("sunroomOutput").orNull ?: "${rootDir}/testkit/sunroom-native")
+}
