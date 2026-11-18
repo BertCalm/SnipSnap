@@ -87,7 +87,7 @@ internal object CalabashFits {
         name: String, v: Double, tr: Rng, seconds: Double, tuneRatio: Double = 1.0, damp: Double = 0.3,
         modeGain: ((Double) -> Double)? = null, slopeMul: ((Double) -> Double)? = null, glideMul: Double = 1.0,
         residualDb: Double = 0.0, attackDb: Double = 0.0, residUntil: Double? = null, contactMs: Double? = null,
-        fit: HandData? = null,
+        fit: HandData? = null, detuneSd: Double = 0.0015,
     ): Pair<DoubleArray, DoubleArray> {
         val d = fit?.hand ?: hand(name)
         val n = Math.rint(seconds * RATE).toInt()
@@ -98,7 +98,7 @@ internal object CalabashFits {
             val order = d.amp.indices.sortedByDescending { d.amp[it] }
             val lowRank = BooleanArray(k).also { for (i in order.take(3)) it[i] = true }
             val fRef = d.hz[order[0]]
-            val hz = DoubleArray(k) { d.hz[it] * tuneRatio * (1 + tr.normal(0.0, 0.0015)) }
+            val hz = DoubleArray(k) { d.hz[it] * tuneRatio * (1 + tr.normal(0.0, detuneSd)) }
             val gain = DoubleArray(k) { CalabashDsp.db(d.tilt[it] * w + tr.normal() * (if (lowRank[it]) 0.5 else 1.5)) }
             val sign = DoubleArray(k) { if (hz[it] > 1.8 * fRef * tuneRatio && tr.random() < 0.25) -1.0 else 1.0 }
             if (modeGain != null) for (i in 0 until k) gain[i] *= modeGain(hz[i])
