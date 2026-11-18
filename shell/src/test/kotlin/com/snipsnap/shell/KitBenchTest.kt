@@ -15,7 +15,10 @@ import kotlin.test.assertFailsWith
  */
 class KitBenchTest {
 
-    private val padBenches = listOf(Bench.PAD_SHEET, Bench.PAD_EFFECTS, Bench.PAD_VARIATIONS, Bench.GRAIN_FIELD, Bench.SPLICE, Bench.STACK)
+    private val padBenches = listOf(
+        Bench.PAD_SHEET, Bench.PAD_EFFECTS, Bench.PAD_VARIATIONS, Bench.PAD_LAYERS, Bench.PAD_TRIM, Bench.PAD_MAKE,
+        Bench.GRAIN_FIELD, Bench.SPLICE, Bench.STACK,
+    )
     private val kitBound = listOf(Bench.VERSIONS, Bench.PAD_CAPTURE, Bench.SONG) + padBenches
 
     /** Any kit-bound bench, asked with the slot it needs to draw: empty for PAD CAPTURE, filled for the pad benches. */

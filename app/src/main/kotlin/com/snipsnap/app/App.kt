@@ -4166,13 +4166,14 @@ fun App(shelf: KitShelf) {
                         // under a tool: it leaves composition when one opens and
                         // re-opens its model on the way back (its open section
                         // is PADS' state, `nav.padsOpenBox`, and survives).
-                        // EFFECTS and VARIATIONS are the editor's own screens (`Bench.PAD_EFFECTS`,
-                        // `Bench.PAD_VARIATIONS`, opened by its `EFFECTS ▸` and `VARIATIONS ▸` doors).
-                        // They are drawn by this same call, with a `page`, and not by arms of their
+                        // The editor's own screens (`PadSheetPage`: EFFECTS, MIX WITH ANOTHER SOUND and,
+                        // since the short pad page, LAYERS AND TAKES, TRIM AND SPLICE, MAKE FROM THIS PAD),
+                        // opened by its doors. They are drawn by this same call, with a `page`, and not by arms of their
                         // own: everything they hold closes over state this composable keeps (a trip
                         // out in flight, the Aquarium's draft, the pedal slate, the pending knobs), and
                         // a second call site would start them again from nothing.
-                        top == Bench.PAD_EFFECTS || top == Bench.PAD_VARIATIONS || top == Bench.PAD_SHEET -> {
+                        top == Bench.PAD_EFFECTS || top == Bench.PAD_VARIATIONS || top == Bench.PAD_LAYERS ||
+                            top == Bench.PAD_TRIM || top == Bench.PAD_MAKE || top == Bench.PAD_SHEET -> {
                             val sheetSlot = padSheetSlot
                             val sheetEntry = open
                             val openDir = sheetEntry?.dir
@@ -4190,6 +4191,14 @@ fun App(shelf: KitShelf) {
                                     page = PadSheetPage.of(top) ?: PadSheetPage.EDITOR,
                                     onOpenEffects = { nav.open(Bench.PAD_EFFECTS) },
                                     onOpenVariations = { nav.open(Bench.PAD_VARIATIONS) },
+                                    onOpenPage = { page ->
+                                        when (page) {
+                                            PadSheetPage.LAYERS -> nav.open(Bench.PAD_LAYERS)
+                                            PadSheetPage.TRIM -> nav.open(Bench.PAD_TRIM)
+                                            PadSheetPage.MAKE -> nav.open(Bench.PAD_MAKE)
+                                            else -> nav.open(page.bench)
+                                        }
+                                    },
                                     onBack = { nav.closeBench() },
                                     onToast = { dock.say(it) },
                                     // The open box is PADS' state (plan §3.3): a

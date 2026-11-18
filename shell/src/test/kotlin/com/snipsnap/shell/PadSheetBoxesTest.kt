@@ -1,6 +1,7 @@
 package com.snipsnap.shell
 
 import com.snipsnap.audio.DrumClass
+import com.snipsnap.kit.KitLayer
 import com.snipsnap.kit.KitPad
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -149,7 +150,10 @@ class PadSheetBoxesTest {
         // Words that would not fit the line become a count, as the pedal strip's own do.
         val full = delayed.copy(attack = 1f, decay = 0.5f, cutoff = 1f, resonance = 1f)
         assertEquals("2 APPLIED", PadSheetBoxes.effectsLine(full))
-        for (line in listOf(PadSheetBoxes.EFFECTS_HOLDS, PadSheetBoxes.MUTATE_OFFERS, PadSheetBoxes.effectsLine(delayed))) {
+        for (line in listOf(
+            PadSheetBoxes.EFFECTS_HOLDS, PadSheetBoxes.MUTATE_OFFERS, PadSheetBoxes.effectsLine(delayed),
+            PadSheetBoxes.LAYERS_HOLDS, PadSheetBoxes.TRIM_HOLDS, PadSheetBoxes.BEAT_READY, PadSheetBoxes.BEAT_WAITING,
+        )) {
             assertTrue(line.length <= PadSheetBoxes.SUMMARY_CHARS, "a door line must fit the strip: '$line'")
         }
     }
@@ -158,10 +162,11 @@ class PadSheetBoxesTest {
     fun `every box sits on one of the editor's pages, OUTSIDE with the effects, and the pages are benches`() {
         assertEquals(PadSheetPage.EFFECTS, PadSheetBoxes.page(PadSheetBoxes.Box.OUTSIDE))
         assertEquals(PadSheetPage.VARIATIONS, PadSheetBoxes.page(PadSheetBoxes.Box.MUTATE))
-        assertEquals(PadSheetPage.EDITOR, PadSheetBoxes.page(PadSheetBoxes.Box.MAKE))
+        // The short pad page (2026-11-16): MAKE is behind its own door now, not on the editor.
+        assertEquals(PadSheetPage.MAKE, PadSheetBoxes.page(PadSheetBoxes.Box.MAKE))
         // The order is the order the pages draw them in: a page's boxes are a run of ORDER.
         assertEquals(
-            listOf(PadSheetPage.EFFECTS, PadSheetPage.EFFECTS, PadSheetPage.EFFECTS, PadSheetPage.VARIATIONS, PadSheetPage.EDITOR),
+            listOf(PadSheetPage.EFFECTS, PadSheetPage.EFFECTS, PadSheetPage.EFFECTS, PadSheetPage.VARIATIONS, PadSheetPage.MAKE),
             PadSheetBoxes.ORDER.map { PadSheetBoxes.page(it) },
         )
         for (page in PadSheetPage.entries) assertEquals(page, PadSheetPage.of(page.bench))
@@ -185,5 +190,16 @@ class PadSheetBoxesTest {
         assertEquals("EFFECTS, SHAPE, SPEAKER AND ROOM", PadSheetBoxes.EFFECTS_HOLDS)
         // The MIX WITH ANOTHER SOUND door's line says what is inside, not its own name again.
         assertTrue(PadSheetBoxes.MUTATE_OFFERS !in Copy.PAD_VARIATIONS_DOOR, PadSheetBoxes.MUTATE_OFFERS)
+    }
+
+    @Test
+    fun `the layers door says what a pad plays, and the beat door what it is waiting for`() {
+        val single = KitPad(slot = 1, sampleFile = "hit.wav")
+        assertEquals(PadSheetBoxes.LAYERS_HOLDS, PadSheetBoxes.layersLine(single))
+        // The pad's own file is its loudest zone's, as a layered pad must be.
+        val layered = single.copy(velocityLayers = listOf(KitLayer("soft.wav", 1, 63), KitLayer("hit.wav", 64, 127)))
+        assertEquals("LAYERED · 2 SOUNDS", PadSheetBoxes.layersLine(layered), "the pad's own file is one of its zones")
+        assertEquals(PadSheetBoxes.BEAT_READY, PadSheetBoxes.beatLine(hasOtherVersion = true))
+        assertEquals(PadSheetBoxes.BEAT_WAITING, PadSheetBoxes.beatLine(hasOtherVersion = false))
     }
 }

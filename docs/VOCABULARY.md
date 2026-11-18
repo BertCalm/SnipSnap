@@ -230,6 +230,9 @@ Every label in `Navigation.kt`. The last column says where the name went: the ap
 | `PAD SHEET` | `PAD` | PROJECT | Edit one pad. | Proposed `PAD EDITOR` (B) |
 | `EFFECTS` | `EFFECTS` | PROJECT | The pad editor's effects page. | Keep |
 | `MIX WITH ANOTHER SOUND` | `MIX` | PROJECT | The pad editor's second page: COMBINE SOUNDS. | Renamed from `VARIATIONS` (owner, 2026-11-15): `VARIATIONS` also named bank B's twins |
+| `LAYERS AND TAKES` | `LAYERS` | PROJECT | The pad editor's page for SOFT HITS, ROUND ROBIN and STACK ▸. | New with the short pad page (owner's mockup, 2026-11-16) |
+| `TRIM AND SPLICE` | `TRIM` | PROJECT | The pad editor's page for RE-TRIM ▸, SPLICE ▸ and their undos. | New with the short pad page (2026-11-16) |
+| `MAKE FROM THIS PAD` | `MAKE` | PROJECT | The pad editor's page for the MAKE box: a held sound, a synth, grains, an instrument. | New with the short pad page (2026-11-16); its back name is the pad page's, not the old place `MAKE`, now `CREATE` |
 | `GRAIN FIELD` | `GRAIN FIELD` | PROJECT | Play a pad as grains. | Keep with line (B) |
 | `SPLICE` | `SPLICE` | PROJECT | Join two earlier takes of a pad at one cut. | Keep (primary use) |
 | `STACK THE TAKES` | `STACK` | PROJECT | Layer earlier versions as hit zones. | Proposed `STACK VERSIONS` (B) |
