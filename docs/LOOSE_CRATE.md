@@ -9,11 +9,13 @@ behind → a dark, rumbling bed with the top cut off**.
 
 ## Status
 
-**Round 3 built, not yet heard.** The four kits are on FRESH TAPE's SKINS shelf (`LooseCrateKits` version 3,
-`StarterKits`), with their velocity and round-robin grids proven in software through save, reload, playback and MPC 3,
-SFZ and DecentSampler export. The owner heard round 1 ("Sounds pretty good", then "It's a bit drum machine like"),
-chose round 2a's treatment A, and heard round 2 as "Better. Crate cloth could use a bit of warmth or compression in
-the bass" (2026-11-18). Round 3 changes CLOTH's print only. Nothing has been played on a phone or an MPC.
+**Sound approved (2026-11-18): "It sounds good to me."** The four kits are on FRESH TAPE's SKINS shelf
+(`LooseCrateKits` version 3, `StarterKits`), with their velocity and round-robin grids proven in software through save,
+reload, playback and MPC 3, SFZ and DecentSampler export. How the owner got there: round 1 ("Sounds pretty good", then
+"It's a bit drum machine like"); round 2a, choosing A; round 2 ("Better. Crate cloth could use a bit of warmth or
+compression in the bass"); round 3, CLOTH's bass ("It sounds good to me"). The optional extra crack on CLOTH's snare
+was not asked for and is left as built. **Still open:** playing the kits on a phone and an MPC, and the build time
+there (45 to 107 s on this machine).
 
 Listening pages (private to the owner's account): [round 1](https://claude.ai/artifact/WgYApFNJqJTjEiv6XGgnn6),
 the four kits read back from their MPC 3 export; [round 0](https://claude.ai/artifact/DaKKJX6p18cMbitmFKDVQn),
@@ -285,10 +287,10 @@ little between. Left for the owner to call.
 | Gate | Status |
 |---|---|
 | Melodic, keygroups, chord tools, STRUM | Not applicable: drum kits |
-| Drums: multiple distinct genre kits on the shelf | Round 1 heard ("pretty good", "a bit drum machine like"); round 2 built, not heard: four kits under SKINS. `LooseCrateKitsTest` holds every pair to at least six different pad names and a different kick and main snare, dry (shape distance over 0.5), and the four prints differ |
-| Percussion: roll/riser | Built, not heard: one accelerating roll per kit (A15) |
+| Drums: multiple distinct genre kits on the shelf | Pass by ear (2026-11-18, round 3: "It sounds good to me"): four kits under SKINS. `LooseCrateKitsTest` holds every pair to at least six different pad names and a different kick and main snare, dry (shape distance over 0.5), and the four prints differ |
+| Percussion: roll/riser | Pass by ear with the kits: one accelerating roll per kit (A15), in the room since round 2 |
 | Velocity and round robin: rendering | Pass in software: every soft zone is a different strike from the hard one and never brighter; every zone holds four different strikes (`LooseCrateKitsTest`) |
-| Velocity and round robin: saving, playback, export | Pass in software: `LooseCrateKitTest` and `:shell:generateLooseCrateKits` (all four kits, 192 slices each: saved PCM, reload, the pad resolver walking the takes, MPC 3 track, SFZ, DecentSampler). MPC 2 is not written (the owner's format limit). Not played on a phone or an MPC |
+| Velocity and round robin: saving, playback, export | Pass in software; phone and MPC playback not yet checked: `LooseCrateKitTest` and `:shell:generateLooseCrateKits` (all four kits, 192 slices each: saved PCM, reload, the pad resolver walking the takes, MPC 3 track, SFZ, DecentSampler). MPC 2 is not written (the owner's format limit). Not played on a phone or an MPC |
 
 ## Ledger
 
@@ -299,4 +301,4 @@ little between. Left for the owner to call.
 - **Proposed**: every setting outside round 0's candidates, the four prints, the rolls and grooves.
 - **Heard**: round 0's two hum kicks ("Both sound great"); round 1's kits ("Sounds pretty good", "It's a bit drum
   machine like"); round 2a, choosing A; round 2 ("Better. Crate cloth could use a bit of warmth or compression in the
-  bass") (all 2026-11-18). Round 3's CLOTH is not heard.
+  bass"); round 3 ("It sounds good to me") (all 2026-11-18).
