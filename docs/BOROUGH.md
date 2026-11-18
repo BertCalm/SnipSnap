@@ -120,7 +120,7 @@ A04, through the same record chain; the pedal hat stays on A08 (the foot keeps 2
 ride), and the closed and open hats leave this kit. `fit.py` fits a `ride` role against the loop's
 cymbal descriptor (`BOROUGH_ROLES=ride`, `ROLE_TARGET`). The groove gets an over-lane: eighths on
 the ride with the quarters leaning in, the bell to close every other bar, the pedal hat under the
-rims; it plays with or without a stack, 10 dB under a hat lane because a ride's 1.4 s ring piles
+rims; it plays with or without a stack, about 4 dB under a hat lane (gain 0.32 against 0.5) because a ride's 1.4 s ring piles
 up on eighths.
 
 **Results (Python harness).** Ride fit on drums_ride_moffat_rims: 4.60 dB (the closed hat it
