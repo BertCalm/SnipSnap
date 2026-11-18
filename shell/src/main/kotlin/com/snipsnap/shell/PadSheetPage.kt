@@ -9,6 +9,9 @@ enum class PadSheetPage(val bench: Bench) {
     EDITOR(Bench.PAD_SHEET),
     EFFECTS(Bench.PAD_EFFECTS),
     VARIATIONS(Bench.PAD_VARIATIONS),
+    LAYERS(Bench.PAD_LAYERS),
+    TRIM(Bench.PAD_TRIM),
+    MAKE(Bench.PAD_MAKE),
     ;
 
     companion object {

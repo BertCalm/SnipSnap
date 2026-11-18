@@ -3982,3 +3982,34 @@ tasks.register<JavaExec>("generateLooseCrateRound0") {
     maxHeapSize = "1g"
     args(providers.gradleProperty("looseCrateOutput").orNull ?: "${rootDir}/testkit/loose-crate-round0")
 }
+
+tasks.named<org.gradle.language.jvm.tasks.ProcessResources>("processResources") {
+    for (name in listOf("measured-contacts.json", "crash-wash.json", "NOTICE-measured.txt")) {
+        from(rootProject.file("prototype/drumline_parade/$name")) { into("parade") }
+    }
+}
+
+tasks.register<JavaExec>("generateSecondLineCandidate") {
+    group = "verification"
+    description = "Render the native Second Line candidate and audit its full velocity/take grid."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.SecondLineGenerator")
+    maxHeapSize = "1g"
+    args(providers.gradleProperty("secondLineOutput").getOrElse("${rootDir}/testkit/second-line-native"))
+}
+
+tasks.named<org.gradle.language.jvm.tasks.ProcessResources>("processResources") {
+    for (name in listOf("triangle-fit.json", "NOTICE-triangle.txt")) {
+        from(rootProject.file("prototype/drumline_parade/$name")) { into("parade") }
+    }
+}
+
+tasks.register<JavaExec>("generateLooseCrateRound2a") {
+    group = "distribution"
+    description = "Render LOOSE CRATE round 2a: HUMMIN's groove as shipped, in one room, and as an acoustic kit in one room."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.LooseCrateRound2Generator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "1g"
+    args(listOfNotNull(providers.gradleProperty("looseCrateRound2aOutput").orNull ?: "${rootDir}/testkit/loose-crate-round2a", providers.gradleProperty("looseCrateRound2aMode").orNull))
+}

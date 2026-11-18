@@ -1096,6 +1096,12 @@ object StarterKits {
             "The eight EROSION pads with soft, medium and hard touch and four takes on each: a repeated hit sparks differently every time.",
             seeded = false,
         ) { com.snipsnap.synth.ErosionRoundRobinKits.build() },
+        // Opt-in beside the kept TERRA starter, which stays as it is; appended after EROSION ROUND ROBIN.
+        Starter(
+            com.snipsnap.synth.TerraRoundRobinKits.ID, "TERRA ROUND ROBIN",
+            "The sixteen TERRA pads with soft, medium and hard touch and four takes on each: a repeated hit lands a little differently every time.",
+            seeded = false,
+        ) { com.snipsnap.synth.TerraRoundRobinKits.build() },
     ))
 
     fun byId(id: String): Starter? = ALL.firstOrNull { it.id == id }

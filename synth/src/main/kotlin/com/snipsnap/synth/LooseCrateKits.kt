@@ -36,7 +36,7 @@ import kotlin.math.pow
  */
 object LooseCrateKits {
     /** Bump when a pad's audio changes; saved kits carry the version they were printed with. */
-    const val VERSION = 1
+    const val VERSION = 2
 
     enum class Kit(val id: String, val title: String, val bpm: Int) {
         HUMMIN("loose-crate-hummin", "Hummin", 88),
@@ -60,7 +60,7 @@ object LooseCrateKits {
     /** Where every zone's first take peaks, as CYPHER's do. */
     const val PAD_PEAK = .92f
 
-    /** The most a print is fed: CRUNCH and TAPE match their input's peak and then clamp, so a sum over 1 would be squared off. */
+    /** The level every pad is fed to its print at: CRUNCH and TAPE match their input's peak and then clamp, so a sum over 1 would be squared off. */
     const val HEADROOM = .9f
 
     /**
@@ -75,9 +75,17 @@ object LooseCrateKits {
         val hitVinyl: Map<String, Float>?,
         val grooveVinyl: Map<String, Float>?,
     ) {
+        /**
+         * Every pad enters the print at [HEADROOM]. Round 1 first fed a softer zone in softer, so the converter
+         * would hear it softer: but CRUNCH's grain is a fixed size, so it was relatively louder on a quiet hit,
+         * and the soft zone of every low or woody drum through a 12-bit print measured brighter than the hard
+         * one (the thud kick's onset centroid 264, 244, 244 Hz soft to hard; CLOTH's near-clean converter
+         * showed none). Fed at one level, the softness is the strike's own (duller, `LooseCrateKitsTest`). A
+         * hard hit already entered at [HEADROOM], so round 0's heard sounds do not move.
+         */
         fun apply(x: FloatArray, phrase: Boolean): FloatArray {
             val peak = x.maxOfOrNull { abs(it) } ?: 0f
-            val k = if (peak > HEADROOM) HEADROOM / peak else 1f
+            val k = if (peak > 1e-9f) HEADROOM / peak else 1f
             val fed = Snip(FloatArray(x.size) { x[it] * k }, 1, Dsp.RATE)
             val taped = Tape.process(Crunch.process(fed, crunch), tape)
             val vinyl = if (phrase) grooveVinyl else hitVinyl
@@ -97,7 +105,9 @@ object LooseCrateKits {
         mapOf("BITS" to .20f, "RATE" to 0f, "TONE" to 1f, "GRIT" to 0f),
         mapOf("WOBBLE" to .03f, "DRIVE" to .10f, "AGE" to .35f),
         null,
-        mapOf("CRACKLE" to .05f, "RUMBLE" to .20f, "HISS" to .15f))
+        // The cloth reference's quiet frames sit 45 dB under its loudest with its top 62 dB down: the record's low
+        // rumble, not a room or hiss (a closer or farther mic moved round 2's CLOTH groove by under 1 dB from 57).
+        mapOf("CRACKLE" to .10f, "RUMBLE" to .80f, "HISS" to .10f))
 
     /** The haze: a coarser converter, the tape wobbling and darker, more surface. */
     val HAZY = Print("haze",
@@ -184,15 +194,124 @@ object LooseCrateKits {
         val parts = parts(kit)
         if (role < HITS) return KitStrikes.struck(parts[role].strike, velocity, take, touch(velocity))
         val phrase = phrases(kit)[role - HITS]
+        val room = roomOf(kit)
         if (!phrase.loop) {
             val end = phrase.notes.maxOf { Cypher.startFrame(it, kit.bpm) }
-            return Cypher.phraseRaw(phrase.notes, kit.bpm, velocity, take, TAKES, end.toFloat() / Dsp.RATE + TAIL_SECONDS, ::touch) { parts[it].strike }
+            val raw = Cypher.phraseRaw(phrase.notes, kit.bpm, velocity, take, TAKES, end.toFloat() / Dsp.RATE + TAIL_SECONDS, ::touch) { strikeOf(kit, it) }
+            return room.play(raw)
         }
-        // The loop: the bars plus a tail, the tail folded back onto the first bar, as it rings when the pad repeats.
+        // The loop: the bars plus every tail (the notes' and the room's), folded back onto the first bars, as the
+        // kit rings on when the pad repeats.
         val frames = grooveFrames(kit)
-        val tail = (TAIL_SECONDS * Dsp.RATE).toInt()
-        val raw = Cypher.phraseRaw(phrase.notes, kit.bpm, velocity, take, TAKES, (frames + tail).toFloat() / Dsp.RATE, ::touch) { parts[it].strike }
-        return FloatArray(frames) { raw[it] + if (it < tail) raw[frames + it] else 0f }
+        val raw = Cypher.phraseRaw(played(kit, phrase.notes), kit.bpm, velocity, take, TAKES, frames.toFloat() / Dsp.RATE + LOOP_TAIL_SECONDS, ::touch) { strikeOf(kit, it) }
+        val roomed = room.play(raw)
+        val out = FloatArray(frames)
+        for (i in roomed.indices) out[i % frames] += roomed[i]
+        return out
+    }
+
+    /** How long a groove rings past its bars before it is folded: the notes' tails plus the room's (at most 1 s). */
+    private const val LOOP_TAIL_SECONDS = 2.5f
+
+    // ---------- round 2: one kit in one room ----------
+
+    /**
+     * How a kit is played and heard as one kit in one room, round 2 (the owner heard round 1 as "a bit drum machine
+     * like" and chose treatment A from round 2a, 2026-11-18). Measured on the references (docs/LOOSE_CRATE.md): a
+     * sampled break never goes quiet the way summed dry hits do, its cymbals wash, and its kicks land 5 to 12 dB
+     * apart. So the grooves are played with a drummer's kick dynamics ([kickCurve]: a note's weight w becomes
+     * w^kickCurve), the snare wires answer every kick ([wireWeight] of the kick's weight, 2 ms after it), the hats sit
+     * at [hatLevel] with the open hat ringing on each bar's last eighth when [ringBarEnd], and a [ride] washes on the
+     * quarters at its two weights. Then the whole kit, grooves and rolls, goes through [space] (ROOM), [bus]
+     * (COMPRESSOR, the mics breathing) and a [shelfDb] high shelf at [SHELF_HZ] (the references are mixed dark).
+     * Single hits are not roomed: pads sequenced on a sampler would stack their rooms. Shape values.
+     */
+    class Room(
+        val space: Map<String, Float>?,
+        val bus: Map<String, Float>?,
+        val shelfDb: Float,
+        val kickCurve: Float,
+        val wireWeight: Float,
+        val hatLevel: Float,
+        val ringBarEnd: Boolean,
+        val ride: Int?,
+        val rideWeights: Pair<Float, Float> = .10f to .06f,
+    ) {
+        /** The dry kit through the room, the compressor and the shelf, fed at the print's level ([HEADROOM]). */
+        fun play(dry: FloatArray): FloatArray {
+            if (space == null && bus == null && shelfDb == 0f) return dry
+            val peak = dry.maxOfOrNull { abs(it) } ?: 0f
+            var x = Snip(FloatArray(dry.size) { dry[it] * HEADROOM / max(peak, 1e-9f) }, 1, Dsp.RATE)
+            if (space != null) x = com.snipsnap.synth.Room.process(x, space)
+            if (bus != null) x = Compressor.process(x, bus)
+            if (shelfDb == 0f) return x.samples
+            val shelf = Dsp.Biquad().apply { highShelf(SHELF_HZ, shelfDb) }
+            return FloatArray(x.samples.size) { shelf.process(x.samples[it]) }
+        }
+    }
+
+    const val SHELF_HZ = 1_200f
+
+    /** The part number the snare wires play on in a groove: past the fourteen hits, so it never names a pad. */
+    const val WIRES = 100
+
+    /** Only a snare's wires: SKIN's snare struck softly with its body filtered away (two poles high-passed at 1.8 kHz). */
+    internal val wires: Strike = { v, t, _ ->
+        val x = Skin.render(SkinVoice.SNARE, mapOf("TUNE" to 1f, "SNAP" to .30f, "DECAY" to .60f, "RATTLE" to .90f, "SIZZLE" to .80f), v, 100 + t).samples
+        val a = Dsp.FixedOnePole(1_800f)
+        val b = Dsp.FixedOnePole(1_800f)
+        FloatArray(x.size) { val h = x[it] - a.lp(x[it]); h - b.lp(h) }
+    }
+
+    internal fun strikeOf(kit: Kit, part: Int): Strike = if (part == WIRES) wires else parts(kit)[part].strike
+
+    /**
+     * Each kit's room, against its references (quietest tenth of 10 ms frames under the loudest; the cymbal band's
+     * quietest; loud against soft kicks): HUMMIN's 18 to 23 dB, 26 to 29 dB and 9 to 11 dB are a room that never
+     * goes quiet; CLOTH's reference keeps clean gaps (45 dB, 62 dB, 9 dB): dynamics and wires, almost no room;
+     * HAZE's three (22 to 31, 19 to 38, 8 to 12 dB) are the washiest; RITUAL's three (35 to 44, 41 to 59, 5 to 9 dB)
+     * a moderate room with no ride. HUMMIN is round 2a's treatment A exactly as the owner heard it.
+     */
+    fun roomOf(kit: Kit): Room = when (kit) {
+        Kit.HUMMIN -> Room(mapOf("SIZE" to .22f, "WALLS" to .55f, "DISTANCE" to .60f), mapOf("AMOUNT" to .45f, "ATTACK" to .80f, "RECOVER" to .45f),
+            -5f, kickCurve = 3f, wireWeight = .10f, hatLevel = .7f, ringBarEnd = true, ride = 10)
+        Kit.CLOTH -> Room(mapOf("SIZE" to .10f, "WALLS" to .35f, "DISTANCE" to .40f), mapOf("AMOUNT" to .30f, "ATTACK" to .85f, "RECOVER" to .55f),
+            -2f, kickCurve = 3f, wireWeight = .08f, hatLevel = .85f, ringBarEnd = false, ride = null)
+        // HAZE's crash already washes over bars one and three and its hats run in sixteenths: a ride on top measured
+        // the quietest frames 12 dB under the loudest, against the references' 22 to 31.
+        Kit.HAZE -> Room(mapOf("SIZE" to .30f, "WALLS" to .55f, "DISTANCE" to .60f), mapOf("AMOUNT" to .30f, "ATTACK" to .80f, "RECOVER" to .40f),
+            -5f, kickCurve = 3f, wireWeight = .10f, hatLevel = .6f, ringBarEnd = true, ride = null)
+        Kit.RITUAL -> Room(mapOf("SIZE" to .28f, "WALLS" to .50f, "DISTANCE" to .55f), mapOf("AMOUNT" to .40f, "ATTACK" to .80f, "RECOVER" to .50f),
+            -4f, kickCurve = 2.5f, wireWeight = .08f, hatLevel = .8f, ringBarEnd = false, ride = null)
+    }
+
+    /**
+     * A groove's notes as a drummer plays them in the room: kick weights curved, the wires under every kick, the hats
+     * at the room's level (the open hat ringing on each bar's last eighth where the room says), the ride on the quarters.
+     */
+    internal fun played(kit: Kit, notes: List<Note>): List<Note> {
+        val room = roomOf(kit)
+        val parts = parts(kit)
+        val kicks = parts.indices.filter { parts[it].cls == DrumClass.KICK }.toSet()
+        val hat = parts.indexOfFirst { it.cls == DrumClass.HAT_CLOSED }
+        val openHat = parts.indexOfFirst { it.cls == DrumClass.HAT_OPEN }
+        return buildList {
+            for (n in notes) {
+                when {
+                    n.part in kicks -> {
+                        val w = n.weight.pow(room.kickCurve)
+                        add(Note(n.beat, n.part, w, n.offsetMs, n.tuneSemis))
+                        add(Note(n.beat, WIRES, (w * room.wireWeight).coerceAtLeast(.05f), n.offsetMs + 2f))
+                    }
+                    n.part == hat && room.ringBarEnd && abs(n.beat % 4.0 - 3.5) < 1e-6 ->
+                        add(Note(n.beat, openHat, n.weight * .8f * room.hatLevel, n.offsetMs, n.tuneSemis))
+                    n.part == hat || n.part == openHat -> add(Note(n.beat, n.part, n.weight * room.hatLevel, n.offsetMs, n.tuneSemis))
+                    else -> add(n)
+                }
+            }
+            val ride = room.ride
+            if (ride != null) for (q in 0 until GROOVE_BARS * 4) add(Note(q.toDouble(), ride, if (q % 2 == 0) room.rideWeights.first else room.rideWeights.second, offsetMs = 12f))
+        }
     }
 
     /**
@@ -477,12 +596,18 @@ object LooseCrateKits {
         Phrase("Haze Groove", hazeGroove, loop = true),
     )
 
+    /** RITUAL's kick on three, bar by bar: a drummer's one drop never lands the same twice. */
+    private val RITUAL_KICKS = floatArrayOf(1f, .80f, .95f, .75f)
+
     // RITUAL: one drop. Kick and slap together on three, a rimshot before it, hats on the eighths with the
     // open hat at the end of each bar, the doum and the hand slap on the off-beats, the sub dropping in bar four.
     private val ritualGroove: List<Note> = Cypher.humanised(buildList {
         for (bar in 0 until GROOVE_BARS) {
             val b = bar * 4.0
-            add(Note(b + 2.0, 0, 1f))
+            // A drummer's one drop: the kick never lands the same twice, and a soft pickup leads into bars two and four
+            // (round 2: every kick at 1 measured 2.3 dB of spread, the references' 5 to 9).
+            add(Note(b + 2.0, 0, RITUAL_KICKS[bar]))
+            if (bar % 2 == 1) add(Note(b + 1.75, 0, .55f, offsetMs = 8f))
             add(Note(b + 2.0, 1, 1f, offsetMs = 10f))
             add(Note(b + 1.5, 5, .55f, offsetMs = 12f))
             for (eighth in 0 until 8) add(Note(b + eighth * .5, if (eighth == 7) 3 else 2, if (eighth % 2 == 0) .60f else .40f, offsetMs = 14f))

@@ -210,6 +210,7 @@ class PadSheetScreenTest : ComposeScreenTest() {
                         page = pageState,
                         onOpenEffects = { pageState = PadSheetPage.EFFECTS },
                         onOpenVariations = { pageState = PadSheetPage.VARIATIONS },
+                        onOpenPage = { pageState = it },
                         onBack = { if (pageState == PadSheetPage.EDITOR) backs++ else pageState = PadSheetPage.EDITOR },
                         onToast = {},
                         onNavigateTape = {},
@@ -348,6 +349,9 @@ class PadSheetScreenTest : ComposeScreenTest() {
     @Test
     fun dialling_depth_and_bloom_survives_a_trip_to_another_pad_and_back() {
         show(padSheetKit(listOf(1, 2)), slot = 1, openBox = PadSheetBoxes.Box.MAKE.name)
+        // The MAKE box is behind its own door on the short pad page (2026-11-16); the pad nav stays under every page.
+        activate(Copy.PAD_MAKE_DOOR)
+        waitFor("MAKE FROM THIS PAD") { pageState == PadSheetPage.MAKE }
 
         val defaultDepth = sliderText("DEPTH")
         val defaultBloom = sliderText("BLOOM")
@@ -361,9 +365,9 @@ class PadSheetScreenTest : ComposeScreenTest() {
         assertTrue("dialling BLOOM did not move its value off the default", dialledBloom != defaultBloom)
 
         tap("NEXT PAD, ${PadBanks.tag(2)}")
-        assertOnPad(2, "2 OF 2")
+        compose.onNodeWithText("2 OF 2", useUnmergedTree = true).assertExists()
         tap("PREVIOUS PAD, ${PadBanks.tag(1)}")
-        assertOnPad(1, "1 OF 2")
+        compose.onNodeWithText("1 OF 2", useUnmergedTree = true).assertExists()
 
         assertEquals(
             "DEPTH reset on the trip to pad 2 and back - it's remember(slot)-keyed again (J26)",

@@ -285,7 +285,7 @@ object Places {
         ),
         // The owner's UX pass (docs/UX_PASS_2026_11.md, fix g): Help said nothing about effects.
         PAD_SOUND to listOf(
-            "· Tap a pad, then CHANGE SOUND. Each effect in the list says what it does.",
+            "· Tap a pad, then CHANGE SOUND. Tap an effect to hear it; KEEP keeps it.",
             "· START HERE has eight that suit drums. The groups sort the rest by their job.",
             "· ON marks what the pad has. AMT sets how much; a pedal at zero comes off.",
             "· EFFECT CHAIN is six effects in one. SHAPE is the start, the fade and the tone.",

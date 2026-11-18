@@ -10,8 +10,8 @@ package com.snipsnap.shell
  * Kept free of Compose so the rules are testable on the JVM: the holder's `removeState` is passed in.
  */
 object PadEditorKeep {
-    /** The benches that are the pad editor or draw as it (EFFECTS and VARIATIONS are its own pages). */
-    val EDITOR_BENCHES: Set<Bench> = setOf(Bench.PAD_SHEET, Bench.PAD_EFFECTS, Bench.PAD_VARIATIONS)
+    /** The benches that are the pad editor or draw as it: its pages ([PadSheetPage]). */
+    val EDITOR_BENCHES: Set<Bench> = PadSheetPage.entries.map { it.bench }.toSet()
 
     /** Whether the pad editor is anywhere in [location]'s stack, on top or under a tool. */
     fun inStack(location: Location): Boolean = location.benches.any { it in EDITOR_BENCHES }

@@ -40,6 +40,28 @@ class LooseCrateKitsTest {
         return high / max(all, 1e-18)
     }
 
+    /**
+     * The magnitude-weighted spectral centroid of the first 50 ms after the onset: the probe StrikeVelocityTest
+     * uses, since a power-weighted centroid (or one band split) hides a drum's overtones and a hat's darkening.
+     */
+    private fun onsetCentroid(x: FloatArray): Double {
+        val peak = x.maxOf { abs(it) }
+        val on = x.indexOfFirst { abs(it) > peak * .05f }
+        val n = min((.05f * rate).toInt(), x.size - on)
+        var num = 0.0
+        var den = 0.0
+        for (k in 1 until n / 2) {
+            var re = 0.0
+            var im = 0.0
+            val w = 2 * Math.PI * k / n
+            for (i in 0 until n) { val hann = .5 - .5 * Math.cos(2 * Math.PI * i / n); re += x[on + i] * hann * Math.cos(w * i); im -= x[on + i] * hann * Math.sin(w * i) }
+            val mag = sqrt(re * re + im * im)
+            num += mag * k * rate / n
+            den += mag
+        }
+        return num / max(den, 1e-18)
+    }
+
     private fun rendered(kit: Kit, role: Int, velocity: Float, take: Int): Snip =
         renders.getOrPut(listOf(kit, role, velocity, take)) { LooseCrateKits.render(kit, role, velocity, take) }
 
@@ -92,6 +114,18 @@ class LooseCrateKitsTest {
         }
     }
 
+    @Test fun `the print never makes a softer hit brighter`() {
+        // Fed in at its zone's level, a soft hit's converter grain was relatively louder and a 12-bit print
+        // brightened every low or woody drum's soft zone. Every pad now enters the print at one level.
+        for (kit in Kit.entries) for (role in 0 until LooseCrateKits.HITS) {
+            if (role in subs(kit)) continue
+            val hard = rendered(kit, role, 1f, 0).samples
+            val soft = rendered(kit, role, .3f, 0).samples
+            val (cs, ch) = onsetCentroid(soft) to onsetCentroid(hard)
+            assertTrue(cs <= ch * 1.005, "${kit.name} role $role: printed soft onset centroid $cs Hz against hard $ch Hz")
+        }
+    }
+
     @Test fun `every zone holds four different strikes`() {
         for (kit in Kit.entries) for (role in 0 until LooseCrateKits.PADS) for (v in LooseCrateKits.velocities) {
             val takes = List(LooseCrateKits.TAKES) { rendered(kit, role, v, it).samples }
@@ -128,6 +162,38 @@ class LooseCrateKitsTest {
             var largest = 0f
             for (i in x.size - (.02f * rate).toInt() until x.size - 1) largest = max(largest, abs(x[i + 1] - x[i]))
             assertTrue(wrap <= largest * 1.5f + 1e-4f, "${kit.name} v $v: wrap step $wrap against $largest")
+        }
+    }
+
+    /**
+     * Round 2 (the owner heard round 1 as "a bit drum machine like"): a groove keeps sounding between hits as its
+     * references do. The quietest tenth of its 10 ms frames, under its loudest frame, sits in a band around its
+     * references' (HUMMIN's 18 to 23 dB, CLOTH's 45, HAZE's 22 to 31, RITUAL's 35 to 44); round 1 measured 45, 44,
+     * 45 and 56, every groove falling to near silence between hits.
+     */
+    @Test fun `every groove keeps sounding between hits as its references do`() {
+        val bands = mapOf(Kit.HUMMIN to -33.0..-15.0, Kit.CLOTH to -56.0..-40.0, Kit.HAZE to -36.0..-18.0, Kit.RITUAL to -48.0..-30.0)
+        for (kit in Kit.entries) {
+            val x = rendered(kit, LooseCrateKits.GROOVE, 1f, 0).samples
+            val hop = rate / 100
+            val frames = DoubleArray(x.size / hop) { f -> sqrt((0 until hop).sumOf { val v = x[f * hop + it].toDouble(); v * v } / hop) }
+            val loudest = frames.max()
+            val quiet = frames.sorted()[frames.size / 10]
+            val db = 20 * kotlin.math.log10(quiet / loudest)
+            assertTrue(db in bands.getValue(kit), "${kit.name}: quietest tenth $db dB under the loudest frame, band ${bands.getValue(kit)}")
+        }
+    }
+
+    /** Round 2: a drummer's kicks are not all one strength; the references' land 5 to 12 dB apart, round 1's within 1.6 dB. */
+    @Test fun `every groove's kicks land at least 8 dB apart from softest to hardest`() {
+        for (kit in Kit.entries) {
+            val parts = LooseCrateKits.parts(kit)
+            val notes = LooseCrateKits.played(kit, LooseCrateKits.phrases(kit)[1].notes)
+            val kicks = notes.filter { it.part < LooseCrateKits.HITS && parts[it.part].cls == DrumClass.KICK }.map { it.weight }
+            val spread = 20 * kotlin.math.log10(kicks.max().toDouble() / kicks.min())
+            assertTrue(spread >= 8.0, "${kit.name}: kicks only $spread dB apart")
+            // Every kick has the snare wires under it.
+            assertEquals(kicks.size, notes.count { it.part == LooseCrateKits.WIRES }, "${kit.name} wires")
         }
     }
 

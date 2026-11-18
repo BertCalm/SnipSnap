@@ -848,16 +848,16 @@ TERRA is a world-percussion drum engine with 13 voices. Four are spec voices, fr
 | Percussion: authored roll or riser | Not yet verified | No roll or riser is authored. |
 | Drums: premade kit | Pass | The classic 16-pad kit, owner KEEP in full (`terra-kit-1`, 2026-11-14), on the shelf as `terra`. `TerraKitsTest` pins all 16 pads and their softer strikes. |
 | Drums: multiple distinct genre kits on the shelf | Pass in software | Four kits: the classic kit and TERRA SAHEL, MAQAM and PUNJAB, all owner KEEP (`terra-kit-1`; `terra-presets-1`, X1–X3 and Y1–Y3). `TerraGenreKitsTest`: no recipe shared between any two kits or with the classic kit, so no shared kick or snare; balafon keys within 15 cents of their names; every pad pinned; MPC 3 and MPC 2 read-back. |
-| Velocity: rendering | Pass in software | Every TERRA voice strikes at the velocity: a softer hit is a different strike, not a quieter copy ([STRIKE_VELOCITY](STRIKE_VELOCITY.md), `StrikeVelocityTest`). The classic kit's pads carry two softer strikes each. The owner has never heard soft and medium hits clearly ("Can't tell" twice, [TERRA HANDS](TERRA_HANDS.md)). |
+| Velocity: rendering | Pass in software | Every TERRA voice strikes at the velocity: a softer hit is a different strike, not a quieter copy ([STRIKE_VELOCITY](STRIKE_VELOCITY.md), `StrikeVelocityTest`). The classic kit's pads carry two softer strikes each. The owner did not hear soft and medium hits clearly in TERRA HANDS ("Can't tell" twice, [TERRA HANDS](TERRA_HANDS.md)); in terra-rr-1 (16 Nov 2026) the owner kept J2, every classic pad's medium and soft takes matched to the hard hit's level. |
 | Velocity: saving, playback, export | Pass in software | The `terra` starter saves each pad's two softer strikes as velocity zones under the hard one, and they survive `KitStore` and MPC 3/MPC 2 export read-back (`TerraStarterTest`, `TerraKitsTest`). Not heard on a phone or MPC. |
-| Round robin | Not yet verified | TERRA can re-strike (`Restrike.canRestrike`, POS moved per take), but no shelf pad deals takes. |
+| Round robin | Kept by ear, pass in software; not on a device | TERRA ROUND ROBIN (`terra-round-robin`), opt-in after the `terra` starter: the classic kit's 16 pads, three touches, four takes each, take 1 the kept hit byte for byte. Takes are the drum struck again: fresh noise, the strike point moved, a lighter landing where the voice allows, the fitted drums' wash held at its kept levels ([TERRA_PROMOTION](TERRA_PROMOTION.md#round-robin-opt-in-2026-11-16-kept-by-ear-in-terra-rr-1)). `TerraRoundRobinKitsTest` screens them (start, shape, energy time) and holds them phase-blind apart; `TerraRoundRobinPinsTest` pins all 192; `TerraRoundRobinStarterTest` carries them through saving, the pad resolver, the groove preview and MPC 3 read-back. MPC 2 keeps each zone's first take (format limit). Kept by ear in terra-rr-1 (16 Nov 2026): J1, J2, J3 and J5 KEEP with no notes, J4 the first-take reference. Not played on a phone or MPC. Genre kits not yet. |
 | Starter kit: saving and export | Pass in software | The `terra` starter: every pad regenerates from its saved recipe, the kit reloads from `KitStore`, and MPC 3 and MPC 2 exports read back clean (`TerraStarterTest`, `TerraKitsTest`). |
 | Presets | Pass in software | `TerraPresets`: 48 presets, four on each of the twelve playing voices, all owner KEEP: W1–W10 in `terra-presets-1` and BAYAN's and TUN's reworked sets (Z2, Z4) in `terra-presets-2`, both 2026-11-15. `TerraPresetsTest` pins all 48 renders; Z2 and Z4 rebuild byte-identical to the desk. Not heard on a phone or MPC. |
 | Picker | Not yet verified on a device | TERRA is in the SYNTH picker and `EngineCatalog` (DRUMS), after CLUTTER and before CAIRN, with the twelve playing voices and their presets. `NewEngineSynthScreenTest` recalls the kept Djembe Open; the app side is compiled by CI only and has not run on a device. |
 | Hardware playback | Not verified | No phone or MPC run is recorded. |
 
 - **Sound character: the whole classic kit is owner KEEP, as the app renders it** (`terra-kit-1`). The nine newer voices were first picked as Python prototype clips. The six spec pads (A01, A04, A13–A16) were kept as part of the full kit, over a picks-only alternative.
-- **Overall: incomplete.** The kit verdict, the starter, the three genre kits and all 48 presets are owner KEEP and pass in software. The picker is not yet verified on a device; round robin and touch come after.
+- **Overall: incomplete.** The kit verdict, the starter, the three genre kits and all 48 presets are owner KEEP and pass in software. The picker is not yet verified on a device. Round robin for the classic kit, an opt-in starter, was kept by ear in terra-rr-1 (16 Nov 2026), with its soft and medium takes (J2); the genre kits have no takes yet. None of it has been played on a phone or MPC.
 
 ## SPORE synthetic kits (2026-11-14)
 
@@ -935,7 +935,7 @@ owner's "Proceed") files the five kits' 80 pads as EMBER's factory presets and p
   MPC 3 export in software (rounds 2 and 3L), and their pads are the presets on the picker (round 4). Open: phone and
   MPC hardware.
 
-## KINDRED (rounds 0 to 2 heard in Python, round 2 accepted 2026-11-15; K1 port merged; K2 kits on the shelf 2026-11-16, not heard)
+## KINDRED (complete 2026-11-18: four kits on the shelf, on the picker, factory bank filed, kits and hardware approved)
 
 A one-voice, eight-step analog-style percussion synth and four genre kits from it. See [KINDRED](KINDRED.md).
 
@@ -948,11 +948,11 @@ A one-voice, eight-step analog-style percussion synth and four genre kits from i
 | Velocity: rendering | Pass in Kotlin, not heard | Every recipe's soft and hard hits differ by at least 1.96 dB of level-matched shape (`KindredTest`). |
 | Round robin: rendering | Pass in Kotlin, not heard | Four takes per recipe, none a copy, each deterministic; `Restrike` deals them. |
 | Velocity and round robin: saving | Pass in software | Each kit reloads equal and every saved slice matches its render; patches round-trip with velocity, take, recipe and model (`KindredKitTest`, `:shell:generateKindredKits`, `DeterminismTest`). |
-| Velocity and round robin: playback and export | Pass in software; MPC 2 not applicable ([format limit](#mpc-2-and-round-robin-owner-decision-2026-11-14)) | `PadHit.resolve` picks the zone by velocity and walks four takes in order, then repeats; the MPC 3 export reads back: 768 slices. A soft zone is at least 1.74 dB apart in shape; the closest takes are 12.4 dB apart (a copy is over 40). No phone or MPC has played them. |
-| Hardware playback | Not verified | |
-| Sound character | Python round 2 accepted | "It's better. I think it was something with my headphones. Let's proceed with ring 2 sounds", corrected by the owner to "Round" (2026-11-15). The Kotlin port matches the noise-free recipes to 0.01 dB; the noise recipes are another realisation and wait for the ear. |
+| Velocity and round robin: playback and export | Pass in software; MPC 2 not applicable ([format limit](#mpc-2-and-round-robin-owner-decision-2026-11-14)) | `PadHit.resolve` picks the zone by velocity and walks four takes in order, then repeats; the MPC 3 export reads back: 768 slices. A soft zone is at least 1.74 dB apart in shape; the closest takes are 12.4 dB apart (a copy is over 40). The owner approved phone and MPC playback on 2026-11-18. |
+| Hardware playback | Pass, owner-reported | Asked to check the kits on phone and MPC alongside the listen, the owner answered "Approved, approved" (2026-11-18), read as the kits and the hardware. This is the owner's report, not a capture. |
+| Sound character | Approved | Python round 2 accepted 2026-11-15; the Kotlin kits approved by the owner on 2026-11-18 ("Approved, approved") from the K2 page, where each groove measures within 1 dB of the accepted Python groove in every band. Preserve `Kindred.MODEL_VERSION` 2 and `KindredKits.VERSION` 1 as the accepted baseline. |
 
-- **Overall: in progress.** The software gates pass at K2. Open: the owner's listen to the Kotlin kits (each groove measures within 1 dB of the accepted round-2 groove in every band), the presets into the factory roster after it, the picker, hardware.
+- **Overall: complete (2026-11-18).** Four kits on the shelf, KINDRED on the picker, its 56 one-shots filed as the factory bank, velocity and round robin verified through rendering, saving, playback and MPC 3 export, and the kits and hardware approved by the owner. MPC 2 is not applicable ([format limit](#mpc-2-and-round-robin-owner-decision-2026-11-14)).
 
 ## CALABASH (complete, 2026-11-15: four genre kits on the shelf, approved by ear and on phone and MPC 3)
 
@@ -1143,3 +1143,16 @@ Version 2 preserves its nine exact strikes on Roadhouse pad 2, with three veloci
 layers and three natural alternate strikes. Other kit pads retain original PCM.
 The revised snare is frozen synthesis, not a newly registered editable engine.
 Phone and MPC hardware acceptance remains open for this revision. See `SOUL_ROCK.md`.
+
+## LOOSE CRATE kits (round 2 built, 2026-11-18; round 1 heard, round 2 not yet)
+
+Four drum kits after the owner's beat-tape reference loops, in the CYPHER shape: HUMMIN, CLOTH, HAZE, RITUAL. See [LOOSE CRATE](LOOSE_CRATE.md). The owner heard round 0's two hum kicks ("Both sound great"), heard round 1 as "a bit drum machine like", and chose round 2a's treatment A (one kit in one room), which round 2 carries to every groove and roll at kit version 2. Evidence: `LooseCrateKitsTest`, `LooseCrateKitTest`, `:shell:generateLooseCrateKits`.
+
+| Gate | Status | Evidence |
+|---|---|---|
+| Melodic, keygroups, chord tools, STRUM | Not applicable | Drum kits |
+| Drums: multiple distinct genre kits on the shelf | Built, not heard | Four kits under SKINS; every pair differs in at least six pads and in a kick and main snare dry, and each kit has its own print |
+| Percussion: roll/riser | Built, not heard | An accelerating roll on A15 of every kit |
+| Velocity and round robin: rendering | Pass in software | Soft zones are different strikes and never brighter; four different strikes per zone |
+| Velocity and round robin: saving, playback, export | Pass in software | Save, reload, pad resolver, MPC 3, SFZ and DecentSampler for all 64 pads; MPC 2 not written (format limit). No phone or MPC playback yet |
+
