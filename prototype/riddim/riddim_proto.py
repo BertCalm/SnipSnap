@@ -19,6 +19,7 @@ Two families, so drums and percussion can be mixed on one kit:
 """
 from __future__ import annotations
 
+import functools
 import math
 import os
 import sys
@@ -125,9 +126,10 @@ def _kick(m, v, k, seconds, f_end, f_start, tau, t60, drv, click_amt):
     t = t_axis(seconds)
     jit = 1 + rng.normal(0, 0.02)                         # take-to-take: a slightly different hit
     tune = 2 ** ((m.get("TUNE", .5) - .5) * 12 / 12)      # TUNE: +-6 semitones
-    body, _ = swept_sine(t, f_end * tune, f_start * tune * (0.75 + 0.25 * v) * jit, tau * jit)
+    # A soft hit starts its sweep lower and drives the circuit less, so it is rounder, not only quieter.
+    body, _ = swept_sine(t, f_end * tune, f_start * tune * (0.6 + 0.4 * v) * jit, tau * jit)
     amp = env_exp(t, t60 * (0.85 + 0.15 * m.get("DECAY", .5) * 2))
-    y = drive(body * amp * (0.6 + 0.4 * v), drv * m.get("DRIVE", .5) * 2)
+    y = drive(body * amp * (0.6 + 0.4 * v), drv * m.get("DRIVE", .5) * 2 * (0.3 + 0.7 * v))
     return y + click_amt * v * v * click(len(t), v, rng)      # v squared: a soft hit loses its beater fastest
 
 
@@ -145,11 +147,12 @@ def dembow_kick(m, v, k):
 
 def boom(m, v, k, glide=0.025, f_start=150.0):
     """Long tuned 808-style boom: the kick *is* the bassline. Target (nasty 808 loop): settles on
-    43.3 Hz (F1, -13 cents) within 80 ms and sustains. Default note F1; TUNE moves it +-6 semitones."""
+    43.3 Hz (F1, -13 cents) within 80 ms and sustains. Default note F1; TUNE moves it +-12 semitones, so
+    one voice spreads a bass line across pads."""
     rng = rng_for("boom", glide, round(v, 3), k)
     seconds = 1.6
     t = t_axis(seconds)
-    note = 29 + round((m.get("TUNE", .5) - .5) * 12)      # MIDI 29 = F1 (43.65 Hz)
+    note = 29 + round((m.get("TUNE", .5) - .5) * 24)      # MIDI 29 = F1 (43.65 Hz)
     # Each take varies the glide and the ring a little, so repeated notes are new strikes, not copies.
     glide = glide * (1 + rng.normal(0, .12))
     body, _ = swept_sine(t, hz(note), f_start * (0.8 + 0.2 * v) * (1 + rng.normal(0, .03)), glide)
@@ -268,12 +271,17 @@ def _struck(f0, modes, t60_root, v, k, seconds, mallet_soft_ms, mallet_hard_ms, 
     w = max(2, int(mallet_ms * 1e-3 * FS * (1 + rng.normal(0, .05))))
     x = np.zeros(n)
     x[:w] = 0.5 * (1 - np.cos(TAU * np.arange(w) / w))
+    # Round robin: a player never hits the same spot twice. Moving the strike point along the bar changes
+    # how much each overtone is excited (a mode is quiet where it has a node), so each take re-weights the
+    # upper modes by up to about +-2.5 dB and nudges the pitch by a cent or two. Before this, only the pulse
+    # width varied, and two takes that rounded to the same width came out identical (round 1, 2026-11-18).
     y = np.zeros(n)
-    for ratio, gain, t60_scale in modes:
-        f = f0 * ratio
+    for i, (ratio, gain, t60_scale) in enumerate(modes):
+        f = f0 * ratio * 2 ** (rng.normal(0, 1.5) / 1200)
         if f > 18000:
             continue
-        y += gain * resonator(x, f, t60_root * t60_scale)
+        g = gain if i == 0 else gain * 10 ** (rng.uniform(-2.5, 2.5) / 20)
+        y += g * resonator(x, f, t60_root * t60_scale * (1 + rng.normal(0, .04)))
     return y
 
 
@@ -320,7 +328,13 @@ BORROWED = ["SHAKER", "CLAVE", "STICKS", "COWBELL", "CONGA", "BONGO_HIGH", "TAMA
 
 
 def render(voice: str, macros: dict | None = None, velocity: float = 1.0, take: int = 0) -> np.ndarray:
-    """One hit at 44.1 kHz, peak 0.89, from either family."""
+    """One hit at 44.1 kHz, peak 0.89, from either family. Cached: the same strike is never drawn twice."""
+    return _render_cached(voice, tuple(sorted((macros or {}).items())), round(float(velocity), 4), int(take)).copy()
+
+
+@functools.lru_cache(maxsize=4096)
+def _render_cached(voice, macro_items, velocity, take):
+    macros = dict(macro_items)
     m = {"TUNE": .5, "DECAY": .5, "DRIVE": .5, "WAVE": .5} | (macros or {})
     v = float(np.clip(velocity, 0.05, 1.0))
     if voice in ELECTRONIC:
@@ -384,10 +398,10 @@ def grooves():
         # 808 riddim: the boom plays a bass line (F1, Ab1, F1, Bb1); rim on the backbeat; the metal pair answers.
         "boom_riddim_100": (100, 0.0, [
             ("BOOM", {"TUNE": .5}, (0, 0), 1.0, 1.0), ("BOOM", {"TUNE": .5}, (10, 0), .9, .9),
-            ("BOOM", {"TUNE": .5 + 3 / 12}, (0, 1), 1.0, 1.0), ("SLIDE", {"TUNE": .5}, (10, 1), .9, .9),
+            ("BOOM", {"TUNE": .5 + 3 / 24}, (0, 1), 1.0, 1.0), ("SLIDE", {"TUNE": .5}, (10, 1), .9, .9),
             ("BOOM", {"TUNE": .5}, (0, 2), 1.0, 1.0), ("BOOM", {"TUNE": .5}, (10, 2), .9, .9),
-            ("BOOM", {"TUNE": .5 + 5 / 12}, (0, 3), 1.0, 1.0),
-            ("SLIDE", {"TUNE": .5 + 3 / 12}, (10, 3), .9, .9)] + [
+            ("BOOM", {"TUNE": .5 + 5 / 24}, (0, 3), 1.0, 1.0),
+            ("SLIDE", {"TUNE": .5 + 3 / 24}, (10, 3), .9, .9)] + [
             ("RIMSHOT", F, s, .6, 1.0) for s in (4, 12)] + [
             ("CLAP", F, (12, 3), .5, .9)] + [
             ("HAT_CLOSED", F, s, .22, .5 + .4 * (s % 4 == 2)) for s in range(16)] + [

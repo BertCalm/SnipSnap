@@ -55,12 +55,45 @@ less above 2 kHz. No two takes of a new voice are near-copies (the closest are W
 a copy is above 40). The KICK's soft and hard 100 Hz to 1 kHz shares differ by only 0.1 dB: its velocity lives in
 the click and the sweep start, and that may be too subtle. Disclosed, not fixed.
 
+## Round 0 heard (2026-11-18)
+
+The owner heard the round-0 page: "I think the sounds are pretty good so far". They chose the wider collection
+and three kits for the first round. The three are the dancehall core; swung Brazilian funk, swung West African and
+a wood and metal kit follow in the next round.
+
+## Round 1: three kits (`kits.py`, 2026-11-18)
+
+Listening page: <https://claude.ai/artifact/LKkSW3LNNGt25XyFZvTJTg>. Python harness; not yet heard.
+
+| Kit | BPM | Character | A16 |
+|---|---|---|---|
+| Clave Dancehall | 102 | punch kick and rimshot on the clave, tight hats, shaker, claves, cowbell, four woods in F# minor | rim roll: eighths, sixteenths, 32nds, rising 3 semitones |
+| Dembow | 95 | deep driven kick, snare and clap 2 semitones down, darker hats, conga, bongo, talking drum, a low metal | snare roll: two beats of sixteenths, two of 32nds |
+| Boom Riddim | 100 | six tuned booms F1 to Eb2 (one a slide) in one cut-off group, bronze pairs in F minor | hat riser: sixteenths to sextuplet 32nds, rising 9 semitones |
+
+Layout: kick A01, snare family A02, closed hat A03, open hat A04 (one choke group), A16 the roll. Each pad renders
+three velocity zones (0.35, 0.65, 1.0) by four takes. The grooves play the kits the way the app deals them: velocity
+picks the zone, takes cycle per zone, chokes cut with a 5 ms fade. BOOM's TUNE now spans 12 semitones each way so
+one voice covers the bass line; the round-0 grooves were rescaled to keep their notes.
+
+Measured (Python harness, `checks.json`):
+
+- **Round robin.** No pad's takes are near-copies (a copy is above 40 dB). The closest two takes on any pad are
+  36.1 dB apart (Dembow's low rim), then 34.6 dB (Clave Dancehall's rimshot); noise voices sit below 0 dB. The first
+  render found the wood pads' takes identical (218 dB apart): only the mallet width varied per take, and two takes
+  rounded to the same width. Each take now moves the strike point (upper modes re-weighted by up to ±2.5 dB, pitch
+  by a cent or two, decay by 4%); the woods are now 27 to 33 dB apart, the metals 8 to 16 dB.
+- **Velocity.** Every new voice gets darker at each softer zone (its energy share above a voice-specific split,
+  first 300 ms). The punch kick's velocity was strengthened: a soft hit now starts its sweep lower and drives less
+  (share above 150 Hz: −14.5, −11.3, −8.3 dB soft to hard; round 0 differed by 0.1 dB). Disclosed, not changed:
+  five reused CALABASH voices (shaker, claves, cowbell, high bongo) do not darken on this measure. Their velocity is
+  CALABASH's fit of real soft and hard recordings, which the owner approved by ear on 2026-11-15.
+
 ## Open, for the owner
 
-- Scope: dancehall only (clave, dembow, boom) or the wider collection (plus swung Brazilian funk, swung West
-  African, wood and metal percussion)? CALABASH already covers Mbalax and Afrobeats; Samba Bateria covers samba.
-- How many kits in the first shelf round.
-- Every voice by ear.
+- The kit layouts, the three rolls and the groove balance, by ear.
+- Then round 2: the Kotlin port and the shelf (velocity and round robin through rendering, saving, playback and
+  export), and the wider kits.
 
 ## Ledger
 
@@ -68,7 +101,7 @@ the click and the sweep start, and that may be too subtle. Disclosed, not fixed.
   CALABASH's prototype API (`calabash_proto.render`), and that no dancehall, dembow or baile kit exists.
 - **Measured:** the tables above, Python harness.
 - **Proposed:** every constant in `riddim_proto.py` is a shape value until heard.
-- **Heard:** nothing.
+- **Heard:** round 0's palette, "pretty good so far" (2026-11-18). Round 1 not yet.
 
 ## Why it is built this way
 
