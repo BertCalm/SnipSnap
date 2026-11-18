@@ -3983,3 +3983,13 @@ tasks.register<JavaExec>("generateRiddimAudition") {
     maxHeapSize = "2g"
     args(providers.gradleProperty("riddimOutput").orNull ?: "${rootDir}/testkit/riddim-audition/kotlin")
 }
+
+tasks.register<JavaExec>("generateLooseCrateRound0") {
+    group = "distribution"
+    description = "Render LOOSE CRATE round 0: candidate hits, round-robin and velocity strips, the HUMMIN groove and CYPHER DUST for comparison."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.LooseCrateRound0Generator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "1g"
+    args(providers.gradleProperty("looseCrateOutput").orNull ?: "${rootDir}/testkit/loose-crate-round0")
+}

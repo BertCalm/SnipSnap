@@ -32,7 +32,11 @@ starting points are added:
 |---|---|---|
 | FIRE CIRCLE | Softer pressure in a close, slowly moving circle, with moderate canyon space | 0: finite |
 | NIGHT REPLY | Wider placement and more canyon return over a longer finite gesture | .55: finite |
-| EMBER PULSE | Warmer pressure and a recurring pulse in a compact moving formation | 1: settled loop |
+| WARM PULSE | Warmer pressure and a recurring pulse in a compact moving formation | 1: settled loop |
+
+WARM PULSE was filed as EMBER PULSE. It was renamed on 2026-11-17, when EMBER became an engine with a
+factory roster, because a preset name may not use an engine's name. Its settings and its rendered bytes are
+unchanged.
 
 All three store TUNE 1 (C4). They use the existing seven macros and ordinary
 `CircuitPatch`/`PadRecipe` formats. ROOT's existing preset picker exposes them;

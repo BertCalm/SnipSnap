@@ -598,6 +598,16 @@ tasks.register<JavaExec>("generateCypherKits") {
     args(providers.gradleProperty("cypherOutput").orNull ?: "${rootDir}/testkit/cypher-kits")
 }
 
+tasks.register<JavaExec>("generateLooseCrateKits") {
+    group = "distribution"
+    description = "Build the LOOSE CRATE kits, prove the velocity and round-robin grid through save, playback and MPC 3 export, and write the listening pack."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.LooseCrateKitGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "2g"
+    args(providers.gradleProperty("looseCrateKitsOutput").orNull ?: "${rootDir}/testkit/loose-crate-kits")
+}
+
 tasks.register<JavaExec>("generateMirrorballKits") {
     group = "distribution"
     description = "Build the three MIRRORBALL disco kits, prove the velocity and round-robin grid through save, playback and MPC 3 export, and write the listening pack."

@@ -1,10 +1,11 @@
 # EMBER: design brief, the rounds, the Kotlin engine and its five kits
 
-Status: **round 3L, five kits on the shelf, every sound approved by the owner (2026-11-16: "All sound great").**
+Status: **round 4, five kits on the shelf, their 80 pads the factory bank, EMBER on the picker; every sound approved
+by the owner (2026-11-16: "All sound great").**
 `Ember.kt` has 35 voices: the 27 approved at round 1b and the eight Latin percussion voices approved in Python at
 round 2L and ported at round 3L. `EmberKits` puts five kits on the shelf as FRESH TAPE starters: EMBER, After Hours,
-Soul Jazz, Free and Latin Jazz, proved through saving, playback and MPC 3 export. Open: presets and the picker, phone
-and MPC hardware. The owner's listens so far:
+Soul Jazz, Free and Latin Jazz, proved through saving, playback and MPC 3 export. Round 4 files their 80 pads as
+EMBER's presets and puts EMBER on SYNTH's engine picker. Open: phone and MPC hardware. The owner's listens so far:
 - "Cymbals need a lot of work. Sounds like hitting sheet metal." Round 0b rebuilt every cymbal and hat from
   measurements of real cymbals.
 - "Sweeps sound like hail hitting a roof." Round 0c rebuilt the brush sweep and the brush roll from
@@ -34,7 +35,7 @@ and MPC hardware. The owner's listens so far:
   Latin percussion and the cha-cha-chá kit. Round 3L ports the Latin voices and puts the fifth kit on the shelf.
 
 Each round is below. Nothing else changed sound. The engine stays in progress until every applicable owner gate has evidence (see "Gates" below and the gates entry in
-[ENGINE_ACCEPTANCE_GATES.md](ENGINE_ACCEPTANCE_GATES.md#ember-round-3l-five-kits-on-the-shelf-sound-approved-2026-11-16-hardware-open)).
+[ENGINE_ACCEPTANCE_GATES.md](ENGINE_ACCEPTANCE_GATES.md#ember-round-4-five-kits-on-the-shelf-presets-and-picker-sound-approved-2026-11-16-hardware-open)).
 
 Prototype: [`prototype/ember/`](../prototype/ember/) (`ember_proto.py` is the model, `kits.py` the four kits
 and their grooves, `measures.py` CLUTTER's house distance measures, `gen_audition.py` renders and measures,
@@ -48,8 +49,52 @@ Repository truth: read at `8742c5b8` (2026-11-14). APIs named here were grepped:
 `Modes.Mode(ratio, gain, t60, pan)`, `Modes.Friction(a).force(...)`, `Dsp.seedFor`, `Dsp.Noise`, `Room`
 (`synth/.../Room.kt`), `BreakerChain.spring`/`Tank`, `PadHit.resolve` (`shell/.../PadHit.kt`), and
 `Soot.render(voice, macros, velocity, take, model)` / `Clutter.render(voice, macros, velocity, take)` as the
-drum-engine shape to copy. `EMBER` is a working name: the word is already a CIRCUIT preset ("EMBER PULSE"),
-an ALLOY preset ("Endless Ember") and a name in `shell/.../Names.kt`. It is not an engine name anywhere.
+drum-engine shape to copy. `EMBER` is a working name: the word was already a CIRCUIT preset ("EMBER PULSE"),
+an ALLOY preset ("Endless Ember") and a name in `shell/.../Names.kt`. It was not an engine name anywhere.
+Round 4 renamed the CIRCUIT preset to WARM PULSE (same settings, same bytes), because CIRCUIT's roster test
+refuses a preset name that uses an engine's name.
+
+## Round 4: the presets and the picker (2026-11-17)
+
+**What the owner said:** "Proceed", after #1168 (round 3L) merged and the next step was named as presets and the
+picker.
+
+**The factory bank.** `EmberPresets` files the eighty pads of the five approved kits as EMBER's presets, as
+CALABASH's and SERVO's banks do: each voice at the pad's own macros (completed by `Ember.settled`), struck full,
+at take 0, so a preset is byte for byte the engine render that the kit's hard zone scales. Nothing is reasoned from
+the knobs; every preset is a pad the owner heard. Names are the kit's tag and the pad's name, caps: CLUB (the club
+kit, whose title is the engine's name alone), AFTER HOURS, SOUL JAZZ, FREE and LATIN JAZZ. Four would pass a preset
+list's 24 letters and are shortened in the bank only (the kits keep their names): AFTER HOURS SOFT CROSS, AFTER
+HOURS BRUSH FLOOR, FREE FLOOR, SNARES ON and LATIN JAZZ TIMBAL HEMBRA. Its partner becomes LATIN JAZZ TIMBAL MACHO
+so the pair still reads as a pair (timbal is the Spanish singular). All 35 voices are on a pad, so every voice has
+at least one preset; the rolls, the swell and the bow are voices here, not phrases, so they are presets too.
+
+EMBER leaves `PatchTypes.ROSTERLESS`; `Presets` serves the bank. A user preset promotes through
+`EmberPatch.fromJsonText`, keeping its velocity, take and model (`UserPresets`, with its test). The hand-built EMBER
+entries in `PatchesTest` and `SynthRootTest` go, since the roster now supplies EMBER's sound.
+
+`EmberPresetsTest` holds CLUTTER's preset contracts:
+- **Identity:** the bank is the five kits pad for pad; each preset is the engine's render of its pad byte for byte; and
+  through the kit's own finish, a kick, a sweep, a roll, the bow and the guiro correlate above 0.999 with the kit's pad.
+- **Registration:** the roster serves exactly the bank.
+- **Sanity:** finite, at the engine's peak, as long as the voice says, centred, ending in silence.
+- **Round trip:** JSON keeps velocity, take and model and the same bytes; a softer strike is another sound.
+- **Names:** unique, caps, after their kit, within 24 letters, only the five above shortened, no maker's name.
+- **Distinctness:** every two presets of a voice differ in recipe and in sound.
+
+**The picker.** EMBER sits on SYNTH's engine picker after SERVO, before CAIRN, wired as SERVO's entry is: every arm of
+the `Engine` enum, the saved-draft restore, a frozen draft where no recipe is loading, the live-edit list and the
+native-factory path, because an EMBER preset carries its strike velocity, take and model outside the macro map. The
+voice chips are the voice names with spaces (TOM RACK, BRUSH SWEEP, BONGO HIGH); the stick hat reads HAT CL and the
+open hat HAT OP, as on the other drum engines. `EngineCatalog` files EMBER under DRUMS ("A 1962 jazz club: sticks,
+brushes, mallets and Latin hands"); both READMEs count 97 picker engines (SAMBA landed on the base at the same time and sits after EMBER, before CAIRN). The app README's starter list had lost EMBER
+LATIN JAZZ in a merge; it is back.
+
+`NewEngineSynthScreenTest` gains an on-device test: the kick opens with its five controls, CLUB KICK lands with the
+pad's TUNE and DAMP, a WARMTH edit survives a rebuild, and the saved draft keeps take 0, full velocity and model 1.
+This session has no Android SDK: CI's android-build compiles the entry and emulator-tests runs the test.
+
+`Ember.MODEL_VERSION` stays 1 and `EmberKits.VERSION` stays 1: no sound changed.
 
 ## Round 3L: the Latin percussion in the app, Latin jazz on the shelf (2026-11-16)
 
@@ -762,9 +807,9 @@ every mode (a fresh phase, detune and level). The Python medians are in "Measure
 - **Round 2:** done (above), the kits heard and approved (2026-11-16).
 - **Latin percussion (owner, 2026-11-15):** done: previewed in Python (round 2L), approved, ported with the Latin jazz
   kit on the shelf (round 3L). No model bump was needed: the approved voices are unchanged and only new voices came.
-- **Next, presets and the picker:** the five kits' 80 pads as EMBER's factory bank (leaving
-  `PatchTypes.ROSTERLESS`), then EMBER on SYNTH's engine picker with its on-device test, as CLUTTER's rounds 3 and 4.
-- **Then hardware:** the owner's phone and MPC 3 checks.
+- **Round 4, presets and the picker:** done (above), on the owner's "Proceed" (2026-11-17).
+- **Next, hardware:** the owner's phone and MPC 3 checks: the kits played on a phone (velocity picks the zone,
+  repeats deal the takes), the MPC 3 export loaded on an MPC, and EMBER on the picker with a preset loaded.
 
 ## Why it is built this way
 

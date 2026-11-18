@@ -598,7 +598,7 @@ class DeterminismTest {
 
     @Test
     fun `CIRCUIT ROOT call and listening presets regenerate finite and held audio exactly`() {
-        for (name in listOf("FIRE CIRCLE", "EMBER PULSE")) {
+        for (name in listOf("FIRE CIRCLE", "WARM PULSE")) {
             val patch = CircuitPresets.forVoice(CircuitVoice.ROOT).single { it.name == name }
             val recipe = PadRecipe.fromJsonText(PadRecipe(patch).toJsonText())
             assertContentEquals(patch.render().samples, recipe.render().samples,

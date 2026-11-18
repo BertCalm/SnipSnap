@@ -11,14 +11,15 @@ enum class FootworkVoice {
 }
 
 /**
- * Full-dynamics FOOTWORK: contact -> tiny metallic response -> weighted sole/floor -> finite ending.
- * The owner selected the Python full-dynamics audition. This native port preserves its coefficients,
- * envelopes and fixed gain, but uses Dsp.Noise Gaussian draws and the house decimator. Native listening
- * is therefore a separate gate. Body/object voices and the three surfaces are new authored hypotheses.
+ * Full-dynamics FOOTWORK. Model 4 replaces eight Tap roles with the reference-guided
+ * minimum-phase contact and connected-movement study. Models 1..3 remain replayable;
+ * other roles and both other kits retain their earlier source behavior.
+ * Dsp.Noise Gaussian draws and the house decimator differ from Python. Native listening
+ * is a separate gate; body/object sources and distinct kit identities remain unapproved.
  * No reference PCM, per-hit peak normalization, room convolution, or shared mutable noise state.
  */
 object Footwork {
-    const val VERSION = 3
+    const val VERSION = 4
     private const val FS = Dsp.RATE * 4
     private const val RATE = Dsp.RATE
     private const val N = 38808 // 220 ms at 4x
@@ -289,6 +290,12 @@ object Footwork {
     fun render(voice: FootworkVoice,velocity: Float=1f,take: Int=0,kit: FootworkKits.Kit=FootworkKits.Kit.TAP,model: Int=VERSION): Snip {
         require(velocity.isFinite() && velocity in 0f..1f && take in 0..3 && model in 1..VERSION)
         val v=velocity.toDouble()
+        if(model>=4 && kit==FootworkKits.Kit.TAP) {
+            FootworkTap.render(voice,v,take)?.let { out ->
+                require(out.all { it.isFinite() && abs(it)<.98f }) { "FOOTWORK model 4 peak budget: $voice $velocity $take" }
+                return Snip(out,1,RATE)
+            }
+        }
         val y=when(voice) {
             FootworkVoice.SHUFFLE,FootworkVoice.FLAP,FootworkVoice.ROLL,FootworkVoice.RISER -> gesture(voice,v,take,kit,model)
             FootworkVoice.BUCKET,FootworkVoice.METAL,FootworkVoice.BOARD -> if(model>=3 && voice!=FootworkVoice.METAL) surface(identity(voice,v,take),kit,voice) else objectSound(voice,v,take,kit)
@@ -296,6 +303,14 @@ object Footwork {
         }
         val out=FloatArray(y.size) { if(velocity==0f) 0f else (y[it]*GAIN*(if(kit==FootworkKits.Kit.TAP) 1.0 else .85)).toFloat() }
         require(out.all { it.isFinite() && abs(it)<.98f }) { "FOOTWORK peak budget exceeded: $kit $voice $velocity $take peak=${out.maxOf { abs(it) }}" }
+        return Snip(out,1,RATE)
+    }
+
+    /** Current Tap study phrase; separately auditioned, not a new pad or a loop promise. */
+    fun tapPhrase(velocity: Float=1f,take: Int=0): Snip {
+        require(velocity.isFinite() && velocity in 0f..1f && take in 0..3)
+        val out=FootworkTap.sequence("phrase",velocity.toDouble(),take)
+        require(out.all { it.isFinite() && abs(it)<.98f })
         return Snip(out,1,RATE)
     }
 }

@@ -26,7 +26,7 @@ object CircuitPresets {
         p(CircuitVoice.ROOT, "CLOSE CIRCLE", "BREATH" to 0.40f, "DIAMETER" to 0.05f, "ORBIT" to 0f, "PACE" to 0.25f, "CANYON" to 0.20f),
         p(CircuitVoice.ROOT, "FIRE CIRCLE", "TUNE" to 1f, "BREATH" to 0.50f, "DIAMETER" to 0.25f, "ORBIT" to 0.10f, "PACE" to 0.20f, "CANYON" to 0.50f, "HOLD" to 0f),
         p(CircuitVoice.ROOT, "NIGHT REPLY", "TUNE" to 1f, "BREATH" to 0.48f, "DIAMETER" to 0.50f, "ORBIT" to 0.20f, "PACE" to 0.20f, "CANYON" to 0.70f, "HOLD" to 0.55f),
-        p(CircuitVoice.ROOT, "EMBER PULSE", "TUNE" to 1f, "BREATH" to 0.60f, "DIAMETER" to 0.32f, "ORBIT" to 0.25f, "PACE" to 0.27f, "CANYON" to 0.45f, "HOLD" to 1f),
+        p(CircuitVoice.ROOT, "WARM PULSE", "TUNE" to 1f, "BREATH" to 0.60f, "DIAMETER" to 0.32f, "ORBIT" to 0.25f, "PACE" to 0.27f, "CANYON" to 0.45f, "HOLD" to 1f),
     )
 
     private val procession = listOf(
