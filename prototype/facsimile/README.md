@@ -42,6 +42,7 @@ python3 -I fit.py WORK models            # about 11 minutes; add a loop's tempo 
 python3 -I groove.py models GROOVES
 python3 -I measure.py REFS WORK models GROOVES
 python3 -I build_audition.py REFS WORK models AUDITION
+python3 -I test_glidefit.py && python3 -I test_steady.py   # known-answer checks
 ```
 
 Requires NumPy, SciPy, soundfile and matplotlib; `build_audition.py` also calls ffmpeg.
@@ -124,6 +125,21 @@ some of the other drums, and a replica lane carries none. Not yet shown.
   strike's energy is now restored after the tilt. And the target was a median across hits,
   about 1.6 dB under the mean the replica is measured as; it is now a median of three group
   means.
+- Round 0b (2026-11-18), heard by the owner as "warping and warbling ... generally the higher
+  pitches like long shaker. Almost like a bit of ring modulation". Two causes, both fixed.
+  The ringing-tone detector turned random peaks of the noise into steady sine partials: where a
+  loop repeats one sample, its chance peaks are identical in every hit, so the median across
+  hits kept them, and the long shaker carried a 7.7 kHz sine louder than its own noise (the
+  mover hat carried eight). Above 1 kHz a tone must now ring, staying proud in two of three
+  slices of the hit, and stand 18 dB proud rather than 12; each tone is sized from its measured
+  share of its band, not from its prominence (`test_steady.py`). And the noise loudness
+  zigzagged 15 to 30 dB between grid points a few milliseconds apart, a fast amplitude
+  modulation that adds buzzy sidebands; every band now rises to its peak within 14 ms and then
+  only falls. `measure.py` reports each drum's ring against its reference: after the refit no
+  drum rings more than 6 dB over its reference (worst, the mover hat, +3.9 dB; it was +18).
+  The price, measured: the fit median rose from 1.84 to 2.52 dB (a strike that may only rise
+  then fall cannot chase every flicker of the one reference sample), and the grooves sit 1.5
+  to 5.8 dB under their references, where four were within 1 dB.
 - Round robin follows the reference's own hit-to-hit spread, clamped to 0.3 to 1.2 dB per band,
   plus fresh noise and phases. Whether that reads as one drum hit again is for the ear.
 - Engine gates: this is a prototype. Velocity and round robin are checked in rendering only;

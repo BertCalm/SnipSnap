@@ -14,6 +14,8 @@ Per drum (rendered at 4x, the house rate):
                   take can reach, since every single strike wobbles around the average
   velocity        spectral-shape change of a v=.4 strike against v=1 at matched loudness, dB
                   (owner gate: a soft hit must differ in character, not only level)
+  ring            the strongest peak above 1 kHz over its neighbourhood, replica against the
+                  reference: whether a drum whistles where the reference does not
   takes           the closest pair of four takes, 20 log10(rms(a) / rms(a - b)); a copy
                   measures above 40 dB (the house's threshold for "copies")
 
@@ -73,6 +75,20 @@ def shape_change(a: np.ndarray, b: np.ndarray) -> float:
     return float(np.mean(np.abs(d - np.mean(d))))
 
 
+def ring(x: np.ndarray) -> float:
+    """The strongest peak above 1 kHz, in dB over its +-1/6 octave neighbourhood, from 5 to
+    150 ms: how much a drum whistles. A replica far above its reference rings where the drum
+    does not (heard as ring modulation on the long shaker, 2026-11-18)."""
+    a, b = int(0.005 * RATE), int(0.15 * RATE)
+    x = x[a:b]
+    if len(x) < 1024:
+        x = np.pad(x, (0, 1024 - len(x)))
+    f = np.fft.rfftfreq(1 << 15, 1 / RATE)
+    sp = 20 * np.log10(np.abs(np.fft.rfft(x * np.hanning(len(x)), 1 << 15)) + 1e-12)
+    lf, _, prom, _ = fit._prominence(sp, f)
+    return float(prom[lf > 1000].max())
+
+
 def take_distance(a: np.ndarray, b: np.ndarray) -> float:
     n = min(len(a), len(b))
     a, b = a[:n], b[:n]
@@ -123,12 +139,19 @@ def main(ref_dir: Path, work: Path, models: Path, grooves: Path) -> None:
                                  for h in takes]))
             report["drums"][did] = dict(fit_distance_4x_db=round(dist, 2),
                                         reference_own_hits_db=round(own, 2),
+                                        ring_db=round(float(np.median([ring(y) for y in ys])), 1),
+                                        reference_ring_db=round(float(np.median(
+                                            [ring(h[fit.PRE:]) for h in takes[:6]])), 1),
                                         velocity_shape_db=round(shape_change(hard, soft), 2),
                                         closest_takes_db=round(closest, 1))
     vel = [v["velocity_shape_db"] for v in report["drums"].values()]
     tk = [v["closest_takes_db"] for v in report["drums"].values()]
     fd = [v["fit_distance_4x_db"] for v in report["drums"].values()]
     own = [v["reference_own_hits_db"] for v in report["drums"].values()]
+    over = sorted(((v["ring_db"] - v["reference_ring_db"], d) for d, v in report["drums"].items()),
+                  reverse=True)
+    print(f"ring over 1 kHz, replica minus reference: worst {over[0][1]} {over[0][0]:+.1f} dB, "
+          f"{sum(o > 6 for o, _ in over)} drums more than 6 dB over")
     print(f"reference's own single hits from their target: median {np.median(own):.2f} dB "
           f"(the floor a single replica take is compared against)")
     print(f"drums {len(fd)}: fit at 4x median {np.median(fd):.2f} dB max {max(fd):.2f}; "
