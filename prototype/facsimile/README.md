@@ -135,7 +135,11 @@ some of the other drums, and a replica lane carries none. Not yet shown.
   share of its band, not from its prominence (`test_steady.py`). And the noise loudness
   zigzagged 15 to 30 dB between grid points a few milliseconds apart, a fast amplitude
   modulation that adds buzzy sidebands; every band now rises to its peak within 14 ms and then
-  only falls. `measure.py` reports each drum's ring against its reference.
+  only falls. `measure.py` reports each drum's ring against its reference: after the refit no
+  drum rings more than 6 dB over its reference (worst, the mover hat, +3.9 dB; it was +18).
+  The price, measured: the fit median rose from 1.84 to 2.52 dB (a strike that may only rise
+  then fall cannot chase every flicker of the one reference sample), and the grooves sit 1.5
+  to 5.8 dB under their references, where four were within 1 dB.
 - Round robin follows the reference's own hit-to-hit spread, clamped to 0.3 to 1.2 dB per band,
   plus fresh noise and phases. Whether that reads as one drum hit again is for the ear.
 - Engine gates: this is a prototype. Velocity and round robin are checked in rendering only;
