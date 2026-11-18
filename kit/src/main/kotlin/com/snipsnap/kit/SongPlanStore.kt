@@ -103,7 +103,7 @@ object SongPlanStore {
             "sections" to JsonValue.Arr(
                 plan.sections.map { s ->
                     JsonValue.Obj(
-                        linkedMapOf(
+                        linkedMapOf<String, JsonValue>(
                             "name" to JsonValue.Str(s.name),
                             "clip" to JsonValue.Str(s.clip),
                             "repeats" to JsonValue.Num(s.repeats.toDouble()),
@@ -112,7 +112,11 @@ object SongPlanStore {
                             "bass" to JsonValue.Bool(s.bass),
                             "pullUp" to JsonValue.Bool(s.pullUp),
                             "drop" to JsonValue.Bool(s.drop),
-                        ),
+                        ).also { fields ->
+                            // Only when on: a song with neither writes the file it always did.
+                            if (s.close) fields["close"] = JsonValue.Bool(true)
+                            if (s.reverseCrash) fields["reverseCrash"] = JsonValue.Bool(true)
+                        },
                     )
                 },
             ),
@@ -134,6 +138,8 @@ object SongPlanStore {
                 bass = (s["bass"] as? JsonValue.Bool)?.value ?: SectionNames.bassUnder(name),
                 pullUp = (s["pullUp"] as? JsonValue.Bool)?.value ?: SectionNames.pullsUpInto(name),
                 drop = (s["drop"] as? JsonValue.Bool)?.value ?: false,
+                close = (s["close"] as? JsonValue.Bool)?.value ?: false,
+                reverseCrash = (s["reverseCrash"] as? JsonValue.Bool)?.value ?: false,
             )
         }
         return SongPlan(seed = obj["seed"]?.int() ?: 0, sections = sections)

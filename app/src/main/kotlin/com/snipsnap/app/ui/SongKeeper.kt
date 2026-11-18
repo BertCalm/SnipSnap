@@ -202,11 +202,27 @@ internal class SongKeeper(
         edit(if (now) Copy.SONG_PULL_UP_ON else Copy.SONG_PULL_UP_OFF, k.withPullUp(selected, now) ?: return)
     }
 
-    /** The selected section's own last bar kept to the kick (or the bed), on or off. It turns off the pull-up into the next section: both would rewrite that boundary. */
-    fun toggleDrop() {
+    /**
+     * The selected section's last bar goes to [to] ([SongTransition]): NONE turns whichever is on off. The plan keeps at most one,
+     * and each turns off the pull-up into the next section. The edit is named by the state it lands in.
+     */
+    fun chooseTransition(to: SongTransition) {
         val k = kept ?: return
-        val now = !(k.sections.getOrNull(selected)?.drop ?: return)
-        edit(if (now) Copy.SONG_DROP_ON else Copy.SONG_DROP_OFF, k.withDrop(selected, now) ?: return)
+        val now = k.sections.getOrNull(selected)?.let { SongTransition.of(it.drop, it.close, it.reverseCrash) } ?: return
+        if (to == now) return
+        val cleared = when (now) {
+            SongTransition.NONE -> k
+            SongTransition.DROP -> k.withDrop(selected, false)
+            SongTransition.CLOSE -> k.withClose(selected, false)
+            SongTransition.REVERSE_CRASH -> k.withReverseCrash(selected, false)
+        } ?: return
+        val next = when (to) {
+            SongTransition.NONE -> cleared
+            SongTransition.DROP -> cleared.withDrop(selected, true)
+            SongTransition.CLOSE -> cleared.withClose(selected, true)
+            SongTransition.REVERSE_CRASH -> cleared.withReverseCrash(selected, true)
+        } ?: return
+        edit(to.on, next)
     }
 
     fun toggleLock() {
@@ -366,5 +382,27 @@ internal class SongKeeper(
          * is still kept, which a write on the screen's scope would lose.
          */
         val writes = CoroutineScope(SupervisorJob() + Dispatchers.IO.limitedParallelism(1))
+    }
+}
+
+/**
+ * What happens to a section's own last bar: nothing, or one of DROP, CLOSE and REVERSE CRASH. [label] is the choice's word,
+ * [on] what it is called once chosen (the spoken name and the undo verb), [off] what it is called while it is not.
+ */
+internal enum class SongTransition(val label: String, val on: String, val off: String) {
+    NONE(Copy.SONG_TRANSITION_NONE, Copy.SONG_NONE_ON, Copy.SONG_NONE_OFF),
+    DROP(Copy.SONG_TRANSITION_DROP, Copy.SONG_DROP_ON, Copy.SONG_DROP_OFF),
+    CLOSE(Copy.SONG_TRANSITION_CLOSE, Copy.SONG_CLOSE_ON, Copy.SONG_CLOSE_OFF),
+    REVERSE_CRASH(Copy.SONG_TRANSITION_REVERSE_CRASH, Copy.SONG_REVERSE_CRASH_ON, Copy.SONG_REVERSE_CRASH_OFF),
+    ;
+
+    companion object {
+        /** The one a section has: a plan keeps at most one, so a hand-edited file with several reads as the first of DROP, CLOSE, REVERSE CRASH, the order the mix gives them. */
+        fun of(drop: Boolean, close: Boolean, reverseCrash: Boolean): SongTransition = when {
+            drop -> DROP
+            close -> CLOSE
+            reverseCrash -> REVERSE_CRASH
+            else -> NONE
+        }
     }
 }

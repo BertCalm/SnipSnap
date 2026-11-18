@@ -247,6 +247,24 @@ class ArrangeScreenTest : ComposeScreenTest() {
         waitFor("the button to say DROP ON", timeoutMillis = 30_000, diagnose = { dropDiagnosis(projectDir, entry.dir.name) }) {
             runCatching { button(Copy.SONG_DROP_ON).assertExists() }.isSuccess
         }
+
+        // The last bar takes one of four: choosing CLOSE turns the drop off, REVERSE CRASH turns CLOSE off, NONE turns them all off.
+        button(Copy.SONG_CLOSE_OFF).assertIsEnabled().performClick()
+        waitFor("CLOSE to be kept in place of the drop", timeoutMillis = 30_000) {
+            val s = SongPlanStore.load(projectDir, entry.dir.name)?.sections?.get(0)
+            s != null && s.close && !s.drop && !s.reverseCrash
+        }
+        waitFor("the button to say CLOSE ON", timeoutMillis = 30_000) { runCatching { button(Copy.SONG_CLOSE_ON).assertExists() }.isSuccess }
+        button(Copy.SONG_REVERSE_CRASH_OFF).assertIsEnabled().performClick()
+        waitFor("REVERSE CRASH to be kept in place of CLOSE", timeoutMillis = 30_000) {
+            val s = SongPlanStore.load(projectDir, entry.dir.name)?.sections?.get(0)
+            s != null && s.reverseCrash && !s.close && !s.drop
+        }
+        button(Copy.SONG_NONE_OFF).assertIsEnabled().performClick()
+        waitFor("NONE to turn the last bar's transition off", timeoutMillis = 30_000) {
+            val s = SongPlanStore.load(projectDir, entry.dir.name)?.sections?.get(0)
+            s != null && !s.reverseCrash && !s.close && !s.drop
+        }
     }
 
     /**
