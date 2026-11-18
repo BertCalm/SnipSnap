@@ -74,6 +74,14 @@ object SectionNames {
  * the three, and each, like DROP, takes the boundary from the next
  * section's pull-up ([SongPlan.withClose], [SongPlan.withReverseCrash]).
  * Off unless asked for, and left out of the file when off.
+ *
+ * [mutes] are the lanes this section leaves out: a [padLane] key for each
+ * drum pad whose hits are not played in it, and [BED_LANE] for the bass
+ * bed. The key is the pad's SLOT, not its name or its class: a kit can
+ * have two kick pads or rename one, and a swapped clip changes which
+ * lanes a section plays but not what a slot is. A mute names a lane the
+ * section may not play (any more); it then does nothing. Empty unless
+ * asked for, and left out of the file when empty.
  */
 data class PlanSection(
     val name: String,
@@ -86,11 +94,20 @@ data class PlanSection(
     val drop: Boolean = false,
     val close: Boolean = false,
     val reverseCrash: Boolean = false,
+    val mutes: Set<String> = emptySet(),
 ) {
     init {
         require(name.isNotBlank()) { "a section needs a name" }
         require(clip.isNotBlank()) { "a section needs a clip" }
         require(repeats in 1..SongPlan.MAX_REPEATS) { "repeats out of range: $repeats" }
+    }
+
+    companion object {
+        /** The mute key of the bass bed. */
+        const val BED_LANE = "bed"
+
+        /** The mute key of the drum pad in 1-based [slot] (`Mpc3Note.slotFor` of its notes). */
+        fun padLane(slot: Int): String = "pad:$slot"
     }
 }
 
@@ -164,6 +181,12 @@ data class SongPlan(val seed: Int, val sections: List<PlanSection>) {
         val next = replaced(i) { change(if (on) it.copy(drop = false, close = false, reverseCrash = false) else it) } ?: return null
         if (!on || !(sections.getOrNull(i + 1)?.pullUp ?: false)) return next
         return next.copy(sections = next.sections.toMutableList().also { it[i + 1] = it[i + 1].copy(pullUp = false) })
+    }
+
+    /** Lane [lane] of section [i] left out ([on]) or played again; see [PlanSection.mutes]. */
+    fun withMute(i: Int, lane: String, on: Boolean): SongPlan? {
+        require(lane.isNotBlank()) { "a mute names a lane" }
+        return replaced(i) { it.copy(mutes = if (on) it.mutes + lane else it.mutes - lane) }
     }
 
     /** Every unlocked section redrawn with [newSeed]; locked ones keep the seed they have. */

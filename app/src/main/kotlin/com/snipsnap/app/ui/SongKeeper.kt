@@ -46,7 +46,7 @@ import java.io.File
  * composables).
  */
 internal class SongKeeper(
-    private val kit: Kit,
+    val kit: Kit,
     private val kitDir: File,
     private val projectDir: File?,
     private val scope: CoroutineScope,
@@ -223,6 +223,13 @@ internal class SongKeeper(
             SongTransition.REVERSE_CRASH -> cleared.withReverseCrash(selected, true)
         } ?: return
         edit(to.on, next)
+    }
+
+    /** Lane [lane] of the selected section left out, or played again ([com.snipsnap.kit.PlanSection.mutes]). Like DROP it re-lays the song, so the mix is built again. */
+    fun toggleMute(lane: String) {
+        val k = kept ?: return
+        val now = lane !in (k.sections.getOrNull(selected)?.mutes ?: return)
+        edit(Copy.SONG_MUTES, k.withMute(selected, lane, now) ?: return)
     }
 
     fun toggleLock() {

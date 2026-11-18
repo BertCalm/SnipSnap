@@ -121,16 +121,24 @@ def write(path: Path, x):
 
 
 # Authored audition patterns (not transcriptions): 16 steps, one char per step.
-# K kick, S snare, g ghost, h hat, o open hat, r rim, p pedal hat, R ride.
+# K kick, S snare, g ghost, h hat, o open hat, r rim, p pedal hat. Ride kits add an OVER lane.
 PATTERNS = {
     'borough-stoop':   ['K.h.S.hKh.K.S.h.', 'K.h.S.h.hKK.S.o.'],
     'borough-cellar':  ['K.h.S.h...K.S.h.', 'K.h.S.hK..K.S.oK'],
     'borough-cranked': ['K.h.S.g.KKh.S.g.', 'K.h.S.g.K.K.S.gK'],
     'borough-wax':     ['KK.KS.h.K.K.S.h.', 'KK.KS.h.K.K.S.o.'],
     'borough-dry':     ['K.h.S...K.K.S...', 'K.h.S.h.K.K.S..K'],
-    'borough-rims':    ['K.R.r.R.K.R.r.RK', 'K.R.r.R.KKR.r.R.'],
+    'borough-rims':    ['K.K.r...K.K.r...', 'K.K.r...K.K.r..K'],   # the ride loop's kick and rim places
 }
-LANE = dict(K=0, S=1, h=2, o=3, r=6, p=7, g=8, R=None)
+# Cymbal lanes played over the pattern, for kits whose timekeeper is a ride: (pad index, steps, strength,
+# bars) -- every 8th on the ride with the quarters leaning in, the bell to close every other bar, the
+# pedal hat under the rims on 2 and 4. Separate from PATTERNS because a ride stroke shares its step
+# with the kick and the rim (one character per step cannot hold both).
+OVER = {
+    'borough-rims': [(2, [0, 4, 8, 12], .8, (0, 1, 2, 3)), (2, [2, 6, 10], .55, (0, 1, 2, 3)),
+                     (2, [14], .55, (0, 2)), (3, [14], .75, (1, 3)), (7, [4, 12], .45, (0, 1, 2, 3))],
+}
+LANE = dict(K=0, S=1, h=2, o=3, r=6, p=7, g=8)
 STACK_PATTERNS = {   # (pad index 0-3, steps, zone)
     'hands': [(0, range(0, 16, 2), 1), (0, range(1, 16, 2), 0), (1, [3, 10], 2), (2, [6, 14], 1), (3, [11], 1)],
     'tamb':  [(0, range(0, 16), 0), (1, [4, 12], 2), (2, [5], 1)],
@@ -161,12 +169,13 @@ def groove(kit, bank, stack=None, sbank=None, bars=4):
         pat = PATTERNS[kit['id']][bar % 2 if bar < 3 else 1]
         for s, c in enumerate(pat):
             if c == '.': continue
-            if c == 'R':
-                if stack is None: place(('k', 2), bar * 16 + s, .6, .7, 5)   # no ride on the kit itself: hat
-                continue
             v = NOMINAL[c] + (.25 if c == 'h' and s % 4 == 0 else 0)
             place(('k', LANE[c]), bar * 16 + s, v, .55 if c in 'hop' else 1,
                   3 if c == 'K' else 4 if c in 'Sgr' else 5, 6 if c == 'S' else 0)
+        for pad, steps, v, in_bars in OVER.get(kit['id'], []):
+            if bar in in_bars:
+                for s in steps:   # the ride rings 1.4 s, so eighths pile up: it sits lower than a hat
+                    place(('k', pad), bar * 16 + s, v, .32 if pad in (2, 3) else .5, 5)
         if bar == 3:
             place(('k', 9), bar * 16 + 13, .9, .8, 4); place(('k', 10), bar * 16 + 14, .7, .7, 4)
         if stack is not None:
@@ -218,7 +227,9 @@ def main(fitted_path, out):
         for pi in (0, 1, 2):
             for zi in range(3):
                 for t in range(TAKES):
-                    touch += [bank[pi][zi][t][:int(.5 * SR)], np.zeros(int(.08 * SR))]
+                    clip = bank[pi][zi][t][:int(.5 * SR)].copy()      # a ride rings past 0.5 s: fade, no click
+                    clip[-441:] *= np.linspace(1, 0, min(441, len(clip)))[-len(clip[-441:]):]
+                    touch += [clip, np.zeros(int(.08 * SR))]
         write(out / 'demo' / f"{kit['id']}-touch.wav", np.concatenate(touch))
         man['kits'].append(dict(kit, pads=[dict(pad=i + 1, label=l, model=k, params=p, extra=e) for i, (l, k, p, e) in enumerate(pads)],
                                 fitted_residual_db={r: fitted[kit['primary']][r]['residual_db'] for r in fitted[kit['primary']]}))

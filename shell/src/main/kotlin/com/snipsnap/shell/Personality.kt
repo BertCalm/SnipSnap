@@ -1719,6 +1719,17 @@ object Copy {
     @field:CopyLabel const val SONG_CLOSE_OFF = "CLOSE OFF"
     @field:CopyLabel const val SONG_REVERSE_CRASH_ON = "REVERSE CRASH ON"
     @field:CopyLabel const val SONG_REVERSE_CRASH_OFF = "REVERSE CRASH OFF"
+    /** MUTES: the selected section's lanes, each a chip that leaves that lane out of the section; a muted chip says MUTED. UNDO names the edit by SONG_MUTES. */
+    @field:CopyLabel const val SONG_MUTES = "MUTES"
+    @field:CopyLabel const val SONG_MUTE_BED = "BED"
+    @field:CopyLabel const val SONG_MUTED = "MUTED"
+    /** A pad's lane chip: its name, or its pad number when it has none. */
+    fun songMuteLane(name: String, slot: Int): String = name.trim().uppercase(java.util.Locale.ROOT).ifEmpty { "PAD $slot" }
+    /** The chip's spoken name: what it is now, or what pressing it does. */
+    fun songMuteOn(lane: String): String = "$lane, MUTED"
+    fun songMuteOff(lane: String): String = "MUTE $lane"
+    /** What a section's row prints when it leaves lanes out: `2 MUTED`. */
+    fun songRowMutes(count: Int): String = "$count $SONG_MUTED"
     /** The words a section's row prints for them. */
     @field:CopyLabel const val SONG_ROW_BASS = "BASS"
     @field:CopyLabel const val SONG_ROW_PULL_UP = "PULL-UP IN"

@@ -1520,4 +1520,167 @@ class ArrangerTest {
         val again = Arranger.resolve(m.kit, m.kitDir, gone).arrangement.sections
         assertTrue(again[0].close && again[1].reverseCrash, "a section planned again after a refusal keeps them")
     }
+
+    // ---- MUTES: a section leaves lanes out ---------------------------------------------------
+
+    private val muteKick = PlanSection.padLane(1)
+    private val muteSnare = PlanSection.padLane(2)
+    private val muteHat = PlanSection.padLane(3)
+
+    /** Two bars of kick, snare and hat (pads 1, 2 and 3), with [without] lanes' notes taken out of the clip itself, and [mutes] asked of the section. */
+    private fun muteSong(mutes: Set<String> = emptySet(), without: Set<Int> = emptySet(), bass: Boolean = false): Arranger.Arrangement {
+        val notes = listOf(
+            Mpc3Note(36, 0, 0.9f), Mpc3Note(36, dropBar, 0.9f),
+            Mpc3Note(37, 4 * dropS16, 0.9f), Mpc3Note(37, dropBar + 4 * dropS16, 0.9f),
+            Mpc3Note(38, 2 * dropS16, 0.7f), Mpc3Note(38, dropBar + 2 * dropS16, 0.7f),
+        ).filter { Mpc3Note.slotFor(it.note) !in without }
+        val a = Arranger.Section("a", Mpc3Clip("A", 2, notes), 1, "r", bass = bass, pullUp = false, mutes = mutes)
+        val b = Arranger.Section("b", Mpc3Clip("B", 1, listOf(Mpc3Note(36, 0, 0.9f))), 1, "r", bass = false, pullUp = false)
+        return Arranger.Arrangement("Mutes", 0, listOf(a, b))
+    }
+
+    private fun sha(x: FloatArray): String {
+        val d = java.security.MessageDigest.getInstance("SHA-256")
+        for (f in x) d.update(java.nio.ByteBuffer.allocate(4).putInt(f.toRawBits()).array())
+        return d.digest().joinToString("") { "%02x".format(it) }
+    }
+
+    @Test
+    fun `a muted lane is exactly that lane's hits left out, and the others are untouched`() {
+        val m = dropModel("MuteLane")
+        val full = Arranger.mixdown(m.kit, m.kitDir, muteSong())
+        for ((lane, slot) in listOf(muteKick to 1, muteSnare to 2, muteHat to 3)) {
+            val muted = Arranger.mixdown(m.kit, m.kitDir, muteSong(mutes = setOf(lane)))
+            val gone = Arranger.mixdown(m.kit, m.kitDir, muteSong(without = setOf(slot)))
+            assertTrue(muted.snip.samples.contentEquals(gone.snip.samples), "$lane muted is the song with that pad never played")
+            assertTrue(!muted.snip.samples.contentEquals(full.snip.samples), "$lane is audible when it is not muted")
+            assertTrue(energy(muted.snip.samples) < energy(full.snip.samples), "$lane left out takes energy out")
+        }
+        // Two lanes at once are both gone.
+        val two = Arranger.mixdown(m.kit, m.kitDir, muteSong(mutes = setOf(muteKick, muteHat)))
+        assertTrue(two.snip.samples.contentEquals(Arranger.mixdown(m.kit, m.kitDir, muteSong(without = setOf(1, 3))).snip.samples))
+    }
+
+    @Test
+    fun `muting never changes the length, the bar grid or the passes, even with every lane muted`() {
+        val m = dropModel("MuteGrid")
+        val plain = Arranger.mixdown(m.kit, m.kitDir, muteSong())
+        for (mutes in listOf(setOf(muteKick), setOf(muteKick, muteSnare, muteHat))) {
+            val muted = Arranger.mixdown(m.kit, m.kitDir, muteSong(mutes = mutes))
+            assertEquals(plain.sectionStarts, muted.sectionStarts)
+            assertEquals(plain.passes, muted.passes)
+            assertEquals(plain.snip.frameCount, muted.snip.frameCount, "the song is as long as it was")
+        }
+        // The last section muted whole: its own ring-out still sets where the song ends.
+        val s = muteSong()
+        val lastMuted = s.copy(sections = listOf(s.sections[0], s.sections[1].copy(mutes = setOf(muteKick))))
+        assertEquals(plain.snip.frameCount, Arranger.mixdown(m.kit, m.kitDir, lastMuted).snip.frameCount)
+    }
+
+    @Test
+    fun `a song with no mutes is sample for sample the song it was, and a mute that names nothing played changes nothing`() {
+        val m = dropModel("MuteZero")
+        val plain = Arranger.mixdown(m.kit, m.kitDir, muteSong())
+        // A mute of a pad the clip never hits, and of a bed the section does not have, goes through the filter and leaves every sample alone.
+        val idle = Arranger.mixdown(m.kit, m.kitDir, muteSong(mutes = setOf(PlanSection.padLane(99), PlanSection.BED_LANE)))
+        assertEquals(sha(plain.snip.samples), sha(idle.snip.samples))
+        assertEquals(plain.sectionStarts, idle.sectionStarts)
+        assertEquals(plain.drops, idle.drops)
+        val seeded = Arranger.arrange(m.kit, m.kitDir, seed = 3)
+        val a = Arranger.mixdown(m.kit, m.kitDir, seeded)
+        val b = Arranger.mixdown(m.kit, m.kitDir, Arranger.resolve(m.kit, m.kitDir, Arranger.toPlan(seeded)).arrangement)
+        assertEquals(sha(a.snip.samples), sha(b.snip.samples), "a planned song with no mutes is the arranger's song")
+    }
+
+    @Test
+    fun `a muted mix is deterministic`() {
+        val m = dropModel("MuteDet")
+        val a = Arranger.mixdown(m.kit, m.kitDir, muteSong(mutes = setOf(muteSnare)))
+        val b = Arranger.mixdown(m.kit, m.kitDir, muteSong(mutes = setOf(muteSnare)))
+        assertEquals(sha(a.snip.samples), sha(b.snip.samples))
+    }
+
+    @Test
+    fun `a section with every lane muted is a silent section, not a failed mix`() {
+        val m = dropModel("MuteAll")
+        // A one-section song is its own stretch: with nothing left to play there is nothing for the kit to render, and that is silence.
+        val one = muteSong().copy(sections = listOf(muteSong().sections[0]))
+        val plain = Arranger.mixdown(m.kit, m.kitDir, one)
+        val silent = Arranger.mixdown(m.kit, m.kitDir, one.copy(sections = listOf(one.sections[0].copy(mutes = setOf(muteKick, muteSnare, muteHat)))))
+        assertEquals(plain.sectionStarts, silent.sectionStarts)
+        assertEquals(plain.snip.frameCount, silent.snip.frameCount)
+        assertTrue(energy(silent.snip.samples) < 1e-12)
+        // Between two pull-ups it is a stretch of its own too.
+        val three = Arranger.Arrangement("Three", 0, listOf(one.sections[0], one.sections[0].copy(pullUp = true, mutes = setOf(muteKick, muteSnare, muteHat)), one.sections[0].copy(pullUp = true)))
+        assertEquals(3, Arranger.mixdown(m.kit, m.kitDir, three).sectionStarts.size)
+    }
+
+    @Test
+    fun `a muted bed leaves the bed out of that section only`() {
+        val m = dropModel("MuteBed")
+        val rate = 44_100
+        WavWriter.write(File(m.kitDir, "bass.wav"), Snip(FloatArray(2 * rate) { 0.4f * sin(2 * PI * 110.0 * it / rate).toFloat() }, 1, rate))
+        AnswerStore.save(m.kitDir, AnswerStore.StoredAnswer(0, "Mute Answer", "bass.wav", Mpc3Clip("Bass", 1, listOf(Mpc3Note(45, 0, 0.9f)))))
+        val withBed = Arranger.mixdown(m.kit, m.kitDir, muteSong(bass = true))
+        val bedMuted = Arranger.mixdown(m.kit, m.kitDir, muteSong(bass = true, mutes = setOf(PlanSection.BED_LANE)))
+        val noBass = Arranger.mixdown(m.kit, m.kitDir, muteSong(bass = false))
+        assertTrue(!withBed.snip.samples.contentEquals(noBass.snip.samples), "the bed is heard")
+        assertTrue(bedMuted.snip.samples.contentEquals(noBass.snip.samples), "BASS on with the bed muted is BASS off")
+        assertEquals(withBed.snip.frameCount, bedMuted.snip.frameCount)
+        // A drum mute leaves the bed in.
+        val drumMuted = Arranger.mixdown(m.kit, m.kitDir, muteSong(bass = true, mutes = setOf(muteHat)))
+        assertTrue(!drumMuted.snip.samples.contentEquals(bedMuted.snip.samples))
+    }
+
+    @Test
+    fun `DROP on a section whose kick is muted keeps a silent bar and says so`() {
+        val m = dropModel("MuteDrop")
+        val song = dropSong(extras = true, drop = true)
+        val muted = song.copy(sections = listOf(song.sections[0].copy(mutes = setOf(muteKick)), song.sections[1]))
+        val mix = Arranger.mixdown(m.kit, m.kitDir, muted)
+        val (from, to) = dropFrames(m, mix)
+        assertEquals(listOf("kick"), mix.drops.map { it.kept })
+        assertTrue(mix.drops.single().reason.contains("muted") && mix.drops.single().reason.contains("silent"), mix.drops.single().reason)
+        assertTrue(energy(window(mix, from + 220, to - 220)) < 1e-9, "the kick is the only thing DROP keeps, and it is muted")
+        // The control: the same song with the kick played has it in that bar, and is the same length.
+        val loud = Arranger.mixdown(m.kit, m.kitDir, song)
+        assertTrue(energy(window(loud, from, to)) > 1e-3)
+        assertEquals(loud.snip.frameCount, mix.snip.frameCount)
+        assertEquals(loud.sectionStarts, mix.sectionStarts)
+        // With the kick not muted but another lane muted, DROP is what it was.
+        val other = song.copy(sections = listOf(song.sections[0].copy(mutes = setOf(muteHat)), song.sections[1]))
+        assertEquals("the last bar keeps only the kick", Arranger.mixdown(m.kit, m.kitDir, other).drops.single().reason)
+    }
+
+    @Test
+    fun `a muted hat does not choke the open hat before it`() {
+        val m = KitBuilderModel.create("MuteChoke", File(temp, "MuteChoke"))
+        m.assign(3, DrumSynth.closedHat(), DrumClass.HAT_CLOSED)
+        m.assign(4, DrumSynth.openHat(), DrumClass.HAT_OPEN)
+        m.save()
+        val s16 = Mpc3Clip.PULSES_PER_16TH
+        fun song(mutes: Set<String>) = Arranger.Arrangement(
+            "Choke Song", 0,
+            listOf(
+                Arranger.Section("theme", Mpc3Clip("Open", 1, listOf(Mpc3Note(39, 15 * s16, 1f))), 1, "open hat last"),
+                Arranger.Section("variation", Mpc3Clip("Closed", 1, listOf(Mpc3Note(38, 0, 1f))), 1, "then this", mutes = mutes),
+            ),
+        )
+        val chokes = Arranger.mixdown(m.kit, m.kitDir, song(emptySet()))
+        assertTrue(energyAfter(chokes.snip, chokes.sectionStarts[1], 100, 300) < 1e-6, "the closed hat chokes the open hat")
+        val muted = Arranger.mixdown(m.kit, m.kitDir, song(setOf(PlanSection.padLane(3))))
+        assertTrue(energyAfter(muted.snip, muted.sectionStarts[1], 100, 300) > 1e-3, "a hat that is not played chokes nothing")
+    }
+
+    @Test
+    fun `mutes ride through resolve and back, and name the pads a clip plays`() {
+        val m = dropModel("MutePlan")
+        val plan = Arranger.toPlan(Arranger.arrange(m.kit, m.kitDir, seed = 0)).withMute(1, muteKick, true)!!.withMute(1, PlanSection.BED_LANE, true)!!
+        val resolved = Arranger.resolve(m.kit, m.kitDir, plan).arrangement
+        assertEquals(listOf(emptySet(), setOf(muteKick, PlanSection.BED_LANE)), resolved.sections.take(2).map { it.mutes })
+        assertEquals(plan.sections.map { it.mutes }, Arranger.toPlan(resolved).sections.map { it.mutes })
+        val gone = SongPlan(0, listOf(PlanSection("theme", "gone-clip", mutes = setOf(muteHat)), PlanSection("reprise", ClipRef.CAPTURED)))
+        assertEquals(setOf(muteHat), Arranger.resolve(m.kit, m.kitDir, gone).arrangement.sections[0].mutes, "a section planned again keeps its mutes")
+        assertEquals(listOf(1, 2, 3), Arranger.lanes(muteSong().sections[0].clip))
+    }
 }

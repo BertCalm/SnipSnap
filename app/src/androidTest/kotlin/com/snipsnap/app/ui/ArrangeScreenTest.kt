@@ -10,6 +10,8 @@ import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.assertContentDescriptionContains
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertIsNotSelected
+import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.isSelected
 import androidx.compose.ui.test.onAllNodesWithContentDescription
@@ -28,6 +30,7 @@ import com.snipsnap.audio.WavReader
 import com.snipsnap.kit.GrooveStore
 import com.snipsnap.kit.Kit
 import com.snipsnap.kit.Names
+import com.snipsnap.kit.PlanSection
 import com.snipsnap.kit.SongPlanStore
 import com.snipsnap.mpc3.Mpc3Clip
 import com.snipsnap.mpc3.Mpc3Note
@@ -265,6 +268,37 @@ class ArrangeScreenTest : ComposeScreenTest() {
             val s = SongPlanStore.load(projectDir, entry.dir.name)?.sections?.get(0)
             s != null && !s.reverseCrash && !s.close && !s.drop
         }
+    }
+
+    @Test
+    fun a_lane_mute_on_the_selected_section_is_shown_as_muted_and_kept() {
+        val entry = grooveKit("SONG MUTES TEST")
+        val projectDir = File(entry.dir.parentFile, "project").apply { mkdirs() }
+        setPhoneContent {
+            CompositionLocalProvider(LocalReduceMotion provides true) {
+                ArrangeScreen(entry = entry, backLabel = "◄ BEAT", onBack = {}, onToast = {}, projectDir = projectDir)
+            }
+        }
+        waitFor("the plan and its edit buttons", timeoutMillis = 30_000) {
+            runCatching { button(Copy.SONG_BASS_OFF).assertIsEnabled() }.isSuccess
+        }
+        waitFor("the first plan to be kept", timeoutMillis = 30_000) { SongPlanStore.load(projectDir, entry.dir.name) != null }
+        // The first section is selected; its first lane is the first pad its clip plays.
+        val first = Arranger.arrange(entry.kit, entry.dir, seed = 0).sections[0]
+        val slot = Arranger.lanes(first.clip).first()
+        val lane = PlanSection.padLane(slot)
+        val name = Copy.songMuteLane(entry.kit.pad(slot)?.displayName.orEmpty(), slot)
+        button(Copy.songMuteOff(name)).assertIsEnabled().performClick()
+        waitFor("the mute to be kept", timeoutMillis = 30_000) {
+            SongPlanStore.load(projectDir, entry.dir.name)?.sections?.get(0)?.mutes == setOf(lane)
+        }
+        waitFor("the chip to say MUTED", timeoutMillis = 30_000) { runCatching { button(Copy.songMuteOn(name)).assertIsSelected() }.isSuccess }
+        // Tapping it again plays the lane again, and the file says so.
+        button(Copy.songMuteOn(name)).performClick()
+        waitFor("the mute to be taken off", timeoutMillis = 30_000) {
+            SongPlanStore.load(projectDir, entry.dir.name)?.sections?.get(0)?.mutes?.isEmpty() == true
+        }
+        waitFor("the chip to say it is playing", timeoutMillis = 30_000) { runCatching { button(Copy.songMuteOff(name)).assertIsNotSelected() }.isSuccess }
     }
 
     /**
