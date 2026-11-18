@@ -3,6 +3,7 @@ import argparse, hashlib, json
 from pathlib import Path
 import numpy as np
 from scipy.io import wavfile
+from scipy import signal
 import study
 import snipkit as sk
 
@@ -16,7 +17,7 @@ def main():
  for kit,(_,pads) in study.KITS.items():
   for i,p in enumerate(pads):
    name,fam=p[:2]
-   if fam not in ('metal','wood','rim','rim_dry'):
+   if kit!='samba-bateria':
     for v in [.3,.6,1.]:
      for take in range(3):
       path=f'{kit}/{i+1:02}_{name}_v{v}_t{take}.wav'
@@ -30,11 +31,19 @@ def main():
    for label,x in [('before',before),('after',after)]:sk.write_wav(str(out/f'{kit}-{name}-{label}.wav'),x*gain)
    def tail_ratio(x):
     return float(10*np.log10(max(np.mean(x[round(.3*sk.RATE):round(.7*sk.RATE)]**2),1e-20)/max(np.mean(x[:n]**2),1e-20)))
-   rows.append({'kit':kit,'pad':name,'before_late_early_db':tail_ratio(before),'after_late_early_db':tail_ratio(after)})
+   def attack_ratio(x):
+    # Dimensionless attack/body contrast survives the comparison gain match.
+    return float(10*np.log10(max(np.mean(x[:round(.012*sk.RATE)]**2),1e-20)/max(np.mean(x[round(.025*sk.RATE):round(.10*sk.RATE)]**2),1e-20)))
+   def low_tail(x):
+    low=signal.sosfilt(signal.butter(2,120,fs=sk.RATE,output='sos'),x)
+    return float(10*np.log10(max(np.mean(low[round(.15*sk.RATE):round(.45*sk.RATE)]**2),1e-20)/max(np.mean(x[:n]**2),1e-20)))
+   rows.append({'kit':kit,'pad':name,'before_late_early_db':tail_ratio(before),'after_late_early_db':tail_ratio(after),
+    'before_attack_body_db':attack_ratio(before),'after_attack_body_db':attack_ratio(after),
+    'before_low_tail_db':low_tail(before),'after_low_tail_db':low_tail(after)})
    cards.append(f'<article><h3>{kit.replace("-"," ").title()} · {name.replace("_"," ").title()}</h3><p>Before</p><audio controls preload="none" src="comparison/{kit}-{name}-before.wav"></audio><p>Revised</p><audio controls preload="none" src="comparison/{kit}-{name}-after.wav"></audio></article>')
  report={'unchanged_grid_wavs':unchanged,'changed_pads':len(rows),'comparisons':rows}
  (out/'report.json').write_text(json.dumps(report,indent=2))
  page=a.current/'index.html';s=page.read_text();pos=s.index('<section>')
- s=s[:pos]+'<section><h2>Cymbal, rim and stick revision</h2><p>Matched-level comparisons. The complete kits below use the revised sounds.</p><div class="grid">'+''.join(cards)+'</div></section>'+s[pos:];page.write_text(s.replace('.wav"', '.wav?revision=2"').replace('.zip"', '.zip?revision=2"'))
+ s=s[:pos]+'<section><h2>Samba Bateria instrument revision</h2><p>Matched-level comparisons. The complete kits below use the revised sounds.</p><div class="grid">'+''.join(cards)+'</div></section>'+s[pos:];page.write_text(s.replace('.wav"', '.wav?revision=7"').replace('.zip"', '.zip?revision=7"'))
  print(json.dumps(report))
 if __name__=='__main__':main()

@@ -245,6 +245,8 @@ import com.snipsnap.synth.Backwash
 import com.snipsnap.synth.BackwashPatch
 import com.snipsnap.synth.BackwashVoice
 import com.snipsnap.synth.Drumline
+import com.snipsnap.synth.SambaPatch
+import com.snipsnap.synth.ParadeSamba
 import com.snipsnap.synth.DrumlinePatch
 import com.snipsnap.synth.DrumlineVoice
 import com.snipsnap.synth.Soot
@@ -256,6 +258,12 @@ import com.snipsnap.synth.ClutterVoice
 import com.snipsnap.synth.Calabash
 import com.snipsnap.synth.CalabashPatch
 import com.snipsnap.synth.CalabashVoice
+import com.snipsnap.synth.Servo
+import com.snipsnap.synth.ServoPatch
+import com.snipsnap.synth.ServoVoice
+import com.snipsnap.synth.Ember
+import com.snipsnap.synth.EmberPatch
+import com.snipsnap.synth.EmberVoice
 import com.snipsnap.synth.Scuff
 import com.snipsnap.synth.ScuffPatch
 import com.snipsnap.synth.ScuffVoice
@@ -971,7 +979,7 @@ fun SynthScreen(
                                 it.name == settings[presetSettingsKey(e, v)]
                             } as? OrphicaPatch)
                     } else null
-                    val nativeFactory = if (e == Engine.BRISTLE || e == Engine.TEMPEST || e == Engine.SPLAY || e == Engine.OSTERIA || e == Engine.ETCH || e == Engine.SCUFF || e == Engine.HICCUP || e == Engine.CAIRN || e == Engine.HALOBAR || e == Engine.EROSION || e == Engine.CHITIN || e == Engine.CAUSTIC || e == Engine.ACCORD || e == Engine.RIME || e == Engine.FILAMENT || e == Engine.CHAMBER || e == Engine.TREMOR || e == Engine.RELAY || e == Engine.NACRE || e == Engine.MERIDIAN || e == Engine.OTIS || e == Engine.OHM || e == Engine.WICK || e == Engine.RIVET || e == Engine.CLUTTER || e == Engine.CALABASH || e == Engine.MURMUR) {
+                    val nativeFactory = if (e == Engine.BRISTLE || e == Engine.TEMPEST || e == Engine.SPLAY || e == Engine.OSTERIA || e == Engine.ETCH || e == Engine.SCUFF || e == Engine.HICCUP || e == Engine.CAIRN || e == Engine.HALOBAR || e == Engine.EROSION || e == Engine.CHITIN || e == Engine.CAUSTIC || e == Engine.ACCORD || e == Engine.RIME || e == Engine.FILAMENT || e == Engine.CHAMBER || e == Engine.TREMOR || e == Engine.RELAY || e == Engine.NACRE || e == Engine.MERIDIAN || e == Engine.OTIS || e == Engine.OHM || e == Engine.WICK || e == Engine.RIVET || e == Engine.CLUTTER || e == Engine.CALABASH || e == Engine.SERVO || e == Engine.EMBER || e == Engine.MURMUR) {
                         factoryPresets(e, v).firstOrNull {
                             it.name == settings[presetSettingsKey(e, v)]
                         }
@@ -987,10 +995,13 @@ fun SynthScreen(
                     val recipe = seed.seededOvenPatches[e to v]
                         ?: if (e == Engine.SKIN) seed.seededDrafts.filterIsInstance<SkinPatch>().firstOrNull { it.voice == v }
                         else if (e == Engine.BACKWASH) seed.seededDrafts.filterIsInstance<BackwashPatch>().firstOrNull { it.voice == v }
+                        else if (e == Engine.SAMBA) seed.seededDrafts.filterIsInstance<SambaPatch>().firstOrNull { it.voice == v }
                         else if (e == Engine.DRUMLINE) seed.seededDrafts.filterIsInstance<DrumlinePatch>().firstOrNull { it.voice == v }
                         else if (e == Engine.SOOT) seed.seededDrafts.filterIsInstance<SootPatch>().firstOrNull { it.voice == v }
                         else if (e == Engine.CLUTTER) seed.seededDrafts.filterIsInstance<ClutterPatch>().firstOrNull { it.voice == v }
                         else if (e == Engine.CALABASH) seed.seededDrafts.filterIsInstance<CalabashPatch>().firstOrNull { it.voice == v }
+                        else if (e == Engine.SERVO) seed.seededDrafts.filterIsInstance<ServoPatch>().firstOrNull { it.voice == v }
+                        else if (e == Engine.EMBER) seed.seededDrafts.filterIsInstance<EmberPatch>().firstOrNull { it.voice == v }
                         else if (e == Engine.SCUFF) seed.seededDrafts.filterIsInstance<ScuffPatch>().firstOrNull { it.voice == v }
                         else if (e == Engine.HICCUP) seed.seededDrafts.filterIsInstance<HiccupPatch>().firstOrNull { it.voice == v }
                         else if (e == Engine.ONSET) seed.seededDrafts.filterIsInstance<OnsetPatch>().firstOrNull { it.voice == v }
@@ -1062,7 +1073,7 @@ fun SynthScreen(
                         else -> embouchureRestore.macrosFor(e, v, settings) ?: defaults.mapValues { (name, fallback) ->
                             // Finite voices reserve HOLD: a stale
                             // navigation value must not leave the voice stuck.
-                            if ((e == Engine.ACCORD || e == Engine.CHAMBER || e == Engine.NACRE || e == Engine.LIBRATION || e == Engine.RIVET || e == Engine.TEMPEST || e == Engine.SPLAY) && name == "HOLD") fallback
+                            if ((e == Engine.ACCORD || e == Engine.CHAMBER || (e == Engine.NACRE && v != NacreVoice.GROTTO && v != NacreVoice.CONCH) || e == Engine.LIBRATION || e == Engine.RIVET || e == Engine.TEMPEST || e == Engine.SPLAY) && name == "HOLD") fallback
                             else if (e == Engine.TIDAL && name == "HOLD") {
                                 if (settings[macroSettingsKey(e, v, name)]?.toFloatOrNull() == 1f) 1f else 0f
                             } else settings[macroSettingsKey(e, v, name)]?.toFloatOrNull()
@@ -1197,6 +1208,12 @@ fun SynthScreen(
             )
         }
         // Freeze versioned drum renderers before a macro bag so edits retain their model.
+        if (engine == Engine.SAMBA && (engine to voice) !in loadedPatchesByVoice &&
+            (engine to voice) !in seed.seededPresets) {
+            loadedPatchesByVoice[engine to voice] = SambaPatch(
+                engine.patchDisplayName(voice), voice as ParadeSamba.Voice, macros,
+            )
+        }
         if (engine == Engine.DRUMLINE && (engine to voice) !in loadedPatchesByVoice &&
             (engine to voice) !in seed.seededPresets) {
             loadedPatchesByVoice[engine to voice] = DrumlinePatch(
@@ -1223,6 +1240,22 @@ fun SynthScreen(
             (engine to voice) !in seed.seededPresets) {
             loadedPatchesByVoice[engine to voice] = CalabashPatch(
                 engine.patchDisplayName(voice), voice as CalabashVoice, macros,
+            )
+        }
+        // SERVO likewise keeps its strike velocity, take and renderer model on the patch; a factory preset (an
+        // approved kit's hit at the kit grid's first take) loads whole, so freeze one only where no recipe is loading.
+        if (engine == Engine.SERVO && (engine to voice) !in loadedPatchesByVoice &&
+            (engine to voice) !in seed.seededPresets) {
+            loadedPatchesByVoice[engine to voice] = ServoPatch(
+                engine.patchDisplayName(voice), voice as ServoVoice, macros,
+            )
+        }
+        // EMBER likewise keeps its strike velocity, take and renderer model on the patch; a factory preset (an
+        // approved kit's pad at the kit grid's first take) loads whole, so freeze one only where no recipe is loading.
+        if (engine == Engine.EMBER && (engine to voice) !in loadedPatchesByVoice &&
+            (engine to voice) !in seed.seededPresets) {
+            loadedPatchesByVoice[engine to voice] = EmberPatch(
+                engine.patchDisplayName(voice), voice as EmberVoice, macros,
             )
         }
         // SCUFF keeps its strike, take and renderer model on the patch; a factory preset (a kit's pad at
@@ -1261,7 +1294,7 @@ fun SynthScreen(
         // existing draft format, including a last-frame macro edit before navigation.
         if (patch is CausticPatch) CausticEditing.edited(patch, macros = macrosByVoice.getValue(pair))
         else if (patch is SkinPatch) patch.withMacros(macrosByVoice.getValue(pair))
-        else if (patch is BristlePatch || patch is DrumlinePatch || patch is TempestPatch || patch is SplayPatch || patch is OsteriaPatch || patch is EtchPatch || patch is ScuffPatch || patch is CairnPatch || patch is BackwashPatch || patch is SootPatch || patch is HiccupPatch || patch is ClutterPatch || patch is CalabashPatch || patch is HalobarPatch || patch is ErosionPatch || patch is OnsetPatch || patch is AccordPatch || patch is LibrationPatch || patch is RimePatch || patch is OtisPatch || patch is RivetPatch || patch is WickPatch || patch is FilamentPatch || patch is TidalPatch || patch is TremorPatch || patch is ChamberPatch ||
+        else if (patch is BristlePatch || patch is SambaPatch || patch is EmberPatch || patch is DrumlinePatch || patch is TempestPatch || patch is SplayPatch || patch is OsteriaPatch || patch is EtchPatch || patch is ScuffPatch || patch is CairnPatch || patch is BackwashPatch || patch is SootPatch || patch is HiccupPatch || patch is ClutterPatch || patch is CalabashPatch || patch is ServoPatch || patch is HalobarPatch || patch is ErosionPatch || patch is OnsetPatch || patch is AccordPatch || patch is LibrationPatch || patch is RimePatch || patch is OtisPatch || patch is RivetPatch || patch is WickPatch || patch is FilamentPatch || patch is TidalPatch || patch is TremorPatch || patch is ChamberPatch ||
             patch is PrismPatch || patch is NacrePatch || patch is OverlapPatch || patch is ObbligatoPatch || patch is RelayPatch || patch is MurmurPatch ||
             patch is PluckPatch && patch.voice == PluckVoice.UPRIGHT)
             patch.withMacros(macrosByVoice.getValue(pair)) else patch
@@ -2251,6 +2284,8 @@ fun SynthScreen(
             engine == Engine.APSIS && Apsis.isLoop(macros["HOLD"] ?: 0f) -> 0 until heard.frameCount
             engine == Engine.TIDAL && Tidal.isHeld(macros["HOLD"] ?: 0f) -> 0 until heard.frameCount
             engine == Engine.LIBRATION && LibrationKeys.isHeld(macros["HOLD"] ?: 0f) -> 0 until heard.frameCount
+            // GROTTO's and CONCH's top HOLD step renders exactly one seamless loop.
+            engine == Engine.NACRE && Nacre.isLoop(voice as NacreVoice, macros) -> 0 until heard.frameCount
             engine == Engine.PRISM -> prismMotionStudio.loopFor(target)
             engine == Engine.CAUSTIC && CausticInstrument.isLoop(voice as CausticVoice, macros,
                 (loadedPatchesByVoice[engine to voice] as? CausticPatch)?.model ?: 2) -> 0 until heard.frameCount
@@ -5221,6 +5256,7 @@ private fun macroReadout(
     engine == Engine.HALOBAR && name == "HOLD" && macros.getValue(name) >= .98f -> "LONG NOTE"
     engine == Engine.BORE && name == "HOLD" && Bore.isLoop(macros.getValue(name)) -> "LOOP"
     engine == Engine.ARCO && name == "HOLD" && Arco.isLoop(macros.getValue(name)) -> "LOOP"
+    engine == Engine.NACRE && name == "HOLD" && Nacre.isLoop(voice as NacreVoice, macros) -> "LOOP"
     engine == Engine.KEEL && name == "HOLD" && Keel.isLoop(macros.getValue(name)) -> "LOOP"
     engine == Engine.WICK && name == "HOLD" && Wick.isLoop(macros.getValue(name)) -> "LOOP"
     engine == Engine.ETCH && name == "HOLD" && Etch.isLoop(macros.getValue(name)) -> "LOOP"
@@ -6616,7 +6652,7 @@ private enum class ObbligatoVoice { AIR_REED }
  */
 private enum class Engine {
     LATTICE, ACCORD,
-    THUMP, SCANNED_CHAIN, SKIN, ONSET, TINES, VELVET, VOX, PLUCK, ORPHICA, TONEWHEEL, OTIS, REGISTERS, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, HALOBAR, FLOTILLA, AEROSTAT, TREMOR, BALLAST, CISTERN, CIRCUIT, OBBLIGATO, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVERLAP, OVEN, FLOCK, VENT, CREASE, TRIO, NACRE, ORIGAMI, TREFOIL, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS, TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME, BORE, ARCO, SCOUR, KEEL, CHITIN, WICK, EROSION, RIVET, FIRED_BRONZE, BACKWASH, DRUMLINE, SOOT, HICCUP, TEMPEST, SPLAY, OSTERIA, ETCH, SCUFF, CLUTTER, CALABASH, TERRA, BRISTLE, CAIRN;
+    THUMP, SCANNED_CHAIN, SKIN, ONSET, TINES, VELVET, VOX, PLUCK, ORPHICA, TONEWHEEL, OTIS, REGISTERS, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, HALOBAR, FLOTILLA, AEROSTAT, TREMOR, BALLAST, CISTERN, CIRCUIT, OBBLIGATO, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVERLAP, OVEN, FLOCK, VENT, CREASE, TRIO, NACRE, ORIGAMI, TREFOIL, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS, TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME, BORE, ARCO, SCOUR, KEEL, CHITIN, WICK, EROSION, RIVET, FIRED_BRONZE, BACKWASH, DRUMLINE, SOOT, HICCUP, TEMPEST, SPLAY, OSTERIA, ETCH, SCUFF, CLUTTER, CALABASH, TERRA, BRISTLE, SERVO, EMBER, SAMBA, CAIRN;
     val displayName: String get() = name.replace('_', ' ')
 
     /** The engine after this one in the enum's order, wrapping from the last back to the first. */
@@ -6633,11 +6669,14 @@ private enum class Engine {
         FIRED_BRONZE -> FiredBronzeDryKit.Pad.entries
         SKIN -> SkinVoice.entries
         BACKWASH -> BackwashVoice.entries
+        SAMBA -> ParadeSamba.Voice.entries
         DRUMLINE -> DrumlineVoice.entries
         SOOT -> SootVoice.entries
         CLUTTER -> ClutterVoice.entries
         HICCUP -> HiccupVoice.entries
         CALABASH -> CalabashVoice.entries
+        SERVO -> ServoVoice.entries
+        EMBER -> EmberVoice.entries
         ONSET -> listOf(
             OnsetVoice.KICK, OnsetVoice.SNARE, OnsetVoice.HAT_CLOSED, OnsetVoice.HAT_OPEN,
             OnsetVoice.TOM, OnsetVoice.PERC_PLUCK, OnsetVoice.PERC_WOOD, OnsetVoice.PERC_METAL,
@@ -6715,6 +6754,8 @@ private enum class Engine {
         TIDAL -> TidalVoice.entries
         CHAMBER -> ChamberVoice.entries
         MERIDIAN -> MeridianVoice.entries
+        // GROTTO (saved model 8) joined after BUBBLE once the owner kept round nacre-grotto-1 (15 Nov 2026);
+        // CONCH (saved model 9) followed GROTTO once the owner kept round nacre-conch-1 (16 Nov 2026).
         NACRE -> NacreVoice.entries
         BORE -> BoreVoice.entries
         ARCO -> ArcoVoice.entries
@@ -6735,11 +6776,14 @@ private enum class Engine {
         FIRED_BRONZE -> FiredBronzeInstrument.macros
         SKIN -> Skin.macrosFor(voice as SkinVoice)
         BACKWASH -> Backwash.macrosFor(voice as BackwashVoice)
+        SAMBA -> SambaPatch.macrosFor()
         DRUMLINE -> Drumline.macrosFor(voice as DrumlineVoice)
         SOOT -> Soot.macrosFor(voice as SootVoice)
         CLUTTER -> Clutter.macrosFor(voice as ClutterVoice)
         HICCUP -> Hiccup.macrosFor(voice as HiccupVoice)
         CALABASH -> Calabash.macrosFor(voice as CalabashVoice)
+        SERVO -> Servo.macrosFor(voice as ServoVoice)
+        EMBER -> Ember.macrosFor(voice as EmberVoice)
         ONSET -> Onset.macrosFor(voice as OnsetVoice)
         TINES -> Tines.macrosFor(voice as TinesVoice)
         VELVET -> Velvet.macrosFor(voice as VelvetVoice)
@@ -6821,7 +6865,8 @@ private enum class Engine {
         TIDAL -> Tidal.macrosFor(voice as TidalVoice).filterNot { it.name == "HOLD" }
         CHAMBER -> Chamber.macrosFor(voice as ChamberVoice).filter { it.name != "HOLD" }
         MERIDIAN -> Meridian.macrosFor(voice as MeridianVoice)
-        NACRE -> Nacre.macrosFor(voice as NacreVoice).filter { it.name != "HOLD" }
+        // Only GROTTO and CONCH have a held loop, so only they show HOLD; the finite voices keep it hidden at 0.
+        NACRE -> Nacre.macrosFor(voice as NacreVoice).filter { it.name != "HOLD" || voice == NacreVoice.GROTTO || voice == NacreVoice.CONCH }
     }
 
     fun defaults(voice: Enum<*>): Map<String, Float> = when (this) {
@@ -6832,11 +6877,14 @@ private enum class Engine {
         FIRED_BRONZE -> FiredBronzeInstrument.defaults()
         SKIN -> Skin.defaults(voice as SkinVoice)
         BACKWASH -> Backwash.defaults(voice as BackwashVoice)
+        SAMBA -> ParadeSamba.defaults()
         DRUMLINE -> Drumline.defaults(voice as DrumlineVoice)
         SOOT -> Soot.defaults(voice as SootVoice)
         CLUTTER -> Clutter.defaults(voice as ClutterVoice)
         HICCUP -> Hiccup.defaults(voice as HiccupVoice)
         CALABASH -> Calabash.defaults(voice as CalabashVoice)
+        SERVO -> Servo.defaults(voice as ServoVoice)
+        EMBER -> Ember.defaults(voice as EmberVoice)
         ONSET -> Onset.defaults(voice as OnsetVoice)
         TINES -> Tines.defaults(voice as TinesVoice)
         VELVET -> Velvet.defaults(voice as VelvetVoice)
@@ -6929,11 +6977,14 @@ private enum class Engine {
         FIRED_BRONZE -> FiredBronzeInstrument.scramble(random)
         SKIN -> Skin.scramble(voice as SkinVoice, random)
         BACKWASH -> Backwash.scramble(voice as BackwashVoice, random)
+        SAMBA -> ParadeSamba.scramble(random)
         DRUMLINE -> Drumline.scramble(voice as DrumlineVoice, random)
         SOOT -> Soot.scramble(voice as SootVoice, random)
         CLUTTER -> Clutter.scramble(voice as ClutterVoice, random)
         HICCUP -> Hiccup.scramble(voice as HiccupVoice, random)
         CALABASH -> Calabash.scramble(voice as CalabashVoice, random)
+        SERVO -> Servo.scramble(voice as ServoVoice, random)
+        EMBER -> Ember.scramble(voice as EmberVoice, random)
         ONSET -> Onset.scramble(voice as OnsetVoice, random)
         TINES -> Tines.scramble(voice as TinesVoice, random)
         VELVET -> Velvet.scramble(voice as VelvetVoice, random)
@@ -7040,11 +7091,14 @@ private enum class Engine {
         FIRED_BRONZE -> FiredBronzeInstrument.render(voice as FiredBronzeDryKit.Pad, macros)
         SKIN -> Skin.render(voice as SkinVoice, macros)
         BACKWASH -> BackwashPatch("Backwash", voice as BackwashVoice, macros).render()
+        SAMBA -> SambaPatch("Samba", voice as ParadeSamba.Voice, macros).render()
         DRUMLINE -> DrumlinePatch("Drumline", voice as DrumlineVoice, macros).render()
         SOOT -> SootPatch("Soot", voice as SootVoice, macros).render()
         CLUTTER -> ClutterPatch("Clutter", voice as ClutterVoice, macros).render()
         HICCUP -> HiccupPatch("Hiccup", voice as HiccupVoice, macros).render()
         CALABASH -> CalabashPatch("Calabash", voice as CalabashVoice, macros).render()
+        SERVO -> ServoPatch("Servo", voice as ServoVoice, macros).render()
+        EMBER -> EmberPatch("Ember", voice as EmberVoice, macros).render()
         ONSET -> Onset.render(voice as OnsetVoice, macros)
         TINES -> Tines.render(voice as TinesVoice, macros)
         VELVET -> Velvet.render(voice as VelvetVoice, macros)
@@ -7141,11 +7195,14 @@ private enum class Engine {
         FIRED_BRONZE -> (voice as FiredBronzeDryKit.Pad).kind
         SKIN -> (voice as SkinVoice).drumClass
         BACKWASH -> Backwash.drumClassFor(voice as BackwashVoice)
+        SAMBA -> com.snipsnap.audio.DrumClass.PERC
         DRUMLINE -> Drumline.drumClassFor(voice as DrumlineVoice)
         SOOT -> Soot.drumClassFor(voice as SootVoice)
         CLUTTER -> Clutter.drumClassFor(voice as ClutterVoice)
         HICCUP -> Hiccup.drumClassFor(voice as HiccupVoice)
         CALABASH -> Calabash.drumClassFor(voice as CalabashVoice)
+        SERVO -> Servo.drumClassFor(voice as ServoVoice)
+        EMBER -> Ember.drumClassFor(voice as EmberVoice)
         ONSET -> (voice as OnsetVoice).drumClass
         TINES -> (voice as TinesVoice).drumClass
         VELVET -> Velvet.drumClassFor(voice as VelvetVoice, macros)
@@ -7241,11 +7298,14 @@ private enum class Engine {
         FIRED_BRONZE -> FiredBronzePatch(name, voice as FiredBronzeDryKit.Pad, macros)
         SKIN -> SkinPatch(name, voice as SkinVoice, macros)
         BACKWASH -> BackwashPatch(name, voice as BackwashVoice, macros)
+        SAMBA -> SambaPatch(name, voice as ParadeSamba.Voice, macros)
         DRUMLINE -> DrumlinePatch(name, voice as DrumlineVoice, macros)
         SOOT -> SootPatch(name, voice as SootVoice, macros)
         CLUTTER -> ClutterPatch(name, voice as ClutterVoice, macros)
         HICCUP -> HiccupPatch(name, voice as HiccupVoice, macros)
         CALABASH -> CalabashPatch(name, voice as CalabashVoice, macros)
+        SERVO -> ServoPatch(name, voice as ServoVoice, macros)
+        EMBER -> EmberPatch(name, voice as EmberVoice, macros)
         ONSET -> OnsetPatch(name, voice as OnsetVoice, macros)
         TINES -> TinesPatch(name, voice as TinesVoice, macros)
         VELVET -> VelvetPatch(name, voice as VelvetVoice, macros)
@@ -7500,6 +7560,11 @@ private fun chipLabel(engine: Engine, voice: Enum<*>): String = when (engine) {
     Engine.CALABASH -> when (voice as CalabashVoice) {
         CalabashVoice.HAT_CLOSED -> "HAT CL"
         CalabashVoice.HAT_OPEN -> "HAT OP"
+        else -> voice.name.replace('_', ' ')
+    }
+    Engine.EMBER -> when (voice as EmberVoice) {
+        EmberVoice.HAT_CLOSED -> "HAT CL"
+        EmberVoice.HAT_OPEN -> "HAT OP"
         else -> voice.name.replace('_', ' ')
     }
     Engine.OBBLIGATO -> "AIR + REED"
@@ -7998,7 +8063,9 @@ private fun NacreNoteControls(
         onValueChange = { onVelocityChange(it.coerceIn(0f, 1f)) },
     )
     TapeText(
-        "Paired harp · finite strum · space follows the note.",
+        if (patch.voice == NacreVoice.GROTTO) "Bowed bass string · C2–C4 · the top hold step loops."
+        else if (patch.voice == NacreVoice.CONCH) "Blown shell pair · C2–C5 · the top hold step loops."
+        else "Paired harp · finite strum · space follows the note.",
         TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2,
     )
 }

@@ -1,0 +1,14 @@
+Agogo acoustic references: VCSL, Versilian Studios LLC. CC0 1.0.
+https://github.com/sgossner/VCSL
+Pinned source c1ea7bcc3c7309650ab0da9d15c9cd1fbc4a4c7e.
+Idiophones/Struck Idiophones/Agogo Bells/Agogo_Low_v1_rr1_Mid.wav
+Idiophones/Struck Idiophones/Agogo Bells/Agogo_Low_v2_rr1_Mid.wav
+Idiophones/Struck Idiophones/Agogo Bells/Agogo_High_v1_rr1_Mid.wav
+Idiophones/Struck Idiophones/Agogo Bells/Agogo_High_v3_rr1_Mid.wav
+Exact URLs and SHA256 hashes are stored in agogo-fit.json.
+
+The existing CALABASH fitter extracts 64 modes per bell plus soft/hard
+residual spectral envelopes. Runtime uses coefficients and generated noise,
+not PCM playback. Recorded references are separate, labeled audition controls.
+Only agogo is fitted here. Surdo, caixa, repinique, tamborim and chocalho are
+modeled approximations, not fits to matching recordings. No endorsement implied.

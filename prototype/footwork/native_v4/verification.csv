@@ -1,0 +1,4 @@
+kit,pads,cells,source_checks,saved_pcm,playback_all_velocities,SFZ,MPC3_PCM_and_cycle_fields,MPC3_round_robin
+footwork-tap-jazz,18,216,passed,passed,passed,passed,passed,open_missing_slice_map
+footwork-street-breaks,18,216,passed,passed,passed,passed,passed,open_missing_slice_map
+footwork-industrial-stepping,18,216,passed,passed,passed,passed,passed,open_missing_slice_map

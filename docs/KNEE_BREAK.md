@@ -294,3 +294,32 @@ checks every selection, three tempo schedules, repeat/cycle, cancellation and
 package links. Direct browser listening is unavailable. These candidates are
 not yet listening-approved, native shelf entries or MPC-verified: the distinct
 genre shelf gate remains open until accepted candidates are integrated.
+
+## Genre listening accepted and native integration (2026-11-16)
+
+The owner accepted all three genre auditions: “Sounds good, proceed.”
+`KneeBreakGenreKits` now supplies BOOM BAP (90 BPM), TRIP HOP (76 BPM), and
+FUNK BREAKS (108 BPM) as separate FRESH TAPE entries. Each preserves the exact
+approved 432-file audition bank, checked by SHA before lossless compression.
+All three retain 16 pads, 3 velocity layers, 3 strikes per layer, shared hat
+choking and the finite roll/riser. This is a frozen synthetic kit bank.
+
+The native generator supplies kit.json, SFZ, DecentSampler, MPC 3 and the
+MPC 2 companion. The companion retains each layer's first strike under the
+owner's documented MPC 2 exception. Original-kit hardware acceptance remains
+recorded; these newly packaged genre programs have not yet been tested on hardware.
+Targeted validation and full-suite status will be reported on PR #1160.
+
+Why it is built this way: lossless assets keep the accepted tuning and envelopes;
+independent per-layer takes retain velocity and repeat behaviour; printed effects
+avoid applying the knee/cassette treatments twice. The shelf now has genuinely
+different genre arrangements, with no claim of an editable synthesis engine.
+
+Focused Kotlin tests and package generation passed (Gradle exit 0). The independent
+PCM audit verified every one of the 432 native chain windows exactly against the
+frozen source through the repository's PCM conversion, and all three ZIP contents.
+Starter ID ordering, shelf coverage, documentation counts, asset hashes, owned
+buffers, velocity ordering, save/load, all MIDI velocities with repeated strikes,
+SFZ import and MPC 3 readback passed. Full JVM suite restarted after these changes;
+its result is not implied by the focused pass. Publication includes all three
+native/MPC bundles alongside the unchanged approved audition sounds.

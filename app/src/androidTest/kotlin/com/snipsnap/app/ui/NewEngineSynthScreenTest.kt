@@ -33,6 +33,12 @@ import com.snipsnap.synth.ClutterPresets
 import com.snipsnap.synth.Calabash
 import com.snipsnap.synth.CalabashPatch
 import com.snipsnap.synth.CalabashPresets
+import com.snipsnap.synth.Servo
+import com.snipsnap.synth.ServoPatch
+import com.snipsnap.synth.ServoPresets
+import com.snipsnap.synth.Ember
+import com.snipsnap.synth.EmberPatch
+import com.snipsnap.synth.EmberPresets
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -116,6 +122,20 @@ class NewEngineSynthScreenTest : ComposeScreenTest() {
         val pushed = SynthDrafts.read(settings).single { it.engine == "BACKWASH" && it.voiceName == "SNARE" } as BackwashPatch
         assertEquals(4, pushed.model)
         assertEquals(.72f, pushed.macros.getValue("PRESS"), .0001f)
+    }
+
+    @Test
+    fun sambaKeepsContactEditsAndRendererModel() {
+        show("SAMBA", "CAIXA")
+        for (label in listOf("TUNE", "STRIKE", "DAMP")) control(label).assertExists()
+        adjust("DAMP", .7f)
+        compose.runOnIdle { generation++ }
+        pump()
+        assertEquals(.7f, progress("DAMP"), .0001f)
+        assertFalse(showsLoop())
+        val draft = SynthDrafts.read(settings).single { it.engine == "SAMBA" && it.voiceName == "CAIXA" } as com.snipsnap.synth.SambaPatch
+        assertEquals(1, draft.model)
+        assertEquals(.7f, draft.macros.getValue("DAMP"), .0001f)
     }
 
     @Test
@@ -295,6 +315,65 @@ class NewEngineSynthScreenTest : ComposeScreenTest() {
         assertEquals(1f, draft.velocity, .0001f)
         assertEquals(.6f, draft.macros.getValue("DAMP"), .0001f)
         assertEquals(.55f, draft.macros.getValue("AGE"), .0001f)
+    }
+
+    /**
+     * SERVO on the picker (2026-11-16), mirroring CALABASH's entry: the kick opens with its six controls, ELECTRO BOOM
+     * KICK (the first of its presets, the ELECTRO kit's A01) lands with the pad's SAG, GROWL and ZAP, an edit
+     * survives a rebuild, and the saved draft keeps the preset's take, full velocity and model.
+     */
+    @Test
+    fun servoOpensItsKickLoadsAKitPresetAndKeepsAnEditWithItsTakeAndModel() {
+        show("SERVO", "KICK")
+        button("KICK").assertIsSelected()
+        for (label in listOf("TUNE", "DECAY", "ZAP", "SAG", "GROWL", "HEAT")) control(label).assertExists()
+        button("PRESET ELECTRO BOOM KICK").performSemanticsAction(SemanticsActions.OnClick) { it() }
+        pump()
+        assertEquals(.3f, progress("SAG"), .0001f)
+        assertEquals(.15f, progress("GROWL"), .0001f)
+        assertEquals(.5f, progress("ZAP"), .0001f)
+        adjust("HEAT", .6f)
+        compose.runOnIdle { generation++ }
+        pump()
+        assertEquals("SERVO", settings["engine"])
+        assertEquals(.6f, progress("HEAT"), .0001f)
+        assertEquals(.3f, progress("SAG"), .0001f)
+        assertFalse(showsLoop())
+        val draft = SynthDrafts.read(settings).single { it.engine == "SERVO" && it.voiceName == "KICK" } as ServoPatch
+        assertEquals(Servo.MODEL_VERSION, draft.model)
+        assertEquals(ServoPresets.TAKE, draft.take)
+        assertEquals(1f, draft.velocity, .0001f)
+        assertEquals(.6f, draft.macros.getValue("HEAT"), .0001f)
+        assertEquals(.15f, draft.macros.getValue("GROWL"), .0001f)
+    }
+
+    /**
+     * EMBER on the picker (round 4, 2026-11-17), mirroring SERVO's entry: the kick opens with its five controls, CLUB
+     * KICK (the first of its presets, the club kit's A01) lands with the pad's TUNE and DAMP, an edit survives a
+     * rebuild, and the saved draft keeps the preset's take, full velocity and model.
+     */
+    @Test
+    fun emberOpensItsKickLoadsAKitPresetAndKeepsAnEditWithItsTakeAndModel() {
+        show("EMBER", "KICK")
+        button("KICK").assertIsSelected()
+        for (label in listOf("TUNE", "DAMP", "BUZZ", "DISTANCE", "WARMTH")) control(label).assertExists()
+        button("PRESET CLUB KICK").performSemanticsAction(SemanticsActions.OnClick) { it() }
+        pump()
+        assertEquals(.55f, progress("TUNE"), .0001f)
+        assertEquals(.25f, progress("DAMP"), .0001f)
+        adjust("WARMTH", .6f)
+        compose.runOnIdle { generation++ }
+        pump()
+        assertEquals("EMBER", settings["engine"])
+        assertEquals(.6f, progress("WARMTH"), .0001f)
+        assertEquals(.25f, progress("DAMP"), .0001f)
+        assertFalse(showsLoop())
+        val draft = SynthDrafts.read(settings).single { it.engine == "EMBER" && it.voiceName == "KICK" } as EmberPatch
+        assertEquals(Ember.MODEL_VERSION, draft.model)
+        assertEquals(EmberPresets.TAKE, draft.take)
+        assertEquals(1f, draft.velocity, .0001f)
+        assertEquals(.6f, draft.macros.getValue("WARMTH"), .0001f)
+        assertEquals(.55f, draft.macros.getValue("TUNE"), .0001f)
     }
 
     @Test

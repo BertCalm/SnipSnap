@@ -2,9 +2,10 @@
 
 A one-voice, eight-step analog-style percussion synth, and four genre kits made from that one voice.
 
-Status: round K1 (2026-11-15). The Kotlin engine, patch and recipes are built and tested; the kits are not on
-the shelf yet (round K2). The sound direction was accepted by ear on the Python round-2 renders; no Kotlin render
-has been heard.
+Status: round K2 (2026-11-16). The Kotlin engine, patch and recipes are built and tested (K1, merged in #1156),
+and the four kits are on the shelf with velocity and round robin proved through saving, playback and MPC 3 export
+in software (K2). The sound direction was accepted by ear on the Python round-2 renders; no Kotlin render has been
+heard yet.
 
 The characteristic gesture: **a strike → the pitch dives from a zap into a body → the ladder closes over the
 harmonics → the next step re-strikes the same voice at its own height and force.**
@@ -124,12 +125,12 @@ take 0, aligned by cross-correlation, RMS matched):
 |---|---|
 | Melodic voices, keygroups, chord tools | Not applicable: a drum engine |
 | Articulation: HOLD, STRUM | Not applicable: finite hits. The eight-step phrase is a kit pad (A15), not HOLD |
-| Percussion: roll or riser | Not yet built in Kotlin. Each kit's A16 riser and A15 phrase were heard in Python (round 2) |
-| Drums: multiple distinct genre kits on the shelf | Not yet: four kits accepted in Python; round K2 puts them on the shelf |
+| Percussion: roll or riser | Pass in software, not heard in Kotlin: every kit has its A16 riser and A15 phrase, rendered by the engine's trigger list |
+| Drums: multiple distinct genre kits on the shelf | Pass in software: four kits on the shelf under SKINS (`kindred-techno`, `-industrial`, `-electro`, `-ambient`), accepted by ear in Python; the Kotlin kits wait for the ear |
 | Velocity: rendering | Pass in Kotlin, not heard |
 | Round robin: rendering | Pass in Kotlin, not heard |
-| Velocity and round robin: saving | Partly: a patch round-trips with its velocity, take, recipe and model; no saved kit yet |
-| Velocity and round robin: playback, export | Not yet verified |
+| Velocity and round robin: saving | Pass in software: each kit reloads equal and every saved slice matches its render (`KindredKitTest`, `:shell:generateKindredKits`) |
+| Velocity and round robin: playback, export | Pass in software: `PadHit.resolve` picks the zone by velocity and walks four takes, then repeats; the MPC 3 export reads back. MPC 2 not applicable (format limit). No phone or MPC has played them |
 | Hardware | Not verified |
 
 ## Ledger
@@ -140,8 +141,36 @@ take 0, aligned by cross-correlation, RMS matched):
 - Proposed: every voice and recipe setting is a "shape" value chosen from the clips and by the owner's ear.
 - Heard: rounds 0, 1 and 2 in Python, by the owner. Nothing in Kotlin.
 
-## Next: round K2
+## Round K2, as built (2026-11-16)
 
-The four kits on the shelf (`KindredKits`, `StarterKits`, `StarterShelf`), each with its A15 phrase and A16 riser
-rendered by the engine's trigger list, three velocity zones of four takes per pad, and the grid proved through
-saving, playback and MPC 3 export (`KindredKitTest`), then the owner's listen to the Kotlin kits.
+`KindredKits` builds the four kits (`kindred-techno` 132 BPM, `kindred-industrial` 100, `kindred-electro` 124,
+`kindred-ambient` 84), registered in `StarterKits`, the SKINS group of `StarterShelf`, and `StarterKitsTest`.
+
+- **A01 to A14:** each recipe as three velocity zones (.3, .6, 1) of four takes, rendered by the engine
+  (`Kindred.padRaw`); take 0 is the reference strike the owner heard. Every zone's first take peaks at 0.92 and its
+  takes share that gain, so a soft zone is a different strike, not a quieter copy.
+- **A15 Phrase:** two bars of the kit's eight-step pattern on one pad's voice (the prototype's phrase data, generated
+  into `KindredRecipes.KITS`). Changed against the prototype: the audition rendered a seamless loop with the
+  oscillators reset each pass; a one-shot pad needs no seam, so they run free across the steps, the reference's
+  own behaviour.
+- **A16 Riser:** the prototype's riser line for line (start and end rates, curve, glide, decays capped).
+- **Levels:** each pad's mixer level is the round-2 groove's balance: the prototype levelled every pad to an RMS of
+  0.1 under a 0.97 peak ceiling and scaled it by its mix, so the level is mix x min(0.1 x crest, 0.97), the loudest
+  one-shot at the house default (-3 dB). A first version without the ceiling put the techno clap over its kick; the
+  ceiling is what the owner heard.
+- **Mute groups:** the two hats choke each other; the phrase and riser choke each other.
+
+Measured (`KindredKitsTest`, `KindredKitTest`, `:shell:generateKindredKits`, `prototype/kindred/build_k2_page.py`):
+
+- Every one of the 768 strikes is finite and peaks between 0.05 and 0.98.
+- A soft zone differs from the hard one by at least 1.74 dB of level-matched third-octave shape (ELECTRO A04,
+  TECHNO A11); the test floors it at 1.25.
+- The closest two takes in any zone are 12.4 dB apart (TECHNO A12 at .6); a copy reads over 40.
+- Every pair of kits differs on all fourteen one-shot slots by over 2 dB (least 2.90 dB, ELECTRO against AMBIENT).
+- Every kit reloads equal, every saved slice matches its render, the pad resolver deals the zones and takes, and the
+  MPC 3 track reads back: 4 kits, 64 pads, 768 slices. A kit builds in 14 to 20 s on the session's machine.
+- Each kit's groove, played from the MPC 3 export's slices at the pads' levels and the touch law, is within 1 dB of
+  the round-2 Python groove in every band from under 60 Hz to over 6 kHz.
+
+Open: the owner's listen to the Kotlin kits ([K2 page](https://claude.ai/artifact/7ZrWVzzezn5uktr2fBm2Yf)), presets
+into the factory roster after that listen, the picker entry, and phone and MPC hardware.

@@ -641,6 +641,12 @@ object StarterKits {
             "Industrial drums with long warehouse reflections. The same sources, with room to ring.",
             seeded = false,
         ) { SynthKits.rivet(1f) },
+        Starter("soul-rock-pocket", "SOUL POCKET", "Close acoustic soul drums, tambourine and claps. Three velocity layers and three strikes, with a roll and swell.", seeded = false, tempoBpm = 108f) { com.snipsnap.synth.SoulRockKits.build(com.snipsnap.synth.SoulRockKits.Choice.SOUL) },
+        Starter("soul-rock-roadhouse", "ROADHOUSE ROCK", "Full acoustic rock drums, open hats and cowbell. Three velocity layers and three strikes, with a roll and swell.", seeded = false, tempoBpm = 134f) { com.snipsnap.synth.SoulRockKits.build(com.snipsnap.synth.SoulRockKits.Choice.ROADHOUSE) },
+        Starter("soul-rock-open-room", "OPEN ROOM ROCK", "Open acoustic rock drums, ride and three tom colors. Three velocity layers and three strikes, with a roll and swell.", seeded = false, tempoBpm = 89f) { com.snipsnap.synth.SoulRockKits.build(com.snipsnap.synth.SoulRockKits.Choice.OPEN_ROOM) },
+        Starter("knee-break-boom-bap", "KNEE BREAK BOOM BAP", "Compact kick and rimshot shells with dry cymbals. Three velocity layers and three strikes per layer.", seeded = false, tempoBpm = 90f) { com.snipsnap.synth.KneeBreakGenreKits.build(com.snipsnap.synth.KneeBreakGenreKits.Choice.BOOM_BAP) },
+        Starter("knee-break-trip-hop", "KNEE BREAK TRIP HOP", "Lower tuning and long filtered cassette tails. Three velocity layers and three strikes per layer.", seeded = false, tempoBpm = 76f) { com.snipsnap.synth.KneeBreakGenreKits.build(com.snipsnap.synth.KneeBreakGenreKits.Choice.TRIP_HOP) },
+        Starter("knee-break-funk", "KNEE BREAK FUNK BREAKS", "Tight dry drums with raised snare and hat tuning. Three velocity layers and three strikes per layer.", seeded = false, tempoBpm = 108f) { com.snipsnap.synth.KneeBreakGenreKits.build(com.snipsnap.synth.KneeBreakGenreKits.Choice.FUNK) },
         Starter("knee-break-body", "KNEE BREAK BODY", "Fitted synth drums, percussion and finite snare gestures. Three velocity layers and three strikes per layer.", seeded = false, tempoBpm = com.snipsnap.synth.KneeBreakKits.TEMPO) { com.snipsnap.synth.KneeBreakKits.build(com.snipsnap.synth.KneeBreakKits.Choice.BODY) },
         Starter("knee-break-knee", "KNEE BREAK KNEE", "Fitted synth drums, percussion and finite snare gestures. Three velocity layers and three strikes per layer.", seeded = false, tempoBpm = com.snipsnap.synth.KneeBreakKits.TEMPO) { com.snipsnap.synth.KneeBreakKits.build(com.snipsnap.synth.KneeBreakKits.Choice.KNEE) },
         Starter("knee-break-cassette", "KNEE BREAK CASSETTE", "Fitted synth drums, percussion and finite snare gestures. Three velocity layers and three strikes per layer.", seeded = false, tempoBpm = com.snipsnap.synth.KneeBreakKits.TEMPO) { com.snipsnap.synth.KneeBreakKits.build(com.snipsnap.synth.KneeBreakKits.Choice.CASSETTE) },
@@ -680,6 +686,10 @@ object StarterKits {
         Starter("spore-synth-dub", "SPORE DUB BREAKS",
             "Deep kick, low snare, cross-stick and hand percussion. Dark echo answers and triplet roll.", seeded=false, tempoBpm=85f) {
             com.snipsnap.synth.SporeSyntheticKits.arranged(com.snipsnap.synth.SporeSyntheticKits.Genre.DUB)
+        },
+        Starter(com.snipsnap.synth.Splinter.ID, "SPLINTER BREAKCORE",
+            "Sped-up break hits, clipped and gabber kicks, chopped slices, stutters and a stretched snare. Snare rush and riser.", seeded=false, tempoBpm=com.snipsnap.synth.Splinter.BPM.toFloat()) {
+            com.snipsnap.synth.Splinter.arranged()
         },
         Starter("spore-synth-broken", "SPORE ORBITAL BREAKS",
             "Short kick, wire clap, higher toms and metallic percussion. Reverse-metal accents and accelerating riser.", seeded=false, tempoBpm=155f) {
@@ -761,6 +771,26 @@ object StarterKits {
             seeded = false, tempoBpm = com.snipsnap.synth.CypherKits.Kit.FLINT.bpm.toFloat(),
         ) { com.snipsnap.synth.CypherKits.build(com.snipsnap.synth.CypherKits.Kit.FLINT) },
         Starter(
+            "loose-crate-hummin", "LOOSE CRATE HUMMIN",
+            "Beat-tape boom bap built around a kick that hums: a flam snare, a bouncing snare, dark hats that drag, a record's rumble under everything. Three touch zones, four takes; a flam roll and a loose four-bar groove.",
+            seeded = false, tempoBpm = com.snipsnap.synth.LooseCrateKits.Kit.HUMMIN.bpm.toFloat(),
+        ) { com.snipsnap.synth.LooseCrateKits.build(com.snipsnap.synth.LooseCrateKits.Kit.HUMMIN) },
+        Starter(
+            "loose-crate-cloth", "LOOSE CRATE CLOTH",
+            "Dry and close: a kick that drops an octave, the deep bouncing snare, tight hats, clean gaps. Three touch zones, four takes; a bounce roll and a tight four-bar groove.",
+            seeded = false, tempoBpm = com.snipsnap.synth.LooseCrateKits.Kit.CLOTH.bpm.toFloat(),
+        ) { com.snipsnap.synth.LooseCrateKits.build(com.snipsnap.synth.LooseCrateKits.Kit.CLOTH) },
+        Starter(
+            "loose-crate-haze", "LOOSE CRATE HAZE",
+            "Half-time haze: a lazy flam, a washing cymbal, bells and metal, the tape wobbling and the top cut hardest. Three touch zones, four takes; a ghost roll and a half-time four-bar groove.",
+            seeded = false, tempoBpm = com.snipsnap.synth.LooseCrateKits.Kit.HAZE.bpm.toFloat(),
+        ) { com.snipsnap.synth.LooseCrateKits.build(com.snipsnap.synth.LooseCrateKits.Kit.HAZE) },
+        Starter(
+            "loose-crate-ritual", "LOOSE CRATE RITUAL",
+            "Sparse and dub-leaning: a short sub thud, a high slap, hand drums and a sub that drops. Three touch zones, four takes; a slap roll and a one-drop four-bar groove.",
+            seeded = false, tempoBpm = com.snipsnap.synth.LooseCrateKits.Kit.RITUAL.bpm.toFloat(),
+        ) { com.snipsnap.synth.LooseCrateKits.build(com.snipsnap.synth.LooseCrateKits.Kit.RITUAL) },
+        Starter(
             com.snipsnap.synth.BreakerKits.ID, "BREAKER",
             "Surf rock by way of boom bap: dusty drums through a spring tank, a crush and a surf amp. Three touch zones, three takes; a snare riser and a surf tom fill.",
             seeded = false, tempoBpm = com.snipsnap.synth.BreakerKits.BPM,
@@ -832,6 +862,26 @@ object StarterKits {
             "The faster, brighter Michigan kit: a higher, shorter kick, a tighter clap, bright hats, short hard bass hits and three stank rims, crushed and slammed harder. Three touch zones, four takes; frantic two bars and a rim riser.",
             seeded = false, tempoBpm = com.snipsnap.synth.ScuffKits.Kit.FLINT.bpm.toFloat(),
         ) { com.snipsnap.synth.ScuffKits.build(com.snipsnap.synth.ScuffKits.Kit.FLINT) },
+        Starter(
+            "kindred-techno", "KINDRED TECHNO",
+            "Warehouse techno from one analog-style voice: a punchy kick with a short pitch dive, tight hats, a rumble, ride, cowbell and a sub hit. Three touch zones, four fresh strikes; an eight-step kick phrase and a clap riser.",
+            seeded = false, tempoBpm = com.snipsnap.synth.KindredKits.Kit.TECHNO.bpm.toFloat(),
+        ) { com.snipsnap.synth.KindredKits.build(com.snipsnap.synth.KindredKits.Kit.TECHNO) },
+        Starter(
+            "kindred-industrial", "KINDRED INDUSTRIAL",
+            "Industrial and EBM from one analog-style voice: driven square waves, long pitch dives, anvil, pipe, hammer, steam and grind. Three touch zones, four fresh strikes; an eight-step zap phrase and a riser that turns into a tone.",
+            seeded = false, tempoBpm = com.snipsnap.synth.KindredKits.Kit.INDUSTRIAL.bpm.toFloat(),
+        ) { com.snipsnap.synth.KindredKits.build(com.snipsnap.synth.KindredKits.Kit.INDUSTRIAL) },
+        Starter(
+            "kindred-electro", "KINDRED ELECTRO",
+            "Electro and breaks from one analog-style voice: a long round boom, snappy snare and clap, cowbell, three toms, lasers up and down, a conga. Three touch zones, four fresh strikes; an FM conga phrase and a rising tom roll.",
+            seeded = false, tempoBpm = com.snipsnap.synth.KindredKits.Kit.ELECTRO.bpm.toFloat(),
+        ) { com.snipsnap.synth.KindredKits.build(com.snipsnap.synth.KindredKits.Kit.ELECTRO) },
+        Starter(
+            "kindred-ambient", "KINDRED AMBIENT",
+            "Ambient and downtempo from one analog-style voice: a soft kick, brush, FM bells, wood, a water drop, glass, breath and swell. Three touch zones, four fresh strikes; an eight-step bell phrase and a pluck riser that becomes a tone.",
+            seeded = false, tempoBpm = com.snipsnap.synth.KindredKits.Kit.AMBIENT.bpm.toFloat(),
+        ) { com.snipsnap.synth.KindredKits.build(com.snipsnap.synth.KindredKits.Kit.AMBIENT) },
         Starter(
             "footwork-tap-jazz", "FOOTWORK TAP JAZZ",
             "Weighted metallic tap, heel support, two-way brushes and body percussion on a close stage. Eighteen pads with authored roll and riser; three touch zones and four takes. Full dynamics.",
@@ -938,6 +988,11 @@ object StarterKits {
             seeded = false, tempoBpm = com.snipsnap.synth.EmberKits.Kit.FREE.bpm.toFloat(),
         ) { com.snipsnap.synth.EmberKits.build(com.snipsnap.synth.EmberKits.Kit.FREE) },
         Starter(
+            "ember-latin-jazz", "EMBER LATIN JAZZ",
+            "A cha-cha-cha in the small club, 1962: the jazz drummer plays Latin on the kit (the clave on the rim, the hat foot) while a percussionist adds the guiro, a cha-cha bell, timbales, bongos, a conga and a shaker. Three touch zones, four takes.",
+            seeded = false, tempoBpm = com.snipsnap.synth.EmberKits.Kit.LATIN.bpm.toFloat(),
+        ) { com.snipsnap.synth.EmberKits.build(com.snipsnap.synth.EmberKits.Kit.LATIN) },
+        Starter(
             "meridian-materials", "MERIDIAN MATERIALS",
             "Sixteen finite pads across four ringing voices, with three touch levels and five held-sound captures.",
             seeded = false,
@@ -995,6 +1050,7 @@ object StarterKits {
             "Bass walk, six new source voices and the approved A/B routes. Three touch levels, two takes per pad.",
             seeded = false, key = KeySpec.parse("Cminpent"),
         ) { SynthKits.bristle() },
+        Starter("samba-bateria", "SAMBA BATERIA", "Rio-style bateria: three surdo roles, caixa and tamborim sections, repinique calls, chocalho and agogo. Three touch levels and three takes.", seeded = false, tempoBpm = 140f) { com.snipsnap.synth.SambaKits.build() },
         Starter("drumline-field", "DRUMLINE FIELD CADENCE", "Tight marching battery: independent snares and tenors, five bass sizes and ringing cymbals. Three touch levels and three takes.", seeded = false, tempoBpm = 120f) { com.snipsnap.synth.DrumlineKits.build(com.snipsnap.synth.DrumlineKits.Kit.FIELD) },
         Starter("drumline-street", "DRUMLINE STREET CADENCE", "Open street battery: lower heads, smaller sections, softer mallets, split bass and an accelerating snare. Three touch levels and three takes.", seeded = false, tempoBpm = 100f) { com.snipsnap.synth.DrumlineKits.build(com.snipsnap.synth.DrumlineKits.Kit.STREET) },
         Starter(
@@ -1034,6 +1090,12 @@ object StarterKits {
             "Dholak and tabla TERRA kit: dholak booms, bayan bends, dayan strokes, a cajon backbeat and bells.",
             seeded = false,
         ) { com.snipsnap.synth.TerraGenreKits.build(com.snipsnap.synth.TerraGenreKits.Kit.PUNJAB) },
+        // Opt-in beside the accepted EROSION starter, which stays as it is; appended after TERRA PUNJAB.
+        Starter(
+            com.snipsnap.synth.ErosionRoundRobinKits.ID, "EROSION ROUND ROBIN",
+            "The eight EROSION pads with soft, medium and hard touch and four takes on each: a repeated hit sparks differently every time.",
+            seeded = false,
+        ) { com.snipsnap.synth.ErosionRoundRobinKits.build() },
     ))
 
     fun byId(id: String): Starter? = ALL.firstOrNull { it.id == id }

@@ -1,0 +1,24 @@
+{
+  "checks": [
+    {
+      "velocity": 0.3,
+      "take": 0,
+      "choke_late_energy_ratio": 0.00011188730638171792,
+      "choke_high_vs_low_loss_db": -16.316775500792055,
+      "touch_late_energy_ratio": 0.0003940868859729851,
+      "strike_identity": true,
+      "cache_isolation": true
+    },
+    {
+      "velocity": 1.0,
+      "take": 2,
+      "choke_late_energy_ratio": 4.010179902893291e-05,
+      "choke_high_vs_low_loss_db": -19.27597496511346,
+      "touch_late_energy_ratio": 0.0002853282862037868,
+      "strike_identity": true,
+      "cache_isolation": true
+    }
+  ],
+  "cache_max_entries": 12,
+  "mutation_negative_control_rejected": true
+}

@@ -1,0 +1,180 @@
+package com.snipsnap.synth
+
+import com.snipsnap.audio.DrumClass
+import com.snipsnap.audio.Snip
+import com.snipsnap.synth.LooseCrateKits.Kit
+import kotlin.math.abs
+import kotlin.math.max
+import kotlin.math.min
+import kotlin.math.sqrt
+import kotlin.test.Test
+import kotlin.test.assertContentEquals
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
+
+/**
+ * The LOOSE CRATE kits' contracts, on real renders, in CypherTest's shape: the same bytes twice, every zone
+ * levelled, a softer hit a different and duller strike, four different takes in every zone, four kits that
+ * are four kits, grooves that are bar-exact and close on themselves, and HUMMIN opening with round 0's sounds.
+ */
+class LooseCrateKitsTest {
+    private val rate = Dsp.RATE
+
+    /** How unlike two renders are once level is taken out: 0 for the same shape, about 1.4 for unrelated ones. */
+    private fun shapeDistance(a: FloatArray, b: FloatArray): Double {
+        val n = min(a.size, b.size)
+        val ea = sqrt(a.sumOf { it.toDouble() * it })
+        val eb = sqrt(b.sumOf { it.toDouble() * it })
+        var d = 0.0
+        for (i in 0 until n) { val v = a[i] / ea - b[i] / eb; d += v * v }
+        return sqrt(d)
+    }
+
+    /** Share of a render's energy above [hz], by a one-pole split. */
+    private fun brightness(x: FloatArray, hz: Float = 2_000f): Double {
+        val lp = Dsp.FixedOnePole(hz)
+        var high = 0.0
+        var all = 0.0
+        for (v in x) { val h = v - lp.lp(v); high += h.toDouble() * h; all += v.toDouble() * v }
+        return high / max(all, 1e-18)
+    }
+
+    private fun rendered(kit: Kit, role: Int, velocity: Float, take: Int): Snip =
+        renders.getOrPut(listOf(kit, role, velocity, take)) { LooseCrateKits.render(kit, role, velocity, take) }
+
+    private companion object {
+        val renders = java.util.concurrent.ConcurrentHashMap<List<Any>, Snip>()
+    }
+
+    private fun subs(kit: Kit) = (0 until LooseCrateKits.HITS).filter { LooseCrateKits.muteGroup(kit, it) == LooseCrateKits.SUB_GROUP }
+
+    @Test fun `every pad renders the same bytes twice`() {
+        for (kit in Kit.entries) for (role in 0 until LooseCrateKits.PADS) {
+            assertContentEquals(rendered(kit, role, .65f, 1).samples, LooseCrateKits.render(kit, role, .65f, 1).samples, "${kit.name} role $role")
+        }
+    }
+
+    @Test fun `every pad is finite bounded centred and every hit ends in silence`() {
+        for (kit in Kit.entries) for (role in 0 until LooseCrateKits.PADS) for (v in LooseCrateKits.velocities) {
+            val x = rendered(kit, role, v, 0).samples
+            val what = "${kit.name} role $role v $v"
+            assertTrue(x.all { it.isFinite() }, "$what finite")
+            val peak = x.maxOf { abs(it) }
+            assertTrue(peak <= .98f + 1e-6f && peak > .2f, "$what peak $peak")
+            assertTrue(abs(x.average()) < .005, "$what DC ${x.average()}")
+            if (role != LooseCrateKits.GROOVE) assertTrue(abs(x.last()) < 1e-4f, "$what tail")
+        }
+    }
+
+    @Test fun `every zone is levelled to one peak and no take runs far from it`() {
+        for (kit in Kit.entries) for (role in 0 until LooseCrateKits.PADS) for (v in LooseCrateKits.velocities) {
+            assertEquals(LooseCrateKits.PAD_PEAK, rendered(kit, role, v, 0).peak(), .005f, "${kit.name} role $role v $v")
+            for (take in 1 until LooseCrateKits.TAKES) {
+                val peak = rendered(kit, role, v, take).peak()
+                assertTrue(peak in .6f..(.98f + 1e-6f), "${kit.name} role $role v $v take $take peak $peak")
+            }
+        }
+    }
+
+    @Test fun `a softer hit is a different strike and not only a quieter one`() {
+        for (kit in Kit.entries) for (role in 0 until LooseCrateKits.PADS) {
+            val distance = shapeDistance(rendered(kit, role, 1f, 0).samples, rendered(kit, role, .3f, 0).samples)
+            assertTrue(distance > .05, "${kit.name} role $role: soft is a scaled copy of hard ($distance)")
+        }
+        // On single hits the soft strike is also duller, measured dry (the converter's grain is a fixed size, so
+        // it is relatively louder on a quiet hit and can brighten the printed soft zone; round 0's thud kick).
+        for (kit in Kit.entries) for (role in 0 until LooseCrateKits.HITS) {
+            if (role in subs(kit)) continue
+            val hard = LooseCrateKits.dry(kit, role, 1f, 0).samples
+            val soft = LooseCrateKits.dry(kit, role, .3f, 0).samples
+            assertTrue(brightness(soft) < brightness(hard), "${kit.name} role $role: soft is not duller than hard")
+        }
+    }
+
+    @Test fun `every zone holds four different strikes`() {
+        for (kit in Kit.entries) for (role in 0 until LooseCrateKits.PADS) for (v in LooseCrateKits.velocities) {
+            val takes = List(LooseCrateKits.TAKES) { rendered(kit, role, v, it).samples }
+            for (a in takes.indices) for (b in a + 1 until takes.size) {
+                val distance = shapeDistance(takes[a], takes[b])
+                val floor = if (role in subs(kit)) .05 else .005
+                assertTrue(distance > floor, "${kit.name} role $role v $v: takes $a and $b differ by only $distance")
+            }
+        }
+    }
+
+    @Test fun `the four kits are four kits`() {
+        val names = Kit.entries.map { LooseCrateKits.roles(it) }
+        for (roles in names) { assertEquals(LooseCrateKits.PADS, roles.size); assertEquals(roles.size, roles.toSet().size) }
+        assertEquals(4, Kit.entries.map { it.bpm }.toSet().size)
+        assertEquals(4, Kit.entries.map { LooseCrateKits.printOf(it).name }.toSet().size)
+        // "Different effect strengths on the same kit are not sufficient evidence of distinct genre kits": every
+        // pair differs in at least six pad names, and the kick and the main snare are different drums, dry.
+        for (a in Kit.entries.indices) for (b in a + 1 until Kit.entries.size) {
+            assertTrue((names[a] zip names[b]).count { (x, y) -> x != y } >= 6, "${Kit.entries[a]} and ${Kit.entries[b]} share pads")
+            for (role in 0..1) {
+                val d = shapeDistance(LooseCrateKits.dry(Kit.entries[a], role, 1f, 0).samples, LooseCrateKits.dry(Kit.entries[b], role, 1f, 0).samples)
+                assertTrue(d > .5, "role $role: ${Kit.entries[a]} and ${Kit.entries[b]} share a drum ($d)")
+            }
+        }
+    }
+
+    @Test fun `every groove is bar-exact and closes on itself`() {
+        for (kit in Kit.entries) for (v in LooseCrateKits.velocities) {
+            val x = rendered(kit, LooseCrateKits.GROOVE, v, 0).samples
+            assertEquals(LooseCrateKits.grooveFrames(kit), x.size, "${kit.name} length")
+            // The step across the wrap is no bigger than the steps just before it: no click where the pad repeats.
+            val wrap = abs(x[0] - x[x.size - 1])
+            var largest = 0f
+            for (i in x.size - (.02f * rate).toInt() until x.size - 1) largest = max(largest, abs(x[i + 1] - x[i]))
+            assertTrue(wrap <= largest * 1.5f + 1e-4f, "${kit.name} v $v: wrap step $wrap against $largest")
+        }
+    }
+
+    @Test fun `HUMMIN opens with round 0's sounds as they were heard`() {
+        // Round 0's candidates are the HUMMIN strikes, through CRATE: the printed hard first take must match.
+        val pairs = mapOf(0 to "hum-kick-layer", 1 to "flam-snare", 2 to "dark-hat", 4 to "hum-kick-sub", 5 to "bounce-snare", 6 to "thud-kick", 13 to "slap-snare")
+        for ((role, name) in pairs) {
+            val heard = LooseCrateRound0Generator.pad(LooseCrateRound0Generator.candidates.first { it.name == name }, 1f, 0, printed = true).samples
+            val kit = rendered(Kit.HUMMIN, role, 1f, 0).samples
+            assertTrue(shapeDistance(heard, kit) < 1e-3, "role $role differs from round 0's $name")
+        }
+    }
+
+    @Test fun `a built kit carries its grid its classes its chokes and its provenance`() {
+        for (kit in Kit.entries) {
+            // Built from the same renders the other tests use: build() itself is only arrangement.
+            val pads = LooseCrateKits.build(kit, ::rendered)
+            assertEquals(LooseCrateKits.PADS, pads.size)
+            assertEquals(listOf(DrumClass.KICK, DrumClass.SNARE, DrumClass.HAT_CLOSED, DrumClass.HAT_OPEN), pads.take(4).map { it.drumClass })
+            assertEquals(listOf(DrumClass.LOOP, DrumClass.LOOP), pads.takeLast(2).map { it.drumClass })
+            for ((role, pad) in pads.withIndex()) {
+                assertEquals(3, pad.velocityTakes.size)
+                assertTrue(pad.velocityTakes.all { it.size == LooseCrateKits.TAKES })
+                assertContentEquals(pad.velocityTakes.last().first().samples, pad.snip.samples)
+                assertEquals(LooseCrateKits.roles(kit)[role], pad.displayName)
+                assertEquals("LOOSE CRATE", pad.source["engine"])
+                assertEquals(kit.name, pad.source["kit"])
+                assertEquals(LooseCrateKits.VERSION.toString(), pad.source["kitVersion"])
+                val hat = pad.drumClass == DrumClass.HAT_CLOSED || pad.drumClass == DrumClass.HAT_OPEN
+                val expected = when {
+                    hat -> LooseCrateKits.HAT_GROUP
+                    role >= LooseCrateKits.HITS -> LooseCrateKits.PHRASE_GROUP
+                    role in subs(kit) -> LooseCrateKits.SUB_GROUP
+                    else -> 0
+                }
+                assertEquals(expected, pad.muteGroup, "${kit.name} role $role choke")
+                if (role >= LooseCrateKits.HITS) assertTrue(pad.snip.frameCount > 1.5 * rate, "${kit.name} role $role")
+                else assertTrue(pad.snip.frameCount < 1.5 * rate, "${kit.name} role $role is ${pad.snip.frameCount} frames")
+            }
+        }
+    }
+
+    @Test fun `no pad or kit name borrows a maker's or the producer's name`() {
+        for (kit in Kit.entries) for (name in LooseCrateKits.roles(kit) + kit.title + kit.id) {
+            assertFalse(PresetTestSupport.trademarkBlocklist.containsMatchIn(name), name)
+            // The producer the references were named after, his aliases, album titles and label (the brief's terms).
+            assertFalse(Regex("(?i)madlib|quasimoto|lootpack|konducta|madvillain|stones ?throw|yesterdays new|beat konducta").containsMatchIn(name), name)
+        }
+    }
+}

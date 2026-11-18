@@ -24,7 +24,8 @@ native MPC 3 downloads. Physical MPC loading remains unverified.
 
 EROSION's accepted eight-role percussion bank is available in factory presets,
 the SYNTH picker and FRESH TAPE, with three native touch layers. The finite
-renderer and original audition recipes are preserved. The broader
+renderer and original audition recipes are preserved. EROSION ROUND ROBIN, an
+opt-in starter beside it, adds four takes per touch; the owner kept it by ear on 15 Nov 2026. The broader
 [instrument completion programme](docs/SYNTH_COMPLETION_PROGRAM.md) tracks
 remaining voice, articulation, kit, round-robin and chord requirements;
 [Wave 1](docs/SYNTH_COMPLETION_WAVE_1.md) collects the next listening decisions.
@@ -33,6 +34,9 @@ remaining voice, articulation, kit, round-robin and chord requirements;
 Dub (85) and Electro (130), each with 18 pads and three velocity zones × three takes.
 The published audition includes SFZ, native kits and MPC programs. MPC round robin
 remains blocked on slice-map/hardware verification. Owner listening is pending.
+
+[SPLINTER](docs/SPLINTER.md) is a breakcore kit at 200 BPM: sped-up break hits, chopped slices,
+a stutter, a stretched snare, clipped and gabber kicks, a snare rush and a riser. Not heard yet.
 
 [GATECRASH](docs/GATECRASH.md) is a family of three 1980s gated drum kits on the shelf: Stone Room, Machine Pop and Electro Funk. Each has sixteen pads with three velocity zones of four takes. The owner approved the sound on 2026-11-11 after four rounds; phone and MPC hardware playback remain unverified.
 
@@ -458,7 +462,7 @@ explicit MIDI root (24–96), strike velocity and model version; TUNE is a
 relative ±12-semitone offset, neutral at 0.5, so the effective note spans
 12–108 without clamping back to the saved-root range. Seven provisional presets
 and a dry sixteen-pad C minor pentatonic kit are included, with PITCHWHEEL among
-FRESH TAPE's 179 starters. Run `./gradlew :synth:generatePitchwheelAudition`
+FRESH TAPE's 193 starters. Run `./gradlew :synth:generatePitchwheelAudition`
 for the compact first listening set, or add `-PpitchwheelFull` for the broader
 dry probes. HOLD's top step returns settled loop-only material with a
 deterministic attachment cycle and capped adhesion. The owner heard R1 as six
@@ -1023,7 +1027,7 @@ bit-identical to their baselines.
 
 Six voices, seven macros, fifteen dry presets and the existing sixteen-pad
 kit use the current patch, recipe and app workflows. New C4 ROOT presets
-FIRE CIRCLE, NIGHT REPLY and EMBER PULSE explore close soft pressure, wider
+FIRE CIRCLE, NIGHT REPLY and WARM PULSE explore close soft pressure, wider
 finite returns and a settled recurring pulse. Existing presets and kit notes
 are retained. HOLD at .99 returns settled loop material. V2 passed 90 native
 render guards, 209/209 artifact checks and 36/36 transition checks; held listening
@@ -1147,8 +1151,8 @@ render-time limits. Build its MPC program and replay files with:
 ```
 
 ONSET, SCANNED CHAIN, VOX, FORK, HALOBAR, AEROSTAT, TREMOR, BALLAST, FLOTILLA, CISTERN, CIRCUIT, OBBLIGATO, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE,
-TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, LATTICE, ACCORD, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, REGISTERS, OSPREY, OPENSKY, OVEN, FLOCK, VENT, OVERLAP, TRIO, NACRE, ORIGAMI, TREFOIL, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS, TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME, OTIS, WICK, BORE, ARCO, SCOUR, KEEL, CHITIN, EROSION, RIVET, FIRED BRONZE, BACKWASH, DRUMLINE, HICCUP, TEMPEST, SPLAY, OSTERIA, ETCH, SCUFF, CLUTTER, CALABASH, TERRA, BRISTLE, CAIRN and GRAINS round out the lineup —
-94 engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
+TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, LATTICE, ACCORD, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, REGISTERS, OSPREY, OPENSKY, OVEN, FLOCK, VENT, OVERLAP, TRIO, NACRE, ORIGAMI, TREFOIL, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS, TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME, OTIS, WICK, BORE, ARCO, SCOUR, KEEL, CHITIN, EROSION, RIVET, FIRED BRONZE, BACKWASH, DRUMLINE, HICCUP, TEMPEST, SPLAY, OSTERIA, ETCH, SCUFF, CLUTTER, CALABASH, TERRA, BRISTLE, SERVO, EMBER, CAIRN, SAMBA and GRAINS round out the lineup —
+97 engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
 since it has no voice enum and works on a source snip instead of picking
 one. VOX is formant vocal synthesis — the shopping-mall-keyboard choir,
 proudly: a VOWEL knob morphs
@@ -1404,7 +1408,7 @@ TREMOR, BALLAST, CISTERN, CIRCUIT, OBBLIGATO, ALLOY, THAW, MURK, NIMBUS, COROLLA
 UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL,
 SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVERLAP,
 OVEN, FLOCK, VENT, CREASE, TRIO, NACRE, ORIGAMI, TREFOIL, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS,
-TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME, BORE, ARCO, SCOUR, KEEL, CHITIN, WICK, EROSION, RIVET, FIRED BRONZE, BACKWASH, DRUMLINE, SOOT, HICCUP, TEMPEST, SPLAY, OSTERIA, ETCH, SCUFF, CLUTTER, CALABASH, TERRA, BRISTLE, CAIRN, plus GRAINS, SNAP and DRAW,
+TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME, BORE, ARCO, SCOUR, KEEL, CHITIN, WICK, EROSION, RIVET, FIRED BRONZE, BACKWASH, DRUMLINE, SOOT, HICCUP, TEMPEST, SPLAY, OSTERIA, ETCH, SCUFF, CLUTTER, CALABASH, TERRA, BRISTLE, SERVO, EMBER, CAIRN, SAMBA, plus GRAINS, SNAP and DRAW,
 which sit beside the picker. `:synth` also holds engines that picker does not show.
 LORENTZ has a preset roster, so `snipsnap synth` renders it.
 
@@ -1794,3 +1798,7 @@ oscillator/noise synth renders preserve the audition, with three velocity layers
 and three strikes per pad, including a finite roll and riser. They are rendered
 kit assets, not a new editable synthesis engine. See [Knee Break](docs/KNEE_BREAK.md)
 and the [audition](https://knee-break-audition.bertcalm.chatgpt.site).
+
+[SOUL AND ROCK](docs/SOUL_ROCK.md) adds SOUL POCKET, ROADHOUSE ROCK and OPEN ROOM
+ROCK to FRESH TAPE: the approved acoustic synthesis, frozen as three sixteen-pad
+factory kits with three velocity levels and three alternate strikes per pad.

@@ -225,3 +225,107 @@ parts, syncopation, ghost notes, rests and multi-contact tap phrases. Twenty-fou
 new gesture velocity/repeat cells pass the study checks. The native source models,
 kit downloads and exported roll/riser remain previous candidates; neither source
 realism nor independent kit identity is claimed fixed by new arrangements.
+
+### Tap refinement after phrase feedback
+
+The owner clarified that the new phrase studies, not the recorded-reference
+buttons, were closer: Tap is weakest; Street and Industrial are pretty good.
+Those two exact phrase studies are retained as the working direction, without
+converting that feedback into approval of every source voice or delivery gate.
+
+`prototype/footwork/tap_refinement/` revises only Tap: role-specific contact shaping
+preserves the toe's delayed plate, restores the heel knock and exposes complete
+brush/spank motion. A one-dancer event plan adds call/answer, a quiet passage and
+a turnaround; related roll/build studies use the same vocabulary. There are 36
+phrase/gesture cells and 48 single-contact cells. Render assertions and PCM16
+round-trip checks pass. Six Street/Industrial audition WAV hashes are unchanged.
+This remains an audition study; native models and kit downloads are not promoted.
+
+### Tap weight and connected-timing follow-up
+
+The owner finds the refined Tap too weak and lacking human feel. The wording was
+interpreted as strike naturalness and/or rhythm, with clarification requested.
+`prototype/footwork/tap_weight_feel/` restores the native contact body removed by
+the previous toe filtering, firms landing accents and authors connected movement
+offsets. Per-foot/contact repeat counters replace global event-index cycling.
+A same-contact/old-grid comparison isolates timing. No measured-human timing or
+realism claim is made. The 36 gesture and 48 contact cells pass source assertions;
+Street/Industrial retained audio hashes remain unchanged. Native kits stay at
+model 3 and the source/delivery acceptance gates remain open.
+
+### Full-weight tap impact
+
+The owner still requests more human oomph and weight. `prototype/footwork/tap_impact/`
+adds a finite pressure-driven, damped support response and broad contact knock
+beneath toe/heel. Prior timing, force accents, per-foot take selection and brush
+PCM are retained exactly. This is an authored mechanical analogy, not a measured
+human-weight model. The 36 gesture and 24 impact-contact cells pass source checks;
+new phrase peaks remain below 0.77. The same-gain comparison retains the added
+impact, with a separate energy-matched comparison for timbre. Street/Industrial
+remain unchanged. Native model/kit versions and outstanding gates remain unchanged.
+
+### Owner-reference isolated contact rebuild
+
+The owner reports that the preceding impact study still lacks weight/fullness
+and supplies five performance recordings. `prototype/footwork/tap_contact_fit/`
+measures all five, then fits two provisional contact groups from the solo clip.
+Fresh excitation drives one magnitude-fitted minimum-phase response per candidate;
+no reference PCM or recorded phase enters synthesis. Toe/heel names are intended
+pad roles, not verified labels for the reference events. Room and capture effects
+remain confounds. Six unused same-recording events provide a limited spectral
+comparison, not a realism pass. The owner-private page compares isolated reference,
+new and previous strikes at equal 120 ms energy and provides 3-velocity × 4-repeat
+strips. All 24 source/save-strip checks pass. No new groove or native release is
+introduced; the preferred Street/Industrial phrase audio is retained byte-for-byte.
+All unresolved source, kit-identity, performance and delivery gates remain open.
+
+### Connected tap gestures from the preferred source direction
+
+The owner calls the reference-guided contacts “Better” and asks to continue.
+`prototype/footwork/tap_connected/` preserves all 24 toe/heel PCM cells exactly,
+adds authored sliding/return excitation, and develops shuffle, flap, ball-change,
+phrase, roll and build candidates. Seventy-two Python render/save cells pass the
+study checks. Gestures carry explicit foot/contact/time/force plans, with pickup
+motion rather than alternating heels in the roll. These are authored hypotheses,
+not extracted dancer motion or approved articulation. Native versions and all
+unresolved acceptance gates remain unchanged; Street/Industrial audio is retained.
+
+The owner subsequently finds the shuffle too abrupt. A shuffle-only revision
+extends forward/return travel to 110/90 ms, starts the return at 85 ms and uses
+zero-slope pressure envelopes. Fixed source gain balances the longer travel.
+The other 48 gesture cells and all 24 core contact cells remain PCM-identical.
+An energy-matched shuffle comparison and the affected phrase are published for
+listening; no native model or acceptance gate is promoted.
+
+The owner then asks to continue. Smooth brush/return sources now carry into the
+pickup figures in phrase, roll and build. Travel duration scales with pickup
+spacing without changing filter pitch, keeping the planted toe distinct. All
+36 isolated gesture cells and 24 core contact cells remain PCM-identical to the
+prior revision. The 72-cell Python checks pass again. Native/export gates remain
+open; the earlier full JVM command has now completed successfully.
+
+### Native model 4 Tap port
+
+Model/kit version 4 ports the reference-guided heel/toe, smooth brushes, shuffle,
+flap and pickup-based roll/riser to Kotlin. Coarse numeric fits generate a fresh
+minimum-phase response; no reference PCM enters the renderer. The RNG and house
+filters differ from Python, and soft brushes gain small pressure-dependent shape
+changes after the native proof caught amplitude-only dynamics.
+
+Six focused synth tests and the 648-cell native/SFZ proof pass. All 552 untouched
+role/velocity/take cells retain model-3 PCM; earlier models remain replayable.
+Saved playback-window auditions and a separately labeled source phrase accompany
+the candidate. See `prototype/footwork/native_v4/` for reproduction and measured
+parity. Native listening/device acceptance, unapproved source/kit identities and
+the MPC 3 slice-map export blocker remain open.
+
+### Native naturalness rejection and brush reset
+
+The owner finds the brushes unnatural and everything stiff/mechanical. Native
+model 4 is not sound-approved. `prototype/footwork/brush_motion/` replaces the
+brush experiment's stationary noise swell with speed-spaced microcontacts,
+variable pressure and quieter rubbing excitation. A short phrase separately
+tests shared timing/force/travel curves. These are authored analogies, not measured
+human movement. Forty-eight Python source/save cells pass, with source and timing
+comparisons for listening. Native kit/model versions and all outstanding gates
+remain unchanged. Delivery correctness does not establish naturalness.

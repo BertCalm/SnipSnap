@@ -1,0 +1,579 @@
+{
+  "scope": "Tap-only Python arrangement/contact study; native source model 3 unchanged",
+  "plans": {
+    "phrase": {
+      "events": [
+        {
+          "beat": 0,
+          "pad": 5,
+          "force": 0.533,
+          "foot": "L",
+          "gesture": "brush"
+        },
+        {
+          "beat": 0.166667,
+          "pad": 6,
+          "force": 0.65,
+          "foot": "L",
+          "gesture": "spank"
+        },
+        {
+          "beat": 0.333333,
+          "pad": 3,
+          "force": 0.9,
+          "foot": "L",
+          "gesture": "ball-tap proxy"
+        },
+        {
+          "beat": 0.666667,
+          "pad": 2,
+          "force": 0.55,
+          "foot": "L",
+          "gesture": "heel"
+        },
+        {
+          "beat": 1,
+          "pad": 3,
+          "force": 0.65,
+          "foot": "R",
+          "gesture": "ball-tap proxy"
+        },
+        {
+          "beat": 1.333333,
+          "pad": 2,
+          "force": 0.45,
+          "foot": "R",
+          "gesture": "heel"
+        },
+        {
+          "beat": 1.666667,
+          "pad": 5,
+          "force": 0.574,
+          "foot": "L",
+          "gesture": "brush"
+        },
+        {
+          "beat": 1.833333,
+          "pad": 6,
+          "force": 0.7,
+          "foot": "L",
+          "gesture": "spank"
+        },
+        {
+          "beat": 2,
+          "pad": 3,
+          "force": 0.85,
+          "foot": "L",
+          "gesture": "ball-tap proxy"
+        },
+        {
+          "beat": 2.666667,
+          "pad": 3,
+          "force": 0.8,
+          "foot": "R",
+          "gesture": "ball-tap proxy"
+        },
+        {
+          "beat": 3,
+          "pad": 2,
+          "force": 0.5,
+          "foot": "L",
+          "gesture": "heel"
+        },
+        {
+          "beat": 3.333333,
+          "pad": 2,
+          "force": 0.7,
+          "foot": "R",
+          "gesture": "heel"
+        },
+        {
+          "beat": 4,
+          "pad": 5,
+          "force": 0.5850000000000001,
+          "foot": "R",
+          "gesture": "brush"
+        },
+        {
+          "beat": 4.166667,
+          "pad": 3,
+          "force": 0.9,
+          "foot": "R",
+          "gesture": "ball-tap proxy"
+        },
+        {
+          "beat": 4.333333,
+          "pad": 2,
+          "force": 0.55,
+          "foot": "R",
+          "gesture": "heel"
+        },
+        {
+          "beat": 4.666667,
+          "pad": 5,
+          "force": 0.48750000000000004,
+          "foot": "L",
+          "gesture": "brush"
+        },
+        {
+          "beat": 4.833333,
+          "pad": 3,
+          "force": 0.75,
+          "foot": "L",
+          "gesture": "ball-tap proxy"
+        },
+        {
+          "beat": 5,
+          "pad": 2,
+          "force": 0.5,
+          "foot": "L",
+          "gesture": "heel"
+        },
+        {
+          "beat": 5.666667,
+          "pad": 5,
+          "force": 0.574,
+          "foot": "R",
+          "gesture": "brush"
+        },
+        {
+          "beat": 5.833333,
+          "pad": 6,
+          "force": 0.7,
+          "foot": "R",
+          "gesture": "spank"
+        },
+        {
+          "beat": 6,
+          "pad": 3,
+          "force": 0.9,
+          "foot": "R",
+          "gesture": "ball-tap proxy"
+        },
+        {
+          "beat": 6.666667,
+          "pad": 3,
+          "force": 0.7,
+          "foot": "L",
+          "gesture": "ball-tap proxy"
+        },
+        {
+          "beat": 7,
+          "pad": 2,
+          "force": 0.55,
+          "foot": "R",
+          "gesture": "heel"
+        },
+        {
+          "beat": 7.333333,
+          "pad": 2,
+          "force": 0.75,
+          "foot": "L",
+          "gesture": "heel"
+        },
+        {
+          "beat": 8,
+          "pad": 3,
+          "force": 0.55,
+          "foot": "R",
+          "gesture": "ball-tap proxy"
+        },
+        {
+          "beat": 8.333333,
+          "pad": 2,
+          "force": 0.4,
+          "foot": "R",
+          "gesture": "heel"
+        },
+        {
+          "beat": 8.666667,
+          "pad": 5,
+          "force": 0.39359999999999995,
+          "foot": "L",
+          "gesture": "brush"
+        },
+        {
+          "beat": 8.833333,
+          "pad": 6,
+          "force": 0.48,
+          "foot": "L",
+          "gesture": "spank"
+        },
+        {
+          "beat": 9,
+          "pad": 3,
+          "force": 0.65,
+          "foot": "L",
+          "gesture": "ball-tap proxy"
+        },
+        {
+          "beat": 10.333333,
+          "pad": 5,
+          "force": 0.49199999999999994,
+          "foot": "R",
+          "gesture": "brush"
+        },
+        {
+          "beat": 10.5,
+          "pad": 6,
+          "force": 0.6,
+          "foot": "R",
+          "gesture": "spank"
+        },
+        {
+          "beat": 10.666667,
+          "pad": 3,
+          "force": 0.8,
+          "foot": "R",
+          "gesture": "ball-tap proxy"
+        },
+        {
+          "beat": 11,
+          "pad": 2,
+          "force": 0.5,
+          "foot": "R",
+          "gesture": "heel"
+        },
+        {
+          "beat": 12,
+          "pad": 3,
+          "force": 0.7,
+          "foot": "L",
+          "gesture": "ball-tap proxy"
+        },
+        {
+          "beat": 12.25,
+          "pad": 3,
+          "force": 0.85,
+          "foot": "R",
+          "gesture": "ball-tap proxy"
+        },
+        {
+          "beat": 12.5,
+          "pad": 2,
+          "force": 0.5,
+          "foot": "L",
+          "gesture": "heel"
+        },
+        {
+          "beat": 12.75,
+          "pad": 2,
+          "force": 0.7,
+          "foot": "R",
+          "gesture": "heel"
+        },
+        {
+          "beat": 13.333333,
+          "pad": 5,
+          "force": 0.574,
+          "foot": "L",
+          "gesture": "brush"
+        },
+        {
+          "beat": 13.5,
+          "pad": 6,
+          "force": 0.7,
+          "foot": "L",
+          "gesture": "spank"
+        },
+        {
+          "beat": 13.666667,
+          "pad": 3,
+          "force": 0.85,
+          "foot": "L",
+          "gesture": "ball-tap proxy"
+        },
+        {
+          "beat": 14,
+          "pad": 2,
+          "force": 0.55,
+          "foot": "L",
+          "gesture": "heel"
+        },
+        {
+          "beat": 14.666667,
+          "pad": 5,
+          "force": 0.615,
+          "foot": "R",
+          "gesture": "brush"
+        },
+        {
+          "beat": 14.833333,
+          "pad": 6,
+          "force": 0.75,
+          "foot": "R",
+          "gesture": "spank"
+        },
+        {
+          "beat": 15,
+          "pad": 3,
+          "force": 1.0,
+          "foot": "R",
+          "gesture": "ball-tap proxy"
+        },
+        {
+          "beat": 15.333333,
+          "pad": 2,
+          "force": 0.65,
+          "foot": "R",
+          "gesture": "heel"
+        }
+      ],
+      "beats": 16,
+      "bpm": 124,
+      "peak": 0.40872847333000123,
+      "eventCount": 45
+    },
+    "roll": {
+      "events": [
+        {
+          "beat": 0,
+          "pad": 3,
+          "force": 0.7,
+          "foot": "L",
+          "gesture": "ball-tap proxy"
+        },
+        {
+          "beat": 0.24,
+          "pad": 3,
+          "force": 0.85,
+          "foot": "R",
+          "gesture": "ball-tap proxy"
+        },
+        {
+          "beat": 0.48,
+          "pad": 2,
+          "force": 0.5,
+          "foot": "L",
+          "gesture": "heel"
+        },
+        {
+          "beat": 0.72,
+          "pad": 2,
+          "force": 0.7,
+          "foot": "R",
+          "gesture": "heel"
+        },
+        {
+          "beat": 1.25,
+          "pad": 3,
+          "force": 0.7,
+          "foot": "L",
+          "gesture": "ball-tap proxy"
+        },
+        {
+          "beat": 1.45,
+          "pad": 3,
+          "force": 0.85,
+          "foot": "R",
+          "gesture": "ball-tap proxy"
+        },
+        {
+          "beat": 1.65,
+          "pad": 2,
+          "force": 0.5,
+          "foot": "L",
+          "gesture": "heel"
+        },
+        {
+          "beat": 1.85,
+          "pad": 2,
+          "force": 0.7,
+          "foot": "R",
+          "gesture": "heel"
+        },
+        {
+          "beat": 2.5,
+          "pad": 5,
+          "force": 0.49199999999999994,
+          "foot": "L",
+          "gesture": "brush"
+        },
+        {
+          "beat": 2.666667,
+          "pad": 6,
+          "force": 0.6,
+          "foot": "L",
+          "gesture": "spank"
+        },
+        {
+          "beat": 2.833333,
+          "pad": 3,
+          "force": 0.85,
+          "foot": "L",
+          "gesture": "ball-tap proxy"
+        },
+        {
+          "beat": 3.166667,
+          "pad": 2,
+          "force": 0.55,
+          "foot": "L",
+          "gesture": "heel"
+        }
+      ],
+      "beats": 4,
+      "bpm": 124,
+      "peak": 0.370031109728352,
+      "eventCount": 12
+    },
+    "build": {
+      "events": [
+        {
+          "beat": 0,
+          "pad": 5,
+          "force": 0.369,
+          "foot": "L",
+          "gesture": "brush"
+        },
+        {
+          "beat": 0.166667,
+          "pad": 6,
+          "force": 0.45,
+          "foot": "L",
+          "gesture": "spank"
+        },
+        {
+          "beat": 0.333333,
+          "pad": 3,
+          "force": 0.55,
+          "foot": "L",
+          "gesture": "ball-tap proxy"
+        },
+        {
+          "beat": 0.666667,
+          "pad": 2,
+          "force": 0.315,
+          "foot": "L",
+          "gesture": "heel"
+        },
+        {
+          "beat": 1.5,
+          "pad": 5,
+          "force": 0.49199999999999994,
+          "foot": "R",
+          "gesture": "brush"
+        },
+        {
+          "beat": 1.666667,
+          "pad": 6,
+          "force": 0.6,
+          "foot": "R",
+          "gesture": "spank"
+        },
+        {
+          "beat": 1.833333,
+          "pad": 3,
+          "force": 0.7,
+          "foot": "R",
+          "gesture": "ball-tap proxy"
+        },
+        {
+          "beat": 2.166667,
+          "pad": 2,
+          "force": 0.42,
+          "foot": "R",
+          "gesture": "heel"
+        },
+        {
+          "beat": 2.75,
+          "pad": 5,
+          "force": 0.615,
+          "foot": "L",
+          "gesture": "brush"
+        },
+        {
+          "beat": 2.916667,
+          "pad": 6,
+          "force": 0.75,
+          "foot": "L",
+          "gesture": "spank"
+        },
+        {
+          "beat": 3.083333,
+          "pad": 3,
+          "force": 0.85,
+          "foot": "L",
+          "gesture": "ball-tap proxy"
+        },
+        {
+          "beat": 3.416667,
+          "pad": 2,
+          "force": 0.5249999999999999,
+          "foot": "L",
+          "gesture": "heel"
+        },
+        {
+          "beat": 3.75,
+          "pad": 5,
+          "force": 0.697,
+          "foot": "R",
+          "gesture": "brush"
+        },
+        {
+          "beat": 3.916667,
+          "pad": 6,
+          "force": 0.85,
+          "foot": "R",
+          "gesture": "spank"
+        },
+        {
+          "beat": 4.083333,
+          "pad": 3,
+          "force": 0.95,
+          "foot": "R",
+          "gesture": "ball-tap proxy"
+        },
+        {
+          "beat": 4.416667,
+          "pad": 2,
+          "force": 0.595,
+          "foot": "R",
+          "gesture": "heel"
+        },
+        {
+          "beat": 5,
+          "pad": 5,
+          "force": 0.615,
+          "foot": "L",
+          "gesture": "brush"
+        },
+        {
+          "beat": 5.166667,
+          "pad": 6,
+          "force": 0.75,
+          "foot": "L",
+          "gesture": "spank"
+        },
+        {
+          "beat": 5.333333,
+          "pad": 3,
+          "force": 1.0,
+          "foot": "L",
+          "gesture": "ball-tap proxy"
+        },
+        {
+          "beat": 5.666667,
+          "pad": 2,
+          "force": 0.65,
+          "foot": "L",
+          "gesture": "heel"
+        }
+      ],
+      "beats": 7,
+      "bpm": 124,
+      "peak": 0.536298200691853,
+      "eventCount": 20
+    }
+  },
+  "gestureCells": 36,
+  "singleContactCells": 48,
+  "checks": [
+    "finite/headroom/DC/tail",
+    "determinism",
+    "silent velocity zero",
+    "four distinct phrase takes",
+    "monotonic phrase/contact dynamics",
+    "one-foot event separation >70 ms",
+    "PCM16 WAV round-trip error <5e-5"
+  ]
+}

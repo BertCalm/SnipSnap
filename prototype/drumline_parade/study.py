@@ -10,7 +10,7 @@ sys.path.insert(0,str(ROOT/'.claude/skills/luthier/scripts'))
 import snipkit as sk
 R=sk.INTERNAL
 # id, family, root Hz, T60 seconds, section players, contact width ms
-NOLA=[('bass_open','skin',72,.85,1,3.2),('bass_muted','skin',72,.23,1,3.2),
+NOLA=[('bass_open','skin',58,1.35,1,3.2),('bass_muted','skin',58,.32,1,3.2),
  ('snare_center','wire',255,.26,1,.5),('snare_ghost','wire',255,.16,1,.9),
  ('rimshot','rim',255,.19,1,.3),('cross_stick','wood',820,.07,1,.4),
  ('snare_drag','drag',255,.23,1,.5),('snare_flam','flam',255,.25,1,.5),
@@ -54,7 +54,13 @@ def raw_legacy(p,v,take):
    hz=f*a*identity.uniform(.995,1.005)
    if hz>=18000:continue
    sustain=life/a**.5;g=np.exp(-a*(.12+.8*(1-touch)))/a**.65*rng.uniform(.93,1.07)
+   # Preserve take 0; later bass/bell contacts excite a different modal balance.
+   if name in ('bass_open','bass_muted','bell') and take>0:
+    position=(.18 if take%2 else -.18)
+    g*=np.exp(position*(a-1))
    if fam in ('skin','wire') and k==0:g*=1.5
+   # Emphasize the large head's low modes without adding an electronic sub.
+   if name in ('bass_open','bass_muted'):g*=2.0 if k<2 else .65
    y+=g*np.sin(2*np.pi*hz*t)*np.exp(-6.9078*t/sustain)
   force=np.hanning(max(4,round(width*.001*(1.5-.65*touch)*R)));force/=force.sum()
   y=signal.lfilter(force,[1],y)
@@ -63,6 +69,11 @@ def raw_legacy(p,v,take):
    if fam!='rim_dry':
     cord=signal.sosfilt(signal.butter(2,[1700,9500],btype='bandpass',fs=R,output='sos'),noise)
     y+=(1.8 if fam=='wire' else .35)*touch**.7*cord*np.minimum(t/.0002,1)*np.exp(-6.9078*t/life)
+    if fam=='wire' and (name.startswith('snare_') or name in ('press_buzz','turnaround')):
+     # A brief head/contact pop, distinct from the measured metal rim modes.
+     pop=signal.sosfilt(signal.butter(2,[700,4200],btype='bandpass',fs=R,output='sos'),noise)
+     y+=5.5*touch**1.2*pop*(1-np.exp(-t/.0003))*np.exp(-t/.006)
+     y+=.85*touch*np.sin(2*np.pi*f*2.136*t)*np.exp(-t/.012)
    if fam!='wire':
     for hz,g in [(1550,.8),(2620,.7),(3880,.5)]:
      y+=g*np.sin(2*np.pi*hz*t)*np.exp(-6.9078*t/.035)
@@ -79,9 +90,12 @@ def raw_legacy(p,v,take):
  return out
 
 def raw(p,v,take):
+ if p[0] in {q[0] for q in SAMBA}:
+  import samba
+  return samba.render(p,v,take)
  if p[1] in ('metal','wood','rim','rim_dry'):
-  import contacts
-  return contacts.render(p,v,take,raw_legacy)
+  import measured
+  return measured.render(p,v,take,raw_legacy)
  return raw_legacy(p,v,take)
 
 def render(p,v,take):return sk.finish(raw(p,v,take))
@@ -114,6 +128,22 @@ def phrase(kit,pads,bpm):
   out[at:at+len(a)]+=gain*a
  out*=.9/max(np.max(np.abs(out)),1e-9);return out,events
 
+def closest_takes(grid):
+ # Same first-half-second, +/-3 ms lag search as native BreakerKitProof.
+ # Checking every velocity rejects soft takes hidden by the earlier hard-only check.
+ best=0.
+ for zone in range(3):
+  for i in range(3):
+   for j in range(i+1,3):
+    a=grid[zone*3+i][:round(.5*sk.RATE)];b=grid[zone*3+j][:len(a)];n=min(len(a),len(b));a=a[:n];b=b[:n]
+    cross=signal.correlate(b,a,mode='full',method='fft')
+    aa=np.r_[0.,np.cumsum(a*a)];bb=np.r_[0.,np.cumsum(b*b)]
+    for d in range(-132,133):
+     lo=max(0,-d);hi=min(n,n-d)
+     den=np.sqrt((aa[hi]-aa[lo])*(bb[hi+d]-bb[lo+d])+1e-30)
+     best=max(best,float(cross[n-1+d]/den))
+ return best
+
 def main():
  ap=argparse.ArgumentParser();ap.add_argument('--output',type=Path,required=True);dest=ap.parse_args().output;dest.mkdir(parents=True,exist_ok=True)
  rows=[];sections=[]
@@ -127,7 +157,7 @@ def main():
      assert x[-1]==0
      sk.write_wav(str(folder/f'{index+1:02}_{p[0]}_v{v}_t{take}.wav'),x);grid.append(x)
    assert np.array_equal(grid[6],render(p,1.,0))
-   corr=float(np.corrcoef(grid[6],grid[7])[0,1]);assert corr<.99995,(p[0],corr)
+   corr=closest_takes(grid);assert corr<.99995,(p[0],corr)
    # Normalized waveform difference rejects gain-only velocity variants.
    a=grid[0]/np.linalg.norm(grid[0]);b=grid[6]/np.linalg.norm(grid[6]);movement=float(np.linalg.norm(a-b));assert movement>.01,(p[0],movement)
    rows.append([kit,p[0],p[4],corr,movement,float(np.max(np.abs(grid[6])))])
@@ -139,7 +169,7 @@ def main():
    for path in sorted(folder.iterdir()):z.write(path,f'{kit}/{path.name}')
   sections.append(f'<section><h2>{kit.replace("-"," ").title()}</h2><p>{bpm} BPM · 16 pads · 3 velocity levels × 3 takes</p><audio controls preload="none" src="{kit}/groove.wav"></audio><p><a href="{kit}-study-wavs.zip">Download study WAVs and recipes</a></p><div class="grid">'+''.join(cards)+'</div></section>')
  with (dest/'metrics.csv').open('w') as f:
-  w=csv.writer(f,lineterminator="\n");w.writerow(['kit','pad','players','hard_take_correlation','normalized_velocity_difference','hard_peak']);w.writerows(rows)
- (dest/'index.html').write_text('''<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Two new parade kits · Listening study</title><style>body{background:#10191c;color:#f3eee2;font:17px system-ui;margin:0 auto;padding:32px;max-width:1200px}h1,h2{color:#f0bd65}a{color:#7ce0d2}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}article{padding:16px;background:#1d2b30;border-radius:12px}audio{max-width:100%;width:100%}section{margin:40px 0}p{line-height:1.5}</style><h1>Second Line & Samba Bateria</h1><p>Second listening round: revised cymbals, rimshots and wooden contacts. Second Line uses a compact snare/bass/cymbal rhythm section. The Rio-style bateria uses distinct surdo roles, caixa and tamborim sections, repinique calls, chocalho and agogô.</p><p>These are new Python sound studies, not the approved Kotlin Field/Street kits. Grooves are authored sketches, not transcriptions of a particular band or samba school. Downloaded WAVs are not MPC program files.</p>'''+''.join(sections)+'</html>')
+  w=csv.writer(f,lineterminator="\n");w.writerow(['kit','pad','players','closest_take_correlation','normalized_velocity_difference','hard_peak']);w.writerows(rows)
+ (dest/'index.html').write_text('''<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Two new parade kits · Listening study</title><style>body{background:#10191c;color:#f3eee2;font:17px system-ui;margin:0 auto;padding:32px;max-width:1200px}h1,h2{color:#f0bd65}a{color:#7ce0d2}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}article{padding:16px;background:#1d2b30;border-radius:12px}audio{max-width:100%;width:100%}section{margin:40px 0}p{line-height:1.5}</style><h1>Second Line & Samba Bateria</h1><p>Transport revision: verified kit packs, with stronger repeat variation on Second Line bass and bell. Second Line uses a compact snare/bass/cymbal rhythm section. The Rio-style bateria uses distinct surdo roles, caixa and tamborim sections, repinique calls, chocalho and agogô.</p><p>These are new Python sound studies, not the approved Kotlin Field/Street kits. Grooves are authored sketches, not transcriptions of a particular band or samba school. Downloaded WAVs are not MPC program files.</p>'''+''.join(sections)+'</html>')
  print(json.dumps({'pads':len(rows),'grid_renders':len(rows)*9,'max_take_correlation':max(r[3] for r in rows),'min_velocity_difference':min(r[4] for r in rows)}))
 if __name__=='__main__':main()

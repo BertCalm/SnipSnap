@@ -589,7 +589,7 @@ class DeterminismTest {
 
     @Test
     fun `CIRCUIT ROOT call and listening presets regenerate finite and held audio exactly`() {
-        for (name in listOf("FIRE CIRCLE", "EMBER PULSE")) {
+        for (name in listOf("FIRE CIRCLE", "WARM PULSE")) {
             val patch = CircuitPresets.forVoice(CircuitVoice.ROOT).single { it.name == name }
             val recipe = PadRecipe.fromJsonText(PadRecipe(patch).toJsonText())
             assertContentEquals(patch.render().samples, recipe.render().samples,
@@ -1100,5 +1100,13 @@ class DeterminismTest {
         assertContentEquals(p.render().samples,SporeKick.Recipe.fromJsonText(p.toJsonText()).render().samples)
         val r=SporeSyntheticKits.Recipe(SporeSyntheticKits.Genre.JUNGLE,7,.65,2)
         assertContentEquals(r.render().samples,SporeSyntheticKits.Recipe.fromJsonText(r.toJsonText()).render().samples)
+    }
+
+    @Test
+    fun `SPLINTER saved recipes are deterministic for a hit, an edit and a gesture`() {
+        for (pad in listOf(2, 12, 16)) {
+            val r = Splinter.Recipe(pad, .65, 2)
+            assertContentEquals(r.render().samples, Splinter.Recipe.fromJsonText(r.toJsonText()).render().samples, "pad $pad")
+        }
     }
 }
