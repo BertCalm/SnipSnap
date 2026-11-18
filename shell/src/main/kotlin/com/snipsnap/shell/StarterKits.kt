@@ -1030,6 +1030,7 @@ object StarterKits {
             "Bass walk, six new source voices and the approved A/B routes. Three touch levels, two takes per pad.",
             seeded = false, key = KeySpec.parse("Cminpent"),
         ) { SynthKits.bristle() },
+        Starter("samba-bateria", "SAMBA BATERIA", "Rio-style bateria: three surdo roles, caixa and tamborim sections, repinique calls, chocalho and agogo. Three touch levels and three takes.", seeded = false, tempoBpm = 140f) { com.snipsnap.synth.SambaKits.build() },
         Starter("drumline-field", "DRUMLINE FIELD CADENCE", "Tight marching battery: independent snares and tenors, five bass sizes and ringing cymbals. Three touch levels and three takes.", seeded = false, tempoBpm = 120f) { com.snipsnap.synth.DrumlineKits.build(com.snipsnap.synth.DrumlineKits.Kit.FIELD) },
         Starter("drumline-street", "DRUMLINE STREET CADENCE", "Open street battery: lower heads, smaller sections, softer mallets, split bass and an accelerating snare. Three touch levels and three takes.", seeded = false, tempoBpm = 100f) { com.snipsnap.synth.DrumlineKits.build(com.snipsnap.synth.DrumlineKits.Kit.STREET) },
         Starter(
