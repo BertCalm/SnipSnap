@@ -255,6 +255,59 @@ class SongPlanStoreTest {
     }
 
     @Test
+    fun `a section's mutes survive a save, a copy and a move, and a toggle puts them back`() {
+        assertTrue(plan().sections.all { it.mutes.isEmpty() })
+        val kick = PlanSection.padLane(1)
+        val p = plan().withMute(1, kick, true)!!.withMute(1, PlanSection.BED_LANE, true)!!.withMute(2, PlanSection.padLane(3), true)!!
+        SongPlanStore.save(dir, "Kitchen", p)
+        val back = SongPlanStore.load(dir, "Kitchen")!!
+        assertEquals(p, back)
+        assertEquals(listOf(emptySet(), setOf(kick, PlanSection.BED_LANE), setOf(PlanSection.padLane(3)), emptySet()), back.sections.map { it.mutes })
+        assertEquals(setOf(kick, PlanSection.BED_LANE), back.duplicated(1)!!.sections[2].mutes, "a copy keeps the mutes")
+        assertEquals(setOf(kick, PlanSection.BED_LANE), back.moved(1, 1)!!.sections[2].mutes, "a move keeps them")
+        assertEquals(emptySet(), back.withMute(1, kick, false)!!.withMute(1, PlanSection.BED_LANE, false)!!.sections[1].mutes)
+        assertEquals(back.sections[1].mutes, back.withMute(1, kick, true)!!.sections[1].mutes, "muting a muted lane is one mute")
+        assertNull(plan().withMute(99, kick, true))
+    }
+
+    @Test
+    fun `a song kept before mutes existed loads with none`() {
+        File(dir, SongPlanStore.FILE_NAME).writeText(
+            """{"version":1,"plans":{"Kitchen":{"seed":0,"sections":[""" +
+                """{"name":"theme","clip":"captured","bass":true,"pullUp":false,"drop":true},{"name":"the turn","clip":"fill"}]}}}""",
+        )
+        val p = SongPlanStore.load(dir, "Kitchen")!!
+        assertEquals(listOf(emptySet(), emptySet()), p.sections.map { it.mutes })
+        assertTrue(p.sections[0].drop && p.sections[0].bass, "the fields it had are as they were")
+        // A mutes field that is not a list of names is read as none, not as a refusal of the whole song.
+        File(dir, SongPlanStore.FILE_NAME).writeText(
+            """{"version":1,"plans":{"Kitchen":{"seed":0,"sections":[{"name":"theme","clip":"captured","mutes":["pad:2",7,"",null]},{"name":"b","clip":"fill","mutes":"pad:1"}]}}}""",
+        )
+        assertEquals(listOf(setOf("pad:2"), emptySet()), SongPlanStore.load(dir, "Kitchen")!!.sections.map { it.mutes })
+    }
+
+    @Test
+    fun `a song with no mutes writes the file it always wrote`() {
+        val p = SongPlan(7, listOf(PlanSection("theme", ClipRef.CAPTURED, repeats = 2, bass = true, pullUp = false), PlanSection("the turn", "fill", pullUp = true, drop = true)))
+        SongPlanStore.save(dir, "Kitchen", p)
+        val written = File(dir, SongPlanStore.FILE_NAME).readText()
+        fun squeezed(text: String) = text.filterNot { it.isWhitespace() }
+        assertEquals(
+            """{"version":1,"plans":{"Kitchen":{"seed":7,"sections":[""" +
+                """{"name":"theme","clip":"captured","repeats":2,"locked":false,"seed":0,"bass":true,"pullUp":false,"drop":false},""" +
+                """{"name":"theturn","clip":"fill","repeats":1,"locked":false,"seed":0,"bass":false,"pullUp":true,"drop":true}]}}}""",
+            squeezed(written),
+        )
+        assertTrue("mutes" !in written)
+        // Muting and un-muting again is the same bytes.
+        SongPlanStore.save(dir, "Kitchen", p.withMute(0, PlanSection.padLane(1), true)!!.withMute(0, PlanSection.padLane(1), false)!!)
+        assertEquals(written, File(dir, SongPlanStore.FILE_NAME).readText())
+        // With one, the field is there, sorted.
+        SongPlanStore.save(dir, "Kitchen", p.withMute(0, PlanSection.padLane(3), true)!!.withMute(0, PlanSection.BED_LANE, true)!!)
+        assertTrue(squeezed(File(dir, SongPlanStore.FILE_NAME).readText()).contains(""""mutes":["bed","pad:3"]"""))
+    }
+
+    @Test
     fun `yours references round-trip their number`() {
         assertEquals(2, ClipRef.yoursId(ClipRef.yours(2)))
         assertNull(ClipRef.yoursId("captured"))

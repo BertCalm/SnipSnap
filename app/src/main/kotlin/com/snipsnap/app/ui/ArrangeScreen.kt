@@ -48,6 +48,7 @@ import com.snipsnap.app.theme.sunkenField
 import com.snipsnap.app.theme.tape
 import com.snipsnap.kit.GrooveFeel
 import com.snipsnap.kit.Names
+import com.snipsnap.kit.PlanSection
 import com.snipsnap.kit.SongPlan
 import com.snipsnap.shell.Arranger
 import com.snipsnap.shell.Copy
@@ -485,6 +486,7 @@ private fun SongEditor(keeper: SongKeeper, section: Arranger.Section?, index: In
             ActionButton(if (pullUp) Copy.SONG_PULL_UP_ON else Copy.SONG_PULL_UP_OFF, scheme, enabled = !busy && section != null && index > 0, lit = pullUp, modifier = Modifier.weight(1f)) { keeper.togglePullUp() }
             SongDropButton(section?.drop == true, enabled = !busy && section != null, keeper = keeper, scheme = scheme)
         }
+        if (section != null) SongMutesRow(keeper, section, enabled = !busy)
         if (picking && section != null && !busy) {
             ClipPicker(keeper.picks, current = section.ref, names = keeper.names) { ref ->
                 picking = false
@@ -508,6 +510,36 @@ private fun SongEditor(keeper: SongKeeper, section: Arranger.Section?, index: In
 @Composable
 private fun RowScope.SongDropButton(on: Boolean, enabled: Boolean, keeper: SongKeeper, scheme: Scheme) {
     ActionButton(if (on) Copy.SONG_DROP_ON else Copy.SONG_DROP_OFF, scheme, enabled = enabled, lit = on, modifier = Modifier.weight(1f)) { keeper.toggleDrop() }
+}
+
+/**
+ * MUTES: one chip for each lane the selected section plays (its pads, then BED when the section has BASS on), in a row that scrolls.
+ * A muted chip is lit and says MUTED, like the clip picker's NOW: a rim and a word, not colour alone. Its own composable so SongEditor
+ * does not grow past the dex register limit.
+ */
+@Composable
+private fun SongMutesRow(keeper: SongKeeper, section: Arranger.Section, enabled: Boolean) {
+    val scheme = LocalScheme.current
+    val lanes = remember(section.clip, section.bass, keeper.kit) {
+        Arranger.lanes(section.clip).map { slot ->
+            PlanSection.padLane(slot) to Copy.songMuteLane(keeper.kit.pad(slot)?.displayName.orEmpty(), slot)
+        } + if (section.bass) listOf(PlanSection.BED_LANE to Copy.SONG_MUTE_BED) else emptyList()
+    }
+    // A muted lane the section no longer plays (a swapped clip, BASS turned off) keeps its key but has no chip: nothing to un-mute, nothing heard.
+    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        TapeText(Copy.SONG_MUTES, TapeType.pixelSmall, scheme.ink2.tape, Modifier.align(Alignment.CenterVertically))
+        for ((key, name) in lanes) {
+            val muted = key in section.mutes
+            ActionButton(
+                if (muted) "$name · ${Copy.SONG_MUTED}" else name,
+                scheme,
+                enabled = enabled,
+                lit = muted,
+                accessibilityLabel = if (muted) Copy.songMuteOn(name) else Copy.songMuteOff(name),
+                modifier = Modifier.widthIn(min = 72.dp),
+            ) { keeper.toggleMute(key) }
+        }
+    }
 }
 
 /** Every clip the kit can play, as chips in a row that scrolls. The one in use is lit and says NOW. */
@@ -567,6 +599,7 @@ private fun SectionRow(
                     (if (section.bass) ", ${Copy.SONG_ROW_BASS}" else "") +
                     (if (section.pullUp && index > 0) ", ${Copy.SONG_ROW_PULL_UP}" else "") +
                     (if (section.drop) ", ${Copy.SONG_ROW_DROP}" else "") +
+                    (if (section.mutes.isNotEmpty()) ", ${Copy.songRowMutes(section.mutes.size)}" else "") +
                     (if (next) ", ${Copy.SONG_ROW_NEXT}" else ""),
             ) { onTap() }
             .padding(horizontal = 10.dp, vertical = 8.dp),
@@ -588,6 +621,7 @@ private fun SectionRow(
                         Copy.SONG_ROW_BASS.takeIf { section.bass },
                         Copy.SONG_ROW_PULL_UP.takeIf { section.pullUp && index > 0 },
                         Copy.SONG_ROW_DROP.takeIf { section.drop },
+                        Copy.songRowMutes(section.mutes.size).takeIf { section.mutes.isNotEmpty() },
                     ).joinToString(" · "),
                     TapeType.pixelSmall,
                     scheme.ink2.tape,
