@@ -58,7 +58,7 @@ object RiddimKitGenerator {
                     // middle of its own MIDI range, as RiddimKitTest plays it. The render forces (0.35, 0.65, 1.0)
                     // are not the playback velocities: the sampler splits 0..127 into equal zones, and 0.35 x 127 = 44
                     // lands in the middle zone, so a strip struck at the render forces plays mid, mid, hard.
-                    val zones = requireNotNull(pad.chain).zones
+                    val zones = requireNotNull(pad.chain?.zones) { "${pad.displayName}: no velocity zones" }
                     val clips = zones.flatMap { z ->
                         val v = (z.velStart + z.velEnd) / 2f / 127f
                         List(RiddimKits.TAKES) { t -> play(pad.slot, v, t) }
