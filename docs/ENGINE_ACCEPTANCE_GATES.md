@@ -1136,3 +1136,16 @@ Version 2 preserves its nine exact strikes on Roadhouse pad 2, with three veloci
 layers and three natural alternate strikes. Other kit pads retain original PCM.
 The revised snare is frozen synthesis, not a newly registered editable engine.
 Phone and MPC hardware acceptance remains open for this revision. See `SOUL_ROCK.md`.
+
+## LOOSE CRATE kits (round 1 built, 2026-11-18, not heard)
+
+Four drum kits after the owner's beat-tape reference loops, in the CYPHER shape: HUMMIN, CLOTH, HAZE, RITUAL. See [LOOSE CRATE](LOOSE_CRATE.md). The owner heard round 0's two hum kicks ("Both sound great") and asked to continue. Evidence: `LooseCrateKitsTest`, `LooseCrateKitTest`, `:shell:generateLooseCrateKits`.
+
+| Gate | Status | Evidence |
+|---|---|---|
+| Melodic, keygroups, chord tools, STRUM | Not applicable | Drum kits |
+| Drums: multiple distinct genre kits on the shelf | Built, not heard | Four kits under SKINS; every pair differs in at least six pads and in a kick and main snare dry, and each kit has its own print |
+| Percussion: roll/riser | Built, not heard | An accelerating roll on A15 of every kit |
+| Velocity and round robin: rendering | Pass in software | Soft zones are different strikes and never brighter; four different strikes per zone |
+| Velocity and round robin: saving, playback, export | Pass in software | Save, reload, pad resolver, MPC 3, SFZ and DecentSampler for all 64 pads; MPC 2 not written (format limit). No phone or MPC playback yet |
+
