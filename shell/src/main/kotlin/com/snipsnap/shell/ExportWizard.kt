@@ -117,7 +117,8 @@ class ExportWizardModel(
 
     /**
      * What the picked format cannot hold of this kit, or null: today only MPC 2's `.xpm` and a
-     * velocity × round-robin grid ([Mpc2Limits]). Shown under the format, before anything is written.
+     * velocity × round-robin grid or a single-zone chain of takes ([Mpc2Limits]). Shown under the
+     * format, before anything is written.
      */
     val formatNote: Finding? get() = Mpc2Limits.note(format, kit)
 

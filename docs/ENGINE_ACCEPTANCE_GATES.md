@@ -1163,7 +1163,7 @@ percussion on the same grids. See [RIDDIM](RIDDIM.md).
   Kotlin kits and confirmed they match the approved kits ("Yes, they match", 2026-11-18).
 - **Overall: incomplete.** Open: phone and MPC playback.
 
-## LOOSE CRATE kits (round 1 built, 2026-11-18, not heard)
+## LOOSE CRATE kits (round 3 built, 2026-11-18; rounds 1 and 2 heard)
 
 Four drum kits after the owner's beat-tape reference loops, in the CYPHER shape: HUMMIN, CLOTH, HAZE, RITUAL. See [LOOSE CRATE](LOOSE_CRATE.md). The owner heard round 0's two hum kicks ("Both sound great") and asked to continue. Evidence: `LooseCrateKitsTest`, `LooseCrateKitTest`, `:shell:generateLooseCrateKits`.
 

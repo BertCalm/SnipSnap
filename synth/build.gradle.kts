@@ -4014,3 +4014,13 @@ tasks.named<org.gradle.language.jvm.tasks.ProcessResources>("processResources") 
         from(rootProject.file("prototype/drumline_parade/$name")) { into("parade") }
     }
 }
+
+tasks.register<JavaExec>("generateLooseCrateRound2a") {
+    group = "distribution"
+    description = "Render LOOSE CRATE round 2a: HUMMIN's groove as shipped, in one room, and as an acoustic kit in one room."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.LooseCrateRound2Generator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "1g"
+    args(listOfNotNull(providers.gradleProperty("looseCrateRound2aOutput").orNull ?: "${rootDir}/testkit/loose-crate-round2a", providers.gradleProperty("looseCrateRound2aMode").orNull))
+}

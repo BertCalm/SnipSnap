@@ -55,13 +55,16 @@ object Tempest {
         defaults(voice).mapValues { (name, _) -> if (name == "HOLD") 0f else random.nextFloat() }
 
     /** Continuous harmonic-to-inharmonic color; no discrete algorithm boundaries.
-     * Fixed convex weights keep the root present while PM depth and noise develop over the dial. */
-    internal class Source(private val source: Float, seed: Int) {
+     * Fixed convex weights keep the root present while PM depth and noise develop over the dial.
+     * [metalPhase] is a round-robin take's start offset for the two inharmonic partials; null
+     * (every accepted render) keeps them locked to the master phase. */
+    internal class Source(private val source: Float, seed: Int, private val metalPhase: DoubleArray? = null) {
         private val noise = Dsp.Noise(seed)
         fun step(phase: Double, indexPm: Double): Float {
             val s = source.toDouble()
             val harmonics = .58 * sin(2 * phase) + .42 * sin(3 * phase)
-            val metal = .58 * sin(sqrt(2.0) * phase) + .42 * sin(E * phase)
+            val metal = if (metalPhase == null) .58 * sin(sqrt(2.0) * phase) + .42 * sin(E * phase)
+                else .58 * sin(sqrt(2.0) * phase + metalPhase[0]) + .42 * sin(E * phase + metalPhase[1])
             val pm = sin(phase + (.1 + 2.4 * s) * (.65 + .35 * indexPm / 3.0) * sin(2 * phase))
             val tone = .42 * sin(phase) + .38 * ((1-s)*harmonics + s*metal) + .20*pm
             val grit = .12*s
@@ -97,14 +100,48 @@ object Tempest {
         return ((1-wet)*input+wet*folded).toFloat()
     }
 
-    /** Rate-independent reference path also supports higher-rate alias comparisons. */
-    internal fun synthesize(voice: TempestVoice, macros: Map<String, Float>, rate: Int): FloatArray {
+    /**
+     * What a round-robin take ([TempestRoundRobinKits]) re-rolls: only what an analog drum machine
+     * leaves to chance from one stroke to the next. Take 0 never reaches this; it is the accepted
+     * render, seed for seed. A later take draws a fresh noise seed for every voice. Beyond that,
+     * METAL's two inharmonic partials start at a small offset from the harmonic ones (free-running
+     * oscillators in a cowbell or cymbal circuit), HAT's six cluster partials start at small random
+     * phases, and CLAP's later bursts and release land a little early or late. Pitch, envelopes,
+     * filters, drive, the memory and the output stage are untouched, and KICK, SNARE and TOM change
+     * only their noise, so a tuned body strikes the same way every time.
+     */
+    internal object Takes {
+        /** Largest start offset of METAL's inharmonic partials, radians (about 14 degrees). */
+        const val METAL_PHASE = .25
+        /** Largest start phase of each HAT cluster partial, radians (45 degrees). */
+        const val HAT_PHASE = PI / 4
+        /** Largest shift of CLAP's second and third bursts and its release, as a fraction of the burst spacing (at most 1.2 ms, at SOURCE 1). */
+        const val CLAP_JITTER = .04
+
+        fun seed(model: Int, voice: TempestVoice, midi: Int, take: Int, part: String): Int {
+            require(take > 0) { "take 0 keeps the accepted seeds" }
+            return Dsp.seedFor("TEMPEST", model, voice.name, midi, "take", take, part)
+        }
+
+        /** [count] values, each uniform in -[width]..[width]. */
+        fun spread(count: Int, seed: Int, width: Double): DoubleArray {
+            val random = Random(seed)
+            return DoubleArray(count) { width * (2 * random.nextDouble() - 1) }
+        }
+    }
+
+    /** Rate-independent reference path also supports higher-rate alias comparisons. [take] 0 is the accepted render. */
+    internal fun synthesize(voice: TempestVoice, macros: Map<String, Float>, rate: Int, take: Int = 0): FloatArray {
         require(rate >= Dsp.RATE && rate % Dsp.RATE == 0)
-        if (voice in EXPANSION_VOICES) return TempestPercussion.synthesize(voice, macros, rate)
+        require(take >= 0) { "TEMPEST take must not be negative" }
+        if (voice in EXPANSION_VOICES) return TempestPercussion.synthesize(voice, macros, rate, take = take)
         val m = settled(voice, macros)
         val root = frequencyFor(m.getValue("TUNE")).toDouble()
         // HOLD and unknown keys cannot change finite audio, including its noise seed.
-        val source = Source(m.getValue("SOURCE"), Dsp.seedFor("TEMPEST", 2, voice.name, midiFor(m.getValue("TUNE"))))
+        val midi = midiFor(m.getValue("TUNE"))
+        val source = if (take == 0) Source(m.getValue("SOURCE"), Dsp.seedFor("TEMPEST", 2, voice.name, midi))
+            else Source(m.getValue("SOURCE"), Takes.seed(2, voice, midi, take, "noise"),
+                if (voice == TempestVoice.METAL) Takes.spread(2, Takes.seed(2, voice, midi, take, "phase"), Takes.METAL_PHASE) else null)
         val memory = Memory(voice, m.getValue("SPACE"), rate)
         val svf = Dsp.TptSvf(rate)
         val dc = Dsp.FixedOnePole(10f, rate)
@@ -156,9 +193,11 @@ object Tempest {
         return out
     }
 
-    fun render(voice: TempestVoice, macros: Map<String, Float> = emptyMap(), model: Int = defaultModelFor(voice)): Snip {
+    /** One finished hit. [take] 0 is the accepted render; a later take is a round-robin re-strike ([Takes]). Model 1 has no takes. */
+    fun render(voice: TempestVoice, macros: Map<String, Float> = emptyMap(), model: Int = defaultModelFor(voice), take: Int = 0): Snip {
         require(supports(voice, model)) { "unsupported TEMPEST $voice model $model" }
+        require(take >= 0 && (take == 0 || model > 1)) { "TEMPEST takes need model 2 or 3 and must not be negative" }
         if (model == 1) return TempestLegacy.render(voice, macros)
-        return Snip(finish(synthesize(voice, macros, Dsp.RATE * Dsp.OVERSAMPLE)), 1, Dsp.RATE)
+        return Snip(finish(synthesize(voice, macros, Dsp.RATE * Dsp.OVERSAMPLE, take)), 1, Dsp.RATE)
     }
 }

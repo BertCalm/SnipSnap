@@ -9,11 +9,11 @@ behind → a dark, rumbling bed with the top cut off**.
 
 ## Status
 
-**Round 1 built, not yet heard.** The four kits are on FRESH TAPE's SKINS shelf (`LooseCrateKits`,
-`StarterKits`), with their velocity and round-robin grids proven in software through save, reload, playback
-and MPC 3, SFZ and DecentSampler export. Of their sounds, the owner has heard only round 0's two hum kicks
-("Both sound great", 2026-11-18); the owner then said "Continue" without answering round 0's other questions,
-so round 0's other sounds stand as provisionally accepted. Nothing has been played on a phone or an MPC.
+**Round 3 built, not yet heard.** The four kits are on FRESH TAPE's SKINS shelf (`LooseCrateKits` version 3,
+`StarterKits`), with their velocity and round-robin grids proven in software through save, reload, playback and MPC 3,
+SFZ and DecentSampler export. The owner heard round 1 ("Sounds pretty good", then "It's a bit drum machine like"),
+chose round 2a's treatment A, and heard round 2 as "Better. Crate cloth could use a bit of warmth or compression in
+the bass" (2026-11-18). Round 3 changes CLOTH's print only. Nothing has been played on a phone or an MPC.
 
 Listening pages (private to the owner's account): [round 1](https://claude.ai/artifact/WgYApFNJqJTjEiv6XGgnn6),
 the four kits read back from their MPC 3 export; [round 0](https://claude.ai/artifact/DaKKJX6p18cMbitmFKDVQn),
@@ -182,12 +182,110 @@ Disclosed, not fixed:
 - A printed one-shot carries its print's VINYL bed to the end of its render buffer, and pads' beds add when
   they overlap; CLOTH's hits carry none.
 
+## Round 2a: less drum machine (HUMMIN's groove only, not yet heard)
+
+"It's a bit drum machine like" (the owner, 2026-11-18). Measured on the two 88 BPM references against round 1's
+HUMMIN groove (Python probes; the onset detector behind the kick spread is rough):
+
+| Measure | References | Round 1 | A: the room | B: the acoustic kit |
+|---|---|---|---|---|
+| Quietest tenth of 10 ms frames, under the loudest | 18 to 23 dB | 45 dB | 27 dB | 19 dB |
+| Cymbal band (6 to 14 kHz) at its quietest | 26 to 29 dB down | 49 | 31 | 24 |
+| 95 percent of the energy below | 221 to 334 Hz | 161 Hz | 307 Hz | 624 Hz |
+| Loud against soft kicks | 9 to 11 dB | 1.6 dB | 4.5 dB | 5.5 dB |
+
+Round 1 summed isolated dry hits into silence, every kick at about one strength. A sampled break is one kit in one
+room on shared microphones: the room rings, the wires buzz when the kick lands, the cymbals wash, a compressor
+breathes with the whole kit, and the drummer's kicks differ.
+
+`LooseCrateRound2Generator` (`:synth:generateLooseCrateRound2a`) renders the same notes and feel two ways:
+- **A, the room:** round 1's own sounds; the kick weights curved (w^3) for a drummer's dynamics; SKIN snare wires
+  under every kick; a soft dark ride on the quarters; the open hat ringing unchoked; hats at 0.7 of round 1; then
+  ROOM (SIZE .22, WALLS .55, DISTANCE .60), COMPRESSOR (AMOUNT .45, ATTACK .80, RECOVER .45) and a -5 dB high shelf
+  at 1.2 kHz (the references are mixed dark), then round 1's crate print.
+- **B, the acoustic kit:** A with EMBER's snare (the same flam, at 0.75), hats and ride; the hum kick stays.
+
+What moved while tuning, measured: a first pass put the kit through the room with round 1's levels and measured 5
+to 8 dB too much above 1 kHz against the references and the kicks squeezed to 3 dB of spread; the ride, the wires
+and the hats came down, the compressor eased and slowed, and the shelf went on. B keeps 6 dB more snare body
+between 200 Hz and 1 kHz than the references.
+
+[Round 2a listening page](https://claude.ai/artifact/7AJ7r6HtckC5H31c8qmR1f) (private to the owner). The owner
+chose **A** (2026-11-18). The other two round-2a questions (how much room; room on single pads) went unanswered:
+round 2 sized each kit's room to its own references and left the single hits dry, since pads sequenced on a
+sampler would stack their rooms.
+
+## Round 2 (as built)
+
+`LooseCrateKits` version 2. Every groove (A16) and roll (A15) is played as one kit in one room
+(`LooseCrateKits.Room`, `roomOf`, `played`); the fourteen single hits are unchanged. A groove's notes are played with
+a drummer's kick dynamics (weight w becomes w^kickCurve), SKIN snare wires under every kick, hats at a room level
+(the open hat ringing on each bar's last eighth where set), and a soft ride where set; then the whole kit goes through
+ROOM, COMPRESSOR and a high shelf at 1.2 kHz before the kit's print. RITUAL's one drop also gained varying kicks
+(1, 0.80, 0.95, 0.75 by bar) and a soft pickup into bars two and four.
+
+| Kit | Room (SIZE, WALLS, DISTANCE) | Compressor (AMOUNT) | Shelf | Ride | Hats |
+|---|---|---|---|---|---|
+| HUMMIN | .22, .55, .60 (round 2a's A exactly) | .45 | -5 dB | Dark Ride .10 / .06 | x0.7, open hat rings |
+| CLOTH | .10, .35, .40 | .30 | -2 dB | none | x0.85 |
+| HAZE | .30, .55, .60 | .30 | -5 dB | none (its crash washes) | x0.6, open hat rings |
+| RITUAL | .28, .50, .55 | .40 | -4 dB | none | x0.8 |
+
+Measured on the exported grooves (Python probes; references in brackets):
+
+| Kit | Quietest tenth under the loudest | Cymbal band at its quietest | Loop-point step (largest before it) |
+|---|---|---|---|
+| HUMMIN | 27.0 dB (18 to 23) | 31.1 dB (26 to 29) | 0.0044 (0.052) |
+| CLOTH | 49.3 dB (45) | 55.2 dB (62) | 0.0001 (0.0018) |
+| HAZE | 29.0 dB (22 to 31) | 22.8 dB (19 to 38) | 0.0009 (0.032) |
+| RITUAL | 41.6 dB (35 to 44) | 41.5 dB (41 to 59) | 0.0045 (0.015) |
+
+What moved while tuning, measured:
+- HAZE with a ride on top of its crash measured its quietest frames 12 dB under the loudest (the references 22 to
+  31): the ride went, the hats came down to 0.6 and the compressor eased (29 dB).
+- CLOTH's mic distance moved its quietest frames under 1 dB from 57. The cloth reference's floor is the record's low
+  rumble (its top sits 62 dB down), so CLOTH's groove print carries more rumble and less hiss (49 dB, top 55).
+- RITUAL's one drop put every kick at 1: the new kick test measured 2.3 dB of spread. Its kicks now vary.
+
+Tests: `every groove keeps sounding between hits as its references do` (a band around each kit's references; taking
+HUMMIN's room away alone fails it at 41.8 dB) and `every groove's kicks land at least 8 dB apart from softest to
+hardest`. Round 2a's generator now renders A from the kit itself: its five files match the heard ones to within one
+24-bit step (A's before-print copy is levelled differently, 0.0009).
+
+Disclosed, not fixed: a kit now builds in 45 to 107 seconds on this machine (round 1: 31 to 85), since every
+groove and roll goes through a room. Not measured on a phone.
+
+[Round 2 listening page](https://claude.ai/artifact/V66JmBdrMha3TvJLuLhdwh) (private to the owner).
+
+## Round 3: CLOTH's bass (as built, not yet heard)
+
+"Better. Crate cloth could use a bit of warmth or compression in the bass" (the owner, 2026-11-18). Measured against
+the cloth reference (Python probes): round 2's CLOTH groove had a spikier bass, its crest (peak against RMS under
+200 Hz) 21.4 dB against the reference's 17.9, and its kicks were nearly sine, the Drop Kick 40.6 dB down between 200
+and 500 Hz and 62 dB down above 500 Hz.
+
+CLOTH's print (`LooseCrateKits.CLOSE`, kit version 3) gains two stages after the converter, so every CLOTH pad,
+groove and roll carries them:
+- **Warmth:** VALVE with its speaker off (DRIVE .50, SAG .15, TONE .40, CAB 0): the harmonics a sine-like kick lacks.
+  At DRIVE .25 the kick's 200 to 500 Hz moved under 1 dB; at .50 the Drop Kick's rose 6.6 dB (-34.0).
+- **Compression in the bass:** `squeezeBass`, COMPRESSOR (AMOUNT .80, ATTACK .35, RECOVER .55) on the band under
+  180 Hz alone, split by two one-poles so the rest passes untouched.
+
+Measured in Kotlin on the groove through each print (`CLOTH's print presses its bass into body and leaves the rest
+alone`): bass crest 21.1 dB through round 2's print, 19.2 with the tube, 17.9 with the tube and the squeeze, the
+reference's 17.9. The test holds both: the full print at least 2 dB under round 2's, and the squeeze below the tube
+alone.
+
+Disclosed, not asked for: the groove's 0.5 to 2 kHz still sits near -22 dB against the reference's -12.4. That band
+is the reference snare's crack and beater knock, not the bass; CLOTH's bounce snare is a deep body and wires with
+little between. Left for the owner to call.
+
 ## Gates
 
 | Gate | Status |
 |---|---|
 | Melodic, keygroups, chord tools, STRUM | Not applicable: drum kits |
-| Drums: multiple distinct genre kits on the shelf | Built, not heard: four kits under SKINS. `LooseCrateKitsTest` holds every pair to at least six different pad names and a different kick and main snare, dry (shape distance over 0.5), and the four prints differ |
+| Drums: multiple distinct genre kits on the shelf | Round 1 heard ("pretty good", "a bit drum machine like"); round 2 built, not heard: four kits under SKINS. `LooseCrateKitsTest` holds every pair to at least six different pad names and a different kick and main snare, dry (shape distance over 0.5), and the four prints differ |
 | Percussion: roll/riser | Built, not heard: one accelerating roll per kit (A15) |
 | Velocity and round robin: rendering | Pass in software: every soft zone is a different strike from the hard one and never brighter; every zone holds four different strikes (`LooseCrateKitsTest`) |
 | Velocity and round robin: saving, playback, export | Pass in software: `LooseCrateKitTest` and `:shell:generateLooseCrateKits` (all four kits, 192 slices each: saved PCM, reload, the pad resolver walking the takes, MPC 3 track, SFZ, DecentSampler). MPC 2 is not written (the owner's format limit). Not played on a phone or an MPC |
@@ -199,4 +297,6 @@ Disclosed, not fixed:
 - **Measured**: every number in the round-0 tables, Python probes on the Kotlin renders and on the reference
   files.
 - **Proposed**: every setting outside round 0's candidates, the four prints, the rolls and grooves.
-- **Heard**: round 0's two hum kicks ("Both sound great", 2026-11-18). Nothing else.
+- **Heard**: round 0's two hum kicks ("Both sound great"); round 1's kits ("Sounds pretty good", "It's a bit drum
+  machine like"); round 2a, choosing A; round 2 ("Better. Crate cloth could use a bit of warmth or compression in the
+  bass") (all 2026-11-18). Round 3's CLOTH is not heard.
