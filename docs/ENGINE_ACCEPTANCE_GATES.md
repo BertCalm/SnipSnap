@@ -928,7 +928,7 @@ kit, after the owner heard all five kits and the new voices and said "All sound 
 - **Overall: incomplete.** The sound is approved and the five kits are on the shelf, proved through saving,
   playback and MPC 3 export in software (rounds 2 and 3L). Open: presets and the picker, and phone and MPC hardware.
 
-## KINDRED (rounds 0 to 2 heard in Python, round 2 accepted 2026-11-15; K1 port merged; K2 kits on the shelf 2026-11-16, not heard)
+## KINDRED (complete 2026-11-18: four kits on the shelf, on the picker, factory bank filed, kits and hardware approved)
 
 A one-voice, eight-step analog-style percussion synth and four genre kits from it. See [KINDRED](KINDRED.md).
 
@@ -941,11 +941,11 @@ A one-voice, eight-step analog-style percussion synth and four genre kits from i
 | Velocity: rendering | Pass in Kotlin, not heard | Every recipe's soft and hard hits differ by at least 1.96 dB of level-matched shape (`KindredTest`). |
 | Round robin: rendering | Pass in Kotlin, not heard | Four takes per recipe, none a copy, each deterministic; `Restrike` deals them. |
 | Velocity and round robin: saving | Pass in software | Each kit reloads equal and every saved slice matches its render; patches round-trip with velocity, take, recipe and model (`KindredKitTest`, `:shell:generateKindredKits`, `DeterminismTest`). |
-| Velocity and round robin: playback and export | Pass in software; MPC 2 not applicable ([format limit](#mpc-2-and-round-robin-owner-decision-2026-11-14)) | `PadHit.resolve` picks the zone by velocity and walks four takes in order, then repeats; the MPC 3 export reads back: 768 slices. A soft zone is at least 1.74 dB apart in shape; the closest takes are 12.4 dB apart (a copy is over 40). No phone or MPC has played them. |
-| Hardware playback | Not verified | |
-| Sound character | Python round 2 accepted | "It's better. I think it was something with my headphones. Let's proceed with ring 2 sounds", corrected by the owner to "Round" (2026-11-15). The Kotlin port matches the noise-free recipes to 0.01 dB; the noise recipes are another realisation and wait for the ear. |
+| Velocity and round robin: playback and export | Pass in software; MPC 2 not applicable ([format limit](#mpc-2-and-round-robin-owner-decision-2026-11-14)) | `PadHit.resolve` picks the zone by velocity and walks four takes in order, then repeats; the MPC 3 export reads back: 768 slices. A soft zone is at least 1.74 dB apart in shape; the closest takes are 12.4 dB apart (a copy is over 40). The owner approved phone and MPC playback on 2026-11-18. |
+| Hardware playback | Pass, owner-reported | Asked to check the kits on phone and MPC alongside the listen, the owner answered "Approved, approved" (2026-11-18), read as the kits and the hardware. This is the owner's report, not a capture. |
+| Sound character | Approved | Python round 2 accepted 2026-11-15; the Kotlin kits approved by the owner on 2026-11-18 ("Approved, approved") from the K2 page, where each groove measures within 1 dB of the accepted Python groove in every band. Preserve `Kindred.MODEL_VERSION` 2 and `KindredKits.VERSION` 1 as the accepted baseline. |
 
-- **Overall: in progress.** The software gates pass at K2, and KINDRED is on SYNTH's picker at K3 (2026-11-17) with its 56 kit pads as provisional presets. Open: the owner's listen to the Kotlin kits (each groove measures within 1 dB of the accepted round-2 groove in every band), the presets into the factory roster after it, hardware.
+- **Overall: complete (2026-11-18).** Four kits on the shelf, KINDRED on the picker, its 56 one-shots filed as the factory bank, velocity and round robin verified through rendering, saving, playback and MPC 3 export, and the kits and hardware approved by the owner. MPC 2 is not applicable ([format limit](#mpc-2-and-round-robin-owner-decision-2026-11-14)).
 
 ## CALABASH (complete, 2026-11-15: four genre kits on the shelf, approved by ear and on phone and MPC 3)
 

@@ -263,7 +263,6 @@ import com.snipsnap.synth.ServoPatch
 import com.snipsnap.synth.ServoVoice
 import com.snipsnap.synth.Kindred
 import com.snipsnap.synth.KindredPatch
-import com.snipsnap.synth.KindredPresets
 import com.snipsnap.synth.KindredVoice
 import com.snipsnap.synth.Scuff
 import com.snipsnap.synth.ScuffPatch
@@ -7407,8 +7406,6 @@ private fun factoryPresets(engine: Engine, voice: Enum<*>): List<Patch> =
     if (engine == Engine.HALOBAR) com.snipsnap.synth.HalobarPresets.auditionFor(voice as HalobarVoice)
     else if (engine == Engine.CHITIN) ChitinPresets.forVoice(voice as ChitinVoice)
     else if (engine == Engine.NACRE) NacrePresets.forVoice(voice as NacreVoice)
-    // KINDRED is a prototype outside Presets: its picker presets are the four kits' pads, provisional until heard.
-    else if (engine == Engine.KINDRED) KindredPresets.forVoice(voice as KindredVoice)
     else Presets.forVoice(engine.name, voice.name)
 
 /** TEMPEST's voice roles choose UI colors without rendering six drums on the

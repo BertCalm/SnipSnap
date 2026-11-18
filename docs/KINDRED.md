@@ -2,10 +2,9 @@
 
 A one-voice, eight-step analog-style percussion synth, and four genre kits made from that one voice.
 
-Status: round K2 (2026-11-16). The Kotlin engine, patch and recipes are built and tested (K1, merged in #1156),
-and the four kits are on the shelf with velocity and round robin proved through saving, playback and MPC 3 export
-in software (K2). The sound direction was accepted by ear on the Python round-2 renders; no Kotlin render has been
-heard yet.
+Status: complete (2026-11-18). The engine, the four kits on the shelf, the picker entry and the factory bank are
+built; the owner approved the Kotlin kits and the hardware ("Approved, approved", 2026-11-18). MPC 2 cannot carry
+velocity x round robin on one pad (the owner's format limit).
 
 The characteristic gesture: **a strike → the pitch dives from a zap into a body → the ladder closes over the
 harmonics → the next step re-strikes the same voice at its own height and force.**
@@ -190,3 +189,16 @@ READMEs count 96 picker engines.
 pad's LENGTH; a TONE edit survives a rebuild; the saved draft keeps the kit recipe, take 0, full velocity and model.
 This session has no Android SDK: CI's `android-build` compiles the entry and `emulator-tests` runs the test.
 `ConventionTest` (picker against catalogue, README counts), `UserPresetsTest` and `SynthRootTest` pass.
+
+## Round K4: the factory bank (2026-11-18)
+
+Asked to listen to the K2 page and to check the kits on phone and MPC, the owner answered "Approved, approved",
+read as both: the Kotlin kits by ear, and the hardware. KINDRED leaves `PatchTypes.PROTOTYPES`: `KindredPresets` is
+now its factory bank, the 56 one-shots of the four kits as patches (each pad's voice, recipe and macros, struck full,
+take 0), served by `Presets` like every rostered engine, so the picker no longer needs its own source. The phrase
+and riser pads are many strikes of one voice and are not presets. `KindredPresetsTest` holds SERVO's contracts:
+the bank is the kits pad for pad, each preset is the kit's pad (correlation over 0.999 after the kit's finish),
+registration, sanity, round trip with velocity, take, recipe and model, names (unique, caps, kit-tagged, at most 24
+letters, no maker's name), and distinctness (two presets of a voice differ in recipe and in bytes; SERVO's macro
+distance does not apply, because a recipe changes the circuit as well as the macros). `UserPresets` promotion has
+a destination (`promoted`) and its `UserPresetsTest` branches.
