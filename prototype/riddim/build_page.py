@@ -40,16 +40,22 @@ def mp3(y, path):
     os.remove(tmp)
 
 
-def main(out):
+# Voices the page colours as percussion rather than drums.
+PERC = {"SHAKER", "CLAVE", "STICKS", "COWBELL", "CONGA", "BONGO_HIGH", "TAMA", "WOOD", "METAL",
+        "TING", "RATCHET", "TUMBA", "QUINTO", "NDER", "MBENG", "COL", "DUNDUN", "SHEKERE", "AGOGO_HIGH", "TALKING_CALL"}
+
+
+def main(out, kits=K, template=None):
+    """`kits` is any module with KITS and PADS laid out as `kits.py`'s (round 3 passes `kits_wide`)."""
     site = os.path.join(out, "site")
     os.makedirs(os.path.join(site, "audio"), exist_ok=True)
     checks = json.load(open(os.path.join(out, "checks.json")))
     sections = []
-    for kit, k in K.KITS.items():
+    for kit, k in kits.KITS.items():
         g = os.path.join(out, kit)
         mp3(rd(os.path.join(g, "groove.wav")), os.path.join(site, "audio", f"{kit}_groove.mp3"))
         cells = {}
-        for pid, p in zip(K.PADS, k["pads"]):
+        for pid, p in zip(kits.PADS, k["pads"]):
             is_roll = "roll" in p
             cap = 3.0 if is_roll else 1.2
             ladder = chain([os.path.join(g, "pads", f"{pid}_z{z}_t0.wav") for z in range(3)], cap=cap)
@@ -57,8 +63,7 @@ def main(out):
             mp3(ladder, os.path.join(site, "audio", f"{kit}_{pid}_ladder.mp3"))
             mp3(takes, os.path.join(site, "audio", f"{kit}_{pid}_takes.mp3"))
             c = checks[kit][pid]
-            fam = "roll" if is_roll else ("perc" if p["voice"] in ("SHAKER", "CLAVE", "STICKS", "COWBELL", "CONGA", "BONGO_HIGH",
-                                                                      "TAMA", "WOOD", "METAL") else "drum")
+            fam = "roll" if is_roll else ("perc" if p["voice"] in PERC else "drum")
             cells[pid] = f'''<div class="pad {fam}">
   <button type="button" class="hit play" data-src="audio/{kit}_{pid}_ladder.mp3" aria-label="{E(p['label'])}: soft, mid, hard">
     <span class="pid">{pid}</span><span class="pl">{E(p['label'])}</span></button>
@@ -67,11 +72,13 @@ def main(out):
   <span class="meas" title="closest two takes; a copy is above 40 dB">{c['closest_takes_db']:.0f} dB{'' if c['darker_when_softer'] else ' · soft not darker'}</span>
 </div>'''
         # MPC layout: A13-A16 on top, A01-A04 at the bottom
-        rows = [K.PADS[12:16], K.PADS[8:12], K.PADS[4:8], K.PADS[0:4]]
+        rows = [kits.PADS[12:16], kits.PADS[8:12], kits.PADS[4:8], kits.PADS[0:4]]
         grid = "".join(cells[pid] for row in rows for pid in row)
         mono = sum(1 for c in checks[kit].values() if c["darker_when_softer"])
         worst = max(c["closest_takes_db"] for c in checks[kit].values())
         key = f" · {E(k['key'])}" if k["key"] else ""
+        if k.get("swing"):
+            key += f" · {round(k['swing'] * 100)}% swing"
         sections.append(f'''<section class="kit" aria-labelledby="{kit}">
   <div class="kit-head"><h2 id="{kit}">{E(k['title'])}</h2><span class="meta">{k['bpm']} BPM{key}</span></div>
   <p>{E(k['about'])}</p>
@@ -80,7 +87,7 @@ def main(out):
   <div class="grid">{grid}</div>
   <p class="foot">Measured: {mono} of 16 pads get darker at each softer zone; the closest two takes on any pad are {worst:.1f} dB apart (a copy is above 40).</p>
 </section>''')
-    page = TEMPLATE.replace("{SECTIONS}", "".join(sections))
+    page = (template or TEMPLATE).replace("{SECTIONS}", "".join(sections))
     open(os.path.join(site, "index.html"), "w").write(page)
     print("wrote", site)
 

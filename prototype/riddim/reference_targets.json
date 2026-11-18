@@ -439,5 +439,299 @@
    "877Hz A5-6c",
    "904Hz A5+47c"
   ]
+ },
+ "embaixodemim:kick": {
+  "loop": "embaixodemim",
+  "role": "kick",
+  "band": [
+   25,
+   250
+  ],
+  "hits": 8,
+  "decay20_ms": 42.0,
+  "peak_at_ms": 39.0,
+  "centroid60_hz": 3366,
+  "partials": [
+   "39Hz D#1-9c",
+   "61Hz B1-24c",
+   "84Hz E2+42c",
+   "135Hz C#3-46c",
+   "155Hz D#3-9c"
+  ],
+  "f0_track_0_30_80_200_400ms": [
+   74.0,
+   59.9,
+   134.6,
+   204.6,
+   null
+  ]
+ },
+ "embaixodemim:tambor": {
+  "loop": "embaixodemim",
+  "role": "tambor",
+  "band": [
+   150,
+   2000
+  ],
+  "hits": 24,
+  "decay20_ms": 64.0,
+  "peak_at_ms": 8.0,
+  "centroid60_hz": 5341,
+  "partials": [
+   "1061Hz C6+23c",
+   "1123Hz C#6+23c",
+   "1660Hz G#6-1c",
+   "1681Hz G#6+20c",
+   "1818Hz A#6-44c"
+  ]
+ },
+ "embaixodemim:clap": {
+  "loop": "embaixodemim",
+  "role": "clap",
+  "band": [
+   1500,
+   8000
+  ],
+  "hits": 24,
+  "decay20_ms": 68.0,
+  "peak_at_ms": 20.0,
+  "centroid60_hz": 5341,
+  "partials": [
+   "1681Hz G#6+20c",
+   "1818Hz A#6-44c",
+   "2309Hz D7-30c",
+   "3714Hz A#7-7c",
+   "4413Hz C#8-9c"
+  ]
+ },
+ "embaixodemim:hat": {
+  "loop": "embaixodemim",
+  "role": "hat",
+  "band": [
+   6000,
+   16000
+  ],
+  "hits": 24,
+  "decay20_ms": 20.0,
+  "peak_at_ms": 12.0,
+  "centroid60_hz": 5558,
+  "partials": [
+   "6907Hz A8-33c",
+   "7513Hz A#8+13c",
+   "7602Hz A#8+33c",
+   "7687Hz B8-48c",
+   "12053Hz F#9+31c"
+  ]
+ },
+ "ting:low": {
+  "loop": "ting",
+  "role": "low",
+  "band": [
+   60,
+   300
+  ],
+  "hits": 40,
+  "decay20_ms": 12.0,
+  "peak_at_ms": 0.0,
+  "centroid60_hz": 6968,
+  "partials": [
+   "115Hz A#2-22c",
+   "135Hz C3+49c",
+   "148Hz D3+14c",
+   "252Hz B3+37c",
+   "276Hz C#4-10c"
+  ],
+  "f0_track_0_30_80_200_400ms": [
+   151.8,
+   134.6,
+   135.9,
+   null,
+   null
+  ]
+ },
+ "ting:ting": {
+  "loop": "ting",
+  "role": "ting",
+  "band": [
+   2500,
+   14000
+  ],
+  "hits": 32,
+  "decay20_ms": 48.0,
+  "peak_at_ms": 11.0,
+  "centroid60_hz": 7144,
+  "partials": [
+   "3234Hz G#7-47c",
+   "3309Hz G#7-7c",
+   "3715Hz A#7-7c",
+   "3875Hz B7-34c",
+   "3891Hz B7-27c"
+  ]
+ },
+ "ting:mid": {
+  "loop": "ting",
+  "role": "mid",
+  "band": [
+   300,
+   2500
+  ],
+  "hits": 24,
+  "decay20_ms": 43.0,
+  "peak_at_ms": 16.0,
+  "centroid60_hz": 7169,
+  "partials": [
+   "496Hz B4+7c",
+   "665Hz E5+14c",
+   "1136Hz C#6+42c",
+   "1213Hz D#6-44c",
+   "1575Hz G6+7c"
+  ]
+ },
+ "ratchet:ratchet": {
+  "loop": "ratchet",
+  "role": "ratchet",
+  "band": [
+   1500,
+   12000
+  ],
+  "hits": 16,
+  "decay20_ms": 77.0,
+  "peak_at_ms": 22.0,
+  "centroid60_hz": 4419,
+  "partials": [
+   "2913Hz F#7-28c",
+   "2942Hz F#7-10c",
+   "3018Hz F#7+34c",
+   "3060Hz G7-42c",
+   "3708Hz A#7-10c"
+  ]
+ },
+ "ratchet:body": {
+  "loop": "ratchet",
+  "role": "body",
+  "band": [
+   100,
+   1500
+  ],
+  "hits": 4,
+  "decay20_ms": 61.0,
+  "peak_at_ms": 16.0,
+  "centroid60_hz": 2286,
+  "partials": [
+   "472Hz A#4+22c",
+   "488Hz B4-20c",
+   "526Hz C5+9c",
+   "827Hz G#5-8c",
+   "863Hz A5-34c"
+  ]
+ },
+ "samba:surdo": {
+  "loop": "samba",
+  "role": "surdo",
+  "band": [
+   30,
+   250
+  ],
+  "hits": 32,
+  "decay20_ms": 68.0,
+  "peak_at_ms": 22.0,
+  "centroid60_hz": 5209,
+  "partials": [
+   "60Hz A#1+47c",
+   "89Hz F2+30c",
+   "115Hz A#2-27c",
+   "140Hz C#3+17c",
+   "153Hz D#3-24c"
+  ],
+  "f0_track_0_30_80_200_400ms": [
+   80.7,
+   61.2,
+   54.5,
+   115.7,
+   99.6
+  ]
+ },
+ "samba:ganza": {
+  "loop": "samba",
+  "role": "ganza",
+  "band": [
+   5000,
+   16000
+  ],
+  "hits": 32,
+  "decay20_ms": 56.0,
+  "peak_at_ms": 17.0,
+  "centroid60_hz": 6820,
+  "partials": [
+   "5477Hz F8-35c",
+   "6665Hz G#8+5c",
+   "7960Hz B8+13c",
+   "9006Hz C#9+26c",
+   "9657Hz D9+47c"
+  ]
+ },
+ "dakar:kick": {
+  "loop": "dakar",
+  "role": "kick",
+  "band": [
+   25,
+   250
+  ],
+  "hits": 32,
+  "decay20_ms": 54.0,
+  "peak_at_ms": 102.0,
+  "centroid60_hz": 2418,
+  "partials": [
+   "36Hz D1-50c",
+   "132Hz C3+14c",
+   "157Hz D#3+14c",
+   "190Hz F#3+44c",
+   "204Hz G#3-32c"
+  ],
+  "f0_track_0_30_80_200_400ms": [
+   36.6,
+   35.0,
+   33.0,
+   129.9,
+   null
+  ]
+ },
+ "dakar:drum": {
+  "loop": "dakar",
+  "role": "drum",
+  "band": [
+   150,
+   2000
+  ],
+  "hits": 32,
+  "decay20_ms": 20.0,
+  "peak_at_ms": 34.0,
+  "centroid60_hz": 2884,
+  "partials": [
+   "156Hz D#3+2c",
+   "207Hz G#3-6c",
+   "248Hz B3+7c",
+   "294Hz D4+0c",
+   "311Hz D#4-3c"
+  ]
+ },
+ "dakar:hat": {
+  "loop": "dakar",
+  "role": "hat",
+  "band": [
+   6000,
+   16000
+  ],
+  "hits": 32,
+  "decay20_ms": 46.0,
+  "peak_at_ms": 32.0,
+  "centroid60_hz": 4139,
+  "partials": [
+   "6585Hz G#8-16c",
+   "6670Hz G#8+6c",
+   "6850Hz A8-47c",
+   "6903Hz A8-34c",
+   "8294Hz C9-16c"
+  ]
  }
 }

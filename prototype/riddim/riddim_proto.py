@@ -307,6 +307,54 @@ def metal(m, v, k):
     return a + 0.85 * b
 
 
+
+# ------------------------------------------------------------------ round 3: the Brazilian funk tops
+
+# The "ting" loop's bell measured four close partials, 3234, 3309, 3715 and 3875 Hz, falling 20 dB in 48 ms
+# (round 3, reference_targets.json "ting:ting"). Written as ratios to the lowest: two pairs a few percent
+# apart, so the pairs beat against each other the way a small hand bell or a struck pan lid shimmers.
+TING_BAR = ((1.0, 1.0, 1.0), (1.023, 0.8, 0.9), (1.149, 0.6, 0.7), (1.198, 0.45, 0.6), (2.31, 0.15, 0.3))
+
+
+def ting(m, v, k):
+    """A small, high, metal bell: the bright "ting" that rides a Brazilian funk groove. Default 3234 Hz (the
+    reference's lowest partial); TUNE spans an octave either way. A metal beater is a short pulse, so the
+    mallet runs 0.4 ms soft to 0.06 ms hard: a soft stroke cannot reach the upper pair, so it is darker."""
+    f0 = 3234.0 * 2 ** ((m.get("TUNE", .5) - .5) * 24 / 12)
+    t60 = 0.08 + 0.38 * m.get("DECAY", .5)        # default 0.27 s: the pairs beat, so -20 dB lands near 50 ms
+    return _struck(f0, TING_BAR, t60, v, k, 0.5, 0.4, 0.06, "ting")
+
+
+def ratchet(m, v, k):
+    """A scraper (a ratchet or a ridged gourd): a stick dragged over teeth. Each tooth is a click that rings a
+    small plate; the plate measured a cluster at 2.9 to 3.06 kHz and the whole scrape fell 20 dB in 77 ms
+    (round 3, "ratchet:ratchet"). Teeth come faster through the middle of the drag and slow at its end.
+    TUNE moves the plate an octave either way, DECAY the drag's length (40 to 200 ms), WAVE how fast the teeth
+    come (120 to 420 a second). A harder drag is faster, louder per tooth and brighter; a softer one leaves
+    more of the low body (near 500 Hz, the "ratchet:body" partials) and less of the plate, so it is darker."""
+    rng = rng_for("ratchet", k, round(v, 3))
+    length = 0.04 + 0.16 * m.get("DECAY", .5)
+    rate = (120 + 300 * m.get("WAVE", .5)) * (0.75 + 0.35 * v)
+    n = int((length + 0.12) * FS)
+    x = np.zeros(n)
+    t = 0.0
+    while t < length:
+        phase = t / length                                   # 0..1 through the drag
+        speed = 0.6 + 0.8 * math.sin(math.pi * min(1.0, phase * 1.1))    # slow, fast, slow
+        level = (0.35 + 0.65 * math.sin(math.pi * min(1.0, phase * 1.05 + 0.05))) * rng.uniform(0.55, 1.0)
+        i = int(t * FS)
+        x[i] += level
+        if i + 1 < n:
+            x[i + 1] -= 0.6 * level                          # a tooth is a sharp up-down, not a step
+        t += (1 / (rate * speed)) * (1 + rng.normal(0, 0.12))   # each take drags its own way
+    shift = 2 ** ((m.get("TUNE", .5) - .5) * 2)
+    plate = sum(g * resonator(x, f * shift * 2 ** (rng.normal(0, 8) / 1200), t60)
+                for f, g, t60 in ((2913, 1.0, .022), (2985, .8, .018), (3060, .7, .02), (5480, .25, .01)))
+    body = sum(g * resonator(x, f * shift, .03) for f, g in ((488, .6), (526, .45)))
+    grit = bandpass(x * rng.normal(0, 1, n), 2000, 7000) * 0.3
+    bright = 0.35 + 0.65 * v                                 # softer: less plate and grit, more body
+    return bright * (plate + grit) + (1.15 - 0.6 * v) * body
+
 # ------------------------------------------------------------------ the palette
 
 ELECTRONIC = {
@@ -322,9 +370,13 @@ ELECTRONIC = {
     "HAT_OPEN": (hat_open, 0.7, "hat"),
     "WOOD": (wood, 0.6, "perc"),
     "METAL": (metal, 2.0, "perc"),
+    "TING": (ting, 0.5, "perc"),          # round 3
+    "RATCHET": (ratchet, 0.35, "perc"),   # round 3
 }
 # Mixed in from CALABASH (fitted to CC0 recordings, approved by the owner 2026-11-15).
-BORROWED = ["SHAKER", "CLAVE", "STICKS", "COWBELL", "CONGA", "BONGO_HIGH", "TAMA"]
+BORROWED = ["SHAKER", "CLAVE", "STICKS", "COWBELL", "CONGA", "BONGO_HIGH", "TAMA",
+            # round 3: the funk tambor (TUMBA, QUINTO), the sabar family and its friends, the agogo
+            "TUMBA", "QUINTO", "NDER", "MBENG", "COL", "DUNDUN", "SHEKERE", "AGOGO_HIGH", "TALKING_CALL"]
 
 
 def render(voice: str, macros: dict | None = None, velocity: float = 1.0, take: int = 0) -> np.ndarray:

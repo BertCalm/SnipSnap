@@ -167,10 +167,63 @@ Listening page of the Kotlin kits, cut from the verified export, with the approv
 **Heard and confirmed (2026-11-18).** Asked whether the Kotlin kits sound like the three kits approved in round 1, the
 owner answered "Yes, they match".
 
+## Round 3: the wider kits (`kits_wide.py`, 2026-11-18)
+
+The owner chose the wider collection in round 0, confirmed the Kotlin kits match, and asked for all three wider
+styles in one round. Python harness; not yet heard. Listening page: <https://claude.ai/artifact/FcDCQaGKVSxPhgcH7SiUdy>.
+
+**Measured (round-3 entries in `reference_targets.json`).** The four Brazilian funk loops and Dakar Dusk had grids but
+no hit targets; they have both now.
+
+| Loop | Grid | Hit targets |
+|---|---|---|
+| Brazilian funk full loop, 145 BPM | kick on step 1 only; tamborzao body on 1, 4, 9, 13; off-sixteenths 17 ms late (58%) | kick −20 dB in 42 ms, f0 about 74 to 60 Hz; tambor and clap energy 1 to 2 kHz, about 65 ms |
+| Ting loop, 145 BPM | low drum on 1, 4, 7, 9, 13 (3+3+2) | bell partials 3234, 3309, 3715, 3875 Hz, −20 dB in 48 ms; low drum 135 to 150 Hz |
+| Ratchet loop, 123 BPM | tops on every eighth | scrape cluster 2913 to 3060 Hz, −20 dB in 77 ms; body near 470 to 530 Hz |
+| Samba, 105 BPM | surdo on every beat, dense ganza | surdo about 80 to 55 Hz; not used: SAMBA already covers bateria |
+| Dakar Dusk, 103 BPM | low drum on step 2 of each beat; off-sixteenths 33 ms late (61%) | kick 37 to 33 Hz, −20 dB in 54 ms; drum partials 156, 207, 248, 294 Hz, 20 ms |
+
+**Sibling check.** CALABASH already has the sabar family (NDER, MBENG, COL, TAMA, SABAR_ROLL) and an MBALAX kit at
+126 BPM, straight and bright; SAMBA covers bateria. So the West African kit is a different kit (slow, swung, dark, an
+electronic sub kick after the beat) that reuses CALABASH's approved sabar voices, and the funk kit is built around the
+tamborzao, not the bateria. Nothing in the roster scrapes, and the nearest bell (AGOGO_HIGH, 1.5 kHz) sits an octave
+below the ting, so those are the round's two new voices. Wood and metal is a kit of RIDDIM's own WOOD and METAL.
+
+**Two new voices (`riddim_proto.py`).**
+
+- **TING**: a small high bell, modelled as struck modes at the measured partial ratios (two close pairs that beat).
+  Default 3234 Hz, TUNE ±12 semitones. Measured: −20 dB in 41 to 55 ms (target 48). The beater pulse runs 0.4 ms soft
+  to 0.06 ms hard, so a soft stroke cannot reach the upper pair.
+- **RATCHET**: a stick dragged over teeth. Each tooth is a click that rings a small plate tuned to the measured
+  cluster, with a body near 500 Hz; teeth come slow, fast, then slow through the drag. DECAY is the drag's length,
+  WAVE the tooth rate. Measured: −20 dB in 65 to 78 ms (target 77), hard-hit centroid 4296 Hz (target 4419). A harder
+  drag is faster and brighter; a softer one keeps more body.
+
+**Three kits.** 16 pads each, 3 velocity zones × 4 takes, kick, snare family and a choked hat pair on A01 to A04.
+
+- **Baile Funk**, 130 BPM, 58% swing: tight kick, clap, short boom, tamborzao on CALABASH's TUMBA (open, slap) and
+  QUINTO, two tings, two ratchets, agogo, shaker, rimshot. A16: a ratchet riser (eighths to 32nds, climbing 5 semitones).
+- **Sabar Swing**, 103 BPM, 61% swing, G minor: a sub kick (about 34 Hz) just after each beat, snare, dark hats,
+  CALABASH's MBENG (open hand, hand slap), NDER, COL, DUNDUN, a talking-drum call, shekere, tama, clap, a G1 boom.
+  A16: a sabar roll of NDER strokes.
+- **Wood and Bronze**, 96 BPM, 55% swing, D minor: soft kick, sticks, quiet hats, claves, five woods (D3, F3, G3, A3,
+  C4) and four bronze pairs (F5, A5, C6, D6). A16: a 32nd-note wood tremolo on D3 with a crescendo.
+
+Swing belongs to the groove: the app's pads hold sounds, and the MPC or the app's sequencer sets swing. The page plays
+each groove at the swing the references measured.
+
+**Checks (`kits_wide.py`, Python harness).** No pad's takes are near-copies: the closest two takes on any pad are
+36.3 dB apart (a copy is above 40). 44 of 48 pads get darker at each softer zone. The four that do not are reused
+CALABASH voices whose velocity is their approved recording fit: agogo, shaker, shekere and claves. Wood brightness is
+measured above 400 Hz, as `RiddimTest` does, because a low wood has nothing above 2 kHz. The bronze pads skip METAL's
+default D5, which does not darken from mid to soft (round 2). Round 1's audio is unchanged: 96 strikes re-rendered
+after the round-3 changes match their round-1 WAVs sample for sample.
+
 ## Open
 
 - Phone and MPC playback of the three kits.
-- The wider kits (swung Brazilian funk, swung West African, wood and metal), a preset roster, and the picker.
+- Round 3's three wider kits: the owner's listen, then the Kotlin port of TING, RATCHET and the three A16s, and the shelf.
+- A preset roster and the picker.
 
 ## Ledger
 
@@ -180,6 +233,7 @@ owner answered "Yes, they match".
 - **Proposed:** every constant in `riddim_proto.py` is a shape value until heard.
 - **Heard:** round 0's palette, "pretty good so far" (2026-11-18); round 1's three kits, "Approved" (2026-11-18).
   The Kotlin kits (round 2) confirmed to match, "Yes, they match" (2026-11-18). No phone or MPC has played them.
+  Round 3 (the wider kits, TING and RATCHET) not yet heard.
 
 ## Why it is built this way
 
@@ -193,3 +247,11 @@ owner answered "Yes, they match".
   are mixed onto the dancehall kits; only wood and metal are new.
 - **The risky decision** is mono. The percussion references get much of their character from stereo width, and the
   metal pair's beating is round 0's answer to that.
+- **Round 3: the ting beats because it is two pairs.** Its four measured partials come in two close pairs; ringing
+  together, each pair wobbles in level a few times a second, the shimmer of a small bell. One partial per pair would
+  ring like a sine-wave beep.
+- **Round 3: the ratchet is teeth, not noise.** A scrape is a train of separate clicks, each ringing the same small
+  plate. Filtered noise would sound like a hiss; the click train is what makes it read as a stick on ridges, and the
+  slow-fast-slow spacing is the hand's drag.
+- **Round 3: swing lives in the groove, not the pads.** The same kit has to sound right straight or swung on an MPC,
+  so the pads carry no timing; the listening page swings the grooves only to judge them as the references played.
