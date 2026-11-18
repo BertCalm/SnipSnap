@@ -60,7 +60,7 @@ internal object PatchTypes {
      * factory bank, as CLUTTER's did. SERVO sat here from its port until the owner approved its kits (2026-11-15)
      * and their hits became its factory bank.
      */
-    val ROSTERLESS: Set<String> = setOf(HydroformPatch.ENGINE, SnapPatch.ENGINE, SilkPatch.ENGINE, GyrePatch.ENGINE, MagnetPatch.ENGINE, EmberPatch.ENGINE)
+    val ROSTERLESS: Set<String> = setOf(HydroformPatch.ENGINE, SnapPatch.ENGINE, SilkPatch.ENGINE, GyrePatch.ENGINE, MagnetPatch.ENGINE, EmberPatch.ENGINE, RiddimPatch.ENGINE)
 
     /**
      * The engines with a [Patch] type and provisional recipes of their own that are

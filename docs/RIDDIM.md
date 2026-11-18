@@ -89,10 +89,49 @@ Measured (Python harness, `checks.json`):
   five reused CALABASH voices (shaker, claves, cowbell, high bongo) do not darken on this measure. Their velocity is
   CALABASH's fit of real soft and hard recordings, which the owner approved by ear on 2026-11-15.
 
-## Open, for the owner
+**Heard and approved (2026-11-18).** The owner listened to the round-1 page and answered "Approved": the three
+kits, their layouts, the A16 rolls and the grooves. Preserve `kits.py` as it stands as the accepted baseline for
+the port.
 
-- The kit layouts, the three rolls and the groove balance, by ear.
-- Then round 2: the Kotlin port and the shelf (velocity and round robin through rendering, saving, playback and
+## Round 2a: the Kotlin port of the voices (2026-11-18)
+
+`Riddim.kt` and `RiddimPatch.kt` port the eleven voices and the three A16 rolls (RIM_ROLL, SNARE_ROLL, HAT_RISER as
+voices with a SPEED control: render receives no tempo, so SPEED maps 80 to 140 BPM and each kit sets its own).
+RIDDIM is registered the way EMBER is: rosterless (`PatchTypes.ROSTERLESS`), with Patches, Velocity (`macroSpecsFor`,
+`touchedRender`), PatchesTest, PadRecipeTest, a DeterminismTest canary and a rootless SynthRoot arm. The reused
+CALABASH voices are not ported; the kits will strike CALABASH's own Kotlin voices.
+
+**Against the approved prototype** (`compare_kotlin.py`, Python harness over both sides' renders; each side's takes
+are its own random strikes, so the comparison is of averaged third-octave spectra, not samples): every voice is within
+2.1 dB band RMS of the prototype in its first 300 ms (worst: the hard clap, 2.1 dB; most voices under 1 dB). Pitch
+tracks agree within 2 Hz on the kick, dembow kick and boom. Decay to −20 dB agrees within 10% except the hard METAL
+(116 ms prototype, 180 ms port, two takes each, the strike-point draw dominating).
+
+**Changed in the port, measured or argued:**
+- The hats' band-limited squares stop at 20 kHz instead of 40 kHz: the output stage band-limits at 20 kHz first, so
+  the dropped harmonics never reached a pad. Half the cost.
+- The hat filter's lower edge is capped at 12 kHz. `RiddimTest` found HAT_RISER non-finite at TUNE 1, where the
+  riser's nine-semitone climb put the lower edge above the 15 kHz upper one. Approved renders reach 10.9 kHz, so
+  none changes.
+
+**`RiddimTest`** holds: finite, peak 0.89, no DC, exact lengths; drum classes; the kick, dembow kick and boom pitches
+(40, 27, 43.65 Hz) and the boom's TUNE in semitones; the wood and metal notes; softer is darker at every zone for
+every one-shot voice; no two takes copies (under 40 dB); every control audible, unknown keys ignored, non-finite
+controls fall back; roll lengths at their tempo, acceleration and crescendo; byte-for-byte repeats.
+
+**Disclosed, not fixed:**
+- METAL at its default D5 measures soft and mid alike above 2 kHz (prototype −50.8 and −50.5 dB, four takes): the
+  mallet pulse's spectral dip lands on the second mode. Every metal pad on the kits (G4, F5, Ab5, C6) darkens at each
+  softer zone; the test checks those notes.
+- Each roll stroke is peak-matched, as in the prototype, so a roll grows by density and brightness rather than stroke
+  level (Snare roll: last quarter 1.38 times the first in RMS).
+- Render time (one machine, one thread): one-shots 10 to 130 ms (the open hat slowest); rolls 0.4 to 0.8 s (the hat
+  riser strikes about 40 hats). The one-shots meet the tens-of-milliseconds rule except the open hat; the rolls are
+  phrases and do not.
+
+## Open
+
+- Round 2b: the Kotlin port and the shelf (velocity and round robin through rendering, saving, playback and
   export), and the wider kits.
 
 ## Ledger
@@ -101,7 +140,7 @@ Measured (Python harness, `checks.json`):
   CALABASH's prototype API (`calabash_proto.render`), and that no dancehall, dembow or baile kit exists.
 - **Measured:** the tables above, Python harness.
 - **Proposed:** every constant in `riddim_proto.py` is a shape value until heard.
-- **Heard:** round 0's palette, "pretty good so far" (2026-11-18). Round 1 not yet.
+- **Heard:** round 0's palette, "pretty good so far" (2026-11-18); round 1's three kits, "Approved" (2026-11-18).
 
 ## Why it is built this way
 

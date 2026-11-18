@@ -3972,3 +3972,14 @@ tasks.named<org.gradle.language.jvm.tasks.ProcessResources>("processResources") 
         rename { "NOTICE.txt" }
     }
 }
+
+/** Render RIDDIM's Kotlin voices under testkit/riddim-audition/kotlin/, for the A/B against the approved prototype. */
+tasks.register<JavaExec>("generateRiddimAudition") {
+    group = "distribution"
+    description = "Render every RIDDIM voice soft and hard, two takes each, under testkit/riddim-audition/kotlin/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.RiddimAuditionGenerator")
+    workingDir = projectDir
+    maxHeapSize = "2g"
+    args(providers.gradleProperty("riddimOutput").orNull ?: "${rootDir}/testkit/riddim-audition/kotlin")
+}

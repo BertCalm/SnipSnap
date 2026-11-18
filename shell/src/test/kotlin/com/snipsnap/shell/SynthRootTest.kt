@@ -94,6 +94,7 @@ class SynthRootTest {
             Presets.all() + listOf(
                 GyrePatch("Door", GyreVoice.FLICK, emptyMap()),
                 EmberPatch("Kick", EmberVoice.KICK, emptyMap()),
+                com.snipsnap.synth.RiddimPatch("Kick", com.snipsnap.synth.RiddimVoice.KICK, emptyMap()),
                 com.snipsnap.synth.KindredPatch.of(com.snipsnap.synth.KindredRecipes.ALL.first()),
                 MagnetPatch("Door", MagnetVoice.JANGLE, emptyMap()),
                 SilkPatch("Door", SilkVoice.OUD, emptyMap()),
@@ -112,7 +113,7 @@ class SynthRootTest {
         }
 
         /** The engines whose every patch answers null: drums, voice, scale rows, frequency sweeps. */
-        private val ROOTLESS = setOf("SAMBA", "RIVET", "THUMP", "SKIN", "ONSET", "TERRA", "VOX", "SILK", "EROSION", "FIRED_BRONZE", "BACKWASH", "SCUFF", "KINDRED", "HICCUP", "CLUTTER", "DRUMLINE", "EMBER", "CALABASH", "SERVO", "TEMPEST")
+        private val ROOTLESS = setOf("SAMBA", "RIVET", "THUMP", "SKIN", "ONSET", "TERRA", "VOX", "SILK", "EROSION", "FIRED_BRONZE", "BACKWASH", "SCUFF", "KINDRED", "HICCUP", "CLUTTER", "DRUMLINE", "EMBER", "RIDDIM", "CALABASH", "SERVO", "TEMPEST")
 
         private fun cents(hz: Float, midi: Int): Float = 1200f * ln(hz / Keys.midiHz(midi)) / ln(2f)
     }
