@@ -102,8 +102,10 @@ class ConfluenceWorkshopUiTest : ComposeScreenTest() {
                 onPedalRowChange = {},
             )
         }
+        // The pad counter under the page reads the kit as loaded, so it is the wait the
+        // page title "PAD A0n" used to be before MAKE FROM THIS PAD got its own page.
         waitFor("the original gathering's saved controls", timeoutMillis = 30_000) {
-            currentSlot == 1 && sliderState("REVERB") == "20%"
+            currentSlot == 1 && hasText("1 OF 1") && sliderState("REVERB") == "20%"
         }
 
         clickAction("Low voice: ROUNDED OO")
@@ -126,7 +128,7 @@ class ConfluenceWorkshopUiTest : ComposeScreenTest() {
         clickAction("MAKE VARIATION → A02")
         waitFor("the saved variation and destination pad", timeoutMillis = 120_000) {
             toasts.contains("Gathering made on A02. Original kept.") &&
-                currentSlot == 2 && sliderState("REVERB") == "70%"
+                currentSlot == 2 && hasText("2 OF 2") && sliderState("REVERB") == "70%"
         }
         val saved = KitStore.load(directory)
         val made = checkNotNull(saved.pad(2))
@@ -150,11 +152,11 @@ class ConfluenceWorkshopUiTest : ComposeScreenTest() {
         // saved source recipe, rather than the previous screen's local draft.
         clickAction("PREVIOUS PAD, A01")
         waitFor("the unchanged original controls") {
-            currentSlot == 1 && sliderState("REVERB") == "20%"
+            currentSlot == 1 && hasText("1 OF 2") && sliderState("REVERB") == "20%"
         }
         clickAction("NEXT PAD, A02")
         waitFor("the variation controls after reopening") {
-            currentSlot == 2 && sliderState("REVERB") == "70%"
+            currentSlot == 2 && hasText("2 OF 2") && sliderState("REVERB") == "70%"
         }
     }
 
