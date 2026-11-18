@@ -1,3 +1,8 @@
+> LOOSE CRATE kits (complete 2026-11-18: sound approved, phone and MPC gates passed): four beat-tape drum kits in
+> the CYPHER shape, HUMMIN, CLOTH, HAZE and RITUAL, aimed at measurements of the owner's reference loops. Every
+> groove and roll is played as one kit in one room (a drummer's kick dynamics, snare wires under every kick, ROOM,
+> COMPRESSOR and a dark shelf); CLOTH's print adds a tube and a bass-only compressor. Velocity × round robin is
+> proven through save, playback and MPC 3, SFZ and DecentSampler export. See [LOOSE CRATE](LOOSE_CRATE.md).
 > CYPHER kits (round 2 heard 2026-11-12; all six kits approved): six hip-hop drum kits in
 > the GATECRASH shape over THUMP's new SUB voice, a sub drum whose pitch holds its root and then slides to
 > another note. Velocity × round robin is proven through save, playback and MPC 3, SFZ and DecentSampler

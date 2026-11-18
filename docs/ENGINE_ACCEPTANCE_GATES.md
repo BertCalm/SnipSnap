@@ -1163,15 +1163,15 @@ percussion on the same grids. See [RIDDIM](RIDDIM.md).
   Kotlin kits and confirmed they match the approved kits ("Yes, they match", 2026-11-18).
 - **Overall: incomplete.** Open: phone and MPC playback.
 
-## LOOSE CRATE kits (sound approved 2026-11-18: "It sounds good to me"; phone and MPC open)
+## LOOSE CRATE kits (complete, 2026-11-18: sound approved, phone and MPC gates passed)
 
-Four drum kits after the owner's beat-tape reference loops, in the CYPHER shape: HUMMIN, CLOTH, HAZE, RITUAL. See [LOOSE CRATE](LOOSE_CRATE.md). The owner heard round 0's two hum kicks ("Both sound great"), heard round 1 as "a bit drum machine like", chose round 2a's treatment A (one kit in one room), which round 2 carries to every groove and roll, and heard round 2 as "Better", asking for warmth and bass compression on CLOTH, which round 3 adds at kit version 3. On hearing round 3 the owner said "It sounds good to me" (2026-11-18). Evidence: `LooseCrateKitsTest`, `LooseCrateKitTest`, `:shell:generateLooseCrateKits`.
+Four drum kits after the owner's beat-tape reference loops, in the CYPHER shape: HUMMIN, CLOTH, HAZE, RITUAL. See [LOOSE CRATE](LOOSE_CRATE.md). The owner heard round 0's two hum kicks ("Both sound great"), heard round 1 as "a bit drum machine like", chose round 2a's treatment A (one kit in one room), which round 2 carries to every groove and roll, and heard round 2 as "Better", asking for warmth and bass compression on CLOTH, which round 3 adds at kit version 3. On hearing round 3 the owner said "It sounds good to me", and after playing the kits on the phone and the MPC, "All good on my gates" (both 2026-11-18). Evidence: `LooseCrateKitsTest`, `LooseCrateKitTest`, `:shell:generateLooseCrateKits`.
 
 | Gate | Status | Evidence |
 |---|---|---|
 | Melodic, keygroups, chord tools, STRUM | Not applicable | Drum kits |
-| Drums: multiple distinct genre kits on the shelf | Built, not heard | Four kits under SKINS; every pair differs in at least six pads and in a kick and main snare dry, and each kit has its own print |
-| Percussion: roll/riser | Built, not heard | An accelerating roll on A15 of every kit |
+| Drums: multiple distinct genre kits on the shelf | Pass | Approved by ear 2026-11-18. Four kits under SKINS; every pair differs in at least six pads and in a kick and main snare dry, and each kit has its own print |
+| Percussion: roll/riser | Pass | An accelerating roll on A15 of every kit, in the room since round 2; approved with the kits |
 | Velocity and round robin: rendering | Pass in software | Soft zones are different strikes and never brighter; four different strikes per zone |
-| Velocity and round robin: saving, playback, export | Pass in software | Save, reload, pad resolver, MPC 3, SFZ and DecentSampler for all 64 pads; MPC 2 not written (format limit). No phone or MPC playback yet |
+| Velocity and round robin: saving, playback, export | Pass | Save, reload, pad resolver, MPC 3, SFZ and DecentSampler for all 64 pads; MPC 2 not written (format limit). Owner-reported pass on the phone and the MPC, 2026-11-18 |
 
