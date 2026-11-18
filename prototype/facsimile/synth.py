@@ -66,8 +66,10 @@ def band_sos(lo: float, hi: float, rate: int):
 _SOS_CACHE: dict = {}
 
 
-def render(model: dict, velocity: float = 1.0, take: int = 0, oversample: int = OVERSAMPLE
-           ) -> np.ndarray:
+def render(model: dict, velocity: float = 1.0, take: int = 0, oversample: int = OVERSAMPLE,
+           noise_seed: int | None = None) -> np.ndarray:
+    """`noise_seed` (fitting only) swaps the noise for another recording of the same strike,
+    leaving every other choice of the take alone, so the fit can average over recordings."""
     rate = RATE * oversample
     length = model["length_s"]
     n = int(length * rate)
@@ -97,8 +99,14 @@ def render(model: dict, velocity: float = 1.0, take: int = 0, oversample: int = 
         out += np.sin(ph) * e
 
     # Noise bands
-    noise = rng.standard_normal(n) if not first_take else \
-        np.random.default_rng(seed_for("facsimile", model["id"], "noise0")).standard_normal(n)
+    if noise_seed is not None:
+        noise = np.random.default_rng(seed_for("facsimile", model["id"], "fit",
+                                               noise_seed)).standard_normal(n)
+    elif first_take:
+        noise = np.random.default_rng(seed_for("facsimile", model["id"], "noise0")
+                                      ).standard_normal(n)
+    else:
+        noise = rng.standard_normal(n)
     centres = np.sqrt(BAND_EDGES[:-1] * BAND_EDGES[1:])
     for b, env_db in enumerate(model["noise_db"]):
         if max(env_db) <= FLOOR_DB + 1:

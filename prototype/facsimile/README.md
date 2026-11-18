@@ -87,6 +87,14 @@ templates (all derived from reference PCM), and every rendered WAV or MP3.
 - Some NMFD components are artifacts (a kick's sub re-fired on its own). The grooves use every
   component, so nothing in the reference goes missing; the pads use only the drums named in
   `kits.json`.
+- Two fit bugs were caught by the groove level check (grooves 113 and 134 measured 8 to 20 dB
+  louder than their references). First, a grid point at the render's very end can never be
+  measured, so the closed loop raised it every pass and the drum swelled into its last sample;
+  such points are now frozen at silence and no band may be set more than 6 dB over the drum's
+  loudest target. Second, the loop fitted one noise recording's random wobble (narrow-band
+  noise wanders 4 to 6 dB at any instant), which left other takes and the 4x render 2 dB
+  further off than the fit reported; the fit now averages its replica over three noise seeds,
+  and `measure.py` reports the mean distance over the four takes.
 - Round robin follows the reference's own hit-to-hit spread, clamped to 0.3 to 1.2 dB per band,
   plus fresh noise and phases. Whether that reads as one drum hit again is for the ear.
 - Engine gates: this is a prototype. Velocity and round robin are checked in rendering only;

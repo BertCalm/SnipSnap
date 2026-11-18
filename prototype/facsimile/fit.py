@@ -261,6 +261,19 @@ def steady_peaks(takes: np.ndarray, clean_s: float, exclude: list[float]) -> lis
 
 # ---------- the fit ----------
 
+FIT_SEEDS = 3            # noise recordings the fit averages over
+CAP_OVER_PEAK_DB = 6.0   # no band or partial may be set louder than the drum's loudest target
+
+
+def expected_envelopes(model: dict) -> np.ndarray:
+    """The replica's band envelopes averaged (in power) over FIT_SEEDS noise recordings. One
+    recording's narrow-band noise wanders 4 to 6 dB at any grid point; fitted to one, the loop
+    learns that recording's wobble, and every other take (and the 4x render) misses by more."""
+    p = np.mean([10 ** (band_envelopes(synth.render(model, 1.0, 0, oversample=1, noise_seed=k))
+                        / 10) for k in range(FIT_SEEDS)], axis=0)
+    return 10 * np.log10(p + 1e-30)
+
+
 def fit_drum(drum: dict, work: Path) -> tuple[dict, dict]:
     takes = np.load(work / "hits" / f"{drum['id']}_takes.npy").astype(float)
     template = np.load(work / "hits" / f"{drum['id']}_template.npy")
@@ -341,11 +354,13 @@ def fit_drum(drum: dict, work: Path) -> tuple[dict, dict]:
     # closed loop: render (no oversampling during the fit, for speed; the final check renders
     # at 4x), measure exactly as the target was measured, correct by the damped difference
     history = []
+    # Grid points at or past the render's end can never be heard or measured; correcting them
+    # only pumps them up pass after pass (a swell into the last sample, 8 to 20 dB too loud).
+    ends = GRID >= length - 0.01
     for it in range(ITERATIONS + 1):
-        y = synth.render(jsonable(model), 1.0, 0, oversample=1)
-        got = band_envelopes(y)
+        got = expected_envelopes(jsonable(model))
         err = target - got
-        live = target > peak_db - 50
+        live = (target > peak_db - 50) & ~ends[None, :]
         history.append(float(np.mean(np.abs(err[live]))))
         if history[-1] == min(history):
             best = jsonable(model)  # keep the best pass: the loop may never hand back worse
@@ -353,7 +368,10 @@ def fit_drum(drum: dict, work: Path) -> tuple[dict, dict]:
             break
         corr = DAMPING * np.clip(err, -18, 18)
         corr[~live] = np.minimum(corr[~live], 0)   # never boost what the target says is quiet
-        model["noise_db"] = np.maximum(np.asarray(model["noise_db"]) + corr, FLOOR_DB)
+        corr[:, ends] = 0
+        model["noise_db"] = np.clip(np.asarray(model["noise_db"]) + corr, FLOOR_DB,
+                                    peak_db + CAP_OVER_PEAK_DB)
+        model["noise_db"][:, ends] = FLOOR_DB
         for p in partials:
             bt = band_index_over_time(p)
             c = corr[bt, cols]
@@ -362,7 +380,8 @@ def fit_drum(drum: dict, work: Path) -> tuple[dict, dict]:
                 # time and at most 3 dB a pass, so the curve cannot start to jump again
                 c = np.clip(np.convolve(np.pad(c, 1, mode="edge"), np.ones(3) / 3, "valid"),
                             -3, 3)
-            e = np.maximum(np.asarray(p["env_db"]) + c, FLOOR_DB)
+            e = np.clip(np.asarray(p["env_db"]) + c, FLOOR_DB, peak_db + CAP_OVER_PEAK_DB)
+            e[ends] = FLOOR_DB
             pk = int(np.argmax(e))
             e[pk:] = np.minimum.accumulate(e[pk:])  # a ringing mode only decays
             p["env_db"] = e

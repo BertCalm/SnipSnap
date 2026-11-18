@@ -9,7 +9,7 @@ Per loop (replica groove against the reference loop, both mono):
                   what a clearly wrong groove scores on this scale
 
 Per drum (rendered at 4x, the house rate):
-  fit distance    the fit's own number, re-measured at 4x against the same target
+  fit distance    re-measured at 4x against the same target, averaged over the four takes
   velocity        spectral-shape change of a v=.4 strike against v=1 at matched loudness, dB
                   (owner gate: a soft hit must differ in character, not only level)
   takes           the closest pair of four takes, 20 log10(rms(a) / rms(a - b)); a copy
@@ -107,12 +107,14 @@ def main(ref_dir: Path, work: Path, models: Path, grooves: Path) -> None:
             tpl = np.load(work / "hits" / f"{did}_template.npy")
             low = float((tpl[fit.TEMPLATE_EDGES < 150] ** 2).sum() / (tpl ** 2).sum())
             target = fit.target_for(takes, tpl, float(drums[did]["clean_seconds"]), low)
-            hard = synth.render(m, 1.0, 0)
-            got = fit.band_envelopes(hard)
-            live = target > target.max() - 50
-            dist = float(np.mean(np.abs(target - got)[live]))
-            soft = synth.render(m, 0.4, 0)
             ys = [synth.render(m, 1.0, t) for t in range(4)]
+            hard = ys[0]
+            live = target > target.max() - 50
+            live &= (fit.GRID < m["length_s"] - 0.01)[None, :]
+            # the distance a listener meets across repeated hits: the mean over the four takes
+            dist = float(np.mean([np.mean(np.abs(target - fit.band_envelopes(y))[live])
+                                  for y in ys]))
+            soft = synth.render(m, 0.4, 0)
             closest = max(take_distance(ys[i], ys[j]) for i in range(4) for j in range(i + 1, 4))
             report["drums"][did] = dict(fit_distance_4x_db=round(dist, 2),
                                         velocity_shape_db=round(shape_change(hard, soft), 2),
