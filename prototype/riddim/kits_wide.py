@@ -43,6 +43,10 @@ def roll(label, voice, macros, kind):
     return {"label": label, "voice": voice, "macros": macros, "choke": 0, "roll": kind}
 
 
+# The Wood and Bronze kit's mallet. 0.5 is the wood of rounds 1 and 2; the owner heard round 3's woods and asked
+# for more attack (2026-11-18), so the kit plays a harder mallet. `riddim_proto.wood` says what BEATER changes.
+WOOD_BEATER = 0.85
+
 # Pitches below are written in semitones from each voice's default note: WOOD F#3, METAL D5, BOOM F1,
 # DEMBOW_KICK about 27 Hz, KICK about 40 Hz, TING 3234 Hz.
 KITS = {
@@ -77,19 +81,21 @@ KITS = {
     },
     "wood_bronze": {
         "title": "Wood and Bronze", "bpm": 96, "swing": 0.55, "key": "D minor",
-        "about": "Quiet and pitched: five woods (D3 to C4) and four bronze pairs (F5 to D6) in D minor over a soft kick, sticks and hats. Melodic answers on every pad.",
+        "about": "Quiet and pitched: five hard-mallet woods (D3 to C4) and four bronze pairs (F5 to D6) in D minor over a soft kick, sticks and hats. Melodic answers on every pad.",
         "pads": [
             pad("Soft kick", "KICK", st("KICK", -2, DECAY=.45, DRIVE=.25)), pad("Sticks", "STICKS"),
             pad("Closed hat", "HAT_CLOSED", st("HAT_CLOSED", -4, DECAY=.2), 1), pad("Open hat", "HAT_OPEN", st("HAT_OPEN", -4, DECAY=.4), 1),
             pad("Claves", "CLAVE"),
-            pad("Wood D3", "WOOD", st("WOOD", -4)), pad("Wood F3", "WOOD", st("WOOD", -1)), pad("Wood G3", "WOOD", st("WOOD", 1)),
-            pad("Wood A3", "WOOD", st("WOOD", 3)), pad("Wood C4", "WOOD", st("WOOD", 6)),
+            # A harder mallet than rounds 1 and 2 (BEATER 0.5): the owner heard round 3's woods as needing more attack.
+            pad("Wood D3", "WOOD", st("WOOD", -4, BEATER=WOOD_BEATER)), pad("Wood F3", "WOOD", st("WOOD", -1, BEATER=WOOD_BEATER)),
+            pad("Wood G3", "WOOD", st("WOOD", 1, BEATER=WOOD_BEATER)), pad("Wood A3", "WOOD", st("WOOD", 3, BEATER=WOOD_BEATER)),
+            pad("Wood C4", "WOOD", st("WOOD", 6, BEATER=WOOD_BEATER)),
             # METAL at its default D5 does not darken from mid to soft (disclosed in round 2), so the bronze
             # pairs skip it and take D an octave up: F5, A5, C6, D6.
             pad("Bronze F5", "METAL", st("METAL", 3, WAVE=.35)), pad("Bronze A5", "METAL", st("METAL", 7, WAVE=.35)),
             pad("Bronze C6", "METAL", st("METAL", 10, WAVE=.35)), pad("Bronze D6", "METAL", st("METAL", 12, WAVE=.35)),
             pad("Rimshot", "RIMSHOT", st("RIMSHOT", -5, DECAY=.6)),
-            roll("Wood tremolo", "WOOD", st("WOOD", -4), "tremolo"),
+            roll("Wood tremolo", "WOOD", st("WOOD", -4, BEATER=WOOD_BEATER), "tremolo"),
         ],
     },
 }

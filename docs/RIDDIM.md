@@ -219,6 +219,30 @@ measured above 400 Hz, as `RiddimTest` does, because a low wood has nothing abov
 default D5, which does not darken from mid to soft (round 2). Round 1's audio is unchanged: 96 strikes re-rendered
 after the round-3 changes match their round-1 WAVs sample for sample.
 
+### Round 3 follow-up: wood attack (2026-11-18)
+
+The owner heard round 3 and said "wood might need more of an attack". Measured against the two wood loops (Python
+harness): the first 8 ms of a reference wood hit centre at 2368 Hz (wood mallet loop) and 1520 Hz (woody loop), while
+WOOD's centred at 294 to 487 Hz. Its rise was already as fast as the references'; what was missing was brightness at
+the strike. WOOD was almost all fundamental, with its upper modes at 35% and 12%.
+
+WOOD now has a BEATER control, the mallet from yarn (0) to hard (1), named as CALABASH names its kick beater. At 0.5
+it is exactly the wood of rounds 1 and 2: 288 round-1 strikes (every pad, three zones, two takes) re-render sample for
+sample, so Clave Dancehall's woods on the shelf are unchanged. Above 0.5 it does three things:
+
+- **A shorter mallet pulse.** It reaches higher before the pulse's own spectrum falls off.
+- **Stronger upper modes.** The bar's 4th- and 10th-harmonic modes get louder; they still die faster than the
+  fundamental.
+- **A knock.** Three short modes fixed at 1.9, 2.75 and 4.1 kHz, plus a burst of contact noise. They do not follow
+  the note, as a mallet head and a stiff block do not. The knock scales with velocity to the power 1.2.
+
+A first try that tuned the knock to the note could not lift the onset past about 950 Hz on low woods, and only made
+the click louder; the fixed band and the brighter bar together reach the references.
+
+Wood and Bronze plays BEATER 0.85. Measured, hard hit: D3 1187 Hz, A3 1379 Hz, C4 1436 Hz (before: about 260 to
+400 Hz). Soft hits stay dark, at 342 to 425 Hz, and every wood pad still darkens at each softer zone; the closest
+two takes on a wood pad are 26.4 dB apart. The page has a before and after at 0.5, 0.85 and 1.0. Not yet heard.
+
 ## Open
 
 - Phone and MPC playback of the three kits.
@@ -233,7 +257,7 @@ after the round-3 changes match their round-1 WAVs sample for sample.
 - **Proposed:** every constant in `riddim_proto.py` is a shape value until heard.
 - **Heard:** round 0's palette, "pretty good so far" (2026-11-18); round 1's three kits, "Approved" (2026-11-18).
   The Kotlin kits (round 2) confirmed to match, "Yes, they match" (2026-11-18). No phone or MPC has played them.
-  Round 3 (the wider kits, TING and RATCHET) not yet heard.
+  Round 3 heard: "wood might need more of an attack" (2026-11-18); the harder-mallet woods not yet heard.
 
 ## Why it is built this way
 

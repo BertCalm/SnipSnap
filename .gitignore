@@ -844,3 +844,6 @@ testkit/splinter-breakcore/
 /prototype/soul-rock/checks.json
 /prototype/soul-rock/coupled-snare/model.so
 /testkit/soul-rock-v2/
+testkit/shatter-breakcore/
+testkit/soundclash-breakcore/
+testkit/redline-breakcore/
