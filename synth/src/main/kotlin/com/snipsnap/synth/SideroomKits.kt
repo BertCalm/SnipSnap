@@ -13,7 +13,7 @@ import kotlin.math.*
  * and authors finite roll/fill scores (with legacy riser replay). No editable Kotlin spectral-engine claim.
  */
 object SideroomKits {
-    const val VERSION = 2
+    const val VERSION = 3
     const val TAKES = 3
     const val PADS = 10
     val velocities = listOf(.25f, .6f, 1f)
@@ -42,6 +42,19 @@ object SideroomKits {
         }
         return stored.copy(samples=stored.samples.copyOf())
     }
+    private fun fillBytes(name: String) = checkNotNull(javaClass.getResourceAsStream("/sideroom/fills-v3/$name")).use { it.readBytes() }
+    private val fillHashes by lazy { fillBytes("index.csv").toString(Charsets.UTF_8).lineSequence().drop(1).filter { it.isNotBlank() }.associate { val p=it.split(','); p[0] to p[1] } }
+    // Frozen synthesized phrases: medium/take 1 is the exact approved audition.
+    @Synchronized private fun originalFill(kit: Kit, layer: Int, take: Int): Snip {
+        val name="${kit.slug}/fill-$layer-$take.wav"
+        val stored=cache.getOrPut("fills-v3/$name") {
+            val raw=GZIPInputStream(fillBytes("$name.gz").inputStream()).use { it.readBytes() }
+            val digest=MessageDigest.getInstance("SHA-256").digest(raw).joinToString("") { "%02x".format(it.toInt() and 255) }
+            check(digest==fillHashes.getValue(name))
+            WavReader.read(raw).also { check(it.channels==1 && it.sampleRate==Dsp.RATE) }
+        }
+        return stored.copy(samples=stored.samples.copyOf())
+    }
     fun layer(velocity: Float): Int {
         require(velocity.isFinite() && velocity in 0f..1f)
         val midi=(velocity*127).roundToInt()
@@ -52,6 +65,7 @@ object SideroomKits {
         require(role in 0 until PADS && take in 0 until TAKES)
         val z=layer(velocity)
         if(role<8) return hit(kit,role,z,take)
+        if(role==9 && model>=3) return originalFill(kit,z,take)
         val raw=phrase(kit,role,z,take,model)
         val gain=phraseGain(kit,role,model)
         for(i in raw.indices) raw[i]*=gain
@@ -108,7 +122,8 @@ object SideroomKits {
     }
     fun source(kit: Kit, role: Int, model: Int = VERSION)=mapOf("engine" to "SIDEROOM", "model" to model.toString(), "kit" to kit.name,
         "role" to role.toString(), "velocities" to velocities.joinToString(","), "takes" to TAKES.toString(),
-        "articulation" to if(role==8) "roll" else if(role==9) (if(model==1) "riser" else "fill") else "finite", "sourceType" to "cached-spectral-synthesis")
+        "articulation" to if(role==8) "roll" else if(role==9) (if(model==1) "riser" else "fill") else "finite", "sourceType" to "cached-spectral-synthesis") +
+        if(role==9 && model>=3) mapOf("phraseTempo" to "100", "phrase" to "original-audition") else emptyMap()
     fun replay(source: Map<String,String>): List<List<Snip>> {
         val model=source["model"]?.toIntOrNull()
         require(source["engine"]=="SIDEROOM" && model!=null && model in 1..VERSION)

@@ -2,7 +2,7 @@
 Checks actual XPM slice windows and chain bytes; does not claim hardware playback.
 """
 from pathlib import Path
-import json,shutil,sys,xml.etree.ElementTree as ET,wave,zipfile
+import gzip,json,shutil,sys,xml.etree.ElementTree as ET,wave,zipfile
 from scipy.io import wavfile
 import numpy as np
 src,out=map(Path,sys.argv[1:3]);out.mkdir(parents=True,exist_ok=True)
@@ -23,7 +23,7 @@ for folder in sorted(src.iterdir()):
    assert int(layer.findtext('SliceStart'))==start;assert int(layer.findtext('SliceEnd'))==end
    assert layer.findtext('SampleName')+'.wav'==pad['sample']
  shutil.copy(program,data/program.name)
- text='SIDEROOM native kit. Open the .xtd on MPC 3 and keep its _[TrackData] folder alongside it. The data folder also contains the MPC 2 .xpm. MPC 3 keeps three velocity zones and three cycling takes. MPC 2 selects the first take of each velocity zone, per its documented format limit. Ten pads: eight approved synthesized hits, an approved snare roll and new one-bar drum fill. Native software read-back passes; the new fill and phone/MPC hardware playback await owner verification. No commercial reference audio sampled.\n'
+ text='SIDEROOM native kit. Open the .xtd on MPC 3 and keep its _[TrackData] folder alongside it. The data folder also contains the MPC 2 .xpm. MPC 3 keeps three velocity zones and three cycling takes. MPC 2 selects the first take of each velocity zone, per its documented format limit. Ten pads: eight approved synthesized hits, an approved snare roll and original audition fill at 100 BPM. Native software read-back passes; the new fill and phone/MPC hardware playback await owner verification. No commercial reference audio sampled.\n'
  archive=out/(folder.name+'-native.zip')
  with zipfile.ZipFile(archive,'w',zipfile.ZIP_DEFLATED,compresslevel=9) as z:
   for p in sorted(mpc3.rglob('*')):
@@ -41,6 +41,7 @@ for folder in sorted(src.iterdir()):
     f=folder/f'{role}-{level}-{take}.wav';sr,x=wavfile.read(f)
     y=x.astype(float)/(2**31 if x.dtype==np.int32 else 32768)
     dest=out/folder.name/f'{role}-{level}-{take}.wav';dest.parent.mkdir(exist_ok=True);wavfile.write(dest,sr,np.rint(y*32767).astype(np.int16))
+ assert (out/folder.name/'drumfill-1-0.wav').read_bytes()==gzip.decompress((resource.parent/'fills-v3'/folder.name/'fill-1-0.wav.gz').read_bytes()),'Approved original fill changed in delivery'
  report[folder.name]={'pads':10,'variants':90,'mpc2_velocity_windows_verified':30,'archive_bytes':archive.stat().st_size}
  print(folder.name,round(archive.stat().st_size/1024**2,2),'MiB')
 shutil.copy(src/'verification.csv',out/'verification.csv');(out/'delivery-checks.json').write_text(json.dumps(report,indent=2))

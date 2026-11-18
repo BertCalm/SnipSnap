@@ -64,7 +64,7 @@ class SideroomKitTest {
                 assertContentEquals(SideroomKits.render(g,8,v,t,1).samples,SideroomKits.render(g,8,v,t).samples)
             }
             val old=SideroomKits.replay(SideroomKits.source(g,9,1))
-            val fresh=SideroomKits.replay(SideroomKits.source(g,9))
+            val fresh=SideroomKits.replay(SideroomKits.source(g,9,2))
             assertEquals("fill",SideroomKits.source(g,9)["articulation"])
             assertEquals("riser",SideroomKits.source(g,9,1)["articulation"])
             for(z in 0..2) for(t in 0..2) {
