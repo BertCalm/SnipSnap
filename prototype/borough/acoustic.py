@@ -176,6 +176,23 @@ def hat(p, vel=1.0, rng=None, seconds=0.45, kind='HAT_CLOSED'):
                        seconds if kind != 'HAT_OPEN' else None)
 
 
+def ride(p, vel=1.0, rng=None, seconds=None, kind='RIDE'):
+    """EMBER's ride (or its bell) through the same record chain as the hats. Fitted as role 'ride'
+    against a loop's cymbal descriptor (fit.py ROLE_TARGET), so a ride-led loop gets a ride, not a
+    closed hat bent toward one. Full natural ring on pads; the fitter passes a short window."""
+    take = 0 if rng is None else int(rng.integers(1 << 20))
+    m = dict(TUNE=p['tune'], DAMP=p['damp'], BUZZ=p['buzz'], DISTANCE=p['distance'])
+    if seconds is None:
+        return ember_voice(kind, m, p, vel, take)
+    # fitting: render only the window being scored (EMBER.render always rings the full 1.45 s),
+    # the same steps as E.render with a shorter buffer
+    # (with 0.25 s to spare, so end()'s release lands after the scored window, not inside it)
+    mm = E.settled(kind, dict(m, WARMTH=0.0)); v = float(np.clip(vel, .05, 1.0)); s = seconds + .25
+    raw = E.RENDER[kind](mm, v, E.rng_for('ember', kind, take), E.n_of(s + .05))
+    y = E.finish(raw, mm, v, s, E.TAILS.get(kind))
+    return end(record(y, p, vel), s)
+
+
 CHAIN = dict(distance=(0, .7), comp=(0, 1), drive=(0, 1), lp=(1200, 16000), tilt=(-12, 6))
 SPACES = {
     'kick': dict(f1=(38, 110), t1=(.08, 1.2), alpha=(.6, 1.6), beater_ms=(.5, 3.5), air=(0, 1), r=(0, .5),
@@ -184,7 +201,8 @@ SPACES = {
                   stick_ms=(.15, .8), crack=(0, .5), **CHAIN),
     'hat': dict(tune=(0, 1), damp=(0, 1), buzz=(0, 1), **CHAIN),
 }
-RENDER = {'kick': kick, 'snare': snare, 'hat': hat}
+SPACES['ride'] = dict(SPACES['hat'])
+RENDER = {'kick': kick, 'snare': snare, 'hat': hat, 'ride': ride}
 LOGK = {'f1', 'lp', 't1', 'beater_ms', 'stick_ms'}
 
 
@@ -201,14 +219,18 @@ def derive(kit, fitted, fallback_hat):
     a, b = fitted[kit['primary']], fitted[kit['secondary']]
     k1, s1 = a['kick']['params'], a['snare']['params']
     h = (a.get('hat') or b.get('hat') or fallback_hat)['params']
+    # A ride-led kit (kits.py ride=True): A03 RIDE fitted to the primary loop's cymbal, A04 its bell.
+    # Pedal hat stays on A08 (the foot keeps 2 and 4 under a ride); the closed and open hats go.
+    top = ([('RIDE', 'ride', a['ride']['params'], {}), ('RIDE BELL', 'ride', a['ride']['params'], {'kind': 'RIDE_BELL'})]
+           if kit.get('ride') else
+           [('HAT', 'hat', h, {}), ('OPEN HAT', 'hat', h, {'kind': 'HAT_OPEN'})])
     k2 = (b.get('kick') or a['kick'])['params']; s2 = (b.get('snare') or a['snare'])['params']
     snare_tune = tune_for(s1['f1'], 285.0, 5)
     sch = {k: s1[k] for k in CHAIN}
     floor_tune = tune_for(k1['f1'] * 2.0, 104.0, 6)    # EMBER floor tom base 104 Hz, rack 172 Hz
     rack_tune = tune_for(k1['f1'] * 3.2, 172.0, 6)
     return [
-        ('KICK', 'kick', k1, {}), ('SNARE', 'snare', s1, {}), ('HAT', 'hat', h, {}),
-        ('OPEN HAT', 'hat', h, {'kind': 'HAT_OPEN'}),
+        ('KICK', 'kick', k1, {}), ('SNARE', 'snare', s1, {}), *top,
         ('KICK 2', 'kick', k2, {}), ('SNARE 2', 'snare', s2, {}),
         ('RIM', 'ember', dict(sch, voice='CROSS_STICK', macros=dict(TUNE=snare_tune, DAMP=.4, BUZZ=s1['buzz'])), {}),
         ('PEDAL HAT', 'hat', h, {'kind': 'HAT_FOOT'}),
@@ -225,6 +247,7 @@ def render_pad(kind, p, vel, rng, extra):
     if kind == 'ghost':   # the stick barely leaves the head: a soft stroke, wires relatively louder
         return snare(p, vel * .4, rng, seconds=.5, wire_scale=1.3)
     if kind == 'hat': return hat(p, vel, rng, kind=extra.get('kind', 'HAT_CLOSED'))
+    if kind == 'ride': return ride(p, vel, rng, kind=extra.get('kind', 'RIDE'))
     if kind == 'ember':
         return ember_voice(p['voice'], p['macros'], p, vel, int(rng.integers(1 << 20)))
     raise ValueError(kind)

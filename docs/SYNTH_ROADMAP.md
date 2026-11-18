@@ -31,6 +31,10 @@
 > snare, with a new edit stage (speed, chop, retrigger, stretch, clip). 162 cells verified through
 > saving, playback, SFZ and MPC 3. Groove heard 2026-11-15: fine; hardware open. See [SPLINTER](SPLINTER.md).
 
+> Breakcore family (2026-11-18): SHATTER (180 BPM), SOUNDCLASH (175) and REDLINE (250) join SPLINTER,
+> three 18-pad starters, 162 cells each verified through saving, playback, SFZ and MPC 3. Grooves and pads
+> heard 2026-11-18 and kept; per-pad verdicts and hardware open. See [BREAKCORE_FAMILY](BREAKCORE_FAMILY.md).
+
 > TRIAD first listening gate (2026-11-09): one generated hybrid drum groove through
 > shared compression/drive, dynamics/tape, or crush/grains. Native finite audition;
 > presets, HOLD, phone controls and MPC program export remain outside this gate.

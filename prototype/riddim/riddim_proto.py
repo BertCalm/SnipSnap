@@ -290,7 +290,46 @@ def wood(m, v, k):
     each hit falls 20 dB in 43 to 60 ms, so T60 is about 0.2 s. Default note F#3 (the loops sit in F# minor);
     TUNE spans an octave either way so one voice plays a whole phrase across pads."""
     note = 54 + round((m.get("TUNE", .5) - .5) * 24)
-    return _struck(hz(note), TUNED_BAR, 0.06 + 0.2 * m.get("DECAY", .5), v, k, 0.6, 3.0, 0.5, "wood")
+    # BEATER (added 2026-11-18, after the owner heard round 3: "wood might need more of an attack"). The mallet,
+    # from yarn (0) to hard (1), named as CALABASH names its kick beater. At 0.5 the wood is exactly the one
+    # approved in rounds 1 and 2: the mallet width is unchanged and no knock is added.
+    beater = m.get("BEATER", .5)
+    width = 2 ** ((0.5 - beater) * 2)          # 1 at 0.5; a hard mallet presses half as long, a yarn one twice
+    knock = max(0.0, (beater - 0.5) * 2)       # 0 up to the middle, 1 at a hard mallet
+    # A harder mallet also lifts the bar's own upper modes (they still die faster than the fundamental), so the
+    # first tens of milliseconds are brighter, as the references are, not only the first click.
+    modes = tuple((r, g * (1 + UPPER_BOOST * knock) ** i, t) for i, (r, g, t) in enumerate(TUNED_BAR))
+    f0 = hz(note)
+    y = _struck(f0, modes, 0.06 + 0.2 * m.get("DECAY", .5), v, k, 0.6, 3.0 * width, 0.5 * width, "wood")
+    if knock > 0:
+        y = y + knock * v ** 1.2 * _knock(f0, v, k, 3.0 * width, 0.5 * width)
+    return y
+
+
+# The tock's own ringing, fixed in frequency: the mallet head and the block's small, stiff modes do not move with
+# the bar's note. (Hz, gain, T60 s.)
+WOOD_KNOCK = ((1900, 1.0, .012), (2750, .8, .009), (4100, .5, .006))
+UPPER_BOOST = 3.0     # with KNOCK_GAIN: a hard BEATER puts the first 8 ms near 1.4 to 1.6 kHz (woody loop 1.5 kHz)
+KNOCK_GAIN = 6.0
+
+
+def _knock(f0, v, k, soft_ms, hard_ms):
+    """The tock of a mallet landing on wood. Measured on the owner's wood loops (round 3 follow-up): the first
+    8 ms of a hit centre near 1.5 to 2.4 kHz, while the tuned wood alone centred near 0.3 to 0.5 kHz, almost all
+    fundamental. A real bar also has untuned upper modes that die within a few tens of milliseconds, and the
+    mallet's contact is a short burst of noise. Both are drawn here, struck by the same mallet pulse, so a
+    softer stroke (a wider pulse) still reaches less of them and stays darker."""
+    rng = rng_for("wood-knock", round(f0, 2), round(v, 3), k)
+    n = int(0.6 * FS)
+    w = max(2, int((soft_ms + (hard_ms - soft_ms) * v) * 1e-3 * FS * (1 + rng.normal(0, .05))))
+    pulse = np.zeros(n)
+    pulse[:w] = 0.5 * (1 - np.cos(TAU * np.arange(w) / w))
+    modes = np.zeros(n)
+    for hz_, gain, t60 in WOOD_KNOCK:
+        f = hz_ * 2 ** (rng.normal(0, 30) / 1200)               # each take lands a little apart
+        modes += gain * 10 ** (rng.uniform(-2, 2) / 20) * resonator(pulse, f, t60 * (1 + rng.normal(0, .08)))
+    contact = bandpass(rng.normal(0, 1, n) * pulse, 1500, 7000)
+    return KNOCK_GAIN * (modes + 0.25 * contact)
 
 
 def metal(m, v, k):

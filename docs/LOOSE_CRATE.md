@@ -283,6 +283,30 @@ Disclosed, not asked for: the groove's 0.5 to 2 kHz still sits near -22 dB again
 is the reference snare's crack and beater knock, not the bass; CLOTH's bounce snare is a deep body and wires with
 little between. Left for the owner to call.
 
+## Expansion: BLUE, SPEED, RAGA (round 0, not yet heard)
+
+Asked which adjacent kits would extend the collection, the owner chose all three proposed (2026-11-18): BLUE (jazz
+breaks off a record), SPEED (sped-up breaks) and RAGA (Indian-record percussion). Nearest siblings and what differs:
+EMBER's Soul Jazz and After Hours (a clean club) for BLUE; the rack's SPEED section (whole semitones, per pad) for
+SPEED; TERRA PUNJAB (the same hand drums, clean) for RAGA. No reference loops were given for these.
+
+`LooseCrateExpansionRound0Generator` (`:synth:generateLooseCrateExpansionRound0`) renders one four-bar groove and
+the key hits of each, through LOOSE CRATE's room (`LooseCrateKits.Room`) and crate print:
+- **BLUE (90 BPM):** EMBER's felt kick, brush tap, brush sweep, ride and foot hat (DISTANCE 0, WARMTH 0: the room
+  and the print supply both); the ride swung in triplets, brushes on two and four, a boom-bap kick push.
+- **SPEED (108 BPM):** HUMMIN's approved strikes and played notes at 80 BPM in HUMMIN's room, then the loop read as
+  if recorded at 1.35 times the rate (45 rpm over 33 1/3) and resampled (`Resampler`), three copies end to end with
+  the middle kept, then the crate print. 529,200 frames at 80 become 392,000, four bars at 108 exactly (checked in the
+  generator).
+- **RAGA (94 BPM):** TERRA's dayan (open "na", closed "ti"), bayan ("ge", bending) and dholak over LOOSE CRATE's
+  thud kick and slap snare.
+
+Measured (Python probes): SPEED's hum kick rises from 53.8 to 73.3 Hz and shortens from 1.13 to 0.84 s; RAGA's bayan
+bends from 103 to 90 Hz; BLUE's groove never goes quiet (quietest tenth 12.5 dB under the loudest), from the ride,
+which rings over a second six times a bar; easing the brush sweep from .35 to .20 moved it under 1 dB.
+
+[Expansion round 0 listening page](https://claude.ai/artifact/Q3rZ8po8ZaeJs9E4tNd86s) (private to the owner).
+
 ## Gates
 
 | Gate | Status |
