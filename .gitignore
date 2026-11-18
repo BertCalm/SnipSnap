@@ -30,6 +30,7 @@ testkit/filament-held-keys/
 testkit/loose-crate-round0/
 testkit/loose-crate-kits/
 testkit/loose-crate-round2a/
+testkit/loose-crate-expansion-round0/
 testkit/filament-thread-touch-keys/
 testkit/filament-pulse-touch-keys/
 testkit/filament-curl-touch-keys/
