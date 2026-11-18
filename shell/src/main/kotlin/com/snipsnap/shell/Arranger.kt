@@ -650,6 +650,8 @@ object Arranger {
             }
         }
 
+        // A stretch whose every hit is muted is a stretch of silence, as one whose hits all rolled out is.
+        fun anyMuted(range: IntRange) = range.any { plan.sections[it].mutes.isNotEmpty() }
         val pieces = stretches.map { range ->
             val first = range.first
             val notes = range.flatMap { i ->
@@ -659,7 +661,7 @@ object Arranger {
             val stretchPulses = startPulses[range.last + 1] - startPulses[first]
             val drops = range.mapNotNull { dropAt[it] }
             var audio = if (drops.isEmpty()) {
-                KitPreview.renderNotes(kit, kitDir, notes, stretchPulses, bpm, allowSilence = chancy)
+                KitPreview.renderNotes(kit, kitDir, notes, stretchPulses, bpm, allowSilence = chancy || anyMuted(range))
             } else {
                 // Each stretch of drums between drops is its own take, in this stretch's own frames, cut where
                 // the next dropped bar begins: a tail never rings into it, and none comes back after it.

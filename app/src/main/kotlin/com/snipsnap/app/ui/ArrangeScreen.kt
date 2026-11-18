@@ -536,7 +536,7 @@ private fun SongMutesRow(keeper: SongKeeper, section: Arranger.Section, enabled:
                 enabled = enabled,
                 lit = muted,
                 accessibilityLabel = if (muted) Copy.songMuteOn(name) else Copy.songMuteOff(name),
-                modifier = Modifier.widthIn(min = 72.dp),
+                modifier = Modifier.widthIn(min = 72.dp).semantics { this.selected = muted },
             ) { keeper.toggleMute(key) }
         }
     }

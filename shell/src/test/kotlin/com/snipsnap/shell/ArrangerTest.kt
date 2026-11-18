@@ -1400,6 +1400,21 @@ class ArrangerTest {
     }
 
     @Test
+    fun `a section with every lane muted is a silent section, not a failed mix`() {
+        val m = dropModel("MuteAll")
+        // A one-section song is its own stretch: with nothing left to play there is nothing for the kit to render, and that is silence.
+        val one = muteSong().copy(sections = listOf(muteSong().sections[0]))
+        val plain = Arranger.mixdown(m.kit, m.kitDir, one)
+        val silent = Arranger.mixdown(m.kit, m.kitDir, one.copy(sections = listOf(one.sections[0].copy(mutes = setOf(muteKick, muteSnare, muteHat)))))
+        assertEquals(plain.sectionStarts, silent.sectionStarts)
+        assertEquals(plain.snip.frameCount, silent.snip.frameCount)
+        assertTrue(energy(silent.snip.samples) < 1e-12)
+        // Between two pull-ups it is a stretch of its own too.
+        val three = Arranger.Arrangement("Three", 0, listOf(one.sections[0], one.sections[0].copy(pullUp = true, mutes = setOf(muteKick, muteSnare, muteHat)), one.sections[0].copy(pullUp = true)))
+        assertEquals(3, Arranger.mixdown(m.kit, m.kitDir, three).sectionStarts.size)
+    }
+
+    @Test
     fun `a muted bed leaves the bed out of that section only`() {
         val m = dropModel("MuteBed")
         val rate = 44_100

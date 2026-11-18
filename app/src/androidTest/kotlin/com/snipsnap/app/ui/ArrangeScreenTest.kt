@@ -10,6 +10,8 @@ import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.assertContentDescriptionContains
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertIsNotSelected
+import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.isSelected
 import androidx.compose.ui.test.onAllNodesWithContentDescription
@@ -272,13 +274,13 @@ class ArrangeScreenTest : ComposeScreenTest() {
         waitFor("the mute to be kept", timeoutMillis = 30_000) {
             SongPlanStore.load(projectDir, entry.dir.name)?.sections?.get(0)?.mutes == setOf(lane)
         }
-        waitFor("the chip to say MUTED", timeoutMillis = 30_000) { runCatching { button(Copy.songMuteOn(name)).assertExists() }.isSuccess }
+        waitFor("the chip to say MUTED", timeoutMillis = 30_000) { runCatching { button(Copy.songMuteOn(name)).assertIsSelected() }.isSuccess }
         // Tapping it again plays the lane again, and the file says so.
         button(Copy.songMuteOn(name)).performClick()
         waitFor("the mute to be taken off", timeoutMillis = 30_000) {
             SongPlanStore.load(projectDir, entry.dir.name)?.sections?.get(0)?.mutes?.isEmpty() == true
         }
-        waitFor("the chip to say it is playing", timeoutMillis = 30_000) { runCatching { button(Copy.songMuteOff(name)).assertExists() }.isSuccess }
+        waitFor("the chip to say it is playing", timeoutMillis = 30_000) { runCatching { button(Copy.songMuteOff(name)).assertIsNotSelected() }.isSuccess }
     }
 
     /**
