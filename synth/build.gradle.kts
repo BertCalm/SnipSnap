@@ -3997,3 +3997,9 @@ tasks.register<JavaExec>("generateSecondLineCandidate") {
     maxHeapSize = "1g"
     args(providers.gradleProperty("secondLineOutput").getOrElse("${rootDir}/testkit/second-line-native"))
 }
+
+tasks.named<org.gradle.language.jvm.tasks.ProcessResources>("processResources") {
+    for (name in listOf("triangle-fit.json", "NOTICE-triangle.txt")) {
+        from(rootProject.file("prototype/drumline_parade/$name")) { into("parade") }
+    }
+}

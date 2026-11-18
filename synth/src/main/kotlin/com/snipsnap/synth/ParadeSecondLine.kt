@@ -11,7 +11,7 @@ internal object ParadeSecondLine {
     const val MODEL = 1
     private const val R = Dsp.RATE * Dsp.OVERSAMPLE
     enum class Voice { BASS_OPEN, BASS_MUTED, SNARE_CENTER, SNARE_GHOST, RIMSHOT, CROSS_STICK,
-        SNARE_DRAG, SNARE_FLAM, PRESS_BUZZ, SNARE_ROLL, CYMBAL_CRASH, CYMBAL_CHOKE, CYMBAL_TOUCH, BELL, STICK_CLICK, TURNAROUND }
+        SNARE_DRAG, SNARE_FLAM, PRESS_BUZZ, SNARE_ROLL, CYMBAL_CRASH, CYMBAL_CHOKE, CYMBAL_TOUCH, BELL, STICK_CLICK, TURNAROUND, TRIANGLE, TRIANGLE_MUTED }
     fun defaults() = mapOf("TUNE" to .5f,"STRIKE" to .5f,"DAMP" to .5f)
     fun settled(m: Map<String,Float>) = defaults().mapValues { (k,v)->m[k]?.takeIf { it.isFinite() }?.coerceIn(0f,1f) ?: v }
     data class Recipe(val voice: Voice,val macros: Map<String,Float> = defaults(),val velocity: Float = 1f,val take: Int = 0,val model: Int = MODEL) {
@@ -27,15 +27,17 @@ internal object ParadeSecondLine {
     }
     private fun table(name: String) = Json.parse(checkNotNull(javaClass.getResourceAsStream("/parade/$name")).bufferedReader().use { it.readText() }).obj()
     private fun doubles(v: JsonValue)=v.arr().map { it.num() }.toDoubleArray()
-    private val contacts by lazy {
-        val root=table("measured-contacts.json");val bands=doubles(root.getValue("bands"));val times=doubles(root.getValue("times"))
-        root.getValue("voices").obj().mapValues { (_,value)->
+    private fun contactBank(file: String): Map<String,CalabashFits.HandData> {
+        val root=table(file);val bands=doubles(root.getValue("bands"));val times=doubles(root.getValue("times"))
+        return root.getValue("voices").obj().mapValues { (_,value)->
             val d=value.obj();val modes=d.getValue("modes").arr().map { doubles(it) };val glide=doubles(d.getValue("glide"))
             fun col(k: Int)=DoubleArray(modes.size) { modes[it][k] }
             CalabashFits.HandData(CalabashFits.Hand(col(0),col(1),col(2),col(3),col(4),glide[0],glide[1],
                 d.getValue("residual").arr().map { doubles(it) }.toTypedArray(),d.getValue("residualSoft").arr().map { doubles(it) }.toTypedArray()),bands,times,root.getValue("early").num())
         }
     }
+    private val contacts by lazy { contactBank("measured-contacts.json") }
+    private val triangle by lazy { contactBank("triangle-fit.json").getValue("triangle") }
     private val wash by lazy { table("crash-wash.json") }
     private fun loss(t: Double,start: Double,width: Double): Double {
         val z=(t-start).coerceIn(0.0,width)
@@ -106,6 +108,19 @@ internal object ParadeSecondLine {
                     val lo=CalabashDsp.butter(2,CalabashDsp.Kind.LOW,1800.0,fs=R).run(y)
                     val start=if(voice==Voice.CYMBAL_TOUCH).045 else .18;val width=if(voice==Voice.CYMBAL_TOUCH).06 else .14
                     for(i in y.indices) { val t=i.toDouble()/R;if(t>=start) { val e=loss(t,start,width);y[i]=lo[i]*exp(-20*e)+(y[i]-lo[i])*exp(-55*e) } }
+                };y
+            }
+            Voice.TRIANGLE,Voice.TRIANGLE_MUTED -> {
+                val rng=CalabashDsp.Rng(Dsp.seedFor("PARADE_TRIANGLE",take))
+                val (a,b)=CalabashFits.strike("triangle",v,rng,5.0,contactMs=.18,fit=triangle)
+                var y=CalabashDsp.upsample4(DoubleArray(a.size) { (a[it]+b[it])*v },5*R)
+                if(voice==Voice.TRIANGLE_MUTED) {
+                    y=y.copyOf((1.2*R).roundToInt())
+                    val lo=CalabashDsp.butter(2,CalabashDsp.Kind.LOW,1800.0,fs=R).run(y)
+                    for(i in y.indices) {
+                        val e=loss(i.toDouble()/R,.035,.055)
+                        y[i]=lo[i]*exp(-28*e)+(y[i]-lo[i])*exp(-65*e)
+                    }
                 };y
             }
             Voice.RIMSHOT,Voice.CROSS_STICK,Voice.STICK_CLICK -> {

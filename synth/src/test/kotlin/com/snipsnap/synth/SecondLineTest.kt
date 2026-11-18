@@ -4,6 +4,17 @@ import kotlin.test.*
 import kotlin.math.*
 
 class SecondLineTest {
+    @Test fun `muted triangle releases progressively with much less late ring`() {
+        fun ratio(x: FloatArray): Double {
+            val early=x.take(1323).sumOf { it.toDouble()*it }/1323
+            val late=x.sliceArray(8820 until 22050).sumOf { it.toDouble()*it }/13230
+            return 10*log10(max(late,1e-20)/max(early,1e-20))
+        }
+        val open=ParadeSecondLine.render(ParadeSecondLine.Voice.TRIANGLE).samples
+        val muted=ParadeSecondLine.render(ParadeSecondLine.Voice.TRIANGLE_MUTED).samples
+        assertTrue(ratio(muted)<ratio(open)-12,"Muted triangle retained the open ring")
+    }
+
     @Test fun `binary control corners stay finite bounded and silent at release`() {
         for(voice in ParadeSecondLine.Voice.entries)for(bits in 0..7) {
             val m=ParadeSecondLine.defaults().keys.withIndex().associate { (i,key)->key to ((bits shr i) and 1).toFloat() }
@@ -15,7 +26,7 @@ class SecondLineTest {
     }
     @Test fun `controls move each contact family and unknown controls settle`() {
         for(voice in listOf(ParadeSecondLine.Voice.BASS_OPEN,ParadeSecondLine.Voice.SNARE_CENTER,
-            ParadeSecondLine.Voice.RIMSHOT,ParadeSecondLine.Voice.CYMBAL_CRASH,ParadeSecondLine.Voice.BELL)) {
+            ParadeSecondLine.Voice.RIMSHOT,ParadeSecondLine.Voice.CYMBAL_CRASH,ParadeSecondLine.Voice.TRIANGLE,ParadeSecondLine.Voice.BELL)) {
             for(key in ParadeSecondLine.defaults().keys) {
                 val a=ParadeSecondLine.render(voice,mapOf(key to .2f),.6f).samples
                 val b=ParadeSecondLine.render(voice,mapOf(key to .8f),.6f).samples

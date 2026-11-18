@@ -1,0 +1,13 @@
+Triangle acoustic reference: VCSL, Versilian Studios LLC. CC0 1.0.
+https://github.com/sgossner/VCSL
+Pinned source c1ea7bcc3c7309650ab0da9d15c9cd1fbc4a4c7e.
+Idiophones/Struck Idiophones/Triangles/Triangle1_Hit_v1_rr1_Mid.wav (soft)
+Idiophones/Struck Idiophones/Triangles/Triangle1_Hit_v2_rr1_Mid.wav (hard)
+Exact URLs and source SHA256 hashes are recorded in triangle-fit.json.
+
+fit_triangle.py reuses the existing CALABASH fitter for 128 modes, two decay
+slopes, velocity spectral differences and residual spectral envelopes.
+The renderer loads coefficients and generates fresh modes and noise, not PCM.
+A recorded reference is supplied separately as a labeled audition control.
+Muted articulation is modeled progressive hand contact on the open strike,
+not a fit to a recorded muted take. No endorsement implied.
