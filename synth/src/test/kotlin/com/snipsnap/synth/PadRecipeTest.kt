@@ -74,6 +74,7 @@ class PadRecipeTest {
         ScuffPatch("Rim Test", ScuffVoice.RIM, mapOf("BITE" to 0.4f), velocity = 0.7f, take = 2),
         ClutterPatch("Pot Test", ClutterVoice.POT, mapOf("RATTLE" to 0.8f), velocity = 0.7f, take = 2),
         EmberPatch("Brush Test", EmberVoice.BRUSH_TAP, mapOf("BUZZ" to 0.8f), velocity = 0.6f, take = 1),
+        RiddimPatch("Boom Test", RiddimVoice.BOOM, mapOf("TUNE" to 0.625f), velocity = 0.65f, take = 2),
         CalabashPatch("Slap Test", CalabashVoice.CONGA, mapOf("STROKE" to 1f), velocity = 0.7f, take = 2),
         HiccupPatch("Stumble Test", HiccupVoice.SNARE, mapOf("FAULT" to 0.8f), velocity = 0.7f, take = 2),
         ServoPatch("Snare Test", ServoVoice.SNARE, mapOf("GROWL" to 0.8f), velocity = 0.7f, take = 2),
