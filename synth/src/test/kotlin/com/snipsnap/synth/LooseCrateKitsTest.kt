@@ -165,6 +165,38 @@ class LooseCrateKitsTest {
         }
     }
 
+    /**
+     * Round 2 (the owner heard round 1 as "a bit drum machine like"): a groove keeps sounding between hits as its
+     * references do. The quietest tenth of its 10 ms frames, under its loudest frame, sits in a band around its
+     * references' (HUMMIN's 18 to 23 dB, CLOTH's 45, HAZE's 22 to 31, RITUAL's 35 to 44); round 1 measured 45, 44,
+     * 45 and 56, every groove falling to near silence between hits.
+     */
+    @Test fun `every groove keeps sounding between hits as its references do`() {
+        val bands = mapOf(Kit.HUMMIN to -33.0..-15.0, Kit.CLOTH to -56.0..-40.0, Kit.HAZE to -36.0..-18.0, Kit.RITUAL to -48.0..-30.0)
+        for (kit in Kit.entries) {
+            val x = rendered(kit, LooseCrateKits.GROOVE, 1f, 0).samples
+            val hop = rate / 100
+            val frames = DoubleArray(x.size / hop) { f -> sqrt((0 until hop).sumOf { val v = x[f * hop + it].toDouble(); v * v } / hop) }
+            val loudest = frames.max()
+            val quiet = frames.sorted()[frames.size / 10]
+            val db = 20 * kotlin.math.log10(quiet / loudest)
+            assertTrue(db in bands.getValue(kit), "${kit.name}: quietest tenth $db dB under the loudest frame, band ${bands.getValue(kit)}")
+        }
+    }
+
+    /** Round 2: a drummer's kicks are not all one strength; the references' land 5 to 12 dB apart, round 1's within 1.6 dB. */
+    @Test fun `every groove's kicks land at least 8 dB apart from softest to hardest`() {
+        for (kit in Kit.entries) {
+            val parts = LooseCrateKits.parts(kit)
+            val notes = LooseCrateKits.played(kit, LooseCrateKits.phrases(kit)[1].notes)
+            val kicks = notes.filter { it.part < LooseCrateKits.HITS && parts[it.part].cls == DrumClass.KICK }.map { it.weight }
+            val spread = 20 * kotlin.math.log10(kicks.max().toDouble() / kicks.min())
+            assertTrue(spread >= 8.0, "${kit.name}: kicks only $spread dB apart")
+            // Every kick has the snare wires under it.
+            assertEquals(kicks.size, notes.count { it.part == LooseCrateKits.WIRES }, "${kit.name} wires")
+        }
+    }
+
     @Test fun `HUMMIN opens with round 0's sounds as they were heard`() {
         // Round 0's candidates are the HUMMIN strikes, through CRATE: the printed hard first take must match.
         val pairs = mapOf(0 to "hum-kick-layer", 1 to "flam-snare", 2 to "dark-hat", 4 to "hum-kick-sub", 5 to "bounce-snare", 6 to "thud-kick", 13 to "slap-snare")

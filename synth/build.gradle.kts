@@ -4011,5 +4011,5 @@ tasks.register<JavaExec>("generateLooseCrateRound2a") {
     mainClass.set("com.snipsnap.synth.LooseCrateRound2Generator")
     workingDir = rootProject.projectDir
     maxHeapSize = "1g"
-    args(providers.gradleProperty("looseCrateRound2aOutput").orNull ?: "${rootDir}/testkit/loose-crate-round2a")
+    args(listOfNotNull(providers.gradleProperty("looseCrateRound2aOutput").orNull ?: "${rootDir}/testkit/loose-crate-round2a", providers.gradleProperty("looseCrateRound2aMode").orNull))
 }
