@@ -145,6 +145,7 @@ import com.snipsnap.shell.Scheme
 import com.snipsnap.shell.Schemes
 import com.snipsnap.shell.ShapeAudition
 import com.snipsnap.shell.SnipStore
+import com.snipsnap.shell.TryEffect
 import com.snipsnap.xpm.PadNoteMap
 import java.io.File
 import kotlin.math.abs
@@ -860,6 +861,33 @@ fun PadSheetScreen(
         }
     }
 
+    // ---- Try before you keep (docs/UX_PASS_2026_11.md, fix e) ----
+    // A list row's tap is heard first. Its apply runs its own landing on a scratch copy of the kit
+    // ([TryEffect.hear]), plays what that made, and leaves the pad as it was; KEEP then runs the real
+    // apply with the same AMT and seed, so it gives what was heard. [triedNext] is the tap in flight,
+    // [tried] the one heard and waiting on KEEP.
+    var tried by remember(entry.dir, slot) { mutableStateOf<Tried?>(null) }
+    var triedNext by remember(entry.dir, slot) { mutableStateOf<Tried?>(null) }
+
+    /** [landing] on a scratch copy, under the kit lock so the copy is never half a save; the pad's sound after it, or null. */
+    suspend fun hearOnScratch(kitDir: File, landing: (KitBuilderModel) -> Unit): Snip? {
+        val targetSlot = slot
+        return offMain {
+            KitWrites.mutex.withLock {
+                TryEffect.hear(kitDir, File(context.cacheDir, TryEffect.SCRATCH_DIR), targetSlot, TAPE_LOAD_MAX_SEC, landing)
+            }
+        }
+    }
+
+    /** A preview landed: it becomes the row being heard, and plays, unless the user has moved to another pad. */
+    fun playTried(heard: Snip, p: KitPad) {
+        val next = triedNext ?: return
+        triedNext = null
+        if (liveSlot != slot || liveKitDir != entry.dir) return
+        tried = next
+        if (lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) audition(heard, p.level, p)
+    }
+
     /**
      * SMEAR: not an era, so it doesn't route through `eraPad` — it's
      * `com.snipsnap.audio.Smear.process` through the generic
@@ -930,7 +958,7 @@ fun PadSheetScreen(
      * to skip them for a dead composable the way the teardown effect skips
      * saving a stale `m`.
      */
-    fun applySmear(m: KitBuilderModel, p: KitPad, amount: Float, padName: String) {
+    fun applySmear(m: KitBuilderModel, p: KitPad, amount: Float, padName: String, preview: Boolean = false) {
         val kitDir = m.kitDir
         val staleSampleFile = p.sampleFile
         val stalePads = pendingMetadataSlots.associateWith { m.kit.pad(it) }
@@ -943,7 +971,7 @@ fun PadSheetScreen(
                 var stacked = false
                 var noop = false
                 var pedalsBaked = false
-                val (fresh, _) = withFreshKit(kitDir) { f ->
+                val landing: (KitBuilderModel) -> Unit = land@{ f ->
                     reapplyPendingMetadataFields(f, stalePads)
                     val freshPad = f.kit.pad(slot)
                     if (freshPad != null && freshPad.sampleFile == staleSampleFile) {
@@ -956,7 +984,7 @@ fun PadSheetScreen(
                         // not a landing: no toast claiming one, no audition.
                         if (amount <= 0f && PadSheet.readSmear(freshPad.recipe) == null) {
                             noop = true
-                            return@withFreshKit
+                            return@land
                         }
                         // `smearPad` restores first when it can; when the
                         // original is not in the bin it stacks (amount 0 is
@@ -967,7 +995,7 @@ fun PadSheetScreen(
                         // would wipe them off the card while the audio keeps every one (the slate design's D5).
                         if (notBinned && PedalSlate.boardOf(freshPad.recipe) != null) {
                             pedalsBaked = true
-                            return@withFreshKit
+                            return@land
                         }
                         stacked = amount > 0f && notBinned
                         // The rewrite itself lives in the model now
@@ -977,12 +1005,19 @@ fun PadSheetScreen(
                         applied = true
                     }
                 }
-                if (applied) auditionOnRefresh = true
-                model = fresh
-                pendingMetadataSlots = emptySet()
-                onKitUpdated(fresh.kit)
+                // Try before you keep: the same landing on a scratch copy, played, the kit untouched.
+                val heard = if (preview) hearOnScratch(kitDir, landing) else null
+                if (!preview) {
+                    val (fresh, _) = withFreshKit(kitDir, landing)
+                    if (applied) auditionOnRefresh = true
+                    model = fresh
+                    pendingMetadataSlots = emptySet()
+                    onKitUpdated(fresh.kit)
+                }
                 if (pedalsBaked) {
                     onToast(Copy.PEDALS_NOT_BINNED)
+                } else if (applied && preview) {
+                    heard?.let { playTried(it, p) }
                 } else if (applied) {
                     val label = PadSheet.displayLabel(PadSheet.SMEAR)
                     onToast(if (stacked) Copy.treatedStacked(label, padName) else Copy.treated(label, padName))
@@ -1018,7 +1053,7 @@ fun PadSheetScreen(
      * Bug fix (tab-switch data loss): launched into [appScope] — same fix,
      * same reason, as [applySmear]'s own KDoc above.
      */
-    fun applyDust(m: KitBuilderModel, p: KitPad, amount: Float, padName: String, from: String? = null) {
+    fun applyDust(m: KitBuilderModel, p: KitPad, amount: Float, padName: String, from: String? = null, preview: Boolean = false) {
         if (PrintedPads.has(p.recipe)) {
             onToast(boardRemoveFirst(p.recipe))
             return
@@ -1053,7 +1088,7 @@ fun PadSheetScreen(
                 var stacked = false
                 var noop = false
                 var pedalsBaked = false
-                val (fresh, _) = withFreshKit(kitDir) { f ->
+                val landing: (KitBuilderModel) -> Unit = land@{ f ->
                     reapplyPendingMetadataFields(f, stalePads)
                     val freshPad = f.kit.pad(slot)
                     // The tape was read off the pad before the lock; a DUST
@@ -1070,7 +1105,7 @@ fun PadSheetScreen(
                         // nothing, so this is not a landing.
                         if (amount <= 0f && PadSheet.readDust(freshPad.recipe) == null) {
                             noop = true
-                            return@withFreshKit
+                            return@land
                         }
                         val notBinned =
                             PadSheet.unTreatState(freshPad, f.binContents().map { it.originalName }.toSet()) == PadSheet.UnTreat.NOT_BINNED
@@ -1078,19 +1113,26 @@ fun PadSheetScreen(
                         // would wipe them off the card while the audio keeps every one (the slate design's D5).
                         if (notBinned && PedalSlate.boardOf(freshPad.recipe) != null) {
                             pedalsBaked = true
-                            return@withFreshKit
+                            return@land
                         }
                         stacked = amount > 0f && notBinned
                         f.dustPad(slot, amount, tape, print)
                         applied = true
                     }
                 }
-                if (applied) auditionOnRefresh = true
-                model = fresh
-                pendingMetadataSlots = emptySet()
-                onKitUpdated(fresh.kit)
+                // Try before you keep: the same landing on a scratch copy, played, the kit untouched.
+                val heard = if (preview) hearOnScratch(kitDir, landing) else null
+                if (!preview) {
+                    val (fresh, _) = withFreshKit(kitDir, landing)
+                    if (applied) auditionOnRefresh = true
+                    model = fresh
+                    pendingMetadataSlots = emptySet()
+                    onKitUpdated(fresh.kit)
+                }
                 if (pedalsBaked) {
                     onToast(Copy.PEDALS_NOT_BINNED)
+                } else if (applied && preview) {
+                    heard?.let { playTried(it, p) }
                 } else if (applied) {
                     val label = if (from != null) Copy.dustFromLabel(SnipStore.displayName(tapeFile)) else PadSheet.displayLabel(PadSheet.DUST)
                     onToast(if (stacked) Copy.treatedStacked(label, padName) else Copy.treated(label, padName))
@@ -1176,7 +1218,12 @@ fun PadSheetScreen(
      * is launched into [appScope], not this composable's own `scope` — same
      * fix, same reason, as [applySmear]'s own KDoc.
      */
-    fun applyTreatment(segment: String, amount: Float) {
+    fun applyTreatment(
+        segment: String,
+        amount: Float,
+        preview: Boolean = false,
+        seed: Long = kotlin.random.Random.nextLong(0L, 1_000_000L),
+    ) {
         if (busy) return
         val m = model ?: return
         val p = m.kit.pad(slot) ?: return
@@ -1187,11 +1234,11 @@ fun PadSheetScreen(
         }
         val padName = p.displayName
         if (segment == PadSheet.SMEAR) {
-            applySmear(m, p, amount, padName)
+            applySmear(m, p, amount, padName, preview)
             return
         }
         if (segment == PadSheet.DUST) {
-            applyDust(m, p, amount, padName)
+            applyDust(m, p, amount, padName, preview = preview)
             return
         }
         // MORE opens the slate's list and is never a treatment (`treatmentFor` refuses it, outside any
@@ -1201,7 +1248,8 @@ fun PadSheetScreen(
         val staleSampleFile = p.sampleFile
         val kitDir = m.kitDir
         val stalePads = pendingMetadataSlots.associateWith { m.kit.pad(it) }
-        val keyedSeed = kotlin.random.Random.nextLong(0L, 1_000_000L)
+        // A preview and its KEEP share the seed, so KEEP gives the retune that was heard.
+        val keyedSeed = seed
         busy = true
         padJob = Copy.treatmentBusy(PadSheet.displayLabel(segment))
         val boardJob = jobs.beginJob(padJob ?: Copy.WORKING_BUSY)
@@ -1211,7 +1259,7 @@ fun PadSheetScreen(
                 var stacked = false
                 var pedalsBaked = false
                 var keyLabel = ""
-                val (fresh, _) = withFreshKit(kitDir) { f ->
+                val landing: (KitBuilderModel) -> Unit = land@{ f ->
                     reapplyPendingMetadataFields(f, stalePads)
                     val freshPad = f.kit.pad(slot)
                     if (freshPad != null && freshPad.sampleFile == staleSampleFile) {
@@ -1241,7 +1289,7 @@ fun PadSheetScreen(
                                 // (the slate design's D5, kept for the whole card).
                                 if (PedalSlate.boardOf(freshPad.recipe) != null) {
                                     pedalsBaked = true
-                                    return@withFreshKit
+                                    return@land
                                 }
                                 stacked = amount > 0f
                             }
@@ -1259,12 +1307,19 @@ fun PadSheetScreen(
                         applied = true
                     }
                 }
-                if (applied) auditionOnRefresh = true
-                model = fresh
-                pendingMetadataSlots = emptySet()
-                onKitUpdated(fresh.kit)
+                // Try before you keep: the same landing on a scratch copy, played, the kit untouched.
+                val heard = if (preview) hearOnScratch(kitDir, landing) else null
+                if (!preview) {
+                    val (fresh, _) = withFreshKit(kitDir, landing)
+                    if (applied) auditionOnRefresh = true
+                    model = fresh
+                    pendingMetadataSlots = emptySet()
+                    onKitUpdated(fresh.kit)
+                }
                 if (pedalsBaked) {
                     onToast(Copy.PEDALS_NOT_BINNED)
+                } else if (applied && preview) {
+                    heard?.let { playTried(it, p) }
                 } else if (applied) {
                     onToast(
                         when {
@@ -1305,7 +1360,7 @@ fun PadSheetScreen(
      * before the launch, the fresh-kit block, the model swap, the refresh audition) around that one
      * call, launched into [appScope] for the same tab-switch reason.
      */
-    fun applyPedal(gesture: PedalSlate.Gesture) {
+    fun applyPedal(gesture: PedalSlate.Gesture, preview: Boolean = false) {
         if (busy) return
         val m = model ?: return
         val p = m.kit.pad(slot) ?: return
@@ -1325,11 +1380,21 @@ fun PadSheetScreen(
         appScope.launch {
             try {
                 var landed: PedalSlate.Landed = PedalSlate.Landed.Gone
-                val (fresh, _) = withFreshKit(kitDir) { f ->
+                val landing: (KitBuilderModel) -> Unit = { f ->
                     reapplyPendingMetadataFields(f, stalePads)
                     // A slot emptied underneath the sheet is the same answer as a changed sample.
                     if (f.kit.pad(slot) != null) landed = PedalSlate.land(f, slot, gesture, staleSampleFile)
                 }
+                if (preview) {
+                    // Try before you keep: the same landing on a scratch copy, played; a refusal is said
+                    // the way the real tap says it, and nothing moves (no mark, no refusal count).
+                    val heard = hearOnScratch(kitDir, landing)
+                    val result = landed
+                    val changed = result is PedalSlate.Landed.Applied || result == PedalSlate.Landed.Cleared
+                    if (changed && heard != null) playTried(heard, p) else PedalSlate.toast(gesture, result, padName)?.let(onToast)
+                    return@launch
+                }
+                val (fresh, _) = withFreshKit(kitDir, landing)
                 val result = landed
                 val changed = result is PedalSlate.Landed.Applied || result == PedalSlate.Landed.Cleared
                 if (changed) auditionOnRefresh = true
@@ -3473,6 +3538,55 @@ fun PadSheetScreen(
         }
     }
 
+    // Try before you keep: an effect or a pedal row is heard first ([tried], above). The same door its
+    // pick takes, with `preview` set; every other row opens what it opened before. A second tap on the
+    // row being heard plays it again. The pedal is said on or off from the pad as it is now, so a lit
+    // pedal's row previews the pad without it.
+    val pedalGestureFor: (String) -> PedalSlate.Gesture? = { word ->
+        Pedals.byWord(word)?.key?.let { key ->
+            val on = PadSheet.readPedals(pad.recipe)?.picks?.any { it.key == key } == true
+            if (on) PedalSlate.Gesture.Off(key) else PedalSlate.Gesture.On(key)
+        }
+    }
+    val listPick: (EffectsMenu.Target) -> Unit = listPick@{ target ->
+        if (busy) return@listPick
+        if (!EffectsMenu.tries(target)) {
+            tried = null
+            pickEffect(target)
+            return@listPick
+        }
+        pedalPlacing = null
+        val next = Tried(target, pendingAmt, kotlin.random.Random.nextLong(0L, 1_000_000L))
+        tried = null
+        triedNext = next
+        when (target) {
+            is EffectsMenu.Target.Segment -> {
+                applyingSegment = target.id
+                applyTreatment(target.id, next.amount, preview = true, seed = next.seed)
+            }
+            is EffectsMenu.Target.Pedal -> pedalGestureFor(target.word)?.let { applyPedal(it, preview = true) }
+            else -> Unit
+        }
+    }
+    val keepTried: () -> Unit = keep@{
+        val t = tried ?: return@keep
+        if (busy) return@keep
+        tried = null
+        when (val target = t.target) {
+            is EffectsMenu.Target.Segment -> {
+                applyingSegment = target.id
+                applyTreatment(target.id, t.amount, seed = t.seed)
+            }
+            is EffectsMenu.Target.Pedal -> pedalGestureFor(target.word)?.let { applyPedal(it) }
+            else -> Unit
+        }
+    }
+    // Leaving the page, or the pad changing under the preview (a chip below, AMT, an undo), lets the
+    // preview go: what was heard is no longer what KEEP would give.
+    LaunchedEffect(page, pad.recipe, pad.sampleFile) {
+        tried = null
+    }
+
     // DUST FROM ▸ (docs/DUST.md §5): borrow another tape's dust. The shelf's
     // tapes open inline on the TREATMENT bench, newest first; a pick runs
     // the DUST door at the card's AMT with that tape, and since the recipe
@@ -3839,9 +3953,12 @@ fun PadSheetScreen(
                 padColor = classColor,
                 scheme = scheme,
                 busy = busy,
-                onPick = pickEffect,
+                onPick = listPick,
                 onAmountChange = { f -> pendingAmt = (f * 20f).roundToInt() / 20f },
                 onAmountCommit = commitAmount,
+                hearing = tried?.target,
+                onKeep = keepTried,
+                onCancelTry = { tried = null },
             )
             // A board stages on its card until KEEP: drawn once a list row picks one, while the pad
             // carries one, or with the buttons.
@@ -6055,3 +6172,6 @@ private fun DeleteButton(scheme: Scheme, enabled: Boolean, onClick: () -> Unit) 
         TapeText("DELETE → TRASH", TapeType.pixel, if (enabled) BinRedOnLcd else scheme.ink3.tape)
     }
 }
+
+/** Try before you keep: the list row heard, the AMT it was heard at, and the seed a retune used. */
+private data class Tried(val target: EffectsMenu.Target, val amount: Float, val seed: Long)
