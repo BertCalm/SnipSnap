@@ -1,5 +1,6 @@
 package com.snipsnap.app.ui
 
+import android.os.SystemClock
 import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -93,6 +94,9 @@ internal class SongKeeper(
     val keeps: Boolean get() = projectDir != null
 
     private var layout: Job? = null
+
+    /** How many layouts [apply] has started; numbers its log lines. */
+    private var layouts = 0
 
     private class Opened(val kept: SongPlan, val plan: Arranger.Arrangement, val picks: List<Arranger.Pick>, val refused: List<String>, val save: Boolean, val names: Map<Int, String>, val hasBass: Boolean)
 
@@ -295,17 +299,35 @@ internal class SongKeeper(
         selected = select.coerceIn(0, next.sections.lastIndex)
         persist(next)
         layout?.cancel()
+        // Each layout says when it started, and when it landed or was cancelled, how long it took
+        // and on which thread it wrote [plan]: an on-device run's logcat then tells "the layout
+        // never landed" from "it landed and the screen did not redraw it" (ArrangeScreenTest's
+        // DROP wait timed out twice with neither visible).
+        val n = ++layouts
+        val started = SystemClock.elapsedRealtime()
+        Log.d(TAG, "layout $n: start, selected $selected, sections ${next.sections.joinToString(" ") { flags(it.bass, it.pullUp, it.drop) }}")
         layout = scope.launch {
             val laid = withContext(Dispatchers.IO) {
                 runCatching { Arranger.resolve(kit, kitDir, next, swingPercent, feel, feelTemplate) }
             }
-            laid.onSuccess { plan = it.arrangement; refusal = null }
-                .onFailure { e ->
-                    if (e is CancellationException) throw e
-                    Log.e(TAG, "layout: failed", e)
-                    plan = null
-                    refusal = e.message ?: Copy.ARRANGE_NEEDS_GROOVE
-                }
+            laid.onSuccess {
+                plan = it.arrangement
+                refusal = null
+                Log.d(
+                    TAG,
+                    "layout $n: finished in ${SystemClock.elapsedRealtime() - started} ms, written on ${Thread.currentThread().name}, " +
+                        "sections ${it.arrangement.sections.joinToString(" ") { s -> flags(s.bass, s.pullUp, s.drop) }}",
+                )
+            }.onFailure { e ->
+                if (e is CancellationException) throw e
+                Log.e(TAG, "layout: failed", e)
+                plan = null
+                refusal = e.message ?: Copy.ARRANGE_NEEDS_GROOVE
+            }
+        }.also { job ->
+            job.invokeOnCompletion { cause ->
+                if (cause is CancellationException) Log.d(TAG, "layout $n: cancelled after ${SystemClock.elapsedRealtime() - started} ms")
+            }
         }
     }
 
@@ -324,6 +346,10 @@ internal class SongKeeper(
 
     private companion object {
         const val TAG = "SongKeeper"
+
+        /** A section's BASS, PULL-UP and DROP for a log line: `BPD`, a dash for each one off. */
+        fun flags(bass: Boolean, pullUp: Boolean, drop: Boolean): String =
+            "${if (bass) 'B' else '-'}${if (pullUp) 'P' else '-'}${if (drop) 'D' else '-'}"
         const val MAX_UNDO = 30
 
         /**
