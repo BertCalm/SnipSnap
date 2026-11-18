@@ -1144,9 +1144,9 @@ layers and three natural alternate strikes. Other kit pads retain original PCM.
 The revised snare is frozen synthesis, not a newly registered editable engine.
 Phone and MPC hardware acceptance remains open for this revision. See `SOUL_ROCK.md`.
 
-## LOOSE CRATE kits (round 1 built, 2026-11-18, not heard)
+## LOOSE CRATE kits (round 2 built, 2026-11-18; round 1 heard, round 2 not yet)
 
-Four drum kits after the owner's beat-tape reference loops, in the CYPHER shape: HUMMIN, CLOTH, HAZE, RITUAL. See [LOOSE CRATE](LOOSE_CRATE.md). The owner heard round 0's two hum kicks ("Both sound great") and asked to continue. Evidence: `LooseCrateKitsTest`, `LooseCrateKitTest`, `:shell:generateLooseCrateKits`.
+Four drum kits after the owner's beat-tape reference loops, in the CYPHER shape: HUMMIN, CLOTH, HAZE, RITUAL. See [LOOSE CRATE](LOOSE_CRATE.md). The owner heard round 0's two hum kicks ("Both sound great"), heard round 1 as "a bit drum machine like", and chose round 2a's treatment A (one kit in one room), which round 2 carries to every groove and roll at kit version 2. Evidence: `LooseCrateKitsTest`, `LooseCrateKitTest`, `:shell:generateLooseCrateKits`.
 
 | Gate | Status | Evidence |
 |---|---|---|
