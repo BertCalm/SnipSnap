@@ -40,7 +40,7 @@ class LooseCrateRound0Test {
     @Test
     fun theFlamsStrikesLandWhereTheyWereWritten() {
         // One strike alone, so the onsets can be read: a click per strike through an identity "drum".
-        val clicks = LooseCrateRound0Generator.multi(listOf(0f, 7f, 23f, 40f), listOf(.5f, 1f, .6f, .7f)) { _, _ -> floatArrayOf(1f) }
+        val clicks = KitStrikes.multi(listOf(0f, 7f, 23f, 40f), listOf(.5f, 1f, .6f, .7f)) { _, _ -> floatArrayOf(1f) }
         val x = clicks(1f, 0, 0f)
         val at = x.indices.filter { x[it] != 0f }
         assertEquals(listOf(0, 7, 23, 40).map { Math.round(it * rate / 1000f) }, at)
