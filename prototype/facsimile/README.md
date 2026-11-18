@@ -40,6 +40,7 @@ python3 -I decompose.py REFS WORK        # about 3 minutes
 python3 -I drums.py REFS WORK
 python3 -I fit.py WORK models            # about 11 minutes; add a loop's tempo to fit one loop
 python3 -I groove.py models GROOVES
+python3 -I fit_glue.py REFS GROOVES && python3 -I groove.py models GROOVES   # glue, then re-render
 python3 -I measure.py REFS WORK models GROOVES
 python3 -I build_audition.py REFS WORK models AUDITION
 python3 -I test_glidefit.py && python3 -I test_steady.py   # known-answer checks
@@ -140,6 +141,17 @@ some of the other drums, and a replica lane carries none. Not yet shown.
   The price, measured: the fit median rose from 1.84 to 2.52 dB (a strike that may only rise
   then fall cannot chase every flicker of the one reference sample), and the grooves sit 1.5
   to 5.8 dB under their references, where four were within 1 dB.
+- Round 0c (2026-11-18): the owner suggested compression to glue the grooves. The raw sum of
+  replica drums measured 2 to 7 dB peakier (crest factor) than its reference in 8 of 9 loops,
+  so each groove now prints through a bus compressor (`groove.glue`) fitted by `fit_glue.py`
+  to its reference's crest factor, with a makeup gain to its level. A classic slow glue attack
+  (10 ms) made the grooves PEAKIER (90: 23.6 to 30.3 dB), because it passes each hit's front
+  edge and turns down the body; only fast attacks tightened them, so attack is fitted too
+  (0.3 to 2 ms chosen). Every compressed groove measured closer to its reference (band
+  distance 0.9 to 3.7 dB lower) and matches its level. Loop 163 was already as tight and is
+  not compressed (still 5.8 dB quiet). Loop 127 needed a 0.3 ms attack 28 dB under its peak
+  and reaches 15.7 dB against the reference's 13.7: the original was likely clipped. The
+  single pads are not compressed.
 - Round robin follows the reference's own hit-to-hit spread, clamped to 0.3 to 1.2 dB per band,
   plus fresh noise and phases. Whether that reads as one drum hit again is for the ear.
 - Engine gates: this is a prototype. Velocity and round robin are checked in rendering only;
