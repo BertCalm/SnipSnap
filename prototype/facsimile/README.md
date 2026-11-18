@@ -53,6 +53,25 @@ frequencies, envelope breakpoints in dB, and the reference's hit times and loudn
 notation). Not committed: the reference loops, the separated audio, the aligned hits and the
 templates (all derived from reference PCM), and every rendered WAV or MP3.
 
+## Round 0 results (Python harness, 2026-11-18)
+
+Listening page: [FACSIMILE Round 0](https://claude.ai/artifact/LvtMyNDXUr9jjvVvw8uPMa) (private to
+the owner). Numbers from `models/fit-report.json` and `models/measure-report.json`.
+
+| Measure | Result |
+|---|---|
+| Fit, averaged over three noise seeds | median 1.84 dB, 90% under 5.79, worst 6.26 (57 drums) |
+| One take at 4x against its target, mean of four takes | median 4.24 dB, worst 9.09 |
+| The reference's own single hits against the same target | median 9.28 dB |
+| Velocity: spectral-shape change, v=.4 against v=1 at matched loudness | 1.34 dB at least, median 3.08 |
+| Round robin: closest pair of four takes | 7.9 dB at most (a copy measures over 40) |
+| Grooves: band distance against the reference | 6.7 to 11.8 dB; 8 of 9 under the reference shifted one 16th (8.98 to 23.4), loop 163 level with it (9.45 against 8.98) |
+| Grooves: level against the reference | 106, 113, 154, 90 within 0.9 dB; 127 at -2.8; 102, 103, 134, 163 at -4.6 to -5.3 |
+| Pads: replica level against its reference strike (full-strength pads) | median -0.2 dB; tom-beat hat -10.8, tom-beat kick +8.5 |
+
+Part of the remaining groove shortfall is probably bleed: each separated reference lane carries
+some of the other drums, and a replica lane carries none. Not yet shown.
+
 ## Ledger (round 0, 2026-11-18)
 
 - **Verified:** the render path reads only `models/*.json` (`synth.py`, `groove.py` import no

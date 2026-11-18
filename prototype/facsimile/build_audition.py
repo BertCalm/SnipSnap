@@ -68,27 +68,44 @@ def render_pad(models: dict, layers: list[str], v: float, take: int) -> np.ndarr
 
 
 def reference_strike(work: Path, inv: dict, layers: list[str], max_s: float = 1.2):
-    """The separated reference audio of all layers at one moment they all fire."""
+    """The separated reference audio of all layers at one moment they all fire. Layers from
+    different loops never fired together: each loop's layers are cut on their own and the cuts
+    are summed at the onset, which is what the pad itself does."""
+    loops = sorted({d.split("-")[0] for d in layers})
+    if len(loops) > 1:
+        cuts = [reference_strike(work, inv, [d for d in layers if d.split("-")[0] == k], max_s)
+                for k in loops]
+        out = np.zeros(max(len(c) for c in cuts))
+        for c in cuts:
+            out[:len(c)] += c
+        return out
     key = layers[0].split("-")[0]
     drums = {d["id"]: d for d in inv[key]["drums"]}
-    ev = {d: [e for e in drums[d]["events"]] for d in layers}
+    ev = {d: drums[d]["events"] for d in layers}
     n = int(round(inv[key]["seconds"] * RATE))
-    best = None
-    for e in sorted(ev[layers[0]], key=lambda e: -e["gain"]):
-        ok = all(any(abs(x["t"] - e["t"]) < 0.012 for x in ev[d]) for d in layers[1:])
-        if ok:
-            best = e
-            break
-    best = best or max(ev[layers[0]], key=lambda e: e["gain"])
+    # Only real hits end a cut: detections under a quarter of the loudest are mostly bleed,
+    # and stopping at them left some references a tenth of a second long.
+    stops = sorted(int(x["t"] * RATE) for d in layers for x in ev[d] if x["gain"] > 0.25)
+
+    def gap_after(t0):
+        g = [(t - t0) % n for t in stops]
+        # a component re-firing within 120 ms is the same strike detected twice (a snare's
+        # tail part fires again 78 ms in), so it does not end the cut
+        g = [x for x in g if x > int(0.12 * RATE)]
+        return min(g) if g else n
+    # Among strong hits where every layer fires, take the one with the longest clean gap after
+    # it (enough to hear the tail), then the loudest.
+    cands = [e for e in ev[layers[0]] if e["gain"] > 0.5 and
+             all(any(abs(x["t"] - e["t"]) < 0.012 for x in ev[d]) for d in layers[1:])]
+    cands = cands or sorted(ev[layers[0]], key=lambda e: -e["gain"])[:3]
+    best = max(cands, key=lambda e: (min(gap_after(int(e["t"] * RATE)), int(0.5 * RATE)),
+                                     e["gain"]))
     t0 = int(best["t"] * RATE)
     y = np.zeros(n)
     for d in layers:
         for c in drums[d]["components"]:
             y += sf.read(work / f"{key}_c{c}.wav")[0]
-    # stop before the next hit of any of these drums
-    nxt = [((int(x["t"] * RATE) - t0) % n) for d in layers for x in ev[d]]
-    nxt = [g for g in nxt if g > int(0.02 * RATE)]
-    stop = min(min(nxt) if nxt else n, int(max_s * RATE))
+    stop = min(gap_after(t0), int(max_s * RATE))
     pre = int(0.002 * RATE)
     seg = y[(np.arange(-pre, stop) + t0) % n].copy()
     fade = int(0.006 * RATE)
