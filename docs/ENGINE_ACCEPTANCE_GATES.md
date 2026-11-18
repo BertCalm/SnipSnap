@@ -1144,7 +1144,7 @@ layers and three natural alternate strikes. Other kit pads retain original PCM.
 The revised snare is frozen synthesis, not a newly registered editable engine.
 Phone and MPC hardware acceptance remains open for this revision. See `SOUL_ROCK.md`.
 
-## RIDDIM (round 2, 2026-11-18: three kits on the shelf, Kotlin not yet heard, hardware open)
+## RIDDIM (round 2, 2026-11-18: three kits on the shelf, Kotlin heard and confirmed, hardware open)
 
 Dancehall drum kits synthesized to targets measured from the owner's reference loops, with CALABASH's approved
 percussion on the same grids. See [RIDDIM](RIDDIM.md).
@@ -1159,7 +1159,7 @@ percussion on the same grids. See [RIDDIM](RIDDIM.md).
 - **Velocity/round robin: verified in software through rendering, saving, playback and MPC 3 export for every pad of
   all three kits** (`RiddimKitsTest`, `RiddimKitTest`, `:shell:generateRiddimKits`). Three zones of four takes per pad.
   MPC 2 is not applicable (format limit). No phone or MPC has played the kits.
-- **Sound character:** round 0 and round 1 heard in Python; round 1 approved ("Approved", 2026-11-18). The Kotlin kits'
-  listening page is published and not yet heard.
-- **Overall: incomplete.** Open: the owner's listen to the Kotlin kits, phone and MPC playback.
+- **Sound character:** round 0 and round 1 heard in Python; round 1 approved ("Approved", 2026-11-18). The owner heard the
+  Kotlin kits and confirmed they match the approved kits ("Yes, they match", 2026-11-18).
+- **Overall: incomplete.** Open: phone and MPC playback.
 

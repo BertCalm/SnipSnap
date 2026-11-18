@@ -162,11 +162,14 @@ mid, hard. RIDDIM's generator now strikes each zone at its own mid velocity. CAL
 mislabel in its listening pack (its kits and tests are unaffected); not changed here.
 
 Listening page of the Kotlin kits, cut from the verified export, with the approved grooves played on them:
-<https://claude.ai/artifact/LAmftedd8ziuoPE9ZPQdhQ>. Not yet heard.
+<https://claude.ai/artifact/LAmftedd8ziuoPE9ZPQdhQ>.
+
+**Heard and confirmed (2026-11-18).** Asked whether the Kotlin kits sound like the three kits approved in round 1, the
+owner answered "Yes, they match".
 
 ## Open
 
-- The owner's listen to the Kotlin kits, then phone and MPC playback.
+- Phone and MPC playback of the three kits.
 - The wider kits (swung Brazilian funk, swung West African, wood and metal), a preset roster, and the picker.
 
 ## Ledger
@@ -176,7 +179,7 @@ Listening page of the Kotlin kits, cut from the verified export, with the approv
 - **Measured:** the tables above, Python harness.
 - **Proposed:** every constant in `riddim_proto.py` is a shape value until heard.
 - **Heard:** round 0's palette, "pretty good so far" (2026-11-18); round 1's three kits, "Approved" (2026-11-18).
-  The Kotlin kits (round 2) not yet; no phone or MPC has played them.
+  The Kotlin kits (round 2) confirmed to match, "Yes, they match" (2026-11-18). No phone or MPC has played them.
 
 ## Why it is built this way
 
