@@ -7,7 +7,7 @@ import java.io.File
 import java.util.Locale
 import kotlin.math.abs
 
-/** Native audition comes from saved playback windows, not from bypassing the kit delivery path. */
+/** Pad audition comes from saved playback windows. The separately named phrase-source is a source study. */
 object FootworkKitGenerator {
     @JvmStatic fun main(args: Array<String>) {
         val root=File(args.firstOrNull() ?: "testkit/footwork-native").absoluteFile
@@ -51,6 +51,11 @@ object FootworkKitGenerator {
                 for(i in x.indices) if(at+i<phrase.size) phrase[at+i]+=.8f*x[i]
             }
             write("phrase.wav",phrase)
+            if(genre==FootworkKits.Kit.TAP) {
+                // This multi-event source phrase is explicitly separate from the saved-pad proof.
+                // Pad 17/18 auditions above exercise the saved native roll/riser windows.
+                write("phrase-source.wav",Footwork.tapPhrase().samples)
+            }
             manifest.append("],\"buildAndProofMs\":${(System.nanoTime()-start)/1000000}}")
             proof.append("${genre.id},18,216,passed,passed,passed,passed,passed,open_missing_slice_map\n")
             println("Verified ${genre.id}: 216 cells + native/SFZ; MPC3 PCM and cycle fields only, slice-map gate open")

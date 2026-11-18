@@ -3954,3 +3954,31 @@ tasks.register<JavaExec>("auditDrumlineEdgeReference") {
     workingDir = rootProject.projectDir
     maxHeapSize = "1g"
 }
+
+tasks.register<JavaExec>("generateParadeSambaCandidate") {
+    group = "verification"
+    description = "Render the unregistered native Samba candidate and audit its velocity/take grid."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ParadeSambaGenerator")
+    maxHeapSize = "1g"
+    args(providers.gradleProperty("paradeSambaOutput").getOrElse("${rootDir}/testkit/parade-samba-native"))
+}
+
+// One coefficient authority: package the audition's pinned fit, rather than maintaining a second copy.
+tasks.named<org.gradle.language.jvm.tasks.ProcessResources>("processResources") {
+    from(rootProject.file("prototype/drumline_parade/agogo-fit.json")) { into("parade") }
+    from(rootProject.file("prototype/drumline_parade/NOTICE-agogo.txt")) {
+        into("parade")
+        rename { "NOTICE.txt" }
+    }
+}
+
+tasks.register<JavaExec>("generateLooseCrateRound0") {
+    group = "distribution"
+    description = "Render LOOSE CRATE round 0: candidate hits, round-robin and velocity strips, the HUMMIN groove and CYPHER DUST for comparison."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.LooseCrateRound0Generator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "1g"
+    args(providers.gradleProperty("looseCrateOutput").orNull ?: "${rootDir}/testkit/loose-crate-round0")
+}

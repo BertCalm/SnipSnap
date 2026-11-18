@@ -8,13 +8,15 @@
           "seconds": 0.04,
           "role": "shuffle_brush",
           "force": 0.7,
-          "foot": "L"
+          "foot": "L",
+          "travel": 1.0
         },
         {
           "seconds": 0.125,
           "role": "shuffle_spank",
           "force": 0.82,
-          "foot": "L"
+          "foot": "L",
+          "travel": 1.0
         }
       ]
     },
@@ -25,13 +27,15 @@
           "seconds": 0.04,
           "role": "brush",
           "force": 0.65,
-          "foot": "L"
+          "foot": "L",
+          "travel": 1.0
         },
         {
           "seconds": 0.115,
           "role": "toe",
           "force": 1.0,
-          "foot": "L"
+          "foot": "L",
+          "travel": 1.0
         }
       ]
     },
@@ -42,19 +46,22 @@
           "seconds": 0.04,
           "role": "toe",
           "force": 0.65,
-          "foot": "L"
+          "foot": "L",
+          "travel": 1.0
         },
         {
           "seconds": 0.152,
           "role": "toe",
           "force": 1.0,
-          "foot": "R"
+          "foot": "R",
+          "travel": 1.0
         },
         {
           "seconds": 0.209,
           "role": "heel",
           "force": 0.55,
-          "foot": "R"
+          "foot": "R",
+          "travel": 1.0
         }
       ]
     },
@@ -64,129 +71,150 @@
       "events": [
         {
           "seconds": 0.04,
-          "role": "brush",
+          "role": "shuffle_brush",
           "force": 0.5828,
-          "foot": "L"
+          "foot": "L",
+          "travel": 1.0
         },
         {
-          "seconds": 0.118,
-          "role": "spank",
+          "seconds": 0.125,
+          "role": "shuffle_spank",
           "force": 0.705,
-          "foot": "L"
+          "foot": "L",
+          "travel": 1.0
         },
         {
-          "seconds": 0.204,
+          "seconds": 0.21,
           "role": "toe",
           "force": 0.94,
-          "foot": "L"
+          "foot": "L",
+          "travel": 1.0
         },
         {
           "seconds": 0.441786,
           "role": "heel",
           "force": 0.63,
-          "foot": "L"
+          "foot": "L",
+          "travel": 1.0
         },
         {
           "seconds": 0.709643,
           "role": "brush",
           "force": 0.559,
-          "foot": "R"
+          "foot": "R",
+          "travel": 1.0
         },
         {
           "seconds": 0.784643,
           "role": "toe",
           "force": 0.86,
-          "foot": "R"
+          "foot": "R",
+          "travel": 1.0
         },
         {
           "seconds": 1.245357,
           "role": "toe",
           "force": 0.5980000000000001,
-          "foot": "L"
+          "foot": "L",
+          "travel": 1.0
         },
         {
           "seconds": 1.357357,
           "role": "toe",
           "force": 0.92,
-          "foot": "R"
+          "foot": "R",
+          "travel": 1.0
         },
         {
           "seconds": 1.414357,
           "role": "heel",
           "force": 0.5060000000000001,
-          "foot": "R"
+          "foot": "R",
+          "travel": 1.0
         },
         {
           "seconds": 1.781071,
           "role": "shuffle_brush",
           "force": 0.44799999999999995,
-          "foot": "R"
+          "foot": "R",
+          "travel": 1.0
         },
         {
           "seconds": 1.866071,
           "role": "shuffle_spank",
           "force": 0.5247999999999999,
-          "foot": "R"
+          "foot": "R",
+          "travel": 1.0
         },
         {
           "seconds": 2.182857,
           "role": "brush",
           "force": 0.507,
-          "foot": "R"
+          "foot": "R",
+          "travel": 1.0
         },
         {
           "seconds": 2.257857,
           "role": "toe",
           "force": 0.78,
-          "foot": "R"
+          "foot": "R",
+          "travel": 1.0
         },
         {
           "seconds": 2.718571,
-          "role": "brush",
+          "role": "shuffle_brush",
           "force": 0.5456,
-          "foot": "L"
+          "foot": "L",
+          "travel": 1.0
         },
         {
-          "seconds": 2.796571,
-          "role": "spank",
+          "seconds": 2.803571,
+          "role": "shuffle_spank",
           "force": 0.66,
-          "foot": "L"
+          "foot": "L",
+          "travel": 1.0
         },
         {
-          "seconds": 2.882571,
+          "seconds": 2.888571,
           "role": "toe",
           "force": 0.88,
-          "foot": "L"
+          "foot": "L",
+          "travel": 1.0
         },
         {
           "seconds": 3.254286,
           "role": "toe",
           "force": 0.65,
-          "foot": "R"
+          "foot": "R",
+          "travel": 1.0
         },
         {
           "seconds": 3.366286,
           "role": "toe",
           "force": 1.0,
-          "foot": "L"
+          "foot": "L",
+          "travel": 1.0
         },
         {
           "seconds": 3.423286,
           "role": "heel",
           "force": 0.55,
-          "foot": "L"
+          "foot": "L",
+          "travel": 1.0
         },
         {
           "seconds": 3.79,
           "role": "toe",
           "force": 0.76,
-          "foot": "L"
+          "foot": "L",
+          "travel": 1.0
         },
         {
           "seconds": 3.923929,
           "role": "heel",
           "force": 0.57,
-          "foot": "L"
+          "foot": "L",
+          "travel": 1.0
         }
       ]
     },
@@ -195,123 +223,143 @@
       "events": [
         {
           "seconds": 0.04,
-          "role": "brush",
+          "role": "shuffle_brush",
           "force": 0.44639999999999996,
-          "foot": "L"
+          "foot": "L",
+          "travel": 0.7
         },
         {
-          "seconds": 0.0946,
-          "role": "spank",
+          "seconds": 0.0995,
+          "role": "shuffle_spank",
           "force": 0.54,
-          "foot": "L"
+          "foot": "L",
+          "travel": 0.7
         },
         {
-          "seconds": 0.1548,
+          "seconds": 0.159,
           "role": "toe",
           "force": 0.72,
-          "foot": "L"
+          "foot": "L",
+          "travel": 0.7
         },
         {
           "seconds": 0.4,
-          "role": "brush",
+          "role": "shuffle_brush",
           "force": 0.4712,
-          "foot": "R"
+          "foot": "R",
+          "travel": 0.7
         },
         {
-          "seconds": 0.4546,
-          "role": "spank",
+          "seconds": 0.4595,
+          "role": "shuffle_spank",
           "force": 0.5700000000000001,
-          "foot": "R"
+          "foot": "R",
+          "travel": 0.7
         },
         {
-          "seconds": 0.5148,
+          "seconds": 0.519,
           "role": "toe",
           "force": 0.76,
-          "foot": "R"
+          "foot": "R",
+          "travel": 0.7
         },
         {
           "seconds": 0.76,
-          "role": "brush",
+          "role": "shuffle_brush",
           "force": 0.49599999999999994,
-          "foot": "L"
+          "foot": "L",
+          "travel": 0.7
         },
         {
-          "seconds": 0.8146,
-          "role": "spank",
+          "seconds": 0.8195,
+          "role": "shuffle_spank",
           "force": 0.6,
-          "foot": "L"
+          "foot": "L",
+          "travel": 0.7
         },
         {
-          "seconds": 0.8748,
+          "seconds": 0.879,
           "role": "toe",
           "force": 0.7999999999999999,
-          "foot": "L"
+          "foot": "L",
+          "travel": 0.7
         },
         {
           "seconds": 1.005,
           "role": "heel",
           "force": 0.57,
-          "foot": "L"
+          "foot": "L",
+          "travel": 1.0
         },
         {
           "seconds": 1.12,
-          "role": "brush",
+          "role": "shuffle_brush",
           "force": 0.44639999999999996,
-          "foot": "R"
+          "foot": "R",
+          "travel": 0.7
         },
         {
-          "seconds": 1.1746,
-          "role": "spank",
+          "seconds": 1.1795,
+          "role": "shuffle_spank",
           "force": 0.54,
-          "foot": "R"
+          "foot": "R",
+          "travel": 0.7
         },
         {
-          "seconds": 1.2348,
+          "seconds": 1.239,
           "role": "toe",
           "force": 0.72,
-          "foot": "R"
+          "foot": "R",
+          "travel": 0.7
         },
         {
           "seconds": 1.48,
-          "role": "brush",
+          "role": "shuffle_brush",
           "force": 0.4712,
-          "foot": "L"
+          "foot": "L",
+          "travel": 0.7
         },
         {
-          "seconds": 1.5346,
-          "role": "spank",
+          "seconds": 1.5395,
+          "role": "shuffle_spank",
           "force": 0.5700000000000001,
-          "foot": "L"
+          "foot": "L",
+          "travel": 0.7
         },
         {
-          "seconds": 1.5948,
+          "seconds": 1.599,
           "role": "toe",
           "force": 0.76,
-          "foot": "L"
+          "foot": "L",
+          "travel": 0.7
         },
         {
           "seconds": 1.84,
-          "role": "brush",
+          "role": "shuffle_brush",
           "force": 0.49599999999999994,
-          "foot": "R"
+          "foot": "R",
+          "travel": 0.7
         },
         {
-          "seconds": 1.8946,
-          "role": "spank",
+          "seconds": 1.8995,
+          "role": "shuffle_spank",
           "force": 0.6,
-          "foot": "R"
+          "foot": "R",
+          "travel": 0.7
         },
         {
-          "seconds": 1.9548,
+          "seconds": 1.959,
           "role": "toe",
           "force": 0.7999999999999999,
-          "foot": "R"
+          "foot": "R",
+          "travel": 0.7
         },
         {
           "seconds": 2.085,
           "role": "heel",
           "force": 0.57,
-          "foot": "R"
+          "foot": "R",
+          "travel": 1.0
         }
       ]
     },
@@ -320,147 +368,171 @@
       "events": [
         {
           "seconds": 0.04,
-          "role": "brush",
+          "role": "shuffle_brush",
           "force": 0.2728,
-          "foot": "L"
+          "foot": "L",
+          "travel": 1.05
         },
         {
-          "seconds": 0.1219,
-          "role": "spank",
+          "seconds": 0.12925,
+          "role": "shuffle_spank",
           "force": 0.33,
-          "foot": "L"
+          "foot": "L",
+          "travel": 1.05
         },
         {
-          "seconds": 0.2122,
+          "seconds": 0.2185,
           "role": "toe",
           "force": 0.44,
-          "foot": "L"
+          "foot": "L",
+          "travel": 1.05
         },
         {
           "seconds": 0.5,
-          "role": "brush",
+          "role": "shuffle_brush",
           "force": 0.31930000000000003,
-          "foot": "R"
+          "foot": "R",
+          "travel": 0.9850000000000001
         },
         {
-          "seconds": 0.57683,
-          "role": "spank",
+          "seconds": 0.583725,
+          "role": "shuffle_spank",
           "force": 0.38625,
-          "foot": "R"
+          "foot": "R",
+          "travel": 0.9850000000000001
         },
         {
-          "seconds": 0.66154,
+          "seconds": 0.66745,
           "role": "toe",
           "force": 0.515,
-          "foot": "R"
+          "foot": "R",
+          "travel": 0.9850000000000001
         },
         {
           "seconds": 0.925,
-          "role": "brush",
+          "role": "shuffle_brush",
           "force": 0.36579999999999996,
-          "foot": "L"
+          "foot": "L",
+          "travel": 0.92
         },
         {
-          "seconds": 0.99676,
-          "role": "spank",
+          "seconds": 1.0032,
+          "role": "shuffle_spank",
           "force": 0.4425,
-          "foot": "L"
+          "foot": "L",
+          "travel": 0.92
         },
         {
-          "seconds": 1.07588,
+          "seconds": 1.0814,
           "role": "toe",
           "force": 0.59,
-          "foot": "L"
+          "foot": "L",
+          "travel": 0.92
         },
         {
           "seconds": 1.315,
-          "role": "brush",
+          "role": "shuffle_brush",
           "force": 0.4123,
-          "foot": "R"
+          "foot": "R",
+          "travel": 0.855
         },
         {
-          "seconds": 1.38169,
-          "role": "spank",
+          "seconds": 1.387675,
+          "role": "shuffle_spank",
           "force": 0.49875,
-          "foot": "R"
+          "foot": "R",
+          "travel": 0.855
         },
         {
-          "seconds": 1.45522,
+          "seconds": 1.46035,
           "role": "toe",
           "force": 0.665,
-          "foot": "R"
+          "foot": "R",
+          "travel": 0.855
         },
         {
           "seconds": 1.67,
-          "role": "brush",
+          "role": "shuffle_brush",
           "force": 0.4588,
-          "foot": "L"
+          "foot": "L",
+          "travel": 0.79
         },
         {
-          "seconds": 1.73162,
-          "role": "spank",
+          "seconds": 1.73715,
+          "role": "shuffle_spank",
           "force": 0.5549999999999999,
-          "foot": "L"
+          "foot": "L",
+          "travel": 0.79
         },
         {
-          "seconds": 1.79956,
+          "seconds": 1.8043,
           "role": "toe",
           "force": 0.74,
-          "foot": "L"
+          "foot": "L",
+          "travel": 0.79
         },
         {
           "seconds": 1.99,
-          "role": "brush",
+          "role": "shuffle_brush",
           "force": 0.5053,
-          "foot": "R"
+          "foot": "R",
+          "travel": 0.7250000000000001
         },
         {
-          "seconds": 2.04655,
-          "role": "spank",
+          "seconds": 2.051625,
+          "role": "shuffle_spank",
           "force": 0.61125,
-          "foot": "R"
+          "foot": "R",
+          "travel": 0.7250000000000001
         },
         {
-          "seconds": 2.1089,
+          "seconds": 2.11325,
           "role": "toe",
           "force": 0.815,
-          "foot": "R"
+          "foot": "R",
+          "travel": 0.7250000000000001
         },
         {
           "seconds": 2.275,
-          "role": "brush",
+          "role": "shuffle_brush",
           "force": 0.5518,
-          "foot": "L"
+          "foot": "L",
+          "travel": 0.66
         },
         {
-          "seconds": 2.32648,
-          "role": "spank",
+          "seconds": 2.3311,
+          "role": "shuffle_spank",
           "force": 0.6675,
-          "foot": "L"
+          "foot": "L",
+          "travel": 0.66
         },
         {
-          "seconds": 2.38324,
+          "seconds": 2.3872,
           "role": "toe",
           "force": 0.8899999999999999,
-          "foot": "L"
+          "foot": "L",
+          "travel": 0.66
         },
         {
           "seconds": 2.605,
           "role": "toe",
           "force": 0.65,
-          "foot": "L"
+          "foot": "L",
+          "travel": 1.0
         },
         {
           "seconds": 2.7002,
           "role": "toe",
           "force": 1.0,
-          "foot": "R"
+          "foot": "R",
+          "travel": 1.0
         },
         {
           "seconds": 2.74865,
           "role": "heel",
           "force": 0.55,
-          "foot": "R"
+          "foot": "R",
+          "travel": 1.0
         }
       ]
     }
@@ -725,252 +797,252 @@
       "velocity": 0.3,
       "take": 0,
       "peak": 0.09260092398252683,
-      "rms": 0.007094137128305489
+      "rms": 0.007139462055700273
     },
     {
       "gesture": "phrase",
       "velocity": 0.3,
       "take": 1,
-      "peak": 0.1075690545424277,
-      "rms": 0.007545550292097157
+      "peak": 0.10868712011393966,
+      "rms": 0.0075051832534495915
     },
     {
       "gesture": "phrase",
       "velocity": 0.3,
       "take": 2,
       "peak": 0.1151258030216805,
-      "rms": 0.007616476732811838
+      "rms": 0.007488279748980855
     },
     {
       "gesture": "phrase",
       "velocity": 0.3,
       "take": 3,
-      "peak": 0.09836698742675604,
-      "rms": 0.007372548252064686
+      "peak": 0.09868587145312092,
+      "rms": 0.007336880531631841
     },
     {
       "gesture": "phrase",
       "velocity": 0.65,
       "take": 0,
       "peak": 0.25110602255870235,
-      "rms": 0.020107536140538246
+      "rms": 0.020236181334559008
     },
     {
       "gesture": "phrase",
       "velocity": 0.65,
       "take": 1,
-      "peak": 0.3067594353785097,
-      "rms": 0.02130171005450556
+      "peak": 0.3099347488951065,
+      "rms": 0.021185799170001983
     },
     {
       "gesture": "phrase",
       "velocity": 0.65,
       "take": 2,
       "peak": 0.3278609410965273,
-      "rms": 0.021510802762504635
+      "rms": 0.021144651136697345
     },
     {
       "gesture": "phrase",
       "velocity": 0.65,
       "take": 3,
-      "peak": 0.28063889336555553,
-      "rms": 0.020838355814601087
+      "peak": 0.2815445260806153,
+      "rms": 0.020736490719456574
     },
     {
       "gesture": "phrase",
       "velocity": 1.0,
       "take": 0,
       "peak": 0.4363280676785292,
-      "rms": 0.03596753018591452
+      "rms": 0.03619716983887065
     },
     {
       "gesture": "phrase",
       "velocity": 1.0,
       "take": 1,
-      "peak": 0.5385323411061945,
-      "rms": 0.03777772586664203
+      "peak": 0.5442124097030954,
+      "rms": 0.03756853476937543
     },
     {
       "gesture": "phrase",
       "velocity": 1.0,
       "take": 2,
       "peak": 0.5731448339652124,
-      "rms": 0.03812763136268268
+      "rms": 0.03746663866164886
     },
     {
       "gesture": "phrase",
       "velocity": 1.0,
       "take": 3,
-      "peak": 0.49502667436420206,
-      "rms": 0.037073237202422366
+      "peak": 0.49664668949601504,
+      "rms": 0.036889932995181104
     },
     {
       "gesture": "roll",
       "velocity": 0.3,
       "take": 0,
-      "peak": 0.08642902325050975,
-      "rms": 0.008429245696240262
+      "peak": 0.08648678479635748,
+      "rms": 0.007717520137892538
     },
     {
       "gesture": "roll",
       "velocity": 0.3,
       "take": 1,
-      "peak": 0.08642902325050975,
-      "rms": 0.0086030853231127
+      "peak": 0.08648678479635748,
+      "rms": 0.007624469008836583
     },
     {
       "gesture": "roll",
       "velocity": 0.3,
       "take": 2,
-      "peak": 0.07521039937492975,
-      "rms": 0.008368152386668132
+      "peak": 0.07493130701162316,
+      "rms": 0.007627273102441603
     },
     {
       "gesture": "roll",
       "velocity": 0.3,
       "take": 3,
-      "peak": 0.08061698620905196,
-      "rms": 0.008615287581178344
+      "peak": 0.08067088334338265,
+      "rms": 0.007684590122118127
     },
     {
       "gesture": "roll",
       "velocity": 0.65,
       "take": 0,
-      "peak": 0.24670203372661204,
-      "rms": 0.02388585320263299
+      "peak": 0.24686607689361678,
+      "rms": 0.021859224049488757
     },
     {
       "gesture": "roll",
       "velocity": 0.65,
       "take": 1,
-      "peak": 0.24670203372661204,
-      "rms": 0.024347028006058122
+      "peak": 0.24686607689361678,
+      "rms": 0.02155818277361481
     },
     {
       "gesture": "roll",
       "velocity": 0.65,
       "take": 2,
-      "peak": 0.21493032881469007,
-      "rms": 0.02372427714957525
+      "peak": 0.2140686897471002,
+      "rms": 0.02161561632060344
     },
     {
       "gesture": "roll",
       "velocity": 0.65,
       "take": 3,
-      "peak": 0.23021171171675103,
-      "rms": 0.024380105514674125
+      "peak": 0.23036477992983864,
+      "rms": 0.021729103335591693
     },
     {
       "gesture": "roll",
       "velocity": 1.0,
       "take": 0,
-      "peak": 0.4376874946678889,
-      "rms": 0.042617784871449876
+      "peak": 0.437980938586598,
+      "rms": 0.038981368277202645
     },
     {
       "gesture": "roll",
       "velocity": 1.0,
       "take": 1,
-      "peak": 0.4376874946678889,
-      "rms": 0.04335444468655098
+      "peak": 0.437980938586598,
+      "rms": 0.038341626695153876
     },
     {
       "gesture": "roll",
       "velocity": 1.0,
       "take": 2,
-      "peak": 0.38319751764280385,
-      "rms": 0.04238733618838611
+      "peak": 0.3815412386660556,
+      "rms": 0.03860760748667394
     },
     {
       "gesture": "roll",
       "velocity": 1.0,
       "take": 3,
-      "peak": 0.4094819167479913,
-      "rms": 0.04340914656166344
+      "peak": 0.4097557284348681,
+      "rms": 0.038645096571692905
     },
     {
       "gesture": "build",
       "velocity": 0.3,
       "take": 0,
       "peak": 0.11678943606022167,
-      "rms": 0.007880125420827085
+      "rms": 0.0072862439519756576
     },
     {
       "gesture": "build",
       "velocity": 0.3,
       "take": 1,
       "peak": 0.0944283027446579,
-      "rms": 0.007723983635878388
+      "rms": 0.007349651436219075
     },
     {
       "gesture": "build",
       "velocity": 0.3,
       "take": 2,
-      "peak": 0.0998945737312648,
-      "rms": 0.0075684456709435586
+      "peak": 0.10010528474115046,
+      "rms": 0.007120774888633947
     },
     {
       "gesture": "build",
       "velocity": 0.3,
       "take": 3,
       "peak": 0.0923522103213036,
-      "rms": 0.007418285848691858
+      "rms": 0.006814489409629938
     },
     {
       "gesture": "build",
       "velocity": 0.65,
       "take": 0,
       "peak": 0.33249256125691284,
-      "rms": 0.022265631638670617
+      "rms": 0.02057027187534123
     },
     {
       "gesture": "build",
       "velocity": 0.65,
       "take": 1,
       "peak": 0.2734282037023352,
-      "rms": 0.02185770272493257
+      "rms": 0.020789489331331765
     },
     {
       "gesture": "build",
       "velocity": 0.65,
       "take": 2,
-      "peak": 0.28498464927328426,
-      "rms": 0.021413689638594052
+      "peak": 0.28558306991589555,
+      "rms": 0.020136537547068338
     },
     {
       "gesture": "build",
       "velocity": 0.65,
       "take": 3,
       "peak": 0.25877488614338773,
-      "rms": 0.021011454121381945
+      "rms": 0.019291294759818504
     },
     {
       "gesture": "build",
       "velocity": 1.0,
       "take": 0,
       "peak": 0.5813142760075273,
-      "rms": 0.03953141169499884
+      "rms": 0.03647506249888506
     },
     {
       "gesture": "build",
       "velocity": 1.0,
       "take": 1,
       "peak": 0.48415507713086287,
-      "rms": 0.03893308021424756
+      "rms": 0.03701084939942117
     },
     {
       "gesture": "build",
       "velocity": 1.0,
       "take": 2,
-      "peak": 0.502359191577611,
-      "rms": 0.03811636385974969
+      "peak": 0.5034296591966563,
+      "rms": 0.03581912658184442
     },
     {
       "gesture": "build",
       "velocity": 1.0,
       "take": 3,
       "peak": 0.44516824700393504,
-      "rms": 0.037489428487540534
+      "rms": 0.03440334825439457
     }
   ],
   "core_invariance": [
