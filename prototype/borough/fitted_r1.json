@@ -742,6 +742,22 @@
    "evals": 3712,
    "seconds": 675.4,
    "occurrences": 8
+  },
+  "ride": {
+   "params": {
+    "tune": 0.2911,
+    "damp": 0.9814,
+    "buzz": 0.0159,
+    "distance": 0.1047,
+    "comp": 0.3778,
+    "drive": 0.9426,
+    "lp": 4676.7825,
+    "tilt": 5.5194
+   },
+   "residual_db": 4.599,
+   "evals": 1856,
+   "seconds": 1233.1,
+   "occurrences": 4
   }
  }
 }

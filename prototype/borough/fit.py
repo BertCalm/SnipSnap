@@ -16,6 +16,10 @@ import importlib, os
 V = importlib.import_module(os.environ.get('BOROUGH_MODEL', 'voices'))   # 'acoustic' from round 1
 
 FLOOR = -50.0
+# A role fitted against another role's descriptor: the ride is scored on the loop's cymbal ('hat')
+# envelope. BOROUGH_ROLES picks the roles to fit (default kick, snare, hat).
+ROLE_TARGET = {'ride': 'hat'}
+ROLES = tuple(os.environ.get('BOROUGH_ROLES', 'kick,snare,hat').split(','))
 
 
 def masks(target, role):
@@ -74,9 +78,10 @@ if __name__ == '__main__':
     for loop, r in targets['loops'].items():
         if only and loop not in only:
             continue
-        for role in ('kick', 'snare', 'hat'):
-            if r.get(role) and role not in fitted.get(loop, {}):   # resume: skip finished fits
-                jobs.append((loop, role, r[role]))
+        for role in ROLES:
+            tgt = r.get(ROLE_TARGET.get(role, role))
+            if tgt and role not in fitted.get(loop, {}):   # resume: skip finished fits
+                jobs.append((loop, role, tgt))
     with Pool(4) as pool:
         for loop, role, res in pool.imap_unordered(fit_one, jobs):
             fitted.setdefault(loop, {})[role] = res
