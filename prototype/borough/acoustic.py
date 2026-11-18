@@ -112,7 +112,9 @@ def end(y, seconds):
     live = np.where(e > e.max() * 1e-3)[0]
     stop = min(len(y), (live[-1] if len(live) else len(y)) + w)
     y = y[:stop]
-    still = e[stop - 1] > e.max() * 3e-3
+    # still ringing at the cut? judge the last full 10 ms against the sample peak (what the
+    # verifier checks), not the half-empty 'same' window at the edge, which reads ~half as loud
+    still = np.sqrt(np.mean(y[stop - w:stop] ** 2)) > np.max(np.abs(y)) * 1e-3
     k = min(int(.25 * SR), len(y) // 4) if still else min(w, len(y) // 4)
     y[-k:] *= 0.5 + 0.5 * np.cos(np.linspace(0, math.pi, k))
     return y / (np.max(np.abs(y)) + 1e-12)
