@@ -10,6 +10,8 @@ Per loop (replica groove against the reference loop, both mono):
 
 Per drum (rendered at 4x, the house rate):
   fit distance    re-measured at 4x against the same target, averaged over the four takes
+  own hits        the reference's own single hits against that target: the floor a single
+                  take can reach, since every single strike wobbles around the average
   velocity        spectral-shape change of a v=.4 strike against v=1 at matched loudness, dB
                   (owner gate: a soft hit must differ in character, not only level)
   takes           the closest pair of four takes, 20 log10(rms(a) / rms(a - b)); a copy
@@ -116,12 +118,19 @@ def main(ref_dir: Path, work: Path, models: Path, grooves: Path) -> None:
                                   for y in ys]))
             soft = synth.render(m, 0.4, 0)
             closest = max(take_distance(ys[i], ys[j]) for i in range(4) for j in range(i + 1, 4))
+            # the floor: how far the reference's own single hits sit from the same target
+            own = float(np.mean([np.mean(np.abs(target - fit.band_envelopes(h[fit.PRE:]))[live])
+                                 for h in takes]))
             report["drums"][did] = dict(fit_distance_4x_db=round(dist, 2),
+                                        reference_own_hits_db=round(own, 2),
                                         velocity_shape_db=round(shape_change(hard, soft), 2),
                                         closest_takes_db=round(closest, 1))
     vel = [v["velocity_shape_db"] for v in report["drums"].values()]
     tk = [v["closest_takes_db"] for v in report["drums"].values()]
     fd = [v["fit_distance_4x_db"] for v in report["drums"].values()]
+    own = [v["reference_own_hits_db"] for v in report["drums"].values()]
+    print(f"reference's own single hits from their target: median {np.median(own):.2f} dB "
+          f"(the floor a single replica take is compared against)")
     print(f"drums {len(fd)}: fit at 4x median {np.median(fd):.2f} dB max {max(fd):.2f}; "
           f"velocity shape change min {min(vel):.2f} dB median {np.median(vel):.2f}; "
           f"closest takes max {max(tk):.1f} dB (a copy is > 40)")

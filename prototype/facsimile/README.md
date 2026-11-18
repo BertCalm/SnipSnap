@@ -95,6 +95,14 @@ templates (all derived from reference PCM), and every rendered WAV or MP3.
   noise wanders 4 to 6 dB at any instant), which left other takes and the 4x render 2 dB
   further off than the fit reported; the fit now averages its replica over three noise seeds,
   and `measure.py` reports the mean distance over the four takes.
+- Grooves still came out 2 to 8 dB quiet, worst on drums made of soft hits, for three
+  reasons, all fixed. The noise band filters started from silence, so a narrow low band took
+  50 to 100 ms to ring up and was nearly silent during the strike itself (the loop had been
+  inflating those bands to compensate); they now run over a discarded lead-in. The velocity
+  tilt made soft hits darker and also quieter, counting their measured softness twice; a
+  strike's energy is now restored after the tilt. And the target was a median across hits,
+  about 1.6 dB under the mean the replica is measured as; it is now a median of three group
+  means.
 - Round robin follows the reference's own hit-to-hit spread, clamped to 0.3 to 1.2 dB per band,
   plus fresh noise and phases. Whether that reads as one drum hit again is for the ear.
 - Engine gates: this is a prototype. Velocity and round robin are checked in rendering only;

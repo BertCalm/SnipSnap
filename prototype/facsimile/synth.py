@@ -33,6 +33,7 @@ GRID_MS = [0, 1, 2, 3, 5, 7, 10, 14, 20, 28, 40, 55, 75, 100, 130, 170, 220, 280
            550, 700, 850, 1000, 1200, 1400]
 BAND_EDGES = np.geomspace(35, 17_000, 27)
 FLOOR_DB = -120.0
+WARM_S = 0.25        # noise lead-in for the band filters, discarded
 
 
 def seed_for(*parts) -> int:
@@ -99,14 +100,18 @@ def render(model: dict, velocity: float = 1.0, take: int = 0, oversample: int = 
         out += np.sin(ph) * e
 
     # Noise bands
+    # Each band filter runs over a lead-in first, discarded, so a narrow low band is already at
+    # full level when the strike begins: started from silence, a 10 Hz-wide band takes 50 to
+    # 100 ms to ring up, which is exactly when a drum's energy is.
+    warm = int(WARM_S * rate)
     if noise_seed is not None:
         noise = np.random.default_rng(seed_for("facsimile", model["id"], "fit",
-                                               noise_seed)).standard_normal(n)
+                                               noise_seed)).standard_normal(n + warm)
     elif first_take:
         noise = np.random.default_rng(seed_for("facsimile", model["id"], "noise0")
-                                      ).standard_normal(n)
+                                      ).standard_normal(n + warm)
     else:
-        noise = rng.standard_normal(n)
+        noise = rng.standard_normal(n + warm)
     centres = np.sqrt(BAND_EDGES[:-1] * BAND_EDGES[1:])
     for b, env_db in enumerate(model["noise_db"]):
         if max(env_db) <= FLOOR_DB + 1:
@@ -115,19 +120,40 @@ def render(model: dict, velocity: float = 1.0, take: int = 0, oversample: int = 
         key = (lo, hi, rate)
         if key not in _SOS_CACHE:
             _SOS_CACHE[key] = band_sos(lo, hi, rate)
-        y = signal.sosfilt(_SOS_CACHE[key], noise)
+        y = signal.sosfilt(_SOS_CACHE[key], noise)[warm:]
         y /= np.sqrt(np.mean(y ** 2)) + 1e-12
         tilt = vel["tilt_db_per_oct"] * soft * np.log2(centres[b] / 1000.0)
         level_db = tilt + (0.0 if first_take else rng.normal(0, rr["band_sigma_db"]))
         out += y * env_curve(np.asarray(env_db) + level_db, n, rate,
                              1 - vel["decay_loss"] * soft)
 
-    # Level: amplitude follows velocity squared (a quiet ghost note is about -12 dB at v=.5)
-    out *= v ** 2
+    # Level: amplitude follows velocity squared (a quiet ghost note is about -12 dB at v=.5).
+    # The groove's measured loudness of a soft hit already is its level, so the darker tilt
+    # must not make it quieter on top: the tilt changes the character at the same energy.
+    out *= v ** 2 * tilt_compensation(model, soft)
     # Strike onset: a 0.2 ms ramp so the first sample is not a step (a click we did not fit)
     ramp = int(0.0002 * rate)
     out[:ramp] *= np.linspace(0, 1, ramp)
     return finish(out, oversample)
+
+
+def tilt_compensation(model: dict, soft: float) -> float:
+    """Gain that restores a strike's energy after the velocity tilt, worked out from the model's
+    own band and partial energies (the tilt only moves noise between bands)."""
+    if soft <= 0:
+        return 1.0
+    # integrate each loudness curve at 1 ms steps along the synth's own dB interpolation
+    t = np.arange(0, model["length_s"] * 1000, 1.0)
+
+    def energy(env_db):
+        return float(np.sum(10 ** (np.interp(t, GRID_MS, env_db) / 10)))
+    centres = np.sqrt(BAND_EDGES[:-1] * BAND_EDGES[1:])
+    tilt = model["velocity"]["tilt_db_per_oct"] * soft * np.log2(centres / 1000.0)
+    band_e = np.array([energy(e) for e in model["noise_db"]])
+    part_e = sum(energy(p["env_db"]) / 2 for p in model["partials"])
+    before = band_e.sum() + part_e
+    after = np.sum(band_e * 10 ** (tilt / 10)) + part_e
+    return float(np.sqrt(before / max(after, 1e-30)))
 
 
 def finish(x: np.ndarray, oversample: int) -> np.ndarray:

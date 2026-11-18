@@ -76,11 +76,21 @@ def template_envelopes(template: np.ndarray) -> np.ndarray:
     return out
 
 
+def robust_mean_db(envs: list[np.ndarray]) -> np.ndarray:
+    """Average loudness across hits that one bleed-heavy hit cannot drag up: split the hits into
+    three groups, average each in power, take the median of the three. A plain median of noise
+    sits about 1.6 dB under its mean (the replica is measured as a mean), so it is not used."""
+    p = 10 ** (np.array(envs) / 10)
+    if len(p) < 6:
+        return 10 * np.log10(p.mean(axis=0) + 1e-30)
+    groups = np.array_split(np.arange(len(p)), 3)
+    means = [p[g].mean(axis=0) for g in groups]
+    return 10 * np.log10(np.median(means, axis=0) + 1e-30)
+
+
 def target_for(takes: np.ndarray, template: np.ndarray, clean_s: float,
                low_share: float = 0.0) -> np.ndarray:
-    # the median, in dB, of each hit's own envelopes: rejects one-off bleed without the
-    # cancellation a sample-by-sample median causes
-    fine = np.median([band_envelopes(h[PRE:]) for h in takes], axis=0)
+    fine = robust_mean_db([band_envelopes(h[PRE:]) for h in takes])
     tail = template_envelopes(template)
     join = max(0.02, min(clean_s - 0.006, 1.2))
     j = int(np.searchsorted(GRID, join))
