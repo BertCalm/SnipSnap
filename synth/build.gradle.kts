@@ -4110,3 +4110,13 @@ tasks.register<JavaExec>("benchmarkParadeSecondLine") {
     maxHeapSize = "1g"
     args("secondline_speed",providers.gradleProperty("paradeSecondLineSpeedOutput").getOrElse("${rootDir}/testkit/parade-secondline-speed.csv"))
 }
+
+tasks.register<JavaExec>("generateSunroomKits") {
+    group = "distribution"
+    description = "Export three approved Sunroom factory kits with velocity and alternate-take grids."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.SunroomKitGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "1g"
+    args(providers.gradleProperty("sunroomOutput").orNull ?: "${rootDir}/testkit/sunroom-native")
+}
