@@ -3,9 +3,14 @@
 - every WAV finite, peak <= 0.9, |DC| < 0.005, last 10 ms quiet
 - velocity is timbral, not only gain: gain-matched soft-vs-hard residual and centroid shift
 - takes are distinct strikes: gain-matched residual between takes in a zone
-- struck sounds are loudest at the strike: no pad (rolls aside) rises more than 1 dB after its
-  first 40 ms (the ride "dead spot", round 1.2, rose 2 dB; every EMBER cymbal through the chain at
-  tilt >= 0 rises under 0.3 dB)
+- stick-struck cymbals are loudest at the strike: no hat, open hat, ride or bell pad rises more
+  than 1 dB (25 ms RMS) after its first 40 ms. A negative tilt after the drive removed the stick click and made the WAX
+  open hat rise 3.8 dB (round 1.2). Drums are left out: EMBER's toms rise 1-2 dB dry at some tunings,
+  the two heads answering, which is the model's character, not the chain's. So is the pedal hat:
+  fitted from a recording, the plates' 'shhk' builds to its peak over 60-100 ms.
+- rides ring without a dead spot: no ride or bell pad fades and comes back by more than 5 dB
+  (25 ms RMS, 50 ms to 1.2 s). EMBER's approved ride, dry: 2.2 dB typical, 4.6 dB worst. The ride
+  heard in round 1.1 measured 7.5 typical, 11.2 worst.
 - fitted pads against their reference descriptors (numbers only), re-scored from the final render
 
     python3 verify.py OUT_DIR targets.json fitted.json
@@ -39,8 +44,15 @@ def centroid(x):
 
 def rise_db(x):
     """How much louder a hit gets after its first 40 ms (10 ms RMS envelope)."""
-    w = int(.01 * V.SR); e = np.sqrt(np.convolve(x * x, np.ones(w) / w, 'same')) + 1e-12
+    w = int(.025 * V.SR); e = np.sqrt(np.convolve(x * x, np.ones(w) / w, 'same')) + 1e-12   # 25 ms: longer than a tom's period
     return float(20 * np.log10(e.max() / e[:int(.04 * V.SR)].max()))
+
+
+def hole_db(x, a=.05, b=1.2):
+    """Deepest fade-and-return between a and b seconds: the largest rise above the lowest level so far."""
+    w = int(.025 * V.SR)
+    e = 20 * np.log10(np.sqrt(np.convolve(x * x, np.ones(w) / w, 'same')) + 1e-12)[int(a * V.SR):int(b * V.SR):int(.01 * V.SR)]
+    return float(np.max(e - np.minimum.accumulate(e))) if len(e) else 0.0
 
 
 def main(out, targets_path, fitted_path):
@@ -54,8 +66,10 @@ def main(out, targets_path, fitted_path):
         if not (np.all(np.isfinite(x)) and pk <= .9 and dc < .005 and tail < .003):
             rep['fail'].append(p.name)
         stem = p.stem.rsplit('-v', 1)[0]
-        if 'roll' not in stem and rise_db(x) > 1.0:
+        if any(c in stem for c in ('hat', 'ride', 'bell')) and 'pedal' not in stem and rise_db(x) > 1.0:
             rep.setdefault('rises_after_strike', []).append(f'{p.parent.name}/{p.name} {rise_db(x):.1f} dB')
+        if any(c in stem for c in ('ride', 'bell')) and hole_db(x) > 5.0:
+            rep.setdefault('dead_spot', []).append(f'{p.parent.name}/{p.name} {hole_db(x):.1f} dB')
         z, t = p.stem.rsplit('-v', 1)[1].split('-t')
         pads.setdefault((p.parent.name, stem), {})[(int(z), int(t))] = x
     rep['worst'] = {k: round(float(v), 5) for k, v in worst.items()}
@@ -88,10 +102,10 @@ def main(out, targets_path, fitted_path):
                              resid_db=round(F.score(X.to_db(X.bank_env(x), -80), t, b, tm), 2),
                              fit_resid_db=fitted[loop][role]['residual_db']))
     rep['fit'] = fits
+    rep['fail'] += rep.get('rises_after_strike', []) + rep.get('dead_spot', [])
     (out / 'verification.json').write_text(json.dumps(rep, indent=1))
-    rep['fail'] += rep.get('rises_after_strike', [])
     print(json.dumps({k: rep[k] for k in ('files', 'worst', 'velocity_timbral', 'take_resid_db_max', 'take_resid_db_min')}),
-          'fail', len(rep['fail']), '(of which rise after strike:', len(rep.get('rises_after_strike', [])), ')')
+          'fail', len(rep['fail']), '(rise after strike:', len(rep.get('rises_after_strike', [])), 'dead spot:', len(rep.get('dead_spot', [])), ')')
     for f in fits:
         print(f"  {f['kit']:16s} A{f['pad']:02d} {f['role']:5s} {f['loop']:24s} shipped {f['resid_db']:5.2f} dB (fit {f['fit_resid_db']})")
 

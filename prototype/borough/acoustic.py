@@ -178,19 +178,12 @@ def hat(p, vel=1.0, rng=None, seconds=0.45, kind='HAT_CLOSED'):
 
 def ride(p, vel=1.0, rng=None, seconds=None, kind='RIDE'):
     """EMBER's ride (or its bell) through the same record chain as the hats. Fitted as role 'ride'
-    against a loop's cymbal descriptor (fit.py ROLE_TARGET), so a ride-led loop gets a ride, not a
-    closed hat bent toward one. Full natural ring on pads; the fitter passes a short window."""
+    against a loop's cymbal descriptor (fit.py ROLE_TARGET). The fitter scores the first `seconds`
+    of exactly the pad that ships (round 1.2: a shorter render for speed scored 4.7-5.7 dB where the
+    shipped pad scored 4.7-8.4 dB, so the fit tuned a ride that did not ship)."""
     take = 0 if rng is None else int(rng.integers(1 << 20))
-    m = dict(TUNE=p['tune'], DAMP=p['damp'], BUZZ=p['buzz'], DISTANCE=p['distance'])
-    if seconds is None:
-        return ember_voice(kind, m, p, vel, take)
-    # fitting: render only the window being scored (EMBER.render always rings the full 1.45 s),
-    # the same steps as E.render with a shorter buffer
-    # (with 0.25 s to spare, so end()'s release lands after the scored window, not inside it)
-    mm = E.settled(kind, dict(m, WARMTH=0.0)); v = float(np.clip(vel, .05, 1.0)); s = seconds + .25
-    raw = E.RENDER[kind](mm, v, E.rng_for('ember', kind, take), E.n_of(s + .05))
-    y = E.finish(raw, mm, v, s, E.TAILS.get(kind))
-    return end(record(y, p, vel), s)
+    y = ember_voice(kind, dict(TUNE=p['tune'], DAMP=p['damp'], BUZZ=p['buzz'], DISTANCE=p['distance']), p, vel, take)
+    return y if seconds is None else y[:int(seconds * SR)]
 
 
 CHAIN = dict(distance=(0, .7), comp=(0, 1), drive=(0, 1), lp=(1200, 16000), tilt=(-12, 6))
@@ -204,7 +197,12 @@ SPACES = {
 # The ride's DAMP stops at 0.45. The cymbal descriptor only sees the 0.31 s between strokes, so it
 # scores DAMP 0.4 and 0.98 alike (5.5-5.7 dB); left free the fit chose 0.98, a choked ride the owner
 # heard as hitting a dead spot ("The ride sounds like it has a dead spot", round 1.1).
-SPACES['ride'] = dict(SPACES['hat'], damp=(0, .45))
+# The ride's low-pass stops at 10 kHz. EMBER builds each cymbal partial as a doublet 0.4-3 Hz apart, so
+# partials beat; with dozens of them the dips average out, but a 4.7 kHz low-pass leaves a few strong
+# ones, and when they dip together the ring fades and comes back: a hole of 7.5 dB on a typical hit
+# (11.2 worst), the owner's "dead spot". EMBER's approved ride, dry: 2.2 typical, 4.6 worst. At
+# 12 kHz the fitted ride measures 2.3 / 3.2 (verify.py checks it). Its darkness belongs to the room.
+SPACES['ride'] = dict(SPACES['hat'], damp=(0, .45), lp=(10000, 16000))
 # Cymbals take their darkness from the low-pass, never a negative tilt. The tilt comes after the
 # drive: a cut above 1 kHz there removes the stick's click, which after the drive is the whole
 # attack, so the cymbal swells 2 to 4 dB after its strike (the ride's "dead spot"; the WAX and
