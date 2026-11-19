@@ -3401,6 +3401,16 @@ tasks.register<JavaExec>("generateSootAudition") {
     args(providers.gradleProperty("sootOutput").orNull ?: "${rootDir}/testkit/soot-audition")
 }
 
+tasks.register<JavaExec>("generateKerfFit") {
+    group = "distribution"
+    description = "Fit KERF patches to the caller's own audio: a folder of chops hit by hit, or one loop as a kit."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.KerfFitGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "1g"
+    args(providers.gradleProperty("kerfInput").orNull ?: "", providers.gradleProperty("kerfOutput").orNull ?: "${rootDir}/testkit/kerf-audition/fit")
+}
+
 tasks.register<JavaExec>("generateKerfAudition") {
     group = "distribution"
     description = "Render KERF's round-1 listening pack: the four fitted chop kits from the Kotlin port, clean and chopped."

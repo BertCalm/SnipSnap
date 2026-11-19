@@ -2,10 +2,11 @@
 
 Version 1.0 · 2026-11-19
 
-Status: round 1 built (the Kotlin renderer; see "As built" at the end). A Python prototype
-exists and the owner has heard it once. The Kotlin renders have not been heard. The fitter,
-the tool and the engine are not written. KERF is a working name (a kerf is the sliver a saw
-removes); no maker or product is named by it.
+Status: rounds 1 and 2a built (the Kotlin renderer and the Kotlin fitter; see "As built" at
+the end). The in-app action that would call them (round 2b) and the engine are not written.
+The owner has heard the Python prototype once and answered the round-1 Kotlin page with
+"Sounds good, continue" (2026-11-19). The round-2a kits have not been heard. KERF is a
+working name (a kerf is the sliver a saw removes); no maker or product is named by it.
 
 Owner decisions, 2026-11-19 ("I take your recommendations proceed"): the patch format is
 carried the recommended way (section 6, A); velocity starts from the ghost-against-snare
@@ -403,8 +404,11 @@ a layer is not always a separate drum.
   tool that writes it, so that no field ships unused.
 - **R1.** Built. `KerfRender` and the patch data, fed the committed `kit_patches.json`.
   Gate, still open: the owner hears Kotlin renders of the four kits beside the Python ones.
-- **R2.** `KerfFit` and the tool entry. Gate: fit metrics within the section 16 figures on
-  the same loops; the owner chops a loop of their own in the app.
+- **R2a.** Built. `KerfFit` and `kitFromLoop`. Gate, met by measurement: fit metrics within
+  the section 16 figures on the same slices. Gate, open: a listen to kits the Kotlin code
+  made from a loop.
+- **R2b.** The tool entry in `:shell` beside `desamplePad`, the pad recipe field, and the
+  screen. Gate: the owner chops a loop of their own in the app.
 - **R3.** The ghost-against-snare comparison, then velocity and round robin. Gate: the
   owner's velocity/round-robin gate through render, save, playback and export.
 - **R4.** Engine registration, voices and presets after listening, genre kits, audition,
@@ -457,7 +461,10 @@ content from third-party recordings.
 | The revised velocity law in section 11 | proposed | constants not prototyped, not heard |
 | The Kotlin renderer matches the Python one | measured | `KerfRenderTest`: lengths equal to the frame on 64 pads; level and band figures in "As built" |
 | A chopped pad renders in tens of ms in Kotlin | measured | 49.6 ms per pad on the JVM including warm-up, `generateKerfAudition` |
-| The Kotlin renders sound like the Python ones | not heard | audition page published 2026-11-19 |
+| The Kotlin renders sound like the Python ones | heard | owner, 2026-11-19, on the round-1 page: "Sounds good, continue" (my reading: no difference worth raising; no pad was singled out) |
+| The Kotlin fitter fits real chops as well as the Python one | measured | 63 of the bank's source slices, figures in "As built: round 2a" |
+| A loop becomes a kit in the app's own code | measured | two of the owner's loops, 16 pads each in 7.5 and 8.2 s on the JVM |
+| Kits the Kotlin code made from a loop sound like their chops | not heard | audition page published 2026-11-19 |
 | The synthetic twins are acceptable | heard | owner, 2026-11-18: "Seems closer. I think I can live with it." |
 | Cymbal ring under another hit is present | heard, partly | owner reported it missing on Kit A pads 1, 4, 6, 9, 11, 13, 16 and elsewhere; the colour stage followed; the quote above is the only verdict since |
 | BLEED and SLOP levels are right | not heard | no verdict given on which step to ship |
@@ -536,3 +543,76 @@ Not done in this round, each still owed:
   The fitter must refuse such a slice (R2); the test allows exactly this one.
 - Heard: nothing. The Kotlin renders are on a published audition page beside the Python
   ones and nobody has listened.
+
+## As built: round 2a, the fitter (2026-11-19)
+
+Read at `6e76ec3b`. What exists:
+
+- `synth/.../KerfFit.kt`: `fit` (one chop in, patch data out) and `kitFromLoop` (a loop in,
+  up to sixteen pads out, each with both neighbours).
+- `synth/src/test/.../KerfFitTest.kt`, six tests, and `:synth:generateKerfFit`, which fits
+  the caller's own audio from disk.
+
+The repository holds no source audio, so the suite feeds the fitter renders of the bank,
+where the truth is known. How it does on real chops was measured outside the suite on the
+owner's loops.
+
+On real chops: the 63 source slices of the bank's pads that are one-shots (the 3.30 s slice
+is refused), each fitted by Python and by Kotlin, each render compared with its source by
+`prototype/kerf/resynth.py compare`.
+
+| Median over 63 pads | Python fit | Kotlin fit |
+|---|---:|---:|
+| Band error over time | 3.49 dB | 3.44 dB |
+| Loudness-shape correlation | 0.93 | 0.93 |
+| Level against source | −0.51 dB | −0.57 dB |
+| Centroid against source | 1.03× | 1.05× |
+| Ring match | 0.29 | 0.28 |
+| Top-end peak against source | −0.62 dB | −0.15 dB |
+| Partials / events / resonances / ticks | 4 / 3 / 20 / 2 | 4 / 3 / 20 / 2 |
+
+Worst Kotlin pads: band error 8.1 dB (Python's worst on the same pad is 7.5), level −4.1 dB.
+The fit takes 410 ms per hit on the JVM including warm-up (Python: 555 ms).
+
+On renders of the bank (`KerfFitTest`, eight pads of kit B): level median 1.06 dB, worst
+3.27 dB; band median 0.87 dB, 95th 3.04 dB over 140 bands. The yardstick, one patch with two
+noise seeds, is 0.70 and 3.02.
+
+A loop to a kit: two of the owner's loops, 16 pads each, 7.5 s and 8.2 s.
+
+What changed against the design and the prototype, and why:
+
+- **The chop is the app's, not the prototype's.** `kitFromLoop` uses
+  `Chopper.byTransients`, which keeps the strongest sixteen hits. Quieter hats stay inside
+  their neighbour's slice, which is what layers are for. The cut points are therefore not
+  the ones the owner heard in the Python kits.
+- **A hit on the first frame is kept.** The detector does not see a hit that starts the
+  file, so the chop began at the second hit and both test loops lost their opening kick.
+  Audio before the first cut is now a pad when its peak is at least a quarter of the loop's.
+- **A slice over 1.5 s is cut there**, not refused, inside `kitFromLoop`. `fit` itself
+  still refuses one. The knife coming down is what this instrument does.
+- **Metal candidates are capped at 48 tries, and layers at 8 per band.** Both bound the
+  time on long or busy slices; neither changed a figure above.
+- **The band-pass is run both ways from rest over a silent pad**, not with SciPy's edge
+  extension. The partial counts and levels above say it did not matter.
+
+Findings, not fixed:
+
+- **A hit whose low end is refused loses that low end.** The lowest noise band starts at
+  about 86 Hz; below it only an oscillator can carry energy. When the projection test
+  refuses a sub partial, nothing else picks it up. This is the −3.27 dB pad in the suite
+  and the −4.1 dB pad on real chops. It is a gap in the model, in Python too.
+- **The app's classifier mislabels these chops.** On the two loops it called most kicks
+  PERC and most hats SNARE. The labels decide a kit's layout, so the tool needs either its
+  own labelling from the fit (the body's pitch and the band shares are already measured) or
+  the owner's hand. Open for R2b.
+- **Where a glide ends cannot be read from a short kick.** The fit clamps it at 20 Hz where
+  the truth was 25 Hz. The pitch while the body sounds is right (within 8 % at 30 and
+  80 ms), which is what is heard.
+
+Proven able to fail: the second-sound test renders the same fit with layers off and
+requires the hat to drop by more than 6 dB. Not proven by a reverted guard: the round-trip
+bounds.
+
+Not done in this round, each still owed: R2b entirely; the 88.2 kHz assertion; any listen
+to a kit made by `kitFromLoop`.
