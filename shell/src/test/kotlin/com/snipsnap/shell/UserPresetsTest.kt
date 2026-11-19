@@ -397,6 +397,13 @@ class UserPresetsTest {
                 val promoted = com.snipsnap.synth.ServoPatch.fromJsonText((call.positional.single() as KotlinLiteral.Str).value)
                 assertEquals(preset, promoted, "${preset.name}: velocity, take and model promotion")
                 assertEquals(preset.macros.mapValues { it.value.toRawBits() }, promoted.macros.mapValues { it.value.toRawBits() })
+            } else if (preset is com.snipsnap.synth.RiddimPatch) {
+                val call = KotlinLiteral.parse(line.removeSuffix(",")) as KotlinLiteral.Call
+                assertEquals("fromJsonText", call.name)
+                assertEquals("RiddimPatch", (call.receiver as KotlinLiteral.Call).name)
+                val promoted = com.snipsnap.synth.RiddimPatch.fromJsonText((call.positional.single() as KotlinLiteral.Str).value)
+                assertEquals(preset, promoted, "${preset.name}: velocity, take and model promotion")
+                assertEquals(preset.macros.mapValues { it.value.toRawBits() }, promoted.macros.mapValues { it.value.toRawBits() })
             } else if (preset is com.snipsnap.synth.EmberPatch) {
                 val call = KotlinLiteral.parse(line.removeSuffix(",")) as KotlinLiteral.Call
                 assertEquals("fromJsonText", call.name)
@@ -1424,6 +1431,13 @@ class UserPresetsTest {
                 assertTrue("private val promoted:" in text, "SERVO promotions need a destination beside the approved kits")
                 val patch = Presets.all().first { it.engine == engine }
                 assertTrue(UserPresets.rosterLine(patch).startsWith("ServoPatch.fromJsonText("))
+            } else if (engine == com.snipsnap.synth.RiddimPatch.ENGINE) {
+                val decoder = com.snipsnap.synth.RiddimPatch.Companion.javaClass.getMethod("fromJsonText", String::class.java)
+                assertEquals(com.snipsnap.synth.RiddimPatch::class.java, decoder.returnType,
+                    "RIDDIM promotion retains strike velocity, take and model version")
+                assertTrue("private val promoted:" in text, "RIDDIM promotions need a destination beside the accepted kits")
+                val patch = Presets.all().first { it.engine == engine }
+                assertTrue(UserPresets.rosterLine(patch).startsWith("RiddimPatch.fromJsonText("))
             } else if (engine == com.snipsnap.synth.EmberPatch.ENGINE) {
                 val decoder = com.snipsnap.synth.EmberPatch.Companion.javaClass.getMethod("fromJsonText", String::class.java)
                 assertEquals(com.snipsnap.synth.EmberPatch::class.java, decoder.returnType,
