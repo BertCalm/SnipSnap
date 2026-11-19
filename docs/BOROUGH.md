@@ -371,8 +371,13 @@ Listening page (private until shared): https://claude.ai/artifact/6y32yHPUszWK58
 - **Measured (Python harness):** everything in "What the loops measured" and "Results".
 - **Proposed:** the kit groupings, the A01-A12 / A13-A16 contract, every derived pad, the perc
   parameters, the velocity laws, the take jitter, the kick length.
-- **Heard:** round 0 by the owner: "Sounds quite drum machine like". Round 1: nothing yet. This
-  sandbox cannot play audio.
+- **Heard (by the owner; this sandbox cannot play audio):**
+  - round 0: "Sounds quite drum machine like".
+  - round 1: "Better. But rides and rims doesn't have any rides."
+  - round 1.1: "The ride sounds like it has a dead spot. And the stoop kick is a bit overpowering."
+  - round 1.2: "Stoop sounds like the speaker is overblown when the kick hits. Ride is sounding better."
+  - round 1.3: "Its better now" (the STOOP kick, 2026-11-19).
+  Heard as better is not accepted for the shelf: no kit has been approved yet.
 
 ## Why it is built this way
 
