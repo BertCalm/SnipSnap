@@ -855,3 +855,6 @@ testkit/stagger-round1b/
 /testkit/stagger-kits/
 
 /testkit/sunroom-native/
+
+# Reproducible SIDEROOM native audition and exported kits.
+/testkit/sideroom-native/

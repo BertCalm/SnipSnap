@@ -840,6 +840,16 @@ tasks.register<JavaExec>("generateSporeSyntheticKits") {
     args(providers.gradleProperty("sporeSyntheticOutput").orNull ?: "${rootDir}/testkit/spore-synthetic-kits")
 }
 
+tasks.register<JavaExec>("generateSideroomKits") {
+    group = "distribution"
+    description = "Build five SIDEROOM cached-synthesis kits and verify native save/playback and MPC exports."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.SideroomKitGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "2g"
+    args(providers.gradleProperty("sideroomOutput").orNull ?: "${rootDir}/testkit/sideroom-native")
+}
+
 tasks.register<JavaExec>("generateEastAfricaKits") {
     group = "distribution"
     description = "Render five fitted-synthesis banks with native/MPC exports and saved-PCM auditions."
