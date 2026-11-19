@@ -783,21 +783,6 @@ object StarterKits {
             seeded = false, tempoBpm = com.snipsnap.synth.CypherKits.Kit.FLINT.bpm.toFloat(),
         ) { com.snipsnap.synth.CypherKits.build(com.snipsnap.synth.CypherKits.Kit.FLINT) },
         Starter(
-            "stagger-cardboard", "STAGGER CARDBOARD",
-            "A muffled, click-free kick against a dry crack and a hat at a whisper, timpani, gong, zap and punch pitched down through a 12-bit converter. Three touch zones, four takes; a timpani roll and a two-bar groove whose clock drags and catches up.",
-            seeded = false, tempoBpm = com.snipsnap.synth.StaggerKits.Kit.CARDBOARD.bpm.toFloat(),
-        ) { com.snipsnap.synth.StaggerKits.build(com.snipsnap.synth.StaggerKits.Kit.CARDBOARD) },
-        Starter(
-            "stagger-matinee", "STAGGER MATINEE",
-            "The cinematic kit: a stage kick and snare, then ten effects, two timpani, two gongs, glass breaking, two zaps, a punch and a stab, all pitched down through the converter. Three touch zones, four takes; a timpani riser into the crash and a groove with a glass break in it.",
-            seeded = false, tempoBpm = com.snipsnap.synth.StaggerKits.Kit.MATINEE.bpm.toFloat(),
-        ) { com.snipsnap.synth.StaggerKits.build(com.snipsnap.synth.StaggerKits.Kit.MATINEE) },
-        Starter(
-            "stagger-stumble", "STAGGER STUMBLE",
-            "The drunkest clock: a humming muffled kick, a rimshot in the snare's place, no hats in the groove, the tape worn. Three touch zones, four takes; a dragging snare roll and a two-bar groove that leans and catches up.",
-            seeded = false, tempoBpm = com.snipsnap.synth.StaggerKits.Kit.STUMBLE.bpm.toFloat(),
-        ) { com.snipsnap.synth.StaggerKits.build(com.snipsnap.synth.StaggerKits.Kit.STUMBLE) },
-        Starter(
             "loose-crate-hummin", "LOOSE CRATE HUMMIN",
             "Beat-tape boom bap built around a kick that hums: a flam snare, a bouncing snare, dark hats that drag, a record's rumble under everything. Three touch zones, four takes; a flam roll and a loose four-bar groove.",
             seeded = false, tempoBpm = com.snipsnap.synth.LooseCrateKits.Kit.HUMMIN.bpm.toFloat(),
@@ -817,6 +802,21 @@ object StarterKits {
             "Sparse and dub-leaning: a short sub thud, a high slap, hand drums and a sub that drops. Three touch zones, four takes; a slap roll and a one-drop four-bar groove.",
             seeded = false, tempoBpm = com.snipsnap.synth.LooseCrateKits.Kit.RITUAL.bpm.toFloat(),
         ) { com.snipsnap.synth.LooseCrateKits.build(com.snipsnap.synth.LooseCrateKits.Kit.RITUAL) },
+        Starter(
+            "stagger-cardboard", "STAGGER CARDBOARD",
+            "A muffled, click-free kick against a dry crack and a hat at a whisper, timpani, gong, zap and punch pitched down through a 12-bit converter. Three touch zones, four takes; a timpani roll and a two-bar groove whose clock drags and catches up.",
+            seeded = false, tempoBpm = com.snipsnap.synth.StaggerKits.Kit.CARDBOARD.bpm.toFloat(),
+        ) { com.snipsnap.synth.StaggerKits.build(com.snipsnap.synth.StaggerKits.Kit.CARDBOARD) },
+        Starter(
+            "stagger-matinee", "STAGGER MATINEE",
+            "The cinematic kit: a stage kick and snare, then ten effects, two timpani, two gongs, glass breaking, two zaps, a punch and a stab, all pitched down through the converter. Three touch zones, four takes; a timpani riser into the crash and a groove with a glass break in it.",
+            seeded = false, tempoBpm = com.snipsnap.synth.StaggerKits.Kit.MATINEE.bpm.toFloat(),
+        ) { com.snipsnap.synth.StaggerKits.build(com.snipsnap.synth.StaggerKits.Kit.MATINEE) },
+        Starter(
+            "stagger-stumble", "STAGGER STUMBLE",
+            "The drunkest clock: a humming muffled kick, a rimshot in the snare's place, no hats in the groove, the tape worn. Three touch zones, four takes; a dragging snare roll and a two-bar groove that leans and catches up.",
+            seeded = false, tempoBpm = com.snipsnap.synth.StaggerKits.Kit.STUMBLE.bpm.toFloat(),
+        ) { com.snipsnap.synth.StaggerKits.build(com.snipsnap.synth.StaggerKits.Kit.STUMBLE) },
         Starter(
             com.snipsnap.synth.BreakerKits.ID, "BREAKER",
             "Surf rock by way of boom bap: dusty drums through a spring tank, a crush and a surf amp. Three touch zones, three takes; a snare riser and a surf tom fill.",

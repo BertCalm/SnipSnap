@@ -1,6 +1,6 @@
 """Build the STAGGER round-1 listening page from the generator's manifest.
 
-Run:  python3 scripts/stagger_page/build_page.py testkit/stagger-round1 OUT_DIR
+Run:  python3 scripts/stagger_page/build_page.py testkit/stagger-round1 OUT_DIR [mp3]
 Writes OUT_DIR/index.html, which references the WAVs by their paths under the generator's folder; publish the
 page with those files beside it. No audio is converted or committed.
 """
@@ -134,9 +134,11 @@ def build_1b(m, files, clip, out):
     return 0
 
 
-def build_2(m, src, out):
-    """Round 2: the three kits as they ship, read back from their MPC 3 exports by the shelf generator."""
+def build_2(m, src, out, ext="wav"):
+    """Round 2: the three kits as they ship, read back from their MPC 3 exports by the shelf generator. [ext] is the
+    clips' extension beside the page: the WAVs as the generator wrote them, or MP3 copies for a lighter page."""
     def clip(path, label, seconds):
+        path = path[:-3] + ext
         return ('<button class="clip" type="button" data-src="%s" aria-pressed="false"><span class="play" aria-hidden="true"></span>'
                 '<span class="label">%s</span><span class="secs">%.2f s</span></button>' % (html.escape(path), html.escape(label), seconds))
     sections = []
@@ -169,7 +171,7 @@ def main(argv):
     out = argv[2] if len(argv) > 2 else src
     m = json.load(open(os.path.join(src, "manifest.json")))
     if m.get("round") == "2":
-        return build_2(m, src, out)
+        return build_2(m, src, out, ext=argv[3] if len(argv) > 3 else "wav")
     files = {f["file"]: f for f in m["files"]}
 
     def clip(path, label):

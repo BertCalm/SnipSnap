@@ -37,10 +37,19 @@ MATINEE, STUMBLE; the references 16 to 35, median 23); 95 percent of the energy 
 309 to 635; MATINEE's foley is allowed up to 1.5 kHz and lands inside the references anyway). A foley pad's cap shrinks
 with its pitch so every pad lands under 1.4 s (the Low Timpani at -9 measured 1.62 s with a flat 1 s cap).
 
+The round 2 listening page (private to the owner's account): [Stagger, round two](https://claude.ai/artifact/5YU1WGvQy2ZyhDj2WCx8dC).
+Every pad of the three kits read back from its MPC 3 export through the app's own pad resolver: printed, dry, and
+soft, medium and hard with each zone's four takes. The page plays MP3 copies (160 kbps); the kits' audio is the WAV.
+
+`:shell:generateStaggerKits` verified all three kits on 2026-11-19: 16 pads and 192 slices each, saved PCM, reload,
+the pad resolver over two cycles of every zone, the MPC 3 track read back, SFZ and DecentSampler written; built in
+138, 139 and 115 s (CARDBOARD, MATINEE, STUMBLE) on this machine, EMBER's models being the cost. The phone builds a
+starter when it is picked, and this has not been measured on a phone.
+
 ```sh
 ./gradlew --no-daemon :synth:test --tests '*StaggerKitsTest' :shell:test --tests '*StaggerKitTest'
 ./gradlew --no-daemon :shell:generateStaggerKits          # → testkit/stagger-kits/ (gitignored)
-python3 scripts/stagger_page/build_page.py testkit/stagger-kits OUT_DIR
+python3 scripts/stagger_page/build_page.py testkit/stagger-kits OUT_DIR [mp3]
 ```
 
 **Round 1b heard (2026-11-19): "New sounds are better."** EMBER's drums are the kit's.
