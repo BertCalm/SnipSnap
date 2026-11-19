@@ -125,6 +125,7 @@ LEDE = {
 }
 
 LISTEN_R1 = [
+    'New in this version: STOOP\'s kick lost its fast flutter. Its two drum heads were tuned 12% apart, so they beat about 12 times a second, and that ran through a squashed, saturated boom over a second long, a lot like a woofer flapping. The heads are now almost in unison and the boom stops by about 0.8 s. Six other kicks got the same correction, mostly the KICK 2 pads. STOOP needs less level trim now (-2.2 dB, was -5.5).',
     'New in this version: the ride lost its dead spot. Its ring used to fade out and come back (7.5 dB on a typical hit): the record chain darkened it so much that only a few cymbal partials were left, and they beat together. It is brighter now and dips under 2.2 dB, smoother than the EMBER ride you approved. The before player is the version you heard.',
     'New in this version: every kit\'s kicks are set against its loop\'s low-to-mid balance. STOOP DUST came down 5.5 dB and CELLAR BOOM 6.5 dB; DRY ROOM 1.8 dB; the others barely moved.',
     'Also fixed: open hats that swelled after the stick (the chain cut their click). Every cymbal now peaks at the strike.',

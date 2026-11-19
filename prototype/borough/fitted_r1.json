@@ -21,28 +21,6 @@
    "seconds": 523.4,
    "occurrences": 8
   },
-  "kick": {
-   "params": {
-    "f1": 95.1789,
-    "t1": 0.1643,
-    "alpha": 1.0411,
-    "beater_ms": 3.0153,
-    "air": 0.8386,
-    "r": 0.2069,
-    "reso": 1.0883,
-    "hum": 0.3256,
-    "click": 0.1628,
-    "distance": 0.0138,
-    "comp": 0.9704,
-    "drive": 0.921,
-    "lp": 10775.2502,
-    "tilt": 5.0691
-   },
-   "residual_db": 8.299,
-   "evals": 3712,
-   "seconds": 701.9,
-   "occurrences": 20
-  },
   "hat": {
    "params": {
     "tune": 0.9341,
@@ -58,6 +36,28 @@
    "evals": 1856,
    "seconds": 351.1,
    "occurrences": 8
+  },
+  "kick": {
+   "params": {
+    "f1": 98.3626,
+    "t1": 0.0992,
+    "alpha": 0.6404,
+    "beater_ms": 3.2363,
+    "air": 0.8206,
+    "r": 0.1893,
+    "reso": 1.0109,
+    "hum": 0.6679,
+    "click": 0.2365,
+    "distance": 0.0462,
+    "comp": 0.972,
+    "drive": 0.9415,
+    "lp": 8858.7111,
+    "tilt": 0.4742
+   },
+   "residual_db": 8.292,
+   "evals": 3712,
+   "seconds": 623.4,
+   "occurrences": 20
   }
  },
  "drum_tops_surf": {
@@ -122,28 +122,6 @@
   }
  },
  "drums_full_decatur": {
-  "kick": {
-   "params": {
-    "f1": 53.1965,
-    "t1": 0.6984,
-    "alpha": 0.7679,
-    "beater_ms": 0.5273,
-    "air": 0.1303,
-    "r": 0.1234,
-    "reso": 1.0899,
-    "hum": 0.1996,
-    "click": 0.0221,
-    "distance": 0.0331,
-    "comp": 0.1732,
-    "drive": 0.6991,
-    "lp": 9595.606,
-    "tilt": 0.2593
-   },
-   "residual_db": 4.889,
-   "evals": 3712,
-   "seconds": 687.4,
-   "occurrences": 9
-  },
   "snare": {
    "params": {
     "f1": 211.5905,
@@ -164,6 +142,28 @@
    "evals": 3712,
    "seconds": 605.7,
    "occurrences": 8
+  },
+  "kick": {
+   "params": {
+    "f1": 54.1666,
+    "t1": 0.3702,
+    "alpha": 1.0175,
+    "beater_ms": 0.5529,
+    "air": 0.1168,
+    "r": 0.1072,
+    "reso": 1.0377,
+    "hum": 0.1199,
+    "click": 0.1369,
+    "distance": 0.004,
+    "comp": 0.116,
+    "drive": 0.8778,
+    "lp": 11472.2553,
+    "tilt": -3.0794
+   },
+   "residual_db": 4.974,
+   "evals": 3712,
+   "seconds": 617.7,
+   "occurrences": 9
   }
  },
  "drums_full_ditmas": {
@@ -188,28 +188,6 @@
    "seconds": 390.1,
    "occurrences": 8
   },
-  "kick": {
-   "params": {
-    "f1": 45.8035,
-    "t1": 0.7833,
-    "alpha": 0.685,
-    "beater_ms": 0.5668,
-    "air": 0.165,
-    "r": 0.0144,
-    "reso": 1.1043,
-    "hum": 0.9806,
-    "click": 0.2812,
-    "distance": 0.0022,
-    "comp": 0.7782,
-    "drive": 0.9361,
-    "lp": 11547.599,
-    "tilt": 2.3295
-   },
-   "residual_db": 5.705,
-   "evals": 3712,
-   "seconds": 535.2,
-   "occurrences": 15
-  },
   "hat": {
    "params": {
     "tune": 0.6265,
@@ -225,31 +203,31 @@
    "evals": 1856,
    "seconds": 283.2,
    "occurrences": 4
+  },
+  "kick": {
+   "params": {
+    "f1": 52.013,
+    "t1": 0.5072,
+    "alpha": 1.2711,
+    "beater_ms": 0.5399,
+    "air": 0.0373,
+    "r": 0.1071,
+    "reso": 1.012,
+    "hum": 0.7781,
+    "click": 0.0393,
+    "distance": 0.0611,
+    "comp": 0.145,
+    "drive": 0.6339,
+    "lp": 10392.3395,
+    "tilt": 4.8013
+   },
+   "residual_db": 6.265,
+   "evals": 3712,
+   "seconds": 487.2,
+   "occurrences": 15
   }
  },
  "drums_full_driggs": {
-  "kick": {
-   "params": {
-    "f1": 96.5474,
-    "t1": 1.1792,
-    "alpha": 1.3935,
-    "beater_ms": 3.4288,
-    "air": 0.9692,
-    "r": 0.2478,
-    "reso": 1.1212,
-    "hum": 0.5231,
-    "click": 0.1368,
-    "distance": 0.4987,
-    "comp": 0.8793,
-    "drive": 0.9696,
-    "lp": 8795.8227,
-    "tilt": 3.4127
-   },
-   "residual_db": 8.119,
-   "evals": 3712,
-   "seconds": 636.5,
-   "occurrences": 16
-  },
   "snare": {
    "params": {
     "f1": 186.3154,
@@ -286,6 +264,28 @@
    "evals": 1856,
    "seconds": 330.7,
    "occurrences": 2
+  },
+  "kick": {
+   "params": {
+    "f1": 82.0316,
+    "t1": 0.765,
+    "alpha": 1.2798,
+    "beater_ms": 2.4629,
+    "air": 0.8985,
+    "r": 0.4513,
+    "reso": 1.0013,
+    "hum": 0.5905,
+    "click": 0.255,
+    "distance": 0.258,
+    "comp": 0.8736,
+    "drive": 0.9739,
+    "lp": 7736.9256,
+    "tilt": -0.1564
+   },
+   "residual_db": 8.349,
+   "evals": 3712,
+   "seconds": 581.4,
+   "occurrences": 16
   }
  },
  "drums_full_halsey": {
@@ -371,28 +371,6 @@
    "seconds": 535.8,
    "occurrences": 8
   },
-  "kick": {
-   "params": {
-    "f1": 51.0544,
-    "t1": 1.1511,
-    "alpha": 1.0976,
-    "beater_ms": 0.5729,
-    "air": 0.8952,
-    "r": 0.0119,
-    "reso": 1.0194,
-    "hum": 0.642,
-    "click": 0.0039,
-    "distance": 0.082,
-    "comp": 0.945,
-    "drive": 0.1478,
-    "lp": 7080.0276,
-    "tilt": 5.5675
-   },
-   "residual_db": 7.15,
-   "evals": 3712,
-   "seconds": 733.2,
-   "occurrences": 12
-  },
   "hat": {
    "params": {
     "tune": 0.9306,
@@ -408,31 +386,31 @@
    "evals": 1856,
    "seconds": 315.7,
    "occurrences": 9
+  },
+  "kick": {
+   "params": {
+    "f1": 51.4247,
+    "t1": 0.8862,
+    "alpha": 1.1963,
+    "beater_ms": 0.9392,
+    "air": 0.9659,
+    "r": 0.0455,
+    "reso": 1.008,
+    "hum": 0.7202,
+    "click": 0.1689,
+    "distance": 0.291,
+    "comp": 0.9778,
+    "drive": 0.0867,
+    "lp": 7302.9393,
+    "tilt": 5.4691
+   },
+   "residual_db": 6.903,
+   "evals": 3712,
+   "seconds": 653.4,
+   "occurrences": 12
   }
  },
  "drums_full_kingston": {
-  "kick": {
-   "params": {
-    "f1": 95.7981,
-    "t1": 0.1291,
-    "alpha": 1.338,
-    "beater_ms": 2.839,
-    "air": 0.5533,
-    "r": 0.3645,
-    "reso": 1.0448,
-    "hum": 0.9726,
-    "click": 0.1941,
-    "distance": 0.0139,
-    "comp": 0.0916,
-    "drive": 0.8664,
-    "lp": 4244.3157,
-    "tilt": 4.7017
-   },
-   "residual_db": 7.436,
-   "evals": 3712,
-   "seconds": 739.7,
-   "occurrences": 16
-  },
   "snare": {
    "params": {
     "f1": 281.8652,
@@ -453,6 +431,28 @@
    "evals": 3712,
    "seconds": 682.5,
    "occurrences": 8
+  },
+  "kick": {
+   "params": {
+    "f1": 90.5317,
+    "t1": 0.0905,
+    "alpha": 1.5319,
+    "beater_ms": 2.9351,
+    "air": 0.3245,
+    "r": 0.25,
+    "reso": 1.0382,
+    "hum": 0.866,
+    "click": 0.1997,
+    "distance": 0.0062,
+    "comp": 0.1166,
+    "drive": 0.7851,
+    "lp": 4850.6257,
+    "tilt": 5.0588
+   },
+   "residual_db": 7.312,
+   "evals": 3712,
+   "seconds": 629.8,
+   "occurrences": 16
   }
  },
  "drums_howard": {
@@ -578,28 +578,6 @@
   }
  },
  "drums_lafayette": {
-  "kick": {
-   "params": {
-    "f1": 98.3808,
-    "t1": 0.1036,
-    "alpha": 1.3136,
-    "beater_ms": 3.4244,
-    "air": 0.8607,
-    "r": 0.3279,
-    "reso": 1.0445,
-    "hum": 0.9351,
-    "click": 0.0992,
-    "distance": 0.0783,
-    "comp": 0.0138,
-    "drive": 0.7149,
-    "lp": 9464.9041,
-    "tilt": 5.1161
-   },
-   "residual_db": 6.509,
-   "evals": 3712,
-   "seconds": 447.8,
-   "occurrences": 25
-  },
   "snare": {
    "params": {
     "f1": 288.6932,
@@ -620,6 +598,28 @@
    "evals": 3712,
    "seconds": 467.3,
    "occurrences": 8
+  },
+  "kick": {
+   "params": {
+    "f1": 96.5856,
+    "t1": 0.147,
+    "alpha": 1.5387,
+    "beater_ms": 3.3616,
+    "air": 0.6104,
+    "r": 0.2107,
+    "reso": 1.0341,
+    "hum": 0.665,
+    "click": 0.1969,
+    "distance": 0.0248,
+    "comp": 0.1673,
+    "drive": 0.7522,
+    "lp": 6987.4988,
+    "tilt": 5.496
+   },
+   "residual_db": 6.538,
+   "evals": 3712,
+   "seconds": 431.0,
+   "occurrences": 25
   }
  },
  "drums_mercer_cranked": {

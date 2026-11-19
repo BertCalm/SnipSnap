@@ -131,6 +131,33 @@ rings 1.35 s above -30 dB. Verification unchanged: 792 WAVs, 0 failures, timbral
 88 of 88 pads. Listening page version 3: the RIDE & RIMS before player is the round 1 groove
 with the hat stand-in.
 
+### Round 1.3: STOOP's overblown kick
+
+**What the owner heard.** "Stoop sounds like the speaker is overblown when the kick hits. Ride is
+sounding better."
+
+**Measured.** Not sub-bass: STOOP's kick has the least energy below 45 Hz of the six (0.6%). Not
+drive alone: WAX and CRANKED kicks carry more harmonic distortion. What only STOOP had: its two
+heads 12% apart (reso 1.121), an 11.7 Hz beat, through a squashed (comp 0.88), driven (0.97) boom
+with t1 1.18 s. A loud bass tone fluttering at 12 Hz is what a woofer flapping sounds like.
+
+**Why the fit went there.** Round 1 opened the kick's ring to 1.2 s and its second head to 15%
+above the batter, past EMBER's approved kick (t1 at most 0.95 s, second head 2.5% up). The kick
+descriptor sees only the ~0.3 s before the next hit, so neither range was evidenced; seven fitted
+kicks sat outside EMBER's. This is the ride's lesson again: a parameter whose effect falls outside
+the scored window stays inside the approved model's range.
+
+**Fix.** Kick t1 0.08-0.95 s and reso 1.0-1.04, then refit the seven (driggs, hudson, baxter,
+decatur, ditmas, kingston, lafayette; the surf kick is unused). Residuals moved -0.25 to +0.55 dB.
+STOOP's kick: reso 1.001, t1 0.77 s. Its 8-20 Hz flutter fell from 6.3 to 4.0 dB peak to peak,
+level with CRANKED (4.1) and under RIDE & RIMS (5.2); what remains is EMBER's own head (removing
+the hum, drive, squash or air push does not change it). Its kick trim fell from -5.5 to -2.2 dB:
+with the long boom gone it needs less pulling down to match driggs. CELLAR -5.3 dB (was -6.5).
+STOOP's drive stays at 0.97; if the kick still sounds overblown, that is the next setting to bound.
+
+**Results (Python harness).** 792 WAVs, 0 failures. Listening page version 5, before player =
+round 1.2.
+
 ### Round 1.2: the ride's dead spot, kick levels, cymbals that swelled
 
 **What the owner heard.** "The ride sounds like it has a dead spot. And the stoop kick is a bit
