@@ -1196,6 +1196,22 @@ Four drum kits after the owner's beat-tape reference loops, in the CYPHER shape:
 | Velocity and round robin: saving, playback, export | Pass | Save, reload, pad resolver, MPC 3, SFZ and DecentSampler for all 64 pads; MPC 2 not written (format limit). Owner-reported pass on the phone and the MPC, 2026-11-18 |
 
 
+## Sunroom studio-pop factory collection (2026-11-18)
+
+See [SUNROOM](SUNROOM.md). The owner approved the assembled R10 audition with
+“Sounds much better, continue.” Three distinct 16-pad kits on SKINS preserve
+432 approved printed synthesis/resynthesis WAVs, three velocity zones and
+three alternate outputs, including finite roll/riser gestures. This is a
+factory bank, not an editable engine. Software evidence is in `SunroomKitsTest`
+and `SunroomRoundTripTest`. The Psych cymbal crescendo has level-only dynamics;
+its timbral-velocity gate remains open. The owner reported “Hardware passes- proceed”
+on 2026-11-19; device models and individual format results were not specified.
+All JVM, Android build, native and emulator CI checks passed on `a16dd8da8`.
+The shared MPC 3 slice-map limitation is unchanged. MPC 2's combined
+velocity/RR exception applies. Melodic/keygroup/chord/HOLD/STRUM gates do not
+apply to these finite drum kits. Overall completion remains open.
+
+
 ## ACCORD (native sound kept by ear 2026-11-19; seven voices kept, gates open)
 
 Fifteen self-sustaining mechanisms on one moving support, struck into tuned resonators; their contacts drift into and out of step. See [ACCORD](ACCORD.md). The owner approved the Python sound direction first. On 2026-11-19 they heard the native Kotlin engine, the one the app plays, for the first time and kept all of it (round accord-native-1, AI1 to AI14 KEEP, no notes): each approved Python sound beside its native render (BRUSH, WOOD and the four TINE tones), every voice at C2, C3, C4 and C5, every voice at soft, medium and hard touch, and the sixteen-pad starter kit. `AccordNativePinsTest` pins those 37 native renders by the SHA-256 of their float samples (`accord/native-kept-v1.sha256`); each one's PCM24 matched the heard WAVs sample for sample.

@@ -6,6 +6,8 @@ and exporting a drum kit your Akai MPC can load.
 
 > You heard it. You snipped it. It's on pad A03.
 
+[Sunroom](docs/SUNROOM.md) adds three studio-pop factory kits with the approved brush, woodblock and cymbal models, three touch levels and three alternate outputs. These are frozen synthesis banks with owner-reported hardware acceptance; the crescendo's timbral-velocity gate remains open.
+
 **Status:** a tested pure-Kotlin core — capture buffer, cleanup DSP, the
 synth engines, and writers for both MPC generations, **hardware-verified on
 an MPC Live III** (native `.xtd` and compatibility `.xpm` kits load and
@@ -466,7 +468,7 @@ explicit MIDI root (24–96), strike velocity and model version; TUNE is a
 relative ±12-semitone offset, neutral at 0.5, so the effective note spans
 12–108 without clamping back to the saved-root range. Seven provisional presets
 and a dry sixteen-pad C minor pentatonic kit are included, with PITCHWHEEL among
-FRESH TAPE's 215 starters. Run `./gradlew :synth:generatePitchwheelAudition`
+FRESH TAPE's 218 starters. Run `./gradlew :synth:generatePitchwheelAudition`
 for the compact first listening set, or add `-PpitchwheelFull` for the broader
 dry probes. HOLD's top step returns settled loop-only material with a
 deterministic attachment cycle and capped adhesion. The owner heard R1 as six
