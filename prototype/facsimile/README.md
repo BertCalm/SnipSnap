@@ -178,6 +178,21 @@ some of the other drums, and a replica lane carries none. Not yet shown.
   co-firing parts is now 0.0 ms in every loop checked (it was 15 to 19 ms in the knocker
   groove). Only hit times changed: `python3 -I fit.py WORK models --events-only` copies them
   into the models without refitting a sound.
+- Round 0f (2026-11-19), kick first, the knocker groove only so far. The owner heard the kick
+  as fragmented and asked why it had been split. NMFD learns a few fixed shapes per loop, each
+  one pitch and one decay; a kick that varies from hit to hit is spread over several, each hit
+  a different blend, so the parts co-fired on only 22 to 88% of each other's hits and the 70%
+  merge rule kept them apart. Each was fitted as its own drum and the four were stacked: four
+  pitch drops and attacks at once. `drums.kick_first` (loops in `KICK_FIRST`) sums every low
+  part's audio into one low track, merges the parts' hits, fits each hit's pitch glide, and
+  regroups: the loud hits define the kick (they all swept from about 400 Hz to 64 to 72 Hz in
+  about 7 ms), a quieter hit with the same shape is that kick played softer, and the remaining
+  low hits group by where they settle (a round low knock following the kick, the sub drop). A
+  first version grouped by settled pitch alone and split the one kick into four again, since
+  the next hit or another drum's low end lands within 70 to 170 ms. Measured: the knocker
+  groove's band distance 7.10 to 7.03 dB, its tonal balance 2.97 to 2.00 dB; the kick is one
+  fall from 165 to 64 Hz in 8 ms. KNOCK A01 to A04 are now the kick, the low knock, the kick
+  struck softly, and the sub drop.
 - Round robin follows the reference's own hit-to-hit spread, clamped to 0.3 to 1.2 dB per band,
   plus fresh noise and phases. Whether that reads as one drum hit again is for the ear.
 - Engine gates: this is a prototype. Velocity and round robin are checked in rendering only;

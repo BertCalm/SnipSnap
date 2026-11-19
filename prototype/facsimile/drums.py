@@ -26,6 +26,9 @@ import numpy as np
 import soundfile as sf
 from scipy import signal
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))  # run with -I: our own modules
+import glidefit  # noqa: E402
+
 RATE = 44_100
 EVENT_FLOOR = 0.08      # a hit must reach 8% of the drum's loudest firing (about -22 dB)
 COFIRE = 0.7            # share of strong hits two components must share to be one drum
@@ -223,6 +226,161 @@ def role_of(ft: dict) -> str:
     return "snare"
 
 
+def build_drum(drum_id, comps, y, times, gains, n_fired, template, n, work, stops=None):
+    """Cut a drum's strong hits from its audio, align them, save the takes, the loudest hit
+    and the template for fit.py, and describe the drum. `stops` are the times its hits are cut
+    at (by default its own hits)."""
+    # Reference hit: align the strong hits on their onsets and take the median sample
+    # by sample after a per-hit polarity and gain match.
+    strong = [t for t, g in zip(times, gains) if g > 0.5]
+    L = int(HIT_SECONDS * RATE)
+    pre = int(0.003 * RATE)
+    segs = []
+    all_t = np.array(sorted(stops if stops is not None else times))
+    for t in strong:
+        idx = (np.arange(-pre, L) + t) % n  # the loop wraps
+        seg = y[idx].copy()
+        gaps = ((all_t - t) % n)
+        gaps = gaps[gaps > int(0.01 * RATE)]
+        stop = int(min(gaps.min() if len(gaps) else L, L)) - int(0.004 * RATE)
+        fade = int(0.004 * RATE)
+        seg[pre + stop:] = 0  # the drum's own next hit begins here: stop before it
+        seg[pre + stop - fade:pre + stop] *= np.linspace(1, 0, fade)
+        segs.append(seg)
+    segs = np.array(segs)
+    ref = segs[int(np.argmax(np.abs(segs[:, :int(0.05 * RATE)]).max(1)))]
+    aligned = []
+    for s in segs:  # align each hit to the loudest by cross-correlation within 2 ms
+        lag_range = int(0.002 * RATE)
+        cc = [np.dot(ref[pre:pre + 4410], np.roll(s, -d)[pre:pre + 4410])
+              for d in range(-lag_range, lag_range + 1)]
+        d = int(np.argmax(np.abs(cc))) - lag_range
+        s = np.roll(s, -d) * np.sign(cc[d + lag_range])
+        g = np.sqrt(np.sum(ref[:4410] ** 2) / (np.sum(s[:4410] ** 2) + 1e-12))
+        aligned.append(s * g)
+    aligned = np.array(aligned)
+    # The listening reference is the loudest single hit, real audio. The fit does not
+    # take a sample-by-sample median: across hits that differ by a fraction of a
+    # millisecond it cancels tonal sweeps, and the median of different noise bursts is
+    # quieter than any one of them. fit.py takes medians of band envelopes instead.
+    loud = [g for t, g in zip(times, gains) if g > 0.5]
+    order = np.argsort(loud)[::-1][:12]
+    takes = aligned[order]
+    median_hit = takes[0]
+    np.save(work / "hits" / f"{drum_id}_takes.npy", takes.astype(np.float32))
+    # Instance spread: how different the reference's own repeats are, in dB per band.
+    spread = instance_spread(aligned)
+    ft = features(median_hit[pre:])
+    sf.write(work / "hits" / f"{drum_id}.wav", median_hit.astype(np.float32), RATE,
+             subtype="FLOAT")
+    np.save(work / "hits" / f"{drum_id}_template.npy", template)
+    clean_s = float(np.median([np.count_nonzero(np.abs(s) > 0) for s in segs]) / RATE)
+    return dict(id=drum_id, components=comps, role=role_of(ft), features=ft,
+                hits=len(times), strong_hits=len(strong),
+                refires_dropped=n_fired - len(times),
+                clean_seconds=round(clean_s, 3),
+                instance_spread_db=spread,
+                events=[dict(t=round(t / RATE, 5), gain=round(float(g), 3))
+                        for t, g in sorted(zip(times, gains))])
+
+
+KICK_FIRST = {"113"}        # loops whose low drums are rebuilt whole (kick first), by ear
+LOW_SHARE = 0.5             # a part with more energy than this under 150 Hz is a low part
+KICK_LOUD_DB = 6.0          # hits this close to the loudest define the kick
+KICK_SWEEP = 2.5            # a kick sweeps down by more than this ratio (click and punch)
+SAME_NOTE_SEMITONES = 2.0   # settled within this of the kick (or of a group) is the same sound
+MIN_NOTE_HITS = 3           # a group with fewer hits joins its nearest group
+
+
+def hit_glide(y: np.ndarray, t: int, stop: int, n: int):
+    """The pitch glide of one low hit, fitted on the low track up to the next low hit (40 to
+    300 ms): start, settle and how much of the hit it explains."""
+    span = float(np.clip(stop / RATE - 0.004, 0.04, 0.3))
+    seg = y[np.arange(t, t + int(span * RATE) + 10) % n]
+    return glidefit.fit(seg, RATE, 75.0, span, 1500.0)
+
+
+def kick_first(key, drums, work, n):
+    """Rebuild a loop's low drums whole. NMFD has a few fixed shapes per loop, each one pitch
+    and one decay, so a kick that varies from hit to hit is spread over several shapes, each
+    hit a different blend of them: in the knocker groove four parts that fire together on only
+    22 to 88% of each other's hits, so the 70% merge rule kept them apart, and each was fitted
+    as its own drum with its own pitch drop and attack. Stacked, they played as four kicks at
+    once, heard as a fragmented kick (2026-11-19).
+
+    Here every low part's audio is summed into one low track; the parts' hits (already timed
+    from the loop by align_hits) are merged into one hit wherever they fall within
+    ALIGN_WINDOW_S, and a hit stays only if the low track jumps at it; each hit's loudness is
+    read off the low track; each hit's pitch glide is fitted. The loud hits define the kick
+    (their sweep and settle); a quieter hit with the same shape is the kick played softer; the
+    remaining low hits (a following bass knock, a sub drop) group by where they settle. Each
+    group becomes one drum, cut and saved like any other, k0 being the kick. Returns the new
+    list of drums."""
+    low = [d for d in drums if d["features"]["low_share"] > LOW_SHARE]
+    if len(low) < 2:
+        return drums
+    comps = sorted(c for d in low for c in d["components"])
+    y = sum(sf.read(work / f"{key}_c{c}.wav")[0] for c in comps)
+    template = sum(np.load(work / "hits" / f"{d['id']}_template.npy") for d in low)
+    raw = sorted(int(round(e["t"] * RATE)) for d in low for e in d["events"])
+    times = []
+    for t in raw:
+        if not times or t - times[-1] > int(ALIGN_WINDOW_S * RATE):
+            times.append(t)
+    w = int(0.001 * RATE)
+    env = np.sqrt(np.convolve(y * y, np.ones(w) / w, mode="same"))
+    gains = np.array([env[np.arange(t, t + int(0.03 * RATE)) % n].max() for t in times])
+    gains = gains / gains.max()
+    n_fired = len(times)
+    times, gains = drop_refires(times, gains, y, n)
+    keep = [i for i, t in enumerate(times) if attack_rise_db(env, t, n) >= REFIRE_RISE_DB]
+    times = [times[i] for i in keep]
+    gains = np.asarray(gains)[keep]
+    gaps = [((times[(i + 1) % len(times)] - t) % n) or n for i, t in enumerate(times)]
+    gl = [hit_glide(y, t, g, n) for t, g in zip(times, gaps)]
+    f1 = np.array([g["f1"] if g else np.nan for g in gl])
+    sweep = np.array([g["f0"] / g["f1"] if g else 1.0 for g in gl])
+    level = 20 * np.log10(np.maximum(gains, 1e-6))
+    # The kick is what the loud hits are; a quieter hit with the same sweep and settle is the
+    # kick played softer. A first reading by settled pitch alone split one knocker kick into
+    # four, since the next hit or another drum's low end lands within 70 to 170 ms.
+    loud = level >= -KICK_LOUD_DB
+    kick_f1 = float(np.nanmedian(f1[loud]))
+    near_kick = np.abs(12 * np.log2(f1 / kick_f1)) <= SAME_NOTE_SEMITONES
+    is_kick = loud | ((sweep >= KICK_SWEEP) & near_kick)
+    groups = [list(np.nonzero(is_kick)[0])]
+    # The other low hits (a following bass knock, a sub drop) group by where they settle
+    others = sorted(np.nonzero(~is_kick)[0], key=lambda i: np.nan_to_num(f1[i], nan=0.0))
+    cur = []
+    for i in others:
+        if cur and abs(12 * np.log2(f1[i] / np.nanmedian(f1[cur]))) > SAME_NOTE_SEMITONES:
+            groups.append(cur)
+            cur = []
+        cur.append(i)
+    if cur:
+        groups.append(cur)
+    while len(groups) > 1 and min(len(g) for g in groups[1:]) < MIN_NOTE_HITS:
+        k = 1 + min(range(len(groups) - 1), key=lambda j: len(groups[j + 1]))
+        small = groups.pop(k)
+        centre = np.nanmedian(f1[small])
+        near = min(range(len(groups)), key=lambda j: abs(np.log2(np.nanmedian(f1[groups[j]]) / centre)))
+        groups[near] += small
+    pitch = f1
+    rest = [d for d in drums if d not in low]
+    new = []
+    for gi, g in enumerate(groups):   # k0 is the kick, then the other low sounds
+        g = sorted(g, key=lambda i: times[i])
+        gt = [times[i] for i in g]
+        gg = np.array([gains[i] for i in g])
+        d = build_drum(f"{key}-k{gi}", comps, y, gt, gg / gg.max(), n_fired, template, n,
+                       work, stops=times)
+        d["kick_first"] = dict(parts=[x["id"] for x in low], kick=gi == 0,
+                               settled_hz=round(float(np.nanmedian(pitch[g])), 1),
+                               sweep=round(float(np.median(sweep[g])), 2))
+        new.append(d)
+    return rest + new
+
+
 def main(ref_dir: Path, work: Path) -> None:
     inv = {}
     (work / "hits").mkdir(exist_ok=True)
@@ -251,60 +409,12 @@ def main(ref_dir: Path, work: Path) -> None:
             times = [refine_onset(y, int(p * hop), int(0.015 * RATE)) for p in pk]
             n_fired = len(times)
             times, gains = drop_refires(times, gains, y, n)
-            # Reference hit: align the strong hits on their onsets and take the median sample
-            # by sample after a per-hit polarity and gain match.
-            strong = [t for t, g in zip(times, gains) if g > 0.5]
-            L = int(HIT_SECONDS * RATE)
-            pre = int(0.003 * RATE)
-            segs = []
-            all_t = np.array(sorted(times))
-            for t in strong:
-                idx = (np.arange(-pre, L) + t) % n  # the loop wraps
-                seg = y[idx].copy()
-                gaps = ((all_t - t) % n)
-                gaps = gaps[gaps > int(0.01 * RATE)]
-                stop = int(min(gaps.min() if len(gaps) else L, L)) - int(0.004 * RATE)
-                fade = int(0.004 * RATE)
-                seg[pre + stop:] = 0  # the drum's own next hit begins here: stop before it
-                seg[pre + stop - fade:pre + stop] *= np.linspace(1, 0, fade)
-                segs.append(seg)
-            segs = np.array(segs)
-            ref = segs[int(np.argmax(np.abs(segs[:, :int(0.05 * RATE)]).max(1)))]
-            aligned = []
-            for s in segs:  # align each hit to the loudest by cross-correlation within 2 ms
-                lag_range = int(0.002 * RATE)
-                cc = [np.dot(ref[pre:pre + 4410], np.roll(s, -d)[pre:pre + 4410])
-                      for d in range(-lag_range, lag_range + 1)]
-                d = int(np.argmax(np.abs(cc))) - lag_range
-                s = np.roll(s, -d) * np.sign(cc[d + lag_range])
-                g = np.sqrt(np.sum(ref[:4410] ** 2) / (np.sum(s[:4410] ** 2) + 1e-12))
-                aligned.append(s * g)
-            aligned = np.array(aligned)
-            # The listening reference is the loudest single hit, real audio. The fit does not
-            # take a sample-by-sample median: across hits that differ by a fraction of a
-            # millisecond it cancels tonal sweeps, and the median of different noise bursts is
-            # quieter than any one of them. fit.py takes medians of band envelopes instead.
-            loud = [g for t, g in zip(times, gains) if g > 0.5]
-            order = np.argsort(loud)[::-1][:12]
-            takes = aligned[order]
-            median_hit = takes[0]
-            np.save(work / "hits" / f"{drum_id}_takes.npy", takes.astype(np.float32))
-            # Instance spread: how different the reference's own repeats are, in dB per band.
-            spread = instance_spread(aligned)
-            ft = features(median_hit[pre:])
-            sf.write(work / "hits" / f"{drum_id}.wav", median_hit.astype(np.float32), RATE,
-                     subtype="FLOAT")
-            np.save(work / "hits" / f"{drum_id}_template.npy", template)
-            clean_s = float(np.median([np.count_nonzero(np.abs(s) > 0) for s in segs]) / RATE)
-            drums.append(dict(id=drum_id, components=comps, role=role_of(ft), features=ft,
-                              hits=len(times), strong_hits=len(strong),
-                              refires_dropped=n_fired - len(times),
-                              clean_seconds=round(clean_s, 3),
-                              instance_spread_db=spread,
-                              events=[dict(t=round(t / RATE, 5), gain=round(float(g), 3))
-                                      for t, g in sorted(zip(times, gains))]))
+            drums.append(build_drum(drum_id, comps, y, times, gains, n_fired, template, n,
+                                    work))
         mono = sf.read(path, always_2d=True)[0].mean(axis=1)
         moved = align_hits(drums, mono)
+        if key in KICK_FIRST:
+            drums = kick_first(key, drums, work, n)
         inv[key] = dict(name=name, bpm=bpm_of(name), seconds=round(n / RATE, 5), drums=drums,
                         aligned_firings=moved)
         print(f"== {key} {name}  (firings moved onto the loop's own onsets: {moved})")

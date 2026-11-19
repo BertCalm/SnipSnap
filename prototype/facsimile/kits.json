@@ -160,31 +160,32 @@
      "name": "Knock Kick",
      "class": "KICK",
      "layers": [
-      "113-d6"
+      "113-k0"
      ]
     },
     {
      "pad": "A02",
-     "name": "Second Kick",
+     "name": "Low Knock",
      "class": "KICK",
      "layers": [
-      "113-d5"
+      "113-k2"
      ]
     },
     {
      "pad": "A03",
-     "name": "Body Knock",
-     "class": "PERC",
+     "name": "Ghost Kick",
+     "class": "KICK",
      "layers": [
-      "113-d4"
-     ]
+      "113-k0"
+     ],
+     "velocity": 0.45
     },
     {
      "pad": "A04",
      "name": "Sub Drop",
      "class": "KICK",
      "layers": [
-      "113-d1"
+      "113-k1"
      ]
     },
     {
