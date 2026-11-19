@@ -1,8 +1,8 @@
 # CONSORT: design brief
 
 Status: concept with a Python prototype. Nothing is built in Kotlin. The owner heard round 1
-("sounds pretty good") and asked for more humanization and a room; round 2 below adds both and
-awaits a listen.
+("sounds pretty good"), then round 2 (room approved at its default, takes inaudible); round 3
+below rebuilds the takes and awaits a listen.
 Repository truth: read at `3117e454`. Grepped and found: `Bore.Player` (`Bore.kt:935`, its
 `tick` at 1012 takes `pressureScale`, `pitchCents`, `turbulenceScale`), `Strings.Loop.reflected`
 / `inject`, `MacroSpec` (`Thump.kt:40`), `Velocity.macroSpecsFor` and `touchedRender`
@@ -165,6 +165,40 @@ a convolution with decaying seeded noise, a stand-in for `Room.kt`'s feedback ne
 - A HOLD loop with a room in it needs the wash to be periodic too, or the room applied after the loop.
 - The room measures darker (it adds low-mid energy), on a prototype that was already dark.
 
+## Round 3: takes that can be heard (after the owner's second listen)
+
+The owner's verdict on round 2: "Room is good at default, but I can't hear the takes
+differences." ROOM 0.4 is therefore heard and accepted as the default.
+
+Round 2's takes re-rolled small random numbers (a few cents, a few milliseconds). They measured
+as different waveforms and were inaudible as different performances: a correlation number is
+not evidence that an ear can tell two takes apart. Round 3 makes each take a named way of
+playing, spread on purpose across what an ear catches first, with level and pitch centre held:
+
+| Take | What changes |
+|---|---|
+| centred | the reference |
+| soft | lower effort, slow attack, weak tongue, more air, late slow vibrato |
+| bitten | higher effort, fast attack, hard tongue, less air, early quick vibrato |
+| leaning | comes up into the note from 110 cents under, deeper vibrato |
+
+Chairs are staggered (take + chair) so a section does not all bite together, LOOSE scales how
+far a take strays, and a take may not push a note across the overblow line.
+
+| Measured on solo notes (Python harness) | centred | soft | bitten | leaning |
+|---|---|---|---|---|
+| SAX time to half level | 42 ms | 136 ms | 26 ms | 50 ms |
+| OBOE time to half level | 26 ms | 56 ms | 16 ms | 26 ms |
+| DUDUK time to half level | 62 ms | 148 ms | 28 ms | 84 ms |
+| SAX pitch at 70 ms against the held note | -4 cents | -1 | -1 | -42 |
+| SAX held pitch against the target | +3.9 cents | +0.2 | -1.9 | 0.0 |
+
+Disclosed: on SAX the bitten take's held note measures duller than centred (897 against
+1119 Hz centroid) although its attack is the brightest (888 against 813); the cause is not
+traced. Whether four takes read as one player repeating a note, or as four articulations, is a
+listening question, and the audition page now has an eight-hit row with takes cycling beside
+the same row with one take.
+
 ## Risks and disclosed limits
 
 - **Too dark against the references.** Mid-velocity centroids are 440 to 1260 Hz; the
@@ -226,4 +260,7 @@ sounds like players or like one instrument copied. Only then a full spec and Kot
 | Every constant in the prototype | proposed | "shape" values, none tuned by ear |
 | Macro set, chair storage, round-robin source | proposed | not implemented |
 | Round 1 overall | heard | owner, 2026-11-19: "sounds pretty good", wants more humanization and a room |
-| Round 2 humanization, room, takes | not heard | awaiting the owner |
+| Round 2 room at default 0.4 | heard | owner, 2026-11-19: "Room is good at default" |
+| Round 2 takes | heard, rejected | owner: "I can't hear the takes differences" |
+| Round 2 humanization amount | not answered | owner has not said |
+| Round 3 takes | not heard | awaiting the owner |
