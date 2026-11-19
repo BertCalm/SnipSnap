@@ -295,6 +295,7 @@ object Velocity {
         is HiccupPatch -> Hiccup.macrosFor(patch.voice)
         is ClutterPatch -> Clutter.macrosFor(patch.voice)
         is EmberPatch -> Ember.macrosFor(patch.voice)
+        is RiddimPatch -> Riddim.macrosFor(patch.voice)
         is CalabashPatch -> Calabash.macrosFor(patch.voice)
         is ServoPatch -> Servo.macrosFor(patch.voice)
         is TanglePatch -> Tangle.macrosFor(patch.voice)
@@ -487,6 +488,8 @@ object Velocity {
         is ClutterPatch -> patch.copy(velocity = v).render()
         // EMBER re-strikes the drum: a longer, darker contact when soft, and the wires and rivets only past their threshold.
         is EmberPatch -> patch.copy(velocity = v).render()
+        // RIDDIM renders velocity in its own synthesis (a soft kick sweeps lower and drives less), so re-render.
+        is RiddimPatch -> patch.copy(velocity = v).render()
         // CALABASH re-strikes: a fitted voice moves toward its own soft recording, a physical one lands with a
         // broader, slower contact and its beads, wires and squeeze answer less.
         is CalabashPatch -> patch.copy(velocity = v).render()

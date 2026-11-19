@@ -3973,6 +3973,17 @@ tasks.named<org.gradle.language.jvm.tasks.ProcessResources>("processResources") 
     }
 }
 
+/** Render RIDDIM's Kotlin voices under testkit/riddim-audition/kotlin/, for the A/B against the approved prototype. */
+tasks.register<JavaExec>("generateRiddimAudition") {
+    group = "distribution"
+    description = "Render every RIDDIM voice soft and hard, two takes each, under testkit/riddim-audition/kotlin/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.RiddimAuditionGenerator")
+    workingDir = projectDir
+    maxHeapSize = "2g"
+    args(providers.gradleProperty("riddimOutput").orNull ?: "${rootDir}/testkit/riddim-audition/kotlin")
+}
+
 tasks.register<JavaExec>("generateLooseCrateRound0") {
     group = "distribution"
     description = "Render LOOSE CRATE round 0: candidate hits, round-robin and velocity strips, the HUMMIN groove and CYPHER DUST for comparison."
@@ -4004,7 +4015,27 @@ tasks.named<org.gradle.language.jvm.tasks.ProcessResources>("processResources") 
     }
 }
 
- tasks.register<JavaExec>("generateSunroomKits") {
+tasks.register<JavaExec>("generateLooseCrateRound2a") {
+    group = "distribution"
+    description = "Render LOOSE CRATE round 2a: HUMMIN's groove as shipped, in one room, and as an acoustic kit in one room."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.LooseCrateRound2Generator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "1g"
+    args(listOfNotNull(providers.gradleProperty("looseCrateRound2aOutput").orNull ?: "${rootDir}/testkit/loose-crate-round2a", providers.gradleProperty("looseCrateRound2aMode").orNull))
+}
+
+tasks.register<JavaExec>("generateLooseCrateExpansionRound0") {
+    group = "distribution"
+    description = "Render LOOSE CRATE's expansion round 0: a groove and key hits for BLUE, SPEED and RAGA."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.LooseCrateExpansionRound0Generator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "1g"
+    args(providers.gradleProperty("looseCrateExpansionOutput").orNull ?: "${rootDir}/testkit/loose-crate-expansion-round0")
+}
+
+tasks.register<JavaExec>("generateSunroomKits") {
     group = "distribution"
     description = "Export three approved Sunroom factory kits with velocity and alternate-take grids."
     classpath = sourceSets["test"].runtimeClasspath

@@ -1,9 +1,9 @@
 {
  "134-d0": {
   "id": "134-d0",
-  "distance_db": 1.69,
-  "best_pass": 4,
-  "first_distance_db": 3.58,
+  "distance_db": 2.74,
+  "best_pass": 2,
+  "first_distance_db": 3.59,
   "glide": {
    "f0": 130.8605442355616,
    "f1": 130.8605442355616,
@@ -13,15 +13,15 @@
    "root_guess": 118.5985487198339,
    "from_hit": 1
   },
-  "steady_partials": 1,
+  "steady_partials": 0,
   "low_share": 0.948,
   "length_s": 1.4
  },
  "134-d1": {
   "id": "134-d1",
-  "distance_db": 1.56,
-  "best_pass": 6,
-  "first_distance_db": 3.04,
+  "distance_db": 2.38,
+  "best_pass": 2,
+  "first_distance_db": 3.43,
   "glide": {
    "f0": 405.45522612921536,
    "f1": 138.2445155243254,
@@ -31,15 +31,15 @@
    "root_guess": 118.5985487198339,
    "from_hit": 0
   },
-  "steady_partials": 2,
+  "steady_partials": 0,
   "low_share": 0.744,
   "length_s": 0.25
  },
  "134-d2": {
   "id": "134-d2",
-  "distance_db": 1.06,
-  "best_pass": 6,
-  "first_distance_db": 2.67,
+  "distance_db": 1.82,
+  "best_pass": 1,
+  "first_distance_db": 2.66,
   "glide": null,
   "steady_partials": 0,
   "low_share": 0.082,
@@ -47,9 +47,9 @@
  },
  "134-d3": {
   "id": "134-d3",
-  "distance_db": 2.37,
-  "best_pass": 2,
-  "first_distance_db": 3.25,
+  "distance_db": 2.97,
+  "best_pass": 1,
+  "first_distance_db": 3.62,
   "glide": {
    "f0": 136.90198805150388,
    "f1": 46.66666779047567,
@@ -59,15 +59,15 @@
    "root_guess": 33.34579762341568,
    "from_hit": 1
   },
-  "steady_partials": 4,
+  "steady_partials": 0,
   "low_share": 0.996,
   "length_s": 0.63
  },
  "134-d4": {
   "id": "134-d4",
-  "distance_db": 1.52,
-  "best_pass": 2,
-  "first_distance_db": 2.56,
+  "distance_db": 1.97,
+  "best_pass": 1,
+  "first_distance_db": 2.5,
   "glide": {
    "f0": 151.77470179833497,
    "f1": 103.27869871048983,
@@ -77,15 +77,15 @@
    "root_guess": 103.6285400390625,
    "from_hit": 2
   },
-  "steady_partials": 1,
+  "steady_partials": 0,
   "low_share": 0.969,
   "length_s": 1.4
  },
  "134-d5": {
   "id": "134-d5",
-  "distance_db": 6.06,
+  "distance_db": 6.13,
   "best_pass": 0,
-  "first_distance_db": 6.06,
+  "first_distance_db": 6.13,
   "glide": {
    "f0": 42.12085197695384,
    "f1": 42.12034390890403,
@@ -95,15 +95,15 @@
    "root_guess": 33.34579762341568,
    "from_hit": 2
   },
-  "steady_partials": 2,
+  "steady_partials": 1,
   "low_share": 1.0,
   "length_s": 0.52
  },
  "134-d6": {
   "id": "134-d6",
-  "distance_db": 5.98,
+  "distance_db": 4.68,
   "best_pass": 6,
-  "first_distance_db": 7.58,
+  "first_distance_db": 7.68,
   "glide": {
    "f0": 74.37499733870001,
    "f1": 46.081506658948406,
@@ -113,15 +113,15 @@
    "root_guess": 41.04766845703125,
    "from_hit": 2
   },
-  "steady_partials": 5,
+  "steady_partials": 1,
   "low_share": 1.0,
   "length_s": 0.43
  },
  "102-d0": {
   "id": "102-d0",
-  "distance_db": 2.1,
-  "best_pass": 5,
-  "first_distance_db": 4.72,
+  "distance_db": 3.13,
+  "best_pass": 4,
+  "first_distance_db": 4.96,
   "glide": {
    "f0": 7157.366683755834,
    "f1": 166.10184144098793,
@@ -131,14 +131,14 @@
    "root_guess": 190.43426513671875,
    "from_hit": 0
   },
-  "steady_partials": 1,
+  "steady_partials": 0,
   "low_share": 0.239,
   "length_s": 0.3
  },
  "102-d1": {
   "id": "102-d1",
-  "distance_db": 1.55,
-  "best_pass": 6,
+  "distance_db": 1.9,
+  "best_pass": 3,
   "first_distance_db": 3.45,
   "glide": null,
   "steady_partials": 0,
@@ -147,29 +147,29 @@
  },
  "102-d2": {
   "id": "102-d2",
-  "distance_db": 1.75,
-  "best_pass": 6,
-  "first_distance_db": 2.26,
+  "distance_db": 2.22,
+  "best_pass": 2,
+  "first_distance_db": 2.71,
   "glide": null,
-  "steady_partials": 1,
+  "steady_partials": 0,
   "low_share": 0.0,
   "length_s": 0.43
  },
  "102-d3": {
   "id": "102-d3",
-  "distance_db": 1.26,
+  "distance_db": 1.64,
   "best_pass": 6,
-  "first_distance_db": 2.55,
+  "first_distance_db": 2.52,
   "glide": null,
-  "steady_partials": 1,
+  "steady_partials": 0,
   "low_share": 0.185,
   "length_s": 0.36
  },
  "102-d4": {
   "id": "102-d4",
-  "distance_db": 1.61,
-  "best_pass": 6,
-  "first_distance_db": 3.09,
+  "distance_db": 2.2,
+  "best_pass": 1,
+  "first_distance_db": 3.07,
   "glide": null,
   "steady_partials": 0,
   "low_share": 0.002,
@@ -177,39 +177,39 @@
  },
  "102-d5": {
   "id": "102-d5",
-  "distance_db": 1.84,
-  "best_pass": 1,
-  "first_distance_db": 2.37,
+  "distance_db": 3.16,
+  "best_pass": 0,
+  "first_distance_db": 3.16,
   "glide": null,
-  "steady_partials": 9,
+  "steady_partials": 5,
   "low_share": 0.033,
   "length_s": 0.36
  },
  "106-d0": {
   "id": "106-d0",
-  "distance_db": 1.51,
-  "best_pass": 2,
-  "first_distance_db": 2.35,
+  "distance_db": 2.48,
+  "best_pass": 1,
+  "first_distance_db": 2.75,
   "glide": null,
-  "steady_partials": 1,
+  "steady_partials": 0,
   "low_share": 0.005,
   "length_s": 0.36
  },
  "106-d1": {
   "id": "106-d1",
-  "distance_db": 2.53,
-  "best_pass": 0,
-  "first_distance_db": 2.53,
+  "distance_db": 2.82,
+  "best_pass": 1,
+  "first_distance_db": 2.94,
   "glide": null,
-  "steady_partials": 1,
+  "steady_partials": 0,
   "low_share": 0.003,
   "length_s": 0.36
  },
  "106-d2": {
   "id": "106-d2",
-  "distance_db": 1.21,
-  "best_pass": 4,
-  "first_distance_db": 2.71,
+  "distance_db": 1.48,
+  "best_pass": 2,
+  "first_distance_db": 2.75,
   "glide": null,
   "steady_partials": 0,
   "low_share": 0.011,
@@ -217,9 +217,9 @@
  },
  "106-d3": {
   "id": "106-d3",
-  "distance_db": 3.16,
-  "best_pass": 2,
-  "first_distance_db": 4.05,
+  "distance_db": 3.42,
+  "best_pass": 1,
+  "first_distance_db": 3.9,
   "glide": {
    "f0": 190.91945862086413,
    "f1": 53.19662956351239,
@@ -235,37 +235,37 @@
  },
  "106-d4": {
   "id": "106-d4",
-  "distance_db": 3.5,
-  "best_pass": 6,
-  "first_distance_db": 4.16,
+  "distance_db": 2.87,
+  "best_pass": 0,
+  "first_distance_db": 2.87,
   "glide": null,
-  "steady_partials": 4,
+  "steady_partials": 1,
   "low_share": 0.001,
   "length_s": 0.3
  },
  "106-d5": {
   "id": "106-d5",
-  "distance_db": 1.82,
-  "best_pass": 3,
-  "first_distance_db": 2.26,
+  "distance_db": 2.27,
+  "best_pass": 1,
+  "first_distance_db": 2.54,
   "glide": null,
-  "steady_partials": 5,
+  "steady_partials": 3,
   "low_share": 0.018,
   "length_s": 0.43
  },
  "113-d0": {
   "id": "113-d0",
-  "distance_db": 2.01,
+  "distance_db": 2.27,
   "best_pass": 1,
-  "first_distance_db": 2.55,
+  "first_distance_db": 2.34,
   "glide": null,
-  "steady_partials": 2,
+  "steady_partials": 0,
   "low_share": 0.035,
   "length_s": 0.63
  },
  "113-d1": {
   "id": "113-d1",
-  "distance_db": 4.92,
+  "distance_db": 4.98,
   "best_pass": 1,
   "first_distance_db": 5.08,
   "glide": {
@@ -277,15 +277,15 @@
    "root_guess": 56.57706145748493,
    "from_hit": 0
   },
-  "steady_partials": 4,
+  "steady_partials": 3,
   "low_share": 0.999,
   "length_s": 0.21
  },
  "113-d2": {
   "id": "113-d2",
-  "distance_db": 0.84,
-  "best_pass": 6,
-  "first_distance_db": 3.1,
+  "distance_db": 1.99,
+  "best_pass": 2,
+  "first_distance_db": 3.12,
   "glide": null,
   "steady_partials": 1,
   "low_share": 0.005,
@@ -293,19 +293,19 @@
  },
  "113-d3": {
   "id": "113-d3",
-  "distance_db": 1.07,
-  "best_pass": 6,
-  "first_distance_db": 2.75,
+  "distance_db": 1.92,
+  "best_pass": 2,
+  "first_distance_db": 3.06,
   "glide": null,
-  "steady_partials": 6,
+  "steady_partials": 0,
   "low_share": 0.0,
   "length_s": 0.63
  },
  "113-d4": {
   "id": "113-d4",
-  "distance_db": 1.49,
+  "distance_db": 1.99,
   "best_pass": 2,
-  "first_distance_db": 2.88,
+  "first_distance_db": 2.74,
   "glide": {
    "f0": 1302.695018938527,
    "f1": 109.42928063061659,
@@ -315,15 +315,15 @@
    "root_guess": 113.72222900390625,
    "from_hit": 0
   },
-  "steady_partials": 1,
+  "steady_partials": 0,
   "low_share": 0.991,
   "length_s": 0.78
  },
  "113-d5": {
   "id": "113-d5",
-  "distance_db": 3.77,
+  "distance_db": 4.13,
   "best_pass": 3,
-  "first_distance_db": 5.4,
+  "first_distance_db": 5.39,
   "glide": {
    "f0": 118.17594924130206,
    "f1": 77.23292715779289,
@@ -339,9 +339,9 @@
  },
  "113-d6": {
   "id": "113-d6",
-  "distance_db": 2.64,
+  "distance_db": 3.12,
   "best_pass": 3,
-  "first_distance_db": 4.67,
+  "first_distance_db": 4.65,
   "glide": {
    "f0": 245.9229192012907,
    "f1": 64.00580577240295,
@@ -357,19 +357,19 @@
  },
  "90-d0": {
   "id": "90-d0",
-  "distance_db": 1.53,
+  "distance_db": 2.12,
   "best_pass": 3,
-  "first_distance_db": 3.2,
+  "first_distance_db": 3.11,
   "glide": null,
-  "steady_partials": 4,
+  "steady_partials": 0,
   "low_share": 0.084,
   "length_s": 0.52
  },
  "90-d1": {
   "id": "90-d1",
-  "distance_db": 6.21,
+  "distance_db": 6.39,
   "best_pass": 0,
-  "first_distance_db": 6.21,
+  "first_distance_db": 6.39,
   "glide": {
    "f0": 64.97443979212467,
    "f1": 34.04761813717054,
@@ -379,35 +379,35 @@
    "root_guess": 33.34579762341568,
    "from_hit": 0
   },
-  "steady_partials": 2,
+  "steady_partials": 0,
   "low_share": 1.0,
   "length_s": 0.3
  },
  "90-d2": {
   "id": "90-d2",
-  "distance_db": 1.53,
+  "distance_db": 2.98,
   "best_pass": 6,
-  "first_distance_db": 2.22,
+  "first_distance_db": 3.83,
   "glide": null,
-  "steady_partials": 2,
+  "steady_partials": 0,
   "low_share": 0.007,
   "length_s": 0.52
  },
  "90-d3": {
   "id": "90-d3",
-  "distance_db": 0.64,
-  "best_pass": 6,
-  "first_distance_db": 2.45,
+  "distance_db": 1.45,
+  "best_pass": 5,
+  "first_distance_db": 2.56,
   "glide": null,
-  "steady_partials": 1,
+  "steady_partials": 0,
   "low_share": 0.072,
   "length_s": 0.78
  },
  "90-d4": {
   "id": "90-d4",
-  "distance_db": 2.64,
+  "distance_db": 3.08,
   "best_pass": 6,
-  "first_distance_db": 3.23,
+  "first_distance_db": 3.53,
   "glide": {
    "f0": 216.75719601776444,
    "f1": 116.82119406040631,
@@ -417,15 +417,15 @@
    "root_guess": 118.5985487198339,
    "from_hit": 0
   },
-  "steady_partials": 2,
+  "steady_partials": 0,
   "low_share": 0.387,
   "length_s": 0.3
  },
  "90-d5": {
   "id": "90-d5",
-  "distance_db": 5.95,
+  "distance_db": 6.28,
   "best_pass": 1,
-  "first_distance_db": 7.23,
+  "first_distance_db": 7.24,
   "glide": {
    "f0": 116.57053735819369,
    "f1": 45.985427817495165,
@@ -435,15 +435,15 @@
    "root_guess": 49.12261962890625,
    "from_hit": 2
   },
-  "steady_partials": 7,
+  "steady_partials": 5,
   "low_share": 1.0,
   "length_s": 0.63
  },
  "163-d0": {
   "id": "163-d0",
-  "distance_db": 4.42,
-  "best_pass": 4,
-  "first_distance_db": 5.9,
+  "distance_db": 4.88,
+  "best_pass": 3,
+  "first_distance_db": 5.94,
   "glide": {
    "f0": 80.93804160983122,
    "f1": 62.20026378208893,
@@ -459,9 +459,9 @@
  },
  "163-d1": {
   "id": "163-d1",
-  "distance_db": 1.3,
-  "best_pass": 6,
-  "first_distance_db": 2.11,
+  "distance_db": 1.83,
+  "best_pass": 2,
+  "first_distance_db": 2.32,
   "glide": {
    "f0": 6000.0,
    "f1": 390.3633196721766,
@@ -472,25 +472,25 @@
    "from_hit": 1,
    "rejected": true
   },
-  "steady_partials": 4,
+  "steady_partials": 3,
   "low_share": 0.641,
   "length_s": 0.52
  },
  "163-d2": {
   "id": "163-d2",
-  "distance_db": 1.55,
-  "best_pass": 6,
-  "first_distance_db": 3.73,
+  "distance_db": 2.42,
+  "best_pass": 1,
+  "first_distance_db": 3.76,
   "glide": null,
-  "steady_partials": 2,
+  "steady_partials": 0,
   "low_share": 0.102,
   "length_s": 0.63
  },
  "163-d3": {
   "id": "163-d3",
-  "distance_db": 1.5,
-  "best_pass": 6,
-  "first_distance_db": 2.67,
+  "distance_db": 2.18,
+  "best_pass": 2,
+  "first_distance_db": 2.86,
   "glide": {
    "f0": 2166.254194719945,
    "f1": 139.1169996666285,
@@ -500,25 +500,25 @@
    "root_guess": 135.25543212890625,
    "from_hit": 1
   },
-  "steady_partials": 5,
+  "steady_partials": 3,
   "low_share": 0.779,
   "length_s": 0.52
  },
  "163-d4": {
   "id": "163-d4",
-  "distance_db": 2.16,
-  "best_pass": 3,
-  "first_distance_db": 2.98,
+  "distance_db": 2.81,
+  "best_pass": 1,
+  "first_distance_db": 3.06,
   "glide": null,
-  "steady_partials": 3,
+  "steady_partials": 2,
   "low_share": 0.002,
   "length_s": 0.63
  },
  "163-d5": {
   "id": "163-d5",
-  "distance_db": 4.6,
+  "distance_db": 4.34,
   "best_pass": 1,
-  "first_distance_db": 5.14,
+  "first_distance_db": 5.0,
   "glide": {
    "f0": 144.93802376580538,
    "f1": 42.94060660128526,
@@ -528,15 +528,15 @@
    "root_guess": 33.34579762341568,
    "from_hit": 1
   },
-  "steady_partials": 1,
+  "steady_partials": 0,
   "low_share": 0.999,
   "length_s": 0.3
  },
  "163-d6": {
   "id": "163-d6",
-  "distance_db": 1.63,
-  "best_pass": 6,
-  "first_distance_db": 3.16,
+  "distance_db": 2.21,
+  "best_pass": 2,
+  "first_distance_db": 3.07,
   "glide": {
    "f0": 145.34741068039278,
    "f1": 78.46985233044455,
@@ -552,9 +552,9 @@
  },
  "163-d7": {
   "id": "163-d7",
-  "distance_db": 0.99,
-  "best_pass": 3,
-  "first_distance_db": 2.56,
+  "distance_db": 2.31,
+  "best_pass": 1,
+  "first_distance_db": 2.92,
   "glide": {
    "f0": 112.7737243418511,
    "f1": 95.24838342680528,
@@ -564,15 +564,15 @@
    "root_guess": 98.2452392578125,
    "from_hit": 1
   },
-  "steady_partials": 4,
+  "steady_partials": 3,
   "low_share": 0.963,
   "length_s": 1.4
  },
  "103-d0": {
   "id": "103-d0",
-  "distance_db": 2.67,
-  "best_pass": 2,
-  "first_distance_db": 3.62,
+  "distance_db": 2.79,
+  "best_pass": 3,
+  "first_distance_db": 3.83,
   "glide": {
    "f0": 6000.0,
    "f1": 127.45666202519598,
@@ -582,15 +582,15 @@
    "root_guess": 57.8704833984375,
    "from_hit": 2
   },
-  "steady_partials": 5,
+  "steady_partials": 2,
   "low_share": 0.824,
   "length_s": 0.52
  },
  "103-d1": {
   "id": "103-d1",
-  "distance_db": 5.79,
-  "best_pass": 2,
-  "first_distance_db": 6.6,
+  "distance_db": 6.84,
+  "best_pass": 1,
+  "first_distance_db": 7.18,
   "glide": {
    "f0": 87.20176637683717,
    "f1": 43.405887676771414,
@@ -600,15 +600,15 @@
    "root_guess": 31.62868838100104,
    "from_hit": 1
   },
-  "steady_partials": 2,
+  "steady_partials": 1,
   "low_share": 1.0,
   "length_s": 0.52
  },
  "103-d2": {
   "id": "103-d2",
-  "distance_db": 1.35,
-  "best_pass": 6,
-  "first_distance_db": 2.76,
+  "distance_db": 2.0,
+  "best_pass": 2,
+  "first_distance_db": 2.77,
   "glide": null,
   "steady_partials": 0,
   "low_share": 0.061,
@@ -616,19 +616,19 @@
  },
  "103-d3": {
   "id": "103-d3",
-  "distance_db": 4.28,
-  "best_pass": 1,
-  "first_distance_db": 4.6,
+  "distance_db": 4.87,
+  "best_pass": 0,
+  "first_distance_db": 4.87,
   "glide": null,
-  "steady_partials": 2,
+  "steady_partials": 0,
   "low_share": 0.001,
   "length_s": 0.3
  },
  "103-d4": {
   "id": "103-d4",
-  "distance_db": 4.21,
-  "best_pass": 2,
-  "first_distance_db": 5.33,
+  "distance_db": 3.58,
+  "best_pass": 5,
+  "first_distance_db": 5.57,
   "glide": {
    "f0": 574.921393412196,
    "f1": 50.17065538100494,
@@ -638,15 +638,15 @@
    "root_guess": 45.758056640625,
    "from_hit": 0
   },
-  "steady_partials": 4,
+  "steady_partials": 1,
   "low_share": 0.994,
   "length_s": 0.43
  },
  "154-d0": {
   "id": "154-d0",
-  "distance_db": 4.05,
+  "distance_db": 4.4,
   "best_pass": 6,
-  "first_distance_db": 6.42,
+  "first_distance_db": 6.48,
   "glide": {
    "f0": 465.87274287176217,
    "f1": 40.20054826536441,
@@ -656,15 +656,15 @@
    "root_guess": 37.68310546875,
    "from_hit": 2
   },
-  "steady_partials": 7,
+  "steady_partials": 0,
   "low_share": 0.993,
   "length_s": 0.52
  },
  "154-d1": {
   "id": "154-d1",
-  "distance_db": 2.45,
-  "best_pass": 5,
-  "first_distance_db": 5.21,
+  "distance_db": 2.72,
+  "best_pass": 6,
+  "first_distance_db": 5.27,
   "glide": {
    "f0": 2065.731240020112,
    "f1": 56.903230254451735,
@@ -680,19 +680,19 @@
  },
  "154-d2": {
   "id": "154-d2",
-  "distance_db": 0.94,
-  "best_pass": 4,
-  "first_distance_db": 3.22,
+  "distance_db": 1.71,
+  "best_pass": 3,
+  "first_distance_db": 2.09,
   "glide": null,
-  "steady_partials": 10,
+  "steady_partials": 5,
   "low_share": 0.001,
   "length_s": 0.36
  },
  "154-d3": {
   "id": "154-d3",
-  "distance_db": 1.78,
-  "best_pass": 4,
-  "first_distance_db": 3.9,
+  "distance_db": 2.32,
+  "best_pass": 3,
+  "first_distance_db": 3.91,
   "glide": {
    "f0": 212.69042515438795,
    "f1": 212.69042515438795,
@@ -708,19 +708,19 @@
  },
  "154-d4": {
   "id": "154-d4",
-  "distance_db": 4.25,
-  "best_pass": 2,
-  "first_distance_db": 4.93,
+  "distance_db": 3.07,
+  "best_pass": 0,
+  "first_distance_db": 3.07,
   "glide": null,
-  "steady_partials": 3,
+  "steady_partials": 1,
   "low_share": 0.001,
   "length_s": 0.52
  },
  "154-d5": {
   "id": "154-d5",
-  "distance_db": 1.32,
-  "best_pass": 2,
-  "first_distance_db": 2.37,
+  "distance_db": 1.69,
+  "best_pass": 1,
+  "first_distance_db": 2.31,
   "glide": {
    "f0": 96.92554158000586,
    "f1": 96.92307692360502,
@@ -730,15 +730,15 @@
    "root_guess": 94.207763671875,
    "from_hit": 0
   },
-  "steady_partials": 1,
+  "steady_partials": 0,
   "low_share": 0.97,
   "length_s": 0.52
  },
  "127-d0": {
   "id": "127-d0",
-  "distance_db": 2.41,
+  "distance_db": 2.52,
   "best_pass": 2,
-  "first_distance_db": 3.67,
+  "first_distance_db": 3.72,
   "glide": {
    "f0": 453.84039163636606,
    "f1": 97.78270547047335,
@@ -754,9 +754,9 @@
  },
  "127-d1": {
   "id": "127-d1",
-  "distance_db": 6.26,
-  "best_pass": 1,
-  "first_distance_db": 7.1,
+  "distance_db": 7.08,
+  "best_pass": 0,
+  "first_distance_db": 7.08,
   "glide": {
    "f0": 69.57952025608137,
    "f1": 64.37956312806604,
@@ -766,15 +766,15 @@
    "root_guess": 63.2537841796875,
    "from_hit": 1
   },
-  "steady_partials": 3,
+  "steady_partials": 1,
   "low_share": 1.0,
   "length_s": 1.4
  },
  "127-d2": {
   "id": "127-d2",
-  "distance_db": 1.43,
-  "best_pass": 6,
-  "first_distance_db": 3.32,
+  "distance_db": 2.05,
+  "best_pass": 2,
+  "first_distance_db": 3.35,
   "glide": null,
   "steady_partials": 0,
   "low_share": 0.002,
@@ -782,9 +782,9 @@
  },
  "127-d3": {
   "id": "127-d3",
-  "distance_db": 2.62,
-  "best_pass": 2,
-  "first_distance_db": 3.71,
+  "distance_db": 2.85,
+  "best_pass": 1,
+  "first_distance_db": 3.74,
   "glide": {
    "f0": 76.82926829415914,
    "f1": 76.82926829415914,
@@ -800,19 +800,19 @@
  },
  "127-d4": {
   "id": "127-d4",
-  "distance_db": 1.38,
-  "best_pass": 2,
-  "first_distance_db": 2.56,
+  "distance_db": 1.93,
+  "best_pass": 1,
+  "first_distance_db": 2.69,
   "glide": null,
-  "steady_partials": 2,
+  "steady_partials": 0,
   "low_share": 0.003,
   "length_s": 0.3
  },
  "127-d5": {
   "id": "127-d5",
-  "distance_db": 2.0,
-  "best_pass": 1,
-  "first_distance_db": 2.36,
+  "distance_db": 2.37,
+  "best_pass": 0,
+  "first_distance_db": 2.37,
   "glide": {
    "f0": 98.34087537238976,
    "f1": 98.34087537238976,

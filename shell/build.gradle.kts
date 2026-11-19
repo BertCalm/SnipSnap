@@ -687,6 +687,16 @@ tasks.register<JavaExec>("generateCalabashKits") {
     args(providers.gradleProperty("calabashKitsOutput").orNull ?: "${rootDir}/testkit/calabash-kits")
 }
 
+tasks.register<JavaExec>("generateRiddimKits") {
+    group = "distribution"
+    description = "Build the three RIDDIM kits, prove every velocity and round-robin grid through save, playback and MPC 3 export, and write the listening pack."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.RiddimKitGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "3g"
+    args(providers.gradleProperty("riddimKitsOutput").orNull ?: "${rootDir}/testkit/riddim-kits")
+}
+
 tasks.register<JavaExec>("generateHiccupKits") {
     group = "distribution"
     description = "Build the HICCUP kits, prove the velocity and round-robin grid through save, playback and MPC 3 export, and write the listening pack."
@@ -796,6 +806,18 @@ tasks.register<JavaExec>("generateCuttingsKits") {
     workingDir = rootProject.projectDir
     maxHeapSize = "2g"
     args(providers.gradleProperty("cuttingsOutput").orNull ?: "${rootDir}/testkit/cuttings-kits")
+}
+
+for (kitName in listOf("shatter", "soundclash", "redline")) {
+    tasks.register<JavaExec>("generate${kitName.replaceFirstChar { it.uppercase() }}Kit") {
+        group = "distribution"
+        description = "Render and verify the ${kitName.uppercase()} breakcore shelf kit, with its listening files and archives."
+        classpath = sourceSets["test"].runtimeClasspath
+        mainClass.set("com.snipsnap.shell.BreakcoreFamilyDelivery")
+        workingDir = rootProject.projectDir
+        maxHeapSize = "2g"
+        args(kitName, providers.gradleProperty("${kitName}Output").orNull ?: "${rootDir}/testkit/${kitName}-breakcore")
+    }
 }
 
 tasks.register<JavaExec>("generateSporeSyntheticKits") {

@@ -40,6 +40,10 @@ remains blocked on slice-map/hardware verification. Owner listening is pending.
 [SPLINTER](docs/SPLINTER.md) is a breakcore kit at 200 BPM: sped-up break hits, chopped slices,
 a stutter, a stretched snare, clipped and gabber kicks, a snare rush and a riser. Not heard yet.
 
+[SHATTER, SOUNDCLASH and REDLINE](docs/BREAKCORE_FAMILY.md) complete the breakcore family: a break cut at its own hits (180 BPM),
+a sound system of subs, reese, siren and rewind (175), and speedcore with tuned kicks (250). The owner heard
+their grooves and pads on 2026-11-18 and kept them; per-pad verdicts and device playback are open.
+
 [GATECRASH](docs/GATECRASH.md) is a family of three 1980s gated drum kits on the shelf: Stone Room, Machine Pop and Electro Funk. Each has sixteen pads with three velocity zones of four takes. The owner approved the sound on 2026-11-11 after four rounds; phone and MPC hardware playback remain unverified.
 
 [MIRRORBALL](docs/MIRRORBALL.md) is a family of three 1970s disco kits on the shelf: Philly Strings, Loft Party and Munich Machine. Every pad is printed through an FET compressor, a multi-head tape echo, then an amp, in an order the FX rack cannot make. Each has sixteen pads with three velocity zones of four takes; Philly's tambourine is synthesized, fitted to CC0 recordings. The owner approved the sound on 2026-11-12 after five rounds; phone and MPC hardware playback remain unverified.
@@ -464,7 +468,7 @@ explicit MIDI root (24–96), strike velocity and model version; TUNE is a
 relative ±12-semitone offset, neutral at 0.5, so the effective note spans
 12–108 without clamping back to the saved-root range. Seven provisional presets
 and a dry sixteen-pad C minor pentatonic kit are included, with PITCHWHEEL among
-FRESH TAPE's 201 starters. Run `./gradlew :synth:generatePitchwheelAudition`
+FRESH TAPE's 214 starters. Run `./gradlew :synth:generatePitchwheelAudition`
 for the compact first listening set, or add `-PpitchwheelFull` for the broader
 dry probes. HOLD's top step returns settled loop-only material with a
 deterministic attachment cycle and capped adhesion. The owner heard R1 as six
@@ -530,7 +534,12 @@ DECAY. The owner accepted all six and the 22 factory presets. FRESH TAPE → TEM
 is the sixteen-pad kit with choking hats; TEMPEST TUNED keeps the original E minor
 pentatonic kicks and metal colors. TEMPEST CIRCUIT (electro), TEMPEST FOUNDRY
 (industrial) and TEMPEST STEP (UK garage) are genre kits made from new settings of
-the same accepted voices, kept by the owner on 2026-11-14. HOLD is reserved. See [TEMPEST](docs/TEMPEST_FULL_KIT.md).
+the same accepted voices, kept by the owner on 2026-11-14. TEMPEST ROUND ROBIN, an
+opt-in starter beside TEMPEST, gives each of its sixteen pads four takes; the owner
+kept it by ear on 16 Nov 2026 (round tempest-rr-1). CIRCUIT TAKES, FOUNDRY TAKES and
+STEP TAKES do the same for the three genre kits, each beside its kit; WIRE and STEP SUB,
+which have no noise to re-roll, drift a few cents instead; the owner kept them by ear in genre-rr-1 (19 Nov 2026).
+HOLD is reserved. See [TEMPEST](docs/TEMPEST_FULL_KIT.md).
 
 OSTERIA is one evolving note: four spectral layers on a fixed root drift between
 five coastal palettes, with SHORE, TENSION, WANDER, MEMORY, ROOM and HOLD. Its six
@@ -1448,7 +1457,9 @@ presets each, the sixteen kept pads among them. TERRA SAHEL, TERRA MAQAM and
 TERRA PUNJAB are genre kits from the same voices, kept by the owner
 ([`docs/TERRA_PROMOTION.md`](docs/TERRA_PROMOTION.md)). TERRA ROUND ROBIN, an
 opt-in starter beside TERRA, deals four takes per touch on the same sixteen
-pads; the owner kept it by ear in terra-rr-1 (16 Nov 2026).
+pads; the owner kept it by ear in terra-rr-1 (16 Nov 2026). SAHEL TAKES, MAQAM
+TAKES and PUNJAB TAKES do the same for the three genre kits, each beside its kit
+(kept by ear in genre-rr-1, 19 Nov 2026).
 VENT, the Rössler-attractor synth (separate from the TapeOS scheme of that
 name), brings clean model-2 PULSE, COIL and PLUME to the picker
 and factory roster. FRESH TAPE's VENT kit has twelve dry pads in C minor

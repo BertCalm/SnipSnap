@@ -325,6 +325,15 @@ class DeterminismTest {
         }
     }
 
+    @Test fun `RIDDIM renders every voice, a soft hit and every take byte for byte through JSON`() {
+        for (voice in RiddimVoice.entries) {
+            val patch = RiddimPatch("Canary", voice, Riddim.defaults(voice))
+            assertContentEquals(patch.render().samples, Patches.fromJsonText(patch.toJsonText()).render().samples, "$voice")
+            val struck = RiddimPatch("Soft take", voice, Riddim.defaults(voice), velocity = 0.4f, take = 3)
+            assertContentEquals(struck.render().samples, Patches.fromJsonText(struck.toJsonText()).render().samples, "$voice soft take 3")
+        }
+    }
+
     @Test fun `EROSION native voices replay their saved touch`() {
         for (voice in ErosionVoice.entries) {
             val patch = ErosionPatch("Canary", voice, velocity = .6f)
@@ -1107,6 +1116,30 @@ class DeterminismTest {
         for (pad in listOf(2, 12, 16)) {
             val r = Splinter.Recipe(pad, .65, 2)
             assertContentEquals(r.render().samples, Splinter.Recipe.fromJsonText(r.toJsonText()).render().samples, "pad $pad")
+        }
+    }
+
+    @Test
+    fun `SHATTER saved recipes are deterministic for a slice, a repeat and a rush`() {
+        for (pad in listOf(0, 11, 16)) {
+            val r = Breakcore.Recipe(Shatter, pad, .65, 2)
+            assertContentEquals(r.render().samples, Breakcore.Recipe.fromJsonText(r.toJsonText()).render().samples, "pad $pad")
+        }
+    }
+
+    @Test
+    fun `SOUNDCLASH saved recipes are deterministic for a sub, a reese and a rewind`() {
+        for (pad in listOf(1, 5, 9)) {
+            val r = Breakcore.Recipe(Soundclash, pad, .65, 2)
+            assertContentEquals(r.render().samples, Breakcore.Recipe.fromJsonText(r.toJsonText()).render().samples, "pad $pad")
+        }
+    }
+
+    @Test
+    fun `REDLINE saved recipes are deterministic for a tuned kick, a scream and a roll`() {
+        for (pad in listOf(1, 11, 16)) {
+            val r = Breakcore.Recipe(Redline, pad, .65, 2)
+            assertContentEquals(r.render().samples, Breakcore.Recipe.fromJsonText(r.toJsonText()).render().samples, "pad $pad")
         }
     }
 }
