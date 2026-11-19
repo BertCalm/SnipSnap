@@ -316,8 +316,17 @@ longer. Measured on dry stems on one scale, the sweep against the rest of the ki
 2 to 6 kHz band 7.8 dB down (round 0: level with it, 0.1). The groove's quietest moments sit 15 dB under its loudest:
 the ride. Lesson for the kits: a part that should sit far back needs a fader, not only a soft weight.
 
-[Expansion round 0 listening page](https://claude.ai/artifact/Q3rZ8po8ZaeJs9E4tNd86s) (private to the owner; round 0c
-beside round 0 for BLUE).
+**Round 0d, BLUE's sweep rattles.** "It sounds scraping rather than a gently rattling sweep" (the owner,
+2026-11-19). EMBER's sweep is shaped bristle noise with no snare wires in it, so however soft it stays a scrape. Round
+0d builds the sweep from the wires: a train of very soft taps of LOOSE CRATE's snare wires (`LooseCrateKits.wires` at
+.45), one every 18 to 40 ms over 1.76 s, swelling and fading with the brush's circle (a sine arch to the 1.3, each tap
+varied), over EMBER's sweep made darker (two one-poles at 2.5 kHz) and 8 dB under the wires. The tap and the fader are
+unchanged. Measured on the sweep alone: the 15 to 60 Hz flicker of its loudness (the rattle) at -1.6 dB of its envelope
+(round 0c -6.6, round 0 -8.4); its centre 2,784 Hz (round 0c 3,219, round 0 3,533); against the rest of the kit 13.0 dB
+down (round 0c 12.8).
+
+[Expansion round 0 listening page](https://claude.ai/artifact/Q3rZ8po8ZaeJs9E4tNd86s) (private to the owner; rounds
+0d, 0c and 0 side by side for BLUE).
 
 ## Gates
 

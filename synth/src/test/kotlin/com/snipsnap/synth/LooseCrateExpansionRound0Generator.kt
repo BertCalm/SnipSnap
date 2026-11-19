@@ -37,6 +37,38 @@ object LooseCrateExpansionRound0Generator {
         Ember.render(voice, mapOf("DISTANCE" to 0f, "WARMTH" to 0f) + mapOf(*m), v, t).samples
     }
 
+    /** How long a sweep's circle lasts, seconds: EMBER's slow sweep (SPEED .1). */
+    private const val SWEEP_SECONDS = 1.76
+
+    /**
+     * A brush circling a snare as the wires hear it: a train of very soft snare-wire taps ([LooseCrateKits.wires]),
+     * one every 18 to 40 ms, swelling and fading with the circle (sin^1.3 with a seeded sway), over EMBER's slow sweep
+     * made darker (TUNE .30, BUZZ .80) and low-passed twice at 2.5 kHz to take its scrape off, the bristles 8 dB under the
+     * wires. Every take re-seeds the train. Shape values.
+     */
+    private val rattlingSweep: Strike = { v, t, _ ->
+        val noise = Dsp.Noise(Dsp.seedFor("LOOSE-CRATE", "blue-rattle", t))
+        fun u() = (noise.next() + 1f) * .5f
+        val offsets = mutableListOf(0f)
+        while (offsets.last() < SWEEP_SECONDS * 1000) offsets += offsets.last() + 18f + 22f * u()
+        offsets.removeAt(offsets.lastIndex)
+        val weights = offsets.map { ms ->
+            val x = (ms / 1000 / SWEEP_SECONDS).toDouble()
+            (Math.pow(Math.sin(Math.PI * x), 1.3) * (.65 + .35 * u())).toFloat().coerceIn(.05f, 1f)
+        }
+        val rattle = KitStrikes.multi(offsets, weights) { vv, take -> LooseCrateKits.wires(vv * .45f, take, 0f) }(v, t, 0f)
+        val bristles = Ember.render(EmberVoice.BRUSH_SWEEP, mapOf("SPEED" to .1f, "TUNE" to .30f, "BUZZ" to .80f, "DISTANCE" to .4f, "WARMTH" to .35f), v, t).samples
+        val a = Dsp.FixedOnePole(2_500f)
+        val b = Dsp.FixedOnePole(2_500f)
+        val dark = FloatArray(bristles.size) { b.lp(a.lp(bristles[it])) }
+        val r = KitStrikes.peakOf(rattle).let { if (it > 1e-9f) 1f / it else 0f }
+        val d = KitStrikes.peakOf(dark).let { if (it > 1e-9f) BRISTLES / it else 0f }
+        FloatArray(maxOf(rattle.size, dark.size)) { (if (it < rattle.size) rattle[it] * r else 0f) + (if (it < dark.size) dark[it] * d else 0f) }
+    }
+
+    /** The bristles under the wires: 8 dB down. */
+    private const val BRISTLES = .4f
+
     private val blueParts: List<Pair<String, Strike>> = listOf(
         "felt-kick" to ember(EmberVoice.KICK, "TUNE" to .35f, "DAMP" to .65f, "BUZZ" to .15f),
         "brush-tap" to ember(EmberVoice.BRUSH_TAP, "TUNE" to .55f, "DAMP" to .35f, "BUZZ" to .55f),
@@ -45,7 +77,9 @@ object LooseCrateExpansionRound0Generator {
         // Round 0c: "It's the brush sweep that was harsh and overbearing" (the owner, correcting round 0b, which had
         // softened the tap). Round 0 swept faster with the mic close and no warmth (SPEED .45, DISTANCE 0, WARMTH 0):
         // its loudest band was 2 to 6 kHz. It now takes EMBER's approved "Slow Sweep" exactly, and plays softer.
-        "sweep" to { v, t, _ -> Ember.render(EmberVoice.BRUSH_SWEEP, mapOf("SPEED" to .1f, "DISTANCE" to .4f, "WARMTH" to .35f), v, t).samples },
+        // Round 0d: "It sounds scraping rather than a gently rattling sweep" (the owner, of round 0c's slow sweep).
+        // EMBER's sweep is band noise fitted to recorded stirs plus air added by ear: bristles, no wires.
+        "sweep" to rattlingSweep,
     )
 
     /**
@@ -214,6 +248,7 @@ object LooseCrateExpansionRound0Generator {
             write("blue/stem-$tag-rest.wav", Snip(FloatArray(rest.size) { rest[it] * k }, 1, Dsp.RATE))
         }
         write("blue/hit-sweep-round0.wav", hit(r0Sweep))
+        write("blue/hit-sweep-round0c.wav", hit({ v, t, _ -> Ember.render(EmberVoice.BRUSH_SWEEP, mapOf("SPEED" to .1f, "DISTANCE" to .4f, "WARMTH" to .35f), v, t).samples }))
 
         val hummin = LooseCrateKits.Kit.HUMMIN
         val source = loopDry(LooseCrateKits.played(hummin, LooseCrateKits.humminNotes(kick = 0, snare = 1, hat = 2, ghost = 5)), SPEED_SOURCE_BPM,
