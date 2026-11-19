@@ -697,7 +697,9 @@ class Mpc3TrackWriter(
         // A chain grid's zones become the layers: every one references the
         // same chain WAV, differing only in velocity window and slice anchor.
         val gridZones = pad?.chain?.zones?.asReversed()
+        val cycleTakes = pad?.cycleLayers
         val zones = when {
+            cycleTakes != null -> cycleTakes
             gridZones != null && pad != null ->
                 gridZones.map { z -> VelocityLayer(pad.sampleName, pad.frameCount, z.velStart, z.velEnd) }
             pad != null -> zonesOf(pad).asReversed()
@@ -724,6 +726,7 @@ class Mpc3TrackWriter(
                 )
             },
             keygroupExtras = false,
+            zonePlay = if (pad?.cycleLayers != null) 0 else 1,
             level = pad?.level?.toDouble() ?: MPC_LEVEL_EMPTY,
             pan = pad?.pan?.toDouble() ?: 0.5,
         )

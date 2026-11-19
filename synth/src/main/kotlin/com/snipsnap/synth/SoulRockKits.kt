@@ -11,7 +11,7 @@ import java.util.zip.GZIPInputStream
  * Each build owns its buffers; decoding cannot mutate a later build or the approved resources.
  */
 object SoulRockKits {
-    const val VERSION = 2
+    const val VERSION = 3
     const val TAKES = 3
     const val PADS = 16
     enum class Choice(val id: String, val title: String, val bpm: Int, internal val bank: String) {
@@ -23,10 +23,14 @@ object SoulRockKits {
     internal fun resource(name: String): ByteArray {
         require(name in setOf("manifest.json", "NOTICE.txt") ||
             Regex("(soul-pocket|roadhouse-rock|open-room-rock)/(?:[1-9]|1[0-6])-[0-2]-[0-2]\\.wav\\.gz").matches(name))
-        // Version 2 changes only the accepted Roadhouse snare. Missing v2 assets must
-        // fail rather than silently falling back to an obsolete snare.
-        val assetVersion = if (name in setOf("manifest.json", "NOTICE.txt") ||
-            name.startsWith("roadhouse-rock/2-")) VERSION else 1
+        // Explicit immutable versions prevent missing revised assets from silently
+        // falling back to a different sound. Unchanged pads keep their original PCM.
+        val assetVersion = when {
+            name in setOf("manifest.json", "NOTICE.txt") -> VERSION
+            name.startsWith("roadhouse-rock/12-") -> 3
+            name.startsWith("roadhouse-rock/2-") -> 2
+            else -> 1
+        }
         return requireNotNull(javaClass.getResourceAsStream("/soul-rock/v$assetVersion/$name")) {
             "Missing Soul Rock asset: $name"
         }.use { stream -> if (name.endsWith(".gz")) GZIPInputStream(stream).use { it.readBytes() } else stream.readBytes() }
@@ -50,7 +54,7 @@ object SoulRockKits {
                 14 -> when (choice) { Choice.SOUL -> DrumClass.CLAP; Choice.OPEN_ROOM -> DrumClass.TOM; else -> DrumClass.PERC }
                 else -> DrumClass.PERC
             }
-            val label = if (slot == 14) when (choice) {
+            val label = if (choice == Choice.ROADHOUSE && slot == 12) "Crash" else if (slot == 14) when (choice) {
                 Choice.SOUL -> "Claps"; Choice.ROADHOUSE -> "Cowbell"; Choice.OPEN_ROOM -> "High Tom"
             } else names[slot - 1]
             ArrangedPad(grid.last().first(), cls, displayName = label, velocityTakes = grid,

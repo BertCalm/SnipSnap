@@ -41,6 +41,9 @@ object Mpc3Exporter {
          * bare program folder. One asset folder, every MPC ever made.
          */
         mpc2Twin: Boolean = false,
+        /** Split single-velocity robin chains into discrete cycling WAV layers.
+         * Avoids the hardware slice-map dependency. Velocity grids remain grids. */
+        splitRoundRobinTakes: Boolean = false,
     ): ExportResult {
         val findings = Preflight.check(kit, kitDir)
         if (findings.blocked()) throw ExportBlockedException(findings)
@@ -53,7 +56,7 @@ object Mpc3Exporter {
         }
         dataDir.deleteRecursively()
 
-        val (slots, written) = KitExporter.buildSlots(kit, kitDir, samplesDir = dataDir)
+        val (slots, written) = KitExporter.buildSlots(kit, kitDir, samplesDir = dataDir, splitRobinTakes = splitRoundRobinTakes)
         val effectiveClips = clips.ifEmpty { listOfNotNull(clip) }.map { ChanceExport.forMpc(it) }
         val program = Mpc3TrackWriter().writeTo(destRoot, DrumProgram(kit.name, slots), trackColour, effectiveClips)
         if (mpc2Twin) XpmWriter().writeTo(dataDir, DrumProgram(kit.name, slots))

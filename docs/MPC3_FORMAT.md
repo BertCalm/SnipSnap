@@ -854,6 +854,18 @@ firmware without the slice map degrades to honest 4-way velocity
 switching. Our grids cap at 4 zones: the MPC 2 `.xpm` has 4 layer
 slots, and 4 keeps every zone representable on both generations.
 
+### Discrete drum Cycle layers
+
+For an explicit fixed-touch cycling program, the writer now honors
+`Pad.cycleLayers`: it preserves the supplied take order, writes
+`zonePlayTime=0`, and references separate full-range WAV layers with complete
+`sliceInfo` windows and no Slice Motion increment. The opt-in
+`Mpc3Exporter.splitRoundRobinTakes` uses the existing byte-preserving splitter
+for single-zone robin chains. This avoids an embedded slice-map dependency;
+it does not convert a combined velocity grid or close HH1.4. SIDEROOM ships
+three such touch companions, with matching XPM programs. Descriptor and PCM
+checks pass; their physical MPC playback remains unverified.
+
 ### Synth section
 
 Each zone carries its own `instruments[i].synthSection` (the copy on

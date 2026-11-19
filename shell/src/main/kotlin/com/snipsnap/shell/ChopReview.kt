@@ -247,20 +247,6 @@ class ChopReviewModel private constructor(
         }
     }
 
-    /**
-     * The bench's own record of how this chop was reached: how many chops ran on this source before this
-     * one ([tries] — RE-CHOP, AUTO, every EAR, CUT, SNAP and HITS step, a
-     * hum landing), and how many cuts were moved by hand since ([merges],
-     * [splits]). A re-chop starts the hand count over: its cuts are the
-     * detector's again. Set by [rechop] and [rebuilt], never by a caller.
-     */
-    var tries: Int = 0
-        internal set
-    var merges: Int = 0
-        internal set
-    var splits: Int = 0
-        internal set
-
     /** True for a GHOSTS chop: rows are the spaces between the hits. */
     val ghosts: Boolean get() = mode is ChopMode.Ghosts
 
@@ -355,7 +341,7 @@ class ChopReviewModel private constructor(
         val overrides = rows.map { it.override }.toMutableList().also { it.removeAt(index + 1) }
         val names = ghostNames?.toMutableList()?.also { it.removeAt(index + 1) }
         val tags = labels?.toMutableList()?.also { it.removeAt(index + 1) }
-        return rebuilt(slices, overrides, names, tags, merges = merges + 1)
+        return rebuilt(slices, overrides, names, tags)
     }
 
     /**
@@ -388,16 +374,13 @@ class ChopReviewModel private constructor(
         val names = ghostNames?.toMutableList()?.also { it.add(index + 1, it[index]) }
         // The second half of a split bar is still that bar.
         val tags = labels?.toMutableList()?.also { it.add(index + 1, it[index]) }
-        return rebuilt(slices, overrides, names, tags, splits = splits + 1)
+        return rebuilt(slices, overrides, names, tags)
     }
 
-    /** A model over [slices] with [overrides] laid back onto its rows, marked [edited], the bench's record carried with one more merge or split counted. */
-    private fun rebuilt(slices: List<Slice>, overrides: List<DrumClass?>, names: List<String?>?, tags: List<String?>? = labels, merges: Int = this.merges, splits: Int = this.splits): ChopReviewModel {
+    /** A model over [slices] with [overrides] laid back onto its rows, marked [edited]. */
+    private fun rebuilt(slices: List<Slice>, overrides: List<DrumClass?>, names: List<String?>?, tags: List<String?>? = labels): ChopReviewModel {
         val m = ChopReviewModel(source, mode, slices, tape, edited = true, tempoLazy = tempoLazy, gridStep = gridStep, ghostNames = names, hitsHeard = if (ghosts) hitsHeard else null, labels = tags, pulse = pulse)
         for ((i, o) in overrides.withIndex()) m.rows[i].override = o
-        m.tries = tries
-        m.merges = merges
-        m.splits = splits
         return m
     }
 
@@ -507,8 +490,8 @@ class ChopReviewModel private constructor(
         )
     }
 
-    /** RE-CHOP: fresh detection, fresh labels, overrides gone, hand edits gone; the tape reference rides along, and [tries] counts one more. */
-    fun rechop(newMode: ChopMode = mode): ChopReviewModel = chop(source, newMode, tape, tempoLazy).also { it.tries = tries + 1 }
+    /** RE-CHOP: fresh detection, fresh labels, overrides gone, hand edits gone; the tape reference rides along. */
+    fun rechop(newMode: ChopMode = mode): ChopReviewModel = chop(source, newMode, tape, tempoLazy)
 
     /** The bench's own re-chop: [newMode], with this model's corrected chips carried across ([carryingOverrides]). */
     fun rechopKeeping(newMode: ChopMode): ChopReviewModel = carryingOverrides(rechop(newMode))

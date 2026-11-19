@@ -1,0 +1,290 @@
+[
+  {
+    "path": "Samples/mid/htom/mid_htom_center_vl10.flac",
+    "mode": "100644",
+    "type": "blob",
+    "sha": "e4f9fba94f8e9511edbb4b44ac3cb3aa56412fdd",
+    "size": 246326,
+    "url": "https://api.github.com/repos/sfzinstruments/virtuosity_drums/git/blobs/e4f9fba94f8e9511edbb4b44ac3cb3aa56412fdd"
+  },
+  {
+    "path": "Samples/mid/htom/mid_htom_center_vl11.flac",
+    "mode": "100644",
+    "type": "blob",
+    "sha": "29ed5036a3b99d62898353df9f600b5517c26804",
+    "size": 236671,
+    "url": "https://api.github.com/repos/sfzinstruments/virtuosity_drums/git/blobs/29ed5036a3b99d62898353df9f600b5517c26804"
+  },
+  {
+    "path": "Samples/mid/htom/mid_htom_center_vl14.flac",
+    "mode": "100644",
+    "type": "blob",
+    "sha": "8f9fb4809723d288289382b22be752196cd23f7f",
+    "size": 257444,
+    "url": "https://api.github.com/repos/sfzinstruments/virtuosity_drums/git/blobs/8f9fb4809723d288289382b22be752196cd23f7f"
+  },
+  {
+    "path": "Samples/mid/htom/mid_htom_center_vl15.flac",
+    "mode": "100644",
+    "type": "blob",
+    "sha": "ece0c18efcb3730b8beba4e6aac5ab807ffa1972",
+    "size": 267485,
+    "url": "https://api.github.com/repos/sfzinstruments/virtuosity_drums/git/blobs/ece0c18efcb3730b8beba4e6aac5ab807ffa1972"
+  },
+  {
+    "path": "Samples/mid/htom/mid_htom_center_vl16.flac",
+    "mode": "100644",
+    "type": "blob",
+    "sha": "e32463d77fc3582f2dd1c47fe1e17480cc24d29e",
+    "size": 278571,
+    "url": "https://api.github.com/repos/sfzinstruments/virtuosity_drums/git/blobs/e32463d77fc3582f2dd1c47fe1e17480cc24d29e"
+  },
+  {
+    "path": "Samples/mid/htom/mid_htom_center_vl4.flac",
+    "mode": "100644",
+    "type": "blob",
+    "sha": "e0ecd09368cfdda5e19edc1a0a331159f93c6f27",
+    "size": 217562,
+    "url": "https://api.github.com/repos/sfzinstruments/virtuosity_drums/git/blobs/e0ecd09368cfdda5e19edc1a0a331159f93c6f27"
+  },
+  {
+    "path": "Samples/mid/htom/mid_htom_center_vl5.flac",
+    "mode": "100644",
+    "type": "blob",
+    "sha": "7323d25f6289a976032edd967cb479a36fd9fad7",
+    "size": 238478,
+    "url": "https://api.github.com/repos/sfzinstruments/virtuosity_drums/git/blobs/7323d25f6289a976032edd967cb479a36fd9fad7"
+  },
+  {
+    "path": "Samples/mid/htom/mid_htom_center_vl6.flac",
+    "mode": "100644",
+    "type": "blob",
+    "sha": "2edbfe8f44bd092fcc24330fcd32071cbaad3c2a",
+    "size": 263659,
+    "url": "https://api.github.com/repos/sfzinstruments/virtuosity_drums/git/blobs/2edbfe8f44bd092fcc24330fcd32071cbaad3c2a"
+  },
+  {
+    "path": "Samples/mid/htom/mid_htom_center_vl9.flac",
+    "mode": "100644",
+    "type": "blob",
+    "sha": "e07c7d4f4e9a4d0e9b7416ad9c341a8bbd667392",
+    "size": 198032,
+    "url": "https://api.github.com/repos/sfzinstruments/virtuosity_drums/git/blobs/e07c7d4f4e9a4d0e9b7416ad9c341a8bbd667392"
+  },
+  {
+    "path": "Samples/mid/ltom/mid_ltom_center_vl10.flac",
+    "mode": "100644",
+    "type": "blob",
+    "sha": "38ef6ced7cd983a3a4921b0c3cd5b4f6e50df74b",
+    "size": 456263,
+    "url": "https://api.github.com/repos/sfzinstruments/virtuosity_drums/git/blobs/38ef6ced7cd983a3a4921b0c3cd5b4f6e50df74b"
+  },
+  {
+    "path": "Samples/mid/ltom/mid_ltom_center_vl11.flac",
+    "mode": "100644",
+    "type": "blob",
+    "sha": "170ef9db0c5327bf1bc6eb927f71dadef1f42ffb",
+    "size": 512794,
+    "url": "https://api.github.com/repos/sfzinstruments/virtuosity_drums/git/blobs/170ef9db0c5327bf1bc6eb927f71dadef1f42ffb"
+  },
+  {
+    "path": "Samples/mid/ltom/mid_ltom_center_vl14.flac",
+    "mode": "100644",
+    "type": "blob",
+    "sha": "3521b9b542b411d23b0c933c21850f908e9d6896",
+    "size": 577393,
+    "url": "https://api.github.com/repos/sfzinstruments/virtuosity_drums/git/blobs/3521b9b542b411d23b0c933c21850f908e9d6896"
+  },
+  {
+    "path": "Samples/mid/ltom/mid_ltom_center_vl15.flac",
+    "mode": "100644",
+    "type": "blob",
+    "sha": "08b2cf122d9d0002312d32f071fdd4ffbc594a16",
+    "size": 556866,
+    "url": "https://api.github.com/repos/sfzinstruments/virtuosity_drums/git/blobs/08b2cf122d9d0002312d32f071fdd4ffbc594a16"
+  },
+  {
+    "path": "Samples/mid/ltom/mid_ltom_center_vl16.flac",
+    "mode": "100644",
+    "type": "blob",
+    "sha": "f7d6cbb9f47cd4c82ef8933f9ef643585d265020",
+    "size": 502824,
+    "url": "https://api.github.com/repos/sfzinstruments/virtuosity_drums/git/blobs/f7d6cbb9f47cd4c82ef8933f9ef643585d265020"
+  },
+  {
+    "path": "Samples/mid/ltom/mid_ltom_center_vl4.flac",
+    "mode": "100644",
+    "type": "blob",
+    "sha": "6022c6c5de3e04da2d1deb2856d2690f3d6a9b63",
+    "size": 277591,
+    "url": "https://api.github.com/repos/sfzinstruments/virtuosity_drums/git/blobs/6022c6c5de3e04da2d1deb2856d2690f3d6a9b63"
+  },
+  {
+    "path": "Samples/mid/ltom/mid_ltom_center_vl5.flac",
+    "mode": "100644",
+    "type": "blob",
+    "sha": "24315deb82c8b7775ea40f4407752fa37731f42e",
+    "size": 405590,
+    "url": "https://api.github.com/repos/sfzinstruments/virtuosity_drums/git/blobs/24315deb82c8b7775ea40f4407752fa37731f42e"
+  },
+  {
+    "path": "Samples/mid/ltom/mid_ltom_center_vl6.flac",
+    "mode": "100644",
+    "type": "blob",
+    "sha": "2d9d01fde5a6ad368c721a328f6607d8ecd82816",
+    "size": 502209,
+    "url": "https://api.github.com/repos/sfzinstruments/virtuosity_drums/git/blobs/2d9d01fde5a6ad368c721a328f6607d8ecd82816"
+  },
+  {
+    "path": "Samples/mid/ltom/mid_ltom_center_vl9.flac",
+    "mode": "100644",
+    "type": "blob",
+    "sha": "2953c491e0f60c9ff218b802b70ea243b8b02c8b",
+    "size": 406760,
+    "url": "https://api.github.com/repos/sfzinstruments/virtuosity_drums/git/blobs/2953c491e0f60c9ff218b802b70ea243b8b02c8b"
+  },
+  {
+    "path": "Samples/oh/crash/oh_crash_crash_vl1_rr1.flac",
+    "mode": "100644",
+    "type": "blob",
+    "sha": "8cbe9cb0bc2d8d42703148c18828bd1b8b58f5d0",
+    "size": 1264401,
+    "url": "https://api.github.com/repos/sfzinstruments/virtuosity_drums/git/blobs/8cbe9cb0bc2d8d42703148c18828bd1b8b58f5d0"
+  },
+  {
+    "path": "Samples/oh/crash/oh_crash_crash_vl1_rr2.flac",
+    "mode": "100644",
+    "type": "blob",
+    "sha": "c24484922e87b16234b38b5d786440e281e055d4",
+    "size": 1312381,
+    "url": "https://api.github.com/repos/sfzinstruments/virtuosity_drums/git/blobs/c24484922e87b16234b38b5d786440e281e055d4"
+  },
+  {
+    "path": "Samples/oh/crash/oh_crash_crash_vl1_rr3.flac",
+    "mode": "100644",
+    "type": "blob",
+    "sha": "b914c66cb01098cc4de3e8670cb1cdc029bb6f24",
+    "size": 1217885,
+    "url": "https://api.github.com/repos/sfzinstruments/virtuosity_drums/git/blobs/b914c66cb01098cc4de3e8670cb1cdc029bb6f24"
+  },
+  {
+    "path": "Samples/oh/crash/oh_crash_crash_vl2_rr1.flac",
+    "mode": "100644",
+    "type": "blob",
+    "sha": "b6af432414327be04e97d23bc6c5dd3cc1c3e439",
+    "size": 1426940,
+    "url": "https://api.github.com/repos/sfzinstruments/virtuosity_drums/git/blobs/b6af432414327be04e97d23bc6c5dd3cc1c3e439"
+  },
+  {
+    "path": "Samples/oh/crash/oh_crash_crash_vl2_rr2.flac",
+    "mode": "100644",
+    "type": "blob",
+    "sha": "c9cb2131b03410a6ecc38f495d96c20a6e41b61d",
+    "size": 1311650,
+    "url": "https://api.github.com/repos/sfzinstruments/virtuosity_drums/git/blobs/c9cb2131b03410a6ecc38f495d96c20a6e41b61d"
+  },
+  {
+    "path": "Samples/oh/crash/oh_crash_crash_vl2_rr3.flac",
+    "mode": "100644",
+    "type": "blob",
+    "sha": "8218a9652d32dd650b33c1f40aae26b96c9ad515",
+    "size": 1253370,
+    "url": "https://api.github.com/repos/sfzinstruments/virtuosity_drums/git/blobs/8218a9652d32dd650b33c1f40aae26b96c9ad515"
+  },
+  {
+    "path": "Samples/oh/crash/oh_crash_crash_vl3_rr1.flac",
+    "mode": "100644",
+    "type": "blob",
+    "sha": "464020e19ae66f3c6b1bedcb87877590f705cdff",
+    "size": 1628049,
+    "url": "https://api.github.com/repos/sfzinstruments/virtuosity_drums/git/blobs/464020e19ae66f3c6b1bedcb87877590f705cdff"
+  },
+  {
+    "path": "Samples/oh/crash/oh_crash_crash_vl3_rr2.flac",
+    "mode": "100644",
+    "type": "blob",
+    "sha": "f80c919d56e5a7229b6eec4a06a8a5b5b4739ba7",
+    "size": 1585868,
+    "url": "https://api.github.com/repos/sfzinstruments/virtuosity_drums/git/blobs/f80c919d56e5a7229b6eec4a06a8a5b5b4739ba7"
+  },
+  {
+    "path": "Samples/oh/crash/oh_crash_crash_vl3_rr3.flac",
+    "mode": "100644",
+    "type": "blob",
+    "sha": "28eac522cce5b49d12e6940ce25af633c266df04",
+    "size": 1511281,
+    "url": "https://api.github.com/repos/sfzinstruments/virtuosity_drums/git/blobs/28eac522cce5b49d12e6940ce25af633c266df04"
+  },
+  {
+    "path": "Samples/oh/ride/oh_ride_ride_vl1_rr1.flac",
+    "mode": "100644",
+    "type": "blob",
+    "sha": "aff84ed9a051aabe7582efecfbe8f46ca35e24df",
+    "size": 1107361,
+    "url": "https://api.github.com/repos/sfzinstruments/virtuosity_drums/git/blobs/aff84ed9a051aabe7582efecfbe8f46ca35e24df"
+  },
+  {
+    "path": "Samples/oh/ride/oh_ride_ride_vl1_rr2.flac",
+    "mode": "100644",
+    "type": "blob",
+    "sha": "34f479c844eabaa7ff1440310fc42fa5b467c638",
+    "size": 862504,
+    "url": "https://api.github.com/repos/sfzinstruments/virtuosity_drums/git/blobs/34f479c844eabaa7ff1440310fc42fa5b467c638"
+  },
+  {
+    "path": "Samples/oh/ride/oh_ride_ride_vl1_rr3.flac",
+    "mode": "100644",
+    "type": "blob",
+    "sha": "4b70fdb30c744d66388adc0d6e4092cc0e755dcd",
+    "size": 926629,
+    "url": "https://api.github.com/repos/sfzinstruments/virtuosity_drums/git/blobs/4b70fdb30c744d66388adc0d6e4092cc0e755dcd"
+  },
+  {
+    "path": "Samples/oh/ride/oh_ride_ride_vl2_rr1.flac",
+    "mode": "100644",
+    "type": "blob",
+    "sha": "7bd3f5b5998be54c876097ff622598b2587b39a3",
+    "size": 961942,
+    "url": "https://api.github.com/repos/sfzinstruments/virtuosity_drums/git/blobs/7bd3f5b5998be54c876097ff622598b2587b39a3"
+  },
+  {
+    "path": "Samples/oh/ride/oh_ride_ride_vl2_rr2.flac",
+    "mode": "100644",
+    "type": "blob",
+    "sha": "03fafaa977b558d53caed373cda79cfe89fdb0e6",
+    "size": 967228,
+    "url": "https://api.github.com/repos/sfzinstruments/virtuosity_drums/git/blobs/03fafaa977b558d53caed373cda79cfe89fdb0e6"
+  },
+  {
+    "path": "Samples/oh/ride/oh_ride_ride_vl2_rr3.flac",
+    "mode": "100644",
+    "type": "blob",
+    "sha": "412dfbba709cdcbeda088aa613f6e80da6482ac8",
+    "size": 934994,
+    "url": "https://api.github.com/repos/sfzinstruments/virtuosity_drums/git/blobs/412dfbba709cdcbeda088aa613f6e80da6482ac8"
+  },
+  {
+    "path": "Samples/oh/ride/oh_ride_ride_vl3_rr1.flac",
+    "mode": "100644",
+    "type": "blob",
+    "sha": "11b81972377915468bcf033785d313d2a7665b31",
+    "size": 945050,
+    "url": "https://api.github.com/repos/sfzinstruments/virtuosity_drums/git/blobs/11b81972377915468bcf033785d313d2a7665b31"
+  },
+  {
+    "path": "Samples/oh/ride/oh_ride_ride_vl3_rr2.flac",
+    "mode": "100644",
+    "type": "blob",
+    "sha": "7eb3b0ef766a8fe81cb6e7c9517a295731982a04",
+    "size": 803470,
+    "url": "https://api.github.com/repos/sfzinstruments/virtuosity_drums/git/blobs/7eb3b0ef766a8fe81cb6e7c9517a295731982a04"
+  },
+  {
+    "path": "Samples/oh/ride/oh_ride_ride_vl3_rr3.flac",
+    "mode": "100644",
+    "type": "blob",
+    "sha": "c44542f02348ac68fc285c31c7360b1de15232f6",
+    "size": 924938,
+    "url": "https://api.github.com/repos/sfzinstruments/virtuosity_drums/git/blobs/c44542f02348ac68fc285c31c7360b1de15232f6"
+  }
+]

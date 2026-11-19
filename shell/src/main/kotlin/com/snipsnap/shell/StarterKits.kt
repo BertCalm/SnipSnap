@@ -105,6 +105,7 @@ object StarterKits {
         }
     }
 
+    val SIDEROOM_IDS = com.snipsnap.synth.SideroomKits.Kit.entries.map { it.id }.toSet()
     val PATIO_IDS = com.snipsnap.synth.PatioPerformance.Genre.entries.map { it.id }.toSet()
     val ALL: List<Starter> = listOf(
         // displayName is "EMPTY GRID", not "BLANK" — the other
@@ -1203,14 +1204,19 @@ object StarterKits {
             "The sixteen TERRA PUNJAB pads with soft, medium and hard touch and four takes on each: a repeated hit lands a little differently every time.",
             seeded = false,
         ) { com.snipsnap.synth.TerraGenreRoundRobinKits.build(com.snipsnap.synth.TerraGenreRoundRobinKits.Kit.PUNJAB) },
-        // Opt-in beside the kept ACCORD starter, which stays as it is; appended after PUNJAB TAKES.
+    )) + com.snipsnap.synth.SideroomKits.Kit.entries.map { kit ->
+        Starter(kit.id, "SIDEROOM ${kit.title.uppercase(java.util.Locale.ROOT)}",
+            "Synthesized ${kit.title} drums: eight instruments, a snare roll and a drum fill. Three strike strengths and three alternate hits.",
+            seeded = false, tempoBpm = kit.bpm.toFloat()) { com.snipsnap.synth.SideroomKits.build(kit) }
+    } + listOf(
+        // Opt-in beside the kept ACCORD starter, which stays as it is; appended after the SIDEROOM kits.
         Starter(
             ACCORD_VOICES_ID, "ACCORD VOICES",
             "Reed, hammered strings, clock tick and tock, and bell. Each at C2, C3, C4 and C5, finite and dry.",
             seeded = false,
             key = KeySpec.parse("Cminpent"),
         ) { SynthKits.accordVoices() },
-    ))
+    )
 
     fun byId(id: String): Starter? = ALL.firstOrNull { it.id == id }
 }

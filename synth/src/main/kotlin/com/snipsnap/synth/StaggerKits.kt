@@ -47,7 +47,7 @@ import kotlin.math.tanh
  */
 object StaggerKits {
     /** Bump when a pad's audio changes; saved kits carry the version they were printed with. */
-    const val VERSION = 2
+    const val VERSION = 3
 
     enum class Kit(val id: String, val title: String, val bpm: Int) {
         CARDBOARD("stagger-cardboard", "Cardboard", 89),
@@ -186,20 +186,34 @@ object StaggerKits {
 
     /**
      * The kit's print, in the order the records were made: sampled into a converter (CRUNCH, 12 bits at about
-     * 26 kHz, dark), bounced to tape (TAPE), the record's surface under the phrases only (VINYL). A foley pad was
-     * already converted by its own print and skips CRUNCH, so its grain is not doubled at a second rate.
+     * 26 kHz, dark), pressed at the mix (COMPRESSOR: the body pressed down, the peak match bringing the tail and
+     * the room back up; round 2b, "maybe we need a bit of compression", the owner, 2026-11-19), bounced to tape
+     * (TAPE), the record's surface under the phrases only (VINYL). A foley pad was already converted by its own
+     * print and skips CRUNCH, so its grain is not doubled at a second rate; it is pressed like every pad.
      */
-    class Print(val name: String, val crunch: Map<String, Float>, val tape: Map<String, Float>, val grooveVinyl: Map<String, Float>?) {
+    class Print(val name: String, val crunch: Map<String, Float>, val tape: Map<String, Float>, val grooveVinyl: Map<String, Float>?,
+                val compressor: Map<String, Float>? = null) {
         fun apply(x: FloatArray, phrase: Boolean, converted: Boolean): FloatArray {
             val peak = x.maxOfOrNull { abs(it) } ?: 0f
             val k = if (peak > 1e-9f) HEADROOM / peak else 1f
             var s = Snip(FloatArray(x.size) { x[it] * k }, 1, Dsp.RATE)
             if (!converted) s = Crunch.process(s, crunch)
+            if (compressor != null) s = Compressor.process(s, compressor)
             s = Tape.process(s, tape)
             if (phrase && grooveVinyl != null) s = Vinyl.process(s, grooveVinyl)
             return s.samples
         }
     }
+
+    /**
+     * "A bit of compression" (round 2b). Measured on CARDBOARD's kick and snare before choosing: the sustain
+     * compressor lets the hit through at a slow ATTACK and presses the body under it, and the peak match then
+     * lifts everything, so a slow attack *raised* the snare's crest from 10.0 to 11.8 dB and the kick's from 3.6 to
+     * 8.8. A fast attack (ATTACK .25, about 1 ms) catches the hit too: the snare's crest falls and its tail
+     * (300 to 500 ms against its first 50 ms) comes up 6 to 16 dB with the amount, the kick's tail comes up and
+     * its crest barely moves (a muffled kick is already dense). AMOUNT .40 and RECOVER .45 are "a bit". Shape.
+     */
+    val PRESS = mapOf("AMOUNT" to .40f, "ATTACK" to .25f, "RECOVER" to .45f)
 
     /**
      * CARDBOARD's print: 12 bits at 26 kHz (RATE .37 lands CRUNCH's hold at 26.0 kHz on its exponential law), the
@@ -208,22 +222,27 @@ object StaggerKits {
      * references show (eight put 95 percent of their energy under 309 to 635 Hz) is the kick's weight, not a
      * missing top: the groove's ceiling measured 360 Hz with either TONE.
      */
+
     val BOX = Print("box",
         mapOf("BITS" to .45f, "RATE" to .37f, "TONE" to .72f, "GRIT" to .05f),
         mapOf("WOBBLE" to .06f, "DRIVE" to .15f, "AGE" to .55f),
-        mapOf("CRACKLE" to .15f, "RUMBLE" to .40f, "HISS" to .20f))
+        mapOf("CRACKLE" to .15f, "RUMBLE" to .40f, "HISS" to .20f),
+        compressor = PRESS)
+
 
     /** MATINEE's print: the same converter, a cleaner tape (the foley carries its own grain), the record under the phrases. */
     val REEL = Print("reel",
         mapOf("BITS" to .45f, "RATE" to .37f, "TONE" to .78f, "GRIT" to .05f),
         mapOf("WOBBLE" to .05f, "DRIVE" to .12f, "AGE" to .45f),
-        mapOf("CRACKLE" to .20f, "RUMBLE" to .35f, "HISS" to .25f))
+        mapOf("CRACKLE" to .20f, "RUMBLE" to .35f, "HISS" to .25f),
+        compressor = PRESS)
 
     /** STUMBLE's print: the tape driven and worn, more record under the groove: the loosest of the three. */
     val WORN = Print("worn",
         mapOf("BITS" to .50f, "RATE" to .40f, "TONE" to .65f, "GRIT" to .08f),
         mapOf("WOBBLE" to .10f, "DRIVE" to .30f, "AGE" to .80f),
-        mapOf("CRACKLE" to .25f, "RUMBLE" to .55f, "HISS" to .25f))
+        mapOf("CRACKLE" to .25f, "RUMBLE" to .55f, "HISS" to .25f),
+        compressor = PRESS)
 
     fun printOf(kit: Kit): Print = when (kit) { Kit.CARDBOARD -> BOX; Kit.MATINEE -> REEL; Kit.STUMBLE -> WORN }
 
@@ -573,7 +592,13 @@ object StaggerKits {
     internal val lowGlass: Strike = glassAt(-9)
     internal val lowZap: Strike = foley(KitStrikes.thump(ThumpVoice.SPARK, mapOf("TUNE" to .40f, "DECAY" to .35f, "COLOR" to .70f)) { v -> mapOf("METAL" to .1f + .3f * v) }, -7)
     /** A tuned bar with its buzz up, seven down: an orchestral stab's bite. */
-    internal val stab: Strike = foley(KitStrikes.terra(TerraVoice.TUNED_BAR, mapOf("TUNE" to .30f, "DECAY" to .45f, "FORCE" to .80f, "POS" to .30f, "BUZZ" to .60f)), -7)
+    internal val stab: Strike = foley(terraStruck(TerraVoice.TUNED_BAR, "TUNE" to .30f, "DECAY" to .45f, "FORCE" to .80f, "POS" to .30f, "BUZZ" to .60f), -7)
+
+    /** A TERRA drum whose later takes also land a little harder or softer and ring a little longer or shorter (the stab's soft takes measured 0.0047 apart on the re-seeded strike alone). */
+    private fun terraStruck(voice: TerraVoice, vararg m: Pair<String, Float>): Strike = { v, t, _ ->
+        val base = mapOf(*m)
+        Terra.render(voice, if (t == 0) base else KitStrikes.varied(base, listOf("FORCE", "DECAY", "POS"), t, KitStrikes.SKIN_TAKE_STEP), v, t).samples
+    }
 
     private val matinee: List<Part> = listOf(
         Part("Stage Kick", DrumClass.KICK, strike = stageKick),

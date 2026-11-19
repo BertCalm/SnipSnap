@@ -1,4 +1,4 @@
-> STAGGER (round 2 built 2026-11-19; round 1 was "too much like drum machine sounds", round 1b "New sounds are better"):
+> STAGGER (round 2b built 2026-11-19, "a bit of compression" in every print; round 1 was "too much like drum machine sounds", round 1b "New sounds are better"):
 > three kits, CARDBOARD, MATINEE and STUMBLE, on the SKINS shelf, after the owner's muffled-kick, drunk-clock, foley-fill
 > producer profile, in the CYPHER shape, their drums EMBER's, proven through save, playback and MPC 3 export in software; a MUFFLE strike law, the `Cypher.staggered` clock, a kit-side
 > converter-then-pitch FOLEY print, a GLASS source and a PUNCH strike. Not on the shelf. See [STAGGER](STAGGER.md).

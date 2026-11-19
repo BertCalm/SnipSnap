@@ -15,7 +15,6 @@ import com.snipsnap.synth.Accord
 import com.snipsnap.synth.AccordKits
 import com.snipsnap.synth.AccordPatch
 import com.snipsnap.synth.PadRecipe
-import com.snipsnap.synth.TerraGenreRoundRobinKits
 import java.io.File
 import kotlin.io.path.createTempDirectory
 import kotlin.math.abs
@@ -41,10 +40,10 @@ class AccordVoicesStarterTest {
         val group = StarterShelf.GROUPS.single { id in it.ids }
         assertEquals(1, StarterShelf.GROUPS.sumOf { g -> g.ids.count { it == id } })
         assertEquals(group.ids.indexOf("accord") + 1, group.ids.indexOf(id))
-        // Stored starter order only grows at the end: ACCORD VOICES was appended after PUNJAB TAKES.
+        // Stored starter order only grows at the end: ACCORD VOICES was appended after the SIDEROOM kits.
         // Later starters are appended after it, so pin its place rather than demand it stays last.
         val ids = StarterKits.ALL.map { it.id }
-        assertEquals(TerraGenreRoundRobinKits.Kit.PUNJAB.id, ids[ids.indexOf(id) - 1], "the stored starter order only grows at the end")
+        assertEquals(com.snipsnap.synth.SideroomKits.Kit.entries.last().id, ids[ids.indexOf(id) - 1], "the stored starter order only grows at the end")
         // The kept ACCORD starter stays where it was and plays only its three voices.
         assertEquals(ids.indexOf("obbligato") + 1, ids.indexOf("accord"))
         assertTrue(AccordKits.patches().none { it.voice in AccordKits.NEW_VOICES })
