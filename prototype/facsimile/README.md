@@ -193,6 +193,33 @@ some of the other drums, and a replica lane carries none. Not yet shown.
   groove's band distance 7.10 to 7.03 dB, its tonal balance 2.97 to 2.00 dB; the kick is one
   fall from 165 to 64 Hz in 8 ms. KNOCK A01 to A04 are now the kick, the low knock, the kick
   struck softly, and the sub drop.
+- Round 0g (2026-11-19), only the hits the loop shows, the knocker groove only so far. The owner
+  heard 0f as still fragmented, the kick itself fine. Measured against the reference, three
+  causes. First, pieces of tails were played as hits: the knocker kick's tail dips about 70 ms
+  after the click and swells back 10 dB, the same on every hit, and that swell had become a
+  "low knock" and a "sub drop" striking 110 to 170 ms after each kick, the kick cut short at
+  them; snare and hat parts fired where the loop rises 0 to 5 dB in every band; a snare layer
+  sat 57 to 85 ms off three backbeats. `drums.confirm_attacks` and kick_first now keep a hit
+  only where the loop itself jumps (15 dB under 150 Hz over 30 ms for a low drum, 7 dB in the
+  mids or highs over 12 ms for the rest; real hits jump 15 to 65 dB); a strong firing without
+  one moves to the nearest real attack within 100 ms, and one drum's firings within 50 ms are
+  one hit: 11 dropped, 1 moved, and the kick is one drum of 9 hits cut only at the next kick.
+  Second, that tail pulse was rendered as narrow noise bands, so each take swelled at its own
+  random moments, extra soft hits inside the kick. `fit.tail_modes` measures it instead as
+  damped tones (matrix pencil on the clean takes, 60 to 450 ms under 200 Hz: eight tones,
+  67 to 82 Hz with about the same decay and a few at 93 to 113 Hz, one boom whose level
+  pulses), rendered with the reference's own phases on every take (synth `mode` partials) and
+  faded where the reference kick ends (440 ms); the low glide hands over at 40 to 75 ms. The
+  kick's low-band error from 80 ms fell from about 6 to 3 dB per take. Third, the knocker
+  snare has a room layer (113-d2) that starts 30 dB under its body and builds for 75 ms; the
+  target and noise shape held every band to its first 14 ms, so it played 30 dB too quiet and
+  every snare was dry. In loops listed in `fit.SWELL_LOOPS` a band that later stands 6 dB over
+  its first 14 ms (robust mean) peaks where it really does. Measured: groove band distance 7.03
+  to 6.26 dB (raw 10.92 to 8.49), balance 2.00 to 2.04; the highs still sit 5 to 8 dB under
+  the reference. Other loops refit identically. 23 of 49 drums in the other loops have a band
+  or more that builds (mostly kick low bands peaking at 20 to 40 ms; 163-d2 by 6 dB in 13
+  bands), so the swell rule is a candidate for them too. KNOCK A02 and A04 are now the snare's
+  room layer and body on their own.
 - Round robin follows the reference's own hit-to-hit spread, clamped to 0.3 to 1.2 dB per band,
   plus fresh noise and phases. Whether that reads as one drum hit again is for the ear.
 - Engine gates: this is a prototype. Velocity and round robin are checked in rendering only;

@@ -117,6 +117,101 @@ def align_hits(drums: list[dict], mono: np.ndarray) -> int:
     return moved
 
 
+EVIDENCE_LOW_DB = 15.0   # a low hit: the loop's level under 150 Hz jumps this much (30 ms)
+EVIDENCE_HIGH_DB = 7.0   # any other hit: the loop's 150 Hz to 2 kHz or >2 kHz level, 12 ms
+EVIDENCE_SEARCH_S = (-0.010, 0.005)   # the attack may read this far before or after the event
+SNAP_S = 0.1             # a strong firing with no attack goes to a real attack this close
+SNAP_GAIN = 0.3          # ... if it is this strong; a weaker one is dropped
+SAME_HIT_S = 0.05        # one drum's firings this close are one hit (the louder one)
+RISE_HOP = 44            # samples per step of the rise curves (about 1 ms)
+
+
+def loop_rises(mono: np.ndarray) -> dict[str, np.ndarray]:
+    """How much the loop itself jumps at each millisecond, per band, in dB: the loudest of
+    what follows against the mean power of what precedes. The low band is read over 30 ms,
+    since a sub swells over 20 to 40 ms where a click takes 2; the others over 12 ms. The
+    loop wraps. Returned on a RISE_HOP grid: index a time as t * RATE / RISE_HOP (44 samples
+    is not 1 ms; read as 1 ms the index drifted 13 ms by the loop's sixth second)."""
+    blk = RISE_HOP
+    m = len(mono) // blk
+    out = {}
+    for name, sos, span in (
+            ("low", signal.butter(4, 150, "low", fs=RATE, output="sos"), 0.030),
+            ("mid", signal.butter(4, [150, 2000], "band", fs=RATE, output="sos"), 0.012),
+            ("high", signal.butter(4, 2000, "high", fs=RATE, output="sos"), 0.012)):
+        y = signal.sosfiltfilt(sos, mono)[:m * blk]
+        p = (y.reshape(m, blk) ** 2).mean(1) + 1e-12
+        if name == "low":   # 5 ms power, so the level does not ride each 70 Hz cycle
+            w = int(round(0.005 * RATE / blk))
+            p = np.convolve(np.concatenate([p[-(w - 1):], p]), np.ones(w) / w, mode="valid")
+        k = int(round(span * RATE / blk))
+        gap = int(round((0.005 if name == "low" else 0.002) * RATE / blk))
+        idx = np.arange(m)
+        after = np.max([p[(idx + j) % m] for j in range(k)], axis=0)
+        before = np.mean([p[(idx - j) % m] for j in range(gap, k)], axis=0)
+        out[name] = 10 * np.log10(after / before)
+    return out
+
+
+def attack_evidence(rises: dict, t: float, low: bool) -> bool:
+    """Whether the loop shows an attack at t (seconds): for a low drum, a 15 dB jump under
+    150 Hz; for any other, a 7 dB jump in the mids or highs."""
+    m = len(rises["low"])
+    a, b = (int(round((t + s) * RATE / RISE_HOP)) for s in EVIDENCE_SEARCH_S)
+    idx = np.arange(a, b + 1) % m
+    if low:
+        return bool(rises["low"][idx].max() >= EVIDENCE_LOW_DB)
+    return bool(max(rises["mid"][idx].max(), rises["high"][idx].max()) >= EVIDENCE_HIGH_DB)
+
+
+def confirm_attacks(drums: list[dict], rises: dict) -> tuple[int, int]:
+    """Keep only the hits the loop itself shows. NMFD fires a part wherever its shape explains
+    some energy, including inside another drum's tail and a few tens of ms off the real hit:
+    in the knocker groove a snare layer sat 57 to 85 ms from three backbeats (heard as flams),
+    and parts fired on tails where the loop rises 0 to 5 dB in every band. Played back each is
+    a fresh strike, heard as a fragmented groove (2026-11-19). Real hits jump 12 to 65 dB.
+
+    For the drums that are not low (low ones are checked in kick_first): a firing the loop
+    shows an attack at stays; a strong one (gain >= SNAP_GAIN) without one moves to the
+    nearest real attack within SNAP_S where the drum has no hit yet (the misplaced layer);
+    the rest are dropped. A drum's own firings within SAME_HIT_S are then one hit, the
+    louder (a snare layer fired twice 13 and 26 ms apart). Returns (moved, dropped)."""
+    m = len(rises["low"])
+    up = np.maximum(rises["mid"], rises["high"])
+    pk, _ = signal.find_peaks(np.concatenate([up, up[:1]]), height=EVIDENCE_HIGH_DB)
+    attacks = pk[pk < m] * RISE_HOP / RATE
+    moved = dropped = 0
+    for d in drums:
+        if d["features"]["low_share"] > LOW_SHARE:
+            continue
+        keep = []
+        for e in d["events"]:
+            if attack_evidence(rises, e["t"], low=False):
+                keep.append(e)
+                continue
+            if e["gain"] >= SNAP_GAIN:
+                taken = [k["t"] for k in d["events"]]
+                cand = [a for a in attacks if abs(a - e["t"]) <= SNAP_S
+                        and all(abs(a - k) > ALIGN_WINDOW_S for k in taken)]
+                if cand:
+                    e["t"] = round(float(min(cand, key=lambda a: abs(a - e["t"]))), 5)
+                    keep.append(e)
+                    moved += 1
+                    continue
+            dropped += 1
+        keep = sorted(keep, key=lambda e: e["t"])
+        one = []
+        for e in keep:
+            if one and e["t"] - one[-1]["t"] <= SAME_HIT_S:
+                dropped += 1
+                if e["gain"] > one[-1]["gain"]:
+                    one[-1] = e
+                continue
+            one.append(e)
+        d["events"] = one
+    return moved, dropped
+
+
 def drop_refires(times, gains, y, n):
     """NMFD explains a drum's tail by firing its template again 40 to 90 ms after the hit.
     Played back, each firing is a fresh strike, so a re-fire sounds like slapback echo (heard
@@ -300,7 +395,7 @@ def hit_glide(y: np.ndarray, t: int, stop: int, n: int):
     return glidefit.fit(seg, RATE, 75.0, span, 1500.0)
 
 
-def kick_first(key, drums, work, n):
+def kick_first(key, drums, work, n, rises):
     """Rebuild a loop's low drums whole. NMFD has a few fixed shapes per loop, each one pitch
     and one decay, so a kick that varies from hit to hit is spread over several shapes, each
     hit a different blend of them: in the knocker groove four parts that fire together on only
@@ -311,7 +406,8 @@ def kick_first(key, drums, work, n):
     Here every low part's audio is summed into one low track; the parts' hits (already timed
     from the loop by align_hits) are merged into one hit wherever they fall within
     ALIGN_WINDOW_S, and a hit stays only if the low track jumps at it; each hit's loudness is
-    read off the low track; each hit's pitch glide is fitted. The loud hits define the kick
+    read off the low track (confirmed against the loop's own low band, see attack_evidence);
+    each hit's pitch glide is fitted. The loud hits define the kick
     (their sweep and settle); a quieter hit with the same shape is the kick played softer; the
     remaining low hits (a following bass knock, a sub drop) group by where they settle. Each
     group becomes one drum, cut and saved like any other, k0 being the kick. Returns the new
@@ -333,9 +429,22 @@ def kick_first(key, drums, work, n):
     gains = gains / gains.max()
     n_fired = len(times)
     times, gains = drop_refires(times, gains, y, n)
-    keep = [i for i, t in enumerate(times) if attack_rise_db(env, t, n) >= REFIRE_RISE_DB]
-    times = [times[i] for i in keep]
-    gains = np.asarray(gains)[keep]
+    # a low hit is real only where the loop itself jumps under 150 Hz: the knocker kick's
+    # tail dips about 70 ms after the click and swells back 10 dB (it beats, 73 Hz against
+    # 108), which the separated low track read as a new hit; cutting the kick there and
+    # striking again played every kick as two (2026-11-19)
+    keep = [i for i, t in enumerate(times) if attack_evidence(rises, t / RATE, low=True)]
+    # two low hits within SAME_HIT_S are one, the louder: the 30 ms window lets a firing just
+    # ahead of a kick borrow the kick's jump (5.019 against the kick at 5.053)
+    one = []
+    for i in keep:
+        if one and times[i] - times[one[-1]] <= int(SAME_HIT_S * RATE):
+            if gains[i] > gains[one[-1]]:
+                one[-1] = i
+            continue
+        one.append(i)
+    times = [times[i] for i in one]
+    gains = np.asarray(gains)[one]
     gaps = [((times[(i + 1) % len(times)] - t) % n) or n for i, t in enumerate(times)]
     gl = [hit_glide(y, t, g, n) for t, g in zip(times, gaps)]
     f1 = np.array([g["f1"] if g else np.nan for g in gl])
@@ -381,6 +490,16 @@ def kick_first(key, drums, work, n):
     return rest + new
 
 
+def rebuild(key, d, work, n):
+    """Cut a drum again from its own audio at its (confirmed) event times."""
+    y = sum(sf.read(work / f"{key}_c{c}.wav")[0] for c in d["components"])
+    template = np.load(work / "hits" / f"{d['id']}_template.npy")
+    times = [int(round(e["t"] * RATE)) for e in d["events"]]
+    gains = np.array([e["gain"] for e in d["events"]])
+    return build_drum(d["id"], d["components"], y, times, gains / gains.max(),
+                      d["hits"] + d["refires_dropped"], template, n, work)
+
+
 def main(ref_dir: Path, work: Path) -> None:
     inv = {}
     (work / "hits").mkdir(exist_ok=True)
@@ -413,10 +532,19 @@ def main(ref_dir: Path, work: Path) -> None:
                                     work))
         mono = sf.read(path, always_2d=True)[0].mean(axis=1)
         moved = align_hits(drums, mono)
+        confirmed = None
         if key in KICK_FIRST:
-            drums = kick_first(key, drums, work, n)
+            rises = loop_rises(mono)
+            confirmed = confirm_attacks(drums, rises)
+            # recut the takes of the drums whose hits moved or went: a phantom hit had cut
+            # the drum's previous strong hit short
+            drums = [rebuild(key, d, work, n) if d["features"]["low_share"] <= LOW_SHARE
+                     else d for d in drums]
+            drums = kick_first(key, drums, work, n, rises)
         inv[key] = dict(name=name, bpm=bpm_of(name), seconds=round(n / RATE, 5), drums=drums,
                         aligned_firings=moved)
+        if confirmed:
+            inv[key]["confirmed_attacks"] = dict(moved=confirmed[0], dropped=confirmed[1])
         print(f"== {key} {name}  (firings moved onto the loop's own onsets: {moved})")
         for d in drums:
             print(f"  {d['id']:8s} {d['role']:10s} comps={d['components']} hits={d['hits']:3d} "
