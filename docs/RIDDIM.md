@@ -1,4 +1,4 @@
-# RIDDIM: dancehall drum kits (round 0, 2026-11-18)
+# RIDDIM: dancehall drum kits (complete, 2026-11-19)
 
 `RIDDIM` is a working name. The owner asked for a dancehall-inspired collection of drum kits, built as synth
 versions of 18 reference loops they shared, with drum and percussion sounds mixed on the same kits. Round 0 is a
@@ -275,15 +275,130 @@ The owner asked for both readings side by side, in place of Baile Funk's A11, A1
   be counted (RATCHET's 300 a second cannot). Each click rings the tongue (1.6, 2.4 and 3.3 kHz) and its box (420 Hz).
   Measured: 9 to 12 clicks in a hit, onset centroid 1.0 kHz soft to 1.65 kHz hard.
 
-Every A and B pad darkens at each softer zone and has four different takes. The kit keeps RATCHET until the owner
-chooses; the page plays all three. Not yet heard.
+Every A and B pad darkens at each softer zone and has four different takes.
 
+**Heard (2026-11-19).** The owner chose B: "Let's do the real ratchet". Baile Funk's A11, A12 and A16 now play
+RATCHET_WOOD. With the wood mallet and the ratchet settled, the owner named nothing else to change ("The only other
+thing is ratchet"), so round 3 is approved: Baile Funk, Sabar Swing, Wood and Bronze, TING and the three A16s.
+
+
+## Round 4: round 3 in the app (2026-11-19)
+
+The owner approved round 3 with the hardest wood mallet and a real ratchet. This round ports it to Kotlin and puts its
+three kits on the shelf.
+
+**The port (`Riddim.kt`).**
+- New voices: TING; RATCHET, the prototype's RATCHET_WOOD; WOOD's BEATER with its knock.
+- New rolls: RATCHET_RISER (eighths to 32nds, rising five semitones); NDER_ROLL, CALABASH's nder in sixteenths then
+  32nds; and WOOD_TREMOLO, 32nds on one wood all bar.
+- A roll strikes each stroke as its own landing. For CALABASH's nder, the new internal `Calabash.stroke` does this:
+  `render` clamps a take to 0 to 3, which would repeat four landings and make every take of the roll the same
+  performance. For landings 0 to 3, `stroke` is `render`.
+- Against the Python renders (`compare_kotlin.py`, takes averaged as third-octave power spectra), every new voice
+  and roll is within 1.1 dB band RMS over the first 300 ms. The worst single band is 2.5 dB. Round 2's worst voice
+  was 2.1 dB.
+
+| Kotlin voice | First 300 ms, RMS / worst band | −20 dB, Python / Kotlin |
+|---|---|---|
+| TING | 0.5 / 1.3 dB | 46–54 / 52–60 ms |
+| RATCHET | 0.6–0.8 / 2.3 dB | 12–14 / 12–14 ms per click |
+| WOOD at BEATER 1.0 | 0.8–1.0 / 2.1 dB | 11 / 16 ms, the knock's first fall |
+| RATCHET_RISER, NDER_ROLL, WOOD_TREMOLO | 0.1–0.9 dB | within 2 ms |
+
+**A latent bug, fixed.**
+- `Riddim` built its roll set, and its roll defaults, when it started. But `RiddimVoice`'s entries ask
+  `Riddim.rollSeconds` while they are being made.
+- So touching `RiddimVoice` first left both reading the voices as unset, and `isRoll` said no to every roll.
+  `generateRiddimAudition` crashed on RIM_ROLL that way.
+- `isRoll` is now a `when`, and the defaults are lazy. `RiddimTest` checks that every voice with a tempo is a roll.
+
+**Tests (`RiddimTest`).**
+- The ting at 3234 Hz.
+- A ratchet whose clicks can be counted: 6 to 24 clicks, 15 to 60 ms apart.
+- WOOD's onset: below 600 Hz at BEATER 0.5, above 1.2 kHz at 1.0, and 0.5 is the default.
+- Every one-shot darker when softer, including WOOD at the hardest mallet.
+- The tremolo brightening toward its end. It keeps one density all bar, so it does not grow louder: the other rolls
+  get denser.
+- The ratchet now fills its full 0.8 s at any DECAY. Its buffer used to end with the turn, so its length changed
+  with DECAY. The prototype matches.
+- `Fft.magnitudeSpectrum` windows across its whole frame, so the onset test uses its own short transform, as the
+  prototype's measure does.
+
+**The kits (`RiddimKits.kt`, kit version 2).**
+- Baile Funk (130 BPM), Sabar Swing (103) and Wood and Bronze (96) join the shelf after Boom Riddim, pad for pad
+  from `kits_wide.py`.
+- Clave Dancehall's woods play BEATER 1.0, the owner's choice. Its pads from before carry kit version 1.
+- CALABASH's talking call is levelled as a phrase and filed as a riser, as CALABASH's own kits do. CALABASH pads now
+  take settings, for the tumba slap and the mbeng hand slap.
+- Of the 15 kit pairs, only round 1's pairs and Dembow with Sabar Swing (CALABASH's tama) share a slot.
+- FRESH TAPE holds 214 starters.
+
+**Velocity and round robin, in software, for every pad of all six kits.**
+- `RiddimKitsTest` and `RiddimKitTest` pass, and `:shell:generateRiddimKits` verified all 96 pads: saved PCM,
+  playback through the pad resolver, and the MPC 3 track read back, 192 slices a kit.
+- Cut from that export (`shelf_grooves.py`), the closest two takes on any pad are 35.3 dB apart (a copy is above 40).
+- Every pad darkens at each softer zone, except reused CALABASH voices that keep their approved recording fit:
+  shaker, claves, cowbell, high bongo, agogo and shekere.
+- Build times on one machine:
+
+  | Kit | Build time |
+  |---|---|
+  | Clave Dancehall | 4.0 s |
+  | Dembow | 5.5 s |
+  | Boom Riddim | 10.0 s |
+  | Baile Funk | 13.7 s |
+  | Sabar Swing | 51.8 s |
+  | Wood and Bronze | 14.8 s |
+
+  Sabar Swing is slow because its talking call and nder roll are many CALABASH strokes. A kit is built once, when it
+  is made.
+
+The six kits as the app exports them: <https://claude.ai/artifact/LAmftedd8ziuoPE9ZPQdhQ>. Heard: "Sounds great"
+(2026-11-19).
+
+## Accepted (2026-11-19)
+
+The owner heard round 4 and played the six kits on the phone and the MPC: "Sounds great. Phone/MPC pass."
+(2026-11-19). Every applicable gate passes; see [the gates](ENGINE_ACCEPTANCE_GATES.md). `RiddimKits.VERSION` 2 is the
+accepted baseline.
+
+## Round 5: the roster and the picker (2026-11-19)
+
+After accepting the kits the owner chose the roster and the picker, as CALABASH's rounds 3 and 4 and EMBER's round 4
+did.
+
+- **The roster.** `RiddimPresets` files the six kits' RIDDIM pads as RIDDIM's factory bank: each voice at the pad's
+  own macros (completed by `Riddim.settled`), struck full, at take 0 (the kit grid's first take). A preset is byte for
+  byte the engine render that the kit's hard zone scales by its level law. Nothing is reasoned from the knobs.
+  - **Names:** "<tag> <pad>" in caps, the tag a short name for the kit: CLAVE, DEMBOW, BOOM, BAILE, SABAR, WOOD. A full
+    kit title would pass a preset list's 24 letters.
+  - **Coverage:** sixty-nine of the kits' 96 pads strike a RIDDIM voice. The other 27 strike CALABASH's voices and
+    stay CALABASH's sounds. Four RIDDIM pads repeat another kit's pad at the same settings and are filed once, under
+    the first kit: Dembow's Punch Kick (Clave's Kick), Boom Riddim's Open Hat and Clap (Clave's), and Wood and
+    Bronze's Wood A3 (Clave's, since both play the hardest mallet). That leaves sixty-five presets, and every one of
+    the 19 RIDDIM voices has at least one.
+  - **Promotion:** a saved RIDDIM strike promotes through `RiddimPatch.fromJsonText`, so its velocity, take and model
+    survive (`UserPresets`, `UserPresetsTest`), into `RiddimPresets`' `promoted` list beside the accepted kits.
+  - **Proof:** `RiddimPresetsTest` holds CALABASH's preset contracts. Every RIDDIM pad of every kit is a preset, each
+    the engine's render of that pad byte for byte, and the kit's pad has the same shape (correlation over 0.999999 on
+    Clave's kick, Baile Funk's ting and Wood and Bronze's tremolo). Each preset is finite, at the engine's 0.89, centred
+    and faded. A JSON round trip keeps velocity, take and model, and a softer strike is another sound. Names are
+    unique, in caps, named after their kit, within 24 letters and no maker's name. Every two presets of a voice are
+    different recipes and sounds. RIDDIM leaves `PatchTypes.ROSTERLESS`.
+- **The picker.** RIDDIM sits on SYNTH's engine picker after KINDRED and before CAIRN (which closes the engine ring).
+  It is wired as EMBER's was: every arm of the `Engine` enum, the saved-draft restore, a frozen draft before a macro
+  bag and the live-edit list, and the native-factory path, because a RIDDIM preset carries its strike velocity, take
+  and model outside the macro map. The voice chips are their names with spaces; the hats read HAT CL and HAT OP.
+  `EngineCatalog` files RIDDIM under DRUMS, and both READMEs count 99 picker engines.
+- **On-device test.** `NewEngineSynthScreenTest` opens the wood with its three controls, loads CLAVE WOOD F#3 with
+  the pad's hardest mallet, keeps a DECAY edit through a rebuild, and checks that the saved draft keeps take 0, full
+  velocity and model 1. This session has no Android SDK: CI's `android-build` compiles the entry and `emulator-tests`
+  runs the test. Not yet seen on a phone.
 
 ## Open
 
-- Phone and MPC playback of the three kits.
-- Round 3's three wider kits: the owner's listen, then the Kotlin port of TING, RATCHET and the three A16s, and the shelf.
-- A preset roster and the picker.
+- The picker and its presets on the phone: open RIDDIM in SYNTH, load a preset, play it. Not a gate; the kits'
+  gates are closed.
 
 ## Ledger
 
@@ -292,10 +407,12 @@ chooses; the page plays all three. Not yet heard.
 - **Measured:** the tables above, Python harness.
 - **Proposed:** every constant in `riddim_proto.py` is a shape value until heard.
 - **Heard:** round 0's palette, "pretty good so far" (2026-11-18); round 1's three kits, "Approved" (2026-11-18).
-  The Kotlin kits (round 2) confirmed to match, "Yes, they match" (2026-11-18). No phone or MPC has played them.
+  The Kotlin kits (round 2) confirmed to match, "Yes, they match" (2026-11-18).
   Round 3 heard: "wood might need more of an attack" (2026-11-18); the hardest mallet chosen for Wood and Bronze
   (2026-11-19); Clave Dancehall's woods moved to the hardest mallet ("I do like b", 2026-11-19); RATCHET "not sure it
-  sounds as it should", so A (BLIP) and B (RATCHET_WOOD) are on the page, not yet heard.
+  sounds as it should"; of A (BLIP) and B (RATCHET_WOOD) the owner chose B (2026-11-19). Round 3 approved.
+  Round 4, the six kits as the app exports them, heard and played on the phone and the MPC: "Sounds great.
+  Phone/MPC pass." (2026-11-19).
 
 ## Why it is built this way
 
