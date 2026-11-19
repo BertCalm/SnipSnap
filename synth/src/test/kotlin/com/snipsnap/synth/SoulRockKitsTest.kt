@@ -37,8 +37,12 @@ class SoulRockKitsTest {
                     assertEquals(3,row.size)
                     val rms = row.map { rms(it.samples) }
                     // The accepted coupled snare retains natural strike-level variation.
-                    // Its exact PCM is pinned above; every other pad remains take-levelled.
-                    val spreadLimit = if (choice == SoulRockKits.Choice.ROADHOUSE && i == 1) 4.0 else .01
+                    // The crash also retains small natural differences; original pads remain take-levelled.
+                    val spreadLimit = when {
+                        choice == SoulRockKits.Choice.ROADHOUSE && i == 1 -> 4.0
+                        choice == SoulRockKits.Choice.ROADHOUSE && i == 11 -> .5
+                        else -> .01
+                    }
                     assertTrue(20*log10(rms.max()/rms.min()) < spreadLimit, "$choice pad $i take levels")
                     for (t in 1..2) assertTrue(residual(row[0].samples,row[t].samples) > .005, "$choice pad $i take $t")
                     rms.average()
@@ -71,6 +75,29 @@ class SoulRockKitsTest {
         val snare = SoulRockKits.build(SoulRockKits.Choice.ROADHOUSE)[1]
         assertEquals("coupled-snare-snap-rattle", snare.source["sourceModel"])
         assertTrue(snare.source.keys.none { it.startsWith("synthesis.") })
+    }
+    @Test fun `accepted crash bytes label and source identity are pinned`() {
+        val expected = mapOf(
+            "roadhouse-rock/12-0-0.wav.gz" to "2b5c51519ac66f73f3b5be11b035b74ec68935536b9ff0bc54857e02c1a269e6",
+            "roadhouse-rock/12-0-1.wav.gz" to "42f569082f67f4000985de27f0d0310024c1ab562a08efa099dae15659c4173d",
+            "roadhouse-rock/12-0-2.wav.gz" to "8093163fe94adbb1e99eaea0979850aa92bdec5e18858e24f022903359467e53",
+            "roadhouse-rock/12-1-0.wav.gz" to "3fa55bb6aecbc0b5001100c3b536cba42dccbac6a76a7f9bd35ddb94301d15b3",
+            "roadhouse-rock/12-1-1.wav.gz" to "04d37710545309731c013a6715fa07536bab0ae6815617e689f61fd55440707b",
+            "roadhouse-rock/12-1-2.wav.gz" to "1f12861a8574f7b02f6a5462be7470c53d0b4431810d8b25a7c21bc5530be399",
+            "roadhouse-rock/12-2-0.wav.gz" to "9715f513724eb8fce4b184f188351d71a4a160fa6943344785200754311935de",
+            "roadhouse-rock/12-2-1.wav.gz" to "26e294be07a13938216f63565fec60e5649a5293f0e9a0e8621c82073c289800",
+            "roadhouse-rock/12-2-2.wav.gz" to "99d42871425fb6e1e0c3f54533aa161bb3ef62aa2b8d9535b2808781f80befa5"
+        )
+        for ((name, hash) in expected) {
+            val actual = MessageDigest.getInstance("SHA-256").digest(SoulRockKits.resource(name)).joinToString("") { "%02x".format(it) }
+            assertEquals(hash, actual)
+        }
+        val crash = SoulRockKits.build(SoulRockKits.Choice.ROADHOUSE)[11]
+        assertEquals("Crash", crash.displayName)
+        assertEquals("CRASH", crash.source["voice"])
+        assertEquals("statistical-modal-rock-crash-bloom", crash.source["sourceModel"])
+        assertTrue(crash.source.keys.none { it.startsWith("synthesis.") })
+        assertEquals(198450, crash.snip.frameCount)
     }
     private fun rms(x: FloatArray) = sqrt(x.sumOf { it.toDouble()*it }/x.size)
     private fun residual(a: FloatArray,b: FloatArray): Double {

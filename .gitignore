@@ -854,8 +854,13 @@ testkit/lull-breakcore/
 testkit/strobe-breakcore/
 testkit/cartridge-breakcore/
 testkit/barricade-breakcore/
+/testkit/soul-rock-v3/
+
 testkit/stagger-round1/
 testkit/stagger-round1b/
 /testkit/stagger-kits/
 
 /testkit/sunroom-native/
+
+# Reproducible SIDEROOM native audition and exported kits.
+/testkit/sideroom-native/

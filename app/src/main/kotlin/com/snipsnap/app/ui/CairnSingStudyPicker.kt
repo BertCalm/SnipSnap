@@ -43,7 +43,7 @@ internal fun CairnSingStudyPicker(enabled: Boolean, onMake: (String) -> Unit) {
             .verticalScroll(rememberScrollState()).padding(14.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)) {
             TapeText("CAIRN SING", TapeType.markerBig, scheme.ink.tape)
-            TapeText("ONE VOICE, FIVE SETTINGS. CHOOSE AN INSTRUMENT FOR THE LIBRARY.",
+            TapeText("One voice, five settings. Choose an instrument for the LIBRARY.",
                 TapeType.pixelSmall, scheme.ink2.tape, maxLines = 3)
             TapeText("A continuous held tone with a short fade when you lift a key. The first one takes a moment to prepare.",
                 TapeType.pixelSmall, scheme.ink2.tape, maxLines = 3)

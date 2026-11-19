@@ -12,19 +12,23 @@ This approval covers the published Python sound, not phone or MPC hardware.
 
 Each kit has 16 pads, three velocity zones and three distinct takes: 432 strikes.
 Every kit includes a finite press roll and cymbal swell. Closed, open and pedal
-hats share mute group 1. Sizzle remains the approved sizzle voice; a true crash
-is a future addition, not an unannounced substitution.
+hats share mute group 1. Roadhouse version 3 uses the separately accepted coupled
+snare and broader crash. Soul Pocket and Open Room retain their original snares
+and sizzle cymbals. Revision approval and validation are recorded below.
 
 ## What ships
 
 `SoulRockKits` loads losslessly compressed mono 44.1 kHz PCM16 factory audio.
-The audio was synthesized with the existing EMBER Python membrane, wire and
-cymbal models. No source recording excerpts play inside the instruments.
+The original audio uses EMBER Python membrane, wire and cymbal models. Roadhouse
+adds the accepted coupled-head/contact-wire snare and statistical modal crash.
+No source recording excerpts play inside the instruments.
 These are **frozen synthesized factory samples**, not a new editable Kotlin
 synth engine. The optional native recipe field stays empty; source metadata
-retains the original voice, macro settings, kit, slot, bank version and audition.
+retains voice/model identity, applicable macro settings, kit, slot, bank version
+and audition. Revised voices do not claim the original EMBER macro settings.
 Each build owns its decoded arrays and does not resynthesize on a pad trigger.
-Compressed assets add approximately 32.7 MiB before APK packaging.
+The original v1 assets add approximately 32.7 MiB before APK packaging; the
+immutable snare and crash revision assets are stored alongside them.
 
 The manifest records a SHA-256 and frame count for every approved WAV. Loading
 and saving must preserve those samples; no further normalization, EQ or noise
@@ -44,7 +48,7 @@ reference reconstruction is claimed. EMBER's CC0 model-source credits are in
 
 - **Sound:** owner-approved Python audition, 2026-11-16. The shipped factory
   samples are pinned to those approved WAV hashes.
-- **Python measurements:** 432 distinct files; estimated 4x true peak below
+- **Original v1 Python measurements:** 432 distinct files; estimated 4x true peak below
   0.93, maximum absolute DC below 0.000023, final 10 ms RMS below 0.000675.
   Take RMS spread within each zone is below 0.001 dB. These are numerical
   checks, not perceptual similarity scores or a full alias-reference proof.
@@ -118,3 +122,28 @@ focused tests). The generator verified all 48 pads / 432 strikes through saved P
 playback cycles and MPC 3 metadata/PCM read-back. All six download ZIP parts passed
 CRC and payload checks. Full repository regression/CI is tracked on the revision PR;
 these local checks do not imply Android or physical MPC acceptance.
+
+## Accepted broader rock crash, version 3
+
+On 19 November 2026 the owner accepted **Broader rock crash revision**:
+“That sounds better let's continue”. Newly built Roadhouse kits replace pad 12's
+sizzle with **Crash**, preserving the exact nine accepted strikes (4.5 seconds each).
+Its source identity is `statistical-modal-rock-crash-bloom`; obsolete sizzle macros
+are absent. The accepted coupled snare keeps its version 2 assets. All other pads,
+Soul Pocket and Open Room keep their previous audio; saved kits are not rewritten.
+
+Version routing is explicit: Roadhouse crash v3, Roadhouse snare v2, all other audio
+v1. Missing revision assets fail rather than silently substituting an old sound.
+The crash's small natural take-level differences are retained (maximum measured
+zone spread 0.379 dB). Its nine hashes are independently pinned in tests. Source and
+prototype evidence live in `prototype/soul-rock/rock-crash`. This is frozen statistical
+modal synthesis, not an editable physical cymbal engine. The audition's choke demo
+is a playback fade, not a newly shipped choke control. Physical phone/MPC acceptance
+and full alias-convergence characterization remain open.
+
+Version 3 validation: five focused tests passed (`SoulRockKitsTest` and
+`SoulRockRoundTripTest`). The generator verified all 48 pads / 432 strikes through
+saved PCM, playback cycles and MPC 3 metadata/PCM read-back. Download ZIP CRC and
+payload checks passed. Retained source reproduced all nine approved crash WAVs
+byte-for-byte on this host. Full repository regression and CI are tracked on the
+revision PR; physical hardware acceptance remains open.

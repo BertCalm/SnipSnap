@@ -1224,7 +1224,7 @@ private fun ProjectCard(
                 }
                 if (shown.missing.isNotEmpty()) {
                     TapeText(
-                        "MISSING FROM THE LIBRARY: ${shown.missing.joinToString(", ")}",
+                        "Missing from the LIBRARY: ${shown.missing.joinToString(", ")}",
                         TapeType.pixelSmall,
                         BinRedGlow,
                         Modifier.fillMaxWidth(),
