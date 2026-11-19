@@ -206,13 +206,6 @@ object StaggerKits {
     }
 
     /**
-     * CARDBOARD's print: 12 bits at 26 kHz (RATE .37 lands CRUNCH's hold at 26.0 kHz on its exponential law), the
-     * converter's TONE at about 7.9 kHz (at .45, a 4.4 kHz low-pass, the groove's hat band measured 35 dB under the
-     * mix against the references' 16 to 35), a worn tape, a light record under the groove. The darkness the
-     * references show (eight put 95 percent of their energy under 309 to 635 Hz) is the kick's weight, not a
-     * missing top: the groove's ceiling measured 360 Hz with either TONE.
-     */
-    /**
      * "A bit of compression" (round 2b). Measured on CARDBOARD's kick and snare before choosing: the sustain
      * compressor lets the hit through at a slow ATTACK and presses the body under it, and the peak match then
      * lifts everything, so a slow attack *raised* the snare's crest from 10.0 to 11.8 dB and the kick's from 3.6 to
@@ -221,6 +214,14 @@ object StaggerKits {
      * its crest barely moves (a muffled kick is already dense). AMOUNT .40 and RECOVER .45 are "a bit". Shape.
      */
     val PRESS = mapOf("AMOUNT" to .40f, "ATTACK" to .25f, "RECOVER" to .45f)
+
+    /**
+     * CARDBOARD's print: 12 bits at 26 kHz (RATE .37 lands CRUNCH's hold at 26.0 kHz on its exponential law), the
+     * converter's TONE at about 7.9 kHz (at .45, a 4.4 kHz low-pass, the groove's hat band measured 35 dB under the
+     * mix against the references' 16 to 35), a worn tape, a light record under the groove. The darkness the
+     * references show (eight put 95 percent of their energy under 309 to 635 Hz) is the kick's weight, not a
+     * missing top: the groove's ceiling measured 360 Hz with either TONE.
+     */
 
     val BOX = Print("box",
         mapOf("BITS" to .45f, "RATE" to .37f, "TONE" to .72f, "GRIT" to .05f),
