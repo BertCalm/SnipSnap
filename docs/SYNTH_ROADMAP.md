@@ -1,3 +1,7 @@
+> STAGGER (round 1 built 2026-11-19, not heard): one kit, CARDBOARD, after the owner's muffled-kick, drunk-clock,
+> foley-fill producer profile, in the CYPHER shape; a MUFFLE strike law, the `Cypher.staggered` clock, a kit-side
+> converter-then-pitch FOLEY print, a GLASS source and a PUNCH strike. Not on the shelf. See [STAGGER](STAGGER.md).
+
 > LOOSE CRATE kits (complete 2026-11-18: sound approved, phone and MPC gates passed): four beat-tape drum kits in
 > the CYPHER shape, HUMMIN, CLOTH, HAZE and RITUAL, aimed at measurements of the owner's reference loops. Every
 > groove and roll is played as one kit in one room (a drummer's kick dynamics, snare wires under every kick, ROOM,

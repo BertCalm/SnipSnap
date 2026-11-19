@@ -3984,6 +3984,16 @@ tasks.register<JavaExec>("generateRiddimAudition") {
     args(providers.gradleProperty("riddimOutput").orNull ?: "${rootDir}/testkit/riddim-audition/kotlin")
 }
 
+tasks.register<JavaExec>("generateStaggerRound1") {
+    group = "distribution"
+    description = "Render STAGGER round 1: CARDBOARD's pads, round-robin and velocity strips, the box kick at three cutoffs, GLASS at three pitches, the groove under nine clock laws."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.StaggerRound1Generator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "1g"
+    args(providers.gradleProperty("staggerOutput").orNull ?: "${rootDir}/testkit/stagger-round1")
+}
+
 tasks.register<JavaExec>("generateLooseCrateRound0") {
     group = "distribution"
     description = "Render LOOSE CRATE round 0: candidate hits, round-robin and velocity strips, the HUMMIN groove and CYPHER DUST for comparison."
