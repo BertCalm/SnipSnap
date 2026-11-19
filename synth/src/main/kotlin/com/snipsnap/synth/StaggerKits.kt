@@ -212,14 +212,15 @@ object StaggerKits {
      * references show (eight put 95 percent of their energy under 309 to 635 Hz) is the kick's weight, not a
      * missing top: the groove's ceiling measured 360 Hz with either TONE.
      */
+    /** "A bit of compression" (round 2b): the body pressed at about 2:1, the hit keeping some room above it, a medium recovery. Shape. */
+    val PRESS = mapOf("AMOUNT" to .45f, "ATTACK" to .60f, "RECOVER" to .55f)
+
     val BOX = Print("box",
         mapOf("BITS" to .45f, "RATE" to .37f, "TONE" to .72f, "GRIT" to .05f),
         mapOf("WOBBLE" to .06f, "DRIVE" to .15f, "AGE" to .55f),
         mapOf("CRACKLE" to .15f, "RUMBLE" to .40f, "HISS" to .20f),
         compressor = PRESS)
 
-    /** "A bit of compression" (round 2b): the body pressed at about 2:1, the hit keeping some room above it, a medium recovery. Shape. */
-    val PRESS = mapOf("AMOUNT" to .45f, "ATTACK" to .60f, "RECOVER" to .55f)
 
     /** MATINEE's print: the same converter, a cleaner tape (the foley carries its own grain), the record under the phrases. */
     val REEL = Print("reel",
