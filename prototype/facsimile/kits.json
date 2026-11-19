@@ -585,10 +585,10 @@
    "makeup_db": 4.45
   },
   "113": {
-   "threshold_db": -13.67,
+   "threshold_db": -18.39,
    "ratio": 4.0,
    "attack_ms": 0.5,
-   "makeup_db": 8.73
+   "makeup_db": 12.13
   },
   "127": {
    "threshold_db": -12.49,
