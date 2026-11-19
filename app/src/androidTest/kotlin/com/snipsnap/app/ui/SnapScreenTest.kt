@@ -299,9 +299,9 @@ class SnapScreenTest : ComposeScreenTest() {
         takePhoto()
         invokeClick("EIGHT COPIES CHAIN")
         waitFor("the generations", timeoutMillis = 120_000) { present("GENERATION 1") }
-        assertTrue(showing("EIGHT COPIES — TAP ONE TO HEAR IT"))
+        assertTrue(showing("Eight copies — tap one to hear it"))
         invokeClick("GENERATION 2")
-        invokeClick("SEND GENERATION TO PAD")
+        invokeClick("Send generation to pad")
         invokeClick("${PadBanks.tag(1)}, EMPTY")
         waitFor("the generation on ${PadBanks.tag(1)}", timeoutMillis = 60_000) { padOnDisk(entry, 1) != null }
         val pad = requireNotNull(padOnDisk(entry, 1))

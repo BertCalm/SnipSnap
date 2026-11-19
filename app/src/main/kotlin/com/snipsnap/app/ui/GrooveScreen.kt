@@ -1897,7 +1897,7 @@ fun GrooveScreen(
                         val nowBar = (posSteps.toInt() / barSteps) + 1
                         val nowBeat = ((posSteps.toInt() % barSteps) / 4) + 1
                         Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                            TapeText("● RECORDING — BAR $nowBar.$nowBeat", TapeType.pixel, scheme.amber.tape)
+                            TapeText("● Recording — bar $nowBar.$nowBeat", TapeType.pixel, scheme.amber.tape)
                         }
                     }
                     if (recording || countingIn) {
@@ -2477,7 +2477,7 @@ private fun FeelRow(
             // Names the reset this tap performs, not the live readout it
             // shows (a real label here would replace, not add to, the
             // TapeText below — clickable does not merge it for free).
-            Modifier.weight(1f).tapeClick(label = "RESET FEEL TO AS PLAYED", onClick = onRecentre),
+            Modifier.weight(1f).tapeClick(label = "Reset feel to as played", onClick = onRecentre),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             TapeText(
@@ -2734,7 +2734,7 @@ private fun AuditionBar(
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            TapeText("AUDITION · SWAPS EVERY BAR", TapeType.pixelSmall, scheme.ink2.tape)
+            TapeText("AUDITION · swaps every bar", TapeType.pixelSmall, scheme.ink2.tape)
             Box(
                 Modifier.width(Layout.MIN_HIT_TARGET.dp).height(Layout.MIN_HIT_TARGET.dp)
                     .tapeClick(label = "CANCEL AUDITION", enabled = !busy, onClick = onCancel),
@@ -2892,7 +2892,7 @@ private fun NeedleRoll(
         val nowBar = (posSteps.toInt() / barSteps) + 1
         val nowBeat = ((posSteps.toInt() % barSteps) / 4) + 1
         TapeText(
-            "▶ BAR $nowBar.$nowBeat",
+            "▶ Bar $nowBar.$nowBeat",
             TapeType.pixelSmall,
             scheme.amber.tape,
             Modifier.align(Alignment.TopStart).offset(x = 8.dp, y = (Layout.NEEDLE_Y + 5).dp),

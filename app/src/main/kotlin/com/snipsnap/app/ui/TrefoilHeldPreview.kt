@@ -95,8 +95,8 @@ internal fun TrefoilPerformanceControls(
             valueRange = TrefoilHeld.MIN_MOVING_WEAVE..1f,
             onValueChange = { value -> onEdit { it.copy(macros = it.macros + ("WEAVE" to value.coerceIn(TrefoilHeld.MIN_MOVING_WEAVE, 1f))) } },
         )
-        TapeText("ORDERED ORBIT · NUDGE IS FIXED AT ZERO", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
-        TapeText("STEADY HELD PREVIEW · LIFT TO RELEASE", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
+        TapeText("Ordered orbit · nudge is fixed at zero", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
+        TapeText("Steady held preview · lift to release", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
         TapeText("Send and spread make finite pads. MAKE INSTRUMENT sustains.", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 3)
     } else {
         MacroSlider("CONTACT", (patch.activeSeconds - .05f) / (patch.seconds - .15f), fill, scheme,

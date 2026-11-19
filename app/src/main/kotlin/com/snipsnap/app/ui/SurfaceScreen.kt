@@ -1389,9 +1389,9 @@ fun SurfaceScreen(
                         val ringBpm = entry?.kit?.tempoBpm
                         TapeText(
                             when {
-                                !ringOnBar -> "RING ONCE, ON THE TAP"
-                                ringBpm == null -> "RING AGAIN EVERY BAR AT THE DEFAULT TEMPO"
-                                else -> "RING AGAIN EVERY BAR AT ${ringBpm.toInt()} BPM"
+                                !ringOnBar -> "Ring once, on the tap"
+                                ringBpm == null -> "Ring again every bar at the default tempo"
+                                else -> "Ring again every bar at ${ringBpm.toInt()} BPM"
                             },
                             TapeType.pixel,
                             scheme.ink.tape,
@@ -1633,9 +1633,9 @@ fun SurfaceScreen(
                         TapeText(
                             when {
                                 recording -> "RECORDING %.1f OF %d BARS".format(java.util.Locale.ROOT, recordingBars.coerceIn(0f, gestureLength.toFloat()), gestureLength)
-                                gestureArmed -> "ARMED. TOUCH THE PAD FOR ${PrintLength.label(gestureLength)}"
+                                gestureArmed -> "Armed. Touch the pad for ${PrintLength.label(gestureLength)}"
                                 kept != null -> "GESTURE ${PrintLength.label(kept.bars)} · ${kept.points} POINTS"
-                                else -> "NO GESTURE. REC, THEN TOUCH THE PAD"
+                                else -> "No gesture. REC, then touch the pad"
                             },
                             TapeType.pixel,
                             scheme.ink.tape,

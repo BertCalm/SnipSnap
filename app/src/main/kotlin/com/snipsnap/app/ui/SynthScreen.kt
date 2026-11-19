@@ -3676,7 +3676,7 @@ fun SynthScreen(
                 }
 
                 if (prismFiniteMotion(loadedPatch as? PrismPatch)) {
-                    TapeText("FINITE NOTE · HOLD SETS LENGTH", TapeType.pixelSmall, scheme.ink2.tape)
+                    TapeText("Finite note · HOLD sets length", TapeType.pixelSmall, scheme.ink2.tape)
                 }
 
                 val origamiPatch = if (engine == Engine.ORIGAMI)
@@ -3843,7 +3843,7 @@ fun SynthScreen(
                     SynthSectionHeading(Copy.SYNTH_HEADING_PLAYING, scheme)
                 }
                 if (engine == Engine.TEMPEST) {
-                    TapeText("FINITE DRUM · 1.20 SECONDS · HOLD IS RESERVED",
+                    TapeText("Finite drum · 1.20 seconds · HOLD is reserved",
                         TapeType.pixelSmall, scheme.ink2.tape)
                 }
                 if (engine == Engine.RIVET) {
@@ -4034,7 +4034,7 @@ fun SynthScreen(
                     TapeText(
                         if (embouchureRestore.waitsForRecipe(engine, voice)) {
                             if (embouchureRestore.pending[engine to voice] == false)
-                                "SAVED SPLAY COULD NOT OPEN. CHOOSE A PRESET."
+                                "Saved splay could not open. Choose a preset."
                             else "RESTORING SAVED SPLAY…"
                         } else SplayDelivery.PLAYING_NOTE,
                         TapeType.pixelSmall, scheme.ink2.tape, maxLines = 3,
@@ -4241,17 +4241,17 @@ fun SynthScreen(
                         )
                         TapeText(
                             when (voice as RegistersVoice) {
-                                RegistersVoice.PIPE -> "COLOR: BRIGHTNESS · AIR: FLOW · EDGE: CHIFF"
-                                RegistersVoice.MUSETTE -> "COLOR: REED BODY · AIR: BELLOWS · EDGE: BUZZ"
-                                RegistersVoice.TRANSISTOR -> "COLOR: RANKS · AIR: KEY CLICK · EDGE: DRIVE"
+                                RegistersVoice.PIPE -> "COLOR: brightness · AIR: flow · EDGE: chiff"
+                                RegistersVoice.MUSETTE -> "COLOR: reed body · AIR: bellows · EDGE: buzz"
+                                RegistersVoice.TRANSISTOR -> "COLOR: ranks · AIR: key click · EDGE: drive"
                             },
                             TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2,
                         )
                         TapeText(
                             when (voice as RegistersVoice) {
-                                RegistersVoice.PIPE -> "SPREAD: ENSEMBLE · MOTION: TREMULANT"
-                                RegistersVoice.MUSETTE -> "SPREAD: BEATING · MOTION: VIBRATO + SWELL"
-                                RegistersVoice.TRANSISTOR -> "SPREAD: DETUNED RANKS · MOTION: VIBRATO"
+                                RegistersVoice.PIPE -> "SPREAD: ensemble · MOTION: tremulant"
+                                RegistersVoice.MUSETTE -> "SPREAD: beating · MOTION: vibrato + swell"
+                                RegistersVoice.TRANSISTOR -> "SPREAD: detuned ranks · MOTION: vibrato"
                             },
                             TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2,
                         )
@@ -4409,7 +4409,7 @@ fun SynthScreen(
                                 Engine.CREASE -> "MAKE INSTRUMENT needs model 3. The saved original still plays as before."
                                 Engine.BELLOWS -> "MAKE INSTRUMENT needs a current bellows sound. The saved original still plays as before."
                                 Engine.PRISM -> "Wait for the source tone to finish loading."
-                                else -> "MAKE INSTRUMENT NEEDS ROOT ${Scales.nameOf(OpenSkyPadMaker.ROOT_MIDI_MIN)}–${Scales.nameOf(OpenSkyPadMaker.ROOT_MIDI_MAX)}"
+                                else -> "MAKE INSTRUMENT needs root ${Scales.nameOf(OpenSkyPadMaker.ROOT_MIDI_MIN)}–${Scales.nameOf(OpenSkyPadMaker.ROOT_MIDI_MAX)}"
                             },
                             TapeType.pixelSmall,
                             scheme.ink2.tape,
@@ -4765,8 +4765,8 @@ internal fun OsteriaPerformanceControls(
 ) {
     TapeText(
         if (patch.config.model == 1) "LEGACY QUARTET PHRASE"
-        else if (patch.strum != null) "ONE STRIKE PER TONE · FINITE STRUM"
-        else "ONE NOTE · FOUR EVOLVING LAYERS",
+        else if (patch.strum != null) "One strike per tone · finite strum"
+        else "One note · four evolving layers",
         TapeType.pixelSmall, scheme.ink2.tape,
     )
     if (patch.voice == OsteriaVoice.PLUCK && patch.config.model == 2) {
@@ -4926,7 +4926,7 @@ private fun OrigamiPerformanceControls(
     )
     if (patch.gesture != OrigamiGesture.STEADY) {
         TapeText(
-            "MOTION SETS GESTURE TIME · FAST → SLOW · PLAYS ONCE",
+            "MOTION sets gesture time · fast → slow · plays once",
             TapeType.pixelSmall, scheme.ink2.tape, maxLines = 3,
         )
     }
@@ -4966,7 +4966,7 @@ private fun OrigamiPerformanceControls(
     }
     if (OrigamiExpressions.colorsWithVelocity(patch.expression)) {
         TapeText(
-            "PADS: USE SOFT HITS FOR VELOCITY COLOR",
+            "Pads: use soft hits for velocity COLOR",
             TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2,
         )
     }
@@ -6443,7 +6443,7 @@ private fun EtchPerformanceControls(
     MacroSlider("VELOCITY", patch.velocity, fill, scheme,
         onValueChange = { value -> onEdit(patch.voice) { it.copy(velocity = value.coerceIn(0f, 1f)) } })
     TapeText(if (Etch.isLoop(patch.macros["HOLD"] ?: 0f))
-        "HOLD PLAYS THE SIXTEEN-STEP LINE AS A LOOP" else "One note · HOLD sets the gate.",
+        "HOLD plays the sixteen-step line as a loop" else "One note · HOLD sets the gate.",
         TapeType.lcdSmall, scheme.ink2.tape)
 }
 
@@ -6477,7 +6477,7 @@ private fun WickPerformanceControls(
         }
     }
     TapeText(if (Wick.isLoop(patch.macros["HOLD"] ?: 0f))
-        "HOLD REPEATS THE MOVEMENT" else "Plays once · let the tail ring.",
+        "HOLD repeats the movement" else "Plays once · let the tail ring.",
         TapeType.lcdSmall, scheme.ink2.tape)
 }
 
@@ -6577,8 +6577,8 @@ private fun LibrationControls(patch: LibrationPatch, color: Color, scheme: Schem
         }
     }
     TapeText(if (LibrationKeys.isHeld(patch.macros["HOLD"] ?: 0f))
-        "PADS REPEAT THE ORBIT · MAKE INSTRUMENT KEEPS ITS ATTACK"
-        else "ONE FINITE NOTE · PLAYS ONCE", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 3)
+        "Pads repeat the orbit · MAKE INSTRUMENT keeps its attack"
+        else "One finite note · plays once", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 3)
 }
 
 /** Keep untouched physical grain settings exact, including sub-frame Float values. */
@@ -6625,7 +6625,7 @@ internal fun TidalPerformanceControls(
         )
     }
     if (seedText.toLongOrNull() == null) {
-        TapeText("INVALID SEED · PREVIOUS VARIATION KEPT", TapeType.pixelSmall, scheme.warnInk.tape, maxLines = 3)
+        TapeText("Invalid seed · previous variation kept", TapeType.pixelSmall, scheme.warnInk.tape, maxLines = 3)
     }
     TapeText("PLAYBACK", TapeType.pixelSmall, scheme.ink2.tape)
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -6638,8 +6638,8 @@ internal fun TidalPerformanceControls(
         }
     }
     TapeText(if (Tidal.isHeld(patch.macros["HOLD"] ?: 0f))
-        "PADS LOOP THE AFTERMATH · MAKE INSTRUMENT KEEPS THE ENCOUNTER"
-        else "ONE FINITE ENCOUNTER · PLAYS ONCE", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 3)
+        "Pads loop the aftermath · MAKE INSTRUMENT keeps the encounter"
+        else "One finite encounter · plays once", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 3)
 }
 
 // ---------- the engine adapter ----------
@@ -7908,7 +7908,7 @@ private fun ReopenPadOverlay(
                 TapeText("REOPEN PAD RECIPE", TapeType.lcdSmall, scheme.lcdInk.tape, Modifier.weight(1f))
                 LabButton("CANCEL", scheme, enabled = true, tier = ButtonTier.Text, onClick = onCancel)
             }
-            TapeText("LOAD, EDIT, THEN SEND TO PAD", TapeType.lcdSmall, scheme.lcdInk2)
+            TapeText("Load, edit, then SEND TO PAD", TapeType.lcdSmall, scheme.lcdInk2)
             LazyColumn(Modifier.weight(1f).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 items(pads.sortedBy { it.slot }, key = { it.slot }) { pad ->
                     val patch = Breed.recipeOf(pad)?.patch
@@ -7941,8 +7941,8 @@ private fun TrioPerformanceControls(
     val config = patch.config
     TapeText(
         if (patch.voice == TrioVoice.ENSEMBLE)
-            "DRAMA BRINGS ANSWERS TOGETHER · SIDES PICKS THE OUTSIDER · MOTION MOVES THE ALLIANCE"
-        else "SOLO PERFORMER · DRAMA, SIDES AND MOTION ARE ENSEMBLE CONTROLS",
+            "DRAMA brings answers together · SIDES picks the outsider · MOTION moves the alliance"
+        else "Solo performer · DRAMA, SIDES and MOTION are ensemble controls",
         TapeType.pixelSmall, scheme.ink2.tape, maxLines = 4,
     )
     MacroSlider(
@@ -8323,7 +8323,7 @@ internal fun SlotChooserOverlay(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                TapeText("SEND TO PAD — PICK A SLOT", TapeType.lcdSmall, scheme.lcdInk.tape, Modifier.weight(1f))
+                TapeText("SEND TO PAD — pick a slot", TapeType.lcdSmall, scheme.lcdInk.tape, Modifier.weight(1f))
                 Box(
                     Modifier
                         .heightIn(min = Layout.MIN_HIT_TARGET.dp)
