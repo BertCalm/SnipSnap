@@ -89,4 +89,22 @@ class AccordRoundRobinTest {
         for ((k, t) in takes.withIndex()) assertTrue(t.peak() <= .85f, "edited take $k peak ${t.peak()}")
         assertTrue(Accord.renderTake(edited.copy(velocity = 0f), 2).samples.all { it == 0f })
     }
+
+    @Test fun `Restrike deals ACCORD's own takes at the saved touch scaled, with no force spread and no seed`() {
+        val patch = preset(AccordVoice.WOOD)
+        assertTrue(Restrike.canRestrike(patch))
+        // Take 0 is the plain render; later Restrike takes cycle through takes 1..3, never back to 0.
+        assertEquals(listOf(0, 1, 2, 3, 1, 2, 3, 1), (0..7).map { Restrike.accordTake(it) })
+        // Robin's untouched hit (1) is the saved performance: its takes are the kept takes, byte for byte.
+        assertContentEquals(patch.render().samples, Restrike.take(patch, 1f, seed = 7, take = 0)!!.samples)
+        for (take in 1..4) assertContentEquals(Accord.renderTake(patch, Restrike.accordTake(take)).samples,
+            Restrike.take(patch, 1f, seed = 7, take = take)!!.samples, "take $take")
+        // A softer Robin zone scales the saved touch; the seed never matters.
+        val softer = patch.copy(velocity = patch.velocity * .4f)
+        for (take in 0..4) {
+            val want = Accord.renderTake(softer, Restrike.accordTake(take)).samples
+            assertContentEquals(want, Restrike.take(patch, .4f, seed = 7, take = take)!!.samples, "touch .4 take $take")
+            assertContentEquals(want, Restrike.take(patch, .4f, seed = 99, take = take)!!.samples, "touch .4 take $take, another seed")
+        }
+    }
 }
