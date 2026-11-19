@@ -134,10 +134,42 @@ def build_1b(m, files, clip, out):
     return 0
 
 
+def build_2(m, src, out):
+    """Round 2: the three kits as they ship, read back from their MPC 3 exports by the shelf generator."""
+    def clip(path, label, seconds):
+        return ('<button class="clip" type="button" data-src="%s" aria-pressed="false"><span class="play" aria-hidden="true"></span>'
+                '<span class="label">%s</span><span class="secs">%.2f s</span></button>' % (html.escape(path), html.escape(label), seconds))
+    sections = []
+    for kit in m["kits"]:
+        rows = []
+        for pad in kit["pads"]:
+            n = "%02d" % pad["slot"]
+            items = [clip("%s/pad-%s.wav" % (kit["id"], n), "Printed", pad["seconds"]), clip("%s/dry-%s.wav" % (kit["id"], n), "No kit print", pad["seconds"])]
+            if pad["slot"] < 16:
+                items.append(clip("%s/touch-%s.wav" % (kit["id"], n), "Soft, medium, hard; four takes each", 12 * (pad["seconds"] + .125)))
+            rows.append('<div class="pad"><h3>A%s %s</h3><div class="row">%s</div></div>' % (n, html.escape(pad["name"]), "".join(items)))
+        sections.append(("%s, %d BPM" % (kit["title"], kit["bpm"]),
+                         {"stagger-cardboard": "The profile itself: the muffled box kick, the crack snare, a hat at a whisper, the foley where a kit keeps its toms and cymbals. A15 the timpani roll into the gong, A16 the groove.",
+                          "stagger-matinee": "The cinematic kit: a stage kick and snare on a bigger room, then ten effects through the converter. A15 the timpani riser into the crash gong, A16 a groove with a glass break and a zap pickup.",
+                          "stagger-stumble": "The drunkest clock: a humming muffled kick, the rimshot in the snare's place, no hats in the groove, the tape worn. A15 a dragging snare roll, A16 the groove."}[kit["id"]],
+                         rows))
+    page = render({"bpm": "", "version": m["kitVersion"]}, "Stagger Round Two", "Stagger, round two",
+                  "Three kits on the shelf, every clip read back from the MPC 3 export through the app's own pad resolver. Kit version {VERSION}; the drums are EMBER's, as you chose in round 1b. Nothing has been heard before you. One player: a new clip stops the last.",
+                  "<li>Are the three kits three kits, each worth its row?</li><li>Any pad wrong for its kit, and does the glass earn its two pads on MATINEE?</li><li>The clocks: CARDBOARD's, MATINEE's and STUMBLE's widest; is any one too drunk or too straight?</li>",
+                  sections_html(sections))
+    os.makedirs(out, exist_ok=True)
+    with open(os.path.join(out, "index.html"), "w") as f:
+        f.write(page)
+    print("wrote", os.path.join(out, "index.html"), sum(len(k["pads"]) for k in m["kits"]), "pads")
+    return 0
+
+
 def main(argv):
     src = argv[1]
     out = argv[2] if len(argv) > 2 else src
     m = json.load(open(os.path.join(src, "manifest.json")))
+    if m.get("round") == "2":
+        return build_2(m, src, out)
     files = {f["file"]: f for f in m["files"]}
 
     def clip(path, label):

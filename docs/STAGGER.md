@@ -13,6 +13,38 @@ barely hear, or none → the clock drags and catches up → a cartoon lands wher
 
 ## Status
 
+**Round 2 built (2026-11-19): three kits on the shelf, proven in software; the kits not yet heard as kits.** The owner heard
+round 1b and said "New sounds are better" (2026-11-19), which retires round 1's THUMP and SKIN drums and keeps EMBER's.
+The owner did not pick a cutoff, a clock width or slices over hits, so round 2 keeps the kit's defaults (300 Hz, the kit's
+clock, isolated EMBER hits) and the page's alternatives stand ready. Round 2 adds the family's other two kits and the
+shelf rows, and proves every pad's velocity and round-robin grid through save, reload, the app's pad resolver and the
+MPC 3 export (`StaggerKitTest`, `:shell:generateStaggerKits`).
+
+| Kit | Tempo | Print | Clock (kick, snare, hats; wobble, rho) | Pads (A01 to A14) | A15 | A16 |
+|---|---|---|---|---|---|---|
+| STAGGER CARDBOARD | 89 | box: 12 bits at 26 kHz, a worn tape | +12, -3, +8; 10 ms, .4 | Box Kick, Crack Snare, Whisper Hat, Rim, Low Box Kick, Cross Stick, Paper Snare, Shaker, Dead Tom, Timpani, Dark Gong, Zap, Punch, Clap | Timpani Roll | Cardboard Groove |
+| STAGGER MATINEE | 84 | reel: the same converter, a cleaner tape | +10, -3, +6; 8 ms, .4 | Stage Kick, Stage Snare, Whisper Hat, Rim, Timpani, Low Timpani, Dark Gong, Crash Gong, Glass, Low Glass, Zap, Low Zap, Punch, Stab | Timpani Riser | Matinee Groove |
+| STAGGER STUMBLE | 93 | worn: the tape driven and worn, more record | +18, -3, +10; 16 ms, .55 | Hum Kick, Rimshot, Crack Snare, Ghost Snare, Shaker, Open Box, Low Tom, Knock, Timpani, Dark Gong, Punch, Zap, Clap, Bell | Dragging Roll | Stumble Groove |
+
+The kits differ in their drums (`StaggerKitsTest` holds every pair to at least six different pad names and a different
+kick and backbeat drum, dry), their rooms (CARDBOARD small and dry, MATINEE a stage, STUMBLE close with the bus pressing
+harder), their clocks, their prints and their phrases, not in effect strength alone. MATINEE's groove has a glass break
+on the and of four and a zap pickup into bar two; STUMBLE's has no hat part at all (the shaker whispers) and the rimshot
+takes the backbeat; its roll is sixteenths every stroke later than the last by its own clock.
+
+Measured on the grooves (`StaggerKitsTest`): hats 28.4, 28.5 and 29.2 dB under the mix at their loudest (CARDBOARD,
+MATINEE, STUMBLE; the references 16 to 35, median 23); 95 percent of the energy under 579, 636 and 495 Hz (the references
+309 to 635; MATINEE's foley is allowed up to 1.5 kHz and lands inside the references anyway). A foley pad's cap shrinks
+with its pitch so every pad lands under 1.4 s (the Low Timpani at -9 measured 1.62 s with a flat 1 s cap).
+
+```sh
+./gradlew --no-daemon :synth:test --tests '*StaggerKitsTest' :shell:test --tests '*StaggerKitTest'
+./gradlew --no-daemon :shell:generateStaggerKits          # → testkit/stagger-kits/ (gitignored)
+python3 scripts/stagger_page/build_page.py testkit/stagger-kits OUT_DIR
+```
+
+**Round 1b heard (2026-11-19): "New sounds are better."** EMBER's drums are the kit's.
+
 **Round 1b built, not heard (2026-11-19): every drum re-sourced from EMBER.** The owner heard round 1 as "too much
 like drum machine sounds". Round 1's drums were THUMP's and SKIN's: a swept sine is a drum machine by construction,
 and an isolated synth hit has no shell, wires, bleed or room in it, where the profile's drums are chopped off records.
@@ -83,6 +115,16 @@ python3 scripts/stagger_page/build_page.py testkit/stagger-round1 OUT_DIR   # th
 
 The kit print (`StaggerKits.BOX`): CRUNCH at 12 bits and a 26.0 kHz hold, TAPE light and worn, VINYL light under
 the phrases only.
+
+## Gates
+
+| Gate | Status |
+|---|---|
+| Melodic, keygroups, chord tools, STRUM | Not applicable: drum kits |
+| Drums: multiple distinct genre kits on the shelf | Pass in software: three kits under SKINS, held apart by `StaggerKitsTest`; the owner has heard CARDBOARD's drums (round 1b, "New sounds are better"), not the three kits as kits |
+| Percussion: roll/riser | Built: a timpani roll, a timpani riser into the crash gong, a dragging snare roll, one per kit, in the room; not heard |
+| Velocity and round robin: rendering | Pass in software: every soft zone a different strike from the hard one and no brighter; every zone holds four different strikes (`StaggerKitsTest`) |
+| Velocity and round robin: saving, playback, export | Pass in software: `StaggerKitTest` and `:shell:generateStaggerKits` (all three kits, 192 slices each: saved PCM, reload, the pad resolver walking the takes, MPC 3 track, SFZ, DecentSampler). MPC 2 is not written (the owner's format limit). Not played on a phone or an MPC |
 
 ## What was measured while building (Kotlin, `StaggerKitsTest`, this cloud JVM)
 

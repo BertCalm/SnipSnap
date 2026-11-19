@@ -783,6 +783,21 @@ object StarterKits {
             seeded = false, tempoBpm = com.snipsnap.synth.CypherKits.Kit.FLINT.bpm.toFloat(),
         ) { com.snipsnap.synth.CypherKits.build(com.snipsnap.synth.CypherKits.Kit.FLINT) },
         Starter(
+            "stagger-cardboard", "STAGGER CARDBOARD",
+            "A muffled, click-free kick against a dry crack and a hat at a whisper, timpani, gong, zap and punch pitched down through a 12-bit converter. Three touch zones, four takes; a timpani roll and a two-bar groove whose clock drags and catches up.",
+            seeded = false, tempoBpm = com.snipsnap.synth.StaggerKits.Kit.CARDBOARD.bpm.toFloat(),
+        ) { com.snipsnap.synth.StaggerKits.build(com.snipsnap.synth.StaggerKits.Kit.CARDBOARD) },
+        Starter(
+            "stagger-matinee", "STAGGER MATINEE",
+            "The cinematic kit: a stage kick and snare, then ten effects, two timpani, two gongs, glass breaking, two zaps, a punch and a stab, all pitched down through the converter. Three touch zones, four takes; a timpani riser into the crash and a groove with a glass break in it.",
+            seeded = false, tempoBpm = com.snipsnap.synth.StaggerKits.Kit.MATINEE.bpm.toFloat(),
+        ) { com.snipsnap.synth.StaggerKits.build(com.snipsnap.synth.StaggerKits.Kit.MATINEE) },
+        Starter(
+            "stagger-stumble", "STAGGER STUMBLE",
+            "The drunkest clock: a humming muffled kick, a rimshot in the snare's place, no hats in the groove, the tape worn. Three touch zones, four takes; a dragging snare roll and a two-bar groove that leans and catches up.",
+            seeded = false, tempoBpm = com.snipsnap.synth.StaggerKits.Kit.STUMBLE.bpm.toFloat(),
+        ) { com.snipsnap.synth.StaggerKits.build(com.snipsnap.synth.StaggerKits.Kit.STUMBLE) },
+        Starter(
             "loose-crate-hummin", "LOOSE CRATE HUMMIN",
             "Beat-tape boom bap built around a kick that hums: a flam snare, a bouncing snare, dark hats that drag, a record's rumble under everything. Three touch zones, four takes; a flam roll and a loose four-bar groove.",
             seeded = false, tempoBpm = com.snipsnap.synth.LooseCrateKits.Kit.HUMMIN.bpm.toFloat(),

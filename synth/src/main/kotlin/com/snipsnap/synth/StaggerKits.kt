@@ -51,6 +51,8 @@ object StaggerKits {
 
     enum class Kit(val id: String, val title: String, val bpm: Int) {
         CARDBOARD("stagger-cardboard", "Cardboard", 89),
+        MATINEE("stagger-matinee", "Matinee", 84),
+        STUMBLE("stagger-stumble", "Stumble", 93),
     }
 
     val velocities = listOf(.30f, .65f, 1f)
@@ -107,7 +109,9 @@ object StaggerKits {
     fun foley(strike: Strike, semitones: Int, capSeconds: Float = 1f): Strike = { v, t, semis ->
         require(semitones in -12..0)
         val x = strike(v, t, semis)
-        val cap = (capSeconds * Dsp.RATE).toInt()
+        // The pitch move lengthens the pad by 2^(-semitones/12): the cap shrinks so the pad lands under 1.4 s at any
+        // pitch (the Low Timpani at -9 measured 1.62 s with a flat 1 s cap, over the classifier's loop floor).
+        val cap = (min(capSeconds, 1.4f / 2f.pow(-semitones / 12f)) * Dsp.RATE).toInt()
         val capped = if (x.size > cap) x.copyOf(cap).also { Dsp.fadeTailCosine(it, .25f) } else x
         val converted = Eras.process("sp1200", Snip(capped, 1, Dsp.RATE))
         Speed.process(converted, mapOf("SEMITONES" to .5f + semitones / (2f * Speed.SEMITONE_RANGE))).samples
@@ -209,7 +213,19 @@ object StaggerKits {
         mapOf("WOBBLE" to .06f, "DRIVE" to .15f, "AGE" to .55f),
         mapOf("CRACKLE" to .15f, "RUMBLE" to .40f, "HISS" to .20f))
 
-    fun printOf(kit: Kit): Print = when (kit) { Kit.CARDBOARD -> BOX }
+    /** MATINEE's print: the same converter, a cleaner tape (the foley carries its own grain), the record under the phrases. */
+    val REEL = Print("reel",
+        mapOf("BITS" to .45f, "RATE" to .37f, "TONE" to .78f, "GRIT" to .05f),
+        mapOf("WOBBLE" to .05f, "DRIVE" to .12f, "AGE" to .45f),
+        mapOf("CRACKLE" to .20f, "RUMBLE" to .35f, "HISS" to .25f))
+
+    /** STUMBLE's print: the tape driven and worn, more record under the groove: the loosest of the three. */
+    val WORN = Print("worn",
+        mapOf("BITS" to .50f, "RATE" to .40f, "TONE" to .65f, "GRIT" to .08f),
+        mapOf("WOBBLE" to .10f, "DRIVE" to .30f, "AGE" to .80f),
+        mapOf("CRACKLE" to .25f, "RUMBLE" to .55f, "HISS" to .25f))
+
+    fun printOf(kit: Kit): Print = when (kit) { Kit.CARDBOARD -> BOX; Kit.MATINEE -> REEL; Kit.STUMBLE -> WORN }
 
     // ---------- the pads ----------
 
@@ -307,12 +323,23 @@ object StaggerKits {
         Kit.CARDBOARD -> LooseCrateKits.Room(mapOf("SIZE" to .14f, "WALLS" to .40f, "DISTANCE" to .45f),
             mapOf("AMOUNT" to .40f, "ATTACK" to .80f, "RECOVER" to .45f),
             -3f, kickCurve = 2.5f, wireWeight = .08f, hatLevel = 1f, ringBarEnd = false, ride = null)
+        // The cinematic kit: a bigger, further room (a stage), the foley needs the space.
+        Kit.MATINEE -> LooseCrateKits.Room(mapOf("SIZE" to .26f, "WALLS" to .50f, "DISTANCE" to .55f),
+            mapOf("AMOUNT" to .35f, "ATTACK" to .80f, "RECOVER" to .50f),
+            -3f, kickCurve = 2.5f, wireWeight = .08f, hatLevel = 1f, ringBarEnd = false, ride = null)
+        // The drunkest kit: close and dry, the bus pressing harder, no hats to level.
+        Kit.STUMBLE -> LooseCrateKits.Room(mapOf("SIZE" to .10f, "WALLS" to .35f, "DISTANCE" to .40f),
+            mapOf("AMOUNT" to .50f, "ATTACK" to .75f, "RECOVER" to .40f),
+            -4f, kickCurve = 3f, wireWeight = .10f, hatLevel = 1f, ringBarEnd = false, ride = null)
     }
 
     fun clockOf(kit: Kit): Clock = when (kit) {
         // The references' backbeats sit 5 to 13 ms from the grid and show no drift; the profile says the kick drags
         // and the snare snaps early. Shape: between the two, and the page plays three widths and three rhos.
         Kit.CARDBOARD -> Clock(kickMs = 12f, snareMs = -3f, hatMs = 8f, wobbleMs = 10f, rho = .4f, seed = "cardboard")
+        Kit.MATINEE -> Clock(kickMs = 10f, snareMs = -3f, hatMs = 6f, wobbleMs = 8f, rho = .4f, seed = "matinee")
+        // The drunkest clock: the kick drags most, the lag breathes widest and slowest.
+        Kit.STUMBLE -> Clock(kickMs = 18f, snareMs = -3f, hatMs = 10f, wobbleMs = 16f, rho = .55f, seed = "stumble")
     }
 
     /** A groove's notes as the drummer plays them: the clock, then the room's kick dynamics, wires and hat level. */
@@ -450,7 +477,7 @@ object StaggerKits {
      * [occurrence] picks which note of [part] (0 is its first in the loop).
      */
     internal fun sliced(kit: Kit, part: Int, occurrence: Int = 0, maxSeconds: Float = .6f): Strike = { v, t, _ ->
-        val notes = played(kit, cardboardNotes)
+        val notes = played(kit, notesOf(kit))
         val starts = notes.map { Cypher.startFrame(it, kit.bpm) }
         val mine = notes.indices.filter { notes[it].part == part }.sortedBy { starts[it] }
         val i = mine[occurrence.coerceIn(0, mine.lastIndex)]
@@ -465,9 +492,12 @@ object StaggerKits {
         out
     }
 
-    internal fun parts(kit: Kit): List<Part> = when (kit) { Kit.CARDBOARD -> cardboard }
+    internal fun parts(kit: Kit): List<Part> = when (kit) { Kit.CARDBOARD -> cardboard; Kit.MATINEE -> matinee; Kit.STUMBLE -> stumble }
 
-    internal fun phrases(kit: Kit): List<Phrase> = when (kit) { Kit.CARDBOARD -> cardboardPhrases }
+    internal fun phrases(kit: Kit): List<Phrase> = when (kit) { Kit.CARDBOARD -> cardboardPhrases; Kit.MATINEE -> matineePhrases; Kit.STUMBLE -> stumblePhrases }
+
+    /** A kit's groove before the clock. */
+    internal fun notesOf(kit: Kit): List<Note> = when (kit) { Kit.CARDBOARD -> cardboardNotes; Kit.MATINEE -> matineeNotes; Kit.STUMBLE -> stumbleNotes }
 
     // CARDBOARD (89): the profile itself. The box kick and the crack snare lead; the hat is a whisper; the foley
     // sits where a kit would keep its toms and cymbals.
@@ -530,5 +560,118 @@ object StaggerKits {
         // A timpani roll at 1/32 over two beats, the weight rising, into the gong.
         Phrase("Timpani Roll", Cypher.ratchet(TIMPANI, 0.0, .125, 16, .30f, 1f) + Note(2.0, GONG, 1f), loop = false),
         Phrase("Cardboard Groove", cardboardNotes, loop = true),
+    )
+
+    // ---------- MATINEE (84): the cinematic kit ----------
+    // Half the pads are effects. The kick and snare stand further back on a stage than CARDBOARD's; the foley is
+    // where a kit would keep its toms and cymbals.
+    internal val stageKick: Strike = muffled(ember(EmberVoice.KICK, "TUNE" to .40f, "DAMP" to .45f, "BUZZ" to .30f, "DISTANCE" to .50f, "WARMTH" to .45f), 350f, 3f)
+    internal val stageSnare: Strike = contact(ember(EmberVoice.SNARE, "TUNE" to .45f, "DAMP" to .40f, "BUZZ" to .65f, "DISTANCE" to .55f, "WARMTH" to .50f), 5_500f)
+    internal val lowTimpani: Strike = foley(ember(EmberVoice.MALLET_TOM, "TUNE" to .02f, "DAMP" to .10f, "BUZZ" to 0f, "DISTANCE" to .50f, "WARMTH" to .40f), -9)
+    /** BREAKER's fitted crash, a second long with a long fade, then nine semitones down: a gong-like crash. */
+    internal val crashGong: Strike = foley(KitStrikes.cymbal(BreakerCymbal.Kind.CRASH, 1f, .4f, pitch = .8), -9)
+    internal val lowGlass: Strike = glassAt(-9)
+    internal val lowZap: Strike = foley(KitStrikes.thump(ThumpVoice.SPARK, mapOf("TUNE" to .40f, "DECAY" to .35f, "COLOR" to .70f)) { v -> mapOf("METAL" to .1f + .3f * v) }, -7)
+    /** A tuned bar with its buzz up, seven down: an orchestral stab's bite. */
+    internal val stab: Strike = foley(KitStrikes.terra(TerraVoice.TUNED_BAR, mapOf("TUNE" to .30f, "DECAY" to .45f, "FORCE" to .80f, "POS" to .30f, "BUZZ" to .60f)), -7)
+
+    private val matinee: List<Part> = listOf(
+        Part("Stage Kick", DrumClass.KICK, strike = stageKick),
+        Part("Stage Snare", DrumClass.SNARE, strike = stageSnare),
+        Part("Whisper Hat", DrumClass.HAT_CLOSED, HAT_GROUP, strike = emberHat),
+        Part("Rim", DrumClass.PERC, strike = emberRim),
+        Part("Timpani", DrumClass.TOM, converted = true, strike = emberTimpani),
+        Part("Low Timpani", DrumClass.TOM, converted = true, strike = lowTimpani),
+        Part("Dark Gong", DrumClass.PERC, converted = true, strike = darkGong),
+        Part("Crash Gong", DrumClass.PERC, converted = true, strike = crashGong),
+        Part("Glass", DrumClass.PERC, converted = true, strike = glassAt(-5)),
+        Part("Low Glass", DrumClass.PERC, converted = true, strike = lowGlass),
+        Part("Zap", DrumClass.PERC, converted = true, strike = zap),
+        Part("Low Zap", DrumClass.PERC, converted = true, strike = lowZap),
+        Part("Punch", DrumClass.PERC, converted = true, strike = punchHit),
+        Part("Stab", DrumClass.PERC, converted = true, strike = stab),
+    )
+
+    private const val M_KICK = 0
+    private const val M_SNARE = 1
+    private const val M_HAT = 2
+    private const val M_TIMPANI = 4
+    private const val M_CRASH = 7
+    private const val M_GLASS = 8
+    private const val M_ZAP = 10
+
+    /** MATINEE's groove: the kick and snare under hats, a glass break on the and of four, a zap pickup into bar two. */
+    internal val matineeNotes: List<Note> = buildList {
+        for (bar in 0 until GROOVE_BARS) {
+            val b = bar * 4.0
+            val kicks = if (bar == 0) listOf(0.0 to 1f, 2.5 to .85f) else listOf(0.0 to 1f, 1.75 to .70f, 2.5 to .85f)
+            for ((beat, w) in kicks) add(Note(b + beat, M_KICK, w))
+            add(Note(b + 1.0, M_SNARE, .95f))
+            add(Note(b + 3.0, M_SNARE, 1f))
+            for (eighth in 0 until 8) add(Note(b + eighth * .5, M_HAT, if (eighth % 2 == 0) .70f else .45f))
+        }
+        add(Note(3.5, M_GLASS, .70f))
+        add(Note(3.75, M_ZAP, .50f))
+        add(Note(7.5, M_TIMPANI, .60f))
+    }
+
+    private val matineePhrases = listOf(
+        // The riser: the timpani in sixteenths for two beats, then thirty-seconds for two, rising, into the crash gong.
+        Phrase("Timpani Riser", Cypher.ratchet(M_TIMPANI, 0.0, .25, 8, .25f, .60f) + Cypher.ratchet(M_TIMPANI, 2.0, .125, 16, .60f, 1f) + Note(4.0, M_CRASH, 1f), loop = false),
+        Phrase("Matinee Groove", matineeNotes, loop = true),
+    )
+
+    // ---------- STUMBLE (93): the drunkest clock ----------
+    // A rimshot in the snare's place, no hats in the groove (the shaker whispers), the kick humming and muffled.
+    internal val humKick: Strike = muffled(ember(EmberVoice.KICK, "TUNE" to .28f, "DAMP" to .35f, "BUZZ" to .35f, "DISTANCE" to .25f, "WARMTH" to .60f), 350f, 4f)
+    internal val rimshot: Strike = ember(EmberVoice.RIMSHOT, "TUNE" to .70f, "DAMP" to .45f, "BUZZ" to .50f, "DISTANCE" to .25f, "WARMTH" to .55f)
+    internal val ghostSnare: Strike = KitStrikes.softer(emberSnare, .40f)
+    internal val openBox: Strike = ember(EmberVoice.HAT_OPEN, "TUNE" to .40f, "DAMP" to .70f, "DISTANCE" to .25f, "WARMTH" to .55f)
+    internal val lowTom: Strike = muffled(ember(EmberVoice.TOM_FLOOR, "TUNE" to .20f, "DAMP" to .75f, "BUZZ" to .25f, "DISTANCE" to .25f, "WARMTH" to .55f), 400f, 2f)
+    internal val knock: Strike = KitStrikes.terra(TerraVoice.SLAP, mapOf("TUNE" to .45f, "DECAY" to .20f, "FORCE" to .80f, "POS" to .80f, "BOWL" to 0f, "SMACK" to .70f))
+    internal val bell: Strike = foley(KitStrikes.tines(TinesVoice.BELL, mapOf("TUNE" to .40f, "DECAY" to .40f, "RATIO" to .6f)), -7)
+
+    private val stumble: List<Part> = listOf(
+        Part("Hum Kick", DrumClass.KICK, strike = humKick),
+        Part("Rimshot", DrumClass.SNARE, strike = rimshot),
+        Part("Crack Snare", DrumClass.SNARE, strike = emberSnare),
+        Part("Ghost Snare", DrumClass.SNARE, strike = ghostSnare),
+        Part("Shaker", DrumClass.PERC, strike = emberShaker),
+        Part("Open Box", DrumClass.HAT_OPEN, HAT_GROUP, strike = openBox),
+        Part("Low Tom", DrumClass.TOM, strike = lowTom),
+        Part("Knock", DrumClass.PERC, strike = knock),
+        Part("Timpani", DrumClass.TOM, converted = true, strike = emberTimpani),
+        Part("Dark Gong", DrumClass.PERC, converted = true, strike = darkGong),
+        Part("Punch", DrumClass.PERC, converted = true, strike = punchHit),
+        Part("Zap", DrumClass.PERC, converted = true, strike = zap),
+        Part("Clap", DrumClass.CLAP, strike = emberClap),
+        Part("Bell", DrumClass.PERC, converted = true, strike = bell),
+    )
+
+    private const val S_KICK = 0
+    private const val S_RIM = 1
+    private const val S_SNARE = 2
+    private const val S_GHOST = 3
+    private const val S_SHAKER = 4
+    private const val S_KNOCK = 7
+
+    /** STUMBLE's groove: no hat part at all; the shaker whispers on the eighths, the rimshot takes the backbeat. */
+    internal val stumbleNotes: List<Note> = buildList {
+        for (bar in 0 until GROOVE_BARS) {
+            val b = bar * 4.0
+            val kicks = if (bar == 0) listOf(0.0 to 1f, 1.5 to .70f, 2.75 to .85f) else listOf(0.0 to 1f, 1.75 to .65f, 2.5 to .90f, 3.25 to .55f)
+            for ((beat, w) in kicks) add(Note(b + beat, S_KICK, w))
+            add(Note(b + 1.0, S_RIM, .95f))
+            add(Note(b + 3.0, if (bar == 1) S_SNARE else S_RIM, 1f))
+            add(Note(b + 2.25, S_GHOST, .35f))
+            if (bar == 1) add(Note(b + 3.75, S_KNOCK, .50f))
+            for (eighth in 0 until 8) add(Note(b + eighth * .5, S_SHAKER, if (eighth % 2 == 0) .20f else .14f))
+        }
+    }
+
+    private val stumblePhrases = listOf(
+        // A dragging snare roll: sixteenths over two beats, every stroke later than the last by the drunkest clock, into the rimshot.
+        Phrase("Dragging Roll", clockOf(Kit.STUMBLE).let { c -> Cypher.staggered(Cypher.ratchet(S_SNARE, 0.0, .25, 8, .30f, .90f), mapOf(S_SNARE to 14f), c.wobbleMs, c.rho, "stumble-roll") } + Note(2.0, S_RIM, 1f), loop = false),
+        Phrase("Stumble Groove", stumbleNotes, loop = true),
     )
 }

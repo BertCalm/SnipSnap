@@ -22,6 +22,7 @@ import kotlin.test.assertTrue
 class StaggerKitsTest {
     private val rate = Dsp.RATE
     private val kit = Kit.CARDBOARD
+    private val kits = Kit.entries
 
     private fun shapeDistance(a: FloatArray, b: FloatArray): Double {
         val n = min(a.size, b.size)
@@ -95,8 +96,8 @@ class StaggerKitsTest {
         return DoubleArray(n / 2) { re[it] * re[it] + im[it] * im[it] }
     }
 
-    private fun rendered(role: Int, velocity: Float, take: Int): Snip =
-        renders.getOrPut(listOf(role, velocity, take)) { StaggerKits.render(kit, role, velocity, take) }
+    private fun rendered(role: Int, velocity: Float, take: Int, k: Kit = kit): Snip =
+        renders.getOrPut(listOf(k, role, velocity, take)) { StaggerKits.render(k, role, velocity, take) }
 
     private companion object {
         val renders = java.util.concurrent.ConcurrentHashMap<List<Any>, Snip>()
@@ -105,15 +106,15 @@ class StaggerKitsTest {
     private fun lone(strike: Strike, v: Float = 1f, t: Int = 0): FloatArray = KitStrikes.finish(KitStrikes.struck(strike, v, t, StaggerKits.touch(v)), 1f).samples
 
     @Test fun `every pad renders the same bytes twice`() {
-        for (role in 0 until StaggerKits.PADS) {
-            assertContentEquals(rendered(role, .65f, 1).samples, StaggerKits.render(kit, role, .65f, 1).samples, "role $role")
+        for (k in kits) for (role in 0 until StaggerKits.PADS) {
+            assertContentEquals(rendered(role, .65f, 1, k).samples, StaggerKits.render(k, role, .65f, 1).samples, "${k.name} role $role")
         }
     }
 
     @Test fun `every pad is finite bounded centred levelled and every hit ends in silence under the loop floor`() {
-        for (role in 0 until StaggerKits.PADS) for (v in StaggerKits.velocities) {
-            val x = rendered(role, v, 0).samples
-            val what = "role $role v $v"
+        for (k in kits) for (role in 0 until StaggerKits.PADS) for (v in StaggerKits.velocities) {
+            val x = rendered(role, v, 0, k).samples
+            val what = "${k.name} role $role v $v"
             assertTrue(x.all { it.isFinite() }, "$what finite")
             val peak = x.maxOf { abs(it) }
             assertEquals(StaggerKits.PAD_PEAK, peak, .005f, "$what peak")
@@ -123,32 +124,32 @@ class StaggerKitsTest {
                 assertTrue(x.size < 1.5 * rate, "$what is ${x.size} frames, over the 1.5 s loop floor")
             }
             for (take in 1 until StaggerKits.TAKES) {
-                val p = rendered(role, v, take).peak()
+                val p = rendered(role, v, take, k).peak()
                 assertTrue(p in .6f..(.98f + 1e-6f), "$what take $take peak $p")
             }
         }
     }
 
     @Test fun `a softer hit is a different strike and not only a quieter one`() {
-        for (role in 0 until StaggerKits.PADS) {
-            val distance = shapeDistance(rendered(role, 1f, 0).samples, rendered(role, .3f, 0).samples)
-            assertTrue(distance > .05, "role $role: soft is a scaled copy of hard ($distance)")
+        for (k in kits) for (role in 0 until StaggerKits.PADS) {
+            val distance = shapeDistance(rendered(role, 1f, 0, k).samples, rendered(role, .3f, 0, k).samples)
+            assertTrue(distance > .05, "${k.name} role $role: soft is a scaled copy of hard ($distance)")
         }
-        for (role in 0 until StaggerKits.HITS) {
-            val hard = StaggerKits.dry(kit, role, 1f, 0).samples
-            val soft = StaggerKits.dry(kit, role, .3f, 0).samples
+        for (k in kits) for (role in 0 until StaggerKits.HITS) {
+            val hard = StaggerKits.dry(k, role, 1f, 0).samples
+            val soft = StaggerKits.dry(k, role, .3f, 0).samples
             // A muffled drum has next to nothing above 2 kHz either way (the low kick: 0.07 percent); under half a
             // percent the comparison is noise, and the shape distance above already proves a different strike.
-            assertTrue(brightness(soft) <= brightness(hard) * 1.05 || brightness(hard) < .005, "role $role: soft is brighter than hard (${brightness(soft)} against ${brightness(hard)})")
+            assertTrue(brightness(soft) <= brightness(hard) * 1.05 || brightness(hard) < .005, "${k.name} role $role: soft is brighter than hard (${brightness(soft)} against ${brightness(hard)})")
         }
     }
 
     @Test fun `every zone holds four different strikes`() {
-        for (role in 0 until StaggerKits.PADS) for (v in StaggerKits.velocities) {
-            val takes = List(StaggerKits.TAKES) { rendered(role, v, it).samples }
+        for (k in kits) for (role in 0 until StaggerKits.PADS) for (v in StaggerKits.velocities) {
+            val takes = List(StaggerKits.TAKES) { rendered(role, v, it, k).samples }
             for (a in takes.indices) for (b in a + 1 until takes.size) {
                 val distance = shapeDistance(takes[a], takes[b])
-                assertTrue(distance > .005, "role $role v $v: takes $a and $b differ by only $distance")
+                assertTrue(distance > .005, "${k.name} role $role v $v: takes $a and $b differ by only $distance")
             }
         }
     }
@@ -242,55 +243,76 @@ class StaggerKitsTest {
         assertTrue(spread in 5.0..16.0, "hat spread $spread ms for a 10 ms wobble")
     }
 
-    @Test fun `the groove is bar-exact closes on itself whispers its hats and keeps its mix dark`() {
-        for (v in StaggerKits.velocities) {
-            val x = rendered(StaggerKits.GROOVE, v, 0).samples
-            assertEquals(StaggerKits.grooveFrames(kit), x.size, "length")
-            val wrap = abs(x[0] - x[x.size - 1])
-            var largest = 0f
-            for (i in x.size - (.02f * rate).toInt() until x.size - 1) largest = max(largest, abs(x[i + 1] - x[i]))
-            assertTrue(wrap <= largest * 1.5f + 1e-4f, "v $v: wrap step $wrap against $largest")
+    @Test fun `every groove is bar-exact closes on itself whispers its hats and keeps its mix dark`() {
+        for (k in kits) {
+            for (v in StaggerKits.velocities) {
+                val x = rendered(StaggerKits.GROOVE, v, 0, k).samples
+                assertEquals(StaggerKits.grooveFrames(k), x.size, "${k.name} length")
+                val wrap = abs(x[0] - x[x.size - 1])
+                var largest = 0f
+                for (i in x.size - (.02f * rate).toInt() until x.size - 1) largest = max(largest, abs(x[i + 1] - x[i]))
+                assertTrue(wrap <= largest * 1.5f + 1e-4f, "${k.name} v $v: wrap step $wrap against $largest")
+            }
+            val x = rendered(StaggerKits.GROOVE, 1f, 0, k).samples
+            // The hats: the 6 to 14 kHz band at its loudest tenth of 23 ms frames against the full band's loudest tenth.
+            val hop = 1024
+            val top = ArrayList<Double>(); val whole = ArrayList<Double>()
+            var i = 0
+            while (i + hop <= x.size) {
+                val spec = power(x.copyOfRange(i, i + hop), hop)
+                var t = 0.0; var w = 0.0
+                for (b in spec.indices) { val f = b.toFloat() * rate / hop; if (f >= 30f) w += spec[b]; if (f >= 6_000f && f < 14_000f) t += spec[b] }
+                top.add(t); whole.add(w)
+                i += hop
+            }
+            val loudTop = top.sorted().takeLast(top.size / 10).average()
+            val loudWhole = whole.sorted().takeLast(whole.size / 10).average()
+            val hatsDb = 10 * kotlin.math.log10(loudTop / loudWhole)
+            val n = 1 shl 18
+            val spec = power(x, n)
+            val total = spec.sum()
+            var cum = 0.0
+            var ceiling = 0.0
+            for (b in spec.indices) { cum += spec[b]; if (cum >= .95 * total) { ceiling = b.toDouble() * rate / n; break } }
+            println("${k.name} groove: hats $hatsDb dB under the full band at its loudest; 95 percent of the energy under $ceiling Hz")
+            // The references' range is 16 to 35 dB under (median 23). STUMBLE's groove has no hat part (its shaker
+            // whispers), so its band is not held to the window; MATINEE's foley (glass, zap) lifts its ceiling.
+            val parts = StaggerKits.parts(k)
+            val hasHat = StaggerKits.notesOf(k).any { parts[it.part].cls == DrumClass.HAT_CLOSED }
+            if (hasHat) assertTrue(hatsDb in -35.0..-16.0, "${k.name}: hats $hatsDb dB under; the references 16 to 35, median 23")
+            val ceilingLimit = if (k == Kit.MATINEE) 1_500.0 else 650.0
+            assertTrue(ceiling < ceilingLimit, "${k.name}: 95 percent of the energy under $ceiling Hz; eight references under 309 to 635")
         }
-        val x = rendered(StaggerKits.GROOVE, 1f, 0).samples
-        // The hats: the 6 to 14 kHz band at its loudest tenth of 23 ms frames against the full band's loudest tenth.
-        val hop = 1024
-        val top = ArrayList<Double>(); val whole = ArrayList<Double>()
-        var i = 0
-        while (i + hop <= x.size) {
-            val spec = power(x.copyOfRange(i, i + hop), hop)
-            var t = 0.0; var w = 0.0
-            for (k in spec.indices) { val f = k.toFloat() * rate / hop; if (f >= 30f) w += spec[k]; if (f >= 6_000f && f < 14_000f) t += spec[k] }
-            top.add(t); whole.add(w)
-            i += hop
+    }
+
+    @Test fun `the three kits are three kits`() {
+        val names = kits.map { StaggerKits.roles(it) }
+        for (roles in names) { assertEquals(StaggerKits.PADS, roles.size); assertEquals(roles.size, roles.toSet().size) }
+        assertEquals(kits.size, kits.map { it.bpm }.toSet().size)
+        assertEquals(kits.size, kits.map { StaggerKits.printOf(it).name }.toSet().size)
+        assertEquals(kits.size, kits.map { StaggerKits.clockOf(it).seed }.toSet().size)
+        // "Different effect strengths on the same kit are not sufficient evidence of distinct genre kits": every pair
+        // differs in at least six pad names, and the kick and the backbeat drum are different drums, dry.
+        for (a in kits.indices) for (b in a + 1 until kits.size) {
+            assertTrue((names[a] zip names[b]).count { (x, y) -> x != y } >= 6, "${kits[a]} and ${kits[b]} share pads")
+            for (role in 0..1) {
+                val d = shapeDistance(StaggerKits.dry(kits[a], role, 1f, 0).samples, StaggerKits.dry(kits[b], role, 1f, 0).samples)
+                assertTrue(d > .5, "role $role: ${kits[a]} and ${kits[b]} share a drum ($d)")
+            }
         }
-        val loudTop = top.sorted().takeLast(top.size / 10).average()
-        val loudWhole = whole.sorted().takeLast(whole.size / 10).average()
-        val hatsDb = 10 * kotlin.math.log10(loudTop / loudWhole)
-        // The mix: where 95 percent of the groove's energy sits.
-        val n = 1 shl 18
-        val spec = power(x, n)
-        val total = spec.sum()
-        var cum = 0.0
-        var ceiling = 0.0
-        for (k in spec.indices) { cum += spec[k]; if (cum >= .95 * total) { ceiling = k.toDouble() * rate / n; break } }
-        println("cardboard groove: hats $hatsDb dB under the full band at its loudest; 95 percent of the energy under $ceiling Hz")
-        // The references' range is 16 to 35 dB under (median 23); the groove sits near 30, the whisper end of it. Hats
-        // at their written weights with a brighter contact moved it from 35 to 30; the print's tape and converter
-        // and the bus set the rest, and the owner's ear decides whether the hats should come up further.
-        assertTrue(hatsDb in -35.0..-16.0, "hats $hatsDb dB under; the references 16 to 35, median 23")
-        assertTrue(ceiling < 650.0, "95 percent of the energy under $ceiling Hz; eight references under 309 to 635")
     }
 
     @Test fun `a built kit carries its grid its classes its chokes and its provenance`() {
-        val pads = StaggerKits.build(kit, { _, role, v, t -> rendered(role, v, t) })
+        for (k in kits) {
+        val pads = StaggerKits.build(k, { _, role, v, t -> rendered(role, v, t, k) })
         assertEquals(StaggerKits.PADS, pads.size)
-        assertEquals(listOf(DrumClass.KICK, DrumClass.SNARE, DrumClass.HAT_CLOSED), pads.take(3).map { it.drumClass })
+        assertEquals(listOf(DrumClass.KICK, DrumClass.SNARE), pads.take(2).map { it.drumClass })
         assertEquals(listOf(DrumClass.LOOP, DrumClass.LOOP), pads.takeLast(2).map { it.drumClass })
         for ((role, pad) in pads.withIndex()) {
             assertEquals(3, pad.velocityTakes.size)
             assertTrue(pad.velocityTakes.all { it.size == StaggerKits.TAKES })
             assertContentEquals(pad.velocityTakes.last().first().samples, pad.snip.samples)
-            assertEquals(StaggerKits.roles(kit)[role], pad.displayName)
+            assertEquals(StaggerKits.roles(k)[role], pad.displayName)
             assertEquals("STAGGER", pad.source["engine"])
             assertEquals(StaggerKits.VERSION.toString(), pad.source["kitVersion"])
             val expected = when {
@@ -299,13 +321,14 @@ class StaggerKitsTest {
                 else -> 0
             }
             assertEquals(expected, pad.muteGroup, "role $role choke")
-            if (role >= StaggerKits.HITS) assertTrue(pad.snip.frameCount > 1.5 * rate, "role $role") else assertTrue(pad.snip.frameCount < 1.5 * rate, "role $role")
+            if (role >= StaggerKits.HITS) assertTrue(pad.snip.frameCount > 1.5 * rate, "${k.name} role $role") else assertTrue(pad.snip.frameCount < 1.5 * rate, "${k.name} role $role")
+        }
         }
     }
 
     @Test fun `no pad or kit name borrows a maker's or the producer's name`() {
         val producer = Regex("(?i)doom|dumile|metal\\s*fingers?|viktor\\s*vaughn|king\\s*geedorah|zev\\s*love|\\bkmd\\b|madvillain|madlib|danger\\s*doom|special\\s*herbs|vaudeville|doomsday|mm\\.?\\s*food|born\\s*like\\s*this|stones?\\s*throw|rhymesayers|lex\\s*records|super\\s*villain|villain|\\bmask\\b")
-        for (name in StaggerKits.roles(kit) + kit.title + kit.id + "STAGGER") {
+        for (name in kits.flatMap { StaggerKits.roles(it) + it.title + it.id } + "STAGGER") {
             assertFalse(PresetTestSupport.trademarkBlocklist.containsMatchIn(name), name)
             assertFalse(producer.containsMatchIn(name), name)
         }
