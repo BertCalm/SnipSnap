@@ -337,8 +337,20 @@ level with round 0's harsh sweep (-14.0; round 0c -15.2). A shaker's brightness 
 continuous scrape, but given the history a softer groove (fader .25, about 3 dB down; 2 to 6 kHz at -14.7) is
 rendered beside it so the owner can choose the level by ear.
 
-[Expansion round 0 listening page](https://claude.ai/artifact/Q3rZ8po8ZaeJs9E4tNd86s) (private to the owner; the
-shaker at two levels, beside round 0d's sweep for BLUE).
+**Round 0f, BLUE's ride shimmers.** "The ride needs to be brighter and more of a light shimmery wash after the
+attack" (the owner, 2026-11-19). EMBER's flat ride is bright dry (its wash centred near 6.7 kHz), but BLUE's room
+shelf (-4 dB over 1.2 kHz) and the crate print's tape head (AGE .60: a one-pole near 6 kHz) took the shimmer, and
+through them its wash centred at 1.1 kHz. Both shape the whole kit and the tape is the family's, so the ride is
+treated on its own channel: TUNE .65 and DAMP .10 (were .40 and .40), a +6 dB high shelf at 5 kHz, and its own band
+over 5 kHz added twice over, faded in across the first 0.15 s so the strike is unchanged. A compressor on the ride
+(the house COMPRESSOR, fast attack) was tried and rejected: it matches the input's peak, so it lifted the wash over
+the strike and the ride lost its attack. Measured through the room and the print (no vinyl): the band over 5 kHz in
+the wash, 0.2 to 0.6 s after the strike, from 12.6 to 7.4 dB under the attack; the wash's centre from 1.1 to 3.4 kHz.
+On the printed groove, 6 to 12 kHz is up 2.7 dB and over 12 kHz up 6 dB, while 2 to 6 kHz (where the sweep was harsh)
+moved 0.4 dB.
+
+[Expansion round 0 listening page](https://claude.ai/artifact/Q3rZ8po8ZaeJs9E4tNd86s) (private to the owner; BLUE's
+shimmering ride beside round 0e's, and the shaker at two levels).
 
 ## Gates
 

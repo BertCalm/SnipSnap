@@ -37,10 +37,40 @@ object LooseCrateExpansionRound0Generator {
         Ember.render(voice, mapOf("DISTANCE" to 0f, "WARMTH" to 0f) + mapOf(*m), v, t).samples
     }
 
+    /**
+     * BLUE's ride, round 0f: "The ride needs to be brighter and more of a light shimmery wash after the attack" (the
+     * owner, 2026-11-19). EMBER's flat ride is bright dry (its wash centred near 6.7 kHz), but the room's shelf (-4 dB
+     * over 1.2 kHz) and the crate print's tape head (AGE .60, a one-pole near 6 kHz) take the shimmer: through them
+     * its wash centred at 1.1 kHz. Both shape the whole kit and the tape is the family's, so the ride is treated on
+     * its own channel, as a mixing engineer would:
+     * - TUNE .65 (was .40) and DAMP .10 (was .40): the modes higher, the ring longer;
+     * - a high shelf, +[RIDE_SHELF_DB] at [RIDE_AIR_HZ], to stand up to the room and the tape;
+     * - the wash lifted: the ride's own band over [RIDE_AIR_HZ] (two one-poles' high-pass), added [RIDE_LIFT] times
+     *   over, faded in across the first [RIDE_LIFT_SECONDS] s so the strike itself is unchanged.
+     * Measured through the room and the print (no vinyl): the band over 5 kHz in the wash (0.2 to 0.6 s after the
+     * strike) from 12.6 to 7.4 dB under the attack, the wash's centre from 1.1 to 3.4 kHz.
+     */
+    private val shimmeringRide: Strike = { v, t, _ ->
+        val x = Ember.render(EmberVoice.RIDE, mapOf("TUNE" to .65f, "DAMP" to .10f, "BUZZ" to .20f, "DISTANCE" to 0f, "WARMTH" to 0f), v, t).samples
+        val shelf = Dsp.Biquad().apply { highShelf(RIDE_AIR_HZ, RIDE_SHELF_DB) }
+        val y = FloatArray(x.size) { shelf.process(x[it]) }
+        val a = Dsp.FixedOnePole(RIDE_AIR_HZ)
+        val b = Dsp.FixedOnePole(RIDE_AIR_HZ)
+        val ramp = RIDE_LIFT_SECONDS * Dsp.RATE
+        FloatArray(y.size) { val h1 = y[it] - a.lp(y[it]); val h = h1 - b.lp(h1); y[it] + RIDE_LIFT * h * minOf(1f, it / ramp) }
+    }
+
+    /** Where the ride's air starts, Hz: its shelf and its lifted wash. */
+    private const val RIDE_AIR_HZ = 5_000f
+    private const val RIDE_SHELF_DB = 6f
+    /** How many times over the ride's air is added again after the strike: 2 is about +9.5 dB on that band. */
+    private const val RIDE_LIFT = 2f
+    private const val RIDE_LIFT_SECONDS = .15f
+
     private val blueParts: List<Pair<String, Strike>> = listOf(
         "felt-kick" to ember(EmberVoice.KICK, "TUNE" to .35f, "DAMP" to .65f, "BUZZ" to .15f),
         "brush-tap" to ember(EmberVoice.BRUSH_TAP, "TUNE" to .55f, "DAMP" to .35f, "BUZZ" to .55f),
-        "ride" to ember(EmberVoice.RIDE, "TUNE" to .40f, "DAMP" to .40f, "BUZZ" to .20f),
+        "ride" to shimmeringRide,
         "foot-hat" to ember(EmberVoice.HAT_FOOT, "TUNE" to .45f, "DAMP" to .50f, "BUZZ" to .10f),
         // Round 0e: the brush sweep is gone. Three rounds of it (round 0 "harsh and overbearing", 0c "scraping rather
         // than a gently rattling sweep", 0d "just awful") and the owner chose a shaker in its place (2026-11-19).
