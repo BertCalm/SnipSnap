@@ -560,52 +560,52 @@
  "choke_note": "Decided by measurement (round 0): with every 808 group choked, the 808 lanes of loops 127, 134 and 163 rendered 3 to 7 dB under their separated references and 1.9 to 4.4 dB closer without the choke, so their 808 notes ring over each other in the references. Only loop 154's 808 measured closer choked (-0.5 dB against +1.6 dB).",
  "glue": {
   "90": {
-   "threshold_db": -14.52,
-   "ratio": 4.0,
-   "attack_ms": 0.5,
-   "makeup_db": 8.77
-  },
-  "102": {
-   "threshold_db": -12.34,
-   "ratio": 4.0,
-   "attack_ms": 2.0,
-   "makeup_db": 6.16
-  },
-  "103": {
-   "threshold_db": -10.35,
-   "ratio": 4.0,
-   "attack_ms": 2.0,
-   "makeup_db": 6.14
-  },
-  "106": {
-   "threshold_db": -9.73,
-   "ratio": 4.0,
-   "attack_ms": 0.5,
-   "makeup_db": 5.5
-  },
-  "113": {
-   "threshold_db": -13.82,
-   "ratio": 4.0,
-   "attack_ms": 0.5,
-   "makeup_db": 8.75
-  },
-  "127": {
-   "threshold_db": -3.5,
+   "threshold_db": -20.78,
    "ratio": 4.0,
    "attack_ms": 0.3,
-   "makeup_db": 5.61
+   "makeup_db": 12.72
   },
-  "134": {
-   "threshold_db": -15.46,
-   "ratio": 4.0,
-   "attack_ms": 0.5,
-   "makeup_db": 10.08
-  },
-  "154": {
-   "threshold_db": -7.23,
+  "102": {
+   "threshold_db": -10.87,
    "ratio": 4.0,
    "attack_ms": 2.0,
-   "makeup_db": 2.71
+   "makeup_db": 5.78
+  },
+  "103": {
+   "threshold_db": -12.1,
+   "ratio": 4.0,
+   "attack_ms": 2.0,
+   "makeup_db": 6.58
+  },
+  "106": {
+   "threshold_db": -8.31,
+   "ratio": 4.0,
+   "attack_ms": 1.0,
+   "makeup_db": 4.45
+  },
+  "113": {
+   "threshold_db": -13.67,
+   "ratio": 4.0,
+   "attack_ms": 0.5,
+   "makeup_db": 8.73
+  },
+  "127": {
+   "threshold_db": -12.49,
+   "ratio": 4.0,
+   "attack_ms": 0.3,
+   "makeup_db": 11.2
+  },
+  "134": {
+   "threshold_db": -12.7,
+   "ratio": 4.0,
+   "attack_ms": 0.5,
+   "makeup_db": 8.52
+  },
+  "154": {
+   "threshold_db": -8.5,
+   "ratio": 4.0,
+   "attack_ms": 2.0,
+   "makeup_db": 3.24
   }
  },
  "glue_note": "Bus compression per groove (groove.glue), fitted by fit_glue.py to the reference's crest factor: 4:1, release 120 ms, 6 dB soft knee, attack and threshold fitted (a slow attack made the grooves peakier); the makeup gain matches the reference's RMS level."
