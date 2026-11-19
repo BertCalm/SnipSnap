@@ -241,7 +241,7 @@ object StaggerKits {
         mapOf("BITS" to .50f, "RATE" to .40f, "TONE" to .65f, "GRIT" to .08f),
         mapOf("WOBBLE" to .10f, "DRIVE" to .30f, "AGE" to .80f),
         mapOf("CRACKLE" to .25f, "RUMBLE" to .55f, "HISS" to .25f),
-        compressor = mapOf("AMOUNT" to .50f, "ATTACK" to .25f, "RECOVER" to .50f))
+        compressor = PRESS)
 
     fun printOf(kit: Kit): Print = when (kit) { Kit.CARDBOARD -> BOX; Kit.MATINEE -> REEL; Kit.STUMBLE -> WORN }
 
