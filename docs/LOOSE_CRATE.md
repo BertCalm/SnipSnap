@@ -9,11 +9,14 @@ behind → a dark, rumbling bed with the top cut off**.
 
 ## Status
 
-**Round 2 built, not yet heard.** The four kits are on FRESH TAPE's SKINS shelf (`LooseCrateKits` version 2,
-`StarterKits`), with their velocity and round-robin grids proven in software through save, reload, playback and MPC 3,
-SFZ and DecentSampler export. The owner heard round 1 ("Sounds pretty good", then "It's a bit drum machine like"),
-heard round 2a's two treatments and chose A (2026-11-18). Round 2 carries A to every kit's groove and roll. Only
-HUMMIN's groove has been heard as built (it is round 2a's A). Nothing has been played on a phone or an MPC.
+**Complete (2026-11-18).** Sound approved ("It sounds good to me") and the owner's device gates passed ("All good
+on my gates"): the four kits play on the owner's phone and load and cycle on the MPC. They are on FRESH TAPE's SKINS
+shelf (`LooseCrateKits` version 3, `StarterKits`), their velocity and round-robin grids proven in software through
+save, reload, playback and MPC 3, SFZ and DecentSampler export. How the owner got there: round 1 ("Sounds pretty
+good", then "It's a bit drum machine like"); round 2a, choosing A; round 2 ("Better. Crate cloth could use a bit of
+warmth or compression in the bass"); round 3, CLOTH's bass ("It sounds good to me"). The optional extra crack on
+CLOTH's snare was not asked for and is left as built. The phone's build time was not reported separately (45 to 107 s
+on the build machine).
 
 Listening pages (private to the owner's account): [round 1](https://claude.ai/artifact/WgYApFNJqJTjEiv6XGgnn6),
 the four kits read back from their MPC 3 export; [round 0](https://claude.ai/artifact/DaKKJX6p18cMbitmFKDVQn),
@@ -257,15 +260,62 @@ groove and roll goes through a room. Not measured on a phone.
 
 [Round 2 listening page](https://claude.ai/artifact/V66JmBdrMha3TvJLuLhdwh) (private to the owner).
 
+## Round 3: CLOTH's bass (as built, not yet heard)
+
+"Better. Crate cloth could use a bit of warmth or compression in the bass" (the owner, 2026-11-18). Measured against
+the cloth reference (Python probes): round 2's CLOTH groove had a spikier bass, its crest (peak against RMS under
+200 Hz) 21.4 dB against the reference's 17.9, and its kicks were nearly sine, the Drop Kick 40.6 dB down between 200
+and 500 Hz and 62 dB down above 500 Hz.
+
+CLOTH's print (`LooseCrateKits.CLOSE`, kit version 3) gains two stages after the converter, so every CLOTH pad,
+groove and roll carries them:
+- **Warmth:** VALVE with its speaker off (DRIVE .50, SAG .15, TONE .40, CAB 0): the harmonics a sine-like kick lacks.
+  At DRIVE .25 the kick's 200 to 500 Hz moved under 1 dB; at .50 the Drop Kick's rose 6.6 dB (-34.0).
+- **Compression in the bass:** `squeezeBass`, COMPRESSOR (AMOUNT .80, ATTACK .35, RECOVER .55) on the band under
+  180 Hz alone, split by two one-poles so the rest passes untouched.
+
+Measured in Kotlin on the groove through each print (`CLOTH's print presses its bass into body and leaves the rest
+alone`): bass crest 21.1 dB through round 2's print, 19.2 with the tube, 17.9 with the tube and the squeeze, the
+reference's 17.9. The test holds both: the full print at least 2 dB under round 2's, and the squeeze below the tube
+alone.
+
+Disclosed, not asked for: the groove's 0.5 to 2 kHz still sits near -22 dB against the reference's -12.4. That band
+is the reference snare's crack and beater knock, not the bass; CLOTH's bounce snare is a deep body and wires with
+little between. Left for the owner to call.
+
+## Expansion: BLUE, SPEED, RAGA (round 0, not yet heard)
+
+Asked which adjacent kits would extend the collection, the owner chose all three proposed (2026-11-18): BLUE (jazz
+breaks off a record), SPEED (sped-up breaks) and RAGA (Indian-record percussion). Nearest siblings and what differs:
+EMBER's Soul Jazz and After Hours (a clean club) for BLUE; the rack's SPEED section (whole semitones, per pad) for
+SPEED; TERRA PUNJAB (the same hand drums, clean) for RAGA. No reference loops were given for these.
+
+`LooseCrateExpansionRound0Generator` (`:synth:generateLooseCrateExpansionRound0`) renders one four-bar groove and
+the key hits of each, through LOOSE CRATE's room (`LooseCrateKits.Room`) and crate print:
+- **BLUE (90 BPM):** EMBER's felt kick, brush tap, brush sweep, ride and foot hat (DISTANCE 0, WARMTH 0: the room
+  and the print supply both); the ride swung in triplets, brushes on two and four, a boom-bap kick push.
+- **SPEED (108 BPM):** HUMMIN's approved strikes and played notes at 80 BPM in HUMMIN's room, then the loop read as
+  if recorded at 1.35 times the rate (45 rpm over 33 1/3) and resampled (`Resampler`), three copies end to end with
+  the middle kept, then the crate print. 529,200 frames at 80 become 392,000, four bars at 108 exactly (checked in the
+  generator).
+- **RAGA (94 BPM):** TERRA's dayan (open "na", closed "ti"), bayan ("ge", bending) and dholak over LOOSE CRATE's
+  thud kick and slap snare.
+
+Measured (Python probes): SPEED's hum kick rises from 53.8 to 73.3 Hz and shortens from 1.13 to 0.84 s; RAGA's bayan
+bends from 103 to 90 Hz; BLUE's groove never goes quiet (quietest tenth 12.5 dB under the loudest), from the ride,
+which rings over a second six times a bar; easing the brush sweep from .35 to .20 moved it under 1 dB.
+
+[Expansion round 0 listening page](https://claude.ai/artifact/Q3rZ8po8ZaeJs9E4tNd86s) (private to the owner).
+
 ## Gates
 
 | Gate | Status |
 |---|---|
 | Melodic, keygroups, chord tools, STRUM | Not applicable: drum kits |
-| Drums: multiple distinct genre kits on the shelf | Round 1 heard ("pretty good", "a bit drum machine like"); round 2 built, not heard: four kits under SKINS. `LooseCrateKitsTest` holds every pair to at least six different pad names and a different kick and main snare, dry (shape distance over 0.5), and the four prints differ |
-| Percussion: roll/riser | Built, not heard: one accelerating roll per kit (A15) |
+| Drums: multiple distinct genre kits on the shelf | Pass by ear (2026-11-18, round 3: "It sounds good to me"): four kits under SKINS. `LooseCrateKitsTest` holds every pair to at least six different pad names and a different kick and main snare, dry (shape distance over 0.5), and the four prints differ |
+| Percussion: roll/riser | Pass by ear with the kits: one accelerating roll per kit (A15), in the room since round 2 |
 | Velocity and round robin: rendering | Pass in software: every soft zone is a different strike from the hard one and never brighter; every zone holds four different strikes (`LooseCrateKitsTest`) |
-| Velocity and round robin: saving, playback, export | Pass in software: `LooseCrateKitTest` and `:shell:generateLooseCrateKits` (all four kits, 192 slices each: saved PCM, reload, the pad resolver walking the takes, MPC 3 track, SFZ, DecentSampler). MPC 2 is not written (the owner's format limit). Not played on a phone or an MPC |
+| Velocity and round robin: saving, playback, export | Pass: in software, and on the owner's phone and MPC ("All good on my gates", 2026-11-18): `LooseCrateKitTest` and `:shell:generateLooseCrateKits` (all four kits, 192 slices each: saved PCM, reload, the pad resolver walking the takes, MPC 3 track, SFZ, DecentSampler). MPC 2 is not written (the owner's format limit). Not played on a phone or an MPC |
 
 ## Ledger
 
@@ -275,4 +325,5 @@ groove and roll goes through a room. Not measured on a phone.
   files.
 - **Proposed**: every setting outside round 0's candidates, the four prints, the rolls and grooves.
 - **Heard**: round 0's two hum kicks ("Both sound great"); round 1's kits ("Sounds pretty good", "It's a bit drum
-  machine like"); round 2a, choosing A (all 2026-11-18). Round 2's CLOTH, HAZE and RITUAL grooves are not heard.
+  machine like"); round 2a, choosing A; round 2 ("Better. Crate cloth could use a bit of warmth or compression in the
+  bass"); round 3 ("It sounds good to me"); the device gates ("All good on my gates") (all 2026-11-18).

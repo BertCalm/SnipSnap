@@ -1,6 +1,9 @@
-"""Write OUT/page/index.html and MP3 copies of the demos for the BOROUGH round 0 listening page.
+"""Write OUT/page/index.html and MP3 copies of the demos for the BOROUGH listening page.
 
-    python3 build_page.py OUT_DIR
+    python3 build_page.py OUT_DIR [BEFORE_OUT_DIR]
+BEFORE_OUT_DIR (optional) is an earlier round's build; its grooves become a "before" player on
+each kit sheet so the two rounds can be compared. The round is read from the kick's parameters
+(round 0 drum-machine voices carry `f0`, round 1 acoustic voices carry `f1`).
 The page plays synthesized audio only. Reference loops are never copied to it.
 """
 from __future__ import annotations
@@ -56,7 +59,7 @@ ul{margin:0;padding-left:20px;display:grid;gap:4px}
 <div class="wrap">
 <header class="lede">
   <h1>Borough Kits</h1>
-  <p>Round 0 listening page. Six drum kits and four perc stacks, all synthesized from oscillators and fresh noise, with their parameters fitted to measurements of your twenty reference loops. No audio from the references is in these sounds or on this page.</p>
+  <p>__LEDE__</p>
   <p class="note">Every kit fills pads A01–A12 and every stack fills A13–A16, so any kit plus any stack is a complete sixteen-pad bank. The grooves below are original patterns at each kit's measured tempo and swing, not transcriptions.</p>
 </header>
 <section class="panel mixer" aria-labelledby="mixh">
@@ -101,16 +104,36 @@ for(const k of M.kits){
   sec.innerHTML=`<div class="kit"><div style="display:grid;gap:8px;min-width:0"><h2></h2><p class="role"></p><div class="facts"></div></div><div class="media">
   <h3>Groove</h3><audio controls preload="none" src="audio/${k.id}-groove.mp3"></audio>
   <h3>All twelve pads, hardest zone</h3><audio controls preload="none" src="audio/${k.id}-pads.mp3"></audio>
-  <h3>Touch: kick, snare, hat · soft ×3, medium ×3, hard ×3</h3><audio controls preload="none" src="audio/${k.id}-touch.mp3"></audio></div></div>`;
+  <h3>Touch: kick, snare, hat · soft ×3, medium ×3, hard ×3</h3><audio controls preload="none" src="audio/${k.id}-touch.mp3"></audio>
+  ${M.before?`<h3>Before: the same groove in ${M.before}</h3><audio controls preload="none" src="audio/before-${k.id}-groove.mp3"></audio>`:''}</div></div>`;
   sec.querySelector('h2').textContent=k.name;sec.querySelector('.role').textContent=k.role;
   const kp=k.pads[0].params, sp=k.pads[1].params;
-  const f=[`${k.bpm} BPM · swing ${k.swing_ms} ms on the 16th offbeat`,`kick ${kp.f0.toFixed(0)} Hz, sweep ×${kp.sweep.toFixed(2)} over ${kp.sweep_ms.toFixed(0)} ms, body ${kp.decay_ms.toFixed(0)} ms`,`snare head ${sp.f1.toFixed(0)} Hz, wires ${sp.wire_lo.toFixed(0)}–${sp.wire_hi.toFixed(0)} Hz for ${sp.wire_ms.toFixed(0)} ms`,`low-pass ${(kp.lp/1000).toFixed(1)} kHz kick · ${(sp.lp/1000).toFixed(1)} kHz snare · drive ${kp.drive.toFixed(2)}`,`fit residual ${res}`,`from ${k.primary.replace(/_/g,' ')} + ${k.secondary.replace(/_/g,' ')}`];
+  const head=kp.f0!==undefined
+    ?[`kick ${kp.f0.toFixed(0)} Hz, sweep ×${kp.sweep.toFixed(2)} over ${kp.sweep_ms.toFixed(0)} ms, body ${kp.decay_ms.toFixed(0)} ms`,`snare head ${sp.f1.toFixed(0)} Hz, wires ${sp.wire_lo.toFixed(0)}–${sp.wire_hi.toFixed(0)} Hz for ${sp.wire_ms.toFixed(0)} ms`,`low-pass ${(kp.lp/1000).toFixed(1)} kHz kick · ${(sp.lp/1000).toFixed(1)} kHz snare · drive ${kp.drive.toFixed(2)}`]
+    :[`kick head ${kp.f1.toFixed(0)} Hz, rings ${(kp.t1*1000).toFixed(0)} ms, beater contact ${kp.beater_ms.toFixed(1)} ms`,`snare head ${sp.f1.toFixed(0)} Hz, rings ${(sp.t1*1000).toFixed(0)} ms, wires ×${sp.wire.toFixed(2)}, stick contact ${sp.stick_ms.toFixed(2)} ms`,`record: room ${kp.distance.toFixed(2)} · squash ${kp.comp.toFixed(2)} · drive ${kp.drive.toFixed(2)} · low-pass ${(kp.lp/1000).toFixed(1)} kHz (kick), ${(sp.lp/1000).toFixed(1)} kHz (snare)`];
+  const f=[`${k.bpm} BPM · swing ${k.swing_ms} ms on the 16th offbeat`,...head,`fit residual ${res}`,`from ${k.primary.replace(/_/g,' ')} + ${k.secondary.replace(/_/g,' ')}`];
   sec.querySelector('.facts').replaceChildren(...f.map(t=>{const d=document.createElement('div');d.textContent=t;return d}));
   $('kitlist').append(sec);
 }
 $('listen').replaceChildren(...M.listen.map(t=>{const li=document.createElement('li');li.textContent=t;return li}));
 </script>
 """
+
+LEDE = {
+    0: 'Round 0 listening page. Six drum kits and four perc stacks, all synthesized from oscillators and fresh noise, with their parameters fitted to measurements of your twenty reference loops. No audio from the references is in these sounds or on this page.',
+    1: 'Round 1 listening page. Round 0 sounded like a drum machine, so every voice is now an acoustic model: drum heads that ring with many overtones, a felt beater, snare wires that only rattle when the head moves hard enough, cymbals fitted to real cymbal recordings, and a room. Each hit then goes through the sound of a sampled record: compression, saturation and a darker top end. The models were refitted to measurements of your twenty reference loops. No audio from the references is in these sounds or on this page.',
+}
+
+LISTEN_R1 = [
+    'New since your last listen: RIDE & RIMS now has a real ride. A03 is a ride cymbal fitted to the ride loop, A04 its bell, and the groove rides eighths with the bell closing every other bar. Before, a closed hat stood in for it.',
+    'Before and after: each kit sheet has the round 0 groove last. Does round 1 sound like drums in a room rather than a machine?',
+    'Kick: a felt beater on a head, with the air and boom of the shell, rather than a falling sine. Snare: a stick on a head with the wires reacting, rather than tone plus noise.',
+    'Feel: the grooves now drift by a few milliseconds and vary in strength, the snare sits slightly late, and quarter-note hats are accented.',
+    'Touch clips: soft strikes should be darker and rounder, with fewer wires, not just quieter.',
+    'Toms, rim, pedal hat, roll and the perc stacks are EMBER acoustic voices tuned to your loops, but not yet fitted to them.',
+    'Suspects from the spectrograms: the open hat may be brighter and longer than anything in the loops, and DRY ROOM carries more room between hits than keap does.',
+    'The record is in each hit (room, squash, drive, low-pass). There is no vinyl crackle bed yet; say if you want one.',
+]
 
 LISTEN = [
     'Does each kit sound like the family of loops it was fitted to? The kit sheet names its two source loops.',
@@ -122,7 +145,7 @@ LISTEN = [
 ]
 
 
-def main(out):
+def main(out, before=None):
     out = Path(out); page = out / 'page'; (page / 'audio').mkdir(parents=True, exist_ok=True)
     man = json.loads((out / 'manifest.json').read_text())
     for w in sorted((out / 'demo').glob('*.wav')):
@@ -131,9 +154,19 @@ def main(out):
     slim = dict(kits=[{k: v for k, v in kit.items() if k != 'pads'} | {'pads': [dict(pad=p['pad'], label=p['label'], params=p['params']) for p in kit['pads']]} for kit in man['kits']],
                 stacks=[dict(id=s['id'], name=s['name'], pads=[dict(pad=p['pad'], label=p['label']) for p in s['pads']]) for s in man['stacks']],
                 listen=LISTEN)
-    (page / 'index.html').write_text(PAGE.replace('__MANIFEST__', json.dumps(slim).replace('</', '<\\/')))
+    rnd = 0 if 'f0' in man['kits'][0]['pads'][0]['params'] else 1
+    if rnd == 1:
+        slim['listen'] = LISTEN_R1
+    if before:
+        for kit in man['kits']:
+            w = Path(before) / 'demo' / f"{kit['id']}-groove.wav"
+            subprocess.run(['ffmpeg', '-v', 'error', '-y', '-i', str(w), '-codec:a', 'libmp3lame', '-b:a', '160k',
+                            str(page / 'audio' / f"before-{kit['id']}-groove.mp3")], check=True)
+        slim['before'] = f'round {rnd - 1}'
+    (page / 'index.html').write_text(PAGE.replace('__LEDE__', html.escape(LEDE[rnd]))
+                                     .replace('__MANIFEST__', json.dumps(slim).replace('</', '<\\/')))
     print('page', page)
 
 
 if __name__ == '__main__':
-    main(sys.argv[1])
+    main(*sys.argv[1:3])

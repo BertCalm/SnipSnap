@@ -691,6 +691,18 @@ object StarterKits {
             "Sped-up break hits, clipped and gabber kicks, chopped slices, stutters and a stretched snare. Snare rush and riser.", seeded=false, tempoBpm=com.snipsnap.synth.Splinter.BPM.toFloat()) {
             com.snipsnap.synth.Splinter.arranged()
         },
+        Starter(com.snipsnap.synth.Shatter.id, "SHATTER BREAKCORE",
+            "One two-bar break cut into sixteen slices, each carrying the room of its neighbours. Slice repeat and break rush.", seeded=false, tempoBpm=com.snipsnap.synth.Shatter.bpm.toFloat()) {
+            com.snipsnap.synth.Breakcore.arranged(com.snipsnap.synth.Shatter)
+        },
+        Starter(com.snipsnap.synth.Soundclash.id, "SOUNDCLASH BREAKCORE",
+            "Slam kick, subs, reese, siren, horn, rewind and echo throws. Dub roll and siren rise.", seeded=false, tempoBpm=com.snipsnap.synth.Soundclash.bpm.toFloat()) {
+            com.snipsnap.synth.Breakcore.arranged(com.snipsnap.synth.Soundclash)
+        },
+        Starter(com.snipsnap.synth.Redline.id, "REDLINE BREAKCORE",
+            "Speedcore at 250 BPM: tuned terror kicks, clipped noise snares and hats, a scream and feedback stab. Snare roll and scream rise.", seeded=false, tempoBpm=com.snipsnap.synth.Redline.bpm.toFloat()) {
+            com.snipsnap.synth.Breakcore.arranged(com.snipsnap.synth.Redline)
+        },
         Starter("spore-synth-broken", "SPORE ORBITAL BREAKS",
             "Short kick, wire clap, higher toms and metallic percussion. Reverse-metal accents and accelerating riser.", seeded=false, tempoBpm=155f) {
             com.snipsnap.synth.SporeSyntheticKits.arranged(com.snipsnap.synth.SporeSyntheticKits.Genre.BROKEN)
@@ -967,6 +979,21 @@ object StarterKits {
             "New York in the 1950s, a Latin section beside a jazz drummer: congas, bongos, timbales and paila, a mambo bell, a clave, a ride and an open kick, heard across a big studio through valve and tape. Three touch zones, four takes; an abanico.",
             seeded = false, tempoBpm = com.snipsnap.synth.CalabashKits.Kit.AFROCUBAN.bpm.toFloat(),
         ) { com.snipsnap.synth.CalabashKits.build(com.snipsnap.synth.CalabashKits.Kit.AFROCUBAN) },
+        Starter(
+            "riddim-clave-dancehall", "RIDDIM CLAVE DANCEHALL",
+            "Bright, tight dancehall on the 3-2 clave: a punch kick and a digital rimshot, a clap, choked hats, a shaker, claves, sticks and a cowbell, and four tuned woods in F sharp minor. Three touch zones, four takes; a rim roll.",
+            seeded = false, tempoBpm = com.snipsnap.synth.RiddimKits.Kit.CLAVE_DANCEHALL.bpm.toFloat(),
+        ) { com.snipsnap.synth.RiddimKits.build(com.snipsnap.synth.RiddimKits.Kit.CLAVE_DANCEHALL) },
+        Starter(
+            "riddim-dembow", "RIDDIM DEMBOW",
+            "Deep and heavy dembow: a driven sub kick, a lower snare and a wide clap, darker hats, a conga, a bongo, a talking drum and a low bronze bar that wobbles. Three touch zones, four takes; a snare roll.",
+            seeded = false, tempoBpm = com.snipsnap.synth.RiddimKits.Kit.DEMBOW.bpm.toFloat(),
+        ) { com.snipsnap.synth.RiddimKits.build(com.snipsnap.synth.RiddimKits.Kit.DEMBOW) },
+        Starter(
+            "riddim-boom-riddim", "RIDDIM BOOM RIDDIM",
+            "The kick is the bass: six tuned booms from F1 to E flat 2, one sliding, that cut each other off like one bass voice, with a ringing rim, choked hats, a clap and bronze bars in F minor. Three touch zones, four takes; a hat riser.",
+            seeded = false, tempoBpm = com.snipsnap.synth.RiddimKits.Kit.BOOM_RIDDIM.bpm.toFloat(),
+        ) { com.snipsnap.synth.RiddimKits.build(com.snipsnap.synth.RiddimKits.Kit.BOOM_RIDDIM) },
         Starter(
             "ember", "EMBER",
             "A live jazz kit in a small club in 1962, hard bop on sticks: an open calfskin kick feathered under the band, a crisp snare, a riveted ride carrying the time, a press roll and a mallet cymbal swell. Three touch zones, four takes.",

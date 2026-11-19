@@ -1,6 +1,8 @@
-# BOROUGH: fitted boom-bap kits and perc stacks (round 0)
+# BOROUGH: fitted boom-bap kits and perc stacks (round 1)
 
-Status: CONCEIVE plus a Python sound proof. Not heard, not integrated, not on the shelf.
+Status: CONCEIVE plus a Python sound proof. Round 0 heard by the owner ("Sounds quite drum
+machine like"); round 1 rebuilds every voice on acoustic models and is waiting for a listen.
+Not integrated, not on the shelf.
 Repository read: `afb0fa98` (2026-11-18).
 
 The characteristic gesture is **heavy swept kick → papery snare crack with late wires → dark, driven recording chain → a perc stack riding on top**.
@@ -18,6 +20,116 @@ occurrence. The fitter (`fit.py`) only compares those numbers. No reference PCM 
 mixed, resynthesised with its phases, or put on the listening page. The reference files are not
 in the repository; their SHA-256 hashes are in `targets.json` so a later round can prove which
 files were measured.
+
+## Round 1: from drum machine to drums in a room
+
+**What the owner heard.** Round 0: "Sounds quite drum machine like". That is an accurate
+description of what round 0 built. Its kick was a falling sine with a click, its snare two sines
+plus white noise, its hats six square waves through filters: the classic analog drum-machine
+recipes. Fitting moved those recipes' numbers toward the loops' band envelopes, but no setting of
+a swept sine is a felt beater hitting a calf head in a room. The grid-perfect demo grooves added
+to the impression.
+
+**What changed.** `prototype/borough/acoustic.py` replaces every voice with the repository's
+acoustic drum models (EMBER, `prototype/ember/ember_proto.py`, owner-approved) and adds the
+record that the loops were sampled from:
+
+```
+kick : felt beater + air push -> membrane (Bessel modes, high modes die first, pitch sag on hard
+       hits, second head) -> the kit hums along (snare wires, a floor tom answering) + beater click
+snare: hickory stick -> membrane -> threshold wires driven by the head's own motion (a soft stroke
+       is clean, a hard one sizzles) + the stick heard directly
+hats, rim, toms, roll, perc stacks: EMBER's voices (cymbals and Latin voices fitted to CC0
+       recordings), tuned per kit or per measured perc peak
+  -> EMBER room by DISTANCE -> 44.1 kHz
+  -> the record, per hit: compressor (lifts room and tail) -> drive (scaled by strike)
+     -> high-shelf tilt -> 2-pole low-pass -> trim / release -> zone level 0.89 * v^0.8
+```
+
+Fitted per role (kick, snare, hat) against the same round 0 descriptors: the head's pitch,
+decay and loss law, strike radius, beater or stick contact width, wire looseness and level, and
+the record (room distance, squash, drive, tilt, low-pass). Derived pads follow their kit: RIM is
+tuned from the snare head, TOM LO and TOM HI sit at 2x and 3.2x the kick head, GHOST is the
+fitted snare at 0.4 strength with the wires relatively louder, SNARE ROLL is EMBER's press roll.
+Perc stacks are EMBER voices tuned to the measured stack peaks (shaker 5.6 kHz, bongos 400 and
+750 Hz, clave 950 Hz, tambourine 5.3 kHz, conga 88 and 395 Hz, ride bells 3.45 and 2.52 kHz).
+
+The demo grooves are now played, not sequenced: each hit drifts with sd 3 ms (kick), 4 ms (snare,
+ghost, rim) or 5 ms (hats), the snare sits 6 ms late, strength varies with sd 0.06 and picks the
+nearest velocity zone, and quarter-note hats are accented. Seeded, so every build is identical.
+
+**Results (Python harness).** Refit: 36 fits at 28 generations. Mean residual against the
+reference descriptors, round 0 to round 1: kick 6.2 to 7.4 dB, snare 8.3 to 8.8 dB, hat 7.1 to
+7.7 dB. The acoustic models score slightly worse on this descriptor, and that is expected: the
+descriptor is a band envelope, which a free recipe can match by shape without sounding like a
+drum, while a membrane can only make the spectra a membrane makes. The number cannot measure
+"drum machine"; the listen decides.
+
+| Loop | kick r0 → r1 | snare r0 → r1 | hat r0 → r1 |
+|---|---|---|---|
+| drum_tops_surf | 7.8 → 9.5 | 10.1 → 9.1 | 10.9 → 13.7 |
+| drums_baxter | 7.7 → 8.3 | 10.1 → 10.6 | 6.8 → 7.3 |
+| drums_full_decatur | 4.5 → 4.9 | 9.8 → 9.9 | – |
+| drums_full_ditmas | 5.3 → 5.7 | 7.8 → 7.4 | 5.6 → 5.0 |
+| drums_full_driggs | 7.5 → 8.1 | 5.7 → 7.4 | 7.6 → 7.9 |
+| drums_full_halsey | 8.1 → 8.0 | 7.5 → 7.7 | 6.2 → 6.1 |
+| drums_full_hudson | 5.8 → 7.2 | 7.4 → 8.3 | 5.3 → 5.3 |
+| drums_full_kingston | 5.8 → 7.4 | 8.5 → 8.4 | – |
+| drums_howard | 5.7 → 7.1 | 9.7 → 8.9 | 11.3 → 13.1 |
+| drums_keap | 5.8 → 7.4 | 10.3 → 11.1 | 7.1 → 6.6 |
+| drums_lafayette | 4.5 → 6.5 | 6.6 → 8.2 | – |
+| drums_mercer_cranked | 6.6 → 7.9 | 6.6 → 8.2 | 6.4 → 6.3 |
+| drums_ride_moffat_rims | 6.1 → 7.5 | 7.5 → 9.2 | 3.3 → 5.7 |
+
+Verification (`verify.py` on the round 1 build): 792 WAVs, 0 failures; worst peak 0.890,
+worst DC 0.0006, worst final-10 ms RMS 0.0008. Velocity is timbral on 88 of 88 pads
+(gain-matched soft-to-hard residual above -20 dB; the closest, the DRY ROOM ghost, is -11.1 dB
+with its spectral centroid moving from 324 Hz soft to 1118 Hz hard). Takes are distinct strikes:
+the most alike pair of takes still differs by -19.6 dB after gain matching. The first build
+failed 17 open- and pedal-hat files on the silent-ending check: the trim judged the cut point
+with a half-empty averaging window, read the ringing cymbal as quiet, and gave it a 10 ms fade.
+`end()` now judges the last full 10 ms against the sample peak and fades a still-ringing cut
+over up to 250 ms.
+
+Spectrograms of four grooves against their reference loops (a private visual check, not
+published): the round 1 kicks show several low bands where round 0 showed one sine line; the
+room and compression fill the gaps that round 0 left silent; the tops arrive in short bright
+bursts like the loops'. Two suspects for the listen: the open hat at the end of the bar is
+brighter and longer than anything in the loops, and DRY ROOM carries more room between hits
+than keap, which is gated.
+
+Listening page, version 2 (same link), with a round 0 before player on each kit sheet.
+
+Round 1 build (from `prototype/borough/`):
+
+```sh
+BOROUGH_MODEL=acoustic BOROUGH_ITER=28 python3 fit.py targets.json fitted_r1.json [loop ...]  # ~80 min on 4 cores
+BOROUGH_MODEL=acoustic python3 build.py fitted_r1.json OUT     # ~4 min
+python3 verify.py OUT targets.json fitted_r1.json
+python3 build_page.py OUT [ROUND0_OUT]                         # optional before/after players
+```
+
+### Round 1.1: RIDE & RIMS gets a ride
+
+**What the owner heard.** "Better. But rides and rims doesn't have any rides." Correct. RIDE &
+RIMS' A03 was EMBER's closed hat fitted toward the ride loop's cymbal, and the demo groove's ride
+notes fell back to that hat, or played nothing when a perc stack was chosen.
+
+**What changed.** A ride kit (`kits.py` `ride=True`) now puts EMBER's ride on A03 and its bell on
+A04, through the same record chain; the pedal hat stays on A08 (the foot keeps 2 and 4 under a
+ride), and the closed and open hats leave this kit. `fit.py` fits a `ride` role against the loop's
+cymbal descriptor (`BOROUGH_ROLES=ride`, `ROLE_TARGET`). The groove gets an over-lane: eighths on
+the ride with the quarters leaning in, the bell to close every other bar, the pedal hat under the
+rims; it plays with or without a stack, about 4 dB under a hat lane (gain 0.32 against 0.5) because a ride's 1.4 s ring piles
+up on eighths.
+
+**Results (Python harness).** Ride fit on drums_ride_moffat_rims: 4.60 dB (the closed hat it
+replaces: 5.68 dB); the shipped A03 re-scores at 5.24 dB (was 6.50 dB). The fit chose a nearly
+fully damped, dark (4.7 kHz low-pass), driven ride: the descriptor only sees the 0.31 s between
+strokes, never the full ring, so the pad may sound shorter than a ride left to ring. It still
+rings 1.35 s above -30 dB. Verification unchanged: 792 WAVs, 0 failures, timbral velocity on
+88 of 88 pads. Listening page version 3: the RIDE & RIMS before player is the round 1 groove
+with the hat stand-in.
 
 ## What the loops measured (Python harness)
 
@@ -53,7 +165,7 @@ them do, and what earns this collection a place:
    already lands a second kit on bank B (CLI `merge`); a stack-onto-A13 combine and its phone
    picker are new work for the integration round.
 
-## Signal flow
+## Signal flow (round 0, superseded by round 1 above)
 
 ```
 macro-free recipe (fitted numbers) + zone velocity + take seed
@@ -87,7 +199,7 @@ Shape constants, not measured mechanics.
 | CRANKED | 90 | mercer cranked, lafayette | the highest, longest kick (62 Hz, little sweep) against a 39 Hz partner |
 | WAX | 80 | baxter, halsey | slow and darkest: snare low-passed at 3.2 kHz, heavy drive |
 | DRY ROOM | 90 | keap, howard | gated: a 47 ms kick body, silence between hits |
-| RIDE & RIMS | 90 | ride moffat rims, ditmas | short rim-led snare, a ride-like cymbal in the hat slot, the most swing |
+| RIDE & RIMS | 90 | ride moffat rims, ditmas | short rim-led snare, a ride and ride bell on A03-A04 (from round 1.1), the most swing |
 
 Drum pads A01-A12: KICK, SNARE, HAT, OPEN HAT, KICK 2, SNARE 2, RIM, PEDAL HAT, GHOST, TOM LO,
 TOM HI, SNARE ROLL. Fitted: A01, A02, A03, A05, A06. Derived from a fitted parent (proposed,
@@ -101,7 +213,7 @@ two-beat roll), BELLS (bell hi, bell lo, sleigh, log), TOPS (clap, ride, ride be
 Unused this round: berry (85 BPM, the darkest kick low-pass, 1.4 kHz), the goner texture loop,
 and the wilkins tops loop (too sparse to fit). Each is a candidate for a seventh kit or a dust bed.
 
-## Results (Python harness, not Kotlin)
+## Results, round 0 (Python harness, not Kotlin)
 
 Fit: `fit.py`, differential evolution over 10 to 15 named parameters per role, scored as the RMS
 dB difference of the third-octave band envelope (29 bands, up to 21 times, -50 dB floor) over the
@@ -164,7 +276,7 @@ Listening page (private until shared): https://claude.ai/artifact/6y32yHPUszWK58
 
 | Gate | Status |
 |---|---|
-| Drums: multiple distinct genre kits on the shelf | not yet: six kits rendered in Python, not heard, not on the shelf |
+| Drums: multiple distinct genre kits on the shelf | not yet: six kits rendered in Python; round 0 heard and rejected as drum-machine-like, round 1 not heard; not on the shelf |
 | Percussion: authored roll/riser where appropriate | partial: SNARE ROLL per kit and TAMB ROLL, finite, not heard |
 | Velocity levels through render, save, playback, export | render only (Python): three timbral zones; save, playback and export not started |
 | Round robin through render, save, playback, export | render only (Python): three takes; save, playback and export not started |
@@ -172,7 +284,8 @@ Listening page (private until shared): https://claude.ai/artifact/6y32yHPUszWK58
 
 ## Next round
 
-1. Owner listens. Kick and snare per kit first; then the derived pads; then the stacks.
+1. Owner listens to round 1 against round 0 (each kit sheet has a before player). Kick and
+   snare per kit first; then the derived pads; then the stacks.
 2. Fit the stacks properly (shaker, tambourine, bells, clap) with role-specific descriptors.
 3. Optional dust bed and a seventh kit from berry, if the listen asks for them.
 4. Re-render at 4x, freeze accepted audio as a versioned resource bank (the SOUL ROCK path),
@@ -187,7 +300,8 @@ Listening page (private until shared): https://claude.ai/artifact/6y32yHPUszWK58
 - **Measured (Python harness):** everything in "What the loops measured" and "Results".
 - **Proposed:** the kit groupings, the A01-A12 / A13-A16 contract, every derived pad, the perc
   parameters, the velocity laws, the take jitter, the kick length.
-- **Heard:** nothing. This sandbox cannot play audio.
+- **Heard:** round 0 by the owner: "Sounds quite drum machine like". Round 1: nothing yet. This
+  sandbox cannot play audio.
 
 ## Why it is built this way
 
@@ -203,6 +317,11 @@ Listening page (private until shared): https://claude.ai/artifact/6y32yHPUszWK58
   turned-down backbeats.
 - **Kits and stacks share fixed pads.** Drums on A01-A12 and percussion on A13-A16 is what makes
   "mix and match" a one-tap swap that never moves the kick.
+- **Round 1 trades a better score for a real drum.** A drum-machine recipe can bend into almost
+  any band envelope; a membrane can only make what a membrane makes. Round 1's residuals are
+  about 1 dB worse on average, and it is still the right trade: the owner's ear rejected the
+  better-scoring recipes, and the physics is what makes a soft hit, a hard hit and the next hit
+  differ the way a played drum does.
 - **The risky decision** is fitting each role against a mix that has other drums in it. The
   backbeat prior and averaging over every occurrence reduce the bleed, but the residuals stay at
   4 to 11 dB, and only your ears can say whether that is close enough.

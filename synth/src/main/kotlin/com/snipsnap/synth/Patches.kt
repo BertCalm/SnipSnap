@@ -65,6 +65,7 @@ object Patches {
             HiccupPatch.ENGINE -> HiccupPatch.fromJsonValue(value)
             ClutterPatch.ENGINE -> ClutterPatch.fromJsonValue(value)
             EmberPatch.ENGINE -> EmberPatch.fromJsonValue(value)
+            RiddimPatch.ENGINE -> RiddimPatch.fromJsonValue(value)
             CalabashPatch.ENGINE -> CalabashPatch.fromJsonValue(value)
             ServoPatch.ENGINE -> ServoPatch.fromJsonValue(value)
             OnsetPatch.ENGINE -> OnsetPatch.fromJsonValue(value)

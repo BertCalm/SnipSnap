@@ -1,3 +1,8 @@
+> LOOSE CRATE kits (complete 2026-11-18: sound approved, phone and MPC gates passed): four beat-tape drum kits in
+> the CYPHER shape, HUMMIN, CLOTH, HAZE and RITUAL, aimed at measurements of the owner's reference loops. Every
+> groove and roll is played as one kit in one room (a drummer's kick dynamics, snare wires under every kick, ROOM,
+> COMPRESSOR and a dark shelf); CLOTH's print adds a tube and a bass-only compressor. Velocity × round robin is
+> proven through save, playback and MPC 3, SFZ and DecentSampler export. See [LOOSE CRATE](LOOSE_CRATE.md).
 > CYPHER kits (round 2 heard 2026-11-12; all six kits approved): six hip-hop drum kits in
 > the GATECRASH shape over THUMP's new SUB voice, a sub drum whose pitch holds its root and then slides to
 > another note. Velocity × round robin is proven through save, playback and MPC 3, SFZ and DecentSampler
@@ -25,6 +30,10 @@
 > SPLINTER breakcore kit (2026-11-15): one 18-pad starter at 200 BPM on the approved Spore kick and
 > snare, with a new edit stage (speed, chop, retrigger, stretch, clip). 162 cells verified through
 > saving, playback, SFZ and MPC 3. Groove heard 2026-11-15: fine; hardware open. See [SPLINTER](SPLINTER.md).
+
+> Breakcore family (2026-11-18): SHATTER (180 BPM), SOUNDCLASH (175) and REDLINE (250) join SPLINTER,
+> three 18-pad starters, 162 cells each verified through saving, playback, SFZ and MPC 3. Grooves and pads
+> heard 2026-11-18 and kept; per-pad verdicts and hardware open. See [BREAKCORE_FAMILY](BREAKCORE_FAMILY.md).
 
 > TRIAD first listening gate (2026-11-09): one generated hybrid drum groove through
 > shared compression/drive, dynamics/tape, or crush/grains. Native finite audition;

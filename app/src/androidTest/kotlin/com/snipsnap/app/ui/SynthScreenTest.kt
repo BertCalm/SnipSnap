@@ -478,7 +478,7 @@ class SynthScreenTest : ComposeScreenTest() {
         condition: () -> Boolean = { updatedKit.get() != null },
     ) {
         try {
-            waitFor(what, timeoutMillis, condition)
+            waitFor(what, timeoutMillis, condition = condition)
         } catch (failure: AssertionError) {
             val messages = recordedToasts.joinToString(" | ").ifBlank { "<none>" }
             throw AssertionError("$what did not complete within ${timeoutMillis}ms. Captured SYNTH toasts: $messages", failure)

@@ -5,12 +5,16 @@ kit+stack combinations and a listening page. Python harness, not Kotlin. Reads f
     python3 build.py fitted.json OUT_DIR
 """
 from __future__ import annotations
-import html, json, sys, time, zipfile
+import html, importlib, json, os, sys, time, zipfile
 from pathlib import Path
 import numpy as np
 from scipy.io import wavfile
 import voices as V
 import kits as K
+
+# Round 0 rendered with voices.py (drum-machine recipes); round 1 with acoustic.py (EMBER models).
+MODEL = os.environ.get('BOROUGH_MODEL', 'voices')
+M = importlib.import_module(MODEL)
 
 SR = V.SR
 ZONES = [0.35, 0.65, 1.0]
@@ -24,7 +28,7 @@ def jitter(p, rng):
             continue
         if k.endswith('_hz') or k in ('f0', 'f1', 'metal_hz', 'j1'):
             q[k] = v * (1 + rng.normal(0, .004))          # a retensioned head, a different spot on the plate
-        elif k.endswith('_ms'):
+        elif k.endswith('_ms') or k == 't1':
             q[k] = v * (1 + rng.normal(0, .04))
         elif k in ('click', 'wire', 'skin', 'shell'):
             q[k] = v * float(np.clip(1 + rng.normal(0, .1), .7, 1.3))
@@ -32,6 +36,8 @@ def jitter(p, rng):
 
 
 def derive(kit, fitted):
+    if MODEL != 'voices':
+        return M.derive(kit, fitted, fitted['drum_tops_surf']['hat'])
     """Twelve drum pads from two fitted loops. Fitted: KICK, SNARE, HAT, KICK 2, SNARE 2.
     Derived (proposed, not fitted): the rest, each from its fitted parent."""
     a, b = fitted[kit['primary']], fitted[kit['secondary']]
@@ -51,6 +57,10 @@ def derive(kit, fitted):
 
 
 def render_pad(kind, p, vel, rng, extra):
+    if MODEL != 'voices' and kind != 'stack':
+        return M.render_pad(kind, p, vel, rng, extra)
+    if kind == 'stack':
+        return M.stack_pad(p['voice'], p['macros'], p['target'], vel, rng.integers(1 << 20))
     if kind == 'kick': return V.kick(p, vel, rng)
     if kind == 'snare': return V.snare(p, vel, rng)
     if kind == 'rim': return V.rim(p, vel, rng)
@@ -111,16 +121,24 @@ def write(path: Path, x):
 
 
 # Authored audition patterns (not transcriptions): 16 steps, one char per step.
-# K kick, S snare, g ghost, h hat, o open hat, r rim, p pedal hat, R ride.
+# K kick, S snare, g ghost, h hat, o open hat, r rim, p pedal hat. Ride kits add an OVER lane.
 PATTERNS = {
     'borough-stoop':   ['K.h.S.hKh.K.S.h.', 'K.h.S.h.hKK.S.o.'],
     'borough-cellar':  ['K.h.S.h...K.S.h.', 'K.h.S.hK..K.S.oK'],
     'borough-cranked': ['K.h.S.g.KKh.S.g.', 'K.h.S.g.K.K.S.gK'],
     'borough-wax':     ['KK.KS.h.K.K.S.h.', 'KK.KS.h.K.K.S.o.'],
     'borough-dry':     ['K.h.S...K.K.S...', 'K.h.S.h.K.K.S..K'],
-    'borough-rims':    ['K.R.r.R.K.R.r.RK', 'K.R.r.R.KKR.r.R.'],
+    'borough-rims':    ['K.K.r...K.K.r...', 'K.K.r...K.K.r..K'],   # the ride loop's kick and rim places
 }
-LANE = dict(K=0, S=1, h=2, o=3, r=6, p=7, g=8, R=None)
+# Cymbal lanes played over the pattern, for kits whose timekeeper is a ride: (pad index, steps, strength,
+# bars) -- every 8th on the ride with the quarters leaning in, the bell to close every other bar, the
+# pedal hat under the rims on 2 and 4. Separate from PATTERNS because a ride stroke shares its step
+# with the kick and the rim (one character per step cannot hold both).
+OVER = {
+    'borough-rims': [(2, [0, 4, 8, 12], .8, (0, 1, 2, 3)), (2, [2, 6, 10], .55, (0, 1, 2, 3)),
+                     (2, [14], .55, (0, 2)), (3, [14], .75, (1, 3)), (7, [4, 12], .45, (0, 1, 2, 3))],
+}
+LANE = dict(K=0, S=1, h=2, o=3, r=6, p=7, g=8)
 STACK_PATTERNS = {   # (pad index 0-3, steps, zone)
     'hands': [(0, range(0, 16, 2), 1), (0, range(1, 16, 2), 0), (1, [3, 10], 2), (2, [6, 14], 1), (3, [11], 1)],
     'tamb':  [(0, range(0, 16), 0), (1, [4, 12], 2), (2, [5], 1)],
@@ -129,38 +147,58 @@ STACK_PATTERNS = {   # (pad index 0-3, steps, zone)
 }
 
 
+NOMINAL = dict(K=.95, S=.92, g=.3, h=.5, o=.7, r=.7, p=.45)
+
+
 def groove(kit, bank, stack=None, sbank=None, bars=4):
+    """Round 1 plays it like a person: every hit drifts a few ms (sd 3 ms kick, 4 ms snare, 5 ms
+    hats; shape), the backbeat sits 6 ms late, quarter-note hats are accented, and each hit's
+    strength wanders (sd 0.06) and picks the nearest velocity zone and take in turn, as a pad would."""
     bpm = kit['bpm']; st = 60 / bpm / 4
+    hr = V.rng_for('groove', kit['id'], stack['id'] if stack else '')   # seeded: same groove every run
     y = np.zeros(int((bars * 16 * st + 2) * SR)); count = {}
-    def place(key, step_abs, zone, gain):
+    def place(key, step_abs, v, gain, sd_ms, late_ms=0.0):
+        v = float(np.clip(v + hr.normal(0, .06), .15, 1.0))
+        zone = int(np.argmin([abs(v - z) for z in ZONES]))
         cyc = count.get(key, 0); count[key] = cyc + 1
-        hit = (bank if key[0] == 'k' else sbank)[key[1]][zone][cyc % TAKES]
+        hit = (bank if key[0] == 'k' else sbank)[key[1]][zone][cyc % TAKES] * (v / ZONES[zone]) ** .8
         sw = kit['swing_ms'] / 1000 if step_abs % 2 else 0
-        at = int((step_abs * st + sw) * SR)
+        at = max(0, int((step_abs * st + sw + (late_ms + hr.normal(0, sd_ms)) / 1000) * SR))
         y[at:at + len(hit)] += hit[:len(y) - at] * gain
     for bar in range(bars):
         pat = PATTERNS[kit['id']][bar % 2 if bar < 3 else 1]
         for s, c in enumerate(pat):
             if c == '.': continue
-            if c == 'R':
-                if stack is None: place(('k', 2), bar * 16 + s, 1, .7)   # no ride on the kit itself: hat
-                continue
-            zone = 2 if c in 'KS' else 1 if s % 4 == 0 else 0
-            place(('k', LANE[c]), bar * 16 + s, zone, .55 if c in 'hop' else 1)
+            v = NOMINAL[c] + (.25 if c == 'h' and s % 4 == 0 else 0)
+            place(('k', LANE[c]), bar * 16 + s, v, .55 if c in 'hop' else 1,
+                  3 if c == 'K' else 4 if c in 'Sgr' else 5, 6 if c == 'S' else 0)
+        for pad, steps, v, in_bars in OVER.get(kit['id'], []):
+            if bar in in_bars:
+                for s in steps:   # the ride rings 1.4 s, so eighths pile up: it sits lower than a hat
+                    place(('k', pad), bar * 16 + s, v, .32 if pad in (2, 3) else .5, 5)
         if bar == 3:
-            place(('k', 9), bar * 16 + 13, 2, .8); place(('k', 10), bar * 16 + 14, 1, .7)
+            place(('k', 9), bar * 16 + 13, .9, .8, 4); place(('k', 10), bar * 16 + 14, .7, .7, 4)
         if stack is not None:
             for pad, steps, zone in STACK_PATTERNS[stack['id']]:
                 for s in steps:
-                    place(('s', pad), bar * 16 + s, zone, .5)
+                    place(('s', pad), bar * 16 + s, ZONES[zone], .5, 6)
     return y / np.max(np.abs(y)) * .89
+
+
+def stacks():
+    if MODEL == 'voices':
+        return K.STACKS
+    return [dict(st, pads=[(label, 'stack', dict(voice=v, macros=m, target=t)) for label, v, m, t in st['pads']]) for st in M.STACKS]
+
+
+STACKS = stacks()
 
 
 def main(fitted_path, out):
     out = Path(out); fitted = json.load(open(fitted_path))
-    t0 = time.time(); man = {'status': 'Python round 0 audition; not factory audio, not heard', 'kits': [], 'stacks': []}
+    t0 = time.time(); man = {'status': f"Python round {0 if MODEL == 'voices' else 1} audition ({MODEL}); not factory audio, not heard", 'kits': [], 'stacks': []}
     sbanks = {}
-    for st in K.STACKS:
+    for st in STACKS:
         bank = []
         for i, (label, kind, p) in enumerate(st['pads']):
             g = grid(f"{st['id']}-{label}", kind, p, {})
@@ -179,7 +217,7 @@ def main(fitted_path, out):
                     write(out / 'kits' / kit['id'] / f'A{i + 1:02d}-{label.lower().replace(" ", "-")}-v{zi + 1}-t{t + 1}.wav', g[zi][t])
             bank.append(g)
         write(out / 'demo' / f"{kit['id']}-groove.wav", groove(kit, bank))
-        for st in K.STACKS:
+        for st in STACKS:
             write(out / 'demo' / f"{kit['id']}+{st['id']}.wav", groove(kit, bank, st, sbanks[st['id']]))
         tour = []
         for g in bank:
@@ -189,12 +227,14 @@ def main(fitted_path, out):
         for pi in (0, 1, 2):
             for zi in range(3):
                 for t in range(TAKES):
-                    touch += [bank[pi][zi][t][:int(.5 * SR)], np.zeros(int(.08 * SR))]
+                    clip = bank[pi][zi][t][:int(.5 * SR)].copy()      # a ride rings past 0.5 s: fade, no click
+                    clip[-441:] *= np.linspace(1, 0, min(441, len(clip)))[-len(clip[-441:]):]
+                    touch += [clip, np.zeros(int(.08 * SR))]
         write(out / 'demo' / f"{kit['id']}-touch.wav", np.concatenate(touch))
         man['kits'].append(dict(kit, pads=[dict(pad=i + 1, label=l, model=k, params=p, extra=e) for i, (l, k, p, e) in enumerate(pads)],
                                 fitted_residual_db={r: fitted[kit['primary']][r]['residual_db'] for r in fitted[kit['primary']]}))
         print(kit['id'], round(time.time() - t0, 1), 's', flush=True)
-    for st in K.STACKS:
+    for st in STACKS:
         tour = []
         for g in sbanks[st['id']]:
             tour += [g[2][0][:int(1.4 * SR)], np.zeros(int(.12 * SR))]

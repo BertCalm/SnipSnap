@@ -1,0 +1,763 @@
+{
+ "drums_baxter": {
+  "hat": {
+   "params": {
+    "tune": 0.9615,
+    "damp": 0.1873,
+    "buzz": 0.5228,
+    "distance": 0.1327,
+    "comp": 0.1904,
+    "drive": 0.7858,
+    "lp": 8970.4464,
+    "tilt": -11.274
+   },
+   "residual_db": 7.268,
+   "evals": 1856,
+   "seconds": 315.1,
+   "occurrences": 8
+  },
+  "snare": {
+   "params": {
+    "f1": 305.8325,
+    "t1": 0.1742,
+    "alpha": 0.6214,
+    "r": 0.1622,
+    "buzz": 0.2106,
+    "wire": 0.7252,
+    "stick_ms": 0.222,
+    "crack": 0.1159,
+    "distance": 0.4077,
+    "comp": 0.1607,
+    "drive": 0.0456,
+    "lp": 4974.3061,
+    "tilt": 4.746
+   },
+   "residual_db": 10.584,
+   "evals": 3712,
+   "seconds": 523.4,
+   "occurrences": 8
+  },
+  "kick": {
+   "params": {
+    "f1": 95.1789,
+    "t1": 0.1643,
+    "alpha": 1.0411,
+    "beater_ms": 3.0153,
+    "air": 0.8386,
+    "r": 0.2069,
+    "reso": 1.0883,
+    "hum": 0.3256,
+    "click": 0.1628,
+    "distance": 0.0138,
+    "comp": 0.9704,
+    "drive": 0.921,
+    "lp": 10775.2502,
+    "tilt": 5.0691
+   },
+   "residual_db": 8.299,
+   "evals": 3712,
+   "seconds": 701.9,
+   "occurrences": 20
+  }
+ },
+ "drum_tops_surf": {
+  "kick": {
+   "params": {
+    "f1": 94.8938,
+    "t1": 0.964,
+    "alpha": 0.7461,
+    "beater_ms": 0.5442,
+    "air": 0.2963,
+    "r": 0.009,
+    "reso": 1.0897,
+    "hum": 0.8975,
+    "click": 0.1578,
+    "distance": 0.465,
+    "comp": 0.0332,
+    "drive": 0.7428,
+    "lp": 9748.0922,
+    "tilt": 5.2765
+   },
+   "residual_db": 9.495,
+   "evals": 3712,
+   "seconds": 516.7,
+   "occurrences": 3
+  },
+  "hat": {
+   "params": {
+    "tune": 0.905,
+    "damp": 0.0128,
+    "buzz": 0.9342,
+    "distance": 0.3291,
+    "comp": 0.9691,
+    "drive": 0.9664,
+    "lp": 5847.8747,
+    "tilt": -7.0011
+   },
+   "residual_db": 13.743,
+   "evals": 1856,
+   "seconds": 317.8,
+   "occurrences": 6
+  },
+  "snare": {
+   "params": {
+    "f1": 307.6018,
+    "t1": 0.2617,
+    "alpha": 0.8055,
+    "r": 0.1366,
+    "buzz": 0.9853,
+    "wire": 0.3504,
+    "stick_ms": 0.2286,
+    "crack": 0.0787,
+    "distance": 0.4021,
+    "comp": 0.012,
+    "drive": 0.7554,
+    "lp": 12071.1531,
+    "tilt": -2.0189
+   },
+   "residual_db": 9.055,
+   "evals": 3712,
+   "seconds": 584.5,
+   "occurrences": 8
+  }
+ },
+ "drums_full_decatur": {
+  "kick": {
+   "params": {
+    "f1": 53.1965,
+    "t1": 0.6984,
+    "alpha": 0.7679,
+    "beater_ms": 0.5273,
+    "air": 0.1303,
+    "r": 0.1234,
+    "reso": 1.0899,
+    "hum": 0.1996,
+    "click": 0.0221,
+    "distance": 0.0331,
+    "comp": 0.1732,
+    "drive": 0.6991,
+    "lp": 9595.606,
+    "tilt": 0.2593
+   },
+   "residual_db": 4.889,
+   "evals": 3712,
+   "seconds": 687.4,
+   "occurrences": 9
+  },
+  "snare": {
+   "params": {
+    "f1": 211.5905,
+    "t1": 0.3002,
+    "alpha": 0.7637,
+    "r": 0.0551,
+    "buzz": 0.7498,
+    "wire": 2.7616,
+    "stick_ms": 0.2065,
+    "crack": 0.2382,
+    "distance": 0.2364,
+    "comp": 0.1426,
+    "drive": 0.0001,
+    "lp": 5184.3283,
+    "tilt": 5.8422
+   },
+   "residual_db": 9.941,
+   "evals": 3712,
+   "seconds": 605.7,
+   "occurrences": 8
+  }
+ },
+ "drums_full_ditmas": {
+  "snare": {
+   "params": {
+    "f1": 295.8642,
+    "t1": 0.2484,
+    "alpha": 0.6367,
+    "r": 0.1482,
+    "buzz": 0.853,
+    "wire": 2.5919,
+    "stick_ms": 0.1583,
+    "crack": 0.3888,
+    "distance": 0.2092,
+    "comp": 0.213,
+    "drive": 0.0072,
+    "lp": 10169.0554,
+    "tilt": 4.3067
+   },
+   "residual_db": 7.447,
+   "evals": 3712,
+   "seconds": 390.1,
+   "occurrences": 8
+  },
+  "kick": {
+   "params": {
+    "f1": 45.8035,
+    "t1": 0.7833,
+    "alpha": 0.685,
+    "beater_ms": 0.5668,
+    "air": 0.165,
+    "r": 0.0144,
+    "reso": 1.1043,
+    "hum": 0.9806,
+    "click": 0.2812,
+    "distance": 0.0022,
+    "comp": 0.7782,
+    "drive": 0.9361,
+    "lp": 11547.599,
+    "tilt": 2.3295
+   },
+   "residual_db": 5.705,
+   "evals": 3712,
+   "seconds": 535.2,
+   "occurrences": 15
+  },
+  "hat": {
+   "params": {
+    "tune": 0.9226,
+    "damp": 0.5606,
+    "buzz": 0.3568,
+    "distance": 0.1364,
+    "comp": 0.1334,
+    "drive": 0.5632,
+    "lp": 10455.4369,
+    "tilt": -11.4334
+   },
+   "residual_db": 4.996,
+   "evals": 1856,
+   "seconds": 239.8,
+   "occurrences": 4
+  }
+ },
+ "drums_full_driggs": {
+  "hat": {
+   "params": {
+    "tune": 0.873,
+    "damp": 0.013,
+    "buzz": 0.7675,
+    "distance": 0.1243,
+    "comp": 0.3405,
+    "drive": 0.9149,
+    "lp": 7166.5364,
+    "tilt": 3.5815
+   },
+   "residual_db": 7.881,
+   "evals": 1856,
+   "seconds": 308.3,
+   "occurrences": 2
+  },
+  "kick": {
+   "params": {
+    "f1": 96.5474,
+    "t1": 1.1792,
+    "alpha": 1.3935,
+    "beater_ms": 3.4288,
+    "air": 0.9692,
+    "r": 0.2478,
+    "reso": 1.1212,
+    "hum": 0.5231,
+    "click": 0.1368,
+    "distance": 0.4987,
+    "comp": 0.8793,
+    "drive": 0.9696,
+    "lp": 8795.8227,
+    "tilt": 3.4127
+   },
+   "residual_db": 8.119,
+   "evals": 3712,
+   "seconds": 636.5,
+   "occurrences": 16
+  },
+  "snare": {
+   "params": {
+    "f1": 186.3154,
+    "t1": 0.3275,
+    "alpha": 1.4021,
+    "r": 0.5233,
+    "buzz": 0.9777,
+    "wire": 0.337,
+    "stick_ms": 0.2398,
+    "crack": 0.2506,
+    "distance": 0.0919,
+    "comp": 0.0808,
+    "drive": 0.0553,
+    "lp": 9439.6413,
+    "tilt": -2.6114
+   },
+   "residual_db": 7.371,
+   "evals": 3712,
+   "seconds": 690.0,
+   "occurrences": 8
+  }
+ },
+ "drums_full_halsey": {
+  "kick": {
+   "params": {
+    "f1": 93.0854,
+    "t1": 0.3717,
+    "alpha": 1.0798,
+    "beater_ms": 0.5453,
+    "air": 0.3347,
+    "r": 0.1747,
+    "reso": 1.0394,
+    "hum": 0.9904,
+    "click": 0.1313,
+    "distance": 0.0478,
+    "comp": 0.8385,
+    "drive": 0.9235,
+    "lp": 11639.5359,
+    "tilt": 5.353
+   },
+   "residual_db": 8.014,
+   "evals": 3712,
+   "seconds": 713.0,
+   "occurrences": 15
+  },
+  "snare": {
+   "params": {
+    "f1": 293.8869,
+    "t1": 0.346,
+    "alpha": 1.5441,
+    "r": 0.5088,
+    "buzz": 0.9387,
+    "wire": 0.3114,
+    "stick_ms": 0.2483,
+    "crack": 0.0241,
+    "distance": 0.2018,
+    "comp": 0.2403,
+    "drive": 0.0941,
+    "lp": 12030.5337,
+    "tilt": -2.4926
+   },
+   "residual_db": 7.664,
+   "evals": 3712,
+   "seconds": 515.7,
+   "occurrences": 8
+  },
+  "hat": {
+   "params": {
+    "tune": 0.8855,
+    "damp": 0.108,
+    "buzz": 0.7141,
+    "distance": 0.1373,
+    "comp": 0.4658,
+    "drive": 0.6411,
+    "lp": 8523.2547,
+    "tilt": -11.8107
+   },
+   "residual_db": 6.112,
+   "evals": 1856,
+   "seconds": 269.8,
+   "occurrences": 8
+  }
+ },
+ "drums_full_hudson": {
+  "hat": {
+   "params": {
+    "tune": 0.9385,
+    "damp": 0.2661,
+    "buzz": 0.9516,
+    "distance": 0.056,
+    "comp": 0.5181,
+    "drive": 0.6738,
+    "lp": 9575.0657,
+    "tilt": -9.9182
+   },
+   "residual_db": 5.329,
+   "evals": 1856,
+   "seconds": 292.5,
+   "occurrences": 9
+  },
+  "snare": {
+   "params": {
+    "f1": 293.365,
+    "t1": 0.3259,
+    "alpha": 0.8985,
+    "r": 0.5928,
+    "buzz": 0.2898,
+    "wire": 2.3947,
+    "stick_ms": 0.464,
+    "crack": 0.0428,
+    "distance": 0.2658,
+    "comp": 0.2696,
+    "drive": 0.0019,
+    "lp": 11798.8785,
+    "tilt": 5.6747
+   },
+   "residual_db": 8.257,
+   "evals": 3712,
+   "seconds": 535.8,
+   "occurrences": 8
+  },
+  "kick": {
+   "params": {
+    "f1": 51.0544,
+    "t1": 1.1511,
+    "alpha": 1.0976,
+    "beater_ms": 0.5729,
+    "air": 0.8952,
+    "r": 0.0119,
+    "reso": 1.0194,
+    "hum": 0.642,
+    "click": 0.0039,
+    "distance": 0.082,
+    "comp": 0.945,
+    "drive": 0.1478,
+    "lp": 7080.0276,
+    "tilt": 5.5675
+   },
+   "residual_db": 7.15,
+   "evals": 3712,
+   "seconds": 733.2,
+   "occurrences": 12
+  }
+ },
+ "drums_full_kingston": {
+  "kick": {
+   "params": {
+    "f1": 95.7981,
+    "t1": 0.1291,
+    "alpha": 1.338,
+    "beater_ms": 2.839,
+    "air": 0.5533,
+    "r": 0.3645,
+    "reso": 1.0448,
+    "hum": 0.9726,
+    "click": 0.1941,
+    "distance": 0.0139,
+    "comp": 0.0916,
+    "drive": 0.8664,
+    "lp": 4244.3157,
+    "tilt": 4.7017
+   },
+   "residual_db": 7.436,
+   "evals": 3712,
+   "seconds": 739.7,
+   "occurrences": 16
+  },
+  "snare": {
+   "params": {
+    "f1": 281.8652,
+    "t1": 0.4321,
+    "alpha": 1.5384,
+    "r": 0.652,
+    "buzz": 0.8897,
+    "wire": 0.2469,
+    "stick_ms": 0.6028,
+    "crack": 0.3093,
+    "distance": 0.2758,
+    "comp": 0.0542,
+    "drive": 0.28,
+    "lp": 10263.6245,
+    "tilt": -4.8159
+   },
+   "residual_db": 8.409,
+   "evals": 3712,
+   "seconds": 682.5,
+   "occurrences": 8
+  }
+ },
+ "drums_howard": {
+  "hat": {
+   "params": {
+    "tune": 0.2189,
+    "damp": 0.0012,
+    "buzz": 0.9186,
+    "distance": 0.0002,
+    "comp": 0.9882,
+    "drive": 0.6345,
+    "lp": 8405.4277,
+    "tilt": -11.8234
+   },
+   "residual_db": 13.119,
+   "evals": 1856,
+   "seconds": 301.7,
+   "occurrences": 4
+  },
+  "snare": {
+   "params": {
+    "f1": 205.7788,
+    "t1": 0.469,
+    "alpha": 1.0863,
+    "r": 0.1454,
+    "buzz": 0.8084,
+    "wire": 0.4064,
+    "stick_ms": 0.1538,
+    "crack": 0.1257,
+    "distance": 0.3704,
+    "comp": 0.0083,
+    "drive": 0.5236,
+    "lp": 12130.3245,
+    "tilt": 0.0188
+   },
+   "residual_db": 8.87,
+   "evals": 3712,
+   "seconds": 616.0,
+   "occurrences": 8
+  },
+  "kick": {
+   "params": {
+    "f1": 80.013,
+    "t1": 0.4637,
+    "alpha": 1.1721,
+    "beater_ms": 3.142,
+    "air": 0.1678,
+    "r": 0.186,
+    "reso": 1.0037,
+    "hum": 0.9331,
+    "click": 0.2175,
+    "distance": 0.0873,
+    "comp": 0.049,
+    "drive": 0.4063,
+    "lp": 5567.4319,
+    "tilt": 3.1097
+   },
+   "residual_db": 7.068,
+   "evals": 3712,
+   "seconds": 741.7,
+   "occurrences": 9
+  }
+ },
+ "drums_keap": {
+  "hat": {
+   "params": {
+    "tune": 0.9404,
+    "damp": 0.1473,
+    "buzz": 0.483,
+    "distance": 0.1399,
+    "comp": 0.1243,
+    "drive": 0.3961,
+    "lp": 15236.7348,
+    "tilt": -11.2676
+   },
+   "residual_db": 6.559,
+   "evals": 1856,
+   "seconds": 261.6,
+   "occurrences": 6
+  },
+  "kick": {
+   "params": {
+    "f1": 55.6299,
+    "t1": 0.8885,
+    "alpha": 1.3813,
+    "beater_ms": 1.7764,
+    "air": 0.0181,
+    "r": 0.1958,
+    "reso": 1.0346,
+    "hum": 0.7928,
+    "click": 0.0767,
+    "distance": 0.0051,
+    "comp": 0.0452,
+    "drive": 0.1422,
+    "lp": 1673.4308,
+    "tilt": -8.2991
+   },
+   "residual_db": 7.382,
+   "evals": 3712,
+   "seconds": 679.8,
+   "occurrences": 12
+  },
+  "snare": {
+   "params": {
+    "f1": 218.5336,
+    "t1": 0.3203,
+    "alpha": 1.1727,
+    "r": 0.5228,
+    "buzz": 0.2487,
+    "wire": 2.6053,
+    "stick_ms": 0.3958,
+    "crack": 0.2829,
+    "distance": 0.5346,
+    "comp": 0.2823,
+    "drive": 0.0348,
+    "lp": 13509.281,
+    "tilt": -10.9137
+   },
+   "residual_db": 11.069,
+   "evals": 3712,
+   "seconds": 646.9,
+   "occurrences": 8
+  }
+ },
+ "drums_lafayette": {
+  "kick": {
+   "params": {
+    "f1": 98.3808,
+    "t1": 0.1036,
+    "alpha": 1.3136,
+    "beater_ms": 3.4244,
+    "air": 0.8607,
+    "r": 0.3279,
+    "reso": 1.0445,
+    "hum": 0.9351,
+    "click": 0.0992,
+    "distance": 0.0783,
+    "comp": 0.0138,
+    "drive": 0.7149,
+    "lp": 9464.9041,
+    "tilt": 5.1161
+   },
+   "residual_db": 6.509,
+   "evals": 3712,
+   "seconds": 447.8,
+   "occurrences": 25
+  },
+  "snare": {
+   "params": {
+    "f1": 288.6932,
+    "t1": 0.2907,
+    "alpha": 1.4818,
+    "r": 0.5759,
+    "buzz": 0.9222,
+    "wire": 0.3532,
+    "stick_ms": 0.7657,
+    "crack": 0.3476,
+    "distance": 0.1387,
+    "comp": 0.1839,
+    "drive": 0.0533,
+    "lp": 13966.9528,
+    "tilt": -6.6532
+   },
+   "residual_db": 8.162,
+   "evals": 3712,
+   "seconds": 467.3,
+   "occurrences": 8
+  }
+ },
+ "drums_mercer_cranked": {
+  "hat": {
+   "params": {
+    "tune": 0.8879,
+    "damp": 0.0251,
+    "buzz": 0.7722,
+    "distance": 0.1099,
+    "comp": 0.978,
+    "drive": 0.5117,
+    "lp": 7477.5489,
+    "tilt": -9.9861
+   },
+   "residual_db": 6.291,
+   "evals": 1856,
+   "seconds": 255.0,
+   "occurrences": 4
+  },
+  "snare": {
+   "params": {
+    "f1": 207.5067,
+    "t1": 0.4071,
+    "alpha": 1.5332,
+    "r": 0.5322,
+    "buzz": 0.9104,
+    "wire": 0.3117,
+    "stick_ms": 0.1527,
+    "crack": 0.1306,
+    "distance": 0.2302,
+    "comp": 0.205,
+    "drive": 0.0368,
+    "lp": 7125.1721,
+    "tilt": -2.6308
+   },
+   "residual_db": 8.227,
+   "evals": 3712,
+   "seconds": 468.7,
+   "occurrences": 8
+  },
+  "kick": {
+   "params": {
+    "f1": 61.9148,
+    "t1": 0.4144,
+    "alpha": 0.6025,
+    "beater_ms": 0.6568,
+    "air": 0.0112,
+    "r": 0.0805,
+    "reso": 1.0374,
+    "hum": 0.8575,
+    "click": 0.2327,
+    "distance": 0.0286,
+    "comp": 0.6098,
+    "drive": 0.5474,
+    "lp": 12160.9493,
+    "tilt": 5.9071
+   },
+   "residual_db": 7.922,
+   "evals": 3712,
+   "seconds": 540.9,
+   "occurrences": 15
+  }
+ },
+ "drums_ride_moffat_rims": {
+  "hat": {
+   "params": {
+    "tune": 0.1414,
+    "damp": 0.0115,
+    "buzz": 0.7068,
+    "distance": 0.1143,
+    "comp": 0.5944,
+    "drive": 0.9937,
+    "lp": 7944.3189,
+    "tilt": -9.1784
+   },
+   "residual_db": 5.681,
+   "evals": 1856,
+   "seconds": 247.9,
+   "occurrences": 4
+  },
+  "snare": {
+   "params": {
+    "f1": 289.8726,
+    "t1": 0.4374,
+    "alpha": 1.3524,
+    "r": 0.5138,
+    "buzz": 0.6005,
+    "wire": 0.4271,
+    "stick_ms": 0.4814,
+    "crack": 0.3567,
+    "distance": 0.1456,
+    "comp": 0.1805,
+    "drive": 0.021,
+    "lp": 12034.5424,
+    "tilt": -3.7172
+   },
+   "residual_db": 9.165,
+   "evals": 3712,
+   "seconds": 472.6,
+   "occurrences": 4
+  },
+  "kick": {
+   "params": {
+    "f1": 101.5818,
+    "t1": 0.5101,
+    "alpha": 1.1938,
+    "beater_ms": 0.6629,
+    "air": 0.6527,
+    "r": 0.2767,
+    "reso": 1.0273,
+    "hum": 0.9855,
+    "click": 0.117,
+    "distance": 0.0146,
+    "comp": 0.2751,
+    "drive": 0.0645,
+    "lp": 8357.2581,
+    "tilt": -0.0755
+   },
+   "residual_db": 7.498,
+   "evals": 3712,
+   "seconds": 675.4,
+   "occurrences": 8
+  },
+  "ride": {
+   "params": {
+    "tune": 0.2911,
+    "damp": 0.9814,
+    "buzz": 0.0159,
+    "distance": 0.1047,
+    "comp": 0.3778,
+    "drive": 0.9426,
+    "lp": 4676.7825,
+    "tilt": 5.5194
+   },
+   "residual_db": 4.599,
+   "evals": 1856,
+   "seconds": 1233.1,
+   "occurrences": 4
+  }
+ }
+}

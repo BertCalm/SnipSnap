@@ -336,7 +336,7 @@ the MPC 3 export. The genre kits' takes are in the next section.
   `Restrike.canRestrike` is still false for TEMPEST, so the app's own ROBIN does not
   re-strike it. Round-robin pads carry no `PadRecipe`.
 
-## Genre round robin, opt-in (2026-11-18, waiting on listening round genre-rr-1)
+## Genre round robin, opt-in (2026-11-18, kept by ear in genre-rr-1)
 
 CIRCUIT TAKES, FOUNDRY TAKES and STEP TAKES (`tempest-circuit-round-robin`,
 `tempest-foundry-round-robin`, `tempest-step-round-robin`; `TempestGenreRoundRobinKits`) each
@@ -385,7 +385,7 @@ source). The names keep to 14 characters (`UserPresets.MAX_NAME`), owner decisio
   `tempest/genre-round-robin-v1.sha256`, with take 1 checked against `accepted-v1.sha256`.
 - **Listening round genre-rr-1** (with the TERRA genre kits): AE1/AE2 CIRCUIT TICK hard and soft,
   AF1/AF2 FOUNDRY PLATE, AG1/AG2 STEP CLOSED, and AH1 WIRE and AH2 STEP SUB for the pitch drift.
-  Verdicts pending.
+  Kept by ear on 19 Nov 2026: all eight clips KEEP, with no notes.
 
 ## Verified / measured / proposed / heard
 

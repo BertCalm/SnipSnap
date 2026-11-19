@@ -102,11 +102,18 @@ abstract class ComposeScreenTest {
      * A frame at a time until [condition], or a failure naming what never
      * came. Safe for a real async wait (disk IO, a coroutine `delay()`) —
      * see this class's own KDoc for the one thing that is not safe.
+     *
+     * [diagnose], when given, runs once the wait has failed and its answer
+     * is added to the failure: what the screen and the disk said at that
+     * moment, so a timeout on a device names the state it timed out in.
      */
-    protected fun waitFor(what: String, timeoutMillis: Long = 10_000, condition: () -> Boolean) {
+    protected fun waitFor(what: String, timeoutMillis: Long = 10_000, diagnose: (() -> String)? = null, condition: () -> Boolean) {
         val deadline = System.currentTimeMillis() + timeoutMillis
         while (!condition()) {
-            if (System.currentTimeMillis() > deadline) throw AssertionError("waited $timeoutMillis ms and $what never came")
+            if (System.currentTimeMillis() > deadline) {
+                val seen = diagnose?.let { d -> runCatching(d).getOrElse { "(the diagnosis itself failed: $it)" } }
+                throw AssertionError("waited $timeoutMillis ms and $what never came" + (seen?.let { "\n$it" } ?: ""))
+            }
             compose.mainClock.advanceTimeByFrame()
             compose.waitForIdle()
         }

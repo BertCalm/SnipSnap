@@ -36,7 +36,7 @@ import kotlin.math.pow
  */
 object LooseCrateKits {
     /** Bump when a pad's audio changes; saved kits carry the version they were printed with. */
-    const val VERSION = 2
+    const val VERSION = 3
 
     enum class Kit(val id: String, val title: String, val bpm: Int) {
         HUMMIN("loose-crate-hummin", "Hummin", 88),
@@ -74,6 +74,10 @@ object LooseCrateKits {
         val tape: Map<String, Float>,
         val hitVinyl: Map<String, Float>?,
         val grooveVinyl: Map<String, Float>?,
+        /** A tube after the converter (VALVE, its speaker off): warmth, the harmonics a sine-like kick lacks. Null skips it. */
+        val valve: Map<String, Float>? = null,
+        /** COMPRESSOR on the band under [BASS_SPLIT_HZ] alone, the rest untouched: the kick's spike pressed into body. Null skips it. */
+        val bassSqueeze: Map<String, Float>? = null,
     ) {
         /**
          * Every pad enters the print at [HEADROOM]. Round 1 first fed a softer zone in softer, so the converter
@@ -87,10 +91,29 @@ object LooseCrateKits {
             val peak = x.maxOfOrNull { abs(it) } ?: 0f
             val k = if (peak > 1e-9f) HEADROOM / peak else 1f
             val fed = Snip(FloatArray(x.size) { x[it] * k }, 1, Dsp.RATE)
-            val taped = Tape.process(Crunch.process(fed, crunch), tape)
+            var x = Crunch.process(fed, crunch)
+            if (valve != null) x = Valve.process(x, valve)
+            if (bassSqueeze != null) x = squeezeBass(x, bassSqueeze)
+            val taped = Tape.process(x, tape)
             val vinyl = if (phrase) grooveVinyl else hitVinyl
             return (if (vinyl == null) taped else Vinyl.process(taped, vinyl)).samples
         }
+    }
+
+    /** Where [Print.bassSqueeze] splits the bass from the rest. Shape. */
+    const val BASS_SPLIT_HZ = 180f
+
+    /**
+     * [x] split by two one-poles at [BASS_SPLIT_HZ] into the bass and the rest (the rest is [x] minus the bass, so the
+     * two sum back to [x] exactly), the bass through COMPRESSOR, summed again. COMPRESSOR matches its input's peak,
+     * so it presses the kick's spike down into its body and leaves the snare, the hats and the room alone.
+     */
+    internal fun squeezeBass(x: Snip, macros: Map<String, Float>): Snip {
+        val a = Dsp.FixedOnePole(BASS_SPLIT_HZ)
+        val b = Dsp.FixedOnePole(BASS_SPLIT_HZ)
+        val bass = FloatArray(x.samples.size) { b.lp(a.lp(x.samples[it])) }
+        val squeezed = Compressor.process(Snip(bass, 1, x.sampleRate), macros).samples
+        return Snip(FloatArray(x.samples.size) { x.samples[it] - bass[it] + squeezed[it] }, 1, x.sampleRate)
     }
 
     /** Round 0's print, as heard: 12-bit at about 32 kHz, worn tape, a record's rumble. */
@@ -107,7 +130,13 @@ object LooseCrateKits {
         null,
         // The cloth reference's quiet frames sit 45 dB under its loudest with its top 62 dB down: the record's low
         // rumble, not a room or hiss (a closer or farther mic moved round 2's CLOTH groove by under 1 dB from 57).
-        mapOf("CRACKLE" to .10f, "RUMBLE" to .80f, "HISS" to .10f))
+        mapOf("CRACKLE" to .10f, "RUMBLE" to .80f, "HISS" to .10f),
+        // Round 3: "Crate cloth could use a bit of warmth or compression in the bass" (the owner, 2026-11-18).
+        // Measured against the cloth reference, round 2's groove had a spikier bass (crest 21.4 dB under 200 Hz,
+        // the reference 17.9) and 7 dB less between 0.5 and 2 kHz (-19.8 against -12.4): its kicks are nearly sine,
+        // nothing above 500 Hz. A light tube adds their harmonics; the bass alone is squeezed. Shape values.
+        valve = mapOf("DRIVE" to .50f, "SAG" to .15f, "TONE" to .40f, "CAB" to 0f),
+        bassSqueeze = mapOf("AMOUNT" to .80f, "ATTACK" to .35f, "RECOVER" to .55f))
 
     /** The haze: a coarser converter, the tape wobbling and darker, more surface. */
     val HAZY = Print("haze",

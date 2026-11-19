@@ -8,15 +8,15 @@ import kotlin.math.*
  * One bass drummer, one snare drummer and cymbal. No factory or Patch registration yet.
  */
 internal object ParadeSecondLine {
-    const val MODEL = 1
+    const val MODEL = 2
     private const val R = Dsp.RATE * Dsp.OVERSAMPLE
     enum class Voice { BASS_OPEN, BASS_MUTED, SNARE_CENTER, SNARE_GHOST, RIMSHOT, CROSS_STICK,
         SNARE_DRAG, SNARE_FLAM, PRESS_BUZZ, SNARE_ROLL, CYMBAL_CRASH, CYMBAL_CHOKE, CYMBAL_TOUCH, BELL, STICK_CLICK, TURNAROUND, TRIANGLE, TRIANGLE_MUTED }
     fun defaults() = mapOf("TUNE" to .5f,"STRIKE" to .5f,"DAMP" to .5f)
     fun settled(m: Map<String,Float>) = defaults().mapValues { (k,v)->m[k]?.takeIf { it.isFinite() }?.coerceIn(0f,1f) ?: v }
     data class Recipe(val voice: Voice,val macros: Map<String,Float> = defaults(),val velocity: Float = 1f,val take: Int = 0,val model: Int = MODEL) {
-        init { require(model==MODEL && take>=0 && velocity.isFinite() && velocity in .05f..1f) }
-        fun render() = ParadeSecondLine.render(voice,macros,velocity,take)
+        init { require(model in 1..MODEL && take>=0 && velocity.isFinite() && velocity in .05f..1f) }
+        fun render() = ParadeSecondLine.render(voice,macros,velocity,take,model)
         fun json() = JsonValue.Obj(mapOf("voice" to JsonValue.Str(voice.name),"model" to JsonValue.Num(model.toDouble()),
             "velocity" to JsonValue.Num(velocity.toDouble()),"take" to JsonValue.Num(take.toDouble()),
             "macros" to JsonValue.Obj(settled(macros).mapValues { JsonValue.Num(it.value.toDouble()) })))
@@ -38,6 +38,12 @@ internal object ParadeSecondLine {
     }
     private val contacts by lazy { contactBank("measured-contacts.json") }
     private val triangle by lazy { contactBank("triangle-fit.json").getValue("triangle") }
+    private val settledTriangle by lazy {
+        val d=triangle.hand
+        // The weak fitted neighbours otherwise outlive the principal measured mode.
+        val late=DoubleArray(d.late.size) { if(d.amp[it]<.15)min(d.late[it],-12.0) else d.late[it] }
+        CalabashFits.HandData(CalabashFits.Hand(d.hz,d.amp,d.early,late,d.tilt,d.glide,d.glideTau,d.residual,d.residualSoft),triangle.bands,triangle.times,triangle.early)
+    }
     private val wash by lazy { table("crash-wash.json") }
     private fun loss(t: Double,start: Double,width: Double): Double {
         val z=(t-start).coerceIn(0.0,width)
@@ -76,15 +82,15 @@ internal object ParadeSecondLine {
         for(i in out.indices)out[i]*=min(i.toDouble()/Dsp.RATE/.0004,1.0)*v
         return CalabashDsp.upsample4(out,(4.5*R).roundToInt())
     }
-    fun render(voice: Voice,macros: Map<String,Float> = defaults(),velocity: Float = 1f,take: Int = 0): Snip {
-        require(take>=0);val m=settled(macros);val v=velocity.takeIf { it.isFinite() }?.coerceIn(.05f,1f)?.toDouble() ?: 1.0
-        val raw=raw(voice,m,v,take);val x=FloatArray(raw.size) { raw[it].toFloat() }
+    fun render(voice: Voice,macros: Map<String,Float> = defaults(),velocity: Float = 1f,take: Int = 0,model: Int = MODEL): Snip {
+        require(take>=0 && model in 1..MODEL);val m=settled(macros);val v=velocity.takeIf { it.isFinite() }?.coerceIn(.05f,1f)?.toDouble() ?: 1.0
+        val raw=raw(voice,m,v,take,model);val x=FloatArray(raw.size) { raw[it].toFloat() }
         Tide.bandLimit(x,R);val out=Dsp.decimate(x,Dsp.RATE);val mean=out.average().toFloat();val hp=Dsp.FixedOnePole(20f,Dsp.RATE)
         for(i in out.indices) { val a=out[i]-mean;out[i]=a-hp.lp(a) }
         Dsp.levelTo(out,Dsp.RATE,Dsp.MELODIC_LOUDNESS_TARGET);Dsp.fadeTail(out)
         return Snip(out,1,Dsp.RATE)
     }
-    private fun raw(voice: Voice,m: Map<String,Float>,v: Double,take: Int): DoubleArray {
+    private fun raw(voice: Voice,m: Map<String,Float>,v: Double,take: Int,model: Int): DoubleArray {
         val times=when(voice) {
             Voice.SNARE_DRAG->listOf(0.0,.024,.065);Voice.SNARE_FLAM->listOf(0.0,.025)
             Voice.PRESS_BUZZ->buildList { var t=0.0;add(t);for(i in 0..14) { t+=.012+.0015*i;add(t) } }
@@ -112,7 +118,10 @@ internal object ParadeSecondLine {
             }
             Voice.TRIANGLE,Voice.TRIANGLE_MUTED -> {
                 val rng=CalabashDsp.Rng(Dsp.seedFor("PARADE_TRIANGLE",take))
-                val (a,b)=CalabashFits.strike("triangle",v,rng,5.0,contactMs=.18,fit=triangle)
+                val refined=voice==Voice.TRIANGLE && model>=2
+                val (a,b)=if(refined) CalabashFits.strike("triangle",v,rng,5.0,contactMs=.32,fit=settledTriangle,
+                    detuneSd=0.0,modeGain={ hz -> 1/sqrt(1+(hz/6500).pow(4)) },residualDb=-8.0,attackDb=-3.0,residUntil=.08)
+                    else CalabashFits.strike("triangle",v,rng,5.0,contactMs=.18,fit=triangle)
                 var y=CalabashDsp.upsample4(DoubleArray(a.size) { (a[it]+b[it])*v },5*R)
                 if(voice==Voice.TRIANGLE_MUTED) {
                     y=y.copyOf((1.2*R).roundToInt())

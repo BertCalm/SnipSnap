@@ -12,9 +12,14 @@ from multiprocessing import Pool
 import numpy as np
 from scipy.optimize import differential_evolution
 import extract as X
-import voices as V
+import importlib, os
+V = importlib.import_module(os.environ.get('BOROUGH_MODEL', 'voices'))   # 'acoustic' from round 1
 
 FLOOR = -50.0
+# A role fitted against another role's descriptor: the ride is scored on the loop's cymbal ('hat')
+# envelope. BOROUGH_ROLES picks the roles to fit (default kick, snare, hat).
+ROLE_TARGET = {'ride': 'hat'}
+ROLES = tuple(os.environ.get('BOROUGH_ROLES', 'kick,snare,hat').split(','))
 
 
 def masks(target, role):
@@ -44,7 +49,7 @@ def fit_one(job):
     keys = list(space)
     lo = np.array([space[k][0] for k in keys]); hi = np.array([space[k][1] for k in keys])
     # log-scale frequency and time parameters so the search spends equal effort per octave
-    logk = np.array([k.endswith(('_hz', '_ms')) or k in ('f0', 'f1', 'lp') for k in keys])
+    logk = np.array([k in getattr(V, 'LOGK', set()) or k.endswith(('_hz', '_ms')) or k in ('f0', 'f1', 'lp') for k in keys])
     def decode(u):
         v = np.where(logk, np.exp(np.log(lo) + u * (np.log(hi) - np.log(lo))), lo + u * (hi - lo))
         return dict(zip(keys, v.tolist()))
@@ -54,7 +59,7 @@ def fit_one(job):
         except Exception:
             return 99.0
     t0 = time.time()
-    r = differential_evolution(loss, [(0, 1)] * len(keys), popsize=6, maxiter=36, tol=1e-4, seed=7,
+    r = differential_evolution(loss, [(0, 1)] * len(keys), popsize=6, maxiter=int(os.environ.get('BOROUGH_ITER', 36)), tol=1e-4, seed=7,
                                polish=False, init='sobol', updating='immediate')
     p = decode(r.x)
     return loop, role, dict(params={k: round(v, 4) for k, v in p.items()}, residual_db=round(float(r.fun), 3),
@@ -73,9 +78,10 @@ if __name__ == '__main__':
     for loop, r in targets['loops'].items():
         if only and loop not in only:
             continue
-        for role in ('kick', 'snare', 'hat'):
-            if r.get(role) and role not in fitted.get(loop, {}):   # resume: skip finished fits
-                jobs.append((loop, role, r[role]))
+        for role in ROLES:
+            tgt = r.get(ROLE_TARGET.get(role, role))
+            if tgt and role not in fitted.get(loop, {}):   # resume: skip finished fits
+                jobs.append((loop, role, tgt))
     with Pool(4) as pool:
         for loop, role, res in pool.imap_unordered(fit_one, jobs):
             fitted.setdefault(loop, {})[role] = res

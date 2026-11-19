@@ -26,7 +26,7 @@ KITS = [
     dict(id='borough-dry', name='DRY ROOM', bpm=90, primary='drums_keap', secondary='drums_howard',
          swing_ms=20, role='gated and clean: silence between hits, short snare'),
     dict(id='borough-rims', name='RIDE & RIMS', bpm=90, primary='drums_ride_moffat_rims', secondary='drums_full_ditmas',
-         swing_ms=45, role='rim-led snare and a ride instead of hats, the most swing'),
+         swing_ms=45, ride=True, role='rim-led snare and a ride instead of hats, the most swing'),
 ]
 
 DRUM_PADS = ['KICK', 'SNARE', 'HAT', 'OPEN HAT', 'KICK 2', 'SNARE 2', 'RIM', 'PEDAL HAT',
