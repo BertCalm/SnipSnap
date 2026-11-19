@@ -4142,7 +4142,7 @@ fun PadSheetScreen(
                 )
             }
             TapeText(
-                clipboard?.let { "ON THE CLIPBOARD: ${PadSheet.displayLabel(it.word)} FROM ${it.from}" } ?: Copy.REPLAY_LAST_ONLY,
+                clipboard?.let { "On the clipboard: ${PadSheet.displayLabel(it.word)} from ${it.from}" } ?: Copy.REPLAY_LAST_ONLY,
                 TapeType.pixelSmall,
                 scheme.ink2.tape,
                 Modifier.fillMaxWidth(),
@@ -4373,7 +4373,7 @@ fun PadSheetScreen(
             }
             val away = pad.source["desampled"]
             TapeText(
-                if (away != null) "A PATCH NOW, $away AWAY" else "THE HIT MEASURED AGAINST EVERY THUMP",
+                if (away != null) "A patch now, $away away" else "The hit measured against every thump",
                 TapeType.pixelSmall,
                 scheme.ink2.tape,
                 maxLines = 1,
@@ -4858,7 +4858,7 @@ private fun StrikeFxSection(
             enabled = !busy,
             onFractionChange = onRoom,
             onFractionCommit = {},
-            accessibilityLabel = "FX BY VELOCITY REVERB",
+            accessibilityLabel = "FX by velocity REVERB",
         )
         StepperSlider(
             label = "SLAP",
@@ -4869,14 +4869,14 @@ private fun StrikeFxSection(
             enabled = !busy,
             onFractionChange = onSlap,
             onFractionCommit = {},
-            accessibilityLabel = "FX BY VELOCITY SLAP",
+            accessibilityLabel = "FX by velocity SLAP",
         )
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             // Named for the section: KEEP alone is also the board's button.
-            ActionButton("AUDITION", scheme, enabled = !busy, accessibilityLabel = "FX BY VELOCITY AUDITION", modifier = Modifier.weight(1f), onClick = onAudition)
-            ActionButton("KEEP", scheme, enabled = !busy, accessibilityLabel = "FX BY VELOCITY KEEP", modifier = Modifier.weight(1f), onClick = onKeep)
+            ActionButton("AUDITION", scheme, enabled = !busy, accessibilityLabel = "FX by velocity AUDITION", modifier = Modifier.weight(1f), onClick = onAudition)
+            ActionButton("KEEP", scheme, enabled = !busy, accessibilityLabel = "FX by velocity KEEP", modifier = Modifier.weight(1f), onClick = onKeep)
             if (kept) {
-                ActionButton("CLEAR", scheme, enabled = !busy, accessibilityLabel = "FX BY VELOCITY CLEAR", modifier = Modifier.weight(1f), onClick = onClear)
+                ActionButton("CLEAR", scheme, enabled = !busy, accessibilityLabel = "FX by velocity CLEAR", modifier = Modifier.weight(1f), onClick = onClear)
             }
         }
     }
@@ -5350,7 +5350,7 @@ private fun TreatmentCard(
                 applying != null -> Copy.treatmentBusy(PadSheet.displayLabel(applying))
                 placing != null -> Copy.putOnRowPrompt(PadSheet.displayLabel(placing))
                 // One recipe per pad, except row seven: pedals stack on one pad (the slate design).
-                else -> "ONE PER PAD · PEDALS STACK"
+                else -> "One per pad · pedals stack"
             },
             TapeType.pixelSmall,
             if (applying != null || placing != null) scheme.accent.tape else scheme.ink3.tape,
@@ -5607,7 +5607,7 @@ private fun ShapeCard(
             // What the line is for is the thing the legend cannot say -
             // that these four are metadata the hardware applies, not edits
             // to the audio on disk - so that is all it says now.
-            TapeText("THE MPC RENDERS IT", TapeType.pixelSmall, scheme.ink2.tape, Modifier.weight(1f), maxLines = 2)
+            TapeText("The MPC renders it", TapeType.pixelSmall, scheme.ink2.tape, Modifier.weight(1f), maxLines = 2)
             ActionButton("RESET", scheme, enabled = !busy && shaped, onClick = onReset)
         }
         for (knob in knobs) {
@@ -5693,7 +5693,7 @@ private fun MutateCard(
     val move = MutateSheet.modeFor(mode)
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            TapeText("ONE HIT FROM TWO", TapeType.pixelSmall, scheme.ink2.tape, Modifier.weight(1f), maxLines = 2)
+            TapeText("One hit from two", TapeType.pixelSmall, scheme.ink2.tape, Modifier.weight(1f), maxLines = 2)
             // Dimmed, not disabled, with nothing to undo: a tap says why (onUnmutate).
             ActionButton(Copy.UNDO_MUTATE, scheme, enabled = !busy, dimmed = MutateSheet.undoRefusal(mutated, canUndo) != null, onClick = onUndo)
         }
@@ -5831,7 +5831,7 @@ private fun MutateCard(
         // then its pads (four to a row) - the shelf with intent, where
         // ROULETTE below is the shelf by chance. Absent on a one-kit shelf.
         if (otherKits.isNotEmpty()) {
-            TapeText("ANOTHER KIT · PICK ITS PAD", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
+            TapeText("Another kit · pick its pad", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
             for (row in otherKits.chunked(2)) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     for (k in row) {
@@ -5976,7 +5976,7 @@ private fun OutsideCard(
 ) {
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            TapeText("THE WORLD AS AN EFFECT", TapeType.pixelSmall, scheme.ink2.tape, Modifier.weight(1f), maxLines = 2)
+            TapeText("The world as an effect", TapeType.pixelSmall, scheme.ink2.tape, Modifier.weight(1f), maxLines = 2)
             ActionButton(Copy.UNDO_OUTSIDE, scheme, enabled = !busy && applied != null && canUndo, onClick = onUndo)
         }
         if (stage != null) {
@@ -5995,7 +5995,7 @@ private fun OutsideCard(
             }
         } else {
             TapeText(
-                if (move == OutsideSheet.Move.ROOM.name) "A SWEEP GOES OUT, THE ROOM COMES BACK AS THE PAD'S ROOM" else "THE PAD GOES OUT THE JACK, WHAT COMES BACK IS THE PAD",
+                if (move == OutsideSheet.Move.ROOM.name) "A sweep goes out, the room comes back as the pad's room" else "The pad goes out the jack, what comes back is the pad",
                 TapeType.pixelSmall,
                 scheme.ink2.tape,
                 maxLines = 1,

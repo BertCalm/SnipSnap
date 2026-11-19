@@ -96,7 +96,7 @@ internal fun ObbligatoPerformanceControls(
         TapeText("Send and spread make finite pads. MAKE INSTRUMENT sustains.",
             TapeType.pixelSmall, scheme.ink2.tape, maxLines = 3)
     } else {
-        TapeText("HOLD EXTENDS A FINITE PHRASE", TapeType.pixelSmall, scheme.ink2.tape)
+        TapeText("HOLD extends a finite phrase", TapeType.pixelSmall, scheme.ink2.tape)
     }
 }
 

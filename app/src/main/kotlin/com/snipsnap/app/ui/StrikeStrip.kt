@@ -98,7 +98,7 @@ internal fun StrikeLayerFeedback(state: StrikeState, modifier: Modifier = Modifi
     Row(modifier.heightIn(min = 28.dp), horizontalArrangement = Arrangement.spacedBy(4.dp),
         verticalAlignment = Alignment.CenterVertically) {
         if (hit == null) {
-            TapeText("TAP A PAD TO SEE ITS LAYER", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
+            TapeText("Tap a pad to see its layer", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
         } else {
             TapeText("LAST ${PadNoteMap.labelForPad(hit.slot)}", TapeType.pixelSmall, scheme.ink2.tape)
             hit.labels.forEachIndexed { index, label ->

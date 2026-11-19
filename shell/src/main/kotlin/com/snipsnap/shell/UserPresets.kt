@@ -383,6 +383,7 @@ object UserPresets {
 
     /** The voice enum a roster line names: `THUMP` → `ThumpVoice`, `TONEWHEEL` → `TonewheelVoice`. */
     fun voiceEnum(engine: String): String = when (engine.uppercase(Locale.ROOT)) {
+        com.snipsnap.synth.SecondlinePatch.ENGINE -> "ParadeSecondLine.Voice"
         com.snipsnap.synth.SambaPatch.ENGINE -> "ParadeSamba.Voice"
         com.snipsnap.synth.BristlePatch.ENGINE -> "Bristle.Route"
         com.snipsnap.synth.FiredBronzePatch.ENGINE -> "FiredBronzeDryKit.Pad"
@@ -489,6 +490,11 @@ object UserPresets {
             // Velocity, take and model version live outside the macro map; promotion keeps the strike saved.
             val recipe = Json.write(JsonValue.Str(patch.toJsonText())).replace("$", "\\$")
             return "ScuffPatch.fromJsonText($recipe),"
+        }
+        if (patch is com.snipsnap.synth.SecondlinePatch) {
+            // The renderer model lives outside the macro map; promotion keeps the battery as heard.
+            val recipe = Json.write(JsonValue.Str(patch.toJsonText())).replace("$", "\\$")
+            return "SecondlinePatch.fromJsonText($recipe),"
         }
         if (patch is com.snipsnap.synth.SambaPatch) {
             // The renderer model lives outside the macro map; promotion keeps the battery as heard.

@@ -247,6 +247,23 @@ Rounds 1 to 3 were a Python audition, accepted 2026-11-12. Kotlin round K1 (2026
   of milliseconds": the voice runs at 4x with several transcendental calls a sample, and bringing it under would
   approximate the filter, a change to the accepted sound. A line loop takes 0.3 to 0.5 s; kit pads cache both.
 - **Overall: incomplete.** Open: phone playback of keys and kit, and an MPC.
+## STAGGER kits (round 2 built 2026-11-19: three kits on the shelf, proven in software; the kits not yet heard as kits)
+
+Three authored boom-bap kits after the owner's muffled-kick, drunk-clock, foley-fill producer profile, in the CYPHER shape, every drum EMBER's. See [STAGGER](STAGGER.md). The owner heard round 1 as "too much like drum machine sounds" (THUMP and SKIN drums), then round 1b as "New sounds are better" (EMBER's), both 2026-11-19.
+
+| Gate | Status | Evidence |
+|---|---|---|
+| Melodic voices, keygroups, premade kit, chord tools | Not applicable | Drum kits. |
+| Articulation: HOLD, STRUM | Not applicable | Finite hits; the phrases are printed at the kit's tempo. |
+| Percussion: authored roll or riser | Built, not heard | A timpani roll into the gong (CARDBOARD), a timpani riser into the crash gong (MATINEE), a dragging snare roll (STUMBLE), each A15, each played in the kit's room. |
+| Drums: multiple distinct genre kits on the shelf | Pass in software | Three kits under SKINS; `StaggerKitsTest` holds every pair to at least six different pad names and a different kick and backbeat drum dry, with three prints, three rooms, three clocks. The owner has heard CARDBOARD's drums, not the three kits. |
+| Velocity: rendering | Pass | Every soft zone a different strike and no brighter (`StaggerKitsTest`). |
+| Round robin: rendering | Pass | Four different takes in every zone of every pad; GLASS deals four panes. |
+| Velocity and round robin: saving | Pass | Each kit reloads equal and every saved slice matches its render (`:shell:generateStaggerKits`). |
+| Velocity and round robin: playback | Pass in software | `PadHit.resolve` picks the zone by velocity and deals the takes in order, then repeats (`StaggerKitTest`). No phone has played these kits. |
+| Velocity and round robin: export | MPC 3 verified by read-back; MPC 2 not applicable (the owner's format limit, 2026-11-14) | `StaggerKitTest`, the generator. SFZ and DecentSampler written. No MPC has loaded these kits. |
+| Sound character | CARDBOARD's drums approved in direction ("New sounds are better"); the three kits as kits not heard | The round-2 listening page. |
+
 ## CYPHER kits and THUMP SUB (round 2, 2026-11-12)
 
 Hip-hop drum kits in the GATECRASH shape, six built: TRAP, DRILL, BACKROOM, LOWRIDER, DUST, FLINT. See [CYPHER](CYPHER.md). The owner heard round 1 ("The triple snare thing is messy"), then round 1b ("Ok, sounds good. Make sure we clear the approval gates"), which approved TRAP and DRILL, then round 2 ("All four pass"), which approved BACKROOM, LOWRIDER, DUST and FLINT. Evidence at kit version 3, `CypherTest`, `CypherKitTest`, `ThumpSubTest`, `ThumpSubRobinTest` and `:shell:generateCypherKits`.
@@ -1178,3 +1195,42 @@ Four drum kits after the owner's beat-tape reference loops, in the CYPHER shape:
 | Velocity and round robin: rendering | Pass in software | Soft zones are different strikes and never brighter; four different strikes per zone |
 | Velocity and round robin: saving, playback, export | Pass | Save, reload, pad resolver, MPC 3, SFZ and DecentSampler for all 64 pads; MPC 2 not written (format limit). Owner-reported pass on the phone and the MPC, 2026-11-18 |
 
+
+## Sunroom studio-pop factory collection (2026-11-18)
+
+See [SUNROOM](SUNROOM.md). The owner approved the assembled R10 audition with
+“Sounds much better, continue.” Three distinct 16-pad kits on SKINS preserve
+432 approved printed synthesis/resynthesis WAVs, three velocity zones and
+three alternate outputs, including finite roll/riser gestures. This is a
+factory bank, not an editable engine. Software evidence is in `SunroomKitsTest`
+and `SunroomRoundTripTest`. The Psych cymbal crescendo has level-only dynamics;
+its timbral-velocity gate remains open. The owner reported “Hardware passes- proceed”
+on 2026-11-19; device models and individual format results were not specified.
+All JVM, Android build, native and emulator CI checks passed on `a16dd8da8`.
+The shared MPC 3 slice-map limitation is unchanged. MPC 2's combined
+velocity/RR exception applies. Melodic/keygroup/chord/HOLD/STRUM gates do not
+apply to these finite drum kits. Overall completion remains open.
+
+
+## ACCORD (native sound kept by ear 2026-11-19; three voices, gates open)
+
+Fifteen self-sustaining mechanisms on one moving support, struck into tuned resonators; their contacts drift into and out of step. See [ACCORD](ACCORD.md). The owner approved the Python sound direction first. On 2026-11-19 they heard the native Kotlin engine, the one the app plays, for the first time and kept all of it (round accord-native-1, AI1 to AI14 KEEP, no notes): each approved Python sound beside its native render (BRUSH, WOOD and the four TINE tones), every voice at C2, C3, C4 and C5, every voice at soft, medium and hard touch, and the sixteen-pad starter kit. `AccordNativePinsTest` pins those 37 native renders by the SHA-256 of their float samples (`accord/native-kept-v1.sha256`); each one's PCM24 matched the heard WAVs sample for sample.
+
+| Gate | Status | Evidence |
+|---|---|---|
+| Melodic: six voices with presets | Partial: three of six | BRUSH, WOOD and TINE (`AccordVoice`). TINE's four acoustic profiles (Reference, Soft Attack, Bright Edge, Long Ring) override one to three numbers of one table, so they count as TINE's presets, not voices, as SPLAY's populations are settings, not voices. Three more voices are needed. |
+| Melodic: playable keygroups | Not yet verified | ACCORD has no MAKE INSTRUMENT path. |
+| Melodic: premade kit | Pass, kept by ear | The `accord` starter (sixteen pads: BRUSH up a C minor pentatonic, WOOD, the four TINE tones, soft and hard BRUSH, soft WOOD), heard as the app ships it in AI13 and AI14 and pinned. MPC 3 and MPC 2 export pass in software (`AccordKitGenerator`); no MPC has loaded it. |
+| Melodic: chord-tool compatibility | Not yet verified | No chord voicing, keys or chord render exists for ACCORD. |
+| Articulation: HOLD | Not yet verified | HOLD is refused (`Accord.settled`); every voice is finite. Whether each voice gets a documented finite exception or a held articulation is open. |
+| Articulation: STRUM | Not applicable | No picked or thumbed strings: every voice is struck by pendulum contacts. |
+| Percussion: roll or riser | Not applicable | A melodic engine. |
+| Drums: genre kits | Not applicable | A melodic engine. |
+| Velocity: rendering | Pass, kept by ear | Touch changes contact width, upper-mode tilt, decay and pulse and brush gains, under one gain per performance shared across touches; soft, medium and hard heard for every voice (AI10 to AI12) and pinned. |
+| Velocity: saving, playback, export | Partial | Soft BRUSH and soft WOOD are separate kit pads; no pad or key carries velocity zones yet. |
+| Round robin | Not yet verified | ACCORD has no takes, and `Restrike.canRestrike` excludes it. |
+| Picker | Not yet verified on a device | The SYNTH picker's ACCORD controls passed three emulator tests at `fac839f0` ([ACCORD](ACCORD.md)); no phone run. |
+| Hardware playback | Not verified | No phone timing or MPC load is recorded. |
+
+- **Sound character: kept by ear, native.** The three voices, TINE's four tones, the C2 to C5 range, the touch response and the starter kit, as pinned by `AccordNativePinsTest`. Preserve these renders: new voices, takes and keys must leave every pinned render byte-identical.
+- **Overall: incomplete.** Three more voices, keygroups, chord tools, a HOLD decision per voice, velocity zones and round robin through saving, playback and export, device runs of the picker and hardware playback remain open.

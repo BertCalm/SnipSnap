@@ -21,8 +21,8 @@ import java.util.concurrent.CopyOnWriteArrayList
  * starts at the next bar line of the pass playing ([Arranger.Pass.barLines]
  * and the pass's end), in the clip's own meter, on the same frames the mix
  * was laid on. Nothing is rendered for it either. The pass cut short is a
- * partial pass in [played]; a song section cannot hold part of a pass, so
- * KEEP THIS ORDER counts it as a whole one.
+ * partial pass: [heard] says how many bars of it sounded, and KEEP THIS
+ * ORDER keeps it as a shorter section ([PlanSection.bars]).
  *
  * A jump that does not run on into the next pass of the mix crossfades
  * over [FADE_FRAMES], because a sample-exact cut between two unrelated
@@ -49,7 +49,7 @@ class SongCursor(
     enum class QueueMode { END_OF_PASS, NEXT_BAR }
 
     /** One pass starting to sound at [stream] frames into the playback. */
-    data class Mark(val stream: Long, val section: Int)
+    data class Mark(val stream: Long, val section: Int, val bars: Int? = null)
 
     init {
         require(passes.isNotEmpty()) { "a song has at least one pass" }
@@ -96,6 +96,7 @@ class SongCursor(
                 if (next == null) {
                     tail = true
                 } else {
+                    heardBars(at)?.let { b -> marks[marks.lastIndex] = marks.last().copy(bars = b) }
                     if (next != pass + 1 || at != passes[next].start) {
                         fadeAt = at
                         fadeLeft = FADE_FRAMES
@@ -166,6 +167,13 @@ class SongCursor(
         return p.barLines.firstOrNull { it > p.start && it >= at && it < p.end } ?: p.end
     }
 
+    /** Bars of the pass playing that sounded before a cut at frame [cutAt], or null when the cut is at its end (or past it): the pass was whole. */
+    private fun heardBars(cutAt: Int): Int? {
+        val p = passes[pass]
+        if (cutAt >= p.end) return null
+        return p.barLines.count { it <= cutAt }
+    }
+
     private fun firstPassOf(section: Int): Int = passes.indexOfFirst { it.section == section }
 
     /** The section sounding at [streamFrame] frames into the playback. */
@@ -177,6 +185,14 @@ class SongCursor(
      * but not yet heard when STOP was pressed is not in it.
      */
     fun played(streamFrame: Long = Long.MAX_VALUE): List<Int> = marks.filter { it.stream <= streamFrame }.map { it.section }
+
+    /**
+     * [played] with how many bars each pass that was cut at a bar line
+     * sounded (null for the rest), for KEEP THIS ORDER. A pass still playing
+     * when the log is read is whole as far as it goes.
+     */
+    fun heard(streamFrame: Long = Long.MAX_VALUE): List<Arranger.Heard> =
+        marks.filter { it.stream <= streamFrame }.map { Arranger.Heard(it.section, it.bars) }
 
     companion object {
         const val CHANNELS = 2

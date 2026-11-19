@@ -119,7 +119,7 @@ class PrismSynthScreenTest : ComposeScreenTest() {
         assertTrue("An opening must never offer the loop threshold", hold.range.endInclusive < Prism.LOOP_THRESHOLD)
         assertFalse(Prism.isLoop(hold.current))
         compose.onNodeWithText("NOTE", useUnmergedTree = true).assertExists()
-        compose.onNodeWithText("FINITE NOTE · HOLD SETS LENGTH", useUnmergedTree = true).assertExists()
+        compose.onNodeWithText("Finite note · HOLD sets length", useUnmergedTree = true).assertExists()
     }
 
     private fun saveAs(name: String, root: File): PrismPatch {
@@ -174,7 +174,7 @@ class PrismSynthScreenTest : ComposeScreenTest() {
 
         loadFactory(legacy)
         assertEquals(0f..1f, progress("HOLD").range)
-        compose.onNodeWithText("FINITE NOTE · HOLD SETS LENGTH", useUnmergedTree = true).assertDoesNotExist()
+        compose.onNodeWithText("Finite note · HOLD sets length", useUnmergedTree = true).assertDoesNotExist()
         dial("HOLD", 1f)
         assertEquals(1f, progress("HOLD").current, 0f)
         assertTrue(Prism.isLoop(progress("HOLD").current))

@@ -794,7 +794,7 @@ fun KitScreen(
         // it changes how every pad plays, so it went behind the one door for the whole kit.
         StrikeLayerFeedback(strike, Modifier.fillMaxWidth())
         if (strike.enabled && kit.pads.none { it.velocityLayers.isNotEmpty() || it.chain?.zones?.isNotEmpty() == true }) {
-            TapeText("FOR TONE CHANGES: ADD SOFT HITS IN PAD EDITOR", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
+            TapeText("For tone changes: add soft hits in pad editor", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
         }
         StrikePadArea(strike, Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
             Column(
@@ -1510,7 +1510,7 @@ private fun TexturePanel(
     val scheme = LocalScheme.current
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         if (kind == "SCULPT") TapeText(Copy.SCULPT_LINE, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
-        TapeText("TEXTURE · $kind · FOUR TAKES, ONE NEW SAMPLE", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
+        TapeText("Texture · $kind · four takes, one new sample", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
 
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
             ActionButton("◄", scheme, enabled = !busy, accessibilityLabel = "PREVIOUS SOURCE", onClick = { onSourceStep(-1) })

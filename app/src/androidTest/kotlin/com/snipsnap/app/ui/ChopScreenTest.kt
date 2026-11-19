@@ -299,7 +299,7 @@ class ChopScreenTest : ComposeScreenTest() {
         showChopped()
         // The chip is named for its class: the same model the screen
         // builds, built here, says which class the first slice is. Only
-        // the chips take a long press (RESTORE THE MACHINE'S CALL), which
+        // the chips take a long press (Restore the machine's call), which
         // tells a chip from anything else on screen reading that class.
         val model = ChopReviewModel.chop(breakSnip())
         val first = ChopReviewModel.chipName(model.rows.first().effectiveClass)

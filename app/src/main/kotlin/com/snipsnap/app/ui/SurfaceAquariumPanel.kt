@@ -34,20 +34,20 @@ internal fun SurfaceAquariumPanel(
                 modifier = Modifier.weight(1f).testTag("surface-aquarium-reset"), onClick = onReset)
         }
         TapeText(when {
-            !ready -> "CHOOSE A KIT · WAIT FOR ITS SURFACE SETTINGS"
+            !ready -> "Choose a kit · wait for its surface settings"
             !streamUp -> "NO STREAM"
-            faulted -> "AQUARIUM FAULT · RESET TAIL OR REOPEN SURFACE"
+            faulted -> "Aquarium fault · reset tail or reopen surface"
             pending -> "Waiting to queue settings…"
             !optedIn -> "KIT FX OFF"
-            !route.settings.enabled -> "DRY · LIVE KIT EFFECTS ARE OFF"
-            route.settings.settings.isBypass -> "DRY · ALL SIX EFFECT MIXES ARE ZERO"
+            !route.settings.enabled -> "Dry · live kit effects are off"
+            route.settings.settings.isBypass -> "Dry · all six effect mixes are zero"
             route.settings.outputGain == 0f -> "WET MIX MUTED"
-            else -> "STEREO KIT FX LIVE"
+            else -> "Stereo kit FX live"
         }, TapeType.pixelSmall, if (faulted) scheme.warnInk.tape else scheme.ink.tape,
             Modifier.testTag("surface-aquarium-state"), maxLines = Int.MAX_VALUE)
         route.warning?.let { TapeText(it, TapeType.pixelSmall, scheme.warnInk.tape, maxLines = Int.MAX_VALUE) }
         TapeText("Saved for this kit. Uses KIT TOOLS → LIVE KIT EFFECTS settings on SURFACE’s own stereo bus. PRINT includes FX. Playing the print through KIT FX applies them again.",
             TapeType.pixelSmall, scheme.ink2.tape, maxLines = Int.MAX_VALUE)
-        if (optedIn) TapeText("PROTECTION · $limitedFrames FRAMES THIS STREAM", TapeType.pixelSmall, scheme.ink2.tape)
+        if (optedIn) TapeText("Protection · $limitedFrames frames this stream", TapeType.pixelSmall, scheme.ink2.tape)
     }
 }

@@ -3401,6 +3401,16 @@ tasks.register<JavaExec>("generateSootAudition") {
     args(providers.gradleProperty("sootOutput").orNull ?: "${rootDir}/testkit/soot-audition")
 }
 
+tasks.register<JavaExec>("generateKerfAudition") {
+    group = "distribution"
+    description = "Render KERF's round-1 listening pack: the four fitted chop kits from the Kotlin port, clean and chopped."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.KerfAuditionGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "1g"
+    args(providers.gradleProperty("kerfOutput").orNull ?: "${rootDir}/testkit/kerf-audition")
+}
+
 tasks.register<JavaExec>("generateBoomBapAudition") {
     group = "distribution"
     description = "Render the Backroom boom bap study, dry/wet grooves, metrics and layered MPC kit."
@@ -3984,6 +3994,26 @@ tasks.register<JavaExec>("generateRiddimAudition") {
     args(providers.gradleProperty("riddimOutput").orNull ?: "${rootDir}/testkit/riddim-audition/kotlin")
 }
 
+tasks.register<JavaExec>("generateStaggerRound1") {
+    group = "distribution"
+    description = "Render STAGGER round 1: CARDBOARD's pads, round-robin and velocity strips, the box kick at three cutoffs, GLASS at three pitches, the groove under nine clock laws."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.StaggerRound1Generator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "1g"
+    args(providers.gradleProperty("staggerOutput").orNull ?: "${rootDir}/testkit/stagger-round1")
+}
+
+tasks.register<JavaExec>("generateStaggerRound1b") {
+    group = "distribution"
+    description = "Render STAGGER round 1b: CARDBOARD's pads from EMBER beside round 1's, the kick at three cutoffs, slices of the groove, and the groove under three clock laws."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.StaggerRound1bGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "1g"
+    args(providers.gradleProperty("staggerOutput").orNull ?: "${rootDir}/testkit/stagger-round1b")
+}
+
 tasks.register<JavaExec>("generateLooseCrateRound0") {
     group = "distribution"
     description = "Render LOOSE CRATE round 0: candidate hits, round-robin and velocity strips, the HUMMIN groove and CYPHER DUST for comparison."
@@ -4033,4 +4063,14 @@ tasks.register<JavaExec>("generateLooseCrateExpansionRound0") {
     workingDir = rootProject.projectDir
     maxHeapSize = "1g"
     args(providers.gradleProperty("looseCrateExpansionOutput").orNull ?: "${rootDir}/testkit/loose-crate-expansion-round0")
+}
+
+tasks.register<JavaExec>("generateSunroomKits") {
+    group = "distribution"
+    description = "Export three approved Sunroom factory kits with velocity and alternate-take grids."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.SunroomKitGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "1g"
+    args(providers.gradleProperty("sunroomOutput").orNull ?: "${rootDir}/testkit/sunroom-native")
 }

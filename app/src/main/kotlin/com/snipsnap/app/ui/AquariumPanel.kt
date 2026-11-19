@@ -94,7 +94,7 @@ internal fun AquariumPanel(
                 when {
                     busy -> status ?: "SAVING ${PadSheet.CHAIN_LABEL}…"
                     previewing -> "RENDERING PREVIEW…"
-                    editor.render.isBypass -> "DRY · ALL SIX EFFECTS BYPASSED"
+                    editor.render.isBypass -> "Dry · all six effects bypassed"
                     else -> editor.presetId?.let { AquariumControls.preset(it).name } ?: "CUSTOM SETTINGS"
                 },
                 TapeType.pixelSmall, scheme.amber.tape, maxLines = 2,

@@ -89,7 +89,7 @@ class SynthRootTest {
     companion object {
         /** Every factory sound, plus one hand-built patch per engine kept off the preset roster. */
         private val patches: List<Patch> by lazy {
-            Presets.all() + listOf(
+            Presets.all() + com.snipsnap.synth.SecondlinePresets.all() + listOf(
                 GyrePatch("Door", GyreVoice.FLICK, emptyMap()),
                 MagnetPatch("Door", MagnetVoice.JANGLE, emptyMap()),
                 SilkPatch("Door", SilkVoice.OUD, emptyMap()),
@@ -108,7 +108,7 @@ class SynthRootTest {
         }
 
         /** The engines whose every patch answers null: drums, voice, scale rows, frequency sweeps. */
-        private val ROOTLESS = setOf("SAMBA", "RIVET", "THUMP", "SKIN", "ONSET", "TERRA", "VOX", "SILK", "EROSION", "FIRED_BRONZE", "BACKWASH", "SCUFF", "KINDRED", "HICCUP", "CLUTTER", "DRUMLINE", "EMBER", "RIDDIM", "CALABASH", "SERVO", "TEMPEST")
+        private val ROOTLESS = setOf("SECONDLINE", "SAMBA", "RIVET", "THUMP", "SKIN", "ONSET", "TERRA", "VOX", "SILK", "EROSION", "FIRED_BRONZE", "BACKWASH", "SCUFF", "KINDRED", "HICCUP", "CLUTTER", "DRUMLINE", "EMBER", "RIDDIM", "CALABASH", "SERVO", "TEMPEST")
 
         private fun cents(hz: Float, midi: Int): Float = 1200f * ln(hz / Keys.midiHz(midi)) / ln(2f)
     }
