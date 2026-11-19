@@ -103,7 +103,8 @@ def target_for(takes: np.ndarray, template: np.ndarray, clean_s: float,
         # a drum strike only decays after its peak: hold the target to that
         pk = int(np.argmax(tgt[b, :8]))
         tgt[b, pk:] = np.minimum.accumulate(tgt[b, pk:])
-    template_bound(tgt, tail)
+    if TEMPLATE_BOUND:
+        template_bound(tgt, tail)
     extended = False
     if low_share > CHOKE_LOW_SHARE:
         extended = uncut(tgt)
@@ -114,6 +115,11 @@ def target_for(takes: np.ndarray, template: np.ndarray, clean_s: float,
     return np.maximum(tgt, FLOOR_DB)
 
 
+# Off until the owner has heard both (2026-11-19). On, 4 of 49 drums ring over 1.5x their
+# template (was 20 of 57), but the grooves measured further from their references (loop 113's
+# band distance 6.9 to 11.1 dB, loop 163's 11.3 to 17.6): the references seem to carry room or
+# reverb that the long tails were partly standing in for.
+TEMPLATE_BOUND = False
 EARLY_CAP_DB = 10.0    # at the attack a band may stand this much over what the template allows
 DECAY_SLACK_DB = 3.0   # and after BOUND_FROM_S it may fall this much slower than the template
 BOUND_FROM_S = 0.025   # (the template's 46 ms window smears anything earlier)
