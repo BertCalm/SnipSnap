@@ -68,7 +68,7 @@ object KerfFit {
     fun fit(slice: FloatArray, seed: Long): KerfPatchData {
         val n = slice.size
         require(n >= WINDOW) { "a slice needs at least $WINDOW frames, got $n" }
-        require(n < MAX_SECONDS * RATE) { "a KERF hit is a one-shot under $MAX_SECONDS s; this slice is ${"%.2f".format(n.toDouble() / RATE)} s" }
+        require(n < MAX_SECONDS * RATE) { "a KERF hit is a one-shot under $MAX_SECONDS s; this slice is ${"%.2f".format(java.util.Locale.ROOT, n.toDouble() / RATE)} s" }
         val x = DoubleArray(n) { slice[it].toDouble() }
         val res = x.copyOf()
 
