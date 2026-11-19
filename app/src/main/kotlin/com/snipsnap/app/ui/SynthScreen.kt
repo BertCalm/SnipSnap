@@ -6758,9 +6758,9 @@ private enum class Engine {
         APSIS -> ApsisVoice.entries
         OVEN -> OvenVoice.entries
         LIBRATION -> LibrationVoice.entries
-        // ACCORD shows the three voices the owner kept (accord-native-1, 19 Nov 2026). REED, COURSE,
-        // ESCAPEMENT and BELL stay in the roster as candidates until round accord-voices-1's listen.
-        ACCORD -> Accord.KEPT_VOICES
+        // BRUSH, WOOD and TINE were kept in accord-native-1; REED, COURSE, ESCAPEMENT and BELL
+        // joined after them once the owner kept round accord-voices-1 (19 Nov 2026).
+        ACCORD -> AccordVoice.entries
         ORIGAMI -> OrigamiVoice.entries
         // MERCURY shows the three voices the owner kept at R1's gate (2026-10-04). EDDY, VESSEL
         // and SHARD (R2c) stay in the roster and the CLI until round 7's listen, VENT's shape.

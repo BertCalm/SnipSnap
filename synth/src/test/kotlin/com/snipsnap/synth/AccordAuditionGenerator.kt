@@ -28,7 +28,7 @@ object AccordAuditionGenerator {
                 if (patch.voice == AccordVoice.TINE && patch.acousticProfile != AccordAcousticProfile.REFERENCE) "profiles" else "voices",
                 patch, "C3, normal touch, four seconds of mechanics preroll. The acoustic state starts at zero.")
         }
-        for (voice in Accord.KEPT_VOICES) {
+        for (voice in AccordVoice.entries) {
             val anchor = AccordPresets.forVoice(voice).first()
             for (midi in listOf(36, 60, 72)) result += Case("${voice.name.lowercase()}-note-$midi",
                 "${voice.name} · C${midi / 12 - 1}", "notes", anchor.copy(midi = midi),

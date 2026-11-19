@@ -110,14 +110,16 @@ class AccordSynthScreenTest : ComposeScreenTest() {
     private fun profileLabel(profile: AccordAcousticProfile) =
         "ACCORD PROFILE ${profile.name.replace('_', ' ')}"
 
-    @Test fun brush_is_the_default_and_all_six_presets_restore_their_finite_profile() {
+    @Test fun brush_is_the_default_and_every_voice_and_preset_restores_its_finite_profile() {
         show()
         compose.onNodeWithContentDescription("ENGINE ACCORD. CHOOSE ENGINE").assertExists()
         assertEquals("BRUSH", settings["voice"])
         assertEquals((48 - 36) / 36f, progress("ROOT"), 1e-6f)
         assertEquals(.75f, progress("TOUCH"), 1e-6f)
         assertEquals(1f, progress("LENGTH"), 1e-6f)
-        for (voice in Accord.KEPT_VOICES) {
+        // All seven voices: REED, COURSE, ESCAPEMENT and BELL each bring one preset.
+        assertEquals(10, AccordPresets.all().size)
+        for (voice in AccordVoice.entries) {
             activate(voice.name)
             for (macro in Accord.macrosFor(voice).filterNot { it.name == "HOLD" }) slider(macro.name).assertExists()
             slider("HOLD").assertDoesNotExist()

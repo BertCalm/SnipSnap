@@ -15,9 +15,9 @@ import kotlin.math.sqrt
 import kotlin.random.Random
 
 /**
- * BRUSH, WOOD and TINE are the kept voices. REED, COURSE, ESCAPEMENT and BELL are
- * candidates for listening round accord-voices-1, appended so saved ordinals and
- * names never move; the ones the owner does not keep are removed before release.
+ * BRUSH, WOOD and TINE were kept in accord-native-1; REED, COURSE, ESCAPEMENT and BELL
+ * were kept in accord-voices-1 (19 Nov 2026). The four were appended after TINE so saved
+ * ordinals and names never move.
  */
 enum class AccordVoice { BRUSH, WOOD, TINE, REED, COURSE, ESCAPEMENT, BELL }
 enum class AccordAcousticProfile { BASE, REFERENCE, SOFT_ATTACK, BRIGHT_EDGE, LONG_RING }
@@ -48,8 +48,12 @@ object Accord {
     private const val MAX_AUDIO_BYTES = 8L * 1024 * 1024
     private const val PERFORMANCE_PEAK_CEILING = .85
 
-    /** The voices the owner kept in accord-native-1 (19 Nov 2026): presets, kit, picker and pins. */
-    val KEPT_VOICES: List<AccordVoice> = listOf(AccordVoice.BRUSH, AccordVoice.WOOD, AccordVoice.TINE)
+    /**
+     * The voices with frozen factory calibration rows (VERSION 2). REED, COURSE, ESCAPEMENT and
+     * BELL have none: their default performance takes the edited-performance path, the same
+     * normal/hard recipe the table accelerates, which is how their kept renders were heard.
+     */
+    private val FACTORY_CALIBRATED = setOf(AccordVoice.BRUSH, AccordVoice.WOOD, AccordVoice.TINE)
 
     fun supportsModel(model: Int): Boolean = model == MODEL_VERSION
     fun defaultProfile(voice: AccordVoice): AccordAcousticProfile =
@@ -249,9 +253,9 @@ object Accord {
     private fun calibration(key: AudioKey, trace: AccordDynamics.Trace, pace: Double): Calibrated {
         require(key.model == AccordCalibration.MODEL_VERSION) { "ACCORD reference calibration model mismatch" }
         require(AccordCalibration.VERSION == 2) { "ACCORD calibration table requires regeneration for the captured-tail policy" }
-        // Candidate voices have no frozen factory row. They take the edited-performance
-        // path below, the same normal/hard recipe the factory table accelerates.
-        if (key.voice in KEPT_VOICES &&
+        // REED, COURSE, ESCAPEMENT and BELL have no frozen factory row. They take the
+        // edited-performance path below, the same normal/hard recipe the table accelerates.
+        if (key.voice in FACTORY_CALIBRATED &&
             key.seed == DEFAULT_SEED && key.initializer == AccordInitializer.REFERENCE_SINE_20261022 &&
             key.start == 8.0 && key.seconds == 8.0 && key.macros == defaults(key.voice)) {
             return Calibrated(AccordCalibration.gain(key.voice, key.profile, key.midi))

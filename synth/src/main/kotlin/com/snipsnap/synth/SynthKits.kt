@@ -93,6 +93,9 @@ object SynthKits {
     /** Eight BRUSH scale notes and eight accepted voice/profile/touch contrasts. */
     fun accord(): List<ArrangedPad> = AccordKits.arranged()
 
+    /** REED, COURSE, ESCAPEMENT and BELL at C2, C3, C4 and C5: the renders kept in accord-voices-1. */
+    fun accordVoices(): List<ArrangedPad> = AccordKits.voicesArranged()
+
     /** The sixteen auditioned finite Otis performances, retaining their complete score recipes. */
     fun otis(): List<ArrangedPad> = OtisPresets.all().map { patch ->
         pad(patch, Otis.drumClassFor(patch)).copy(oneShot = true, displayName = patch.name,

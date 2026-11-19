@@ -66,7 +66,7 @@ internal object AccordAcoustics {
         val candidate: Candidate? = null,
     )
 
-    /** Which unused mechanical readout chooses a candidate's resonator. */
+    /** Which mechanical readout, unused by the single-bank voices, chooses the resonator. */
     enum class Split { MECHANISM, DIRECTION, PRESSURE }
 
     /** One resonator that only hears the contacts routed to it. Width and modes are final. */
@@ -86,8 +86,9 @@ internal object AccordAcoustics {
         val chamber: List<Mode>, val chamberGain: Double, val breath: Double)
 
     /**
-     * Candidate voice layout (listening round accord-voices-1); not an accepted sound.
-     * [shared] modes (a soundboard) hear every route's force.
+     * The routed layout of REED, COURSE and ESCAPEMENT, first heard as candidates in listening
+     * round accord-voices-1 and kept there (19 Nov 2026). [shared] modes (a soundboard) hear
+     * every route's force.
      */
     data class Candidate(val split: Split, val routes: List<Route>, val shared: List<Mode> = emptyList(),
         val reed: Reed? = null) {
@@ -169,8 +170,8 @@ internal object AccordAcoustics {
                 baseWidth = if (profile == AccordAcousticProfile.SOFT_ATTACK) 3.2 else .72
                 baseBody = .32; baseBrush = 0.0; basePulse = 1.0
             }
-            // Candidates for listening round accord-voices-1. `tongue` is always the bank
-            // that carries the root, so freeResponse(rootOnly) checks each pitch authority.
+            // Kept in listening round accord-voices-1. `tongue` is always the bank that
+            // carries the root, so freeResponse(rootOnly) checks each pitch authority.
             AccordVoice.REED -> {
                 // The tongue alone; the pressure readout blows it (renderCandidate).
                 tongue = listOf(Mode(1.0, 1.0, .9))
@@ -244,7 +245,10 @@ internal object AccordAcoustics {
     private val REED_CHAMBER = listOf(Triple(680.0, 1.6, .020), Triple(1650.0, 1.1, .015), Triple(2900.0, .5, .010))
     private const val COURSE_STIFFNESS = 1.2e-4
     private const val COURSE_STRIKE = 1 / 7.3
-    /** Three strings per course. Spec section 10 warns against independently detuned banks; owner decision. */
+    /**
+     * Three strings per course. Spec section 10 warns against independently detuned banks;
+     * the owner approved these three by keeping COURSE (accord-voices-1, 19 Nov 2026).
+     */
     private val COURSE_CENTS = listOf(-2.5, 0.0, 2.5)
 
     /** A stiff string struck near one end: n*sqrt(1+Bn^2) partials, a strike-position comb, faster upper decay. */
@@ -271,8 +275,8 @@ internal object AccordAcoustics {
     }
 
     /**
-     * The candidate layouts use the same touch, CONTACT and RAFT laws as the
-     * accepted voices ([mapped], width, body gain), so a soft/hard or RAFT move
+     * The routed layouts use the same touch, CONTACT and RAFT laws as the
+     * single-bank voices ([mapped], width, body gain), so a soft/hard or RAFT move
      * means the same thing on every voice. BELL is a table only and returns null.
      */
     private fun candidate(voice: AccordVoice, register: Double, delta: Double, contactOffset: Double,
@@ -440,9 +444,9 @@ internal object AccordAcoustics {
     }
 
     /**
-     * Candidate voices only; BRUSH, WOOD, TINE and BELL never reach this path.
+     * REED, COURSE and ESCAPEMENT only; BRUSH, WOOD, TINE and BELL never reach this path.
      * Contacts are placed exactly as in [renderConditioned], then routed by the
-     * readout the accepted voices discard: MECHANISM (COURSE: which string),
+     * readout the single-bank voices discard: MECHANISM (COURSE: which string),
      * DIRECTION (ESCAPEMENT: tick or tock) or PRESSURE (REED: the raft blows a
      * tongue). Each route has its own kernel, force-bandwidth filter and bank.
      */
@@ -686,7 +690,7 @@ internal object AccordAcoustics {
                 cosine[j] = cos(angle); sine[j] = sin(angle)
                 a1[j] = 2.0 * radius * cos(angle)
                 a2[j] = -radius * radius
-                // The kept C2..C5 tables stay below 3.2 kHz (candidates reach 5.2 kHz). Keep a
+                // The kept C2..C5 tables stay below 3.2 kHz (the routed voices reach 5.2 kHz). Keep a
                 // frequency guard here so future modes cannot fold on export.
                 gain[j] = if (hz > 0.0 && hz < Dsp.RATE * .45) mode.gain * sin(angle) else 0.0
             }

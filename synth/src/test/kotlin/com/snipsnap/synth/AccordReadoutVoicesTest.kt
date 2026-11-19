@@ -15,13 +15,14 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 /**
- * Candidate voices for listening round accord-voices-1. Each one hears a mechanical
- * readout the kept voices discard: COURSE the mechanism (which string), ESCAPEMENT
+ * The four voices kept in listening round accord-voices-1. Each one hears a mechanical
+ * readout BRUSH, WOOD and TINE discard: COURSE the mechanism (which string), ESCAPEMENT
  * the passage direction (tick or tock), REED the pressure (breath). BELL is a table.
- * The kept renders are pinned by AccordNativePinsTest; nothing here is heard.
+ * The kept renders are pinned by AccordNativePinsTest and AccordVoicesPinsTest; nothing
+ * here is heard.
  */
-class AccordCandidateVoicesTest {
-    private val candidates = AccordVoice.entries.filter { it !in Accord.KEPT_VOICES }
+class AccordReadoutVoicesTest {
+    private val newVoices = AccordKits.NEW_VOICES
 
     private fun c3(voice: AccordVoice) = AccordAcoustics.configuration(voice, AccordAcousticProfile.BASE, 48, .75f)
 
@@ -71,8 +72,8 @@ class AccordCandidateVoicesTest {
     }
 
     @Test
-    fun `candidates use the edited-performance gain recipe, never an invented factory row`() {
-        for (voice in candidates) {
+    fun `the new voices use the edited-performance gain recipe, never an invented factory row`() {
+        for (voice in newVoices) {
             assertFailsWith<IllegalStateException> { AccordCalibration.gain(voice, AccordAcousticProfile.BASE, 48) }
             val factory = Accord.probe(voice)
             // The same normal/hard recipe a factory row would freeze, computed on demand.
@@ -86,9 +87,9 @@ class AccordCandidateVoicesTest {
     }
 
     @Test
-    fun `every candidate is spectrally distinct from every other voice at C3`() {
+    fun `every new voice is spectrally distinct from every other voice at C3`() {
         val shapes = AccordVoice.entries.associateWith { bands(Accord.render(it).samples) }
-        for (a in candidates) for (b in AccordVoice.entries) if (a != b) {
+        for (a in newVoices) for (b in AccordVoice.entries) if (a != b) {
             val d = sqrt(shapes.getValue(a).indices.sumOf { (shapes.getValue(a)[it] - shapes.getValue(b)[it]).pow(2) } / 24)
             println("ACCORD third-octave distance $a/$b = $d dB")
             // ETCH's bar for six distinct voices.

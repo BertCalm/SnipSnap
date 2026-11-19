@@ -69,8 +69,7 @@ class AccordTest {
 
     @Test
     fun `the accepted roster retains five timbral controls with finite playback at default`() {
-        // Candidates are appended after the kept voices, so saved names and ordinals never move.
-        assertEquals(listOf(AccordVoice.BRUSH, AccordVoice.WOOD, AccordVoice.TINE), Accord.KEPT_VOICES)
+        // REED, COURSE, ESCAPEMENT and BELL were appended after TINE, so saved names and ordinals never move.
         assertEquals(listOf(AccordVoice.BRUSH, AccordVoice.WOOD, AccordVoice.TINE, AccordVoice.REED,
             AccordVoice.COURSE, AccordVoice.ESCAPEMENT, AccordVoice.BELL), AccordVoice.entries)
         for (voice in AccordVoice.entries) {
