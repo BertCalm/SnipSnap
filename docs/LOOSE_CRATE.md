@@ -376,8 +376,19 @@ the printed hit sits 5.3 dB from the references' mean (round 0g 7.0; each refere
 the print's: vinyl hiss over 12 kHz in the tail and the strike's lows (under 1 kHz at -10.4 against -19.5 and -12.7).
 On the printed groove, over 12 kHz falls from -29.2 to -35.9 dB of the whole.
 
+**Round 0i, three grooves on the same sounds.** "Maybe the groove isn't good. It just isn't clicking" (the owner,
+2026-11-19). Round 0's groove mixed two grids: the ride's spang-a-lang, the shaker and the brush ghosts on triplet
+swing, the kick on straight sixteenths (beats 1.75 and 2.5, landing 56 ms after and 111 ms before the triplet notes
+beside them at 90 BPM). And every note moved by its own random draw of up to 12 ms over its part's offset, so no two
+parts locked. Three grooves, each on one grid with a fixed feel per part (brushes 16 ms behind, the ride 4 ms ahead,
+the foot hat 6 and the shaker 4 behind, the kick on the grid) and a random spread of 4 ms: A, pocket (round 0's idea,
+the kick on the triplet swing at 1, the swung "and" of 2 and of 3, the ghosts off the kick, the shaker on the back
+strokes only); B, break (a hip-hop break: sixteenths swung at 58% as an MPC's swing, the ride on eighths, the kick
+"boom, b-boom" at 1, the "a" of 1 and the "and" of 3, no shaker); C, A without the shaker. Shape values, for the
+owner to choose by ear; round 0h's groove stays the kit's until then.
+
 [Expansion round 0 listening page](https://claude.ai/artifact/Q3rZ8po8ZaeJs9E4tNd86s) (private to the owner; BLUE's
-ride at rounds 0h and 0g, and the shaker at two levels).
+three grooves, its ride at rounds 0h and 0g, and the shaker at two levels).
 
 ## Gates
 

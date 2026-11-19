@@ -132,6 +132,58 @@ object LooseCrateExpansionRound0Generator {
         }
     }, 12f, "loose-crate-blue")
 
+    /**
+     * Round 0i, three grooves on the same sounds: "Maybe the groove isn't good. It just isn't clicking" (the owner,
+     * 2026-11-19). Round 0's groove mixed two grids: the ride, shaker and ghosts on triplet swing, the kick on straight
+     * sixteenths (1.75 and 2.5, landing 56 ms after and 111 ms before the triplet notes beside them at 90), and every
+     * note moved by its own random draw of up to 12 ms, so the parts did not lock. Each of these keeps one grid, a
+     * fixed feel per part (the brushes laid back, the ride on top, the kick on the grid) and a random spread of
+     * [POCKET_SPREAD_MS]. Shape values, unheard.
+     * - [pocketNotes]: round 0's idea on one grid. The kick on the triplet swing (1, the swung "and" of 2 soft, the
+     *   swung "and" of 3), the brush ghosts moved off the kick, the shaker only on the swung "and" (the back stroke).
+     * - [breakNotes]: a hip-hop break instead of jazz time. Sixteenths swung at [BREAK_SWING] (an MPC's swing), the ride
+     *   on swung eighths, the kick "boom, b-boom" (1, the "a" of 1 soft, the "and" of 3), the brushes on two and four
+     *   with a ghost on the "a" of 4 every other bar, the shaker out.
+     * - [pocketNotes] without the shaker, for space.
+     */
+    private fun pocket(build: MutableList<Note>.() -> Unit): List<Note> {
+        val laid = mapOf(0 to 0f, 1 to 16f, 2 to -4f, 3 to 6f, 4 to 4f)
+        return Cypher.humanised(buildList(build).map { Note(it.beat, it.part, it.weight, laid.getValue(it.part)) }, POCKET_SPREAD_MS, "loose-crate-blue-pocket")
+    }
+
+    private const val POCKET_SPREAD_MS = 4f
+    private const val T = 2.0 / 3
+
+    private val pocketNotes: List<Note> = pocket {
+        for (bar in 0 until BARS) {
+            val b = bar * 4.0
+            for ((beat, w) in listOf(0.0 to .70f, 1.0 to .60f, 1 + T to .40f, 2.0 to .65f, 3.0 to .60f, 3 + T to .40f)) add(Note(b + beat, 2, w))
+            add(Note(b + 1.0, 3, .55f)); add(Note(b + 3.0, 3, .55f))
+            add(Note(b + 1.0, 1, .90f)); add(Note(b + 3.0, 1, .95f))
+            add(Note(b + T, 1, .22f))
+            if (bar % 2 == 1) add(Note(b + 3 + T, 1, .28f))
+            for (beat in 0 until 4) add(Note(b + beat + T, 4, if (beat == 3) SHAKE_AND + .08f else SHAKE_AND))
+            add(Note(b + 0.0, 0, .85f)); add(Note(b + 1 + T, 0, .45f)); add(Note(b + 2 + T, 0, .75f))
+        }
+    }
+
+    /** How late a swung sixteenth lands, as a share of its eighth: 0.5 is straight, 0.58 an MPC's gentle swing. */
+    private const val BREAK_SWING = .58
+
+    /** The [i]th sixteenth of a bar, the odd ones swung by [BREAK_SWING]. */
+    private fun sixteenth(i: Int) = (i / 2) * .5 + if (i % 2 == 1) BREAK_SWING * .5 else 0.0
+
+    private val breakNotes: List<Note> = pocket {
+        for (bar in 0 until BARS) {
+            val b = bar * 4.0
+            for (i in 0 until 8) add(Note(b + sixteenth(2 * i), 2, if (i % 2 == 0) .65f else .38f))
+            add(Note(b + 1.0, 3, .50f)); add(Note(b + 3.0, 3, .50f))
+            add(Note(b + 1.0, 1, .92f)); add(Note(b + 3.0, 1, .95f))
+            if (bar % 2 == 1) add(Note(b + 3 + sixteenth(3), 1, .30f))
+            add(Note(b + 0.0, 0, .90f)); add(Note(b + sixteenth(3), 0, .50f)); add(Note(b + sixteenth(10), 0, .80f))
+        }
+    }
+
     /** The shaker's weights: the forward stroke on the beat, the back stroke on the swung "and". */
     private const val SHAKE_ON = .35f
     private const val SHAKE_AND = .55f
@@ -274,6 +326,8 @@ object LooseCrateExpansionRound0Generator {
         write("blue/groove-noprint.wav", levelled(blue))
         // The same groove with the shaker about 3 dB down, so the owner can choose its level by ear.
         write("blue/groove-shaker-softer.wav", levelled(printedLoop(loopDry(blueNotes, 90, blueParts.map { it.second }, blueRoom, mapOf(4 to SHAKER_SOFTER)), BLUE_PRINT)))
+        for ((tag, notes) in listOf("a-pocket" to pocketNotes, "b-break" to breakNotes, "c-pocket-no-shaker" to pocketNotes.filter { it.part != 4 }))
+            write("blue/groove-$tag.wav", levelled(printedLoop(loopDry(notes, 90, blueParts.map { it.second }, blueRoom, blueFaders), BLUE_PRINT)))
         for ((name, s) in blueParts) write("blue/hit-$name.wav", hit(s, print = BLUE_PRINT))
         // The shaker's share of the groove, dry and on one scale: the shaker alone and everything else alone.
         // Stems for measuring only.
