@@ -118,43 +118,43 @@
    "level_db": -0.0
   },
   "113": {
-   "band_distance_db": 7.1,
+   "band_distance_db": 7.03,
    "glued": true,
-   "raw_band_distance_db": 10.0,
-   "crest_db": 17.4,
-   "raw_crest_db": 22.0,
+   "raw_band_distance_db": 10.92,
+   "crest_db": 17.5,
+   "raw_crest_db": 23.3,
    "reference_crest_db": 17.2,
    "shifted_16th_reference_db": 12.36,
-   "balance_db": 2.97,
+   "balance_db": 2.0,
    "balance_by_band": [
     3.7,
-    4.9,
-    2.9,
-    -2.6,
-    -3.7,
-    0.6,
-    3.2,
-    2.2,
-    0.1,
-    0.5,
-    -2.6,
-    -1.5,
-    -2.3,
-    -4.4,
-    -2.2,
-    -4.9,
-    -3.5,
-    -4.6,
-    -4.7,
-    -3.4,
-    -2.5,
-    -2.8,
-    -4.1,
+    1.8,
+    -0.7,
+    -0.6,
+    0.7,
+    3.0,
+    -0.4,
+    0.7,
+    0.9,
+    1.8,
     -1.2,
-    3.9,
-    4.0
+    -0.9,
+    -1.4,
+    -4.1,
+    -1.7,
+    -4.0,
+    -3.1,
+    -2.6,
+    -3.0,
+    -1.0,
+    -0.0,
+    -0.7,
+    -2.2,
+    0.6,
+    5.7,
+    5.4
    ],
-   "level_db": 0.0
+   "level_db": -0.0
   },
   "127": {
    "band_distance_db": 6.6,
@@ -497,14 +497,6 @@
    "velocity_shape_db": 3.29,
    "closest_takes_db": -0.5
   },
-  "113-d1": {
-   "fit_distance_4x_db": 4.89,
-   "reference_own_hits_db": 17.09,
-   "ring_db": 12.7,
-   "reference_ring_db": 31.4,
-   "velocity_shape_db": 1.2,
-   "closest_takes_db": 3.7
-  },
   "113-d2": {
    "fit_distance_4x_db": 4.14,
    "reference_own_hits_db": 9.29,
@@ -521,29 +513,37 @@
    "velocity_shape_db": 3.22,
    "closest_takes_db": -2.6
   },
-  "113-d4": {
-   "fit_distance_4x_db": 4.73,
-   "reference_own_hits_db": 22.16,
-   "ring_db": 12.3,
-   "reference_ring_db": 17.4,
-   "velocity_shape_db": 2.69,
-   "closest_takes_db": -1.0
+  "113-k0": {
+   "fit_distance_4x_db": 4.88,
+   "reference_own_hits_db": 7.6,
+   "ring_db": 11.8,
+   "reference_ring_db": 14.2,
+   "velocity_shape_db": 3.75,
+   "closest_takes_db": 2.7
   },
-  "113-d5": {
-   "fit_distance_4x_db": 6.44,
-   "reference_own_hits_db": 6.09,
-   "ring_db": 11.1,
-   "reference_ring_db": 16.2,
-   "velocity_shape_db": 3.92,
-   "closest_takes_db": 2.6
-  },
-  "113-d6": {
-   "fit_distance_4x_db": 5.49,
-   "reference_own_hits_db": 14.35,
-   "ring_db": 11.5,
-   "reference_ring_db": 12.9,
-   "velocity_shape_db": 3.3,
+  "113-k1": {
+   "fit_distance_4x_db": 5.74,
+   "reference_own_hits_db": 12.17,
+   "ring_db": 11.2,
+   "reference_ring_db": 14.3,
+   "velocity_shape_db": 2.85,
    "closest_takes_db": 1.4
+  },
+  "113-k2": {
+   "fit_distance_4x_db": 4.76,
+   "reference_own_hits_db": 10.42,
+   "ring_db": 11.3,
+   "reference_ring_db": 15.8,
+   "velocity_shape_db": 3.71,
+   "closest_takes_db": 1.9
+  },
+  "113-k3": {
+   "fit_distance_4x_db": 4.46,
+   "reference_own_hits_db": 17.02,
+   "ring_db": 12.1,
+   "reference_ring_db": 14.3,
+   "velocity_shape_db": 2.85,
+   "closest_takes_db": 2.3
   },
   "127-d0": {
    "fit_distance_4x_db": 4.26,
