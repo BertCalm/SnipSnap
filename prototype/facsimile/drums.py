@@ -42,6 +42,78 @@ def attack_rise_db(env: np.ndarray, t: int, n: int) -> float:
     return float(20 * np.log10((post + 1e-9) / (pre + 1e-9)))
 
 
+ALIGN_WINDOW_S = 0.03   # firings of different drums this close may be one hit, split by NMFD
+
+
+def mix_onsets(mono: np.ndarray, hop: int = 32) -> tuple[np.ndarray, np.ndarray]:
+    """Fine onsets of the whole loop: positive spectral flux above 2 kHz, on a 0.7 ms hop. A new
+    hit brings a fresh crack up there; a kick's body blooming about 15 ms after its click does
+    not, and counted from 200 Hz up it read as a second hit, so the body was still placed late.
+    Returns times in samples and flux."""
+    f, t, Z = signal.stft(mono, RATE, nperseg=512, noverlap=512 - hop, boundary=None,
+                          padded=False)
+    lm = np.log1p(100 * np.abs(Z[f >= 2000]))
+    flux = np.maximum(0, np.diff(lm, axis=1)).sum(0)
+    flux = flux - signal.medfilt(flux, 31)
+    pk, pr = signal.find_peaks(flux, height=0, distance=int(0.004 * RATE / hop))
+    return ((t[1:][pk] - 256 / RATE) * RATE).astype(int), pr["peak_heights"]
+
+
+def align_hits(drums: list[dict], mono: np.ndarray) -> int:
+    """One hit split into several NMFD components is timed per component, on that component's
+    own audio, and a low component builds slowly, so its start reads 10 to 20 ms late. Played
+    back, one kick became two or three attacks 15 to 19 ms apart: the doubling the owner heard
+    on the knocker groove (2026-11-19). The loop itself shows where a hit starts. For firings
+    of different drums within ALIGN_WINDOW_S of each other, the loop's onsets in that window
+    are found (those within 30% of the window's strongest): one onset, and every firing snaps
+    to it; several (a real flam, a hat played off the kick), and each firing goes to the latest
+    onset at or before it. Where the loop shows no clear attack in the window (none as strong
+    as its typical hits: a soft hit under other sounds), the firings become one hit at the
+    earliest one's time. A drum's own successive firings are never merged. Returns how many
+    firings moved more than 2 ms."""
+    on_t, on_h = mix_onsets(mono)
+    clear = float(np.percentile(on_h, 75))   # an attack as strong as the loop's typical hits
+    # a low part's start reads late (it builds slowly), never early: it takes the earliest
+    # clear attack in its window, not the latest before its reading
+    low = {d["id"]: d["features"]["low_share"] > 0.5 for d in drums}
+    ev = sorted(((e["t"], d["id"], e) for d in drums for e in d["events"]), key=lambda x: x[0])
+    moved, i = 0, 0
+    while i < len(ev):
+        j = i + 1
+        while j < len(ev) and ev[j][0] - ev[i][0] <= ALIGN_WINDOW_S:
+            j += 1
+        group = ev[i:j]
+        if len({g[1] for g in group}) > 1:
+            a = int(group[0][0] * RATE) - int(0.008 * RATE)
+            b = int(group[-1][0] * RATE) + int(0.003 * RATE)
+            sel = (on_t >= a) & (on_t <= b)
+            if not sel.any() or on_h[sel].max() < clear:
+                # no clear attack in the loop here (a soft hit under other sounds): nothing to
+                # time the parts from, so they are one hit, at the earliest part's time
+                t0 = group[0][0]
+                for t, _, e in group:
+                    if abs(t - t0) > 0.002:
+                        moved += 1
+                    e["t"] = round(t0, 5)
+            else:
+                cand_t, cand_h = on_t[sel], on_h[sel]
+                cand_t = cand_t[cand_h >= 0.3 * cand_h.max()]
+                for t, did, e in group:
+                    ts = int(t * RATE)
+                    before = cand_t[cand_t <= ts + int(0.003 * RATE)]
+                    if low[did] or not len(before):
+                        new = int(cand_t[0])
+                    else:
+                        new = int(before[-1])
+                    if abs(new - ts) > int(0.002 * RATE):
+                        moved += 1
+                    e["t"] = round(new / RATE, 5)
+        i = j
+    for d in drums:
+        d["events"].sort(key=lambda e: e["t"])
+    return moved
+
+
 def drop_refires(times, gains, y, n):
     """NMFD explains a drum's tail by firing its template again 40 to 90 ms after the hit.
     Played back, each firing is a fresh strike, so a re-fire sounds like slapback echo (heard
@@ -231,8 +303,11 @@ def main(ref_dir: Path, work: Path) -> None:
                               instance_spread_db=spread,
                               events=[dict(t=round(t / RATE, 5), gain=round(float(g), 3))
                                       for t, g in sorted(zip(times, gains))]))
-        inv[key] = dict(name=name, bpm=bpm_of(name), seconds=round(n / RATE, 5), drums=drums)
-        print(f"== {key} {name}")
+        mono = sf.read(path, always_2d=True)[0].mean(axis=1)
+        moved = align_hits(drums, mono)
+        inv[key] = dict(name=name, bpm=bpm_of(name), seconds=round(n / RATE, 5), drums=drums,
+                        aligned_firings=moved)
+        print(f"== {key} {name}  (firings moved onto the loop's own onsets: {moved})")
         for d in drums:
             print(f"  {d['id']:8s} {d['role']:10s} comps={d['components']} hits={d['hits']:3d} "
                   f"strong={d['strong_hits']:3d} spread={d['instance_spread_db']} {d['features']}")

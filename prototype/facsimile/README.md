@@ -167,6 +167,17 @@ some of the other drums, and a replica lane carries none. Not yet shown.
   (3 dB of slack), nor stand more than 10 dB over the template at the attack (which also
   removed another drum's click from an 808). An 808 whose tail the reference cut keeps its
   natural ring as a pad and is choked at its own next hit in the groove (`self_choke`).
+- Round 0e (2026-11-19): the owner heard the knocker groove doubling. One kick had been split
+  into four NMFD parts, each timed on its own separated audio, and a low part builds slowly,
+  so its start read 10 to 20 ms late: the parts fired 15 to 19 ms apart and one kick played
+  as two or three attacks, a flam. `drums.align_hits` now times a split hit from the loop
+  itself (onsets above 2 kHz, where a new hit cracks and a kick's own body bloom does not):
+  one clear attack and every part snaps to it; several (a real flam, a hat off the kick) and
+  each part takes its own, a low part the earliest; no clear attack (a soft hit under other
+  sounds) and the parts become one hit at the earliest part's time. The median offset between
+  co-firing parts is now 0.0 ms in every loop checked (it was 15 to 19 ms in the knocker
+  groove). Only hit times changed: `python3 -I fit.py WORK models --events-only` copies them
+  into the models without refitting a sound.
 - Round robin follows the reference's own hit-to-hit spread, clamped to 0.3 to 1.2 dB per band,
   plus fresh noise and phases. Whether that reads as one drum hit again is for the ear.
 - Engine gates: this is a prototype. Velocity and round robin are checked in rendering only;

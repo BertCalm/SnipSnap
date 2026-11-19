@@ -20,6 +20,7 @@ Then render, measure the render exactly as the target was measured, and correct 
 by the difference (closed loop, damped). The remaining difference is the reported distance.
 
     python3 -I fit.py WORK_DIR MODELS_DIR
+    python3 -I fit.py WORK_DIR MODELS_DIR --events-only   # new hit times, same sounds
 """
 from __future__ import annotations
 
@@ -515,6 +516,16 @@ def jsonable(m):
 def main(work: Path, models: Path, only: str | None = None) -> None:
     models.mkdir(parents=True, exist_ok=True)
     inv = json.loads((work / "inventory.json").read_text())
+    if only == "--events-only":
+        # hit times and loudness changed, the sounds did not: copy the events, refit nothing
+        for key, loop in inv.items():
+            f = models / f"{key}.json"
+            m = json.loads(f.read_text())
+            for d in loop["drums"]:
+                m["drums"][d["id"]]["events"] = d["events"]
+            f.write_text(json.dumps(m, separators=(",", ":")))
+        print("events copied into", len(inv), "loops")
+        return
     reports = {}
     for key, loop in inv.items():
         if only and key != only:
