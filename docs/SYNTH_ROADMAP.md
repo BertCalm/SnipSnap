@@ -3400,6 +3400,10 @@ held-loop join sits at the loop's end so the attack stays the render's own;
 and the chord voicings gather near one centre so neighbouring pads read as a
 progression.
 
+## CONSORT woodwind section prototype
+
+A lead and up to three harmony players, each a blown pipe (BORE's loop and valves as a cone, a closed cylinder or a jet), six voices, fixed intervals, velocity as breath, five gestures, four takes and a per-chair room. The owner approved the Python prototype's sound over three rounds (2026-11-19); the Kotlin engine, patch and probes exist and nobody has heard them. No presets, kit, keygroups, picker entry or loop; render time is over the house rule. See `docs/CONSORT.md`.
+
 ## CHITIN finite-note prototype
 
 SHELL and WING share a source/filter/phaser excursion with protected bass roots. The owner approved the first audition; twelve candidate presets, a finite-note sixteen-pad MPC kit, picker wiring and a focused published bank are now available. See `docs/CHITIN.md`.

@@ -1246,3 +1246,22 @@ Fifteen self-sustaining mechanisms on one moving support, struck into tuned reso
 ### SIDEROOM — cached synthesized drum family
 
 Five distinct approved kits are implemented on the SKINS shelf with ten pads each. Three velocity layers × three takes survive native rendering, saving, replay and playback; the roll is owner accepted and the model-3 Original fill is owner accepted. Focused software tests verify all 450 variants and MPC export read-back. **MPC 3/phone hardware verification remains open.** The owner’s 2026-11-14 MPC2 combined-grid exception applies: its first-take velocity export is a format limit, not a new blocking gate. The generic slice-map capture remains parked by the owner; software checks do not establish SIDEROOM’s physical MPC3 cycling behavior. Separate Soft/Medium/Hard discrete-WAV cycling companions now preserve all takes in both formats, verified in software. They are an explicit fallback, not closure of the combined grid gate. No Android build/device check is claimed. Melodic voices, keygroups, chord tools and string STRUM do not apply. This is a versioned cached-synthesis bank, not an editable Kotlin spectral engine. See [SIDEROOM](SIDEROOM.md) for build steps and evidence.
+
+## CONSORT (Kotlin prototype, 2026-11-19)
+
+Source: the commit that adds this entry. Details: [CONSORT](CONSORT.md).
+
+| Gate | Current evidence | Status |
+|---|---|---|
+| Six melodic voices | FLUTE, SAX, CLARINET, OBOE, BASSOON, DUDUK render and pass pitch, level and classifier probes. Three pipe types; OBOE, SAX and BASSOON differ by reed, edge and formants. The owner heard them in Python only. | Open: Kotlin listening |
+| Presets | None. The engine is in `PatchTypes.PROTOTYPES`. | Open |
+| Playable keygroups | None. | Open |
+| Premade kit | None. | Open |
+| Chord-tool compatibility | Not tested. A chord on a patch that already seats a seventh stacks intervals. | Open |
+| Appropriate HOLD | Breath length only; the top step is a long note. No loop. | Open: owner's decision on a loop |
+| Velocity | Velocity is breath effort inside the render; `Velocity.touchedRender` passes it through. Tone changes with velocity in `ConsortTest`. No save, playback or export evidence. | Open |
+| Round robin | Four authored takes in the render and on `ConsortPatch.take`. No pad pool, no selection, no save/load, no playback, no export. | Open |
+| App picker | No entry. | Open |
+
+Nothing here is a completion claim. A passing `ConsortTest` and an audition page do not close a gate.
+

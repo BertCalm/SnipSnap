@@ -81,7 +81,7 @@ object ConsortAuditionGenerator {
         var group = ""
         // one warm-up so the first clip's render time is the engine's, not the JVM's
         Consort.render(ConsortVoice.OBOE)
-        for (clip in clips()) {
+        for (clip in clips().sortedBy { it.section }) {
             File(root, clip.file).parentFile.mkdirs()
             val t0 = System.nanoTime()
             val snip: Snip = clip.patch.render()

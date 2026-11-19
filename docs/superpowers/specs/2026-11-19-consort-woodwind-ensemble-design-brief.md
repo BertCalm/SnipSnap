@@ -264,3 +264,35 @@ sounds like players or like one instrument copied. Only then a full spec and Kot
 | Round 2 takes | heard, rejected | owner: "I can't hear the takes differences" |
 | Round 2 humanization amount | not answered | owner has not said |
 | Round 3 takes | not heard | awaiting the owner |
+
+## As built: Kotlin round K1 (2026-11-19)
+
+The owner heard round 3 ("This is better, continue"). K1 is the engine, its patch, registration
+and probes; [CONSORT](../../CONSORT.md) has the numbers. Nobody has heard the Kotlin.
+
+What changed against this brief:
+
+- **The pipe is `Strings.Loop` directly, not `Bore.Player`.** `Bore.Player` is tied to
+  `BoreVoice` (two voices, LIP as the reed offset) and has no closed cylinder. `Strings.Loop`
+  already takes `roundTrip = 0.5` for one.
+- **The section is patch data**: `ConsortPatch.chairs`, with `velocity` and `take`, as
+  `ObbligatoPatch` carries its note. This settles the brief's open "chair storage" question.
+- **ROOM stayed a macro**: eight controls with HOLD. The brief's alternative (land with the
+  rack's ROOM) cannot seat each chair. The wash is `Room.bloom`, scaled to unit energy.
+- **Two defects the port found.** The cylinder's sign flip was applied on the way back and again
+  on the way in, which made a non-inverting half loop: CLARINET and DUDUK played an octave high
+  (+1181 to +1190 cents) until the second flip was removed. And 12 of 180 short renders filed as
+  SNARE (flatness 0.26 to 0.36 against the classifier's 0.25) because white breath noise at the
+  internal rate was lifted by the body's tilt; a 3 kHz low-pass on the noise alone clears them
+  (8 kHz still misfiled 2, 5 kHz none) and leaves the audible breath at its level.
+- **Pitch pins are six constants**, one a voice (-5 to +6.5 cents), measured on three notes each,
+  not the prototype's per-note search.
+- **Not built:** a HOLD loop, presets, kit, keygroups, picker entry, round-robin pads and export,
+  and the render-time work. Every acceptance gate is open.
+
+| Claim | Status | Evidence |
+|---|---|---|
+| Round 3 takes | heard | owner, 2026-11-19: "This is better, continue" |
+| Kotlin mechanics (pitch, overblow, odd harmonics, classes, JSON, determinism) | measured | `ConsortTest`, 16 tests; the audition's `metrics.csv` |
+| Kotlin sound | not heard | awaiting the owner |
+
