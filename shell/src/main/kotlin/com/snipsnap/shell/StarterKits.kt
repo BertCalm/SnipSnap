@@ -1135,6 +1135,38 @@ object StarterKits {
             "The sixteen TEMPEST pads with four takes each: repeated hats, snares and claps vary like a real drum machine's.",
             seeded = false,
         ) { com.snipsnap.synth.TempestRoundRobinKits.build() },
+        // Opt-in beside each kept TEMPEST genre starter, which stays as it is; appended after TEMPEST ROUND ROBIN.
+        Starter(
+            com.snipsnap.synth.TempestGenreRoundRobinKits.Kit.CIRCUIT.id, "CIRCUIT TAKES",
+            "The sixteen TEMPEST CIRCUIT pads with four takes each: repeated hats, claps and zaps vary like a real drum machine's.",
+            seeded = false,
+        ) { com.snipsnap.synth.TempestGenreRoundRobinKits.build(com.snipsnap.synth.TempestGenreRoundRobinKits.Kit.CIRCUIT) },
+        Starter(
+            com.snipsnap.synth.TempestGenreRoundRobinKits.Kit.FOUNDRY.id, "FOUNDRY TAKES",
+            "The sixteen TEMPEST FOUNDRY pads with four takes each: repeated snares, pipes and metal vary like a real drum machine's.",
+            seeded = false,
+        ) { com.snipsnap.synth.TempestGenreRoundRobinKits.build(com.snipsnap.synth.TempestGenreRoundRobinKits.Kit.FOUNDRY) },
+        Starter(
+            com.snipsnap.synth.TempestGenreRoundRobinKits.Kit.STEP.id, "STEP TAKES",
+            "The sixteen TEMPEST STEP pads with four takes each: repeated hats, rims and claps vary like a real drum machine's.",
+            seeded = false,
+        ) { com.snipsnap.synth.TempestGenreRoundRobinKits.build(com.snipsnap.synth.TempestGenreRoundRobinKits.Kit.STEP) },
+        // Opt-in beside each kept TERRA genre starter, which stays as it is; appended after STEP TAKES.
+        Starter(
+            com.snipsnap.synth.TerraGenreRoundRobinKits.Kit.SAHEL.id, "SAHEL TAKES",
+            "The sixteen TERRA SAHEL pads with soft, medium and hard touch and four takes on each: a repeated hit lands a little differently every time.",
+            seeded = false,
+        ) { com.snipsnap.synth.TerraGenreRoundRobinKits.build(com.snipsnap.synth.TerraGenreRoundRobinKits.Kit.SAHEL) },
+        Starter(
+            com.snipsnap.synth.TerraGenreRoundRobinKits.Kit.MAQAM.id, "MAQAM TAKES",
+            "The sixteen TERRA MAQAM pads with soft, medium and hard touch and four takes on each: a repeated hit lands a little differently every time.",
+            seeded = false,
+        ) { com.snipsnap.synth.TerraGenreRoundRobinKits.build(com.snipsnap.synth.TerraGenreRoundRobinKits.Kit.MAQAM) },
+        Starter(
+            com.snipsnap.synth.TerraGenreRoundRobinKits.Kit.PUNJAB.id, "PUNJAB TAKES",
+            "The sixteen TERRA PUNJAB pads with soft, medium and hard touch and four takes on each: a repeated hit lands a little differently every time.",
+            seeded = false,
+        ) { com.snipsnap.synth.TerraGenreRoundRobinKits.build(com.snipsnap.synth.TerraGenreRoundRobinKits.Kit.PUNJAB) },
     ))
 
     fun byId(id: String): Starter? = ALL.firstOrNull { it.id == id }

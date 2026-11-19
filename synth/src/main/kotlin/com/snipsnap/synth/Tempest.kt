@@ -117,6 +117,13 @@ object Tempest {
         const val HAT_PHASE = PI / 4
         /** Largest shift of CLAP's second and third bursts and its release, as a fraction of the burst spacing (at most 1.2 ms, at SOURCE 1). */
         const val CLAP_JITTER = .04
+        /**
+         * Largest oscillator drift a take may carry, in cents ([drifted]). Only the genre kits' two
+         * SOURCE-0 pads use it (TempestGenreRoundRobinKits): with no noise in the source, a fresh seed
+         * changes nothing there, so their takes drift a few cents instead, as a free-running analog
+         * oscillator does between strokes. The owner chose this exception on 18 Nov 2026.
+         */
+        const val MAX_DRIFT_CENTS = 10.0
 
         fun seed(model: Int, voice: TempestVoice, midi: Int, take: Int, part: String): Int {
             require(take > 0) { "take 0 keeps the accepted seeds" }
@@ -130,13 +137,21 @@ object Tempest {
         }
     }
 
-    /** Rate-independent reference path also supports higher-rate alias comparisons. [take] 0 is the accepted render. */
-    internal fun synthesize(voice: TempestVoice, macros: Map<String, Float>, rate: Int, take: Int = 0): FloatArray {
+    /**
+     * Rate-independent reference path also supports higher-rate alias comparisons. [take] 0 is the accepted render.
+     * [cents] detunes the model-2 oscillator ([drifted]); at 0, the default, the root is the tuned note untouched.
+     */
+    internal fun synthesize(voice: TempestVoice, macros: Map<String, Float>, rate: Int, take: Int = 0, cents: Double = 0.0): FloatArray {
         require(rate >= Dsp.RATE && rate % Dsp.RATE == 0)
         require(take >= 0) { "TEMPEST take must not be negative" }
-        if (voice in EXPANSION_VOICES) return TempestPercussion.synthesize(voice, macros, rate, take = take)
+        require(cents.isFinite() && abs(cents) <= Takes.MAX_DRIFT_CENTS) { "TEMPEST drift must be within ${Takes.MAX_DRIFT_CENTS} cents" }
+        if (voice in EXPANSION_VOICES) {
+            require(cents == 0.0) { "only the model-2 KICK and METAL oscillator drifts" }
+            return TempestPercussion.synthesize(voice, macros, rate, take = take)
+        }
         val m = settled(voice, macros)
-        val root = frequencyFor(m.getValue("TUNE")).toDouble()
+        val tuned = frequencyFor(m.getValue("TUNE")).toDouble()
+        val root = if (cents == 0.0) tuned else tuned * 2.0.pow(cents / 1200)
         // HOLD and unknown keys cannot change finite audio, including its noise seed.
         val midi = midiFor(m.getValue("TUNE"))
         val source = if (take == 0) Source(m.getValue("SOURCE"), Dsp.seedFor("TEMPEST", 2, voice.name, midi))
@@ -199,5 +214,16 @@ object Tempest {
         require(take >= 0 && (take == 0 || model > 1)) { "TEMPEST takes need model 2 or 3 and must not be negative" }
         if (model == 1) return TempestLegacy.render(voice, macros)
         return Snip(finish(synthesize(voice, macros, Dsp.RATE * Dsp.OVERSAMPLE, take)), 1, Dsp.RATE)
+    }
+
+    /**
+     * Renderer take [take] of a model-2 KICK or METAL with its oscillator [cents] off the tuned note: the
+     * whole voice (root, pitch drop, the filter that tracks it) moves together; envelopes, drive, the
+     * repeats and the output stage do not. A take only; the accepted render is [render] at take 0.
+     */
+    internal fun drifted(voice: TempestVoice, macros: Map<String, Float>, model: Int, take: Int, cents: Double): Snip {
+        require(model == 2 && voice in APPROVED_VOICES) { "only the model-2 KICK and METAL oscillator drifts" }
+        require(take > 0 && cents != 0.0) { "take 0 keeps the accepted render" }
+        return Snip(finish(synthesize(voice, macros, Dsp.RATE * Dsp.OVERSAMPLE, take, cents)), 1, Dsp.RATE)
     }
 }
