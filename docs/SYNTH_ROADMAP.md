@@ -3916,3 +3916,13 @@ The owner approved the Kotlin kits and the hardware ("Approved, approved"). `Kin
 the 56 one-shots of the four kits, served by `Presets`; KINDRED leaves `PatchTypes.PROTOTYPES`; `KindredPresetsTest`
 holds the preset contracts. Complete: shelf, picker, roster, velocity and round robin through MPC 3 export, sound and
 hardware approved; MPC 2 not applicable. Preserve model 2 and kit version 1. See [KINDRED](KINDRED.md).
+
+### RIDDIM, round 5: presets and picker (2026-11-19)
+
+The owner accepted RIDDIM's six dancehall kits on the phone and the MPC ("Sounds great. Phone/MPC pass.") and chose
+the roster and the picker. `RiddimPresets` files the kits' RIDDIM pads as the factory bank: each pad's own macros
+struck full at take 0, named after its kit (CLAVE, DEMBOW, BOOM, BAILE, SABAR, WOOD). Sixty-nine pads give sixty-five
+presets: four pads two kits share at the same settings are filed once, and the 27 pads that strike CALABASH voices
+stay CALABASH's. Every one of the 19 RIDDIM voices has a preset. RIDDIM leaves `PatchTypes.ROSTERLESS` and sits on
+SYNTH's picker after KINDRED, before CAIRN, under DRUMS; 99 picker engines. An on-device test loads CLAVE WOOD F#3 and
+keeps an edit with its hardest mallet, take and model; CI compiles and runs it. See [RIDDIM](RIDDIM.md).

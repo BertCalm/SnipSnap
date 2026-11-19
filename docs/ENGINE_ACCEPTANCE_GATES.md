@@ -1164,6 +1164,7 @@ on the phone and the MPC said "Sounds great. Phone/MPC pass." (2026-11-19). Evid
 | Percussion: roll/riser | Pass | Each kit's A16 is a one-bar roll or riser at its tempo: rim roll, snare roll, hat riser, ratchet riser, sabar (nder) roll, wood tremolo; approved with the kits |
 | Velocity and round robin: rendering | Pass in software | Three zones of four takes per pad; every pad darkens when softer except reused CALABASH voices that keep their approved recording fit; closest two takes on any pad 35.3 dB apart |
 | Velocity and round robin: saving, playback, export | Pass | Saved PCM, playback through the pad resolver and the MPC 3 track read back for all 96 pads; MPC 2 not written (format limit). Owner-reported pass on the phone and the MPC, 2026-11-19 |
+| Presets, catalog and picker (not a drum gate; the owner's choice, round 5) | Done in software | `RiddimPresets` files the 65 distinct RIDDIM pads of the six kits as the factory bank (`RiddimPresetsTest`); RIDDIM is off `PatchTypes.ROSTERLESS`, in `EngineCatalog` under DRUMS and on SYNTH's picker, with an on-device test in `NewEngineSynthScreenTest` run by CI's emulator. Not yet seen on a phone |
 
 ## LOOSE CRATE kits (complete, 2026-11-18: sound approved, phone and MPC gates passed)
 

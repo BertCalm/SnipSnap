@@ -59,9 +59,10 @@ internal object PatchTypes {
      * and their pads became its factory bank. CALABASH sat here from its Kotlin
      * port (round 1, 2026-11-15) until the owner approved its kits on the shelf (2026-11-15) and they became its
      * factory bank, as CLUTTER's did. SERVO sat here from its port until the owner approved its kits (2026-11-15)
-     * and their hits became its factory bank.
+     * and their hits became its factory bank. RIDDIM sat here from its port (round 2a, 2026-11-18) until the owner
+     * accepted its six kits on the phone and the MPC (2026-11-19) and their RIDDIM pads became its factory bank.
      */
-    val ROSTERLESS: Set<String> = setOf(HydroformPatch.ENGINE, SnapPatch.ENGINE, SilkPatch.ENGINE, GyrePatch.ENGINE, MagnetPatch.ENGINE, RiddimPatch.ENGINE)
+    val ROSTERLESS: Set<String> = setOf(HydroformPatch.ENGINE, SnapPatch.ENGINE, SilkPatch.ENGINE, GyrePatch.ENGINE, MagnetPatch.ENGINE)
 
     /**
      * The engines with a [Patch] type and provisional recipes of their own that are

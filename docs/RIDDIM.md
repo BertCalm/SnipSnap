@@ -362,9 +362,43 @@ The owner heard round 4 and played the six kits on the phone and the MPC: "Sound
 (2026-11-19). Every applicable gate passes; see [the gates](ENGINE_ACCEPTANCE_GATES.md). `RiddimKits.VERSION` 2 is the
 accepted baseline.
 
+## Round 5: the roster and the picker (2026-11-19)
+
+After accepting the kits the owner chose the roster and the picker, as CALABASH's rounds 3 and 4 and EMBER's round 4
+did.
+
+- **The roster.** `RiddimPresets` files the six kits' RIDDIM pads as RIDDIM's factory bank: each voice at the pad's
+  own macros (completed by `Riddim.settled`), struck full, at take 0 (the kit grid's first take). A preset is byte for
+  byte the engine render that the kit's hard zone scales by its level law. Nothing is reasoned from the knobs.
+  - **Names:** "<tag> <pad>" in caps, the tag a short name for the kit: CLAVE, DEMBOW, BOOM, BAILE, SABAR, WOOD. A full
+    kit title would pass a preset list's 24 letters.
+  - **Coverage:** sixty-nine of the kits' 96 pads strike a RIDDIM voice. The other 27 strike CALABASH's voices and
+    stay CALABASH's sounds. Four RIDDIM pads repeat another kit's pad at the same settings and are filed once, under
+    the first kit: Dembow's Punch Kick (Clave's Kick), Boom Riddim's Open Hat and Clap (Clave's), and Wood and
+    Bronze's Wood A3 (Clave's, since both play the hardest mallet). That leaves sixty-five presets, and every one of
+    the 19 RIDDIM voices has at least one.
+  - **Promotion:** a saved RIDDIM strike promotes through `RiddimPatch.fromJsonText`, so its velocity, take and model
+    survive (`UserPresets`, `UserPresetsTest`), into `RiddimPresets`' `promoted` list beside the accepted kits.
+  - **Proof:** `RiddimPresetsTest` holds CALABASH's preset contracts. Every RIDDIM pad of every kit is a preset, each
+    the engine's render of that pad byte for byte, and the kit's pad has the same shape (correlation over 0.999999 on
+    Clave's kick, Baile Funk's ting and Wood and Bronze's tremolo). Each preset is finite, at the engine's 0.89, centred
+    and faded. A JSON round trip keeps velocity, take and model, and a softer strike is another sound. Names are
+    unique, in caps, named after their kit, within 24 letters and no maker's name. Every two presets of a voice are
+    different recipes and sounds. RIDDIM leaves `PatchTypes.ROSTERLESS`.
+- **The picker.** RIDDIM sits on SYNTH's engine picker after KINDRED and before CAIRN (which closes the engine ring).
+  It is wired as EMBER's was: every arm of the `Engine` enum, the saved-draft restore, a frozen draft before a macro
+  bag and the live-edit list, and the native-factory path, because a RIDDIM preset carries its strike velocity, take
+  and model outside the macro map. The voice chips are their names with spaces; the hats read HAT CL and HAT OP.
+  `EngineCatalog` files RIDDIM under DRUMS, and both READMEs count 99 picker engines.
+- **On-device test.** `NewEngineSynthScreenTest` opens the wood with its three controls, loads CLAVE WOOD F#3 with
+  the pad's hardest mallet, keeps a DECAY edit through a rebuild, and checks that the saved draft keeps take 0, full
+  velocity and model 1. This session has no Android SDK: CI's `android-build` compiles the entry and `emulator-tests`
+  runs the test. Not yet seen on a phone.
+
 ## Open
 
-- Optional, not a gate: a preset roster and the SYNTH picker, as CALABASH's rounds 3 and 4 did.
+- The picker and its presets on the phone: open RIDDIM in SYNTH, load a preset, play it. Not a gate; the kits'
+  gates are closed.
 
 ## Ledger
 

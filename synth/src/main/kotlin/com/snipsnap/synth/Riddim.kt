@@ -104,7 +104,7 @@ object Riddim {
 
     fun drumClassFor(voice: RiddimVoice): DrumClass = voice.drumClass
 
-    /** SCRAMBLE near the defaults (no preset bank yet), the way CALABASH rolls. */
+    /** SCRAMBLE near the defaults, the way CALABASH rolls (a preset as [near] rolls near that preset). */
     fun scramble(voice: RiddimVoice, random: Random, temperature: Float = 0.35f, near: Patch? = null): Map<String, Float> {
         val base = defaults(voice)
         val seed = if (near != null) base + near.macros.filterKeys { it in base } else base

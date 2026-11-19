@@ -91,7 +91,6 @@ class SynthRootTest {
         private val patches: List<Patch> by lazy {
             Presets.all() + listOf(
                 GyrePatch("Door", GyreVoice.FLICK, emptyMap()),
-                com.snipsnap.synth.RiddimPatch("Kick", com.snipsnap.synth.RiddimVoice.KICK, emptyMap()),
                 MagnetPatch("Door", MagnetVoice.JANGLE, emptyMap()),
                 SilkPatch("Door", SilkVoice.OUD, emptyMap()),
                 SnapPatch("Door", SnapVoice.ORBIT, emptyMap(), IntArray(Snap.TABLE_SIZE) { (it * 255) / (Snap.TABLE_SIZE - 1) }),
