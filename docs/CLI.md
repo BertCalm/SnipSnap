@@ -1177,6 +1177,33 @@ On the phone it is the PAD SHEET's DE-SAMPLE card, whose UNDO runs the
 same `undesamplePad` (since 2026-11-01:
 `docs/superpowers/specs/2026-11-01-splice-desample-undo-design.md`).
 
+
+### `kerf <kit-dir> <pad> | --all` — a pad's synthetic twin
+
+KERF measures a pad's audio and plays it back from the numbers
+(`docs/superpowers/specs/2026-11-19-kerf-synthetic-chops-design.md`):
+sine oscillators for the body, noise shaped by 19 bands for the rest,
+then the two things that make a chop sound chopped. `--bleed` (0..4,
+default 1) is how loud the pad before it keeps ringing underneath, and
+`--slop` (0..1, default 0.5) is how far off the two cut points land.
+The neighbours are the pads either side in slot order, wrapping at the
+ends, so `chop` a loop into a kit first: slot order is then the loop's
+order. The fitted numbers ride the pad as its recipe; no audio of the
+capture is kept in them.
+
+The pad takes KERF's own label, from its tone and how loud it is beside
+the kit's loudest pad, because the capture classifier reads a break
+badly. A twin is mono and a one-shot: a stereo pad is summed and a pad
+over 1.5 s is cut there.
+
+Bin-backed. `--undo` is `KitBuilderModel.unkerfPad`: the capture comes
+back, the recipe comes off and the pad is called what it was called. It
+refuses a pad that is not a twin, and a twin with anything riding it
+(undo that first). `--all` does every pad that can take it, measuring
+each once from its capture, and names the pads it left alone (printed,
+velocity-layered, a chain, too short); `--all --undo` restores them.
+About 0.4 s a pad.
+
 ### `arrange <kit-dir>` — songs, not loops
 
 The Arranger's structure grammar lays the kit's **own** variations into

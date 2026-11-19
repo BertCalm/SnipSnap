@@ -77,9 +77,15 @@ data class PadRecipe(
      * existing recipes and their exact audio.
      */
     val layers: List<LayerRecipe>? = null,
+    /**
+     * A KERF twin as this pad's source: a chopped hit's fitted numbers and its two neighbours ([KerfRecipe]). A source
+     * like [patch], and never both; it is kilobytes of measurement, which is why it rides here and is not a [Patch].
+     */
+    val kerf: KerfRecipe? = null,
 ) {
     init {
-        require(patch != null || fx != null || board != null || pedals != null || !layers.isNullOrEmpty()) {
+        require(patch == null || kerf == null) { "a recipe has one source: a patch or a KERF twin, not both" }
+        require(patch != null || kerf != null || fx != null || board != null || pedals != null || !layers.isNullOrEmpty()) {
             "an empty recipe records nothing"
         }
         layers?.let { require(it.isNotEmpty()) { "a bank has at least one layer" } }
@@ -95,8 +101,8 @@ data class PadRecipe(
      * recipe saved before renders differently.
      */
     fun render(): Snip {
-        val p = requireNotNull(patch) { "recipe has no patch to render; use process() on the captured audio" }
-        val dry = p.render()
+        val dry = kerf?.render()
+            ?: requireNotNull(patch) { "recipe has no patch to render; use process() on the captured audio" }.render()
         val board = pedals ?: return process(dry)
         val pedalled = board.processAround(dry, fx)
         return terminalFade(this.board?.process(pedalled) ?: pedalled)
@@ -128,7 +134,9 @@ data class PadRecipe(
 
     fun toJsonValue(): JsonValue.Obj {
         val obj = LinkedHashMap<String, JsonValue>()
-        obj["recipe"] = JsonValue.Num((if (layers == null) MIN_READABLE_VERSION else VERSION).toDouble())
+        // A reader that does not know a key would drop it silently, so each addition a reader must understand moves
+        // the number: 3 for layers, 4 for a KERF source (an older build refuses the pad instead of reading it as empty).
+        obj["recipe"] = JsonValue.Num((if (kerf != null) KERF_VERSION else if (layers == null) MIN_READABLE_VERSION else VERSION).toDouble())
         patch?.let { obj["patch"] = it.toJsonValue() }
         fx?.let { obj["fx"] = it.toJsonValue() }
         treatment?.let { obj["treatment"] = JsonValue.Str(it) }
@@ -138,6 +146,7 @@ data class PadRecipe(
         terminalFadeMs?.let { obj["terminalFadeMs"] = JsonValue.Num(it.toDouble()) }
         pedals?.let { obj["pedals"] = it.toJsonValue() }
         layers?.let { obj["layers"] = JsonValue.Arr(it.map(LayerRecipe::toJsonValue)) }
+        kerf?.let { obj["kerf"] = it.toJsonValue() }
         return JsonValue.Obj(obj)
     }
 
@@ -160,6 +169,9 @@ data class PadRecipe(
         /** The oldest recipe version [fromJsonValue] still reads (and unbanked recipes still write). */
         const val MIN_READABLE_VERSION = 2
 
+        /** Written when [kerf] is present. */
+        const val KERF_VERSION = 4
+
         /**
          * The [alias] default: true where grit is deliberately the point
          * (docs/SYNTH_UPGRADE.md's U6 alias-flag section) - VELVET `CHIP`,
@@ -174,7 +186,7 @@ data class PadRecipe(
         fun fromJsonValue(value: JsonValue): PadRecipe {
             val obj = value.obj()
             val version = obj["recipe"]?.int() ?: throw JsonException("not a pad recipe: no recipe version")
-            if (version != MIN_READABLE_VERSION && version != VERSION) throw JsonException("unsupported recipe version $version")
+            if (version != MIN_READABLE_VERSION && version != VERSION && version != KERF_VERSION) throw JsonException("unsupported recipe version $version")
             val patch = obj["patch"]?.let { Patches.fromJsonValue(it) }
             val fx = obj["fx"]?.let { FxChain.fromJsonValue(it) }
             return PadRecipe(
@@ -187,6 +199,7 @@ data class PadRecipe(
                 terminalFadeMs = obj["terminalFadeMs"]?.takeUnless { it is JsonValue.Null }?.num()?.toFloat(),
                 pedals = obj["pedals"]?.let { PedalBoard.fromJsonValue(it) },
                 layers = obj["layers"]?.takeUnless { it is JsonValue.Null }?.arr()?.map { LayerRecipe.fromJsonValue(it) },
+                kerf = obj["kerf"]?.takeUnless { it is JsonValue.Null }?.let { KerfRecipe.fromJsonValue(it) },
             )
         }
 

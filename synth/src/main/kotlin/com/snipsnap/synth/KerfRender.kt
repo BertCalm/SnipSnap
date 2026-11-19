@@ -87,6 +87,12 @@ object KerfRender {
         return FloatArray(out.size) { out[it].toFloat() }
     }
 
+    /** The hit before its edge, for the fitter, which measures a render against its source ([KerfFit]). */
+    internal fun rawRender(patch: KerfPatchData): DoubleArray = raw(patch, Controls())
+
+    /** The body oscillators alone, added into [out]: what the fitter subtracts before it looks for the next one. */
+    internal fun addBody(patch: KerfPatchData, out: DoubleArray) = body(patch, Controls(), 1.0, out)
+
     /** The hit before its edge, in doubles, so [chopped] with nothing to add lands on the same bytes as [render]. */
     private fun raw(patch: KerfPatchData, controls: Controls, extendSeconds: Double = 0.0): DoubleArray {
         val n = Math.rint((patch.seconds * controls.cut + extendSeconds) * RATE).toInt().coerceAtLeast(1)
