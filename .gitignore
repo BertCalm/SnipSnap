@@ -850,6 +850,10 @@ testkit/stagger-proto/
 testkit/shatter-breakcore/
 testkit/soundclash-breakcore/
 testkit/redline-breakcore/
+testkit/lull-breakcore/
+testkit/strobe-breakcore/
+testkit/cartridge-breakcore/
+testkit/barricade-breakcore/
 /testkit/soul-rock-v3/
 
 testkit/stagger-round1/

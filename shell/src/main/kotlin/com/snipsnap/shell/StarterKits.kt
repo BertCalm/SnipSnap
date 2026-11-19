@@ -707,6 +707,22 @@ object StarterKits {
             "Speedcore at 250 BPM: tuned terror kicks, clipped noise snares and hats, a scream and feedback stab. Snare roll and scream rise.", seeded=false, tempoBpm=com.snipsnap.synth.Redline.bpm.toFloat()) {
             com.snipsnap.synth.Breakcore.arranged(com.snipsnap.synth.Redline)
         },
+        Starter(com.snipsnap.synth.Lull.id, "LULL BREAKCORE",
+            "Tender piano chords in A minor, strings, choir, a music box and a worn tape, then a sudden stop. Fading repeat and swell rise.", seeded=false, tempoBpm=com.snipsnap.synth.Lull.bpm.toFloat()) {
+            com.snipsnap.synth.Breakcore.arranged(com.snipsnap.synth.Lull)
+        },
+        Starter(com.snipsnap.synth.Strobe.id, "STROBE BREAKCORE",
+            "The 1992 rave: a whine that dives, hard piano and organ stabs, an orchestra hit and a sped-up break. Stab roll and whine rise.", seeded=false, tempoBpm=com.snipsnap.synth.Strobe.bpm.toFloat()) {
+            com.snipsnap.synth.Breakcore.arranged(com.snipsnap.synth.Strobe)
+        },
+        Starter(com.snipsnap.synth.Cartridge.id, "CARTRIDGE BREAKCORE",
+            "Chip breakcore: pulse duty, a 4-bit triangle, shift-register noise drums and a crushed break, all on a 60 Hz frame. Noise roll and arp rise.", seeded=false, tempoBpm=com.snipsnap.synth.Cartridge.bpm.toFloat()) {
+            com.snipsnap.synth.Breakcore.arranged(com.snipsnap.synth.Cartridge)
+        },
+        Starter(com.snipsnap.synth.Barricade.id, "BARRICADE BREAKCORE",
+            "Digital hardcore at 165 BPM in E: power chords through a cranked amp, a punk kick and snare, harsh noise. Chug roll and feedback rise.", seeded=false, tempoBpm=com.snipsnap.synth.Barricade.bpm.toFloat()) {
+            com.snipsnap.synth.Breakcore.arranged(com.snipsnap.synth.Barricade)
+        },
         Starter("spore-synth-broken", "SPORE ORBITAL BREAKS",
             "Short kick, wire clap, higher toms and metallic percussion. Reverse-metal accents and accelerating riser.", seeded=false, tempoBpm=155f) {
             com.snipsnap.synth.SporeSyntheticKits.arranged(com.snipsnap.synth.SporeSyntheticKits.Genre.BROKEN)
