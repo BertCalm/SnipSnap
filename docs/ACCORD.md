@@ -5,10 +5,14 @@ contacts can move from scattered timing toward concentrated pulses, while tuned
 resonators retain the requested note. Gathering is an outcome of the reciprocal
 mechanical model, not a scheduled phase alignment or a guarantee for every setting.
 
-This is the finite native model-1 candidate. The owner approved the Python sound
+This is the finite native model-1 engine. The owner approved the Python sound
 direction: BRUSH is the default, WOOD remains, and TINE retains its Reference,
-Soft Attack, Bright Edge and Long Ring alternatives. Native listening, complete
-control-domain acceptance and phone/MPC checks remain open.
+Soft Attack, Bright Edge and Long Ring alternatives. On 2026-11-19 the owner heard
+the native engine itself and kept it (round accord-native-1): every factory recipe
+beside its Python original, each voice from C2 to C5 and at three touches, and the
+sixteen-pad kit. `AccordNativePinsTest` pins those renders. Complete control-domain
+acceptance and phone/MPC checks remain open; the remaining gates are listed in
+[the acceptance gates](ENGINE_ACCEPTANCE_GATES.md#accord-native-sound-kept-by-ear-2026-11-19-three-voices-gates-open).
 
 ## Play a saved performance
 
@@ -182,7 +186,7 @@ on the unchanged merged C++ tree. The final unfiltered nine-module JVM gate
 at clean source `00a1f9ff67cecf44076fb2472db2d7dab921ec1f` exited zero in
 1h30m58s: **8,010 tests, zero failures, errors or skips**. All 4,403 synth tests
 reran; the other eight unchanged module tasks were validly up to date. Native
-listening remains pending. Phone latency values are targets, and
+listening was kept by ear on 2026-11-19 (above). Phone latency values are targets, and
 physical phone/MPC acceptance remains open. Finite HOLD=0 is the only
 supported playback contract.
 
