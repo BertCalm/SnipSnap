@@ -349,8 +349,19 @@ the wash, 0.2 to 0.6 s after the strike, from 12.6 to 7.4 dB under the attack; t
 On the printed groove, 6 to 12 kHz is up 2.7 dB and over 12 kHz up 6 dB, while 2 to 6 kHz (where the sweep was harsh)
 moved 0.4 dB.
 
+**Round 0g, a steady deck for BLUE.** "It's too noisy" (the owner, 2026-11-19), asked which noise: the ride, hissy.
+Measured stage by stage, as the share of the ride's 5 to 14 kHz wash (0.2 to 0.6 s) in spectral peaks 8 dB over the
+local floor: dry, 100% (all ringing modes; BUZZ's rivets made no difference); through the room, 100%; through the
+converter alone, 95%; through the converter and tape, 73% for round 0e's ride and 57% for round 0f's. Turning off the
+tape's drive changed nothing; turning off its wobble (WOBBLE .08, about 0.1% of pitch) gave 96% and 94%. Wow and
+flutter smear a cymbal's hundreds of high modes into swish, and round 0f's brighter ride exposed it. BLUE now prints
+through the crate print with WOBBLE 0 (`BLUE_PRINT` in the generator); the converter, the tape's drive and head, and
+the vinyl are unchanged, and `LooseCrateKits.CRATE` and the four approved kits keep their wobble. Measured on the
+printed ride hit (with vinyl): 94% (round 0f 55%, round 0e 71%), centred at 4.0 kHz (round 0f 4.4, round 0e 2.4).
+Lesson for the kits: test a bright cymbal through the tape's wobble, not only its head.
+
 [Expansion round 0 listening page](https://claude.ai/artifact/Q3rZ8po8ZaeJs9E4tNd86s) (private to the owner; BLUE's
-shimmering ride beside round 0e's, and the shaker at two levels).
+ride at rounds 0g, 0f and 0e, and the shaker at two levels).
 
 ## Gates
 

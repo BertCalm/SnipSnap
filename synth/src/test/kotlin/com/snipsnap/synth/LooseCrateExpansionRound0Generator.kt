@@ -118,6 +118,16 @@ object LooseCrateExpansionRound0Generator {
     /** The shaker's fader in the softer comparison groove: about 3 dB under [SHAKER_FADER]. */
     private const val SHAKER_SOFTER = .25f
 
+    /**
+     * BLUE's print, round 0g: the crate print with the tape's wobble off. "It's too noisy", the ride hissy (the owner,
+     * 2026-11-19, of round 0f's brighter ride). The ride is all ringing modes dry and stays so through the room and
+     * the converter; the tape's wow and flutter (WOBBLE .08, about 0.1% of pitch) smear its hundreds of high modes
+     * into swish. The share of the ride's 5 to 14 kHz wash (0.2 to 0.6 s) in peaks 8 dB over the local floor, through
+     * the converter and the tape: round 0e's ride 73%, round 0f's 57%, round 0f's with no wobble 94% (no drive: 57%,
+     * no change). On a kit led by a ride, a steady deck. [LooseCrateKits.CRATE] itself, and the approved kits, keep it.
+     */
+    private val BLUE_PRINT = LooseCrateKits.CRATE.let { c -> LooseCrateKits.Print("blue", c.crunch, c.tape + ("WOBBLE" to 0f), c.hitVinyl, c.grooveVinyl, c.valve, c.bassSqueeze) }
+
     /** BLUE's room: HUMMIN's, a little smaller and drier, for brushes; a soft compressor. */
     private val blueRoom = LooseCrateKits.Room(mapOf("SIZE" to .18f, "WALLS" to .50f, "DISTANCE" to .50f), mapOf("AMOUNT" to .35f, "ATTACK" to .80f, "RECOVER" to .50f),
         -4f, kickCurve = 1f, wireWeight = 0f, hatLevel = 1f, ringBarEnd = false, ride = null)
@@ -204,9 +214,9 @@ object LooseCrateExpansionRound0Generator {
         return fast.copyOfRange(m, 2 * m)
     }
 
-    private fun printedLoop(loop: FloatArray): FloatArray {
+    private fun printedLoop(loop: FloatArray, print: LooseCrateKits.Print = LooseCrateKits.CRATE): FloatArray {
         val n = loop.size
-        val p = LooseCrateKits.CRATE.apply(FloatArray(2 * n) { loop[it % n] }, phrase = true)
+        val p = print.apply(FloatArray(2 * n) { loop[it % n] }, phrase = true)
         val fade = (.02f * Dsp.RATE).toInt()
         return FloatArray(n) { j -> if (j < n - fade) p[n + j] else { val w = (j - (n - fade) + 1).toFloat() / fade; p[n + j] * (1 - w) + p[j] * w } }
     }
@@ -218,10 +228,10 @@ object LooseCrateExpansionRound0Generator {
     }
 
     /** One printed hit at full velocity, optionally sped like the record. */
-    private fun hit(strike: Strike, ratio: Double = 1.0): Snip {
+    private fun hit(strike: Strike, ratio: Double = 1.0, print: LooseCrateKits.Print = LooseCrateKits.CRATE): Snip {
         var x = KitStrikes.struck(strike, 1f, 0, LooseCrateKits.touch(1f))
         if (ratio != 1.0) x = Resampler.resample(Snip(x, 1, Math.round(Dsp.RATE * ratio).toInt()), Dsp.RATE).samples
-        return KitStrikes.finish(LooseCrateKits.CRATE.apply(x, phrase = false), 1f).let { s ->
+        return KitStrikes.finish(print.apply(x, phrase = false), 1f).let { s ->
             val peak = s.samples.maxOf { abs(it) }
             Snip(FloatArray(s.samples.size) { s.samples[it] * .92f / max(peak, 1e-9f) }, 1, Dsp.RATE)
         }
@@ -232,11 +242,11 @@ object LooseCrateExpansionRound0Generator {
         fun write(name: String, s: Snip) = WavWriter.write(File(root, name), s).also { println("wrote ${it.path}") }
 
         val blue = loopDry(blueNotes, 90, blueParts.map { it.second }, blueRoom, blueFaders)
-        write("blue/groove.wav", levelled(printedLoop(blue)))
+        write("blue/groove.wav", levelled(printedLoop(blue, BLUE_PRINT)))
         write("blue/groove-noprint.wav", levelled(blue))
         // The same groove with the shaker about 3 dB down, so the owner can choose its level by ear.
-        write("blue/groove-shaker-softer.wav", levelled(printedLoop(loopDry(blueNotes, 90, blueParts.map { it.second }, blueRoom, mapOf(4 to SHAKER_SOFTER)))))
-        for ((name, s) in blueParts) write("blue/hit-$name.wav", hit(s))
+        write("blue/groove-shaker-softer.wav", levelled(printedLoop(loopDry(blueNotes, 90, blueParts.map { it.second }, blueRoom, mapOf(4 to SHAKER_SOFTER)), BLUE_PRINT)))
+        for ((name, s) in blueParts) write("blue/hit-$name.wav", hit(s, print = BLUE_PRINT))
         // The shaker's share of the groove, dry and on one scale: the shaker alone and everything else alone.
         // Stems for measuring only.
         run {
