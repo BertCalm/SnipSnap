@@ -360,8 +360,35 @@ the vinyl are unchanged, and `LooseCrateKits.CRATE` and the four approved kits k
 printed ride hit (with vinyl): 94% (round 0f 55%, round 0e 71%), centred at 4.0 kHz (round 0f 4.4, round 0e 2.4).
 Lesson for the kits: test a bright cymbal through the tape's wobble, not only its head.
 
+**Round 0h, a ride like a record's.** "The ride should have less shimmer. It should be like these" (the owner,
+2026-11-19), with two recordings of jazz rides: used only to measure, never committed or sliced. Measured from each
+hit's peak, as the share of five bands (under 1 kHz, 1 to 3, 3 to 6, 6 to 12, over 12) at the strike (the first 40 ms),
+the wash (0.2 to 0.6 s) and the tail (0.6 to 1.2 s): the references' wash holds 21 and 30 dB under its whole over 12
+kHz, round 0g's 15. They live between 3 and 12 kHz, a stick ping centred near 8 to 9 kHz over a wash centred at 3.5 and
+6.2 kHz, falling 20 dB in 0.52 and 1.32 s. A search through BLUE's print found the print does not add low end to a
+cymbal; its converter filter and tape head take the top, so the lows' share rises (the converter's bit depth, grit and
+the tape's drive barely moved it). So the ride is shaped before the print: EMBER's flat ride at TUNE .40, DAMP .30,
+BUZZ 0; a 500 Hz low cut; +12 dB at 8 kHz (Q .8) against the tape head; the strike 3 dB softer, back over 50 ms; and
+two Butterworth low-passes at 12 kHz (24 dB an octave). Round 0f's shelf and lift are gone; round 0g's steady tape
+stays. Scored as the root mean square of those fifteen shares and the wash's and tail's levels against the strike,
+the printed hit sits 5.3 dB from the references' mean (round 0g 7.0; each reference sits 3.5 from it). Its wash: over
+12 kHz -23.2 dB, 6 to 12 kHz -3.2, centred at 5.5 kHz, 98% in ringing peaks; it falls 20 dB in 0.48 s. What is left is
+the print's: vinyl hiss over 12 kHz in the tail and the strike's lows (under 1 kHz at -10.4 against -19.5 and -12.7).
+On the printed groove, over 12 kHz falls from -29.2 to -35.9 dB of the whole.
+
+**Round 0i, three grooves on the same sounds.** "Maybe the groove isn't good. It just isn't clicking" (the owner,
+2026-11-19). Round 0's groove mixed two grids: the ride's spang-a-lang, the shaker and the brush ghosts on triplet
+swing, the kick on straight sixteenths (beats 1.75 and 2.5, landing 56 ms after and 111 ms before the triplet notes
+beside them at 90 BPM). And every note moved by its own random draw of up to 12 ms over its part's offset, so no two
+parts locked. Three grooves, each on one grid with a fixed feel per part (brushes 16 ms behind, the ride 4 ms ahead,
+the foot hat 6 and the shaker 4 behind, the kick on the grid) and a random spread of 4 ms: A, pocket (round 0's idea,
+the kick on the triplet swing at 1, the swung "and" of 2 and of 3, the ghosts off the kick, the shaker on the back
+strokes only); B, break (a hip-hop break: sixteenths swung at 58% as an MPC's swing, the ride on eighths, the kick
+"boom, b-boom" at 1, the "a" of 1 and the "and" of 3, no shaker); C, A without the shaker. Shape values, for the
+owner to choose by ear; round 0h's groove stays the kit's until then.
+
 [Expansion round 0 listening page](https://claude.ai/artifact/Q3rZ8po8ZaeJs9E4tNd86s) (private to the owner; BLUE's
-ride at rounds 0g, 0f and 0e, and the shaker at two levels).
+three grooves, its ride at rounds 0h and 0g, and the shaker at two levels).
 
 ## Gates
 

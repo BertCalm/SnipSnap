@@ -38,39 +38,67 @@ object LooseCrateExpansionRound0Generator {
     }
 
     /**
-     * BLUE's ride, round 0f: "The ride needs to be brighter and more of a light shimmery wash after the attack" (the
-     * owner, 2026-11-19). EMBER's flat ride is bright dry (its wash centred near 6.7 kHz), but the room's shelf (-4 dB
-     * over 1.2 kHz) and the crate print's tape head (AGE .60, a one-pole near 6 kHz) take the shimmer: through them
-     * its wash centred at 1.1 kHz. Both shape the whole kit and the tape is the family's, so the ride is treated on
-     * its own channel, as a mixing engineer would:
-     * - TUNE .65 (was .40) and DAMP .10 (was .40): the modes higher, the ring longer;
-     * - a high shelf, +[RIDE_SHELF_DB] at [RIDE_AIR_HZ], to stand up to the room and the tape;
-     * - the wash lifted: the ride's own band over [RIDE_AIR_HZ] (two one-poles' high-pass), added [RIDE_LIFT] times
-     *   over, faded in across the first [RIDE_LIFT_SECONDS] s so the strike itself is unchanged.
-     * Measured through the room and the print (no vinyl): the band over 5 kHz in the wash (0.2 to 0.6 s after the
-     * strike) from 12.6 to 7.4 dB under the attack, the wash's centre from 1.1 to 3.4 kHz.
+     * BLUE's ride, round 0h: "The ride should have less shimmer. It should be like these" (the owner, 2026-11-19, with
+     * two recordings of jazz rides, used only to measure). Round 0f's shelf and lift had put air over 12 kHz: the
+     * references' wash (0.2 to 0.6 s after the strike) holds 21 to 30 dB under its whole there, round 0g's 15. The
+     * references live between 3 and 12 kHz, a bright stick ping over a wash that falls 20 dB in 0.5 to 1.3 s. The
+     * print's converter filter and tape head (about 6 kHz) take that band, so the ride is shaped before it:
+     * - EMBER's flat ride at TUNE .40, DAMP .30, BUZZ 0 (no rivets: EMBER's fitted cymbals start at 0);
+     * - a low cut at [RIDE_LOW_CUT_HZ] (two one-poles' high-pass), the references' lows being modest;
+     * - +[RIDE_PRESENCE_DB] dB at [RIDE_PRESENCE_HZ] (peaking, Q .8), to stand up to the tape head;
+     * - the strike [RIDE_STRIKE_DB] dB softer, coming back over [RIDE_STRIKE_SECONDS] s, so the wash sits as the
+     *   references' does against the strike;
+     * - a steep cut at [RIDE_TOP_HZ] (two Butterworth low-passes, 24 dB an octave): no shimmer.
+     * Scored against the references by the share of five bands (under 1 kHz to over 12 kHz) at the strike, the wash
+     * and the tail, and the wash's and tail's levels against the strike, the printed hit (BLUE's print, vinyl
+     * included) sits 5.3 dB from the references' mean (round 0g 7.0; the two references sit 3.5 from it). What is
+     * left is the print's own: vinyl hiss over 12 kHz in the tail and the strike's lows.
      */
-    private val shimmeringRide: Strike = { v, t, _ ->
-        val x = Ember.render(EmberVoice.RIDE, mapOf("TUNE" to .65f, "DAMP" to .10f, "BUZZ" to .20f, "DISTANCE" to 0f, "WARMTH" to 0f), v, t).samples
-        val shelf = Dsp.Biquad().apply { highShelf(RIDE_AIR_HZ, RIDE_SHELF_DB) }
-        val y = FloatArray(x.size) { shelf.process(x[it]) }
-        val a = Dsp.FixedOnePole(RIDE_AIR_HZ)
-        val b = Dsp.FixedOnePole(RIDE_AIR_HZ)
-        val ramp = RIDE_LIFT_SECONDS * Dsp.RATE
-        FloatArray(y.size) { val h1 = y[it] - a.lp(y[it]); val h = h1 - b.lp(h1); y[it] + RIDE_LIFT * h * minOf(1f, it / ramp) }
+    private val recordRide: Strike = { v, t, _ ->
+        val x = Ember.render(EmberVoice.RIDE, mapOf("TUNE" to .40f, "DAMP" to .30f, "BUZZ" to 0f, "DISTANCE" to 0f, "WARMTH" to 0f), v, t).samples
+        val a = Dsp.FixedOnePole(RIDE_LOW_CUT_HZ)
+        val b = Dsp.FixedOnePole(RIDE_LOW_CUT_HZ)
+        val presence = Dsp.Biquad().apply { peaking(RIDE_PRESENCE_HZ, RIDE_PRESENCE_DB, .8f) }
+        val floor = Math.pow(10.0, -RIDE_STRIKE_DB / 20.0)
+        val tau = RIDE_STRIKE_SECONDS * Dsp.RATE
+        val shaped = FloatArray(x.size) {
+            val h1 = x[it] - a.lp(x[it])
+            val g = 1.0 - (1.0 - floor) * Math.exp(-it / tau)
+            (presence.process(h1 - b.lp(h1)) * g).toFloat()
+        }
+        lowPass(lowPass(shaped, RIDE_TOP_HZ), RIDE_TOP_HZ)
     }
 
-    /** Where the ride's air starts, Hz: its shelf and its lifted wash. */
-    private const val RIDE_AIR_HZ = 5_000f
-    private const val RIDE_SHELF_DB = 6f
-    /** How many times over the ride's air is added again after the strike: 2 is about +9.5 dB on that band. */
-    private const val RIDE_LIFT = 2f
-    private const val RIDE_LIFT_SECONDS = .15f
+    private const val RIDE_LOW_CUT_HZ = 500f
+    private const val RIDE_PRESENCE_HZ = 8_000f
+    private const val RIDE_PRESENCE_DB = 12f
+    private const val RIDE_STRIKE_DB = 3.0
+    private const val RIDE_STRIKE_SECONDS = .05
+    private const val RIDE_TOP_HZ = 12_000f
+
+    /** A Butterworth low-pass (RBJ's cookbook, Q 0.7071), 12 dB an octave; twice over, 24. */
+    private fun lowPass(x: FloatArray, hz: Float): FloatArray {
+        val w = 2 * Math.PI * hz / Dsp.RATE
+        val alpha = Math.sin(w) / (2 * .7071)
+        val cw = Math.cos(w)
+        val a0 = 1 + alpha
+        val b0 = (1 - cw) / 2 / a0
+        val b1 = (1 - cw) / a0
+        val a1 = -2 * cw / a0
+        val a2 = (1 - alpha) / a0
+        var x1 = 0.0; var x2 = 0.0; var y1 = 0.0; var y2 = 0.0
+        return FloatArray(x.size) {
+            val xi = x[it].toDouble()
+            val y = b0 * xi + b1 * x1 + b0 * x2 - a1 * y1 - a2 * y2
+            x2 = x1; x1 = xi; y2 = y1; y1 = y
+            y.toFloat()
+        }
+    }
 
     private val blueParts: List<Pair<String, Strike>> = listOf(
         "felt-kick" to ember(EmberVoice.KICK, "TUNE" to .35f, "DAMP" to .65f, "BUZZ" to .15f),
         "brush-tap" to ember(EmberVoice.BRUSH_TAP, "TUNE" to .55f, "DAMP" to .35f, "BUZZ" to .55f),
-        "ride" to shimmeringRide,
+        "ride" to recordRide,
         "foot-hat" to ember(EmberVoice.HAT_FOOT, "TUNE" to .45f, "DAMP" to .50f, "BUZZ" to .10f),
         // Round 0e: the brush sweep is gone. Three rounds of it (round 0 "harsh and overbearing", 0c "scraping rather
         // than a gently rattling sweep", 0d "just awful") and the owner chose a shaker in its place (2026-11-19).
@@ -103,6 +131,58 @@ object LooseCrateExpansionRound0Generator {
             add(Note(b + 0.0, 0, .85f)); add(Note(b + 1.75, 0, .45f)); add(Note(b + 2.5, 0, .75f))
         }
     }, 12f, "loose-crate-blue")
+
+    /**
+     * Round 0i, three grooves on the same sounds: "Maybe the groove isn't good. It just isn't clicking" (the owner,
+     * 2026-11-19). Round 0's groove mixed two grids: the ride, shaker and ghosts on triplet swing, the kick on straight
+     * sixteenths (1.75 and 2.5, landing 56 ms after and 111 ms before the triplet notes beside them at 90), and every
+     * note moved by its own random draw of up to 12 ms, so the parts did not lock. Each of these keeps one grid, a
+     * fixed feel per part (the brushes laid back, the ride on top, the kick on the grid) and a random spread of
+     * [POCKET_SPREAD_MS]. Shape values, unheard.
+     * - [pocketNotes]: round 0's idea on one grid. The kick on the triplet swing (1, the swung "and" of 2 soft, the
+     *   swung "and" of 3), the brush ghosts moved off the kick, the shaker only on the swung "and" (the back stroke).
+     * - [breakNotes]: a hip-hop break instead of jazz time. Sixteenths swung at [BREAK_SWING] (an MPC's swing), the ride
+     *   on swung eighths, the kick "boom, b-boom" (1, the "a" of 1 soft, the "and" of 3), the brushes on two and four
+     *   with a ghost on the "a" of 4 every other bar, the shaker out.
+     * - [pocketNotes] without the shaker, for space.
+     */
+    private fun pocket(build: MutableList<Note>.() -> Unit): List<Note> {
+        val laid = mapOf(0 to 0f, 1 to 16f, 2 to -4f, 3 to 6f, 4 to 4f)
+        return Cypher.humanised(buildList(build).map { Note(it.beat, it.part, it.weight, laid.getValue(it.part)) }, POCKET_SPREAD_MS, "loose-crate-blue-pocket")
+    }
+
+    private const val POCKET_SPREAD_MS = 4f
+    private const val T = 2.0 / 3
+
+    private val pocketNotes: List<Note> = pocket {
+        for (bar in 0 until BARS) {
+            val b = bar * 4.0
+            for ((beat, w) in listOf(0.0 to .70f, 1.0 to .60f, 1 + T to .40f, 2.0 to .65f, 3.0 to .60f, 3 + T to .40f)) add(Note(b + beat, 2, w))
+            add(Note(b + 1.0, 3, .55f)); add(Note(b + 3.0, 3, .55f))
+            add(Note(b + 1.0, 1, .90f)); add(Note(b + 3.0, 1, .95f))
+            add(Note(b + T, 1, .22f))
+            if (bar % 2 == 1) add(Note(b + 3 + T, 1, .28f))
+            for (beat in 0 until 4) add(Note(b + beat + T, 4, if (beat == 3) SHAKE_AND + .08f else SHAKE_AND))
+            add(Note(b + 0.0, 0, .85f)); add(Note(b + 1 + T, 0, .45f)); add(Note(b + 2 + T, 0, .75f))
+        }
+    }
+
+    /** How late a swung sixteenth lands, as a share of its eighth: 0.5 is straight, 0.58 an MPC's gentle swing. */
+    private const val BREAK_SWING = .58
+
+    /** The [i]th sixteenth of a bar, the odd ones swung by [BREAK_SWING]. */
+    private fun sixteenth(i: Int) = (i / 2) * .5 + if (i % 2 == 1) BREAK_SWING * .5 else 0.0
+
+    private val breakNotes: List<Note> = pocket {
+        for (bar in 0 until BARS) {
+            val b = bar * 4.0
+            for (i in 0 until 8) add(Note(b + sixteenth(2 * i), 2, if (i % 2 == 0) .65f else .38f))
+            add(Note(b + 1.0, 3, .50f)); add(Note(b + 3.0, 3, .50f))
+            add(Note(b + 1.0, 1, .92f)); add(Note(b + 3.0, 1, .95f))
+            if (bar % 2 == 1) add(Note(b + 3 + sixteenth(3), 1, .30f))
+            add(Note(b + 0.0, 0, .90f)); add(Note(b + sixteenth(3), 0, .50f)); add(Note(b + sixteenth(10), 0, .80f))
+        }
+    }
 
     /** The shaker's weights: the forward stroke on the beat, the back stroke on the swung "and". */
     private const val SHAKE_ON = .35f
@@ -246,6 +326,8 @@ object LooseCrateExpansionRound0Generator {
         write("blue/groove-noprint.wav", levelled(blue))
         // The same groove with the shaker about 3 dB down, so the owner can choose its level by ear.
         write("blue/groove-shaker-softer.wav", levelled(printedLoop(loopDry(blueNotes, 90, blueParts.map { it.second }, blueRoom, mapOf(4 to SHAKER_SOFTER)), BLUE_PRINT)))
+        for ((tag, notes) in listOf("a-pocket" to pocketNotes, "b-break" to breakNotes, "c-pocket-no-shaker" to pocketNotes.filter { it.part != 4 }))
+            write("blue/groove-$tag.wav", levelled(printedLoop(loopDry(notes, 90, blueParts.map { it.second }, blueRoom, blueFaders), BLUE_PRINT)))
         for ((name, s) in blueParts) write("blue/hit-$name.wav", hit(s, print = BLUE_PRINT))
         // The shaker's share of the groove, dry and on one scale: the shaker alone and everything else alone.
         // Stems for measuring only.
