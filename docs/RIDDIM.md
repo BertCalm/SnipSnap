@@ -275,14 +275,18 @@ The owner asked for both readings side by side, in place of Baile Funk's A11, A1
   be counted (RATCHET's 300 a second cannot). Each click rings the tongue (1.6, 2.4 and 3.3 kHz) and its box (420 Hz).
   Measured: 9 to 12 clicks in a hit, onset centroid 1.0 kHz soft to 1.65 kHz hard.
 
-Every A and B pad darkens at each softer zone and has four different takes. The kit keeps RATCHET until the owner
-chooses; the page plays all three. Not yet heard.
+Every A and B pad darkens at each softer zone and has four different takes.
+
+**Heard (2026-11-19).** The owner chose B: "Let's do the real ratchet". Baile Funk's A11, A12 and A16 now play
+RATCHET_WOOD. With the wood mallet and the ratchet settled, the owner named nothing else to change ("The only other
+thing is ratchet"), so round 3 is approved: Baile Funk, Sabar Swing, Wood and Bronze, TING and the three A16s.
 
 
 ## Open
 
 - Phone and MPC playback of the three kits.
-- Round 3's three wider kits: the owner's listen, then the Kotlin port of TING, RATCHET and the three A16s, and the shelf.
+- Round 3's three wider kits (approved): the Kotlin port of TING, RATCHET_WOOD, WOOD's BEATER and the three A16s, and
+  the shelf, with Clave Dancehall's woods moving to BEATER 1.0.
 - A preset roster and the picker.
 
 ## Ledger
@@ -295,7 +299,7 @@ chooses; the page plays all three. Not yet heard.
   The Kotlin kits (round 2) confirmed to match, "Yes, they match" (2026-11-18). No phone or MPC has played them.
   Round 3 heard: "wood might need more of an attack" (2026-11-18); the hardest mallet chosen for Wood and Bronze
   (2026-11-19); Clave Dancehall's woods moved to the hardest mallet ("I do like b", 2026-11-19); RATCHET "not sure it
-  sounds as it should", so A (BLIP) and B (RATCHET_WOOD) are on the page, not yet heard.
+  sounds as it should"; of A (BLIP) and B (RATCHET_WOOD) the owner chose B (2026-11-19). Round 3 approved.
 
 ## Why it is built this way
 
