@@ -113,7 +113,9 @@ object SongPlanStore {
                             "pullUp" to JsonValue.Bool(s.pullUp),
                             "drop" to JsonValue.Bool(s.drop),
                         ).also { fields ->
-                            // Only when there is one: a song with none writes the file it always did.
+                            // Only when on or non-empty: an untouched song writes the file it always did.
+                            if (s.close) fields["close"] = JsonValue.Bool(true)
+                            if (s.reverseCrash) fields["reverseCrash"] = JsonValue.Bool(true)
                             if (s.mutes.isNotEmpty()) fields["mutes"] = JsonValue.Arr(s.mutes.sorted().map { JsonValue.Str(it) })
                         },
                     )
@@ -137,6 +139,8 @@ object SongPlanStore {
                 bass = (s["bass"] as? JsonValue.Bool)?.value ?: SectionNames.bassUnder(name),
                 pullUp = (s["pullUp"] as? JsonValue.Bool)?.value ?: SectionNames.pullsUpInto(name),
                 drop = (s["drop"] as? JsonValue.Bool)?.value ?: false,
+                close = (s["close"] as? JsonValue.Bool)?.value ?: false,
+                reverseCrash = (s["reverseCrash"] as? JsonValue.Bool)?.value ?: false,
                 mutes = (s["mutes"] as? JsonValue.Arr)?.items?.mapNotNull { (it as? JsonValue.Str)?.value?.takeIf(String::isNotBlank) }?.toSet() ?: emptySet(),
             )
         }

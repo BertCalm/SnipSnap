@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -484,8 +483,8 @@ private fun SongEditor(keeper: SongKeeper, section: Arranger.Section?, index: In
             val pullUp = section?.pullUp == true
             ActionButton(if (bass) Copy.SONG_BASS_ON else Copy.SONG_BASS_OFF, scheme, enabled = !busy && section != null, lit = bass, modifier = Modifier.weight(1f)) { keeper.toggleBass() }
             ActionButton(if (pullUp) Copy.SONG_PULL_UP_ON else Copy.SONG_PULL_UP_OFF, scheme, enabled = !busy && section != null && index > 0, lit = pullUp, modifier = Modifier.weight(1f)) { keeper.togglePullUp() }
-            SongDropButton(section?.drop == true, enabled = !busy && section != null, keeper = keeper, scheme = scheme)
         }
+        if (section != null) SongTransitionRow(keeper, section, enabled = !busy)
         if (section != null) SongMutesRow(keeper, section, enabled = !busy)
         if (picking && section != null && !busy) {
             ClipPicker(keeper.picks, current = section.ref, names = keeper.names) { ref ->
@@ -506,10 +505,29 @@ private fun SongEditor(keeper: SongKeeper, section: Arranger.Section?, index: In
     }
 }
 
-/** DROP's toggle, its own composable so SongEditor does not grow past the dex register limit. It names its state in words, like BASS and PULL-UP. */
+/**
+ * What the selected section's last bar does, one choice of NONE, DROP, CLOSE and REVERSE CRASH, in a row that scrolls. The chosen
+ * one is lit, says ON and is marked selected for a screen reader (ActionButton sets no state of its own); each speaks its state
+ * in words, like BASS and PULL-UP. Its own composable so SongEditor does not grow past the dex register limit.
+ */
 @Composable
-private fun RowScope.SongDropButton(on: Boolean, enabled: Boolean, keeper: SongKeeper, scheme: Scheme) {
-    ActionButton(if (on) Copy.SONG_DROP_ON else Copy.SONG_DROP_OFF, scheme, enabled = enabled, lit = on, modifier = Modifier.weight(1f)) { keeper.toggleDrop() }
+private fun SongTransitionRow(keeper: SongKeeper, section: Arranger.Section, enabled: Boolean) {
+    val scheme = LocalScheme.current
+    val chosen = SongTransition.of(section.drop, section.close, section.reverseCrash)
+    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        TapeText(Copy.SONG_TRANSITION, TapeType.pixelSmall, scheme.ink2.tape, Modifier.align(Alignment.CenterVertically))
+        for (choice in SongTransition.entries) {
+            val picked = choice == chosen
+            ActionButton(
+                if (picked) "${choice.label} · ${Copy.SONG_TRANSITION_CHOSEN}" else choice.label,
+                scheme,
+                enabled = enabled,
+                lit = picked,
+                accessibilityLabel = if (picked) choice.on else choice.off,
+                modifier = Modifier.widthIn(min = 72.dp).semantics { this.selected = picked },
+            ) { keeper.chooseTransition(choice) }
+        }
+    }
 }
 
 /**
@@ -599,6 +617,8 @@ private fun SectionRow(
                     (if (section.bass) ", ${Copy.SONG_ROW_BASS}" else "") +
                     (if (section.pullUp && index > 0) ", ${Copy.SONG_ROW_PULL_UP}" else "") +
                     (if (section.drop) ", ${Copy.SONG_ROW_DROP}" else "") +
+                    (if (section.close) ", ${Copy.SONG_ROW_CLOSE}" else "") +
+                    (if (section.reverseCrash) ", ${Copy.SONG_ROW_REVERSE_CRASH}" else "") +
                     (if (section.mutes.isNotEmpty()) ", ${Copy.songRowMutes(section.mutes.size)}" else "") +
                     (if (next) ", ${Copy.SONG_ROW_NEXT}" else ""),
             ) { onTap() }
@@ -621,6 +641,8 @@ private fun SectionRow(
                         Copy.SONG_ROW_BASS.takeIf { section.bass },
                         Copy.SONG_ROW_PULL_UP.takeIf { section.pullUp && index > 0 },
                         Copy.SONG_ROW_DROP.takeIf { section.drop },
+                        Copy.SONG_ROW_CLOSE.takeIf { section.close },
+                        Copy.SONG_ROW_REVERSE_CRASH.takeIf { section.reverseCrash },
                         Copy.songRowMutes(section.mutes.size).takeIf { section.mutes.isNotEmpty() },
                     ).joinToString(" · "),
                     TapeType.pixelSmall,
