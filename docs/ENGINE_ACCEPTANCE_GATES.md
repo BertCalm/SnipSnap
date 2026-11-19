@@ -1196,6 +1196,14 @@ Four drum kits after the owner's beat-tape reference loops, in the CYPHER shape:
 | Velocity and round robin: saving, playback, export | Pass | Save, reload, pad resolver, MPC 3, SFZ and DecentSampler for all 64 pads; MPC 2 not written (format limit). Owner-reported pass on the phone and the MPC, 2026-11-18 |
 
 
+### Soul Rock Roadhouse crash revision (2026-11-19)
+
+Owner accepted **Broader rock crash revision**: “That sounds better let's continue”.
+Version 3 retains its nine exact synthesized strikes on Roadhouse pad 12, labelled
+Crash. The accepted coupled snare and all other pads retain their earlier audio.
+This is a frozen statistical modal bank, not a newly registered editable engine.
+Phone/MPC hardware acceptance for this revision remains open. See `SOUL_ROCK.md`.
+
 ## Sunroom studio-pop factory collection (2026-11-18)
 
 See [SUNROOM](SUNROOM.md). The owner approved the assembled R10 audition with

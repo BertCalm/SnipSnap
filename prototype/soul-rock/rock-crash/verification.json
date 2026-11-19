@@ -1,0 +1,177 @@
+{
+  "scope": "One non-riveted crash listening prototype; native and hardware gates open",
+  "renders": [
+    {
+      "velocity": 0.34,
+      "take": 0,
+      "seconds": 9.290321032000001
+    },
+    {
+      "velocity": 0.34,
+      "take": 1,
+      "seconds": 9.583581264999992
+    },
+    {
+      "velocity": 0.34,
+      "take": 2,
+      "seconds": 9.702596142999994
+    },
+    {
+      "velocity": 0.64,
+      "take": 0,
+      "seconds": 8.946554254999995
+    },
+    {
+      "velocity": 0.64,
+      "take": 1,
+      "seconds": 9.833723516000006
+    },
+    {
+      "velocity": 0.64,
+      "take": 2,
+      "seconds": 9.422763555000003
+    },
+    {
+      "velocity": 1.0,
+      "take": 0,
+      "seconds": 9.651947262999997
+    },
+    {
+      "velocity": 1.0,
+      "take": 1,
+      "seconds": 8.79600915200001
+    },
+    {
+      "velocity": 1.0,
+      "take": 2,
+      "seconds": 9.306732399999987
+    }
+  ],
+  "gain": 0.896436496024722,
+  "files": [
+    {
+      "file": "isolated-before-after.wav",
+      "sha256": "831b5d1d56536882d1924036a2eb22ab4b29d431a998fcb6d4e801ec936d6015",
+      "true_peak_4x": 0.8799774662434373,
+      "dc": -2.5507483283415756e-09,
+      "tail_rms": 0.0
+    },
+    {
+      "file": "crash-v1-t2.wav",
+      "sha256": "42f569082f67f4000985de27f0d0310024c1ab562a08efa099dae15659c4173d",
+      "true_peak_4x": 0.20812202862914578,
+      "dc": 4.044405667359537e-08,
+      "tail_rms": 0.0
+    },
+    {
+      "file": "crash-v2-t1.wav",
+      "sha256": "3fa55bb6aecbc0b5001100c3b536cba42dccbac6a76a7f9bd35ddb94301d15b3",
+      "true_peak_4x": 0.4596181152855636,
+      "dc": -1.9991358812043336e-09,
+      "tail_rms": 0.0
+    },
+    {
+      "file": "crash-v3-t2.wav",
+      "sha256": "26e294be07a13938216f63565fec60e5649a5293f0e9a0e8621c82073c289800",
+      "true_peak_4x": 0.8799726116341032,
+      "dc": -1.307127306941295e-08,
+      "tail_rms": 0.0
+    },
+    {
+      "file": "soft-medium-hard.wav",
+      "sha256": "fd720d01937c035c687f6e0ffe86f94fdab38a5cddd88ccc68cb64d4267902ff",
+      "true_peak_4x": 0.8799726116341032,
+      "dc": 2.707163172464202e-09,
+      "tail_rms": 0.0
+    },
+    {
+      "file": "crash-v3-t3.wav",
+      "sha256": "99d42871425fb6e1e0c3f54533aa161bb3ef62aa2b8d9535b2808781f80befa5",
+      "true_peak_4x": 0.837163564950259,
+      "dc": -5.5360685941043085e-09,
+      "tail_rms": 0.0
+    },
+    {
+      "file": "open-then-choked.wav",
+      "sha256": "976709d29038f414130a06016f251cf0dddf618501ace2e047d86a6203a74e7e",
+      "true_peak_4x": 0.8799790423212337,
+      "dc": -1.2110150049603175e-08,
+      "tail_rms": 0.0
+    },
+    {
+      "file": "crash-v1-t1.wav",
+      "sha256": "2b5c51519ac66f73f3b5be11b035b74ec68935536b9ff0bc54857e02c1a269e6",
+      "true_peak_4x": 0.20283684938926752,
+      "dc": -2.4450969623960695e-08,
+      "tail_rms": 0.0
+    },
+    {
+      "file": "groove-before-after.wav",
+      "sha256": "4172aea683d9c27fc6887d276eb18b6a72ec6ce9e6c4b29096b2150a1304f719",
+      "true_peak_4x": 0.8799848601126996,
+      "dc": -5.560823045175384e-05,
+      "tail_rms": 0.0
+    },
+    {
+      "file": "crash-v2-t3.wav",
+      "sha256": "1f12861a8574f7b02f6a5462be7470c53d0b4431810d8b25a7c21bc5530be399",
+      "true_peak_4x": 0.46838588167924855,
+      "dc": -1.0764577821869488e-09,
+      "tail_rms": 0.0
+    },
+    {
+      "file": "crash-v2-t2.wav",
+      "sha256": "04d37710545309731c013a6715fa07536bab0ae6815617e689f61fd55440707b",
+      "true_peak_4x": 0.4588241568429852,
+      "dc": 1.706954483182162e-08,
+      "tail_rms": 0.0
+    },
+    {
+      "file": "crash-v3-t1.wav",
+      "sha256": "9715f513724eb8fce4b184f188351d71a4a160fa6943344785200754311935de",
+      "true_peak_4x": 0.837885870970547,
+      "dc": 9.226780990173847e-09,
+      "tail_rms": 0.0
+    },
+    {
+      "file": "crash-v1-t3.wav",
+      "sha256": "8093163fe94adbb1e99eaea0979850aa92bdec5e18858e24f022903359467e53",
+      "true_peak_4x": 0.22497991560789243,
+      "dc": 5.382288910934745e-09,
+      "tail_rms": 0.0
+    }
+  ],
+  "velocity_spectral_centroids_hz": [
+    4469.631841449286,
+    5404.581888251157,
+    6445.844306258747
+  ],
+  "matched_take_residuals": [
+    0.9995658254641422,
+    0.9999943269206765,
+    0.9993705195853765,
+    0.9999998133321146,
+    0.9991950019622129,
+    0.9999993497005513
+  ],
+  "comparison": [
+    {
+      "take": 1,
+      "late_shimmer_change_db_at_equal_rms": 9.052958471419256,
+      "early_spectral_flatness_before": 0.002105042043407906,
+      "early_spectral_flatness_after": 0.050921365169818815
+    },
+    {
+      "take": 2,
+      "late_shimmer_change_db_at_equal_rms": 8.46853313355674,
+      "early_spectral_flatness_before": 0.001815455739099587,
+      "early_spectral_flatness_after": 0.05051800413645304
+    },
+    {
+      "take": 3,
+      "late_shimmer_change_db_at_equal_rms": 9.502800675072553,
+      "early_spectral_flatness_before": 0.0025919328287983628,
+      "early_spectral_flatness_after": 0.05052110251004176
+    }
+  ]
+}
