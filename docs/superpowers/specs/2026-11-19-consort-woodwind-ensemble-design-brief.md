@@ -1,7 +1,8 @@
 # CONSORT: design brief
 
-Status: concept with a Python prototype. Nothing is built in Kotlin. Nobody has heard the
-prototype yet; the owner's first listen is the next gate.
+Status: concept with a Python prototype. Nothing is built in Kotlin. The owner heard round 1
+("sounds pretty good") and asked for more humanization and a room; round 2 below adds both and
+awaits a listen.
 Repository truth: read at `3117e454`. Grepped and found: `Bore.Player` (`Bore.kt:935`, its
 `tick` at 1012 takes `pressureScale`, `pitchCents`, `turbulenceScale`), `Strings.Loop.reflected`
 / `inject`, `MacroSpec` (`Thump.kt:40`), `Velocity.macroSpecsFor` and `touchedRender`
@@ -121,6 +122,49 @@ behave in a register.
 | Aliasing | energy above the output Nyquist before band limiting, brightest corner: 0.0 |
 | Cost | 0.31 s of Python per player-second. Says nothing about Kotlin; BORE's one pipe is the reference there |
 
+## Round 2: humanization and room (after the owner's first listen)
+
+The owner's verdict on round 1: "Sounds pretty good. I think we need to push the humanization a
+bit further and maybe add some room (this was a game changer on the horns engine)." I did not
+find a horns engine or its room in the repo at `3117e454` or on the default branch, so the room
+here is modelled on the rack's ROOM (`Room.kt`: `SPEED_OF_SOUND`, `MAX_RT60 = 0.9`).
+
+**Humanization.** LOOSE now means how human the players are, default 0.5, and the lead gets
+60 % of it. Per player and per take it draws: a tuning offset (up to 12 cents for a harmony
+chair, 4 for the lead), attack speed (up to 45 % either way), who lets go first (up to 70 ms),
+how far under the note they start, when vibrato enters, and how much air leaks. Through the
+note: vibrato speed wanders up to 9 % and its depth up to 35 %, and it shakes the breath as well
+as the pitch; the pressure wanders 1 to 9 %; over the last third the breath tapers up to 14 %
+and the pitch sags up to 9 cents; trill fingers are uneven and each finger move dips the tone.
+
+**Takes.** A `take` number reseeds everything a player does differently and nothing about the
+instrument. This is the proposed round-robin source.
+
+**Room.** A ROOM control, default 0.4. Each chair has a position in a 9 x 7 x 3.6 m room: its
+own first and second wall bounces (shoebox mirror images), its own distance, delay and level.
+All chairs then share one wash, 0.35 to 0.9 s, 16 to 5 dB under the players. The Python wash is
+a convolution with decaying seeded noise, a stand-in for `Room.kt`'s feedback network.
+
+| Question | Result (Python harness) |
+|---|---|
+| Do the voices stay on pitch with the default humanization and room? | 18 renders: worst 7.6 cents, lowest confidence 0.96. The duduk's deep vibrato reads 7 to 10 cents flat in a 0.25 s window |
+| Does the flute still overblow? | hard hit reads 1193 cents |
+| Does velocity still move tone? | soft to hard centroid: FLUTE 795 to 1491 Hz, SAX 834 to 1461, CLARINET 441 to 638, OBOE 988 to 1207, BASSOON 369 to 521, DUDUK 562 to 805 |
+| Are takes different? | waveform correlation between takes 0.33 to -0.12 (identical takes would read 1.0); sax solo takes detected at 262.21, 261.43, 261.76 Hz, a spread of 5 cents |
+| Do the macros move? | BREATH 9.5 dB, BLEND 6.7, ROOM 3.4, LOOSE 3.1, MOTION 2.9 |
+| Cost | the whole audition set, 90 files, in 82 s of Python |
+
+**Open decisions this round adds.**
+- ROOM makes seven macros plus HOLD, one over the house maximum of six. Options: land the
+  engine with the rack's ROOM in its recipe (the house rule that an engine renders dry, as BORE
+  lands with TAPE) and keep only the per-chair seating inside the engine; or fold BLEND and
+  ROOM into one "distance" control. The per-chair bounces cannot come from the rack, which sees
+  one finished mix.
+- A room tail lengthens every render by up to 1.2 s. A pad with HOLD under about 0.3 would cross
+  the classifier's 1.5 s LOOP line on its tail alone at high ROOM; `drumClassFor` must count the tail.
+- A HOLD loop with a room in it needs the wash to be periodic too, or the room applied after the loop.
+- The room measures darker (it adds low-mid energy), on a prototype that was already dark.
+
 ## Risks and disclosed limits
 
 - **Too dark against the references.** Mid-velocity centroids are 440 to 1260 Hz; the
@@ -145,7 +189,7 @@ behave in a register.
 
 ## Cheapest proof, and what comes next
 
-Done: the prototype above. Next: the owner listens to the three audition pages and says which
+Done: the prototype above, two rounds. Next: the owner listens to the audition page and says which
 voices read as their instrument, which gestures are worth keeping, and whether the section
 sounds like players or like one instrument copied. Only then a full spec and Kotlin, reusing
 `Bore.Player` where its pressure, pitch and turbulence inputs already fit.
@@ -181,4 +225,5 @@ sounds like players or like one instrument copied. Only then a full spec and Kot
 | Six pipes on pitch, flute overblows, velocity moves tone | measured | `consort_proto.py` report, Python harness |
 | Every constant in the prototype | proposed | "shape" values, none tuned by ear |
 | Macro set, chair storage, round-robin source | proposed | not implemented |
-| Any statement about how it sounds | not heard | awaiting the owner |
+| Round 1 overall | heard | owner, 2026-11-19: "sounds pretty good", wants more humanization and a room |
+| Round 2 humanization, room, takes | not heard | awaiting the owner |

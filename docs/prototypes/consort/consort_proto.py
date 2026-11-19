@@ -21,6 +21,9 @@ How it is put together (read this before the code):
      separates oboe from sax from bassoon here; they share the CONE pipe.
   4. The ENSEMBLE (`render`) runs the lead and each harmony player through 1 to 3 with their
      own seed, their own small lateness, tuning drift and level, at lead + interval semitones.
+  5. The ROOM seats each player on their own chair: every chair gets its own first wall
+     bounces and its own distance from the microphone, then all share one wash. LOOSE is how
+     human the players are, and a `take` number reseeds it all, which is what round robin cycles.
 
 Run:  python3 -I docs/prototypes/consort/consort_proto.py <out_dir>
 """
@@ -66,7 +69,7 @@ VOICES = list(INSTRUMENTS)
 INTERVALS = {"OCT_DOWN": -12, "UNISON": 0, "FIFTH": 7, "MIN7": 10, "MAJ7": 11, "OCT_UP": 12}
 
 GESTURES = ["PLAIN", "SCOOP", "TRILL", "FLUTTER", "FALL"]   # GESTURE is a stepped knob over these
-MACROS = {"TUNE": 0.5, "BREATH": 0.6, "GESTURE": 0.0, "MOTION": 0.5, "BLEND": 0.6, "LOOSE": 0.35, "HOLD": 0.45}
+MACROS = {"TUNE": 0.5, "BREATH": 0.6, "GESTURE": 0.0, "MOTION": 0.5, "BLEND": 0.6, "LOOSE": 0.5, "ROOM": 0.4, "HOLD": 0.45}
 
 REED_SLOPE = -0.3             # Bore.REED_SLOPE
 LOOP_GAIN = 0.95              # Bore.LOOP_GAIN
@@ -118,7 +121,7 @@ def smooth_noise(n: int, seed: int, corner_hz: float) -> np.ndarray:
     return np.interp(np.arange(n) / step, np.arange(m), y)
 
 
-def plan(inst: str, midi: float, velocity: float, macros: dict, role: int, seconds: float) -> dict:
+def plan(inst: str, midi: float, velocity: float, macros: dict, role: int, seconds: float, take: int = 0) -> dict:
     """The player. Returns the curves the pipe is blown with. `role` 0 is the lead; harmony
     players (1..3) breathe and bend with the lead but only the lead trills and flutters, the
     way a section holds its notes under a soloist's ornament."""
@@ -126,38 +129,66 @@ def plan(inst: str, midi: float, velocity: float, macros: dict, role: int, secon
     m = {**MACROS, **macros}
     n = int(seconds * RATE)
     t = np.arange(n) / RATE
-    seed = sk.seed_for("CONSORT", inst, int(round(midi)), role)
+    # `take` is the round-robin number: a new take reseeds everything a player does differently
+    # each time (drift, lateness, breath, vibrato), and nothing about the instrument itself
+    seed = sk.seed_for("CONSORT", inst, int(round(midi)), role, take)
     effort = effort_of(m["BREATH"], velocity)
     gesture = gesture_of(m["GESTURE"])
     motion = m["MOTION"]
-    loose = m["LOOSE"] if role > 0 else 0.25 * m["LOOSE"]
+    # LOOSE is how human the players are. The lead gets 60 % of it: a soloist is steadier than
+    # the section behind them, but not a machine
+    loose = m["LOOSE"] if role > 0 else 0.6 * m["LOOSE"]
     blown = hold_seconds(m["HOLD"])
     release = 0.09
+    human = {}
     over = max(0.0, (effort - OVERBLOW_FROM) / (1.0 - OVERBLOW_FROM))
 
     # each harmony player comes in a little late (up to 35 ms at LOOSE 1), by their own amount
     rnd = sk.Noise(seed + 7)
     late = (0.004 + 0.031 * abs(rnd.next())) * loose if role > 0 else 0.0
     tt = np.maximum(t - late, 0.0)
+    # six ways no two players are alike, each drawn once per player per take and scaled by LOOSE:
+    flat = (12.0 if role > 0 else 4.0) * loose * rnd.next()   # 1. where they sit against the pitch (the lead stays close: it is the reference)
+    attack_scale = 1.0 + 0.45 * loose * rnd.next()   # 2. how quickly their note speaks
+    stop = 0.07 * loose * rnd.next()                 # 3. who lets go first: up to 70 ms early or late
+    release = release * (1.0 + 0.6 * loose * abs(rnd.next()))
+    under = 1.0 + 0.8 * loose * rnd.next()           # 4. how far under the note they start
+    vib_late = 0.12 * loose * rnd.next()             # 5. when their vibrato comes in
+    air = 1.0 + 0.5 * loose * rnd.next()             # 6. how much air leaks round the reed or the lip
+    human = dict(flat_cents=round(flat, 1), attack_scale=round(attack_scale, 2), stop_ms=round(1000 * stop, 1))
+    ends = late + blown + stop
 
-    attack = spec["attack"] * sk.lin(effort, 1.5, 0.6)           # a hard blow speaks faster
+    attack = spec["attack"] * sk.lin(effort, 1.5, 0.6) * attack_scale   # a hard blow speaks faster
     env = np.clip(tt / attack, 0, 1) ** 0.7
-    env *= np.clip((late + blown - t) / release, 0, 1)            # the breath stops, the pipe rings out
+    env *= np.clip((ends - t) / release, 0, 1)                    # the breath stops, the pipe rings out
     env[t < late] = 0.0
     # a breath is never flat: it swells a little toward the middle of a long note
-    env *= 1.0 + 0.06 * np.sin(np.pi * np.clip(tt / max(blown, 1e-3), 0, 1)) * (0.5 + effort)
+    frac = np.clip(tt / max(blown, 1e-3), 0, 1)
+    env *= 1.0 + 0.06 * np.sin(np.pi * frac) * (0.5 + effort)
+    # and it runs out: over the last third the pressure tapers and the pitch sags a few cents with it
+    tired = np.clip((frac - 0.67) / 0.33, 0, 1) ** 2
+    env *= 1.0 - 0.14 * loose * tired
+    # the diaphragm is not a pump: the pressure wanders a few percent, slowly, the whole way through
+    wander = smooth_noise(n, seed + 17, 2.5)
+    env *= 1.0 + sk.lin(loose, 0.01, 0.09) * wander
 
     cents = np.zeros(n)
     # vibrato enters late and grows, as a held wind note's does; MOTION scales its depth on a plain note
     vib_hz, vib_cents = spec["vib"]
     vib_hz *= 1.0 + 0.06 * rnd.next()
     depth = vib_cents * (sk.lin(motion, 0.2, 1.6) if gesture == "PLAIN" else 0.6)
-    rise = np.clip((tt - 0.18) / 0.35, 0, 1)
-    cents += depth * rise * np.sin(2 * np.pi * vib_hz * tt + 2 * np.pi * abs(rnd.next()))
+    rise = np.clip((tt - 0.18 - vib_late) / 0.35, 0, 1)
+    # a played vibrato is not a sine from a box: its speed wanders (up to 9 %), its depth breathes
+    # (up to 35 %), and it shakes the breath as well as the pitch, so the tone pulses with it
+    vib_rate = vib_hz * (1.0 + 0.09 * loose * smooth_noise(n, seed + 19, 1.2))
+    vib_phase = 2 * np.pi * np.cumsum(vib_rate) / RATE + 2 * np.pi * abs(rnd.next())
+    vib_depth = depth * rise * (1.0 + 0.35 * loose * smooth_noise(n, seed + 23, 0.9))
+    cents += vib_depth * np.sin(vib_phase)
+    env *= 1.0 + 0.0025 * vib_depth * np.sin(vib_phase + 0.6)
     # tuning drift: nobody holds a pitch still. A few cents for the lead, more for a loose section
-    cents += sk.lin(loose, 2.0, 14.0) * smooth_noise(n, seed + 11, 0.8)
+    cents += sk.lin(loose, 2.0, 14.0) * smooth_noise(n, seed + 11, 0.8) + flat - 9.0 * loose * tired
     # every wind attack starts a few cents under and settles; a harder blow starts further under
-    cents -= sk.lin(effort, 6.0, 22.0) * np.exp(-tt / 0.04)
+    cents -= sk.lin(effort, 6.0, 22.0) * under * np.exp(-tt / 0.04)
 
     pressure_scale = np.ones(n)
     if gesture == "SCOOP":
@@ -166,7 +197,7 @@ def plan(inst: str, midi: float, velocity: float, macros: dict, role: int, secon
     if gesture == "FALL":
         # the end of the note drops away: pitch falls and the breath lets go with it
         length = sk.lin(motion, 0.15, 0.6)
-        x = np.clip((t - (late + blown - length)) / length, 0, 1)
+        x = np.clip((t - (ends - length)) / length, 0, 1)
         cents -= sk.lin(motion, 400.0, 1200.0) * x ** 1.6
         pressure_scale *= 1.0 - 0.45 * x
     if role == 0 and gesture == "TRILL":
@@ -176,9 +207,15 @@ def plan(inst: str, midi: float, velocity: float, macros: dict, role: int, secon
         rate_hz = sk.lin(motion, 5.0, 8.0) + sk.lin(motion, 0.5, 3.0) * np.clip((tt - start) / 1.2, 0, 1)
         rate_hz *= 1.0 + 0.05 * smooth_noise(n, seed + 13, 2.0)
         phase = np.cumsum(rate_hz) / RATE
-        upper = ((phase % 1.0) < 0.5) & (tt > start) & (t < late + blown - 0.05)
+        # fingers are not a square wave: the upper note is held a little shorter than the lower,
+        # by an amount that wanders
+        duty = 0.46 + 0.07 * loose * smooth_noise(n, seed + 29, 3.0)
+        upper = ((phase % 1.0) < duty) & (tt > start) & (t < ends - 0.05)
         k = int(0.012 * RATE)
-        cents += 200.0 * np.convolve(upper.astype(float), np.hanning(k) / np.hanning(k).sum(), mode="same")
+        moved = np.convolve(upper.astype(float), np.hanning(k) / np.hanning(k).sum(), mode="same")
+        cents += 200.0 * moved
+        # each finger move leaks: the tone dips for the 12 ms the hole is half covered
+        pressure_scale *= 1.0 - 0.5 * loose * 4.0 * moved * (1.0 - moved)
     if role == 0 and gesture == "FLUTTER":
         # flutter-tongue: the tongue rolls and chops the breath 24 times a second
         d = sk.lin(motion, 0.25, 0.75)
@@ -188,7 +225,8 @@ def plan(inst: str, midi: float, velocity: float, macros: dict, role: int, secon
         pressure_scale *= 1.0 + 0.4 * over ** 1.2 * np.sin(2 * np.pi * GROWL_HZ * tt) * np.clip((tt - 0.06) / 0.05, 0, 1)
 
     lo, hi = spec["noise"]
-    noise = sk.lin(effort, lo, hi) * (1.0 + 2.5 * np.exp(-tt / 0.05))     # extra air at the tongue: the chiff
+    noise = sk.lin(effort, lo, hi) * air * (1.0 + 2.5 * np.exp(-tt / 0.05))     # extra air at the tongue: the chiff
+    noise = noise * (1.0 + 0.4 * loose * smooth_noise(n, seed + 31, 4.0))       # and the leak is never steady
     # the flute's overblow: after the low note has spoken (0.14 s) the jet's travel time halves
     # over 5 ms and the note cracks to the octave. `jet` is that travel time in periods.
     jet = np.full(n, 0.5)
@@ -196,7 +234,7 @@ def plan(inst: str, midi: float, velocity: float, macros: dict, role: int, secon
         jet -= 0.25 * np.clip((tt - 0.14) / 0.005, 0, 1)
         pressure_scale *= 1.0 + 0.25 * over * np.sin(2 * np.pi * GROWL_HZ * tt) * np.clip((tt - 0.2) / 0.05, 0, 1)
     return dict(env=env * pressure_scale, cents=cents, noise=noise, jet=jet, effort=effort, over=over,
-                seed=seed, late=late)
+                seed=seed, late=late, human=human)
 
 
 def blow(inst: str, hz: float, p: dict, pin_cents: float = 0.0) -> np.ndarray:
@@ -343,25 +381,100 @@ def pin_for(inst: str, midi: int, effort: float) -> float:
     return _PIN[key]
 
 
-def player(inst: str, midi: int, velocity: float, macros: dict, role: int, seconds: float) -> np.ndarray:
-    p = plan(inst, midi, velocity, macros, role, seconds)
+def player(inst: str, midi: int, velocity: float, macros: dict, role: int, seconds: float, take: int = 0) -> np.ndarray:
+    p = plan(inst, midi, velocity, macros, role, seconds, take)
     raw = blow(inst, hz_of(midi), p, pin_for(inst, midi, p["effort"]))
     y = body(rasp(raw, inst, p["effort"]), inst, p["effort"])
     return y / max(1e-9, sk.rms(y[int(0.1 * RATE):]))            # each player at unit level before the mix
 
 
-def render(lead: str, macros: dict, velocity: float = 0.7, parts: list | None = None) -> np.ndarray:
+# Where each chair sits, in metres, in a room 9 x 7 x 3.6 m with the microphone at MIC. The lead
+# is closest; the others sit behind and to the sides, so each one's sound reaches the microphone
+# by its own set of wall bounces. That difference is most of what says "several people in a room".
+ROOM_DIMS = (9.0, 7.0, 3.6)
+MIC = (4.5, 2.0, 1.5)
+CHAIRS = [(4.4, 3.2, 1.2), (3.1, 4.3, 1.2), (5.8, 4.5, 1.2), (4.6, 5.4, 1.3)]
+SPEED_OF_SOUND = 343.0          # Room.SPEED_OF_SOUND
+
+
+def early(role: int, amount: float) -> np.ndarray:
+    """The first wall bounces for one chair: the direct sound, the six walls, and the eighteen
+    two-wall paths, each a spike delayed by its extra distance and quieter by distance and by
+    0.75 a bounce. This is geometry (a shoebox room's mirror images), not a recording."""
+    src = CHAIRS[role]
+    direct = math.dist(src, MIC)
+    ir = np.zeros(int(0.09 * RATE))
+    ir[0] = 1.0
+    for ix in (-1, 0, 1):
+        for iy in (-1, 0, 1):
+            for iz in (-1, 0, 1):
+                bounces = abs(ix) + abs(iy) + abs(iz)
+                if bounces == 0 or bounces > 2:
+                    continue
+                image = [(-s if i == -1 else (2 * d - s if i == 1 else s)) for s, d, i in zip(src, ROOM_DIMS, (ix, iy, iz))]
+                dist = math.dist(image, MIC)
+                at = int((dist - direct) / SPEED_OF_SOUND * RATE)
+                if at < len(ir):
+                    # a bounce off a wall is duller than the direct sound: spread it over 0.25 ms
+                    k = int(0.00025 * RATE * bounces) + 1
+                    ir[at:at + k] += amount * (0.75 ** bounces) * (direct / dist) / k * (1 if (ix + iy + iz) % 2 == 0 else -1)
+    return ir
+
+
+def late_tail(amount: float, seconds: float) -> np.ndarray:
+    """The room's wash after the first bounces: seeded noise that dies away, its highs twice as
+    fast as its lows, starting 25 ms in. A Python stand-in for the rack's ROOM (`Room.kt`, a
+    16-line feedback network); the Kotlin would use that, not a convolution."""
+    n = int(seconds * 2.2 * RATE)
+    t = np.arange(n) / RATE
+    w = sk.Noise(sk.seed_for("CONSORT", "room")).array(n)
+    a = math.exp(-2 * math.pi * 3500.0 / RATE)
+    low = np.empty(n)
+    s = 0.0
+    for i, x in enumerate(w.tolist()):
+        s = a * s + (1 - a) * x
+        low[i] = s
+    high = w - low
+    tail = low * np.exp(-6.9 * t / seconds) + 0.7 * high * np.exp(-6.9 * t / (0.5 * seconds))
+    tail *= np.clip((t - 0.025) / 0.03, 0, 1)
+    return amount * tail / math.sqrt(np.sum(tail ** 2))
+
+
+def render(lead: str, macros: dict, velocity: float = 0.7, parts: list | None = None, take: int = 0) -> np.ndarray:
     """The engine. `parts` is the section: up to three (instrument, interval name) pairs.
     Pure: the same inputs give the same samples."""
+    from scipy.signal import fftconvolve
     m = {**MACROS, **macros}
     midi = midi_for(lead, m["TUNE"])
     seconds = hold_seconds(m["HOLD"]) + 0.35
-    mix = player(lead, midi, velocity, m, 0, seconds)
-    for role, (inst, interval) in enumerate(parts or [], start=1):
-        note = midi + INTERVALS[interval]
+    room = m["ROOM"]
+    bounce = sk.lin(room, 0.0, 0.9)
+    chairs = [(lead, midi, velocity, 1.0)]
+    for inst, interval in parts or []:
         # BLEND is how far forward the section sits: tucked 14 dB under the lead, up to level with it
-        level = 10 ** (sk.lin(m["BLEND"], -14.0, 0.0) / 20)
-        mix = mix + level * player(inst, note, velocity * 0.92, m, role, seconds)
+        chairs.append((inst, midi + INTERVALS[interval], velocity * 0.92, 10 ** (sk.lin(m["BLEND"], -14.0, 0.0) / 20)))
+    mix = None
+    for role, (inst, note, vel, level) in enumerate(chairs):
+        y = level * player(inst, note, vel, m, role, seconds, take)
+        if room > 0:
+            # further chairs are quieter and arrive later, as well as bouncing differently
+            lead_dist = math.dist(CHAIRS[0], MIC)
+            dist = math.dist(CHAIRS[role], MIC)
+            y = fftconvolve(y, early(role, bounce))
+            y = np.concatenate([np.zeros(int(room * (dist - lead_dist) / SPEED_OF_SOUND * RATE)), y]) * (lead_dist / dist) ** (0.6 * room)
+        if mix is None:
+            mix = y
+        else:
+            size = max(len(mix), len(y))
+            mix = np.pad(mix, (0, size - len(mix))) + np.pad(y, (0, size - len(y)))
+    if room > 0:
+        # ROOM is one knob for size and amount: the wash rings 0.35 to 0.9 s (the rack ROOM's
+        # MAX_RT60) and sits 16 dB under the players up to 5 dB under. The tail has unit energy,
+        # so a held note comes back from it at about its own level times `wet`
+        rt60 = sk.lin(room, 0.35, 0.9)
+        wet = 10 ** (sk.lin(room, -16.0, -5.0) / 20)
+        mix = np.pad(mix, (0, int(rt60 * 1.3 * RATE)))
+        mix = mix + wet * fftconvolve(mix, late_tail(1.0, rt60))[:len(mix)]
     return mix
 
 
@@ -431,15 +544,41 @@ def main(out_dir: str) -> int:
         res["sections"].append(dict(section=name, lead=lead, parts=parts, peak=round(pr.peak(y), 3), finite=pr.finite(y),
                                     centroid_hz=round(pr.spectral_centroid(y))))
 
-    # 5. every macro changes the sound (one section, extremes, levelled)
+    # 5. the room: the same notes dry, at the default, and with the room wide open
+    res["room"] = []
+    for name in ("sax_fifths", "full_quartet"):
+        lead, parts = SECTIONS[name]
+        for label, room in (("dry", 0.0), ("default", MACROS["ROOM"]), ("big", 1.0)):
+            y = save(out_dir, "5_room", f"{name}_{label}", render(lead, {"HOLD": 0.6, "ROOM": room}, parts=parts))
+            res["room"].append(dict(section=name, room=room, seconds=round(len(y) / sk.RATE, 2), peak=round(pr.peak(y), 3), finite=pr.finite(y)))
+    for label, room in (("dry", 0.0), ("default", MACROS["ROOM"]), ("big", 1.0)):
+        save(out_dir, "5_room", f"OBOE_solo_{label}", render("OBOE", {"HOLD": 0.6, "ROOM": room}))
+
+    # 6. humanization: the same section stiff, at the default and loose; then three takes of one
+    #    pad, which is what round robin would cycle. Takes must differ but stay the same note.
+    res["takes"] = []
     lead, parts = SECTIONS["reed_trio_min7"]
-    for macro in ("BREATH", "MOTION", "BLEND", "LOOSE"):
+    for label, loose in (("stiff", 0.0), ("default", MACROS["LOOSE"]), ("loose", 1.0)):
+        save(out_dir, "6_human", f"reed_trio_{label}", render(lead, {"HOLD": 0.75, "LOOSE": loose}, parts=parts))
+        save(out_dir, "6_human", f"DUDUK_solo_{label}", render("DUDUK", {"HOLD": 0.75, "LOOSE": loose}))
+    for name, (ld, pt) in (("SAX_solo", ("SAX", [])), ("flute_octaves", SECTIONS["flute_octaves"])):
+        ys = [save(out_dir, "7_takes", f"{name}_take{k + 1}", render(ld, {"HOLD": 0.6}, parts=pt, take=k)) for k in range(3)]
+        n = min(len(y) for y in ys)
+        hz = [pr.pitch(y, sk.RATE, lo_hz=30, hi_hz=3000, start_seconds=0.6)[0] for y in ys]
+        res["takes"].append(dict(pad=name,
+                                 correlation_1v2=round(float(np.corrcoef(ys[0][:n], ys[1][:n])[0, 1]), 3),
+                                 correlation_1v3=round(float(np.corrcoef(ys[0][:n], ys[2][:n])[0, 1]), 3),
+                                 detected_hz=[round(h, 2) for h in hz]))
+
+    # 8. every macro changes the sound (one section, extremes, levelled)
+    lead, parts = SECTIONS["reed_trio_min7"]
+    for macro in ("BREATH", "MOTION", "BLEND", "LOOSE", "ROOM"):
         lo = sk.finish(render(lead, {macro: 0.0}, parts=parts))
         hi = sk.finish(render(lead, {macro: 1.0}, parts=parts))
         res["macro_activity_dB"][macro] = round(pr.macro_activity(lo, hi), 2)
 
-    # 6. aliasing proxy at the brightest corner: energy above the output Nyquist before band limiting
-    raw = render("OBOE", {"TUNE": 1.0, "BREATH": 1.0}, velocity=1.0)
+    # 9. aliasing proxy at the brightest corner: energy above the output Nyquist before band limiting
+    raw = render("OBOE", {"TUNE": 1.0, "BREATH": 1.0, "ROOM": 0.0}, velocity=1.0)
     res["alias_proxy_oboe_top_hard"] = round(pr.alias_proxy(raw, RATE), 6)
     res["wall_seconds"] = round(time.time() - t0, 1)
     res["pin_cents"] = {f"{k[0]}_{k[1]}_{k[2]}": round(v, 1) for k, v in _PIN.items()}
