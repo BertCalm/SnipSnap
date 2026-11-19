@@ -216,7 +216,7 @@ some of the other drums, and a replica lane carries none. Not yet shown.
   every snare was dry. In loops listed in `fit.SWELL_LOOPS` a band that later stands 6 dB over
   its first 14 ms (robust mean) peaks where it really does. Measured: groove band distance 7.03
   to 6.26 dB (raw 10.92 to 8.49), balance 2.00 to 2.04; the highs still sit 5 to 8 dB under
-  the reference. Other loops refit identically. 23 of 49 drums in the other loops have a band
+  the reference. Other loops refit identically. 24 of 50 drums in the other loops have a band
   or more that builds (mostly kick low bands peaking at 20 to 40 ms; 163-d2 by 6 dB in 13
   bands), so the swell rule is a candidate for them too. KNOCK A02 and A04 are now the snare's
   room layer and body on their own.
