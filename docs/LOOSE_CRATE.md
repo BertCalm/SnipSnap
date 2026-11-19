@@ -316,8 +316,52 @@ longer. Measured on dry stems on one scale, the sweep against the rest of the ki
 2 to 6 kHz band 7.8 dB down (round 0: level with it, 0.1). The groove's quietest moments sit 15 dB under its loudest:
 the ride. Lesson for the kits: a part that should sit far back needs a fader, not only a soft weight.
 
-[Expansion round 0 listening page](https://claude.ai/artifact/Q3rZ8po8ZaeJs9E4tNd86s) (private to the owner; round 0c
-beside round 0 for BLUE).
+**Round 0d, BLUE's sweep rattles.** "It sounds scraping rather than a gently rattling sweep" (the owner,
+2026-11-19). EMBER's sweep is shaped bristle noise with no snare wires in it, so however soft it stays a scrape. Round
+0d builds the sweep from the wires: a train of very soft taps of LOOSE CRATE's snare wires (`LooseCrateKits.wires` at
+.45), one every 18 to 40 ms over 1.76 s, swelling and fading with the brush's circle (a sine arch to the 1.3, each tap
+varied), over EMBER's sweep made darker (two one-poles at 2.5 kHz) and 8 dB under the wires. The tap and the fader are
+unchanged. Measured on the sweep alone: the 15 to 60 Hz flicker of its loudness (the rattle) at -1.6 dB of its envelope
+(round 0c -6.6, round 0 -8.4); its centre 2,784 Hz (round 0c 3,219, round 0 3,533); against the rest of the kit 13.0 dB
+down (round 0c 12.8).
+
+**Round 0e, a shaker in place of the sweep.** The owner heard round 0d as "just awful" and chose, of four
+directions offered, a shaker in the sweep's place (2026-11-19). The lesson: a brush sweep is friction, thousands of
+bristles on a coated head, and three rounds of stand-ins for it (shaped noise, then a train of wire taps) came out as
+hiss or scrape; tuning was not going to fix the method. EMBER's shaker is fitted to a CC0 recording of a large
+shaker; BLUE plays it on swung eighths (.35 on the beat, .55 on the swung "and", the bar's last lifted to .63), TUNE
+.30, DAMP .45, at fader .35. The brush tap and everything else are unchanged. Measured on dry stems on one scale: the
+shaker 14.8 dB under the rest of the kit, and 4.7 dB under it from 2 to 6 kHz (a shaker lives there: its centre is
+5.2 kHz; TUNE from .40 to .30 moved that only 140 Hz). On the printed groove, 2 to 6 kHz is -13.8 dB of the whole,
+level with round 0's harsh sweep (-14.0; round 0c -15.2). A shaker's brightness comes in short strokes, not a
+continuous scrape, but given the history a softer groove (fader .25, about 3 dB down; 2 to 6 kHz at -14.7) is
+rendered beside it so the owner can choose the level by ear.
+
+**Round 0f, BLUE's ride shimmers.** "The ride needs to be brighter and more of a light shimmery wash after the
+attack" (the owner, 2026-11-19). EMBER's flat ride is bright dry (its wash centred near 6.7 kHz), but BLUE's room
+shelf (-4 dB over 1.2 kHz) and the crate print's tape head (AGE .60: a one-pole near 6 kHz) took the shimmer, and
+through them its wash centred at 1.1 kHz. Both shape the whole kit and the tape is the family's, so the ride is
+treated on its own channel: TUNE .65 and DAMP .10 (were .40 and .40), a +6 dB high shelf at 5 kHz, and its own band
+over 5 kHz added twice over, faded in across the first 0.15 s so the strike is unchanged. A compressor on the ride
+(the house COMPRESSOR, fast attack) was tried and rejected: it matches the input's peak, so it lifted the wash over
+the strike and the ride lost its attack. Measured through the room and the print (no vinyl): the band over 5 kHz in
+the wash, 0.2 to 0.6 s after the strike, from 12.6 to 7.4 dB under the attack; the wash's centre from 1.1 to 3.4 kHz.
+On the printed groove, 6 to 12 kHz is up 2.7 dB and over 12 kHz up 6 dB, while 2 to 6 kHz (where the sweep was harsh)
+moved 0.4 dB.
+
+**Round 0g, a steady deck for BLUE.** "It's too noisy" (the owner, 2026-11-19), asked which noise: the ride, hissy.
+Measured stage by stage, as the share of the ride's 5 to 14 kHz wash (0.2 to 0.6 s) in spectral peaks 8 dB over the
+local floor: dry, 100% (all ringing modes; BUZZ's rivets made no difference); through the room, 100%; through the
+converter alone, 95%; through the converter and tape, 73% for round 0e's ride and 57% for round 0f's. Turning off the
+tape's drive changed nothing; turning off its wobble (WOBBLE .08, about 0.1% of pitch) gave 96% and 94%. Wow and
+flutter smear a cymbal's hundreds of high modes into swish, and round 0f's brighter ride exposed it. BLUE now prints
+through the crate print with WOBBLE 0 (`BLUE_PRINT` in the generator); the converter, the tape's drive and head, and
+the vinyl are unchanged, and `LooseCrateKits.CRATE` and the four approved kits keep their wobble. Measured on the
+printed ride hit (with vinyl): 94% (round 0f 55%, round 0e 71%), centred at 4.0 kHz (round 0f 4.4, round 0e 2.4).
+Lesson for the kits: test a bright cymbal through the tape's wobble, not only its head.
+
+[Expansion round 0 listening page](https://claude.ai/artifact/Q3rZ8po8ZaeJs9E4tNd86s) (private to the owner; BLUE's
+ride at rounds 0g, 0f and 0e, and the shaker at two levels).
 
 ## Gates
 

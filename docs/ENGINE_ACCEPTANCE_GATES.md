@@ -247,6 +247,23 @@ Rounds 1 to 3 were a Python audition, accepted 2026-11-12. Kotlin round K1 (2026
   of milliseconds": the voice runs at 4x with several transcendental calls a sample, and bringing it under would
   approximate the filter, a change to the accepted sound. A line loop takes 0.3 to 0.5 s; kit pads cache both.
 - **Overall: incomplete.** Open: phone playback of keys and kit, and an MPC.
+## STAGGER kits (round 2 built 2026-11-19: three kits on the shelf, proven in software; the kits not yet heard as kits)
+
+Three authored boom-bap kits after the owner's muffled-kick, drunk-clock, foley-fill producer profile, in the CYPHER shape, every drum EMBER's. See [STAGGER](STAGGER.md). The owner heard round 1 as "too much like drum machine sounds" (THUMP and SKIN drums), then round 1b as "New sounds are better" (EMBER's), both 2026-11-19.
+
+| Gate | Status | Evidence |
+|---|---|---|
+| Melodic voices, keygroups, premade kit, chord tools | Not applicable | Drum kits. |
+| Articulation: HOLD, STRUM | Not applicable | Finite hits; the phrases are printed at the kit's tempo. |
+| Percussion: authored roll or riser | Built, not heard | A timpani roll into the gong (CARDBOARD), a timpani riser into the crash gong (MATINEE), a dragging snare roll (STUMBLE), each A15, each played in the kit's room. |
+| Drums: multiple distinct genre kits on the shelf | Pass in software | Three kits under SKINS; `StaggerKitsTest` holds every pair to at least six different pad names and a different kick and backbeat drum dry, with three prints, three rooms, three clocks. The owner has heard CARDBOARD's drums, not the three kits. |
+| Velocity: rendering | Pass | Every soft zone a different strike and no brighter (`StaggerKitsTest`). |
+| Round robin: rendering | Pass | Four different takes in every zone of every pad; GLASS deals four panes. |
+| Velocity and round robin: saving | Pass | Each kit reloads equal and every saved slice matches its render (`:shell:generateStaggerKits`). |
+| Velocity and round robin: playback | Pass in software | `PadHit.resolve` picks the zone by velocity and deals the takes in order, then repeats (`StaggerKitTest`). No phone has played these kits. |
+| Velocity and round robin: export | MPC 3 verified by read-back; MPC 2 not applicable (the owner's format limit, 2026-11-14) | `StaggerKitTest`, the generator. SFZ and DecentSampler written. No MPC has loaded these kits. |
+| Sound character | CARDBOARD's drums approved in direction ("New sounds are better"); the three kits as kits not heard | The round-2 listening page. |
+
 ## CYPHER kits and THUMP SUB (round 2, 2026-11-12)
 
 Hip-hop drum kits in the GATECRASH shape, six built: TRAP, DRILL, BACKROOM, LOWRIDER, DUST, FLINT. See [CYPHER](CYPHER.md). The owner heard round 1 ("The triple snare thing is messy"), then round 1b ("Ok, sounds good. Make sure we clear the approval gates"), which approved TRAP and DRILL, then round 2 ("All four pass"), which approved BACKROOM, LOWRIDER, DUST and FLINT. Evidence at kit version 3, `CypherTest`, `CypherKitTest`, `ThumpSubTest`, `ThumpSubRobinTest` and `:shell:generateCypherKits`.
