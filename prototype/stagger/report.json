@@ -1,0 +1,235 @@
+{
+  "harness": "Python numpy 2.5.3, not Kotlin; nothing heard",
+  "muffled_kick": {
+    "snare": {
+      "centroid_hz": 7838,
+      "onset_centroid_hz": 7762,
+      "share_above_1k": 0.592
+    },
+    "kick": [
+      {
+        "cutoff_hz": null,
+        "drive": 1.0,
+        "share_150_400": 0.0127,
+        "share_above_1k": 0.00163,
+        "onset_centroid_hz": 3193,
+        "centroid_hz": 3116,
+        "attack_ms": 6.0,
+        "crest_db": 19.0
+      },
+      {
+        "cutoff_hz": null,
+        "drive": 3.0,
+        "share_150_400": 0.0254,
+        "share_above_1k": 0.00025,
+        "onset_centroid_hz": 1132,
+        "centroid_hz": 500,
+        "attack_ms": 6.0,
+        "crest_db": 14.4
+      },
+      {
+        "cutoff_hz": 600.0,
+        "drive": 1.0,
+        "share_150_400": 0.0124,
+        "share_above_1k": 1e-05,
+        "onset_centroid_hz": 843,
+        "centroid_hz": 175,
+        "attack_ms": 6.0,
+        "crest_db": 18.0
+      },
+      {
+        "cutoff_hz": 600.0,
+        "drive": 3.0,
+        "share_150_400": 0.0247,
+        "share_above_1k": 1e-05,
+        "onset_centroid_hz": 1254,
+        "centroid_hz": 152,
+        "attack_ms": 6.0,
+        "crest_db": 14.6
+      },
+      {
+        "cutoff_hz": 350.0,
+        "drive": 1.0,
+        "share_150_400": 0.0106,
+        "share_above_1k": 0.0,
+        "onset_centroid_hz": 1036,
+        "centroid_hz": 132,
+        "attack_ms": 6.0,
+        "crest_db": 17.7
+      },
+      {
+        "cutoff_hz": 350.0,
+        "drive": 3.0,
+        "share_150_400": 0.021,
+        "share_above_1k": 0.0,
+        "onset_centroid_hz": 1390,
+        "centroid_hz": 125,
+        "attack_ms": 6.0,
+        "crest_db": 14.6
+      },
+      {
+        "cutoff_hz": 250.0,
+        "drive": 1.0,
+        "share_150_400": 0.0082,
+        "share_above_1k": 0.0,
+        "onset_centroid_hz": 1220,
+        "centroid_hz": 113,
+        "attack_ms": 6.0,
+        "crest_db": 17.7
+      },
+      {
+        "cutoff_hz": 250.0,
+        "drive": 3.0,
+        "share_150_400": 0.0155,
+        "share_above_1k": 0.0,
+        "onset_centroid_hz": 1515,
+        "centroid_hz": 111,
+        "attack_ms": 6.0,
+        "crest_db": 14.5
+      },
+      {
+        "cutoff_hz": 160.0,
+        "drive": 1.0,
+        "share_150_400": 0.0041,
+        "share_above_1k": 0.0,
+        "onset_centroid_hz": 1569,
+        "centroid_hz": 95,
+        "attack_ms": 8.0,
+        "crest_db": 17.5
+      },
+      {
+        "cutoff_hz": 160.0,
+        "drive": 3.0,
+        "share_150_400": 0.0069,
+        "share_above_1k": 0.0,
+        "onset_centroid_hz": 1778,
+        "centroid_hz": 94,
+        "attack_ms": 8.0,
+        "crest_db": 14.1
+      }
+    ]
+  },
+  "drunk_clock": {
+    "staggered": {
+      "per_part_mean_ms": {
+        "0": 31.5,
+        "2": 15.9,
+        "1": 0.5
+      },
+      "per_part_std_ms": {
+        "0": 11.5,
+        "2": 12.0,
+        "1": 14.2
+      },
+      "worst_abs_ms": 52.0,
+      "hat_lag1_autocorr": 0.74,
+      "kick_minus_snare_mean_ms": 31.0
+    },
+    "staggered_same_seed_same_offsets": true,
+    "humanised_22ms": {
+      "per_part_mean_ms": {
+        "0": -2.0,
+        "2": -1.5,
+        "1": -2.4
+      },
+      "per_part_std_ms": {
+        "0": 10.1,
+        "2": 13.6,
+        "1": 10.7
+      },
+      "worst_abs_ms": 21.6,
+      "hat_lag1_autocorr": -0.1,
+      "kick_minus_snare_mean_ms": 0.5
+    },
+    "behind_only": {
+      "per_part_mean_ms": {
+        "0": 22.0,
+        "2": 8.0,
+        "1": -6.0
+      },
+      "per_part_std_ms": {
+        "0": 0.0,
+        "2": 0.0,
+        "1": 0.0
+      },
+      "worst_abs_ms": 22.0,
+      "hat_lag1_autocorr": 0.0,
+      "kick_minus_snare_mean_ms": 28.0
+    },
+    "law": {
+      "bias_ms": {
+        "kick": 22,
+        "snare": -6,
+        "hat": 8
+      },
+      "wobble_ms": 12,
+      "rho_per_eighth": 0.75,
+      "clamp_ms": 60
+    }
+  },
+  "foley_converter_order": {
+    "timpani": {
+      "dry": {
+        "share_6k_16k": 0.0,
+        "share_above_10k": 0.0,
+        "centroid_hz": 107,
+        "seconds": 1.6
+      },
+      "rack_order": {
+        "share_6k_16k": 1e-05,
+        "share_above_10k": 2e-05,
+        "centroid_hz": 466,
+        "seconds": 2.4,
+        "loudest_hz_above_10k": 18119
+      },
+      "sampler_order": {
+        "share_6k_16k": 1e-05,
+        "share_above_10k": 1e-05,
+        "centroid_hz": 387,
+        "seconds": 2.4,
+        "loudest_hz_above_10k": 11995
+      }
+    },
+    "zap": {
+      "dry": {
+        "share_6k_16k": 0.00035,
+        "share_above_10k": 3e-05,
+        "centroid_hz": 2582,
+        "seconds": 0.35
+      },
+      "rack_order": {
+        "share_6k_16k": 0.00369,
+        "share_above_10k": 0.00839,
+        "centroid_hz": 3977,
+        "seconds": 0.52,
+        "loudest_hz_above_10k": 19660
+      },
+      "sampler_order": {
+        "share_6k_16k": 0.00837,
+        "share_above_10k": 0.00596,
+        "centroid_hz": 3387,
+        "seconds": 0.52,
+        "loudest_hz_above_10k": 10456
+      }
+    },
+    "expected_image_hz": {
+      "hold_image_for_low_content_at_44k1": 18060,
+      "same_image_pitched_down_7_semitones": 12054
+    }
+  },
+  "glass_shatter": {
+    "finite": true,
+    "seconds": 0.7,
+    "centroid_hz": 4755,
+    "centroid_hz_pitched_converted": 6038,
+    "take_similarity_0_1": 0.073,
+    "take_similarity_0_2": 0.049,
+    "same_take_twice_identical": true,
+    "punch": {
+      "seconds": 0.6,
+      "centroid_hz": 3886,
+      "onset_centroid_hz": 7072,
+      "attack_ms_to_90pct": 114.0
+    }
+  }
+}

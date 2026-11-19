@@ -65,6 +65,8 @@ def main(out, targets_path, fitted_path):
         for pad, role, loop in ((1, 'kick', kit['primary']), (2, 'snare', kit['primary']), (3, 'hat', kit['primary']),
                                 (5, 'kick', kit['secondary']), (6, 'snare', kit['secondary'])):
             tgt = tg[loop].get(role)
+            if role == 'hat' and kit.get('ride'):   # a ride kit's A03 is the ride, fitted on the cymbal descriptor
+                role = 'ride'
             if not tgt or role not in fitted.get(loop, {}):
                 continue
             label = kit['pads'][pad - 1]['label'].lower().replace(' ', '-')

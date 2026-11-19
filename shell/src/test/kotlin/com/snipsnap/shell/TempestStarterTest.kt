@@ -63,6 +63,7 @@ class TempestStarterTest {
         }
         val skins=StarterShelf.GROUPS.single { it.heading==Copy.STARTER_HEADING_SKINS }.ids
         val at=skins.indexOf("tempest")
-        assertEquals(listOf("tempest","tempest-circuit","tempest-foundry","tempest-step"),skins.subList(at,at+4))
+        // TEMPEST ROUND ROBIN, the opt-in round robin of the accepted kit, sits right after it, and each genre kit's TAKES right after that kit.
+        assertEquals(listOf("tempest",TempestRoundRobinKits.ID,"tempest-circuit",TempestGenreRoundRobinKits.Kit.CIRCUIT.id,"tempest-foundry",TempestGenreRoundRobinKits.Kit.FOUNDRY.id,"tempest-step",TempestGenreRoundRobinKits.Kit.STEP.id),skins.subList(at,at+8))
     }
 }

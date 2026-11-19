@@ -1701,10 +1701,41 @@ object Copy {
     /** DROP: the selected section's own last bar keeps only the kick, or the bed. It and PULL-UP are exclusive at a boundary. */
     @field:CopyLabel const val SONG_DROP_ON = "DROP ON"
     @field:CopyLabel const val SONG_DROP_OFF = "DROP OFF"
+    /**
+     * What happens to the selected section's own last bar, one choice of four: NONE, DROP, CLOSE (a low-pass sweeps down
+     * over it) or REVERSE CRASH (a reversed crash lands on the next downbeat). The chosen one is lit and says ON; each
+     * speaks its state in words, and UNDO names an edit by the state it landed in. Each is exclusive with the next
+     * section's PULL-UP, as DROP is.
+     */
+    @field:CopyLabel const val SONG_TRANSITION = "LAST BAR"
+    @field:CopyLabel const val SONG_TRANSITION_NONE = "NONE"
+    @field:CopyLabel const val SONG_TRANSITION_DROP = "DROP"
+    @field:CopyLabel const val SONG_TRANSITION_CLOSE = "CLOSE"
+    @field:CopyLabel const val SONG_TRANSITION_REVERSE_CRASH = "REVERSE CRASH"
+    @field:CopyLabel const val SONG_TRANSITION_CHOSEN = "ON"
+    @field:CopyLabel const val SONG_NONE_ON = "NONE ON"
+    @field:CopyLabel const val SONG_NONE_OFF = "NONE OFF"
+    @field:CopyLabel const val SONG_CLOSE_ON = "CLOSE ON"
+    @field:CopyLabel const val SONG_CLOSE_OFF = "CLOSE OFF"
+    @field:CopyLabel const val SONG_REVERSE_CRASH_ON = "REVERSE CRASH ON"
+    @field:CopyLabel const val SONG_REVERSE_CRASH_OFF = "REVERSE CRASH OFF"
+    /** MUTES: the selected section's lanes, each a chip that leaves that lane out of the section; a muted chip says MUTED. UNDO names the edit by SONG_MUTES. */
+    @field:CopyLabel const val SONG_MUTES = "MUTES"
+    @field:CopyLabel const val SONG_MUTE_BED = "BED"
+    @field:CopyLabel const val SONG_MUTED = "MUTED"
+    /** A pad's lane chip: its name, or its pad number when it has none. */
+    fun songMuteLane(name: String, slot: Int): String = name.trim().uppercase(java.util.Locale.ROOT).ifEmpty { "PAD $slot" }
+    /** The chip's spoken name: what it is now, or what pressing it does. */
+    fun songMuteOn(lane: String): String = "$lane, MUTED"
+    fun songMuteOff(lane: String): String = "MUTE $lane"
+    /** What a section's row prints when it leaves lanes out: `2 MUTED`. */
+    fun songRowMutes(count: Int): String = "$count $SONG_MUTED"
     /** The words a section's row prints for them. */
     @field:CopyLabel const val SONG_ROW_BASS = "BASS"
     @field:CopyLabel const val SONG_ROW_PULL_UP = "PULL-UP IN"
     @field:CopyLabel const val SONG_ROW_DROP = "DROP"
+    @field:CopyLabel const val SONG_ROW_CLOSE = "CLOSE"
+    @field:CopyLabel const val SONG_ROW_REVERSE_CRASH = "REVERSE CRASH"
     /** BASS turned on in a kit with no Answer bassline: kept for when there is one, and said. */
     const val SONG_BASS_NONE_YET = "Bass is on, but this kit has no answer bassline yet. Make one and it plays here."
     /**

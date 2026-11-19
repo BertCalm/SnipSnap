@@ -23,11 +23,14 @@ import kotlin.math.*
  * A source grid, not an engine: no Patch, no picker entry. Saved [Recipe]s rerender it.
  * Every constant is a shape awaiting the owner's listen.
  */
-object Splinter {
+object Splinter : BreakcoreKit {
     const val VERSION = 1
     const val ID = "splinter-breakcore"
     const val TITLE = "Splinter Breakcore"
     const val BPM = 200
+    override val id: String get() = ID
+    override val title: String get() = TITLE
+    override val bpm: Int get() = BPM
     const val PLAYED_BPM = 137
     /** Tape-speed pitch rise from running a [PLAYED_BPM] performance at [BPM]: about +6.55. */
     val SPEED_SEMITONES: Double = 12 * ln(BPM.toDouble() / PLAYED_BPM) / ln(2.0)
@@ -36,7 +39,7 @@ object Splinter {
 
     val velocities: List<Double> get() = listOf(.3, .65, 1.0)
 
-    val layout: List<Part> = listOf(
+    override val layout: List<Part> = listOf(
         Part("Clip Kick", DrumClass.KICK, 1f),
         Part("Gabber Kick", DrumClass.KICK, .9f),
         Part("Crack Snare", DrumClass.SNARE, .9f),
@@ -142,13 +145,13 @@ object Splinter {
 
     // ---- Sources: the approved Spore pair, SKIN, TINES and the Spore ride. ----
 
-    private fun kick(v: Double, t: Int, tune: Double = .3, strike: Double = .7, body: Double = .55, click: Double = .6) =
+    internal fun kick(v: Double, t: Int, tune: Double = .3, strike: Double = .7, body: Double = .55, click: Double = .6) =
         SporeKick.render(SporeKick.Controls(tune, strike, body, click), v, t).samples
 
-    private fun snare(v: Double, t: Int, tune: Double = .55, strike: Double = .7, body: Double = .45, wires: Double = .6) =
+    internal fun snare(v: Double, t: Int, tune: Double = .55, strike: Double = .7, body: Double = .45, wires: Double = .6) =
         SporeSnare.render(SporeSnare.Controls(tune, strike, body, wires), v, t).samples
 
-    private fun skin(voice: SkinVoice, v: Double, t: Int, overrides: Map<String, Float>): FloatArray {
+    internal fun skin(voice: SkinVoice, v: Double, t: Int, overrides: Map<String, Float>): FloatArray {
         val m = (Skin.defaults(voice) + overrides).toMutableMap()
         // A softer hit is darker and, for cymbals, shorter; each take nudges the tone.
         val tone = listOf("TONE", "CLICK", "BODY").first { it in m }
@@ -189,7 +192,7 @@ object Splinter {
         return repitch(played, SPEED_SEMITONES)
     }
 
-    fun renderPad(pad: Int, velocity: Double = 1.0, take: Int = 0): Snip {
+    override fun renderPad(pad: Int, velocity: Double, take: Int): Snip {
         require(pad in layout.indices && velocity.isFinite() && velocity in 0.0..1.0 && take >= 0)
         val v = velocity; val t = take
         // A softer strike reaches the clipper lower, so it clips less: touch changes the

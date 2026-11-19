@@ -88,6 +88,7 @@ object LooseCrateRound2Generator {
             for (k in LooseCrateKits.Kit.entries) {
                 write("grooves/${k.id}.wav", LooseCrateKits.render(k, LooseCrateKits.GROOVE, 1f, 0))
                 write("grooves/${k.id}-bus.wav", LooseCrateKits.dry(k, LooseCrateKits.GROOVE, 1f, 0))
+                for (role in listOf(0, 4, 8)) write("grooves/${k.id}-pad-${role + 1}.wav", LooseCrateKits.render(k, role, 1f, 0))
             }
             return
         }
