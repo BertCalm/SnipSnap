@@ -13,6 +13,31 @@ barely hear, or none → the clock drags and catches up → a cartoon lands wher
 
 ## Status
 
+**Round 1b built, not heard (2026-11-19): every drum re-sourced from EMBER.** The owner heard round 1 as "too much
+like drum machine sounds". Round 1's drums were THUMP's and SKIN's: a swept sine is a drum machine by construction,
+and an isolated synth hit has no shell, wires, bleed or room in it, where the profile's drums are chopped off records.
+Round 1b (`StaggerKits` version 2) keeps the kit, the muffle, the foley print and the clock, and sources every drum
+from EMBER (calfskin heads with sag, threshold wires, hats and ride fitted to recordings, the club's response and a
+warm chain; the owner approved its voices by ear on 2026-11-16). It also shows a second way, SHATTER's: the groove
+played in its room and cut at a hit (`StaggerKits.sliced`), so the pad carries its neighbours' bleed.
+
+The round 1b listening page (private to the owner's account):
+[Stagger, round one b](https://claude.ai/artifact/AungjMxiy48xkpqZQscryx). Each drum from round 1 beside its EMBER
+replacement, EMBER's kick open and at three cutoffs beside round 1's, kick, snare and hat slices with their takes,
+every pad printed and dry with its takes and zones, and the groove under the kit's clock, straight and humanised.
+
+```sh
+./gradlew --no-daemon :synth:generateStaggerRound1b         # → testkit/stagger-round1b/ (gitignored)
+python3 scripts/stagger_page/build_page.py testkit/stagger-round1b OUT_DIR
+```
+
+Measured on round 1b (`StaggerKitsTest`): the crack snare's centroid 3.59 kHz over its first 120 ms (round 1's
+4.19; the references' median 3.2); the groove's hats 28.4 dB under the mix (round 1's 30.2; the references' median
+23); 95 percent of the groove's energy under 579 Hz (round 1's 442; the references 309 to 635). EMBER's kick carries
+4.0 percent of its energy in 150 to 400 Hz with or without the clipper (its shell already puts it there), so on an
+acoustic kick the muffle's drive is a character choice, a squarer thud, and the click still falls 38-fold. The
+suite takes about three minutes against round 1's one: EMBER renders at the internal rate with Bessel modes.
+
 **Round 1 built, not heard (2026-11-19).** One kit, CARDBOARD (89 BPM), in the CYPHER shape: fourteen hits, a
 timpani roll into the gong on A15, a two-bar groove on A16, three velocity zones of four takes on every pad
 (`StaggerKits`, version 1). It is not on the shelf and has no generator proof beyond `StaggerKitsTest`; the

@@ -6,6 +6,7 @@ import com.snipsnap.synth.Cypher.Note
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.abs
 import kotlin.math.max
+import kotlin.math.min
 import kotlin.math.pow
 import kotlin.math.tanh
 
@@ -28,6 +29,13 @@ import kotlin.math.tanh
  * - [glass]: a pane breaking, which no engine makes: tiny modal shards in a scattered cascade.
  * - [punch]: a comic-book punch, a rising whoosh that lands on a thud 110 ms later.
  *
+ * Round 1b: the owner heard round 1 as "too much like drum machine sounds". Round 1's drums were THUMP's and SKIN's:
+ * a swept sine is a drum machine by construction, and an isolated synth hit has no shell, wires, bleed or room in
+ * it, where the profile's drums are chopped off records. Round 1b sources every drum from EMBER (calfskin heads
+ * with sag, threshold wires, hats and ride fitted to recordings, the club's response and a warm chain; the owner
+ * approved its voices by ear) and keeps the muffle, the foley print and the clock. [sliced] is the alternative in
+ * SHATTER's manner: the kit played in its room and cut at a hit, so the pad carries its neighbours' bleed.
+ *
  * Every pad has three velocity zones of four takes; a zone is its own strike and a take a fresh one. Pads 1 to
  * 14 are hits, pad 15 a timpani roll into the gong, pad 16 a two-bar groove, bar-exact so it loops, played as one
  * kit in one small room with a bus compressor ([LooseCrateKits.Room], reused, not copied) because the owner heard a
@@ -39,7 +47,7 @@ import kotlin.math.tanh
  */
 object StaggerKits {
     /** Bump when a pad's audio changes; saved kits carry the version they were printed with. */
-    const val VERSION = 1
+    const val VERSION = 2
 
     enum class Kit(val id: String, val title: String, val bpm: Int) {
         CARDBOARD("stagger-cardboard", "Cardboard", 89),
@@ -417,6 +425,46 @@ object StaggerKits {
     /** GLASS at a pitch, for the page; it is not on CARDBOARD (the cinematic kit's pad). */
     internal fun glassAt(semitones: Int): Strike = foley(glassDry, semitones)
 
+    /** An EMBER drum struck at the velocity and take: the engine reads both itself (a softer stroke, another strike). */
+    private fun ember(voice: EmberVoice, vararg m: Pair<String, Float>): Strike = { v, t, _ -> Ember.render(voice, mapOf(*m), v, t).samples }
+
+    // Round 1b: the kit's drums, EMBER's, in the club at a short distance and through its warm chain.
+    internal val emberKickOpen: Strike = ember(EmberVoice.KICK, "TUNE" to .35f, "DAMP" to .55f, "BUZZ" to .30f, "DISTANCE" to .30f, "WARMTH" to .50f)
+    internal fun emberKickAt(cutoffHz: Float, drive: Float = 3f): Strike = muffled(emberKickOpen, cutoffHz, drive)
+    internal val emberKick: Strike = emberKickAt(300f)
+    internal val emberLowKick: Strike = muffled(ember(EmberVoice.KICK, "TUNE" to .15f, "DAMP" to .70f, "BUZZ" to .20f, "DISTANCE" to .30f, "WARMTH" to .55f), 250f, 3f)
+    internal val emberSnare: Strike = contact(ember(EmberVoice.SNARE, "TUNE" to .50f, "DAMP" to .45f, "BUZZ" to .60f, "DISTANCE" to .30f, "WARMTH" to .55f), 5_500f)
+    internal val emberPaper: Strike = contact(ember(EmberVoice.SNARE, "TUNE" to .70f, "DAMP" to .80f, "BUZZ" to .45f, "DISTANCE" to .25f, "WARMTH" to .50f), 6_000f)
+    internal val emberHat: Strike = ember(EmberVoice.HAT_CLOSED, "TUNE" to .45f, "DAMP" to .75f, "DISTANCE" to .30f, "WARMTH" to .50f)
+    internal val emberRim: Strike = ember(EmberVoice.RIMSHOT, "TUNE" to .55f, "DAMP" to .50f, "BUZZ" to .40f, "DISTANCE" to .30f, "WARMTH" to .50f)
+    internal val emberStick: Strike = ember(EmberVoice.CROSS_STICK, "TUNE" to .55f, "DAMP" to .40f, "BUZZ" to .30f, "DISTANCE" to .30f, "WARMTH" to .50f)
+    internal val emberShaker: Strike = ember(EmberVoice.SHAKER, "TUNE" to .40f, "DAMP" to .50f, "DISTANCE" to .30f, "WARMTH" to .50f)
+    internal val emberDeadTom: Strike = muffled(ember(EmberVoice.TOM_FLOOR, "TUNE" to .35f, "DAMP" to .85f, "BUZZ" to .20f, "DISTANCE" to .30f, "WARMTH" to .50f), 400f, 2f)
+    internal val emberTimpani: Strike = foley(ember(EmberVoice.MALLET_TOM, "TUNE" to .05f, "DAMP" to .15f, "BUZZ" to 0f, "DISTANCE" to .45f, "WARMTH" to .40f), -5)
+    internal val emberClap: Strike = ember(EmberVoice.CLAPS, "TUNE" to .50f, "CROWD" to .25f, "DISTANCE" to .35f, "WARMTH" to .50f)
+
+    /**
+     * SHATTER's manner, as an alternative on the page: the groove played in its room and cut at one of its notes, so
+     * the pad is a slice of a performance with its neighbours' bleed in it. The cut starts 2 ms before the note's
+     * strike and ends at the next note of any part (at most [maxSeconds]), with a 2 ms fade in and a 30 ms fade out.
+     * [occurrence] picks which note of [part] (0 is its first in the loop).
+     */
+    internal fun sliced(kit: Kit, part: Int, occurrence: Int = 0, maxSeconds: Float = .6f): Strike = { v, t, _ ->
+        val notes = played(kit, cardboardNotes)
+        val starts = notes.map { Cypher.startFrame(it, kit.bpm) }
+        val mine = notes.indices.filter { notes[it].part == part }.sortedBy { starts[it] }
+        val i = mine[occurrence.coerceIn(0, mine.lastIndex)]
+        val from = max(0, starts[i] - (.002f * Dsp.RATE).toInt())
+        val next = starts.filter { it > starts[i] + 64 }.minOrNull() ?: (starts[i] + (maxSeconds * Dsp.RATE).toInt())
+        val to = min(next, starts[i] + (maxSeconds * Dsp.RATE).toInt())
+        val raw = grooveRaw(kit, notes, v, t)
+        val out = raw.copyOfRange(from, min(to, raw.size))
+        val fadeIn = (.002f * Dsp.RATE).toInt()
+        for (j in 0 until min(fadeIn, out.size)) out[j] *= j.toFloat() / fadeIn
+        Dsp.fadeTailCosine(out, .03f)
+        out
+    }
+
     internal fun parts(kit: Kit): List<Part> = when (kit) { Kit.CARDBOARD -> cardboard }
 
     internal fun phrases(kit: Kit): List<Phrase> = when (kit) { Kit.CARDBOARD -> cardboardPhrases }
@@ -424,20 +472,32 @@ object StaggerKits {
     // CARDBOARD (89): the profile itself. The box kick and the crack snare lead; the hat is a whisper; the foley
     // sits where a kit would keep its toms and cymbals.
     private val cardboard: List<Part> = listOf(
-        Part("Box Kick", DrumClass.KICK, strike = boxKick),
-        Part("Crack Snare", DrumClass.SNARE, strike = crackSnare),
-        Part("Whisper Hat", DrumClass.HAT_CLOSED, HAT_GROUP, strike = whisperHat),
-        Part("Rim", DrumClass.PERC, strike = KitStrikes.thump(ThumpVoice.RIM, mapOf("TUNE" to .70f, "DECAY" to .25f), vary = listOf("TUNE", "DECAY", "RING"))),
-        Part("Low Box Kick", DrumClass.KICK, strike = lowBoxKick),
-        Part("Cross Stick", DrumClass.PERC, strike = skinTouched(SkinVoice.STICK, "TUNE" to .60f, "DECAY" to .25f, "BODY" to .25f, "CLICK" to .50f) { v -> mapOf("CLICK" to .3f + .4f * v) }),
-        Part("Paper Snare", DrumClass.SNARE, strike = paperSnare),
-        Part("Shaker", DrumClass.PERC, strike = skinTouched(SkinVoice.SHAKER, "TONE" to .30f, "DECAY" to .25f, vary = listOf("TONE", "DECAY", "GRAIN")) { v -> mapOf("PUNCH" to .3f + .3f * v) }),
-        Part("Dead Tom", DrumClass.TOM, strike = deadTom),
-        Part("Timpani", DrumClass.TOM, converted = true, strike = timpani),
+        Part("Box Kick", DrumClass.KICK, strike = emberKick),
+        Part("Crack Snare", DrumClass.SNARE, strike = emberSnare),
+        Part("Whisper Hat", DrumClass.HAT_CLOSED, HAT_GROUP, strike = emberHat),
+        Part("Rim", DrumClass.PERC, strike = emberRim),
+        Part("Low Box Kick", DrumClass.KICK, strike = emberLowKick),
+        Part("Cross Stick", DrumClass.PERC, strike = emberStick),
+        Part("Paper Snare", DrumClass.SNARE, strike = emberPaper),
+        Part("Shaker", DrumClass.PERC, strike = emberShaker),
+        Part("Dead Tom", DrumClass.TOM, strike = emberDeadTom),
+        Part("Timpani", DrumClass.TOM, converted = true, strike = emberTimpani),
         Part("Dark Gong", DrumClass.PERC, converted = true, strike = darkGong),
         Part("Zap", DrumClass.PERC, converted = true, strike = zap),
         Part("Punch", DrumClass.PERC, converted = true, strike = punchHit),
-        Part("Clap", DrumClass.CLAP, strike = KitStrikes.thump(ThumpVoice.CLAP, mapOf("SPREAD" to .25f, "DECAY" to .25f), vary = listOf("SPREAD", "DECAY", "TONE")) { v -> mapOf("TONE" to .35f + .3f * v) }),
+        Part("Clap", DrumClass.CLAP, strike = emberClap),
+    )
+
+    /** Round 1's drums (THUMP and SKIN), heard as "too much like drum machine sounds": kept for the page's comparison. */
+    internal val round1: Map<String, Strike> = linkedMapOf(
+        "Box Kick" to boxKick, "Crack Snare" to crackSnare, "Whisper Hat" to whisperHat,
+        "Rim" to KitStrikes.thump(ThumpVoice.RIM, mapOf("TUNE" to .70f, "DECAY" to .25f), vary = listOf("TUNE", "DECAY", "RING")),
+        "Low Box Kick" to lowBoxKick,
+        "Cross Stick" to skinTouched(SkinVoice.STICK, "TUNE" to .60f, "DECAY" to .25f, "BODY" to .25f, "CLICK" to .50f) { v -> mapOf("CLICK" to .3f + .4f * v) },
+        "Paper Snare" to paperSnare,
+        "Shaker" to skinTouched(SkinVoice.SHAKER, "TONE" to .30f, "DECAY" to .25f, vary = listOf("TONE", "DECAY", "GRAIN")) { v -> mapOf("PUNCH" to .3f + .3f * v) },
+        "Dead Tom" to deadTom, "Timpani" to timpani,
+        "Clap" to KitStrikes.thump(ThumpVoice.CLAP, mapOf("SPREAD" to .25f, "DECAY" to .25f), vary = listOf("SPREAD", "DECAY", "TONE")) { v -> mapOf("TONE" to .35f + .3f * v) },
     )
 
     const val KICK = 0

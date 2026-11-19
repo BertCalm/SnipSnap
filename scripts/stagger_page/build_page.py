@@ -12,58 +12,7 @@ import os
 import sys
 
 
-def main(argv):
-    src = argv[1]
-    out = argv[2] if len(argv) > 2 else src
-    m = json.load(open(os.path.join(src, "manifest.json")))
-    files = {f["file"]: f for f in m["files"]}
-
-    def clip(path, label):
-        f = files[path]
-        return ('<button class="clip" type="button" data-src="%s" aria-pressed="false"><span class="play" aria-hidden="true"></span>'
-                '<span class="label">%s</span><span class="secs">%.2f s</span></button>' % (html.escape(path), html.escape(label), f["seconds"]))
-
-    pads = sorted(p for p in files if p.startswith("pads/") and not p.endswith("-dry.wav"))
-
-    def pad_name(p):
-        return os.path.basename(p)[3:-4].replace("-", " ").title()
-
-    sections = []
-    # 1. the kick
-    sections.append(("The box kick", "The identity decision. The muffle clips the kick first and filters it second, so a phone still hears a thud. "
-                     "Pick the cutoff: 250 Hz is the profile, 400 Hz is safer on a phone. The last clip is the filter with no clipper ahead of it, the version that goes missing on a phone.",
-                     [clip("kick/box-open.wav", "Open kick (no muffle)"), clip("kick/box-lp400.wav", "Muffle 400 Hz"), clip("kick/box-lp300.wav", "Muffle 300 Hz (the kit's)"),
-                      clip("kick/box-lp250.wav", "Muffle 250 Hz"), clip("kick/box-lp300-nodrive.wav", "300 Hz, no clipper")]))
-    # 2. the pads
-    rows = []
-    for p in pads[:14]:
-        base = p[:-4]
-        rows.append('<div class="pad"><h3>%s</h3><div class="row">%s%s%s%s</div></div>' % (
-            html.escape(pad_name(p)), clip(p, "Printed"), clip(base + "-dry.wav", "No kit print"),
-            clip("strips/" + os.path.basename(base) + "-takes.wav", "Four takes"), clip("strips/" + os.path.basename(base) + "-velocity.wav", "Soft, medium, hard")))
-    sections.append(("The fourteen hits", "Each pad through the kit's print, the same strike without it, its four round-robin takes, and its three velocity zones. "
-                     "Timpani, gong, zap and punch carry their own converter-then-pitch print either way.", rows))
-    # 3. glass
-    sections.append(("Glass", "A pane breaking: a new source, not on CARDBOARD, on the cinematic kit's list. Unconverted, then through the foley print at three pitches, then four takes (four panes).",
-                     [clip("glass/glass-dry.wav", "Unconverted"), clip("glass/glass-down5.wav", "5 semitones down"), clip("glass/glass-down7.wav", "7 down"),
-                      clip("glass/glass-down9.wav", "9 down"), clip("glass/glass-takes.wav", "Four takes at 5 down")]))
-    # 4. the clock
-    laws = [("kit", "The kit's clock: kick +12 ms, snare -3, hats +8, wobble 10 ms, rho 0.4"), ("straight", "Straight: everything on the grid"),
-            ("behind-only", "Biases only, no wobble"), ("narrow-5ms", "Wobble 5 ms"), ("wide-18ms", "Wobble 18 ms"), ("rho-0", "Rho 0: the wobble scatters"),
-            ("rho-0.75", "Rho 0.75: the wobble breathes"), ("kick-24ms", "Kick +24 ms"), ("humanised-10ms", "CYPHER's humanised, 10 ms, no biases")]
-    sections.append(("The drunk clock", "The same two bars under nine clock laws, every one printed and played in the same room. The references' backbeats sit 5 to 13 ms from the grid; "
-                     "the profile says the kick drags and the snare snaps early. Which one is the pocket?",
-                     [clip("groove/cardboard-%s.wav" % k, v) for k, v in laws]))
-    # 5. the phrases
-    sections.append(("The two phrase pads", "A15, the timpani roll into the gong; A16, the groove as the kit ships it (the kit's clock, printed twice for the loop seam).",
-                     [clip("pads/15-timpani-roll.wav", "Timpani roll"), clip("pads/15-timpani-roll-dry.wav", "Roll, no kit print"), clip("pads/16-cardboard-groove.wav", "Cardboard groove"),
-                      clip("pads/16-cardboard-groove-dry.wav", "Groove, no kit print")]))
-
-    body = []
-    for title, lead, items in sections:
-        body.append('<section><h2>%s</h2><p class="lead">%s</p><div class="grid">%s</div></section>' % (html.escape(title), html.escape(lead), "".join(items)))
-
-    page = '''<title>Stagger Round One</title>
+PAGE = '''<title>{TITLE}</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=IBM+Plex+Sans:wght@400;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
@@ -102,15 +51,10 @@ h3 { font-size: .8rem; letter-spacing: .08em; text-transform: uppercase; color: 
 @media (prefers-reduced-motion: no-preference) { .clip { transition: background .12s, border-color .12s; } }
 </style>
 <main>
-<h1>Stagger, round one</h1>
-<p class="sub">CARDBOARD at {BPM} BPM: the fourteen hits, the box kick at three cutoffs, the glass source at three pitches, and the groove under nine clock laws. Every clip is a Kotlin render (kit version {VERSION}), nothing is sampled, and nothing has been heard before you. One player: a new clip stops the last.</p>
+<h1>{H1}</h1>
+<p class="sub">{SUB}</p>
 {SECTIONS}
-<div class="ask"><h2>What to answer</h2><ol>
-<li>The kick: which cutoff, and does the muffled kick still land on your phone?</li>
-<li>The clock: which groove is the pocket, and is the drag too much, too little, or a scatter rather than a lean?</li>
-<li>The snare: a crack, or still too bright or too dull?</li>
-<li>Any pad that is wrong for this kit, and whether glass earns a pad on the cinematic kit.</li>
-</ol></div>
+<div class="ask"><h2>What to answer</h2><ol>{ASK}</ol></div>
 </main>
 <script>
 (function () {
@@ -131,7 +75,116 @@ h3 { font-size: .8rem; letter-spacing: .08em; text-transform: uppercase; color: 
   });
 })();
 </script>
-'''.replace("{BPM}", str(m["bpm"])).replace("{VERSION}", str(m["version"])).replace("{SECTIONS}", "\n".join(body))
+'''
+SUB1 = 'CARDBOARD at {BPM} BPM: the fourteen hits, the box kick at three cutoffs, the glass source at three pitches, and the groove under nine clock laws. Every clip is a Kotlin render (kit version {VERSION}), nothing is sampled, and nothing has been heard before you. One player: a new clip stops the last.'
+ASK1 = '\n<li>The kick: which cutoff, and does the muffled kick still land on your phone?</li>\n<li>The clock: which groove is the pocket, and is the drag too much, too little, or a scatter rather than a lean?</li>\n<li>The snare: a crack, or still too bright or too dull?</li>\n<li>Any pad that is wrong for this kit, and whether glass earns a pad on the cinematic kit.</li>\n'
+
+
+def render(m, title, h1, sub, ask, body):
+    return (PAGE.replace("{TITLE}", title).replace("{H1}", h1).replace("{SUB}", sub).replace("{ASK}", ask)
+            .replace("{BPM}", str(m["bpm"])).replace("{VERSION}", str(m["version"])).replace("{SECTIONS}", "\n".join(body)))
+
+
+def sections_html(sections):
+    return ['<section><h2>%s</h2><p class="lead">%s</p><div class="grid">%s</div></section>' % (html.escape(t), html.escape(l), "".join(i)) for t, l, i in sections]
+
+
+def build_1b(m, files, clip, out):
+    """Round 1b: the owner heard round 1 as 'too much like drum machine sounds'. Every drum beside its EMBER
+    replacement, the kick at three cutoffs, slices of the kit in its room, the pads, the groove."""
+    pads = sorted(p for p in files if p.startswith("pads/") and not p.endswith("-dry.wav"))
+
+    def pad_name(p):
+        return os.path.basename(p)[3:-4].replace("-", " ").title()
+
+    drums = []
+    for p in sorted(f for f in files if f.startswith("compare/") and f.endswith("-round1.wav")):
+        slug = os.path.basename(p)[:-len("-round1.wav")]
+        drums.append('<div class="pad"><h3>%s</h3><div class="row">%s%s</div></div>' % (
+            html.escape(slug.replace("-", " ").title()), clip(p, "Round 1 (synth drums)"), clip("compare/%s-ember.wav" % slug, "Round 1b (acoustic models)")))
+    sections = [
+        ("Each drum, then and now", "Round 1's drums came from THUMP and SKIN, the synth drum engines: a swept sine is a drum machine by construction. "
+         "Round 1b sources every drum from EMBER, the calfskin and fitted-cymbal kit you approved by ear, through its club response and warm chain. Same muffle, same foley print, same clock. Neither clip has the kit print.", drums),
+        ("The box kick", "EMBER's kick open, then muffled at three cutoffs; the last clip is round 1's synth kick at 300 Hz for the contrast.",
+         [clip("kick/ember-open.wav", "EMBER open"), clip("kick/ember-lp400.wav", "EMBER 400 Hz"), clip("kick/ember-lp300.wav", "EMBER 300 Hz (the kit's)"),
+          clip("kick/ember-lp250.wav", "EMBER 250 Hz"), clip("kick/thump-lp300.wav", "Round 1's kick, 300 Hz")]),
+        ("Slices of the kit in its room", "The other way to not sound like a machine: the whole kit played in its room and cut at a hit, so the pad carries its neighbours' bleed, as a chopped record does. "
+         "A kick slice, a snare slice and a hat slice from the groove, each with four takes.",
+         [clip("slices/kick-slice.wav", "Kick slice"), clip("slices/kick-slice-takes.wav", "Kick slice, four takes"), clip("slices/snare-slice.wav", "Snare slice"),
+          clip("slices/snare-slice-takes.wav", "Snare slice, four takes"), clip("slices/hat-slice.wav", "Hat slice"), clip("slices/hat-slice-takes.wav", "Hat slice, four takes")]),
+    ]
+    rows = []
+    for p in pads[:14]:
+        base = p[:-4]
+        rows.append('<div class="pad"><h3>%s</h3><div class="row">%s%s%s%s</div></div>' % (
+            html.escape(pad_name(p)), clip(p, "Printed"), clip(base + "-dry.wav", "No kit print"),
+            clip("strips/" + os.path.basename(base) + "-takes.wav", "Four takes"), clip("strips/" + os.path.basename(base) + "-velocity.wav", "Soft, medium, hard")))
+    sections.append(("The kit as it ships", "Every pad through the kit's print, without it, its four takes and three zones.", rows))
+    sections.append(("The phrases and the groove", "The timpani roll into the gong; the groove under the kit's clock, straight, and under CYPHER's independent scatter.",
+                     [clip("pads/15-timpani-roll.wav", "Timpani roll"), clip("pads/16-cardboard-groove.wav", "Cardboard groove (the kit's clock)"),
+                      clip("groove/cardboard-straight.wav", "Groove, straight"), clip("groove/cardboard-humanised-10ms.wav", "Groove, humanised 10 ms")]))
+    page = render(m, "Stagger Round One B", "Stagger, round one b",
+                  "You heard round 1 as too much like drum machine sounds. Round 1b keeps the kit and swaps every drum's source for an acoustic model, and shows a second way: slices of the kit played in its room. CARDBOARD at {BPM} BPM, kit version {VERSION}. Nothing is sampled; nothing has been heard before you. One player: a new clip stops the last.",
+                  "<li>Do the EMBER drums stop sounding like a machine, or is it the slices that do?</li><li>The kick: which cutoff, and does it land on your phone?</li><li>Any drum still wrong?</li>",
+                  sections_html(sections))
+    os.makedirs(out, exist_ok=True)
+    with open(os.path.join(out, "index.html"), "w") as f:
+        f.write(page)
+    print("wrote", os.path.join(out, "index.html"), len(files), "clips")
+    return 0
+
+
+def main(argv):
+    src = argv[1]
+    out = argv[2] if len(argv) > 2 else src
+    m = json.load(open(os.path.join(src, "manifest.json")))
+    files = {f["file"]: f for f in m["files"]}
+
+    def clip(path, label):
+        f = files[path]
+        return ('<button class="clip" type="button" data-src="%s" aria-pressed="false"><span class="play" aria-hidden="true"></span>'
+                '<span class="label">%s</span><span class="secs">%.2f s</span></button>' % (html.escape(path), html.escape(label), f["seconds"]))
+
+    pads = sorted(p for p in files if p.startswith("pads/") and not p.endswith("-dry.wav"))
+
+    def pad_name(p):
+        return os.path.basename(p)[3:-4].replace("-", " ").title()
+
+    if m.get("round") == "1b":
+        return build_1b(m, files, clip, out)
+    sections = []
+    # 1. the kick
+    sections.append(("The box kick", "The identity decision. The muffle clips the kick first and filters it second, so a phone still hears a thud. "
+                     "Pick the cutoff: 250 Hz is the profile, 400 Hz is safer on a phone. The last clip is the filter with no clipper ahead of it, the version that goes missing on a phone.",
+                     [clip("kick/box-open.wav", "Open kick (no muffle)"), clip("kick/box-lp400.wav", "Muffle 400 Hz"), clip("kick/box-lp300.wav", "Muffle 300 Hz (the kit's)"),
+                      clip("kick/box-lp250.wav", "Muffle 250 Hz"), clip("kick/box-lp300-nodrive.wav", "300 Hz, no clipper")]))
+    # 2. the pads
+    rows = []
+    for p in pads[:14]:
+        base = p[:-4]
+        rows.append('<div class="pad"><h3>%s</h3><div class="row">%s%s%s%s</div></div>' % (
+            html.escape(pad_name(p)), clip(p, "Printed"), clip(base + "-dry.wav", "No kit print"),
+            clip("strips/" + os.path.basename(base) + "-takes.wav", "Four takes"), clip("strips/" + os.path.basename(base) + "-velocity.wav", "Soft, medium, hard")))
+    sections.append(("The fourteen hits", "Each pad through the kit's print, the same strike without it, its four round-robin takes, and its three velocity zones. "
+                     "Timpani, gong, zap and punch carry their own converter-then-pitch print either way.", rows))
+    # 3. glass
+    sections.append(("Glass", "A pane breaking: a new source, not on CARDBOARD, on the cinematic kit's list. Unconverted, then through the foley print at three pitches, then four takes (four panes).",
+                     [clip("glass/glass-dry.wav", "Unconverted"), clip("glass/glass-down5.wav", "5 semitones down"), clip("glass/glass-down7.wav", "7 down"),
+                      clip("glass/glass-down9.wav", "9 down"), clip("glass/glass-takes.wav", "Four takes at 5 down")]))
+    # 4. the clock
+    laws = [("kit", "The kit's clock: kick +12 ms, snare -3, hats +8, wobble 10 ms, rho 0.4"), ("straight", "Straight: everything on the grid"),
+            ("behind-only", "Biases only, no wobble"), ("narrow-5ms", "Wobble 5 ms"), ("wide-18ms", "Wobble 18 ms"), ("rho-0", "Rho 0: the wobble scatters"),
+            ("rho-0.75", "Rho 0.75: the wobble breathes"), ("kick-24ms", "Kick +24 ms"), ("humanised-10ms", "CYPHER's humanised, 10 ms, no biases")]
+    sections.append(("The drunk clock", "The same two bars under nine clock laws, every one printed and played in the same room. The references' backbeats sit 5 to 13 ms from the grid; "
+                     "the profile says the kick drags and the snare snaps early. Which one is the pocket?",
+                     [clip("groove/cardboard-%s.wav" % k, v) for k, v in laws]))
+    # 5. the phrases
+    sections.append(("The two phrase pads", "A15, the timpani roll into the gong; A16, the groove as the kit ships it (the kit's clock, printed twice for the loop seam).",
+                     [clip("pads/15-timpani-roll.wav", "Timpani roll"), clip("pads/15-timpani-roll-dry.wav", "Roll, no kit print"), clip("pads/16-cardboard-groove.wav", "Cardboard groove"),
+                      clip("pads/16-cardboard-groove-dry.wav", "Groove, no kit print")]))
+
+    body = sections_html(sections)
+    page = render(m, "Stagger Round One", "Stagger, round one", SUB1, ASK1, body)
     os.makedirs(out, exist_ok=True)
     with open(os.path.join(out, "index.html"), "w") as f:
         f.write(page)
