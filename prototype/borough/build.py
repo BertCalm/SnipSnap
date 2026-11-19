@@ -11,6 +11,7 @@ import numpy as np
 from scipy.io import wavfile
 import voices as V
 import kits as K
+import extract as X
 
 # Round 0 rendered with voices.py (drum-machine recipes); round 1 with acoustic.py (EMBER models).
 MODEL = os.environ.get('BOROUGH_MODEL', 'voices')
@@ -185,6 +186,28 @@ def groove(kit, bank, stack=None, sbank=None, bars=4):
     return y / np.max(np.abs(y)) * .89
 
 
+KICK_PADS = (0, 4)   # A01 KICK, A05 KICK 2
+
+
+def kick_trim(kit, bank, target_db):
+    """Gain for both kick pads that puts the groove's low-to-mid balance (extract.low_mid_db) at
+    the primary loop's. Cuts only, never boosts (a boost would break the 0.89 peak), and at most
+    12 dB. Fitting scores each pad's shape normalised to its own peak, so nothing else sets how
+    loud a kick is against its snare; round 1's STOOP kick came out heavy ("a bit overpowering")."""
+    if target_db is None:
+        return 1.0
+    def balance(g):
+        b = [[[y * g for y in row] for row in pad] if i in KICK_PADS else pad for i, pad in enumerate(bank)]
+        return X.low_mid_db(groove(kit, b))
+    if balance(1.0) <= target_db:
+        return 1.0
+    lo, hi = 10 ** (-12 / 20), 1.0
+    for _ in range(14):   # balance rises with the kick gain: bisect on it
+        mid = (lo * hi) ** .5
+        lo, hi = (mid, hi) if balance(mid) < target_db else (lo, mid)
+    return lo
+
+
 def stacks():
     if MODEL == 'voices':
         return K.STACKS
@@ -208,14 +231,17 @@ def main(fitted_path, out):
             bank.append(g)
         sbanks[st['id']] = bank
         man['stacks'].append(dict(id=st['id'], name=st['name'], source=st['source'], pads=[dict(pad=13 + i, label=l, model=k, params=p) for i, (l, k, p) in enumerate(st['pads'])]))
+    targets = json.load(open(Path(__file__).with_name('targets.json')))['loops']
     for kit in K.KITS:
-        pads = derive(kit, fitted); bank = []
+        pads = derive(kit, fitted)
+        bank = [grid(f"{kit['id']}-{label}", kind, p, extra) for label, kind, p, extra in pads]
+        trim = kick_trim(kit, bank, targets[kit['primary']].get('low_mid_db'))
+        for i in KICK_PADS:
+            bank[i] = [[y * trim for y in row] for row in bank[i]]
         for i, (label, kind, p, extra) in enumerate(pads):
-            g = grid(f"{kit['id']}-{label}", kind, p, extra)
             for zi in range(3):
                 for t in range(TAKES):
-                    write(out / 'kits' / kit['id'] / f'A{i + 1:02d}-{label.lower().replace(" ", "-")}-v{zi + 1}-t{t + 1}.wav', g[zi][t])
-            bank.append(g)
+                    write(out / 'kits' / kit['id'] / f'A{i + 1:02d}-{label.lower().replace(" ", "-")}-v{zi + 1}-t{t + 1}.wav', bank[i][zi][t])
         write(out / 'demo' / f"{kit['id']}-groove.wav", groove(kit, bank))
         for st in STACKS:
             write(out / 'demo' / f"{kit['id']}+{st['id']}.wav", groove(kit, bank, st, sbanks[st['id']]))
@@ -231,7 +257,7 @@ def main(fitted_path, out):
                     clip[-441:] *= np.linspace(1, 0, min(441, len(clip)))[-len(clip[-441:]):]
                     touch += [clip, np.zeros(int(.08 * SR))]
         write(out / 'demo' / f"{kit['id']}-touch.wav", np.concatenate(touch))
-        man['kits'].append(dict(kit, pads=[dict(pad=i + 1, label=l, model=k, params=p, extra=e) for i, (l, k, p, e) in enumerate(pads)],
+        man['kits'].append(dict(kit, kick_trim_db=round(20 * np.log10(trim), 2), pads=[dict(pad=i + 1, label=l, model=k, params=p, extra=e) for i, (l, k, p, e) in enumerate(pads)],
                                 fitted_residual_db={r: fitted[kit['primary']][r]['residual_db'] for r in fitted[kit['primary']]}))
         print(kit['id'], round(time.time() - t0, 1), 's', flush=True)
     for st in STACKS:

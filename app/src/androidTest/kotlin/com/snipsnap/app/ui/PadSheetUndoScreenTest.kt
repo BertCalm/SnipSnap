@@ -210,7 +210,7 @@ class PadSheetUndoScreenTest : ComposeScreenTest() {
         )
 
         show(KitShelf.Entry(entry.dir, KitStore.load(entry.dir)), openBox = PadSheetBoxes.Box.MAKE.name, page = PadSheetPage.MAKE)
-        waitFor("the MAKE box's FIND NEAREST SYNTH line to name the patch", timeoutMillis = 60_000) { hasText("A PATCH NOW, 0.12 AWAY") }
+        waitFor("the MAKE box's FIND NEAREST SYNTH line to name the patch", timeoutMillis = 60_000) { hasText("A patch now, 0.12 away") }
         activate("UNDO NEAREST SYNTH")
         waitForToast(Copy.UNDESAMPLED)
         val undone = savedPad(entry)
@@ -218,7 +218,7 @@ class PadSheetUndoScreenTest : ComposeScreenTest() {
         assertFalse("the de-sample's stamp came off", "desampled" in undone.source)
         assertTrue("the take before the de-sample, byte for byte", original.contentEquals(File(entry.dir, "hit1.wav").readBytes()))
         waitFor("the MAKE box's FIND NEAREST SYNTH line to stop naming a patch", timeoutMillis = 60_000) {
-            hasText("THE HIT MEASURED AGAINST EVERY THUMP")
+            hasText("The hit measured against every thump")
         }
 
         activate("UNDO NEAREST SYNTH")

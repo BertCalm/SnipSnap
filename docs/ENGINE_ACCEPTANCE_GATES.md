@@ -1210,3 +1210,27 @@ All JVM, Android build, native and emulator CI checks passed on `a16dd8da8`.
 The shared MPC 3 slice-map limitation is unchanged. MPC 2's combined
 velocity/RR exception applies. Melodic/keygroup/chord/HOLD/STRUM gates do not
 apply to these finite drum kits. Overall completion remains open.
+
+
+## ACCORD (native sound kept by ear 2026-11-19; three voices, gates open)
+
+Fifteen self-sustaining mechanisms on one moving support, struck into tuned resonators; their contacts drift into and out of step. See [ACCORD](ACCORD.md). The owner approved the Python sound direction first. On 2026-11-19 they heard the native Kotlin engine, the one the app plays, for the first time and kept all of it (round accord-native-1, AI1 to AI14 KEEP, no notes): each approved Python sound beside its native render (BRUSH, WOOD and the four TINE tones), every voice at C2, C3, C4 and C5, every voice at soft, medium and hard touch, and the sixteen-pad starter kit. `AccordNativePinsTest` pins those 37 native renders by the SHA-256 of their float samples (`accord/native-kept-v1.sha256`); each one's PCM24 matched the heard WAVs sample for sample.
+
+| Gate | Status | Evidence |
+|---|---|---|
+| Melodic: six voices with presets | Partial: three of six | BRUSH, WOOD and TINE (`AccordVoice`). TINE's four acoustic profiles (Reference, Soft Attack, Bright Edge, Long Ring) override one to three numbers of one table, so they count as TINE's presets, not voices, as SPLAY's populations are settings, not voices. Three more voices are needed. |
+| Melodic: playable keygroups | Not yet verified | ACCORD has no MAKE INSTRUMENT path. |
+| Melodic: premade kit | Pass, kept by ear | The `accord` starter (sixteen pads: BRUSH up a C minor pentatonic, WOOD, the four TINE tones, soft and hard BRUSH, soft WOOD), heard as the app ships it in AI13 and AI14 and pinned. MPC 3 and MPC 2 export pass in software (`AccordKitGenerator`); no MPC has loaded it. |
+| Melodic: chord-tool compatibility | Not yet verified | No chord voicing, keys or chord render exists for ACCORD. |
+| Articulation: HOLD | Not yet verified | HOLD is refused (`Accord.settled`); every voice is finite. Whether each voice gets a documented finite exception or a held articulation is open. |
+| Articulation: STRUM | Not applicable | No picked or thumbed strings: every voice is struck by pendulum contacts. |
+| Percussion: roll or riser | Not applicable | A melodic engine. |
+| Drums: genre kits | Not applicable | A melodic engine. |
+| Velocity: rendering | Pass, kept by ear | Touch changes contact width, upper-mode tilt, decay and pulse and brush gains, under one gain per performance shared across touches; soft, medium and hard heard for every voice (AI10 to AI12) and pinned. |
+| Velocity: saving, playback, export | Partial | Soft BRUSH and soft WOOD are separate kit pads; no pad or key carries velocity zones yet. |
+| Round robin | Not yet verified | ACCORD has no takes, and `Restrike.canRestrike` excludes it. |
+| Picker | Not yet verified on a device | The SYNTH picker's ACCORD controls passed three emulator tests at `fac839f0` ([ACCORD](ACCORD.md)); no phone run. |
+| Hardware playback | Not verified | No phone timing or MPC load is recorded. |
+
+- **Sound character: kept by ear, native.** The three voices, TINE's four tones, the C2 to C5 range, the touch response and the starter kit, as pinned by `AccordNativePinsTest`. Preserve these renders: new voices, takes and keys must leave every pinned render byte-identical.
+- **Overall: incomplete.** Three more voices, keygroups, chord tools, a HOLD decision per voice, velocity zones and round robin through saving, playback and export, device runs of the picker and hardware playback remain open.

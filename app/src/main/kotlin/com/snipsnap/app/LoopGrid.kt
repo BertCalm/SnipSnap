@@ -513,7 +513,7 @@ private fun BlockCell(
                 // Semantics actions are plain lambda properties re-read on
                 // every recomposition — no restart to key, so these already
                 // saw the latest callback and stay as they were.
-                onClick(label = "WHAT IS THIS BLOCK") { onSelect(); true }
+                onClick(label = "What is this block") { onSelect(); true }
                 // twin: the CLEAR TRACK button (Copy.LOOP_CLEAR_BUTTON), which calls the same onClear
                 if (filled) onLongClick(label = "CLEAR THIS TRACK") { onClear(); true }
             }

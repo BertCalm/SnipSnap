@@ -156,7 +156,7 @@ internal fun OhmControls(
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 LabButton("FROM PAD ▾", scheme, enabled = !busy && pads.isNotEmpty(),
-                    modifier = Modifier.weight(1f), accessibilityLabel = "OHM EXCITER FROM PAD") {
+                    modifier = Modifier.weight(1f), accessibilityLabel = "OHM exciter from pad") {
                     pickingSource = true
                 }
                 if (patch.options.capture != null) {
@@ -221,7 +221,7 @@ private fun OhmSourcePadDialog(pads: List<KitPad>, onPick: (KitPad) -> Unit, onC
     Dialog(onDismissRequest = onCancel, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Column(Modifier.fillMaxWidth().fillMaxHeight(.85f).padding(14.dp).raisedBevel(scheme).padding(12.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            TapeText("CHOOSE AN EXCITER PAD", TapeType.lcdSmall, scheme.ink.tape)
+            TapeText("Choose an exciter pad", TapeType.lcdSmall, scheme.ink.tape)
             LazyColumn(Modifier.weight(1f).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 items(pads, key = { it.slot }) { pad ->
                     LabButton("${PadBanks.tag(pad.slot)} · ${pad.displayName ?: pad.sampleFile}", scheme,

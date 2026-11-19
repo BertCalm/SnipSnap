@@ -1135,8 +1135,8 @@ class ArrangerTest {
     }
 
     @Test
-    fun `a pass cut short at a bar line is kept as one whole pass, until a section can hold part of one`() {
-        // S1a open question: a section is a clip and a whole number of repeats, so a cut pass cannot be a shorter section without a new stored field.
+    fun `the whole-pass entry point keeps every pass as a whole one, cut or not (heardOrder is the one that hears a cut)`() {
+        // playedOrder takes sections only, so it has no cut to hear; SongSectionBarsTest covers the shorter section heardOrder keeps.
         val kept = sections("intro", "theme")
         val made = Arranger.playedOrder(kept, listOf(4, 4), listOf(0, 0, 1))!!
         assertEquals(listOf("intro" to 2, "theme" to 1), made.plan.sections.map { it.name to it.repeats })

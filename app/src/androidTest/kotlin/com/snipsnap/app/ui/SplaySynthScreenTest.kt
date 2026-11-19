@@ -149,7 +149,7 @@ class SplaySynthScreenTest : ComposeScreenTest() {
         nameOnly(saved)
         show { error("fixture shelf read failed") }
         waitFor("failed SPLAY restore status", timeoutMillis = 5_000) {
-            compose.onAllNodesWithText("SAVED SPLAY COULD NOT OPEN. CHOOSE A PRESET.")
+            compose.onAllNodesWithText("Saved splay could not open. Choose a preset.")
                 .fetchSemanticsNodes().isNotEmpty()
         }
         assertNull(currentRootOrNull())

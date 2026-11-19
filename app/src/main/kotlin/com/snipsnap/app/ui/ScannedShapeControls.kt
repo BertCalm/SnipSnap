@@ -264,7 +264,7 @@ internal fun ScannedShapeControls(
     }
     if (pickingSource) {
         ScannedPadDialog(
-            title = "CHOOSE A SOURCE PAD", pads = pads,
+            title = "Choose a source pad", pads = pads,
             onPick = ::readSource, onCancel = { pickingSource = false },
         )
     }
@@ -411,7 +411,7 @@ private fun ScannedSourceDialog(
             Modifier.fillMaxWidth().padding(14.dp).raisedBevel(scheme).padding(12.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            TapeText("SHAPE FROM A PAD", TapeType.lcdSmall, scheme.ink.tape)
+            TapeText("Shape from a pad", TapeType.lcdSmall, scheme.ink.tape)
             TapeText(source.label, TapeType.pixel, scheme.accent.tape, maxLines = 2)
             ScannedShapeCanvas(preview, "SOURCE WAVEFORM", Modifier.fillMaxWidth().height(100.dp),
                 marker = if (source.snip.frameCount == 0) 0f else startFrame.toFloat() / source.snip.frameCount)

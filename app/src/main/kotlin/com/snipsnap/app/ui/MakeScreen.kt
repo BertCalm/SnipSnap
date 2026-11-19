@@ -294,7 +294,7 @@ private fun InstrumentRow(entry: KitShelf.InstrumentEntry, onOpen: (KitShelf.Ins
             Box(
                 Modifier
                     .heightIn(min = Layout.MIN_HIT_TARGET.dp)
-                    .tapeClick(label = "ADD ${i.name.uppercase()} TO AN EXPANSION", onClick = onExpansion)
+                    .tapeClick(label = "Add ${i.name.uppercase()} to an expansion", onClick = onExpansion)
                     .padding(horizontal = 10.dp, vertical = 10.dp),
                 contentAlignment = Alignment.Center,
             ) {

@@ -103,7 +103,7 @@ class TempestSynthScreenTest : ComposeScreenTest() {
                 }
             }
         }
-        assertTrue(compose.onAllNodesWithText("FINITE DRUM · 1.20 SECONDS · HOLD IS RESERVED",
+        assertTrue(compose.onAllNodesWithText("Finite drum · 1.20 seconds · HOLD is reserved",
             useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty())
         compose.onNode(hasContentDescription("MAKE INSTRUMENT")).assertDoesNotExist()
     }

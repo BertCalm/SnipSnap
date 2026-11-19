@@ -45,7 +45,7 @@ internal fun MurmurKeptInstrumentPicker(enabled: Boolean, onMake: (String) -> Un
             TapeText("MURMUR PLUCK", TapeType.markerBig, scheme.ink.tape)
             TapeText("THREE KEPT SETTINGS. CHOOSE AN INSTRUMENT FOR THE LIBRARY.",
                 TapeType.pixelSmall, scheme.ink2.tape, maxLines = 3)
-            TapeText("THE HELD SETTING KEEPS SOUNDING UNTIL YOU LIFT A KEY.",
+            TapeText("The held setting keeps sounding until you lift a key.",
                 TapeType.pixelSmall, scheme.ink2.tape, maxLines = 3)
             for (choice in KeptMurmurPicker.choices) {
                 Box(Modifier.fillMaxWidth().heightIn(min = Layout.MIN_HIT_TARGET.dp)

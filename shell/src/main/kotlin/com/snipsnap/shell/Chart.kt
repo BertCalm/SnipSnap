@@ -125,7 +125,7 @@ object Chart {
         for (section in arrangement.sections) {
             appendLine()
             val head = "${section.name.uppercase()} · ${bars(section.bars)} " +
-                "(${section.clip.bars} × ${section.repeats}) · ${section.clip.name.uppercase()}"
+                "(${section.passBars} × ${section.repeats}) · ${section.clip.name.uppercase()}"
             appendLine(head)
             appendLine("-".repeat(head.length))
             appendLine(section.reason.uppercase())
