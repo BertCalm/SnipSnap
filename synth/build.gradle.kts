@@ -3350,6 +3350,17 @@ tasks.register<JavaExec>("generateChitinAudition") {
 }
 
 
+/** Render CONSORT's Kotlin audition: clips, recipes, metrics and a listening page under testkit/consort-audition/. See ConsortAuditionGenerator. */
+tasks.register<JavaExec>("generateConsortAudition") {
+    group = "distribution"
+    description = "Render the CONSORT woodwind section audition clips, recipes, metrics and listening page."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ConsortAuditionGenerator")
+    workingDir = rootDir
+    maxHeapSize = "768m"
+    args(providers.gradleProperty("consortOutput").orNull ?: "${rootDir}/testkit/consort-audition")
+}
+
 tasks.register<JavaExec>("generateChitinBank") {
     group = "distribution"
     description = "Render twelve candidate presets and the sixteen-pad finite CHITIN MPC kit."

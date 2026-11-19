@@ -134,6 +134,7 @@ object Patches {
             ShoalPatch.ENGINE -> ShoalPatch.fromJsonValue(value)
             RelayPatch.ENGINE -> RelayPatch.fromJsonValue(value)
             ObbligatoPatch.ENGINE -> ObbligatoPatch.fromJsonValue(value)
+            ConsortPatch.ENGINE -> ConsortPatch.fromJsonValue(value)
             OrphicaPatch.ENGINE -> OrphicaPatch.fromJsonValue(value)
             OpenSkyPatch.ENGINE -> OpenSkyPatch.fromJsonValue(value)
             RegistersPatch.ENGINE -> RegistersPatch.fromJsonValue(value)
