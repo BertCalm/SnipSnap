@@ -44,8 +44,9 @@ def roll(label, voice, macros, kind):
 
 
 # The Wood and Bronze kit's mallet. 0.5 is the wood of rounds 1 and 2; the owner heard round 3's woods and asked
-# for more attack (2026-11-18), so the kit plays a harder mallet. `riddim_proto.wood` says what BEATER changes.
-WOOD_BEATER = 0.85
+# for more attack (2026-11-18), heard 0.5, 0.85 and 1.0 side by side, and chose the hardest (2026-11-19).
+# `riddim_proto.wood` says what BEATER changes.
+WOOD_BEATER = 1.0
 
 # Pitches below are written in semitones from each voice's default note: WOOD F#3, METAL D5, BOOM F1,
 # DEMBOW_KICK about 27 Hz, KICK about 40 Hz, TING 3234 Hz.

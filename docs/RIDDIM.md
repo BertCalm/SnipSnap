@@ -239,9 +239,23 @@ sample, so Clave Dancehall's woods on the shelf are unchanged. Above 0.5 it does
 A first try that tuned the knock to the note could not lift the onset past about 950 Hz on low woods, and only made
 the click louder; the fixed band and the brighter bar together reach the references.
 
-Wood and Bronze plays BEATER 0.85. Measured, hard hit: D3 1187 Hz, A3 1379 Hz, C4 1436 Hz (before: about 260 to
+Wood and Bronze first played BEATER 0.85. Measured, hard hit: D3 1187 Hz, A3 1379 Hz, C4 1436 Hz (before: about 260 to
 400 Hz). Soft hits stay dark, at 342 to 425 Hz, and every wood pad still darkens at each softer zone; the closest
 two takes on a wood pad are 26.4 dB apart. The page has a before and after at 0.5, 0.85 and 1.0. Not yet heard.
+
+**Heard (2026-11-19).** The owner compared BEATER 0.5, 0.85 and 1.0 and chose the hardest for Wood and Bronze, which
+now plays 1.0. Every wood pad still darkens at each softer zone, and the closest two takes on a wood pad are 22.4 dB
+apart. For Clave Dancehall, approved and on the shelf at 0.5, they asked for an A/B, now at the top of the round-3
+page: A is the kit as approved, B every wood at 1.0. Measured, onset centroid soft/mid/hard (Python harness):
+
+| Wood | A (0.5) | B (1.0) |
+|---|---|---|
+| F#3 | 202 / 232 / 293 Hz | 430 / 700 / 1437 Hz |
+| A3 | 216 / 253 / 329 Hz | 459 / 741 / 1574 Hz |
+| C#4 | 274 / 300 / 395 Hz | 523 / 923 / 1786 Hz |
+| F#4 | 359 / 365 / 486 Hz | 567 / 1074 / 1914 Hz |
+
+Clave Dancehall stays at 0.5 unless the owner picks B.
 
 ## Open
 
@@ -257,7 +271,8 @@ two takes on a wood pad are 26.4 dB apart. The page has a before and after at 0.
 - **Proposed:** every constant in `riddim_proto.py` is a shape value until heard.
 - **Heard:** round 0's palette, "pretty good so far" (2026-11-18); round 1's three kits, "Approved" (2026-11-18).
   The Kotlin kits (round 2) confirmed to match, "Yes, they match" (2026-11-18). No phone or MPC has played them.
-  Round 3 heard: "wood might need more of an attack" (2026-11-18); the harder-mallet woods not yet heard.
+  Round 3 heard: "wood might need more of an attack" (2026-11-18); the hardest mallet chosen for Wood and Bronze
+  (2026-11-19). Clave Dancehall's wood A/B and the rest of round 3 not yet answered.
 
 ## Why it is built this way
 
