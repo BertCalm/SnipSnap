@@ -265,7 +265,7 @@ fun ConfluenceVoicesScreen(
             TapeText(when (selected.mode) {
                 ConfluenceSelectedWorkshop.Mode.SOURCE -> "The exact recorded crop, at native pitch."
                 ConfluenceSelectedWorkshop.Mode.REFERENCE -> "The same passage with constant gain and edge fades."
-                else -> "30-SECOND TEXTURE · NO NOTE OR MELODY CONTROL"
+                else -> "30-second texture · no note or melody control"
             }, TapeType.pixelSmall, scheme.ink2.tape, maxLines = Int.MAX_VALUE)
             StepperSlider("VARIATION", selected.variation, "${(selected.variation * 100).roundToInt()}%", scheme.accent.tape, scheme,
                 enabled = !saving && adjustable, labelWidth = 104.dp,
@@ -281,7 +281,7 @@ fun ConfluenceVoicesScreen(
             }
             if (player != null || working != null) ActionButton("STOP", scheme, enabled = !saving,
                 modifier = Modifier.fillMaxWidth(), onClick = { stop(); status = "PREVIEW STOPPED" })
-            readySeconds?.let { TapeText("${"%.2f".format(Locale.ROOT, it)}S READY · EXACT HEARD SETTINGS", TapeType.pixelSmall, scheme.ink2.tape) }
+            readySeconds?.let { TapeText("${"%.2f".format(Locale.ROOT, it)}s ready · exact heard settings", TapeType.pixelSmall, scheme.ink2.tape) }
             if (entry == null) TapeText("Open a kit to save a new pad.", TapeType.pixelSmall, scheme.ink2.tape)
             else if (destination == null) TapeText("No empty pad. Make room before saving.", TapeType.pixelSmall, scheme.warnInk.tape, maxLines = Int.MAX_VALUE)
             ActionButton(if (creditsOpen) "CLOSE SOURCE CREDITS" else "SOURCE CREDITS & LICENCE", scheme, enabled = true,

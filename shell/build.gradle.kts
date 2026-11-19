@@ -608,6 +608,16 @@ tasks.register<JavaExec>("generateLooseCrateKits") {
     args(providers.gradleProperty("looseCrateKitsOutput").orNull ?: "${rootDir}/testkit/loose-crate-kits")
 }
 
+tasks.register<JavaExec>("generateStaggerKits") {
+    group = "distribution"
+    description = "Build the three STAGGER kits, prove the velocity and round-robin grid through save, playback and MPC 3 export, and write the listening pack."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.StaggerKitGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "2g"
+    args(providers.gradleProperty("staggerKitsOutput").orNull ?: "${rootDir}/testkit/stagger-kits")
+}
+
 tasks.register<JavaExec>("generateMirrorballKits") {
     group = "distribution"
     description = "Build the three MIRRORBALL disco kits, prove the velocity and round-robin grid through save, playback and MPC 3 export, and write the listening pack."
@@ -878,4 +888,13 @@ tasks.register<JavaExec>("verifyNativeSambaKit") {
     mainClass.set("com.snipsnap.shell.SambaKitProof")
     maxHeapSize = "1g"
     args(providers.gradleProperty("nativeSambaKitOutput").getOrElse("${rootDir}/testkit/native-samba-kit"))
+}
+
+tasks.register<JavaExec>("verifySecondlineKits") {
+    group = "verification"
+    description = "Regenerate classic and triangle Second Line kits through saving, playback and MPC export."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.SecondlineKitProof")
+    maxHeapSize = "1g"
+    args(providers.gradleProperty("secondlineKitOutput").getOrElse("${rootDir}/testkit/secondline-kits"))
 }

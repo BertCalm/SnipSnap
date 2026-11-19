@@ -42,6 +42,23 @@ def render_db(role, params, seconds):
     return X.to_db(X.bank_env(x), floor=-80)
 
 
+class _Loss:
+    """The fit's loss as a picklable object, so one slow fit can spread over cores (BOROUGH_WORKERS)."""
+    def __init__(self, role, keys, lo, hi, logk, t, bands, tm, tmax):
+        self.__dict__.update(role=role, keys=keys, lo=lo, hi=hi, logk=logk, t=t, bands=bands, tm=tm, tmax=tmax)
+
+    def decode(self, u):
+        lo, hi = self.lo, self.hi
+        v = np.where(self.logk, np.exp(np.log(lo) + u * (np.log(hi) - np.log(lo))), lo + u * (hi - lo))
+        return dict(zip(self.keys, v.tolist()))
+
+    def __call__(self, u):
+        try:
+            return score(render_db(self.role, self.decode(u), self.tmax + .06), self.t, self.bands, self.tm)
+        except Exception:
+            return 99.0
+
+
 def fit_one(job):
     loop, role, target = job
     t, bands, tm, tmax = masks(target, role)
@@ -50,18 +67,12 @@ def fit_one(job):
     lo = np.array([space[k][0] for k in keys]); hi = np.array([space[k][1] for k in keys])
     # log-scale frequency and time parameters so the search spends equal effort per octave
     logk = np.array([k in getattr(V, 'LOGK', set()) or k.endswith(('_hz', '_ms')) or k in ('f0', 'f1', 'lp') for k in keys])
-    def decode(u):
-        v = np.where(logk, np.exp(np.log(lo) + u * (np.log(hi) - np.log(lo))), lo + u * (hi - lo))
-        return dict(zip(keys, v.tolist()))
-    def loss(u):
-        try:
-            return score(render_db(role, decode(u), tmax + .06), t, bands, tm)
-        except Exception:
-            return 99.0
+    loss = _Loss(role, keys, lo, hi, logk, t, bands, tm, tmax)
+    workers = int(os.environ.get('BOROUGH_WORKERS', 1))
     t0 = time.time()
     r = differential_evolution(loss, [(0, 1)] * len(keys), popsize=6, maxiter=int(os.environ.get('BOROUGH_ITER', 36)), tol=1e-4, seed=7,
-                               polish=False, init='sobol', updating='immediate')
-    p = decode(r.x)
+                               polish=False, init='sobol', updating='immediate' if workers == 1 else 'deferred', workers=workers)
+    p = loss.decode(r.x)
     return loop, role, dict(params={k: round(v, 4) for k, v in p.items()}, residual_db=round(float(r.fun), 3),
                             evals=int(r.nfev), seconds=round(time.time() - t0, 1), occurrences=target['n'])
 
@@ -82,8 +93,10 @@ if __name__ == '__main__':
             tgt = r.get(ROLE_TARGET.get(role, role))
             if tgt and role not in fitted.get(loop, {}):   # resume: skip finished fits
                 jobs.append((loop, role, tgt))
-    with Pool(4) as pool:
-        for loop, role, res in pool.imap_unordered(fit_one, jobs):
+    # BOROUGH_WORKERS > 1: jobs one at a time, each spread over that many cores (one slow fit)
+    serial = int(os.environ.get('BOROUGH_WORKERS', 1)) > 1
+    with Pool(1 if serial else 4) as pool:
+        for loop, role, res in (map(fit_one, jobs) if serial else pool.imap_unordered(fit_one, jobs)):
             fitted.setdefault(loop, {})[role] = res
             print(f'{loop:26s} {role:6s} residual {res["residual_db"]:5.2f} dB  {res["seconds"]}s', flush=True)
             json.dump(fitted, open(out_path, 'w'), indent=1)

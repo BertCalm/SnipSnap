@@ -243,6 +243,7 @@ object Velocity {
         is SkinPatch -> patch.macroSpecs()
         is BackwashPatch -> Backwash.macrosFor(patch.voice)
         is BreakerPatch -> Breaker.macrosFor(patch.voice, patch.model)
+        is SecondlinePatch -> SecondlinePatch.macrosFor()
         is SambaPatch -> SambaPatch.macrosFor()
         is DrumlinePatch -> Drumline.macrosFor(patch.voice)
         is SootPatch -> Soot.macrosFor(patch.voice, patch.model)
@@ -534,6 +535,7 @@ object Velocity {
         // BREAKER strikes its SKIN source at the velocity; the chain after it keeps the timbre that gives.
         is BreakerPatch -> patch.render(v)
         // DRUMLINE re-excites each player through its own contact law.
+        is SecondlinePatch -> patch.render(v)
         is SambaPatch -> patch.render(v)
         is DrumlinePatch -> patch.render(v)
         // SOOT strikes every drum at the velocity through its own contact law (and the kick's sag).

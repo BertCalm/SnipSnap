@@ -43,16 +43,16 @@ internal fun SplitAquariumPanel(settings: SplitAquarium.Settings, route: SplitAq
                     modifier = Modifier.weight(1f), onClick = onReset)
             }
             TapeText(when {
-                !ready -> "LOADING SPLIT FX SETTINGS"
-                refused -> "SPLIT FX SETTINGS UNREADABLE · USING DRY"
-                !streamUp -> "NO SPLIT STREAM · PLAY CAN RETRY"
-                faulted -> "AQUARIUM FAULT · RESET TAIL OR RETRY PLAY"
+                !ready -> "Loading split FX settings"
+                refused -> "Split FX settings unreadable · using dry"
+                !streamUp -> "No split stream · play can retry"
+                faulted -> "Aquarium fault · reset tail or retry play"
                 pending -> "Waiting to queue settings…"
                 !settings.fromKit -> "KIT FX OFF"
-                !route.sound.enabled -> "DRY · LIVE KIT EFFECTS ARE OFF"
-                route.sound.settings.isBypass -> "DRY · ALL SIX EFFECT MIXES ARE ZERO"
+                !route.sound.enabled -> "Dry · live kit effects are off"
+                route.sound.settings.isBypass -> "Dry · all six effect mixes are zero"
                 route.sound.outputGain == 0f -> "WET MIX MUTED"
-                else -> "STEREO KIT FX READY"
+                else -> "Stereo kit FX ready"
             }, TapeType.pixelSmall, if (refused || faulted || !streamUp) scheme.warnInk.tape else scheme.ink.tape,
                 Modifier.testTag("split-aquarium-state"), maxLines = Int.MAX_VALUE)
             route.warning?.let { TapeText(it, TapeType.pixelSmall, scheme.warnInk.tape, maxLines = Int.MAX_VALUE) }
@@ -71,7 +71,7 @@ internal fun SplitAquariumPanel(settings: SplitAquarium.Settings, route: SplitAq
                 TapeType.pixelSmall, scheme.ink2.tape, maxLines = Int.MAX_VALUE)
             TapeText("The SAVED SAMPLES file and PAD keep stereo; SAMPLE edits in mono. A wet print already contains FX. KIT FX applies them again on playback.",
                 TapeType.pixelSmall, scheme.ink2.tape, maxLines = Int.MAX_VALUE)
-            if (settings.fromKit) TapeText("PROTECTION · $limitedFrames FRAMES THIS STREAM", TapeType.pixelSmall, scheme.ink2.tape)
+            if (settings.fromKit) TapeText("Protection · $limitedFrames frames this stream", TapeType.pixelSmall, scheme.ink2.tape)
             ActionButton("DONE", scheme, enabled = true, modifier = Modifier.fillMaxWidth(), onClick = onClose)
         }
     }
