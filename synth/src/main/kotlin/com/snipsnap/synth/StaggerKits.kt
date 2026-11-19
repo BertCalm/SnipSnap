@@ -47,7 +47,7 @@ import kotlin.math.tanh
  */
 object StaggerKits {
     /** Bump when a pad's audio changes; saved kits carry the version they were printed with. */
-    const val VERSION = 2
+    const val VERSION = 3
 
     enum class Kit(val id: String, val title: String, val bpm: Int) {
         CARDBOARD("stagger-cardboard", "Cardboard", 89),
@@ -186,15 +186,19 @@ object StaggerKits {
 
     /**
      * The kit's print, in the order the records were made: sampled into a converter (CRUNCH, 12 bits at about
-     * 26 kHz, dark), bounced to tape (TAPE), the record's surface under the phrases only (VINYL). A foley pad was
-     * already converted by its own print and skips CRUNCH, so its grain is not doubled at a second rate.
+     * 26 kHz, dark), pressed at the mix (COMPRESSOR: the body pressed down, the peak match bringing the tail and
+     * the room back up; round 2b, "maybe we need a bit of compression", the owner, 2026-11-19), bounced to tape
+     * (TAPE), the record's surface under the phrases only (VINYL). A foley pad was already converted by its own
+     * print and skips CRUNCH, so its grain is not doubled at a second rate; it is pressed like every pad.
      */
-    class Print(val name: String, val crunch: Map<String, Float>, val tape: Map<String, Float>, val grooveVinyl: Map<String, Float>?) {
+    class Print(val name: String, val crunch: Map<String, Float>, val tape: Map<String, Float>, val grooveVinyl: Map<String, Float>?,
+                val compressor: Map<String, Float>? = null) {
         fun apply(x: FloatArray, phrase: Boolean, converted: Boolean): FloatArray {
             val peak = x.maxOfOrNull { abs(it) } ?: 0f
             val k = if (peak > 1e-9f) HEADROOM / peak else 1f
             var s = Snip(FloatArray(x.size) { x[it] * k }, 1, Dsp.RATE)
             if (!converted) s = Crunch.process(s, crunch)
+            if (compressor != null) s = Compressor.process(s, compressor)
             s = Tape.process(s, tape)
             if (phrase && grooveVinyl != null) s = Vinyl.process(s, grooveVinyl)
             return s.samples
@@ -211,19 +215,25 @@ object StaggerKits {
     val BOX = Print("box",
         mapOf("BITS" to .45f, "RATE" to .37f, "TONE" to .72f, "GRIT" to .05f),
         mapOf("WOBBLE" to .06f, "DRIVE" to .15f, "AGE" to .55f),
-        mapOf("CRACKLE" to .15f, "RUMBLE" to .40f, "HISS" to .20f))
+        mapOf("CRACKLE" to .15f, "RUMBLE" to .40f, "HISS" to .20f),
+        compressor = PRESS)
+
+    /** "A bit of compression" (round 2b): the body pressed at about 2:1, the hit keeping some room above it, a medium recovery. Shape. */
+    val PRESS = mapOf("AMOUNT" to .45f, "ATTACK" to .60f, "RECOVER" to .55f)
 
     /** MATINEE's print: the same converter, a cleaner tape (the foley carries its own grain), the record under the phrases. */
     val REEL = Print("reel",
         mapOf("BITS" to .45f, "RATE" to .37f, "TONE" to .78f, "GRIT" to .05f),
         mapOf("WOBBLE" to .05f, "DRIVE" to .12f, "AGE" to .45f),
-        mapOf("CRACKLE" to .20f, "RUMBLE" to .35f, "HISS" to .25f))
+        mapOf("CRACKLE" to .20f, "RUMBLE" to .35f, "HISS" to .25f),
+        compressor = PRESS)
 
     /** STUMBLE's print: the tape driven and worn, more record under the groove: the loosest of the three. */
     val WORN = Print("worn",
         mapOf("BITS" to .50f, "RATE" to .40f, "TONE" to .65f, "GRIT" to .08f),
         mapOf("WOBBLE" to .10f, "DRIVE" to .30f, "AGE" to .80f),
-        mapOf("CRACKLE" to .25f, "RUMBLE" to .55f, "HISS" to .25f))
+        mapOf("CRACKLE" to .25f, "RUMBLE" to .55f, "HISS" to .25f),
+        compressor = mapOf("AMOUNT" to .55f, "ATTACK" to .55f, "RECOVER" to .55f))
 
     fun printOf(kit: Kit): Print = when (kit) { Kit.CARDBOARD -> BOX; Kit.MATINEE -> REEL; Kit.STUMBLE -> WORN }
 

@@ -302,6 +302,30 @@ class StaggerKitsTest {
         }
     }
 
+    /**
+     * Round 2b, "maybe we need a bit of compression" (the owner, 2026-11-19): every print presses its hits. On each
+     * kit's kick and backbeat drum, the printed hard take's crest (its peak against its RMS over the first 200 ms)
+     * is at least 1.5 dB under the same print's with the compressor taken out, and the groove's crest falls too.
+     */
+    @Test fun `every print presses its hits a bit`() {
+        fun crest(x: FloatArray): Double {
+            val n = min(x.size, (.2f * rate).toInt())
+            val rms = sqrt(x.take(n).sumOf { it.toDouble() * it } / n)
+            return 20 * kotlin.math.log10(x.maxOf { abs(it) } / max(rms, 1e-9))
+        }
+        for (k in kits) {
+            val print = StaggerKits.printOf(k)
+            val bare = StaggerKits.Print(print.name, print.crunch, print.tape, print.grooveVinyl, compressor = null)
+            for (role in 0..1) {
+                val dry = StaggerKits.dryRaw(k, role, 1f, 0)
+                val pressed = crest(print.apply(dry.copyOf(), phrase = false, converted = false))
+                val loose = crest(bare.apply(dry.copyOf(), phrase = false, converted = false))
+                println("${k.name} role $role crest: ${"%.1f".format(loose)} dB without the compressor, ${"%.1f".format(pressed)} with it")
+                assertTrue(pressed <= loose - 1.5, "${k.name} role $role: the compressor presses only ${loose - pressed} dB")
+            }
+        }
+    }
+
     @Test fun `a built kit carries its grid its classes its chokes and its provenance`() {
         for (k in kits) {
         val pads = StaggerKits.build(k, { _, role, v, t -> rendered(role, v, t, k) })
