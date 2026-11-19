@@ -42,7 +42,10 @@ object LooseCrateExpansionRound0Generator {
         "brush-tap" to ember(EmberVoice.BRUSH_TAP, "TUNE" to .55f, "DAMP" to .35f, "BUZZ" to .55f),
         "ride" to ember(EmberVoice.RIDE, "TUNE" to .40f, "DAMP" to .40f, "BUZZ" to .20f),
         "foot-hat" to ember(EmberVoice.HAT_FOOT, "TUNE" to .45f, "DAMP" to .50f, "BUZZ" to .10f),
-        "sweep" to ember(EmberVoice.BRUSH_SWEEP, "TUNE" to .50f, "SPEED" to .45f, "BUZZ" to .40f),
+        // Round 0c: "It's the brush sweep that was harsh and overbearing" (the owner, correcting round 0b, which had
+        // softened the tap). Round 0 swept faster with the mic close and no warmth (SPEED .45, DISTANCE 0, WARMTH 0):
+        // its loudest band was 2 to 6 kHz. It now takes EMBER's approved "Slow Sweep" exactly, and plays softer.
+        "sweep" to { v, t, _ -> Ember.render(EmberVoice.BRUSH_SWEEP, mapOf("SPEED" to .1f, "DISTANCE" to .4f, "WARMTH" to .35f), v, t).samples },
     )
 
     /**
@@ -60,12 +63,22 @@ object LooseCrateExpansionRound0Generator {
             add(Note(b + 1.0, 1, .90f, offsetMs = 12f)); add(Note(b + 3.0, 1, .95f, offsetMs = 14f))
             add(Note(b + 2.0 + 2.0 / 3, 1, .25f, offsetMs = 10f))
             if (bar % 2 == 1) add(Note(b + 3.0 + 2.0 / 3, 1, .30f, offsetMs = 12f))
-            // The sweep at .35 and .30 kept the groove's quietest frames 12 dB under its loudest: a wash. Brushes swirl,
-            // but under a boom-bap kick they sit back.
-            add(Note(b + 0.0, 4, .20f)); add(Note(b + 2.0, 4, .17f))
+            // The sweep sits back under a boom-bap kick: .35 and .30 at first, .20 and .17 in round 0 ("harsh and
+            // overbearing"), now .12 and .10.
+            add(Note(b + 0.0, 4, SWEEP)); add(Note(b + 2.0, 4, SWEEP - .02f))
             add(Note(b + 0.0, 0, .85f)); add(Note(b + 1.75, 0, .45f)); add(Note(b + 2.5, 0, .75f))
         }
     }, 12f, "loose-crate-blue")
+
+    /** How hard the sweep swirls under each half bar. */
+    private const val SWEEP = .12f
+
+    /**
+     * The sweep's fader. Round 0c's first try set EMBER's slow sweep at weight .12 and measured it 3.7 dB under the
+     * rest of the kit, louder than round 0's (5.2): the slow sweep swishes longer, and weight barely turns a part down.
+     */
+    private const val SWEEP_FADER = .35f
+    private val blueFaders = mapOf(4 to SWEEP_FADER)
 
     /** BLUE's room: HUMMIN's, a little smaller and drier, for brushes; a soft compressor. */
     private val blueRoom = LooseCrateKits.Room(mapOf("SIZE" to .18f, "WALLS" to .50f, "DISTANCE" to .50f), mapOf("AMOUNT" to .35f, "ATTACK" to .80f, "RECOVER" to .50f),
@@ -118,12 +131,27 @@ object LooseCrateExpansionRound0Generator {
 
     private fun frames(bpm: Int) = Math.round(BARS * 4 * 60.0 / bpm * Dsp.RATE).toInt()
 
-    /** Notes summed at [bpm], through [room], folded onto [BARS] bars: the dry loop before the print. */
-    private fun loopDry(notes: List<Note>, bpm: Int, parts: List<Strike>, room: LooseCrateKits.Room): FloatArray {
+    /**
+     * Notes summed at [bpm], through [room], folded onto [BARS] bars: the dry loop before the print. [faders] turns a
+     * part's notes down as a whole (a mixing fader): a note's level follows its weight only gently (`touch`, at least
+     * 0.35 of full), so weight alone cannot sit a part far back.
+     */
+    private fun loopDry(notes: List<Note>, bpm: Int, parts: List<Strike>, room: LooseCrateKits.Room, faders: Map<Int, Float> = emptyMap()): FloatArray {
         val n = frames(bpm)
-        val raw = Cypher.phraseRaw(notes, bpm, 1f, 0, LooseCrateKits.TAKES, n.toFloat() / Dsp.RATE + 2.5f, LooseCrateKits::touch) { parts[it] }
+        val raw = rawMix(notes, bpm, n.toFloat() / Dsp.RATE + 2.5f, parts, faders)
         val roomed = room.play(raw)
         return FloatArray(n).also { out -> for (i in roomed.indices) out[i % n] += roomed[i] }
+    }
+
+    /** The notes summed dry, each part in [faders] rendered on its own and scaled by its fader. */
+    private fun rawMix(notes: List<Note>, bpm: Int, seconds: Float, parts: List<Strike>, faders: Map<Int, Float>): FloatArray {
+        fun raw(only: List<Note>) = Cypher.phraseRaw(only, bpm, 1f, 0, LooseCrateKits.TAKES, seconds, LooseCrateKits::touch) { parts[it] }
+        val out = raw(notes.filter { it.part !in faders })
+        for ((part, gain) in faders) {
+            val x = raw(notes.filter { it.part == part })
+            for (i in out.indices) out[i] += x[i] * gain
+        }
+        return out
     }
 
     /**
@@ -161,14 +189,31 @@ object LooseCrateExpansionRound0Generator {
         }
     }
 
+    private data class Stem(val tag: String, val notes: List<Note>, val sweep: Strike, val fader: Float)
+
     @JvmStatic fun main(args: Array<String>) {
         val root = File(args.firstOrNull() ?: "testkit/loose-crate-expansion-round0")
         fun write(name: String, s: Snip) = WavWriter.write(File(root, name), s).also { println("wrote ${it.path}") }
 
-        val blue = loopDry(blueNotes, 90, blueParts.map { it.second }, blueRoom)
+        val blue = loopDry(blueNotes, 90, blueParts.map { it.second }, blueRoom, blueFaders)
         write("blue/groove.wav", levelled(printedLoop(blue)))
         write("blue/groove-noprint.wav", levelled(blue))
         for ((name, s) in blueParts) write("blue/hit-$name.wav", hit(s))
+        // The sweep's share of the groove, dry and on one scale: the sweep alone and everything else alone, round 0c
+        // against round 0's sweep (SPEED .45, mic close, no warmth, at .20 and .17). Stems for measuring only.
+        val r0Sweep: Strike = ember(EmberVoice.BRUSH_SWEEP, "TUNE" to .50f, "SPEED" to .45f, "BUZZ" to .40f)
+        val r0Notes = blueNotes.map { if (it.part == 4) Note(it.beat, 4, if (it.weight >= SWEEP) .20f else .17f, it.offsetMs) else it }
+        for ((tag, notes, sweep, fader) in listOf(Stem("r0c", blueNotes, blueParts[4].second, SWEEP_FADER), Stem("r0", r0Notes, r0Sweep, 1f))) {
+            val strikes = blueParts.map { it.second }.toMutableList().also { it[4] = sweep }
+            val seconds = frames(90).toFloat() / Dsp.RATE + 2.5f
+            val all = rawMix(notes, 90, seconds, strikes, mapOf(4 to fader))
+            val k = .9f / all.maxOf { abs(it) }
+            val sw = rawMix(notes.filter { it.part == 4 }, 90, seconds, strikes, mapOf(4 to fader))
+            val rest = rawMix(notes.filter { it.part != 4 }, 90, seconds, strikes, emptyMap())
+            write("blue/stem-$tag-sweep.wav", Snip(FloatArray(sw.size) { sw[it] * k }, 1, Dsp.RATE))
+            write("blue/stem-$tag-rest.wav", Snip(FloatArray(rest.size) { rest[it] * k }, 1, Dsp.RATE))
+        }
+        write("blue/hit-sweep-round0.wav", hit(r0Sweep))
 
         val hummin = LooseCrateKits.Kit.HUMMIN
         val source = loopDry(LooseCrateKits.played(hummin, LooseCrateKits.humminNotes(kick = 0, snare = 1, hat = 2, ghost = 5)), SPEED_SOURCE_BPM,

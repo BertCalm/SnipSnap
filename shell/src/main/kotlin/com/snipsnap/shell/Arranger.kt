@@ -88,6 +88,10 @@ object Arranger {
         val pullUp: Boolean = SectionNames.pullsUpInto(name),
         /** The section's own last bar keeps only the kick, or the bed ([PlanSection.drop]). */
         val drop: Boolean = false,
+        /** The section's own last bar sweeps down through a low-pass ([PlanSection.close]). */
+        val close: Boolean = false,
+        /** A reversed crash or open hat ends on the next section's downbeat ([PlanSection.reverseCrash]). */
+        val reverseCrash: Boolean = false,
         /** The lanes left out of it ([PlanSection.mutes]); the [clip] still holds their hits, so un-muting needs no new layout. */
         val mutes: Set<String> = emptySet(),
     ) {
@@ -151,7 +155,21 @@ object Arranger {
      */
     fun toPlan(arrangement: Arrangement): SongPlan = SongPlan(
         seed = arrangement.seed,
-        sections = arrangement.sections.map { PlanSection(it.name, it.ref, it.repeats, it.locked, it.seed, it.bass, it.pullUp, it.drop, it.mutes) },
+        sections = arrangement.sections.map {
+            PlanSection(
+                name = it.name,
+                clip = it.ref,
+                repeats = it.repeats,
+                locked = it.locked,
+                seed = it.seed,
+                bass = it.bass,
+                pullUp = it.pullUp,
+                drop = it.drop,
+                close = it.close,
+                reverseCrash = it.reverseCrash,
+                mutes = it.mutes,
+            )
+        },
     )
 
     /**
@@ -180,7 +198,21 @@ object Arranger {
         val sections = plan.sections.map { s ->
             val clip = palette.clip(s.clip, s.seed)
             if (clip != null) {
-                Section(s.name, clip, minOf(s.repeats, maxRepeats(clip)), palette.reason(s.clip), s.clip, s.locked, s.seed, s.bass, s.pullUp, s.drop, s.mutes)
+                Section(
+                    name = s.name,
+                    clip = clip,
+                    repeats = minOf(s.repeats, maxRepeats(clip)),
+                    reason = palette.reason(s.clip),
+                    ref = s.clip,
+                    locked = s.locked,
+                    seed = s.seed,
+                    bass = s.bass,
+                    pullUp = s.pullUp,
+                    drop = s.drop,
+                    close = s.close,
+                    reverseCrash = s.reverseCrash,
+                    mutes = s.mutes,
+                )
             } else {
                 if (s.clip !in refused) refused += s.clip
                 // A gone program of yours is not replaced by a different one of
@@ -189,7 +221,18 @@ object Arranger {
                 // the section name the old one had.
                 val draft = palette.draft(s.seed).filter { ClipRef.yoursId(s.clip) == null || ClipRef.yoursId(it.ref) == null }
                 val again = draft.firstOrNull { it.name == s.name } ?: draft.first { it.ref == ClipRef.CAPTURED }
-                again.copy(name = s.name, repeats = minOf(s.repeats, maxRepeats(again.clip)), locked = s.locked, seed = s.seed, bass = s.bass, pullUp = s.pullUp, drop = s.drop, mutes = s.mutes)
+                again.copy(
+                    name = s.name,
+                    repeats = minOf(s.repeats, maxRepeats(again.clip)),
+                    locked = s.locked,
+                    seed = s.seed,
+                    bass = s.bass,
+                    pullUp = s.pullUp,
+                    drop = s.drop,
+                    close = s.close,
+                    reverseCrash = s.reverseCrash,
+                    mutes = s.mutes,
+                )
             }
         }
         return Resolved(Arrangement("${kit.name} Song", plan.seed, sections), refused)
@@ -482,7 +525,22 @@ object Arranger {
      * [passes]: every time through every section's clip, in song order, on
      * the same grid. Live play ([SongCursor]) moves between passes.
      */
-    data class Mix(val snip: Snip, val sectionStarts: List<Int>, val passes: List<Pass> = emptyList(), val drops: List<Drop> = emptyList())
+    data class Mix(
+        val snip: Snip,
+        val sectionStarts: List<Int>,
+        val passes: List<Pass> = emptyList(),
+        val drops: List<Drop> = emptyList(),
+        val transitions: List<Transition> = emptyList(),
+    )
+
+    /**
+     * What a section's CLOSE or REVERSE CRASH did: [kind] is "CLOSE" or
+     * "REVERSE CRASH", [applied] whether the bar was changed, and the
+     * [reason] says why not when it was left as it was (no crash or open hat
+     * in the kit, no next section, another transition on the boundary), or
+     * what was used when it was.
+     */
+    data class Transition(val section: Int, val kind: String, val applied: Boolean, val reason: String)
 
     /**
      * What a section's DROP did: [kept] is "kick" or "bed" when its last
@@ -650,6 +708,7 @@ object Arranger {
             }
         }
 
+        val transitionReports = mutableListOf<Transition>()
         // A stretch whose every hit is muted is a stretch of silence, as one whose hits all rolled out is.
         fun anyMuted(range: IntRange) = range.any { plan.sections[it].mutes.isNotEmpty() }
         val pieces = stretches.map { range ->
@@ -702,6 +761,21 @@ object Arranger {
                     audio = addAt(audio, if (cut == null) layer else cutAt(layer, cut - at), at)
                 }
             }
+            // CLOSE and REVERSE CRASH: each section's own last bar, in this stretch's frames.
+            for (i in range) {
+                val s = plan.sections[i]
+                if (!s.close && !s.reverseCrash) continue
+                val barEnd = frameAt(startPulses[i + 1])
+                val bar = BoundaryBar(
+                    index = i,
+                    from = frameAt(startPulses[i + 1] - clips[i].pulsesPerBar) - starts[first],
+                    end = barEnd - starts[first],
+                    pulses = clips[i].pulsesPerBar.toLong(),
+                    last = i == plan.sections.lastIndex,
+                    pullUpNext = i + 1 in turns,
+                )
+                audio = boundaryTransitions(kit, kitDir, audio, s, bar, bpm, transitionReports)
+            }
             val next = range.last + 1
             if (next in turns) {
                 val lastBeat = frameAt(startPulses[next] - Mpc3Clip.PULSES_PER_BEAT) - starts[first]
@@ -734,8 +808,122 @@ object Arranger {
                 Pass(i, frameAt(at), frameAt(at + one), lines)
             }
         }
-        return Mix(song, starts, passes, dropReports)
+        return Mix(song, starts, passes, dropReports, transitionReports)
     }
+
+    /**
+     * Where one section's last bar is, in the frames of the stretch being
+     * mixed: [from] up to [end] (the next section's downbeat), [pulses]
+     * long. [last] is the song's last section, [pullUpNext] a pull-up into
+     * the next one.
+     */
+    private class BoundaryBar(val index: Int, val from: Int, val end: Int, val pulses: Long, val last: Boolean, val pullUpNext: Boolean)
+
+    /**
+     * [section]'s CLOSE and REVERSE CRASH applied to [audio] over [bar], and
+     * what each did added to [reports]. One transition holds a boundary: a
+     * DROP on the section takes it before either (and was reported by its
+     * own list), CLOSE before REVERSE CRASH, and the next section's pull-up
+     * before all of them, so the rest are left off and say so.
+     */
+    private fun boundaryTransitions(kit: Kit, kitDir: File, audio: Snip, section: Section, bar: BoundaryBar, bpm: Float, reports: MutableList<Transition>): Snip {
+        var out = audio
+        var held = section.drop
+        for (kind in listOfNotNull(CLOSE.takeIf { section.close }, REVERSE_CRASH.takeIf { section.reverseCrash })) {
+            fun skip(why: String) { reports += Transition(bar.index, kind, false, "$why, so the last bar was left as it is") }
+            when {
+                held -> skip(if (section.drop) "DROP is on this section and takes the boundary" else "another transition on this section takes the boundary")
+                bar.pullUpNext -> skip("the pull-up into the next section takes this boundary")
+                kind == REVERSE_CRASH && bar.last -> skip("the last section has no next downbeat to land on")
+                kind == CLOSE -> {
+                    out = closeBar(out, bar.from, bar.end)
+                    reports += Transition(bar.index, kind, true, "the last bar sweeps down from ${CLOSE_OPEN_HZ.roundToInt()} Hz to ${CLOSE_SHAPE_HZ.roundToInt()} Hz")
+                    held = true
+                }
+                else -> {
+                    val pad = crashPad(kit)
+                    if (pad == null) {
+                        skip("this kit has no crash or open-hat pad")
+                    } else {
+                        val hit = KitPreview.renderNotes(kit, kitDir, listOf(Mpc3Note(Mpc3Note.noteFor(pad.slot), 0, REVERSE_CRASH_VELOCITY)), bar.pulses, bpm)
+                        out = reverseInto(out, hit, bar.end, bar.end - bar.from)
+                        reports += Transition(bar.index, kind, true, "pad ${pad.slot} (${pad.displayName}) reversed to end on the next downbeat")
+                        held = true
+                    }
+                }
+            }
+        }
+        return out
+    }
+
+    /**
+     * The pad REVERSE CRASH reverses: the lowest-numbered pad whose name says
+     * "crash" (a crash is tagged as an open hat in this app, so its class
+     * cannot tell it from a ride or a hat), else the lowest-numbered pad of
+     * class [com.snipsnap.audio.DrumClass.HAT_OPEN]; null when the kit has
+     * neither.
+     */
+    internal fun crashPad(kit: Kit): com.snipsnap.kit.KitPad? =
+        kit.pads.filter { it.drumClass != com.snipsnap.audio.DrumClass.HAT_CLOSED && it.displayName.contains("crash", ignoreCase = true) }.minByOrNull { it.slot }
+            ?: kit.pads.filter { it.drumClass == com.snipsnap.audio.DrumClass.HAT_OPEN }.minByOrNull { it.slot }
+
+    /**
+     * CLOSE: [seg] with frames [from] until [to] (clamped to its length)
+     * run through a low-pass (`Dsp.TptSvf` by way of
+     * [com.snipsnap.synth.PadFilter.sweep], since `Dsp` is internal to
+     * :synth) whose cutoff falls exponentially from [CLOSE_OPEN_HZ] to [CLOSE_SHAPE_HZ] across
+     * them, resonance [CLOSE_Q]. Every other frame is [seg]'s own, bit for
+     * bit, and the length is unchanged. The filter is run over the
+     * [CLOSE_WARMUP] frames before [from] at the open cutoff first, so
+     * its state is the music's and the bar does not start with a click.
+     */
+    internal fun closeBar(seg: Snip, from: Int, to: Int): Snip {
+        require(seg.channels == 2) { "the mixdown is stereo, got ${seg.channels} channel(s)" }
+        val open = minOf(CLOSE_OPEN_HZ, seg.sampleRate * 0.45f)
+        return com.snipsnap.synth.PadFilter.sweep(seg, from, to, open, CLOSE_SHAPE_HZ, 1f / CLOSE_Q, CLOSE_WARMUP)
+    }
+
+    /**
+     * REVERSE CRASH: the first [maxFrames] frames of [hit] (a crash struck
+     * once, with its ring-out), played backwards so that its last sample is
+     * the frame before [end] and the hit's own attack lands on [end], the
+     * next downbeat. Added into [seg]; nothing is added from [end] on, so
+     * the song is no longer and the downbeat is where it was. A short ramp
+     * up at the start keeps the cut end of the ring-out from clicking.
+     */
+    internal fun reverseInto(seg: Snip, hit: Snip, end: Int, maxFrames: Int): Snip {
+        val len = minOf(hit.frameCount, maxFrames, end)
+        if (len <= 0) return seg
+        val rev = FloatArray(len * 2)
+        val ramp = minOf(CUT_FADE, len)
+        for (n in 0 until len) {
+            val g = if (n < ramp) n.toFloat() / ramp else 1f
+            val src = (len - 1 - n) * 2
+            rev[n * 2] = hit.samples[src] * g
+            rev[n * 2 + 1] = hit.samples[src + 1] * g
+        }
+        return addAt(seg, Snip(rev, 2, seg.sampleRate), end - len)
+    }
+
+    private const val CLOSE = "CLOSE"
+    private const val REVERSE_CRASH = "REVERSE CRASH"
+
+    /**
+     * CLOSE's shape, in Hz: the cutoff the last bar starts at (wide open) and the one it ends at. These,
+     * [CLOSE_Q] and the exponential path between them are shape choices, set by reasoning and not yet by ear:
+     * they await the owner's listen on a phone.
+     */
+    private const val CLOSE_OPEN_HZ = 18_000f
+    private const val CLOSE_SHAPE_HZ = 300f
+
+    /** CLOSE's resonance: mild, so the sweep darkens without whistling. A shape choice awaiting the owner's ear. */
+    private const val CLOSE_Q = 0.7f
+
+    /** Frames run through the filter before CLOSE's bar, so it starts with the music's state: about 46 ms. */
+    private const val CLOSE_WARMUP = 2048
+
+    /** The velocity the reversed crash is struck at. A shape choice awaiting the owner's ear. */
+    private const val REVERSE_CRASH_VELOCITY = 0.9f
 
     /** [KitPreview]'s own frame arithmetic, so a section boundary and a note inside it agree. */
     private fun framesPerPulse(bpm: Float): Double = 60.0 / bpm * KitPreview.RATE / Mpc3Clip.PULSES_PER_BEAT

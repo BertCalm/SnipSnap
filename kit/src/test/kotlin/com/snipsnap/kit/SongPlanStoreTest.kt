@@ -255,6 +255,90 @@ class SongPlanStoreTest {
     }
 
     @Test
+    fun `CLOSE and REVERSE CRASH are off unless asked for, and survive a save and a copy`() {
+        assertFalse(plan().sections.any { it.close || it.reverseCrash })
+        assertFalse(plan().added(ClipRef.CAPTURED)!!.sections.last().let { it.close || it.reverseCrash })
+        val p = plan().withClose(1, true)!!.withReverseCrash(2, true)!!
+        SongPlanStore.save(dir, "Kitchen", p)
+        val back = SongPlanStore.load(dir, "Kitchen")!!
+        assertEquals(p, back)
+        assertEquals(listOf(false, true, false, false), back.sections.map { it.close })
+        assertEquals(listOf(false, false, true, false), back.sections.map { it.reverseCrash })
+        assertTrue(back.duplicated(1)!!.sections[2].close, "a copy keeps the close")
+        assertNull(plan().withClose(99, true))
+        assertNull(plan().withReverseCrash(99, true))
+    }
+
+    @Test
+    fun `a song with no CLOSE or REVERSE CRASH writes the bytes it wrote before they existed`() {
+        SongPlanStore.save(dir, "Kitchen", SongPlan(0, listOf(PlanSection("a", ClipRef.CAPTURED, 2, seed = 1, bass = false, pullUp = true))))
+        val expected = """
+            {
+              "version": 1,
+              "plans": {
+                "Kitchen": {
+                  "seed": 0,
+                  "sections": [
+                    {
+                      "name": "a",
+                      "clip": "captured",
+                      "repeats": 2,
+                      "locked": false,
+                      "seed": 1,
+                      "bass": false,
+                      "pullUp": true,
+                      "drop": false
+                    }
+                  ]
+                }
+              }
+            }
+        """.trimIndent() + "\n"
+        assertEquals(expected, File(dir, SongPlanStore.FILE_NAME).readText(), "exactly the fields it had")
+        SongPlanStore.save(dir, "Kitchen", SongPlan(0, listOf(PlanSection("a", ClipRef.CAPTURED, close = true))))
+        assertTrue(File(dir, SongPlanStore.FILE_NAME).readText().contains("\"drop\": false,\n" + " ".repeat(10) + "\"close\": true\n"))
+        SongPlanStore.save(dir, "Kitchen", SongPlan(0, listOf(PlanSection("a", ClipRef.CAPTURED, reverseCrash = true))))
+        assertTrue(File(dir, SongPlanStore.FILE_NAME).readText().contains("\"reverseCrash\": true"))
+    }
+
+    @Test
+    fun `a song kept before CLOSE and REVERSE CRASH existed loads with them off`() {
+        File(dir, SongPlanStore.FILE_NAME).writeText(
+            """{"version":1,"plans":{"Kitchen":{"seed":0,"sections":[""" +
+                """{"name":"theme","clip":"captured","bass":true,"pullUp":false,"drop":true},{"name":"the turn","clip":"fill","bass":false,"pullUp":true}]}}}""",
+        )
+        val p = SongPlanStore.load(dir, "Kitchen")!!
+        assertEquals(listOf(false, false), p.sections.map { it.close })
+        assertEquals(listOf(false, false), p.sections.map { it.reverseCrash })
+        assertEquals(listOf(true, false), p.sections.map { it.drop }, "the old fields are as they were")
+    }
+
+    @Test
+    fun `DROP, CLOSE and REVERSE CRASH are one choice for a section, and each is exclusive with the next pull-up`() {
+        val base = SongPlan(0, List(3) { PlanSection("s$it", ClipRef.CAPTURED, pullUp = false) })
+        fun marks(p: SongPlan) = p.sections[1].let { listOf(it.drop, it.close, it.reverseCrash) }
+        assertEquals(listOf(false, true, false), marks(base.withDrop(1, true)!!.withClose(1, true)!!))
+        assertEquals(listOf(false, false, true), marks(base.withClose(1, true)!!.withReverseCrash(1, true)!!))
+        assertEquals(listOf(true, false, false), marks(base.withReverseCrash(1, true)!!.withDrop(1, true)!!))
+        assertEquals(listOf(false, false, false), marks(base.withClose(1, true)!!.withClose(1, false)!!))
+        // Turning one off leaves the others as they were (there is only ever one on).
+        assertEquals(listOf(false, true, false), marks(base.withClose(1, true)!!.withDrop(1, false)!!))
+        // The next section's pull-up is the other rewrite of the boundary, whichever is turned on last.
+        val pulled = base.withPullUp(2, true)!!
+        for (turnOn in listOf(SongPlan::withDrop, SongPlan::withClose, SongPlan::withReverseCrash)) {
+            val taken = turnOn(pulled, 1, true)!!
+            assertFalse(taken.sections[2].pullUp, "the transition took the boundary from the pull-up")
+            assertTrue(marks(taken).any { it })
+            val back = taken.withPullUp(2, true)!!
+            assertEquals(listOf(false, false, false), marks(back), "the pull-up took it back from every kind")
+            assertTrue(back.sections[2].pullUp)
+        }
+        // Another boundary is not touched, and the last section has no pull-up after it.
+        assertTrue(pulled.withClose(2, true)!!.let { it.sections[2].close && it.sections[2].pullUp })
+        assertTrue(base.withReverseCrash(0, true)!!.sections[0].reverseCrash)
+    }
+
+    @Test
     fun `a section's mutes survive a save, a copy and a move, and a toggle puts them back`() {
         assertTrue(plan().sections.all { it.mutes.isEmpty() })
         val kick = PlanSection.padLane(1)
