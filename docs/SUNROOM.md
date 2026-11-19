@@ -36,10 +36,10 @@ Each pad holds three velocity zones (1–41, 42–84, 85–127), each with three
 | Velocity / round robin software | `SunroomRoundTripTest` checks save/reload, all 127 MIDI velocities over three cycles, SFZ import, actual saved and MPC 3 PCM, and exported slice/velocity metadata |
 | Timbral velocity | Mixed recorded-profile/authored dynamics; crescendo level-only limitation remains open |
 | MPC 2 | Preserves first take per velocity zone under the owner's combined velocity/RR format exception; XML boundaries checked |
-| Phone and MPC hardware | Not verified for Sunroom; exporter read-back is not a hardware claim |
+| Hardware playback | Owner-reported pass, 2026-11-19: “Hardware passes- proceed.” Device models and individual format results were not specified |
 | Editable engine / source controls | Not supplied by this frozen bank |
-| Targeted checks | Source-bank, kit, shelf and save/playback/export round-trip tests passed; native C++ 8/8 passed |
-| Full regression | Restarted 2026-11-19 after merging default branch `da91f5381` and correcting starter-registry/count expectations; pending. No full-suite or Android-device pass is claimed |
+| Targeted checks | Sunroom source-bank, save/playback/export round-trip and convention tests passed again after the hardware-note update, 2026-11-19. All three packages regenerated; all 96 exported chain WAVs match the previously delivered packages exactly. Native C++ 8/8 passed |
+| Full regression | GitHub Actions [tests](https://github.com/BertCalm/SnipSnap/actions/runs/44451954755) and [emulator-tests](https://github.com/BertCalm/SnipSnap/actions/runs/44451954874) passed on `a16dd8da8`, including all JVM shards, Android build and native tests. The interrupted local full run is not counted as a pass |
 
 The shared MPC 3 chain-WAV slice-map limitation remains unchanged; see `ENGINE_ACCEPTANCE_GATES.md`. No exporter repair is claimed. This collection is not declared fully gate-complete.
 

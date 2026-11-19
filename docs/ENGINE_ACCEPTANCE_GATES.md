@@ -1187,7 +1187,9 @@ See [SUNROOM](SUNROOM.md). The owner approved the assembled R10 audition with
 three alternate outputs, including finite roll/riser gestures. This is a
 factory bank, not an editable engine. Software evidence is in `SunroomKitsTest`
 and `SunroomRoundTripTest`. The Psych cymbal crescendo has level-only dynamics;
-its timbral-velocity gate remains open. Phone/MPC hardware acceptance is not
-claimed; the shared MPC 3 slice-map limitation is unchanged. MPC 2's combined
+its timbral-velocity gate remains open. The owner reported “Hardware passes- proceed”
+on 2026-11-19; device models and individual format results were not specified.
+All JVM, Android build, native and emulator CI checks passed on `a16dd8da8`.
+The shared MPC 3 slice-map limitation is unchanged. MPC 2's combined
 velocity/RR exception applies. Melodic/keygroup/chord/HOLD/STRUM gates do not
 apply to these finite drum kits. Overall completion remains open.
