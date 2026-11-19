@@ -303,9 +303,13 @@ class StaggerKitsTest {
     }
 
     /**
-     * Round 2b, "maybe we need a bit of compression" (the owner, 2026-11-19): every print presses its hits. On each
-     * kit's kick and backbeat drum, the printed hard take's crest (its peak against its RMS over the first 200 ms)
-     * is at least 1.5 dB under the same print's with the compressor taken out, and the groove's crest falls too.
+     * Round 2b, "maybe we need a bit of compression" (the owner, 2026-11-19). What the press does to a drum,
+     * measured against the same print with the compressor taken out: the backbeat drum's crest (its peak against
+     * its RMS over the first 200 ms) falls and its tail (300 to 500 ms against the first 50 ms) comes up at least
+     * 3 dB; the kick's tail comes up and its crest rises by no more than 2.5 dB (a muffled kick is already dense,
+     * crest 1.3 to 3.6 dB, and the sustain compressor can only lift what is under its body: measured, the three
+     * kicks' crests rose 1.6 to 2.2 dB and their tails 0.8 to 4 dB, the three snares' crests fell 0.3 to 2.9 dB
+     * and their tails rose 8 to 17 dB).
      */
     @Test fun `every print presses its hits a bit`() {
         fun crest(x: FloatArray): Double {
@@ -313,15 +317,28 @@ class StaggerKitsTest {
             val rms = sqrt(x.take(n).sumOf { it.toDouble() * it } / n)
             return 20 * kotlin.math.log10(x.maxOf { abs(it) } / max(rms, 1e-9))
         }
+        fun tail(x: FloatArray): Double {
+            val a = (.3f * rate).toInt(); val b = min(x.size, (.5f * rate).toInt())
+            if (b <= a + 100) return -99.0
+            val late = sqrt(x.copyOfRange(a, b).sumOf { it.toDouble() * it } / (b - a))
+            val head = sqrt(x.take((.05f * rate).toInt()).sumOf { it.toDouble() * it } / (.05f * rate))
+            return 20 * kotlin.math.log10(max(late, 1e-9) / max(head, 1e-9))
+        }
         for (k in kits) {
             val print = StaggerKits.printOf(k)
             val bare = StaggerKits.Print(print.name, print.crunch, print.tape, print.grooveVinyl, compressor = null)
             for (role in 0..1) {
                 val dry = StaggerKits.dryRaw(k, role, 1f, 0)
-                val pressed = crest(print.apply(dry.copyOf(), phrase = false, converted = false))
-                val loose = crest(bare.apply(dry.copyOf(), phrase = false, converted = false))
-                println("${k.name} role $role crest: ${"%.1f".format(loose)} dB without the compressor, ${"%.1f".format(pressed)} with it")
-                assertTrue(pressed <= loose - 1.5, "${k.name} role $role: the compressor presses only ${loose - pressed} dB")
+                val pressed = print.apply(dry.copyOf(), phrase = false, converted = false)
+                val loose = bare.apply(dry.copyOf(), phrase = false, converted = false)
+                println("${k.name} role $role: crest ${"%.1f".format(crest(loose))} to ${"%.1f".format(crest(pressed))} dB, tail ${"%.1f".format(tail(loose))} to ${"%.1f".format(tail(pressed))} dB")
+                if (role == 1) {
+                    assertTrue(crest(pressed) < crest(loose), "${k.name} role $role: the press raised the crest")
+                    assertTrue(tail(pressed) >= tail(loose) + 3, "${k.name} role $role: the tail came up only ${tail(pressed) - tail(loose)} dB")
+                } else {
+                    assertTrue(tail(pressed) > tail(loose) + .5, "${k.name} role $role: the tail came up only ${tail(pressed) - tail(loose)} dB")
+                    assertTrue(crest(pressed) <= crest(loose) + 2.5, "${k.name} role $role: the press raised the kick's crest by ${crest(pressed) - crest(loose)} dB")
+                }
             }
         }
     }
