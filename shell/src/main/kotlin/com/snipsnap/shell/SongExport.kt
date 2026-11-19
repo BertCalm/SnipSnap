@@ -96,6 +96,6 @@ object SongExport {
     fun sectionClips(plan: Arranger.Arrangement, mode: ChanceExport.Mode = ChanceExport.MODE): List<Mpc3Clip> =
         plan.sections.mapIndexed { i, s ->
             // WRITE: not pre-resolved, the MPC rolls `probability`. BAKE: rolled per repeat, under the source's own name (before the rename below).
-            Arranger.tiled(s.clip, s.repeats, roll = mode == ChanceExport.Mode.BAKE).copy(name = "%02d %s".format(java.util.Locale.ROOT, i + 1, s.name))
+            Arranger.tiled(Arranger.cut(s.clip, s.cutBars), s.repeats, roll = mode == ChanceExport.Mode.BAKE).copy(name = "%02d %s".format(java.util.Locale.ROOT, i + 1, s.name))
         }
 }

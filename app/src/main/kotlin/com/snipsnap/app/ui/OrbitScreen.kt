@@ -1386,7 +1386,7 @@ private fun padColor(kit: Kit, slot: Int, fallback: Color): Color =
  */
 @Composable
 private fun RingUndoChip(steps: Int, scheme: Scheme, onUndo: () -> Unit) {
-    SmallChip(Copy.orbitUndo(steps), scheme, enabled = steps > 0, description = "UNDO THE LAST EDIT") { onUndo() }
+    SmallChip(Copy.orbitUndo(steps), scheme, enabled = steps > 0, description = "Undo the last edit") { onUndo() }
 }
 
 @Composable
@@ -1455,7 +1455,7 @@ private fun RingDetailPanel(
         horizontalArrangement = Arrangement.spacedBy(6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        SmallChip(if (ring.engaged) "ON" else "OFF", scheme, accent = ring.engaged, description = if (ring.engaged) "RING ON — TAP TO MUTE" else "RING OFF — TAP TO HEAR") {
+        SmallChip(if (ring.engaged) "ON" else "OFF", scheme, accent = ring.engaged, description = if (ring.engaged) "Ring on — tap to mute" else "Ring off — tap to hear") {
             onUpdateRing { it.copy(engaged = !it.engaged) }
         }
         SmallChip("SOLO", scheme, accent = solo == selected) { onToggleSolo() }
@@ -1464,12 +1464,12 @@ private fun RingDetailPanel(
             SmallChip(Places.opener("SPACE EVENLY"), scheme, description = "SPACE EVENLY") { onOpenSpread() }
             SmallChip("CLEAR", scheme) { onUpdateRing { OrbitPatterns.clear(it) } }
             SmallChip("⚄ RANDOM FILL", scheme, description = "RANDOM FILL") { onScrambleRing() }
-            SmallChip("◀", scheme, description = "TURN ONE STEP EARLIER") { onUpdateRing { OrbitPatterns.turn(it, -1) } }
-            SmallChip("▶", scheme, description = "TURN ONE STEP LATER") { onUpdateRing { OrbitPatterns.turn(it, 1) } }
+            SmallChip("◀", scheme, description = "Turn one step earlier") { onUpdateRing { OrbitPatterns.turn(it, -1) } }
+            SmallChip("▶", scheme, description = "Turn one step later") { onUpdateRing { OrbitPatterns.turn(it, 1) } }
         }
-        SmallChip("DUP", scheme, description = "COPY THIS RING BESIDE IT") { onDuplicateRing() }
+        SmallChip("DUP", scheme, description = "Copy this ring beside it") { onDuplicateRing() }
         if (ring.content is PatternOrbit) {
-            SmallChip("REC", scheme, accent = recording, description = if (recording) "REC ON — TAP TO DISARM THE RAIL" else "ARM THE RAIL TO RECORD") {
+            SmallChip("REC", scheme, accent = recording, description = if (recording) "REC on — tap to disarm the rail" else "Arm the rail to record") {
                 onToggleRecording()
             }
         }
@@ -1493,7 +1493,7 @@ private fun RingDetailPanel(
         SmallChip("+", scheme, description = "LOUDER") { onUpdateRing { it.copy(level = (it.level + LEVEL_STEP).coerceAtMost(MAX_LEVEL)) } }
         SmallChip("◀", scheme, description = "PAN LEFT") { onUpdateRing { it.copy(pan = (it.pan - PAN_STEP).coerceAtLeast(-1f)) } }
         Box(
-            Modifier.weight(1f).heightIn(min = Layout.MIN_HIT_TARGET.dp).tapeClick(label = "RESET PAN TO CENTRE") {
+            Modifier.weight(1f).heightIn(min = Layout.MIN_HIT_TARGET.dp).tapeClick(label = "Reset pan to centre") {
                 onUpdateRing { it.copy(pan = 0f) }
             },
             contentAlignment = Alignment.Center,
@@ -1582,7 +1582,7 @@ private fun ArpPanel(
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
         SmallChip("−", scheme, description = "GATE SHORTER") { onGateChange((arpGate - ARP_GATE_STEP).coerceAtLeast(Arp.MIN_GATE)) }
         Box(
-            Modifier.weight(1f).heightIn(min = Layout.MIN_HIT_TARGET.dp).tapeClick(label = "RESET GATE TO FULL") { onGateChange(1f) },
+            Modifier.weight(1f).heightIn(min = Layout.MIN_HIT_TARGET.dp).tapeClick(label = "Reset gate to full") { onGateChange(1f) },
             contentAlignment = Alignment.Center,
         ) {
             TapeText("GATE ${(arpGate * 100).roundToInt()}%", TapeType.pixel, scheme.ink.tape)
@@ -1755,7 +1755,7 @@ private fun TheSetPanel(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             TapeText("TAKE", TapeType.pixelSmall, scheme.ink2.tape, Modifier.width(36.dp))
-            SmallChip("ROLL · ${current.seed}", scheme, description = "ROLL A NEW TAKE OF THE SAME HITS") {
+            SmallChip("ROLL · ${current.seed}", scheme, description = "Roll a new take of the same hits") {
                 onCommit(current.copy(seed = current.seed + 1))
             }
             TapeText(
@@ -1812,11 +1812,11 @@ private fun SectionsPanel(
                     if (here) scheme.accent.tape else scheme.ink.tape,
                     Modifier.width(28.dp),
                 )
-                SmallChip("−", scheme, enabled = section.bars > 1, description = "SECTION ${section.name}: ONE BAR SHORTER") {
+                SmallChip("−", scheme, enabled = section.bars > 1, description = "Section ${section.name}: one bar shorter") {
                     onEditSection(index) { it.copy(bars = it.bars - 1) }
                 }
                 TapeText("${section.bars} BAR${if (section.bars == 1) "" else "S"}", TapeType.pixelSmall, scheme.ink2.tape, Modifier.width(56.dp))
-                SmallChip("+", scheme, enabled = section.bars < OrbitClip.MAX_BARS, description = "SECTION ${section.name}: ONE BAR LONGER") {
+                SmallChip("+", scheme, enabled = section.bars < OrbitClip.MAX_BARS, description = "Section ${section.name}: one bar longer") {
                     onEditSection(index) { it.copy(bars = it.bars + 1) }
                 }
                 for ((ringIndex, ring) in current.orbits.withIndex()) {
@@ -1845,7 +1845,7 @@ private fun SectionsPanel(
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
         SmallChip("+ SECTION", scheme, accent = current.sections.isEmpty()) { onAddSection() }
         if (current.sections.isNotEmpty()) {
-            SmallChip("NO ARRANGEMENT", scheme, description = "DROP THE SECTIONS, KEEP THE RINGS") { onClearSections() }
+            SmallChip("NO ARRANGEMENT", scheme, description = "Drop the sections, keep the rings") { onClearSections() }
         }
     }
     TapeText(
@@ -1915,8 +1915,8 @@ private fun OrbitControlPanel(
         ) {
             if (ring == null) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                    TapeText("NO RINGS — ADD ONE BELOW", TapeType.pixel, scheme.ink2.tape)
-                    SmallChip("UNDO", scheme, enabled = history.isNotEmpty(), description = "UNDO THE LAST EDIT") { onUndo() }
+                    TapeText("No rings — add one below", TapeType.pixel, scheme.ink2.tape)
+                    SmallChip("UNDO", scheme, enabled = history.isNotEmpty(), description = "Undo the last edit") { onUndo() }
                 }
             } else {
                 RingDetailPanel(
@@ -2201,12 +2201,12 @@ private fun OrbitFooterRow(
 ) {
     // One row: the tempo and the ring shelf. PLAY is in the header.
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-        ActionButton("↺", scheme, Modifier.weight(0.7f), enabled = playing, description = "BACK TO THE TOP") { onRewind() }
+        ActionButton("↺", scheme, Modifier.weight(0.7f), enabled = playing, description = "Back to the top") { onRewind() }
         // Read-only: the tempo is the project's, set from BEAT. Said where the
         // BPM buttons used to be, so the row does not move under a thumb that
         // learned it.
         Box(Modifier.weight(2f).minHeight(Layout.MIN_HIT_TARGET.dp), contentAlignment = Alignment.Center) {
-            TapeText("${bpm.roundToInt()} BPM · SET IN BEAT", TapeType.pixel, scheme.ink2.tape, maxLines = 2)
+            TapeText("${bpm.roundToInt()} BPM · set in BEAT", TapeType.pixel, scheme.ink2.tape, maxLines = 2)
         }
         ActionButton("+ PAD", scheme, Modifier.weight(1f)) { onAddPatternRing() }
         ActionButton(Places.opener("+ SAMPLE"), scheme, Modifier.weight(1f), enabled = snips.isNotEmpty(), accent = snipPickerOpen, description = "+ SAMPLE") {
@@ -2675,7 +2675,7 @@ private fun TapWritesChip(tapWrites: Boolean, brush: OrbitBrush, scheme: Scheme,
         if (tapWrites) Copy.orbitTapWrites(brush.label) else Copy.ORBIT_TAP_PLACES,
         scheme,
         accent = tapWrites,
-        description = if (tapWrites) "A TAP CHANGES ${brush.label}. TAP HERE TO PLACE AND LIFT HITS INSTEAD" else "A TAP PLACES OR LIFTS A HIT. TAP HERE TO MAKE A TAP CHANGE ${brush.label}",
+        description = if (tapWrites) "A tap changes ${brush.label}. Tap here to place and lift hits instead" else "A tap places or lifts a hit. Tap here to make a tap change ${brush.label}",
         onClick = onClick,
     )
 }

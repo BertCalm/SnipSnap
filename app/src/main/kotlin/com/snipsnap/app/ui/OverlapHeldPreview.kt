@@ -83,7 +83,7 @@ internal fun OverlapPerformanceControls(
             onValueChange = { value -> onEdit { current -> current.copy(releaseSeconds = OverlapPadMaker.RELEASE.value(value)
                 .coerceIn(OverlapPadMaker.RELEASE.lo, OverlapPadMaker.RELEASE.hi)) } },
             readout = OverlapPadMaker.secondsLabel(patch.releaseSeconds))
-        TapeText("STEADY HELD PREVIEW · LIFT TO RELEASE", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
+        TapeText("Steady held preview · lift to release", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
         TapeText("Send and spread make finite pads. MAKE INSTRUMENT sustains.", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 3)
     } else {
         TapeText("Root is the reference note. Hold extends a finite sound.",

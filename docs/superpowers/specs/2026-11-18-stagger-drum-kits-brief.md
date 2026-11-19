@@ -1,6 +1,6 @@
 # STAGGER: design brief for a muffled-kick, drunk-clock boom-bap kit family
 
-Status: concept with a round-0 Python prototype. Nothing rendered in Kotlin, nothing heard.
+Status: concept with a round-0 Python prototype and the owner's thirteen references measured (2026-11-19). Nothing rendered in Kotlin, nothing heard.
 Repository truth: read at `8daaf2ef` (2026-11-18); the branch then took the default branch at `22d9e522` (the breakcore family, PRs 1204 and 1205), which adds a `Shatter.kt` that is a chopped-break kit, not a glass sound, so the glass source below is named GLASS to keep clear of it. APIs named below were grepped: `CypherKits` (`Part`,
 `Phrase`, `Print`, `build`, `render`, `touch`, `velocities`, `TAKES`), `KitStrikes` in `Cypher.kt`
 (`thumpKick`, `skinStruck`, `skinTouched`, `terra`, `tines`, `cymbal`, `multi`, `layered`, `struck`,
@@ -88,7 +88,7 @@ a kit-side `Print` that composes the two sections in the sampler's order, the wa
 
 | Kit (working name) | Tempo | Identity | Pads (A01 to A14) | A15 | A16 |
 |---|---|---|---|---|---|
-| CARDBOARD | 89 | the profile itself: boxy kick, dry crack, whisper hat | Box Kick (THUMP KICK, CLICK 0, MUFFLE 300 Hz), Crack Snare (SKIN SNARE, SNAP .8, SIZZLE .7, DECAY .3, dry), Whisper Hat (SKIN HAT_CLOSED, TONE .3, DECAY .15), Rim (THUMP RIM, dry), Low Box Kick (MUFFLE 250 Hz, TUNE low), Cross Stick (SKIN STICK), Paper Snare (SKIN SNARE, soft zone's wires, as a pad), Shaker (SKIN SHAKER, dark), Dead Tom (SKIN TOM, MUFFLE 400 Hz), Timpani (SKIN TOM, TUNE .15, DECAY .8, FOLEY -5), Dark Gong (FIRED BRONZE KEMPUL, FOLEY -5, faded under 1.5 s), Zap (TINES ZAP, FOLEY -7), Punch (whoosh + thud, FOLEY -5), Clap (THUMP CLAP, dry, short) | Timpani roll: `ratchet` at 1/32 over two beats, weight .3 to 1, into the gong | two bars, `staggered`; hats at .25; the kick and snare carry the bar |
+| CARDBOARD | 89 | the profile itself: boxy kick, dry crack, whisper hat | Box Kick (THUMP KICK, CLICK 0, MUFFLE 300 Hz), Crack Snare (SKIN SNARE, SNAP .8, SIZZLE .4, DECAY .3, dry; centroid aimed at 2.5 to 3.5 kHz), Whisper Hat (SKIN HAT_CLOSED, TONE .3, DECAY .15), Rim (THUMP RIM, dry), Low Box Kick (MUFFLE 250 Hz, TUNE low), Cross Stick (SKIN STICK), Paper Snare (SKIN SNARE, soft zone's wires, as a pad), Shaker (SKIN SHAKER, dark), Dead Tom (SKIN TOM, MUFFLE 400 Hz), Timpani (SKIN TOM, TUNE .15, DECAY .8, FOLEY -5), Dark Gong (FIRED BRONZE KEMPUL, FOLEY -5, faded under 1.5 s), Zap (TINES ZAP, FOLEY -7), Punch (whoosh + thud, FOLEY -5), Clap (THUMP CLAP, dry, short) | Timpani roll: `ratchet` at 1/32 over two beats, weight .3 to 1, into the gong | two bars, `staggered`; hats at .25; the kick and snare carry the bar |
 | MATINEE | 84 | the cinematic kit: half the pads are effects | Box Kick, Crack Snare, Rim, Whisper Hat, then ten foley pads: two timpani (FOLEY -5 and -9), Gong, Crash-Gong (BREAKER CRASH, 1.4 s, FOLEY -9), Glass (take-dealt, FOLEY -5), Low Glass (FOLEY -9), Zap, Low Zap (THUMP SPARK, FOLEY -7), Punch, Stab (TERRA TUNED_BAR, BUZZ .6, FOLEY -7) | Riser: the timpani roll crescendo over a whole bar (`ratchet`, 1/16 then 1/32) landing on the crash-gong | two bars, `staggered`; a glass break on the and of four, a zap pickup into bar two |
 | STUMBLE | 93 | the drunkest clock; a rim in the snare's place; no hats in the groove | Hum Kick (SKIN KICK over THUMP SUB, MUFFLE 350 Hz, drive 4), Rimshot (THUMP RIM, TUNE .85, dry), Crack Snare, Ghost Snare (`softer` .4), Shaker (whisper), Open Box (SKIN HAT_OPEN, dark, short), Low Tom (MUFFLE 400 Hz), Knock (TERRA SLAP, BOWL 0), Timpani, Gong, Punch, Zap, Clap, Bell (TINES BELL, FOLEY -7) | A dragging snare roll: `ratchet` with `staggered` on the roll itself (every stroke a little late) | two bars, `staggered` at the widest law; no hat part at all, the shaker at .2 |
 
@@ -103,12 +103,14 @@ Every setting in the table is a shape value. Pad names are placeholders for the 
 |---|---:|---|---|---|
 | MUFFLE cutoff | 300 Hz (250 to 400 by pad) | the two-pole low-pass after the clipper on a kick or tom pad | with drive: at 250 Hz and no drive the phone band falls under 1 percent | `share_150_400 >= 0.01` on every muffled pad (the CYPHER sub test's shape) |
 | MUFFLE drive | 3 (tanh gain) | harmonics made before the filter | doubles the 150 to 400 Hz share at every cutoff (measured) | the drive-off render has less phone-band share than the drive-on one |
-| kick bias | +22 ms (STUMBLE +28) | how late the kick lands | with the snare's -6: the kick sits 28 to 34 ms behind the snare | kick mean minus snare mean within 25 to 40 ms |
-| snare bias | -6 ms | the snare a hair early | | |
+| kick bias | +12 ms (STUMBLE +18) | how late the kick lands | with the snare's -3: the kick sits about 15 ms behind the snare. Shape: the references cannot time a muffled kick (§ the references), so the page plays 0, +12 and +24 | kick mean minus snare mean within 10 to 25 ms |
+| snare bias | -3 ms | the snare a hair early | | |
 | hat bias | +8 ms | the hats sit back | | |
-| wobble | 12 ms (STUMBLE 18) | the drift's stationary spread, shared by every part | clamped with the bias to +-60 (`Cypher.Note`) | worst offset under 60; every note still an onset of its part (`CypherTest`'s probe) |
-| rho | 0.75 per eighth | how slowly the lag breathes | 0 is `humanised`, 1 is a constant | lag-one autocorrelation of the hat offsets over 0.5 |
-| whisper | hats at .25 of the groove's level (STUMBLE: no hat part) | the hats' place in the phrase, not the pad's level | a pad is levelled to .92 like every pad: "whisper" lives in the phrases and in the hat's timbre | the groove's 6 to 14 kHz band at its loudest at least 20 dB under the full band's |
+| wobble | 10 ms (STUMBLE 16) | the drift's stationary spread, shared by every part | clamped with the bias to +-60 (`Cypher.Note`). The references' backbeats sit 5 to 13 ms from the grid on seven of thirteen (a quantized phrase reads 2 to 8 through the same probe) | worst offset under 60; every note still an onset of its part (`CypherTest`'s probe) |
+| rho | 0.4 per eighth (shape) | how slowly the lag breathes | 0 is `humanised`, 1 is a constant. The references show no drift (lag-one autocorrelation of the hats -0.43 to +0.74, mostly near 0), so the breathing lag is the profile's claim, not the references': the page plays 0, 0.4 and 0.75 | lag-one autocorrelation of the hat offsets matches the authored rho within 0.2 |
+| whisper | hats at .25 of the groove's level (STUMBLE: no hat part) | the hats' place in the phrase, not the pad's level | a pad is levelled to .92 like every pad: "whisper" lives in the phrases and in the hat's timbre | the groove's 6 to 14 kHz band at its loudest 18 to 30 dB under the full band's (the references: 16 to 35, median 23) |
+| crack | Crack Snare centroid 2.5 to 3.5 kHz over its first 120 ms | SIZZLE and SNAP on the SKIN snare, dry | the references' snares read 1.3 to 5.3 kHz (median 3.2) through the probe; the prototype's snare reads 7.8 kHz, too bright by an octave | centroid of the snare pad's hard take within 2.5 to 3.5 kHz |
+| dark mix | 95 percent of the groove's energy under 650 Hz | CRUNCH TONE .45, TAPE AGE .70, the room law's shelf -4 dB at 1.2 kHz | eight of thirteen references put 95 percent of their energy under 309 to 635 Hz; the bright five sit at 0.9 to 4.4 kHz (MATINEE's foley may land there) | the groove's 95 percent ceiling under 650 Hz on CARDBOARD and STUMBLE |
 | FOLEY pitch | -5, -7 or -9 semitones by pad | `Speed` after the converter | foley pads skip the kit's CRUNCH; every foley pad ends under 1.5 s so it files as PERC, not LOOP | `drumClass` of every pad from the render; the sampler-order render carries more 6 to 16 kHz energy than the rack-order one on a zap |
 
 ## The three directions
@@ -140,8 +142,8 @@ entry; a round of its own.
   1 percent even with drive. The law stops at 250 Hz and the drive is on. The listening page plays the
   Box Kick at 400, 300 and 250 Hz so the owner can choose, as they did for the SUB pedal's drive.
 - **"Drunk" reads as "sloppy".** The owner heard LOOSE CRATE round 1 as "a bit drum machine like"; the
-  opposite failure is the same page. The page plays CARDBOARD's groove three ways: `staggered`,
-  `humanised` at the same spread, and `behind` alone.
+  opposite failure is the same page, and the references' backbeats are tighter than the profile's words. The
+  page plays CARDBOARD's groove at three widths and three rhos, beside `humanised` and `behind` alone.
 - **Foley reads as a sound-effects library, not a kit.** Every effect is levelled, printed and dealt
   like a drum, kept under 1.5 s (the LOOP floor), and placed where a fill goes on the grooves.
 - **Two converters in series.** A foley pad's print already sampled it at 26 kHz; the kit's CRUNCH would
@@ -223,6 +225,82 @@ is under 0.5), the same take twice is byte-identical, 0.7 s, centroid 4,755 Hz, 
 through the converter at -5 (the images added the metal). The punch's whoosh leads its thud by 114 ms,
 so the pad's onset is the swing, not the hit, which is the cartoon.
 
+## The references, measured (2026-11-19)
+
+Thirteen phone screen recordings from the owner, 16 to 31 s each. They are used for measurement only and are
+never committed, sliced, resampled or shipped. The on-screen titles say what they are: **YouTube "type beats"
+by other producers in the style**, not the producer's own records. Eleven are titled; two were reached from a
+search page and show only a thumbnail. That matters for how far to trust them: they measure how type-beat
+makers hear the style, and a type beat is tidier than a record. If the owner wants the kits measured against
+the records themselves, those are a different thirteen files.
+
+| Ref | On-screen title (research text; nothing below names a kit) |
+|---|---|
+| 01 | "mf doom + joey bada$$ type beat — uppercut" |
+| 02 | "(FREE) MF DOOM Type Beat - Food" |
+| 03 | "(Free) Sad MF DOOM x EARL SWEATSHIRT Type Beat" |
+| 04 | playlist "MF DOOM Type Beats", "(Free) Dark MF DOOM x FRED..." |
+| 05 | "[FREE] MF DOOM type beat - unpredictable" |
+| 06 | untitled (search page; a cartoon cat in a suit) |
+| 07 | "(SOLD) MF DOOM x Joey Bada$$ 90s Boom Bap" |
+| 08 | "(Free) 90s MF DOOM Type Beat - BUT WHAT IF" |
+| 09 | "(FREE) MF DOOM Type Beat | Villainous Boom Bap" |
+| 10 | untitled (search page; a cartoon pianist) |
+| 11 | "[FREE] MF DOOM x MADLIB TYPE BEAT 'ROCK...'" |
+| 12 | "[FREE] MF DOOM X MADLIB TYPE BEAT 'VILLA...'" |
+| 13 | "MF DOOM x Joey Bada$$ x 90s Boom Bap Type Beat" |
+
+`prototype/stagger/measure_references.py` (numpy only) writes `references.json`. Whole-mix statistics from
+compressed phone audio with vocals and samples under the drums; the onset detector is a band-split spectral
+flux. **Calibrated first** on a grid-quantized phrase of the prototype's own kick and snare: the probe times a
+snare to a 2 to 8 ms spread and an open kick to 22 ms, but a muffled kick to 82 ms (its low-band onset builds
+too slowly to place), so **no kick-timing number below is evidence**, and the grid is fitted on the snares.
+The same calibration anchors the spectral numbers: the prototype's open kick reads 0.8 percent above 1 kHz in
+its first 40 ms and 10.0 percent above 400 Hz over 300 ms; its muffled kick (300 Hz, drive 3) reads 0.2 and 0.2.
+
+| Ref | BPM | Kick: first 40 ms above 1 kHz | Kick: above 400 Hz over 300 ms | Kick f0 attack → body | Kick to -20 dB | Snare centroid | Hats: 6 to 14 kHz under full, at loudest | Backbeats within 30 ms of an eighth | Backbeat spread (IQR) | Hat lag-one autocorrelation | 95 % of energy below | Crest |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 01 | 91.6 | 2.5 % | 5.9 % | 63 → 62 Hz | 186 ms | 2.4 kHz | 28.7 dB | 53 % | 58 ms | 0.50 | 316 Hz | 9.2 dB |
+| 02 | 92.1 | 0.7 | 3.0 | 72 → 55 | 261 | 3.3 k | 23.4 | 91 | 12 | 0.74 | 309 | 10.2 |
+| 03 | 90.2 | 2.5 | 8.7 | 58 → 52 | 120 | 3.2 k | 23.3 | 82 | 32 | 0.08 | 635 | 7.5 |
+| 04 | 92.0 | 7.5 | 9.9 | 83 → 70 | 69 | 2.7 k | 21.7 | 78 | 7 | -0.28 | 1,122 | 12.4 |
+| 05 | 93.0 | 10.6 | 13.1 | 76 → 61 | 120 | 3.9 k | 17.6 | 65 | 6 | -0.34 | 1,987 | 12.4 |
+| 06 | 87.0 | 0.3 | 2.2 | 71 → 65 | 335 | 1.3 k | 34.5 | 93 | 13 | -0.43 | 558 | 12.5 |
+| 07 | 89.0 | 0.6 | 4.2 | 50 → 50 | 330 | 2.7 k | 26.2 | 87 | 29 | -0.22 | 629 | 12.6 |
+| 08 | 95.7 | 0.2 | 0.9 | 68 → 91 | 58 | 4.3 k | 21.4 | 31 (grid lost) | 68 | 0.73 | 339 | 12.8 |
+| 09 | 90.9 | 8.6 | 12.7 | 121 → 62 | 108 | 5.3 k | 15.7 | 85 | 13 | -0.07 | 4,359 | 13.8 |
+| 10 | 94.9 | 0.1 | 2.0 | 74 → 40 | 56 | 2.3 k | 32.7 | 59 | 21 | -0.33 | 356 | 15.2 |
+| 11 | 100.9 | 1.6 | 18.9 | 89 → 69 | 86 | 3.0 k | 24.7 | 18 (grid lost) | 80 | -0.07 | 544 | 17.8 |
+| 12 | 88.5 | 22.7 | 28.8 | 75 → 60 | 295 | 3.5 k | 19.9 | 14 (grid lost) | 68 | 0.05 | 1,988 | 15.2 |
+| 13 | 85.0 | 6.3 | 33.8 | 86 → 53 | 113 | 4.8 k | 18.9 | 100 | 5 | -0.07 | 876 | 12.3 |
+
+What the references say, and what they changed in this brief:
+
+- **The muffle holds.** Eight of thirteen kicks carry 0.9 to 5.9 percent above 400 Hz over 300 ms, between the
+  probe's muffled anchor (0.2) and well under its open anchor (10.0); their first 40 ms carry 0.1 to 2.5 percent
+  above 1 kHz, at or under the open anchor's 0.8. Five are bright (10 to 34 percent above 400 Hz), with vocals
+  and samples under them or a brighter kick. Roots 50 to 89 Hz at the attack (one at 121), falling to 40 to 91
+  Hz; decays to -20 dB from 56 to 335 ms. The MUFFLE law stands at 250 to 400 Hz with the drive on.
+- **The mixes are dark.** Eight put 95 percent of their energy under 309 to 635 Hz. The "dark mix" row above is
+  new: CARDBOARD and STUMBLE print darker than the first draft (CRUNCH TONE .45, TAPE AGE .70, the room law's
+  shelf), and the test reads the groove's ceiling.
+- **The snare is a crack, not a sizzle.** Centroids 1.3 to 5.3 kHz (median 3.2) over the first 120 ms. The
+  prototype's snare reads 7.8 kHz through the same probe, an octave too bright; the Crack Snare's target is
+  now 2.5 to 3.5 kHz (the "crack" row).
+- **The hats are a whisper.** The 6 to 14 kHz band at its loudest sits 16 to 35 dB under the full band
+  (median 23). The whisper test's window is now 18 to 30 dB.
+- **The backbeats are closer to the grid than the profile says.** On seven references the snares sit 5 to 13 ms
+  from the grid (a quantized phrase reads 2 to 8 through this probe) and 53 to 100 percent of them are within
+  30 ms of an eighth (quantized: 86). Three are loose (29 to 32 ms) and three lost the grid (the probe, or a
+  beat it cannot follow). So the drunk clock, as a law, is an exaggeration of these references; the biases
+  and the wobble came down (+12, -3, 10 ms), and the page plays three widths.
+- **No drift in the data.** The hats' lag-one autocorrelation is -0.43 to +0.74 and mostly near zero; the two
+  high readings are one tight reference (02) and one whose grid was lost (08). The breathing lag is the
+  profile's description, not something the probe found, so rho's default is 0.4 and the page plays 0, 0.4 and
+  0.75 for the owner to decide.
+- **Not measurable here:** whether the kick drags behind the snare. The probe cannot place a muffled kick
+  (82 ms spread on a quantized phrase). The kick bias is a shape value until a record, or the owner's ear, says.
+
 ## Integration (round 1, the rows that grep)
 
 1. `synth/.../StaggerKits.kt` in `LooseCrateKits`' shape: `Kit`, `Print`, `Part`, `Phrase`, `build`,
@@ -267,6 +345,9 @@ so the pad's onset is the swing, not the hit, which is the cartoon.
 | `staggered` has lag-one autocorrelation 0.74 against `humanised`'s -0.10 | measured | `report.json` |
 | The sampler order carries 2.3 times the 6 to 16 kHz energy of the rack order on a zap | measured | `report.json` |
 | Three GLASS takes correlate under 0.1 | measured | `report.json` |
+| Eight of thirteen references carry under 6 percent of their kick above 400 Hz; eight put 95 percent of their energy under 650 Hz; snare centroids 1.3 to 5.3 kHz; hats 16 to 35 dB under | measured | `references.json`, whole-mix statistics from phone recordings of type beats |
+| The references' backbeats sit 5 to 13 ms from the grid on seven of thirteen, and show no drift | measured | `references.json`; the probe's calibration on a quantized phrase |
+| The kick drags behind the snare | proposed | not measurable: the probe cannot place a muffled kick |
 | Every table setting, the three kits, the pad lists | proposed | nothing rendered in Kotlin |
 | The kick reads as boxy and the clock as drunk | heard? | not heard; round 1's page |
 
@@ -293,8 +374,10 @@ so the pad's onset is the swing, not the hit, which is the cartoon.
 
 ## What would have changed this brief (prompt notes)
 
-- A reference loop per kit, with timestamps, the way LOOSE CRATE had twelve files: the clock's biases
-  and the cutoff would then be measured against something rather than set by shape.
+- The thirteen references arrived after the first draft and are measured above. They are type beats by
+  other producers; if the kits should be measured against the records themselves, those are different files.
+  A reference per kit (which three of the thirteen are CARDBOARD, MATINEE and STUMBLE) would tie each kit's
+  print and clock to a number.
 - Which three kits. The profile names one sound; the three here are my split (the profile, the
   cinematic one, the drunkest one). A fourth from the early instrumental series or a collaborator's
   side is a different kit.

@@ -1,6 +1,6 @@
 """Write OUT/page/index.html and MP3 copies of the demos for the BOROUGH listening page.
 
-    python3 build_page.py OUT_DIR [BEFORE_OUT_DIR]
+    python3 build_page.py OUT_DIR [BEFORE_OUT_DIR [BEFORE_LABEL]]
 BEFORE_OUT_DIR (optional) is an earlier round's build; its grooves become a "before" player on
 each kit sheet so the two rounds can be compared. The round is read from the kick's parameters
 (round 0 drum-machine voices carry `f0`, round 1 acoustic voices carry `f1`).
@@ -125,6 +125,9 @@ LEDE = {
 }
 
 LISTEN_R1 = [
+    'New in this version: the ride lost its dead spot. Its ring used to fade out and come back (7.5 dB on a typical hit): the record chain darkened it so much that only a few cymbal partials were left, and they beat together. It is brighter now and dips under 2.2 dB, smoother than the EMBER ride you approved. The before player is the version you heard.',
+    'New in this version: every kit\'s kicks are set against its loop\'s low-to-mid balance. STOOP DUST came down 5.5 dB and CELLAR BOOM 6.5 dB; DRY ROOM 1.8 dB; the others barely moved.',
+    'Also fixed: open hats that swelled after the stick (the chain cut their click). Every cymbal now peaks at the strike.',
     'New since your last listen: RIDE & RIMS now has a real ride. A03 is a ride cymbal fitted to the ride loop, A04 its bell, and the groove rides eighths with the bell closing every other bar. Before, a closed hat stood in for it.',
     'Before and after: each kit sheet has the round 0 groove last. Does round 1 sound like drums in a room rather than a machine?',
     'Kick: a felt beater on a head, with the air and boom of the shell, rather than a falling sine. Snare: a stick on a head with the wires reacting, rather than tone plus noise.',
@@ -145,7 +148,7 @@ LISTEN = [
 ]
 
 
-def main(out, before=None):
+def main(out, before=None, before_label=None):
     out = Path(out); page = out / 'page'; (page / 'audio').mkdir(parents=True, exist_ok=True)
     man = json.loads((out / 'manifest.json').read_text())
     for w in sorted((out / 'demo').glob('*.wav')):
@@ -162,11 +165,11 @@ def main(out, before=None):
             w = Path(before) / 'demo' / f"{kit['id']}-groove.wav"
             subprocess.run(['ffmpeg', '-v', 'error', '-y', '-i', str(w), '-codec:a', 'libmp3lame', '-b:a', '160k',
                             str(page / 'audio' / f"before-{kit['id']}-groove.mp3")], check=True)
-        slim['before'] = f'round {rnd - 1}'
+        slim['before'] = before_label or f'round {rnd - 1}'
     (page / 'index.html').write_text(PAGE.replace('__LEDE__', html.escape(LEDE[rnd]))
                                      .replace('__MANIFEST__', json.dumps(slim).replace('</', '<\\/')))
     print('page', page)
 
 
 if __name__ == '__main__':
-    main(*sys.argv[1:3])
+    main(*sys.argv[1:4])

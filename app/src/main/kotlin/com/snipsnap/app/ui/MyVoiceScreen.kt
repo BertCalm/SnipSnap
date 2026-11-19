@@ -416,7 +416,7 @@ fun MyVoiceScreen(
                 }
                 if (kept == null) ActionButton("SAVE VOICE", scheme, enabled = idle && name.isNotBlank(), modifier = Modifier.fillMaxWidth(), onClick = ::saveVoice)
                 else {
-                    TapeText("VOICE KEPT ON THIS PHONE", TapeType.pixelSmall, scheme.ink2.tape)
+                    TapeText("Voice kept on this phone", TapeType.pixelSmall, scheme.ink2.tape)
                     if (entry == null) TapeText("Open a kit to save a new pad.", TapeType.pixelSmall, scheme.ink2.tape)
                     else ActionButton(destination?.let { "SAVE ${mode.name} → ${PadNoteMap.labelForPad(it)}" } ?: "NO EMPTY PAD", scheme,
                         enabled = idle && destination != null, modifier = Modifier.fillMaxWidth(), onClick = ::savePad)
@@ -433,7 +433,7 @@ fun MyVoiceScreen(
             it.source["engine"] == ConfluencePersonalWorkshop.ENGINE && !it.source["personalVoiceId"].isNullOrBlank()
         }.distinctBy { it.source["personalVoiceId"] }.filter { it.source["personalVoiceId"] !in phoneIds }
         if (kitVoices.isNotEmpty()) {
-            TapeText("VOICES IN THIS KIT", TapeType.pixelSmall, scheme.ink2.tape)
+            TapeText("Voices in this kit", TapeType.pixelSmall, scheme.ink2.tape)
             for (pad in kitVoices) {
                 val title = pad.source["personalVoiceName"] ?: pad.displayName
                 ActionButton(title, scheme, accessibilityLabel = "Open kit voice $title", enabled = idle,

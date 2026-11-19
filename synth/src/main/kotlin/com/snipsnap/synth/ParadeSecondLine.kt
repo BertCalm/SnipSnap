@@ -5,10 +5,10 @@ import com.snipsnap.json.*
 import kotlin.math.*
 
 /** Native listening candidate based on parade study revision 8. Native RNG/output differ from Python.
- * One bass drummer, one snare drummer and cymbal. No factory or Patch registration yet.
+ * One bass drummer, one snare drummer and cymbal. Versioned patches preserve the selected native renderer.
  */
-internal object ParadeSecondLine {
-    const val MODEL = 2
+object ParadeSecondLine {
+    const val MODEL = 3
     private const val R = Dsp.RATE * Dsp.OVERSAMPLE
     enum class Voice { BASS_OPEN, BASS_MUTED, SNARE_CENTER, SNARE_GHOST, RIMSHOT, CROSS_STICK,
         SNARE_DRAG, SNARE_FLAM, PRESS_BUZZ, SNARE_ROLL, CYMBAL_CRASH, CYMBAL_CHOKE, CYMBAL_TOUCH, BELL, STICK_CLICK, TURNAROUND, TRIANGLE, TRIANGLE_MUTED }
@@ -135,7 +135,12 @@ internal object ParadeSecondLine {
             Voice.RIMSHOT,Voice.CROSS_STICK,Voice.STICK_CLICK -> {
                 val name=voice.name.lowercase();val rng=CalabashDsp.Rng(Dsp.seedFor("PARADE_MEASURED_CONTACT",name,0,take))
                 val (a,b)=CalabashFits.strike(name,v,rng,1.2,contactMs=.25,fit=contacts.getValue(name))
-                CalabashDsp.upsample4(DoubleArray(a.size) { (a[it]+b[it])*v },(1.2*R).roundToInt())
+                val hit=DoubleArray(a.size) { (a[it]+b[it])*v }
+                // A gentler wooden contact has less high-frequency energy. The only
+                // source capture is hard, so this soft-contact law is modeled.
+                val shaped=if(voice==Voice.STICK_CLICK && model>=3 && v<1.0)
+                    CalabashDsp.butter(2,CalabashDsp.Kind.LOW,2500+9500*v,fs=Dsp.RATE).run(hit) else hit
+                CalabashDsp.upsample4(shaped,(1.2*R).roundToInt())
             }
             Voice.BASS_OPEN->skin("bass_open",true,58.0,1.35,3.2,m,v,take)
             Voice.BASS_MUTED->skin("bass_muted",true,58.0,.32,3.2,m,v,take)
