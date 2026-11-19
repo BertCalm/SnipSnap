@@ -262,7 +262,7 @@ Three authored boom-bap kits after the owner's muffled-kick, drunk-clock, foley-
 | Velocity and round robin: saving | Pass | Each kit reloads equal and every saved slice matches its render (`:shell:generateStaggerKits`). |
 | Velocity and round robin: playback | Pass in software | `PadHit.resolve` picks the zone by velocity and deals the takes in order, then repeats (`StaggerKitTest`). No phone has played these kits. |
 | Velocity and round robin: export | MPC 3 verified by read-back; MPC 2 not applicable (the owner's format limit, 2026-11-14) | `StaggerKitTest`, the generator. SFZ and DecentSampler written. No MPC has loaded these kits. |
-| Sound character | CARDBOARD's drums approved in direction ("New sounds are better"); the three kits as kits not heard | The round-2 listening page. |
+| Sound character | CARDBOARD's drums approved in direction ("New sounds are better"); round 2 heard as wanting "a bit of compression" (2026-11-19), which round 2b adds to every kit's print, measured; the kits as kits not yet accepted | The round-2b listening page. |
 
 ## CYPHER kits and THUMP SUB (round 2, 2026-11-12)
 
@@ -1196,6 +1196,14 @@ Four drum kits after the owner's beat-tape reference loops, in the CYPHER shape:
 | Velocity and round robin: saving, playback, export | Pass | Save, reload, pad resolver, MPC 3, SFZ and DecentSampler for all 64 pads; MPC 2 not written (format limit). Owner-reported pass on the phone and the MPC, 2026-11-18 |
 
 
+### Soul Rock Roadhouse crash revision (2026-11-19)
+
+Owner accepted **Broader rock crash revision**: “That sounds better let's continue”.
+Version 3 retains its nine exact synthesized strikes on Roadhouse pad 12, labelled
+Crash. The accepted coupled snare and all other pads retain their earlier audio.
+This is a frozen statistical modal bank, not a newly registered editable engine.
+Phone/MPC hardware acceptance for this revision remains open. See `SOUL_ROCK.md`.
+
 ## Sunroom studio-pop factory collection (2026-11-18)
 
 See [SUNROOM](SUNROOM.md). The owner approved the assembled R10 audition with
@@ -1237,3 +1245,7 @@ The same day, round accord-voices-1 played four new voices, each reading a part 
 - **Sound character: kept by ear, native.** The seven voices, TINE's four tones, the C2 to C5 range, the touch response, the two starter kits and the new voices' dispersed renders (not ESCAPEMENT's), and the round-robin takes, as pinned by `AccordNativePinsTest`, `AccordVoicesPinsTest` and `AccordRoundRobinPinsTest`. Preserve these renders: keys must leave every pinned render byte-identical.
 - **Calibration.** BRUSH, WOOD and TINE keep their frozen VERSION 2 factory gains. The new voices have no factory row: their default performance computes the same normal/hard shared gain the edited-performance path uses, which is how they were heard. Rows were not appended: the generator's reference measurement is checked against the heard gain only to within 1e-12 (`AccordReadoutVoicesTest`), not proved bit for bit, so a frozen row could move the heard renders by a last bit, and the generated table and its provenance would have to be regenerated around the VERSION 2 rows. The cost is two extra acoustic renders on a new voice's first render (about 0.25 to 0.45 s on a desktop JVM), then cached.
 - **Overall: incomplete.** Keygroups (with takes), chord tools, a HOLD decision per voice, device runs of the picker and of the takes, and hardware playback remain open. Round robin and velocity zones are done for pads in software.
+
+### SIDEROOM — cached synthesized drum family
+
+Five distinct approved kits are implemented on the SKINS shelf with ten pads each. Three velocity layers × three takes survive native rendering, saving, replay and playback; the roll is owner accepted and the model-3 Original fill is owner accepted. Focused software tests verify all 450 variants and MPC export read-back. **MPC 3/phone hardware verification remains open.** The owner’s 2026-11-14 MPC2 combined-grid exception applies: its first-take velocity export is a format limit, not a new blocking gate. The generic slice-map capture remains parked by the owner; software checks do not establish SIDEROOM’s physical MPC3 cycling behavior. Separate Soft/Medium/Hard discrete-WAV cycling companions now preserve all takes in both formats, verified in software. They are an explicit fallback, not closure of the combined grid gate. No Android build/device check is claimed. Melodic voices, keygroups, chord tools and string STRUM do not apply. This is a versioned cached-synthesis bank, not an editable Kotlin spectral engine. See [SIDEROOM](SIDEROOM.md) for build steps and evidence.

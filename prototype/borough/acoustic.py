@@ -188,8 +188,12 @@ def ride(p, vel=1.0, rng=None, seconds=None, kind='RIDE'):
 
 CHAIN = dict(distance=(0, .7), comp=(0, 1), drive=(0, 1), lp=(1200, 16000), tilt=(-12, 6))
 SPACES = {
-    'kick': dict(f1=(38, 110), t1=(.08, 1.2), alpha=(.6, 1.6), beater_ms=(.5, 3.5), air=(0, 1), r=(0, .5),
-                 reso=(1.0, 1.15), hum=(0, 1), click=(0, .3), **CHAIN),
+    # t1 and reso stay inside EMBER's approved kick (t1 0.16-0.95 s, second head 2.5% above the batter).
+    # Round 1 opened them to 1.2 s and 15%; the descriptor sees only the ~0.3 s before the next hit, and
+    # STOOP's fit went to t1 1.18 s with the heads 12% apart: an 11.7 Hz beat through a squashed,
+    # driven second-long boom, which the owner heard as "the speaker is overblown" (round 1.3).
+    'kick': dict(f1=(38, 110), t1=(.08, .95), alpha=(.6, 1.6), beater_ms=(.5, 3.5), air=(0, 1), r=(0, .5),
+                 reso=(1.0, 1.04), hum=(0, 1), click=(0, .3), **CHAIN),
     'snare': dict(f1=(150, 340), t1=(.04, .5), alpha=(.6, 1.6), r=(.05, .7), buzz=(.05, 1), wire=(.2, 3),
                   stick_ms=(.15, .8), crack=(0, .5), **CHAIN),
     'hat': dict(tune=(0, 1), damp=(0, 1), buzz=(0, 1), **CHAIN),

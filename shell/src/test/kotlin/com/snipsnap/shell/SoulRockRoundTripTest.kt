@@ -36,6 +36,10 @@ class SoulRockRoundTripTest {
                         assertEquals("coupled-snare-snap-rattle", pad.source["sourceModel"])
                         assertTrue(pad.source.keys.none { it.startsWith("synthesis.") })
                     }
+                    if (t == SoulRockKits.Choice.ROADHOUSE && pad.slot == 12) {
+                        assertEquals("Crash", pad.displayName)
+                        assertEquals("statistical-modal-rock-crash-bloom", pad.source["sourceModel"])
+                    }
                     assertEquals(SoulRockKits.VERSION.toString(), pad.source["bankVersion"])
                     assertNotNull(pad.source["kit"])
                     assertTrue(pad.oneShot)

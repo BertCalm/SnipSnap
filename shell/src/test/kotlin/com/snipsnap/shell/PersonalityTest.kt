@@ -1475,9 +1475,9 @@ class PersonalityTest {
      * shrink: [caseLawWaiverCeiling] is today's size and the stale-entry test fails on any
      * entry the scan no longer finds. Fix a site, delete its entry, lower the ceiling.
      * What is left is the MY VOICE and CONFLUENCE status lines and the gathering preview
-     * status, which androidTests read back as exact text; the five sentences that name THE
-     * LIBRARY as a place, which wait on an owner ruling; and the X-ray's readout of control
-     * names. The ceiling went 14 -> 20 once, when the wide sinks joined the scan; shrink-only since.
+     * status, which androidTests read back as exact text, and the X-ray's readout of control
+     * names. The ceiling went 14 -> 20 once, when the wide sinks joined the scan, and 20 -> 15
+     * when the five sentences naming the LIBRARY went to sentence case; shrink-only since.
      */
     private val caseLawWaiver: Set<String> = setOf(
         "ConfluenceVoicesScreen.kt:SETTINGS CHANGED · HEAR BEFORE SAVING",
@@ -1494,16 +1494,10 @@ class PersonalityTest {
         "MyVoiceScreen.kt:PREVIEW STOPPED",
         "MyVoiceScreen.kt:RECORDING · HOLD ONE STEADY AH OR OO",
         "PadSheetScreen.kt:PREVIEW READY · ORIGINAL KEPT",
-        // Awaiting owner ruling: each names THE LIBRARY, used as a place name, and the owner has not ruled on its case.
-        "PadSheetScreen.kt:ROOMS IN THE LIBRARY · ROOM PLAYS THE PAD INSIDE ONE",
-        "MurmurKeptInstrumentPicker.kt:THREE KEPT SETTINGS. CHOOSE AN INSTRUMENT FOR THE LIBRARY.",
-        "CairnSingStudyPicker.kt:ONE VOICE, FIVE SETTINGS. CHOOSE AN INSTRUMENT FOR THE LIBRARY.",
-        "ExportScreen.kt:MISSING FROM THE LIBRARY: \${shown.missing.joinToString(\", \")}",
-        "KitsScreen.kt:KITS · THE LIBRARY EVERY PROJECT SHARES",
         // Not a sentence: a readout of four control names and their values (L, P, TUNE, MUTE), caught only by length.
         "XRayScreen.kt:L \${fmt(pad.level)}  P \${fmt(pad.pan)}  TUNE \${fmtInt(pad.tuneCoarse)}/\${fmtInt(pad.tuneFine)}  MUTE \${fmtInt(pad.muteGroup)}",
     )
-    private val caseLawWaiverCeiling = 20
+    private val caseLawWaiverCeiling = 15
 
     @Test
     fun `law - a sentence in a toast, dock line, note, hint or confirm is sentence case, wherever it is written`() {
