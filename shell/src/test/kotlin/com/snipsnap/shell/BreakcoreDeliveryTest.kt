@@ -11,4 +11,8 @@ class BreakcoreDeliveryTest {
     @Test fun `SHATTER keeps every velocity and take through source replay, playback and exports`() = run("shatter")
     @Test fun `SOUNDCLASH keeps every velocity and take through source replay, playback and exports`() = run("soundclash")
     @Test fun `REDLINE keeps every velocity and take through source replay, playback and exports`() = run("redline")
+    @Test fun `LULL keeps every velocity and take through source replay, playback and exports`() = run("lull")
+    @Test fun `STROBE keeps every velocity and take through source replay, playback and exports`() = run("strobe")
+    @Test fun `CARTRIDGE keeps every velocity and take through source replay, playback and exports`() = run("cartridge")
+    @Test fun `BARRICADE keeps every velocity and take through source replay, playback and exports`() = run("barricade")
 }

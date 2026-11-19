@@ -818,7 +818,7 @@ tasks.register<JavaExec>("generateCuttingsKits") {
     args(providers.gradleProperty("cuttingsOutput").orNull ?: "${rootDir}/testkit/cuttings-kits")
 }
 
-for (kitName in listOf("shatter", "soundclash", "redline")) {
+for (kitName in listOf("shatter", "soundclash", "redline", "lull", "strobe", "cartridge", "barricade")) {
     tasks.register<JavaExec>("generate${kitName.replaceFirstChar { it.uppercase() }}Kit") {
         group = "distribution"
         description = "Render and verify the ${kitName.uppercase()} breakcore shelf kit, with its listening files and archives."
