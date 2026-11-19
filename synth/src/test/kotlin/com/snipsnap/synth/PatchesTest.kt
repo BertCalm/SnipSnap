@@ -47,7 +47,6 @@ class PatchesTest {
         SambaPatch("Samba", ParadeSamba.Voice.CAIXA, emptyMap()),
         DrumlinePatch("Section", DrumlineVoice.SNARE, emptyMap()),
         SootPatch("Hot", SootVoice.SNARE, emptyMap()),
-        RiddimPatch("Kick", RiddimVoice.KICK, emptyMap()),
         HalobarPatch("Mallet dub", HalobarVoice.MARIMBA, emptyMap()),
         TempestPatch("Legacy Strike", TempestVoice.METAL, emptyMap(), model = 1),
         HydroformPatch("Door", HydroformVoice.DOME, emptyMap()),

@@ -156,6 +156,7 @@ object EngineCatalog {
         "EMBER" to EngineEntry(listOf(EngineCategory.DRUMS), "A 1962 jazz club: sticks, brushes, mallets and Latin hands"),
         "SAMBA" to EngineEntry(listOf(EngineCategory.DRUMS), "Surdo, caixa, repinique, tamborim and metal percussion"),
         "KINDRED" to EngineEntry(listOf(EngineCategory.DRUMS), "One analog voice re-struck: diving kicks, zaps, FM toms"),
+        "RIDDIM" to EngineEntry(listOf(EngineCategory.DRUMS), "Dancehall drums: booms, ratchet, ting, woods and bronze"),
         "CAIRN" to EngineEntry(listOf(EngineCategory.BELLS, EngineCategory.DRUMS), "Stones that knock, tumble, grind, sing and roll in a bowl"),
     )
 
