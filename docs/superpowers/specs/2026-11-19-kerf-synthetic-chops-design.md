@@ -2,16 +2,18 @@
 
 Version 1.0 · 2026-11-19
 
-Status: rounds 1 and 2a built (the Kotlin renderer and the Kotlin fitter; see "As built" at
-the end). The in-app action that would call them (round 2b) and the engine are not written.
-The owner has heard the Python prototype once and answered the round-1 Kotlin page with
-"Sounds good, continue" (2026-11-19). The round-2a kits have not been heard. KERF is a
-working name (a kerf is the sliver a saw removes); no maker or product is named by it.
+Status: rounds 1, 2a and 2b built (the Kotlin renderer, the Kotlin fitter, and the kit
+action with its command; see "As built" at the end). The screen (round 2c) and the engine
+are not written. The owner has heard the Python prototype once and answered the round-1
+Kotlin page with "Sounds good, continue" (2026-11-19). Kits made by the Kotlin code from a
+loop have not been heard. KERF is a working name (a kerf is the sliver a saw removes); no
+maker or product is named by it.
 
 Owner decisions, 2026-11-19 ("I take your recommendations proceed"): the patch format is
 carried the recommended way (section 6, A); velocity starts from the ghost-against-snare
 comparison (section 11, now run); the kits stay at BLEED 1.0 and SLOP 0.5 until a listen
-says otherwise.
+says otherwise. Later the same day ("I take your recommendation"): KERF labels its own
+pads from what it measures, in place of the capture classifier.
 
 Repository truth: read at `5f208336`. Grepped and found: `Chopper.byTransients`,
 `Transients.detect`, `Fft.forward` / `Fft.inverse` (`:audio`), `Desample.nearest` and
@@ -407,8 +409,10 @@ a layer is not always a separate drum.
 - **R2a.** Built. `KerfFit` and `kitFromLoop`. Gate, met by measurement: fit metrics within
   the section 16 figures on the same slices. Gate, open: a listen to kits the Kotlin code
   made from a loop.
-- **R2b.** The tool entry in `:shell` beside `desamplePad`, the pad recipe field, and the
-  screen. Gate: the owner chops a loop of their own in the app.
+- **R2b.** Built. The kit action in `:shell` beside `desamplePad`, the pad recipe field,
+  KERF's own labels, and `snipsnap kerf`.
+- **R2c.** The pad sheet's rules for a twin and the screen. Gate: the owner chops a loop of
+  their own in the app and makes it a KERF kit.
 - **R3.** The ghost-against-snare comparison, then velocity and round robin. Gate: the
   owner's velocity/round-robin gate through render, save, playback and export.
 - **R4.** Engine registration, voices and presets after listening, genre kits, audition,
@@ -616,3 +620,47 @@ bounds.
 
 Not done in this round, each still owed: R2b entirely; the 88.2 kHz assertion; any listen
 to a kit made by `kitFromLoop`.
+
+## As built: round 2b, the kit action (2026-11-19)
+
+Read at `f09a14fe`. What exists:
+
+- `KerfRecipe.kt` and a `kerf` field on `PadRecipe`: the hit's numbers, both neighbours,
+  BLEED, SLOP, the stored draw, the controls and the renderer model. A recipe has one
+  source, a patch or a twin. A recipe with a twin writes version 4, so an older build
+  refuses the pad instead of reading it as empty.
+- `KitBuilderModel.kerfPad`, `kerfKit`, `unkerfPad` (`:shell`), beside `desamplePad`.
+- `KerfFit.label`: KERF's own drum class for a chop.
+- `snipsnap kerf <kit-dir> <pad> | --all [--bleed] [--slop] [--undo]`, and its entry in
+  `docs/CLI.md`.
+
+How it lands, and why:
+
+- **The action is per pad, on a kit that already exists**, not a new "loop to kit" door.
+  The app already chops a loop into a kit; KERF then replaces pads with their twins. The
+  neighbours are the pads either side in slot order, wrapping, which in a chopped kit is
+  the loop's order. This reuses every screen and rule the chop already has.
+- **Every neighbour is measured from its capture, before anything is written**, so `--all`
+  never fits a twin of a twin, and each pad is fitted once.
+- **The undo refuses a twin with anything riding it.** A treatment over a twin puts the
+  twin's own take on top of the bin; popping it would hand back the twin as if it were the
+  capture. Any plain audio rewrite clears KERF's stamp, as it clears DE-SAMPLE's.
+- **The label.** The prototype's rules, folded into the app's classes: a stacked hit goes
+  with the drum it mostly is, a ghost note is a snare. On the owner's two test loops the
+  capture classifier had called most kicks PERC; KERF's labels put a kick on each of the
+  four kick positions of the first loop (0.00, 1.62, 2.66, 4.33 s) and a snare on each
+  backbeat. Hats are still uneven: some quiet ones come out as snares.
+
+Tested (`CliTest`, `KerfFitTest`): a pad becomes a twin with both neighbours and the asked
+SLOP; the saved recipe renders the saved length; the undo is byte-identical and restores
+the old label; a pad that is not a twin and a twin with a treatment over it are both
+refused untouched; `--all` and `--all --undo`; a recipe survives JSON and plays the same; a
+recipe cannot hold a patch and a twin; a rack still rides a twin; labels on six known pads.
+
+Not done in this round, each still owed:
+
+- **R2c.** `PadSheet` does not know a twin yet, so the pad sheet shows no KERF card and no
+  undo for one; the app has no button. A twin whose treatment is undone keeps its stamp but
+  loses its recipe, and then `kerf --undo` refuses it while the capture is still in the bin.
+  That state needs the pad sheet's rules, as DE-SAMPLE has them.
+- The 88.2 kHz assertion; the low-end gap of round 2a; any listen to a twin made this way.

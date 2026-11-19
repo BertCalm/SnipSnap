@@ -1,7 +1,7 @@
 package com.snipsnap.synth
 
 import com.snipsnap.audio.Chopper
-import com.snipsnap.audio.Classifier
+import com.snipsnap.audio.DrumClass
 import com.snipsnap.audio.Cleanup
 import com.snipsnap.audio.Fft
 import com.snipsnap.audio.Snip
@@ -104,7 +104,9 @@ object KerfFit {
     }
 
     /** One pad of a kit made by [kitFromLoop]. */
-    class FittedPad(val pad: KerfPad, val sourceFrame: Int, val seconds: Double)
+    class FittedPad(val pad: KerfPad, val sourceFrame: Int, val seconds: Double) {
+        fun recipe() = KerfRecipe(pad.patch, pad.prev, pad.next, pad.bleed, pad.slop, pad.draw ?: KerfRender.drawFor(pad.patch.seed))
+    }
 
     /**
      * Chop a loop where its hits are and fit every chop: the tool's whole job, with no screen on it yet.
@@ -129,13 +131,63 @@ object KerfFit {
         }
         val fitted = chops.filter { it.second.size >= WINDOW * 4 }.mapIndexed { i, (frame, samples) ->
             val audio = if (samples.size > limit) samples.copyOf(limit) else samples
-            Triple(frame, fit(audio, seedFor(name, frame, i)), Classifier.classify(Snip(audio, 1, RATE)).drumClass.name)
+            Triple(frame, fit(audio, seedFor(name, frame, i)), audio)
         }
-        return fitted.mapIndexed { i, (s, patch, cls) ->
+        val loudest = fitted.maxOfOrNull { peak(it.third, 0, it.third.size) } ?: 1f
+        return fitted.mapIndexed { i, (s, patch, audio) ->
+            val cls = label(audio, peak(audio, 0, audio.size) / loudest).name
             val prev = fitted[(i - 1 + fitted.size) % fitted.size].second; val next = fitted[(i + 1) % fitted.size].second
             FittedPad(KerfPad(i + 1, cls, patch, prev.takeIf { fitted.size > 1 }, next.takeIf { fitted.size > 1 }, bleed, slop, null),
                 s, patch.seconds)
         }
+    }
+
+    /**
+     * What kind of drum a chop is, from the chop itself and how loud it is beside the loudest chop of its loop
+     * ([relativePeak], 1 for the loudest). The owner chose this over the app's classifier on 2026-11-19.
+     *
+     * The app's `Classifier` is built for single captured hits and reads a break badly: on the owner's loops it called
+     * most kicks PERC and most hats SNARE, because the loops are dark (a hat here has almost nothing above 6 kHz) and a
+     * chop carries its neighbours. Inside one loop, level is the better clue: hats and ghost notes are quiet beside
+     * the kick and snare. These are the prototype's rules, with its two extra kinds folded into the app's classes: a
+     * stacked hit goes with whichever of its drums it is mostly, and a ghost note is a snare.
+     */
+    fun label(chop: FloatArray, relativePeak: Float): DrumClass {
+        val head = min(chop.size, (0.12 * RATE).toInt())
+        var size = 2048; while (size < head) size = size shl 1
+        val re = FloatArray(size); val im = FloatArray(size)
+        for (i in 0 until head) re[i] = (chop[i] * (0.5 - 0.5 * cos(2 * PI * i / max(head - 1, 1)))).toFloat()
+        Fft.forward(re, im)
+        var total = 1e-20; var sub = 0.0; var low = 0.0; var mid = 0.0; var pres = 0.0; var air = 0.0; var weighted = 0.0
+        for (k in 0..size / 2) {
+            val f = k.toDouble() * RATE / size; val p = re[k].toDouble() * re[k] + im[k].toDouble() * im[k]
+            total += p; weighted += f * p
+            when { f < 20 -> {}; f < 120 -> sub += p; f < 300 -> low += p; f < 2000 -> mid += p; f < 6000 -> pres += p; else -> air += p }
+        }
+        sub /= total; low /= total; mid /= total; pres /= total; air /= total
+        val centroid = weighted / total; val lows = sub + low; val seconds = chop.size.toDouble() / RATE
+        return when {
+            lows > 0.6 -> DrumClass.KICK
+            centroid > 2800 && pres + air > 0.5 && relativePeak < 0.6 -> if (ringSeconds(chop) > 0.5 && seconds > 0.2) DrumClass.HAT_OPEN else DrumClass.HAT_CLOSED
+            relativePeak > 0.5 -> if (lows > 0.35) DrumClass.KICK else DrumClass.SNARE
+            mid + low > 0.4 -> DrumClass.SNARE
+            else -> DrumClass.PERC
+        }
+    }
+
+    /** How long the chop would take to fall 60 dB at the rate it is falling: a line through its envelope in dB. */
+    private fun ringSeconds(chop: FloatArray): Double {
+        val env = DoubleArray(chop.size); var e = 0.0; var ip = 0
+        for (i in chop.indices) { e = 0.995 * e + 0.005 * abs(chop[i]); env[i] = e; if (e > env[ip]) ip = i }
+        var n = 0; var st = 0.0; var sy = 0.0; var stt = 0.0; var sty = 0.0
+        for (i in ip until chop.size) {
+            val db = 20 * log10(env[i] / env[ip] + 1e-9)
+            if (db <= -30) continue
+            val t = (i - ip).toDouble() / RATE; n++; st += t; sy += db; stt += t * t; sty += t * db
+        }
+        if (n <= 50) return 0.1
+        val slope = (n * sty - st * sy) / (n * stt - st * st)
+        return min(5.0, -60 / min(slope, -1e-3))
     }
 
     /** Audio before the first detected cut counts as a hit when its peak is at least this share of the loop's. */
@@ -143,7 +195,8 @@ object KerfFit {
 
     private fun peak(x: FloatArray, from: Int, to: Int): Float { var m = 0f; for (i in from until to) m = max(m, abs(x[i])); return m }
 
-    private fun seedFor(vararg parts: Any): Long = Dsp.seedFor(*parts).toLong() and 0x7fffffffL
+    /** A stable seed for a chop, from whatever names it: the same names give the same noise and the same cut. */
+    fun seedFor(vararg parts: Any): Long = Dsp.seedFor(*parts).toLong() and 0x7fffffffL
 
     // ---------------------------------------------------------------- partials
 

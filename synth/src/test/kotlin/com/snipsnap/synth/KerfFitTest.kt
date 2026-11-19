@@ -84,6 +84,35 @@ class KerfFitTest {
         assertTrue(db(top(flat) / top(mix)) < -6.0, "with layers off the hat should be mostly gone: ${db(top(flat) / top(mix))} dB")
     }
 
+    @Test fun `a chop is called what it is, with level deciding between a snare and what only sounds like one`() {
+        val names = mapOf(1 to "KICK", 2 to "KICK", 5 to "SNARE", 6 to "SNARE", 11 to "HAT_CLOSED", 12 to "HAT_CLOSED")
+        val audio = names.keys.associateWith { KerfRender.render(pad(it).patch, edge = false) }
+        val loudest = audio.values.maxOf { a -> a.maxOf { abs(it) } }
+        for ((n, want) in names) {
+            val a = audio.getValue(n)
+            assertEquals(want, KerfFit.label(a, a.maxOf { abs(it) } / loudest).name, "pad $n (${pad(n).drumClass} in the bank)")
+        }
+        // the same hat called loud is no longer a hat: inside a loop, a bright hit as loud as the snare is a snare
+        val hat = audio.getValue(11)
+        assertEquals("SNARE", KerfFit.label(hat, 1f).name)
+    }
+
+    @Test fun `a twin's recipe survives a save and plays the same`() {
+        val kit = KerfBank.kits.getValue("B"); val p = kit.first { it.pad == 5 }
+        val kerf = KerfRecipe(p.patch, p.prev, p.next, bleed = 1.5, slop = 0.25, draw = p.draw, controls = KerfRender.Controls(cut = 0.8, decay = 0.7, tuneSemitones = -2.0))
+        val recipe = PadRecipe(kerf = kerf)
+        val back = PadRecipe.fromJsonText(recipe.toJsonText())
+        assertEquals(recipe, back)
+        assertEquals(PadRecipe.KERF_VERSION, com.snipsnap.json.Json.parse(recipe.toJsonText()).obj().getValue("recipe").int())
+        assertTrue(recipe.render().samples.contentEquals(back.render().samples))
+        assertEquals(KerfRender.toSnip(KerfRender.chopped(p.patch, p.prev, p.next, 1.5, 0.25, kerf.controls, p.draw).samples).samples.toList(), recipe.render().samples.toList())
+        // one source, not two
+        assertFailsWith<IllegalArgumentException> { PadRecipe(patch = ThumpPatch("k", ThumpVoice.KICK, emptyMap()), kerf = kerf) }
+        // and a rack still rides it
+        val racked = PadRecipe(kerf = kerf, fx = FxChain(eq = mapOf("BASS" to .6f)))
+        assertTrue(!racked.render().samples.contentEquals(recipe.render().samples))
+    }
+
     @Test fun `the same slice fits to the same numbers`() {
         val x = KerfRender.render(pad(5).patch, edge = false)
         assertEquals(KerfFit.fit(x, 3), KerfFit.fit(x, 3))
