@@ -305,15 +305,18 @@ Measured (Python probes): SPEED's hum kick rises from 53.8 to 73.3 Hz and shorte
 bends from 103 to 90 Hz; BLUE's groove never goes quiet (quietest tenth 12.5 dB under the loudest), from the ride,
 which rings over a second six times a bar; easing the brush sweep from .35 to .20 moved it under 1 dB.
 
-**Round 0b, BLUE's brushes.** "The brush snare is too harsh and overbearing" (the owner, 2026-11-18). Round 0 had
-set the brush tap's mic close and its warmth off (DISTANCE 0, WARMTH 0) and struck the backbeat at .90 and .95. It
-now takes EMBER's approved "Brush Tap" exactly (BUZZ .6, DISTANCE .4, WARMTH .35) and lays the backbeat in at .45
-and .50. Measured on dry stems on one scale (the brush taps alone against the rest of the kit): peaks 7.0 dB down
-(round 0: 4.0) and the 2 to 6 kHz band 7.6 dB down (round 0: 4.3); the overall energy is unchanged (6.2 dB down),
-since the softer tap rings longer. A first try at .65 moved the groove under 1 dB: a hit's level follows its
-velocity gently (`touch`), and the room's compressor evens it again. The tap's centroid fell from 1,109 to 768 Hz.
+**Round 0c, BLUE's brush sweep.** "The brush snare is too harsh and overbearing" (the owner, 2026-11-18). Round 0b
+read it as the brush tap and softened that; the owner corrected it: "It's the brush sweep that was harsh and
+overbearing". Round 0c returns the tap to round 0 exactly (byte-identical) and fixes the sweep. Round 0 had swept
+faster with the mic close and no warmth (SPEED .45, DISTANCE 0, WARMTH 0); its loudest band was 2 to 6 kHz. The sweep
+now takes EMBER's approved "Slow Sweep" exactly (SPEED .1, DISTANCE .4, WARMTH .35), at weight .12 and .10, and has its
+own fader (.35), since a note's level follows its weight only gently (`touch`, never under 0.35 of full): the slow
+sweep at weight .12 alone measured 3.7 dB under the rest of the kit, louder than round 0's 5.2, because it swishes
+longer. Measured on dry stems on one scale, the sweep against the rest of the kit: 12.8 dB down (round 0: 5.2) and the
+2 to 6 kHz band 7.8 dB down (round 0: level with it, 0.1). The groove's quietest moments sit 15 dB under its loudest:
+the ride. Lesson for the kits: a part that should sit far back needs a fader, not only a soft weight.
 
-[Expansion round 0 listening page](https://claude.ai/artifact/Q3rZ8po8ZaeJs9E4tNd86s) (private to the owner; round 0b
+[Expansion round 0 listening page](https://claude.ai/artifact/Q3rZ8po8ZaeJs9E4tNd86s) (private to the owner; round 0c
 beside round 0 for BLUE).
 
 ## Gates
