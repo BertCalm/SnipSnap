@@ -392,6 +392,51 @@ class SongPlanStoreTest {
     }
 
     @Test
+    fun `a section's bars round-trip, and a song with no cut writes the file it always wrote`() {
+        val p = SongPlan(7, listOf(PlanSection("theme", ClipRef.CAPTURED, repeats = 2, bass = true, pullUp = false), PlanSection("the turn", "fill", pullUp = true)))
+        SongPlanStore.save(dir, "Kitchen", p)
+        val written = File(dir, SongPlanStore.FILE_NAME).readText()
+        assertTrue("bars" !in written, "no cut, no field")
+        // Cutting and putting the whole clip back is the same bytes.
+        SongPlanStore.save(dir, "Kitchen", p.withBars(0, 2)!!.withBars(0, null)!!)
+        assertEquals(written, File(dir, SongPlanStore.FILE_NAME).readText())
+
+        val cut = p.withBars(1, 3)!!
+        SongPlanStore.save(dir, "Kitchen", cut)
+        assertEquals(cut, SongPlanStore.load(dir, "Kitchen"))
+        assertEquals(listOf<Int?>(null, 3), SongPlanStore.load(dir, "Kitchen")!!.sections.map { it.bars })
+        assertTrue(File(dir, SongPlanStore.FILE_NAME).readText().filterNot { it.isWhitespace() }.contains(""""bars":3"""))
+    }
+
+    @Test
+    fun `a song kept before bars existed loads with the whole clip, and a bars field that is not a count is read as none`() {
+        File(dir, SongPlanStore.FILE_NAME).writeText(
+            """{"version":1,"plans":{"Kitchen":{"seed":0,"sections":[""" +
+                """{"name":"theme","clip":"captured","repeats":2,"bass":true,"pullUp":false,"drop":true},{"name":"the turn","clip":"fill"}]}}}""",
+        )
+        val p = SongPlanStore.load(dir, "Kitchen")!!
+        assertEquals(listOf<Int?>(null, null), p.sections.map { it.bars })
+        assertTrue(p.sections[0].drop && p.sections[0].repeats == 2, "the fields it had are as they were")
+        File(dir, SongPlanStore.FILE_NAME).writeText(
+            """{"version":1,"plans":{"Kitchen":{"seed":0,"sections":[""" +
+                """{"name":"a","clip":"fill","bars":0},{"name":"b","clip":"fill","bars":"2"},{"name":"c","clip":"fill","bars":-3},{"name":"d","clip":"fill","bars":2}]}}}""",
+        )
+        assertEquals(listOf<Int?>(null, null, null, 2), SongPlanStore.load(dir, "Kitchen")!!.sections.map { it.bars })
+    }
+
+    @Test
+    fun `bars is at least one, a copy and a move keep it, and a different clip takes it back`() {
+        assertFailsWith<IllegalArgumentException> { PlanSection("a", "fill", bars = 0) }
+        val p = SongPlan(0, listOf(PlanSection("a", ClipRef.CAPTURED), PlanSection("b", ClipRef.TIGHT))).withBars(0, 2)!!
+        assertEquals(1, p.withBars(0, -4)!!.sections[0].bars, "held to one bar")
+        assertEquals(2, p.duplicated(0)!!.sections[1].bars, "a copy keeps it")
+        assertEquals(2, p.moved(0, 1)!!.sections[1].bars, "a move keeps it")
+        assertEquals(2, p.withClip(0, ClipRef.CAPTURED)!!.sections[0].bars, "the same clip is not a different one")
+        assertNull(p.withClip(0, ClipRef.TIGHT)!!.sections[0].bars, "a different clip has its own length")
+        assertNull(p.withBars(5, 2))
+    }
+
+    @Test
     fun `yours references round-trip their number`() {
         assertEquals(2, ClipRef.yoursId(ClipRef.yours(2)))
         assertNull(ClipRef.yoursId("captured"))

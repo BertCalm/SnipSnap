@@ -286,19 +286,21 @@ internal class SongKeeper(
     }
 
     /**
-     * KEEP THIS ORDER: [played] (the section of every pass heard, in order,
-     * from [com.snipsnap.shell.SongCursor.played]) becomes the song, each
-     * run of one section kept as that section played that many times. It is
-     * an edit like any other, so UNDO puts the song back.
+     * KEEP THIS ORDER: [played] (every pass heard, in order, from
+     * [com.snipsnap.shell.SongCursor.heard]) becomes the song, each run of
+     * whole passes of one section kept as that section played that many
+     * times and a pass cut at a bar line as a shorter section
+     * ([com.snipsnap.kit.PlanSection.bars]). It is an edit like any other,
+     * so UNDO puts the song back.
      */
-    fun keepOrder(played: List<Int>) {
+    fun keepOrder(played: List<Arranger.Heard>) {
         val k = kept ?: return
         val laid = plan ?: return
-        if (played.isEmpty() || played.any { it !in laid.sections.indices } || laid.sections.size != k.sections.size) {
+        if (played.isEmpty() || played.any { it.section !in laid.sections.indices } || laid.sections.size != k.sections.size) {
             toast(Copy.SONG_KEEP_NOTHING)
             return
         }
-        val made = Arranger.playedOrder(k, laid.sections.map { it.clip.bars }, played) ?: return
+        val made = Arranger.heardOrder(k, laid.sections.map { it.clip.bars }, played) ?: return
         if (made.plan == k) {
             toast(Copy.SONG_KEEP_SAME)
             return
