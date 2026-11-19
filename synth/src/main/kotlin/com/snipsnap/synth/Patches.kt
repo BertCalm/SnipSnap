@@ -73,6 +73,7 @@ object Patches {
             SkinPatch.ENGINE -> SkinPatch.fromJsonValue(value)
             BackwashPatch.ENGINE -> BackwashPatch.fromJsonValue(value)
             BreakerPatch.ENGINE -> BreakerPatch.fromJsonValue(value)
+            SecondlinePatch.ENGINE -> SecondlinePatch.fromJsonValue(value)
             SambaPatch.ENGINE -> SambaPatch.fromJsonValue(value)
             DrumlinePatch.ENGINE -> DrumlinePatch.fromJsonValue(value)
             SootPatch.ENGINE -> SootPatch.fromJsonValue(value)
