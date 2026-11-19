@@ -5,16 +5,17 @@ import com.snipsnap.json.JsonException
 import com.snipsnap.json.JsonValue
 
 /**
- * A reproducible finite paired-harp gesture. Root, strike energy, model and exact seed
- * travel beside the controls; string, current and venue states are rebuilt on render.
- * The saved model selects its original synthesis and control defaults. Finite models
- * refuse HOLD rather than saving an unsupported loop.
+ * A reproducible NACRE gesture. Root, strike energy, model and exact seed travel beside the
+ * controls; string, current and venue states are rebuilt on render. The saved model selects its
+ * original synthesis and control defaults. Finite models (1 to 7) refuse HOLD rather than saving
+ * an unsupported loop; only GROTTO's model 8 and CONCH's model 9 have a held loop, so only they save
+ * a nonzero HOLD. GROTTO plays C2 to C4 and CONCH C2 to C5 ([Nacre.midiRange]).
  */
 data class NacrePatch(
     override val name: String,
     val voice: NacreVoice,
     override val macros: Map<String, Float>,
-    val midi: Int = Nacre.DEFAULT_MIDI,
+    val midi: Int = Nacre.defaultMidi(voice),
     val velocity: Float = 1f,
     val seed: Long = Nacre.DEFAULT_SEED,
     val model: Int = Nacre.defaultModel(voice),
@@ -26,8 +27,11 @@ data class NacrePatch(
         require(midi in Nacre.MIN_MIDI..Nacre.MAX_MIDI) {
             "NACRE midi must be ${Nacre.MIN_MIDI}..${Nacre.MAX_MIDI}"
         }
+        require(midi in Nacre.midiRange(voice)) { "NACRE ${voice.name} midi must be ${Nacre.midiRange(voice)}" }
         require(velocity.isFinite() && velocity in 0f..1f) { "NACRE velocity must be 0..1" }
-        require((macros["HOLD"] ?: 0f) == 0f) { "NACRE prototype supports finite gestures only; HOLD must be 0" }
+        require((macros["HOLD"] ?: 0f) == 0f || NacreModels.supportsHold(model)) {
+            "NACRE model $model supports finite gestures only; HOLD must be 0"
+        }
     }
 
     override val engine get() = ENGINE
@@ -70,8 +74,8 @@ data class NacrePatch(
             if (rawMacros is JsonValue.Obj) for ((key, raw) in rawMacros.entries) {
                 val number = raw.num()
                 if (!number.isFinite() || number !in 0.0..1.0) throw JsonException("NACRE $key must be 0..1")
-                if (key == "HOLD" && number != 0.0) {
-                    throw JsonException("NACRE prototype supports finite gestures only; HOLD must be 0")
+                if (key == "HOLD" && number != 0.0 && !NacreModels.supportsHold(model)) {
+                    throw JsonException("NACRE model $model supports finite gestures only; HOLD must be 0")
                 }
             }
             return Patches.decode(value, ENGINE, { n -> NacreVoice.entries.firstOrNull { it.name == n } }) { name, voice, macros ->

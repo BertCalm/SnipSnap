@@ -416,7 +416,7 @@ fun KitsScreen(
             ) {
                 TapeText(
                     when {
-                        assigningSnip -> "PICK A KIT FOR THIS SAMPLE"
+                        assigningSnip -> "Pick a kit for this sample"
                         breedingFrom != null -> Copy.breedPickHeader(breedingFrom.kit.name)
                         addingTo != null -> Places.addPickHeader(addingTo)
                         else -> "LIBRARY"
@@ -543,7 +543,7 @@ fun KitsScreen(
                     // made one per kit before this screen read them.
                     if (!assigningSnip && breedingFrom == null && addingTo == null) {
                         item(key = "projects-header") {
-                            TapeText("PROJECTS · ${projects.size} · OPEN ONE, OR START ONE", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
+                            TapeText("Projects · ${projects.size} · open one, or start one", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
                         }
                         items(projects, key = { "project:" + it.dir.name }) { row ->
                             ProjectRow(row, row.name == openProjectName, busy, onOpenProject, onMore = { opsTarget = it })
@@ -641,7 +641,7 @@ fun KitsScreen(
                         // left, and RESTORE - the same row TAKES + BIN draws for a pad.
                         if (binnedRooms.isNotEmpty()) {
                             item(key = "rooms-bin-header") {
-                                TapeText("IN THE TRASH · RESTORE BEFORE THE DAYS RUN OUT", TapeType.pixelSmall, scheme.ink2.tape, Modifier.padding(top = 6.dp), maxLines = 2)
+                                TapeText("In the trash · restore before the days run out", TapeType.pixelSmall, scheme.ink2.tape, Modifier.padding(top = 6.dp), maxLines = 2)
                             }
                             items(binnedRooms, key = { "binned:" + it.room.file.name }) { binned ->
                                 BinnedRoomRow(binned, busy) {
@@ -763,7 +763,7 @@ fun KitsScreen(
                     "SAVED SAMPLES ▸",
                     scheme,
                     enabled = !busy,
-                    accessibilityLabel = "OPEN SAVED SAMPLES, EVERY CATCH IN ONE LIST",
+                    accessibilityLabel = "Open saved samples, every catch in one list",
                     modifier = Modifier.weight(1f),
                     onClick = onSnips,
                 )
@@ -777,7 +777,7 @@ fun KitsScreen(
                     "TOOLS ▾",
                     scheme,
                     enabled = !busy,
-                    accessibilityLabel = "OPEN TOOLS, BACKUP, CHOP ALL, INSPECT FILE, FIND SIMILAR SOUNDS",
+                    accessibilityLabel = "Open tools, backup, chop all, inspect file, find similar sounds",
                     modifier = Modifier.weight(1f),
                     onClick = { toolsMenuOpen = true },
                 )
@@ -1132,7 +1132,7 @@ private fun KitRow(
                         indication = null,
                         // The same words as the legend under the shelf, so the sighted and the spoken app agree.
                         // twin: the ⋮ at the end of this row (RowMoreDoor), which calls the same onArm
-                        onLongClickLabel = if (onRequestExpansion != null) "RENAME, DELETE OR ADD TO AN EXPANSION" else "RENAME OR DELETE",
+                        onLongClickLabel = if (onRequestExpansion != null) "Rename, delete or add to an expansion" else "RENAME OR DELETE",
                         onLongClick = { onArm() },
                         onClick = { if (armed) onDisarm() else onOpen(entry) },
                     )
@@ -1142,7 +1142,7 @@ private fun KitRow(
             // tapeClick and combinedClickable — already set it) so this
             // property lands on the same merged node regardless of
             // modifier-chain order.
-            .semantics(mergeDescendants = true) { if (revealActions) stateDescription = "RENAME AND DELETE REVEALED" }
+            .semantics(mergeDescendants = true) { if (revealActions) stateDescription = "Rename and delete revealed" }
             .padding(horizontal = 10.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -1188,7 +1188,7 @@ private fun KitRow(
                         Modifier
                             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                             .raisedBevel(scheme)
-                            .tapeClick(label = "ADD ${kit.name.uppercase()} TO AN EXPANSION", enabled = !busy) { request(entry) }
+                            .tapeClick(label = "Add ${kit.name.uppercase()} to an expansion", enabled = !busy) { request(entry) }
                             .padding(horizontal = 10.dp),
                         contentAlignment = Alignment.Center,
                     ) {
@@ -1206,7 +1206,7 @@ private fun KitRow(
             // has no hold at all (see the KDoc), so it has no door either.
             if (!pickModeActive) {
                 RowMoreDoor(
-                    label = "${if (onRequestExpansion != null) "RENAME, DELETE OR ADD TO AN EXPANSION" else "RENAME OR DELETE"}: ${kit.name.uppercase()}",
+                    label = "${if (onRequestExpansion != null) "Rename, delete or add to an expansion" else "RENAME OR DELETE"}: ${kit.name.uppercase()}",
                     enabled = !busy,
                 ) { onArm() }
             }

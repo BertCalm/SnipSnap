@@ -103,7 +103,7 @@ object SongPlanStore {
             "sections" to JsonValue.Arr(
                 plan.sections.map { s ->
                     JsonValue.Obj(
-                        linkedMapOf(
+                        linkedMapOf<String, JsonValue>(
                             "name" to JsonValue.Str(s.name),
                             "clip" to JsonValue.Str(s.clip),
                             "repeats" to JsonValue.Num(s.repeats.toDouble()),
@@ -112,7 +112,13 @@ object SongPlanStore {
                             "bass" to JsonValue.Bool(s.bass),
                             "pullUp" to JsonValue.Bool(s.pullUp),
                             "drop" to JsonValue.Bool(s.drop),
-                        ),
+                        ).also { fields ->
+                            // Only when on or non-empty: an untouched song writes the file it always did.
+                            if (s.close) fields["close"] = JsonValue.Bool(true)
+                            if (s.reverseCrash) fields["reverseCrash"] = JsonValue.Bool(true)
+                            if (s.bars != null) fields["bars"] = JsonValue.Num(s.bars.toDouble())
+                            if (s.mutes.isNotEmpty()) fields["mutes"] = JsonValue.Arr(s.mutes.sorted().map { JsonValue.Str(it) })
+                        },
                     )
                 },
             ),
@@ -134,6 +140,10 @@ object SongPlanStore {
                 bass = (s["bass"] as? JsonValue.Bool)?.value ?: SectionNames.bassUnder(name),
                 pullUp = (s["pullUp"] as? JsonValue.Bool)?.value ?: SectionNames.pullsUpInto(name),
                 drop = (s["drop"] as? JsonValue.Bool)?.value ?: false,
+                close = (s["close"] as? JsonValue.Bool)?.value ?: false,
+                reverseCrash = (s["reverseCrash"] as? JsonValue.Bool)?.value ?: false,
+                bars = s["bars"]?.let { (it as? JsonValue.Num)?.value?.toInt() }?.takeIf { it >= 1 },
+                mutes = (s["mutes"] as? JsonValue.Arr)?.items?.mapNotNull { (it as? JsonValue.Str)?.value?.takeIf(String::isNotBlank) }?.toSet() ?: emptySet(),
             )
         }
         return SongPlan(seed = obj["seed"]?.int() ?: 0, sections = sections)

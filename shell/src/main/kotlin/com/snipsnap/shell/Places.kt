@@ -248,7 +248,8 @@ object Places {
 
     /**
      * HELP rewritten as one short section per place and one for the dock,
-     * three to five lines each. The first section's first line names the
+     * three to five lines each, and since the November UX pass one on changing
+     * a pad's sound ([PAD_SOUND]), which no place owns. The first section's first line names the
      * MPC: the app is built for its owner and the front door never said
      * so (persona review, P2). The 21 WORTH KNOWING lines are redistributed
      * under the place they belong to; a line about a bench sits under the
@@ -260,6 +261,7 @@ object Places {
             "· A kit is an MPC program. A project is an MPC project. The card reads both.",
             "· Hold a kit to rename it, or to trash it. The trash keeps it ${Reversal.DAYS} days.",
             "· TOOLS holds BACKUP, CHOP ALL, INSPECT FILE and FIND SIMILAR SOUNDS.",
+            "· The app opens on the pads of the project you last had open.",
         ),
         "SAMPLE" to listOf(
             "· RECORD: a sound from the mic, another app, or a file shared in.",
@@ -281,12 +283,23 @@ object Places {
             "· CONFLUENCE VOICES: hear a recorded passage, then save it as a pad.",
             "· MY VOICE: a short vowel of yours becomes a voice, kept on this phone.",
         ),
+        // The owner's UX pass (docs/UX_PASS_2026_11.md, fix g): Help said nothing about effects.
+        PAD_SOUND to listOf(
+            "· Tap a pad, then CHANGE SOUND. Tap an effect to hear it; KEEP keeps it.",
+            "· START HERE has eight that suit drums. The groups sort the rest by their job.",
+            "· ON marks what the pad has. AMT sets how much; a pedal at zero comes off.",
+            "· EFFECT CHAIN is six effects in one. SHAPE is the start, the fade and the tone.",
+            "· NONE, in ALL AS BUTTONS, takes every effect off and gives the original back.",
+        ),
         "THE DOCK" to listOf(
             "· The beat keeps playing on PADS, EXPORT, CREATE and a pad bench.",
             "· The light means listening. While on, SNIP keeps what it hears, up to 60s.",
             "· The line says what just happened. A door beside it stays until you take it.",
         ),
     )
+
+    /** HELP's section on changing a pad's sound: not a place, so it sits after them, before the dock. */
+    @field:CopyLabel const val PAD_SOUND = "CHANGE A PAD'S SOUND"
 
     /** The longest a HELP line may be and still fit the panel at the design width. */
     const val HELP_LINE_CHARS = 80

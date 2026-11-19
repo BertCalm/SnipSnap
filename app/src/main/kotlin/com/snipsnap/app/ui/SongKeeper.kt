@@ -1,5 +1,6 @@
 package com.snipsnap.app.ui
 
+import android.os.SystemClock
 import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -45,7 +46,7 @@ import java.io.File
  * composables).
  */
 internal class SongKeeper(
-    private val kit: Kit,
+    val kit: Kit,
     private val kitDir: File,
     private val projectDir: File?,
     private val scope: CoroutineScope,
@@ -94,6 +95,9 @@ internal class SongKeeper(
 
     private var layout: Job? = null
 
+    /** How many layouts [apply] has started; numbers its log lines. */
+    private var layouts = 0
+
     private class Opened(val kept: SongPlan, val plan: Arranger.Arrangement, val picks: List<Arranger.Pick>, val refused: List<String>, val save: Boolean, val names: Map<Int, String>, val hasBass: Boolean)
 
     /**
@@ -106,22 +110,24 @@ internal class SongKeeper(
     suspend fun open() {
         loading = true
         val opened = withContext(Dispatchers.IO) { runCatching { read() } }
-        opened.onSuccess { o ->
-            kept = o.kept
-            plan = o.plan
-            picks = o.picks
-            names = o.names
-            hasBass = o.hasBass
-            refusal = null
-            if (o.refused.isNotEmpty()) toast(Copy.songRefused(o.refused))
-            if (o.save) persist(o.kept)
-        }.onFailure { e ->
-            if (e is CancellationException) throw e
-            plan = null
-            kept = null
-            refusal = e.message ?: Copy.ARRANGE_NEEDS_GROOVE
+        withContext(Dispatchers.Main.immediate) {
+            opened.onSuccess { o ->
+                kept = o.kept
+                plan = o.plan
+                picks = o.picks
+                names = o.names
+                hasBass = o.hasBass
+                refusal = null
+                if (o.refused.isNotEmpty()) toast(Copy.songRefused(o.refused))
+                if (o.save) persist(o.kept)
+            }.onFailure { e ->
+                if (e is CancellationException) throw e
+                plan = null
+                kept = null
+                refusal = e.message ?: Copy.ARRANGE_NEEDS_GROOVE
+            }
+            loading = false
         }
-        loading = false
     }
 
     private fun read(): Opened {
@@ -196,11 +202,34 @@ internal class SongKeeper(
         edit(if (now) Copy.SONG_PULL_UP_ON else Copy.SONG_PULL_UP_OFF, k.withPullUp(selected, now) ?: return)
     }
 
-    /** The selected section's own last bar kept to the kick (or the bed), on or off. It turns off the pull-up into the next section: both would rewrite that boundary. */
-    fun toggleDrop() {
+    /**
+     * The selected section's last bar goes to [to] ([SongTransition]): NONE turns whichever is on off. The plan keeps at most one,
+     * and each turns off the pull-up into the next section. The edit is named by the state it lands in.
+     */
+    fun chooseTransition(to: SongTransition) {
         val k = kept ?: return
-        val now = !(k.sections.getOrNull(selected)?.drop ?: return)
-        edit(if (now) Copy.SONG_DROP_ON else Copy.SONG_DROP_OFF, k.withDrop(selected, now) ?: return)
+        val now = k.sections.getOrNull(selected)?.let { SongTransition.of(it.drop, it.close, it.reverseCrash) } ?: return
+        if (to == now) return
+        val cleared = when (now) {
+            SongTransition.NONE -> k
+            SongTransition.DROP -> k.withDrop(selected, false)
+            SongTransition.CLOSE -> k.withClose(selected, false)
+            SongTransition.REVERSE_CRASH -> k.withReverseCrash(selected, false)
+        } ?: return
+        val next = when (to) {
+            SongTransition.NONE -> cleared
+            SongTransition.DROP -> cleared.withDrop(selected, true)
+            SongTransition.CLOSE -> cleared.withClose(selected, true)
+            SongTransition.REVERSE_CRASH -> cleared.withReverseCrash(selected, true)
+        } ?: return
+        edit(to.on, next)
+    }
+
+    /** Lane [lane] of the selected section left out, or played again ([com.snipsnap.kit.PlanSection.mutes]). Like DROP it re-lays the song, so the mix is built again. */
+    fun toggleMute(lane: String) {
+        val k = kept ?: return
+        val now = lane !in (k.sections.getOrNull(selected)?.mutes ?: return)
+        edit(Copy.SONG_MUTES, k.withMute(selected, lane, now) ?: return)
     }
 
     fun toggleLock() {
@@ -235,39 +264,43 @@ internal class SongKeeper(
                 val drawn = withContext(Dispatchers.IO) {
                     runCatching { Arranger.rerolled(kit, kitDir, k, k.seed + 1, swingPercent, feel, feelTemplate) }
                 }
-                if (kept !== k) return@launch
-                drawn.onSuccess { r ->
-                    if (r.redrawn == 0) {
-                        toast(Copy.SONG_REROLL_NOTHING)
-                    } else {
-                        edit(Copy.SONG_VERB_REROLL, r.plan)
-                        toast(Copy.songRerolled(r.redrawn, k.sections.size - unlocked))
+                withContext(Dispatchers.Main.immediate) {
+                    if (kept !== k) return@withContext
+                    drawn.onSuccess { r ->
+                        if (r.redrawn == 0) {
+                            toast(Copy.SONG_REROLL_NOTHING)
+                        } else {
+                            edit(Copy.SONG_VERB_REROLL, r.plan)
+                            toast(Copy.songRerolled(r.redrawn, k.sections.size - unlocked))
+                        }
+                    }.onFailure { e ->
+                        if (e is CancellationException) throw e
+                        Log.e(TAG, "reroll: failed", e)
+                        toast(e.message ?: Copy.ARRANGE_NEEDS_GROOVE)
                     }
-                }.onFailure { e ->
-                    if (e is CancellationException) throw e
-                    Log.e(TAG, "reroll: failed", e)
-                    toast(e.message ?: Copy.ARRANGE_NEEDS_GROOVE)
                 }
             } finally {
-                rerolling = false
+                withContext(NonCancellable + Dispatchers.Main.immediate) { rerolling = false }
             }
         }
     }
 
     /**
-     * KEEP THIS ORDER: [played] (the section of every pass heard, in order,
-     * from [com.snipsnap.shell.SongCursor.played]) becomes the song, each
-     * run of one section kept as that section played that many times. It is
-     * an edit like any other, so UNDO puts the song back.
+     * KEEP THIS ORDER: [played] (every pass heard, in order, from
+     * [com.snipsnap.shell.SongCursor.heard]) becomes the song, each run of
+     * whole passes of one section kept as that section played that many
+     * times and a pass cut at a bar line as a shorter section
+     * ([com.snipsnap.kit.PlanSection.bars]). It is an edit like any other,
+     * so UNDO puts the song back.
      */
-    fun keepOrder(played: List<Int>) {
+    fun keepOrder(played: List<Arranger.Heard>) {
         val k = kept ?: return
         val laid = plan ?: return
-        if (played.isEmpty() || played.any { it !in laid.sections.indices } || laid.sections.size != k.sections.size) {
+        if (played.isEmpty() || played.any { it.section !in laid.sections.indices } || laid.sections.size != k.sections.size) {
             toast(Copy.SONG_KEEP_NOTHING)
             return
         }
-        val made = Arranger.playedOrder(k, laid.sections.map { it.clip.bars }, played) ?: return
+        val made = Arranger.heardOrder(k, laid.sections.map { it.clip.bars }, played) ?: return
         if (made.plan == k) {
             toast(Copy.SONG_KEEP_SAME)
             return
@@ -295,17 +328,39 @@ internal class SongKeeper(
         selected = select.coerceIn(0, next.sections.lastIndex)
         persist(next)
         layout?.cancel()
+        // Each layout says when it started, and when it landed or was cancelled, how long it took
+        // and on which thread it wrote [plan]: an on-device run's logcat then tells "the layout
+        // never landed" from "it landed and the screen did not redraw it" (ArrangeScreenTest's
+        // DROP wait timed out twice with neither visible).
+        val n = ++layouts
+        val started = SystemClock.elapsedRealtime()
+        Log.d(TAG, "layout $n: start, selected $selected, sections ${next.sections.joinToString(" ") { flags(it.bass, it.pullUp, it.drop) }}")
         layout = scope.launch {
             val laid = withContext(Dispatchers.IO) {
                 runCatching { Arranger.resolve(kit, kitDir, next, swingPercent, feel, feelTemplate) }
             }
-            laid.onSuccess { plan = it.arrangement; refusal = null }
-                .onFailure { e ->
+            withContext(Dispatchers.Main.immediate) {
+                // A newer edit (or undo) has already replaced this song: its own layout lands instead.
+                if (kept !== next) return@withContext
+                laid.onSuccess {
+                    plan = it.arrangement
+                    refusal = null
+                    Log.d(
+                        TAG,
+                        "layout $n: finished in ${SystemClock.elapsedRealtime() - started} ms, written on ${Thread.currentThread().name}, " +
+                            "sections ${it.arrangement.sections.joinToString(" ") { s -> flags(s.bass, s.pullUp, s.drop) }}",
+                    )
+                }.onFailure { e ->
                     if (e is CancellationException) throw e
                     Log.e(TAG, "layout: failed", e)
                     plan = null
                     refusal = e.message ?: Copy.ARRANGE_NEEDS_GROOVE
                 }
+            }
+        }.also { job ->
+            job.invokeOnCompletion { cause ->
+                if (cause is CancellationException) Log.d(TAG, "layout $n: cancelled after ${SystemClock.elapsedRealtime() - started} ms")
+            }
         }
     }
 
@@ -324,6 +379,10 @@ internal class SongKeeper(
 
     private companion object {
         const val TAG = "SongKeeper"
+
+        /** A section's BASS, PULL-UP and DROP for a log line: `BPD`, a dash for each one off. */
+        fun flags(bass: Boolean, pullUp: Boolean, drop: Boolean): String =
+            "${if (bass) 'B' else '-'}${if (pullUp) 'P' else '-'}${if (drop) 'D' else '-'}"
         const val MAX_UNDO = 30
 
         /**
@@ -332,5 +391,27 @@ internal class SongKeeper(
          * is still kept, which a write on the screen's scope would lose.
          */
         val writes = CoroutineScope(SupervisorJob() + Dispatchers.IO.limitedParallelism(1))
+    }
+}
+
+/**
+ * What happens to a section's own last bar: nothing, or one of DROP, CLOSE and REVERSE CRASH. [label] is the choice's word,
+ * [on] what it is called once chosen (the spoken name and the undo verb), [off] what it is called while it is not.
+ */
+internal enum class SongTransition(val label: String, val on: String, val off: String) {
+    NONE(Copy.SONG_TRANSITION_NONE, Copy.SONG_NONE_ON, Copy.SONG_NONE_OFF),
+    DROP(Copy.SONG_TRANSITION_DROP, Copy.SONG_DROP_ON, Copy.SONG_DROP_OFF),
+    CLOSE(Copy.SONG_TRANSITION_CLOSE, Copy.SONG_CLOSE_ON, Copy.SONG_CLOSE_OFF),
+    REVERSE_CRASH(Copy.SONG_TRANSITION_REVERSE_CRASH, Copy.SONG_REVERSE_CRASH_ON, Copy.SONG_REVERSE_CRASH_OFF),
+    ;
+
+    companion object {
+        /** The one a section has: a plan keeps at most one, so a hand-edited file with several reads as the first of DROP, CLOSE, REVERSE CRASH, the order the mix gives them. */
+        fun of(drop: Boolean, close: Boolean, reverseCrash: Boolean): SongTransition = when {
+            drop -> DROP
+            close -> CLOSE
+            reverseCrash -> REVERSE_CRASH
+            else -> NONE
+        }
     }
 }

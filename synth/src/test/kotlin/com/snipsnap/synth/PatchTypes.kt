@@ -55,20 +55,23 @@ internal object PatchTypes {
      * sat here from its Kotlin port until the owner heard its kits (2026-11-13),
      * CLUTTER likewise until the owner approved its kits' audition (2026-11-14); TERRA
      * until the owner chose to promote it and kept its classic kit (2026-11-14). EMBER
-     * sits here from its Kotlin port (round 1) until its kits are heard. CALABASH sat here from its Kotlin
+     * sat here from its Kotlin port (round 1) until the owner approved its five kits (2026-11-16, "All sound great")
+     * and their pads became its factory bank. CALABASH sat here from its Kotlin
      * port (round 1, 2026-11-15) until the owner approved its kits on the shelf (2026-11-15) and they became its
-     * factory bank, as CLUTTER's did.
+     * factory bank, as CLUTTER's did. SERVO sat here from its port until the owner approved its kits (2026-11-15)
+     * and their hits became its factory bank.
      */
-    val ROSTERLESS: Set<String> = setOf(HydroformPatch.ENGINE, SnapPatch.ENGINE, SilkPatch.ENGINE, GyrePatch.ENGINE, MagnetPatch.ENGINE, EmberPatch.ENGINE, ServoPatch.ENGINE)
+    val ROSTERLESS: Set<String> = setOf(HydroformPatch.ENGINE, SnapPatch.ENGINE, SilkPatch.ENGINE, GyrePatch.ENGINE, MagnetPatch.ENGINE, RiddimPatch.ENGINE)
 
     /**
      * The engines with a [Patch] type and provisional recipes of their own that are
      * deliberately kept out of [Presets] until the owner's listening verdict.
      * Named here so leaving it out is a recorded decision, not a forgotten line:
      * accepting the engine means filing its recipes in [Presets] and taking it off this list. ETCH sat here from
-     * its Kotlin port (K1) to round K2 (2026-11-14), when its heard round-3 settings became the factory bank.
+     * its Kotlin port (K1) to round K2 (2026-11-14), when its heard round-3 settings became the factory bank. KINDRED sat
+     * here from its port (K1, 2026-11-15) until the owner approved its Kotlin kits (2026-11-18).
      */
-    val PROTOTYPES: Set<String> = setOf(ChitinPatch.ENGINE, FerryPatch.ENGINE, FillPatch.ENGINE, BreakerPatch.ENGINE, SootPatch.ENGINE)
+    val PROTOTYPES: Set<String> = setOf(SecondlinePatch.ENGINE, ChitinPatch.ENGINE, FerryPatch.ENGINE, FillPatch.ENGINE, BreakerPatch.ENGINE, SootPatch.ENGINE)
 
     /** These voices of otherwise rostered engines await a factory-preset listening verdict. */
     val PROTOTYPE_VOICES: Map<String, Set<String>> = mapOf(

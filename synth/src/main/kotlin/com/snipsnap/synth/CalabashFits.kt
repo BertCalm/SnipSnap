@@ -41,6 +41,9 @@ internal object CalabashFits {
         fun strongest(rank: Int = 0): Double = hz[amp.indices.sortedByDescending { amp[it] }[rank]]
     }
 
+    /** Explicit coefficient bank for another fitted instrument; existing callers keep the original bank. */
+    data class HandData(val hand: Hand, val bands: DoubleArray, val times: DoubleArray, val early: Double)
+
     private fun doubles(v: JsonValue) = v.arr().map { it.num() }.toDoubleArray()
     private fun rows(v: JsonValue) = v.arr().map { doubles(it) }.toTypedArray()
 
@@ -84,8 +87,9 @@ internal object CalabashFits {
         name: String, v: Double, tr: Rng, seconds: Double, tuneRatio: Double = 1.0, damp: Double = 0.3,
         modeGain: ((Double) -> Double)? = null, slopeMul: ((Double) -> Double)? = null, glideMul: Double = 1.0,
         residualDb: Double = 0.0, attackDb: Double = 0.0, residUntil: Double? = null, contactMs: Double? = null,
+        fit: HandData? = null, detuneSd: Double = 0.0015,
     ): Pair<DoubleArray, DoubleArray> {
-        val d = hand(name)
+        val d = fit?.hand ?: hand(name)
         val n = Math.rint(seconds * RATE).toInt()
         val w = handSoftWeight(v)
         val modes = DoubleArray(n)
@@ -94,7 +98,7 @@ internal object CalabashFits {
             val order = d.amp.indices.sortedByDescending { d.amp[it] }
             val lowRank = BooleanArray(k).also { for (i in order.take(3)) it[i] = true }
             val fRef = d.hz[order[0]]
-            val hz = DoubleArray(k) { d.hz[it] * tuneRatio * (1 + tr.normal(0.0, 0.0015)) }
+            val hz = DoubleArray(k) { d.hz[it] * tuneRatio * (1 + tr.normal(0.0, detuneSd)) }
             val gain = DoubleArray(k) { CalabashDsp.db(d.tilt[it] * w + tr.normal() * (if (lowRank[it]) 0.5 else 1.5)) }
             val sign = DoubleArray(k) { if (hz[it] > 1.8 * fRef * tuneRatio && tr.random() < 0.25) -1.0 else 1.0 }
             if (modeGain != null) for (i in 0 until k) gain[i] *= modeGain(hz[i])
@@ -103,7 +107,7 @@ internal object CalabashFits {
             val late = DoubleArray(k) { d.late[it] * df * (slopeMul?.invoke(hz[it]) ?: 1.0) }
             val g = d.glide * glideMul * v * v * (1 + tr.normal(0.0, 0.15))
             val tau = d.glideTau
-            val e = handEarly
+            val e = fit?.early ?: handEarly
             // The phase time of a pitch that starts sharp and settles.
             val warp = DoubleArray(n) { val t = it.toDouble() / RATE; t + g * tau * (1 - exp(-t / tau)) }
             val dbToLn = ln(10.0) / 20
@@ -131,7 +135,7 @@ internal object CalabashFits {
             val c = (contactMs ?: 0.25) * 1e-3 * v.pow(-0.6)
             for (s in 0 until n) modes[s] *= 1 - exp(-(s.toDouble() / RATE) / c)
         }
-        val res = residual(d, w, tr, n, tuneRatio, damp, residualDb, attackDb, residUntil)
+        val res = residual(d, w, tr, n, tuneRatio, damp, residualDb, attackDb, residUntil, fit)
         return modes to res
     }
 
@@ -143,9 +147,9 @@ internal object CalabashFits {
 
     /** fitted.py's `residual_noise`: band noise along what the modes leave out, hard to soft, slid by TUNE. */
     private fun residual(d: Hand, w: Double, tr: Rng, n: Int, tuneRatio: Double, damp: Double, residualDb: Double,
-                         attackDb: Double, residUntil: Double?): DoubleArray {
-        val bands = handBands
-        val times = handTimes
+                         attackDb: Double, residUntil: Double?, fit: HandData? = null): DoubleArray {
+        val bands = fit?.bands ?: handBands
+        val times = fit?.times ?: handTimes
         val ws = min(w, 1.0)
         val shift = 3 * log2(tuneRatio)
         val cols = times.size

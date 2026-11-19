@@ -29,11 +29,12 @@ class TerraStarterTest {
         } finally { dir.deleteRecursively() }
     }
 
-    @Test fun `TERRA is shelved under SKINS right after the TEMPEST kits, its genre kits after it`() {
+    @Test fun `TERRA is shelved under SKINS right after the TEMPEST kits, its round robin and genre kits after it`() {
         val skins=StarterShelf.GROUPS.single { it.heading==Copy.STARTER_HEADING_SKINS }.ids
-        val at=skins.indexOf("tempest-step")
-        assertEquals(listOf("tempest-step","terra","terra-sahel","terra-maqam","terra-punjab"),skins.subList(at,at+5))
-        for (id in listOf("terra","terra-sahel","terra-maqam","terra-punjab"))
+        val at=skins.indexOf(TempestGenreRoundRobinKits.Kit.STEP.id)
+        val sahel=TerraGenreRoundRobinKits.Kit.SAHEL.id; val maqam=TerraGenreRoundRobinKits.Kit.MAQAM.id; val punjab=TerraGenreRoundRobinKits.Kit.PUNJAB.id
+        assertEquals(listOf(TempestGenreRoundRobinKits.Kit.STEP.id,"terra",TerraRoundRobinKits.ID,"terra-sahel",sahel,"terra-maqam",maqam,"terra-punjab",punjab),skins.subList(at,at+9))
+        for (id in listOf("terra",TerraRoundRobinKits.ID,"terra-sahel",sahel,"terra-maqam",maqam,"terra-punjab",punjab))
             assertEquals(1,StarterShelf.GROUPS.sumOf { g -> g.ids.count { it==id } },id)
     }
 

@@ -1,0 +1,503 @@
+{
+  "bpm": 100,
+  "events": [
+    {
+      "pad": 0,
+      "beat": 0,
+      "zone": 2,
+      "take": 0,
+      "gain": 1
+    },
+    {
+      "pad": 7,
+      "beat": 0.0,
+      "zone": 2,
+      "take": 0,
+      "gain": 1
+    },
+    {
+      "pad": 7,
+      "beat": 0.535,
+      "zone": 1,
+      "take": 1,
+      "gain": 1
+    },
+    {
+      "pad": 8,
+      "beat": 0.75,
+      "zone": 1,
+      "take": 0,
+      "gain": 1
+    },
+    {
+      "pad": 3,
+      "beat": 1,
+      "zone": 2,
+      "take": 0,
+      "gain": 1.0
+    },
+    {
+      "pad": 7,
+      "beat": 1.0,
+      "zone": 2,
+      "take": 0,
+      "gain": 1
+    },
+    {
+      "pad": 10,
+      "beat": 1.25,
+      "zone": 2,
+      "take": 0,
+      "gain": 1
+    },
+    {
+      "pad": 0,
+      "beat": 1.5,
+      "zone": 2,
+      "take": 1,
+      "gain": 1
+    },
+    {
+      "pad": 7,
+      "beat": 1.535,
+      "zone": 1,
+      "take": 1,
+      "gain": 1
+    },
+    {
+      "pad": 7,
+      "beat": 2.0,
+      "zone": 2,
+      "take": 0,
+      "gain": 1
+    },
+    {
+      "pad": 9,
+      "beat": 2.5,
+      "zone": 1,
+      "take": 0,
+      "gain": 1
+    },
+    {
+      "pad": 7,
+      "beat": 2.535,
+      "zone": 1,
+      "take": 1,
+      "gain": 1
+    },
+    {
+      "pad": 0,
+      "beat": 2.75,
+      "zone": 2,
+      "take": 0,
+      "gain": 1
+    },
+    {
+      "pad": 3,
+      "beat": 3,
+      "zone": 2,
+      "take": 1,
+      "gain": 1.0
+    },
+    {
+      "pad": 7,
+      "beat": 3.0,
+      "zone": 2,
+      "take": 0,
+      "gain": 1
+    },
+    {
+      "pad": 10,
+      "beat": 3.5,
+      "zone": 2,
+      "take": 1,
+      "gain": 1
+    },
+    {
+      "pad": 7,
+      "beat": 3.535,
+      "zone": 1,
+      "take": 1,
+      "gain": 1
+    },
+    {
+      "pad": 0,
+      "beat": 4,
+      "zone": 2,
+      "take": 1,
+      "gain": 1
+    },
+    {
+      "pad": 7,
+      "beat": 4.0,
+      "zone": 2,
+      "take": 0,
+      "gain": 1
+    },
+    {
+      "pad": 7,
+      "beat": 4.535,
+      "zone": 1,
+      "take": 1,
+      "gain": 1
+    },
+    {
+      "pad": 8,
+      "beat": 4.75,
+      "zone": 1,
+      "take": 1,
+      "gain": 1
+    },
+    {
+      "pad": 3,
+      "beat": 5,
+      "zone": 2,
+      "take": 0,
+      "gain": 1.0
+    },
+    {
+      "pad": 7,
+      "beat": 5.0,
+      "zone": 2,
+      "take": 0,
+      "gain": 1
+    },
+    {
+      "pad": 10,
+      "beat": 5.25,
+      "zone": 2,
+      "take": 0,
+      "gain": 1
+    },
+    {
+      "pad": 0,
+      "beat": 5.5,
+      "zone": 2,
+      "take": 0,
+      "gain": 1
+    },
+    {
+      "pad": 7,
+      "beat": 5.535,
+      "zone": 1,
+      "take": 1,
+      "gain": 1
+    },
+    {
+      "pad": 7,
+      "beat": 6.0,
+      "zone": 2,
+      "take": 0,
+      "gain": 1
+    },
+    {
+      "pad": 9,
+      "beat": 6.5,
+      "zone": 1,
+      "take": 1,
+      "gain": 1
+    },
+    {
+      "pad": 7,
+      "beat": 6.535,
+      "zone": 1,
+      "take": 1,
+      "gain": 1
+    },
+    {
+      "pad": 0,
+      "beat": 6.75,
+      "zone": 2,
+      "take": 1,
+      "gain": 1
+    },
+    {
+      "pad": 3,
+      "beat": 7,
+      "zone": 2,
+      "take": 1,
+      "gain": 1.0
+    },
+    {
+      "pad": 7,
+      "beat": 7.0,
+      "zone": 2,
+      "take": 0,
+      "gain": 1
+    },
+    {
+      "pad": 10,
+      "beat": 7.5,
+      "zone": 2,
+      "take": 1,
+      "gain": 1
+    },
+    {
+      "pad": 6,
+      "beat": 7.5,
+      "zone": 1,
+      "take": 0,
+      "gain": 1
+    },
+    {
+      "pad": 7,
+      "beat": 7.535,
+      "zone": 1,
+      "take": 1,
+      "gain": 1
+    },
+    {
+      "pad": 0,
+      "beat": 8,
+      "zone": 2,
+      "take": 0,
+      "gain": 1
+    },
+    {
+      "pad": 7,
+      "beat": 8.0,
+      "zone": 2,
+      "take": 0,
+      "gain": 1
+    },
+    {
+      "pad": 7,
+      "beat": 8.535,
+      "zone": 1,
+      "take": 1,
+      "gain": 1
+    },
+    {
+      "pad": 8,
+      "beat": 8.75,
+      "zone": 1,
+      "take": 0,
+      "gain": 1
+    },
+    {
+      "pad": 3,
+      "beat": 9,
+      "zone": 2,
+      "take": 0,
+      "gain": 1.0
+    },
+    {
+      "pad": 7,
+      "beat": 9.0,
+      "zone": 2,
+      "take": 0,
+      "gain": 1
+    },
+    {
+      "pad": 10,
+      "beat": 9.25,
+      "zone": 2,
+      "take": 0,
+      "gain": 1
+    },
+    {
+      "pad": 0,
+      "beat": 9.5,
+      "zone": 2,
+      "take": 1,
+      "gain": 1
+    },
+    {
+      "pad": 7,
+      "beat": 9.535,
+      "zone": 1,
+      "take": 1,
+      "gain": 1
+    },
+    {
+      "pad": 7,
+      "beat": 10.0,
+      "zone": 2,
+      "take": 0,
+      "gain": 1
+    },
+    {
+      "pad": 9,
+      "beat": 10.5,
+      "zone": 1,
+      "take": 0,
+      "gain": 1
+    },
+    {
+      "pad": 7,
+      "beat": 10.535,
+      "zone": 1,
+      "take": 1,
+      "gain": 1
+    },
+    {
+      "pad": 0,
+      "beat": 10.75,
+      "zone": 2,
+      "take": 0,
+      "gain": 1
+    },
+    {
+      "pad": 3,
+      "beat": 11,
+      "zone": 2,
+      "take": 1,
+      "gain": 1.0
+    },
+    {
+      "pad": 7,
+      "beat": 11.0,
+      "zone": 2,
+      "take": 0,
+      "gain": 1
+    },
+    {
+      "pad": 10,
+      "beat": 11.5,
+      "zone": 2,
+      "take": 1,
+      "gain": 1
+    },
+    {
+      "pad": 7,
+      "beat": 11.535,
+      "zone": 1,
+      "take": 1,
+      "gain": 1
+    },
+    {
+      "pad": 0,
+      "beat": 12,
+      "zone": 2,
+      "take": 1,
+      "gain": 1
+    },
+    {
+      "pad": 7,
+      "beat": 12.0,
+      "zone": 2,
+      "take": 0,
+      "gain": 1
+    },
+    {
+      "pad": 7,
+      "beat": 12.535,
+      "zone": 1,
+      "take": 1,
+      "gain": 1
+    },
+    {
+      "pad": 8,
+      "beat": 12.75,
+      "zone": 1,
+      "take": 1,
+      "gain": 1
+    },
+    {
+      "pad": 3,
+      "beat": 13,
+      "zone": 2,
+      "take": 0,
+      "gain": 1.0
+    },
+    {
+      "pad": 7,
+      "beat": 13.0,
+      "zone": 2,
+      "take": 0,
+      "gain": 1
+    },
+    {
+      "pad": 10,
+      "beat": 13.25,
+      "zone": 2,
+      "take": 0,
+      "gain": 1
+    },
+    {
+      "pad": 0,
+      "beat": 13.5,
+      "zone": 2,
+      "take": 0,
+      "gain": 1
+    },
+    {
+      "pad": 7,
+      "beat": 13.535,
+      "zone": 1,
+      "take": 1,
+      "gain": 1
+    },
+    {
+      "pad": 7,
+      "beat": 14.0,
+      "zone": 2,
+      "take": 0,
+      "gain": 1
+    },
+    {
+      "pad": 9,
+      "beat": 14.5,
+      "zone": 1,
+      "take": 1,
+      "gain": 1
+    },
+    {
+      "pad": 7,
+      "beat": 14.535,
+      "zone": 1,
+      "take": 1,
+      "gain": 1
+    },
+    {
+      "pad": 0,
+      "beat": 14.75,
+      "zone": 2,
+      "take": 1,
+      "gain": 1
+    },
+    {
+      "pad": 3,
+      "beat": 15,
+      "zone": 2,
+      "take": 1,
+      "gain": 1.0
+    },
+    {
+      "pad": 7,
+      "beat": 15.0,
+      "zone": 2,
+      "take": 0,
+      "gain": 1
+    },
+    {
+      "pad": 10,
+      "beat": 15.5,
+      "zone": 2,
+      "take": 1,
+      "gain": 1
+    },
+    {
+      "pad": 6,
+      "beat": 15.5,
+      "zone": 1,
+      "take": 1,
+      "gain": 1
+    },
+    {
+      "pad": 7,
+      "beat": 15.535,
+      "zone": 1,
+      "take": 1,
+      "gain": 1
+    }
+  ],
+  "indices": "zero based",
+  "chokes": [
+    {
+      "start": 4.5,
+      "end": 9.3
+    }
+  ],
+  "note": "Authored proposal, not a reference transcription. Event-driven hat choke in rendered groove; native sampler untested."
+}

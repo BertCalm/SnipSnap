@@ -50,11 +50,20 @@ object Erosion {
         val conservationError get() = abs(1.0 - reservoir - charge - emitted)
     }
 
+    /**
+     * A round-robin take's scheduler after its first release. Take 0 never reaches this: it keeps the
+     * one accepted sequence. A later take keeps the first discharge (its onset, energy and collapse
+     * delay) and re-seeds what follows, so the same hit lands with different packets after it.
+     */
+    private fun takeNoise(voice: ErosionVoice, take: Int) =
+        Dsp.Noise(Dsp.seedFor("EROSION", MODEL_VERSION, voice.name, "schedule", "take", take))
+
     /** Audio controls never alter the random sequence or the charge trajectory. */
-    internal fun schedule(voice: ErosionVoice, macros: Map<String, Float>, scarAftershock: Boolean = true): Trace {
+    internal fun schedule(voice: ErosionVoice, macros: Map<String, Float>, scarAftershock: Boolean = true, take: Int = 0): Trace {
+        require(take >= 0) { "EROSION take must not be negative" }
         val m = settled(voice, macros)
-        if (voice == ErosionVoice.SCAR) return scarSchedule(m, scarAftershock)
-        val noise = Dsp.Noise(Dsp.seedFor("EROSION", MODEL_VERSION, voice.name, "schedule"))
+        if (voice == ErosionVoice.SCAR) return scarSchedule(m, scarAftershock, take)
+        var noise = Dsp.Noise(Dsp.seedFor("EROSION", MODEL_VERSION, voice.name, "schedule"))
         val tau = map(m.getValue("FEED"), .018, .14)
         val baseThreshold = map(m.getValue("VOLTAGE"), .012, .00065) *
             if (voice == ErosionVoice.CRATER) 1.6 else 1.0
@@ -82,6 +91,7 @@ object Erosion {
                 charge -= energy
                 emitted += energy
                 events += Event(t, energy, noise.next().toDouble())
+                if (take > 0 && events.size == 1) noise = takeNoise(voice, take)
                 recovery = max(1, (CLOCK * recoveryTime * (1 + .25 * noise.next())).roundToInt())
                 target = threshold * (1 + .3 * noise.next())
             }
@@ -94,9 +104,10 @@ object Erosion {
      * reserve is withheld from the original reservoir, never added energy.
      * The gap exceeds the longest collapse kernel, so the audio can recover.
      * The optional ablation removes only reserve release for causal listening.
+     * A later round-robin take keeps the initial crack and re-seeds the cluster and aftershock.
      */
-    private fun scarSchedule(m: Map<String, Float>, aftershock: Boolean): Trace {
-        val noise = Dsp.Noise(Dsp.seedFor("EROSION", MODEL_VERSION, "SCAR", "schedule"))
+    private fun scarSchedule(m: Map<String, Float>, aftershock: Boolean, take: Int): Trace {
+        var noise = Dsp.Noise(Dsp.seedFor("EROSION", MODEL_VERSION, "SCAR", "schedule"))
         val feed = m.getValue("FEED").toDouble()
         val clusterEnd = .025 + .100 * feed
         val afterStart = clusterEnd + .095 + .100 * feed
@@ -108,6 +119,7 @@ object Erosion {
         val recoveryTime = packetRecovery(baseRecovery, grain)
         val reserve = .12
         val events = arrayListOf(Event(0.0, .30, noise.next().toDouble()))
+        if (take > 0) noise = takeNoise(ErosionVoice.SCAR, take)
         var reservoir = .70
         var charge = 0.0
         var emitted = .30
@@ -147,11 +159,11 @@ object Erosion {
      */
     internal fun source(voice: ErosionVoice, macros: Map<String, Float> = emptyMap(),
                         velocity: Float = 1f, rate: Int = Dsp.RATE * 4,
-                        scarAftershock: Boolean = true): FloatArray {
+                        scarAftershock: Boolean = true, take: Int = 0): FloatArray {
         require(rate == Dsp.RATE * 4 || rate == Dsp.RATE * 8) { "EROSION supports 4x and 8x probes" }
         val m = settled(voice, macros)
         val v = velocity.takeIf { it.isFinite() }?.coerceIn(0f, 1f) ?: 1f
-        val trace = schedule(voice, m, scarAftershock)
+        val trace = schedule(voice, m, scarAftershock, take)
         val frames = ceil((trace.supplySeconds + .12) * Dsp.RATE).toInt()
         val sparks = FloatArray(frames * (rate / Dsp.RATE))
         val body = FloatArray(sparks.size)
@@ -227,8 +239,9 @@ object Erosion {
         Dsp.fadeTail(out)
         return out
     }
-    fun render(voice: ErosionVoice, macros: Map<String, Float> = emptyMap(), velocity: Float = 1f) =
-        Snip(finish(source(voice, macros, velocity)), channels = 1, sampleRate = Dsp.RATE)
+    /** One finished hit. [take] 0 is the accepted render; a later take is a round-robin re-strike ([ErosionRoundRobinKits]). */
+    fun render(voice: ErosionVoice, macros: Map<String, Float> = emptyMap(), velocity: Float = 1f, take: Int = 0) =
+        Snip(finish(source(voice, macros, velocity, take = take)), channels = 1, sampleRate = Dsp.RATE)
 
     /** A percussion engine: nominal PERC does not override the actual audio class. */
     fun drumClassFor(voice: ErosionVoice, macros: Map<String, Float> = emptyMap()) =

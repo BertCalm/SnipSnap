@@ -85,7 +85,7 @@ class ExpansionBirthTest : ComposeScreenTest() {
     private fun openTheDoor(kit: KitShelf.Entry) {
         compose.onNodeWithText(kit.kit.name).performSemanticsAction(SemanticsActions.OnLongClick)
         pump()
-        press("ADD ${kit.kit.name} TO AN EXPANSION")
+        press("Add ${kit.kit.name} to an expansion")
         waitFor("the expansion sheet") {
             compose.onAllNodesWithText(Copy.EXPANSION_SHEET_TITLE, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
         }

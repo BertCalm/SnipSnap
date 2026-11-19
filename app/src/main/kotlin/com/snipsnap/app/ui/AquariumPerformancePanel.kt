@@ -54,7 +54,7 @@ internal fun AquariumPerformancePanel(
         }
     }
     Column(Modifier.fillMaxWidth().testTag("aquarium-performance-panel"), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        TapeText("LIVE KIT EFFECTS · SIX IN ONE", TapeType.lcdHeader, scheme.lcdInk.tape)
+        TapeText("Live kit effects · six in one", TapeType.lcdHeader, scheme.lcdInk.tape)
         TapeText(com.snipsnap.shell.Copy.AQUARIUM_LINE, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
         TapeText(
             "PADS + BEAT/GROOVE + their PRINT/BOUNCE. Count-in clicks share the effects. Other players and MPC kit exports use their own routes.",
@@ -62,12 +62,12 @@ internal fun AquariumPerformancePanel(
         )
         TapeText(
             when {
-                !streamUp -> "NO STREAM · SETTINGS CAN STILL BE SAVED"
-                faulted -> "AQUARIUM FAULT · RESET TAIL OR REOPEN KIT"
+                !streamUp -> "No stream · settings can still be saved"
+                faulted -> "Aquarium fault · reset tail or reopen kit"
                 pending -> "Waiting to queue settings…"
-                !settings.enabled -> "GLOBAL BYPASS · DRY MIX"
-                settings.settings.isBypass -> "DRY · ALL SIX EFFECT MIXES ARE ZERO"
-                settings.outputGain == 0f -> "LIVE WET MIX MUTED"
+                !settings.enabled -> "Global bypass · dry mix"
+                settings.settings.isBypass -> "Dry · all six effect mixes are zero"
+                settings.outputGain == 0f -> "Live wet mix muted"
                 else -> "LIVE · ${if (bpm == 0.0) "FREE TIME" else String.format(Locale.ROOT, "%.1f BPM", bpm)}"
             }, TapeType.pixelSmall, scheme.accent.tape,
             Modifier.testTag("performance-state"), maxLines = Int.MAX_VALUE,

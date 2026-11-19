@@ -1,5 +1,6 @@
 package com.snipsnap.app.ui
 
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.assertIsNotEnabled
@@ -105,12 +106,17 @@ class BristleSynthScreenTest : ComposeScreenTest() {
         press("B")
         press("NEXT ENGINE")
         press("PREVIOUS ENGINE")
+        // Engine navigation starts at its first voice; each voice retains its own draft.
+        button("A").assertIsSelected()
+        press("B")
         button("B").assertIsSelected()
         val restored = SynthDrafts.read(settings).filterIsInstance<BristlePatch>().single { it.voice == Bristle.Route.B }
         assertEquals(patch.midi, restored.midi)
         assertEquals(patch.velocity, restored.velocity)
         assertEquals(patch.model, restored.model)
         assertEquals(.81f, restored.macros.getValue("GRIT"))
+        assertEquals(.81f, compose.onNodeWithContentDescription("GRIT").fetchSemanticsNode()
+            .config[SemanticsProperties.ProgressBarRangeInfo].current)
         for (control in Bristle.defaults.keys) button(control).assertExists()
         press("MAKE INSTRUMENT")
         compose.onNodeWithText("FINITE BASS ENVELOPE · THREE TOUCH LAYERS").assertExists()
@@ -130,6 +136,10 @@ class BristleSynthScreenTest : ComposeScreenTest() {
         press("B")
         press("NEXT ENGINE")
         press("PREVIOUS ENGINE")
+        // Engine navigation starts at its first voice; each voice retains its own draft.
+        button("A").assertIsSelected()
+        press("B")
+        button("B").assertIsSelected()
         val saved = SynthDrafts.read(settings).filterIsInstance<BristlePatch>().single { it.voice == patch.voice }
         assertEquals(patch.name, saved.name)
         assertEquals(patch.midi, saved.midi)

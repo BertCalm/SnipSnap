@@ -230,6 +230,9 @@ Every label in `Navigation.kt`. The last column says where the name went: the ap
 | `PAD SHEET` | `PAD` | PROJECT | Edit one pad. | Proposed `PAD EDITOR` (B) |
 | `EFFECTS` | `EFFECTS` | PROJECT | The pad editor's effects page. | Keep |
 | `MIX WITH ANOTHER SOUND` | `MIX` | PROJECT | The pad editor's second page: COMBINE SOUNDS. | Renamed from `VARIATIONS` (owner, 2026-11-15): `VARIATIONS` also named bank B's twins |
+| `LAYERS AND TAKES` | `LAYERS` | PROJECT | The pad editor's page for SOFT HITS, ROUND ROBIN and STACK ▸. | New with the short pad page (owner's mockup, 2026-11-16) |
+| `TRIM AND SPLICE` | `TRIM` | PROJECT | The pad editor's page for RE-TRIM ▸, SPLICE ▸ and their undos. | New with the short pad page (2026-11-16) |
+| `MAKE FROM THIS PAD` | `MAKE` | PROJECT | The pad editor's page for the MAKE box: a held sound, a synth, grains, an instrument. | New with the short pad page (2026-11-16); its back name is the pad page's, not the old place `MAKE`, now `CREATE` |
 | `GRAIN FIELD` | `GRAIN FIELD` | PROJECT | Play a pad as grains. | Keep with line (B) |
 | `SPLICE` | `SPLICE` | PROJECT | Join two earlier takes of a pad at one cut. | Keep (primary use) |
 | `STACK THE TAKES` | `STACK` | PROJECT | Layer earlier versions as hit zones. | Proposed `STACK VERSIONS` (B) |
@@ -316,7 +319,7 @@ Back labels that do not come from `backChip`:
 | `INSTANT KIT`, `USE THIS PART ▸`, `IN`, `OUT` (marks) | Deck actions: one-tap chop, take the selection to CHOP, the selection's start and end (`Personality.kt:468`). |
 | `BY HITS`, `GRID`, `AUTO`, `MERGE`, `RE-CHOP` | Chop controls (`ChopScreen.kt:1486,1487,1506,1310,926`). |
 | `START YOURS`, `EDIT STEPS`, `CHART`, `SHARE`, `MIDI EXPORT` | Beat controls (`GrooveScreen.kt:1957,2155,1414,1359`; `Places.kt:74`). |
-| `+ SECTION`, `LOCK`, `UNLOCK`, `REROLL ⚄`, `PLAY`, `STOP`, `LOOP ON/OFF`, `BASS ON/OFF`, `PULL-UP`, `DROP ON/OFF` | Song controls (`Personality.kt:1672-1735`). |
+| `+ SECTION`, `LOCK`, `UNLOCK`, `REROLL ⚄`, `PLAY`, `STOP`, `LOOP ON/OFF`, `BASS ON/OFF`, `PULL-UP`, `NONE`, `DROP`, `CLOSE`, `REVERSE CRASH` (the last-bar choice, each also spoken as `… ON/OFF`), `MUTES` (a chip per lane, `MUTED` when out) | Song controls (`Personality.kt:1672-1735`). |
 | `VOICE`, `PRESETS`, `PLAYING`, `USE THIS SOUND` | SYNTH section headings (`Personality.kt:666-672`). |
 | `START HERE`, `BASS`, `KEYS AND CHORDS`, `PLUCKS AND STRINGS`, `BREATH AND REEDS`, `VOICES`, `METAL WOOD AND GLASS`, `SKINS`, `MOVING AND STRANGE` | Starter list headings (`Personality.kt:674-682`). |
 | `SEND TO PAD`, `SAVE AS PRESET`, `FORGET` | Synth send, preset save and delete (`SnapScreen.kt:1054`, `SynthScreen.kt:4879`, `Personality.kt:635`). |

@@ -176,7 +176,7 @@ class OsteriaSynthScreenTest : ComposeScreenTest() {
         chooseOsteria()
         button("NOTE").assertIsSelected()
         assertReadsInFull("OSTERIA ▾")
-        compose.onNodeWithText("ONE NOTE · FOUR EVOLVING LAYERS").assertExists()
+        compose.onNodeWithText("One note · four evolving layers").assertExists()
         for (name in listOf("Anchored Note", "Evolving Note", "Lingering Color")) {
             compose.onNodeWithContentDescription("PRESET $name").assertExists()
         }
@@ -261,7 +261,7 @@ class OsteriaSynthScreenTest : ComposeScreenTest() {
             compose.onAllNodes(yourPreset("SAVED STRUM"), useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
         }
         activateUserPreset("SAVED STRUM")
-        compose.onNodeWithText("ONE STRIKE PER TONE · FINITE STRUM").assertExists()
+        compose.onNodeWithText("One strike per tone · finite strum").assertExists()
         compose.onNodeWithContentDescription("MAKE INSTRUMENT").assertDoesNotExist()
         dial("HOLD", .5f)
         dial("ROOT", 1f)

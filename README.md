@@ -24,7 +24,8 @@ native MPC 3 downloads. Physical MPC loading remains unverified.
 
 EROSION's accepted eight-role percussion bank is available in factory presets,
 the SYNTH picker and FRESH TAPE, with three native touch layers. The finite
-renderer and original audition recipes are preserved. The broader
+renderer and original audition recipes are preserved. EROSION ROUND ROBIN, an
+opt-in starter beside it, adds four takes per touch; the owner kept it by ear on 15 Nov 2026. The broader
 [instrument completion programme](docs/SYNTH_COMPLETION_PROGRAM.md) tracks
 remaining voice, articulation, kit, round-robin and chord requirements;
 [Wave 1](docs/SYNTH_COMPLETION_WAVE_1.md) collects the next listening decisions.
@@ -34,11 +35,20 @@ Dub (85) and Electro (130), each with 18 pads and three velocity zones × three 
 The published audition includes SFZ, native kits and MPC programs. MPC round robin
 remains blocked on slice-map/hardware verification. Owner listening is pending.
 
+[SPLINTER](docs/SPLINTER.md) is a breakcore kit at 200 BPM: sped-up break hits, chopped slices,
+a stutter, a stretched snare, clipped and gabber kicks, a snare rush and a riser. Not heard yet.
+
+[SHATTER, SOUNDCLASH and REDLINE](docs/BREAKCORE_FAMILY.md) complete the breakcore family: a break cut at its own hits (180 BPM),
+a sound system of subs, reese, siren and rewind (175), and speedcore with tuned kicks (250). The owner heard
+their grooves and pads on 2026-11-18 and kept them; per-pad verdicts and device playback are open.
+
 [GATECRASH](docs/GATECRASH.md) is a family of three 1980s gated drum kits on the shelf: Stone Room, Machine Pop and Electro Funk. Each has sixteen pads with three velocity zones of four takes. The owner approved the sound on 2026-11-11 after four rounds; phone and MPC hardware playback remain unverified.
 
 [MIRRORBALL](docs/MIRRORBALL.md) is a family of three 1970s disco kits on the shelf: Philly Strings, Loft Party and Munich Machine. Every pad is printed through an FET compressor, a multi-head tape echo, then an amp, in an order the FX rack cannot make. Each has sixteen pads with three velocity zones of four takes; Philly's tambourine is synthesized, fitted to CC0 recordings. The owner approved the sound on 2026-11-12 after five rounds; phone and MPC hardware playback remain unverified.
 
 TRIAD has a [native shared-bus drum audition](docs/TRIAD.md): one hybrid groove through three processing rigs. These are listening candidates, not a factory engine or MPC program.
+
+[East African fitted synthesis](docs/EAST_AFRICA.md) adds five 22-pad starters for Bongo Flava, Singeli, Bongopiano, Genge and Kapuka. Each carries three strike levels and three alternate takes, including finite rolls and risers. The Python sound is approved; native listening and hardware checks remain open.
 
 [TIMBER](docs/TIMBER.md) adds three acoustic-instrument percussion banks: Folk Pocket, Wood Boom Bap and String Two Step. Guitar, acoustic bass guitar, cello and upright contacts fill sixteen pads, with three strike levels, four takes, a roll and a riser. The owner approved listening and hardware on 2026-11-15; full software regression remains pending.
 
@@ -456,7 +466,7 @@ explicit MIDI root (24–96), strike velocity and model version; TUNE is a
 relative ±12-semitone offset, neutral at 0.5, so the effective note spans
 12–108 without clamping back to the saved-root range. Seven provisional presets
 and a dry sixteen-pad C minor pentatonic kit are included, with PITCHWHEEL among
-FRESH TAPE's 167 starters. Run `./gradlew :synth:generatePitchwheelAudition`
+FRESH TAPE's 219 starters. Run `./gradlew :synth:generatePitchwheelAudition`
 for the compact first listening set, or add `-PpitchwheelFull` for the broader
 dry probes. HOLD's top step returns settled loop-only material with a
 deterministic attachment cycle and capped adhesion. The owner heard R1 as six
@@ -522,7 +532,12 @@ DECAY. The owner accepted all six and the 22 factory presets. FRESH TAPE → TEM
 is the sixteen-pad kit with choking hats; TEMPEST TUNED keeps the original E minor
 pentatonic kicks and metal colors. TEMPEST CIRCUIT (electro), TEMPEST FOUNDRY
 (industrial) and TEMPEST STEP (UK garage) are genre kits made from new settings of
-the same accepted voices, kept by the owner on 2026-11-14. HOLD is reserved. See [TEMPEST](docs/TEMPEST_FULL_KIT.md).
+the same accepted voices, kept by the owner on 2026-11-14. TEMPEST ROUND ROBIN, an
+opt-in starter beside TEMPEST, gives each of its sixteen pads four takes; the owner
+kept it by ear on 16 Nov 2026 (round tempest-rr-1). CIRCUIT TAKES, FOUNDRY TAKES and
+STEP TAKES do the same for the three genre kits, each beside its kit; WIRE and STEP SUB,
+which have no noise to re-roll, drift a few cents instead; the owner kept them by ear in genre-rr-1 (19 Nov 2026).
+HOLD is reserved. See [TEMPEST](docs/TEMPEST_FULL_KIT.md).
 
 OSTERIA is one evolving note: four spectral layers on a fixed root drift between
 five coastal palettes, with SHORE, TENSION, WANDER, MEMORY, ROOM and HOLD. Its six
@@ -1021,7 +1036,7 @@ bit-identical to their baselines.
 
 Six voices, seven macros, fifteen dry presets and the existing sixteen-pad
 kit use the current patch, recipe and app workflows. New C4 ROOT presets
-FIRE CIRCLE, NIGHT REPLY and EMBER PULSE explore close soft pressure, wider
+FIRE CIRCLE, NIGHT REPLY and WARM PULSE explore close soft pressure, wider
 finite returns and a settled recurring pulse. Existing presets and kit notes
 are retained. HOLD at .99 returns settled loop material. V2 passed 90 native
 render guards, 209/209 artifact checks and 36/36 transition checks; held listening
@@ -1145,8 +1160,8 @@ render-time limits. Build its MPC program and replay files with:
 ```
 
 ONSET, SCANNED CHAIN, VOX, FORK, HALOBAR, AEROSTAT, TREMOR, BALLAST, FLOTILLA, CISTERN, CIRCUIT, OBBLIGATO, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE,
-TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, LATTICE, ACCORD, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, REGISTERS, OSPREY, OPENSKY, OVEN, FLOCK, VENT, OVERLAP, TRIO, NACRE, ORIGAMI, TREFOIL, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS, TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME, OTIS, WICK, BORE, ARCO, SCOUR, KEEL, CHITIN, EROSION, RIVET, FIRED BRONZE, BACKWASH, DRUMLINE, HICCUP, TEMPEST, SPLAY, OSTERIA, ETCH, SCUFF, CLUTTER, CALABASH, TERRA, BRISTLE, CAIRN and GRAINS round out the lineup —
-94 engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
+TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, LATTICE, ACCORD, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, REGISTERS, OSPREY, OPENSKY, OVEN, FLOCK, VENT, OVERLAP, TRIO, NACRE, ORIGAMI, TREFOIL, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS, TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME, OTIS, WICK, BORE, ARCO, SCOUR, KEEL, CHITIN, EROSION, RIVET, FIRED BRONZE, BACKWASH, DRUMLINE, HICCUP, TEMPEST, SPLAY, OSTERIA, ETCH, SCUFF, CLUTTER, CALABASH, TERRA, BRISTLE, SERVO, EMBER, CAIRN, SAMBA, KINDRED and GRAINS round out the lineup —
+98 engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
 since it has no voice enum and works on a source snip instead of picking
 one. VOX is formant vocal synthesis — the shopping-mall-keyboard choir,
 proudly: a VOWEL knob morphs
@@ -1402,7 +1417,7 @@ TREMOR, BALLAST, CISTERN, CIRCUIT, OBBLIGATO, ALLOY, THAW, MURK, NIMBUS, COROLLA
 UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL,
 SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVERLAP,
 OVEN, FLOCK, VENT, CREASE, TRIO, NACRE, ORIGAMI, TREFOIL, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS,
-TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME, BORE, ARCO, SCOUR, KEEL, CHITIN, WICK, EROSION, RIVET, FIRED BRONZE, BACKWASH, DRUMLINE, SOOT, HICCUP, TEMPEST, SPLAY, OSTERIA, ETCH, SCUFF, CLUTTER, CALABASH, TERRA, BRISTLE, CAIRN, plus GRAINS, SNAP and DRAW,
+TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME, BORE, ARCO, SCOUR, KEEL, CHITIN, WICK, EROSION, RIVET, FIRED BRONZE, BACKWASH, DRUMLINE, SOOT, HICCUP, TEMPEST, SPLAY, OSTERIA, ETCH, SCUFF, CLUTTER, CALABASH, TERRA, BRISTLE, SERVO, EMBER, CAIRN, SAMBA, KINDRED, plus GRAINS, SNAP and DRAW,
 which sit beside the picker. `:synth` also holds engines that picker does not show.
 LORENTZ has a preset roster, so `snipsnap synth` renders it.
 
@@ -1438,7 +1453,11 @@ world-percussion kit, which the owner kept in full, is FRESH TAPE's TERRA
 starter, and its twelve playing voices are in the picker with four factory
 presets each, the sixteen kept pads among them. TERRA SAHEL, TERRA MAQAM and
 TERRA PUNJAB are genre kits from the same voices, kept by the owner
-([`docs/TERRA_PROMOTION.md`](docs/TERRA_PROMOTION.md)).
+([`docs/TERRA_PROMOTION.md`](docs/TERRA_PROMOTION.md)). TERRA ROUND ROBIN, an
+opt-in starter beside TERRA, deals four takes per touch on the same sixteen
+pads; the owner kept it by ear in terra-rr-1 (16 Nov 2026). SAHEL TAKES, MAQAM
+TAKES and PUNJAB TAKES do the same for the three genre kits, each beside its kit
+(kept by ear in genre-rr-1, 19 Nov 2026).
 VENT, the Rössler-attractor synth (separate from the TapeOS scheme of that
 name), brings clean model-2 PULSE, COIL and PLUME to the picker
 and factory roster. FRESH TAPE's VENT kit has twelve dry pads in C minor
@@ -1785,3 +1804,14 @@ with three timbral touch layers per note. SUSTAIN KEYS adds a note-off RELEASE c
 the accepted finite packages remain unchanged. See [BRISTLE](docs/BRISTLE.md) for evidence
 and remaining acceptance gates.
 DRUMLINE adds a versioned marching battery and FIELD/STREET CADENCE shelf kits, with independent players, finite rudiments and velocity/take grids. Native listening, device timing and hardware acceptance remain open. See [DRUMLINE](docs/DRUMLINE.md).
+
+KNEE BREAK supplies six FRESH TAPE kit variants: Body and Tighter, each dry,
+through the revised knee-mic treatment, or through cassette/delay. Their frozen
+oscillator/noise synth renders preserve the audition, with three velocity layers
+and three strikes per pad, including a finite roll and riser. They are rendered
+kit assets, not a new editable synthesis engine. See [Knee Break](docs/KNEE_BREAK.md)
+and the [audition](https://knee-break-audition.bertcalm.chatgpt.site).
+
+[SOUL AND ROCK](docs/SOUL_ROCK.md) adds SOUL POCKET, ROADHOUSE ROCK and OPEN ROOM
+ROCK to FRESH TAPE: the approved acoustic synthesis, frozen as three sixteen-pad
+factory kits with three velocity levels and three alternate strikes per pad.

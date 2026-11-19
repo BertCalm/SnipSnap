@@ -1,0 +1,18 @@
+{
+  "previous_grid_files_unchanged": 144,
+  "new_triangle_grid_files": 18,
+  "triangle_metrics": [
+    {
+      "voice": "triangle",
+      "closest_take": "0.261962086329337",
+      "soft_hard_distance": "0.4561957041039618",
+      "hard_render_ms": "340.273756"
+    },
+    {
+      "voice": "triangle_muted",
+      "closest_take": "0.5377668240851026",
+      "soft_hard_distance": "0.6247597800652879",
+      "hard_render_ms": "426.395277"
+    }
+  ]
+}

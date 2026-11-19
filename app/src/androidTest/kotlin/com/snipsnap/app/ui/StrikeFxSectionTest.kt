@@ -23,6 +23,7 @@ import com.snipsnap.kit.KitStore
 import com.snipsnap.shell.Copy
 import com.snipsnap.shell.KitBuilderModel
 import com.snipsnap.shell.PadBanks
+import com.snipsnap.shell.PadSheetPage
 import com.snipsnap.shell.PedalSlate
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -55,6 +56,7 @@ class StrikeFxSectionTest : ComposeScreenTest() {
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private val kitDirs = mutableListOf<File>()
     private var sheetShown by mutableStateOf(true)
+    private var pageState by mutableStateOf(PadSheetPage.EDITOR)
     private val toasts = mutableListOf<String>()
     private val heard = mutableListOf<Int>()
 
@@ -83,6 +85,7 @@ class StrikeFxSectionTest : ComposeScreenTest() {
 
     private fun show(entry: KitShelf.Entry) {
         sheetShown = true
+        pageState = PadSheetPage.EDITOR
         setPhoneContent {
             if (sheetShown) {
                 PadSheetScreen(
@@ -90,7 +93,9 @@ class StrikeFxSectionTest : ComposeScreenTest() {
                     slot = 1,
                     backLabel = "◄ PADS",
                     onSlotChange = {},
-                    onBack = {},
+                    page = pageState,
+                    onOpenPage = { pageState = it },
+                    onBack = { pageState = PadSheetPage.EDITOR },
                     onToast = { toasts += it },
                     onStrikeHeard = { heard += it },
                     onNavigateTape = {},
@@ -110,13 +115,18 @@ class StrikeFxSectionTest : ComposeScreenTest() {
         waitFor("the pad header") {
             compose.onAllNodesWithText("PAD ${PadBanks.tag(1)}", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
         }
+        // FX BY VELOCITY and SOFT HITS are behind LAYERS AND TAKES on the short pad page (2026-11-16).
+        pageState = PadSheetPage.LAYERS
+        waitFor("LAYERS AND TAKES") {
+            compose.onAllNodesWithText(Copy.PAD_LAYERS_TITLE, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
+        }
     }
 
     private fun node(label: String) = compose.onNodeWithContentDescription(label, useUnmergedTree = true)
 
     /** The sheet is idle when its buttons answer again: `busy` disables every one of them. */
     private fun settled() = waitFor("the sheet to settle") {
-        val keep = compose.onAllNodesWithContentDescription("FX BY VELOCITY KEEP", useUnmergedTree = true).fetchSemanticsNodes()
+        val keep = compose.onAllNodesWithContentDescription("FX by velocity KEEP", useUnmergedTree = true).fetchSemanticsNodes()
         keep.isNotEmpty() && keep[0].config.getOrNull(SemanticsProperties.Disabled) == null
     }
 
@@ -143,7 +153,7 @@ class StrikeFxSectionTest : ComposeScreenTest() {
     fun strike_fx_section_fits_a_narrow_phone_beside_soft_hits() {
         show(strikeKit())
         for (text in listOf("FX BY VELOCITY", "AUDITION", "KEEP")) assertReadsInFull(text)
-        for (label in listOf("FX BY VELOCITY REVERB", "FX BY VELOCITY SLAP", "FX BY VELOCITY AUDITION", "FX BY VELOCITY KEEP")) {
+        for (label in listOf("FX by velocity REVERB", "FX by velocity SLAP", "FX by velocity AUDITION", "FX by velocity KEEP")) {
             val bounds = node(label).fetchSemanticsNode("nothing on screen is named \"$label\"").boundsInRoot
             assertTrue("\"$label\" starts inside the phone width", bounds.left >= 0f)
             assertTrue("\"$label\" ends inside the phone width", bounds.right <= PHONE_WIDTH_DP * compose.density.density + 1f)
@@ -157,7 +167,7 @@ class StrikeFxSectionTest : ComposeScreenTest() {
         val before = File(entry.dir, KitStore.FILE_NAME).readBytes()
         val files = entry.dir.list()!!.sorted()
         show(entry)
-        press("FX BY VELOCITY AUDITION")
+        press("FX by velocity AUDITION")
         // The audition renders off the main thread: wait for it to say it rendered, or fail.
         waitFor("the audition to render its layers") { synchronized(heard) { heard.isNotEmpty() } || toasts.isNotEmpty() }
         assertEquals("the audition rendered DRY, ROOM and ECHO", listOf(3), heard.toList())
@@ -172,13 +182,13 @@ class StrikeFxSectionTest : ComposeScreenTest() {
         val entry = strikeKit()
         val sampleBefore = File(entry.dir, "kick1.wav").readBytes()
         show(entry)
-        press("FX BY VELOCITY KEEP")
+        press("FX by velocity KEEP")
         waitFor("the bank to land") { pad(entry).velocityLayers.size == 3 }
         assertEquals(listOf("DRY", "ROOM", "ECHO"), pad(entry).velocityLayers.map { it.displayName })
         waitFor("the layer names on the section") {
             compose.onAllNodesWithText("DRY · ROOM · ECHO", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
         }
-        press("FX BY VELOCITY CLEAR")
+        press("FX by velocity CLEAR")
         waitFor("the bank to go") { pad(entry).velocityLayers.isEmpty() }
         assertArrayEquals("the pad's sample is its first bytes again", sampleBefore, File(entry.dir, "kick1.wav").readBytes())
         assertEquals("one sample on disk again", listOf("kick1.wav", KitStore.FILE_NAME).sorted(), entry.dir.list()!!.filter { !it.startsWith(".") }.sorted())
@@ -190,7 +200,7 @@ class StrikeFxSectionTest : ComposeScreenTest() {
         assertTrue("the fixture starts with soft hits", pad(entry).velocityLayers.isNotEmpty())
         val softLayers = pad(entry).velocityLayers
         show(entry)
-        press("FX BY VELOCITY KEEP")
+        press("FX by velocity KEEP")
         compose.onNodeWithText(Copy.STRIKE_FX_REPLACES_LAYERS, useUnmergedTree = true).assertExists()
         assertEquals("nothing is written before the answer", softLayers, pad(entry).velocityLayers)
         press("KEEP")
@@ -202,7 +212,7 @@ class StrikeFxSectionTest : ComposeScreenTest() {
     private fun keptBankThenSoftHits(): KitShelf.Entry {
         val entry = strikeKit()
         show(entry)
-        press("FX BY VELOCITY KEEP")
+        press("FX by velocity KEEP")
         waitFor("the bank to land") { pad(entry).velocityLayers.size == 3 }
         settled() // the files land before `busy` clears; a tap while busy is dropped on the floor
         press("SOFT HITS, OFF") // the bank is not soft hits: the chip reads off on a STRIKE FX pad
@@ -238,21 +248,21 @@ class StrikeFxSectionTest : ComposeScreenTest() {
     fun knobs_read_back_from_a_kept_pad() {
         val entry = strikeKit()
         show(entry)
-        assertEquals("0.42", sliderText("FX BY VELOCITY REVERB"))
-        assertEquals("0.90", sliderText("FX BY VELOCITY SLAP"))
-        dial("FX BY VELOCITY REVERB", 0.2f)
-        dial("FX BY VELOCITY SLAP", 0.5f)
-        assertEquals("0.20", sliderText("FX BY VELOCITY REVERB"))
-        press("FX BY VELOCITY KEEP")
+        assertEquals("0.42", sliderText("FX by velocity REVERB"))
+        assertEquals("0.90", sliderText("FX by velocity SLAP"))
+        dial("FX by velocity REVERB", 0.2f)
+        dial("FX by velocity SLAP", 0.5f)
+        assertEquals("0.20", sliderText("FX by velocity REVERB"))
+        press("FX by velocity KEEP")
         waitFor("the bank to land") { pad(entry).velocityLayers.size == 3 }
         // Close the sheet and open it on the kept kit: the knobs come from the pad's recipe.
         compose.runOnIdle { sheetShown = false }
         pump()
         compose.runOnIdle { sheetShown = true }
         waitFor("the reopened sheet's knobs") {
-            compose.onAllNodesWithContentDescription("FX BY VELOCITY REVERB").fetchSemanticsNodes().isNotEmpty()
+            compose.onAllNodesWithContentDescription("FX by velocity REVERB").fetchSemanticsNodes().isNotEmpty()
         }
-        assertEquals("0.20", sliderText("FX BY VELOCITY REVERB"))
-        assertEquals("0.50", sliderText("FX BY VELOCITY SLAP"))
+        assertEquals("0.20", sliderText("FX by velocity REVERB"))
+        assertEquals("0.50", sliderText("FX by velocity SLAP"))
     }
 }

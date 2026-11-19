@@ -399,7 +399,7 @@ private fun StepTapChip(state: StepEditorState, scheme: Scheme) {
             if (edits) Copy.STEP_TAP_EDITS else Copy.STEP_TAP_TOGGLES,
             scheme,
             accent = edits,
-            description = if (edits) "A TAP OPENS A STEP TO EDIT. TAP HERE TO FLIP STEPS ON AND OFF INSTEAD" else "A TAP FLIPS A STEP ON OR OFF. TAP HERE TO MAKE A TAP OPEN A STEP TO EDIT",
+            description = if (edits) "A tap opens a step to edit. Tap here to flip steps on and off instead" else "A tap flips a step on or off. Tap here to make a tap open a step to edit",
             onClick = { state.tapEdits = !edits },
         )
     }

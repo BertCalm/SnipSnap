@@ -292,7 +292,7 @@ object SynthRoot {
         is BristlePatch -> Field(patch.midi, Bristle.MIDI_MIN..Bristle.MIDI_MAX) { patch.copy(midi = it) }
         is MeridianPatch -> Field(patch.midi, Meridian.MIDI_MIN..Meridian.MIDI_MAX) { patch.copy(midi = it) }
         is MurmurPatch -> Field(patch.midi, Murmur.rootRange(patch.config)) { patch.copy(midi = it) }
-        is NacrePatch -> Field(patch.midi, Nacre.MIN_MIDI..Nacre.MAX_MIDI) { patch.copy(midi = it) }
+        is NacrePatch -> Field(patch.midi, Nacre.midiRange(patch.voice)) { patch.copy(midi = it) }
         is ObbligatoPatch -> Field(patch.midi, Obbligato.midiRange(patch.model)) { patch.copy(midi = it) }
         is OhmPatch -> Field(patch.midi, Ohm.MIDI_MIN..Ohm.MIDI_MAX) { patch.copy(midi = it) }
         is OpenSkyPatch -> Field(patch.midi, OpenSkyPatch.MIDI_MIN..OpenSkyPatch.MIDI_MAX) { patch.copy(midi = it) }
@@ -369,7 +369,7 @@ object SynthRoot {
         is TinesPatch -> if (patch.voice == TinesVoice.KALIMBA) tune(patch, { nearestMidi(Tines.frequencyFor(patch.voice, it)) }) else null
 
         // ---- no root a note name would describe ----
-        is com.snipsnap.synth.DrumlinePatch, is ServoPatch, is BackwashPatch, is BreakerPatch, is SootPatch, is ThumpPatch, is SkinPatch, is OnsetPatch, is TerraPatch, is VoxPatch, is FillPatch, is RivetPatch, is ScuffPatch, is HiccupPatch, is ClutterPatch, is EmberPatch, is com.snipsnap.synth.CalabashPatch, is TempestPatch -> null
+        is com.snipsnap.synth.SecondlinePatch, is com.snipsnap.synth.SambaPatch, is com.snipsnap.synth.RiddimPatch, is com.snipsnap.synth.DrumlinePatch, is ServoPatch, is BackwashPatch, is BreakerPatch, is SootPatch, is ThumpPatch, is SkinPatch, is OnsetPatch, is TerraPatch, is VoxPatch, is FillPatch, is RivetPatch, is ScuffPatch, is com.snipsnap.synth.KindredPatch, is HiccupPatch, is ClutterPatch, is EmberPatch, is com.snipsnap.synth.CalabashPatch, is TempestPatch -> null
         // SILK's TUNE walks scale degrees, EROSION's sweeps a frequency: neither names a note.
         is SilkPatch, is ErosionPatch -> null
     }

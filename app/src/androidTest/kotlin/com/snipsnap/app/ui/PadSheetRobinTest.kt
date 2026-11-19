@@ -96,7 +96,8 @@ class PadSheetRobinTest : ComposeScreenTest() {
         return KitShelf.Entry(dir, kit)
     }
 
-    private fun show(entry: KitShelf.Entry, openBox: String? = null) {
+    /** The sheet on [page]: the editor first, then through the page's own door (the short pad page, 2026-11-16: ROUND ROBIN is behind LAYERS AND TAKES). */
+    private fun show(entry: KitShelf.Entry, openBox: String? = null, page: PadSheetPage = PadSheetPage.LAYERS) {
         openBoxState = openBox
         pageState = PadSheetPage.EDITOR
         setPhoneContent {
@@ -108,6 +109,7 @@ class PadSheetRobinTest : ComposeScreenTest() {
                 page = pageState,
                 onOpenEffects = { pageState = PadSheetPage.EFFECTS },
                 onOpenVariations = { pageState = PadSheetPage.VARIATIONS },
+                onOpenPage = { pageState = it },
                 onBack = { pageState = PadSheetPage.EDITOR },
                 onToast = { toasts += it },
                 onNavigateTape = {},
@@ -125,6 +127,10 @@ class PadSheetRobinTest : ComposeScreenTest() {
             )
         }
         waitFor("the pad sheet", timeoutMillis = 60_000) { hasText("PAD ${PadBanks.tag(1)}") }
+        if (page == PadSheetPage.LAYERS) {
+            activate(Copy.PAD_LAYERS_DOOR)
+            waitFor("LAYERS AND TAKES", timeoutMillis = 60_000) { pageState == PadSheetPage.LAYERS && hasText(Copy.PAD_LAYERS_TITLE) }
+        }
     }
 
     private fun nodes(description: String) =
@@ -198,7 +204,7 @@ class PadSheetRobinTest : ComposeScreenTest() {
         Robin.apply(m, 1, RobinSettings(0.6f, 6))
         m.save()
 
-        show(KitShelf.Entry(entry.dir, KitStore.load(entry.dir)), openBox = "TREATMENT")
+        show(KitShelf.Entry(entry.dir, KitStore.load(entry.dir)), openBox = "TREATMENT", page = PadSheetPage.EDITOR)
         // KEEP is the board card's, on EFFECTS, with the buttons under the effects list (direction B, 2026-11-15).
         activate(Copy.PAD_EFFECTS_DOOR)
         activate("EXPAND ${EffectsMenu.BUTTONS_HEADING}")
@@ -270,7 +276,7 @@ class PadSheetRobinTest : ComposeScreenTest() {
         Robin.apply(m, 1, RobinSettings(0.6f, 6))
         m.save()
 
-        show(KitShelf.Entry(entry.dir, KitStore.load(entry.dir)))
+        show(KitShelf.Entry(entry.dir, KitStore.load(entry.dir)), page = PadSheetPage.EDITOR)
         // The first taps may land before the pad has been read; keep tapping until one is heard.
         waitFor("a first hit to sound", timeoutMillis = 60_000) {
             if (heard.isEmpty()) activate("▶ HIT")

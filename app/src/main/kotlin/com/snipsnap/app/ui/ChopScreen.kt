@@ -1358,7 +1358,7 @@ private fun ClassPicker(
                 // Tapping accepts the machine's own guess back (clears the
                 // manual override) — named as that action, not just the
                 // readout it shows.
-                .tapeClick(label = "ACCEPT THE MACHINE'S GUESS: ${ChopReviewModel.chipName(machine)}", enabled = enabled, onClick = onMachine),
+                .tapeClick(label = "Accept the machine's guess: ${ChopReviewModel.chipName(machine)}", enabled = enabled, onClick = onMachine),
             contentAlignment = Alignment.Center,
         ) {
             TapeText(
@@ -1494,14 +1494,14 @@ private fun CutBench(
             )
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            SecondaryButton("◀", modifier = Modifier.weight(1f).heightIn(min = Layout.MIN_HIT_TARGET.dp), enabled = !busy && !humming && canStep, spoken = if (unit == "BEAT") "THE ONE A BEAT EARLIER" else "ONE $unit FEWER") { onStep(-1) }
+            SecondaryButton("◀", modifier = Modifier.weight(1f).heightIn(min = Layout.MIN_HIT_TARGET.dp), enabled = !busy && !humming && canStep, spoken = if (unit == "BEAT") "The one a BEAT earlier" else "ONE $unit FEWER") { onStep(-1) }
             Box(
                 Modifier.weight(1.6f).heightIn(min = Layout.MIN_HIT_TARGET.dp).lcdPanel(scheme),
                 contentAlignment = Alignment.Center,
             ) {
                 TapeText(if (humming) Copy.HUM_BUSY else if (busy) Copy.CHOP_BENCH_BUSY else readout, TapeType.lcdSmall, scheme.lcdInk.tape, maxLines = 1)
             }
-            SecondaryButton("▶", modifier = Modifier.weight(1f).heightIn(min = Layout.MIN_HIT_TARGET.dp), enabled = !busy && !humming && canStep, spoken = if (unit == "BEAT") "THE ONE A BEAT LATER" else "ONE $unit MORE") { onStep(1) }
+            SecondaryButton("▶", modifier = Modifier.weight(1f).heightIn(min = Layout.MIN_HIT_TARGET.dp), enabled = !busy && !humming && canStep, spoken = if (unit == "BEAT") "The one a BEAT later" else "ONE $unit MORE") { onStep(1) }
             if (hits != null) {
                 SecondaryButton("AUTO", modifier = Modifier.weight(1f).heightIn(min = Layout.MIN_HIT_TARGET.dp), enabled = !busy && !humming, onClick = onAuto)
             }
@@ -1529,13 +1529,13 @@ private fun CutBench(
             }
         }
         if (hits != null) {
-            TapeText("EAR · HOW HARD IT LISTENS", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
+            TapeText("EAR · how hard it listens", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 for (ear in ChopReviewModel.Ear.entries) {
                     SegmentButton(ear.name, active = hits.ear == ear, modifier = Modifier.weight(1f), enabled = !busy) { onEar(ear) }
                 }
             }
-            TapeText("CHOP POINT · AGAINST THE ATTACK", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
+            TapeText("CHOP POINT · against the attack", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 for (cut in ChopReviewModel.Cut.entries) {
                     SegmentButton(cut.name, active = hits.cut == cut, modifier = Modifier.weight(1f), enabled = !busy) { onCut(cut) }
@@ -1547,7 +1547,7 @@ private fun CutBench(
                 t == null -> "NO TEMPO HEARD"
                 else -> "${t.bpm.roundToInt()} BPM"
             }
-            TapeText("SNAP · CUTS ONTO THE PULSE · $pulse", TapeType.pixelSmall, if (t == null) scheme.ink3.tape else scheme.ink2.tape, maxLines = 2)
+            TapeText("SNAP · cuts onto the pulse · $pulse", TapeType.pixelSmall, if (t == null) scheme.ink3.tape else scheme.ink2.tape, maxLines = 2)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 for (grid in ChopReviewModel.GridSnap.entries) {
                     SegmentButton(grid.label, active = hits.grid == grid, modifier = Modifier.weight(1f), enabled = !busy) { onSnap(grid) }
@@ -1609,7 +1609,7 @@ private fun SliceRow(
                     // opening the picker. TalkBack was announcing this
                     // action as the one gesture it is not.
                     // twin: the class picker's THE MACHINE SAID row (ClassPicker onMachine), opened by a tap on this same chip
-                    onLongClickLabel = "RESTORE THE MACHINE'S CALL",
+                    onLongClickLabel = "Restore the machine's call",
                     onLongClick = { onLongPressChip() },
                     onClick = { onTapChip() },
                 )

@@ -267,8 +267,8 @@ internal fun PrismMotionPanel(
             MacroSlider("TIME", motion.seconds, color, scheme,
                 onValueChange = { seconds -> edit { PrismMotionEditor.withTime(it, seconds) } },
                 readout = "${prismSeconds(motion.seconds)} S", valueRange = PrismMotionEditor.MIN_SECONDS..PrismMotionEditor.MAX_SECONDS)
-            TapeText(if (motion.repeat) "BODY ↔ TONE · ${prismSeconds(motion.seconds)} S PER CYCLE"
-                else "BODY → TONE · ${prismSeconds(motion.seconds)} S TO OPEN", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
+            TapeText(if (motion.repeat) "Body ↔ tone · ${prismSeconds(motion.seconds)} s per cycle"
+                else "Body → tone · ${prismSeconds(motion.seconds)} s to open", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
             if (motion.repeat && Prism.isLoop(patch.macros["HOLD"] ?: 0f)) {
                 val fitted = Prism.motionCycleSeconds(patch.voice, patch.macros, motion, patch.template)
                 TapeText("HELD CYCLE ≈ ${prismSeconds(fitted)} S", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)

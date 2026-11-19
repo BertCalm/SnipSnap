@@ -101,7 +101,7 @@ internal fun ExpansionRow(
                 onLongClick = onArm,
                 onClick = { if (armed) onDisarm() else onOpen(e) },
             )
-            .semantics(mergeDescendants = true) { if (armed) stateDescription = "RENAME AND DELETE REVEALED" }
+            .semantics(mergeDescendants = true) { if (armed) stateDescription = "Rename and delete revealed" }
             .padding(horizontal = 10.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp),

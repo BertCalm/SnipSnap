@@ -1,0 +1,12 @@
+{
+  "model": 2,
+  "sourceTests": {"suite": "FootworkTest", "tests": 3, "failures": 0},
+  "deliveryTests": {"suite": "FootworkKitTest", "tests": 1, "cells": 648, "failures": 0},
+  "conventions": {"suite": "ConventionTest", "tests": 87, "failures": 0},
+  "nativeAndSfz": "verified in software",
+  "mpc3PcmAndCycleFields": "read back; not proof of MPC slice cycling",
+  "mpc3RoundRobin": "open: shared exporter omits the chain-WAV slice map (HH1.4)",
+  "nativeListeningAndDevices": "pending owner",
+  "repositoryWideRegression": "no clean completed full-suite run; broad run found roster-count documentation failure, then was stopped for final source revision; corrected convention suite and focused source/delivery suites pass",
+  "environment": "Source test Java compilation initially required a JDK rather than the installed JRE; rerun passed with local Temurin JDK 21"
+}

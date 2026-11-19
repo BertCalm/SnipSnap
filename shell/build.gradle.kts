@@ -598,6 +598,26 @@ tasks.register<JavaExec>("generateCypherKits") {
     args(providers.gradleProperty("cypherOutput").orNull ?: "${rootDir}/testkit/cypher-kits")
 }
 
+tasks.register<JavaExec>("generateLooseCrateKits") {
+    group = "distribution"
+    description = "Build the LOOSE CRATE kits, prove the velocity and round-robin grid through save, playback and MPC 3 export, and write the listening pack."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.LooseCrateKitGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "2g"
+    args(providers.gradleProperty("looseCrateKitsOutput").orNull ?: "${rootDir}/testkit/loose-crate-kits")
+}
+
+tasks.register<JavaExec>("generateStaggerKits") {
+    group = "distribution"
+    description = "Build the three STAGGER kits, prove the velocity and round-robin grid through save, playback and MPC 3 export, and write the listening pack."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.StaggerKitGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "2g"
+    args(providers.gradleProperty("staggerKitsOutput").orNull ?: "${rootDir}/testkit/stagger-kits")
+}
+
 tasks.register<JavaExec>("generateMirrorballKits") {
     group = "distribution"
     description = "Build the three MIRRORBALL disco kits, prove the velocity and round-robin grid through save, playback and MPC 3 export, and write the listening pack."
@@ -625,6 +645,16 @@ tasks.register<JavaExec>("generateScuffKits") {
     workingDir = rootProject.projectDir
     maxHeapSize = "2g"
     args(providers.gradleProperty("scuffKitsOutput").orNull ?: "${rootDir}/testkit/scuff-kits")
+}
+
+tasks.register<JavaExec>("generateKindredKits") {
+    group = "distribution"
+    description = "Build the four KINDRED kits, prove the velocity and round-robin grid through save, playback and MPC 3 export, and write the listening pack."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.KindredKitGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "2g"
+    args(providers.gradleProperty("kindredKitsOutput").orNull ?: "${rootDir}/testkit/kindred-kits")
 }
 
 tasks.register<JavaExec>("generateEmberKits") {
@@ -665,6 +695,16 @@ tasks.register<JavaExec>("generateCalabashKits") {
     workingDir = rootProject.projectDir
     maxHeapSize = "3g"
     args(providers.gradleProperty("calabashKitsOutput").orNull ?: "${rootDir}/testkit/calabash-kits")
+}
+
+tasks.register<JavaExec>("generateRiddimKits") {
+    group = "distribution"
+    description = "Build the three RIDDIM kits, prove every velocity and round-robin grid through save, playback and MPC 3 export, and write the listening pack."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.RiddimKitGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "3g"
+    args(providers.gradleProperty("riddimKitsOutput").orNull ?: "${rootDir}/testkit/riddim-kits")
 }
 
 tasks.register<JavaExec>("generateHiccupKits") {
@@ -758,6 +798,38 @@ tasks.register<JavaExec>("generateSporeApprovedSnare") {
     args(providers.gradleProperty("sporeApprovedOutput").orNull ?: "${rootDir}/testkit/spore-approved-snare")
 }
 
+tasks.register<JavaExec>("generateSplinterKit") {
+    group = "distribution"
+    description = "Render and verify the SPLINTER breakcore shelf kit, with its listening files and archives."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.SplinterDelivery")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "2g"
+    args(providers.gradleProperty("splinterOutput").orNull ?: "${rootDir}/testkit/splinter-breakcore")
+}
+
+tasks.register<JavaExec>("generateCuttingsKits") {
+    group = "distribution"
+    description = "Build CUTTINGS genre kits, verify saved grids and MPC metadata, and render their actual playback windows."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.CuttingsKitGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "2g"
+    args(providers.gradleProperty("cuttingsOutput").orNull ?: "${rootDir}/testkit/cuttings-kits")
+}
+
+for (kitName in listOf("shatter", "soundclash", "redline")) {
+    tasks.register<JavaExec>("generate${kitName.replaceFirstChar { it.uppercase() }}Kit") {
+        group = "distribution"
+        description = "Render and verify the ${kitName.uppercase()} breakcore shelf kit, with its listening files and archives."
+        classpath = sourceSets["test"].runtimeClasspath
+        mainClass.set("com.snipsnap.shell.BreakcoreFamilyDelivery")
+        workingDir = rootProject.projectDir
+        maxHeapSize = "2g"
+        args(kitName, providers.gradleProperty("${kitName}Output").orNull ?: "${rootDir}/testkit/${kitName}-breakcore")
+    }
+}
+
 tasks.register<JavaExec>("generateSporeSyntheticKits") {
     group = "distribution"
     description = "Render and verify all three complete sample-free Spore shelf kits."
@@ -776,4 +848,63 @@ tasks.register<JavaExec>("generateSideroomKits") {
     workingDir = rootProject.projectDir
     maxHeapSize = "2g"
     args(providers.gradleProperty("sideroomOutput").orNull ?: "${rootDir}/testkit/sideroom-native")
+}
+
+tasks.register<JavaExec>("generateEastAfricaKits") {
+    group = "distribution"
+    description = "Render five fitted-synthesis banks with native/MPC exports and saved-PCM auditions."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.EastAfricaKitGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "1g"
+    args(providers.gradleProperty("eastAfricaOutput").orNull ?: "${rootDir}/testkit/east-africa-kits")
+}
+
+tasks.register<JavaExec>("generateFootworkKits") {
+    group = "distribution"
+    description = "Render and verify the full-dynamics FOOTWORK kits and native audition."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.FootworkKitGenerator")
+    workingDir = rootDir
+    maxHeapSize = "2g"
+    args(providers.gradleProperty("footworkOutput").orNull ?: "${rootDir}/testkit/footwork-native")
+}
+
+ tasks.register<JavaExec>("generateSoulRockKits") {
+    group = "distribution"
+    description = "Export the three approved Soul Rock banks and verify every saved and MPC 3 strike."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.SoulRockKitGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "2g"
+    args(providers.gradleProperty("soulRockOutput").orNull ?: "${rootDir}/testkit/soul-rock-kits")
+}
+
+tasks.register<JavaExec>("verifyParadeStudyTransport") {
+    group = "verification"
+    description = "Verify pinned parade audition PCM through native kit saving, selection and MPC export."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.ParadeKitTransport")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "1g"
+    args(providers.gradleProperty("paradeInput").getOrElse("${rootDir}/testkit/parade-study"),
+        providers.gradleProperty("paradeOutput").getOrElse("${rootDir}/testkit/parade-transport"))
+}
+
+tasks.register<JavaExec>("verifyNativeSambaKit") {
+    group = "verification"
+    description = "Regenerate native Samba recipes and verify save/load, playback and MPC export."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.SambaKitProof")
+    maxHeapSize = "1g"
+    args(providers.gradleProperty("nativeSambaKitOutput").getOrElse("${rootDir}/testkit/native-samba-kit"))
+}
+
+tasks.register<JavaExec>("verifySecondlineKits") {
+    group = "verification"
+    description = "Regenerate classic and triangle Second Line kits through saving, playback and MPC export."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.SecondlineKitProof")
+    maxHeapSize = "1g"
+    args(providers.gradleProperty("secondlineKitOutput").getOrElse("${rootDir}/testkit/secondline-kits"))
 }

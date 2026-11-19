@@ -168,6 +168,28 @@ internal object KitStrikes {
     const val ONSET_MODEL = 4
 
     /**
+     * One pad that is several strikes of one drum: strike i lands [offsetsMs]\[i] after the first, at
+     * [weights]\[i] of the pad's velocity (its timbre struck that softly, and its level scaled by the same
+     * weight). A flam and a bouncing snare are both this, and the rack's shortest echo (60 ms) is far too
+     * long for either. Every strike is a fresh take of the engine: [single] renders one strike at a velocity
+     * and an engine take, and engine take 0 (a drum's authored strike) is never used, so no two strikes inside
+     * a pad, and no two takes of a pad, share audio. From LOOSE CRATE round 0 (`docs/LOOSE_CRATE.md`).
+     */
+    fun multi(offsetsMs: List<Float>, weights: List<Float>, single: (velocity: Float, engineTake: Int) -> FloatArray): Strike {
+        require(offsetsMs.size == weights.size && offsetsMs.isNotEmpty() && offsetsMs.first() == 0f)
+        return { v, t, _ ->
+            val strikes = offsetsMs.indices.map { i -> single((v * weights[i]).coerceIn(.05f, 1f), 1 + t * 16 + i) }
+            val starts = offsetsMs.map { Math.round(it * Dsp.RATE / 1000f) }
+            val out = FloatArray(starts.indices.maxOf { starts[it] + strikes[it].size })
+            for (i in strikes.indices) {
+                val k = peakOf(strikes[i]).let { if (it > 1e-9f) weights[i] / it else 0f }
+                for (j in strikes[i].indices) out[starts[i] + j] += strikes[i][j] * k
+            }
+            out
+        }
+    }
+
+    /**
      * Two strikes as one drum: each peak-normalised, summed at [weightA] and [weightB], then normalised
      * again. They share an onset, so the sum reads as one hit rather than two.
      */
@@ -281,6 +303,40 @@ internal object Cypher {
     /** Every note of [parts] moved by [ms]: the backbeat 18 ms behind, the hats 8 ms behind. */
     fun behind(notes: List<Note>, parts: Set<Int>, ms: Float): List<Note> =
         notes.map { n -> if (n.part in parts) Note(n.beat, n.part, n.weight, n.offsetMs + ms, n.tuneSemis) else n }
+
+    /**
+     * One player's clock (STAGGER, docs/superpowers/specs/2026-11-18-stagger-drum-kits-brief.md): a drift shared
+     * by every part plus a bias per part. The drift is a mean-reverting walk ticked once per eighth of the grid,
+     * d = rho * d + sigma * noise, with sigma chosen so its stationary spread is [wobbleMs] (the noise is uniform,
+     * variance a third); rho 0 is [humanised] with the bias added, rho near 1 is [behind]. It is centred over the
+     * notes, so a part's mean lateness is exactly its bias. [biasMs] names a part's habit (a kick that drags, a
+     * snare a hair early); an unnamed part has none. Drawn once from [seed], clamped to [Note]'s +-60 ms, and
+     * fixed by the kit version like every other feel law.
+     *
+     * Why one drift rather than a draw per note: a drummer has one sense of time that wanders and a habit per limb.
+     * Independent draws put the kick and the hat on the same beat on different sides of it, which the ear reads as a
+     * mistake; a shared drift leans them the same way, which it reads as a feel.
+     */
+    fun staggered(notes: List<Note>, biasMs: Map<Int, Float>, wobbleMs: Float, rho: Float, seed: String): List<Note> {
+        require(rho in 0f..0.99f && wobbleMs >= 0f)
+        val beats = notes.map { it.beat }.distinct().sorted()
+        if (beats.isEmpty()) return notes
+        val noise = Dsp.Noise(Dsp.seedFor("STAGGER", "clock", seed))
+        val sigma = wobbleMs * kotlin.math.sqrt((1f - rho * rho) * 3f)
+        val drift = HashMap<Double, Float>()
+        var d = 0f
+        var last: Double? = null
+        for (b in beats) {
+            val steps = if (last == null) 1 else max(1, Math.round((b - last!!) * 2).toInt())
+            repeat(steps) { d = rho * d + sigma * noise.next() }
+            drift[b] = d
+            last = b
+        }
+        val mean = drift.values.average().toFloat()
+        return notes.map { n ->
+            Note(n.beat, n.part, n.weight, (n.offsetMs + (biasMs[n.part] ?: 0f) + drift.getValue(n.beat) - mean).coerceIn(-60f, 60f), n.tuneSemis)
+        }
+    }
 
     /**
      * A ratchet: [count] notes of [part] from [beat], one every [division] of a beat, the weight rising from

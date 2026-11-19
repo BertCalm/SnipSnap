@@ -160,7 +160,7 @@ class KitScreenRobinTest : ComposeScreenTest() {
         val entry = kit()
         show(entry)
 
-        assertTrue("UNDO waits for a dial change", nodes("KIT ROUND ROBIN UNDO").isEmpty())
+        assertTrue("UNDO waits for a dial change", nodes("Kit round robin undo").isEmpty())
         activate("KIT ROUND ROBIN, OFF")
         settled()
         waitFor("the kit switched on") { entryState?.kit?.robin != null }
@@ -170,16 +170,16 @@ class KitScreenRobinTest : ComposeScreenTest() {
         assertEquals(KitRobin(), on.robin)
         val at60 = bytesOf(entry, 1)
 
-        dial("KIT ROUND ROBIN AMOUNT", 1f)
+        dial("Kit round robin amount", 1f)
         settled()
         waitFor("amount 100 stored") { entryState?.kit?.robin?.amount == 1f }
         assertFalse("the follower was re-rendered", at60.contentEquals(bytesOf(entry, 1)))
 
-        activate("KIT ROUND ROBIN UNDO")
+        activate("Kit round robin undo")
         settled()
         waitFor("amount back") { entryState?.kit?.robin?.amount == KitRobin.DEFAULT_AMOUNT }
         assertArrayEquals("UNDO restores the 60 render byte for byte", at60, bytesOf(entry, 1))
-        assertTrue("UNDO is spent", nodes("KIT ROUND ROBIN UNDO").isEmpty())
+        assertTrue("UNDO is spent", nodes("Kit round robin undo").isEmpty())
     }
 
     @Test
@@ -236,12 +236,12 @@ class KitScreenRobinTest : ComposeScreenTest() {
         // Wire only the dial to a change that fails before touching anything.
         val shelf = KitShelf(entry.dir.parentFile!!)
         refuse = true
-        dial("KIT ROUND ROBIN AMOUNT", 1f)
+        dial("Kit round robin amount", 1f)
         settled()
         waitFor("the dial back at 60") {
-            nodes("KIT ROUND ROBIN AMOUNT").single().config.getOrNull(SemanticsProperties.StateDescription) == "60"
+            nodes("Kit round robin amount").single().config.getOrNull(SemanticsProperties.StateDescription) == "60"
         }
-        assertTrue("no UNDO for a change that never landed", nodes("KIT ROUND ROBIN UNDO").isEmpty())
+        assertTrue("no UNDO for a change that never landed", nodes("Kit round robin undo").isEmpty())
         assertNotNull(shelf)
     }
 }

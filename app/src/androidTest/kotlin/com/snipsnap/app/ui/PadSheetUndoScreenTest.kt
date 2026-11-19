@@ -25,6 +25,7 @@ import com.snipsnap.shell.KitBuilderModel
 import com.snipsnap.shell.PadBanks
 import com.snipsnap.shell.PadSheet
 import com.snipsnap.shell.PadSheetBoxes
+import com.snipsnap.shell.PadSheetPage
 import com.snipsnap.shell.PedalSlate
 import com.snipsnap.synth.PadRecipe
 import com.snipsnap.synth.Thump
@@ -74,6 +75,7 @@ class PadSheetUndoScreenTest : ComposeScreenTest() {
     private val toasts = CopyOnWriteArrayList<String>()
     private var currentSlot by mutableStateOf(1)
     private var openBoxState by mutableStateOf<String?>(null)
+    private var pageState by mutableStateOf(PadSheetPage.EDITOR)
 
     @After
     fun cleanUp() {
@@ -96,15 +98,22 @@ class PadSheetUndoScreenTest : ComposeScreenTest() {
         return KitShelf.Entry(dir, kit)
     }
 
-    private fun show(entry: KitShelf.Entry, openBox: String?) {
+    /**
+     * The sheet, read on the editor (its provenance line says the bin holds the take), then moved to [page]: on
+     * the short pad page (2026-11-16) UNDO SPLICE is behind TRIM AND SPLICE and the MAKE box behind MAKE FROM THIS PAD.
+     */
+    private fun show(entry: KitShelf.Entry, openBox: String?, page: PadSheetPage) {
         openBoxState = openBox
+        pageState = PadSheetPage.EDITOR
         setPhoneContent {
             PadSheetScreen(
                 entry = entry,
                 slot = currentSlot,
                 backLabel = "◄ PADS",
                 onSlotChange = { currentSlot = it },
-                onBack = {},
+                page = pageState,
+                onOpenPage = { pageState = it },
+                onBack = { pageState = PadSheetPage.EDITOR },
                 onToast = { toasts += it },
                 onNavigateTape = {},
                 onGrainField = {},
@@ -123,6 +132,8 @@ class PadSheetUndoScreenTest : ComposeScreenTest() {
         waitFor("the provenance line to say the bin keeps the take", timeoutMillis = 60_000) {
             compose.onAllNodesWithText("original in bin, kept", substring = true, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
         }
+        pageState = page
+        pump()
     }
 
     private fun nodes(description: String) =
@@ -166,7 +177,7 @@ class PadSheetUndoScreenTest : ComposeScreenTest() {
             KitBuilderModel.open(entry.dir).binHolds().single { it.entry.originalName == "hit1.wav" }.keptFor,
         )
 
-        show(KitShelf.Entry(entry.dir, KitStore.load(entry.dir)), openBox = null)
+        show(KitShelf.Entry(entry.dir, KitStore.load(entry.dir)), openBox = null, page = PadSheetPage.TRIM)
         assertTrue(
             "with every box closed the sheet draws no bare UNDO; UNDO SPLICE must keep its own name",
             nodes("UNDO").isEmpty(),
@@ -198,8 +209,8 @@ class PadSheetUndoScreenTest : ComposeScreenTest() {
             KitBuilderModel.open(entry.dir).binHolds().single { it.entry.originalName == "hit1.wav" }.keptFor,
         )
 
-        show(KitShelf.Entry(entry.dir, KitStore.load(entry.dir)), openBox = PadSheetBoxes.Box.MAKE.name)
-        waitFor("the MAKE box's FIND NEAREST SYNTH line to name the patch", timeoutMillis = 60_000) { hasText("A PATCH NOW, 0.12 AWAY") }
+        show(KitShelf.Entry(entry.dir, KitStore.load(entry.dir)), openBox = PadSheetBoxes.Box.MAKE.name, page = PadSheetPage.MAKE)
+        waitFor("the MAKE box's FIND NEAREST SYNTH line to name the patch", timeoutMillis = 60_000) { hasText("A patch now, 0.12 away") }
         activate("UNDO NEAREST SYNTH")
         waitForToast(Copy.UNDESAMPLED)
         val undone = savedPad(entry)
@@ -207,7 +218,7 @@ class PadSheetUndoScreenTest : ComposeScreenTest() {
         assertFalse("the de-sample's stamp came off", "desampled" in undone.source)
         assertTrue("the take before the de-sample, byte for byte", original.contentEquals(File(entry.dir, "hit1.wav").readBytes()))
         waitFor("the MAKE box's FIND NEAREST SYNTH line to stop naming a patch", timeoutMillis = 60_000) {
-            hasText("THE HIT MEASURED AGAINST EVERY THUMP")
+            hasText("The hit measured against every thump")
         }
 
         activate("UNDO NEAREST SYNTH")

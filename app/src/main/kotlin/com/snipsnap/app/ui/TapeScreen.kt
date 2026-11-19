@@ -1297,7 +1297,7 @@ private fun ReadoutRow(model: TapeDeckModel, readoutPos: State<Long>, onToast: (
                 // Named for what the tap switches to, not Copy.ODOMETER_ON/
                 // OFF — those are toasts (full stop, said once) while this
                 // is a control name spoken every time it's found.
-                .tapeClick(label = if (model.odometer) "SWITCH TO REAL TIME" else "SHOW COUNTER") {
+                .tapeClick(label = if (model.odometer) "Switch to real time" else "SHOW COUNTER") {
                     model.toggleOdometer()
                     localGen++
                     onToast(if (model.odometer) Copy.ODOMETER_ON else Copy.ODOMETER_OFF)

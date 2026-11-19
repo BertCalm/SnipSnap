@@ -145,6 +145,7 @@ import com.snipsnap.shell.Scheme
 import com.snipsnap.shell.Schemes
 import com.snipsnap.shell.ShapeAudition
 import com.snipsnap.shell.SnipStore
+import com.snipsnap.shell.TryEffect
 import com.snipsnap.xpm.PadNoteMap
 import java.io.File
 import kotlin.math.abs
@@ -204,7 +205,7 @@ fun PadSheetScreen(
     backLabel: String,
     onSlotChange: (Int) -> Unit,
     /**
-     * Which of the editor's three pages to draw (`Bench.PAD_SHEET`, `PAD_EFFECTS`, `PAD_VARIATIONS`): one
+     * Which of the editor's pages to draw ([PadSheetPage]: the editor and the screens behind its doors): one
      * composable, so the state EFFECTS and VARIATIONS work on survives the trip from the editor and back.
      * [onBack] is Back from whichever page is up, and [backLabel] names where it lands.
      */
@@ -213,6 +214,8 @@ fun PadSheetScreen(
     onOpenEffects: () -> Unit = {},
     /** `VARIATIONS ▸`: opens the VARIATIONS page over the editor. */
     onOpenVariations: () -> Unit = {},
+    /** The short pad page's other doors: LAYERS AND TAKES, TRIM AND SPLICE and MAKE FROM THIS PAD open their page over the editor. */
+    onOpenPage: (PadSheetPage) -> Unit = {},
     onBack: () -> Unit,
     onToast: (String) -> Unit,
     onNavigateTape: () -> Unit,
@@ -860,6 +863,33 @@ fun PadSheetScreen(
         }
     }
 
+    // ---- Try before you keep (docs/UX_PASS_2026_11.md, fix e) ----
+    // A list row's tap is heard first. Its apply runs its own landing on a scratch copy of the kit
+    // ([TryEffect.hear]), plays what that made, and leaves the pad as it was; KEEP then runs the real
+    // apply with the same AMT and seed, so it gives what was heard. [triedNext] is the tap in flight,
+    // [tried] the one heard and waiting on KEEP.
+    var tried by remember(entry.dir, slot) { mutableStateOf<Tried?>(null) }
+    var triedNext by remember(entry.dir, slot) { mutableStateOf<Tried?>(null) }
+
+    /** [landing] on a scratch copy, under the kit lock so the copy is never half a save; the pad's sound after it, or null. */
+    suspend fun hearOnScratch(kitDir: File, landing: (KitBuilderModel) -> Unit): Snip? {
+        val targetSlot = slot
+        return offMain {
+            KitWrites.mutex.withLock {
+                TryEffect.hear(kitDir, File(context.cacheDir, TryEffect.SCRATCH_DIR), targetSlot, TAPE_LOAD_MAX_SEC, landing)
+            }
+        }
+    }
+
+    /** A preview landed: it becomes the row being heard, and plays, unless the user has moved to another pad. */
+    fun playTried(heard: Snip, p: KitPad) {
+        val next = triedNext ?: return
+        triedNext = null
+        if (liveSlot != slot || liveKitDir != entry.dir) return
+        tried = next
+        if (lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) audition(heard, p.level, p)
+    }
+
     /**
      * SMEAR: not an era, so it doesn't route through `eraPad` — it's
      * `com.snipsnap.audio.Smear.process` through the generic
@@ -930,7 +960,7 @@ fun PadSheetScreen(
      * to skip them for a dead composable the way the teardown effect skips
      * saving a stale `m`.
      */
-    fun applySmear(m: KitBuilderModel, p: KitPad, amount: Float, padName: String) {
+    fun applySmear(m: KitBuilderModel, p: KitPad, amount: Float, padName: String, preview: Boolean = false) {
         val kitDir = m.kitDir
         val staleSampleFile = p.sampleFile
         val stalePads = pendingMetadataSlots.associateWith { m.kit.pad(it) }
@@ -943,7 +973,7 @@ fun PadSheetScreen(
                 var stacked = false
                 var noop = false
                 var pedalsBaked = false
-                val (fresh, _) = withFreshKit(kitDir) { f ->
+                val landing: (KitBuilderModel) -> Unit = land@{ f ->
                     reapplyPendingMetadataFields(f, stalePads)
                     val freshPad = f.kit.pad(slot)
                     if (freshPad != null && freshPad.sampleFile == staleSampleFile) {
@@ -956,7 +986,7 @@ fun PadSheetScreen(
                         // not a landing: no toast claiming one, no audition.
                         if (amount <= 0f && PadSheet.readSmear(freshPad.recipe) == null) {
                             noop = true
-                            return@withFreshKit
+                            return@land
                         }
                         // `smearPad` restores first when it can; when the
                         // original is not in the bin it stacks (amount 0 is
@@ -967,7 +997,7 @@ fun PadSheetScreen(
                         // would wipe them off the card while the audio keeps every one (the slate design's D5).
                         if (notBinned && PedalSlate.boardOf(freshPad.recipe) != null) {
                             pedalsBaked = true
-                            return@withFreshKit
+                            return@land
                         }
                         stacked = amount > 0f && notBinned
                         // The rewrite itself lives in the model now
@@ -977,12 +1007,19 @@ fun PadSheetScreen(
                         applied = true
                     }
                 }
-                if (applied) auditionOnRefresh = true
-                model = fresh
-                pendingMetadataSlots = emptySet()
-                onKitUpdated(fresh.kit)
+                // Try before you keep: the same landing on a scratch copy, played, the kit untouched.
+                val heard = if (preview) hearOnScratch(kitDir, landing) else null
+                if (!preview) {
+                    val (fresh, _) = withFreshKit(kitDir, landing)
+                    if (applied) auditionOnRefresh = true
+                    model = fresh
+                    pendingMetadataSlots = emptySet()
+                    onKitUpdated(fresh.kit)
+                }
                 if (pedalsBaked) {
                     onToast(Copy.PEDALS_NOT_BINNED)
+                } else if (applied && preview) {
+                    heard?.let { playTried(it, p) }
                 } else if (applied) {
                     val label = PadSheet.displayLabel(PadSheet.SMEAR)
                     onToast(if (stacked) Copy.treatedStacked(label, padName) else Copy.treated(label, padName))
@@ -1018,7 +1055,7 @@ fun PadSheetScreen(
      * Bug fix (tab-switch data loss): launched into [appScope] — same fix,
      * same reason, as [applySmear]'s own KDoc above.
      */
-    fun applyDust(m: KitBuilderModel, p: KitPad, amount: Float, padName: String, from: String? = null) {
+    fun applyDust(m: KitBuilderModel, p: KitPad, amount: Float, padName: String, from: String? = null, preview: Boolean = false) {
         if (PrintedPads.has(p.recipe)) {
             onToast(boardRemoveFirst(p.recipe))
             return
@@ -1053,7 +1090,7 @@ fun PadSheetScreen(
                 var stacked = false
                 var noop = false
                 var pedalsBaked = false
-                val (fresh, _) = withFreshKit(kitDir) { f ->
+                val landing: (KitBuilderModel) -> Unit = land@{ f ->
                     reapplyPendingMetadataFields(f, stalePads)
                     val freshPad = f.kit.pad(slot)
                     // The tape was read off the pad before the lock; a DUST
@@ -1070,7 +1107,7 @@ fun PadSheetScreen(
                         // nothing, so this is not a landing.
                         if (amount <= 0f && PadSheet.readDust(freshPad.recipe) == null) {
                             noop = true
-                            return@withFreshKit
+                            return@land
                         }
                         val notBinned =
                             PadSheet.unTreatState(freshPad, f.binContents().map { it.originalName }.toSet()) == PadSheet.UnTreat.NOT_BINNED
@@ -1078,19 +1115,26 @@ fun PadSheetScreen(
                         // would wipe them off the card while the audio keeps every one (the slate design's D5).
                         if (notBinned && PedalSlate.boardOf(freshPad.recipe) != null) {
                             pedalsBaked = true
-                            return@withFreshKit
+                            return@land
                         }
                         stacked = amount > 0f && notBinned
                         f.dustPad(slot, amount, tape, print)
                         applied = true
                     }
                 }
-                if (applied) auditionOnRefresh = true
-                model = fresh
-                pendingMetadataSlots = emptySet()
-                onKitUpdated(fresh.kit)
+                // Try before you keep: the same landing on a scratch copy, played, the kit untouched.
+                val heard = if (preview) hearOnScratch(kitDir, landing) else null
+                if (!preview) {
+                    val (fresh, _) = withFreshKit(kitDir, landing)
+                    if (applied) auditionOnRefresh = true
+                    model = fresh
+                    pendingMetadataSlots = emptySet()
+                    onKitUpdated(fresh.kit)
+                }
                 if (pedalsBaked) {
                     onToast(Copy.PEDALS_NOT_BINNED)
+                } else if (applied && preview) {
+                    heard?.let { playTried(it, p) }
                 } else if (applied) {
                     val label = if (from != null) Copy.dustFromLabel(SnipStore.displayName(tapeFile)) else PadSheet.displayLabel(PadSheet.DUST)
                     onToast(if (stacked) Copy.treatedStacked(label, padName) else Copy.treated(label, padName))
@@ -1176,7 +1220,12 @@ fun PadSheetScreen(
      * is launched into [appScope], not this composable's own `scope` — same
      * fix, same reason, as [applySmear]'s own KDoc.
      */
-    fun applyTreatment(segment: String, amount: Float) {
+    fun applyTreatment(
+        segment: String,
+        amount: Float,
+        preview: Boolean = false,
+        seed: Long = kotlin.random.Random.nextLong(0L, 1_000_000L),
+    ) {
         if (busy) return
         val m = model ?: return
         val p = m.kit.pad(slot) ?: return
@@ -1187,11 +1236,11 @@ fun PadSheetScreen(
         }
         val padName = p.displayName
         if (segment == PadSheet.SMEAR) {
-            applySmear(m, p, amount, padName)
+            applySmear(m, p, amount, padName, preview)
             return
         }
         if (segment == PadSheet.DUST) {
-            applyDust(m, p, amount, padName)
+            applyDust(m, p, amount, padName, preview = preview)
             return
         }
         // MORE opens the slate's list and is never a treatment (`treatmentFor` refuses it, outside any
@@ -1201,7 +1250,8 @@ fun PadSheetScreen(
         val staleSampleFile = p.sampleFile
         val kitDir = m.kitDir
         val stalePads = pendingMetadataSlots.associateWith { m.kit.pad(it) }
-        val keyedSeed = kotlin.random.Random.nextLong(0L, 1_000_000L)
+        // A preview and its KEEP share the seed, so KEEP gives the retune that was heard.
+        val keyedSeed = seed
         busy = true
         padJob = Copy.treatmentBusy(PadSheet.displayLabel(segment))
         val boardJob = jobs.beginJob(padJob ?: Copy.WORKING_BUSY)
@@ -1211,7 +1261,7 @@ fun PadSheetScreen(
                 var stacked = false
                 var pedalsBaked = false
                 var keyLabel = ""
-                val (fresh, _) = withFreshKit(kitDir) { f ->
+                val landing: (KitBuilderModel) -> Unit = land@{ f ->
                     reapplyPendingMetadataFields(f, stalePads)
                     val freshPad = f.kit.pad(slot)
                     if (freshPad != null && freshPad.sampleFile == staleSampleFile) {
@@ -1241,7 +1291,7 @@ fun PadSheetScreen(
                                 // (the slate design's D5, kept for the whole card).
                                 if (PedalSlate.boardOf(freshPad.recipe) != null) {
                                     pedalsBaked = true
-                                    return@withFreshKit
+                                    return@land
                                 }
                                 stacked = amount > 0f
                             }
@@ -1259,12 +1309,19 @@ fun PadSheetScreen(
                         applied = true
                     }
                 }
-                if (applied) auditionOnRefresh = true
-                model = fresh
-                pendingMetadataSlots = emptySet()
-                onKitUpdated(fresh.kit)
+                // Try before you keep: the same landing on a scratch copy, played, the kit untouched.
+                val heard = if (preview) hearOnScratch(kitDir, landing) else null
+                if (!preview) {
+                    val (fresh, _) = withFreshKit(kitDir, landing)
+                    if (applied) auditionOnRefresh = true
+                    model = fresh
+                    pendingMetadataSlots = emptySet()
+                    onKitUpdated(fresh.kit)
+                }
                 if (pedalsBaked) {
                     onToast(Copy.PEDALS_NOT_BINNED)
+                } else if (applied && preview) {
+                    heard?.let { playTried(it, p) }
                 } else if (applied) {
                     onToast(
                         when {
@@ -1305,7 +1362,7 @@ fun PadSheetScreen(
      * before the launch, the fresh-kit block, the model swap, the refresh audition) around that one
      * call, launched into [appScope] for the same tab-switch reason.
      */
-    fun applyPedal(gesture: PedalSlate.Gesture) {
+    fun applyPedal(gesture: PedalSlate.Gesture, preview: Boolean = false) {
         if (busy) return
         val m = model ?: return
         val p = m.kit.pad(slot) ?: return
@@ -1325,11 +1382,21 @@ fun PadSheetScreen(
         appScope.launch {
             try {
                 var landed: PedalSlate.Landed = PedalSlate.Landed.Gone
-                val (fresh, _) = withFreshKit(kitDir) { f ->
+                val landing: (KitBuilderModel) -> Unit = { f ->
                     reapplyPendingMetadataFields(f, stalePads)
                     // A slot emptied underneath the sheet is the same answer as a changed sample.
                     if (f.kit.pad(slot) != null) landed = PedalSlate.land(f, slot, gesture, staleSampleFile)
                 }
+                if (preview) {
+                    // Try before you keep: the same landing on a scratch copy, played; a refusal is said
+                    // the way the real tap says it, and nothing moves (no mark, no refusal count).
+                    val heard = hearOnScratch(kitDir, landing)
+                    val result = landed
+                    val changed = result is PedalSlate.Landed.Applied || result == PedalSlate.Landed.Cleared
+                    if (changed && heard != null) playTried(heard, p) else PedalSlate.toast(gesture, result, padName)?.let(onToast)
+                    return@launch
+                }
+                val (fresh, _) = withFreshKit(kitDir, landing)
                 val result = landed
                 val changed = result is PedalSlate.Landed.Applied || result == PedalSlate.Landed.Cleared
                 if (changed) auditionOnRefresh = true
@@ -3473,6 +3540,55 @@ fun PadSheetScreen(
         }
     }
 
+    // Try before you keep: an effect or a pedal row is heard first ([tried], above). The same door its
+    // pick takes, with `preview` set; every other row opens what it opened before. A second tap on the
+    // row being heard plays it again. The pedal is said on or off from the pad as it is now, so a lit
+    // pedal's row previews the pad without it.
+    val pedalGestureFor: (String) -> PedalSlate.Gesture? = { word ->
+        Pedals.byWord(word)?.key?.let { key ->
+            val on = PadSheet.readPedals(pad.recipe)?.picks?.any { it.key == key } == true
+            if (on) PedalSlate.Gesture.Off(key) else PedalSlate.Gesture.On(key)
+        }
+    }
+    val listPick: (EffectsMenu.Target) -> Unit = listPick@{ target ->
+        if (busy) return@listPick
+        if (!EffectsMenu.tries(target)) {
+            tried = null
+            pickEffect(target)
+            return@listPick
+        }
+        pedalPlacing = null
+        val next = Tried(target, pendingAmt, kotlin.random.Random.nextLong(0L, 1_000_000L))
+        tried = null
+        triedNext = next
+        when (target) {
+            is EffectsMenu.Target.Segment -> {
+                applyingSegment = target.id
+                applyTreatment(target.id, next.amount, preview = true, seed = next.seed)
+            }
+            is EffectsMenu.Target.Pedal -> pedalGestureFor(target.word)?.let { applyPedal(it, preview = true) }
+            else -> Unit
+        }
+    }
+    val keepTried: () -> Unit = keep@{
+        val t = tried ?: return@keep
+        if (busy) return@keep
+        tried = null
+        when (val target = t.target) {
+            is EffectsMenu.Target.Segment -> {
+                applyingSegment = target.id
+                applyTreatment(target.id, t.amount, seed = t.seed)
+            }
+            is EffectsMenu.Target.Pedal -> pedalGestureFor(target.word)?.let { applyPedal(it) }
+            else -> Unit
+        }
+    }
+    // Leaving the page, or the pad changing under the preview (a chip below, AMT, an undo), lets the
+    // preview go: what was heard is no longer what KEEP would give.
+    LaunchedEffect(page, pad.recipe, pad.sampleFile) {
+        tried = null
+    }
+
     // DUST FROM ▸ (docs/DUST.md §5): borrow another tape's dust. The shelf's
     // tapes open inline on the TREATMENT bench, newest first; a pick runs
     // the DUST door at the card's AMT with that tape, and since the recipe
@@ -3533,6 +3649,9 @@ fun PadSheetScreen(
                 PadSheetPage.EDITOR -> "PAD ${padTag(slot)}"
                 PadSheetPage.EFFECTS -> Copy.PAD_EFFECTS_TITLE
                 PadSheetPage.VARIATIONS -> Copy.PAD_VARIATIONS_TITLE
+                PadSheetPage.LAYERS -> Copy.PAD_LAYERS_TITLE
+                PadSheetPage.TRIM -> Copy.PAD_TRIM_TITLE
+                PadSheetPage.MAKE -> Copy.PAD_MAKE_TITLE
             },
             onBack = ::requestBack,
             onHit = {
@@ -3610,6 +3729,7 @@ fun PadSheetScreen(
                 },
             )
 
+            SectionHeading(Copy.PAD_HOW_IT_PLAYS, scheme)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 ToggleChip("ONE-SHOT", pad.oneShot, classColor, scheme, enabled = !busy, modifier = Modifier.weight(1f)) {
                     editPadMetadata { m -> m.update(slot) { p -> p.copy(oneShot = !p.oneShot) } }
@@ -3635,7 +3755,28 @@ fun PadSheetScreen(
                 }
             }
 
-            SectionHeading("LAYERS", scheme)
+            // The short pad page (the owner's mockup, 2026-11-16): the levels and how it plays, then six labelled
+            // doors, each a screen of its own (`PadSheetPage`) with a closed line saying what is applied or inside.
+            // Nothing left the editor: what sat below HOW IT PLAYS is behind LAYERS, TRIM and MAKE, and AUDITION
+            // is HEAR IT IN THE BEAT. MAKE's door opens its box too, since the box is all that page holds.
+            SectionHeading("CHANGE IT", scheme)
+            PageDoor(Copy.PAD_EFFECTS_DOOR, PadSheetBoxes.effectsLine(pad, outsideStage), scheme, !busy, onClick = onOpenEffects)
+            PageDoor(Copy.PAD_VARIATIONS_DOOR, PadSheetBoxes.variationsLine(pad), scheme, !busy, onClick = onOpenVariations)
+            PageDoor(Copy.PAD_LAYERS_DOOR, PadSheetBoxes.layersLine(pad), scheme, !busy) { onOpenPage(PadSheetPage.LAYERS) }
+            PageDoor(Copy.PAD_TRIM_DOOR, PadSheetBoxes.TRIM_HOLDS, scheme, !busy) { onOpenPage(PadSheetPage.TRIM) }
+            PageDoor(Copy.PAD_MAKE_DOOR, boxes.getValue(PadSheetBoxes.Box.MAKE), scheme, !busy) {
+                if (openBoxKind != PadSheetBoxes.Box.MAKE) tapBox(PadSheetBoxes.Box.MAKE)
+                onOpenPage(PadSheetPage.MAKE)
+            }
+            // AUDITION ▸ (spec decision 2), renamed for what it does: dimmed rather than hidden with no other
+            // version to compare against, "still tappable, the destination explains why".
+            PageDoor(
+                Copy.PAD_BEAT_DOOR, PadSheetBoxes.beatLine(auditionSibling != null), scheme, !busy,
+                dimmed = auditionSibling == null, onClick = { onAudition(slot) },
+            )
+            }
+
+            if (page == PadSheetPage.LAYERS) PadPageBody {
             TapeText(Copy.LAYERS_RULE, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
             // ROUND ROBIN: the pad plays a different take each hit. Edits above and below still work on
             // the original; the takes re-render from it.
@@ -3725,7 +3866,9 @@ fun PadSheetScreen(
                 onClick = { if (pad.isRobinChain) onToast(Copy.ROBIN_NO_LAYERS) else onStack(slot) },
             )
 
-            SectionHeading("EDIT", scheme)
+            }
+
+            if (page == PadSheetPage.TRIM) PadPageBody {
             ActionButton("RE-TRIM ▸", scheme, enabled = !busy, modifier = Modifier.fillMaxWidth(), onClick = onNavigateTape)
             // Dimmed, not disabled, when there's no prior take yet - same
             // "still tappable, the destination explains why" convention as
@@ -3758,11 +3901,6 @@ fun PadSheetScreen(
                     onClick = ::onUnsplice,
                 )
             }
-
-            // EFFECTS and VARIATIONS are screens of their own (`PadSheetPage`), one door row each:
-            // the name with a ▸, and a closed line saying what is applied or what is inside.
-            PageDoor(Copy.PAD_EFFECTS_DOOR, PadSheetBoxes.effectsLine(pad, outsideStage), scheme, !busy, onOpenEffects)
-            PageDoor(Copy.PAD_VARIATIONS_DOOR, PadSheetBoxes.variationsLine(pad), scheme, !busy, onOpenVariations)
             }
 
             if (page == PadSheetPage.EFFECTS) PadPageBody {
@@ -3839,9 +3977,12 @@ fun PadSheetScreen(
                 padColor = classColor,
                 scheme = scheme,
                 busy = busy,
-                onPick = pickEffect,
+                onPick = listPick,
                 onAmountChange = { f -> pendingAmt = (f * 20f).roundToInt() / 20f },
                 onAmountCommit = commitAmount,
+                hearing = tried?.target,
+                onKeep = keepTried,
+                onCancelTry = { tried = null },
             )
             // A board stages on its card until KEEP: drawn once a list row picks one, while the pad
             // carries one, or with the buttons.
@@ -4001,7 +4142,7 @@ fun PadSheetScreen(
                 )
             }
             TapeText(
-                clipboard?.let { "ON THE CLIPBOARD: ${PadSheet.displayLabel(it.word)} FROM ${it.from}" } ?: Copy.REPLAY_LAST_ONLY,
+                clipboard?.let { "On the clipboard: ${PadSheet.displayLabel(it.word)} from ${it.from}" } ?: Copy.REPLAY_LAST_ONLY,
                 TapeType.pixelSmall,
                 scheme.ink2.tape,
                 Modifier.fillMaxWidth(),
@@ -4144,8 +4285,7 @@ fun PadSheetScreen(
             }
             }
 
-            if (page == PadSheetPage.EDITOR) PadPageBody {
-            SectionHeading("MAKE FROM THIS PAD", scheme)
+            if (page == PadSheetPage.MAKE) PadPageBody {
             GroupBox(
                 legend = PadSheetBoxes.Box.MAKE.legend,
                 summary = boxes.getValue(PadSheetBoxes.Box.MAKE),
@@ -4233,7 +4373,7 @@ fun PadSheetScreen(
             }
             val away = pad.source["desampled"]
             TapeText(
-                if (away != null) "A PATCH NOW, $away AWAY" else "THE HIT MEASURED AGAINST EVERY THUMP",
+                if (away != null) "A patch now, $away away" else "The hit measured against every thump",
                 TapeType.pixelSmall,
                 scheme.ink2.tape,
                 maxLines = 1,
@@ -4281,21 +4421,10 @@ fun PadSheetScreen(
                 onClick = ::openSpread,
             )
             }
+            }
 
-            SectionHeading("TRY IN THE BEAT", scheme)
-            // AUDITION ▸ (spec decision 2): offered whenever a MAKE PAD ▸
-            // sibling exists to compare against - dimmed rather than hidden,
-            // same "still tappable, the destination explains why" convention
-            // as MAKE INSTRUMENT above, so the card never rearranges itself
-            // pad to pad.
-            ActionButton(
-                "AUDITION ▸",
-                scheme,
-                enabled = !busy,
-                dimmed = auditionSibling == null,
-                modifier = Modifier.fillMaxWidth(),
-                onClick = { onAudition(slot) },
-            )
+            // EJECT stays at the foot of the editor; AUDITION is the HEAR IT IN THE BEAT ▸ door above.
+            if (page == PadSheetPage.EDITOR) PadPageBody {
             DeleteButton(scheme, enabled = !busy, onClick = ::onEject)
             }
         }
@@ -4729,7 +4858,7 @@ private fun StrikeFxSection(
             enabled = !busy,
             onFractionChange = onRoom,
             onFractionCommit = {},
-            accessibilityLabel = "FX BY VELOCITY REVERB",
+            accessibilityLabel = "FX by velocity REVERB",
         )
         StepperSlider(
             label = "SLAP",
@@ -4740,14 +4869,14 @@ private fun StrikeFxSection(
             enabled = !busy,
             onFractionChange = onSlap,
             onFractionCommit = {},
-            accessibilityLabel = "FX BY VELOCITY SLAP",
+            accessibilityLabel = "FX by velocity SLAP",
         )
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             // Named for the section: KEEP alone is also the board's button.
-            ActionButton("AUDITION", scheme, enabled = !busy, accessibilityLabel = "FX BY VELOCITY AUDITION", modifier = Modifier.weight(1f), onClick = onAudition)
-            ActionButton("KEEP", scheme, enabled = !busy, accessibilityLabel = "FX BY VELOCITY KEEP", modifier = Modifier.weight(1f), onClick = onKeep)
+            ActionButton("AUDITION", scheme, enabled = !busy, accessibilityLabel = "FX by velocity AUDITION", modifier = Modifier.weight(1f), onClick = onAudition)
+            ActionButton("KEEP", scheme, enabled = !busy, accessibilityLabel = "FX by velocity KEEP", modifier = Modifier.weight(1f), onClick = onKeep)
             if (kept) {
-                ActionButton("CLEAR", scheme, enabled = !busy, accessibilityLabel = "FX BY VELOCITY CLEAR", modifier = Modifier.weight(1f), onClick = onClear)
+                ActionButton("CLEAR", scheme, enabled = !busy, accessibilityLabel = "FX by velocity CLEAR", modifier = Modifier.weight(1f), onClick = onClear)
             }
         }
     }
@@ -5221,7 +5350,7 @@ private fun TreatmentCard(
                 applying != null -> Copy.treatmentBusy(PadSheet.displayLabel(applying))
                 placing != null -> Copy.putOnRowPrompt(PadSheet.displayLabel(placing))
                 // One recipe per pad, except row seven: pedals stack on one pad (the slate design).
-                else -> "ONE PER PAD · PEDALS STACK"
+                else -> "One per pad · pedals stack"
             },
             TapeType.pixelSmall,
             if (applying != null || placing != null) scheme.accent.tape else scheme.ink3.tape,
@@ -5478,7 +5607,7 @@ private fun ShapeCard(
             // What the line is for is the thing the legend cannot say -
             // that these four are metadata the hardware applies, not edits
             // to the audio on disk - so that is all it says now.
-            TapeText("THE MPC RENDERS IT", TapeType.pixelSmall, scheme.ink2.tape, Modifier.weight(1f), maxLines = 2)
+            TapeText("The MPC renders it", TapeType.pixelSmall, scheme.ink2.tape, Modifier.weight(1f), maxLines = 2)
             ActionButton("RESET", scheme, enabled = !busy && shaped, onClick = onReset)
         }
         for (knob in knobs) {
@@ -5564,7 +5693,7 @@ private fun MutateCard(
     val move = MutateSheet.modeFor(mode)
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            TapeText("ONE HIT FROM TWO", TapeType.pixelSmall, scheme.ink2.tape, Modifier.weight(1f), maxLines = 2)
+            TapeText("One hit from two", TapeType.pixelSmall, scheme.ink2.tape, Modifier.weight(1f), maxLines = 2)
             // Dimmed, not disabled, with nothing to undo: a tap says why (onUnmutate).
             ActionButton(Copy.UNDO_MUTATE, scheme, enabled = !busy, dimmed = MutateSheet.undoRefusal(mutated, canUndo) != null, onClick = onUndo)
         }
@@ -5702,7 +5831,7 @@ private fun MutateCard(
         // then its pads (four to a row) - the shelf with intent, where
         // ROULETTE below is the shelf by chance. Absent on a one-kit shelf.
         if (otherKits.isNotEmpty()) {
-            TapeText("ANOTHER KIT · PICK ITS PAD", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
+            TapeText("Another kit · pick its pad", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
             for (row in otherKits.chunked(2)) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     for (k in row) {
@@ -5847,7 +5976,7 @@ private fun OutsideCard(
 ) {
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            TapeText("THE WORLD AS AN EFFECT", TapeType.pixelSmall, scheme.ink2.tape, Modifier.weight(1f), maxLines = 2)
+            TapeText("The world as an effect", TapeType.pixelSmall, scheme.ink2.tape, Modifier.weight(1f), maxLines = 2)
             ActionButton(Copy.UNDO_OUTSIDE, scheme, enabled = !busy && applied != null && canUndo, onClick = onUndo)
         }
         if (stage != null) {
@@ -5866,7 +5995,7 @@ private fun OutsideCard(
             }
         } else {
             TapeText(
-                if (move == OutsideSheet.Move.ROOM.name) "A SWEEP GOES OUT, THE ROOM COMES BACK AS THE PAD'S ROOM" else "THE PAD GOES OUT THE JACK, WHAT COMES BACK IS THE PAD",
+                if (move == OutsideSheet.Move.ROOM.name) "A sweep goes out, the room comes back as the pad's room" else "The pad goes out the jack, what comes back is the pad",
                 TapeType.pixelSmall,
                 scheme.ink2.tape,
                 maxLines = 1,
@@ -6055,3 +6184,6 @@ private fun DeleteButton(scheme: Scheme, enabled: Boolean, onClick: () -> Unit) 
         TapeText("DELETE → TRASH", TapeType.pixel, if (enabled) BinRedOnLcd else scheme.ink3.tape)
     }
 }
+
+/** Try before you keep: the list row heard, the AMT it was heard at, and the seed a retune used. */
+private data class Tried(val target: EffectsMenu.Target, val amount: Float, val seed: Long)

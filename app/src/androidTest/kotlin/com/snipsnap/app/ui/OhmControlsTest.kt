@@ -74,7 +74,7 @@ class OhmControlsTest : ComposeScreenTest() {
             assertEquals(0f..1f, progress.range)
         }
         for (label in listOf("OHM STEADY", "OHM GATHER", "OHM EXTEND", "OHM UPDATE SOURCES",
-            "OHM EXCITER PLUCK", "OHM EXCITER BOW", "OHM EXCITER CAPTURED", "OHM EXCITER FROM PAD",
+            "OHM EXCITER PLUCK", "OHM EXCITER BOW", "OHM EXCITER CAPTURED", "OHM exciter from pad",
             "HOLD", "ELDER", "GRAINS", "FREEZE", "FM RATIO", "FM INDEX", "GRAIN SIZE")) {
             button(label).assertDoesNotExist()
         }
@@ -209,7 +209,7 @@ class OhmControlsTest : ComposeScreenTest() {
             val entry = KitShelf.Entry(root, Kit("Capture source", listOf(KitPad(1, sample.name, "OWN HIT"))))
             patch = OhmPatch("Captured source", Ohm.defaults(4), model = 4, midi = 57, seed = -905)
             show(entry)
-            click("OHM EXCITER FROM PAD")
+            click("OHM exciter from pad")
             click("${PadBanks.tag(1)} · OWN HIT")
             waitFor("the captured pad attack") { patch.options.capture != null }
             compose.runOnIdle {
