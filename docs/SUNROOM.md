@@ -39,7 +39,7 @@ Each pad holds three velocity zones (1–41, 42–84, 85–127), each with three
 | Phone and MPC hardware | Not verified for Sunroom; exporter read-back is not a hardware claim |
 | Editable engine / source controls | Not supplied by this frozen bank |
 | Targeted checks | Source-bank, kit, shelf and save/playback/export round-trip tests passed; native C++ 8/8 passed |
-| Full regression | Started 2026-11-18; pending at preparation of this collection. No full-suite or Android-device pass is claimed |
+| Full regression | Restarted 2026-11-19 after merging default branch `da91f5381` and correcting starter-registry/count expectations; pending. No full-suite or Android-device pass is claimed |
 
 The shared MPC 3 chain-WAV slice-map limitation remains unchanged; see `ENGINE_ACCEPTANCE_GATES.md`. No exporter repair is claimed. This collection is not declared fully gate-complete.
 
