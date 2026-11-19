@@ -14,6 +14,7 @@ object SideroomKitGenerator {
         for(g in SideroomKits.Kit.entries) {
             val folder=File(root,g.slug).apply { mkdirs() };val native=File(folder,"native")
             val pads=SideroomKits.build(g)
+            SideroomDelivery.exportCycles(g,File(folder,"cycles"),overwrite=true,pads=pads)
             val kit=KitAssembler.assembleArranged("Sideroom ${g.title}",pads,native,tempoBpm=g.bpm.toFloat())
             val saved=KitStore.load(native);check(saved==kit);TriadKitProof.verify(saved,native,pads)
             val mpc3=Mpc3Exporter.exportTrack(saved,native,File(folder,"mpc3"),overwrite=true)
