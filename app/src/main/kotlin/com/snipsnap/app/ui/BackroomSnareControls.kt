@@ -27,6 +27,6 @@ internal fun BackroomSnareControls(backroom: Boolean, scheme: Scheme, onLoad: (S
                 onLoad(SkinPatch("More Snap", SkinVoice.SNARE, BackroomSnare.defaults(), model = 2))
             }
         }
-        if (backroom) TapeText("BACKROOM · 50% RECALLS MORE SNAP", TapeType.pixelSmall, scheme.ink2.tape)
+        if (backroom) TapeText("BACKROOM · 50% recalls more snap", TapeType.pixelSmall, scheme.ink2.tape)
     }
 }

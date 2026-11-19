@@ -102,7 +102,7 @@ internal fun KitRobinRow(
             if (on && back != null) {
                 ActionButton(
                     "UNDO", scheme, enabled = !busy,
-                    accessibilityLabel = "KIT ROUND ROBIN UNDO", modifier = Modifier.weight(1f),
+                    accessibilityLabel = "Kit round robin undo", modifier = Modifier.weight(1f),
                     onClick = { submit(back, undoAfter = null, undoIfFailed = back) },
                 )
             }
@@ -112,7 +112,7 @@ internal fun KitRobinRow(
             fraction = pendingAmount,
             valueText = "%d".format(java.util.Locale.ROOT, (pendingAmount * 100).roundToInt()),
             fillColor = classColor, scheme = scheme, enabled = !busy && on,
-            accessibilityLabel = "KIT ROUND ROBIN AMOUNT",
+            accessibilityLabel = "Kit round robin amount",
             onFractionChange = { f -> pendingAmount = (f * 100).roundToInt() / 100f },
             onFractionCommit = ::commit,
         )
@@ -121,7 +121,7 @@ internal fun KitRobinRow(
             fraction = ((pendingTakes - KitRobin.MIN_TAKES).toFloat() / (KitRobin.MAX_TAKES - KitRobin.MIN_TAKES)).coerceIn(0f, 1f),
             valueText = "%d".format(java.util.Locale.ROOT, pendingTakes),
             fillColor = classColor, scheme = scheme, enabled = !busy && on,
-            accessibilityLabel = "KIT ROUND ROBIN ALTERNATES",
+            accessibilityLabel = "Kit round robin alternates",
             onFractionChange = { f ->
                 pendingTakes = KitRobin.MIN_TAKES + (f * (KitRobin.MAX_TAKES - KitRobin.MIN_TAKES)).roundToInt()
             },

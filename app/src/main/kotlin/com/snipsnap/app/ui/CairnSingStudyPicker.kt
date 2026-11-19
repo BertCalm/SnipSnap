@@ -45,7 +45,7 @@ internal fun CairnSingStudyPicker(enabled: Boolean, onMake: (String) -> Unit) {
             TapeText("CAIRN SING", TapeType.markerBig, scheme.ink.tape)
             TapeText("ONE VOICE, FIVE SETTINGS. CHOOSE AN INSTRUMENT FOR THE LIBRARY.",
                 TapeType.pixelSmall, scheme.ink2.tape, maxLines = 3)
-            TapeText("A CONTINUOUS HELD TONE WITH A SHORT FADE WHEN YOU LIFT A KEY. THE FIRST ONE TAKES A MOMENT TO PREPARE.",
+            TapeText("A continuous held tone with a short fade when you lift a key. The first one takes a moment to prepare.",
                 TapeType.pixelSmall, scheme.ink2.tape, maxLines = 3)
             for (choice in CairnSingInstrumentPicker.choices) {
                 Box(Modifier.fillMaxWidth().heightIn(min = Layout.MIN_HIT_TARGET.dp)

@@ -101,7 +101,7 @@ class InstrumentExpansionTest : ComposeScreenTest() {
         setPhoneContent {
             InstrumentsBench(listOf(glass), backLabel = "MAKE", onOpen = {}, onBack = {}, expansions = store, onToast = { toasts += it })
         }
-        press("ADD GLASS KEYS TO AN EXPANSION")
+        press("Add GLASS KEYS to an expansion")
         waitFor("the sheet lists the expansion") { shows("KEY SHIFT") }
         press("KEY SHIFT")
         waitFor("joined") { store.get(e.id)?.instrumentNames == listOf("GLASS KEYS") }

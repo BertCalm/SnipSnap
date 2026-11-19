@@ -86,10 +86,10 @@ internal fun FlockPerformanceControls(
                 .coerceIn(FlockPadMaker.RELEASE.lo, FlockPadMaker.RELEASE.hi))) },
             readout = FlockPadMaker.secondsLabel(patch.releaseSeconds),
         )
-        TapeText("DRY HELD PREVIEW · LIFT TO RELEASE", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
+        TapeText("Dry held preview · lift to release", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
         TapeText("Send makes a one-shot. MAKE INSTRUMENT sustains.", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 3)
     } else {
-        TapeText("FINITE GESTURE · HOLD SETS LENGTH", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
+        TapeText("Finite gesture · HOLD sets length", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
     }
 }
 
@@ -258,7 +258,7 @@ internal fun FlockHeldAudition(
             when {
                 state.rendering -> "RENDERING…"
                 !state.ready -> "PREVIEW UNAVAILABLE"
-                state.sounding -> "HELD · LIFT TO RELEASE"
+                state.sounding -> "Held · lift to release"
                 else -> "HOLD TO AUDITION"
             },
             TapeType.pixel,

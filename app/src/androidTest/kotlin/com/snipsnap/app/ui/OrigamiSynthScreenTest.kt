@@ -263,7 +263,7 @@ class OrigamiSynthScreenTest {
         dial("MOTION", 0f)
         click("ORIGAMI BLOOM")
         compose.onNodeWithText("Start open, then fold.").assertExists()
-        compose.onNodeWithText("MOTION SETS GESTURE TIME · FAST → SLOW · PLAYS ONCE").assertExists()
+        compose.onNodeWithText("MOTION sets gesture time · fast → slow · plays once").assertExists()
         compose.onNodeWithText("0.12s").assertExists()
         dial("MOTION", 1f)
         compose.onNodeWithText("1.20s").assertExists()
@@ -287,7 +287,7 @@ class OrigamiSynthScreenTest {
         click("FAN")
         click("ORIGAMI VELOCITY FOLD")
         compose.onNodeWithText("SOFT HITS have less folded color. Hard hits have more.").assertExists()
-        compose.onNodeWithText("PADS: USE SOFT HITS FOR VELOCITY COLOR").assertExists()
+        compose.onNodeWithText("Pads: use soft hits for velocity COLOR").assertExists()
         click("ORIGAMI PREVIEW SOFT")
         click("MAKE INSTRUMENT")
         compose.onNodeWithText("C3–C5 · soft, mid and hard touch change folded color. Hold to sustain; let go to fade.").assertExists()
@@ -348,7 +348,7 @@ class OrigamiSynthScreenTest {
         assertEquals(written, OrigamiPatch.fromJsonText(settings.getValue("patch.ORIGAMI.FAN")))
         if (mode == OrigamiExpression.TOUCH) {
             compose.onNodeWithText("SOFT HITS darken the source and fold. Strong hits keep their color.").assertExists()
-            compose.onNodeWithText("PADS: USE SOFT HITS FOR VELOCITY COLOR").assertExists()
+            compose.onNodeWithText("Pads: use soft hits for velocity COLOR").assertExists()
             click("MAKE INSTRUMENT")
             compose.onNodeWithText("C3–C5 · soft, mid and hard hits change source and folded color. Hold to sustain; let go to fade.").assertExists()
         }

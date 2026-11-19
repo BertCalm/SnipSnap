@@ -162,7 +162,7 @@ class TidalSynthScreenTest : ComposeScreenTest() {
         assertEquals(Long.MIN_VALUE, working().seed)
         button("TIDAL VARIATION SEED").performTextReplacement("9223372036854775808")
         pump(16)
-        compose.onNodeWithText("INVALID SEED · PREVIOUS VARIATION KEPT").assertExists()
+        compose.onNodeWithText("Invalid seed · previous variation kept").assertExists()
         assertEquals(Long.MIN_VALUE, working().seed)
         button("TIDAL VARIATION SEED").performTextReplacement(Long.MIN_VALUE.toString())
         pump(16)

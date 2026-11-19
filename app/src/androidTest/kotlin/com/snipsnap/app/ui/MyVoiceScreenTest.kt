@@ -159,7 +159,7 @@ class MyVoiceScreenTest : ComposeScreenTest() {
         setPhoneContent {
             if (shown) MyVoiceScreen(KitShelf.Entry(directory, model.kit), appScope, onToast = { toasts += it }, onKitUpdated = {})
         }
-        waitFor("the kit's portable voice row", timeoutMillis = 30_000) { hasText("VOICES IN THIS KIT") }
+        waitFor("the kit's portable voice row", timeoutMillis = 30_000) { hasText("Voices in this kit") }
         click("Open kit voice $title")
         waitFor("the kit-only source to reopen", timeoutMillis = 60_000) { hasText("SAVED VOICE READY") }
         click("SAVE ENSEMBLE → A02")

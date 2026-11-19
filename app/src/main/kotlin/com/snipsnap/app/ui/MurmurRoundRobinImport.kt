@@ -96,13 +96,13 @@ internal fun MurmurRoundRobinImport(shelf: File, enabled: Boolean, onImported: (
         }
     }
     Column {
-        TapeText("CHOOSE A COMPLETE STEADY ROOT C2 RR BANK ZIP.", TapeType.lcdSmall, scheme.ink2.tape, maxLines = 2)
+        TapeText("Choose a complete steady root C2 RR bank ZIP.", TapeType.lcdSmall, scheme.ink2.tape, maxLines = 2)
         ActionButton(if (active != null) "CANCEL RR IMPORT" else "IMPORT RR BANK", scheme,
             enabled = active != null || (enabled && foreground && !picking && pending == null)) {
             if (active != null) active.set(true)
             else { picking = true; picker.launch(arrayOf("application/zip", "application/x-zip-compressed", "application/octet-stream")) }
         }
-        if (active != null) TapeText("IMPORTING… CANCELLING MAY TAKE A MOMENT.", TapeType.lcdSmall, scheme.ink2.tape, maxLines = 2)
+        if (active != null) TapeText("Importing… cancelling may take a moment.", TapeType.lcdSmall, scheme.ink2.tape, maxLines = 2)
         else if (message != null) TapeText(checkNotNull(message), TapeType.lcdSmall, scheme.ink2.tape, maxLines = 3)
     }
 }

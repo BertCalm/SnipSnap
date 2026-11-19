@@ -38,14 +38,14 @@ internal fun ConfluenceGatheringCard(
 ) {
     val enabled = controls != null && ready && !loading && !busy
     Column(Modifier.fillMaxWidth().testTag("confluence-gathering"), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        TapeText("GATHERING · A NEW VARIATION", TapeType.pixelSmall, scheme.ink.tape, maxLines = 2)
+        TapeText("Gathering · a new variation", TapeType.pixelSmall, scheme.ink.tape, maxLines = 2)
         TapeText(
             "Rebuilds the saved gathering. This pad's current edits and FX stay on the original.",
             TapeType.pixelSmall, scheme.ink2.tape, maxLines = Int.MAX_VALUE,
         )
         if (seconds != null && performers != null) {
             TapeText(
-                "$performers PERFORMERS · ${seconds.roundToInt()}S · NATIVE PITCHES, WHOLE PHRASES",
+                "$performers performers · ${seconds.roundToInt()}s · native pitches, whole phrases",
                 TapeType.pixelSmall, scheme.ink3.tape, maxLines = 2,
             )
         }
