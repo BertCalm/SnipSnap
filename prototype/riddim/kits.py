@@ -60,8 +60,11 @@ KITS = {
             pad("Kick", "KICK"), pad("Rimshot", "RIMSHOT"), pad("Closed hat", "HAT_CLOSED", {"DECAY": .35}, 1),
             pad("Open hat", "HAT_OPEN", None, 1), pad("Clap", "CLAP"), pad("High kick", "KICK", st("KICK", 4, DECAY=.3)),
             pad("Tight snare", "SNARE", st("SNARE", 2, DECAY=.3)), pad("Shaker", "SHAKER"), pad("Claves", "CLAVE"),
-            pad("Sticks", "STICKS"), pad("Cowbell", "COWBELL"), pad("Wood F#3", "WOOD"),
-            pad("Wood A3", "WOOD", st("WOOD", 3)), pad("Wood C#4", "WOOD", st("WOOD", 7)), pad("Wood F#4", "WOOD", st("WOOD", 12)),
+            # The woods play the hardest mallet: the owner heard an A/B of approved (BEATER 0.5) against hardest
+            # (1.0) and chose the hardest (2026-11-19). The shelf's Kotlin kit follows in the next Kotlin round.
+            pad("Sticks", "STICKS"), pad("Cowbell", "COWBELL"), pad("Wood F#3", "WOOD", {"BEATER": 1.0}),
+            pad("Wood A3", "WOOD", st("WOOD", 3, BEATER=1.0)), pad("Wood C#4", "WOOD", st("WOOD", 7, BEATER=1.0)),
+            pad("Wood F#4", "WOOD", st("WOOD", 12, BEATER=1.0)),
             roll("Rim roll", "RIMSHOT", {}, "rim"),
         ],
     },

@@ -34,7 +34,7 @@ import riddim_proto as rp  # noqa: E402
 
 RATE = K.RATE
 ZONES, TAKES, PADS = K.ZONES, K.TAKES, K.PADS
-SPAN = dict(K.SPAN, TING=12, RATCHET=12)
+SPAN = dict(K.SPAN, TING=12, RATCHET=12, BLIP=12, RATCHET_WOOD=12)
 K.SPAN.update(SPAN)                 # `kits.st` reads SPAN for the new voices too
 st, pad = K.st, K.pad
 
@@ -44,8 +44,9 @@ def roll(label, voice, macros, kind):
 
 
 # The Wood and Bronze kit's mallet. 0.5 is the wood of rounds 1 and 2; the owner heard round 3's woods and asked
-# for more attack (2026-11-18), so the kit plays a harder mallet. `riddim_proto.wood` says what BEATER changes.
-WOOD_BEATER = 0.85
+# for more attack (2026-11-18), heard 0.5, 0.85 and 1.0 side by side, and chose the hardest (2026-11-19).
+# `riddim_proto.wood` says what BEATER changes.
+WOOD_BEATER = 1.0
 
 # Pitches below are written in semitones from each voice's default note: WOOD F#3, METAL D5, BOOM F1,
 # DEMBOW_KICK about 27 Hz, KICK about 40 Hz, TING 3234 Hz.
@@ -99,6 +100,33 @@ KITS = {
         ],
     },
 }
+
+
+# ------------------------------------------------------------------ the ratchet A/B (2026-11-19)
+# The owner was "not sure" RATCHET sounds as it should and asked to hear both readings of the reference: A is the
+# loop's own sound, a smooth pitched blip (`riddim_proto.blip`); B a real ratchet noisemaker (`ratchet_wood`).
+# Each replaces Baile Funk's A11, A12 and A16; "now" is the pads as first built. The kit keeps "now" until the
+# owner chooses. Blip notes follow the loop's hits: about 3.06 kHz and 2.2 kHz.
+RATCHET_AB = {
+    "now": (pad("Ratchet", "RATCHET"), pad("Long ratchet", "RATCHET", {"DECAY": .85, "WAVE": .35}),
+            roll("Ratchet riser", "RATCHET", {"DECAY": .3}, "ratchet")),
+    "loop": (pad("Blip", "BLIP", st("BLIP", 4)), pad("Blip low", "BLIP", st("BLIP", -2)),
+             roll("Blip riser", "BLIP", {"DECAY": .25}, "ratchet")),
+    "real": (pad("Ratchet", "RATCHET_WOOD", {"DECAY": .2}), pad("Long ratchet", "RATCHET_WOOD", {"DECAY": .7, "WAVE": .4}),
+             roll("Ratchet riser", "RATCHET_WOOD", {"DECAY": .0}, "ratchet")),
+}
+RATCHET_SLOTS = (10, 11, 15)        # A11, A12, A16 on the Baile Funk grid
+
+
+def with_ratchet(choice):
+    """Baile Funk's pads with the ratchet slots taken from RATCHET_AB[choice]."""
+    pads = list(KITS["baile_funk"]["pads"])
+    for slot, p in zip(RATCHET_SLOTS, RATCHET_AB[choice]):
+        pads[slot] = p
+    return pads
+
+
+assert all(KITS["baile_funk"]["pads"][s] == p for s, p in zip(RATCHET_SLOTS, RATCHET_AB["now"]))
 
 
 # ------------------------------------------------------------------ rolls and risers (one bar at the kit's tempo)
@@ -218,7 +246,7 @@ def play_groove(kit, bars=4):
 # ------------------------------------------------------------------ checks (Python harness)
 
 # WOOD at 400 Hz, as RiddimTest measures it: a low wood has nothing above 2 kHz, so that split reads the noise floor.
-SPLIT = dict(K.SPLIT, WOOD=400, TING=5000, RATCHET=2000, TUMBA=1000, QUINTO=1000, MBENG=1000, NDER=2000, COL=800,
+SPLIT = dict(K.SPLIT, WOOD=400, TING=5000, RATCHET=2000, BLIP=3500, RATCHET_WOOD=2000, TUMBA=1000, QUINTO=1000, MBENG=1000, NDER=2000, COL=800,
              DUNDUN=1000, SHEKERE=6000, AGOGO_HIGH=3000, TALKING_CALL=1000)
 
 

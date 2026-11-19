@@ -239,9 +239,45 @@ sample, so Clave Dancehall's woods on the shelf are unchanged. Above 0.5 it does
 A first try that tuned the knock to the note could not lift the onset past about 950 Hz on low woods, and only made
 the click louder; the fixed band and the brighter bar together reach the references.
 
-Wood and Bronze plays BEATER 0.85. Measured, hard hit: D3 1187 Hz, A3 1379 Hz, C4 1436 Hz (before: about 260 to
+Wood and Bronze first played BEATER 0.85. Measured, hard hit: D3 1187 Hz, A3 1379 Hz, C4 1436 Hz (before: about 260 to
 400 Hz). Soft hits stay dark, at 342 to 425 Hz, and every wood pad still darkens at each softer zone; the closest
 two takes on a wood pad are 26.4 dB apart. The page has a before and after at 0.5, 0.85 and 1.0. Not yet heard.
+
+**Heard (2026-11-19).** The owner compared BEATER 0.5, 0.85 and 1.0 and chose the hardest for Wood and Bronze, which
+now plays 1.0. Every wood pad still darkens at each softer zone, and the closest two takes on a wood pad are 22.4 dB
+apart. For Clave Dancehall, approved and on the shelf at 0.5, they asked for an A/B, now at the top of the round-3
+page: A is the kit as approved, B every wood at 1.0. Measured, onset centroid soft/mid/hard (Python harness):
+
+| Wood | A (0.5) | B (1.0) |
+|---|---|---|
+| F#3 | 202 / 232 / 293 Hz | 430 / 700 / 1437 Hz |
+| A3 | 216 / 253 / 329 Hz | 459 / 741 / 1574 Hz |
+| C#4 | 274 / 300 / 395 Hz | 523 / 923 / 1786 Hz |
+| F#4 | 359 / 365 / 486 Hz | 567 / 1074 / 1914 Hz |
+
+The owner chose B (2026-11-19): "I do like b". `kits.py` now plays Clave Dancehall's woods at 1.0. The shelf's Kotlin
+kit still plays 0.5 until the next Kotlin round ports BEATER, which round 3's Wood and Bronze needs as well.
+
+### Round 3 follow-up: the ratchet A/B (2026-11-19)
+
+The owner was "not sure" RATCHET sounds as it should. It was built as a scraper because the reference loop is named
+"ratchet"; measured again (Python harness), the loop's top sound is not a scrape. Each hit is a smooth, pitched tone:
+spectral flatness 0.006 to 0.07 (noise is 1), a note that changes from hit to hit (about 2.2, 2.5, 3.0 and 3.8 kHz)
+with a slight rise, and only 27% of its level movement is fast flutter (11 to 41% across 23 hits). RATCHET's tooth
+train is 48 to 60%, a buzz. The name was probably the loop's style, not its instrument.
+
+The owner asked for both readings side by side, in place of Baile Funk's A11, A12 and A16 (`kits_wide.RATCHET_AB`):
+
+- **A, BLIP: the loop's sound.** A short, smooth tone, default 2500 Hz, rising 1.7% as it sounds, with faint upper
+  tones at 1.24 and 1.83 of it, as the loop showed. Measured: flutter 0 to 2%, −20 dB at 78 to 83 ms (loop 77). Pads
+  at about 3.15 and 2.23 kHz follow the loop's changing notes.
+- **B, RATCHET_WOOD: a real ratchet.** A wooden gear flicking a wooden tongue, 20 to 40 clicks a second, which can
+  be counted (RATCHET's 300 a second cannot). Each click rings the tongue (1.6, 2.4 and 3.3 kHz) and its box (420 Hz).
+  Measured: 9 to 12 clicks in a hit, onset centroid 1.0 kHz soft to 1.65 kHz hard.
+
+Every A and B pad darkens at each softer zone and has four different takes. The kit keeps RATCHET until the owner
+chooses; the page plays all three. Not yet heard.
+
 
 ## Open
 
@@ -257,7 +293,9 @@ two takes on a wood pad are 26.4 dB apart. The page has a before and after at 0.
 - **Proposed:** every constant in `riddim_proto.py` is a shape value until heard.
 - **Heard:** round 0's palette, "pretty good so far" (2026-11-18); round 1's three kits, "Approved" (2026-11-18).
   The Kotlin kits (round 2) confirmed to match, "Yes, they match" (2026-11-18). No phone or MPC has played them.
-  Round 3 heard: "wood might need more of an attack" (2026-11-18); the harder-mallet woods not yet heard.
+  Round 3 heard: "wood might need more of an attack" (2026-11-18); the hardest mallet chosen for Wood and Bronze
+  (2026-11-19); Clave Dancehall's woods moved to the hardest mallet ("I do like b", 2026-11-19); RATCHET "not sure it
+  sounds as it should", so A (BLIP) and B (RATCHET_WOOD) are on the page, not yet heard.
 
 ## Why it is built this way
 
