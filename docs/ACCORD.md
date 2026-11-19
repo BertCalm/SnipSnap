@@ -10,9 +10,12 @@ direction: BRUSH is the default, WOOD remains, and TINE retains its Reference,
 Soft Attack, Bright Edge and Long Ring alternatives. On 2026-11-19 the owner heard
 the native engine itself and kept it (round accord-native-1): every factory recipe
 beside its Python original, each voice from C2 to C5 and at three touches, and the
-sixteen-pad kit. `AccordNativePinsTest` pins those renders. Complete control-domain
+sixteen-pad kit. `AccordNativePinsTest` pins those renders. The same day the owner
+kept four more voices, REED, COURSE, ESCAPEMENT and BELL (round accord-voices-1,
+[below](#reed-course-escapement-and-bell)), pinned by `AccordVoicesPinsTest` and
+played by the ACCORD VOICES starter. Complete control-domain
 acceptance and phone/MPC checks remain open; the remaining gates are listed in
-[the acceptance gates](ENGINE_ACCEPTANCE_GATES.md#accord-native-sound-kept-by-ear-2026-11-19-three-voices-gates-open).
+[the acceptance gates](ENGINE_ACCEPTANCE_GATES.md#accord-native-sound-kept-by-ear-2026-11-19-seven-voices-kept-gates-open).
 
 ## Play a saved performance
 
@@ -57,11 +60,54 @@ strict validation: unknown/out-of-range controls and unsupported HOLD fail.
 
 ## Voices and persistence
 
-Six starting recipes are registered: BRUSH, WOOD, and the four TINE profiles.
-`AccordPresets.default()` selects BRUSH; `AccordPresets.forVoice(voice)` returns
-that voice's recipes. BRUSH/WOOD require acousticProfile BASE. TINE requires
-REFERENCE, SOFT_ATTACK, BRIGHT_EDGE or LONG_RING. Its original upper ratio stays
-5.96; the archived 6.00 tuning experiment is not the native default.
+Ten starting recipes are registered: BRUSH, WOOD, the four TINE profiles, then
+REED, COURSE, ESCAPEMENT and BELL. `AccordPresets.default()` selects BRUSH;
+`AccordPresets.forVoice(voice)` returns that voice's recipes. Every voice but TINE
+requires acousticProfile BASE. TINE requires REFERENCE, SOFT_ATTACK, BRIGHT_EDGE
+or LONG_RING. Its original upper ratio stays 5.96; the archived 6.00 tuning
+experiment is not the native default.
+
+## REED, COURSE, ESCAPEMENT and BELL
+
+The owner kept these four by ear in round accord-voices-1 (19 Nov 2026), after
+BRUSH, WOOD and TINE. They were appended to `AccordVoice` after TINE, so saved
+names and ordinals never move. The mechanics, the MIDI pitch authority, the five
+controls and the one-gain-per-performance policy are the same as for the first
+three. What changes is which part of the machine each one listens to: BRUSH, WOOD
+and TINE hear only where and how hard the contacts land, and these hear something
+else the machine already computes.
+
+- **REED** reads the support's **pressure**: the pull of the pendulums through
+  the centre blows a free reed. The tongue swings at the note, its swing chops the
+  flow through an offset slot, and a fixed three-formant chamber and a little breath
+  colour it. It sounds while the machine breathes and is louder and brighter the
+  harder it blows; contacts only nudge the tongue.
+- **COURSE** reads the **mechanism index**: pendulum *i* always strikes string
+  *i* mod 3 of a hammered course of three stiff eight-partial strings, tuned -2.5,
+  0 and +2.5 cents over a shared soundboard, like a hammered dulcimer. Spec §10
+  warns against independently detuned banks; the owner's KEEP of AK1 to AK3
+  approved this one.
+- **ESCAPEMENT** reads the **passage direction**: a pendulum swinging forward
+  strikes a bright tuned bar (the tick), swinging back it knocks a dark harmonic
+  block in a hollow box (the tock). Its gathered-then-dispersed clip (AL3) was not
+  rated, so the dispersed behaviour is not pinned.
+- **BELL** reads nothing new: it is a minor-third bell **tuning table** (prime,
+  tierce, quint, nominal, with hum and upper partials as body) on the same
+  single-bank path as BRUSH, WOOD and TINE.
+
+ESCAPEMENT's bar changed from the plan. The audit planned a raw free-free bar,
+partials 1 : 2.756 : 5.404. Measured, those partials pulled the detected pitch of
+C3 by more than a semitone, so the tick read as another note. The bar is tuned
+instead, 1 : 4 : 9.9, as marimba and vibraphone bars are cut, and low notes taper
+the upper two partials.
+
+Each new voice has one factory preset, its default recipe at C3 and normal touch,
+the render heard in round accord-voices-1. The ACCORD VOICES starter plays each at
+C2, C3, C4 and C5. `AccordVoicesPinsTest` pins those renders, the soft and hard
+touches and the dispersed (RAFT 0) renders of REED, COURSE and BELL. They have no
+frozen factory calibration row: their default performance computes the shared
+normal/hard gain on first render, as an edited performance does
+([acceptance gates](ENGINE_ACCEPTANCE_GATES.md#accord-native-sound-kept-by-ear-2026-11-19-seven-voices-kept-gates-open)).
 
 `AccordPatch` saves name, voice, controls, MIDI, velocity, full signed Long seed,
 model, acoustic profile, initializer, source start and duration. JSON stores the
