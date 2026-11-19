@@ -31,7 +31,7 @@ import kotlin.test.*
 class AccordVoicesStarterTest {
     private val id = StarterKits.ACCORD_VOICES_ID
 
-    @Test fun `ACCORD VOICES sits right after ACCORD on the shelf and is appended to the stored order`() {
+    @Test fun `ACCORD VOICES sits right after ACCORD and ACCORD TAKES on the shelf and is appended to the stored order`() {
         val starter = assertNotNull(StarterKits.byId(id))
         assertEquals("accord-voices", id)
         assertEquals("ACCORD VOICES", starter.displayName)
@@ -40,7 +40,9 @@ class AccordVoicesStarterTest {
         assertEquals(KeySpec.parse("Cminpent"), starter.key)
         val group = StarterShelf.GROUPS.single { id in it.ids }
         assertEquals(1, StarterShelf.GROUPS.sumOf { g -> g.ids.count { it == id } })
-        assertEquals(group.ids.indexOf("accord") + 1, group.ids.indexOf(id))
+        // On the shelf it follows ACCORD and ACCORD TAKES, the kept starter's round robin.
+        assertEquals(group.ids.indexOf("accord") + 2, group.ids.indexOf(id))
+        assertEquals(com.snipsnap.synth.AccordRoundRobinKits.ID, group.ids[group.ids.indexOf(id) - 1])
         // Stored starter order only grows at the end: ACCORD VOICES was appended after PUNJAB TAKES.
         // Later starters are appended after it, so pin its place rather than demand it stays last.
         val ids = StarterKits.ALL.map { it.id }
