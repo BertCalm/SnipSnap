@@ -879,3 +879,12 @@ tasks.register<JavaExec>("verifyNativeSambaKit") {
     maxHeapSize = "1g"
     args(providers.gradleProperty("nativeSambaKitOutput").getOrElse("${rootDir}/testkit/native-samba-kit"))
 }
+
+tasks.register<JavaExec>("verifySecondlineKits") {
+    group = "verification"
+    description = "Regenerate classic and triangle Second Line kits through saving, playback and MPC export."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.SecondlineKitProof")
+    maxHeapSize = "1g"
+    args(providers.gradleProperty("secondlineKitOutput").getOrElse("${rootDir}/testkit/secondline-kits"))
+}
