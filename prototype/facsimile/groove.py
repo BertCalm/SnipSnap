@@ -56,9 +56,12 @@ def render_loop(loop: dict, choke: list[str], oversample: int = synth.OVERSAMPLE
                 cache[key] = synth.render(model, v, take, oversample)
             y = cache[key]
             start = int(round(e["t"] * RATE))
-            if did in choke:
+            # an 808 the reference cut with its next note keeps its natural tail as a pad,
+            # but in the groove it is cut at its own next hit, as the reference played it
+            group = choke if did in choke else ([did] if model.get("self_choke") else None)
+            if group:
                 # the next note of any drum in the choke group cuts this one
-                later = [int(round(x["t"] * RATE)) for d2 in choke if d2 in loop["drums"]
+                later = [int(round(x["t"] * RATE)) for d2 in group if d2 in loop["drums"]
                          for x in loop["drums"][d2]["events"]]
                 later = sorted(((t - start) % n) for t in later if (t - start) % n > 0)
                 if later and later[0] < len(y):

@@ -103,12 +103,43 @@ def target_for(takes: np.ndarray, template: np.ndarray, clean_s: float,
         # a drum strike only decays after its peak: hold the target to that
         pk = int(np.argmax(tgt[b, :8]))
         tgt[b, pk:] = np.minimum.accumulate(tgt[b, pk:])
+    template_bound(tgt, tail)
+    extended = False
     if low_share > CHOKE_LOW_SHARE:
-        uncut(tgt)
+        extended = uncut(tgt)
     else:
         no_stall(tgt)
     keep_falling(tgt)
+    target_for.extended = extended   # read by fit_drum: the groove chokes an extended tail
     return np.maximum(tgt, FLOOR_DB)
+
+
+EARLY_CAP_DB = 10.0    # at the attack a band may stand this much over what the template allows
+DECAY_SLACK_DB = 3.0   # and after BOUND_FROM_S it may fall this much slower than the template
+BOUND_FROM_S = 0.025   # (the template's 46 ms window smears anything earlier)
+
+
+def template_bound(tgt: np.ndarray, tail: np.ndarray) -> None:
+    """The NMFD template is one clean strike of this drum; the hits it is fitted to are cut
+    from a dense loop and carry the tails and attacks of the drums around them, and the mix's
+    own room. Measured, 20 of 57 replicas rang 1.5 to 5 times longer than their templates (a
+    snare 459 ms to -30 dB against 157), which a groove plays as a wash behind every hit, heard
+    as echo (2026-11-19); and an 808 carried another drum's click in its attack. So the template
+    bounds the target: no band louder at the attack than the template's own level for it plus
+    EARLY_CAP_DB (levels anchored on the drum's strongest band), and after BOUND_FROM_S no band
+    falling slower than the template's decay in that band plus DECAY_SLACK_DB."""
+    tail = np.maximum(tail, FLOOR_DB)
+    early = GRID <= 0.014
+    t_peak = tail[:, early].max(axis=1)
+    b0 = int(np.argmax(t_peak))
+    gain = tgt[b0, early].max() - t_peak[b0]
+    cap = t_peak + gain + EARLY_CAP_DB
+    np.minimum(tgt, cap[:, None], out=tgt)
+    late = GRID >= BOUND_FROM_S
+    for b in range(len(tgt)):
+        anchor = tgt[b, early].max()
+        bound = anchor + (tail[b] - t_peak[b]) + DECAY_SLACK_DB
+        tgt[b, late] = np.minimum(tgt[b, late], np.maximum(bound[late], FLOOR_DB))
 
 
 STALL_AFTER_DB = 20.0   # a hat or snare that has fallen this far ...
@@ -162,7 +193,7 @@ CHOKE_LOW_SHARE = 0.5  # and only for a low-heavy drum (808, kick): a hat or a s
                        # fast on its own, and continuing its body would give it a long wash
 
 
-def uncut(tgt: np.ndarray) -> None:
+def uncut(tgt: np.ndarray) -> bool:
     """Trap 808s are monophonic: the next note chokes the last, so the reference never lets a
     tail ring out and the target falls off a cliff. Where the whole drum falls CLIFF_DB within
     CLIFF_S, continue every band at the slope it had over the 50 ms before the cut (between
@@ -175,15 +206,16 @@ def uncut(tgt: np.ndarray) -> None:
             cut = i
             break
     else:
-        return
+        return False
     k = max(0, int(np.searchsorted(GRID, GRID[cut] - 0.05)))
     before = (total[cut] - total[k]) / max(GRID[cut] - GRID[k], 1e-3)
     if before < -SUSTAIN_DB_S:
-        return  # it was already falling fast: a natural decay, not a cut
+        return False  # it was already falling fast: a natural decay, not a cut
     for b in range(len(tgt)):
         span = max(GRID[cut] - GRID[k], 1e-3)
         slope = float(np.clip((tgt[b, cut] - tgt[b, k]) / span, -400, -15))
         tgt[b, cut + 1:] = tgt[b, cut] + slope * (GRID[cut + 1:] - GRID[cut])
+    return True
 
 
 # ---------- partials ----------
@@ -343,6 +375,7 @@ def fit_drum(drum: dict, work: Path) -> tuple[dict, dict]:
     clean = float(drum["clean_seconds"])
     low_share = float((template[TEMPLATE_EDGES < 150] ** 2).sum() / (template ** 2).sum())
     target = target_for(takes, template, clean, low_share)
+    extended_tail = bool(target_for.extended)
     # length: where every band has fallen 60 dB below the drum's peak, plus a little
     peak_db = target.max()
     alive = np.nonzero((target > peak_db - 60).any(0))[0]
@@ -408,6 +441,7 @@ def fit_drum(drum: dict, work: Path) -> tuple[dict, dict]:
 
     noise_db = np.array([strike_shape(r) for r in noise_db])
     model = dict(id=drum["id"], length_s=round(length, 3), partials=partials,
+                 self_choke=extended_tail,
                  noise_db=noise_db,
                  velocity=dict(tilt_db_per_oct=-2.5, decay_loss=0.15, glide_depth_loss=0.3,
                                source="house law"),

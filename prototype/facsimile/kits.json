@@ -560,52 +560,52 @@
  "choke_note": "Decided by measurement (round 0): with every 808 group choked, the 808 lanes of loops 127, 134 and 163 rendered 3 to 7 dB under their separated references and 1.9 to 4.4 dB closer without the choke, so their 808 notes ring over each other in the references. Only loop 154's 808 measured closer choked (-0.5 dB against +1.6 dB).",
  "glue": {
   "90": {
-   "threshold_db": -13.84,
+   "threshold_db": -14.52,
    "ratio": 4.0,
    "attack_ms": 0.5,
-   "makeup_db": 7.77
+   "makeup_db": 8.77
   },
   "102": {
-   "threshold_db": -14.09,
+   "threshold_db": -12.34,
    "ratio": 4.0,
    "attack_ms": 2.0,
-   "makeup_db": 6.46
+   "makeup_db": 6.16
   },
   "103": {
-   "threshold_db": -11.99,
+   "threshold_db": -10.35,
    "ratio": 4.0,
    "attack_ms": 2.0,
-   "makeup_db": 6.78
+   "makeup_db": 6.14
   },
   "106": {
-   "threshold_db": -12.77,
+   "threshold_db": -9.73,
    "ratio": 4.0,
    "attack_ms": 0.5,
-   "makeup_db": 7.58
+   "makeup_db": 5.5
   },
   "113": {
-   "threshold_db": -14.11,
-   "ratio": 4.0,
-   "attack_ms": 1.0,
-   "makeup_db": 7.53
-  },
-  "127": {
-   "threshold_db": -27.66,
-   "ratio": 4.0,
-   "attack_ms": 0.3,
-   "makeup_db": 20.9
-  },
-  "134": {
-   "threshold_db": -13.04,
+   "threshold_db": -13.82,
    "ratio": 4.0,
    "attack_ms": 0.5,
-   "makeup_db": 8.21
+   "makeup_db": 8.75
+  },
+  "127": {
+   "threshold_db": -3.5,
+   "ratio": 4.0,
+   "attack_ms": 0.3,
+   "makeup_db": 5.61
+  },
+  "134": {
+   "threshold_db": -15.46,
+   "ratio": 4.0,
+   "attack_ms": 0.5,
+   "makeup_db": 10.08
   },
   "154": {
-   "threshold_db": -6.89,
+   "threshold_db": -7.23,
    "ratio": 4.0,
    "attack_ms": 2.0,
-   "makeup_db": 2.3
+   "makeup_db": 2.71
   }
  },
  "glue_note": "Bus compression per groove (groove.glue), fitted by fit_glue.py to the reference's crest factor: 4:1, release 120 ms, 6 dB soft knee, attack and threshold fitted (a slow attack made the grooves peakier); the makeup gain matches the reference's RMS level."

@@ -158,7 +158,15 @@ some of the other drums, and a replica lane carries none. Not yet shown.
   firing played back as a fresh strike: slapback. `drums.py` now keeps a firing within 250 ms
   of the drum's last hit only if the drum's separated audio jumps 6 dB at it. Kept events rise
   8 to 53 dB (median per drum), dropped ones 1.4 to 4.4 dB, so 16th-note hats and flams stay;
-  599 of 2230 events were re-fires.
+  599 of 2230 events were re-fires. That was not the whole echo: dropping even 190 more events
+  left loop 163 with about 60 extra onsets, because the extras were inside the drum sounds.
+  20 of 57 replicas rang 1.5 to 5 times longer than their own NMFD template (a snare 459 ms to
+  -30 dB against 157), a sustained hiss that a groove plays as a wash behind every hit. The
+  hits the fit learns from are cut from a dense loop and carry the other drums' tails and the
+  mix's room. `fit.template_bound` now lets no band fall slower than the template after 25 ms
+  (3 dB of slack), nor stand more than 10 dB over the template at the attack (which also
+  removed another drum's click from an 808). An 808 whose tail the reference cut keeps its
+  natural ring as a pad and is choked at its own next hit in the groove (`self_choke`).
 - Round robin follows the reference's own hit-to-hit spread, clamped to 0.3 to 1.2 dB per band,
   plus fresh noise and phases. Whether that reads as one drum hit again is for the ear.
 - Engine gates: this is a prototype. Velocity and round robin are checked in rendering only;
