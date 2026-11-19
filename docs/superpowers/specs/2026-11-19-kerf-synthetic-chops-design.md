@@ -2,9 +2,15 @@
 
 Version 1.0 · 2026-11-19
 
-Status: proposed engineering handoff. A Python prototype exists and the owner has heard it
-once. No Kotlin is written. KERF is a working name (a kerf is the sliver a saw removes); no
-maker or product is named by it.
+Status: round 1 built (the Kotlin renderer; see "As built" at the end). A Python prototype
+exists and the owner has heard it once. The Kotlin renders have not been heard. The fitter,
+the tool and the engine are not written. KERF is a working name (a kerf is the sliver a saw
+removes); no maker or product is named by it.
+
+Owner decisions, 2026-11-19 ("I take your recommendations proceed"): the patch format is
+carried the recommended way (section 6, A); velocity starts from the ghost-against-snare
+comparison (section 11, now run); the kits stay at BLEED 1.0 and SLOP 0.5 until a listen
+says otherwise.
 
 Repository truth: read at `5f208336`. Grepped and found: `Chopper.byTransients`,
 `Transients.detect`, `Fft.forward` / `Fft.inverse` (`:audio`), `Desample.nearest` and
@@ -280,9 +286,41 @@ and by a stated minimum in onset position; the pool survives save and load.
 - BLEED is **not** scaled, so a ghost note sits deeper in its neighbours' wash. This is the
   part a sample cannot do and the reason to do velocity in the model.
 
-A better source of truth is available: the prototype already labels 48 ghost notes beside
-104 snares from the same loops. Comparing their fitted patches would show what a soft hit
-actually changes in these recordings. That comparison is the cheapest proof and comes first.
+### What the recordings say (measured 2026-11-19)
+
+`prototype/kerf/ghost_vs_snare.py` compares the fitted patches of ghost notes with the full
+snares of the same loop: same drum, same room, same chain, different stick force. Nine loops
+have at least two of each (67 snares, 46 ghosts). Each figure is ghost minus snare inside
+one loop, then the median across loops.
+
+| Quantity | Ghost against snare | Consistent in |
+|---|---:|---:|
+| Peak level | −11.1 dB | 9 of 9 loops |
+| Bleed under the attack, against the hit | +12.2 dB | 9 of 9 |
+| Floor against the hit's own energy | +5.3 dB | 8 of 9 |
+| Tick against the hit's peak | −2.2 dB | 7 of 9 |
+| Spectral centroid | 0.86× | 6 of 9 |
+| Top-end share of the hit (above 3 kHz) | −1.9 dB | 5 of 9 |
+| Crack against ring | −1.2 dB | 5 of 9 |
+| Body pitch, pitch glide | no difference | 4 of 8, 3 of 8 |
+
+What this settles:
+
+- **The wash and the bleed do not follow the hit down.** A ghost note is 11 dB quieter and
+  the bleed under it is 12 dB louder against it, which is the bleed staying where it was.
+  This is the strongest finding and it confirms the proposal: velocity scales the hit, not
+  BLEED and not `floor`.
+- **A soft hit is slightly duller and its tick slightly softer**, at about 0.86× the
+  centroid and −2 dB of tick per 11 dB of level. Both are real but modest.
+- **The crack-against-ring and top-share laws are not supported** as stated: 5 of 9 loops is
+  a coin toss. Do not build a strong version of either.
+- **The v² glide law has no support here.** These snares do not glide at any level. It may
+  still hold for kicks; these loops have no soft kicks to test it on.
+
+Revised proposal for R3: velocity scales `snap`, `level`, the partials and the ticks
+together; `floor` and BLEED stay fixed; the top bands roll off gently (to about 0.86×
+centroid at −11 dB); ticks fall 2 dB further than the hit at −11 dB. Constants are shape
+until heard.
 
 ## 12. Render budget and caching
 
@@ -361,9 +399,10 @@ a layer is not always a separate drum.
 
 ## 17. Build rounds and gates
 
-- **R0.** The pad recipe field (section 6, decision A or B). Owner decides.
-- **R1.** `KerfRender` and the patch data, fed the committed `kit_patches.json`. Gate: the
-  owner hears Kotlin renders of the four kits beside the Python ones.
+- **R0.** Decided: A (owner, 2026-11-19). The pad recipe field itself lands in R2, with the
+  tool that writes it, so that no field ships unused.
+- **R1.** Built. `KerfRender` and the patch data, fed the committed `kit_patches.json`.
+  Gate, still open: the owner hears Kotlin renders of the four kits beside the Python ones.
 - **R2.** `KerfFit` and the tool entry. Gate: fit metrics within the section 16 figures on
   the same loops; the owner chops a loop of their own in the app.
 - **R3.** The ghost-against-snare comparison, then velocity and round robin. Gate: the
@@ -414,8 +453,11 @@ content from third-party recordings.
 | The figures in section 16 | measured | `run_fit.py`, `refine_all.py`, Python |
 | The renderer cannot alias | proposed | argument in section 3; the 88.2 kHz test in section 13 would prove it |
 | Round robin by re-drawing SLOP gives distinct strikes | proposed | no test yet |
-| The velocity laws in section 11 | proposed | not prototyped |
-| A 12 ms Python render ports to tens of ms in Kotlin | proposed | no Kotlin figure |
+| Velocity leaves the floor and the bleed where they were | measured | `ghost_vs_snare.py`: 9 of 9 and 8 of 9 loops, Python |
+| The revised velocity law in section 11 | proposed | constants not prototyped, not heard |
+| The Kotlin renderer matches the Python one | measured | `KerfRenderTest`: lengths equal to the frame on 64 pads; level and band figures in "As built" |
+| A chopped pad renders in tens of ms in Kotlin | measured | 49.6 ms per pad on the JVM including warm-up, `generateKerfAudition` |
+| The Kotlin renders sound like the Python ones | not heard | audition page published 2026-11-19 |
 | The synthetic twins are acceptable | heard | owner, 2026-11-18: "Seems closer. I think I can live with it." |
 | Cymbal ring under another hit is present | heard, partly | owner reported it missing on Kit A pads 1, 4, 6, 9, 11, 13, 16 and elsewhere; the colour stage followed; the quote above is the only verdict since |
 | BLEED and SLOP levels are right | not heard | no verdict given on which step to ship |
@@ -433,3 +475,64 @@ content from third-party recordings.
 - **The risky decision** is the patch format in section 6. It is the first patch in the
   repo that is not a voice plus a macro map, and everything after R0 depends on how it is
   carried.
+
+## As built: round 1, the renderer (2026-11-19)
+
+Read at `f7eae082`. What exists:
+
+- `synth/.../KerfPatchData.kt`: the patch format of section 6, its JSON, and `KerfBank`,
+  which loads the four heard kits from `synth/src/main/resources/kerf/v1/kit_patches.json`.
+- `synth/.../KerfRender.kt`: `render` (one hit, clean), `chopped` (BLEED and SLOP),
+  `bandEnergies` (the measure a render is held to).
+- `synth/src/test/.../KerfRenderTest.kt`, twelve tests.
+- `:synth:generateKerfAudition`, which writes the four kits, clean and chopped.
+
+What changed against the design, and why:
+
+- **One copy of the bank.** `kit_patches.json` moved out of `prototype/kerf/` into the
+  renderer's resources; the Python scripts now read it from there. Two copies would have
+  been one quantity in two places.
+- **Each pad's SLOP draw is stored with the pad.** Kotlin has no generator that matches
+  NumPy's, so without this every heard pad would have been cut somewhere new. With the draw
+  stored, the chopped lengths and the start and overrun times equal the prototype's on all
+  64 pads. A pad with no stored draw gets one from `Dsp.Noise` on its seed.
+- **The neighbours follow TUNE and DECAY.** The prototype rendered them at their defaults,
+  which no heard render ever exercised. A chop pitched down now has its bleed pitched down.
+- **The lowest band survives TUNE going up.** The prototype silenced every bin below the
+  first band centre, so tuning up muted the lowest band. The port holds the end value. This
+  is the one deliberate difference in sound, and only away from TUNE 0.
+- **No DC removal.** A slice cut part-way through a 46 Hz kick cycle has a mean of its own
+  (worst measured 0.0134), as the source chop does. Removing it would move the chop's
+  edges. The test bounds it at 0.02 and does not ask for less.
+
+Parity with the prototype (`KerfRenderTest`, all 64 pads, 1049 bands within 30 dB of each
+pad's loudest):
+
+| Measure | Kotlin against Python | Python against itself, other noise seed |
+|---|---:|---:|
+| Level, median | 0.25 dB | 0.30 dB |
+| Level, worst | 2.07 dB | 1.68 dB |
+| Band energy, median | 0.68 dB | 0.70 dB |
+| Band energy, 95th percentile | 2.76 dB | 3.02 dB |
+| Band energy, worst | 12.85 dB | 12.49 dB |
+
+The port differs from the prototype by what a different noise draw differs by, and no more.
+The parity test was proven able to fail: with the noise gain multiplied by 1.25 it fails
+and nothing else in the file does.
+
+Also tested: byte-identical repeats; BLEED 0 with SLOP 0 is byte-identical to the clean
+render on every pad; CUT sets the length to the frame; DECAY and FLOOR lower the last third;
+TUNE moves a kick's body by the interval asked (within 60 cents over 14 semitones); added
+bleed energy rises with BLEED; early starts carry a pre-roll and late starts shave at most
+3 ms; patch data survives JSON on every pad.
+
+Not done in this round, each still owed:
+
+- The 88.2 kHz no-aliasing assertion of section 13. The renderer takes no rate parameter
+  yet.
+- A `DeterminismTest` canary. `KerfRenderTest` covers determinism; the canary joins when
+  the engine registers (R4).
+- The one slice over the 1.5 s loop threshold (Kit D pad 6, 3.30 s) is still in the bank.
+  The fitter must refuse such a slice (R2); the test allows exactly this one.
+- Heard: nothing. The Kotlin renders are on a published audition page beside the Python
+  ones and nobody has listened.

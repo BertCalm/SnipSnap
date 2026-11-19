@@ -3401,6 +3401,16 @@ tasks.register<JavaExec>("generateSootAudition") {
     args(providers.gradleProperty("sootOutput").orNull ?: "${rootDir}/testkit/soot-audition")
 }
 
+tasks.register<JavaExec>("generateKerfAudition") {
+    group = "distribution"
+    description = "Render KERF's round-1 listening pack: the four fitted chop kits from the Kotlin port, clean and chopped."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.KerfAuditionGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "1g"
+    args(providers.gradleProperty("kerfOutput").orNull ?: "${rootDir}/testkit/kerf-audition")
+}
+
 tasks.register<JavaExec>("generateBoomBapAudition") {
     group = "distribution"
     description = "Render the Backroom boom bap study, dry/wet grooves, metrics and layered MPC kit."

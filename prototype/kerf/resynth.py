@@ -303,7 +303,12 @@ def compare(x, y):
 
 
 
-def chopped(patch, prev=None, nxt=None, bleed=0.5, slop=0.5, **kw):
+def slop_draw(seed):
+    """The three numbers that decide where a pad's knife lands. Stored beside each pad in the kit file, so the
+    Kotlin renderer (which has a different random generator) chops every heard pad the same way."""
+    return [float(u) for u in np.random.default_rng(seed & 0xFFFFFFFF).random(3)]
+
+def chopped(patch, prev=None, nxt=None, bleed=0.5, slop=0.5, draw=None, **kw):
     """A hit as a hand-made chop: the neighbours leak in, and the two cut points are a little off.
 
     BLEED  the previous hit keeps ringing under this one. It is that hit's own patch, rendered past
@@ -314,8 +319,7 @@ def chopped(patch, prev=None, nxt=None, bleed=0.5, slop=0.5, **kw):
              end late    -> the slice catches the front of the NEXT hit before it stops (the little flam)
            and the end fade shrinks from 1 ms towards nothing, so the cut can click.
     bleed=0, slop=0 gives exactly render(patch)."""
-    rng = np.random.default_rng(patch['seed'] & 0xFFFFFFFF)
-    u_start, u_end, u_which = rng.random(3)
+    u_start, u_end, u_which = draw if draw is not None else slop_draw(patch['seed'])
     start_ms = slop*(-3.0 + 15.0*u_start) if u_which > 0.25 else -slop*3.0*u_start   # mostly early (pre-roll), sometimes late (shaved)
     over_ms = slop*36.0*u_end**1.5 if nxt is not None else 0.0                        # most ends are near clean, a few run well into the next hit
     k = int(over_ms*SR/1000)

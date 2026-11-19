@@ -2,7 +2,7 @@
 
 Python harness for the design in
 [`docs/superpowers/specs/2026-11-19-kerf-synthetic-chops-design.md`](../../docs/superpowers/specs/2026-11-19-kerf-synthetic-chops-design.md).
-KERF is a working name. Nothing here is Kotlin and nothing here is an engine yet.
+KERF is a working name. The Kotlin renderer is `synth/.../KerfRender.kt`; this folder is the fitter and the reference it is checked against.
 
 It chops a drum loop into hits, fits a small synthesis patch to each hit, and renders the
 patch back with the two things that make a chop sound chopped: the previous hit bleeding
@@ -12,8 +12,9 @@ underneath, and cut points that are a little off.
 
 | File | What it does |
 |---|---|
-| `kit_patches.json` | Four 16-pad kits as numbers only: each pad's patch plus its two neighbours' patches. No audio. |
-| `render_kits.py` | Renders those kits to WAV. Needs nothing but this folder. |
+| `render_kits.py` | Renders the four kits to WAV from `synth/src/main/resources/kerf/v1/kit_patches.json` (numbers only, no audio; the Kotlin renderer reads the same file). |
+| `freeze_reference.py` | Writes the summaries the Kotlin port is tested against (`synth/src/test/resources/kerf/python_reference.json`). |
+| `ghost_vs_snare.py` | Compares ghost notes with full snares from the same loop: the evidence for the velocity law. |
 | `resynth.py` | The model: `fit`, `refine`, `render`, `chopped`, `compare`. Start reading here. |
 | `chop.py` | Onset detection, slicing and hit labelling for a set of loops. |
 | `run_fit.py` | Fits every chop and prints the error table. |
