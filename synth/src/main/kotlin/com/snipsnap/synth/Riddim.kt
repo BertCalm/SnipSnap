@@ -26,14 +26,25 @@ enum class RiddimVoice(val drumClass: DrumClass, internal val seconds: Double, i
     SNARE(DrumClass.SNARE, 0.45, listOf("TUNE", "DECAY")),
     HAT_CLOSED(DrumClass.HAT_CLOSED, 0.25, listOf("TUNE", "DECAY")),
     HAT_OPEN(DrumClass.HAT_OPEN, 0.66, listOf("TUNE", "DECAY")),
-    WOOD(DrumClass.PERC, 0.60, listOf("TUNE", "DECAY")),
+    /** Tuned wood. BEATER is the mallet, yarn (0) to hard (1); 0.5 is the wood of rounds 1 and 2 exactly. */
+    WOOD(DrumClass.PERC, 0.60, listOf("TUNE", "DECAY", "BEATER")),
     METAL(DrumClass.PERC, 2.00, listOf("TUNE", "DECAY", "WAVE")),
+    /** A small, high, metal bell: the "ting" of a Brazilian funk groove (round 3). */
+    TING(DrumClass.PERC, 0.50, listOf("TUNE", "DECAY")),
+    /** A real ratchet: a wooden gear flicking a wooden tongue, clicks you can count (round 3, the owner's choice). */
+    RATCHET(DrumClass.PERC, 0.80, listOf("TUNE", "DECAY", "WAVE")),
     /** One bar of rimshots, eighths to 32nds, rising three semitones (Clave Dancehall's A16). */
     RIM_ROLL(DrumClass.PERC, Riddim.rollSeconds(Riddim.DEFAULT_SPEED), listOf("TUNE", "DECAY", "SPEED")),
     /** One bar of snare: two beats of sixteenths, two of 32nds (Dembow's A16). */
     SNARE_ROLL(DrumClass.PERC, Riddim.rollSeconds(Riddim.DEFAULT_SPEED), listOf("TUNE", "DECAY", "SPEED")),
     /** One bar of closed hats speeding to sextuplet 32nds and rising nine semitones (Boom Riddim's A16). */
     HAT_RISER(DrumClass.PERC, Riddim.rollSeconds(Riddim.DEFAULT_SPEED), listOf("TUNE", "DECAY", "SPEED")),
+    /** One bar of ratchet turns, eighths to 32nds, rising five semitones (Baile Funk's A16). */
+    RATCHET_RISER(DrumClass.PERC, Riddim.rollSeconds(Riddim.DEFAULT_SPEED), listOf("TUNE", "DECAY", "WAVE", "SPEED")),
+    /** One bar of CALABASH's nder, two beats of sixteenths and two of 32nds into the downbeat (Sabar Swing's A16). */
+    NDER_ROLL(DrumClass.PERC, Riddim.rollSeconds(Riddim.DEFAULT_SPEED), listOf("TUNE", "SPEED")),
+    /** A marimba player's roll: 32nds on one wood for a whole bar, growing (Wood and Bronze's A16). */
+    WOOD_TREMOLO(DrumClass.PERC, Riddim.rollSeconds(Riddim.DEFAULT_SPEED), listOf("TUNE", "DECAY", "BEATER", "SPEED")),
 }
 
 /**
@@ -70,12 +81,14 @@ object Riddim {
     const val MAX_BPM = 140.0
     const val DEFAULT_SPEED = 0.5f
 
-    private val DEFAULTS = mapOf("TUNE" to .5f, "DECAY" to .5f, "DRIVE" to .5f, "WAVE" to .5f, "SPEED" to DEFAULT_SPEED)
-    /** The kit pads that roll start from the voice the roll strikes. */
-    private val ROLL_DEFAULTS: Map<RiddimVoice, Map<String, Float>> = mapOf(
+    private val DEFAULTS = mapOf("TUNE" to .5f, "DECAY" to .5f, "DRIVE" to .5f, "WAVE" to .5f, "BEATER" to .5f, "SPEED" to DEFAULT_SPEED)
+    /** The kit pads that roll start from the voice the roll strikes. Built on first use: [RiddimVoice]'s entries ask
+     * [rollSeconds] while they are being made, so a value built when this object starts could meet them unset. */
+    private val ROLL_DEFAULTS: Map<RiddimVoice, Map<String, Float>> by lazy { mapOf(
         RiddimVoice.SNARE_ROLL to mapOf("TUNE" to (.5f - 2f / 12f), "DECAY" to .4f),
         RiddimVoice.HAT_RISER to mapOf("DECAY" to .3f),
-    )
+        RiddimVoice.RATCHET_RISER to mapOf("DECAY" to 0f),
+    ) }
 
     fun macrosFor(voice: RiddimVoice): List<MacroSpec> =
         voice.controls.map { MacroSpec(it, ROLL_DEFAULTS[voice]?.get(it) ?: DEFAULTS.getValue(it)) }
@@ -100,7 +113,8 @@ object Riddim {
 
     /** TUNE's span in semitones each way, per voice (kits write pads in semitones through [tuneFor]). */
     fun semitoneSpan(voice: RiddimVoice): Int = when (voice) {
-        RiddimVoice.BOOM, RiddimVoice.SLIDE, RiddimVoice.WOOD, RiddimVoice.METAL -> 12
+        RiddimVoice.BOOM, RiddimVoice.SLIDE, RiddimVoice.WOOD, RiddimVoice.METAL, RiddimVoice.TING, RiddimVoice.RATCHET,
+        RiddimVoice.RATCHET_RISER, RiddimVoice.WOOD_TREMOLO -> 12
         else -> 6
     }
 
@@ -115,7 +129,12 @@ object Riddim {
     /** A roll's render length: one bar at its tempo plus 0.6 s for the last stroke to ring. */
     fun rollSeconds(speed: Float): Double = 4 * 60.0 / bpmOf(speed) + 0.6
 
-    fun isRoll(voice: RiddimVoice) = voice == RiddimVoice.RIM_ROLL || voice == RiddimVoice.SNARE_ROLL || voice == RiddimVoice.HAT_RISER
+    /** A `when`, not a set built when this object starts: see [ROLL_DEFAULTS]. */
+    fun isRoll(voice: RiddimVoice) = when (voice) {
+        RiddimVoice.RIM_ROLL, RiddimVoice.SNARE_ROLL, RiddimVoice.HAT_RISER, RiddimVoice.RATCHET_RISER,
+        RiddimVoice.NDER_ROLL, RiddimVoice.WOOD_TREMOLO -> true
+        else -> false
+    }
 
     /** The render length of [voice] with [macros], in seconds (a roll's depends on SPEED). */
     fun secondsFor(voice: RiddimVoice, macros: Map<String, Float>): Double =
@@ -147,6 +166,8 @@ object Riddim {
             RiddimVoice.HAT_OPEN -> hat(m, v, strike, 0.55)
             RiddimVoice.WOOD -> wood(m, v, strike)
             RiddimVoice.METAL -> metal(m, v, strike)
+            RiddimVoice.TING -> ting(m, v, strike)
+            RiddimVoice.RATCHET -> ratchet(m, v, strike)
             else -> error("RIDDIM $voice is a roll")
         }
         return finish(raw, voice.seconds)
@@ -394,10 +415,103 @@ object Riddim {
         return y
     }
 
-    /** Tuned wood, default F#3; TUNE spans an octave each way. */
+    /**
+     * Tuned wood, default F#3; TUNE spans an octave each way. BEATER is the mallet (added after the owner heard round
+     * 3: "wood might need more of an attack"). At 0.5 it is exactly the wood of rounds 1 and 2: the mallet is
+     * unchanged and nothing is added. Measured on the owner's wood loops, a wood hit's first 8 ms centre at 1.5 to
+     * 2.4 kHz; WOOD's centred at 0.3 to 0.5 kHz, almost all fundamental. Above 0.5 a harder mallet presses for less
+     * time, lifts the bar's own upper modes (they still die faster than the fundamental) and adds a knock.
+     */
     private fun wood(m: Map<String, Double>, v: Double, k: Int): DoubleArray {
         val note = 54 + Math.rint((m.g("TUNE") - 0.5) * 24).toInt()
-        return struck(hz(note.toDouble()), TUNED_BAR, 0.06 + 0.2 * m.g("DECAY"), v, k, 0.6, 3.0, 0.5, "wood")
+        val beater = m.g("BEATER")
+        val width = 2.0.pow((0.5 - beater) * 2)                  // 1 at 0.5; hard presses half as long, yarn twice
+        val knock = max(0.0, (beater - 0.5) * 2)                 // 0 up to the middle, 1 at a hard mallet
+        val modes = Array(TUNED_BAR.size) { i ->
+            val mode = TUNED_BAR[i]
+            doubleArrayOf(mode[0], mode[1] * (1 + UPPER_BOOST * knock).pow(i), mode[2])
+        }
+        val f0 = hz(note.toDouble())
+        val y = struck(f0, modes, 0.06 + 0.2 * m.g("DECAY"), v, k, 0.6, 3.0 * width, 0.5 * width, "wood")
+        if (knock > 0) {
+            val tock = knock(f0, v, k, 3.0 * width, 0.5 * width)
+            val g = knock * v.pow(1.2)
+            for (i in y.indices) y[i] += g * tock[i]
+        }
+        return y
+    }
+
+    /** How far a hard mallet lifts the bar's upper modes, and the knock's level: a hard hit's first 8 ms near 1.4 to
+     * 1.6 kHz (the owner's woody loop: 1.5 kHz). */
+    private const val UPPER_BOOST = 3.0
+    private const val KNOCK_GAIN = 6.0
+    /** The tock's own ringing (Hz, gain, T60 s), fixed in frequency: a mallet head and a stiff block do not follow
+     * the note. Tuning these to the note could not lift a low wood past about 950 Hz. */
+    private val WOOD_KNOCK = arrayOf(doubleArrayOf(1900.0, 1.0, .012), doubleArrayOf(2750.0, .8, .009), doubleArrayOf(4100.0, .5, .006))
+
+    /** The tock of a mallet landing: short fixed modes and a burst of contact noise, struck by the same mallet pulse,
+     * so a softer stroke (a wider pulse) still reaches less of them and stays darker. */
+    private fun knock(f0: Double, v: Double, k: Int, softMs: Double, hardMs: Double): DoubleArray {
+        val r = rng("wood-knock", Math.round(f0 * 100), vKey(v), k)
+        val n = n(0.6)
+        val w = max(2, ((softMs + (hardMs - softMs) * v) * 1e-3 * FS * (1 + r.normal(0.0, 0.05))).toInt())
+        val pulse = DoubleArray(n)
+        for (i in 0 until min(w, n)) pulse[i] = 0.5 * (1 - cos(TAU * i / w))
+        val y = DoubleArray(n)
+        for (mode in WOOD_KNOCK) {
+            val f = mode[0] * 2.0.pow(r.normal(0.0, 30.0) / 1200)             // each take lands a little apart
+            val g = mode[1] * 10.0.pow(r.uniform(-2.0, 2.0) / 20)
+            val ring = resonator(pulse, f, mode[2] * (1 + r.normal(0.0, 0.08)))
+            for (i in 0 until n) y[i] += g * ring[i]
+        }
+        val contact = CalabashDsp.band(DoubleArray(n) { r.normal(0.0, 1.0) * pulse[it] }, 1500.0, 7000.0)
+        return DoubleArray(n) { KNOCK_GAIN * (y[it] + 0.25 * contact[it]) }
+    }
+
+    // ------------------------------------------------------------------ round 3: the Brazilian funk tops
+
+    /** The ting loop's bell measured four close partials, 3234, 3309, 3715 and 3875 Hz: two pairs that beat, the
+     * shimmer of a small hand bell. (ratio, gain, t60 scale.) */
+    private val TING_BAR = arrayOf(doubleArrayOf(1.0, 1.0, 1.0), doubleArrayOf(1.023, 0.8, 0.9), doubleArrayOf(1.149, 0.6, 0.7),
+        doubleArrayOf(1.198, 0.45, 0.6), doubleArrayOf(2.31, 0.15, 0.3))
+
+    /** A small high bell, default 3234 Hz, TUNE an octave either way. A metal beater runs 0.4 ms soft to 0.06 ms hard,
+     * so a soft stroke cannot reach the upper pair. -20 dB lands near the measured 48 ms. */
+    private fun ting(m: Map<String, Double>, v: Double, k: Int): DoubleArray {
+        val f0 = 3234.0 * 2.0.pow((m.g("TUNE") - 0.5) * 24 / 12)
+        return struck(f0, TING_BAR, 0.08 + 0.38 * m.g("DECAY"), v, k, 0.5, 0.4, 0.06, "ting")
+    }
+
+    /**
+     * A real ratchet, the owner's choice from the A/B (2026-11-19). A wooden gear, turned, flicks a wooden tongue:
+     * separate clicks, 20 to 40 a second, that can be counted. Each click rings the tongue (about 1.6, 2.4 and 3.3 kHz)
+     * and the hollow box it sits on (420 Hz). DECAY is how long the turn lasts (0.12 to 0.6 s), WAVE how fast the gear
+     * turns. A harder turn is faster and brighter; a softer one slower, with more box, so darker.
+     */
+    private fun ratchet(m: Map<String, Double>, v: Double, k: Int): DoubleArray {
+        val r = rng("ratchet-wood", k, vKey(v))
+        val length = 0.12 + 0.48 * m.g("DECAY")
+        val rate = (20 + 20 * m.g("WAVE")) * (0.7 + 0.45 * v)
+        val n = n(max(length + 0.15, RiddimVoice.RATCHET.seconds))     // the voice's full length at any DECAY
+        val x = DoubleArray(n)
+        val w = max(2, (0.0004 * FS).toInt())
+        var t = 0.0
+        while (t < length) {
+            val level = (1.0 - 0.35 * t / length) * r.uniform(0.7, 1.0)          // the turn loses a little force
+            val a = (t * FS).toInt()
+            for (i in 0 until w) if (a + i < n) x[a + i] += level * 0.5 * (1 - cos(TAU * i / w))
+            val slow = 1 + 0.4 * (t / length).pow(2)                          // the gear slows at the end
+            t += (1 / rate) * slow * (1 + r.normal(0.0, 0.08))
+        }
+        val shift = 2.0.pow((m.g("TUNE") - 0.5) * 2)
+        val tongue = DoubleArray(n)
+        for ((f, g, t60) in listOf(Triple(1600.0, 1.0, .025), Triple(2400.0, .7, .018), Triple(3300.0, .45, .012))) {
+            val ring = resonator(x, f * shift * 2.0.pow(r.normal(0.0, 15.0) / 1200), t60)
+            for (i in 0 until n) tongue[i] += g * ring[i]
+        }
+        val box = resonator(x, 420 * shift, .04)
+        val snap = CalabashDsp.band(DoubleArray(n) { x[it] * r.normal(0.0, 1.0) }, 2000.0, 8000.0)
+        return DoubleArray(n) { (0.3 + 0.7 * v) * (tongue[it] + 0.3 * snap[it]) + (1.2 - 0.6 * v) * 0.6 * box[it] }
     }
 
     /** Keyed bronze played as a detuned pair: the two beat together (the gamelan's ombak). Default D5. */
@@ -418,8 +532,9 @@ object Riddim {
     /** (beat position, velocity scale, semitones) for each stroke. */
     internal fun rollStrokes(voice: RiddimVoice): List<Triple<Double, Double, Double>> {
         val grid = when (voice) {
-            RiddimVoice.RIM_ROLL -> listOf(Triple(0.0, 2.0, 0.5), Triple(2.0, 3.0, 0.25), Triple(3.0, 4.0, 0.125))
-            RiddimVoice.SNARE_ROLL -> listOf(Triple(0.0, 2.0, 0.25), Triple(2.0, 4.0, 0.125))
+            RiddimVoice.RIM_ROLL, RiddimVoice.RATCHET_RISER -> listOf(Triple(0.0, 2.0, 0.5), Triple(2.0, 3.0, 0.25), Triple(3.0, 4.0, 0.125))
+            RiddimVoice.SNARE_ROLL, RiddimVoice.NDER_ROLL -> listOf(Triple(0.0, 2.0, 0.25), Triple(2.0, 4.0, 0.125))
+            RiddimVoice.WOOD_TREMOLO -> listOf(Triple(0.0, 4.0, 0.125))
             else -> listOf(Triple(0.0, 2.0, 0.25), Triple(2.0, 3.0, 0.125), Triple(3.0, 4.0, 1.0 / 12))
         }
         val beats = ArrayList<Double>()
@@ -427,28 +542,42 @@ object Riddim {
             var x = a
             while (x < b - 1e-9) { beats += x; x += step }
         }
-        val rise = when (voice) { RiddimVoice.RIM_ROLL -> 3.0; RiddimVoice.HAT_RISER -> 9.0; else -> 0.0 }
-        return beats.map { x -> val frac = x / 4; Triple(x, 0.3 + 0.7 * frac.pow(1.3), rise * frac) }
+        val rise = when (voice) { RiddimVoice.RIM_ROLL -> 3.0; RiddimVoice.HAT_RISER -> 9.0; RiddimVoice.RATCHET_RISER -> 5.0; else -> 0.0 }
+        return beats.map { x ->
+            val frac = x / 4
+            // The tremolo grows evenly, as a marimba player's roll does; the others crescendo late.
+            val scale = if (voice == RiddimVoice.WOOD_TREMOLO) 0.25 + 0.75 * frac else 0.3 + 0.7 * frac.pow(1.3)
+            Triple(x, scale, rise * frac)
+        }
     }
 
     private fun roll(voice: RiddimVoice, m: Map<String, Double>, v: Double, take: Int): FloatArray {
         val struckVoice = when (voice) {
             RiddimVoice.RIM_ROLL -> RiddimVoice.RIMSHOT
             RiddimVoice.SNARE_ROLL -> RiddimVoice.SNARE
+            RiddimVoice.RATCHET_RISER -> RiddimVoice.RATCHET
+            RiddimVoice.WOOD_TREMOLO -> RiddimVoice.WOOD
+            RiddimVoice.NDER_ROLL -> null                       // CALABASH's nder, struck below
             else -> RiddimVoice.HAT_CLOSED
         }
         val speed = m.g("SPEED").toFloat()
         val beat = 60.0 / bpmOf(speed)
         val n = (rollSeconds(speed) * RATE).toInt()
         val out = DoubleArray(n)
-        val span = semitoneSpan(struckVoice)
+        val span = if (struckVoice != null) semitoneSpan(struckVoice) else 6
         val baseSemis = (m.g("TUNE") - 0.5) * 2 * span
         for ((i, stroke) in rollStrokes(voice).withIndex()) {
             val (at, scale, semis) = stroke
             val tune = 0.5 + (baseSemis + semis) / (2 * span)
-            val hm = mapOf("TUNE" to tune, "DECAY" to m.g("DECAY"))
+            val force = max(0.05, v * scale)
             // Every stroke is its own strike: the take picks a block of 64 strike indices.
-            val y = hit(struckVoice, hm, max(0.05, v * scale), take * 64 + i)
+            val y = if (struckVoice == null) {
+                Calabash.stroke(CalabashVoice.NDER, mapOf("TUNE" to tune.toFloat()), force.toFloat(), take * 64 + i).samples
+            } else {
+                // The struck voice's own controls, from the roll's: TUNE carries the climb, SPEED stays with the roll.
+                val hm = struckVoice.controls.associateWith { if (it == "TUNE") tune else m[it] ?: DEFAULTS.getValue(it).toDouble() }
+                hit(struckVoice, hm, force, take * 64 + i)
+            }
             val a = (at * beat * RATE).toInt()
             for (j in y.indices) if (a + j < n) out[a + j] += y[j].toDouble()
         }

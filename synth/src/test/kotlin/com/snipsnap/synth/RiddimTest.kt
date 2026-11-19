@@ -11,7 +11,7 @@ import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-/** RIDDIM's probe set: the laws the approved prototype measured, held by the port (docs/RIDDIM.md, round 2). */
+/** RIDDIM's probe set: the laws the approved prototype measured, held by the port (docs/RIDDIM.md, rounds 2 and 4). */
 class RiddimTest {
 
     private val one = RiddimVoice.entries.filterNot(Riddim::isRoll)
@@ -47,6 +47,7 @@ class RiddimTest {
         RiddimVoice.KICK, RiddimVoice.DEMBOW_KICK, RiddimVoice.BOOM, RiddimVoice.SLIDE -> 150f
         RiddimVoice.HAT_CLOSED, RiddimVoice.HAT_OPEN -> 9000f
         RiddimVoice.WOOD -> 400f      // a wooden bar has nothing above 2 kHz: its upper modes are 736 Hz and 1.8 kHz
+        RiddimVoice.TING -> 5000f     // the bell lives above 3 kHz; its brightness is the upper pair and the 7.5 kHz mode
         else -> 2000f
     }
 
@@ -111,7 +112,11 @@ class RiddimTest {
      */
     @Test fun `a softer hit is darker, for every one-shot voice`() {
         for (v in one) {
-            val tunings = if (v == RiddimVoice.METAL) listOf(-7, 3, 6, 10).map { mapOf("TUNE" to Riddim.tuneFor(v, it)) } else listOf(emptyMap())
+            val tunings = when (v) {
+                RiddimVoice.METAL -> listOf(-7, 3, 6, 10).map { mapOf("TUNE" to Riddim.tuneFor(v, it)) }
+                RiddimVoice.WOOD -> listOf(emptyMap(), mapOf("BEATER" to 1f))       // the approved mallet and the hardest
+                else -> listOf(emptyMap())
+            }
             for (m in tunings) {
                 val zones = listOf(.35f, .65f, 1f).map { vel -> (0..Riddim.MAX_TAKE).map { upperShareDb(render(v, m, vel, it), split(v)) }.average() }
                 assertTrue(zones[0] < zones[1] && zones[1] < zones[2], "$v $m brightness soft, mid, hard: $zones")
@@ -168,15 +173,78 @@ class RiddimTest {
         }
     }
 
-    /** Each stroke is peak-matched (the prototype's way), so a roll grows by density and brightness, not stroke level. */
+    /** Each stroke is peak-matched (the prototype's way), so a roll grows by density and brightness, not stroke level.
+     * The wood tremolo keeps one density, 32nds all bar, as a marimba roll does, so it grows by brightness alone: its
+     * strokes are struck harder as it goes, and a harder wood stroke is brighter. */
     @Test fun `a roll gets louder toward its end`() {
-        for (r in rolls) {
+        for (r in rolls - RiddimVoice.WOOD_TREMOLO) {
             val x = render(r, mapOf("SPEED" to Riddim.speedFor(100.0)))
             val bar = (2.4 * Riddim.RATE).toInt()
             val first = rms(x.copyOfRange(0, bar / 4))
             val last = rms(x.copyOfRange(bar * 3 / 4, bar))
             assertTrue(last > first * 1.2, "$r first quarter ${"%.3f".format(first)}, last ${"%.3f".format(last)}")
         }
+    }
+
+    /** The centroid of a hit's first 8 ms from where it first reaches a tenth of its peak: what the ear hears as attack. */
+    private fun onsetHz(x: FloatArray): Double {
+        var p = 0f
+        for (s in x) p = max(p, abs(s))
+        val a = x.indexOfFirst { abs(it) > 0.1f * p }
+        val n = (0.008 * Riddim.RATE).toInt()
+        // Hann-windowed over the 8 ms itself, as the prototype measured it, by a direct transform on a 1024-point grid.
+        // Not Fft.magnitudeSpectrum: it windows across its whole frame, and a short slice at the frame's start would
+        // keep only its later, darker part.
+        val seg = DoubleArray(n) { x[a + it] * (0.5 - 0.5 * kotlin.math.cos(2 * Math.PI * it / (n - 1))) }
+        var num = 0.0; var den = 0.0
+        for (k in 0..512) {
+            var re = 0.0; var im = 0.0
+            for (i in 0 until n) { val ph = 2 * Math.PI * k * i / 1024; re += seg[i] * kotlin.math.cos(ph); im -= seg[i] * kotlin.math.sin(ph) }
+            val m = sqrt(re * re + im * im)
+            num += m * k * Riddim.RATE / 1024.0; den += m
+        }
+        return num / den
+    }
+
+    /** Round 3's measured targets: the ting loop's bell at 3234 Hz, and a ratchet whose clicks can be counted. */
+    @Test fun `the ting rings at the bell's note and the ratchet clicks rather than buzzes`() {
+        assertEquals(3234f, peakHz(render(RiddimVoice.TING), 0.0, 2500f, 3290f, window = 4096), 30f)
+        for (vel in listOf(.35f, 1f)) for (take in 0..Riddim.MAX_TAKE) {
+            val x = render(RiddimVoice.RATCHET, velocity = vel, take = take)
+            // Clicks: where the 1 ms level rises to a quarter of the hit's peak, at least 12 ms after the last one.
+            val h = Riddim.RATE / 1000
+            val env = DoubleArray(x.size / h) { i -> var e = 0.0; for (j in 0 until h) e = max(e, abs(x[i * h + j]).toDouble()); e }
+            val top = env.max()
+            val clicks = ArrayList<Int>()
+            for (i in 1 until env.size) if (env[i] > top / 4 && env[i - 1] <= top / 4 && (clicks.isEmpty() || i - clicks.last() >= 12)) clicks += i
+            assertTrue(clicks.size in 6..24, "ratchet at $vel take $take: ${clicks.size} clicks")
+            val gaps = clicks.zipWithNext { a, b -> b - a }
+            assertTrue(gaps.average() in 15.0..60.0, "ratchet at $vel take $take: clicks ${gaps.average()} ms apart, 20 to 40 a second")
+        }
+    }
+
+    /** The owner asked for more attack on the wood (round 3). BEATER 0.5 is the approved wood; the hardest mallet
+     * moves a hard hit's first 8 ms from about 0.3 kHz to the owner's wood loops' range (1.5 to 2.4 kHz). */
+    @Test fun `a harder wood mallet brightens the strike and the approved mallet does not`() {
+        val approved = (0..Riddim.MAX_TAKE).map { onsetHz(render(RiddimVoice.WOOD, take = it)) }.average()
+        val hardest = (0..Riddim.MAX_TAKE).map { onsetHz(render(RiddimVoice.WOOD, mapOf("BEATER" to 1f), take = it)) }.average()
+        assertTrue(approved < 600, "approved mallet starts at $approved Hz")
+        assertTrue(hardest > 1200, "hardest mallet starts at $hardest Hz")
+        assertContentEquals(render(RiddimVoice.WOOD), render(RiddimVoice.WOOD, mapOf("BEATER" to .5f)), "0.5 is the default")
+    }
+
+    /** A roll is any voice with a tempo. Before round 4 the roll list was a set built when [Riddim] started, which
+     * read the voices as unset when [RiddimVoice] was touched first and turned every roll into a crash. */
+    @Test fun `every voice with a tempo is a roll, and only those`() {
+        for (v in RiddimVoice.entries) assertEquals("SPEED" in v.controls, Riddim.isRoll(v), "$v")
+    }
+
+    @Test fun `the wood tremolo brightens toward its end`() {
+        val x = render(RiddimVoice.WOOD_TREMOLO, mapOf("SPEED" to Riddim.speedFor(96.0), "BEATER" to 1f))
+        val bar = (2.5 * Riddim.RATE).toInt()
+        val first = upperShareDb(x.copyOfRange(0, bar / 4), 400f)
+        val last = upperShareDb(x.copyOfRange(bar * 3 / 4, bar), 400f)
+        assertTrue(last > first + 3, "tremolo above 400 Hz: first quarter $first dB, last $last dB")
     }
 
     @Test fun `renders repeat byte for byte`() {

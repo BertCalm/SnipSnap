@@ -102,7 +102,13 @@ class RiddimKitsTest {
                 assertEquals(authored.voiceName, pad.source["voice"])
                 assertEquals(RiddimKits.VERSION.toString(), pad.source["kitVersion"])
                 assertEquals(RiddimKits.muteGroup(k, role), pad.muteGroup)
-                assertEquals(if (role == 15) (if (k == Kit.BOOM_RIDDIM) "riser" else "roll") else "finite", pad.source["articulation"], "${k.name} role $role")
+                assertEquals(authored.articulation, pad.source["articulation"], "${k.name} role $role")
+                val expected = when {
+                    role == 15 -> if (k == Kit.BOOM_RIDDIM || k == Kit.BAILE_FUNK) "riser" else "roll"
+                    k == Kit.SABAR_SWING && role == 10 -> "riser"         // CALABASH's talking call, a phrase there too
+                    else -> "finite"
+                }
+                assertEquals(expected, authored.articulation, "${k.name} role $role")
             }
             // The hats choke each other on every kit.
             assertTrue(pads[2].drumClass == DrumClass.HAT_CLOSED && pads[3].drumClass == DrumClass.HAT_OPEN, k.name)
@@ -131,16 +137,17 @@ class RiddimKitsTest {
         }
     }
 
-    @Test fun `the three kits are three kits`() {
+    @Test fun `the six kits are six kits`() {
         assertEquals(Kit.entries.size, Kit.entries.map { it.bpm }.toSet().size, "each kit has its own tempo")
         for (k in Kit.entries) assertEquals(RiddimKits.PADS, RiddimKits.pads(k).map { it.name }.toSet().size, "${k.name}: sixteen different pads")
         // As approved: Clave Dancehall and Boom Riddim share the plain open hat and clap, Clave Dancehall and Dembow
-        // the shaker and the cowbell. Every other slot is another voice or other settings, and at least 13 of 16 differ in shape.
+        // the shaker and the cowbell, Dembow and Sabar Swing CALABASH's tama. Every other slot is another voice or
+        // other settings, and at least 13 of 16 differ in shape.
         val shared = mapOf(
             setOf(Kit.CLAVE_DANCEHALL, Kit.BOOM_RIDDIM) to setOf(3, 4),
             setOf(Kit.CLAVE_DANCEHALL, Kit.DEMBOW) to setOf(7, 10),
-            setOf(Kit.DEMBOW, Kit.BOOM_RIDDIM) to emptySet(),
-        )
+            setOf(Kit.DEMBOW, Kit.SABAR_SWING) to setOf(12),
+        ).withDefault { emptySet() }
         for (a in Kit.entries.indices) for (b in a + 1 until Kit.entries.size) {
             val ka = Kit.entries[a]; val kb = Kit.entries[b]
             val same = (0 until RiddimKits.PADS).filter { role ->
