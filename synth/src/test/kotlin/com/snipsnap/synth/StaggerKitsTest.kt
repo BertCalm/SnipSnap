@@ -280,8 +280,12 @@ class StaggerKitsTest {
             val parts = StaggerKits.parts(k)
             val hasHat = StaggerKits.notesOf(k).any { parts[it.part].cls == DrumClass.HAT_CLOSED }
             if (hasHat) assertTrue(hatsDb in -35.0..-16.0, "${k.name}: hats $hatsDb dB under; the references 16 to 35, median 23")
-            val ceilingLimit = if (k == Kit.MATINEE) 1_500.0 else 650.0
-            assertTrue(ceiling < ceilingLimit, "${k.name}: 95 percent of the energy under $ceiling Hz; eight references under 309 to 635")
+            // The dark eight references sit at 309 to 635 Hz and the other five at 0.9 to 4.4 kHz. Round 2 measured 579,
+            // 636 and 495 Hz; round 2b's press lifts the tails and the room, to 658, 801 and 953 with STUMBLE's harder
+            // press (its backbeat is a rimshot, brighter than a snare's crack). CARDBOARD stays at the dark end (700),
+            // MATINEE's foley is allowed 1.5 kHz, STUMBLE's rimshot 1 kHz.
+            val ceilingLimit = when (k) { Kit.MATINEE -> 1_500.0; Kit.STUMBLE -> 1_000.0; else -> 700.0 }
+            assertTrue(ceiling < ceilingLimit, "${k.name}: 95 percent of the energy under $ceiling Hz; the dark references under 309 to 635")
         }
     }
 
@@ -298,6 +302,50 @@ class StaggerKitsTest {
             for (role in 0..1) {
                 val d = shapeDistance(StaggerKits.dry(kits[a], role, 1f, 0).samples, StaggerKits.dry(kits[b], role, 1f, 0).samples)
                 assertTrue(d > .5, "role $role: ${kits[a]} and ${kits[b]} share a drum ($d)")
+            }
+        }
+    }
+
+    /**
+     * Round 2b, "maybe we need a bit of compression" (the owner, 2026-11-19). What the press does to a drum,
+     * measured against the same print with the compressor taken out: the backbeat drum's crest (its peak against
+     * its RMS over the first 200 ms) falls and its tail (300 to 500 ms against the first 50 ms) comes up at least
+     * 3 dB; the kick's tail never falls and its crest rises by no more than 2.5 dB (a muffled kick is already dense,
+     * crest 1.3 to 3.6 dB, and the sustain compressor can only lift what is under its body: measured, the three
+     * kicks' crests rose 1.6 to 2.2 dB and their tails 0.8 to 4 dB, the three snares' crests fell 0.3 to 2.9 dB
+     * and their tails rose 8 to 17 dB).
+     */
+    @Test fun `every print presses its hits a bit`() {
+        fun crest(x: FloatArray): Double {
+            val n = min(x.size, (.2f * rate).toInt())
+            val rms = sqrt(x.take(n).sumOf { it.toDouble() * it } / n)
+            return 20 * kotlin.math.log10(x.maxOf { abs(it) } / max(rms, 1e-9))
+        }
+        fun tail(x: FloatArray): Double {
+            val a = (.3f * rate).toInt(); val b = min(x.size, (.5f * rate).toInt())
+            if (b <= a + 100) return -99.0
+            val late = sqrt(x.copyOfRange(a, b).sumOf { it.toDouble() * it } / (b - a))
+            val head = sqrt(x.take((.05f * rate).toInt()).sumOf { it.toDouble() * it } / (.05f * rate))
+            return 20 * kotlin.math.log10(max(late, 1e-9) / max(head, 1e-9))
+        }
+        for (k in kits) {
+            val print = StaggerKits.printOf(k)
+            val bare = StaggerKits.Print(print.name, print.crunch, print.tape, print.grooveVinyl, compressor = null)
+            for (role in 0..1) {
+                val dry = StaggerKits.dryRaw(k, role, 1f, 0)
+                val pressed = print.apply(dry.copyOf(), phrase = false, converted = false)
+                val loose = bare.apply(dry.copyOf(), phrase = false, converted = false)
+                println("${k.name} role $role: crest ${"%.1f".format(crest(loose))} to ${"%.1f".format(crest(pressed))} dB, tail ${"%.1f".format(tail(loose))} to ${"%.1f".format(tail(pressed))} dB")
+                if (role == 1) {
+                    assertTrue(crest(pressed) < crest(loose), "${k.name} role $role: the press raised the crest")
+                    assertTrue(tail(pressed) >= tail(loose) + 3, "${k.name} role $role: the tail came up only ${tail(pressed) - tail(loose)} dB")
+                } else {
+                    // A kick that already hums (STUMBLE's tail sits 7.6 dB under its head, CARDBOARD's 16.6) gives the
+                    // press nothing to lift: measured +0.2 dB against +4.0. The claim for a kick is that the press
+                    // neither pulls its tail down nor sharpens it by more than 2.5 dB.
+                    assertTrue(tail(pressed) >= tail(loose) - .5, "${k.name} role $role: the press pulled the tail down ${tail(loose) - tail(pressed)} dB")
+                    assertTrue(crest(pressed) <= crest(loose) + 2.5, "${k.name} role $role: the press raised the kick's crest by ${crest(pressed) - crest(loose)} dB")
+                }
             }
         }
     }

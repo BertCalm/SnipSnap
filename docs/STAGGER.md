@@ -13,6 +13,27 @@ barely hear, or none → the clock drags and catches up → a cartoon lands wher
 
 ## Status
 
+**Round 2b built (2026-11-19): "maybe we need a bit of compression."** The owner heard the round-2 page and asked for a
+bit of compression. The single pads had none (only the grooves went through a bus), so every kit's print now presses
+its pads between the converter and the tape (`StaggerKits.PRESS`: COMPRESSOR at AMOUNT .40, ATTACK .25, RECOVER .45,
+the same on all three kits), the way a chopped record's drums were pressed at the mix; the peak match after it brings
+the tail and the room back up. A foley pad is pressed like every pad; the grooves keep their bus on top. Kit version 3.
+
+Measured before choosing (`StaggerKitsTest` prints it): the sustain compressor at a slow attack lets the hit through
+and presses the body under it, so the first settings *raised* CARDBOARD's snare crest from 10.0 to 11.8 dB and its
+kick's from 3.6 to 8.8. At a fast attack (about 1 ms) the three snares fall 0.3 to 2.9 dB in crest and their tails
+(300 to 500 ms against the first 50 ms) come up 8 to 17 dB; the kicks' tails come up 0.2 to 4 dB and their crests rise
+1.6 to 2.2 dB, a muffled kick being already dense (crest 1.3 to 3.6 dB), and a humming kick giving the press nothing to
+lift. The test holds those claims. On the exported pads (Python, peak against 200 ms RMS): the hits' median crest moved
+11.0 → 10.7 (CARDBOARD), 9.8 → 10.1 (MATINEE) and 9.1 → 8.0 dB (STUMBLE), their loudest-peaked pads 16.5 → 13.8, 18.7 →
+16.9 and 14.6 → 16.5, and the grooves 12.3 → 10.8, 12.1 → 10.3 and 9.1 → 8.0 dB. The press lifts every groove's 95 percent
+ceiling (579 → 658, 636 → 801, 495 → 950 Hz) as the tails and the room come up; the test's limits moved with the reason
+beside each (700, 1500, 1000). The hats sit 27, 26 and 25 dB under the mix (round 2: 28, 29, 29; the references' median 23).
+
+The round 2b listening page (private to the owner's account): [Stagger, round two b](https://claude.ai/artifact/CSeGgyNZd8nZ5qWfFXHXBz). Each kit's kick,
+backbeat drum and groove before and after the press, then every pad as it ships. `:shell:generateStaggerKits` verified
+all three kits again (built in 179, 184 and 151 s on this machine).
+
 **Round 2 built (2026-11-19): three kits on the shelf, proven in software; the kits not yet heard as kits.** The owner heard
 round 1b and said "New sounds are better" (2026-11-19), which retires round 1's THUMP and SKIN drums and keeps EMBER's.
 The owner did not pick a cutoff, a clock width or slices over hits, so round 2 keeps the kit's defaults (300 Hz, the kit's

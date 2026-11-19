@@ -1,6 +1,6 @@
 """Build the STAGGER round-1 listening page from the generator's manifest.
 
-Run:  python3 scripts/stagger_page/build_page.py testkit/stagger-round1 OUT_DIR [mp3]
+Run:  python3 scripts/stagger_page/build_page.py testkit/stagger-round1 OUT_DIR [mp3] [before-folder]
 Writes OUT_DIR/index.html, which references the WAVs by their paths under the generator's folder; publish the
 page with those files beside it. No audio is converted or committed.
 """
@@ -134,14 +134,26 @@ def build_1b(m, files, clip, out):
     return 0
 
 
-def build_2(m, src, out, ext="wav"):
+def build_2(m, src, out, ext="wav", before=None):
     """Round 2: the three kits as they ship, read back from their MPC 3 exports by the shelf generator. [ext] is the
-    clips' extension beside the page: the WAVs as the generator wrote them, or MP3 copies for a lighter page."""
+    clips' extension beside the page: the WAVs as the generator wrote them, or MP3 copies for a lighter page.
+    [before] names a folder of the previous round's clips beside the page (round 2b: the owner asked for a bit of
+    compression, and the page plays each kit's kick, snare and groove before and after)."""
     def clip(path, label, seconds):
         path = path[:-3] + ext
         return ('<button class="clip" type="button" data-src="%s" aria-pressed="false"><span class="play" aria-hidden="true"></span>'
                 '<span class="label">%s</span><span class="secs">%.2f s</span></button>' % (html.escape(path), html.escape(label), seconds))
     sections = []
+    if before:
+        rows = []
+        for kit in m["kits"]:
+            items = []
+            for slot, what in [(1, kit["pads"][0]["name"]), (2, kit["pads"][1]["name"]), (16, "groove")]:
+                pad = kit["pads"][slot - 1]
+                items.append(clip("%s/%s/pad-%02d.wav" % (before, kit["id"], slot), "%s before" % what, pad["seconds"]))
+                items.append(clip("%s/pad-%02d.wav" % (kit["id"], slot), "%s pressed" % what, pad["seconds"]))
+            rows.append('<div class="pad"><h3>%s</h3><div class="row">%s</div></div>' % (html.escape(kit["title"]), "".join(items)))
+        sections.append(("Before and after the compressor", "Round 2 as you heard it, then round 2b with the compressor in every kit's print: the body pressed at about two to one, the peak match bringing the tail and the room back up. Each kit's kick, backbeat drum and groove.", rows))
     for kit in m["kits"]:
         rows = []
         for pad in kit["pads"]:
@@ -155,7 +167,8 @@ def build_2(m, src, out, ext="wav"):
                           "stagger-matinee": "The cinematic kit: a stage kick and snare on a bigger room, then ten effects through the converter. A15 the timpani riser into the crash gong, A16 a groove with a glass break and a zap pickup.",
                           "stagger-stumble": "The drunkest clock: a humming muffled kick, the rimshot in the snare's place, no hats in the groove, the tape worn. A15 a dragging snare roll, A16 the groove."}[kit["id"]],
                          rows))
-    page = render({"bpm": "", "version": m["kitVersion"]}, "Stagger Round Two", "Stagger, round two",
+    page = render({"bpm": "", "version": m["kitVersion"]}, "Stagger Round Two B" if before else "Stagger Round Two", "Stagger, round two b" if before else "Stagger, round two",
+                  ("You asked for a bit of compression. Every kit's print now presses its pads between the converter and the tape; the grooves keep their bus. " if before else "") +
                   "Three kits on the shelf, every clip read back from the MPC 3 export through the app's own pad resolver. Kit version {VERSION}; the drums are EMBER's, as you chose in round 1b. Nothing has been heard before you. One player: a new clip stops the last.",
                   "<li>Are the three kits three kits, each worth its row?</li><li>Any pad wrong for its kit, and does the glass earn its two pads on MATINEE?</li><li>The clocks: CARDBOARD's, MATINEE's and STUMBLE's widest; is any one too drunk or too straight?</li>",
                   sections_html(sections))
@@ -171,7 +184,7 @@ def main(argv):
     out = argv[2] if len(argv) > 2 else src
     m = json.load(open(os.path.join(src, "manifest.json")))
     if m.get("round") == "2":
-        return build_2(m, src, out, ext=argv[3] if len(argv) > 3 else "wav")
+        return build_2(m, src, out, ext=argv[3] if len(argv) > 3 else "wav", before=argv[4] if len(argv) > 4 else None)
     files = {f["file"]: f for f in m["files"]}
 
     def clip(path, label):
