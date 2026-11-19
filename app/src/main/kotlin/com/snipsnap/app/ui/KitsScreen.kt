@@ -580,7 +580,7 @@ fun KitsScreen(
                             }
                         }
                         item(key = "kits-header") {
-                            TapeText("KITS · THE LIBRARY EVERY PROJECT SHARES", TapeType.pixelSmall, scheme.ink2.tape, Modifier.padding(top = 6.dp), maxLines = 2)
+                            TapeText("KITS. The LIBRARY every project shares.", TapeType.pixelSmall, scheme.ink2.tape, Modifier.padding(top = 6.dp), maxLines = 2)
                         }
                     }
                     // A filter that empties the shelf must say so itself: a

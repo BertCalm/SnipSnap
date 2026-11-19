@@ -7,7 +7,7 @@ The owner chose the wider collection in round 0 and asked for all three of its s
 round-3 entries); no reference audio is copied, sliced or fitted.
 
   * Baile Funk, 130 BPM, 58% swing. Brazilian funk: one short, tight kick a bar, the tamborzao hand-drum
-    figure (3+3+2) on a tumba and quinto, a clap, a high "ting" bell and a ratchet. A16 is a ratchet riser.
+    figure (3+3+2) on a tumba and quinto, a clap, a high "ting" bell and a wooden ratchet. A16 is a ratchet riser.
   * Sabar Swing, 103 BPM, 61% swing. A slow, dark West African groove: a deep sub kick that lands just after
     each beat, CALABASH's approved sabar drums (mbeng, nder, col), a dundun and a talking-drum call over
     swung hats. A16 is a sabar roll. It is not CALABASH MBALAX (126 BPM, straight and bright).
@@ -53,7 +53,7 @@ WOOD_BEATER = 1.0
 KITS = {
     "baile_funk": {
         "title": "Baile Funk", "bpm": 130, "swing": 0.58, "key": "",
-        "about": "Brazilian funk: a short tight kick, the tamborzao on tumba and quinto, a clap, a high ting bell and a ratchet that scrapes the off-beats.",
+        "about": "Brazilian funk: a short tight kick, the tamborzao on tumba and quinto, a clap, a high ting bell and a wooden ratchet on the off-beats.",
         "pads": [
             pad("Tight kick", "KICK", st("KICK", 6, DECAY=.2, DRIVE=.7)), pad("Clap", "CLAP", st("CLAP", 2, DECAY=.35)),
             pad("Closed hat", "HAT_CLOSED", st("HAT_CLOSED", 2, DECAY=.25), 1), pad("Open hat", "HAT_OPEN", st("HAT_OPEN", 2, DECAY=.35), 1),
@@ -61,9 +61,10 @@ KITS = {
             pad("Tambor low", "TUMBA", {"STROKE": 1 / 3}), pad("Tambor slap", "TUMBA", {"STROKE": 1.0}),
             pad("Tambor high", "QUINTO", {"STROKE": 1 / 3}),
             pad("Ting", "TING"), pad("Ting low", "TING", st("TING", -5)),
-            pad("Ratchet", "RATCHET"), pad("Long ratchet", "RATCHET", {"DECAY": .85, "WAVE": .35}),
+            # A11, A12, A16: the real ratchet the owner chose from the A/B (2026-11-19); see RATCHET_AB below.
+            pad("Ratchet", "RATCHET_WOOD", {"DECAY": .2}), pad("Long ratchet", "RATCHET_WOOD", {"DECAY": .7, "WAVE": .4}),
             pad("Agogo", "AGOGO_HIGH"), pad("Shaker", "SHAKER"), pad("Rimshot", "RIMSHOT", st("RIMSHOT", 3)),
-            roll("Ratchet riser", "RATCHET", {"DECAY": .3}, "ratchet"),
+            roll("Ratchet riser", "RATCHET_WOOD", {"DECAY": .0}, "ratchet"),
         ],
     },
     "sabar_swing": {
@@ -105,8 +106,8 @@ KITS = {
 # ------------------------------------------------------------------ the ratchet A/B (2026-11-19)
 # The owner was "not sure" RATCHET sounds as it should and asked to hear both readings of the reference: A is the
 # loop's own sound, a smooth pitched blip (`riddim_proto.blip`); B a real ratchet noisemaker (`ratchet_wood`).
-# Each replaces Baile Funk's A11, A12 and A16; "now" is the pads as first built. The kit keeps "now" until the
-# owner chooses. Blip notes follow the loop's hits: about 3.06 kHz and 2.2 kHz.
+# Each replaces Baile Funk's A11, A12 and A16; "now" is the pads as first built. The owner chose "real", a real
+# ratchet (2026-11-19: "Let's do the real ratchet"), which the kit now plays. Blip notes follow the loop's hits.
 RATCHET_AB = {
     "now": (pad("Ratchet", "RATCHET"), pad("Long ratchet", "RATCHET", {"DECAY": .85, "WAVE": .35}),
             roll("Ratchet riser", "RATCHET", {"DECAY": .3}, "ratchet")),
@@ -126,7 +127,7 @@ def with_ratchet(choice):
     return pads
 
 
-assert all(KITS["baile_funk"]["pads"][s] == p for s, p in zip(RATCHET_SLOTS, RATCHET_AB["now"]))
+assert all(KITS["baile_funk"]["pads"][s] == p for s, p in zip(RATCHET_SLOTS, RATCHET_AB["real"]))
 
 
 # ------------------------------------------------------------------ rolls and risers (one bar at the kit's tempo)

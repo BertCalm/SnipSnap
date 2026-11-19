@@ -5797,7 +5797,7 @@ private fun MutateCard(
         // The rooms on the shelf, two to a row (their names are words, not
         // tags); the row is absent until OUTSIDE has kept one.
         if (rooms.isNotEmpty()) {
-            TapeText("ROOMS IN THE LIBRARY · ROOM PLAYS THE PAD INSIDE ONE", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
+            TapeText("Rooms in the LIBRARY. A ROOM plays the pad inside one.", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
             val chosenRoom = (partner as? MutateSheet.Partner.Room)?.name
             for (row in rooms.chunked(2)) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {

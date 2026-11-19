@@ -4064,3 +4064,13 @@ tasks.register<JavaExec>("generateLooseCrateExpansionRound0") {
     maxHeapSize = "1g"
     args(providers.gradleProperty("looseCrateExpansionOutput").orNull ?: "${rootDir}/testkit/loose-crate-expansion-round0")
 }
+
+tasks.register<JavaExec>("generateSunroomKits") {
+    group = "distribution"
+    description = "Export three approved Sunroom factory kits with velocity and alternate-take grids."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.SunroomKitGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "1g"
+    args(providers.gradleProperty("sunroomOutput").orNull ?: "${rootDir}/testkit/sunroom-native")
+}
