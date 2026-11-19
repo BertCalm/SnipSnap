@@ -1,0 +1,143 @@
+EMBER cymbals and hats, round 0b (Python prototype)
+
+cymbals.json holds synthesis parameters fitted to twelve recordings from
+Virtuosity Drums, https://github.com/sfzinstruments/virtuosity_drums
+at commit 9f04cf9a734527edfbb0a4eee1f674e45bbf71bc, overhead mic.
+License: CC0 1.0 Universal (credited although not required).
+  Samples/oh/flatride/oh_flatride_ride_vl3_rr1.flac
+    sha256 63d1cff0d5a87a24311acc2e799e6911d8a0b958b6d98958a689fec7471ab89f
+  Samples/oh/flatride/oh_flatride_ride_vl1_rr1.flac
+    sha256 5886cdb0cfcbad9ecfec7c2f0bddfc84984812400cd324593bc1a94ff2ee2cf3
+  Samples/oh/ride/oh_ride_bell_vl3_rr1.flac
+    sha256 e9d367cb70b15377fcec2299a15b6590a93e2b8b0d789511616bcb7b8345281d
+  Samples/oh/ride/oh_ride_bell_vl1_rr1.flac
+    sha256 c1d4a6d958fe778cda3c534c3343e1072da5a69b2853a2ae0b1805e6643080e0
+  Samples/oh/crash/oh_crash_sizzle_vl3_rr1.flac
+    sha256 d49368ec3eae95879274f9dac6a1e93f64279f3bcc1c26deb04b3d0bb682bdf1
+  Samples/oh/crash/oh_crash_sizzle_vl1_rr1.flac
+    sha256 10094bc2b8637cfc2af60b8422eb7f1dee38836a8290baf3283eae9e85b5490b
+  Samples/oh/hh/oh_hh_open_vl4_rr1.flac
+    sha256 784687e70ed0adf17229a38f4347674ac4283a0dd85def26c556a5e9be3b1ffc
+  Samples/oh/hh/oh_hh_open_vl1_rr1.flac
+    sha256 bce174c48b9ab905bb48e36ecd5023f6f507d5210d220c7f2a00c21dca670121
+  Samples/oh/hh/oh_hh_closed_vl4_rr1.flac
+    sha256 163b306f52ebe55017e46a7b664b8438458bd7becc01553309a2f441c0bd452b
+  Samples/oh/hh/oh_hh_closed_vl1_rr1.flac
+    sha256 8e23666927c51d04c0e70085f746778fbac0f76638bde06ff54d88c70031c0dc
+  Samples/oh/hh/oh_hh_pedal_vl3_rr1.flac
+    sha256 5311c752a8852e48a05be2d5841bbccb5dedce5b606f49ad8168cc8c52b22235
+  Samples/oh/hh/oh_hh_pedal_vl1_rr1.flac
+    sha256 914fdab7847eacf82f016d48959ddd286c8dff9626ba9a4873a600b3d5d8f6d0
+
+Changes: decoded to mono 44.1 kHz; for the flat ride, bell, sizzle crash and
+open hat, resonances picked from an 8192-point STFT (a frequency, an amplitude
+and a decay each), one level correction per third-octave band, the stick's band
+levels over the first 40 ms, the soft recording's band levels against the hard
+one's, and the residual band levels the resonances leave out; for the closed and
+pedalled hats, each third-octave band's level over time, hard and soft. These
+are derived synthesis parameters, not recordings or PCM. The engine synthesizes
+sinusoids and band noise; it does not play back any recording, and none ships.
+Fitted by prototype/ember/fit_ember_cymbals.py with BREAKER's fitter
+(scripts/fit_breaker_cymbals.py). No endorsement is implied.
+
+EMBER brush sweep and brush roll, round 0c (Python prototype)
+
+brushes.json holds synthesis parameters fitted to nineteen recordings from
+Karoryfer Samples, Swirly Drums, https://github.com/sfzinstruments/karoryfer.swirly-drums
+at commit c40dafe0011cb2e54c0c220ff0fa308a11fc60f5, main mic.
+License: CC0 1.0 Universal (credited although not required).
+  Samples/snare_stir/stir_dl1_rr1.wav
+    sha256 cddbaa6b165ebbd8dfd2b6b9f05dc8c985341c98847ab22afb54dc79b4c603fb
+  Samples/snare_stir/stir_dl1_rr2.wav
+    sha256 5f5fbcebcde9422a40b00dba6d556183fbf98a91044b5ad523f51fd018d4bc18
+  Samples/snare_stir/stir_dl1_rr3.wav
+    sha256 0e976d193a042e54418f1866f8e15fc0704bb4211265830bec1261ec15b359d6
+  Samples/snare_stir/stir_dl1_rr4.wav
+    sha256 f0c44374601be4cc9e3d7fb5b9518ade9da608c288af4a8e400df01166234305
+  Samples/snare_stir/stir_dl2_rr1.wav
+    sha256 6b61f2c97d386e11ae1be7e9c3ba8853a81dce650a4cad504c297bae8785a990
+  Samples/snare_stir/stir_dl2_rr2.wav
+    sha256 c831f0c8d29e1a8f58cc1ad7bd343ff661ed1de8830d23122bc52cfd173fc102
+  Samples/snare_stir/stir_dl2_rr3.wav
+    sha256 b92bd2e69887737a85ffe9d07d966fab5ed97a4cf0f32834b2f8f0c5d3d0e328
+  Samples/snare_stir/stir_dl2_rr4.wav
+    sha256 ad7052984c37cbfec4861993c24cac983c050221c97aa27a416c04ef0c8ff910
+  Samples/snare_stir/stir_dl3_rr1.wav
+    sha256 0d903f5f9b5a296cd569a27ea974deaf42d9337ba5c7f91452294a4bd0919a14
+  Samples/snare_stir/stir_dl3_rr2.wav
+    sha256 1b42423e7995dd5b59ab7328178575781429f327f4c89301b06b502a77deead0
+  Samples/snare_stir/stir_dl3_rr3.wav
+    sha256 ff13c18d523c7ae3b799898727a5a41b7e848cadd08c50057621f27903f56a98
+  Samples/snare_stir/stir_dl3_rr4.wav
+    sha256 78567d6f0e1b2bae307c8acbe1f71d0d13a1e9963db05c28dab45068972e770b
+  Samples/snare_stir/stir_dl4_rr2.wav
+    sha256 d46c952108d47d63d3a48485fe43c386918a9d6998bfab815a54c26480c23f42
+  Samples/snare_stir/stir_dl4_rr3.wav
+    sha256 bd9471584060a8e959a6eaa525ed61e825f6bb6bf24870471a8bc3efdb54820f
+  Samples/snare_stir/stir_dl4_rr4.wav
+    sha256 a4a17de1683f57ac17c9aa50feb1602aec99cb96912756bfcf6823840f589832
+  Samples/snare_flutter/flutter_rr1.wav
+    sha256 9a264eff637e25533b6b50836a5334082bb03c16670222f7f39987531c35f46a
+  Samples/snare_flutter/flutter_rr2.wav
+    sha256 bc674a08dfc7d5020834d1659d4784de6a18181380f2d7d5ad17298de0935624
+  Samples/snare_flutter/flutter_rr3.wav
+    sha256 48115949da341374a31e1863bc1d4741477d13078ca90bbc5b54e00bfd354a90
+  Samples/snare_flutter/flutter_rr4.wav
+    sha256 7460d11df64c34f8e842c496653bb75e490bef7c90f7cd67117a8b0c4366a027
+
+Changes: per third-octave band, the mean level re the overall level over 50 ms frames,
+the dB each band moves per dB of overall level, and the overall level's spread at 50 ms and
+250 ms, for each of four dynamic levels and for the flutter. These are derived synthesis
+parameters, not recordings or PCM; the engine synthesizes band noise and plays back none of
+them. Fitted by prototype/ember/fit_ember_brushes.py. No endorsement is implied.
+
+
+EMBER Latin percussion, round 2L (Python prototype)
+
+latin.json holds synthesis parameters fitted to recordings from the Versilian
+Community Sample Library (VCSL), https://github.com/sgossner/VCSL
+at commit c1ea7bcc3c7309650ab0da9d15c9cd1fbc4a4c7e, the "Mid" microphone.
+License: CC0 1.0 Universal (credited although not required). The recordings do
+not ship; fit_ember_latin.py reads them decoded to mono 44.1 kHz.
+  Idiophones/Struck Idiophones/Cowbells/Cowbell1_Hit_v4_rr1_Mid.wav
+    sha256 e32a7a646bddfbc63595de9f64e3e435999c932ebadf0fe98759e754096002a0 (cowbell_hard)
+  Idiophones/Struck Idiophones/Cowbells/Cowbell1_Hit_v2_rr1_Mid.wav
+    sha256 6820d8f2abebe1d3e4dba262ad628d833ab04ade72dd2711b0cf4d2a58fa780d (cowbell_soft)
+  Idiophones/Struck Idiophones/Cowbells/Cowbell1_Hit_v3_rr1_Mid.wav
+    sha256 36e9243e18b299bde0ebbb108c65846ddb5d46b35a61655fa18a0327e3390e87 (cowbell_mid)
+  Idiophones/Struck Idiophones/Claves/Claves1_Hit_v3_rr1_Mid.wav
+    sha256 12285f65ed125f4140d1e8a86b2d6a08bf3283b7bf30c10d68290b8e8230a927 (clave_hard)
+  Idiophones/Struck Idiophones/Claves/Claves1_Hit_v1_rr1_Mid.wav
+    sha256 19379cc794b9e50d4dc55200238e27091bedab63b7370eb625490c7a96631b34 (clave_soft)
+  Idiophones/Struck Idiophones/Claves/Claves1_Hit_v2_rr1_Mid.wav
+    sha256 bcabe27330761309eb4b4f6207e6e3b4be59815df86449ac05bfb9b81f19efc9 (clave_mid)
+  Membranophones/Struck Membranophones/Bongos/BongoH_Hit1_v3_rr1_Mid.wav
+    sha256 e93ed5c0fbafc3f122ced7c56c3f08021d8616e96c81c42aa62c5f368111d001 (bongo_high_hard)
+  Membranophones/Struck Membranophones/Bongos/BongoH_Hit1_v3_rr2_Mid.wav
+    sha256 e0c143a2d32aca5430ffe2254c699b772ecfeaf6eef9d4c414365b538f693916 (bongo_high_hard2)
+  Membranophones/Struck Membranophones/Bongos/BongoH_Hit1_v1_rr2_Mid.wav
+    sha256 4905c0cee5db34c8edfc49aa51d93f4a7d2a823190eaa12d2500515639a42cf3 (bongo_high_soft)
+  Membranophones/Struck Membranophones/Bongos/BongoL_Hit1_v3_rr1_Mid.wav
+    sha256 07986a1bc54b31dafd9c7dc250e42a613977b320b33b2e4652d21332064de4eb (bongo_low_hard)
+  Membranophones/Struck Membranophones/Bongos/BongoL_Hit1_v3_rr2_Mid.wav
+    sha256 da93f8eba020d57ec57c27505f4132c346900aee6a5f76e9754d01c93658a226 (bongo_low_hard2)
+  Membranophones/Struck Membranophones/Bongos/BongoL_Hit1_v1_rr1_Mid.wav
+    sha256 746f5c4d37cf956c083f0c98b74dd7b6f7daeda6405d7b1534bbc56f1b741e4a (bongo_low_soft)
+  Idiophones/Struck Idiophones/Guiro/Guiro_Med_rr1_Mid.wav
+    sha256 b32a7fd5b8a9971ebe85313df3e7be72134c2c1eaf243d21a28dc48b77deb44c (guiro_med)
+  Idiophones/Struck Idiophones/Guiro/Guiro_Slow_rr2_Mid.wav
+    sha256 4097a3437503d6a98fa7f0c1070bcc6a0516b834eaa8a999a1f745428544680d (guiro_slow)
+  Idiophones/Struck Idiophones/Guiro/Guiro_Fast_rr1_Mid.wav
+    sha256 fb601ba7bf1decb62c6cbe38f4f74807e4067dcdcc967e028bd0ec75053c2c28 (guiro_fast)
+  Idiophones/Struck Idiophones/Guiro/Guiro_Hit_rr1_Mid.wav
+    sha256 e7d4bf1c28521e3410d710688a576f2fe5f6c5339e754417ae3c1a46a386cf42 (guiro_hit)
+  Idiophones/Struck Idiophones/Guiro/Guiro_Hit_rr2_Mid.wav
+    sha256 499ccec0034748c4c7995133be0c9960787ec8f604c8aa98cd4edd28515af7d8 (guiro_hit2)
+  Idiophones/Struck Idiophones/Shaker, Large/LShaker_Hit_rr1_Mid.wav
+    sha256 0d3d62742a6c01ec8b8812faee945eaa2e75bfe02f83df3cc622ba7f00213ddf (shaker_hard)
+  Idiophones/Struck Idiophones/Shaker, Large/LShaker_Hit_rr2_Mid.wav
+    sha256 cb8491cc4bf7ac760109d45de445a7a21fd70217575f503e2ce4873bcd4cf1f9 (shaker_hard2)
+
+Version 2 Roadhouse snare: original coupled-head/contact-wire synthesis; no reference PCM. Owner accepted 2026-11-17. Frozen PCM is canonical.
+
+Version 3 Roadhouse crash: original statistical modal synthesis; no source-recording PCM. Accepted 2026-11-19.
