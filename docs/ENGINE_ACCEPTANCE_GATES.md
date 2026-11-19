@@ -1147,24 +1147,40 @@ layers and three natural alternate strikes. Other kit pads retain original PCM.
 The revised snare is frozen synthesis, not a newly registered editable engine.
 Phone and MPC hardware acceptance remains open for this revision. See `SOUL_ROCK.md`.
 
-## RIDDIM (round 2, 2026-11-18: three kits on the shelf, Kotlin heard and confirmed, hardware open)
+## RIDDIM (round 4, 2026-11-19: six kits on the shelf, round 3 in Kotlin not yet heard, hardware open)
 
 Dancehall drum kits synthesized to targets measured from the owner's reference loops, with CALABASH's approved
 percussion on the same grids. See [RIDDIM](RIDDIM.md).
 
 - **Melodic, keygroup and chord-tool gates:** not applicable. Drum kits.
 - **Articulation:** finite hits, no HOLD.
-- **Percussion: authored, heard in Python (2026-11-18).** Each kit's A16 is a one-bar roll or riser at the kit's tempo:
-  a rim roll (Clave Dancehall), a snare roll (Dembow), a hat riser (Boom Riddim). The owner approved them with the kits
-  in round 1.
-- **Drum shelf: three kits on the shelf.** RIDDIM CLAVE DANCEHALL (102 BPM), RIDDIM DEMBOW (95) and RIDDIM BOOM RIDDIM
-  (100) differ in voices, tuning, decay, pad roles and tempo; `RiddimKitsTest` pins which slots they share.
+- **Percussion: authored, heard in Python.** Each kit's A16 is a one-bar roll or riser at the kit's tempo:
+  - a rim roll (Clave Dancehall), a snare roll (Dembow) and a hat riser (Boom Riddim), approved with round 1;
+  - a ratchet riser (Baile Funk), a sabar roll of CALABASH's nder (Sabar Swing) and a wood tremolo (Wood and Bronze),
+    approved with round 3 (2026-11-19).
+- **Drum shelf: six kits on the shelf.** They differ in voices, tuning, decay, pad roles and tempo. `RiddimKitsTest`
+  pins which slots each of the 15 pairs shares.
+
+  | Starter | Tempo |
+  |---|---|
+  | RIDDIM CLAVE DANCEHALL | 102 BPM |
+  | RIDDIM DEMBOW | 95 |
+  | RIDDIM BOOM RIDDIM | 100 |
+  | RIDDIM BAILE FUNK | 130 |
+  | RIDDIM SABAR SWING | 103 |
+  | RIDDIM WOOD AND BRONZE | 96 |
 - **Velocity/round robin: verified in software through rendering, saving, playback and MPC 3 export for every pad of
-  all three kits** (`RiddimKitsTest`, `RiddimKitTest`, `:shell:generateRiddimKits`). Three zones of four takes per pad.
-  MPC 2 is not applicable (format limit). No phone or MPC has played the kits.
-- **Sound character:** round 0 and round 1 heard in Python; round 1 approved ("Approved", 2026-11-18). The owner heard the
-  Kotlin kits and confirmed they match the approved kits ("Yes, they match", 2026-11-18).
-- **Overall: incomplete.** Open: phone and MPC playback.
+  all six kits** (`RiddimKitsTest`, `RiddimKitTest`, `:shell:generateRiddimKits`).
+  - Three zones of four takes per pad.
+  - MPC 2 is not applicable (format limit).
+  - No phone or MPC has played the kits.
+- **Sound character:**
+  - Rounds 0, 1 and 3 heard in Python. Round 1 approved ("Approved", 2026-11-18). Round 3 approved after two changes
+    the owner asked for: the hardest wood mallet and a real ratchet (2026-11-19).
+  - The owner heard round 2's Kotlin kits and confirmed they match ("Yes, they match", 2026-11-18).
+  - Clave Dancehall's woods moved to the hardest mallet on the owner's A/B ("I do like b", 2026-11-19).
+  - The six kits as the app exports them (round 4) are not yet heard.
+- **Overall: incomplete.** Open: the owner's listen to round 4, then phone and MPC playback.
 
 ## LOOSE CRATE kits (complete, 2026-11-18: sound approved, phone and MPC gates passed)
 

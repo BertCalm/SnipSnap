@@ -282,11 +282,83 @@ RATCHET_WOOD. With the wood mallet and the ratchet settled, the owner named noth
 thing is ratchet"), so round 3 is approved: Baile Funk, Sabar Swing, Wood and Bronze, TING and the three A16s.
 
 
+## Round 4: round 3 in the app (2026-11-19)
+
+The owner approved round 3 with the hardest wood mallet and a real ratchet. This round ports it to Kotlin and puts its
+three kits on the shelf.
+
+**The port (`Riddim.kt`).**
+- New voices: TING; RATCHET, the prototype's RATCHET_WOOD; WOOD's BEATER with its knock.
+- New rolls: RATCHET_RISER (eighths to 32nds, rising five semitones); NDER_ROLL, CALABASH's nder in sixteenths then
+  32nds; and WOOD_TREMOLO, 32nds on one wood all bar.
+- A roll strikes each stroke as its own landing. For CALABASH's nder, the new internal `Calabash.stroke` does this:
+  `render` clamps a take to 0 to 3, which would repeat four landings and make every take of the roll the same
+  performance. For landings 0 to 3, `stroke` is `render`.
+- Against the Python renders (`compare_kotlin.py`, takes averaged as third-octave power spectra), every new voice
+  and roll is within 1.1 dB band RMS over the first 300 ms. The worst single band is 2.5 dB. Round 2's worst voice
+  was 2.1 dB.
+
+| Kotlin voice | First 300 ms, RMS / worst band | −20 dB, Python / Kotlin |
+|---|---|---|
+| TING | 0.5 / 1.3 dB | 46–54 / 52–60 ms |
+| RATCHET | 0.6–0.8 / 2.3 dB | 12–14 / 12–14 ms per click |
+| WOOD at BEATER 1.0 | 0.8–1.0 / 2.1 dB | 11 / 16 ms, the knock's first fall |
+| RATCHET_RISER, NDER_ROLL, WOOD_TREMOLO | 0.1–0.9 dB | within 2 ms |
+
+**A latent bug, fixed.**
+- `Riddim` built its roll set, and its roll defaults, when it started. But `RiddimVoice`'s entries ask
+  `Riddim.rollSeconds` while they are being made.
+- So touching `RiddimVoice` first left both reading the voices as unset, and `isRoll` said no to every roll.
+  `generateRiddimAudition` crashed on RIM_ROLL that way.
+- `isRoll` is now a `when`, and the defaults are lazy. `RiddimTest` checks that every voice with a tempo is a roll.
+
+**Tests (`RiddimTest`).**
+- The ting at 3234 Hz.
+- A ratchet whose clicks can be counted: 6 to 24 clicks, 15 to 60 ms apart.
+- WOOD's onset: below 600 Hz at BEATER 0.5, above 1.2 kHz at 1.0, and 0.5 is the default.
+- Every one-shot darker when softer, including WOOD at the hardest mallet.
+- The tremolo brightening toward its end. It keeps one density all bar, so it does not grow louder: the other rolls
+  get denser.
+- The ratchet now fills its full 0.8 s at any DECAY. Its buffer used to end with the turn, so its length changed
+  with DECAY. The prototype matches.
+- `Fft.magnitudeSpectrum` windows across its whole frame, so the onset test uses its own short transform, as the
+  prototype's measure does.
+
+**The kits (`RiddimKits.kt`, kit version 2).**
+- Baile Funk (130 BPM), Sabar Swing (103) and Wood and Bronze (96) join the shelf after Boom Riddim, pad for pad
+  from `kits_wide.py`.
+- Clave Dancehall's woods play BEATER 1.0, the owner's choice. Its pads from before carry kit version 1.
+- CALABASH's talking call is levelled as a phrase and filed as a riser, as CALABASH's own kits do. CALABASH pads now
+  take settings, for the tumba slap and the mbeng hand slap.
+- Of the 15 kit pairs, only round 1's pairs and Dembow with Sabar Swing (CALABASH's tama) share a slot.
+- FRESH TAPE holds 214 starters.
+
+**Velocity and round robin, in software, for every pad of all six kits.**
+- `RiddimKitsTest` and `RiddimKitTest` pass, and `:shell:generateRiddimKits` verified all 96 pads: saved PCM,
+  playback through the pad resolver, and the MPC 3 track read back, 192 slices a kit.
+- Cut from that export (`shelf_grooves.py`), the closest two takes on any pad are 35.3 dB apart (a copy is above 40).
+- Every pad darkens at each softer zone, except reused CALABASH voices that keep their approved recording fit:
+  shaker, claves, cowbell, high bongo, agogo and shekere.
+- Build times on one machine:
+
+  | Kit | Build time |
+  |---|---|
+  | Clave Dancehall | 4.0 s |
+  | Dembow | 5.5 s |
+  | Boom Riddim | 10.0 s |
+  | Baile Funk | 13.7 s |
+  | Sabar Swing | 51.8 s |
+  | Wood and Bronze | 14.8 s |
+
+  Sabar Swing is slow because its talking call and nder roll are many CALABASH strokes. A kit is built once, when it
+  is made.
+
+The six kits as the app exports them: <https://claude.ai/artifact/LAmftedd8ziuoPE9ZPQdhQ>. Not yet heard.
+
 ## Open
 
-- Phone and MPC playback of the three kits.
-- Round 3's three wider kits (approved): the Kotlin port of TING, RATCHET_WOOD, WOOD's BEATER and the three A16s, and
-  the shelf, with Clave Dancehall's woods moving to BEATER 1.0.
+- The owner's listen to the six kits as the app exports them (round 4).
+- Phone and MPC playback of the six kits.
 - A preset roster and the picker.
 
 ## Ledger
