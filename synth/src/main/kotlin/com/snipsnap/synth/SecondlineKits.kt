@@ -6,7 +6,7 @@ import com.snipsnap.kit.ArrangedPad
 /** Provisional authored kits from the native listening candidate, before factory promotion. */
 object SecondlineKits {
     const val BPM = 104f
-    const val MODEL = 3
+    const val MODEL = 4
     enum class Kit(val id: String,val title: String) {
         CLASSIC("second-line-classic","Second Line Classic"), TRIANGLE("second-line-triangle","Second Line Triangle")
     }
