@@ -147,22 +147,50 @@ The corrected 429-case
 probe passed, including intermediate touches and the former worst resonance.
 That sampled matrix is evidence, not an analytic bound on every possible edit.
 
-## Round-robin takes (candidate, not yet heard)
+## Round-robin takes (kept by ear in accord-rr-1)
 
-`Accord.renderTake(patch, take)` renders take 0 to 3 of a saved performance. Take 0 is
-`patch.render()`, byte for byte. A later take is the same machine heard from an earlier moment:
-the saved mechanics, seed, voice, note, touch and controls, replayed from
-`Accord.TAKE_STEP_CYCLES` (.875) x take cycles before the saved `sourceStartCycles` (default 8:
-7.125, 6.25, 5.375; a start too near 0 goes forward instead). The first strikes and the point
-where the pulses fall after the key goes down differ; the machine and its gathering do not. The
-alternative, a seed take, is a different machine and can fail to gather at all; the owner
-compares the two in accord-rr-1 before either is kept.
+The owner heard these takes on 19 Nov 2026 (listening round accord-rr-1) and kept all of them
+with no notes: every voice at C3, the four takes one at a time at normal touch, and the same note
+repeated with takes dealt 1-2-3-4-1 at soft, normal and hard touch. The same round played seed
+takes on WOOD as the alternative; passage takes were kept.
+
+The take model is the passage offset. `Accord.renderTake(patch, take)` renders take 0 to 3 of a
+saved performance. Take 0 is `patch.render()`, byte for byte. A later take is the same machine
+heard from an earlier moment: the saved mechanics, seed, voice, note, touch and controls, replayed
+from `Accord.TAKE_STEP_CYCLES` (.875) x take cycles before the saved `sourceStartCycles` (default 8:
+7.125, 6.25, 5.375; a start too near 0 goes forward instead). The step is 1.75 centre passages, so
+a gathered machine's pulses fall a different quarter of the pulse spacing after each take's first
+sample. The first strikes and the point where the pulses fall after the key goes down differ; the
+machine and its gathering do not. A seed take, the alternative, is a different machine and can fail
+to gather at all.
 
 Every take plays at take 0's performance gain, the rule already shared across velocity, lowered
 only where that would carry the take's normal or hard render over the .85 ceiling. At C3 and
 default controls that lowers BRUSH's last take by .3 dB and REED's second and third by .5 and
-.8 dB; every other take moves by under .02 dB or not at all. No starter, keygroup, re-strike
-or pin uses takes yet: the owner hears them first (round accord-rr-1).
+.8 dB; every other take moves by under .02 dB or not at all.
+
+Where the takes are used:
+- **Pins.** `AccordRoundRobinPinsTest` pins takes 1 to 3 of every voice's first preset at C3, soft,
+  normal and hard (63 renders, `accord/round-robin-v1.sha256`), and checks that take 0 is still
+  the accord-native-1 and accord-voices-1 pin. Every pinned take's PCM24 matched the heard clips.
+- **ROBIN.** `Restrike.canRestrike` is true for ACCORD, so ROBIN on an ACCORD pad deals the
+  engine's own takes (`Restrike.take`) instead of resampling the kept render a few cents off. The
+  velocity Robin passes scales the saved touch, so its untouched hit is the saved performance and
+  its takes are that performance's kept takes, before Robin's own peak match, start jitter and
+  level spread. There is no extra force spread: ACCORD's velocity is its timbre. Takes past the
+  third cycle back to take 1, never to take 0. In a zoned ROBIN grid the softer zones' first takes
+  come from `Velocity.atVelocity`, which reads ACCORD's velocity as absolute, while their re-struck
+  takes scale the saved touch, so on a pad saved below full touch those zones' later takes are
+  struck softer than their first take (at a saved .75, at 75 % of its touch).
+- **ACCORD TAKES** (`accord-round-robin`), an opt-in starter right after ACCORD on the shelf: the
+  sixteen ACCORD pads, each with soft (.3), medium (.75) and hard (1) touch zones of four takes. A
+  pad's kept sound is the first take of its own touch, sample for sample; the ACCORD starter itself
+  is unchanged. MPC 3 carries every take; MPC 2 keeps each touch's first take only, the recorded
+  format limit (`Mpc2Limits`). The pads at notes and settings other than the heard C3 presets
+  (BRUSH D#3 to F4 and TINE's Soft Attack, Bright Edge and Long Ring) are rendered by the same
+  rule but were not heard with takes in accord-rr-1.
+
+Keygroups, chord renders and a HOLD decision do not use takes yet.
 
 ## Audition and export
 
