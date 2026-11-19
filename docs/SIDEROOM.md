@@ -255,3 +255,11 @@ Use the main native kit downloads for the combined velocity/take check. Test eac
 5. Report results separately for phone and MPC3. A failure should identify kit, pad, velocity, repeat number and whether it appears only after reopening.
 
 The optional Soft/Medium/Hard cycling programs can be checked separately: each chooses a fixed touch timbre and cycles its three takes. A pass there does not prove the main native combined velocity/take grid. MPC2's accepted format exception and the parked generic slice-map capture remain unchanged.
+
+## Full JVM regression and review handoff — 19 November 2026
+
+Merged the current base (`6e76ec3b3`) into SIDEROOM and reconciled the shelf without dropping other families: 219 starters, including the five SIDEROOM kits. The approved sound banks and published audition audio remain unchanged.
+
+The earlier unsharded runs ended without a completed result and are not passes. The complete JVM suite subsequently **passed across all three built-in class shards** (`testShards=3`, separate `testShard=0`, `1`, and `2` invocations of `test`). Every invocation returned exit code 0. The saved XML reports contain **10,850 tests in 1,447 suites, zero failures, errors or skips**; suite identities were checked for duplicate coverage and correct shard assignment. Shards ran 3,409, 3,487 and 3,954 tests respectively. Module totals: audio 457; CLI 324; JSON 16; kit 653; loop 439; MPC3 96; shell 2,740; synth 6,071; XPM 54. Verified source: `dd7d58ff2445d8dee65107bc5a57d850fdb5afdc`.
+
+Runs used Java 21, cached dependencies (`--offline`), and the workspace-only compiler selection described above. No tests were disabled or quarantined. The player routing check also passes all 90 phrase routes, ten groove routes and ten download links. These results close the outstanding JVM regression check; they do not establish an Android build or physical phone/MPC3 playback. The device procedure above, the MPC2 format exception and the parked generic capture remain unchanged.
