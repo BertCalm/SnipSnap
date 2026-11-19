@@ -325,8 +325,20 @@ unchanged. Measured on the sweep alone: the 15 to 60 Hz flicker of its loudness 
 (round 0c -6.6, round 0 -8.4); its centre 2,784 Hz (round 0c 3,219, round 0 3,533); against the rest of the kit 13.0 dB
 down (round 0c 12.8).
 
-[Expansion round 0 listening page](https://claude.ai/artifact/Q3rZ8po8ZaeJs9E4tNd86s) (private to the owner; rounds
-0d, 0c and 0 side by side for BLUE).
+**Round 0e, a shaker in place of the sweep.** The owner heard round 0d as "just awful" and chose, of four
+directions offered, a shaker in the sweep's place (2026-11-19). The lesson: a brush sweep is friction, thousands of
+bristles on a coated head, and three rounds of stand-ins for it (shaped noise, then a train of wire taps) came out as
+hiss or scrape; tuning was not going to fix the method. EMBER's shaker is fitted to a CC0 recording of a large
+shaker; BLUE plays it on swung eighths (.35 on the beat, .55 on the swung "and", the bar's last lifted to .63), TUNE
+.30, DAMP .45, at fader .35. The brush tap and everything else are unchanged. Measured on dry stems on one scale: the
+shaker 14.8 dB under the rest of the kit, and 4.7 dB under it from 2 to 6 kHz (a shaker lives there: its centre is
+5.2 kHz; TUNE from .40 to .30 moved that only 140 Hz). On the printed groove, 2 to 6 kHz is -13.8 dB of the whole,
+level with round 0's harsh sweep (-14.0; round 0c -15.2). A shaker's brightness comes in short strokes, not a
+continuous scrape, but given the history a softer groove (fader .25, about 3 dB down; 2 to 6 kHz at -14.7) is
+rendered beside it so the owner can choose the level by ear.
+
+[Expansion round 0 listening page](https://claude.ai/artifact/Q3rZ8po8ZaeJs9E4tNd86s) (private to the owner; the
+shaker at two levels, beside round 0d's sweep for BLUE).
 
 ## Gates
 

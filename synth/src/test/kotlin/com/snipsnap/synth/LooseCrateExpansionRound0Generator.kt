@@ -14,7 +14,7 @@ import kotlin.math.max
  * and crate print ([LooseCrateKits.CRATE]), so they sound like members of the same family. No reference loops were
  * given for these three; the targets are the styles themselves and, for SPEED, HUMMIN. Shape values, unheard.
  *
- * - **BLUE, jazz breaks off a record (90 BPM):** EMBER's felt kick, brush taps, brush sweep, ride and foot hat (the
+ * - **BLUE, jazz breaks off a record (90 BPM):** EMBER's felt kick, brush taps, ride, foot hat and shaker (the
  *   owner approved EMBER's cymbals after they were rebuilt from measurements of real ones) played as a hip-hop beat
  *   lifted from a jazz record: the ride swung in triplets, the brushes on two and four, a feathered kick with a
  *   boom-bap push, then the room and the crate print.
@@ -37,54 +37,21 @@ object LooseCrateExpansionRound0Generator {
         Ember.render(voice, mapOf("DISTANCE" to 0f, "WARMTH" to 0f) + mapOf(*m), v, t).samples
     }
 
-    /** How long a sweep's circle lasts, seconds: EMBER's slow sweep (SPEED .1). */
-    private const val SWEEP_SECONDS = 1.76
-
-    /**
-     * A brush circling a snare as the wires hear it: a train of very soft snare-wire taps ([LooseCrateKits.wires]),
-     * one every 18 to 40 ms, swelling and fading with the circle (sin^1.3 with a seeded sway), over EMBER's slow sweep
-     * made darker (TUNE .30, BUZZ .80) and low-passed twice at 2.5 kHz to take its scrape off, the bristles 8 dB under the
-     * wires. Every take re-seeds the train. Shape values.
-     */
-    private val rattlingSweep: Strike = { v, t, _ ->
-        val noise = Dsp.Noise(Dsp.seedFor("LOOSE-CRATE", "blue-rattle", t))
-        fun u() = (noise.next() + 1f) * .5f
-        val offsets = mutableListOf(0f)
-        while (offsets.last() < SWEEP_SECONDS * 1000) offsets += offsets.last() + 18f + 22f * u()
-        offsets.removeAt(offsets.lastIndex)
-        val weights = offsets.map { ms ->
-            val x = (ms / 1000 / SWEEP_SECONDS).toDouble()
-            (Math.pow(Math.sin(Math.PI * x), 1.3) * (.65 + .35 * u())).toFloat().coerceIn(.05f, 1f)
-        }
-        val rattle = KitStrikes.multi(offsets, weights) { vv, take -> LooseCrateKits.wires(vv * .45f, take, 0f) }(v, t, 0f)
-        val bristles = Ember.render(EmberVoice.BRUSH_SWEEP, mapOf("SPEED" to .1f, "TUNE" to .30f, "BUZZ" to .80f, "DISTANCE" to .4f, "WARMTH" to .35f), v, t).samples
-        val a = Dsp.FixedOnePole(2_500f)
-        val b = Dsp.FixedOnePole(2_500f)
-        val dark = FloatArray(bristles.size) { b.lp(a.lp(bristles[it])) }
-        val r = KitStrikes.peakOf(rattle).let { if (it > 1e-9f) 1f / it else 0f }
-        val d = KitStrikes.peakOf(dark).let { if (it > 1e-9f) BRISTLES / it else 0f }
-        FloatArray(maxOf(rattle.size, dark.size)) { (if (it < rattle.size) rattle[it] * r else 0f) + (if (it < dark.size) dark[it] * d else 0f) }
-    }
-
-    /** The bristles under the wires: 8 dB down. */
-    private const val BRISTLES = .4f
-
     private val blueParts: List<Pair<String, Strike>> = listOf(
         "felt-kick" to ember(EmberVoice.KICK, "TUNE" to .35f, "DAMP" to .65f, "BUZZ" to .15f),
         "brush-tap" to ember(EmberVoice.BRUSH_TAP, "TUNE" to .55f, "DAMP" to .35f, "BUZZ" to .55f),
         "ride" to ember(EmberVoice.RIDE, "TUNE" to .40f, "DAMP" to .40f, "BUZZ" to .20f),
         "foot-hat" to ember(EmberVoice.HAT_FOOT, "TUNE" to .45f, "DAMP" to .50f, "BUZZ" to .10f),
-        // Round 0c: "It's the brush sweep that was harsh and overbearing" (the owner, correcting round 0b, which had
-        // softened the tap). Round 0 swept faster with the mic close and no warmth (SPEED .45, DISTANCE 0, WARMTH 0):
-        // its loudest band was 2 to 6 kHz. It now takes EMBER's approved "Slow Sweep" exactly, and plays softer.
-        // Round 0d: "It sounds scraping rather than a gently rattling sweep" (the owner, of round 0c's slow sweep).
-        // EMBER's sweep is band noise fitted to recorded stirs plus air added by ear: bristles, no wires.
-        "sweep" to rattlingSweep,
+        // Round 0e: the brush sweep is gone. Three rounds of it (round 0 "harsh and overbearing", 0c "scraping rather
+        // than a gently rattling sweep", 0d "just awful") and the owner chose a shaker in its place (2026-11-19).
+        // EMBER's shaker is fitted to a CC0 recording of a large shaker; TUNE a little low and DAMP a little long
+        // to sit with the brushes. Shape values, unheard.
+        "shaker" to ember(EmberVoice.SHAKER, "TUNE" to .30f, "DAMP" to .45f),
     )
 
     /**
      * A hip-hop beat off a jazz record at 90: the ride's spang-a-lang in triplet swing (beats 0, 1, 1 2/3, 2, 3,
-     * 3 2/3), the foot hat on two and four, brush taps on two and four with ghosts, a sweep across each half bar,
+     * 3 2/3), the foot hat on two and four, brush taps on two and four with ghosts, a shaker on swung eighths,
      * and a feathered kick that pushes like boom bap (0, 1.75 soft, 2.5). Every note moves by its own seeded amount
      * within 12 ms.
      */
@@ -97,22 +64,29 @@ object LooseCrateExpansionRound0Generator {
             add(Note(b + 1.0, 1, .90f, offsetMs = 12f)); add(Note(b + 3.0, 1, .95f, offsetMs = 14f))
             add(Note(b + 2.0 + 2.0 / 3, 1, .25f, offsetMs = 10f))
             if (bar % 2 == 1) add(Note(b + 3.0 + 2.0 / 3, 1, .30f, offsetMs = 12f))
-            // The sweep sits back under a boom-bap kick: .35 and .30 at first, .20 and .17 in round 0 ("harsh and
-            // overbearing"), now .12 and .10.
-            add(Note(b + 0.0, 4, SWEEP)); add(Note(b + 2.0, 4, SWEEP - .02f))
+            // The shaker on swung eighths: soft on the beat, firmer on the swung "and" (the hand's back stroke),
+            // the last of each bar lifted a touch.
+            for (beat in 0 until 4) {
+                add(Note(b + beat, 4, SHAKE_ON, offsetMs = 8f))
+                add(Note(b + beat + 2.0 / 3, 4, if (beat == 3) SHAKE_AND + .08f else SHAKE_AND, offsetMs = 8f))
+            }
             add(Note(b + 0.0, 0, .85f)); add(Note(b + 1.75, 0, .45f)); add(Note(b + 2.5, 0, .75f))
         }
     }, 12f, "loose-crate-blue")
 
-    /** How hard the sweep swirls under each half bar. */
-    private const val SWEEP = .12f
+    /** The shaker's weights: the forward stroke on the beat, the back stroke on the swung "and". */
+    private const val SHAKE_ON = .35f
+    private const val SHAKE_AND = .55f
 
     /**
-     * The sweep's fader. Round 0c's first try set EMBER's slow sweep at weight .12 and measured it 3.7 dB under the
-     * rest of the kit, louder than round 0's (5.2): the slow sweep swishes longer, and weight barely turns a part down.
+     * The shaker's fader. A part that sits back needs a fader, not only a soft weight (round 0c): a note's level
+     * follows its weight only gently ([LooseCrateKits.touch], never under 0.35 of full).
      */
-    private const val SWEEP_FADER = .35f
-    private val blueFaders = mapOf(4 to SWEEP_FADER)
+    private const val SHAKER_FADER = .35f
+    private val blueFaders = mapOf(4 to SHAKER_FADER)
+
+    /** The shaker's fader in the softer comparison groove: about 3 dB under [SHAKER_FADER]. */
+    private const val SHAKER_SOFTER = .25f
 
     /** BLUE's room: HUMMIN's, a little smaller and drier, for brushes; a soft compressor. */
     private val blueRoom = LooseCrateKits.Room(mapOf("SIZE" to .18f, "WALLS" to .50f, "DISTANCE" to .50f), mapOf("AMOUNT" to .35f, "ATTACK" to .80f, "RECOVER" to .50f),
@@ -223,32 +197,27 @@ object LooseCrateExpansionRound0Generator {
         }
     }
 
-    private data class Stem(val tag: String, val notes: List<Note>, val sweep: Strike, val fader: Float)
-
-    @JvmStatic fun main(args: Array<String>) {
+        @JvmStatic fun main(args: Array<String>) {
         val root = File(args.firstOrNull() ?: "testkit/loose-crate-expansion-round0")
         fun write(name: String, s: Snip) = WavWriter.write(File(root, name), s).also { println("wrote ${it.path}") }
 
         val blue = loopDry(blueNotes, 90, blueParts.map { it.second }, blueRoom, blueFaders)
         write("blue/groove.wav", levelled(printedLoop(blue)))
         write("blue/groove-noprint.wav", levelled(blue))
+        // The same groove with the shaker about 3 dB down, so the owner can choose its level by ear.
+        write("blue/groove-shaker-softer.wav", levelled(printedLoop(loopDry(blueNotes, 90, blueParts.map { it.second }, blueRoom, mapOf(4 to SHAKER_SOFTER)))))
         for ((name, s) in blueParts) write("blue/hit-$name.wav", hit(s))
-        // The sweep's share of the groove, dry and on one scale: the sweep alone and everything else alone, round 0c
-        // against round 0's sweep (SPEED .45, mic close, no warmth, at .20 and .17). Stems for measuring only.
-        val r0Sweep: Strike = ember(EmberVoice.BRUSH_SWEEP, "TUNE" to .50f, "SPEED" to .45f, "BUZZ" to .40f)
-        val r0Notes = blueNotes.map { if (it.part == 4) Note(it.beat, 4, if (it.weight >= SWEEP) .20f else .17f, it.offsetMs) else it }
-        for ((tag, notes, sweep, fader) in listOf(Stem("r0c", blueNotes, blueParts[4].second, SWEEP_FADER), Stem("r0", r0Notes, r0Sweep, 1f))) {
-            val strikes = blueParts.map { it.second }.toMutableList().also { it[4] = sweep }
+        // The shaker's share of the groove, dry and on one scale: the shaker alone and everything else alone.
+        // Stems for measuring only.
+        run {
+            val strikes = blueParts.map { it.second }
             val seconds = frames(90).toFloat() / Dsp.RATE + 2.5f
-            val all = rawMix(notes, 90, seconds, strikes, mapOf(4 to fader))
-            val k = .9f / all.maxOf { abs(it) }
-            val sw = rawMix(notes.filter { it.part == 4 }, 90, seconds, strikes, mapOf(4 to fader))
-            val rest = rawMix(notes.filter { it.part != 4 }, 90, seconds, strikes, emptyMap())
-            write("blue/stem-$tag-sweep.wav", Snip(FloatArray(sw.size) { sw[it] * k }, 1, Dsp.RATE))
-            write("blue/stem-$tag-rest.wav", Snip(FloatArray(rest.size) { rest[it] * k }, 1, Dsp.RATE))
+            val k = .9f / rawMix(blueNotes, 90, seconds, strikes, blueFaders).maxOf { abs(it) }
+            val sh = rawMix(blueNotes.filter { it.part == 4 }, 90, seconds, strikes, blueFaders)
+            val rest = rawMix(blueNotes.filter { it.part != 4 }, 90, seconds, strikes, emptyMap())
+            write("blue/stem-shaker.wav", Snip(FloatArray(sh.size) { sh[it] * k }, 1, Dsp.RATE))
+            write("blue/stem-rest.wav", Snip(FloatArray(rest.size) { rest[it] * k }, 1, Dsp.RATE))
         }
-        write("blue/hit-sweep-round0.wav", hit(r0Sweep))
-        write("blue/hit-sweep-round0c.wav", hit({ v, t, _ -> Ember.render(EmberVoice.BRUSH_SWEEP, mapOf("SPEED" to .1f, "DISTANCE" to .4f, "WARMTH" to .35f), v, t).samples }))
 
         val hummin = LooseCrateKits.Kit.HUMMIN
         val source = loopDry(LooseCrateKits.played(hummin, LooseCrateKits.humminNotes(kick = 0, snare = 1, hat = 2, ghost = 5)), SPEED_SOURCE_BPM,
