@@ -39,6 +39,9 @@ import com.snipsnap.synth.ServoPresets
 import com.snipsnap.synth.Ember
 import com.snipsnap.synth.EmberPatch
 import com.snipsnap.synth.EmberPresets
+import com.snipsnap.synth.Riddim
+import com.snipsnap.synth.RiddimPatch
+import com.snipsnap.synth.RiddimPresets
 import com.snipsnap.synth.Kindred
 import com.snipsnap.synth.KindredPatch
 import kotlinx.coroutines.CoroutineScope
@@ -376,6 +379,35 @@ class NewEngineSynthScreenTest : ComposeScreenTest() {
         assertEquals(1f, draft.velocity, .0001f)
         assertEquals(.6f, draft.macros.getValue("WARMTH"), .0001f)
         assertEquals(.55f, draft.macros.getValue("TUNE"), .0001f)
+    }
+
+    /**
+     * RIDDIM on the picker (2026-11-19), mirroring EMBER's entry: the wood opens with its three controls, CLAVE WOOD F#3
+     * (the first of its presets, Clave Dancehall's A12) lands with the pad's hardest mallet, an edit survives a rebuild,
+     * and the saved draft keeps the preset's take, full velocity and model.
+     */
+    @Test
+    fun riddimOpensItsWoodLoadsAKitPresetAndKeepsAnEditWithItsTakeAndModel() {
+        show("RIDDIM", "WOOD")
+        button("WOOD").assertIsSelected()
+        for (label in listOf("TUNE", "DECAY", "BEATER")) control(label).assertExists()
+        button("PRESET CLAVE WOOD F#3").performSemanticsAction(SemanticsActions.OnClick) { it() }
+        pump()
+        assertEquals(1f, progress("BEATER"), .0001f)
+        assertEquals(.5f, progress("TUNE"), .0001f)
+        adjust("DECAY", .6f)
+        compose.runOnIdle { generation++ }
+        pump()
+        assertEquals("RIDDIM", settings["engine"])
+        assertEquals(.6f, progress("DECAY"), .0001f)
+        assertEquals(1f, progress("BEATER"), .0001f)
+        assertFalse(showsLoop())
+        val draft = SynthDrafts.read(settings).single { it.engine == "RIDDIM" && it.voiceName == "WOOD" } as RiddimPatch
+        assertEquals(Riddim.MODEL_VERSION, draft.model)
+        assertEquals(RiddimPresets.TAKE, draft.take)
+        assertEquals(1f, draft.velocity, .0001f)
+        assertEquals(.6f, draft.macros.getValue("DECAY"), .0001f)
+        assertEquals(1f, draft.macros.getValue("BEATER"), .0001f)
     }
 
     /**

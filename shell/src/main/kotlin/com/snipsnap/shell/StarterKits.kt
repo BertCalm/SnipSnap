@@ -641,6 +641,9 @@ object StarterKits {
             "Industrial drums with long warehouse reflections. The same sources, with room to ring.",
             seeded = false,
         ) { SynthKits.rivet(1f) },
+        Starter("sunroom-early", "SUNROOM EARLY POP", "Stick drums, toms, hats and wooden percussion. Three touches and three variations, with a finite roll and riser.", seeded = false, tempoBpm = 116f) { com.snipsnap.synth.SunroomKits.build(com.snipsnap.synth.SunroomKits.Choice.EARLY) },
+        Starter("sunroom-orchestral", "SUNROOM ORCHESTRAL POP", "Brush snare, soft kick, castanet, slit block and triangle. Three touches and three variations, with brush gestures.", seeded = false, tempoBpm = 116f) { com.snipsnap.synth.SunroomKits.build(com.snipsnap.synth.SunroomKits.Choice.ORCHESTRAL) },
+        Starter("sunroom-psych", "SUNROOM PSYCH POP", "Resonant kick, bongos, clap and cabasa, with a full cymbal crescendo. Three touches and three variations.", seeded = false, tempoBpm = 116f) { com.snipsnap.synth.SunroomKits.build(com.snipsnap.synth.SunroomKits.Choice.PSYCH) },
         Starter("soul-rock-pocket", "SOUL POCKET", "Close acoustic soul drums, tambourine and claps. Three velocity layers and three strikes, with a roll and swell.", seeded = false, tempoBpm = 108f) { com.snipsnap.synth.SoulRockKits.build(com.snipsnap.synth.SoulRockKits.Choice.SOUL) },
         Starter("soul-rock-roadhouse", "ROADHOUSE ROCK", "Full acoustic rock drums, open hats and cowbell. Three velocity layers and three strikes, with a roll and swell.", seeded = false, tempoBpm = 134f) { com.snipsnap.synth.SoulRockKits.build(com.snipsnap.synth.SoulRockKits.Choice.ROADHOUSE) },
         Starter("soul-rock-open-room", "OPEN ROOM ROCK", "Open acoustic rock drums, ride and three tom colors. Three velocity layers and three strikes, with a roll and swell.", seeded = false, tempoBpm = 89f) { com.snipsnap.synth.SoulRockKits.build(com.snipsnap.synth.SoulRockKits.Choice.OPEN_ROOM) },
@@ -996,7 +999,7 @@ object StarterKits {
         ) { com.snipsnap.synth.CalabashKits.build(com.snipsnap.synth.CalabashKits.Kit.AFROCUBAN) },
         Starter(
             "riddim-clave-dancehall", "RIDDIM CLAVE DANCEHALL",
-            "Bright, tight dancehall on the 3-2 clave: a punch kick and a digital rimshot, a clap, choked hats, a shaker, claves, sticks and a cowbell, and four tuned woods in F sharp minor. Three touch zones, four takes; a rim roll.",
+            "Bright, tight dancehall on the 3-2 clave: a punch kick and a digital rimshot, a clap, choked hats, a shaker, claves, sticks and a cowbell, and four hard-mallet woods in F sharp minor. Three touch zones, four takes; a rim roll.",
             seeded = false, tempoBpm = com.snipsnap.synth.RiddimKits.Kit.CLAVE_DANCEHALL.bpm.toFloat(),
         ) { com.snipsnap.synth.RiddimKits.build(com.snipsnap.synth.RiddimKits.Kit.CLAVE_DANCEHALL) },
         Starter(
@@ -1009,6 +1012,21 @@ object StarterKits {
             "The kick is the bass: six tuned booms from F1 to E flat 2, one sliding, that cut each other off like one bass voice, with a ringing rim, choked hats, a clap and bronze bars in F minor. Three touch zones, four takes; a hat riser.",
             seeded = false, tempoBpm = com.snipsnap.synth.RiddimKits.Kit.BOOM_RIDDIM.bpm.toFloat(),
         ) { com.snipsnap.synth.RiddimKits.build(com.snipsnap.synth.RiddimKits.Kit.BOOM_RIDDIM) },
+        Starter(
+            "riddim-baile-funk", "RIDDIM BAILE FUNK",
+            "Brazilian funk at 130: one tight kick a bar, the tamborzao on a tumba and a quinto, a clap, choked hats, a high ting bell, an agogo and a wooden ratchet you can count. Three touch zones, four takes; a ratchet riser.",
+            seeded = false, tempoBpm = com.snipsnap.synth.RiddimKits.Kit.BAILE_FUNK.bpm.toFloat(),
+        ) { com.snipsnap.synth.RiddimKits.build(com.snipsnap.synth.RiddimKits.Kit.BAILE_FUNK) },
+        Starter(
+            "riddim-sabar-swing", "RIDDIM SABAR SWING",
+            "Slow, dark and swung: a deep sub kick just after each beat, a low snare and rim, dark hats, the sabar family (mbeng, nder, col), a dundun, a talking-drum call, a shekere, a tama and a G1 boom. Three touch zones, four takes; a sabar roll.",
+            seeded = false, tempoBpm = com.snipsnap.synth.RiddimKits.Kit.SABAR_SWING.bpm.toFloat(),
+        ) { com.snipsnap.synth.RiddimKits.build(com.snipsnap.synth.RiddimKits.Kit.SABAR_SWING) },
+        Starter(
+            "riddim-wood-bronze", "RIDDIM WOOD AND BRONZE",
+            "Quiet and pitched, in D minor: five hard-mallet woods and four bronze pairs that beat, over a soft kick, sticks, claves and quiet hats. Three touch zones, four takes; a wood tremolo.",
+            seeded = false, tempoBpm = com.snipsnap.synth.RiddimKits.Kit.WOOD_BRONZE.bpm.toFloat(),
+        ) { com.snipsnap.synth.RiddimKits.build(com.snipsnap.synth.RiddimKits.Kit.WOOD_BRONZE) },
         Starter(
             "ember", "EMBER",
             "A live jazz kit in a small club in 1962, hard bop on sticks: an open calfskin kick feathered under the band, a crisp snare, a riveted ride carrying the time, a press roll and a mallet cymbal swell. Three touch zones, four takes.",

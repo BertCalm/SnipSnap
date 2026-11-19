@@ -432,7 +432,7 @@ def ratchet_wood(m, v, k):
     rng = rng_for("ratchet-wood", k, round(v, 3))
     length = 0.12 + 0.48 * m.get("DECAY", .5)
     rate = (20 + 20 * m.get("WAVE", .5)) * (0.7 + 0.45 * v)
-    n = int((length + 0.15) * FS)
+    n = int(max(length + 0.15, 0.8) * FS)        # the voice's full 0.8 s at any DECAY, as the Kotlin port renders it
     x = np.zeros(n)
     t = 0.0
     i = 0

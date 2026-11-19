@@ -1164,24 +1164,24 @@ layers and three natural alternate strikes. Other kit pads retain original PCM.
 The revised snare is frozen synthesis, not a newly registered editable engine.
 Phone and MPC hardware acceptance remains open for this revision. See `SOUL_ROCK.md`.
 
-## RIDDIM (round 2, 2026-11-18: three kits on the shelf, Kotlin heard and confirmed, hardware open)
+## RIDDIM kits (complete, 2026-11-19: sound approved, phone and MPC gates passed)
 
-Dancehall drum kits synthesized to targets measured from the owner's reference loops, with CALABASH's approved
-percussion on the same grids. See [RIDDIM](RIDDIM.md).
+Six dancehall drum kits synthesized to targets measured from the owner's reference loops, with CALABASH's approved
+percussion on the same grids. See [RIDDIM](RIDDIM.md). The owner approved rounds 1 and 3 in Python ("Approved",
+2026-11-18; round 3 after choosing the hardest wood mallet and a real ratchet, 2026-11-19), confirmed the Kotlin kits
+match ("Yes, they match", 2026-11-18), and on hearing the six kits as the app exports them (round 4) and playing them
+on the phone and the MPC said "Sounds great. Phone/MPC pass." (2026-11-19). Evidence: `RiddimTest`, `RiddimKitsTest`,
+`RiddimKitTest`, `:shell:generateRiddimKits`. Preserve `RiddimKits.VERSION` 2 as the accepted baseline.
 
-- **Melodic, keygroup and chord-tool gates:** not applicable. Drum kits.
-- **Articulation:** finite hits, no HOLD.
-- **Percussion: authored, heard in Python (2026-11-18).** Each kit's A16 is a one-bar roll or riser at the kit's tempo:
-  a rim roll (Clave Dancehall), a snare roll (Dembow), a hat riser (Boom Riddim). The owner approved them with the kits
-  in round 1.
-- **Drum shelf: three kits on the shelf.** RIDDIM CLAVE DANCEHALL (102 BPM), RIDDIM DEMBOW (95) and RIDDIM BOOM RIDDIM
-  (100) differ in voices, tuning, decay, pad roles and tempo; `RiddimKitsTest` pins which slots they share.
-- **Velocity/round robin: verified in software through rendering, saving, playback and MPC 3 export for every pad of
-  all three kits** (`RiddimKitsTest`, `RiddimKitTest`, `:shell:generateRiddimKits`). Three zones of four takes per pad.
-  MPC 2 is not applicable (format limit). No phone or MPC has played the kits.
-- **Sound character:** round 0 and round 1 heard in Python; round 1 approved ("Approved", 2026-11-18). The owner heard the
-  Kotlin kits and confirmed they match the approved kits ("Yes, they match", 2026-11-18).
-- **Overall: incomplete.** Open: phone and MPC playback.
+| Gate | Status | Evidence |
+|---|---|---|
+| Melodic, keygroups, chord tools | Not applicable | Drum kits |
+| Articulation | Pass | Finite hits, no HOLD |
+| Drums: multiple distinct genre kits on the shelf | Pass | Approved by ear 2026-11-19. Six kits: RIDDIM CLAVE DANCEHALL (102 BPM), DEMBOW (95), BOOM RIDDIM (100), BAILE FUNK (130), SABAR SWING (103), WOOD AND BRONZE (96). They differ in voices, tuning, decay, pad roles and tempo; `RiddimKitsTest` pins which slots each of the 15 pairs shares |
+| Percussion: roll/riser | Pass | Each kit's A16 is a one-bar roll or riser at its tempo: rim roll, snare roll, hat riser, ratchet riser, sabar (nder) roll, wood tremolo; approved with the kits |
+| Velocity and round robin: rendering | Pass in software | Three zones of four takes per pad; every pad darkens when softer except reused CALABASH voices that keep their approved recording fit; closest two takes on any pad 35.3 dB apart |
+| Velocity and round robin: saving, playback, export | Pass | Saved PCM, playback through the pad resolver and the MPC 3 track read back for all 96 pads; MPC 2 not written (format limit). Owner-reported pass on the phone and the MPC, 2026-11-19 |
+| Presets, catalog and picker (not a drum gate; the owner's choice, round 5) | Done in software | `RiddimPresets` files the 65 distinct RIDDIM pads of the six kits as the factory bank (`RiddimPresetsTest`); RIDDIM is off `PatchTypes.ROSTERLESS`, in `EngineCatalog` under DRUMS and on SYNTH's picker, with an on-device test in `NewEngineSynthScreenTest` run by CI's emulator. Not yet seen on a phone |
 
 ## LOOSE CRATE kits (complete, 2026-11-18: sound approved, phone and MPC gates passed)
 
@@ -1203,6 +1203,22 @@ Version 3 retains its nine exact synthesized strikes on Roadhouse pad 12, labell
 Crash. The accepted coupled snare and all other pads retain their earlier audio.
 This is a frozen statistical modal bank, not a newly registered editable engine.
 Phone/MPC hardware acceptance for this revision remains open. See `SOUL_ROCK.md`.
+
+## Sunroom studio-pop factory collection (2026-11-18)
+
+See [SUNROOM](SUNROOM.md). The owner approved the assembled R10 audition with
+“Sounds much better, continue.” Three distinct 16-pad kits on SKINS preserve
+432 approved printed synthesis/resynthesis WAVs, three velocity zones and
+three alternate outputs, including finite roll/riser gestures. This is a
+factory bank, not an editable engine. Software evidence is in `SunroomKitsTest`
+and `SunroomRoundTripTest`. The Psych cymbal crescendo has level-only dynamics;
+its timbral-velocity gate remains open. The owner reported “Hardware passes- proceed”
+on 2026-11-19; device models and individual format results were not specified.
+All JVM, Android build, native and emulator CI checks passed on `a16dd8da8`.
+The shared MPC 3 slice-map limitation is unchanged. MPC 2's combined
+velocity/RR exception applies. Melodic/keygroup/chord/HOLD/STRUM gates do not
+apply to these finite drum kits. Overall completion remains open.
+
 
 ## ACCORD (native sound kept by ear 2026-11-19; three voices, gates open)
 
