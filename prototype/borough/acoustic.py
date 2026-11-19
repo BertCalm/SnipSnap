@@ -201,7 +201,10 @@ SPACES = {
                   stick_ms=(.15, .8), crack=(0, .5), **CHAIN),
     'hat': dict(tune=(0, 1), damp=(0, 1), buzz=(0, 1), **CHAIN),
 }
-SPACES['ride'] = dict(SPACES['hat'])
+# The ride's DAMP stops at 0.45. The cymbal descriptor only sees the 0.31 s between strokes, so it
+# scores DAMP 0.4 and 0.98 alike (5.5-5.7 dB); left free the fit chose 0.98, a choked ride the owner
+# heard as hitting a dead spot ("The ride sounds like it has a dead spot", round 1.1).
+SPACES['ride'] = dict(SPACES['hat'], damp=(0, .45))
 RENDER = {'kick': kick, 'snare': snare, 'hat': hat, 'ride': ride}
 LOGK = {'f1', 'lp', 't1', 'beater_ms', 'stick_ms'}
 
