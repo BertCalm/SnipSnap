@@ -147,6 +147,23 @@ The corrected 429-case
 probe passed, including intermediate touches and the former worst resonance.
 That sampled matrix is evidence, not an analytic bound on every possible edit.
 
+## Round-robin takes (candidate, not yet heard)
+
+`Accord.renderTake(patch, take)` renders take 0 to 3 of a saved performance. Take 0 is
+`patch.render()`, byte for byte. A later take is the same machine heard from an earlier moment:
+the saved mechanics, seed, voice, note, touch and controls, replayed from
+`Accord.TAKE_STEP_CYCLES` (.875) x take cycles before the saved `sourceStartCycles` (default 8:
+7.125, 6.25, 5.375; a start too near 0 goes forward instead). The first strikes and the point
+where the pulses fall after the key goes down differ; the machine and its gathering do not. The
+alternative, a seed take, is a different machine and can fail to gather at all; the owner
+compares the two in accord-rr-1 before either is kept.
+
+Every take plays at take 0's performance gain, the rule already shared across velocity, lowered
+only where that would carry the take's normal or hard render over the .85 ceiling. At C3 and
+default controls that lowers BRUSH's last take by .3 dB and REED's second and third by .5 and
+.8 dB; every other take moves by under .02 dB or not at all. No starter, keygroup, re-strike
+or pin uses takes yet: the owner hears them first (round accord-rr-1).
+
 ## Audition and export
 
 ```sh

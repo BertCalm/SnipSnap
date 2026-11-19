@@ -145,7 +145,9 @@ object Accord {
     private data class TraceLookup(val trace: AccordDynamics.Trace, val hit: Boolean)
     private data class AudioKey(val voice: AccordVoice, val macros: Map<String, Float>, val midi: Int,
         val velocity: Float, val seed: Long, val model: Int, val profile: AccordAcousticProfile,
-        val initializer: AccordInitializer, val start: Double, val seconds: Double)
+        val initializer: AccordInitializer, val start: Double, val seconds: Double,
+        /** The passage whose performance gain this render plays at: its own [start], except for a later take. */
+        val gainStart: Double = start)
     private data class CalibrationKey(val voice: AccordVoice, val profile: AccordAcousticProfile, val midi: Int, val model: Int)
     private data class Calibrated(val gain: Double, val reusable: AccordAcoustics.Result? = null)
     private val cacheLock = Any()
@@ -251,6 +253,7 @@ object Accord {
         computeReferenceCalibration(CalibrationKey(voice, profile, midi, MODEL_VERSION))
 
     private fun calibration(key: AudioKey, trace: AccordDynamics.Trace, pace: Double): Calibrated {
+        if (key.gainStart != key.start) return takeCalibration(key, trace, pace)
         require(key.model == AccordCalibration.MODEL_VERSION) { "ACCORD reference calibration model mismatch" }
         require(AccordCalibration.VERSION == 2) { "ACCORD calibration table requires regeneration for the captured-tail policy" }
         // REED, COURSE, ESCAPEMENT and BELL have no frozen factory row. They take the
@@ -267,6 +270,32 @@ object Accord {
         val hard = condition(key.voice, key.profile, key.midi, 1f, key.macros,
             trace, key.seed, key.start, key.seconds, pace)
         val gain = sharedGain(normal, hard, key.seconds)
+        checkCancelled()
+        synchronized(cacheLock) {
+            while (performanceGains.size >= 64 && gainKey !in performanceGains) performanceGains.remove(performanceGains.keys.first())
+            performanceGains[gainKey] = gain
+        }
+        return Calibrated(gain, when (key.velocity) { .75f -> normal; 1f -> hard; else -> null })
+    }
+
+    /**
+     * A later take plays at its take 0's performance gain (one gain per saved performance, shared
+     * across velocity and now across takes), lowered only if that would carry this passage's
+     * normal or hard render over [PERFORMANCE_PEAK_CEILING]: the same two renders and the same
+     * ceiling the shared gain itself is chosen by, so the gain stays one per (performance, take)
+     * for every velocity. Take 0 never comes here; its gain and audio are [probe]'s own.
+     */
+    private fun takeCalibration(key: AudioKey, trace: AccordDynamics.Trace, pace: Double): Calibrated {
+        val reference = calibration(key.copy(start = key.gainStart), trace, pace).gain
+        val gainKey = key.copy(velocity = .75f)
+        synchronized(cacheLock) { performanceGains[gainKey]?.let { return Calibrated(it) } }
+        val normal = condition(key.voice, key.profile, key.midi, .75f, key.macros,
+            trace, key.seed, key.start, key.seconds, pace)
+        val hard = condition(key.voice, key.profile, key.midi, 1f, key.macros,
+            trace, key.seed, key.start, key.seconds, pace)
+        val peak = max(normal.samples.maxOf { abs(it.toDouble()) }, hard.samples.maxOf { abs(it.toDouble()) })
+        val gain = min(reference, PERFORMANCE_PEAK_CEILING / max(peak, 1e-12))
+        require(gain.isFinite() && gain > 0.0) { "ACCORD invalid take calibration" }
         checkCancelled()
         synchronized(cacheLock) {
             while (performanceGains.size >= 64 && gainKey !in performanceGains) performanceGains.remove(performanceGains.keys.first())
@@ -309,7 +338,54 @@ object Accord {
         velocity: Float = .75f, seed: Long = DEFAULT_SEED, model: Int = MODEL_VERSION,
         acousticProfile: AccordAcousticProfile = defaultProfile(voice),
         initializer: AccordInitializer = AccordInitializer.REFERENCE_SINE_20261022,
-        sourceStartCycles: Double = 8.0, sourceSeconds: Double = 8.0): Probe {
+        sourceStartCycles: Double = 8.0, sourceSeconds: Double = 8.0): Probe =
+        probeAt(voice, macros, midi, velocity, seed, model, acousticProfile, initializer, sourceStartCycles, sourceSeconds,
+            sourceStartCycles)
+
+    /**
+     * Round-robin takes: the same performance heard again from an earlier moment of the same
+     * machine. Take k > 0 replays the saved mechanics, seed, voice, note, touch and controls from
+     * [TAKE_STEP_CYCLES] x k cycles before the saved [AccordPatch.sourceStartCycles] (default 8:
+     * 7.125, 6.25, 5.375), for the same [AccordPatch.sourceSeconds]. Its first contacts, the
+     * phase of its pulses against its first sample and how far the gathering has come differ; the
+     * machine does not. A start too near 0 to go back k steps goes forward instead. BRUSH's and
+     * REED's roughness is drawn from the seed, not the passage, so every take keeps its noise.
+     *
+     * Every take plays at take 0's performance gain ([takeCalibration]); take 0 is [render] itself.
+     */
+    const val TAKES = 4
+
+    /**
+     * Cycles between successive takes' starts: 1.75 centre passages. A gathered machine pulses on
+     * every passage (every .5 cycle), so this step puts each take's pulses a different quarter of
+     * the pulse spacing from its first sample (take 0, then 3/4, 1/2, 1/4): a step of whole
+     * passages (.5, or the plan's .75 every second take) would line some takes' pulses up with
+     * take 0's. At the default start these three passages also begin with a contact within 10 ms,
+     * as take 0 does (7 ms); other starts measured in accord-rr-1 wait up to 72 ms for their first
+     * contact, a late attack. Three steps span 2.625 cycles, 1.3 s at default PACE.
+     */
+    const val TAKE_STEP_CYCLES = .875
+
+    /** The passage start of [take] for a saved start of [start] (take 0 is [start] itself). */
+    fun takeStartCycles(start: Double, take: Int): Double {
+        require(take in 0 until TAKES) { "an ACCORD take is 0..${TAKES - 1}, got $take" }
+        val earlier = start - take * TAKE_STEP_CYCLES
+        return if (earlier >= 0.0) earlier else start + take * TAKE_STEP_CYCLES
+    }
+
+    /** Take [take] of [patch]; take 0 is [render] (patch), byte for byte. */
+    fun renderTake(patch: AccordPatch, take: Int): Snip = probeTake(patch, take).samples
+
+    fun probeTake(patch: AccordPatch, take: Int): Probe {
+        val start = takeStartCycles(patch.sourceStartCycles, take)
+        if (take == 0) return probe(patch)
+        return probeAt(patch.voice, patch.macros, patch.midi, patch.velocity, patch.seed, patch.model,
+            patch.acousticProfile, patch.initializer, start, patch.sourceSeconds, patch.sourceStartCycles)
+    }
+
+    private fun probeAt(voice: AccordVoice, macros: Map<String, Float>, midi: Int, velocity: Float, seed: Long,
+        model: Int, acousticProfile: AccordAcousticProfile, initializer: AccordInitializer,
+        sourceStartCycles: Double, sourceSeconds: Double, gainStart: Double): Probe {
         val began = System.nanoTime()
         checkCancelled()
         val m = settled(voice, macros)
@@ -322,7 +398,8 @@ object Accord {
             "ACCORD $voice does not support $acousticProfile"
         }
         require(initializer != AccordInitializer.REFERENCE_SINE_20261022 || seed == DEFAULT_SEED) { "ACCORD reference initializer requires reference seed" }
-        val key = AudioKey(voice, m, midi, velocity, seed, model, acousticProfile, initializer, sourceStartCycles, sourceSeconds)
+        require(gainStart.isFinite() && gainStart in 0.0..8.0) { "ACCORD take gain start must be 0..8" }
+        val key = AudioKey(voice, m, midi, velocity, seed, model, acousticProfile, initializer, sourceStartCycles, sourceSeconds, gainStart)
         synchronized(cacheLock) {
             audio[key]?.let {
                 audioHits++
