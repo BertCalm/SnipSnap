@@ -243,3 +243,15 @@ The owner’s subsequent “Sounds good, what’s next?” accepts the current s
 Regression follow-through: the initial full JVM run finished its shell suite with **2,654 tests passed, zero failures/errors/skips**, then reported the environment-only `:synth:compileTestJava` failure: the default Java installation lacks `JAVA_COMPILER`. A workspace-only Gradle init script selects the installed Temurin 21 compiler while retaining the original test runtime. The resumed full command successfully compiles Java and reuses completed test tasks; the synth suite is still running. No full-suite pass or Android build is claimed. The live log is `/workspace/shared/sideroom-full-regression-jdk.log`; a separate receipt process writes `/workspace/shared/sideroom-regression-result.json` when Gradle exits. These are session artifacts, not portable repository assets.
 
 Latest publication, including the owner-exception wording: Site source `31579b42e52ec05695ddfa087495f506c285a155`, deployment `appgdep_6afe707028f08191b095a9a97dc0fe9f` succeeded. No SnipSnap GitHub push is claimed.
+
+## Device acceptance procedure
+
+Use the main native kit downloads for the combined velocity/take check. Test each of the five kits on the phone and MPC3, recording device/app/firmware version and which download was used.
+
+1. Load the kit and confirm ten pads: eight core voices, Snare Roll and Drum Fill.
+2. On each pad, play soft, medium and hard strikes. For MIDI-driven checks use velocities 25, 64 and 110, inside the native zones 0–41, 42–84 and 85–127. Confirm the intended touch character, not just louder playback.
+3. At each fixed velocity, repeat six hits. Confirm three distinct takes cycle twice without silence, wrong slices or unexpected tails. Save the kit/program, reopen it, and repeat the velocity/cycling check.
+4. Confirm the closed hat chokes the open hat. Play the accepted roll and Original fill, checking complete tails and no unexpected riser. The promoted Original fill retains its approved 100 BPM source phrase across the family; it is not a newly tempo-stretched fill.
+5. Report results separately for phone and MPC3. A failure should identify kit, pad, velocity, repeat number and whether it appears only after reopening.
+
+The optional Soft/Medium/Hard cycling programs can be checked separately: each chooses a fixed touch timbre and cycles its three takes. A pass there does not prove the main native combined velocity/take grid. MPC2's accepted format exception and the parked generic slice-map capture remain unchanged.
