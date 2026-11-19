@@ -3,6 +3,9 @@
 - every WAV finite, peak <= 0.9, |DC| < 0.005, last 10 ms quiet
 - velocity is timbral, not only gain: gain-matched soft-vs-hard residual and centroid shift
 - takes are distinct strikes: gain-matched residual between takes in a zone
+- struck sounds are loudest at the strike: no pad (rolls aside) rises more than 1 dB after its
+  first 40 ms (the ride "dead spot", round 1.2, rose 2 dB; every EMBER cymbal through the chain at
+  tilt >= 0 rises under 0.3 dB)
 - fitted pads against their reference descriptors (numbers only), re-scored from the final render
 
     python3 verify.py OUT_DIR targets.json fitted.json
@@ -34,6 +37,12 @@ def centroid(x):
     return float(np.sum(f * X_) / max(np.sum(X_), 1e-12))
 
 
+def rise_db(x):
+    """How much louder a hit gets after its first 40 ms (10 ms RMS envelope)."""
+    w = int(.01 * V.SR); e = np.sqrt(np.convolve(x * x, np.ones(w) / w, 'same')) + 1e-12
+    return float(20 * np.log10(e.max() / e[:int(.04 * V.SR)].max()))
+
+
 def main(out, targets_path, fitted_path):
     out = Path(out); rep = {'files': 0, 'fail': []}
     worst = dict(peak=0, dc=0, tail=0)
@@ -45,6 +54,8 @@ def main(out, targets_path, fitted_path):
         if not (np.all(np.isfinite(x)) and pk <= .9 and dc < .005 and tail < .003):
             rep['fail'].append(p.name)
         stem = p.stem.rsplit('-v', 1)[0]
+        if 'roll' not in stem and rise_db(x) > 1.0:
+            rep.setdefault('rises_after_strike', []).append(f'{p.parent.name}/{p.name} {rise_db(x):.1f} dB')
         z, t = p.stem.rsplit('-v', 1)[1].split('-t')
         pads.setdefault((p.parent.name, stem), {})[(int(z), int(t))] = x
     rep['worst'] = {k: round(float(v), 5) for k, v in worst.items()}
@@ -78,8 +89,9 @@ def main(out, targets_path, fitted_path):
                              fit_resid_db=fitted[loop][role]['residual_db']))
     rep['fit'] = fits
     (out / 'verification.json').write_text(json.dumps(rep, indent=1))
+    rep['fail'] += rep.get('rises_after_strike', [])
     print(json.dumps({k: rep[k] for k in ('files', 'worst', 'velocity_timbral', 'take_resid_db_max', 'take_resid_db_min')}),
-          'fail', len(rep['fail']))
+          'fail', len(rep['fail']), '(of which rise after strike:', len(rep.get('rises_after_strike', [])), ')')
     for f in fits:
         print(f"  {f['kit']:16s} A{f['pad']:02d} {f['role']:5s} {f['loop']:24s} shipped {f['resid_db']:5.2f} dB (fit {f['fit_resid_db']})")
 

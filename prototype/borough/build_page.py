@@ -125,6 +125,8 @@ LEDE = {
 }
 
 LISTEN_R1 = [
+    'New in this version: the ride lost its dead spot. It used to get louder a quarter-second after the stick, because the record chain cut the stick click (the attack) after crushing everything else flat. Cymbals now keep their click and get their darkness from the low-pass. The open and pedal hats had a milder version of the same thing.',
+    'New in this version: every kit\'s kicks are set against its loop\'s low-to-mid balance. STOOP DUST came down 5.8 dB and CELLAR BOOM 6.1 dB; DRY ROOM 1.8 dB; the others barely moved.',
     'New since your last listen: RIDE & RIMS now has a real ride. A03 is a ride cymbal fitted to the ride loop, A04 its bell, and the groove rides eighths with the bell closing every other bar. Before, a closed hat stood in for it.',
     'Before and after: each kit sheet has the round 0 groove last. Does round 1 sound like drums in a room rather than a machine?',
     'Kick: a felt beater on a head, with the air and boom of the shell, rather than a falling sine. Snare: a stick on a head with the wires reacting, rather than tone plus noise.',

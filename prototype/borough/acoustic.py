@@ -205,6 +205,12 @@ SPACES = {
 # scores DAMP 0.4 and 0.98 alike (5.5-5.7 dB); left free the fit chose 0.98, a choked ride the owner
 # heard as hitting a dead spot ("The ride sounds like it has a dead spot", round 1.1).
 SPACES['ride'] = dict(SPACES['hat'], damp=(0, .45))
+# Cymbals take their darkness from the low-pass, never a negative tilt. The tilt comes after the
+# drive: a cut above 1 kHz there removes the stick's click, which after the drive is the whole
+# attack, so the cymbal swells 2 to 4 dB after its strike (the ride's "dead spot"; the WAX and
+# CELLAR open hats too). Dry, every EMBER cymbal peaks at the strike; with tilt >= 0 so do these.
+for _role in ('hat', 'ride'):
+    SPACES[_role] = dict(SPACES[_role], tilt=(0, 6))
 RENDER = {'kick': kick, 'snare': snare, 'hat': hat, 'ride': ride}
 LOGK = {'f1', 'lp', 't1', 'beater_ms', 'stick_ms'}
 
