@@ -30,6 +30,36 @@ RATE = 44_100
 EVENT_FLOOR = 0.08      # a hit must reach 8% of the drum's loudest firing (about -22 dB)
 COFIRE = 0.7            # share of strong hits two components must share to be one drum
 HIT_SECONDS = 1.6       # long enough for the longest 808 tail measured (about 1.5 s to -30 dB)
+REFIRE_S = 0.25         # a firing this soon after the drum's last hit ...
+REFIRE_RISE_DB = 6.0    # ... is a new hit only if the drum's audio jumps this much at it
+
+
+def attack_rise_db(env: np.ndarray, t: int, n: int) -> float:
+    """How far the drum's own (separated) audio jumps at t: the loudest of the next 12 ms
+    against the average of the 25..3 ms before, in dB. The loop wraps."""
+    pre = env[np.arange(t - int(0.025 * RATE), t - int(0.003 * RATE)) % n].mean()
+    post = env[np.arange(t, t + int(0.012 * RATE)) % n].max()
+    return float(20 * np.log10((post + 1e-9) / (pre + 1e-9)))
+
+
+def drop_refires(times, gains, y, n):
+    """NMFD explains a drum's tail by firing its template again 40 to 90 ms after the hit.
+    Played back, each firing is a fresh strike, so a re-fire sounds like slapback echo (heard
+    by the owner on the grooves, 2026-11-19). A real hit makes the drum's audio jump; a re-fire
+    lands on a sound already fading. So a firing within REFIRE_S of the drum's last kept hit
+    stays only if the audio rises REFIRE_RISE_DB at it. Measured: kept events rise 8 to 53 dB
+    (median per drum), dropped ones 1.4 to 4.4 dB, so the 16th-note hats and flams stay."""
+    w = int(0.001 * RATE)
+    env = np.sqrt(np.convolve(y * y, np.ones(w) / w, mode="same"))
+    order = np.argsort(times)
+    kept_t, keep = [], np.zeros(len(times), bool)
+    for i in order:
+        t = times[i]
+        recent = any(0 < (t - k) % n < int(REFIRE_S * RATE) for k in kept_t)
+        if not recent or attack_rise_db(env, t, n) >= REFIRE_RISE_DB:
+            keep[i] = True
+            kept_t.append(t)
+    return [t for t, k in zip(times, keep) if k], np.asarray(gains)[keep]
 
 
 def bpm_of(name: str) -> int:
@@ -147,6 +177,8 @@ def main(ref_dir: Path, work: Path) -> None:
             gains = gains / np.median([sum(near(H[c], p) for c in comps) for p in strong_pk])
             gains = gains / gains.max()
             times = [refine_onset(y, int(p * hop), int(0.015 * RATE)) for p in pk]
+            n_fired = len(times)
+            times, gains = drop_refires(times, gains, y, n)
             # Reference hit: align the strong hits on their onsets and take the median sample
             # by sample after a per-hit polarity and gain match.
             strong = [t for t, g in zip(times, gains) if g > 0.5]
@@ -194,6 +226,7 @@ def main(ref_dir: Path, work: Path) -> None:
             clean_s = float(np.median([np.count_nonzero(np.abs(s) > 0) for s in segs]) / RATE)
             drums.append(dict(id=drum_id, components=comps, role=role_of(ft), features=ft,
                               hits=len(times), strong_hits=len(strong),
+                              refires_dropped=n_fired - len(times),
                               clean_seconds=round(clean_s, 3),
                               instance_spread_db=spread,
                               events=[dict(t=round(t / RATE, 5), gain=round(float(g), 3))

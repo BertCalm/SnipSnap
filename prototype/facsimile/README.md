@@ -152,6 +152,13 @@ some of the other drums, and a replica lane carries none. Not yet shown.
   not compressed (still 5.8 dB quiet). Loop 127 needed a 0.3 ms attack 28 dB under its peak
   and reaches 15.7 dB against the reference's 13.7: the original was likely clipped. The
   single pads are not compressed.
+- Round 0d (2026-11-19): the owner asked whether the grooves had echo. No echo is applied,
+  but the grooves had more hits than their references (loop 163: 120 onsets against 84). NMFD
+  explains a drum's tail by firing its template again 40 to 90 ms after the hit, and each
+  firing played back as a fresh strike: slapback. `drums.py` now keeps a firing within 250 ms
+  of the drum's last hit only if the drum's separated audio jumps 6 dB at it. Kept events rise
+  8 to 53 dB (median per drum), dropped ones 1.4 to 4.4 dB, so 16th-note hats and flams stay;
+  599 of 2230 events were re-fires.
 - Round robin follows the reference's own hit-to-hit spread, clamped to 0.3 to 1.2 dB per band,
   plus fresh noise and phases. Whether that reads as one drum hit again is for the ear.
 - Engine gates: this is a prototype. Velocity and round robin are checked in rendering only;
