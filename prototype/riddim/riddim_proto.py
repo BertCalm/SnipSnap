@@ -394,6 +394,63 @@ def ratchet(m, v, k):
     bright = 0.35 + 0.65 * v                                 # softer: less plate and grit, more body
     return bright * (plate + grit) + (1.15 - 0.6 * v) * body
 
+
+# ------------------------------------------------------------------ the ratchet A/B (2026-11-19)
+# The owner heard RATCHET and was "not sure it sounds as it should". Measured again (Python harness), the sound
+# in the "ratchet" top loop is not a scrape: each hit is a smooth, pitched tone (spectral flatness 0.006 to 0.07,
+# where noise is 1), its note changes from hit to hit (about 2.2, 2.5, 3.0 and 3.8 kHz), and only 27% of its level
+# movement is fast flutter (11 to 41%), where RATCHET's tooth train is 48 to 60%. The owner asked for both
+# readings side by side: BLIP is the loop's sound, RATCHET_WOOD a real ratchet noisemaker done properly.
+
+def blip(m, v, k):
+    """A: the loop's top sound. A short, smooth, high tone that rises a little as it sounds (one reference hit went
+    2455 to 2498 Hz, +1.7%) with two faint upper tones at the ratios seen in the loop (1.24 and 1.83 of the main
+    one). Default 2500 Hz, TUNE an octave either way, so pads can play the loop's changing notes. DECAY default
+    puts -20 dB near the measured 77 ms. A softer hit starts a little slower, rises less and keeps less of the
+    upper tones, so it is darker."""
+    rng = rng_for("blip", k, round(v, 3))
+    f0 = 2500.0 * 2 ** ((m.get("TUNE", .5) - .5) * 2) * 2 ** (rng.normal(0, 8) / 1200)
+    t60 = (0.08 + 0.3 * m.get("DECAY", .5)) * (1 + rng.normal(0, .05))
+    t = t_axis(0.5)
+    glide = 0.017 * (0.5 + 0.5 * v) * (1 + rng.normal(0, .2))
+    f = f0 * (1 + glide * (1 - np.exp(-t / 0.02)))
+    phase = TAU * np.cumsum(f) / FS
+    attack = 0.005 - 0.003 * v                          # 5 ms soft, 2 ms hard: smooth, never a click
+    env = np.minimum(1.0, t / attack) * env_exp(t, t60)
+    upper = (0.25 * 10 ** (rng.uniform(-2, 2) / 20) * np.sin(1.24 * phase + rng.uniform(0, TAU))
+             + 0.15 * 10 ** (rng.uniform(-2, 2) / 20) * np.sin(1.83 * phase + rng.uniform(0, TAU)))
+    breath = bandpass(rng.normal(0, 1, len(t)), f0 * 0.85, min(f0 * 1.15, 20000)) * 0.08
+    return env * (np.sin(phase) + v ** 1.5 * upper) + env * breath
+
+
+def ratchet_wood(m, v, k):
+    """B: a real ratchet. A wooden gear, turned, flicks a wooden tongue: separate clicks you can count, 20 to 40 a
+    second, not the 300-a-second tooth train of RATCHET, which reads as a buzz. Each click rings the tongue (about
+    1.6, 2.4 and 3.3 kHz, dying in 10 to 25 ms) and the hollow box it sits on (near 420 Hz). DECAY is how long
+    the turn lasts (0.12 to 0.6 s), WAVE how fast the gear turns. A harder turn is faster and brighter; a softer
+    one is slower, with more box and less tongue, so it is darker. Each take turns a little differently."""
+    rng = rng_for("ratchet-wood", k, round(v, 3))
+    length = 0.12 + 0.48 * m.get("DECAY", .5)
+    rate = (20 + 20 * m.get("WAVE", .5)) * (0.7 + 0.45 * v)
+    n = int((length + 0.15) * FS)
+    x = np.zeros(n)
+    t = 0.0
+    i = 0
+    while t < length:
+        level = (1.0 - 0.35 * t / length) * rng.uniform(0.7, 1.0)    # the turn loses a little force
+        a = int(t * FS)
+        w = max(2, int(0.0004 * FS))
+        x[a:a + w] += level * 0.5 * (1 - np.cos(TAU * np.arange(w) / w))[: n - a]
+        slow = 1 + 0.4 * (t / length) ** 2                            # the gear slows at the end of the turn
+        t += (1 / rate) * slow * (1 + rng.normal(0, .08))
+        i += 1
+    shift = 2 ** ((m.get("TUNE", .5) - .5) * 2)
+    tongue = sum(g * resonator(x, f * shift * 2 ** (rng.normal(0, 15) / 1200), t60)
+                 for f, g, t60 in ((1600, 1.0, .025), (2400, .7, .018), (3300, .45, .012)))
+    box = resonator(x, 420 * shift, .04)
+    snap = bandpass(x * rng.normal(0, 1, n), 2000, 8000) * 0.3
+    return (0.3 + 0.7 * v) * (tongue + snap) + (1.2 - 0.6 * v) * 0.6 * box
+
 # ------------------------------------------------------------------ the palette
 
 ELECTRONIC = {
@@ -411,6 +468,8 @@ ELECTRONIC = {
     "METAL": (metal, 2.0, "perc"),
     "TING": (ting, 0.5, "perc"),          # round 3
     "RATCHET": (ratchet, 0.35, "perc"),   # round 3
+    "BLIP": (blip, 0.5, "perc"),          # ratchet A/B: the loop's sound
+    "RATCHET_WOOD": (ratchet_wood, 0.8, "perc"),   # ratchet A/B: a real ratchet
 }
 # Mixed in from CALABASH (fitted to CC0 recordings, approved by the owner 2026-11-15).
 BORROWED = ["SHAKER", "CLAVE", "STICKS", "COWBELL", "CONGA", "BONGO_HIGH", "TAMA",

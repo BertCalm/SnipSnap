@@ -24,11 +24,12 @@ QUESTIONS_NEW = '''<ol>
     <li>The swing and balance in each groove: too much, too little, anything buried?</li>
     <li>Any pad whose soft hit does not sound like the same drum played softer.</li>
   '''
-QUESTIONS_NEW = QUESTIONS_NEW.replace("<ol>\n", "<ol>\n    <li><b>Clave Dancehall woods</b> (top of the page): keep A, the approved mallet, or switch to B, the hardest?</li>\n", 1)
+QUESTIONS_NEW = QUESTIONS_NEW.replace("<ol>\n", "<ol>\n    <li><b>Ratchet</b> (top of the page): A, the sound from your loop, or B, a real ratchet? Or neither?</li>\n", 1)
 
 # The owner heard round 3 and said "wood might need more of an attack" (2026-11-18), compared mallets 0.5, 0.85 and
 # 1.0, and chose the hardest for Wood and Bronze (2026-11-19). For Clave Dancehall, approved and on the shelf with the
-# 0.5 mallet, they asked for an A/B. BEATER is the mallet: 0.5 is the wood of rounds 1 and 2, 1.0 the hardest.
+# 0.5 mallet, they asked for an A/B and chose B (2026-11-19). BEATER is the mallet: 0.5 is the wood of rounds 1 and 2,
+# 1.0 the hardest.
 # (kit module, kit id, label, wood pad tunings in semitones, [(BEATER, name, what)])
 import kits as K  # noqa: E402  (already imported by build_page, first on the path)
 
@@ -36,11 +37,11 @@ ROWS = (
     (W, "wood_bronze", "Wood and Bronze", (-4, 3, 6),
      ((0.5, "Before", "the wood you first heard"), (W.WOOD_BEATER, "Your choice", "the hardest mallet, as the kit now plays"))),
     (K, "clave_dancehall", "Clave Dancehall", (0, 3, 7, 12),
-     ((0.5, "A: approved", "as on the shelf now"), (1.0, "B: hardest", "the same kit, every wood at the hardest mallet"))),
+     ((0.5, "A: approved", "as on the shelf now"), (1.0, "B: your choice", "every wood at the hardest mallet"))),
 )
 AB = '''<section class="kit" aria-labelledby="wood-attack">
   <div class="kit-head"><h2 id="wood-attack">Wood attack</h2><span class="meta">BEATER: the mallet, yarn (0) to hard (1)</span></div>
-  <p>You asked for more attack on the wood and chose the hardest mallet for Wood and Bronze. Measured against your wood loops, the first 8 ms of a hard hit now sits near your woody loop's brightness, and soft hits stay dark. Below is that change, then the A/B you asked for on Clave Dancehall's four woods, which are on the shelf with the approved mallet.</p>
+  <p>You asked for more attack on the wood and chose the hardest mallet for Wood and Bronze. Measured against your wood loops, the first 8 ms of a hard hit now sits near your woody loop's brightness, and soft hits stay dark. Below is that change, then the A/B of Clave Dancehall's four woods; you chose B, and the kit will move to it in the next round that changes the app.</p>
   {ROWS}
   <p class="foot">Each "hits" clip plays the kit's woods hard, low to high, then one wood soft, mid and hard. Each "groove" clip is the kit's own groove with every wood at that mallet.</p>
 </section>
@@ -62,14 +63,36 @@ def _key(kit, b):
 
 ROWS_HTML = "\n  ".join(ROW.format(title=t, cells="".join(CELL.format(key=_key(kid, b), b=b, name=n, what=w, title=t) for b, n, w in sets))
                          for _, kid, t, _, sets in ROWS)
+# The ratchet A/B (2026-11-19): Baile Funk's A11, A12 and A16 three ways (kits_wide.RATCHET_AB).
+RATCHET_CHOICES = (("now", "Now", "the buzzy scrape you heard"), ("loop", "A: like your loop", "a smooth, pitched blip"),
+                   ("real", "B: real ratchet", "wooden clicks you can count"))
+RATCHET_SECTION = '''<section class="kit" aria-labelledby="ratchet-ab">
+  <div class="kit-head"><h2 id="ratchet-ab">Ratchet: A or B</h2><span class="meta">Baile Funk A11, A12 and A16</span></div>
+  <p>You were not sure the ratchet sounded right, and measured again it was not what your loop has. The sound in your "ratchet" loop is a smooth, high, pitched blip whose note changes from hit to hit (about 2.2 to 3.8 kHz). What I built was a buzzy scrape. A is your loop's sound; B is a real ratchet, wooden clicks you can count. Both get darker when played softer, and every take is a different hit.</p>
+  <div class="grid ab3">{CELLS}</div>
+  <p class="foot">Each "hits" clip plays A11 soft, mid and hard, then A12 hard, then the A16 riser. Each "groove" clip is the Baile Funk groove with those three pads swapped in.</p>
+</section>
+'''
+RCELL = '''<div class="pad perc">
+  <button type="button" class="hit play" data-src="audio/ratchet_ab_{key}_groove.mp3" aria-label="{name}: Baile Funk groove">
+    <span class="pid">{pads}</span><span class="pl">{name}</span></button>
+  <div class="sub"><button type="button" class="mini play" data-src="audio/ratchet_ab_{key}_groove.mp3">groove</button>
+  <button type="button" class="mini play" data-src="audio/ratchet_ab_{key}_hits.mp3">hits</button></div>
+  <span class="meas">{what}</span>
+</div>'''
+RATCHET_SECTION = RATCHET_SECTION.replace("{CELLS}", "".join(
+    RCELL.format(key=k, name=n, what=w, pads=" · ".join(p["label"] for p in W.RATCHET_AB[k][:2])) for k, n, w in RATCHET_CHOICES))
+
+
 TEMPLATE = (B.TEMPLATE.replace(INTRO_OLD, INTRO_NEW).replace(QUESTIONS_OLD, QUESTIONS_NEW)
             .replace("<title>Riddim Kits</title>", "<title>Riddim Wider Kits</title>")
             .replace('<p class="meta">Python renders, mono. Not yet heard: the kit layouts, the rolls and the grooves.</p>', "")
-            .replace("  {SECTIONS}", AB.replace("{ROWS}", ROWS_HTML) + "  {SECTIONS}")
+            .replace("  {SECTIONS}", RATCHET_SECTION + AB.replace("{ROWS}", ROWS_HTML) + "  {SECTIONS}")
             .replace(".pad.perc { background: var(--perc); }", ".pad.perc { background: var(--perc); }\n"
                      ".grid.ab { grid-template-columns: repeat(2, minmax(0, 1fr)); }\n"
+                     ".grid.ab3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }\n"
                      ".ab-title { font: 600 1rem var(--display); margin: 6px 0 0; }"))
-assert "round 3" in TEMPLATE and "Ting" in TEMPLATE and "wood-attack" in TEMPLATE and "{SECTIONS}" in TEMPLATE and "B: hardest" in TEMPLATE
+assert "round 3" in TEMPLATE and "Ting" in TEMPLATE and "wood-attack" in TEMPLATE and "{SECTIONS}" in TEMPLATE and "B: your choice" in TEMPLATE and "ratchet-ab" in TEMPLATE
 
 
 def wood_ab(site):
@@ -91,7 +114,26 @@ def wood_ab(site):
             B.mp3(np.concatenate([x for h in hits for x in (h, gap)]), os.path.join(site, "audio", f"wood_ab_{_key(kid, b)}_hits.mp3"))
 
 
+def ratchet_ab(site):
+    """Renders the ratchet A/B clips: the Baile Funk groove and a set of hits for each choice."""
+    import numpy as np
+    kit = W.KITS["baile_funk"]
+    real = kit["pads"]
+    for key, _, _ in RATCHET_CHOICES:
+        kit["pads"] = W.with_ratchet(key)
+        try:
+            B.mp3(W.play_groove("baile_funk"), os.path.join(site, "audio", f"ratchet_ab_{key}_groove.mp3"))
+        finally:
+            kit["pads"] = real
+        a11, a12, a16 = W.RATCHET_AB[key]
+        gap = np.zeros(int(.25 * W.RATE))
+        clips = [W.render_pad(a11, kit["bpm"], v, 0)[: int(.8 * W.RATE)] for v in W.ZONES]
+        clips += [W.render_pad(a12, kit["bpm"], 1.0, 1)[: int(1.0 * W.RATE)], W.render_pad(a16, kit["bpm"], 1.0, 0)]
+        B.mp3(np.concatenate([x for c in clips for x in (c, gap)]), os.path.join(site, "audio", f"ratchet_ab_{key}_hits.mp3"))
+
+
 if __name__ == "__main__":
     os.makedirs(os.path.join(sys.argv[1], "site", "audio"), exist_ok=True)
     wood_ab(os.path.join(sys.argv[1], "site"))
+    ratchet_ab(os.path.join(sys.argv[1], "site"))
     B.main(sys.argv[1], W, TEMPLATE)

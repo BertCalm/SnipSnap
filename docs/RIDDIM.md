@@ -255,7 +255,29 @@ page: A is the kit as approved, B every wood at 1.0. Measured, onset centroid so
 | C#4 | 274 / 300 / 395 Hz | 523 / 923 / 1786 Hz |
 | F#4 | 359 / 365 / 486 Hz | 567 / 1074 / 1914 Hz |
 
-Clave Dancehall stays at 0.5 unless the owner picks B.
+The owner chose B (2026-11-19): "I do like b". `kits.py` now plays Clave Dancehall's woods at 1.0. The shelf's Kotlin
+kit still plays 0.5 until the next Kotlin round ports BEATER, which round 3's Wood and Bronze needs as well.
+
+### Round 3 follow-up: the ratchet A/B (2026-11-19)
+
+The owner was "not sure" RATCHET sounds as it should. It was built as a scraper because the reference loop is named
+"ratchet"; measured again (Python harness), the loop's top sound is not a scrape. Each hit is a smooth, pitched tone:
+spectral flatness 0.006 to 0.07 (noise is 1), a note that changes from hit to hit (about 2.2, 2.5, 3.0 and 3.8 kHz)
+with a slight rise, and only 27% of its level movement is fast flutter (11 to 41% across 23 hits). RATCHET's tooth
+train is 48 to 60%, a buzz. The name was probably the loop's style, not its instrument.
+
+The owner asked for both readings side by side, in place of Baile Funk's A11, A12 and A16 (`kits_wide.RATCHET_AB`):
+
+- **A, BLIP: the loop's sound.** A short, smooth tone, default 2500 Hz, rising 1.7% as it sounds, with faint upper
+  tones at 1.24 and 1.83 of it, as the loop showed. Measured: flutter 0 to 2%, −20 dB at 78 to 83 ms (loop 77). Pads
+  at about 3.15 and 2.23 kHz follow the loop's changing notes.
+- **B, RATCHET_WOOD: a real ratchet.** A wooden gear flicking a wooden tongue, 20 to 40 clicks a second, which can
+  be counted (RATCHET's 300 a second cannot). Each click rings the tongue (1.6, 2.4 and 3.3 kHz) and its box (420 Hz).
+  Measured: 9 to 12 clicks in a hit, onset centroid 1.0 kHz soft to 1.65 kHz hard.
+
+Every A and B pad darkens at each softer zone and has four different takes. The kit keeps RATCHET until the owner
+chooses; the page plays all three. Not yet heard.
+
 
 ## Open
 
@@ -272,7 +294,8 @@ Clave Dancehall stays at 0.5 unless the owner picks B.
 - **Heard:** round 0's palette, "pretty good so far" (2026-11-18); round 1's three kits, "Approved" (2026-11-18).
   The Kotlin kits (round 2) confirmed to match, "Yes, they match" (2026-11-18). No phone or MPC has played them.
   Round 3 heard: "wood might need more of an attack" (2026-11-18); the hardest mallet chosen for Wood and Bronze
-  (2026-11-19). Clave Dancehall's wood A/B and the rest of round 3 not yet answered.
+  (2026-11-19); Clave Dancehall's woods moved to the hardest mallet ("I do like b", 2026-11-19); RATCHET "not sure it
+  sounds as it should", so A (BLIP) and B (RATCHET_WOOD) are on the page, not yet heard.
 
 ## Why it is built this way
 
