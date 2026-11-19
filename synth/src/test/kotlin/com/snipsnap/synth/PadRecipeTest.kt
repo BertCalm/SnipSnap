@@ -420,7 +420,11 @@ class PadRecipeTest {
     }
 
     @Test fun `an unknown version is still refused`() {
-        assertFailsWith<JsonException> { PadRecipe.fromJsonValue(Json.parse("""{"recipe":4}""")) }
+        // 4 was this test's unknown version until a KERF twin took it (PadRecipe.KERF_VERSION, 2026-11-19).
+        assertFailsWith<JsonException> { PadRecipe.fromJsonValue(Json.parse("""{"recipe":5}""")) }
+        assertEquals(4, PadRecipe.KERF_VERSION)
+        // Knowing the number is not enough to read a recipe: a version 4 with nothing in it is still an empty recipe.
+        assertFailsWith<IllegalArgumentException> { PadRecipe.fromJsonValue(Json.parse("""{"recipe":4}""")) }
     }
 
     @Test fun `processBank returns DRY untouched then one snip per layer`() {
