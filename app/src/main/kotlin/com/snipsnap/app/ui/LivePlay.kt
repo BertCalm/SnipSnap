@@ -43,8 +43,8 @@ internal class LivePlay {
     var active by mutableStateOf<Int?>(null)
         private set
 
-    /** The section of every pass heard in the last play, in order: what KEEP THIS ORDER keeps. */
-    var take by mutableStateOf<List<Int>>(emptyList())
+    /** Every pass heard in the last play, in order, with the bars of one cut at a bar line: what KEEP THIS ORDER keeps. */
+    var take by mutableStateOf<List<Arranger.Heard>>(emptyList())
         private set
 
     private var voice: MixVoice? = null
@@ -74,7 +74,7 @@ internal class LivePlay {
         val v = voice ?: return
         val heard = v.heardFrames()
         v.stop()
-        cursor?.let { take = it.played(heard) }
+        cursor?.let { take = it.heard(heard) }
         voice = null
         cursor = null
         playing = false

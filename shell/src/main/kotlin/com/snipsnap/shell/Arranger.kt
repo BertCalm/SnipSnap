@@ -94,12 +94,18 @@ object Arranger {
         val reverseCrash: Boolean = false,
         /** The lanes left out of it ([PlanSection.mutes]); the [clip] still holds their hits, so un-muting needs no new layout. */
         val mutes: Set<String> = emptySet(),
+        /** Each pass plays only the first this many bars of the [clip] ([PlanSection.bars]); null is the whole clip. */
+        val cutBars: Int? = null,
     ) {
         init {
             require(repeats >= 1) { "a section plays at least once" }
+            require(cutBars == null || cutBars >= 1) { "a cut pass plays at least one bar" }
         }
 
-        val bars: Int get() = clip.bars * repeats
+        /** Bars in one pass: the clip's, or fewer when the pass is cut. */
+        val passBars: Int get() = minOf(cutBars ?: clip.bars, clip.bars)
+
+        val bars: Int get() = passBars * repeats
     }
 
     data class Arrangement(val name: String, val seed: Int, val sections: List<Section>) {
@@ -168,6 +174,7 @@ object Arranger {
                 close = it.close,
                 reverseCrash = it.reverseCrash,
                 mutes = it.mutes,
+                bars = it.cutBars,
             )
         },
     )
@@ -212,6 +219,7 @@ object Arranger {
                     close = s.close,
                     reverseCrash = s.reverseCrash,
                     mutes = s.mutes,
+                    cutBars = s.bars,
                 )
             } else {
                 if (s.clip !in refused) refused += s.clip
@@ -232,6 +240,8 @@ object Arranger {
                     close = s.close,
                     reverseCrash = s.reverseCrash,
                     mutes = s.mutes,
+                    // A clip that is not the one asked for has no bars to cut.
+                    cutBars = null,
                 )
             }
         }
@@ -296,11 +306,11 @@ object Arranger {
             val previous = out.lastOrNull()?.clip
             val pool = choices.filter { it != previous }.ifEmpty { choices }
             val pick = pool[kotlin.random.Random(newSeed * 31 + i).nextInt(pool.size)]
-            val oldBars = (palette.clip(s.clip, s.seed)?.bars ?: 1) * s.repeats
+            val oldBars = minOf(s.bars ?: Int.MAX_VALUE, palette.clip(s.clip, s.seed)?.bars ?: 1) * s.repeats
             val newBars = palette.clip(pick, newSeed)!!.bars
             val repeats = Math.round(oldBars.toFloat() / newBars).coerceIn(1, maxRepeats(newBars))
             if (pick != s.clip || pick == ClipRef.GHOSTED) redrawn++
-            out += s.copy(clip = pick, repeats = repeats, seed = newSeed)
+            out += s.copy(clip = pick, repeats = repeats, seed = newSeed, bars = null)
         }
         return Rerolled(plan.copy(seed = newSeed, sections = out), redrawn)
     }
@@ -587,23 +597,52 @@ object Arranger {
     data class Played(val plan: SongPlan, val left: Int)
 
     /**
-     * KEEP THIS ORDER: the song [played] makes, where [played] names the
-     * section of every pass heard, in order, and [clipBars] is each
-     * section's clip length. Each run of one section becomes that section
-     * (its clip, lock, seed, BASS and PULL-UP) played that many times. A run
-     * longer than one sequence holds ([maxRepeats]) is split across copies.
-     * Null when nothing was played.
+     * One pass heard in live play: its [section], and how many bars of it
+     * were heard when it was cut at a bar line ([SongCursor]'s NEXT BAR);
+     * null for a pass heard to its end (or stopped on).
      */
-    fun playedOrder(kept: SongPlan, clipBars: List<Int>, played: List<Int>): Played? {
-        if (played.isEmpty()) return null
-        val runs = mutableListOf<Pair<Int, Int>>()
-        for (s in played) {
+    data class Heard(val section: Int, val bars: Int? = null)
+
+    /** KEEP THIS ORDER for whole passes only: [played] is the section of each; see [heardOrder]. */
+    fun playedOrder(kept: SongPlan, clipBars: List<Int>, played: List<Int>): Played? =
+        heardOrder(kept, clipBars, played.map { Heard(it) })
+
+    /**
+     * KEEP THIS ORDER: the song [heard] makes, where [heard] names the
+     * section of every pass heard, in order, and [clipBars] is each
+     * section's clip length. Each run of whole passes of one section becomes
+     * that section (its clip, lock, seed, BASS and PULL-UP) played that many
+     * times. A run longer than one sequence holds ([maxRepeats]) is split
+     * across copies. A pass cut at a bar line is not a whole pass: it
+     * becomes a copy of its section playing only the bars that were heard
+     * ([PlanSection.bars]) once, and ends the run before it. Null when
+     * nothing was played.
+     */
+    fun heardOrder(kept: SongPlan, clipBars: List<Int>, heard: List<Heard>): Played? {
+        if (heard.isEmpty()) return null
+        // A pass is cut only if it heard fewer bars than the section's own pass holds.
+        fun cutOf(h: Heard): Int? {
+            val own = minOf(kept.sections[h.section].bars ?: Int.MAX_VALUE, clipBars[h.section])
+            return h.bars?.coerceAtLeast(1)?.takeIf { it < own }
+        }
+        // (section, bars heard or null for whole, passes)
+        val runs = mutableListOf<Triple<Int, Int?, Int>>()
+        for (h in heard) {
+            val cut = cutOf(h)
             val last = runs.lastOrNull()
-            if (last != null && last.first == s) runs[runs.lastIndex] = s to last.second + 1 else runs += s to 1
+            if (cut == null && last != null && last.first == h.section && last.second == null) {
+                runs[runs.lastIndex] = Triple(h.section, null, last.third + 1)
+            } else {
+                runs += Triple(h.section, cut, 1)
+            }
         }
         val out = mutableListOf<PlanSection>()
         var left = 0
-        for ((s, count) in runs) {
+        for ((s, cut, count) in runs) {
+            if (cut != null) {
+                if (out.size < SongPlan.MAX_SECTIONS) out += kept.sections[s].copy(repeats = 1, bars = cut) else left += 1
+                continue
+            }
             val max = maxRepeats(clipBars[s])
             var rest = count
             while (rest > 0) {
@@ -613,6 +652,17 @@ object Arranger {
             }
         }
         return Played(SongPlan(kept.seed, out), left)
+    }
+
+    /**
+     * [clip] cut to its first [bars] bars: the hits that start in them, and
+     * a length of [bars] of the clip's own bars. [clip] itself when [bars]
+     * is null or holds all of it.
+     */
+    internal fun cut(clip: Mpc3Clip, bars: Int?): Mpc3Clip {
+        if (bars == null || bars >= clip.bars) return clip
+        val limit = bars * clip.pulsesPerBar
+        return clip.copy(bars = bars, notes = clip.notes.filter { it.timePulses < limit })
     }
 
     /** The section a pull-up leads into, in the arranger's own draft. */
@@ -662,7 +712,8 @@ object Arranger {
         val bed = answerBed(kitDir)
 
         // Rolled per repeat here (the WAV is what the song sounds like); the .xpj under WRITE keeps the chances for the MPC to roll.
-        val unmuted = plan.sections.map { tiled(it.clip, it.repeats) }
+        val oneClips = plan.sections.map { cut(it.clip, it.cutBars) }
+        val unmuted = plan.sections.mapIndexed { i, it -> tiled(oneClips[i], it.repeats) }
         // A muted lane's hits are left out before anything else reads the clip: they are not played, so they cannot choke or ring.
         val clips = unmuted.mapIndexed { i, c -> withoutMuted(c, plan.sections[i].mutes) }
         // A stretch whose every hit rolled silent is a stretch of silence, not a kit that cannot play the clip.
@@ -677,7 +728,9 @@ object Arranger {
         // with the turn played twice pulls up twice. The mark is the
         // section's own, kept through a move, a copy or a new name.
         val turns = plan.sections.indices.filter { it > 0 && plan.sections[it].pullUp }
-        val cuts = listOf(0) + turns + listOf(plan.sections.size)
+        // A section that plays less than its clip ends on a cut, not on its clip's own end: its stretch stops there, so the cut can ramp down.
+        val cutNext = plan.sections.indices.filter { it + 1 < plan.sections.size && plan.sections[it].cutBars?.let { b -> b < plan.sections[it].clip.bars } == true }.map { it + 1 }
+        val cuts = (listOf(0) + turns + cutNext).distinct().sorted() + listOf(plan.sections.size)
         val stretches = cuts.zipWithNext { from, to -> from until to }
 
         // DROP: a section's own last bar re-rendered from the kick's hits, or
@@ -780,6 +833,9 @@ object Arranger {
             if (next in turns) {
                 val lastBeat = frameAt(startPulses[next] - Mpc3Clip.PULSES_PER_BEAT) - starts[first]
                 audio = pullUpOver(audio, cut = lastBeat, end = starts[next] - starts[first])
+            } else if (next in cutNext) {
+                // The pass was cut at a bar line: what rings past it stops, ramped so it does not click.
+                audio = cutAt(audio, starts[next] - starts[first])
             }
             starts[first] to audio
         }
@@ -799,7 +855,7 @@ object Arranger {
         val song = BeatTape.tapeStop(Snip(out.copyOf(songEnd * 2), 2, KitPreview.RATE))
         SongBus.ceiling(song.samples)
         val passes = plan.sections.indices.flatMap { i ->
-            val clip = plan.sections[i].clip
+            val clip = oneClips[i]
             val one = clip.lengthPulses
             (0 until plan.sections[i].repeats).map { r ->
                 val at = startPulses[i] + r * one
