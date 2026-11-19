@@ -50,7 +50,7 @@
     "frameCalculation": "round((sourceSeconds+resolvedReleaseSeconds)*44100); resolved release can vary with note, velocity and RAFT",
     "referenceFrameArrays": "Rows store normalFrames and hardFrames at default CONTACT/RAFT for every MIDI note"
   },
-  "generatedSourceSha256": "699a44cef47deb4baf1b28bbb2b842f90104b1367bc2751c7dcd5bec208c43de",
+  "generatedSourceSha256": "de6526b44e18aabf6ce4a55f52e578823af05ca17a0c7b8fbee3ede5e629b56a",
   "inputSourceSha256": {
     "Accord.kt": "7e6912f88abbd117d46c3217ad7b1fa8bf2d67735cced9656a0057889adb36dc",
     "AccordAcoustics.kt": "9582b35904b44cd844c326b545148fbaefae813a6ee639ad4061a03c76436231",

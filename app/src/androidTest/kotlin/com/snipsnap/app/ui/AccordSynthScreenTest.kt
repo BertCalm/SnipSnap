@@ -117,7 +117,7 @@ class AccordSynthScreenTest : ComposeScreenTest() {
         assertEquals((48 - 36) / 36f, progress("ROOT"), 1e-6f)
         assertEquals(.75f, progress("TOUCH"), 1e-6f)
         assertEquals(1f, progress("LENGTH"), 1e-6f)
-        for (voice in AccordVoice.entries) {
+        for (voice in Accord.KEPT_VOICES) {
             activate(voice.name)
             for (macro in Accord.macrosFor(voice).filterNot { it.name == "HOLD" }) slider(macro.name).assertExists()
             slider("HOLD").assertDoesNotExist()

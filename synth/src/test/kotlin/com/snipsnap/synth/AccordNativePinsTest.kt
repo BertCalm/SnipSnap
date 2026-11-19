@@ -18,7 +18,7 @@ internal object AccordNativePins {
         for (patch in AccordPresets.all()) {
             result += "${patch.voice.name.lowercase()}-${patch.acousticProfile.name.lowercase()}" to patch
         }
-        for (voice in AccordVoice.entries) {
+        for (voice in Accord.KEPT_VOICES) {
             val anchor = AccordPresets.forVoice(voice).first()
             for (midi in listOf(36, 60, 72)) result += "${voice.name.lowercase()}-note-$midi" to anchor.copy(midi = midi)
             // Normal touch (.75) is the anchor itself, pinned above.

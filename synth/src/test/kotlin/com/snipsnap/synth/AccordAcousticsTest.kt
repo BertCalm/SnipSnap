@@ -107,7 +107,7 @@ class AccordAcousticsTest {
             AccordVoice.TINE to AccordAcousticProfile.SOFT_ATTACK,
             AccordVoice.TINE to AccordAcousticProfile.BRIGHT_EDGE,
             AccordVoice.TINE to AccordAcousticProfile.LONG_RING,
-        )
+        ) + AccordVoice.entries.filter { it !in Accord.KEPT_VOICES }.map { it to AccordAcousticProfile.BASE }
         for ((voice, profile) in cases) for (midi in listOf(36, 48, 60, 72)) {
             // CONTACT/RAFT/velocity can reshape excitation and damping, but
             // must not disguise an empirical detuning curve in the root.

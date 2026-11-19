@@ -14,7 +14,12 @@ import kotlin.math.pow
 import kotlin.math.sqrt
 import kotlin.random.Random
 
-enum class AccordVoice { BRUSH, WOOD, TINE }
+/**
+ * BRUSH, WOOD and TINE are the kept voices. REED, COURSE, ESCAPEMENT and BELL are
+ * candidates for listening round accord-voices-1, appended so saved ordinals and
+ * names never move; the ones the owner does not keep are removed before release.
+ */
+enum class AccordVoice { BRUSH, WOOD, TINE, REED, COURSE, ESCAPEMENT, BELL }
 enum class AccordAcousticProfile { BASE, REFERENCE, SOFT_ATTACK, BRIGHT_EDGE, LONG_RING }
 enum class AccordInitializer { REFERENCE_SINE_20261022, PROJECT_SINE_V1 }
 
@@ -42,6 +47,9 @@ object Accord {
     private const val MAX_TRACE_BYTES = 32L * 1024 * 1024
     private const val MAX_AUDIO_BYTES = 8L * 1024 * 1024
     private const val PERFORMANCE_PEAK_CEILING = .85
+
+    /** The voices the owner kept in accord-native-1 (19 Nov 2026): presets, kit, picker and pins. */
+    val KEPT_VOICES: List<AccordVoice> = listOf(AccordVoice.BRUSH, AccordVoice.WOOD, AccordVoice.TINE)
 
     fun supportsModel(model: Int): Boolean = model == MODEL_VERSION
     fun defaultProfile(voice: AccordVoice): AccordAcousticProfile =
@@ -241,7 +249,10 @@ object Accord {
     private fun calibration(key: AudioKey, trace: AccordDynamics.Trace, pace: Double): Calibrated {
         require(key.model == AccordCalibration.MODEL_VERSION) { "ACCORD reference calibration model mismatch" }
         require(AccordCalibration.VERSION == 2) { "ACCORD calibration table requires regeneration for the captured-tail policy" }
-        if (key.seed == DEFAULT_SEED && key.initializer == AccordInitializer.REFERENCE_SINE_20261022 &&
+        // Candidate voices have no frozen factory row. They take the edited-performance
+        // path below, the same normal/hard recipe the factory table accelerates.
+        if (key.voice in KEPT_VOICES &&
+            key.seed == DEFAULT_SEED && key.initializer == AccordInitializer.REFERENCE_SINE_20261022 &&
             key.start == 8.0 && key.seconds == 8.0 && key.macros == defaults(key.voice)) {
             return Calibrated(AccordCalibration.gain(key.voice, key.profile, key.midi))
         }

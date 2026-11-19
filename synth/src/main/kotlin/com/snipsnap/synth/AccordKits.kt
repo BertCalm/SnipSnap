@@ -40,6 +40,8 @@ object AccordKits {
                 AccordVoice.BRUSH -> "#a5bdaf"
                 AccordVoice.WOOD -> "#d1a77b"
                 AccordVoice.TINE -> "#9cb9cb"
+                // Candidates are not in the starter kit.
+                AccordVoice.REED, AccordVoice.COURSE, AccordVoice.ESCAPEMENT, AccordVoice.BELL -> "#b4adc4"
             },
         )
     }
