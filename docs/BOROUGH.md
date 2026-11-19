@@ -131,6 +131,50 @@ rings 1.35 s above -30 dB. Verification unchanged: 792 WAVs, 0 failures, timbral
 88 of 88 pads. Listening page version 3: the RIDE & RIMS before player is the round 1 groove
 with the hat stand-in.
 
+### Round 1.2: the ride's dead spot, kick levels, cymbals that swelled
+
+**What the owner heard.** "The ride sounds like it has a dead spot. And the stoop kick is a bit
+overpowering."
+
+**The dead spot, measured.** EMBER builds each cymbal partial as a doublet 0.4 to 3 Hz apart, so
+partials beat and shimmer. With dozens of partials the dips average out. Round 1.1's ride had a
+4.7 kHz low-pass and DAMP 0.98, which left a few strong partials; when they dipped together the
+ring faded and came back. Deepest fade-and-return (25 ms RMS, 50 ms to 1.2 s): 7.5 dB on a
+typical hit, 11.2 dB worst. EMBER's approved ride, dry: 2.2 typical, 4.6 worst; the same ride with
+a 4.7 kHz low-pass: 5.1 and 7.7. Fix: the ride's DAMP is bounded to 0.45 and its low-pass to
+10-16 kHz, then refit. Now 1.7 typical, 2.2 worst. Cost: the ride scores 6.20 dB against the
+loop's cymbal (round 1.1: 4.60 fitted, 5.24 shipped). The fitter wants it darker; darker is what
+made the hole. `verify.py` now fails a ride or bell pad whose ring fades and comes back by more
+than 5 dB; round 1.1's build fails it on 5 files.
+
+The first explanation tried was wrong, and is kept here because what it found was real. A
+negative tilt after the drive cut the stick click, the only attack left after the drive, so
+cymbals swelled after the strike. The ride that was heard did not do this (its tilt was +5.5 dB),
+but nine of ten hat fits did (tilt -7 to -12 dB): the WAX open hat rose 3.8 dB after its strike.
+Hats and ride now have tilt 0 to 6 dB (darkness from the low-pass), every hat is refit (0.0 to
+0.7 dB worse), and `verify.py` fails any stick-struck cymbal pad that rises more than 1 dB after
+its first 40 ms (25 ms RMS). Round 1.1's build fails it on 12 files. Toms and the pedal hat are
+left out: EMBER's toms rise 1 to 2 dB dry at some tunings (the two heads), and the pedal hat,
+fitted from a recording, builds over 60 to 100 ms. An attempt to align the pedal hat to its chick
+was reverted for that reason.
+
+The fitter also scored a different ride from the one that shipped: a shortened render, used for
+speed, scored 4.7 to 5.7 dB across takes where the shipped pad scored 4.7 to 8.4 dB. `ride()` now
+renders the pad that ships and the fitter scores its first window; `BOROUGH_WORKERS` spreads that
+slower fit over cores. Fitted 6.20 dB, shipped 6.29 dB.
+
+**Kick level.** Fitting compares each sound's shape normalised to its own peak, so nothing set how
+loud a kick sits against its snare. `extract.low_mid_db()` measures each loop's energy below
+150 Hz minus 150 Hz to 5 kHz (stored in `targets.json`, numbers only, file hashes re-checked), and
+`build.kick_trim()` cuts both kick pads (A01, A05) until the groove's balance matches the primary
+loop's, never boosting, at most 12 dB. STOOP DUST -5.5 dB, CELLAR BOOM -6.5 dB, DRY ROOM -1.8 dB,
+CRANKED -0.2 dB, WAX and RIDE & RIMS unchanged (`manifest.json` `kick_trim_db`). STOOP's kick fit
+also sits at its ring and drive limits (t1 1.18 s of 1.2, drive 0.97): the descriptor sees only the
+0.27 s before the next hit. If it still booms too long, bounding t1 is the next step.
+
+**Results (Python harness).** 792 WAVs, 0 failures, including both new checks. Velocity timbral on
+88 of 88 pads. Listening page version 4; every kit's before player is the round 1.1 groove.
+
 ## What the loops measured (Python harness)
 
 Measured by `prototype/borough/extract.py` at mono 44.1 kHz. Whole-loop statistics include every

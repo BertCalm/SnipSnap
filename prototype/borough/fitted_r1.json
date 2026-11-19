@@ -745,18 +745,18 @@
   },
   "ride": {
    "params": {
-    "tune": 0.5755,
-    "damp": 0.42,
-    "buzz": 0.5454,
-    "distance": 0.0674,
-    "comp": 0.4318,
-    "drive": 0.9634,
-    "lp": 4656.6875,
-    "tilt": 1.3123
+    "tune": 0.0065,
+    "damp": 0.3325,
+    "buzz": 0.5258,
+    "distance": 0.0988,
+    "comp": 0.4418,
+    "drive": 0.9517,
+    "lp": 10217.7721,
+    "tilt": 0.008
    },
-   "residual_db": 4.962,
+   "residual_db": 6.197,
    "evals": 1856,
-   "seconds": 1266.2,
+   "seconds": 701.1,
    "occurrences": 4
   }
  }
