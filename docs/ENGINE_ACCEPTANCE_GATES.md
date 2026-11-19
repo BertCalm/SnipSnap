@@ -1147,40 +1147,23 @@ layers and three natural alternate strikes. Other kit pads retain original PCM.
 The revised snare is frozen synthesis, not a newly registered editable engine.
 Phone and MPC hardware acceptance remains open for this revision. See `SOUL_ROCK.md`.
 
-## RIDDIM (round 4, 2026-11-19: six kits on the shelf, round 3 in Kotlin not yet heard, hardware open)
+## RIDDIM kits (complete, 2026-11-19: sound approved, phone and MPC gates passed)
 
-Dancehall drum kits synthesized to targets measured from the owner's reference loops, with CALABASH's approved
-percussion on the same grids. See [RIDDIM](RIDDIM.md).
+Six dancehall drum kits synthesized to targets measured from the owner's reference loops, with CALABASH's approved
+percussion on the same grids. See [RIDDIM](RIDDIM.md). The owner approved rounds 1 and 3 in Python ("Approved",
+2026-11-18; round 3 after choosing the hardest wood mallet and a real ratchet, 2026-11-19), confirmed the Kotlin kits
+match ("Yes, they match", 2026-11-18), and on hearing the six kits as the app exports them (round 4) and playing them
+on the phone and the MPC said "Sounds great. Phone/MPC pass." (2026-11-19). Evidence: `RiddimTest`, `RiddimKitsTest`,
+`RiddimKitTest`, `:shell:generateRiddimKits`. Preserve `RiddimKits.VERSION` 2 as the accepted baseline.
 
-- **Melodic, keygroup and chord-tool gates:** not applicable. Drum kits.
-- **Articulation:** finite hits, no HOLD.
-- **Percussion: authored, heard in Python.** Each kit's A16 is a one-bar roll or riser at the kit's tempo:
-  - a rim roll (Clave Dancehall), a snare roll (Dembow) and a hat riser (Boom Riddim), approved with round 1;
-  - a ratchet riser (Baile Funk), a sabar roll of CALABASH's nder (Sabar Swing) and a wood tremolo (Wood and Bronze),
-    approved with round 3 (2026-11-19).
-- **Drum shelf: six kits on the shelf.** They differ in voices, tuning, decay, pad roles and tempo. `RiddimKitsTest`
-  pins which slots each of the 15 pairs shares.
-
-  | Starter | Tempo |
-  |---|---|
-  | RIDDIM CLAVE DANCEHALL | 102 BPM |
-  | RIDDIM DEMBOW | 95 |
-  | RIDDIM BOOM RIDDIM | 100 |
-  | RIDDIM BAILE FUNK | 130 |
-  | RIDDIM SABAR SWING | 103 |
-  | RIDDIM WOOD AND BRONZE | 96 |
-- **Velocity/round robin: verified in software through rendering, saving, playback and MPC 3 export for every pad of
-  all six kits** (`RiddimKitsTest`, `RiddimKitTest`, `:shell:generateRiddimKits`).
-  - Three zones of four takes per pad.
-  - MPC 2 is not applicable (format limit).
-  - No phone or MPC has played the kits.
-- **Sound character:**
-  - Rounds 0, 1 and 3 heard in Python. Round 1 approved ("Approved", 2026-11-18). Round 3 approved after two changes
-    the owner asked for: the hardest wood mallet and a real ratchet (2026-11-19).
-  - The owner heard round 2's Kotlin kits and confirmed they match ("Yes, they match", 2026-11-18).
-  - Clave Dancehall's woods moved to the hardest mallet on the owner's A/B ("I do like b", 2026-11-19).
-  - The six kits as the app exports them (round 4) are not yet heard.
-- **Overall: incomplete.** Open: the owner's listen to round 4, then phone and MPC playback.
+| Gate | Status | Evidence |
+|---|---|---|
+| Melodic, keygroups, chord tools | Not applicable | Drum kits |
+| Articulation | Pass | Finite hits, no HOLD |
+| Drums: multiple distinct genre kits on the shelf | Pass | Approved by ear 2026-11-19. Six kits: RIDDIM CLAVE DANCEHALL (102 BPM), DEMBOW (95), BOOM RIDDIM (100), BAILE FUNK (130), SABAR SWING (103), WOOD AND BRONZE (96). They differ in voices, tuning, decay, pad roles and tempo; `RiddimKitsTest` pins which slots each of the 15 pairs shares |
+| Percussion: roll/riser | Pass | Each kit's A16 is a one-bar roll or riser at its tempo: rim roll, snare roll, hat riser, ratchet riser, sabar (nder) roll, wood tremolo; approved with the kits |
+| Velocity and round robin: rendering | Pass in software | Three zones of four takes per pad; every pad darkens when softer except reused CALABASH voices that keep their approved recording fit; closest two takes on any pad 35.3 dB apart |
+| Velocity and round robin: saving, playback, export | Pass | Saved PCM, playback through the pad resolver and the MPC 3 track read back for all 96 pads; MPC 2 not written (format limit). Owner-reported pass on the phone and the MPC, 2026-11-19 |
 
 ## LOOSE CRATE kits (complete, 2026-11-18: sound approved, phone and MPC gates passed)
 

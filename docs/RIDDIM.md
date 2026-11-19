@@ -1,4 +1,4 @@
-# RIDDIM: dancehall drum kits (round 0, 2026-11-18)
+# RIDDIM: dancehall drum kits (complete, 2026-11-19)
 
 `RIDDIM` is a working name. The owner asked for a dancehall-inspired collection of drum kits, built as synth
 versions of 18 reference loops they shared, with drum and percussion sounds mixed on the same kits. Round 0 is a
@@ -353,13 +353,18 @@ three kits on the shelf.
   Sabar Swing is slow because its talking call and nder roll are many CALABASH strokes. A kit is built once, when it
   is made.
 
-The six kits as the app exports them: <https://claude.ai/artifact/LAmftedd8ziuoPE9ZPQdhQ>. Not yet heard.
+The six kits as the app exports them: <https://claude.ai/artifact/LAmftedd8ziuoPE9ZPQdhQ>. Heard: "Sounds great"
+(2026-11-19).
+
+## Accepted (2026-11-19)
+
+The owner heard round 4 and played the six kits on the phone and the MPC: "Sounds great. Phone/MPC pass."
+(2026-11-19). Every applicable gate passes; see [the gates](ENGINE_ACCEPTANCE_GATES.md). `RiddimKits.VERSION` 2 is the
+accepted baseline.
 
 ## Open
 
-- The owner's listen to the six kits as the app exports them (round 4).
-- Phone and MPC playback of the six kits.
-- A preset roster and the picker.
+- Optional, not a gate: a preset roster and the SYNTH picker, as CALABASH's rounds 3 and 4 did.
 
 ## Ledger
 
@@ -368,10 +373,12 @@ The six kits as the app exports them: <https://claude.ai/artifact/LAmftedd8ziuoP
 - **Measured:** the tables above, Python harness.
 - **Proposed:** every constant in `riddim_proto.py` is a shape value until heard.
 - **Heard:** round 0's palette, "pretty good so far" (2026-11-18); round 1's three kits, "Approved" (2026-11-18).
-  The Kotlin kits (round 2) confirmed to match, "Yes, they match" (2026-11-18). No phone or MPC has played them.
+  The Kotlin kits (round 2) confirmed to match, "Yes, they match" (2026-11-18).
   Round 3 heard: "wood might need more of an attack" (2026-11-18); the hardest mallet chosen for Wood and Bronze
   (2026-11-19); Clave Dancehall's woods moved to the hardest mallet ("I do like b", 2026-11-19); RATCHET "not sure it
   sounds as it should"; of A (BLIP) and B (RATCHET_WOOD) the owner chose B (2026-11-19). Round 3 approved.
+  Round 4, the six kits as the app exports them, heard and played on the phone and the MPC: "Sounds great.
+  Phone/MPC pass." (2026-11-19).
 
 ## Why it is built this way
 
