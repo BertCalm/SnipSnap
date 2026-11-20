@@ -3,7 +3,7 @@
 A bar-stopped string whose pitch path is the performance: resonator guitar, electric slide, lap
 steel, pedal steel, country flat-top and western nylon. Design, measurements and the gate plan:
 [docs/superpowers/specs/2026-11-20-drawl-engine-design.md](../../docs/superpowers/specs/2026-11-20-drawl-engine-design.md).
-Python harness, not Kotlin. The owner heard round 0 on 20 Nov 2026 and asked for more twang (CONE) and whine (BOTTLE); round 0b is that change, not yet heard.
+Python harness, not Kotlin. The owner heard round 0 on 20 Nov 2026 and asked for more twang (CONE) and whine (BOTTLE); round 0b was that change ("Better"), and round 0c gives LAP the same whine and slows the wide vibrato, not yet heard.
 
 ```sh
 python3 prototype/drawl/drawl_proto.py OUT                                  # one WAV per voice at its defaults
@@ -24,9 +24,10 @@ python3 prototype/drawl/build_page.py OUT OUT/compare.json [AB_DIR]        # OUT
   zipper probes into `report.json`.
 - `compare_refs.py`: each voice at its defaults beside the reference loops it answers to.
 - `build_page.py`: the audition page (SnipSnap design-system tokens, VENT and OPENSKY).
-- `character_probe.py` (round 0b): numbers for the owner's "twang" (CONE) and "whine" (BOTTLE) notes.
+- `character_probe.py` (rounds 0b and 0c): numbers for the owner's notes: "twang" (CONE), "whine"
+  (BOTTLE, LAP) and the wide vibrato's rate.
 - `reference_metrics.json`, `round0_report.json`, `round0_compare.json`, and the round-0b
-  `round0b_report.json`, `round0b_compare.json`, `round0b_character.json`: the numbers the spec quotes.
+  `round0b_*.json` and `round0c_*.json` (report, compare, character): the numbers the spec quotes.
 - `NOTICE.txt`: the fifteen reference loops by sha256. Their audio is commercial and is not here.
 
 Needs numpy, scipy, numba (the string loop), ffmpeg (the page's audio) and the Luthier `snipkit.py`

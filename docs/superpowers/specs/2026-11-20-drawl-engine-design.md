@@ -2,7 +2,7 @@
 
 Version 0.1 · 2026-11-20
 Status: proposed. Round 0 (a Python prototype) is built, measured and published for listening; the
-owner heard it and asked for two changes, made in round 0b (§18). No Kotlin exists. No acceptance gate
+owner heard it and asked for changes, made in rounds 0b and 0c (§18). No Kotlin exists. No acceptance gate
 is passed by this document.
 Repository truth: read at `7fd194f1`. APIs grepped: `Strings.Loop` and `Strings.Loop.retune`
 (`Strings.kt:529`, `:675`), `Strings.tune` (`:101`), `Strings.pluckExciter` (`:366`), `Strings.pickup`
@@ -186,7 +186,7 @@ STEEL's volume-pedal swell is a raised-cosine fade of 0.02 to 0.7 s on the outpu
 |---|---:|---|---|---|
 | TUNE | .50 | the target note, ±12 semitones around the voice root | the bar's open string and the scrape's bar speed follow it | root within 0.3 cents at TUNE .25/.5/.75 |
 | SLIDE | .30 | bar: slide extent 12·S^1.3 semitones in 0.07 + 0.012·semitones s; fretted: 0 to 3 frets; STEEL: pedal travel 0 to 2 semitones (a half pedal mid-knob) | with WAVER: the vibrato starts after the landing | macro distance 12 to 31 at 0 vs 1 |
-| WAVER | .45 | hand vibrato depth 150·W^1.3 cents (×0.6 STEEL, ×0.45 GUT, ×0.35 FLATTOP one-sided) and rate 5.0 + 2.6·W Hz | with SLIDE (above); scrape takes 15 % of it | pitch spread 0 / 40 / 103 cents at 0 / .5 / 1 on CONE |
+| WAVER | .45 | hand vibrato depth 150·W^1.3 cents (×0.6 STEEL, ×0.45 GUT, ×0.35 FLATTOP one-sided) and rate 5.0 + 2.6·W − 0.8·W² Hz (levels off as it widens; 0c) | with SLIDE (above); scrape takes 15 % of it | pitch spread 0 / 40 / 103 cents at 0 / .5 / 1 on CONE |
 | PICK | .75 | pick hardness (burst low-pass, per-voice range), pick position 0.30 to 0.07 of the string, metal click; STEEL: low half swells in under the volume pedal | with velocity: touch shifts hardness ×2^(2.5(v − .75)) | distance 6 to 15 |
 | BODY | .60 | CONE: cone share and biscuit drive; FLATTOP, GUT: body share; electrics: amp drive | with velocity: a harder pick drives the cone and amp further | distance 5 to 15 |
 | RING | .55 | the hand's loss: T60 of the fundamental between per-voice bounds (CONE 0.8 to 8 s), loop brightness ×0.75 to 1.25, and the string behind the bar | with HOLD: HOLD gives a long RING room to finish | distance 11 to 21 |
@@ -206,13 +206,13 @@ value falls back to its default (both probed, all six voices).
 | FLATTOP | D3 | 2.5 s | fretted steel-string boom, fret-stepped slide-in | acoustic trotting |
 | GUT | E3 | 2.5 s | nylon, finger vibrato, dark | nylon spaghetti and outlaw loops |
 
-Against the references (`round0b_compare.json`; CONE and BOTTLE as changed in round 0b; Python harness):
+Against the references (`round0c_compare.json`; CONE and BOTTLE as changed in round 0b, LAP in 0c; Python harness):
 
 | Voice | Centroid, DRAWL / refs (Hz) | Decay, DRAWL / refs (dB/s) |
 |---|---|---|
 | CONE | 669 (488 in round 0) / 368 to 693 | −18.9 / −24.7 to −4.3 |
 | BOTTLE | 766 (573) / 494 to 1129 | −8.9 (−12.3) / −10.2 to −5.4 |
-| LAP | 463 / 561 | −16.6 / −16.5 |
+| LAP | 592 (463; round 0c) / 561 | −12.2 (−16.6) / −16.5 |
 | STEEL | 597 note, 683 chord / 1051 | −6.2 / −5.3 |
 | FLATTOP | 351 / 274 | −17.0 / −12.2 |
 | GUT | 266 / 307 to 359 | −23.6 / −17 to −4 |
@@ -339,7 +339,8 @@ emmons, sho-bud, and "national" only as `national\s*reso` (the word alone is ord
 | Every body, ζ, rib pitch, scrape and ghost constant | proposed (shape) | none until the listen |
 | Kotlin renders a note in under 50 ms | proposed | round 1 |
 | Round 0 as a whole | heard, owner, 20 Nov 2026 | "Resonator could use more twang, slide a bit more whine." No other note |
-| CONE's twang and BOTTLE's whine as changed in 0b | not heard | the A/B at the top of the audition page |
+| CONE's twang and BOTTLE's whine as changed in 0b | heard, owner, 20 Nov 2026 | "Better." |
+| LAP's whine and the slower wide vibrato (0c) | not heard | the A/B at the top of the audition page |
 | Any voice sounds right enough to keep | not heard | the owner's keep or change per voice |
 
 ## 17. Why it is built this way
@@ -384,6 +385,27 @@ Both stay inside their references' brightness range (§8). The risk to listen fo
 about half its energy now sits between 1.5 and 4 kHz, which could read as harsh or as a wah. LAP, the
 other slide voice, is unchanged until the owner says whether "slide" meant it too. Every other probe
 (root, determinism, DC, velocity timbre, takes, macros) still passes on the round-0b renders.
+
+### Round 0c
+
+The owner heard 0b: "Better. I did mean lap as well. The vibrato on the long slide vibrato should be
+a smidge slower." (`round0c_character.json`; Python harness.)
+
+- **LAP gets the whine, kept the darker slide.** Loop low-pass 4.5 → 8 kHz; coil peak 2.0 kHz Q 1.4 →
+  2.2 kHz Q 3.5 (lower and softer than BOTTLE's 2.6 kHz Q 4.5); amp drive range 0.8 to 3 → 1.5 to 6;
+  speaker 3.5 → 5 kHz; defaults BODY .5, RING .65; bar 25 % slower. Sustain energy 1 to 4 kHz −60.1 →
+  −23.8 dB; harmonics 4 to 10 against the root after 1 s −59.1 → −20.2 dB; attack 1.5 to 4 kHz −26.1 →
+  −11.0 dB. Centroid 463 → 592 Hz against the lap loop's 561. It now decays at −12.2 dB/s against that
+  one loop's −16.5: the sustain the whine needs, disclosed for the listen.
+- **Wide vibrato levels off.** The rate law was 5.0 + 2.6·W Hz, 7.6 Hz at full WAVER, the fast edge of
+  the references' 5.9 to 7.5. It is now 5.0 + 2.6·W − 0.8·W²: 6.05 Hz at half, 6.8 at full, because a
+  wider shake moves more of the arm. Measured at full WAVER: BOTTLE 7.45 → 6.68, LAP 7.63 → 6.84,
+  STEEL 7.71 → 6.90 Hz; at half, CONE 6.24 → 6.05 Hz. CONE at full WAVER is not measurable: the pitch
+  tracker holds it for under 0.15 s through a 150-cent shake and the cone's curve, so its value rests on
+  the shared law. The first vibrato probe spliced the pieces either side of tracker dropouts and read
+  CONE at 8.7 Hz; it now reads only the longest unbroken stretch.
+
+Every probe still passes on all six voices (`round0c_report.json`).
 
 ## As built
 

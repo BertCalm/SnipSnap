@@ -46,7 +46,7 @@ ELECTRIC = {"BOTTLE", "LAP", "STEEL"}    # read by a magnetic pickup, then a sma
 DEFAULTS = {
     "CONE":    {"TUNE": .5, "SLIDE": .30, "WAVER": .45, "PICK": .75, "BODY": .60, "RING": .55, "HOLD": 0.},
     "BOTTLE":  {"TUNE": .5, "SLIDE": .40, "WAVER": .60, "PICK": .55, "BODY": .60, "RING": .85, "HOLD": 0.},
-    "LAP":     {"TUNE": .5, "SLIDE": .55, "WAVER": .40, "PICK": .40, "BODY": .40, "RING": .50, "HOLD": 0.},
+    "LAP":     {"TUNE": .5, "SLIDE": .55, "WAVER": .40, "PICK": .40, "BODY": .50, "RING": .65, "HOLD": 0.},
     "STEEL":   {"TUNE": .5, "SLIDE": .60, "WAVER": .30, "PICK": .30, "BODY": .50, "RING": .80, "HOLD": 0.},
     "FLATTOP": {"TUNE": .5, "SLIDE": .15, "WAVER": .15, "PICK": .45, "BODY": .70, "RING": .65, "HOLD": 0.},
     "GUT":     {"TUNE": .5, "SLIDE": .10, "WAVER": .45, "PICK": .35, "BODY": .60, "RING": .55, "HOLD": 0.},
@@ -66,7 +66,8 @@ T60 = {"CONE": (.8, 8.), "BOTTLE": (1.2, 9.), "LAP": (1.5, 10.), "STEEL": (2.5, 
        "FLATTOP": (1.2, 8.), "GUT": (1., 6.)}
 # Round 0b (owner, 20 Nov: "resonator could use more twang, slide a bit more whine"): CONE's
 # and BOTTLE's loops lose far less top per trip, so the upper harmonics keep ringing.
-LOOP_HZ = {"CONE": 6500., "BOTTLE": 10000., "LAP": 4500., "STEEL": 8000., "FLATTOP": 3200., "GUT": 2600.}
+# Round 0c (owner: "I did mean lap as well"): LAP's loop keeps its top too (4.5 to 8 kHz).
+LOOP_HZ = {"CONE": 6500., "BOTTLE": 10000., "LAP": 8000., "STEEL": 8000., "FLATTOP": 3200., "GUT": 2600.}
 
 # Body tables: (Hz, Q, gain). CONE's first four are the peaks measure.py found in all four
 # resonator-guitar references (571-603, 764-872, 1050-1190 Hz, and 2347 Hz in one); the two
@@ -85,7 +86,7 @@ CONE_ROLLOFF_HZ = 5500.   # the cone's mass roll-off; 3 kHz in round 0 took the 
 TENSION_CENTS = {"CONE": 28.}
 TENSION_SECONDS = {"CONE": .08}
 # BOTTLE's bar moves a little slower, so the glide itself is heard (round 0b, "whine").
-SLIDE_TIME = {"BOTTLE": 1.35}
+SLIDE_TIME = {"BOTTLE": 1.35, "LAP": 1.25}
 # Electric chain: pickup distance from the bridge as a fraction of the open string, coil
 # resonance (Hz, Q), amp drive range over BODY, speaker low-pass. STEEL's 1.5 kHz presence
 # peak follows the pedal-steel reference's 1.25-1.85 kHz peaks; LAP's dark coil follows the
@@ -93,7 +94,8 @@ SLIDE_TIME = {"BOTTLE": 1.35}
 # BOTTLE (0b): a high-Q coil peak at 2.6 kHz, the volume and tone knobs full up, is the slide's
 # vocal whine; more amp drive holds the sustain up so the highs sing.
 PICKUP = {"BOTTLE": (.07, 2600., 4.5, (2., 9.), 6000.),
-          "LAP": (.10, 2000., 1.4, (.8, 3.), 3500.),
+          # LAP (0c): the same whine, kept the darker slide: a lower, softer coil peak than BOTTLE's
+          "LAP": (.10, 2200., 3.5, (1.5, 6.), 5000.),
           "STEEL": (.08, 5000., 1.8, (.6, 2.), 7000.)}
 CLICK = {"CONE": 1., "BOTTLE": .5, "LAP": .6, "STEEL": .6, "FLATTOP": .8, "GUT": 0.}  # metal/flat picks vs flesh
 
@@ -329,7 +331,10 @@ class Performance:
         self.zeta = .8 + .05 * u[3]
         depth_scale = {"STEEL": .6, "GUT": .45, "FLATTOP": .35}.get(voice, 1.0)
         self.vib_depth = 150 * waver ** 1.3 * depth_scale * (1 + .08 * u[4])
-        self.vib_rate = (5.0 + 2.6 * waver) * (1 + .04 * u[5])
+        # A wider shake moves more of the arm, so the rate levels off as the depth grows (round 0c,
+        # owner: the long slide's vibrato "a smidge slower"): 5.0 Hz still, 6.05 at .5, 6.8 at 1
+        # (round 0: 7.6 at 1, the fast edge of the references' 5.9 to 7.5 Hz).
+        self.vib_rate = (5.0 + 2.6 * waver - .8 * waver * waver) * (1 + .04 * u[5])
         self.vib_phase = math.pi * (1 + u[6])
         lo, hi = T60[voice]
         self.t60 = exp_map(m["RING"], lo, hi)

@@ -13,6 +13,8 @@ whine (sustain):
   sustain_band_db  share of 1-4 kHz energy from 0.5 to 1.5 s, dB of the total
   highs_hold_db    how much less harmonics 4 to 10 have fallen than the fundamental between
                    0.1 s and 1.0 s: positive means the upper harmonics keep singing
+vibrato (round 0c, "a smidge slower" on the long slide):
+  vibrato_hz_w1    vibrato rate at WAVER 1 (bar landed, SLIDE 0), from the pitch track's spectrum
 """
 from __future__ import annotations
 
@@ -64,10 +66,33 @@ def probe(voice, velocity=.75, module=dp):
     }
 
 
+def vibrato_hz(voice, waver=1.0, module=dp):
+    y, p = module.render(voice, {"SLIDE": 0.0, "WAVER": waver})
+    tr, dt = measure.pitch_track(y, RATE)
+    c = 1200 * np.log2(tr / module.hz(p.midi))
+    c = c[int(.45 / dt):int(min(len(y) / RATE - .3, 2.6) / dt)]
+    # The longest unbroken voiced stretch only: splicing the pieces either side of a tracker
+    # dropout invents a rhythm (it read CONE, which dies fast, at 8.7 Hz on a 6.8 Hz law).
+    best, start = (0, 0), None
+    for i, ok in enumerate(np.append(np.isfinite(c), False)):
+        if ok and start is None:
+            start = i
+        elif not ok and start is not None:
+            best = max(best, (i - start, start))
+            start = None
+    seg = c[best[1]:best[1] + best[0]]
+    seg = seg - seg.mean()
+    spec = np.abs(np.fft.rfft(seg * np.hanning(len(seg)), 1 << 14))
+    f = np.fft.rfftfreq(1 << 14, dt)
+    band = (f > 3) & (f < 10)
+    return round(float(f[band][np.argmax(spec[band])]), 2)
+
+
 def main(module=dp):
     out = {}
-    for v in ("CONE", "BOTTLE", "LAP"):
-        out[v] = {"medium": probe(v, .75, module), "hard": probe(v, 1.0, module)}
+    for v in ("CONE", "BOTTLE", "LAP", "STEEL"):
+        out[v] = {"medium": probe(v, .75, module), "hard": probe(v, 1.0, module),
+                  "vibrato_hz_w1": vibrato_hz(v, 1.0, module)}
         print(v, json.dumps(out[v]))
     if len(sys.argv) > 1:
         json.dump(out, open(sys.argv[1], "w"), indent=1)

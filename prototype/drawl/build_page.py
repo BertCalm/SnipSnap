@@ -2,8 +2,8 @@
 
     python3 prototype/drawl/build_page.py OUT [COMPARE_JSON] [AB_DIR]
 
-AB_DIR (round 0b) holds before/ and after/ clips named <voice>-<default|hard|slide|strum>.wav and
-before.json / after.json from character_probe.py; the page then opens with an A/B of the owner's notes.
+AB_DIR holds manifest.json (see ab_section), before/ and after/ clips, and character_probe.py's
+before.json and after.json; the page then opens with an A/B of the owner's latest notes.
 
 COMPARE_JSON is compare_refs.py's output (each voice beside its reference loops' numbers).
 
@@ -157,37 +157,38 @@ def main():
     print(os.path.join(site, "index.html"))
 
 
-AB_NOTES = {
-    "CONE": ("CONE · more twang", "Pick nearer the bridge and harder; a bigger pitch drop after the attack; the cone's 2.3 kHz nasal band raised; the string keeps its top instead of losing it first."),
-    "BOTTLE": ("BOTTLE · more whine", "The string keeps its top; a sharp pickup peak at 2.6 kHz (the knobs full up); more amp sustain; the bar moves a little slower so the glide is heard."),
-}
-AB_ROWS = [("Default", "default"), ("Hard pick", "hard"), ("Long slide, wide vibrato", "slide"), ("Strum", "strum")]
-AB_PROBES = [("Boing, hard pick", "hard", "boing_cents", "cents"),
-             ("Sustain 1 to 4 kHz", "medium", "sustain_band_db", "dB of total"),
-             ("Highs vs root after 1 s", "medium", "highs_hold_db", "dB")]
-
-
 def ab_section(ab_dir, site):
+    """An A/B of the owner's latest notes, described by AB_DIR/manifest.json:
+    {"id", "title", "intro", "groups": [{"title", "what", "rows": [[label, stem]],
+     "probes": [[name, voice, level or null, key, unit]]}]}, with AB_DIR/before/<stem>.wav,
+    AB_DIR/after/<stem>.wav and character_probe.py's before.json and after.json."""
+    man = json.load(open(os.path.join(ab_dir, "manifest.json")))
     before = json.load(open(os.path.join(ab_dir, "before.json")))
     after = json.load(open(os.path.join(ab_dir, "after.json")))
+
+    def val(d, voice, level, key):
+        v = d[voice][level][key] if level else d[voice].get(key)
+        return "n/a" if v is None else v
+
     blocks = []
-    for v, (title, what) in AB_NOTES.items():
+    for g in man["groups"]:
         rows = []
-        for label, tag in AB_ROWS:
+        for label, stem in g["rows"]:
             btn = []
             for side in ("before", "after"):
-                fn = f"ab-{side}-{v.lower()}-{tag}.mp3"
-                mp3(os.path.join(ab_dir, side, f"{v.lower()}-{tag}.wav"), os.path.join(site, "audio", fn))
-                btn.append(f'<button class="clip" type="button" data-src="audio/{fn}"><span class="tri" aria-hidden="true">▶</span>{"Round 0" if side == "before" else "Now"}</button>')
+                fn = f"ab-{man['id'].lower()}-{side}-{stem}.mp3"
+                mp3(os.path.join(ab_dir, side, f"{stem}.wav"), os.path.join(site, "audio", fn))
+                btn.append(f'<button class="clip" type="button" data-src="audio/{fn}"><span class="tri" aria-hidden="true">▶</span>{"You heard" if side == "before" else "Now"}</button>')
             rows.append(f'<div class="abrow"><span class="ablabel">{html.escape(label)}</span><div class="clips">{"".join(btn)}</div></div>')
         nums = "".join(
-            f"<tr><th scope=\"row\">{html.escape(n)}</th><td>{before[v][t][k]}</td><td>{after[v][t][k]}</td><td>{u}</td></tr>"
-            for n, t, k, u in AB_PROBES)
-        blocks.append(f"""<div class="abvoice"><h3>{html.escape(title)}</h3><p class="blurb">{html.escape(what)}</p>{"".join(rows)}
-<div class="tablewrap"><table><thead><tr><th scope="col">Probe, still bar</th><th scope="col">Round 0</th><th scope="col">Now</th><th scope="col">Unit</th></tr></thead><tbody>{nums}</tbody></table></div></div>""")
+            f"<tr><th scope=\"row\">{html.escape(n)}</th><td>{val(before, v, lv, k)}</td><td>{val(after, v, lv, k)}</td><td>{html.escape(u)}</td></tr>"
+            for n, v, lv, k, u in g.get("probes", []))
+        table = (f'<div class="tablewrap"><table><thead><tr><th scope="col">Probe</th><th scope="col">You heard</th>'
+                 f'<th scope="col">Now</th><th scope="col">Unit</th></tr></thead><tbody>{nums}</tbody></table></div>') if nums else ""
+        blocks.append(f'<div class="abvoice"><h3>{html.escape(g["title"])}</h3><p class="blurb">{html.escape(g["what"])}</p>{"".join(rows)}{table}</div>')
     return f"""<section class="voice ab" aria-labelledby="h-ab">
-  <header class="vhead"><h2 id="h-ab"><span class="id">0B</span> <span class="vname">Your notes, before and after</span></h2>
-  <p class="blurb">"Resonator could use more twang, slide a bit more whine." Each pair plays round 0 and the change. LAP, the other slide, is unchanged so far. Watch for harshness in the whine: about half of BOTTLE's attack now sits between 1.5 and 4 kHz.</p></header>
+  <header class="vhead"><h2 id="h-ab"><span class="id">{html.escape(man['id'])}</span> <span class="vname">{html.escape(man['title'])}</span></h2>
+  <p class="blurb">{html.escape(man['intro'])}</p></header>
   {"".join(blocks)}
 </section>"""
 
@@ -269,11 +270,11 @@ tbody th { font-weight: 500; color: var(--ink2); }
 </style>
 <div class="window">
   <div class="titlebar"><span class="mark" aria-hidden="true"></span><h1>DRAWL</h1>
-    <span class="status">ROUND 0B · PYTHON HARNESS · TWO NOTES HEARD</span></div>
+    <span class="status">ROUND 0C · PYTHON HARNESS · NOTES HEARD</span></div>
   <div class="intro">
     <p class="eyebrow">Proposed engine · western and cosmic country strings</p>
     <p class="gesture">PICK → THE BAR SLIDES THE NOTE IN → THE BAR SHIMMERS → THE STRING RINGS OUT THROUGH ITS BODY</p>
-    <p>Six voices on one mechanism: a string whose pitch path is the performance. These are Python prototype renders, measured against your fifteen reference loops. You have heard round 0 and asked for two changes, which open the page. Your loops are not on this page; only their numbers are used.</p>
+    <p>Six voices on one mechanism: a string whose pitch path is the performance. These are Python prototype renders, measured against your fifteen reference loops. You have heard it twice; your latest notes and their changes open the page. Your loops are not on this page; only their numbers are used.</p>
     <p>Each sheet plays the default note, its low and high notes, soft and hard touch, three more round-robin takes, the bar held still, a long slide with wide vibrato, and a strum each way. On each dark panel the amber line is the default note's measured pitch and the pale line the long slide's: watch the bar slide up to the dashed note, land, and start to shimmer. A line stops where the note has rung too quiet to track.</p>
   </div>
   {{AB}}
