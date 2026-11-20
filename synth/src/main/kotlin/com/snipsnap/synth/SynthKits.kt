@@ -628,13 +628,12 @@ object SynthKits {
      * engine's own ([Consort.drumClassFor]): the short notes file PERC and the long ones LOOP, and a
      * drum program plays each once through. Every pad carries its recipe, section, velocity and take.
      */
-    fun consort(): List<ArrangedPad?> {
+    /** The CONSORT starter's sixteen recipes, in pad order ([consort]). */
+    fun consortPatches(): List<ConsortPatch> {
         val steps = listOf(0, 3, 5, 7, 10, 12, 15, 17)
         fun note(n: Int, semitone: Int) = ConsortPatch("Flute ${n + 1}", ConsortVoice.FLUTE,
             Consort.defaults(ConsortVoice.FLUTE) + mapOf("TUNE" to semitone / Consort.TUNE_SEMITONES.toFloat(), "HOLD" to CONSORT_NOTE_HOLD))
-            .let { pad(it, Consort.drumClassFor(it.voice, it.macros)) }
         fun preset(voice: ConsortVoice, name: String) = ConsortPresets.forVoice(voice).first { it.name == name }
-            .let { pad(it, Consort.drumClassFor(it.voice, it.macros)) }
         return steps.mapIndexed { n, semitone -> note(n, semitone) } + listOf(
             preset(ConsortVoice.SAX, "PLAIN SAX"), preset(ConsortVoice.OBOE, "PLAIN OBOE"),                 // A09 A10
             preset(ConsortVoice.DUDUK, "PLAIN DUDUK"), preset(ConsortVoice.OBOE, "REED TRIO"),              // A11 A12
@@ -643,13 +642,8 @@ object SynthKits {
         )
     }
 
-    /**
-     * HOLD for the CONSORT kit's note row: 0.39 s of breath, a played note and not a held one. It is this
-     * short because of the room: a render is the breath, 0.35 s of release and the wash's tail (0.74 s at
-     * the default ROOM 0.4), so 0.39 s of breath is 1.48 s, just under the classifier's 1.5 s line, and
-     * files PERC. The first value tried, 0.15 (0.44 s of breath), came to 1.53 s and filed LOOP: at the
-     * default ROOM, any HOLD above about 0.11 is a LOOP by length alone.
-     */
+    fun consort(): List<ArrangedPad?> = consortPatches().map { pad(it, Consort.drumClassFor(it.voice, it.macros)) }
+
     private const val CONSORT_NOTE_HOLD = 0.1f
 
     /**

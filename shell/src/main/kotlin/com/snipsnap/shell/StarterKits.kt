@@ -62,6 +62,9 @@ object StarterKits {
     /** ACCORD's four voices kept in accord-voices-1 (REED, COURSE, ESCAPEMENT, BELL), each at C2 to C5. */
     const val ACCORD_VOICES_ID = "accord-voices"
 
+    /** CONSORT's starter: FLUTE notes up the minor pentatonic and eight recipes, solo and in sections. */
+    const val CONSORT_ID = "consort"
+
     class Starter internal constructor(
         /** Stable machine id. */
         val id: String,
@@ -1239,6 +1242,19 @@ object StarterKits {
             seeded = false,
             key = KeySpec.parse("Cminpent"),
         ) { com.snipsnap.synth.AccordRoundRobinKits.build() },
+        // CONSORT's starter and its opt-in round robin, appended after ACCORD TAKES.
+        Starter(
+            CONSORT_ID, "CONSORT",
+            "Flute, sax, oboe and duduk alone and in sections: lead lines with octaves, fifths and sevenths, in a room.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.consort() },
+        Starter(
+            com.snipsnap.synth.ConsortRoundRobinKits.ID, "CONSORT TAKES",
+            "The sixteen CONSORT pads with soft, medium and hard breath and two takes on each: play harder to overblow, again to hear another way of playing it.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { com.snipsnap.synth.ConsortRoundRobinKits.build() },
     )
 
     fun byId(id: String): Starter? = ALL.firstOrNull { it.id == id }
