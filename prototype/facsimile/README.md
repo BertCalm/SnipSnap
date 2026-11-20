@@ -220,6 +220,25 @@ some of the other drums, and a replica lane carries none. Not yet shown.
   or more that builds (mostly kick low bands peaking at 20 to 40 ms; 163-d2 by 6 dB in 13
   bands), so the swell rule is a candidate for them too. KNOCK A02 and A04 are now the snare's
   room layer and body on their own.
+- Round 0h (2026-11-20), the knocker kick as tones. The owner heard 0g's kick as still
+  fragmented. Measured with smooth (Hilbert) band envelopes aligned on each hit's attack (a 5
+  ms window rides a 73 Hz waveform and invents holes), 0g's takes each broke differently: one
+  fell to -16 dB at 35 ms and swelled back to -2 at 55, a second thump, another dipped at 45
+  and rose at 60, where every isolated reference kick holds its body within 2 dB for 30 ms
+  and then falls smoothly. The low end was sines (the pitch fall and its harmonics, 147 to
+  293 Hz on fresh random phases each take) plus third-octave noise at the same frequencies,
+  and the two drift in and out of phase at random; the tail tones fading in at 40 to 60 ms
+  added a third source. `fit.tone_only_low` now makes a rebuilt kick tones only under 400 Hz:
+  no noise there, each band's measured power given at each grid time to the harmonic nearest
+  it, and every harmonic phase-locked as in a sampled kick. All four takes now hold a solid
+  body to 35 ms and fall within 2 dB of each other. The reference kick's own tail does pulse
+  (its boom dips at 60 ms, swells, dips at 155 ms and swells back to -9 dB by 200 ms on every
+  isolated kick, in the mix itself, not only in the separated audio), and the tail tones keep
+  that; the replica's dip at 60 ms is shallower (-9 against -20 dB), and its lows start about
+  5 ms before its click. The fit's band distance for the kick rose from 3.15 to 4.42 dB:
+  it now scores a tone where the separated audio holds noise. The knocker groove measured slightly further from its reference (band distance 6.26 to
+  6.75 dB, balance 2.04 to 2.42): the body falls slower than the reference's from 40 to 60 ms
+  and misses its dip at 60 ms. Offered to the owner as an A/B against 0g.
 - Round robin follows the reference's own hit-to-hit spread, clamped to 0.3 to 1.2 dB per band,
   plus fresh noise and phases. Whether that reads as one drum hit again is for the ear.
 - Engine gates: this is a prototype. Velocity and round robin are checked in rendering only;

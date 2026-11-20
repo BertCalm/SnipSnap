@@ -448,6 +448,43 @@ def tail_modes(takes: np.ndarray, clean_s: float) -> list[dict]:
     return sorted(modes, key=lambda m: -m["amp_db"])
 
 
+KICK_TONE_HZ = 400.0     # under this a rebuilt kick is tone only: its pitch fall and harmonics,
+                         # then its tail tones
+
+
+def tone_only_low(partials: list[dict], target: np.ndarray) -> np.ndarray | None:
+    """A rebuilt kick's low end as tones only. Fitted as sines plus third-octave noise at the
+    same frequencies, the two drift in and out of phase at random. Under 100 Hz the knocker
+    kick fell to -23 dB at 35 ms and bounced back twice by 80 ms where the reference holds its
+    body flat for 20 ms and then falls smoothly; and with its harmonics (147, 220, 293 Hz) on
+    fresh random phases each take, two takes in four split the attack into a click, a hole at
+    15 ms and the body, where every reference kick is one solid 20 ms block. Both were heard
+    as a fragmented kick (2026-11-20). So the bands wholly under KICK_TONE_HZ get no noise;
+    at each grid time each band's measured power goes to the harmonic nearest it (a sine of
+    amplitude A has power A^2/2), and every harmonic keeps its phase on every take, as a
+    sampled kick does. Returns the mask of those bands, or None when there is no glide."""
+    glides = [q for q in partials if q["kind"] == "glide"]
+    if not any(q.get("harmonic") == 1 for q in glides):
+        return None
+    low = BAND_EDGES[1:] <= KICK_TONE_HZ * 1.001
+    centres = np.sqrt(BAND_EDGES[:-1] * BAND_EDGES[1:])
+    freqs = np.array([glidefit.freq(q.get("law", "exp"), q["f0"], q["f1"], q["tau_s"], GRID)
+                      for q in glides])
+    power = np.zeros((len(glides), len(GRID)))
+    for b in np.nonzero(low)[0]:
+        near = np.argmin(np.abs(np.log2(freqs / centres[b])), axis=0)
+        power[near, np.arange(len(GRID))] += 10 ** (target[b] / 10)
+    for q, pw in zip(glides, power):
+        env = 10 * np.log10(2 * pw + 1e-30)
+        env = np.maximum(env, FLOOR_DB)
+        pk = int(np.argmax(env))
+        env[pk:] = np.minimum.accumulate(env[pk:])
+        q["env_db"] = env
+        q["lock_phase"] = True
+        q["tone_only_low"] = True
+    return low
+
+
 def hand_over(p: dict) -> None:
     """A low glide partial stops where the tail tones take over: full to 40 ms, -6 dB at 55,
     silent from 75 (the grid's own points around the tones' 40 to 60 ms fade-in)."""
@@ -541,7 +578,9 @@ def fit_drum(drum: dict, work: Path) -> tuple[dict, dict]:
                              share=p["share"]))
 
     # a kick rebuilt whole (drums.kick_first): its low tail as measured tones, phase-locked
-    modes = tail_modes(takes, clean) if (drum.get("kick_first") or {}).get("kick") else []
+    is_kick = bool((drum.get("kick_first") or {}).get("kick"))
+    modes = tail_modes(takes, clean) if is_kick else []
+    tone_low = tone_only_low(partials, target) if is_kick else None
     if modes:
         for p in partials:
             hand_over(p)
@@ -567,6 +606,8 @@ def fit_drum(drum: dict, work: Path) -> tuple[dict, dict]:
         p["env_db"][pk:] = np.minimum.accumulate(p["env_db"][pk:])
 
     noise_db = np.array([strike_shape(r, pk) for r, pk in zip(noise_db, band_peaks)])
+    if tone_low is not None:
+        noise_db[tone_low] = FLOOR_DB
     model = dict(id=drum["id"], length_s=round(length, 3), partials=partials + modes,
                  self_choke=extended_tail,
                  noise_db=noise_db,
@@ -599,6 +640,8 @@ def fit_drum(drum: dict, work: Path) -> tuple[dict, dict]:
             np.asarray(model["noise_db"]) + corr, FLOOR_DB, peak_db + CAP_OVER_PEAK_DB),
             band_peaks)])
         model["noise_db"][:, ends] = FLOOR_DB
+        if tone_low is not None:
+            model["noise_db"][tone_low] = FLOOR_DB
         for p in partials:
             bt = band_index_over_time(p)
             c = corr[bt, cols]

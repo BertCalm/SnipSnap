@@ -759,9 +759,9 @@
  },
  "113-k0": {
   "id": "113-k0",
-  "distance_db": 3.15,
-  "best_pass": 1,
-  "first_distance_db": 3.63,
+  "distance_db": 4.42,
+  "best_pass": 2,
+  "first_distance_db": 4.61,
   "glide": {
    "f0": 195.1382434130197,
    "f1": 73.37770795108551,
