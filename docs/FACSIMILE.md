@@ -135,7 +135,7 @@ the kick). Not heard.
   against 892 Hz hard (the prototype's own first take, other noise: 687 against 998). Over a zone's four takes the
   soft zone is never brighter, which is what the test holds. The knocker kick, rebuilt tone-only under 400 Hz, does
   not have this.
-- **Build time**: SHUFFLE 32 s, KNOCK 35 s, HALF-TIME 59 s, TEXTURE 146 s on this machine (LOOSE CRATE: 45 to 107 s).
+- **Build time**: SHUFFLE 43 s, KNOCK 52 s, HALF-TIME 63 s, TEXTURE 161 s on this machine, the rolls included (LOOSE CRATE: 45 to 107 s).
   TEXTURE's three grooves, the World groove's 287 hits above all, cost the most. Not measured on a phone.
 - **Highs**: the knocker groove's highs measured 5 to 8 dB under its reference in the prototype; the port keeps that.
 - **The World groove's mids** fall more than 6 dB under the reference in about 38% of its sounding frames; the owner
