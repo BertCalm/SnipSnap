@@ -64,6 +64,17 @@ paths. Routing uses fixed arrays at the sample rate. Rendering checks
 cancellation during source generation and propagation, including thread
 interrupts from the phone preview job.
 
+A held key (`FilamentKeys`, `FilamentTouchKeys`, the CURL release prototype) thins
+its launched overtones by register. The source is one twelve-harmonic recipe at
+every pitch, so an untreated held key carries the same bright cluster up the
+keyboard; the owner heard that as "kind of abrasive" in the middle and top and
+"less abrasive" in the bass (20 Nov 2026). Each overtone is scaled by a first-order
+roll-off of its own frequency above `Filament.HELD_TILT_CORNER_HZ` (700 Hz),
+relative to the root, which keeps its level. At C2 only the faint top overtones
+move; at C4, C5 and C6 the 2 to 8 kHz band falls by about 10, 9 and 6 dB against
+the root. Ordinary patch renders, including the held presets, never tilt and stay
+bit-identical. The strength (`Filament.HELD_TILT`) awaits the owner's verdict.
+
 The phone keeps at most eight dry previews and 16 MiB of sample data for one
 SYNTH visit. The cache key includes voice, settled controls, root, velocity,
 configuration and model. Stored audio and returned hits own their arrays;
