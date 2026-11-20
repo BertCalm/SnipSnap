@@ -298,16 +298,29 @@ What changed against this brief:
 
 ## As built: Kotlin round K2, render time (2026-11-20)
 
+The owner heard the K1 audition and approved it: "Sounds good to me", and asked directly whether
+that was after listening, "Yes, I listened; it sounds good". K1's render is the accepted baseline.
+
 K1's audition measured a solo note at a median 109 ms and a section at 324 ms. I had written
 that the player's plan was the cost; timing each stage said otherwise (plan 6 ms of a 53 ms dry
-note; the body 18, the band limit 16). So:
+note; the body 18, the band limit 16). Kept:
 
-- the body runs after the decimator (its filters are linear and under 10 kHz): 18 ms to 5 ms;
-- the room's size search and click response are kept per ROOM value: about 12 ms a render;
+- the room's size search and click response are held per ROOM value: about 12 ms a render;
 - a section's players are blown side by side and seated in chair order, as BREAKER's fill does;
 - the plan's slow curves are worked out every 64 samples and drawn as lines between.
 
-Measured on the 100-clip audition (4 cores): solo median 73 ms, section median 100 ms. All
-clips still file correctly and the solo voices stay within 7.5 cents. Renders are not byte
-identical to K1's (the body's filters now run at 44.1 kHz); nobody had heard K1's.
+Tried and undone: running the body after the decimator. Its filters are linear and under
+10 kHz, and it saved 13 ms a note, but it was not the same sound. Measured on all six voices,
+2 to 5 kHz fell by 0.2 (DUDUK) to 1.9 dB (SAX) against 100 to 500 Hz. The owner's approval came
+before that change was published, on the K1 render, so the filters went back.
 
+Measured on the 100-clip audition (4 cores): solo median 78 ms, section median 116 ms. Against
+the K1 renders, regenerated from commit `5e6290bd`: 99 clips differ by -80 dB or less relative to
+the signal and one (the SAX trill) by -50.7 dB, where the block-rate trill curve moves a finger
+change by a fraction of a millisecond. No clip is byte identical. Nobody has listened for that
+difference; the numbers say there is nothing to hear.
+
+| Claim | Status | Evidence |
+|---|---|---|
+| Kotlin K1 sound | heard | owner, 2026-11-20: "Sounds good to me"; "Yes, I listened; it sounds good" |
+| K2 render against K1 | measured | 100 clips, worst -50.7 dB, median -88 dB re signal |

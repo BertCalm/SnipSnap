@@ -1260,7 +1260,7 @@ Source: the commit that adds this entry. Details: [CONSORT](CONSORT.md).
 
 | Gate | Current evidence | Status |
 |---|---|---|
-| Six melodic voices | FLUTE, SAX, CLARINET, OBOE, BASSOON, DUDUK render and pass pitch, level and classifier probes. Three pipe types; OBOE, SAX and BASSOON differ by reed, edge and formants. The owner heard them in Python only. | Open: Kotlin listening |
+| Six melodic voices | FLUTE, SAX, CLARINET, OBOE, BASSOON, DUDUK render and pass pitch, level and classifier probes. Three pipe types; OBOE, SAX and BASSOON differ by reed, edge and formants. The owner heard and approved the Kotlin K1 audition (2026-11-20). | Sound approved; presets, keygroups and kit open |
 | Presets | Thirteen provisional recipes in `ConsortPresets` (each voice alone and leading a section), taken from the Python audition's settings and not chosen by ear. Held out of `Presets`; the engine is in `PatchTypes.PROTOTYPES`. | Open: listening, then a factory bank |
 | Playable keygroups | None. | Open |
 | Premade kit | None. | Open |

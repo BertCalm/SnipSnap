@@ -60,12 +60,9 @@ enum class ConsortGesture { PLAIN, SCOOP, TRILL, FLUTTER, FALL }
  * re-rolled a few cents and milliseconds, and could hear these (2026-11-19, "this is better").
  *
  * What was heard, and on what: the owner heard the Python prototype over three rounds
- * (docs/prototypes/consort/consort_proto.py) and approved its overall sound, the room at its default and
- * the four takes. **Nobody has heard this Kotlin.** It follows the prototype's structure and constants,
- * but the loop is [Strings.Loop] (an allpass-tuned ring retuned every [BLOCK] samples) where the
- * prototype used a linearly interpolated delay, the body is biquads where the prototype used a
- * zero-phase spectrum gain, and the wash is [Room.bloom] where the prototype convolved decaying noise.
- * Every constant is a "shape" value until a listen on this render backs it.
+ * (docs/prototypes/consort/consort_proto.py), then this engine's K1 audition, and approved it
+ * (2026-11-20: "Yes, I listened; it sounds good"). That render is the accepted baseline; a change here
+ * that moves the sound needs a new listen, and a change that should not is measured against it.
  *
  * HOLD is breath length. Its top step is a long note, not a seamless loop: a loop with a room in it
  * needs the wash to be periodic too, and that is not built. [isLoop] is false for every setting.
@@ -589,11 +586,14 @@ object Consort {
      * tilted up between 300 Hz and a corner that opens with effort; then each formant is a bump that
      * does not move with the note; then the top is rolled off at 9 kHz.
      *
-     * It runs at the output rate, after the decimator. Every stage here is a linear filter working under
-     * 10 kHz, so it has no need of the oversampled rate (only the reed's bend, [rasp], makes new harmonics),
-     * and at a quarter of the samples it costs a quarter: measured, 18 ms of a 53 ms note before the move.
+     * It runs at the internal rate, before the decimator, and that is a listening decision, not a
+     * technical one. Every stage here is a linear filter working under 10 kHz, so K2 moved it to the
+     * output rate to save 13 ms a note. Measured, that darkened every voice: against the 100 to 500 Hz
+     * band, 2 to 5 kHz fell by 0.2 (DUDUK) to 1.9 dB (SAX), because a one-pole and a biquad are not the
+     * same filter at 44.1 kHz as at 176.4 kHz. The owner had approved the sound with the filters here
+     * (2026-11-20), so they stay here. [rate] is a parameter only so a probe can repeat that measurement.
      */
-    internal fun body(x: FloatArray, voice: ConsortVoice, effort: Float, rate: Int = RATE) {
+    internal fun body(x: FloatArray, voice: ConsortVoice, effort: Float, rate: Int = INTERNAL) {
         val s = spec(voice)
         val tilt = s.tiltHz * Dsp.expMap(effort, 0.45f, 1.6f)
         val low = Dsp.FixedOnePole(150f, rate)
@@ -615,9 +615,9 @@ object Consort {
         val p = plan(voice, midi, velocity, m, role, frames * Dsp.OVERSAMPLE, take)
         val raw = blow(voice, Keys.midiHz(midi), p)
         rasp(raw, voice, p.effort)
+        body(raw, voice, p.effort)
         Tide.bandLimit(raw, INTERNAL)
         val y = Dsp.decimate(raw, RATE)
-        body(y, voice, p.effort)
         var sum = 0.0
         val from = min((0.1f * RATE).toInt(), y.size / 2)
         for (i in from until y.size) sum += y[i].toDouble() * y[i]
