@@ -262,7 +262,7 @@ Three authored boom-bap kits after the owner's muffled-kick, drunk-clock, foley-
 | Velocity and round robin: saving | Pass | Each kit reloads equal and every saved slice matches its render (`:shell:generateStaggerKits`). |
 | Velocity and round robin: playback | Pass in software | `PadHit.resolve` picks the zone by velocity and deals the takes in order, then repeats (`StaggerKitTest`). No phone has played these kits. |
 | Velocity and round robin: export | MPC 3 verified by read-back; MPC 2 not applicable (the owner's format limit, 2026-11-14) | `StaggerKitTest`, the generator. SFZ and DecentSampler written. No MPC has loaded these kits. |
-| Sound character | CARDBOARD's drums approved in direction ("New sounds are better"); round 2 heard as wanting "a bit of compression" (2026-11-19), which round 2b adds to every kit's print, measured; the kits as kits not yet accepted | The round-2b listening page. |
+| Sound character | CARDBOARD's drums approved in direction ("New sounds are better"); round 2 heard as wanting "a bit of compression" (2026-11-19); round 2b's press heard as "echoy" (2026-11-20), measured as the room lifted 11 dB; round 2c presses the hits lightly and fast and leaves the room where it was; the kits as kits not yet accepted | The round-2c listening page. |
 
 ## CYPHER kits and THUMP SUB (round 2, 2026-11-12)
 

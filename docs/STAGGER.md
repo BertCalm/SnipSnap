@@ -13,6 +13,22 @@ barely hear, or none → the clock drags and catches up → a cartoon lands wher
 
 ## Status
 
+**Round 2c built (2026-11-20): "It made it echoy."** The owner heard round 2b's press as echoy. The sustain compressor
+presses the body and the peak match lifts everything under it, and under an EMBER drum that is the club's response
+baked into every hit: measured, round 2b's press lifted the snares' tails 12 to 14 dB and CARDBOARD's groove's quiet
+moments 11 dB (from 25 dB under its loudest to 15), the room coming forward, which the first round's measurements had
+recorded as "the tail comes up" and read as glue. Round 2c (`StaggerKits` version 4) presses the hits with a fast,
+light press instead (`PRESS`: ATTACK .15, RECOVER .20, AMOUNT .25), measured on the kick, the snare and the groove
+before choosing, and the grooves take no second press: their room's bus is their press.
+
+Measured (`StaggerKitsTest`): the snares' crest falls 0.7, 0.9 and 2.3 dB (CARDBOARD, MATINEE, STUMBLE) and their tails
+rise 4.2, 2.9 and 6.2 dB (round 2b: 11.8, 7.9 and 17.4); the kicks' crests rise 0.9 to 1.4 dB and their tails move
+within 1.1 dB; every groove's quiet tenth sits 24 to 25 dB under its loudest, where round 2's did (round 2b: 15), and the
+grooves' ceilings are round 2's again (579, 636 and 495 Hz). The test now bounds a snare's tail lift to 2 to 8 dB and
+holds every groove's quiet tenth at least 20 dB under its loudest, so the echo cannot come back unnoticed.
+
+The round 2c listening page and the shelf generator's proof follow in the next commit.
+
 **Round 2b built (2026-11-19): "maybe we need a bit of compression."** The owner heard the round-2 page and asked for a
 bit of compression. The single pads had none (only the grooves went through a bus), so every kit's print now presses
 its pads between the converter and the tape (`StaggerKits.PRESS`: COMPRESSOR at AMOUNT .40, ATTACK .25, RECOVER .45,
