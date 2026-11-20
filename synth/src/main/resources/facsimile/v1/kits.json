@@ -313,7 +313,7 @@
     },
     {
      "pad": "A03",
-     "name": "Doves 808",
+     "name": "Doves Sub",
      "class": "KICK",
      "layers": [
       "127-d3"
@@ -321,7 +321,7 @@
     },
     {
      "pad": "A04",
-     "name": "Doves 808 Low",
+     "name": "Doves Sub Low",
      "class": "KICK",
      "layers": [
       "127-d1"
@@ -329,7 +329,7 @@
     },
     {
      "pad": "A05",
-     "name": "Mover 808",
+     "name": "Mover Sub",
      "class": "KICK",
      "layers": [
       "154-d5"
@@ -434,7 +434,7 @@
    "pads": [
     {
      "pad": "A01",
-     "name": "Tom Beat 808",
+     "name": "Tom Beat Sub",
      "class": "KICK",
      "layers": [
       "134-d5"
@@ -490,7 +490,7 @@
     },
     {
      "pad": "A08",
-     "name": "World 808",
+     "name": "World Sub",
      "class": "KICK",
      "layers": [
       "163-d5"

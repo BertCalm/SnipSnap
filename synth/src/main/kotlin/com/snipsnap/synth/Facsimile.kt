@@ -143,63 +143,89 @@ object Facsimile {
      * One strike of [model] at [velocity] (0.05..1) and round-robin [take], at the output rate, unlevelled. Pure: the
      * same arguments give the same samples (`FacsimileTest`).
      */
-    fun render(model: Model, velocity: Float, take: Int): FloatArray {
-        val rate = Dsp.RATE * Dsp.OVERSAMPLE
-        val n = (model.lengthS * rate).toInt()
-        val v = velocity.toDouble().coerceIn(0.05, 1.0)
-        val soft = 1.0 - v
-        val scaleT = 1.0 - model.decayLoss * soft
+    fun render(model: Model, velocity: Float, take: Int): FloatArray = renderMany(model, floatArrayOf(velocity), take)[0]
+
+    /** A take's random choices, drawn in one fixed order so every velocity of the take makes the same choices. */
+    private class Draws(val cents: DoubleArray, val tau: DoubleArray, val phase: DoubleArray, val level: DoubleArray,
+                        val bandLevel: DoubleArray)
+
+    private fun draws(model: Model, take: Int): Draws {
         val firstTake = take == 0
         val rng = Random(Dsp.seedFor("facsimile", model.id, take))
         fun gauss(): Double {
             val u1 = 1.0 - rng.nextDouble()
             return sqrt(-2.0 * ln(u1)) * cos(2.0 * PI * rng.nextDouble())
         }
-        val out = DoubleArray(n)
-
-        for (p in model.partials) {
+        val np = model.partials.size
+        val cents = DoubleArray(np); val tau = DoubleArray(np); val phase = DoubleArray(np); val level = DoubleArray(np)
+        for ((i, p) in model.partials.withIndex()) {
             if (p.kind == "mode") {
-                val cents = if (firstTake) 0.0 else gauss() * model.pitchCents
-                val levelDb = if (firstTake) 0.0 else gauss() * model.bandSigmaDb
-                addMode(out, p, rate, cents, levelDb, scaleT)
+                cents[i] = if (firstTake) 0.0 else gauss() * model.pitchCents
+                level[i] = if (firstTake) 0.0 else gauss() * model.bandSigmaDb
                 continue
             }
-            val cents = if (firstTake) 0.0 else gauss() * model.pitchCents
-            val detune = 2.0.pow(cents / 1200.0)
-            // a softer strike: the pitch falls less far
-            val depth = 1.0 - model.glideDepthLoss * soft
-            val f1 = p.f1 * detune
-            val f0 = f1 + (p.f0 * detune - f1) * depth
-            val tau = p.tauS * (if (firstTake) 1.0 else 1.0 + gauss() * model.tauSpread)
-            val phase0 = if (firstTake || p.lockPhase) p.phase else rng.nextDouble() * 2.0 * PI
-            val levelDb = if (firstTake) 0.0 else gauss() * model.bandSigmaDb
-            val env = envelope(requireNotNull(p.envDb), levelDb, n, rate, scaleT)
-            var ph = phase0
-            val still = tau <= 0.0 || abs(f0 - f1) < 1e-6
-            val decay = if (still) 0.0 else exp(-1.0 / (tau * rate))
-            var e = 1.0
-            val ceiling = rate * 0.45
-            for (i in 0 until n) {
-                val f = if (still) f1 else if (p.law == "logexp") f1 * (f0 / f1).pow(e) else f1 + (f0 - f1) * e
-                ph += 2.0 * PI * min(f, ceiling) / rate
-                out[i] += sin(ph) * env[i]
-                e *= decay
-            }
+            cents[i] = if (firstTake) 0.0 else gauss() * model.pitchCents
+            tau[i] = p.tauS * (if (firstTake) 1.0 else 1.0 + gauss() * model.tauSpread)
+            phase[i] = if (firstTake || p.lockPhase) p.phase else rng.nextDouble() * 2.0 * PI
+            level[i] = if (firstTake) 0.0 else gauss() * model.bandSigmaDb
         }
+        val bandLevel = DoubleArray(model.noiseDb.size) { b ->
+            if (model.noiseDb[b].max() <= FLOOR_DB + 1 || firstTake) 0.0 else gauss() * model.bandSigmaDb
+        }
+        return Draws(cents, tau, phase, level, bandLevel)
+    }
 
-        // Level follows velocity squared (a ghost at .5 is about -12 dB); the tilt's energy is given back.
-        val gain = v * v * tiltCompensation(model, soft)
+    /**
+     * [render] at each of [velocities] for one [take], sharing the work velocity does not change: the take's noise
+     * is one stream at every velocity (velocity moves each band's level, tilt and decay, not the noise), so each band
+     * is filtered once for all of them. A groove asks for a drum at up to some twenty velocities per take; filtering
+     * once makes it about twenty times less work, with the same samples as [render] at each velocity.
+     */
+    fun renderMany(model: Model, velocities: FloatArray, take: Int): List<FloatArray> {
+        val rate = Dsp.RATE * Dsp.OVERSAMPLE
+        val n = (model.lengthS * rate).toInt()
+        val d = draws(model, take)
+        val vs = DoubleArray(velocities.size) { velocities[it].toDouble().coerceIn(0.05, 1.0) }
         val ramp = (ONSET_RAMP_S * rate).toInt()
-        val raw = FloatArray(n) { i -> (out[i] * gain * (if (i < ramp) i.toDouble() / ramp else 1.0)).toFloat() }
-        // The partials are the only part that can alias (a pitch falling from kilohertz): band-limited and decimated.
-        Tide.bandLimit(raw, rate)
-        val x = Dsp.decimate(raw, Dsp.RATE)
+        val gains = DoubleArray(vs.size)
+        val outs = vs.mapIndexed { k, v ->
+            val soft = 1.0 - v
+            val scaleT = 1.0 - model.decayLoss * soft
+            val out = DoubleArray(n)
+            for ((i, p) in model.partials.withIndex()) {
+                if (p.kind == "mode") { addMode(out, p, rate, d.cents[i], d.level[i], scaleT); continue }
+                val detune = 2.0.pow(d.cents[i] / 1200.0)
+                // a softer strike: the pitch falls less far
+                val depth = 1.0 - model.glideDepthLoss * soft
+                val f1 = p.f1 * detune
+                val f0 = f1 + (p.f0 * detune - f1) * depth
+                val tau = d.tau[i]
+                val env = envelope(requireNotNull(p.envDb), d.level[i], n, rate, scaleT)
+                var ph = d.phase[i]
+                val still = tau <= 0.0 || abs(f0 - f1) < 1e-6
+                val decay = if (still) 0.0 else exp(-1.0 / (tau * rate))
+                var e = 1.0
+                val ceiling = rate * 0.45
+                for (j in 0 until n) {
+                    val f = if (still) f1 else if (p.law == "logexp") f1 * (f0 / f1).pow(e) else f1 + (f0 - f1) * e
+                    ph += 2.0 * PI * min(f, ceiling) / rate
+                    out[j] += sin(ph) * env[j]
+                    e *= decay
+                }
+            }
+            // Level follows velocity squared (a ghost at .5 is about -12 dB); the tilt's energy is given back.
+            gains[k] = v * v * tiltCompensation(model, soft)
+            val raw = FloatArray(n) { j -> (out[j] * gains[k] * (if (j < ramp) j.toDouble() / ramp else 1.0)).toFloat() }
+            // The partials are the only part that can alias (a pitch falling from kilohertz): band-limited, decimated.
+            Tide.bandLimit(raw, rate)
+            Dsp.decimate(raw, Dsp.RATE)
+        }
 
         // The noise is band-limited by its own filters, so it runs at the output rate: four times less work than the
         // prototype's, which filtered it at 4x (every band edge is under 17 kHz; the filters are pre-warped there).
         // Every band shares one stream, as the fit's did, filtered per band after a lead-in.
         val out1 = Dsp.RATE
-        val n1 = x.size
+        val n1 = outs[0].size
         val warm = (WARM_S * out1).toInt()
         val noiseRng = Random(Dsp.seedFor("facsimile", model.id, "noise", take))
         val noise = DoubleArray(n1 + warm) {
@@ -210,16 +236,20 @@ object Facsimile {
         for ((b, envDb) in model.noiseDb.withIndex()) {
             if (envDb.max() <= FLOOR_DB + 1) continue
             val centre = sqrt(BAND_EDGES[b] * BAND_EDGES[b + 1])
-            val tilt = model.tiltDbPerOct * soft * log2(centre / 1000.0)
-            val levelDb = tilt + (if (firstTake) 0.0 else gauss() * model.bandSigmaDb)
             val y = filtered(noise, bandpass(BAND_EDGES[b], BAND_EDGES[b + 1], out1, ORDER))
             var energy = 0.0
             for (i in warm until y.size) energy += y[i] * y[i]
-            val norm = gain / (sqrt(energy / n1) + 1e-12)
-            val env = envelope(envDb, levelDb, n1, out1, scaleT)
-            for (i in 0 until n1) x[i] += (y[warm + i] * norm * env[i] * (if (i < ramp1) i.toDouble() / ramp1 else 1.0)).toFloat()
+            val unit = 1.0 / (sqrt(energy / n1) + 1e-12)
+            for ((k, v) in vs.withIndex()) {
+                val soft = 1.0 - v
+                val tilt = model.tiltDbPerOct * soft * log2(centre / 1000.0)
+                val env = envelope(envDb, tilt + d.bandLevel[b], n1, out1, 1.0 - model.decayLoss * soft)
+                val x = outs[k]
+                val norm = gains[k] * unit
+                for (i in 0 until n1) x[i] += (y[warm + i] * norm * env[i] * (if (i < ramp1) i.toDouble() / ramp1 else 1.0)).toFloat()
+            }
         }
-        return finish(x)
+        return outs.map { finish(it) }
     }
 
     private fun addMode(out: DoubleArray, p: Partial, rate: Int, cents: Double, levelDb: Double, scaleT: Double) {
@@ -374,34 +404,39 @@ object Facsimile {
      * A reference loop re-performed with its replica drums: every hit where the reference had it, as hard as it was,
      * each repeat dealing the next of four takes. A drum in [choke] (or one that chokes itself) is cut at the next
      * hit of its group with a 6 ms fade, as an 808 on a sampler pad. The loop wraps: tails ring into bar one.
-     * [strike] renders a drum at a velocity and take (the kit passes its cache). [takeShift] rotates every drum's
-     * takes, a fresh pass of the same performance. Not glued, not levelled.
+     * [takeShift] rotates every drum's takes, a fresh pass of the same performance; [velocityScale] plays every note
+     * softer (a soft zone of the groove pad: softer strikes, not a quieter copy). Not glued, not levelled.
      */
-    fun groove(loop: Loop, choke: Set<String>, takeShift: Int = 0, velocityScale: Float = 1f,
-               strike: (Model, Float, Int) -> FloatArray = ::render): FloatArray {
+    fun groove(loop: Loop, choke: Set<String>, takeShift: Int = 0, velocityScale: Float = 1f): FloatArray {
         val n = round(loop.seconds * Dsp.RATE).toInt()
         val out = FloatArray(n)
         for ((id, model) in loop.drums) {
             val events = model.events.sortedBy { it.t }
             val group = if (id in choke) choke else if (model.selfChoke) setOf(id) else emptySet()
             val groupStarts = group.flatMap { g -> loop.drums[g]?.events.orEmpty().map { round(it.t * Dsp.RATE).toInt() } }
-            for ((i, e) in events.withIndex()) {
-                val v = quantise(velocityOf(e.gain) * velocityScale)
-                var y = strike(model, v, (i + takeShift) % TAKES)
-                val start = round(e.t * Dsp.RATE).toInt()
-                if (group.isNotEmpty()) {
-                    val next = groupStarts.map { Math.floorMod(it - start, n) }.filter { it > 0 }.minOrNull()
-                    if (next != null && next < y.size) {
-                        y = y.copyOf()
-                        val fade = (CHOKE_FADE_S * Dsp.RATE).toInt()
-                        // the prototype's linspace(1, 0, L): from 1 to exactly 0 over the fade
-                        val from = max(0, next - fade)
-                        val len = next - from
-                        for (j in 0 until len) y[from + j] *= if (len > 1) 1f - j.toFloat() / (len - 1) else 1f
-                        for (k in next until y.size) y[k] = 0f
+            // every note's take and velocity, then each take's velocities rendered together (renderMany)
+            val notes = events.mapIndexed { i, e -> Triple(round(e.t * Dsp.RATE).toInt(), (i + takeShift) % TAKES, quantise(velocityOf(e.gain) * velocityScale)) }
+            for (take in 0 until TAKES) {
+                val mine = notes.filter { it.second == take }
+                if (mine.isEmpty()) continue
+                val vs = mine.map { it.third }.distinct().sorted()
+                val strikes = vs.zip(renderMany(model, vs.toFloatArray(), take)).toMap()
+                for ((start, _, v) in mine) {
+                    var y = strikes.getValue(v)
+                    if (group.isNotEmpty()) {
+                        val next = groupStarts.map { Math.floorMod(it - start, n) }.filter { it > 0 }.minOrNull()
+                        if (next != null && next < y.size) {
+                            y = y.copyOf()
+                            // the prototype's linspace(1, 0, L): from 1 to exactly 0 over the fade
+                            val fade = (CHOKE_FADE_S * Dsp.RATE).toInt()
+                            val from = max(0, next - fade)
+                            val len = next - from
+                            for (j in 0 until len) y[from + j] *= if (len > 1) 1f - j.toFloat() / (len - 1) else 1f
+                            for (k in next until y.size) y[k] = 0f
+                        }
                     }
+                    for (k in y.indices) out[(start + k) % n] += y[k]
                 }
-                for (k in y.indices) out[(start + k) % n] += y[k]
             }
         }
         return out
