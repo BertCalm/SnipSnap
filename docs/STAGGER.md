@@ -13,10 +13,10 @@ barely hear, or none → the clock drags and catches up → a cartoon lands wher
 
 ## Status
 
-**Sound approved (2026-11-20): "3D works", then "All three kits pass, gong too."** The owner heard the round 3d page
-(every pad of all three kits, the converter at 16 bits blended half clean, the modal Dark Gong) and passed CARDBOARD,
-MATINEE and STUMBLE. Kit version 9 is the accepted baseline. Open: the phone and MPC gates (no phone has played these
-kits and no MPC has loaded them).
+**Complete (2026-11-20): sound approved, phone and MPC gates passed.** The owner heard the round 3d page (every pad
+of all three kits, the converter at 16 bits blended half clean, the modal Dark Gong) and said "3D works", then "All
+three kits pass, gong too"; after playing the kits on the phone and loading them on the MPC, "phone works, MPC loads
+and plays". Kit version 9 is the accepted baseline.
 
 **Round 3d built (2026-11-20): "I think the 12-bit is too high. The bit crushing is overly effecting the sound."**
 Measured on the kits' own pads, each converter stage switched off in turn against the print with the converter clean
@@ -369,8 +369,8 @@ the phrases only.
 | Melodic, keygroups, chord tools, STRUM | Not applicable: drum kits |
 | Drums: multiple distinct genre kits on the shelf | Pass: three kits under SKINS, held apart by `StaggerKitsTest`, and passed by the owner (2026-11-20, "All three kits pass, gong too") |
 | Percussion: roll/riser | Pass: a timpani roll, a timpani riser into the crash gong (the timpani keep their club), a dragging snare roll (dry, round 2d), one per kit; passed with the kits (2026-11-20) |
-| Velocity and round robin: rendering | Pass in software: every soft zone a different strike from the hard one and no brighter; every zone holds four different strikes (`StaggerKitsTest`) |
-| Velocity and round robin: saving, playback, export | Pass in software: `StaggerKitTest` and `:shell:generateStaggerKits` (all three kits, 192 slices each: saved PCM, reload, the pad resolver walking the takes, MPC 3 track, SFZ, DecentSampler). MPC 2 is not written (the owner's format limit). Not played on a phone or an MPC |
+| Velocity and round robin: rendering | Pass: every soft zone a different strike from the hard one and no brighter; every zone holds four different strikes (`StaggerKitsTest`) |
+| Velocity and round robin: saving, playback, export | Pass: `StaggerKitTest` and `:shell:generateStaggerKits` (all three kits, 192 slices each: saved PCM, reload, the pad resolver walking the takes, MPC 3 track, SFZ, DecentSampler). MPC 2 is not written (the owner's format limit). Owner-reported pass on the phone and the MPC, 2026-11-20 ("phone works, MPC loads and plays") |
 | Sound character | Approved, all three kits (the owner, 2026-11-20: "3D works", then "All three kits pass, gong too"); kit version 9 is the accepted baseline |
 
 ## What was measured while building (Kotlin, `StaggerKitsTest`, this cloud JVM)

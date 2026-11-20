@@ -1,7 +1,7 @@
-> STAGGER (sound approved 2026-11-20, all three kits and the gong, at kit version 9; hardware open. Round 3d: 16-bit words and a half-clean converter after the bit crushing was heard as too much; round 3c rebuilt the Dark Gong as a modal gong; round 3b damped and opened the snare after round 3's "flat, muffled, and muddy"; round 3 boxed the kicks after round 2d's "light taps"; round 2c was "room reverb", round 2b "echoy", round 1 "too much like drum machine sounds", round 1b "New sounds are better"):
+> STAGGER kits (complete 2026-11-20: sound approved, phone and MPC gates passed, at kit version 9). Round 3d: 16-bit words and a half-clean converter after the bit crushing was heard as too much; round 3c rebuilt the Dark Gong as a modal gong; round 3b damped and opened the snare after round 3's "flat, muffled, and muddy"; round 3 boxed the kicks after round 2d's "light taps"; round 2c was "room reverb", round 2b "echoy", round 1 "too much like drum machine sounds", round 1b "New sounds are better"):
 > three kits, CARDBOARD, MATINEE and STUMBLE, on the SKINS shelf, after the owner's muffled-kick, drunk-clock, foley-fill
-> producer profile, in the CYPHER shape, their drums EMBER's, proven through save, playback and MPC 3 export in software; a MUFFLE strike law, the `Cypher.staggered` clock, a kit-side
-> converter-then-pitch FOLEY print, a GLASS source and a PUNCH strike. Not on the shelf. See [STAGGER](STAGGER.md).
+> producer profile, in the CYPHER shape, their drums EMBER's, proven through save, playback and MPC 3 export in software and on the owner's phone and MPC; a MUFFLE strike law, the `Cypher.staggered` clock, a kit-side
+> converter-then-pitch FOLEY print, a GLASS source, a PUNCH strike and a modal GONG. See [STAGGER](STAGGER.md).
 
 > LOOSE CRATE kits (complete 2026-11-18: sound approved, phone and MPC gates passed): four beat-tape drum kits in
 > the CYPHER shape, HUMMIN, CLOTH, HAZE and RITUAL, aimed at measurements of the owner's reference loops. Every
