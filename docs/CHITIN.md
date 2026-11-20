@@ -114,9 +114,9 @@ steps: HUSK 4.1 and 2.7 dB, STING 2.3 and 2.1 dB, GLINT 5.3 and 3.8 dB, HUM 4.3 
 Weak spots named before the round (the owner's only note was GLINT's): STING is the closest to a kept voice (WING); HUSK's body is a bare sine,
 which may be too plain under the moving band; GLINT is close to a sine once the strike has passed (root share .79).
 
-## GLINT tweak: glassiness (after chitin-voices-1, unheard)
+## GLINT tweak: glassiness (after chitin-voices-1; kept in fix-glint-1)
 
-Status: **built, measured, unheard**; GLINT stays a candidate until the owner hears it. The note was "Missing
+Status: **kept** (CX1 KEEP, below). The note was "Missing
 glassiness": the heard GLINT was close to a sine once the strike had passed, because its synced slave can only
 make harmonics and its bend died with the strike.
 
@@ -152,10 +152,13 @@ at the house loudness: the tone change was enough, so GLINT needs no level diffe
 Measured (Kotlin, C4, level-matched): touch steps 23.9 and 18.1 dB (was 5.2 and 3.5), 40.1 dB soft to hard (was
 8.7). Glass partials against the root at .9 s: soft .04, medium .26, hard .84 (was .58, .68, .84); upper partials
 in the first 50 ms: .04, .47, 3.59 (was .91, 1.82, 3.59). The touch test's floor for GLINT is now 12 dB (others .5).
-Unheard: clip CY1 plays the old soft, medium and hard, then the new ones.
+Clip CY1 played the old soft, medium and hard, then the new ones.
 
-**Ship step, pending the verdict on GLINT's touch.** Should the owner keep the touch, GLINT is already set up as
+## GLINT kept as the seventh voice (round touch-glint-1, 2026-11-20)
+
+Verdict: the new soft, medium and hard touch (CY1) **KEEP**, no note; hard is the kept CX1 sound. So GLINT is
 CHITIN's seventh voice: it is in `Chitin.KEPT_VOICES` (so the app's picker offers it), it has one preset named GLINT
 at its default controls and full touch (the kept CX1 middle note), and its six heard renders (C3, C4, G4 and C5 at
-full touch; soft .35 and medium .7 at C4) are pinned in `chitin/kept-voices-v1.sha256`. There is still no starter;
-the CHITIN kit stays SHELL and WING. If the touch is tweaked again, only the two touch pins move.
+full touch; soft .35 and medium .7 at C4) are pinned in `chitin/kept-voices-v1.sha256`. Re-rendered before the PR, CY1
+and CX1's after half match the heard clips byte for byte. There is still no starter; the CHITIN kit stays SHELL and
+WING.

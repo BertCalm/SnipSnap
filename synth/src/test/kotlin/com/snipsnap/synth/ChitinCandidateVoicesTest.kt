@@ -16,7 +16,7 @@ import kotlin.test.assertTrue
  * model that SHELL and WING leave unused: HUSK the phaser's correction alone, STING the product of
  * the synced pair, GLINT the slave bending the root sine's phase, HUM the master pulse's width,
  * PINCER SHELL's source plucked with the excursion run backwards. The owner kept HUSK, STING, HUM and
- * PINCER (20 Nov 2026, range and touch), and GLINT after its glass (fix-glint-1) and touch (pending)
+ * PINCER (20 Nov 2026, range and touch), and GLINT after its glass (fix-glint-1) and touch (touch-glint-1)
  * tweaks. SHELL and WING are pinned below against the build before this round, and the heard renders of
  * the five in `chitin/kept-voices-v1.sha256`.
  */
