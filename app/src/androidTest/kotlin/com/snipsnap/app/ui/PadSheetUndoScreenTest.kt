@@ -259,4 +259,35 @@ class PadSheetUndoScreenTest : ComposeScreenTest() {
         waitForToast(Copy.KERF_UNDO_NOTHING)
         assertTrue("a refused UNDO touches nothing", original.contentEquals(File(entry.dir, "hit1.wav").readBytes()))
     }
+
+    /**
+     * BLEED on a twin re-cuts it from its own numbers when let go, with no new take in the bin, so UNDO SYNTH TWIN
+     * still gives the capture afterwards. Moved through the slider's adjust action, the one TalkBack uses.
+     */
+    @Test
+    fun synth_twin_bleed_recuts_the_twin_and_its_undo_still_gives_the_capture() {
+        val entry = kit()
+        val original = File(entry.dir, "hit1.wav").readBytes()
+        KitBuilderModel.open(entry.dir).apply { kerfPad(1); save() }
+        val made = File(entry.dir, "hit1.wav").readBytes()
+        val takes = KitBuilderModel.open(entry.dir).priorTakes(1).size
+
+        show(KitShelf.Entry(entry.dir, KitStore.load(entry.dir)), openBox = PadSheetBoxes.Box.MAKE.name, page = PadSheetPage.MAKE)
+        waitFor("the twin's BLEED to be live", timeoutMillis = 60_000) {
+            val node = nodes("SYNTH TWIN BLEED").singleOrNull()
+            node != null && node.config.getOrNull(SemanticsActions.SetProgress) != null
+        }
+        compose.onNodeWithContentDescription("SYNTH TWIN BLEED", useUnmergedTree = true)
+            .performSemanticsAction(SemanticsActions.SetProgress) { it(1f) }
+        pump()
+        waitFor("the re-cut to be saved", timeoutMillis = 60_000) {
+            com.snipsnap.shell.Breed.recipeOf(savedPad(entry))?.kerf?.bleed == 2.0
+        }
+        assertFalse("the pad's audio is the new cut", made.contentEquals(File(entry.dir, "hit1.wav").readBytes()))
+        assertEquals("no new take in the bin", takes, KitBuilderModel.open(entry.dir).priorTakes(1).size)
+
+        activate("UNDO SYNTH TWIN")
+        waitForToast(Copy.UNKERFED)
+        assertTrue("after a re-cut, the undo is still the capture", original.contentEquals(File(entry.dir, "hit1.wav").readBytes()))
+    }
 }

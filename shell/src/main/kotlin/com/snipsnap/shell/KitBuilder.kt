@@ -906,24 +906,57 @@ class KitBuilderModel private constructor(
      * The pad takes KERF's own label ([com.snipsnap.synth.KerfFit.label]), the owner's choice of 2026-11-19 over the
      * capture classifier; what it was called before is kept for the undo. A twin is mono and a one-shot: a stereo pad
      * is summed and a pad past the one-shot limit is cut there. Refused, touching nothing: a printed pad (as
-     * DE-SAMPLE refuses one), a layered or chained pad ([requireRewritable]), a pad too short to measure.
+     * DE-SAMPLE refuses one), a layered or chained pad ([requireRewritable]), a pad too short to measure, and a pad
+     * that is a twin already ([Copy.KERF_ALREADY]: its BLEED and SLOP re-cut it, [recutKerfPad], and a twin of a
+     * twin would measure the render, not the capture).
      */
     fun kerfPad(slot: Int, bleed: Double = 1.0, slop: Double = 0.5): KitPad = kerf(listOf(slot), bleed, slop).single()
 
-    /** [kerfPad] for every pad that can take it, each fitted once; the pads it had to leave alone are named, not failed. */
+    /**
+     * [kerfPad] for every pad that can take it, each fitted once: SYNTH TWIN ALL on the kit screen, and the CLI's
+     * `--all`. The pads it leaves alone are named with the reason, not failed: [KerfKit.left] for those no audio
+     * rewrite may touch or that are too short, [KerfKit.already] for twins already, whose own numbers still serve
+     * as their neighbours' neighbours.
+     */
     fun kerfKit(bleed: Double = 1.0, slop: Double = 0.5): KerfKit {
-        val left = LinkedHashMap<Int, String>()
-        val can = kit.pads.sortedBy { it.slot }.filter { pad -> kerfRefusal(pad)?.also { left[pad.slot] = it } == null }
-        return KerfKit(kerf(can.map { it.slot }, bleed, slop), left)
+        val left = LinkedHashMap<Int, String>(); val already = ArrayList<Int>()
+        val can = kit.pads.sortedBy { it.slot }.filter { pad ->
+            if (isKerfSource(pad)) { already += pad.slot; false } else kerfRefusal(pad)?.also { left[pad.slot] = it } == null
+        }
+        return KerfKit(kerf(can.map { it.slot }, bleed, slop), left, already)
     }
 
-    class KerfKit(val made: List<KitPad>, val left: Map<Int, String>)
+    class KerfKit(val made: List<KitPad>, val left: Map<Int, String>, val already: List<Int> = emptyList())
 
     private fun kerfRefusal(pad: KitPad): String? = when {
         PrintedPads.has(pad.recipe) -> "printed"
         pad.velocityLayers.isNotEmpty() -> "velocity-layered"
         pad.chain != null -> "a chain"
         else -> kerfAudio(pad).let { if (it.size < KERF_MIN_FRAMES) "too short to measure" else null }
+    }
+
+    /** Whether [pad]'s recipe carries a twin, bare or with something riding it: its audio is a render, not a capture. */
+    private fun isKerfSource(pad: KitPad): Boolean = Breed.recipeOf(pad)?.kerf != null
+
+    /**
+     * BLEED and SLOP on a twin that is already made: the pad re-cut from its own saved numbers, with no new measure.
+     * About a tenth of a second, so the pad sheet can do it on a slider's release.
+     *
+     * Not bin-backed, on purpose. The twin's render is the recipe's to make again at any time, so the render it
+     * replaces is not lost; and the newest take in the bin stays the capture, so UNDO SYNTH TWIN still gives the
+     * capture back after any number of re-cuts. A bin entry per drag would push it down under renders nobody needs.
+     *
+     * Refused, touching nothing, unless the bare twin is what sits on the pad ([PadSheet.isKerfTwin]): with pedals or
+     * a print over it, a re-cut would write under them or over them.
+     */
+    fun recutKerfPad(slot: Int, bleed: Double, slop: Double): KitPad {
+        val pad = requireRewritable(slot)
+        require(PadSheet.isKerfTwin(pad)) { Copy.KERF_RIDDEN }
+        val old = requireNotNull(Breed.recipeOf(pad)?.kerf)
+        val recipe = old.copy(bleed = bleed.coerceIn(0.0, 4.0), slop = slop.coerceIn(0.0, 1.0))
+        if (recipe == old) return pad
+        WavWriter.write(File(kitDir, pad.sampleFile), recipe.render())
+        return update(slot) { it.copy(recipe = com.snipsnap.synth.PadRecipe(kerf = recipe).toJsonValue()) }
     }
 
     /** A pad's audio as the fitter takes it: mono, at the kit's rate, no longer than a one-shot. */
@@ -938,12 +971,16 @@ class KitBuilderModel private constructor(
         for (slot in slots) {
             val pad = requireRewritable(slot)
             require(!PrintedPads.has(pad.recipe)) { Copy.boardRemoveBeforeKerf(PrintedPads.label(pad.recipe)) }
+            require(!isKerfSource(pad)) { Copy.KERF_ALREADY }
         }
         // Every pad with plain audio is a possible neighbour, whether or not it is being replaced. Fitted before
         // anything is written, so a neighbour is measured from its capture and never from its own twin.
         val ordered = kit.pads.sortedBy { it.slot }.filter { it.velocityLayers.isEmpty() && it.chain == null }
         val audio = HashMap<Int, FloatArray>(); val fits = HashMap<Int, com.snipsnap.synth.KerfPatchData>()
         fun fitOf(pad: KitPad): com.snipsnap.synth.KerfPatchData? = fits[pad.slot] ?: run {
+            // A pad that is a twin already was measured from its capture when it was made: those numbers stand in
+            // for it as a neighbour, so a neighbour is never measured from a twin's own render.
+            Breed.recipeOf(pad)?.kerf?.patch?.let { fits[pad.slot] = it; return@run it }
             val a = audio.getOrPut(pad.slot) { kerfAudio(pad) }
             if (a.size < KERF_MIN_FRAMES) null
             else com.snipsnap.synth.KerfFit.fit(a, com.snipsnap.synth.KerfFit.seedFor(kit.name, pad.sampleFile, pad.slot)).also { fits[pad.slot] = it }

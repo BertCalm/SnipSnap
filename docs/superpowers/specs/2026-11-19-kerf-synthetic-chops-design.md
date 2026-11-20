@@ -2,12 +2,12 @@
 
 Version 1.0 · 2026-11-19
 
-Status: rounds 1, 2a, 2b and 2c built (the Kotlin renderer, the Kotlin fitter, the kit
-action with its command, and the pad sheet's rules and button; see "As built" at the end).
-The engine is not written. Heard by the owner: the Python prototype, the round-1 Kotlin
-page ("Sounds good, continue", 2026-11-19) and the round-2 loop-to-kit page ("Audition is
-fine", 2026-11-20). Nobody has made a twin on a phone yet. KERF is a working name (a kerf
-is the sliver a saw removes); no maker or product is named by it.
+Status: rounds 1 and 2a to 2d built (the Kotlin renderer and fitter, the kit action and its
+command, the pad sheet's SYNTH TWIN, and SYNTH TWIN ALL with BLEED and SLOP on a twin; see
+"As built" at the end). The engine is not written. Heard by the owner: the Python prototype,
+the round-1 Kotlin page ("Sounds good, continue", 2026-11-19) and the round-2 loop-to-kit
+page ("Audition is fine", 2026-11-20). Nobody has made a twin on a phone yet. KERF is a
+working name (a kerf is the sliver a saw removes); no maker or product is named by it.
 
 Owner decisions, 2026-11-19 ("I take your recommendations proceed"): the patch format is
 carried the recommended way (section 6, A); velocity starts from the ghost-against-snare
@@ -414,6 +414,8 @@ a layer is not always a separate drum.
 - **R2c.** Built. The pad sheet's rules for a twin, its wording, and the MAKE box's SYNTH
   TWIN row. Gate, open: the owner chops a loop of their own in the app and makes a pad its
   twin on a phone.
+- **R2d.** Built. SYNTH TWIN ALL on the kit screen, and BLEED and SLOP on a twin. Gate,
+  open: the owner makes a kit of twins on a phone and moves BLEED and SLOP.
 - **R3.** The ghost-against-snare comparison, then velocity and round robin. Gate: the
   owner's velocity/round-robin gate through render, save, playback and export.
 - **R4.** Engine registration, voices and presets after listening, genre kits, audition,
@@ -708,3 +710,45 @@ screen code and the device test were written by reading the DE-SAMPLE arms besid
 Still owed: a whole-kit button (the CLI's `--all` has no screen; sixteen pads are sixteen
 taps); BLEED and SLOP on the sheet (a twin is made at 1.0 and 0.5); the low-end gap of
 round 2a; the 88.2 kHz assertion; rounds 3 and 4.
+
+## As built: round 2d, the whole kit and the controls (2026-11-20)
+
+Read at `15291282`. The owner said "Proceed as recommended" to the two things round 2c named
+as missing from the screen.
+
+- **SYNTH TWIN ALL** on the kit screen, under DUST ALL and wired as DUST ALL is
+  (`App.kerfAll`, `KitBuilderModel.kerfKit`, one `KitWrites.mutex`). Every pad that can take
+  it is measured once from its capture. The landing counts the pads made, the pads left
+  (layered, chained, printed, too short) and the twins already. If a measure throws part
+  way, the pads made before it are saved.
+- **BLEED and SLOP** on a bare twin, in the MAKE box's SYNTH TWIN row. Let go of either and
+  the pad is re-cut from its own saved numbers (`KitBuilderModel.recutKerfPad`), about a
+  tenth of a second. BLEED reads 0 to 2 on the sheet (the recipe allows 4; past 2 the last
+  hit swamps this one), SLOP 0 to 1.
+- `snipsnap kerf <kit> <pad> --recut [--bleed] [--slop]`, the same door.
+
+Decided here, and why:
+
+- **A re-cut is not bin-backed.** The render it replaces is the recipe's to make again, so
+  nothing is lost, and the newest take in the bin stays the capture: UNDO SYNTH TWIN gives the
+  capture after any number of re-cuts. A take per release would bury the capture under
+  renders nobody needs.
+- **A twin is not made twice.** MAKE SYNTH TWIN on a twin is refused in words; a second twin
+  would measure the first twin's render, not the capture. SYNTH TWIN ALL skips twins and
+  counts them.
+- **A twin already is its own neighbour's measurement.** When a pad beside a new twin is a
+  twin already, its saved numbers stand in for it, so no neighbour is measured from a render.
+- **A twin with pedals over it is not re-cut** ([Copy.KERF_RIDDEN]): the cut would land under
+  the pedals.
+
+Tested off the device (`KerfPadTest`, eight tests; `CliTest`): a re-cut changes only BLEED and
+SLOP, keeps the measure and the knife's draw, writes the audio its numbers make, adds no take,
+returns byte for byte to the first cut at the first values, and leaves the undo giving the
+capture; both refusals touch nothing; SYNTH TWIN ALL makes three of four pads, counts the
+twin already, and gives its neighbours its own numbers; a second run makes nothing. On device
+(`PadSheetUndoScreenTest`, a new case): BLEED moved by its adjust action re-cuts and saves
+with no new take, and UNDO SYNTH TWIN then gives the capture. Not run here: no Android SDK in
+this session.
+
+Still owed: velocity and round robin (R3), the low-end gap of round 2a, the 88.2 kHz
+assertion, the engine (R4).

@@ -2360,6 +2360,23 @@ fun PadSheetScreen(
         commitPadEditNow(Copy.UNDO_KERF, onSuccess = { onToast(Copy.UNKERFED) }) { mm -> mm.unkerfPad(slot) }
     }
 
+    /**
+     * BLEED or SLOP let go on a twin: the pad re-cut from its own saved
+     * numbers, no new measure, no new take in the bin
+     * ([KitBuilderModel.recutKerfPad]), so UNDO SYNTH TWIN still gives the
+     * capture after any number of moves. Refused in words when something
+     * rides the twin ([Copy.KERF_RIDDEN]).
+     */
+    fun onKerfRecut(bleed: Double, slop: Double) {
+        if (busy) return
+        val p = model?.kit?.pad(slot) ?: return
+        if (!PadSheet.isKerfTwin(p)) {
+            onToast(Copy.KERF_RIDDEN)
+            return
+        }
+        commitPadEditNow(Copy.KERF_RECUT, job = Copy.KERF_RECUT_BUSY) { mm -> mm.recutKerfPad(slot, bleed, slop) }
+    }
+
     /** ROULETTE: the shelf (the kit folder's parent) deals; the deal becomes the partner. */
     fun onRoulette() {
         if (busy) return
@@ -3240,6 +3257,10 @@ fun PadSheetScreen(
             onToast(Copy.MUTATE_NEEDS_ONE)
             return
         }
+        if (Breed.recipeOf(p)?.kerf != null) {
+            onToast(Copy.KERF_ALREADY)
+            return
+        }
         val padName = p.displayName
         val staleSampleFile = p.sampleFile
         val kitDir = m.kitDir
@@ -3268,8 +3289,8 @@ fun PadSheetScreen(
                 }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
-                if (e is IllegalArgumentException && e.message == Copy.KERF_TOO_SHORT) {
-                    onToast(Copy.KERF_TOO_SHORT)
+                if (e is IllegalArgumentException && (e.message == Copy.KERF_TOO_SHORT || e.message == Copy.KERF_ALREADY)) {
+                    onToast(e.message!!)
                 } else {
                     failure("MAKE SYNTH TWIN", e)
                 }
@@ -4488,6 +4509,38 @@ fun PadSheetScreen(
                 scheme.ink2.tape,
                 maxLines = 1,
             )
+            // BLEED and SLOP, on a bare twin only: the re-cut runs on release
+            // (onKerfRecut), from the pad's own numbers. BLEED reads 0..2 here
+            // (the house range is 0..4; past 2 the last hit swamps this one),
+            // SLOP 0..1. Each starts where the pad's recipe has it, and moves
+            // back there if the pad changes under it.
+            val twin = remember(pad.recipe, pad.source) { if (PadSheet.isKerfTwin(pad)) Breed.recipeOf(pad)?.kerf else null }
+            if (twin != null) {
+                var bleedFraction by remember(pad.recipe) { mutableStateOf((twin.bleed / 2.0).toFloat().coerceIn(0f, 1f)) }
+                var slopFraction by remember(pad.recipe) { mutableStateOf(twin.slop.toFloat().coerceIn(0f, 1f)) }
+                StepperSlider(
+                    label = "BLEED",
+                    fraction = bleedFraction,
+                    valueText = "%.1f".format(java.util.Locale.ROOT, bleedFraction * 2f),
+                    fillColor = classColor,
+                    scheme = scheme,
+                    enabled = !busy,
+                    onFractionChange = { f -> bleedFraction = (f * 20f).roundToInt() / 20f },
+                    onFractionCommit = { onKerfRecut(bleedFraction * 2.0, slopFraction.toDouble()) },
+                    accessibilityLabel = "SYNTH TWIN BLEED",
+                )
+                StepperSlider(
+                    label = "SLOP",
+                    fraction = slopFraction,
+                    valueText = "%.2f".format(java.util.Locale.ROOT, slopFraction),
+                    fillColor = classColor,
+                    scheme = scheme,
+                    enabled = !busy,
+                    onFractionChange = { f -> slopFraction = (f * 20f).roundToInt() / 20f },
+                    onFractionCommit = { onKerfRecut(bleedFraction * 2.0, slopFraction.toDouble()) },
+                    accessibilityLabel = "SYNTH TWIN SLOP",
+                )
+            }
             ActionButton(
                 "MAKE SYNTH TWIN · REPLACES THE WAV",
                 scheme,
