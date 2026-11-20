@@ -16,9 +16,9 @@ import kotlin.test.assertTrue
  * model that SHELL and WING leave unused: HUSK the phaser's correction alone, STING the product of
  * the synced pair, GLINT the slave bending the root sine's phase, HUM the master pulse's width,
  * PINCER SHELL's source plucked with the excursion run backwards. The owner kept HUSK, STING, HUM and
- * PINCER (20 Nov 2026, range and touch); GLINT is still a candidate ("missing glassiness"). SHELL and
- * WING are pinned below against the build before this round, and the heard renders of the four in
- * `chitin/kept-voices-v1.sha256`.
+ * PINCER (20 Nov 2026, range and touch), and GLINT after its glass (fix-glint-1) and touch (pending)
+ * tweaks. SHELL and WING are pinned below against the build before this round, and the heard renders of
+ * the five in `chitin/kept-voices-v1.sha256`.
  */
 class ChitinCandidateVoicesTest {
     private val M = CandidateVoiceMeasures
@@ -36,17 +36,16 @@ class ChitinCandidateVoicesTest {
         Chitin.render(voice, macros + tune(voice, midi), velocity).samples
 
     @Test
-    fun `the new voices are appended, the kept four offered with their heard preset, GLINT nowhere`() {
+    fun `the new voices are appended, the kept five offered with their heard preset`() {
         assertEquals(listOf(ChitinVoice.HUSK, ChitinVoice.STING, ChitinVoice.GLINT, ChitinVoice.HUM, ChitinVoice.PINCER), candidates)
         assertEquals(ChitinVoice.entries.take(2), Chitin.MIXED_VOICES)
-        assertEquals(ChitinVoice.entries - ChitinVoice.GLINT, Chitin.KEPT_VOICES)
-        assertTrue(ChitinPresets.all().none { it.voice == ChitinVoice.GLINT }, "the candidate GLINT has a preset")
+        assertEquals(ChitinVoice.entries, Chitin.KEPT_VOICES)
         // No new starter: the CHITIN kit is still SHELL and WING.
         assertTrue(ChitinKits.patches().all { it.voice in Chitin.MIXED_VOICES }, "a new voice is on the kit")
         assertEquals(listOf(36, 48, 48, 36, 24), candidates.map { low(it) })
         for (voice in candidates) {
             // One preset per kept voice: default controls (the middle of its range) at full touch, as heard.
-            assertEquals(if (voice == ChitinVoice.GLINT) emptyList() else listOf(ChitinPatch(voice.name, voice, Chitin.defaults(voice))),
+            assertEquals(listOf(ChitinPatch(voice.name, voice, Chitin.defaults(voice))),
                 ChitinPresets.forVoice(voice))
             assertEquals(Chitin.macrosFor(ChitinVoice.SHELL).map { it.name }, Chitin.macrosFor(voice).map { it.name })
             assertEquals(low(voice) + 12, Chitin.rootMidi(voice))
@@ -217,10 +216,10 @@ class ChitinCandidateVoicesTest {
     }
 
     @Test
-    fun `every heard render of the four kept voices hashes as it was heard`() {
+    fun `every heard render of the five kept voices hashes as it was heard`() {
         val pinned = KeptVoicePins.read("/chitin/kept-voices-v1.sha256")
         val cases = chitinKeptCases()
-        assertEquals(4 * 6, cases.size)
+        assertEquals(5 * 6, cases.size)
         assertEquals(cases.map { it.first }.toSet(), pinned.keys)
         for ((id, render) in cases) assertEquals(pinned.getValue(id), KeptVoicePins.pin(render().samples), id)
         // The preset is the range clip's middle note and the touch clip's hard note.
@@ -241,7 +240,7 @@ class ChitinCandidateVoicesTest {
 }
 
 /**
- * The renders the owner kept in chitin-voices-1 (20 Nov 2026), from each voice's preset: the range clip
+ * The renders the owner kept in chitin-voices-1 and, for GLINT, fix-glint-1 and its touch round (20 Nov 2026), from each voice's preset: the range clip
  * (TUNE 0, .5, 19/24 and 1 at full touch; .5 is the preset) and the touch clip's soft (.35) and medium
  * (.7) notes at TUNE .5; its hard note is the preset. The clips were joined from exactly these renders.
  */

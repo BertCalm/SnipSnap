@@ -1,7 +1,7 @@
 # CHITIN finite-note prototype
 
-CHITIN has six voices: SHELL is a pulse-root bass, WING a brighter saw-root lead, and HUSK, STING, HUM
-and PINCER were kept in chitin-voices-1 (below); GLINT is a candidate.
+CHITIN has seven voices: SHELL is a pulse-root bass, WING a brighter saw-root lead, HUSK, STING, HUM
+and PINCER were kept in chitin-voices-1 and GLINT after its glass and touch tweaks (all below).
 A shared excursion changes hard-sync harmonics, filter opening, preamp drive and
 six-stage phaser motion. The phaser's correction is high-passed on both sides to
 preserve the root. Its normalized lattice and feedback have an energy bound.
@@ -153,3 +153,9 @@ Measured (Kotlin, C4, level-matched): touch steps 23.9 and 18.1 dB (was 5.2 and 
 8.7). Glass partials against the root at .9 s: soft .04, medium .26, hard .84 (was .58, .68, .84); upper partials
 in the first 50 ms: .04, .47, 3.59 (was .91, 1.82, 3.59). The touch test's floor for GLINT is now 12 dB (others .5).
 Unheard: clip CY1 plays the old soft, medium and hard, then the new ones.
+
+**Ship step, pending the verdict on GLINT's touch.** Should the owner keep the touch, GLINT is already set up as
+CHITIN's seventh voice: it is in `Chitin.KEPT_VOICES` (so the app's picker offers it), it has one preset named GLINT
+at its default controls and full touch (the kept CX1 middle note), and its six heard renders (C3, C4, G4 and C5 at
+full touch; soft .35 and medium .7 at C4) are pinned in `chitin/kept-voices-v1.sha256`. There is still no starter;
+the CHITIN kit stays SHELL and WING. If the touch is tweaked again, only the two touch pins move.

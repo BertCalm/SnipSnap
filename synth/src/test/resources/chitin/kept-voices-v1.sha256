@@ -23,3 +23,10 @@ pincer-note-43 54331 990d4ba57feea2e3be20d82308c63adfb50f8e4bf15fe8c476ab9293556
 pincer-note-48 54331 57efa4c25b8e3998c44a5a7fbb80527e938680570d2df3b55fefa1775503bd05
 pincer-touch-soft 54331 f36dfb6c72b4ce59a16d5c875cdbd327acf57b5708091d8b0c29752c3e0683fa
 pincer-touch-medium 54331 bcdb7f9a7fc1a2c81d84902266eb078aab748163376c0c447adc6cb3617336da
+# GLINT as kept in fix-glint-1 (range, full touch) and, pending its verdict, the touch round (soft and medium).
+glint-note-48 74671 9e5de6d7b78deddf29536cd1c7788ad06067dcabc55e9f082251b6bfbf0e030b
+glint-base 74671 5de05309fc71d7b7425ffbde8306b696d9673d6aee74fd3f825dbc443b9cfc91
+glint-note-67 74671 15b6775f1d119949ea2cf7a1380636d0a3887c44c126c757a80baf8278dd785a
+glint-note-72 74671 a397344bab59ebb2df7ad2eb3b37ad4ecaab80f20f5d83bc1d50d1f7ebc2f537
+glint-touch-soft 74671 0b9077891bd713c89613bcf057182da370e1200657abd2c1dfebfc5cc29069a3
+glint-touch-medium 74671 cdf85a200c3b68853b87964c8d47ba430d8efb78616a58ac43e37d09170f88db
