@@ -228,11 +228,30 @@ object Crease {
         ), traces.finish(), previous, startState, endState)
     }
 
+    /**
+     * Held keys only: how deep a held voice may fold, as a share of its patch's own depth.
+     *
+     * RUBBER composes both maps. On a held key their combined compression stays between 2.8
+     * and 3.6 for the whole pressure cycle, which leaves a standing band of upper harmonics
+     * about as loud as the note. The owner heard held Ink Ribbon as "a bit harsh and was
+     * piercing" (20 Nov 2026). A held RUBBER key therefore scales both map depths by
+     * [HELD_RUBBER_DEPTH], tapering to a further [HELD_RUBBER_TOP_DEPTH] of that by C6, where
+     * the whole band sits on the low harmonics. Scaling the depth, rather than lowering the
+     * ceiling, keeps the pressure gesture moving the tone and keeps the touch layers apart: a
+     * lower ceiling pins every touch at one static shape. ROUND and PINCH keep their whole
+     * depth, so their held keys (Paper Keys was kept) and every patch render are unchanged.
+     */
+    const val HELD_RUBBER_DEPTH = .72
+    const val HELD_RUBBER_TOP_DEPTH = .85
+    internal fun heldDepth(voice: CreaseVoice): Double =
+        if (voice == CreaseVoice.RUBBER) HELD_RUBBER_DEPTH else 1.0
+
     /** Dedicated keyboard trajectory. The ordinary finite/HOLD render paths above retain
      * their original stepping and normalization; only this entry supplies a key envelope
      * and a smoothly changing pressure source to the same model-3 circuit. */
     internal fun keyProbe(patch: CreasePatch, midi: Int, oversample: Int, normalize: Boolean,
-        cancelled: () -> Boolean): CreaseKeyProbe {
+        cancelled: () -> Boolean, depth: Double = heldDepth(patch.voice)): CreaseKeyProbe {
+        require(depth.isFinite() && depth > 0.0 && depth <= 1.0) { "CREASE held depth must be in (0, 1]" }
         val started = System.nanoTime()
         fun checkCancelled() {
             if (cancelled() || Thread.currentThread().isInterrupted)
@@ -248,7 +267,10 @@ object Crease {
         val renderedHz = rootCycles * RATE.toDouble() / frames
         val rate = RATE * oversample
         val internalFrames = frames * oversample
-        val circuit = Model(shape, rate, renderedHz, CreaseHistory.STATEFUL, true)
+        // Unity stays exactly unity, so an unscaled held voice keeps its historical arithmetic.
+        val upper = (ln(renderedHz / 261.6255653) / ln(4.0)).coerceIn(0.0, 1.0)
+        val mapDepth = if (depth == 1.0) 1.0 else depth * mix(1.0, HELD_RUBBER_TOP_DEPTH, upper)
+        val circuit = Model(shape, rate, renderedHz, CreaseHistory.STATEFUL, true, mapDepth)
         val output = OutputPath(rate, oversample)
         val stats = Stats()
         val traces = TraceBuilder()
@@ -514,7 +536,7 @@ object Crease {
     }
 
     private class Model(val shape: Shape, rate: Int, hz: Double,
-        val history: CreaseHistory, val coupled: Boolean) {
+        val history: CreaseHistory, val coupled: Boolean, private val mapDepth: Double = 1.0) {
         var pressure = 0.0
         var dA = 0.0; var dB = 0.0
         var recoveryA = 0.0; var recoveryB = 0.0
@@ -540,7 +562,10 @@ object Crease {
 
         fun state() = doubleArrayOf(pressure, dA, dB, recoveryA, recoveryB, energyA, energyB, loadA, loadB)
 
-        private fun map(warp: Warp, s: Double, c: Double, a: Double, b: Double) {
+        private fun map(warp: Warp, s: Double, c: Double, fullA: Double, fullB: Double) {
+            // Multiplying by exactly 1.0 returns the same double, so only a held RUBBER key differs.
+            val a = fullA * mapDepth
+            val b = fullB * mapDepth
             val total = abs(a) + abs(b)
             val scale = if (total > logCeiling) logCeiling / total else 1.0
             warp.evaluate(s, c, a * scale, b * scale)
