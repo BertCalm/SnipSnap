@@ -93,7 +93,8 @@ class TerraSticksTest {
             assertEquals(5.0, 12 * ln(high / mid.toDouble()) / ln(2.0), 0.01, "$voice up")
             // and the render follows: the strongest peak near the lowest note moves with it
             val x = Terra.render(voice, mapOf("TUNE" to 1f)).samples
-            val heard = TerraMeasure.peakHz(x, 0, minOf(x.size, RATE / 2), high * 0.85f, high * 1.15f, RATE)
+            // a narrow search: SHIME's next notes sit 18% and 29% above its lowest, and are louder
+            val heard = TerraMeasure.peakHz(x, 0, minOf(x.size, RATE / 2), high * 0.94f, high * 1.06f, RATE)
             assertTrue(abs(TerraMeasure.cents(heard, high)) < 60, "$voice at TUNE 1 rings $heard Hz, its table says $high")
         }
     }

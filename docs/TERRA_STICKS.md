@@ -54,6 +54,11 @@ The fitting scripts and the fitted models are in `prototype/taiko/`.
 All share TUNE (+-5 semitones), DECAY (0.5x to 2x), FORCE (the contact, softer
 to harder) and ATTACK (the landing's noise, +-9 dB).
 
+The cowbell has no contact pulse (metal on metal: its notes start at once), so
+there FORCE is the clapper's hardness instead: its upper notes and strike noise
+down or up around the fitted stroke. `TerraSticksTest` caught FORCE as a dead
+knob on the cowbell before this was added.
+
 ## What the listening rounds changed
 
 The owner listened to Python renders on a published page over six rounds.

@@ -66,7 +66,8 @@ internal object TerraSticks {
 
     /**
      * TUNE: +-5 semitones around the stroke as heard. DECAY: every ring and the residual's, 0.5x to
-     * 2x. FORCE: the contact, 2x longer (softer) to half (harder). ATTACK: the landing's own noise,
+     * 2x. FORCE: the contact, 2x longer (softer) to half (harder); on the cowbell, which has no
+     * contact pulse, the clapper's hardness (its upper notes and strike noise, down or up). ATTACK: the landing's own noise,
      * +-9 dB. Then one or two of the voice's own.
      */
     fun macros(voice: TerraVoice): List<MacroSpec> {
@@ -183,7 +184,16 @@ internal object TerraSticks {
             val curves = level?.copyOfRange(modeAt, modeAt + notes)
             modeAt += notes
             val widthMs = if (st.widthMs > 0.0) st.widthMs * widthScale * moved(0.10) + (1.0 - v) * 0.6 else 0.0
-            val noteGain = DoubleArray(notes) { j -> v.pow(min(3.0, 1.0 + 0.45 * max(0.0, ln(st.hz[j] / st.hz[0]) / ln(2.0)))) * moved(0.09) }
+            // A stroke with no contact pulse (the cowbell: metal on metal, its notes start at once) has nothing for
+            // FORCE to lengthen, so there FORCE is the clapper's hardness directly: the upper notes and the strike's
+            // noise up or down around the fitted stroke (0.5 is the stroke as picked). Without this FORCE was a dead
+            // knob on the cowbell (TerraSticksTest caught it).
+            val hardness = if (st.widthMs > 0.0) 0.0 else (m.getValue("FORCE") - 0.5) * 2.0
+            val noteGain = DoubleArray(notes) { j ->
+                val octaves = max(0.0, ln(st.hz[j] / st.hz[0]) / ln(2.0))
+                v.pow(min(3.0, 1.0 + 0.45 * octaves)) * 2.0.pow(hardness * 0.6 * octaves) * moved(0.09)
+            }
+            val strikeNoise = 10.0.pow(hardness * 9.0 / 20.0)
             val main = mainHit(st)
             val parts = DoubleArray(frames)
             val noise = DoubleArray(lowFrames)
@@ -194,7 +204,7 @@ internal object TerraSticks {
                 val start = (time * rate).toInt()
                 if (start >= frames) continue
                 ring(st, h, hitLevel, noteGain, tune, decay * pl.ringScale, rate, start, parts, curves)
-                if (!headOnly) bursts(h, hitLevel * attack, v, tune, decay, (time * low).toInt(), noise, noiseSeed * 31 + si * 977 + hk * 131, ::moved)
+                if (!headOnly) bursts(h, hitLevel * attack * strikeNoise, v, tune, decay, (time * low).toInt(), noise, noiseSeed * 31 + si * 977 + hk * 131, ::moved)
             }
             val body = if (widthMs > 0.0) contact(parts, widthMs, rate) else parts
             for (i in out.indices) {
