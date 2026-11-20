@@ -129,8 +129,6 @@ object EngineCatalog {
         // BORE, ARCO, SCOUR and KEEL reached the picker together (2026-11-01). Classified from each
         // engine's KDoc, its spec and KEEL.md, not from a listen.
         "BORE" to EngineEntry(listOf(EngineCategory.WINDS), "Blown flute and saxophone tones with breath and chiff"),
-        // CONSORT reached the picker in round K3 (2026-11-20).
-        "CONSORT" to EngineEntry(listOf(EngineCategory.WINDS), "Woodwinds alone or as a section in octaves and fifths"),
         "ARCO" to EngineEntry(listOf(EngineCategory.STRINGS), "Bowed cello, erhu and sarangi, from slow swells to stabs"),
         "SCOUR" to EngineEntry(listOf(EngineCategory.PADS, EngineCategory.BELLS), "Shot-blasted plates that build to a slam, then ring"),
         "KEEL" to EngineEntry(listOf(EngineCategory.BASS), "Bass notes whose bright attack settles into a heavy body"),
@@ -160,6 +158,8 @@ object EngineCatalog {
         "KINDRED" to EngineEntry(listOf(EngineCategory.DRUMS), "One analog voice re-struck: diving kicks, zaps, FM toms"),
         "RIDDIM" to EngineEntry(listOf(EngineCategory.DRUMS), "Dancehall drums: booms, ratchet, ting, woods and bronze"),
         "CAIRN" to EngineEntry(listOf(EngineCategory.BELLS, EngineCategory.DRUMS), "Stones that knock, tumble, grind, sing and roll in a bowl"),
+        // CONSORT reached the picker in round K3 (2026-11-20), appended after CAIRN as the enum is.
+        "CONSORT" to EngineEntry(listOf(EngineCategory.WINDS), "Woodwinds alone or as a section in octaves and fifths"),
     )
 
     /** The entry for the engine constant [name], or null for a name the catalogue does not know. */

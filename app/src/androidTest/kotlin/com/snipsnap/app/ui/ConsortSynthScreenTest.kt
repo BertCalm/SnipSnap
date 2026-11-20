@@ -83,6 +83,11 @@ class ConsortSynthScreenTest : ComposeScreenTest() {
     @Test fun every_voice_shows_its_knobs_and_presets_and_a_preset_keeps_its_section() {
         show()
         compose.onNodeWithContentDescription("ENGINE CONSORT. CHOOSE ENGINE").assertExists()
+        // CONSORT closes the engine ring: NEXT wraps to the first engine, PREVIOUS comes back.
+        activate("NEXT ENGINE")
+        compose.onNodeWithContentDescription("ENGINE LATTICE. CHOOSE ENGINE").assertExists()
+        activate("PREVIOUS ENGINE")
+        compose.onNodeWithContentDescription("ENGINE CONSORT. CHOOSE ENGINE").assertExists()
         assertEquals(Consort.DEFAULT_VELOCITY, progress("TOUCH"), 1e-6f)
         for (voice in ConsortVoice.entries) {
             activate(voice.name)
