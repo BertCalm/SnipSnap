@@ -36,6 +36,14 @@ import kotlin.math.tanh
  * approved its voices by ear) and keeps the muffle, the foley print and the clock. [sliced] is the alternative in
  * SHATTER's manner: the kit played in its room and cut at a hit, so the pad carries its neighbours' bleed.
  *
+ * Round 2d: "it sounds like room reverb": every EMBER source dried (DISTANCE 0 and a HUSH gate) and the ROOM taken
+ * off the grooves. Round 3: "the drums are not being hit hard enough. It sound like light taps": measured, the kicks
+ * were subs (98 percent under 150 Hz, which a phone cannot play; the references' kicks keep a median 17 percent in
+ * 150 to 400 Hz) and in every groove the snare sat 8 to 14 dB under the kick (the references roughly over it), with the
+ * hats as loud as the snare. So every kick is [boxed] (a damped rack tom under the sub), the grooves sit their
+ * kicks level with their snares ([LooseCrateKits.Room.kickDb] through [Cypher.phraseRaw]'s per-part gain), the hats
+ * sit 10 dB under the backbeat, and STAGGER has its own [touch] law with a floor a drummer's ghost can live under.
+ *
  * Every pad has three velocity zones of four takes; a zone is its own strike and a take a fresh one. Pads 1 to
  * 14 are hits, pad 15 a timpani roll into the gong, pad 16 a two-bar groove, bar-exact so it loops, played as one
  * kit in one small room with a bus compressor ([LooseCrateKits.Room], reused, not copied) because the owner heard a
@@ -47,7 +55,7 @@ import kotlin.math.tanh
  */
 object StaggerKits {
     /** Bump when a pad's audio changes; saved kits carry the version they were printed with. */
-    const val VERSION = 5
+    const val VERSION = 6
 
     enum class Kit(val id: String, val title: String, val bpm: Int) {
         CARDBOARD("stagger-cardboard", "Cardboard", 89),
@@ -259,7 +267,14 @@ object StaggerKits {
     /** A phrase pad: notes on the kit's grid. [loop] folds the tail back onto the start and keeps the bars exact. */
     internal class Phrase(val name: String, val notes: List<Note>, val loop: Boolean)
 
-    fun touch(velocity: Float): Float = CypherKits.touch(velocity)
+    /**
+     * The touch law: a note's peak from its velocity. CYPHER's (.35 + .65 v) is a sampler pad's response and floors
+     * every note at .35, so in a STAGGER groove the ghost at .35 played at .58 (4.7 dB under the full snare), the
+     * shaker at .20 at .48 and the wires under a kick at .08 at .40: nothing written quiet was quiet, which is part
+     * of why round 2d's snare sat under its kick. Round 3 gives the drummer a deeper floor (.12, 18 dB down): the
+     * ghost lands 7 dB under the snare, the shaker 10, the wires 14, a .6 kick through its dynamics curve 9. Shape.
+     */
+    fun touch(velocity: Float): Float = .12f + .88f * velocity.coerceIn(0f, 1f)
 
     fun roles(kit: Kit): List<String> = parts(kit).map { it.name } + phrases(kit).map { it.name }
 
@@ -324,7 +339,10 @@ object StaggerKits {
     /** The groove's notes, already played through the clock and the room's dynamics, as a bar-exact loop. */
     internal fun grooveRaw(kit: Kit, notes: List<Note>, velocity: Float, take: Int): FloatArray {
         val frames = grooveFrames(kit)
-        val raw = Cypher.phraseRaw(notes, kit.bpm, velocity, take, TAKES, frames.toFloat() / Dsp.RATE + LOOP_TAIL_SECONDS, ::touch) { strikeOf(kit, it) }
+        val parts = parts(kit)
+        val kickGain = 10f.pow(roomOf(kit).kickDb / 20f)
+        val raw = Cypher.phraseRaw(notes, kit.bpm, velocity, take, TAKES, frames.toFloat() / Dsp.RATE + LOOP_TAIL_SECONDS, ::touch,
+            partGain = { part -> if (part < HITS && parts[part].cls == DrumClass.KICK) kickGain else 1f }) { strikeOf(kit, it) }
         val roomed = roomOf(kit).play(raw)
         val out = FloatArray(frames)
         for (i in roomed.indices) out[i % frames] += roomed[i]
@@ -346,17 +364,28 @@ object StaggerKits {
     fun roomOf(kit: Kit): LooseCrateKits.Room = when (kit) {
         // Round 2d: no ROOM on any groove ("it sounds like room reverb"); the bus and the dark shelf stay, and the
         // drummer's dynamics and the wires under the kicks are what keep a dry sum from reading as a machine.
+        // Round 3 ("light taps"): the groove's kick comes down to its snare. Measured in round 2d, the backbeat's 50 ms
+        // RMS sat 8 to 14 dB under the kick's (a muffled sub is dense, crest 2.6 dB; a snare's crack 11); the
+        // references put the snare over the kick (roughly: an onset detector reads a median 7 dB over), and the
+        // snare is the hit a listener hears. The touch law floors every note's peak at .35, so this is a level ([Room.kickDb]), not a weight,
+        // and the bus (a sustain compressor at about 5:1) presses the kick's dense body back up: swept, a 16 dB
+        // cut came back 6.5 dB through MATINEE's bus at .35 and 2 dB at .20. Chosen from the sweep so the backbeat
+        // lands within 3 dB of the kick: CARDBOARD -12 under its bus, MATINEE -16 under a lighter bus, STUMBLE -16.
+        // The hats (round 3): at their written weights a closed hat peaked at 74 percent of full scale and, being noise
+        // (crest about 6 dB over 50 ms), sat within a decibel of the snare's loudness on every eighth, as loud as the
+        // backbeat and crowding it; the 6 to 14 kHz measure read it as a whisper only because the print's TONE had
+        // darkened it. At .40 the hat sits 10 dB or more under the backbeat, which is what "at a whisper" means.
         Kit.CARDBOARD -> LooseCrateKits.Room(null,
             mapOf("AMOUNT" to .40f, "ATTACK" to .80f, "RECOVER" to .45f),
-            -3f, kickCurve = 2.5f, wireWeight = .08f, hatLevel = 1f, ringBarEnd = false, ride = null)
+            -3f, kickCurve = 2.5f, wireWeight = .08f, hatLevel = .40f, ringBarEnd = false, ride = null, kickDb = -12f)
         // The cinematic kit: its foley carries its own hall; the drums are as dry as CARDBOARD's.
         Kit.MATINEE -> LooseCrateKits.Room(null,
-            mapOf("AMOUNT" to .35f, "ATTACK" to .80f, "RECOVER" to .50f),
-            -3f, kickCurve = 2.5f, wireWeight = .08f, hatLevel = 1f, ringBarEnd = false, ride = null)
-        // The drunkest kit: the bus pressing harder, no hats to level.
+            mapOf("AMOUNT" to .20f, "ATTACK" to .80f, "RECOVER" to .50f),
+            -3f, kickCurve = 2.5f, wireWeight = .08f, hatLevel = .40f, ringBarEnd = false, ride = null, kickDb = -16f)
+        // The drunkest kit: the bus pressing harder, no hats to level; its kick is the densest, so it sits lowest.
         Kit.STUMBLE -> LooseCrateKits.Room(null,
             mapOf("AMOUNT" to .50f, "ATTACK" to .75f, "RECOVER" to .40f),
-            -4f, kickCurve = 3f, wireWeight = .10f, hatLevel = 1f, ringBarEnd = false, ride = null)
+            -4f, kickCurve = 3f, wireWeight = .10f, hatLevel = 1f, ringBarEnd = false, ride = null, kickDb = -16f)
     }
 
     fun clockOf(kit: Kit): Clock = when (kit) {
@@ -499,8 +528,33 @@ object StaggerKits {
     // Round 1b: the kit's drums, EMBER's, in the club at a short distance and through its warm chain.
     internal val emberKickOpen: Strike = ember(EmberVoice.KICK, "TUNE" to .35f, "DAMP" to .55f, "BUZZ" to .30f, "DISTANCE" to .30f, "WARMTH" to .50f)
     internal fun emberKickAt(cutoffHz: Float, drive: Float = 3f): Strike = muffled(emberKickOpen, cutoffHz, drive)
-    internal val emberKick: Strike = emberKickAt(300f)
-    internal val emberLowKick: Strike = muffled(ember(EmberVoice.KICK, "TUNE" to .15f, "DAMP" to .70f, "BUZZ" to .20f, "DISTANCE" to .30f, "WARMTH" to .55f), 250f, 3f)
+
+    /**
+     * BOX (round 3, "the drums are not being hit hard enough. It sound like light taps", the owner, 2026-11-20):
+     * EMBER's kick is a sub. Measured dry through the print, 98 percent of its energy sits under 150 Hz and 2 percent
+     * in 150 to 400 Hz at any TUNE, BUZZ or DAMP, and the muffle's cutoff is not what keeps it there (opened to
+     * 1 kHz it passes 0.2 percent above 400). The thirteen references' kicks put a median 17 percent of their
+     * energy in 150 to 400 Hz (quartiles 9 and 32) over the 300 ms after the hit: the beater's knock and the
+     * shell, the "box" in the profile's "boxy", which a phone can play and a sub cannot. So a kit kick is the
+     * muffled sub [thumpDb] under a damped rack tom with nothing above [knock]'s cutoff: a sampled kick with a
+     * sub under it, the way a chopped record's kick is layered. Measured on CARDBOARD's: 18 percent in the band,
+     * 0.5 above 400 Hz, no click (0.06 percent above 1 kHz in the first 40 ms), crest 5.9 dB. The sum is levelled
+     * to the louder part's peak so the print sees what the muffle sent it.
+     */
+    fun boxed(thump: Strike, knock: Strike, thumpDb: Float = -3f): Strike = { v, t, semis ->
+        val a = thump(v, t, semis); val b = knock(v, t, semis)
+        val ga = 10f.pow(thumpDb / 20f) / KitStrikes.peakOf(a).coerceAtLeast(1e-9f)
+        val gb = 1f / KitStrikes.peakOf(b).coerceAtLeast(1e-9f)
+        FloatArray(max(a.size, b.size)) { (if (it < a.size) a[it] * ga else 0f) + (if (it < b.size) b[it] * gb else 0f) }
+    }
+
+    /** The box's knock: EMBER's rack tom at [tune], damped hard, dry, with nothing above [hz] (two one-poles). */
+    internal fun knockOf(tune: Float, hz: Float): Strike = contact(ember(EmberVoice.TOM_RACK, "TUNE" to tune, "DAMP" to .80f, "BUZZ" to 0f, "WARMTH" to .50f), hz)
+
+    /** The sub alone, as round 2d shipped it: what the kick band test measures the box against. */
+    internal val emberKickThump: Strike = emberKickAt(300f)
+    internal val emberKick: Strike = boxed(emberKickThump, knockOf(.50f, 500f))
+    internal val emberLowKick: Strike = boxed(muffled(ember(EmberVoice.KICK, "TUNE" to .15f, "DAMP" to .85f, "BUZZ" to .20f, "DISTANCE" to .30f, "WARMTH" to .55f), 250f, 3f), knockOf(.40f, 450f))
     internal val emberSnare: Strike = contact(ember(EmberVoice.SNARE, "TUNE" to .50f, "DAMP" to .45f, "BUZZ" to .60f, "DISTANCE" to .30f, "WARMTH" to .55f), 5_500f)
     internal val emberPaper: Strike = contact(ember(EmberVoice.SNARE, "TUNE" to .70f, "DAMP" to .80f, "BUZZ" to .45f, "DISTANCE" to .25f, "WARMTH" to .50f), 6_000f)
     internal val emberHat: Strike = ember(EmberVoice.HAT_CLOSED, "TUNE" to .45f, "DAMP" to .75f, "DISTANCE" to .30f, "WARMTH" to .50f)
@@ -606,7 +660,7 @@ object StaggerKits {
     // ---------- MATINEE (84): the cinematic kit ----------
     // Half the pads are effects. The kick and snare stand further back on a stage than CARDBOARD's; the foley is
     // where a kit would keep its toms and cymbals.
-    internal val stageKick: Strike = muffled(ember(EmberVoice.KICK, "TUNE" to .40f, "DAMP" to .45f, "BUZZ" to .30f, "DISTANCE" to .50f, "WARMTH" to .45f), 350f, 3f)
+    internal val stageKick: Strike = boxed(muffled(ember(EmberVoice.KICK, "TUNE" to .40f, "DAMP" to .60f, "BUZZ" to .30f, "DISTANCE" to .50f, "WARMTH" to .45f), 350f, 3f), knockOf(.55f, 600f))
     internal val stageSnare: Strike = contact(ember(EmberVoice.SNARE, "TUNE" to .45f, "DAMP" to .40f, "BUZZ" to .65f, "DISTANCE" to .55f, "WARMTH" to .50f), 5_500f)
     internal val lowTimpani: Strike = foley(ember(EmberVoice.MALLET_TOM, "TUNE" to .02f, "DAMP" to .10f, "BUZZ" to 0f, "DISTANCE" to .50f, "WARMTH" to .40f, dry = false), -9)
     /** BREAKER's fitted crash, a second long with a long fade, then nine semitones down: a gong-like crash. */
@@ -670,7 +724,7 @@ object StaggerKits {
 
     // ---------- STUMBLE (93): the drunkest clock ----------
     // A rimshot in the snare's place, no hats in the groove (the shaker whispers), the kick humming and muffled.
-    internal val humKick: Strike = muffled(ember(EmberVoice.KICK, "TUNE" to .28f, "DAMP" to .35f, "BUZZ" to .35f, "DISTANCE" to .25f, "WARMTH" to .60f), 350f, 4f)
+    internal val humKick: Strike = boxed(muffled(ember(EmberVoice.KICK, "TUNE" to .28f, "DAMP" to .35f, "BUZZ" to .35f, "DISTANCE" to .25f, "WARMTH" to .60f), 350f, 4f), knockOf(.45f, 450f), thumpDb = -2f)
     internal val rimshot: Strike = ember(EmberVoice.RIMSHOT, "TUNE" to .70f, "DAMP" to .45f, "BUZZ" to .50f, "DISTANCE" to .25f, "WARMTH" to .55f)
     internal val ghostSnare: Strike = KitStrikes.softer(emberSnare, .40f)
     internal val openBox: Strike = ember(EmberVoice.HAT_OPEN, "TUNE" to .40f, "DAMP" to .70f, "DISTANCE" to .25f, "WARMTH" to .55f)

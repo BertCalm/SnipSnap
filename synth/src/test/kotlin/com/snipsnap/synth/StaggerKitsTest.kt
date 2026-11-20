@@ -160,11 +160,24 @@ class StaggerKitsTest {
      * keeps less), and the click is gone (under a tenth of the open kick's share above 1 kHz in its first 40 ms).
      */
     @Test fun `the box kick keeps the phone band because it is clipped before it is filtered and loses its click`() {
-        val muffled = lone(StaggerKits.emberKick)
+        val muffled = lone(StaggerKits.emberKickThump)
         val open = lone(StaggerKits.emberKickOpen)
         val phone = bandShare(muffled, 150f, 400f)
         println("box kick (EMBER) 150 to 400 Hz: muffled $phone")
         assertTrue(phone >= .01, "the muffled kick keeps only $phone of its energy in 150 to 400 Hz")
+        // Round 3 ("light taps"): the sub alone keeps 2 percent in the band; the box (the sub under a damped rack
+        // tom) keeps at least 9 percent, the references' lower quartile (median 17), with no more than 3 percent
+        // above 400 Hz over 300 ms (low-passed) and no click (under 1 percent above 1 kHz in the first 40 ms; the
+        // references' lower half sit under 1.6).
+        for ((name, strike) in listOf("box" to StaggerKits.emberKick, "low box" to StaggerKits.emberLowKick, "stage" to StaggerKits.stageKick, "hum" to StaggerKits.humKick)) {
+            val box = lone(strike)
+            val band = bandShare(box, 150f, 400f, .3f); val top = bandShare(box, 400f, 22_050f, .3f)
+            val click = bandShare(box, 1_000f, 22_050f, .04f, taper = true)
+            println("$name kick: 150 to 400 Hz $band, above 400 $top, click $click")
+            assertTrue(band >= .09, "the $name kick keeps only $band of its energy in 150 to 400 Hz; the references' lower quartile is .09")
+            assertTrue(top <= .03, "the $name kick puts $top of its energy above 400 Hz; it is low-passed")
+            assertTrue(click < .01, "the $name kick clicks: $click above 1 kHz in its first 40 ms")
+        }
         // The clipper's job is measured on the synth kick, where it is needed: an acoustic kick's shell already puts
         // 4 percent of its energy in the band (round 1b: 3.97 with the clipper, 3.97 without), so on EMBER's kick the
         // drive is a character choice (a squarer thud), not what keeps the phone band.
@@ -182,6 +195,49 @@ class StaggerKitsTest {
         for (role in listOf(StaggerKits.KICK, StaggerKits.LOW_KICK, 8)) {
             val share = bandShare(rendered(role, 1f, 0).samples, 150f, 400f)
             assertTrue(share >= .01, "role $role through the print keeps only $share in 150 to 400 Hz")
+        }
+    }
+
+    /**
+     * Round 3, "the drums are not being hit hard enough. It sound like light taps" (the owner, 2026-11-20). In round
+     * 2d's grooves the backbeat's loudness (50 ms RMS at beats 1 and 5, where no kick rings under it) sat 8 to 14 dB
+     * under the kick's (beats 0 and 4): a muffled sub is dense and a snare's crack is not, and the touch law floors
+     * every note's peak at .35, so the written weights could not sit the kick lower. The references point the same
+     * way only roughly (an onset detector puts their snare a median 7 dB over their kick, and the same detector read
+     * round 2d's own loops 0 to 14 dB over where this direct measure read 8 to 14 under), so the window is a shape
+     * choice: the backbeat no more than 4 dB under the kick and no more than 10 over it.
+     */
+    @Test fun `every groove's backbeat is heard over its kick`() {
+        val over = LinkedHashMap<Kit, Double>()
+        for (k in kits) {
+            val x = rendered(StaggerKits.GROOVE, 1f, 0, k).samples
+            val beat = 60.0 / k.bpm
+            fun near(sec: Double): Double {
+                val c = (sec * rate).toInt(); var best = -300.0
+                var s = c - (.08 * rate).toInt()
+                while (s < c + (.08 * rate).toInt()) {
+                    val a = s.coerceIn(0, x.size - 1); val b = min(x.size, a + (.05 * rate).toInt())
+                    best = max(best, 10 * kotlin.math.log10((a until b).sumOf { x[it].toDouble() * x[it] } / (b - a) + 1e-20))
+                    s += 110
+                }
+                return best
+            }
+            val snare = listOf(1.0, 5.0).map { near(it * beat) }.average()
+            val kick = listOf(0.0, 4.0).map { near(it * beat) }.average()
+            // The hat alone, on the eighth after the downbeat (no kick falls there in any kit; the downbeat's kick
+            // is 20 dB down by then).
+            val hat = listOf(0.5, 4.5).map { near(it * beat) }.average()
+            println("${k.name} groove: backbeat ${"%.1f".format(snare)} dBFS, kick ${"%.1f".format(kick)}, hat ${"%.1f".format(hat)}, backbeat over kick ${"%.1f".format(snare - kick)} dB, over hat ${"%.1f".format(snare - hat)}")
+            over[k] = snare - kick
+            // "Hats at a whisper or omitted": the hat's loudness at least 10 dB under the backbeat's (round 2d: within 1 dB).
+            // STUMBLE has no hat (a shaker), and its hum kick is still sounding on that eighth.
+            val parts = StaggerKits.parts(k)
+            if (StaggerKits.notesOf(k).any { parts[it.part].cls == DrumClass.HAT_CLOSED })
+                assertTrue(snare - hat >= 10, "${k.name}: the hat sits only ${snare - hat} dB under the backbeat")
+        }
+        for ((k, d) in over) {
+            assertTrue(d >= -4, "${k.name}: the backbeat sits ${-d} dB under the kick; round 2d sat 8 to 14 under, the references 7 over")
+            assertTrue(d <= 10, "${k.name}: the backbeat sits $d dB over the kick, past the references' upper quartile")
         }
     }
 
@@ -279,13 +335,19 @@ class StaggerKitsTest {
             // whispers), so its band is not held to the window; MATINEE's foley (glass, zap) lifts its ceiling.
             val parts = StaggerKits.parts(k)
             val hasHat = StaggerKits.notesOf(k).any { parts[it.part].cls == DrumClass.HAT_CLOSED }
-            if (hasHat) assertTrue(hatsDb in -35.0..-16.0, "${k.name}: hats $hatsDb dB under; the references 16 to 35, median 23")
+            // Round 3 sat the hats 10 dB under the backbeat (the band measure had read them as a whisper while they
+            // were as loud as the snare, the print's TONE having darkened them), so the floor is now 45.
+            if (hasHat) assertTrue(hatsDb in -45.0..-16.0, "${k.name}: hats $hatsDb dB under; the references 16 to 35, median 23")
             // The dark eight references sit at 309 to 635 Hz and the other five at 0.9 to 4.4 kHz. Round 2 measured 579,
             // 636 and 495 Hz; round 2b's press lifts the tails and the room, to 658, 801 and 953 with STUMBLE's harder
             // press (its backbeat is a rimshot, brighter than a snare's crack). CARDBOARD stays at the dark end (700),
             // MATINEE's foley is allowed 1.5 kHz, STUMBLE's rimshot 1 kHz.
-            val ceilingLimit = when (k) { Kit.MATINEE -> 1_500.0; Kit.STUMBLE -> 1_000.0; else -> 700.0 }
-            assertTrue(ceiling < ceilingLimit, "${k.name}: 95 percent of the energy under $ceiling Hz; the dark references under 309 to 635")
+            // Round 3 brings the kick down to the snare and gives it a box, so the sub no longer holds 95 percent of the
+            // groove: the ceilings rise toward the five brighter references (0.9 to 4.4 kHz). CARDBOARD and STUMBLE
+            // are held under 2 kHz; MATINEE's glass break and zap pickup carry more of its groove with the kick 16 dB
+            // down (2.24 kHz measured), so it is held under 3.
+            val ceilingLimit = if (k == Kit.MATINEE) 3_000.0 else 2_000.0
+            assertTrue(ceiling < ceilingLimit, "${k.name}: 95 percent of the energy under $ceiling Hz; the references under 309 to 635 (eight) and 0.9 to 4.4 kHz (five)")
         }
     }
 
