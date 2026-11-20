@@ -2430,6 +2430,21 @@ object Copy {
      */
     fun kitDeleted(name: String): String = "$name is out of the LIBRARY. ${Reversal.MIND}"
     const val KIT_DELETE_BUSY = "Deleting…"
+    /** The kit DELETE confirm, for a kit no project uses. */
+    const val KIT_DELETE_CONFIRM = "Delete this kit? It waits in deleted kits for 30 days."
+
+    /**
+     * The kit DELETE confirm, naming the projects that use the kit (UAT 2026-11 user states,
+     * D-2): deleting a project's only kit left the project with nothing on its grid, and the
+     * confirm said only that the kit would wait in the trash. Two names at most, then a count,
+     * so the dialog's three lines hold any shelf.
+     */
+    fun kitDeleteConfirm(usedBy: List<String>): String {
+        if (usedBy.isEmpty()) return KIT_DELETE_CONFIRM
+        val names = if (usedBy.size <= 2) usedBy.joinToString(" and ") else "${usedBy[0]}, ${usedBy[1]} and ${usedBy.size - 2} more"
+        val verb = if (usedBy.size == 1) "uses it and loses it" else "use it and lose it"
+        return "$KIT_DELETE_CONFIRM $names $verb until it is restored."
+    }
     const val KIT_DELETE_FAILED = "Delete failed. The kit may already be gone."
     /** RENAME on a shelf kit; [name] is what it actually landed under — a collision may have freshened it. */
     fun kitRenamed(name: String): String = "Renamed to $name."

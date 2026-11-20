@@ -3898,7 +3898,7 @@ fun App(shelf: KitShelf) {
                             backLabel = checkNotNull(nav.backChip) { "TRASH is a bench, so it has something to go back to" },
                             onBack = { nav.closeBench() },
                             onToast = { dock.say(it) },
-                            onKitRestored = {
+                            onKitRestored = { restored ->
                                 // The section already owns its own toast
                                 // and its own list refresh — this only
                                 // needs to catch the shelf back up, the
@@ -3909,6 +3909,14 @@ fun App(shelf: KitShelf) {
                                 // also what re-reads the bin count.
                                 scope.launch {
                                     kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
+                                    // The open project's active kit coming back goes back
+                                    // on its grid (UAT 2026-11 user states, D-3): PADS and
+                                    // BEAT said it had no kit until it was reopened, and
+                                    // with nothing open the project was forgotten as the
+                                    // last one open. Read after the await, off the fresh list.
+                                    if (LastOpen.reopensOnRestore(project, open?.dir?.name, restored.dir.name)) {
+                                        open = kits.firstOrNull { it.dir == restored.dir } ?: restored
+                                    }
                                 }
                             },
                             // A snip back on its list changes nothing the
