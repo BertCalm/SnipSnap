@@ -164,6 +164,23 @@ internal object BoreCandidates {
 
     fun spec(voice: BoreVoice): Spec = requireNotNull(of(voice)) { "$voice is a kept voice, not a candidate" }
 
+    /** The BREATH every voice starts at ([Bore.macrosFor]): the candidates' touch is measured down from it. */
+    const val DEFAULT_BREATH = 0.6f
+
+    /**
+     * The candidates' touch ([CandidateTouch]; the owner on every soft, medium, hard clip: "All sound the same"). A breath softer than
+     * [DEFAULT_BREATH] is a gentler air stream that leaves mostly the fundamental and the next partials, quieter and slower to speak.
+     * The clips' soft touch (BREATH at 0.62 of the default, depth 0.38) loses 18.5 dB above three times the note, is 7.7 dB quieter
+     * before that and takes 0.3 s to rise; the held keys' soft layer (BREATH at [BoreKeys.SOFT_BREATH_SHARE] of itself, depth 0.55)
+     * would lose 26 dB. The corner sits higher than ARCO's so a soft low reed keeps enough of its edge to stay a melodic note to the
+     * classifier. At the default BREATH and above, the kept sound.
+     */
+    val TOUCH = CandidateTouch.Lean(shelfDbPerDepth = 48f, levelDbPerDepth = 20f, riseSecondsPerDepth = 0.8f, cornerRatio = 3f)
+
+    /** A candidate's one-shot [x] at [hz] as blown at [breath] ([TOUCH]). */
+    fun touched(x: FloatArray, hz: Float, breath: Float): FloatArray =
+        CandidateTouch.touched(x, hz, CandidateTouch.depth(breath, DEFAULT_BREATH), TOUCH)
+
     fun bellHz(s: Spec, hz: Float, breath: Float, lip: Float): Float = when (s.kind) {
         Kind.JET, Kind.VESSEL -> hz * Dsp.expMap(lip, s.bellLow, s.bellHigh) * Dsp.lin(breath, s.bellBreathLow, s.bellBreathHigh)
         else -> Dsp.expMap(lip, s.bellLow, s.bellHigh) * Dsp.lin(breath, s.bellBreathLow, s.bellBreathHigh)

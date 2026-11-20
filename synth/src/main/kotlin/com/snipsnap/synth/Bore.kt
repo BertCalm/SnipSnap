@@ -1860,6 +1860,9 @@ object Bore {
         val bite = biteBoostDb(voice, m.getValue("LIP"))
         val rasp = raspAmount(voice, m.getValue("LIP"), m.getValue("BREATH"))
         val voicing = voicingFor(voice).copy(openingTrimDb = opening.trimDb)
-        return Snip(finish(blow(voice, hz, m, rate, human = human), rate, bite, rasp, voicing, opening.centred, BoreCandidates.of(voice)), channels = 1, sampleRate = RATE)
+        val cand = BoreCandidates.of(voice)
+        val done = finish(blow(voice, hz, m, rate, human = human), rate, bite, rasp, voicing, opening.centred, cand)
+        // A candidate blown softer than its default BREATH is darker, quieter and slower ([BoreCandidates.touched]); a kept voice is not.
+        return Snip(if (cand != null) BoreCandidates.touched(done, hz, m.getValue("BREATH")) else done, channels = 1, sampleRate = RATE)
     }
 }

@@ -46,7 +46,7 @@ as shipped, and so does the softened SAX opening.
 default note and default LOOP as they ship. The hashes from before the change
 still hold with the player off and the old opening (`BoreFrozenSoundTest`).
 
-## Candidate voices (round bore-voices-1, 20 Nov 2026: awaiting listening)
+## Candidate voices (round bore-voices-1, 20 Nov 2026: kept, touch reworked)
 
 **Why.** The melodic gate asks for six voices; BORE has two. Five candidates are
 built, one of them a spare, appended to `BoreVoice` after SAX so saved names
@@ -87,3 +87,28 @@ filing itself comes from the length, as the kept voices' does.
 **The round.** Clips DP (HOLLOW), DQ (SHAWM), DR (SHAKU), DS (PANPIPE), DT
 (VESSEL): four notes across the range, then soft, medium and hard; DU1 is the
 kept two for reference.
+
+## Verdict of 20 Nov 2026 (round bore-voices-1) and the candidates' touch
+
+**Verdict.** Every range clip (DP1, DQ1, DR1, DS1, DT1): **KEEP**, no notes, so
+HOLLOW, SHAWM, SHAKU, PANPIPE and VESSEL are kept as sounds and BORE will have
+seven voices. Every soft, medium, hard clip (DP2 to DT2): **TWEAK**, "All sound
+the same". Touch moved only the breath, the engine levelled every note to one
+loudness, and soft and hard were 1.3 to 2.7 dB apart by level-matched shape.
+
+**The touch** (`CandidateTouch`, `BoreCandidates.TOUCH`). A candidate blown
+under the default BREATH (0.6) is a gentler air stream, by depth u = how far
+under, as a share of the default: it loses 48u dB above three times the note,
+plays 20u dB quieter and rises over 0.8u s. The corner sits higher than ARCO's
+so a soft low SHAWM keeps enough edge to stay a melodic note to the classifier.
+At the default BREATH and above nothing changes, so the hardest touch is the
+kept sound, byte for byte: the range clips re-render to the heard SHA-256 (5 of
+5, and DU1), and the candidates' default renders are pinned (`KEPT_CANDIDATES`,
+equal to the build before). Only a one-shot is touched; the LOOP and the held
+keys are not yet.
+
+Measured at the clips' touches 0.3, 0.7, 1 (`BoreCandidateVoicesTest`): soft to
+hard 8.6 to 13.2 dB of level-matched third-octave shape (was 1.3 to 2.7), each
+step 4.2 dB or more (was 0.7 to 1.6); soft 8.8 to 9.5 dB and medium 4.2 to
+4.9 dB quieter than hard (was 0); soft reaches half its level 80 to 100 ms
+later. Round touch-ab-1 plays each heard clip, then the new touch (EE1 to EI1).

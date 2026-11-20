@@ -1933,7 +1933,9 @@ object Arco {
         } else bow(voice, hz, m, rate)
         val buzz = m.getValue("BUZZ")
         val strung = if (!(buzz > 0f)) raw else buzzed(raw, voice, buzz, bowOnLevel(raw, voice, hz, m, rate), law = law)
-        return Snip(finishedFor(strung, voice, m, rate), channels = 1, sampleRate = RATE)
+        val done = finishedFor(strung, voice, m, rate)
+        // A candidate bowed lighter than its default BOW is darker, quieter and slower ([ArcoCandidates.touched]); a kept voice is not.
+        return Snip(if (ArcoCandidates.of(voice) != null) ArcoCandidates.touched(done, hz, m.getValue("BOW")) else done, channels = 1, sampleRate = RATE)
     }
 
     /** [finished] at the BODY and the WASH [m] (settled) plays at ([bodyOf], [washOf]): a one-shot's finish for any voice, what [render] calls. */

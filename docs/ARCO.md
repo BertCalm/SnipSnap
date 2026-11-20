@@ -40,7 +40,7 @@ as shipped.
 note, default LOOP and a three-second note as they ship. The hashes from before
 the change still hold with the player off (`ArcoBuzzTest`, `ArcoFrozenR1cTest`).
 
-## Candidate voices (round arco-voices-1, 20 Nov 2026: awaiting listening)
+## Candidate voices (round arco-voices-1, 20 Nov 2026: kept, touch reworked)
 
 **Why.** The melodic gate asks for six voices; ARCO has three. Four candidates
 are built, one of them a spare, appended to `ArcoVoice` after SARANGI so saved
@@ -76,3 +76,27 @@ and no candidate does it more.
 **The round.** Clips DK (WHEEL), DL (BAR), DM (GLASS), DN (VIOL): four notes
 across the range, then soft, medium and hard; DO1 is the kept three for
 reference.
+
+## Verdict of 20 Nov 2026 (round arco-voices-1) and the candidates' touch
+
+**Verdict.** Every range clip (DK1, DL1, DM1, DN1): **KEEP**, no notes, so
+WHEEL, BAR, GLASS and VIOL are kept as sounds and ARCO will have seven voices.
+Every soft, medium, hard clip (DK2 to DN2): **TWEAK**, "All sound the same".
+Touch moved only the bow, the engine levelled every note to one loudness, and
+soft and hard were 1.2 to 2.7 dB apart by level-matched shape.
+
+**The touch** (`CandidateTouch`, `ArcoCandidates.TOUCH`; the same kind of answer
+LATTICE's candidates got). A candidate bowed under the default BOW (0.5) is a
+lighter, slower stroke further from the bridge, by depth u = how far under, as
+a share of the default: it loses 40u dB above 2.5 times the note (a blend toward
+its own two-pole low-pass), plays 14u dB quieter and rises over 0.8u s. At the
+default BOW and above nothing changes, so the hardest touch is the kept sound,
+byte for byte: the range clips re-render to the heard SHA-256 (4 of 4, and DO1),
+and the candidates' default renders are pinned (`KEPT_CANDIDATES`, equal to the
+build before). Only a one-shot is touched; the LOOP and the held keys are not yet.
+
+Measured at the clips' touches 0.3, 0.7, 1 (`ArcoCandidateVoicesTest`): soft to
+hard 9.4 to 13.3 dB of level-matched third-octave shape (was 1.2 to 2.7), each
+step 4.4 dB or more (was 0.8 to 1.8); soft 8.4 to 10.7 dB and medium 4.2 to
+6.1 dB quieter than hard (was 0); soft reaches half its level 80 to 150 ms
+later. Round touch-ab-1 plays each heard clip, then the new touch (EA1 to ED1).

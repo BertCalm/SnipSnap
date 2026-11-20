@@ -124,6 +124,19 @@ internal object ArcoCandidates {
 
     fun spec(voice: ArcoVoice): Spec = requireNotNull(of(voice)) { "$voice is a kept voice, not a candidate" }
 
+    /**
+     * The candidates' touch ([CandidateTouch]; the owner on every soft, medium, hard clip: "All sound the same"). A bow lighter than
+     * [Arco.DEFAULT_BOW] is a slower, lighter stroke further from the bridge: fewer upper partials, less level, a slower start. The
+     * clips' soft touch (BOW at about half the default, depth 0.5) loses 20 dB above two and a half times the note, is 7 dB quieter
+     * before that and takes 0.4 s to rise; the held keys' soft layer (BOW at [ArcoKeys.SOFT_SHARE] of itself, depth 0.72) would lose
+     * 29 dB. At the default BOW and above, the kept sound.
+     */
+    val TOUCH = CandidateTouch.Lean(shelfDbPerDepth = 40f, levelDbPerDepth = 14f, riseSecondsPerDepth = 0.8f, cornerRatio = 2.5f)
+
+    /** A candidate's one-shot [x] at [hz] as bowed at [bow] ([TOUCH]). */
+    fun touched(x: FloatArray, hz: Float, bow: Float): FloatArray =
+        CandidateTouch.touched(x, hz, CandidateTouch.depth(bow, Arco.DEFAULT_BOW), TOUCH)
+
     /** What the bow drags for [s] at [hz], with the bridge's corner at [corner] and the tuning [share]. */
     fun bowed(s: Spec, hz: Float, corner: Float, share: Float, grip: Float, rate: Int): Bowed = when (s.kind) {
         Kind.STRING -> StringBowed(Strings.Bow(f = hz, beta = s.beta, bridgeHz = corner, share = share, rate = rate))

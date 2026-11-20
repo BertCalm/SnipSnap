@@ -112,14 +112,47 @@ class BoreCandidateVoicesTest {
         }
     }
 
+    /**
+     * The owner on every soft, medium, hard clip of round voices-bore-1: "All sound the same" (level-matched, soft to hard was 1.2
+     * to 2.7 dB by third-octave shape, each step 0.6 to 1.8 dB, at one level). Touch now leans the note ([CandidateTouch]): a softer
+     * touch is darker, quieter and slower to speak, and the hardest touch (the default BREATH) is the kept sound. The bars are under
+     * what this build measures at the clips' touches 0.3, 0.7, 1 (soft to hard 8.6 to 13.3 dB of shape, each step at least 4.2 dB, soft 8.6 to 9.4 dB and medium 4.2 to
+     * 4.9 dB quieter than hard, soft reaching half its level 80 to 100 ms later), so a return to "sounds
+     * the same" fails.
+     */
     @Test
-    fun `soft, medium and hard differ in tone at the same loudness`() {
-        for (voice in candidates) {
-            val shapes = listOf(.35f, .7f, 1f).map { M.bands(render(voice, touch = it)) }
-            val steps = listOf(M.distance(shapes[0], shapes[1]), M.distance(shapes[1], shapes[2]))
-            println("BORE $voice level-matched touch steps: %.2f dB, %.2f dB".format(steps[0], steps[1]))
-            assertTrue(steps.all { it > TOUCH_DB }, "$voice touch barely changes the tone: $steps")
+    fun `soft, medium and hard differ clearly in tone, level and onset`() {
+        fun onset(x: FloatArray): Double {
+            val w = Dsp.RATE / 100
+            val env = DoubleArray(x.size / w) { k -> rms(x, k * w / 44100.0, (k + 1) * w / 44100.0) }
+            val steady = env.copyOfRange(50, 200).sorted()[75]
+            return env.indexOfFirst { it >= .5 * steady } / 100.0
         }
+        // Held two and a half seconds, as the soft, medium, hard clips were.
+        val held = mapOf("HOLD" to (Bore.LOOP_THRESHOLD * kotlin.math.ln(2.5 / Bore.HOLD_MIN_SECONDS) / kotlin.math.ln(Bore.HOLD_MAX_SECONDS / Bore.HOLD_MIN_SECONDS)).toFloat())
+        for (voice in candidates) {
+            val x = listOf(.3f, .7f, 1f).map { render(voice, touch = it, extra = held) }
+            val shapes = x.map { M.bands(it) }
+            val steps = listOf(M.distance(shapes[0], shapes[1]), M.distance(shapes[1], shapes[2]))
+            val span = M.distance(shapes[0], shapes[2])
+            val levels = x.map { 20 * log10(rms(it, .3, 2.0)) }
+            val onsets = x.map { onset(it) }
+            println("BORE $voice touch: shape steps %.2f, %.2f dB, soft to hard %.2f dB; level %.1f, %.1f, %.1f dB; half-level onset %.0f, %.0f, %.0f ms"
+                .format(steps[0], steps[1], span, levels[0], levels[1], levels[2], 1000 * onsets[0], 1000 * onsets[1], 1000 * onsets[2]))
+            assertTrue(steps.all { it > TOUCH_STEP_DB } && span > TOUCH_SPAN_DB, "$voice touch barely changes the tone: $steps, $span")
+            assertTrue(levels[2] - levels[0] > TOUCH_SOFT_QUIETER_DB && levels[2] - levels[1] > TOUCH_MEDIUM_QUIETER_DB, "$voice touch levels $levels")
+            assertTrue(onsets[0] - onsets[2] > TOUCH_SLOWER_SECONDS, "$voice soft speaks no slower than hard: $onsets")
+        }
+    }
+
+    /** The hardest touch is the default BREATH: what was heard and kept in the range clips. Under it, the lean starts at once. */
+    @Test
+    fun `the default touch is the kept sound`() {
+        val lines = candidates.map { v -> "$v " + M.hash(render(v)) }
+        lines.forEach(::println)
+        assertEquals(KEPT_CANDIDATES, M.hash(lines))
+        val x = FloatArray(1000) { kotlin.math.sin(it * .1f) }
+        assertContentEquals(x.copyOf(), CandidateTouch.touched(x, 440f, CandidateTouch.MIN_DEPTH / 2, BoreCandidates.TOUCH))
     }
 
     @Test
@@ -186,7 +219,14 @@ class BoreCandidateVoicesTest {
          */
         const val KEPT_RENDERS = "31d7f07fc3ffac4c58235b733bd2ee68dd363e38412cf8aa30384598f3723ecf"
         const val ROOT_SHARE = .3
-        const val TOUCH_DB = .5
+        /** Touch bars, each under what this build measures (the test's KDoc) and far over the 0.6 to 1.8 dB steps the owner rejected. */
+        const val TOUCH_STEP_DB = 3.5
+        const val TOUCH_SPAN_DB = 8.0
+        const val TOUCH_SOFT_QUIETER_DB = 7.5
+        const val TOUCH_MEDIUM_QUIETER_DB = 3.5
+        const val TOUCH_SLOWER_SECONDS = .06
+        /** SHA-256 over the candidates' default renders an octave over the root (default macros): the hardest touch. */
+        const val KEPT_CANDIDATES = "cb428f79c90fbcd974fd4365d8222ca6336a0bab19da0b1857cedcac49bf1b89"
         /** Notes every pair of voices that share a range meets on: HOLLOW and PANPIPE meet from C4 to A4, SAX and SHAKU from D4. */
         val PROBE_NOTES = listOf(48, 55, 60, 64, 67, 72, 79, 84)
     }
