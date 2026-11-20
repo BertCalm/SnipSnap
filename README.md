@@ -1134,7 +1134,7 @@ starting recipes, native note/touch/seed/passage replay,
 a dry sixteen-pad one-shot FRESH TAPE starter and a diagnostic audition carry the approved
 Python direction into a native candidate. Nonzero HOLD is refused. MAKE
 INSTRUMENT builds finite keys from any recipe (C2 to C5, three touches of two
-takes, a key-up fade; built, awaiting the owner's listen in accord-keys-1). SYNTH's
+takes, a key-up fade; kept by ear in accord-keys-1, 20 Nov 2026). SYNTH's
 ROOT, TOUCH, LENGTH and TINE profile controls keep the complete saved recipe.
 Native numerical checks and three software-emulator functional tests passed
 with the documented ART setup. The full nine-module JVM gate at `00a1f9ff`
