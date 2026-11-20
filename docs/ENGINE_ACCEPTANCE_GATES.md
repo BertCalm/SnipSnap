@@ -1272,7 +1272,6 @@ Source: the commit that adds this entry. Details: [CONSORT](CONSORT.md).
 
 Nothing here is a completion claim. A passing `ConsortTest` and an audition page do not close a gate.
 
-
 ## KERF synthetic chops (rounds 1 to 4, 2026-11-20)
 
 Source: the commit that adds this entry. Details: [the KERF spec](superpowers/specs/2026-11-19-kerf-synthetic-chops-design.md). KERF is a capture-side tool (SYNTH TWIN on the pad sheet, SYNTH TWIN ALL on the kit screen, `snipsnap kerf`) and, since round 4, a registered drum engine on the SYNTH picker (`Kerf`, six voices over the bank's 63 fitted hits) with four genre kits on FRESH TAPE (`KerfKits`).
@@ -1287,3 +1286,18 @@ Source: the commit that adds this entry. Details: [the KERF spec](superpowers/sp
 | Melodic, keygroups, chords, HOLD, STRUM | Not applicable: one-shot drum hits. | Not applicable |
 
 Nothing here is a completion claim: the engine's presets, the four kits, their rolls and risers wait for the owner's listen and hardware. The owner has heard the twins (2026-11-18, 2026-11-19, 2026-11-20) and the velocity layers and takes at depth 3, and reported phone and MPC good (2026-11-20).
+
+## FACSIMILE kits (Kotlin built and heard, 2026-11-20)
+
+Four drum kits replicated by synthesis from nine of the owner's reference loops: SHUFFLE, KNOCK, HALF-TIME, TEXTURE.
+See [FACSIMILE](FACSIMILE.md). The owner heard the Python prototype through rounds 0 to 0m and closed them with "Ok,
+sounds good now" (2026-11-20); the Kotlin port matches it within the prototype's own noise-to-noise spread. Evidence:
+`FacsimileTest`, `FacsimileKitsTest`, `FacsimileKitTest`, `:shell:generateFacsimileKits`.
+
+| Gate | Status | Evidence |
+|---|---|---|
+| Melodic, keygroups, chord tools, STRUM | Not applicable | Drum kits |
+| Drums: multiple distinct genre kits on the shelf | Built and heard | Four kits under SKINS, each from different reference loops; the owner heard the Kotlin kits as exported ("Everything sounds good", 2026-11-20) |
+| Percussion: roll/riser | Built and heard | An accelerating snare roll landing on kick and snare on pad 17 of every kit, so no heard pad is given up |
+| Velocity and round robin: rendering | Pass in software | Soft zones are different strikes and, over their four takes, never brighter; four different strikes per zone; a groove's soft zone is a softer performance |
+| Velocity and round robin: saving, playback, export | Pass in software | Save, reload, pad resolver, MPC 3, SFZ and DecentSampler for all 68 pads; MPC 2 not written (format limit). No phone or MPC playback yet |

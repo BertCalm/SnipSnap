@@ -635,6 +635,16 @@ tasks.register<JavaExec>("generateLooseCrateKits") {
     args(providers.gradleProperty("looseCrateKitsOutput").orNull ?: "${rootDir}/testkit/loose-crate-kits")
 }
 
+tasks.register<JavaExec>("generateFacsimileKits") {
+    group = "distribution"
+    description = "Build the FACSIMILE kits, prove the velocity and round-robin grid through save, playback and MPC 3 export, and write the listening pack."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.FacsimileKitGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "2g"
+    args(providers.gradleProperty("facsimileKitsOutput").orNull ?: "${rootDir}/testkit/facsimile-kits")
+}
+
 tasks.register<JavaExec>("generateStaggerKits") {
     group = "distribution"
     description = "Build the three STAGGER kits, prove the velocity and round-robin grid through save, playback and MPC 3 export, and write the listening pack."

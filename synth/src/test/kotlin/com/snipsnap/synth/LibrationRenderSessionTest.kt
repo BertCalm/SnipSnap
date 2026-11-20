@@ -13,7 +13,7 @@ class LibrationRenderSessionTest {
     )
 
     @Test fun `cold cached and renamed previews reproduce the public renderer without exposing cache samples`() {
-        for (voice in LibrationVoice.entries) {
+        for (voice in Libration.CLOUD_VOICES) {
             val patch = note(voice)
             val session = LibrationRenderSession()
             val first = session.renderTimed(patch)

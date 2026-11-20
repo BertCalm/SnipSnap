@@ -9,9 +9,11 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.snipsnap.app.theme.LocalReduceMotion
+import com.snipsnap.kit.Project
 import com.snipsnap.shell.BusyLatch
 import com.snipsnap.shell.Copy
 import com.snipsnap.shell.Places
+import com.snipsnap.shell.ShelfModel
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -47,13 +49,17 @@ class KitsScreenLoadingTest : ComposeScreenTest() {
      * clock the first composition gets (see `setPhoneContent`): the tests of
      * the first 200 ms take almost none of it.
      */
-    private fun show(isLoading: Boolean, settleMillis: Long = 300) {
+    private fun show(
+        isLoading: Boolean,
+        settleMillis: Long = 300,
+        projects: List<ShelfModel.ProjectRow> = emptyList(),
+    ) {
         loading = isLoading
         setPhoneContent(settleMillis) {
             CompositionLocalProvider(LocalReduceMotion provides true) {
                 KitsScreen(
                     kits = emptyList(),
-                    projects = emptyList(),
+                    projects = projects,
                     onOpenProject = {},
                     onNewProject = {},
                     onCatchFirst = {},
@@ -154,5 +160,29 @@ class KitsScreenLoadingTest : ComposeScreenTest() {
         compose.onNodeWithText(Copy.EMPTY_SHELF).assertIsDisplayed()
         button(Places.CATCH_FIRST).assertIsDisplayed()
         button(Copy.START_FROM_KIT).assertIsDisplayed()
+    }
+
+    /**
+     * UAT 2026-11 user states, D-2: a project whose only kit was deleted still
+     * exists, and the LIBRARY used to hide it behind the cold panel ("Nothing
+     * recorded yet.", no project row, no NEW PROJECT). With a project and no
+     * kits the list is drawn: the project's row and NEW PROJECT, and not the
+     * first-run panel.
+     */
+    @Test
+    fun a_project_with_no_kit_left_is_still_listed() {
+        val dir = java.io.File(
+            androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().targetContext.cacheDir,
+            "d2-project",
+        )
+        show(
+            isLoading = false,
+            projects = listOf(ShelfModel.ProjectRow(dir, Project("Beats", kits = listOf("Gone Kit"), activeKit = "Gone Kit"), 0L)),
+        )
+
+        button("OPEN PROJECT BEATS").assertExists()
+        button("NEW PROJECT").assertExists()
+        compose.onNodeWithText(Copy.EMPTY_SHELF).assertDoesNotExist()
+        button(Places.CATCH_FIRST).assertDoesNotExist()
     }
 }

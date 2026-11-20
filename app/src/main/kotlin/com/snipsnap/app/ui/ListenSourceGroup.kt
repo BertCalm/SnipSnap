@@ -21,6 +21,7 @@ import com.snipsnap.app.theme.raisedBevel
 import com.snipsnap.app.theme.tape
 import com.snipsnap.shell.CaptureSource
 import com.snipsnap.shell.Copy
+import com.snipsnap.shell.Layout
 import com.snipsnap.shell.Scheme
 
 /**
@@ -46,7 +47,7 @@ internal fun ListenSourceGroup(scheme: Scheme, source: CaptureSource?, onPick: (
                 Column(
                     Modifier
                         .fillMaxWidth()
-                        .heightIn(min = 44.dp)
+                        .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                         .let { if (selected) it.pressedBevel(scheme) else it.raisedBevel(scheme) }
                         .semantics { this.selected = selected }
                         .tapeClick(label = "${Copy.SETUP_LISTEN_HEADING} ${option.label}") { if (!selected) onPick(option) }

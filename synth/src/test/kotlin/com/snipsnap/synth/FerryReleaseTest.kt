@@ -32,7 +32,8 @@ class FerryReleaseTest {
                 velocity = c.getValue("velocity").num().toFloat(), seed = c.getValue("seed").str().toLong(),
                 macros = mapOf("HANDOFF" to c.getValue("handoff").num().toFloat(), "MATCH" to c.getValue("match").num().toFloat(),
                     "LOSS" to c.getValue("loss").num().toFloat()))
-            val samples = Patches.fromJsonText(old.toJsonText()).render().samples
+            // The goldens hash the note before its onset ease (FerryOnsetTest ties render() to it).
+            val samples = Patches.fromJsonText(old.toJsonText()).let { it as FerryPatch }.acceptedBody()
             val bytes = ByteBuffer.allocate(samples.size * 4).order(ByteOrder.LITTLE_ENDIAN)
             samples.forEach { bytes.putInt(it.toRawBits()) }
             val hash = MessageDigest.getInstance("SHA-256").digest(bytes.array()).joinToString("") { "%02x".format(it) }
@@ -55,7 +56,7 @@ class FerryReleaseTest {
         val oldRaw = plan.render(Ferry.initial(), start * Dsp.OVERSAMPLE)
         assertContentEquals(oldRaw, raw.copyOf(oldRaw.size), "Release must continue the same physical gesture")
         val released = Ferry.finish(raw.copyOf(), Ferry.releaseSeconds(loss))
-        assertContentEquals(released, Ferry.render(macros = mapOf("LOSS" to loss)).samples,
+        assertContentEquals(Ferry.easeOnset(released.copyOf()), Ferry.render(macros = mapOf("LOSS" to loss)).samples,
             "The actual renderer must apply the designed release")
         val unshaped = Ferry.finish(raw.copyOf())
         val gain = released[1000] / unshaped[1000]
@@ -89,7 +90,10 @@ class FerryReleaseTest {
                 assertTrue(snip.samples.all { it.isFinite() })
                 assertTrue(snip.peak() in .01f..1f)
                 assertTrue(abs(snip.samples.sumOf { it.toDouble() } / snip.samples.size) < .001)
-                assertTrue(abs(Loudness.of(snip) - Dsp.MELODIC_LOUDNESS_TARGET) < .001)
+                // The accepted note is leveled to the target; the onset ease then takes the click's own energy out of
+                // the loudest window, so the eased note reads a little lower (FerryOnsetTest prints and bounds it).
+                assertTrue(abs(Loudness.of(Ferry.body(midi = midi, macros = mapOf("HANDOFF" to handoff, "MATCH" to match, "LOSS" to loss)), 1, Dsp.RATE) - Dsp.MELODIC_LOUDNESS_TARGET) < .001)
+                assertTrue(Loudness.of(snip) in Dsp.MELODIC_LOUDNESS_TARGET * FerryOnsetTest.MIN_EASED_LOUDNESS..Dsp.MELODIC_LOUDNESS_TARGET + .001f)
                 val seconds = Ferry.observationFrames(loss).toFloat() / Dsp.RATE
                 val hz = 440 * 2.0.pow((midi - 69) / 12.0)
                 for (from in listOf(.05f, seconds * .325f, seconds * .8f)) {

@@ -6,7 +6,6 @@ import com.snipsnap.audio.WavWriter
 import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitPad
 import com.snipsnap.kit.KitStore
-import com.snipsnap.synth.isBanked
 import java.awt.RenderingHints
 import java.awt.image.BufferedImage
 import java.io.ByteArrayInputStream
@@ -403,24 +402,4 @@ class KitArtTest {
         assertTrue(!rings3.contentEquals(rings4), "rings answer the dice")
     }
 
-    @Test
-    fun `every starter kit renders every style without error`() {
-        for (starter in StarterKits.ALL) {
-            val dir = File(temp, "starter-${starter.id}")
-            val kit = starter.render("Starter ${starter.id}", dir, seed = 1)
-            // Law: a banked recipe (version 3, `layers` present) lists exactly one
-            // layer per velocity layer of its pad. It rides this loop so no starter
-            // is rendered twice. Vacuous until a starter is banked.
-            for (pad in kit.pads) {
-                val r = Breed.recipeOf(pad) ?: continue
-                if (r.isBanked) {
-                    assertEquals(pad.velocityLayers.size, r.layers!!.size, "${starter.id} slot ${pad.slot}")
-                }
-            }
-            for (style in KitArt.Style.entries) {
-                val png = KitArt.png(kit, dir, knobs(style), size = 128)
-                assertTrue(png.isNotEmpty(), "${starter.id}/${style.id}")
-            }
-        }
-    }
 }

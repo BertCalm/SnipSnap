@@ -21,7 +21,7 @@ class ChamberWideRangeTest {
     @Test
     fun `earlier wider recipes round trip without changing their renderer or factory models`() {
         assertEquals(Chamber.REGISTER_MODEL, Chamber.MODEL_VERSION)
-        assertTrue(ChamberPresets.all().all { it.model == 3 })
+        assertTrue(ChamberPresets.all().all { it.model == if (it.name == "Four Answers") 3 else Chamber.REGISTER_MODEL })
         val patch = ChamberPatch("Range candidate", ChamberVoice.HYBRID,
             Chamber.defaults(ChamberVoice.HYBRID) + ("MATERIAL" to 1f),
             midi = 48, seed = Long.MIN_VALUE + 17, model = Chamber.WIDE_RANGE_MODEL)

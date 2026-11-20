@@ -625,7 +625,7 @@ class DeterminismTest {
 
     @Test
     fun `LIBRATION saved short soft notes replay the same populations and audio`() {
-        for (voice in LibrationVoice.entries) {
+        for (voice in Libration.KEPT_VOICES) {
             val patch = LibrationPatch("Recall canary", voice,
                 Libration.defaults(voice) + mapOf("REGION" to .375f, "SWARM" to .65f),
                 midi = 43, velocity = .35f, sourceSeconds = .37)
@@ -636,7 +636,7 @@ class DeterminismTest {
 
     @Test
     fun `LIBRATION explicit held recipes replay byte identical loops through saved pad recipes`() {
-        for (voice in LibrationVoice.entries) {
+        for (voice in Libration.CLOUD_VOICES) {
             val patch = LibrationPatch("Held recall canary", voice,
                 Libration.defaults(voice) + mapOf("SWARM" to .1f, "RESONANCE" to .35f, "HOLD" to 1f),
                 midi = 55, velocity = .35f, heldModel = LibrationKeys.MODEL_VERSION)

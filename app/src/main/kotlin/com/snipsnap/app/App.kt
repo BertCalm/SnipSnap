@@ -1084,6 +1084,21 @@ fun App(shelf: KitShelf) {
             dock.say(Copy.TAPE_STOPPED_ITSELF)
         }
     }
+    // An ARM that never became a session (UAT 2026-11 user states, S-1).
+    // The permission callback and the projection result below say
+    // SESSION_ARMED / APP_AUDIO_ARMED the moment they ask, before the
+    // service has opened anything; when the mic is held by another app or
+    // the platform refuses, this is the correction, the way `lastSnipError`
+    // corrects an optimistic SNIP. Baselined by attempt count, as above.
+    val armFailed by MicSessionService.armFailed.collectAsState()
+    var armFailedSeen by remember { mutableStateOf(MicSessionService.armFailed.value?.first) }
+    LaunchedEffect(armFailed) {
+        val (attempt, source) = armFailed ?: return@LaunchedEffect
+        if (attempt != armFailedSeen) {
+            armFailedSeen = attempt
+            dock.say(if (source == MicSessionService.Source.INSIDE) Copy.APP_AUDIO_WONT_START else Copy.MIC_WONT_START)
+        }
+    }
     // ARM APP AUDIO runs through the same RECORD_AUDIO request as ARM TAPE
     // (playback capture needs it too); this remembers which button asked,
     // so the permission callback below knows whether to arm the mic or
@@ -1135,7 +1150,10 @@ fun App(shelf: KitShelf) {
             } else {
                 haptics.arm()
                 MicSessionService.arm(context)
-                dock.say(Copy.SESSION_ARMED)
+                // A refused notification takes the notification's SNIP with it (UAT 2026-11
+                // user states, S-5); absent below Android 13, where nothing was asked.
+                val notificationsOff = results[Manifest.permission.POST_NOTIFICATIONS] == false
+                dock.say(if (notificationsOff) Copy.SESSION_ARMED_NO_NOTIFICATIONS else Copy.SESSION_ARMED)
             }
         } else {
             // A denied RECORD_AUDIO is not a DRM/dead-air refusal — see
@@ -3898,7 +3916,7 @@ fun App(shelf: KitShelf) {
                             backLabel = checkNotNull(nav.backChip) { "TRASH is a bench, so it has something to go back to" },
                             onBack = { nav.closeBench() },
                             onToast = { dock.say(it) },
-                            onKitRestored = {
+                            onKitRestored = { restored ->
                                 // The section already owns its own toast
                                 // and its own list refresh — this only
                                 // needs to catch the shelf back up, the
@@ -3909,6 +3927,14 @@ fun App(shelf: KitShelf) {
                                 // also what re-reads the bin count.
                                 scope.launch {
                                     kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
+                                    // The open project's active kit coming back goes back
+                                    // on its grid (UAT 2026-11 user states, D-3): PADS and
+                                    // BEAT said it had no kit until it was reopened, and
+                                    // with nothing open the project was forgotten as the
+                                    // last one open. Read after the await, off the fresh list.
+                                    if (LastOpen.reopensOnRestore(project, open?.dir?.name, restored.dir.name)) {
+                                        open = kits.firstOrNull { it.dir == restored.dir } ?: restored
+                                    }
                                 }
                             },
                             // A snip back on its list changes nothing the
@@ -3938,6 +3964,7 @@ fun App(shelf: KitShelf) {
                             KitsScreen(
                                 kits = kits,
                                 projects = projects,
+                                listening = armed,
                                 onOpenProject = { openProject(it.project) },
                                 openProjectName = project?.name,
                                 onNewProject = ::newProject,
