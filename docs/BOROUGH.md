@@ -131,6 +131,40 @@ rings 1.35 s above -30 dB. Verification unchanged: 792 WAVs, 0 failures, timbral
 88 of 88 pads. Listening page version 3: the RIDE & RIMS before player is the round 1 groove
 with the hat stand-in.
 
+### Round 1.4: compression, as a preview
+
+**What the owner asked.** "Maybe add a bit of compression?"
+
+**Measured.** Crest factor (peak over RMS, first 10 s; `extract.crest_db`, stored per loop in
+`targets.json`): the loops measure 10.1 to 14.5 dB, the round 1.3 grooves 14.1 to 20.9 dB, 2.2 to
+6.4 dB peakier. Compressing each pad on its own (the only place the app can carry it today: it has
+no compressor across pads) barely moves a groove: STOOP 14.1 -> 13.3-13.7 dB with the pad's peak or
+its loudness restored, against the loop's 11.0. The first attempt even made grooves peakier: a
+detector that reacts after the first crack turns the body down and, peak restored, sharpens the
+transient. A loop's density is a property of the whole break.
+
+**What the owner chose.** Hear it before it is built: a preview on the listening page only. Each
+kit sheet gets a second groove through `build.bus_preview()`: a gentle causal glue compressor
+(10 ms attack, 120 ms release, ratio 4, threshold 10 dB under the peak) then a lookahead limiter
+(3 ms lookahead, 50 ms release, the app's own output guard), driven until the groove's crest is its
+loop's. The compressor alone made most grooves slightly peakier (its attack lets each crack
+through), so the loops' density is mostly the limiter's. A 3 ms limiter release was rejected
+before publishing: it moves the gain inside one cycle of a 50-100 Hz kick, which is distortion.
+
+| Kit | Groove crest | Preview crest (= loop) | Limiter drive |
+|---|---:|---:|---:|
+| STOOP DUST | 14.1 dB | 11.0 dB | 5.0 dB |
+| CELLAR BOOM | 20.9 dB | 14.5 dB | 7.5 dB |
+| CRANKED | 15.8 dB | 11.0 dB | 7.0 dB |
+| WAX | 14.7 dB | 10.1 dB | 6.9 dB |
+| DRY ROOM | 14.9 dB | 12.7 dB | 5.0 dB |
+| RIDE & RIMS | 17.2 dB | 12.7 dB | 6.1 dB |
+
+The pads are byte-for-byte the round 1.3 pads; 792 WAVs, 0 failures. Listening page version 6.
+If the owner wants it, the real version is a whole-kit compressor and limiter in the app's live
+engine (native audio code, its own tests and the engine gates); the preview's settings are its
+starting point.
+
 ### Round 1.3: STOOP's overblown kick
 
 **What the owner heard.** "Stoop sounds like the speaker is overblown when the kick hits. Ride is

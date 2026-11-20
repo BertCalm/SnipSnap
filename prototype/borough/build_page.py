@@ -103,6 +103,7 @@ for(const k of M.kits){
   const res=Object.entries(k.fitted_residual_db).map(([r,v])=>`${r} ${v.toFixed(1)} dB`).join(' · ');
   sec.innerHTML=`<div class="kit"><div style="display:grid;gap:8px;min-width:0"><h2></h2><p class="role"></p><div class="facts"></div></div><div class="media">
   <h3>Groove</h3><audio controls preload="none" src="audio/${k.id}-groove.mp3"></audio>
+  ${k.bus_preview?`<h3>Preview: the same groove through a whole-kit compressor and limiter (not in the app yet)</h3><audio controls preload="none" src="audio/${k.id}-groove-glued.mp3"></audio>`:''}
   <h3>All twelve pads, hardest zone</h3><audio controls preload="none" src="audio/${k.id}-pads.mp3"></audio>
   <h3>Touch: kick, snare, hat · soft ×3, medium ×3, hard ×3</h3><audio controls preload="none" src="audio/${k.id}-touch.mp3"></audio>
   ${M.before?`<h3>Before: the same groove in ${M.before}</h3><audio controls preload="none" src="audio/before-${k.id}-groove.mp3"></audio>`:''}</div></div>`;
@@ -125,6 +126,7 @@ LEDE = {
 }
 
 LISTEN_R1 = [
+    'New in this version, a preview: each kit sheet has a second groove, the same performance through one compressor and a limiter across the whole kit, set so it is exactly as dense as its loop. Your loops get their squash from that, and compressing each drum on its own barely gets there. It is only on this page: the app cannot do it yet. If you like it, the next step is building it into the app.',
     'New in this version: STOOP\'s kick lost its fast flutter. Its two drum heads were tuned 12% apart, so they beat about 12 times a second, and that ran through a squashed, saturated boom over a second long, a lot like a woofer flapping. The heads are now almost in unison and the boom stops by about 0.8 s. Six other kicks got the same correction, mostly the KICK 2 pads. STOOP needs less level trim now (-2.2 dB, was -5.5).',
     'New in this version: the ride lost its dead spot. Its ring used to fade out and come back (7.5 dB on a typical hit): the record chain darkened it so much that only a few cymbal partials were left, and they beat together. It is brighter now and dips under 2.2 dB, smoother than the EMBER ride you approved. The before player is the version you heard.',
     'New in this version: every kit\'s kicks are set against its loop\'s low-to-mid balance. STOOP DUST came down 5.5 dB and CELLAR BOOM 6.5 dB; DRY ROOM 1.8 dB; the others barely moved.',
