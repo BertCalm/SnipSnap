@@ -122,7 +122,10 @@ for(const k of M.kits){
   ${M.before?`<h3>Before: the same groove in ${M.before}</h3><audio controls preload="none" src="audio/before-${k.id}-groove.mp3"></audio>`:''}</div></div>`;
   sec.querySelector('h2').textContent=k.name;sec.querySelector('.role').textContent=k.role;
   const kp=k.pads[0].params, sp=k.pads[1].params;
-  const head=kp.f0!==undefined
+  const head=kp.punch_hz!==undefined
+    ?[`kick: a drum at ${kp.f1.toFixed(0)} Hz, struck at ${kp.punch_hz.toFixed(0)} Hz and falling onto it in about ${kp.punch_ms.toFixed(0)} ms, low mids cut ${kp.mud_db.toFixed(1)} dB, low-pass ${(kp.lp/1000).toFixed(1)} kHz`,
+      `snare: body ${sp.f1.toFixed(0)} Hz, crack around ${(sp.crack_hz/1000).toFixed(1)} kHz for ${sp.crack_ms.toFixed(0)} ms, grit ${sp.drive.toFixed(2)}, low-pass ${(sp.lp/1000).toFixed(1)} kHz`]
+    :kp.f0!==undefined
     ?[`kick ${kp.f0.toFixed(0)} Hz, sweep ×${kp.sweep.toFixed(2)} over ${kp.sweep_ms.toFixed(0)} ms, body ${kp.decay_ms.toFixed(0)} ms`,`snare head ${sp.f1.toFixed(0)} Hz, wires ${sp.wire_lo.toFixed(0)}–${sp.wire_hi.toFixed(0)} Hz for ${sp.wire_ms.toFixed(0)} ms`,`low-pass ${(kp.lp/1000).toFixed(1)} kHz kick · ${(sp.lp/1000).toFixed(1)} kHz snare · drive ${kp.drive.toFixed(2)}`]
     :[`kick head ${kp.f1.toFixed(0)} Hz, rings ${(kp.t1*1000).toFixed(0)} ms, beater contact ${kp.beater_ms.toFixed(1)} ms`,`snare head ${sp.f1.toFixed(0)} Hz, rings ${(sp.t1*1000).toFixed(0)} ms, wires ×${sp.wire.toFixed(2)}, stick contact ${sp.stick_ms.toFixed(2)} ms`,`record: room ${kp.distance.toFixed(2)} · squash ${kp.comp.toFixed(2)} · drive ${kp.drive.toFixed(2)} · low-pass ${(kp.lp/1000).toFixed(1)} kHz (kick), ${(sp.lp/1000).toFixed(1)} kHz (snare)`];
   const f=[`${k.bpm} BPM · swing ${k.swing_ms} ms on the 16th offbeat`,...head,`fit residual ${res}`,`from ${k.primary.replace(/_/g,' ')} + ${k.secondary.replace(/_/g,' ')}`];
@@ -139,6 +142,9 @@ LEDE = {
 }
 
 LISTEN_R1 = [
+    'Round 2, all six kits: every kick and snare (and KICK 2, SNARE 2 and the ghost) is now a designed boom-bap drum like the STOOP prototype you liked, tuned to fine measurements of each kit\'s own loops. Each kit sheet\'s Before player is round 1 as you last heard it.',
+    'Measured against each loop, every one of the 24 drums is closer than before, most by 2 to 6 times. The two weakest: CRANKED\'s KICK 2 (its loop had only two clean kick hits to measure) and RIDE & RIMS\'s KICK 2.',
+    'To match each loop\'s weight, the rest of each kit now sits 4 to 10 dB under its kick (WAX the most). If a snare feels too quiet, say which kit.',
     'New: a "Clean" groove right under each kit\'s groove: the same kit and performance with the record chain taken off (no squash, drive or low-pass, only a small room). If the clean one sounds clearer and less muddy, the chain is what is dulling them, and I will rebuild from clean upward.',
     'New: a "Wow A/B" on every kit sheet. Louder and punchier closes most of the loudness gap to your loops (they were 8-10 dB louder at the same peak); brighter and crisper adds presence, air and a little sparkle; wider and bigger puts a stereo room around the kit. Tell me which one (or which mix) has the wow, per kit if it differs. These are page previews: the winner gets baked into the pads.',
     'New in this version, against "they all sound similar": each kit now plays its own loop\'s groove (its pattern, its swing and push, its soft ghost kicks) instead of one pattern I wrote. STOOP and RIDE & RIMS drag their 16ths about 40 ms, CRANKED rushes them, WAX lays back on everything.',

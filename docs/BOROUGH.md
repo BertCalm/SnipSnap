@@ -131,7 +131,30 @@ rings 1.35 s above -30 dB. Verification unchanged: 792 WAVs, 0 failures, timbral
 88 of 88 pads. Listening page version 3: the RIDE & RIMS before player is the round 1 groove
 with the hat stand-in.
 
-## Round 2 (prototype): designed boom-bap drums, STOOP first
+## Round 2: designed boom-bap drums in all six kits
+
+The owner heard the STOOP prototype below: "Round 2 is def betetr". Every kit's KICK, SNARE, KICK 2,
+SNARE 2 and GHOST are now designed drums fitted to its own two loops (`hits.json`, `designed_fit.json`).
+Loops that never play a kick alone (keap, moffat) are measured on their kick-and-snare hits, and a
+kick's pitch is scored at 30 ms plus later readings within ~30% of it (past that something else in
+the loop is louder). Scored against the fine measurement, every one of the 24 drums is closer than its
+round 1 pad (dB, lower is closer):
+
+| Kit | KICK | SNARE | KICK 2 | SNARE 2 |
+|---|---|---|---|---|
+| STOOP DUST | 22.4 -> 4.0 | 21.3 -> 3.6 | 15.4 -> 4.9 | 17.2 -> 3.2 |
+| CELLAR BOOM | 10.5 -> 6.1 | 12.0 -> 8.3 | 17.0 -> 5.5 | 19.6 -> 5.5 |
+| CRANKED | 14.6 -> 3.3 | 23.2 -> 6.5 | 21.2 -> 11.0 | 17.7 -> 4.6 |
+| WAX | 24.3 -> 5.4 | 33.3 -> 8.0 | 25.4 -> 3.7 | 16.1 -> 7.2 |
+| DRY ROOM | 16.4 -> 4.3 | 16.6 -> 6.8 | 18.9 -> 4.0 | 16.8 -> 5.5 |
+| RIDE & RIMS | 37.8 -> 5.9 | 15.3 -> 6.8 | 13.1 -> 9.8 | 14.2 -> 4.8 |
+
+CRANKED's KICK 2 is the weakest: its loop (lafayette) gave only two clean kick hits to measure. The
+designed kicks are short and tight like the loops', so to match each loop's low-to-mid balance the rest
+of each kit now comes down instead of the kick: 4.3 to 10.2 dB (WAX the most); listen for a quiet snare
+there. 792 WAVs, 0 failures. Listening page version 11, before players = round 1.
+
+### Round 2 (prototype): designed boom-bap drums, STOOP first
 
 **What the owner heard.** After the wow A/B: "They all just sound muddy, muffled, and flat." After the
 clean A/B: "Without the chain the kick sounds like a weak hit, with it- it becomes muddy. I don't feel
