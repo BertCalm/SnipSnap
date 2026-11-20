@@ -2134,6 +2134,30 @@ object Copy {
     const val KERF_UNDO_NOTHING = "This pad carries no SYNTH TWIN on top. Nothing to undo here."
     /** The twin's UNDO when the bin holds no earlier take of the pad. */
     const val KERF_UNDO_NOT_BINNED = "The trash holds no earlier version of this pad. The twin stays."
+    /** MAKE SYNTH TWIN on a pad that is one already: a second would measure the twin's render, not the capture. */
+    const val KERF_ALREADY = "This pad is a synth twin already. Move BLEED or SLOP to re-cut it, or UNDO SYNTH TWIN first."
+    /** BLEED or SLOP moved on a twin with something riding it (pedals, a print): the re-cut would land under it. */
+    const val KERF_RIDDEN = "Something rides this twin. Take it off with NONE before re-cutting it."
+    /** The re-cut's word: its failure word ([actionFailed]). */
+    @field:CopyLabel const val KERF_RECUT = "RE-CUT TWIN"
+    /** The dock's line while BLEED or SLOP re-cuts a twin from its numbers. */
+    const val KERF_RECUT_BUSY = "Re-cutting the twin…"
+    /** SYNTH TWIN ALL's busy line on the kit screen: every pad measured, about half a second each. */
+    const val KERF_ALL_BUSY = "Measuring every pad…"
+    /** SYNTH TWIN ALL threw part-way: the pads made before it are kept and saved. */
+    const val KERF_ALL_FAILED = "Synth twin all stopped."
+    /**
+     * SYNTH TWIN ALL's landing: how many pads became twins, how many were left as they were (layered, chained,
+     * printed or too short to measure; nothing was done to them), and how many were twins already.
+     */
+    fun kerfedAll(made: Int, left: Int, already: Int): String {
+        val pads = "$made ${if (made == 1) "pad is a synth twin" else "pads are synth twins"} now. Originals are in the trash."
+        val rest = if (left > 0) " $left left as ${if (left == 1) "it was" else "they were"} (layered, chained, printed or too short)." else ""
+        val twins = if (already > 0) " $already ${if (already == 1) "was a twin" else "were twins"} already." else ""
+        return pads + rest + twins
+    }
+    /** SYNTH TWIN ALL with nothing it could make: every pad was left or was a twin already. */
+    const val KERF_ALL_NONE = "No pad here can become a synth twin. Every one is layered, chained, printed, too short or a twin already."
     /** SYNTH TWIN's refusal of a pad too short to measure. */
     const val KERF_TOO_SHORT = "This pad is too short to measure. A twin needs about a fortieth of a second."
     /** DRIFT: the pad drifted toward the partner the shelf picked. */

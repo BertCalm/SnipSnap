@@ -130,7 +130,8 @@ class AccordSynthScreenTest : ComposeScreenTest() {
                 assertEquals(preset.acousticProfile, requireNotNull(stored(voice)).acousticProfile)
             }
         }
-        compose.onNodeWithContentDescription("MAKE INSTRUMENT").assertDoesNotExist()
+        // Finite keys (AccordFiniteInstrumentScreenTest); HOLD itself stays hidden.
+        compose.onNodeWithContentDescription("MAKE INSTRUMENT").assertExists()
     }
 
     @Test fun changing_tine_profile_preserves_the_saved_history_and_return_keeps_the_choice() {

@@ -29,7 +29,7 @@ object StaggerKitGenerator {
         val root = File(args.firstOrNull() ?: "testkit/stagger-kits").absoluteFile.apply { deleteRecursively(); mkdirs() }
         val proof = StringBuilder("kit,pad,name,velocity_zones,takes_per_zone,saved_pcm,playback_cycles,mpc3_track\n")
         val metrics = StringBuilder("kit,pad,name,class,print,choke,seconds,build_ms\n")
-        val manifest = StringBuilder("{\n  \"kitVersion\": ${StaggerKits.VERSION}, \"round\": \"2\",\n  \"kits\": [\n")
+        val manifest = StringBuilder("{\n  \"kitVersion\": ${StaggerKits.VERSION}, \"round\": \"3\",\n  \"kits\": [\n")
         for ((k, g) in Kit.entries.withIndex()) {
             val folder = File(root, g.id).apply { mkdirs() }
             val staging = File(folder, "native")

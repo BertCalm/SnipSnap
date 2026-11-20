@@ -2,6 +2,9 @@ package com.snipsnap.shell
 
 import com.snipsnap.audio.DrumClass
 import com.snipsnap.audio.WavReader
+import com.snipsnap.synth.Accord
+import com.snipsnap.synth.AccordPresets
+import com.snipsnap.synth.AccordVoice
 import com.snipsnap.synth.PadRecipe
 import com.snipsnap.synth.TerraPatch
 import com.snipsnap.synth.TerraVoice
@@ -58,5 +61,37 @@ class RobinRestrikeTest {
         val a = terraModel("A").let { m -> Robin.apply(m, 1, takes = 3, seed = 5); WavReader.read(File(m.kitDir, m.pad(1)!!.sampleFile)).samples }
         val b = terraModel("B").let { m -> Robin.apply(m, 1, takes = 3, seed = 5); WavReader.read(File(m.kitDir, m.pad(1)!!.sampleFile)).samples }
         assertTrue(a.contentEquals(b))
+    }
+
+    /**
+     * ACCORD re-strikes too (accord-rr-1): each take is the engine's own passage-offset take
+     * (Accord.renderTake), the machine's full length, not the kept render resampled a few cents off,
+     * which would move an eight-second note by thousands of frames.
+     */
+    @Test
+    fun `an ACCORD pad's takes are the engine's own takes at the performance's length`() {
+        val patch = AccordPresets.forVoice(AccordVoice.WOOD).first()
+        val m = KitBuilderModel.create("Accord", File(temp, "Accord"))
+        m.assign(1, patch.render(), Accord.drumClassFor(patch))
+        m.update(1) { it.copy(recipe = PadRecipe(patch = patch).toJsonValue()) }
+        val padFile = File(m.kitDir, m.pad(1)!!.sampleFile)
+        val original = WavReader.read(padFile)
+        val chain = Robin.apply(m, 1, takes = 4, seed = 3).chain!!
+        val chained = WavReader.read(padFile)
+        val takes = (0 until 4).map { i -> chain.window(i, chained.frameCount.toLong()).let { chained.samples.copyOfRange(it.first.toInt(), (it.last + 1).toInt()) } }
+        assertEquals(original.frameCount, takes[0].size, "take one is the original")
+        val jitter = (Robin.START_JITTER_SEC * original.sampleRate).toInt() + 1
+        for (t in 1 until 4) {
+            assertTrue(takes[t].size in original.frameCount - jitter..original.frameCount, "take ${t + 1}: ${takes[t].size} frames against ${original.frameCount}")
+            // The re-struck take is the kept engine take t at the pad's own touch, start-trimmed by Robin's
+            // jitter and levelled by its spread: its tail lines up with it, scaled.
+            val engine = Accord.renderTake(patch, t).samples
+            val trim = engine.size - takes[t].size
+            val probe = (engine.size / 2 until engine.size / 2 + 4410)
+            val g = probe.sumOf { takes[t][it - trim].toDouble() * engine[it] } / probe.sumOf { engine[it].toDouble() * engine[it] }
+            val err = probe.sumOf { (takes[t][it - trim] - g * engine[it]).let { e -> e * e } } / probe.sumOf { takes[t][it - trim].toDouble() * takes[t][it - trim] }
+            assertTrue(err < 1e-6, "take ${t + 1} is ACCORD take $t, scaled: residual $err")
+        }
+        for (i in 0 until 4) for (j in i + 1 until 4) assertFalse(takes[i].contentEquals(takes[j]), "takes ${i + 1} and ${j + 1} differ")
     }
 }
