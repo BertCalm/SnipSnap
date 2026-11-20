@@ -31,8 +31,12 @@ silently upgrades it. A saved earlier recipe offers **USE WIDER RESPONSE**,
 which changes only its renderer and preserves its name, controls, note, velocity,
 room, tuning, enabled strikes and exact seed. The complete edited draft persists
 immediately and remains editable through navigation, preset saving and pad delivery.
-The original six factory recipes and sixteen-pad MPC bank remain explicitly
-model 3, so their existing sounds and published kit stay reproducible.
+Four Answers and the whole sixteen-pad MPC bank remain explicitly model 3, so
+the kit the owner kept and its published archive stay reproducible bit for bit.
+The other five factory recipes were re-voiced on model 5 after the owner found the
+original six "all pretty similar" (2026-11-20). The kit's pads A09–A14 still play
+the six recipes as first published (`ChamberPresets.original()`); whether they
+should follow the re-voiced roster is an open owner decision.
 
 The phone SYNTH picker exposes both rooms, five physical controls, native ROOT
 and excitation VELOCITY. HOLD stays hidden because only finite strikes are
@@ -372,6 +376,16 @@ physical excitation effort, hardness and the upper modes it excites. Raw auditio
 files preserve the resulting energy differences; production rendering levels the
 finished sound to SnipSnap's shared melodic target.
 
+Touch pivots on velocity .75, the saved default: there every model renders exactly
+as before. The owner heard soft, normal and hard as "all the same" (2026-11-20),
+because velocity moved hardness by only .13 of its travel and leveling then removed
+the rest. Away from .75, `touch = velocity - .75` now moves four things: strike
+hardness (`TOUCH_HARDNESS`, so contact shortens and each instrument's upper modes
+gain weight), a per-mode tilt (`TOUCH_TILT`), the share of the strike that reaches
+the bar, cowbell and triangle (`TOUCH_LEAN`), and the level after leveling
+(`(velocity / .75)^TOUCH_LEVEL`, about 6 dB down at .3 and 1.9 dB up at 1, held
+under the .99 ceiling). Measured steps are held by `ChamberTouchTest`.
+
 Configuration also saves physical room dimensions, normalized listener and source
 positions, placement endpoints and mode, material mode and policy, layout,
 contrast palette, split height, blend width and all ten region targets. Macro
@@ -383,6 +397,16 @@ and traveling energy are rebuilt deterministically.
 available to the CLI, patch and recipe decoders, user presets, native velocity
 adapter, shared factory roster, Android engine picker, FRESH TAPE and
 `SynthKits.chamber()`. Their broader musical acceptance remains open.
+
+Each recipe now leads with a different instrument and room: Four Answers (all four,
+HYBRID default, model 3, unchanged), Soft Split (the skin, soft and close, in dry
+wood), Glass Corners (the triangle, hard, in ringing glass), Aquarium Ceiling (the
+cowbell, hard, under the canopy), Quiet Canopy (the bar, soft and close) and High
+Water (cowbell and triangle in one continuous glass room, the long ring). The five
+re-voiced recipes use model 5 because on model 3 MATERIAL and DIVIDE moved the
+whole-note spectrum by 0.1 dB and BALANCE never let one instrument lead.
+`ChamberPresets.original()` holds the six recipes as first published, on model 3;
+the kit is built on those.
 
 ## Geometry and material policy
 
