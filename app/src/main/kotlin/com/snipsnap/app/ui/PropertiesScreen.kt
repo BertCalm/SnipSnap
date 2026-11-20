@@ -37,6 +37,7 @@ import com.snipsnap.app.theme.sunkenField
 import com.snipsnap.app.theme.tape
 import com.snipsnap.shell.CaptureSource
 import com.snipsnap.shell.Copy
+import com.snipsnap.shell.Layout
 import com.snipsnap.shell.Scheme
 import com.snipsnap.shell.SchemeId
 import com.snipsnap.shell.Schemes
@@ -148,7 +149,7 @@ fun PropertiesScreen(
                     Box(
                         Modifier
                             .weight(1f)
-                            .height(44.dp)
+                            .height(Layout.MIN_HIT_TARGET.dp)
                             .let { if (selected) it.pressedBevel(scheme) else it.raisedBevel(scheme) }
                             .semantics { this.selected = selected }
                             .tapeClick(label = "HAPTICS ${if (on) "ON" else "OFF"}") { if (!selected) onHaptics(on) },
@@ -193,7 +194,7 @@ fun PropertiesScreen(
                         Box(
                             Modifier
                                 .weight(1f)
-                                .height(44.dp)
+                                .height(Layout.MIN_HIT_TARGET.dp)
                                 .let { if (selected) it.pressedBevel(scheme) else it.raisedBevel(scheme) }
                                 .semantics { this.selected = selected }
                                 .tapeClick(label = "MIDI OUT ${if (on) "ON" else "OFF"}") { if (!selected) onMidiOut(on) },
@@ -223,7 +224,7 @@ fun PropertiesScreen(
         Box(
             Modifier
                 .fillMaxWidth()
-                .height(44.dp)
+                .height(Layout.MIN_HIT_TARGET.dp)
                 .raisedBevel(scheme)
                 .tapeClick(label = Copy.SETUP_MIDI_DEVICES, onClick = onMidiDevices),
             contentAlignment = Alignment.Center,
@@ -313,7 +314,7 @@ fun PropertiesScreen(
         Box(
             Modifier
                 .fillMaxWidth()
-                .height(44.dp)
+                .height(Layout.MIN_HIT_TARGET.dp)
                 .raisedBevel(scheme)
                 .tapeClick(label = "HELP", onClick = onHelp),
             contentAlignment = Alignment.Center,
