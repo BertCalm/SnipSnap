@@ -13,9 +13,10 @@ barely hear, or none → the clock drags and catches up → a cartoon lands wher
 
 ## Status
 
-**Round 3d heard (2026-11-20): "3D works."** The owner heard the round 3d page (the converter at 16 bits, blended half
-clean, beside round 3c's and a no-crushing version) and accepted it. Kit version 9 is the version heard. Whether each
-of the three kits passes the sound gate as a kit is not yet stated; the phone and MPC gates are open.
+**Sound approved (2026-11-20): "3D works", then "All three kits pass, gong too."** The owner heard the round 3d page
+(every pad of all three kits, the converter at 16 bits blended half clean, the modal Dark Gong) and passed CARDBOARD,
+MATINEE and STUMBLE. Kit version 9 is the accepted baseline. Open: the phone and MPC gates (no phone has played these
+kits and no MPC has loaded them).
 
 **Round 3d built (2026-11-20): "I think the 12-bit is too high. The bit crushing is overly effecting the sound."**
 Measured on the kits' own pads, each converter stage switched off in turn against the print with the converter clean
@@ -366,10 +367,11 @@ the phrases only.
 | Gate | Status |
 |---|---|
 | Melodic, keygroups, chord tools, STRUM | Not applicable: drum kits |
-| Drums: multiple distinct genre kits on the shelf | Pass in software: three kits under SKINS, held apart by `StaggerKitsTest`; the owner has heard CARDBOARD's drums (round 1b, "New sounds are better"), not the three kits as kits |
-| Percussion: roll/riser | Built: a timpani roll, a timpani riser into the crash gong (the timpani keep their club), a dragging snare roll (dry, round 2d), one per kit; not heard |
+| Drums: multiple distinct genre kits on the shelf | Pass: three kits under SKINS, held apart by `StaggerKitsTest`, and passed by the owner (2026-11-20, "All three kits pass, gong too") |
+| Percussion: roll/riser | Pass: a timpani roll, a timpani riser into the crash gong (the timpani keep their club), a dragging snare roll (dry, round 2d), one per kit; passed with the kits (2026-11-20) |
 | Velocity and round robin: rendering | Pass in software: every soft zone a different strike from the hard one and no brighter; every zone holds four different strikes (`StaggerKitsTest`) |
 | Velocity and round robin: saving, playback, export | Pass in software: `StaggerKitTest` and `:shell:generateStaggerKits` (all three kits, 192 slices each: saved PCM, reload, the pad resolver walking the takes, MPC 3 track, SFZ, DecentSampler). MPC 2 is not written (the owner's format limit). Not played on a phone or an MPC |
+| Sound character | Approved, all three kits (the owner, 2026-11-20: "3D works", then "All three kits pass, gong too"); kit version 9 is the accepted baseline |
 
 ## What was measured while building (Kotlin, `StaggerKitsTest`, this cloud JVM)
 
