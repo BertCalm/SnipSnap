@@ -7599,8 +7599,6 @@ private fun factoryPresets(engine: Engine, voice: Enum<*>): List<Patch> =
     if (engine == Engine.HALOBAR) com.snipsnap.synth.HalobarPresets.auditionFor(voice as HalobarVoice)
     else if (engine == Engine.CHITIN) ChitinPresets.forVoice(voice as ChitinVoice)
     else if (engine == Engine.NACRE) NacrePresets.forVoice(voice as NacreVoice)
-    // CONSORT's provisional recipes, each voice alone and leading a section, until a factory bank is heard.
-    else if (engine == Engine.CONSORT) com.snipsnap.synth.ConsortPresets.forVoice(voice as ConsortVoice)
     else Presets.forVoice(engine.name, voice.name)
 
 /** TEMPEST's voice roles choose UI colors without rendering six drums on the

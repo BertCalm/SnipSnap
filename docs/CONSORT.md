@@ -93,3 +93,12 @@ The section, the velocity and the take are fields on `ConsortPatch`, not macros.
 ## Acceptance gates
 
 All open. See [the gates' CONSORT entry](ENGINE_ACCEPTANCE_GATES.md#consort-kotlin-prototype-2026-11-19).
+
+## Round K3 (2026-11-20)
+
+Held keys that sustain while a key is down (the owner's choice), the chord tool, round robin on pads
+(ROBIN and CONSORT TAKES), CONSORT and CONSORT TAKES on the shelf, the SYNTH picker with a section
+editor, and fourteen character presets. The owner heard all 29 clips of the K3 round and kept them
+("All sounds good"); the 27 recipes are the factory bank. The one-shot sound is unchanged (156
+renders pinned in `ConsortPinsTest`); the K3 renders are pinned in `ConsortK3PinsTest`. Gate status:
+[the gates' CONSORT entry](ENGINE_ACCEPTANCE_GATES.md).

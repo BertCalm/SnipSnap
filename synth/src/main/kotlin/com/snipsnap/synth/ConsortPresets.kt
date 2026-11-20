@@ -1,14 +1,12 @@
 package com.snipsnap.synth
 
 /**
- * CONSORT's provisional recipes: for each voice, the lead alone and one section it leads. They are the
- * settings of the Python prototype's audition, which the owner heard and approved as a whole
- * (2026-11-19), and most of them are clips of the Kotlin audition the owner approved (2026-11-20);
- * none was chosen one by one. K3 added two to four character recipes a voice, written from the owner's
- * reference recordings (shakuhachi, fujara, bawu, pku) and the techniques the brief asked for (trill,
- * flutter, scoop, fall, overblow); none of those has been heard yet. They stay
- * outside the factory roster ([Presets]) until a listening verdict on the Kotlin render: recipes
- * written without listening are disposable.
+ * CONSORT's factory recipes. For each voice: the lead alone and one section it leads (the Python
+ * prototype's audition settings, approved as a whole 2026-11-19, and the Kotlin K1 audition, approved
+ * 2026-11-20), then two to four character recipes added in round K3, written from the owner's reference
+ * recordings (shakuhachi, fujara, bawu, pku) and the techniques the brief asked for (trill, flutter,
+ * scoop, fall, overblow). The owner heard all 27 in round K3 and kept them (2026-11-20, "All sounds
+ * good"); `ConsortPinsTest` and `ConsortK3PinsTest` hold their renders. They are filed in [Presets].
  */
 object ConsortPresets {
 

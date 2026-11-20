@@ -255,7 +255,7 @@ class ConsortTest {
     }
 
     @Test
-    fun `the provisional recipes are complete, distinct, plainly named and held out of the factory roster`() {
+    fun `the recipes are complete, distinct, plainly named and filed in the factory roster`() {
         val all = ConsortPresets.all()
         for (voice in ConsortVoice.entries) {
             val mine = ConsortPresets.forVoice(voice)
@@ -269,8 +269,9 @@ class ConsortTest {
             assertEquals(Consort.defaults(p.voice).keys, p.macros.keys, "${p.name} does not carry every macro")
             assertEquals(p, Patches.fromJsonText(p.toJsonText()))
         }
-        assertTrue(Presets.all().none { it.engine == ConsortPatch.ENGINE }, "a prototype's recipes are not served through the factory roster")
-        assertTrue(Presets.forVoice(ConsortPatch.ENGINE, ConsortVoice.OBOE.name).isEmpty())
+        // Heard and kept in round K3 (2026-11-20): the factory roster serves them.
+        assertEquals(all, Presets.all().filter { it.engine == ConsortPatch.ENGINE })
+        assertEquals(ConsortPresets.forVoice(ConsortVoice.OBOE), Presets.forVoice(ConsortPatch.ENGINE, ConsortVoice.OBOE.name))
     }
 
     @Test
