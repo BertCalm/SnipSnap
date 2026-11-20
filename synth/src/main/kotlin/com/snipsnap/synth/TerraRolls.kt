@@ -3,8 +3,11 @@ package com.snipsnap.synth
 import com.snipsnap.audio.Snip
 import kotlin.math.pow
 
-/** How a TERRA pad is played: one hit, or an authored roll or riser of a stick voice ([TerraRolls]). */
-enum class TerraArticulation { HIT, ROLL, RISER }
+/**
+ * How a TERRA pad is played: one hit, an authored roll or riser of a stick voice ([TerraRolls]), or a stick voice's hit
+ * left to ring past the hit's 1.45 s cut ([Terra.renderRing]). The last three are phrase pads.
+ */
+enum class TerraArticulation { HIT, ROLL, RISER, RING }
 
 /**
  * Authored rolls and risers for TERRA's stick voices ([TerraSticks]): real repeated strikes of the
@@ -76,7 +79,7 @@ internal object TerraRolls {
 
     /** The strokes of [articulation] on [voice] at [velocity] as kit take [take], in time order. */
     fun strokes(voice: TerraVoice, articulation: TerraArticulation, velocity: Float, take: Int): List<Stroke> {
-        require(articulation != TerraArticulation.HIT) { "a hit is one stroke: Terra.render it" }
+        require(articulation == TerraArticulation.ROLL || articulation == TerraArticulation.RISER) { "$articulation is one stroke: Terra.render or Terra.renderRing it" }
         require(take >= 0) { "a TERRA take is 0 or more, got $take" }
         val v = StrikeVelocity.settled(velocity)
         val (steady, slow, fast) = rates(voice)

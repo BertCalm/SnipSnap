@@ -62,6 +62,20 @@ internal object TerraSticks {
 
     fun frames(voice: TerraVoice, rate: Int): Int = (seconds(voice) * rate).toInt()
 
+    /** The longest a RING is printed: past it even the odaiko's longest note at DECAY's top is under -60 dB. Shape. */
+    const val MAX_RING_SECONDS = 6.0
+
+    /**
+     * How long [voice] at [m] rings when left to ([TerraArticulation.RING]): its longest note's T60 at DECAY, plus
+     * 0.3 s for the fade, at least half a second past the hit's own length and at most [MAX_RING_SECONDS]. The hit is
+     * cut under the classifier's 1.5 s; a ring is a phrase pad, so it keeps the tail the reference has (the first
+     * odaiko's notes ring 2 to 3 s).
+     */
+    fun ringSeconds(voice: TerraVoice, m: Map<String, Float>): Double {
+        val longest = played(voice, m).maxOf { pl -> pl.stroke.t60.max() * pl.ringScale } * decayScale(m)
+        return (longest + 0.3).coerceIn(seconds(voice) + 0.5, MAX_RING_SECONDS)
+    }
+
     // ---------------------------------------------------------------- macros
 
     /**
@@ -181,9 +195,9 @@ internal object TerraSticks {
      * [bodyModes] mode, indexed from the pad's first frame. [headOnly] leaves the noise out.
      */
     fun render(voice: TerraVoice, m: Map<String, Float>, rate: Int, velocity: Float, take: Int, noiseSeed: Int,
-               level: Array<FloatArray>? = null, headOnly: Boolean = false): FloatArray {
+               level: Array<FloatArray>? = null, headOnly: Boolean = false, ringSeconds: Double? = null): FloatArray {
         val v = StrikeVelocity.settled(velocity).toDouble()
-        val frames = frames(voice, rate)
+        val frames = if (ringSeconds == null) frames(voice, rate) else (ringSeconds * rate).toInt()
         val tune = tuneRatio(m); val decay = decayScale(m)
         val widthScale = 2.0.pow((0.5 - m.getValue("FORCE")) * 2.0)
         val attack = 10.0.pow((m.getValue("ATTACK") - 0.5) * 18.0 / 20.0)

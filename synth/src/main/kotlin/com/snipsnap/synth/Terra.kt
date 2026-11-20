@@ -321,6 +321,20 @@ object Terra {
         return TerraHands.render(voice, m, rate, velocity, structure, seedOf(noise, take), inputs?.level, headOnly)
     }
 
+    /**
+     * A stick voice left to ring ([TerraArticulation.RING]): the hit itself, the same strike, notes and noise, printed
+     * for [TerraSticks.ringSeconds] instead of cut under the classifier's 1.5 s. Its first frames are the hit's up to the
+     * hit's own fade. Through the same output stage as the hit ([TerraBox.finish]).
+     */
+    internal fun renderRing(voice: TerraVoice, macros: Map<String, Float>, velocity: Float, take: Int): Snip {
+        require(voice in TerraSticks.VOICES) { "only TERRA's stick voices ring: $voice is a hit" }
+        require(take >= 0) { "a TERRA take is 0 or more, got $take" }
+        val m = settled(voice, macros)
+        val rate = RATE * Dsp.OVERSAMPLE
+        val raw = TerraSticks.render(voice, m, rate, velocity, take, seedOf(stickSeed(voice), take), ringSeconds = TerraSticks.ringSeconds(voice, m))
+        return Snip(TerraBox.finish(raw, rate), channels = 1, sampleRate = RATE)
+    }
+
     /** A stick voice's noise seed ([TerraSticks]); its take re-seeds it as the hand drums' is. */
     private fun stickSeed(voice: TerraVoice): Int = 163 + 4 * (voice.ordinal - TerraVoice.ODAIKO.ordinal)
 

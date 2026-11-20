@@ -23,7 +23,7 @@ import com.snipsnap.json.JsonValue
  * the striker on re-save.
  *
  * It may instead carry an [articulation]: a stick voice ([TerraSticks]) played
- * as an authored roll or riser ([TerraRolls]) rather than one hit. A plain hit
+ * as an authored roll or riser ([TerraRolls]), or its hit left to ring ([Terra.renderRing]), rather than one hit. A plain hit
  * writes nothing new. A roll or riser writes `"version": [ARTICULATED_VERSION]`
  * and its articulation, so an older build refuses it by name rather than
  * playing one hit and dropping the roll on re-save. A pad is struck or
@@ -91,8 +91,11 @@ class TerraPatch(
      * place a TERRA pad is rendered, so its striker or its roll is never dropped. Take 0 at full velocity is [render].
      */
     fun render(velocity: Float, take: Int = 0, macros: Map<String, Float> = this.macros): com.snipsnap.audio.Snip =
-        if (articulation == TerraArticulation.HIT) Terra.render(voice, macros, striker, velocity, take)
-        else TerraRolls.render(voice, macros, articulation, velocity, take)
+        when (articulation) {
+            TerraArticulation.HIT -> Terra.render(voice, macros, striker, velocity, take)
+            TerraArticulation.RING -> Terra.renderRing(voice, macros, velocity, take)
+            TerraArticulation.ROLL, TerraArticulation.RISER -> TerraRolls.render(voice, macros, articulation, velocity, take)
+        }
 
     fun copy(
         name: String = this.name,

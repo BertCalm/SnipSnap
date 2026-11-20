@@ -175,4 +175,37 @@ class TerraStickKitsTest {
         val pad = TerraStickKits.build(k).first()
         assertEquals(TerraStickKits.fxFor(k, 0), FxChain.fromJsonText(pad.source.getValue("fx")))
     }
+
+    /**
+     * RING is the hit left to ring: the same strike printed past the hit's 1.45 s cut, a phrase pad as rolls are. It holds
+     * sound where the hit has faded, still dies away, keeps its touch and take, and saves as version 3 like a roll.
+     */
+    @Test fun `a ring is the hit left to ring, saved and filed as a phrase`() {
+        fun rms(x: FloatArray, a: Double, b: Double): Double {
+            val from = (a * Dsp.RATE).toInt(); val to = minOf(x.size, (b * Dsp.RATE).toInt())
+            var e = 0.0; for (k in from until to) e += x[k].toDouble() * x[k]; return sqrt(e / (to - from).coerceAtLeast(1))
+        }
+        for (voice in listOf(TerraVoice.ODAIKO, TerraVoice.KANE, TerraVoice.CHAPPA, TerraVoice.COWBELL)) {
+            val hit = TerraPatch("t", voice, Terra.defaults(voice)).render()
+            val p = TerraPatch("t", voice, Terra.defaults(voice), articulation = TerraArticulation.RING)
+            val ring = p.render()
+            assertTrue(ring.samples.all { it.isFinite() } && ring.samples.maxOf { abs(it) } in 0.5f..1f, "$voice ring")
+            assertTrue(ring.durationSeconds >= hit.durationSeconds + 0.5f, "$voice rings ${ring.durationSeconds} s against the hit's ${hit.durationSeconds}")
+            assertTrue(ring.durationSeconds <= TerraSticks.MAX_RING_SECONDS + 0.01, "$voice ring is ${ring.durationSeconds} s")
+            assertEquals(DrumClass.LOOP, Classifier.classify(ring).drumClass, "$voice ring is filed as a phrase")
+            // still sounding just past where the hit was cut (measured at DECAY's default: the odaiko 41 to 47 dB under
+            // its loudest 100 ms there, the gong 40 to 46), where the hit itself has faded to nothing, and dying away by its end
+            val loud = rms(ring.samples, 0.0, 0.2)
+            val cut = hit.durationSeconds.toDouble()
+            assertTrue(rms(ring.samples, cut, cut + 0.3) > 0.003 * loud, "$voice ring holds past the hit's cut, under -50 dB")
+            assertTrue(rms(hit.samples, cut - 0.01, cut) < rms(ring.samples, cut - 0.01, cut), "$voice's hit is faded where its ring is not")
+            assertTrue(rms(ring.samples, ring.durationSeconds - 0.2, ring.durationSeconds.toDouble()) < 0.1 * loud, "$voice ring dies away")
+            assertContentEquals(ring.samples, p.render().samples)
+            assertFalse(ring.samples.contentEquals(p.render(1f, 1).samples), "$voice ring's take 1 is another strike")
+            assertTrue(attackCentroid(p.render(1f / 3).samples) < attackCentroid(ring.samples), "$voice soft ring is darker")
+            val back = TerraPatch.fromJsonText(p.toJsonText())
+            assertEquals(TerraArticulation.RING, back.articulation); assertContentEquals(ring.samples, back.render().samples)
+        }
+        assertFailsWith<IllegalArgumentException> { TerraPatch("x", TerraVoice.TUN, emptyMap(), articulation = TerraArticulation.RING) }
+    }
 }
