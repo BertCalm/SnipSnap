@@ -27,7 +27,12 @@ within 1.1 dB; every groove's quiet tenth sits 24 to 25 dB under its loudest, wh
 grooves' ceilings are round 2's again (579, 636 and 495 Hz). The test now bounds a snare's tail lift to 2 to 8 dB and
 holds every groove's quiet tenth at least 20 dB under its loudest, so the echo cannot come back unnoticed.
 
-The round 2c listening page and the shelf generator's proof follow in the next commit.
+The round 2c listening page (private to the owner's account): [Stagger, round two c](https://claude.ai/artifact/6YhwBR1yvdaSazJGY1hJf4).
+Each kit's kick, backbeat drum and groove from round 2 (no press), round 2b (echoy) and round 2c side by side, then
+every pad as it ships. `:shell:generateStaggerKits` verified the three kits again (198, 205 and 164 s on this machine).
+On the exported pads (peak against 200 ms RMS) the hits' median crest reads 11.2, 9.7 and 8.1 dB (round 2: 11.0, 9.8,
+9.1; round 2b: 10.7, 10.1, 8.0) and the grooves 12.3, 12.1 and 9.1, round 2's exactly, since the print no longer
+presses them.
 
 **Round 2b built (2026-11-19): "maybe we need a bit of compression."** The owner heard the round-2 page and asked for a
 bit of compression. The single pads had none (only the grooves went through a bus), so every kit's print now presses
