@@ -131,6 +131,39 @@ rings 1.35 s above -30 dB. Verification unchanged: 792 WAVs, 0 failures, timbral
 88 of 88 pads. Listening page version 3: the RIDE & RIMS before player is the round 1 groove
 with the hat stand-in.
 
+## Round 2 (prototype): designed boom-bap drums, STOOP first
+
+**What the owner heard.** After the wow A/B: "They all just sound muddy, muffled, and flat." After the
+clean A/B: "Without the chain the kick sounds like a weak hit, with it- it becomes muddy. I don't feel
+like we have effectively replicated the vibe of the refereneces. I don't need them to be exact in
+sound, but the general vibe should be aligned. These are just flopping." Offered an imprint of the
+loops or designed drums, they chose designed drums.
+
+**Why round 1 flopped, measured.** `hits.py` reduces a loop's kick and snare hits (aligned on their
+onsets, median over hits so bleed falls away) to band energy in six windows from 0-5 ms to 200-300 ms,
+the kick's pitch track and the snare's body pitch. Numbers only, in `hits.json`. driggs' kick is
+struck at about 124 Hz, falls to about 55 Hz within 30 ms, and is gone by 200-300 ms; STOOP's round 1
+kick sat near 97 Hz with almost no sub and grew louder for 200 ms (the compressor lifting its tail):
+weak without the chain, a long 97 Hz boom in the low mids with it. driggs' snare cracks with a 209 Hz
+body and strong wires for 50 ms; STOOP's sat at 150 Hz and peaked late with its crack 12-15 dB weak.
+The round 1 descriptor compared each sound's band shape over its own peak, so it never saw pitch or
+the order of events.
+
+**The design** (`designed.py`). Layered the way boom-bap drums are, on an acoustic core so it never
+goes back to a drum machine (round 0):
+
+- kick: EMBER's membrane at the loop's pitch, plus a punch that falls onto it, a small beater click,
+  a low-mid cut at 350 Hz, grit above 200 Hz only, a low-pass;
+- snare: EMBER's snare (wires) plus a body tone at the loop's pitch and a crack of noise, a low cut,
+  a low-mid cut, grit, a low-pass.
+
+`fit_designed.py` fits them to the fine measurement (grid RMS with a -40 dB floor, plus 1.5 dB per
+semitone of pitch error). STOOP, against driggs: kick 22.4 -> 4.0 dB, pitch 124 / 54 / 56 Hz exactly;
+snare 21.3 -> 3.65 dB, body 209 against 207 Hz. Against kingston (KICK 2, SNARE 2): 4.9 and 3.2 dB.
+With the new kick STOOP's balance needs no kick cut (it was -11.6 dB); the rest of the kit comes down
+4.3 dB instead. 792 WAVs, 0 failures. Listening page version 10: a STOOP prototype section at the top.
+The other five kits are unchanged until the owner hears this.
+
 ### Round 1.6: a "wow" A/B
 
 **What the owner asked.** "Can you increase the vibrancy of the sound? It just doesn't have the wow."

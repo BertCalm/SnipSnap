@@ -62,6 +62,15 @@ ul{margin:0;padding-left:20px;display:grid;gap:4px}
   <p>__LEDE__</p>
   <p class="note">Every kit fills pads A01–A12 and every stack fills A13–A16, so any kit plus any stack is a complete sixteen-pad bank. The grooves below are original patterns at each kit's measured tempo and swing, not transcriptions.</p>
 </header>
+<section class="panel" id="proto" hidden aria-labelledby="protoh">
+  <h2 id="protoh">Round 2 prototype: STOOP DUST, redesigned</h2>
+  <p class="note">The kick and snare rebuilt as boom-bap drums: an acoustic drum at the loop's own pitch, with a punch layer, a crack, a low-mid cut and grit only where it helps, tuned to fine measurements of the driggs loop (its kick falls from about 124 Hz to 55 Hz in 30 ms and is gone by 250 ms; the old kick sat near 97 Hz and swelled for 200 ms). Compare it with the version you heard. If this is the right direction, all six kits get the same treatment.</p>
+  <h3>STOOP as you heard it</h3><audio controls preload="none" src="audio/borough-stoop-groove.mp3"></audio>
+  <h3>STOOP redesigned</h3><audio controls preload="none" src="audio/proto-stoop-groove.mp3"></audio>
+  <h3>STOOP redesigned, through the compression you liked</h3><audio controls preload="none" src="audio/proto-stoop-groove-glued.mp3"></audio>
+  <h3>Redesigned pads, one by one (hardest hit)</h3><audio controls preload="none" src="audio/proto-stoop-pads.mp3"></audio>
+  <h3>Redesigned touch: kick, snare, hat at soft, medium, hard</h3><audio controls preload="none" src="audio/proto-stoop-touch.mp3"></audio>
+</section>
 <section class="panel mixer" aria-labelledby="mixh">
   <h2 id="mixh">Mix a bank</h2>
   <h3>Drum kit</h3><div class="row" id="kits"></div>
@@ -97,6 +106,7 @@ function draw(){
 }
 function play(){const src=`audio/${kit}${stack?'-with-'+stack:'-groove'}.mp3`;const a=$('player');a.src=src}
 draw();play();
+if(M.proto)$('proto').hidden=false;
 for(const s of M.stacks){const d=document.createElement('div');d.innerHTML=`<h3></h3><audio controls preload="none" src="audio/stack-${s.id}-pads.mp3"></audio>`;d.querySelector('h3').textContent=`${s.name} · ${s.pads.map(p=>p.label.toLowerCase()).join(', ')}`;$('stacklist').append(d)}
 for(const k of M.kits){
   const sec=document.createElement('section');sec.className='panel';
@@ -171,6 +181,7 @@ def main(out, before=None, before_label=None):
     rnd = 0 if 'f0' in man['kits'][0]['pads'][0]['params'] else 1
     slim['wow'] = any((out / 'demo').glob('*-wow-now.wav'))
     slim['clean'] = any((out / 'demo').glob('*-clean-groove.wav'))
+    slim['proto'] = any((out / 'demo').glob('proto-stoop-groove.wav'))
     if rnd == 1:
         slim['listen'] = LISTEN_R1
     if before:

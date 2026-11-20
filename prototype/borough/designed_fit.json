@@ -1,0 +1,86 @@
+{
+ "drums_full_driggs": {
+  "kick": {
+   "params": {
+    "f1": 55.9877,
+    "t1": 0.6627,
+    "alpha": 0.7042,
+    "beater_ms": 1.1427,
+    "punch_hz": 166.2717,
+    "punch_ms": 27.5608,
+    "punch_db": -2.781,
+    "click_db": -45.4628,
+    "mud_db": 6.4043,
+    "drive": 0.1023,
+    "lp": 5321.6717
+   },
+   "score_db": 4.01,
+   "evals": 3968,
+   "seconds": 80.9
+  },
+  "snare": {
+   "params": {
+    "f1": 205.9499,
+    "t1": 0.3457,
+    "alpha": 1.5587,
+    "r": 0.4083,
+    "buzz": 0.2949,
+    "wire": 2.4332,
+    "stick_ms": 0.1827,
+    "body_db": 4.3151,
+    "body_ms": 14.881,
+    "crack_hz": 2043.0488,
+    "crack_db": 3.1289,
+    "crack_ms": 24.5638,
+    "mud_db": 0.8076,
+    "drive": 0.3967,
+    "lp": 10262.0037
+   },
+   "score_db": 3.65,
+   "evals": 3968,
+   "seconds": 68.9
+  }
+ },
+ "drums_full_kingston": {
+  "kick": {
+   "params": {
+    "f1": 64.4499,
+    "t1": 0.3151,
+    "alpha": 1.288,
+    "beater_ms": 2.8228,
+    "punch_hz": 95.2114,
+    "punch_ms": 23.8425,
+    "punch_db": 4.0588,
+    "click_db": -49.285,
+    "mud_db": 8.3623,
+    "drive": 0.0443,
+    "lp": 4658.996
+   },
+   "score_db": 4.94,
+   "evals": 3968,
+   "seconds": 67.6
+  },
+  "snare": {
+   "params": {
+    "f1": 250.73,
+    "t1": 0.3926,
+    "alpha": 0.6281,
+    "r": 0.1044,
+    "buzz": 0.6006,
+    "wire": 2.583,
+    "stick_ms": 0.3513,
+    "body_db": 4.1065,
+    "body_ms": 14.9561,
+    "crack_hz": 1521.0035,
+    "crack_db": -3.988,
+    "crack_ms": 7.6308,
+    "mud_db": 3.1461,
+    "drive": 0.2276,
+    "lp": 13491.3915
+   },
+   "score_db": 3.22,
+   "evals": 3968,
+   "seconds": 66.3
+  }
+ }
+}
