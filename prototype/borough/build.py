@@ -225,6 +225,22 @@ def groove(kit, bank, stack=None, sbank=None, bars=4):
 KICK_PADS = (0, 4)   # A01 KICK, A05 KICK 2
 
 
+# The record chain taken off (BOROUGH_CLEAN=1): EMBER's drums as modelled, a small room, no squash,
+# drive, tilt or low-pass. Owner, round 1.6: "They all just sound muddy, muffled, and flat", after every
+# wow variant (louder, brighter, wider) built on the same chain. Measured against the loops' own hits,
+# the pads' attacks and crests were mostly sharper, so the chain is tested by ear: an A/B, not a guess.
+CLEAN_CHAIN = dict(distance=0.08, comp=0.0, drive=0.0, lp=16000.0, tilt=0.0)
+
+
+def clean(fitted):
+    out = json.loads(json.dumps(fitted))
+    for loop in out.values():
+        for role in loop.values():
+            if isinstance(role, dict) and 'params' in role:
+                role['params'].update({k: v for k, v in CLEAN_CHAIN.items() if k in role['params']})
+    return out
+
+
 def spread(fitted, kits, factor):
     """Push the kits apart: every fitted parameter of every role the kits use is moved `factor`
     times further from the kits' own average, in the fitter's normalised space (log for frequencies
@@ -468,6 +484,8 @@ STACKS = stacks()
 
 def main(fitted_path, out):
     out = Path(out); fitted = spread(json.load(open(fitted_path)), K.KITS, getattr(K, 'SPREAD', 1.0))
+    if os.environ.get('BOROUGH_CLEAN'):
+        fitted = clean(fitted)
     t0 = time.time(); man = {'status': f"Python round {0 if MODEL == 'voices' else 1} audition ({MODEL}); not factory audio, not heard", 'kits': [], 'stacks': []}
     sbanks = {}
     for st in STACKS:
