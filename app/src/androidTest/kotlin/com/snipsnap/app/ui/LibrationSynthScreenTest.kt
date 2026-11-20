@@ -103,10 +103,10 @@ class LibrationSynthScreenTest : ComposeScreenTest() {
     private fun progress(label: String) = slider(label).fetchSemanticsNode().config
         .getOrNull(SemanticsProperties.ProgressBarRangeInfo)!!.current
 
-    @Test fun all_three_voices_expose_the_twelve_factory_recipes_and_finite_controls() {
+    @Test fun every_voice_exposes_its_factory_recipes_and_finite_controls() {
         show()
         compose.onNodeWithContentDescription("ENGINE LIBRATION. CHOOSE ENGINE").assertExists()
-        for (voice in LibrationVoice.entries) {
+        for (voice in Libration.KEPT_VOICES) {
             invokeClick(voice.name)
             for (macro in Libration.macrosFor(voice).filterNot { it.name == "HOLD" }) slider(macro.name).assertExists()
             slider("HOLD").assertDoesNotExist()
@@ -168,7 +168,7 @@ class LibrationSynthScreenTest : ComposeScreenTest() {
 
     @Test fun held_instrument_touch_layers_open_enabled_and_toggle_without_editing_any_voice() {
         show()
-        for (voice in LibrationVoice.entries) {
+        for (voice in Libration.CLOUD_VOICES) {
             invokeClick(voice.name)
             val factory = LibrationPresets.forVoice(voice).first()
             invokeClick("PRESET ${factory.name}")

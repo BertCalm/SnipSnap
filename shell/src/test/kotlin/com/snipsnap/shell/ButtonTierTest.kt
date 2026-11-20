@@ -231,6 +231,7 @@ class ButtonTierTest {
         "EMPTY_CHOP" to Copy.EMPTY_CHOP,
         "CHOP_SOURCE_GONE" to Copy.CHOP_SOURCE_GONE,
         "BEAT_NEEDS_PADS" to Copy.BEAT_NEEDS_PADS,
+        "BEAT_WONT_READ" to Copy.BEAT_WONT_READ,
         "SNIPS_EMPTY" to Copy.SNIPS_EMPTY,
     )
 

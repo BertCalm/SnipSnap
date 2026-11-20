@@ -713,13 +713,14 @@ private fun TakeRowLine(
             Modifier
                 .fillMaxWidth()
                 .heightIn(min = Layout.MIN_HIT_TARGET.dp)
-                .let {
-                    if (!row.current) {
-                        it.tapeClick(label = "${if (expanded) "COLLAPSE" else "EXPAND"} TAKE ${row.label}", onClick = onToggle)
-                    } else {
-                        it
-                    }
-                }
+                // The current take has nothing to compare against, so it is disabled, not
+                // dropped (UAT 2026-11 user states, S-14): it stays a button that reads as
+                // unavailable rather than leaving the tree.
+                .tapeClick(
+                    label = "${if (expanded) "COLLAPSE" else "EXPAND"} TAKE ${row.label}",
+                    enabled = !row.current,
+                    onClick = onToggle,
+                )
                 .padding(horizontal = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp),

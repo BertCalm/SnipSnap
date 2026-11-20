@@ -62,6 +62,15 @@ ul{margin:0;padding-left:20px;display:grid;gap:4px}
   <p>__LEDE__</p>
   <p class="note">Every kit fills pads A01–A12 and every stack fills A13–A16, so any kit plus any stack is a complete sixteen-pad bank. The grooves below are original patterns at each kit's measured tempo and swing, not transcriptions.</p>
 </header>
+<section class="panel" id="proto" hidden aria-labelledby="protoh">
+  <h2 id="protoh">Round 2 prototype: STOOP DUST, redesigned</h2>
+  <p class="note">The kick and snare rebuilt as boom-bap drums: an acoustic drum at the loop's own pitch, with a punch layer, a crack, a low-mid cut and grit only where it helps, tuned to fine measurements of the driggs loop (its kick falls from about 124 Hz to 55 Hz in 30 ms and is gone by 250 ms; the old kick sat near 97 Hz and swelled for 200 ms). Compare it with the version you heard. If this is the right direction, all six kits get the same treatment.</p>
+  <h3>STOOP as you heard it</h3><audio controls preload="none" src="audio/borough-stoop-groove.mp3"></audio>
+  <h3>STOOP redesigned</h3><audio controls preload="none" src="audio/proto-stoop-groove.mp3"></audio>
+  <h3>STOOP redesigned, through the compression you liked</h3><audio controls preload="none" src="audio/proto-stoop-groove-glued.mp3"></audio>
+  <h3>Redesigned pads, one by one (hardest hit)</h3><audio controls preload="none" src="audio/proto-stoop-pads.mp3"></audio>
+  <h3>Redesigned touch: kick, snare, hat at soft, medium, hard</h3><audio controls preload="none" src="audio/proto-stoop-touch.mp3"></audio>
+</section>
 <section class="panel mixer" aria-labelledby="mixh">
   <h2 id="mixh">Mix a bank</h2>
   <h3>Drum kit</h3><div class="row" id="kits"></div>
@@ -97,6 +106,7 @@ function draw(){
 }
 function play(){const src=`audio/${kit}${stack?'-with-'+stack:'-groove'}.mp3`;const a=$('player');a.src=src}
 draw();play();
+if(M.proto)$('proto').hidden=false;
 for(const s of M.stacks){const d=document.createElement('div');d.innerHTML=`<h3></h3><audio controls preload="none" src="audio/stack-${s.id}-pads.mp3"></audio>`;d.querySelector('h3').textContent=`${s.name} · ${s.pads.map(p=>p.label.toLowerCase()).join(', ')}`;$('stacklist').append(d)}
 for(const k of M.kits){
   const sec=document.createElement('section');sec.className='panel';
@@ -112,7 +122,10 @@ for(const k of M.kits){
   ${M.before?`<h3>Before: the same groove in ${M.before}</h3><audio controls preload="none" src="audio/before-${k.id}-groove.mp3"></audio>`:''}</div></div>`;
   sec.querySelector('h2').textContent=k.name;sec.querySelector('.role').textContent=k.role;
   const kp=k.pads[0].params, sp=k.pads[1].params;
-  const head=kp.f0!==undefined
+  const head=kp.punch_hz!==undefined
+    ?[`kick: a drum at ${kp.f1.toFixed(0)} Hz, struck at ${kp.punch_hz.toFixed(0)} Hz and falling onto it in about ${kp.punch_ms.toFixed(0)} ms, low mids cut ${kp.mud_db.toFixed(1)} dB, low-pass ${(kp.lp/1000).toFixed(1)} kHz`,
+      `snare: body ${sp.f1.toFixed(0)} Hz, crack around ${(sp.crack_hz/1000).toFixed(1)} kHz for ${sp.crack_ms.toFixed(0)} ms, grit ${sp.drive.toFixed(2)}, low-pass ${(sp.lp/1000).toFixed(1)} kHz`]
+    :kp.f0!==undefined
     ?[`kick ${kp.f0.toFixed(0)} Hz, sweep ×${kp.sweep.toFixed(2)} over ${kp.sweep_ms.toFixed(0)} ms, body ${kp.decay_ms.toFixed(0)} ms`,`snare head ${sp.f1.toFixed(0)} Hz, wires ${sp.wire_lo.toFixed(0)}–${sp.wire_hi.toFixed(0)} Hz for ${sp.wire_ms.toFixed(0)} ms`,`low-pass ${(kp.lp/1000).toFixed(1)} kHz kick · ${(sp.lp/1000).toFixed(1)} kHz snare · drive ${kp.drive.toFixed(2)}`]
     :[`kick head ${kp.f1.toFixed(0)} Hz, rings ${(kp.t1*1000).toFixed(0)} ms, beater contact ${kp.beater_ms.toFixed(1)} ms`,`snare head ${sp.f1.toFixed(0)} Hz, rings ${(sp.t1*1000).toFixed(0)} ms, wires ×${sp.wire.toFixed(2)}, stick contact ${sp.stick_ms.toFixed(2)} ms`,`record: room ${kp.distance.toFixed(2)} · squash ${kp.comp.toFixed(2)} · drive ${kp.drive.toFixed(2)} · low-pass ${(kp.lp/1000).toFixed(1)} kHz (kick), ${(sp.lp/1000).toFixed(1)} kHz (snare)`];
   const f=[`${k.bpm} BPM · swing ${k.swing_ms} ms on the 16th offbeat`,...head,`fit residual ${res}`,`from ${k.primary.replace(/_/g,' ')} + ${k.secondary.replace(/_/g,' ')}`];
@@ -129,6 +142,9 @@ LEDE = {
 }
 
 LISTEN_R1 = [
+    'Round 2, all six kits: every kick and snare (and KICK 2, SNARE 2 and the ghost) is now a designed boom-bap drum like the STOOP prototype you liked, tuned to fine measurements of each kit\'s own loops. Each kit sheet\'s Before player is round 1 as you last heard it.',
+    'Measured against each loop, every one of the 24 drums is closer than before, most by 2 to 6 times. The two weakest: CRANKED\'s KICK 2 (its loop had only two clean kick hits to measure) and RIDE & RIMS\'s KICK 2.',
+    'To match each loop\'s weight, the rest of each kit now sits 4 to 10 dB under its kick (WAX the most). If a snare feels too quiet, say which kit.',
     'New: a "Clean" groove right under each kit\'s groove: the same kit and performance with the record chain taken off (no squash, drive or low-pass, only a small room). If the clean one sounds clearer and less muddy, the chain is what is dulling them, and I will rebuild from clean upward.',
     'New: a "Wow A/B" on every kit sheet. Louder and punchier closes most of the loudness gap to your loops (they were 8-10 dB louder at the same peak); brighter and crisper adds presence, air and a little sparkle; wider and bigger puts a stereo room around the kit. Tell me which one (or which mix) has the wow, per kit if it differs. These are page previews: the winner gets baked into the pads.',
     'New in this version, against "they all sound similar": each kit now plays its own loop\'s groove (its pattern, its swing and push, its soft ghost kicks) instead of one pattern I wrote. STOOP and RIDE & RIMS drag their 16ths about 40 ms, CRANKED rushes them, WAX lays back on everything.',
@@ -171,6 +187,7 @@ def main(out, before=None, before_label=None):
     rnd = 0 if 'f0' in man['kits'][0]['pads'][0]['params'] else 1
     slim['wow'] = any((out / 'demo').glob('*-wow-now.wav'))
     slim['clean'] = any((out / 'demo').glob('*-clean-groove.wav'))
+    slim['proto'] = any((out / 'demo').glob('proto-stoop-groove.wav'))
     if rnd == 1:
         slim['listen'] = LISTEN_R1
     if before:
