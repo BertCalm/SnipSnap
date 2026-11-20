@@ -90,7 +90,8 @@ object LooseCrateExpansionRound0Generator {
 
     private const val RIDE_LOW_CUT_HZ = 2_000f
     private const val RIDE_PRESENCE_HZ = 8_000f
-    private const val RIDE_PRESENCE_DB = 12f
+    /** +12 dB at round 0k against the worn tape head; +8 from round 0l's fresher tape, which lands the stick where 0k's did. */
+    private const val RIDE_PRESENCE_DB = 8f
     private const val RIDE_PING_HZ = 5_000f
     private const val RIDE_PING = 1.5f
     private const val RIDE_PING_SECONDS = .010
@@ -119,16 +120,28 @@ object LooseCrateExpansionRound0Generator {
         }
     }
 
+    /**
+     * A part made to come through BLUE's room clear (round 0l): a +4 dB shelf at 1.2 kHz that cancels the room's
+     * -4 dB one exactly (the two are the same linear shelf, mirrored), and [airDb] more over 4 kHz. Measured on
+     * groove A without the ride, against round 0k: 6 to 12 kHz up 6.4 dB, 2 to 6 kHz up 2.6, clarity from 1.5 to 2.6 dB.
+     */
+    private fun clearer(strike: Strike, airDb: Float): Strike = { v, t, x ->
+        val y = strike(v, t, x)
+        val undo = Dsp.Biquad().apply { highShelf(LooseCrateKits.SHELF_HZ, 4f) }
+        val air = Dsp.Biquad().apply { highShelf(4_000f, airDb) }
+        FloatArray(y.size) { air.process(undo.process(y[it])) }
+    }
+
     private val blueParts: List<Pair<String, Strike>> = listOf(
-        "felt-kick" to ember(EmberVoice.KICK, "TUNE" to .35f, "DAMP" to .65f, "BUZZ" to .15f),
-        "brush-tap" to ember(EmberVoice.BRUSH_TAP, "TUNE" to .55f, "DAMP" to .35f, "BUZZ" to .55f),
+        "felt-kick" to clearer(ember(EmberVoice.KICK, "TUNE" to .35f, "DAMP" to .65f, "BUZZ" to .15f), 0f),
+        "brush-tap" to clearer(ember(EmberVoice.BRUSH_TAP, "TUNE" to .55f, "DAMP" to .35f, "BUZZ" to .55f), 3f),
         "ride" to recordRide,
-        "foot-hat" to ember(EmberVoice.HAT_FOOT, "TUNE" to .45f, "DAMP" to .50f, "BUZZ" to .10f),
+        "foot-hat" to clearer(ember(EmberVoice.HAT_FOOT, "TUNE" to .45f, "DAMP" to .50f, "BUZZ" to .10f), 3f),
         // Round 0e: the brush sweep is gone. Three rounds of it (round 0 "harsh and overbearing", 0c "scraping rather
         // than a gently rattling sweep", 0d "just awful") and the owner chose a shaker in its place (2026-11-19).
         // EMBER's shaker is fitted to a CC0 recording of a large shaker; TUNE a little low and DAMP a little long
         // to sit with the brushes. Shape values, unheard.
-        "shaker" to ember(EmberVoice.SHAKER, "TUNE" to .30f, "DAMP" to .45f),
+        "shaker" to clearer(ember(EmberVoice.SHAKER, "TUNE" to .30f, "DAMP" to .45f), 3f),
     )
 
     /**
@@ -239,13 +252,24 @@ object LooseCrateExpansionRound0Generator {
      * shape against the references unchanged (5.4 dB from their mean, round 0h 5.3). The references measure 17.6 and
      * 10.0: a real cymbal's fizz is dense, in tune with the cymbal; the fold-back was not. The kick, brushes, hat and
      * shaker carry little over 16 kHz to fold; the 12 bits, the tape and the vinyl stay.
+     *
+     * Round 0l, a fresher print: "The ride is better the rest sounds like it's in a muffled room" (the owner,
+     * 2026-11-20). Measured on groove A without the ride: dry, centred at 1.7 kHz with 4.7 dB of clarity (the 50 ms
+     * after each backbeat against the 250 ms after that); through BLUE's room and print, 290 Hz and 1.5 dB. The room
+     * alone cost almost no clarity (4.1); the print's tape drive and converter and the bus compressor squashed the
+     * hits, and the room's shelf (-4 dB over 1.2 kHz), the tape's worn head (AGE .60, near 6 kHz) and the
+     * converter's tone took the top. So BLUE's print takes a fresher tape (AGE .20, near 12 kHz; DRIVE .08, was
+     * .15) and the converter's tone fully open (TONE 1, was .95); the room's compressor eases ([blueRoom]); and the
+     * parts other than the ride cancel the room's shelf ([clearer]). The ride was fitted to the old chain, so its
+     * presence comes down to +[RIDE_PRESENCE_DB] dB to land where round 0k did.
      */
     private val BLUE_PRINT = LooseCrateKits.CRATE.let { c ->
-        LooseCrateKits.Print("blue", c.crunch + ("RATE" to 0f), c.tape + ("WOBBLE" to 0f), c.hitVinyl, c.grooveVinyl, c.valve, c.bassSqueeze)
+        LooseCrateKits.Print("blue", c.crunch + mapOf("RATE" to 0f, "TONE" to 1f), c.tape + mapOf("WOBBLE" to 0f, "AGE" to .20f, "DRIVE" to .08f),
+            c.hitVinyl, c.grooveVinyl, c.valve, c.bassSqueeze)
     }
 
-    /** BLUE's room: HUMMIN's, a little smaller and drier, for brushes; a soft compressor. */
-    private val blueRoom = LooseCrateKits.Room(mapOf("SIZE" to .18f, "WALLS" to .50f, "DISTANCE" to .50f), mapOf("AMOUNT" to .35f, "ATTACK" to .80f, "RECOVER" to .50f),
+    /** BLUE's room: HUMMIN's, a little smaller and drier, for brushes; a soft compressor (AMOUNT .20 from round 0l, was .35). */
+    private val blueRoom = LooseCrateKits.Room(mapOf("SIZE" to .18f, "WALLS" to .50f, "DISTANCE" to .50f), mapOf("AMOUNT" to .20f, "ATTACK" to .80f, "RECOVER" to .50f),
         -4f, kickCurve = 1f, wireWeight = 0f, hatLevel = 1f, ringBarEnd = false, ride = null)
 
     // ---------- SPEED ----------

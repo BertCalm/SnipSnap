@@ -417,8 +417,25 @@ floor (the references 17.6 and 10). The ring's length is the owner's to judge, s
 down at 0.77 s) is rendered beside it. A fade of 0.1 to 0.15 s was tried and rejected: 20 dB down in 0.1 s is a
 choked cymbal, and the ring sank under the print's own vinyl floor.
 
+**Round 0l, a fresher print for the rest of the kit.** "The ride is better the rest sounds like it's in a muffled
+room" (the owner, 2026-11-20). Measured on groove A without the ride, by its spectral centre, its band shares, and
+its clarity (the 50 ms after each backbeat's peak against the 250 ms after that, median of eight): dry, 1,691 Hz and
+4.7 dB; through BLUE's room and print, 291 Hz and 1.5 dB. Stage by stage: the room alone kept clarity (4.1 dB); the
+print alone took it to 2.1 (the tape alone 3.1, its drive costing 0.6; the converter alone 3.6), and the bus
+compressor lifted the tails further. The darkening was the room's shelf (-4 dB over 1.2 kHz; removing it gave back
+about 3.5 dB over 2 kHz), the tape's worn head (AGE .60, a one-pole near 6 kHz) and the converter's tone (.95);
+moving the mic closer (DISTANCE .25, .15), harder walls, a smaller room and less vinyl rumble did next to nothing. So:
+BLUE's print takes AGE .20 (near 12 kHz), DRIVE .08 (was .15) and TONE 1; the room's compressor eases to AMOUNT .20
+(was .35); and the kick, brush tap, foot hat and shaker cancel the room's shelf with a mirrored +4 dB shelf at 1.2 kHz,
+the last three with +3 dB over 4 kHz besides. The ride was fitted to the old chain: its presence comes down from +12
+to +8 dB, which lands its printed hit where round 0k's was (the stick at 7.96 kHz against 7.79, 1 to 3 kHz -17.5
+against -17.5, the ring -21.2 against -20.9, 40 dB down at 0.65 s). The ride keeps the room's shelf. Across the three
+grooves: the centre from 316-360 to 488-561 Hz, 2 to 6 kHz up 2.6 to 3.8 dB, 6 to 12 kHz up 3.2 to 3.9, 200 Hz to
+1 kHz down 1.4 to 1.7 (less box), clarity from 1.4-1.6 to 2.7 dB. Lesson for the kits: a print tuned for one voice
+(the ride) can bury the others; measure the kit without it.
+
 [Expansion round 0 listening page](https://claude.ai/artifact/Q3rZ8po8ZaeJs9E4tNd86s) (private to the owner; BLUE's
-ride at rounds 0k (two ring lengths) and 0j, its three grooves, and the shaker at two levels).
+grooves at rounds 0l and 0k, its ride at rounds 0k (two ring lengths) and 0j, and the shaker at two levels).
 
 ## Gates
 
