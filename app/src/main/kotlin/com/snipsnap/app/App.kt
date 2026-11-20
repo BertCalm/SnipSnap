@@ -1135,7 +1135,10 @@ fun App(shelf: KitShelf) {
             } else {
                 haptics.arm()
                 MicSessionService.arm(context)
-                dock.say(Copy.SESSION_ARMED)
+                // A refused notification takes the notification's SNIP with it (UAT 2026-11
+                // user states, S-5); absent below Android 13, where nothing was asked.
+                val notificationsOff = results[Manifest.permission.POST_NOTIFICATIONS] == false
+                dock.say(if (notificationsOff) Copy.SESSION_ARMED_NO_NOTIFICATIONS else Copy.SESSION_ARMED)
             }
         } else {
             // A denied RECORD_AUDIO is not a DRM/dead-air refusal — see
@@ -3938,6 +3941,7 @@ fun App(shelf: KitShelf) {
                             KitsScreen(
                                 kits = kits,
                                 projects = projects,
+                                listening = armed,
                                 onOpenProject = { openProject(it.project) },
                                 openProjectName = project?.name,
                                 onNewProject = ::newProject,

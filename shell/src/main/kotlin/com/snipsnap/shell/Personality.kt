@@ -316,6 +316,14 @@ object Copy {
     const val NO_TAPE_YET_ARMED = "Listening, and SNIP keeps what it's heard, up to 60s."
 
     /**
+     * The empty LIBRARY while the first LISTEN is running (UAT 2026-11 user states, D-7). It
+     * kept saying [EMPTY_SHELF] beside CATCH YOUR FIRST SOUND, a button already pressed, and only
+     * the dock said it was listening. This names the next step where the user is looking: make
+     * the sound, then SNIP, which is the dock's, below.
+     */
+    const val EMPTY_SHELF_LISTENING = "Listening, so make a sound and then tap SNIP below."
+
+    /**
      * The first SNIP of a cold shelf, landed: App has made the project, the
      * kit and A01 for it, and PADS is up with that pad selected and lit. Said
      * after [SNIPPED], so the dock keeps SNIPPED's CUT door beside it.
@@ -323,6 +331,13 @@ object Copy {
     const val FIRST_CATCH_LANDED = "Your first sound is on A01. Tap it."
     /** The Bubble's drag-to-hot-zone stop — harmless, distinct from a delete or a reset. */
     const val BUBBLE_EJECTED = "Stopped. What it heard is kept."
+    /**
+     * [SESSION_ARMED] when Android's notification permission was refused (UAT 2026-11 user
+     * states, S-5). The session runs, but the notification that carries its SNIP is not shown,
+     * so from another app the bubble is the only way to SNIP; [BUBBLE_WHY] and its ALLOW are
+     * drawn below while it is not allowed. Two dock lines at most.
+     */
+    const val SESSION_ARMED_NO_NOTIFICATIONS = "Listening. Notifications are off, so SNIP from other apps needs the bubble."
     /**
      * The line over the Bubble's door while TAPE is rolling and Android has not yet let
      * SnipSnap draw over other apps. It says what the Bubble is (a small ring that rides over
