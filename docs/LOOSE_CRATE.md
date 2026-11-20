@@ -487,6 +487,16 @@ What changed in the family to hold them, and why:
   hat at .50, the ride at .65 and .38 in the hard zone) is untouched.
 - **RAGA's takes vary** in force and decay (the family's TERRA strike); round 0 re-seeded only, which measured too
   close on a soft doum in round 1. RAGA's groove differs from round 0's by that alone (-24 dB, correlation 0.998).
+- **RAGA's dayan strokes are levelled by loudness.** Every zone peaks at `PAD_PEAK` and the player supplies loudness
+  (pad level times velocity: 6.7 dB from soft to medium, 3.7 from medium to hard). A hard dayan stroke is mostly
+  click, its crest factor about 7 dB over a soft one's, so at one peak its soft zone measured louder than its hard:
+  played, Dayan Na and Tin kept 0.5 and 0.6 dB of the 3.7 dB step (rms over 0.4 s; 0.2 dB weighted for hearing), Ti
+  and Te 1.6 and 1.7. Their softer zones (`Part.byLoudness`) are now levelled to the hard zone's rms over 0.4 s,
+  never above the peak; the hard zone, the one heard, is unchanged. `every hit gets louder as it is played harder`
+  holds every hit of every kit to 0.9 dB a step; the closest other pad was SPEED's Slap Snare at 1.1.
+- **The listening pack plays at the player's loudness.** `generateLooseCrateKits` used to write `touch-NN.wav` at
+  the saved level, each zone at one peak, which hid the dayan's flat step. It now scales each clip by the gain
+  `PadHit.resolve` returns.
 
 Measured against round 0's renders, through the kit: BLUE's break and its five heard hits, and SPEED's groove, match to
 rounding (-135 to -142 dB); RAGA's heard hits match to rounding. The grooves' quietest tenth of 10 ms frames sits 31.5

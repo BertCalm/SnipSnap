@@ -186,8 +186,11 @@ object LooseCrateKits {
         Kit.SPEED, Kit.RAGA -> CRATE
     }
 
-    /** One playable hit: its name, class, choke group and how to strike it dry. */
-    internal class Part(val name: String, val cls: DrumClass, val mute: Int = 0, val strike: Strike)
+    /**
+     * One playable hit: its name, class, choke group and how to strike it dry. [byLoudness] levels the softer
+     * zones to the hard zone's loudness instead of each to [PAD_PEAK] (see [zoneGain]).
+     */
+    internal class Part(val name: String, val cls: DrumClass, val mute: Int = 0, val byLoudness: Boolean = false, val strike: Strike)
 
     /** A phrase pad: notes on the kit's grid. [loop] folds the tail back onto the start and keeps the bars exact. */
     internal class Phrase(val name: String, val notes: List<Note>, val loop: Boolean)
@@ -412,12 +415,39 @@ object LooseCrateKits {
 
     private val gains = ConcurrentHashMap<Triple<Kit, Int, Float>, Float>()
 
-    /** One gain per velocity zone, from its first take, shared by its four: every zone peaks at [PAD_PEAK]. */
-    private fun zoneGain(kit: Kit, role: Int, velocity: Float): Float = gains.getOrPut(Triple(kit, role, velocity)) {
+    /**
+     * One gain per velocity zone, from its first take, shared by its four: every zone peaks at [PAD_PEAK],
+     * and the player's velocity gain (pad level times velocity) makes a harder zone louder.
+     *
+     * A [Part.byLoudness] pad's softer zones are instead levelled to the hard zone's rms over its first
+     * [LOUDNESS_SECONDS], never above [PAD_PEAK]. A dayan's hard stroke is mostly click: its crest factor
+     * rises about 7 dB from soft to hard, so at one peak its soft zone measured louder than its hard, and the
+     * player's 3.7 dB medium-to-hard step came out at 0.2 dB (Dayan Na and Tin, 2026-11-20). The hard zone,
+     * the one heard and approved, keeps its peak gain.
+     */
+    private fun zoneGain(kit: Kit, role: Int, velocity: Float): Float = gains[Triple(kit, role, velocity)] ?: run {
         val x = printed(kit, role, velocity, 0)
         val peak = if (role == GROOVE) KitStrikes.peakOf(x.let { y -> val m = y.average().toFloat(); FloatArray(y.size) { y[it] - m } })
         else KitStrikes.finish(x, 1f, ceiling = Float.MAX_VALUE).peak()
-        if (peak > 1e-9f) PAD_PEAK / peak else 1f
+        val byPeak = if (peak > 1e-9f) PAD_PEAK / peak else 1f
+        val hard = velocities.last()
+        val gain = if (role >= HITS || velocity == hard || !parts(kit)[role].byLoudness) byPeak else {
+            val target = zoneGain(kit, role, hard) * headRms(KitStrikes.finish(printed(kit, role, hard, 0), 1f, ceiling = Float.MAX_VALUE).samples)
+            val own = headRms(KitStrikes.finish(x, 1f, ceiling = Float.MAX_VALUE).samples)
+            if (own > 1e-9f) minOf(byPeak, target / own) else byPeak
+        }
+        gains.putIfAbsent(Triple(kit, role, velocity), gain) ?: gain
+    }
+
+    /** How long a [Part.byLoudness] zone is measured: the stroke and its first ring. */
+    private const val LOUDNESS_SECONDS = .4f
+
+    private fun headRms(x: FloatArray): Float {
+        val n = minOf(x.size, (LOUDNESS_SECONDS * Dsp.RATE).toInt())
+        if (n == 0) return 0f
+        var sum = 0.0
+        for (i in 0 until n) sum += x[i].toDouble() * x[i]
+        return kotlin.math.sqrt(sum / n).toFloat()
     }
 
     // ---------- the strikes ----------
@@ -899,15 +929,15 @@ object LooseCrateKits {
 
     // Pads 1 to 6 are round 0's sounds (the tabla first, as it leads); the rest are shape values after TERRA PUNJAB's.
     private val raga: List<Part> = listOf(
-        Part("Dayan Na", DrumClass.PERC, strike = terra(TerraVoice.DAYAN, "TUNE" to .55f, "DECAY" to .55f, "FORCE" to .85f, "OPEN" to 1f, "CLICK" to .65f)),
+        Part("Dayan Na", DrumClass.PERC, byLoudness = true, strike = terra(TerraVoice.DAYAN, "TUNE" to .55f, "DECAY" to .55f, "FORCE" to .85f, "OPEN" to 1f, "CLICK" to .65f)),
         Part("Bayan Ge", DrumClass.PERC, strike = terra(TerraVoice.BAYAN, "TUNE" to .45f, "DECAY" to .60f, "FORCE" to .80f, "BEND" to 1f)),
-        Part("Dayan Ti", DrumClass.PERC, strike = terra(TerraVoice.DAYAN, "TUNE" to .55f, "DECAY" to .30f, "FORCE" to .75f, "OPEN" to 0f, "CLICK" to .80f)),
+        Part("Dayan Ti", DrumClass.PERC, byLoudness = true, strike = terra(TerraVoice.DAYAN, "TUNE" to .55f, "DECAY" to .30f, "FORCE" to .75f, "OPEN" to 0f, "CLICK" to .80f)),
         Part("Thud Kick", DrumClass.KICK, strike = thudKick),
         Part("Slap Snare", DrumClass.SNARE, strike = slapSnare),
         Part("Dholak", DrumClass.PERC, strike = terra(TerraVoice.DHOLAK, "TUNE" to .50f, "DECAY" to .45f, "FORCE" to .75f, "DROP" to .50f, "TREBLE" to .55f)),
         Part("Bayan Low", DrumClass.PERC, strike = terra(TerraVoice.BAYAN, "TUNE" to .25f, "DECAY" to .60f, "FORCE" to .65f, "BEND" to 0f)),
-        Part("Dayan Tin", DrumClass.PERC, strike = terra(TerraVoice.DAYAN, "TUNE" to .36f, "DECAY" to .70f, "FORCE" to .70f, "OPEN" to 1f, "CLICK" to .55f)),
-        Part("Dayan Te", DrumClass.PERC, strike = terra(TerraVoice.DAYAN, "TUNE" to .60f, "DECAY" to .15f, "FORCE" to .70f, "OPEN" to 0f, "CLICK" to .90f)),
+        Part("Dayan Tin", DrumClass.PERC, byLoudness = true, strike = terra(TerraVoice.DAYAN, "TUNE" to .36f, "DECAY" to .70f, "FORCE" to .70f, "OPEN" to 1f, "CLICK" to .55f)),
+        Part("Dayan Te", DrumClass.PERC, byLoudness = true, strike = terra(TerraVoice.DAYAN, "TUNE" to .60f, "DECAY" to .15f, "FORCE" to .70f, "OPEN" to 0f, "CLICK" to .90f)),
         Part("Bayan Ka", DrumClass.PERC, strike = terra(TerraVoice.BAYAN, "TUNE" to .45f, "DECAY" to .10f, "FORCE" to .80f, "BEND" to .20f)),
         Part("Dholak Boom", DrumClass.PERC, strike = terra(TerraVoice.DHOLAK, "TUNE" to .35f, "DECAY" to .65f, "FORCE" to .70f, "DROP" to .80f, "TREBLE" to .30f)),
         Part("Dholak High", DrumClass.PERC, strike = terra(TerraVoice.DHOLAK, "TUNE" to .65f, "DECAY" to .40f, "FORCE" to .60f, "DROP" to .30f, "TREBLE" to .70f)),

@@ -1199,6 +1199,18 @@ Four drum kits after the owner's beat-tape reference loops, in the CYPHER shape:
 | Velocity and round robin: rendering | Pass in software | Soft zones are different strikes and never brighter; four different strikes per zone |
 | Velocity and round robin: saving, playback, export | Pass | Save, reload, pad resolver, MPC 3, SFZ and DecentSampler for all 64 pads; MPC 2 not written (format limit). Owner-reported pass on the phone and the MPC, 2026-11-18 |
 
+### LOOSE CRATE expansion: BLUE, SPEED, RAGA (built 2026-11-20; open)
+
+Three more kits on the same shelf, built to the pad lists the owner approved ("Build as proposed", 2026-11-20). Round 0's grooves and key hits were approved by ear: BLUE's break and longer ride, SPEED's 1.35 speed-up, RAGA with the tabla leading. The other pads and every soft-to-hard strip are on a round 1 listening page and not yet heard. See [LOOSE CRATE](LOOSE_CRATE.md#expansion-round-1-the-three-kits-as-built-the-new-pads-not-yet-heard).
+
+| Gate | Status | Evidence |
+|---|---|---|
+| Drums: multiple distinct genre kits on the shelf | Partial | BLUE and RAGA are new genres, each differing from every other kit in at least six pads and in its first two pads dry. SPEED is HUMMIN's speed variant, as the owner chose it: under this table's rule it is not a distinct genre kit, and `LooseCrateKitsTest` holds it to that definition instead |
+| Percussion: roll/riser | Built, not heard | Tap Roll, Sped Roll and Tabla Roll on A15 |
+| Velocity and round robin: rendering | Pass in software | Soft zones are different, never brighter strikes, four different strikes per zone, and every hit gets louder as it is played harder (RAGA's dayan strokes levelled by loudness to do so) |
+| Velocity and round robin: saving, playback, export | Pass in software, not heard | Save, reload, pad resolver, MPC 3, SFZ and DecentSampler for all 48 pads (`:shell:generateLooseCrateKits`, `LooseCrateKitTest`); MPC 2 not written (format limit). The strips at the player's loudness await the owner's ear; nothing played on a phone or an MPC |
+| Sound character | Round 0 approved; round 1 pending | The new pads and strips are on the round 1 page |
+
 
 ### Soul Rock Roadhouse crash revision (2026-11-19)
 

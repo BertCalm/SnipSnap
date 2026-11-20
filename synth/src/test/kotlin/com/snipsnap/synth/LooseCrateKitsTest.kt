@@ -4,6 +4,7 @@ import com.snipsnap.audio.DrumClass
 import com.snipsnap.audio.Snip
 import com.snipsnap.synth.LooseCrateKits.Kit
 import kotlin.math.abs
+import kotlin.math.log10
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.sqrt
@@ -64,6 +65,16 @@ class LooseCrateKitsTest {
         return num / max(den, 1e-18)
     }
 
+    private fun byLoudness(kit: Kit, role: Int) = role < LooseCrateKits.HITS && LooseCrateKits.parts(kit)[role].byLoudness
+
+    /** Rms over a hit's first 0.4 s, as [LooseCrateKits] levels a loudness-levelled zone. */
+    private fun headRms(x: Snip): Float {
+        val n = minOf(x.samples.size, (.4f * x.sampleRate).toInt())
+        var sum = 0.0
+        for (i in 0 until n) sum += x.samples[i].toDouble() * x.samples[i]
+        return sqrt(sum / n).toFloat()
+    }
+
     private fun rendered(kit: Kit, role: Int, velocity: Float, take: Int): Snip =
         renders.getOrPut(listOf(kit, role, velocity, take)) { LooseCrateKits.render(kit, role, velocity, take) }
 
@@ -93,12 +104,36 @@ class LooseCrateKitsTest {
 
     @Test fun `every zone is levelled to one peak and no take runs far from it`() {
         for (kit in Kit.entries) for (role in 0 until LooseCrateKits.PADS) for (v in LooseCrateKits.velocities) {
+            if (byLoudness(kit, role) && v != LooseCrateKits.velocities.last()) {
+                // Levelled to the hard zone's loudness instead, never above the shared peak.
+                val hard = headRms(rendered(kit, role, LooseCrateKits.velocities.last(), 0))
+                val own = headRms(rendered(kit, role, v, 0))
+                assertTrue(rendered(kit, role, v, 0).peak() <= LooseCrateKits.PAD_PEAK + .005f, "${kit.name} role $role v $v")
+                assertTrue(own <= hard * 1.01f, "${kit.name} role $role v $v rms $own over the hard zone's $hard")
+                continue
+            }
             assertEquals(LooseCrateKits.PAD_PEAK, rendered(kit, role, v, 0).peak(), .005f, "${kit.name} role $role v $v")
             for (take in 1 until LooseCrateKits.TAKES) {
                 val peak = rendered(kit, role, v, take).peak()
                 assertTrue(peak in .6f..(.98f + 1e-6f), "${kit.name} role $role v $v take $take peak $peak")
             }
         }
+    }
+
+    @Test fun `every hit gets louder as it is played harder`() {
+        // The player scales a zone by velocity (PadHit.gains): 6.7 dB from soft to medium, 3.7 from medium to
+        // hard. A zone change may spend some of that on timbre but not nearly all of it. Before the dayan
+        // strokes were levelled by loudness, Dayan Na and Tin kept 0.5 and 0.6 dB of the 3.7 (2026-11-20);
+        // the closest any other pad came was 1.1.
+        val failures = mutableListOf<String>()
+        for (kit in Kit.entries) for (role in 0 until LooseCrateKits.HITS) {
+            val played = LooseCrateKits.velocities.map { v -> 20 * log10(headRms(rendered(kit, role, v, 0)) * v) }
+            for (z in 1 until played.size) {
+                val step = played[z] - played[z - 1]
+                if (step < .9f) failures += "${kit.name} ${LooseCrateKits.parts(kit)[role].name} zone $z: ${"%.1f".format(step)} dB"
+            }
+        }
+        assertTrue(failures.isEmpty(), failures.joinToString("\n"))
     }
 
     @Test fun `a softer hit is a different strike and not only a quieter one`() {
