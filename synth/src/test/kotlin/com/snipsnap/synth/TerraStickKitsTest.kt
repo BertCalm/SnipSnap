@@ -221,7 +221,8 @@ class TerraStickKitsTest {
             assertEquals(8 * beat, riser.last().time, 0.0021, "$voice riser's accent at $bpm BPM")
             assertEquals(1f, riser.last().force, "$voice riser's accent is the full touch")
             val gaps = riser.zipWithNext { a, b -> b.time - a.time }
-            for (g in 1 until gaps.size) assertTrue(gaps[g] <= gaps[g - 1] + 0.0045, "$voice riser at $bpm BPM slows at stroke $g")
+            // each stroke moves up to 2 ms either way, so two equal gaps can read up to 8 ms apart; a real slowing is a whole subdivision
+            for (g in 1 until gaps.size) assertTrue(gaps[g] <= gaps[g - 1] + 0.0081, "$voice riser at $bpm BPM slows at stroke $g")
         }
         // without a tempo, the free roll is unchanged
         val free = roll(TerraVoice.SHIME, TerraArticulation.ROLL)
