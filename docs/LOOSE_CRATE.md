@@ -441,8 +441,9 @@ groove. The groove kind of sounds like a Happy Trails type beat" (the owner, 202
 break (`breakNotes`: sixteenths swung at 58%, the ride on eighths, the kick at 1, the "a" of 1 and the "and" of 3, the
 brushes on two and four, no shaker); the triplet pockets trotted like a cowboy clip-clop at 90 and stay rendered for
 the record. Round 0's groove (`blueNotes`) is removed from the generator. The ride's fade is 0.5 s (40 dB down at
-0.77 s), the longer of round 0k's two. Still open: whether round 0l cleared the muffled room, whether SPEED's 1.35
-speed-up is right, subtler or more extreme, and whether RAGA's tabla leads or sits under the kick and snare.
+0.77 s), the longer of round 0k's two. Round 0l's fresher print cleared the muffled room: "Ok, sounds fine now" (the
+owner, 2026-11-20, of round 0m). Still open: whether SPEED's 1.35 speed-up is right, subtler or more extreme, and
+whether RAGA's tabla leads or sits under the kick and snare.
 
 [Expansion round 0 listening page](https://claude.ai/artifact/Q3rZ8po8ZaeJs9E4tNd86s) (private to the owner; what is
 decided and the three open questions at the top, then BLUE's history, SPEED and RAGA).
