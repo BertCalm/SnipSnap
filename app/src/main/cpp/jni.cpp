@@ -443,6 +443,34 @@ Java_com_snipsnap_app_NativePads_aquariumOutputCeiling(JNIEnv*, jobject) {
     return snipsnap::aquarium::PerformanceBus::kOutputCeiling;
 }
 
+/** The whole-kit glue (GlueBus.h): the complete settings, queued for the callback; false queues nothing. */
+JNIEXPORT jboolean JNICALL
+Java_com_snipsnap_app_NativePads_configureGlue(
+    JNIEnv*, jobject, jlong handle, jboolean enabled, jfloat thresholdDbfs, jfloat ratio,
+    jfloat makeupDb, jfloat driveDb, jfloat ceilingDbfs) {
+    if (!handle) return JNI_FALSE;
+    snipsnap::GlueSettings settings;
+    settings.enabled = enabled == JNI_TRUE;
+    settings.thresholdDbfs = thresholdDbfs;
+    settings.ratio = ratio;
+    settings.makeupDb = makeupDb;
+    settings.driveDb = driveDb;
+    settings.ceilingDbfs = ceilingDbfs;
+    return pads(handle)->configureGlue(settings) ? JNI_TRUE : JNI_FALSE;
+}
+
+/** The delay the glue adds while enabled, in frames; 0 for no handle or before preparation. */
+JNIEXPORT jint JNICALL
+Java_com_snipsnap_app_NativePads_glueLatencyFrames(JNIEnv*, jobject, jlong handle) {
+    return handle ? static_cast<jint>(pads(handle)->glueLatencyFrames()) : 0;
+}
+
+/** Samples the glue's final guard clamped (the limiter should leave this at zero). */
+JNIEXPORT jlong JNICALL
+Java_com_snipsnap_app_NativePads_glueClampedSamples(JNIEnv*, jobject, jlong handle) {
+    return handle ? static_cast<jlong>(pads(handle)->glueClampedSamples()) : 0;
+}
+
 JNIEXPORT jint JNICALL
 Java_com_snipsnap_app_NativePads_sampleRate(JNIEnv*, jobject, jlong handle) {
     return pads(handle)->sampleRate();

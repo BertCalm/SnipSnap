@@ -6,7 +6,10 @@ Python prototype and the "As built" record are in the
 [design brief](superpowers/specs/2026-11-19-consort-woodwind-ensemble-design-brief.md).
 
 **What has been heard.** The owner heard the Python prototype over three rounds and approved its
-overall sound, the room at its default and the four takes. Nobody has heard the Kotlin render.
+overall sound, the room at its default and the four takes, then heard the Kotlin K1 audition and
+approved it (2026-11-20: "Sounds good to me"; asked directly, "Yes, I listened; it sounds good").
+That render is the accepted baseline. The current engine is within -50 dB of it on every one of
+the 100 audition clips (median -88 dB), which nobody has listened to as a difference.
 
 ## What it plays
 
@@ -39,6 +42,9 @@ The section, the velocity and the take are fields on `ConsortPatch`, not macros.
 - `synth/src/test/.../ConsortTest.kt`: seventeen probes. `DeterminismTest` has the canary.
 - `synth/src/test/.../ConsortAuditionGenerator.kt`: `./gradlew :synth:generateConsortAudition`
   writes 100 clips, their recipes, `metrics.csv` and a page under `testkit/consort-audition/`.
+- `SynthKits.consort()` and `ConsortKitGenerator`: `./gradlew :synth:generateConsortKit` writes the
+  first kit to `testkit/SnipSnap Consort Kit/` (A01 to A08 FLUTE up the minor pentatonic, A09 to A16
+  eight recipes).
 - `docs/prototypes/consort/consort_proto.py`: the Python prototype the owner heard.
 
 ## Measured on the Kotlin render (2026-11-19, the audition's `metrics.csv` and `ConsortTest`)
@@ -50,13 +56,22 @@ The section, the velocity and the take are fields on `ConsortPatch`, not macros.
 | Hard FLUTE | 1201 cents: the octave |
 | Cylinders | CLARINET's and DUDUK's second harmonic over 20 dB under the first |
 | Classifier | none of the 100 audition clips, and none of the test's 180 short renders, files as a drum |
-| Render time | solo 61 to 285 ms (median 109); section 194 to 440 ms (median 324) |
+| Render time (after the K2 speed pass, 4 cores) | solo 40 to 150 ms (median 78); section 63 to 270 ms (median 116). Before: solo median 109, section median 324 |
 
 ## Disclosed, not fixed
 
-- **Render time is over the house rule** ("tens of ms"). The player's plan computes seven slow
-  wanders and several transcendental functions every internal sample; most of it could move to
-  the 64-sample block the pitch already uses. Not done.
+- **Render time is still over the house rule** ("tens of ms") for long notes and sections. The K2
+  pass keeps the room's setup per ROOM value (about 12 ms a render), blows a section's players
+  side by side, and works the slow parts of the plan out every 64 samples. What is left on a
+  default 1.3 s note, measured: the body's filters 18 ms, the house band limit before the
+  decimator 16 to 20, the pipe 8 to 9, the plan 6 to 7, the reed's bend 3 to 4, and the room
+  about 24. A section's time now depends on the cores it has.
+- **The body's 18 ms is kept on purpose.** Moving its filters to the output rate saved 13 ms a
+  note and darkened every voice (2 to 5 kHz down 0.2 to 1.9 dB against 100 to 500 Hz). The owner
+  had approved the sound with the filters at the internal rate, so the move was undone.
+- **The room makes short notes long.** A render is the breath, 0.35 s of release and the wash's
+  tail (0.74 s at the default ROOM). At the default ROOM any HOLD above about 0.11 passes the
+  classifier's 1.5 s line and files LOOP by length alone, so the kit's note pads use HOLD 0.1.
 - **HOLD does not loop.** A loop with a room in it needs a periodic wash, or the room applied
   after the loop. `Consort.isLoop` is false at every setting and a test says so.
 - **Eight controls**, HOLD included, where the house asks for three to six plus HOLD. TREMOR has

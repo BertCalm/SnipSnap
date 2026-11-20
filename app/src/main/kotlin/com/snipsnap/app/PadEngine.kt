@@ -72,6 +72,8 @@ class PadEngine(preferredSampleRate: Int) {
     private var aquariumBpm = 0.0
     private var aquariumPending = false
     private var aquariumResetPending = false
+    private var glueWanted = GlueSettings.OFF
+    private var gluePending = false
 
     private var sampleIndex: Map<String, Int> = emptyMap()
     private var framesOf: Map<String, Long> = emptyMap()
@@ -109,8 +111,46 @@ class PadEngine(preferredSampleRate: Int) {
     @Synchronized
     fun start(): Boolean {
         running = open && NativePads.start(handle)
-        if (running) flushAquarium()
+        if (running) {
+            flushAquarium()
+            flushGlue()
+        }
         return running
+    }
+
+    /**
+     * The whole-kit glue ([GlueSettings]): a compressor and limiter across
+     * the kit's mix, before the Aquarium bus and the master gain. True queued
+     * now; false keeps the latest request for the frame-rate drain to retry,
+     * unless already closed. Enabling, disabling and edits glide over 20 ms.
+     */
+    @Synchronized
+    fun configureGlue(settings: GlueSettings): Boolean {
+        if (!open) return false
+        glueWanted = settings
+        gluePending = true
+        return flushGlue()
+    }
+
+    @Synchronized
+    fun glueSettings(): GlueSettings = glueWanted
+
+    /** The delay the glue adds while on, in frames; 0 while off or before the stream is up. */
+    @Synchronized
+    fun glueLatencyFrames(): Int = if (open && glueWanted.enabled) NativePads.glueLatencyFrames(handle) else 0
+
+    @Synchronized
+    fun glueClampedSamples(): Long = if (open) NativePads.glueClampedSamples(handle) else 0L
+
+    private fun flushGlue(): Boolean {
+        if (!open) return false
+        if (!gluePending) return true
+        val g = glueWanted
+        val accepted = NativePads.configureGlue(
+            handle, g.enabled, g.thresholdDbfs, g.ratio, g.makeupDb, g.driveDb, g.ceilingDbfs,
+        )
+        if (accepted) gluePending = false
+        return accepted
     }
 
     /**
@@ -578,6 +618,7 @@ class PadEngine(preferredSampleRate: Int) {
         }
         pendingMaster?.let { if (NativePads.setMasterGain(handle, it, FADER_GLIDE_MS)) pendingMaster = null }
         flushAquarium()
+        flushGlue()
     }
 
     /** One warning the first time anything is kept; never per frame. */

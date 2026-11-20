@@ -14,7 +14,7 @@ import java.util.concurrent.CancellationException
  * The hard layer is the existing single-layer instrument, sample for sample.
  */
 object FilamentTouchKeys {
-    const val RENDER_VERSION = 1
+    const val RENDER_VERSION = 2
     // Musical capture anchors and switch points, not a calibrated force model.
     val TOUCHES: List<Float> = listOf(.35f, .65f, 1f)
     val VELOCITY_WINDOWS: List<IntRange> = listOf(1..42, 43..84, 85..127)

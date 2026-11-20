@@ -351,18 +351,21 @@ internal object Cypher {
     /**
      * A dry phrase: every note is its own strike, so neighbouring notes are never the same audio (the take
      * walks), scaled to the phrase's velocity times the note's weight, placed at its offset start, summed.
-     * [seconds] is the buffer length; a phrase with a long sub needs its tail.
+     * [seconds] is the buffer length; a phrase with a long sub needs its tail. [partGain] scales a part's hits
+     * after the touch law (which floors every note's peak at .35, so a weight cannot sit a part 9 dB under
+     * another): a mix level, not a stroke.
      */
     fun phraseRaw(
         notes: List<Note>, bpm: Int, velocity: Float, take: Int, takes: Int, seconds: Float,
-        touch: (Float) -> Float, strike: (part: Int) -> Strike,
+        touch: (Float) -> Float, partGain: (part: Int) -> Float = { 1f }, strike: (part: Int) -> Strike,
     ): FloatArray {
         val out = FloatArray((seconds * Dsp.RATE).toInt())
         for ((i, note) in notes.withIndex()) {
             val v = (velocity * note.weight).coerceIn(.05f, 1f)
             val hit = KitStrikes.struck(strike(note.part), v, (take + i) % takes, touch(v), note.tuneSemis)
+            val g = partGain(note.part)
             val start = startFrame(note, bpm)
-            for (j in 0 until min(hit.size, out.size - start)) out[start + j] += hit[j]
+            for (j in 0 until min(hit.size, out.size - start)) out[start + j] += hit[j] * g
         }
         return out
     }

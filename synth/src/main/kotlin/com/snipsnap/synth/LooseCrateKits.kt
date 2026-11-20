@@ -265,6 +265,8 @@ object LooseCrateKits {
         val ringBarEnd: Boolean,
         val ride: Int?,
         val rideWeights: Pair<Float, Float> = .10f to .06f,
+        /** The kicks' level in the groove, in dB against the rest of the kit (STAGGER round 3); 0 leaves them as struck. */
+        val kickDb: Float = 0f,
     ) {
         /** The dry kit through the room, the compressor and the shelf, fed at the print's level ([HEADROOM]). */
         fun play(dry: FloatArray): FloatArray {

@@ -472,7 +472,7 @@ explicit MIDI root (24–96), strike velocity and model version; TUNE is a
 relative ±12-semitone offset, neutral at 0.5, so the effective note spans
 12–108 without clamping back to the saved-root range. Seven provisional presets
 and a dry sixteen-pad C minor pentatonic kit are included, with PITCHWHEEL among
-FRESH TAPE's 230 starters. Run `./gradlew :synth:generatePitchwheelAudition`
+FRESH TAPE's 231 starters. Run `./gradlew :synth:generatePitchwheelAudition`
 for the compact first listening set, or add `-PpitchwheelFull` for the broader
 dry probes. HOLD's top step returns settled loop-only material with a
 deterministic attachment cycle and capped adhesion. The owner heard R1 as six
@@ -1125,16 +1125,23 @@ WOOD and TINE's original Reference, Soft Attack, Bright Edge and Long Ring
 profiles. REED (the support's pull blows a free reed), COURSE (three detuned
 strings per note), ESCAPEMENT (a bright tick one way, a dark tock back) and BELL
 joined them once the owner kept them by ear in accord-voices-1 (19 Nov 2026), each
-with one preset and together on the ACCORD VOICES starter at C2 to C5. Ten saved
+with one preset and together on the ACCORD VOICES starter at C2 to C5. Round robin
+came next: four takes of each performance, the same machine heard from a moment
+earlier each time, kept by ear in accord-rr-1 (19 Nov 2026). ROBIN re-strikes an
+ACCORD pad with them, and the opt-in ACCORD TAKES starter gives the sixteen ACCORD
+pads soft, medium and hard touch with two of those takes on each (four made the
+kit too large for a phone). Ten saved
 starting recipes, native note/touch/seed/passage replay,
 a dry sixteen-pad one-shot FRESH TAPE starter and a diagnostic audition carry the approved
-Python direction into a native candidate. Nonzero HOLD is refused. SYNTH's
+Python direction into a native candidate. Nonzero HOLD is refused. MAKE
+INSTRUMENT builds finite keys from any recipe (C2 to C5, three touches of two
+takes, a key-up fade; kept by ear in accord-keys-1, 20 Nov 2026). SYNTH's
 ROOT, TOUCH, LENGTH and TINE profile controls keep the complete saved recipe.
 Native numerical checks and three software-emulator functional tests passed
 with the documented ART setup. The full nine-module JVM gate at `00a1f9ff`
 passed 8,010 tests with zero failures/errors/skips. Both final Android builds
 passed at that source; the rebuilt development APK has not been device-executed.
-Owner listening and physical phone/MPC acceptance remain open.
+Physical phone/MPC acceptance remains open.
 [Usage and limits](docs/ACCORD.md) link the design and frozen references.
 
 TIDAL brings two original source populations through a seeded encounter:

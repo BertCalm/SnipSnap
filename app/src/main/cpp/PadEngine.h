@@ -9,6 +9,7 @@
 #include <memory>
 #include <vector>
 
+#include "GlueBus.h"
 #include "PrintBuffer.h"
 #include "SpscRing.h"
 #include "aquarium/PerformanceBus.h"
@@ -175,6 +176,18 @@ public:
     bool configureAquarium(const aquarium::PerformanceSettings& settings, bool reset = false);
     bool aquariumFaulted() const { return aquarium_.faulted() || (stream_ && !aquarium_.isPrepared()); }
     uint64_t aquariumLimitedFrames() const { return aquarium_.limitedFrames(); }
+
+    /**
+     * The whole-kit glue (GlueBus.h): a compressor and lookahead limiter
+     * across the pads' mix, after the voices and before the Aquarium bus and
+     * the master gain. Serialized control thread, as [configureAquarium];
+     * false means nothing was queued. Off is the default and bit-exact.
+     */
+    bool configureGlue(const GlueSettings& settings);
+    /** The delay the glue adds while enabled, in frames (its 3 ms lookahead); 0 before preparation. */
+    int32_t glueLatencyFrames() const { return glue_.latencyFrames(); }
+    /** Samples the glue's final guard clamped; the limiter should keep this at zero. */
+    uint64_t glueClampedSamples() const { return glue_.clampedSamples(); }
 
     // The bank, UI thread: begin, add each sample (index returned), commit.
     void beginBank();
@@ -380,6 +393,7 @@ private:
     int32_t heldCount_ = 0;
 
     aquarium::PerformanceBus aquarium_;
+    GlueBus glue_;
     PrintBuffer print_;
 };
 

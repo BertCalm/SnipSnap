@@ -225,4 +225,75 @@ class PadSheetUndoScreenTest : ComposeScreenTest() {
         waitForToast(Copy.DESAMPLE_UNDO_NOTHING)
         assertTrue("a refused UNDO touches nothing", original.contentEquals(File(entry.dir, "hit1.wav").readBytes()))
     }
+
+    /**
+     * The twin is made the way the MAKE box's button makes one (`KitBuilderModel.kerfPad`, three fits, about a
+     * second), so this also proves the saved recipe and stamp are what the sheet's UNDO looks for.
+     */
+    @Test
+    fun synth_twin_undo_gives_the_take_before_the_twin_back_and_clears_its_mark() {
+        val entry = kit()
+        val original = File(entry.dir, "hit1.wav").readBytes()
+        val before = savedPad(entry)
+        val m = KitBuilderModel.open(entry.dir)
+        m.kerfPad(1)
+        m.save()
+        val twin = savedPad(entry)
+        assertTrue("test setup: the bare twin and its stamp are on top", PadSheet.isKerfTwin(twin))
+        assertFalse("test setup: the pad's audio is the twin's render", original.contentEquals(File(entry.dir, "hit1.wav").readBytes()))
+
+        show(KitShelf.Entry(entry.dir, KitStore.load(entry.dir)), openBox = PadSheetBoxes.Box.MAKE.name, page = PadSheetPage.MAKE)
+        waitFor("the MAKE box's SYNTH TWIN line to say the pad is one", timeoutMillis = 60_000) { hasText("A synth twin now") }
+        activate("UNDO SYNTH TWIN")
+        waitForToast(Copy.UNKERFED)
+        val undone = savedPad(entry)
+        assertNull("the twin's recipe came off", undone.recipe)
+        assertFalse("the twin's stamp came off", KitBuilderModel.KERF_STAMP in undone.source)
+        assertEquals("the pad is called what it was called", before.drumClass, undone.drumClass)
+        assertTrue("the take before the twin, byte for byte", original.contentEquals(File(entry.dir, "hit1.wav").readBytes()))
+        waitFor("the MAKE box's SYNTH TWIN line to stop saying so", timeoutMillis = 60_000) {
+            hasText("This hit rebuilt from its own measurements")
+        }
+
+        activate("UNDO SYNTH TWIN")
+        waitForToast(Copy.KERF_UNDO_NOTHING)
+        assertTrue("a refused UNDO touches nothing", original.contentEquals(File(entry.dir, "hit1.wav").readBytes()))
+    }
+
+    /**
+     * SLOP on a twin re-cuts it from its own numbers when let go, with no new take in the bin, so UNDO SYNTH TWIN
+     * still gives the capture afterwards. Moved through the slider's adjust action, the one TalkBack uses.
+     *
+     * This kit is one pad, so the twin has no hit before it to bleed in, and the sheet offers no BLEED. (The first
+     * version of this test moved BLEED here and failed on CI: the re-cut saved BLEED 2.0 and wrote the same audio,
+     * because there was nothing to bleed. That is why the sheet hides it now.)
+     */
+    @Test
+    fun synth_twin_slop_recuts_the_twin_and_its_undo_still_gives_the_capture() {
+        val entry = kit()
+        val original = File(entry.dir, "hit1.wav").readBytes()
+        KitBuilderModel.open(entry.dir).apply { kerfPad(1); save() }
+        val made = File(entry.dir, "hit1.wav").readBytes()
+        val takes = KitBuilderModel.open(entry.dir).priorTakes(1).size
+
+        show(KitShelf.Entry(entry.dir, KitStore.load(entry.dir)), openBox = PadSheetBoxes.Box.MAKE.name, page = PadSheetPage.MAKE)
+        waitFor("the twin's SLOP to be live", timeoutMillis = 60_000) {
+            val node = nodes("SYNTH TWIN SLOP").singleOrNull()
+            node != null && node.config.getOrNull(SemanticsActions.SetProgress) != null
+        }
+        assertTrue("a twin with no hit before it offers no BLEED", nodes("SYNTH TWIN BLEED").isEmpty())
+        // SLOP 0 from 0.5: the cut's edge fade alone goes from 0.55 ms to 1 ms, so the audio must change
+        compose.onNodeWithContentDescription("SYNTH TWIN SLOP", useUnmergedTree = true)
+            .performSemanticsAction(SemanticsActions.SetProgress) { it(0f) }
+        pump()
+        waitFor("the re-cut to be saved", timeoutMillis = 60_000) {
+            com.snipsnap.shell.Breed.recipeOf(savedPad(entry))?.kerf?.slop == 0.0
+        }
+        assertFalse("the pad's audio is the new cut", made.contentEquals(File(entry.dir, "hit1.wav").readBytes()))
+        assertEquals("no new take in the bin", takes, KitBuilderModel.open(entry.dir).priorTakes(1).size)
+
+        activate("UNDO SYNTH TWIN")
+        waitForToast(Copy.UNKERFED)
+        assertTrue("after a re-cut, the undo is still the capture", original.contentEquals(File(entry.dir, "hit1.wav").readBytes()))
+    }
 }

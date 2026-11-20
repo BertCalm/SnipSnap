@@ -619,6 +619,40 @@ object SynthKits {
     }
 
     /**
+     * The CONSORT first kit: the first voice, FLUTE, alone, walking the minor pentatonic up the first
+     * two rows (A01-A08) as short notes, so the pads play a tune a step apart; then eight of
+     * [ConsortPresets]' recipes (A09-A16): three more voices alone, then five sections, longest last.
+     * The recipes are clips of the audition the owner approved (2026-11-20); which of them belong on a
+     * kit, and in what order, nobody has chosen by ear. Every pad is dry: the room is inside the engine
+     * (its ROOM macro seats each chair), so there is no landing chain. Every pad's class is the
+     * engine's own ([Consort.drumClassFor]): the short notes file PERC and the long ones LOOP, and a
+     * drum program plays each once through. Every pad carries its recipe, section, velocity and take.
+     */
+    fun consort(): List<ArrangedPad?> {
+        val steps = listOf(0, 3, 5, 7, 10, 12, 15, 17)
+        fun note(n: Int, semitone: Int) = ConsortPatch("Flute ${n + 1}", ConsortVoice.FLUTE,
+            Consort.defaults(ConsortVoice.FLUTE) + mapOf("TUNE" to semitone / Consort.TUNE_SEMITONES.toFloat(), "HOLD" to CONSORT_NOTE_HOLD))
+            .let { pad(it, Consort.drumClassFor(it.voice, it.macros)) }
+        fun preset(voice: ConsortVoice, name: String) = ConsortPresets.forVoice(voice).first { it.name == name }
+            .let { pad(it, Consort.drumClassFor(it.voice, it.macros)) }
+        return steps.mapIndexed { n, semitone -> note(n, semitone) } + listOf(
+            preset(ConsortVoice.SAX, "PLAIN SAX"), preset(ConsortVoice.OBOE, "PLAIN OBOE"),                 // A09 A10
+            preset(ConsortVoice.DUDUK, "PLAIN DUDUK"), preset(ConsortVoice.OBOE, "REED TRIO"),              // A11 A12
+            preset(ConsortVoice.SAX, "SAX FIFTHS"), preset(ConsortVoice.FLUTE, "FLUTE OCTAVES"),            // A13 A14
+            preset(ConsortVoice.DUDUK, "DRONE AND FIFTH"), preset(ConsortVoice.CLARINET, "FULL QUARTET"),   // A15 A16
+        )
+    }
+
+    /**
+     * HOLD for the CONSORT kit's note row: 0.39 s of breath, a played note and not a held one. It is this
+     * short because of the room: a render is the breath, 0.35 s of release and the wash's tail (0.74 s at
+     * the default ROOM 0.4), so 0.39 s of breath is 1.48 s, just under the classifier's 1.5 s line, and
+     * files PERC. The first value tried, 0.15 (0.44 s of breath), came to 1.53 s and filed LOOP: at the
+     * default ROOM, any HOLD above about 0.11 is a LOOP by length alone.
+     */
+    private const val CONSORT_NOTE_HOLD = 0.1f
+
+    /**
      * HOLD for the ARCO kit's CELLO row: the bottom of the knob, 0.3 s of bow ([Arco.HOLD_MIN_SECONDS]),
      * the shortest stab the engine makes. Read off what the engine does there: the stroke at the default BOW
      * ([Arco.attackSeconds], 63 ms at BOW 0.5) is far under 0.85 of 0.3 s (0.255 s), so the

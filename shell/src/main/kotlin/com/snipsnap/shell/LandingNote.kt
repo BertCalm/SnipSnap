@@ -147,6 +147,10 @@ object LandingNote {
     fun dustFailed(reason: String): Note =
         Note(Copy.DUST_FAILED, listOf(Line(reasonText(reason.ifBlank { "it said no" }), trouble = true)))
 
+    /** SYNTH TWIN ALL threw: the title, and [reason] in the warn colour. The pads made before it are saved. */
+    fun kerfAllFailed(reason: String): Note =
+        Note(Copy.KERF_ALL_FAILED, listOf(Line(reasonText(reason.ifBlank { "it said no" }), trouble = true)))
+
     /** A name, as the lines draw it: uppercase in Locale.ROOT (never the phone's language), no trailing full stop, no space left where it was. */
     fun shout(s: String): String = s.uppercase(java.util.Locale.ROOT).trim().trimEnd('.').trimEnd()
 

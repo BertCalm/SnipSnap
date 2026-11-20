@@ -3,7 +3,8 @@ package com.snipsnap.synth
 /**
  * CONSORT's provisional recipes: for each voice, the lead alone and one section it leads. They are the
  * settings of the Python prototype's audition, which the owner heard and approved as a whole
- * (2026-11-19); nobody has heard them from this engine, and none was chosen one by one. They stay
+ * (2026-11-19), and most of them are clips of the Kotlin audition the owner approved (2026-11-20);
+ * none was chosen one by one. They stay
  * outside the factory roster ([Presets]) until a listening verdict on the Kotlin render: recipes
  * written without listening are disposable.
  */

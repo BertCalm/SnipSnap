@@ -3350,6 +3350,15 @@ tasks.register<JavaExec>("generateChitinAudition") {
 }
 
 
+tasks.register<JavaExec>("generateConsortKit") {
+    group = "distribution"
+    description = "Render the CONSORT woodwind section first kit under testkit/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ConsortKitGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit")
+}
+
 /** Render CONSORT's Kotlin audition: clips, recipes, metrics and a listening page under testkit/consort-audition/. See ConsortAuditionGenerator. */
 tasks.register<JavaExec>("generateConsortAudition") {
     group = "distribution"
@@ -4084,6 +4093,52 @@ tasks.register<JavaExec>("generateLooseCrateExpansionRound0") {
     workingDir = rootProject.projectDir
     maxHeapSize = "1g"
     args(providers.gradleProperty("looseCrateExpansionOutput").orNull ?: "${rootDir}/testkit/loose-crate-expansion-round0")
+}
+
+tasks.register<JavaExec>("benchmarkParade") {
+    group = "verification"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ParadeAudit")
+    maxHeapSize = "1g"
+    args("speed",providers.gradleProperty("paradeAuditOutput").getOrElse("${rootDir}/testkit/parade-speed.csv"))
+}
+tasks.register<JavaExec>("auditParadeOutput") {
+    group = "verification"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ParadeAudit")
+    maxHeapSize = "1g"
+    args("alias",providers.gradleProperty("paradeAuditOutput").getOrElse("${rootDir}/testkit/parade-output-alias.csv"))
+}
+
+tasks.register<JavaExec>("benchmarkParadeTuned") {
+    group = "verification"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ParadeAudit")
+    maxHeapSize = "1g"
+    args("tuned",providers.gradleProperty("paradeTunedOutput").getOrElse("${rootDir}/testkit/parade-tuned-speed.csv"))
+}
+
+tasks.register<JavaExec>("benchmarkParadeKits") {
+    group = "verification"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ParadeAudit")
+    maxHeapSize = "1g"
+    args("kit_speed",providers.gradleProperty("paradeKitSpeedOutput").getOrElse("${rootDir}/testkit/parade-kit-speed.csv"))
+}
+tasks.register<JavaExec>("auditParadeKits") {
+    group = "verification"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ParadeAudit")
+    maxHeapSize = "1g"
+    args("kit_alias",providers.gradleProperty("paradeKitAliasOutput").getOrElse("${rootDir}/testkit/parade-kit-alias.csv"))
+}
+
+tasks.register<JavaExec>("benchmarkParadeSecondLine") {
+    group = "verification"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ParadeAudit")
+    maxHeapSize = "1g"
+    args("secondline_speed",providers.gradleProperty("paradeSecondLineSpeedOutput").getOrElse("${rootDir}/testkit/parade-secondline-speed.csv"))
 }
 
 tasks.register<JavaExec>("generateSunroomKits") {

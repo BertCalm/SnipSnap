@@ -33,7 +33,7 @@ data class CreaseKeyProbe(
  * by overlapping independently rendered states or duplicating a cycle as recurrence proof.
  */
 object CreaseKeys {
-    const val RENDER_VERSION = 1
+    const val RENDER_VERSION = 2
     const val SUPPORTED_MODEL = 3
     const val MAX_SAMPLE_SECONDS = 64.0
     const val MAX_SETTLE_CYCLES = 28
