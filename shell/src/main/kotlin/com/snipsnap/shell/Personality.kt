@@ -1363,7 +1363,11 @@ object Copy {
     // to it. See feelRolled/FEEL_RECENTRED below for its replacements.
     // The phone reads (wave ZZ): READ AS GROOVE, DIG, STEAL THE FEEL on TAPE.
     const val READ_GROOVE_BUSY = "Listening…"
-    const val READ_GROOVE_NEEDS_KIT = "Add a kit to this project first, because the ear needs pads to play on."
+    /**
+     * BEAT with no kit, and READ AS GROOVE or STEAL THE FEEL with none. It named "the ear",
+     * a word no screen uses (UAT 2026-11 user states, D-10); a beat plays on a kit's pads.
+     */
+    const val READ_GROOVE_NEEDS_KIT = "Add a kit to this project first, because a beat plays on its pads."
     /** The reading landed: how much was heard, and where it plays. */
     fun grooveRead(hits: Int, bars: Int, bpm: Int): String =
         "Heard ${countOf(hits, "hit", "hits")} over ${countOf(bars, "bar", "bars")} at ~$bpm BPM. They play on your pads now."
@@ -3574,6 +3578,8 @@ object Copy {
     const val SNAP_NEEDS_KIT = "Open a kit to send sounds to pads."
     /** SURFACE with no kit open - the pad it plays has nothing to come from yet. */
     const val SURFACE_NEEDS_KIT = "Open a kit. The SURFACE plays its first pad."
+    /** SYNTH with no kit open (UAT 2026-11 user states, S-9): SEND TO PAD is greyed, and this line says why, as SNAP's and SURFACE's do. */
+    const val SYNTH_NEEDS_KIT = "Open a kit to send this sound to a pad."
     /** SPLICE's own picker hint before a head and a tail are chosen. */
     const val SPLICE_PICK_HINT = "Pick a head and a tail - two different takes of this pad."
     /** X-RAY on a JSON file that isn't an MPC program at all - [topKeys] the top-level field count when the tree parsed as an object, null when it didn't even parse that far. */

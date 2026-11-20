@@ -101,7 +101,7 @@ fun DoublesScreen(
             onToast(Copy.doublesMeasured(pairs.index.extracted, pairs.index.fromCache))
         }.onFailure { e ->
             Log.e(TAG, "measure: failed", e)
-            failed = Copy.doublesFailed(e.message ?: "the shelf wouldn't read")
+            failed = Copy.doublesFailed(e.message ?: "the LIBRARY wouldn't read")
         }
     }
 
