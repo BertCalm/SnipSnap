@@ -165,16 +165,17 @@ class StaggerKitsTest {
         val phone = bandShare(muffled, 150f, 400f)
         println("box kick (EMBER) 150 to 400 Hz: muffled $phone")
         assertTrue(phone >= .01, "the muffled kick keeps only $phone of its energy in 150 to 400 Hz")
-        // Round 3 ("light taps"): the sub alone keeps 2 percent in the band; the box (the sub under a damped rack
-        // tom) keeps at least 9 percent, the references' lower quartile (median 17), with no more than 3 percent
-        // above 400 Hz over 300 ms (low-passed) and no click (under 1 percent above 1 kHz in the first 40 ms; the
-        // references' lower half sit under 1.6).
+        // Round 3 ("light taps"): the sub alone keeps 2 percent in the band. Round 3's box kept 30 to 48 percent,
+        // aimed at a reference figure that turned out to carry the references' basslines, and was heard as "muddy"
+        // (round 3b). So the box sits between: 5 to 20 percent in the band, no more than 3 percent above 400 Hz over
+        // 300 ms (low-passed) and no click (under 1 percent above 1 kHz in the first 40 ms).
         for ((name, strike) in listOf("box" to StaggerKits.emberKick, "low box" to StaggerKits.emberLowKick, "stage" to StaggerKits.stageKick, "hum" to StaggerKits.humKick)) {
             val box = lone(strike)
             val band = bandShare(box, 150f, 400f, .3f); val top = bandShare(box, 400f, 22_050f, .3f)
             val click = bandShare(box, 1_000f, 22_050f, .04f, taper = true)
             println("$name kick: 150 to 400 Hz $band, above 400 $top, click $click")
-            assertTrue(band >= .09, "the $name kick keeps only $band of its energy in 150 to 400 Hz; the references' lower quartile is .09")
+            assertTrue(band >= .05, "the $name kick keeps only $band of its energy in 150 to 400 Hz; the sub alone keeps .02, a tap")
+            assertTrue(band <= .20, "the $name kick puts $band of its energy in 150 to 400 Hz; round 3's .30 to .48 was heard as muddy")
             assertTrue(top <= .03, "the $name kick puts $top of its energy above 400 Hz; it is low-passed")
             assertTrue(click < .01, "the $name kick clicks: $click above 1 kHz in its first 40 ms")
         }
@@ -342,11 +343,10 @@ class StaggerKitsTest {
             // 636 and 495 Hz; round 2b's press lifts the tails and the room, to 658, 801 and 953 with STUMBLE's harder
             // press (its backbeat is a rimshot, brighter than a snare's crack). CARDBOARD stays at the dark end (700),
             // MATINEE's foley is allowed 1.5 kHz, STUMBLE's rimshot 1 kHz.
-            // Round 3 brings the kick down to the snare and gives it a box, so the sub no longer holds 95 percent of the
-            // groove: the ceilings rise toward the five brighter references (0.9 to 4.4 kHz). CARDBOARD and STUMBLE
-            // are held under 2 kHz; MATINEE's glass break and zap pickup carry more of its groove with the kick 16 dB
-            // down (2.24 kHz measured), so it is held under 3.
-            val ceilingLimit = if (k == Kit.MATINEE) 3_000.0 else 2_000.0
+            // Round 3 brought the kick down to the snare, and round 3b ("flat, muffled, and muddy") took the dark shelf
+            // off and opened the snare, so the sub no longer holds 95 percent of the groove: the ceilings sit among
+            // the five brighter references (0.9 to 4.4 kHz) and are held under their top.
+            val ceilingLimit = 4_400.0
             assertTrue(ceiling < ceilingLimit, "${k.name}: 95 percent of the energy under $ceiling Hz; the references under 309 to 635 (eight) and 0.9 to 4.4 kHz (five)")
         }
     }

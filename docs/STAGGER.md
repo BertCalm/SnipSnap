@@ -13,6 +13,51 @@ barely hear, or none → the clock drags and catches up → a cartoon lands wher
 
 ## Status
 
+**Round 3b built (2026-11-20): "It just sounds flat, muffled, and muddy."** Measured on our own drums, one change at a
+time, because a reference figure taken from full mixes had misled round 3 (below).
+
+- **The snare was the mud.** On CARDBOARD's and MATINEE's backbeats, 65 to 81 percent of the snare's first 120 ms sat
+  in 250 to 600 Hz: the head (TUNE .50, DAMP .45) rang for a quarter second, and its crack was filtered three times
+  over (a 5.5 kHz contact filter, the converter's TONE, and a -3 dB shelf at 1.2 kHz on every groove). The references'
+  snares, found by an onset detector in the mix, hold a median 16 percent there; their basslines can only push that
+  figure up, so the comparison is safe in this direction. STUMBLE's backbeat is a rimshot and read 19. Round 3 made it
+  more exposed by bringing the kick down and the hats to a whisper around it.
+- **Round 3's kick knock boomed.** It put 41 to 43 percent of a printed kick's energy in 100 to 250 Hz. Round 3 had
+  aimed its 150 to 400 Hz band at the references' median 17 percent, but that figure came from full mixes, basslines
+  and samples included; on its own the kick needed far less.
+
+Swept through the print before choosing: on the snare the wires are the biggest lever (BUZZ .60 to 1 alone takes the
+250 to 600 Hz share from .58 to .38), then the damping (the head stops in 150 ms and the attack over the body rises
+from 5.5 to 8 dB), then less WARMTH and an open contact filter; it levels off near .32, where EMBER's head keeps its own
+body. On the grooves, the dark shelf was the other big lever.
+
+The change (`StaggerKits` version 7): the crack snare at TUNE .65, DAMP .90, WARMTH .35, a 12 kHz contact filter and
+wires that follow the stroke (`emberWired`: BUZZ 1 on a full hit, .40 at rest, so a soft hit stays darker than a hard
+one); the stage snare the same law a little lower and longer; every kick's knock lower, damped to the stop, cut at
+350 Hz and level with the sub; no dark shelf on any groove; the hats .60 on CARDBOARD and .55 on MATINEE.
+
+Measured on the exported pads (round 3 in brackets):
+
+| Claim | CARDBOARD | MATINEE | STUMBLE |
+|---|---|---|---|
+| Backbeat, share of its first 120 ms in 250 to 600 Hz (the references a median 16 percent) | 44 percent (81) | 24 (70) | 15 (19) |
+| Backbeat, spectral centroid | 1,388 Hz (550) | 1,935 (684) | 1,117 (933) |
+| Backbeat, share above 2 kHz | 29 percent (7) | 45 (11) | 14 (8) |
+| Kick pad, share in 100 to 250 Hz (the boom) | 18 percent (43) | 11 (41) | 9 (9) |
+| Groove, backbeat over kick at the written beats | -0.8 dB | -2.0 | -1.2 |
+| Groove, hat under the backbeat | 13.8 dB | 10.5 | no hat |
+| Groove, 95 percent of the energy under | 2.90 kHz (994 Hz) | 3.48 (2.24) | 3.96 (1.79) |
+
+The snare's own attack over its body rises from about 5.5 to 8 dB. `StaggerKitsTest` now holds every kit kick at 5 to
+20 percent in 150 to 400 Hz (the sub alone .02, round 3's .30 to .48) and the grooves' ceilings under the brightest
+references' 4.4 kHz; the backbeat balance, the hat level, the dryness, the press and the velocity law hold as before.
+CARDBOARD's backbeat still carries more body than the references' median: EMBER's head keeps about a third of a struck
+snare's energy there however it is damped, and going further would mean a different snare.
+
+The round 3b listening page (private to the owner's account): [Stagger, round three b](https://claude.ai/artifact/PkQ7vzV7hJZ7LehQeHK5kv). Each kit's
+kick, backbeat drum and groove from round 2, round 2d, round 3 and this round side by side, then every pad as it ships.
+`:shell:generateStaggerKits` verified the three kits again (196, 192 and 164 s on this machine).
+
 **Round 3 built (2026-11-20): "The reverb is gone. Now I think the drums are not being hit hard enough. It sound like
 light taps."** Measured before changing anything. Not the cause: the gate (a snare without it has the same crack-over-body
 shape: 10 dB down 50 ms in, body 1.6 dB under its attack), the velocity (EMBER's stroke at .95 and 1 are the same hit),
@@ -249,7 +294,8 @@ python3 scripts/stagger_page/build_page.py testkit/stagger-round1 OUT_DIR   # th
   (heard as "room reverb"); the bus, the shelf, the dynamics and the wires stay.
 - **BOX** (`StaggerKits.boxed`, round 3): a kit kick is its muffled sub 3 dB under a damped rack tom with
   nothing above 450 to 600 Hz (`knockOf`): a sampled kick with a sub under it. EMBER's kick alone is a sub (98
-  percent under 150 Hz); the references' kicks keep a median 17 percent in 150 to 400 Hz, the band a phone plays.
+  percent under 150 Hz), and a phone plays nothing under about 150. Round 3b shortens and lowers the knock (DAMP
+  .95, cut at 350 Hz, level with the sub), because round 3's boomed.
 - **The kick level with the snare** (`Room.kickDb`, `Cypher.phraseRaw`'s per-part gain, round 3): the grooves' kicks
   sit 12 to 16 dB under the rest of the kit (the bus gives part of that back), because round 2d's grooves put the
   snare 8 to 14 dB under the kick and the references put it roughly over. STAGGER's own touch law (`StaggerKits.touch`, floor .12 against
