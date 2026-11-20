@@ -45,6 +45,17 @@ object Hydroform {
     fun scramble(voice: HydroformVoice, random: Random, temperature: Float = .35f, near: Patch? = null): Map<String, Float> =
         Dsp.scrambleNear(settled(voice, near?.macros ?: emptyMap()), temperature, random)
 
+    /** The closing time ARREST 1 adds to its gate, in seconds. */
+    const val ARREST_RELEASE = .09
+
+    /**
+     * How far ARREST is into its damped top: 0 at and below .8, 1 at 1. Up to .8 the
+     * gate is the accepted quick cut. Above it the strike is cut so early that a quick
+     * cut is heard as the file stopping, so the gate takes longer and closes on a
+     * steeper curve: the sound is damped the way a hand stops a plate.
+     */
+    internal fun damped(arrest: Float): Double = ((arrest - .8f) / .2f).coerceIn(0f, 1f).toDouble()
+
     /** Stable delayed all-pass, with pole radii .5^(1/delay). No limiter hides feedback growth. */
     private class AllPass(size: Int) {
         private val inputs = DoubleArray(size)
@@ -95,7 +106,10 @@ object Hydroform {
         val threshold = .15 + 1.65 * m.getValue("YIELD")
         val arrest = .75 * m.getValue("ARREST")
         val stop = .65 * (.045 / .65).pow(arrest)
-        val ramp = .0015 + .020 * (1 - arrest).pow(2)
+        val ramp = .0015 + .020 * (1 - arrest).pow(2) + ARREST_RELEASE * damped(m.getValue("ARREST"))
+        // The gate still starts closing at the same instant; only its length and curve change.
+        val gate = stop - (.0015 + .020 * (1 - arrest).pow(2))
+        val curve = 1 + damped(m.getValue("ARREST"))
         val drive = 1 + 2 * charge
         val x = DoubleArray(rate)
         val activation = DoubleArray(rate)
@@ -123,8 +137,9 @@ object Hydroform {
             val q = if (frozenSlope) mean else activation[i]
             val brittle = tanh(drive * x[i] * 1.5)
             val folded = sin(drive * x[i] * (1 + 4 * q))
-            val u = ((t - (stop - ramp)) / ramp).coerceIn(0.0, 1.0)
-            (((1 - .9 * q) * brittle + .9 * q * folded) * .5 * (1 + cos(PI * u)))
+            val u = ((t - gate) / ramp).coerceIn(0.0, 1.0)
+            val closing = .5 * (1 + cos(PI * u))
+            (((1 - .9 * q) * brittle + .9 * q * folded) * (if (curve == 1.0) closing else closing.pow(curve)))
                 .coerceIn(-.94, .94).toFloat()
         }
     }

@@ -22,6 +22,11 @@ import com.snipsnap.synth.Dsp.RATE
  * Velocity is timbre, never level (`Velocity.peakMatch`'s rule): both layers are levelled on their loop region to the same target, and
  * the player's velocity curve owns the level. TUNE plays no part (every zone is its key's exact pitch); HOLD plays no part (a held key
  * sustains). Nobody has heard a held key.
+ *
+ * Since 2026-11-20 the held bow carries a player ([Arco.HUMAN], [Arco.played]; the owner on every held clip: "Holds are unnatural,
+ * they need more humanization"): the level swells and eases, the pitch leans a few cents, the vibrato's swings differ more. Every
+ * movement is fitted to the loop, which is four seconds with a player on it and not two ([Arco.heldLoopSeconds]), so the wrap closes
+ * as it did and the pattern takes four seconds to come round. Heard and kept, soft and hard (round fix-arco-1, 2026-11-20, BP3).
  */
 object ArcoKeys {
 
@@ -82,15 +87,15 @@ object ArcoKeys {
     /** [pad] with its measurements; [law] is for the refusal's control (a free-running BUZZ noise, which does not close). */
     internal fun padMeasured(
         voice: ArcoVoice, macros: Map<String, Float>, midi: Int, layer: Layer,
-        cancelled: () -> Boolean = { false }, law: Arco.BuzzLaw = Arco.BUZZ_LAW,
+        cancelled: () -> Boolean = { false }, law: Arco.BuzzLaw = Arco.BUZZ_LAW, human: Float = Arco.HUMAN,
     ): Zone {
         val m = macrosFor(voice, macros, midi, layer)
         fun note(r: Arco.HeldRender) = KeyNote(Snip(r.samples, channels = 1, sampleRate = RATE), loopStartFrame = r.loopStart.toLong())
-        val first = Arco.renderHeldMeasured(voice, m, warmScale = 1, law = law, cancelled = cancelled)
+        val first = Arco.renderHeldMeasured(voice, m, warmScale = 1, law = law, cancelled = cancelled, human = human)
         if (first.seam < Keys.MAX_SEAM_ERROR) return Zone(note(first), first, retried = false)
         // One retry with twice the warm-up: a string that locks late is still settling after it has locked. A second failure is
         // refused, naming the zone: never a crossfade, never a click shipped.
-        val second = Arco.renderHeldMeasured(voice, m, warmScale = 2, law = law, cancelled = cancelled)
+        val second = Arco.renderHeldMeasured(voice, m, warmScale = 2, law = law, cancelled = cancelled, human = human)
         val label = "ARCO $voice ${layer.name.lowercase()} layer at ${Scales.nameOf(midi)}, retried at twice the warm-up " +
             "(the first try's seam %.2e)".format(java.util.Locale.ROOT, first.seam)
         Keys.requireSeam(label, second.samples, second.loopStart)

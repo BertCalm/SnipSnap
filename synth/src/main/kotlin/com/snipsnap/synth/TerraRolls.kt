@@ -80,7 +80,6 @@ internal object TerraRolls {
     /** One stroke: when it lands (seconds), how hard (0..1, the render's velocity), which renderer take, and its level. */
     class Stroke(val time: Double, val force: Float, val take: Int, val gain: Float)
 
-    /** The strokes of [articulation] on [voice] at [velocity] as kit take [take], in time order. */
     /** The subdivisions of a beat a tempo-locked stroke may land on: eighths, triplet eighths, sixteenths, sextuplets, thirty-seconds. */
     val DIVISIONS = intArrayOf(2, 3, 4, 6, 8)
 
@@ -113,6 +112,7 @@ internal object TerraRolls {
     /** A tempo-locked stroke's timing moves by up to this much either way, in seconds: tighter than a free roll's. Shape. */
     private const val LOCKED_JITTER_SECONDS = 0.002
 
+    /** The strokes of [articulation] on [voice] at [velocity] as kit take [take], in time order. */
     fun strokes(voice: TerraVoice, articulation: TerraArticulation, velocity: Float, take: Int, bpm: Int? = null): List<Stroke> {
         require(articulation == TerraArticulation.ROLL || articulation == TerraArticulation.RISER) { "$articulation is one stroke: Terra.render or Terra.renderRing it" }
         require(take >= 0) { "a TERRA take is 0 or more, got $take" }

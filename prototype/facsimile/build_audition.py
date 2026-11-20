@@ -143,11 +143,18 @@ def main(ref_dir: Path, work: Path, models_dir: Path, out: Path) -> None:
             if "phrase" in pad:
                 key = pad["phrase"]
                 ref = sf.read(refs[key], always_2d=True)[0].mean(1)
-                rep = groove.render_loop(loops[key], kits["choke"].get(key, []))
-                g = peak_target / max(np.abs(ref).max(), np.abs(rep).max() * rms(ref) / rms(rep))
-                pd.update(phrase=key, bpm=loops[key]["name_bpm"],
+                raw = groove.render_loop(loops[key], kits["choke"].get(key, []))
+                gs = kits.get("glue", {}).get(key)
+                rep = groove.glue(raw, **gs) if gs else raw
+                # one gain for all three so nothing clips; replica and raw matched in loudness
+                # to the reference, so the ear judges the glue, not the volume
+                g = peak_target / max(np.abs(ref).max(),
+                                      np.abs(rep).max() * rms(ref) / rms(rep),
+                                      np.abs(raw).max() * rms(ref) / rms(raw))
+                pd.update(phrase=key, bpm=loops[key]["name_bpm"], glue=gs,
                           ref=mp3(out / f"{slug}_ref.mp3", ref * g),
                           rep=mp3(out / f"{slug}_rep.mp3", rep * g * rms(ref) / rms(rep)),
+                          raw=mp3(out / f"{slug}_raw.mp3", raw * g * rms(ref) / rms(raw)),
                           metrics=measure["loops"][key])
             else:
                 v = pad.get("velocity", 1.0)

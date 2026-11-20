@@ -460,7 +460,7 @@ class ArcoBodyLiftTest {
                 val macros = ArcoLiftRig.macros(voice, step, body)
                 val m = Arco.settled(macros, voice)
                 val built = Arco.finished(ArcoLiftRig.rawOf(voice, macros), voice, m.getValue("BODY"), ArcoLiftRig.RAW_RATE)
-                val engine = Arco.render(voice, macros)
+                val engine = Arco.render(voice, macros, Arco.BUZZ_LAW, human = Humanize.OFF)
                 assertEquals(1, engine.channels, "$tag BODY $body: not mono")
                 assertEquals(Dsp.RATE, engine.sampleRate, "$tag BODY $body: not at the house rate")
                 assertContentEquals(engine.samples, built, "$tag BODY $body: Arco.finished of Arco.bow is not what Arco.render makes")
@@ -470,9 +470,9 @@ class ArcoBodyLiftTest {
                 assertTrue(staleOut.size != built.size || differing > 0, "control: $tag BODY $body: the stale levelled finish equals the engine's, so this equality cannot see a pipeline that skips the lift")
             }
             val half = ArcoLiftRig.macros(voice, step, knee)
-            assertContentEquals(Arco.render(voice, half).samples, stale(voice, half, knee), "$tag BODY 0.5: the stale route is not the plain's finish, so its difference above the knee says little")
+            assertContentEquals(Arco.render(voice, half, Arco.BUZZ_LAW, human = Humanize.OFF).samples, stale(voice, half, knee), "$tag BODY 0.5: the stale route is not the plain's finish, so its difference above the knee says little")
             if (step != 0) {
-                assertTrue(!Arco.render(voice, ArcoLiftRig.macros(voice, step, 0.75f)).samples.contentEquals(Arco.render(voice, ArcoLiftRig.macros(voice, step, 1f)).samples), "control: $tag BODY 0.75 and 1 render alike")
+                assertTrue(!Arco.render(voice, ArcoLiftRig.macros(voice, step, 0.75f), Arco.BUZZ_LAW, human = Humanize.OFF).samples.contentEquals(Arco.render(voice, ArcoLiftRig.macros(voice, step, 1f), Arco.BUZZ_LAW, human = Humanize.OFF).samples), "control: $tag BODY 0.75 and 1 render alike")
             }
         }
     }
@@ -528,10 +528,10 @@ class ArcoBodyLiftTest {
                 val (step, body) = cell
                 val tag = "$voice ${name(voice, step)} BODY ${f(body.toDouble())}"
                 val macros = macros(voice, step, body) + mapOf("HOLD" to 1f)
-                val engine = Arco.renderLoopMeasured(voice, macros)
-                val plainLoop = Arco.renderLoopMeasured(voice, macros + mapOf("BODY" to knee))
+                val engine = Arco.renderLoopMeasured(voice, macros, human = Humanize.OFF)
+                val plainLoop = Arco.renderLoopMeasured(voice, macros + mapOf("BODY" to knee), human = Humanize.OFF)
                 val bad = ArrayList<String>()
-                if (!Arco.render(voice, macros).samples.contentEquals(engine.loop)) bad += "Arco.render of the loop is not renderLoopMeasured's loop"
+                if (!Arco.render(voice, macros, Arco.BUZZ_LAW, human = Humanize.OFF).samples.contentEquals(engine.loop)) bad += "Arco.render of the loop is not renderLoopMeasured's loop"
                 val (pieces, seam) = loopFromPieces(voice, macros, engine.lift.delivered)
                 val differing = pieces.indices.count { pieces[it].toRawBits() != engine.loop[it].toRawBits() }.let { it + abs(pieces.size - engine.loop.size) }
                 if (differing != 0) bad += "the loop built from the engine's pieces differs from the engine's in $differing samples"

@@ -49,9 +49,11 @@ class ArcoKeysTest {
         val cpu = threads.isCurrentThreadCpuTimeSupported && threads.isThreadCpuTimeEnabled
         fun now(): Long = if (cpu) threads.currentThreadCpuTime else System.nanoTime()
 
-        fun render(voice: ArcoVoice, midi: Int, layer: ArcoKeys.Layer, knobs: Map<String, Float> = emptyMap(), label: String = "defaults"): Rendered {
+        fun render(
+            voice: ArcoVoice, midi: Int, layer: ArcoKeys.Layer, knobs: Map<String, Float> = emptyMap(), label: String = "defaults", human: Float = Arco.HUMAN,
+        ): Rendered {
             val t0 = now()
-            val zone = ArcoKeys.padMeasured(voice, Arco.defaults(voice) + knobs, midi, layer)
+            val zone = ArcoKeys.padMeasured(voice, Arco.defaults(voice) + knobs, midi, layer, human = human)
             return Rendered(voice, midi, layer, label, zone, (now() - t0) / 1_000_000L)
         }
 
@@ -118,7 +120,8 @@ class ArcoKeysTest {
         val name = "${r.voice} ${noteName(r.midi)} ${r.layer} ${r.label}"
         if (r.loopStart <= 0) bad += "$name: loop start ${r.loopStart}"
         if (s.size != r.loopStart + r.zone.render.loopFrames) bad += "$name: the file is not the stroke plus one loop"
-        if (r.zone.render.loopFrames != Bore.planLoop(Keys.midiHz(r.midi)).frames) bad += "$name: the loop is not the plan's whole periods"
+        // Four seconds of whole periods since 2026-11-20: a held key carries a player, and its movement is fitted to that ([Arco.heldLoopSeconds]).
+        if (r.zone.render.loopFrames != Bore.planLoop(Keys.midiHz(r.midi), Arco.heldLoopSeconds(Arco.HUMAN)).frames) bad += "$name: the loop is not the plan's whole periods"
         val seam = Keys.seamError(s, r.loopStart)
         if (!(seam < Keys.MAX_SEAM_ERROR)) bad += "$name: seam ${e(seam)}"
         if (seam != r.zone.render.seam) bad += "$name: the measured seam is not the file's"
@@ -266,8 +269,10 @@ class ArcoKeysTest {
                 val hard = defaults.first { it.voice == voice && it.midi == midi && it.layer == ArcoKeys.Layer.HARD }
                 val cs = centroid(soft.loop, 0, n)
                 val ch = centroid(hard.loop, 0, n)
-                val rs = riseSeconds(soft)
-                val rh = riseSeconds(hard)
+                // The stroke's time is read with the player off ([Humanize.OFF]): it is timed against the loop's own level, which the
+                // player moves on purpose since 2026-11-20 (with it on CELLO C4's two strokes both read 0.27 s).
+                val rs = riseSeconds(render(voice, midi, ArcoKeys.Layer.SOFT, human = Humanize.OFF))
+                val rh = riseSeconds(render(voice, midi, ArcoKeys.Layer.HARD, human = Humanize.OFF))
                 if (soft.samples.contentEquals(hard.samples)) bad += "$voice ${noteName(midi)}: the two layers are the same samples"
                 if (voice == ArcoVoice.CELLO && !(cs < ch)) bad += "$voice ${noteName(midi)}: the soft loop's centroid ${f(cs, 0)} Hz is not under the hard's ${f(ch, 0)}"
                 if (!(rs > rh)) bad += "$voice ${noteName(midi)}: the soft stroke reaches its loop's level in ${f(rs, 3)} s, the hard in ${f(rh, 3)}"

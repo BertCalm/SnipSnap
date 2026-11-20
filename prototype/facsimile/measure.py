@@ -1,7 +1,8 @@
 """FACSIMILE measurements: how close the replicas are, and whether velocity and round robin are
 real. Python harness numbers, not Kotlin tests.
 
-Per loop (replica groove against the reference loop, both mono):
+Per loop (replica groove against the reference loop, both mono; the glued groove where the
+loop has a glue setting, and the raw sum beside it):
   band distance   mean |dB| between 26-band envelopes on 10 ms frames, over cells within 50 dB
                   of the loop's loudest; the number to compare is the calibration below
   balance         per-band difference of the whole-loop spectrum (tonal balance), mean |dB|
@@ -101,21 +102,33 @@ def main(ref_dir: Path, work: Path, models: Path, grooves: Path) -> None:
     for p in sorted(ref_dir.glob("*.wav")):
         key = str(int(re.search(r"TRNDY_(\d+)_", p.stem).group(1)))
         ref = sf.read(p, always_2d=True)[0].mean(1)
-        rep = sf.read(grooves / f"loop_{key}.wav")[0]
+        raw = sf.read(grooves / f"loop_{key}.wav")[0]
+        glued_path = grooves / f"loop_{key}_glued.wav"
+        # the groove as it ships is the glued one where the loop has a glue setting
+        rep = sf.read(glued_path)[0] if glued_path.exists() else raw
         bpm = inv[key]["bpm"]
         shift = int(round(60 / bpm / 4 * RATE))
         d = band_distance(ref, rep)
         cal = band_distance(ref, np.roll(ref, shift))
         bal = third_octave(rep) - third_octave(ref)
+
+        def crest(x):
+            x = x - np.mean(x)
+            return round(float(20 * np.log10(np.abs(x).max() / np.sqrt(np.mean(x * x)))), 1)
         report["loops"][key] = dict(band_distance_db=round(d, 2),
+                                    glued=glued_path.exists(),
+                                    raw_band_distance_db=round(band_distance(ref, raw), 2),
+                                    crest_db=crest(rep), raw_crest_db=crest(raw),
+                                    reference_crest_db=crest(ref),
                                     shifted_16th_reference_db=round(cal, 2),
                                     balance_db=round(float(np.mean(np.abs(bal))), 2),
                                     balance_by_band=[round(float(v), 1) for v in bal],
                                     level_db=round(float(10 * np.log10(np.mean(rep ** 2) /
                                                                        np.mean(ref ** 2))), 2))
-        print(f"loop {key:4s} band {d:5.2f} dB (a 16th off: {cal:5.2f})  balance "
-              f"{report['loops'][key]['balance_db']:4.2f} dB  level "
-              f"{report['loops'][key]['level_db']:+.2f} dB")
+        L = report["loops"][key]
+        print(f"loop {key:4s} band {d:5.2f} dB (raw {L['raw_band_distance_db']:5.2f}, a 16th off: "
+              f"{cal:5.2f})  balance {L['balance_db']:4.2f} dB  level {L['level_db']:+.2f} dB  "
+              f"crest {L['crest_db']} (raw {L['raw_crest_db']}, ref {L['reference_crest_db']})")
 
     for f in sorted(models.glob("[0-9]*.json")):
         loop = json.loads(f.read_text())

@@ -1291,3 +1291,17 @@ Complete against the applicable gates as of 2026-11-20. The forty stick-voice
 presets were kept by the owner the same day ("Ok, they are good") and are pinned
 in `TerraPresetsTest`.
 
+## FACSIMILE kits (Kotlin built and heard, 2026-11-20)
+
+Four drum kits replicated by synthesis from nine of the owner's reference loops: SHUFFLE, KNOCK, HALF-TIME, TEXTURE.
+See [FACSIMILE](FACSIMILE.md). The owner heard the Python prototype through rounds 0 to 0m and closed them with "Ok,
+sounds good now" (2026-11-20); the Kotlin port matches it within the prototype's own noise-to-noise spread. Evidence:
+`FacsimileTest`, `FacsimileKitsTest`, `FacsimileKitTest`, `:shell:generateFacsimileKits`.
+
+| Gate | Status | Evidence |
+|---|---|---|
+| Melodic, keygroups, chord tools, STRUM | Not applicable | Drum kits |
+| Drums: multiple distinct genre kits on the shelf | Built and heard | Four kits under SKINS, each from different reference loops; the owner heard the Kotlin kits as exported ("Everything sounds good", 2026-11-20) |
+| Percussion: roll/riser | Built and heard | An accelerating snare roll landing on kick and snare on pad 17 of every kit, so no heard pad is given up |
+| Velocity and round robin: rendering | Pass in software | Soft zones are different strikes and, over their four takes, never brighter; four different strikes per zone; a groove's soft zone is a softer performance |
+| Velocity and round robin: saving, playback, export | Pass in software | Save, reload, pad resolver, MPC 3, SFZ and DecentSampler for all 68 pads; MPC 2 not written (format limit). No phone or MPC playback yet |
