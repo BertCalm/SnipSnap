@@ -42,7 +42,9 @@ class TerraKitsTest {
         val voices = TerraKits.classic().mapNotNull { pad ->
             pad?.recipe?.let { PadRecipe.fromJsonValue(it) }?.patch?.voiceName
         }.toSet()
-        assertEquals(TerraVoice.entries.map { it.name }.toSet() - TerraVoice.COMPOUND_MEMBRANE.name, voices)
+        // Nor do the nine stick voices yet: the classic kit's sixteen pads are kept as they are, and the kits
+        // that will carry ODAIKO to WATER_DRUM are not built (docs/TERRA_STICKS.md, Gates: open).
+        assertEquals(TerraVoice.entries.map { it.name }.toSet() - TerraVoice.COMPOUND_MEMBRANE.name - TerraSticks.VOICES.map { it.name }.toSet(), voices)
     }
 
     /**
