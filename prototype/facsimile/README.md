@@ -260,6 +260,20 @@ some of the other drums, and a replica lane carries none. Not yet shown.
   reference's 18.3 (the glue now barely works); part of the distance is the timing moving by up
   to 25 ms against 10 ms frames, not separated. The kick fits at 4.99 dB (its slices 3.1 to
   6.3). SHUFFLE A01 and A09 are now the whole kick, A09 struck softly.
+- Round 0j (2026-11-20), the World groove's hat (163). The owner heard a tambourine where a
+  crisp hi-hat should be. The reference has both: a crisp hat between the beats (it falls 10
+  to 23 dB within 50 ms, above 5 kHz) and a tambourine on the backbeat and in a shake near the
+  loop's end (it falls 0 to 3 dB in that time, its jingle swelling back about 80 ms in). NMFD
+  had put both in one part, 163-d1, whose model was fitted to its loudest hits, the
+  tambourine's, so every hat hit played a tambourine. `drums.split_by_decay` (loops in
+  `SPLIT_DECAY`) measures each hit's fall from its peak to 25..50 ms on the part's own audio,
+  splits the falls by 2-means, and when the two centres stand 8 dB apart with 4 hits each
+  makes two drums: 163-d1 is now the crisp hat (25 hits, 45 ms to -30 dB) and 163-d8 the
+  tambourine (29 hits, 177 ms). The rest of the loop is unchanged. The groove now takes a
+  light glue (it had none), whose makeup gain brings it to the reference's level (it played
+  7 dB quiet). Measured at matched level: band distance 8.18 to 7.77 dB, balance 2.05 to
+  1.99. TEXTURE A13 World Hat is the crisp hat (closed hat); the tambourine has no pad yet,
+  all 16 being in use.
 - Round robin follows the reference's own hit-to-hit spread, clamped to 0.3 to 1.2 dB per band,
   plus fresh noise and phases. Whether that reads as one drum hit again is for the ear.
 - Engine gates: this is a prototype. Velocity and round robin are checked in rendering only;

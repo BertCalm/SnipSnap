@@ -253,135 +253,6 @@
   "low_share": 0.018,
   "length_s": 0.43
  },
- "163-d0": {
-  "id": "163-d0",
-  "distance_db": 5.5,
-  "best_pass": 4,
-  "first_distance_db": 5.7,
-  "glide": {
-   "f0": 104.38308574619698,
-   "f1": 69.8890686639318,
-   "tau": 0.006127098306083382,
-   "law": "logexp",
-   "captured": 0.868488184541874,
-   "root_guess": 74.0203857421875,
-   "from_hit": 1
-  },
-  "steady_partials": 1,
-  "low_share": 0.999,
-  "length_s": 0.52
- },
- "163-d1": {
-  "id": "163-d1",
-  "distance_db": 1.74,
-  "best_pass": 2,
-  "first_distance_db": 2.47,
-  "glide": {
-   "f0": 5660.3857259661645,
-   "f1": 428.6378276796651,
-   "tau": 0.3713859123661047,
-   "law": "exp",
-   "captured": 0.05811335194486555,
-   "root_guess": 276.336477745185,
-   "from_hit": 1,
-   "rejected": true
-  },
-  "steady_partials": 4,
-  "low_share": 0.641,
-  "length_s": 0.63
- },
- "163-d2": {
-  "id": "163-d2",
-  "distance_db": 2.25,
-  "best_pass": 1,
-  "first_distance_db": 2.68,
-  "glide": null,
-  "steady_partials": 2,
-  "low_share": 0.102,
-  "length_s": 0.63
- },
- "163-d3": {
-  "id": "163-d3",
-  "distance_db": 2.63,
-  "best_pass": 1,
-  "first_distance_db": 2.89,
-  "glide": {
-   "f0": 2182.4710197800728,
-   "f1": 140.00000473698367,
-   "tau": 0.0042326622436839436,
-   "law": "exp",
-   "captured": 0.6717903570451083,
-   "root_guess": 118.5985487198339,
-   "from_hit": 1
-  },
-  "steady_partials": 4,
-  "low_share": 0.779,
-  "length_s": 0.93
- },
- "163-d4": {
-  "id": "163-d4",
-  "distance_db": 2.87,
-  "best_pass": 1,
-  "first_distance_db": 3.06,
-  "glide": null,
-  "steady_partials": 2,
-  "low_share": 0.002,
-  "length_s": 0.52
- },
- "163-d5": {
-  "id": "163-d5",
-  "distance_db": 3.81,
-  "best_pass": 1,
-  "first_distance_db": 4.32,
-  "glide": {
-   "f0": 150.01352718669762,
-   "f1": 44.77158221541688,
-   "tau": 0.0017871665330463095,
-   "law": "exp",
-   "captured": 0.6616685509874407,
-   "root_guess": 47.1038818359375,
-   "from_hit": 1
-  },
-  "steady_partials": 0,
-  "low_share": 0.999,
-  "length_s": 1.4
- },
- "163-d6": {
-  "id": "163-d6",
-  "distance_db": 2.24,
-  "best_pass": 2,
-  "first_distance_db": 3.05,
-  "glide": {
-   "f0": 89.81670570063667,
-   "f1": 89.81670570063667,
-   "tau": 0.0016939169825115744,
-   "law": "logexp",
-   "captured": 0.7992487783823706,
-   "root_guess": 94.88067626953125,
-   "from_hit": 0
-  },
-  "steady_partials": 0,
-  "low_share": 0.996,
-  "length_s": 0.78
- },
- "163-d7": {
-  "id": "163-d7",
-  "distance_db": 2.31,
-  "best_pass": 1,
-  "first_distance_db": 2.92,
-  "glide": {
-   "f0": 112.7737243418511,
-   "f1": 95.24838342680528,
-   "tau": 0.07390150089145144,
-   "law": "exp",
-   "captured": 0.34466341311456594,
-   "root_guess": 98.2452392578125,
-   "from_hit": 1
-  },
-  "steady_partials": 3,
-  "low_share": 0.963,
-  "length_s": 1.4
- },
  "103-d0": {
   "id": "103-d0",
   "distance_db": 2.79,
@@ -743,5 +614,153 @@
   "tail_modes": 8,
   "low_share": 0.986,
   "length_s": 0.78
+ },
+ "163-d0": {
+  "id": "163-d0",
+  "distance_db": 5.5,
+  "best_pass": 4,
+  "first_distance_db": 5.7,
+  "glide": {
+   "f0": 104.38308574619698,
+   "f1": 69.8890686639318,
+   "tau": 0.006127098306083382,
+   "law": "logexp",
+   "captured": 0.868488184541874,
+   "root_guess": 74.0203857421875,
+   "from_hit": 1
+  },
+  "steady_partials": 1,
+  "tail_modes": 0,
+  "low_share": 0.999,
+  "length_s": 0.52
+ },
+ "163-d1": {
+  "id": "163-d1",
+  "distance_db": 2.48,
+  "best_pass": 3,
+  "first_distance_db": 2.72,
+  "glide": null,
+  "steady_partials": 1,
+  "tail_modes": 0,
+  "low_share": 0.641,
+  "length_s": 0.43
+ },
+ "163-d8": {
+  "id": "163-d8",
+  "distance_db": 1.77,
+  "best_pass": 2,
+  "first_distance_db": 3.13,
+  "glide": {
+   "f0": 112.65319443027916,
+   "f1": 86.98233057200575,
+   "tau": 0.01840504995651157,
+   "law": "exp",
+   "captured": 0.010645417014774623,
+   "root_guess": 85.45989990234375,
+   "from_hit": 1,
+   "rejected": true
+  },
+  "steady_partials": 4,
+  "tail_modes": 0,
+  "low_share": 0.641,
+  "length_s": 0.63
+ },
+ "163-d2": {
+  "id": "163-d2",
+  "distance_db": 2.25,
+  "best_pass": 1,
+  "first_distance_db": 2.68,
+  "glide": null,
+  "steady_partials": 2,
+  "tail_modes": 0,
+  "low_share": 0.102,
+  "length_s": 0.63
+ },
+ "163-d3": {
+  "id": "163-d3",
+  "distance_db": 2.63,
+  "best_pass": 1,
+  "first_distance_db": 2.89,
+  "glide": {
+   "f0": 2182.4710197800728,
+   "f1": 140.00000473698367,
+   "tau": 0.0042326622436839436,
+   "law": "exp",
+   "captured": 0.6717903570451083,
+   "root_guess": 118.5985487198339,
+   "from_hit": 1
+  },
+  "steady_partials": 4,
+  "tail_modes": 0,
+  "low_share": 0.779,
+  "length_s": 0.93
+ },
+ "163-d4": {
+  "id": "163-d4",
+  "distance_db": 2.87,
+  "best_pass": 1,
+  "first_distance_db": 3.06,
+  "glide": null,
+  "steady_partials": 2,
+  "tail_modes": 0,
+  "low_share": 0.002,
+  "length_s": 0.52
+ },
+ "163-d5": {
+  "id": "163-d5",
+  "distance_db": 3.81,
+  "best_pass": 1,
+  "first_distance_db": 4.32,
+  "glide": {
+   "f0": 150.01352718669762,
+   "f1": 44.77158221541688,
+   "tau": 0.0017871665330463095,
+   "law": "exp",
+   "captured": 0.6616685509874407,
+   "root_guess": 47.1038818359375,
+   "from_hit": 1
+  },
+  "steady_partials": 0,
+  "tail_modes": 0,
+  "low_share": 0.999,
+  "length_s": 1.4
+ },
+ "163-d6": {
+  "id": "163-d6",
+  "distance_db": 2.24,
+  "best_pass": 2,
+  "first_distance_db": 3.05,
+  "glide": {
+   "f0": 89.81670570063667,
+   "f1": 89.81670570063667,
+   "tau": 0.0016939169825115744,
+   "law": "logexp",
+   "captured": 0.7992487783823706,
+   "root_guess": 94.88067626953125,
+   "from_hit": 0
+  },
+  "steady_partials": 0,
+  "tail_modes": 0,
+  "low_share": 0.996,
+  "length_s": 0.78
+ },
+ "163-d7": {
+  "id": "163-d7",
+  "distance_db": 2.31,
+  "best_pass": 1,
+  "first_distance_db": 2.92,
+  "glide": {
+   "f0": 112.7737243418511,
+   "f1": 95.24838342680528,
+   "tau": 0.07390150089145144,
+   "law": "exp",
+   "captured": 0.34466341311456594,
+   "root_guess": 98.2452392578125,
+   "from_hit": 1
+  },
+  "steady_partials": 3,
+  "tail_modes": 0,
+  "low_share": 0.963,
+  "length_s": 1.4
  }
 }

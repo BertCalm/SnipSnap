@@ -430,7 +430,7 @@
     "163",
     "102"
    ],
-   "character": "Toms and tone: big pitched toms on the backbeat, several 808 notes, ringing snares, and the thin perc loop as a phrase.",
+   "character": "Toms and tone: big pitched toms on the backbeat, several 808 notes, ringing snares, a crisp hat with a tambourine on the backbeat, and the thin perc loop as a phrase.",
    "pads": [
     {
      "pad": "A01",
@@ -532,7 +532,7 @@
     {
      "pad": "A13",
      "name": "World Hat",
-     "class": "HAT_OPEN",
+     "class": "HAT_CLOSED",
      "layers": [
       "163-d1"
      ]
@@ -607,6 +607,12 @@
    "ratio": 4.0,
    "attack_ms": 2.0,
    "makeup_db": 3.24
+  },
+  "163": {
+   "threshold_db": -13.21,
+   "ratio": 4.0,
+   "attack_ms": 2.0,
+   "makeup_db": 7.24
   }
  },
  "glue_note": "Bus compression per groove (groove.glue), fitted by fit_glue.py to the reference's crest factor: 4:1, release 120 ms, 6 dB soft knee, attack and threshold fitted (a slow attack made the grooves peakier); the makeup gain matches the reference's RMS level."

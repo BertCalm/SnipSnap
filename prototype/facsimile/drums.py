@@ -265,6 +265,76 @@ def tighten(drums: list[dict], beat_s: float, seconds: float) -> int:
     return moved
 
 
+SPLIT_DECAY = {"163"}    # loops whose parts may hold two instruments told apart by decay
+SPLIT_GAP_DB = 8.0       # the two decay groups' centres at least this far apart
+SPLIT_MIN_HITS = 4       # ... each with at least this many hits
+
+
+def hit_falls(y: np.ndarray, times: list[int], n: int) -> list[float | None]:
+    """How far each hit falls: its peak in the first 15 ms against its mean level 25 to 50 ms
+    in (smooth Hilbert power, 2 ms), in dB. None where the drum's next hit comes within 30 ms."""
+    e = np.abs(signal.hilbert(y)) ** 2
+    k = int(0.002 * RATE)
+    env = 10 * np.log10(np.convolve(e, np.ones(k) / k, "same") + 1e-14)
+    out = []
+    for i, t in enumerate(times):
+        gap = ((times[(i + 1) % len(times)] - t) % n) or n
+        w = min(int(0.05 * RATE), gap - int(0.005 * RATE))
+        if w < int(0.03 * RATE):
+            out.append(None)
+            continue
+        pk = env[np.arange(t, t + int(0.015 * RATE)) % n].max()
+        out.append(float(pk - env[np.arange(t + int(0.025 * RATE), t + w) % n].mean()))
+    return out
+
+
+def split_by_decay(key, drums, work, n):
+    """One NMFD part can hold two instruments that play at different moments: in the World
+    groove a crisp hi-hat and a backbeat tambourine shared one part. The part's model was fitted
+    to its loudest hits, the tambourine's, so every hat hit played a tambourine (heard by the
+    owner, 2026-11-20). Their decays tell them apart: the hat falls 10 to 23 dB within 50 ms,
+    the tambourine 0 to 3. For each part that is not low, each hit's fall (hit_falls) is
+    split in two by 2-means; if the groups' centres stand SPLIT_GAP_DB apart with
+    SPLIT_MIN_HITS hits each, the part becomes two drums: the fast-falling one keeps the id,
+    the ringing one takes the next free id. Hits too close to the next to measure stay with the
+    fast-falling one. Returns the new list of drums."""
+    out = []
+    next_id = 1 + max(int(d["id"].split("-d")[1]) for d in drums if "-d" in d["id"])
+    for d in drums:
+        if d["features"]["low_share"] > LOW_SHARE:
+            out.append(d)
+            continue
+        y = sum(sf.read(work / f"{key}_c{c}.wav")[0] for c in d["components"])
+        times = [int(round(e["t"] * RATE)) for e in d["events"]]
+        gains = np.array([e["gain"] for e in d["events"]])
+        falls = hit_falls(y, times, n)
+        f = np.array([v for v in falls if v is not None])
+        if len(f) < 2 * SPLIT_MIN_HITS:
+            out.append(d)
+            continue
+        lo, hi = np.percentile(f, 25), np.percentile(f, 75)
+        for _ in range(20):                              # 2-means in dB
+            cut = (lo + hi) / 2
+            lo, hi = f[f <= cut].mean(), f[f > cut].mean()
+        cut = (lo + hi) / 2
+        ring = [v is not None and v <= cut for v in falls]
+        if hi - lo < SPLIT_GAP_DB or min(sum(ring), len(ring) - sum(ring)) < SPLIT_MIN_HITS:
+            out.append(d)
+            continue
+        template = np.load(work / "hits" / f"{d['id']}_template.npy")
+        n_fired = d["hits"] + d["refires_dropped"]
+        for ids, sel in ((d["id"], [not r for r in ring]), (f"{key}-d{next_id}", ring)):
+            t_sel = [t for t, k in zip(times, sel) if k]
+            g_sel = gains[np.array(sel)]
+            nd = build_drum(ids, d["components"], y, t_sel, g_sel / g_sel.max(), n_fired,
+                            template, n, work, stops=times)
+            nd["split_by_decay"] = dict(part=d["id"], ringing=ids != d["id"],
+                                        fall_db=round(float(lo if ids != d["id"] else hi), 1))
+            out.append(nd)
+        next_id += 1
+    return out
+
+
 def drop_refires(times, gains, y, n):
     """NMFD explains a drum's tail by firing its template again 40 to 90 ms after the hit.
     Played back, each firing is a fresh strike, so a re-fire sounds like slapback echo (heard
@@ -594,6 +664,8 @@ def main(ref_dir: Path, work: Path) -> None:
             drums = [rebuild(key, d, work, n) if d["features"]["low_share"] <= LOW_SHARE
                      else d for d in drums]
             drums = kick_first(key, drums, work, n, rises)
+        if key in SPLIT_DECAY:
+            drums = split_by_decay(key, drums, work, n)
         tightened = None
         if key in TIGHTEN:
             tightened = tighten(drums, 60.0 / bpm_of(name), n / RATE)
