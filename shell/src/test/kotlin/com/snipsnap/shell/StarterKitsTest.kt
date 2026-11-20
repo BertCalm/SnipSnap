@@ -143,7 +143,10 @@ class StarterKitsTest {
         "chamber" to OneEngine(ChamberPatch::class.java, ChamberVoice.entries.map { it.name }.toSet()) {
             (it as ChamberPatch).let { p -> Chamber.drumClassFor(p.voice, p.macros) }
         },
-        "caustic" to OneEngine(CausticPatch::class.java, CausticVoice.entries.map { it.name }.toSet()) {
+        // The kept CAUSTIC kit plays the four voices it was heard with; BOWL, SCATTER and TONGUE (kept 20 Nov 2026)
+        // ship as presets and have no kit pads yet.
+        "caustic" to OneEngine(CausticPatch::class.java, setOf(CausticVoice.ALLOY, CausticVoice.HOLLOW_MALLET,
+            CausticVoice.RUBBED_RING, CausticVoice.TRAVELLING_CATCHES).map { it.name }.toSet()) {
             (it as CausticPatch).let { p -> CausticInstrument.drumClassFor(p.voice, p.macros, p.model) }
         },
         "circuit" to OneEngine(CircuitPatch::class.java, CircuitVoice.entries.map { it.name }.toSet()) {
