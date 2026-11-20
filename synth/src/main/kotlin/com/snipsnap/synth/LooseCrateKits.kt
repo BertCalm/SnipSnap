@@ -190,7 +190,7 @@ object LooseCrateKits {
      * One playable hit: its name, class, choke group and how to strike it dry. [byLoudness] levels the softer
      * zones to the hard zone's loudness instead of each to [PAD_PEAK] (see [zoneGain]).
      */
-    internal class Part(val name: String, val cls: DrumClass, val mute: Int = 0, val byLoudness: Boolean = false, val strike: Strike)
+    internal class Part(val name: String, val cls: DrumClass, val mute: Int = 0, val strike: Strike, val byLoudness: Boolean = false)
 
     /** A phrase pad: notes on the kit's grid. [loop] folds the tail back onto the start and keeps the bars exact. */
     internal class Phrase(val name: String, val notes: List<Note>, val loop: Boolean)
@@ -897,7 +897,7 @@ object LooseCrateKits {
     }
 
     /** HUMMIN's fourteen hits, each struck and then played fast. */
-    private val speed: List<Part> = hummin.map { p -> Part(p.name, p.cls, p.mute) { v, t, s -> spedOnce(p.strike(v, t, s)) } }
+    private val speed: List<Part> = hummin.map { p -> Part(p.name, p.cls, p.mute, strike = { v, t, s -> spedOnce(p.strike(v, t, s)) }) }
 
     private val speedPhrases = listOf(
         Phrase("Sped Roll", humminPhrases[0].notes, loop = false),
