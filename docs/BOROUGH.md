@@ -131,6 +131,46 @@ rings 1.35 s above -30 dB. Verification unchanged: 792 WAVs, 0 failures, timbral
 88 of 88 pads. Listening page version 3: the RIDE & RIMS before player is the round 1 groove
 with the hat stand-in.
 
+### Round 1.5: pushing the kits apart
+
+**What the owner heard.** Round 1.4: "Generally it helps. They all kind of sound pretty similar to
+each other though." Asked what was alike, the owner chose all of: the grooves and feel, the drum
+sounds, the overall vibe, and that the loops are similar too (so push past them). They also asked
+for the compression to be built into the app (a separate change).
+
+**Measured.** In the fitter's own view (band envelopes over each sound's own peak, a common window),
+the kits' kicks, snares and hats were already 88-95% as far apart as the loops' drums. So the
+sameness was not mainly the fitted tone. Five of six demo grooves were one pattern I authored, at
+90 BPM.
+
+**Grooves.** `build.loop_feel()` and a new `groove()`: each kit plays its own loop's measured pattern
+bar by bar, its push on the off-8ths, off-16ths and backbeat relative to that loop's own on-beats,
+and its kick dynamics (a -13 dB kick plays soft). Hats are only measured where nothing louder hit,
+so a hat found on a position in any bar plays there in every bar. RIDE & RIMS plays its loop's
+backbeat on the RIM pad. No authored fill. Off-16ths: STOOP +41 ms, RIDE & RIMS +40, CELLAR +30,
+WAX +26 (and off-8ths +22), DRY ROOM +17, CRANKED -15.
+
+**Sounds and vibe.** `build.spread()` (`kits.SPREAD = 2.0`) moves every fitted setting of every role
+the kits use twice as far from the six kits' average, in the fitter's normalised space, clipped to the
+model's bounds: tuning, ring, loss, beater, wires, room, squash, drive, tilt, low-pass. Kits' spread
+over the loops': kick 0.95 -> 1.13, snare 0.88 -> 1.22, hat 0.92 -> 1.27. Cost: 0.4-1.8 dB of fit.
+One cap from what was heard: a kick's ring is not pushed past 0.8 s (STOOP's went to 0.95 s with full
+drive and air; 1.18 s was "overblown", 0.77 s "better"), unless its fit already rang longer.
+
+**Balance.** The low-to-mid balance (round 1.2) now trims both ways: the kick down when heavy, the
+rest of the kit down when the kick is light (the kick cannot pass its 0.89 peak). With the loop grooves,
+DRY ROOM and RIDE & RIMS came out light, which a cut-only trim could not fix. Five kits land on their
+loop's balance; RIDE & RIMS +4.0 against +5.7, at the 12 dB limit.
+
+**Compression preview.** The loop grooves are peakier (18.8-22.7 dB crest) and matching the loops'
+density took 10-16 dB of limiting, unheard and flattening every kit toward one sound (DRY ROOM's
+silences would fill). The preview is capped at 8 dB, just above the 5-7.5 dB the owner heard: each
+kit comes 6-7 dB closer to its loop without reaching it.
+
+**Results (Python harness).** 792 WAVs, 0 failures (including the cymbal checks). Kick flutter 0.5 to
+5.2 dB, no kick past EMBER's ranges. STOOP's kick drive is 1.00 (was 0.97), ring 0.80 s: listen for
+it. Listening page version 7, before player = round 1.4.
+
 ### Round 1.4: compression, as a preview
 
 **What the owner asked.** "Maybe add a bit of compression?"

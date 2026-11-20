@@ -151,42 +151,112 @@ STACK_PATTERNS = {   # (pad index 0-3, steps, zone)
 NOMINAL = dict(K=.95, S=.92, g=.3, h=.5, o=.7, r=.7, p=.45)
 
 
+_TARGETS = None
+
+
+def loop_feel(kit):
+    """What a kit's demo groove takes from its own loop (numbers in targets.json, never audio): the
+    16th-grid pattern of each bar, the median push of each grid position relative to the loop's own
+    on-beats, and the kick's hit-to-hit levels. Owner, round 1.4: "They all kind of sound pretty
+    similar to each other": five of six demo grooves were one authored pattern at 90 BPM."""
+    global _TARGETS
+    if _TARGETS is None:
+        _TARGETS = json.load(open(Path(__file__).with_name('targets.json')))['loops']
+    t = _TARGETS.get(kit['primary'], {})
+    tm = t.get('timing_ms') or {}
+    on = tm.get('on_beat') or 0.0
+    rel = lambda k: (tm.get(k) - on) if tm.get(k) is not None else 0.0
+    kl = (t.get('levels_db') or {}).get('kick') or [0.0]
+    top = max(kl)
+    return dict(pattern=t.get('pattern'), eighth=rel('eighth_off'), sixteenth=rel('sixteenth_off'),
+                backbeat=rel('backbeat'), kick_db=[d - top for d in kl])
+
+
 def groove(kit, bank, stack=None, sbank=None, bars=4):
-    """Round 1 plays it like a person: every hit drifts a few ms (sd 3 ms kick, 4 ms snare, 5 ms
-    hats; shape), the backbeat sits 6 ms late, quarter-note hats are accented, and each hit's
-    strength wanders (sd 0.06) and picks the nearest velocity zone and take in turn, as a pad would."""
+    """Each kit plays its own loop's groove (loop_feel): its pattern bar by bar (K kick, S snare, X both,
+    g ghost, h hat; hats are only seen where nothing louder hit, so a hat found on a position in any bar
+    plays there in every bar), its push on the off-8ths, off-16ths and backbeat, and its kick dynamics
+    (a measured -13 dB kick is played soft). On top, a person's drift: sd 3 ms kick, 4 ms snare, 5 ms
+    hats, strength sd 0.06 picking the nearest velocity zone and the next take, as a pad would.
+    Ride kits keep their OVER lane for the ride and pedal hat. No authored fill."""
     bpm = kit['bpm']; st = 60 / bpm / 4
+    feel = loop_feel(kit)
+    pats = feel['pattern'] or PATTERNS[kit['id']]
+    hat_slots = sorted({k for row in pats for k, c in enumerate(row) if c == 'h'}) if not kit.get('ride') else []
+    kick_db = feel['kick_db']
     hr = V.rng_for('groove', kit['id'], stack['id'] if stack else '')   # seeded: same groove every run
     y = np.zeros(int((bars * 16 * st + 2) * SR)); count = {}
+    def push(s, snare=False):
+        if snare and s % 8 == 4: return feel['backbeat']
+        return 0.0 if s % 4 == 0 else feel['eighth'] if s % 4 == 2 else feel['sixteenth']
     def place(key, step_abs, v, gain, sd_ms, late_ms=0.0):
         v = float(np.clip(v + hr.normal(0, .06), .15, 1.0))
         zone = int(np.argmin([abs(v - z) for z in ZONES]))
         cyc = count.get(key, 0); count[key] = cyc + 1
         hit = (bank if key[0] == 'k' else sbank)[key[1]][zone][cyc % TAKES] * (v / ZONES[zone]) ** .8
-        sw = kit['swing_ms'] / 1000 if step_abs % 2 else 0
-        at = max(0, int((step_abs * st + sw + (late_ms + hr.normal(0, sd_ms)) / 1000) * SR))
+        at = max(0, int((step_abs * st + (late_ms + hr.normal(0, sd_ms)) / 1000) * SR))
         y[at:at + len(hit)] += hit[:len(y) - at] * gain
+    kicks = 0
     for bar in range(bars):
-        pat = PATTERNS[kit['id']][bar % 2 if bar < 3 else 1]
-        for s, c in enumerate(pat):
-            if c == '.': continue
-            v = NOMINAL[c] + (.25 if c == 'h' and s % 4 == 0 else 0)
-            place(('k', LANE[c]), bar * 16 + s, v, .55 if c in 'hop' else 1,
-                  3 if c == 'K' else 4 if c in 'Sgr' else 5, 6 if c == 'S' else 0)
+        row = pats[bar % len(pats)]
+        for s, c in enumerate(row):
+            if c in 'KX':
+                v = float(np.clip(NOMINAL['K'] * 10 ** (kick_db[kicks % len(kick_db)] / 20 / .8), .15, 1.0)); kicks += 1
+                place(('k', LANE['K']), bar * 16 + s, v, 1, 3, push(s))
+            if c in 'SX':   # a ride kit's backbeat is the rim click its loop plays
+                place(('k', LANE['r'] if kit.get('ride') else LANE['S']), bar * 16 + s,
+                      NOMINAL['r'] if kit.get('ride') else NOMINAL['S'], 1, 4, push(s, snare=True))
+            if c == 'g':
+                place(('k', LANE['g']), bar * 16 + s, NOMINAL['g'], 1, 4, push(s, snare=True))
+        for s in hat_slots:
+            place(('k', LANE['h']), bar * 16 + s, NOMINAL['h'] + (.25 if s % 4 == 0 else 0), .55, 5, push(s))
         for pad, steps, v, in_bars in OVER.get(kit['id'], []):
             if bar in in_bars:
                 for s in steps:   # the ride rings 1.4 s, so eighths pile up: it sits lower than a hat
-                    place(('k', pad), bar * 16 + s, v, .32 if pad in (2, 3) else .5, 5)
-        if bar == 3:
-            place(('k', 9), bar * 16 + 13, .9, .8, 4); place(('k', 10), bar * 16 + 14, .7, .7, 4)
+                    place(('k', pad), bar * 16 + s, v, .32 if pad in (2, 3) else .5, 5, push(s))
         if stack is not None:
             for pad, steps, zone in STACK_PATTERNS[stack['id']]:
                 for s in steps:
-                    place(('s', pad), bar * 16 + s, ZONES[zone], .5, 6)
+                    place(('s', pad), bar * 16 + s, ZONES[zone], .5, 6, push(s))
     return y / np.max(np.abs(y)) * .89
 
 
 KICK_PADS = (0, 4)   # A01 KICK, A05 KICK 2
+
+
+def spread(fitted, kits, factor):
+    """Push the kits apart: every fitted parameter of every role the kits use is moved `factor`
+    times further from the kits' own average, in the fitter's normalised space (log for frequencies
+    and times), and clipped to the model's bounds. Owner, round 1.4: the kits "all kind of sound pretty
+    similar", and asked for them further apart than the loops are. The pads were already as far apart
+    as the loops' drums (88-95% of the loops' spread); factor 1 leaves the fits untouched."""
+    if factor == 1.0 or MODEL == 'voices':
+        return fitted
+    out = json.loads(json.dumps(fitted))
+    loops = sorted({k['primary'] for k in kits} | {k['secondary'] for k in kits})
+    logk = lambda k: k in getattr(M, 'LOGK', set()) or k.endswith(('_hz', '_ms')) or k in ('f0', 'f1', 'lp')
+    for role, space in M.SPACES.items():
+        have = [l for l in loops if role in fitted.get(l, {})]
+        if len(have) < 2:
+            continue
+        for k, (lo, hi) in space.items():
+            f = (lambda v: (math.log(v) - math.log(lo)) / (math.log(hi) - math.log(lo))) if logk(k) else (lambda v: (v - lo) / (hi - lo))
+            g = (lambda u: math.exp(math.log(lo) + u * (math.log(hi) - math.log(lo)))) if logk(k) else (lambda u: lo + u * (hi - lo))
+            u = {l: f(fitted[l][role]['params'][k]) for l in have}
+            mean = sum(u.values()) / len(u)
+            for l in have:
+                v = g(min(1.0, max(0.0, mean + factor * (u[l] - mean))))
+                cap = SPREAD_CAPS.get((role, k))
+                if cap is not None:   # never past what the owner has heard, unless the fit already was
+                    v = min(v, max(cap, fitted[l][role]['params'][k]))
+                out[l][role]['params'][k] = round(v, 4)
+    return out
+
+
+# Limits on how far spread() may push a setting, from what the owner has heard: STOOP's kick ring was
+# "overblown" at 1.18 s and "better" at 0.77 s (round 1.3); pushed, it went to 0.95 s with full drive
+# and air. A fit that already rings longer keeps its own value.
+SPREAD_CAPS = {('kick', 't1'): 0.8}
 
 
 def glue_bus(x, threshold_db=-10.0, ratio=4.0, attack_ms=10.0, release_ms=120.0):
@@ -230,13 +300,20 @@ def bus_preview(x, drive_db):
     return y / (np.max(np.abs(y)) + 1e-12) * .89
 
 
-def bus_drive(x, crest_target):
-    """The limiter drive (dB) that brings this groove's crest (first 10 s) to its loop's."""
+BUS_DRIVE_MAX_DB = 8.0
+# The owner heard 5.0-7.5 dB of limiting and said it "generally helps" (round 1.4). With each kit on its
+# own loop's groove the grooves came out peakier and the loop match asked for 10-16 dB, which is unheard,
+# and would flatten every kit toward one squashed sound, against "they all sound similar"; DRY ROOM's
+# silence between hits would fill in. Capped just above what was heard.
+
+
+def bus_drive(x, crest_target, max_db=BUS_DRIVE_MAX_DB):
+    """The limiter drive (dB) that brings this groove's crest (first 10 s) to its loop's, at most max_db."""
     n = int(10 * SR); g = glue_bus(x[:n])
     crest = lambda d: X.crest_db(limit(g, d))
     if crest_target is None or crest(0.0) <= crest_target:
         return 0.0
-    lo, hi = 0.0, 24.0       # crest falls as the drive rises
+    lo, hi = 0.0, max_db       # crest falls as the drive rises
     if crest(hi) > crest_target:
         return hi
     for _ in range(12):
@@ -245,7 +322,30 @@ def bus_drive(x, crest_target):
     return hi
 
 
-def kick_trim(kit, bank, target_db):
+def balance(kit, bank, target_db):
+    """(kick gain, gain for every other drum pad) putting the groove's low-to-mid balance at the loop's.
+    The kick is cut when it is too heavy; when it is too light, the rest of the kit is cut instead
+    (the kick cannot go past its 0.89 peak), which is the same balance. Each side at most 12 dB.
+    Round 1.4: with the loops' own grooves DRY ROOM and RIDE & RIMS came out light, which a cut-only
+    trim could not fix."""
+    g = kick_trim_one_sided(kit, bank, target_db)
+    if g < 1.0 or target_db is None:
+        return g, 1.0
+    def bal(r):
+        b = [pad if i in KICK_PADS else [[y * r for y in row] for row in pad] for i, pad in enumerate(bank)]
+        return X.low_mid_db(groove(kit, b))
+    if bal(1.0) >= target_db:
+        return 1.0, 1.0
+    lo, hi = 10 ** (-12 / 20), 1.0   # bal(lo) is the heaviest the kit can get, bal(hi) the lightest
+    if bal(lo) <= target_db:
+        return 1.0, lo
+    for _ in range(14):   # the balance rises as the rest of the kit comes down
+        mid = (lo * hi) ** .5
+        lo, hi = (mid, hi) if bal(mid) > target_db else (lo, mid)
+    return 1.0, (lo * hi) ** .5
+
+
+def kick_trim_one_sided(kit, bank, target_db):
     """Gain for both kick pads that puts the groove's low-to-mid balance (extract.low_mid_db) at
     the primary loop's. Cuts only, never boosts (a boost would break the 0.89 peak), and at most
     12 dB. Fitting scores each pad's shape normalised to its own peak, so nothing else sets how
@@ -274,7 +374,7 @@ STACKS = stacks()
 
 
 def main(fitted_path, out):
-    out = Path(out); fitted = json.load(open(fitted_path))
+    out = Path(out); fitted = spread(json.load(open(fitted_path)), K.KITS, getattr(K, 'SPREAD', 1.0))
     t0 = time.time(); man = {'status': f"Python round {0 if MODEL == 'voices' else 1} audition ({MODEL}); not factory audio, not heard", 'kits': [], 'stacks': []}
     sbanks = {}
     for st in STACKS:
@@ -291,9 +391,8 @@ def main(fitted_path, out):
     for kit in K.KITS:
         pads = derive(kit, fitted)
         bank = [grid(f"{kit['id']}-{label}", kind, p, extra) for label, kind, p, extra in pads]
-        trim = kick_trim(kit, bank, targets[kit['primary']].get('low_mid_db'))
-        for i in KICK_PADS:
-            bank[i] = [[y * trim for y in row] for row in bank[i]]
+        trim, rest = balance(kit, bank, targets[kit['primary']].get('low_mid_db'))
+        bank = [[[y * (trim if i in KICK_PADS else rest) for y in row] for row in pad] for i, pad in enumerate(bank)]
         for i, (label, kind, p, extra) in enumerate(pads):
             for zi in range(3):
                 for t in range(TAKES):
@@ -316,7 +415,7 @@ def main(fitted_path, out):
                     clip[-441:] *= np.linspace(1, 0, min(441, len(clip)))[-len(clip[-441:]):]
                     touch += [clip, np.zeros(int(.08 * SR))]
         write(out / 'demo' / f"{kit['id']}-touch.wav", np.concatenate(touch))
-        man['kits'].append(dict(kit, kick_trim_db=round(20 * np.log10(trim), 2),
+        man['kits'].append(dict(kit, kick_trim_db=round(20 * np.log10(trim), 2), rest_trim_db=round(20 * np.log10(rest), 2),
                                 bus_preview=dict(limiter_drive_db=round(bus_db, 2), crest_db=round(X.crest_db(bus_preview(gv, bus_db)[:int(10 * SR)]), 2),
                                                  crest_dry_db=round(X.crest_db(gv[:int(10 * SR)]), 2), loop_crest_db=targets[kit['primary']].get('crest_db')),
                                 pads=[dict(pad=i + 1, label=l, model=k, params=p, extra=e) for i, (l, k, p, e) in enumerate(pads)],
