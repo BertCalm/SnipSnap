@@ -140,6 +140,14 @@ ROUNDS = {
         "intro": "You asked for a bit of compression, then heard round 2b as echoy: its press lifted the room baked into every hit. This round's press is lighter and faster, catches the peak, and leaves the room where it was; the grooves keep only their bus. ",
         "ask": "<li>Is the echo gone, and is what is left still a bit of compression or none at all?</li>",
         "beside": "Round 2 had no press on the pads; round 2b's press lifted the room (echoy); this round's press catches the peak and leaves the room where it was, and the grooves take no second press."},
+    7: {"title": "Stagger Round Three B", "short": "Stagger, round three b",
+        "intro": "You heard round 3 as flat, muffled and muddy. Measured, the snare was the main cause: its head rang around 300 Hz for a quarter second, so most of every backbeat sat in the muddy band, and its crack was filtered away three times over (the snare, the converter, a dark shelf on the grooves). Round 3's kick knock added boom on top. This round damps and tunes up the snare and gives it its wires, opens its filter, shortens the kick's knock, takes the dark shelf off the grooves and brings the hats up a little. ",
+        "ask": "<li>Is the mud gone, does the snare crack now, and is anything too bright or too thin?</li>",
+        "beside": "Round 2 had the room and no press; round 2d dry; round 3 boxed kicks (heard as muddy); this round opens the snare and drops the dark shelf."},
+    6: {"title": "Stagger Round Three", "short": "Stagger, round three",
+        "intro": "You heard round 2d as light taps, the drums not hit hard enough. Measured, two things: the kicks were subs, 98 percent of their energy under 150 Hz, which a phone cannot play, and in every groove the snare sat 8 to 14 dB under the kick, with the hat as loud as the snare. This round gives every kick a box (a damped tom under the sub, nothing above 500 Hz, no click), brings the snares level with the kicks in the grooves, and drops the hats to a whisper. ",
+        "ask": "<li>Do the drums hit now, on the speaker you listened on last time, and does the kick read as a box rather than a tap?</li>",
+        "beside": "Round 2 had the room and no press; round 2c the room and a light press; round 2d dry; this round boxes the kicks, brings them level with the snares and drops the hats."},
     5: {"title": "Stagger Round Two D", "short": "Stagger, round two d",
         "intro": "You heard round 2c as room reverb. It was: every EMBER drum carries the club it was built in, and the grooves played those hits through a second room. This round dries every drum (the club at its nearest, then a gate on what is left) and takes the room off the grooves; only the timpani keep their hall. ",
         "ask": "<li>Is the room gone, and are the dry drums still drums or back to a drum machine?</li>",
@@ -201,7 +209,8 @@ def main(argv):
     src = argv[1]
     out = argv[2] if len(argv) > 2 else src
     m = json.load(open(os.path.join(src, "manifest.json")))
-    if m.get("round") == "2":
+    # Round 2 onward: the shelf generator's kits (its manifest's "round" names the round; the wording follows kitVersion).
+    if m.get("round") in ("2", "3"):
         return build_2(m, src, out, ext=argv[3] if len(argv) > 3 else "wav", before=argv[4] if len(argv) > 4 else None)
     files = {f["file"]: f for f in m["files"]}
 
