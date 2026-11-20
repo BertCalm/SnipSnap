@@ -80,9 +80,15 @@ class FilamentKeysTest {
                     "${patch.voice} $midi $depth does not recur at the exported loop marker")
             }
 
-            // The accepted sustain is still the saved model-three held sound.
+            // The saved model-three held sound is unchanged, and it is still exactly the untilted
+            // key. A held key now thins its launched harmonics by register (the owner's 20 Nov 2026
+            // note that held keys were abrasive above the bass), so the delivered sustain differs.
             val held = patch.copy(macros = patch.macros + ("HOLD" to 1f)).render().samples
-            assertContentEquals(held, sustain, "${patch.voice} $midi keys changed the approved held renderer")
+            val untilted = Filament.keyNote(patch, tilt = 0.0)
+            assertEquals(note.loopStartFrame, untilted.loopStartFrame)
+            assertContentEquals(held, untilted.snip.samples.copyOfRange(start, untilted.snip.samples.size),
+                "${patch.voice} $midi keys changed the approved held renderer")
+            assertTrue(relativeError(held, sustain) > 1e-4, "${patch.voice} $midi held key ignores the register tilt")
             val requestedHz = Keys.midiHz(midi).toDouble()
             assertTrue(abs(1200.0 * kotlin.math.log2(evidence.actualHz / requestedHz)) < 3.0,
                 "${patch.voice} $midi loop-period fit moved the requested root")

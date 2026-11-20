@@ -1,14 +1,15 @@
 package com.snipsnap.synth
 
 /**
- * TERRA's factory bank: four presets on each of its twelve playing voices (COMPOUND_MEMBRANE is retired and has none).
+ * TERRA's factory bank: four presets on each of its twenty-one playing voices (COMPOUND_MEMBRANE is retired and has none).
  *
  * The sixteen pads of [TerraKits.classic], which the owner kept in full (round terra-kit-1, 2026-11-14), are filed
  * here under their own names and macros, so each is the kept pad byte for byte. The other thirty-two are new settings
  * of the same voices, written out in full so no preset moves with a voice's defaults. The owner kept the forty presets
  * of the first ten voices in round terra-presets-1 (W1–W10, 2026-11-15); BAYAN's and TUN's new three were reworked
- * after that round, and the owner kept both reworked sets in round terra-presets-2 (Z2 and Z4, 2026-11-15). All 48 are
- * pinned in `TerraPresetsTest`. See docs/TERRA_PROMOTION.md.
+ * after that round, and the owner kept both reworked sets in round terra-presets-2 (Z2 and Z4, 2026-11-15). Those 48 are
+ * pinned in `TerraPresetsTest`. See docs/TERRA_PROMOTION.md. The nine stick voices' thirty-six (2026-11-20,
+ * docs/TERRA_STICKS.md) are provisional: written from the prototype's rounds, not yet heard from the app, not pinned.
  *
  * Names describe the drum and the stroke; none names a pitch it does not have. Every name fits a pad label (14).
  */
@@ -138,6 +139,97 @@ object TerraPresets {
             p("Tun Muted", TerraVoice.TUN, "TUNE" to 0.5f, "DECAY" to 0f, "FORCE" to 1f, "KNOCK" to 1f, "LAG" to 0f),
             // Five semitones up, a soft finger and no knock at all: the plain ringing note.
             p("Tun Pure", TerraVoice.TUN, "TUNE" to 1f, "DECAY" to 0.5f, "FORCE" to 0f, "KNOCK" to 0f, "LAG" to 0.5f),
+        )
+        // The stick voices (TerraSticks, 2026-11-20): provisional until the owner hears them from the app; not yet pinned.
+        TerraVoice.ODAIKO -> listOf(
+            // The longer-ringing of the two big drums.
+            p("Odaiko Long", TerraVoice.ODAIKO, "TUNE" to 0.5f, "DECAY" to 0.5f, "FORCE" to 0.5f, "ATTACK" to 0.5f, "DRUM" to 0f),
+            // The lower, tighter drum.
+            p("Odaiko Low", TerraVoice.ODAIKO, "TUNE" to 0.5f, "DECAY" to 0.5f, "FORCE" to 0.5f, "ATTACK" to 0.5f, "DRUM" to 1f),
+            // Both drums struck together.
+            p("Odaiko Pair", TerraVoice.ODAIKO, "TUNE" to 0.5f, "DECAY" to 0.5f, "FORCE" to 0.5f, "ATTACK" to 0.5f, "DRUM" to 0.5f),
+            // The low drum five semitones down, a soft stick, twice the ring.
+            p("Odaiko Deep", TerraVoice.ODAIKO, "TUNE" to 0f, "DECAY" to 1f, "FORCE" to 0.3f, "ATTACK" to 0.4f, "DRUM" to 1f),
+        )
+        TerraVoice.NAGADO -> listOf(
+            // The stroke as picked.
+            p("Nagado Don", TerraVoice.NAGADO, "TUNE" to 0.5f, "DECAY" to 0.5f, "FORCE" to 0.5f, "ATTACK" to 0.5f),
+            // Five semitones down and left to ring.
+            p("Nagado Low", TerraVoice.NAGADO, "TUNE" to 0f, "DECAY" to 0.8f, "FORCE" to 0.5f, "ATTACK" to 0.5f),
+            // A hard stick, more of its attack, half the ring.
+            p("Nagado Tight", TerraVoice.NAGADO, "TUNE" to 0.5f, "DECAY" to 0f, "FORCE" to 1f, "ATTACK" to 0.8f),
+            // A soft stick with little attack, a little higher.
+            p("Nagado Soft", TerraVoice.NAGADO, "TUNE" to 0.6f, "DECAY" to 0.5f, "FORCE" to 0f, "ATTACK" to 0.2f),
+        )
+        TerraVoice.SHIME -> listOf(
+            // The first stroke as picked.
+            p("Shime Ten", TerraVoice.SHIME, "TUNE" to 0.5f, "DECAY" to 0.5f, "FORCE" to 0.5f, "ATTACK" to 0.5f, "STROKE" to 0f),
+            // The second stroke as picked.
+            p("Shime Second", TerraVoice.SHIME, "TUNE" to 0.5f, "DECAY" to 0.5f, "FORCE" to 0.5f, "ATTACK" to 0.5f, "STROKE" to 1f),
+            // Five semitones up, hard and short.
+            p("Shime High", TerraVoice.SHIME, "TUNE" to 1f, "DECAY" to 0.3f, "FORCE" to 0.9f, "ATTACK" to 0.6f, "STROKE" to 0f),
+            // The second stroke lower, a soft stick, little attack.
+            p("Shime Soft", TerraVoice.SHIME, "TUNE" to 0.3f, "DECAY" to 0.5f, "FORCE" to 0f, "ATTACK" to 0.2f, "STROKE" to 1f),
+        )
+        TerraVoice.KA -> listOf(
+            // The rim stroke as picked.
+            p("Ka Rim", TerraVoice.KA, "TUNE" to 0.5f, "DECAY" to 0.5f, "FORCE" to 0.5f, "ATTACK" to 0.5f),
+            // Five semitones up and shorter.
+            p("Ka High", TerraVoice.KA, "TUNE" to 1f, "DECAY" to 0.2f, "FORCE" to 0.5f, "ATTACK" to 0.5f),
+            // Five semitones down, softer, longer.
+            p("Ka Low", TerraVoice.KA, "TUNE" to 0f, "DECAY" to 0.8f, "FORCE" to 0.3f, "ATTACK" to 0.5f),
+            // All attack: a hard stick, the wood cut to half.
+            p("Ka Crack", TerraVoice.KA, "TUNE" to 0.5f, "DECAY" to 0f, "FORCE" to 1f, "ATTACK" to 1f),
+        )
+        TerraVoice.KANE -> listOf(
+            // The open centre note.
+            p("Kane Chan", TerraVoice.KANE, "TUNE" to 0.5f, "DECAY" to 0.5f, "FORCE" to 0.5f, "ATTACK" to 0.5f, "EDGE" to 0f),
+            // The bright edge stroke.
+            p("Kane Chiki", TerraVoice.KANE, "TUNE" to 0.5f, "DECAY" to 0.5f, "FORCE" to 0.5f, "ATTACK" to 0.5f, "EDGE" to 1f),
+            // Between centre and edge, shorter.
+            p("Kane Mid", TerraVoice.KANE, "TUNE" to 0.5f, "DECAY" to 0.3f, "FORCE" to 0.5f, "ATTACK" to 0.5f, "EDGE" to 0.5f),
+            // Five semitones down, twice the ring.
+            p("Kane Low Ring", TerraVoice.KANE, "TUNE" to 0f, "DECAY" to 1f, "FORCE" to 0.5f, "ATTACK" to 0.5f, "EDGE" to 0f),
+        )
+        TerraVoice.CHAPPA -> listOf(
+            // The cymbals as picked.
+            p("Chappa Open", TerraVoice.CHAPPA, "TUNE" to 0.5f, "DECAY" to 0.5f, "FORCE" to 0.5f, "ATTACK" to 0.5f),
+            // Pressed together straight after: half the ring, more attack.
+            p("Chappa Choke", TerraVoice.CHAPPA, "TUNE" to 0.5f, "DECAY" to 0f, "FORCE" to 0.8f, "ATTACK" to 0.7f),
+            // A smaller pair, shorter.
+            p("Chappa Small", TerraVoice.CHAPPA, "TUNE" to 1f, "DECAY" to 0.3f, "FORCE" to 0.5f, "ATTACK" to 0.5f),
+            // A larger pair brushed softly and left to ring.
+            p("Chappa Wash", TerraVoice.CHAPPA, "TUNE" to 0f, "DECAY" to 1f, "FORCE" to 0.2f, "ATTACK" to 0.3f),
+        )
+        TerraVoice.BINZASARA -> listOf(
+            // The slats falling as measured.
+            p("Sasara Fall", TerraVoice.BINZASARA, "TUNE" to 0.5f, "DECAY" to 0.5f, "FORCE" to 0.5f, "ATTACK" to 0.5f, "SPREAD" to 0.5f),
+            // The slats thrown together, hard.
+            p("Sasara Snap", TerraVoice.BINZASARA, "TUNE" to 0.5f, "DECAY" to 0.5f, "FORCE" to 1f, "ATTACK" to 0.5f, "SPREAD" to 0f),
+            // A slow fall, each slat ringing longer.
+            p("Sasara Slow", TerraVoice.BINZASARA, "TUNE" to 0.5f, "DECAY" to 0.7f, "FORCE" to 0.5f, "ATTACK" to 0.5f, "SPREAD" to 1f),
+            // Larger slats, duller.
+            p("Sasara Low", TerraVoice.BINZASARA, "TUNE" to 0f, "DECAY" to 0.5f, "FORCE" to 0.5f, "ATTACK" to 0.2f, "SPREAD" to 0.7f),
+        )
+        TerraVoice.COWBELL -> listOf(
+            // The shaken clapper bell as picked.
+            p("Bell Shake", TerraVoice.COWBELL, "TUNE" to 0.5f, "DECAY" to 0.5f, "FORCE" to 0.5f, "ATTACK" to 0.5f, "SHAKE" to 1f, "DAMP" to 0f),
+            // One clapper strike, ringing.
+            p("Bell Single", TerraVoice.COWBELL, "TUNE" to 0.5f, "DECAY" to 0.5f, "FORCE" to 0.5f, "ATTACK" to 0.5f, "SHAKE" to 0f, "DAMP" to 0f),
+            // One strike with a hand on the bell.
+            p("Bell Muted", TerraVoice.COWBELL, "TUNE" to 0.5f, "DECAY" to 0.5f, "FORCE" to 0.5f, "ATTACK" to 0.5f, "SHAKE" to 0f, "DAMP" to 1f),
+            // A larger bell, a tighter shake, twice the ring.
+            p("Bell Low Shake", TerraVoice.COWBELL, "TUNE" to 0f, "DECAY" to 1f, "FORCE" to 0.5f, "ATTACK" to 0.5f, "SHAKE" to 0.7f, "DAMP" to 0f),
+        )
+        TerraVoice.WATER_DRUM -> listOf(
+            // The stroke as picked.
+            p("Water Drum", TerraVoice.WATER_DRUM, "TUNE" to 0.5f, "DECAY" to 0.5f, "FORCE" to 0.5f, "ATTACK" to 0.5f),
+            // Five semitones down, twice the ring.
+            p("Water Low", TerraVoice.WATER_DRUM, "TUNE" to 0f, "DECAY" to 1f, "FORCE" to 0.5f, "ATTACK" to 0.5f),
+            // A hard, short tap, all attack.
+            p("Water Tap", TerraVoice.WATER_DRUM, "TUNE" to 0.5f, "DECAY" to 0f, "FORCE" to 1f, "ATTACK" to 0.8f),
+            // A little higher, a soft stick.
+            p("Water Soft", TerraVoice.WATER_DRUM, "TUNE" to 0.7f, "DECAY" to 0.5f, "FORCE" to 0f, "ATTACK" to 0.2f),
         )
     }
 }

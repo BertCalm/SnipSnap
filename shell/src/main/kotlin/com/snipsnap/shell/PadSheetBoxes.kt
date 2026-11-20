@@ -133,7 +133,8 @@ object PadSheetBoxes {
     /** What MAKE holds, or what DE-SAMPLE already made of the pad. */
     fun make(pad: KitPad): String =
         pad.source["desampled"]?.let { "A PATCH NOW, ${it.uppercase(Locale.ROOT)} AWAY" }
-            ?: if (ConfluenceWorkshop.isGathering(pad)) "GATHERING · MAKE VARIATION"
+            ?: if (KitBuilderModel.KERF_STAMP in pad.source) "A SYNTH TWIN NOW"
+            else if (ConfluenceWorkshop.isGathering(pad)) "GATHERING · MAKE VARIATION"
             else "SUSTAIN · NEAREST SYNTH · INSTRUMENT"
 
     /**
@@ -158,7 +159,8 @@ object PadSheetBoxes {
     fun touched(pad: KitPad, outsideStage: String? = null): Set<Box> {
         val strips = lines(pad, outsideStage)
         val benches = ORDER.filter { it != Box.MAKE && strips.getValue(it).carried }
-        val desampled = if (pad.source["desampled"] != null) listOf(Box.MAKE) else emptyList()
+        // A KERF twin is the other thing MAKE leaves on a pad (2026-11-20).
+        val desampled = if (pad.source["desampled"] != null || KitBuilderModel.KERF_STAMP in pad.source) listOf(Box.MAKE) else emptyList()
         return (benches + desampled).toSet()
     }
 

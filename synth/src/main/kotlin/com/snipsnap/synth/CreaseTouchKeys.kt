@@ -16,7 +16,7 @@ import kotlin.math.pow
  * The ordinary single-layer CreaseKeys path and all historical renders remain unchanged.
  */
 object CreaseTouchKeys {
-    const val RENDER_VERSION = 1
+    const val RENDER_VERSION = 2
     /** Below the smallest normal Float, contact-strength scaling can round conditioned
      * audio to exact zero while the inherited key renderer still expects a nonzero seam.
      * Keep exact zero as intentional silence, and refuse positive subnormal anchors here. */

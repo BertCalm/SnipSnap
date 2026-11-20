@@ -2121,6 +2121,45 @@ object Copy {
     /** DE-SAMPLE's refusal: no patch near enough, and which one was nearest. */
     fun desampleFar(engine: String, voice: String, distance: Float): String =
         "NO PATCH IS NEAR. THE CLOSEST IS A ${engine} ${voice.replace('_', ' ')}, %.2f AWAY.".format(java.util.Locale.ROOT, distance)
+    /**
+     * SYNTH TWIN (KERF, docs/superpowers/specs/2026-11-19-kerf-synthetic-chops-design.md): the pad is its own
+     * measurement played back now. [label] is what KERF called the drum, since the twin takes that name and the
+     * player may find the pad filed somewhere new.
+     */
+    fun kerfed(pad: String, label: String): String =
+        "$pad is a synth twin now, filed as ${label.replace('_', ' ').lowercase(java.util.Locale.ROOT)}. Original is in the trash."
+    /** The twin's UNDO on the pad sheet (and `snipsnap kerf --undo`): the take before the twin, as [UNDESAMPLED] says it. */
+    const val UNKERFED = "Undone. The version before the last MAKE SYNTH TWIN is back from the trash."
+    /** The twin's UNDO when a twin is not what sits on top: never made, already undone, something riding it, or a print over it. */
+    const val KERF_UNDO_NOTHING = "This pad carries no SYNTH TWIN on top. Nothing to undo here."
+    /** The twin's UNDO when the bin holds no earlier take of the pad. */
+    const val KERF_UNDO_NOT_BINNED = "The trash holds no earlier version of this pad. The twin stays."
+    /** MAKE SYNTH TWIN on a pad that is one already: a second would measure the twin's render, not the capture. */
+    const val KERF_ALREADY = "This pad is a synth twin already. Move BLEED or SLOP to re-cut it, or UNDO SYNTH TWIN first."
+    /** BLEED or SLOP moved on a twin with something riding it (pedals, a print): the re-cut would land under it. */
+    const val KERF_RIDDEN = "Something rides this twin. Take it off with NONE before re-cutting it."
+    /** The re-cut's word: its failure word ([actionFailed]). */
+    @field:CopyLabel const val KERF_RECUT = "RE-CUT TWIN"
+    /** The dock's line while BLEED or SLOP re-cuts a twin from its numbers. */
+    const val KERF_RECUT_BUSY = "Re-cutting the twin…"
+    /** SYNTH TWIN ALL's busy line on the kit screen: every pad measured, about half a second each. */
+    const val KERF_ALL_BUSY = "Measuring every pad…"
+    /** SYNTH TWIN ALL threw part-way: the pads made before it are kept and saved. */
+    const val KERF_ALL_FAILED = "Synth twin all stopped."
+    /**
+     * SYNTH TWIN ALL's landing: how many pads became twins, how many were left as they were (layered, chained,
+     * printed or too short to measure; nothing was done to them), and how many were twins already.
+     */
+    fun kerfedAll(made: Int, left: Int, already: Int): String {
+        val pads = "$made ${if (made == 1) "pad is a synth twin" else "pads are synth twins"} now. Originals are in the trash."
+        val rest = if (left > 0) " $left left as ${if (left == 1) "it was" else "they were"} (layered, chained, printed or too short)." else ""
+        val twins = if (already > 0) " $already ${if (already == 1) "was a twin" else "were twins"} already." else ""
+        return pads + rest + twins
+    }
+    /** SYNTH TWIN ALL with nothing it could make: every pad was left or was a twin already. */
+    const val KERF_ALL_NONE = "No pad here can become a synth twin. Every one is layered, chained, printed, too short or a twin already."
+    /** SYNTH TWIN's refusal of a pad too short to measure. */
+    const val KERF_TOO_SHORT = "This pad is too short to measure. A twin needs about a fortieth of a second."
     /** DRIFT: the pad drifted toward the partner the shelf picked. */
     fun drifted(pad: String, toward: String): String = "$pad blended toward $toward. Original is in the trash."
     /**
@@ -2196,6 +2235,7 @@ object Copy {
     @field:CopyLabel const val UNDO_MUTATE = "UNDO COMBINE"
     @field:CopyLabel const val UNDO_SPLICE = "UNDO SPLICE"
     @field:CopyLabel const val UNDO_DESAMPLE = "UNDO NEAREST SYNTH"
+    @field:CopyLabel const val UNDO_KERF = "UNDO SYNTH TWIN"
     @field:CopyLabel const val UNDO_OUTSIDE = "UNDO SPEAKER AND ROOM"
     @field:CopyLabel const val UNDO_BOARD = "UNDO BOARD"
     /** A FILE: the picked file cannot be a partner; [reason] the decoder's or the holder's own words. */
@@ -2240,6 +2280,7 @@ object Copy {
      */
     fun boardRemoveBeforeSplice(board: String): String = "Remove $board before SPLICE."
     fun boardRemoveBeforeDesample(board: String): String = "Remove $board before FIND NEAREST SYNTH."
+    fun boardRemoveBeforeKerf(board: String): String = "Remove $board before MAKE SYNTH TWIN."
     /** The keyed family reads the DESTINATION kit's key; [sourceKey] is named when it differs from what played. */
     fun replayedInKey(word: String, pad: String, key: String, sourceKey: String?): String =
         "$word done again on $pad, in $key" +
@@ -3601,6 +3642,8 @@ object Copy {
     const val MUTATE_BUSY = "Mutating…"
     /** The dock's line while DE-SAMPLE finds the nearest patch and writes it over the pad. */
     const val DESAMPLE_BUSY = "De-sampling…"
+    /** The dock's line while SYNTH TWIN measures the pad and its two neighbours and writes the twin over it. */
+    const val KERF_BUSY = "Measuring the twin…"
     /** The dock's line while MAKE PAD renders a new pad out of one hit. */
     const val MAKE_PAD_BUSY = "Making the pad…"
     /** The dock's line while MAKE KIT quarries one sound into sixteen pads. */

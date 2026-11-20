@@ -571,8 +571,8 @@ object PadSheet {
      *   refusal says so, and clearing the soft hits drops every layer, so a layer's entry is not
      *   given back);
      * - for the pad's main file only, MUTATE's UNDO ([MutateSheet.read]), OUTSIDE's UNDO
-     *   ([OutsideSheet.read]), UNDO SPLICE ([isSpliced]) or DE-SAMPLE's UNDO ([isDesampled]), the
-     *   last two since 2026-11-01. Soft hits on a spliced or de-sampled pad make its UNDO refuse
+     *   ([OutsideSheet.read]), UNDO SPLICE ([isSpliced]), DE-SAMPLE's UNDO ([isDesampled]) or the twin's
+     *   UNDO ([isKerfTwin]), the splice and the de-sample since 2026-11-01, the twin since 2026-11-20. Soft hits on a spliced or de-sampled pad make its UNDO refuse
      *   until SOFT HITS goes off ([Copy.UNDO_LAYERED]), as NONE's GHOSTS_POSTDATE does, so it still
      *   counts. MUTATE's and OUTSIDE's UNDO restore the main file under the layers without refusing.
      *
@@ -595,7 +595,7 @@ object PadSheet {
         if (state == UnTreat.READY) return true
         if (file != pad.sampleFile) return false
         return state == UnTreat.GHOSTS_POSTDATE || MutateSheet.read(pad.recipe) != null || OutsideSheet.read(pad.recipe) != null ||
-            isSpliced(pad.recipe) || isDesampled(pad)
+            isSpliced(pad.recipe) || isDesampled(pad) || isKerfTwin(pad)
     }
 
     /**
@@ -640,6 +640,29 @@ object PadSheet {
     fun spliceUndoRefusal(pad: KitPad, binned: Boolean): String? = when {
         !isSpliced(pad.recipe) -> Copy.SPLICE_UNDO_NOTHING
         !binned -> Copy.SPLICE_UNDO_NOT_BINNED
+        pad.velocityLayers.isNotEmpty() -> Copy.UNDO_LAYERED
+        else -> null
+    }
+
+    /**
+     * Whether a KERF twin (`KitBuilderModel.kerfPad`) is what sits on top of [pad], so its UNDO gives back the take
+     * before it: KERF's stamp, no print, and exactly the recipe `kerfPad` writes, a twin with nothing riding it. The
+     * same shape as [isDesampled], and for the same reason: with pedals or a treatment over the twin, the newest take
+     * in the bin is the twin's own render, and an undo that popped it would hand back the twin as if it were the
+     * capture. Pedals keep the twin under them, so this reads true again once their NONE comes off
+     * (`KitBuilderModel.untreatPad`); a treatment that replaces the recipe takes the stamp with it when it is undone.
+     */
+    fun isKerfTwin(pad: KitPad): Boolean {
+        if (KitBuilderModel.KERF_STAMP !in pad.source || PrintedPads.has(pad.recipe)) return false
+        val r = Breed.recipeOf(pad.recipe) ?: return false
+        return r.kerf != null && r.patch == null && r.fx == null && r.treatment == null && r.amount == null && r.board == null &&
+            r.terminalFadeMs == null && r.pedals == null && r.layers == null
+    }
+
+    /** [spliceUndoRefusal] for the twin's UNDO: [isKerfTwin] in place of [isSpliced], the same order. */
+    fun kerfUndoRefusal(pad: KitPad, binned: Boolean): String? = when {
+        !isKerfTwin(pad) -> Copy.KERF_UNDO_NOTHING
+        !binned -> Copy.KERF_UNDO_NOT_BINNED
         pad.velocityLayers.isNotEmpty() -> Copy.UNDO_LAYERED
         else -> null
     }

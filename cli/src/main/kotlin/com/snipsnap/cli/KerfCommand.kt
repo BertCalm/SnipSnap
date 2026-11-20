@@ -11,15 +11,17 @@ import java.util.Locale
  * from the numbers, with the pads either side of it bleeding in and the cut points a little off (`--bleed`, `--slop`).
  * Bin-backed: `--undo` gives the capture back and refuses a pad the twin is no longer on top of
  * (`KitBuilderModel.unkerfPad`). `--all` does every pad that can take it and names the ones it left.
+ * `--recut` moves an existing twin's BLEED and SLOP from its saved numbers, with no new measure
+ * (`KitBuilderModel.recutKerfPad`), as the pad sheet's sliders do.
  * To start from a loop, `snipsnap chop` it into a kit first: slot order is then the loop's order, which is what the
  * neighbours are read from.
  */
 object KerfCommand {
 
     fun run(args: List<String>, out: PrintStream): Int {
-        val opts = Options.parse(args, valued = setOf("--bleed", "--slop"), boolean = setOf("--undo", "--all"))
+        val opts = Options.parse(args, valued = setOf("--bleed", "--slop"), boolean = setOf("--undo", "--all", "--recut"))
         val first = opts.positional.getOrNull(0)
-            ?: throw CliError("kerf wants a kit and a pad: snipsnap kerf <kit-dir> A02 | --all [--bleed 1.0] [--slop 0.5] [--undo]")
+            ?: throw CliError("kerf wants a kit and a pad: snipsnap kerf <kit-dir> A02 | --all [--bleed 1.0] [--slop 0.5] [--undo] [--recut]")
         val target = File(first)
         if (!File(target, "kit.json").isFile) throw CliError("not a kit folder (no kit.json): $first")
         val bleed = amount(opts["--bleed"], "--bleed", 1.0, 4.0); val slop = amount(opts["--slop"], "--slop", 0.5, 1.0)
@@ -40,11 +42,21 @@ object KerfCommand {
                 out.println("${kit.made.size} pads are KERF twins now (bleed %.2f, slop %.2f) - the captures wait in the bin (undo: --all --undo)".format(Locale.ROOT, bleed, slop))
                 kit.made.forEach { out.println("  pad ${it.slot}: ${it.drumClass.name.lowercase()}") }
                 kit.left.forEach { (slot, why) -> out.println("  pad $slot left alone: $why") }
+                kit.already.forEach { out.println("  pad $it left alone: a twin already") }
                 return 0
             }
             val padArg = opts.positional.getOrNull(1) ?: throw CliError("which pad? (A01..A16, B01.., a slot number, or --all)")
             val slot = parsePad(padArg)
             if (model.kit.pad(slot) == null) throw CliError("no pad on $padArg")
+            if (opts.has("--recut")) {
+                val twin = model.kit.pad(slot)!!
+                val was = com.snipsnap.shell.Breed.recipeOf(twin)?.kerf ?: throw CliError("pad $padArg is not a KERF twin - nothing to re-cut")
+                val pad = model.recutKerfPad(slot, opts["--bleed"]?.let { bleed } ?: was.bleed, opts["--slop"]?.let { slop } ?: was.slop)
+                model.save()
+                val now = com.snipsnap.shell.Breed.recipeOf(pad)!!.kerf!!
+                out.println("pad $padArg re-cut from its own numbers (bleed %.2f, slop %.2f) - the capture still waits in the bin".format(Locale.ROOT, now.bleed, now.slop))
+                return 0
+            }
             if (opts.has("--undo")) {
                 model.unkerfPad(slot)
                 model.save()

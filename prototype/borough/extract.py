@@ -55,6 +55,12 @@ def low_mid_db(x: np.ndarray) -> float:
     return float(10 * np.log10(np.mean(lo ** 2) / max(np.mean(mid ** 2), 1e-20)))
 
 
+def crest_db(x: np.ndarray) -> float:
+    """How far the peaks stand above the average: peak over RMS in dB. A compressed break has a low
+    crest; build.py glue() compresses a kit's pads until its groove's crest is its loop's."""
+    return float(20 * np.log10(np.max(np.abs(x)) / max(np.sqrt(np.mean(x ** 2)), 1e-12)))
+
+
 def analyse(path: str) -> dict:
     y, fs = sf.read(path)
     stereo = y.T
@@ -141,7 +147,7 @@ def analyse(path: str) -> dict:
                ghost=[round(slots[i]['ls'] - LS, 1) for i in ghost][:16], hat=[round(slots[i]['lh'] - LH, 1) for i in hat][:16])
     f, P = signal.welch(m, SR, nperseg=8192)
     tot = P.sum()
-    return dict(low_mid_db=round(low_mid_db(m), 2), snare_low_mid_ratio_db=r_s, file_sha256=hashlib.sha256(open(path, 'rb').read()).hexdigest(), bpm=bpm, seconds=len(m) / SR,
+    return dict(low_mid_db=round(low_mid_db(m), 2), crest_db=round(crest_db(m[:int(10 * SR)]), 2), snare_low_mid_ratio_db=r_s, file_sha256=hashlib.sha256(open(path, 'rb').read()).hexdigest(), bpm=bpm, seconds=len(m) / SR,
                 pattern=pattern, timing_ms=timing, levels_db=vel,
                 stereo_side_db=float(10 * np.log10(np.mean(side ** 2) / np.mean(m ** 2) + 1e-12)),
                 rolloff99_hz=float(f[np.searchsorted(np.cumsum(P) / tot, .99)]),

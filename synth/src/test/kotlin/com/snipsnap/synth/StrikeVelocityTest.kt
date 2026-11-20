@@ -173,7 +173,8 @@ class StrikeVelocityTest {
     @Test
     fun `TERRA's bank sees the bend by v squared and the tilted modes`() {
         for (voice in TerraVoice.entries) {
-            if (voice == TerraVoice.BOX || voice in Terra.HAND_DRUMS) {
+            // The stick voices (TerraSticks) are held the same way: their Body is their notes as fitted, at every velocity.
+            if (voice == TerraVoice.BOX || voice in Terra.HAND_DRUMS || voice in TerraSticks.VOICES) {
                 fun bodyAt(v: Float): Terra.Body {
                     var seen: Terra.Body? = null
                     Terra.renderAt(voice, Terra.defaults(voice), v) { body -> seen = body; null }
@@ -298,7 +299,9 @@ class StrikeVelocityTest {
             // ratios over the same fundamental at every velocity). On their dense inharmonic heads the
             // detector's reading moves with the modes' balance: DARBUKA's (0, 1) mode is 340.0 Hz at
             // every velocity, read as 344.9 Hz hard and 337.9 soft, 35 cents apart.
-            if (p is TerraPatch && (p.voice == TerraVoice.BOX || p.voice in Terra.HAND_DRUMS)) continue
+            // The stick voices likewise: KA is a dense cluster with no single note (read 62 cents apart), and the
+            // bank test above holds every one's notes to the same ratios over the same fundamental.
+            if (p is TerraPatch && (p.voice == TerraVoice.BOX || p.voice in Terra.HAND_DRUMS || p.voice in TerraSticks.VOICES)) continue
             val hardSnip = p.render()
             if (hardSnip.durationSeconds < 0.32f) continue
             val hard = Pitch.detect(hardSnip, fromSec = 0.22f, windowSec = 0.10f) ?: continue

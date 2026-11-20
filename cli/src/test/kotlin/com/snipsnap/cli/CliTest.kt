@@ -1695,7 +1695,7 @@ class CliTest {
         // a pad that is not a twin has nothing of KERF's to undo, even with a take of its own in the bin
         KitBuilderModel.open(kitDir).apply { treatPad(2, "punched"); save() }
         val (neverCode, _, neverErr) = cli("kerf", kitDir.path, "A02", "--undo")
-        assertTrue(neverCode != 0 && "not a KERF twin" in neverErr, "exit $neverCode: $neverErr")
+        assertTrue(neverCode != 0 && com.snipsnap.shell.Copy.KERF_UNDO_NOTHING in neverErr, "exit $neverCode: $neverErr")
         assertEquals(1, KitBuilderModel.open(kitDir).priorTakes(2).size, "the treatment's take is still in the bin")
 
         // with a treatment riding the twin, the newest take in the bin is the twin itself: the undo refuses rather
@@ -1704,8 +1704,14 @@ class CliTest {
         KitBuilderModel.open(kitDir).apply { treatPad(3, "punched"); save() }
         val ridden = File(kitDir, KitStore.load(kitDir).pad(3)!!.sampleFile).readBytes()
         val (riddenCode, _, riddenErr) = cli("kerf", kitDir.path, "A03", "--undo")
-        assertTrue(riddenCode != 0 && "undo that first" in riddenErr, "exit $riddenCode: $riddenErr")
+        assertTrue(riddenCode != 0 && com.snipsnap.shell.Copy.KERF_UNDO_NOTHING in riddenErr, "exit $riddenCode: $riddenErr")
         assertTrue(ridden.contentEquals(File(kitDir, KitStore.load(kitDir).pad(3)!!.sampleFile).readBytes()), "the refusal touched nothing")
+        // Undoing that treatment leaves the twin's audio with no recipe to re-make it from (a treatment replaces the
+        // recipe, and its undo has always cleared it), so KERF's stamp goes with it: the pad no longer claims a twin.
+        KitBuilderModel.open(kitDir).apply { untreatPad(3); save() }
+        val after = KitStore.load(kitDir).pad(3)!!
+        assertNull(after.recipe); assertNull(after.source[KitBuilderModel.KERF_STAMP]); assertNull(after.source[KitBuilderModel.KERF_WAS])
+        assertEquals(1, KitBuilderModel.open(kitDir).priorTakes(3).size, "the capture is still in the bin")
 
         // the whole kit, each pad measured once from its capture; then all of them back
         val (allCode, allOut, allErr) = cli("kerf", kitDir.path, "--all")
@@ -1713,6 +1719,13 @@ class CliTest {
         val twins = KitStore.load(kitDir).pads.count { it.source[KitBuilderModel.KERF_STAMP] != null }
         assertContains(allOut, "$twins pads are KERF twins now")
         assertTrue(twins >= 6, "$twins of ${KitStore.load(kitDir).pads.size} pads became twins: $allOut")
+        // a twin's BLEED and SLOP move from its own numbers, and say so
+        val (recutCode, recutOut, recutErr) = cli("kerf", kitDir.path, "A01", "--recut", "--bleed", "1.8")
+        assertEquals(0, recutCode, "stderr: $recutErr")
+        assertContains(recutOut, "re-cut from its own numbers (bleed 1.80, slop 0.50)")
+        // a second --all leaves every twin as it is
+        val (secondCode, secondOut, _) = cli("kerf", kitDir.path, "--all")
+        assertEquals(0, secondCode); assertContains(secondOut, "a twin already")
         val (backCode, backOut, _) = cli("kerf", kitDir.path, "--all", "--undo")
         assertEquals(0, backCode); assertContains(backOut, "$twins pads restored")
 
