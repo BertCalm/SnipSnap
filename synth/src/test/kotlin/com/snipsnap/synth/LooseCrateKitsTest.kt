@@ -108,24 +108,29 @@ class LooseCrateKitsTest {
         }
         // On single hits the soft strike is also duller, measured dry (the converter's grain is a fixed size, so
         // it is relatively louder on a quiet hit and can brighten the printed soft zone; round 0's thud kick).
-        for (kit in Kit.entries) for (role in 0 until LooseCrateKits.HITS) {
-            if (role in subs(kit)) continue
-            val hard = LooseCrateKits.dry(kit, role, 1f, 0).samples
-            val soft = LooseCrateKits.dry(kit, role, .3f, 0).samples
-            assertTrue(brightness(soft) < brightness(hard), "${kit.name} role $role: soft is not duller than hard")
+        // Every offending pad is named at once, not only the first.
+        val brighter = buildList {
+            for (kit in Kit.entries) for (role in 0 until LooseCrateKits.HITS) {
+                if (role in subs(kit)) continue
+                val hard = brightness(LooseCrateKits.dry(kit, role, 1f, 0).samples)
+                val soft = brightness(LooseCrateKits.dry(kit, role, .3f, 0).samples)
+                if (soft >= hard) add("${kit.name} role $role (soft $soft, hard $hard)")
+            }
         }
+        assertTrue(brighter.isEmpty(), "soft is not duller than hard: $brighter")
     }
 
     @Test fun `the print never makes a softer hit brighter`() {
         // Fed in at its zone's level, a soft hit's converter grain was relatively louder and a 12-bit print
         // brightened every low or woody drum's soft zone. Every pad now enters the print at one level.
-        for (kit in Kit.entries) for (role in 0 until LooseCrateKits.HITS) {
-            if (role in subs(kit)) continue
-            val hard = rendered(kit, role, 1f, 0).samples
-            val soft = rendered(kit, role, .3f, 0).samples
-            val (cs, ch) = onsetCentroid(soft) to onsetCentroid(hard)
-            assertTrue(cs <= ch * 1.005, "${kit.name} role $role: printed soft onset centroid $cs Hz against hard $ch Hz")
+        val brighter = buildList {
+            for (kit in Kit.entries) for (role in 0 until LooseCrateKits.HITS) {
+                if (role in subs(kit)) continue
+                val (cs, ch) = onsetCentroid(rendered(kit, role, .3f, 0).samples) to onsetCentroid(rendered(kit, role, 1f, 0).samples)
+                if (cs > ch * 1.005) add("${kit.name} role $role (soft $cs Hz, hard $ch Hz)")
+            }
         }
+        assertTrue(brighter.isEmpty(), "printed soft onset brighter than hard: $brighter")
     }
 
     @Test fun `every zone holds four different strikes`() {
@@ -161,9 +166,18 @@ class LooseCrateKitsTest {
         }
     }
 
+    /** Sign changes a second: a frequency proxy that a speed-up scales exactly, however many strokes a hit holds. */
+    private fun crossingsPerSecond(x: FloatArray): Double {
+        var n = 0
+        for (i in 1 until x.size) if ((x[i - 1] < 0f) != (x[i] < 0f)) n++
+        return n.toDouble() * rate / x.size
+    }
+
     /**
      * SPEED is not a fifth genre: the owner chose "sped-up breaks" as HUMMIN's record played fast (round 0, settled
-     * 2026-11-20). What makes it SPEED is held instead: every hit is HUMMIN's, 1.35 times shorter and higher.
+     * 2026-11-20). What makes it SPEED is held instead: every hit is HUMMIN's, 1.35 times shorter, and the tonal drums
+     * (kicks and toms) 1.35 times higher, their zero crossings 1.35 times as frequent. A noisy drum's crossings measure
+     * the band's edge, not its pitch: the speed-up moves a snare's top past the Nyquist frequency and its rate hardly moves.
      */
     @Test fun `SPEED is HUMMIN played at 45 rpm`() {
         assertEquals(LooseCrateKits.roles(Kit.HUMMIN).take(LooseCrateKits.HITS), LooseCrateKits.roles(Kit.SPEED).take(LooseCrateKits.HITS))
@@ -173,7 +187,9 @@ class LooseCrateKitsTest {
             val fast = LooseCrateKits.dryRaw(Kit.SPEED, role, 1f, 0)
             val ratio = slow.size.toDouble() / fast.size
             assertTrue(abs(ratio - LooseCrateKits.SPEED_RATIO) < .01, "role $role: HUMMIN to SPEED length ratio $ratio")
-            assertTrue(onsetCentroid(fast) > onsetCentroid(slow), "role $role: SPEED's hit is not higher than HUMMIN's")
+            if (LooseCrateKits.classOf(Kit.HUMMIN, role) !in setOf(DrumClass.KICK, DrumClass.TOM)) continue
+            val higher = crossingsPerSecond(fast) / crossingsPerSecond(slow)
+            assertTrue(abs(higher - LooseCrateKits.SPEED_RATIO) < .1, "role $role: SPEED's hit is $higher times as high as HUMMIN's")
         }
     }
 

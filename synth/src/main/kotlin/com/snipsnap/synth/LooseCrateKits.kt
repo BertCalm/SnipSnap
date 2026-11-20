@@ -769,19 +769,40 @@ object LooseCrateKits {
 
     private const val RIDE_FADE_SECONDS = .50
 
+    /**
+     * A soft strike made duller, as LOOSE CRATE's own hats are ([hat]): EMBER's fitted hats are no darker soft than hard
+     * (the recordings' soft strokes), and the family holds every soft zone to a different and duller strike. Under
+     * [from] the strike is EMBER's at [from] through two one-poles falling from 10 kHz toward 2 kHz (the family hat's
+     * contact, steeper); at [from] and over nothing changes, so the break plays as it was chosen (the foot hat at weight
+     * .50 in the hard zone, the ride at .65 and .38, so the ride's [from] is .35). The stick ride's soft zone measured
+     * as bright as its hard one (0.6963 against 0.6956 of its energy over 2 kHz) before this.
+     */
+    private fun softDarker(strike: Strike, from: Float = CONTACT_FROM): Strike = { v, t, x ->
+        if (v >= from) strike(v, t, x) else {
+            val y = strike(from, t, x)
+            val r = v / from
+            val hz = 2_000f + 8_000f * r * r
+            val a = Dsp.FixedOnePole(hz)
+            val b = Dsp.FixedOnePole(hz)
+            FloatArray(y.size) { b.lp(a.lp(y[it])) }
+        }
+    }
+
+    private const val CONTACT_FROM = .5f
+
     private val brushTap = clearer(ember(EmberVoice.BRUSH_TAP, "TUNE" to .55f, "DAMP" to .35f, "BUZZ" to .55f), 3f)
 
     // The family's first four pads (kick, snare, hat, open hat); round 0's five sounds are pads 1, 2, 3, 5 and 6.
     private val blue: List<Part> = listOf(
         Part("Felt Kick", DrumClass.KICK, strike = clearer(ember(EmberVoice.KICK, "TUNE" to .35f, "DAMP" to .65f, "BUZZ" to .15f), 0f)),
         Part("Brush Tap", DrumClass.SNARE, strike = brushTap),
-        Part("Foot Hat", DrumClass.HAT_CLOSED, HAT_GROUP, clearer(ember(EmberVoice.HAT_FOOT, "TUNE" to .45f, "DAMP" to .50f, "BUZZ" to .10f), 3f)),
-        Part("Open Hat", DrumClass.HAT_OPEN, HAT_GROUP, clearer(ember(EmberVoice.HAT_OPEN, "TUNE" to .45f, "DAMP" to .40f), 3f)),
-        Part("Stick Ride", DrumClass.PERC, strike = stickRide),
+        Part("Foot Hat", DrumClass.HAT_CLOSED, HAT_GROUP, softDarker(clearer(ember(EmberVoice.HAT_FOOT, "TUNE" to .45f, "DAMP" to .50f, "BUZZ" to .10f), 3f))),
+        Part("Open Hat", DrumClass.HAT_OPEN, HAT_GROUP, softDarker(clearer(ember(EmberVoice.HAT_OPEN, "TUNE" to .45f, "DAMP" to .40f), 3f))),
+        Part("Stick Ride", DrumClass.PERC, strike = softDarker(stickRide, .35f)),
         Part("Shaker", DrumClass.PERC, strike = clearer(ember(EmberVoice.SHAKER, "TUNE" to .30f, "DAMP" to .45f), 3f)),
         Part("Ghost Tap", DrumClass.SNARE, strike = KitStrikes.softer(brushTap, .40f)),
         Part("Cross Stick", DrumClass.PERC, strike = clearer(ember(EmberVoice.CROSS_STICK, "TUNE" to .50f, "DAMP" to .40f, "BUZZ" to .30f), 3f)),
-        Part("Closed Hat", DrumClass.HAT_CLOSED, HAT_GROUP, clearer(ember(EmberVoice.HAT_CLOSED, "TUNE" to .45f, "DAMP" to .55f), 3f)),
+        Part("Closed Hat", DrumClass.HAT_CLOSED, HAT_GROUP, softDarker(clearer(ember(EmberVoice.HAT_CLOSED, "TUNE" to .45f, "DAMP" to .55f), 3f))),
         Part("Soft Kick", DrumClass.KICK, strike = clearer(ember(EmberVoice.KICK, "TUNE" to .28f, "DAMP" to .80f, "BUZZ" to .10f), 0f)),
         Part("Rack Tom", DrumClass.TOM, strike = clearer(ember(EmberVoice.TOM_RACK, "TUNE" to .55f, "DAMP" to .45f, "BUZZ" to .20f), 0f)),
         Part("Floor Tom", DrumClass.TOM, strike = clearer(ember(EmberVoice.TOM_FLOOR, "TUNE" to .40f, "DAMP" to .45f, "BUZZ" to .20f), 0f)),

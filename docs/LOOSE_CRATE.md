@@ -283,7 +283,7 @@ Disclosed, not asked for: the groove's 0.5 to 2 kHz still sits near -22 dB again
 is the reference snare's crack and beater knock, not the bass; CLOTH's bounce snare is a deep body and wires with
 little between. Left for the owner to call.
 
-## Expansion: BLUE, SPEED, RAGA (round 0 settled)
+## Expansion: BLUE, SPEED, RAGA (round 0 settled; round 1 built)
 
 Asked which adjacent kits would extend the collection, the owner chose all three proposed (2026-11-18): BLUE (jazz
 breaks off a record), SPEED (sped-up breaks) and RAGA (Indian-record percussion). Nearest siblings and what differs:
@@ -453,6 +453,46 @@ round robin proved through saving, playback and export, as the first four were.
 
 [Expansion round 0 listening page](https://claude.ai/artifact/Q3rZ8po8ZaeJs9E4tNd86s) (private to the owner; what is
 decided and the three open questions at the top, then BLUE's history, SPEED and RAGA).
+
+## Expansion round 1: the three kits (as built; the new pads not yet heard)
+
+The owner approved the three pad lists on 2026-11-20 ("Build as proposed"). `LooseCrateKits` holds BLUE, SPEED and
+RAGA as kits 5 to 7, in the family's shape: fourteen hits of three velocity zones and four takes, an accelerating roll
+on A15, a four-bar groove on A16, registered after RITUAL on the SKINS shelf.
+
+| Kit | Pads 1 to 14 (heard at round 0 in bold) | A15, A16 | Print, room |
+|---|---|---|---|
+| BLUE (90) | **Felt Kick**, **Brush Tap**, **Foot Hat**, Open Hat, **Stick Ride**, **Shaker**, Ghost Tap, Cross Stick, Closed Hat, Soft Kick, Rack Tom, Floor Tom, Finger Snaps, Rimshot | Tap Roll, **Blue Break** | `BLUE_PRINT`; round 0l's room |
+| SPEED (108) | HUMMIN's fourteen, each struck and resampled 1.35 times faster | Sped Roll, **Speed Groove** | CRATE; HUMMIN's room at 80, then sped |
+| RAGA (94) | **Dayan Na**, **Bayan Ge**, **Dayan Ti**, **Thud Kick**, **Slap Snare**, **Dholak**, Bayan Low, Dayan Tin, Dayan Te, Bayan Ka, Dholak Boom, Dholak High, Ghost Snare, Bell Clink | Tabla Roll, **Raga Groove** | CRATE; round 0's room |
+
+What changed in the family to hold them, and why:
+- **No wires where the room has none.** `played` laid the snare wires under every kick at a floor weight of .05 even
+  with `wireWeight` 0 (a note's level follows its weight only gently, so that floor is about a third of full). BLUE's
+  break and RAGA's groove were heard with none. The first four kits all have wires, so their audio is unchanged.
+- **SPEED is HUMMIN's speed variant, not a fifth genre.** The engine gates hold that "different effect strengths on
+  the same kit are not sufficient evidence of distinct genre kits"; the owner chose SPEED as HUMMIN's record played
+  fast. `LooseCrateKitsTest` holds the six genre kits pairwise distinct (six pad names, the first two pads different
+  drums dry) and holds SPEED to its definition instead: HUMMIN's fourteen names, every hit 1.35 times shorter, every
+  kick and tom 1.35 times higher by zero crossings (a snare's crossings measure the band's edge, which the speed-up
+  moves past the Nyquist frequency, not its pitch).
+- **BLUE's pads follow the family's first four** (kick, snare, hat, open hat), the break's notes remapped so it plays
+  as chosen. **RAGA opens with its tabla** (Dayan Na, Bayan Ge): it has no hats, and the tabla leads. Its kick and slap
+  snare are RITUAL's, which first-two-pads distinctness would have caught on pads 1 and 2.
+- **Soft zones duller on BLUE's EMBER hats and ride.** EMBER's fitted foot, closed and open hats and the shaped stick
+  ride measured as bright soft as hard, against the family's rule that a softer hit is a different and duller strike
+  (dry, the share over 2 kHz; printed, the onset centroid): the foot hat's printed soft onset at 5,741 Hz against hard
+  5,553, the ride's dry share 0.6963 against 0.6956. Under a threshold the strike is EMBER's at the threshold through two
+  one-poles falling from 10 kHz toward 2 kHz (`softDarker`): .5 for the hats, .35 for the ride, so the break (the foot
+  hat at .50, the ride at .65 and .38 in the hard zone) is untouched.
+- **RAGA's takes vary** in force and decay (the family's TERRA strike); round 0 re-seeded only, which measured too
+  close on a soft doum in round 1. RAGA's groove differs from round 0's by that alone (-24 dB, correlation 0.998).
+
+Measured against round 0's renders, through the kit: BLUE's break and its five heard hits, and SPEED's groove, match to
+rounding (-135 to -142 dB); RAGA's heard hits match to rounding. The grooves' quietest tenth of 10 ms frames sits 31.5
+(BLUE), 30.4 (SPEED) and 17.7 dB (RAGA) under the loudest; with no references, the test's bands sit 6 dB either side.
+BLUE's and RAGA's kicks, played as settled with no curve, land 5.1 and 5.2 dB apart (the first four's references: 5 to
+12, held at 8); the test holds the expansion to 4.
 
 ## Gates
 
