@@ -1140,7 +1140,7 @@ Native numerical checks and three software-emulator functional tests passed
 with the documented ART setup. The full nine-module JVM gate at `00a1f9ff`
 passed 8,010 tests with zero failures/errors/skips. Both final Android builds
 passed at that source; the rebuilt development APK has not been device-executed.
-Owner listening and physical phone/MPC acceptance remain open.
+Physical phone/MPC acceptance remains open.
 [Usage and limits](docs/ACCORD.md) link the design and frozen references.
 
 TIDAL brings two original source populations through a seeded encounter:
