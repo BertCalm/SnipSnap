@@ -125,6 +125,17 @@ class KerfPadTest {
         assertTrue(original.contentEquals(File(dir, "hit1.wav").readBytes()), "after re-cuts, the undo is still the capture")
     }
 
+    @Test fun `on a lone twin BLEED moves nothing and SLOP moves the cut, which is why the sheet shows only SLOP there`() {
+        val dir = kit(1)
+        KitBuilderModel.open(dir).apply { kerfPad(1); save() }
+        val made = File(dir, "hit1.wav").readBytes()
+        assertNull(Breed.recipeOf(pad(dir))!!.kerf!!.prev)
+        KitBuilderModel.open(dir).apply { recutKerfPad(1, bleed = 2.0, slop = 0.5); save() }
+        assertTrue(made.contentEquals(File(dir, "hit1.wav").readBytes()), "no hit before it: BLEED has nothing to bleed")
+        KitBuilderModel.open(dir).apply { recutKerfPad(1, bleed = 2.0, slop = 0.0); save() }
+        assertFalse(made.contentEquals(File(dir, "hit1.wav").readBytes()), "SLOP changes the cut (its edge, at least) with no neighbours")
+    }
+
     @Test fun `a twin with something riding it is not re-cut, and a twin is not made twice`() {
         val dir = kit(1)
         KitBuilderModel.open(dir).apply { kerfPad(1); save() }

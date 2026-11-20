@@ -4513,12 +4513,14 @@ fun PadSheetScreen(
             // (onKerfRecut), from the pad's own numbers. BLEED reads 0..2 here
             // (the house range is 0..4; past 2 the last hit swamps this one),
             // SLOP 0..1. Each starts where the pad's recipe has it, and moves
-            // back there if the pad changes under it.
+            // back there if the pad changes under it. BLEED only where there is a
+            // hit before this one to bleed in: a twin made alone (a one-pad kit)
+            // has none, and a control that moves nothing would read as broken.
             val twin = remember(pad.recipe, pad.source) { if (PadSheet.isKerfTwin(pad)) Breed.recipeOf(pad)?.kerf else null }
             if (twin != null) {
                 var bleedFraction by remember(pad.recipe) { mutableStateOf((twin.bleed / 2.0).toFloat().coerceIn(0f, 1f)) }
                 var slopFraction by remember(pad.recipe) { mutableStateOf(twin.slop.toFloat().coerceIn(0f, 1f)) }
-                StepperSlider(
+                if (twin.prev != null) StepperSlider(
                     label = "BLEED",
                     fraction = bleedFraction,
                     valueText = "%.1f".format(java.util.Locale.ROOT, bleedFraction * 2f),

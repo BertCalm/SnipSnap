@@ -261,11 +261,15 @@ class PadSheetUndoScreenTest : ComposeScreenTest() {
     }
 
     /**
-     * BLEED on a twin re-cuts it from its own numbers when let go, with no new take in the bin, so UNDO SYNTH TWIN
+     * SLOP on a twin re-cuts it from its own numbers when let go, with no new take in the bin, so UNDO SYNTH TWIN
      * still gives the capture afterwards. Moved through the slider's adjust action, the one TalkBack uses.
+     *
+     * This kit is one pad, so the twin has no hit before it to bleed in, and the sheet offers no BLEED. (The first
+     * version of this test moved BLEED here and failed on CI: the re-cut saved BLEED 2.0 and wrote the same audio,
+     * because there was nothing to bleed. That is why the sheet hides it now.)
      */
     @Test
-    fun synth_twin_bleed_recuts_the_twin_and_its_undo_still_gives_the_capture() {
+    fun synth_twin_slop_recuts_the_twin_and_its_undo_still_gives_the_capture() {
         val entry = kit()
         val original = File(entry.dir, "hit1.wav").readBytes()
         KitBuilderModel.open(entry.dir).apply { kerfPad(1); save() }
@@ -273,15 +277,17 @@ class PadSheetUndoScreenTest : ComposeScreenTest() {
         val takes = KitBuilderModel.open(entry.dir).priorTakes(1).size
 
         show(KitShelf.Entry(entry.dir, KitStore.load(entry.dir)), openBox = PadSheetBoxes.Box.MAKE.name, page = PadSheetPage.MAKE)
-        waitFor("the twin's BLEED to be live", timeoutMillis = 60_000) {
-            val node = nodes("SYNTH TWIN BLEED").singleOrNull()
+        waitFor("the twin's SLOP to be live", timeoutMillis = 60_000) {
+            val node = nodes("SYNTH TWIN SLOP").singleOrNull()
             node != null && node.config.getOrNull(SemanticsActions.SetProgress) != null
         }
-        compose.onNodeWithContentDescription("SYNTH TWIN BLEED", useUnmergedTree = true)
-            .performSemanticsAction(SemanticsActions.SetProgress) { it(1f) }
+        assertTrue("a twin with no hit before it offers no BLEED", nodes("SYNTH TWIN BLEED").isEmpty())
+        // SLOP 0 from 0.5: the cut's edge fade alone goes from 0.55 ms to 1 ms, so the audio must change
+        compose.onNodeWithContentDescription("SYNTH TWIN SLOP", useUnmergedTree = true)
+            .performSemanticsAction(SemanticsActions.SetProgress) { it(0f) }
         pump()
         waitFor("the re-cut to be saved", timeoutMillis = 60_000) {
-            com.snipsnap.shell.Breed.recipeOf(savedPad(entry))?.kerf?.bleed == 2.0
+            com.snipsnap.shell.Breed.recipeOf(savedPad(entry))?.kerf?.slop == 0.0
         }
         assertFalse("the pad's audio is the new cut", made.contentEquals(File(entry.dir, "hit1.wav").readBytes()))
         assertEquals("no new take in the bin", takes, KitBuilderModel.open(entry.dir).priorTakes(1).size)

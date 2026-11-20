@@ -724,7 +724,9 @@ as missing from the screen.
 - **BLEED and SLOP** on a bare twin, in the MAKE box's SYNTH TWIN row. Let go of either and
   the pad is re-cut from its own saved numbers (`KitBuilderModel.recutKerfPad`), about a
   tenth of a second. BLEED reads 0 to 2 on the sheet (the recipe allows 4; past 2 the last
-  hit swamps this one), SLOP 0 to 1.
+  hit swamps this one), SLOP 0 to 1. BLEED is shown only on a twin with a hit before it: a
+  twin made alone has nothing to bleed in, and CI's first emulator run caught exactly that
+  (the device test moved BLEED on a one-pad kit and the audio did not change).
 - `snipsnap kerf <kit> <pad> --recut [--bleed] [--slop]`, the same door.
 
 Decided here, and why:
