@@ -296,3 +296,18 @@ What changed against this brief:
 | Kotlin mechanics (pitch, overblow, odd harmonics, classes, JSON, determinism) | measured | `ConsortTest`, 16 tests; the audition's `metrics.csv` |
 | Kotlin sound | not heard | awaiting the owner |
 
+## As built: Kotlin round K2, render time (2026-11-20)
+
+K1's audition measured a solo note at a median 109 ms and a section at 324 ms. I had written
+that the player's plan was the cost; timing each stage said otherwise (plan 6 ms of a 53 ms dry
+note; the body 18, the band limit 16). So:
+
+- the body runs after the decimator (its filters are linear and under 10 kHz): 18 ms to 5 ms;
+- the room's size search and click response are kept per ROOM value: about 12 ms a render;
+- a section's players are blown side by side and seated in chair order, as BREAKER's fill does;
+- the plan's slow curves are worked out every 64 samples and drawn as lines between.
+
+Measured on the 100-clip audition (4 cores): solo median 73 ms, section median 100 ms. All
+clips still file correctly and the solo voices stay within 7.5 cents. Renders are not byte
+identical to K1's (the body's filters now run at 44.1 kHz); nobody had heard K1's.
+

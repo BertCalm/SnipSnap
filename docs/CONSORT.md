@@ -50,13 +50,17 @@ The section, the velocity and the take are fields on `ConsortPatch`, not macros.
 | Hard FLUTE | 1201 cents: the octave |
 | Cylinders | CLARINET's and DUDUK's second harmonic over 20 dB under the first |
 | Classifier | none of the 100 audition clips, and none of the test's 180 short renders, files as a drum |
-| Render time | solo 61 to 285 ms (median 109); section 194 to 440 ms (median 324) |
+| Render time (after the K2 speed pass, 4 cores) | solo 34 to 169 ms (median 73); section 57 to 214 ms (median 100). Before: solo median 109, section median 324 |
 
 ## Disclosed, not fixed
 
-- **Render time is over the house rule** ("tens of ms"). The player's plan computes seven slow
-  wanders and several transcendental functions every internal sample; most of it could move to
-  the 64-sample block the pitch already uses. Not done.
+- **Render time is still over the house rule** ("tens of ms") for long notes and sections. The K2
+  pass moved the tone filters to the output rate (18 ms to 5 ms a note), keeps the room's setup
+  per ROOM value (about 12 ms a render), blows a section's players side by side, and works the
+  slow parts of the plan out every 64 samples. What is left on a default 1.3 s note, measured:
+  the house band limit before the decimator 16 to 20 ms, the pipe 8 to 9, the plan 6 to 7, the
+  body 5, the reed's bend 3 to 4, and the room about 24. A section's time now depends on the
+  cores it has.
 - **HOLD does not loop.** A loop with a room in it needs a periodic wash, or the room applied
   after the loop. `Consort.isLoop` is false at every setting and a test says so.
 - **Eight controls**, HOLD included, where the house asks for three to six plus HOLD. TREMOR has

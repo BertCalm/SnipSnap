@@ -342,33 +342,38 @@ object Consort {
         val jet = FloatArray(frames)
         // the trill's "upper note" flag, smoothed below: each finger move takes about 12 ms, not zero
         val upper = if (trilling) FloatArray(frames) else null
-        var vibPhase = vibPhase0
-        var trillPhase = 0.0
+        // The slow parts of a performance (the breath's swell and wander, the pitch's drift and settle, the
+        // vibrato's depth and speed, the air) change over tens of milliseconds, so they are worked out once
+        // every BLOCK samples (0.36 ms) and drawn as straight lines between. Only what must be exact to the
+        // sample is done per sample: the attack and release, the vibrato's own sine, the flutter and the growl.
+        // Measured on a default OBOE note: the plan takes 6 ms of a 53 ms dry render this way.
         val dt = 1.0 / INTERNAL
-        for (i in 0 until frames) {
-            val t = i * dt
+        val blocks = frames / BLOCK + 2
+        val slowEnv = FloatArray(blocks)
+        val slowCents = FloatArray(blocks)
+        val slowScale = FloatArray(blocks)
+        val slowDepth = FloatArray(blocks)
+        val slowRate = FloatArray(blocks)
+        val slowNoise = FloatArray(blocks)
+        val slowTrill = FloatArray(blocks)
+        val slowDuty = FloatArray(blocks)
+        val breathDepth = Dsp.lin(loose, 0.01f, 0.09f)
+        for (k in 0 until blocks) {
+            val t = k * BLOCK * dt
             val tt = max(t - late, 0.0)
             val frac = (tt / max(blown, 1e-3f)).coerceIn(0.0, 1.0)
-            var env = if (t < late) 0.0 else (tt / attack).coerceIn(0.0, 1.0).pow(0.7)
-            env *= ((ends - t) / release).coerceIn(0.0, 1.0)                        // the breath stops, the pipe rings out
-            env *= 1.0 + 0.06 * sin(PI * frac) * (0.5 + effort)                     // a breath swells toward the middle
-            // and it runs out: over the last third the pressure tapers and the pitch sags with it
+            // a breath swells toward the middle, and it runs out: over the last third the pressure tapers and the pitch sags
             val tired = ((frac - 0.67) / 0.33).coerceIn(0.0, 1.0).let { it * it }
-            env *= 1.0 - 0.14 * loose * tired
             // the diaphragm is not a pump: the pressure wanders a few percent the whole way through
-            env *= 1.0 + Dsp.lin(loose, 0.01f, 0.09f) * breathWander.at(t)
-
-            // a played vibrato is not a sine from a box: its speed and depth wander, and it shakes the breath as well as the pitch
-            vibPhase += 2.0 * PI * vibHz * (1.0 + 0.09 * loose * rateWander.at(t)) * dt
-            val rise = ((tt - vibStart) / 0.35).coerceIn(0.0, 1.0)
-            val vibDepth = vibBase * rise * (1.0 + 0.35 * loose * depthWander.at(t))
-            var c = vibDepth * sin(vibPhase)
-            env *= 1.0 + 0.0025 * vibDepth * sin(vibPhase + 0.6)
-            c += driftCents * drift.at(t) + flat - 9.0 * loose * tired
+            slowEnv[k] = ((1.0 + 0.06 * sin(PI * frac) * (0.5 + effort)) * (1.0 - 0.14 * loose * tired) *
+                (1.0 + breathDepth * breathWander.at(t))).toFloat()
+            // a played vibrato is not a sine from a box: its speed and depth wander
+            slowRate[k] = (vibHz * (1.0 + 0.09 * loose * rateWander.at(t))).toFloat()
+            slowDepth[k] = (vibBase * ((tt - vibStart) / 0.35).coerceIn(0.0, 1.0) * (1.0 + 0.35 * loose * depthWander.at(t))).toFloat()
+            var c = driftCents * drift.at(t) + flat - 9.0 * loose * tired
             // every wind attack starts a few cents under and settles; a harder blow starts further under
             c -= underCents * exp(-tt / 0.04)
             c -= takeScoop * exp(-tt / 0.13)                                        // the "leaning" take comes up into the note
-
             var scale = 1.0
             when (gesture) {
                 ConsortGesture.SCOOP -> c -= scoopCents * exp(-tt / scoopTau)
@@ -376,36 +381,64 @@ object Consort {
                     // the end of the note drops away: pitch falls and the breath lets go with it
                     val x = ((t - (ends - fallLength)) / fallLength).coerceIn(0.0, 1.0)
                     c -= fallCents * x.pow(1.6)
-                    scale *= 1.0 - 0.45 * x
+                    scale = 1.0 - 0.45 * x
                 }
                 else -> {}
             }
-            if (upper != null) {
+            slowCents[k] = c.toFloat()
+            slowScale[k] = scale.toFloat()
+            // extra air at the tongue (the chiff), and the leak is never steady
+            slowNoise[k] = (noiseBase * (1.0 + chiff * exp(-tt / 0.05)) * (1.0 + 0.4 * loose * airWander.at(t))).toFloat()
+            if (trilling) {
                 // the trill starts slow and speeds up, and the upper note is held a little shorter than the lower
-                val rate = (trillBase + trillGrow * ((tt - 0.22) / 1.2).coerceIn(0.0, 1.0)) * (1.0 + 0.05 * trillWander.at(t))
-                trillPhase += rate * dt
-                val duty = 0.46 + 0.07 * loose * dutyWander.at(t)
-                if (trillPhase - floor(trillPhase) < duty && tt > 0.22 && t < ends - 0.05) upper[i] = 1f
+                slowTrill[k] = ((trillBase + trillGrow * ((tt - 0.22) / 1.2).coerceIn(0.0, 1.0)) * (1.0 + 0.05 * trillWander.at(t))).toFloat()
+                slowDuty[k] = (0.46 + 0.07 * loose * dutyWander.at(t)).toFloat()
+            }
+        }
+        var vibPhase = vibPhase0
+        var trillPhase = 0.0
+        val twoPi = 2.0 * PI
+        for (i in 0 until frames) {
+            val t = i * dt
+            val tt = max(t - late, 0.0)
+            val k = i / BLOCK
+            val f = (i - k * BLOCK).toFloat() / BLOCK
+            fun line(a: FloatArray): Float = a[k] + (a[k + 1] - a[k]) * f
+            // to the sample: the tongue opens the note, and the breath stops and lets the pipe ring out
+            var env = if (t < late) 0.0 else if (tt >= attack) 1.0 else (tt / attack).pow(0.7)
+            env *= ((ends - t) / release).coerceIn(0.0, 1.0)
+            env *= line(slowEnv)
+            // the vibrato shakes the breath as well as the pitch
+            vibPhase += twoPi * line(slowRate) * dt
+            val depth = line(slowDepth)
+            var c = line(slowCents).toDouble()
+            if (depth != 0f) {
+                c += depth * sin(vibPhase)
+                env *= 1.0 + 0.0025 * depth * sin(vibPhase + 0.6)
+            }
+            var scale = line(slowScale).toDouble()
+            if (upper != null) {
+                trillPhase += line(slowTrill) * dt
+                if (trillPhase - floor(trillPhase) < line(slowDuty) && tt > 0.22 && t < ends - 0.05) upper[i] = 1f
             }
             if (fluttering) {
                 // flutter-tongue: the tongue rolls and chops the breath
-                scale *= 1.0 - flutterDepth * (0.5 + 0.5 * sin(2.0 * PI * FLUTTER_HZ * tt)) * ((tt - 0.05) / 0.08).coerceIn(0.0, 1.0)
+                scale *= 1.0 - flutterDepth * (0.5 + 0.5 * sin(twoPi * FLUTTER_HZ * tt)) * ((tt - 0.05) / 0.08).coerceIn(0.0, 1.0)
             }
             var j = 0.5
             if (over > 0f) {
                 if (jetPipe) {
                     // the flute's overblow: once the low note has spoken the jet's transit time halves and the note cracks to the octave
                     j -= 0.25 * ((tt - 0.14) / 0.005).coerceIn(0.0, 1.0)
-                    scale *= 1.0 + 0.25 * over * sin(2.0 * PI * GROWL_HZ * tt) * ((tt - 0.2) / 0.05).coerceIn(0.0, 1.0)
+                    scale *= 1.0 + 0.25 * over * sin(twoPi * GROWL_HZ * tt) * ((tt - 0.2) / 0.05).coerceIn(0.0, 1.0)
                 } else {
                     // an overblown reed growls: the throat shakes the mouth pressure
-                    scale *= 1.0 + growl * sin(2.0 * PI * GROWL_HZ * tt) * ((tt - 0.06) / 0.05).coerceIn(0.0, 1.0)
+                    scale *= 1.0 + growl * sin(twoPi * GROWL_HZ * tt) * ((tt - 0.06) / 0.05).coerceIn(0.0, 1.0)
                 }
             }
             pressure[i] = (env * scale).toFloat()
             cents[i] = c.toFloat()
-            // extra air at the tongue (the chiff), and the leak is never steady
-            noise[i] = (noiseBase * (1.0 + chiff * exp(-tt / 0.05)) * (1.0 + 0.4 * loose * airWander.at(t))).toFloat()
+            noise[i] = line(slowNoise)
             jet[i] = j.toFloat()
         }
         if (upper != null) {
@@ -555,14 +588,18 @@ object Consort {
      * The instrument's fixed tone shape. A bell radiates highs better than lows, so the bore wave is
      * tilted up between 300 Hz and a corner that opens with effort; then each formant is a bump that
      * does not move with the note; then the top is rolled off at 9 kHz.
+     *
+     * It runs at the output rate, after the decimator. Every stage here is a linear filter working under
+     * 10 kHz, so it has no need of the oversampled rate (only the reed's bend, [rasp], makes new harmonics),
+     * and at a quarter of the samples it costs a quarter: measured, 18 ms of a 53 ms note before the move.
      */
-    internal fun body(x: FloatArray, voice: ConsortVoice, effort: Float) {
+    internal fun body(x: FloatArray, voice: ConsortVoice, effort: Float, rate: Int = RATE) {
         val s = spec(voice)
         val tilt = s.tiltHz * Dsp.expMap(effort, 0.45f, 1.6f)
-        val low = Dsp.FixedOnePole(150f, INTERNAL)
-        val corner = Dsp.FixedOnePole(tilt, INTERNAL)
+        val low = Dsp.FixedOnePole(150f, rate)
+        val corner = Dsp.FixedOnePole(tilt, rate)
         val lift = tilt / 300f
-        val peaks = s.formants.map { (hz, db, q) -> Dsp.Biquad().apply { peaking(hz, db, q, INTERNAL) } }
+        val peaks = s.formants.map { (hz, db, q) -> Dsp.Biquad().apply { peaking(hz, db, q, rate) } }
         for (i in x.indices) {
             val high = x[i] - low.lp(x[i])                           // nothing radiates below about 150 Hz
             val l = corner.lp(high)
@@ -570,7 +607,7 @@ object Consort {
             for (p in peaks) y = p.process(y)
             x[i] = y
         }
-        Dsp.TptSvf(INTERNAL).lowPassInPlace(x, TOP_HZ, 1.414f)
+        Dsp.TptSvf(rate).lowPassInPlace(x, TOP_HZ, 1.414f)
     }
 
     /** One player, dry, at the output rate and at unit level (RMS after the attack), ready to be seated. */
@@ -578,9 +615,9 @@ object Consort {
         val p = plan(voice, midi, velocity, m, role, frames * Dsp.OVERSAMPLE, take)
         val raw = blow(voice, Keys.midiHz(midi), p)
         rasp(raw, voice, p.effort)
-        body(raw, voice, p.effort)
         Tide.bandLimit(raw, INTERNAL)
         val y = Dsp.decimate(raw, RATE)
+        body(y, voice, p.effort)
         var sum = 0.0
         val from = min((0.1f * RATE).toInt(), y.size / 2)
         for (i in from until y.size) sum += y[i].toDouble() * y[i]
@@ -632,8 +669,32 @@ object Consort {
      * it at about its own level times the wet gain, whatever the decay.
      */
     private fun wash(mix: FloatArray, room: Float) {
+        val space = spaceFor(room)
+        val p = space.plan
+        val wet = 10f.pow(Dsp.lin(room, -16f, -5f) / 20f) / sqrt(max(space.energy, 1e-24)).toFloat()
+        val start = (0.025f * RATE).toInt()
+        val feed = FloatArray(mix.size)
+        for (i in 0 until mix.size - start) feed[i + start] = mix[i]
+        val late = Room.bloom(feed, p, RATE)
+        for (i in mix.indices) mix[i] += wet * late[i]
+    }
+
+    /** The wash's network for one ROOM value and the energy of its response to one click. */
+    private class Space(val plan: Room.Plan, val energy: Double)
+
+    /**
+     * Precomputed per ROOM value and kept: finding the ROOM size whose decay is the one wanted (its decay
+     * grows with size) and measuring the network's click response depend on the knob alone, and together
+     * they were about 12 ms of every render. The result is a pure function of [room], so keeping it changes
+     * no sample. The cache is dropped whole if a session ever fills it with [SPACES] distinct knob values.
+     */
+    private val spaces = java.util.concurrent.ConcurrentHashMap<Int, Space>()
+    private const val SPACES = 256
+
+    private fun spaceFor(room: Float): Space {
+        val key = room.toRawBits()
+        spaces[key]?.let { return it }
         val want = washSeconds(room)
-        // find the ROOM size whose decay is the one wanted (its decay grows with size)
         var lo = 0f
         var hi = 1f
         repeat(14) {
@@ -644,12 +705,10 @@ object Consort {
         val click = FloatArray((1.2f * RATE).toInt()).also { it[0] = 1f }
         var energy = 0.0
         for (v in Room.bloom(click, p, RATE)) energy += v.toDouble() * v
-        val wet = 10f.pow(Dsp.lin(room, -16f, -5f) / 20f) / sqrt(max(energy, 1e-24)).toFloat()
-        val start = (0.025f * RATE).toInt()
-        val feed = FloatArray(mix.size)
-        for (i in 0 until mix.size - start) feed[i + start] = mix[i]
-        val late = Room.bloom(feed, p, RATE)
-        for (i in mix.indices) mix[i] += wet * late[i]
+        val made = Space(p, energy)
+        if (spaces.size >= SPACES) spaces.clear()
+        spaces[key] = made
+        return made
     }
 
     /**
@@ -675,10 +734,19 @@ object Consort {
         // BLEND is how far forward the section sits: tucked 14 dB under the lead, up to level with it
         val blend = 10f.pow(Dsp.lin(m.getValue("BLEND"), -14f, 0f) / 20f)
         val leadDistance = dist(CHAIRS[0], MIC)
-        for (role in 0..chairs.size) {
+        // Each player is their own pipe and shares nothing with the others, so a section's players are
+        // blown side by side (BREAKER's fill does the same with its toms) and then seated in chair order,
+        // which keeps the sum, and so every sample, the same from run to run.
+        fun blown(role: Int): FloatArray {
             val who = if (role == 0) voice else chairs[role - 1].voice
             val note = if (role == 0) midi else midi + chairs[role - 1].interval.semitones
-            val y = player(who, note, if (role == 0) v else v * 0.92f, m, role, dry, take)
+            return player(who, note, if (role == 0) v else v * 0.92f, m, role, dry, take)
+        }
+        val roles = (0..chairs.size).toList()
+        val players = if (chairs.isEmpty()) listOf(blown(0))
+            else roles.parallelStream().map { blown(it) }.collect(java.util.stream.Collectors.toList())
+        for (role in roles) {
+            val y = players[role]
             // further chairs are quieter and arrive later, as well as bouncing differently
             val d = dist(CHAIRS[role], MIC)
             val level = (if (role == 0) 1f else blend) * (leadDistance / d).pow(0.6f * room)

@@ -70,7 +70,8 @@ class ConsortTest {
             var peak = 0f
             var mean = 0.0
             for (v in s.samples) { assertTrue(v.isFinite(), "$voice has a non-finite sample"); peak = maxOf(peak, abs(v)); mean += v }
-            assertTrue(peak in 0.01f..0.99f, "$voice peak $peak")
+            // Dsp.levelTo limits the peak to 0.99; scaling to it in Float can land a few ulps over (0.99000007 was read)
+            assertTrue(peak in 0.01f..0.9901f, "$voice peak $peak")
             assertTrue(abs(mean / s.samples.size) < 0.005, "$voice mean ${mean / s.samples.size}")
             val loud = Loudness.of(s)
             assertTrue(loud >= 0.9f * Dsp.MELODIC_LOUDNESS_TARGET || peak >= 0.95f, "$voice loudness $loud, peak $peak")
