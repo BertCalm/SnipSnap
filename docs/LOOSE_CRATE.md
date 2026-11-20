@@ -283,7 +283,7 @@ Disclosed, not asked for: the groove's 0.5 to 2 kHz still sits near -22 dB again
 is the reference snare's crack and beater knock, not the bass; CLOTH's bounce snare is a deep body and wires with
 little between. Left for the owner to call.
 
-## Expansion: BLUE, SPEED, RAGA (round 0, not yet heard)
+## Expansion: BLUE, SPEED, RAGA (round 0; SPEED and RAGA kept)
 
 Asked which adjacent kits would extend the collection, the owner chose all three proposed (2026-11-18): BLUE (jazz
 breaks off a record), SPEED (sped-up breaks) and RAGA (Indian-record percussion). Nearest siblings and what differs:
@@ -434,8 +434,12 @@ grooves: the centre from 316-360 to 488-561 Hz, 2 to 6 kHz up 2.6 to 3.8 dB, 6 t
 1 kHz down 1.4 to 1.7 (less box), clarity from 1.4-1.6 to 2.7 dB. Lesson for the kits: a print tuned for one voice
 (the ride) can bury the others; measure the kit without it.
 
-[Expansion round 0 listening page](https://claude.ai/artifact/Q3rZ8po8ZaeJs9E4tNd86s) (private to the owner; BLUE's
-grooves at rounds 0l and 0k, its ride at rounds 0k (two ring lengths) and 0j, and the shaker at two levels).
+**SPEED and RAGA kept.** "Keep speed and raga" (the owner, 2026-11-20). Still open for them: whether SPEED's 1.35
+speed-up is right, subtler or more extreme, and whether RAGA's tabla leads or sits under the kick and snare. For BLUE:
+whether round 0l cleared the muffled room, groove A, B or C, and the ride's ring quick or longer.
+
+[Expansion round 0 listening page](https://claude.ai/artifact/Q3rZ8po8ZaeJs9E4tNd86s) (private to the owner; the five
+open questions at the top, then BLUE's history, SPEED and RAGA).
 
 ## Gates
 
