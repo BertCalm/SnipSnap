@@ -3537,4 +3537,88 @@ TEST(split_aquarium_combined_stems_match_a_fresh_post_sum_bus_and_print_with_zer
     CHECK(!live.aquariumFaulted());
 }
 
+// ---- the whole-kit glue (GlueBus.h) in the pads' callback -------------------
+
+namespace {
+
+GlueSettings glueOn(float thresholdDbfs, float ratio, float driveDb, float ceilingDbfs) {
+    GlueSettings s;
+    s.enabled = true;
+    s.thresholdDbfs = thresholdDbfs;
+    s.ratio = ratio;
+    s.driveDb = driveDb;
+    s.ceilingDbfs = ceilingDbfs;
+    return s;
+}
+
+/** A kit of one long ramp 0 .. 0.999, so a frame's value names the frame it came from. */
+PadEngine* rampKit() {
+    auto* e = new PadEngine(kRate);
+    e->beginBank();
+    e->addSample(ramp(1000), 1, kRate);
+    e->commitBank();
+    callback(*e, 8);  // adopt
+    return e;
+}
+
+}  // namespace
+
+TEST(pad_engine_glue_off_is_the_mix_bit_for_bit) {
+    // The same hits through two engines, one told the glue is off: not one sample may differ.
+    PadEngine* plain = rampKit();
+    PadEngine* told = rampKit();
+    CHECK(told->configureGlue(GlueSettings{}));
+    for (PadEngine* e : {plain, told}) {
+        e->pushCommand(noteOn(1, 0, 0, 1000, 0.8f, 0.6f));
+        e->pushCommand(noteOn(2, 0, 100, 900, 0.5f, 0.9f, 1.5));
+    }
+    for (int block = 0; block < 6; ++block) {
+        const auto a = callback(*plain, 192);
+        const auto b = callback(*told, 192);
+        for (size_t i = 0; i < a.size(); ++i) CHECK_EQ(a[i], b[i]);
+    }
+    CHECK_EQ(told->glueLatencyFrames(), 144);
+    delete plain;
+    delete told;
+}
+
+TEST(pad_engine_glue_delays_the_mix_by_its_lookahead_and_holds_its_ceiling_before_the_master) {
+    // Compressor out (ratio 1), limiter at -1 dBFS: the ramp comes out 144
+    // frames (3 ms) late, unchanged until it reaches the ceiling, then held there.
+    PadEngine* e = rampKit();
+    CHECK(e->configureGlue(glueOn(0.0f, 1.0f, 0.0f, -1.0f)));
+    callback(*e, 1200);  // adopts the glue and waits out its 20 ms (960-frame) fade in
+    e->pushCommand(noteOn(1, 0, 0, 1000));
+    std::vector<float> out;
+    for (int block = 0; block < 6; ++block) {
+        const auto b = callback(*e, 192);
+        out.insert(out.end(), b.begin(), b.end());
+    }
+    const int L = e->glueLatencyFrames();
+    CHECK_EQ(L, 144);
+    const float ceiling = std::pow(10.0f, -1.0f / 20.0f);
+    for (int i = 0; i < L; ++i) CHECK_EQ(out[2 * static_cast<size_t>(i)], 0.0f);
+    CHECK_NEAR(out[2 * static_cast<size_t>(L + 300)], 0.300f, 1e-6);  // frame 300 of the ramp, 3 ms late
+    float peak = 0.0f;
+    for (float v : out) peak = std::max(peak, std::fabs(v));
+    CHECK(peak <= ceiling + 1e-6f);
+    CHECK(peak > ceiling - 1e-3f);
+    CHECK_EQ(e->glueClampedSamples(), uint64_t{0});
+
+    // The master gain comes after the glue: half the master is half the held ceiling.
+    e->pushCommand(master(0.5f, 0.0f));
+    e->pushCommand(noteOn(2, 0, 990, 1000));
+    float after = 0.0f;
+    for (int block = 0; block < 2; ++block)
+        for (float v : callback(*e, 192)) after = std::max(after, std::fabs(v));
+    CHECK(after <= 0.5f * ceiling + 1e-6f);
+    CHECK(after > 0.5f * ceiling - 1e-3f);
+
+    // Invalid settings queue nothing.
+    GlueSettings bad = glueOn(0.0f, 1.0f, 0.0f, -1.0f);
+    bad.driveDb = std::nanf("");
+    CHECK(!e->configureGlue(bad));
+    delete e;
+}
+
 int main() { return check::runAll(); }
