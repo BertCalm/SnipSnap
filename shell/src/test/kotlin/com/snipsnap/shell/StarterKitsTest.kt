@@ -274,7 +274,7 @@ class StarterKitsTest {
                     "footwork-tap-jazz", "footwork-street-breaks", "footwork-industrial-stepping", "spore-synth-jungle", "spore-synth-dub", com.snipsnap.synth.Splinter.ID, com.snipsnap.synth.Shatter.id, com.snipsnap.synth.Soundclash.id, com.snipsnap.synth.Redline.id, com.snipsnap.synth.Lull.id, com.snipsnap.synth.Strobe.id, com.snipsnap.synth.Cartridge.id, com.snipsnap.synth.Barricade.id, "spore-synth-broken", "spore-jungle", "spore-dub", "spore-electro", "cosmic-breaks", "cosmic-jungle", "cosmic-dubstep" -> (1..18).toList()
                     "cloud" -> (7..16).toList()
                     StarterKits.CONFLUENCE_ID, com.snipsnap.synth.ErosionRoundRobinKits.ID -> (1..8).toList()
-                    StarterKits.CONFLUENCE_VOICES_ID, "velour-close", "velour", "velour-bloom", "timber-pocket", "timber-boom-bap", "timber-two-step", "triad-techno", "triad-house", "triad-minimal", "gatecrash-stone", "gatecrash-machine", "gatecrash-electro", "cypher-trap", "cypher-drill", "cypher-backroom", "cypher-lowrider", "cypher-dust", "cypher-flint", "loose-crate-hummin", "loose-crate-cloth", "loose-crate-haze", "loose-crate-ritual", "stagger-cardboard", "stagger-matinee", "stagger-stumble", "mirrorball-philly", "mirrorball-loft", "mirrorball-munich", "soot", "soot-drumless", "soot-dub", "soot-noir", "soot-industrial", "etch", "scuff-detroit", "scuff-flint", "kindred-techno", "kindred-industrial", "kindred-electro", "kindred-ambient", "hiccup-hop", "hiccup-lab", "hiccup-sugar", "clutter-lofi", "clutter-street", "clutter-boombap", "clutter-micro", "servo-electro", "servo-jit", "servo-neuro", "calabash-afrobeat", "calabash-afrobeats", "calabash-mbalax", "calabash-afrocuban", "riddim-clave-dancehall", "riddim-dembow", "riddim-boom-riddim", "riddim-baile-funk", "riddim-sabar-swing", "riddim-wood-bronze", "ember", "ember-after-hours", "ember-soul-jazz", "ember-free", "ember-latin-jazz", com.snipsnap.synth.TerraRoundRobinKits.ID, com.snipsnap.synth.AccordRoundRobinKits.ID, com.snipsnap.synth.TempestRoundRobinKits.ID, com.snipsnap.synth.TempestGenreRoundRobinKits.Kit.CIRCUIT.id, com.snipsnap.synth.TempestGenreRoundRobinKits.Kit.FOUNDRY.id, com.snipsnap.synth.TempestGenreRoundRobinKits.Kit.STEP.id, com.snipsnap.synth.TerraGenreRoundRobinKits.Kit.SAHEL.id, com.snipsnap.synth.TerraGenreRoundRobinKits.Kit.MAQAM.id, com.snipsnap.synth.TerraGenreRoundRobinKits.Kit.PUNJAB.id -> (1..16).toList()
+                    StarterKits.CONFLUENCE_VOICES_ID, "velour-close", "velour", "velour-bloom", "timber-pocket", "timber-boom-bap", "timber-two-step", "triad-techno", "triad-house", "triad-minimal", "gatecrash-stone", "gatecrash-machine", "gatecrash-electro", "cypher-trap", "cypher-drill", "cypher-backroom", "cypher-lowrider", "cypher-dust", "cypher-flint", "loose-crate-hummin", "loose-crate-cloth", "loose-crate-haze", "loose-crate-ritual", "stagger-cardboard", "stagger-matinee", "stagger-stumble", "mirrorball-philly", "mirrorball-loft", "mirrorball-munich", "soot", "soot-drumless", "soot-dub", "soot-noir", "soot-industrial", "etch", "scuff-detroit", "scuff-flint", "kindred-techno", "kindred-industrial", "kindred-electro", "kindred-ambient", "hiccup-hop", "hiccup-lab", "hiccup-sugar", "clutter-lofi", "clutter-street", "clutter-boombap", "clutter-micro", "servo-electro", "servo-jit", "servo-neuro", "calabash-afrobeat", "calabash-afrobeats", "calabash-mbalax", "calabash-afrocuban", "riddim-clave-dancehall", "riddim-dembow", "riddim-boom-riddim", "riddim-baile-funk", "riddim-sabar-swing", "riddim-wood-bronze", "ember", "ember-after-hours", "ember-soul-jazz", "ember-free", "ember-latin-jazz", com.snipsnap.synth.TerraRoundRobinKits.ID, com.snipsnap.synth.AccordRoundRobinKits.ID, com.snipsnap.synth.ConsortRoundRobinKits.ID, com.snipsnap.synth.TempestRoundRobinKits.ID, com.snipsnap.synth.TempestGenreRoundRobinKits.Kit.CIRCUIT.id, com.snipsnap.synth.TempestGenreRoundRobinKits.Kit.FOUNDRY.id, com.snipsnap.synth.TempestGenreRoundRobinKits.Kit.STEP.id, com.snipsnap.synth.TerraGenreRoundRobinKits.Kit.SAHEL.id, com.snipsnap.synth.TerraGenreRoundRobinKits.Kit.MAQAM.id, com.snipsnap.synth.TerraGenreRoundRobinKits.Kit.PUNJAB.id -> (1..16).toList()
                     else -> emptyList()
                 }
                 assertEquals(expectedRenderOnly, renderOnly, "${starter.id}: pads with no recipe")
@@ -453,6 +453,19 @@ class StarterKitsTest {
                         assertTrue(pad.oneShot)
                     }
                     assertEquals(setOf("BRUSH", "WOOD", "TINE"), kit.pads.map { it.source["voice"] }.toSet())
+                    assertEquals(KeySpec.parse("Cminpent"), kit.key)
+                }
+                // CONSORT TAKES: the CONSORT starter's sixteen recipes, each in its source, three breaths of two takes.
+                if (starter.id == com.snipsnap.synth.ConsortRoundRobinKits.ID) {
+                    val kept = com.snipsnap.synth.SynthKits.consortPatches()
+                    for (pad in kit.pads) {
+                        assertEquals("CONSORT", pad.source["engine"])
+                        assertEquals(com.snipsnap.synth.ConsortRoundRobinKits.VERSION.toString(), pad.source["roundRobinVersion"])
+                        assertEquals(kept[pad.slot - 1], com.snipsnap.synth.Patches.fromJsonText(pad.source.getValue("recipe")),
+                            "${pad.displayName}: the CONSORT recipe")
+                        assertEquals(listOf(2, 2, 2), pad.chain?.zones?.map { it.cycle })
+                        assertTrue(pad.oneShot)
+                    }
                     assertEquals(KeySpec.parse("Cminpent"), kit.key)
                 }
             }
