@@ -59,6 +59,11 @@ def derive(kit, fitted):
 
 
 def render_pad(kind, p, vel, rng, extra):
+    if kind in ('dkick', 'dsnare', 'dghost'):   # round 2: designed boom-bap drums (designed.py)
+        import designed as DS
+        if kind == 'dkick': return DS.kick(p, vel, rng)
+        if kind == 'dsnare': return DS.snare(p, vel, rng)
+        return DS.snare(p, vel * .4, rng, seconds=.35)   # the ghost: the stick barely leaves the head
     if MODEL != 'voices' and kind != 'stack':
         return M.render_pad(kind, p, vel, rng, extra)
     if kind == 'stack':
@@ -223,6 +228,19 @@ def groove(kit, bank, stack=None, sbank=None, bars=4):
 
 
 KICK_PADS = (0, 4)   # A01 KICK, A05 KICK 2
+
+
+def designed_pads(kit, pads, fits):
+    """Round 2: where designed_fit.json (fit_designed.py) holds a kit's loops, its KICK, SNARE, KICK 2,
+    SNARE 2 and GHOST become designed boom-bap drums fitted to those loops' fine hit measurements."""
+    pads = list(pads)
+    for i, loop, role, kind in ((0, kit['primary'], 'kick', 'dkick'), (1, kit['primary'], 'snare', 'dsnare'),
+                                (4, kit['secondary'], 'kick', 'dkick'), (5, kit['secondary'], 'snare', 'dsnare'),
+                                (8, kit['primary'], 'snare', 'dghost')):
+        f = fits.get(loop, {}).get(role)
+        if f:
+            pads[i] = (pads[i][0], kind, f['params'], {})
+    return pads
 
 
 # The record chain taken off (BOROUGH_CLEAN=1): EMBER's drums as modelled, a small room, no squash,
@@ -499,8 +517,9 @@ def main(fitted_path, out):
         sbanks[st['id']] = bank
         man['stacks'].append(dict(id=st['id'], name=st['name'], source=st['source'], pads=[dict(pad=13 + i, label=l, model=k, params=p) for i, (l, k, p) in enumerate(st['pads'])]))
     targets = json.load(open(Path(__file__).with_name('targets.json')))['loops']
+    designed_fits = json.load(open(os.environ['BOROUGH_DESIGNED'])) if os.environ.get('BOROUGH_DESIGNED') else {}
     for kit in K.KITS:
-        pads = derive(kit, fitted)
+        pads = designed_pads(kit, derive(kit, fitted), designed_fits)
         bank = [grid(f"{kit['id']}-{label}", kind, p, extra) for label, kind, p, extra in pads]
         trim, rest = balance(kit, bank, targets[kit['primary']].get('low_mid_db'))
         bank = [[[y * (trim if i in KICK_PADS else rest) for y in row] for row in pad] for i, pad in enumerate(bank)]

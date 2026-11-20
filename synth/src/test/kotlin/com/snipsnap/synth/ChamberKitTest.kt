@@ -35,14 +35,14 @@ class ChamberKitTest {
         val bank = ChamberKits.entries()
         assertEquals(16, bank.size)
         assertEquals(listOf(48, 51, 53, 55, 58, 60, 63, 65), bank.take(8).map { it.patch.midi })
-        val anchor = ChamberPresets.all().first { it.name == "Four Answers" }
+        val anchor = ChamberPresets.original().first { it.name == "Four Answers" }
         bank.take(8).forEach { entry ->
             assertEquals(anchor, entry.patch.copy(name = anchor.name, midi = anchor.midi))
             assertEquals(anchor.name, entry.preset)
         }
-        assertEquals(ChamberPresets.all(), bank.subList(8, 14).map { it.patch })
+        assertEquals(ChamberPresets.original(), bank.subList(8, 14).map { it.patch })
         assertEquals(anchor.copy(name = "Uniform Room", macros = anchor.macros + ("DIVIDE" to 0f)), bank[14].patch)
-        val aquarium = ChamberPresets.all().first { it.name == "Aquarium Ceiling" }
+        val aquarium = ChamberPresets.original().first { it.name == "Aquarium Ceiling" }
         assertEquals(aquarium.copy(name = "Low Canopy", macros = aquarium.macros + ("PLACEMENT" to .15f)), bank[15].patch)
         assertEquals(16, bank.map { it.patch.name }.distinct().size)
         for (entry in bank) {
@@ -136,7 +136,7 @@ class ChamberKitTest {
                 assertEquals(PadNoteMap.noteForPad(pad.slot).toString(), xmlPad.getElementsByTagName("Note").item(0).textContent)
                 patch
             }
-            assertTrue(patches.containsAll(ChamberPresets.all()))
+            assertTrue(patches.containsAll(ChamberPresets.original()))
             val manifest = Json.parse(File(destination, "manifest.json").readText()).obj()
             assertEquals(16, manifest.getValue("padCount").int())
             assertEquals(3, manifest.getValue("model").int())
