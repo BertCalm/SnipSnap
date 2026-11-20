@@ -1263,7 +1263,7 @@ Source: the commit that adds this entry. Details: [CONSORT](CONSORT.md).
 | Six melodic voices | FLUTE, SAX, CLARINET, OBOE, BASSOON, DUDUK render and pass pitch, level and classifier probes. Three pipe types; OBOE, SAX and BASSOON differ by reed, edge and formants. The owner heard and approved the Kotlin K1 audition (2026-11-20). | Sound approved; presets, keygroups and kit open |
 | Presets | Thirteen provisional recipes in `ConsortPresets` (each voice alone and leading a section), taken from the Python audition's settings and not chosen by ear. Held out of `Presets`; the engine is in `PatchTypes.PROTOTYPES`. | Open: listening, then a factory bank |
 | Playable keygroups | None. | Open |
-| Premade kit | None. | Open |
+| Premade kit | `SynthKits.consort()`: eight FLUTE notes up the minor pentatonic and eight recipes (three solo voices, five sections), exported to `testkit/SnipSnap Consort Kit/`. A test holds its classes, pitches and recipes. Not on the starter shelf, not chosen by ear, never loaded on an MPC. | Open: listening, shelf, hardware |
 | Chord-tool compatibility | Not tested. A chord on a patch that already seats a seventh stacks intervals. | Open |
 | Appropriate HOLD | Breath length only; the top step is a long note. No loop. | Open: owner's decision on a loop |
 | Velocity | Velocity is breath effort inside the render; `Velocity.touchedRender` passes it through. Tone changes with velocity in `ConsortTest`. No save, playback or export evidence. | Open |

@@ -42,6 +42,9 @@ The section, the velocity and the take are fields on `ConsortPatch`, not macros.
 - `synth/src/test/.../ConsortTest.kt`: seventeen probes. `DeterminismTest` has the canary.
 - `synth/src/test/.../ConsortAuditionGenerator.kt`: `./gradlew :synth:generateConsortAudition`
   writes 100 clips, their recipes, `metrics.csv` and a page under `testkit/consort-audition/`.
+- `SynthKits.consort()` and `ConsortKitGenerator`: `./gradlew :synth:generateConsortKit` writes the
+  first kit to `testkit/SnipSnap Consort Kit/` (A01 to A08 FLUTE up the minor pentatonic, A09 to A16
+  eight recipes).
 - `docs/prototypes/consort/consort_proto.py`: the Python prototype the owner heard.
 
 ## Measured on the Kotlin render (2026-11-19, the audition's `metrics.csv` and `ConsortTest`)
@@ -66,6 +69,9 @@ The section, the velocity and the take are fields on `ConsortPatch`, not macros.
 - **The body's 18 ms is kept on purpose.** Moving its filters to the output rate saved 13 ms a
   note and darkened every voice (2 to 5 kHz down 0.2 to 1.9 dB against 100 to 500 Hz). The owner
   had approved the sound with the filters at the internal rate, so the move was undone.
+- **The room makes short notes long.** A render is the breath, 0.35 s of release and the wash's
+  tail (0.74 s at the default ROOM). At the default ROOM any HOLD above about 0.11 passes the
+  classifier's 1.5 s line and files LOOP by length alone, so the kit's note pads use HOLD 0.1.
 - **HOLD does not loop.** A loop with a room in it needs a periodic wash, or the room applied
   after the loop. `Consort.isLoop` is false at every setting and a test says so.
 - **Eight controls**, HOLD included, where the house asks for three to six plus HOLD. TREMOR has

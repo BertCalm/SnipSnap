@@ -274,6 +274,31 @@ class ConsortTest {
     }
 
     @Test
+    fun `the kit is a pentatonic row of FLUTE and eight recipes, dry, each filed as the engine files it`() {
+        val kit = SynthKits.consort()
+        assertEquals(16, kit.size)
+        val steps = listOf(0, 3, 5, 7, 10, 12, 15, 17)
+        var sections = 0
+        for ((i, pad) in kit.withIndex()) {
+            val recipe = PadRecipe.fromJsonValue(pad!!.recipe!!)
+            val patch = recipe.patch as? ConsortPatch ?: error("pad ${i + 1} is not a CONSORT patch")
+            assertEquals(null, recipe.fx, "pad ${i + 1} lands dry: the room is the engine's")
+            assertEquals(Consort.drumClassFor(patch.voice, patch.macros), pad.drumClass, "pad ${i + 1} is filed wrongly")
+            assertEquals(pad.drumClass, Classifier.classify(pad.snip).drumClass, "pad ${i + 1} does not read as it is filed")
+            assertContentEquals(pad.snip.samples, patch.render().samples, "pad ${i + 1}'s recipe does not render the pad")
+            if (patch.chairs.isNotEmpty()) sections++
+            if (i < 8) {
+                assertEquals(ConsortVoice.FLUTE, patch.voice)
+                assertEquals(DrumClass.PERC, pad.drumClass, "note pad ${i + 1} should be a struck note")
+                val want = Keys.midiHz(Consort.rootMidi(ConsortVoice.FLUTE) + steps[i])
+                val p = Pitch.detect(pad.snip, fromSec = 0.2f, windowSec = 0.2f) ?: error("pad ${i + 1} has no pitch")
+                assertTrue(abs(cents(p.hz, want)) < 25.0, "pad ${i + 1} plays ${p.hz} Hz, ${cents(p.hz, want)} cents from $want")
+            }
+        }
+        assertEquals(5, sections, "the kit carries five sections")
+    }
+
+    @Test
     fun `scramble stays in bounds and renders`() {
         val random = Random(7)
         repeat(6) {
