@@ -2,7 +2,7 @@
 
 Version 0.1 · 2026-11-20
 Status: proposed. Round 0 (a Python prototype) is built, measured and published for listening; the
-owner heard it and asked for changes, made in rounds 0b and 0c (§18). No Kotlin exists. No acceptance gate
+owner heard it and asked for changes, made in rounds 0b, 0c and 0d (§18). No Kotlin exists. No acceptance gate
 is passed by this document.
 Repository truth: read at `7fd194f1`. APIs grepped: `Strings.Loop` and `Strings.Loop.retune`
 (`Strings.kt:529`, `:675`), `Strings.tune` (`:101`), `Strings.pluckExciter` (`:366`), `Strings.pickup`
@@ -186,7 +186,7 @@ STEEL's volume-pedal swell is a raised-cosine fade of 0.02 to 0.7 s on the outpu
 |---|---:|---|---|---|
 | TUNE | .50 | the target note, ±12 semitones around the voice root | the bar's open string and the scrape's bar speed follow it | root within 0.3 cents at TUNE .25/.5/.75 |
 | SLIDE | .30 | bar: slide extent 12·S^1.3 semitones in 0.07 + 0.012·semitones s; fretted: 0 to 3 frets; STEEL: pedal travel 0 to 2 semitones (a half pedal mid-knob) | with WAVER: the vibrato starts after the landing | macro distance 12 to 31 at 0 vs 1 |
-| WAVER | .45 | hand vibrato depth 150·W^1.3 cents (×0.6 STEEL, ×0.45 GUT, ×0.35 FLATTOP one-sided) and rate 5.0 + 2.6·W − 0.8·W² Hz (levels off as it widens; 0c) | with SLIDE (above); scrape takes 15 % of it | pitch spread 0 / 40 / 103 cents at 0 / .5 / 1 on CONE |
+| WAVER | .45 | hand vibrato depth 150·W^1.3·(1 − 0.2·W) cents (0d) (×0.6 STEEL, ×0.45 GUT, ×0.35 FLATTOP one-sided) and rate 5.0 + 2.6·W − 0.8·W² Hz (levels off as it widens; 0c) | with SLIDE (above); scrape takes 15 % of it | pitch spread (std) 0 / 33 / 78 cents at 0 / .5 / 1 on CONE (0d) |
 | PICK | .75 | pick hardness (burst low-pass, per-voice range), pick position 0.30 to 0.07 of the string, metal click; STEEL: low half swells in under the volume pedal | with velocity: touch shifts hardness ×2^(2.5(v − .75)) | distance 6 to 15 |
 | BODY | .60 | CONE: cone share and biscuit drive; FLATTOP, GUT: body share; electrics: amp drive | with velocity: a harder pick drives the cone and amp further | distance 5 to 15 |
 | RING | .55 | the hand's loss: T60 of the fundamental between per-voice bounds (CONE 0.8 to 8 s), loop brightness ×0.75 to 1.25, and the string behind the bar | with HOLD: HOLD gives a long RING room to finish | distance 11 to 21 |
@@ -340,7 +340,8 @@ emmons, sho-bud, and "national" only as `national\s*reso` (the word alone is ord
 | Kotlin renders a note in under 50 ms | proposed | round 1 |
 | Round 0 as a whole | heard, owner, 20 Nov 2026 | "Resonator could use more twang, slide a bit more whine." No other note |
 | CONE's twang and BOTTLE's whine as changed in 0b | heard, owner, 20 Nov 2026 | "Better." |
-| LAP's whine and the slower wide vibrato (0c) | not heard | the A/B at the top of the audition page |
+| LAP's whine and the slower wide vibrato (0c) | heard, owner, 20 Nov 2026 | "Better, but maybe the vibrato needs to be a tad shallower." |
+| The shallower vibrato (0d) | not heard | a stitched A/B sent to the owner; the page's daily upload cap delayed its A/B |
 | Any voice sounds right enough to keep | not heard | the owner's keep or change per voice |
 
 ## 17. Why it is built this way
@@ -406,6 +407,17 @@ a smidge slower." (`round0c_character.json`; Python harness.)
   CONE at 8.7 Hz; it now reads only the longest unbroken stretch.
 
 Every probe still passes on all six voices (`round0c_report.json`).
+
+### Round 0d
+
+The owner heard 0c: "Better, but maybe the vibrato needs to be a tad shallower." Full WAVER reached
+250 to 260 cents peak to peak on BOTTLE and LAP against the single-line references' 140 to 190, while
+the defaults already sat at or under them, so the trim grows with the width: depth is now
+150·W^1.3·(1 − 0.2·W), 20 % less at full WAVER and about 10 % at the defaults. The rate is unchanged
+(BOTTLE 6.68 → 6.69 Hz at full). Peak to peak, full WAVER: BOTTLE 259 → 206, LAP 253 → 203, STEEL
+130 → 104, CONE 211 (unmeasurable before: the narrower shake lets the tracker follow it, at 6.64 Hz);
+defaults: BOTTLE 134 → 118, LAP 80 → 73, CONE 95 → 86, STEEL 28 → 27 (`round0d_character.json`;
+Python harness). Every probe still passes on all six voices (`round0d_report.json`).
 
 ## As built
 
