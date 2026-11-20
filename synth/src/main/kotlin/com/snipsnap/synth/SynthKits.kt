@@ -618,16 +618,6 @@ object SynthKits {
         )
     }
 
-    /**
-     * The CONSORT first kit: the first voice, FLUTE, alone, walking the minor pentatonic up the first
-     * two rows (A01-A08) as short notes, so the pads play a tune a step apart; then eight of
-     * [ConsortPresets]' recipes (A09-A16): three more voices alone, then five sections, longest last.
-     * The recipes are clips of the audition the owner approved (2026-11-20); which of them belong on a
-     * kit, and in what order, nobody has chosen by ear. Every pad is dry: the room is inside the engine
-     * (its ROOM macro seats each chair), so there is no landing chain. Every pad's class is the
-     * engine's own ([Consort.drumClassFor]): the short notes file PERC and the long ones LOOP, and a
-     * drum program plays each once through. Every pad carries its recipe, section, velocity and take.
-     */
     /** The CONSORT starter's sixteen recipes, in pad order ([consort]). */
     fun consortPatches(): List<ConsortPatch> {
         val steps = listOf(0, 3, 5, 7, 10, 12, 15, 17)
@@ -642,6 +632,16 @@ object SynthKits {
         )
     }
 
+    /**
+     * The CONSORT first kit: the first voice, FLUTE, alone, walking the minor pentatonic up the first
+     * two rows (A01-A08) as short notes, so the pads play a tune a step apart; then eight of
+     * [ConsortPresets]' recipes (A09-A16): three more voices alone, then five sections, longest last.
+     * The recipes are clips of the audition the owner approved (2026-11-20); which of them belong on a
+     * kit, and in what order, nobody has chosen by ear. Every pad is dry: the room is inside the engine
+     * (its ROOM macro seats each chair), so there is no landing chain. Every pad's class is the
+     * engine's own ([Consort.drumClassFor]): the short notes file PERC and the long ones LOOP, and a
+     * drum program plays each once through. Every pad carries its recipe, section, velocity and take.
+     */
     fun consort(): List<ArrangedPad?> = consortPatches().map { pad(it, Consort.drumClassFor(it.voice, it.macros)) }
 
     private const val CONSORT_NOTE_HOLD = 0.1f

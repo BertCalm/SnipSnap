@@ -6567,7 +6567,6 @@ private fun WickPerformanceControls(
         TapeType.lcdSmall, scheme.ink2.tape)
 }
 
-/** Copy the current typed performance rather than a stale composition snapshot. */
 /**
  * CONSORT's recipe beyond its knobs: the breath a pad is blown with (TOUCH, the patch's velocity), the take
  * (one of four ways of playing), and the section, up to three players behind the lead, each an instrument
@@ -6640,6 +6639,7 @@ private fun consortIntervalTitle(interval: ConsortInterval): String = when (inte
     ConsortInterval.OCT_UP -> "OCTAVE UP"
 }
 
+/** Copy the current typed performance rather than a stale composition snapshot. */
 @Composable
 internal fun AccordPerformanceControls(
     patch: AccordPatch,
