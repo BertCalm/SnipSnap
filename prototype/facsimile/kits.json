@@ -498,10 +498,10 @@
     },
     {
      "pad": "A09",
-     "name": "World 808 High",
-     "class": "KICK",
+     "name": "World Tambourine",
+     "class": "PERC",
      "layers": [
-      "163-d6"
+      "163-d8"
      ]
     },
     {
@@ -567,16 +567,16 @@
    "makeup_db": 4.26
   },
   "102": {
-   "threshold_db": -10.87,
+   "threshold_db": -14.53,
    "ratio": 4.0,
    "attack_ms": 2.0,
-   "makeup_db": 5.78
+   "makeup_db": 7.28
   },
   "103": {
-   "threshold_db": -12.1,
+   "threshold_db": -10.1,
    "ratio": 4.0,
    "attack_ms": 2.0,
-   "makeup_db": 6.58
+   "makeup_db": 5.67
   },
   "106": {
    "threshold_db": -8.31,
@@ -603,10 +603,10 @@
    "makeup_db": 8.52
   },
   "154": {
-   "threshold_db": -8.5,
+   "threshold_db": -7.97,
    "ratio": 4.0,
    "attack_ms": 2.0,
-   "makeup_db": 3.24
+   "makeup_db": 3.07
   },
   "163": {
    "threshold_db": -13.99,

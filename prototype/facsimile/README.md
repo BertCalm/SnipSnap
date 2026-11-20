@@ -300,6 +300,24 @@ some of the other drums, and a replica lane carries none. Not yet shown.
   live 10 ms frames (the Alley groove 10%), and its 16th-step loudness spreads 7.2 dB against
   the reference's 5.5. Turning the swell rule on for 163 made both worse (band distance 7.64 to
   8.29 dB), so it stays off there.
+- Round 0m (2026-11-20), the other six grooves. Each loop was first counted for the faults
+  found on 113, 90 and 163 (low tail re-strikes, non-low firings with no attack in the loop,
+  low parts firing together, parts with two decays), then given only the fixes its own counts
+  called for, and measured against its reference at matched level (band distance; timing as
+  in round 0l). Kept: 102 Thin Perc (`CONFIRM`, `TIGHTEN`; 7 stray hits; band distance 7.75 to
+  6.23 dB, balance 8.67 to 5.46), 103 Swing (`DOUBLES`, `TIGHTEN`; 13 re-strikes; 6.63 to
+  6.88) and 154 Mover (`TIGHTEN`; 7.76 to 7.66, hits more than 10 ms off the reference 24% to
+  13%). Not kept: 106 Fusion, 127 Doves, 134 Tom. With all their fixes they measured 8.24,
+  7.69, 7.38 against 8.22, 6.60, 6.39 as they were; split into tightening alone (8.57, 7.58,
+  6.91) and the hit fixes alone (8.88, 7.76, 7.40), both halves measured worse: there the
+  dropped firings carried real sound (Fusion's mids fell over 6 dB under the reference in 49%
+  of live frames, against 27%), and the owner had heard no fault in them. Their tightened
+  versions are offered on the listening page only. One rule came out of Fusion: when one
+  drum's two firings within 50 ms become one hit, the hit keeps the louder firing's strength
+  at the time of the one the loop shows an attack at (`confirm_attacks(attack_time=True)`;
+  its snare layer had fired softly on the crack and loudly 36 to 48 ms later in the body);
+  loops approved before this rule keep their merges as heard. TEXTURE A09 is now World
+  Tambourine (163-d8), in place of World 808 High.
 - Round robin follows the reference's own hit-to-hit spread, clamped to 0.3 to 1.2 dB per band,
   plus fresh noise and phases. Whether that reads as one drum hit again is for the ear.
 - Engine gates: this is a prototype. Velocity and round robin are checked in rendering only;

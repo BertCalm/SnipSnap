@@ -164,7 +164,7 @@ def attack_evidence(rises: dict, t: float, low: bool) -> bool:
     return bool(max(rises["mid"][idx].max(), rises["high"][idx].max()) >= EVIDENCE_HIGH_DB)
 
 
-def confirm_attacks(drums: list[dict], rises: dict) -> tuple[int, int]:
+def confirm_attacks(drums: list[dict], rises: dict, attack_time: bool = False) -> tuple[int, int]:
     """Keep only the hits the loop itself shows. NMFD fires a part wherever its shape explains
     some energy, including inside another drum's tail and a few tens of ms off the real hit:
     in the knocker groove a snare layer sat 57 to 85 ms from three backbeats (heard as flams),
@@ -210,15 +210,22 @@ def confirm_attacks(drums: list[dict], rises: dict) -> tuple[int, int]:
         for e in keep:
             if one and e["t"] - one[-1]["t"] <= SAME_HIT_S:
                 dropped += 1
-                if e["gain"] > one[-1]["gain"]:
-                    one[-1] = e
+                louder, softer = (e, one[-1]) if e["gain"] > one[-1]["gain"] else (one[-1], e)
+                # the louder firing's strength, at the time the loop shows the attack: the
+                # Fusion snare's layer fired softly on the crack and loudly 36 to 48 ms later
+                # in its body, where the loop shows no attack, and kept there it played as a
+                # flam (2026-11-20)
+                if (attack_time and not attack_evidence(rises, louder["t"], low=False)
+                        and attack_evidence(rises, softer["t"], low=False)):
+                    louder = dict(louder, t=softer["t"])
+                one[-1] = louder
                 continue
             one.append(e)
         d["events"] = one
     return moved, dropped
 
 
-TIGHTEN = {"90", "163"}        # loops whose hits are set to the groove's own average timing (by ear)
+TIGHTEN = {"90", "163", "102", "103", "154"}        # loops whose hits are set to the groove's own average timing (by ear)
 SLOT_S = 0.025          # a hit this close to a common position in the beat goes to it
 SLOT_MIN_HITS = 4       # ... a position at least this many hits share
 
@@ -338,7 +345,7 @@ def split_by_decay(key, drums, work, n):
     return out
 
 
-DOUBLES = {"163"}        # loops whose low parts' tail re-firings are dropped (by ear)
+DOUBLES = {"163", "103"}        # loops whose low parts' tail re-firings are dropped (by ear)
 TAIL_S = 0.12            # a low firing this soon after a real hit ...
 OWN_LOW_AFTER_S = 0.05   # ... is its tail, unless it cracks itself, or jumps under 150 Hz this
                          # long after it
@@ -557,7 +564,13 @@ def build_drum(drum_id, comps, y, times, gains, n_fired, template, n, work, stop
                         for t, g in sorted(zip(times, gains))])
 
 
-KICK_FIRST = {"113", "90"}        # loops whose low drums are rebuilt whole (kick first), by ear
+KICK_FIRST = {"113", "90"}
+# 106, 127 and 134 measured further from their references with these fixes (band distance
+# 8.22 to 8.88, 6.60 to 7.76, 6.39 to 7.40; tightening alone 8.57, 7.58, 6.91): their dropped
+# firings carried real sound (soft notes under other hits, drum bodies), and the owner heard no
+# fault in them, so they stay as they were (2026-11-20).
+CONFIRM = {"102"}   # loops whose other drums keep only hits the loop shows,
+                                         # without the kick rebuild (2026-11-20)        # loops whose low drums are rebuilt whole (kick first), by ear
 LOW_SHARE = 0.5             # a part with more energy than this under 150 Hz is a low part
 KICK_LOUD_DB = 6.0          # hits this close to the loudest define the kick
 KICK_SWEEP = 2.5            # a kick sweeps down by more than this ratio (click and punch)
@@ -711,13 +724,15 @@ def main(ref_dir: Path, work: Path) -> None:
         mono = sf.read(path, always_2d=True)[0].mean(axis=1)
         moved = align_hits(drums, mono)
         confirmed = None
-        if key in KICK_FIRST:
+        if key in KICK_FIRST or key in CONFIRM:
             rises = loop_rises(mono)
-            confirmed = confirm_attacks(drums, rises)
+            # loops approved by ear before this rule keep their merges as heard
+            confirmed = confirm_attacks(drums, rises, attack_time=key in CONFIRM)
             # recut the takes of the drums whose hits moved or went: a phantom hit had cut
             # the drum's previous strong hit short
             drums = [rebuild(key, d, work, n) if d["features"]["low_share"] <= LOW_SHARE
                      else d for d in drums]
+        if key in KICK_FIRST:
             drums = kick_first(key, drums, work, n, rises)
         doubles = None
         if key in DOUBLES:

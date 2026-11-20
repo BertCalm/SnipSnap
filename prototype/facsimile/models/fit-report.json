@@ -117,74 +117,6 @@
   "low_share": 1.0,
   "length_s": 0.36
  },
- "102-d0": {
-  "id": "102-d0",
-  "distance_db": 3.13,
-  "best_pass": 4,
-  "first_distance_db": 4.96,
-  "glide": {
-   "f0": 7157.366683755834,
-   "f1": 166.10184144098793,
-   "tau": 0.003618510361631108,
-   "law": "exp",
-   "captured": 0.7683043734980233,
-   "root_guess": 190.43426513671875,
-   "from_hit": 0
-  },
-  "steady_partials": 0,
-  "low_share": 0.239,
-  "length_s": 0.3
- },
- "102-d1": {
-  "id": "102-d1",
-  "distance_db": 1.9,
-  "best_pass": 3,
-  "first_distance_db": 3.45,
-  "glide": null,
-  "steady_partials": 0,
-  "low_share": 0.005,
-  "length_s": 0.25
- },
- "102-d2": {
-  "id": "102-d2",
-  "distance_db": 2.08,
-  "best_pass": 5,
-  "first_distance_db": 3.97,
-  "glide": null,
-  "steady_partials": 2,
-  "low_share": 0.0,
-  "length_s": 0.52
- },
- "102-d3": {
-  "id": "102-d3",
-  "distance_db": 1.64,
-  "best_pass": 6,
-  "first_distance_db": 2.52,
-  "glide": null,
-  "steady_partials": 0,
-  "low_share": 0.185,
-  "length_s": 0.36
- },
- "102-d4": {
-  "id": "102-d4",
-  "distance_db": 2.24,
-  "best_pass": 1,
-  "first_distance_db": 3.07,
-  "glide": null,
-  "steady_partials": 0,
-  "low_share": 0.002,
-  "length_s": 0.63
- },
- "102-d5": {
-  "id": "102-d5",
-  "distance_db": 2.96,
-  "best_pass": 0,
-  "first_distance_db": 2.96,
-  "glide": null,
-  "steady_partials": 5,
-  "low_share": 0.033,
-  "length_s": 0.93
- },
  "106-d0": {
   "id": "106-d0",
   "distance_db": 2.26,
@@ -252,172 +184,6 @@
   "steady_partials": 3,
   "low_share": 0.018,
   "length_s": 0.43
- },
- "103-d0": {
-  "id": "103-d0",
-  "distance_db": 2.79,
-  "best_pass": 3,
-  "first_distance_db": 3.83,
-  "glide": {
-   "f0": 6000.0,
-   "f1": 127.45666202519598,
-   "tau": 0.005136873816784653,
-   "law": "logexp",
-   "captured": 0.6783999623112423,
-   "root_guess": 57.8704833984375,
-   "from_hit": 2
-  },
-  "steady_partials": 2,
-  "low_share": 0.824,
-  "length_s": 0.52
- },
- "103-d1": {
-  "id": "103-d1",
-  "distance_db": 5.61,
-  "best_pass": 1,
-  "first_distance_db": 6.12,
-  "glide": {
-   "f0": 77.05904150297093,
-   "f1": 43.620201552028455,
-   "tau": 0.015058909835039594,
-   "law": "exp",
-   "captured": 0.8946096076644913,
-   "root_guess": 31.62868838100104,
-   "from_hit": 0
-  },
-  "steady_partials": 4,
-  "low_share": 1.0,
-  "length_s": 1.4
- },
- "103-d2": {
-  "id": "103-d2",
-  "distance_db": 2.07,
-  "best_pass": 1,
-  "first_distance_db": 2.81,
-  "glide": null,
-  "steady_partials": 0,
-  "low_share": 0.061,
-  "length_s": 0.52
- },
- "103-d3": {
-  "id": "103-d3",
-  "distance_db": 1.87,
-  "best_pass": 1,
-  "first_distance_db": 2.05,
-  "glide": null,
-  "steady_partials": 0,
-  "low_share": 0.001,
-  "length_s": 0.3
- },
- "103-d4": {
-  "id": "103-d4",
-  "distance_db": 3.66,
-  "best_pass": 5,
-  "first_distance_db": 5.6,
-  "glide": {
-   "f0": 574.921393412196,
-   "f1": 50.17065538100494,
-   "tau": 0.004805782374915329,
-   "law": "exp",
-   "captured": 0.7026032578406092,
-   "root_guess": 45.758056640625,
-   "from_hit": 0
-  },
-  "steady_partials": 1,
-  "low_share": 0.994,
-  "length_s": 0.52
- },
- "154-d0": {
-  "id": "154-d0",
-  "distance_db": 4.4,
-  "best_pass": 6,
-  "first_distance_db": 6.5,
-  "glide": {
-   "f0": 465.87274287176217,
-   "f1": 40.20054826536441,
-   "tau": 0.0074550495428304,
-   "law": "exp",
-   "captured": 0.7641427470873172,
-   "root_guess": 37.68310546875,
-   "from_hit": 2
-  },
-  "steady_partials": 0,
-  "low_share": 0.993,
-  "length_s": 0.52
- },
- "154-d1": {
-  "id": "154-d1",
-  "distance_db": 2.36,
-  "best_pass": 6,
-  "first_distance_db": 5.18,
-  "glide": {
-   "f0": 952.7543984472076,
-   "f1": 54.91906057399807,
-   "tau": 0.0038940762972286954,
-   "law": "exp",
-   "captured": 0.5390231944576903,
-   "root_guess": 33.34579762341568,
-   "from_hit": 0
-  },
-  "steady_partials": 2,
-  "low_share": 0.963,
-  "length_s": 0.63
- },
- "154-d2": {
-  "id": "154-d2",
-  "distance_db": 1.84,
-  "best_pass": 3,
-  "first_distance_db": 2.07,
-  "glide": null,
-  "steady_partials": 5,
-  "low_share": 0.001,
-  "length_s": 0.36
- },
- "154-d3": {
-  "id": "154-d3",
-  "distance_db": 2.71,
-  "best_pass": 2,
-  "first_distance_db": 4.46,
-  "glide": {
-   "f0": 188.40221590036583,
-   "f1": 148.2355046548209,
-   "tau": 0.0664172862411985,
-   "law": "logexp",
-   "captured": 0.9183167243669373,
-   "root_guess": 156.11572265625,
-   "from_hit": 2
-  },
-  "steady_partials": 2,
-  "low_share": 0.219,
-  "length_s": 0.43
- },
- "154-d4": {
-  "id": "154-d4",
-  "distance_db": 3.07,
-  "best_pass": 0,
-  "first_distance_db": 3.07,
-  "glide": null,
-  "steady_partials": 1,
-  "low_share": 0.001,
-  "length_s": 0.52
- },
- "154-d5": {
-  "id": "154-d5",
-  "distance_db": 3.24,
-  "best_pass": 1,
-  "first_distance_db": 3.78,
-  "glide": {
-   "f0": 99.94294000621277,
-   "f1": 71.94130970198087,
-   "tau": 0.04085018000511909,
-   "law": "logexp",
-   "captured": 0.9478909579503394,
-   "root_guess": 69.30999755859375,
-   "from_hit": 1
-  },
-  "steady_partials": 0,
-  "low_share": 0.97,
-  "length_s": 1.08
  },
  "127-d0": {
   "id": "127-d0",
@@ -762,5 +528,256 @@
   "tail_modes": 0,
   "low_share": 0.963,
   "length_s": 1.4
+ },
+ "102-d0": {
+  "id": "102-d0",
+  "distance_db": 3.13,
+  "best_pass": 4,
+  "first_distance_db": 4.96,
+  "glide": {
+   "f0": 7157.366683755834,
+   "f1": 166.10184144098793,
+   "tau": 0.003618510361631108,
+   "law": "exp",
+   "captured": 0.7683043734980233,
+   "root_guess": 190.43426513671875,
+   "from_hit": 0
+  },
+  "steady_partials": 0,
+  "tail_modes": 0,
+  "low_share": 0.239,
+  "length_s": 0.3
+ },
+ "102-d1": {
+  "id": "102-d1",
+  "distance_db": 1.23,
+  "best_pass": 5,
+  "first_distance_db": 2.32,
+  "glide": null,
+  "steady_partials": 0,
+  "tail_modes": 0,
+  "low_share": 0.005,
+  "length_s": 0.25
+ },
+ "102-d2": {
+  "id": "102-d2",
+  "distance_db": 1.96,
+  "best_pass": 6,
+  "first_distance_db": 3.85,
+  "glide": null,
+  "steady_partials": 2,
+  "tail_modes": 0,
+  "low_share": 0.0,
+  "length_s": 0.43
+ },
+ "102-d3": {
+  "id": "102-d3",
+  "distance_db": 1.73,
+  "best_pass": 3,
+  "first_distance_db": 2.45,
+  "glide": null,
+  "steady_partials": 0,
+  "tail_modes": 0,
+  "low_share": 0.185,
+  "length_s": 0.36
+ },
+ "102-d4": {
+  "id": "102-d4",
+  "distance_db": 2.52,
+  "best_pass": 0,
+  "first_distance_db": 2.52,
+  "glide": null,
+  "steady_partials": 0,
+  "tail_modes": 0,
+  "low_share": 0.002,
+  "length_s": 0.63
+ },
+ "102-d5": {
+  "id": "102-d5",
+  "distance_db": 1.65,
+  "best_pass": 2,
+  "first_distance_db": 2.44,
+  "glide": null,
+  "steady_partials": 5,
+  "tail_modes": 0,
+  "low_share": 0.033,
+  "length_s": 1.08
+ },
+ "103-d0": {
+  "id": "103-d0",
+  "distance_db": 3.03,
+  "best_pass": 6,
+  "first_distance_db": 3.7,
+  "glide": {
+   "f0": 6000.0,
+   "f1": 128.20969712129076,
+   "tau": 0.0052603846725755195,
+   "law": "logexp",
+   "captured": 0.6760500893307891,
+   "root_guess": 57.8704833984375,
+   "from_hit": 2
+  },
+  "steady_partials": 1,
+  "tail_modes": 0,
+  "low_share": 0.824,
+  "length_s": 0.63
+ },
+ "103-d1": {
+  "id": "103-d1",
+  "distance_db": 5.07,
+  "best_pass": 1,
+  "first_distance_db": 5.55,
+  "glide": {
+   "f0": 61.560283321110916,
+   "f1": 47.16578073195576,
+   "tau": 0.027639295576644216,
+   "law": "exp",
+   "captured": 0.8942321214822916,
+   "root_guess": 31.62868838100104,
+   "from_hit": 1
+  },
+  "steady_partials": 3,
+  "tail_modes": 0,
+  "low_share": 1.0,
+  "length_s": 0.63
+ },
+ "103-d2": {
+  "id": "103-d2",
+  "distance_db": 2.07,
+  "best_pass": 1,
+  "first_distance_db": 2.81,
+  "glide": null,
+  "steady_partials": 0,
+  "tail_modes": 0,
+  "low_share": 0.061,
+  "length_s": 0.52
+ },
+ "103-d3": {
+  "id": "103-d3",
+  "distance_db": 1.87,
+  "best_pass": 1,
+  "first_distance_db": 2.05,
+  "glide": null,
+  "steady_partials": 0,
+  "tail_modes": 0,
+  "low_share": 0.001,
+  "length_s": 0.3
+ },
+ "103-d4": {
+  "id": "103-d4",
+  "distance_db": 4.17,
+  "best_pass": 6,
+  "first_distance_db": 5.96,
+  "glide": {
+   "f0": 1494.7127948117668,
+   "f1": 50.28506416447284,
+   "tau": 0.004712575938913192,
+   "law": "exp",
+   "captured": 0.6864239511626714,
+   "root_guess": 45.758056640625,
+   "from_hit": 0
+  },
+  "steady_partials": 1,
+  "tail_modes": 0,
+  "low_share": 0.994,
+  "length_s": 0.52
+ },
+ "154-d0": {
+  "id": "154-d0",
+  "distance_db": 4.4,
+  "best_pass": 6,
+  "first_distance_db": 6.5,
+  "glide": {
+   "f0": 465.87274287176217,
+   "f1": 40.20054826536441,
+   "tau": 0.0074550495428304,
+   "law": "exp",
+   "captured": 0.7641427470873172,
+   "root_guess": 37.68310546875,
+   "from_hit": 2
+  },
+  "steady_partials": 0,
+  "tail_modes": 0,
+  "low_share": 0.993,
+  "length_s": 0.52
+ },
+ "154-d1": {
+  "id": "154-d1",
+  "distance_db": 2.36,
+  "best_pass": 6,
+  "first_distance_db": 5.18,
+  "glide": {
+   "f0": 952.7543984472076,
+   "f1": 54.91906057399807,
+   "tau": 0.0038940762972286954,
+   "law": "exp",
+   "captured": 0.5390231944576903,
+   "root_guess": 33.34579762341568,
+   "from_hit": 0
+  },
+  "steady_partials": 2,
+  "tail_modes": 0,
+  "low_share": 0.963,
+  "length_s": 0.63
+ },
+ "154-d2": {
+  "id": "154-d2",
+  "distance_db": 1.84,
+  "best_pass": 3,
+  "first_distance_db": 2.07,
+  "glide": null,
+  "steady_partials": 5,
+  "tail_modes": 0,
+  "low_share": 0.001,
+  "length_s": 0.36
+ },
+ "154-d3": {
+  "id": "154-d3",
+  "distance_db": 2.71,
+  "best_pass": 2,
+  "first_distance_db": 4.46,
+  "glide": {
+   "f0": 188.40221590036583,
+   "f1": 148.2355046548209,
+   "tau": 0.0664172862411985,
+   "law": "logexp",
+   "captured": 0.9183167243669373,
+   "root_guess": 156.11572265625,
+   "from_hit": 2
+  },
+  "steady_partials": 2,
+  "tail_modes": 0,
+  "low_share": 0.219,
+  "length_s": 0.43
+ },
+ "154-d4": {
+  "id": "154-d4",
+  "distance_db": 3.07,
+  "best_pass": 0,
+  "first_distance_db": 3.07,
+  "glide": null,
+  "steady_partials": 1,
+  "tail_modes": 0,
+  "low_share": 0.001,
+  "length_s": 0.52
+ },
+ "154-d5": {
+  "id": "154-d5",
+  "distance_db": 3.24,
+  "best_pass": 1,
+  "first_distance_db": 3.78,
+  "glide": {
+   "f0": 99.94294000621277,
+   "f1": 71.94130970198087,
+   "tau": 0.04085018000511909,
+   "law": "logexp",
+   "captured": 0.9478909579503394,
+   "root_guess": 69.30999755859375,
+   "from_hit": 1
+  },
+  "steady_partials": 0,
+  "tail_modes": 0,
+  "low_share": 0.97,
+  "length_s": 1.08
  }
 }
