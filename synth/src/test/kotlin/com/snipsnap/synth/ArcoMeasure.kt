@@ -72,7 +72,7 @@ internal object ArcoMeasure {
      * The voices with a BODY knob: CELLO and ERHU, R1's two. SARANGI (R2) has WASH in BODY's place and its box fixed at the knee, so a test of BODY
      * (the box's amount, the lift above the knee, the BODY listening pages) walks these, and SARANGI's tarab has its own tests (ArcoSarangiTest).
      */
-    val BODY_VOICES: List<ArcoVoice> = ArcoVoice.entries.filter { Arco.hasBody(it) }
+    val BODY_VOICES: List<ArcoVoice> = Arco.KEPT_VOICES.filter { Arco.hasBody(it) }
 
     /**
      * The TUNE steps of R1b's loop grid (every step at the defaults and four corners, 225 loops for CELLO and ERHU), for a voice. CELLO and ERHU walk

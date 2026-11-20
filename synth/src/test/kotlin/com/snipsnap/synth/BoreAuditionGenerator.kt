@@ -328,7 +328,7 @@ object BoreAuditionGenerator {
             ),
         )
 
-        for (voice in BoreVoice.entries) {
+        for (voice in Bore.KEPT_VOICES) {
             val dir = File(root, voice.name)
             val defaults = Bore.defaults(voice)
             fun write(id: String, macros: Map<String, Float>) {

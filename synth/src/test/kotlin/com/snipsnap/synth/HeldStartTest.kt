@@ -48,9 +48,9 @@ class HeldStartTest {
         /** Every zone of ARCO and BORE, both layers, at the defaults: the zone as first built, and shaped. */
         val cases: List<Case> by lazy {
             val jobs = ArrayList<() -> Case>()
-            for (voice in ArcoVoice.entries) for (midi in ArcoKeys.zoneMidis(voice)) for (layer in ArcoKeys.Layer.entries)
+            for (voice in Arco.KEPT_VOICES) for (midi in ArcoKeys.zoneMidis(voice)) for (layer in ArcoKeys.Layer.entries)
                 jobs += { Case("ARCO $voice ${Scales.nameOf(midi)} ${layer.name.lowercase()}", ArcoKeys.padMeasured(voice, Arco.defaults(voice), midi, layer).note) }
-            for (voice in BoreVoice.entries) for (midi in BoreKeys.padMidis(voice))
+            for (voice in Bore.KEPT_VOICES) for (midi in BoreKeys.padMidis(voice))
                 BoreKeys.layerBreaths(voice, Bore.defaults(voice)).forEachIndexed { layer, breath ->
                     jobs += { Case("BORE $voice ${Scales.nameOf(midi)} ${if (layer == 0) "soft" else "hard"}", BoreKeys.padMeasured(voice, Bore.defaults(voice), midi, breath).note) }
                 }

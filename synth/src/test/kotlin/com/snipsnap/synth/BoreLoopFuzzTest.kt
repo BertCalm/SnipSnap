@@ -20,7 +20,7 @@ class BoreLoopFuzzTest {
         var worstCorrelation = 1.0
         var worstDip = 0.0
         var worstWrap = 0.0
-        for (voice in BoreVoice.entries) for (step in 0..Bore.TUNE_SEMITONES) {
+        for (voice in Bore.KEPT_VOICES) for (step in 0..Bore.TUNE_SEMITONES) {
             val tune = step / Bore.TUNE_SEMITONES.toFloat()
             val corners = listOf(
                 Bore.defaults(voice),

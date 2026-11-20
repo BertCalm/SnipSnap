@@ -350,7 +350,7 @@ class ArcoPresetsTest {
 
     @Test
     fun `preset names are uppercase, short, and unique per voice`() {
-        for (voice in ArcoVoice.entries) {
+        for (voice in Arco.KEPT_VOICES) {
             val names = ArcoPresets.forVoice(voice).map { it.name }
             assertEquals(rosterSize.getValue(voice), names.size, "$voice should ship ${rosterSize.getValue(voice)} presets, has ${names.size}")
             assertEquals(names.toSet().size, names.size, "$voice has duplicate preset names: $names")
@@ -429,7 +429,7 @@ class ArcoPresetsTest {
 
     @Test
     fun `presets spread out rather than cluster`() {
-        for (voice in ArcoVoice.entries) {
+        for (voice in Arco.KEPT_VOICES) {
             val presets = ArcoPresets.forVoice(voice)
             for ((i, a) in presets.withIndex()) for (b in presets.drop(i + 1)) {
                 val d = PresetTestSupport.rmsDistance(a.macros, b.macros)
@@ -447,7 +447,7 @@ class ArcoPresetsTest {
 
     @Test
     fun `the roster's HOLD 1 presets are loops and the rest are not`() {
-        for (voice in ArcoVoice.entries) {
+        for (voice in Arco.KEPT_VOICES) {
             val loops = readings.filter { it.voice == voice && it.loop }.map { it.preset.name }
             assertEquals(loopNames.getValue(voice), loops, "$voice's loops")
         }

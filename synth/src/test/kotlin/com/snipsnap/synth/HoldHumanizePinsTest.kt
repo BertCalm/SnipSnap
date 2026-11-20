@@ -31,7 +31,7 @@ class HoldHumanizePinsTest {
     private fun bore(): Map<String, () -> FloatArray> {
         val out = LinkedHashMap<String, () -> FloatArray>()
         for (p in BorePresets.all()) out["${p.voice}/${p.name}"] = { p.render().samples }
-        for (v in BoreVoice.entries) {
+        for (v in Bore.KEPT_VOICES) {
             out["$v/defaults"] = { Bore.render(v).samples }
             out["$v/LOOP"] = { Bore.render(v, mapOf("HOLD" to 1f)).samples }
         }
@@ -41,7 +41,7 @@ class HoldHumanizePinsTest {
     private fun arco(): Map<String, () -> FloatArray> {
         val out = LinkedHashMap<String, () -> FloatArray>()
         for (p in ArcoPresets.all()) out["${p.voice} ${p.name}"] = { p.render().samples }
-        for (v in ArcoVoice.entries) {
+        for (v in Arco.KEPT_VOICES) {
             out["$v DEFAULT NOTE"] = { Arco.render(v, Arco.defaults(v)).samples }
             out["$v DEFAULT LOOP"] = { Arco.render(v, Arco.defaults(v) + ("HOLD" to 1f)).samples }
             out["$v HELD NOTE"] = { Arco.render(v, Arco.defaults(v) + ("HOLD" to Arco.holdFor(3f))).samples }
@@ -70,11 +70,11 @@ class HoldHumanizePinsTest {
     fun `the comparison can fail, and the player and the opening are what moved these`() {
         assertNotEquals(BORE["FLUTE/defaults"], hash(Bore.render(BoreVoice.FLUTE, mapOf("LIP" to 0.501f)).samples), "a thousandth of LIP is seen")
         // The player: a three second bow and a held breath are not the renders they were with it off.
-        for (v in ArcoVoice.entries) {
+        for (v in Arco.KEPT_VOICES) {
             val m = Arco.defaults(v) + ("HOLD" to Arco.holdFor(3f))
             assertNotEquals(ARCO["$v HELD NOTE"], hash(Arco.render(v, m, Arco.BUZZ_LAW, human = Humanize.OFF).samples), "ARCO $v: the player moved nothing")
         }
-        for (v in BoreVoice.entries) {
+        for (v in Bore.KEPT_VOICES) {
             assertNotEquals(BORE["$v/LOOP"], hash(Bore.render(v, mapOf("HOLD" to 1f), Humanize.OFF, Bore.openingFor(v)).samples), "BORE $v: the player moved nothing")
         }
         // The opening: SAX's default note with the player on and the old opening is not the shipped note.

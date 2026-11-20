@@ -41,7 +41,7 @@ class ArcoPadMakerTest {
 
     @Test
     fun `the zones are absolute, each voice's own plan, and TUNE does not move them`() {
-        for (voice in ArcoVoice.entries) {
+        for (voice in Arco.KEPT_VOICES) {
             val at = listOf(0f, 0.5f, 1f).map { tune -> ArcoPadMaker.zoneMidis(ArcoPadMaker.Spec(ArcoPatch("T", voice, Arco.defaults(voice) + ("TUNE" to tune)))) }
             assertTrue(at.all { it == at.first() }, "$voice: TUNE moved the zones: $at")
         }

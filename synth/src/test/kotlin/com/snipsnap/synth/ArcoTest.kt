@@ -82,7 +82,7 @@ class ArcoTest {
     @Test
     fun `along the whole of GRIP at every TUNE step the string locks into one slip a period`() {
         val started = System.nanoTime()
-        for (voice in ArcoVoice.entries) {
+        for (voice in Arco.KEPT_VOICES) {
             val steps = ArcoMeasure.steps(voice).toList()
             val rows = steps.pmap { step ->
                 ArcoMeasure.GRIP_POINTS.map { grip ->
@@ -186,7 +186,7 @@ class ArcoTest {
         val started = System.nanoTime()
         val grips = listOf(0f, Arco.DEFAULT_GRIP, 1f)
         val bows = listOf(0f, Arco.DEFAULT_BOW, 1f)
-        for (voice in ArcoVoice.entries) {
+        for (voice in Arco.KEPT_VOICES) {
             val steps = ArcoMeasure.steps(voice).toList()
             val rows = steps.pmap { step -> grips.flatMap { g -> bows.map { b -> tunedRead(voice, step, g, b) } } }
             println("ARCO cents by FFT on the finished render ($voice), BOW 0 / 0.5 / 1 at GRIP 0, then at GRIP 0.6, then at GRIP 1; ac is the autocorrelation's worst:")
@@ -281,7 +281,7 @@ class ArcoTest {
      */
     @Test
     fun `a bow lifted from the start is exact silence, in the core and in the finished render`() {
-        for (voice in ArcoVoice.entries) {
+        for (voice in Arco.KEPT_VOICES) {
             for (step in spread(voice)) {
                 for (body in listOf(0f, 1f)) {
                     val c = ArcoMeasure.core(voice, step, body = body, gateSeconds = 0.6f, lifted = true, vibrato = true)
@@ -302,7 +302,7 @@ class ArcoTest {
      */
     @Test
     fun `GRIP never reaches pressure 0, and pressure 0 is still a bow`() {
-        for (voice in ArcoVoice.entries) {
+        for (voice in Arco.KEPT_VOICES) {
             for (step in ArcoMeasure.steps(voice)) {
                 for (grip in listOf(0f, 0.5f, 1f)) {
                     assertTrue(Arco.pressureFor(voice, step, grip) >= Arco.PRESSURE_LOW, "$voice ${name(voice, step)} GRIP $grip is below the pressure floor")
@@ -515,7 +515,7 @@ class ArcoTest {
         val failures = ArrayList<String>()
         var latest = Double.NEGATIVE_INFINITY
         var slowest = Double.POSITIVE_INFINITY
-        for (voice in ArcoVoice.entries) {
+        for (voice in Arco.KEPT_VOICES) {
             for (step in stopSteps(voice)) {
                 for (hold in listOf(0f, 0.4f, 0.95f)) {
                     val c = ArcoMeasure.core(voice, step, hold = hold, vibrato = true)
@@ -660,7 +660,7 @@ class ArcoTest {
     fun `bounded, finite, pinned and DC-free across the grid`() {
         val started = System.nanoTime()
         val levels = listOf(0f, 0.5f, 1f)
-        for (voice in ArcoVoice.entries) {
+        for (voice in Arco.KEPT_VOICES) {
             val cases = ArrayList<List<Float>>()
             for (t in levels) for (b in levels) for (g in levels) for (body in levels) for (h in listOf(0f, 0.5f)) cases.add(listOf(t, b, g, body, h))
             val cells = cases.pmap { (t, b, g, body, h) ->
@@ -709,7 +709,7 @@ class ArcoTest {
         // SARANGI (R2) at D3: R2 saw 0.0400 in the first half second and -0.0001 over the last 1.5 s.
         val firstBar = mapOf(ArcoVoice.CELLO to 0.05, ArcoVoice.ERHU to 0.01, ArcoVoice.SARANGI to 0.02)
         val lastBar = mapOf(ArcoVoice.CELLO to 0.005, ArcoVoice.ERHU to 0.001, ArcoVoice.SARANGI to 0.001)
-        for (voice in ArcoVoice.entries) {
+        for (voice in Arco.KEPT_VOICES) {
             val c = ArcoMeasure.core(voice, 0, bow = 0f, grip = 1f, gateSeconds = 3f)
             val halves = (0..5).map { k -> BowMeter.mean(c.out, (k * 0.5 * rate).toInt(), ((k + 1) * 0.5 * rate).toInt()) }
             val late = BowMeter.mean(c.out, (1.5 * rate).toInt(), (3.0 * rate).toInt())
@@ -739,7 +739,7 @@ class ArcoTest {
     fun `a Bow is built at every TUNE step at the engine's constants, and refused where the old span went`() {
         var minMargin = 1.0
         var minAt = ""
-        for (voice in ArcoVoice.entries) {
+        for (voice in Arco.KEPT_VOICES) {
             for (step in ArcoMeasure.steps(voice)) {
                 for (grip in listOf(0f, 0.5f, 1f)) {
                     val hz = ArcoMeasure.hzOf(voice, step)
@@ -783,7 +783,7 @@ class ArcoTest {
      */
     @Test
     fun `the stroke's overshoot row locks at every TUNE step`() {
-        for (voice in ArcoVoice.entries) {
+        for (voice in Arco.KEPT_VOICES) {
             val steps = ArcoMeasure.steps(voice).toList()
             val rows = steps.pmap { step ->
                 listOf(Arco.DEFAULT_GRIP, 1f).map { grip ->
@@ -844,7 +844,7 @@ class ArcoTest {
         val grips = listOf(0f, Arco.DEFAULT_GRIP, 1f)
         // SARANGI (R2): R2 saw its latest lock across BOW at 0.61 s (D#3, BOW 0.3, GRIP 0); its bar is 0.8 s.
         val bar = mapOf(ArcoVoice.CELLO to 2.0, ArcoVoice.ERHU to 0.6, ArcoVoice.SARANGI to 0.8)
-        for (voice in ArcoVoice.entries) {
+        for (voice in Arco.KEPT_VOICES) {
             val steps = ArcoMeasure.steps(voice).toList()
             val rows = steps.pmap { step ->
                 bows.map { b -> grips.map { g -> ArcoMeasure.verdict(ArcoMeasure.core(voice, step, bow = b, grip = g, gateSeconds = 3.5f)).lock } }
@@ -948,7 +948,7 @@ class ArcoTest {
         assertEquals(Arco.BITE_PRESSURE_ERHU, Arco.bitePressure(ArcoVoice.ERHU))
         assertEquals(Arco.BITE_PRESSURE_CELLO, Arco.bitePressure(ArcoVoice.CELLO))
         val hundredths = (0..100).map { it / 100f }
-        for (voice in ArcoVoice.entries) {
+        for (voice in Arco.KEPT_VOICES) {
             for (bow in hundredths.filter { it <= Arco.OVERSHOOT_FROM }) assertEquals(1f, Arco.overshootFor(voice, bow), "$voice BOW $bow: a bite below the point where it starts")
             assertEquals(Arco.overshootMax(voice), Arco.overshootFor(voice, 1f), "$voice: BOW 1 is not the voice's own maximum")
             assertTrue(Arco.bitePressure(voice) in 0f..1f, "$voice: the bite's pressure share ${Arco.bitePressure(voice)} is not a share")
@@ -991,7 +991,7 @@ class ArcoTest {
                 if (Arco.bow(voice, hz, m, rate, vibrato = false).contentEquals(none)) failures.add("$voice ${name(voice, step)}: the voice's own bite at BOW 1 is the no-bite render, so the equality above proves nothing") else differs++
             }
         }
-        for (bow in (0..100).map { it / 100f }) for (voice in ArcoVoice.entries) {
+        for (bow in (0..100).map { it / 100f }) for (voice in Arco.KEPT_VOICES) {
             assertEquals(1f, Arco.overshootFor(voice, bow, 1f), "$voice BOW $bow: a maximum of 1 is a bite")
         }
         println("ARCO bite maximum 1: finite and equal to the no-bite render at $equal of 21 (note, override) cells; the voice's own bite differs from it at $differs of 7 notes")
@@ -1289,7 +1289,7 @@ class ArcoTest {
      */
     @Test
     fun `the voice constants are the ones that pass`() {
-        for (voice in ArcoVoice.entries) {
+        for (voice in Arco.KEPT_VOICES) {
             for (step in ArcoMeasure.steps(voice)) {
                 val g = Arco.gripFor(voice, step)
                 println("ARCO window $voice ${name(voice, step)}: pressure ${f(g.pressureLow.toDouble(), 3)}..${f(g.pressureHigh.toDouble(), 3)} corner ${f(g.cornerLow.toDouble(), 1)}..${f(g.cornerHigh.toDouble(), 1)} Hz")
@@ -1338,7 +1338,7 @@ class ArcoTest {
         assertEquals(2238.6f, Arco.gripFor(ArcoVoice.SARANGI, 24).cornerLow, 1f, "SARANGI's dark corner at D5")
         assertEquals(Strings.Bow.BRIDGE_HZ, Arco.gripFor(ArcoVoice.SARANGI, 0).cornerHigh, 0.5f)
         // the shape: a floor that only falls, a dark corner that only rises, a ceiling that never moves
-        for (voice in ArcoVoice.entries) {
+        for (voice in Arco.KEPT_VOICES) {
             val steps = ArcoMeasure.steps(voice).toList()
             for ((a, b) in steps.zipWithNext()) {
                 val ga = Arco.gripFor(voice, a)
@@ -1358,7 +1358,7 @@ class ArcoTest {
     // ---------------------------------------------------------------- 11. a held note with vibrato
 
     /** The three TUNEs a held note is read at: root, middle and top, the engine's own TUNE 0, 0.5 and 1. */
-    private fun heldCases() = ArcoVoice.entries.flatMap { v -> spread(v).map { v to it } }
+    private fun heldCases() = Arco.KEPT_VOICES.flatMap { v -> spread(v).map { v to it } }
 
     /**
      * A held 3 s note ([Arco.holdFor] of 3 s, the audition's clip) through the core with the engine's vibrato on, at root,
@@ -1412,7 +1412,7 @@ class ArcoTest {
     @Test
     fun `a held three second note with vibrato keeps one slip a period, because the string never feels it`() {
         val failures = ArrayList<String>()
-        for (voice in ArcoVoice.entries) {
+        for (voice in Arco.KEPT_VOICES) {
             val steps = ArcoMeasure.steps(voice).toList()
             val rows = steps.pmap { step ->
                 val c = ArcoMeasure.core(voice, step, hold = Arco.holdFor(3f), vibrato = true)

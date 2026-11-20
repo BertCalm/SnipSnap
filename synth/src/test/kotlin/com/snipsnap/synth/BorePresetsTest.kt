@@ -73,7 +73,7 @@ class BorePresetsTest {
 
     @Test
     fun `preset names are uppercase, short, and unique per voice`() {
-        for (voice in BoreVoice.entries) {
+        for (voice in Bore.KEPT_VOICES) {
             val names = BorePresets.forVoice(voice).map { it.name }
             assertEquals(8, names.size, "$voice should ship 8 presets, has ${names.size}")
             assertEquals(names.toSet().size, names.size, "$voice has duplicate preset names: $names")
@@ -103,7 +103,7 @@ class BorePresetsTest {
 
     @Test
     fun `presets spread out rather than cluster`() {
-        for (voice in BoreVoice.entries) {
+        for (voice in Bore.KEPT_VOICES) {
             val presets = BorePresets.forVoice(voice)
             for ((i, a) in presets.withIndex()) for (b in presets.drop(i + 1)) {
                 val d = PresetTestSupport.rmsDistance(a.macros, b.macros)

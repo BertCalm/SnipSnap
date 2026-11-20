@@ -77,9 +77,14 @@ import kotlin.random.Random
  *
  * The engine renders **dry**, mono, with no landing chain: a bowed note's own tail is its stop.
  */
-enum class ArcoVoice { CELLO, ERHU, SARANGI }
+/** CELLO, ERHU and SARANGI are the kept voices. The entries after them are candidates awaiting a listening verdict ([ArcoCandidates]);
+ * they are appended so saved names and ordinals never move. */
+enum class ArcoVoice { CELLO, ERHU, SARANGI, WHEEL, BAR, GLASS, VIOL }
 
 object Arco {
+
+    /** The voices players are offered. Candidates ([ArcoCandidates]) have no preset, kit or starter. */
+    val KEPT_VOICES = listOf(ArcoVoice.CELLO, ArcoVoice.ERHU, ArcoVoice.SARANGI)
 
     // ---- TUNE ---------------------------------------------------------------
 
@@ -114,12 +119,14 @@ object Arco {
         ArcoVoice.CELLO -> CELLO_TUNE_SEMITONES
         ArcoVoice.ERHU -> ERHU_TUNE_SEMITONES
         ArcoVoice.SARANGI -> SARANGI_TUNE_SEMITONES
+        else -> ArcoCandidates.spec(voice).semitones
     }
 
     fun rootMidi(voice: ArcoVoice): Int = when (voice) {
         ArcoVoice.CELLO -> CELLO_ROOT_MIDI
         ArcoVoice.ERHU -> ERHU_ROOT_MIDI
         ArcoVoice.SARANGI -> SARANGI_ROOT_MIDI
+        else -> ArcoCandidates.spec(voice).rootMidi
     }
 
     /** The snapped semitone above the voice's root that TUNE lands on. */
@@ -151,8 +158,8 @@ object Arco {
         MacroSpec("BOW", DEFAULT_BOW),
         MacroSpec("GRIP", DEFAULT_GRIP, neutral = 0.5f),
         when (voice) {
-            ArcoVoice.CELLO, ArcoVoice.ERHU -> MacroSpec("BODY", DEFAULT_BODY)
             ArcoVoice.SARANGI -> MacroSpec("WASH", DEFAULT_WASH)
+            else -> MacroSpec("BODY", DEFAULT_BODY)
         },
         MacroSpec("HOLD", DEFAULT_HOLD),
         MacroSpec("BUZZ", DEFAULT_BUZZ),
@@ -162,8 +169,8 @@ object Arco {
 
     /** Whether [voice] has a BODY knob: CELLO and ERHU do; SARANGI has WASH in its place. */
     fun hasBody(voice: ArcoVoice): Boolean = when (voice) {
-        ArcoVoice.CELLO, ArcoVoice.ERHU -> true
         ArcoVoice.SARANGI -> false
+        else -> true
     }
 
     /** The name of the fourth knob, the box's or the tarab's: BODY on CELLO and ERHU, WASH on SARANGI. */
@@ -316,6 +323,13 @@ object Arco {
             Dsp.expMap(min(semitone.toFloat() / SARANGI_CORNER_RISE_SEMITONES, 1f), SARANGI_CORNER_LOW_ROOT_HZ, Strings.Bow.BRIDGE_HZ),
             Strings.Bow.BRIDGE_HZ,
         )
+        // A candidate plays a kept voice's window ([ArcoCandidates.Spec.window]), its corner scaled.
+        else -> ArcoCandidates.spec(voice).let { c ->
+            val floor = c.cornerFloorRatio * Keys.midiHz(c.rootMidi + semitone)
+            gripFor(c.window, semitone + c.windowShift).let { g ->
+                Grip(g.pressureLow, g.pressureHigh, max(floor, g.cornerLow * c.cornerScale), max(floor, g.cornerHigh * c.cornerScale))
+            }
+        }
     }
 
     /**
@@ -328,6 +342,7 @@ object Arco {
         ArcoVoice.CELLO -> Strings.Bow.SHARE
         ArcoVoice.ERHU -> Strings.Bow.SHARE
         ArcoVoice.SARANGI -> Strings.Bow.SHARE
+        else -> Strings.Bow.SHARE
     }
 
     /** GRIP -> the bow's pressure at this TUNE step. */
@@ -402,6 +417,7 @@ object Arco {
         ArcoVoice.CELLO -> OVERSHOOT_MAX_CELLO
         ArcoVoice.ERHU -> OVERSHOOT_MAX_ERHU
         ArcoVoice.SARANGI -> OVERSHOOT_MAX_SARANGI
+        else -> ArcoCandidates.spec(voice).overshootMax
     }
 
     /** The least time constant the bite relaxes with, for [voice]: its time constant is the longer of this and the stroke's attack. */
@@ -409,6 +425,7 @@ object Arco {
         ArcoVoice.CELLO -> BITE_SECONDS_CELLO
         ArcoVoice.ERHU -> BITE_SECONDS_ERHU
         ArcoVoice.SARANGI -> BITE_SECONDS_SARANGI
+        else -> BITE_SECONDS_ERHU
     }
 
     /** How much of the bite's share goes into the pressure's climb toward the window's top, for [voice]: ERHU's is all of it (as it was). */
@@ -416,6 +433,7 @@ object Arco {
         ArcoVoice.CELLO -> BITE_PRESSURE_CELLO
         ArcoVoice.ERHU -> BITE_PRESSURE_ERHU
         ArcoVoice.SARANGI -> BITE_PRESSURE_SARANGI
+        else -> BITE_PRESSURE_ERHU
     }
 
     internal fun overshootFor(voice: ArcoVoice, bow: Float, max: Float = overshootMax(voice)): Float =
@@ -589,6 +607,7 @@ object Arco {
         ArcoVoice.CELLO -> VIBRATO_HUMAN
         ArcoVoice.ERHU -> VIBRATO_PLAIN
         ArcoVoice.SARANGI -> VIBRATO_HUMAN
+        else -> VIBRATO_HUMAN
     }
 
     /** A cellist's vibrato swells in over about half a second, against [VIBRATO_RISE_SECONDS]'s fifth. */
@@ -661,6 +680,7 @@ object Arco {
         ArcoVoice.CELLO -> CELLO_BODY
         ArcoVoice.ERHU -> ERHU_BODY
         ArcoVoice.SARANGI -> ERHU_BODY
+        else -> ArcoCandidates.spec(voice).body
     }
 
     /**
@@ -731,18 +751,21 @@ object Arco {
     internal fun liftShelfHz(voice: ArcoVoice): Float = when (voice) {
         ArcoVoice.CELLO -> CELLO_LIFT_SHELF_HZ
         ArcoVoice.ERHU, ArcoVoice.SARANGI -> ERHU_LIFT_SHELF_HZ
+        else -> ArcoCandidates.spec(voice).liftShelfHz
     }
 
     /** The bell's centre for [voice]. */
     internal fun liftBellHz(voice: ArcoVoice): Float = when (voice) {
         ArcoVoice.CELLO -> CELLO_LIFT_BELL_HZ
         ArcoVoice.ERHU, ArcoVoice.SARANGI -> ERHU_LIFT_BELL_HZ
+        else -> ArcoCandidates.spec(voice).liftBellHz
     }
 
     /** The bell's Q for [voice]. */
     internal fun liftBellQ(voice: ArcoVoice): Float = when (voice) {
         ArcoVoice.CELLO -> CELLO_LIFT_BELL_Q
         ArcoVoice.ERHU, ArcoVoice.SARANGI -> ERHU_LIFT_BELL_Q
+        else -> ERHU_LIFT_BELL_Q
     }
 
     /**
@@ -1318,6 +1341,12 @@ object Arco {
     ): FloatArray {
         val gate = gateFor(voice, hz, macros, rate, gateSeconds)
         val tap = play(voice, hz, macros, rate, gate, pressure, cornerHz, vBow, overshoot, lifted, bowPointOut, share, biteSeconds, overshootMax, pressureBite)
+        val cand = ArcoCandidates.of(voice)
+        if (cand != null) {
+            // A candidate's finger: its share of the vibrato (none on a wheel, a bar or a glass).
+            val cents = vibratoCentsFor(gate.holdN.toFloat() / rate) * cand.vibrato
+            return if (vibrato && cents > 0f) vibrato(tap, cents, rate, vibratoShape ?: vibratoShapeFor(voice)) else tap
+        }
         return if (vibrato) vibrato(tap, vibratoCentsFor(gate.holdN.toFloat() / rate), rate, vibratoShape ?: vibratoShapeFor(voice)) else tap
     }
 
@@ -1341,8 +1370,11 @@ object Arco {
         val biteN = max(gate.attackN, ((biteSecondsOverride ?: biteSeconds(voice)) * rate).toInt())
         val tau = biteN.toDouble() / rate
 
-        val bow = Strings.Bow(f = hz, beta = BETA, bridgeHz = corner, share = share ?: shareFor(voice), rate = rate)
-        if (lifted) bow.lift()
+        // A candidate drags its own thing ([ArcoCandidates.Bowed]); the kept voices' string is built and played exactly as it was.
+        val cand = ArcoCandidates.of(voice)
+        val other = if (cand != null) ArcoCandidates.bowed(cand, hz, corner, share ?: shareFor(voice), grip, rate) else null
+        val bow = if (cand == null) Strings.Bow(f = hz, beta = BETA, bridgeHz = corner, share = share ?: shareFor(voice), rate = rate) else null
+        if (lifted) { bow?.lift(); other?.lift() }
 
         val out = FloatArray(gate.total)
         val liftAt = gate.holdN + gate.rampN
@@ -1360,11 +1392,21 @@ object Arco {
             val v = vSustain * ramp * (1f + (bite * relax).toFloat()) * release
             val pNow = p + (pBite - p) * relax.toFloat()
             if (!steady && !lifted && i == liftAt) {
-                bow.lift()
-                bow.gain(stopScale(hz, corner, gate.stopN.toFloat() / rate, rate))
+                if (bow != null) {
+                    bow.lift()
+                    bow.gain(stopScale(hz, corner, gate.stopN.toFloat() / rate, rate))
+                } else {
+                    val release = gate.stopN.toFloat() / rate
+                    other!!.lift()
+                    other.stop(stopScale(hz, corner, release, rate), 10.0.pow(-3.0 / (release * hz)).toFloat())
+                }
             }
-            out[i] = bow.next(v, 5f - 4f * pNow)
-            if (bowPointOut != null) bowPointOut[i] = bow.bowPoint
+            if (bow != null) {
+                out[i] = bow.next(v, 5f - 4f * pNow)
+                if (bowPointOut != null) bowPointOut[i] = bow.bowPoint
+            } else {
+                out[i] = other!!.next(v, ArcoCandidates.slope(cand!!, pNow))
+            }
         }
         return out
     }
@@ -1547,12 +1589,12 @@ object Arco {
      */
     internal fun loopVibrato(
         raw: FloatArray, voice: ArcoVoice, loopFrames: Int, kind: LoopVibrato = LOOP_VIBRATO, rate: Int = RATE * Dsp.OVERSAMPLE,
-        shape: VibratoShape = VIBRATO_HUMAN,
+        shape: VibratoShape = VIBRATO_HUMAN, cents: Float = LOOP_VIBRATO_CENTS,
     ): FloatArray {
-        if (kind == LoopVibrato.OFF) return raw
+        if (kind == LoopVibrato.OFF || !(cents > 0f)) return raw
         val loopSeconds = loopFrames.toDouble() / RATE
         val hz = loopVibratoHz(loopSeconds)
-        val depth = (2.0.pow(LOOP_VIBRATO_CENTS / 1200.0) - 1.0) / (2.0 * PI * hz) * rate
+        val depth = (2.0.pow(cents / 1200.0) - 1.0) / (2.0 * PI * hz) * rate
         val riseSeconds = if (kind == LoopVibrato.HUMAN) shape.riseSeconds else VIBRATO_PLAIN.riseSeconds
         val out = FloatArray(raw.size)
         val last = raw.size - 1
@@ -1618,8 +1660,9 @@ object Arco {
      * so every movement repeats with the loop. With [human] at 0 it is [loopVibrato] alone, the loop before 2026-11-20.
      */
     private fun sungLoop(raw: FloatArray, voice: ArcoVoice, m: Map<String, Float>, loopFrames: Int, kind: LoopVibrato, human: Float, rate: Int): FloatArray {
-        if (!(human > 0f)) return loopVibrato(raw, voice, loopFrames, kind, rate)
-        val sung = loopVibrato(raw, voice, loopFrames, kind, rate, playerShape(human))
+        val cents = LOOP_VIBRATO_CENTS * (ArcoCandidates.of(voice)?.vibrato ?: 1f)
+        if (!(human > 0f)) return loopVibrato(raw, voice, loopFrames, kind, rate, cents = cents)
+        val sung = loopVibrato(raw, voice, loopFrames, kind, rate, playerShape(human), cents)
         return played(sung, voice, midiFor(voice, m.getValue("TUNE")), human, loopFrames.toDouble() / RATE, rate)
     }
 

@@ -6,6 +6,7 @@ import com.snipsnap.audio.WavWriter
 import com.snipsnap.kit.InstrumentStore
 import com.snipsnap.kit.Names
 import com.snipsnap.kit.OneNote
+import com.snipsnap.synth.Bore
 import com.snipsnap.synth.BoreKeys
 import com.snipsnap.synth.BorePatch
 import com.snipsnap.synth.BoreVoice
@@ -35,8 +36,11 @@ object BorePadMaker {
     /** Soft first, [BoreKeys.VELOCITY_WINDOWS]: the export's windows and the preview's. */
     val VELOCITY_WINDOWS: List<IntRange> = BoreKeys.VELOCITY_WINDOWS
 
-    /** The voices whose zones were measured. A voice added to BORE is not offered until its own are. */
-    val VOICES: Set<BoreVoice> = setOf(BoreVoice.FLUTE, BoreVoice.SAX)
+    /**
+     * The voices whose zones were measured: the kept ones ([Bore.KEPT_VOICES]). A candidate is offered once a verdict keeps it; its zones
+     * are cut by the same [BoreKeys] path, so keeping it is adding it there.
+     */
+    val VOICES: Set<BoreVoice> = Bore.KEPT_VOICES.toSet()
 
     /**
      * How long [preview] holds its key: past the zone's end (3.72 to 3.92 s as measured), where it wraps to the loop start,

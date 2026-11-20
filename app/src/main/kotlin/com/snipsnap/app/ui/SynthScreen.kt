@@ -6806,8 +6806,8 @@ private enum class Engine {
         // GROTTO (saved model 8) joined after BUBBLE once the owner kept round nacre-grotto-1 (15 Nov 2026);
         // CONCH (saved model 9) followed GROTTO once the owner kept round nacre-conch-1 (16 Nov 2026).
         NACRE -> NacreVoice.entries
-        BORE -> BoreVoice.entries
-        ARCO -> ArcoVoice.entries
+        BORE -> Bore.KEPT_VOICES
+        ARCO -> Arco.KEPT_VOICES
         SCOUR -> ScourVoice.entries
         EROSION -> ErosionVoice.entries
         OSTERIA -> OsteriaVoice.entries

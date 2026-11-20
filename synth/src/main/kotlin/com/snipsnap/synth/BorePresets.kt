@@ -40,6 +40,8 @@ object BorePresets {
     fun forVoice(voice: BoreVoice): List<BorePatch> = when (voice) {
         BoreVoice.FLUTE -> flutePresets
         BoreVoice.SAX -> saxPresets
+        // Candidates ([BoreCandidates]) have no presets until a listening verdict keeps them.
+        else -> emptyList()
     }
 
     fun all(): List<BorePatch> = BoreVoice.entries.flatMap { forVoice(it) }

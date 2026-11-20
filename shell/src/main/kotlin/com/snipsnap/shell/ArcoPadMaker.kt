@@ -6,6 +6,7 @@ import com.snipsnap.audio.WavWriter
 import com.snipsnap.kit.InstrumentStore
 import com.snipsnap.kit.Names
 import com.snipsnap.kit.OneNote
+import com.snipsnap.synth.Arco
 import com.snipsnap.synth.ArcoKeys
 import com.snipsnap.synth.ArcoPatch
 import com.snipsnap.synth.KeyNote
@@ -52,8 +53,11 @@ object ArcoPadMaker {
         }
     }
 
-    /** Whether [patch]'s voice has a held zone plan; every ARCO voice has one today, so a voice added without one is not offered. */
-    fun supports(patch: ArcoPatch): Boolean = ArcoKeys.zoneMidis(patch.voice).isNotEmpty()
+    /**
+     * Whether [patch]'s voice is offered held: a kept voice ([Arco.KEPT_VOICES]) with a held zone plan. A candidate plays the same held path
+     * ([Arco.renderHeldMeasured]) and is offered once a verdict keeps it.
+     */
+    fun supports(patch: ArcoPatch): Boolean = patch.voice in Arco.KEPT_VOICES && ArcoKeys.zoneMidis(patch.voice).isNotEmpty()
 
     /** The sheet's one stepper as a spec, clamped as [BellowsPadMaker.spec] is: an exponential knob's ends can land a float's width outside its range. */
     fun spec(patch: ArcoPatch, releaseFraction: Float): Spec =

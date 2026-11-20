@@ -38,7 +38,7 @@ class BoreKeysTest {
         /** Every zone of both voices, both layers, at the defaults: 36 renders, shared by the tests below. */
         val defaults: List<Zone> by lazy {
             buildList {
-                for (voice in BoreVoice.entries) for (midi in BoreKeys.padMidis(voice)) {
+                for (voice in Bore.KEPT_VOICES) for (midi in BoreKeys.padMidis(voice)) {
                     BoreKeys.layerBreaths(voice, Bore.defaults(voice)).forEachIndexed { layer, breath ->
                         val t0 = System.nanoTime()
                         val held = BoreKeys.padMeasured(voice, Bore.defaults(voice), midi, breath)
@@ -127,7 +127,7 @@ class BoreKeysTest {
     fun `the zones are nine minor thirds across each voice's range, and the soft layer blows 0_45 of the patch's breath`() {
         assertEquals((60..84 step 3).toList(), BoreKeys.padMidis(BoreVoice.FLUTE))
         assertEquals((48..72 step 3).toList(), BoreKeys.padMidis(BoreVoice.SAX))
-        for (voice in BoreVoice.entries) {
+        for (voice in Bore.KEPT_VOICES) {
             val midis = BoreKeys.padMidis(voice)
             assertEquals(Bore.rootMidi(voice), midis.first())
             assertEquals(Bore.rootMidi(voice) + Bore.TUNE_SEMITONES, midis.last(), "$voice: the top zone is the top of TUNE's range")
@@ -158,7 +158,7 @@ class BoreKeysTest {
         }
         // The report: per voice and layer, the weakest join, the deepest dip, the widest wrap step, the loop start and length,
         // the render time and the size at PCM_24 (3 bytes a frame, the package writer's depth).
-        for (voice in BoreVoice.entries) {
+        for (voice in Bore.KEPT_VOICES) {
             val all = defaults.filter { it.voice == voice }
             for (layer in 0..1) {
                 val zs = all.filter { it.layer == layer }
@@ -254,7 +254,7 @@ class BoreKeysTest {
         val n = (0.3 * Dsp.RATE).toInt()
         var weakest = 1.0
         var strongestControl = -1.0
-        for (voice in BoreVoice.entries) {
+        for (voice in Bore.KEPT_VOICES) {
             val midis = BoreKeys.padMidis(voice)
             for (midi in listOf(midis.first(), midis[midis.size / 2], midis.last())) for (layer in 0..1) {
                 val z = zone(voice, midi, layer)
@@ -281,7 +281,7 @@ class BoreKeysTest {
         // the two are is the audition's question (SAX's layers are much closer on this measure than FLUTE's).
         // Read with the player off ([plainZone]): 0.37 s is one moment of a breath that now drifts, and the two layers' colours at that
         // moment are the drift's as much as the breath's (SAX C3's soft layer read 3 percent brighter than its hard one there).
-        for (voice in BoreVoice.entries) {
+        for (voice in Bore.KEPT_VOICES) {
             val gaps = ArrayList<Double>()
             for (midi in BoreKeys.padMidis(voice)) {
                 val soft = plainZone(voice, midi, 0)
@@ -316,7 +316,7 @@ class BoreKeysTest {
             mapOf("BREATH" to 0f), mapOf("BREATH" to 1f), mapOf("CHIFF" to 0f, "BREATH" to 0f), mapOf("CHIFF" to 1f),
             mapOf("LIP" to 0f, "BREATH" to 1f), mapOf("LIP" to 1f, "BREATH" to 0f), mapOf("LIP" to 0f, "BREATH" to 0f), mapOf("LIP" to 1f, "BREATH" to 1f),
         )
-        for (voice in BoreVoice.entries) {
+        for (voice in Bore.KEPT_VOICES) {
             var weakest = 1.0
             var deepest = 0.0
             var latest = 0

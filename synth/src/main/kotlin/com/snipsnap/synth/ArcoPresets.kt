@@ -40,6 +40,8 @@ object ArcoPresets {
         ArcoVoice.CELLO -> celloPresets
         ArcoVoice.ERHU -> erhuPresets
         ArcoVoice.SARANGI -> sarangiPresets
+        // Candidates ([ArcoCandidates]) have no presets until a listening verdict keeps them.
+        else -> emptyList()
     }
 
     fun all(): List<ArcoPatch> = ArcoVoice.entries.flatMap { forVoice(it) }
