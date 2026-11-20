@@ -127,9 +127,10 @@ class ArcoSarangiTest {
             val m = Arco.settled(mapOf("TUNE" to tuneOf(step), "WASH" to 0f), voice)
             val hz = Arco.frequencyFor(voice, m.getValue("TUNE"))
             val noTarab = Arco.finished(Arco.bow(voice, hz, m), voice, Arco.DEFAULT_BODY, rawRate)
-            val engine = Arco.render(voice, m).samples
+            // With the player off ([Humanize.OFF]): the player (2026-11-20) is not part of [Arco.bow], and this is about the tarab.
+            val engine = Arco.render(voice, m, Arco.BUZZ_LAW, human = Humanize.OFF).samples
             assertContentEquals(noTarab, engine, "SARANGI ${noteName(Arco.midiFor(voice, m.getValue("TUNE")))} at WASH 0 is not the note with no tarab")
-            val faint = Arco.render(voice, m + ("WASH" to 0.01f)).samples
+            val faint = Arco.render(voice, m + ("WASH" to 0.01f), Arco.BUZZ_LAW, human = Humanize.OFF).samples
             assertTrue(!faint.contentEquals(engine), "control: WASH 0.01 is WASH 0")
         }
     }

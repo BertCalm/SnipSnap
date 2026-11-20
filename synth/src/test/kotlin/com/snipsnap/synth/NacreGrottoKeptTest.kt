@@ -98,9 +98,11 @@ class NacreGrottoKeptTest {
 
     @Test
     fun `D9's references are the accepted ARCO and OSTERIA sounds`() {
-        assertEquals("783e8e54df5466f334e1a3d3302f7e810ff66b225732a6d809affe43b4e248c9",
+        // ARCO's two are the held renders kept in round fix-arco-1 (20 Nov 2026), after the held-note player humanized
+        // them; D9's clip was heard before that, with the earlier, steadier holds. OSTERIA's is the one D9 played.
+        assertEquals("f5e05f0332de0b1f6d0b52c2519212cac100e5dfbba9e2528784623a52d757d3",
             hash(Arco.render(ArcoVoice.CELLO, mapOf("TUNE" to 0f, "HOLD" to 1f)).samples), "ARCO CELLO's held loop moved")
-        assertEquals("5e67be4d76b7c4345f016be835e31f94cd0eba8386bec4a2b17b40d8ff0114d5",
+        assertEquals("151ba4295aa50a75382e71626c507d73489f6d672b678883ab4d8529b4b4f311",
             hash(Arco.render(ArcoVoice.SARANGI, mapOf("TUNE" to 0f, "HOLD" to 1f)).samples), "ARCO SARANGI's held loop moved")
         assertEquals("e506fdd5298b049414da1a875798adf9ffeb36d0511808d620a7052b38355645",
             hash(Osteria.render(OsteriaVoice.BOWED, mapOf("HOLD" to 1f), 36, .8f).samples), "OSTERIA BOWED moved")

@@ -65,7 +65,7 @@ import kotlin.math.sin
  *
  * WidePadSheetScreenTest's and PedalSlateScreenTest's harness: semantic clicks rather than
  * scrolled taps, every wait on something observable. Both doors refuse until the sheet has read
- * the bin (`binDaysLeft`), so each test waits for the provenance line to say the bin keeps the take
+ * the bin (`binDaysLeft`), so each test waits for the provenance line to say the trash keeps the take
  * before it taps.
  */
 @RunWith(AndroidJUnit4::class)
@@ -129,8 +129,8 @@ class PadSheetUndoScreenTest : ComposeScreenTest() {
             )
         }
         waitFor("the pad sheet", timeoutMillis = 60_000) { hasText("PAD ${PadBanks.tag(1)}") }
-        waitFor("the provenance line to say the bin keeps the take", timeoutMillis = 60_000) {
-            compose.onAllNodesWithText("original in bin, kept", substring = true, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
+        waitFor("the provenance line to say the trash keeps the take", timeoutMillis = 60_000) {
+            compose.onAllNodesWithText("original in the trash, kept", substring = true, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
         }
         pageState = page
         pump()

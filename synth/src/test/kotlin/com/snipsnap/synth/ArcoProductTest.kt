@@ -649,7 +649,11 @@ class ArcoProductTest {
             assertTrue(a.loop.all { it.isFinite() && abs(it) <= 0.99f + 1e-6f }, "$name: the loop is not finite or is over the ceiling")
             val q = a.loop.size / 4
             fun rms(from: Int) = sqrt((from until from + q).sumOf { a.loop[it].toDouble() * a.loop[it] } / q)
-            val steady = rms(0) / rms(a.loop.size - q)
+            // Steady is the string's: read with the player off ([Humanize.OFF]). The loop as it ships swells and eases on purpose since
+            // 2026-11-20 (CELLO C2's first quarter read 1.05 of its last); HoldHumanizeTest holds what the player may do to it.
+            val bare = Arco.renderLoopMeasured(voice, macros(voice, tune, hold = 1f), human = Humanize.OFF).loop
+            fun bareRms(from: Int) = sqrt((from until from + q).sumOf { bare[it].toDouble() * bare[it] } / q)
+            val steady = bareRms(0) / bareRms(bare.size - q)
             assertTrue(steady in 0.98..1.02, "$name: the loop's first quarter is $steady of its last")
             val three = a.loop + a.loop + a.loop
             val viaFft = FineTuning.cents(FineTuning.measuredHz(three, rate, hz, fromSec = 0.1f, bodySeconds = 1.4f), hz.toDouble())
@@ -979,7 +983,7 @@ class ArcoProductTest {
                 val mean = cents.average()
                 return cents.maxOf { abs(it - mean) } to mean
             }
-            val (flat, flatMean) = spreadAndMean(Arco.renderLoopMeasured(voice, macros(voice, hold = 1f) + noTarab, loopVibrato = Arco.LoopVibrato.OFF).loop)
+            val (flat, flatMean) = spreadAndMean(Arco.renderLoopMeasured(voice, macros(voice, hold = 1f) + noTarab, loopVibrato = Arco.LoopVibrato.OFF, human = Humanize.OFF).loop)
             val (sung, sungMean) = spreadAndMean(Arco.renderLoopMeasured(voice, macros(voice, hold = 1f) + noTarab).loop)
             val held = finishedCore(voice, macros(voice, hold = Arco.holdFor(3f)) + noTarab)
             val heldCents = centsOver(held, hz, 0.6f, 3f)
