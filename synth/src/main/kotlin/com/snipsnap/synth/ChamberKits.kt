@@ -3,7 +3,7 @@ package com.snipsnap.synth
 import com.snipsnap.audio.Scales
 import com.snipsnap.kit.ArrangedPad
 
-/** The finite model-three quartet as native notes and the six saved factory rooms. */
+/** The finite model-three quartet as native notes and the six factory rooms as first published. */
 object ChamberKits {
     const val NAME = "SnipSnap Chamber Kit"
     const val MODEL = ChamberPresets.MODEL
@@ -14,7 +14,8 @@ object ChamberKits {
 
     /** A01–A08: C3–F4. A09–A14: six factory recipes. A15–A16: room contrasts. */
     fun entries(): List<Entry> {
-        val factory = ChamberPresets.all()
+        // The kit keeps the six recipes it was published and heard with; five factory recipes were re-voiced since.
+        val factory = ChamberPresets.original()
         val anchor = factory.first { it.name == "Four Answers" }
         val canopy = factory.first { it.name == "Aquarium Ceiling" }
         val notes = pentatonic.map { semitone ->

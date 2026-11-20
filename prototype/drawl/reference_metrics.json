@@ -1,0 +1,647 @@
+{
+ "MNT_MWC_guitar_dobro_yeehaw_D_wet.wav": {
+  "seconds": 7.4,
+  "centroid_hz": 687,
+  "band_share": {
+   "40-100": 0.0,
+   "100-250": 0.192,
+   "250-500": 0.128,
+   "500-1000": 0.572,
+   "1000-2000": 0.092,
+   "2000-4000": 0.012,
+   "4000-8000": 0.003,
+   "8000-16000": 0.0
+  },
+  "ltas_peaks_hz_db": [
+   [
+    867,
+    25.3
+   ],
+   [
+    657,
+    22.5
+   ],
+   [
+    721,
+    22.2
+   ],
+   [
+    576,
+    20.7
+   ]
+  ],
+  "onsets_per_s": 0.82,
+  "attack_10_90_ms_median": 36.6,
+  "decay_db_per_s_loudest_note": -4.3,
+  "decay_window_s": 3.99,
+  "voiced_fraction": 0.14,
+  "glide_fraction": 0.526,
+  "glide_speed_cents_per_s_median": 20838,
+  "glide_extent_cents_median": 1465,
+  "vibrato_rate_hz_median": null,
+  "vibrato_depth_cents_pp_median": null,
+  "f0_median_hz": 73.1
+ },
+ "115_guitar_electric_wasteland_slide_6-8_Emin.wav": {
+  "seconds": 25.0,
+  "centroid_hz": 494,
+  "band_share": {
+   "40-100": 0.0,
+   "100-250": 0.102,
+   "250-500": 0.61,
+   "500-1000": 0.273,
+   "1000-2000": 0.006,
+   "2000-4000": 0.011,
+   "4000-8000": 0.0,
+   "8000-16000": 0.0
+  },
+  "ltas_peaks_hz_db": [
+   [
+    458,
+    32.2
+   ],
+   [
+    646,
+    27.9
+   ],
+   [
+    969,
+    20.8
+   ],
+   [
+    888,
+    20.6
+   ]
+  ],
+  "onsets_per_s": 0.8,
+  "attack_10_90_ms_median": 39.2,
+  "decay_db_per_s_loudest_note": -5.4,
+  "decay_window_s": 1.56,
+  "voiced_fraction": 0.93,
+  "glide_fraction": 0.196,
+  "glide_speed_cents_per_s_median": 3356,
+  "glide_extent_cents_median": 372,
+  "vibrato_rate_hz_median": 6.0,
+  "vibrato_depth_cents_pp_median": 140,
+  "f0_median_hz": 328.9
+ },
+ "MNT_MWC_70_guitar_dobro_skippy_D.wav": {
+  "seconds": 13.7,
+  "centroid_hz": 512,
+  "band_share": {
+   "40-100": 0.0,
+   "100-250": 0.015,
+   "250-500": 0.799,
+   "500-1000": 0.099,
+   "1000-2000": 0.056,
+   "2000-4000": 0.027,
+   "4000-8000": 0.001,
+   "8000-16000": 0.002
+  },
+  "ltas_peaks_hz_db": [
+   [
+    581,
+    21.4
+   ],
+   [
+    1184,
+    15.8
+   ],
+   [
+    1055,
+    15.7
+   ],
+   [
+    824,
+    14.3
+   ]
+  ],
+  "onsets_per_s": 0.88,
+  "attack_10_90_ms_median": 8.2,
+  "decay_db_per_s_loudest_note": -17.4,
+  "decay_window_s": 1.71,
+  "voiced_fraction": 0.59,
+  "glide_fraction": 0.549,
+  "glide_speed_cents_per_s_median": 1899,
+  "glide_extent_cents_median": 225,
+  "vibrato_rate_hz_median": 5.9,
+  "vibrato_depth_cents_pp_median": 144,
+  "f0_median_hz": 368.1
+ },
+ "MNT_MWC_75_guitar_dobro_trotting_G.wav": {
+  "seconds": 25.6,
+  "centroid_hz": 368,
+  "band_share": {
+   "40-100": 0.012,
+   "100-250": 0.436,
+   "250-500": 0.382,
+   "500-1000": 0.11,
+   "1000-2000": 0.044,
+   "2000-4000": 0.014,
+   "4000-8000": 0.001,
+   "8000-16000": 0.001
+  },
+  "ltas_peaks_hz_db": [
+   [
+    603,
+    18.4
+   ],
+   [
+    705,
+    15.9
+   ],
+   [
+    1184,
+    15.0
+   ],
+   [
+    1050,
+    12.4
+   ]
+  ],
+  "onsets_per_s": 1.88,
+  "attack_10_90_ms_median": 36.3,
+  "decay_db_per_s_loudest_note": -18.3,
+  "decay_window_s": 1.08,
+  "voiced_fraction": 0.16,
+  "glide_fraction": 0.947,
+  "glide_speed_cents_per_s_median": 14743,
+  "glide_extent_cents_median": 1946,
+  "vibrato_rate_hz_median": null,
+  "vibrato_depth_cents_pp_median": null,
+  "f0_median_hz": 112.4
+ },
+ "SNS_AM_slide_guitar_one_shot_raaka_A-D.wav": {
+  "seconds": 6.8,
+  "centroid_hz": 1129,
+  "band_share": {
+   "40-100": 0.002,
+   "100-250": 0.165,
+   "250-500": 0.14,
+   "500-1000": 0.277,
+   "1000-2000": 0.214,
+   "2000-4000": 0.202,
+   "4000-8000": 0.0,
+   "8000-16000": 0.0
+  },
+  "ltas_peaks_hz_db": [
+   [
+    738,
+    8.7
+   ],
+   [
+    581,
+    8.0
+   ],
+   [
+    2665,
+    8.0
+   ],
+   [
+    883,
+    7.8
+   ]
+  ],
+  "onsets_per_s": 1.18,
+  "attack_10_90_ms_median": 11.5,
+  "decay_db_per_s_loudest_note": -10.2,
+  "decay_window_s": 5.9,
+  "voiced_fraction": 0.29,
+  "glide_fraction": 0.5,
+  "glide_speed_cents_per_s_median": 10703,
+  "glide_extent_cents_median": 1919,
+  "vibrato_rate_hz_median": 6.2,
+  "vibrato_depth_cents_pp_median": 1317,
+  "f0_median_hz": 146.8
+ },
+ "SO_AU_electric_guitar_country_edm_slide_Bmin.wav": {
+  "seconds": 10.5,
+  "centroid_hz": 942,
+  "band_share": {
+   "40-100": 0.0,
+   "100-250": 0.0,
+   "250-500": 0.265,
+   "500-1000": 0.39,
+   "1000-2000": 0.313,
+   "2000-4000": 0.031,
+   "4000-8000": 0.0,
+   "8000-16000": 0.0
+  },
+  "ltas_peaks_hz_db": [
+   [
+    479,
+    32.9
+   ],
+   [
+    1475,
+    30.0
+   ],
+   [
+    738,
+    27.8
+   ],
+   [
+    1760,
+    26.6
+   ]
+  ],
+  "onsets_per_s": 2.18,
+  "attack_10_90_ms_median": 37.6,
+  "decay_db_per_s_loudest_note": -9.7,
+  "decay_window_s": 7.55,
+  "voiced_fraction": 0.15,
+  "glide_fraction": 0.673,
+  "glide_speed_cents_per_s_median": 12551,
+  "glide_extent_cents_median": 885,
+  "vibrato_rate_hz_median": 8.6,
+  "vibrato_depth_cents_pp_median": 1265,
+  "f0_median_hz": 245.7
+ },
+ "MNT_MWC_70_guitar_dobro_lequint_D.wav": {
+  "seconds": 13.7,
+  "centroid_hz": 693,
+  "band_share": {
+   "40-100": 0.0,
+   "100-250": 0.025,
+   "250-500": 0.686,
+   "500-1000": 0.099,
+   "1000-2000": 0.083,
+   "2000-4000": 0.099,
+   "4000-8000": 0.005,
+   "8000-16000": 0.002
+  },
+  "ltas_peaks_hz_db": [
+   [
+    797,
+    16.7
+   ],
+   [
+    2347,
+    16.5
+   ],
+   [
+    1184,
+    15.4
+   ],
+   [
+    2051,
+    12.8
+   ]
+  ],
+  "onsets_per_s": 2.19,
+  "attack_10_90_ms_median": 30.9,
+  "decay_db_per_s_loudest_note": -18.6,
+  "decay_window_s": 1.09,
+  "voiced_fraction": 0.74,
+  "glide_fraction": 0.451,
+  "glide_speed_cents_per_s_median": 2289,
+  "glide_extent_cents_median": 226,
+  "vibrato_rate_hz_median": 6.9,
+  "vibrato_depth_cents_pp_median": 190,
+  "f0_median_hz": 296.1
+ },
+ "CO_SDS_Lap_Steel_Chord_Slide_Dmin.wav": {
+  "seconds": 6.4,
+  "centroid_hz": 561,
+  "band_share": {
+   "40-100": 0.0,
+   "100-250": 0.0,
+   "250-500": 0.498,
+   "500-1000": 0.449,
+   "1000-2000": 0.05,
+   "2000-4000": 0.002,
+   "4000-8000": 0.0,
+   "8000-16000": 0.0
+  },
+  "ltas_peaks_hz_db": [
+   [
+    711,
+    32.2
+   ],
+   [
+    764,
+    29.4
+   ],
+   [
+    571,
+    28.9
+   ],
+   [
+    458,
+    25.4
+   ]
+  ],
+  "onsets_per_s": 1.42,
+  "attack_10_90_ms_median": 17.3,
+  "decay_db_per_s_loudest_note": -16.5,
+  "decay_window_s": 5.0,
+  "voiced_fraction": 0.47,
+  "glide_fraction": 0.289,
+  "glide_speed_cents_per_s_median": 10430,
+  "glide_extent_cents_median": 1522,
+  "vibrato_rate_hz_median": 5.5,
+  "vibrato_depth_cents_pp_median": 1222,
+  "f0_median_hz": 349.9
+ },
+ "MNT_MWC_60_guitar_nylon_spag_E.wav": {
+  "seconds": 30.0,
+  "centroid_hz": 359,
+  "band_share": {
+   "40-100": 0.016,
+   "100-250": 0.489,
+   "250-500": 0.367,
+   "500-1000": 0.084,
+   "1000-2000": 0.037,
+   "2000-4000": 0.005,
+   "4000-8000": 0.001,
+   "8000-16000": 0.0
+  },
+  "ltas_peaks_hz_db": [
+   [
+    764,
+    23.9
+   ],
+   [
+    501,
+    23.1
+   ],
+   [
+    1319,
+    20.0
+   ],
+   [
+    657,
+    18.3
+   ]
+  ],
+  "onsets_per_s": 1.4,
+  "attack_10_90_ms_median": 34.8,
+  "decay_db_per_s_loudest_note": -17.0,
+  "decay_window_s": 1.1,
+  "voiced_fraction": 0.47,
+  "glide_fraction": 0.527,
+  "glide_speed_cents_per_s_median": 4727,
+  "glide_extent_cents_median": 970,
+  "vibrato_rate_hz_median": 6.5,
+  "vibrato_depth_cents_pp_median": 739,
+  "f0_median_hz": 330.1
+ },
+ "MNT_MWC_60_guitar_nylon_outlaw_E_filmed.wav": {
+  "seconds": 30.0,
+  "centroid_hz": 307,
+  "band_share": {
+   "40-100": 0.097,
+   "100-250": 0.526,
+   "250-500": 0.266,
+   "500-1000": 0.074,
+   "1000-2000": 0.033,
+   "2000-4000": 0.003,
+   "4000-8000": 0.0,
+   "8000-16000": 0.0
+  },
+  "ltas_peaks_hz_db": [
+   [
+    425,
+    23.5
+   ],
+   [
+    759,
+    18.8
+   ],
+   [
+    506,
+    17.5
+   ],
+   [
+    646,
+    16.9
+   ]
+  ],
+  "onsets_per_s": 0.67,
+  "attack_10_90_ms_median": 40.0,
+  "decay_db_per_s_loudest_note": -4.0,
+  "decay_window_s": 4.04,
+  "voiced_fraction": 0.3,
+  "glide_fraction": 0.304,
+  "glide_speed_cents_per_s_median": 19299,
+  "glide_extent_cents_median": 1355,
+  "vibrato_rate_hz_median": 7.1,
+  "vibrato_depth_cents_pp_median": 868,
+  "f0_median_hz": 82.4
+ },
+ "CO_NE_80_pedal_steel_rearview_swells_slides_Fmaj.wav": {
+  "seconds": 24.0,
+  "centroid_hz": 1051,
+  "band_share": {
+   "40-100": 0.0,
+   "100-250": 0.0,
+   "250-500": 0.203,
+   "500-1000": 0.287,
+   "1000-2000": 0.446,
+   "2000-4000": 0.063,
+   "4000-8000": 0.0,
+   "8000-16000": 0.0
+  },
+  "ltas_peaks_hz_db": [
+   [
+    447,
+    30.6
+   ],
+   [
+    1480,
+    26.5
+   ],
+   [
+    1254,
+    24.8
+   ],
+   [
+    1852,
+    24.8
+   ]
+  ],
+  "onsets_per_s": 0.75,
+  "attack_10_90_ms_median": 17.3,
+  "decay_db_per_s_loudest_note": -5.3,
+  "decay_window_s": 11.77,
+  "voiced_fraction": 0.65,
+  "glide_fraction": 0.221,
+  "glide_speed_cents_per_s_median": 10676,
+  "glide_extent_cents_median": 1024,
+  "vibrato_rate_hz_median": 5.7,
+  "vibrato_depth_cents_pp_median": 386,
+  "f0_median_hz": 373.2
+ },
+ "MNT_MWC_60_guitar_dobro_unchained_Dm.wav": {
+  "seconds": 16.0,
+  "centroid_hz": 403,
+  "band_share": {
+   "40-100": 0.001,
+   "100-250": 0.381,
+   "250-500": 0.439,
+   "500-1000": 0.114,
+   "1000-2000": 0.038,
+   "2000-4000": 0.025,
+   "4000-8000": 0.001,
+   "8000-16000": 0.001
+  },
+  "ltas_peaks_hz_db": [
+   [
+    571,
+    18.4
+   ],
+   [
+    764,
+    13.9
+   ],
+   [
+    1168,
+    12.1
+   ],
+   [
+    872,
+    11.4
+   ]
+  ],
+  "onsets_per_s": 1.38,
+  "attack_10_90_ms_median": 39.1,
+  "decay_db_per_s_loudest_note": -24.7,
+  "decay_window_s": 0.5,
+  "voiced_fraction": 0.39,
+  "glide_fraction": 0.641,
+  "glide_speed_cents_per_s_median": 9295,
+  "glide_extent_cents_median": 932,
+  "vibrato_rate_hz_median": 7.5,
+  "vibrato_depth_cents_pp_median": 671,
+  "f0_median_hz": 147.3
+ },
+ "MNT_MWC_95_guitar_dobro_bobbin_A.wav": {
+  "seconds": 30.0,
+  "centroid_hz": 410,
+  "band_share": {
+   "40-100": 0.0,
+   "100-250": 0.361,
+   "250-500": 0.42,
+   "500-1000": 0.191,
+   "1000-2000": 0.016,
+   "2000-4000": 0.011,
+   "4000-8000": 0.0,
+   "8000-16000": 0.0
+  },
+  "ltas_peaks_hz_db": [
+   [
+    646,
+    26.0
+   ],
+   [
+    431,
+    21.5
+   ],
+   [
+    608,
+    21.3
+   ],
+   [
+    571,
+    21.0
+   ]
+  ],
+  "onsets_per_s": 2.2,
+  "attack_10_90_ms_median": 40.4,
+  "decay_db_per_s_loudest_note": -20.0,
+  "decay_window_s": 0.49,
+  "voiced_fraction": 0.53,
+  "glide_fraction": 0.846,
+  "glide_speed_cents_per_s_median": 16006,
+  "glide_extent_cents_median": 1122,
+  "vibrato_rate_hz_median": null,
+  "vibrato_depth_cents_pp_median": null,
+  "f0_median_hz": 110.0
+ },
+ "MNT_MWC_70_guitar_rubber_bridge_deep_D.wav": {
+  "seconds": 13.7,
+  "centroid_hz": 227,
+  "band_share": {
+   "40-100": 0.217,
+   "100-250": 0.468,
+   "250-500": 0.279,
+   "500-1000": 0.026,
+   "1000-2000": 0.007,
+   "2000-4000": 0.002,
+   "4000-8000": 0.001,
+   "8000-16000": 0.0
+  },
+  "ltas_peaks_hz_db": [
+   [
+    436,
+    23.3
+   ],
+   [
+    587,
+    19.8
+   ],
+   [
+    646,
+    15.1
+   ],
+   [
+    1114,
+    13.8
+   ]
+  ],
+  "onsets_per_s": 1.82,
+  "attack_10_90_ms_median": 46.4,
+  "decay_db_per_s_loudest_note": -12.3,
+  "decay_window_s": 0.66,
+  "voiced_fraction": 0.56,
+  "glide_fraction": 0.646,
+  "glide_speed_cents_per_s_median": 20660,
+  "glide_extent_cents_median": 1448,
+  "vibrato_rate_hz_median": null,
+  "vibrato_depth_cents_pp_median": null,
+  "f0_median_hz": 73.5
+ },
+ "MNT_MWC_80_guitar_acoustic_trotting_D.wav": {
+  "seconds": 12.0,
+  "centroid_hz": 274,
+  "band_share": {
+   "40-100": 0.002,
+   "100-250": 0.611,
+   "250-500": 0.34,
+   "500-1000": 0.033,
+   "1000-2000": 0.013,
+   "2000-4000": 0.001,
+   "4000-8000": 0.0,
+   "8000-16000": 0.0
+  },
+  "ltas_peaks_hz_db": [
+   [
+    431,
+    30.9
+   ],
+   [
+    598,
+    25.2
+   ],
+   [
+    727,
+    22.4
+   ],
+   [
+    899,
+    20.0
+   ]
+  ],
+  "onsets_per_s": 2.67,
+  "attack_10_90_ms_median": 46.5,
+  "decay_db_per_s_loudest_note": -12.2,
+  "decay_window_s": 0.56,
+  "voiced_fraction": 0.59,
+  "glide_fraction": 0.6,
+  "glide_speed_cents_per_s_median": 20640,
+  "glide_extent_cents_median": 1446,
+  "vibrato_rate_hz_median": null,
+  "vibrato_depth_cents_pp_median": null,
+  "f0_median_hz": 73.5
+ }
+}

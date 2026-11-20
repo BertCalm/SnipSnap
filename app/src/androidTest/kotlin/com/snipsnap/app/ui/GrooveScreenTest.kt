@@ -123,7 +123,12 @@ class GrooveScreenTest : ComposeScreenTest() {
         )
     }
 
-    private fun show(entry: KitShelf.Entry, onTempo: ((Float) -> Unit)? = null) {
+    private fun show(
+        entry: KitShelf.Entry,
+        onTempo: ((Float) -> Unit)? = null,
+        onNavigatePads: () -> Unit = {},
+        waitForRow: Boolean = true,
+    ) {
         setPhoneContent {
             GrooveScreen(
                 entry = entry,
@@ -133,9 +138,10 @@ class GrooveScreenTest : ComposeScreenTest() {
                 onNavigateKits = {},
                 hasProject = true,
                 onAddFromShelf = {},
-                onNavigatePads = {},
+                onNavigatePads = onNavigatePads,
             )
         }
+        if (!waitForRow) return
         // The kit's grooves are read off disk in a LaunchedEffect, so the
         // row does not exist on the first frame — `loading` draws a bare
         // panel until it lands.
@@ -268,6 +274,34 @@ class GrooveScreenTest : ComposeScreenTest() {
         tap("YOURS")
         assertSubLine(PROG_SUBS[YOURS_INDEX])
         button("YOURS").assertIsSelected()
+    }
+
+    /**
+     * UAT 2026-11 user states, D-1: a `groove.json` torn mid-object crashed
+     * the app on every open of BEAT for that kit. The screen now says the
+     * beat won't read, offers PADS, and leaves the file exactly as it found
+     * it: a damaged file may still be recoverable, and nothing on this
+     * screen may save a fresh one over it.
+     */
+    @Test
+    fun a_damaged_beat_file_says_so_offers_PADS_and_is_left_as_it_was() {
+        val entry = grooveKit(userPrograms = 1)
+        val file = File(entry.dir, GrooveStore.FILE_NAME)
+        // The UAT's own damage: the closing braces gone, an unterminated object.
+        val damaged = file.readText().trimEnd().dropLast(2)
+        file.writeText(damaged)
+        var toPads = 0
+        show(entry, onNavigatePads = { toPads++ }, waitForRow = false)
+        waitFor("the line saying the beat won't read") {
+            compose.onAllNodesWithText(Copy.BEAT_WONT_READ, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
+        }
+        org.junit.Assert.assertTrue(
+            "no program row over a beat that did not read",
+            compose.onAllNodesWithText("CAPTURED", useUnmergedTree = true).fetchSemanticsNodes().isEmpty(),
+        )
+        tap("PADS ▸")
+        org.junit.Assert.assertEquals(1, toPads)
+        org.junit.Assert.assertEquals(damaged, file.readText())
     }
 
     companion object {

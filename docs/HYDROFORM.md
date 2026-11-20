@@ -14,7 +14,7 @@ gate. No final presets or factory kit integration are included; R7 adds a separa
 | CHARGE | .70 | Source amplitude and nonlinear drive |
 | STANDOFF | .35 | Three stable delayed all-passes, arrival offset and direct/return interference |
 | YIELD | .50 | Slope activation threshold; lower values engage folding more readily |
-| ARREST | .65 | Exponential 650 to 88 ms stop; max is the former R1 .75, not its 45 ms choke |
+| ARREST | .65 | Exponential 650 to 88 ms stop; max is the former R1 .75, not its 45 ms choke. Up to .8 the stop is a quick cut (1.5 to 21.5 ms). Above .8 the strike is damped instead: the gate starts closing at the same instant, takes up to 90 ms longer and falls on a steeper curve |
 | HOLD | 0 | DOME only: exactly 1 retains a 2 s, 120 BPM-assumed eighth-note stutter |
 
 Velocity changes the source onset and excitation, plus upper-partial weight on BULKHEAD.
@@ -53,6 +53,7 @@ No higher-rate claim or spectral repair is silently introduced in Kotlin.
 - A stable delayed return makes STANDOFF change attack structure before distortion.
 - Smooth, root-scaled slope activation gives the folding its accepted dynamic character.
 - Explicit stop/ramp timing implements ARREST independently from clipping.
+- The owner called the shortest candidate presets (ARREST 1) abrupt on 2026-11-20: cut from full level 88 ms in, the quick stop read as the file ending. The damped top of ARREST answers that; every setting at or below .8 renders as before, bit for bit. Heard 2026-11-20, round fix-hydroform-1: BS1 (DIE CUT before and after) and BS2 (CUT RIM before and after, then PLATE TAP unchanged), both KEEP, no notes. So the damped top of ARREST and DIE CUT's roughly 90 ms release are accepted, and PLATE TAP (ARREST .8) stays as it is.
 - The shared house output stage makes the port compatible; raw parity distinguishes a port
   error from an expected filtering or loudness difference.
 

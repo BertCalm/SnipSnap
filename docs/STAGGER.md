@@ -13,6 +13,60 @@ barely hear, or none → the clock drags and catches up → a cartoon lands wher
 
 ## Status
 
+**Complete (2026-11-20): sound approved, phone and MPC gates passed.** The owner heard the round 3d page (every pad
+of all three kits, the converter at 16 bits blended half clean, the modal Dark Gong) and said "3D works", then "All
+three kits pass, gong too"; after playing the kits on the phone and loading them on the MPC, "phone works, MPC loads
+and plays". Kit version 9 is the accepted baseline.
+
+**Round 3d built (2026-11-20): "I think the 12-bit is too high. The bit crushing is overly effecting the sound."**
+Measured on the kits' own pads, each converter stage switched off in turn against the print with the converter clean
+(its TONE kept), in the first 30 ms, 30 to 200 ms and past 200 ms of each hit:
+
+- **The 12-bit word ate the quiet tails and nothing else.** An attack or a body measured the same at 12, 14 and 16
+  bits; past 200 ms, MATINEE's snare sat 7 dB under the clean print at 12 bits and 23 at 16, and STUMBLE's rimshot
+  tail was all quantization (0 dB) at 12 bits and 20 dB under at 16.
+- **The 26 kHz hold made the grit on the snares and hats.** Their attacks sat 10 to 17 dB under the clean print with
+  it and 25 to 27 without. A gentler hold barely helps: at 37 kHz the hat sat 11.4 dB under against 9.7 at 26 kHz.
+  The hold is close to all or nothing.
+- **The input drive touched only the kicks** (21 dB under with it, 45 without).
+
+The change (`StaggerKits` version 9): every print's word is 16 bits (BITS 0), and the converter is blended half and
+half with itself run clean (`Print.crushMix` .5, `CRUSH_MIX`). The clean half keeps the converter's TONE, so the
+blend takes out grit and not colour. Every pad's converter change is about 5 dB smaller (CARDBOARD's hat attack 9.7 to
+14.8 dB under the clean print, its snare 16.5 to 21.8, its groove 18.8 to 23.7), and the tails are whole again
+(MATINEE's snare tail 7.4 to 27.6 dB under, STUMBLE's rimshot tail 0 to 24.2). The foley keeps its own 12-bit
+converter (Eras sp1200): the profile asked for the foley to show the old hardware.
+
+The round 3d listening page (private to the owner's account): [Stagger, round three d](https://claude.ai/artifact/87172E2NbHfXcuHimb5hUx). Each kit's
+backbeat drum, third pad and groove as round 3c shipped them, with no crushing on the drums at all, and with this
+round's half blend, then every pad. `:shell:generateStaggerKits` verified the three kits again (135, 135 and 118 s on this
+machine).
+
+**Round 3c built (2026-11-20): "Dark Gong sounds like the timpani."** It did, by measure. The Dark Gong was FIRED
+BRONZE's kempul played five semitones down: its fundamental sat at 72 Hz against the timpani's 78, its overtones lined
+up almost like a drum's (73, 146, 200, 293 Hz), nothing sounded above 300 Hz, and its upper band fell 7.6 dB after the
+strike, as a drum's does. Nothing about it said gong.
+
+The Dark Gong is now a modal gong (`StaggerKits.modalGong`, `StaggerKits` version 8), built on the three things that
+tell a gong from a drum: a hum that beats, partials that do not line up, and upper partials that bloom after the
+strike. The first draft was still a hum (2 percent above 300 Hz): a two-pole resonator's output grows as its pitch
+falls, so the upper modes' gains are now scaled by their ratio, and the mallet narrowed from 3.5 to 2 ms on a full hit.
+
+| Hard strike | New Dark Gong | Old Dark Gong | Timpani |
+|---|---|---|---|
+| Strongest partial | 120 Hz | 72 Hz | 78 Hz |
+| Share of the first half-second above 300 Hz | 7.5 percent | 0 | 0.2 |
+| Its 250 Hz to 2 kHz band, 50 to 250 ms after the strike against the first 50 ms | +5.1 dB | -7.6 | -2.2 |
+
+A soft strike blooms 0.3 dB and keeps nothing above 300 Hz: darker, not only quieter. `StaggerKitsTest` holds the gong
+at least 1.4 times the timpani's pitch, with at least five times its share above 300 Hz and blooming at least 3 dB
+above 300 Hz (measured in the test: 120 Hz against 79, 7.7 times, +4.4 dB against the timpani's -2.7). Every other pad
+is round 3b's.
+
+The round 3c listening page (private to the owner's account): [Stagger, round three c](https://claude.ai/artifact/FzLjsYKXkXXxK9JEKeVy65). Each kit's
+Timpani and Dark Gong as round 3b shipped them and as this round does, then every pad. `:shell:generateStaggerKits`
+verified the three kits again (169, 169 and 146 s on this machine).
+
 **Round 3b built (2026-11-20): "It just sounds flat, muffled, and muddy."** Measured on our own drums, one change at a
 time, because a reference figure taken from full mixes had misled round 3 (below).
 
@@ -192,7 +246,7 @@ MPC 3 export (`StaggerKitTest`, `:shell:generateStaggerKits`).
 
 | Kit | Tempo | Print | Clock (kick, snare, hats; wobble, rho) | Pads (A01 to A14) | A15 | A16 |
 |---|---|---|---|---|---|---|
-| STAGGER CARDBOARD | 89 | box: 12 bits at 26 kHz, a worn tape | +12, -3, +8; 10 ms, .4 | Box Kick, Crack Snare, Whisper Hat, Rim, Low Box Kick, Cross Stick, Paper Snare, Shaker, Dead Tom, Timpani, Dark Gong, Zap, Punch, Clap | Timpani Roll | Cardboard Groove |
+| STAGGER CARDBOARD | 89 | box: 16 bits held at 26 kHz, blended half clean (12 bits, fully crushed, until round 3d), a worn tape | +12, -3, +8; 10 ms, .4 | Box Kick, Crack Snare, Whisper Hat, Rim, Low Box Kick, Cross Stick, Paper Snare, Shaker, Dead Tom, Timpani, Dark Gong, Zap, Punch, Clap | Timpani Roll | Cardboard Groove |
 | STAGGER MATINEE | 84 | reel: the same converter, a cleaner tape | +10, -3, +6; 8 ms, .4 | Stage Kick, Stage Snare, Whisper Hat, Rim, Timpani, Low Timpani, Dark Gong, Crash Gong, Glass, Low Glass, Zap, Low Zap, Punch, Stab | Timpani Riser | Matinee Groove |
 | STAGGER STUMBLE | 93 | worn: the tape driven and worn, more record | +18, -3, +10; 16 ms, .55 | Hum Kick, Rimshot, Crack Snare, Ghost Snare, Shaker, Open Box, Low Tom, Knock, Timpani, Dark Gong, Punch, Zap, Clap, Bell | Dragging Roll | Stumble Groove |
 
@@ -282,7 +336,11 @@ python3 scripts/stagger_page/build_page.py testkit/stagger-round1 OUT_DIR   # th
   (`Eras` sp1200) and *then* played slow (`Speed`), a sampler's order, which the rack cannot express (PITCH runs
   before CRUNCH there). The converter's images sit near 18 kHz and come down with the pitch. A foley pad skips
   the kit's CRUNCH so its grain is not doubled at a second rate. Timpani (SKIN's tom at the bottom of its range,
-  -5), Dark Gong (FIRED BRONZE's kempul, -5), Zap (TINES, -7), Punch (-5).
+  -5), Dark Gong (the modal GONG below, -5; FIRED BRONZE's kempul until round 3c), Zap (TINES, -7), Punch (-5).
+- **GONG** (`StaggerKits.modalGong`, round 3c): a hanging gong as modes, because FIRED BRONZE's kempul pitched down
+  measured as a second timpani. A hum that beats (two modes 1.2 percent apart, about 1.4 Hz after the print),
+  partials that do not line up (1.47, 2.03, 2.71 up to 9.1 times the hum), and upper partials that bloom over
+  120 ms after the strike. A soft strike is a wider mallet with less bloom: darker, not only quieter.
 - **GLASS** (`StaggerKits.glass`): a pane breaking, which no engine made: 28 modal shards, three modes each
   between 2.2 and 8.8 kHz ringing 20 to 220 ms, the first three inside 2 ms and the rest scattered over about
   120 ms, every shard drawn from the take's seed. Not on CARDBOARD; on the page for the cinematic kit's sake.
@@ -301,7 +359,7 @@ python3 scripts/stagger_page/build_page.py testkit/stagger-round1 OUT_DIR   # th
   snare 8 to 14 dB under the kick and the references put it roughly over. STAGGER's own touch law (`StaggerKits.touch`, floor .12 against
   CYPHER's .35) lets the written ghosts, shakers and wires be quiet.
 
-The kit print (`StaggerKits.BOX`): CRUNCH at 12 bits and a 26.0 kHz hold, TAPE light and worn, VINYL light under
+The kit print (`StaggerKits.BOX`): CRUNCH at 16 bits and a 26.0 kHz hold, blended half and half with itself run clean (12 bits and fully crushed until round 3d), TAPE light and worn, VINYL light under
 the phrases only.
 
 ## Gates
@@ -309,10 +367,11 @@ the phrases only.
 | Gate | Status |
 |---|---|
 | Melodic, keygroups, chord tools, STRUM | Not applicable: drum kits |
-| Drums: multiple distinct genre kits on the shelf | Pass in software: three kits under SKINS, held apart by `StaggerKitsTest`; the owner has heard CARDBOARD's drums (round 1b, "New sounds are better"), not the three kits as kits |
-| Percussion: roll/riser | Built: a timpani roll, a timpani riser into the crash gong (the timpani keep their club), a dragging snare roll (dry, round 2d), one per kit; not heard |
-| Velocity and round robin: rendering | Pass in software: every soft zone a different strike from the hard one and no brighter; every zone holds four different strikes (`StaggerKitsTest`) |
-| Velocity and round robin: saving, playback, export | Pass in software: `StaggerKitTest` and `:shell:generateStaggerKits` (all three kits, 192 slices each: saved PCM, reload, the pad resolver walking the takes, MPC 3 track, SFZ, DecentSampler). MPC 2 is not written (the owner's format limit). Not played on a phone or an MPC |
+| Drums: multiple distinct genre kits on the shelf | Pass: three kits under SKINS, held apart by `StaggerKitsTest`, and passed by the owner (2026-11-20, "All three kits pass, gong too") |
+| Percussion: roll/riser | Pass: a timpani roll, a timpani riser into the crash gong (the timpani keep their club), a dragging snare roll (dry, round 2d), one per kit; passed with the kits (2026-11-20) |
+| Velocity and round robin: rendering | Pass: every soft zone a different strike from the hard one and no brighter; every zone holds four different strikes (`StaggerKitsTest`) |
+| Velocity and round robin: saving, playback, export | Pass: `StaggerKitTest` and `:shell:generateStaggerKits` (all three kits, 192 slices each: saved PCM, reload, the pad resolver walking the takes, MPC 3 track, SFZ, DecentSampler). MPC 2 is not written (the owner's format limit). Owner-reported pass on the phone and the MPC, 2026-11-20 ("phone works, MPC loads and plays") |
+| Sound character | Approved, all three kits (the owner, 2026-11-20: "3D works", then "All three kits pass, gong too"); kit version 9 is the accepted baseline |
 
 ## What was measured while building (Kotlin, `StaggerKitsTest`, this cloud JVM)
 

@@ -24,6 +24,7 @@ import com.snipsnap.app.theme.pressedBevel
 import com.snipsnap.app.theme.raisedBevel
 import com.snipsnap.app.theme.tape
 import com.snipsnap.shell.Copy
+import com.snipsnap.shell.Layout
 import com.snipsnap.shell.OutputRoute
 import com.snipsnap.shell.Scheme
 
@@ -72,7 +73,7 @@ internal fun RecordOffsetGroup(scheme: Scheme) {
 private fun OffsetChip(text: String, selected: Boolean, label: String, scheme: Scheme, modifier: Modifier, onClick: () -> Unit) {
     Box(
         modifier
-            .height(44.dp)
+            .height(Layout.MIN_HIT_TARGET.dp)
             .let { if (selected) it.pressedBevel(scheme) else it.raisedBevel(scheme) }
             .semantics { this.selected = selected }
             .tapeClick(label = label) { if (!selected) onClick() },

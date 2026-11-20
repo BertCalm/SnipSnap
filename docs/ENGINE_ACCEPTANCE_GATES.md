@@ -247,22 +247,22 @@ Rounds 1 to 3 were a Python audition, accepted 2026-11-12. Kotlin round K1 (2026
   of milliseconds": the voice runs at 4x with several transcendental calls a sample, and bringing it under would
   approximate the filter, a change to the accepted sound. A line loop takes 0.3 to 0.5 s; kit pads cache both.
 - **Overall: incomplete.** Open: phone playback of keys and kit, and an MPC.
-## STAGGER kits (round 2 built 2026-11-19: three kits on the shelf, proven in software; the kits not yet heard as kits)
+## STAGGER kits (complete, 2026-11-20: sound approved, phone and MPC gates passed)
 
-Three authored boom-bap kits after the owner's muffled-kick, drunk-clock, foley-fill producer profile, in the CYPHER shape, every drum EMBER's. See [STAGGER](STAGGER.md). The owner heard round 1 as "too much like drum machine sounds" (THUMP and SKIN drums), then round 1b as "New sounds are better" (EMBER's), both 2026-11-19.
+Three authored boom-bap kits after the owner's muffled-kick, drunk-clock, foley-fill producer profile, in the CYPHER shape, every drum EMBER's. See [STAGGER](STAGGER.md). The owner heard round 1 as "too much like drum machine sounds" (THUMP and SKIN drums), then round 1b as "New sounds are better" (EMBER's), both 2026-11-19. After rounds 2 to 3d the owner said "All three kits pass, gong too", and after playing the kits on the phone and the MPC, "phone works, MPC loads and plays" (both 2026-11-20). Evidence at kit version 9: `StaggerKitsTest`, `StaggerKitTest`, `:shell:generateStaggerKits`.
 
 | Gate | Status | Evidence |
 |---|---|---|
 | Melodic voices, keygroups, premade kit, chord tools | Not applicable | Drum kits. |
 | Articulation: HOLD, STRUM | Not applicable | Finite hits; the phrases are printed at the kit's tempo. |
-| Percussion: authored roll or riser | Built, not heard | A timpani roll into the gong (CARDBOARD), a timpani riser into the crash gong (MATINEE), a dragging snare roll (STUMBLE), each A15, each played in the kit's room. |
-| Drums: multiple distinct genre kits on the shelf | Pass in software | Three kits under SKINS; `StaggerKitsTest` holds every pair to at least six different pad names and a different kick and backbeat drum dry, with three prints, three rooms, three clocks. The owner has heard CARDBOARD's drums, not the three kits. |
+| Percussion: authored roll or riser | Pass | A timpani roll into the gong (CARDBOARD), a timpani riser into the crash gong (MATINEE), a dragging snare roll (STUMBLE), each A15, each played in the kit's room. Passed with the kits (2026-11-20). |
+| Drums: multiple distinct genre kits on the shelf | Pass | Three kits under SKINS; `StaggerKitsTest` holds every pair to at least six different pad names and a different kick and backbeat drum dry, with three prints, three rooms, three clocks. The owner passed all three kits (2026-11-20). |
 | Velocity: rendering | Pass | Every soft zone a different strike and no brighter (`StaggerKitsTest`). |
 | Round robin: rendering | Pass | Four different takes in every zone of every pad; GLASS deals four panes. |
 | Velocity and round robin: saving | Pass | Each kit reloads equal and every saved slice matches its render (`:shell:generateStaggerKits`). |
-| Velocity and round robin: playback | Pass in software | `PadHit.resolve` picks the zone by velocity and deals the takes in order, then repeats (`StaggerKitTest`). No phone has played these kits. |
-| Velocity and round robin: export | MPC 3 verified by read-back; MPC 2 not applicable (the owner's format limit, 2026-11-14) | `StaggerKitTest`, the generator. SFZ and DecentSampler written. No MPC has loaded these kits. |
-| Sound character | CARDBOARD's drums approved in direction ("New sounds are better"); round 2 heard as wanting "a bit of compression" (2026-11-19); round 2b's press heard as "echoy" (2026-11-20), measured as the room lifted 11 dB; round 2c heard as "room reverb" (2026-11-20), which was EMBER's club tail under every hit plus the kit's ROOM on the grooves; round 2d dries every EMBER source (DISTANCE 0 and a HUSH gate) and takes the ROOM off the grooves; round 2d heard as "The reverb is gone" and "light taps", the drums "not being hit hard enough" (2026-11-20), measured as kicks that were subs (98 percent under 150 Hz; the references' kicks keep a median 17 percent in 150 to 400) and snares 8 to 14 dB under the kicks in every groove (the references roughly over them), with hats as loud as the snares; round 3 boxes every kick (a damped tom under the sub), sits the kicks level with the snares and the hats 12 to 19 dB under them; round 3 heard as "flat, muffled, and muddy" (2026-11-20), measured as a snare head ringing at 250 to 600 Hz (65 to 81 percent of a backbeat there; the references a median 16) with its crack filtered three times, and a booming kick knock; round 3b damps, tunes up and wires the snare, shortens the knock and takes the dark shelf off the grooves; the kits as kits not yet accepted | The round-3b listening page. |
+| Velocity and round robin: playback | Pass | `PadHit.resolve` picks the zone by velocity and deals the takes in order, then repeats (`StaggerKitTest`). Owner-reported pass on the phone, 2026-11-20 ("phone works"). |
+| Velocity and round robin: export | Pass; MPC 2 not applicable (the owner's format limit, 2026-11-14) | MPC 3 verified by read-back (`StaggerKitTest`, the generator); SFZ and DecentSampler written. Owner-reported pass on the MPC, 2026-11-20 ("MPC loads and plays"). |
+| Sound character | Approved, all three kits | The owner, 2026-11-20, from the round 3d page: "3D works", then "All three kits pass, gong too". Preserve `StaggerKits.VERSION` 9 as the accepted baseline. The way there: CARDBOARD's drums approved in direction ("New sounds are better"); round 2 heard as wanting "a bit of compression" (2026-11-19); round 2b's press heard as "echoy" (2026-11-20), measured as the room lifted 11 dB; round 2c heard as "room reverb" (2026-11-20), which was EMBER's club tail under every hit plus the kit's ROOM on the grooves; round 2d dries every EMBER source (DISTANCE 0 and a HUSH gate) and takes the ROOM off the grooves; round 2d heard as "The reverb is gone" and "light taps", the drums "not being hit hard enough" (2026-11-20), measured as kicks that were subs (98 percent under 150 Hz; the references' kicks keep a median 17 percent in 150 to 400) and snares 8 to 14 dB under the kicks in every groove (the references roughly over them), with hats as loud as the snares; round 3 boxes every kick (a damped tom under the sub), sits the kicks level with the snares and the hats 12 to 19 dB under them; round 3 heard as "flat, muffled, and muddy" (2026-11-20), measured as a snare head ringing at 250 to 600 Hz (65 to 81 percent of a backbeat there; the references a median 16) with its crack filtered three times, and a booming kick knock; round 3b damps, tunes up and wires the snare, shortens the knock and takes the dark shelf off the grooves; the Dark Gong heard as "sounds like the timpani" (2026-11-20), measured as one (72 Hz against 78, nothing above 300 Hz), so round 3c makes it a modal gong that beats, clangs and blooms; the bit crushing heard as "overly effecting the sound" (2026-11-20), measured as a 12-bit word eating the tails and a 26 kHz hold putting grit on the snares and hats, so round 3d sets 16-bit words and blends the converter half clean. |
 
 ## CYPHER kits and THUMP SUB (round 2, 2026-11-12)
 
@@ -1272,3 +1272,17 @@ Source: the commit that adds this entry. Details: [CONSORT](CONSORT.md).
 
 Nothing here is a completion claim. A passing `ConsortTest` and an audition page do not close a gate.
 
+## FACSIMILE kits (Kotlin built and heard, 2026-11-20)
+
+Four drum kits replicated by synthesis from nine of the owner's reference loops: SHUFFLE, KNOCK, HALF-TIME, TEXTURE.
+See [FACSIMILE](FACSIMILE.md). The owner heard the Python prototype through rounds 0 to 0m and closed them with "Ok,
+sounds good now" (2026-11-20); the Kotlin port matches it within the prototype's own noise-to-noise spread. Evidence:
+`FacsimileTest`, `FacsimileKitsTest`, `FacsimileKitTest`, `:shell:generateFacsimileKits`.
+
+| Gate | Status | Evidence |
+|---|---|---|
+| Melodic, keygroups, chord tools, STRUM | Not applicable | Drum kits |
+| Drums: multiple distinct genre kits on the shelf | Built and heard | Four kits under SKINS, each from different reference loops; the owner heard the Kotlin kits as exported ("Everything sounds good", 2026-11-20) |
+| Percussion: roll/riser | Built and heard | An accelerating snare roll landing on kick and snare on pad 17 of every kit, so no heard pad is given up |
+| Velocity and round robin: rendering | Pass in software | Soft zones are different strikes and, over their four takes, never brighter; four different strikes per zone; a groove's soft zone is a softer performance |
+| Velocity and round robin: saving, playback, export | Pass in software | Save, reload, pad resolver, MPC 3, SFZ and DecentSampler for all 68 pads; MPC 2 not written (format limit). No phone or MPC playback yet |

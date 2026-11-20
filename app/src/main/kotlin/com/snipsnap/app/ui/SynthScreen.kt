@@ -4467,6 +4467,7 @@ fun SynthScreen(
                 },
                 sendLabel = if (padChooser.sendBusy) "…" else "SEND TO PAD",
                 sendEnabled = kit != null && !padChooser.sendBusy && !embouchureRestore.waitsForRecipe(engine, voice),
+                noKit = kit == null,
                 onSend = {
                     if (embouchureRestore.waitsForRecipe(engine, voice)) return@AuditionBar
                     padChooser.showChooser = true
@@ -4722,35 +4723,42 @@ private fun AuditionBar(
     sendLabel: String,
     sendEnabled: Boolean,
     onSend: () -> Unit,
+    /** No kit is open, so SEND TO PAD is greyed: the line above the bar says why (UAT 2026-11 user states, S-9). */
+    noKit: Boolean = false,
 ) {
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        Box(Modifier.weight(1f)) {
-            if (sampleHeldPreview != null) {
-                FlockHeldAudition(sampleHeldPreview, classColor, scheme)
-            } else if (repeating) {
-                RepeatingAuditionControls(classColor, scheme, onAudition = onAudition, onStop = onStop)
-            } else {
-                Box(
-                    Modifier
-                        .fillMaxWidth()
-                        .heightIn(min = Layout.PRIMARY_ACTION_H.dp)
-                        .raisedBevel(scheme, fill = classColor.copy(alpha = 0.85f))
-                        .tapeClick(label = "AUDITION", enabled = auditionEnabled, onClick = onAudition)
-                        .padding(horizontal = 10.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    TapeText("AUDITION", TapeType.pixel, scheme.titleInk.tape)
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        // SNAP and SURFACE each say why their pad writes are greyed with no kit; SYNTH's
+        // SEND TO PAD was dimmed with no reason.
+        if (noKit) TapeText(Copy.SYNTH_NEEDS_KIT, TapeType.pixelSmall, scheme.accent.tape)
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Box(Modifier.weight(1f)) {
+                if (sampleHeldPreview != null) {
+                    FlockHeldAudition(sampleHeldPreview, classColor, scheme)
+                } else if (repeating) {
+                    RepeatingAuditionControls(classColor, scheme, onAudition = onAudition, onStop = onStop)
+                } else {
+                    Box(
+                        Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = Layout.PRIMARY_ACTION_H.dp)
+                            .raisedBevel(scheme, fill = classColor.copy(alpha = 0.85f))
+                            .tapeClick(label = "AUDITION", enabled = auditionEnabled, onClick = onAudition)
+                            .padding(horizontal = 10.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        TapeText("AUDITION", TapeType.pixel, scheme.titleInk.tape)
+                    }
                 }
             }
+            LabButton(
+                sendLabel,
+                scheme,
+                enabled = sendEnabled,
+                modifier = Modifier.weight(1f).heightIn(min = Layout.PRIMARY_ACTION_H.dp),
+                accessibilityLabel = "SEND TO PAD",
+                onClick = onSend,
+            )
         }
-        LabButton(
-            sendLabel,
-            scheme,
-            enabled = sendEnabled,
-            modifier = Modifier.weight(1f).heightIn(min = Layout.PRIMARY_ACTION_H.dp),
-            accessibilityLabel = "SEND TO PAD",
-            onClick = onSend,
-        )
     }
 }
 
@@ -6712,7 +6720,9 @@ private enum class Engine {
 
     fun voices(): List<Enum<*>> = when (this) {
         SPLAY -> SplayVoice.entries
-        CHITIN -> ChitinVoice.entries
+        // SHELL and WING, then HUSK, STING, HUM and PINCER, kept in chitin-voices-1 (20 Nov 2026).
+        // GLINT is still a candidate and is not offered.
+        CHITIN -> Chitin.KEPT_VOICES
         THUMP -> ThumpVoice.entries
         SCANNED_CHAIN -> ScannedChainVoice.entries
         FIRED_BRONZE -> FiredBronzeDryKit.Pad.entries
@@ -6797,7 +6807,9 @@ private enum class Engine {
         BELLOWS -> BellowsVoice.entries
         APSIS -> ApsisVoice.entries
         OVEN -> OvenVoice.entries
-        LIBRATION -> LibrationVoice.entries
+        // GATHER, TWINS and DEPARTURE, then CHIME, STRUM, ROTOR and HOLLOW, kept in libration-voices-1
+        // (20 Nov 2026). The four new ones are finite only: MAKE INSTRUMENT stays off for them.
+        LIBRATION -> Libration.KEPT_VOICES
         // BRUSH, WOOD and TINE were kept in accord-native-1; REED, COURSE, ESCAPEMENT and BELL
         // joined after them once the owner kept round accord-voices-1 (19 Nov 2026).
         ACCORD -> AccordVoice.entries

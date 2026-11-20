@@ -23,6 +23,7 @@ import com.snipsnap.app.theme.pressedBevel
 import com.snipsnap.app.theme.raisedBevel
 import com.snipsnap.app.theme.tape
 import com.snipsnap.shell.Copy
+import com.snipsnap.shell.Layout
 import com.snipsnap.shell.PadVelocity
 import com.snipsnap.shell.Scheme
 
@@ -69,7 +70,7 @@ private fun <T> VelocityChips(
             Box(
                 Modifier
                     .weight(1f)
-                    .height(44.dp)
+                    .height(Layout.MIN_HIT_TARGET.dp)
                     .let { if (selected) it.pressedBevel(scheme) else it.raisedBevel(scheme) }
                     .semantics { this.selected = selected }
                     .tapeClick(label = "PAD VELOCITY $label ${chip(option)}") { if (!selected) onChoose(option) },

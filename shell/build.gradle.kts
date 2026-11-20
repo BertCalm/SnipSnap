@@ -61,7 +61,24 @@ tasks.test {
     // copies the 180-second stereo cap in SnipStore.import, and the worker that had
     // already memoised the pad makers had no contiguous room left. 2g is the step
     // the long shell tasks beside this one already take.
-    maxHeapSize = "2g"
+    // On 2026-11-20 jvm-other went red on one PR after another with ":shell:test FAILED"
+    // and no failing test: "Could not complete execution for Gradle Test Executor 26",
+    // "Caused by: java.lang.OutOfMemoryError: Java heap space" (run 44727907558, a PR that
+    // changed only a workflow file, so the base itself was over the line). No JIT crash
+    // report, no kernel kill, 8 to 12 GB of memory and 70 GB of disk free. The signs came
+    // before the error: JCardTest took 61 minutes where a healthy run takes 19, then ended
+    // SKIPPED, and about 70 later classes never ran (4,205 to 4,230 tests against 4,785).
+    // 234 starters were on the shelf, each kit of the newest ones holding sixteen pads of
+    // many zone samples, and the three tests that render every starter keep the engines'
+    // memos live beside them. 3g is half as much again, the same step the 1g to 1536m to 2g
+    // history above took, about a dozen engines of room.
+    maxHeapSize = "3g"
+    // The root build runs one test JVM per CPU, and the public ubuntu-latest has 4 CPUs and
+    // 16 GB: four JVMs at 3g could take 12 GB of heap alone beside the Gradle client and the
+    // OS. Three JVMs keep the heap to 9 GB. The three tests that render every starter run
+    // for 12 to 22 minutes each, so the module's wall time is set by them, and three JVMs
+    // still give each of them its own. A machine with fewer CPUs keeps its smaller count.
+    maxParallelForks = minOf(maxParallelForks, 3)
     testLogging {
         events("passed", "failed", "skipped")
         // FULL, because this module's tests are mostly LAWS, and a law's whole
@@ -606,6 +623,16 @@ tasks.register<JavaExec>("generateLooseCrateKits") {
     workingDir = rootProject.projectDir
     maxHeapSize = "2g"
     args(providers.gradleProperty("looseCrateKitsOutput").orNull ?: "${rootDir}/testkit/loose-crate-kits")
+}
+
+tasks.register<JavaExec>("generateFacsimileKits") {
+    group = "distribution"
+    description = "Build the FACSIMILE kits, prove the velocity and round-robin grid through save, playback and MPC 3 export, and write the listening pack."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.FacsimileKitGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "2g"
+    args(providers.gradleProperty("facsimileKitsOutput").orNull ?: "${rootDir}/testkit/facsimile-kits")
 }
 
 tasks.register<JavaExec>("generateStaggerKits") {
