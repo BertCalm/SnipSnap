@@ -73,7 +73,8 @@ object TerraStickKits {
         pad("Chiki", KANE, HIT, "EDGE" to 1f),
         pad("Chappa", CHAPPA),
         pad("Chappa Choke", CHAPPA, HIT, "DECAY" to .1f, "ATTACK" to .7f),
-        pad("Don Big", ODAIKO, HIT, "DRUM" to .5f),
+        // a festival accent, shorter and a little higher than THUNDER's Odaiko Pair, which rings the same pair
+        pad("Don Big", ODAIKO, HIT, "DRUM" to .5f, "TUNE" to .6f, "DECAY" to .3f),
         pad("Sasara", SASARA),
         pad("Ten Roll", SHIME, ROLL, "STROKE" to 0f),
         pad("Don Riser", NAGADO, RISER),
