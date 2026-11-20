@@ -48,7 +48,7 @@ import kotlin.math.sqrt
  * humanization"): the breath drifts, the pitch leans, the vibrato's swings differ. Its movements repeat every four seconds and the
  * zone's loop is cut that long ([Bore.heldLoopSeconds], against the LOOP's two), searched the same way within the same slack, so
  * the join meets two moments the player is doing the same thing in and the pattern takes four seconds to come round. The settle
- * test and the dip guard allow for the level the breath moves on purpose ([Bore.settleDb], [Bore.maxDipDb]). Nobody has heard it.
+ * test and the dip guard allow for the level the breath moves on purpose ([Bore.settleDb], [Bore.maxDipDb]). Heard and kept, soft and hard (round fix-bore-1, 2026-11-20, BQ3).
  */
 object BoreKeys {
 

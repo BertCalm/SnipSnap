@@ -26,7 +26,7 @@ import com.snipsnap.synth.Dsp.RATE
  * Since 2026-11-20 the held bow carries a player ([Arco.HUMAN], [Arco.played]; the owner on every held clip: "Holds are unnatural,
  * they need more humanization"): the level swells and eases, the pitch leans a few cents, the vibrato's swings differ more. Every
  * movement is fitted to the loop, which is four seconds with a player on it and not two ([Arco.heldLoopSeconds]), so the wrap closes
- * as it did and the pattern takes four seconds to come round. Nobody has heard it.
+ * as it did and the pattern takes four seconds to come round. Heard and kept, soft and hard (round fix-arco-1, 2026-11-20, BP3).
  */
 object ArcoKeys {
 

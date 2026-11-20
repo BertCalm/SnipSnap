@@ -16,7 +16,8 @@ import kotlin.test.assertTrue
  * "Opening is a bit harsh for most." So these sounds moved on purpose: a held note carries a player ([Arco.HUMAN], [Bore.HUMAN]) and
  * SAX opens more gently ([Bore.openingFor]). The hashes that were here before still hold with both switched off
  * (`BoreFrozenSoundTest`, `ArcoBuzzTest`, `ArcoFrozenR1cTest`); these are the ones a later change must not move by accident.
- * Nobody has heard these renders yet: a hash here fixes what the code does, not that it was accepted.
+ * The owner heard them and kept them, with no notes, on 2026-11-20
+ * (rounds fix-arco-1, BP1 to BP4, and fix-bore-1, BQ1 to BQ4), rendered from this code.
  *
  * A change that is meant to move one replaces its hash on purpose, says so in its commit, and names the render that moved.
  */
