@@ -1283,8 +1283,8 @@ WATER_DRUM) picked by ear from Python renders over six rounds; details in
 | Melodic, keygroups, chord tools, STRUM | Not applicable: drum and percussion voices |
 | Percussion: authored roll/riser | Implemented (ROLL and RISER saved in the recipe; seven pads). Listening not yet done |
 | Drums: multiple distinct genre kits | Implemented: TERRA MATSURI, THUNDER and BON. Listening not yet done |
-| Velocity levels | Automated test written, first run pending: timbral touches through render, save, MPC 3, MPC 2, SFZ and playback (`TerraStickKitsTest`, `TerraStickKitsRoundTripTest`) |
-| Round robin | Automated test written, first run pending: four takes per touch through render, save, MPC 3, SFZ and playback; MPC 2 keeps each zone's first take under the owner's 2026-11-14 format limit |
+| Velocity levels | Pass, automated: timbral touches through render, save, MPC 3, MPC 2, SFZ and playback (`TerraStickKitsTest`, `TerraStickKitsRoundTripTest`) |
+| Round robin | Pass, automated: four takes per touch through render, save, MPC 3, SFZ and playback; MPC 2 keeps each zone's first take under the owner's 2026-11-14 format limit |
 | Hardware | Not attempted |
 
 Not engine-complete: nobody has heard the app's renders, and no phone or MPC has

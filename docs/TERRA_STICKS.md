@@ -193,6 +193,6 @@ Applied from [ENGINE_ACCEPTANCE_GATES](ENGINE_ACCEPTANCE_GATES.md).
 | Melodic, keygroups, chord tools, STRUM | Not applicable: percussion voices on a drum engine |
 | Percussion: authored roll/riser | Implemented: ROLL and RISER on every stick voice, saved in the recipe, seven roll and riser pads across the kits. Not yet heard |
 | Drums: multiple distinct genre kits | Implemented: MATSURI, THUNDER and BON on the shelf, distinct lead voices and jobs. Not yet heard |
-| Velocity levels | Automated test written, first run pending: three timbral touches per pad, each softer one darker (`TerraStickKitsTest`), kept through shelf render, save and reload, MPC 3, MPC 2, SFZ and playback at all 127 velocities (`TerraStickKitsRoundTripTest`) |
-| Round robin | Automated test written, first run pending: four distinct takes per touch, dealt in turn over nine hits in playback and kept through save, MPC 3 and SFZ. MPC 2 keeps each zone's first take (owner's format limit) |
+| Velocity levels | Pass, automated: three timbral touches per pad, each softer one darker (`TerraStickKitsTest`), kept through shelf render, save and reload, MPC 3, MPC 2, SFZ and playback at all 127 velocities (`TerraStickKitsRoundTripTest`) |
+| Round robin | Pass, automated: four distinct takes per touch, dealt in turn over nine hits in playback and kept through save, MPC 3 and SFZ. MPC 2 keeps each zone's first take (owner's format limit) |
 | Hardware | Not attempted: no phone or MPC playback yet |
