@@ -2,12 +2,12 @@
 
 Version 1.0 · 2026-11-19
 
-Status: rounds 1, 2a and 2b built (the Kotlin renderer, the Kotlin fitter, and the kit
-action with its command; see "As built" at the end). The screen (round 2c) and the engine
-are not written. The owner has heard the Python prototype once and answered the round-1
-Kotlin page with "Sounds good, continue" (2026-11-19). Kits made by the Kotlin code from a
-loop have not been heard. KERF is a working name (a kerf is the sliver a saw removes); no
-maker or product is named by it.
+Status: rounds 1, 2a, 2b and 2c built (the Kotlin renderer, the Kotlin fitter, the kit
+action with its command, and the pad sheet's rules and button; see "As built" at the end).
+The engine is not written. Heard by the owner: the Python prototype, the round-1 Kotlin
+page ("Sounds good, continue", 2026-11-19) and the round-2 loop-to-kit page ("Audition is
+fine", 2026-11-20). Nobody has made a twin on a phone yet. KERF is a working name (a kerf
+is the sliver a saw removes); no maker or product is named by it.
 
 Owner decisions, 2026-11-19 ("I take your recommendations proceed"): the patch format is
 carried the recommended way (section 6, A); velocity starts from the ghost-against-snare
@@ -411,8 +411,9 @@ a layer is not always a separate drum.
   made from a loop.
 - **R2b.** Built. The kit action in `:shell` beside `desamplePad`, the pad recipe field,
   KERF's own labels, and `snipsnap kerf`.
-- **R2c.** The pad sheet's rules for a twin and the screen. Gate: the owner chops a loop of
-  their own in the app and makes it a KERF kit.
+- **R2c.** Built. The pad sheet's rules for a twin, its wording, and the MAKE box's SYNTH
+  TWIN row. Gate, open: the owner chops a loop of their own in the app and makes a pad its
+  twin on a phone.
 - **R3.** The ghost-against-snare comparison, then velocity and round robin. Gate: the
   owner's velocity/round-robin gate through render, save, playback and export.
 - **R4.** Engine registration, voices and presets after listening, genre kits, audition,
@@ -468,7 +469,8 @@ content from third-party recordings.
 | The Kotlin renders sound like the Python ones | heard | owner, 2026-11-19, on the round-1 page: "Sounds good, continue" (my reading: no difference worth raising; no pad was singled out) |
 | The Kotlin fitter fits real chops as well as the Python one | measured | 63 of the bank's source slices, figures in "As built: round 2a" |
 | A loop becomes a kit in the app's own code | measured | two of the owner's loops, 16 pads each in 7.5 and 8.2 s on the JVM |
-| Kits the Kotlin code made from a loop sound like their chops | not heard | audition page published 2026-11-19 |
+| Kits the Kotlin code made from a loop sound like their chops | heard | owner, 2026-11-20, on the loop-to-kit page: "Audition is fine" |
+| A twin can be made and undone from the pad sheet on a device | not verified here | written without an Android SDK; `android-build` compiles it and `emulator-tests` runs `PadSheetUndoScreenTest` |
 | The synthetic twins are acceptable | heard | owner, 2026-11-18: "Seems closer. I think I can live with it." |
 | Cymbal ring under another hit is present | heard, partly | owner reported it missing on Kit A pads 1, 4, 6, 9, 11, 13, 16 and elsewhere; the colour stage followed; the quote above is the only verdict since |
 | BLEED and SLOP levels are right | not heard | no verdict given on which step to ship |
@@ -664,3 +666,45 @@ Not done in this round, each still owed:
   loses its recipe, and then `kerf --undo` refuses it while the capture is still in the bin.
   That state needs the pad sheet's rules, as DE-SAMPLE has them.
 - The 88.2 kHz assertion; the low-end gap of round 2a; any listen to a twin made this way.
+
+## As built: round 2c, the pad sheet (2026-11-20)
+
+Read at `fbfda867`. What exists:
+
+- `PadSheet.isKerfTwin` and `kerfUndoRefusal` (`:shell`), the same shape as DE-SAMPLE's
+  pair, and `hasOwnWayBack` counts a twin, so THE BIN hides BACK where the twin can undo
+  itself. `KitBuilderModel.unkerfPad` now asks the pad sheet's question, so the button, the
+  CLI and the door cannot disagree.
+- The MAKE box says "A SYNTH TWIN NOW" for a twin and the grid marks it.
+- Wording in `Copy`: the toast, the two refusals, UNDO SYNTH TWIN, the busy line.
+- The app: a SYNTH TWIN row in the MAKE box under FIND NEAREST SYNTH, with MAKE SYNTH TWIN
+  and its own UNDO, wired as `onDesample` and `onUndesample` are.
+- On device: `PadSheetUndoScreenTest.synth_twin_undo_...`, which makes a real twin and
+  undoes it from the screen.
+
+The user-facing name is SYNTH TWIN. KERF stays the code's and the documents' name.
+
+Rules settled here, closing the state round 2b left open:
+
+- **Pedals ride a twin and keep it.** A twin is a source like a patch, so pedals re-render
+  it and their NONE gives the bare twin back, on top again, still under KERF's label. Then
+  the twin's own undo gives the capture.
+- **A treatment that replaces the recipe takes the stamp with it when it is undone.** That
+  undo has always cleared the recipe; a pad left with a twin's audio and no numbers no
+  longer claims a twin. The capture is still in the bin on its own clock.
+- **NONE on a bare twin is the twin's undo**: the capture comes back and the pad is called
+  what it was called. Two doors, one result.
+- **A pad too short to measure is refused in words**, about a fortieth of a second.
+
+Tested off the device (`KerfPadTest`, `PadSheetTest`, `CliTest`): a lone pad's twin has no
+neighbours; in a kit the pads either side are its neighbours and are measured, not
+replaced; both undo doors give the capture byte for byte and the old label; pedals on and
+off; the refusal order; the grid's mark. `ConventionTest`, `PersonalityTest` and
+`FormatLocaleTest` pass with the new wording.
+
+Not verified in this session: anything in `app/`. There is no Android SDK here, so the
+screen code and the device test were written by reading the DE-SAMPLE arms beside them.
+
+Still owed: a whole-kit button (the CLI's `--all` has no screen; sixteen pads are sixteen
+taps); BLEED and SLOP on the sheet (a twin is made at 1.0 and 0.5); the low-end gap of
+round 2a; the 88.2 kHz assertion; rounds 3 and 4.

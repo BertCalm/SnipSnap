@@ -2342,6 +2342,24 @@ fun PadSheetScreen(
         commitPadEditNow(Copy.UNDO_DESAMPLE, onSuccess = { onToast(Copy.UNDESAMPLED) }) { mm -> mm.undesamplePad(slot) }
     }
 
+    /**
+     * The twin's UNDO, in the MAKE box's SYNTH TWIN row: the take the twin
+     * binned comes back, the twin's recipe and stamp come off, and the pad is
+     * called what it was called ([KitBuilderModel.unkerfPad]). Dimmed, not
+     * disabled, under the same three refusals as [onUndesample]
+     * ([PadSheet.kerfUndoRefusal]); a tap says which.
+     */
+    fun onUnkerf() {
+        if (busy) return
+        val p = model?.kit?.pad(slot) ?: return
+        val nothing = PadSheet.kerfUndoRefusal(p, binned = binDaysLeft != null)
+        if (nothing != null) {
+            onToast(nothing)
+            return
+        }
+        commitPadEditNow(Copy.UNDO_KERF, onSuccess = { onToast(Copy.UNKERFED) }) { mm -> mm.unkerfPad(slot) }
+    }
+
     /** ROULETTE: the shelf (the kit folder's parent) deals; the deal becomes the partner. */
     fun onRoulette() {
         if (busy) return
@@ -3192,6 +3210,68 @@ fun PadSheetScreen(
                     onToast(Copy.desampleFar(e.match.patch.engine, e.match.patch.voiceName, e.match.distance))
                 } else {
                     failure("MAKE SYNTH", e)
+                }
+            } finally {
+                busy = false
+                padJob = null
+                boardJob?.end()
+            }
+        }
+    }
+
+    /**
+     * SYNTH TWIN (KERF): the pad measured and replaced by the render of its
+     * own numbers, with the pads either side of it in the kit as the
+     * neighbours that bleed in ([KitBuilderModel.kerfPad]). About a second:
+     * three fits. The same shape as [onDesample] in every rule: a print and
+     * soft hits are asked about first, the write runs against a FRESH model
+     * under [withFreshKit]'s lock in [appScope], and [model] swaps to the
+     * fresh instance on success.
+     */
+    fun onKerf() {
+        if (busy) return
+        val m = model ?: return
+        val p = m.kit.pad(slot) ?: return
+        if (PrintedPads.has(p.recipe)) {
+            onToast(Copy.boardRemoveBeforeKerf(PrintedPads.label(p.recipe)))
+            return
+        }
+        if (p.velocityLayers.isNotEmpty()) {
+            onToast(Copy.MUTATE_NEEDS_ONE)
+            return
+        }
+        val padName = p.displayName
+        val staleSampleFile = p.sampleFile
+        val kitDir = m.kitDir
+        val stalePads = pendingMetadataSlots.associateWith { m.kit.pad(it) }
+        busy = true
+        padJob = Copy.KERF_BUSY
+        val boardJob = jobs.beginJob(padJob ?: Copy.WORKING_BUSY)
+        appScope.launch {
+            try {
+                var made: KitPad? = null
+                val (fresh, _) = withFreshKit(kitDir) { f ->
+                    reapplyPendingMetadataFields(f, stalePads)
+                    val freshPad = f.kit.pad(slot)
+                    if (freshPad != null && freshPad.sampleFile == staleSampleFile && freshPad.velocityLayers.isEmpty()) {
+                        made = f.kerfPad(slot)
+                    }
+                }
+                model = fresh
+                pendingMetadataSlots = emptySet()
+                onKitUpdated(fresh.kit)
+                val twin = made
+                if (twin != null) {
+                    onToast(Copy.kerfed(padName, twin.drumClass.name))
+                } else {
+                    onToast(Copy.BIN_ITEM_GONE)
+                }
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                if (e is IllegalArgumentException && e.message == Copy.KERF_TOO_SHORT) {
+                    onToast(Copy.KERF_TOO_SHORT)
+                } else {
+                    failure("MAKE SYNTH TWIN", e)
                 }
             } finally {
                 busy = false
@@ -4385,6 +4465,36 @@ fun PadSheetScreen(
                 working = busy && padJob == Copy.DESAMPLE_BUSY,
                 modifier = Modifier.fillMaxWidth(),
                 onClick = ::onDesample,
+            )
+        }
+
+        // SYNTH TWIN (KERF): the capture measured and played back from its own numbers,
+        // with the pads either side of it bleeding in. The same header row and UNDO shape
+        // as FIND NEAREST SYNTH above; named in full for TalkBack for the same reason.
+        Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                TapeText("SYNTH TWIN", TapeType.pixelSmall, scheme.ink2.tape, Modifier.weight(1f), maxLines = 2)
+                ActionButton(
+                    Copy.UNDO_KERF,
+                    scheme,
+                    enabled = !busy,
+                    dimmed = PadSheet.kerfUndoRefusal(pad, binDaysLeft != null) != null,
+                    onClick = ::onUnkerf,
+                )
+            }
+            TapeText(
+                if (KitBuilderModel.KERF_STAMP in pad.source) "A synth twin now" else "This hit rebuilt from its own measurements",
+                TapeType.pixelSmall,
+                scheme.ink2.tape,
+                maxLines = 1,
+            )
+            ActionButton(
+                "MAKE SYNTH TWIN · REPLACES THE WAV",
+                scheme,
+                enabled = !busy,
+                working = busy && padJob == Copy.KERF_BUSY,
+                modifier = Modifier.fillMaxWidth(),
+                onClick = ::onKerf,
             )
         }
 
