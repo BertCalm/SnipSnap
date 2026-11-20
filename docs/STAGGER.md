@@ -13,6 +13,30 @@ barely hear, or none → the clock drags and catches up → a cartoon lands wher
 
 ## Status
 
+**Round 3d built (2026-11-20): "I think the 12-bit is too high. The bit crushing is overly effecting the sound."**
+Measured on the kits' own pads, each converter stage switched off in turn against the print with the converter clean
+(its TONE kept), in the first 30 ms, 30 to 200 ms and past 200 ms of each hit:
+
+- **The 12-bit word ate the quiet tails and nothing else.** An attack or a body measured the same at 12, 14 and 16
+  bits; past 200 ms, MATINEE's snare sat 7 dB under the clean print at 12 bits and 23 at 16, and STUMBLE's rimshot
+  tail was all quantization (0 dB) at 12 bits and 20 dB under at 16.
+- **The 26 kHz hold made the grit on the snares and hats.** Their attacks sat 10 to 17 dB under the clean print with
+  it and 25 to 27 without. A gentler hold barely helps: at 37 kHz the hat sat 11.4 dB under against 9.7 at 26 kHz.
+  The hold is close to all or nothing.
+- **The input drive touched only the kicks** (21 dB under with it, 45 without).
+
+The change (`StaggerKits` version 9): every print's word is 16 bits (BITS 0), and the converter is blended half and
+half with itself run clean (`Print.crushMix` .5, `CRUSH_MIX`). The clean half keeps the converter's TONE, so the
+blend takes out grit and not colour. Every pad's converter change is about 5 dB smaller (CARDBOARD's hat attack 9.7 to
+14.8 dB under the clean print, its snare 16.5 to 21.8, its groove 18.8 to 23.7), and the tails are whole again
+(MATINEE's snare tail 7.4 to 27.6 dB under, STUMBLE's rimshot tail 0 to 24.2). The foley keeps its own 12-bit
+converter (Eras sp1200): the profile asked for the foley to show the old hardware.
+
+The round 3d listening page (private to the owner's account): [Stagger, round three d](https://claude.ai/artifact/87172E2NbHfXcuHimb5hUx). Each kit's
+backbeat drum, third pad and groove as round 3c shipped them, with no crushing on the drums at all, and with this
+round's half blend, then every pad. `:shell:generateStaggerKits` verified the three kits again (135, 135 and 118 s on this
+machine).
+
 **Round 3c built (2026-11-20): "Dark Gong sounds like the timpani."** It did, by measure. The Dark Gong was FIRED
 BRONZE's kempul played five semitones down: its fundamental sat at 72 Hz against the timpani's 78, its overtones lined
 up almost like a drum's (73, 146, 200, 293 Hz), nothing sounded above 300 Hz, and its upper band fell 7.6 dB after the
@@ -217,7 +241,7 @@ MPC 3 export (`StaggerKitTest`, `:shell:generateStaggerKits`).
 
 | Kit | Tempo | Print | Clock (kick, snare, hats; wobble, rho) | Pads (A01 to A14) | A15 | A16 |
 |---|---|---|---|---|---|---|
-| STAGGER CARDBOARD | 89 | box: 12 bits at 26 kHz, a worn tape | +12, -3, +8; 10 ms, .4 | Box Kick, Crack Snare, Whisper Hat, Rim, Low Box Kick, Cross Stick, Paper Snare, Shaker, Dead Tom, Timpani, Dark Gong, Zap, Punch, Clap | Timpani Roll | Cardboard Groove |
+| STAGGER CARDBOARD | 89 | box: 16 bits held at 26 kHz, blended half clean (12 bits, fully crushed, until round 3d), a worn tape | +12, -3, +8; 10 ms, .4 | Box Kick, Crack Snare, Whisper Hat, Rim, Low Box Kick, Cross Stick, Paper Snare, Shaker, Dead Tom, Timpani, Dark Gong, Zap, Punch, Clap | Timpani Roll | Cardboard Groove |
 | STAGGER MATINEE | 84 | reel: the same converter, a cleaner tape | +10, -3, +6; 8 ms, .4 | Stage Kick, Stage Snare, Whisper Hat, Rim, Timpani, Low Timpani, Dark Gong, Crash Gong, Glass, Low Glass, Zap, Low Zap, Punch, Stab | Timpani Riser | Matinee Groove |
 | STAGGER STUMBLE | 93 | worn: the tape driven and worn, more record | +18, -3, +10; 16 ms, .55 | Hum Kick, Rimshot, Crack Snare, Ghost Snare, Shaker, Open Box, Low Tom, Knock, Timpani, Dark Gong, Punch, Zap, Clap, Bell | Dragging Roll | Stumble Groove |
 
@@ -330,7 +354,7 @@ python3 scripts/stagger_page/build_page.py testkit/stagger-round1 OUT_DIR   # th
   snare 8 to 14 dB under the kick and the references put it roughly over. STAGGER's own touch law (`StaggerKits.touch`, floor .12 against
   CYPHER's .35) lets the written ghosts, shakers and wires be quiet.
 
-The kit print (`StaggerKits.BOX`): CRUNCH at 12 bits and a 26.0 kHz hold, TAPE light and worn, VINYL light under
+The kit print (`StaggerKits.BOX`): CRUNCH at 16 bits and a 26.0 kHz hold, blended half and half with itself run clean (12 bits and fully crushed until round 3d), TAPE light and worn, VINYL light under
 the phrases only.
 
 ## Gates

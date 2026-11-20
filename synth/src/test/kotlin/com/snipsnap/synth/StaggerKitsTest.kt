@@ -435,7 +435,7 @@ class StaggerKitsTest {
         }
         for (k in kits) {
             val print = StaggerKits.printOf(k)
-            val bare = StaggerKits.Print(print.name, print.crunch, print.tape, print.grooveVinyl, compressor = null)
+            val bare = StaggerKits.Print(print.name, print.crunch, print.tape, print.grooveVinyl, compressor = null, crushMix = print.crushMix)
             for (role in 0..1) {
                 val dry = StaggerKits.dryRaw(k, role, 1f, 0)
                 val pressed = print.apply(dry.copyOf(), phrase = false, converted = false)

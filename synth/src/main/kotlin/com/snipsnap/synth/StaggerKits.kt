@@ -48,6 +48,8 @@ import kotlin.math.tanh
  * times over, and round 3's knock boomed. So the snare is damped, tuned up and given its wires ([emberWired]), the
  * contact filter opens, the knock is shortened, and the grooves lose their dark shelf. Round 3c: "Dark Gong sounds
  * like the timpani": it measured as one (72 Hz against 78, nothing above 300 Hz), so the Dark Gong is a [modalGong].
+ * Round 3d: "The bit crushing is overly effecting the sound": every print's word is 16 bits and its converter is
+ * blended half and half with itself run clean ([CRUSH_MIX]).
  *
  * Every pad has three velocity zones of four takes; a zone is its own strike and a take a fresh one. Pads 1 to
  * 14 are hits, pad 15 a timpani roll into the gong, pad 16 a two-bar groove, bar-exact so it loops, played as one
@@ -60,7 +62,7 @@ import kotlin.math.tanh
  */
 object StaggerKits {
     /** Bump when a pad's audio changes; saved kits carry the version they were printed with. */
-    const val VERSION = 8
+    const val VERSION = 9
 
     enum class Kit(val id: String, val title: String, val bpm: Int) {
         CARDBOARD("stagger-cardboard", "Cardboard", 89),
@@ -254,18 +256,33 @@ object StaggerKits {
      * their press.
      */
     class Print(val name: String, val crunch: Map<String, Float>, val tape: Map<String, Float>, val grooveVinyl: Map<String, Float>?,
-                val compressor: Map<String, Float>? = null) {
+                val compressor: Map<String, Float>? = null, val crushMix: Float = 1f) {
         fun apply(x: FloatArray, phrase: Boolean, converted: Boolean): FloatArray {
             val peak = x.maxOfOrNull { abs(it) } ?: 0f
             val k = if (peak > 1e-9f) HEADROOM / peak else 1f
             var s = Snip(FloatArray(x.size) { x[it] * k }, 1, Dsp.RATE)
-            if (!converted) s = Crunch.process(s, crunch)
+            if (!converted) s = converter(s)
             // The hits are pressed; a phrase already went through its room's bus, and a second press on top brought
             // the room between the hits up 11 dB (round 2b, heard as "echoy").
             if (compressor != null && !phrase) s = Compressor.process(s, compressor)
             s = Tape.process(s, tape)
             if (phrase && grooveVinyl != null) s = Vinyl.process(s, grooveVinyl)
             return s.samples
+        }
+
+        /**
+         * CRUNCH blended with the same converter run clean ([crushMix] of the crushed one). Round 3d ("the bit
+         * crushing is overly affecting the sound"): the hold is close to all or nothing (moving it from 26 to 37 kHz
+         * took the hat's change from the clean print only from 9.7 to 11.4 dB under, where no hold sits 27 under),
+         * so less crushing is a blend, not a gentler hold. The clean path keeps the converter's TONE, so the blend
+         * changes the grit and not the colour; both paths are peak-matched to their input, so they meet level.
+         */
+        private fun converter(s: Snip): Snip {
+            val crushed = Crunch.process(s, crunch)
+            if (crushMix >= 1f) return crushed
+            val clean = Crunch.process(s, crunch + mapOf("BITS" to 0f, "RATE" to 0f, "GRIT" to 0f))
+            val a = crushMix.coerceIn(0f, 1f)
+            return Snip(FloatArray(s.samples.size) { a * crushed.samples[it] + (1f - a) * clean.samples[it] }, s.channels, s.sampleRate)
         }
     }
 
@@ -282,7 +299,19 @@ object StaggerKits {
     val PRESS = mapOf("AMOUNT" to .25f, "ATTACK" to .15f, "RECOVER" to .20f)
 
     /**
-     * CARDBOARD's print: 12 bits at 26 kHz (RATE .37 lands CRUNCH's hold at 26.0 kHz on its exponential law), the
+     * Round 3d ("I think the 12-bit is too high. The bit crushing is overly effecting the sound", the owner,
+     * 2026-11-20). Measured on the kits' own pads, against the same print with the converter clean: the 12-bit word
+     * moved nothing in an attack or a body (the same figures at 12, 14 and 16 bits) and ate the quiet tails
+     * (STUMBLE's rimshot past 200 ms was all quantization; at 16 bits 20 dB under); the 26 kHz hold made the
+     * grit on the snares and hats (their attacks 10 to 17 dB under the clean print, 25 to 27 without the hold); the
+     * input drive touched only the kicks. So every print's word is 16 bits (BITS 0) and the converter is blended
+     * half and half with itself run clean ([Print.crushMix] .5). The foley keeps its own 12-bit converter (Eras
+     * sp1200): the profile asked for the foley to show the old hardware.
+     */
+    val CRUSH_MIX = .5f
+
+    /**
+     * CARDBOARD's print: 16 bits held at 26 kHz (RATE .37 lands CRUNCH's hold at 26.0 kHz on its exponential law), the
      * converter's TONE at about 7.9 kHz (at .45, a 4.4 kHz low-pass, the groove's hat band measured 35 dB under the
      * mix against the references' 16 to 35), a worn tape, a light record under the groove. The darkness the
      * references show (eight put 95 percent of their energy under 309 to 635 Hz) is the kick's weight, not a
@@ -290,25 +319,25 @@ object StaggerKits {
      */
 
     val BOX = Print("box",
-        mapOf("BITS" to .45f, "RATE" to .37f, "TONE" to .72f, "GRIT" to .05f),
+        mapOf("BITS" to 0f, "RATE" to .37f, "TONE" to .72f, "GRIT" to .05f),
         mapOf("WOBBLE" to .06f, "DRIVE" to .15f, "AGE" to .55f),
         mapOf("CRACKLE" to .15f, "RUMBLE" to .40f, "HISS" to .20f),
-        compressor = PRESS)
+        compressor = PRESS, crushMix = CRUSH_MIX)
 
 
     /** MATINEE's print: the same converter, a cleaner tape (the foley carries its own grain), the record under the phrases. */
     val REEL = Print("reel",
-        mapOf("BITS" to .45f, "RATE" to .37f, "TONE" to .78f, "GRIT" to .05f),
+        mapOf("BITS" to 0f, "RATE" to .37f, "TONE" to .78f, "GRIT" to .05f),
         mapOf("WOBBLE" to .05f, "DRIVE" to .12f, "AGE" to .45f),
         mapOf("CRACKLE" to .20f, "RUMBLE" to .35f, "HISS" to .25f),
-        compressor = PRESS)
+        compressor = PRESS, crushMix = CRUSH_MIX)
 
     /** STUMBLE's print: the tape driven and worn, more record under the groove: the loosest of the three. */
     val WORN = Print("worn",
-        mapOf("BITS" to .50f, "RATE" to .40f, "TONE" to .65f, "GRIT" to .08f),
+        mapOf("BITS" to 0f, "RATE" to .40f, "TONE" to .65f, "GRIT" to .08f),
         mapOf("WOBBLE" to .10f, "DRIVE" to .30f, "AGE" to .80f),
         mapOf("CRACKLE" to .25f, "RUMBLE" to .55f, "HISS" to .25f),
-        compressor = PRESS)
+        compressor = PRESS, crushMix = CRUSH_MIX)
 
     fun printOf(kit: Kit): Print = when (kit) { Kit.CARDBOARD -> BOX; Kit.MATINEE -> REEL; Kit.STUMBLE -> WORN }
 
