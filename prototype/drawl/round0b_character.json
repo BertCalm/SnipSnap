@@ -1,0 +1,90 @@
+{
+ "before": {
+  "CONE": {
+   "medium": {
+    "boing_cents": 4.2,
+    "attack_band_db": -20.8,
+    "sustain_band_db": -60.8,
+    "highs_hold_db": -44.4
+   },
+   "hard": {
+    "boing_cents": 7.3,
+    "attack_band_db": -19.4,
+    "sustain_band_db": -57.6,
+    "highs_hold_db": -43.8
+   }
+  },
+  "BOTTLE": {
+   "medium": {
+    "boing_cents": 3.9,
+    "attack_band_db": -14.5,
+    "sustain_band_db": -31.1,
+    "highs_hold_db": -30.4
+   },
+   "hard": {
+    "boing_cents": 7.0,
+    "attack_band_db": -13.3,
+    "sustain_band_db": -30.9,
+    "highs_hold_db": -29.5
+   }
+  },
+  "LAP": {
+   "medium": {
+    "boing_cents": 4.1,
+    "attack_band_db": -26.1,
+    "sustain_band_db": -60.1,
+    "highs_hold_db": -59.1
+   },
+   "hard": {
+    "boing_cents": 7.2,
+    "attack_band_db": -23.9,
+    "sustain_band_db": -57.9,
+    "highs_hold_db": -56.4
+   }
+  }
+ },
+ "after": {
+  "CONE": {
+   "medium": {
+    "boing_cents": 8.7,
+    "attack_band_db": -12.6,
+    "sustain_band_db": -25.4,
+    "highs_hold_db": -13.5
+   },
+   "hard": {
+    "boing_cents": 15.4,
+    "attack_band_db": -11.7,
+    "sustain_band_db": -25.0,
+    "highs_hold_db": -13.1
+   }
+  },
+  "BOTTLE": {
+   "medium": {
+    "boing_cents": 4.1,
+    "attack_band_db": -3.7,
+    "sustain_band_db": -14.3,
+    "highs_hold_db": -16.8
+   },
+   "hard": {
+    "boing_cents": 7.2,
+    "attack_band_db": -3.4,
+    "sustain_band_db": -14.5,
+    "highs_hold_db": -17.3
+   }
+  },
+  "LAP": {
+   "medium": {
+    "boing_cents": 4.1,
+    "attack_band_db": -26.1,
+    "sustain_band_db": -60.1,
+    "highs_hold_db": -59.1
+   },
+   "hard": {
+    "boing_cents": 7.2,
+    "attack_band_db": -23.9,
+    "sustain_band_db": -57.9,
+    "highs_hold_db": -56.4
+   }
+  }
+ }
+}

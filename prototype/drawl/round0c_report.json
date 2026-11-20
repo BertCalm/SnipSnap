@@ -1,0 +1,681 @@
+{
+ "voices": {
+  "CONE": {
+   "seconds": 2.5,
+   "drum_class": "LOOP",
+   "peak": 0.921,
+   "dc": 0.0,
+   "finite": true,
+   "centroid_hz": 690,
+   "root_cents_house": {
+    "low": 0.0,
+    "mid": 0.1,
+    "high": 0.1
+   },
+   "root_voiced_share_house": {
+    "low": 1.0,
+    "mid": 1.0,
+    "high": 1.0
+   },
+   "root_cents_lagrange": {
+    "low": 0.0,
+    "mid": 0.1,
+    "high": 0.1
+   },
+   "root_voiced_share_lagrange": {
+    "low": 1.0,
+    "mid": 1.0,
+    "high": 1.0
+   },
+   "band_share": {
+    "40-100": 0.0,
+    "100-250": 0.078,
+    "250-500": 0.347,
+    "500-1000": 0.51,
+    "1000-2000": 0.033,
+    "2000-4000": 0.031,
+    "4000-8000": 0.0,
+    "8000-16000": 0.0
+   },
+   "ltas_peaks_hz_db": [
+    [
+     651,
+     32.7
+    ],
+    [
+     436,
+     32.1
+    ],
+    [
+     867,
+     31.7
+    ],
+    [
+     1303,
+     19.8
+    ]
+   ],
+   "glide_fraction": 0.216,
+   "glide_speed_cents_per_s_median": 7797,
+   "glide_extent_cents_median": 565,
+   "vibrato_rate_hz_median": 5.7,
+   "vibrato_depth_cents_pp_median": 411,
+   "decay_db_per_s": -21.3,
+   "deterministic": true,
+   "velocity": {
+    "soft": {
+     "rms_db": -27.2,
+     "onset_centroid_hz_level_matched": 1070
+    },
+    "medium": {
+     "rms_db": -21.9,
+     "onset_centroid_hz_level_matched": 1314
+    },
+    "hard": {
+     "rms_db": -21.1,
+     "onset_centroid_hz_level_matched": 1466
+    }
+   },
+   "velocity_timbre_monotonic": true,
+   "takes": {
+    "pairwise_distance_min": 4.84,
+    "pairwise_distance_max": 5.55,
+    "identical_pairs": 0,
+    "steady_pitch_cents": [
+     0.1,
+     0.1,
+     0.1,
+     0.1
+    ],
+    "velocity_soft_hard_distance": 6.77
+   },
+   "macro_activity": {
+    "TUNE": 15.53,
+    "SLIDE": 30.36,
+    "WAVER": 3.83,
+    "PICK": 8.61,
+    "BODY": 6.42,
+    "RING": 12.57,
+    "HOLD": 0.01,
+    "WAVER_pitch_std_cents_at_0_.5_1": {
+     "0.0": 0.0,
+     "0.5": 37.5,
+     "1.0": 114.2
+    },
+    "HOLD_seconds_at_0_1": [
+     2.5,
+     8.0
+    ],
+    "unknown_key_identical": true,
+    "nan_falls_back_to_default": true
+   },
+   "strum_chord": "open D major, bar across"
+  },
+  "BOTTLE": {
+   "seconds": 3.0,
+   "drum_class": "LOOP",
+   "peak": 0.376,
+   "dc": -0.0,
+   "finite": true,
+   "centroid_hz": 777,
+   "root_cents_house": {
+    "low": 0.1,
+    "mid": 0.1,
+    "high": 0.1
+   },
+   "root_voiced_share_house": {
+    "low": 1.0,
+    "mid": 1.0,
+    "high": 1.0
+   },
+   "root_cents_lagrange": {
+    "low": 0.1,
+    "mid": 0.1,
+    "high": 0.1
+   },
+   "root_voiced_share_lagrange": {
+    "low": 1.0,
+    "mid": 1.0,
+    "high": 1.0
+   },
+   "band_share": {
+    "40-100": 0.0,
+    "100-250": 0.0,
+    "250-500": 0.252,
+    "500-1000": 0.54,
+    "1000-2000": 0.145,
+    "2000-4000": 0.06,
+    "4000-8000": 0.002,
+    "8000-16000": 0.0
+   },
+   "ltas_peaks_hz_db": [
+    [
+     587,
+     27.6
+    ],
+    [
+     872,
+     20.8
+    ],
+    [
+     1168,
+     20.4
+    ],
+    [
+     2632,
+     14.1
+    ]
+   ],
+   "glide_fraction": 0.075,
+   "glide_speed_cents_per_s_median": 4688,
+   "glide_extent_cents_median": 384,
+   "vibrato_rate_hz_median": 6.1,
+   "vibrato_depth_cents_pp_median": 171,
+   "decay_db_per_s": -8.3,
+   "deterministic": true,
+   "velocity": {
+    "soft": {
+     "rms_db": -24.1,
+     "onset_centroid_hz_level_matched": 1887
+    },
+    "medium": {
+     "rms_db": -20.0,
+     "onset_centroid_hz_level_matched": 2520
+    },
+    "hard": {
+     "rms_db": -19.2,
+     "onset_centroid_hz_level_matched": 2745
+    }
+   },
+   "velocity_timbre_monotonic": true,
+   "takes": {
+    "pairwise_distance_min": 3.47,
+    "pairwise_distance_max": 5.44,
+    "identical_pairs": 0,
+    "steady_pitch_cents": [
+     0.1,
+     0.1,
+     0.1,
+     0.1
+    ],
+    "velocity_soft_hard_distance": 16.24
+   },
+   "macro_activity": {
+    "TUNE": 8.5,
+    "SLIDE": 24.19,
+    "WAVER": 1.07,
+    "PICK": 10.96,
+    "BODY": 13.69,
+    "RING": 10.75,
+    "HOLD": 5.3,
+    "WAVER_pitch_std_cents_at_0_.5_1": {
+     "0.0": 0.0,
+     "0.5": 37.1,
+     "1.0": 89.9
+    },
+    "HOLD_seconds_at_0_1": [
+     3.0,
+     8.0
+    ],
+    "unknown_key_identical": true,
+    "nan_falls_back_to_default": true
+   },
+   "strum_chord": "E power chord plus octave"
+  },
+  "LAP": {
+   "seconds": 3.5,
+   "drum_class": "LOOP",
+   "peak": 0.515,
+   "dc": 0.0,
+   "finite": true,
+   "centroid_hz": 598,
+   "root_cents_house": {
+    "low": 0.0,
+    "mid": 0.1,
+    "high": 0.1
+   },
+   "root_voiced_share_house": {
+    "low": 1.0,
+    "mid": 1.0,
+    "high": 1.0
+   },
+   "root_cents_lagrange": {
+    "low": 0.0,
+    "mid": 0.1,
+    "high": 0.1
+   },
+   "root_voiced_share_lagrange": {
+    "low": 1.0,
+    "mid": 1.0,
+    "high": 1.0
+   },
+   "band_share": {
+    "40-100": 0.0,
+    "100-250": 0.006,
+    "250-500": 0.363,
+    "500-1000": 0.572,
+    "1000-2000": 0.026,
+    "2000-4000": 0.032,
+    "4000-8000": 0.001,
+    "8000-16000": 0.0
+   },
+   "ltas_peaks_hz_db": [
+    [
+     581,
+     28.4
+    ],
+    [
+     877,
+     20.9
+    ],
+    [
+     2046,
+     13.8
+    ],
+    [
+     1755,
+     11.8
+    ]
+   ],
+   "glide_fraction": 0.12,
+   "glide_speed_cents_per_s_median": 4433,
+   "glide_extent_cents_median": 378,
+   "vibrato_rate_hz_median": 6.0,
+   "vibrato_depth_cents_pp_median": 194,
+   "decay_db_per_s": -12.2,
+   "deterministic": true,
+   "velocity": {
+    "soft": {
+     "rms_db": -24.3,
+     "onset_centroid_hz_level_matched": 1003
+    },
+    "medium": {
+     "rms_db": -20.0,
+     "onset_centroid_hz_level_matched": 1334
+    },
+    "hard": {
+     "rms_db": -19.0,
+     "onset_centroid_hz_level_matched": 1486
+    }
+   },
+   "velocity_timbre_monotonic": true,
+   "takes": {
+    "pairwise_distance_min": 2.4,
+    "pairwise_distance_max": 3.67,
+    "identical_pairs": 0,
+    "steady_pitch_cents": [
+     0.1,
+     0.2,
+     0.1,
+     0.1
+    ],
+    "velocity_soft_hard_distance": 21.97
+   },
+   "macro_activity": {
+    "TUNE": 6.43,
+    "SLIDE": 30.95,
+    "WAVER": 0.91,
+    "PICK": 8.83,
+    "BODY": 17.07,
+    "RING": 13.72,
+    "HOLD": 4.48,
+    "WAVER_pitch_std_cents_at_0_.5_1": {
+     "0.0": 0.0,
+     "0.5": 37.9,
+     "1.0": 89.9
+    },
+    "HOLD_seconds_at_0_1": [
+     3.5,
+     8.0
+    ],
+    "unknown_key_identical": true,
+    "nan_falls_back_to_default": true
+   },
+   "strum_chord": "D minor, bar slides the chord"
+  },
+  "STEEL": {
+   "seconds": 4.0,
+   "drum_class": "LOOP",
+   "peak": 0.536,
+   "dc": -0.0,
+   "finite": true,
+   "centroid_hz": 597,
+   "root_cents_house": {
+    "low": 0.0,
+    "mid": 0.1,
+    "high": 0.1
+   },
+   "root_voiced_share_house": {
+    "low": 1.0,
+    "mid": 1.0,
+    "high": 1.0
+   },
+   "root_cents_lagrange": {
+    "low": 0.0,
+    "mid": 0.1,
+    "high": 0.1
+   },
+   "root_voiced_share_lagrange": {
+    "low": 1.0,
+    "mid": 1.0,
+    "high": 1.0
+   },
+   "band_share": {
+    "40-100": 0.0,
+    "100-250": 0.0,
+    "250-500": 0.345,
+    "500-1000": 0.636,
+    "1000-2000": 0.018,
+    "2000-4000": 0.001,
+    "4000-8000": 0.0,
+    "8000-16000": 0.0
+   },
+   "ltas_peaks_hz_db": [
+    [
+     641,
+     68.9
+    ],
+    [
+     942,
+     62.7
+    ],
+    [
+     1556,
+     47.4
+    ],
+    [
+     1863,
+     46.8
+    ]
+   ],
+   "glide_fraction": 0.117,
+   "glide_speed_cents_per_s_median": 427,
+   "glide_extent_cents_median": 360,
+   "vibrato_rate_hz_median": 5.9,
+   "vibrato_depth_cents_pp_median": 98,
+   "decay_db_per_s": -6.4,
+   "deterministic": true,
+   "velocity": {
+    "soft": {
+     "rms_db": -26.7,
+     "onset_centroid_hz_level_matched": 1455
+    },
+    "medium": {
+     "rms_db": -20.0,
+     "onset_centroid_hz_level_matched": 1692
+    },
+    "hard": {
+     "rms_db": -18.3,
+     "onset_centroid_hz_level_matched": 1789
+    }
+   },
+   "velocity_timbre_monotonic": true,
+   "takes": {
+    "pairwise_distance_min": 0.99,
+    "pairwise_distance_max": 2.15,
+    "identical_pairs": 0,
+    "steady_pitch_cents": [
+     0.1,
+     0.1,
+     0.1,
+     0.1
+    ],
+    "velocity_soft_hard_distance": 9.35
+   },
+   "macro_activity": {
+    "TUNE": 21.05,
+    "SLIDE": 12.46,
+    "WAVER": 1.28,
+    "PICK": 14.8,
+    "BODY": 4.95,
+    "RING": 14.88,
+    "HOLD": 2.14,
+    "WAVER_pitch_std_cents_at_0_.5_1": {
+     "0.0": 0.0,
+     "0.5": 22.5,
+     "1.0": 53.1
+    },
+    "HOLD_seconds_at_0_1": [
+     4.0,
+     8.0
+    ],
+    "unknown_key_identical": true,
+    "nan_falls_back_to_default": true
+   },
+   "strum_chord": "E major, pedals raise the third and the top into it"
+  },
+  "FLATTOP": {
+   "seconds": 2.5,
+   "drum_class": "LOOP",
+   "peak": 0.783,
+   "dc": 0.0,
+   "finite": true,
+   "centroid_hz": 357,
+   "root_cents_house": {
+    "low": 0.2,
+    "mid": 0.2,
+    "high": 0.2
+   },
+   "root_voiced_share_house": {
+    "low": 1.0,
+    "mid": 1.0,
+    "high": 1.0
+   },
+   "root_cents_lagrange": {
+    "low": 0.2,
+    "mid": 0.2,
+    "high": 0.2
+   },
+   "root_voiced_share_lagrange": {
+    "low": 1.0,
+    "mid": 1.0,
+    "high": 1.0
+   },
+   "band_share": {
+    "40-100": 0.0,
+    "100-250": 0.301,
+    "250-500": 0.615,
+    "500-1000": 0.08,
+    "1000-2000": 0.005,
+    "2000-4000": 0.0,
+    "4000-8000": 0.0,
+    "8000-16000": 0.0
+   },
+   "ltas_peaks_hz_db": [
+    [
+     441,
+     59.9
+    ],
+    [
+     587,
+     56.0
+    ],
+    [
+     1034,
+     44.4
+    ],
+    [
+     883,
+     42.4
+    ]
+   ],
+   "glide_fraction": 0.137,
+   "glide_speed_cents_per_s_median": 12648,
+   "glide_extent_cents_median": 888,
+   "vibrato_rate_hz_median": 5.1,
+   "vibrato_depth_cents_pp_median": 526,
+   "decay_db_per_s": -17.0,
+   "deterministic": true,
+   "velocity": {
+    "soft": {
+     "rms_db": -27.7,
+     "onset_centroid_hz_level_matched": 622
+    },
+    "medium": {
+     "rms_db": -20.3,
+     "onset_centroid_hz_level_matched": 757
+    },
+    "hard": {
+     "rms_db": -18.4,
+     "onset_centroid_hz_level_matched": 848
+    }
+   },
+   "velocity_timbre_monotonic": true,
+   "takes": {
+    "pairwise_distance_min": 4.48,
+    "pairwise_distance_max": 5.92,
+    "identical_pairs": 0,
+    "steady_pitch_cents": [
+     0.2,
+     0.2,
+     0.2,
+     0.2
+    ],
+    "velocity_soft_hard_distance": 15.06
+   },
+   "macro_activity": {
+    "TUNE": 24.66,
+    "SLIDE": 15.94,
+    "WAVER": 0.2,
+    "PICK": 7.66,
+    "BODY": 8.32,
+    "RING": 19.15,
+    "HOLD": 0.0,
+    "WAVER_pitch_std_cents_at_0_.5_1": {
+     "0.0": 0.0,
+     "0.5": 6.5,
+     "1.0": 15.7
+    },
+    "HOLD_seconds_at_0_1": [
+     2.5,
+     8.0
+    ],
+    "unknown_key_identical": true,
+    "nan_falls_back_to_default": true
+   },
+   "strum_chord": "six-string D major strum"
+  },
+  "GUT": {
+   "seconds": 2.5,
+   "drum_class": "LOOP",
+   "peak": 0.773,
+   "dc": 0.0,
+   "finite": true,
+   "centroid_hz": 273,
+   "root_cents_house": {
+    "low": 0.2,
+    "mid": 0.2,
+    "high": 0.3
+   },
+   "root_voiced_share_house": {
+    "low": 1.0,
+    "mid": 1.0,
+    "high": 1.0
+   },
+   "root_cents_lagrange": {
+    "low": 0.2,
+    "mid": 0.2,
+    "high": 0.3
+   },
+   "root_voiced_share_lagrange": {
+    "low": 1.0,
+    "mid": 1.0,
+    "high": 1.0
+   },
+   "band_share": {
+    "40-100": 0.0,
+    "100-250": 0.554,
+    "250-500": 0.414,
+    "500-1000": 0.031,
+    "1000-2000": 0.001,
+    "2000-4000": 0.0,
+    "4000-8000": 0.0,
+    "8000-16000": 0.0
+   },
+   "ltas_peaks_hz_db": [
+    [
+     495,
+     63.7
+    ],
+    [
+     829,
+     49.9
+    ],
+    [
+     662,
+     45.6
+    ],
+    [
+     1157,
+     44.1
+    ]
+   ],
+   "glide_fraction": 0.19,
+   "glide_speed_cents_per_s_median": 11318,
+   "glide_extent_cents_median": 803,
+   "vibrato_rate_hz_median": 6.0,
+   "vibrato_depth_cents_pp_median": 543,
+   "decay_db_per_s": -23.6,
+   "deterministic": true,
+   "velocity": {
+    "soft": {
+     "rms_db": -28.5,
+     "onset_centroid_hz_level_matched": 488
+    },
+    "medium": {
+     "rms_db": -21.0,
+     "onset_centroid_hz_level_matched": 576
+    },
+    "hard": {
+     "rms_db": -19.0,
+     "onset_centroid_hz_level_matched": 649
+    }
+   },
+   "velocity_timbre_monotonic": true,
+   "takes": {
+    "pairwise_distance_min": 4.14,
+    "pairwise_distance_max": 5.71,
+    "identical_pairs": 0,
+    "steady_pitch_cents": [
+     0.2,
+     0.2,
+     0.2,
+     0.2
+    ],
+    "velocity_soft_hard_distance": 13.18
+   },
+   "macro_activity": {
+    "TUNE": 17.14,
+    "SLIDE": 13.98,
+    "WAVER": 0.27,
+    "PICK": 8.31,
+    "BODY": 8.81,
+    "RING": 20.71,
+    "HOLD": 0.0,
+    "WAVER_pitch_std_cents_at_0_.5_1": {
+     "0.0": 0.0,
+     "0.5": 17.1,
+     "1.0": 43.1
+    },
+    "HOLD_seconds_at_0_1": [
+     2.5,
+     8.0
+    ],
+    "unknown_key_identical": true,
+    "nan_falls_back_to_default": true
+   },
+   "strum_chord": "E minor"
+  }
+ },
+ "probes": {},
+ "zipper": {
+  "house_allpass_retune": {
+   "hf_share_glide_db": -68.3,
+   "hf_share_vibrato_db": -95.6
+  },
+  "lagrange_read": {
+   "hf_share_glide_db": -67.9,
+   "hf_share_vibrato_db": -138.8
+  }
+ }
+}
