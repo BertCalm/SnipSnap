@@ -221,8 +221,10 @@ The listening page for this round is
 - **The owner's verdicts on the app's renders:** "These are cool" (kits round 1),
   then "Sounds good, I like" (round 7, all four kits, the fan and the soft edge
   stroke), both 2026-11-20. The kits are pinned as heard; the presets are not.
-- **The forty presets are not pinned.** The kits are; the presets were written
-  from the prototype's rounds and have not had their own listen.
+- **The forty presets were kept on one listen** of each at a soft and a full
+  touch ("Ok, they are good", 2026-11-20), and are pinned as heard in
+  `TerraPresetsTest`. Their knob settings were written from the prototype's
+  rounds, not tuned by ear one by one.
 - **The classifier files a few pads outside PERC:** the binzasara as CLAP, BON's
   small cymbal and slat snap as SNARE. Each pad's class is what the classifier
   hears, as in every TERRA kit.

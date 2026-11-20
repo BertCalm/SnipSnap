@@ -1288,6 +1288,6 @@ WATER_DRUM, FAN), the first nine picked by ear from Python renders over six roun
 | Hardware | Pass, owner's report (2026-11-20): asked to check that repeated hits cycle and soft hits sound softer on phone and MPC, the owner answered "Is good". Kits and MPC export format played were not stated |
 
 Complete against the applicable gates as of 2026-11-20. The forty stick-voice
-presets have not had their own listen and are not pinned; no gate requires that
-for a drum engine.
+presets were kept by the owner the same day ("Ok, they are good") and are pinned
+in `TerraPresetsTest`.
 

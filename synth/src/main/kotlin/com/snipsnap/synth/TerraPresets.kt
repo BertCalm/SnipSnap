@@ -8,8 +8,8 @@ package com.snipsnap.synth
  * of the same voices, written out in full so no preset moves with a voice's defaults. The owner kept the forty presets
  * of the first ten voices in round terra-presets-1 (W1–W10, 2026-11-15); BAYAN's and TUN's new three were reworked
  * after that round, and the owner kept both reworked sets in round terra-presets-2 (Z2 and Z4, 2026-11-15). Those 48 are
- * pinned in `TerraPresetsTest`. See docs/TERRA_PROMOTION.md. The ten stick voices' forty (2026-11-20,
- * docs/TERRA_STICKS.md) are provisional: written from the prototype's rounds, not yet heard from the app, not pinned.
+ * pinned in `TerraPresetsTest`. See docs/TERRA_PROMOTION.md. The ten stick voices' forty (docs/TERRA_STICKS.md)
+ * the owner kept on 2026-11-20 after hearing each from the app at a soft and a full touch; they are pinned there too.
  *
  * Names describe the drum and the stroke; none names a pitch it does not have. Every name fits a pad label (14).
  */
