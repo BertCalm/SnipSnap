@@ -6199,4 +6199,65 @@ class ConventionTest {
         assertTrue(padEditorWiringFaults(good.replace("ReleasePadEditorWhenGone(x, k)", "")).isNotEmpty())
         assertTrue(padEditorWiringFaults(good.replace("rememberPadEditorKeys(padEditorHolder)", "remember { PadEditorKeys(h) }")).isNotEmpty())
     }
+
+    // ---- Law: a tappable control is at least MIN_HIT_TARGET tall ----
+
+    /**
+     * UAT 2026-11 user states, S-13: six rows in SETTINGS, PAD VELOCITY and RECORD OFFSET were
+     * 44 dp tall and LISTEN FROM's options had a 44 dp floor, under [Layout.MIN_HIT_TARGET]'s 48,
+     * and nothing held them to it. This reads every modifier chain that makes a control tappable
+     * (`tapeClick(` or `.clickable(`, on the line or on the `.` lines that follow it) and refuses
+     * a literal height, height floor or size under 48 dp in the same chain. A size from `Layout`
+     * passes, as does a literal of 48 or more; a small size on something no one taps is not this
+     * law's business.
+     */
+    @Test
+    fun `law - a tappable control is never given a literal height under the hit target`() {
+        val offenders = appSrcRoot.walkTopDown().filter { it.isFile && it.extension == "kt" }.flatMap { file ->
+            smallTargets(file.readLines(Charsets.UTF_8)).map { "${file.path.replace('\\', '/')}:$it" }
+        }.toList()
+        assertTrue(
+            offenders.isEmpty(),
+            "a tappable control is sized under Layout.MIN_HIT_TARGET (${Layout.MIN_HIT_TARGET} dp) at $offenders. " +
+                "Use Layout.MIN_HIT_TARGET.dp (or more) for its height or its floor.",
+        )
+    }
+
+    @Test
+    fun `law - the hit-target law reports the 44 dp row it replaced and passes the fix`() {
+        val before = listOf(
+            "Box(",
+            "    Modifier",
+            "        .fillMaxWidth()",
+            "        .height(44.dp)",
+            "        .raisedBevel(scheme)",
+            "        .tapeClick(label = \"HELP\", onClick = onHelp),",
+            ")",
+        )
+        assertEquals(listOf(4), smallTargets(before))
+        assertEquals(listOf(1), smallTargets(listOf("Column(Modifier.heightIn(min = 44.dp).tapeClick(label = \"X\") {})")))
+        assertEquals(emptyList(), smallTargets(before.map { it.replace("44.dp", "Layout.MIN_HIT_TARGET.dp") }))
+        assertEquals(emptyList(), smallTargets(listOf("Box(Modifier.size(44.dp).lcdPanel(scheme))")))
+        assertEquals(listOf(1), smallTargets(listOf(".height(40.dp)", "// a note in the chain", ".tapeClick(label = \"X\") {}")))
+    }
+
+    /** 1-based lines in [lines] that size a tappable chain under [Layout.MIN_HIT_TARGET] with a literal. */
+    private fun smallTargets(lines: List<String>): List<Int> {
+        val size = Regex("""\.(?:height|size|heightIn\(\s*min\s*=)\(?\s*(\d+)\.dp""")
+        val out = ArrayList<Int>()
+        for ((i, line) in lines.withIndex()) {
+            val t = line.trimStart()
+            if (t.startsWith("//") || t.startsWith("*")) continue
+            if (size.findAll(line).none { it.groupValues[1].toInt() < Layout.MIN_HIT_TARGET }) continue
+            val chain = ArrayList<String>().apply { add(line) }
+            var j = i + 1
+            // A comment inside the chain does not end it.
+            while (j < lines.size && j <= i + 8 && lines[j].trimStart().let { it.startsWith(".") || it.startsWith("//") }) {
+                chain += lines[j]
+                j++
+            }
+            if (chain.any { "tapeClick(" in it || ".clickable(" in it }) out += i + 1
+        }
+        return out
+    }
 }

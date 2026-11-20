@@ -1547,4 +1547,22 @@ class PersonalityTest {
         assertEquals(emptySet(), violations("onToast(\"\${pad.tag} saved.\")"), "a template is not text the reader reads as caps")
         assertEquals(emptySet(), violations("// onToast(\"COMMENTED OUT SHOUT\")"))
     }
+
+    /** UAT 2026-11 user states, D-2: the kit DELETE confirm names the projects that lose the kit. */
+    @Test
+    fun `the kit delete confirm names the projects that use the kit, two at most`() {
+        assertEquals(Copy.KIT_DELETE_CONFIRM, Copy.kitDeleteConfirm(emptyList()))
+        assertEquals(
+            "Delete this kit? It waits in deleted kits for 30 days. Beats uses it and loses it until it is restored.",
+            Copy.kitDeleteConfirm(listOf("Beats")),
+        )
+        assertEquals(
+            "Delete this kit? It waits in deleted kits for 30 days. Beats and Tape Loops use it and lose it until it is restored.",
+            Copy.kitDeleteConfirm(listOf("Beats", "Tape Loops")),
+        )
+        assertEquals(
+            "Delete this kit? It waits in deleted kits for 30 days. Beats, Tape Loops and 3 more use it and lose it until it is restored.",
+            Copy.kitDeleteConfirm(listOf("Beats", "Tape Loops", "A", "B", "C")),
+        )
+    }
 }
