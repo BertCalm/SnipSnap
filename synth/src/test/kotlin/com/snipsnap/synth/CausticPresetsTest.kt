@@ -86,7 +86,8 @@ class CausticPresetsTest {
             assertEquals(patches[index].name, pad.displayName)
             assertEquals(0f, patches[index].macros.getValue("HOLD"))
             assertEquals(if (index == 14) DrumClass.TONAL else DrumClass.LOOP, pad.drumClass)
-            if (index == 14) assertEquals(.5f, pad.snip.durationSeconds)
+            // Short Glint rings out since the 20 Nov 2026 verdict ("abrupt"); it is still the one short TONAL pad.
+            if (index == 14) assertEquals(1.25f, pad.snip.durationSeconds)
             else assertTrue(pad.snip.durationSeconds > 1.5f)
             assertEquals(1, pad.snip.channels)
             assertEquals(44_100, pad.snip.sampleRate)

@@ -191,20 +191,52 @@ class LatticeCandidateVoicesTest {
         assertContentEquals(loop.snip.samples, Lattice.renderLoop(LatticeVoice.BOW, midi = 60))
     }
 
+    /**
+     * The owner on the candidates' soft, medium, hard clips (20 Nov 2026): "I didn't hear a
+     * difference" / "Very little difference". Touch now leans the source: the brightness measure
+     * is the share of the note's energy in its sample-to-sample change, which loudness cannot move.
+     */
+    @Test
+    fun `touch changes the tone of every candidate and leaves the medium touch as it was kept`() {
+        fun brightness(x: FloatArray): Double {
+            var energy = 0.0
+            var change = 0.0
+            for (i in 0 until x.size - 1) { val d = x[i + 1] - x[i].toDouble(); energy += x[i].toDouble() * x[i]; change += d * d }
+            return 10 * kotlin.math.log10(change / energy)
+        }
+        for (voice in candidates) for (midi in listOf(48, 60)) {
+            val now = listOf(.3f, .75f, 1f).map { brightness(Lattice.render(voice, midi = midi, velocity = it).samples) }
+            val before = listOf(.3f, .75f, 1f).map { brightness(Lattice.renderPlayed(voice, midi = midi, velocity = it, human = null, touch = 0.0).samples) }
+            println("LATTICE $voice MIDI$midi brightness soft/medium/hard now %.1f %.1f %.1f dB, before %.1f %.1f %.1f dB"
+                .format(now[0], now[1], now[2], before[0], before[1], before[2]))
+            assertTrue(now[1] - now[0] > 3.0 && now[2] - now[1] > 1.5, "$voice MIDI$midi touch does not change the tone: $now")
+            assertContentEquals(Lattice.renderPlayed(voice, midi = midi, velocity = .75f, human = null, touch = 0.0).samples,
+                Lattice.render(voice, midi = midi, velocity = .75f).samples, "$voice MIDI$midi medium touch moved")
+        }
+    }
+
     @Test
     fun `the kept voices render exactly what they rendered before the candidates`() {
+        // Six presets are left out: the held WARM and PLUCK presets, which the owner asked to be
+        // humanized on 20 Nov 2026. LatticeHoldDriftTest pins what they play now, and proves that
+        // with the drift off they still render these exact old bytes.
         val lines = ArrayList<String>()
         for (voice in Lattice.KEPT_VOICES) {
             for (midi in listOf(41, 60)) for (v in listOf(.4f, .75f)) lines +=
                 "LATTICE ${voice.name} default midi $midi v $v ${CandidateVoiceProbes.hash(Lattice.render(voice, midi = midi, velocity = v).samples)}"
-            for (p in LatticePresets.forVoice(voice)) lines += "LATTICE preset ${p.name} ${CandidateVoiceProbes.hash(p.render().samples)}"
+            for (p in LatticePresets.forVoice(voice)) if (p.name !in HUMANIZED_PRESETS)
+                lines += "LATTICE preset ${p.name} ${CandidateVoiceProbes.hash(p.render().samples)}"
         }
-        assertEquals(31, lines.size)
+        assertEquals(25, lines.size)
         assertEquals(KEPT_RENDERS, CandidateVoiceProbes.hash(lines), lines.joinToString("\n"))
     }
 
     private companion object {
-        /** SHA-256 over the 31 lines above, taken from the build before this round (fbfda867d). */
-        const val KEPT_RENDERS = "1a30e1cd6a42feea906cf73edd7dd9c3058a567f707ef38868ab0a1439157db2"
+        /**
+         * SHA-256 over the 25 lines above, taken from the build before the candidates (fbfda867d):
+         * the same per-line hashes as the earlier 31-line pin, less the six humanized presets.
+         */
+        const val KEPT_RENDERS = "ae7e8d79bf083ae24f5ce5a1ac1b80ca5eedf81015000416d2a1d1c513abef58"
+        val HUMANIZED_PRESETS = setOf("Close Weave", "Soft Outline", "Warm Thread", "Plucked Outline", "Split Pluck", "Pluck Thread")
     }
 }

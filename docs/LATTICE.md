@@ -403,3 +403,35 @@ C2, C3, C4, C5 and C6. By level-matched third-octave shape every candidate is at
 voice at C3 and C4 (the nearest pair is RAKE and BOW). Constants are authored, not measured from an instrument.
 
 Not done for the candidates: presets, kit pads, keygroups (`LatticeKeys` is TRACE only), takes, a listening verdict.
+
+## Held WARM and PLUCK in a hand that drifts (verdict of 20 Nov 2026, unheard)
+
+The owner on WARM and PLUCK: "Holds are unnatural, they need more humanization". Measured on the judged clips, the
+held tone did not move: level within 0.3 dB, pitch and brightness fixed, and the top-HOLD loop repeated every 2 s.
+
+A held WARM or PLUCK note (HOLD above zero) is now played by a hand that drifts (`Lattice.Human`, `HoldDrift`):
+effort (level), pitch, and a lean of the source's harmonic weights that mostly follows the effort. Each drift is a
+seeded sum of a few sinusoids with whole cycles over a 6 s span, so nothing is random at render time, the drift has
+no mean, and it meets itself where a loop wraps. Each note has its own seed, so a chord does not drift in parallel.
+
+- A finite hold runs the same source, gates and collector; the drift grows in over the first 0.4 s, so the attack is
+  the judged one and the note starts in tune.
+- The top-HOLD loop is 6 s long (was 2 s) and repeats only once per span. Its collector response is the settled one at
+  the fitted pitch; a few cents of slow drift is treated as quasi-static.
+- Shipped amount (`HELD_HUMAN`, modest): 0.6 dB, 4 cents, tilt 0.06 either way. `HUMAN_STRONGER` is 1.1 dB, 7 cents,
+  0.11. Measured on the loops (Kotlin, `LatticeHoldDriftTest`): level range about 1.1 to 1.5 dB modest and 2.3 to
+  2.5 dB stronger, pitch range about 7 and 13 cents, mean pitch unchanged, generated seam error under 1e-11.
+- HOLLOW, TRACE, the candidates and every note with HOLD 0 are untouched and stay byte-identical; with the drift off
+  the six changed presets still render the judged bytes (pinned).
+
+Known side effect: in a finite hold with REJECT up, a drifting pitch also moves how much of the narrow collector
+rings, so the level moves more than the authored amount (Soft Outline: up to 1.4 dB modest), and the brief dip
+at the release is filled by several dB for about 50 ms. The loop does not model this.
+
+## Touch on the candidates (verdict of 20 Nov 2026, unheard)
+
+The owner kept VANE, RAKE and BOW's range clips; on their soft, medium, hard clips: "I didn't hear a difference".
+Touch only changed loudness (and a .15 lean too slight to hear). The candidates' source now leans with touch:
+harmonic h is scaled by h^(1.6 x (velocity - .75)) (`CANDIDATE_TOUCH`), so the medium touch is byte-identical to the
+kept sound, soft is duller and hard brighter. Measured (share of energy in the sample-to-sample change): soft to hard
+now spans 9 to 14 dB, where it spanned 0.9 to 3.2 dB. The kept voices keep their own arithmetic.

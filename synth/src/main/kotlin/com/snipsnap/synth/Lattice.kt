@@ -69,6 +69,33 @@ object Lattice {
     /** Fixed authored send from the row of bars; a short pick only part-fills each narrow bar. */
     private const val RAKE_GAIN = 32.0
 
+    /**
+     * How far a held WARM or PLUCK note drifts in the player's hand: level (dB either way), pitch
+     * (cents either way) and brightness (a tilt of the source's harmonic weights, as touch tilts
+     * them). The drift is seeded by the note, never random at render time; see [HoldDrift].
+     * Authored amounts, not measurements of a player.
+     */
+    data class Human(val levelDb: Double, val cents: Double, val tilt: Double) {
+        init {
+            require(levelDb.isFinite() && levelDb in 0.0..3.0 && cents.isFinite() && cents in 0.0..20.0 &&
+                tilt.isFinite() && tilt in 0.0..(.3)) { "LATTICE hold drift is out of its authored range" }
+        }
+    }
+    val HUMAN_MODEST = Human(levelDb = .6, cents = 4.0, tilt = .06)
+    val HUMAN_STRONGER = Human(levelDb = 1.1, cents = 7.0, tilt = .11)
+    /** What WARM and PLUCK play when HOLD is above zero. HOLLOW and TRACE were kept as heard and have none. */
+    val HELD_HUMAN = HUMAN_MODEST
+    /** The drift's span, and the length of a humanized HOLD loop: the pattern returns only this often. */
+    const val HUMAN_SPAN_SECONDS = 6.0
+    private const val HUMAN_SETTLE_SECONDS = .4
+    /**
+     * How strongly touch leans the candidates' source: harmonic h is scaled by
+     * h^(CANDIDATE_TOUCH * (velocity - .75)), so the medium touch the owner kept is unchanged, a
+     * soft touch (.3) is duller (the eighth harmonic 13 dB down) and a hard one (1.0) brighter
+     * (7 dB up). The kept voices keep their slight .15 lean alone. Authored, not measured.
+     */
+    const val CANDIDATE_TOUCH = 1.6
+
     /** The voices players are offered. The rest are unheard candidates: no picker, preset or kit. */
     val KEPT_VOICES: List<LatticeVoice> =
         listOf(LatticeVoice.WARM, LatticeVoice.PLUCK, LatticeVoice.HOLLOW, LatticeVoice.TRACE)
@@ -133,14 +160,19 @@ object Lattice {
      * or levels the result.
      */
     fun render(voice: LatticeVoice, macros: Map<String, Float> = emptyMap(), midi: Int = DEFAULT_MIDI,
-        velocity: Float = .75f, cancelled: () -> Boolean = { false }): Snip {
+        velocity: Float = .75f, cancelled: () -> Boolean = { false }): Snip =
+        renderPlayed(voice, macros, midi, velocity, HELD_HUMAN, cancelled)
+
+    /** [render] with an explicit hold drift; null plays WARM and PLUCK holds perfectly still, as before. */
+    internal fun renderPlayed(voice: LatticeVoice, macros: Map<String, Float> = emptyMap(), midi: Int = DEFAULT_MIDI,
+        velocity: Float = .75f, human: Human?, cancelled: () -> Boolean = { false }, touch: Double? = null): Snip {
         stopIfUnwanted(cancelled)
         val m = settled(voice, macros)
         if (voice == LatticeVoice.TRACE) return tracePerformance(m, midi, velocity, cancelled, evidence = false).snip
-        if (voice == LatticeVoice.VANE) return vanePerformance(m, midi, velocity, cancelled)
-        if (voice == LatticeVoice.RAKE) return rakePerformance(m, midi, velocity, cancelled)
+        if (voice == LatticeVoice.VANE) return vanePerformance(m, midi, velocity, cancelled, touch)
+        if (voice == LatticeVoice.RAKE) return rakePerformance(m, midi, velocity, cancelled, touch)
         val hold = m.getValue("HOLD")
-        val settings = settingsFor(voice, m, midi, velocity)
+        val settings = settingsFor(voice, m, midi, velocity, human).let { if (touch == null) it else it.copy(touch = touch) }
         if (isLoop(hold)) return heldProbe(settings, cancelled).snip
         return perform(settings, controls = null, effortHoldSeconds = settings.excitationSeconds - .26, cancelled = cancelled).snip
     }
@@ -160,8 +192,8 @@ object Lattice {
      * so the mallet attack is always heard whole. Nothing is added to the model: this is the
      * documented moving-control path with a periodic trajectory.
      */
-    private fun vanePerformance(m: Map<String, Float>, midi: Int, velocity: Float, cancelled: () -> Boolean): Snip {
-        val settings = settingsFor(LatticeVoice.VANE, m, midi, velocity)
+    private fun vanePerformance(m: Map<String, Float>, midi: Int, velocity: Float, cancelled: () -> Boolean, touch: Double?): Snip {
+        val settings = settingsFor(LatticeVoice.VANE, m, midi, velocity).let { if (touch == null) it else it.copy(touch = touch) }
         val hz = vaneHz(m.getValue("SPEED"))
         val controls = { seconds: Double ->
             Controls(turn = .5 - .5 * cos(2.0 * PI * hz * seconds), color = VANE_COLOR, reject = VANE_REJECT, gateCount = 2.0)
@@ -177,8 +209,8 @@ object Lattice {
      * own rejection is heard at its own time, ringing its own harmonic bar (gate s rings harmonic
      * s), so the note opens as a run up its overtones. See [Rake].
      */
-    private fun rakePerformance(m: Map<String, Float>, midi: Int, velocity: Float, cancelled: () -> Boolean): Snip {
-        val settings = settingsFor(LatticeVoice.RAKE, m, midi, velocity)
+    private fun rakePerformance(m: Map<String, Float>, midi: Int, velocity: Float, cancelled: () -> Boolean, touch: Double?): Snip {
+        val settings = settingsFor(LatticeVoice.RAKE, m, midi, velocity).let { if (touch == null) it else it.copy(touch = touch) }
         return performKernel(settings, controls = null, effortHoldSeconds = 0.0, cancelled = cancelled, motion = null,
             referenceExcitationSeconds = settings.excitationSeconds, evidence = false,
             rake = RakeSpec(rakeStepSeconds(m.getValue("SPEED")), 1.0 + 1.5 * m.getValue("HOLD"))).snip
@@ -186,7 +218,7 @@ object Lattice {
 
     /** Authoritative control-to-model mapping shared by the instrument and its audition. */
     fun settingsFor(voice: LatticeVoice, macros: Map<String, Float> = emptyMap(), midi: Int = DEFAULT_MIDI,
-        velocity: Float = .75f): Settings {
+        velocity: Float = .75f, human: Human? = HELD_HUMAN): Settings {
         val m = settled(voice, macros)
         val hold = m.getValue("HOLD")
         if (voice == LatticeVoice.TRACE) return LatticeMotion.settings(m.getValue("SPEED"), hold,
@@ -221,7 +253,10 @@ object Lattice {
             turn = m.getValue("TURN").toDouble(), stages = m.getValue("STAGES").toDouble(),
             twist = m.getValue("TWIST").toDouble(), color = m.getValue("COLOR").toDouble(),
             reject = m.getValue("REJECT").toDouble(), durationSeconds = min(6.0, excitation + 1.8),
-            excitationSeconds = excitation, sourceProfile = SourceProfile.valueOf(voice.name), contour = Contour.PLUCK)
+            excitationSeconds = excitation, sourceProfile = SourceProfile.valueOf(voice.name), contour = Contour.PLUCK,
+            // Only a held note has a sustained part to drift, and only the two voices the owner
+            // asked to be humanized: HOLD 0 and HOLLOW keep their exact arithmetic.
+            human = human?.takeIf { hold > 0f && (voice == LatticeVoice.WARM || voice == LatticeVoice.PLUCK) })
     }
 
     fun renderLoop(voice: LatticeVoice, macros: Map<String, Float> = emptyMap(), midi: Int = DEFAULT_MIDI,
@@ -285,6 +320,10 @@ object Lattice {
         val contour: Contour = Contour.SUSTAIN,
         /** Overrides the source profile's pluck decay time; null keeps the profile's own. */
         val pluckDecaySeconds: Double? = null,
+        /** Seeded drift of the held part; null holds perfectly still. See [Human]. */
+        val human: Human? = null,
+        /** Overrides how strongly touch leans the source's harmonics; null keeps the profile's own. */
+        val touch: Double? = null,
     ) {
         init {
             require(pluckDecaySeconds == null || pluckDecaySeconds.isFinite() && pluckDecaySeconds > 0.0) {
@@ -503,6 +542,14 @@ object Lattice {
         var residual = if (evidence) geometry.groups.maxOf { abs(it.allocationResidual) } else 0.0
         var rawPeak = 0.0
         var mixAmount = settings.reject
+        // The player only drifts while holding: a note with no held effort keeps the exact still path.
+        val player = settings.human?.takeIf { effortHoldSeconds > 0.0 && motion == null && rake == null }
+            ?.let { Player(it, settings, rate) }
+        var level = 1.0
+        var levelStep = 0.0
+        var tilt = 0.0
+        var tiltStep = 0.0
+        var bend = 0.0
         val attack = when (settings.contour) {
             Contour.SUSTAIN -> .040 - .020 * settings.velocity
             Contour.PLUCK -> .025 - .013 * settings.velocity
@@ -550,6 +597,17 @@ object Lattice {
                     }
                     mixAmount = c.reject
                 }
+                if (player != null) {
+                    // Level and brightness glide across the block; pitch is constant inside it, so
+                    // the source phase stays continuous and nothing steps.
+                    val from = i.toDouble() / rate
+                    val to = (i + CONTROL_BLOCK).toDouble() / rate
+                    level = player.level(from, settled = false)
+                    levelStep = (player.level(to, settled = false) - level) / CONTROL_BLOCK
+                    tilt = player.tilt(from, settled = false)
+                    tiltStep = (player.tilt(to, settled = false) - tilt) / CONTROL_BLOCK
+                    bend = player.bend(.5 * (from + to))
+                }
             }
             val physicalTime = i.toDouble() / rate
             val t = motion?.sourceTime(physicalTime) ?: physicalTime
@@ -561,7 +619,11 @@ object Lattice {
             }
             val decayTime = if (effortHoldSeconds > 0.0) max(0.0, t - effortHoldSeconds) else t
             val articulation = if (settings.contour == Contour.PLUCK) exp(-decayTime / decaySeconds) else 1.0
-            bank.next(groupSamples, envelope * articulation)
+            if (player == null) bank.next(groupSamples, envelope * articulation) else {
+                bank.nextPlayed(groupSamples, envelope * articulation * level, bend, tilt)
+                level += levelStep
+                tilt += tiltStep
+            }
             var dry = 0.0
             for (g in 0 until GROUPS) {
                 dry += groupSamples[g] * geometry.groups[g].transmission
@@ -787,7 +849,9 @@ object Lattice {
         val started = System.nanoTime()
         stopIfUnwanted(cancelled)
         val requested = Keys.midiHz(settings.midi).toDouble()
-        val periods = (2.0 * requested).roundToInt().coerceAtLeast(1)
+        // A drifting hold repeats only once per drift span; the still hold keeps its two seconds.
+        val loopSeconds = if (settings.human != null) HUMAN_SPAN_SECONDS else 2.0
+        val periods = (loopSeconds * requested).roundToInt().coerceAtLeast(1)
         val frames = (periods * Dsp.RATE.toDouble() / requested).roundToInt()
         val fitted = periods * Dsp.RATE.toDouble() / frames
         val rate = Dsp.RATE * Dsp.OVERSAMPLE
@@ -814,7 +878,55 @@ object Lattice {
         val preroll = Dsp.RATE / 2
         val postroll = 512
         val raw = FloatArray((preroll + 2 * frames + postroll) * Dsp.OVERSAMPLE)
-        for (i in raw.indices) {
+        val human = settings.human
+        if (human != null) {
+            // The same settled carriers, played by a hand that drifts. The fundamental's phase is
+            // the fitted note's plus the drift's own integral, which is periodic over the loop, so
+            // both generated cycles and the wrap agree by construction. It is evaluated exactly at
+            // every control block; the harmonics are powers of that one rotor, so they stay locked.
+            // The collector response is the settled one at the fitted pitch: a few cents of slow
+            // drift is treated as quasi-static, it does not re-ring the collector.
+            val player = Player(human, settings, rate)
+            val lean = source.lean()
+            val loopSamples = frames.toDouble() * Dsp.OVERSAMPLE
+            val origin = preroll * Dsp.OVERSAMPLE
+            val omega = 2.0 * PI * fitted / rate
+            fun theta(sample: Int) = omega * sample + player.loopPhase((sample - origin) / loopSamples, fitted, loopSeconds)
+            var c1 = 1.0; var s1 = 0.0; var stepC = 1.0; var stepS = 0.0
+            var level = 1.0; var levelStep = 0.0; var tilt = 0.0; var tiltStep = 0.0
+            for (i in raw.indices) {
+                if (i % CONTROL_BLOCK == 0) {
+                    stopIfUnwanted(cancelled)
+                    val a = theta(i)
+                    val delta = (theta(i + CONTROL_BLOCK) - a) / CONTROL_BLOCK
+                    c1 = cos(a); s1 = sin(a); stepC = cos(delta); stepS = sin(delta)
+                    val from = (i - origin) / loopSamples * loopSeconds
+                    val to = (i + CONTROL_BLOCK - origin) / loopSamples * loopSeconds
+                    level = player.level(from, settled = true)
+                    levelStep = (player.level(to, settled = true) - level) / CONTROL_BLOCK
+                    tilt = player.tilt(from, settled = true)
+                    tiltStep = (player.tilt(to, settled = true) - tilt) / CONTROL_BLOCK
+                }
+                var body = 0.0
+                var leaning = 0.0
+                var ch = 1.0
+                var sh = 0.0
+                for (p in 0 until PARTIALS) {
+                    val c = ch * c1 - sh * s1
+                    sh = sh * c1 + ch * s1
+                    ch = c
+                    val value = sine[p] * ch + cosine[p] * sh
+                    body += value
+                    leaning += lean[p] * value
+                }
+                raw[i] = (level * (body + tilt * leaning)).toFloat()
+                level += levelStep
+                tilt += tiltStep
+                val c = c1 * stepC - s1 * stepS
+                s1 = s1 * stepC + c1 * stepS
+                c1 = c
+            }
+        } else for (i in raw.indices) {
             if (i % CONTROL_BLOCK == 0) stopIfUnwanted(cancelled)
             var sum = 0.0
             for (p in 0 until PARTIALS) {
@@ -863,12 +975,19 @@ object Lattice {
         private val stepCos = DoubleArray(PARTIALS)
         private val weights = DoubleArray(PARTIALS)
         private val groups = IntArray(PARTIALS) { groupForHarmonic(it + 1) }
+        private val lean = DoubleArray(PARTIALS)
         val gain: Double
 
         init {
             val frequency = Keys.midiHz(settings.midi).toDouble()
             val phases = Dsp.phases(PARTIALS, Dsp.seedFor("LATTICE", MODEL_VERSION, settings.midi, "harmonic-source"))
-            val participation = .15 * (settings.velocity - .5)
+            val touchLean = settings.touch ?: when (settings.sourceProfile) {
+                SourceProfile.WARM, SourceProfile.PLUCK, SourceProfile.HOLLOW -> 0.0
+                SourceProfile.VANE, SourceProfile.RAKE, SourceProfile.BOW -> CANDIDATE_TOUCH
+            }
+            val slight = .15 * (settings.velocity - .5)
+            // The kept voices take the first branch: their arithmetic is the judged one, bit for bit.
+            val participation = if (touchLean == 0.0) slight else slight + touchLean * (settings.velocity - .75)
             for (p in 0 until PARTIALS) {
                 val harmonic = p + 1
                 val hz = harmonic * frequency
@@ -922,6 +1041,10 @@ object Lattice {
                 stepCos[p] = cos(step)
             }
             val norm = sqrt(weights.sumOf { it * it })
+            // Brightness drift leans the weights about their own power centre, so it moves the
+            // colour and leaves the level to the level drift.
+            val centre = if (norm > 0.0) (0 until PARTIALS).sumOf { weights[it] * weights[it] * kotlin.math.ln(it + 1.0) } / (norm * norm) else 0.0
+            for (p in 0 until PARTIALS) lean[p] = kotlin.math.ln(p + 1.0) - centre
             gain = if (norm > 0.0) sqrt(2.0) * SOURCE_RMS * settings.velocity.toDouble().pow(.72) / norm else 0.0
         }
 
@@ -937,12 +1060,71 @@ object Lattice {
             for (g in groups.indices) groups[g] *= effort
         }
 
+        /**
+         * The same source in a drifting hand. [bend] is the fundamental's extra phase per sample
+         * (each harmonic turns by its own multiple, so they stay locked); [tilt] leans the
+         * harmonic weights. The extra turn is a second-order rotation: its gain error is
+         * bend^4 / 4 per sample, far below the float output.
+         */
+        fun nextPlayed(groups: DoubleArray, envelope: Double, bend: Double, tilt: Double) {
+            groups.fill(0.0)
+            for (p in 0 until PARTIALS) {
+                groups[this.groups[p]] += weights[p] * (1.0 + tilt * lean[p]) * sine[p]
+                val s = sine[p] * stepCos[p] + cosine[p] * stepSin[p]
+                val c = cosine[p] * stepCos[p] - sine[p] * stepSin[p]
+                val e = (p + 1) * bend
+                val k = 1.0 - .5 * e * e
+                sine[p] = s * k + c * e
+                cosine[p] = c * k - s * e
+            }
+            val effort = gain * envelope
+            for (g in groups.indices) groups[g] *= effort
+        }
+
+        fun lean(): DoubleArray = lean.copyOf()
+
         /** Read before any ticks: the held solver uses exactly this source, not a second palette. */
         fun heldCarriers(): List<Carrier> = (0 until PARTIALS).map { p ->
             Carrier(p + 1, groups[p], weights[p] * gain, sine[p], cosine[p])
         }
 
         fun state(): DoubleArray = sine + cosine
+    }
+
+    /**
+     * The hand on a held WARM or PLUCK note. Three seeded drifts over one [HUMAN_SPAN_SECONDS]
+     * span: effort (level), pitch, and a touch of brightness that mostly follows the effort, as a
+     * firmer hand is also a brighter one. In a finite note the drift grows in over the first
+     * [HUMAN_SETTLE_SECONDS], so the attack is the unchanged one and the note starts in tune.
+     */
+    private class Player(private val human: Human, private val settings: Settings, private val rate: Int) {
+        private val hz = Keys.midiHz(settings.midi).toDouble()
+        private fun drift(part: String, cycles: IntArray) = HoldDrift(
+            Dsp.seedFor("LATTICE", MODEL_VERSION, settings.midi, settings.sourceProfile, "hold", part), cycles)
+        private val effort = drift("effort", intArrayOf(1, 2, 3, 5, 8))
+        private val pitch = drift("pitch", intArrayOf(1, 3, 4, 7))
+        private val colour = drift("colour", intArrayOf(2, 5, 9))
+        private val levelSwing = 10.0.pow(human.levelDb / 20.0) - 1.0
+        private val pitchSwing = human.cents * kotlin.math.ln(2.0) / 1200.0
+
+        private fun grown(seconds: Double, settled: Boolean) =
+            if (settled) 1.0 else smooth((seconds / HUMAN_SETTLE_SECONDS).coerceIn(0.0, 1.0))
+
+        fun level(seconds: Double, settled: Boolean): Double =
+            1.0 + grown(seconds, settled) * levelSwing * effort.at(seconds / HUMAN_SPAN_SECONDS)
+
+        fun tilt(seconds: Double, settled: Boolean): Double {
+            val at = seconds / HUMAN_SPAN_SECONDS
+            return grown(seconds, settled) * human.tilt * (.6 * effort.at(at) + .4 * colour.at(at))
+        }
+
+        /** Extra fundamental phase per internal sample in a finite note. */
+        fun bend(seconds: Double): Double =
+            grown(seconds, false) * 2.0 * PI * hz * pitchSwing * pitch.at(seconds / HUMAN_SPAN_SECONDS) / rate
+
+        /** Accumulated extra fundamental phase at [position] (in loops) of a settled loop. */
+        fun loopPhase(position: Double, fittedHz: Double, loopSeconds: Double): Double =
+            2.0 * PI * fittedHz * pitchSwing * loopSeconds * pitch.integral(position)
     }
 
     internal class RakeSpec(val stepSeconds: Double, val ringScale: Double)

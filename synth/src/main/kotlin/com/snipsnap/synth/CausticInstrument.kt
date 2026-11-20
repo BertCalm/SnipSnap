@@ -74,6 +74,12 @@ object CausticInstrument {
     private const val TAU = 2.0 * PI
 
     /** The voices players are offered. The rest are unheard candidates: no picker, preset or kit. */
+    /**
+     * What a held key (HOLD 1 with no MOTION) plays: each repeated strike a little different and
+     * the continued pressure drifting, repeating only every four of the old periods.
+     */
+    internal val HELD_HUMAN: CausticSustain.Human = CausticSustain.HUMAN_MODEST
+
     val KEPT_VOICES: List<CausticVoice> = listOf(CausticVoice.ALLOY, CausticVoice.HOLLOW_MALLET,
         CausticVoice.RUBBED_RING, CausticVoice.TRAVELLING_CATCHES)
 
@@ -139,8 +145,9 @@ object CausticInstrument {
 
     fun durationSeconds(voice: CausticVoice, macros: Map<String, Float> = emptyMap(), model: Int = MODEL_VERSION,
         midi: Int = DEFAULT_MIDI): Double =
-        if (isLoop(voice, macros, model)) CausticSustain.loopFrameCount(midi,
-            settled(voice, macros, model).getValue("LENGTH")) / RATE.toDouble()
+        if (isLoop(voice, macros, model)) settled(voice, macros, model).let { m ->
+            CausticSustain.loopFrameCount(midi, m.getValue("LENGTH")) * CausticSustain.heldRepeats(m, HELD_HUMAN) / RATE.toDouble()
+        }
         else .5 + 7.5 * finiteMacros(voice, macros, model).getValue("LENGTH")
 
     fun drumClassFor(voice: CausticVoice, macros: Map<String, Float> = emptyMap(), model: Int = MODEL_VERSION): DrumClass {
@@ -423,10 +430,16 @@ object CausticInstrument {
 
     /** Keygroups keep the real note-on prefix and a positive, explicitly measured loop marker. */
     fun keyNote(voice: CausticVoice, macros: Map<String, Float>, midi: Int = DEFAULT_MIDI,
-        velocity: Float = .75f, model: Int = MODEL_VERSION, cancelled: () -> Boolean = { false }): KeyNote {
+        velocity: Float = .75f, model: Int = MODEL_VERSION, cancelled: () -> Boolean = { false }): KeyNote =
+        keyNotePlayed(voice, macros, midi, velocity, model, HELD_HUMAN, cancelled)
+
+    /** [keyNote] with an explicit hold variation; null is the still hold of before. */
+    internal fun keyNotePlayed(voice: CausticVoice, macros: Map<String, Float>, midi: Int = DEFAULT_MIDI,
+        velocity: Float = .75f, model: Int = MODEL_VERSION, human: CausticSustain.Human?,
+        cancelled: () -> Boolean = { false }): KeyNote {
         if (Thread.currentThread().isInterrupted || cancelled()) throw CancellationException("CAUSTIC key no longer wanted")
         return if (isLoop(voice, macros, model)) CausticHeld.probe(voice, macros, midi, velocity, model,
-            4, true, cancelled, record = false).note else KeyNote(render(voice, macros, midi, velocity, model))
+            4, true, cancelled, record = false, human = human).note else KeyNote(render(voice, macros, midi, velocity, model))
     }
 
     fun heldProbe(voice: CausticVoice, macros: Map<String, Float>, midi: Int = DEFAULT_MIDI,

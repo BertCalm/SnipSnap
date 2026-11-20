@@ -829,3 +829,32 @@ Known weak spot: BOWL in the bottom two octaves. Its beating pair moves the inst
 small speakers it may be taken for the note. The repository's pitch detector reads BOWL about a semitone flat at
 C2 and C3 for that reason, though the root component itself is in tune. The same detector reads SCATTER 10 to 14
 cents sharp at C2 and C3 during the spill.
+
+## Held keys in a hand that varies, and four ALLOY presets re-voiced (verdicts of 20 Nov 2026, unheard)
+
+**Held keys.** The owner: "Holds are unnatural, they need more humanization". Measured, the hold repeated every
+period (about a second): ALLOY's four re-excitation ticks, HOLLOW MALLET's four strikes and TRAVELLING CATCHES'
+four catches were identical each time, and RUBBED RING kept one pressure.
+
+With no MOTION, a hold now repeats every four of those periods, and inside them (`CausticSustain.Human`, `Hand`):
+every strike, catch or tick has its own seeded strength and may land a few milliseconds late; a firmer mallet
+strike is also shorter; ALLOY's continued pressure and the rub's pressure drift slowly (and a little in
+brightness and roughness) and return exactly at the wrap. Only the excitation varies. The body's modes are not
+touched, so the pitch does not drift. Shipped (`HELD_HUMAN`, modest): strikes 12 % either way, pressure 0.6 dB, up
+to 6 ms late; `HUMAN_STRONGER`: 22 %, 1.1 dB, 12 ms. ALLOY's pressure glides in straight lines between strike
+boundaries, which the exact force terms carry on the one existing pole.
+
+Measured at C4 (Kotlin, `CausticHoldDriftTest`; nothing heard): held ALLOY level range 0.1 dB before, about 1.0 dB
+modest, 1.7 dB stronger; RUBBED RING 0.2, 1.1, 1.8 dB; mean pitch unmoved; modal state, continuation and seam
+close as before at C2, C4 and C6.
+
+Costs: the key file is longer, because the settle before the loop is counted in whole loops and the loop is four
+times as long. At C4: ALLOY 19.6 s (was 10.5), HOLLOW MALLET 14.9 s (3.5), RUBBED RING 15.6 s (4.5), TRAVELLING
+CATCHES 16.3 s (9.1). A hold with MOTION above zero is unchanged: its path already moves once per period.
+
+**ALLOY presets.** The owner: "First 3 sound the same, second to last is abrupt". Parallel Body, Rim Vessel and
+Wide Shoulder all sat on the full body, 0.7 to 2.1 dB apart by level-matched third-octave shape and 1.1 to 2.6 dB
+from Fuller Body. They are now 8.0, 14.5 and 8.1 dB apart (Parallel Body: bright body, short; Rim Vessel: half body;
+Wide Shoulder: FOCUS .6, body .75), and each at least 3.7 dB from Fuller Body and Preferred Alloy. Short Glint was
+not cut off; its own decay was abrupt (40 dB down in 0.22 s at LENGTH 0). At LENGTH .1 it takes about twice as long and is
+1.25 s long, so it is still a TONAL pad; the CAUSTIC kit's Short Glint pad follows the preset. Sparse Alloy, Low Vessel and the other presets are unchanged; all eleven are pinned.
