@@ -316,6 +316,14 @@ object Copy {
     const val NO_TAPE_YET_ARMED = "Listening, and SNIP keeps what it's heard, up to 60s."
 
     /**
+     * The empty LIBRARY while the first LISTEN is running (UAT 2026-11 user states, D-7). It
+     * kept saying [EMPTY_SHELF] beside CATCH YOUR FIRST SOUND, a button already pressed, and only
+     * the dock said it was listening. This names the next step where the user is looking: make
+     * the sound, then SNIP, which is the dock's, below.
+     */
+    const val EMPTY_SHELF_LISTENING = "Listening, so make a sound and then tap SNIP below."
+
+    /**
      * The first SNIP of a cold shelf, landed: App has made the project, the
      * kit and A01 for it, and PADS is up with that pad selected and lit. Said
      * after [SNIPPED], so the dock keeps SNIPPED's CUT door beside it.
@@ -323,6 +331,13 @@ object Copy {
     const val FIRST_CATCH_LANDED = "Your first sound is on A01. Tap it."
     /** The Bubble's drag-to-hot-zone stop — harmless, distinct from a delete or a reset. */
     const val BUBBLE_EJECTED = "Stopped. What it heard is kept."
+    /**
+     * [SESSION_ARMED] when Android's notification permission was refused (UAT 2026-11 user
+     * states, S-5). The session runs, but the notification that carries its SNIP is not shown,
+     * so from another app the bubble is the only way to SNIP; [BUBBLE_WHY] and its ALLOW are
+     * drawn below while it is not allowed. Two dock lines at most.
+     */
+    const val SESSION_ARMED_NO_NOTIFICATIONS = "Listening. Notifications are off, so SNIP from other apps needs the bubble."
     /**
      * The line over the Bubble's door while TAPE is rolling and Android has not yet let
      * SnipSnap draw over other apps. It says what the Bubble is (a small ring that rides over
@@ -380,6 +395,20 @@ object Copy {
      * captured. Say that it stopped, and say what gets it back.
      */
     const val TAPE_STOPPED_ITSELF = "Listening stopped on its own. Nothing since was kept. Press LISTEN again."
+
+    /**
+     * The correction to [SESSION_ARMED] when the mic never started (UAT 2026-11
+     * user states, S-1). The dock says "Listening." the moment LISTEN is
+     * granted, before the service has opened the mic; when another app holds
+     * it or the platform refuses the `AudioRecord`, the service gives up and
+     * this replaces that line. Nothing was ever kept, unlike
+     * [TAPE_STOPPED_ITSELF], so it does not say "since". Another app holding
+     * the mic is the cause a user can act on, so it is the one named.
+     */
+    const val MIC_WONT_START = "The mic wouldn't start, so nothing is being kept. Close any app using the mic and press LISTEN again."
+
+    /** [MIC_WONT_START]'s twin for [APP_AUDIO_ARMED]: the projection or the playback-capture stream was refused after consent. */
+    const val APP_AUDIO_WONT_START = "APP AUDIO wouldn't start, so nothing is being kept. Press APP AUDIO again."
 
     /**
      * A MIC session has read nothing but exact digital silence for a long
@@ -1372,7 +1401,11 @@ object Copy {
     // to it. See feelRolled/FEEL_RECENTRED below for its replacements.
     // The phone reads (wave ZZ): READ AS GROOVE, DIG, STEAL THE FEEL on TAPE.
     const val READ_GROOVE_BUSY = "Listening…"
-    const val READ_GROOVE_NEEDS_KIT = "Add a kit to this project first, because the ear needs pads to play on."
+    /**
+     * BEAT with no kit, and READ AS GROOVE or STEAL THE FEEL with none. It named "the ear",
+     * a word no screen uses (UAT 2026-11 user states, D-10); a beat plays on a kit's pads.
+     */
+    const val READ_GROOVE_NEEDS_KIT = "Add a kit to this project first, because a beat plays on its pads."
     /** The reading landed: how much was heard, and where it plays. */
     fun grooveRead(hits: Int, bars: Int, bpm: Int): String =
         "Heard ${countOf(hits, "hit", "hits")} over ${countOf(bars, "bar", "bars")} at ~$bpm BPM. They play on your pads now."
@@ -2439,6 +2472,21 @@ object Copy {
      */
     fun kitDeleted(name: String): String = "$name is out of the LIBRARY. ${Reversal.MIND}"
     const val KIT_DELETE_BUSY = "Deleting…"
+    /** The kit DELETE confirm, for a kit no project uses. */
+    const val KIT_DELETE_CONFIRM = "Delete this kit? It waits in deleted kits for 30 days."
+
+    /**
+     * The kit DELETE confirm, naming the projects that use the kit (UAT 2026-11 user states,
+     * D-2): deleting a project's only kit left the project with nothing on its grid, and the
+     * confirm said only that the kit would wait in the trash. Two names at most, then a count,
+     * so the dialog's three lines hold any shelf.
+     */
+    fun kitDeleteConfirm(usedBy: List<String>): String {
+        if (usedBy.isEmpty()) return KIT_DELETE_CONFIRM
+        val names = if (usedBy.size <= 2) usedBy.joinToString(" and ") else "${usedBy[0]}, ${usedBy[1]} and ${usedBy.size - 2} more"
+        val verb = if (usedBy.size == 1) "uses it and loses it" else "use it and lose it"
+        return "$KIT_DELETE_CONFIRM $names $verb until it is restored."
+    }
     const val KIT_DELETE_FAILED = "Delete failed. The kit may already be gone."
     /** RENAME on a shelf kit; [name] is what it actually landed under — a collision may have freshened it. */
     fun kitRenamed(name: String): String = "Renamed to $name."
@@ -3583,6 +3631,8 @@ object Copy {
     const val SNAP_NEEDS_KIT = "Open a kit to send sounds to pads."
     /** SURFACE with no kit open - the pad it plays has nothing to come from yet. */
     const val SURFACE_NEEDS_KIT = "Open a kit. The SURFACE plays its first pad."
+    /** SYNTH with no kit open (UAT 2026-11 user states, S-9): SEND TO PAD is greyed, and this line says why, as SNAP's and SURFACE's do. */
+    const val SYNTH_NEEDS_KIT = "Open a kit to send this sound to a pad."
     /** SPLICE's own picker hint before a head and a tail are chosen. */
     const val SPLICE_PICK_HINT = "Pick a head and a tail - two different takes of this pad."
     /** X-RAY on a JSON file that isn't an MPC program at all - [topKeys] the top-level field count when the tree parsed as an object, null when it didn't even parse that far. */

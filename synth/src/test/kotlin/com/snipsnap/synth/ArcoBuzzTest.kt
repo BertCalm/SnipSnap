@@ -120,13 +120,14 @@ class ArcoBuzzTest {
     )
 
     /**
-     * A render as BUZZ left it: a one-shot exactly as the engine plays it, and a LOOP with R2's loop vibrato (the owner's later request, a separate
-     * change on purpose) turned off, because the vibrato moves every loop and the hashes are of the loops before it. The one-shots have no such
-     * switch: nothing after BUZZ touches them.
+     * A render as BUZZ left it: a LOOP with R2's loop vibrato (the owner's later request, a separate change on purpose) turned off, because the
+     * vibrato moves every loop and the hashes are of the loops before it, and every render with the player off ([Humanize.OFF]): since 2026-11-20
+     * a held note carries a player's hand (the owner's verdict, "Holds are unnatural, they need more humanization"), which moves every note
+     * with more than 0.6 s of bow and every loop. What ships with the player on is pinned by `HoldHumanizePinsTest`.
      */
     private fun asBuzzLeftIt(voice: ArcoVoice, macros: Map<String, Float>): FloatArray =
-        if (Arco.isLoop(Arco.settled(macros, voice).getValue("HOLD"))) Arco.render(voice, macros, Arco.BUZZ_LAW, Arco.LoopVibrato.OFF).samples
-        else Arco.render(voice, macros).samples
+        if (Arco.isLoop(Arco.settled(macros, voice).getValue("HOLD"))) Arco.render(voice, macros, Arco.BUZZ_LAW, Arco.LoopVibrato.OFF, Humanize.OFF).samples
+        else Arco.render(voice, macros, Arco.BUZZ_LAW, human = Humanize.OFF).samples
 
     @Test
     fun `at BUZZ 0 every preset, each default note and each default loop is the code before BUZZ, sample for sample`() {
@@ -137,14 +138,17 @@ class ArcoBuzzTest {
             assertEquals(0f, p.macros.getValue("BUZZ"), "$key: a factory preset is written at BUZZ 0")
             assertEquals(before.getValue(key), sha(asBuzzLeftIt(p.voice, p.macros)), "$key changed")
             assertEquals(before.getValue(key), sha(asBuzzLeftIt(p.voice, p.macros - "BUZZ")), "$key, saved before BUZZ (no key), changed")
-            if (!Arco.isLoop(p.macros.getValue("HOLD"))) assertEquals(before.getValue(key), sha(p.render().samples), "$key, through the patch, changed")
+            // Through the patch only where the player (2026-11-20) leaves the note alone: a bow of 0.6 s or less.
+            if (!Arco.isLoop(p.macros.getValue("HOLD")) && Arco.playerShare(Arco.holdSeconds(p.macros.getValue("HOLD"))) == 0f) {
+                assertEquals(before.getValue(key), sha(p.render().samples), "$key, through the patch, changed")
+            }
             checked += key
         }
         for (v in ArcoMeasure.BODY_VOICES) {
             val note = "$v DEFAULT NOTE"
             val loop = "$v DEFAULT LOOP"
-            assertEquals(before.getValue(note), sha(Arco.render(v, Arco.defaults(v)).samples), "$note changed")
-            assertEquals(before.getValue(note), sha(Arco.render(v, Arco.defaults(v) - "BUZZ").samples), "$note, with no BUZZ key, changed")
+            assertEquals(before.getValue(note), sha(Arco.render(v, Arco.defaults(v), Arco.BUZZ_LAW, human = Humanize.OFF).samples), "$note changed")
+            assertEquals(before.getValue(note), sha(Arco.render(v, Arco.defaults(v) - "BUZZ", Arco.BUZZ_LAW, human = Humanize.OFF).samples), "$note, with no BUZZ key, changed")
             assertEquals(before.getValue(loop), sha(asBuzzLeftIt(v, Arco.defaults(v) + ("HOLD" to 1f))), "$loop changed")
             checked += note
             checked += loop
@@ -305,7 +309,8 @@ class ArcoBuzzTest {
      * nothing there, so what rises is the buzz alone. Since R2 the shipped loop's vibrato spreads each harmonic into sidebands (about -16 dB of the loop
      * at CELLO C2), which would hide BUZZ's low steps; and a sample-by-sample difference of two shipped loops is no measure either, because BUZZ moves
      * where [Siren.bestCut] cuts the loop, so the two are the same loop rotated (a first try read -13 dB at BUZZ 0.1 and +3 dB at 1 that way). The
-     * one-shot law test below is the measure on the sound as it ships.
+     * one-shot law test below is the measure on the sound as it ships. The player (2026-11-20, [Arco.played]) is off here for the vibrato's reason:
+     * its moving level and pitch spread each harmonic too (with it on, CELLO C2 read -13.0 dB between the harmonics at BUZZ 0 and at 0.1 alike).
      */
     @Test
     fun `BUZZ is monotone - the energy between a loop's harmonics rises at every step`() {
@@ -314,7 +319,7 @@ class ArcoBuzzTest {
             val periods = Arco.planLoop(hz).periods
             val base = Arco.defaults(voice) + mapOf("TUNE" to tune, "HOLD" to 1f)
             val dbs = BUZZ_STEPS.map { b ->
-                betweenHarmonicsDb(Arco.renderLoopMeasured(voice, base + ("BUZZ" to b), loopVibrato = Arco.LoopVibrato.OFF).loop, periods)
+                betweenHarmonicsDb(Arco.renderLoopMeasured(voice, base + ("BUZZ" to b), loopVibrato = Arco.LoopVibrato.OFF, human = Humanize.OFF).loop, periods)
             }
             println("ARCO BUZZ between the harmonics $voice midi ${Arco.midiFor(voice, tune)}: " + BUZZ_STEPS.zip(dbs).joinToString(", ") { (b, d) -> "BUZZ $b ${f(d, 1)} dB" })
             for (i in 1 until dbs.size) {

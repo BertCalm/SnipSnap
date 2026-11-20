@@ -4464,6 +4464,7 @@ fun SynthScreen(
                 },
                 sendLabel = if (padChooser.sendBusy) "…" else "SEND TO PAD",
                 sendEnabled = kit != null && !padChooser.sendBusy && !embouchureRestore.waitsForRecipe(engine, voice),
+                noKit = kit == null,
                 onSend = {
                     if (embouchureRestore.waitsForRecipe(engine, voice)) return@AuditionBar
                     padChooser.showChooser = true
@@ -4719,35 +4720,42 @@ private fun AuditionBar(
     sendLabel: String,
     sendEnabled: Boolean,
     onSend: () -> Unit,
+    /** No kit is open, so SEND TO PAD is greyed: the line above the bar says why (UAT 2026-11 user states, S-9). */
+    noKit: Boolean = false,
 ) {
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        Box(Modifier.weight(1f)) {
-            if (sampleHeldPreview != null) {
-                FlockHeldAudition(sampleHeldPreview, classColor, scheme)
-            } else if (repeating) {
-                RepeatingAuditionControls(classColor, scheme, onAudition = onAudition, onStop = onStop)
-            } else {
-                Box(
-                    Modifier
-                        .fillMaxWidth()
-                        .heightIn(min = Layout.PRIMARY_ACTION_H.dp)
-                        .raisedBevel(scheme, fill = classColor.copy(alpha = 0.85f))
-                        .tapeClick(label = "AUDITION", enabled = auditionEnabled, onClick = onAudition)
-                        .padding(horizontal = 10.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    TapeText("AUDITION", TapeType.pixel, scheme.titleInk.tape)
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        // SNAP and SURFACE each say why their pad writes are greyed with no kit; SYNTH's
+        // SEND TO PAD was dimmed with no reason.
+        if (noKit) TapeText(Copy.SYNTH_NEEDS_KIT, TapeType.pixelSmall, scheme.accent.tape)
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Box(Modifier.weight(1f)) {
+                if (sampleHeldPreview != null) {
+                    FlockHeldAudition(sampleHeldPreview, classColor, scheme)
+                } else if (repeating) {
+                    RepeatingAuditionControls(classColor, scheme, onAudition = onAudition, onStop = onStop)
+                } else {
+                    Box(
+                        Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = Layout.PRIMARY_ACTION_H.dp)
+                            .raisedBevel(scheme, fill = classColor.copy(alpha = 0.85f))
+                            .tapeClick(label = "AUDITION", enabled = auditionEnabled, onClick = onAudition)
+                            .padding(horizontal = 10.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        TapeText("AUDITION", TapeType.pixel, scheme.titleInk.tape)
+                    }
                 }
             }
+            LabButton(
+                sendLabel,
+                scheme,
+                enabled = sendEnabled,
+                modifier = Modifier.weight(1f).heightIn(min = Layout.PRIMARY_ACTION_H.dp),
+                accessibilityLabel = "SEND TO PAD",
+                onClick = onSend,
+            )
         }
-        LabButton(
-            sendLabel,
-            scheme,
-            enabled = sendEnabled,
-            modifier = Modifier.weight(1f).heightIn(min = Layout.PRIMARY_ACTION_H.dp),
-            accessibilityLabel = "SEND TO PAD",
-            onClick = onSend,
-        )
     }
 }
 

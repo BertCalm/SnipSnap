@@ -555,7 +555,8 @@ class BoreTest {
             val label = "$voice TUNE $tune LIP $lip BREATH $breath"
             val r = Bore.renderLoopMeasured(voice, macros(voice, tune, breath, lip, hold = 1f))
             val j = r.join
-            Bore.checkJoin(label, j)
+            // The dip guard as the engine applies it: it allows for the level the player's breath moves on purpose ([Bore.maxDipDb]).
+            Bore.checkJoin(label, j, maxDipDb = Bore.maxDipDb(Bore.HUMAN))
             // The loop is rotated onto a zero crossing, so the blend's join is inside it, at junctionFrames; the loop's own wrap is
             // a quiet crossing. Both are read from the samples, and what the engine reports of the join is checked against them.
             val atJoin = stepOverSteepest(r.loop, j.junctionFrames)
@@ -648,7 +649,9 @@ class BoreTest {
         val voice = BoreVoice.SAX
         val m = macros(voice, 0.5f)
         val hz = Bore.frequencyFor(voice, 0.5f)
-        val loop = Bore.render(voice, m + ("HOLD" to 1f)).samples
+        // With the player off ([Humanize.OFF]): this is the vibrato's own depth. The player (2026-11-20) lets its swings differ and
+        // leans the pitch under it, so the loop as it ships ranges further (19.5 cents against this 16.8); `HoldHumanizeTest` holds that.
+        val loop = Bore.render(voice, m + ("HOLD" to 1f), Humanize.OFF, Bore.OPENING_AS_HEARD).samples
         assertEquals(0.5f, Bore.LOOP_HOLD, "the loop is no longer blown at the HOLD of the one-shot the owner called good")
         val (_, loopRange) = centsSpread(loop + loop + loop, hz, 0.4f, 1.9f)
         val (_, heard) = centsSpread(heldShot(voice, m, hold = 0.5f), hz, 0.9f, 2.4f)

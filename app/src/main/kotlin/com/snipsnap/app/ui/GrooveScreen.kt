@@ -1947,7 +1947,9 @@ fun GrooveScreen(
                                 .minHeight(Layout.MIN_HIT_TARGET.dp)
                                 .background(scheme.lcd.tape, RoundedCornerShape(6.dp))
                                 .border(1.dp, scheme.amber.tape, RoundedCornerShape(6.dp))
-                                .let { m -> if (countingIn) m else m.tapeClick(label = "STOP RECORDING") { stopRecording() } },
+                                // Disabled through the count-in, not dropped (UAT 2026-11 user states, S-14):
+                                // the node stays a button and reads as unavailable.
+                                .tapeClick(label = "STOP RECORDING", enabled = !countingIn) { stopRecording() },
                             contentAlignment = Alignment.Center,
                         ) {
                             TapeText(if (countingIn) "COUNTING IN… $countInBeat" else "■ STOP RECORDING", TapeType.pixel, scheme.lcdInk.tape, maxLines = 2)
