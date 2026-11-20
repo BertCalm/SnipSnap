@@ -3350,6 +3350,15 @@ tasks.register<JavaExec>("generateChitinAudition") {
 }
 
 
+tasks.register<JavaExec>("generateConsortKit") {
+    group = "distribution"
+    description = "Render the CONSORT woodwind section first kit under testkit/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ConsortKitGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit")
+}
+
 /** Render CONSORT's Kotlin audition: clips, recipes, metrics and a listening page under testkit/consort-audition/. See ConsortAuditionGenerator. */
 tasks.register<JavaExec>("generateConsortAudition") {
     group = "distribution"
