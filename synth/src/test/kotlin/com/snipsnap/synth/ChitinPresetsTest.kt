@@ -12,7 +12,7 @@ import kotlin.test.*
 
 class ChitinPresetsTest {
     @Test fun `twelve candidate recipes remain distinct complete and reproducible`() {
-        for(voice in ChitinVoice.entries) {
+        for(voice in Chitin.MIXED_VOICES) {
             val presets=ChitinPresets.forVoice(voice)
             assertEquals(6,presets.size)
             assertEquals(6,presets.map { it.name }.toSet().size)
