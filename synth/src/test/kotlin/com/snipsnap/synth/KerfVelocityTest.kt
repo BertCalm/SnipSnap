@@ -47,34 +47,51 @@ class KerfVelocityTest {
         }
     }
 
-    @Test fun `a soft layer is a different strike - duller, a softer tick, deeper in its neighbours' wash - not the hit turned down`() {
-        val v = 0.45
-        val centroidRatio = ArrayList<Double>(); val washRise = ArrayList<Double>(); val residual = ArrayList<Double>(); val headRise = ArrayList<Double>()
-        // washRise: floor against hit, soft over full; headRise: tick against hit, soft over full
+    private class Stats(val centroid: Double, val floorRise: Double, val tickDrop: Double, val residualMedian: Double, val nearestCopy: Double, val pads: Int)
+
+    /** The velocity law at [depth] over the whole bank at velocity [v], peak-matched as the app writes a layer. */
+    private fun stats(depth: Double, v: Double = 0.45): Stats {
+        val centroidRatio = ArrayList<Double>(); val floorRise = ArrayList<Double>(); val residual = ArrayList<Double>(); val tickDrop = ArrayList<Double>()
         for (p in pads) {
             if (p.prev == null || p.patch.seconds < 0.1) continue
-            val r = recipe(p); val full = r.render(); val soft = matched(full, r.renderAt(v))
+            val r = recipe(p); val full = r.render(); val soft = matched(full, r.renderAt(v, depth))
             centroidRatio += centroid(soft) / centroid(full.samples)
             // the floor and the ticks against the hit, from the struck numbers: the two quantities the ghosts measured
-            val struck = KerfVelocity.strike(p.patch, v)
+            val struck = KerfVelocity.strike(p.patch, v, depth)
             fun floorShare(x: KerfPatchData) = x.bands.sumOf { it.floor } / x.bands.sumOf { it.snap + it.level + 1e-30 }
-            washRise += db(floorShare(struck) / floorShare(p.patch))
+            floorRise += db(floorShare(struck) / floorShare(p.patch))
             if (p.patch.ticks.isNotEmpty()) {
-                val tick = 20 * log10(struck.ticks.maxOf { it.amp } / p.patch.ticks.maxOf { it.amp })
-                headRise += tick - 20 * log10(KerfVelocity.hitGain(v))
+                tickDrop += 20 * log10(struck.ticks.maxOf { it.amp } / p.patch.ticks.maxOf { it.amp }) - 20 * log10(KerfVelocity.hitGain(v, depth))
             }
-            residual += residualDb(full.samples, soft).also { if (it < -25) println("KERF near-copy: pad ${p.pad} ${p.drumClass} ${"%.1f".format(it)} dB, ${p.patch.partials.size} partials, ${p.patch.seconds} s") }
+            residual += residualDb(full.samples, soft)
         }
         fun med(x: List<Double>) = x.sorted()[x.size / 2]
-        println("KERF velocity 0.45 over ${residual.size} pads: centroid ${"%.3f".format(med(centroidRatio))}x (measured ghosts 0.86x), " +
-            "floor against hit ${"%+.1f".format(med(washRise))} dB (measured +5.3), tick against hit ${"%+.1f".format(med(headRise))} dB (measured -2.2), " +
-            "not-a-copy residual ${"%.1f".format(med(residual))} dB (nearest a copy ${"%.1f".format(residual.min())})")
-        assertTrue(med(centroidRatio) in 0.80..0.92, "a soft hit is duller, near the ghosts' 0.86x: ${med(centroidRatio)}")
-        assertTrue(med(washRise) in 3.5..7.5, "the floor does not follow the hit all the way down: ${med(washRise)} dB")
-        assertTrue(med(headRise) in -4.0..-1.0, "the tick falls a little further than the hit: ${med(headRise)} dB")
+        return Stats(med(centroidRatio), med(floorRise), med(tickDrop), med(residual), residual.min(), residual.size).also {
+            println("KERF velocity 0.45 at depth $depth over ${it.pads} pads: centroid ${"%.3f".format(it.centroid)}x (ghosts 0.86x), " +
+                "floor against hit ${"%+.1f".format(it.floorRise)} dB (ghosts +5.3), tick against hit ${"%+.1f".format(it.tickDrop)} dB (ghosts -2.2), " +
+                "not-a-copy residual ${"%.1f".format(it.residualMedian)} dB (nearest a copy ${"%.1f".format(it.nearestCopy)})")
+        }
+    }
+
+    @Test fun `at depth 1 the law is the ghost notes' - duller, a softer tick, the floor not following the hit down`() {
+        val m = stats(1.0)
+        assertTrue(m.centroid in 0.80..0.92, "a soft hit is duller, near the ghosts' 0.86x: ${m.centroid}")
+        assertTrue(m.floorRise in 3.5..7.5, "the floor does not follow the hit all the way down: ${m.floorRise} dB")
+        assertTrue(m.tickDrop in -4.0..-1.0, "the tick falls a little further than the hit: ${m.tickDrop} dB")
         // A copy at another level leaves nothing (minus infinity); a different strike leaves something on every pad.
-        assertTrue(residual.all { it > -30.0 }, "every soft layer is more than a level change: worst ${residual.max()} dB")
-        assertTrue(med(residual) > -20.0, "median residual ${med(residual)} dB")
+        assertTrue(m.nearestCopy > -30.0, "every soft layer is more than a level change: nearest ${m.nearestCopy} dB")
+    }
+
+    @Test fun `the owner's depth goes further than the ghosts on every row, and is still a strike, not a copy`() {
+        // The owner heard depth 1 as "a bit indistinguishable" and picked the strongest of 1, 2 and 3 (2026-11-20).
+        assertEquals(3.0, KerfVelocity.DEPTH)
+        val measured = stats(1.0); val chosen = stats(KerfVelocity.DEPTH)
+        assertTrue(chosen.centroid < measured.centroid - 0.08, "duller than the measured law: ${chosen.centroid} against ${measured.centroid}")
+        assertTrue(chosen.floorRise > measured.floorRise + 2.0, "deeper in the wash: ${chosen.floorRise} against ${measured.floorRise} dB")
+        assertTrue(chosen.tickDrop < measured.tickDrop - 4.0, "a softer stick: ${chosen.tickDrop} against ${measured.tickDrop} dB")
+        assertTrue(chosen.residualMedian > measured.residualMedian, "further from a copy at another level")
+        assertTrue(chosen.nearestCopy > -30.0, "every soft layer is more than a level change: nearest ${chosen.nearestCopy} dB")
+        assertTrue(chosen.centroid > 0.5, "still the same drum: ${chosen.centroid}x")
     }
 
     @Test fun `the bleed under a soft hit stays where it was, so against the hit it rises by the hit's own drop`() {

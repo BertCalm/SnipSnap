@@ -816,3 +816,28 @@ Fixed on the way, found by the kit-level test:
 
 Not done, each owed: the owner's listen to the layers and takes (an audition page is
 published); phone and MPC playback; the engine and its genre kits (round 4).
+
+### Round 3, the owner's listen: velocity depth (2026-11-20)
+
+The owner heard the velocity layers at the measured law as "a bit indistinguishable". The
+ghost-note medians are what a loop's soft hits average, not what an ear needs from a pad's soft
+layer. `KerfVelocity` gained a depth, a multiple of those medians. Above 1 it deepens the tone
+rows (the tilt, the tick's extra drop) and softens the crack, the fast part of each band, by
+6 dB at velocity 0 per unit of depth, which the medians did not show. The hit's drop against
+its neighbours does not scale: a first version let it, and at depth 3 a soft kick fell so far
+that the hat before it took over, at 5.8× the kick's brightness.
+
+An audition of depths 1, 2 and 3 on six pads, tone-only and at the app's playback level, went
+to the owner, who picked "strongest". `DEPTH` is 3.
+
+| At velocity 0.45, bank's 63 pads | Depth 1 (measured law) | Depth 3 (owner's pick) | Ghosts |
+|---|---:|---:|---:|
+| Centroid | 0.868× | 0.730× | 0.86× |
+| Floor against hit | +5.7 dB | +10.6 dB | +5.3 dB |
+| Tick against hit | −3.5 dB | −10.4 dB | −2.2 dB |
+| Bleed against hit | +11.0 dB | +12.5 dB | +12.2 dB |
+| Nearest a copy at another level | −24.7 dB | −16.7 dB | |
+
+`KerfVelocityTest` keeps both: depth 1 still holds to the ghosts, and depth 3 goes further on
+every row and is still a strike, not a copy. Heard: depth chosen by ear from the audition; the
+layers at depth 3 on the round-3 page not yet heard.

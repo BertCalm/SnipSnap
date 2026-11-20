@@ -57,8 +57,10 @@ object KerfVelocity {
      * the crack (the fast part of each band) is softened too, which the medians did not show. The hit's drop against
      * its neighbours does not: scaled with depth, a soft kick at depth 3 fell so far that the hat before it took over,
      * 5.8x the kick's brightness (measured 2026-11-20).
+     *
+     * 3, the owner's pick on 2026-11-20 ("strongest", from an audition of 1, 2 and 3 on six pads).
      */
-    const val DEPTH = 1.0
+    const val DEPTH = 3.0
 
     /** How much further the crack falls than the ring, in dB at velocity 0, per unit of depth above 1. */
     const val CRACK_DB = 6.0
