@@ -59,9 +59,17 @@ tasks.test {
     // dozen engines, set here rather than discovered when one tips it over.
     // On 2026-11-09 jvm-other's executor 25 still ran out: StereoPerformanceImportTest
     // copies the 180-second stereo cap in SnipStore.import, and the worker that had
-    // already memoised the pad makers had no contiguous room left. 2g is the step
-    // the long shell tasks beside this one already take.
-    maxHeapSize = "2g"
+    // already memoised the pad makers had no contiguous room left. 2g was the step
+    // the long shell tasks beside this one took then.
+    // On 2026-11-19 and 2026-11-20 jvm-other's worker ran out again, four times on
+    // branches that touched no :shell code (#1213, #1235), in KitArtTest's
+    // every-starter render (TileStyles.river), while the base passed beside them:
+    // the live set sits at the edge of 2g and the shelf keeps growing. 3g is what
+    // the long shell tasks above take now. The budget: GitHub's runner for a public
+    // repository has 4 CPUs and 16 GB, maxParallelForks gives 4 test JVMs, and
+    // Gradle itself runs at 2g (gradle.properties), so 4 x 3g + 2g = 14 GB. The next
+    // step up needs fewer forks for :shell, not a bigger heap.
+    maxHeapSize = "3g"
     testLogging {
         events("passed", "failed", "skipped")
         // FULL, because this module's tests are mostly LAWS, and a law's whole
