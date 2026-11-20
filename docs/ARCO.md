@@ -100,3 +100,27 @@ hard 9.4 to 13.3 dB of level-matched third-octave shape (was 1.2 to 2.7), each
 step 4.4 dB or more (was 0.8 to 1.8); soft 8.4 to 10.7 dB and medium 4.2 to
 6.1 dB quieter than hard (was 0); soft reaches half its level 80 to 150 ms
 later. Round touch-ab-1 plays each heard clip, then the new touch (EA1 to ED1).
+
+## Verdict of 20 Nov 2026 (round touch-arco-1): shipped
+
+**Verdict.** EA1 (WHEEL), EB1 (BAR), EC1 (GLASS), ED1 (VIOL), the new touch
+(hard is the kept sound): **KEEP**, no notes. So ARCO ships seven voices:
+`Arco.KEPT_VOICES` is CELLO, ERHU, SARANGI, WHEEL, BAR, GLASS, VIOL, the picker
+follows it, and each new voice
+has one factory preset, the note the owner heard as its touch clip's hard note
+(defaults, an octave over the root, 2.5 s of bow): TURNING DRONE (WHEEL), BOWED
+METAL (BAR), WET RIM (GLASS), GUT CONSORT (VIOL). Each preset renders byte for
+byte the heard note and is pinned in `HoldHumanizePinsTest` with each new
+voice's default note, default LOOP and three second note. Being 2.5 s long, each
+reads and is filed LOOP by length (a one-shot, not a HOLD 1 loop).
+
+**Held keys: not offered yet.** The owner heard the new voices only as one-shots,
+so MAKE INSTRUMENT stays on CELLO, ERHU and SARANGI (`ArcoPadMaker.VOICES`), as
+LIBRATION's new voices stay finite only. Every zone of every new voice closes in
+both layers, but WHEEL's D4 hard key reaches its level more than 20 ms later
+than its whole stroke does (`HeldStartTest`'s bar), and nobody has heard a held
+key or decided how the one-shot's touch (`CandidateTouch`) should carry to the
+held soft layer (`ArcoKeys`' lighter bow and GRIP, levelled to one target).
+The LOOP (HOLD 1) is offered, unleaned, and closes at every note
+(`ArcoLoopFuzzTest`), but has not been heard either. No kit pad or starter has
+been made for them.

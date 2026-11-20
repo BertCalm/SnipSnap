@@ -1,7 +1,7 @@
 package com.snipsnap.synth
 
 /**
- * BORE's factory roster: eight per voice, authored from the R1 measurements
+ * BORE's factory roster: eight for FLUTE and for SAX (and one each for the five voices kept on 2026-11-20, [heard]), authored from the R1 measurements
  * (the speaking windows, onsets and timbre spans in [Bore]'s KDoc) - and
  * **provisional**. It was authored before anything in BORE had been heard.
  * SAX has been heard since, in the listening rounds the BORE design doc
@@ -40,9 +40,27 @@ object BorePresets {
     fun forVoice(voice: BoreVoice): List<BorePatch> = when (voice) {
         BoreVoice.FLUTE -> flutePresets
         BoreVoice.SAX -> saxPresets
-        // Candidates ([BoreCandidates]) have no presets until a listening verdict keeps them.
-        else -> emptyList()
+        BoreVoice.HOLLOW -> listOf(heard(BoreVoice.HOLLOW, "LOW WOOD REED"))
+        BoreVoice.SHAWM -> listOf(heard(BoreVoice.SHAWM, "PINCHED REED"))
+        BoreVoice.SHAKU -> listOf(heard(BoreVoice.SHAKU, "BAMBOO BREATH"))
+        BoreVoice.PANPIPE -> listOf(heard(BoreVoice.PANPIPE, "CANE PIPES"))
+        BoreVoice.VESSEL -> listOf(heard(BoreVoice.VESSEL, "ROUND CLAY"))
     }
+
+    /**
+     * The one preset of each voice kept on 2026-11-20 (HOLLOW, SHAWM, SHAKU, PANPIPE, VESSEL: rounds bore-voices-1 and touch-bore-1): the
+     * note the owner heard as touch-bore-1's hard note, which is the kept sound. Every macro at the voice's default, TUNE 0.5 (an octave
+     * over the root: HOLLOW A3, SHAWM G4, SHAKU D5, PANPIPE C5, VESSEL C5) and HOLD at two and a half seconds of breath. Over the
+     * classifier's 1.5 s line, so it reads and is filed LOOP by length; it is a one-shot, not a HOLD 1 loop. HoldHumanizePinsTest pins each.
+     */
+    private fun heard(voice: BoreVoice, name: String) =
+        BorePatch(name, voice, Bore.defaults(voice) + mapOf("TUNE" to HEARD_TUNE, "HOLD" to HEARD_HOLD))
+
+    private const val HEARD_TUNE = 0.5f
+
+    /** HOLD for 2.5 s: [Bore]'s HOLD law (exponential from [Bore.HOLD_MIN_SECONDS] to [Bore.HOLD_MAX_SECONDS] below [Bore.LOOP_THRESHOLD]) inverted. */
+    private val HEARD_HOLD: Float =
+        (Bore.LOOP_THRESHOLD * kotlin.math.ln(2.5f / Bore.HOLD_MIN_SECONDS) / kotlin.math.ln(Bore.HOLD_MAX_SECONDS / Bore.HOLD_MIN_SECONDS)).toFloat()
 
     fun all(): List<BorePatch> = BoreVoice.entries.flatMap { forVoice(it) }
 

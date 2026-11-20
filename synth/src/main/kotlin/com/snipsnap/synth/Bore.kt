@@ -67,14 +67,18 @@ import kotlin.random.Random
  * by another name; a BORE pad *lands* with it in its recipe ([landingChain]) the
  * way SIREN lands with ECHO, and the pad's tape stays editable like every other.
  */
-/** FLUTE and SAX are the kept voices. The entries after them are candidates awaiting a listening verdict ([BoreCandidates]); they are
- * appended so saved names and ordinals never move. */
+/** BORE's seven voices. FLUTE and SAX came first; HOLLOW, SHAWM, SHAKU, PANPIPE and VESSEL ([BoreCandidates]) were kept on 2026-11-20
+ * (rounds bore-voices-1 and touch-bore-1) and are appended after them so saved names and ordinals never move. */
 enum class BoreVoice { FLUTE, SAX, HOLLOW, SHAWM, SHAKU, PANPIPE, VESSEL }
 
 object Bore {
 
-    /** The voices players are offered. Candidates ([BoreCandidates]) have no preset, kit or starter. */
-    val KEPT_VOICES = listOf(BoreVoice.FLUTE, BoreVoice.SAX)
+    /**
+     * The voices players are offered: all seven. HOLLOW, SHAWM, SHAKU, PANPIPE and VESSEL ([BoreCandidates]) joined on 2026-11-20, when the
+     * owner kept their range clips (bore-voices-1) and their touch (touch-bore-1). The touch the owner heard is the one-shot's
+     * ([BoreCandidates.touched]); their held keys and LOOP play the engine's held path, unleaned, as every voice's do.
+     */
+    val KEPT_VOICES = listOf(BoreVoice.FLUTE, BoreVoice.SAX, BoreVoice.HOLLOW, BoreVoice.SHAWM, BoreVoice.SHAKU, BoreVoice.PANPIPE, BoreVoice.VESSEL)
 
     /** TUNE: two octaves, snapped to semitones (every melodic engine's rule; SPREAD and in-key need it). */
     const val TUNE_SEMITONES = 24

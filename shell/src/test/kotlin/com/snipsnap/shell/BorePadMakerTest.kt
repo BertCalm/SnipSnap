@@ -61,7 +61,9 @@ class BorePadMakerTest {
         assertEquals(.1f, BorePadMaker.spec(patch, 0f).releaseSeconds, 1e-4f)
         assertEquals(1.5f, BorePadMaker.spec(patch, 1f).releaseSeconds, 1e-4f)
         for (bad in listOf(.05f, 2f, Float.NaN)) assertFailsWith<IllegalArgumentException> { BorePadMaker.Spec(patch, bad) }
-        for (voice in Bore.KEPT_VOICES) assertTrue(BorePadMaker.supports(BorePatch("ANY", voice, Bore.defaults(voice))), "$voice")
+        for (voice in Bore.KEPT_VOICES) assertEquals(voice in BorePadMaker.VOICES, BorePadMaker.supports(BorePatch("ANY", voice, Bore.defaults(voice))), "$voice")
+        // The five voices kept on 2026-11-20 are offered as one-shots and LOOPs, not yet on held keys.
+        assertEquals(Bore.KEPT_VOICES.take(2).toSet(), BorePadMaker.VOICES)
         assertEquals("0.60 s", BorePadMaker.secondsLabel(.6f))
         assertEquals(listOf(1..63, 64..127), BorePadMaker.VELOCITY_WINDOWS)
         assertFalse(LoopPadMaker.offers("BORE"), "BORE's keys are its own maker's now; the loop-only one must not offer them too")
@@ -71,7 +73,7 @@ class BorePadMakerTest {
     @Test
     fun `the zones are the voice's nine whatever the patch's TUNE, and a zone the voice does not have is refused`() {
         assertEquals((60..84 step 3).toList(), BorePadMaker.zoneMidis(spec))
-        for (voice in Bore.KEPT_VOICES) for (tune in listOf(0f, .5f, 1f)) {
+        for (voice in BorePadMaker.VOICES) for (tune in listOf(0f, .5f, 1f)) {
             val s = BorePadMaker.Spec(BorePatch("ANY", voice, Bore.defaults(voice) + ("TUNE" to tune)))
             assertEquals(BoreKeys.padMidis(voice), BorePadMaker.zoneMidis(s), "$voice at TUNE $tune")
         }

@@ -21,6 +21,14 @@ import kotlin.math.sqrt
  */
 internal object ArcoMeasure {
 
+    /**
+     * CELLO, ERHU and SARANGI: ARCO's voices before WHEEL, BAR, GLASS and VIOL joined [Arco.KEPT_VOICES] on 2026-11-20. The tests that measure,
+     * tune or pin these three (their bite, BODY, vibrato, zones, rosters and frozen hashes) walk this list, so the new voices do not change
+     * what they hold; the new voices' own claims are in ArcoCandidateVoicesTest, and the product-wide checks (loop fuzz, held starts,
+     * determinism, the shipped pins, the held maker) walk [Arco.KEPT_VOICES].
+     */
+    val FIRST_VOICES: List<ArcoVoice> = listOf(ArcoVoice.CELLO, ArcoVoice.ERHU, ArcoVoice.SARANGI)
+
     /** The rate the bow runs at: [Dsp.RATE] times [Dsp.OVERSAMPLE]. */
     val RATE = Dsp.RATE * Dsp.OVERSAMPLE
 
@@ -72,7 +80,7 @@ internal object ArcoMeasure {
      * The voices with a BODY knob: CELLO and ERHU, R1's two. SARANGI (R2) has WASH in BODY's place and its box fixed at the knee, so a test of BODY
      * (the box's amount, the lift above the knee, the BODY listening pages) walks these, and SARANGI's tarab has its own tests (ArcoSarangiTest).
      */
-    val BODY_VOICES: List<ArcoVoice> = Arco.KEPT_VOICES.filter { Arco.hasBody(it) }
+    val BODY_VOICES: List<ArcoVoice> = FIRST_VOICES.filter { Arco.hasBody(it) }
 
     /**
      * The TUNE steps of R1b's loop grid (every step at the defaults and four corners, 225 loops for CELLO and ERHU), for a voice. CELLO and ERHU walk

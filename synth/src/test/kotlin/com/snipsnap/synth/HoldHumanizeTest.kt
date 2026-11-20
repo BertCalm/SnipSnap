@@ -268,7 +268,7 @@ class HoldHumanizeTest {
 
     @Test
     fun `a played ARCO note above the knee keeps the finished-peak bar, and every played note is level, finite and its own length`() {
-        for (voice in Arco.KEPT_VOICES) for (tune in listOf(0f, 0.25f, 0.5f, 0.75f, 1f)) for (body in listOf(0.5f, 0.75f, 1f)) {
+        for (voice in ArcoMeasure.FIRST_VOICES) for (tune in listOf(0f, 0.25f, 0.5f, 0.75f, 1f)) for (body in listOf(0.5f, 0.75f, 1f)) {
             val m = Arco.defaults(voice) + mapOf("TUNE" to tune, Arco.boxKnob(voice) to body, "HOLD" to Arco.holdFor(3f))
             val x = Arco.render(voice, m).samples
             val label = "ARCO $voice TUNE $tune ${Arco.boxKnob(voice)} $body"

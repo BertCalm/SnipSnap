@@ -16,14 +16,16 @@ import kotlin.test.assertTrue
 /**
  * Candidate voices for listening round bore-voices-1 ([BoreCandidates]): HOLLOW (a reed on a closed cylinder), SHAWM (a double reed
  * and two formants), SHAKU (a jet with its edge noise heard and a bend into the note), PANPIPE (a jet on a closed pipe) and VESSEL
- * (a jet across one Helmholtz cavity). Five for four places: one is the spare. Nothing here is heard. The kept renders are pinned
- * below against the build before this round.
+ * (a jet across one Helmholtz cavity). Five for four places: one was the spare. The owner kept all five on 2026-11-20 (bore-voices-1,
+ * then touch-bore-1 for the touch), so they are offered ([Bore.KEPT_VOICES]); FLUTE's and SAX's renders are pinned below against the build
+ * before this round.
  *
  * Touch is the held keys' law ([BoreKeys.SOFT_BREATH_SHARE]): BREATH scaled from 0.45 of itself at the softest to all of it.
  */
 class BoreCandidateVoicesTest {
     private val M = CandidateVoiceMeasures
-    private val candidates = BoreVoice.entries.filter { it !in Bore.KEPT_VOICES }
+    /** The five built for bore-voices-1 and kept on 2026-11-20. */
+    private val candidates = listOf(BoreVoice.HOLLOW, BoreVoice.SHAWM, BoreVoice.SHAKU, BoreVoice.PANPIPE, BoreVoice.VESSEL)
 
     private fun hz(midi: Int) = 440.0 * 2.0.pow((midi - 69) / 12.0)
     private fun rms(x: FloatArray, from: Double, to: Double): Double {
@@ -42,13 +44,19 @@ class BoreCandidateVoicesTest {
         Bore.render(voice, macros(voice, midi, touch, extra)).samples
 
     @Test
-    fun `candidates are appended and offered nowhere`() {
-        assertEquals(listOf(BoreVoice.HOLLOW, BoreVoice.SHAWM, BoreVoice.SHAKU, BoreVoice.PANPIPE, BoreVoice.VESSEL), candidates)
-        assertEquals(BoreVoice.entries.take(2), Bore.KEPT_VOICES)
-        assertTrue(BorePresets.all().all { it.voice in Bore.KEPT_VOICES }, "a candidate has a preset")
+    fun `the new voices are appended after the first two, offered, and each has its one heard preset`() {
+        assertEquals(BoreMeasure.FIRST_VOICES + candidates, BoreVoice.entries, "the new voices are appended: saved names and ordinals do not move")
+        assertEquals(listOf(0, 1), BoreMeasure.FIRST_VOICES.map { it.ordinal })
+        assertEquals(BoreVoice.entries, Bore.KEPT_VOICES, "every voice is offered")
         assertEquals(listOf(45, 55, 62, 60, 60), candidates.map { low(it) })
-        for (voice in candidates) {
-            assertTrue(BorePresets.forVoice(voice).isEmpty(), "$voice has presets")
+        val names = listOf("LOW WOOD REED", "PINCHED REED", "BAMBOO BREATH", "CANE PIPES", "ROUND CLAY")
+        for ((voice, name) in candidates.zip(names)) {
+            // The one preset is the note the owner heard as touch-bore-1's hard note: the defaults an octave over the root, held 2.5 s.
+            val preset = BorePresets.forVoice(voice).single()
+            assertEquals(name, preset.name)
+            assertEquals(preset, Presets.byName("BORE", voice.name, name))
+            assertContentEquals(render(voice, extra = mapOf("HOLD" to preset.macros.getValue("HOLD"))), preset.render().samples, "$voice: the preset is not the heard note")
+            assertEquals(2.5, Bore.renderFrames(Bore.settled(preset.macros, voice), voice).toDouble() / Dsp.RATE, .35, "$voice: the preset is not the 2.5 s note")
             assertEquals(Bore.macrosFor(BoreVoice.SAX).map { it.name }, Bore.macrosFor(voice).map { it.name })
             val patch = BorePatch("Candidate", voice, Bore.defaults(voice) + ("LIP" to .3f))
             assertEquals(patch, Patches.fromJsonText(patch.toJsonText()), "$voice does not survive saving")
@@ -201,7 +209,7 @@ class BoreCandidateVoicesTest {
     @Test
     fun `the kept voices render exactly what they rendered before the candidates`() {
         val lines = ArrayList<String>()
-        for (v in Bore.KEPT_VOICES) {
+        for (v in BoreMeasure.FIRST_VOICES) {
             for (tune in listOf(0f, .5f, 1f)) for (hold in listOf(Bore.DEFAULT_HOLD, .8f)) lines +=
                 "BORE $v TUNE $tune HOLD $hold " + M.hash(Bore.render(v, mapOf("TUNE" to tune, "HOLD" to hold)).samples)
             val root = BoreKeys.padMidis(v).first()

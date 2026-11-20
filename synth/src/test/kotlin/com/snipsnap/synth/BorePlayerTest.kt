@@ -11,7 +11,7 @@ class BorePlayerTest {
 
     @Test
     fun `a caller envelope reproduces the raw one-shot through attack sustain and release`() {
-        for (voice in Bore.KEPT_VOICES) for (hold in listOf(0f, .5f)) {
+        for (voice in BoreMeasure.FIRST_VOICES) for (hold in listOf(0f, .5f)) {
             // Below the key-thump threshold: Player returns the bore alone, before that output layer.
             val macros = Bore.defaults(voice) + mapOf("CHIFF" to .4f, "HOLD" to hold)
             val hz = Bore.tunedHz(voice, Bore.frequencyFor(voice, .5f))
@@ -35,7 +35,7 @@ class BorePlayerTest {
 
     @Test
     fun `noise belongs to each player and its explicit seed reproduces the performance`() {
-        for (voice in Bore.KEPT_VOICES) {
+        for (voice in BoreMeasure.FIRST_VOICES) {
             val macros = Bore.defaults(voice)
             val hz = Bore.tunedHz(voice, 440f)
             val a = Bore.Player(voice, hz, macros, rate, noiseSeed = 11)
@@ -54,7 +54,7 @@ class BorePlayerTest {
 
     @Test
     fun `zero pressure also removes the reed tongue and pop`() {
-        for (voice in Bore.KEPT_VOICES) {
+        for (voice in BoreMeasure.FIRST_VOICES) {
             val macros = Bore.defaults(voice) + ("CHIFF" to 1f)
             val player = Bore.Player(voice, 440f, macros, rate, noiseSeed = 23)
             repeat(rate / 4) { i ->
@@ -66,7 +66,7 @@ class BorePlayerTest {
 
     @Test
     fun `caller pitch can cross both detune bounds without reallocating the sounding bore`() {
-        for (voice in Bore.KEPT_VOICES) {
+        for (voice in BoreMeasure.FIRST_VOICES) {
             val macros = Bore.defaults(voice) + ("HOLD" to .8f)
             val player = Bore.Player(voice, 440f, macros, rate, maxDetuneCents = 32f)
             var sounded = false
@@ -82,7 +82,7 @@ class BorePlayerTest {
 
     @Test
     fun `external excitation returns through the bore instead of appearing directly at its output`() {
-        for (voice in Bore.KEPT_VOICES) {
+        for (voice in BoreMeasure.FIRST_VOICES) {
             val player = Bore.Player(voice, 440f, Bore.defaults(voice), rate, noiseSeed = 23)
             assertTrue(player.tick(0f, 0.0, pressureScale = 0f, externalExcitation = .25f) == 0f)
             val tail = FloatArray(rate / 20) { i ->

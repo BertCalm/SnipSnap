@@ -11,7 +11,8 @@ import kotlin.math.sin
 /**
  * ARCO's candidate voices for listening round arco-voices-1. CELLO, ERHU and SARANGI are the kept voices; the melodic gate asks for
  * six, so four candidates are built (one spare) and appended to [ArcoVoice] after them, so saved names and ordinals never move.
- * Nothing here has been heard.
+ * The owner kept all four on 2026-11-20 (arco-voices-1's range clips; touch-arco-1's soft, medium, hard), so they are now voices
+ * ([Arco.KEPT_VOICES]) and "candidate" here names the four built in this file.
  *
  * Each is a bowed instrument the kept three are not, and each uses a part of the friction model they leave unused. The bow, its stroke,
  * its bite, GRIP's window, HOLD, the stop, the LOOP's retune, the held key and the player ([Arco.played]) are the engine's own: a

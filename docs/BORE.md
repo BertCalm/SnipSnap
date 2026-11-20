@@ -112,3 +112,26 @@ hard 8.6 to 13.2 dB of level-matched third-octave shape (was 1.3 to 2.7), each
 step 4.2 dB or more (was 0.7 to 1.6); soft 8.8 to 9.5 dB and medium 4.2 to
 4.9 dB quieter than hard (was 0); soft reaches half its level 80 to 100 ms
 later. Round touch-ab-1 plays each heard clip, then the new touch (EE1 to EI1).
+
+## Verdict of 20 Nov 2026 (round touch-bore-1): shipped
+
+**Verdict.** EE1 (HOLLOW), EF1 (SHAWM), EG1 (SHAKU), EH1 (PANPIPE), EI1
+(VESSEL), the new touch (hard is the kept sound): **KEEP**, no notes. So BORE
+ships seven voices: `Bore.KEPT_VOICES` is FLUTE, SAX, HOLLOW, SHAWM, SHAKU,
+PANPIPE, VESSEL, the picker follows it, and each new voice has one factory preset, the note the owner heard
+as its touch clip's hard note (defaults, an octave over the root, 2.5 s of
+breath): LOW WOOD REED (HOLLOW), PINCHED REED (SHAWM), BAMBOO BREATH (SHAKU),
+CANE PIPES (PANPIPE), ROUND CLAY (VESSEL). Each preset renders byte for byte the
+heard note and is pinned in `HoldHumanizePinsTest` with each new voice's default
+note and default LOOP. Being 2.5 s long, each reads and is filed LOOP by length.
+
+**Held keys: not offered yet.** The owner heard the new voices only as one-shots,
+so MAKE INSTRUMENT stays on FLUTE and SAX (`BorePadMaker.VOICES`), as LIBRATION's
+new voices stay finite only. Every zone of every new voice renders and its join
+holds, but nobody has heard a held key or decided how the one-shot's touch
+(`CandidateTouch`) should carry to the held soft layer (`BoreKeys`' lower breath,
+levelled to one target). The LOOP (HOLD 1) is offered, unleaned, and its join
+holds at every note under the engine's own bar for a played loop
+(`Bore.maxDipDb`; SHAKU's random corner at A#4 dips 1.01 dB, past the plain
+1.0 dB `BoreLoopFuzzTest` used before the player), but has not been heard. No
+kit pad or starter has been made for them.

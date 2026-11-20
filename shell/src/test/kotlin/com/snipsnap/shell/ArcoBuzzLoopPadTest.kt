@@ -21,7 +21,7 @@ class ArcoBuzzLoopPadTest {
     @Test
     fun `the loop-only maker no longer offers ARCO, and the held maker does`() {
         assertFalse(LoopPadMaker.offers(ArcoPatch.ENGINE), "ARCO's keys come from ArcoPadMaker now")
-        for (voice in Arco.KEPT_VOICES) {
+        for (voice in ArcoPadMaker.VOICES) {
             val patch = ArcoPatch("Rattle", voice, Arco.defaults(voice) + ("BUZZ" to 1f))
             assertFalse(LoopPadMaker.supports(patch), "$voice: the loop instrument still offers ARCO")
             assertTrue(ArcoPadMaker.supports(patch), "$voice: the held instrument does not offer a BUZZ patch")
@@ -30,7 +30,7 @@ class ArcoBuzzLoopPadTest {
 
     @Test
     fun `a BUZZ 1 patch's middle zone renders through the held instrument with a closed seam, and carries the buzz`() {
-        for (voice in Arco.KEPT_VOICES) {
+        for (voice in ArcoPadMaker.VOICES) {
             val spec = ArcoPadMaker.spec(ArcoPatch("Rattle", voice, Arco.defaults(voice) + ("BUZZ" to 1f)), 0.5f)
             val plain = ArcoPadMaker.spec(ArcoPatch("Plain", voice, Arco.defaults(voice)), 0.5f)
             val midis = ArcoPadMaker.zoneMidis(spec)

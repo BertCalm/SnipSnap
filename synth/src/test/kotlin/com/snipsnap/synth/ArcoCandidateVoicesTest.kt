@@ -10,21 +10,22 @@ import kotlin.math.sqrt
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
-import kotlin.test.assertFalse
 import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 
 /**
  * Candidate voices for listening round arco-voices-1 ([ArcoCandidates]): WHEEL (a wheel and a period-locked chien), BAR (a banded
  * bow on a tuned bar), GLASS (the banded bow on a glass's modes) and VIOL, the spare (a string bowed further from the bridge into a
- * flat box). Nothing here is heard. The kept renders are pinned below against the build before this round.
+ * flat box). The owner kept all four on 2026-11-20 (arco-voices-1, then touch-arco-1 for the touch), so they are offered
+ * ([Arco.KEPT_VOICES]); CELLO's, ERHU's and SARANGI's renders are pinned below against the build before this round.
  *
  * Touch is the held keys' law ([ArcoKeys.SOFT_SHARE]): BOW and GRIP scaled from 0.28 of themselves at the softest to all of
  * themselves at the hardest, the same two macros the soft layer moves.
  */
 class ArcoCandidateVoicesTest {
     private val M = CandidateVoiceMeasures
-    private val candidates = ArcoVoice.entries.filter { it !in Arco.KEPT_VOICES }
+    /** The four built for arco-voices-1 and kept on 2026-11-20. */
+    private val candidates = listOf(ArcoVoice.WHEEL, ArcoVoice.BAR, ArcoVoice.GLASS, ArcoVoice.VIOL)
 
     private fun hz(midi: Int) = 440.0 * 2.0.pow((midi - 69) / 12.0)
     private fun rms(x: FloatArray, from: Double, to: Double): Double {
@@ -44,13 +45,22 @@ class ArcoCandidateVoicesTest {
         Arco.render(voice, macros(voice, midi, touch, extra)).samples
 
     @Test
-    fun `candidates are appended and offered nowhere`() {
-        assertEquals(listOf(ArcoVoice.WHEEL, ArcoVoice.BAR, ArcoVoice.GLASS, ArcoVoice.VIOL), candidates)
-        assertEquals(ArcoVoice.entries.take(3), Arco.KEPT_VOICES)
-        assertTrue(ArcoPresets.all().all { it.voice in Arco.KEPT_VOICES }, "a candidate has a preset")
+    fun `the new voices are appended after the first three, offered, and each has its one heard preset`() {
+        assertEquals(ArcoMeasure.FIRST_VOICES + candidates, ArcoVoice.entries, "the new voices are appended: saved names and ordinals do not move")
+        assertEquals(listOf(0, 1, 2), ArcoMeasure.FIRST_VOICES.map { it.ordinal })
+        assertEquals(ArcoVoice.entries, Arco.KEPT_VOICES, "every voice is offered")
         assertEquals(listOf(50, 53, 60, 48), candidates.map { low(it) })
-        for (voice in candidates) {
-            assertTrue(ArcoPresets.forVoice(voice).isEmpty(), "$voice has presets")
+        val names = listOf("TURNING DRONE", "BOWED METAL", "WET RIM", "GUT CONSORT")
+        for ((voice, name) in candidates.zip(names)) {
+            // The one preset is the note the owner heard as touch-arco-1's hard note: the defaults an octave over the root, held 2.5 s.
+            val preset = ArcoPresets.forVoice(voice).single()
+            assertEquals(name, preset.name)
+            assertEquals(preset, Presets.byName("ARCO", voice.name, name))
+            assertContentEquals(render(voice, extra = mapOf("HOLD" to Arco.holdFor(2.5f))), preset.render().samples, "$voice: the preset is not the heard note")
+            assertTrue(name.length <= 14 && name == name.uppercase(), name)
+            val heard = Classifier.classify(preset.render()).drumClass
+            assertEquals(DrumClass.LOOP, heard, "$voice $name: a 2.5 s note reads LOOP by length")
+            assertEquals(heard, Arco.drumClassFor(voice, preset.macros), "$voice $name: filed and heard disagree")
             assertEquals(Arco.macrosFor(ArcoVoice.CELLO).map { it.name }, Arco.macrosFor(voice).map { it.name })
             val patch = ArcoPatch("Candidate", voice, Arco.defaults(voice) + ("GRIP" to .3f))
             assertEquals(patch, Patches.fromJsonText(patch.toJsonText()), "$voice does not survive saving")
@@ -66,7 +76,7 @@ class ArcoCandidateVoicesTest {
         // The classifier files a low bowed note whose loudest moment comes late as a KICK (its kick rule reads a dark note that falls
         // soon after its peak): the kept voices do it too, CELLO's C2 and SARANGI's D3 at every touch. So a candidate is held to the
         // kept voices' own record on the same grid, not to none.
-        val keptStrays = Arco.KEPT_VOICES.associateWith { v ->
+        val keptStrays = ArcoMeasure.FIRST_VOICES.associateWith { v ->
             listOf(low(v), low(v) + 12, top(v)).sumOf { midi -> listOf(.3f, .7f, 1f).count { heard(render(v, midi, it)) !in allowed } }
         }
         val bar = keptStrays.values.max()
@@ -215,7 +225,7 @@ class ArcoCandidateVoicesTest {
     @Test
     fun `the kept voices render exactly what they rendered before the candidates`() {
         val lines = ArrayList<String>()
-        for (v in Arco.KEPT_VOICES) {
+        for (v in ArcoMeasure.FIRST_VOICES) {
             for (tune in listOf(0f, .5f, 1f)) for (hold in listOf(Arco.DEFAULT_HOLD, Arco.holdFor(3f))) lines +=
                 "ARCO $v TUNE $tune HOLD $hold " + M.hash(Arco.render(v, Arco.defaults(v) + mapOf("TUNE" to tune, "HOLD" to hold)).samples)
             val root = ArcoKeys.zoneMidis(v).first()
@@ -224,7 +234,7 @@ class ArcoCandidateVoicesTest {
         }
         assertEquals(24, lines.size)
         assertEquals(KEPT_RENDERS, M.hash(lines), lines.joinToString("\n"))
-        assertFalse(candidates.any { it in Arco.KEPT_VOICES })
+        assertTrue(candidates.all { it in Arco.KEPT_VOICES })
     }
 
     private companion object {

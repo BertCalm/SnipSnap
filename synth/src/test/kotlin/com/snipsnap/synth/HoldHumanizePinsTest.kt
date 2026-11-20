@@ -19,6 +19,9 @@ import kotlin.test.assertTrue
  * The owner heard them and kept them, with no notes, on 2026-11-20
  * (rounds fix-arco-1, BP1 to BP4, and fix-bore-1, BQ1 to BQ4), rendered from this code.
  *
+ * The seven voices that joined on 2026-11-20 (ARCO's WHEEL, BAR, GLASS and VIOL; BORE's HOLLOW, SHAWM, SHAKU, PANPIPE and VESSEL) are
+ * pinned the same way, from the build the owner heard them from (their presets are the touch rounds' hard notes, byte for byte).
+ *
  * A change that is meant to move one replaces its hash on purpose, says so in its commit, and names the render that moved.
  */
 class HoldHumanizePinsTest {
@@ -105,6 +108,22 @@ class HoldHumanizePinsTest {
         "FLUTE/LOOP" to "ed3c0096c60b8f1b9572ed767fec9c089f504d571ab9a221b372aa873d088867",
         "SAX/defaults" to "d0fabc4d35ba84a98265453d9112160243840de659188e7b189234660a312ff6",
         "SAX/LOOP" to "0cd281a49998b45552fcecdcc74678e199c3b29c9f4951f54483f723db7e1c28",
+        // HOLLOW, SHAWM, SHAKU, PANPIPE and VESSEL, kept on 2026-11-20 (bore-voices-1, touch-bore-1): each preset is the hard note the owner heard in touch-bore-1.
+        "HOLLOW/LOW WOOD REED" to "6eeda7f8afc48afb112903a8e49ee4f2a50aa909edeac315d0774daeff4d2643",
+        "SHAWM/PINCHED REED" to "db2e5a3c57736f59ef2d144443ea0b1d746dff059f43381dfa1c9870e6bbc96f",
+        "SHAKU/BAMBOO BREATH" to "6b0c772558203ee5b532b214ca15f90a0b0d30c06d5cdd61889ca187e58cccbf",
+        "PANPIPE/CANE PIPES" to "c7b66882036310a2a07967b69b01c41bf927c84a9e9d75b8c6601098c87afeeb",
+        "VESSEL/ROUND CLAY" to "188d486cf467b063ff26c94b37ae94e5cd61895d3c22104a5ae13f4977c893ed",
+        "HOLLOW/defaults" to "de14289c2d87e89d6f63e1c2642ebbd384ed9d080b0fcdfd44a54acbb60ffb11",
+        "HOLLOW/LOOP" to "5c0fbec3a5efa7e48f7a1531821b736ee87989244652447c2a875476a8141a3f",
+        "SHAWM/defaults" to "05d006d9fe4f256119b78edbc925ccb8278bf7d1b28efd31fadb189ab33f2d80",
+        "SHAWM/LOOP" to "e6c9c6073295cbb2d2a7a09c653955e67a03dc9cef578a4eb7396e3d0a7da1b0",
+        "SHAKU/defaults" to "fee7844d31d575dc7bb33141af64317885f864b0f69da02ddd1e6258d36381cf",
+        "SHAKU/LOOP" to "5328a03cfb5917d7ba1dcd834b1327121c74dc5c68c11b225f767f8aeae2ac99",
+        "PANPIPE/defaults" to "9a6c88714303d78dc6ea38a631cd349be707702c38ac12c8cc4d8724f8374e6f",
+        "PANPIPE/LOOP" to "14cb990311baca310114511aa285e5fcd0471af32a9729ba10551dd8fdf31b67",
+        "VESSEL/defaults" to "a357e68d42ebe61a76e737e8bae45fb74c9212bc1e770993d07ba2d7ac8c91fe",
+        "VESSEL/LOOP" to "d789f521dd8095c8acd36bc0afa8d2643faa083f5e8cf5a457d16366e87dd61c",
         )
 
         /** Taken on 2026-11-20 from the commit that added the player. Notes with 0.6 s of bow or less carry no player and kept their old hashes. */
@@ -140,6 +159,23 @@ class HoldHumanizePinsTest {
         "SARANGI DEFAULT NOTE" to "6986f4e4f2048774b22e1e6f0714bdac9e566208cadaa9af09fe43a68a46658b",
         "SARANGI DEFAULT LOOP" to "72ac9e6789b987cf896871d1ae444774f38cbb18bd2b07fa6ebd2f9d37fad402",
         "SARANGI HELD NOTE" to "529522443fb20376b672265f9eb2cf0efb1c22fdca59cea893d6be679137c939",
+        // WHEEL, BAR, GLASS and VIOL, kept on 2026-11-20 (arco-voices-1, touch-arco-1): each preset is the hard note the owner heard in touch-arco-1.
+        "WHEEL TURNING DRONE" to "6922e77645a98224abde1b67464c7027c7bb0b7d3cafb064d444a70ff5f862ba",
+        "BAR BOWED METAL" to "bcac7c5d255b1caf7996dd90a7fd584389c4127993fd0f55348ad94accfd16bd",
+        "GLASS WET RIM" to "d18a8be29cf6e6771419d1543f12c0491c36b9f820dd44bb5569409910b01c8b",
+        "VIOL GUT CONSORT" to "ad0fcbc2403a5ddc05991714d474e0dfd5af6f27e74d87d0d5ff19678c12667f",
+        "WHEEL DEFAULT NOTE" to "06a5439e80f9632e128b1894da2da57141c0178428066071494d0f83222b0bb4",
+        "WHEEL DEFAULT LOOP" to "bf20512a26245e6f725a657f43822848a8c96bacbeb8a41c5ae889768bedea7c",
+        "WHEEL HELD NOTE" to "41629f9734caa62d42cb3382d3a0d9b192360147d81d03b92c0472e0a7a39ac2",
+        "BAR DEFAULT NOTE" to "c081ecbc442431594c599b78d6144b9b7a7b1ea26287806dd4492d3b4e1ec0fc",
+        "BAR DEFAULT LOOP" to "09f596bb33192543943886ac4f7a17ff4aa5acc61d93a761054661823e615e5a",
+        "BAR HELD NOTE" to "4b4dd699be7053e7c66a607a72c251a488d94e5fa57ea1a7f19bf08ca6601613",
+        "GLASS DEFAULT NOTE" to "a295a77745df7085a02951792e8e9e0e05138947075c64cad1ea84a901a1596e",
+        "GLASS DEFAULT LOOP" to "dd4b385af70013f253ce2dfeb8a0e20b7f179da798c5fdfa6496055cd124dbc6",
+        "GLASS HELD NOTE" to "0c8ff50bd3eda50177697d05c56c267a92e1213990b2036ad059859343de6383",
+        "VIOL DEFAULT NOTE" to "9528e0cbfbeb174ecbd233721d8b337b7fb0fc6df796394d25467a7543febe3d",
+        "VIOL DEFAULT LOOP" to "8c2ef94f813ac537fa8e659379d858a0b78734ca20097058b4bf15ced97b6215",
+        "VIOL HELD NOTE" to "716d8faf0e22af4a148896df98d4ef9879a3dadb8685dd9cec93c550c3471095",
         )
     }
 }

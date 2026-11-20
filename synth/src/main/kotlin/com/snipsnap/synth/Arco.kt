@@ -77,14 +77,18 @@ import kotlin.random.Random
  *
  * The engine renders **dry**, mono, with no landing chain: a bowed note's own tail is its stop.
  */
-/** CELLO, ERHU and SARANGI are the kept voices. The entries after them are candidates awaiting a listening verdict ([ArcoCandidates]);
- * they are appended so saved names and ordinals never move. */
+/** ARCO's seven voices. CELLO, ERHU and SARANGI came first; WHEEL, BAR, GLASS and VIOL ([ArcoCandidates]) were kept on 2026-11-20
+ * (rounds arco-voices-1 and touch-arco-1) and are appended after them so saved names and ordinals never move. */
 enum class ArcoVoice { CELLO, ERHU, SARANGI, WHEEL, BAR, GLASS, VIOL }
 
 object Arco {
 
-    /** The voices players are offered. Candidates ([ArcoCandidates]) have no preset, kit or starter. */
-    val KEPT_VOICES = listOf(ArcoVoice.CELLO, ArcoVoice.ERHU, ArcoVoice.SARANGI)
+    /**
+     * The voices players are offered: all seven. WHEEL, BAR, GLASS and VIOL ([ArcoCandidates]) joined on 2026-11-20, when the owner kept
+     * their range clips (arco-voices-1) and their touch (touch-arco-1). The touch the owner heard is the one-shot's ([ArcoCandidates.touched]);
+     * their held keys and LOOP play the engine's held path, unleaned, as every voice's do.
+     */
+    val KEPT_VOICES = listOf(ArcoVoice.CELLO, ArcoVoice.ERHU, ArcoVoice.SARANGI, ArcoVoice.WHEEL, ArcoVoice.BAR, ArcoVoice.GLASS, ArcoVoice.VIOL)
 
     // ---- TUNE ---------------------------------------------------------------
 

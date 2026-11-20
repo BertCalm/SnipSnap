@@ -9,8 +9,9 @@ import kotlin.math.sin
 
 /**
  * BORE's candidate voices for listening round bore-voices-1. FLUTE and SAX are the kept voices; the melodic gate asks for six, so
- * five candidates are built (one spare) and appended to [BoreVoice] after them, so saved names and ordinals never move. Nothing here
- * has been heard.
+ * five candidates are built (one spare) and appended to [BoreVoice] after them, so saved names and ordinals never move. The owner
+ * kept all five on 2026-11-20 (bore-voices-1's range clips; touch-bore-1's soft, medium, hard), so they are now voices
+ * ([Bore.KEPT_VOICES]) and "candidate" here names the five built in this file.
  *
  * Each is a blown instrument the engine's two voices are not, and each uses a part of the valve-in-a-pipe model they leave unused:
  *  - [BoreVoice.HOLLOW]: SAX's single reed on a *closed cylinder* (a clarinet's chalumeau). The pipe is half a period long and

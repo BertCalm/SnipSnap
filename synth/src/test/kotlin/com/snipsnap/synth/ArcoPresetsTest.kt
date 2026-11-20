@@ -102,7 +102,8 @@ class ArcoPresetsTest {
         const val SWELL_AIMED_HOLD = 0.42f
         const val SWELL_AIMED_GRIP = 0.7f
 
-        val readings: List<Reading> by lazy { ArcoPresets.all().parallelStream().map { Reading(it) }.toList() }
+        /** The roster this file's claims are about: CELLO's, ERHU's and SARANGI's. The one preset of each voice kept on 2026-11-20 is the note the owner heard, held by ArcoCandidateVoicesTest and pinned by HoldHumanizePinsTest. */
+        val readings: List<Reading> by lazy { ArcoPresets.all().filter { it.voice in ArcoMeasure.FIRST_VOICES }.parallelStream().map { Reading(it) }.toList() }
 
         private val noteNames = arrayOf("C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B")
 
@@ -350,7 +351,7 @@ class ArcoPresetsTest {
 
     @Test
     fun `preset names are uppercase, short, and unique per voice`() {
-        for (voice in Arco.KEPT_VOICES) {
+        for (voice in ArcoMeasure.FIRST_VOICES) {
             val names = ArcoPresets.forVoice(voice).map { it.name }
             assertEquals(rosterSize.getValue(voice), names.size, "$voice should ship ${rosterSize.getValue(voice)} presets, has ${names.size}")
             assertEquals(names.toSet().size, names.size, "$voice has duplicate preset names: $names")
@@ -429,7 +430,7 @@ class ArcoPresetsTest {
 
     @Test
     fun `presets spread out rather than cluster`() {
-        for (voice in Arco.KEPT_VOICES) {
+        for (voice in ArcoMeasure.FIRST_VOICES) {
             val presets = ArcoPresets.forVoice(voice)
             for ((i, a) in presets.withIndex()) for (b in presets.drop(i + 1)) {
                 val d = PresetTestSupport.rmsDistance(a.macros, b.macros)
@@ -447,7 +448,7 @@ class ArcoPresetsTest {
 
     @Test
     fun `the roster's HOLD 1 presets are loops and the rest are not`() {
-        for (voice in Arco.KEPT_VOICES) {
+        for (voice in ArcoMeasure.FIRST_VOICES) {
             val loops = readings.filter { it.voice == voice && it.loop }.map { it.preset.name }
             assertEquals(loopNames.getValue(voice), loops, "$voice's loops")
         }

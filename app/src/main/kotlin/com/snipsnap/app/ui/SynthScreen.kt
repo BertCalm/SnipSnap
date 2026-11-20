@@ -2715,7 +2715,8 @@ fun SynthScreen(
     } }
     // The name MAKE will land under, read off the shelf when the sheet opens
     // so the sheet can say it; MAKE asks the shelf again at write time.
-    val supportsHeldInstrument = engine == Engine.BRISTLE || (engine == Engine.SPLAY && !embouchureRestore.waitsForRecipe(engine, voice)) || engine == Engine.WICK || engine == Engine.ACCORD || engine == Engine.ETCH || engine == Engine.HALOBAR || engine == Engine.CAUSTIC || engine == Engine.LIBRATION || engine == Engine.RIME || (engine == Engine.TIDAL && !embouchureRestore.pending.containsKey(engine to voice)) || engine == Engine.CREASE || engine == Engine.ORPHICA || engine == Engine.RESIN || engine == Engine.SIREN || engine == Engine.GLINT || engine == Engine.REGISTERS || engine == Engine.BELLOWS || engine == Engine.CONTOUR || engine == Engine.BALLAST || engine == Engine.MERIDIAN || engine == Engine.MERCURY || engine == Engine.KEEL || engine == Engine.ARCO ||
+    val supportsHeldInstrument = engine == Engine.BRISTLE || (engine == Engine.SPLAY && !embouchureRestore.waitsForRecipe(engine, voice)) || engine == Engine.WICK || engine == Engine.ACCORD || engine == Engine.ETCH || engine == Engine.HALOBAR || engine == Engine.CAUSTIC || engine == Engine.LIBRATION || engine == Engine.RIME || (engine == Engine.TIDAL && !embouchureRestore.pending.containsKey(engine to voice)) || engine == Engine.CREASE || engine == Engine.ORPHICA || engine == Engine.RESIN || engine == Engine.SIREN || engine == Engine.GLINT || engine == Engine.REGISTERS || engine == Engine.BELLOWS || engine == Engine.CONTOUR || engine == Engine.BALLAST || engine == Engine.MERIDIAN || engine == Engine.MERCURY || engine == Engine.KEEL ||
+        (engine == Engine.ARCO && ArcoPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as ArcoPatch)) ||
         (engine == Engine.OPENSKY && OpenSkyPadMaker.supports(voice as OpenSkyVoice)) ||
         (engine == Engine.ORIGAMI && OrigamiPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as OrigamiPatch)) ||
         (engine == Engine.FLOCK && FlockPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as FlockPatch)) ||
@@ -2837,9 +2838,11 @@ fun SynthScreen(
         Engine.BALLAST -> HeldSpec.Ballast(BallastPadMaker.spec(voice as BallastVoice, macros, heldSheet.holdRelease))
         Engine.MERCURY -> HeldSpec.Mercury(MercuryPadMaker.spec(voice as MercuryVoice, macros, heldSheet.holdRelease))
         Engine.KEEL -> HeldSpec.Keel(KeelPadMaker.spec(voice as KeelVoice, macros, heldSheet.holdRelease))
-        Engine.ARCO -> HeldSpec.Arco(ArcoPadMaker.spec(
-            buildCurrentPatch(engine.patchDisplayName(voice)) as ArcoPatch, heldSheet.holdRelease,
-        ))
+        Engine.ARCO -> {
+            // CELLO, ERHU and SARANGI only: the four voices kept on 20 Nov 2026 are one-shots and LOOPs until their held keys are heard.
+            val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as ArcoPatch
+            if (ArcoPadMaker.supports(patch)) HeldSpec.Arco(ArcoPadMaker.spec(patch, heldSheet.holdRelease)) else null
+        }
         Engine.BORE -> {
             val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as BorePatch
             if (BorePadMaker.supports(patch)) HeldSpec.Bore(BorePadMaker.spec(patch, heldSheet.holdRelease)) else null
@@ -6810,7 +6813,9 @@ private enum class Engine {
         // GROTTO (saved model 8) joined after BUBBLE once the owner kept round nacre-grotto-1 (15 Nov 2026);
         // CONCH (saved model 9) followed GROTTO once the owner kept round nacre-conch-1 (16 Nov 2026).
         NACRE -> NacreVoice.entries
+        // FLUTE and SAX, then HOLLOW, SHAWM, SHAKU, PANPIPE and VESSEL, kept in bore-voices-1 and touch-bore-1 (20 Nov 2026).
         BORE -> Bore.KEPT_VOICES
+        // CELLO, ERHU and SARANGI, then WHEEL, BAR, GLASS and VIOL, kept in arco-voices-1 and touch-arco-1 (20 Nov 2026).
         ARCO -> Arco.KEPT_VOICES
         SCOUR -> ScourVoice.entries
         EROSION -> ErosionVoice.entries

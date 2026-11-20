@@ -157,7 +157,7 @@ class ArcoProductTest {
         assertEquals(19, Arco.tuneSemitones(ArcoVoice.ERHU))
         assertEquals(36, Arco.rootMidi(ArcoVoice.CELLO))
         assertEquals(62, Arco.rootMidi(ArcoVoice.ERHU))
-        for (voice in Arco.KEPT_VOICES) {
+        for (voice in ArcoMeasure.FIRST_VOICES) {
             val root = Arco.rootMidi(voice)
             val span = Arco.tuneSemitones(voice)
             assertEquals(root, Arco.midiFor(voice, 0f))
@@ -219,7 +219,7 @@ class ArcoProductTest {
     @Test
     fun `the predicted frame count is what a render makes - every voice, three TUNEs, ten HOLDs`() {
         val holds = listOf(0f, 0.1f, 0.2f, 0.3f, 0.4f, 0.5f, 0.6f, 0.7f, 0.85f, 0.95f)
-        val cases = Arco.KEPT_VOICES.flatMap { v -> threeTunes.flatMap { t -> holds.map { h -> Triple(v, t, h) } } }
+        val cases = ArcoMeasure.FIRST_VOICES.flatMap { v -> threeTunes.flatMap { t -> holds.map { h -> Triple(v, t, h) } } }
         val rows = cases.parMap { (voice, tune, hold) ->
             val m = macros(voice, tune, hold = hold)
             Triple("${label(voice, tune)} HOLD $hold", Arco.renderFrames(voice, m), Arco.render(voice, m).frameCount)
@@ -237,7 +237,7 @@ class ArcoProductTest {
      */
     @Test
     fun `the default HOLD renders a note under the classifier's line at every TUNE step of both voices`() {
-        for (voice in Arco.KEPT_VOICES) {
+        for (voice in ArcoMeasure.FIRST_VOICES) {
             val steps = (0..Arco.tuneSemitones(voice)).toList()
             val rows = steps.parMap { step ->
                 val m = macros(voice, tuneOf(voice, step))
@@ -470,7 +470,7 @@ class ArcoProductTest {
      */
     @Test
     fun `the filed class agrees with the classifier's own length line, to the frame`() {
-        val cells = Arco.KEPT_VOICES.flatMap { v -> threeTunes.map { v to it } }
+        val cells = ArcoMeasure.FIRST_VOICES.flatMap { v -> threeTunes.map { v to it } }
         val lines = cells.map { (voice, tune) -> Triple(voice, tune, lineHold(voice, tune)) }
         val jobs = lines.flatMap { (voice, tune, line) ->
             val holds = (0..40).map { line.first + (it - 20) * 0.0003f } + listOf(line.first, line.second)
@@ -523,16 +523,16 @@ class ArcoProductTest {
     @Test
     fun `a note under the line is filed PERC, and the classifier hears a drum only at the two known corners`() {
         val holds = listOf(0f, 0.1f, 0.2f, 0.3f, 0.4f, 0.5f, 0.6f, 0.7f, 0.8f, 0.95f)
-        val cells = Arco.KEPT_VOICES.flatMap { v -> threeTunes.flatMap { t -> holds.map { h -> Triple(v, t, h) } } }
-        val steps = Arco.KEPT_VOICES.flatMap { v -> (0..Arco.tuneSemitones(v)).map { Triple(v, tuneOf(v, it), Arco.DEFAULT_HOLD) } }
+        val cells = ArcoMeasure.FIRST_VOICES.flatMap { v -> threeTunes.flatMap { t -> holds.map { h -> Triple(v, t, h) } } }
+        val steps = ArcoMeasure.FIRST_VOICES.flatMap { v -> (0..Arco.tuneSemitones(v)).map { Triple(v, tuneOf(v, it), Arco.DEFAULT_HOLD) } }
         val rows = (cells + steps).parMap { (voice, tune, hold) -> lineRow(voice, tune, hold) }
         val grid = rows.take(cells.size)
         val defaults = rows.drop(cells.size)
-        for (voice in Arco.KEPT_VOICES) for (tune in threeTunes) {
+        for (voice in ArcoMeasure.FIRST_VOICES) for (tune in threeTunes) {
             val mine = grid.filter { it.name.startsWith(label(voice, tune) + " ") }
             println("ARCO classifier ${label(voice, tune)}: " + mine.joinToString(" ") { "${it.hold}=${it.heard}/${it.filed}" })
         }
-        for (voice in Arco.KEPT_VOICES) {
+        for (voice in ArcoMeasure.FIRST_VOICES) {
             val mine = defaults.filter { it.name.startsWith("$voice ") }
             println("ARCO classifier default HOLD $voice: " + mine.joinToString(" ") { "${it.name.substringAfter(' ').substringBefore(' ')}=${it.heard}" })
         }
@@ -630,7 +630,7 @@ class ArcoProductTest {
      */
     @Test
     fun `a LOOP closes on itself in whole periods, at exactly TUNE, steady, across the range`() {
-        val cells = Arco.KEPT_VOICES.flatMap { v -> threeTunes.map { v to it } }
+        val cells = ArcoMeasure.FIRST_VOICES.flatMap { v -> threeTunes.map { v to it } }
         val results = cells.parMap { (voice, tune) ->
             val m = macros(voice, tune, hold = 1f)
             LoopCase(voice, tune, Arco.renderLoopMeasured(voice, m), Arco.renderLoopMeasured(voice, m))
@@ -684,7 +684,7 @@ class ArcoProductTest {
      */
     @Test
     fun `a LOOP is the same loop whatever BOW and HOLD say, and BODY changes it`() {
-        for (voice in Arco.KEPT_VOICES) {
+        for (voice in ArcoMeasure.FIRST_VOICES) {
             val base = Arco.renderLoopMeasured(voice, macros(voice, hold = 1f, bow = 0f)).loop
             assertContentEquals(base, Arco.renderLoopMeasured(voice, macros(voice, hold = 0.99f, bow = 1f)).loop, "$voice: BOW or HOLD changed the loop")
             // the control is the voice's fourth knob: BODY on CELLO and ERHU (the same macros as before, to the key), WASH on SARANGI
@@ -717,7 +717,7 @@ class ArcoProductTest {
         assertTrue("does not close" in e.message.orEmpty(), "the refusal does not say why: ${e.message}")
         val whole = FloatArray(loopStart + period * 10) { sin(2.0 * PI * it / period).toFloat() }
         Keys.requireSeam("ARCO CELLO 36", whole, loopStart)
-        for (voice in Arco.KEPT_VOICES) {
+        for (voice in ArcoMeasure.FIRST_VOICES) {
             val m = macros(voice, hold = 1f)
             assertContentEquals(Arco.renderLoopMeasured(voice, m).loop, Arco.renderLoop(voice, m), "$voice: renderLoop is not the measured loop")
         }
@@ -736,7 +736,7 @@ class ArcoProductTest {
      */
     @Test
     fun `a held three second note renders clean, files LOOP, and lasts about four seconds at C3`() {
-        val cells = Arco.KEPT_VOICES.flatMap { v -> threeTunes.map { v to it } }
+        val cells = ArcoMeasure.FIRST_VOICES.flatMap { v -> threeTunes.map { v to it } }
         val rows = cells.parMap { (voice, tune) ->
             val m = macros(voice, tune, hold = Arco.holdFor(3f))
             val snip = Arco.render(voice, m)
@@ -835,7 +835,7 @@ class ArcoProductTest {
     @Test
     fun `vibrato is none at a short hold, grows with HOLD, and stays under 15 cents at three seconds`() {
         val problems = ArrayList<String>()
-        for (voice in Arco.KEPT_VOICES) {
+        for (voice in ArcoMeasure.FIRST_VOICES) {
             val tune = 0.5f
             val hz = Arco.frequencyFor(voice, tune)
             // SARANGI (R2) is read on its string, at WASH 0: its tarab rings at fixed pitches and holds the pitch a window reads toward the note
@@ -902,7 +902,7 @@ class ArcoProductTest {
     @Test
     fun `a held note slips once a period through its vibrato, because the string never feels it`() {
         val problems = ArrayList<String>()
-        for (voice in Arco.KEPT_VOICES) {
+        for (voice in ArcoMeasure.FIRST_VOICES) {
             val steps = (0..Arco.tuneSemitones(voice)).toList()
             val rows = steps.parMap { step ->
                 val tune = tuneOf(voice, step)
@@ -947,7 +947,7 @@ class ArcoProductTest {
     @Test
     fun `the default note locks into one slip before its bow lifts, at every TUNE step`() {
         val problems = ArrayList<String>()
-        for (voice in Arco.KEPT_VOICES) {
+        for (voice in ArcoMeasure.FIRST_VOICES) {
             val steps = (0..Arco.tuneSemitones(voice)).toList()
             val rows = steps.parMap { step ->
                 val tune = tuneOf(voice, step)
@@ -974,7 +974,7 @@ class ArcoProductTest {
      */
     @Test
     fun `a LOOP carries the loop vibrato, R1's loop is flat to the measure's floor`() {
-        for (voice in Arco.KEPT_VOICES) {
+        for (voice in ArcoMeasure.FIRST_VOICES) {
             val hz = Arco.frequencyFor(voice, 0.5f)
             val noTarab = stringOnly(voice)
             fun spreadAndMean(loop: FloatArray): Pair<Double, Double> {
@@ -1074,7 +1074,7 @@ class ArcoProductTest {
         assertTrue(Arco.vibratoShapeFor(ArcoVoice.SARANGI) === Arco.VIBRATO_HUMAN, "SARANGI's shape is not the human one")
         val cents = Arco.vibratoCentsFor(3f)
         assertEquals(Arco.VIBRATO_MAX_CENTS, cents, "a 3 s hold is not full depth")
-        for (voice in Arco.KEPT_VOICES) {
+        for (voice in ArcoMeasure.FIRST_VOICES) {
             val m = macros(voice, 0.5f, hold = Arco.holdFor(3f))
             val hz = Arco.frequencyFor(voice, 0.5f)
             val on = Arco.bow(voice, hz, m, rawRate, gateSeconds = 3f, vibrato = true)
@@ -1264,7 +1264,7 @@ class ArcoProductTest {
     @Test
     fun `the top note of each voice is clean of aliasing`() {
         val problems = ArrayList<String>()
-        for (voice in Arco.KEPT_VOICES) {
+        for (voice in ArcoMeasure.FIRST_VOICES) {
             val hz = Arco.frequencyFor(voice, 1f)
             val short = Arco.render(voice, macros(voice, 1f, bow = 1f, grip = 1f, hold = 0.26f))
             val shortReads = listOf(0.2f, 0.3f, 0.4f).map { fittedClarity(short.samples, hz, (it * rate).toInt()).first }
@@ -1293,7 +1293,7 @@ class ArcoProductTest {
      */
     @Test
     fun `an out of range macro is clamped and an unknown key is dropped`() {
-        for (voice in Arco.KEPT_VOICES) {
+        for (voice in ArcoMeasure.FIRST_VOICES) {
             val knob = Arco.boxKnob(voice)
             val settled = Arco.settled(mapOf("TUNE" to 9f, "SPARKLE" to 0.7f, knob to -1f), voice)
             assertEquals(Arco.defaults(voice) + mapOf("TUNE" to 1f, knob to 0f), settled, "$voice: settled")
@@ -1313,7 +1313,7 @@ class ArcoProductTest {
      */
     @Test
     fun `a recipe with an unknown macro, a value out of range or a blank name is refused`() {
-        for (voice in Arco.KEPT_VOICES) {
+        for (voice in ArcoMeasure.FIRST_VOICES) {
             val unknown = assertFailsWith<IllegalArgumentException> { ArcoPatch("X", voice, mapOf("SPARKLE" to 0.5f)) }
             assertTrue("SPARKLE" in unknown.message.orEmpty(), "the refusal does not name the macro: ${unknown.message}")
             val high = assertFailsWith<IllegalArgumentException> { ArcoPatch("X", voice, mapOf("GRIP" to 1.5f)) }
@@ -1335,7 +1335,7 @@ class ArcoProductTest {
      */
     @Test
     fun `a patch renders the same bits every time, and through its recipe`() {
-        for (voice in Arco.KEPT_VOICES) {
+        for (voice in ArcoMeasure.FIRST_VOICES) {
             val shot = ArcoPatch("Canary", voice, Arco.defaults(voice))
             val first = shot.render().samples
             assertContentEquals(first, shot.render().samples, "$voice one-shot")
@@ -1381,7 +1381,7 @@ class ArcoProductTest {
 
     @Test
     fun `every macro changes the sound, BODY too, and an unknown key does not`() {
-        for (voice in Arco.KEPT_VOICES) {
+        for (voice in ArcoMeasure.FIRST_VOICES) {
             val base = Arco.render(voice, Arco.defaults(voice)).samples
             val none = Arco.render(voice, Arco.defaults(voice) + ("SPARKLE" to 0.9f)).samples
             assertContentEquals(base, none, "$voice: an unknown key changed the render")
@@ -1467,7 +1467,7 @@ class ArcoProductTest {
                 "at BOW 1 (printed, not a control) it locks at ${f(outsideBite.lock, 3)} s, ${outsideBite.late} unclean gaps",
         )
         if (!late(outside)) problems += "a string outside the window passes the lock check, so the check cannot fail"
-        for (voice in Arco.KEPT_VOICES) for ((temperature, seed) in listOf(0.35f to 20260930, 1f to 20261001)) {
+        for (voice in ArcoMeasure.FIRST_VOICES) for ((temperature, seed) in listOf(0.35f to 20260930, 1f to 20261001)) {
             val rolls = (0 until 200).map { i -> Arco.scramble(voice, Random(seed + i), temperature) }
             for (macros in rolls) {
                 if (!macros.values.all { it in 0f..1f }) problems += "$voice scrambled out of range: $macros"
@@ -1495,7 +1495,7 @@ class ArcoProductTest {
     @Test
     fun `scramble rolls render clean through the whole render, and one seed is one roll`() {
         val random = Random(42)
-        for (voice in Arco.KEPT_VOICES) {
+        for (voice in ArcoMeasure.FIRST_VOICES) {
             val rolls = (0 until 12).map { Arco.scramble(voice, random) }
             val snips = rolls.parMap { Arco.render(voice, it) }
             for ((macros, snip) in rolls.zip(snips)) {
@@ -1518,7 +1518,7 @@ class ArcoProductTest {
      */
     @Test
     fun `velocity softens through the fallback and is darker at low velocity`() {
-        for (voice in Arco.KEPT_VOICES) {
+        for (voice in ArcoMeasure.FIRST_VOICES) {
             val patch = ArcoPatch("Vel Canary", voice, Arco.defaults(voice))
             assertEquals(null, Velocity.brightnessSpec(patch), "$voice: a brightness macro is registered; the fallback canary is out of date")
             val viaFallback = Velocity.atVelocity(patch, 0.3f)

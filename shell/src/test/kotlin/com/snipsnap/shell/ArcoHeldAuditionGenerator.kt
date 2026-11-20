@@ -44,7 +44,7 @@ object ArcoHeldAuditionGenerator {
         val out = File(args.firstOrNull() ?: "../testkit/arco-held-audition").canonicalFile.also { it.mkdirs() }
         val hold = (HOLD_SECONDS * WavWriter.MPC_SAMPLE_RATE).roundToInt()
         val manifest = ArrayList<JsonValue>()
-        for (voice in Arco.KEPT_VOICES) {
+        for (voice in ArcoPadMaker.VOICES) {
             val patch = ArcoPatch("ARCO ${voice.name} DEFAULTS", voice, Arco.defaults(voice))
             val spec = ArcoPadMaker.Spec(patch, RELEASE)
             val zones = ArcoPadMaker.zoneMidis(spec)

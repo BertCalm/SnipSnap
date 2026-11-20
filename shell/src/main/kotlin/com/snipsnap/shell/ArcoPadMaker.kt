@@ -9,6 +9,7 @@ import com.snipsnap.kit.OneNote
 import com.snipsnap.synth.Arco
 import com.snipsnap.synth.ArcoKeys
 import com.snipsnap.synth.ArcoPatch
+import com.snipsnap.synth.ArcoVoice
 import com.snipsnap.synth.KeyNote
 import com.snipsnap.xpm.Keygroup
 import com.snipsnap.xpm.KeygroupProgram
@@ -54,10 +55,15 @@ object ArcoPadMaker {
     }
 
     /**
-     * Whether [patch]'s voice is offered held: a kept voice ([Arco.KEPT_VOICES]) with a held zone plan. A candidate plays the same held path
-     * ([Arco.renderHeldMeasured]) and is offered once a verdict keeps it.
+     * The voices offered on held keys: CELLO, ERHU and SARANGI. WHEEL, BAR, GLASS and VIOL joined [Arco.KEPT_VOICES] on 2026-11-20 as
+     * one-shots and LOOPs, which is what the owner heard (arco-voices-1, touch-arco-1); their held keys are not offered until they are
+     * heard (WHEEL's D4 hard key also starts later than its whole stroke, against HeldStartTest's bar), as LIBRATION's new voices stay
+     * finite only.
      */
-    fun supports(patch: ArcoPatch): Boolean = patch.voice in Arco.KEPT_VOICES && ArcoKeys.zoneMidis(patch.voice).isNotEmpty()
+    val VOICES: Set<ArcoVoice> = setOf(ArcoVoice.CELLO, ArcoVoice.ERHU, ArcoVoice.SARANGI)
+
+    /** Whether [patch]'s voice is offered held: one of [VOICES], with a held zone plan. */
+    fun supports(patch: ArcoPatch): Boolean = patch.voice in VOICES && ArcoKeys.zoneMidis(patch.voice).isNotEmpty()
 
     /** The sheet's one stepper as a spec, clamped as [BellowsPadMaker.spec] is: an exponential knob's ends can land a float's width outside its range. */
     fun spec(patch: ArcoPatch, releaseFraction: Float): Spec =
