@@ -131,6 +131,16 @@ rings 1.35 s above -30 dB. Verification unchanged: 792 WAVs, 0 failures, timbral
 88 of 88 pads. Listening page version 3: the RIDE & RIMS before player is the round 1 groove
 with the hat stand-in.
 
+## Round 3: into the app, generated (in progress)
+
+Accepted 2026-11-20. The kits are exported as recipes (`export_recipes.py` ->
+`synth/src/main/resources/borough/v1/recipes.json`, 34 KB, numbers only: per kit the twelve pads, designed drums or
+EMBER voices with their record chain, the balance trims and the limiter drive the owner heard; per stack the four
+EMBER voices with their TUNE and resample ratio resolved once). `synth/src/test/resources/borough-parity.json` holds
+the Python harness's fine measurement of every accepted pad (hardest zone, first take: band energy by window,
+kick pitch, snare body pitch, length, loudness) for the Kotlin port to be measured against. Shipping the same kits
+as frozen samples would have added roughly 40-50 MB.
+
 ## Round 2: designed boom-bap drums in all six kits
 
 The owner heard the STOOP prototype below: "Round 2 is def betetr". Every kit's KICK, SNARE, KICK 2,
@@ -541,6 +551,9 @@ Listening page (private until shared): https://claude.ai/artifact/6y32yHPUszWK58
     muddy ... These are just flopping."
   - round 2 prototype (STOOP, designed drums): "Round 2 is def betetr" (2026-11-20). Direction accepted; all six
     kits are being rebuilt this way.
+  - round 2, all six kits: "I think they are all ready" (2026-11-20). Accepted for the app. The owner chose to
+    generate them in the app (Kotlin, on EMBER) rather than ship samples, six kits with a perc-stack picker,
+    and the live glue compressor switched on when a BOROUGH kit loads.
   Heard as better is not accepted for the shelf: no kit has been approved yet.
 
 ## Why it is built this way
