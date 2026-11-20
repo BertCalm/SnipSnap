@@ -165,6 +165,8 @@ object AccordCalibrationGenerator {
         appendLine("                AccordAcousticProfile.LONG_RING -> 5")
         appendLine("                AccordAcousticProfile.BASE -> error(\"TINE has no BASE acoustic profile\")")
         appendLine("            }")
+        appendLine("            AccordVoice.REED, AccordVoice.COURSE, AccordVoice.ESCAPEMENT, AccordVoice.BELL ->")
+        appendLine("                error(\"ACCORD candidate voice \$voice has no factory calibration row\")")
         appendLine("        }")
         appendLine("        return gains[row][midi - MIN_MIDI]")
         appendLine("    }")

@@ -1,0 +1,636 @@
+{
+  "version": 1,
+  "name": "SnipSnap Consort Kit",
+  "pads": [
+    {
+      "slot": 1,
+      "sample": "A01_Perc_01.wav",
+      "name": "Perc 01",
+      "class": "PERC",
+      "level": 0.7079460024833679,
+      "pan": 0.5,
+      "tuneCoarse": 0,
+      "tuneFine": 0,
+      "muteGroup": 0,
+      "oneShot": true,
+      "colorHex": "#8fd424",
+      "source": {
+        "rawSha256": "e475620c8f153b64a2d810e1bd80564585cf4f23b7a52af45259f8e5696ebcff"
+      },
+      "recipe": {
+        "recipe": 2,
+        "patch": {
+          "engine": "CONSORT",
+          "version": 1,
+          "name": "Flute 1",
+          "voice": "FLUTE",
+          "macros": {
+            "TUNE": 0,
+            "BREATH": 0.6000000238418579,
+            "GESTURE": 0,
+            "MOTION": 0.5,
+            "BLEND": 0.6000000238418579,
+            "LOOSE": 0.5,
+            "ROOM": 0.4000000059604645,
+            "HOLD": 0.10000000149011612
+          }
+        },
+        "alias": false
+      }
+    },
+    {
+      "slot": 2,
+      "sample": "A02_Perc_02.wav",
+      "name": "Perc 02",
+      "class": "PERC",
+      "level": 0.7079460024833679,
+      "pan": 0.5,
+      "tuneCoarse": 0,
+      "tuneFine": 0,
+      "muteGroup": 0,
+      "oneShot": true,
+      "colorHex": "#8fd424",
+      "source": {
+        "rawSha256": "e0101e26717e258ccb345871d6b5de8458f71b1ed81f0f7ffb3dce14c4dac4e0"
+      },
+      "recipe": {
+        "recipe": 2,
+        "patch": {
+          "engine": "CONSORT",
+          "version": 1,
+          "name": "Flute 2",
+          "voice": "FLUTE",
+          "macros": {
+            "TUNE": 0.125,
+            "BREATH": 0.6000000238418579,
+            "GESTURE": 0,
+            "MOTION": 0.5,
+            "BLEND": 0.6000000238418579,
+            "LOOSE": 0.5,
+            "ROOM": 0.4000000059604645,
+            "HOLD": 0.10000000149011612
+          }
+        },
+        "alias": false
+      }
+    },
+    {
+      "slot": 3,
+      "sample": "A03_Perc_03.wav",
+      "name": "Perc 03",
+      "class": "PERC",
+      "level": 0.7079460024833679,
+      "pan": 0.5,
+      "tuneCoarse": 0,
+      "tuneFine": 0,
+      "muteGroup": 0,
+      "oneShot": true,
+      "colorHex": "#8fd424",
+      "source": {
+        "rawSha256": "c91f93eb3e743a24fc4dfb3ca0e4d228a43e5719d79c01cea9f1afa2d30495da"
+      },
+      "recipe": {
+        "recipe": 2,
+        "patch": {
+          "engine": "CONSORT",
+          "version": 1,
+          "name": "Flute 3",
+          "voice": "FLUTE",
+          "macros": {
+            "TUNE": 0.2083333283662796,
+            "BREATH": 0.6000000238418579,
+            "GESTURE": 0,
+            "MOTION": 0.5,
+            "BLEND": 0.6000000238418579,
+            "LOOSE": 0.5,
+            "ROOM": 0.4000000059604645,
+            "HOLD": 0.10000000149011612
+          }
+        },
+        "alias": false
+      }
+    },
+    {
+      "slot": 4,
+      "sample": "A04_Perc_04.wav",
+      "name": "Perc 04",
+      "class": "PERC",
+      "level": 0.7079460024833679,
+      "pan": 0.5,
+      "tuneCoarse": 0,
+      "tuneFine": 0,
+      "muteGroup": 0,
+      "oneShot": true,
+      "colorHex": "#8fd424",
+      "source": {
+        "rawSha256": "c443f46f4fdb070d0e7e9bc69c958be43d82171dfd7ba2dada731959e70d25a5"
+      },
+      "recipe": {
+        "recipe": 2,
+        "patch": {
+          "engine": "CONSORT",
+          "version": 1,
+          "name": "Flute 4",
+          "voice": "FLUTE",
+          "macros": {
+            "TUNE": 0.2916666567325592,
+            "BREATH": 0.6000000238418579,
+            "GESTURE": 0,
+            "MOTION": 0.5,
+            "BLEND": 0.6000000238418579,
+            "LOOSE": 0.5,
+            "ROOM": 0.4000000059604645,
+            "HOLD": 0.10000000149011612
+          }
+        },
+        "alias": false
+      }
+    },
+    {
+      "slot": 5,
+      "sample": "A05_Perc_05.wav",
+      "name": "Perc 05",
+      "class": "PERC",
+      "level": 0.7079460024833679,
+      "pan": 0.5,
+      "tuneCoarse": 0,
+      "tuneFine": 0,
+      "muteGroup": 0,
+      "oneShot": true,
+      "colorHex": "#8fd424",
+      "source": {
+        "rawSha256": "e04a97d129258f4c405cbff64504a277171e3a40417a9be1e71ac63966c263f4"
+      },
+      "recipe": {
+        "recipe": 2,
+        "patch": {
+          "engine": "CONSORT",
+          "version": 1,
+          "name": "Flute 5",
+          "voice": "FLUTE",
+          "macros": {
+            "TUNE": 0.4166666567325592,
+            "BREATH": 0.6000000238418579,
+            "GESTURE": 0,
+            "MOTION": 0.5,
+            "BLEND": 0.6000000238418579,
+            "LOOSE": 0.5,
+            "ROOM": 0.4000000059604645,
+            "HOLD": 0.10000000149011612
+          }
+        },
+        "alias": false
+      }
+    },
+    {
+      "slot": 6,
+      "sample": "A06_Perc_06.wav",
+      "name": "Perc 06",
+      "class": "PERC",
+      "level": 0.7079460024833679,
+      "pan": 0.5,
+      "tuneCoarse": 0,
+      "tuneFine": 0,
+      "muteGroup": 0,
+      "oneShot": true,
+      "colorHex": "#8fd424",
+      "source": {
+        "rawSha256": "efbf28092e8a26c0e4f2c025154623da99da5b15508a3ede785a4d6a085f8888"
+      },
+      "recipe": {
+        "recipe": 2,
+        "patch": {
+          "engine": "CONSORT",
+          "version": 1,
+          "name": "Flute 6",
+          "voice": "FLUTE",
+          "macros": {
+            "TUNE": 0.5,
+            "BREATH": 0.6000000238418579,
+            "GESTURE": 0,
+            "MOTION": 0.5,
+            "BLEND": 0.6000000238418579,
+            "LOOSE": 0.5,
+            "ROOM": 0.4000000059604645,
+            "HOLD": 0.10000000149011612
+          }
+        },
+        "alias": false
+      }
+    },
+    {
+      "slot": 7,
+      "sample": "A07_Perc_07.wav",
+      "name": "Perc 07",
+      "class": "PERC",
+      "level": 0.7079460024833679,
+      "pan": 0.5,
+      "tuneCoarse": 0,
+      "tuneFine": 0,
+      "muteGroup": 0,
+      "oneShot": true,
+      "colorHex": "#8fd424",
+      "source": {
+        "rawSha256": "ae992917bbe999dee19afac6317823145ebe6a7a6e8f552ef980d4809b9d958e"
+      },
+      "recipe": {
+        "recipe": 2,
+        "patch": {
+          "engine": "CONSORT",
+          "version": 1,
+          "name": "Flute 7",
+          "voice": "FLUTE",
+          "macros": {
+            "TUNE": 0.625,
+            "BREATH": 0.6000000238418579,
+            "GESTURE": 0,
+            "MOTION": 0.5,
+            "BLEND": 0.6000000238418579,
+            "LOOSE": 0.5,
+            "ROOM": 0.4000000059604645,
+            "HOLD": 0.10000000149011612
+          }
+        },
+        "alias": false
+      }
+    },
+    {
+      "slot": 8,
+      "sample": "A08_Perc_08.wav",
+      "name": "Perc 08",
+      "class": "PERC",
+      "level": 0.7079460024833679,
+      "pan": 0.5,
+      "tuneCoarse": 0,
+      "tuneFine": 0,
+      "muteGroup": 0,
+      "oneShot": true,
+      "colorHex": "#8fd424",
+      "source": {
+        "rawSha256": "285ad8425bdeb86d9fa4022d64040cbbcb6a5fb3231379575f89490d4d5eb657"
+      },
+      "recipe": {
+        "recipe": 2,
+        "patch": {
+          "engine": "CONSORT",
+          "version": 1,
+          "name": "Flute 8",
+          "voice": "FLUTE",
+          "macros": {
+            "TUNE": 0.7083333134651184,
+            "BREATH": 0.6000000238418579,
+            "GESTURE": 0,
+            "MOTION": 0.5,
+            "BLEND": 0.6000000238418579,
+            "LOOSE": 0.5,
+            "ROOM": 0.4000000059604645,
+            "HOLD": 0.10000000149011612
+          }
+        },
+        "alias": false
+      }
+    },
+    {
+      "slot": 9,
+      "sample": "A09_Loop_01.wav",
+      "name": "Loop 01",
+      "class": "LOOP",
+      "level": 0.7079460024833679,
+      "pan": 0.5,
+      "tuneCoarse": 0,
+      "tuneFine": 0,
+      "muteGroup": 0,
+      "oneShot": true,
+      "colorHex": "#3f8cf0",
+      "source": {
+        "rawSha256": "8a415618124d413aa52f959bb5c15821daf29e260a2cce45d7395cee140a5021"
+      },
+      "recipe": {
+        "recipe": 2,
+        "patch": {
+          "engine": "CONSORT",
+          "version": 1,
+          "name": "PLAIN SAX",
+          "voice": "SAX",
+          "macros": {
+            "TUNE": 0.5,
+            "BREATH": 0.6000000238418579,
+            "GESTURE": 0,
+            "MOTION": 0.5,
+            "BLEND": 0.6000000238418579,
+            "LOOSE": 0.5,
+            "ROOM": 0.4000000059604645,
+            "HOLD": 0.44999998807907104
+          }
+        },
+        "alias": false
+      }
+    },
+    {
+      "slot": 10,
+      "sample": "A10_Loop_02.wav",
+      "name": "Loop 02",
+      "class": "LOOP",
+      "level": 0.7079460024833679,
+      "pan": 0.5,
+      "tuneCoarse": 0,
+      "tuneFine": 0,
+      "muteGroup": 0,
+      "oneShot": true,
+      "colorHex": "#3f8cf0",
+      "source": {
+        "rawSha256": "766166cc36a4d044130041cb7c22908b04775e0c3a142e7e2d156213153b6587"
+      },
+      "recipe": {
+        "recipe": 2,
+        "patch": {
+          "engine": "CONSORT",
+          "version": 1,
+          "name": "PLAIN OBOE",
+          "voice": "OBOE",
+          "macros": {
+            "TUNE": 0.5,
+            "BREATH": 0.6000000238418579,
+            "GESTURE": 0,
+            "MOTION": 0.5,
+            "BLEND": 0.6000000238418579,
+            "LOOSE": 0.5,
+            "ROOM": 0.4000000059604645,
+            "HOLD": 0.44999998807907104
+          }
+        },
+        "alias": false
+      }
+    },
+    {
+      "slot": 11,
+      "sample": "A11_Loop_03.wav",
+      "name": "Loop 03",
+      "class": "LOOP",
+      "level": 0.7079460024833679,
+      "pan": 0.5,
+      "tuneCoarse": 0,
+      "tuneFine": 0,
+      "muteGroup": 0,
+      "oneShot": true,
+      "colorHex": "#3f8cf0",
+      "source": {
+        "rawSha256": "626dcc9109c08967d2d3ef81ff6561a66872888da71f40e77a448a2544748b38"
+      },
+      "recipe": {
+        "recipe": 2,
+        "patch": {
+          "engine": "CONSORT",
+          "version": 1,
+          "name": "PLAIN DUDUK",
+          "voice": "DUDUK",
+          "macros": {
+            "TUNE": 0.5,
+            "BREATH": 0.6000000238418579,
+            "GESTURE": 0,
+            "MOTION": 0.5,
+            "BLEND": 0.6000000238418579,
+            "LOOSE": 0.5,
+            "ROOM": 0.4000000059604645,
+            "HOLD": 0.44999998807907104
+          }
+        },
+        "alias": false
+      }
+    },
+    {
+      "slot": 12,
+      "sample": "A12_Loop_04.wav",
+      "name": "Loop 04",
+      "class": "LOOP",
+      "level": 0.7079460024833679,
+      "pan": 0.5,
+      "tuneCoarse": 0,
+      "tuneFine": 0,
+      "muteGroup": 0,
+      "oneShot": true,
+      "colorHex": "#3f8cf0",
+      "source": {
+        "rawSha256": "d5c280936d7986bb81c2f8bb5c541d4b00505885474ae884fbb04bfae6eeeab5"
+      },
+      "recipe": {
+        "recipe": 2,
+        "patch": {
+          "engine": "CONSORT",
+          "version": 1,
+          "name": "REED TRIO",
+          "voice": "OBOE",
+          "macros": {
+            "TUNE": 0.5,
+            "BREATH": 0.6000000238418579,
+            "GESTURE": 0,
+            "MOTION": 0.5,
+            "BLEND": 0.6000000238418579,
+            "LOOSE": 0.5,
+            "ROOM": 0.4000000059604645,
+            "HOLD": 0.75
+          },
+          "chairs": [
+            {
+              "voice": "CLARINET",
+              "interval": "FIFTH"
+            },
+            {
+              "voice": "BASSOON",
+              "interval": "MIN7"
+            }
+          ]
+        },
+        "alias": false
+      }
+    },
+    {
+      "slot": 13,
+      "sample": "A13_Loop_05.wav",
+      "name": "Loop 05",
+      "class": "LOOP",
+      "level": 0.7079460024833679,
+      "pan": 0.5,
+      "tuneCoarse": 0,
+      "tuneFine": 0,
+      "muteGroup": 0,
+      "oneShot": true,
+      "colorHex": "#3f8cf0",
+      "source": {
+        "rawSha256": "2c5454c2d8eec286e538491b658ec71070a23f726fb7b7d6f86db9c7ea4b27ee"
+      },
+      "recipe": {
+        "recipe": 2,
+        "patch": {
+          "engine": "CONSORT",
+          "version": 1,
+          "name": "SAX FIFTHS",
+          "voice": "SAX",
+          "macros": {
+            "TUNE": 0.5,
+            "BREATH": 0.6000000238418579,
+            "GESTURE": 0,
+            "MOTION": 0.5,
+            "BLEND": 0.6000000238418579,
+            "LOOSE": 0.5,
+            "ROOM": 0.4000000059604645,
+            "HOLD": 0.75
+          },
+          "chairs": [
+            {
+              "voice": "SAX",
+              "interval": "FIFTH"
+            },
+            {
+              "voice": "SAX",
+              "interval": "OCT_DOWN"
+            }
+          ]
+        },
+        "alias": false
+      }
+    },
+    {
+      "slot": 14,
+      "sample": "A14_Loop_06.wav",
+      "name": "Loop 06",
+      "class": "LOOP",
+      "level": 0.7079460024833679,
+      "pan": 0.5,
+      "tuneCoarse": 0,
+      "tuneFine": 0,
+      "muteGroup": 0,
+      "oneShot": true,
+      "colorHex": "#3f8cf0",
+      "source": {
+        "rawSha256": "fcc8121af6d664dcdca47498168549cce1bf937776f39073370332887d1679aa"
+      },
+      "recipe": {
+        "recipe": 2,
+        "patch": {
+          "engine": "CONSORT",
+          "version": 1,
+          "name": "FLUTE OCTAVES",
+          "voice": "FLUTE",
+          "macros": {
+            "TUNE": 0.5,
+            "BREATH": 0.6000000238418579,
+            "GESTURE": 0,
+            "MOTION": 0.5,
+            "BLEND": 0.6000000238418579,
+            "LOOSE": 0.5,
+            "ROOM": 0.4000000059604645,
+            "HOLD": 0.75
+          },
+          "chairs": [
+            {
+              "voice": "FLUTE",
+              "interval": "OCT_UP"
+            },
+            {
+              "voice": "CLARINET",
+              "interval": "OCT_DOWN"
+            }
+          ]
+        },
+        "alias": false
+      }
+    },
+    {
+      "slot": 15,
+      "sample": "A15_Loop_07.wav",
+      "name": "Loop 07",
+      "class": "LOOP",
+      "level": 0.7079460024833679,
+      "pan": 0.5,
+      "tuneCoarse": 0,
+      "tuneFine": 0,
+      "muteGroup": 0,
+      "oneShot": true,
+      "colorHex": "#3f8cf0",
+      "source": {
+        "rawSha256": "2e31e26931456860c4c4e90b31cc2a953caa3589dd3abd07347d7d79a0daadba"
+      },
+      "recipe": {
+        "recipe": 2,
+        "patch": {
+          "engine": "CONSORT",
+          "version": 1,
+          "name": "DRONE AND FIFTH",
+          "voice": "DUDUK",
+          "macros": {
+            "TUNE": 0.5,
+            "BREATH": 0.6000000238418579,
+            "GESTURE": 0,
+            "MOTION": 0.5,
+            "BLEND": 0.6000000238418579,
+            "LOOSE": 0.5,
+            "ROOM": 0.4000000059604645,
+            "HOLD": 0.75
+          },
+          "chairs": [
+            {
+              "voice": "DUDUK",
+              "interval": "OCT_DOWN"
+            },
+            {
+              "voice": "DUDUK",
+              "interval": "FIFTH"
+            }
+          ]
+        },
+        "alias": false
+      }
+    },
+    {
+      "slot": 16,
+      "sample": "A16_Loop_08.wav",
+      "name": "Loop 08",
+      "class": "LOOP",
+      "level": 0.7079460024833679,
+      "pan": 0.5,
+      "tuneCoarse": 0,
+      "tuneFine": 0,
+      "muteGroup": 0,
+      "oneShot": true,
+      "colorHex": "#3f8cf0",
+      "source": {
+        "rawSha256": "cc775193d2dcb8fd9805770de3c6246b3ffee1ffdf4b6d6ebb57ba636a97b60a"
+      },
+      "recipe": {
+        "recipe": 2,
+        "patch": {
+          "engine": "CONSORT",
+          "version": 1,
+          "name": "FULL QUARTET",
+          "voice": "CLARINET",
+          "macros": {
+            "TUNE": 0.5,
+            "BREATH": 0.6000000238418579,
+            "GESTURE": 0,
+            "MOTION": 0.5,
+            "BLEND": 0.6000000238418579,
+            "LOOSE": 0.5,
+            "ROOM": 0.4000000059604645,
+            "HOLD": 0.75
+          },
+          "chairs": [
+            {
+              "voice": "FLUTE",
+              "interval": "OCT_UP"
+            },
+            {
+              "voice": "OBOE",
+              "interval": "FIFTH"
+            },
+            {
+              "voice": "BASSOON",
+              "interval": "OCT_DOWN"
+            }
+          ]
+        },
+        "alias": false
+      }
+    }
+  ]
+}

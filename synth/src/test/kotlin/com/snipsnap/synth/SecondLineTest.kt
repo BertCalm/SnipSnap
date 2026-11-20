@@ -46,7 +46,7 @@ class SecondLineTest {
             }
         }
         assertEquals(ParadeSecondLine.defaults(),ParadeSecondLine.settled(mapOf("DAMP" to Float.NaN,"TUNE" to Float.POSITIVE_INFINITY,"UNKNOWN" to 1f)))
-        assertFailsWith<IllegalArgumentException> { ParadeSecondLine.Recipe(ParadeSecondLine.Voice.BASS_OPEN,model=4) }
+        assertFailsWith<IllegalArgumentException> { ParadeSecondLine.Recipe(ParadeSecondLine.Voice.BASS_OPEN,model=5) }
         assertFailsWith<IllegalArgumentException> { ParadeSecondLine.Recipe(ParadeSecondLine.Voice.BASS_OPEN,take=-1) }
     }
 }

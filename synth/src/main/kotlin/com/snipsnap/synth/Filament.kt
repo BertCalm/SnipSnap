@@ -258,28 +258,45 @@ object Filament {
         val actualHz: Double,
     )
 
+    /**
+     * Held keys only: how the launched overtones thin out with their own frequency.
+     *
+     * The source is one fixed twelve-harmonic recipe at every pitch, so a held key carries the
+     * same bright cluster up the keyboard: under 800 Hz at C2, 0.5 to 3 kHz at C4, 2 to 12 kHz at
+     * C6. The owner heard that as "kind of abrasive" in the middle and top and "less abrasive" in
+     * the bass (20 Nov 2026). A held key therefore scales every overtone by
+     * tiltGain(its frequency) / tiltGain(root), where
+     * tiltGain(f) = (1 + (f / HELD_TILT_CORNER_HZ)^2)^(-tilt / 2): about unity while the overtone
+     * is below the corner, so the bass keeps its recipe, and tilt * 6 dB per octave above it.
+     * The root keeps its level and nothing is renormalized, so the overtones are removed
+     * rather than traded for a louder root. Zero is the untilted source. Patch renders never
+     * tilt, so every preset stays byte for byte what was accepted.
+     */
+    const val HELD_TILT_CORNER_HZ = 700.0
+    const val HELD_TILT = 1.0
+
     internal fun keyNote(patch: FilamentPatch, midi: Int = patch.midi,
-                         cancelled: () -> Boolean = { false }): KeyNote =
-        heldNote(patch, midi, cancelled, continuationEvidence = false).note
+                         cancelled: () -> Boolean = { false }, tilt: Double = HELD_TILT): KeyNote =
+        heldNote(patch, midi, cancelled, continuationEvidence = false, tilt = tilt).note
 
     internal fun keyNoteMeasured(patch: FilamentPatch, midi: Int = patch.midi,
-                                 cancelled: () -> Boolean = { false }): HeldNoteEvidence =
-        heldNote(patch, midi, cancelled, continuationEvidence = true)
+                                 cancelled: () -> Boolean = { false }, tilt: Double = HELD_TILT): HeldNoteEvidence =
+        heldNote(patch, midi, cancelled, continuationEvidence = true, tilt = tilt)
 
     internal fun keyComponents(patch: FilamentPatch, midi: Int,
-                               cancelled: () -> Boolean): FilamentHaloKeys.Components =
+                               cancelled: () -> Boolean, tilt: Double = HELD_TILT): FilamentHaloKeys.Components =
         requireNotNull(synthesize(patch.voice, patch.macros + ("HOLD" to 1f), midi, patch.velocity,
             patch.config, Options(), patch.model, captureDiagnostics = false, cancelled = cancelled,
-            retainOnset = true, retainComponents = true).components)
+            retainOnset = true, retainComponents = true, heldTilt = tilt).components)
 
     private fun heldNote(patch: FilamentPatch, midi: Int, cancelled: () -> Boolean,
-                         continuationEvidence: Boolean): HeldNoteEvidence {
+                         continuationEvidence: Boolean, tilt: Double): HeldNoteEvidence {
         require(FilamentKeys.supports(patch)) {
             "FILAMENT playable keys require a supported model-$MODEL_VERSION recipe"
         }
         return requireNotNull(synthesize(patch.voice, patch.macros + ("HOLD" to 1f), midi, patch.velocity,
             patch.config, Options(), patch.model, captureDiagnostics = false, cancelled = cancelled,
-            retainOnset = true, continuationEvidence = continuationEvidence).held)
+            retainOnset = true, continuationEvidence = continuationEvidence, heldTilt = tilt).held)
     }
 
     private data class RenderResult(val samples: FloatArray, val probe: Probe? = null,
@@ -688,8 +705,9 @@ object Filament {
         config: FilamentConfig,
         rate: Int = HIGH_RATE,
         cancelled: () -> Boolean = { false },
+        heldTilt: Double = 0.0,
     ): FloatArray {
-        if (model != ORIGINAL_MODEL) return sourceTable2(voice, m, hz, effort, velocity, frames, loop, carrierCycles, config, rate, cancelled)
+        if (model != ORIGINAL_MODEL) return sourceTable2(voice, m, hz, effort, velocity, frames, loop, carrierCycles, config, rate, cancelled, heldTilt)
         val inject = m.getValue("INJECT").toDouble()
         val hold = m.getValue("HOLD").toDouble()
         val weights = harmonicWeights(inject, voice, hz)
@@ -760,6 +778,7 @@ object Filament {
         config: FilamentConfig,
         rate: Int = HIGH_RATE,
         cancelled: () -> Boolean = { false },
+        heldTilt: Double = 0.0,
     ): FloatArray {
         val inject = m.getValue("INJECT").toDouble()
         val hold = if (loop) 1.0 else m.getValue("HOLD").toDouble()
@@ -774,6 +793,12 @@ object Filament {
         }
         val normalization = weights.sum()
         for (i in weights.indices) weights[i] /= normalization
+        // Held keys only (see HELD_TILT), after normalization so the root keeps its level. The
+        // untilted branch is skipped entirely: patch renders keep their exact historical weights.
+        if (heldTilt != 0.0) {
+            fun tiltGain(f: Double) = (1.0 + (f / HELD_TILT_CORNER_HZ).pow(2)).pow(-heldTilt / 2.0)
+            for (h in 1 until weights.size) weights[h] *= tiltGain((h + 1.0) * hz) / tiltGain(hz)
+        }
         val seeded = Random(Dsp.seedFor("filament-articulation-v2", config.seed, voice))
         val phaseA = seeded.nextDouble() * TWO_PI
         val phaseB = seeded.nextDouble() * TWO_PI
@@ -889,7 +914,10 @@ object Filament {
         retainOnset: Boolean = false,
         continuationEvidence: Boolean = false,
         retainComponents: Boolean = false,
+        heldTilt: Double = 0.0,
     ): RenderResult {
+        require(heldTilt.isFinite() && heldTilt >= 0.0) { "FILAMENT held tilt must be finite and not negative" }
+        require(heldTilt == 0.0 || retainOnset) { "only a held FILAMENT key tilts its source" }
         requireActive(cancelled)
         require(model in ORIGINAL_MODEL..MODEL_VERSION) { "unsupported FILAMENT model $model" }
         require(options.referenceOversampling in listOf(4, 8)) { "FILAMENT reference oversampling must be 4 or 8" }
@@ -967,7 +995,7 @@ object Filament {
             }
         } else {
             val highFrames = periodFrames * oversampling
-            val source = sourceTable(voice, m, hz, effort, velocity.toDouble(), highFrames, true, cycles, model, config, highRate, cancelled)
+            val source = sourceTable(voice, m, hz, effort, velocity.toDouble(), highFrames, true, cycles, model, config, highRate, cancelled, heldTilt)
             val recent = ArrayList<Cycle>()
             val onset = if (retainOnset) ArrayList<FloatArray>() else null
             val bodyOnset = if (retainComponents) ArrayList<FloatArray>() else null

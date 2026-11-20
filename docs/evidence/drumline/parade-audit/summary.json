@@ -1,0 +1,152 @@
+{
+  "benchmark_cases": 110,
+  "output_fingerprints_identical": 110,
+  "render_source_count": 55,
+  "output_reference_cases": 165,
+  "retune_diagnostic": {
+    "input_hz": 15000,
+    "ratio": 1.1,
+    "intended_hz": 16500,
+    "fold_hz": 1140,
+    "linear_fold_db": -40.70316155912665,
+    "bandlimited_fold_db": -142.09003621928534,
+    "scope": "Single coherent synthetic-tone fold; not whole-renderer internal-rate reference"
+  },
+  "cache": {
+    "entries": 2,
+    "max_source_payload_bytes": 12700800,
+    "copy_guard_negative_control": "Removing only return-copy made cache-mutation test fail at sample100 with the named cache mutation assertion."
+  },
+  "output_reference_scope": "Same-passband output-stage reference includes edge and projected out-of-band contributions; not complete internal-rate synthesis alias power.",
+  "worst_output_results": {
+    "reference_db": {
+      "source": "secondline/TRIANGLE_MUTED",
+      "case": "bright_damped",
+      "reference_db": "-33.17955108530103",
+      "reference_20_18k_db": "-69.62745408350307",
+      "edge_db": "-69.05851488025776",
+      "projected_db": "-33.17780537610658",
+      "decomposition_db": "-140.86696043250387"
+    },
+    "reference_20_18k_db": {
+      "source": "samba/AGOGO_HIGH",
+      "case": "bright_damped",
+      "reference_db": "-63.7870968007537",
+      "reference_20_18k_db": "-66.58919222454153",
+      "edge_db": "-64.97201137665512",
+      "projected_db": "-75.66856907270082",
+      "decomposition_db": "-140.88067091334673"
+    },
+    "edge_db": {
+      "source": "samba/AGOGO_HIGH",
+      "case": "bright_damped",
+      "reference_db": "-63.7870968007537",
+      "reference_20_18k_db": "-66.58919222454153",
+      "edge_db": "-64.97201137665512",
+      "projected_db": "-75.66856907270082",
+      "decomposition_db": "-140.88067091334673"
+    },
+    "projected_db": {
+      "source": "secondline/TRIANGLE_MUTED",
+      "case": "bright_damped",
+      "reference_db": "-33.17955108530103",
+      "reference_20_18k_db": "-69.62745408350307",
+      "edge_db": "-69.05851488025776",
+      "projected_db": "-33.17780537610658",
+      "decomposition_db": "-140.86696043250387"
+    },
+    "decomposition_db": {
+      "source": "samba/SURDO_LOW_OPEN",
+      "case": "bright_open",
+      "reference_db": "-87.38604030561035",
+      "reference_20_18k_db": "-90.42896681467866",
+      "edge_db": "-87.48092810866852",
+      "projected_db": "-99.92408543848107",
+      "decomposition_db": "-140.02764858297843"
+    }
+  },
+  "actual_kit_recipe_cases": 80,
+  "kit_output_reference_cases": 80,
+  "secondline_tuned_speed_cases": 18,
+  "kit_worst_output_results": {
+    "reference_db": {
+      "source": "kit/drumline-street/FLAM",
+      "case": "kit_recipe",
+      "reference_db": "-42.503376679307216",
+      "reference_20_18k_db": "-81.09307159968364",
+      "edge_db": "-105.4050147931564",
+      "projected_db": "-42.503423742999786",
+      "decomposition_db": "-140.36918310465703"
+    },
+    "reference_20_18k_db": {
+      "source": "kit/second-line-classic/RIMSHOT",
+      "case": "kit_recipe",
+      "reference_db": "-67.75643266773633",
+      "reference_20_18k_db": "-69.50027080647331",
+      "edge_db": "-66.13780227265657",
+      "projected_db": "-76.19813728619377",
+      "decomposition_db": "-140.73782502985512"
+    },
+    "decomposition_db": {
+      "source": "kit/drumline-street/BASS_5",
+      "case": "kit_recipe",
+      "reference_db": "-88.63387768030087",
+      "reference_20_18k_db": "-96.50792269702579",
+      "edge_db": "-93.58926895601252",
+      "projected_db": "-90.24307491344855",
+      "decomposition_db": "-139.71434260060573"
+    }
+  },
+  "cold_refinement": {
+    "benchmark_cases": 36,
+    "output_fingerprints_identical": 36,
+    "interpolation_grid_payload_bytes": 2381400,
+    "shared_hard_soft_grid": true,
+    "scope": "Precomputed interpolation addresses; first crash 884 ms, subsequent cache-cleared cymbal sources 559\u2013573 ms on shared host; no phone budget pass."
+  },
+  "final_focused": {
+    "command": "./gradlew --no-daemon :synth:test --tests '*ParadeCacheTest' --tests '*ParadeRetuneTest' --tests '*SecondLineTest' --tests '*ParadeOutputAuditTest'",
+    "exit_code": 0,
+    "elapsed_seconds": 96,
+    "classes": [
+      {
+        "name": "com.snipsnap.synth.SecondLineTest",
+        "tests": "4",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "60.049"
+      },
+      {
+        "name": "com.snipsnap.synth.ParadeCacheTest",
+        "tests": "1",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "5.059"
+      },
+      {
+        "name": "com.snipsnap.synth.ParadeRetuneTest",
+        "tests": "2",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.96"
+      },
+      {
+        "name": "com.snipsnap.synth.ParadeOutputAuditTest",
+        "tests": "1",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "5.911"
+      }
+    ]
+  },
+  "acceptance": {
+    "speed": "OPEN: cold sources and long figures exceed target; phone not measured",
+    "internal_synthesis_alias": "OPEN: complete higher-rate/analytic source reference still needed",
+    "unfiltered_jvm": "RUNNING; no full-green claim",
+    "android": "Requires CI, no local SDK"
+  }
+}

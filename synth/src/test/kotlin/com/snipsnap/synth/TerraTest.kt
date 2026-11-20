@@ -108,6 +108,21 @@ class TerraTest {
                 assertTrue(tail < peak * 0.1, "$voice should decay: its last 100 ms at ${"%.1f".format(20 * Math.log10(tail / peak))} dB from its loudest 10 ms")
                 continue
             }
+            if (voice in TerraSticks.VOICES) {
+                // The stick voices are fitted to references too (docs/TERRA_STICKS.md), and two of them are not
+                // one strike: NAGADO's reference is an ensemble hit that builds over 32 ms (its first 10 ms
+                // against the next 90 reads 0.88 here), BINZASARA is 21 slat clicks swelling for 35 ms, and
+                // COWBELL is a clapper's three strikes, the loudest the third at 345 ms. So, as for the fitted
+                // hands, a real attack is a hit's shape: the loudest 10 ms early, the tail far under it.
+                val win = 441
+                val loudest = (0..samples.size - win step win / 2).maxByOrNull { rms(it until it + win) }!!
+                val peak = rms(loudest until loudest + win)
+                val tail = rms(samples.size - 4410 until samples.size)
+                val latest = if (voice == TerraVoice.COWBELL) 17640 else 3528      // the third strike, measured at 345 ms; else 80 ms
+                assertTrue(loudest <= latest, "$voice's loudest 10 ms should land in its first ${latest * 1000 / 44100} ms, not at ${loudest * 1000 / 44100} ms")
+                assertTrue(tail < peak * 0.1, "$voice should decay: its last 100 ms at ${"%.1f".format(20 * Math.log10(tail / peak))} dB from its loudest 10 ms")
+                continue
+            }
             val onset = rms(0 until minOf(441, samples.size))
             val restEnd = minOf(4410, samples.size)
             val rest = if (restEnd > 441) rms(441 until restEnd) else onset

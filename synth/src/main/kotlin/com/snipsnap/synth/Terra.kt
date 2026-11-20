@@ -59,7 +59,10 @@ import kotlin.math.tanh
  * only the accumulation itself ([strikeAndModalBank]) had to be bespoke,
  * and every topology shares it.
  */
-enum class TerraVoice { COMPOUND_MEMBRANE, RESONANT_CAVITY, CONICAL_BELL, TUNED_BAR, BOX, SLAP, DAYAN, DARBUKA, DOUM, DJEMBE, DHOLAK, BAYAN, TUN }
+enum class TerraVoice {
+    COMPOUND_MEMBRANE, RESONANT_CAVITY, CONICAL_BELL, TUNED_BAR, BOX, SLAP, DAYAN, DARBUKA, DOUM, DJEMBE, DHOLAK, BAYAN, TUN,
+    ODAIKO, NAGADO, SHIME, KA, KANE, CHAPPA, BINZASARA, COWBELL, WATER_DRUM,
+}
 
 object Terra {
 
@@ -121,6 +124,8 @@ object Terra {
         TerraVoice.BOX -> TerraBox.macros()
         TerraVoice.SLAP, TerraVoice.DAYAN, TerraVoice.DARBUKA, TerraVoice.DOUM,
         TerraVoice.DJEMBE, TerraVoice.DHOLAK, TerraVoice.BAYAN, TerraVoice.TUN -> TerraHands.macros(voice)
+        TerraVoice.ODAIKO, TerraVoice.NAGADO, TerraVoice.SHIME, TerraVoice.KA, TerraVoice.KANE,
+            TerraVoice.CHAPPA, TerraVoice.BINZASARA, TerraVoice.COWBELL, TerraVoice.WATER_DRUM -> TerraSticks.macros(voice)
     }
 
     /** The hand drums ([TerraHands], and [TerraFitted]'s): their own render and output stage, like BOX. */
@@ -212,13 +217,16 @@ object Terra {
         // owner picked had no PUNCH.
         if (voice == TerraVoice.BOX) return Snip(TerraBox.finish(box(m, renderRate, inputsFor, velocity, take), renderRate), channels = 1, sampleRate = RATE)
         if (voice in HAND_DRUMS) return Snip(TerraBox.finish(hand(voice, m, renderRate, inputsFor, velocity, take), renderRate), channels = 1, sampleRate = RATE)
+        if (voice in TerraSticks.VOICES) return Snip(TerraBox.finish(stick(voice, m, renderRate, inputsFor, velocity, take), renderRate), channels = 1, sampleRate = RATE)
         val (raw, clackFrames) = when (voice) {
             TerraVoice.COMPOUND_MEMBRANE -> compoundMembrane(m, renderRate, inputsFor, velocity, take) to 0
             TerraVoice.RESONANT_CAVITY -> resonantCavity(m, renderRate, inputsFor, velocity = velocity, take = take) to 0
             TerraVoice.CONICAL_BELL -> conicalBell(m, renderRate, inputsFor, velocity, take)
             TerraVoice.TUNED_BAR -> tunedBar(m, renderRate, inputsFor, velocity = velocity, take = take) to 0
             TerraVoice.BOX, TerraVoice.SLAP, TerraVoice.DAYAN, TerraVoice.DARBUKA, TerraVoice.DOUM,
-            TerraVoice.DJEMBE, TerraVoice.DHOLAK, TerraVoice.BAYAN, TerraVoice.TUN -> error("$voice returned above")
+            TerraVoice.DJEMBE, TerraVoice.DHOLAK, TerraVoice.BAYAN, TerraVoice.TUN,
+            TerraVoice.ODAIKO, TerraVoice.NAGADO, TerraVoice.SHIME, TerraVoice.KA, TerraVoice.KANE,
+            TerraVoice.CHAPPA, TerraVoice.BINZASARA, TerraVoice.COWBELL, TerraVoice.WATER_DRUM -> error("$voice returned above")
         }
         // A fixed level into Punch.saturate's nonlinearity, same reason
         // Thump.render normalizes raw before its own Punch call (Punch.kt's
@@ -276,6 +284,8 @@ object Terra {
             TerraVoice.BOX -> box(m, renderRate, inputsFor, velocity, plateOnly = true)
             TerraVoice.SLAP, TerraVoice.DAYAN, TerraVoice.DARBUKA, TerraVoice.DOUM,
             TerraVoice.DJEMBE, TerraVoice.DHOLAK, TerraVoice.BAYAN, TerraVoice.TUN -> hand(voice, m, renderRate, inputsFor, velocity, headOnly = true)
+            TerraVoice.ODAIKO, TerraVoice.NAGADO, TerraVoice.SHIME, TerraVoice.KA, TerraVoice.KANE,
+            TerraVoice.CHAPPA, TerraVoice.BINZASARA, TerraVoice.COWBELL, TerraVoice.WATER_DRUM -> stick(voice, m, renderRate, inputsFor, velocity, headOnly = true)
         }
     }
 
@@ -309,6 +319,22 @@ object Terra {
         require(inputs?.pitch == null) { "$voice has no droop line for a pitch curve to bend" }
         if (fitted) return TerraFitted.render(voice, m, rate, velocity, seedOf(noise, take), inputs?.level, headOnly)
         return TerraHands.render(voice, m, rate, velocity, structure, seedOf(noise, take), inputs?.level, headOnly)
+    }
+
+    /** A stick voice's noise seed ([TerraSticks]); its take re-seeds it as the hand drums' is. */
+    private fun stickSeed(voice: TerraVoice): Int = 163 + 4 * (voice.ordinal - TerraVoice.ODAIKO.ordinal)
+
+    /**
+     * A stick-struck or shaken voice ([TerraSticks]) at the render [rate]: its [Body] is its notes
+     * at its loudest landing. A pitch curve is refused: these have no droop line.
+     */
+    private fun stick(voice: TerraVoice, m: Map<String, Float>, rate: Int, inputsFor: ((Body) -> BankInputs?)?, velocity: Float, take: Int = 0, headOnly: Boolean = false): FloatArray {
+        val inputs = inputsFor?.let { f ->
+            val (modes, fundamental) = TerraSticks.bodyModes(voice, m)
+            f(Body(modes, fundamental, 0f, TerraSticks.frames(voice, rate), rate, onsetSamples = 0))
+        }
+        require(inputs?.pitch == null) { "$voice has no droop line for a pitch curve to bend" }
+        return TerraSticks.render(voice, m, rate, velocity, take, seedOf(stickSeed(voice), take), inputs?.level, headOnly)
     }
 
     /**
