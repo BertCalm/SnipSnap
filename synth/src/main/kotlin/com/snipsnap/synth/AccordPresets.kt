@@ -1,10 +1,12 @@
 package com.snipsnap.synth
 
 /**
- * The six accepted acoustic anchors, with the same saved mechanical history.
+ * The accepted acoustic anchors, with the same saved mechanical history.
  * BRUSH is the default. The four TINE choices remain separate profiles: no
  * winner or combined profile was selected during the Python listening work.
- * Native rendering and the proposed control domains still require listening.
+ * The first six were kept natively in accord-native-1. REED, COURSE, ESCAPEMENT
+ * and BELL follow, appended: each is its voice's default recipe at C3, normal
+ * touch, the render kept in accord-voices-1 (19 Nov 2026).
  */
 object AccordPresets {
     private val bank: List<AccordPatch> by lazy {
@@ -19,6 +21,10 @@ object AccordPresets {
                 acousticProfile = AccordAcousticProfile.BRIGHT_EDGE),
             AccordPatch("LONG RING", AccordVoice.TINE, Accord.defaults(AccordVoice.TINE),
                 acousticProfile = AccordAcousticProfile.LONG_RING),
+            AccordPatch("REED", AccordVoice.REED, Accord.defaults(AccordVoice.REED)),
+            AccordPatch("COURSE", AccordVoice.COURSE, Accord.defaults(AccordVoice.COURSE)),
+            AccordPatch("ESCAPEMENT", AccordVoice.ESCAPEMENT, Accord.defaults(AccordVoice.ESCAPEMENT)),
+            AccordPatch("BELL", AccordVoice.BELL, Accord.defaults(AccordVoice.BELL)),
         )
     }
 

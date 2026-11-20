@@ -1,4 +1,4 @@
-> STAGGER (round 2b built 2026-11-19, "a bit of compression" in every print; round 1 was "too much like drum machine sounds", round 1b "New sounds are better"):
+> STAGGER (round 3b built 2026-11-20, the snare damped and opened and the dark shelf removed after round 3 was heard as "flat, muffled, and muddy"; round 3 boxed the kicks after round 2d's "light taps"; round 2c was "room reverb", round 2b "echoy", round 1 "too much like drum machine sounds", round 1b "New sounds are better"):
 > three kits, CARDBOARD, MATINEE and STUMBLE, on the SKINS shelf, after the owner's muffled-kick, drunk-clock, foley-fill
 > producer profile, in the CYPHER shape, their drums EMBER's, proven through save, playback and MPC 3 export in software; a MUFFLE strike law, the `Cypher.staggered` clock, a kit-side
 > converter-then-pitch FOLEY print, a GLASS source and a PUNCH strike. Not on the shelf. See [STAGGER](STAGGER.md).
@@ -3403,6 +3403,10 @@ every factor is exactly 1 at full velocity, so no saved sound moves; the
 held-loop join sits at the loop's end so the attack stays the render's own;
 and the chord voicings gather near one centre so neighbouring pads read as a
 progression.
+
+## CONSORT woodwind section prototype
+
+A lead and up to three harmony players, each a blown pipe (BORE's loop and valves as a cone, a closed cylinder or a jet), six voices, fixed intervals, velocity as breath, five gestures, four takes and a per-chair room. The owner approved the Python prototype's sound over three rounds (2026-11-19); the Kotlin engine, patch and probes exist and nobody has heard them. No presets, kit, keygroups, picker entry or loop; render time is over the house rule. See `docs/CONSORT.md`.
 
 ## CHITIN finite-note prototype
 

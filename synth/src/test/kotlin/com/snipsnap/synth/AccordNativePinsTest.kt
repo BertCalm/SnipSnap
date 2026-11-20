@@ -13,12 +13,15 @@ import kotlin.test.assertEquals
  * sections and AccordKits.patches(), so the ids name what was heard.
  */
 internal object AccordNativePins {
+    /** The three voices heard in accord-native-1. Later voices are pinned by AccordVoicesPinsTest. */
+    val VOICES = listOf(AccordVoice.BRUSH, AccordVoice.WOOD, AccordVoice.TINE)
+
     fun cases(): List<Pair<String, AccordPatch>> {
         val result = mutableListOf<Pair<String, AccordPatch>>()
-        for (patch in AccordPresets.all()) {
+        for (patch in AccordPresets.all().filter { it.voice in VOICES }) {
             result += "${patch.voice.name.lowercase()}-${patch.acousticProfile.name.lowercase()}" to patch
         }
-        for (voice in AccordVoice.entries) {
+        for (voice in VOICES) {
             val anchor = AccordPresets.forVoice(voice).first()
             for (midi in listOf(36, 60, 72)) result += "${voice.name.lowercase()}-note-$midi" to anchor.copy(midi = midi)
             // Normal touch (.75) is the anchor itself, pinned above.

@@ -78,6 +78,23 @@ GROWL_HZ = 31.0               # Bore.OVERBLOW_GROWL_HZ, the rate the owner chose
 FLUTTER_HZ = 24.0             # a flutter-tongue is 20 to 30 rolls a second
 
 
+# Round robin. Round 2's takes only re-rolled small random numbers (a few cents, a few
+# milliseconds) and the owner could not hear a difference. A player repeating a note does not
+# vary by random dust; they vary the *way* they play it. So each take is a named way of playing,
+# spread on purpose across the things an ear catches first: how hard the tongue hits, how fast
+# the note speaks, whether it is approached from below, how bright it is, when the vibrato
+# arrives and how fast it is. Level and pitch centre are not varied: a take must be the same note.
+#   effort: added to breath effort (brighter or duller)     attack: attack time multiplier
+#   chiff: tongue noise multiplier                          scoop: cents under at the start
+#   vib_at: seconds before vibrato enters                   vib_rate, vib_depth, air: multipliers
+TAKES = [
+    dict(name="centred", effort=0.00,  attack=1.00, chiff=1.0, scoop=0.0,  vib_at=0.18, vib_rate=1.00, vib_depth=1.0, air=1.0),
+    dict(name="soft",    effort=-0.15, attack=2.20, chiff=0.3, scoop=0.0,  vib_at=0.42, vib_rate=0.92, vib_depth=0.7, air=1.5),
+    dict(name="bitten",  effort=0.14,  attack=0.45, chiff=2.6, scoop=0.0,  vib_at=0.08, vib_rate=1.08, vib_depth=1.2, air=0.8),
+    dict(name="leaning", effort=0.04,  attack=1.30, chiff=1.0, scoop=110.0, vib_at=0.30, vib_rate=1.00, vib_depth=1.5, air=1.1),
+]
+
+
 def hz_of(midi: float) -> float:
     return 440.0 * 2 ** ((midi - 69) / 12)
 
@@ -133,6 +150,13 @@ def plan(inst: str, midi: float, velocity: float, macros: dict, role: int, secon
     # each time (drift, lateness, breath, vibrato), and nothing about the instrument itself
     seed = sk.seed_for("CONSORT", inst, int(round(midi)), role, take)
     effort = effort_of(m["BREATH"], velocity)
+    # this chair's way of playing on this take. Chairs are staggered (take + role) so a section
+    # does not all bite or all lean together, and LOOSE scales how far a take strays from centred
+    way = TAKES[(take + role) % len(TAKES)]
+    stray = sk.lin(m["LOOSE"], 0.3, 1.5)
+    varied = float(np.clip(effort + stray * way["effort"], 0.0, 1.0))
+    # a take may not push a note across the overblow line: that is velocity's job, not chance's
+    effort = min(varied, OVERBLOW_FROM - 0.01) if effort < OVERBLOW_FROM else max(varied, OVERBLOW_FROM)
     gesture = gesture_of(m["GESTURE"])
     motion = m["MOTION"]
     # LOOSE is how human the players are. The lead gets 60 % of it: a soloist is steadier than
@@ -155,10 +179,10 @@ def plan(inst: str, midi: float, velocity: float, macros: dict, role: int, secon
     under = 1.0 + 0.8 * loose * rnd.next()           # 4. how far under the note they start
     vib_late = 0.12 * loose * rnd.next()             # 5. when their vibrato comes in
     air = 1.0 + 0.5 * loose * rnd.next()             # 6. how much air leaks round the reed or the lip
-    human = dict(flat_cents=round(flat, 1), attack_scale=round(attack_scale, 2), stop_ms=round(1000 * stop, 1))
+    human = dict(way=way["name"], flat_cents=round(flat, 1), attack_scale=round(attack_scale, 2), stop_ms=round(1000 * stop, 1))
     ends = late + blown + stop
 
-    attack = spec["attack"] * sk.lin(effort, 1.5, 0.6) * attack_scale   # a hard blow speaks faster
+    attack = spec["attack"] * sk.lin(effort, 1.5, 0.6) * attack_scale * way["attack"] ** stray   # a hard blow speaks faster
     env = np.clip(tt / attack, 0, 1) ** 0.7
     env *= np.clip((ends - t) / release, 0, 1)                    # the breath stops, the pipe rings out
     env[t < late] = 0.0
@@ -175,9 +199,10 @@ def plan(inst: str, midi: float, velocity: float, macros: dict, role: int, secon
     cents = np.zeros(n)
     # vibrato enters late and grows, as a held wind note's does; MOTION scales its depth on a plain note
     vib_hz, vib_cents = spec["vib"]
-    vib_hz *= 1.0 + 0.06 * rnd.next()
+    vib_hz *= (1.0 + 0.06 * rnd.next()) * way["vib_rate"] ** stray
     depth = vib_cents * (sk.lin(motion, 0.2, 1.6) if gesture == "PLAIN" else 0.6)
-    rise = np.clip((tt - 0.18 - vib_late) / 0.35, 0, 1)
+    depth *= way["vib_depth"] ** stray
+    rise = np.clip((tt - 0.18 - stray * (way["vib_at"] - 0.18) - vib_late) / 0.35, 0, 1)
     # a played vibrato is not a sine from a box: its speed wanders (up to 9 %), its depth breathes
     # (up to 35 %), and it shakes the breath as well as the pitch, so the tone pulses with it
     vib_rate = vib_hz * (1.0 + 0.09 * loose * smooth_noise(n, seed + 19, 1.2))
@@ -189,6 +214,7 @@ def plan(inst: str, midi: float, velocity: float, macros: dict, role: int, secon
     cents += sk.lin(loose, 2.0, 14.0) * smooth_noise(n, seed + 11, 0.8) + flat - 9.0 * loose * tired
     # every wind attack starts a few cents under and settles; a harder blow starts further under
     cents -= sk.lin(effort, 6.0, 22.0) * under * np.exp(-tt / 0.04)
+    cents -= stray * way["scoop"] * np.exp(-tt / 0.13)             # the "leaning" take comes up into the note
 
     pressure_scale = np.ones(n)
     if gesture == "SCOOP":
@@ -225,7 +251,7 @@ def plan(inst: str, midi: float, velocity: float, macros: dict, role: int, secon
         pressure_scale *= 1.0 + 0.4 * over ** 1.2 * np.sin(2 * np.pi * GROWL_HZ * tt) * np.clip((tt - 0.06) / 0.05, 0, 1)
 
     lo, hi = spec["noise"]
-    noise = sk.lin(effort, lo, hi) * air * (1.0 + 2.5 * np.exp(-tt / 0.05))     # extra air at the tongue: the chiff
+    noise = sk.lin(effort, lo, hi) * air * way["air"] ** stray * (1.0 + 2.5 * way["chiff"] ** stray * np.exp(-tt / 0.05))     # extra air at the tongue: the chiff
     noise = noise * (1.0 + 0.4 * loose * smooth_noise(n, seed + 31, 4.0))       # and the leak is never steady
     # the flute's overblow: after the low note has spoken (0.14 s) the jet's travel time halves
     # over 5 ms and the note cracks to the octave. `jet` is that travel time in periods.
@@ -234,7 +260,7 @@ def plan(inst: str, midi: float, velocity: float, macros: dict, role: int, secon
         jet -= 0.25 * np.clip((tt - 0.14) / 0.005, 0, 1)
         pressure_scale *= 1.0 + 0.25 * over * np.sin(2 * np.pi * GROWL_HZ * tt) * np.clip((tt - 0.2) / 0.05, 0, 1)
     return dict(env=env * pressure_scale, cents=cents, noise=noise, jet=jet, effort=effort, over=over,
-                seed=seed, late=late, human=human)
+                seed=seed, late=late, human=human, attack=attack, tongue=way["chiff"] ** stray)
 
 
 def blow(inst: str, hz: float, p: dict, pin_cents: float = 0.0) -> np.ndarray:
@@ -282,11 +308,13 @@ def blow(inst: str, hz: float, p: dict, pin_cents: float = 0.0) -> np.ndarray:
         pm_curve = np.minimum(closing * share * p["env"] * (1.0 + p["noise"] * rng), closing * 0.99)
     # the tongue's seed: eight periods of the note put straight into the bore so a reed speaks at once
     seed = np.zeros(n)
-    start = int((p["late"] + 0.6 * spec["attack"]) * RATE)
+    start = int((p["late"] + 0.6 * p["attack"]) * RATE)
     k = int(8 * RATE / hz)
     if pipe != "JET" and start + k < n:
         i = np.arange(k)
-        seed[start:start + k] = 0.3 * sk.lin(effort, 0.3, 1.0) * (0.5 - 0.5 * np.cos(2 * np.pi * i / k)) * np.sin(2 * np.pi * hz * i / RATE)
+        # the tongue's strength is part of the take: a bitten note is seeded hard and speaks at once,
+        # a soft one is barely seeded and the reed has to find the note by itself
+        seed[start:start + k] = min(0.6, 0.3 * sk.lin(effort, 0.3, 1.0) * p["tongue"]) * (0.5 - 0.5 * np.cos(2 * np.pi * i / k)) * np.sin(2 * np.pi * hz * i / RATE)
     if pipe == "JET" and p["over"] > 0:
         at = int((p["late"] + 0.145) * RATE)                   # an octave seed where the jet arrives, as BORE's crack has
         k2 = int(8 * RATE / (2 * hz))
@@ -561,14 +589,33 @@ def main(out_dir: str) -> int:
     for label, loose in (("stiff", 0.0), ("default", MACROS["LOOSE"]), ("loose", 1.0)):
         save(out_dir, "6_human", f"reed_trio_{label}", render(lead, {"HOLD": 0.75, "LOOSE": loose}, parts=parts))
         save(out_dir, "6_human", f"DUDUK_solo_{label}", render("DUDUK", {"HOLD": 0.75, "LOOSE": loose}))
-    for name, (ld, pt) in (("SAX_solo", ("SAX", [])), ("flute_octaves", SECTIONS["flute_octaves"])):
-        ys = [save(out_dir, "7_takes", f"{name}_take{k + 1}", render(ld, {"HOLD": 0.6}, parts=pt, take=k)) for k in range(3)]
-        n = min(len(y) for y in ys)
-        hz = [pr.pitch(y, sk.RATE, lo_hz=30, hi_hz=3000, start_seconds=0.6)[0] for y in ys]
-        res["takes"].append(dict(pad=name,
-                                 correlation_1v2=round(float(np.corrcoef(ys[0][:n], ys[1][:n])[0, 1]), 3),
-                                 correlation_1v3=round(float(np.corrcoef(ys[0][:n], ys[2][:n])[0, 1]), 3),
-                                 detected_hz=[round(h, 2) for h in hz]))
+    for name, (ld, pt) in (("SAX_solo", ("SAX", [])), ("OBOE_solo", ("OBOE", [])), ("DUDUK_solo", ("DUDUK", [])),
+                           ("flute_octaves", SECTIONS["flute_octaves"]), ("reed_trio_min7", SECTIONS["reed_trio_min7"])):
+        ys = [save(out_dir, "7_takes", f"{name}_take{k + 1}_{TAKES[k]['name']}", render(ld, {"HOLD": 0.7}, parts=pt, take=k)) for k in range(len(TAKES))]
+        # the same pad eight times in a row, cycling the takes, then eight times with one take:
+        # the two files are what round robin on and off would sound like under a repeated hit
+        hit = int(0.42 * sk.RATE)
+        for label, order in (("cycling", [0, 1, 2, 3, 0, 1, 2, 3]), ("one_take", [0] * 8)):
+            line = np.zeros(hit * 8 + max(len(y) for y in ys))
+            for i, k in enumerate(order):
+                line[i * hit:i * hit + len(ys[k])] += ys[k] * 0.5
+            os.makedirs(os.path.join(out_dir, "7_takes"), exist_ok=True)
+            sk.write_wav(os.path.join(out_dir, "7_takes", f"{name}_repeated_{label}.wav"), line)
+        row = dict(pad=name, takes=[])
+        for k, y in enumerate(ys):
+            env = pr.envelope(y, sk.RATE, block_ms=2.0)
+            top = np.max(env[:250])
+            speak_ms = 2.0 * float(np.argmax(env > 0.5 * top))                     # time to half level
+            first = y[int(0.02 * sk.RATE):int(0.14 * sk.RATE)]
+            held = y[int(0.5 * sk.RATE):int(1.2 * sk.RATE)]
+            entry = dict(way=TAKES[k]["name"], speak_ms=round(speak_ms), attack_centroid_hz=round(pr.spectral_centroid(first)),
+                         held_centroid_hz=round(pr.spectral_centroid(held)))
+            if not pt:      # a pitch tracker follows one note; on a section it hops between chairs, so solos only
+                hz0 = pr.pitch(y, sk.RATE, lo_hz=30, hi_hz=3000, window_seconds=0.08, start_seconds=0.07)[0]
+                hz1 = pr.pitch(y, sk.RATE, lo_hz=30, hi_hz=3000, start_seconds=0.7)[0]
+                entry.update(start_cents_vs_held=round(pr.cents(hz0, hz1), 1), held_cents=round(pr.cents(hz1, hz_of(midi_for(ld, 0.5))), 1))
+            row["takes"].append(entry)
+        res["takes"].append(row)
 
     # 8. every macro changes the sound (one section, extremes, levelled)
     lead, parts = SECTIONS["reed_trio_min7"]

@@ -5,10 +5,10 @@ import java.nio.file.Files
 import kotlin.test.*
 
 class SecondlineKitTest {
-    @Test fun `model three preserves every hard reference and both legacy soft stick recipes`() {
+    @Test fun `current model preserves every hard reference and both legacy soft stick recipes`() {
         for(voice in ParadeSecondLine.Voice.entries) {
             val old=SecondlinePatch("Reference",voice,emptyMap(),2).render(1f)
-            val current=SecondlinePatch("Reference",voice,emptyMap(),3).render(1f)
+            val current=SecondlinePatch("Reference",voice,emptyMap(),4).render(1f)
             assertContentEquals(old.samples,current.samples,voice.name)
         }
         val file=Files.createTempFile("legacy-stick", ".wav").toFile()
@@ -49,7 +49,7 @@ class SecondlineKitTest {
         val triangle=SecondlineKits.patches(SecondlineKits.Kit.TRIANGLE)
         assertEquals(listOf(13,14),base.indices.filter { base[it]!=triangle[it] })
         assertEquals(ParadeSecondLine.Voice.entries.toSet(),SecondlinePresets.all().map { it.voice }.toSet())
-        assertTrue((base+triangle).all { it.model==3 })
+        assertTrue((base+triangle).all { it.model==4 })
         val old=SecondlinePatch("Legacy triangle",ParadeSecondLine.Voice.TRIANGLE,emptyMap(),1)
         assertEquals(old,SecondlinePatch.fromJsonText(old.toJsonText()))
         assertEquals(old,com.snipsnap.synth.Patches.fromJsonText(old.toJsonText()))

@@ -36,43 +36,43 @@
   {
    "voice": "SAX",
    "midi": 48,
-   "cents": -0.6,
-   "confidence": 0.96,
-   "centroid_hz": 1065,
-   "peak": 0.802,
+   "cents": -0.5,
+   "confidence": 0.95,
+   "centroid_hz": 1063,
+   "peak": 0.794,
    "dc": 0.0,
    "finite": true,
-   "later_over_attack": 1.22
+   "later_over_attack": 1.24
   },
   {
    "voice": "SAX",
    "midi": 60,
    "cents": 0.6,
    "confidence": 0.98,
-   "centroid_hz": 1150,
-   "peak": 0.586,
+   "centroid_hz": 1146,
+   "peak": 0.579,
    "dc": 0.0,
    "finite": true,
-   "later_over_attack": 1.21
+   "later_over_attack": 1.24
   },
   {
    "voice": "SAX",
    "midi": 72,
-   "cents": -1.4,
+   "cents": -1.3,
    "confidence": 0.99,
-   "centroid_hz": 1438,
-   "peak": 0.525,
+   "centroid_hz": 1435,
+   "peak": 0.52,
    "dc": 0.0,
    "finite": true,
-   "later_over_attack": 1.22
+   "later_over_attack": 1.23
   },
   {
    "voice": "CLARINET",
    "midi": 50,
-   "cents": -0.4,
+   "cents": -0.3,
    "confidence": 1.0,
-   "centroid_hz": 653,
-   "peak": 0.587,
+   "centroid_hz": 656,
+   "peak": 0.589,
    "dc": -0.0,
    "finite": true,
    "later_over_attack": 0.59
@@ -82,8 +82,8 @@
    "midi": 62,
    "cents": -4.4,
    "confidence": 1.0,
-   "centroid_hz": 513,
-   "peak": 0.386,
+   "centroid_hz": 518,
+   "peak": 0.387,
    "dc": -0.0,
    "finite": true,
    "later_over_attack": 1.19
@@ -93,110 +93,110 @@
    "midi": 74,
    "cents": 1.6,
    "confidence": 1.0,
-   "centroid_hz": 782,
-   "peak": 0.323,
+   "centroid_hz": 791,
+   "peak": 0.325,
    "dc": -0.0,
    "finite": true,
-   "later_over_attack": 1.16
+   "later_over_attack": 1.17
   },
   {
    "voice": "OBOE",
    "midi": 58,
    "cents": -1.8,
    "confidence": 0.99,
-   "centroid_hz": 965,
-   "peak": 0.706,
+   "centroid_hz": 949,
+   "peak": 0.707,
    "dc": 0.0,
    "finite": true,
-   "later_over_attack": 0.91
+   "later_over_attack": 0.87
   },
   {
    "voice": "OBOE",
    "midi": 70,
-   "cents": 0.4,
+   "cents": 0.5,
    "confidence": 1.0,
-   "centroid_hz": 1089,
-   "peak": 0.398,
+   "centroid_hz": 1070,
+   "peak": 0.394,
    "dc": 0.0,
    "finite": true,
-   "later_over_attack": 1.08
+   "later_over_attack": 1.06
   },
   {
    "voice": "OBOE",
    "midi": 82,
    "cents": -0.9,
    "confidence": 1.0,
-   "centroid_hz": 1164,
-   "peak": 0.433,
+   "centroid_hz": 1165,
+   "peak": 0.435,
    "dc": 0.0,
    "finite": true,
-   "later_over_attack": 0.98
+   "later_over_attack": 0.87
   },
   {
    "voice": "BASSOON",
    "midi": 34,
    "cents": 2.9,
    "confidence": 0.97,
-   "centroid_hz": 315,
+   "centroid_hz": 308,
    "peak": 0.72,
-   "dc": -0.0,
+   "dc": 0.0,
    "finite": true,
-   "later_over_attack": 1.42
+   "later_over_attack": 1.33
   },
   {
    "voice": "BASSOON",
    "midi": 46,
-   "cents": -1.1,
+   "cents": -1.2,
    "confidence": 0.99,
-   "centroid_hz": 441,
-   "peak": 0.577,
+   "centroid_hz": 431,
+   "peak": 0.569,
    "dc": 0.0,
    "finite": true,
-   "later_over_attack": 1.05
+   "later_over_attack": 1.01
   },
   {
    "voice": "BASSOON",
    "midi": 58,
-   "cents": -1.4,
+   "cents": -1.5,
    "confidence": 0.99,
-   "centroid_hz": 575,
-   "peak": 0.453,
+   "centroid_hz": 557,
+   "peak": 0.447,
    "dc": 0.0,
    "finite": true,
-   "later_over_attack": 1.15
+   "later_over_attack": 1.17
   },
   {
    "voice": "DUDUK",
    "midi": 57,
-   "cents": -2.8,
+   "cents": -3.0,
    "confidence": 0.99,
-   "centroid_hz": 593,
-   "peak": 0.387,
+   "centroid_hz": 597,
+   "peak": 0.386,
    "dc": -0.0,
    "finite": true,
-   "later_over_attack": 1.2
+   "later_over_attack": 1.26
   },
   {
    "voice": "DUDUK",
    "midi": 69,
-   "cents": -7.6,
+   "cents": -7.2,
    "confidence": 0.99,
-   "centroid_hz": 674,
-   "peak": 0.355,
+   "centroid_hz": 689,
+   "peak": 0.353,
    "dc": -0.0,
    "finite": true,
-   "later_over_attack": 1.05
+   "later_over_attack": 1.19
   },
   {
    "voice": "DUDUK",
    "midi": 81,
-   "cents": 3.9,
+   "cents": 3.8,
    "confidence": 1.0,
    "centroid_hz": 887,
-   "peak": 0.38,
+   "peak": 0.381,
    "dc": -0.0,
    "finite": true,
-   "later_over_attack": 1.31
+   "later_over_attack": 1.33
   }
  ],
  "velocity": [
@@ -221,35 +221,35 @@
   {
    "voice": "SAX",
    "soft": {
-    "centroid_hz": 834,
-    "cents": 3.4,
+    "centroid_hz": 832,
+    "cents": 3.3,
     "confidence": 0.99
    },
    "medium": {
-    "centroid_hz": 1150,
+    "centroid_hz": 1146,
     "cents": 3.6,
     "confidence": 0.98
    },
    "hard": {
-    "centroid_hz": 1461,
-    "cents": 3.5,
+    "centroid_hz": 1457,
+    "cents": 3.4,
     "confidence": 0.97
    }
   },
   {
    "voice": "CLARINET",
    "soft": {
-    "centroid_hz": 441,
+    "centroid_hz": 439,
     "cents": -4.4,
     "confidence": 1.0
    },
    "medium": {
-    "centroid_hz": 513,
-    "cents": -4.5,
+    "centroid_hz": 518,
+    "cents": -4.6,
     "confidence": 1.0
    },
    "hard": {
-    "centroid_hz": 638,
+    "centroid_hz": 642,
     "cents": -5.3,
     "confidence": 1.0
    }
@@ -257,54 +257,54 @@
   {
    "voice": "OBOE",
    "soft": {
-    "centroid_hz": 988,
-    "cents": -1.4,
+    "centroid_hz": 993,
+    "cents": -1.3,
     "confidence": 1.0
    },
    "medium": {
-    "centroid_hz": 1089,
-    "cents": -1.0,
+    "centroid_hz": 1070,
+    "cents": -0.9,
     "confidence": 1.0
    },
    "hard": {
-    "centroid_hz": 1207,
-    "cents": -1.8,
+    "centroid_hz": 1175,
+    "cents": -1.7,
     "confidence": 1.0
    }
   },
   {
    "voice": "BASSOON",
    "soft": {
-    "centroid_hz": 369,
-    "cents": 1.9,
+    "centroid_hz": 372,
+    "cents": 1.8,
     "confidence": 0.99
    },
    "medium": {
-    "centroid_hz": 441,
-    "cents": 1.9,
+    "centroid_hz": 431,
+    "cents": 1.7,
     "confidence": 0.99
    },
    "hard": {
-    "centroid_hz": 521,
-    "cents": 1.5,
+    "centroid_hz": 506,
+    "cents": 1.4,
     "confidence": 0.99
    }
   },
   {
    "voice": "DUDUK",
    "soft": {
-    "centroid_hz": 562,
-    "cents": -10.2,
+    "centroid_hz": 564,
+    "cents": -10.4,
     "confidence": 1.0
    },
    "medium": {
-    "centroid_hz": 674,
-    "cents": -8.3,
+    "centroid_hz": 689,
+    "cents": -8.0,
     "confidence": 0.99
    },
    "hard": {
-    "centroid_hz": 805,
-    "cents": -6.8,
+    "centroid_hz": 850,
+    "cents": -6.7,
     "confidence": 0.99
    }
   }
@@ -314,14 +314,14 @@
   "FLUTE_TRILL_vs_PLAIN_dB": 6.32,
   "FLUTE_FLUTTER_vs_PLAIN_dB": 6.37,
   "FLUTE_FALL_vs_PLAIN_dB": 5.6,
-  "SAX_SCOOP_vs_PLAIN_dB": 7.16,
-  "SAX_TRILL_vs_PLAIN_dB": 10.95,
-  "SAX_FLUTTER_vs_PLAIN_dB": 3.56,
-  "SAX_FALL_vs_PLAIN_dB": 11.34,
-  "DUDUK_SCOOP_vs_PLAIN_dB": 3.43,
-  "DUDUK_TRILL_vs_PLAIN_dB": 5.37,
-  "DUDUK_FLUTTER_vs_PLAIN_dB": 13.4,
-  "DUDUK_FALL_vs_PLAIN_dB": 7.71
+  "SAX_SCOOP_vs_PLAIN_dB": 7.13,
+  "SAX_TRILL_vs_PLAIN_dB": 10.74,
+  "SAX_FLUTTER_vs_PLAIN_dB": 3.55,
+  "SAX_FALL_vs_PLAIN_dB": 11.08,
+  "DUDUK_SCOOP_vs_PLAIN_dB": 3.55,
+  "DUDUK_TRILL_vs_PLAIN_dB": 5.46,
+  "DUDUK_FLUTTER_vs_PLAIN_dB": 13.29,
+  "DUDUK_FALL_vs_PLAIN_dB": 7.74
  },
  "sections": [
   {
@@ -337,9 +337,9 @@
      "OCT_DOWN"
     ]
    ],
-   "peak": 0.544,
+   "peak": 0.511,
    "finite": true,
-   "centroid_hz": 1162
+   "centroid_hz": 1131
   },
   {
    "section": "reed_trio_min7",
@@ -354,9 +354,9 @@
      "MIN7"
     ]
    ],
-   "peak": 0.435,
+   "peak": 0.696,
    "finite": true,
-   "centroid_hz": 1099
+   "centroid_hz": 1097
   },
   {
    "section": "flute_octaves",
@@ -371,9 +371,9 @@
      "OCT_DOWN"
     ]
    ],
-   "peak": 0.377,
+   "peak": 0.35,
    "finite": true,
-   "centroid_hz": 1051
+   "centroid_hz": 1022
   },
   {
    "section": "duduk_drone",
@@ -388,9 +388,9 @@
      "FIFTH"
     ]
    ],
-   "peak": 0.44,
+   "peak": 0.469,
    "finite": true,
-   "centroid_hz": 629
+   "centroid_hz": 627
   },
   {
    "section": "full_quartet",
@@ -411,7 +411,7 @@
    ],
    "peak": 0.411,
    "finite": true,
-   "centroid_hz": 561
+   "centroid_hz": 570
   },
   {
    "section": "sax_maj7_stack",
@@ -430,133 +430,295 @@
      "FIFTH"
     ]
    ],
-   "peak": 0.522,
+   "peak": 0.537,
    "finite": true,
    "centroid_hz": 955
   }
  ],
  "macro_activity_dB": {
-  "BREATH": 9.47,
-  "MOTION": 2.88,
-  "BLEND": 6.7,
-  "LOOSE": 3.1,
-  "ROOM": 3.35
+  "BREATH": 14.31,
+  "MOTION": 2.22,
+  "BLEND": 6.31,
+  "LOOSE": 6.35,
+  "ROOM": 3.02
  },
- "seconds_per_player_second": 0.25,
+ "seconds_per_player_second": 0.27,
  "room": [
   {
    "section": "sax_fifths",
    "room": 0.0,
    "seconds": 1.77,
-   "peak": 0.61,
+   "peak": 0.569,
    "finite": true
   },
   {
    "section": "sax_fifths",
    "room": 0.4,
    "seconds": 2.6,
-   "peak": 0.588,
+   "peak": 0.543,
    "finite": true
   },
   {
    "section": "sax_fifths",
    "room": 1.0,
    "seconds": 3.03,
-   "peak": 0.543,
+   "peak": 0.586,
    "finite": true
   },
   {
    "section": "full_quartet",
    "room": 0.0,
    "seconds": 1.77,
-   "peak": 0.362,
+   "peak": 0.67,
    "finite": true
   },
   {
    "section": "full_quartet",
    "room": 0.4,
    "seconds": 2.6,
-   "peak": 0.471,
+   "peak": 0.463,
    "finite": true
   },
   {
    "section": "full_quartet",
    "room": 1.0,
    "seconds": 3.04,
-   "peak": 0.442,
+   "peak": 0.47,
    "finite": true
   }
  ],
  "takes": [
   {
    "pad": "SAX_solo",
-   "correlation_1v2": 0.136,
-   "correlation_1v3": -0.123,
-   "detected_hz": [
-    262.21,
-    261.43,
-    261.76
+   "takes": [
+    {
+     "way": "centred",
+     "speak_ms": 42,
+     "attack_centroid_hz": 813,
+     "held_centroid_hz": 1119,
+     "start_cents_vs_held": -4.2,
+     "held_cents": 3.9
+    },
+    {
+     "way": "soft",
+     "speak_ms": 136,
+     "attack_centroid_hz": 753,
+     "held_centroid_hz": 1001,
+     "start_cents_vs_held": -1.2,
+     "held_cents": 0.2
+    },
+    {
+     "way": "bitten",
+     "speak_ms": 26,
+     "attack_centroid_hz": 888,
+     "held_centroid_hz": 897,
+     "start_cents_vs_held": -1.4,
+     "held_cents": -1.9
+    },
+    {
+     "way": "leaning",
+     "speak_ms": 50,
+     "attack_centroid_hz": 763,
+     "held_centroid_hz": 1242,
+     "start_cents_vs_held": -41.9,
+     "held_cents": 0.0
+    }
+   ]
+  },
+  {
+   "pad": "OBOE_solo",
+   "takes": [
+    {
+     "way": "centred",
+     "speak_ms": 26,
+     "attack_centroid_hz": 1155,
+     "held_centroid_hz": 1072,
+     "start_cents_vs_held": 1.7,
+     "held_cents": -0.5
+    },
+    {
+     "way": "soft",
+     "speak_ms": 56,
+     "attack_centroid_hz": 934,
+     "held_centroid_hz": 1159,
+     "start_cents_vs_held": -2.6,
+     "held_cents": 3.4
+    },
+    {
+     "way": "bitten",
+     "speak_ms": 16,
+     "attack_centroid_hz": 1090,
+     "held_centroid_hz": 991,
+     "start_cents_vs_held": -0.7,
+     "held_cents": -0.2
+    },
+    {
+     "way": "leaning",
+     "speak_ms": 26,
+     "attack_centroid_hz": 1123,
+     "held_centroid_hz": 1186,
+     "start_cents_vs_held": -43.8,
+     "held_cents": -2.1
+    }
+   ]
+  },
+  {
+   "pad": "DUDUK_solo",
+   "takes": [
+    {
+     "way": "centred",
+     "speak_ms": 62,
+     "attack_centroid_hz": 569,
+     "held_centroid_hz": 621,
+     "start_cents_vs_held": 4.3,
+     "held_cents": -8.7
+    },
+    {
+     "way": "soft",
+     "speak_ms": 148,
+     "attack_centroid_hz": 1860,
+     "held_centroid_hz": 623,
+     "start_cents_vs_held": 22.2,
+     "held_cents": 4.7
+    },
+    {
+     "way": "bitten",
+     "speak_ms": 28,
+     "attack_centroid_hz": 639,
+     "held_centroid_hz": 619,
+     "start_cents_vs_held": -8.4,
+     "held_cents": 4.8
+    },
+    {
+     "way": "leaning",
+     "speak_ms": 84,
+     "attack_centroid_hz": 562,
+     "held_centroid_hz": 629,
+     "start_cents_vs_held": -38.5,
+     "held_cents": 0.7
+    }
    ]
   },
   {
    "pad": "flute_octaves",
-   "correlation_1v2": 0.327,
-   "correlation_1v3": 0.208,
-   "detected_hz": [
-    522.7,
-    261.55,
-    522.72
+   "takes": [
+    {
+     "way": "centred",
+     "speak_ms": 70,
+     "attack_centroid_hz": 934,
+     "held_centroid_hz": 1015
+    },
+    {
+     "way": "soft",
+     "speak_ms": 120,
+     "attack_centroid_hz": 993,
+     "held_centroid_hz": 961
+    },
+    {
+     "way": "bitten",
+     "speak_ms": 62,
+     "attack_centroid_hz": 1049,
+     "held_centroid_hz": 1182
+    },
+    {
+     "way": "leaning",
+     "speak_ms": 90,
+     "attack_centroid_hz": 1010,
+     "held_centroid_hz": 1127
+    }
+   ]
+  },
+  {
+   "pad": "reed_trio_min7",
+   "takes": [
+    {
+     "way": "centred",
+     "speak_ms": 30,
+     "attack_centroid_hz": 1202,
+     "held_centroid_hz": 1072
+    },
+    {
+     "way": "soft",
+     "speak_ms": 54,
+     "attack_centroid_hz": 998,
+     "held_centroid_hz": 1107
+    },
+    {
+     "way": "bitten",
+     "speak_ms": 16,
+     "attack_centroid_hz": 1091,
+     "held_centroid_hz": 989
+    },
+    {
+     "way": "leaning",
+     "speak_ms": 28,
+     "attack_centroid_hz": 1089,
+     "held_centroid_hz": 1098
+    }
    ]
   }
  ],
  "alias_proxy_oboe_top_hard": 0.0,
- "wall_seconds": 82.2,
+ "wall_seconds": 107.7,
  "pin_cents": {
   "FLUTE_60_3": 1.6,
   "FLUTE_72_3": -1.7,
   "FLUTE_84_3": -3.3,
-  "SAX_48_3": 6.9,
+  "SAX_48_3": 6.8,
   "SAX_60_3": 4.4,
-  "SAX_72_3": 1.5,
-  "CLARINET_50_3": 8.5,
-  "CLARINET_62_3": 5.5,
-  "CLARINET_74_3": 0.9,
+  "SAX_72_3": 1.6,
+  "CLARINET_50_3": 8.4,
+  "CLARINET_62_3": 5.4,
+  "CLARINET_74_3": 0.8,
   "OBOE_58_3": 4.3,
   "OBOE_70_3": 2.4,
   "OBOE_82_3": 0.5,
-  "BASSOON_34_3": 5.8,
+  "BASSOON_34_3": 5.9,
   "BASSOON_46_3": 5.0,
   "BASSOON_58_3": 2.9,
   "DUDUK_57_3": 6.2,
   "DUDUK_69_3": 0.2,
-  "DUDUK_81_3": -0.2,
+  "DUDUK_81_3": -0.3,
   "FLUTE_72_2": -2.0,
   "FLUTE_72_4": -1.3,
   "SAX_60_2": 4.0,
   "SAX_60_4": 4.6,
   "CLARINET_62_2": 4.9,
-  "CLARINET_62_4": 5.4,
+  "CLARINET_62_4": 5.3,
   "OBOE_70_2": 1.9,
   "OBOE_70_4": 1.9,
   "BASSOON_46_2": 4.9,
-  "BASSOON_46_4": 4.3,
-  "DUDUK_69_2": -0.5,
-  "DUDUK_69_4": 0.7,
+  "BASSOON_46_4": 4.2,
+  "DUDUK_69_2": -0.6,
+  "DUDUK_69_4": 0.4,
+  "SAX_67_2": 2.4,
   "SAX_67_3": 2.8,
+  "SAX_48_4": 6.4,
+  "CLARINET_77_2": -0.3,
+  "BASSOON_80_3": -0.3,
   "CLARINET_77_3": 0.1,
-  "BASSOON_80_3": -0.2,
-  "CLARINET_60_3": 6.2,
-  "DUDUK_76_3": -1.0,
-  "FLUTE_74_3": -2.1,
+  "BASSOON_80_4": -0.9,
+  "FLUTE_84_2": -3.3,
+  "CLARINET_60_3": 6.1,
+  "CLARINET_60_4": 5.9,
+  "DUDUK_57_2": 4.9,
+  "DUDUK_76_3": -0.9,
+  "DUDUK_76_4": -0.8,
+  "FLUTE_74_2": -2.6,
   "OBOE_69_3": 2.6,
   "BASSOON_50_3": 4.3,
-  "CLARINET_71_3": 1.7,
+  "FLUTE_74_3": -2.1,
+  "OBOE_69_4": 2.0,
+  "BASSOON_50_4": 3.3,
+  "CLARINET_71_2": 1.1,
   "BASSOON_48_3": 4.6,
   "FLUTE_67_3": -0.6,
-  "CLARINET_77_2": -0.2,
+  "CLARINET_71_3": 1.8,
+  "BASSOON_48_4": 3.7,
+  "FLUTE_67_4": -0.1,
+  "CLARINET_60_2": 5.8,
   "BASSOON_80_2": -0.3,
-  "CLARINET_77_4": 0.4,
-  "BASSOON_80_4": -0.9,
+  "CLARINET_77_1": -0.6,
   "OBOE_82_4": 0.4
  }
 }

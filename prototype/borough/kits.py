@@ -29,6 +29,12 @@ KITS = [
          swing_ms=45, ride=True, role='rim-led snare and a ride instead of hats, the most swing'),
 ]
 
+# How far apart the kits are pushed (build.spread): every fitted setting moved this many times further
+# from the six kits' average, inside the model's bounds. 2.0 puts kick, snare and hat 13-18% further
+# apart than the loops' own drums (1.0: 84-95%), at 0.4-1.8 dB of fit. Owner, round 1.4: the kits
+# "all kind of sound pretty similar", and the loops are similar too; push past them.
+SPREAD = 2.0
+
 DRUM_PADS = ['KICK', 'SNARE', 'HAT', 'OPEN HAT', 'KICK 2', 'SNARE 2', 'RIM', 'PEDAL HAT',
              'GHOST', 'TOM LO', 'TOM HI', 'SNARE ROLL']
 

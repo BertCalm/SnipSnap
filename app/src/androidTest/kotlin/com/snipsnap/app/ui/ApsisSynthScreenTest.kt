@@ -9,6 +9,7 @@ import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.hasSetTextAction
+import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
@@ -85,6 +86,11 @@ class ApsisSynthScreenTest : ComposeScreenTest() {
     }
 
     private fun press(label: String) {
+        // A pad reaches the disk before onKitUpdated hands it to the screen, so a control that names
+        // the pad (REOPEN A01 ...) can trail the disk wait by a frame or two: wait for it to be drawn.
+        waitFor("the control $label") {
+            compose.onAllNodesWithContentDescription(label, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
+        }
         val node = compose.onNodeWithContentDescription(label, useUnmergedTree = true).fetchSemanticsNode()
         assertTrue(node.config.getOrNull(SemanticsActions.OnClick)?.action?.invoke() == true)
         pump()

@@ -283,7 +283,7 @@ Disclosed, not asked for: the groove's 0.5 to 2 kHz still sits near -22 dB again
 is the reference snare's crack and beater knock, not the bass; CLOTH's bounce snare is a deep body and wires with
 little between. Left for the owner to call.
 
-## Expansion: BLUE, SPEED, RAGA (round 0, not yet heard)
+## Expansion: BLUE, SPEED, RAGA (round 0; SPEED and RAGA kept)
 
 Asked which adjacent kits would extend the collection, the owner chose all three proposed (2026-11-18): BLUE (jazz
 breaks off a record), SPEED (sped-up breaks) and RAGA (Indian-record percussion). Nearest siblings and what differs:
@@ -387,8 +387,59 @@ strokes only); B, break (a hip-hop break: sixteenths swung at 58% as an MPC's sw
 "boom, b-boom" at 1, the "a" of 1 and the "and" of 3, no shaker); C, A without the shaker. Shape values, for the
 owner to choose by ear; round 0h's groove stays the kit's until then.
 
-[Expansion round 0 listening page](https://claude.ai/artifact/Q3rZ8po8ZaeJs9E4tNd86s) (private to the owner; BLUE's
-three grooves, its ride at rounds 0h and 0g, and the shaker at two levels).
+**Round 0j, the converter at its full rate.** "The ride is too noisy" (the owner, 2026-11-20, of round 0h's ride).
+Round 0g measured only how tonal the 5 to 14 kHz band was; this time the floor between the ride's ringing peaks,
+200 Hz to 16 kHz (a 150 Hz running median), at each stage of the print. The converter alone took the wash (0.2 to 0.6 s)
+from 30.0 to 15.5 dB of peaks over the floor, its floor from 2 to 8 kHz from -43.6 to -29.3 dB of the strike; the tape
+alone and the vinyl alone each cost a few dB. Not bit depth: 16 bits changed nothing. The converter holds its input at
+about 32 kHz (RATE .22), not a divisor of 44.1 kHz, so a cymbal's top folds back as tones in tune with nothing, and
+round 0h's +12 dB at 8 kHz fed it. A gentler hold (RATE .05) did not help. BLUE's print now runs the converter at RATE 0
+(its 12 bits, the tape's drive and head and the vinyl stay; the approved kits keep CRATE whole): the printed ride's wash
+is 27.6 dB over its floor (round 0h 14.7), its band shape against the references unchanged (5.4 dB from their mean, round
+0h 5.3), over 12 kHz at -28.6 dB (the references -29.6 and -20.7). The references themselves measure 17.6 and 10.0: a
+real cymbal's fizz is dense but in tune with the cymbal, and reads as cymbal; fold-back reads as hiss. The kick, brush
+tap and foot hat move under 1.5 dB in any band; the shaker sheds 3.5 dB of fold-back under 1 kHz. Lesson for the kits:
+a bright cymbal through a sample-rate reduction that does not divide the output rate needs its noise measured, not
+only its spectrum.
+
+**Round 0k, a stick hit and a quick ring.** "No. It's not right. Tone down the sizzle, it should be a bright stick hit
+to the ride (not bell) with a light and shimmery ring that fades quickly" (the owner, 2026-11-20). Round 0h had
+softened the strike to lift the wash toward the references; the owner wants the opposite balance. Each phrase as a
+measure on the printed hit, the round-0h references (used only to measure) as a guide: the stick, the first 40 ms'
+centre (references 8.6 and 7.7 kHz); not bell, 1 to 3 kHz's share of those 40 ms (references -25 and -15 dB); light,
+the ring's level from 0.2 to 0.6 s against the stick; fades quickly, the time to 40 dB down; the sizzle, the ring's
+peaks over the floor between them. A search of 72 settings through BLUE's print chose: DAMP .55; a 2 kHz low cut (was
+500 Hz); the ride's own band over 5 kHz added 1.5 times over and gone in 10 ms (the ping); round 0h's +12 dB at 8 kHz
+and 12 kHz cut kept; round 0h's softened strike gone; after 30 ms, an exponential fade of 0.35 s. Measured: the stick
+at 7.8 kHz (round 0j 7.1), 1 to 3 kHz at -17.5 dB (round 0j -12.5), the ring 21 dB under the stick (round 0j 9; the
+references 13 and 8), 40 dB down at 0.65 s (round 0j 1.4 s; the references 1.8 and 3.2), its peaks 21.6 dB over the
+floor (the references 17.6 and 10). The ring's length is the owner's to judge, so a version fading over 0.5 s (40 dB
+down at 0.77 s) is rendered beside it. A fade of 0.1 to 0.15 s was tried and rejected: 20 dB down in 0.1 s is a
+choked cymbal, and the ring sank under the print's own vinyl floor.
+
+**Round 0l, a fresher print for the rest of the kit.** "The ride is better the rest sounds like it's in a muffled
+room" (the owner, 2026-11-20). Measured on groove A without the ride, by its spectral centre, its band shares, and
+its clarity (the 50 ms after each backbeat's peak against the 250 ms after that, median of eight): dry, 1,691 Hz and
+4.7 dB; through BLUE's room and print, 291 Hz and 1.5 dB. Stage by stage: the room alone kept clarity (4.1 dB); the
+print alone took it to 2.1 (the tape alone 3.1, its drive costing 0.6; the converter alone 3.6), and the bus
+compressor lifted the tails further. The darkening was the room's shelf (-4 dB over 1.2 kHz; removing it gave back
+about 3.5 dB over 2 kHz), the tape's worn head (AGE .60, a one-pole near 6 kHz) and the converter's tone (.95);
+moving the mic closer (DISTANCE .25, .15), harder walls, a smaller room and less vinyl rumble did next to nothing. So:
+BLUE's print takes AGE .20 (near 12 kHz), DRIVE .08 (was .15) and TONE 1; the room's compressor eases to AMOUNT .20
+(was .35); and the kick, brush tap, foot hat and shaker cancel the room's shelf with a mirrored +4 dB shelf at 1.2 kHz,
+the last three with +3 dB over 4 kHz besides. The ride was fitted to the old chain: its presence comes down from +12
+to +8 dB, which lands its printed hit where round 0k's was (the stick at 7.96 kHz against 7.79, 1 to 3 kHz -17.5
+against -17.5, the ring -21.2 against -20.9, 40 dB down at 0.65 s). The ride keeps the room's shelf. Across the three
+grooves: the centre from 316-360 to 488-561 Hz, 2 to 6 kHz up 2.6 to 3.8 dB, 6 to 12 kHz up 3.2 to 3.9, 200 Hz to
+1 kHz down 1.4 to 1.7 (less box), clarity from 1.4-1.6 to 2.7 dB. Lesson for the kits: a print tuned for one voice
+(the ride) can bury the others; measure the kit without it.
+
+**SPEED and RAGA kept.** "Keep speed and raga" (the owner, 2026-11-20). Still open for them: whether SPEED's 1.35
+speed-up is right, subtler or more extreme, and whether RAGA's tabla leads or sits under the kick and snare. For BLUE:
+whether round 0l cleared the muffled room, groove A, B or C, and the ride's ring quick or longer.
+
+[Expansion round 0 listening page](https://claude.ai/artifact/Q3rZ8po8ZaeJs9E4tNd86s) (private to the owner; the five
+open questions at the top, then BLUE's history, SPEED and RAGA).
 
 ## Gates
 

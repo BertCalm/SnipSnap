@@ -171,3 +171,11 @@ target_include_directories(round_robin_loading_tests PRIVATE "${ENGINE_DIR}" "${
 target_compile_options(round_robin_loading_tests PRIVATE -Wall -Wextra -include cstring)
 target_link_libraries(round_robin_loading_tests PRIVATE Threads::Threads)
 add_test(NAME round_robin_loading_tests COMMAND round_robin_loading_tests)
+
+# The whole-kit glue (GlueBus.h, header only) on its own, with real allocation
+# interception on its callback work. Its place in PadEngine and its JNI entry
+# points are covered by engine_tests.
+add_executable(glue_tests glue_tests.cpp)
+target_include_directories(glue_tests PRIVATE "${ENGINE_DIR}")
+target_compile_options(glue_tests PRIVATE -Wall -Wextra -Wpedantic)
+add_test(NAME glue_tests COMMAND glue_tests)
