@@ -1,0 +1,619 @@
+{
+ "about": "FACSIMILE round 0: four kits replicated (synthesized from fitted numeric models, no reference samples) from nine reference loops. Each pad stacks one or more fitted drums ('layers', drum ids from models/<loop>.json). A pad's 'velocity' below 1 is a ghost-note pad: the same drum struck softer, which changes its character, not only its level. Phrase pads re-perform a reference loop with the replica drums at the loop's own tempo and measured micro-timing. Roles were named by hand from each drum's NMFD template and its pattern on the 16th grid; they are a first reading, to be corrected by ear.",
+ "choke": {
+  "154": [
+   "154-d5"
+  ]
+ },
+ "kits": [
+  {
+   "name": "FACSIMILE SHUFFLE",
+   "tempo": 90,
+   "references": [
+    "90",
+    "103"
+   ],
+   "character": "Heavy-swing boom bap: long falling kick bodies, roomy backbeat snares, hats pushed late by 37 to 53 ms on the off-16ths.",
+   "pads": [
+    {
+     "pad": "A01",
+     "name": "Alley Kick",
+     "class": "KICK",
+     "layers": [
+      "90-k0"
+     ]
+    },
+    {
+     "pad": "A02",
+     "name": "Swing Kick",
+     "class": "KICK",
+     "layers": [
+      "103-d4"
+     ]
+    },
+    {
+     "pad": "A03",
+     "name": "Swing Low",
+     "class": "KICK",
+     "layers": [
+      "103-d1"
+     ]
+    },
+    {
+     "pad": "A04",
+     "name": "Knock",
+     "class": "PERC",
+     "layers": [
+      "103-d0"
+     ]
+    },
+    {
+     "pad": "A05",
+     "name": "Alley Snare",
+     "class": "SNARE",
+     "layers": [
+      "90-d0",
+      "90-d3"
+     ]
+    },
+    {
+     "pad": "A06",
+     "name": "Swing Snare",
+     "class": "SNARE",
+     "layers": [
+      "103-d2"
+     ]
+    },
+    {
+     "pad": "A07",
+     "name": "Alley Hat",
+     "class": "HAT_CLOSED",
+     "layers": [
+      "90-d2"
+     ]
+    },
+    {
+     "pad": "A08",
+     "name": "Swing Hat",
+     "class": "HAT_CLOSED",
+     "layers": [
+      "103-d3"
+     ]
+    },
+    {
+     "pad": "A09",
+     "name": "Ghost Thud",
+     "class": "KICK",
+     "layers": [
+      "90-k0"
+     ],
+     "velocity": 0.45
+    },
+    {
+     "pad": "A10",
+     "name": "Shaker",
+     "class": "PERC",
+     "layers": [
+      "102-d1"
+     ]
+    },
+    {
+     "pad": "A11",
+     "name": "Long Shaker",
+     "class": "PERC",
+     "layers": [
+      "102-d2"
+     ]
+    },
+    {
+     "pad": "A12",
+     "name": "Tick",
+     "class": "PERC",
+     "layers": [
+      "102-d3"
+     ]
+    },
+    {
+     "pad": "A13",
+     "name": "Alley Ghost",
+     "class": "SNARE",
+     "layers": [
+      "90-d0",
+      "90-d3"
+     ],
+     "velocity": 0.45
+    },
+    {
+     "pad": "A14",
+     "name": "Swing Ghost Kick",
+     "class": "KICK",
+     "layers": [
+      "103-d4"
+     ],
+     "velocity": 0.5
+    },
+    {
+     "pad": "A15",
+     "name": "Alley Groove",
+     "class": "LOOP",
+     "phrase": "90"
+    },
+    {
+     "pad": "A16",
+     "name": "Swing Groove",
+     "class": "LOOP",
+     "phrase": "103"
+    }
+   ]
+  },
+  {
+   "name": "FACSIMILE KNOCK",
+   "tempo": 113,
+   "references": [
+    "113",
+    "106"
+   ],
+   "character": "Punchy mid-tempo: a short hard kick with a long pulsing boom, a snare with a room that blooms behind it and drag notes before beat four, light swing.",
+   "pads": [
+    {
+     "pad": "A01",
+     "name": "Knock Kick",
+     "class": "KICK",
+     "layers": [
+      "113-k0"
+     ]
+    },
+    {
+     "pad": "A02",
+     "name": "Snare Room",
+     "class": "SNARE",
+     "layers": [
+      "113-d2"
+     ]
+    },
+    {
+     "pad": "A03",
+     "name": "Ghost Kick",
+     "class": "KICK",
+     "layers": [
+      "113-k0"
+     ],
+     "velocity": 0.45
+    },
+    {
+     "pad": "A04",
+     "name": "Snare Body",
+     "class": "SNARE",
+     "layers": [
+      "113-d0"
+     ]
+    },
+    {
+     "pad": "A05",
+     "name": "Fusion Kick",
+     "class": "KICK",
+     "layers": [
+      "106-d3"
+     ]
+    },
+    {
+     "pad": "A06",
+     "name": "Knock Snare",
+     "class": "SNARE",
+     "layers": [
+      "113-d2",
+      "113-d0"
+     ]
+    },
+    {
+     "pad": "A07",
+     "name": "Fusion Snare",
+     "class": "SNARE",
+     "layers": [
+      "106-d2"
+     ]
+    },
+    {
+     "pad": "A08",
+     "name": "Crack",
+     "class": "CLAP",
+     "layers": [
+      "106-d0"
+     ]
+    },
+    {
+     "pad": "A09",
+     "name": "Rim",
+     "class": "PERC",
+     "layers": [
+      "106-d5"
+     ]
+    },
+    {
+     "pad": "A10",
+     "name": "Open Hat",
+     "class": "HAT_OPEN",
+     "layers": [
+      "113-d3"
+     ]
+    },
+    {
+     "pad": "A11",
+     "name": "Fusion Hat",
+     "class": "HAT_CLOSED",
+     "layers": [
+      "106-d1"
+     ]
+    },
+    {
+     "pad": "A12",
+     "name": "Fusion Shaker",
+     "class": "PERC",
+     "layers": [
+      "106-d4"
+     ]
+    },
+    {
+     "pad": "A13",
+     "name": "Tambourine Air",
+     "class": "HAT_OPEN",
+     "layers": [
+      "102-d5"
+     ]
+    },
+    {
+     "pad": "A14",
+     "name": "Knock Ghost",
+     "class": "SNARE",
+     "layers": [
+      "113-d2",
+      "113-d0"
+     ],
+     "velocity": 0.45
+    },
+    {
+     "pad": "A15",
+     "name": "Knocker Groove",
+     "class": "LOOP",
+     "phrase": "113"
+    },
+    {
+     "pad": "A16",
+     "name": "Fusion Groove",
+     "class": "LOOP",
+     "phrase": "106"
+    }
+   ]
+  },
+  {
+   "name": "FACSIMILE HALF-TIME",
+   "tempo": 127,
+   "references": [
+    "127",
+    "154"
+   ],
+   "character": "Half-time trap: tuned 808 notes that choke each other, a punch kick on top, a dense clap and a bright half-time snare.",
+   "pads": [
+    {
+     "pad": "A01",
+     "name": "Punch Kick",
+     "class": "KICK",
+     "layers": [
+      "127-d0"
+     ]
+    },
+    {
+     "pad": "A02",
+     "name": "Mover Kick",
+     "class": "KICK",
+     "layers": [
+      "154-d0",
+      "154-d1"
+     ]
+    },
+    {
+     "pad": "A03",
+     "name": "Doves 808",
+     "class": "KICK",
+     "layers": [
+      "127-d3"
+     ]
+    },
+    {
+     "pad": "A04",
+     "name": "Doves 808 Low",
+     "class": "KICK",
+     "layers": [
+      "127-d1"
+     ]
+    },
+    {
+     "pad": "A05",
+     "name": "Mover 808",
+     "class": "KICK",
+     "layers": [
+      "154-d5"
+     ]
+    },
+    {
+     "pad": "A06",
+     "name": "Thump",
+     "class": "PERC",
+     "layers": [
+      "127-d5"
+     ]
+    },
+    {
+     "pad": "A07",
+     "name": "Doves Clap",
+     "class": "CLAP",
+     "layers": [
+      "127-d4"
+     ]
+    },
+    {
+     "pad": "A08",
+     "name": "Mover Snare",
+     "class": "SNARE",
+     "layers": [
+      "154-d4"
+     ]
+    },
+    {
+     "pad": "A09",
+     "name": "Tone Perc",
+     "class": "PERC",
+     "layers": [
+      "154-d3"
+     ]
+    },
+    {
+     "pad": "A10",
+     "name": "Doves Hat",
+     "class": "HAT_CLOSED",
+     "layers": [
+      "127-d2"
+     ]
+    },
+    {
+     "pad": "A11",
+     "name": "Mover Hat",
+     "class": "HAT_OPEN",
+     "layers": [
+      "154-d2"
+     ]
+    },
+    {
+     "pad": "A12",
+     "name": "Zap",
+     "class": "PERC",
+     "layers": [
+      "102-d0"
+     ]
+    },
+    {
+     "pad": "A13",
+     "name": "Air Hat",
+     "class": "HAT_OPEN",
+     "layers": [
+      "102-d4"
+     ]
+    },
+    {
+     "pad": "A14",
+     "name": "Stack Clap",
+     "class": "CLAP",
+     "layers": [
+      "127-d4",
+      "154-d4"
+     ]
+    },
+    {
+     "pad": "A15",
+     "name": "Doves Groove",
+     "class": "LOOP",
+     "phrase": "127"
+    },
+    {
+     "pad": "A16",
+     "name": "Mover Groove",
+     "class": "LOOP",
+     "phrase": "154"
+    }
+   ]
+  },
+  {
+   "name": "FACSIMILE TEXTURE",
+   "tempo": 134,
+   "references": [
+    "134",
+    "163",
+    "102"
+   ],
+   "character": "Toms and tone: big pitched toms on the backbeat, several 808 notes, ringing snares, a crisp hat with a tambourine on the backbeat, and the thin perc loop as a phrase.",
+   "pads": [
+    {
+     "pad": "A01",
+     "name": "Tom Beat 808",
+     "class": "KICK",
+     "layers": [
+      "134-d5"
+     ]
+    },
+    {
+     "pad": "A02",
+     "name": "Tom Beat Kick",
+     "class": "KICK",
+     "layers": [
+      "134-d6"
+     ]
+    },
+    {
+     "pad": "A03",
+     "name": "Big Tom",
+     "class": "TOM",
+     "layers": [
+      "134-d4"
+     ]
+    },
+    {
+     "pad": "A04",
+     "name": "Low Tom",
+     "class": "TOM",
+     "layers": [
+      "134-d3"
+     ]
+    },
+    {
+     "pad": "A05",
+     "name": "Mid Tom",
+     "class": "TOM",
+     "layers": [
+      "134-d1"
+     ]
+    },
+    {
+     "pad": "A06",
+     "name": "Fill Tom",
+     "class": "TOM",
+     "layers": [
+      "134-d0"
+     ]
+    },
+    {
+     "pad": "A07",
+     "name": "Tom Beat Hat",
+     "class": "HAT_CLOSED",
+     "layers": [
+      "134-d2"
+     ]
+    },
+    {
+     "pad": "A08",
+     "name": "World 808",
+     "class": "KICK",
+     "layers": [
+      "163-d5"
+     ]
+    },
+    {
+     "pad": "A09",
+     "name": "World Tambourine",
+     "class": "PERC",
+     "layers": [
+      "163-d8"
+     ]
+    },
+    {
+     "pad": "A10",
+     "name": "Bass Tom",
+     "class": "TOM",
+     "layers": [
+      "163-d7"
+     ]
+    },
+    {
+     "pad": "A11",
+     "name": "World Tom",
+     "class": "TOM",
+     "layers": [
+      "163-d3"
+     ]
+    },
+    {
+     "pad": "A12",
+     "name": "World Snare",
+     "class": "SNARE",
+     "layers": [
+      "163-d4",
+      "163-d2"
+     ]
+    },
+    {
+     "pad": "A13",
+     "name": "World Hat",
+     "class": "HAT_CLOSED",
+     "layers": [
+      "163-d1"
+     ]
+    },
+    {
+     "pad": "A14",
+     "name": "Tom Groove",
+     "class": "LOOP",
+     "phrase": "134"
+    },
+    {
+     "pad": "A15",
+     "name": "World Groove",
+     "class": "LOOP",
+     "phrase": "163"
+    },
+    {
+     "pad": "A16",
+     "name": "Thin Perc Groove",
+     "class": "LOOP",
+     "phrase": "102"
+    }
+   ]
+  }
+ ],
+ "choke_note": "Decided by measurement (round 0): with every 808 group choked, the 808 lanes of loops 127, 134 and 163 rendered 3 to 7 dB under their separated references and 1.9 to 4.4 dB closer without the choke, so their 808 notes ring over each other in the references. Only loop 154's 808 measured closer choked (-0.5 dB against +1.6 dB).",
+ "glue": {
+  "90": {
+   "threshold_db": -6.37,
+   "ratio": 4.0,
+   "attack_ms": 2.0,
+   "makeup_db": 4.26
+  },
+  "102": {
+   "threshold_db": -14.53,
+   "ratio": 4.0,
+   "attack_ms": 2.0,
+   "makeup_db": 7.28
+  },
+  "103": {
+   "threshold_db": -10.1,
+   "ratio": 4.0,
+   "attack_ms": 2.0,
+   "makeup_db": 5.67
+  },
+  "106": {
+   "threshold_db": -8.31,
+   "ratio": 4.0,
+   "attack_ms": 1.0,
+   "makeup_db": 4.45
+  },
+  "113": {
+   "threshold_db": -17.3,
+   "ratio": 4.0,
+   "attack_ms": 1.0,
+   "makeup_db": 9.58
+  },
+  "127": {
+   "threshold_db": -12.49,
+   "ratio": 4.0,
+   "attack_ms": 0.3,
+   "makeup_db": 11.2
+  },
+  "134": {
+   "threshold_db": -12.7,
+   "ratio": 4.0,
+   "attack_ms": 0.5,
+   "makeup_db": 8.52
+  },
+  "154": {
+   "threshold_db": -7.97,
+   "ratio": 4.0,
+   "attack_ms": 2.0,
+   "makeup_db": 3.07
+  },
+  "163": {
+   "threshold_db": -13.99,
+   "ratio": 4.0,
+   "attack_ms": 2.0,
+   "makeup_db": 7.87
+  }
+ },
+ "glue_note": "Bus compression per groove (groove.glue), fitted by fit_glue.py to the reference's crest factor: 4:1, release 120 ms, 6 dB soft knee, attack and threshold fitted (a slow attack made the grooves peakier); the makeup gain matches the reference's RMS level."
+}
