@@ -6763,8 +6763,8 @@ private enum class Engine {
         TANGLE -> TangleVoice.entries
         SHOAL -> ShoalVoice.entries
         CREASE -> CreaseVoice.entries
-        CAUSTIC -> CausticVoice.entries
-        LATTICE -> LatticeVoice.entries
+        CAUSTIC -> CausticInstrument.KEPT_VOICES
+        LATTICE -> Lattice.KEPT_VOICES
         RELAY -> RelayVoice.entries
         EMBOUCHURE -> EmbouchureVoice.entries
         BELLOWS -> BellowsVoice.entries
@@ -7618,6 +7618,9 @@ private fun chipLabel(engine: Engine, voice: Enum<*>): String = when (engine) {
         CausticVoice.HOLLOW_MALLET -> "Hollow Mallet"
         CausticVoice.RUBBED_RING -> "Rubbed Ring"
         CausticVoice.TRAVELLING_CATCHES -> "Travelling Catches"
+        CausticVoice.BOWL -> "Bowl"
+        CausticVoice.SCATTER -> "Scatter"
+        CausticVoice.TONGUE -> "Tongue"
     }
     else -> voice.name
 }
