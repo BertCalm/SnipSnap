@@ -16,8 +16,9 @@ import kotlin.test.assertTrue
 
 /**
  * The LOOSE CRATE kits' contracts, on real renders, in CypherTest's shape: the same bytes twice, every zone
- * levelled, a softer hit a different and duller strike, four different takes in every zone, four kits that
- * are four kits, grooves that are bar-exact and close on themselves, and HUMMIN opening with round 0's sounds.
+ * levelled, a softer hit a different and duller strike, four different takes in every zone, seven kits that
+ * are seven kits (SPEED being HUMMIN's speed variant, by the owner's choice), grooves that are bar-exact and close
+ * on themselves, and HUMMIN opening with round 0's sounds.
  */
 class LooseCrateKitsTest {
     private val rate = Dsp.RATE
@@ -138,19 +139,41 @@ class LooseCrateKitsTest {
         }
     }
 
-    @Test fun `the four kits are four kits`() {
-        val names = Kit.entries.map { LooseCrateKits.roles(it) }
-        for (roles in names) { assertEquals(LooseCrateKits.PADS, roles.size); assertEquals(roles.size, roles.toSet().size) }
-        assertEquals(4, Kit.entries.map { it.bpm }.toSet().size)
-        assertEquals(4, Kit.entries.map { LooseCrateKits.printOf(it).name }.toSet().size)
+    /** The original four and the expansion's BLUE and RAGA: authored genre kits, held apart. */
+    private val genres = Kit.entries - Kit.SPEED
+
+    @Test fun `the seven kits are seven kits`() {
+        val names = Kit.entries.associateWith { LooseCrateKits.roles(it) }
+        for (roles in names.values) { assertEquals(LooseCrateKits.PADS, roles.size); assertEquals(roles.size, roles.toSet().size) }
+        assertEquals(Kit.entries.size, Kit.entries.map { it.bpm }.toSet().size)
+        // The first four have four prints; BLUE has its own (BLUE_PRINT). SPEED is HUMMIN's record and RAGA was heard
+        // and settled through it, so both share CRATE.
+        assertEquals(5, Kit.entries.map { LooseCrateKits.printOf(it).name }.toSet().size)
         // "Different effect strengths on the same kit are not sufficient evidence of distinct genre kits": every
-        // pair differs in at least six pad names, and the kick and the main snare are different drums, dry.
-        for (a in Kit.entries.indices) for (b in a + 1 until Kit.entries.size) {
-            assertTrue((names[a] zip names[b]).count { (x, y) -> x != y } >= 6, "${Kit.entries[a]} and ${Kit.entries[b]} share pads")
+        // pair of genre kits differs in at least six pad names, and their first two pads are different drums, dry.
+        for (a in genres.indices) for (b in a + 1 until genres.size) {
+            val (ka, kb) = genres[a] to genres[b]
+            assertTrue((names.getValue(ka) zip names.getValue(kb)).count { (x, y) -> x != y } >= 6, "$ka and $kb share pads")
             for (role in 0..1) {
-                val d = shapeDistance(LooseCrateKits.dry(Kit.entries[a], role, 1f, 0).samples, LooseCrateKits.dry(Kit.entries[b], role, 1f, 0).samples)
-                assertTrue(d > .5, "role $role: ${Kit.entries[a]} and ${Kit.entries[b]} share a drum ($d)")
+                val d = shapeDistance(LooseCrateKits.dry(ka, role, 1f, 0).samples, LooseCrateKits.dry(kb, role, 1f, 0).samples)
+                assertTrue(d > .5, "role $role: $ka and $kb share a drum ($d)")
             }
+        }
+    }
+
+    /**
+     * SPEED is not a fifth genre: the owner chose "sped-up breaks" as HUMMIN's record played fast (round 0, settled
+     * 2026-11-20). What makes it SPEED is held instead: every hit is HUMMIN's, 1.35 times shorter and higher.
+     */
+    @Test fun `SPEED is HUMMIN played at 45 rpm`() {
+        assertEquals(LooseCrateKits.roles(Kit.HUMMIN).take(LooseCrateKits.HITS), LooseCrateKits.roles(Kit.SPEED).take(LooseCrateKits.HITS))
+        assertEquals(108, Math.round(LooseCrateKits.SPEED_SOURCE_BPM * LooseCrateKits.SPEED_RATIO).toInt())
+        for (role in 0 until LooseCrateKits.HITS) {
+            val slow = LooseCrateKits.dryRaw(Kit.HUMMIN, role, 1f, 0)
+            val fast = LooseCrateKits.dryRaw(Kit.SPEED, role, 1f, 0)
+            val ratio = slow.size.toDouble() / fast.size
+            assertTrue(abs(ratio - LooseCrateKits.SPEED_RATIO) < .01, "role $role: HUMMIN to SPEED length ratio $ratio")
+            assertTrue(onsetCentroid(fast) > onsetCentroid(slow), "role $role: SPEED's hit is not higher than HUMMIN's")
         }
     }
 
@@ -170,10 +193,12 @@ class LooseCrateKitsTest {
      * Round 2 (the owner heard round 1 as "a bit drum machine like"): a groove keeps sounding between hits as its
      * references do. The quietest tenth of its 10 ms frames, under its loudest frame, sits in a band around its
      * references' (HUMMIN's 18 to 23 dB, CLOTH's 45, HAZE's 22 to 31, RITUAL's 35 to 44); round 1 measured 45, 44,
-     * 45 and 56, every groove falling to near silence between hits.
+     * 45 and 56, every groove falling to near silence between hits. The expansion had no references: its bands sit
+     * 6 dB either side of the grooves the owner settled (BLUE 31.5, SPEED 30.4, RAGA 17.7), so they cannot drift.
      */
     @Test fun `every groove keeps sounding between hits as its references do`() {
-        val bands = mapOf(Kit.HUMMIN to -33.0..-15.0, Kit.CLOTH to -56.0..-40.0, Kit.HAZE to -36.0..-18.0, Kit.RITUAL to -48.0..-30.0)
+        val bands = mapOf(Kit.HUMMIN to -33.0..-15.0, Kit.CLOTH to -56.0..-40.0, Kit.HAZE to -36.0..-18.0, Kit.RITUAL to -48.0..-30.0,
+            Kit.BLUE to -37.5..-25.5, Kit.SPEED to -36.4..-24.4, Kit.RAGA to -23.7..-11.7)
         for (kit in Kit.entries) {
             val x = rendered(kit, LooseCrateKits.GROOVE, 1f, 0).samples
             val hop = rate / 100
@@ -185,16 +210,21 @@ class LooseCrateKitsTest {
         }
     }
 
-    /** Round 2: a drummer's kicks are not all one strength; the references' land 5 to 12 dB apart, round 1's within 1.6 dB. */
-    @Test fun `every groove's kicks land at least 8 dB apart from softest to hardest`() {
+    /**
+     * Round 2: a drummer's kicks are not all one strength; the references' land 5 to 12 dB apart, round 1's within
+     * 1.6 dB. BLUE's break and RAGA's groove were settled as written, their kicks 5.1 and 5.2 dB apart with no curve
+     * and no wires (brushes and hand drums): they hold at least 4 dB, and no wires.
+     */
+    @Test fun `every groove's kicks land apart from softest to hardest`() {
         for (kit in Kit.entries) {
             val parts = LooseCrateKits.parts(kit)
             val notes = LooseCrateKits.played(kit, LooseCrateKits.phrases(kit)[1].notes)
             val kicks = notes.filter { it.part < LooseCrateKits.HITS && parts[it.part].cls == DrumClass.KICK }.map { it.weight }
             val spread = 20 * kotlin.math.log10(kicks.max().toDouble() / kicks.min())
-            assertTrue(spread >= 8.0, "${kit.name}: kicks only $spread dB apart")
-            // Every kick has the snare wires under it.
-            assertEquals(kicks.size, notes.count { it.part == LooseCrateKits.WIRES }, "${kit.name} wires")
+            val wired = LooseCrateKits.roomOf(kit).wireWeight > 0f
+            assertTrue(spread >= if (wired) 8.0 else 4.0, "${kit.name}: kicks only $spread dB apart")
+            // Every kick has the snare wires under it, where the room has wires.
+            assertEquals(if (wired) kicks.size else 0, notes.count { it.part == LooseCrateKits.WIRES }, "${kit.name} wires")
         }
     }
 
@@ -239,7 +269,9 @@ class LooseCrateKitsTest {
             // Built from the same renders the other tests use: build() itself is only arrangement.
             val pads = LooseCrateKits.build(kit, ::rendered)
             assertEquals(LooseCrateKits.PADS, pads.size)
-            assertEquals(listOf(DrumClass.KICK, DrumClass.SNARE, DrumClass.HAT_CLOSED, DrumClass.HAT_OPEN), pads.take(4).map { it.drumClass })
+            // The family opens kick, snare, hat, open hat. RAGA has no hats: its tabla leads on pads 1 and 2.
+            if (kit == Kit.RAGA) assertEquals(listOf("Dayan Na", "Bayan Ge"), pads.take(2).map { it.displayName })
+            else assertEquals(listOf(DrumClass.KICK, DrumClass.SNARE, DrumClass.HAT_CLOSED, DrumClass.HAT_OPEN), pads.take(4).map { it.drumClass })
             assertEquals(listOf(DrumClass.LOOP, DrumClass.LOOP), pads.takeLast(2).map { it.drumClass })
             for ((role, pad) in pads.withIndex()) {
                 assertEquals(3, pad.velocityTakes.size)
