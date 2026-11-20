@@ -373,3 +373,33 @@ does not establish that this entire repository gate passed.
   can continue without another attack or a new synthetic layer at the wrap.
 - Promote the owner's accepted moving example with an exact default comparison,
   then offer speed and finite HOLD as focused extensions of that reference.
+
+## Candidate voices: VANE, RAKE, BOW (round lattice-voices-1, 2026-11-20)
+
+Status: **built, measured, unheard**. The melodic gate asks for six voices and LATTICE has four. Three candidates
+are appended to `LatticeVoice` after TRACE, so saved names and ordinals do not move. `Lattice.KEPT_VOICES` is the
+four voices players are offered; the candidates have no preset, kit or starter, and the kept renders are pinned
+byte for byte in `LatticeCandidateVoicesTest`. The owner needs to keep at least two.
+
+Each candidate hears a part of the gate model that the kept voices hold still or sum away.
+
+- **VANE** hears the analyzer angle in motion. A bar-like source (root, double octave, a little tenth harmonic,
+  0.9 s decay) passes two gates while the analyzer turns at 2 to 8 Hz (SPEED, 4 Hz at the centre). As it crosses,
+  the passing tone dims and what it rejects feeds the ringing outline, group by group (COLOR .6 staggers their
+  extinction angles). The turn starts open, so the attack is whole. This is the documented moving-control path
+  with a periodic trajectory; nothing is added to the model. Controls: TUNE, SPEED, HOLD (finite, up to 3.24 s more).
+- **RAKE** hears each gate's own rejection at its own time. Sixteen evenly turned gates stand in a row; the wave
+  reaches gate *s* after *(s-1)* travel steps (SPEED: 90 to 22.5 ms a step, 45 ms at the centre) and that gate's
+  rejection rings its own bar at harmonic *s*. A short pick (60 ms) is followed by a run up the overtones. A harder
+  pick carries further up the row (velocity^((s-1)/7)). The row replaces the shared collector for this voice.
+  Controls: TUNE, SPEED, HOLD (finite: bars ring up to 2.5 times longer).
+- **BOW** is the spare. It is the kept static path with a new source (h^-0.8 roll-off over 11 harmonics) and a
+  bowed contour: a 50 to 113 ms start that depends on touch, constant effort, a 280 ms release. It keeps the full
+  gate contract (TUNE, TURN, STAGES, TWIST, COLOR, REJECT, HOLD) and loops at the top of HOLD like WARM.
+
+Measured (Kotlin, `LatticeCandidateVoicesTest`; nothing here is heard): every candidate is finite, bounded under
+the engine's .99 raw headroom, deterministic, silent at zero velocity and within a cent of the played note at
+C2, C3, C4, C5 and C6. By level-matched third-octave shape every candidate is at least 3.7 dB from every other
+voice at C3 and C4 (the nearest pair is RAKE and BOW). Constants are authored, not measured from an instrument.
+
+Not done for the candidates: presets, kit pads, keygroups (`LatticeKeys` is TRACE only), takes, a listening verdict.

@@ -180,7 +180,7 @@ class CausticSynthScreenTest : ComposeScreenTest() {
         val labels = mapOf(CausticVoice.ALLOY to "ALLOY", CausticVoice.HOLLOW_MALLET to "Hollow Mallet",
             CausticVoice.RUBBED_RING to "Rubbed Ring", CausticVoice.TRAVELLING_CATCHES to "Travelling Catches")
         for (label in labels.values) compose.onNodeWithContentDescription(label).assertIsDisplayed()
-        for ((index, voice) in CausticVoice.entries.withIndex()) {
+        for ((index, voice) in CausticInstrument.KEPT_VOICES.withIndex()) {
             press(labels.getValue(voice))
             val preset = CausticPresets.forVoice(voice).first()
             press("PRESET ${preset.name}")
@@ -198,7 +198,7 @@ class CausticSynthScreenTest : ComposeScreenTest() {
         }
         compose.runOnIdle { generation++ }
         pump()
-        for ((index, voice) in CausticVoice.entries.withIndex()) {
+        for ((index, voice) in CausticInstrument.KEPT_VOICES.withIndex()) {
             press(labels.getValue(voice))
             val midi = 48 + index * 3
             assertRoot(midi)

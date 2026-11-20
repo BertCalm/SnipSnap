@@ -26,7 +26,7 @@ import kotlin.test.assertTrue
  */
 class CausticSustainTest {
     private val rate = Dsp.RATE
-    private val voices = CausticVoice.entries
+    private val voices = CausticInstrument.KEPT_VOICES
     private fun macros(voice: CausticVoice, vararg overrides: Pair<String, Float>) =
         CausticInstrument.defaults(voice, model = 1) + mapOf("HOLD" to 1f, "MOTION" to 0f) + overrides.toMap()
 

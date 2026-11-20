@@ -16,8 +16,12 @@ import kotlin.math.sin
 import kotlin.math.sqrt
 import kotlin.random.Random
 
-/** The accepted source characters plus the accepted pluck-to-ring motion. */
-enum class LatticeVoice { WARM, PLUCK, HOLLOW, TRACE }
+/**
+ * The accepted source characters plus the accepted pluck-to-ring motion, then the listening
+ * candidates of round lattice-voices-1. Candidates are appended so saved names and ordinals
+ * never move; [Lattice.KEPT_VOICES] is what players are offered.
+ */
+enum class LatticeVoice { WARM, PLUCK, HOLLOW, TRACE, VANE, RAKE, BOW }
 
 /**
  * LATTICE, directional passage and a rejected outline, model 2.
@@ -57,17 +61,37 @@ object Lattice {
     private const val HALO_GAIN = 1.5
     private const val BANDWIDTH_HZ = 18_000.0
     private const val LOG_1000 = 6.907755278982137
+    private const val VANE_COLOR = .6
+    private const val VANE_REJECT = .45
+    /** No COLOR: every harmonic group meets the same sixteen evenly turned gates, so the run is even. */
+    private const val RAKE_COLOR = 0.0
+    private const val RAKE_REJECT = .5
+    /** Fixed authored send from the row of bars; a short pick only part-fills each narrow bar. */
+    private const val RAKE_GAIN = 32.0
+
+    /** The voices players are offered. The rest are unheard candidates: no picker, preset or kit. */
+    val KEPT_VOICES: List<LatticeVoice> =
+        listOf(LatticeVoice.WARM, LatticeVoice.PLUCK, LatticeVoice.HOLLOW, LatticeVoice.TRACE)
+
+    /** Static-gate source voices: the full gate contract and a periodic top HOLD. */
+    private fun isStatic(voice: LatticeVoice) = when (voice) {
+        LatticeVoice.WARM, LatticeVoice.PLUCK, LatticeVoice.HOLLOW, LatticeVoice.BOW -> true
+        LatticeVoice.TRACE, LatticeVoice.VANE, LatticeVoice.RAKE -> false
+    }
 
     fun macrosFor(voice: LatticeVoice): List<MacroSpec> {
         // TRACE exposes the one accepted motion and its timing, rather than duplicating its
         // authored geometry as extra controls. Existing source voices retain their full contract.
-        if (voice == LatticeVoice.TRACE) return listOf(MacroSpec("TUNE", .5f, .5f),
+        // VANE and RAKE are one authored gesture each: SPEED is the vane's turning rate or the
+        // travel time between gates, and HOLD is a bounded finite extension, as it is for TRACE.
+        if (!isStatic(voice)) return listOf(MacroSpec("TUNE", .5f, .5f),
             MacroSpec("SPEED", .5f, .5f), MacroSpec("HOLD", 0f, 0f))
         val d = when (voice) {
             LatticeVoice.WARM -> floatArrayOf(1f, sqrt(6f / 14f), .5f, .45f, 0f)
             LatticeVoice.PLUCK -> floatArrayOf(.85f, sqrt(2f / 14f), .78f, .7f, .35f)
             LatticeVoice.HOLLOW -> floatArrayOf(.85f, sqrt(2f / 14f), .5f, .7f, .15f)
-            LatticeVoice.TRACE -> error("TRACE uses its motion controls")
+            LatticeVoice.BOW -> floatArrayOf(.8f, sqrt(4f / 14f), .5f, .5f, .25f)
+            LatticeVoice.TRACE, LatticeVoice.VANE, LatticeVoice.RAKE -> error("$voice uses its motion controls")
         }
         return listOf(MacroSpec("TUNE", .5f, .5f), MacroSpec("TURN", d[0], 0f),
             MacroSpec("STAGES", d[1], 0f), MacroSpec("TWIST", d[2], .5f),
@@ -94,7 +118,7 @@ object Lattice {
     fun isLoop(hold: Float): Boolean = hold.isFinite() && hold >= HOLD_LOOP
 
     /** TRACE HOLD is a bounded note extension, not a periodic sustain segment. */
-    fun isLoop(voice: LatticeVoice, hold: Float): Boolean = voice != LatticeVoice.TRACE && isLoop(hold)
+    fun isLoop(voice: LatticeVoice, hold: Float): Boolean = isStatic(voice) && isLoop(hold)
 
     fun drumClassFor(voice: LatticeVoice, macros: Map<String, Float> = emptyMap()): DrumClass =
         if (isLoop(voice, settled(voice, macros).getValue("HOLD"))) DrumClass.LOOP else DrumClass.TONAL
@@ -113,10 +137,51 @@ object Lattice {
         stopIfUnwanted(cancelled)
         val m = settled(voice, macros)
         if (voice == LatticeVoice.TRACE) return tracePerformance(m, midi, velocity, cancelled, evidence = false).snip
+        if (voice == LatticeVoice.VANE) return vanePerformance(m, midi, velocity, cancelled)
+        if (voice == LatticeVoice.RAKE) return rakePerformance(m, midi, velocity, cancelled)
         val hold = m.getValue("HOLD")
         val settings = settingsFor(voice, m, midi, velocity)
         if (isLoop(hold)) return heldProbe(settings, cancelled).snip
         return perform(settings, controls = null, effortHoldSeconds = settings.excitationSeconds - .26, cancelled = cancelled).snip
+    }
+
+    /** VANE's turning rate: 2 Hz at SPEED 0, 4 Hz at the centre, 8 Hz at 1. */
+    internal fun vaneHz(speed: Float): Double = 2.0.pow(1.0 + 2.0 * speed)
+
+    /** RAKE's travel time from one gate to the next: 90 ms at SPEED 0, 45 ms at the centre, 22.5 ms at 1. */
+    internal fun rakeStepSeconds(speed: Float): Double = .045 * 2.0.pow(1.0 - 2.0 * speed)
+
+    /**
+     * VANE: one analyzer turns in front of a bar-like source, as a motor vane turns over a
+     * resonator. The kept voices hold their gates still (or move them once, TRACE); here the
+     * analyzer angle is the sound. As it crosses, the passing tone dims and what it rejects feeds
+     * the ringing outline, harmonic group by harmonic group (COLOR staggers their extinction
+     * angles), so the tone and its outline trade places at the vane rate. The turn starts open,
+     * so the mallet attack is always heard whole. Nothing is added to the model: this is the
+     * documented moving-control path with a periodic trajectory.
+     */
+    private fun vanePerformance(m: Map<String, Float>, midi: Int, velocity: Float, cancelled: () -> Boolean): Snip {
+        val settings = settingsFor(LatticeVoice.VANE, m, midi, velocity)
+        val hz = vaneHz(m.getValue("SPEED"))
+        val controls = { seconds: Double ->
+            Controls(turn = .5 - .5 * cos(2.0 * PI * hz * seconds), color = VANE_COLOR, reject = VANE_REJECT, gateCount = 2.0)
+        }
+        return performKernel(settings, controls, effortHoldSeconds = LatticeMotion.MAX_HOLD_SECONDS * m.getValue("HOLD"),
+            cancelled = cancelled, motion = null, referenceExcitationSeconds = settings.excitationSeconds,
+            evidence = false).snip
+    }
+
+    /**
+     * RAKE: the gates stand in a row and the plucked wave reaches them one after another. The
+     * kept voices sum every gate's rejection at once into one shared outline; here each gate's
+     * own rejection is heard at its own time, ringing its own harmonic bar (gate s rings harmonic
+     * s), so the note opens as a run up its overtones. See [Rake].
+     */
+    private fun rakePerformance(m: Map<String, Float>, midi: Int, velocity: Float, cancelled: () -> Boolean): Snip {
+        val settings = settingsFor(LatticeVoice.RAKE, m, midi, velocity)
+        return performKernel(settings, controls = null, effortHoldSeconds = 0.0, cancelled = cancelled, motion = null,
+            referenceExcitationSeconds = settings.excitationSeconds, evidence = false,
+            rake = RakeSpec(rakeStepSeconds(m.getValue("SPEED")), 1.0 + 1.5 * m.getValue("HOLD"))).snip
     }
 
     /** Authoritative control-to-model mapping shared by the instrument and its audition. */
@@ -126,6 +191,31 @@ object Lattice {
         val hold = m.getValue("HOLD")
         if (voice == LatticeVoice.TRACE) return LatticeMotion.settings(m.getValue("SPEED"), hold,
             midiFor(voice, m.getValue("TUNE"), midi), velocity)
+        if (voice == LatticeVoice.VANE) {
+            // A struck bar rings long enough for several turns of the vane before the release.
+            val excitation = 2.6 + LatticeMotion.MAX_HOLD_SECONDS * hold
+            return Settings(midi = midiFor(voice, m.getValue("TUNE"), midi), velocity = velocity, turn = 0.0,
+                gateCount = 2.0, color = VANE_COLOR, reject = VANE_REJECT, durationSeconds = excitation + 1.8,
+                excitationSeconds = excitation, sourceProfile = SourceProfile.VANE, contour = Contour.PLUCK,
+                pluckDecaySeconds = .9)
+        }
+        if (voice == LatticeVoice.RAKE) {
+            val ring = 1.0 + 1.5 * hold
+            return Settings(midi = midiFor(voice, m.getValue("TUNE"), midi), velocity = velocity, turn = 1.0,
+                gateCount = 16.0, twist = .5, color = RAKE_COLOR, reject = RAKE_REJECT,
+                durationSeconds = (SLOTS - 2) * rakeStepSeconds(m.getValue("SPEED")) + .35 + 1.9 * ring,
+                excitationSeconds = .35, sourceProfile = SourceProfile.RAKE, contour = Contour.PLUCK,
+                pluckDecaySeconds = .06)
+        }
+        if (voice == LatticeVoice.BOW) {
+            // The bow keeps its effort for the whole excitation: no pluck decay under HOLD.
+            val excitation = 1.1 + 3.24 * (hold / HOLD_LOOP).coerceIn(0f, 1f)
+            return Settings(midi = midiFor(voice, m.getValue("TUNE"), midi), velocity = velocity,
+                turn = m.getValue("TURN").toDouble(), stages = m.getValue("STAGES").toDouble(),
+                twist = m.getValue("TWIST").toDouble(), color = m.getValue("COLOR").toDouble(),
+                reject = m.getValue("REJECT").toDouble(), durationSeconds = min(6.5, excitation + 1.8),
+                excitationSeconds = excitation, sourceProfile = SourceProfile.BOW, contour = Contour.BOW)
+        }
         val excitation = .26 + 3.24 * (hold / HOLD_LOOP).coerceIn(0f, 1f)
         return Settings(midi = midiFor(voice, m.getValue("TUNE"), midi), velocity = velocity,
             turn = m.getValue("TURN").toDouble(), stages = m.getValue("STAGES").toDouble(),
@@ -136,7 +226,7 @@ object Lattice {
 
     fun renderLoop(voice: LatticeVoice, macros: Map<String, Float> = emptyMap(), midi: Int = DEFAULT_MIDI,
         velocity: Float = .75f, cancelled: () -> Boolean = { false }): FloatArray {
-        require(voice != LatticeVoice.TRACE) { "TRACE HOLD extends one finite motion; it does not render a loop" }
+        require(isStatic(voice)) { "$voice HOLD extends one finite motion; it does not render a loop" }
         return render(voice, macros + ("HOLD" to 1f), midi, velocity, cancelled).samples
     }
 
@@ -171,10 +261,13 @@ object Lattice {
      * at .025 on h9 and decay over 2.5 harmonic steps, while upper evens start at .005 on h10.
      * These spectra are authored source choices awaiting listening, not physical instrument models.
      */
-    enum class SourceProfile { WARM, PLUCK, HOLLOW }
+    enum class SourceProfile { WARM, PLUCK, HOLLOW, VANE, RAKE, BOW }
 
-    /** SUSTAIN keeps effort constant for causal fixtures; PLUCK supplies one finite decaying excitation. */
-    enum class Contour { SUSTAIN, PLUCK }
+    /**
+     * SUSTAIN keeps effort constant for causal fixtures; PLUCK supplies one finite decaying
+     * excitation; BOW is SUSTAIN with a slower, velocity-dependent start and a longer release.
+     */
+    enum class Contour { SUSTAIN, PLUCK, BOW }
 
     data class Settings(
         val midi: Int = 60,
@@ -190,8 +283,13 @@ object Lattice {
         val haloEnabled: Boolean = true,
         val sourceProfile: SourceProfile = SourceProfile.WARM,
         val contour: Contour = Contour.SUSTAIN,
+        /** Overrides the source profile's pluck decay time; null keeps the profile's own. */
+        val pluckDecaySeconds: Double? = null,
     ) {
         init {
+            require(pluckDecaySeconds == null || pluckDecaySeconds.isFinite() && pluckDecaySeconds > 0.0) {
+                "LATTICE pluck decay must be positive"
+            }
             require(midi in 36..84) { "LATTICE MIDI must be 36..84" }
             require(velocity.isFinite() && velocity in 0f..1f) { "LATTICE velocity must be 0..1" }
             require(durationSeconds.isFinite() && durationSeconds in .05..30.0) { "LATTICE finite duration must be .05..30 seconds" }
@@ -382,7 +480,7 @@ object Lattice {
     /** Native TRACE needs only its mixed WAV; probes retain the complete independent evidence. */
     private fun performKernel(settings: Settings, controls: ((Double) -> Controls)?, effortHoldSeconds: Double,
         cancelled: () -> Boolean, motion: LatticeMotion.Plan?, referenceExcitationSeconds: Double,
-        evidence: Boolean): RenderResult {
+        evidence: Boolean, rake: RakeSpec? = null): RenderResult {
         val started = System.nanoTime()
         val rate = Dsp.RATE * Dsp.OVERSAMPLE
         // Native motion owns a whole output-frame budget. Rounding at the internal rate
@@ -395,7 +493,8 @@ object Lattice {
         val haloRaw = if (evidence) FloatArray(frames) else null
         val mixedRaw = FloatArray(frames)
         val bank = Source(settings, rate)
-        val halo = if (settings.haloEnabled) Halo(Keys.midiHz(settings.midi).toDouble(), rate) else null
+        val halo = if (settings.haloEnabled && rake == null) Halo(Keys.midiHz(settings.midi).toDouble(), rate) else null
+        val row = rake?.let { Rake(Keys.midiHz(settings.midi).toDouble(), rate, it, settings.velocity.toDouble()) }
         val stageEnergy = if (evidence) DoubleArray(SLOTS) else null
         val groupEnergy = if (evidence) DoubleArray(GROUPS) else null
         val groupSamples = DoubleArray(GROUPS)
@@ -407,14 +506,17 @@ object Lattice {
         val attack = when (settings.contour) {
             Contour.SUSTAIN -> .040 - .020 * settings.velocity
             Contour.PLUCK -> .025 - .013 * settings.velocity
+            Contour.BOW -> .14 - .09 * settings.velocity
         }
-        val release = min(.16, referenceExcitationSeconds * .3)
+        val release = if (settings.contour == Contour.BOW) min(.28, referenceExcitationSeconds * .3)
+            else min(.16, referenceExcitationSeconds * .3)
         // One decaying source excites the same gates and collector. No unrelated pluck or
         // post-chain filter is mixed in to disguise the original steady source.
-        val decaySeconds = when (settings.sourceProfile) {
+        val decaySeconds = settings.pluckDecaySeconds ?: when (settings.sourceProfile) {
             SourceProfile.WARM -> .32
             SourceProfile.PLUCK -> .23
             SourceProfile.HOLLOW -> .38
+            SourceProfile.VANE, SourceProfile.RAKE, SourceProfile.BOW -> .3
         }
 
         fun collectBlockEnergy() {
@@ -465,7 +567,8 @@ object Lattice {
                 dry += groupSamples[g] * geometry.groups[g].transmission
                 if (groupEnergy != null) groupEnergy[g] += groupSamples[g] * groupSamples[g]
             }
-            val collected = if (halo != null && drives != null) halo.process(groupSamples, drives!!) else 0.0
+            val collected = if (row != null) row.process(groupSamples, geometry)
+                else if (halo != null && drives != null) halo.process(groupSamples, drives!!) else 0.0
             check(dry.isFinite() && collected.isFinite()) { "LATTICE generated a non-finite branch at frame $i" }
             if (dryRaw != null) dryRaw[i] = dry.toFloat()
             if (haloRaw != null) haloRaw[i] = collected.toFloat()
@@ -794,6 +897,21 @@ object Lattice {
                         else -> if (harmonic % 2 == 1) .025 * exp(-(harmonic - 9) / 2.5)
                             else .005 * exp(-(harmonic - 10) / 2.5)
                     }
+                    // A tuned bar: the root, its double octave and a little of the tenth harmonic.
+                    SourceProfile.VANE -> when (harmonic) {
+                        1 -> 1.0
+                        2 -> .05
+                        3 -> .10
+                        4 -> .42
+                        5 -> .04
+                        6 -> .05
+                        10 -> .12
+                        else -> .03 * exp(-(harmonic - 7) / 4.0)
+                    }
+                    // A hard pick: enough upper harmonics for every bar in the row to be reached.
+                    SourceProfile.RAKE -> harmonic.toDouble().pow(-.45) * exp(-(harmonic - 1) / 18.0)
+                    // A bowed string: a slow sawtooth roll-off with the even harmonics kept.
+                    SourceProfile.BOW -> harmonic.toDouble().pow(-.8) * exp(-(harmonic - 1) / 11.0)
                 }
                 weights[p] = if (hz < BANDWIDTH_HZ) profileWeight * harmonic.toDouble().pow(participation) else 0.0
                 val phase = 2.0 * PI * phases[p]
@@ -825,6 +943,73 @@ object Lattice {
         }
 
         fun state(): DoubleArray = sine + cosine
+    }
+
+    internal class RakeSpec(val stepSeconds: Double, val ringScale: Double)
+
+    /**
+     * RAKE's row of bars. Gate s (1..15) owns one double-precision constant-peak bandpass at
+     * harmonic s of the note and hears only its own signed rejection, read from the four group
+     * signals as they were (s-1) travel steps ago. The gate chain, its rejection coefficients
+     * and the source are the engine's own; this replaces the shared collector, it does not add
+     * a second source. A harder pick carries further up the row (velocity^((s-1)/7)), so touch
+     * changes how many bars speak, not only how loud. Every bar is a damped two-pole; bars above
+     * the engine bandwidth are left out. Timbral constants are authored, not measured.
+     */
+    private class Rake(fundamental: Double, rate: Int, spec: RakeSpec, velocity: Double) {
+        private val b0 = DoubleArray(SLOTS)
+        private val a1 = DoubleArray(SLOTS)
+        private val a2 = DoubleArray(SLOTS)
+        private val x1 = DoubleArray(SLOTS)
+        private val x2 = DoubleArray(SLOTS)
+        private val y1 = DoubleArray(SLOTS)
+        private val y2 = DoubleArray(SLOTS)
+        private val reach = DoubleArray(SLOTS)
+        private val delay = IntArray(SLOTS)
+        private val size: Int
+        private val history: DoubleArray
+        private var write = 0
+
+        init {
+            for (s in 1 until SLOTS) {
+                val hz = s * fundamental
+                if (hz >= BANDWIDTH_HZ) continue
+                val t60 = (1.9 - 1.1 * (s - 1) / (SLOTS - 2)) * spec.ringScale
+                val q = max(.5, PI * hz * t60 / LOG_1000)
+                val angle = 2.0 * PI * hz / rate
+                val alpha = sin(angle) / (2.0 * q)
+                val denominator = 1.0 + alpha
+                b0[s] = alpha / denominator
+                a1[s] = -2.0 * cos(angle) / denominator
+                a2[s] = (1.0 - alpha) / denominator
+                reach[s] = if (velocity > 0.0) velocity.pow((s - 1) / 7.0) else 0.0
+                delay[s] = ((s - 1) * spec.stepSeconds * rate).roundToInt()
+            }
+            size = delay.max() + 1
+            history = DoubleArray(size * GROUPS)
+        }
+
+        fun process(groups: DoubleArray, geometry: Geometry): Double {
+            val base = write * GROUPS
+            for (g in 0 until GROUPS) history[base + g] = groups[g]
+            var out = 0.0
+            for (s in 1 until SLOTS) {
+                if (b0[s] == 0.0) continue
+                var at = write - delay[s]
+                if (at < 0) at += size
+                at *= GROUPS
+                var input = 0.0
+                for (g in 0 until GROUPS) input += history[at + g] * geometry.groups[g].rejection[s]
+                val value = b0[s] * (input - x2[s]) - a1[s] * y1[s] - a2[s] * y2[s]
+                x2[s] = x1[s]
+                x1[s] = input
+                y2[s] = y1[s]
+                y1[s] = value
+                out += reach[s] * value
+            }
+            if (++write == size) write = 0
+            return RAKE_GAIN * out
+        }
     }
 
     /**

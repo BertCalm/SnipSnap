@@ -21,7 +21,9 @@ class LatticePatchTest {
 
     @Test
     fun `original source voices keep their mechanism pitch and deliberate loop controls`() {
-        assertEquals(listOf("WARM", "PLUCK", "HOLLOW", "TRACE"), LatticeVoice.entries.map { it.name })
+        // Candidates are appended; the saved names and ordinals of the kept four never move.
+        assertEquals(listOf("WARM", "PLUCK", "HOLLOW", "TRACE", "VANE", "RAKE", "BOW"), LatticeVoice.entries.map { it.name })
+        assertEquals(listOf("WARM", "PLUCK", "HOLLOW", "TRACE"), Lattice.KEPT_VOICES.map { it.name })
         for (voice in originalVoices) {
             assertEquals(controls, Lattice.macrosFor(voice).map { it.name }, "$voice controls")
             assertEquals(controls.toSet(), Lattice.defaults(voice).keys)

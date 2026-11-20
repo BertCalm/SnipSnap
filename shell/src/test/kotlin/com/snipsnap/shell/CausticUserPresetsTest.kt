@@ -1,5 +1,6 @@
 package com.snipsnap.shell
 
+import com.snipsnap.synth.CausticInstrument
 import com.snipsnap.synth.CausticPatch
 import com.snipsnap.synth.CausticVoice
 import com.snipsnap.synth.Patches
@@ -15,7 +16,7 @@ class CausticUserPresetsTest {
         val shelf = createTempDirectory("caustic-held-shelf").toFile()
         val destination = createTempDirectory("caustic-held-backup").toFile()
         try {
-            val patches = CausticVoice.entries.map { voice -> CausticPatch("MY HELD", voice,
+            val patches = CausticInstrument.KEPT_VOICES.map { voice -> CausticPatch("MY HELD", voice,
                 linkedMapOf("SOURCE" to .63f, "FOCUS" to .27f, "MOTION" to .65f, "HOLD" to 1f),
                 midi = 55, velocity = .43f, model = 2) }
             for (patch in patches) UserPresets.save(shelf, patch, nowMillis = 10L)
@@ -39,7 +40,7 @@ class CausticUserPresetsTest {
         val shelf = createTempDirectory("caustic-voice-shelf").toFile()
         val destination = createTempDirectory("caustic-voice-backup").toFile()
         try {
-            val voices = CausticVoice.entries.filter { it != CausticVoice.ALLOY }
+            val voices = CausticInstrument.KEPT_VOICES.filter { it != CausticVoice.ALLOY }
             val patches = voices.map { voice -> sound("MY DIRECTION").copy(voice = voice) }
             for (patch in patches) UserPresets.save(shelf, patch, nowMillis = 10L)
             assertEquals(patches.associateBy { it.voice }, UserPresets.read(shelf)

@@ -17,7 +17,12 @@ import kotlin.math.sin
 import kotlin.math.sqrt
 import kotlin.random.Random
 
-enum class CausticVoice { ALLOY, HOLLOW_MALLET, RUBBED_RING, TRAVELLING_CATCHES }
+/**
+ * The four heard voices, then the listening candidates of round caustic-voices-1. Candidates
+ * are appended so saved names and ordinals never move; [CausticInstrument.KEPT_VOICES] is what
+ * players are offered.
+ */
+enum class CausticVoice { ALLOY, HOLLOW_MALLET, RUBBED_RING, TRAVELLING_CATCHES, BOWL, SCATTER, TONGUE }
 
 data class CausticInstrumentDiagnostics(
     val rawPeak: Double, val rawRms: Double, val rawDc: Double,
@@ -68,6 +73,10 @@ object CausticInstrument {
     private const val DIRECT_ROOT = .035
     private const val TAU = 2.0 * PI
 
+    /** The voices players are offered. The rest are unheard candidates: no picker, preset or kit. */
+    val KEPT_VOICES: List<CausticVoice> = listOf(CausticVoice.ALLOY, CausticVoice.HOLLOW_MALLET,
+        CausticVoice.RUBBED_RING, CausticVoice.TRAVELLING_CATCHES)
+
     fun supportsModel(model: Int) = model == LEGACY_MODEL_VERSION || model == MODEL_VERSION
 
     fun macrosFor(voice: CausticVoice, model: Int = MODEL_VERSION): List<MacroSpec> {
@@ -85,7 +94,18 @@ object CausticInstrument {
                 MacroSpec("SOURCE", .5f, .5f), MacroSpec("FOCUS", .19f, .19f),
                 MacroSpec("BODY", 0f, 0f), MacroSpec("LENGTH", 1f, 1f), MacroSpec("HOLD", 0f, 0f),
             )
+            CausticVoice.BOWL -> listOf(
+                MacroSpec("SOURCE", .5f, .5f), MacroSpec("FOCUS", .19f, .19f),
+                MacroSpec("BODY", .5f, .5f), MacroSpec("LENGTH", 1f, 1f), MacroSpec("HOLD", 0f, 0f),
+            )
+            // Shorter bodies: their authored ring is heard at LENGTH .4, with room above it.
+            CausticVoice.SCATTER, CausticVoice.TONGUE -> listOf(
+                MacroSpec("SOURCE", .5f, .5f), MacroSpec("FOCUS", .19f, .19f),
+                MacroSpec("BODY", .5f, .5f), MacroSpec("LENGTH", .4f, .4f), MacroSpec("HOLD", 0f, 0f),
+            )
         }
+        // Candidates are finite only for now: no path MOTION, and HOLD extends the note at every step.
+        if (CausticCandidates.handles(voice)) return finite
         return if (model == LEGACY_MODEL_VERSION) finite else
             finite.dropLast(1) + MacroSpec("MOTION", 0f, 0f) + finite.last()
     }
@@ -104,7 +124,7 @@ object CausticInstrument {
         require(model != LEGACY_MODEL_VERSION || m.getValue("HOLD") == 0f) {
             "CAUSTIC model 1 HOLD is reserved; its saved finite sound remains unchanged"
         }
-        return model == MODEL_VERSION && m.getValue("HOLD") == 1f
+        return model == MODEL_VERSION && m.getValue("HOLD") == 1f && !CausticCandidates.handles(voice)
     }
 
     private fun finiteMacros(voice: CausticVoice, macros: Map<String, Float>, model: Int): Map<String, Float> {
@@ -396,8 +416,10 @@ object CausticInstrument {
 
     /** A whole-buffer loop for ordinary sampler pads; it deliberately contains no attack prefix. */
     fun renderLoop(voice: CausticVoice, macros: Map<String, Float>, midi: Int = DEFAULT_MIDI,
-        velocity: Float = .75f, model: Int = MODEL_VERSION, cancelled: () -> Boolean = { false }): Snip =
-        CausticHeld.probe(voice, macros, midi, velocity, model, 4, true, cancelled, record = false).loop
+        velocity: Float = .75f, model: Int = MODEL_VERSION, cancelled: () -> Boolean = { false }): Snip {
+        require(!CausticCandidates.handles(voice)) { "CAUSTIC $voice is finite only; it has no sustained loop yet" }
+        return CausticHeld.probe(voice, macros, midi, velocity, model, 4, true, cancelled, record = false).loop
+    }
 
     /** Keygroups keep the real note-on prefix and a positive, explicitly measured loop marker. */
     fun keyNote(voice: CausticVoice, macros: Map<String, Float>, midi: Int = DEFAULT_MIDI,
@@ -409,8 +431,10 @@ object CausticInstrument {
 
     fun heldProbe(voice: CausticVoice, macros: Map<String, Float>, midi: Int = DEFAULT_MIDI,
         velocity: Float = .75f, model: Int = MODEL_VERSION, oversample: Int = 4,
-        normalize: Boolean = true, cancelled: () -> Boolean = { false }): CausticHeldProbe =
-        CausticHeld.probe(voice, macros, midi, velocity, model, oversample, normalize, cancelled)
+        normalize: Boolean = true, cancelled: () -> Boolean = { false }): CausticHeldProbe {
+        require(!CausticCandidates.handles(voice)) { "CAUSTIC $voice is finite only; it has no sustained loop yet" }
+        return CausticHeld.probe(voice, macros, midi, velocity, model, oversample, normalize, cancelled)
+    }
 
     /** Optional [seconds] captures a prefix without changing LENGTH or its source/modal release.
      * Diagnostic 16x uses the same source and modes with finer discrete rotation/kick steps. */
@@ -469,6 +493,17 @@ object CausticInstrument {
                     peak = maxOf(peak, abs(value.toDouble()))
                 }
                 audio = Audio(rendered.internal, peak, System.nanoTime() - audioStarted)
+                frequencies = rendered.frequencies
+            }
+            CausticVoice.BOWL, CausticVoice.SCATTER, CausticVoice.TONGUE -> {
+                val preparationStarted = System.nanoTime()
+                val (prepared, cached) = geometry(m.getValue("SOURCE").toDouble(), m.getValue("FOCUS").toDouble())
+                cacheHit = cached
+                prepareNanos = System.nanoTime() - preparationStarted
+                val audioStarted = System.nanoTime()
+                val rendered = CausticCandidates.render(voice, m, midi, vel, frames, oversample, prepared)
+                audio = Audio(rendered.internal, rendered.internal.maxOfOrNull { abs(it.toDouble()) } ?: 0.0,
+                    System.nanoTime() - audioStarted)
                 frequencies = rendered.frequencies
             }
         }

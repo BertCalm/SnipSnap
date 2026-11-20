@@ -788,3 +788,44 @@ engine is required for this sample workflow.
   SPREAD check passed. The added chromatic scan and DSP checks above also pass.
   The broader nine-module suite result is recorded in the change's pull-request
   validation section, separately from these focused and artifact checks.
+
+## Candidate voices: BOWL, SCATTER, TONGUE (round caustic-voices-1, 2026-11-20)
+
+Status: **built, measured, unheard**. The melodic gate asks for six voices and CAUSTIC has four. Three candidates
+are appended to `CausticVoice` after TRAVELLING_CATCHES, so saved names and ordinals do not move.
+`CausticInstrument.KEPT_VOICES` is the four voices players are offered; the candidates have no preset, kit or
+starter, and the kept renders (finite, moving and held) are pinned byte for byte in `CausticCandidateVoicesTest`.
+The owner needs to keep at least two. The code is `CausticCandidates.kt`.
+
+Each candidate reads a part of the reflected-path geometry that the kept voices discard.
+
+- **BOWL** reads where on the rim each ray landed (`Path.boundaryTheta`, unused until now). A round vessel's
+  bending modes come in pairs, cos(n·θ) and sin(n·θ), which small imperfections split by a hertz or two. A landing
+  at θ drives a pair in the proportion cos : sin of n·(θ − imperfection angle). Five pairs (ratios 1, 2.71, 5.15,
+  8.1, 11.6; 9 s to 1.6 s) are struck by a felt-mallet pulse about a third of a period long. SOURCE and FOCUS
+  choose the lit arc, so they choose which partials are struck and how deeply each beats. The lit arc is
+  mirror-symmetric, which alone would fix every beat depth, so the strike leans to one end of the pickup band.
+  Each pair straddles its partial so that its loudness-weighted centre is the partial: the root stays in tune.
+- **SCATTER** reads when each ray arrives. The kept voices compress arrival times into a fraction of a period;
+  here a coarse 64-ray fan is stretched to audible time (3.4 s per radius at LENGTH 1, about a quarter of a second
+  of spill at the default LENGTH .4) and each arrival is a small hard contact on a six-mode body. FOCUS 1 gathers
+  the spill into one strike.
+- **TONGUE** is the spare: a clamped-tongue mode table (1, 2, 6.27, 17.55) and a short pluck on the kept reception.
+
+All three are linear: finite raised-cosine contacts at exact fractional delays drive damped two-pole modes. They
+pass through the same decimation, house finish and loudness target as the kept voices. Constants are authored.
+
+**Finite only for now.** The candidates have five controls (SOURCE, FOCUS, BODY, LENGTH, HOLD) in both models:
+no MOTION, and HOLD lengthens the note at every step (HOLD 1 adds four seconds; it is not a sustained loop).
+`renderLoop` and `heldProbe` refuse them. A kept candidate needs the model-2 sustain and motion written for it.
+
+Measured (Kotlin, `CausticCandidateVoicesTest`; nothing here is heard): finite, under the .99 ceiling, deterministic,
+silent at zero velocity, root within 15 cents at C2 to C6 (SCATTER and TONGUE within 1 cent; BOWL 1 to 5 cents flat
+in the ring), and at least 3.7 dB from every other voice by level-matched third-octave shape at C3 and C4 (the
+nearest pair is SCATTER and RUBBED_RING at 16.4 dB).
+
+Known weak spot: BOWL in the bottom two octaves. Its beating pair moves the instantaneous root by up to the split
+(about 12 cents either way at C2), and its second partial (2.71 times the root) is 10 dB under the root, so on
+small speakers it may be taken for the note. The repository's pitch detector reads BOWL about a semitone flat at
+C2 and C3 for that reason, though the root component itself is in tune. The same detector reads SCATTER 10 to 14
+cents sharp at C2 and C3 during the spill.

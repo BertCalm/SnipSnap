@@ -51,7 +51,7 @@ object CausticCompleteAuditionGenerator {
     private data class Held(val loop: Snip, val note: KeyNote, val preceding: FloatArray,
         val following: FloatArray, val evidence: Map<String, Any?>)
     private data class Capture(val case: Case, val snip: Snip, val evidence: Map<String, Any?>)
-    private val voices = CausticVoice.entries.toList()
+    private val voices = CausticInstrument.KEPT_VOICES.toList()
     private fun title(voice: CausticVoice) = voice.name.lowercase().split('_').joinToString(" ") { it.replaceFirstChar(Char::uppercase) }
     private fun slug(voice: CausticVoice) = voice.name.lowercase().replace('_', '-')
 

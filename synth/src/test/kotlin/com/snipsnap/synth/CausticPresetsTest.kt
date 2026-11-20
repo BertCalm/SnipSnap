@@ -15,8 +15,8 @@ class CausticPresetsTest {
         val all = CausticPresets.all()
         assertEquals(11, all.size)
         assertEquals(11, all.map { it.name }.toSet().size)
-        assertEquals(CausticVoice.entries.toSet(), all.map { it.voice }.toSet())
-        for (voice in CausticVoice.entries) {
+        assertEquals(CausticInstrument.KEPT_VOICES.toSet(), all.map { it.voice }.toSet())
+        for (voice in CausticInstrument.KEPT_VOICES) {
             assertEquals(CausticPresets.forVoice(voice), Presets.forVoice("CAUSTIC", voice.name))
         }
         assertEquals(all, Presets.all().filter { it.engine == "CAUSTIC" })
@@ -80,7 +80,7 @@ class CausticPresetsTest {
         val positions = listOf("Fuller Body", "Preferred Alloy", "Hollow Mallet", "Rubbed Ring",
             "Travelling Catches", "Sparse Alloy", "Short Glint", "Low Vessel")
         assertEquals(positions.map { name -> CausticPresets.all().single { it.name == name } }, patches.drop(8))
-        assertEquals(CausticVoice.entries.toSet(), patches.map { it.voice }.toSet())
+        assertEquals(CausticInstrument.KEPT_VOICES.toSet(), patches.map { it.voice }.toSet())
         for ((index, pad) in pads.withIndex()) {
             assertTrue(pad.oneShot, "finite pad ${index + 1} must not advertise held sustain")
             assertEquals(patches[index].name, pad.displayName)
