@@ -77,8 +77,12 @@ The section, the velocity and the take are fields on `ConsortPatch`, not macros.
 - **Eight controls**, HOLD included, where the house asks for three to six plus HOLD. TREMOR has
   the same count. The alternative is to land the pad with the rack's ROOM, but the rack sees one
   finished mix and cannot seat each chair.
-- **The low BASSOON is thin.** At its lowest note (58 Hz) the audition reads a 1466 Hz centroid
-  against 211 Hz an octave up: the body's 150 Hz high-pass and tilt remove most of the fundamental.
+- **The low BASSOON is not thin (K3 correction).** K2 reported it thin from the whole-file
+  centroid (1466 Hz at 58 Hz against 211 Hz an octave up). Measured on the held part of the note
+  (0.4 to 1.1 s, room off), the lowest note is the darkest: centroid 327 Hz at MIDI 34 against
+  465 Hz at MIDI 52, the fundamental is its strongest partial (-7 dB against the RMS), and the band
+  above 2 kHz is -12.9 dB against -9.1. The whole-file reading is pulled up by the quiet edges of
+  the clip. Nothing was changed; the listening round plays the low notes for the owner to judge.
 - **DUDUK's velocity is not monotonic by the classifier's whole-file centroid** at the defaults
   (soft 778, medium 542, hard 704 Hz); dry and stiff it rises, which is what the test checks.
 - **The Kotlin differs from the heard prototype** in three places: `Strings.Loop` (allpass-tuned,
