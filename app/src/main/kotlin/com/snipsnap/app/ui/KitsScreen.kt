@@ -112,6 +112,8 @@ fun KitsScreen(
     /** The projects on the shelf, most recently edited first (`ShelfModel.projects`). */
     projects: List<ShelfModel.ProjectRow>,
     onOpenProject: (ShelfModel.ProjectRow) -> Unit,
+    /** A capture session is listening (`MicSessionService.armed`): the empty panel names the next step (D-7). */
+    listening: Boolean = false,
     /** The open project's folder name, so its row can say it is the one open; null while none is. */
     openProjectName: String? = null,
     /** NEW PROJECT ▸: an empty project, opened. */
@@ -519,6 +521,7 @@ fun KitsScreen(
                 // still carries them. See [EmptyShelfPanel].
                 EmptyShelfPanel(
                     assigningSnip = assigningSnip,
+                    listening = listening,
                     withStarts = startsInPanel,
                     busy = busy,
                     startingKit = startingKit,
@@ -1397,6 +1400,7 @@ internal fun KitRenameDialog(
 @Composable
 private fun EmptyShelfPanel(
     assigningSnip: Boolean,
+    listening: Boolean,
     withStarts: Boolean,
     busy: Boolean,
     startingKit: Boolean,
@@ -1419,7 +1423,13 @@ private fun EmptyShelfPanel(
             // to place: EMPTY_SHELF's "NOTHING TAPED YET" would flatly
             // contradict that. This names the real blocker and the real fix.
             TapeText(
-                if (assigningSnip) Copy.EMPTY_SHELF_FOR_ASSIGN else Copy.EMPTY_SHELF,
+                when {
+                    assigningSnip -> Copy.EMPTY_SHELF_FOR_ASSIGN
+                    // Listening (D-7): the panel said "Nothing recorded yet." beside the
+                    // button just pressed; it names the next step instead.
+                    listening -> Copy.EMPTY_SHELF_LISTENING
+                    else -> Copy.EMPTY_SHELF
+                },
                 TapeType.lcdSmall,
                 scheme.lcdInk.tape,
                 maxLines = 3,
@@ -1432,11 +1442,14 @@ private fun EmptyShelfPanel(
                     maxLines = 3,
                 )
                 if (withStarts) {
-                    PrimaryAction(
-                        label = Places.CATCH_FIRST,
-                        enabled = !busy,
-                        onClick = onCatchFirst,
-                    )
+                    // Not while listening: it is the button that started it.
+                    if (!listening) {
+                        PrimaryAction(
+                            label = Places.CATCH_FIRST,
+                            enabled = !busy,
+                            onClick = onCatchFirst,
+                        )
+                    }
                     ActionButton(
                         Copy.START_FROM_KIT,
                         scheme,
