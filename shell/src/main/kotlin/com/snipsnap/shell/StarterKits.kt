@@ -1232,6 +1232,13 @@ object StarterKits {
             seeded = false,
             key = KeySpec.parse("Cminpent"),
         ) { SynthKits.accordVoices() },
+        // Opt-in beside the kept ACCORD starter, which stays as it is; appended after ACCORD VOICES.
+        Starter(
+            com.snipsnap.synth.AccordRoundRobinKits.ID, "ACCORD TAKES",
+            "The sixteen ACCORD pads with soft, medium and hard touch and two takes on each: a repeated note is the same machine caught at another moment.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { com.snipsnap.synth.AccordRoundRobinKits.build() },
     )
 
     fun byId(id: String): Starter? = ALL.firstOrNull { it.id == id }
