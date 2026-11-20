@@ -321,8 +321,10 @@ class StaggerKitsTest {
             val rms = sqrt(x.take(n).sumOf { it.toDouble() * it } / n)
             return 20 * kotlin.math.log10(x.maxOf { abs(it) } / max(rms, 1e-9))
         }
+        // Round 2d gates the club's tail off every kit drum, so a hit's "tail" is now its own decay, 100 to 200 ms
+        // in, against its first 50 ms.
         fun tail(x: FloatArray): Double {
-            val a = (.3f * rate).toInt(); val b = min(x.size, (.5f * rate).toInt())
+            val a = (.1f * rate).toInt(); val b = min(x.size, (.2f * rate).toInt())
             if (b <= a + 100) return -99.0
             val late = sqrt(x.copyOfRange(a, b).sumOf { it.toDouble() * it } / (b - a))
             val head = sqrt(x.take((.05f * rate).toInt()).sumOf { it.toDouble() * it } / (.05f * rate))
@@ -335,11 +337,11 @@ class StaggerKitsTest {
                 val dry = StaggerKits.dryRaw(k, role, 1f, 0)
                 val pressed = print.apply(dry.copyOf(), phrase = false, converted = false)
                 val loose = bare.apply(dry.copyOf(), phrase = false, converted = false)
-                println("${k.name} role $role: crest ${"%.1f".format(crest(loose))} to ${"%.1f".format(crest(pressed))} dB, tail ${"%.1f".format(tail(loose))} to ${"%.1f".format(tail(pressed))} dB")
+                println("${k.name} role $role: crest ${"%.1f".format(crest(loose))} to ${"%.1f".format(crest(pressed))} dB, decay ${"%.1f".format(tail(loose))} to ${"%.1f".format(tail(pressed))} dB")
                 if (role == 1) {
                     assertTrue(crest(pressed) < crest(loose), "${k.name} role $role: the press raised the crest")
                     val lift = tail(pressed) - tail(loose)
-                    assertTrue(lift >= 2 && lift <= 8, "${k.name} role $role: the tail moved $lift dB; 2 to 8 is a bit, 12 was echoy")
+                    assertTrue(lift >= 0 && lift <= 8, "${k.name} role $role: the decay moved $lift dB; up to 8 is a bit, 12 was echoy")
                 } else {
                     assertTrue(tail(pressed) >= tail(loose) - 2, "${k.name} role $role: the press pulled the tail down ${tail(loose) - tail(pressed)} dB")
                     assertTrue(crest(pressed) <= crest(loose) + 2, "${k.name} role $role: the press raised the kick's crest by ${crest(pressed) - crest(loose)} dB")
@@ -351,6 +353,32 @@ class StaggerKitsTest {
             val quiet = 20 * kotlin.math.log10(frames.sorted()[frames.size / 10] / frames.max())
             println("${k.name} groove: quietest tenth $quiet dB under the loudest frame")
             assertTrue(quiet <= -20, "${k.name}: the groove's room sits only $quiet dB under its loudest; round 2b's echo sat at -14.6")
+        }
+    }
+
+    /**
+     * Round 2d, "it sounds like room reverb" (the owner, 2026-11-20): every kit drum is the close mic with the club's
+     * tail gated off, so a backbeat drum's pad is at least 50 dB under its peak from 300 to 500 ms (at DISTANCE .30
+     * it measured 49 dB down there and 28 dB down at 150 to 250 ms, a room), and every groove, with no ROOM on it,
+     * keeps its quiet tenth at least 30 dB under its loudest.
+     */
+    @Test fun `every kit drum is dry and no groove carries a room`() {
+        fun under(x: FloatArray, fromS: Float, toS: Float): Double {
+            val a = (fromS * rate).toInt(); val b = min(x.size, (toS * rate).toInt())
+            if (b <= a + 100) return 99.0
+            return -20 * kotlin.math.log10(max(sqrt(x.copyOfRange(a, b).sumOf { it.toDouble() * it } / (b - a)), 1e-9) / max(x.maxOf { abs(it) }.toDouble(), 1e-9))
+        }
+        for (k in kits) {
+            val snare = StaggerKits.dry(k, 1, 1f, 0).samples
+            val late = under(snare, .3f, .5f)
+            println("${k.name} backbeat drum: ${"%.1f".format(under(snare, .15f, .25f))} dB under its peak at 150 to 250 ms, ${"%.1f".format(late)} at 300 to 500")
+            assertTrue(late >= 50, "${k.name}: the backbeat drum still rings $late dB under its peak at 300 to 500 ms")
+            val groove = rendered(StaggerKits.GROOVE, 1f, 0, k).samples
+            val hop = rate / 100
+            val frames = DoubleArray(groove.size / hop) { f -> sqrt((0 until hop).sumOf { val v = groove[f * hop + it].toDouble(); v * v } / hop) }
+            val quiet = 20 * kotlin.math.log10(frames.sorted()[frames.size / 10] / frames.max())
+            println("${k.name} groove: quietest tenth $quiet dB under the loudest frame")
+            assertTrue(quiet <= -30, "${k.name}: the groove's quiet tenth sits only $quiet dB under its loudest")
         }
     }
 

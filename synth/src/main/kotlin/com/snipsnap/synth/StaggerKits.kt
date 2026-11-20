@@ -47,7 +47,7 @@ import kotlin.math.tanh
  */
 object StaggerKits {
     /** Bump when a pad's audio changes; saved kits carry the version they were printed with. */
-    const val VERSION = 4
+    const val VERSION = 5
 
     enum class Kit(val id: String, val title: String, val bpm: Int) {
         CARDBOARD("stagger-cardboard", "Cardboard", 89),
@@ -337,22 +337,24 @@ object StaggerKits {
     internal fun strikeOf(kit: Kit, part: Int): Strike = if (part == WIRES) LooseCrateKits.wires else parts(kit)[part].strike
 
     /**
-     * CARDBOARD's room: small and dry (the references' gaps are clean against LOOSE CRATE HUMMIN's), the bus
+     * CARDBOARD's room, round 2: small and dry (the references' gaps are clean against LOOSE CRATE HUMMIN's), the bus
      * breathing, a -3 dB shelf at 1.2 kHz (the mixes are dark), the hats at their written weights (.75 and .5 against
      * the snare's 1; at a quarter of that, with the hat's own contact closing on a quiet hit, the groove's 6 to 14 kHz
      * measured 35 dB under the mix, and at .65 still 32; the references sit 16 to 35, median 23). "Whisper" is the
      * hat's short, dark timbre and its place under the kick, not silence.
      */
     fun roomOf(kit: Kit): LooseCrateKits.Room = when (kit) {
-        Kit.CARDBOARD -> LooseCrateKits.Room(mapOf("SIZE" to .14f, "WALLS" to .40f, "DISTANCE" to .45f),
+        // Round 2d: no ROOM on any groove ("it sounds like room reverb"); the bus and the dark shelf stay, and the
+        // drummer's dynamics and the wires under the kicks are what keep a dry sum from reading as a machine.
+        Kit.CARDBOARD -> LooseCrateKits.Room(null,
             mapOf("AMOUNT" to .40f, "ATTACK" to .80f, "RECOVER" to .45f),
             -3f, kickCurve = 2.5f, wireWeight = .08f, hatLevel = 1f, ringBarEnd = false, ride = null)
-        // The cinematic kit: a bigger, further room (a stage), the foley needs the space.
-        Kit.MATINEE -> LooseCrateKits.Room(mapOf("SIZE" to .26f, "WALLS" to .50f, "DISTANCE" to .55f),
+        // The cinematic kit: its foley carries its own hall; the drums are as dry as CARDBOARD's.
+        Kit.MATINEE -> LooseCrateKits.Room(null,
             mapOf("AMOUNT" to .35f, "ATTACK" to .80f, "RECOVER" to .50f),
             -3f, kickCurve = 2.5f, wireWeight = .08f, hatLevel = 1f, ringBarEnd = false, ride = null)
-        // The drunkest kit: close and dry, the bus pressing harder, no hats to level.
-        Kit.STUMBLE -> LooseCrateKits.Room(mapOf("SIZE" to .10f, "WALLS" to .35f, "DISTANCE" to .40f),
+        // The drunkest kit: the bus pressing harder, no hats to level.
+        Kit.STUMBLE -> LooseCrateKits.Room(null,
             mapOf("AMOUNT" to .50f, "ATTACK" to .75f, "RECOVER" to .40f),
             -4f, kickCurve = 3f, wireWeight = .10f, hatLevel = 1f, ringBarEnd = false, ride = null)
     }
@@ -476,8 +478,23 @@ object StaggerKits {
     /** GLASS at a pitch, for the page; it is not on CARDBOARD (the cinematic kit's pad). */
     internal fun glassAt(semitones: Int): Strike = foley(glassDry, semitones)
 
-    /** An EMBER drum struck at the velocity and take: the engine reads both itself (a softer stroke, another strike). */
-    private fun ember(voice: EmberVoice, vararg m: Pair<String, Float>): Strike = { v, t, _ -> Ember.render(voice, mapOf(*m), v, t).samples }
+    /**
+     * An EMBER drum struck at the velocity and take (the engine reads both itself: a softer stroke, another strike),
+     * heard dry. Round 2d ("it sounds like room reverb", the owner, 2026-11-20): every EMBER hit carries the club's
+     * response, 16 dB under the direct sound even at DISTANCE 0 and ringing 0.9 s, and under a snare that is a room
+     * 35 dB down a quarter-second after the hit. So a kit drum is rendered at DISTANCE 0 (the close mic) and its
+     * tail gated to silence past the drum's own decay (HUSH at its tap, FLOOR .5 and CLOSE .5: measured, the snare
+     * keeps its first 250 ms as it was and nothing after), which is what a tightly chopped record drum is. The
+     * foley keeps its distance and its tail ([dry] false): a timpani in a hall is the point of it.
+     */
+    private fun ember(voice: EmberVoice, vararg m: Pair<String, Float>, dry: Boolean = true): Strike = { v, t, _ ->
+        val macros = if (dry) mapOf(*m) + ("DISTANCE" to 0f) else mapOf(*m)
+        val x = Ember.render(voice, macros, v, t)
+        if (dry) Hush.process(x, GATE).samples else x.samples
+    }
+
+    /** HUSH at its tap: the club's tail shut past the drum's decay. Shape. */
+    val GATE = mapOf("FLOOR" to .5f, "CLOSE" to .5f)
 
     // Round 1b: the kit's drums, EMBER's, in the club at a short distance and through its warm chain.
     internal val emberKickOpen: Strike = ember(EmberVoice.KICK, "TUNE" to .35f, "DAMP" to .55f, "BUZZ" to .30f, "DISTANCE" to .30f, "WARMTH" to .50f)
@@ -491,7 +508,7 @@ object StaggerKits {
     internal val emberStick: Strike = ember(EmberVoice.CROSS_STICK, "TUNE" to .55f, "DAMP" to .40f, "BUZZ" to .30f, "DISTANCE" to .30f, "WARMTH" to .50f)
     internal val emberShaker: Strike = ember(EmberVoice.SHAKER, "TUNE" to .40f, "DAMP" to .50f, "DISTANCE" to .30f, "WARMTH" to .50f)
     internal val emberDeadTom: Strike = muffled(ember(EmberVoice.TOM_FLOOR, "TUNE" to .35f, "DAMP" to .85f, "BUZZ" to .20f, "DISTANCE" to .30f, "WARMTH" to .50f), 400f, 2f)
-    internal val emberTimpani: Strike = foley(ember(EmberVoice.MALLET_TOM, "TUNE" to .05f, "DAMP" to .15f, "BUZZ" to 0f, "DISTANCE" to .45f, "WARMTH" to .40f), -5)
+    internal val emberTimpani: Strike = foley(ember(EmberVoice.MALLET_TOM, "TUNE" to .05f, "DAMP" to .15f, "BUZZ" to 0f, "DISTANCE" to .45f, "WARMTH" to .40f, dry = false), -5)
     internal val emberClap: Strike = ember(EmberVoice.CLAPS, "TUNE" to .50f, "CROWD" to .25f, "DISTANCE" to .35f, "WARMTH" to .50f)
 
     /**
@@ -591,7 +608,7 @@ object StaggerKits {
     // where a kit would keep its toms and cymbals.
     internal val stageKick: Strike = muffled(ember(EmberVoice.KICK, "TUNE" to .40f, "DAMP" to .45f, "BUZZ" to .30f, "DISTANCE" to .50f, "WARMTH" to .45f), 350f, 3f)
     internal val stageSnare: Strike = contact(ember(EmberVoice.SNARE, "TUNE" to .45f, "DAMP" to .40f, "BUZZ" to .65f, "DISTANCE" to .55f, "WARMTH" to .50f), 5_500f)
-    internal val lowTimpani: Strike = foley(ember(EmberVoice.MALLET_TOM, "TUNE" to .02f, "DAMP" to .10f, "BUZZ" to 0f, "DISTANCE" to .50f, "WARMTH" to .40f), -9)
+    internal val lowTimpani: Strike = foley(ember(EmberVoice.MALLET_TOM, "TUNE" to .02f, "DAMP" to .10f, "BUZZ" to 0f, "DISTANCE" to .50f, "WARMTH" to .40f, dry = false), -9)
     /** BREAKER's fitted crash, a second long with a long fade, then nine semitones down: a gong-like crash. */
     internal val crashGong: Strike = foley(KitStrikes.cymbal(BreakerCymbal.Kind.CRASH, 1f, .4f, pitch = .8), -9)
     internal val lowGlass: Strike = glassAt(-9)
