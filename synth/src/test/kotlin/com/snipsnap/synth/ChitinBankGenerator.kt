@@ -24,7 +24,7 @@ object ChitinBankGenerator {
         val html=StringBuilder("<!doctype html><html lang=en><meta charset=utf-8><meta name=viewport content='width=device-width,initial-scale=1'><title>CHITIN candidate bank</title><style>body{font:17px system-ui;max-width:1000px;margin:40px auto;padding:0 16px;background:#191d21;color:#eee}article{padding:14px 0;border-bottom:1px solid #444}audio{width:100%;margin:10px 0}a{color:#a9d5ff}h1{line-height:1.1}small{color:#bbc}</style><h1>CHITIN candidate bank</h1><p>Twelve candidates from the approved SHELL and WING core. All notes are finite. Choose the colors you want to keep.</p><p><a href='chitin-mpc-kit.zip' download>Download the 16-pad MPC kit</a> · <a href='recipes.zip' download>Download all twelve recipes</a> · <a href='lab/'>Open the full control audition</a></p>")
         val manifest=mutableListOf<String>()
         val metrics=StringBuilder("name,voice,frames,class,rawPeak,filterPeak,energyExcess,renderMillis\n")
-        for(voice in ChitinVoice.entries) {
+        for(voice in Chitin.KEPT_VOICES) {
             html.append("<h2>${voice.name}</h2>")
             for((index,p) in ChitinPresets.forVoice(voice).withIndex()) {
                 val id="${voice.name.lowercase(Locale.ROOT)}-${index+1}"
@@ -64,7 +64,7 @@ object ChitinBankGenerator {
         File(program,"PAD-LAYOUT.txt").writeText("CHITIN candidate kit\n\nLoad SnipSnap Chitin Kit.xpm. All pads are finite one-shots.\nA01-A08 climb C minor pentatonic from C1 to F2.\n\n$layout\n\nHardware listening acceptance is pending.\n")
         zip(File(root,"chitin-mpc-kit.zip"), program.walkTopDown().filter { it.isFile }
             .map { it to it.relativeTo(root).invariantSeparatorsPath }.toList())
-        val recipes = ChitinVoice.entries.flatMap { v -> (1..6).map { i ->
+        val recipes = Chitin.KEPT_VOICES.flatMap { v -> (1..6).map { i ->
             val name="${v.name.lowercase(Locale.ROOT)}-$i.json"; File(root,name) to name
         } }
         zip(File(root,"recipes.zip"), recipes)

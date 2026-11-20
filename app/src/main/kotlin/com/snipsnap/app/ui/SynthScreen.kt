@@ -6687,7 +6687,7 @@ private enum class Engine {
 
     fun voices(): List<Enum<*>> = when (this) {
         SPLAY -> SplayVoice.entries
-        CHITIN -> ChitinVoice.entries
+        CHITIN -> Chitin.KEPT_VOICES
         THUMP -> ThumpVoice.entries
         SCANNED_CHAIN -> ScannedChainVoice.entries
         FIRED_BRONZE -> FiredBronzeDryKit.Pad.entries
@@ -6770,7 +6770,7 @@ private enum class Engine {
         BELLOWS -> BellowsVoice.entries
         APSIS -> ApsisVoice.entries
         OVEN -> OvenVoice.entries
-        LIBRATION -> LibrationVoice.entries
+        LIBRATION -> Libration.KEPT_VOICES
         // BRUSH, WOOD and TINE were kept in accord-native-1; REED, COURSE, ESCAPEMENT and BELL
         // joined after them once the owner kept round accord-voices-1 (19 Nov 2026).
         ACCORD -> AccordVoice.entries

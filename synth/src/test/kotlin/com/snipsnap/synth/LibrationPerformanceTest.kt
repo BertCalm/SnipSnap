@@ -46,7 +46,7 @@ class LibrationPerformanceTest {
     }
 
     @Test fun `touch changes articulation after level matching while preserving a clear root`() {
-        for (voice in LibrationVoice.entries) {
+        for (voice in Libration.KEPT_VOICES) {
             val options = Libration.Options(seconds = .8)
             val physics = Libration.population(voice, emptyMap(), options)
             val soft = Libration.probe(voice, velocity = .3f, options = options, cached = physics)
@@ -78,9 +78,9 @@ class LibrationPerformanceTest {
         val bank = LibrationPresets.all()
         assertEquals(12, bank.size)
         assertEquals(12, bank.map { it.name }.toSet().size)
-        for (voice in LibrationVoice.entries) assertEquals(4, LibrationPresets.forVoice(voice).size)
+        for (voice in Libration.KEPT_VOICES) assertEquals(4, LibrationPresets.forVoice(voice).size)
         assertTrue(bank.all { it in Presets.all() })
-        for (voice in LibrationVoice.entries) {
+        for (voice in Libration.KEPT_VOICES) {
             assertEquals(LibrationPresets.forVoice(voice), Presets.forVoice(LibrationPatch.ENGINE, voice.name))
         }
         assertTrue(LibrationPresets.references().none { it in Presets.all() })

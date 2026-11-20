@@ -12,7 +12,7 @@ object ChitinAuditionGenerator {
         val manifest=mutableListOf<String>()
         val rows=StringBuilder("id,rawPeak,filterPeak,energyExcess,finalStorage,renderMs\n")
         val html=StringBuilder("<!doctype html><meta charset=utf-8><title>CHITIN audition</title><style>body{font:17px system-ui;max-width:1000px;margin:40px auto;background:#191d21;color:#eee}article{padding:12px;border-bottom:1px solid #444}audio{width:100%}</style><h1>CHITIN finite-note audition</h1><p>Two voices under one shared morph. HOLD extends the note; all clips are finite. Settings remain provisional.</p>")
-        for(v in ChitinVoice.entries) {
+        for(v in Chitin.KEPT_VOICES) {
             val cases=linkedMapOf<String,Map<String,Float>>()
             for(t in listOf(0f,.5f,1f)) cases["tune-$t"]=mapOf("TUNE" to t)
             for(key in Chitin.defaults(v).keys) for(step in listOf(0f,.25f,.5f,.75f,1f)) cases["$key-$step"]=mapOf(key to step)

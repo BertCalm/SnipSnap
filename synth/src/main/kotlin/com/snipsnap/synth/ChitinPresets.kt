@@ -26,6 +26,7 @@ object ChitinPresets {
     fun forVoice(voice: ChitinVoice): List<ChitinPatch> = when(voice) {
         ChitinVoice.SHELL -> shell
         ChitinVoice.WING -> wing
+        else -> emptyList()
     }
     fun all(): List<ChitinPatch> = shell + wing
 }

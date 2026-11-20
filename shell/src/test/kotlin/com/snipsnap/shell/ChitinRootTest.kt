@@ -7,7 +7,7 @@ import kotlin.test.*
 
 class ChitinRootTest {
     @Test fun `root edits retain candidate character and sound at the requested pitch`() {
-        for(voice in ChitinVoice.entries) {
+        for(voice in Chitin.KEPT_VOICES) {
             val patch=ChitinPresets.forVoice(voice).first()
             val control=assertNotNull(SynthRoot.of(patch))
             assertEquals(if(voice==ChitinVoice.SHELL) 24..48 else 48..72,control.range)

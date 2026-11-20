@@ -11,7 +11,7 @@ class LibrationTouchKeysTest {
     private companion object {
         fun patch(voice: LibrationVoice) = LibrationPatch("Touch proof", voice,
             Libration.defaults(voice) + mapOf("SWARM" to .1f, "RESONANCE" to .3f), velocity = .8f)
-        val captures by lazy { LibrationVoice.entries.associateWith { LibrationTouchKeys.capture(patch(it)) } }
+        val captures by lazy { Libration.KEPT_VOICES.associateWith { LibrationTouchKeys.capture(patch(it)) } }
     }
 
     @Test fun `both touches keep real recurrence root and distinct articulation in every voice`() {

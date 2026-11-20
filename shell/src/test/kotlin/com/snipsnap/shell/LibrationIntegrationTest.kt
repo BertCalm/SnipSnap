@@ -11,6 +11,7 @@ import com.snipsnap.kit.KitStore
 import com.snipsnap.kit.Preflight
 import com.snipsnap.kit.Severity
 import com.snipsnap.kit.blocked
+import com.snipsnap.synth.Libration
 import com.snipsnap.synth.LibrationKits
 import com.snipsnap.synth.LibrationPatch
 import com.snipsnap.synth.LibrationPresets
@@ -26,7 +27,7 @@ class LibrationIntegrationTest {
         val shelf = kotlin.io.path.createTempDirectory("libration-recipes").toFile()
         try {
             val settings = mutableMapOf("engine" to "LIBRATION", "voice" to "GATHER")
-            val edited = LibrationVoice.entries.mapIndexed { i, voice ->
+            val edited = Libration.KEPT_VOICES.mapIndexed { i, voice ->
                 val factory = Presets.forVoice(LibrationPatch.ENGINE, voice.name).first() as LibrationPatch
                 assertIs<UserPresets.Check.Factory>(UserPresets.check(factory.name, factory.engine, voice.name, emptyList()))
                 val patch = factory.copy(name = "MY ${voice.name}", midi = 43 + i * 7,

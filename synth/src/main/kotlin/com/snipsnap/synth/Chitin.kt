@@ -6,7 +6,9 @@ import com.snipsnap.audio.Snip
 import kotlin.math.*
 import kotlin.random.Random
 
-enum class ChitinVoice { SHELL, WING }
+/** SHELL and WING are the kept voices. The entries after them are candidates awaiting a listening
+ * verdict; they are appended so saved names and ordinals never move. */
+enum class ChitinVoice { SHELL, WING, HUSK, STING, GLINT, HUM, PINCER }
 
 internal data class ChitinDiagnostics(val rawPeak: Double, val rawDc: Double, val filterPeak: Double,
     val energyExcess: Double, val finalStorage: Double, val renderMillis: Double)
@@ -18,20 +20,25 @@ internal data class ChitinRender(val snip: Snip, val raw: FloatArray, val before
  * step is reserved. No random modulation, samples or extra rack processing. */
 object Chitin {
     const val MODEL_VERSION=1
+    /** The voices players are offered. Candidates have no preset, kit or starter. */
+    val KEPT_VOICES=listOf(ChitinVoice.SHELL,ChitinVoice.WING)
     // A pitched attack precedes the shared sweep; a fast sync chirp at note-on
     // otherwise becomes broadband percussion in the classifier head window.
     internal const val MORPH_START_SECONDS=.08
     private val names=listOf("TUNE","BITE","COLOR","PHASE","MORPH","PACE","HOLD")
     fun macrosFor(voice: ChitinVoice): List<MacroSpec> {
-        val values=if(voice==ChitinVoice.SHELL) listOf(.5f,.35f,.45f,.55f,.6f,.4f,.35f)
-                   else listOf(.5f,.6f,.55f,.65f,.75f,.6f,.25f)
+        val values=when(voice) {
+            ChitinVoice.SHELL -> listOf(.5f,.35f,.45f,.55f,.6f,.4f,.35f)
+            ChitinVoice.WING -> listOf(.5f,.6f,.55f,.65f,.75f,.6f,.25f)
+            else -> ChitinCandidates.defaults(voice)
+        }
         return names.zip(values).map { MacroSpec(it.first,it.second) }
     }
     fun defaults(voice: ChitinVoice)=macrosFor(voice).associate { it.name to it.default }
     internal fun settled(voice: ChitinVoice, macros: Map<String,Float>)=defaults(voice).mapValues { (key,default)->
         val v=macros[key]; if(v==null || !v.isFinite()) default else if(v==0f) 0f else v.coerceIn(0f,1f)
     }
-    fun midiFor(voice: ChitinVoice,tune: Float): Int = (if(voice==ChitinVoice.SHELL) 24 else 48)+floor(24*tune.coerceIn(0f,1f)+.5).toInt()
+    fun midiFor(voice: ChitinVoice,tune: Float): Int = (when(voice) { ChitinVoice.SHELL -> 24; ChitinVoice.WING -> 48; else -> ChitinCandidates.lowestMidi(voice) })+floor(24*tune.coerceIn(0f,1f)+.5).toInt()
     fun rootMidi(voice: ChitinVoice)=midiFor(voice,.5f)
     fun frequencyFor(voice: ChitinVoice,tune: Float)=440.0*2.0.pow((midiFor(voice,tune)-69)/12.0)
     @Suppress("UNUSED_PARAMETER") fun isLoop(hold: Float)=false
@@ -83,6 +90,7 @@ object Chitin {
     internal fun inspect(voice: ChitinVoice,macros: Map<String,Float> = emptyMap(),velocity: Float=1f,
                          protected: Boolean=true, sourceMorph: Boolean=true, phaseMorph: Boolean=true): ChitinRender {
         val started=System.nanoTime(); val p=plan(voice,macros,velocity)
+        if(voice !in KEPT_VOICES) return ChitinCandidates.inspect(p,started)
         val rate=Dsp.RATE*Dsp.OVERSAMPLE
         val wing=voice==ChitinVoice.WING
         val source=ChitinSource.render(p.frames*4,rate,p.root,!wing, ratio = { t -> p.ratio(if(sourceMorph) t else 0.0) })
