@@ -387,8 +387,23 @@ strokes only); B, break (a hip-hop break: sixteenths swung at 58% as an MPC's sw
 "boom, b-boom" at 1, the "a" of 1 and the "and" of 3, no shaker); C, A without the shaker. Shape values, for the
 owner to choose by ear; round 0h's groove stays the kit's until then.
 
+**Round 0j, the converter at its full rate.** "The ride is too noisy" (the owner, 2026-11-20, of round 0h's ride).
+Round 0g measured only how tonal the 5 to 14 kHz band was; this time the floor between the ride's ringing peaks,
+200 Hz to 16 kHz (a 150 Hz running median), at each stage of the print. The converter alone took the wash (0.2 to 0.6 s)
+from 30.0 to 15.5 dB of peaks over the floor, its floor from 2 to 8 kHz from -43.6 to -29.3 dB of the strike; the tape
+alone and the vinyl alone each cost a few dB. Not bit depth: 16 bits changed nothing. The converter holds its input at
+about 32 kHz (RATE .22), not a divisor of 44.1 kHz, so a cymbal's top folds back as tones in tune with nothing, and
+round 0h's +12 dB at 8 kHz fed it. A gentler hold (RATE .05) did not help. BLUE's print now runs the converter at RATE 0
+(its 12 bits, the tape's drive and head and the vinyl stay; the approved kits keep CRATE whole): the printed ride's wash
+is 27.6 dB over its floor (round 0h 14.7), its band shape against the references unchanged (5.4 dB from their mean, round
+0h 5.3), over 12 kHz at -28.6 dB (the references -29.6 and -20.7). The references themselves measure 17.6 and 10.0: a
+real cymbal's fizz is dense but in tune with the cymbal, and reads as cymbal; fold-back reads as hiss. The kick, brush
+tap and foot hat move under 1.5 dB in any band; the shaker sheds 3.5 dB of fold-back under 1 kHz. Lesson for the kits:
+a bright cymbal through a sample-rate reduction that does not divide the output rate needs its noise measured, not
+only its spectrum.
+
 [Expansion round 0 listening page](https://claude.ai/artifact/Q3rZ8po8ZaeJs9E4tNd86s) (private to the owner; BLUE's
-three grooves, its ride at rounds 0h and 0g, and the shaker at two levels).
+ride at rounds 0j and 0h, its three grooves, and the shaker at two levels).
 
 ## Gates
 

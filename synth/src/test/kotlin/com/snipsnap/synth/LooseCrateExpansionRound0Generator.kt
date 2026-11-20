@@ -205,8 +205,20 @@ object LooseCrateExpansionRound0Generator {
      * into swish. The share of the ride's 5 to 14 kHz wash (0.2 to 0.6 s) in peaks 8 dB over the local floor, through
      * the converter and the tape: round 0e's ride 73%, round 0f's 57%, round 0f's with no wobble 94% (no drive: 57%,
      * no change). On a kit led by a ride, a steady deck. [LooseCrateKits.CRATE] itself, and the approved kits, keep it.
+     *
+     * Round 0j, the converter at its full rate: "The ride is too noisy" (the owner, 2026-11-20, of round 0h's ride).
+     * The converter holds its input at about 32 kHz (RATE .22), not a divisor of 44.1 kHz, so a cymbal's top folds
+     * back as tones in tune with nothing: through the converter alone the ride's wash (0.2 to 0.6 s) fell from 30.0
+     * to 15.5 dB of ringing peaks over the floor between them (200 Hz to 16 kHz, the floor a 150 Hz running median),
+     * its floor from 2 to 8 kHz rising from -43.6 to -29.3 dB of the strike. Bit depth (16 bits) changed nothing, nor
+     * did a gentler hold (RATE .05). With RATE 0 the printed hit's wash is 27.6 dB over its floor (round 0h 14.7), its
+     * shape against the references unchanged (5.4 dB from their mean, round 0h 5.3). The references measure 17.6 and
+     * 10.0: a real cymbal's fizz is dense, in tune with the cymbal; the fold-back was not. The kick, brushes, hat and
+     * shaker carry little over 16 kHz to fold; the 12 bits, the tape and the vinyl stay.
      */
-    private val BLUE_PRINT = LooseCrateKits.CRATE.let { c -> LooseCrateKits.Print("blue", c.crunch, c.tape + ("WOBBLE" to 0f), c.hitVinyl, c.grooveVinyl, c.valve, c.bassSqueeze) }
+    private val BLUE_PRINT = LooseCrateKits.CRATE.let { c ->
+        LooseCrateKits.Print("blue", c.crunch + ("RATE" to 0f), c.tape + ("WOBBLE" to 0f), c.hitVinyl, c.grooveVinyl, c.valve, c.bassSqueeze)
+    }
 
     /** BLUE's room: HUMMIN's, a little smaller and drier, for brushes; a soft compressor. */
     private val blueRoom = LooseCrateKits.Room(mapOf("SIZE" to .18f, "WALLS" to .50f, "DISTANCE" to .50f), mapOf("AMOUNT" to .35f, "ATTACK" to .80f, "RECOVER" to .50f),
