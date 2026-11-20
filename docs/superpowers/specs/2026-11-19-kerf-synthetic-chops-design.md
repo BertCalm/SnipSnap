@@ -418,7 +418,8 @@ a layer is not always a separate drum.
 - **R2d.** Built. SYNTH TWIN ALL on the kit screen, and BLEED and SLOP on a twin. Gate,
   open: the owner makes a kit of twins on a phone and moves BLEED and SLOP.
 - **R3.** Built. Velocity and round robin through the app's own doors (SOFT HITS, the zone grid,
-  the kit's round robin). Gate, open: the owner hears the layers and the takes.
+  the kit's round robin). Gate, met: the owner heard the layers at depth 3 and the takes, and
+  played them on phone and MPC ("Audition is good, phone/mpc is good", 2026-11-20).
 - **R4.** Engine registration, voices and presets after listening, genre kits, audition,
   docs. Gate: the drum gate (multiple distinct genre kits on the shelf).
 
@@ -839,5 +840,6 @@ to the owner, who picked "strongest". `DEPTH` is 3.
 | Nearest a copy at another level | −24.7 dB | −16.7 dB | |
 
 `KerfVelocityTest` keeps both: depth 1 still holds to the ghosts, and depth 3 goes further on
-every row and is still a strike, not a copy. Heard: depth chosen by ear from the audition; the
-layers at depth 3 on the round-3 page not yet heard.
+every row and is still a strike, not a copy. Heard: depth chosen by ear from the audition, then
+the whole round-3 page at depth 3, and the layers and takes on phone and MPC: "Audition is good,
+phone/mpc is good" (2026-11-20).
