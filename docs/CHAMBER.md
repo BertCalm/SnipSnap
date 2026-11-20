@@ -35,8 +35,9 @@ Four Answers and the whole sixteen-pad MPC bank remain explicitly model 3, so
 the kit the owner kept and its published archive stay reproducible bit for bit.
 The other five factory recipes were re-voiced on model 5 after the owner found the
 original six "all pretty similar" (2026-11-20). The kit's pads A09–A14 still play
-the six recipes as first published (`ChamberPresets.original()`); whether they
-should follow the re-voiced roster is an open owner decision.
+the six recipes as first published (`ChamberPresets.original()`). The owner kept
+the re-voiced presets and the new touch (round fix-chamber-1, BT1 and BT2 KEEP,
+2026-11-20) and asked nothing of the kit, so the kit keeps the original six.
 
 The phone SYNTH picker exposes both rooms, five physical controls, native ROOT
 and excitation VELOCITY. HOLD stays hidden because only finite strikes are
@@ -384,7 +385,9 @@ hardness (`TOUCH_HARDNESS`, so contact shortens and each instrument's upper mode
 gain weight), a per-mode tilt (`TOUCH_TILT`), the share of the strike that reaches
 the bar, cowbell and triangle (`TOUCH_LEAN`), and the level after leveling
 (`(velocity / .75)^TOUCH_LEVEL`, about 6 dB down at .3 and 1.9 dB up at 1, held
-under the .99 ceiling). Measured steps are held by `ChamberTouchTest`.
+under the .99 ceiling). Measured steps are held by `ChamberTouchTest`. Heard
+2026-11-20, round fix-chamber-1: BT2 (Four Answers soft, normal, hard at C4 and C3,
+before then after) KEEP, no notes, so this touch is accepted.
 
 Configuration also saves physical room dimensions, normalized listener and source
 positions, placement endpoints and mode, material mode and policy, layout,
@@ -406,7 +409,9 @@ Water (cowbell and triangle in one continuous glass room, the long ring). The fi
 re-voiced recipes use model 5 because on model 3 MATERIAL and DIVIDE moved the
 whole-note spectrum by 0.1 dB and BALANCE never let one instrument lead.
 `ChamberPresets.original()` holds the six recipes as first published, on model 3;
-the kit is built on those.
+the kit is built on those. Heard 2026-11-20, round fix-chamber-1: BT1 (the six as
+first published, then re-voiced, at C4) KEEP, no notes. These six are the accepted
+factory presets.
 
 ## Geometry and material policy
 

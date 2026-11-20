@@ -180,7 +180,7 @@ keygroups and MPC hardware acceptance are deferred to their appropriate gates.
 | Kotlin aligned sound character | Heard and approved: “Same character” on 2026-10-30. |
 | MATCH upper-tuning range | Heard and approved: “Clear change, note stays clear” on 2026-11-01. |
 | LOSS decay range | A separate listening gate; not yet heard by the owner. |
-| Onset | The owner heard a click at the start of every note on 2026-11-20. Every mode starts at its largest displacement, so the output stepped from silence to the note's peak in two samples. `Ferry.render` now eases its first 3 ms in on a raised cosine (`Ferry.easeOnset`), after leveling; every later sample is unchanged bit for bit and the accepted Float goldens still hash that unchanged body (`Ferry.body`). The eased start awaits hearing. |
+| Onset | The owner heard a click at the start of every note on 2026-11-20. Every mode starts at its largest displacement, so the output stepped from silence to the note's peak in two samples. `Ferry.render` now eases its first 3 ms in on a raised cosine (`Ferry.easeOnset`), after leveling; every later sample is unchanged bit for bit and the accepted Float goldens still hash that unchanged body (`Ferry.body`). Heard 2026-11-20, round fix-ferry-1: BR1 (C3 at five LOSS settings) and BR2 (C3 soft, medium, hard; C2, C4, C5), each note with the click then eased: both KEEP, no notes. The 3 ms eased start is accepted. |
 | Full macro set, held loops, production tail, phone/MPC behavior | Later work. |
 
 ## As built: MATCH, 2026-10-31
