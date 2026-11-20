@@ -26,7 +26,7 @@ class FacsimileKitsTest {
         val renders = java.util.concurrent.ConcurrentHashMap<List<Any>, Snip>()
     }
 
-    @Test fun `every kit lays out sixteen named pads with its grooves last`() {
+    @Test fun `every kit lays out its sixteen heard pads, grooves last, then its roll`() {
         for (kit in Kit.entries) {
             val names = FacsimileKits.roles(kit)
             assertEquals(FacsimileKits.PADS, names.size, kit.name)
@@ -34,7 +34,9 @@ class FacsimileKitsTest {
             for (name in names + kit.title) assertFalse(PresetTestSupport.trademarkBlocklist.containsMatchIn(name), name)
             val grooves = (0 until FacsimileKits.PADS).filter { FacsimileKits.isGroove(kit, it) }
             assertTrue(grooves.isNotEmpty(), kit.name)
-            assertEquals((FacsimileKits.PADS - grooves.size until FacsimileKits.PADS).toList(), grooves, "${kit.name}: grooves sit last")
+            assertEquals((FacsimileKits.HEARD - grooves.size until FacsimileKits.HEARD).toList(), grooves, "${kit.name}: grooves sit last of the heard pads")
+            assertEquals(FacsimileKits.ROLL, FacsimileKits.HEARD, "the roll is the pad after them")
+            assertEquals(DrumClass.LOOP, FacsimileKits.classOf(kit, FacsimileKits.ROLL))
             for (g in grooves) assertEquals(DrumClass.LOOP, FacsimileKits.classOf(kit, g))
         }
         assertEquals(listOf(90, 113, 127, 134), Kit.entries.map { it.bpm })
@@ -50,6 +52,22 @@ class FacsimileKitsTest {
         // the wrap: the step from the last frame to the first is no larger than the steps inside the loop
         val inside = (1 until x.size).maxOf { abs(x[it] - x[it - 1]) }
         assertTrue(abs(x[0] - x.last()) <= inside, "loop seam ${abs(x[0] - x.last())} against $inside")
+    }
+
+    @Test fun `the roll speeds up as it swells and lands on the kick and snare`() {
+        for (kit in Kit.entries) {
+            val notes = FacsimileKits.rollNotes(kit)
+            val gaps = notes.zipWithNext { a, b -> b.beat - a.beat }.dropLast(1)
+            assertTrue(gaps.zipWithNext().all { (a, b) -> b < a }, "${kit.name}: every gap tighter than the last")
+            assertEquals(.5, gaps.first(), 1e-9)
+            assertTrue(gaps.last() < .15, "${kit.name}: it ends near thirty-seconds (${gaps.last()} beats)")
+            assertTrue(notes.zipWithNext().all { (a, b) -> b.velocity >= a.velocity }, "${kit.name}: it swells")
+            val landing = notes.last()
+            assertEquals(FacsimileKits.ROLL_BEATS, landing.beat)
+            assertTrue(FacsimileKits.kickPad(kit).layers.all { it in landing.layers }, "${kit.name}: the kick lands with it")
+            val x = rendered(kit, FacsimileKits.ROLL, 1f, 0).samples
+            assertTrue(x.size / rate.toFloat() > 1.5f, "${kit.name}: filed as a phrase")
+        }
     }
 
     @Test fun `every pad renders the same bytes twice`() {

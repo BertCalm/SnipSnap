@@ -1,5 +1,5 @@
 {
- "about": "FACSIMILE round 0: four kits replicated (synthesized from fitted numeric models, no reference samples) from nine reference loops. Each pad stacks one or more fitted drums ('layers', drum ids from models/<loop>.json). A pad's 'velocity' below 1 is a ghost-note pad: the same drum struck softer, which changes its character, not only its level. Phrase pads re-perform a reference loop with the replica drums at the loop's own tempo and measured micro-timing. Roles were named by hand from each drum's NMFD template and its pattern on the 16th grid; they are a first reading, to be corrected by ear.",
+ "about": "FACSIMILE: four kits replicated (synthesized from fitted numeric models, no reference samples) from nine reference loops. Each pad stacks one or more fitted drums ('layers', drum ids from models/<loop>.json). A pad's 'velocity' below 1 is a ghost-note pad: the same drum struck softer, which changes its character, not only its level. Phrase pads re-perform a reference loop with the replica drums at the loop's own tempo and measured micro-timing. Roles were named by hand from each drum's NMFD template and its pattern on the 16th grid; they are a first reading, to be corrected by ear.",
  "choke": {
   "154": [
    "154-d5"

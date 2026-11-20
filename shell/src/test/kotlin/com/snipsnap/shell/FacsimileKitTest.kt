@@ -21,8 +21,8 @@ import kotlin.test.assertTrue
  * own pad resolver and the MPC 3 exporter, read back from the files each step wrote.
  */
 class FacsimileKitTest {
-    /** A single drum, a layered stack, a ghost pad, a hat (choke group) and a groove, each with its whole 3 x 4 grid. */
-    private val probes = listOf(Kit.KNOCK to 0, Kit.KNOCK to 5, Kit.KNOCK to 2, Kit.SHUFFLE to 6, Kit.KNOCK to 14)
+    /** A single drum, a layered stack, a ghost pad, a hat (choke group), a groove and a roll, each with its whole 3 x 4 grid. */
+    private val probes = listOf(Kit.KNOCK to 0, Kit.KNOCK to 5, Kit.KNOCK to 2, Kit.SHUFFLE to 6, Kit.KNOCK to 14, Kit.KNOCK to FacsimileKits.ROLL)
 
     private fun probePads(): List<ArrangedPad> = probes.map { (kit, role) ->
         val grid = FacsimileKits.velocities.map { v -> List(FacsimileKits.TAKES) { t -> FacsimileKits.render(kit, role, v, t) } }
@@ -66,6 +66,7 @@ class FacsimileKitTest {
             // the hat's choke group and the groove's survive the save
             assertEquals(FacsimileKits.HAT_GROUP, saved.pads[3].muteGroup)
             assertEquals(FacsimileKits.PHRASE_GROUP, saved.pads[4].muteGroup)
+            assertEquals(FacsimileKits.PHRASE_GROUP, saved.pads[5].muteGroup)
         } finally { dir.deleteRecursively() }
     }
 

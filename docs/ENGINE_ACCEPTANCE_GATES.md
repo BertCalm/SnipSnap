@@ -1283,6 +1283,6 @@ sounds good now" (2026-11-20); the Kotlin port matches it within the prototype's
 |---|---|---|
 | Melodic, keygroups, chord tools, STRUM | Not applicable | Drum kits |
 | Drums: multiple distinct genre kits on the shelf | Built, prototype heard | Four kits under SKINS, each from different reference loops; Kotlin renders not heard |
-| Percussion: roll/riser | Not built | Every pad holds the heard layout and no reference has a roll; a roll would replace a pad (owner's choice) |
+| Percussion: roll/riser | Built, not heard | An accelerating snare roll landing on kick and snare on pad 17 of every kit, so no heard pad is given up |
 | Velocity and round robin: rendering | Pass in software | Soft zones are different strikes and, over their four takes, never brighter; four different strikes per zone; a groove's soft zone is a softer performance |
-| Velocity and round robin: saving, playback, export | Pass in software | Save, reload, pad resolver, MPC 3, SFZ and DecentSampler for all 64 pads; MPC 2 not written (format limit). No phone or MPC playback yet |
+| Velocity and round robin: saving, playback, export | Pass in software | Save, reload, pad resolver, MPC 3, SFZ and DecentSampler for all 68 pads; MPC 2 not written (format limit). No phone or MPC playback yet |

@@ -72,13 +72,13 @@ object FacsimileKitGenerator {
                 }
                 val seconds = String.format(Locale.ROOT, "%.3f", hard.size / RATE.toDouble())
                 proof.append("${g.id},${pad.slot},${pad.displayName},3,4,verified,2,verified\n")
-                metrics.append("${g.id},${pad.slot},${pad.displayName},${pad.drumClass},${FacsimileKits.layout(g).pads[role].let { it.phrase ?: it.layers.joinToString("+") }},${pad.muteGroup},$seconds,$buildMs\n")
+                metrics.append("${g.id},${pad.slot},${pad.displayName},${pad.drumClass},${FacsimileKits.sourceOf(g, role)},${pad.muteGroup},$seconds,$buildMs\n")
                 manifest.append("      {\"slot\": ${pad.slot}, \"name\": \"${pad.displayName}\", \"class\": \"${pad.drumClass}\", \"choke\": ${pad.muteGroup}, \"seconds\": $seconds}")
                     .append(if (pad.slot == saved.pads.size) "\n" else ",\n")
             }
             manifest.append("    ]}").append(if (k == Kit.entries.lastIndex) "\n" else ",\n")
             File(folder, "kit-source.json").writeText(File(staging, KitStore.FILE_NAME).readText())
-            println("Verified ${g.title}: 16 pads, 192 slices, saved PCM + playback + MPC 3 track + SFZ + DecentSampler, built in $buildMs ms")
+            println("Verified ${g.title}: ${FacsimileKits.PADS} pads, ${FacsimileKits.PADS * 12} slices, saved PCM + playback + MPC 3 track + SFZ + DecentSampler, built in $buildMs ms")
         }
         manifest.append("  ]\n}\n")
         File(root, "README.txt").writeText("FACSIMILE kits, version ${FacsimileKits.VERSION}: four drum kits replicated by synthesis from fitted models, three velocity zones of four takes per pad.\n" +

@@ -25,7 +25,8 @@ generalised here to any order), `Tide.bandLimit`, `Dsp.decimate`, `Dsp.seedFor`,
 
 ## The landing: a kit family, not an engine
 
-As LOOSE CRATE: sixteen-pad kits, three velocity zones of four takes per pad, fixed recipes on the shelf. No Patch,
+As LOOSE CRATE: sixteen heard pads plus a roll on pad 17 (bank B's first), three velocity zones of four takes
+per pad, fixed recipes on the shelf. No Patch,
 no macros, no app picker entry: the drums are frozen fits, not knob-driven voices.
 
 | Kit | Tempo | From the references | Pads |
@@ -106,13 +107,26 @@ The grooves, as the kits render them (hard zone, first take, level-matched, meas
 
 ## Gates
 
+## The roll (pad 17)
+
+Authored, not measured: none of the nine references holds a roll. Each kit's main snare (its fullest snare pad at
+full velocity: Alley Snare, Knock Snare, Mover Snare, World Snare) is struck over two bars at the kit's tempo, the gap
+between strokes tightening geometrically from an eighth to a thirty-second over the first seven beats while the strokes
+swell from .35 to full, then lands on beat nine with the kit's main kick and snare together. Each stroke is a fresh
+strike (the takes cycle along the roll); a zone softens every stroke as a groove's zone does, and a take rotates
+them. It sits on pad 17 so that none of the sixteen heard pads is given up; it chokes with the grooves.
+`FacsimileKitsTest` holds its shape (every gap tighter than the last, from .5 beat to under .15, swelling, landing with
+the kick). Not heard.
+
+## Gates
+
 | Gate | Status |
 |---|---|
 | Melodic, keygroups, chord tools, STRUM | Not applicable: drum kits |
 | Drums: multiple distinct genre kits on the shelf | Built: four kits under SKINS, each from different reference loops (boom-bap swing, knock, half time, toms and texture). The prototype's kits were heard through round 0m ("Ok, sounds good now"); the Kotlin renders are not heard |
-| Percussion: roll/riser | Not built. Every pad is taken by the heard layout and none of the nine references holds a roll; a roll would replace a pad, which is the owner's choice |
+| Percussion: roll/riser | Built, not heard: an accelerating snare roll landing on kick and snare, pad 17 of every kit (`FacsimileKitsTest`, `FacsimileKitTest`, the generator) |
 | Velocity and round robin: rendering | Pass in software: in every hit pad the soft zone is a different strike from the hard one and, over its four takes, never brighter; every zone holds four different strikes; a groove's soft zone is a different performance (`FacsimileKitsTest`) |
-| Velocity and round robin: saving, playback, export | Pass in software: `FacsimileKitTest` (a single drum, a stack, a ghost, a hat, a groove) and `:shell:generateFacsimileKits` (all four kits, 768 slices: saved PCM, two playback cycles per zone through the pad resolver, MPC 3 track, SFZ, DecentSampler). MPC 2 is not written (the owner's format limit). Not played on a phone or an MPC |
+| Velocity and round robin: saving, playback, export | Pass in software: `FacsimileKitTest` (a single drum, a stack, a ghost, a hat, a groove) and `:shell:generateFacsimileKits` (all four kits, 816 slices: saved PCM, two playback cycles per zone through the pad resolver, MPC 3 track, SFZ, DecentSampler). MPC 2 is not written (the owner's format limit). Not played on a phone or an MPC |
 
 ## Disclosed, not fixed
 
