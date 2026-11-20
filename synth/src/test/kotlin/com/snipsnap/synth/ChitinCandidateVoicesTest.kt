@@ -176,6 +176,24 @@ class ChitinCandidateVoicesTest {
     }
 
     @Test
+    fun `GLINT rings with inharmonic glass partials long after the strike`() {
+        // The owner's note on chitin-voices-1 was "Missing glassiness": the heard GLINT was close to a sine
+        // once the strike had passed. The released slave puts partials at 2.6 and 4.6 times the root.
+        for (midi in listOf(48, 60, 72)) {
+            val f = hz(midi)
+            val x = render(ChitinVoice.GLINT, midi)
+            fun glass(from: Double) = (M.component(x, 2.6 * f, from, .2) + M.component(x, 4.6 * f, from, .2)) / M.component(x, f, from, .2)
+            fun harmonics(from: Double) = (2..5).sumOf { M.component(x, it * f, from, .2) } / M.component(x, f, from, .2)
+            println("CHITIN GLINT MIDI$midi glass partials against root: %.3f at .15 s, %.3f at .9 s (harmonics 2 to 5: %.3f)"
+                .format(glass(.15), glass(.9), harmonics(.9)))
+            assertTrue(glass(.9) > .25, "GLINT MIDI$midi has no glass left at .9 s: ${glass(.9)}")
+            assertTrue(glass(.9) > harmonics(.9), "GLINT MIDI$midi rings harmonic, not glass")
+            // The glass partials ring with the root: their share does not collapse after the strike.
+            assertTrue(glass(.9) > .4 * glass(.15), "GLINT MIDI$midi glass dies with the strike")
+        }
+    }
+
+    @Test
     fun `HUM moves the pulse width with the excursion`() {
         val f = hz(48)
         fun even(x: FloatArray) = (M.component(x, 2 * f, .5, .3) + M.component(x, 4 * f, .5, .3)) / M.component(x, f, .5, .3)

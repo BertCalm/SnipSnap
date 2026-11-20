@@ -113,3 +113,24 @@ steps: HUSK 4.1 and 2.7 dB, STING 2.3 and 2.1 dB, GLINT 5.3 and 3.8 dB, HUM 4.3 
 
 Weak spots named before the round (the owner's only note was GLINT's): STING is the closest to a kept voice (WING); HUSK's body is a bare sine,
 which may be too plain under the moving band; GLINT is close to a sine once the strike has passed (root share .79).
+
+## GLINT tweak: glassiness (after chitin-voices-1, unheard)
+
+Status: **built, measured, unheard**; GLINT stays a candidate until the owner hears it. The note was "Missing
+glassiness": the heard GLINT was close to a sine once the strike had passed, because its synced slave can only
+make harmonics and its bend died with the strike.
+
+The fix stays inside GLINT's mechanism, the slave bending the root sine's phase. At the strike the slave is synced,
+as before: a harmonic ping. Released from sync, it runs on at 3.6 times the root (`ChitinCandidates.GLASS`) and
+keeps bending the root for the whole note, so the first sidebands sit at 2.6 and 4.6 times the root and the second
+at 6.2 and 8.2: inharmonic, near a wine glass's ring modes (about 1, 2.4 to 2.6, 4.2 to 4.6, 6.6 to 7). A second
+copy 1.3 Hz faster (a glass's split mode pair) makes the ring shimmer slowly. A harder touch bends further and adds
+a 35 ms flash of upper partials at the hit. Around it: the synced bend's sustained part is smaller, the onset is
+3 to 5 ms (was 5 to 12), the drive is gentler (it was washing the partials together), the filter rests higher so the
+glass passes at any COLOR, the ring time is .70 of the gate (was .60) and the default HOLD is .50 (was .30), so a
+note lasts about 1.7 s (was 1.4 s).
+
+Measured (Kotlin; C4, partials at 2.6 and 4.6 times the root against the root, 200 ms windows): before 0.00 at
+.15, .5 and .9 s; after .41, 1.12 and .84, and .95 at 1.3 s, above harmonics 2 to 5 from .5 s on. Root within 1
+cent at C3, C4 and C5, root share .81. Touch steps 5.2 and 3.5 dB. At least 25.8 dB from every other voice. SHELL,
+WING and the four kept voices are unchanged (their pins pass).
