@@ -1,8 +1,9 @@
 # DRAWL Engine: Engineering Specification
 
 Version 0.1 · 2026-11-20
-Status: proposed. Round 0 (a Python prototype) is built, measured and published for listening.
-Nothing has been heard. No Kotlin exists. No acceptance gate is passed by this document.
+Status: proposed. Round 0 (a Python prototype) is built, measured and published for listening; the
+owner heard it and asked for two changes, made in round 0b (§18). No Kotlin exists. No acceptance gate
+is passed by this document.
 Repository truth: read at `7fd194f1`. APIs grepped: `Strings.Loop` and `Strings.Loop.retune`
 (`Strings.kt:529`, `:675`), `Strings.tune` (`:101`), `Strings.pluckExciter` (`:366`), `Strings.pickup`
 (`:401`), `Strings.bodyRing` (`:1321`), `Restrike.canRestrike` (`Restrike.kt:35`), `OsteriaStrum`
@@ -141,7 +142,9 @@ Measured risk, settled: retuning every sample through a 12-semitone slide under 
 house read (integer delay, two-tap average, allpass fraction, as SILK uses it) puts the content above
 10 kHz at −91.4 dB under the note in the glide and −110.4 dB under vibrato; a Lagrange read measures
 −91.3 and −162.7 dB (`round0_report.json`, `zipper`). Both are far below audibility, so **DRAWL keeps
-the house loop** and needs no new delay-line code. Root pitch on a still bar: within 0.3 cents at three
+the house loop** and needs no new delay-line code. Round 0b's brighter CONE loop raises the glide figure
+to −68.3 dB in both reads alike (−67.9 Lagrange), so that is the string's own top, not an artifact;
+under vibrato the house read stays at −94.7 dB (`round0b_report.json`). Root pitch on a still bar: within 0.3 cents at three
 notes per voice in both reads.
 
 ### 6.3 The pick (one toolkit change)
@@ -170,7 +173,7 @@ and SILK's frozen grids stay byte-identical; `StringsTest` must prove it.
 
 | Voice | Body | Provenance |
 |---|---|---|
-| CONE | asymmetric soft curve (the biscuit driving the cone; drive from BODY and from touch) → modes 580, 820, 1180, 2350 Hz → 120 Hz high-pass → 3 kHz mass roll-off; cone and cover-plate ring at 3.3 and 4.7 kHz | modes measured (§2); the rest shape |
+| CONE | asymmetric soft curve (the biscuit driving the cone; drive from BODY and from touch) → modes 580, 820, 1180, 2350 Hz → 120 Hz high-pass → 5.5 kHz mass roll-off (3 kHz in round 0); the 2350 Hz mode raised to gain 0.8 (0b); cone and cover-plate ring at 3.3 and 4.7 kHz | modes measured (§2); the rest shape |
 | FLATTOP | modes 100 and 205 Hz (air, top), 431, 598, 727, 1500 Hz | 431/598/727 measured on the acoustic loop; 100/205 shape |
 | GUT | modes 95, 190, 425, 501, 764 Hz; dark loop filter | 425/501/764 measured on the nylon loops |
 | BOTTLE, LAP, STEEL | pickup comb at a fixed distance from the bridge (a fixed delay in samples wherever the bar is, because stopped length times frequency is constant) → coil resonance → amp tanh → speaker band; STEEL adds a 1.5 kHz presence peak | STEEL's peak from the pedal-steel loop; LAP's dark coil from the lap loop's centroid; rest shape |
@@ -184,7 +187,7 @@ STEEL's volume-pedal swell is a raised-cosine fade of 0.02 to 0.7 s on the outpu
 | TUNE | .50 | the target note, ±12 semitones around the voice root | the bar's open string and the scrape's bar speed follow it | root within 0.3 cents at TUNE .25/.5/.75 |
 | SLIDE | .30 | bar: slide extent 12·S^1.3 semitones in 0.07 + 0.012·semitones s; fretted: 0 to 3 frets; STEEL: pedal travel 0 to 2 semitones (a half pedal mid-knob) | with WAVER: the vibrato starts after the landing | macro distance 12 to 31 at 0 vs 1 |
 | WAVER | .45 | hand vibrato depth 150·W^1.3 cents (×0.6 STEEL, ×0.45 GUT, ×0.35 FLATTOP one-sided) and rate 5.0 + 2.6·W Hz | with SLIDE (above); scrape takes 15 % of it | pitch spread 0 / 40 / 103 cents at 0 / .5 / 1 on CONE |
-| PICK | .65 | pick hardness (burst low-pass, per-voice range), pick position 0.30 to 0.07 of the string, metal click; STEEL: low half swells in under the volume pedal | with velocity: touch shifts hardness ×2^(2.5(v − .75)) | distance 6 to 15 |
+| PICK | .75 | pick hardness (burst low-pass, per-voice range), pick position 0.30 to 0.07 of the string, metal click; STEEL: low half swells in under the volume pedal | with velocity: touch shifts hardness ×2^(2.5(v − .75)) | distance 6 to 15 |
 | BODY | .60 | CONE: cone share and biscuit drive; FLATTOP, GUT: body share; electrics: amp drive | with velocity: a harder pick drives the cone and amp further | distance 5 to 15 |
 | RING | .55 | the hand's loss: T60 of the fundamental between per-voice bounds (CONE 0.8 to 8 s), loop brightness ×0.75 to 1.25, and the string behind the bar | with HOLD: HOLD gives a long RING room to finish | distance 11 to 21 |
 | HOLD | 0 | render length from the voice's base (2.5 to 4 s) to 8 s; finite, never a loop | with RING | 2.5 → 8.0 s |
@@ -203,12 +206,12 @@ value falls back to its default (both probed, all six voices).
 | FLATTOP | D3 | 2.5 s | fretted steel-string boom, fret-stepped slide-in | acoustic trotting |
 | GUT | E3 | 2.5 s | nylon, finger vibrato, dark | nylon spaghetti and outlaw loops |
 
-Round 0 against the references (`round0_compare.json`; Python harness):
+Against the references (`round0b_compare.json`; CONE and BOTTLE as changed in round 0b; Python harness):
 
 | Voice | Centroid, DRAWL / refs (Hz) | Decay, DRAWL / refs (dB/s) |
 |---|---|---|
-| CONE | 488 / 368 to 693 | −19.1 / −24.7 to −4.3 |
-| BOTTLE | 573 / 494 to 1129 | −12.3 / −10.2 to −5.4 |
+| CONE | 669 (488 in round 0) / 368 to 693 | −18.9 / −24.7 to −4.3 |
+| BOTTLE | 766 (573) / 494 to 1129 | −8.9 (−12.3) / −10.2 to −5.4 |
 | LAP | 463 / 561 | −16.6 / −16.5 |
 | STEEL | 597 note, 683 chord / 1051 | −6.2 / −5.3 |
 | FLATTOP | 351 / 274 | −17.0 / −12.2 |
@@ -233,7 +236,7 @@ owner's own reference measures a 227 Hz centroid with 22 % of its energy under 1
 - **Velocity is timbre.** Touch moves pick hardness, noise share, click, tension pitch, and (through
   level) the cone's and amp's drive. One gain per saved performance, shared across touches and takes
   and lowered only so the hardest touch clears the ceiling (the ACCORD rule). Round 0, level-matched
-  onset centroid soft / medium / hard, Hz: CONE 752/883/944, BOTTLE 1197/1511/1637, LAP 732/822/871,
+  onset centroid soft / medium / hard, Hz: CONE 1070/1314/1466, BOTTLE 1887/2520/2745 (both round 0b), LAP 732/822/871,
   STEEL 1455/1692/1789, FLATTOP 622/757/848, GUT 488/576/649. Measured with SLIDE 0: the bar's scrape
   does not follow the pick, so at a soft touch it would stand in for the pick in the probe.
 - **Round robin.** A take is the same player again: pick seed, pick position ±6 %, hardness ±10 %,
@@ -335,7 +338,9 @@ emmons, sho-bud, and "national" only as `national\s*reso` (the word alone is ord
 | Resonator modes at 580/820/1180 Hz are the cone's | measured on references; the attribution is proposed | four loops agree; one producer |
 | Every body, ζ, rib pitch, scrape and ghost constant | proposed (shape) | none until the listen |
 | Kotlin renders a note in under 50 ms | proposed | round 1 |
-| Any voice sounds right | not heard | the owner's round-0 listen |
+| Round 0 as a whole | heard, owner, 20 Nov 2026 | "Resonator could use more twang, slide a bit more whine." No other note |
+| CONE's twang and BOTTLE's whine as changed in 0b | not heard | the A/B at the top of the audition page |
+| Any voice sounds right enough to keep | not heard | the owner's keep or change per voice |
 
 ## 17. Why it is built this way
 
@@ -354,6 +359,31 @@ emmons, sho-bud, and "national" only as `national\s*reso` (the word alone is ord
   on the string; Alternate B is ready if the listen says that matters.
 - **The risky decision** is reusing the house loop for continuous retuning. Round 0 measured it clean,
   so it stays; the decision to reverse it would be a click heard in a slide.
+
+## 18. Round 0b: the owner's first listen
+
+On 20 November 2026 the owner heard round 0 and wrote: "Resonator could use more twang, slide a bit
+more whine." Read as model quantities, not tone controls, and measured on a still bar with
+`character_probe.py` (`round0b_character.json`; Python harness):
+
+| Change | Why |
+|---|---|
+| CONE loop low-pass 3.5 → 6.5 kHz; BOTTLE 6 → 10 kHz | both strings lost their top first: harmonics 4 to 10 fell 44 dB (CONE) and 30 dB (BOTTLE) further than the fundamental within a second |
+| CONE cone roll-off 3 → 5.5 kHz; 2350 Hz mode gain 0.35 → 0.8 | round 0 had darkened CONE toward the references, and the twang band went with it |
+| CONE tension modulation 12 → 28 cents at full touch, settling in 80 ms; PICK default .65 → .75 (nearer the bridge) | a twang is a hard metal pick on a high-action string: it starts sharp and drops |
+| BOTTLE coil peak 3.2 kHz Q 2.2 → 2.6 kHz Q 4.5; amp drive range 1 to 6 → 2 to 9; defaults BODY .6, RING .85, WAVER .6; bar 35 % slower | the whine: a vocal pickup peak, sustain that holds the highs up, and a glide long enough to hear |
+
+| Probe (still bar) | CONE round 0 → 0b | BOTTLE round 0 → 0b |
+|---|---|---|
+| boing, hard pick (cents) | 7.3 → 15.4 | 7.0 → 7.2 |
+| sustain energy 1 to 4 kHz (dB of total) | −60.8 → −25.4 | −31.1 → −14.3 |
+| harmonics 4 to 10 against the fundamental after 1 s (dB) | −44.4 → −13.5 | −30.4 → −16.8 |
+| attack energy 1.5 to 4 kHz (dB of total) | −20.8 → −12.6 | −14.5 → −3.7 |
+
+Both stay inside their references' brightness range (§8). The risk to listen for is BOTTLE's attack:
+about half its energy now sits between 1.5 and 4 kHz, which could read as harsh or as a wah. LAP, the
+other slide voice, is unchanged until the owner says whether "slide" meant it too. Every other probe
+(root, determinism, DC, velocity timbre, takes, macros) still passes on the round-0b renders.
 
 ## As built
 

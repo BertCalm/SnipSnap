@@ -3,14 +3,14 @@
 A bar-stopped string whose pitch path is the performance: resonator guitar, electric slide, lap
 steel, pedal steel, country flat-top and western nylon. Design, measurements and the gate plan:
 [docs/superpowers/specs/2026-11-20-drawl-engine-design.md](../../docs/superpowers/specs/2026-11-20-drawl-engine-design.md).
-Python harness, not Kotlin; nothing here has been heard.
+Python harness, not Kotlin. The owner heard round 0 on 20 Nov 2026 and asked for more twang (CONE) and whine (BOTTLE); round 0b is that change, not yet heard.
 
 ```sh
 python3 prototype/drawl/drawl_proto.py OUT                                  # one WAV per voice at its defaults
 python3 -I prototype/drawl/measure.py REFS_DIR OUT/reference_metrics.json  # the reference loops' numbers
 python3 prototype/drawl/gen_audition.py OUT prototype/drawl/reference_metrics.json   # 168 renders and the probes
 python3 prototype/drawl/compare_refs.py prototype/drawl/reference_metrics.json OUT/compare.json
-python3 prototype/drawl/build_page.py OUT OUT/compare.json                 # OUT/site/index.html and its MP3s
+python3 prototype/drawl/build_page.py OUT OUT/compare.json [AB_DIR]        # OUT/site/index.html and its MP3s
 ```
 
 - `drawl_proto.py`: the model. Six voices, macros TUNE SLIDE WAVER PICK BODY RING HOLD, plus
@@ -24,7 +24,9 @@ python3 prototype/drawl/build_page.py OUT OUT/compare.json                 # OUT
   zipper probes into `report.json`.
 - `compare_refs.py`: each voice at its defaults beside the reference loops it answers to.
 - `build_page.py`: the audition page (SnipSnap design-system tokens, VENT and OPENSKY).
-- `reference_metrics.json`, `round0_report.json`, `round0_compare.json`: the numbers the spec quotes.
+- `character_probe.py` (round 0b): numbers for the owner's "twang" (CONE) and "whine" (BOTTLE) notes.
+- `reference_metrics.json`, `round0_report.json`, `round0_compare.json`, and the round-0b
+  `round0b_report.json`, `round0b_compare.json`, `round0b_character.json`: the numbers the spec quotes.
 - `NOTICE.txt`: the fifteen reference loops by sha256. Their audio is commercial and is not here.
 
 Needs numpy, scipy, numba (the string loop), ffmpeg (the page's audio) and the Luthier `snipkit.py`

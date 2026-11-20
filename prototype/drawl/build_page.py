@@ -1,6 +1,9 @@
 """Build the DRAWL round-0 audition page from gen_audition.py's output.
 
-    python3 prototype/drawl/build_page.py OUT [COMPARE_JSON]
+    python3 prototype/drawl/build_page.py OUT [COMPARE_JSON] [AB_DIR]
+
+AB_DIR (round 0b) holds before/ and after/ clips named <voice>-<default|hard|slide|strum>.wav and
+before.json / after.json from character_probe.py; the page then opens with an A/B of the owner's notes.
 
 COMPARE_JSON is compare_refs.py's output (each voice beside its reference loops' numbers).
 
@@ -145,12 +148,48 @@ def main():
   <p class="ask"><span class="eyebrow">LISTEN FOR</span> {html.escape(QUESTIONS[v])}</p>
   <div class="tablewrap"><table><thead><tr><th scope="col">Probe</th><th scope="col">DRAWL</th><th scope="col">Against</th></tr></thead><tbody>{table}</tbody></table></div>
 </section>""")
+    ab = ab_section(sys.argv[3], site) if len(sys.argv) > 3 else ""
     z = rep["zipper"]
-    page = TEMPLATE.replace("{{CARDS}}", "".join(cards)).replace(
+    page = TEMPLATE.replace("{{AB}}", ab).replace("{{CARDS}}", "".join(cards)).replace(
         "{{ZIP}}", f'{z["house_allpass_retune"]["hf_share_glide_db"]} dB during a 12-semitone slide, '
                    f'{z["house_allpass_retune"]["hf_share_vibrato_db"]} dB under full vibrato')
     open(os.path.join(site, "index.html"), "w").write(page)
     print(os.path.join(site, "index.html"))
+
+
+AB_NOTES = {
+    "CONE": ("CONE · more twang", "Pick nearer the bridge and harder; a bigger pitch drop after the attack; the cone's 2.3 kHz nasal band raised; the string keeps its top instead of losing it first."),
+    "BOTTLE": ("BOTTLE · more whine", "The string keeps its top; a sharp pickup peak at 2.6 kHz (the knobs full up); more amp sustain; the bar moves a little slower so the glide is heard."),
+}
+AB_ROWS = [("Default", "default"), ("Hard pick", "hard"), ("Long slide, wide vibrato", "slide"), ("Strum", "strum")]
+AB_PROBES = [("Boing, hard pick", "hard", "boing_cents", "cents"),
+             ("Sustain 1 to 4 kHz", "medium", "sustain_band_db", "dB of total"),
+             ("Highs vs root after 1 s", "medium", "highs_hold_db", "dB")]
+
+
+def ab_section(ab_dir, site):
+    before = json.load(open(os.path.join(ab_dir, "before.json")))
+    after = json.load(open(os.path.join(ab_dir, "after.json")))
+    blocks = []
+    for v, (title, what) in AB_NOTES.items():
+        rows = []
+        for label, tag in AB_ROWS:
+            btn = []
+            for side in ("before", "after"):
+                fn = f"ab-{side}-{v.lower()}-{tag}.mp3"
+                mp3(os.path.join(ab_dir, side, f"{v.lower()}-{tag}.wav"), os.path.join(site, "audio", fn))
+                btn.append(f'<button class="clip" type="button" data-src="audio/{fn}"><span class="tri" aria-hidden="true">▶</span>{"Round 0" if side == "before" else "Now"}</button>')
+            rows.append(f'<div class="abrow"><span class="ablabel">{html.escape(label)}</span><div class="clips">{"".join(btn)}</div></div>')
+        nums = "".join(
+            f"<tr><th scope=\"row\">{html.escape(n)}</th><td>{before[v][t][k]}</td><td>{after[v][t][k]}</td><td>{u}</td></tr>"
+            for n, t, k, u in AB_PROBES)
+        blocks.append(f"""<div class="abvoice"><h3>{html.escape(title)}</h3><p class="blurb">{html.escape(what)}</p>{"".join(rows)}
+<div class="tablewrap"><table><thead><tr><th scope="col">Probe, still bar</th><th scope="col">Round 0</th><th scope="col">Now</th><th scope="col">Unit</th></tr></thead><tbody>{nums}</tbody></table></div></div>""")
+    return f"""<section class="voice ab" aria-labelledby="h-ab">
+  <header class="vhead"><h2 id="h-ab"><span class="id">0B</span> <span class="vname">Your notes, before and after</span></h2>
+  <p class="blurb">"Resonator could use more twang, slide a bit more whine." Each pair plays round 0 and the change. LAP, the other slide, is unchanged so far. Watch for harshness in the whine: about half of BOTTLE's attack now sits between 1.5 and 4 kHz.</p></header>
+  {"".join(blocks)}
+</section>"""
 
 
 TEMPLATE = """<title>DRAWL Round 0</title>
@@ -220,19 +259,24 @@ table { border-collapse: collapse; width: 100%; font-size: 13px; font-variant-nu
 th, td { text-align: left; padding: 6px 8px 6px 0; border-top: 1px solid var(--edge); vertical-align: top; }
 thead th { font: 11px var(--mono); letter-spacing: 1px; color: var(--ink2); text-transform: uppercase; border-top: 0; }
 tbody th { font-weight: 500; color: var(--ink2); }
+.abvoice { display: grid; gap: 8px; border-top: 1px solid var(--edge); padding-top: 10px; }
+.abvoice h3 { margin: 0; font: 600 15px/1.3 var(--sans); }
+.abrow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.ablabel { font: 11px var(--mono); letter-spacing: 1px; color: var(--ink2); text-transform: uppercase; min-width: 13ch; }
 .foot { margin-top: 16px; display: grid; gap: 8px; max-width: 66ch; color: var(--ink2); font-size: 14px; }
 .foot p { margin: 0; }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
 <div class="window">
   <div class="titlebar"><span class="mark" aria-hidden="true"></span><h1>DRAWL</h1>
-    <span class="status">ROUND 0 · PYTHON HARNESS · NOT HEARD</span></div>
+    <span class="status">ROUND 0B · PYTHON HARNESS · TWO NOTES HEARD</span></div>
   <div class="intro">
     <p class="eyebrow">Proposed engine · western and cosmic country strings</p>
     <p class="gesture">PICK → THE BAR SLIDES THE NOTE IN → THE BAR SHIMMERS → THE STRING RINGS OUT THROUGH ITS BODY</p>
-    <p>Six voices on one mechanism: a string whose pitch path is the performance. These are Python prototype renders, measured against your fifteen reference loops but not yet heard by anyone. Your loops are not on this page; only their numbers are used.</p>
+    <p>Six voices on one mechanism: a string whose pitch path is the performance. These are Python prototype renders, measured against your fifteen reference loops. You have heard round 0 and asked for two changes, which open the page. Your loops are not on this page; only their numbers are used.</p>
     <p>Each sheet plays the default note, its low and high notes, soft and hard touch, three more round-robin takes, the bar held still, a long slide with wide vibrato, and a strum each way. On each dark panel the amber line is the default note's measured pitch and the pale line the long slide's: watch the bar slide up to the dashed note, land, and start to shimmer. A line stops where the note has rung too quiet to track.</p>
   </div>
+  {{AB}}
   {{CARDS}}
   <div class="foot">
     <p><span class="eyebrow">Under the hood</span> The slide reuses SnipSnap's own string loop. Its retune artifacts measured {{ZIP}}, under the note: not audible, so no new string code is needed.</p>

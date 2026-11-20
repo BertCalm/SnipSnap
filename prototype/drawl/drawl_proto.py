@@ -44,8 +44,8 @@ ELECTRIC = {"BOTTLE", "LAP", "STEEL"}    # read by a magnetic pickup, then a sma
 
 # Defaults per voice. Hypotheses until the audition: "presets authored blind are disposable".
 DEFAULTS = {
-    "CONE":    {"TUNE": .5, "SLIDE": .30, "WAVER": .45, "PICK": .65, "BODY": .60, "RING": .55, "HOLD": 0.},
-    "BOTTLE":  {"TUNE": .5, "SLIDE": .40, "WAVER": .55, "PICK": .55, "BODY": .50, "RING": .75, "HOLD": 0.},
+    "CONE":    {"TUNE": .5, "SLIDE": .30, "WAVER": .45, "PICK": .75, "BODY": .60, "RING": .55, "HOLD": 0.},
+    "BOTTLE":  {"TUNE": .5, "SLIDE": .40, "WAVER": .60, "PICK": .55, "BODY": .60, "RING": .85, "HOLD": 0.},
     "LAP":     {"TUNE": .5, "SLIDE": .55, "WAVER": .40, "PICK": .40, "BODY": .40, "RING": .50, "HOLD": 0.},
     "STEEL":   {"TUNE": .5, "SLIDE": .60, "WAVER": .30, "PICK": .30, "BODY": .50, "RING": .80, "HOLD": 0.},
     "FLATTOP": {"TUNE": .5, "SLIDE": .15, "WAVER": .15, "PICK": .45, "BODY": .70, "RING": .65, "HOLD": 0.},
@@ -64,7 +64,9 @@ MAX_SECONDS = 8.0         # HOLD's top: a finite long note (HALOBAR/ACCORD/OSTER
 # electric slide (T60 6 to 15 s). Measured by measure.py, section 2 of the spec.
 T60 = {"CONE": (.8, 8.), "BOTTLE": (1.2, 9.), "LAP": (1.5, 10.), "STEEL": (2.5, 14.),
        "FLATTOP": (1.2, 8.), "GUT": (1., 6.)}
-LOOP_HZ = {"CONE": 3500., "BOTTLE": 6000., "LAP": 4500., "STEEL": 8000., "FLATTOP": 3200., "GUT": 2600.}
+# Round 0b (owner, 20 Nov: "resonator could use more twang, slide a bit more whine"): CONE's
+# and BOTTLE's loops lose far less top per trip, so the upper harmonics keep ringing.
+LOOP_HZ = {"CONE": 6500., "BOTTLE": 10000., "LAP": 4500., "STEEL": 8000., "FLATTOP": 3200., "GUT": 2600.}
 
 # Body tables: (Hz, Q, gain). CONE's first four are the peaks measure.py found in all four
 # resonator-guitar references (571-603, 764-872, 1050-1190 Hz, and 2347 Hz in one); the two
@@ -72,16 +74,25 @@ LOOP_HZ = {"CONE": 3500., "BOTTLE": 6000., "LAP": 4500., "STEEL": 8000., "FLATTO
 # acoustic reference's peaks; the 100/205 Hz air and top modes are textbook dreadnought shape
 # values. GUT's 425/501/764 Hz are the nylon references' peaks.
 BODY_MODES = {
-    "CONE": [(580, 6, 1.0), (820, 5, .8), (1180, 7, .7), (2350, 8, .35)],
+    "CONE": [(580, 6, 1.0), (820, 5, .8), (1180, 7, .7), (2350, 6, .8)],  # 2350 raised in 0b: the nasal twang band
     "FLATTOP": [(100, 10, .9), (205, 12, .8), (431, 6, .6), (598, 6, .45), (727, 7, .35), (1500, 5, .2)],
     "GUT": [(95, 10, .8), (190, 10, .7), (425, 6, .5), (501, 6, .45), (764, 6, .3)],
 }
 CONE_RING = [(3300, 25, .12), (4700, 30, .08)]  # the cone and cover plate ringing (shape)
+CONE_ROLLOFF_HZ = 5500.   # the cone's mass roll-off; 3 kHz in round 0 took the twang with it
+# Tension modulation, cents at full touch: CONE's metal fingerpicks on a high-action steel string
+# pull hardest, so its attack starts sharpest and drops (the "boing" in a twang). Shape.
+TENSION_CENTS = {"CONE": 28.}
+TENSION_SECONDS = {"CONE": .08}
+# BOTTLE's bar moves a little slower, so the glide itself is heard (round 0b, "whine").
+SLIDE_TIME = {"BOTTLE": 1.35}
 # Electric chain: pickup distance from the bridge as a fraction of the open string, coil
 # resonance (Hz, Q), amp drive range over BODY, speaker low-pass. STEEL's 1.5 kHz presence
 # peak follows the pedal-steel reference's 1.25-1.85 kHz peaks; LAP's dark coil follows the
 # lap-steel reference's 561 Hz centroid.
-PICKUP = {"BOTTLE": (.07, 3200., 2.2, (1., 6.), 4500.),
+# BOTTLE (0b): a high-Q coil peak at 2.6 kHz, the volume and tone knobs full up, is the slide's
+# vocal whine; more amp drive holds the sustain up so the highs sing.
+PICKUP = {"BOTTLE": (.07, 2600., 4.5, (2., 9.), 6000.),
           "LAP": (.10, 2000., 1.4, (.8, 3.), 3500.),
           "STEEL": (.08, 5000., 1.8, (.6, 2.), 7000.)}
 CLICK = {"CONE": 1., "BOTTLE": .5, "LAP": .6, "STEEL": .6, "FLATTOP": .8, "GUT": 0.}  # metal/flat picks vs flesh
@@ -300,14 +311,15 @@ class Performance:
         self.pick_hz = exp_map(pick, lo_hz, hi_hz) * 2 ** (2.5 * (v - .75)) * (1 + .10 * u[0])
         # Tension modulation: a hard pick stretches the string, so the note starts sharp and
         # settles as the swing dies (Pakarinen et al.); shape: 12 cents at full touch, 120 ms.
-        self.tension_cents = 12.0 * v * v * (1 + .1 * u[7])
+        self.tension_cents = TENSION_CENTS.get(voice, 12.0) * v * v * (1 + .1 * u[7])
+        self.tension_seconds = TENSION_SECONDS.get(voice, .12)
         self.position = lin(pick, .30, .07) * (1 + .06 * u[1])
         self.click = CLICK[voice] * pick * v * v
         self.swell = lin(1 - pick, .02, .7) if voice == "STEEL" else 0.0
         slide, waver = m["SLIDE"], m["WAVER"]
         if voice in BAR:
             self.extent = 1200 * slide ** 1.3
-            self.slide_dur = (.07 + .012 * self.extent / 100) * (1 + .10 * u[2])
+            self.slide_dur = (.07 + .012 * self.extent / 100) * SLIDE_TIME.get(voice, 1.0) * (1 + .10 * u[2])
         elif voice in FRETTED:
             self.extent = 100 * round(3 * slide)
             self.slide_dur = (.04 + .03 * self.extent / 100) * (1 + .10 * u[2])
@@ -343,7 +355,7 @@ def path_for(p: Performance, n, pedal_cents=None):  # -> (path, scraping part)
             base = frets(base)
         onset = p.slide_dur if p.extent > 0 else 0.05
     vib = vibrato(n, onset, p.vib_depth, p.vib_rate, p.vib_phase, p.seed + 7, one_sided=(v == "FLATTOP"))
-    vib = vib + p.tension_cents * np.exp(-np.arange(n) / (.12 * R))
+    vib = vib + p.tension_cents * np.exp(-np.arange(n) / (p.tension_seconds * R))
     # What travels along the ribs: the slide itself, and a little of the vibrato (a bar
     # vibrato mostly rocks the contact rather than dragging it; 15 % is a shape value).
     return base + vib, base + .15 * vib
@@ -434,8 +446,8 @@ def body(voice, x, p: Performance):
     out = (1 - mix) * y + mix * 2.5 * wet
     if voice == "CONE":
         # A spun aluminium cone is a mass: above a few kHz it stops following the bridge
-        # (shape: 3 kHz, second order). Its own ring and the cover plate sit on top.
-        lp = signal.butter(2, 3000 / (R / 2), output="sos")
+        # (shape: CONE_ROLLOFF_HZ, second order). Its own ring and the cover plate sit on top.
+        lp = signal.butter(2, CONE_ROLLOFF_HZ / (R / 2), output="sos")
         out = signal.sosfilt(lp, out)
         for f0, q, g in CONE_RING:
             b, a = signal.iirpeak(f0, q, R)
