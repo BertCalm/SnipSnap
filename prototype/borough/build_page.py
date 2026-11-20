@@ -103,7 +103,10 @@ for(const k of M.kits){
   const res=Object.entries(k.fitted_residual_db).map(([r,v])=>`${r} ${v.toFixed(1)} dB`).join(' · ');
   sec.innerHTML=`<div class="kit"><div style="display:grid;gap:8px;min-width:0"><h2></h2><p class="role"></p><div class="facts"></div></div><div class="media">
   <h3>Groove</h3><audio controls preload="none" src="audio/${k.id}-groove.mp3"></audio>
-  ${k.bus_preview?`<h3>Preview: the same groove through a whole-kit compressor and limiter (not in the app yet)</h3><audio controls preload="none" src="audio/${k.id}-groove-glued.mp3"></audio>`:''}
+  ${M.clean?`<h3>Clean: the same kit with the record chain taken off (no squash, drive or low-pass, a small room)</h3><audio controls preload="none" src="audio/${k.id}-clean-groove.mp3"></audio>`:''}
+  ${k.bus_preview?`<h3>Preview: the same groove through a whole-kit compressor and limiter</h3><audio controls preload="none" src="audio/${k.id}-groove-glued.mp3"></audio>`:''}
+  ${M.wow?`<h3>Wow A/B: which one has it?</h3><div class="facts">Same groove five ways. Brighter and wider are matched in loudness to Now, so you hear character, not volume.</div>
+  ${[['now','Now'],['punch','Louder and punchier'],['bright','Brighter and crisper'],['wide','Wider and bigger (stereo)'],['all','All three']].map(([v,l])=>`<h3>${l}</h3><audio controls preload="none" src="audio/${k.id}-wow-${v}.mp3"></audio>`).join('')}`:''}
   <h3>All twelve pads, hardest zone</h3><audio controls preload="none" src="audio/${k.id}-pads.mp3"></audio>
   <h3>Touch: kick, snare, hat · soft ×3, medium ×3, hard ×3</h3><audio controls preload="none" src="audio/${k.id}-touch.mp3"></audio>
   ${M.before?`<h3>Before: the same groove in ${M.before}</h3><audio controls preload="none" src="audio/before-${k.id}-groove.mp3"></audio>`:''}</div></div>`;
@@ -126,6 +129,11 @@ LEDE = {
 }
 
 LISTEN_R1 = [
+    'New: a "Clean" groove right under each kit\'s groove: the same kit and performance with the record chain taken off (no squash, drive or low-pass, only a small room). If the clean one sounds clearer and less muddy, the chain is what is dulling them, and I will rebuild from clean upward.',
+    'New: a "Wow A/B" on every kit sheet. Louder and punchier closes most of the loudness gap to your loops (they were 8-10 dB louder at the same peak); brighter and crisper adds presence, air and a little sparkle; wider and bigger puts a stereo room around the kit. Tell me which one (or which mix) has the wow, per kit if it differs. These are page previews: the winner gets baked into the pads.',
+    'New in this version, against "they all sound similar": each kit now plays its own loop\'s groove (its pattern, its swing and push, its soft ghost kicks) instead of one pattern I wrote. STOOP and RIDE & RIMS drag their 16ths about 40 ms, CRANKED rushes them, WAX lays back on everything.',
+    'And the sounds are pushed apart: every setting (tuning, ring, room, squash, drive, darkness) moved twice as far from the six kits\' average, so kicks, snares and hats now differ more than your loops\' do. The before player is the version you heard.',
+    'Compression preview: now at most 8 dB of limiting (you heard 5 to 7.5). The new grooves have more space in them, and matching the loops exactly would take up to 16 dB, which would squash every kit into the same sound.',
     'New in this version, a preview: each kit sheet has a second groove, the same performance through one compressor and a limiter across the whole kit, set so it is exactly as dense as its loop. Your loops get their squash from that, and compressing each drum on its own barely gets there. It is only on this page: the app cannot do it yet. If you like it, the next step is building it into the app.',
     'New in this version: STOOP\'s kick lost its fast flutter. Its two drum heads were tuned 12% apart, so they beat about 12 times a second, and that ran through a squashed, saturated boom over a second long, a lot like a woofer flapping. The heads are now almost in unison and the boom stops by about 0.8 s. Six other kicks got the same correction, mostly the KICK 2 pads. STOOP needs less level trim now (-2.2 dB, was -5.5).',
     'New in this version: the ride lost its dead spot. Its ring used to fade out and come back (7.5 dB on a typical hit): the record chain darkened it so much that only a few cymbal partials were left, and they beat together. It is brighter now and dips under 2.2 dB, smoother than the EMBER ride you approved. The before player is the version you heard.',
@@ -161,6 +169,8 @@ def main(out, before=None, before_label=None):
                 stacks=[dict(id=s['id'], name=s['name'], pads=[dict(pad=p['pad'], label=p['label']) for p in s['pads']]) for s in man['stacks']],
                 listen=LISTEN)
     rnd = 0 if 'f0' in man['kits'][0]['pads'][0]['params'] else 1
+    slim['wow'] = any((out / 'demo').glob('*-wow-now.wav'))
+    slim['clean'] = any((out / 'demo').glob('*-clean-groove.wav'))
     if rnd == 1:
         slim['listen'] = LISTEN_R1
     if before:
