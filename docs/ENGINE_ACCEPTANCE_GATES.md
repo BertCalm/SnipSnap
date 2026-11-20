@@ -1254,21 +1254,20 @@ The same day, round accord-voices-1 played four new voices, each reading a part 
 
 Five distinct approved kits are implemented on the SKINS shelf with ten pads each. Three velocity layers × three takes survive native rendering, saving, replay and playback; the roll is owner accepted and the model-3 Original fill is owner accepted. Focused software tests verify all 450 variants and MPC export read-back. **MPC 3/phone hardware verification remains open.** The owner’s 2026-11-14 MPC2 combined-grid exception applies: its first-take velocity export is a format limit, not a new blocking gate. The generic slice-map capture remains parked by the owner; software checks do not establish SIDEROOM’s physical MPC3 cycling behavior. Separate Soft/Medium/Hard discrete-WAV cycling companions now preserve all takes in both formats, verified in software. They are an explicit fallback, not closure of the combined grid gate. No Android build/device check is claimed. Melodic voices, keygroups, chord tools and string STRUM do not apply. This is a versioned cached-synthesis bank, not an editable Kotlin spectral engine. See [SIDEROOM](SIDEROOM.md) for build steps and evidence.
 
-## CONSORT (Kotlin prototype, 2026-11-19)
+## CONSORT (Kotlin prototype 2026-11-19; round K3 2026-11-20: keys, chords, round robin, shelf, picker)
 
-Source: the commit that adds this entry. Details: [CONSORT](CONSORT.md).
+Source: the commits of round K3 (PR #1256). Details: [CONSORT](CONSORT.md).
 
 | Gate | Current evidence | Status |
 |---|---|---|
-| Six melodic voices | FLUTE, SAX, CLARINET, OBOE, BASSOON, DUDUK render and pass pitch, level and classifier probes. Three pipe types; OBOE, SAX and BASSOON differ by reed, edge and formants. The owner heard and approved the Kotlin K1 audition (2026-11-20). | Sound approved; presets, keygroups and kit open |
-| Presets | Thirteen provisional recipes in `ConsortPresets` (each voice alone and leading a section), taken from the Python audition's settings and not chosen by ear. Held out of `Presets`; the engine is in `PatchTypes.PROTOTYPES`. | Open: listening, then a factory bank |
-| Playable keygroups | None. | Open |
-| Premade kit | `SynthKits.consort()`: eight FLUTE notes up the minor pentatonic and eight recipes (three solo voices, five sections), exported to `testkit/SnipSnap Consort Kit/`. A test holds its classes, pitches and recipes. Not on the starter shelf, not chosen by ear, never loaded on an MPC. | Open: listening, shelf, hardware |
-| Chord-tool compatibility | Not tested. A chord on a patch that already seats a seventh stacks intervals. | Open |
-| Appropriate HOLD | Breath length only; the top step is a long note. No loop. | Open: owner's decision on a loop |
-| Velocity | Velocity is breath effort inside the render; `Velocity.touchedRender` passes it through. Tone changes with velocity in `ConsortTest`. No save, playback or export evidence. | Open |
-| Round robin | Four authored takes in the render and on `ConsortPatch.take`. No pad pool, no selection, no save/load, no playback, no export. | Open |
-| App picker | No entry. | Open |
+| Six melodic voices | FLUTE, SAX, CLARINET, OBOE, BASSOON, DUDUK. The owner heard and approved the Kotlin K1 audition (2026-11-20). `ConsortPinsTest` pins 156 one-shot renders (the 13 heard recipes, 3 velocities, 4 takes); the K3 keys work left every one byte-identical. | Sound approved |
+| Presets | 27 provisional recipes in `ConsortPresets`: the 13 heard ones and 14 K3 character recipes (SHAKUHACHI, FUJARA, BAWU, PKU, trills, flutter, scoops, falls, growl) written from the owner's references, not yet heard. The picker offers them, as CHITIN's and NACRE's; held out of `Presets`. | Open: listening (round K3 page), then a factory bank |
+| Playable keygroups | The owner chose keys that sustain while held (2026-11-20). `ConsortKeys`/`ConsortPadMaker`: nine zones, three touch windows, two takes a window in the matching-window Cycle layout, each sample its attack then a two-second loop cut and guarded as BORE's. In held mode only, the slow motions and breath noise repeat every 2 s and each player is retuned to repeat, so sections line up at the splice. Zero refusals across 324 solo keys, every section preset's keys and every gesture. `ConsortPadMakerTest`: phone, MPC 3 and MPC 2 read-back of every loop and window, a key held 9 s at steady level, release. | Pass in software; open: listening, phone, MPC |
+| Premade kit | CONSORT and CONSORT TAKES on the shelf with the winds. | Open: listening, hardware |
+| Chord-tool compatibility | `ConsortChords`: all 960 chords keep their spacing, move by octaves; 956 inside each voice's two octaves, 4 one semitone past onto the edge zones. All 960 play and release on real CLARINET keys. A chord on a section stacks the section on every tone. | Pass in software; open: listening, phone |
+| Appropriate HOLD | One-shots: HOLD is breath length, no loop. Keys: sustain while held, the owner's choice. | Pass in software; open: listening |
+| Velocity | Breath effort in the render; three touch windows on keys (levelled, differ by timbre; never overblow) and three zones on CONSORT TAKES pads (the hard zone overblows). Save, reload, resolver and MPC 3/MPC 2 read-back proven for both. | Pass in software; open: listening, hardware |
+| Round robin | ROBIN re-strikes CONSORT with the engine's own takes. Pads: two takes a zone, cycling proven through save, reload, resolver, MPC 3; MPC 2 keeps each touch's first take (the recorded format limit). Keys: two takes a window, dealt in turn by the phone cursor and written as MPC 3 and MPC 2 Cycle layers. | Pass in software; open: listening, hardware |
+| App picker | On the SYNTH picker under WINDS & BRASS with TOUCH, TAKE, a SECTION editor and MAKE INSTRUMENT; `ConsortSynthScreenTest` for the emulator. Not compiled in the dev container. | Open: CI build, emulator, phone |
 
-Nothing here is a completion claim. A passing `ConsortTest` and an audition page do not close a gate.
-
+Nothing here is a completion claim. A passing test and an audition page do not close a gate.
