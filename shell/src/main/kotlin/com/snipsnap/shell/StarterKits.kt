@@ -826,6 +826,21 @@ object StarterKits {
             seeded = false, tempoBpm = com.snipsnap.synth.LooseCrateKits.Kit.RITUAL.bpm.toFloat(),
         ) { com.snipsnap.synth.LooseCrateKits.build(com.snipsnap.synth.LooseCrateKits.Kit.RITUAL) },
         Starter(
+            "loose-crate-blue", "LOOSE CRATE BLUE",
+            "Jazz breaks off a record: a felt kick, brushes, a bright stick ride with a light ring that fades quickly, a foot hat and a shaker, on a fresher tape. Three touch zones, four takes; a tap roll and a swung four-bar break.",
+            seeded = false, tempoBpm = com.snipsnap.synth.LooseCrateKits.Kit.BLUE.bpm.toFloat(),
+        ) { com.snipsnap.synth.LooseCrateKits.build(com.snipsnap.synth.LooseCrateKits.Kit.BLUE) },
+        Starter(
+            "loose-crate-speed", "LOOSE CRATE SPEED",
+            "HUMMIN's record played at 45: every drum shorter, tighter and higher, the humming kick lifted. Three touch zones, four takes; a sped roll and a four-bar groove at 108.",
+            seeded = false, tempoBpm = com.snipsnap.synth.LooseCrateKits.Kit.SPEED.bpm.toFloat(),
+        ) { com.snipsnap.synth.LooseCrateKits.build(com.snipsnap.synth.LooseCrateKits.Kit.SPEED) },
+        Starter(
+            "loose-crate-raga", "LOOSE CRATE RAGA",
+            "Indian-record percussion with the tabla leading: dayan strokes, a bending bayan, dholak under them, a thud kick and a slap snare. Three touch zones, four takes; a tabla roll and a four-bar groove.",
+            seeded = false, tempoBpm = com.snipsnap.synth.LooseCrateKits.Kit.RAGA.bpm.toFloat(),
+        ) { com.snipsnap.synth.LooseCrateKits.build(com.snipsnap.synth.LooseCrateKits.Kit.RAGA) },
+        Starter(
             "stagger-cardboard", "STAGGER CARDBOARD",
             "A muffled, click-free kick against a dry crack and a hat at a whisper, timpani, gong, zap and punch pitched down through a 12-bit converter. Three touch zones, four takes; a timpani roll and a two-bar groove whose clock drags and catches up.",
             seeded = false, tempoBpm = com.snipsnap.synth.StaggerKits.Kit.CARDBOARD.bpm.toFloat(),
