@@ -3947,7 +3947,7 @@ becomes a drum engine. It has six voices (KICK, SNARE, GHOST, HAT, HAT_OPEN, PER
 pool of the bank's fitted hits, 63 in all. HIT, TUNE, DECAY, FLOOR, BLEED and SLOP pick and
 shape a hit. Every render is the SYNTH TWIN sound path (`KerfRecipe.take`: velocity at the
 owner's depth 3, a take a fresh cut), with one level per setting. It is a prototype
-(`PatchTypes.PROTOTYPES`, `KerfPresets`, 27 presets) and last on SYNTH's picker under DRUMS:
+(`PatchTypes.PROTOTYPES`, `KerfPresets`, 27 presets) and on SYNTH's picker after SOOT, under DRUMS:
 100 picker engines. Four genre kits sit on FRESH TAPE: KERF DUST, SOUL, FUNK and STOMP. Each
 has fourteen hits, a roll and a riser, every pad 3 zones × 4 takes, proved through save,
 playback and MPC 3 export (`KerfKitTest`). None of it has been heard yet.

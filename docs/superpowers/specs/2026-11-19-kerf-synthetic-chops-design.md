@@ -868,7 +868,7 @@ a pad made from a capture keeps its own numbers in the pad recipe, as before.
   knife can peak up to 1.5× take 0 (a ghost note cut into the kick before it).
 - **Registration.** `Patches` decode; both `Velocity` arms; `Restrike`; `SynthRoot`;
   `UserPresets.rosterLine`; `PatchTypes.PROTOTYPES` with `KerfPresets`; `PatchesTest`,
-  `PadRecipeTest` and `DeterminismTest`. It is last on the SYNTH picker with an on-device test
+  `PadRecipeTest` and `DeterminismTest`. It sits after SOOT on the SYNTH picker (CAIRN still closes the ring) with an on-device test
   (`NewEngineSynthScreenTest`), and `EngineCatalog` lists it under DRUMS. The picker now has 100
   engines.
 - **Presets (27, not yet heard).** Each is one pool hit, named for what it measures. A preset

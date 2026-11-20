@@ -142,6 +142,7 @@ object EngineCatalog {
         "BACKWASH" to EngineEntry(listOf(EngineCategory.DRUMS), "Damped drums with wavering tails and warm amp grit"),
         "DRUMLINE" to EngineEntry(listOf(EngineCategory.DRUMS), "Marching drum sections, split bass and ringing cymbals"),
         "SOOT" to EngineEntry(listOf(EngineCategory.DRUMS), "Grimy boom bap drums: sagging skins, a coil, detuned metal"),
+        "KERF" to EngineEntry(listOf(EngineCategory.DRUMS), "Synthetic chops: break hits rebuilt with bleed and slop"),
         "HICCUP" to EngineEntry(listOf(EngineCategory.DRUMS), "Glitch drums that snag, ratchet and buzz inside each hit"),
         "TEMPEST" to EngineEntry(listOf(EngineCategory.DRUMS), "Digital drums, driven metal and degrading short repeats"),
         "SPLAY" to EngineEntry(listOf(EngineCategory.BELLS, EngineCategory.PADS), "Six bodies (tongue, wire, rub, air, bar, skin), finite notes"),
@@ -158,7 +159,6 @@ object EngineCatalog {
         "KINDRED" to EngineEntry(listOf(EngineCategory.DRUMS), "One analog voice re-struck: diving kicks, zaps, FM toms"),
         "RIDDIM" to EngineEntry(listOf(EngineCategory.DRUMS), "Dancehall drums: booms, ratchet, ting, woods and bronze"),
         "CAIRN" to EngineEntry(listOf(EngineCategory.BELLS, EngineCategory.DRUMS), "Stones that knock, tumble, grind, sing and roll in a bowl"),
-        "KERF" to EngineEntry(listOf(EngineCategory.DRUMS), "Synthetic chops: break hits rebuilt with bleed and slop"),
     )
 
     /** The entry for the engine constant [name], or null for a name the catalogue does not know. */
