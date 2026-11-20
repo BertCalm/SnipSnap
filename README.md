@@ -1129,7 +1129,8 @@ with one preset and together on the ACCORD VOICES starter at C2 to C5. Round rob
 came next: four takes of each performance, the same machine heard from a moment
 earlier each time, kept by ear in accord-rr-1 (19 Nov 2026). ROBIN re-strikes an
 ACCORD pad with them, and the opt-in ACCORD TAKES starter gives the sixteen ACCORD
-pads soft, medium and hard touch with four takes on each. Ten saved
+pads soft, medium and hard touch with two of those takes on each (four made the
+kit too large for a phone). Ten saved
 starting recipes, native note/touch/seed/passage replay,
 a dry sixteen-pad one-shot FRESH TAPE starter and a diagnostic audition carry the approved
 Python direction into a native candidate. Nonzero HOLD is refused. SYNTH's
