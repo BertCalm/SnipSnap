@@ -163,10 +163,10 @@ internal fun MidiLearnPanel(
         val armedChip = targets.firstOrNull { it.first == armed }?.second
         TapeText(
             when {
-                !supported -> "THIS PHONE HAS NO MIDI"
-                !connected -> "PLUG IN A KEYBOARD TO LEARN"
-                armedChip != null -> "MOVE A CONTROL FOR $armedChip"
-                else -> "TAP A TARGET, THEN MOVE A CONTROL"
+                !supported -> "This phone has no MIDI"
+                !connected -> "Plug in a keyboard to learn"
+                armedChip != null -> "Move a control for $armedChip"
+                else -> "Tap a target, then move a control"
             },
             TapeType.pixel,
             scheme.ink.tape,

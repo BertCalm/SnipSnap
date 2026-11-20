@@ -207,6 +207,10 @@ object Cli {
         |                        the nearest THUMP patch to a captured hit: a
         |                        wav prints it (--out patch.json), a pad becomes
         |                        it (--force past a far match, --undo)
+        |  kerf <kit-dir> <pad>|--all
+        |                        a pad becomes its synthetic twin: measured, then
+        |                        played from the numbers with its neighbours
+        |                        bleeding in (--bleed, --slop, --undo)
         |  mutate <kit-dir> <pad> --with <src>[,<src>..]
         |                        one hit from many parents: transient-aligned
         |                        stack (with a polarity check), --splice (the
@@ -452,6 +456,7 @@ object Cli {
                 "drift" -> DriftCommand.run(args.drop(1), out)
                 "breed" -> BreedCommand.run(args.drop(1), out)
                 "desample" -> DesampleCommand.run(args.drop(1), out)
+                "kerf" -> KerfCommand.run(args.drop(1), out)
                 "robin" -> RobinCommand.run(args.drop(1), out)
                 "mutate" -> MutateCommand.run(args.drop(1), out)
                 "shape" -> ShapeCommand.run(args.drop(1), out)

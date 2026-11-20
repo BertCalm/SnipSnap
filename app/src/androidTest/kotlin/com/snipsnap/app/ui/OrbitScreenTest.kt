@@ -177,9 +177,9 @@ class OrbitScreenTest : ComposeScreenTest() {
         val entry = kit()
         show(entry)
         val before = builtRings(entry)
-        invokeClick("COPY THIS RING BESIDE IT")
+        invokeClick("Copy this ring beside it")
         waitFor("the set saved with one ring more", timeoutMillis = 30_000) { ringsOnDisk(entry) == before + 1 }
-        button("UNDO THE LAST EDIT").assertIsEnabled()
+        button("Undo the last edit").assertIsEnabled()
     }
 
     @Test

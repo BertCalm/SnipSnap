@@ -1,3 +1,13 @@
+> STAGGER (round 3b built 2026-11-20, the snare damped and opened and the dark shelf removed after round 3 was heard as "flat, muffled, and muddy"; round 3 boxed the kicks after round 2d's "light taps"; round 2c was "room reverb", round 2b "echoy", round 1 "too much like drum machine sounds", round 1b "New sounds are better"):
+> three kits, CARDBOARD, MATINEE and STUMBLE, on the SKINS shelf, after the owner's muffled-kick, drunk-clock, foley-fill
+> producer profile, in the CYPHER shape, their drums EMBER's, proven through save, playback and MPC 3 export in software; a MUFFLE strike law, the `Cypher.staggered` clock, a kit-side
+> converter-then-pitch FOLEY print, a GLASS source and a PUNCH strike. Not on the shelf. See [STAGGER](STAGGER.md).
+
+> LOOSE CRATE kits (complete 2026-11-18: sound approved, phone and MPC gates passed): four beat-tape drum kits in
+> the CYPHER shape, HUMMIN, CLOTH, HAZE and RITUAL, aimed at measurements of the owner's reference loops. Every
+> groove and roll is played as one kit in one room (a drummer's kick dynamics, snare wires under every kick, ROOM,
+> COMPRESSOR and a dark shelf); CLOTH's print adds a tube and a bass-only compressor. Velocity × round robin is
+> proven through save, playback and MPC 3, SFZ and DecentSampler export. See [LOOSE CRATE](LOOSE_CRATE.md).
 > CYPHER kits (round 2 heard 2026-11-12; all six kits approved): six hip-hop drum kits in
 > the GATECRASH shape over THUMP's new SUB voice, a sub drum whose pitch holds its root and then slides to
 > another note. Velocity × round robin is proven through save, playback and MPC 3, SFZ and DecentSampler
@@ -25,6 +35,14 @@
 > SPLINTER breakcore kit (2026-11-15): one 18-pad starter at 200 BPM on the approved Spore kick and
 > snare, with a new edit stage (speed, chop, retrigger, stretch, clip). 162 cells verified through
 > saving, playback, SFZ and MPC 3. Groove heard 2026-11-15: fine; hardware open. See [SPLINTER](SPLINTER.md).
+
+> Breakcore family (2026-11-18): SHATTER (180 BPM), SOUNDCLASH (175) and REDLINE (250) join SPLINTER,
+> three 18-pad starters, 162 cells each verified through saving, playback, SFZ and MPC 3. Grooves and pads
+> heard 2026-11-18 and kept; per-pad verdicts and hardware open. See [BREAKCORE_FAMILY](BREAKCORE_FAMILY.md).
+
+> Breakcore family, second round: LULL (170 BPM), STROBE (145), CARTRIDGE (190) and BARRICADE (165) join the
+> family, four more 18-pad starters, 162 cells each verified through saving, playback, SFZ and MPC 3. Grooves and
+> pads auditioned and approved as built; per-pad verdicts and hardware open. See [BREAKCORE_FAMILY](BREAKCORE_FAMILY.md).
 
 > TRIAD first listening gate (2026-11-09): one generated hybrid drum groove through
 > shared compression/drive, dynamics/tape, or crush/grains. Native finite audition;
@@ -3386,6 +3404,10 @@ held-loop join sits at the loop's end so the attack stays the render's own;
 and the chord voicings gather near one centre so neighbouring pads read as a
 progression.
 
+## CONSORT woodwind section prototype
+
+A lead and up to three harmony players, each a blown pipe (BORE's loop and valves as a cone, a closed cylinder or a jet), six voices, fixed intervals, velocity as breath, five gestures, four takes and a per-chair room. The owner approved the Python prototype's sound over three rounds (2026-11-19); the Kotlin engine, patch and probes exist and nobody has heard them. No presets, kit, keygroups, picker entry or loop; render time is over the house rule. See `docs/CONSORT.md`.
+
 ## CHITIN finite-note prototype
 
 SHELL and WING share a source/filter/phaser excursion with protected bass roots. The owner approved the first audition; twelve candidate presets, a finite-note sixteen-pad MPC kit, picker wiring and a focused published bank are now available. See `docs/CHITIN.md`.
@@ -3907,3 +3929,13 @@ The owner approved the Kotlin kits and the hardware ("Approved, approved"). `Kin
 the 56 one-shots of the four kits, served by `Presets`; KINDRED leaves `PatchTypes.PROTOTYPES`; `KindredPresetsTest`
 holds the preset contracts. Complete: shelf, picker, roster, velocity and round robin through MPC 3 export, sound and
 hardware approved; MPC 2 not applicable. Preserve model 2 and kit version 1. See [KINDRED](KINDRED.md).
+
+### RIDDIM, round 5: presets and picker (2026-11-19)
+
+The owner accepted RIDDIM's six dancehall kits on the phone and the MPC ("Sounds great. Phone/MPC pass.") and chose
+the roster and the picker. `RiddimPresets` files the kits' RIDDIM pads as the factory bank: each pad's own macros
+struck full at take 0, named after its kit (CLAVE, DEMBOW, BOOM, BAILE, SABAR, WOOD). Sixty-nine pads give sixty-five
+presets: four pads two kits share at the same settings are filed once, and the 27 pads that strike CALABASH voices
+stay CALABASH's. Every one of the 19 RIDDIM voices has a preset. RIDDIM leaves `PatchTypes.ROSTERLESS` and sits on
+SYNTH's picker after KINDRED, before CAIRN, under DRUMS; 99 picker engines. An on-device test loads CLAVE WOOD F#3 and
+keeps an edit with its hardest mallet, take and model; CI compiles and runs it. See [RIDDIM](RIDDIM.md).

@@ -59,7 +59,8 @@ internal object PatchTypes {
      * and their pads became its factory bank. CALABASH sat here from its Kotlin
      * port (round 1, 2026-11-15) until the owner approved its kits on the shelf (2026-11-15) and they became its
      * factory bank, as CLUTTER's did. SERVO sat here from its port until the owner approved its kits (2026-11-15)
-     * and their hits became its factory bank.
+     * and their hits became its factory bank. RIDDIM sat here from its port (round 2a, 2026-11-18) until the owner
+     * accepted its six kits on the phone and the MPC (2026-11-19) and their RIDDIM pads became its factory bank.
      */
     val ROSTERLESS: Set<String> = setOf(HydroformPatch.ENGINE, SnapPatch.ENGINE, SilkPatch.ENGINE, GyrePatch.ENGINE, MagnetPatch.ENGINE)
 
@@ -69,9 +70,10 @@ internal object PatchTypes {
      * Named here so leaving it out is a recorded decision, not a forgotten line:
      * accepting the engine means filing its recipes in [Presets] and taking it off this list. ETCH sat here from
      * its Kotlin port (K1) to round K2 (2026-11-14), when its heard round-3 settings became the factory bank. KINDRED sat
-     * here from its port (K1, 2026-11-15) until the owner approved its Kotlin kits (2026-11-18).
+     * here from its port (K1, 2026-11-15) until the owner approved its Kotlin kits (2026-11-18). CONSORT joined at its
+     * Kotlin port (K1, 2026-11-19): the owner heard its Python prototype, and nobody has heard the Kotlin render.
      */
-    val PROTOTYPES: Set<String> = setOf(ChitinPatch.ENGINE, FerryPatch.ENGINE, FillPatch.ENGINE, BreakerPatch.ENGINE, SootPatch.ENGINE)
+    val PROTOTYPES: Set<String> = setOf(SecondlinePatch.ENGINE, ChitinPatch.ENGINE, FerryPatch.ENGINE, FillPatch.ENGINE, BreakerPatch.ENGINE, SootPatch.ENGINE, ConsortPatch.ENGINE)
 
     /** These voices of otherwise rostered engines await a factory-preset listening verdict. */
     val PROTOTYPE_VOICES: Map<String, Set<String>> = mapOf(

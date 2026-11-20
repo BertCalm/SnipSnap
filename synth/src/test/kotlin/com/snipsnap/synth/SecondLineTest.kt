@@ -4,6 +4,17 @@ import kotlin.test.*
 import kotlin.math.*
 
 class SecondLineTest {
+    @Test fun `model one triangle retains the original audition PCM`() {
+        val path=java.nio.file.Files.createTempFile("triangle-model-one", ".wav").toFile()
+        try {
+            val recipe=ParadeSecondLine.Recipe(ParadeSecondLine.Voice.TRIANGLE,model=1)
+            val restored=ParadeSecondLine.Recipe.fromJson(recipe.json())
+            com.snipsnap.audio.WavWriter.write(path,restored.render(),com.snipsnap.audio.WavWriter.BitDepth.PCM_16)
+            val digest=java.security.MessageDigest.getInstance("SHA-256").digest(path.readBytes()).joinToString("") { "%02x".format(it) }
+            assertEquals("5712405c360d8c176e7689c46165a15d170e81ca7ff5eb370b24a9cbe3d08802",digest)
+        } finally { path.delete() }
+    }
+
     @Test fun `muted triangle releases progressively with much less late ring`() {
         fun ratio(x: FloatArray): Double {
             val early=x.take(1323).sumOf { it.toDouble()*it }/1323
@@ -35,7 +46,7 @@ class SecondLineTest {
             }
         }
         assertEquals(ParadeSecondLine.defaults(),ParadeSecondLine.settled(mapOf("DAMP" to Float.NaN,"TUNE" to Float.POSITIVE_INFINITY,"UNKNOWN" to 1f)))
-        assertFailsWith<IllegalArgumentException> { ParadeSecondLine.Recipe(ParadeSecondLine.Voice.BASS_OPEN,model=2) }
+        assertFailsWith<IllegalArgumentException> { ParadeSecondLine.Recipe(ParadeSecondLine.Voice.BASS_OPEN,model=5) }
         assertFailsWith<IllegalArgumentException> { ParadeSecondLine.Recipe(ParadeSecondLine.Voice.BASS_OPEN,take=-1) }
     }
 }

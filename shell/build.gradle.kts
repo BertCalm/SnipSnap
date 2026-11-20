@@ -61,7 +61,24 @@ tasks.test {
     // copies the 180-second stereo cap in SnipStore.import, and the worker that had
     // already memoised the pad makers had no contiguous room left. 2g is the step
     // the long shell tasks beside this one already take.
-    maxHeapSize = "2g"
+    // On 2026-11-20 jvm-other went red on one PR after another with ":shell:test FAILED"
+    // and no failing test: "Could not complete execution for Gradle Test Executor 26",
+    // "Caused by: java.lang.OutOfMemoryError: Java heap space" (run 44727907558, a PR that
+    // changed only a workflow file, so the base itself was over the line). No JIT crash
+    // report, no kernel kill, 8 to 12 GB of memory and 70 GB of disk free. The signs came
+    // before the error: JCardTest took 61 minutes where a healthy run takes 19, then ended
+    // SKIPPED, and about 70 later classes never ran (4,205 to 4,230 tests against 4,785).
+    // 234 starters were on the shelf, each kit of the newest ones holding sixteen pads of
+    // many zone samples, and the three tests that render every starter keep the engines'
+    // memos live beside them. 3g is half as much again, the same step the 1g to 1536m to 2g
+    // history above took, about a dozen engines of room.
+    maxHeapSize = "3g"
+    // The root build runs one test JVM per CPU, and the public ubuntu-latest has 4 CPUs and
+    // 16 GB: four JVMs at 3g could take 12 GB of heap alone beside the Gradle client and the
+    // OS. Three JVMs keep the heap to 9 GB. The three tests that render every starter run
+    // for 12 to 22 minutes each, so the module's wall time is set by them, and three JVMs
+    // still give each of them its own. A machine with fewer CPUs keeps its smaller count.
+    maxParallelForks = minOf(maxParallelForks, 3)
     testLogging {
         events("passed", "failed", "skipped")
         // FULL, because this module's tests are mostly LAWS, and a law's whole
@@ -618,6 +635,16 @@ tasks.register<JavaExec>("generateFacsimileKits") {
     args(providers.gradleProperty("facsimileKitsOutput").orNull ?: "${rootDir}/testkit/facsimile-kits")
 }
 
+tasks.register<JavaExec>("generateStaggerKits") {
+    group = "distribution"
+    description = "Build the three STAGGER kits, prove the velocity and round-robin grid through save, playback and MPC 3 export, and write the listening pack."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.StaggerKitGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "2g"
+    args(providers.gradleProperty("staggerKitsOutput").orNull ?: "${rootDir}/testkit/stagger-kits")
+}
+
 tasks.register<JavaExec>("generateMirrorballKits") {
     group = "distribution"
     description = "Build the three MIRRORBALL disco kits, prove the velocity and round-robin grid through save, playback and MPC 3 export, and write the listening pack."
@@ -695,6 +722,16 @@ tasks.register<JavaExec>("generateCalabashKits") {
     workingDir = rootProject.projectDir
     maxHeapSize = "3g"
     args(providers.gradleProperty("calabashKitsOutput").orNull ?: "${rootDir}/testkit/calabash-kits")
+}
+
+tasks.register<JavaExec>("generateRiddimKits") {
+    group = "distribution"
+    description = "Build the three RIDDIM kits, prove every velocity and round-robin grid through save, playback and MPC 3 export, and write the listening pack."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.RiddimKitGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "3g"
+    args(providers.gradleProperty("riddimKitsOutput").orNull ?: "${rootDir}/testkit/riddim-kits")
 }
 
 tasks.register<JavaExec>("generateHiccupKits") {
@@ -808,6 +845,18 @@ tasks.register<JavaExec>("generateCuttingsKits") {
     args(providers.gradleProperty("cuttingsOutput").orNull ?: "${rootDir}/testkit/cuttings-kits")
 }
 
+for (kitName in listOf("shatter", "soundclash", "redline", "lull", "strobe", "cartridge", "barricade")) {
+    tasks.register<JavaExec>("generate${kitName.replaceFirstChar { it.uppercase() }}Kit") {
+        group = "distribution"
+        description = "Render and verify the ${kitName.uppercase()} breakcore shelf kit, with its listening files and archives."
+        classpath = sourceSets["test"].runtimeClasspath
+        mainClass.set("com.snipsnap.shell.BreakcoreFamilyDelivery")
+        workingDir = rootProject.projectDir
+        maxHeapSize = "2g"
+        args(kitName, providers.gradleProperty("${kitName}Output").orNull ?: "${rootDir}/testkit/${kitName}-breakcore")
+    }
+}
+
 tasks.register<JavaExec>("generateSporeSyntheticKits") {
     group = "distribution"
     description = "Render and verify all three complete sample-free Spore shelf kits."
@@ -816,6 +865,16 @@ tasks.register<JavaExec>("generateSporeSyntheticKits") {
     workingDir = rootProject.projectDir
     maxHeapSize = "2g"
     args(providers.gradleProperty("sporeSyntheticOutput").orNull ?: "${rootDir}/testkit/spore-synthetic-kits")
+}
+
+tasks.register<JavaExec>("generateSideroomKits") {
+    group = "distribution"
+    description = "Build five SIDEROOM cached-synthesis kits and verify native save/playback and MPC exports."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.SideroomKitGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "2g"
+    args(providers.gradleProperty("sideroomOutput").orNull ?: "${rootDir}/testkit/sideroom-native")
 }
 
 tasks.register<JavaExec>("generateEastAfricaKits") {
@@ -866,4 +925,13 @@ tasks.register<JavaExec>("verifyNativeSambaKit") {
     mainClass.set("com.snipsnap.shell.SambaKitProof")
     maxHeapSize = "1g"
     args(providers.gradleProperty("nativeSambaKitOutput").getOrElse("${rootDir}/testkit/native-samba-kit"))
+}
+
+tasks.register<JavaExec>("verifySecondlineKits") {
+    group = "verification"
+    description = "Regenerate classic and triangle Second Line kits through saving, playback and MPC export."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.SecondlineKitProof")
+    maxHeapSize = "1g"
+    args(providers.gradleProperty("secondlineKitOutput").getOrElse("${rootDir}/testkit/secondline-kits"))
 }

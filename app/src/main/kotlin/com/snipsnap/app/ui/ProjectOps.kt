@@ -219,7 +219,7 @@ private fun ProjectMenuCard(
             Places.PROJECT_DROP_DESC,
             onDrop,
             enabled = row.project.kits.isNotEmpty(),
-            accessibilityLabel = "REMOVE A KIT FROM PROJECT $name",
+            accessibilityLabel = "Remove a kit from project $name",
         )
     }
 }
@@ -264,7 +264,7 @@ private fun ProjectDropCard(row: ShelfModel.ProjectRow, onPick: (String) -> Unit
                     kit,
                     scheme,
                     enabled = true,
-                    accessibilityLabel = "REMOVE KIT ${kit.uppercase(Locale.ROOT)} FROM PROJECT $project",
+                    accessibilityLabel = "Remove kit ${kit.uppercase(Locale.ROOT)} from project $project",
                     modifier = Modifier.fillMaxWidth(),
                     onClick = { onPick(kit) },
                 )

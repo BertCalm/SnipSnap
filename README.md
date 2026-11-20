@@ -6,6 +6,8 @@ and exporting a drum kit your Akai MPC can load.
 
 > You heard it. You snipped it. It's on pad A03.
 
+[Sunroom](docs/SUNROOM.md) adds three studio-pop factory kits with the approved brush, woodblock and cymbal models, three touch levels and three alternate outputs. These are frozen synthesis banks with owner-reported hardware acceptance; the crescendo's timbral-velocity gate remains open.
+
 **Status:** a tested pure-Kotlin core — capture buffer, cleanup DSP, the
 synth engines, and writers for both MPC generations, **hardware-verified on
 an MPC Live III** (native `.xtd` and compatibility `.xpm` kits load and
@@ -37,6 +39,14 @@ remains blocked on slice-map/hardware verification. Owner listening is pending.
 
 [SPLINTER](docs/SPLINTER.md) is a breakcore kit at 200 BPM: sped-up break hits, chopped slices,
 a stutter, a stretched snare, clipped and gabber kicks, a snare rush and a riser. Not heard yet.
+
+[SHATTER, SOUNDCLASH and REDLINE](docs/BREAKCORE_FAMILY.md) complete the breakcore family: a break cut at its own hits (180 BPM),
+a sound system of subs, reese, siren and rewind (175), and speedcore with tuned kicks (250). The owner heard
+their grooves and pads on 2026-11-18 and kept them; per-pad verdicts and device playback are open.
+
+[LULL, STROBE, CARTRIDGE and BARRICADE](docs/BREAKCORE_FAMILY.md) are the family's second round: a quiet piano track that stops dead (170 BPM),
+a 1992 rave with a diving whine and a sped-up break (145), a sound-chip kit (190), and digital hardcore with power chords (165).
+The owner auditioned and approved their grooves and pads; per-pad verdicts and device playback are open.
 
 [GATECRASH](docs/GATECRASH.md) is a family of three 1980s gated drum kits on the shelf: Stone Room, Machine Pop and Electro Funk. Each has sixteen pads with three velocity zones of four takes. The owner approved the sound on 2026-11-11 after four rounds; phone and MPC hardware playback remain unverified.
 
@@ -462,7 +472,7 @@ explicit MIDI root (24–96), strike velocity and model version; TUNE is a
 relative ±12-semitone offset, neutral at 0.5, so the effective note spans
 12–108 without clamping back to the saved-root range. Seven provisional presets
 and a dry sixteen-pad C minor pentatonic kit are included, with PITCHWHEEL among
-FRESH TAPE's 202 starters. Run `./gradlew :synth:generatePitchwheelAudition`
+FRESH TAPE's 235 starters. Run `./gradlew :synth:generatePitchwheelAudition`
 for the compact first listening set, or add `-PpitchwheelFull` for the broader
 dry probes. HOLD's top step returns settled loop-only material with a
 deterministic attachment cycle and capped adhesion. The owner heard R1 as six
@@ -528,7 +538,12 @@ DECAY. The owner accepted all six and the 22 factory presets. FRESH TAPE → TEM
 is the sixteen-pad kit with choking hats; TEMPEST TUNED keeps the original E minor
 pentatonic kicks and metal colors. TEMPEST CIRCUIT (electro), TEMPEST FOUNDRY
 (industrial) and TEMPEST STEP (UK garage) are genre kits made from new settings of
-the same accepted voices, kept by the owner on 2026-11-14. HOLD is reserved. See [TEMPEST](docs/TEMPEST_FULL_KIT.md).
+the same accepted voices, kept by the owner on 2026-11-14. TEMPEST ROUND ROBIN, an
+opt-in starter beside TEMPEST, gives each of its sixteen pads four takes; the owner
+kept it by ear on 16 Nov 2026 (round tempest-rr-1). CIRCUIT TAKES, FOUNDRY TAKES and
+STEP TAKES do the same for the three genre kits, each beside its kit; WIRE and STEP SUB,
+which have no noise to re-roll, drift a few cents instead; the owner kept them by ear in genre-rr-1 (19 Nov 2026).
+HOLD is reserved. See [TEMPEST](docs/TEMPEST_FULL_KIT.md).
 
 OSTERIA is one evolving note: four spectral layers on a fixed root drift between
 five coastal palettes, with SHORE, TENSION, WANDER, MEMORY, ROOM and HOLD. Its six
@@ -1107,15 +1122,26 @@ bank and starter.
 ACCORD is a finite pitched ensemble whose fifteen autonomous mechanisms
 exchange reaction through one moving support. BRUSH is the default, alongside
 WOOD and TINE's original Reference, Soft Attack, Bright Edge and Long Ring
-profiles. Six saved starting recipes, native note/touch/seed/passage replay,
+profiles. REED (the support's pull blows a free reed), COURSE (three detuned
+strings per note), ESCAPEMENT (a bright tick one way, a dark tock back) and BELL
+joined them once the owner kept them by ear in accord-voices-1 (19 Nov 2026), each
+with one preset and together on the ACCORD VOICES starter at C2 to C5. Round robin
+came next: four takes of each performance, the same machine heard from a moment
+earlier each time, kept by ear in accord-rr-1 (19 Nov 2026). ROBIN re-strikes an
+ACCORD pad with them, and the opt-in ACCORD TAKES starter gives the sixteen ACCORD
+pads soft, medium and hard touch with two of those takes on each (four made the
+kit too large for a phone). Ten saved
+starting recipes, native note/touch/seed/passage replay,
 a dry sixteen-pad one-shot FRESH TAPE starter and a diagnostic audition carry the approved
-Python direction into a native candidate. Nonzero HOLD is refused. SYNTH's
+Python direction into a native candidate. Nonzero HOLD is refused. MAKE
+INSTRUMENT builds finite keys from any recipe (C2 to C5, three touches of two
+takes, a key-up fade; kept by ear in accord-keys-1, 20 Nov 2026). SYNTH's
 ROOT, TOUCH, LENGTH and TINE profile controls keep the complete saved recipe.
 Native numerical checks and three software-emulator functional tests passed
 with the documented ART setup. The full nine-module JVM gate at `00a1f9ff`
 passed 8,010 tests with zero failures/errors/skips. Both final Android builds
 passed at that source; the rebuilt development APK has not been device-executed.
-Owner listening and physical phone/MPC acceptance remain open.
+Physical phone/MPC acceptance remains open.
 [Usage and limits](docs/ACCORD.md) link the design and frozen references.
 
 TIDAL brings two original source populations through a seeded encounter:
@@ -1152,7 +1178,7 @@ render-time limits. Build its MPC program and replay files with:
 
 ONSET, SCANNED CHAIN, VOX, FORK, HALOBAR, AEROSTAT, TREMOR, BALLAST, FLOTILLA, CISTERN, CIRCUIT, OBBLIGATO, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE,
 TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, LATTICE, ACCORD, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, REGISTERS, OSPREY, OPENSKY, OVEN, FLOCK, VENT, OVERLAP, TRIO, NACRE, ORIGAMI, TREFOIL, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS, TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME, OTIS, WICK, BORE, ARCO, SCOUR, KEEL, CHITIN, EROSION, RIVET, FIRED BRONZE, BACKWASH, DRUMLINE, HICCUP, TEMPEST, SPLAY, OSTERIA, ETCH, SCUFF, CLUTTER, CALABASH, TERRA, BRISTLE, SERVO, EMBER, CAIRN, SAMBA, KINDRED and GRAINS round out the lineup —
-98 engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
+99 engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
 since it has no voice enum and works on a source snip instead of picking
 one. VOX is formant vocal synthesis — the shopping-mall-keyboard choir,
 proudly: a VOWEL knob morphs
@@ -1408,7 +1434,7 @@ TREMOR, BALLAST, CISTERN, CIRCUIT, OBBLIGATO, ALLOY, THAW, MURK, NIMBUS, COROLLA
 UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL,
 SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVERLAP,
 OVEN, FLOCK, VENT, CREASE, TRIO, NACRE, ORIGAMI, TREFOIL, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS,
-TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME, BORE, ARCO, SCOUR, KEEL, CHITIN, WICK, EROSION, RIVET, FIRED BRONZE, BACKWASH, DRUMLINE, SOOT, HICCUP, TEMPEST, SPLAY, OSTERIA, ETCH, SCUFF, CLUTTER, CALABASH, TERRA, BRISTLE, SERVO, EMBER, CAIRN, SAMBA, KINDRED, plus GRAINS, SNAP and DRAW,
+TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME, BORE, ARCO, SCOUR, KEEL, CHITIN, WICK, EROSION, RIVET, FIRED BRONZE, BACKWASH, DRUMLINE, SOOT, HICCUP, TEMPEST, SPLAY, OSTERIA, ETCH, SCUFF, CLUTTER, CALABASH, TERRA, BRISTLE, SERVO, EMBER, CAIRN, SAMBA, KINDRED, RIDDIM, plus GRAINS, SNAP and DRAW,
 which sit beside the picker. `:synth` also holds engines that picker does not show.
 LORENTZ has a preset roster, so `snipsnap synth` renders it.
 
@@ -1446,7 +1472,9 @@ presets each, the sixteen kept pads among them. TERRA SAHEL, TERRA MAQAM and
 TERRA PUNJAB are genre kits from the same voices, kept by the owner
 ([`docs/TERRA_PROMOTION.md`](docs/TERRA_PROMOTION.md)). TERRA ROUND ROBIN, an
 opt-in starter beside TERRA, deals four takes per touch on the same sixteen
-pads; the owner kept it by ear in terra-rr-1 (16 Nov 2026).
+pads; the owner kept it by ear in terra-rr-1 (16 Nov 2026). SAHEL TAKES, MAQAM
+TAKES and PUNJAB TAKES do the same for the three genre kits, each beside its kit
+(kept by ear in genre-rr-1, 19 Nov 2026).
 VENT, the Rössler-attractor synth (separate from the TapeOS scheme of that
 name), brings clean model-2 PULSE, COIL and PLUME to the picker
 and factory roster. FRESH TAPE's VENT kit has twelve dry pads in C minor

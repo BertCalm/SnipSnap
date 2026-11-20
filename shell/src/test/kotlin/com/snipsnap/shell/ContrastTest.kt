@@ -631,7 +631,7 @@ class ContrastTest {
         val overlay = codeLines(java.io.File(appSrc, "ui/KitFromResultOverlay.kt").readText())
         assertTrue(overlay.any { "scheme.lcd.tape" in it.second }, "the overlay must still sit on the lcd")
         assertTrue(overlay.none { Regex("""scheme\.ink[23]\b""").containsMatchIn(it.second) }, "KitFromResultOverlay draws chrome ink on the lcd")
-        val reopen = codeLines(java.io.File(appSrc, "ui/SynthScreen.kt").readText()).filter { "LOAD, EDIT, THEN SEND TO PAD" in it.second }
+        val reopen = codeLines(java.io.File(appSrc, "ui/SynthScreen.kt").readText()).filter { "Load, edit, then SEND TO PAD" in it.second }
         assertEquals(1, reopen.size)
         assertTrue("lcdInk2" in reopen[0].second && "ink2" !in reopen[0].second.replace("lcdInk2", ""), "the REOPEN caption sits on the lcd: ${reopen[0].second}")
     }

@@ -137,3 +137,14 @@ three draws the Kotlin port takes from the prototype (the room's noise, the cymb
 `compare_kotlin.py KOTLIN_DIR` measures the port (`./gradlew :synth:generateCalabashAudition`) against these renders
 pad by pad. `shelf_grooves.py` puts the kits on the shelf (`:shell:generateCalabashKits`) on the page beside the
 approved grooves. Needs numpy, scipy and ffmpeg. See [`../docs/CALABASH.md`](../docs/CALABASH.md).
+
+## taiko/ — the Japanese festival set, fitted
+
+The Python rounds behind TERRA's nine stick voices (`TerraSticks.kt`,
+[`../docs/TERRA_STICKS.md`](../docs/TERRA_STICKS.md)). `fit.py` is round 1's
+fitter (measured notes plus a fitted third-octave residual); `round2.py` to
+`round6.py` are the reworks the owner's listening verdicts asked for;
+`models.json` and `report.json` are the fitted models and their measurements.
+`gen_kotlin.py` writes `TerraSticksTables.kt`, and `cmp_kotlin.py` compares the
+Kotlin render with the Python one. The scripts read the owner's reference
+recordings, which are not in the repository.

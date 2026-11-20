@@ -3350,6 +3350,26 @@ tasks.register<JavaExec>("generateChitinAudition") {
 }
 
 
+tasks.register<JavaExec>("generateConsortKit") {
+    group = "distribution"
+    description = "Render the CONSORT woodwind section first kit under testkit/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ConsortKitGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit")
+}
+
+/** Render CONSORT's Kotlin audition: clips, recipes, metrics and a listening page under testkit/consort-audition/. See ConsortAuditionGenerator. */
+tasks.register<JavaExec>("generateConsortAudition") {
+    group = "distribution"
+    description = "Render the CONSORT woodwind section audition clips, recipes, metrics and listening page."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ConsortAuditionGenerator")
+    workingDir = rootDir
+    maxHeapSize = "768m"
+    args(providers.gradleProperty("consortOutput").orNull ?: "${rootDir}/testkit/consort-audition")
+}
+
 tasks.register<JavaExec>("generateChitinBank") {
     group = "distribution"
     description = "Render twelve candidate presets and the sixteen-pad finite CHITIN MPC kit."
@@ -3399,6 +3419,26 @@ tasks.register<JavaExec>("generateSootAudition") {
     workingDir = rootProject.projectDir
     maxHeapSize = "1g"
     args(providers.gradleProperty("sootOutput").orNull ?: "${rootDir}/testkit/soot-audition")
+}
+
+tasks.register<JavaExec>("generateKerfFit") {
+    group = "distribution"
+    description = "Fit KERF patches to the caller's own audio: a folder of chops hit by hit, or one loop as a kit."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.KerfFitGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "1g"
+    args(providers.gradleProperty("kerfInput").orNull ?: "", providers.gradleProperty("kerfOutput").orNull ?: "${rootDir}/testkit/kerf-audition/fit")
+}
+
+tasks.register<JavaExec>("generateKerfAudition") {
+    group = "distribution"
+    description = "Render KERF's round-1 listening pack: the four fitted chop kits from the Kotlin port, clean and chopped."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.KerfAuditionGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "1g"
+    args(providers.gradleProperty("kerfOutput").orNull ?: "${rootDir}/testkit/kerf-audition")
 }
 
 tasks.register<JavaExec>("generateBoomBapAudition") {
@@ -3973,6 +4013,37 @@ tasks.named<org.gradle.language.jvm.tasks.ProcessResources>("processResources") 
     }
 }
 
+/** Render RIDDIM's Kotlin voices under testkit/riddim-audition/kotlin/, for the A/B against the approved prototype. */
+tasks.register<JavaExec>("generateRiddimAudition") {
+    group = "distribution"
+    description = "Render every RIDDIM voice soft and hard, two takes each, under testkit/riddim-audition/kotlin/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.RiddimAuditionGenerator")
+    workingDir = projectDir
+    maxHeapSize = "2g"
+    args(providers.gradleProperty("riddimOutput").orNull ?: "${rootDir}/testkit/riddim-audition/kotlin")
+}
+
+tasks.register<JavaExec>("generateStaggerRound1") {
+    group = "distribution"
+    description = "Render STAGGER round 1: CARDBOARD's pads, round-robin and velocity strips, the box kick at three cutoffs, GLASS at three pitches, the groove under nine clock laws."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.StaggerRound1Generator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "1g"
+    args(providers.gradleProperty("staggerOutput").orNull ?: "${rootDir}/testkit/stagger-round1")
+}
+
+tasks.register<JavaExec>("generateStaggerRound1b") {
+    group = "distribution"
+    description = "Render STAGGER round 1b: CARDBOARD's pads from EMBER beside round 1's, the kick at three cutoffs, slices of the groove, and the groove under three clock laws."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.StaggerRound1bGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "1g"
+    args(providers.gradleProperty("staggerOutput").orNull ?: "${rootDir}/testkit/stagger-round1b")
+}
+
 tasks.register<JavaExec>("generateLooseCrateRound0") {
     group = "distribution"
     description = "Render LOOSE CRATE round 0: candidate hits, round-robin and velocity strips, the HUMMIN groove and CYPHER DUST for comparison."
@@ -4012,4 +4083,70 @@ tasks.register<JavaExec>("generateLooseCrateRound2a") {
     workingDir = rootProject.projectDir
     maxHeapSize = "1g"
     args(listOfNotNull(providers.gradleProperty("looseCrateRound2aOutput").orNull ?: "${rootDir}/testkit/loose-crate-round2a", providers.gradleProperty("looseCrateRound2aMode").orNull))
+}
+
+tasks.register<JavaExec>("generateLooseCrateExpansionRound0") {
+    group = "distribution"
+    description = "Render LOOSE CRATE's expansion round 0: a groove and key hits for BLUE, SPEED and RAGA."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.LooseCrateExpansionRound0Generator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "1g"
+    args(providers.gradleProperty("looseCrateExpansionOutput").orNull ?: "${rootDir}/testkit/loose-crate-expansion-round0")
+}
+
+tasks.register<JavaExec>("benchmarkParade") {
+    group = "verification"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ParadeAudit")
+    maxHeapSize = "1g"
+    args("speed",providers.gradleProperty("paradeAuditOutput").getOrElse("${rootDir}/testkit/parade-speed.csv"))
+}
+tasks.register<JavaExec>("auditParadeOutput") {
+    group = "verification"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ParadeAudit")
+    maxHeapSize = "1g"
+    args("alias",providers.gradleProperty("paradeAuditOutput").getOrElse("${rootDir}/testkit/parade-output-alias.csv"))
+}
+
+tasks.register<JavaExec>("benchmarkParadeTuned") {
+    group = "verification"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ParadeAudit")
+    maxHeapSize = "1g"
+    args("tuned",providers.gradleProperty("paradeTunedOutput").getOrElse("${rootDir}/testkit/parade-tuned-speed.csv"))
+}
+
+tasks.register<JavaExec>("benchmarkParadeKits") {
+    group = "verification"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ParadeAudit")
+    maxHeapSize = "1g"
+    args("kit_speed",providers.gradleProperty("paradeKitSpeedOutput").getOrElse("${rootDir}/testkit/parade-kit-speed.csv"))
+}
+tasks.register<JavaExec>("auditParadeKits") {
+    group = "verification"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ParadeAudit")
+    maxHeapSize = "1g"
+    args("kit_alias",providers.gradleProperty("paradeKitAliasOutput").getOrElse("${rootDir}/testkit/parade-kit-alias.csv"))
+}
+
+tasks.register<JavaExec>("benchmarkParadeSecondLine") {
+    group = "verification"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ParadeAudit")
+    maxHeapSize = "1g"
+    args("secondline_speed",providers.gradleProperty("paradeSecondLineSpeedOutput").getOrElse("${rootDir}/testkit/parade-secondline-speed.csv"))
+}
+
+tasks.register<JavaExec>("generateSunroomKits") {
+    group = "distribution"
+    description = "Export three approved Sunroom factory kits with velocity and alternate-take grids."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.SunroomKitGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "1g"
+    args(providers.gradleProperty("sunroomOutput").orNull ?: "${rootDir}/testkit/sunroom-native")
 }

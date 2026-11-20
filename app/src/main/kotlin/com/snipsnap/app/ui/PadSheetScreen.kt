@@ -2342,6 +2342,41 @@ fun PadSheetScreen(
         commitPadEditNow(Copy.UNDO_DESAMPLE, onSuccess = { onToast(Copy.UNDESAMPLED) }) { mm -> mm.undesamplePad(slot) }
     }
 
+    /**
+     * The twin's UNDO, in the MAKE box's SYNTH TWIN row: the take the twin
+     * binned comes back, the twin's recipe and stamp come off, and the pad is
+     * called what it was called ([KitBuilderModel.unkerfPad]). Dimmed, not
+     * disabled, under the same three refusals as [onUndesample]
+     * ([PadSheet.kerfUndoRefusal]); a tap says which.
+     */
+    fun onUnkerf() {
+        if (busy) return
+        val p = model?.kit?.pad(slot) ?: return
+        val nothing = PadSheet.kerfUndoRefusal(p, binned = binDaysLeft != null)
+        if (nothing != null) {
+            onToast(nothing)
+            return
+        }
+        commitPadEditNow(Copy.UNDO_KERF, onSuccess = { onToast(Copy.UNKERFED) }) { mm -> mm.unkerfPad(slot) }
+    }
+
+    /**
+     * BLEED or SLOP let go on a twin: the pad re-cut from its own saved
+     * numbers, no new measure, no new take in the bin
+     * ([KitBuilderModel.recutKerfPad]), so UNDO SYNTH TWIN still gives the
+     * capture after any number of moves. Refused in words when something
+     * rides the twin ([Copy.KERF_RIDDEN]).
+     */
+    fun onKerfRecut(bleed: Double, slop: Double) {
+        if (busy) return
+        val p = model?.kit?.pad(slot) ?: return
+        if (!PadSheet.isKerfTwin(p)) {
+            onToast(Copy.KERF_RIDDEN)
+            return
+        }
+        commitPadEditNow(Copy.KERF_RECUT, job = Copy.KERF_RECUT_BUSY) { mm -> mm.recutKerfPad(slot, bleed, slop) }
+    }
+
     /** ROULETTE: the shelf (the kit folder's parent) deals; the deal becomes the partner. */
     fun onRoulette() {
         if (busy) return
@@ -3192,6 +3227,72 @@ fun PadSheetScreen(
                     onToast(Copy.desampleFar(e.match.patch.engine, e.match.patch.voiceName, e.match.distance))
                 } else {
                     failure("MAKE SYNTH", e)
+                }
+            } finally {
+                busy = false
+                padJob = null
+                boardJob?.end()
+            }
+        }
+    }
+
+    /**
+     * SYNTH TWIN (KERF): the pad measured and replaced by the render of its
+     * own numbers, with the pads either side of it in the kit as the
+     * neighbours that bleed in ([KitBuilderModel.kerfPad]). About a second:
+     * three fits. The same shape as [onDesample] in every rule: a print and
+     * soft hits are asked about first, the write runs against a FRESH model
+     * under [withFreshKit]'s lock in [appScope], and [model] swaps to the
+     * fresh instance on success.
+     */
+    fun onKerf() {
+        if (busy) return
+        val m = model ?: return
+        val p = m.kit.pad(slot) ?: return
+        if (PrintedPads.has(p.recipe)) {
+            onToast(Copy.boardRemoveBeforeKerf(PrintedPads.label(p.recipe)))
+            return
+        }
+        if (p.velocityLayers.isNotEmpty()) {
+            onToast(Copy.MUTATE_NEEDS_ONE)
+            return
+        }
+        if (Breed.recipeOf(p)?.kerf != null) {
+            onToast(Copy.KERF_ALREADY)
+            return
+        }
+        val padName = p.displayName
+        val staleSampleFile = p.sampleFile
+        val kitDir = m.kitDir
+        val stalePads = pendingMetadataSlots.associateWith { m.kit.pad(it) }
+        busy = true
+        padJob = Copy.KERF_BUSY
+        val boardJob = jobs.beginJob(padJob ?: Copy.WORKING_BUSY)
+        appScope.launch {
+            try {
+                var made: KitPad? = null
+                val (fresh, _) = withFreshKit(kitDir) { f ->
+                    reapplyPendingMetadataFields(f, stalePads)
+                    val freshPad = f.kit.pad(slot)
+                    if (freshPad != null && freshPad.sampleFile == staleSampleFile && freshPad.velocityLayers.isEmpty()) {
+                        made = f.kerfPad(slot)
+                    }
+                }
+                model = fresh
+                pendingMetadataSlots = emptySet()
+                onKitUpdated(fresh.kit)
+                val twin = made
+                if (twin != null) {
+                    onToast(Copy.kerfed(padName, twin.drumClass.name))
+                } else {
+                    onToast(Copy.BIN_ITEM_GONE)
+                }
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                if (e is IllegalArgumentException && (e.message == Copy.KERF_TOO_SHORT || e.message == Copy.KERF_ALREADY)) {
+                    onToast(e.message!!)
+                } else {
+                    failure("MAKE SYNTH TWIN", e)
                 }
             } finally {
                 busy = false
@@ -4142,7 +4243,7 @@ fun PadSheetScreen(
                 )
             }
             TapeText(
-                clipboard?.let { "ON THE CLIPBOARD: ${PadSheet.displayLabel(it.word)} FROM ${it.from}" } ?: Copy.REPLAY_LAST_ONLY,
+                clipboard?.let { "On the clipboard: ${PadSheet.displayLabel(it.word)} from ${it.from}" } ?: Copy.REPLAY_LAST_ONLY,
                 TapeType.pixelSmall,
                 scheme.ink2.tape,
                 Modifier.fillMaxWidth(),
@@ -4373,7 +4474,7 @@ fun PadSheetScreen(
             }
             val away = pad.source["desampled"]
             TapeText(
-                if (away != null) "A PATCH NOW, $away AWAY" else "THE HIT MEASURED AGAINST EVERY THUMP",
+                if (away != null) "A patch now, $away away" else "The hit measured against every thump",
                 TapeType.pixelSmall,
                 scheme.ink2.tape,
                 maxLines = 1,
@@ -4385,6 +4486,70 @@ fun PadSheetScreen(
                 working = busy && padJob == Copy.DESAMPLE_BUSY,
                 modifier = Modifier.fillMaxWidth(),
                 onClick = ::onDesample,
+            )
+        }
+
+        // SYNTH TWIN (KERF): the capture measured and played back from its own numbers,
+        // with the pads either side of it bleeding in. The same header row and UNDO shape
+        // as FIND NEAREST SYNTH above; named in full for TalkBack for the same reason.
+        Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                TapeText("SYNTH TWIN", TapeType.pixelSmall, scheme.ink2.tape, Modifier.weight(1f), maxLines = 2)
+                ActionButton(
+                    Copy.UNDO_KERF,
+                    scheme,
+                    enabled = !busy,
+                    dimmed = PadSheet.kerfUndoRefusal(pad, binDaysLeft != null) != null,
+                    onClick = ::onUnkerf,
+                )
+            }
+            TapeText(
+                if (KitBuilderModel.KERF_STAMP in pad.source) "A synth twin now" else "This hit rebuilt from its own measurements",
+                TapeType.pixelSmall,
+                scheme.ink2.tape,
+                maxLines = 1,
+            )
+            // BLEED and SLOP, on a bare twin only: the re-cut runs on release
+            // (onKerfRecut), from the pad's own numbers. BLEED reads 0..2 here
+            // (the house range is 0..4; past 2 the last hit swamps this one),
+            // SLOP 0..1. Each starts where the pad's recipe has it, and moves
+            // back there if the pad changes under it. BLEED only where there is a
+            // hit before this one to bleed in: a twin made alone (a one-pad kit)
+            // has none, and a control that moves nothing would read as broken.
+            val twin = remember(pad.recipe, pad.source) { if (PadSheet.isKerfTwin(pad)) Breed.recipeOf(pad)?.kerf else null }
+            if (twin != null) {
+                var bleedFraction by remember(pad.recipe) { mutableStateOf((twin.bleed / 2.0).toFloat().coerceIn(0f, 1f)) }
+                var slopFraction by remember(pad.recipe) { mutableStateOf(twin.slop.toFloat().coerceIn(0f, 1f)) }
+                if (twin.prev != null) StepperSlider(
+                    label = "BLEED",
+                    fraction = bleedFraction,
+                    valueText = "%.1f".format(java.util.Locale.ROOT, bleedFraction * 2f),
+                    fillColor = classColor,
+                    scheme = scheme,
+                    enabled = !busy,
+                    onFractionChange = { f -> bleedFraction = (f * 20f).roundToInt() / 20f },
+                    onFractionCommit = { onKerfRecut(bleedFraction * 2.0, slopFraction.toDouble()) },
+                    accessibilityLabel = "SYNTH TWIN BLEED",
+                )
+                StepperSlider(
+                    label = "SLOP",
+                    fraction = slopFraction,
+                    valueText = "%.2f".format(java.util.Locale.ROOT, slopFraction),
+                    fillColor = classColor,
+                    scheme = scheme,
+                    enabled = !busy,
+                    onFractionChange = { f -> slopFraction = (f * 20f).roundToInt() / 20f },
+                    onFractionCommit = { onKerfRecut(bleedFraction * 2.0, slopFraction.toDouble()) },
+                    accessibilityLabel = "SYNTH TWIN SLOP",
+                )
+            }
+            ActionButton(
+                "MAKE SYNTH TWIN · REPLACES THE WAV",
+                scheme,
+                enabled = !busy,
+                working = busy && padJob == Copy.KERF_BUSY,
+                modifier = Modifier.fillMaxWidth(),
+                onClick = ::onKerf,
             )
         }
 
@@ -4858,7 +5023,7 @@ private fun StrikeFxSection(
             enabled = !busy,
             onFractionChange = onRoom,
             onFractionCommit = {},
-            accessibilityLabel = "FX BY VELOCITY REVERB",
+            accessibilityLabel = "FX by velocity REVERB",
         )
         StepperSlider(
             label = "SLAP",
@@ -4869,14 +5034,14 @@ private fun StrikeFxSection(
             enabled = !busy,
             onFractionChange = onSlap,
             onFractionCommit = {},
-            accessibilityLabel = "FX BY VELOCITY SLAP",
+            accessibilityLabel = "FX by velocity SLAP",
         )
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             // Named for the section: KEEP alone is also the board's button.
-            ActionButton("AUDITION", scheme, enabled = !busy, accessibilityLabel = "FX BY VELOCITY AUDITION", modifier = Modifier.weight(1f), onClick = onAudition)
-            ActionButton("KEEP", scheme, enabled = !busy, accessibilityLabel = "FX BY VELOCITY KEEP", modifier = Modifier.weight(1f), onClick = onKeep)
+            ActionButton("AUDITION", scheme, enabled = !busy, accessibilityLabel = "FX by velocity AUDITION", modifier = Modifier.weight(1f), onClick = onAudition)
+            ActionButton("KEEP", scheme, enabled = !busy, accessibilityLabel = "FX by velocity KEEP", modifier = Modifier.weight(1f), onClick = onKeep)
             if (kept) {
-                ActionButton("CLEAR", scheme, enabled = !busy, accessibilityLabel = "FX BY VELOCITY CLEAR", modifier = Modifier.weight(1f), onClick = onClear)
+                ActionButton("CLEAR", scheme, enabled = !busy, accessibilityLabel = "FX by velocity CLEAR", modifier = Modifier.weight(1f), onClick = onClear)
             }
         }
     }
@@ -5350,7 +5515,7 @@ private fun TreatmentCard(
                 applying != null -> Copy.treatmentBusy(PadSheet.displayLabel(applying))
                 placing != null -> Copy.putOnRowPrompt(PadSheet.displayLabel(placing))
                 // One recipe per pad, except row seven: pedals stack on one pad (the slate design).
-                else -> "ONE PER PAD · PEDALS STACK"
+                else -> "One per pad · pedals stack"
             },
             TapeType.pixelSmall,
             if (applying != null || placing != null) scheme.accent.tape else scheme.ink3.tape,
@@ -5607,7 +5772,7 @@ private fun ShapeCard(
             // What the line is for is the thing the legend cannot say -
             // that these four are metadata the hardware applies, not edits
             // to the audio on disk - so that is all it says now.
-            TapeText("THE MPC RENDERS IT", TapeType.pixelSmall, scheme.ink2.tape, Modifier.weight(1f), maxLines = 2)
+            TapeText("The MPC renders it", TapeType.pixelSmall, scheme.ink2.tape, Modifier.weight(1f), maxLines = 2)
             ActionButton("RESET", scheme, enabled = !busy && shaped, onClick = onReset)
         }
         for (knob in knobs) {
@@ -5693,7 +5858,7 @@ private fun MutateCard(
     val move = MutateSheet.modeFor(mode)
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            TapeText("ONE HIT FROM TWO", TapeType.pixelSmall, scheme.ink2.tape, Modifier.weight(1f), maxLines = 2)
+            TapeText("One hit from two", TapeType.pixelSmall, scheme.ink2.tape, Modifier.weight(1f), maxLines = 2)
             // Dimmed, not disabled, with nothing to undo: a tap says why (onUnmutate).
             ActionButton(Copy.UNDO_MUTATE, scheme, enabled = !busy, dimmed = MutateSheet.undoRefusal(mutated, canUndo) != null, onClick = onUndo)
         }
@@ -5797,7 +5962,7 @@ private fun MutateCard(
         // The rooms on the shelf, two to a row (their names are words, not
         // tags); the row is absent until OUTSIDE has kept one.
         if (rooms.isNotEmpty()) {
-            TapeText("ROOMS IN THE LIBRARY · ROOM PLAYS THE PAD INSIDE ONE", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
+            TapeText("Rooms in the LIBRARY. A ROOM plays the pad inside one.", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
             val chosenRoom = (partner as? MutateSheet.Partner.Room)?.name
             for (row in rooms.chunked(2)) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -5831,7 +5996,7 @@ private fun MutateCard(
         // then its pads (four to a row) - the shelf with intent, where
         // ROULETTE below is the shelf by chance. Absent on a one-kit shelf.
         if (otherKits.isNotEmpty()) {
-            TapeText("ANOTHER KIT · PICK ITS PAD", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
+            TapeText("Another kit · pick its pad", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
             for (row in otherKits.chunked(2)) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     for (k in row) {
@@ -5976,7 +6141,7 @@ private fun OutsideCard(
 ) {
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            TapeText("THE WORLD AS AN EFFECT", TapeType.pixelSmall, scheme.ink2.tape, Modifier.weight(1f), maxLines = 2)
+            TapeText("The world as an effect", TapeType.pixelSmall, scheme.ink2.tape, Modifier.weight(1f), maxLines = 2)
             ActionButton(Copy.UNDO_OUTSIDE, scheme, enabled = !busy && applied != null && canUndo, onClick = onUndo)
         }
         if (stage != null) {
@@ -5995,7 +6160,7 @@ private fun OutsideCard(
             }
         } else {
             TapeText(
-                if (move == OutsideSheet.Move.ROOM.name) "A SWEEP GOES OUT, THE ROOM COMES BACK AS THE PAD'S ROOM" else "THE PAD GOES OUT THE JACK, WHAT COMES BACK IS THE PAD",
+                if (move == OutsideSheet.Move.ROOM.name) "A sweep goes out, the room comes back as the pad's room" else "The pad goes out the jack, what comes back is the pad",
                 TapeType.pixelSmall,
                 scheme.ink2.tape,
                 maxLines = 1,

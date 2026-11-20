@@ -43,6 +43,7 @@ class PatchesTest {
     private fun onePatchPerEngine(): List<Patch> = Presets.all().distinctBy { it.engine } + listOf(
         BackwashPatch("Damped hit", BackwashVoice.SNARE, emptyMap()),
         BreakerPatch("Crushed drip", BreakerVoice.SNARE, emptyMap()),
+        SecondlinePatch("Second Line", ParadeSecondLine.Voice.SNARE_CENTER, emptyMap()),
         SambaPatch("Samba", ParadeSamba.Voice.CAIXA, emptyMap()),
         DrumlinePatch("Section", DrumlineVoice.SNARE, emptyMap()),
         SootPatch("Hot", SootVoice.SNARE, emptyMap()),
@@ -51,6 +52,8 @@ class PatchesTest {
         HydroformPatch("Door", HydroformVoice.DOME, emptyMap()),
         RivetPatch("Industrial kick", RivetVoice.KICK),
         ChitinPatch("Chitin shell", ChitinVoice.SHELL, Chitin.defaults(ChitinVoice.SHELL)),
+        ConsortPatch("Reed trio", ConsortVoice.OBOE, mapOf("HOLD" to 0.2f),
+            chairs = listOf(ConsortChair(ConsortVoice.CLARINET, ConsortInterval.FIFTH), ConsortChair(ConsortVoice.BASSOON, ConsortInterval.MIN7)), velocity = 0.8f, take = 2),
         FillPatch("Fill roll", FillVoice.SNARE, Fill.defaults(FillVoice.SNARE)),
         ErosionPatch("Door", ErosionVoice.ARC),
         SnapPatch("Door", SnapVoice.ORBIT, emptyMap(), IntArray(Snap.TABLE_SIZE) { (it * 255) / (Snap.TABLE_SIZE - 1) }),

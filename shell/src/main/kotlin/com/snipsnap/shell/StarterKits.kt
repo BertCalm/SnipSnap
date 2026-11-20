@@ -59,6 +59,9 @@ object StarterKits {
     const val CONFLUENCE_BANK_DIR = "confluence-voice-bank"
     const val CONFLUENCE_VOICES_ID = "confluence-voices"
 
+    /** ACCORD's four voices kept in accord-voices-1 (REED, COURSE, ESCAPEMENT, BELL), each at C2 to C5. */
+    const val ACCORD_VOICES_ID = "accord-voices"
+
     class Starter internal constructor(
         /** Stable machine id. */
         val id: String,
@@ -102,6 +105,7 @@ object StarterKits {
         }
     }
 
+    val SIDEROOM_IDS = com.snipsnap.synth.SideroomKits.Kit.entries.map { it.id }.toSet()
     val PATIO_IDS = com.snipsnap.synth.PatioPerformance.Genre.entries.map { it.id }.toSet()
     val ALL: List<Starter> = listOf(
         // displayName is "EMPTY GRID", not "BLANK" — the other
@@ -641,6 +645,9 @@ object StarterKits {
             "Industrial drums with long warehouse reflections. The same sources, with room to ring.",
             seeded = false,
         ) { SynthKits.rivet(1f) },
+        Starter("sunroom-early", "SUNROOM EARLY POP", "Stick drums, toms, hats and wooden percussion. Three touches and three variations, with a finite roll and riser.", seeded = false, tempoBpm = 116f) { com.snipsnap.synth.SunroomKits.build(com.snipsnap.synth.SunroomKits.Choice.EARLY) },
+        Starter("sunroom-orchestral", "SUNROOM ORCHESTRAL POP", "Brush snare, soft kick, castanet, slit block and triangle. Three touches and three variations, with brush gestures.", seeded = false, tempoBpm = 116f) { com.snipsnap.synth.SunroomKits.build(com.snipsnap.synth.SunroomKits.Choice.ORCHESTRAL) },
+        Starter("sunroom-psych", "SUNROOM PSYCH POP", "Resonant kick, bongos, clap and cabasa, with a full cymbal crescendo. Three touches and three variations.", seeded = false, tempoBpm = 116f) { com.snipsnap.synth.SunroomKits.build(com.snipsnap.synth.SunroomKits.Choice.PSYCH) },
         Starter("soul-rock-pocket", "SOUL POCKET", "Close acoustic soul drums, tambourine and claps. Three velocity layers and three strikes, with a roll and swell.", seeded = false, tempoBpm = 108f) { com.snipsnap.synth.SoulRockKits.build(com.snipsnap.synth.SoulRockKits.Choice.SOUL) },
         Starter("soul-rock-roadhouse", "ROADHOUSE ROCK", "Full acoustic rock drums, open hats and cowbell. Three velocity layers and three strikes, with a roll and swell.", seeded = false, tempoBpm = 134f) { com.snipsnap.synth.SoulRockKits.build(com.snipsnap.synth.SoulRockKits.Choice.ROADHOUSE) },
         Starter("soul-rock-open-room", "OPEN ROOM ROCK", "Open acoustic rock drums, ride and three tom colors. Three velocity layers and three strikes, with a roll and swell.", seeded = false, tempoBpm = 89f) { com.snipsnap.synth.SoulRockKits.build(com.snipsnap.synth.SoulRockKits.Choice.OPEN_ROOM) },
@@ -690,6 +697,34 @@ object StarterKits {
         Starter(com.snipsnap.synth.Splinter.ID, "SPLINTER BREAKCORE",
             "Sped-up break hits, clipped and gabber kicks, chopped slices, stutters and a stretched snare. Snare rush and riser.", seeded=false, tempoBpm=com.snipsnap.synth.Splinter.BPM.toFloat()) {
             com.snipsnap.synth.Splinter.arranged()
+        },
+        Starter(com.snipsnap.synth.Shatter.id, "SHATTER BREAKCORE",
+            "One two-bar break cut into sixteen slices, each carrying the room of its neighbours. Slice repeat and break rush.", seeded=false, tempoBpm=com.snipsnap.synth.Shatter.bpm.toFloat()) {
+            com.snipsnap.synth.Breakcore.arranged(com.snipsnap.synth.Shatter)
+        },
+        Starter(com.snipsnap.synth.Soundclash.id, "SOUNDCLASH BREAKCORE",
+            "Slam kick, subs, reese, siren, horn, rewind and echo throws. Dub roll and siren rise.", seeded=false, tempoBpm=com.snipsnap.synth.Soundclash.bpm.toFloat()) {
+            com.snipsnap.synth.Breakcore.arranged(com.snipsnap.synth.Soundclash)
+        },
+        Starter(com.snipsnap.synth.Redline.id, "REDLINE BREAKCORE",
+            "Speedcore at 250 BPM: tuned terror kicks, clipped noise snares and hats, a scream and feedback stab. Snare roll and scream rise.", seeded=false, tempoBpm=com.snipsnap.synth.Redline.bpm.toFloat()) {
+            com.snipsnap.synth.Breakcore.arranged(com.snipsnap.synth.Redline)
+        },
+        Starter(com.snipsnap.synth.Lull.id, "LULL BREAKCORE",
+            "Tender piano chords in A minor, strings, choir, a music box and a worn tape, then a sudden stop. Fading repeat and swell rise.", seeded=false, tempoBpm=com.snipsnap.synth.Lull.bpm.toFloat()) {
+            com.snipsnap.synth.Breakcore.arranged(com.snipsnap.synth.Lull)
+        },
+        Starter(com.snipsnap.synth.Strobe.id, "STROBE BREAKCORE",
+            "The 1992 rave: a whine that dives, hard piano and organ stabs, an orchestra hit and a sped-up break. Stab roll and whine rise.", seeded=false, tempoBpm=com.snipsnap.synth.Strobe.bpm.toFloat()) {
+            com.snipsnap.synth.Breakcore.arranged(com.snipsnap.synth.Strobe)
+        },
+        Starter(com.snipsnap.synth.Cartridge.id, "CARTRIDGE BREAKCORE",
+            "Chip breakcore: pulse duty, a 4-bit triangle, shift-register noise drums and a crushed break, all on a 60 Hz frame. Noise roll and arp rise.", seeded=false, tempoBpm=com.snipsnap.synth.Cartridge.bpm.toFloat()) {
+            com.snipsnap.synth.Breakcore.arranged(com.snipsnap.synth.Cartridge)
+        },
+        Starter(com.snipsnap.synth.Barricade.id, "BARRICADE BREAKCORE",
+            "Digital hardcore at 165 BPM in E: power chords through a cranked amp, a punk kick and snare, harsh noise. Chug roll and feedback rise.", seeded=false, tempoBpm=com.snipsnap.synth.Barricade.bpm.toFloat()) {
+            com.snipsnap.synth.Breakcore.arranged(com.snipsnap.synth.Barricade)
         },
         Starter("spore-synth-broken", "SPORE ORBITAL BREAKS",
             "Short kick, wire clap, higher toms and metallic percussion. Reverse-metal accents and accelerating riser.", seeded=false, tempoBpm=155f) {
@@ -790,6 +825,21 @@ object StarterKits {
             "Sparse and dub-leaning: a short sub thud, a high slap, hand drums and a sub that drops. Three touch zones, four takes; a slap roll and a one-drop four-bar groove.",
             seeded = false, tempoBpm = com.snipsnap.synth.LooseCrateKits.Kit.RITUAL.bpm.toFloat(),
         ) { com.snipsnap.synth.LooseCrateKits.build(com.snipsnap.synth.LooseCrateKits.Kit.RITUAL) },
+        Starter(
+            "stagger-cardboard", "STAGGER CARDBOARD",
+            "A muffled, click-free kick against a dry crack and a hat at a whisper, timpani, gong, zap and punch pitched down through a 12-bit converter. Three touch zones, four takes; a timpani roll and a two-bar groove whose clock drags and catches up.",
+            seeded = false, tempoBpm = com.snipsnap.synth.StaggerKits.Kit.CARDBOARD.bpm.toFloat(),
+        ) { com.snipsnap.synth.StaggerKits.build(com.snipsnap.synth.StaggerKits.Kit.CARDBOARD) },
+        Starter(
+            "stagger-matinee", "STAGGER MATINEE",
+            "The cinematic kit: a stage kick and snare, then ten effects, two timpani, two gongs, glass breaking, two zaps, a punch and a stab, all pitched down through the converter. Three touch zones, four takes; a timpani riser into the crash and a groove with a glass break in it.",
+            seeded = false, tempoBpm = com.snipsnap.synth.StaggerKits.Kit.MATINEE.bpm.toFloat(),
+        ) { com.snipsnap.synth.StaggerKits.build(com.snipsnap.synth.StaggerKits.Kit.MATINEE) },
+        Starter(
+            "stagger-stumble", "STAGGER STUMBLE",
+            "The drunkest clock: a humming muffled kick, a rimshot in the snare's place, no hats in the groove, the tape worn. Three touch zones, four takes; a dragging snare roll and a two-bar groove that leans and catches up.",
+            seeded = false, tempoBpm = com.snipsnap.synth.StaggerKits.Kit.STUMBLE.bpm.toFloat(),
+        ) { com.snipsnap.synth.StaggerKits.build(com.snipsnap.synth.StaggerKits.Kit.STUMBLE) },
         Starter(
             "facsimile-shuffle", "FACSIMILE SHUFFLE",
             "Heavy-swing boom bap rebuilt by synthesis from two loops: a long falling kick, roomy backbeat snares, hats pushed late on the swung sixteenths. Three touch zones, four takes; the Alley and Swing grooves, hit for hit.",
@@ -988,6 +1038,36 @@ object StarterKits {
             seeded = false, tempoBpm = com.snipsnap.synth.CalabashKits.Kit.AFROCUBAN.bpm.toFloat(),
         ) { com.snipsnap.synth.CalabashKits.build(com.snipsnap.synth.CalabashKits.Kit.AFROCUBAN) },
         Starter(
+            "riddim-clave-dancehall", "RIDDIM CLAVE DANCEHALL",
+            "Bright, tight dancehall on the 3-2 clave: a punch kick and a digital rimshot, a clap, choked hats, a shaker, claves, sticks and a cowbell, and four hard-mallet woods in F sharp minor. Three touch zones, four takes; a rim roll.",
+            seeded = false, tempoBpm = com.snipsnap.synth.RiddimKits.Kit.CLAVE_DANCEHALL.bpm.toFloat(),
+        ) { com.snipsnap.synth.RiddimKits.build(com.snipsnap.synth.RiddimKits.Kit.CLAVE_DANCEHALL) },
+        Starter(
+            "riddim-dembow", "RIDDIM DEMBOW",
+            "Deep and heavy dembow: a driven sub kick, a lower snare and a wide clap, darker hats, a conga, a bongo, a talking drum and a low bronze bar that wobbles. Three touch zones, four takes; a snare roll.",
+            seeded = false, tempoBpm = com.snipsnap.synth.RiddimKits.Kit.DEMBOW.bpm.toFloat(),
+        ) { com.snipsnap.synth.RiddimKits.build(com.snipsnap.synth.RiddimKits.Kit.DEMBOW) },
+        Starter(
+            "riddim-boom-riddim", "RIDDIM BOOM RIDDIM",
+            "The kick is the bass: six tuned booms from F1 to E flat 2, one sliding, that cut each other off like one bass voice, with a ringing rim, choked hats, a clap and bronze bars in F minor. Three touch zones, four takes; a hat riser.",
+            seeded = false, tempoBpm = com.snipsnap.synth.RiddimKits.Kit.BOOM_RIDDIM.bpm.toFloat(),
+        ) { com.snipsnap.synth.RiddimKits.build(com.snipsnap.synth.RiddimKits.Kit.BOOM_RIDDIM) },
+        Starter(
+            "riddim-baile-funk", "RIDDIM BAILE FUNK",
+            "Brazilian funk at 130: one tight kick a bar, the tamborzao on a tumba and a quinto, a clap, choked hats, a high ting bell, an agogo and a wooden ratchet you can count. Three touch zones, four takes; a ratchet riser.",
+            seeded = false, tempoBpm = com.snipsnap.synth.RiddimKits.Kit.BAILE_FUNK.bpm.toFloat(),
+        ) { com.snipsnap.synth.RiddimKits.build(com.snipsnap.synth.RiddimKits.Kit.BAILE_FUNK) },
+        Starter(
+            "riddim-sabar-swing", "RIDDIM SABAR SWING",
+            "Slow, dark and swung: a deep sub kick just after each beat, a low snare and rim, dark hats, the sabar family (mbeng, nder, col), a dundun, a talking-drum call, a shekere, a tama and a G1 boom. Three touch zones, four takes; a sabar roll.",
+            seeded = false, tempoBpm = com.snipsnap.synth.RiddimKits.Kit.SABAR_SWING.bpm.toFloat(),
+        ) { com.snipsnap.synth.RiddimKits.build(com.snipsnap.synth.RiddimKits.Kit.SABAR_SWING) },
+        Starter(
+            "riddim-wood-bronze", "RIDDIM WOOD AND BRONZE",
+            "Quiet and pitched, in D minor: five hard-mallet woods and four bronze pairs that beat, over a soft kick, sticks, claves and quiet hats. Three touch zones, four takes; a wood tremolo.",
+            seeded = false, tempoBpm = com.snipsnap.synth.RiddimKits.Kit.WOOD_BRONZE.bpm.toFloat(),
+        ) { com.snipsnap.synth.RiddimKits.build(com.snipsnap.synth.RiddimKits.Kit.WOOD_BRONZE) },
+        Starter(
             "ember", "EMBER",
             "A live jazz kit in a small club in 1962, hard bop on sticks: an open calfskin kick feathered under the band, a crisp snare, a riveted ride carrying the time, a press roll and a mallet cymbal swell. Three touch zones, four takes.",
             seeded = false, tempoBpm = com.snipsnap.synth.EmberKits.Kit.CLUB.bpm.toFloat(),
@@ -1122,7 +1202,64 @@ object StarterKits {
             "The sixteen TERRA pads with soft, medium and hard touch and four takes on each: a repeated hit lands a little differently every time.",
             seeded = false,
         ) { com.snipsnap.synth.TerraRoundRobinKits.build() },
-    ))
+        // Opt-in beside the accepted TEMPEST starter, which stays as it is; appended after TERRA ROUND ROBIN.
+        Starter(
+            com.snipsnap.synth.TempestRoundRobinKits.ID, "TEMPEST ROUND ROBIN",
+            "The sixteen TEMPEST pads with four takes each: repeated hats, snares and claps vary like a real drum machine's.",
+            seeded = false,
+        ) { com.snipsnap.synth.TempestRoundRobinKits.build() },
+        // Opt-in beside each kept TEMPEST genre starter, which stays as it is; appended after TEMPEST ROUND ROBIN.
+        Starter(
+            com.snipsnap.synth.TempestGenreRoundRobinKits.Kit.CIRCUIT.id, "CIRCUIT TAKES",
+            "The sixteen TEMPEST CIRCUIT pads with four takes each: repeated hats, claps and zaps vary like a real drum machine's.",
+            seeded = false,
+        ) { com.snipsnap.synth.TempestGenreRoundRobinKits.build(com.snipsnap.synth.TempestGenreRoundRobinKits.Kit.CIRCUIT) },
+        Starter(
+            com.snipsnap.synth.TempestGenreRoundRobinKits.Kit.FOUNDRY.id, "FOUNDRY TAKES",
+            "The sixteen TEMPEST FOUNDRY pads with four takes each: repeated snares, pipes and metal vary like a real drum machine's.",
+            seeded = false,
+        ) { com.snipsnap.synth.TempestGenreRoundRobinKits.build(com.snipsnap.synth.TempestGenreRoundRobinKits.Kit.FOUNDRY) },
+        Starter(
+            com.snipsnap.synth.TempestGenreRoundRobinKits.Kit.STEP.id, "STEP TAKES",
+            "The sixteen TEMPEST STEP pads with four takes each: repeated hats, rims and claps vary like a real drum machine's.",
+            seeded = false,
+        ) { com.snipsnap.synth.TempestGenreRoundRobinKits.build(com.snipsnap.synth.TempestGenreRoundRobinKits.Kit.STEP) },
+        // Opt-in beside each kept TERRA genre starter, which stays as it is; appended after STEP TAKES.
+        Starter(
+            com.snipsnap.synth.TerraGenreRoundRobinKits.Kit.SAHEL.id, "SAHEL TAKES",
+            "The sixteen TERRA SAHEL pads with soft, medium and hard touch and four takes on each: a repeated hit lands a little differently every time.",
+            seeded = false,
+        ) { com.snipsnap.synth.TerraGenreRoundRobinKits.build(com.snipsnap.synth.TerraGenreRoundRobinKits.Kit.SAHEL) },
+        Starter(
+            com.snipsnap.synth.TerraGenreRoundRobinKits.Kit.MAQAM.id, "MAQAM TAKES",
+            "The sixteen TERRA MAQAM pads with soft, medium and hard touch and four takes on each: a repeated hit lands a little differently every time.",
+            seeded = false,
+        ) { com.snipsnap.synth.TerraGenreRoundRobinKits.build(com.snipsnap.synth.TerraGenreRoundRobinKits.Kit.MAQAM) },
+        Starter(
+            com.snipsnap.synth.TerraGenreRoundRobinKits.Kit.PUNJAB.id, "PUNJAB TAKES",
+            "The sixteen TERRA PUNJAB pads with soft, medium and hard touch and four takes on each: a repeated hit lands a little differently every time.",
+            seeded = false,
+        ) { com.snipsnap.synth.TerraGenreRoundRobinKits.build(com.snipsnap.synth.TerraGenreRoundRobinKits.Kit.PUNJAB) },
+    )) + com.snipsnap.synth.SideroomKits.Kit.entries.map { kit ->
+        Starter(kit.id, "SIDEROOM ${kit.title.uppercase(java.util.Locale.ROOT)}",
+            "Synthesized ${kit.title} drums: eight instruments, a snare roll and a drum fill. Three strike strengths and three alternate hits.",
+            seeded = false, tempoBpm = kit.bpm.toFloat()) { com.snipsnap.synth.SideroomKits.build(kit) }
+    } + listOf(
+        // Opt-in beside the kept ACCORD starter, which stays as it is; appended after the SIDEROOM kits.
+        Starter(
+            ACCORD_VOICES_ID, "ACCORD VOICES",
+            "Reed, hammered strings, clock tick and tock, and bell. Each at C2, C3, C4 and C5, finite and dry.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.accordVoices() },
+        // Opt-in beside the kept ACCORD starter, which stays as it is; appended after ACCORD VOICES.
+        Starter(
+            com.snipsnap.synth.AccordRoundRobinKits.ID, "ACCORD TAKES",
+            "The sixteen ACCORD pads with soft, medium and hard touch and two takes on each: a repeated note is the same machine caught at another moment.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { com.snipsnap.synth.AccordRoundRobinKits.build() },
+    )
 
     fun byId(id: String): Starter? = ALL.firstOrNull { it.id == id }
 }

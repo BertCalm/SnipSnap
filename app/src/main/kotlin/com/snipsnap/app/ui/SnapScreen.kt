@@ -1301,7 +1301,7 @@ private fun TelephoneOverlay(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                TapeText("EIGHT COPIES — TAP ONE TO HEAR IT", TapeType.lcdSmall, scheme.lcdInk.tape, Modifier.weight(1f))
+                TapeText("Eight copies — tap one to hear it", TapeType.lcdSmall, scheme.lcdInk.tape, Modifier.weight(1f))
                 Box(
                     Modifier
                         .heightIn(min = Layout.MIN_HIT_TARGET.dp)
@@ -1333,7 +1333,7 @@ private fun TelephoneOverlay(
                 scheme,
                 enabled = generations.isNotEmpty(),
                 modifier = Modifier.fillMaxWidth(),
-                accessibilityLabel = "SEND GENERATION TO PAD",
+                accessibilityLabel = "Send generation to pad",
                 onClick = onSend,
             )
         }
@@ -1481,7 +1481,7 @@ private fun PhotoStrip(thumb: Bitmap?, reading: Snap.Reading?, looking: Boolean,
                 looking -> TapeText("LOOKING…", TapeType.lcdSmall, scheme.amber.tape)
                 reading == null -> {
                     TapeText("Take a photo.", TapeType.lcdSmall, scheme.lcdInk.tape)
-                    TapeText("ITS LINE IS THE WAVE,", TapeType.lcdSmall, scheme.lcdInk.tape.copy(alpha = 0.7f))
+                    TapeText("Its line is the wave,", TapeType.lcdSmall, scheme.lcdInk.tape.copy(alpha = 0.7f))
                     TapeText("Its colours are the knobs.", TapeType.lcdSmall, scheme.lcdInk.tape.copy(alpha = 0.7f))
                 }
                 else -> {
@@ -1661,9 +1661,9 @@ private fun DrawOverlay(
             ) {
                 TapeText(
                     when (tab) {
-                        DrawTab.WAVE -> "DRAW — THE WAVE, ONE CYCLE"
-                        DrawTab.SHAPE -> "DRAW — THE VOLUME, ONE NOTE"
-                        DrawTab.PATH -> "DRAW — A PATH THROUGH THE PICTURE"
+                        DrawTab.WAVE -> "Draw — the wave, one cycle"
+                        DrawTab.SHAPE -> "Draw — the volume, one note"
+                        DrawTab.PATH -> "Draw — a path through the picture"
                     },
                     TapeType.lcdSmall,
                     scheme.lcdInk.tape,

@@ -1135,8 +1135,8 @@ class ArrangerTest {
     }
 
     @Test
-    fun `a pass cut short at a bar line is kept as one whole pass, until a section can hold part of one`() {
-        // S1a open question: a section is a clip and a whole number of repeats, so a cut pass cannot be a shorter section without a new stored field.
+    fun `the whole-pass entry point keeps every pass as a whole one, cut or not (heardOrder is the one that hears a cut)`() {
+        // playedOrder takes sections only, so it has no cut to hear; SongSectionBarsTest covers the shorter section heardOrder keeps.
         val kept = sections("intro", "theme")
         val made = Arranger.playedOrder(kept, listOf(4, 4), listOf(0, 0, 1))!!
         assertEquals(listOf("intro" to 2, "theme" to 1), made.plan.sections.map { it.name to it.repeats })
@@ -1318,5 +1318,369 @@ class ArrangerTest {
         assertTrue(bar.samples.contentEquals(kickAlone.samples))
         val kickFrame = (15 * dropS16 * 60.0 / bpm * com.snipsnap.kit.KitPreview.RATE / 960).roundToInt()
         assertTrue(energy(bar.samples.copyOfRange(0, (kickFrame - 1) * 2)) < 1e-12, "silent before the kick")
+    }
+
+    // ---- CLOSE and REVERSE CRASH: the last bar's other two transitions ---------------------
+
+    /** [model]'s kick, snare and closed hat, and an open hat on slot 4 (note 39), the pad REVERSE CRASH reverses. */
+    private fun crashModel(name: String): KitBuilderModel {
+        val m = model(name)
+        m.assign(4, DrumSynth.openHat(), DrumClass.HAT_OPEN)
+        m.save()
+        return m
+    }
+
+    /** Section "a": two bars, a kick on each bar's one and the closed hat on every 16th (bright); then "b": a kick on its downbeat. */
+    private fun closeSong(
+        drop: Boolean = false,
+        close: Boolean = false,
+        crash: Boolean = false,
+        pullUpB: Boolean = false,
+        closeB: Boolean = false,
+        crashB: Boolean = false,
+    ): Arranger.Arrangement {
+        val notes = (0 until 2).flatMap { bar ->
+            listOf(Mpc3Note(36, bar * dropBar, 0.9f)) + (0 until 16).map { Mpc3Note(38, bar * dropBar + it * dropS16, 0.7f) }
+        }
+        val a = Arranger.Section("a", Mpc3Clip("A", 2, notes), 1, "r", bass = false, pullUp = false, drop = drop, close = close, reverseCrash = crash)
+        val b = Arranger.Section("b", Mpc3Clip("B", 1, listOf(Mpc3Note(36, 0, 0.9f))), 1, "r", bass = false, pullUp = pullUpB, close = closeB, reverseCrash = crashB)
+        return Arranger.Arrangement("Close", 0, listOf(a, b))
+    }
+
+    /** The energy of the signal's first difference: a high-pass that weighs the top of the spectrum. */
+    private fun brightness(x: FloatArray): Double {
+        var sum = 0.0
+        for (n in 1 until x.size / 2) {
+            val d = (x[n * 2] - x[n * 2 - 2]).toDouble()
+            sum += d * d
+        }
+        return sum
+    }
+
+    @Test
+    fun `CLOSE darkens only the last bar, and changes nothing before or after it`() {
+        val m = crashModel("CloseBar")
+        val plain = Arranger.mixdown(m.kit, m.kitDir, closeSong())
+        val closed = Arranger.mixdown(m.kit, m.kitDir, closeSong(close = true))
+        val (from, to) = dropFrames(m, plain)
+        assertEquals(listOf(Arranger.Transition(0, "CLOSE", true, closed.transitions.single().reason)), closed.transitions)
+        // Before the bar: the same samples, bit for bit. After it, the same too: what rings on past the downbeat is not filtered.
+        assertTrue(window(closed, 0, from).contentEquals(window(plain, 0, from)), "the bars before the last are as they were")
+        assertTrue(window(closed, to, closed.snip.frameCount).contentEquals(window(plain, to, plain.snip.frameCount)), "from the next downbeat on, as it was")
+        // In the bar: much less of the top of the spectrum, and by the bar's end almost none.
+        val bar = to - from
+        assertTrue(brightness(window(closed, from, to)) < 0.5 * brightness(window(plain, from, to)), "the bar is darker")
+        val tail = to - bar / 4
+        assertTrue(brightness(window(closed, tail, to)) < 0.05 * brightness(window(plain, tail, to)), "and closed by its end")
+        assertTrue(energy(window(closed, from, to)) > 1e-3, "but it still sounds")
+        assertTrue(plain.transitions.isEmpty())
+    }
+
+    @Test
+    fun `CLOSE and REVERSE CRASH never lengthen a section, and the next downbeat is where it was`() {
+        val m = crashModel("CloseGrid")
+        val plain = Arranger.mixdown(m.kit, m.kitDir, closeSong())
+        for (song in listOf(closeSong(close = true), closeSong(crash = true), closeSong(close = true, closeB = true))) {
+            val mix = Arranger.mixdown(m.kit, m.kitDir, song)
+            assertEquals(plain.sectionStarts, mix.sectionStarts)
+            assertEquals(plain.passes, mix.passes)
+            assertEquals(plain.snip.frameCount, mix.snip.frameCount, "the song is as long as it was")
+        }
+    }
+
+    @Test
+    fun `closeBar leaves every other frame alone and the cutoff really falls`() {
+        val rate = com.snipsnap.kit.KitPreview.RATE
+        val rng = java.util.Random(7)
+        val noise = Snip(FloatArray(rate * 2) { (rng.nextFloat() - 0.5f) * 0.5f }, 2, rate)
+        val from = 10_000
+        val to = from + rate / 2
+        val out = Arranger.closeBar(noise, from, to)
+        assertEquals(noise.frameCount, out.frameCount)
+        assertTrue(out.samples.copyOfRange(0, from * 2).contentEquals(noise.samples.copyOfRange(0, from * 2)))
+        assertTrue(out.samples.copyOfRange(to * 2, out.samples.size).contentEquals(noise.samples.copyOfRange(to * 2, noise.samples.size)))
+        val q = (to - from) / 4
+        fun band(s: Snip, i: Int) = brightness(s.samples.copyOfRange((from + i * q) * 2, (from + (i + 1) * q) * 2))
+        // White noise through a falling low-pass: each quarter of the bar is darker than the one before, to a hush at the end.
+        val levels = (0 until 4).map { band(out, it) / band(noise, it) }
+        assertTrue(levels.zipWithNext().all { (a, b) -> b < a }, "darker each quarter: $levels")
+        assertTrue(levels.last() < 0.001, "and shut at the end: $levels")
+        // A bar that runs past the audio is clamped to it, and one with nothing in it is the audio itself.
+        assertEquals(noise.frameCount, Arranger.closeBar(noise, from, noise.frameCount + 5_000).frameCount)
+        assertSame(noise, Arranger.closeBar(noise, to, from))
+    }
+
+    @Test
+    fun `REVERSE CRASH peaks just before the next downbeat and adds nothing from it on`() {
+        val m = crashModel("ReverseBar")
+        val plain = Arranger.mixdown(m.kit, m.kitDir, closeSong())
+        val rev = Arranger.mixdown(m.kit, m.kitDir, closeSong(crash = true))
+        val (from, to) = dropFrames(m, plain)
+        val t = rev.transitions.single()
+        assertTrue(t.applied && t.kind == "REVERSE CRASH" && t.reason.contains("pad 4"), t.reason)
+        assertTrue(window(rev, 0, from).contentEquals(window(plain, 0, from)), "before the last bar: as it was")
+        assertTrue(window(rev, to, rev.snip.frameCount).contentEquals(window(plain, to, plain.snip.frameCount)), "from the downbeat on: as it was")
+        // What the reversed hit added is the difference; its energy, in short windows, climbs to a peak at the end of the bar.
+        val added = FloatArray((to - from) * 2) { rev.snip.samples[from * 2 + it] - plain.snip.samples[from * 2 + it] }
+        val win = 1_024
+        val energies = (0 until added.size / 2 / win).map { w -> energy(added.copyOfRange(w * win * 2, (w + 1) * win * 2)) }
+        assertTrue(energies.max() > 1e-3, "the crash is there")
+        assertTrue(energies.indexOf(energies.max()) >= energies.size - 2, "its peak is in the last windows before the downbeat: $energies")
+        assertTrue(energies.last() > 10 * energies.first(), "it builds up to the downbeat")
+        // It is a take of the kit's own open hat, struck once and backwards: the same as reversing that hit by hand.
+        val hit = com.snipsnap.kit.KitPreview.renderNotes(m.kit, m.kitDir, listOf(Mpc3Note(39, 0, 0.9f)), dropBar, com.snipsnap.kit.KitPreview.playedBpm(m.kit.tempoBpm))
+        val n = added.size / 2
+        for (k in 0 until 64) {
+            assertEquals(hit.samples[k * 2], added[(n - 1 - k) * 2], 1e-3f, "frame ${n - 1 - k} of the bar is frame $k of the hit, the last one being the hit's first")
+        }
+    }
+
+    @Test
+    fun `REVERSE CRASH is skipped and named when the kit has no crash or open hat, or no next section`() {
+        val noHat = model("ReverseNone")
+        val plain = Arranger.mixdown(noHat.kit, noHat.kitDir, closeSong())
+        val skipped = Arranger.mixdown(noHat.kit, noHat.kitDir, closeSong(crash = true))
+        assertTrue(skipped.snip.samples.contentEquals(plain.snip.samples), "the bar is as it was")
+        val t = skipped.transitions.single()
+        assertTrue(!t.applied && t.section == 0 && t.reason.contains("no crash or open-hat pad") && t.reason.contains("left as it is"), t.reason)
+        // The last section has no downbeat after it.
+        val m = crashModel("ReverseLast")
+        val lastPlain = Arranger.mixdown(m.kit, m.kitDir, closeSong())
+        val last = Arranger.mixdown(m.kit, m.kitDir, closeSong(crashB = true))
+        assertTrue(last.snip.samples.contentEquals(lastPlain.snip.samples))
+        assertTrue(last.transitions.single().reason.contains("no next downbeat"), last.transitions.single().reason)
+    }
+
+    @Test
+    fun `the pad REVERSE CRASH uses is a crash by name, else the lowest open hat, else none`() {
+        fun pad(slot: Int, name: String, drumClass: DrumClass) = com.snipsnap.kit.KitPad(slot, "$name.wav", name, drumClass)
+        val kit = com.snipsnap.kit.Kit("K", listOf(pad(1, "KICK 01", DrumClass.KICK), pad(2, "Open Hat B", DrumClass.HAT_OPEN), pad(3, "Open Hat A", DrumClass.HAT_OPEN)))
+        assertEquals(2, Arranger.crashPad(kit)?.slot, "the lowest-numbered open hat")
+        val withCrash = kit.copy(pads = kit.pads + pad(9, "Sizzle CRASH", DrumClass.HAT_OPEN) + pad(10, "Crash (closed?)", DrumClass.HAT_CLOSED) + pad(8, "Crash Ride", DrumClass.PERC))
+        assertEquals(8, Arranger.crashPad(withCrash)?.slot, "a pad that says crash comes first, in any class but the closed hat")
+        assertNull(Arranger.crashPad(kit.copy(pads = listOf(pad(1, "KICK 01", DrumClass.KICK), pad(2, "Crash?", DrumClass.HAT_CLOSED)))))
+    }
+
+    @Test
+    fun `one transition holds a boundary, and a pull-up into the next section takes it from all of them`() {
+        val m = crashModel("OneBoundary")
+        // DROP, then CLOSE, then REVERSE CRASH, in the order a hand-edited file with several is read.
+        val dropOnly = Arranger.mixdown(m.kit, m.kitDir, closeSong(drop = true))
+        val all = Arranger.mixdown(m.kit, m.kitDir, closeSong(drop = true, close = true, crash = true))
+        assertTrue(all.snip.samples.contentEquals(dropOnly.snip.samples), "DROP holds it")
+        assertEquals(listOf(false, false), all.transitions.map { it.applied })
+        assertTrue(all.transitions.all { it.reason.contains("DROP") && it.reason.contains("left as it is") }, all.transitions.toString())
+        val closeOnly = Arranger.mixdown(m.kit, m.kitDir, closeSong(close = true))
+        val both = Arranger.mixdown(m.kit, m.kitDir, closeSong(close = true, crash = true))
+        assertTrue(both.snip.samples.contentEquals(closeOnly.snip.samples), "CLOSE holds it before REVERSE CRASH")
+        assertEquals(listOf(true, false), both.transitions.map { it.applied })
+        // The turn into section b.
+        val turned = Arranger.mixdown(m.kit, m.kitDir, closeSong(pullUpB = true))
+        val clash = Arranger.mixdown(m.kit, m.kitDir, closeSong(close = true, crash = true, pullUpB = true))
+        assertTrue(clash.snip.samples.contentEquals(turned.snip.samples), "the pull-up plays, the transitions do not")
+        assertTrue(clash.transitions.none { it.applied } && clash.transitions.size == 2)
+        assertTrue(clash.transitions.all { it.reason.contains("pull-up") })
+    }
+
+    @Test
+    fun `a song with CLOSE or REVERSE CRASH switched off mixes exactly as one that skipped them`() {
+        // A zero-transition mix is the song as the build made it before these existed: nothing is rendered, filtered or added for a
+        // section that has none, and a transition that is skipped leaves the bar as it is, sample for sample.
+        val noHat = model("ZeroTransitions")
+        val zero = Arranger.mixdown(noHat.kit, noHat.kitDir, closeSong())
+        assertTrue(zero.transitions.isEmpty() && zero.drops.isEmpty())
+        val skipped = Arranger.mixdown(noHat.kit, noHat.kitDir, closeSong(crash = true, pullUpB = false))
+        assertEquals(sha256(zero.snip.samples), sha256(skipped.snip.samples))
+        val again = Arranger.mixdown(noHat.kit, noHat.kitDir, closeSong())
+        assertEquals(sha256(zero.snip.samples), sha256(again.snip.samples))
+    }
+
+    private fun sha256(x: FloatArray): String {
+        val bytes = java.nio.ByteBuffer.allocate(x.size * 4).also { b -> x.forEach { b.putFloat(it) } }.array()
+        return java.security.MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
+    }
+
+    @Test
+    fun `CLOSE and REVERSE CRASH are deterministic, and the plan carries them through resolve and back`() {
+        val m = crashModel("CloseDeterministic")
+        val song = closeSong(close = true, crashB = true)
+        val a = Arranger.mixdown(m.kit, m.kitDir, song)
+        val b = Arranger.mixdown(m.kit, m.kitDir, song)
+        assertTrue(a.snip.samples.contentEquals(b.snip.samples))
+        assertEquals(a.transitions, b.transitions)
+        val c = Arranger.mixdown(m.kit, m.kitDir, closeSong(crash = true))
+        val d = Arranger.mixdown(m.kit, m.kitDir, closeSong(crash = true))
+        assertTrue(c.snip.samples.contentEquals(d.snip.samples))
+        val plan = Arranger.toPlan(Arranger.arrange(m.kit, m.kitDir, seed = 0)).withClose(0, true)!!.withReverseCrash(1, true)!!
+        val resolved = Arranger.resolve(m.kit, m.kitDir, plan).arrangement
+        assertEquals(plan.sections.map { it.close }, resolved.sections.map { it.close })
+        assertEquals(plan.sections.map { it.reverseCrash }, resolved.sections.map { it.reverseCrash })
+        assertEquals(plan.sections.map { it.close to it.reverseCrash }, Arranger.toPlan(resolved).sections.map { it.close to it.reverseCrash })
+        val gone = SongPlan(0, listOf(PlanSection("theme", "gone-clip", close = true), PlanSection("reprise", ClipRef.CAPTURED, reverseCrash = true)))
+        val again = Arranger.resolve(m.kit, m.kitDir, gone).arrangement.sections
+        assertTrue(again[0].close && again[1].reverseCrash, "a section planned again after a refusal keeps them")
+    }
+
+    // ---- MUTES: a section leaves lanes out ---------------------------------------------------
+
+    private val muteKick = PlanSection.padLane(1)
+    private val muteSnare = PlanSection.padLane(2)
+    private val muteHat = PlanSection.padLane(3)
+
+    /** Two bars of kick, snare and hat (pads 1, 2 and 3), with [without] lanes' notes taken out of the clip itself, and [mutes] asked of the section. */
+    private fun muteSong(mutes: Set<String> = emptySet(), without: Set<Int> = emptySet(), bass: Boolean = false): Arranger.Arrangement {
+        val notes = listOf(
+            Mpc3Note(36, 0, 0.9f), Mpc3Note(36, dropBar, 0.9f),
+            Mpc3Note(37, 4 * dropS16, 0.9f), Mpc3Note(37, dropBar + 4 * dropS16, 0.9f),
+            Mpc3Note(38, 2 * dropS16, 0.7f), Mpc3Note(38, dropBar + 2 * dropS16, 0.7f),
+        ).filter { Mpc3Note.slotFor(it.note) !in without }
+        val a = Arranger.Section("a", Mpc3Clip("A", 2, notes), 1, "r", bass = bass, pullUp = false, mutes = mutes)
+        val b = Arranger.Section("b", Mpc3Clip("B", 1, listOf(Mpc3Note(36, 0, 0.9f))), 1, "r", bass = false, pullUp = false)
+        return Arranger.Arrangement("Mutes", 0, listOf(a, b))
+    }
+
+    private fun sha(x: FloatArray): String {
+        val d = java.security.MessageDigest.getInstance("SHA-256")
+        for (f in x) d.update(java.nio.ByteBuffer.allocate(4).putInt(f.toRawBits()).array())
+        return d.digest().joinToString("") { "%02x".format(it) }
+    }
+
+    @Test
+    fun `a muted lane is exactly that lane's hits left out, and the others are untouched`() {
+        val m = dropModel("MuteLane")
+        val full = Arranger.mixdown(m.kit, m.kitDir, muteSong())
+        for ((lane, slot) in listOf(muteKick to 1, muteSnare to 2, muteHat to 3)) {
+            val muted = Arranger.mixdown(m.kit, m.kitDir, muteSong(mutes = setOf(lane)))
+            val gone = Arranger.mixdown(m.kit, m.kitDir, muteSong(without = setOf(slot)))
+            assertTrue(muted.snip.samples.contentEquals(gone.snip.samples), "$lane muted is the song with that pad never played")
+            assertTrue(!muted.snip.samples.contentEquals(full.snip.samples), "$lane is audible when it is not muted")
+            assertTrue(energy(muted.snip.samples) < energy(full.snip.samples), "$lane left out takes energy out")
+        }
+        // Two lanes at once are both gone.
+        val two = Arranger.mixdown(m.kit, m.kitDir, muteSong(mutes = setOf(muteKick, muteHat)))
+        assertTrue(two.snip.samples.contentEquals(Arranger.mixdown(m.kit, m.kitDir, muteSong(without = setOf(1, 3))).snip.samples))
+    }
+
+    @Test
+    fun `muting never changes the length, the bar grid or the passes, even with every lane muted`() {
+        val m = dropModel("MuteGrid")
+        val plain = Arranger.mixdown(m.kit, m.kitDir, muteSong())
+        for (mutes in listOf(setOf(muteKick), setOf(muteKick, muteSnare, muteHat))) {
+            val muted = Arranger.mixdown(m.kit, m.kitDir, muteSong(mutes = mutes))
+            assertEquals(plain.sectionStarts, muted.sectionStarts)
+            assertEquals(plain.passes, muted.passes)
+            assertEquals(plain.snip.frameCount, muted.snip.frameCount, "the song is as long as it was")
+        }
+        // The last section muted whole: its own ring-out still sets where the song ends.
+        val s = muteSong()
+        val lastMuted = s.copy(sections = listOf(s.sections[0], s.sections[1].copy(mutes = setOf(muteKick))))
+        assertEquals(plain.snip.frameCount, Arranger.mixdown(m.kit, m.kitDir, lastMuted).snip.frameCount)
+    }
+
+    @Test
+    fun `a song with no mutes is sample for sample the song it was, and a mute that names nothing played changes nothing`() {
+        val m = dropModel("MuteZero")
+        val plain = Arranger.mixdown(m.kit, m.kitDir, muteSong())
+        // A mute of a pad the clip never hits, and of a bed the section does not have, goes through the filter and leaves every sample alone.
+        val idle = Arranger.mixdown(m.kit, m.kitDir, muteSong(mutes = setOf(PlanSection.padLane(99), PlanSection.BED_LANE)))
+        assertEquals(sha(plain.snip.samples), sha(idle.snip.samples))
+        assertEquals(plain.sectionStarts, idle.sectionStarts)
+        assertEquals(plain.drops, idle.drops)
+        val seeded = Arranger.arrange(m.kit, m.kitDir, seed = 3)
+        val a = Arranger.mixdown(m.kit, m.kitDir, seeded)
+        val b = Arranger.mixdown(m.kit, m.kitDir, Arranger.resolve(m.kit, m.kitDir, Arranger.toPlan(seeded)).arrangement)
+        assertEquals(sha(a.snip.samples), sha(b.snip.samples), "a planned song with no mutes is the arranger's song")
+    }
+
+    @Test
+    fun `a muted mix is deterministic`() {
+        val m = dropModel("MuteDet")
+        val a = Arranger.mixdown(m.kit, m.kitDir, muteSong(mutes = setOf(muteSnare)))
+        val b = Arranger.mixdown(m.kit, m.kitDir, muteSong(mutes = setOf(muteSnare)))
+        assertEquals(sha(a.snip.samples), sha(b.snip.samples))
+    }
+
+    @Test
+    fun `a section with every lane muted is a silent section, not a failed mix`() {
+        val m = dropModel("MuteAll")
+        // A one-section song is its own stretch: with nothing left to play there is nothing for the kit to render, and that is silence.
+        val one = muteSong().copy(sections = listOf(muteSong().sections[0]))
+        val plain = Arranger.mixdown(m.kit, m.kitDir, one)
+        val silent = Arranger.mixdown(m.kit, m.kitDir, one.copy(sections = listOf(one.sections[0].copy(mutes = setOf(muteKick, muteSnare, muteHat)))))
+        assertEquals(plain.sectionStarts, silent.sectionStarts)
+        assertEquals(plain.snip.frameCount, silent.snip.frameCount)
+        assertTrue(energy(silent.snip.samples) < 1e-12)
+        // Between two pull-ups it is a stretch of its own too.
+        val three = Arranger.Arrangement("Three", 0, listOf(one.sections[0], one.sections[0].copy(pullUp = true, mutes = setOf(muteKick, muteSnare, muteHat)), one.sections[0].copy(pullUp = true)))
+        assertEquals(3, Arranger.mixdown(m.kit, m.kitDir, three).sectionStarts.size)
+    }
+
+    @Test
+    fun `a muted bed leaves the bed out of that section only`() {
+        val m = dropModel("MuteBed")
+        val rate = 44_100
+        WavWriter.write(File(m.kitDir, "bass.wav"), Snip(FloatArray(2 * rate) { 0.4f * sin(2 * PI * 110.0 * it / rate).toFloat() }, 1, rate))
+        AnswerStore.save(m.kitDir, AnswerStore.StoredAnswer(0, "Mute Answer", "bass.wav", Mpc3Clip("Bass", 1, listOf(Mpc3Note(45, 0, 0.9f)))))
+        val withBed = Arranger.mixdown(m.kit, m.kitDir, muteSong(bass = true))
+        val bedMuted = Arranger.mixdown(m.kit, m.kitDir, muteSong(bass = true, mutes = setOf(PlanSection.BED_LANE)))
+        val noBass = Arranger.mixdown(m.kit, m.kitDir, muteSong(bass = false))
+        assertTrue(!withBed.snip.samples.contentEquals(noBass.snip.samples), "the bed is heard")
+        assertTrue(bedMuted.snip.samples.contentEquals(noBass.snip.samples), "BASS on with the bed muted is BASS off")
+        assertEquals(withBed.snip.frameCount, bedMuted.snip.frameCount)
+        // A drum mute leaves the bed in.
+        val drumMuted = Arranger.mixdown(m.kit, m.kitDir, muteSong(bass = true, mutes = setOf(muteHat)))
+        assertTrue(!drumMuted.snip.samples.contentEquals(bedMuted.snip.samples))
+    }
+
+    @Test
+    fun `DROP on a section whose kick is muted keeps a silent bar and says so`() {
+        val m = dropModel("MuteDrop")
+        val song = dropSong(extras = true, drop = true)
+        val muted = song.copy(sections = listOf(song.sections[0].copy(mutes = setOf(muteKick)), song.sections[1]))
+        val mix = Arranger.mixdown(m.kit, m.kitDir, muted)
+        val (from, to) = dropFrames(m, mix)
+        assertEquals(listOf("kick"), mix.drops.map { it.kept })
+        assertTrue(mix.drops.single().reason.contains("muted") && mix.drops.single().reason.contains("silent"), mix.drops.single().reason)
+        assertTrue(energy(window(mix, from + 220, to - 220)) < 1e-9, "the kick is the only thing DROP keeps, and it is muted")
+        // The control: the same song with the kick played has it in that bar, and is the same length.
+        val loud = Arranger.mixdown(m.kit, m.kitDir, song)
+        assertTrue(energy(window(loud, from, to)) > 1e-3)
+        assertEquals(loud.snip.frameCount, mix.snip.frameCount)
+        assertEquals(loud.sectionStarts, mix.sectionStarts)
+        // With the kick not muted but another lane muted, DROP is what it was.
+        val other = song.copy(sections = listOf(song.sections[0].copy(mutes = setOf(muteHat)), song.sections[1]))
+        assertEquals("the last bar keeps only the kick", Arranger.mixdown(m.kit, m.kitDir, other).drops.single().reason)
+    }
+
+    @Test
+    fun `a muted hat does not choke the open hat before it`() {
+        val m = KitBuilderModel.create("MuteChoke", File(temp, "MuteChoke"))
+        m.assign(3, DrumSynth.closedHat(), DrumClass.HAT_CLOSED)
+        m.assign(4, DrumSynth.openHat(), DrumClass.HAT_OPEN)
+        m.save()
+        val s16 = Mpc3Clip.PULSES_PER_16TH
+        fun song(mutes: Set<String>) = Arranger.Arrangement(
+            "Choke Song", 0,
+            listOf(
+                Arranger.Section("theme", Mpc3Clip("Open", 1, listOf(Mpc3Note(39, 15 * s16, 1f))), 1, "open hat last"),
+                Arranger.Section("variation", Mpc3Clip("Closed", 1, listOf(Mpc3Note(38, 0, 1f))), 1, "then this", mutes = mutes),
+            ),
+        )
+        val chokes = Arranger.mixdown(m.kit, m.kitDir, song(emptySet()))
+        assertTrue(energyAfter(chokes.snip, chokes.sectionStarts[1], 100, 300) < 1e-6, "the closed hat chokes the open hat")
+        val muted = Arranger.mixdown(m.kit, m.kitDir, song(setOf(PlanSection.padLane(3))))
+        assertTrue(energyAfter(muted.snip, muted.sectionStarts[1], 100, 300) > 1e-3, "a hat that is not played chokes nothing")
+    }
+
+    @Test
+    fun `mutes ride through resolve and back, and name the pads a clip plays`() {
+        val m = dropModel("MutePlan")
+        val plan = Arranger.toPlan(Arranger.arrange(m.kit, m.kitDir, seed = 0)).withMute(1, muteKick, true)!!.withMute(1, PlanSection.BED_LANE, true)!!
+        val resolved = Arranger.resolve(m.kit, m.kitDir, plan).arrangement
+        assertEquals(listOf(emptySet(), setOf(muteKick, PlanSection.BED_LANE)), resolved.sections.take(2).map { it.mutes })
+        assertEquals(plan.sections.map { it.mutes }, Arranger.toPlan(resolved).sections.map { it.mutes })
+        val gone = SongPlan(0, listOf(PlanSection("theme", "gone-clip", mutes = setOf(muteHat)), PlanSection("reprise", ClipRef.CAPTURED)))
+        assertEquals(setOf(muteHat), Arranger.resolve(m.kit, m.kitDir, gone).arrangement.sections[0].mutes, "a section planned again keeps its mutes")
+        assertEquals(listOf(1, 2, 3), Arranger.lanes(muteSong().sections[0].clip))
     }
 }

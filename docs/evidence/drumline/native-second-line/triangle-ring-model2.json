@@ -1,0 +1,14 @@
+{
+  "unchanged_other_grid_files": 153,
+  "before": {
+    "attack_high_band_fraction_db": -4.071706358081803,
+    "late_ring_vs_attack_db": -23.99967012983072,
+    "detrended_4khz_tail_envelope_std_db": 2.0928986085088885
+  },
+  "after": {
+    "attack_high_band_fraction_db": -7.660365221046709,
+    "late_ring_vs_attack_db": -22.988649784406775,
+    "detrended_4khz_tail_envelope_std_db": 0.09375508178922888
+  },
+  "scope": "Signal descriptors; envelope variation includes real beating and is not a perceptual realism score."
+}

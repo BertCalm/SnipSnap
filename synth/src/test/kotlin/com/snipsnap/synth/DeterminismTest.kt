@@ -325,6 +325,15 @@ class DeterminismTest {
         }
     }
 
+    @Test fun `RIDDIM renders every voice, a soft hit and every take byte for byte through JSON`() {
+        for (voice in RiddimVoice.entries) {
+            val patch = RiddimPatch("Canary", voice, Riddim.defaults(voice))
+            assertContentEquals(patch.render().samples, Patches.fromJsonText(patch.toJsonText()).render().samples, "$voice")
+            val struck = RiddimPatch("Soft take", voice, Riddim.defaults(voice), velocity = 0.4f, take = 3)
+            assertContentEquals(struck.render().samples, Patches.fromJsonText(struck.toJsonText()).render().samples, "$voice soft take 3")
+        }
+    }
+
     @Test fun `EROSION native voices replay their saved touch`() {
         for (voice in ErosionVoice.entries) {
             val patch = ErosionPatch("Canary", voice, velocity = .6f)
@@ -440,6 +449,15 @@ class DeterminismTest {
                 midi = 67, velocity = .6f, seed = 17, model = model)
             assertContentEquals(patch.render().samples, patch.render().samples)
         }
+    }
+
+    @Test
+    fun `CONSORT retains its section velocity and take across renders`() {
+        val patch = ConsortPatch("Section canary", ConsortVoice.CLARINET, mapOf("HOLD" to 0.2f),
+            chairs = listOf(ConsortChair(ConsortVoice.FLUTE, ConsortInterval.OCT_UP), ConsortChair(ConsortVoice.BASSOON, ConsortInterval.OCT_DOWN)),
+            velocity = 1f, take = 1)
+        assertContentEquals(patch.render().samples, patch.render().samples)
+        assertContentEquals(patch.render().samples, Patches.fromJsonText(patch.toJsonText()).render().samples)
     }
 
     @Test
@@ -899,6 +917,12 @@ class DeterminismTest {
                 TerraVoice.TUN -> mapOf("KNOCK" to 1f)
                 TerraVoice.CONICAL_BELL -> mapOf("CLACK" to 1f)
                 TerraVoice.COMPOUND_MEMBRANE -> emptyMap()
+                TerraVoice.ODAIKO -> mapOf("DRUM" to 0.5f)
+                TerraVoice.SHIME -> mapOf("STROKE" to 0.5f)
+                TerraVoice.KANE -> mapOf("EDGE" to 0.5f)
+                TerraVoice.BINZASARA -> mapOf("SPREAD" to 1f)
+                TerraVoice.COWBELL -> mapOf("DAMP" to 0.5f)
+                TerraVoice.NAGADO, TerraVoice.KA, TerraVoice.CHAPPA, TerraVoice.WATER_DRUM -> mapOf("ATTACK" to 1f)
             }
             val patch = TerraPatch("Canary", voice, Terra.defaults(voice) + loud)
             assertContentEquals(patch.render().samples, patch.render().samples, voice.name)
@@ -1107,6 +1131,62 @@ class DeterminismTest {
         for (pad in listOf(2, 12, 16)) {
             val r = Splinter.Recipe(pad, .65, 2)
             assertContentEquals(r.render().samples, Splinter.Recipe.fromJsonText(r.toJsonText()).render().samples, "pad $pad")
+        }
+    }
+
+    @Test
+    fun `SHATTER saved recipes are deterministic for a slice, a repeat and a rush`() {
+        for (pad in listOf(0, 11, 16)) {
+            val r = Breakcore.Recipe(Shatter, pad, .65, 2)
+            assertContentEquals(r.render().samples, Breakcore.Recipe.fromJsonText(r.toJsonText()).render().samples, "pad $pad")
+        }
+    }
+
+    @Test
+    fun `SOUNDCLASH saved recipes are deterministic for a sub, a reese and a rewind`() {
+        for (pad in listOf(1, 5, 9)) {
+            val r = Breakcore.Recipe(Soundclash, pad, .65, 2)
+            assertContentEquals(r.render().samples, Breakcore.Recipe.fromJsonText(r.toJsonText()).render().samples, "pad $pad")
+        }
+    }
+
+    @Test
+    fun `REDLINE saved recipes are deterministic for a tuned kick, a scream and a roll`() {
+        for (pad in listOf(1, 11, 16)) {
+            val r = Breakcore.Recipe(Redline, pad, .65, 2)
+            assertContentEquals(r.render().samples, Breakcore.Recipe.fromJsonText(r.toJsonText()).render().samples, "pad $pad")
+        }
+    }
+
+    @Test
+    fun `LULL saved recipes are deterministic for a chord, a tape stop and a fading repeat`() {
+        for (pad in listOf(0, 14, 16)) {
+            val r = Breakcore.Recipe(Lull, pad, .65, 2)
+            assertContentEquals(r.render().samples, Breakcore.Recipe.fromJsonText(r.toJsonText()).render().samples, "pad $pad")
+        }
+    }
+
+    @Test
+    fun `STROBE saved recipes are deterministic for a whine, a break and a stab roll`() {
+        for (pad in listOf(0, 15, 16)) {
+            val r = Breakcore.Recipe(Strobe, pad, .65, 2)
+            assertContentEquals(r.render().samples, Breakcore.Recipe.fromJsonText(r.toJsonText()).render().samples, "pad $pad")
+        }
+    }
+
+    @Test
+    fun `CARTRIDGE saved recipes are deterministic for a lead, a crushed break and a noise roll`() {
+        for (pad in listOf(4, 13, 16)) {
+            val r = Breakcore.Recipe(Cartridge, pad, .65, 2)
+            assertContentEquals(r.render().samples, Breakcore.Recipe.fromJsonText(r.toJsonText()).render().samples, "pad $pad")
+        }
+    }
+
+    @Test
+    fun `BARRICADE saved recipes are deterministic for a chord, a dive bomb and a chug roll`() {
+        for (pad in listOf(0, 4, 16)) {
+            val r = Breakcore.Recipe(Barricade, pad, .65, 2)
+            assertContentEquals(r.render().samples, Breakcore.Recipe.fromJsonText(r.toJsonText()).render().samples, "pad $pad")
         }
     }
 }

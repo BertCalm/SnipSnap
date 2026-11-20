@@ -305,6 +305,40 @@ internal object Cypher {
         notes.map { n -> if (n.part in parts) Note(n.beat, n.part, n.weight, n.offsetMs + ms, n.tuneSemis) else n }
 
     /**
+     * One player's clock (STAGGER, docs/superpowers/specs/2026-11-18-stagger-drum-kits-brief.md): a drift shared
+     * by every part plus a bias per part. The drift is a mean-reverting walk ticked once per eighth of the grid,
+     * d = rho * d + sigma * noise, with sigma chosen so its stationary spread is [wobbleMs] (the noise is uniform,
+     * variance a third); rho 0 is [humanised] with the bias added, rho near 1 is [behind]. It is centred over the
+     * notes, so a part's mean lateness is exactly its bias. [biasMs] names a part's habit (a kick that drags, a
+     * snare a hair early); an unnamed part has none. Drawn once from [seed], clamped to [Note]'s +-60 ms, and
+     * fixed by the kit version like every other feel law.
+     *
+     * Why one drift rather than a draw per note: a drummer has one sense of time that wanders and a habit per limb.
+     * Independent draws put the kick and the hat on the same beat on different sides of it, which the ear reads as a
+     * mistake; a shared drift leans them the same way, which it reads as a feel.
+     */
+    fun staggered(notes: List<Note>, biasMs: Map<Int, Float>, wobbleMs: Float, rho: Float, seed: String): List<Note> {
+        require(rho in 0f..0.99f && wobbleMs >= 0f)
+        val beats = notes.map { it.beat }.distinct().sorted()
+        if (beats.isEmpty()) return notes
+        val noise = Dsp.Noise(Dsp.seedFor("STAGGER", "clock", seed))
+        val sigma = wobbleMs * kotlin.math.sqrt((1f - rho * rho) * 3f)
+        val drift = HashMap<Double, Float>()
+        var d = 0f
+        var last: Double? = null
+        for (b in beats) {
+            val steps = if (last == null) 1 else max(1, Math.round((b - last!!) * 2).toInt())
+            repeat(steps) { d = rho * d + sigma * noise.next() }
+            drift[b] = d
+            last = b
+        }
+        val mean = drift.values.average().toFloat()
+        return notes.map { n ->
+            Note(n.beat, n.part, n.weight, (n.offsetMs + (biasMs[n.part] ?: 0f) + drift.getValue(n.beat) - mean).coerceIn(-60f, 60f), n.tuneSemis)
+        }
+    }
+
+    /**
      * A ratchet: [count] notes of [part] from [beat], one every [division] of a beat, the weight rising from
      * [weightFrom] to [weightTo] and the pitch from 0 to [riseSemis]. A hat roll, a snare build.
      */
@@ -317,18 +351,21 @@ internal object Cypher {
     /**
      * A dry phrase: every note is its own strike, so neighbouring notes are never the same audio (the take
      * walks), scaled to the phrase's velocity times the note's weight, placed at its offset start, summed.
-     * [seconds] is the buffer length; a phrase with a long sub needs its tail.
+     * [seconds] is the buffer length; a phrase with a long sub needs its tail. [partGain] scales a part's hits
+     * after the touch law (which floors every note's peak at .35, so a weight cannot sit a part 9 dB under
+     * another): a mix level, not a stroke.
      */
     fun phraseRaw(
         notes: List<Note>, bpm: Int, velocity: Float, take: Int, takes: Int, seconds: Float,
-        touch: (Float) -> Float, strike: (part: Int) -> Strike,
+        touch: (Float) -> Float, partGain: (part: Int) -> Float = { 1f }, strike: (part: Int) -> Strike,
     ): FloatArray {
         val out = FloatArray((seconds * Dsp.RATE).toInt())
         for ((i, note) in notes.withIndex()) {
             val v = (velocity * note.weight).coerceIn(.05f, 1f)
             val hit = KitStrikes.struck(strike(note.part), v, (take + i) % takes, touch(v), note.tuneSemis)
+            val g = partGain(note.part)
             val start = startFrame(note, bpm)
-            for (j in 0 until min(hit.size, out.size - start)) out[start + j] += hit[j]
+            for (j in 0 until min(hit.size, out.size - start)) out[start + j] += hit[j] * g
         }
         return out
     }

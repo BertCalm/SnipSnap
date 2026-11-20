@@ -319,7 +319,7 @@ Back labels that do not come from `backChip`:
 | `INSTANT KIT`, `USE THIS PART ▸`, `IN`, `OUT` (marks) | Deck actions: one-tap chop, take the selection to CHOP, the selection's start and end (`Personality.kt:468`). |
 | `BY HITS`, `GRID`, `AUTO`, `MERGE`, `RE-CHOP` | Chop controls (`ChopScreen.kt:1486,1487,1506,1310,926`). |
 | `START YOURS`, `EDIT STEPS`, `CHART`, `SHARE`, `MIDI EXPORT` | Beat controls (`GrooveScreen.kt:1957,2155,1414,1359`; `Places.kt:74`). |
-| `+ SECTION`, `LOCK`, `UNLOCK`, `REROLL ⚄`, `PLAY`, `STOP`, `LOOP ON/OFF`, `BASS ON/OFF`, `PULL-UP`, `DROP ON/OFF` | Song controls (`Personality.kt:1672-1735`). |
+| `+ SECTION`, `LOCK`, `UNLOCK`, `REROLL ⚄`, `PLAY`, `STOP`, `LOOP ON/OFF`, `BASS ON/OFF`, `PULL-UP`, `NONE`, `DROP`, `CLOSE`, `REVERSE CRASH` (the last-bar choice, each also spoken as `… ON/OFF`), `MUTES` (a chip per lane, `MUTED` when out) | Song controls (`Personality.kt:1672-1735`). |
 | `VOICE`, `PRESETS`, `PLAYING`, `USE THIS SOUND` | SYNTH section headings (`Personality.kt:666-672`). |
 | `START HERE`, `BASS`, `KEYS AND CHORDS`, `PLUCKS AND STRINGS`, `BREATH AND REEDS`, `VOICES`, `METAL WOOD AND GLASS`, `SKINS`, `MOVING AND STRANGE` | Starter list headings (`Personality.kt:674-682`). |
 | `SEND TO PAD`, `SAVE AS PRESET`, `FORGET` | Synth send, preset save and delete (`SnapScreen.kt:1054`, `SynthScreen.kt:4879`, `Personality.kt:635`). |
@@ -351,7 +351,7 @@ The picker groups engines into nine kinds (`EngineCatalog.kt:14-24`): `DRUMS & P
 | Engine | Kind | What it is | Source |
 |---|---|---|---|
 | `LATTICE` | SYNTH | Warm, plucked or hollow notes that drop out and come back | `docs/LATTICE.md` |
-| `ACCORD` | BELLS & MALLETS, PADS & FX | Pitched brushes, wood and tines finding shared timing | `docs/ACCORD.md` |
+| `ACCORD` | BELLS & MALLETS, PADS & FX | Pitched brush, wood, tines, reed, strings, clock and bell | `docs/ACCORD.md` |
 | `THUMP` | DRUMS & PERCUSSION | Analog-style kick, snare, hats, clap, tom, cowbell, rim | `synth/.../Thump.kt` |
 | `SCANNED CHAIN` | SYNTH, BELLS & MALLETS | Evolving pitched notes: springy plucks, metal and swells | `docs/SCANNED_CHAIN.md` |
 | `SKIN` | DRUMS & PERCUSSION | Acoustic-style kick, snare, hats, toms, ride and shaker | `docs/SKIN.md` |

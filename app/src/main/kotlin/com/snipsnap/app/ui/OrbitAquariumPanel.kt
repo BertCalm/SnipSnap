@@ -35,18 +35,18 @@ internal fun OrbitAquariumPanel(set: OrbitSet, route: OrbitAquarium.Route, schem
                 modifier = Modifier.weight(1f), onClick = onReset)
         }
         TapeText(when {
-            faulted -> "AQUARIUM FAULT · RESET TAIL OR RESTART PLAY"
+            faulted -> "Aquarium fault · reset tail or restart play"
             !set.aquariumFromKit -> "KIT FX OFF"
-            !route.settings.enabled -> "DRY · LIVE KIT EFFECTS ARE OFF"
-            route.settings.settings.isBypass -> "DRY · ALL SIX EFFECT MIXES ARE ZERO"
+            !route.settings.enabled -> "Dry · live kit effects are off"
+            route.settings.settings.isBypass -> "Dry · all six effect mixes are zero"
             route.settings.outputGain == 0f -> "WET MIX MUTED"
-            playing -> "STEREO KIT FX LIVE"
+            playing -> "Stereo kit FX live"
             else -> "KIT FX READY"
         }, TapeType.pixelSmall, if (faulted) scheme.warnInk.tape else scheme.ink.tape, maxLines = Int.MAX_VALUE)
         route.warning?.let { TapeText(it, TapeType.pixelSmall, scheme.warnInk.tape, maxLines = Int.MAX_VALUE) }
         TapeText(when {
             !auditionUp -> "TAP STREAM UNAVAILABLE"
-            auditionFaulted -> "TAP FX FAULT · RESET TAIL OR RETRY A TAP"
+            auditionFaulted -> "Tap FX fault · reset tail or retry a tap"
             auditionPending -> "Tap FX waiting to queue settings…"
             else -> "TAP STREAM READY"
         }, TapeType.pixelSmall, if (!auditionUp || auditionFaulted) scheme.warnInk.tape else scheme.ink2.tape,
@@ -64,6 +64,6 @@ internal fun OrbitAquariumPanel(set: OrbitSet, route: OrbitAquarium.Route, schem
             TapeType.pixelSmall, scheme.ink2.tape, maxLines = Int.MAX_VALUE)
         TapeText("SAVED SAMPLES keeps the stereo file; SAMPLE edits in mono. A wet bounce already contains FX. Playing it through KIT FX applies them again.",
             TapeType.pixelSmall, scheme.ink2.tape, maxLines = Int.MAX_VALUE)
-        if (set.aquariumFromKit) TapeText("MIX PROTECTION · $limitedFrames FRAMES THIS PLAY", TapeType.pixelSmall, scheme.ink2.tape)
+        if (set.aquariumFromKit) TapeText("Mix protection · $limitedFrames frames this play", TapeType.pixelSmall, scheme.ink2.tape)
     }
 }

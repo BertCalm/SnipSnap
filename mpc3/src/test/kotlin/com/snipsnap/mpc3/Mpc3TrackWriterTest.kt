@@ -52,6 +52,23 @@ class Mpc3TrackWriterTest {
     private fun layers(inst: Map<String, JsonValue>): List<Map<String, JsonValue>> =
         (inst["layersv"] as JsonValue.Arr).items.map { (it as JsonValue.Obj).entries }
 
+    @Test fun `discrete drum cycles retain take order and independent sample windows`() {
+        val takes=(1..3).map { VelocityLayer("Take$it",it*1000L,0,127) }
+        val root=(Json.parse(writer.payloadText(DrumProgram("Cycle",listOf(Pad("Take1",1000,cycleLayers=takes))))) as JsonValue.Obj).entries
+        val data=(root.getValue("data") as JsonValue.Obj).entries
+        val prog=(data.getValue("program") as JsonValue.Obj).entries
+        val drum=(prog.getValue("drum") as JsonValue.Obj).entries
+        val inst=(((drum.getValue("instruments") as JsonValue.Arr).items.first()) as JsonValue.Obj).entries
+        assertEquals(0.0,(inst.getValue("zonePlayTime") as JsonValue.Num).value)
+        val active=layers(inst).filter { (it.getValue("sampleName") as JsonValue.Str).value.isNotEmpty() }
+        assertEquals(listOf("Take1","Take2","Take3"),active.map { (it.getValue("sampleName") as JsonValue.Str).value })
+        active.forEachIndexed { i,l ->
+            assertEquals(0.0,(l.getValue("sliceIncrement") as JsonValue.Num).value)
+            val window=(l.getValue("sliceInfo") as JsonValue.Obj).entries
+            assertEquals((i+1)*1000.0,(window.getValue("End") as JsonValue.Num).value)
+        }
+    }
+
     // ---- container --------------------------------------------------------
 
     @Test

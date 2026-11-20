@@ -66,6 +66,29 @@ object SectionNames {
  * and by `sections[i+1].pullUp`, so a plan edit turns one off when it
  * turns the other on ([SongPlan.withDrop], [SongPlan.withPullUp]). Off
  * unless asked for.
+ *
+ * [close] and [reverseCrash] are DROP's two siblings and sit where it
+ * does, on the section whose own last bar they change: CLOSE sweeps a
+ * low-pass down over that bar, REVERSE CRASH lands a reversed crash (or
+ * open hat) on the next section's downbeat. A section has at most one of
+ * the three, and each, like DROP, takes the boundary from the next
+ * section's pull-up ([SongPlan.withClose], [SongPlan.withReverseCrash]).
+ * Off unless asked for, and left out of the file when off.
+ *
+ * [mutes] are the lanes this section leaves out: a [padLane] key for each
+ * drum pad whose hits are not played in it, and [BED_LANE] for the bass
+ * bed. The key is the pad's SLOT, not its name or its class: a kit can
+ * have two kick pads or rename one, and a swapped clip changes which
+ * lanes a section plays but not what a slot is. A mute names a lane the
+ * section may not play (any more); it then does nothing. Empty unless
+ * asked for, and left out of the file when empty.
+ *
+ * [bars] cuts each pass of the clip short: it plays only the first [bars]
+ * bars of its clip, then goes on to the next pass or section. Null is the
+ * whole clip, and so is a number at or past the clip's own length. A
+ * different clip ([SongPlan.withClip]) takes it back to null. It is what KEEP THIS ORDER
+ * writes for a pass live play cut at a bar line. Null unless a pass was
+ * cut, and left out of the file when null.
  */
 data class PlanSection(
     val name: String,
@@ -76,11 +99,24 @@ data class PlanSection(
     val bass: Boolean = SectionNames.bassUnder(name),
     val pullUp: Boolean = SectionNames.pullsUpInto(name),
     val drop: Boolean = false,
+    val close: Boolean = false,
+    val reverseCrash: Boolean = false,
+    val mutes: Set<String> = emptySet(),
+    val bars: Int? = null,
 ) {
     init {
         require(name.isNotBlank()) { "a section needs a name" }
         require(clip.isNotBlank()) { "a section needs a clip" }
         require(repeats in 1..SongPlan.MAX_REPEATS) { "repeats out of range: $repeats" }
+        require(bars == null || bars >= 1) { "bars out of range: $bars" }
+    }
+
+    companion object {
+        /** The mute key of the bass bed. */
+        const val BED_LANE = "bed"
+
+        /** The mute key of the drum pad in 1-based [slot] (`Mpc3Note.slotFor` of its notes). */
+        fun padLane(slot: Int): String = "pad:$slot"
     }
 }
 
@@ -108,7 +144,10 @@ data class SongPlan(val seed: Int, val sections: List<PlanSection>) {
 
     fun withRepeats(i: Int, repeats: Int): SongPlan? = replaced(i) { it.copy(repeats = repeats.coerceIn(1, MAX_REPEATS)) }
 
-    fun withClip(i: Int, ref: String): SongPlan? = replaced(i) { it.copy(clip = ref) }
+    fun withClip(i: Int, ref: String): SongPlan? = replaced(i) { it.copy(clip = ref, bars = if (ref == it.clip) it.bars else null) }
+
+    /** Section [i] playing only the first [bars] bars of its clip, or the whole clip for null; see [PlanSection.bars]. */
+    fun withBars(i: Int, bars: Int?): SongPlan? = replaced(i) { it.copy(bars = bars?.coerceAtLeast(1)) }
 
     fun withLock(i: Int, locked: Boolean): SongPlan? = replaced(i) { it.copy(locked = locked) }
 
@@ -133,18 +172,33 @@ data class SongPlan(val seed: Int, val sections: List<PlanSection>) {
 
     fun withBass(i: Int, on: Boolean): SongPlan? = replaced(i) { it.copy(bass = on) }
 
-    /** Turning a pull-up on turns off the DROP of the section before it: they would both rewrite the same boundary. */
+    /** Turning a pull-up on turns off the DROP, CLOSE or REVERSE CRASH of the section before it: they would all rewrite the same boundary. */
     fun withPullUp(i: Int, on: Boolean): SongPlan? {
         val next = replaced(i) { it.copy(pullUp = on) } ?: return null
-        if (!on || i == 0 || !sections[i - 1].drop) return next
-        return next.copy(sections = next.sections.toMutableList().also { it[i - 1] = it[i - 1].copy(drop = false) })
+        if (!on || i == 0) return next
+        return next.copy(sections = next.sections.toMutableList().also { it[i - 1] = it[i - 1].copy(drop = false, close = false, reverseCrash = false) })
     }
 
-    /** Turning a DROP on turns off the pull-up of the section after it, the other rewrite of the same boundary. The last section has none after it. */
-    fun withDrop(i: Int, on: Boolean): SongPlan? {
-        val next = replaced(i) { it.copy(drop = on) } ?: return null
+    /** Turning a DROP on turns off the section's CLOSE and REVERSE CRASH and the pull-up of the section after it, the other rewrite of the same boundary. The last section has none after it. */
+    fun withDrop(i: Int, on: Boolean): SongPlan? = withTransition(i, on) { it.copy(drop = on) }
+
+    /** CLOSE: the section's own last bar sweeps down through a low-pass. Exclusive with DROP, REVERSE CRASH and the next section's pull-up, as [withDrop] is. */
+    fun withClose(i: Int, on: Boolean): SongPlan? = withTransition(i, on) { it.copy(close = on) }
+
+    /** REVERSE CRASH: a reversed crash (or open hat) ends on the next section's downbeat. Exclusive with DROP, CLOSE and the next section's pull-up. */
+    fun withReverseCrash(i: Int, on: Boolean): SongPlan? = withTransition(i, on) { it.copy(reverseCrash = on) }
+
+    /** Section [i] with [change] applied; when it turns a transition [on], the other two are off and so is the pull-up into the next section. */
+    private fun withTransition(i: Int, on: Boolean, change: (PlanSection) -> PlanSection): SongPlan? {
+        val next = replaced(i) { change(if (on) it.copy(drop = false, close = false, reverseCrash = false) else it) } ?: return null
         if (!on || !(sections.getOrNull(i + 1)?.pullUp ?: false)) return next
         return next.copy(sections = next.sections.toMutableList().also { it[i + 1] = it[i + 1].copy(pullUp = false) })
+    }
+
+    /** Lane [lane] of section [i] left out ([on]) or played again; see [PlanSection.mutes]. */
+    fun withMute(i: Int, lane: String, on: Boolean): SongPlan? {
+        require(lane.isNotBlank()) { "a mute names a lane" }
+        return replaced(i) { it.copy(mutes = if (on) it.mutes + lane else it.mutes - lane) }
     }
 
     /** Every unlocked section redrawn with [newSeed]; locked ones keep the seed they have. */

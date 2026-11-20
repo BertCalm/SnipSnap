@@ -20,7 +20,8 @@ import kotlin.random.Random
  *
  * Modal mallets and drums re-strike ([canRestrike]): SKIN's [Skin.STRUCK]
  * voices, every TERRA voice, HALOBAR mallets, BREAKER (whose source is a
- * struck SKIN drum), BACKWASH's model 5 and FIRED BRONZE's model 2. Every take is deterministic in
+ * struck SKIN drum), BACKWASH's model 5, FIRED BRONZE's model 2 and ACCORD, whose takes are its own
+ * passage-offset takes ([Accord.renderTake]), kept by ear in accord-rr-1. Every take is deterministic in
  * (patch, velocity, seed, take); take 0 is the reference itself.
  */
 object Restrike {
@@ -35,7 +36,10 @@ object Restrike {
         (patch is SkinPatch && patch.voice in Skin.STRUCK) || patch is TerraPatch ||
             patch is DrumlinePatch || patch is HalobarPatch || patch is BreakerPatch || patch is SootPatch || (patch is BackwashPatch && patch.model == 5) || patch is EtchPatch ||
             (patch is ThumpPatch && patch.voice == ThumpVoice.SUB) ||
-            (patch is FiredBronzePatch && patch.model >= 2) || patch is KindredPatch
+            (patch is FiredBronzePatch && patch.model >= 2) || patch is KindredPatch || patch is AccordPatch
+
+    /** ACCORD's take for Restrike take [take]: 0 is 0, later takes cycle through 1 until [Accord.TAKES], never back to 0. */
+    internal fun accordTake(take: Int): Int = if (take == 0) 0 else 1 + (take - 1) % (Accord.TAKES - 1)
 
     /** The velocity and the TERRA POS offset take [take] lands with, drawn from [seed]; take 0 is (velocity, 0). */
     internal fun landing(velocity: Float, seed: Int, take: Int): Pair<Float, Float> {
@@ -50,7 +54,8 @@ object Restrike {
     /**
      * Take [take] of [patch] hit at [velocity], seeded by [seed]; null when
      * [patch] cannot re-strike. Take 0 is `Velocity.atVelocity(patch,
-     * velocity)`'s own render for these engines.
+     * velocity)`'s own render for these engines, except ACCORD, whose
+     * [velocity] scales its saved touch (take 0 at 1 is the saved render).
      */
     fun take(patch: Patch, velocity: Float, seed: Int, take: Int): Snip? {
         require(take >= 0) { "a take is 0 or more, got $take" }
@@ -59,6 +64,11 @@ object Restrike {
         if (patch is BackwashPatch) return patch.copy(take = patch.take + take).render(velocity)
         // ETCH deals its own five-dimension takes (Etch.takeFor), accepted by ear; no extra force spread on top.
         if (patch is EtchPatch) return patch.render(velocity.coerceIn(0f, 1f), take, seed)
+        // ACCORD deals its own passage-offset takes (Accord.renderTake), kept by ear in accord-rr-1. Its
+        // velocity is the timbre (how hard the machine is driven), so no force spread on top, and [velocity]
+        // scales the saved touch: Robin's untouched hit (1) is the saved performance, so ROBIN on a pad deals
+        // exactly the kept takes of its render. The takes are deterministic in the patch alone: no seed.
+        if (patch is AccordPatch) return Accord.renderTake(patch.copy(velocity = patch.velocity * velocity.coerceIn(0f, 1f)), accordTake(take))
         val (v, offset) = landing(velocity.coerceIn(0f, 1f), seed, take)
         return when (patch) {
             is HalobarPatch -> Halobar.renderTake(patch.voice, patch.macros, v, seed, take, patch.model)

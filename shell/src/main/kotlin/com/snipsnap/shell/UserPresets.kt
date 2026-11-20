@@ -383,6 +383,7 @@ object UserPresets {
 
     /** The voice enum a roster line names: `THUMP` → `ThumpVoice`, `TONEWHEEL` → `TonewheelVoice`. */
     fun voiceEnum(engine: String): String = when (engine.uppercase(Locale.ROOT)) {
+        com.snipsnap.synth.SecondlinePatch.ENGINE -> "ParadeSecondLine.Voice"
         com.snipsnap.synth.SambaPatch.ENGINE -> "ParadeSamba.Voice"
         com.snipsnap.synth.BristlePatch.ENGINE -> "Bristle.Route"
         com.snipsnap.synth.FiredBronzePatch.ENGINE -> "FiredBronzeDryKit.Pad"
@@ -449,7 +450,7 @@ object UserPresets {
      * controls through the complete JSON constructor. WICK retains its selected
      * RATTLE body, root, velocity and controls through that constructor as well. SCUFF
      * retains its strike velocity, take and model version the same way, as does HICCUP, and CLUTTER
-     * its object's strike velocity, take and model version, as do CALABASH, SERVO and EMBER, and KINDRED with its kit recipe; CAIRN its root,
+     * its object's strike velocity, take and model version, as do CALABASH, RIDDIM, SERVO and EMBER, and KINDRED with its kit recipe; CAIRN its root,
      * touch, contact cue and saved model.
      * Names and embedded JSON are escaped
      * Kotlin string literals.
@@ -490,6 +491,11 @@ object UserPresets {
             val recipe = Json.write(JsonValue.Str(patch.toJsonText())).replace("$", "\\$")
             return "ScuffPatch.fromJsonText($recipe),"
         }
+        if (patch is com.snipsnap.synth.SecondlinePatch) {
+            // The renderer model lives outside the macro map; promotion keeps the battery as heard.
+            val recipe = Json.write(JsonValue.Str(patch.toJsonText())).replace("$", "\\$")
+            return "SecondlinePatch.fromJsonText($recipe),"
+        }
         if (patch is com.snipsnap.synth.SambaPatch) {
             // The renderer model lives outside the macro map; promotion keeps the battery as heard.
             val recipe = Json.write(JsonValue.Str(patch.toJsonText())).replace("$", "\\$")
@@ -514,6 +520,11 @@ object UserPresets {
             // Velocity, take and model version live outside the macro map, as CLUTTER's do.
             val recipe = Json.write(JsonValue.Str(patch.toJsonText())).replace("$", "\\$")
             return "CalabashPatch.fromJsonText($recipe),"
+        }
+        if (patch is com.snipsnap.synth.RiddimPatch) {
+            // Velocity, take and model version live outside the macro map, as CLUTTER's do.
+            val recipe = Json.write(JsonValue.Str(patch.toJsonText())).replace("$", "\\$")
+            return "RiddimPatch.fromJsonText($recipe),"
         }
         if (patch is com.snipsnap.synth.ServoPatch) {
             // Velocity, take and model version live outside the macro map, as CLUTTER's do.

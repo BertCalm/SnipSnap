@@ -69,6 +69,9 @@ jfloatArray Java_com_snipsnap_app_NativePads_stopPrint(JNIEnv*, jobject, jlong);
 jboolean Java_com_snipsnap_app_NativePads_configureAquarium(JNIEnv*, jobject, jlong, jfloatArray, jlong, jint, jdouble, jfloat, jboolean, jboolean);
 jboolean Java_com_snipsnap_app_NativePads_aquariumFaulted(JNIEnv*, jobject, jlong);
 jlong Java_com_snipsnap_app_NativePads_aquariumLimitedFrames(JNIEnv*, jobject, jlong);
+jboolean Java_com_snipsnap_app_NativePads_configureGlue(JNIEnv*, jobject, jlong, jboolean, jfloat, jfloat, jfloat, jfloat, jfloat);
+jint Java_com_snipsnap_app_NativePads_glueLatencyFrames(JNIEnv*, jobject, jlong);
+jlong Java_com_snipsnap_app_NativePads_glueClampedSamples(JNIEnv*, jobject, jlong);
 jfloat Java_com_snipsnap_app_NativePads_aquariumOutputCeiling(JNIEnv*, jobject);
 jlong Java_com_snipsnap_app_NativeSurface_create(JNIEnv*, jobject, jint);
 jboolean Java_com_snipsnap_app_NativeSurface_configureAquarium(JNIEnv*, jobject, jlong, jfloatArray, jlong, jint, jdouble, jfloat, jboolean, jboolean);
@@ -838,6 +841,38 @@ TEST(jni_the_pads_bend_and_master_gain_cross_the_bridge) {
     // Frames 0, 2, 4, 6 at half size.
     CHECK_NEAR(out[2 * 3], 0.5f * 6.0f / 1000.0f, 1e-5);
     CHECK(Java_com_snipsnap_app_NativePads_setVibrato(e, nullptr, h, 0.5f, 0.0f) == JNI_TRUE);
+    Java_com_snipsnap_app_NativePads_destroy(e, nullptr, h);
+}
+
+TEST(jni_the_pads_glue_crosses_the_bridge_whole_or_not_at_all) {
+    // The six values arrive in their own places: compressor out (ratio 1), a
+    // ceiling at -6 dBFS, so the ramp comes out 3 ms late and held at 0.501.
+    JNIEnv* e = env();
+    const jlong h = Java_com_snipsnap_app_NativePads_create(e, nullptr, 48000);
+    auto* pads = reinterpret_cast<PadEngine*>(h);
+    Java_com_snipsnap_app_NativePads_beginBank(e, nullptr, h);
+    Java_com_snipsnap_app_NativePads_addSample(e, nullptr, h, floats(ramp(1000)), 1, 48000);
+    Java_com_snipsnap_app_NativePads_commitBank(e, nullptr, h);
+    pull(pads, 8);
+    CHECK_EQ(Java_com_snipsnap_app_NativePads_glueLatencyFrames(e, nullptr, h), 0);  // not prepared yet
+    CHECK(Java_com_snipsnap_app_NativePads_configureGlue(e, nullptr, h, JNI_TRUE, 0.0f, 1.0f, 0.0f, 0.0f, -6.0f) == JNI_TRUE);
+    CHECK_EQ(Java_com_snipsnap_app_NativePads_glueLatencyFrames(e, nullptr, h), 144);
+    pull(pads, 1200);  // adopt, and wait out the 20 ms fade in
+    CHECK(Java_com_snipsnap_app_NativePads_noteOn(
+              e, nullptr, h, 1, 0, 0, 1000, -1, 1.0f, 1.0f, 1.0, JNI_FALSE) == JNI_TRUE);
+    const auto out = pull(pads, 1200);
+    CHECK_EQ(out[2 * 143], 0.0f);
+    CHECK_NEAR(out[2 * (144 + 200)], 0.200f, 1e-6);
+    float peak = 0.0f;
+    for (float v : out) peak = std::max(peak, std::fabs(v));
+    CHECK_NEAR(peak, std::pow(10.0f, -6.0f / 20.0f), 1e-4);
+    CHECK_EQ(Java_com_snipsnap_app_NativePads_glueClampedSamples(e, nullptr, h), 0);
+    // Out of range or not a number: refused, nothing queued; no handle: refused.
+    CHECK(Java_com_snipsnap_app_NativePads_configureGlue(e, nullptr, h, JNI_TRUE, 6.0f, 1.0f, 0.0f, 0.0f, -6.0f) == JNI_FALSE);
+    CHECK(Java_com_snipsnap_app_NativePads_configureGlue(e, nullptr, h, JNI_TRUE, -10.0f, std::nanf(""), 0.0f, 0.0f, -6.0f) == JNI_FALSE);
+    CHECK(Java_com_snipsnap_app_NativePads_configureGlue(e, nullptr, 0, JNI_FALSE, -10.0f, 4.0f, 0.0f, 0.0f, -1.0f) == JNI_FALSE);
+    CHECK_EQ(Java_com_snipsnap_app_NativePads_glueLatencyFrames(e, nullptr, 0), 0);
+    CHECK_EQ(Java_com_snipsnap_app_NativePads_glueClampedSamples(e, nullptr, 0), 0);
     Java_com_snipsnap_app_NativePads_destroy(e, nullptr, h);
 }
 

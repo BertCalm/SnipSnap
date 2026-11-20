@@ -39,6 +39,7 @@ class PadRecipeTest {
     private fun handBuiltPatches(): List<Patch> = listOf(
         BackwashPatch("Damped hit", BackwashVoice.SNARE, emptyMap()),
         BreakerPatch("Crushed drip", BreakerVoice.SNARE, emptyMap()),
+        SecondlinePatch("Second Line", ParadeSecondLine.Voice.SNARE_CENTER, emptyMap()),
         SambaPatch("Samba", ParadeSamba.Voice.CAIXA, emptyMap()),
         DrumlinePatch("Section", DrumlineVoice.SNARE, emptyMap()),
         SootPatch("Hot", SootVoice.SNARE, emptyMap()),
@@ -48,6 +49,8 @@ class PadRecipeTest {
         HydroformPatch("Saved impact", HydroformVoice.BULKHEAD, mapOf("YIELD" to .3f), velocity = .6f),
         RivetPatch("Industrial kick", RivetVoice.KICK),
         ChitinPatch("Chitin shell", ChitinVoice.SHELL, Chitin.defaults(ChitinVoice.SHELL)),
+        ConsortPatch("Reed trio", ConsortVoice.OBOE, mapOf("HOLD" to 0.2f),
+            chairs = listOf(ConsortChair(ConsortVoice.CLARINET, ConsortInterval.FIFTH), ConsortChair(ConsortVoice.BASSOON, ConsortInterval.MIN7)), velocity = 0.8f, take = 2),
         FillPatch("Fill roll", FillVoice.SNARE, Fill.defaults(FillVoice.SNARE)),
         AccordPatch("Saved ensemble", AccordVoice.TINE, mapOf("CONTACT" to .7f),
             midi = 55, velocity = .6f, seed = Long.MIN_VALUE,
@@ -74,6 +77,7 @@ class PadRecipeTest {
         ScuffPatch("Rim Test", ScuffVoice.RIM, mapOf("BITE" to 0.4f), velocity = 0.7f, take = 2),
         ClutterPatch("Pot Test", ClutterVoice.POT, mapOf("RATTLE" to 0.8f), velocity = 0.7f, take = 2),
         EmberPatch("Brush Test", EmberVoice.BRUSH_TAP, mapOf("BUZZ" to 0.8f), velocity = 0.6f, take = 1),
+        RiddimPatch("Boom Test", RiddimVoice.BOOM, mapOf("TUNE" to 0.625f), velocity = 0.65f, take = 2),
         CalabashPatch("Slap Test", CalabashVoice.CONGA, mapOf("STROKE" to 1f), velocity = 0.7f, take = 2),
         HiccupPatch("Stumble Test", HiccupVoice.SNARE, mapOf("FAULT" to 0.8f), velocity = 0.7f, take = 2),
         ServoPatch("Snare Test", ServoVoice.SNARE, mapOf("GROWL" to 0.8f), velocity = 0.7f, take = 2),
@@ -418,7 +422,11 @@ class PadRecipeTest {
     }
 
     @Test fun `an unknown version is still refused`() {
-        assertFailsWith<JsonException> { PadRecipe.fromJsonValue(Json.parse("""{"recipe":4}""")) }
+        // 4 was this test's unknown version until a KERF twin took it (PadRecipe.KERF_VERSION, 2026-11-19).
+        assertFailsWith<JsonException> { PadRecipe.fromJsonValue(Json.parse("""{"recipe":5}""")) }
+        assertEquals(4, PadRecipe.KERF_VERSION)
+        // Knowing the number is not enough to read a recipe: a version 4 with nothing in it is still an empty recipe.
+        assertFailsWith<IllegalArgumentException> { PadRecipe.fromJsonValue(Json.parse("""{"recipe":4}""")) }
     }
 
     @Test fun `processBank returns DRY untouched then one snip per layer`() {

@@ -243,6 +243,7 @@ object Velocity {
         is SkinPatch -> patch.macroSpecs()
         is BackwashPatch -> Backwash.macrosFor(patch.voice)
         is BreakerPatch -> Breaker.macrosFor(patch.voice, patch.model)
+        is SecondlinePatch -> SecondlinePatch.macrosFor()
         is SambaPatch -> SambaPatch.macrosFor()
         is DrumlinePatch -> Drumline.macrosFor(patch.voice)
         is SootPatch -> Soot.macrosFor(patch.voice, patch.model)
@@ -254,6 +255,7 @@ object Velocity {
         is SilkPatch -> Silk.macrosFor(patch.voice)
         is BorePatch -> Bore.macrosFor(patch.voice)
         is ObbligatoPatch -> Obbligato.macrosFor()
+        is ConsortPatch -> Consort.macrosFor(patch.voice)
         is ArcoPatch -> Arco.macrosFor(patch.voice)
         is TempestPatch -> Tempest.macrosFor(patch.voice)
         is MercuryPatch -> Mercury.macrosFor(patch.voice)
@@ -295,6 +297,7 @@ object Velocity {
         is HiccupPatch -> Hiccup.macrosFor(patch.voice)
         is ClutterPatch -> Clutter.macrosFor(patch.voice)
         is EmberPatch -> Ember.macrosFor(patch.voice)
+        is RiddimPatch -> Riddim.macrosFor(patch.voice)
         is CalabashPatch -> Calabash.macrosFor(patch.voice)
         is ServoPatch -> Servo.macrosFor(patch.voice)
         is TanglePatch -> Tangle.macrosFor(patch.voice)
@@ -463,6 +466,8 @@ object Velocity {
         is PitchwheelPatch -> patch.copy(velocity = v).render()
         is EmbouchurePatch -> patch.copy(velocity = v).render()
         is ObbligatoPatch -> patch.copy(velocity = v).render()
+        // CONSORT's velocity is breath effort: its own render turns a harder hit into more harmonics, more air and the overblow.
+        is ConsortPatch -> patch.copy(velocity = v).render()
         is BellowsPatch -> patch.copy(velocity = v).render()
         is MurmurPatch -> patch.copy(velocity = v).render()
         is OspreyPatch -> patch.copy(velocity = v).render()
@@ -487,6 +492,8 @@ object Velocity {
         is ClutterPatch -> patch.copy(velocity = v).render()
         // EMBER re-strikes the drum: a longer, darker contact when soft, and the wires and rivets only past their threshold.
         is EmberPatch -> patch.copy(velocity = v).render()
+        // RIDDIM renders velocity in its own synthesis (a soft kick sweeps lower and drives less), so re-render.
+        is RiddimPatch -> patch.copy(velocity = v).render()
         // CALABASH re-strikes: a fitted voice moves toward its own soft recording, a physical one lands with a
         // broader, slower contact and its beads, wires and squeeze answer less.
         is CalabashPatch -> patch.copy(velocity = v).render()
@@ -531,6 +538,7 @@ object Velocity {
         // BREAKER strikes its SKIN source at the velocity; the chain after it keeps the timbre that gives.
         is BreakerPatch -> patch.render(v)
         // DRUMLINE re-excites each player through its own contact law.
+        is SecondlinePatch -> patch.render(v)
         is SambaPatch -> patch.render(v)
         is DrumlinePatch -> patch.render(v)
         // SOOT strikes every drum at the velocity through its own contact law (and the kick's sag).
