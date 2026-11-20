@@ -1273,17 +1273,17 @@ Source: the commit that adds this entry. Details: [CONSORT](CONSORT.md).
 Nothing here is a completion claim. A passing `ConsortTest` and an audition page do not close a gate.
 
 
-## KERF synthetic chops (rounds 1 to 3, 2026-11-20)
+## KERF synthetic chops (rounds 1 to 4, 2026-11-20)
 
-Source: the commit that adds this entry. Details: [the KERF spec](superpowers/specs/2026-11-19-kerf-synthetic-chops-design.md). KERF is a capture-side tool today (SYNTH TWIN on the pad sheet, SYNTH TWIN ALL on the kit screen, `snipsnap kerf`), not a registered engine; the drum gate's genre kits belong to its round 4.
+Source: the commit that adds this entry. Details: [the KERF spec](superpowers/specs/2026-11-19-kerf-synthetic-chops-design.md). KERF is a capture-side tool (SYNTH TWIN on the pad sheet, SYNTH TWIN ALL on the kit screen, `snipsnap kerf`) and, since round 4, a registered drum engine on the SYNTH picker (`Kerf`, six voices over the bank's 63 fitted hits) with four genre kits on FRESH TAPE (`KerfKits`).
 
 | Gate | Current evidence | Status |
 |---|---|---|
 | Velocity (render) | A twin struck softer from its own numbers (`KerfVelocity`, `KerfRecipe.renderAt`): the hit falls, the floor follows half, the previous hit's bleed stays, the top tilts down, the crack softens, the tick falls further, a kick's pitch drop shrinks. Fitted at depth 1 to the owner's ghost notes against their snares (nine loops): over the bank's 63 pads at 0.45, centroid 0.868× (ghosts 0.86×), floor against hit +5.7 dB (ghosts +5.3), tick against hit −3.5 dB (ghosts −2.2). The owner heard depth 1 as "a bit indistinguishable" and picked depth 3, the strongest of three (2026-11-20): centroid 0.730×, floor +10.6 dB, tick −10.4 dB, bleed +12.5 dB; no soft layer is a copy at another level, the nearest −16.7 dB (`KerfVelocityTest`). | Pass: measured, and heard by the owner at depth 3 ("Audition is good", 2026-11-20) |
 | Velocity (save, playback, export) | SOFT HITS on a twin writes the twin re-struck at 0.3 and 0.6, not the main take filtered (`KerfGateTest`). A twin's 3-zone × 4-take grid (`Robin.apply`) saves and reloads, `PadHit.resolve` picks the zone for all 127 velocities, MPC 2 and MPC 3 exports read back clean, and SFZ export and import keep the chain and the bytes. The owner reported phone and MPC good (2026-11-20). | Pass |
 | Round robin | Each take is the chop made again: the pad's own knife nudged by about a millisecond and a fresh noise draw, chosen among four for the band profile nearest the pad's (`KerfRecipe.take`). Takes are distinct and repeatable; after peak matching their energy spreads 0.8 dB median, 2.6 dB worst, over 48 takes. The kit's round robin keeps a twin a twin, re-cuts it under BLEED and SLOP, and its undo gives the capture back as take one (`KerfGateTest`). Heard by the owner, and played on phone and MPC: "Audition is good, phone/mpc is good" (2026-11-20). | Pass |
-| Drum genre kits | None authored. | Open (round 4) |
-| Percussion roll/riser | None. | Open (round 4, if the kits want one) |
+| Drum genre kits | Four on the shelf under SKINS: KERF DUST (88 BPM), SOUL (94), FUNK (104) and STOMP (84). Each draws most of its hits from a different loop's bank and sets its own tuning, decay, wash, bleed and knife. Every pair shares at most three of fourteen hits and has a different lead kick, lead snare and tempo (`KerfKitsTest`). Each pad is 3 zones × 4 takes through saving, reloading, `PadHit.resolve` and MPC 3 export (`KerfKitTest`; `:shell:generateKerfKits` verifies all 64 pads). | Pass in software; not yet heard (audition sent 2026-11-20) |
+| Percussion roll/riser | Every kit: A15 a roll (sixteen strikes accelerating over one bar, each a fresh take), A16 a riser (twenty-four strikes tightening over one bar, rising seven semitones). Saved, played and exported with their grids (`KerfKitTest`). | Built, not heard |
 | Melodic, keygroups, chords, HOLD, STRUM | Not applicable: one-shot drum hits. | Not applicable |
 
-Nothing here is a completion claim: the drum gate's genre kits are round 4. The owner has heard the twins (2026-11-18, 2026-11-19, 2026-11-20) and the velocity layers and takes at depth 3, and reported phone and MPC good (2026-11-20).
+Nothing here is a completion claim: the engine's presets, the four kits, their rolls and risers wait for the owner's listen and hardware. The owner has heard the twins (2026-11-18, 2026-11-19, 2026-11-20) and the velocity layers and takes at depth 3, and reported phone and MPC good (2026-11-20).

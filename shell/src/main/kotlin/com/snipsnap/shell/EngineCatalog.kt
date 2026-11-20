@@ -158,6 +158,7 @@ object EngineCatalog {
         "KINDRED" to EngineEntry(listOf(EngineCategory.DRUMS), "One analog voice re-struck: diving kicks, zaps, FM toms"),
         "RIDDIM" to EngineEntry(listOf(EngineCategory.DRUMS), "Dancehall drums: booms, ratchet, ting, woods and bronze"),
         "CAIRN" to EngineEntry(listOf(EngineCategory.BELLS, EngineCategory.DRUMS), "Stones that knock, tumble, grind, sing and roll in a bowl"),
+        "KERF" to EngineEntry(listOf(EngineCategory.DRUMS), "Synthetic chops: break hits rebuilt with bleed and slop"),
     )
 
     /** The entry for the engine constant [name], or null for a name the catalogue does not know. */

@@ -77,6 +77,7 @@ object Patches {
             SambaPatch.ENGINE -> SambaPatch.fromJsonValue(value)
             DrumlinePatch.ENGINE -> DrumlinePatch.fromJsonValue(value)
             SootPatch.ENGINE -> SootPatch.fromJsonValue(value)
+            KerfPatch.ENGINE -> KerfPatch.fromJsonValue(value)
             TinesPatch.ENGINE -> TinesPatch.fromJsonValue(value)
             PluckPatch.ENGINE -> PluckPatch.fromJsonValue(value)
             TonewheelPatch.ENGINE -> TonewheelPatch.fromJsonValue(value)

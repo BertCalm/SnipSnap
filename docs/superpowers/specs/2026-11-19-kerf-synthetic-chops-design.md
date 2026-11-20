@@ -4,10 +4,11 @@ Version 1.0 · 2026-11-19
 
 Status: rounds 1 to 3 built (the renderer and fitter, the kit action and its command, the pad
 sheet's SYNTH TWIN, SYNTH TWIN ALL with BLEED and SLOP, and velocity and round robin; see "As
-built" at the end, and KERF's row in docs/ENGINE_ACCEPTANCE_GATES.md). The engine (round 4) is
-not written. Heard by the owner: the Python prototype, the round-1 Kotlin page ("Sounds good,
-continue", 2026-11-19) and the round-2 loop-to-kit page ("Audition is fine", 2026-11-20). The
-velocity layers and takes have not been heard, and nobody has made a twin on a phone. KERF is a
+built" at the end, and KERF's row in docs/ENGINE_ACCEPTANCE_GATES.md). The engine and its four
+genre kits (round 4) are built, not yet heard. Heard by the owner: the Python prototype, the
+round-1 Kotlin page ("Sounds good, continue", 2026-11-19), the round-2 loop-to-kit page
+("Audition is fine", 2026-11-20), and the round-3 velocity layers and takes, also on phone and
+MPC ("Audition is good, phone/mpc is good", 2026-11-20). KERF is a
 working name (a kerf is the sliver a saw removes); no maker or product is named by it.
 
 Owner decisions, 2026-11-19 ("I take your recommendations proceed"): the patch format is
@@ -420,8 +421,9 @@ a layer is not always a separate drum.
 - **R3.** Built. Velocity and round robin through the app's own doors (SOFT HITS, the zone grid,
   the kit's round robin). Gate, met: the owner heard the layers at depth 3 and the takes, and
   played them on phone and MPC ("Audition is good, phone/mpc is good", 2026-11-20).
-- **R4.** Engine registration, voices and presets after listening, genre kits, audition,
-  docs. Gate: the drum gate (multiple distinct genre kits on the shelf).
+- **R4.** Built: engine registration, six voices, 27 presets, four genre kits with a roll and a
+  riser, the audition, docs. Gate, open: the owner hears the kits and presets (the drum gate:
+  multiple distinct genre kits on the shelf).
 
 ## 18. Sonic risks
 
@@ -843,3 +845,57 @@ to the owner, who picked "strongest". `DEPTH` is 3.
 every row and is still a strike, not a copy. Heard: depth chosen by ear from the audition, then
 the whole round-3 page at depth 3, and the layers and takes on phone and MPC: "Audition is good,
 phone/mpc is good" (2026-11-20).
+
+## As built: round 4, the engine and its genre kits (2026-11-20)
+
+KERF is a registered drum engine in the house shape: a voice and its macros (`Kerf.kt`,
+`KerfPatch.kt`), as decision A (section 6) said. The voices point at the bank's fitted numbers;
+a pad made from a capture keeps its own numbers in the pad recipe, as before.
+
+- **Voices.** KICK, SNARE, GHOST (filed as SNARE), HAT (HAT_CLOSED), HAT_OPEN and PERC (the
+  bank's percussion and stacked hits). Each is a pool of the bank's hits of that kind, in kit
+  then pad order: 16, 15, 6, 11, 10 and 5, 63 in all. The one hit over 1.2 s (a 3.3 s snare)
+  is left out, so every render stays under the 1.5 s loop threshold.
+- **Six controls.** HIT picks a hit of the pool. TUNE moves it ±7 semitones. DECAY scales
+  every decay ×0.35 to ×2.8. FLOOR sets the wash from none to 4× the fit, in power. BLEED sets
+  the previous hit's tail from none to 2× the fit. SLOP sets how far off the knife lands. At the
+  defaults (TUNE, DECAY, FLOOR, BLEED and SLOP at 0.5) a hit is the bank pad as the owner heard
+  it. No HOLD.
+- **One sound path.** Every render is `KerfRecipe.take`: velocity is `KerfVelocity` at depth 3,
+  and a take is a fresh cut. The engine adds one thing, a level. One gain per setting puts the
+  loudest of the four full-velocity takes at 0.89 peak, and every velocity and take shares it.
+  The first version levelled take 0 alone, and the shell proof caught takes clipping: a fresh
+  knife can peak up to 1.5× take 0 (a ghost note cut into the kick before it).
+- **Registration.** `Patches` decode; both `Velocity` arms; `Restrike`; `SynthRoot`;
+  `UserPresets.rosterLine`; `PatchTypes.PROTOTYPES` with `KerfPresets`; `PatchesTest`,
+  `PadRecipeTest` and `DeterminismTest`. It is last on the SYNTH picker with an on-device test
+  (`NewEngineSynthScreenTest`), and `EngineCatalog` lists it under DRUMS. The picker now has 100
+  engines.
+- **Presets (27, not yet heard).** Each is one pool hit, named for what it measures. A preset
+  is only a hit that KERF's own labeller (`KerfFit.label`) files as its kind when the engine
+  renders it. The loops' hats are dark, so about half the hat pool labels as SNARE. Kit A's loud
+  open hats are cymbals over a kick or snare. Those hits stay on HIT and are not presets. The app's
+  capture classifier is not the judge, as the owner decided on 2026-11-19: it calls most of these
+  kicks PERC and most of these hats SNARE.
+- **Four genre kits (`KerfKits`).** Each takes most of its hits from one loop's bank and sets
+  its own tempo, tuning, decay, wash, bleed and knife:
+  - DUST: 88 BPM, kit B, a loose knife and heavy bleed.
+  - SOUL: 94 BPM, kit D, as measured.
+  - FUNK: 104 BPM, kit A, a clean knife and little bleed.
+  - STOMP: 84 BPM, kit C, the wash pushed and the knife sloppiest.
+
+  Every pair shares at most three of fourteen hits and has a different lead kick, lead snare and
+  tempo (`KerfKitsTest`). Each kit's A01 to A14 are hits. A15 is a roll: sixteen strikes
+  accelerating over one bar, each a fresh take. A16 is a riser: twenty-four strikes tightening
+  over one bar, from five semitones under to two over. Every pad is 3 touch zones × 4 takes,
+  scaled by one gain so its loudest cell sits at the pad's level. Hats and ghosts sit 6 to 9 dB
+  under the kick and snare, and nothing clips.
+- **Proof.** `KerfKitTest` (shell) builds all four kits. Each pad's level is checked; a hit, the
+  roll and the riser of every kit go through saving, reloading, `PadHit.resolve` (zone by
+  velocity, takes in order, then repeat) and MPC 3 export. `:shell:generateKerfKits` verifies all
+  64 pads (768 slices) the same way and writes the listening pack. `:synth:generateKerfEngineAudition`
+  renders the presets.
+- **Not yet.** The owner has not heard the engine's presets, the four kits, the roll or the
+  riser. The audition page went to the owner on 2026-11-20. Hardware playback of these kits is
+  open.
+
