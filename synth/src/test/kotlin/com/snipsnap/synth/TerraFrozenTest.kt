@@ -24,7 +24,7 @@ class TerraFrozenTest {
     fun `the frozen copy's macro table is today's`() {
         for (voice in TerraCases.FROZEN_VOICES) assertEquals(LegacyTerraBank.macrosFor(voice), Terra.macrosFor(voice), voice.name)
         assertEquals(listOf(TerraVoice.BOX, TerraVoice.SLAP, TerraVoice.DAYAN, TerraVoice.DARBUKA, TerraVoice.DOUM, TerraVoice.DJEMBE, TerraVoice.DHOLAK, TerraVoice.BAYAN, TerraVoice.TUN,
-            TerraVoice.ODAIKO, TerraVoice.NAGADO, TerraVoice.SHIME, TerraVoice.KA, TerraVoice.KANE, TerraVoice.CHAPPA, TerraVoice.BINZASARA, TerraVoice.COWBELL, TerraVoice.WATER_DRUM),
+            TerraVoice.ODAIKO, TerraVoice.NAGADO, TerraVoice.SHIME, TerraVoice.KA, TerraVoice.KANE, TerraVoice.CHAPPA, TerraVoice.BINZASARA, TerraVoice.COWBELL, TerraVoice.WATER_DRUM, TerraVoice.FAN),
             TerraVoice.entries - TerraCases.FROZEN_VOICES, "the voices that came after the freeze")
     }
 

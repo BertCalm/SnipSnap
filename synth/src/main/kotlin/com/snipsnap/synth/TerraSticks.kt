@@ -48,7 +48,7 @@ import kotlin.math.sqrt
 internal object TerraSticks {
 
     val VOICES = setOf(TerraVoice.ODAIKO, TerraVoice.NAGADO, TerraVoice.SHIME, TerraVoice.KA, TerraVoice.KANE,
-        TerraVoice.CHAPPA, TerraVoice.BINZASARA, TerraVoice.COWBELL, TerraVoice.WATER_DRUM)
+        TerraVoice.CHAPPA, TerraVoice.BINZASARA, TerraVoice.COWBELL, TerraVoice.WATER_DRUM, TerraVoice.FAN)
 
     /** Under the classifier's 1.5 s, past which a render is filed as a phrase ([TerraFitted.SECONDS]). */
     private fun seconds(voice: TerraVoice): Double = when (voice) {
@@ -56,7 +56,7 @@ internal object TerraSticks {
         TerraVoice.NAGADO -> 1.2
         TerraVoice.KANE -> 1.0
         TerraVoice.SHIME, TerraVoice.WATER_DRUM -> 0.8
-        TerraVoice.KA, TerraVoice.BINZASARA -> 0.5
+        TerraVoice.KA, TerraVoice.BINZASARA, TerraVoice.FAN -> 0.5
         else -> error("$voice is not a TERRA stick voice")
     }
 
@@ -85,6 +85,8 @@ internal object TerraSticks {
             // SHAKE: 1 the measured train (strikes at 0, 139 and 345 ms, a rebound at 708), 0 one
             // strike. DAMP: a hand on the bell, its ring from full (0) to a quarter (1).
             TerraVoice.COWBELL -> listOf(MacroSpec("SHAKE", 1f), MacroSpec("DAMP", 0f))
+            // SWEEP: 0 the slap (twelve flaps dying away over 106 ms), 1 the swish (sixteen swelling over 123 ms).
+            TerraVoice.FAN -> listOf(MacroSpec("SWEEP", 0f))
             TerraVoice.NAGADO, TerraVoice.KA, TerraVoice.CHAPPA, TerraVoice.WATER_DRUM -> emptyList()
             else -> error("$voice is not a TERRA stick voice")
         }
@@ -107,12 +109,29 @@ internal object TerraSticks {
         return listOfNotNull(if (x < 1.0) Played(a, 1.0 - x) else null, if (x > 0.0) Played(b, x) else null)
     }
 
-    private fun played(voice: TerraVoice, m: Map<String, Float>): List<Played> = when (voice) {
+    /**
+     * How far a soft strike on the gong's edge reaches its centre: at [velocity] 1 the edge stroke as fitted, at the
+     * softest a third of the way to the centre stroke. A longer, softer contact brings out a plate's low modes against its
+     * high ones, and the edge stroke's own notes sit in one narrow band (3.4 to 7.6 kHz) that no tilt among themselves can
+     * darken: measured, every tilt tried moved its onset brightness by -2 to +1 %. Analogy, not simulated: the centre
+     * stroke's notes stand in for the plate's low modes. Shape: [EDGE_SOFT_REACH].
+     */
+    private fun kaneEdge(m: Map<String, Float>, velocity: Double): Float =
+        (m.getValue("EDGE") * (1.0 - EDGE_SOFT_REACH * (1.0 - velocity))).toFloat()
+
+    /** The share of the centre stroke a strike at velocity 0 brings to an edge stroke ([kaneEdge]). Shape. */
+    private const val EDGE_SOFT_REACH = 0.45
+
+    /**
+     * The strokes [voice] sounds at [m] struck at [velocity]. [velocity] moves only KANE's edge ([kaneEdge]), and not
+     * under HIT ([fixedStrokes]), whose level curves are built from the full-velocity strokes.
+     */
+    private fun played(voice: TerraVoice, m: Map<String, Float>, velocity: Double = 1.0, fixedStrokes: Boolean = false): List<Played> = when (voice) {
         TerraVoice.ODAIKO -> blend(TerraSticksTables.ODAIKO_A, TerraSticksTables.ODAIKO_B, m.getValue("DRUM"))
         TerraVoice.NAGADO -> listOf(Played(TerraSticksTables.NAGADO, 1.0))
         TerraVoice.SHIME -> blend(TerraSticksTables.SHIME, TerraSticksTables.SHIME_B, m.getValue("STROKE"))
         TerraVoice.KA -> listOf(Played(TerraSticksTables.KA, 1.0))
-        TerraVoice.KANE -> blend(TerraSticksTables.KANE, TerraSticksTables.KANE_EDGE, m.getValue("EDGE"))
+        TerraVoice.KANE -> blend(TerraSticksTables.KANE, TerraSticksTables.KANE_EDGE, if (fixedStrokes) m.getValue("EDGE") else kaneEdge(m, velocity))
         TerraVoice.CHAPPA -> listOf(Played(TerraSticksTables.CHAPPA, 1.0))
         TerraVoice.BINZASARA -> listOf(Played(TerraSticksTables.CLAPPER, 1.0, timeScale = 2.0.pow((m.getValue("SPREAD") - 0.5) * 2.0)))
         TerraVoice.COWBELL -> {
@@ -121,6 +140,7 @@ internal object TerraSticks {
             listOf(Played(TerraSticksTables.COWBELL, 1.0, timeScale = shake, ringScale = 1.0 - 0.75 * m.getValue("DAMP"), othersLevel = shake))
         }
         TerraVoice.WATER_DRUM -> listOf(Played(TerraSticksTables.WATER, 1.0))
+        TerraVoice.FAN -> blend(TerraSticksTables.FAN, TerraSticksTables.FAN_SWEEP, m.getValue("SWEEP"))
         else -> error("$voice is not a TERRA stick voice")
     }
 
@@ -167,7 +187,7 @@ internal object TerraSticks {
         val tune = tuneRatio(m); val decay = decayScale(m)
         val widthScale = 2.0.pow((0.5 - m.getValue("FORCE")) * 2.0)
         val attack = 10.0.pow((m.getValue("ATTACK") - 0.5) * 18.0 / 20.0)
-        val strokes = played(voice, m)
+        val strokes = played(voice, m, v, fixedStrokes = level != null)
         val nModes = strokes.sumOf { it.stroke.hz.size }
         if (level != null) require(level.size == nModes && level.all { it.isNotEmpty() }) { "a level curve per mode ($nModes), each at least one value long" }
         // a take's own landing: three uniform draws summed have unit deviation, so `spread` is the log's deviation

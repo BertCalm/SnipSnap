@@ -16,6 +16,12 @@ import com.snipsnap.kit.ArrangedPad
  *   a big-drum riser.
  * - **BON** (dance, 115 BPM): the water drum and the shaken clapper bell lead, the small drum and a soft
  *   barrel drum under them, the slats as the shaker, a slat roll and a bell riser. No odaiko.
+ * - **DUSK** (processed, 90 BPM): the owner's references include delayed and granular versions of these
+ *   instruments, so this kit is built around the rack ([FxChain]). The odaiko rewound and in a large room,
+ *   echoes timed near the references' 90 BPM (TIME 0.66, about 250 ms, a dotted sixteenth; TIME 0.94, about
+ *   333 ms, an eighth), the shime smeared into a spring, the rim through tape, the fan ghosted, the water drum
+ *   dubbed. The rack has no granular section; REWIND's reversed windows and SMEAR stand in for the
+ *   references' granular smear, which is an approximation, not that effect.
  *
  * Every pad carries three touches (a third, two thirds and all of a full strike: [TOUCHES]) and
  * [TAKES] takes per touch. A touch is a different strike, not a quieter copy: each is rendered at its
@@ -34,6 +40,7 @@ object TerraStickKits {
         MATSURI("terra-matsuri", "TERRA MATSURI", 90),
         THUNDER("terra-thunder", "TERRA THUNDER", 70),
         BON("terra-bon", "TERRA BON", 115),
+        DUSK("terra-dusk", "TERRA DUSK", 90),
     }
 
     const val TAKES = 4
@@ -118,11 +125,40 @@ object TerraStickKits {
         pad("Bell Riser", BELL, RISER, "SHAKE" to 0f),
     )
 
+    private val FAN = TerraVoice.FAN
+
+    /** The rack's settings for an echo: TIME 0.66 is about 250 ms (a dotted sixteenth at 90 BPM), 0.94 about 333 ms (an eighth). */
+    private fun echo(time: Float, repeat: Float, tone: Float, mix: Float) = mapOf("TIME" to time, "REPEAT" to repeat, "TONE" to tone, "MIX" to mix)
+
+    /** DUSK: each pad's recipe and the chain baked into every one of its zone samples. Every recipe differs from every other kit's. */
+    private fun dusk(): List<Pair<TerraPatch, FxChain>> = listOf(
+        pad("Odaiko Rewind", ODAIKO, HIT, "DRUM" to .5f, "DECAY" to .7f) to FxChain(rewind = mapOf("MIX" to .8f, "TIME" to .55f, "REPEAT" to .3f)),
+        pad("Odaiko Hall", ODAIKO, HIT, "DRUM" to 0f, "DECAY" to .8f, "TUNE" to .4f) to FxChain(room = mapOf("SIZE" to .85f, "WALLS" to .4f, "DISTANCE" to .75f)),
+        pad("Don Echo", NAGADO, HIT, "TUNE" to .45f, "DECAY" to .4f) to FxChain(echo = echo(.66f, .5f, .6f, .4f)),
+        pad("Don Ghost", NAGADO, HIT, "TUNE" to .3f, "DECAY" to .6f) to FxChain(ghost = mapOf("AMOUNT" to .7f), room = mapOf("SIZE" to .6f, "WALLS" to .5f, "DISTANCE" to .7f)),
+        pad("Ten Echo", SHIME, HIT, "STROKE" to 0f, "DECAY" to .4f) to FxChain(echo = echo(.66f, .35f, .55f, .35f)),
+        pad("Ten Smear", SHIME, HIT, "STROKE" to 1f, "TUNE" to .4f) to FxChain(smear = mapOf("AMOUNT" to .8f, "FLOOR" to 0f), spring = mapOf("SIZE" to .5f, "TONE" to .5f, "MIX" to .4f)),
+        pad("Ka Echo", KA, HIT, "DECAY" to .3f, "ATTACK" to .7f) to FxChain(echo = echo(.3f, .6f, .7f, .45f)),
+        pad("Ka Tape", KA, HIT, "TUNE" to .3f, "DECAY" to .6f) to FxChain(tape = mapOf("WOBBLE" to .5f, "DRIVE" to .4f, "AGE" to .6f), echo = echo(.45f, .3f, .4f, .3f)),
+        pad("Chan Echo", KANE, HIT, "EDGE" to 0f, "DECAY" to .6f) to FxChain(echo = echo(.94f, .55f, .4f, .45f)),
+        pad("Chiki Echo", KANE, HIT, "EDGE" to 1f, "DECAY" to .4f) to FxChain(echo = echo(.66f, .5f, .5f, .4f)),
+        pad("Cymbal Spring", CHAPPA, HIT, "DECAY" to .6f, "FORCE" to .4f) to FxChain(spring = mapOf("SIZE" to .7f, "TONE" to .45f, "MIX" to .5f)),
+        pad("Fan Ghost", FAN, HIT, "SWEEP" to 1f, "DECAY" to .7f) to FxChain(ghost = mapOf("AMOUNT" to .6f), room = mapOf("SIZE" to .7f, "WALLS" to .3f, "DISTANCE" to .8f)),
+        pad("Bell Echo", BELL, HIT, "SHAKE" to 0f, "DECAY" to .4f) to FxChain(echo = echo(.66f, .45f, .5f, .35f)),
+        pad("Water Dub", WATER, HIT, "TUNE" to .4f, "DECAY" to .6f) to FxChain(dub = mapOf("GENERATIONS" to .6f), echo = echo(.94f, .35f, .35f, .3f)),
+        pad("Ten Roll Echo", SHIME, ROLL, "STROKE" to 1f, "DECAY" to .4f) to FxChain(echo = echo(.66f, .3f, .55f, .3f)),
+        pad("Odaiko Swell", ODAIKO, RISER, "DRUM" to .3f, "DECAY" to .6f) to FxChain(room = mapOf("SIZE" to .9f, "WALLS" to .4f, "DISTANCE" to .7f)),
+    )
+
+    /** The chain baked into [kit]'s pad [index], or null for a dry kit. */
+    fun fxFor(kit: Kit, index: Int): FxChain? = if (kit == Kit.DUSK) dusk()[index].second else null
+
     /** The sixteen recipes of [kit], in MPC pad order A01 to A16. */
     fun patches(kit: Kit): List<TerraPatch> = when (kit) {
         Kit.MATSURI -> matsuri()
         Kit.THUNDER -> thunder()
         Kit.BON -> bon()
+        Kit.DUSK -> dusk().map { it.first }
     }
 
     /**
@@ -132,22 +168,30 @@ object TerraStickKits {
     private fun muteGroup(kit: Kit, name: String): Int = when (kit) {
         Kit.MATSURI -> if (name == "Chappa" || name == "Chappa Choke") 1 else 0
         Kit.BON -> if (name.startsWith("Bell ") && name != "Bell Riser") 1 else 0
-        Kit.THUNDER -> 0
+        Kit.THUNDER, Kit.DUSK -> 0
     }
 
-    /** One zone sample: [patch] as kit take [take] at [velocity], a softer touch peak-matched to its take's hard hit. Pure. */
-    fun render(patch: TerraPatch, velocity: Float, take: Int): Snip {
+    /**
+     * One zone sample: [patch] as kit take [take] at [velocity], through [fx] when the kit bakes one, a softer touch
+     * peak-matched to its take's processed hard hit. The strike is softened before the chain, so a soft touch is a
+     * softer strike through the same rack, not a quieter echo. Pure.
+     */
+    fun render(patch: TerraPatch, velocity: Float, take: Int, fx: FxChain? = null): Snip {
         require(velocity in TOUCHES && take in 0 until TAKES) { "a touch in $TOUCHES and a take in 0 until $TAKES" }
-        val hard = patch.render(1f, take)
-        return if (velocity == 1f) hard else Velocity.peakMatch(hard, patch.render(velocity, take))
+        val hard = processed(patch.render(1f, take), fx)
+        return if (velocity == 1f) hard else Velocity.peakMatch(hard, processed(patch.render(velocity, take), fx))
     }
+
+    private fun processed(snip: Snip, fx: FxChain?): Snip = fx?.process(snip) ?: snip
 
     /** The sixteen pads of [kit], each [TOUCHES] by [TAKES] zone samples. */
     fun build(kit: Kit): List<ArrangedPad> {
         val patches = patches(kit)
-        val grids = patches.parallelStream().map { p ->
-            val hard = List(TAKES) { t -> p.render(1f, t) }
-            TOUCHES.map { v -> List(TAKES) { t -> if (v == 1f) hard[t] else Velocity.peakMatch(hard[t], p.render(v, t)) } }
+        val chains = patches.indices.map { fxFor(kit, it) }
+        val grids = patches.indices.toList().parallelStream().map { i ->
+            val p = patches[i]; val fx = chains[i]
+            val hard = List(TAKES) { t -> processed(p.render(1f, t), fx) }
+            TOUCHES.map { v -> List(TAKES) { t -> if (v == 1f) hard[t] else Velocity.peakMatch(hard[t], processed(p.render(v, t), fx)) } }
         }.toList()
         return patches.indices.map { i ->
             val p = patches[i]
@@ -166,7 +210,7 @@ object TerraStickKits {
                     "recipe" to p.toJsonText(),
                     "roundRobin" to "$TAKES takes per touch: renderer takes 0 to ${TAKES - 1}, each the voice's own next landing",
                     "roundRobinVersion" to VERSION.toString(),
-                ),
+                ) + (chains[i]?.let { mapOf("fx" to it.toJsonText()) } ?: emptyMap()),
             )
         }
     }

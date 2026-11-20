@@ -26,7 +26,7 @@ class TerraPresetsTest {
             else assertEquals(4, presets.size, voice.name)
             assertTrue(presets.all { it.voice == voice })
         }
-        assertEquals(84, TerraPresets.all().size)      // 48 kept and pinned below, and the nine stick voices' 36 (provisional, docs/TERRA_STICKS.md)
+        assertEquals(88, TerraPresets.all().size)      // 48 kept and pinned below, and the ten stick voices' 40 (provisional, docs/TERRA_STICKS.md)
     }
 
     @Test fun `names are unique and fit a pad label`() {
@@ -38,7 +38,7 @@ class TerraPresetsTest {
     @Test fun `every new preset spells out all its voice's macros and is a different sound from every kept pad`() {
         val kept = TerraPresets.kept().toSet()
         val fresh = TerraPresets.all().filter { it !in kept }
-        assertEquals(68, fresh.size)      // 32 on the first twelve voices, 36 on the stick voices
+        assertEquals(72, fresh.size)      // 32 on the first twelve voices, 40 on the stick voices
         for (p in fresh) {
             assertEquals(Terra.macrosFor(p.voice).map { it.name }.toSet(), p.macros.keys, "${p.name} names every macro")
             assertTrue(p.macros.values.all { it in 0f..1f }, p.name)

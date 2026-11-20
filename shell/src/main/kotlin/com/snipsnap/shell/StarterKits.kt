@@ -1236,6 +1236,11 @@ object StarterKits {
             "Japanese dance percussion: water drum, shaken cowbell, small drum, hand gong and slats, a slat roll and a bell riser. Three touch levels and four takes.",
             seeded = false, tempoBpm = com.snipsnap.synth.TerraStickKits.Kit.BON.bpm.toFloat(),
         ) { com.snipsnap.synth.TerraStickKits.build(com.snipsnap.synth.TerraStickKits.Kit.BON) },
+        Starter(
+            com.snipsnap.synth.TerraStickKits.Kit.DUSK.id, "TERRA DUSK",
+            "Processed Japanese percussion: rewound and roomy odaiko, echoed drums, rim and gong, a smeared small drum, a ghosted fan, a dubbed water drum. Three touch levels and four takes.",
+            seeded = false, tempoBpm = com.snipsnap.synth.TerraStickKits.Kit.DUSK.bpm.toFloat(),
+        ) { com.snipsnap.synth.TerraStickKits.build(com.snipsnap.synth.TerraStickKits.Kit.DUSK) },
     )) + com.snipsnap.synth.SideroomKits.Kit.entries.map { kit ->
         Starter(kit.id, "SIDEROOM ${kit.title.uppercase(java.util.Locale.ROOT)}",
             "Synthesized ${kit.title} drums: eight instruments, a snare roll and a drum fill. Three strike strengths and three alternate hits.",

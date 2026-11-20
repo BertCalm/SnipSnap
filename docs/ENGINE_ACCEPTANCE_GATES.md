@@ -1274,19 +1274,19 @@ Nothing here is a completion claim. A passing `ConsortTest` and an audition page
 
 ## TERRA stick voices: Japanese kits (2026-11-20, kits round 1)
 
-Nine TERRA voices (ODAIKO, NAGADO, SHIME, KA, KANE, CHAPPA, BINZASARA, COWBELL,
-WATER_DRUM) picked by ear from Python renders over six rounds; details in
+Ten TERRA voices (ODAIKO, NAGADO, SHIME, KA, KANE, CHAPPA, BINZASARA, COWBELL,
+WATER_DRUM, FAN), the first nine picked by ear from Python renders over six rounds; details in
 [TERRA_STICKS](TERRA_STICKS.md).
 
 | Gate | Status |
 |---|---|
 | Melodic, keygroups, chord tools, STRUM | Not applicable: drum and percussion voices |
 | Percussion: authored roll/riser | Implemented (ROLL and RISER saved in the recipe; seven pads). Listening not yet done |
-| Drums: multiple distinct genre kits | Implemented: TERRA MATSURI, THUNDER and BON. Listening not yet done |
+| Drums: multiple distinct genre kits | Implemented: TERRA MATSURI, THUNDER, BON and the processed DUSK. The owner liked the first three on a first listen of the app's renders ("These are cool", 2026-11-20); not approved pad by pad; DUSK not yet heard |
 | Velocity levels | Pass, automated: timbral touches through render, save, MPC 3, MPC 2, SFZ and playback (`TerraStickKitsTest`, `TerraStickKitsRoundTripTest`) |
 | Round robin | Pass, automated: four takes per touch through render, save, MPC 3, SFZ and playback; MPC 2 keeps each zone's first take under the owner's 2026-11-14 format limit |
 | Hardware | Not attempted |
 
-Not engine-complete: nobody has heard the app's renders, and no phone or MPC has
-played the kits.
+Not engine-complete: no phone or MPC has played the kits, and the fan, the soft
+edge stroke and TERRA DUSK have not been heard.
 

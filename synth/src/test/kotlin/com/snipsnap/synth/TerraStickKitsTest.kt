@@ -155,4 +155,24 @@ class TerraStickKitsTest {
             }
         }
     }
+
+    /**
+     * DUSK bakes a chain into every zone sample: each pad's source carries the chain, the chain reloads, and every pad
+     * differs from the same recipe dry. A soft touch is the softer strike through the same chain, so it is still darker.
+     */
+    @Test fun `DUSK is processed on every pad, its chain saved beside its recipe`() {
+        val k = TerraStickKits.Kit.DUSK
+        val patches = TerraStickKits.patches(k)
+        for ((i, p) in patches.withIndex()) {
+            val fx = kotlin.test.assertNotNull(TerraStickKits.fxFor(k, i), p.name)
+            assertEquals(fx, FxChain.fromJsonText(fx.toJsonText()))
+            val wet = TerraStickKits.render(p, 1f, 0, fx).samples
+            val dry = TerraStickKits.render(p, 1f, 0).samples
+            assertFalse(wet.contentEquals(dry), "${p.name} is not processed")
+            assertTrue(distance(dry, wet) > 0.05, "${p.name}: the chain moves the render by ${distance(dry, wet)}")
+        }
+        for (other in TerraStickKits.Kit.entries - k) for (i in 0 until 16) assertEquals(null, TerraStickKits.fxFor(other, i), "${other.id} is dry")
+        val pad = TerraStickKits.build(k).first()
+        assertEquals(TerraStickKits.fxFor(k, 0), FxChain.fromJsonText(pad.source.getValue("fx")))
+    }
 }

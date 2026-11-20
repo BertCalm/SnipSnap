@@ -66,6 +66,8 @@ internal object TerraRolls {
         TerraVoice.BINZASARA -> Triple(5.0, 2.0, 7.0)
         TerraVoice.COWBELL -> Triple(8.0, 3.0, 10.0)
         TerraVoice.WATER_DRUM -> Triple(10.0, 4.0, 14.0)
+        // each stroke is itself a 106 to 123 ms flutter of flaps
+        TerraVoice.FAN -> Triple(6.0, 2.0, 8.0)
         else -> error("$voice is not a TERRA stick voice")
     }
 
