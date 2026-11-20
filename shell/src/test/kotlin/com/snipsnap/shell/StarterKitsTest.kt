@@ -448,8 +448,8 @@ class StarterKitsTest {
                         val patch = assertIs<AccordPatch>(com.snipsnap.synth.Patches.fromJsonText(pad.source.getValue("recipe")))
                         assertEquals(kept[pad.slot - 1], patch, "${pad.displayName}: the kept ACCORD recipe")
                         assertEquals(Accord.drumClassFor(patch), pad.drumClass)
-                        assertEquals(listOf(4, 4, 4), pad.chain?.zones?.map { it.cycle })
-                        assertEquals(12, pad.chain?.boundaries?.size)
+                        assertEquals(listOf(2, 2, 2), pad.chain?.zones?.map { it.cycle })
+                        assertEquals(6, pad.chain?.boundaries?.size)
                         assertTrue(pad.oneShot)
                     }
                     assertEquals(setOf("BRUSH", "WOOD", "TINE"), kit.pads.map { it.source["voice"] }.toSet())

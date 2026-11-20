@@ -23,7 +23,9 @@ import kotlin.test.*
  * ACCORD TAKES, the opt-in round robin for the kept ACCORD starter, whose passage-offset takes the
  * owner kept by ear in accord-rr-1 (19 Nov 2026): the grid through the shelf, saving, reloading,
  * preflight, the app's pad resolver and both MPC exports, read back from the files each step wrote.
- * MPC 3 carries every take; MPC 2 keeps each touch's first take (the recorded format limit).
+ * Each touch deals two takes (engine takes 0 and 2; four made the kit about 245 MB and ran the
+ * insert-card test out of memory). MPC 3 carries both; MPC 2 keeps each touch's first take (the
+ * recorded format limit).
  */
 class AccordRoundRobinStarterTest {
     private val id = AccordRoundRobinKits.ID
@@ -73,7 +75,7 @@ class AccordRoundRobinStarterTest {
                 assertEquals(kept[i].muteGroup ?: com.snipsnap.audio.AutoPlace.muteGroupFor(pad.drumClass), pad.muteGroup)
                 val zones = assertNotNull(pad.chain?.zones)
                 assertEquals(listOf(0 to 41, 42 to 84, 85 to 127), zones.map { it.velStart to it.velEnd })
-                assertEquals(listOf(4, 4, 4), zones.map { it.cycle })
+                assertEquals(listOf(2, 2, 2), zones.map { it.cycle })
                 val wav = WavReader.read(dir.resolve(pad.sampleFile))
                 assertEquals(1, wav.channels)
                 assertEquals(44_100, wav.sampleRate)
@@ -81,9 +83,9 @@ class AccordRoundRobinStarterTest {
                     val velocity = (zone.velStart + zone.velEnd) / 2f / 127f
                     val hits = List(8) { assertNotNull(PadHit.resolve(pad, velocity, it) { wav.frameCount.toLong() }) }
                     val starts = hits.map { it.startFrame }
-                    // Takes 1, 2, 3, 4, then 1 again: the zone's four slices in chain order.
-                    assertEquals((0 until 4).map { pad.chain!!.boundaries[zone.baseSlice + it] }, starts.take(4), "${pad.displayName} zone $z: takes 1-2-3-4")
-                    assertEquals(starts.take(4), starts.drop(4), "${pad.displayName} zone $z: the cycle repeats")
+                    // Takes 1, 2, then 1 again: the zone's two slices in chain order.
+                    assertEquals((0 until 2).map { pad.chain!!.boundaries[zone.baseSlice + it] }, starts.take(2), "${pad.displayName} zone $z: takes 1-2")
+                    assertEquals(List(4) { starts.take(2) }.flatten(), starts, "${pad.displayName} zone $z: the cycle repeats")
                     assertTrue(hits.all { it.pitchRatio == 1.0 && it.loopStartFrame == -1L })
                 }
                 // The kept touch's first hit plays the kept ACCORD pad, the engine's render, to PCM24.
@@ -95,7 +97,7 @@ class AccordRoundRobinStarterTest {
                 assertTrue(render.indices.all { abs(render[it] - wav.samples[first.startFrame.toInt() + it]) <= lsb }, "${pad.displayName}: kept pad on disk")
             }
 
-            // MPC 3: every take goes out unchanged, each touch a layer dealing its four slices.
+            // MPC 3: every take goes out unchanged, each touch a layer dealing its two slices.
             val track = Mpc3Exporter.exportTrack(saved, dir, root.resolve("mpc3"))
             TriadKitProof.verifyTrack(track.program, saved)
             val data = track.samples.first().parentFile

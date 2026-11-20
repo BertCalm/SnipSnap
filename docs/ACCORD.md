@@ -183,9 +183,15 @@ Where the takes are used:
   takes scale the saved touch, so on a pad saved below full touch those zones' later takes are
   struck softer than their first take (at a saved .75, at 75 % of its touch).
 - **ACCORD TAKES** (`accord-round-robin`), an opt-in starter right after ACCORD on the shelf: the
-  sixteen ACCORD pads, each with soft (.3), medium (.75) and hard (1) touch zones of four takes. A
+  sixteen ACCORD pads, each with soft (.3), medium (.75) and hard (1) touch zones of two takes: engine takes 0
+  and 2, the two whose pulses fall furthest apart (half a pulse spacing), the owner's choice of
+  20 Nov 2026 and the same one kept for ACCORD's keys. Four takes on every touch made each pad's
+  file twelve renders of about 9.7 s, some 31 minutes and 245 MB of PCM24 for the kit: too heavy
+  for a phone, and enough to run the insert-card test (`JCardTest`) out of memory in CI. Two takes
+  halve that, and every render in the kit is still one kept by ear. The engine, ROBIN and the pins
+  keep all four takes. A
   pad's kept sound is the first take of its own touch, sample for sample; the ACCORD starter itself
-  is unchanged. MPC 3 carries every take; MPC 2 keeps each touch's first take only, the recorded
+  is unchanged. MPC 3 carries both takes; MPC 2 keeps each touch's first take only, the recorded
   format limit (`Mpc2Limits`). The pads at notes and settings other than the heard C3 presets
   (BRUSH D#3 to F4 and TINE's Soft Attack, Bright Edge and Long Ring) are rendered by the same
   rule but were not heard with takes in accord-rr-1.
