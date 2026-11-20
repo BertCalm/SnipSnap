@@ -189,6 +189,12 @@ def confirm_attacks(drums: list[dict], rises: dict) -> tuple[int, int]:
             if attack_evidence(rises, e["t"], low=False):
                 keep.append(e)
                 continue
+            if any(0 < abs(k["t"] - e["t"]) <= SAME_HIT_S for k in d["events"]):
+                # part of the drum's own hit next to it (the merge below keeps the louder):
+                # sent to the nearest free attack instead, a snare's late layer landed 38 ms
+                # before the snare, a flam turned round (loop 90, 2026-11-20)
+                keep.append(e)
+                continue
             if e["gain"] >= SNAP_GAIN:
                 taken = [k["t"] for k in d["events"]]
                 cand = [a for a in attacks if abs(a - e["t"]) <= SNAP_S
@@ -210,6 +216,53 @@ def confirm_attacks(drums: list[dict], rises: dict) -> tuple[int, int]:
             one.append(e)
         d["events"] = one
     return moved, dropped
+
+
+TIGHTEN = {"90"}        # loops whose hits are set to the groove's own average timing (by ear)
+SLOT_S = 0.025          # a hit this close to a common position in the beat goes to it
+SLOT_MIN_HITS = 4       # ... a position at least this many hits share
+
+
+def tighten(drums: list[dict], beat_s: float, seconds: float) -> int:
+    """Set every hit to its groove's average timing. Replicating each hit's own measured time
+    copied the analysis's scatter too (a few ms between layers of one hit, more between
+    repeats); the owner heard the result as stuttery and stilted and asked for the grooves to
+    be tightened (2026-11-20). The groove's feel is kept: each hit's place within its beat is
+    grouped with the hits at the same place (a shuffle's swung off-beat lands about 55 ms after
+    the straight 16th, every time), and each group's median is that place's time. A hit more
+    than SLOT_S from any place SLOT_MIN_HITS hits share (a real ghost or drag) keeps its own
+    time. Every layer of one hit then lands on the same sample. Returns how many moved > 1 ms."""
+    ev = [e for d in drums for e in d["events"]]
+    phase = np.array([e["t"] % beat_s for e in ev])
+    order = np.sort(phase)
+    # group the phases (around the circle: a hit just before the beat belongs with the beat)
+    gaps = np.diff(np.concatenate([order, [order[0] + beat_s]]))
+    cut = int(np.argmax(gaps)) + 1                      # start after the widest empty stretch
+    ring = np.concatenate([order[cut:], order[:cut] + beat_s])
+    groups, cur = [], [ring[0]]
+    for v in ring[1:]:
+        if v - cur[-1] > SLOT_S / 2:
+            groups.append(cur); cur = []
+        cur.append(v)
+    groups.append(cur)
+    places = [float(np.median(g)) % beat_s for g in groups if len(g) >= SLOT_MIN_HITS]
+    moved = 0
+    for e in ev:
+        beat_no = np.floor(e["t"] / beat_s)
+        best = None
+        for c in places:
+            for k in (-1, 0, 1):                         # the place may be in the next beat
+                t = (beat_no + k) * beat_s + c
+                if abs(t - e["t"]) <= SLOT_S and (best is None or abs(t - e["t"]) < abs(best - e["t"])):
+                    best = t
+        if best is not None:
+            best = round(float(best % seconds), 5)
+            if abs(best - e["t"]) > 0.001:
+                moved += 1
+            e["t"] = best
+    for d in drums:
+        d["events"].sort(key=lambda e: e["t"])
+    return moved
 
 
 def drop_refires(times, gains, y, n):
@@ -379,7 +432,7 @@ def build_drum(drum_id, comps, y, times, gains, n_fired, template, n, work, stop
                         for t, g in sorted(zip(times, gains))])
 
 
-KICK_FIRST = {"113"}        # loops whose low drums are rebuilt whole (kick first), by ear
+KICK_FIRST = {"113", "90"}        # loops whose low drums are rebuilt whole (kick first), by ear
 LOW_SHARE = 0.5             # a part with more energy than this under 150 Hz is a low part
 KICK_LOUD_DB = 6.0          # hits this close to the loudest define the kick
 KICK_SWEEP = 2.5            # a kick sweeps down by more than this ratio (click and punch)
@@ -541,10 +594,15 @@ def main(ref_dir: Path, work: Path) -> None:
             drums = [rebuild(key, d, work, n) if d["features"]["low_share"] <= LOW_SHARE
                      else d for d in drums]
             drums = kick_first(key, drums, work, n, rises)
+        tightened = None
+        if key in TIGHTEN:
+            tightened = tighten(drums, 60.0 / bpm_of(name), n / RATE)
         inv[key] = dict(name=name, bpm=bpm_of(name), seconds=round(n / RATE, 5), drums=drums,
                         aligned_firings=moved)
         if confirmed:
             inv[key]["confirmed_attacks"] = dict(moved=confirmed[0], dropped=confirmed[1])
+        if tightened is not None:
+            inv[key]["tightened"] = tightened
         print(f"== {key} {name}  (firings moved onto the loop's own onsets: {moved})")
         for d in drums:
             print(f"  {d['id']:8s} {d['role']:10s} comps={d['components']} hits={d['hits']:3d} "

@@ -89,7 +89,7 @@ def robust_mean_db(envs: list[np.ndarray]) -> np.ndarray:
     return 10 * np.log10(np.median(means, axis=0) + 1e-30)
 
 
-SWELL_LOOPS = {"113"}   # loops whose layers may build after the strike (as drums.KICK_FIRST)
+SWELL_LOOPS = {"113", "90"}   # loops whose layers may build after the strike (as drums.KICK_FIRST)
 SWELL_DB = 6.0          # a band builds if it later stands this far over its first 14 ms
 
 
@@ -376,6 +376,7 @@ MODE_TO_S = 0.45         # ... to here (or the clean end)
 MODE_ORDER = 16          # matrix-pencil model order (8 complex pairs and room for noise)
 MODE_RANGE_DB = 30.0     # tones this far under the strongest are left to the noise
 MODE_FADE_S = 0.02       # the tones fade in over MODE_FROM_S - MODE_FADE_S .. MODE_FROM_S
+MODE_MIN_DECAY_S = 0.08  # a tail tone rings at least this long (time constant)
 MODE_END_DB = 8.0        # the tones stop where the reference falls this far under them
 MODE_END_FADE_S = 0.04   # ... over this long
 MODE_END_HOLD = 5        # "stays there": five 20 ms windows (the take's last ms can hold the
@@ -418,6 +419,13 @@ def tail_modes(takes: np.ndarray, clean_s: float) -> list[dict]:
     if not keep.any():
         return []
     amp = 2 * np.abs(a)
+    # a tail tone rings: one that dies within MODE_MIN_DECAY_S is the pencil standing in for a
+    # pitch still falling at MODE_FROM_S (the Alley kick goes 115 to 60 Hz from 40 to 100 ms),
+    # with huge tones that cancel each other: referred back to the strike they stood 33 dB over
+    # the kick and made it 6 dB too loud (2026-11-20). Then the pitch fall carries the tail.
+    keep &= -1 / (np.log(np.abs(z) + 1e-12) * r) >= MODE_MIN_DECAY_S
+    if not keep.any():
+        return []
     keep &= amp >= amp[keep].max() * 10 ** (-MODE_RANGE_DB / 20)
     rec = 2 * np.real(np.vander(z[keep], N, increasing=True).T @ a[keep])
     if np.sum((seg - rec) ** 2) > 0.25 * np.sum(seg ** 2):
@@ -445,6 +453,9 @@ def tail_modes(takes: np.ndarray, clean_s: float) -> list[dict]:
                           phase=round(float(np.angle(a0)), 4),
                           start_s=MODE_FROM_S - MODE_FADE_S, fade_s=MODE_FADE_S,
                           end_s=round(float(end_s), 3), end_fade_s=MODE_END_FADE_S))
+    peak = 20 * np.log10(np.abs(x[:int((PRE / RATE + MODE_FROM_S) * r)]).max() + 1e-12)
+    if any(m["amp_db"] > peak for m in modes):
+        return []   # louder than the strike itself: not a ringing tail
     return sorted(modes, key=lambda m: -m["amp_db"])
 
 
@@ -609,7 +620,10 @@ def fit_drum(drum: dict, work: Path) -> tuple[dict, dict]:
     if tone_low is not None:
         noise_db[tone_low] = FLOOR_DB
     model = dict(id=drum["id"], length_s=round(length, 3), partials=partials + modes,
-                 self_choke=extended_tail,
+                 # a kick rebuilt whole is one voice: its next hit cuts it, where its takes
+                 # were cut (the Alley kick rings 1.4 s, and with hits 0.33 s apart the
+                 # tails piled up to 96% of the groove's energy, 2026-11-20)
+                 self_choke=bool(extended_tail or is_kick),
                  noise_db=noise_db,
                  velocity=dict(tilt_db_per_oct=-2.5, decay_loss=0.15, glide_depth_loss=0.3,
                                source="house law"),

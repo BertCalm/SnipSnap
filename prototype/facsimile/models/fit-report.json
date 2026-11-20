@@ -253,90 +253,6 @@
   "low_share": 0.018,
   "length_s": 0.43
  },
- "90-d0": {
-  "id": "90-d0",
-  "distance_db": 2.12,
-  "best_pass": 3,
-  "first_distance_db": 3.11,
-  "glide": null,
-  "steady_partials": 0,
-  "low_share": 0.084,
-  "length_s": 0.52
- },
- "90-d1": {
-  "id": "90-d1",
-  "distance_db": 5.59,
-  "best_pass": 0,
-  "first_distance_db": 5.59,
-  "glide": {
-   "f0": 78.3906891003539,
-   "f1": 31.841184910421045,
-   "tau": 0.04345455400924223,
-   "law": "exp",
-   "captured": 0.8984942585764943,
-   "root_guess": 30.9539794921875,
-   "from_hit": 0
-  },
-  "steady_partials": 1,
-  "low_share": 1.0,
-  "length_s": 1.4
- },
- "90-d2": {
-  "id": "90-d2",
-  "distance_db": 5.82,
-  "best_pass": 6,
-  "first_distance_db": 6.44,
-  "glide": null,
-  "steady_partials": 0,
-  "low_share": 0.007,
-  "length_s": 0.3
- },
- "90-d3": {
-  "id": "90-d3",
-  "distance_db": 1.6,
-  "best_pass": 2,
-  "first_distance_db": 2.61,
-  "glide": null,
-  "steady_partials": 1,
-  "low_share": 0.072,
-  "length_s": 0.78
- },
- "90-d4": {
-  "id": "90-d4",
-  "distance_db": 3.05,
-  "best_pass": 3,
-  "first_distance_db": 3.47,
-  "glide": {
-   "f0": 216.75719601776444,
-   "f1": 116.82119406040631,
-   "tau": 0.023178578724050273,
-   "law": "logexp",
-   "captured": 0.873839663284678,
-   "root_guess": 118.5985487198339,
-   "from_hit": 0
-  },
-  "steady_partials": 0,
-  "low_share": 0.387,
-  "length_s": 0.3
- },
- "90-d5": {
-  "id": "90-d5",
-  "distance_db": 6.28,
-  "best_pass": 1,
-  "first_distance_db": 7.24,
-  "glide": {
-   "f0": 116.57053735819369,
-   "f1": 45.985427817495165,
-   "tau": 0.03865230784668157,
-   "law": "exp",
-   "captured": 0.9243969124967364,
-   "root_guess": 49.12261962890625,
-   "from_hit": 2
-  },
-  "steady_partials": 5,
-  "low_share": 1.0,
-  "length_s": 0.63
- },
  "163-d0": {
   "id": "163-d0",
   "distance_db": 5.5,
@@ -723,6 +639,58 @@
   "steady_partials": 1,
   "low_share": 0.99,
   "length_s": 0.36
+ },
+ "90-d0": {
+  "id": "90-d0",
+  "distance_db": 2.08,
+  "best_pass": 2,
+  "first_distance_db": 3.08,
+  "glide": null,
+  "steady_partials": 0,
+  "tail_modes": 0,
+  "low_share": 0.084,
+  "length_s": 0.52
+ },
+ "90-d2": {
+  "id": "90-d2",
+  "distance_db": 6.86,
+  "best_pass": 6,
+  "first_distance_db": 7.82,
+  "glide": null,
+  "steady_partials": 0,
+  "tail_modes": 0,
+  "low_share": 0.007,
+  "length_s": 0.3
+ },
+ "90-d3": {
+  "id": "90-d3",
+  "distance_db": 1.87,
+  "best_pass": 2,
+  "first_distance_db": 2.69,
+  "glide": null,
+  "steady_partials": 0,
+  "tail_modes": 0,
+  "low_share": 0.072,
+  "length_s": 0.78
+ },
+ "90-k0": {
+  "id": "90-k0",
+  "distance_db": 4.99,
+  "best_pass": 6,
+  "first_distance_db": 5.28,
+  "glide": {
+   "f0": 221.27104656857273,
+   "f1": 24.73359521484098,
+   "tau": 0.06731374160954824,
+   "law": "exp",
+   "captured": 0.7336597364506263,
+   "root_guess": 56.57706145748493,
+   "from_hit": 2
+  },
+  "steady_partials": 0,
+  "tail_modes": 0,
+  "low_share": 0.733,
+  "length_s": 1.4
  },
  "113-d0": {
   "id": "113-d0",

@@ -239,6 +239,27 @@ some of the other drums, and a replica lane carries none. Not yet shown.
   it now scores a tone where the separated audio holds noise. The knocker groove measured slightly further from its reference (band distance 6.26 to
   6.75 dB, balance 2.04 to 2.42): the body falls slower than the reference's from 40 to 60 ms
   and misses its dip at 60 ms. Offered to the owner as an A/B against 0g.
+- Round 0i (2026-11-20), the Alley groove (90) tightened. The owner heard it as stuttery and
+  stilted and suggested the grooves needed tightening rather than matching every detail. Its
+  kick is a deep 808-style drop (about 180 Hz at 5 ms, 115 at 40, 60 at 100), and NMFD had
+  sliced it by pitch into three parts each struck on its own: the real attack (the loop jumps
+  37 to 56 dB), a 55 Hz slice 50 to 60 ms later and a 38 Hz slice 100 ms later (both 2 to 5
+  dB, no attack), every kick three times in 100 ms. 90 joins `KICK_FIRST` and `SWELL_LOOPS`
+  (19 fragments dropped). New `drums.tighten` (loops in `TIGHTEN`) sets each hit to its
+  groove's average timing: the hits' places within the beat are grouped (a hit within 25 ms
+  of a place at least 4 hits share), each group's median is that place, so the shuffle stays
+  (swung notes about 55 ms late, every time) and the scatter goes; layers of one hit land on
+  one sample (19 hits moved). A strong firing with no attack next to its own drum's hit is now
+  merged with it rather than sent to the nearest free attack (a snare's late layer had landed
+  38 ms before the snare). The snare's second burst about 45 ms after its crack is kept: the
+  mix shows it on every snare. Two guards came out of this loop: `tail_modes` keeps only tones
+  that ring at least 80 ms and none louder than the strike (on a pitch still falling at 60 ms
+  the pencil returned tones at +33 dB dying in 15 to 56 ms, cancelling each other, and made the
+  kick 6 dB too loud), and a rebuilt kick chokes itself in the groove. Measured: groove band
+  distance 6.59 to 7.69 dB, balance 1.03 to 1.18, raw crest 22.3 to 19.6 against the
+  reference's 18.3 (the glue now barely works); part of the distance is the timing moving by up
+  to 25 ms against 10 ms frames, not separated. The kick fits at 4.99 dB (its slices 3.1 to
+  6.3). SHUFFLE A01 and A09 are now the whole kick, A09 struck softly.
 - Round robin follows the reference's own hit-to-hit spread, clamped to 0.3 to 1.2 dB per band,
   plus fresh noise and phases. Whether that reads as one drum hit again is for the ear.
 - Engine gates: this is a prototype. Velocity and round robin are checked in rendering only;
