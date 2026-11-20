@@ -118,6 +118,9 @@ object Consort {
     )
 
     const val TUNE_SEMITONES = 24
+
+    /** The ways of playing a take steps through ([TAKES]): the picker's TAKE buttons. A later take repeats a way with fresh humanization. */
+    val TAKE_COUNT: Int get() = TAKES.size
     const val MAX_CHAIRS = 3
     const val DEFAULT_VELOCITY = 0.7f
 

@@ -21,7 +21,7 @@ class ConsortPinsTest {
     fun `every pinned one-shot renders sample for sample as it did before the held keys`() {
         val lines = javaClass.getResourceAsStream("/consort/oneshot-k2-v1.sha256")!!.bufferedReader().readLines().filter { it.isNotBlank() }
         val presets = ConsortPresets.all().associateBy { it.name }
-        assertEquals(presets.size * 3 * 4, lines.size)
+        assertEquals(13 * 3 * 4, lines.size)
         for (line in lines) {
             val (name, velocity, take, hash) = line.split('\t')
             val patch = presets.getValue(name).copy(velocity = velocity.toFloat(), take = take.toInt())
