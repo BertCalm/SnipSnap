@@ -96,7 +96,7 @@ class SpreadTest {
         // or sympathetic room pitches, must not retune the four-source root.
         val misleading = tone(220.0)
         assertEquals(57f, assertNotNull(Spread.detect(misleading)), .2f)
-        for (voice in ChamberVoice.entries) for (model in 1..Chamber.MODEL_VERSION) {
+        for (voice in Chamber.KEPT_VOICES) for (model in 1..Chamber.MODEL_VERSION) {
             for (midi in listOf(Chamber.MIDI_MIN, 60, Chamber.MIDI_MAX)) for (balance in listOf(0f, 1f)) {
                 val patch = ChamberPatch("Authored quartet", voice, mapOf("BALANCE" to balance),
                     midi = midi, model = model)

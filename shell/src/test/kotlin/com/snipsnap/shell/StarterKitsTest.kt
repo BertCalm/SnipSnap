@@ -10,7 +10,6 @@ import com.snipsnap.synth.HalobarPatch
 import com.snipsnap.synth.Accord
 import com.snipsnap.synth.AccordPatch
 import com.snipsnap.synth.ChamberPatch
-import com.snipsnap.synth.ChamberVoice
 import com.snipsnap.synth.CausticInstrument
 import com.snipsnap.synth.CausticPatch
 import com.snipsnap.synth.CausticVoice
@@ -140,7 +139,7 @@ class StarterKitsTest {
         StarterKits.ACCORD_VOICES_ID to OneEngine(AccordPatch::class.java, setOf("REED", "COURSE", "ESCAPEMENT", "BELL")) {
             Accord.drumClassFor(it as AccordPatch)
         },
-        "chamber" to OneEngine(ChamberPatch::class.java, ChamberVoice.entries.map { it.name }.toSet()) {
+        "chamber" to OneEngine(ChamberPatch::class.java, Chamber.KEPT_VOICES.map { it.name }.toSet()) {
             (it as ChamberPatch).let { p -> Chamber.drumClassFor(p.voice, p.macros) }
         },
         "caustic" to OneEngine(CausticPatch::class.java, CausticVoice.entries.map { it.name }.toSet()) {

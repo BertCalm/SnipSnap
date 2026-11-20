@@ -520,3 +520,32 @@ raw/matched switching, keyboard stop, filters, persistent notes, JSON export and
 downloads. No layout overflow, console errors or failed requests were observed.
 To open the downloaded starter page locally, serve its directory over HTTP
 (for example `python3 -m http.server`); it loads the included JSON manifest.
+
+## Candidate voices, round chamber-voices-1 (20 Nov 2026)
+
+The melodic gate asks for six voices; CHAMBER has two rooms (HYBRID, AQUARIUM). Five candidates (one a spare) are
+appended to `ChamberVoice` after them, so saved names and ordinals never move. `Chamber.KEPT_VOICES` names the voices
+players are offered: presets, the kit, the picker (`SynthScreen`) and the tests that walk the kept contract read it.
+A candidate has no preset, no kit pad and no picker entry until the owner keeps it, and renders on the register
+model (5) only. None has been heard.
+
+Each candidate keeps the engine whole (one shared strike, modal instruments, the passive room that takes their energy
+and gives it back, the listener taps) and changes what the room holds (`ChamberCandidates.kt`):
+
+| Voice | What it is | How the engine is used |
+|---|---|---|
+| TIMBER | a marimba | the bar's modes tuned 1:4:10; a wooden room whose walls each carry the note as a resonance at every pitch (the register model's sympathetic mode, made a marimba's tubes); the bar coupled to the room enough to feed them |
+| MASS | a big drum in a stone hall | the membrane alone, longer, coupled strongly (2/s against .5/s) to a 14 × 15 × 8 m concrete room whose answer is heard louder |
+| ALLOY | a steel pan | the cowbell's shell retuned to a pan's tone field (root, octave, twelfth, weak skirt modes), played on the note in a metal room |
+| GLAZE | a singing bowl | the triangle replaced by a bowl's modes, each a pair 5 cents apart about the mode, so every partial beats; a glass room |
+| BOUNCE (spare) | a hammered string | the bar becomes a slightly stiff string; the shared strike comes back twice, lighter, each return on a whole number of the note's periods |
+
+Touch is wider than the kept rooms' and pivots on the same default (.75, the sound a KEEP keeps): from soft (.3) to
+hard (1) it moves hardness, tilts every mode (more below the default than above), and sets the level after leveling
+(soft 9 dB under the default, hard 2 dB over, never levelled back). Measured at C3 and C4: each step 5.1 to 18.1 dB
+of level-matched third-octave shape, soft against hard 12.1 to 22.5 dB, soft 11 dB under hard.
+`ChamberCandidateVoicesTest` holds these (each step at least 3.5 dB, soft against hard at least 8, soft at least 6 dB
+quieter), the pitch (within 15 cents from C2 to C6), distinctness (at least 3.7 dB from every other voice; least
+measured 6.0, ALLOY/BOUNCE at G#4), clean ends, a top register no brighter than AQUARIUM's plus 3 dB, and one check of
+each voice's own mechanism. It also pins 30 kept renders (both rooms on every model, touch and register extremes, all
+presets and the kit's original recipes) to hashes from the build before this round (7495ca56c).

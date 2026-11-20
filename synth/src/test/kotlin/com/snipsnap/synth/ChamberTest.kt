@@ -49,7 +49,7 @@ class ChamberTest {
     @Test
     fun `zero velocity leaves every source boundary and traveling store at exact rest`() {
         val high = TIMBRAL.associateWith { 1f }
-        for (voice in ChamberVoice.entries) {
+        for (voice in Chamber.KEPT_VOICES) {
             val p = Chamber.probe(voice, high, velocity = 0f, options = quick)
             for (stem in listOf(p.rawMix, p.samples, p.direct, p.early, p.surface, p.late) +
                 p.instrumentStems.toList() + p.surfaceStems.toList()) assertTrue(stem.all { it == 0f })
@@ -118,7 +118,7 @@ class ChamberTest {
     @Test
     fun `every timbral control changes audio at the first quarter step and across its range`() {
         // A numerical activity gate; the published comparisons still need the owner's listening verdict.
-        for (voice in ChamberVoice.entries) for (macro in TIMBRAL) {
+        for (voice in Chamber.KEPT_VOICES) for (macro in TIMBRAL) {
             val probes = listOf(0f, .25f, .5f, .75f, 1f).map { value ->
                 Chamber.probe(voice, Chamber.defaults(voice) + (macro to value), options = quick.copy(recordStems = false))
             }
@@ -131,7 +131,7 @@ class ChamberTest {
 
     @Test
     fun `return bypass changes local instrument decay with listener pickup gains fixed`() {
-        for (voice in ChamberVoice.entries) {
+        for (voice in Chamber.KEPT_VOICES) {
             val controls = Chamber.defaults(voice) + mapOf("STRIKE" to .8f, "DIVIDE" to 1f)
             val full = Chamber.probe(voice, controls, options = quick)
             val bypass = Chamber.probe(voice, controls, options = quick.copy(returnsEnabled = false))
@@ -147,7 +147,7 @@ class ChamberTest {
 
     @Test
     fun `regional boundaries and placement affect resonance beyond listener delay and gain`() {
-        for (voice in ChamberVoice.entries) {
+        for (voice in Chamber.KEPT_VOICES) {
             val controls = Chamber.defaults(voice) + mapOf("DIVIDE" to 1f, "PLACEMENT" to .75f)
             val full = Chamber.probe(voice, controls, options = quick)
             val averaged = Chamber.probe(voice, controls, options = quick.copy(averageSurfaces = true))
@@ -200,7 +200,7 @@ class ChamberTest {
 
     @Test
     fun `unpowered complete coupled network decays at maximum velocity and reflective extremes`() {
-        for (voice in ChamberVoice.entries) for (midi in listOf(36, 60, 84)) {
+        for (voice in Chamber.KEPT_VOICES) for (midi in listOf(36, 60, 84)) {
             val p = Chamber.probe(voice, TIMBRAL.associateWith { 1f }, midi = midi, velocity = 1f,
                 options = Chamber.ProbeOptions(seconds = Chamber.MAX_SECONDS, recordStems = false))
             val d = p.diagnostics
@@ -232,7 +232,7 @@ class ChamberTest {
 
     @Test
     fun `normal ensemble body remains pitched and outside percussion classification`() {
-        for (voice in ChamberVoice.entries) for (midi in listOf(36, 48, 60, 84)) {
+        for (voice in Chamber.KEPT_VOICES) for (midi in listOf(36, 48, 60, 84)) {
             val p = Chamber.probe(voice, midi = midi, options = quick.copy(normalize = true, recordStems = false))
             val snip = Snip(p.samples, 1, Dsp.RATE)
             val detected = assertNotNull(Pitch.detect(snip, .08f, .4f), "$voice MIDI $midi lost the ensemble pitch")
@@ -246,7 +246,7 @@ class ChamberTest {
 
     @Test
     fun `bright high register is measured against an eight times rate reference`() {
-        for (voice in ChamberVoice.entries) {
+        for (voice in Chamber.KEPT_VOICES) {
             val controls = TIMBRAL.associateWith { 1f }
             val standard = Chamber.probe(voice, controls, midi = 84, velocity = 1f,
                 options = quick.copy(recordStems = false))
@@ -277,7 +277,7 @@ class ChamberTest {
 
     @Test
     fun `finite prototype rejects hold rather than silently exporting an invalid loop`() {
-        for (voice in ChamberVoice.entries) for (hold in listOf(.001f, .5f, 1f)) {
+        for (voice in Chamber.KEPT_VOICES) for (hold in listOf(.001f, .5f, 1f)) {
             assertFailsWith<IllegalArgumentException> { Chamber.probe(voice, mapOf("HOLD" to hold), options = quick) }
             assertFailsWith<IllegalArgumentException> { Chamber.render(voice, mapOf("HOLD" to hold)) }
         }

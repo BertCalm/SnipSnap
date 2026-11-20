@@ -59,7 +59,7 @@ class ChamberPresetsTest {
     @Test
     fun `factory discovery serves both room voices and lands every recipe dry`() {
         assertEquals(ChamberPresets.all(), Presets.all().filterIsInstance<ChamberPatch>())
-        for (voice in ChamberVoice.entries) {
+        for (voice in Chamber.KEPT_VOICES) {
             val bank = ChamberPresets.forVoice(voice)
             assertEquals(3, bank.size)
             assertEquals(bank, Presets.forVoice("CHAMBER", voice.name))

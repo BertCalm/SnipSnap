@@ -86,7 +86,7 @@ class ChamberPatchTest {
         assertEquals(6, recipes.size)
         assertEquals(recipes.size, recipes.map { it.name }.distinct().size)
         assertEquals(recipes, Presets.all().filter { it.engine == ChamberPatch.ENGINE })
-        for (voice in ChamberVoice.entries) {
+        for (voice in Chamber.KEPT_VOICES) {
             assertEquals(3, ChamberPresets.forVoice(voice).size)
             assertEquals(ChamberPresets.forVoice(voice), Presets.forVoice(ChamberPatch.ENGINE, voice.name))
         }

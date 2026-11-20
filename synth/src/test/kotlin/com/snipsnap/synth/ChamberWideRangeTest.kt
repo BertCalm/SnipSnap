@@ -33,7 +33,7 @@ class ChamberWideRangeTest {
 
     @Test
     fun `both accepted centres retain every sample stem and energy state in the candidate`() {
-        for (voice in ChamberVoice.entries) {
+        for (voice in Chamber.KEPT_VOICES) {
             val options = quick.copy(recordStems = true, normalize = true)
             val accepted = Chamber.probe(voice, model = 3, options = options)
             val candidate = Chamber.probe(voice, model = Chamber.WIDE_RANGE_MODEL, options = options)
@@ -54,7 +54,7 @@ class ChamberWideRangeTest {
     fun `candidate endpoints gain level independent spectral and late body variation`() {
         var acceptedSpectralSpan = 0.0
         var candidateSpectralSpan = 0.0
-        for (voice in ChamberVoice.entries) for (control in controls) {
+        for (voice in Chamber.KEPT_VOICES) for (control in controls) {
             val accepted = listOf(0f, 1f).map { value ->
                 Chamber.probe(voice, mapOf(control to value), model = 3, options = quick)
             }
@@ -91,7 +91,7 @@ class ChamberWideRangeTest {
     @Test
     fun `balance endpoints separate the sources rather than raising master level`() {
         val options = quick.copy(recordStems = true, roomEnabled = false)
-        for (voice in ChamberVoice.entries) for (end in listOf(0f, 1f)) {
+        for (voice in Chamber.KEPT_VOICES) for (end in listOf(0f, 1f)) {
             val accepted = Chamber.probe(voice, mapOf("BALANCE" to end), model = 3, options = options)
             val candidate = Chamber.probe(voice, mapOf("BALANCE" to end), model = Chamber.WIDE_RANGE_MODEL, options = options)
             val selected = if (end == 0f) 0 else 3
@@ -106,7 +106,7 @@ class ChamberWideRangeTest {
 
     @Test
     fun `placement widens near far geometry within clearances and respects explicit positions`() {
-        for (voice in ChamberVoice.entries) {
+        for (voice in Chamber.KEPT_VOICES) {
             val configuration = Chamber.configFor(voice)
             val current = mutableListOf<ChamberGeometry>()
             val candidate = mutableListOf<ChamberGeometry>()
@@ -175,7 +175,7 @@ class ChamberWideRangeTest {
     fun `bright candidate high register retains pressure and spectrum against an eight rate reference`() {
         val options = quick.copy(seconds = .7f, recordDiagnostics = false)
         val high = controls.associateWith { 1f }
-        for (voice in ChamberVoice.entries) {
+        for (voice in Chamber.KEPT_VOICES) {
             fun render(oversample: Int, roomEnabled: Boolean) = Chamber.probe(voice, high,
                 midi = 84, velocity = 1f, model = Chamber.WIDE_RANGE_MODEL,
                 options = options.copy(oversample = oversample, roomEnabled = roomEnabled))

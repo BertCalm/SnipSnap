@@ -8,7 +8,8 @@ import kotlin.math.min
 import kotlin.math.pow
 import kotlin.math.roundToInt
 
-enum class FerryVoice { PASSAGE }
+/** PASSAGE is kept; the rest are candidates appended after it (see [Ferry.KEPT_VOICES] and FerryCandidates). */
+enum class FerryVoice { PASSAGE, TWIN, SWELL, TARAB, CHIME, RELAY, TINE }
 
 /**
  * A finite wood-to-wire exchange: strike -> handoff -> sympathetic bloom -> return.
@@ -32,6 +33,12 @@ object Ferry {
     const val DEFAULT_SEED = 7L
     const val DURATION_SECONDS = 4
     const val INTERNAL_RATE = Dsp.RATE * Dsp.OVERSAMPLE
+
+    /**
+     * The voices players are offered: presets, kits, pickers and key makers read this. The voices after PASSAGE are
+     * candidates for listening round ferry-voices-1 (FerryCandidates) and are offered nowhere until the owner keeps them.
+     */
+    val KEPT_VOICES: List<FerryVoice> = listOf(FerryVoice.PASSAGE)
     private const val CACHE_SIZE = 32
     private data class Key(val midi: Int, val handoffBits: Int, val matchBits: Int, val lossBits: Int)
     private val compiled = object : LinkedHashMap<Key, FerryNetwork.Compiled>(CACHE_SIZE, .75f, true) {
@@ -137,8 +144,8 @@ object Ferry {
     ): FloatArray {
         require(midi in MIN_MIDI..MAX_MIDI) { "FERRY MIDI must be $MIN_MIDI..$MAX_MIDI" }
         require(velocity.isFinite() && velocity in 0f..1f) { "FERRY velocity must be finite and in 0..1" }
-        require(voice == FerryVoice.PASSAGE)
         val m = settled(macros, model)
+        if (voice != FerryVoice.PASSAGE) return FerryCandidates.body(voice, m, midi, velocity, model)
         val loss = m["LOSS"] ?: .5f
         val frames = outputFrames(loss, model)
         if (velocity == 0f) return FloatArray(frames)

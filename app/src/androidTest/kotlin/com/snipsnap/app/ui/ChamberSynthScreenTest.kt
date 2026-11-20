@@ -135,7 +135,7 @@ class ChamberSynthScreenTest : ComposeScreenTest() {
         compose.onNodeWithContentDescription("ENGINE TIDAL. CHOOSE ENGINE").assertExists()
         press("NEXT ENGINE")
         compose.onNodeWithContentDescription("ENGINE CHAMBER. CHOOSE ENGINE").assertExists()
-        for (voice in ChamberVoice.entries) {
+        for (voice in Chamber.KEPT_VOICES) {
             press(voice.name)
             val preset = ChamberPresets.forVoice(voice).last()
             press("PRESET ${preset.name}")
@@ -159,7 +159,7 @@ class ChamberSynthScreenTest : ComposeScreenTest() {
     fun fresh_rooms_keep_the_wider_response_through_note_edits_and_recreation() {
         val settings = mutableMapOf("engine" to "CHAMBER", "voice" to "HYBRID")
         show(shelf(), settings)
-        for (voice in ChamberVoice.entries) {
+        for (voice in Chamber.KEPT_VOICES) {
             press(voice.name)
             compose.onNodeWithText("WIDER RESPONSE").assertExists()
             compose.onNodeWithContentDescription("USE WIDER RESPONSE").assertDoesNotExist()
@@ -178,7 +178,7 @@ class ChamberSynthScreenTest : ComposeScreenTest() {
         assertRoot(84)
         compose.runOnIdle {
             val drafts = SynthDrafts.read(settings).filterIsInstance<ChamberPatch>()
-            assertEquals(ChamberVoice.entries.toSet(), drafts.map { it.voice }.toSet())
+            assertEquals(Chamber.KEPT_VOICES.toSet(), drafts.map { it.voice }.toSet())
             assertTrue(drafts.all { it.model == 5 && it.midi == 84 })
         }
     }

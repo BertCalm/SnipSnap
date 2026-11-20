@@ -6805,7 +6805,7 @@ private enum class Engine {
         MERCURY -> listOf(MercuryVoice.PING, MercuryVoice.SING, MercuryVoice.BLADE)
         FILAMENT -> FilamentVoice.entries
         TIDAL -> TidalVoice.entries
-        CHAMBER -> ChamberVoice.entries
+        CHAMBER -> Chamber.KEPT_VOICES
         MERIDIAN -> MeridianVoice.entries
         // GROTTO (saved model 8) joined after BUBBLE once the owner kept round nacre-grotto-1 (15 Nov 2026);
         // CONCH (saved model 9) followed GROTTO once the owner kept round nacre-conch-1 (16 Nov 2026).

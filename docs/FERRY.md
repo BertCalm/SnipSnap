@@ -481,3 +481,34 @@ probe.
 - The existing cosine helper keeps one definition of the release shape.
 - Versioning preserves old recipes and the approved reference while the revised
   ending is judged in the listening room.
+
+## Candidate voices, round ferry-voices-1 (20 Nov 2026)
+
+The melodic gate asks for six voices; FERRY has one (PASSAGE). Six candidates (one a spare) are appended to
+`FerryVoice` after it. `Ferry.KEPT_VOICES` names the voices players are offered; presets read it, so a candidate has
+no preset (FERRY is not yet on the picker or in a kit). Candidates render on model 4 only, take the same macros, and
+have not been heard.
+
+Every candidate is PASSAGE's instrument: a passive network da/dt = (i H − Γ) a, struck once by displacing some of its
+states, observed through pickups, compiled once and stepped by `FerryNetwork.Compiled`. What changes is the graph,
+which states are struck and which are heard (`FerryCandidates.kt`):
+
+| Voice | What it is | Graph |
+|---|---|---|
+| TWIN | a piano-like string pair | per partial, two unison strings on one lossy bridge (Weinreich): the part that pushes the bridge dies fast, the rest rings and beats; MATCH sets how far apart the pair is |
+| SWELL | a note that swells in | the struck wood has no pickup; only what crosses into the wire is heard, so the note grows out of silence and breathes |
+| TARAB | a sitar-like string | a bright pluck under sympathetic strings at the octave, fifth, twelfth and double octave, a few cents apart, ringing as a halo |
+| CHIME | a handbell | each partial a pair of modes split 7 cents about it and coupled, so energy turns round the bell and the tone wavers |
+| RELAY | wood to wire to glass | a one-way chain: a dark knock, a bright wire bloom, then a pure glass tone left ringing |
+| TINE (spare) | a kalimba | a tine's clamped-bar modes driving a box whose modes stay at fixed pitches; the tine is retuned so the note stays in tune against the box's pull |
+
+HANDOFF scales every link (PASSAGE's pace law), LOSS every damping rate (PASSAGE's law) and the window; links shrink
+below middle C so a low note's coupling split stays a few cents. A long ring ends on a cosine release over the last
+.9 s of the window. Touch is the strike: velocity decides which partials the strike fills (soft leaves mostly the
+root), and after loudness leveling the level follows velocity (soft .35 is 8 to 9 dB under hard, never levelled
+back; the house target is 2 dB lower for candidates so a bright hard strike keeps its peak). Measured at C3 and C4:
+each step 4.9 to 23.6 dB of level-matched third-octave shape, soft against hard 12.1 to 38.4 dB.
+`FerryCandidateVoicesTest` holds these (each step at least 3.5 dB, soft against hard at least 8, soft at least 6 dB
+quieter), the pitch (within 15 cents from C2 to C5), distinctness (least measured 5.4 dB, SWELL/CHIME at C3), clean ends,
+the top note's 2 to 8 kHz band, one check of each graph's behaviour, and pins 19 PASSAGE renders (models 1 to 4,
+touch, register, LOSS, seed, presets) to hashes from the build before this round (7495ca56c).
