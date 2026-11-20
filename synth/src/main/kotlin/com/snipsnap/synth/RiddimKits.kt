@@ -10,7 +10,8 @@ import kotlin.math.min
 import kotlin.math.sqrt
 
 /**
- * The three RIDDIM kits as the owner heard and approved them on 2026-11-18 (round 1, `prototype/riddim/kits.py`):
+ * The six RIDDIM kits as the owner heard and approved them: round 1's three on 2026-11-18 (`prototype/riddim/kits.py`)
+ * and round 3's three on 2026-11-19 (`prototype/riddim/kits_wide.py`), with a harder wood mallet and a real ratchet. Round 1's:
  * sixteen pads each, A01 bottom left, ported pad for pad. Drums and percussion share a kit: a pad strikes either a
  * RIDDIM voice or one of CALABASH's (the shaker, claves, sticks, cowbell, conga, high bongo and talking drum, fitted
  * to CC0 recordings and approved by the owner on 2026-11-15) at that voice's defaults, as the prototype did.
@@ -18,6 +19,14 @@ import kotlin.math.sqrt
  * - [Kit.CLAVE_DANCEHALL], 102 BPM: bright and tight; kick and rimshot on the 3-2 son clave, four woods in F# minor.
  * - [Kit.DEMBOW], 95 BPM: deep and heavier; the sub-heavy dembow kick, a lower snare and clap, hand drums.
  * - [Kit.BOOM_RIDDIM], 100 BPM: the kick is the bass; six tuned booms that cut each other off, bronze in F minor.
+ * - [Kit.BAILE_FUNK], 130 BPM: Brazilian funk; one tight kick a bar, the tamborzao on CALABASH's tumba and quinto,
+ *   a high ting bell and a wooden ratchet.
+ * - [Kit.SABAR_SWING], 103 BPM: slow and dark; a sub kick just after each beat under CALABASH's sabar family.
+ * - [Kit.WOOD_BRONZE], 96 BPM: quiet and pitched; five hard-mallet woods and four bronze pairs in D minor.
+ *
+ * Swing belongs to the groove, not the kit: the owner's references swung 58%, 61% and 55%, and the MPC or the app's
+ * sequencer sets it. Clave Dancehall's woods play the hardest mallet since the owner's A/B (2026-11-19), so its pads
+ * printed before that carry kit version 1.
  *
  * Each pad is a grid of three velocity zones (0.35, 0.65, 1.0) of four takes, rendered by the engines themselves: take
  * t is engine take t, and a softer zone is a different stroke. The sampler makes a soft zone quieter. A16 is each
@@ -29,12 +38,15 @@ import kotlin.math.sqrt
  */
 object RiddimKits {
     /** Bump when a pad's audio changes; saved kits carry the version they were printed with. */
-    const val VERSION = 1
+    const val VERSION = 2
 
     enum class Kit(val id: String, val title: String, val bpm: Int) {
         CLAVE_DANCEHALL("riddim-clave-dancehall", "Clave Dancehall", 102),
         DEMBOW("riddim-dembow", "Dembow", 95),
         BOOM_RIDDIM("riddim-boom-riddim", "Boom Riddim", 100),
+        BAILE_FUNK("riddim-baile-funk", "Baile Funk", 130),
+        SABAR_SWING("riddim-sabar-swing", "Sabar Swing", 103),
+        WOOD_BRONZE("riddim-wood-bronze", "Wood and Bronze", 96),
     }
 
     val velocities = listOf(.35f, .65f, 1f)
@@ -51,16 +63,25 @@ object RiddimKits {
         val engine: String get() = if (riddim != null) RiddimPatch.ENGINE else CalabashPatch.ENGINE
         val voiceName: String get() = riddim?.name ?: calabash!!.name
         val drumClass: DrumClass get() = riddim?.drumClass ?: calabash!!.drumClass
-        val isPhrase: Boolean get() = riddim != null && Riddim.isRoll(riddim)
+        /** A roll, a riser or a call: matched in loudness over its whole length. CALABASH's own phrases count as its kits
+         *  count them (Sabar Swing's talking call). */
+        val isPhrase: Boolean get() = if (riddim != null) Riddim.isRoll(riddim) else calabash in CalabashKits.PHRASES
+        /** What the pad plays, for its saved source: "roll", "riser" or "finite". */
+        val articulation: String get() = when {
+            riddim == RiddimVoice.HAT_RISER || riddim == RiddimVoice.RATCHET_RISER -> "riser"
+            riddim != null -> if (Riddim.isRoll(riddim)) "roll" else "finite"
+            else -> CalabashKits.PHRASES[calabash] ?: "finite"
+        }
     }
 
     private fun r(name: String, voice: RiddimVoice, macros: Map<String, Float> = emptyMap()) = Pad(name, voice, null, macros)
-    private fun c(name: String, voice: CalabashVoice) = Pad(name, null, voice, emptyMap())
+    private fun c(name: String, voice: CalabashVoice, macros: Map<String, Float> = emptyMap()) = Pad(name, null, voice, macros)
     /** [voice]'s TUNE moved [semis] semitones, with any other settings. */
     private fun st(voice: RiddimVoice, semis: Int, vararg more: Pair<String, Float>) = mapOf("TUNE" to Riddim.tuneFor(voice, semis)) + more
 
     fun pads(kit: Kit): List<Pad> = when (kit) {
         Kit.CLAVE_DANCEHALL -> claveDancehallPads; Kit.DEMBOW -> dembowPads; Kit.BOOM_RIDDIM -> boomRiddimPads
+        Kit.BAILE_FUNK -> baileFunkPads; Kit.SABAR_SWING -> sabarSwingPads; Kit.WOOD_BRONZE -> woodBronzePads
     }
 
     /** The span over which a one-shot zone's takes are matched in loudness (CALABASH's and CLUTTER's). "shape" */
@@ -76,6 +97,9 @@ object RiddimKits {
         Kit.CLAVE_DANCEHALL to mapOf(2 to 1, 3 to 1),
         Kit.DEMBOW to mapOf(2 to 1, 3 to 1),
         Kit.BOOM_RIDDIM to mapOf(2 to 1, 3 to 1, 0 to 2, 5 to 2, 6 to 2, 7 to 2, 8 to 2, 9 to 2),
+        Kit.BAILE_FUNK to mapOf(2 to 1, 3 to 1),
+        Kit.SABAR_SWING to mapOf(2 to 1, 3 to 1),
+        Kit.WOOD_BRONZE to mapOf(2 to 1, 3 to 1),
     )
 
     /** The sixteen pads, each with its full grid. The 192 renders are independent, so they run in parallel. */
@@ -107,7 +131,7 @@ object RiddimKits {
                     "model" to (if (pad.riddim != null) Riddim.MODEL_VERSION else Calabash.MODEL_VERSION).toString(),
                     "kit" to kit.name, "role" to role.toString(), "bpm" to kit.bpm.toString(), "voice" to pad.voiceName,
                     "velocities" to velocities.joinToString(","), "takes" to TAKES.toString(),
-                    "articulation" to (if (pad.isPhrase) (if (pad.riddim == RiddimVoice.HAT_RISER) "riser" else "roll") else "finite"),
+                    "articulation" to pad.articulation,
                 ),
             )
         }
@@ -161,10 +185,11 @@ object RiddimKits {
         c("Claves", CalabashVoice.CLAVE),
         c("Sticks", CalabashVoice.STICKS),
         c("Cowbell", CalabashVoice.COWBELL),
-        r("Wood F#3", RiddimVoice.WOOD),
-        r("Wood A3", RiddimVoice.WOOD, st(RiddimVoice.WOOD, 3)),
-        r("Wood C#4", RiddimVoice.WOOD, st(RiddimVoice.WOOD, 7)),
-        r("Wood F#4", RiddimVoice.WOOD, st(RiddimVoice.WOOD, 12)),
+        // The hardest mallet: the owner heard an A/B of the approved mallet against it and chose it (2026-11-19).
+        r("Wood F#3", RiddimVoice.WOOD, mapOf("BEATER" to 1f)),
+        r("Wood A3", RiddimVoice.WOOD, st(RiddimVoice.WOOD, 3, "BEATER" to 1f)),
+        r("Wood C#4", RiddimVoice.WOOD, st(RiddimVoice.WOOD, 7, "BEATER" to 1f)),
+        r("Wood F#4", RiddimVoice.WOOD, st(RiddimVoice.WOOD, 12, "BEATER" to 1f)),
         r("Rim Roll", RiddimVoice.RIM_ROLL, mapOf("TUNE" to .5f, "DECAY" to .5f, "SPEED" to Riddim.speedFor(102.0))),
     )
 
@@ -204,5 +229,64 @@ object RiddimKits {
         r("Snare", RiddimVoice.SNARE),
         c("Sticks", CalabashVoice.STICKS),
         r("Hat Riser", RiddimVoice.HAT_RISER, mapOf("DECAY" to .3f, "SPEED" to Riddim.speedFor(100.0))),
+    )
+
+    private val baileFunkPads = listOf(
+        r("Tight Kick", RiddimVoice.KICK, st(RiddimVoice.KICK, 6, "DECAY" to .2f, "DRIVE" to .7f)),
+        r("Clap", RiddimVoice.CLAP, st(RiddimVoice.CLAP, 2, "DECAY" to .35f)),
+        r("Closed Hat", RiddimVoice.HAT_CLOSED, st(RiddimVoice.HAT_CLOSED, 2, "DECAY" to .25f)),
+        r("Open Hat", RiddimVoice.HAT_OPEN, st(RiddimVoice.HAT_OPEN, 2, "DECAY" to .35f)),
+        r("Short Boom", RiddimVoice.BOOM, st(RiddimVoice.BOOM, 5, "DECAY" to .25f)),
+        c("Tambor Low", CalabashVoice.TUMBA, mapOf("STROKE" to 1f / 3)),
+        c("Tambor Slap", CalabashVoice.TUMBA, mapOf("STROKE" to 1f)),
+        c("Tambor High", CalabashVoice.QUINTO, mapOf("STROKE" to 1f / 3)),
+        r("Ting", RiddimVoice.TING),
+        r("Ting Low", RiddimVoice.TING, st(RiddimVoice.TING, -5)),
+        r("Ratchet", RiddimVoice.RATCHET, mapOf("DECAY" to .2f)),
+        r("Long Ratchet", RiddimVoice.RATCHET, mapOf("DECAY" to .7f, "WAVE" to .4f)),
+        c("Agogo", CalabashVoice.AGOGO_HIGH),
+        c("Shaker", CalabashVoice.SHAKER),
+        r("Rimshot", RiddimVoice.RIMSHOT, st(RiddimVoice.RIMSHOT, 3)),
+        r("Ratchet Riser", RiddimVoice.RATCHET_RISER, mapOf("DECAY" to 0f, "SPEED" to Riddim.speedFor(130.0))),
+    )
+
+    private val sabarSwingPads = listOf(
+        r("Sub Kick", RiddimVoice.DEMBOW_KICK, st(RiddimVoice.DEMBOW_KICK, 4, "DECAY" to .4f)),
+        r("Snare", RiddimVoice.SNARE, st(RiddimVoice.SNARE, -3, "DECAY" to .4f)),
+        r("Closed Hat", RiddimVoice.HAT_CLOSED, st(RiddimVoice.HAT_CLOSED, -3, "DECAY" to .3f)),
+        r("Open Hat", RiddimVoice.HAT_OPEN, st(RiddimVoice.HAT_OPEN, -3)),
+        r("Low Rim", RiddimVoice.RIMSHOT, st(RiddimVoice.RIMSHOT, -3)),
+        c("Mbeng", CalabashVoice.MBENG),
+        c("Mbeng Slap", CalabashVoice.MBENG, mapOf("STROKE" to 1f / 3)),
+        c("Nder", CalabashVoice.NDER),
+        c("Col", CalabashVoice.COL),
+        c("Dundun", CalabashVoice.DUNDUN),
+        c("Talking Call", CalabashVoice.TALKING_CALL),
+        c("Shekere", CalabashVoice.SHEKERE),
+        c("Tama", CalabashVoice.TAMA),
+        r("Clap", RiddimVoice.CLAP, st(RiddimVoice.CLAP, -3, "DECAY" to .6f)),
+        r("Boom G1", RiddimVoice.BOOM, st(RiddimVoice.BOOM, 2, "DECAY" to .4f)),
+        r("Sabar Roll", RiddimVoice.NDER_ROLL, mapOf("SPEED" to Riddim.speedFor(103.0))),
+    )
+
+    private val woodBronzePads = listOf(
+        r("Soft Kick", RiddimVoice.KICK, st(RiddimVoice.KICK, -2, "DECAY" to .45f, "DRIVE" to .25f)),
+        c("Sticks", CalabashVoice.STICKS),
+        r("Closed Hat", RiddimVoice.HAT_CLOSED, st(RiddimVoice.HAT_CLOSED, -4, "DECAY" to .2f)),
+        r("Open Hat", RiddimVoice.HAT_OPEN, st(RiddimVoice.HAT_OPEN, -4, "DECAY" to .4f)),
+        c("Claves", CalabashVoice.CLAVE),
+        // The hardest mallet, the owner's choice: "wood might need more of an attack" (2026-11-18, 2026-11-19).
+        r("Wood D3", RiddimVoice.WOOD, st(RiddimVoice.WOOD, -4, "BEATER" to 1f)),
+        r("Wood F3", RiddimVoice.WOOD, st(RiddimVoice.WOOD, -1, "BEATER" to 1f)),
+        r("Wood G3", RiddimVoice.WOOD, st(RiddimVoice.WOOD, 1, "BEATER" to 1f)),
+        r("Wood A3", RiddimVoice.WOOD, st(RiddimVoice.WOOD, 3, "BEATER" to 1f)),
+        r("Wood C4", RiddimVoice.WOOD, st(RiddimVoice.WOOD, 6, "BEATER" to 1f)),
+        // METAL's default D5 does not darken from mid to soft, so the bronze skips it: F5, A5, C6, D6.
+        r("Bronze F5", RiddimVoice.METAL, st(RiddimVoice.METAL, 3, "WAVE" to .35f)),
+        r("Bronze A5", RiddimVoice.METAL, st(RiddimVoice.METAL, 7, "WAVE" to .35f)),
+        r("Bronze C6", RiddimVoice.METAL, st(RiddimVoice.METAL, 10, "WAVE" to .35f)),
+        r("Bronze D6", RiddimVoice.METAL, st(RiddimVoice.METAL, 12, "WAVE" to .35f)),
+        r("Rimshot", RiddimVoice.RIMSHOT, st(RiddimVoice.RIMSHOT, -5, "DECAY" to .6f)),
+        r("Wood Tremolo", RiddimVoice.WOOD_TREMOLO, st(RiddimVoice.WOOD, -4, "BEATER" to 1f, "SPEED" to Riddim.speedFor(96.0))),
     )
 }

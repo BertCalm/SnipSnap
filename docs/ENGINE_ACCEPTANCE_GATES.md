@@ -262,7 +262,7 @@ Three authored boom-bap kits after the owner's muffled-kick, drunk-clock, foley-
 | Velocity and round robin: saving | Pass | Each kit reloads equal and every saved slice matches its render (`:shell:generateStaggerKits`). |
 | Velocity and round robin: playback | Pass in software | `PadHit.resolve` picks the zone by velocity and deals the takes in order, then repeats (`StaggerKitTest`). No phone has played these kits. |
 | Velocity and round robin: export | MPC 3 verified by read-back; MPC 2 not applicable (the owner's format limit, 2026-11-14) | `StaggerKitTest`, the generator. SFZ and DecentSampler written. No MPC has loaded these kits. |
-| Sound character | CARDBOARD's drums approved in direction ("New sounds are better"); the three kits as kits not heard | The round-2 listening page. |
+| Sound character | CARDBOARD's drums approved in direction ("New sounds are better"); round 2 heard as wanting "a bit of compression" (2026-11-19), which round 2b adds to every kit's print, measured; the kits as kits not yet accepted | The round-2b listening page. |
 
 ## CYPHER kits and THUMP SUB (round 2, 2026-11-12)
 
@@ -887,6 +887,10 @@ One 18-pad starter at 200 BPM, `splinter-breakcore`, built on the approved Spore
 
 Three 18-pad starters that complete the breakcore family with SPLINTER: `shatter-breakcore` (180 BPM, one played break cut at its own hits), `soundclash-breakcore` (175, subs, reese, siren, rewind and echo) and `redline-breakcore` (250, tuned speedcore kicks, noise and scream). Sixteen voices plus an authored roll and riser each; three velocities and three takes on every pad. All 162 cells of each kit pass velocity and take source checks, saved recipe replay, native playback including take wrap (and hat choke where the kit has one), SFZ import and MPC 3 grid and PCM read-back (`BreakcoreFamilyTest`, `BreakcoreDeliveryTest`). Melodic, keygroup, chord and STRUM gates do not apply. No MPC 2 export, under the 2026-11-14 ruling. The owner auditioned all three kits' grooves and pads on 2026-11-18 and kept them as built; per-pad verdicts are open. **Open: no phone or MPC has played them.** See [BREAKCORE_FAMILY](BREAKCORE_FAMILY.md).
 
+## LULL, STROBE, CARTRIDGE and BARRICADE breakcore kits (second round, grooves and pads approved)
+
+Four more 18-pad starters join the breakcore family: `lull-breakcore` (170 BPM, piano, strings and a music box, then a sudden stop), `strobe-breakcore` (145, a diving whine, stabs and a sped-up break), `cartridge-breakcore` (190, a sound chip: pulse duty, 4-bit triangle, shift-register noise) and `barricade-breakcore` (165, power chords through a cranked amp, punk drums and noise). Sixteen voices plus an authored roll and riser each; three velocities and three takes on every pad. All 162 cells of each kit pass velocity and take source checks, saved recipe replay, native playback including take wrap (and mute-group choke where the kit has one), SFZ import and MPC 3 grid and PCM read-back (`BreakcoreFamilyTest`, `BreakcoreDeliveryTest`). Melodic, keygroup, chord and STRUM gates do not apply. No MPC 2 export, under the 2026-11-14 ruling. The owner auditioned and approved the grooves and pads as built; per-pad verdicts are open. **Open: no phone or MPC has played them.** See [BREAKCORE_FAMILY](BREAKCORE_FAMILY.md).
+
 ## EMBER (round 4, five kits on the shelf, presets and picker, sound approved 2026-11-16; hardware open)
 
 A drum engine for a live jazz and soul kit in a small club in 1962: calfskin drums, a riveted ride, brushes, the
@@ -1164,24 +1168,24 @@ layers and three natural alternate strikes. Other kit pads retain original PCM.
 The revised snare is frozen synthesis, not a newly registered editable engine.
 Phone and MPC hardware acceptance remains open for this revision. See `SOUL_ROCK.md`.
 
-## RIDDIM (round 2, 2026-11-18: three kits on the shelf, Kotlin heard and confirmed, hardware open)
+## RIDDIM kits (complete, 2026-11-19: sound approved, phone and MPC gates passed)
 
-Dancehall drum kits synthesized to targets measured from the owner's reference loops, with CALABASH's approved
-percussion on the same grids. See [RIDDIM](RIDDIM.md).
+Six dancehall drum kits synthesized to targets measured from the owner's reference loops, with CALABASH's approved
+percussion on the same grids. See [RIDDIM](RIDDIM.md). The owner approved rounds 1 and 3 in Python ("Approved",
+2026-11-18; round 3 after choosing the hardest wood mallet and a real ratchet, 2026-11-19), confirmed the Kotlin kits
+match ("Yes, they match", 2026-11-18), and on hearing the six kits as the app exports them (round 4) and playing them
+on the phone and the MPC said "Sounds great. Phone/MPC pass." (2026-11-19). Evidence: `RiddimTest`, `RiddimKitsTest`,
+`RiddimKitTest`, `:shell:generateRiddimKits`. Preserve `RiddimKits.VERSION` 2 as the accepted baseline.
 
-- **Melodic, keygroup and chord-tool gates:** not applicable. Drum kits.
-- **Articulation:** finite hits, no HOLD.
-- **Percussion: authored, heard in Python (2026-11-18).** Each kit's A16 is a one-bar roll or riser at the kit's tempo:
-  a rim roll (Clave Dancehall), a snare roll (Dembow), a hat riser (Boom Riddim). The owner approved them with the kits
-  in round 1.
-- **Drum shelf: three kits on the shelf.** RIDDIM CLAVE DANCEHALL (102 BPM), RIDDIM DEMBOW (95) and RIDDIM BOOM RIDDIM
-  (100) differ in voices, tuning, decay, pad roles and tempo; `RiddimKitsTest` pins which slots they share.
-- **Velocity/round robin: verified in software through rendering, saving, playback and MPC 3 export for every pad of
-  all three kits** (`RiddimKitsTest`, `RiddimKitTest`, `:shell:generateRiddimKits`). Three zones of four takes per pad.
-  MPC 2 is not applicable (format limit). No phone or MPC has played the kits.
-- **Sound character:** round 0 and round 1 heard in Python; round 1 approved ("Approved", 2026-11-18). The owner heard the
-  Kotlin kits and confirmed they match the approved kits ("Yes, they match", 2026-11-18).
-- **Overall: incomplete.** Open: phone and MPC playback.
+| Gate | Status | Evidence |
+|---|---|---|
+| Melodic, keygroups, chord tools | Not applicable | Drum kits |
+| Articulation | Pass | Finite hits, no HOLD |
+| Drums: multiple distinct genre kits on the shelf | Pass | Approved by ear 2026-11-19. Six kits: RIDDIM CLAVE DANCEHALL (102 BPM), DEMBOW (95), BOOM RIDDIM (100), BAILE FUNK (130), SABAR SWING (103), WOOD AND BRONZE (96). They differ in voices, tuning, decay, pad roles and tempo; `RiddimKitsTest` pins which slots each of the 15 pairs shares |
+| Percussion: roll/riser | Pass | Each kit's A16 is a one-bar roll or riser at its tempo: rim roll, snare roll, hat riser, ratchet riser, sabar (nder) roll, wood tremolo; approved with the kits |
+| Velocity and round robin: rendering | Pass in software | Three zones of four takes per pad; every pad darkens when softer except reused CALABASH voices that keep their approved recording fit; closest two takes on any pad 35.3 dB apart |
+| Velocity and round robin: saving, playback, export | Pass | Saved PCM, playback through the pad resolver and the MPC 3 track read back for all 96 pads; MPC 2 not written (format limit). Owner-reported pass on the phone and the MPC, 2026-11-19 |
+| Presets, catalog and picker (not a drum gate; the owner's choice, round 5) | Done in software | `RiddimPresets` files the 65 distinct RIDDIM pads of the six kits as the factory bank (`RiddimPresetsTest`); RIDDIM is off `PatchTypes.ROSTERLESS`, in `EngineCatalog` under DRUMS and on SYNTH's picker, with an on-device test in `NewEngineSynthScreenTest` run by CI's emulator. Not yet seen on a phone |
 
 ## LOOSE CRATE kits (complete, 2026-11-18: sound approved, phone and MPC gates passed)
 
@@ -1195,6 +1199,14 @@ Four drum kits after the owner's beat-tape reference loops, in the CYPHER shape:
 | Velocity and round robin: rendering | Pass in software | Soft zones are different strikes and never brighter; four different strikes per zone |
 | Velocity and round robin: saving, playback, export | Pass | Save, reload, pad resolver, MPC 3, SFZ and DecentSampler for all 64 pads; MPC 2 not written (format limit). Owner-reported pass on the phone and the MPC, 2026-11-18 |
 
+
+### Soul Rock Roadhouse crash revision (2026-11-19)
+
+Owner accepted **Broader rock crash revision**: “That sounds better let's continue”.
+Version 3 retains its nine exact synthesized strikes on Roadhouse pad 12, labelled
+Crash. The accepted coupled snare and all other pads retain their earlier audio.
+This is a frozen statistical modal bank, not a newly registered editable engine.
+Phone/MPC hardware acceptance for this revision remains open. See `SOUL_ROCK.md`.
 
 ## Sunroom studio-pop factory collection (2026-11-18)
 
@@ -1234,3 +1246,7 @@ Fifteen self-sustaining mechanisms on one moving support, struck into tuned reso
 
 - **Sound character: kept by ear, native.** The three voices, TINE's four tones, the C2 to C5 range, the touch response and the starter kit, as pinned by `AccordNativePinsTest`. Preserve these renders: new voices, takes and keys must leave every pinned render byte-identical.
 - **Overall: incomplete.** Three more voices, keygroups, chord tools, a HOLD decision per voice, velocity zones and round robin through saving, playback and export, device runs of the picker and hardware playback remain open.
+
+### SIDEROOM — cached synthesized drum family
+
+Five distinct approved kits are implemented on the SKINS shelf with ten pads each. Three velocity layers × three takes survive native rendering, saving, replay and playback; the roll is owner accepted and the model-3 Original fill is owner accepted. Focused software tests verify all 450 variants and MPC export read-back. **MPC 3/phone hardware verification remains open.** The owner’s 2026-11-14 MPC2 combined-grid exception applies: its first-take velocity export is a format limit, not a new blocking gate. The generic slice-map capture remains parked by the owner; software checks do not establish SIDEROOM’s physical MPC3 cycling behavior. Separate Soft/Medium/Hard discrete-WAV cycling companions now preserve all takes in both formats, verified in software. They are an explicit fallback, not closure of the combined grid gate. No Android build/device check is claimed. Melodic voices, keygroups, chord tools and string STRUM do not apply. This is a versioned cached-synthesis bank, not an editable Kotlin spectral engine. See [SIDEROOM](SIDEROOM.md) for build steps and evidence.

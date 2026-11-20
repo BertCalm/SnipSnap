@@ -1,4 +1,4 @@
-> STAGGER (round 2 built 2026-11-19; round 1 was "too much like drum machine sounds", round 1b "New sounds are better"):
+> STAGGER (round 2b built 2026-11-19, "a bit of compression" in every print; round 1 was "too much like drum machine sounds", round 1b "New sounds are better"):
 > three kits, CARDBOARD, MATINEE and STUMBLE, on the SKINS shelf, after the owner's muffled-kick, drunk-clock, foley-fill
 > producer profile, in the CYPHER shape, their drums EMBER's, proven through save, playback and MPC 3 export in software; a MUFFLE strike law, the `Cypher.staggered` clock, a kit-side
 > converter-then-pitch FOLEY print, a GLASS source and a PUNCH strike. Not on the shelf. See [STAGGER](STAGGER.md).
@@ -39,6 +39,10 @@
 > Breakcore family (2026-11-18): SHATTER (180 BPM), SOUNDCLASH (175) and REDLINE (250) join SPLINTER,
 > three 18-pad starters, 162 cells each verified through saving, playback, SFZ and MPC 3. Grooves and pads
 > heard 2026-11-18 and kept; per-pad verdicts and hardware open. See [BREAKCORE_FAMILY](BREAKCORE_FAMILY.md).
+
+> Breakcore family, second round: LULL (170 BPM), STROBE (145), CARTRIDGE (190) and BARRICADE (165) join the
+> family, four more 18-pad starters, 162 cells each verified through saving, playback, SFZ and MPC 3. Grooves and
+> pads auditioned and approved as built; per-pad verdicts and hardware open. See [BREAKCORE_FAMILY](BREAKCORE_FAMILY.md).
 
 > TRIAD first listening gate (2026-11-09): one generated hybrid drum groove through
 > shared compression/drive, dynamics/tape, or crush/grains. Native finite audition;
@@ -3921,3 +3925,13 @@ The owner approved the Kotlin kits and the hardware ("Approved, approved"). `Kin
 the 56 one-shots of the four kits, served by `Presets`; KINDRED leaves `PatchTypes.PROTOTYPES`; `KindredPresetsTest`
 holds the preset contracts. Complete: shelf, picker, roster, velocity and round robin through MPC 3 export, sound and
 hardware approved; MPC 2 not applicable. Preserve model 2 and kit version 1. See [KINDRED](KINDRED.md).
+
+### RIDDIM, round 5: presets and picker (2026-11-19)
+
+The owner accepted RIDDIM's six dancehall kits on the phone and the MPC ("Sounds great. Phone/MPC pass.") and chose
+the roster and the picker. `RiddimPresets` files the kits' RIDDIM pads as the factory bank: each pad's own macros
+struck full at take 0, named after its kit (CLAVE, DEMBOW, BOOM, BAILE, SABAR, WOOD). Sixty-nine pads give sixty-five
+presets: four pads two kits share at the same settings are filed once, and the 27 pads that strike CALABASH voices
+stay CALABASH's. Every one of the 19 RIDDIM voices has a preset. RIDDIM leaves `PatchTypes.ROSTERLESS` and sits on
+SYNTH's picker after KINDRED, before CAIRN, under DRUMS; 99 picker engines. An on-device test loads CLAVE WOOD F#3 and
+keeps an edit with its hardest mallet, take and model; CI compiles and runs it. See [RIDDIM](RIDDIM.md).

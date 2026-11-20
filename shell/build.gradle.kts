@@ -818,7 +818,7 @@ tasks.register<JavaExec>("generateCuttingsKits") {
     args(providers.gradleProperty("cuttingsOutput").orNull ?: "${rootDir}/testkit/cuttings-kits")
 }
 
-for (kitName in listOf("shatter", "soundclash", "redline")) {
+for (kitName in listOf("shatter", "soundclash", "redline", "lull", "strobe", "cartridge", "barricade")) {
     tasks.register<JavaExec>("generate${kitName.replaceFirstChar { it.uppercase() }}Kit") {
         group = "distribution"
         description = "Render and verify the ${kitName.uppercase()} breakcore shelf kit, with its listening files and archives."
@@ -838,6 +838,16 @@ tasks.register<JavaExec>("generateSporeSyntheticKits") {
     workingDir = rootProject.projectDir
     maxHeapSize = "2g"
     args(providers.gradleProperty("sporeSyntheticOutput").orNull ?: "${rootDir}/testkit/spore-synthetic-kits")
+}
+
+tasks.register<JavaExec>("generateSideroomKits") {
+    group = "distribution"
+    description = "Build five SIDEROOM cached-synthesis kits and verify native save/playback and MPC exports."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.SideroomKitGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "2g"
+    args(providers.gradleProperty("sideroomOutput").orNull ?: "${rootDir}/testkit/sideroom-native")
 }
 
 tasks.register<JavaExec>("generateEastAfricaKits") {

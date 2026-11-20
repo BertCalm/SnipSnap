@@ -102,6 +102,7 @@ object StarterKits {
         }
     }
 
+    val SIDEROOM_IDS = com.snipsnap.synth.SideroomKits.Kit.entries.map { it.id }.toSet()
     val PATIO_IDS = com.snipsnap.synth.PatioPerformance.Genre.entries.map { it.id }.toSet()
     val ALL: List<Starter> = listOf(
         // displayName is "EMPTY GRID", not "BLANK" — the other
@@ -706,6 +707,22 @@ object StarterKits {
             "Speedcore at 250 BPM: tuned terror kicks, clipped noise snares and hats, a scream and feedback stab. Snare roll and scream rise.", seeded=false, tempoBpm=com.snipsnap.synth.Redline.bpm.toFloat()) {
             com.snipsnap.synth.Breakcore.arranged(com.snipsnap.synth.Redline)
         },
+        Starter(com.snipsnap.synth.Lull.id, "LULL BREAKCORE",
+            "Tender piano chords in A minor, strings, choir, a music box and a worn tape, then a sudden stop. Fading repeat and swell rise.", seeded=false, tempoBpm=com.snipsnap.synth.Lull.bpm.toFloat()) {
+            com.snipsnap.synth.Breakcore.arranged(com.snipsnap.synth.Lull)
+        },
+        Starter(com.snipsnap.synth.Strobe.id, "STROBE BREAKCORE",
+            "The 1992 rave: a whine that dives, hard piano and organ stabs, an orchestra hit and a sped-up break. Stab roll and whine rise.", seeded=false, tempoBpm=com.snipsnap.synth.Strobe.bpm.toFloat()) {
+            com.snipsnap.synth.Breakcore.arranged(com.snipsnap.synth.Strobe)
+        },
+        Starter(com.snipsnap.synth.Cartridge.id, "CARTRIDGE BREAKCORE",
+            "Chip breakcore: pulse duty, a 4-bit triangle, shift-register noise drums and a crushed break, all on a 60 Hz frame. Noise roll and arp rise.", seeded=false, tempoBpm=com.snipsnap.synth.Cartridge.bpm.toFloat()) {
+            com.snipsnap.synth.Breakcore.arranged(com.snipsnap.synth.Cartridge)
+        },
+        Starter(com.snipsnap.synth.Barricade.id, "BARRICADE BREAKCORE",
+            "Digital hardcore at 165 BPM in E: power chords through a cranked amp, a punk kick and snare, harsh noise. Chug roll and feedback rise.", seeded=false, tempoBpm=com.snipsnap.synth.Barricade.bpm.toFloat()) {
+            com.snipsnap.synth.Breakcore.arranged(com.snipsnap.synth.Barricade)
+        },
         Starter("spore-synth-broken", "SPORE ORBITAL BREAKS",
             "Short kick, wire clap, higher toms and metallic percussion. Reverse-metal accents and accelerating riser.", seeded=false, tempoBpm=155f) {
             com.snipsnap.synth.SporeSyntheticKits.arranged(com.snipsnap.synth.SporeSyntheticKits.Genre.BROKEN)
@@ -999,7 +1016,7 @@ object StarterKits {
         ) { com.snipsnap.synth.CalabashKits.build(com.snipsnap.synth.CalabashKits.Kit.AFROCUBAN) },
         Starter(
             "riddim-clave-dancehall", "RIDDIM CLAVE DANCEHALL",
-            "Bright, tight dancehall on the 3-2 clave: a punch kick and a digital rimshot, a clap, choked hats, a shaker, claves, sticks and a cowbell, and four tuned woods in F sharp minor. Three touch zones, four takes; a rim roll.",
+            "Bright, tight dancehall on the 3-2 clave: a punch kick and a digital rimshot, a clap, choked hats, a shaker, claves, sticks and a cowbell, and four hard-mallet woods in F sharp minor. Three touch zones, four takes; a rim roll.",
             seeded = false, tempoBpm = com.snipsnap.synth.RiddimKits.Kit.CLAVE_DANCEHALL.bpm.toFloat(),
         ) { com.snipsnap.synth.RiddimKits.build(com.snipsnap.synth.RiddimKits.Kit.CLAVE_DANCEHALL) },
         Starter(
@@ -1012,6 +1029,21 @@ object StarterKits {
             "The kick is the bass: six tuned booms from F1 to E flat 2, one sliding, that cut each other off like one bass voice, with a ringing rim, choked hats, a clap and bronze bars in F minor. Three touch zones, four takes; a hat riser.",
             seeded = false, tempoBpm = com.snipsnap.synth.RiddimKits.Kit.BOOM_RIDDIM.bpm.toFloat(),
         ) { com.snipsnap.synth.RiddimKits.build(com.snipsnap.synth.RiddimKits.Kit.BOOM_RIDDIM) },
+        Starter(
+            "riddim-baile-funk", "RIDDIM BAILE FUNK",
+            "Brazilian funk at 130: one tight kick a bar, the tamborzao on a tumba and a quinto, a clap, choked hats, a high ting bell, an agogo and a wooden ratchet you can count. Three touch zones, four takes; a ratchet riser.",
+            seeded = false, tempoBpm = com.snipsnap.synth.RiddimKits.Kit.BAILE_FUNK.bpm.toFloat(),
+        ) { com.snipsnap.synth.RiddimKits.build(com.snipsnap.synth.RiddimKits.Kit.BAILE_FUNK) },
+        Starter(
+            "riddim-sabar-swing", "RIDDIM SABAR SWING",
+            "Slow, dark and swung: a deep sub kick just after each beat, a low snare and rim, dark hats, the sabar family (mbeng, nder, col), a dundun, a talking-drum call, a shekere, a tama and a G1 boom. Three touch zones, four takes; a sabar roll.",
+            seeded = false, tempoBpm = com.snipsnap.synth.RiddimKits.Kit.SABAR_SWING.bpm.toFloat(),
+        ) { com.snipsnap.synth.RiddimKits.build(com.snipsnap.synth.RiddimKits.Kit.SABAR_SWING) },
+        Starter(
+            "riddim-wood-bronze", "RIDDIM WOOD AND BRONZE",
+            "Quiet and pitched, in D minor: five hard-mallet woods and four bronze pairs that beat, over a soft kick, sticks, claves and quiet hats. Three touch zones, four takes; a wood tremolo.",
+            seeded = false, tempoBpm = com.snipsnap.synth.RiddimKits.Kit.WOOD_BRONZE.bpm.toFloat(),
+        ) { com.snipsnap.synth.RiddimKits.build(com.snipsnap.synth.RiddimKits.Kit.WOOD_BRONZE) },
         Starter(
             "ember", "EMBER",
             "A live jazz kit in a small club in 1962, hard bop on sticks: an open calfskin kick feathered under the band, a crisp snare, a riveted ride carrying the time, a press roll and a mallet cymbal swell. Three touch zones, four takes.",
@@ -1185,7 +1217,11 @@ object StarterKits {
             "The sixteen TERRA PUNJAB pads with soft, medium and hard touch and four takes on each: a repeated hit lands a little differently every time.",
             seeded = false,
         ) { com.snipsnap.synth.TerraGenreRoundRobinKits.build(com.snipsnap.synth.TerraGenreRoundRobinKits.Kit.PUNJAB) },
-    ))
+    )) + com.snipsnap.synth.SideroomKits.Kit.entries.map { kit ->
+        Starter(kit.id, "SIDEROOM ${kit.title.uppercase(java.util.Locale.ROOT)}",
+            "Synthesized ${kit.title} drums: eight instruments, a snare roll and a drum fill. Three strike strengths and three alternate hits.",
+            seeded = false, tempoBpm = kit.bpm.toFloat()) { com.snipsnap.synth.SideroomKits.build(kit) }
+    }
 
     fun byId(id: String): Starter? = ALL.firstOrNull { it.id == id }
 }

@@ -1142,4 +1142,36 @@ class DeterminismTest {
             assertContentEquals(r.render().samples, Breakcore.Recipe.fromJsonText(r.toJsonText()).render().samples, "pad $pad")
         }
     }
+
+    @Test
+    fun `LULL saved recipes are deterministic for a chord, a tape stop and a fading repeat`() {
+        for (pad in listOf(0, 14, 16)) {
+            val r = Breakcore.Recipe(Lull, pad, .65, 2)
+            assertContentEquals(r.render().samples, Breakcore.Recipe.fromJsonText(r.toJsonText()).render().samples, "pad $pad")
+        }
+    }
+
+    @Test
+    fun `STROBE saved recipes are deterministic for a whine, a break and a stab roll`() {
+        for (pad in listOf(0, 15, 16)) {
+            val r = Breakcore.Recipe(Strobe, pad, .65, 2)
+            assertContentEquals(r.render().samples, Breakcore.Recipe.fromJsonText(r.toJsonText()).render().samples, "pad $pad")
+        }
+    }
+
+    @Test
+    fun `CARTRIDGE saved recipes are deterministic for a lead, a crushed break and a noise roll`() {
+        for (pad in listOf(4, 13, 16)) {
+            val r = Breakcore.Recipe(Cartridge, pad, .65, 2)
+            assertContentEquals(r.render().samples, Breakcore.Recipe.fromJsonText(r.toJsonText()).render().samples, "pad $pad")
+        }
+    }
+
+    @Test
+    fun `BARRICADE saved recipes are deterministic for a chord, a dive bomb and a chug roll`() {
+        for (pad in listOf(0, 4, 16)) {
+            val r = Breakcore.Recipe(Barricade, pad, .65, 2)
+            assertContentEquals(r.render().samples, Breakcore.Recipe.fromJsonText(r.toJsonText()).render().samples, "pad $pad")
+        }
+    }
 }

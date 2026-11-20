@@ -2,7 +2,7 @@
 
 Python harness for the design in
 [`docs/superpowers/specs/2026-11-19-kerf-synthetic-chops-design.md`](../../docs/superpowers/specs/2026-11-19-kerf-synthetic-chops-design.md).
-KERF is a working name. The Kotlin renderer is `synth/.../KerfRender.kt`; this folder is the fitter and the reference it is checked against.
+KERF is a working name. The Kotlin renderer is `synth/.../KerfRender.kt` and the Kotlin fitter is `synth/.../KerfFit.kt`; this folder is the prototype both were ported from and the reference they are checked against.
 
 It chops a drum loop into hits, fits a small synthesis patch to each hit, and renders the
 patch back with the two things that make a chop sound chopped: the previous hit bleeding

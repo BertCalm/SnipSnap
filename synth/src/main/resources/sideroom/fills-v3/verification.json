@@ -1,0 +1,47 @@
+{
+  "open-road": {
+    "energy_by_layer": [
+      24.55459609908335,
+      810.4322845551078,
+      1431.5622028132566
+    ],
+    "medium_take_1_sha256": "782f01c1b3176a158bb8edcc36e5b83092e63c3db367a831016b8f12cf952a21",
+    "tempo": 100
+  },
+  "tight-pocket": {
+    "energy_by_layer": [
+      18.698113073902572,
+      665.4166912042668,
+      1164.4424718921082
+    ],
+    "medium_take_1_sha256": "a2956f2569310447e10e56e757f5fe9da0edc2f9f561289ec272f0b8d92d9937",
+    "tempo": 100
+  },
+  "angular": {
+    "energy_by_layer": [
+      29.626000398883246,
+      692.7102204533044,
+      1161.2733469563523
+    ],
+    "medium_take_1_sha256": "2c261494efcac3e60d852dcf2c0bf71cf39c567fccc0050495944ad2314d5a94",
+    "tempo": 100
+  },
+  "high-voltage": {
+    "energy_by_layer": [
+      20.119097526913798,
+      749.9143409566753,
+      1253.1122206803188
+    ],
+    "medium_take_1_sha256": "22ccca50dfa7594815cb872961f3be4e543488184308ccd47d988d503ea6a1ef",
+    "tempo": 100
+  },
+  "deep-pocket": {
+    "energy_by_layer": [
+      19.567428331299922,
+      659.0969119384993,
+      1065.9892000255495
+    ],
+    "medium_take_1_sha256": "271f4983679e135f33ae0a0031643c58575e58073c937057a1c0f4aecf52bb6c",
+    "tempo": 100
+  }
+}

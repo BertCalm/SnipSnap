@@ -29,6 +29,13 @@ object RiddimAuditionGenerator {
                 }
             }
         }
+        // Settings the kits play that the defaults do not reach: the hardest wood mallet (round 3's follow-up).
+        for ((name, voice, macros) in listOf(Triple("WOOD_HARD", RiddimVoice.WOOD, mapOf("BEATER" to 1f)))) {
+            for (velocity in listOf(0.4f, 1f)) for (take in 0..1) {
+                val snip = Riddim.render(voice, Riddim.settled(voice, macros), velocity, take)
+                WavWriter.write(File(voices, "${name}_v%03d_t$take.wav".format((velocity * 100).toInt())), snip, WavWriter.BitDepth.PCM_16)
+            }
+        }
         File(root, "timings.csv").writeText(timings.toString())
         println("wrote $root")
     }

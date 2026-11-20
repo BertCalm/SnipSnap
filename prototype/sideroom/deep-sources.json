@@ -1,0 +1,74 @@
+[
+  {
+    "path": "Samples/snaremic/snare/snaremic_snare_center_vl13.flac",
+    "mode": "100644",
+    "type": "blob",
+    "sha": "f1670d2ce4785eb4b69cfc78cb69f6028ad4f934",
+    "size": 78489,
+    "url": "https://api.github.com/repos/sfzinstruments/virtuosity_drums/git/blobs/f1670d2ce4785eb4b69cfc78cb69f6028ad4f934"
+  },
+  {
+    "path": "Samples/snaremic/snare/snaremic_snare_center_vl14.flac",
+    "mode": "100644",
+    "type": "blob",
+    "sha": "f3dcb02cde0590a47735446e876fd871a02f5b70",
+    "size": 90312,
+    "url": "https://api.github.com/repos/sfzinstruments/virtuosity_drums/git/blobs/f3dcb02cde0590a47735446e876fd871a02f5b70"
+  },
+  {
+    "path": "Samples/snaremic/snare/snaremic_snare_center_vl15.flac",
+    "mode": "100644",
+    "type": "blob",
+    "sha": "61e643c0011b6d8592c0037970aae8a3679788e3",
+    "size": 80270,
+    "url": "https://api.github.com/repos/sfzinstruments/virtuosity_drums/git/blobs/61e643c0011b6d8592c0037970aae8a3679788e3"
+  },
+  {
+    "path": "Samples/snaremic/snare/snaremic_snare_offcenter_vl23.flac",
+    "mode": "100644",
+    "type": "blob",
+    "sha": "a485bb133d697c8bd657711562f9ff4fbe8582e8",
+    "size": 108295,
+    "url": "https://api.github.com/repos/sfzinstruments/virtuosity_drums/git/blobs/a485bb133d697c8bd657711562f9ff4fbe8582e8"
+  },
+  {
+    "path": "Samples/snaremic/snare/snaremic_snare_offcenter_vl24.flac",
+    "mode": "100644",
+    "type": "blob",
+    "sha": "eb9d6063b5a7ef8e6b36755b6361a39175040be4",
+    "size": 105603,
+    "url": "https://api.github.com/repos/sfzinstruments/virtuosity_drums/git/blobs/eb9d6063b5a7ef8e6b36755b6361a39175040be4"
+  },
+  {
+    "path": "Samples/snaremic/snare/snaremic_snare_offcenter_vl25.flac",
+    "mode": "100644",
+    "type": "blob",
+    "sha": "49d4bef1f94e992c55475ccdc5c83c26f068f584",
+    "size": 102983,
+    "url": "https://api.github.com/repos/sfzinstruments/virtuosity_drums/git/blobs/49d4bef1f94e992c55475ccdc5c83c26f068f584"
+  },
+  {
+    "path": "Samples/snaremic/snare/snaremic_snare_rimshot_vl10.flac",
+    "mode": "100644",
+    "type": "blob",
+    "sha": "9de463874b2c68539d5a265b0733a3b1a13378b7",
+    "size": 118914,
+    "url": "https://api.github.com/repos/sfzinstruments/virtuosity_drums/git/blobs/9de463874b2c68539d5a265b0733a3b1a13378b7"
+  },
+  {
+    "path": "Samples/snaremic/snare/snaremic_snare_rimshot_vl11.flac",
+    "mode": "100644",
+    "type": "blob",
+    "sha": "3196aed58f405f24f192f8787f16479c41ff224e",
+    "size": 119596,
+    "url": "https://api.github.com/repos/sfzinstruments/virtuosity_drums/git/blobs/3196aed58f405f24f192f8787f16479c41ff224e"
+  },
+  {
+    "path": "Samples/snaremic/snare/snaremic_snare_rimshot_vl12.flac",
+    "mode": "100644",
+    "type": "blob",
+    "sha": "05acbd99659fbebca202e96420018a9d8545fae4",
+    "size": 108902,
+    "url": "https://api.github.com/repos/sfzinstruments/virtuosity_drums/git/blobs/05acbd99659fbebca202e96420018a9d8545fae4"
+  }
+]

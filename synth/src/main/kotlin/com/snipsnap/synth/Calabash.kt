@@ -172,6 +172,22 @@ object Calabash {
         return Snip(finish(raw, m, v, seconds), channels = 1, sampleRate = RATE)
     }
 
+    /**
+     * One stroke from any landing, not only the four takes: [render] with [landing] left unclamped, so landings 0 to
+     * [MAX_TAKE] are exactly [render]'s takes. A RIDDIM roll strikes a CALABASH drum dozens of times in one bar
+     * (Sabar Swing's nder roll), and each stroke is its own landing, as RIDDIM's prototype draws it; clamped, the
+     * strokes would repeat four landings and every take of the roll would be the same performance.
+     */
+    internal fun stroke(voice: CalabashVoice, macros: Map<String, Float>, velocity: Float, landing: Int): Snip {
+        val s = settled(voice, macros)
+        val v = (if (velocity.isFinite()) velocity.toDouble() else 1.0).coerceIn(0.05, 1.0)
+        val m = s.mapValues { it.value.toDouble() }
+        val seconds = voice.seconds
+        val raw = voiceRaw(voice, m, v, CalabashDsp.rngFor(voice.name, landing), nOf(seconds + 0.05))
+        check(raw.all { it.isFinite() }) { "CALABASH $voice rendered a non-finite sample" }
+        return Snip(finish(raw, m, v, seconds), channels = 1, sampleRate = RATE)
+    }
+
     /** A hit drawn from any seed, not only the four takes: for the round-1 A/B of the port's take law against the
      * prototype's (`CalabashLawTest`, `compare_kotlin.py`), never for a kit. */
     internal fun renderSeeded(voice: CalabashVoice, macros: Map<String, Float>, velocity: Float, seed: Int): Snip {

@@ -20,6 +20,7 @@ import numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import kits as K  # noqa: E402
+import kits_wide as W  # noqa: E402  (round 3's kits, swung; imported after kits.py, before nothing else)
 import wave  # noqa: E402
 
 
@@ -35,7 +36,10 @@ def rd(path):
     return (np.pad(b, ((0, 0), (1, 0))).view("<i4").ravel() >> 8) / 2 ** 23
 
 RATE = K.RATE
-IDS = {"clave_dancehall": "riddim-clave-dancehall", "dembow": "riddim-dembow", "boom_riddim": "riddim-boom-riddim"}
+IDS = {"clave_dancehall": "riddim-clave-dancehall", "dembow": "riddim-dembow", "boom_riddim": "riddim-boom-riddim",
+       "baile_funk": "riddim-baile-funk", "sabar_swing": "riddim-sabar-swing", "wood_bronze": "riddim-wood-bronze"}
+# Each kit's prototype module: round 1's in kits.py, round 3's (swung) in kits_wide.py.
+MODULES = {**{k: K for k in K.KITS}, **{k: W for k in W.KITS}}
 
 
 def strikes(pack, kit, slot):
@@ -52,7 +56,11 @@ def strikes(pack, kit, slot):
 
 def main(pack, out):
     checks = {}
-    for kit, k in K.KITS.items():
+    only = set(sys.argv[3].split(",")) if len(sys.argv) > 3 else set(IDS)
+    for kit, mod in MODULES.items():
+        if kit not in only:
+            continue
+        k = mod.KITS[kit]
         grid = {pid: strikes(pack, kit, i + 1) for i, pid in enumerate(K.PADS)}
         os.makedirs(os.path.join(out, kit, "pads"), exist_ok=True)
         for pid, zones in grid.items():
@@ -60,17 +68,17 @@ def main(pack, out):
                 for t, y in enumerate(row):
                     K.write_wav(os.path.join(out, kit, "pads", f"{pid}_z{z}_t{t}.wav"), y)
         # The prototype's dealing and choking, with the Kotlin strikes in place of the prototype's renders.
-        real = K.render_pad
-        K.render_pad = lambda p, bpm, v, take, _g=grid, _k=k: _g[K.PADS[_k["pads"].index(p)]][K.ZONES.index(v)][take]
+        real = mod.render_pad
+        mod.render_pad = lambda p, bpm, v, take, _g=grid, _k=k: _g[K.PADS[_k["pads"].index(p)]][K.ZONES.index(v)][take]
         try:
-            K.write_wav(os.path.join(out, kit, "groove.wav"), K.play_groove(kit))
+            K.write_wav(os.path.join(out, kit, "groove.wav"), mod.play_groove(kit))
         finally:
-            K.render_pad = real
+            mod.render_pad = real
         checks[kit] = {}
         for pid, p in zip(K.PADS, k["pads"]):
             zones = grid[pid]
             closest = max(K.take_distance_db(row[i], row[j]) for row in zones for i in range(4) for j in range(i + 1, 4))
-            bright = [float(np.mean([K.upper_share_db(y, p["voice"]) for y in row])) for row in zones]
+            bright = [float(np.mean([W.upper_share_db(y, p["voice"]) for y in row])) for row in zones]
             checks[kit][pid] = {"label": p["label"], "voice": p["voice"], "closest_takes_db": round(closest, 1),
                                 "brightness_soft_mid_hard_db": [round(b, 1) for b in bright],
                                 "darker_when_softer": bool(bright[0] < bright[1] < bright[2])}

@@ -7,7 +7,8 @@ import java.util.Random
 import kotlin.math.*
 
 /** One kit of the breakcore family. Each kit owns one job a breakcore track needs:
- * [Splinter] the edit, [Shatter] the break, [Soundclash] the sound system, [Redline] speedcore.
+ * [Splinter] the edit, [Shatter] the break, [Soundclash] the sound system, [Redline] speedcore,
+ * [Lull] the quiet side, [Strobe] the rave, [Cartridge] the chip, [Barricade] digital hardcore.
  * The shape is shared: 16 voices on A01 to A16, an authored roll on B01 and riser on B02,
  * three velocities by three takes on every pad, no per-hit levelling. */
 interface BreakcoreKit {
@@ -23,7 +24,7 @@ interface BreakcoreKit {
 object Breakcore {
     const val RECIPE_VERSION = 1
     val VELOCITIES: List<Double> = listOf(.3, .65, 1.0)
-    val kits: List<BreakcoreKit> get() = listOf(Splinter, Shatter, Soundclash, Redline)
+    val kits: List<BreakcoreKit> get() = listOf(Splinter, Shatter, Soundclash, Redline, Lull, Strobe, Cartridge, Barricade)
     /** The name a saved recipe carries: the first word of the kit's title. */
     fun name(kit: BreakcoreKit): String = kit.title.substringBefore(' ')
     fun byName(name: String): BreakcoreKit = requireNotNull(kits.firstOrNull { name(it) == name }) { "unknown breakcore kit $name" }
@@ -51,8 +52,11 @@ object Breakcore {
         val grid = VELOCITIES.map { v -> (0..2).map { t -> Recipe(kit, i, v, t).render() } }
         ArrangedPad(grid[2][0], p.kind, level = p.level, oneShot = true, displayName = p.name, muteGroup = p.muteGroup, velocityTakes = grid,
             source = mapOf("sourceBank" to "${name(kit)}/v$RECIPE_VERSION", "sourceRecipe" to Recipe(kit, i).toJsonText(),
-                "velocities" to ".3,.65,1.0", "takes" to "3", "status" to "groove and pads heard 2026-11-18 and kept; per-pad verdicts, phone and MPC playback open"))
+                "velocities" to ".3,.65,1.0", "takes" to "3", "status" to "groove and pads heard ${heard(kit)} and kept; per-pad verdicts, phone and MPC playback open"))
     }
+
+    /** The day the owner heard the kit's groove and pads and kept them: round one on 2026-11-18, round two the next day. */
+    private fun heard(kit: BreakcoreKit): String = if (kit in listOf(Lull, Strobe, Cartridge, Barricade)) "2026-11-19" else "2026-11-18"
 
     fun beat(bpm: Int): Double = 60.0 / bpm * Dsp.RATE
     fun frames(seconds: Double): Int = (seconds * Dsp.RATE).roundToInt()
