@@ -40,6 +40,10 @@
 > three 18-pad starters, 162 cells each verified through saving, playback, SFZ and MPC 3. Grooves and pads
 > heard 2026-11-18 and kept; per-pad verdicts and hardware open. See [BREAKCORE_FAMILY](BREAKCORE_FAMILY.md).
 
+> Breakcore family, second round: LULL (170 BPM), STROBE (145), CARTRIDGE (190) and BARRICADE (165) join the
+> family, four more 18-pad starters, 162 cells each verified through saving, playback, SFZ and MPC 3. Grooves and
+> pads auditioned and approved as built; per-pad verdicts and hardware open. See [BREAKCORE_FAMILY](BREAKCORE_FAMILY.md).
+
 > TRIAD first listening gate (2026-11-09): one generated hybrid drum groove through
 > shared compression/drive, dynamics/tape, or crush/grains. Native finite audition;
 > presets, HOLD, phone controls and MPC program export remain outside this gate.

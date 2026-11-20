@@ -1657,6 +1657,71 @@ class CliTest {
     }
 
     @Test
+    fun `kerf makes a pad its synthetic twin, relabels it, and gives the capture back`() {
+        val wav = writeBreak(File(temp, "kerf.wav"))
+        val out = File(temp, "kerf-out")
+        assertEquals(0, cli("chop", wav.path, "--out", out.path, "--name", "KF", "--slices", "8").first)
+        val kitDir = File(out, "KF")
+        val pad = KitStore.load(kitDir).pad(1)!!
+        val padFile = File(kitDir, pad.sampleFile)
+        val before = padFile.readBytes()
+
+        val (code, stdout, stderr) = cli("kerf", kitDir.path, "A01", "--slop", "0.25")
+        assertEquals(0, code, "stderr: $stderr")
+        assertContains(stdout, "pad A01 is a KERF twin now")
+        assertContains(stdout, "slop 0.25")
+        assertTrue(!before.contentEquals(padFile.readBytes()), "the pad's audio is the twin's render")
+        val made = KitStore.load(kitDir).pad(1)!!
+        val recipe = com.snipsnap.synth.PadRecipe.fromJsonValue(made.recipe!!)
+        val kerf = recipe.kerf!!
+        assertNull(recipe.patch, "a twin is its own source")
+        assertTrue(kerf.prev != null && kerf.next != null, "the pads either side came along as its neighbours")
+        assertEquals(0.25, kerf.slop)
+        assertTrue(made.source[KitBuilderModel.KERF_STAMP] != null)
+        assertEquals(pad.drumClass.name, made.source[KitBuilderModel.KERF_WAS], "what it was called before is kept for the undo")
+        // the saved numbers make the saved audio again
+        val again = recipe.render()
+        val onDisk = com.snipsnap.audio.WavReader.read(padFile)
+        assertEquals(onDisk.frameCount, again.frameCount)
+
+        val (undoCode, undoOut, undoErr) = cli("kerf", kitDir.path, "A01", "--undo")
+        assertEquals(0, undoCode, "stderr: $undoErr")
+        assertContains(undoOut, "came back out of the bin")
+        assertTrue(before.contentEquals(padFile.readBytes()))
+        val back = KitStore.load(kitDir).pad(1)!!
+        assertNull(back.recipe); assertNull(back.source[KitBuilderModel.KERF_STAMP]); assertNull(back.source[KitBuilderModel.KERF_WAS])
+        assertEquals(pad.drumClass, back.drumClass, "and it is called what it was called")
+
+        // a pad that is not a twin has nothing of KERF's to undo, even with a take of its own in the bin
+        KitBuilderModel.open(kitDir).apply { treatPad(2, "punched"); save() }
+        val (neverCode, _, neverErr) = cli("kerf", kitDir.path, "A02", "--undo")
+        assertTrue(neverCode != 0 && "not a KERF twin" in neverErr, "exit $neverCode: $neverErr")
+        assertEquals(1, KitBuilderModel.open(kitDir).priorTakes(2).size, "the treatment's take is still in the bin")
+
+        // with a treatment riding the twin, the newest take in the bin is the twin itself: the undo refuses rather
+        // than hand that back as if it were the capture
+        assertEquals(0, cli("kerf", kitDir.path, "A03").first)
+        KitBuilderModel.open(kitDir).apply { treatPad(3, "punched"); save() }
+        val ridden = File(kitDir, KitStore.load(kitDir).pad(3)!!.sampleFile).readBytes()
+        val (riddenCode, _, riddenErr) = cli("kerf", kitDir.path, "A03", "--undo")
+        assertTrue(riddenCode != 0 && "undo that first" in riddenErr, "exit $riddenCode: $riddenErr")
+        assertTrue(ridden.contentEquals(File(kitDir, KitStore.load(kitDir).pad(3)!!.sampleFile).readBytes()), "the refusal touched nothing")
+
+        // the whole kit, each pad measured once from its capture; then all of them back
+        val (allCode, allOut, allErr) = cli("kerf", kitDir.path, "--all")
+        assertEquals(0, allCode, "stderr: $allErr")
+        val twins = KitStore.load(kitDir).pads.count { it.source[KitBuilderModel.KERF_STAMP] != null }
+        assertContains(allOut, "$twins pads are KERF twins now")
+        assertTrue(twins >= 6, "$twins of ${KitStore.load(kitDir).pads.size} pads became twins: $allOut")
+        val (backCode, backOut, _) = cli("kerf", kitDir.path, "--all", "--undo")
+        assertEquals(0, backCode); assertContains(backOut, "$twins pads restored")
+
+        val (badCode, _, badErr) = cli("kerf", File(temp, "nowhere").path, "A01")
+        assertTrue(badCode != 0 && "not a kit folder" in badErr, badErr)
+        assertTrue(cli("kerf", kitDir.path, "A01", "--bleed", "9").first != 0, "bleed is bounded")
+    }
+
+    @Test
     fun `desample names the nearest patch for a wav and makes a pad into one`() {
         val kickWav = File(temp, "ds kick.wav")
         WavWriter.write(kickWav, com.snipsnap.synth.Thump.render(com.snipsnap.synth.ThumpVoice.KICK, mapOf("TUNE" to 0.5f, "SWEEP" to 0.85f, "DECAY" to 0.15f, "CLICK" to 0.5f, "DRIVE" to 0.5f)))
