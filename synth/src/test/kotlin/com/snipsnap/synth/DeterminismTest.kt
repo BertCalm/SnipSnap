@@ -452,6 +452,15 @@ class DeterminismTest {
     }
 
     @Test
+    fun `CONSORT retains its section velocity and take across renders`() {
+        val patch = ConsortPatch("Section canary", ConsortVoice.CLARINET, mapOf("HOLD" to 0.2f),
+            chairs = listOf(ConsortChair(ConsortVoice.FLUTE, ConsortInterval.OCT_UP), ConsortChair(ConsortVoice.BASSOON, ConsortInterval.OCT_DOWN)),
+            velocity = 1f, take = 1)
+        assertContentEquals(patch.render().samples, patch.render().samples)
+        assertContentEquals(patch.render().samples, Patches.fromJsonText(patch.toJsonText()).render().samples)
+    }
+
+    @Test
     fun `CHAMBER factory room recipes regenerate the authored note velocity and exact seed`() {
         val patch = ChamberPresets.forVoice(ChamberVoice.AQUARIUM).first().copy(
             midi = 57, velocity = .42f, seed = Long.MIN_VALUE + 1,
