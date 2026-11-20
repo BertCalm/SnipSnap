@@ -82,5 +82,25 @@
    "evals": 3968,
    "seconds": 66.3
   }
+ },
+ "drums_full_hudson": {
+  "kick": {
+   "params": {
+    "f1": 38.1005,
+    "t1": 0.3896,
+    "alpha": 1.0287,
+    "beater_ms": 2.8826,
+    "punch_hz": 167.2966,
+    "punch_ms": 27.2362,
+    "punch_db": -4.2447,
+    "click_db": -29.0337,
+    "mud_db": 1.6051,
+    "drive": 0.1877,
+    "lp": 4109.8739
+   },
+   "score_db": 6.14,
+   "evals": 3968,
+   "seconds": 82.0
+  }
  }
 }
