@@ -34,7 +34,11 @@ def score(target, pad, role):
     err = math.sqrt(float(np.mean((t - p)[mask] ** 2)))
     semis = lambda a, b: abs(12 * math.log2(max(a, 1) / max(b, 1)))
     if role == 'kick':
-        err += 1.5 * np.mean([semis(target['pitch_hz'][k], pad['pitch_hz'][k]) for k in ('30ms', '60ms', '100ms')])
+        # 30 ms is where the kick dominates its loop; a later reading counts only within ~30% of it, since
+        # past that something else in the loop is louder (mercer read 65 -> 89 -> 113 Hz, halsey 127 Hz at 60 ms)
+        p30 = target['pitch_hz']['30ms']
+        keys = ['30ms'] + [k for k in ('60ms', '100ms') if abs(math.log2(target['pitch_hz'][k] / p30)) < .4]
+        err += 1.5 * np.mean([semis(target['pitch_hz'][k], pad['pitch_hz'][k]) for k in keys])
     else:
         err += 1.5 * semis(target['body_hz'], pad['body_hz'])
     return err

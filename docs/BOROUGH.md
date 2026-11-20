@@ -512,6 +512,12 @@ Listening page (private until shared): https://claude.ai/artifact/6y32yHPUszWK58
   - round 1.1: "The ride sounds like it has a dead spot. And the stoop kick is a bit overpowering."
   - round 1.2: "Stoop sounds like the speaker is overblown when the kick hits. Ride is sounding better."
   - round 1.3: "Its better now" (the STOOP kick, 2026-11-19).
+  - round 1.4 (compression preview): "Generally it helps. They all kind of sound pretty similar to each other though."
+  - round 1.5 to 1.7: "Can you increase the vibrancy of the sound? It just doesn't have the wow"; "They all just
+    sound muddy, muffled, and flat"; "Without the chain the kick sounds like a weak hit, with it- it becomes
+    muddy ... These are just flopping."
+  - round 2 prototype (STOOP, designed drums): "Round 2 is def betetr" (2026-11-20). Direction accepted; all six
+    kits are being rebuilt this way.
   Heard as better is not accepted for the shelf: no kit has been approved yet.
 
 ## Why it is built this way

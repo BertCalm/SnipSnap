@@ -20,20 +20,22 @@ WINDOWS = [(0, .005), (.005, .02), (.02, .05), (.05, .1), (.1, .2), (.2, .3)]
 def _onsets(x, t, role, st, pats, bars):
     """Onset of each kick or backbeat-snare hit near its grid slot (steepest rise, 1-8 kHz for snares,
     40-200 Hz for kicks), as sample indices."""
-    lo, hi = (1000, 8000) if role == 'snare' else (40, 200)
+    lo, hi = (1000, 8000) if role == 'snare' else (40, 200)   # kick_x aligns on its kick band too
     b = signal.sosfiltfilt(signal.butter(4, [lo, hi], btype='band', fs=SR, output='sos'), x)
     e = np.abs(signal.hilbert(b))
     out = []
     for bar in range(bars):
         row = pats[bar % len(pats)]
         for s, c in enumerate(row):
-            ok = (c in 'SX' and s % 8 == 4) if role == 'snare' else (c in 'K')   # X carries a snare: skip for kicks
+            ok = (c in 'SX' and s % 8 == 4) if role == 'snare' else (c in 'KX') if role == 'kick_x' else (c in 'K')   # X carries a snare: kicks take it only as a fallback
             if not ok:
                 continue
             c0 = int(((bar * 16 + s) * st - .04) * SR); c1 = int(((bar * 16 + s) * st + .06) * SR)
             if c0 < 0 or c1 + int(.32 * SR) > len(x):
                 continue
             d = np.diff(e[c0:c1]); out.append(c0 + int(np.argmax(d)) - int(.001 * SR))
+    if not out and role == 'kick':   # some loops never play a kick alone (keap, moffat): take the kick-and-snare hits
+        return _onsets(x, t, 'kick_x', st, pats, bars)
     return out
 
 
