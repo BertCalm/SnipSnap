@@ -13,6 +13,10 @@ barely hear, or none → the clock drags and catches up → a cartoon lands wher
 
 ## Status
 
+**Round 3d heard (2026-11-20): "3D works."** The owner heard the round 3d page (the converter at 16 bits, blended half
+clean, beside round 3c's and a no-crushing version) and accepted it. Kit version 9 is the version heard. Whether each
+of the three kits passes the sound gate as a kit is not yet stated; the phone and MPC gates are open.
+
 **Round 3d built (2026-11-20): "I think the 12-bit is too high. The bit crushing is overly effecting the sound."**
 Measured on the kits' own pads, each converter stage switched off in turn against the print with the converter clean
 (its TONE kept), in the first 30 ms, 30 to 200 ms and past 200 ms of each hit:
