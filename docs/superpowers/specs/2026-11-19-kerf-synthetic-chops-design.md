@@ -367,7 +367,7 @@ Rows of the registration checklist (snipsnap-conventions.md §3) that apply at e
 - **R1 (renderer):** `KerfRender.kt`, `KerfPatchData.kt`, their tests. No registration.
 - **R2 (tool):** `KerfFit.kt`; a `KitBuilder` entry beside `desamplePad`; the pad recipe
   field from section 6.
-- **R3 (engine):** rows 1 to 14: `Kerf.kt`, `KerfPatch.kt`, the `Patches.fromJsonValue`
+- **R4 (engine):** rows 1 to 14: `Kerf.kt`, `KerfPatch.kt`, the `Patches.fromJsonValue`
   arm, both `Velocity.kt` arms, `KerfPresets.kt`, `SynthKits`, the kit generator, the
   audition generator, docs, and the app picker entry with an on-device test.
 
