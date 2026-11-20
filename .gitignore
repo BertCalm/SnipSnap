@@ -865,3 +865,7 @@ testkit/stagger-round1b/
 
 # Reproducible SIDEROOM native audition and exported kits.
 /testkit/sideroom-native/
+
+# SIGIL round-0 renders and listening page regenerate locally (prototype/sigil/gen.py, build_page.py).
+/prototype/sigil/out/
+/prototype/sigil/__pycache__/

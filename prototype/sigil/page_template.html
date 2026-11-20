@@ -1,0 +1,253 @@
+<title>SIGIL Kits, Round 0</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: three kit panels stacked, each an MPC-order 4x4 pad grid beside its controls; the measured comparison closes the page. */
+:root {
+  --bg: #e7e8eb; --surface: #f4f5f7; --fg: #16171a; --muted: #585c66; --line: #c6c9d0;
+  --pad: #d9dbe0; --pad-hi: #cdd0d6; --pad-fg: #1d1f23;
+  --iron: #a8471f; --neon: #4446c9; --ash: #7c6a3c; --ok: #2f7a4a; --warn: #9a5b00;
+  --display: "Chakra Petch", "Arial Narrow", system-ui, sans-serif;
+  --body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #111215; --surface: #191a1e; --fg: #e6e7ea; --muted: #9a9ea8; --line: #2b2e35;
+  --pad: #22252b; --pad-hi: #2c3038; --pad-fg: #e6e7ea;
+  --iron: #e2794a; --neon: #9195f7; --ash: #cdb77f; --ok: #6cc28c; --warn: #e3a64a; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #111215; --surface: #191a1e; --fg: #e6e7ea; --muted: #9a9ea8; --line: #2b2e35;
+  --pad: #22252b; --pad-hi: #2c3038; --pad-fg: #e6e7ea;
+  --iron: #e2794a; --neon: #9195f7; --ash: #cdb77f; --ok: #6cc28c; --warn: #e3a64a; color-scheme: dark }
+* { box-sizing: border-box }
+body { background: var(--bg); color: var(--fg); font: 15px/1.55 var(--body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 28px 64px }
+.wrap { max-width: 1060px; margin: 0 auto; display: grid; gap: 40px }
+.wrap > *, .kits > * { min-width: 0 }
+.kits { display: grid; gap: 48px }
+h1, h2, h3 { font-family: var(--display); text-wrap: balance; margin: 0; letter-spacing: .01em }
+h1 { font-size: clamp(2rem, 5vw, 3.1rem); font-weight: 700; line-height: 1.05 }
+h2 { font-size: 1.7rem; font-weight: 700 }
+.eyebrow { font: 600 .75rem/1 var(--display); letter-spacing: .14em; text-transform: uppercase; color: var(--muted) }
+.lede { max-width: 66ch; color: var(--fg); margin: 12px 0 0 }
+.note { max-width: 66ch; color: var(--muted); font-size: .92rem; margin: 8px 0 0 }
+header { display: grid; gap: 6px }
+.controls { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--bg);
+  border-bottom: 1px solid var(--line); padding-block: 10px; display: flex; flex-wrap: wrap; gap: 14px 22px; align-items: center }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg) }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden }
+.seg button { font: 600 .82rem/1 var(--display); letter-spacing: .06em; text-transform: uppercase; padding: 9px 12px;
+  background: var(--surface); color: var(--fg); border: 0; cursor: pointer }
+.seg button + button { border-left: 1px solid var(--line) }
+.seg button[aria-pressed="true"] { background: var(--fg); color: var(--bg) }
+.ctl-label { font: 600 .72rem/1 var(--display); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin-right: 8px }
+.hint { color: var(--muted); font-size: .85rem }
+kbd { font: 500 .78rem var(--mono); border: 1px solid var(--line); border-radius: 4px; padding: 1px 5px; background: var(--surface) }
+.kit { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 330px); gap: 28px; align-items: start;
+  border-top: 3px solid var(--kit); padding-top: 18px }
+.kit[data-kit="iron"] { --kit: var(--iron) } .kit[data-kit="neon"] { --kit: var(--neon) } .kit[data-kit="ash"] { --kit: var(--ash) }
+.kit h2 { color: var(--kit) }
+.meta { font: 500 .85rem var(--mono); color: var(--muted); margin-top: 4px }
+.grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px }
+.pad { position: relative; aspect-ratio: 1 / 1; max-width: 100%; min-width: 0; border: 1px solid var(--line); border-radius: 8px;
+  background: var(--pad); color: var(--pad-fg); cursor: pointer; padding: 9px; text-align: left;
+  display: flex; flex-direction: column; justify-content: space-between; font: inherit;
+  transition: background .06s, transform .06s; -webkit-tap-highlight-color: transparent; touch-action: manipulation }
+.pad:hover { background: var(--pad-hi) }
+.pad:focus-visible { outline: 2px solid var(--kit); outline-offset: 2px }
+.pad.hit { background: var(--kit); color: var(--bg); transform: scale(.97) }
+.pad.on { background: var(--kit); color: var(--bg) }
+.pad .num { font: 600 .72rem/1 var(--display); letter-spacing: .1em; opacity: .75; display: flex; justify-content: space-between }
+.pad .name { font: 600 clamp(.72rem, 1.9vw, .95rem)/1.15 var(--display); overflow-wrap: anywhere }
+.pad .dots { display: flex; gap: 4px }
+.pad .dots i { width: 6px; height: 6px; border-radius: 50%; background: currentColor; opacity: .25 }
+.pad .dots i.cur { opacity: 1 }
+.pad.special { border-style: dashed }
+.side { display: grid; gap: 14px; min-width: 0 }
+.side p { margin: 0 }
+.facts { display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; font-size: .9rem; margin: 0 }
+.facts dt { font: 600 .72rem/1.9 var(--display); letter-spacing: .1em; text-transform: uppercase; color: var(--muted) }
+.facts dd { margin: 0 }
+.now { font: 500 .85rem var(--mono); color: var(--muted); min-height: 1.4em }
+.tablewrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--surface) }
+table { border-collapse: collapse; width: 100%; min-width: 640px; font-size: .9rem; font-variant-numeric: tabular-nums }
+th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--line); vertical-align: top }
+th { font: 600 .72rem/1.3 var(--display); letter-spacing: .1em; text-transform: uppercase; color: var(--muted) }
+td:not(:first-child) { font-family: var(--mono); font-size: .85rem; white-space: nowrap }
+th.iron { color: var(--iron) } th.neon { color: var(--neon) } th.ash { color: var(--ash) }
+tr:last-child td { border-bottom: 0 }
+.ask { display: grid; gap: 10px; max-width: 70ch; padding-left: 1.2em; margin: 0 }
+section > h2 + .note { margin-top: 6px }
+@media (max-width: 760px) { .kit { grid-template-columns: minmax(0, 1fr) } .grid { gap: 7px } .pad { padding: 7px } }
+@media (prefers-reduced-motion: reduce) { .pad { transition: none } .pad.hit { transform: none } }
+</style>
+
+<div class="wrap">
+  <header>
+    <span class="eyebrow">SnipSnap · drum kits · round 0</span>
+    <h1>SIGIL</h1>
+    <p class="lede">Three kits after your 23 reference loops: heavy, centred kick and snare under percussion that is part organic and part synthetic. One kit per tempo you gave, each with its own wear.</p>
+    <p class="note">This is the Python test version: every pad is rendered and measured, but nobody has heard it yet. Your loops are not on this page; only numbers taken from them are. Every pad has three velocities and four takes, as the finished kits will.</p>
+  </header>
+
+  <div class="controls" role="group" aria-label="Playing">
+    <div><span class="ctl-label" id="vel-label">Velocity</span>
+      <span class="seg" role="group" aria-labelledby="vel-label">
+        <button type="button" data-z="0" aria-pressed="false">Soft</button>
+        <button type="button" data-z="1" aria-pressed="false">Medium</button>
+        <button type="button" data-z="2" aria-pressed="true">Hard</button>
+      </span></div>
+    <div><span class="ctl-label" id="take-label">Takes</span>
+      <span class="seg" role="group" aria-labelledby="take-label">
+        <button type="button" data-cycle="1" aria-pressed="true">Cycle</button>
+        <button type="button" data-cycle="0" aria-pressed="false">Take 1 only</button>
+      </span></div>
+    <span class="hint">Tap a pad again for its next take. Keys <kbd>1</kbd>–<kbd>4</kbd> <kbd>Q</kbd>–<kbd>R</kbd> <kbd>A</kbd>–<kbd>F</kbd> <kbd>Z</kbd>–<kbd>V</kbd> play the last kit you touched.</span>
+  </div>
+
+  <div id="kits" class="kits"></div>
+
+  <section>
+    <span class="eyebrow">Measured, not heard</span>
+    <h2>Against your references</h2>
+    <p class="note">The same probes run on your drum loops (the six heavy loops and the slammed 90 BPM loop) and on these kits. Python harness, not the app. The percussion loops have no kick or snare, so they set the key and the feel, not these rows.</p>
+    <div class="tablewrap" style="margin-top:14px">
+      <table>
+        <thead><tr><th>Measure</th><th>Your drum loops</th><th class="iron">IRON</th><th class="neon">NEON</th><th class="ash">ASH</th></tr></thead>
+        <tbody><!--ROWS--></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <span class="eyebrow">What helps the next round</span>
+    <h2>Tell me</h2>
+    <ol class="ask">
+      <li>For each kit: keep, change or drop. One word each is enough.</li>
+      <li>The kick and snare: impactful enough? Too clean, too dirty, too long, too short?</li>
+      <li>The percussion: which pads feel right for "organic/inorganic hybrid", and which feel too much like one or the other?</li>
+      <li>Velocity and takes: does Soft sound like a softer hit, and do the four takes sound like the same drum struck again?</li>
+      <li>Any pad you would swap for something else, and what.</li>
+    </ol>
+  </section>
+</div>
+
+<script>
+const KITS = /*MANIFEST*/;
+const ABOUT = {
+  iron: { line: "After the six heavy drum loops: sub-drop kicks, a dark snare with a long tail, hats at a whisper. One of those loops is a speaker pushed too hard; that is this kit's print.",
+          print: "Blown speaker: lopsided clipping, a cone that rolls off at 4.5 kHz and rattles when pushed" },
+  neon: { line: "After the slammed 90 BPM loop and the 90 BPM percussion: an 808-style sub, a crack snare, ratcheting hats, clock ticks and wood.",
+          print: "Slam: clean and loud, a soft knee into a ceiling" },
+  ash:  { line: "After the 115 BPM percussion loops and the two tape-and-vinyl loops: four on the floor, a soft backbeat, log drums walking A minor, shakers swung.",
+          print: "Tape: a head bump, warm saturation, the top rolled off; wow, flutter, hiss and crackle on the groove" },
+};
+// MPC order: pad 1 bottom left, pad 16 top right.
+const ORDER = [13,14,15,16, 9,10,11,12, 5,6,7,8, 1,2,3,4];
+const KEYS = { "1":13,"2":14,"3":15,"4":16, q:9,w:10,e:11,r:12, a:5,s:6,d:7,f:8, z:1,x:2,c:3,v:4 };
+const ZN = ["Soft", "Medium", "Hard"];
+let zone = 2, cycle = true, ctx = null, lastKit = KITS[0].id;
+const buffers = new Map(), loading = new Map(), takeOf = new Map(), grooveSrc = new Map();
+
+function audio() {
+  if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
+  if (ctx.state === "suspended") ctx.resume();
+  return ctx;
+}
+const INLINE = new Map();
+KITS.forEach(k => k.pads.forEach(p => { if (p.data) INLINE.set(p.file, p.data); }));
+function bytes(b64) { const s = atob(b64), u = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) u[i] = s.charCodeAt(i); return u.buffer; }
+function load(file) {
+  if (buffers.has(file)) return Promise.resolve(buffers.get(file));
+  const get = INLINE.has(file) ? Promise.resolve(bytes(INLINE.get(file))) : fetch(file).then(r => r.arrayBuffer());
+  if (!loading.has(file)) loading.set(file, get.then(b => audio().decodeAudioData(b))
+    .then(buf => { buffers.set(file, buf); return buf; }));
+  return loading.get(file);
+}
+function preload(kit) { kit.pads.forEach(p => load(p.file).catch(() => {})); }
+
+function render() {
+  const host = document.getElementById("kits");
+  for (const kit of KITS) {
+    const sec = document.createElement("section");
+    sec.className = "kit"; sec.dataset.kit = kit.id; sec.id = kit.id;
+    const grid = document.createElement("div"); grid.className = "grid";
+    for (const n of ORDER) {
+      const p = kit.pads[n - 1];
+      const b = document.createElement("button");
+      b.type = "button"; b.className = "pad" + (n >= 15 ? " special" : ""); b.id = `${kit.id}-pad-${n}`;
+      b.dataset.kit = kit.id; b.dataset.n = n;
+      b.setAttribute("aria-label", `A${String(n).padStart(2, "0")} ${p.name}`);
+      b.innerHTML = `<span class="num"><span>A${String(n).padStart(2, "0")}</span><span>${n === 16 ? "LOOP" : n === 15 ? "ROLL" : ""}</span></span>
+        <span class="name">${p.name}</span>` + (n === 16 ? `<span class="dots"></span>` : `<span class="dots">${"<i></i>".repeat(4)}</span>`);
+      b.addEventListener("pointerdown", e => { e.preventDefault(); trigger(kit, n); });
+      b.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); trigger(kit, n); } });
+      grid.appendChild(b);
+    }
+    const a = ABOUT[kit.id];
+    const side = document.createElement("div"); side.className = "side";
+    side.innerHTML = `<div><span class="eyebrow">Kit ${KITS.indexOf(kit) + 1} of 3</span><h2>${kit.title}</h2>
+      <div class="meta">${kit.bpm} BPM · swing ${kit.swing} · 16 pads · 3 velocities × 4 takes</div></div>
+      <p>${a.line}</p>
+      <dl class="facts"><dt>Wear</dt><dd>${a.print}</dd><dt>Key</dt><dd>A minor (every tuned pad)</dd>
+      <dt>A15</dt><dd>${kit.pads[14].name}</dd><dt>A16</dt><dd>The groove, two bars, looped (${kit.groove_s.toFixed(1)} s with its tail)</dd></dl>
+      <div class="now" id="${kit.id}-now" aria-live="polite">Tap a pad.</div>`;
+    sec.append(grid, side);
+    host.appendChild(sec);
+  }
+}
+
+function flash(el) { el.classList.add("hit"); setTimeout(() => el.classList.remove("hit"), 110); }
+
+async function trigger(kit, n) {
+  lastKit = kit.id;
+  const c = audio(); preload(kit);
+  const el = document.getElementById(`${kit.id}-pad-${n}`);
+  const p = kit.pads[n - 1];
+  const now = document.getElementById(`${kit.id}-now`);
+  if (n === 16) return toggleGroove(kit, el, now);
+  const key = `${kit.id}-${n}`;
+  const t = cycle ? (takeOf.get(key) ?? 0) : 0;
+  takeOf.set(key, (t + 1) % 4);
+  flash(el);
+  el.querySelectorAll(".dots i").forEach((d, i) => d.classList.toggle("cur", i === t));
+  now.textContent = `A${String(n).padStart(2, "0")} ${p.name} · ${ZN[zone]} · take ${t + 1} of 4`;
+  try {
+    const buf = await load(p.file);
+    const src = c.createBufferSource(); src.buffer = buf; src.connect(c.destination);
+    src.start(0, p.slot * (zone * 4 + t), p.slot);
+  } catch (e) { now.textContent = "This pad's audio did not load. Reload the page and try again."; }
+}
+
+async function toggleGroove(kit, el, now) {
+  const c = audio();
+  if (grooveSrc.has(kit.id)) { grooveSrc.get(kit.id).stop(); grooveSrc.delete(kit.id); el.classList.remove("on"); now.textContent = "Groove stopped."; return; }
+  for (const [k, s] of grooveSrc) { s.stop(); document.getElementById(`${k}-pad-16`).classList.remove("on"); }
+  grooveSrc.clear();
+  el.classList.add("on"); now.textContent = "Loading the groove…";
+  try {
+    const buf = await load(kit.groove);
+    const src = c.createBufferSource(); src.buffer = buf; src.loop = true;
+    src.loopStart = 0; src.loopEnd = 8 * 60 / kit.bpm;
+    src.connect(c.destination); src.start();
+    grooveSrc.set(kit.id, src);
+    now.textContent = `Groove · ${kit.bpm} BPM · two bars, looping. Tap A16 again to stop.`;
+  } catch (e) { el.classList.remove("on"); now.textContent = "The groove did not load. Reload the page and try again."; }
+}
+
+document.querySelectorAll("[data-z]").forEach(b => b.addEventListener("click", () => {
+  zone = +b.dataset.z; document.querySelectorAll("[data-z]").forEach(x => x.setAttribute("aria-pressed", x === b));
+}));
+document.querySelectorAll("[data-cycle]").forEach(b => b.addEventListener("click", () => {
+  cycle = b.dataset.cycle === "1"; document.querySelectorAll("[data-cycle]").forEach(x => x.setAttribute("aria-pressed", x === b));
+}));
+document.addEventListener("keydown", e => {
+  if (e.repeat || e.metaKey || e.ctrlKey || e.altKey) return;
+  const n = KEYS[e.key.toLowerCase()];
+  if (!n) return;
+  const kit = KITS.find(k => k.id === lastKit);
+  trigger(kit, n);
+});
+render();
+</script>
