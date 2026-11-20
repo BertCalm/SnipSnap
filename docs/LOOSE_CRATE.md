@@ -402,8 +402,23 @@ tap and foot hat move under 1.5 dB in any band; the shaker sheds 3.5 dB of fold-
 a bright cymbal through a sample-rate reduction that does not divide the output rate needs its noise measured, not
 only its spectrum.
 
+**Round 0k, a stick hit and a quick ring.** "No. It's not right. Tone down the sizzle, it should be a bright stick hit
+to the ride (not bell) with a light and shimmery ring that fades quickly" (the owner, 2026-11-20). Round 0h had
+softened the strike to lift the wash toward the references; the owner wants the opposite balance. Each phrase as a
+measure on the printed hit, the round-0h references (used only to measure) as a guide: the stick, the first 40 ms'
+centre (references 8.6 and 7.7 kHz); not bell, 1 to 3 kHz's share of those 40 ms (references -25 and -15 dB); light,
+the ring's level from 0.2 to 0.6 s against the stick; fades quickly, the time to 40 dB down; the sizzle, the ring's
+peaks over the floor between them. A search of 72 settings through BLUE's print chose: DAMP .55; a 2 kHz low cut (was
+500 Hz); the ride's own band over 5 kHz added 1.5 times over and gone in 10 ms (the ping); round 0h's +12 dB at 8 kHz
+and 12 kHz cut kept; round 0h's softened strike gone; after 30 ms, an exponential fade of 0.35 s. Measured: the stick
+at 7.8 kHz (round 0j 7.1), 1 to 3 kHz at -17.5 dB (round 0j -12.5), the ring 21 dB under the stick (round 0j 9; the
+references 13 and 8), 40 dB down at 0.65 s (round 0j 1.4 s; the references 1.8 and 3.2), its peaks 21.6 dB over the
+floor (the references 17.6 and 10). The ring's length is the owner's to judge, so a version fading over 0.5 s (40 dB
+down at 0.77 s) is rendered beside it. A fade of 0.1 to 0.15 s was tried and rejected: 20 dB down in 0.1 s is a
+choked cymbal, and the ring sank under the print's own vinyl floor.
+
 [Expansion round 0 listening page](https://claude.ai/artifact/Q3rZ8po8ZaeJs9E4tNd86s) (private to the owner; BLUE's
-ride at rounds 0j and 0h, its three grooves, and the shaker at two levels).
+ride at rounds 0k (two ring lengths) and 0j, its three grooves, and the shaker at two levels).
 
 ## Gates
 

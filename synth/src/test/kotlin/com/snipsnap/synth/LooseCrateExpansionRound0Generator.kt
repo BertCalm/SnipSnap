@@ -42,38 +42,62 @@ object LooseCrateExpansionRound0Generator {
      * two recordings of jazz rides, used only to measure). Round 0f's shelf and lift had put air over 12 kHz: the
      * references' wash (0.2 to 0.6 s after the strike) holds 21 to 30 dB under its whole there, round 0g's 15. The
      * references live between 3 and 12 kHz, a bright stick ping over a wash that falls 20 dB in 0.5 to 1.3 s. The
-     * print's converter filter and tape head (about 6 kHz) take that band, so the ride is shaped before it:
-     * - EMBER's flat ride at TUNE .40, DAMP .30, BUZZ 0 (no rivets: EMBER's fitted cymbals start at 0);
-     * - a low cut at [RIDE_LOW_CUT_HZ] (two one-poles' high-pass), the references' lows being modest;
-     * - +[RIDE_PRESENCE_DB] dB at [RIDE_PRESENCE_HZ] (peaking, Q .8), to stand up to the tape head;
-     * - the strike [RIDE_STRIKE_DB] dB softer, coming back over [RIDE_STRIKE_SECONDS] s, so the wash sits as the
-     *   references' does against the strike;
-     * - a steep cut at [RIDE_TOP_HZ] (two Butterworth low-passes, 24 dB an octave): no shimmer.
+     * print's converter filter and tape head (about 6 kHz) take that band, so round 0h shaped the ride before it:
+     * EMBER's flat ride at TUNE .40, DAMP .30, BUZZ 0 (no rivets: EMBER's fitted cymbals start at 0); a 500 Hz low
+     * cut; +12 dB at 8 kHz (peaking, Q .8) against the tape head; the strike 3 dB softer, back over 50 ms, so the
+     * wash sat as the references' does against the strike; a steep cut at 12 kHz (two Butterworth low-passes,
+     * 24 dB an octave): no shimmer. Round 0k ([stickRide]) keeps the presence and the cut and turns the rest.
      * Scored against the references by the share of five bands (under 1 kHz to over 12 kHz) at the strike, the wash
      * and the tail, and the wash's and tail's levels against the strike, the printed hit (BLUE's print, vinyl
      * included) sits 5.3 dB from the references' mean (round 0g 7.0; the two references sit 3.5 from it). What is
      * left is the print's own: vinyl hiss over 12 kHz in the tail and the strike's lows.
      */
-    private val recordRide: Strike = { v, t, _ ->
-        val x = Ember.render(EmberVoice.RIDE, mapOf("TUNE" to .40f, "DAMP" to .30f, "BUZZ" to 0f, "DISTANCE" to 0f, "WARMTH" to 0f), v, t).samples
+    private val recordRide: Strike = stickRide(RIDE_FADE_SECONDS)
+
+    /**
+     * Round 0k: "It's not right. Tone down the sizzle, it should be a bright stick hit to the ride (not bell) with a
+     * light and shimmery ring that fades quickly" (the owner, 2026-11-20). Round 0h had softened the strike to lift
+     * the wash; this turns that round: the stick forward, the ring light and short. Against the round-0h references
+     * (used only to measure) and the owner's words, on the printed hit:
+     * - the stick's first 40 ms centred at 7.8 kHz (references 8.6 and 7.7, round 0j 7.1): a low cut at
+     *   [RIDE_LOW_CUT_HZ] and the ride's own band over [RIDE_PING_HZ] added [RIDE_PING] times over, gone in
+     *   [RIDE_PING_SECONDS] s (the ping);
+     * - not bell: 1 to 3 kHz holds -17.5 dB of the stick (references -25 and -15, round 0j -12.5);
+     * - the ring light, 21 dB under the stick from 0.2 to 0.6 s (references 13 and 8, round 0j 9), and fading
+     *   quickly, 40 dB down at 0.65 s (references 1.8 and 3.2, round 0j 1.4): DAMP .55 and, after the first
+     *   [RIDE_FADE_AFTER] s, an exponential fade of [fadeSeconds];
+     * - the sizzle down with the ring; its peaks 21.6 dB over the floor between them (references 17.6 and 10).
+     * Round 0h's +12 dB at 8 kHz against the tape head and its cut at 12 kHz stay, as do BLUE's print's full-rate
+     * converter and steady tape.
+     */
+    private fun stickRide(fadeSeconds: Double): Strike = { v, t, _ ->
+        val x = Ember.render(EmberVoice.RIDE, mapOf("TUNE" to .40f, "DAMP" to .55f, "BUZZ" to 0f, "DISTANCE" to 0f, "WARMTH" to 0f), v, t).samples
         val a = Dsp.FixedOnePole(RIDE_LOW_CUT_HZ)
         val b = Dsp.FixedOnePole(RIDE_LOW_CUT_HZ)
         val presence = Dsp.Biquad().apply { peaking(RIDE_PRESENCE_HZ, RIDE_PRESENCE_DB, .8f) }
-        val floor = Math.pow(10.0, -RIDE_STRIKE_DB / 20.0)
-        val tau = RIDE_STRIKE_SECONDS * Dsp.RATE
+        val c = Dsp.FixedOnePole(RIDE_PING_HZ)
+        val d = Dsp.FixedOnePole(RIDE_PING_HZ)
         val shaped = FloatArray(x.size) {
             val h1 = x[it] - a.lp(x[it])
-            val g = 1.0 - (1.0 - floor) * Math.exp(-it / tau)
-            (presence.process(h1 - b.lp(h1)) * g).toFloat()
+            val y = presence.process(h1 - b.lp(h1))
+            val p1 = y - c.lp(y)
+            val seconds = it.toDouble() / Dsp.RATE
+            val pinged = y + RIDE_PING * (p1 - d.lp(p1)) * Math.exp(-seconds / RIDE_PING_SECONDS).toFloat()
+            if (seconds <= RIDE_FADE_AFTER) pinged else pinged * Math.exp(-(seconds - RIDE_FADE_AFTER) / fadeSeconds).toFloat()
         }
         lowPass(lowPass(shaped, RIDE_TOP_HZ), RIDE_TOP_HZ)
     }
 
-    private const val RIDE_LOW_CUT_HZ = 500f
+    private const val RIDE_LOW_CUT_HZ = 2_000f
     private const val RIDE_PRESENCE_HZ = 8_000f
     private const val RIDE_PRESENCE_DB = 12f
-    private const val RIDE_STRIKE_DB = 3.0
-    private const val RIDE_STRIKE_SECONDS = .05
+    private const val RIDE_PING_HZ = 5_000f
+    private const val RIDE_PING = 1.5f
+    private const val RIDE_PING_SECONDS = .010
+    private const val RIDE_FADE_AFTER = .03
+    private const val RIDE_FADE_SECONDS = .35
+    /** The comparison ring, a little longer: 40 dB down at 0.77 s. */
+    private const val RIDE_FADE_LONGER = .50
     private const val RIDE_TOP_HZ = 12_000f
 
     /** A Butterworth low-pass (RBJ's cookbook, Q 0.7071), 12 dB an octave; twice over, 24. */
@@ -341,6 +365,11 @@ object LooseCrateExpansionRound0Generator {
         for ((tag, notes) in listOf("a-pocket" to pocketNotes, "b-break" to breakNotes, "c-pocket-no-shaker" to pocketNotes.filter { it.part != 4 }))
             write("blue/groove-$tag.wav", levelled(printedLoop(loopDry(notes, 90, blueParts.map { it.second }, blueRoom, blueFaders), BLUE_PRINT)))
         for ((name, s) in blueParts) write("blue/hit-$name.wav", hit(s, print = BLUE_PRINT))
+        // Round 0k's ring a little longer, for the owner to judge "fades quickly" by ear.
+        write("blue/hit-ride-longer.wav", hit(stickRide(RIDE_FADE_LONGER), print = BLUE_PRINT))
+        write("blue/groove-a-pocket-ride-longer.wav", levelled(printedLoop(loopDry(pocketNotes, 90,
+            blueParts.map { it.second }.toMutableList().also { it[2] = stickRide(RIDE_FADE_LONGER) }, blueRoom, blueFaders), BLUE_PRINT)))
+
         // The shaker's share of the groove, dry and on one scale: the shaker alone and everything else alone.
         // Stems for measuring only.
         run {
