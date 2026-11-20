@@ -70,6 +70,23 @@ object Chamber {
     // listener mix lift; it never changes the membrane or room energy states.
     private val MEMBRANE_MIX_LIFT = 10.0.pow(3.0 / 20.0)
 
+    /**
+     * Touch. The saved default velocity is the pivot: at [NORMAL_VELOCITY] every model renders
+     * exactly as it always has, so accepted recordings keep every bit. The owner heard soft,
+     * normal and hard as "all the same" (20 Nov 2026): velocity moved hardness by .13 of its
+     * travel and leveling removed the rest. Away from the pivot, [touch] now moves four things.
+     */
+    const val NORMAL_VELOCITY = .75f
+    internal fun touch(velocity: Float): Double = (velocity-NORMAL_VELOCITY).toDouble()
+    /** Hardness per unit of touch: a harder strike is a shorter contact and wakes more upper modes. */
+    private const val TOUCH_HARDNESS = 1.3
+    /** Extra tilt of each instrument's modes, per mode index and unit of touch. */
+    private const val TOUCH_TILT = .8
+    /** How far the strike leans toward the bar, cowbell and triangle, per unit of touch (full weight on the triangle). */
+    private const val TOUCH_LEAN = 1.6
+    /** Level after leveling follows (velocity / normal) to this power: 6 dB down at .3, 1.9 dB up at 1. */
+    private const val TOUCH_LEVEL = .75
+
     fun macrosFor(voice: ChamberVoice): List<MacroSpec> {
         val d = if (voice == ChamberVoice.HYBRID) floatArrayOf(.50f,.45f,.40f,.90f,.60f)
             else floatArrayOf(.35f,.60f,.95f,.80f,.70f)
@@ -365,8 +382,9 @@ object Chamber {
         val strengths=DoubleArray(4) { i -> floor+(1.0-floor)*exp(-.5*((balance-i)/width).pow(2)) }
         val norm=sqrt(strengths.sumOf { it*it })
         val strength=velocity.toDouble().pow(.72)*(.32+.95*m.getValue("STRIKE"))
+        val touch=touch(velocity)
         for(i in 0..3) strengths[i] = strengths[i]/norm*strength*
-            doubleArrayOf(1.08,1.23,.92,.88)[i]*
+            doubleArrayOf(1.08,1.23,.92,.88)[i]*exp(TOUCH_LEAN*touch*i/3.0)*
             (if(isolated==null || isolated==i) 1.0 else 0.0)*
             (if(configuration.instrumentEnabled[i]) 1.0 else 0.0)
         // The force sum is the same independent upper bound used by models 1–3.
@@ -423,10 +441,11 @@ object Chamber {
         val registerPressure=if(model==REGISTER_MODEL) ChamberRegister.pressureScale(midi) else 1.0
         val observerGain=AUDIO_GAIN*sqrt(rate.toDouble()/IR)*registerPressure
         val geometry=ChamberWideRange.geometry(configuration,m.getValue("MATERIAL"),m.getValue("DIVIDE"),m.getValue("PLACEMENT"),profile)
-        val hardness=(.12+.75*m.getValue("STRIKE")+.13*velocity).coerceIn(0.0,1.0)
+        val touch=touch(velocity)
+        val hardness=(.12+.75*m.getValue("STRIKE")+.13*velocity+TOUCH_HARDNESS*touch).coerceIn(0.0,1.0)
         val triangleRootWeight=if(model==REGISTER_MODEL) ChamberRegister.triangleRootWeight(midi) else 1.0
         val banks=Array(4) { i -> instrument(i,Keys.midiHz(midi).toDouble(),configuration.tuningRatios[i].toDouble(),hardness,rate,seed,model,
-            profile?.spectralTilt ?: 0.0,if(i==3) triangleRootWeight else 1.0) }
+            (profile?.spectralTilt ?: 0.0)+TOUCH_TILT*touch,if(i==3) triangleRootWeight else 1.0) }
         val average=averageMaterials(geometry)
         val materials=if(options.averageSurfaces) List(10) { average } else geometry.regionMaterialWeights
         val boundaryScale=if(model==REGISTER_MODEL) ChamberRegister.boundaryFrequencyScale(midi) else 1.0
@@ -619,7 +638,14 @@ object Chamber {
         val surface=finish(rawSurface,rate,cancelled);val late=finish(rawLate,rate,cancelled)
         val stems=finishStems(instrumentTaps,rate,cancelled);val surfaces=finishStems(surfaceStems,rate,cancelled)
         val samples=finished.copyOf()
-        if(options.normalize && velocity>0f) Dsp.levelTo(samples,RATE,Dsp.MELODIC_LOUDNESS_TARGET)
+        if(options.normalize && velocity>0f) {
+            Dsp.levelTo(samples,RATE,Dsp.MELODIC_LOUDNESS_TARGET)
+            if(velocity!=NORMAL_VELOCITY) {
+                val gain=(velocity/NORMAL_VELOCITY).toDouble().pow(TOUCH_LEVEL).toFloat()
+                for(i in samples.indices) samples[i] *= gain
+                Dsp.limitPeak(samples,.99f)
+            }
+        }
         Dsp.fadeTail(samples)
         val finalEnergy=bankEnergy(banks)+bankEnergy(boundaries)+delayEnergy(allDelays)
         val finite=finalEnergy.isFinite() && modalPeak.isFinite() && finite(finished)

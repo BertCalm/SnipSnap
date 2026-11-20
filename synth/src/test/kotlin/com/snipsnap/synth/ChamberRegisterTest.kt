@@ -32,7 +32,7 @@ class ChamberRegisterTest {
             assertEquals(before.diagnostics.energy, after.diagnostics.energy, "$label network states changed")
         }
         assertEquals(Chamber.REGISTER_MODEL, Chamber.MODEL_VERSION)
-        assertTrue(ChamberPresets.all().all { it.model == 3 })
+        assertTrue(ChamberPresets.all().all { it.model == if (it.name == "Four Answers") 3 else Chamber.REGISTER_MODEL })
     }
 
     @Test
