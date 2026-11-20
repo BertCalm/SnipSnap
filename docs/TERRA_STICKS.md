@@ -5,12 +5,12 @@ BINZASARA, COWBELL, WATER_DRUM and FAN (the fan came in round 7). They live in `
 tables in `TerraSticksTables.kt`, and share TERRA's output stage, velocity and
 takes.
 
-**Status: sound approved, not engine-complete.** The owner approved the sound of
-the four kits, the fan and the darker soft edge stroke on 2026-11-20 ("Sounds
+**Status: complete against the applicable gates (2026-11-20).** The owner
+approved the sound of the four kits, the fan and the darker soft edge stroke ("Sounds
 good, I like", after the round-7 listening page), and `TerraStickKitsPinsTest`
 pins every pad's twelve zone samples as heard. Velocity and round robin are
-verified through save, export and playback. No phone or MPC has played the kits.
-See [Gates](#gates).
+verified through save, export and playback. The owner reported phone and MPC
+playback good the same day. See [Gates](#gates).
 
 ## The gesture
 
@@ -241,4 +241,4 @@ Applied from [ENGINE_ACCEPTANCE_GATES](ENGINE_ACCEPTANCE_GATES.md).
 | Drums: multiple distinct genre kits | Pass: MATSURI, THUNDER, BON and the processed DUSK on the shelf, distinct lead voices and jobs; sound approved 2026-11-20 and pinned |
 | Velocity levels | Pass, automated: three timbral touches per pad, each softer one darker (`TerraStickKitsTest`), kept through shelf render, save and reload, MPC 3, MPC 2, SFZ and playback at all 127 velocities (`TerraStickKitsRoundTripTest`) |
 | Round robin | Pass, automated: four distinct takes per touch, dealt in turn over nine hits in playback and kept through save, MPC 3 and SFZ. MPC 2 keeps each zone's first take (owner's format limit) |
-| Hardware | Not attempted: no phone or MPC playback yet |
+| Hardware | Pass, owner's report: asked to check repeated hits cycling and soft hits sounding softer on phone and MPC, the owner answered "Is good" (2026-11-20). Which kits and which MPC export format were played was not stated |

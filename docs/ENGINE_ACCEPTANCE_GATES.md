@@ -1285,8 +1285,9 @@ WATER_DRUM, FAN), the first nine picked by ear from Python renders over six roun
 | Drums: multiple distinct genre kits | Pass: TERRA MATSURI, THUNDER, BON and the processed DUSK. The owner approved their sound on 2026-11-20 ("Sounds good, I like"); every pad is pinned as heard (`TerraStickKitsPinsTest`) |
 | Velocity levels | Pass, automated: timbral touches through render, save, MPC 3, MPC 2, SFZ and playback (`TerraStickKitsTest`, `TerraStickKitsRoundTripTest`) |
 | Round robin | Pass, automated: four takes per touch through render, save, MPC 3, SFZ and playback; MPC 2 keeps each zone's first take under the owner's 2026-11-14 format limit |
-| Hardware | Not attempted |
+| Hardware | Pass, owner's report (2026-11-20): asked to check that repeated hits cycle and soft hits sound softer on phone and MPC, the owner answered "Is good". Kits and MPC export format played were not stated |
 
-Not engine-complete: no phone or MPC has played the kits. The forty stick-voice
-presets have not had their own listen and are not pinned.
+Complete against the applicable gates as of 2026-11-20. The forty stick-voice
+presets have not had their own listen and are not pinned; no gate requires that
+for a drum engine.
 
