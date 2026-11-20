@@ -1,8 +1,8 @@
 # CONSORT: design brief
 
 Status: concept with a Python prototype. Nothing is built in Kotlin. The owner heard round 1
-("sounds pretty good") and asked for more humanization and a room; round 2 below adds both and
-awaits a listen.
+("sounds pretty good"), then round 2 (room approved at its default, takes inaudible); round 3
+below rebuilds the takes and awaits a listen.
 Repository truth: read at `3117e454`. Grepped and found: `Bore.Player` (`Bore.kt:935`, its
 `tick` at 1012 takes `pressureScale`, `pitchCents`, `turbulenceScale`), `Strings.Loop.reflected`
 / `inject`, `MacroSpec` (`Thump.kt:40`), `Velocity.macroSpecsFor` and `touchedRender`
@@ -165,6 +165,40 @@ a convolution with decaying seeded noise, a stand-in for `Room.kt`'s feedback ne
 - A HOLD loop with a room in it needs the wash to be periodic too, or the room applied after the loop.
 - The room measures darker (it adds low-mid energy), on a prototype that was already dark.
 
+## Round 3: takes that can be heard (after the owner's second listen)
+
+The owner's verdict on round 2: "Room is good at default, but I can't hear the takes
+differences." ROOM 0.4 is therefore heard and accepted as the default.
+
+Round 2's takes re-rolled small random numbers (a few cents, a few milliseconds). They measured
+as different waveforms and were inaudible as different performances: a correlation number is
+not evidence that an ear can tell two takes apart. Round 3 makes each take a named way of
+playing, spread on purpose across what an ear catches first, with level and pitch centre held:
+
+| Take | What changes |
+|---|---|
+| centred | the reference |
+| soft | lower effort, slow attack, weak tongue, more air, late slow vibrato |
+| bitten | higher effort, fast attack, hard tongue, less air, early quick vibrato |
+| leaning | comes up into the note from 110 cents under, deeper vibrato |
+
+Chairs are staggered (take + chair) so a section does not all bite together, LOOSE scales how
+far a take strays, and a take may not push a note across the overblow line.
+
+| Measured on solo notes (Python harness) | centred | soft | bitten | leaning |
+|---|---|---|---|---|
+| SAX time to half level | 42 ms | 136 ms | 26 ms | 50 ms |
+| OBOE time to half level | 26 ms | 56 ms | 16 ms | 26 ms |
+| DUDUK time to half level | 62 ms | 148 ms | 28 ms | 84 ms |
+| SAX pitch at 70 ms against the held note | -4 cents | -1 | -1 | -42 |
+| SAX held pitch against the target | +3.9 cents | +0.2 | -1.9 | 0.0 |
+
+Disclosed: on SAX the bitten take's held note measures duller than centred (897 against
+1119 Hz centroid) although its attack is the brightest (888 against 813); the cause is not
+traced. Whether four takes read as one player repeating a note, or as four articulations, is a
+listening question, and the audition page now has an eight-hit row with takes cycling beside
+the same row with one take.
+
 ## Risks and disclosed limits
 
 - **Too dark against the references.** Mid-velocity centroids are 440 to 1260 Hz; the
@@ -226,4 +260,39 @@ sounds like players or like one instrument copied. Only then a full spec and Kot
 | Every constant in the prototype | proposed | "shape" values, none tuned by ear |
 | Macro set, chair storage, round-robin source | proposed | not implemented |
 | Round 1 overall | heard | owner, 2026-11-19: "sounds pretty good", wants more humanization and a room |
-| Round 2 humanization, room, takes | not heard | awaiting the owner |
+| Round 2 room at default 0.4 | heard | owner, 2026-11-19: "Room is good at default" |
+| Round 2 takes | heard, rejected | owner: "I can't hear the takes differences" |
+| Round 2 humanization amount | not answered | owner has not said |
+| Round 3 takes | not heard | awaiting the owner |
+
+## As built: Kotlin round K1 (2026-11-19)
+
+The owner heard round 3 ("This is better, continue"). K1 is the engine, its patch, registration
+and probes; [CONSORT](../../CONSORT.md) has the numbers. Nobody has heard the Kotlin.
+
+What changed against this brief:
+
+- **The pipe is `Strings.Loop` directly, not `Bore.Player`.** `Bore.Player` is tied to
+  `BoreVoice` (two voices, LIP as the reed offset) and has no closed cylinder. `Strings.Loop`
+  already takes `roundTrip = 0.5` for one.
+- **The section is patch data**: `ConsortPatch.chairs`, with `velocity` and `take`, as
+  `ObbligatoPatch` carries its note. This settles the brief's open "chair storage" question.
+- **ROOM stayed a macro**: eight controls with HOLD. The brief's alternative (land with the
+  rack's ROOM) cannot seat each chair. The wash is `Room.bloom`, scaled to unit energy.
+- **Two defects the port found.** The cylinder's sign flip was applied on the way back and again
+  on the way in, which made a non-inverting half loop: CLARINET and DUDUK played an octave high
+  (+1181 to +1190 cents) until the second flip was removed. And 12 of 180 short renders filed as
+  SNARE (flatness 0.26 to 0.36 against the classifier's 0.25) because white breath noise at the
+  internal rate was lifted by the body's tilt; a 3 kHz low-pass on the noise alone clears them
+  (8 kHz still misfiled 2, 5 kHz none) and leaves the audible breath at its level.
+- **Pitch pins are six constants**, one a voice (-5 to +6.5 cents), measured on three notes each,
+  not the prototype's per-note search.
+- **Not built:** a HOLD loop, presets, kit, keygroups, picker entry, round-robin pads and export,
+  and the render-time work. Every acceptance gate is open.
+
+| Claim | Status | Evidence |
+|---|---|---|
+| Round 3 takes | heard | owner, 2026-11-19: "This is better, continue" |
+| Kotlin mechanics (pitch, overblow, odd harmonics, classes, JSON, determinism) | measured | `ConsortTest`, 16 tests; the audition's `metrics.csv` |
+| Kotlin sound | not heard | awaiting the owner |
+

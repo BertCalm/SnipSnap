@@ -59,6 +59,9 @@ object StarterKits {
     const val CONFLUENCE_BANK_DIR = "confluence-voice-bank"
     const val CONFLUENCE_VOICES_ID = "confluence-voices"
 
+    /** ACCORD's four voices kept in accord-voices-1 (REED, COURSE, ESCAPEMENT, BELL), each at C2 to C5. */
+    const val ACCORD_VOICES_ID = "accord-voices"
+
     class Starter internal constructor(
         /** Stable machine id. */
         val id: String,
@@ -1221,7 +1224,15 @@ object StarterKits {
         Starter(kit.id, "SIDEROOM ${kit.title.uppercase(java.util.Locale.ROOT)}",
             "Synthesized ${kit.title} drums: eight instruments, a snare roll and a drum fill. Three strike strengths and three alternate hits.",
             seeded = false, tempoBpm = kit.bpm.toFloat()) { com.snipsnap.synth.SideroomKits.build(kit) }
-    }
+    } + listOf(
+        // Opt-in beside the kept ACCORD starter, which stays as it is; appended after the SIDEROOM kits.
+        Starter(
+            ACCORD_VOICES_ID, "ACCORD VOICES",
+            "Reed, hammered strings, clock tick and tock, and bell. Each at C2, C3, C4 and C5, finite and dry.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.accordVoices() },
+    )
 
     fun byId(id: String): Starter? = ALL.firstOrNull { it.id == id }
 }

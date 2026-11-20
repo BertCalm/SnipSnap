@@ -104,6 +104,8 @@ internal object AccordCalibration {
                 AccordAcousticProfile.LONG_RING -> 5
                 AccordAcousticProfile.BASE -> error("TINE has no BASE acoustic profile")
             }
+            AccordVoice.REED, AccordVoice.COURSE, AccordVoice.ESCAPEMENT, AccordVoice.BELL ->
+                error("ACCORD candidate voice $voice has no factory calibration row")
         }
         return gains[row][midi - MIN_MIDI]
     }
