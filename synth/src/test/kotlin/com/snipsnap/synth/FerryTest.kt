@@ -134,7 +134,10 @@ class FerryTest {
             assertTrue(snip.samples.all { it.isFinite() })
             assertTrue(snip.samples.maxOf { abs(it) } in .01f..1f)
             assertTrue(abs(snip.samples.sumOf { it.toDouble() } / snip.samples.size) < .001)
-            assertTrue(abs(Loudness.of(snip) - Dsp.MELODIC_LOUDNESS_TARGET) < .001)
+            // The accepted note is leveled to the target; the onset ease then takes the click's own energy out of
+            // the loudest window, so the eased note reads a little lower (FerryOnsetTest prints and bounds it).
+            assertTrue(abs(Loudness.of(Ferry.body(macros = mapOf("HANDOFF" to handoff), midi = midi), 1, Dsp.RATE) - Dsp.MELODIC_LOUDNESS_TARGET) < .001)
+            assertTrue(Loudness.of(snip) in Dsp.MELODIC_LOUDNESS_TARGET * FerryOnsetTest.MIN_EASED_LOUDNESS..Dsp.MELODIC_LOUDNESS_TARGET + .001f)
             val requested = 440 * 2.0.pow((midi - 69) / 12.0)
             // The native audition measured at most 14.21 cents and confidence
             // at least .927 here. This bound allows a small implementation margin;

@@ -189,6 +189,15 @@ object Copy {
     /** The dock's play chip, tapped on BEAT with no notes in the beat: it would start a clock over nothing, so it says so instead of staying silent. */
     const val NOTHING_TO_PLAY = "Nothing to play yet. Record or tap steps in."
     /**
+     * BEAT, and the dock's play chip, over a kit whose `groove.json` will not
+     * parse (UAT 2026-11 user states, D-1). BEAT used to crash on every open of
+     * such a kit, and the dock said "PLAY failed. Try again.", which no retry
+     * could satisfy. Nothing offers to start the beat over: that would write a
+     * new file over the old one, and a damaged file may still be recoverable.
+     * The pads are untouched, so PADS ▸ is the way on, as for [BEAT_NEEDS_PADS].
+     */
+    const val BEAT_WONT_READ = "This kit's beat file won't read and may be damaged, but its pads still play on PADS."
+    /**
      * PROJECT with no project open: the page has nothing to show, so it
      * says so once and sends the user to the shelf, where a project is
      * opened or started. Replaces the tab era's two empties (a switcher

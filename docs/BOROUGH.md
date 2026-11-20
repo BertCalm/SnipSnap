@@ -131,6 +131,62 @@ rings 1.35 s above -30 dB. Verification unchanged: 792 WAVs, 0 failures, timbral
 88 of 88 pads. Listening page version 3: the RIDE & RIMS before player is the round 1 groove
 with the hat stand-in.
 
+## Round 2: designed boom-bap drums in all six kits
+
+The owner heard the STOOP prototype below: "Round 2 is def betetr". Every kit's KICK, SNARE, KICK 2,
+SNARE 2 and GHOST are now designed drums fitted to its own two loops (`hits.json`, `designed_fit.json`).
+Loops that never play a kick alone (keap, moffat) are measured on their kick-and-snare hits, and a
+kick's pitch is scored at 30 ms plus later readings within ~30% of it (past that something else in
+the loop is louder). Scored against the fine measurement, every one of the 24 drums is closer than its
+round 1 pad (dB, lower is closer):
+
+| Kit | KICK | SNARE | KICK 2 | SNARE 2 |
+|---|---|---|---|---|
+| STOOP DUST | 22.4 -> 4.0 | 21.3 -> 3.6 | 15.4 -> 4.9 | 17.2 -> 3.2 |
+| CELLAR BOOM | 10.5 -> 6.1 | 12.0 -> 8.3 | 17.0 -> 5.5 | 19.6 -> 5.5 |
+| CRANKED | 14.6 -> 3.3 | 23.2 -> 6.5 | 21.2 -> 11.0 | 17.7 -> 4.6 |
+| WAX | 24.3 -> 5.4 | 33.3 -> 8.0 | 25.4 -> 3.7 | 16.1 -> 7.2 |
+| DRY ROOM | 16.4 -> 4.3 | 16.6 -> 6.8 | 18.9 -> 4.0 | 16.8 -> 5.5 |
+| RIDE & RIMS | 37.8 -> 5.9 | 15.3 -> 6.8 | 13.1 -> 9.8 | 14.2 -> 4.8 |
+
+CRANKED's KICK 2 is the weakest: its loop (lafayette) gave only two clean kick hits to measure. The
+designed kicks are short and tight like the loops', so to match each loop's low-to-mid balance the rest
+of each kit now comes down instead of the kick: 4.3 to 10.2 dB (WAX the most); listen for a quiet snare
+there. 792 WAVs, 0 failures. Listening page version 11, before players = round 1.
+
+### Round 2 (prototype): designed boom-bap drums, STOOP first
+
+**What the owner heard.** After the wow A/B: "They all just sound muddy, muffled, and flat." After the
+clean A/B: "Without the chain the kick sounds like a weak hit, with it- it becomes muddy. I don't feel
+like we have effectively replicated the vibe of the refereneces. I don't need them to be exact in
+sound, but the general vibe should be aligned. These are just flopping." Offered an imprint of the
+loops or designed drums, they chose designed drums.
+
+**Why round 1 flopped, measured.** `hits.py` reduces a loop's kick and snare hits (aligned on their
+onsets, median over hits so bleed falls away) to band energy in six windows from 0-5 ms to 200-300 ms,
+the kick's pitch track and the snare's body pitch. Numbers only, in `hits.json`. driggs' kick is
+struck at about 124 Hz, falls to about 55 Hz within 30 ms, and is gone by 200-300 ms; STOOP's round 1
+kick sat near 97 Hz with almost no sub and grew louder for 200 ms (the compressor lifting its tail):
+weak without the chain, a long 97 Hz boom in the low mids with it. driggs' snare cracks with a 209 Hz
+body and strong wires for 50 ms; STOOP's sat at 150 Hz and peaked late with its crack 12-15 dB weak.
+The round 1 descriptor compared each sound's band shape over its own peak, so it never saw pitch or
+the order of events.
+
+**The design** (`designed.py`). Layered the way boom-bap drums are, on an acoustic core so it never
+goes back to a drum machine (round 0):
+
+- kick: EMBER's membrane at the loop's pitch, plus a punch that falls onto it, a small beater click,
+  a low-mid cut at 350 Hz, grit above 200 Hz only, a low-pass;
+- snare: EMBER's snare (wires) plus a body tone at the loop's pitch and a crack of noise, a low cut,
+  a low-mid cut, grit, a low-pass.
+
+`fit_designed.py` fits them to the fine measurement (grid RMS with a -40 dB floor, plus 1.5 dB per
+semitone of pitch error). STOOP, against driggs: kick 22.4 -> 4.0 dB, pitch 124 / 54 / 56 Hz exactly;
+snare 21.3 -> 3.65 dB, body 209 against 207 Hz. Against kingston (KICK 2, SNARE 2): 4.9 and 3.2 dB.
+With the new kick STOOP's balance needs no kick cut (it was -11.6 dB); the rest of the kit comes down
+4.3 dB instead. 792 WAVs, 0 failures. Listening page version 10: a STOOP prototype section at the top.
+The other five kits are unchanged until the owner hears this.
+
 ### Round 1.6: a "wow" A/B
 
 **What the owner asked.** "Can you increase the vibrancy of the sound? It just doesn't have the wow."
@@ -479,6 +535,12 @@ Listening page (private until shared): https://claude.ai/artifact/6y32yHPUszWK58
   - round 1.1: "The ride sounds like it has a dead spot. And the stoop kick is a bit overpowering."
   - round 1.2: "Stoop sounds like the speaker is overblown when the kick hits. Ride is sounding better."
   - round 1.3: "Its better now" (the STOOP kick, 2026-11-19).
+  - round 1.4 (compression preview): "Generally it helps. They all kind of sound pretty similar to each other though."
+  - round 1.5 to 1.7: "Can you increase the vibrancy of the sound? It just doesn't have the wow"; "They all just
+    sound muddy, muffled, and flat"; "Without the chain the kick sounds like a weak hit, with it- it becomes
+    muddy ... These are just flopping."
+  - round 2 prototype (STOOP, designed drums): "Round 2 is def betetr" (2026-11-20). Direction accepted; all six
+    kits are being rebuilt this way.
   Heard as better is not accepted for the shelf: no kit has been approved yet.
 
 ## Why it is built this way

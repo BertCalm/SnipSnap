@@ -415,15 +415,29 @@ fun GrooveScreen(
     var listOpen by remember(kitDir) { mutableStateOf(false) }
     var eClip by remember(kitDir) { mutableStateOf<Mpc3Clip?>(null) }
     var loading by remember(kitDir) { mutableStateOf(true) }
+    // The kit's `groove.json` would not read (UAT 2026-11 user states, D-1).
+    // `GrooveStore.load` throws on a damaged file rather than handing back an
+    // empty list, so that nothing saves a fresh file over it; this screen has
+    // to catch that, or the throw escapes the LaunchedEffect and the app dies.
+    var unreadable by remember(kitDir) { mutableStateOf(false) }
     LaunchedEffect(kitDir, reloadRequest) {
         loading = true
-        val (b, all, nm) = offMain {
-            // The captured base used to be taken as whatever was stored
-            // first, on a convention several call sites shared. It is now
-            // taken by the same predicate `GrooveEdit` and `Arranger` use,
-            // so the three cannot drift: the base is the clip that is not
-            // one of yours, whatever order the sidecar holds them in.
-            Triple(GrooveStore.load(kitDir).firstOrNull { !GrooveEdit.isProgE(it) }, GrooveEdit.loadAll(kitDir), GrooveStore.loadNames(kitDir))
+        unreadable = false
+        val (b, all, nm) = try {
+            offMain {
+                // The captured base used to be taken as whatever was stored
+                // first, on a convention several call sites shared. It is now
+                // taken by the same predicate `GrooveEdit` and `Arranger` use,
+                // so the three cannot drift: the base is the clip that is not
+                // one of yours, whatever order the sidecar holds them in.
+                Triple(GrooveStore.load(kitDir).firstOrNull { !GrooveEdit.isProgE(it) }, GrooveEdit.loadAll(kitDir), GrooveStore.loadNames(kitDir))
+            }
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            Log.e("GrooveScreen", "load: the kit's grooves would not read", e)
+            unreadable = true
+            loading = false
+            return@LaunchedEffect
         }
         base = b
         names = nm
@@ -550,6 +564,12 @@ fun GrooveScreen(
 
     if (loading) {
         Box(Modifier.fillMaxSize().lcdPanel(scheme))
+        return
+    }
+    if (unreadable) {
+        // Returned before any control is drawn, so no edit, take or rename on
+        // this screen can reach `GrooveStore.save` and write over the file.
+        EmptyStatePanel(Copy.BEAT_WONT_READ, listOf(EmptyStateRoute("PADS ▸", onNavigatePads)))
         return
     }
     if (kit.pads.isEmpty()) {
