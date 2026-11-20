@@ -103,6 +103,25 @@ class CausticSynthScreenTest : ComposeScreenTest() {
         compose.onNodeWithContentDescription("DRONE TO LOOP").assertDoesNotExist()
     }
 
+    /**
+     * BOWL, SCATTER and TONGUE presets are the model-2 note the owner kept, finite only:
+     * HOLD lengthens the note, and there is no MOTION and no held key to make.
+     */
+    private fun assertFiniteOnlyControls() {
+        compose.onNodeWithText("Length sets the note · hold lengthens it.").assertExists()
+        compose.onNodeWithContentDescription("HOLD", useUnmergedTree = true).assertIsEnabled()
+        compose.onNodeWithContentDescription("MOTION", useUnmergedTree = true).assertDoesNotExist()
+        val hold = compose.onNodeWithContentDescription("HOLD", useUnmergedTree = true).fetchSemanticsNode()
+        assertTrue(hold.config.getOrNull(SemanticsActions.SetProgress) != null)
+        assertEquals(0f, progress("HOLD"), .00001f)
+        compose.onNodeWithContentDescription("MAKE INSTRUMENT").assertDoesNotExist()
+        compose.onNodeWithContentDescription("DRONE TO LOOP").assertDoesNotExist()
+    }
+
+    private fun assertControlsFor(voice: CausticVoice) {
+        if (voice in CausticInstrument.HELD_VOICES) assertFiniteControls() else assertFiniteOnlyControls()
+    }
+
     @Test
     fun a_deliberate_motion_edit_expands_only_the_working_recipe_and_survives_immediate_recreation() {
         val root = shelf()
@@ -185,7 +204,8 @@ class CausticSynthScreenTest : ComposeScreenTest() {
             press(labels.getValue(voice))
             val preset = CausticPresets.forVoice(voice).first()
             press("PRESET ${preset.name}")
-            assertFiniteControls()
+            if (voice !in CausticInstrument.HELD_VOICES) assertEquals(2, preset.model)
+            assertControlsFor(voice)
             assertEquals(preset.macros.getValue("BODY"), progress("BODY"), .00001f)
             val midi = 48 + index * 3
             val velocity = .3f + index * .1f
@@ -206,7 +226,7 @@ class CausticSynthScreenTest : ComposeScreenTest() {
             assertEquals(.3f + index * .1f, progress("VELOCITY"), .00001f)
             assertEquals(CausticPresets.forVoice(voice).first().macros.getValue("BODY"), progress("BODY"), .00001f)
             assertEquals(0f, progress("LENGTH"), .00001f)
-            assertFiniteControls()
+            assertControlsFor(voice)
         }
     }
 
