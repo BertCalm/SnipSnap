@@ -95,6 +95,7 @@ import com.snipsnap.synth.ThawVoice
 import com.snipsnap.synth.Undertow
 import com.snipsnap.synth.UndertowPatch
 import com.snipsnap.synth.UndertowVoice
+import com.snipsnap.synth.isBanked
 import java.io.File
 import kotlin.test.AfterTest
 import kotlin.test.Test
@@ -205,6 +206,27 @@ class StarterKitsTest {
         for (starter in StarterKits.ALL) {
             val dir = File(temp, starter.id)
             val kit = starter.render("Starter ${starter.id}", dir, seed = 1)
+            // Two more laws ride this render, which KitArtTest and JCardTest used to repeat by rendering every
+            // starter again themselves (the three loops were 125 minutes of class time between them on
+            // 2026-11-20, each with its own JVM holding its own copy of the engines' memos). They go here,
+            // straight after the render, because the
+            // laws below rewrite the folder (the replay checks) and these two want it as it was rendered.
+            // The J-card insert, which JCardTest rendered at seed 0 where this renders at seed 1: the check is
+            // that the insert paints, which holds for any seed.
+            assertTrue(JCard.png(kit, dir).isNotEmpty(), "${starter.id} renders a card")
+            // The kit art, in every style (what KitArtTest's "every starter kit renders every style without error" was).
+            for (style in KitArt.Style.entries) {
+                val png = KitArt.png(kit, dir, ArtKnobs(style, Palettes.VENT, null, Mark.Variant.STACKED), size = 128)
+                assertTrue(png.isNotEmpty(), "${starter.id}/${style.id}")
+            }
+            // Law: a banked recipe (version 3, `layers` present) lists exactly one layer per velocity layer of
+            // its pad. Vacuous until a starter is banked.
+            for (pad in kit.pads) {
+                val r = Breed.recipeOf(pad) ?: continue
+                if (r.isBanked) {
+                    assertEquals(pad.velocityLayers.size, r.layers!!.size, "${starter.id} slot ${pad.slot}")
+                }
+            }
             if (starter.id == "blank") {
                 // The empty grid is the point: no pads to assign yet, and
                 // preflight correctly refuses to export nothing.

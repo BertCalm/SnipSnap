@@ -87,16 +87,6 @@ class JCardTest {
     }
 
     @Test
-    fun `every starter kit renders its insert`() {
-        StarterKits.ALL.forEachIndexed { i, starter ->
-            val dir = File(temp, "starter-$i")
-            val kit = starter.render("Starter ${starter.id}", dir)
-            val png = JCard.png(kit, dir)
-            assertTrue(png.isNotEmpty(), "${starter.id} renders a card")
-        }
-    }
-
-    @Test
     fun `the groove notation folds the pattern to sixteen steps`() {
         val s16 = Mpc3Clip.PULSES_PER_16TH
         val clip = Mpc3Clip(
