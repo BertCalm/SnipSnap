@@ -151,6 +151,18 @@ all actual settling audio is retained before the final loop. The loop is accepte
 only after successive full circuit states recur and an independently evolved
 audio period closes. There is no finite-note/held-note audio splice.
 
+A held RUBBER key folds less deeply than its patch: both map depths are scaled by
+`Crease.HELD_RUBBER_DEPTH` (.72), tapering to a further .85 of that by C6. RUBBER
+composes both maps, so its held keys kept a combined compression of 2.8 to 3.6
+through the whole pressure cycle and left a standing band of upper harmonics about
+as loud as the note: the owner heard held Ink Ribbon as "a bit harsh and was
+piercing" (20 Nov 2026). The 2 to 8 kHz band now falls by about 7 dB against the
+fundamental at C4 and 6 dB at C5. Depth is scaled rather than the ceiling lowered
+because a lower ceiling pins the tone at one static shape; scaled depth keeps the
+pressure gesture moving the tone and keeps the three touch layers apart. ROUND and
+PINCH held keys (Paper Keys was kept) and every finite or HOLD patch render are
+bit-identical. The strength awaits the owner's verdict.
+
 `CreasePadMaker` samples minor-third roots over two octaves around the saved MIDI
 note, clipped to MIDI 24–84. Keygroup boundaries stop at the outer sampled roots.
 The full saved patch supplies the voice, model, macros and excitation velocity;
