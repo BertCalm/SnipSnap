@@ -10,11 +10,12 @@ groove's own average timing per place in the bar, printed through the bus compre
 
 ## Status
 
-**Kotlin built, not heard in the app.** The owner listened to the Python prototype through rounds 0 to 0m
+**Kotlin built and heard.** The owner listened to the Python prototype through rounds 0 to 0m
 (2026-11-18 to 2026-11-20) and closed them with "Ok, sounds good now". The four kits are now on FRESH TAPE's SKINS
 shelf (`FacsimileKits` version 1, `StarterKits`), rendered by a Kotlin port of the prototype's synth, with their
 velocity and round-robin grid proven in software through save, reload, playback and MPC 3, SFZ and DecentSampler
-export. Nothing has been played on a phone or an MPC, and nobody has heard the Kotlin renders yet.
+export. The owner heard the Kotlin kits as the app plays them (read back from the MPC 3 export), rolls included, and
+answered "Everything sounds good" (2026-11-20). Nothing has been played on a phone or an MPC.
 
 Listening page (private to the owner's account): [FACSIMILE](https://claude.ai/artifact/LvtMyNDXUr9jjvVvw8uPMa),
 every round, newest first, with the Kotlin kits at the top.
@@ -116,15 +117,15 @@ swell from .35 to full, then lands on beat nine with the kit's main kick and sna
 strike (the takes cycle along the roll); a zone softens every stroke as a groove's zone does, and a take rotates
 them. It sits on pad 17 so that none of the sixteen heard pads is given up; it chokes with the grooves.
 `FacsimileKitsTest` holds its shape (every gap tighter than the last, from .5 beat to under .15, swelling, landing with
-the kick). Not heard.
+the kick). Heard by the owner with the kits ("Everything sounds good", 2026-11-20).
 
 ## Gates
 
 | Gate | Status |
 |---|---|
 | Melodic, keygroups, chord tools, STRUM | Not applicable: drum kits |
-| Drums: multiple distinct genre kits on the shelf | Built: four kits under SKINS, each from different reference loops (boom-bap swing, knock, half time, toms and texture). The prototype's kits were heard through round 0m ("Ok, sounds good now"); the Kotlin renders are not heard |
-| Percussion: roll/riser | Built, not heard: an accelerating snare roll landing on kick and snare, pad 17 of every kit (`FacsimileKitsTest`, `FacsimileKitTest`, the generator) |
+| Drums: multiple distinct genre kits on the shelf | Built: four kits under SKINS, each from different reference loops (boom-bap swing, knock, half time, toms and texture). The prototype's kits were heard through round 0m ("Ok, sounds good now"), and the Kotlin kits as exported ("Everything sounds good", 2026-11-20) |
+| Percussion: roll/riser | Built and heard: an accelerating snare roll landing on kick and snare, pad 17 of every kit (`FacsimileKitsTest`, `FacsimileKitTest`, the generator) |
 | Velocity and round robin: rendering | Pass in software: in every hit pad the soft zone is a different strike from the hard one and, over its four takes, never brighter; every zone holds four different strikes; a groove's soft zone is a different performance (`FacsimileKitsTest`) |
 | Velocity and round robin: saving, playback, export | Pass in software: `FacsimileKitTest` (a single drum, a stack, a ghost, a hat, a groove) and `:shell:generateFacsimileKits` (all four kits, 816 slices: saved PCM, two playback cycles per zone through the pad resolver, MPC 3 track, SFZ, DecentSampler). MPC 2 is not written (the owner's format limit). Not played on a phone or an MPC |
 
@@ -150,4 +151,5 @@ the kick). Not heard.
   `:shell:generateFacsimileKits` verifies all four kits.
 - **Measured**: the parity and groove tables (Python harness on Kotlin renders), the build times.
 - **Proposed**: the velocity and groove-zone laws (house laws), the zone levels.
-- **Heard**: the prototype's rounds 0 to 0m, by the owner. Not heard: any Kotlin render.
+- **Heard**: the prototype's rounds 0 to 0m, and the Kotlin kits with their rolls as read back from the MPC 3 export,
+  by the owner ("Everything sounds good", 2026-11-20). Not played: on a phone or an MPC.
