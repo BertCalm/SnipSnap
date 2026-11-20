@@ -288,6 +288,18 @@ some of the other drums, and a replica lane carries none. Not yet shown.
   pairs 15 to 80 ms apart went from 119 to 42; 22 of those show attacks at both hits (fast
   notes the original plays), about 9 follow legato notes and remain. Measured at matched
   level: band distance 7.77 to 7.67 dB, balance 1.99 to 1.90.
+- Round 0l (2026-11-20), tightening per bar. The owner heard the World groove as still a bit
+  stilted. Tightened per place in the beat, every beat was made the same; the reference's own
+  strong attacks show beat 4 about 15 ms ahead of beats 1 to 3 and the offbeats after 2 and 4
+  about 10 ms ahead of the others, which that average erased. `tighten` now repeats its
+  places per bar where the loop is whole bars. Against the reference (cross-correlated onset
+  curves at strong 16ths, middle half of the lags) the World groove's timing spread 9 ms
+  untightened, 20 ms tightened per beat, 6 ms per bar; the Alley groove 9, 3 and 3 ms (its
+  shuffle is even across the bar). Only hit times changed (`fit.py --events-only`). Still open
+  in the World groove: its 150 Hz to 2 kHz band sits over 6 dB under the reference in 38% of
+  live 10 ms frames (the Alley groove 10%), and its 16th-step loudness spreads 7.2 dB against
+  the reference's 5.5. Turning the swell rule on for 163 made both worse (band distance 7.64 to
+  8.29 dB), so it stays off there.
 - Round robin follows the reference's own hit-to-hit spread, clamped to 0.3 to 1.2 dB per band,
   plus fresh noise and phases. Whether that reads as one drum hit again is for the ear.
 - Engine gates: this is a prototype. Velocity and round robin are checked in rendering only;

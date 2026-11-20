@@ -224,6 +224,9 @@ SLOT_MIN_HITS = 4       # ... a position at least this many hits share
 
 
 def tighten(drums: list[dict], beat_s: float, seconds: float) -> int:
+    # beat_s is the cycle the places repeat in: a bar where the loop is whole bars (2026-11-20:
+    # per beat, the owner heard the World groove as still stilted; tightened per beat its
+    # timing against the reference spread 20 ms where untightened it spread 9)
     """Set every hit to its groove's average timing. Replicating each hit's own measured time
     copied the analysis's scatter too (a few ms between layers of one hit, more between
     repeats); the owner heard the result as stuttery and stilted and asked for the grooves to
@@ -726,7 +729,13 @@ def main(ref_dir: Path, work: Path) -> None:
             drums = split_by_decay(key, drums, work, n)
         tightened = None
         if key in TIGHTEN:
-            tightened = tighten(drums, 60.0 / bpm_of(name), n / RATE)
+            beat = 60.0 / bpm_of(name)
+            bars = n / RATE / (4 * beat)
+            # per place in the bar when the loop is whole bars: averaged per place in the beat,
+            # every beat was made the same and the groove's own push and pull went (the World
+            # loop's beat 4 lands about 15 ms ahead of the others), heard as stilted
+            cycle = 4 * beat if abs(bars - round(bars)) < 0.01 else beat
+            tightened = tighten(drums, cycle, n / RATE)
         inv[key] = dict(name=name, bpm=bpm_of(name), seconds=round(n / RATE, 5), drums=drums,
                         aligned_firings=moved)
         if confirmed:
