@@ -104,7 +104,7 @@ internal object ArcoBodyMeasure {
 
     /** The finished render the owner hears: [Arco.render] at [Arco.defaults] except TUNE (the step) and BODY. */
     fun viaArco(voice: ArcoVoice, step: Int, body: Float): FloatArray =
-        Arco.render(voice, Arco.defaults(voice) + mapOf("TUNE" to tuneOf(voice, step), "BODY" to body)).samples
+        Arco.render(voice, Arco.defaults(voice) + mapOf("TUNE" to tuneOf(voice, step), "BODY" to body), Arco.BUZZ_LAW, human = Humanize.OFF).samples
 
     // ---- the spectrum -------------------------------------------------------------------------------------------
 

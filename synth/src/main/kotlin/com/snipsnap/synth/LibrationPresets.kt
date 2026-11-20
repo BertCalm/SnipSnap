@@ -29,9 +29,19 @@ object LibrationPresets {
         p("LONG GOODBYE", LibrationVoice.DEPARTURE, 48, 5.0, .75f, .68f, .75f, .82f, .78f),
     )
 
-    fun forVoice(voice: LibrationVoice): List<LibrationPatch> = presets.filter { it.voice == voice }
+    /**
+     * One preset per voice kept in libration-voices-1 (20 Nov 2026): the voice's default controls at C3,
+     * the default touch (.8) and the six-second note, which is the C3 note of its heard range clip.
+     */
+    private val voices = listOf(LibrationVoice.CHIME, LibrationVoice.STRUM, LibrationVoice.ROTOR, LibrationVoice.HOLLOW)
+        .map { LibrationPatch(it.name, it, Libration.defaults(it), midi = 48) }
 
-    fun all(): List<LibrationPatch> = presets
+    fun forVoice(voice: LibrationVoice): List<LibrationPatch> = all().filter { it.voice == voice }
+
+    fun all(): List<LibrationPatch> = presets + voices
+
+    /** The twelve cloud-voice presets the starter kit is built from. */
+    fun cloud(): List<LibrationPatch> = presets
 
     fun references(): List<LibrationPatch> = references
 }

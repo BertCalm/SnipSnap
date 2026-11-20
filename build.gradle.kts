@@ -104,7 +104,7 @@ subprojects {
 // unsharded run does. Without the two properties nothing is filtered:
 // `./gradlew test` and `:synth:test` run every class, as before.
 //
-// CI's jvm-synth jobs pass them, with N and i taken from the job matrix
+// CI's jvm-synth and jvm-shell jobs pass them, with N and i taken from the job matrix
 // (strategy.job-total and strategy.job-index), so the count and the indices
 // cannot disagree. One property without the other, or an i outside 0..N-1,
 // stops the build here rather than quietly running part of the suite.

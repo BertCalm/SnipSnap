@@ -20,6 +20,7 @@ Then render, measure the render exactly as the target was measured, and correct 
 by the difference (closed loop, damped). The remaining difference is the reported distance.
 
     python3 -I fit.py WORK_DIR MODELS_DIR
+    python3 -I fit.py WORK_DIR MODELS_DIR --events-only   # new hit times, same sounds
 """
 from __future__ import annotations
 
@@ -88,12 +89,33 @@ def robust_mean_db(envs: list[np.ndarray]) -> np.ndarray:
     return 10 * np.log10(np.median(means, axis=0) + 1e-30)
 
 
+SWELL_LOOPS = {"113", "90"}   # loops whose layers may build after the strike (as drums.KICK_FIRST)
+SWELL_DB = 6.0          # a band builds if it later stands this far over its first 14 ms
+
+
+def peaks_of_bands(fine: np.ndarray, upto: int, swell: bool) -> np.ndarray:
+    """Where each band peaks, as a grid index. A strike peaks in its first 14 ms (the first 8
+    grid points). With `swell`, a band that later stands SWELL_DB over that (on the robust
+    mean, so one hit's bleed cannot make it) peaks where it really does: the knocker snare's
+    room layer starts 30 dB under its body and builds for 75 ms, and held to its first 14 ms
+    it was rendered 30 dB too quiet, a dry snare with silence around every hit (2026-11-19)."""
+    early = np.argmax(fine[:, :8], axis=1)
+    if not swell or upto <= 8:
+        return early
+    late = 8 + np.argmax(fine[:, 8:upto], axis=1)
+    rows = np.arange(len(fine))
+    builds = fine[rows, late] - fine[rows, early] >= SWELL_DB
+    return np.where(builds, late, early)
+
+
 def target_for(takes: np.ndarray, template: np.ndarray, clean_s: float,
-               low_share: float = 0.0) -> np.ndarray:
+               low_share: float = 0.0, swell: bool = False) -> np.ndarray:
     fine = robust_mean_db([band_envelopes(h[PRE:]) for h in takes])
     tail = template_envelopes(template)
     join = max(0.02, min(clean_s - 0.006, 1.2))
     j = int(np.searchsorted(GRID, join))
+    peaks = peaks_of_bands(fine, j, swell)
+    target_for.peaks = peaks          # read by fit_drum: the noise keeps the same shape
     tgt = fine.copy()
     for b in range(len(fine)):
         # match the template to the fine envelope over the last grid points before the join
@@ -101,14 +123,51 @@ def target_for(takes: np.ndarray, template: np.ndarray, clean_s: float,
         offset = np.median(fine[b, k] - tail[b, k])
         tgt[b, j:] = tail[b, j:] + offset
         # a drum strike only decays after its peak: hold the target to that
-        pk = int(np.argmax(tgt[b, :8]))
+        pk = int(peaks[b])
         tgt[b, pk:] = np.minimum.accumulate(tgt[b, pk:])
+    if TEMPLATE_BOUND:
+        template_bound(tgt, tail)
+    extended = False
     if low_share > CHOKE_LOW_SHARE:
-        uncut(tgt)
+        extended = uncut(tgt)
     else:
         no_stall(tgt)
     keep_falling(tgt)
+    target_for.extended = extended   # read by fit_drum: the groove chokes an extended tail
     return np.maximum(tgt, FLOOR_DB)
+
+
+# Off until the owner has heard both (2026-11-19). On, 4 of 49 drums ring over 1.5x their
+# template (was 20 of 57), but the grooves measured further from their references (loop 113's
+# band distance 6.9 to 11.1 dB, loop 163's 11.3 to 17.6): the references seem to carry room or
+# reverb that the long tails were partly standing in for.
+TEMPLATE_BOUND = False
+EARLY_CAP_DB = 10.0    # at the attack a band may stand this much over what the template allows
+DECAY_SLACK_DB = 3.0   # and after BOUND_FROM_S it may fall this much slower than the template
+BOUND_FROM_S = 0.025   # (the template's 46 ms window smears anything earlier)
+
+
+def template_bound(tgt: np.ndarray, tail: np.ndarray) -> None:
+    """The NMFD template is one clean strike of this drum; the hits it is fitted to are cut
+    from a dense loop and carry the tails and attacks of the drums around them, and the mix's
+    own room. Measured, 20 of 57 replicas rang 1.5 to 5 times longer than their templates (a
+    snare 459 ms to -30 dB against 157), which a groove plays as a wash behind every hit, heard
+    as echo (2026-11-19); and an 808 carried another drum's click in its attack. So the template
+    bounds the target: no band louder at the attack than the template's own level for it plus
+    EARLY_CAP_DB (levels anchored on the drum's strongest band), and after BOUND_FROM_S no band
+    falling slower than the template's decay in that band plus DECAY_SLACK_DB."""
+    tail = np.maximum(tail, FLOOR_DB)
+    early = GRID <= 0.014
+    t_peak = tail[:, early].max(axis=1)
+    b0 = int(np.argmax(t_peak))
+    gain = tgt[b0, early].max() - t_peak[b0]
+    cap = t_peak + gain + EARLY_CAP_DB
+    np.minimum(tgt, cap[:, None], out=tgt)
+    late = GRID >= BOUND_FROM_S
+    for b in range(len(tgt)):
+        anchor = tgt[b, early].max()
+        bound = anchor + (tail[b] - t_peak[b]) + DECAY_SLACK_DB
+        tgt[b, late] = np.minimum(tgt[b, late], np.maximum(bound[late], FLOOR_DB))
 
 
 STALL_AFTER_DB = 20.0   # a hat or snare that has fallen this far ...
@@ -162,7 +221,7 @@ CHOKE_LOW_SHARE = 0.5  # and only for a low-heavy drum (808, kick): a hat or a s
                        # fast on its own, and continuing its body would give it a long wash
 
 
-def uncut(tgt: np.ndarray) -> None:
+def uncut(tgt: np.ndarray) -> bool:
     """Trap 808s are monophonic: the next note chokes the last, so the reference never lets a
     tail ring out and the target falls off a cliff. Where the whole drum falls CLIFF_DB within
     CLIFF_S, continue every band at the slope it had over the 50 ms before the cut (between
@@ -175,15 +234,16 @@ def uncut(tgt: np.ndarray) -> None:
             cut = i
             break
     else:
-        return
+        return False
     k = max(0, int(np.searchsorted(GRID, GRID[cut] - 0.05)))
     before = (total[cut] - total[k]) / max(GRID[cut] - GRID[k], 1e-3)
     if before < -SUSTAIN_DB_S:
-        return  # it was already falling fast: a natural decay, not a cut
+        return False  # it was already falling fast: a natural decay, not a cut
     for b in range(len(tgt)):
         span = max(GRID[cut] - GRID[k], 1e-3)
         slope = float(np.clip((tgt[b, cut] - tgt[b, k]) / span, -400, -15))
         tgt[b, cut + 1:] = tgt[b, cut] + slope * (GRID[cut + 1:] - GRID[cut])
+    return True
 
 
 # ---------- partials ----------
@@ -310,13 +370,151 @@ def steady_peaks(takes: np.ndarray, clean_s: float, exclude: list[float]) -> lis
     return peaks
 
 
-def strike_shape(env_db: np.ndarray) -> np.ndarray:
+MODE_MAX_HZ = 200.0      # tail tones are measured below this
+MODE_FROM_S = 0.06       # ... from here, once the pitch fall has settled
+MODE_TO_S = 0.45         # ... to here (or the clean end)
+MODE_ORDER = 16          # matrix-pencil model order (8 complex pairs and room for noise)
+MODE_RANGE_DB = 30.0     # tones this far under the strongest are left to the noise
+MODE_FADE_S = 0.02       # the tones fade in over MODE_FROM_S - MODE_FADE_S .. MODE_FROM_S
+MODE_MIN_DECAY_S = 0.08  # a tail tone rings at least this long (time constant)
+MODE_END_DB = 8.0        # the tones stop where the reference falls this far under them
+MODE_END_FADE_S = 0.04   # ... over this long
+MODE_END_HOLD = 5        # "stays there": five 20 ms windows (the take's last ms can hold the
+                         # next drum's bleed, so "to the end" never held)
+
+
+def tail_modes(takes: np.ndarray, clean_s: float) -> list[dict]:
+    """A kick's low tail as measured damped tones, each with its frequency, decay, level and
+    phase. The knocker kick's tail pulses: its level under 150 Hz dips about 70 ms after the
+    click, swells back 10 dB and dips again, the same on every hit (one sample). Rendered as
+    narrow noise bands it swelled at random moments on each take, heard as extra soft hits
+    inside the kick (2026-11-19). A matrix pencil on the mean of the clean takes, low-passed
+    and decimated to 1.1 kHz, over MODE_FROM_S..MODE_TO_S, finds a cluster of tones at 67 to
+    82 Hz with about the same 1.1 s decay (one boom whose level pulses) and a few at 93 to
+    113 Hz; summed with their measured phases they follow the reference's pulse within about
+    2 dB to 360 ms. The kick then stops (it falls 27 dB from 400 to 520 ms, the sample's own
+    end), which decaying tones cannot do: they end, fading over MODE_END_FADE_S, where the
+    reference falls MODE_END_DB under them and stays there for 100 ms. Returns [] if they explain less
+    than 3/4 of the tail."""
+    t1 = min(MODE_TO_S, clean_s - 0.02)
+    if t1 - MODE_FROM_S < 0.15:
+        return []
+    sos = signal.butter(4, MODE_MAX_HZ * 1.1, "low", fs=RATE, output="sos")
+    full = [h for h in takes if np.count_nonzero(np.abs(h)) / RATE >= t1 + PRE / RATE]
+    if not full:
+        return []
+    x = np.mean([signal.sosfiltfilt(sos, h) for h in full], axis=0)
+    dec = 40
+    r = RATE / dec
+    x = signal.resample_poly(x, 1, dec)
+    seg = x[int((PRE / RATE + MODE_FROM_S) * r):int((PRE / RATE + t1) * r)]
+    N = len(seg)
+    L = N // 2
+    Y = np.array([seg[i:i + L + 1] for i in range(N - L)])
+    V = np.linalg.svd(Y, full_matrices=False)[2][:MODE_ORDER].conj().T
+    z = np.linalg.eigvals(np.linalg.pinv(V[:-1]) @ V[1:])
+    a = np.linalg.lstsq(np.vander(z, N, increasing=True).T, seg.astype(complex), rcond=None)[0]
+    hz = np.angle(z) * r / (2 * np.pi)
+    keep = (hz > 30) & (hz < MODE_MAX_HZ) & (np.abs(z) < 1)
+    if not keep.any():
+        return []
+    amp = 2 * np.abs(a)
+    # a tail tone rings: one that dies within MODE_MIN_DECAY_S is the pencil standing in for a
+    # pitch still falling at MODE_FROM_S (the Alley kick goes 115 to 60 Hz from 40 to 100 ms),
+    # with huge tones that cancel each other: referred back to the strike they stood 33 dB over
+    # the kick and made it 6 dB too loud (2026-11-20). Then the pitch fall carries the tail.
+    keep &= -1 / (np.log(np.abs(z) + 1e-12) * r) >= MODE_MIN_DECAY_S
+    if not keep.any():
+        return []
+    keep &= amp >= amp[keep].max() * 10 ** (-MODE_RANGE_DB / 20)
+    rec = 2 * np.real(np.vander(z[keep], N, increasing=True).T @ a[keep])
+    if np.sum((seg - rec) ** 2) > 0.25 * np.sum(seg ** 2):
+        return []
+    # where the reference falls away from the tones for good, on 20 ms windows to the clean end
+    start = int((PRE / RATE + MODE_FROM_S) * r)
+    stop = int((PRE / RATE + clean_s - 0.01) * r)
+    tail = x[start:stop]
+    rec_all = 2 * np.real(np.vander(z[keep], len(tail), increasing=True).T @ a[keep])
+    w = int(0.02 * r)
+    db = lambda y: 10 * np.log10(np.array([np.mean(y[i:i + w] ** 2) for i in
+                                           range(0, len(y) - w + 1, w)]) + 1e-20)
+    below = db(tail) < db(rec_all) - MODE_END_DB
+    end_s = clean_s
+    for i in range(len(below)):
+        if below[i:i + MODE_END_HOLD].all() and len(below[i:i + MODE_END_HOLD]) == MODE_END_HOLD:
+            end_s = MODE_FROM_S + i * w / r
+            break
+    modes = []
+    for zk, ak, f in zip(z[keep], a[keep], hz[keep]):
+        a0 = ak * zk ** (-MODE_FROM_S * r)          # referred back to the strike (t = 0)
+        modes.append(dict(kind="mode", hz=round(float(f), 3),
+                          decay_s=round(float(1 / (-np.log(np.abs(zk)) * r)), 4),
+                          amp_db=round(float(20 * np.log10(2 * np.abs(a0))), 3),
+                          phase=round(float(np.angle(a0)), 4),
+                          start_s=MODE_FROM_S - MODE_FADE_S, fade_s=MODE_FADE_S,
+                          end_s=round(float(end_s), 3), end_fade_s=MODE_END_FADE_S))
+    peak = 20 * np.log10(np.abs(x[:int((PRE / RATE + MODE_FROM_S) * r)]).max() + 1e-12)
+    if any(m["amp_db"] > peak for m in modes):
+        return []   # louder than the strike itself: not a ringing tail
+    return sorted(modes, key=lambda m: -m["amp_db"])
+
+
+KICK_TONE_HZ = 400.0     # under this a rebuilt kick is tone only: its pitch fall and harmonics,
+                         # then its tail tones
+
+
+def tone_only_low(partials: list[dict], target: np.ndarray) -> np.ndarray | None:
+    """A rebuilt kick's low end as tones only. Fitted as sines plus third-octave noise at the
+    same frequencies, the two drift in and out of phase at random. Under 100 Hz the knocker
+    kick fell to -23 dB at 35 ms and bounced back twice by 80 ms where the reference holds its
+    body flat for 20 ms and then falls smoothly; and with its harmonics (147, 220, 293 Hz) on
+    fresh random phases each take, two takes in four split the attack into a click, a hole at
+    15 ms and the body, where every reference kick is one solid 20 ms block. Both were heard
+    as a fragmented kick (2026-11-20). So the bands wholly under KICK_TONE_HZ get no noise;
+    at each grid time each band's measured power goes to the harmonic nearest it (a sine of
+    amplitude A has power A^2/2), and every harmonic keeps its phase on every take, as a
+    sampled kick does. Returns the mask of those bands, or None when there is no glide."""
+    glides = [q for q in partials if q["kind"] == "glide"]
+    if not any(q.get("harmonic") == 1 for q in glides):
+        return None
+    low = BAND_EDGES[1:] <= KICK_TONE_HZ * 1.001
+    centres = np.sqrt(BAND_EDGES[:-1] * BAND_EDGES[1:])
+    freqs = np.array([glidefit.freq(q.get("law", "exp"), q["f0"], q["f1"], q["tau_s"], GRID)
+                      for q in glides])
+    power = np.zeros((len(glides), len(GRID)))
+    for b in np.nonzero(low)[0]:
+        near = np.argmin(np.abs(np.log2(freqs / centres[b])), axis=0)
+        power[near, np.arange(len(GRID))] += 10 ** (target[b] / 10)
+    for q, pw in zip(glides, power):
+        env = 10 * np.log10(2 * pw + 1e-30)
+        env = np.maximum(env, FLOOR_DB)
+        pk = int(np.argmax(env))
+        env[pk:] = np.minimum.accumulate(env[pk:])
+        q["env_db"] = env
+        q["lock_phase"] = True
+        q["tone_only_low"] = True
+    return low
+
+
+def hand_over(p: dict) -> None:
+    """A low glide partial stops where the tail tones take over: full to 40 ms, -6 dB at 55,
+    silent from 75 (the grid's own points around the tones' 40 to 60 ms fade-in)."""
+    if p["kind"] != "glide" or p["f1"] >= MODE_MAX_HZ:
+        return
+    e = np.asarray(p["env_db"], dtype=float)
+    g = np.asarray(GRID)
+    e[g >= MODE_FROM_S - 0.005] -= 6.0
+    e[g >= MODE_FROM_S + 0.015] = FLOOR_DB
+    p["env_db"] = e
+
+
+def strike_shape(env_db: np.ndarray, peak: int | None = None) -> np.ndarray:
     """A struck sound's loudness in one band: it rises to its peak within the first 14 ms and
     then only falls. Corrected point by point, the loop otherwise zigzags 15 to 30 dB between
     grid points a few ms apart, and that fast loudness switching adds buzzy sidebands, a kind
     of ring modulation."""
     e = np.array(env_db, dtype=float)
-    pk = int(np.argmax(e[:8]))
+    pk = int(np.argmax(e[:8])) if peak is None else int(peak)   # a building layer: its own
     e[:pk + 1] = np.maximum.accumulate(e[:pk + 1])
     e[pk:] = np.minimum.accumulate(e[pk:])
     return e
@@ -342,7 +540,11 @@ def fit_drum(drum: dict, work: Path) -> tuple[dict, dict]:
     template = np.load(work / "hits" / f"{drum['id']}_template.npy")
     clean = float(drum["clean_seconds"])
     low_share = float((template[TEMPLATE_EDGES < 150] ** 2).sum() / (template ** 2).sum())
-    target = target_for(takes, template, clean, low_share)
+    target = target_for(takes, template, clean, low_share,
+                        swell=drum["id"].split("-")[0] in SWELL_LOOPS)
+    # only a band that builds gets its late peak; a strike keeps finding its own early one
+    band_peaks = [int(pk) if pk >= 8 else None for pk in target_for.peaks]
+    extended_tail = bool(target_for.extended)
     # length: where every band has fallen 60 dB below the drum's peak, plus a little
     peak_db = target.max()
     alive = np.nonzero((target > peak_db - 60).any(0))[0]
@@ -386,6 +588,14 @@ def fit_drum(drum: dict, work: Path) -> tuple[dict, dict]:
                              lock_phase=False, prominence_db=p["prominence_db"],
                              share=p["share"]))
 
+    # a kick rebuilt whole (drums.kick_first): its low tail as measured tones, phase-locked
+    is_kick = bool((drum.get("kick_first") or {}).get("kick"))
+    modes = tail_modes(takes, clean) if is_kick else []
+    tone_low = tone_only_low(partials, target) if is_kick else None
+    if modes:
+        for p in partials:
+            hand_over(p)
+
     # initial split of each band's target between partials in it and noise
     noise_db = target.copy()
     cols = np.arange(len(GRID))
@@ -406,8 +616,14 @@ def fit_drum(drum: dict, work: Path) -> tuple[dict, dict]:
         pk = int(np.argmax(p["env_db"]))
         p["env_db"][pk:] = np.minimum.accumulate(p["env_db"][pk:])
 
-    noise_db = np.array([strike_shape(r) for r in noise_db])
-    model = dict(id=drum["id"], length_s=round(length, 3), partials=partials,
+    noise_db = np.array([strike_shape(r, pk) for r, pk in zip(noise_db, band_peaks)])
+    if tone_low is not None:
+        noise_db[tone_low] = FLOOR_DB
+    model = dict(id=drum["id"], length_s=round(length, 3), partials=partials + modes,
+                 # a kick rebuilt whole is one voice: its next hit cuts it, where its takes
+                 # were cut (the Alley kick rings 1.4 s, and with hits 0.33 s apart the
+                 # tails piled up to 96% of the groove's energy, 2026-11-20)
+                 self_choke=bool(extended_tail or is_kick),
                  noise_db=noise_db,
                  velocity=dict(tilt_db_per_oct=-2.5, decay_loss=0.15, glide_depth_loss=0.3,
                                source="house law"),
@@ -434,9 +650,12 @@ def fit_drum(drum: dict, work: Path) -> tuple[dict, dict]:
         corr = DAMPING * np.clip(err, -18, 18)
         corr[~live] = np.minimum(corr[~live], 0)   # never boost what the target says is quiet
         corr[:, ends] = 0
-        model["noise_db"] = np.array([strike_shape(r) for r in np.clip(
-            np.asarray(model["noise_db"]) + corr, FLOOR_DB, peak_db + CAP_OVER_PEAK_DB)])
+        model["noise_db"] = np.array([strike_shape(r, pk) for r, pk in zip(np.clip(
+            np.asarray(model["noise_db"]) + corr, FLOOR_DB, peak_db + CAP_OVER_PEAK_DB),
+            band_peaks)])
         model["noise_db"][:, ends] = FLOOR_DB
+        if tone_low is not None:
+            model["noise_db"][tone_low] = FLOOR_DB
         for p in partials:
             bt = band_index_over_time(p)
             c = corr[bt, cols]
@@ -450,10 +669,13 @@ def fit_drum(drum: dict, work: Path) -> tuple[dict, dict]:
             pk = int(np.argmax(e))
             e[pk:] = np.minimum.accumulate(e[pk:])  # a ringing mode only decays
             p["env_db"] = e
+            if modes:
+                hand_over(p)
     report = dict(id=drum["id"], distance_db=round(min(history), 2),
                   best_pass=int(np.argmin(history)),
                   first_distance_db=round(history[0], 2), glide=glide_info,
                   steady_partials=sum(p["kind"] == "steady" for p in partials),
+                  tail_modes=len(modes),
                   low_share=round(low_share, 3), length_s=round(length, 3))
     return best, report
 
@@ -475,6 +697,16 @@ def jsonable(m):
 def main(work: Path, models: Path, only: str | None = None) -> None:
     models.mkdir(parents=True, exist_ok=True)
     inv = json.loads((work / "inventory.json").read_text())
+    if only == "--events-only":
+        # hit times and loudness changed, the sounds did not: copy the events, refit nothing
+        for key, loop in inv.items():
+            f = models / f"{key}.json"
+            m = json.loads(f.read_text())
+            for d in loop["drums"]:
+                m["drums"][d["id"]]["events"] = d["events"]
+            f.write_text(json.dumps(m, separators=(",", ":")))
+        print("events copied into", len(inv), "loops")
+        return
     reports = {}
     for key, loop in inv.items():
         if only and key != only:

@@ -856,6 +856,26 @@ object StarterKits {
             seeded = false, tempoBpm = com.snipsnap.synth.StaggerKits.Kit.STUMBLE.bpm.toFloat(),
         ) { com.snipsnap.synth.StaggerKits.build(com.snipsnap.synth.StaggerKits.Kit.STUMBLE) },
         Starter(
+            "facsimile-shuffle", "FACSIMILE SHUFFLE",
+            "Heavy-swing boom bap rebuilt by synthesis from two loops: a long falling kick, roomy backbeat snares, hats pushed late on the swung sixteenths. Three touch zones, four takes; the Alley and Swing grooves, hit for hit.",
+            seeded = false, tempoBpm = com.snipsnap.synth.FacsimileKits.Kit.SHUFFLE.bpm.toFloat(),
+        ) { com.snipsnap.synth.FacsimileKits.build(com.snipsnap.synth.FacsimileKits.Kit.SHUFFLE) },
+        Starter(
+            "facsimile-knock", "FACSIMILE KNOCK",
+            "A knocking kick with a pulsing boom, a snare that blooms into its room, and a fusion kit's hats and cracks, all synthesized. Three touch zones, four takes; the Knocker and Fusion grooves, hit for hit.",
+            seeded = false, tempoBpm = com.snipsnap.synth.FacsimileKits.Kit.KNOCK.bpm.toFloat(),
+        ) { com.snipsnap.synth.FacsimileKits.build(com.snipsnap.synth.FacsimileKits.Kit.KNOCK) },
+        Starter(
+            "facsimile-half-time", "FACSIMILE HALF-TIME",
+            "Half-time weight rebuilt by synthesis: punchy kicks, falling subs, a clap and a stacked clap, open hats. Three touch zones, four takes; the Doves and Mover grooves, hit for hit.",
+            seeded = false, tempoBpm = com.snipsnap.synth.FacsimileKits.Kit.HALF_TIME.bpm.toFloat(),
+        ) { com.snipsnap.synth.FacsimileKits.build(com.snipsnap.synth.FacsimileKits.Kit.HALF_TIME) },
+        Starter(
+            "facsimile-texture", "FACSIMILE TEXTURE",
+            "Toms and tone rebuilt by synthesis: pitched toms, sub notes, a crisp hat and a backbeat tambourine. Three touch zones, four takes; the Tom, World and Thin Perc grooves, hit for hit.",
+            seeded = false, tempoBpm = com.snipsnap.synth.FacsimileKits.Kit.TEXTURE.bpm.toFloat(),
+        ) { com.snipsnap.synth.FacsimileKits.build(com.snipsnap.synth.FacsimileKits.Kit.TEXTURE) },
+        Starter(
             com.snipsnap.synth.BreakerKits.ID, "BREAKER",
             "Surf rock by way of boom bap: dusty drums through a spring tank, a crush and a surf amp. Three touch zones, three takes; a snare riser and a surf tom fill.",
             seeded = false, tempoBpm = com.snipsnap.synth.BreakerKits.BPM,

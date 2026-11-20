@@ -34,7 +34,7 @@ object LibrationAuditionGenerator {
     private fun scaled(s: Snip, gain: Double) = s.copy(samples = FloatArray(s.samples.size) { (s.samples[it] * gain).toFloat() })
     private fun cases(): List<Case> {
         val cases = mutableListOf<Case>()
-        for (voice in LibrationVoice.entries) {
+        for (voice in Libration.CLOUD_VOICES) {
             val id = voice.name.lowercase()
             val title = id.replaceFirstChar(Char::uppercase)
             val patch = LibrationPresets.references().single { it.voice == voice }
@@ -42,6 +42,7 @@ object LibrationAuditionGenerator {
                 LibrationVoice.GATHER -> "Rounded excursions around a steady root. Listen for changing weight inside the tone."
                 LibrationVoice.TWINS -> "A fine upper cloud and a quieter rounded counterpart. Listen for two different populations."
                 LibrationVoice.DEPARTURE -> "Voices leave the L2 neighborhood and reduce their excitation; the modal bank keeps ringing."
+                else -> error("kept voices only")
             }
             cases += Case(id, title, "voices", patch, text)
             for ((ablation, label, description) in listOf(

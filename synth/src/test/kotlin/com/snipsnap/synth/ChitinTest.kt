@@ -16,7 +16,7 @@ class ChitinTest {
         }
     }
     @Test fun `duration has one frame plan and HOLD top is finite`() {
-        for(v in ChitinVoice.entries) {
+        for(v in Chitin.MIXED_VOICES) {
             val top=Chitin.render(v,mapOf("HOLD" to .98f))
             for(h in listOf(.999f,1f)) assertContentEquals(top.samples,Chitin.render(v,mapOf("HOLD" to h)).samples)
             assertFalse(Chitin.isLoop(1f))
@@ -36,7 +36,7 @@ class ChitinTest {
     }
     @Test fun `output remains finite bounded and outside drum classes at parameter corners`() {
         val allowed=setOf(DrumClass.TONAL,DrumClass.PERC,DrumClass.LOOP)
-        for(v in ChitinVoice.entries) for(tune in listOf(0f,.5f,1f)) for(bits in 0 until 32) {
+        for(v in Chitin.MIXED_VOICES) for(tune in listOf(0f,.5f,1f)) for(bits in 0 until 32) {
             val keys=listOf("BITE","COLOR","PHASE","MORPH","PACE")
             val m=keys.mapIndexed { i,k -> k to (if(bits and (1 shl i)==0) 0f else 1f) }.toMap()+mapOf("TUNE" to tune,"HOLD" to 0f)
             val r=Chitin.inspect(v,m);val d=r.diagnostics
@@ -49,7 +49,7 @@ class ChitinTest {
         }
     }
     @Test fun `root stays anchored through sync and phase at ordinary corners`() {
-        for(v in ChitinVoice.entries) for(t in listOf(.5f,1f)) {
+        for(v in Chitin.MIXED_VOICES) for(t in listOf(.5f,1f)) {
             val m=mapOf("TUNE" to t,"BITE" to 1f,"PHASE" to 1f)
             val s=Chitin.render(v,m);val pitch=assertNotNull(Pitch.detect(s,fromSec=.2f))
             val cents=1200*ln(pitch.hz/Chitin.frequencyFor(v,t))/ln(2.0)

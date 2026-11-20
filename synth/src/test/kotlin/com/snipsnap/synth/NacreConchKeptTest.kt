@@ -120,7 +120,9 @@ class NacreConchKeptTest {
 
     @Test
     fun `O10's references are the accepted BORE, EMBOUCHURE, OBBLIGATO and BUBBLE sounds`() {
-        assertEquals("ab358e3945b1902507b79a0835a98923911c53bf5edd14eac6fa3b5ebd6ad74e",
+        // BORE FLUTE's is the held render kept in round fix-bore-1 (20 Nov 2026), after the held-note player humanized
+        // it; O10's clip was heard before that, with the earlier, steadier hold. The others are the ones O10 played.
+        assertEquals("f37f960d0f2ae4d7cc693c763c75e7b8b6f679de54eb0a146b5f7b66dd21975d",
             hash(Bore.render(BoreVoice.FLUTE, mapOf("TUNE" to 0f, "HOLD" to 1f)).samples), "BORE FLUTE's held loop moved")
         assertEquals("3046967ce6cd0ea595540f0ae785748cba54e6c516f898ca69b3462b433b6d41",
             hash(Embouchure.render(EmbouchureVoice.WHISTLE, mapOf("HOLD" to 1f), 60, .8f).samples), "EMBOUCHURE WHISTLE moved")

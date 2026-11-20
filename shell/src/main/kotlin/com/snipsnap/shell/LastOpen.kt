@@ -26,6 +26,18 @@ object LastOpen {
         project?.takeIf { openKit != null && openKit in it.kits }?.name
 
     /**
+     * RESTORE from the trash (UAT 2026-11 user states, D-3): whether the kit that came back as
+     * [restored] goes back on the open project's grid. Deleting a project's active kit leaves
+     * the project open with no kit, and RESTORE used to leave it that way until the project was
+     * reopened, and [toSave] forgot it meanwhile. It goes back when the project is open with no
+     * kit and [restored] is its active kit, which is what the delete took away. A kit already on
+     * the grid, another project's kit, or a restore that landed under a fresh name leaves the
+     * grid alone.
+     */
+    fun reopensOnRestore(project: Project?, openKit: String?, restored: String): Boolean =
+        project != null && openKit == null && project.activeKit == restored
+
+    /**
      * The project a cold start opens on PADS, or null for the library. Null when nothing was
      * remembered, when the project is gone (renamed, binned), or when its active kit is no
      * longer on the shelf: a project that would open on an empty grid is not "on the pads".
