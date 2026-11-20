@@ -373,6 +373,20 @@ object Copy {
     const val TAPE_STOPPED_ITSELF = "Listening stopped on its own. Nothing since was kept. Press LISTEN again."
 
     /**
+     * The correction to [SESSION_ARMED] when the mic never started (UAT 2026-11
+     * user states, S-1). The dock says "Listening." the moment LISTEN is
+     * granted, before the service has opened the mic; when another app holds
+     * it or the platform refuses the `AudioRecord`, the service gives up and
+     * this replaces that line. Nothing was ever kept, unlike
+     * [TAPE_STOPPED_ITSELF], so it does not say "since". Another app holding
+     * the mic is the cause a user can act on, so it is the one named.
+     */
+    const val MIC_WONT_START = "The mic wouldn't start, so nothing is being kept. Close any app using the mic and press LISTEN again."
+
+    /** [MIC_WONT_START]'s twin for [APP_AUDIO_ARMED]: the projection or the playback-capture stream was refused after consent. */
+    const val APP_AUDIO_WONT_START = "APP AUDIO wouldn't start, so nothing is being kept. Press APP AUDIO again."
+
+    /**
      * A MIC session has read nothing but exact digital silence for a long
      * while — the platform likely muted or revoked the mic mid-session.
      * Deliberately NOT [TAPE_STOPPED_ITSELF]'s language: that toast says

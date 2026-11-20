@@ -199,10 +199,10 @@ class MicSessionService : Service() {
         if (minBuffer <= 0) {
             // One-time arm-path branch, not the realtime loop: logged so a
             // dead ARM is diagnosable from logcat/a bug report instead of
-            // silently doing nothing. The ARM button UI owns any
-            // user-facing message.
+            // silently doing nothing. [failArm] tells the app, which owns the
+            // words.
             Log.w(TAG, "arm: getMinBufferSize rejected the format outright ($minBuffer)")
-            stopForeground(STOP_FOREGROUND_REMOVE)
+            failArm(Source.MIC)
             return
         }
 
@@ -224,16 +224,16 @@ class MicSessionService : Service() {
             // permission first — this is the defensive floor, not the
             // permission flow itself.
             Log.w(TAG, "arm: RECORD_AUDIO not granted", e)
-            stopForeground(STOP_FOREGROUND_REMOVE)
+            failArm(Source.MIC)
             return
         } catch (e: UnsupportedOperationException) {
             Log.w(TAG, "arm: device rejected the AudioRecord params", e)
-            stopForeground(STOP_FOREGROUND_REMOVE)
+            failArm(Source.MIC)
             return
         }
 
         if (!startRecording(newRecord, "arm")) {
-            stopForeground(STOP_FOREGROUND_REMOVE)
+            failArm(Source.MIC)
             return
         }
         beginSession(newRecord, Source.MIC, stereo = false)
@@ -264,6 +264,7 @@ class MicSessionService : Service() {
         }
         if (code != Activity.RESULT_OK || data == null) {
             Log.w(TAG, "arm inside: no consent on the intent")
+            failArm(Source.INSIDE)
             return
         }
 
@@ -281,7 +282,7 @@ class MicSessionService : Service() {
             null
         }
         if (newProjection == null) {
-            stopForeground(STOP_FOREGROUND_REMOVE)
+            failArm(Source.INSIDE)
             return
         }
         newProjection.registerCallback(projectionCallback, Handler(Looper.getMainLooper()))
@@ -303,7 +304,7 @@ class MicSessionService : Service() {
         if (minBuffer <= 0) {
             Log.w(TAG, "arm inside: getMinBufferSize rejected the format outright ($minBuffer)")
             dropProjection(newProjection)
-            stopForeground(STOP_FOREGROUND_REMOVE)
+            failArm(Source.INSIDE)
             return
         }
         val format = AudioFormat.Builder()
@@ -320,22 +321,34 @@ class MicSessionService : Service() {
         } catch (e: SecurityException) {
             Log.w(TAG, "arm inside: RECORD_AUDIO not granted", e)
             dropProjection(newProjection)
-            stopForeground(STOP_FOREGROUND_REMOVE)
+            failArm(Source.INSIDE)
             return
         } catch (e: UnsupportedOperationException) {
             Log.w(TAG, "arm inside: device rejected the playback-capture params", e)
             dropProjection(newProjection)
-            stopForeground(STOP_FOREGROUND_REMOVE)
+            failArm(Source.INSIDE)
             return
         }
 
         if (!startRecording(newRecord, "arm inside")) {
             dropProjection(newProjection)
-            stopForeground(STOP_FOREGROUND_REMOVE)
+            failArm(Source.INSIDE)
             return
         }
         projection = newProjection
         beginSession(newRecord, Source.INSIDE, stereo = true)
+    }
+
+    /**
+     * An ARM that never became a session (UAT 2026-11 user states, S-1): out
+     * of the foreground state, and said. The app speaks "Listening." as soon
+     * as it asks, before this service has opened anything, and every exit
+     * here used to only log, so a mic held by another app left the dock
+     * saying it was listening to nothing. [armFailed] carries the correction.
+     */
+    private fun failArm(source: Source) {
+        stopForeground(STOP_FOREGROUND_REMOVE)
+        _armFailed.value = ((_armFailed.value?.first ?: 0) + 1) to source
     }
 
     /** A projection that never became a session: unhook it before it can call [projectionCallback] back. */
@@ -763,6 +776,15 @@ class MicSessionService : Service() {
 
         private val _armed = MutableStateFlow(false)
         val armed: StateFlow<Boolean> = _armed.asStateFlow()
+
+        private val _armFailed = MutableStateFlow<Pair<Int, Source>?>(null)
+        /**
+         * The latest ARM that never became a session, by attempt count and
+         * source, or null when none has failed. The app baselines it at first
+         * composition, as it does [sessionDied], so a recreated Activity does
+         * not replay an old failure; a new count is said once.
+         */
+        val armFailed: StateFlow<Pair<Int, Source>?> = _armFailed.asStateFlow()
 
         /** Optional owner for finite in-app takes; ordinary ARM/EJECT remains unscoped. */
         @Volatile internal var activeOwnerToken: String? = null

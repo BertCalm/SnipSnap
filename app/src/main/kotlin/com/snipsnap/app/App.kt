@@ -1084,6 +1084,21 @@ fun App(shelf: KitShelf) {
             dock.say(Copy.TAPE_STOPPED_ITSELF)
         }
     }
+    // An ARM that never became a session (UAT 2026-11 user states, S-1).
+    // The permission callback and the projection result below say
+    // SESSION_ARMED / APP_AUDIO_ARMED the moment they ask, before the
+    // service has opened anything; when the mic is held by another app or
+    // the platform refuses, this is the correction, the way `lastSnipError`
+    // corrects an optimistic SNIP. Baselined by attempt count, as above.
+    val armFailed by MicSessionService.armFailed.collectAsState()
+    var armFailedSeen by remember { mutableStateOf(MicSessionService.armFailed.value?.first) }
+    LaunchedEffect(armFailed) {
+        val (attempt, source) = armFailed ?: return@LaunchedEffect
+        if (attempt != armFailedSeen) {
+            armFailedSeen = attempt
+            dock.say(if (source == MicSessionService.Source.INSIDE) Copy.APP_AUDIO_WONT_START else Copy.MIC_WONT_START)
+        }
+    }
     // ARM APP AUDIO runs through the same RECORD_AUDIO request as ARM TAPE
     // (playback capture needs it too); this remembers which button asked,
     // so the permission callback below knows whether to arm the mic or
