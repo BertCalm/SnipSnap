@@ -30,6 +30,48 @@ data class KerfRecipe(
 
     fun render(): Snip = KerfRender.toSnip(KerfRender.chopped(patch, prev, next, bleed, slop, controls, draw).samples)
 
+    /**
+     * The pad struck at [velocity] (0..1, [KerfVelocity]): the hit softer, duller and with a softer tick, the
+     * neighbours' bleed where it was. Velocity 1 is [render], byte for byte.
+     */
+    fun renderAt(velocity: Double): Snip =
+        if (velocity >= 1.0) render()
+        else KerfRender.toSnip(KerfRender.chopped(KerfVelocity.strike(patch, velocity), prev, next, bleed, slop, controls, draw, KerfVelocity.hitGain(velocity)).samples)
+
+    /**
+     * Take [take] of a round robin at [velocity]: the hit cut again with another knife and other noise
+     * ([KerfVelocity.takeDraw], [KerfVelocity.takeSeed]), so each take is a fresh strike. Take 0, or [amount] 0, is
+     * [renderAt] itself.
+     */
+    fun take(take: Int, velocity: Double = 1.0, amount: Double = 1.0): Snip {
+        if (take == 0 || amount <= 0.0) return renderAt(velocity)
+        val own = draw ?: KerfRender.drawFor(patch.seed)
+        val knife = KerfVelocity.takeDraw(own, patch.seed, take, amount)
+        // The noise draw is what makes a take a fresh strike, but one draw of a short noisy hit can land 0.65x or
+        // 1.36x as bright as another (kit D's snare, measured 2026-11-20): a different drum, not another hit of this
+        // one. So each take tries [TAKE_CANDIDATES] draws and keeps the one whose band energies sit nearest the pad's
+        // own at this velocity. Deterministic: the candidates and the choice depend only on the take.
+        val reference = KerfRender.bandEnergies(renderAt(velocity).samples)
+        var best: FloatArray? = null; var bestDistance = Double.MAX_VALUE
+        for (k in 0 until TAKE_CANDIDATES) {
+            val struck = KerfVelocity.strike(patch.copy(seed = KerfVelocity.takeSeed(patch.seed, take * TAKE_CANDIDATES + k)), velocity)
+            val samples = KerfRender.chopped(struck, prev, next, bleed, slop, controls, knife, KerfVelocity.hitGain(velocity)).samples
+            val d = profileDistance(reference, KerfRender.bandEnergies(samples))
+            if (d < bestDistance) { bestDistance = d; best = samples }
+        }
+        return KerfRender.toSnip(best!!)
+    }
+
+    /** Mean |dB| between two band-energy profiles, over the bands within 30 dB of [reference]'s loudest. */
+    private fun profileDistance(reference: DoubleArray, candidate: DoubleArray): Double {
+        val top = reference.max(); var sum = 0.0; var n = 0
+        for (b in reference.indices) {
+            if (reference[b] < top * 1e-3) continue
+            sum += kotlin.math.abs(10 * kotlin.math.log10((candidate[b] + 1e-30) / (reference[b] + 1e-30))); n++
+        }
+        return if (n == 0) 0.0 else sum / n
+    }
+
     fun toJsonValue(): JsonValue.Obj {
         val o = LinkedHashMap<String, JsonValue>()
         o["model"] = JsonValue.Num(model.toDouble())
@@ -44,6 +86,9 @@ data class KerfRecipe(
     }
 
     companion object {
+        /** Noise draws a round-robin take chooses among ([take]). */
+        const val TAKE_CANDIDATES = 4
+
         fun fromJsonValue(value: JsonValue): KerfRecipe {
             val o = value.obj()
             return KerfRecipe(

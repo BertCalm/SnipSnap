@@ -2,11 +2,12 @@
 
 Version 1.0 · 2026-11-19
 
-Status: rounds 1 and 2a to 2d built (the Kotlin renderer and fitter, the kit action and its
-command, the pad sheet's SYNTH TWIN, and SYNTH TWIN ALL with BLEED and SLOP on a twin; see
-"As built" at the end). The engine is not written. Heard by the owner: the Python prototype,
-the round-1 Kotlin page ("Sounds good, continue", 2026-11-19) and the round-2 loop-to-kit
-page ("Audition is fine", 2026-11-20). Nobody has made a twin on a phone yet. KERF is a
+Status: rounds 1 to 3 built (the renderer and fitter, the kit action and its command, the pad
+sheet's SYNTH TWIN, SYNTH TWIN ALL with BLEED and SLOP, and velocity and round robin; see "As
+built" at the end, and KERF's row in docs/ENGINE_ACCEPTANCE_GATES.md). The engine (round 4) is
+not written. Heard by the owner: the Python prototype, the round-1 Kotlin page ("Sounds good,
+continue", 2026-11-19) and the round-2 loop-to-kit page ("Audition is fine", 2026-11-20). The
+velocity layers and takes have not been heard, and nobody has made a twin on a phone. KERF is a
 working name (a kerf is the sliver a saw removes); no maker or product is named by it.
 
 Owner decisions, 2026-11-19 ("I take your recommendations proceed"): the patch format is
@@ -416,8 +417,8 @@ a layer is not always a separate drum.
   twin on a phone.
 - **R2d.** Built. SYNTH TWIN ALL on the kit screen, and BLEED and SLOP on a twin. Gate,
   open: the owner makes a kit of twins on a phone and moves BLEED and SLOP.
-- **R3.** The ghost-against-snare comparison, then velocity and round robin. Gate: the
-  owner's velocity/round-robin gate through render, save, playback and export.
+- **R3.** Built. Velocity and round robin through the app's own doors (SOFT HITS, the zone grid,
+  the kit's round robin). Gate, open: the owner hears the layers and the takes.
 - **R4.** Engine registration, voices and presets after listening, genre kits, audition,
   docs. Gate: the drum gate (multiple distinct genre kits on the shelf).
 
@@ -754,3 +755,64 @@ this session.
 
 Still owed: velocity and round robin (R3), the low-end gap of round 2a, the 88.2 kHz
 assertion, the engine (R4).
+
+## As built: round 3, velocity and round robin (2026-11-20)
+
+Read at `04657854`. The owner said "Proceed to next round". The gate is the owner's: working
+velocity levels and round robin through rendering, saving, playback and export, velocity a
+change of strike character, the takes distinct strikes.
+
+What exists:
+
+- `KerfVelocity`: `strike(patch, velocity)`, the velocity law, and the takes' knife and seed.
+- `KerfRecipe.renderAt(velocity)` and `KerfRecipe.take(take, velocity, amount)`.
+- `Velocity.kerfForLayers` and `Velocity.kerfLayerAt`, beside the patch path's pair.
+- Hooks, one line each, in the app's three doors: SOFT HITS (`addGhostLayers`), the
+  velocity × round-robin grid and the kit's round robin (`Robin.apply`, its `restriker`).
+- `KerfVelocityTest` (5), `KerfGateTest` (4). The audition generator writes velocity and takes.
+
+The velocity law, fitted to section 11's ghost-note measurements, every constant "shape":
+
+| Quantity | Law | Over the bank's 63 pads at 0.45 | Ghosts |
+|---|---|---:|---:|
+| Hit level | −20 dB × (1 − v) | −11.0 dB | −11.1 dB |
+| Floor against hit | floor follows half the drop | +5.7 dB | +5.3 dB |
+| Previous hit's bleed against hit | not scaled | +11.0 dB | +12.2 dB |
+| Centroid | tilt above 1 kHz, exponent 0.35 × (1 − v) | 0.868× | 0.86× |
+| Tick against hit | 4 dB further at v = 0 | −3.5 dB | −2.2 dB |
+| Kick pitch drop | × v² below 300 Hz (`StrikeVelocity.droopFactor`) | | not measured |
+
+Decided here, each from a measurement that failed first:
+
+- **TILT 0.35, not 0.6.** 0.6 gave 0.79× centroid; too dull against the ghosts' 0.86×.
+- **The next hit's front follows the hit.** Left at full level, it became the loudest moment of
+  a soft layer, a bright flam at its end that peak matching then set the level by: the first
+  kit-level check found a snare's soft layer brighter than its main take. The ghosts say
+  nothing about it (the chopper cut at the next onset); the previous hit's tail stays, which
+  is the bleed they measured.
+- **Kicks take `StrikeVelocity`'s droop.** A kick is mostly body below 1 kHz, which the measured
+  rows only turn down; soft kicks were within −26 to −32 dB of a copy at another level. That
+  row is the app's own struck-drum physics, borrowed, not measured from the loops.
+- **A take nudges the pad's own knife, it does not draw a new one.** A fresh draw gave a quiet
+  hat a few milliseconds of the kick before it on one take and not the next: 9 dB and 3× the
+  brightness apart. The start moves about a millisecond, the end one or two, early or late is
+  kept.
+- **A take chooses its noise among four draws.** One draw of a short noisy hit can land 0.65× or
+  1.36× as bright as another (kit D's snare). The take keeps the draw whose band profile sits
+  nearest the pad's own at that velocity. Spread after: 0.8 dB median, 2.6 dB worst in energy;
+  brightness mostly within ±15 %. Kit C's snare takes sit 1.2× to 1.4× above the pad, because
+  the pad's own draw is at the dark end of its spread; the takes agree with each other, and the
+  pad as heard stays take one.
+
+Fixed on the way, found by the kit-level test:
+
+- A twin under the kit's round robin lost KERF's stamp (the robin's rewrite cleared it) and so
+  stopped being a twin. `replaceAudio` now keeps the stamp when the new recipe still carries
+  the twin.
+- BLEED or SLOP on a round-robin twin wrote straight over the chain WAV. `recutKerfPad` now
+  lifts the chain, re-cuts and deals the takes again.
+- Measuring a round-robin pad read every take end to end. KERF now measures its first take,
+  the original.
+
+Not done, each owed: the owner's listen to the layers and takes (an audition page is
+published); phone and MPC playback; the engine and its genre kits (round 4).

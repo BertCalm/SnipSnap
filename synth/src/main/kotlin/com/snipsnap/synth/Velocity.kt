@@ -85,6 +85,28 @@ object Velocity {
         it.board == null && it.pedals == null && it.layers == null && it.terminalFadeMs == null
     }?.patch
 
+    /** [patchForLayers] for a KERF twin: the twin a layer path may re-strike, under the same conditions. */
+    fun kerfForLayers(recipe: PadRecipe?): KerfRecipe? = recipe?.takeIf {
+        it.board == null && it.pedals == null && it.layers == null && it.terminalFadeMs == null
+    }?.kerf
+
+    /**
+     * [layerAt] for a KERF twin: the twin struck again at [velocity] ([KerfRecipe.renderAt]), its rack replayed on
+     * the softer strike, then peak-matched to [reference], because the sampler owns loudness. What is left is the
+     * change of character: a duller hit with a softer tick, deeper in its neighbours' wash. A render whose shape
+     * differs from [reference] falls back to [soften], as [layerAt] does.
+     */
+    fun kerfLayerAt(reference: Snip, kerf: KerfRecipe, fx: FxChain?, velocity: Float): Snip {
+        val dry = kerf.renderAt(velocity.toDouble())
+        val wet = if (fx == null || fx.isBypass) dry else {
+            val seen = StrikeVelocity.levelSeen(velocity)
+            fx.process(dry.copy(samples = FloatArray(dry.samples.size) { dry.samples[it] * seen }))
+        }
+        return if (wet.channels != reference.channels || wet.sampleRate != reference.sampleRate)
+            soften(reference, 1f - velocity.coerceIn(0f, 1f))
+        else peakMatch(reference, wet)
+    }
+
     /**
      * [variants], but re-rendered via [atVelocity] when [patch] is a synth
      * patch, replaying its [fx] after the softer strike. This is the third

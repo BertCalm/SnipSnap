@@ -65,6 +65,9 @@ object KerfRender {
     private fun binHz(bin: Int) = bin.toDouble() * RATE / WINDOW
     private val centres = DoubleArray(BAND_COUNT) { sqrt(binHz(EDGES[it]) * binHz(EDGES[it + 1] - 1)) }
 
+    /** The centre of band [b] in Hz (the geometric mean of its first and last bin). */
+    fun bandCentreHz(b: Int): Double = centres[b]
+
     /**
      * The render-side controls. All defaults reproduce the fit.
      * @param cut fraction of the slice rendered before the edge.
@@ -122,6 +125,12 @@ object KerfRender {
     fun chopped(
         patch: KerfPatchData, prev: KerfPatchData?, next: KerfPatchData?, bleed: Double, slop: Double,
         controls: Controls = Controls(), draw: KerfDraw? = null,
+        /**
+         * The level of the next hit's front where the cut runs late, against its own. 1 for a chop as cut; a soft
+         * strike ([KerfVelocity]) passes the hit's own gain, because the overrun is the knife's error, sized to the
+         * hit that was chopped. The previous hit's tail is not scaled: that is the bleed, and it stays.
+         */
+        nextGain: Double = 1.0,
     ): Chop {
         val d = draw ?: drawFor(patch.seed)
         val startMs = if (d.which > 0.25) slop * (-3.0 + 15.0 * d.start) else -slop * 3.0 * d.start
@@ -133,7 +142,7 @@ object KerfRender {
         if (over > 0 && next != null && next.seconds * RATE >= over) {
             val head = raw(next, neighbour)   // this hit keeps ringing under the next one's attack
             val at = hit.size - over
-            for (i in 0 until min(over, head.size)) if (at + i >= 0) hit[at + i] += head[i]
+            for (i in 0 until min(over, head.size)) if (at + i >= 0) hit[at + i] += head[i] * nextGain
         }
         val pre = if (prev != null) (max(startMs, 0.0) * RATE / 1000).toInt() else 0
         val shave = min((max(-startMs, 0.0) * RATE / 1000).toInt(), hit.size - 1)

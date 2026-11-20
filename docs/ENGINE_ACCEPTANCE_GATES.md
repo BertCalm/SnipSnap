@@ -1272,3 +1272,18 @@ Source: the commit that adds this entry. Details: [CONSORT](CONSORT.md).
 
 Nothing here is a completion claim. A passing `ConsortTest` and an audition page do not close a gate.
 
+
+## KERF synthetic chops (rounds 1 to 3, 2026-11-20)
+
+Source: the commit that adds this entry. Details: [the KERF spec](superpowers/specs/2026-11-19-kerf-synthetic-chops-design.md). KERF is a capture-side tool today (SYNTH TWIN on the pad sheet, SYNTH TWIN ALL on the kit screen, `snipsnap kerf`), not a registered engine; the drum gate's genre kits belong to its round 4.
+
+| Gate | Current evidence | Status |
+|---|---|---|
+| Velocity (render) | A twin struck softer from its own numbers (`KerfVelocity`, `KerfRecipe.renderAt`): the hit falls, the floor follows half, the previous hit's bleed stays, the top tilts down, the tick falls further, a kick's pitch drop shrinks. Fitted to the owner's ghost notes against their snares (nine loops). Over the bank's 63 pads at 0.45, peak-matched: centroid 0.868× (ghosts 0.86×), floor against hit +5.7 dB (ghosts +5.3), bleed against hit +11.0 dB (ghosts +12.2), tick against hit −3.5 dB (ghosts −2.2). No soft layer is a copy at another level: the nearest is −24.7 dB residual (`KerfVelocityTest`). | Pass, by measurement; not heard |
+| Velocity (save, playback, export) | SOFT HITS on a twin writes the twin re-struck at 0.3 and 0.6, not the main take filtered (`KerfGateTest`). A twin's 3-zone × 4-take grid (`Robin.apply`) saves and reloads, `PadHit.resolve` picks the zone for all 127 velocities, MPC 2 and MPC 3 exports read back clean, and SFZ export and import keep the chain and the bytes. | Pass, off device; phone and MPC not run |
+| Round robin | Each take is the chop made again: the pad's own knife nudged by about a millisecond and a fresh noise draw, chosen among four for the band profile nearest the pad's (`KerfRecipe.take`). Takes are distinct and repeatable; after peak matching their energy spreads 0.8 dB median, 2.6 dB worst, over 48 takes. The kit's round robin keeps a twin a twin, re-cuts it under BLEED and SLOP, and its undo gives the capture back as take one (`KerfGateTest`). | Pass, off device; not heard; phone and MPC not run |
+| Drum genre kits | None authored. | Open (round 4) |
+| Percussion roll/riser | None. | Open (round 4, if the kits want one) |
+| Melodic, keygroups, chords, HOLD, STRUM | Not applicable: one-shot drum hits. | Not applicable |
+
+Nothing here is a completion claim. The owner has heard the twins (2026-11-18, 2026-11-19, 2026-11-20) but not the velocity layers or the takes; nobody has played a twin on a phone or an MPC.
