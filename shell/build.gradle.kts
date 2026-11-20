@@ -684,6 +684,16 @@ tasks.register<JavaExec>("generateKindredKits") {
     args(providers.gradleProperty("kindredKitsOutput").orNull ?: "${rootDir}/testkit/kindred-kits")
 }
 
+tasks.register<JavaExec>("generateBoroughKits") {
+    group = "distribution"
+    description = "Generate the six BOROUGH kits with their default perc stacks, prove every velocity and round-robin grid through save, playback and MPC 3 export, and write the listening pack."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.BoroughKitGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "2g"
+    args(providers.gradleProperty("boroughKitsOutput").orNull ?: "${rootDir}/testkit/borough-kits")
+}
+
 tasks.register<JavaExec>("generateEmberKits") {
     group = "distribution"
     description = "Build the four EMBER kits, prove every velocity and round-robin grid through save, playback and MPC 3 export, and write the listening pack."
