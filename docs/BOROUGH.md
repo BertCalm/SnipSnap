@@ -131,6 +131,34 @@ rings 1.35 s above -30 dB. Verification unchanged: 792 WAVs, 0 failures, timbral
 88 of 88 pads. Listening page version 3: the RIDE & RIMS before player is the round 1 groove
 with the hat stand-in.
 
+### Round 1.6: a "wow" A/B
+
+**What the owner asked.** "Can you increase the vibrancy of the sound? It just doesn't have the wow."
+Asked what that meant, they chose all of louder, brighter and wider, and an A/B page to pick by ear.
+
+**Measured against the loops, at the same peak.** The grooves were 8-10 dB quieter (2.5-4 dB with the
+glue preview). CRANKED, DRY ROOM and WAX were duller than their loops in presence (2.5-6 kHz) and air
+(6-16 kHz); STOOP, CELLAR and RIDE & RIMS were brighter. Every kit is mono; the loops are nearly mono
+too (side 31 to 56 dB under mid).
+
+**The A/B** (`build.wow_variants()`, demo grooves only; the pads are byte-for-byte round 1.5). Each kit
+sheet gets five grooves, all from the glue preview the owner liked:
+
+- NOW: the glue preview.
+- LOUDER AND PUNCHIER: parallel compression (a copy squashed at ratio 8 and blended in at the dry
+  hit's level), then a soft clipper driven until the groove's crest is its loop's (at most 9 dB),
+  then the 8 dB limiter. It lands within 0.4-0.6 dB of the loops' loudness. Without the clipper it
+  came out only +0.3 to +0.9 dB louder, since NOW already used the full 8 dB of limiting.
+- BRIGHTER AND CRISPER: +3 dB at 3 kHz, +4 dB shelf above 6 kHz, and the band above 3 kHz saturated
+  and mixed in at 12%. Loudness-matched to NOW.
+- WIDER AND BIGGER: a short stereo room (8 ms pre-delay, 0.5 s decay, 300 Hz-8 kHz, different left
+  and right) added as side only, 14 dB under the kit; it sums to mono exactly. Loudness-matched to NOW.
+- ALL THREE.
+
+Brighter and wider are matched to NOW so the owner hears character, not level (louder almost always
+wins a quick A/B). Whichever wins gets baked into the pads (and stereo pads where the room wins).
+792 WAVs, 0 failures. Listening page version 8.
+
 ### Round 1.5: pushing the kits apart
 
 **What the owner heard.** Round 1.4: "Generally it helps. They all kind of sound pretty similar to

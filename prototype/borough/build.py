@@ -8,6 +8,7 @@ from __future__ import annotations
 import html, importlib, json, math, os, sys, time, zipfile
 from pathlib import Path
 import numpy as np
+from scipy import signal
 from scipy.io import wavfile
 import voices as V
 import kits as K
@@ -307,6 +308,98 @@ BUS_DRIVE_MAX_DB = 8.0
 # silence between hits would fill in. Capped just above what was heard.
 
 
+# ---------------------------------------------------------------- "wow" A/B (preview only, round 1.6)
+# Owner, round 1.5: "Can you increase the vibrancy of the sound? It just doesn't have the wow", and chose
+# an A/B page with every option. Measured against the loops at the same peak: the grooves 8-10 dB quieter
+# (2.5-4 with the glue preview); CRANKED, DRY ROOM and WAX duller in presence and air; every kit mono.
+# Each variant starts from the glue preview the owner liked. BRIGHT and WIDE are loudness-matched to it,
+# so the owner hears character, not level; PUNCH is the one meant to be louder.
+
+def _biquad(kind, f0, gain_db, q=0.707):
+    """RBJ cookbook peaking / high-shelf biquad as an SOS row."""
+    A = 10 ** (gain_db / 40); w = 2 * math.pi * f0 / SR; cw, sw = math.cos(w), math.sin(w); al = sw / (2 * q)
+    if kind == 'peak':
+        b = [1 + al * A, -2 * cw, 1 - al * A]; a = [1 + al / A, -2 * cw, 1 - al / A]
+    else:   # high shelf
+        sq = 2 * math.sqrt(A) * al
+        b = [A * ((A + 1) + (A - 1) * cw + sq), -2 * A * ((A - 1) + (A + 1) * cw), A * ((A + 1) + (A - 1) * cw - sq)]
+        a = [(A + 1) - (A - 1) * cw + sq, 2 * ((A - 1) - (A + 1) * cw), (A + 1) - (A - 1) * cw - sq]
+    return np.array([b[0] / a[0], b[1] / a[0], b[2] / a[0], 1.0, a[1] / a[0], a[2] / a[0]])
+
+
+def _rms(x):
+    return float(np.sqrt(np.mean(np.asarray(x, float) ** 2)) + 1e-12)
+
+
+def _peak89(y):
+    return y / (np.max(np.abs(y)) + 1e-12) * .89
+
+
+def wow_bright(x):
+    """Brighter and crisper: +3 dB presence at 3 kHz (Q 0.8), +4 dB shelf above 6 kHz, and a little
+    sparkle (the band above 3 kHz saturated, 12% in), so the top gains harmonics, not only level."""
+    y = signal.sosfilt(np.vstack([_biquad('peak', 3000, 3.0, .8), _biquad('shelf', 6000, 4.0)]), x)
+    hi = signal.sosfilt(signal.butter(2, 3000, btype='high', fs=SR, output='sos'), x)
+    hp = signal.sosfilt(signal.butter(2, 3000, btype='high', fs=SR, output='sos'), np.tanh(4 * hi / (np.max(np.abs(hi)) + 1e-12)))
+    y = y + .12 * hp * np.max(np.abs(hi))
+    return y
+
+
+def wow_punch(x, crest_target):
+    """Louder and punchier: parallel compression (a copy squashed hard, 2 ms attack, 80 ms release,
+    ratio 8, 30 dB under the peak, blended in at the dry hit's peak level) lifts the body while the
+    dry hit keeps its crack; then the glue chain with its limiter at the 8 dB the owner has heard."""
+    a_at = math.exp(-1 / (2e-3 * SR)); a_re = math.exp(-1 / (80e-3 * SR))
+    thr = np.max(np.abs(x)) * 10 ** (-30 / 20); e = 0.0; env = np.empty_like(x)
+    for i, l in enumerate(np.abs(x)):
+        e = a_at * e + (1 - a_at) * l if l > e else a_re * e + (1 - a_re) * l
+        env[i] = e
+    sq = x * np.maximum(env / thr, 1.0) ** (1 / 8 - 1)
+    y = x + sq * (np.max(np.abs(x)) / (np.max(np.abs(sq)) + 1e-12))
+    y = glue_bus(y)
+    # Loudness past the 8 dB of limiting the owner has heard comes from a soft clipper before it,
+    # shaving only the first milliseconds of each hit (part of how loud breaks crunch). Its drive is
+    # searched until the groove's crest is its loop's, at most 9 dB. Without it the 'louder' version
+    # came out only +0.3 to +0.9 dB: the glue preview already used the full 8 dB.
+    clip = lambda d: np.tanh(y * 10 ** (d / 20)) / np.tanh(10 ** (d / 20))
+    n = int(10 * SR); crest = lambda d: X.crest_db(limit(clip(d)[:n], BUS_DRIVE_MAX_DB))
+    lo, hi = 0.0, 9.0
+    if crest_target is not None and crest(lo) > crest_target:
+        if crest(hi) > crest_target:
+            lo = hi
+        else:
+            for _ in range(10):
+                mid = (lo + hi) / 2
+                lo, hi = (mid, hi) if crest(mid) > crest_target else (lo, mid)
+    y = limit(clip(lo), BUS_DRIVE_MAX_DB)
+    return y / (np.max(np.abs(y)) + 1e-12) * .89
+
+
+def wow_wide(x, seed=7):
+    """Wider and bigger: a short stereo room (8 ms pre-delay, 0.5 s decay, 300 Hz-8 kHz) whose left and
+    right are different, added as side only, about 14 dB under the kit. The mid is the kit untouched,
+    so it sums back to mono exactly; nothing below 300 Hz is spread."""
+    r = np.random.default_rng(seed); n = int(.6 * SR); t = np.arange(n) / SR
+    env = np.exp(-6.9 * t / .5); env[:int(.008 * SR)] = 0
+    band = signal.butter(2, [300, 8000], btype='band', fs=SR, output='sos')
+    irl = signal.sosfilt(band, r.standard_normal(n)) * env; irr = signal.sosfilt(band, r.standard_normal(n)) * env
+    side = (signal.fftconvolve(x, irl)[:len(x)] - signal.fftconvolve(x, irr)[:len(x)]) / 2
+    side *= _rms(x) * 10 ** (-14 / 20) / _rms(side)
+    return np.stack([x + side, x - side], 1)
+
+
+def wow_variants(gv, crest_target):
+    """The five A/B grooves, each at a 0.89 peak; BRIGHT and WIDE loudness-matched (RMS) to NOW."""
+    now = bus_preview(gv, bus_drive(gv, crest_target))
+    match = lambda y: y * (_rms(now) / _rms(y if y.ndim == 1 else y.mean(1)))
+    bright = match(bus_preview(wow_bright(gv), bus_drive(wow_bright(gv), crest_target)))
+    punch = wow_punch(gv, crest_target)
+    wide = match(wow_wide(now))
+    allx = wow_wide(wow_punch(wow_bright(gv), crest_target))
+    fit = lambda y: y * min(1.0, .89 / (np.max(np.abs(y)) + 1e-12))   # matched ones may only come down
+    return dict(now=now, punch=punch, bright=fit(bright), wide=fit(wide), all=_peak89(allx))
+
+
 def bus_drive(x, crest_target, max_db=BUS_DRIVE_MAX_DB):
     """The limiter drive (dB) that brings this groove's crest (first 10 s) to its loop's, at most max_db."""
     n = int(10 * SR); g = glue_bus(x[:n])
@@ -401,6 +494,8 @@ def main(fitted_path, out):
         write(out / 'demo' / f"{kit['id']}-groove.wav", gv)
         bus_db = bus_drive(gv, targets[kit['primary']].get('crest_db'))
         write(out / 'demo' / f"{kit['id']}-groove-glued.wav", bus_preview(gv, bus_db))
+        for name, y in wow_variants(gv, targets[kit['primary']].get('crest_db')).items():
+            write(out / 'demo' / f"{kit['id']}-wow-{name}.wav", y)
         for st in STACKS:
             write(out / 'demo' / f"{kit['id']}+{st['id']}.wav", groove(kit, bank, st, sbanks[st['id']]))
         tour = []
