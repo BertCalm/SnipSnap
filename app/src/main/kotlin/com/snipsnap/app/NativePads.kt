@@ -116,6 +116,16 @@ object NativePads {
     /** Native host-policy ceiling; finite wet sample peaks, not reconstructed true peaks. */
     external fun aquariumOutputCeiling(): Float
 
+    /** The whole-kit glue's complete settings ([GlueSettings]); false queues nothing. */
+    external fun configureGlue(
+        handle: Long, enabled: Boolean, thresholdDbfs: Float, ratio: Float,
+        makeupDb: Float, driveDb: Float, ceilingDbfs: Float,
+    ): Boolean
+    /** The delay the glue adds while enabled, in frames (its 3 ms lookahead); 0 before preparation. */
+    external fun glueLatencyFrames(handle: Long): Int
+    /** Samples the glue's final guard clamped; the limiter should keep this at zero. */
+    external fun glueClampedSamples(handle: Long): Long
+
     /**
      * The resample tap, the same four calls `NativeSurface` has. [armPrint]
      * reserves `maxFrames` before the callback is told to record and refuses

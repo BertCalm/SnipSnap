@@ -47,6 +47,17 @@ bool PadEngine::start() {
             return false;
         }
     }
+    // The glue's delay line is sized for this rate here, never on the audio
+    // thread. Like the Aquarium bus, an asked-for glue must not silently go dry.
+    if (!glue_.prepare(sampleRate_)) {
+        LOGW("Glue preparation failed at stream rate %d", sampleRate_);
+        glue_.release();
+        if (glue_.controlSettings().enabled) {
+            stream_->close();
+            stream_.reset();
+            return false;
+        }
+    }
     const oboe::Result started = stream_->requestStart();
     if (started != oboe::Result::OK) {
         LOGW("requestStart failed: %s", oboe::convertToText(started));
@@ -87,6 +98,15 @@ bool PadEngine::configureAquarium(const aquarium::PerformanceSettings& settings,
     return aquarium_.publish(settings, reset);
 }
 
+bool PadEngine::configureGlue(const GlueSettings& settings) {
+    if (!validGlueSettings(settings)) return false;
+    if (stream_ && !glue_.isPrepared() && settings.enabled) return false;
+    // A stopped engine driven by a host callback harness prepares here, at
+    // the rate it has; start() prepares again at the stream's own rate.
+    if (!stream_ && !glue_.isPrepared() && !glue_.prepare(sampleRate_)) return false;
+    return glue_.publish(settings);
+}
+
 void PadEngine::stop() {
     if (stream_) {
         stream_->stop();
@@ -116,6 +136,7 @@ void PadEngine::stop() {
     }
     heldCount_ = 0;
     aquarium_.release();
+    glue_.release();
 }
 
 void PadEngine::onErrorAfterClose(oboe::AudioStream*, oboe::Result error) {
@@ -565,6 +586,7 @@ int32_t PadEngine::applyDue(int32_t frame, int32_t numFrames) {
 
 oboe::DataCallbackResult PadEngine::onAudioReady(oboe::AudioStream*, void* audioData, int32_t numFrames) {
     aquarium_.beginCallback();
+    glue_.beginCallback();
     adoptPendingBank();
     takeCommands();
     auto* out = static_cast<float*>(audioData);
@@ -575,6 +597,9 @@ oboe::DataCallbackResult PadEngine::onAudioReady(oboe::AudioStream*, void* audio
     while (cursor < numFrames) {
         const int32_t next = applyDue(cursor, numFrames);
         render(out + 2 * cursor, next - cursor);
+        // The glue squeezes the kit as one mix; the Aquarium bus and the
+        // master gain follow it, so an effect's tail is not pumped by it.
+        glue_.process(out + 2 * cursor, next - cursor);
         aquarium_.process(out + 2 * cursor, next - cursor);
         applyMaster(out + 2 * cursor, next - cursor);
         cursor = next;
