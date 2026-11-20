@@ -47,13 +47,14 @@ class KitsScreenLoadingTest : ComposeScreenTest() {
      * clock the first composition gets (see `setPhoneContent`): the tests of
      * the first 200 ms take almost none of it.
      */
-    private fun show(isLoading: Boolean, settleMillis: Long = 300) {
+    private fun show(isLoading: Boolean, settleMillis: Long = 300, unreadableKits: List<String> = emptyList()) {
         loading = isLoading
         setPhoneContent(settleMillis) {
             CompositionLocalProvider(LocalReduceMotion provides true) {
                 KitsScreen(
                     kits = emptyList(),
                     projects = emptyList(),
+                    unreadableKits = unreadableKits,
                     onOpenProject = {},
                     onNewProject = {},
                     onCatchFirst = {},
@@ -154,5 +155,20 @@ class KitsScreenLoadingTest : ComposeScreenTest() {
         compose.onNodeWithText(Copy.EMPTY_SHELF).assertIsDisplayed()
         button(Places.CATCH_FIRST).assertIsDisplayed()
         button(Copy.START_FROM_KIT).assertIsDisplayed()
+    }
+
+    /**
+     * UAT 2026-11 user states, S-15: a kit whose kit.json will not load used to
+     * vanish with no row and no line, and on a shelf with nothing else that
+     * read as "Nothing recorded yet.". It is named instead, and the first-run
+     * way in stays offered in the footer.
+     */
+    @Test
+    fun a_kit_that_will_not_load_is_named_not_hidden() {
+        show(isLoading = false, unreadableKits = listOf("TORN"))
+
+        compose.onNodeWithText(Copy.kitsWontOpen(listOf("TORN"))).assertExists()
+        compose.onNodeWithText(Copy.EMPTY_SHELF).assertDoesNotExist()
+        button(Places.CATCH_FIRST).assertExists()
     }
 }

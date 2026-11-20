@@ -1547,4 +1547,33 @@ class PersonalityTest {
         assertEquals(emptySet(), violations("onToast(\"\${pad.tag} saved.\")"), "a template is not text the reader reads as caps")
         assertEquals(emptySet(), violations("// onToast(\"COMMENTED OUT SHOUT\")"))
     }
+
+    /** UAT 2026-11 user states, S-15: kits that will not load are named, not hidden. */
+    @Test
+    fun `kits that won't open are named, two at most`() {
+        assertEquals("TORN won't open, and its kit file may be damaged.", Copy.kitsWontOpen(listOf("TORN")))
+        assertEquals("TORN and BENT won't open, and their kit files may be damaged.", Copy.kitsWontOpen(listOf("TORN", "BENT")))
+        assertEquals(
+            "TORN, BENT and 2 more won't open, and their kit files may be damaged.",
+            Copy.kitsWontOpen(listOf("TORN", "BENT", "C", "D")),
+        )
+    }
+
+    /** UAT 2026-11 user states, S-15: a pad whose sound file is gone says so when its kit opens. */
+    @Test
+    fun `pads with no sound file are named by tag, three at most`() {
+        assertEquals("Pad A03 has no sound file, so it plays nothing. Record or load a sound onto it.", Copy.padsMissingFiles(listOf(3)))
+        assertEquals(
+            "Pads A03 and B01 have no sound file, so they play nothing. Record or load a sound onto them.",
+            Copy.padsMissingFiles(listOf(3, 17)),
+        )
+        assertEquals(
+            "Pads A01, A02 and A03 have no sound file, so they play nothing. Record or load a sound onto them.",
+            Copy.padsMissingFiles(listOf(1, 2, 3)),
+        )
+        assertEquals(
+            "Pads A01, A02, A03 and 2 more have no sound file, so they play nothing. Record or load a sound onto them.",
+            Copy.padsMissingFiles(listOf(1, 2, 3, 4, 5)),
+        )
+    }
 }

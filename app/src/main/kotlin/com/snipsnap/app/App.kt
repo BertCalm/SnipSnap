@@ -137,6 +137,7 @@ import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitPad
 import com.snipsnap.kit.KitPreview
 import com.snipsnap.kit.KitStore
+import com.snipsnap.kit.Preflight
 import com.snipsnap.kit.isRobinChain
 import com.snipsnap.kit.Project
 import com.snipsnap.kit.ProjectStore
@@ -1158,6 +1159,23 @@ fun App(shelf: KitShelf) {
     fun requestArmInside() {
         armInsidePending = true
         requestArm()
+    }
+
+    // Kit folders the last shelf read could not load (UAT 2026-11 user states, S-15). Every
+    // reload goes through `shelf.list`, which records them, and every reload lands in `kits`,
+    // so following `kits` keeps this current without a second read of the shelf.
+    var unreadableKits by remember { mutableStateOf<List<String>>(emptyList()) }
+    LaunchedEffect(kits) { unreadableKits = shelf.unreadable }
+    // A kit opening with pads whose sound file is gone says so once (S-15): such a pad was
+    // silent until export's preflight. `open` changes identity on every edit, so the kit and
+    // the slots last said are kept, and the same news is not said again until it changes.
+    var missingPadsSaid by remember { mutableStateOf<Pair<File, List<Int>>?>(null) }
+    LaunchedEffect(open) {
+        val entry = open ?: return@LaunchedEffect
+        val missing = withContext(Dispatchers.IO) { Preflight.missingFileSlots(entry.kit, entry.dir) }
+        val news = entry.dir to missing
+        if (missing.isNotEmpty() && news != missingPadsSaid) dock.say(Copy.padsMissingFiles(missing))
+        missingPadsSaid = news
     }
 
     LaunchedEffect(Unit) {
@@ -3938,6 +3956,7 @@ fun App(shelf: KitShelf) {
                             KitsScreen(
                                 kits = kits,
                                 projects = projects,
+                                unreadableKits = unreadableKits,
                                 onOpenProject = { openProject(it.project) },
                                 openProjectName = project?.name,
                                 onNewProject = ::newProject,
