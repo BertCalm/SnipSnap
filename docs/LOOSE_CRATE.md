@@ -283,7 +283,7 @@ Disclosed, not asked for: the groove's 0.5 to 2 kHz still sits near -22 dB again
 is the reference snare's crack and beater knock, not the bass; CLOTH's bounce snare is a deep body and wires with
 little between. Left for the owner to call.
 
-## Expansion: BLUE, SPEED, RAGA (round 0 settled; round 1 built)
+## Expansion: BLUE, SPEED, RAGA (round 0 settled; round 1 approved)
 
 Asked which adjacent kits would extend the collection, the owner chose all three proposed (2026-11-18): BLUE (jazz
 breaks off a record), SPEED (sped-up breaks) and RAGA (Indian-record percussion). Nearest siblings and what differs:
@@ -454,9 +454,11 @@ round robin proved through saving, playback and export, as the first four were.
 [Expansion round 0 listening page](https://claude.ai/artifact/Q3rZ8po8ZaeJs9E4tNd86s) (private to the owner; what is
 decided and the three open questions at the top, then BLUE's history, SPEED and RAGA).
 
-## Expansion round 1: the three kits (as built; the new pads not yet heard)
+## Expansion round 1: the three kits (as built and approved)
 
-The owner approved the three pad lists on 2026-11-20 ("Build as proposed"). `LooseCrateKits` holds BLUE, SPEED and
+The owner approved the three pad lists on 2026-11-20 ("Build as proposed"). The round 1 page played every new pad and
+every pad's soft-to-hard strip at the player's loudness; the owner's verdict on it and on the kits played on the phone
+and the MPC: "All good" (2026-11-20). `LooseCrateKits` holds BLUE, SPEED and
 RAGA as kits 5 to 7, in the family's shape: fourteen hits of three velocity zones and four takes, an accelerating roll
 on A15, a four-bar groove on A16, registered after RITUAL on the SKINS shelf.
 
