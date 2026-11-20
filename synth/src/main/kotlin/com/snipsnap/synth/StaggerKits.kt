@@ -47,7 +47,7 @@ import kotlin.math.tanh
  */
 object StaggerKits {
     /** Bump when a pad's audio changes; saved kits carry the version they were printed with. */
-    const val VERSION = 3
+    const val VERSION = 4
 
     enum class Kit(val id: String, val title: String, val bpm: Int) {
         CARDBOARD("stagger-cardboard", "Cardboard", 89),
@@ -186,10 +186,11 @@ object StaggerKits {
 
     /**
      * The kit's print, in the order the records were made: sampled into a converter (CRUNCH, 12 bits at about
-     * 26 kHz, dark), pressed at the mix (COMPRESSOR: the body pressed down, the peak match bringing the tail and
-     * the room back up; round 2b, "maybe we need a bit of compression", the owner, 2026-11-19), bounced to tape
-     * (TAPE), the record's surface under the phrases only (VINYL). A foley pad was already converted by its own
-     * print and skips CRUNCH, so its grain is not doubled at a second rate; it is pressed like every pad.
+     * 26 kHz, dark), the hits pressed at the mix (COMPRESSOR, a fast light press that catches the peak without
+     * bringing the room forward; rounds 2b and 2c), bounced to tape (TAPE), the record's surface under the
+     * phrases only (VINYL). A foley pad was already converted by its own print and skips CRUNCH, so its grain is
+     * not doubled at a second rate; it is pressed like every hit. The phrases are not pressed here: their bus is
+     * their press.
      */
     class Print(val name: String, val crunch: Map<String, Float>, val tape: Map<String, Float>, val grooveVinyl: Map<String, Float>?,
                 val compressor: Map<String, Float>? = null) {
@@ -198,7 +199,9 @@ object StaggerKits {
             val k = if (peak > 1e-9f) HEADROOM / peak else 1f
             var s = Snip(FloatArray(x.size) { x[it] * k }, 1, Dsp.RATE)
             if (!converted) s = Crunch.process(s, crunch)
-            if (compressor != null) s = Compressor.process(s, compressor)
+            // The hits are pressed; a phrase already went through its room's bus, and a second press on top brought
+            // the room between the hits up 11 dB (round 2b, heard as "echoy").
+            if (compressor != null && !phrase) s = Compressor.process(s, compressor)
             s = Tape.process(s, tape)
             if (phrase && grooveVinyl != null) s = Vinyl.process(s, grooveVinyl)
             return s.samples
@@ -206,14 +209,16 @@ object StaggerKits {
     }
 
     /**
-     * "A bit of compression" (round 2b). Measured on CARDBOARD's kick and snare before choosing: the sustain
-     * compressor lets the hit through at a slow ATTACK and presses the body under it, and the peak match then
-     * lifts everything, so a slow attack *raised* the snare's crest from 10.0 to 11.8 dB and the kick's from 3.6 to
-     * 8.8. A fast attack (ATTACK .25, about 1 ms) catches the hit too: the snare's crest falls and its tail
-     * (300 to 500 ms against its first 50 ms) comes up 6 to 16 dB with the amount, the kick's tail comes up and
-     * its crest barely moves (a muffled kick is already dense). AMOUNT .40 and RECOVER .45 are "a bit". Shape.
+     * "A bit of compression" (round 2b), then "it made it echoy" (round 2c, the owner, 2026-11-20). The sustain
+     * compressor presses the body and the peak match lifts everything under it, and under an EMBER drum that is
+     * the club's response: round 2b's settings (AMOUNT .40, ATTACK .25, RECOVER .45) lifted the snares' tails
+     * 12 to 14 dB and a groove's quiet moments 11 dB, which is the room coming forward. Measured on the kick,
+     * the snare and the groove before choosing again: a fast attack still catches the peak, and a short recovery
+     * with less amount (RECOVER .20, AMOUNT .25) takes the snares' crest down 0.7 to 2.3 dB while their tails
+     * rise only 4 to 6 dB and the kicks' tails stay put. The grooves take no second press: their bus is their
+     * press, and the print's on top is what made the room ring between the hits. Shape.
      */
-    val PRESS = mapOf("AMOUNT" to .40f, "ATTACK" to .25f, "RECOVER" to .45f)
+    val PRESS = mapOf("AMOUNT" to .25f, "ATTACK" to .15f, "RECOVER" to .20f)
 
     /**
      * CARDBOARD's print: 12 bits at 26 kHz (RATE .37 lands CRUNCH's hold at 26.0 kHz on its exponential law), the

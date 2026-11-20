@@ -307,15 +307,15 @@ class StaggerKitsTest {
     }
 
     /**
-     * Round 2b, "maybe we need a bit of compression" (the owner, 2026-11-19). What the press does to a drum,
-     * measured against the same print with the compressor taken out: the backbeat drum's crest (its peak against
-     * its RMS over the first 200 ms) falls and its tail (300 to 500 ms against the first 50 ms) comes up at least
-     * 3 dB; the kick's tail never falls and its crest rises by no more than 2.5 dB (a muffled kick is already dense,
-     * crest 1.3 to 3.6 dB, and the sustain compressor can only lift what is under its body: measured, the three
-     * kicks' crests rose 1.6 to 2.2 dB and their tails 0.8 to 4 dB, the three snares' crests fell 0.3 to 2.9 dB
-     * and their tails rose 8 to 17 dB).
+     * Round 2b, "maybe we need a bit of compression"; round 2c, "it made it echoy" (the owner, 2026-11-19 and 20).
+     * What the press does to a hit, measured against the same print with the compressor taken out: the backbeat
+     * drum's crest (its peak against its RMS over the first 200 ms) falls, and its tail (300 to 500 ms against the
+     * first 50 ms) comes up at least 2 dB but no more than 8 (round 2b lifted it 12 to 14, and that was the room
+     * ringing); the kick's tail never falls more than 2 dB and its crest rises by no more than 2 (a muffled kick is
+     * already dense). A phrase is not pressed by the print at all: a groove's quiet tenth of 10 ms frames stays at
+     * least 20 dB under its loudest (round 2b's second press put CARDBOARD's at 14.6, round 2's sat at 25.4).
      */
-    @Test fun `every print presses its hits a bit`() {
+    @Test fun `every print presses its hits a bit and leaves the room where it was`() {
         fun crest(x: FloatArray): Double {
             val n = min(x.size, (.2f * rate).toInt())
             val rms = sqrt(x.take(n).sumOf { it.toDouble() * it } / n)
@@ -338,15 +338,19 @@ class StaggerKitsTest {
                 println("${k.name} role $role: crest ${"%.1f".format(crest(loose))} to ${"%.1f".format(crest(pressed))} dB, tail ${"%.1f".format(tail(loose))} to ${"%.1f".format(tail(pressed))} dB")
                 if (role == 1) {
                     assertTrue(crest(pressed) < crest(loose), "${k.name} role $role: the press raised the crest")
-                    assertTrue(tail(pressed) >= tail(loose) + 3, "${k.name} role $role: the tail came up only ${tail(pressed) - tail(loose)} dB")
+                    val lift = tail(pressed) - tail(loose)
+                    assertTrue(lift >= 2 && lift <= 8, "${k.name} role $role: the tail moved $lift dB; 2 to 8 is a bit, 12 was echoy")
                 } else {
-                    // A kick that already hums (STUMBLE's tail sits 7.6 dB under its head, CARDBOARD's 16.6) gives the
-                    // press nothing to lift: measured +0.2 dB against +4.0. The claim for a kick is that the press
-                    // neither pulls its tail down nor sharpens it by more than 2.5 dB.
-                    assertTrue(tail(pressed) >= tail(loose) - .5, "${k.name} role $role: the press pulled the tail down ${tail(loose) - tail(pressed)} dB")
-                    assertTrue(crest(pressed) <= crest(loose) + 2.5, "${k.name} role $role: the press raised the kick's crest by ${crest(pressed) - crest(loose)} dB")
+                    assertTrue(tail(pressed) >= tail(loose) - 2, "${k.name} role $role: the press pulled the tail down ${tail(loose) - tail(pressed)} dB")
+                    assertTrue(crest(pressed) <= crest(loose) + 2, "${k.name} role $role: the press raised the kick's crest by ${crest(pressed) - crest(loose)} dB")
                 }
             }
+            val groove = rendered(StaggerKits.GROOVE, 1f, 0, k).samples
+            val hop = rate / 100
+            val frames = DoubleArray(groove.size / hop) { f -> sqrt((0 until hop).sumOf { val v = groove[f * hop + it].toDouble(); v * v } / hop) }
+            val quiet = 20 * kotlin.math.log10(frames.sorted()[frames.size / 10] / frames.max())
+            println("${k.name} groove: quietest tenth $quiet dB under the loudest frame")
+            assertTrue(quiet <= -20, "${k.name}: the groove's room sits only $quiet dB under its loudest; round 2b's echo sat at -14.6")
         }
     }
 
