@@ -1272,7 +1272,7 @@ Source: the commit that adds this entry. Details: [CONSORT](CONSORT.md).
 
 Nothing here is a completion claim. A passing `ConsortTest` and an audition page do not close a gate.
 
-## TERRA stick voices: Japanese kits (2026-11-20, kits round 1)
+## TERRA stick voices: Japanese kits (complete, 2026-11-20: sound approved, phone and MPC reported good)
 
 Ten TERRA voices (ODAIKO, NAGADO, SHIME, KA, KANE, CHAPPA, BINZASARA, COWBELL,
 WATER_DRUM, FAN), the first nine picked by ear from Python renders over six rounds; details in
