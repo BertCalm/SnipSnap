@@ -136,6 +136,13 @@ jobs:
           find . -path '*/build/test-results/test/*.xml' -print0 \
             | xargs -0 -r grep -h -B1 -A4 -E '<(failure|error)' | head -80
           echo "::endgroup::"
+          # A worker that dies leaves "failed to execute tests" with the real
+          # exception several lines further down than the four above show.
+          echo "::group::Causes named in those reports"
+          find . -path '*/build/test-results/test/*.xml' -print0 \
+            | xargs -0 -r grep -h -E 'Caused by|OutOfMemoryError|StackOverflowError|NoSpaceLeft|No space left|Could not complete|worker|Gradle Test Executor' \
+            | cut -c1-300 | sort | uniq -c | sort -rn | head -40
+          echo "::endgroup::"
           echo "::group::Kernel kills, memory and disk"
           sudo dmesg 2>/dev/null | grep -i -E 'killed process|out of memory|oom' | tail -20
           free -m
