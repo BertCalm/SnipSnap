@@ -102,6 +102,66 @@ class KerfPadTest {
         assertEquals(DrumClass.TONAL, pad(dir).drumClass)
     }
 
+    @Test fun `BLEED and SLOP re-cut a twin from its numbers, with no new take, so the undo still gives the capture`() {
+        val dir = kit(3); val original = File(dir, "hit1.wav").readBytes()
+        KitBuilderModel.open(dir).apply { kerfPad(1); save() }
+        val made = File(dir, "hit1.wav").readBytes(); val takes = KitBuilderModel.open(dir).priorTakes(1).size
+        val before = Breed.recipeOf(pad(dir))!!.kerf!!
+
+        KitBuilderModel.open(dir).apply { recutKerfPad(1, bleed = 2.0, slop = 0.0); save() }
+        val recut = Breed.recipeOf(pad(dir))!!.kerf!!
+        assertEquals(2.0, recut.bleed); assertEquals(0.0, recut.slop)
+        assertEquals(before.patch, recut.patch, "no new measure"); assertEquals(before.draw, recut.draw, "the knife's draw is the pad's own")
+        assertFalse(made.contentEquals(File(dir, "hit1.wav").readBytes()), "the audio is the new cut")
+        assertEquals(com.snipsnap.audio.WavReader.read(File(dir, "hit1.wav")).frameCount, recut.render().frameCount, "the saved numbers make the saved audio")
+        assertEquals(takes, KitBuilderModel.open(dir).priorTakes(1).size, "no new take in the bin")
+        assertTrue(PadSheet.isKerfTwin(pad(dir)), "still a bare twin")
+
+        // the same values again write nothing; then back to the first cut, byte for byte
+        KitBuilderModel.open(dir).apply { recutKerfPad(1, 1.0, 0.5); save() }
+        assertTrue(made.contentEquals(File(dir, "hit1.wav").readBytes()), "the first cut again, from the same numbers")
+
+        KitBuilderModel.open(dir).apply { unkerfPad(1); save() }
+        assertTrue(original.contentEquals(File(dir, "hit1.wav").readBytes()), "after re-cuts, the undo is still the capture")
+    }
+
+    @Test fun `on a lone twin BLEED moves nothing and SLOP moves the cut, which is why the sheet shows only SLOP there`() {
+        val dir = kit(1)
+        KitBuilderModel.open(dir).apply { kerfPad(1); save() }
+        val made = File(dir, "hit1.wav").readBytes()
+        assertNull(Breed.recipeOf(pad(dir))!!.kerf!!.prev)
+        KitBuilderModel.open(dir).apply { recutKerfPad(1, bleed = 2.0, slop = 0.5); save() }
+        assertTrue(made.contentEquals(File(dir, "hit1.wav").readBytes()), "no hit before it: BLEED has nothing to bleed")
+        KitBuilderModel.open(dir).apply { recutKerfPad(1, bleed = 2.0, slop = 0.0); save() }
+        assertFalse(made.contentEquals(File(dir, "hit1.wav").readBytes()), "SLOP changes the cut (its edge, at least) with no neighbours")
+    }
+
+    @Test fun `a twin with something riding it is not re-cut, and a twin is not made twice`() {
+        val dir = kit(1)
+        KitBuilderModel.open(dir).apply { kerfPad(1); save() }
+        KitBuilderModel.open(dir).apply { pedalPad(1, com.snipsnap.synth.PedalBoard(listOf(com.snipsnap.synth.PedalBoard.Pick("driven", 0.7f)))); save() }
+        val ridden = File(dir, "hit1.wav").readBytes()
+        assertEquals(Copy.KERF_RIDDEN, assertFailsWith<IllegalArgumentException> { KitBuilderModel.open(dir).recutKerfPad(1, 2.0, 0.0) }.message)
+        assertEquals(Copy.KERF_ALREADY, assertFailsWith<IllegalArgumentException> { KitBuilderModel.open(dir).kerfPad(1) }.message, "pedals or not, its audio is a render")
+        assertTrue(ridden.contentEquals(File(dir, "hit1.wav").readBytes()), "both refusals touched nothing")
+    }
+
+    @Test fun `the whole kit becomes twins, a twin already is counted and serves as a neighbour from its own numbers`() {
+        val dir = kit(4)
+        KitBuilderModel.open(dir).apply { kerfPad(2); save() }
+        val twoNumbers = Breed.recipeOf(pad(dir, 2))!!.kerf!!.patch
+        val twoBytes = File(dir, "hit2.wav").readBytes()
+        val all = KitBuilderModel.open(dir).run { kerfKit().also { save() } }
+        assertEquals(listOf(1, 3, 4), all.made.map { it.slot })
+        assertEquals(listOf(2), all.already); assertTrue(all.left.isEmpty())
+        assertTrue(twoBytes.contentEquals(File(dir, "hit2.wav").readBytes()), "the twin already was left as it was")
+        assertEquals(twoNumbers, Breed.recipeOf(pad(dir, 1))!!.kerf!!.next, "pad 1's next is pad 2's own measurement, not a measure of its render")
+        assertEquals(twoNumbers, Breed.recipeOf(pad(dir, 3))!!.kerf!!.prev)
+        for (n in 1..4) assertTrue(PadSheet.isKerfTwin(pad(dir, n)), "pad $n")
+        val again = KitBuilderModel.open(dir).kerfKit()
+        assertTrue(again.made.isEmpty()); assertEquals(listOf(1, 2, 3, 4), again.already)
+    }
+
     @Test fun `a pad too short to measure is refused in words, touching nothing`() {
         val dir = File(temp, "short").apply { mkdirs() }
         WavWriter.write(File(dir, "tick.wav"), Snip(FloatArray(300) { .3f }, 1, WavWriter.MPC_SAMPLE_RATE))

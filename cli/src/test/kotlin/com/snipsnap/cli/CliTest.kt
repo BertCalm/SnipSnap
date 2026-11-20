@@ -1719,6 +1719,13 @@ class CliTest {
         val twins = KitStore.load(kitDir).pads.count { it.source[KitBuilderModel.KERF_STAMP] != null }
         assertContains(allOut, "$twins pads are KERF twins now")
         assertTrue(twins >= 6, "$twins of ${KitStore.load(kitDir).pads.size} pads became twins: $allOut")
+        // a twin's BLEED and SLOP move from its own numbers, and say so
+        val (recutCode, recutOut, recutErr) = cli("kerf", kitDir.path, "A01", "--recut", "--bleed", "1.8")
+        assertEquals(0, recutCode, "stderr: $recutErr")
+        assertContains(recutOut, "re-cut from its own numbers (bleed 1.80, slop 0.50)")
+        // a second --all leaves every twin as it is
+        val (secondCode, secondOut, _) = cli("kerf", kitDir.path, "--all")
+        assertEquals(0, secondCode); assertContains(secondOut, "a twin already")
         val (backCode, backOut, _) = cli("kerf", kitDir.path, "--all", "--undo")
         assertEquals(0, backCode); assertContains(backOut, "$twins pads restored")
 

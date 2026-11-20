@@ -1201,7 +1201,11 @@ back, the recipe comes off and the pad is called what it was called. It
 refuses a pad that is not a twin, and a twin with anything riding it
 (undo that first). `--all` does every pad that can take it, measuring
 each once from its capture, and names the pads it left alone (printed,
-velocity-layered, a chain, too short); `--all --undo` restores them.
+velocity-layered, a chain, too short, a twin already); `--all --undo`
+restores them. `--recut` moves an existing twin's `--bleed` and `--slop`
+from its saved numbers without measuring again, as the pad sheet's
+sliders do: no new take goes in the bin, so `--undo` still gives the
+capture.
 About 0.4 s a pad.
 
 ### `arrange <kit-dir>` — songs, not loops
