@@ -1,6 +1,8 @@
 package com.snipsnap.synth
 
 import com.snipsnap.audio.Snip
+import kotlin.math.abs
+import kotlin.math.ln
 import kotlin.math.pow
 
 /**
@@ -22,8 +24,9 @@ enum class TerraArticulation { HIT, ROLL, RISER, RING }
  *   on an exponential curve and grow from [RISER_START] of the touch to all of it, so a riser is a
  *   crescendo of strike character (each stroke brighter), not only of level.
  *
- * Tempo-free, as BACKWASH's tambourine roll is: [Terra.render] receives no tempo, so a roll is
- * printed at the voice's rate rather than locked to a kit's BPM.
+ * Tempo-free by default, as BACKWASH's tambourine roll is: [Terra.render] receives no tempo, so a roll is printed at
+ * the voice's own rate. A recipe may carry a BPM ([TerraPatch.bpm]); then the strokes land on that tempo's grid
+ * ([lockedTimes]): a one-bar roll, or a two-bar riser that climbs through the subdivisions to a downbeat accent.
  *
  * [velocity] is the touch: every stroke's force is scaled by it, so a soft roll is a darker roll.
  * [take] is a different roll: its strokes draw renderer takes from `take * TAKE_STRIDE` and its
@@ -78,9 +81,56 @@ internal object TerraRolls {
     class Stroke(val time: Double, val force: Float, val take: Int, val gain: Float)
 
     /** The strokes of [articulation] on [voice] at [velocity] as kit take [take], in time order. */
-    fun strokes(voice: TerraVoice, articulation: TerraArticulation, velocity: Float, take: Int): List<Stroke> {
+    /** The subdivisions of a beat a tempo-locked stroke may land on: eighths, triplet eighths, sixteenths, sextuplets, thirty-seconds. */
+    val DIVISIONS = intArrayOf(2, 3, 4, 6, 8)
+
+    /** The subdivision of a beat at [bpm] whose stroke rate is nearest [rate] strokes a second, on a log scale. */
+    fun nearestDivision(rate: Double, bpm: Double): Int = DIVISIONS.minBy { abs(ln(bpm / 60.0 * it / rate)) }
+
+    /**
+     * The strokes of a roll or riser locked to [bpm]: a ROLL is one bar of 4/4 at the subdivision nearest the voice's
+     * own roll rate; a RISER is two bars whose subdivision climbs, beat by beat, from the one nearest its slow rate to
+     * the one nearest its fast rate, then one accent at full touch on the next downbeat. Forces, hands, takes and the
+     * swell are the free-running roll's; the timing moves only [LOCKED_JITTER_SECONDS] either way, so the grid holds.
+     */
+    private fun lockedTimes(voice: TerraVoice, articulation: TerraArticulation, bpm: Double): List<Double> {
+        val beat = 60.0 / bpm
+        val (steady, slow, fast) = rates(voice)
+        if (articulation == TerraArticulation.ROLL) {
+            val div = nearestDivision(steady, bpm)
+            return List(4 * div) { it * beat / div }
+        }
+        val from = DIVISIONS.indexOf(nearestDivision(slow, bpm)); val to = DIVISIONS.indexOf(nearestDivision(fast, bpm))
+        val out = ArrayList<Double>()
+        for (b in 0 until 8) {
+            val div = DIVISIONS[from + Math.round((to - from) * b / 7.0).toInt()]
+            for (k in 0 until div) out += (b + k.toDouble() / div) * beat
+        }
+        out += 8 * beat
+        return out
+    }
+
+    /** A tempo-locked stroke's timing moves by up to this much either way, in seconds: tighter than a free roll's. Shape. */
+    private const val LOCKED_JITTER_SECONDS = 0.002
+
+    fun strokes(voice: TerraVoice, articulation: TerraArticulation, velocity: Float, take: Int, bpm: Int? = null): List<Stroke> {
         require(articulation == TerraArticulation.ROLL || articulation == TerraArticulation.RISER) { "$articulation is one stroke: Terra.render or Terra.renderRing it" }
         require(take >= 0) { "a TERRA take is 0 or more, got $take" }
+        if (bpm != null) {
+            val v = StrikeVelocity.settled(velocity)
+            val jitter = Dsp.Noise(Dsp.seedFor("TERRA ROLL", voice.name, articulation.name, take, bpm))
+            val times = lockedTimes(voice, articulation, bpm.toDouble())
+            val end = times.last().coerceAtLeast(1e-9)
+            return times.mapIndexed { i, time ->
+                val x = (time / end).toFloat()
+                val hand = if (i % 2 == 0) 1f else OFF_HAND
+                val swell = if (articulation == TerraArticulation.ROLL) 1f else RISER_START + (1f - RISER_START) * x.toDouble().pow(1.4).toFloat()
+                // the riser's last stroke is its accent on the downbeat: the full touch, the leading hand
+                val force = quantize(v * (if (articulation == TerraArticulation.RISER && i == times.lastIndex) 1f else hand * swell))
+                val moved = if (i == 0) 0.0 else LOCKED_JITTER_SECONDS * jitter.next()
+                Stroke(maxOf(0.0, time + moved), force, take * TAKE_STRIDE + i % STROKE_TAKES, force.toDouble().pow(0.8).toFloat())
+            }
+        }
         val v = StrikeVelocity.settled(velocity)
         val (steady, slow, fast) = rates(voice)
         val jitter = Dsp.Noise(Dsp.seedFor("TERRA ROLL", voice.name, articulation.name, take))
@@ -105,8 +155,8 @@ internal object TerraRolls {
     private fun quantize(f: Float): Float = (Math.round(f.coerceIn(0f, 1f) / FORCE_STEP) * FORCE_STEP).coerceIn(FORCE_STEP, 1f)
 
     /** [articulation] of [voice] with [macros], at [velocity], as kit take [take]: the strokes summed, levelled and faded. */
-    fun render(voice: TerraVoice, macros: Map<String, Float>, articulation: TerraArticulation, velocity: Float, take: Int): Snip {
-        val strokes = strokes(voice, articulation, velocity, take)
+    fun render(voice: TerraVoice, macros: Map<String, Float>, articulation: TerraArticulation, velocity: Float, take: Int, bpm: Int? = null): Snip {
+        val strokes = strokes(voice, articulation, velocity, take, bpm)
         val keys = strokes.map { it.force to it.take }.distinct()
         val renders = keys.parallelStream().map { (force, t) -> Terra.render(voice, macros, velocity = force, take = t).samples }.toList()
         val byKey = keys.zip(renders).toMap()

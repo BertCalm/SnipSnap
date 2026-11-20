@@ -208,4 +208,32 @@ class TerraStickKitsTest {
         }
         assertFailsWith<IllegalArgumentException> { TerraPatch("x", TerraVoice.TUN, emptyMap(), articulation = TerraArticulation.RING) }
     }
+
+    /** A roll or riser with a saved BPM lands on that tempo's grid ([TerraRolls]' lockedTimes); without one it is the free roll it was. */
+    @Test fun `a roll locked to a tempo lands on its grid, a riser climbs to a downbeat accent`() {
+        for (voice in TerraSticks.VOICES) for (bpm in listOf(70, 90, 115)) {
+            val beat = 60.0 / bpm
+            val roll = TerraRolls.strokes(voice, TerraArticulation.ROLL, 1f, 0, bpm)
+            val div = TerraRolls.nearestDivision(TerraRolls.rates(voice).first, bpm.toDouble())
+            assertEquals(4 * div, roll.size, "$voice roll at $bpm BPM")
+            for ((k, st) in roll.withIndex()) assertEquals(k * beat / div, st.time, 0.0021, "$voice roll stroke $k at $bpm BPM")
+            val riser = TerraRolls.strokes(voice, TerraArticulation.RISER, 1f, 0, bpm)
+            assertEquals(8 * beat, riser.last().time, 0.0021, "$voice riser's accent at $bpm BPM")
+            assertEquals(1f, riser.last().force, "$voice riser's accent is the full touch")
+            val gaps = riser.zipWithNext { a, b -> b.time - a.time }
+            for (g in 1 until gaps.size) assertTrue(gaps[g] <= gaps[g - 1] + 0.0045, "$voice riser at $bpm BPM slows at stroke $g")
+        }
+        // without a tempo, the free roll is unchanged
+        val free = roll(TerraVoice.SHIME, TerraArticulation.ROLL)
+        assertContentEquals(TerraRolls.render(TerraVoice.SHIME, free.macros, TerraArticulation.ROLL, 1f, 0).samples, free.render().samples)
+        // saved, reloaded, and refused where it means nothing
+        val locked = TerraPatch("r", TerraVoice.NAGADO, Terra.defaults(TerraVoice.NAGADO), articulation = TerraArticulation.RISER, bpm = 90)
+        val back = TerraPatch.fromJsonText(locked.toJsonText())
+        assertEquals(locked, back); assertEquals(90, back.bpm)
+        assertContentEquals(locked.render().samples, back.render().samples)
+        assertFalse(locked.render().samples.contentEquals(locked.copy(bpm = null).render().samples), "the tempo moves the riser")
+        assertFailsWith<IllegalArgumentException> { TerraPatch("x", TerraVoice.KA, emptyMap(), articulation = TerraArticulation.RING, bpm = 90) }
+        assertFailsWith<IllegalArgumentException> { TerraPatch("x", TerraVoice.KA, emptyMap(), articulation = TerraArticulation.ROLL, bpm = 20) }
+        assertFailsWith<JsonException> { TerraPatch.fromJsonText(locked.toJsonText().replace("\"RISER\"", "\"RING\"")) }
+    }
 }

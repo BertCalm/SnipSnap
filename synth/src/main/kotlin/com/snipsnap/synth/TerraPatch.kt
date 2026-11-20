@@ -35,6 +35,8 @@ class TerraPatch(
     override val macros: Map<String, Float>,
     val striker: Striker? = null,
     val articulation: TerraArticulation = TerraArticulation.HIT,
+    /** A roll's or riser's tempo, when it is locked to one ([TerraRolls]); null is the voice's own free rate. */
+    val bpm: Int? = null,
 ) : Patch {
 
     /**
@@ -79,6 +81,8 @@ class TerraPatch(
         Patches.validateMacros(this, Terra.macrosFor(voice))
         require(articulation == TerraArticulation.HIT || voice in TerraSticks.VOICES) { "only TERRA's stick voices roll: $voice is a hit" }
         require(articulation == TerraArticulation.HIT || striker == null) { "a TERRA pad is struck by another pad or articulated, not both" }
+        require(bpm == null || (articulation == TerraArticulation.ROLL || articulation == TerraArticulation.RISER)) { "only a roll or a riser follows a tempo" }
+        require(bpm == null || bpm in MIN_BPM..MAX_BPM) { "a TERRA roll's tempo is $MIN_BPM to $MAX_BPM BPM, got $bpm" }
     }
 
     override val engine get() = ENGINE
@@ -94,7 +98,7 @@ class TerraPatch(
         when (articulation) {
             TerraArticulation.HIT -> Terra.render(voice, macros, striker, velocity, take)
             TerraArticulation.RING -> Terra.renderRing(voice, macros, velocity, take)
-            TerraArticulation.ROLL, TerraArticulation.RISER -> TerraRolls.render(voice, macros, articulation, velocity, take)
+            TerraArticulation.ROLL, TerraArticulation.RISER -> TerraRolls.render(voice, macros, articulation, velocity, take, bpm)
         }
 
     fun copy(
@@ -103,7 +107,8 @@ class TerraPatch(
         macros: Map<String, Float> = this.macros,
         striker: Striker? = this.striker,
         articulation: TerraArticulation = this.articulation,
-    ): TerraPatch = TerraPatch(name, voice, macros, striker, articulation)
+        bpm: Int? = this.bpm,
+    ): TerraPatch = TerraPatch(name, voice, macros, striker, articulation, bpm)
 
     override fun toJsonValue(): JsonValue.Obj {
         val base = Patches.toJsonValue(this)
@@ -111,6 +116,7 @@ class TerraPatch(
             val obj = LinkedHashMap(base.entries)
             obj["version"] = JsonValue.Num(ARTICULATED_VERSION.toDouble())
             obj["articulation"] = JsonValue.Str(articulation.name)
+            bpm?.let { obj["bpm"] = JsonValue.Num(it.toDouble()) }
             return JsonValue.Obj(obj)
         }
         val s = striker ?: return base
@@ -126,14 +132,14 @@ class TerraPatch(
 
     override fun equals(other: Any?): Boolean =
         other is TerraPatch && name == other.name && voice == other.voice && macros == other.macros && striker == other.striker &&
-            articulation == other.articulation
+            articulation == other.articulation && bpm == other.bpm
 
     override fun hashCode(): Int =
-        (((name.hashCode() * 31 + voice.hashCode()) * 31 + macros.hashCode()) * 31 + (striker?.hashCode() ?: 0)) * 31 + articulation.hashCode()
+        ((((name.hashCode() * 31 + voice.hashCode()) * 31 + macros.hashCode()) * 31 + (striker?.hashCode() ?: 0)) * 31 + articulation.hashCode()) * 31 + (bpm ?: 0)
 
     override fun toString(): String =
         "TerraPatch(name=$name, voice=$voice, macros=$macros" + (striker?.let { ", striker=$it" } ?: "") +
-            (if (articulation == TerraArticulation.HIT) "" else ", articulation=$articulation") + ")"
+            (if (articulation == TerraArticulation.HIT) "" else ", articulation=$articulation") + (bpm?.let { ", bpm=$it" } ?: "") + ")"
 
     companion object {
         const val ENGINE = "TERRA"
@@ -143,6 +149,10 @@ class TerraPatch(
 
         /** The version a rolled or risen patch writes ([articulation]); an older build refuses it by name. */
         const val ARTICULATED_VERSION = 3
+
+        /** The tempi a roll or riser may lock to. */
+        const val MIN_BPM = 40
+        const val MAX_BPM = 240
 
         /** The longest source label a striker keeps; the chooser cuts a longer one before it is stored. */
         const val MAX_FROM_CHARS = 24
@@ -176,7 +186,12 @@ class TerraPatch(
                 common["version"] = JsonValue.Num(Patches.VERSION.toDouble())
                 return Patches.decode(JsonValue.Obj(common), ENGINE, { n -> voiceOf(n) }) { patchName, voice, macros ->
                     if (voice !in TerraSticks.VOICES) throw JsonException("only TERRA's stick voices roll: $voice is a hit")
-                    TerraPatch(patchName, voice, macros, articulation = articulation)
+                    val bpm = when (val b = obj["bpm"]) {
+                        null, JsonValue.Null -> null
+                        is JsonValue.Num -> b.int().also { if (it !in MIN_BPM..MAX_BPM || (articulation != TerraArticulation.ROLL && articulation != TerraArticulation.RISER)) throw JsonException("a TERRA $articulation cannot follow $it BPM") }
+                        else -> throw JsonException("a TERRA roll's bpm is not a number")
+                    }
+                    TerraPatch(patchName, voice, macros, articulation = articulation, bpm = bpm)
                 }
             }
             if (articulationField != null) throw JsonException("a TERRA articulation needs version $ARTICULATED_VERSION")
