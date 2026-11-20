@@ -60,6 +60,34 @@ def fmt(v, unit="", nd=0):
     return f"{v:,.{nd}f}{unit}"
 
 
+KIDS = [k["id"] for k in KITS]
+
+# What each voice is, in a line, shown when its pad is tapped (the owner asked what the rods were).
+VOICE_NOTES = {
+    "kick": "a sine whose pitch drops an octave, a beater click and a short knock",
+    "snare": "two head tones, wires, a crack and a short tail",
+    "clap": "three noise bursts and a fourth crushed to a lower sample rate",
+    "hat": "six detuned square waves (drum-machine metal) mixed with noise",
+    "log_drum": "struck wood plus a sine that bends down into the note",
+    "glass_bell": "struck glass plus FM, the classic synthetic bell",
+    "tine": "a thumb-piano tine with its buzz, and an 8-bit copy an octave up",
+    "clock_tick": "a clock's tick-tock: two wooden clicks, the second one crushed",
+    "shaker": "bead grains, some of them replaced by single digital pulses",
+    "wood_chirp": "a wooden knock with a synthetic upward chirp riding it",
+    "breath": "a breath or half-sung vowel through three formants, lightly ring-modulated (no words)",
+    "water_drop": "a droplet: a sine that rises fast over a tiny splash",
+    "rod": "a texture, not a hit: wind through a tuned metal pipe, swelling in, with a faint shimmer",
+    "hand_drum": "a skin struck by hand, with a synthetic sub under the low ones",
+    "tambourine": "ten jingles landing a few ms apart over the frame",
+    "rim": "a stick on a wooden rim",
+    "metal_tick": "a short FM ping, the most synthetic hit in the set",
+    "zap": "a falling sine, driven",
+    "snap": "a finger snap, part of it crushed to a lower sample rate",
+    "scrape": "a scraper: a run of tiny wooden clicks slowing down, every third one crushed",
+    "roll": "the kit's roll: fresh strikes speeding up from eighths to thirty-seconds",
+}
+
+
 def ref_rows(refs, report):
     """Reference ranges beside each kit's own numbers (Python harness, the same probes on both)."""
     heavy = [r for r in refs if r["pack"] == "NH_UAS"]
@@ -84,17 +112,17 @@ def ref_rows(refs, report):
                 return p["stats"]
 
     rows.append(("Kick pitch at the hit", rng([d.get("f0_attack_hz") for d in k], " Hz"),
-                 *[fmt(kick(kid)["f0_attack_hz"], " Hz") for kid in ("iron", "neon", "ash")]))
+                 *[fmt(kick(kid)["f0_attack_hz"], " Hz") for kid in KIDS]))
     rows.append(("Kick pitch after 80 ms", rng([d.get("f0_body_hz") for d in k if d.get("f0_body_hz", 0) < 100], " Hz"),
-                 *[fmt(kick(kid)["f0_body_hz"], " Hz") for kid in ("iron", "neon", "ash")]))
+                 *[fmt(kick(kid)["f0_body_hz"], " Hz") for kid in KIDS]))
     rows.append(("Kick gone 20 dB after", rng([d.get("to_m20db_ms") for d in k], " ms"),
-                 *[fmt(kick(kid)["to_m20db_ms"], " ms") for kid in ("iron", "neon", "ash")]))
+                 *[fmt(kick(kid)["to_m20db_ms"], " ms") for kid in KIDS]))
     rows.append(("Kick distortion under its note", rng([d.get("harmonics_over_fund_db") for d in k], " dB", 1),
-                 *[fmt(kick(kid)["harmonics_over_fund_db"], " dB", 1) for kid in ("iron", "neon", "ash")]))
+                 *[fmt(kick(kid)["harmonics_over_fund_db"], " dB", 1) for kid in KIDS]))
     rows.append(("Snare tone centre, first 120 ms", rng([d.get("centroid_hz") for d in s], " Hz"),
-                 *[fmt(snare(kid)["centroid_120ms_hz"], " Hz") for kid in ("iron", "neon", "ash")]))
+                 *[fmt(snare(kid)["centroid_120ms_hz"], " Hz") for kid in KIDS]))
     rows.append(("Snare gone 20 dB after", rng([d.get("to_m20db_ms") for d in s], " ms"),
-                 *[fmt(snare(kid)["to_m20db_ms"], " ms") for kid in ("iron", "neon", "ash")]))
+                 *[fmt(snare(kid)["to_m20db_ms"], " ms") for kid in KIDS]))
 
     def hat_under(kid):
         b = kits[kid]["groove_balance_db"]
@@ -102,7 +130,7 @@ def ref_rows(refs, report):
         return max(b[n] for n in names)
 
     rows.append(("Loudest hat or shaker under the kick, in the groove", "10–20 dB (drum loops)",
-                 *[fmt(-hat_under(kid), " dB", 1) for kid in ("iron", "neon", "ash")]))
+                 *[fmt(-hat_under(kid), " dB", 1) for kid in KIDS]))
 
     def snare_vs(kid):
         b = kits[kid]["groove_balance_db"]
@@ -111,14 +139,14 @@ def ref_rows(refs, report):
                 return b[p["name"]]
 
     rows.append(("Snare against the kick, in the groove", "within about 3 dB",
-                 *[fmt(snare_vs(kid), " dB", 1) for kid in ("iron", "neon", "ash")]))
+                 *[fmt(snare_vs(kid), " dB", 1) for kid in KIDS]))
     g = lambda kid, key: kits[kid]["groove"][key]
     rows.append(("Groove: 95 % of the energy under", rng([r["roll95_hz"] for r in heavy + slammed], " Hz"),
-                 *[fmt(g(kid, "roll95_hz"), " Hz") for kid in ("iron", "neon", "ash")]))
+                 *[fmt(g(kid, "roll95_hz"), " Hz") for kid in KIDS]))
     rows.append(("Groove: share in 60–150 Hz", rng([r["bands"]["60-150"] for r in heavy + slammed], " %", 0),
-                 *[fmt(g(kid, "bands")["60-150"], " %") for kid in ("iron", "neon", "ash")]))
+                 *[fmt(g(kid, "bands")["60-150"], " %") for kid in KIDS]))
     rows.append(("Groove: swing (50 straight, 67 triplet)", "50–57 (one tape loop 67)",
-                 *[fmt(g(kid, "groove_all").get("swing_pct_16th"), "", 1) for kid in ("iron", "neon", "ash")]))
+                 *[fmt(g(kid, "groove_all").get("swing_pct_16th"), "", 1) for kid in KIDS]))
     return rows
 
 
@@ -139,6 +167,7 @@ def main(out):
             rep = report["kits"][kid]["pads"][i]
             voice = rep["voice"]
             pads.append({"n": i + 1, "name": name, "file": fn, "slot": slot, "voice": voice,
+                         "note": VOICE_NOTES.get(voice, ""),
                          "bright": round(rep["soft_over_hard_hf_db"], 1),
                          "takes": round(rep["worst_closest_takes_db"], 1)})
         gfn = f"audio/{kid}_groove.mp3"
@@ -156,7 +185,8 @@ def main(out):
                 p["data"] = base64.b64encode(open(os.path.join(site, p["file"]), "rb").read()).decode()
             kit["groove_data"] = next(p["data"] for p in kit["pads"] if p["file"] == kit["groove"])
     rows = ref_rows(refs, report)
-    page = TEMPLATE.replace("/*MANIFEST*/", json.dumps(manifest)).replace("<!--ROWS-->", "\n".join(
+    head = "".join(f'<th class="{k["id"]}">{k["title"]}</th>' for k in KITS)
+    page = TEMPLATE.replace("/*MANIFEST*/", json.dumps(manifest)).replace("<!--KITHEADS-->", head).replace("<!--ROWS-->", "\n".join(
         "<tr>" + "".join(f"<td>{html.escape(str(c))}</td>" for c in r) + "</tr>" for r in rows))
     open(os.path.join(site, "index.html"), "w").write(page)
     print("page:", os.path.join(site, "index.html"))

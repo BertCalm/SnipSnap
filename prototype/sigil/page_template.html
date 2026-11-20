@@ -7,7 +7,7 @@
 :root {
   --bg: #e7e8eb; --surface: #f4f5f7; --fg: #16171a; --muted: #585c66; --line: #c6c9d0;
   --pad: #d9dbe0; --pad-hi: #cdd0d6; --pad-fg: #1d1f23;
-  --iron: #a8471f; --neon: #4446c9; --ash: #7c6a3c; --ok: #2f7a4a; --warn: #9a5b00;
+  --iron: #a8471f; --neon: #4446c9; --ash: #7c6a3c; --kiln: #8f3b52; --ok: #2f7a4a; --warn: #9a5b00;
   --display: "Chakra Petch", "Arial Narrow", system-ui, sans-serif;
   --body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
   --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
@@ -15,11 +15,11 @@
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
   --bg: #111215; --surface: #191a1e; --fg: #e6e7ea; --muted: #9a9ea8; --line: #2b2e35;
   --pad: #22252b; --pad-hi: #2c3038; --pad-fg: #e6e7ea;
-  --iron: #e2794a; --neon: #9195f7; --ash: #cdb77f; --ok: #6cc28c; --warn: #e3a64a; color-scheme: dark } }
+  --iron: #e2794a; --neon: #9195f7; --ash: #cdb77f; --kiln: #e08aa0; --ok: #6cc28c; --warn: #e3a64a; color-scheme: dark } }
 :root[data-theme="dark"] {
   --bg: #111215; --surface: #191a1e; --fg: #e6e7ea; --muted: #9a9ea8; --line: #2b2e35;
   --pad: #22252b; --pad-hi: #2c3038; --pad-fg: #e6e7ea;
-  --iron: #e2794a; --neon: #9195f7; --ash: #cdb77f; --ok: #6cc28c; --warn: #e3a64a; color-scheme: dark }
+  --iron: #e2794a; --neon: #9195f7; --ash: #cdb77f; --kiln: #e08aa0; --ok: #6cc28c; --warn: #e3a64a; color-scheme: dark }
 * { box-sizing: border-box }
 body { background: var(--bg); color: var(--fg); font: 15px/1.55 var(--body);
   padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 28px 64px }
@@ -46,7 +46,7 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 kbd { font: 500 .78rem var(--mono); border: 1px solid var(--line); border-radius: 4px; padding: 1px 5px; background: var(--surface) }
 .kit { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 330px); gap: 28px; align-items: start;
   border-top: 3px solid var(--kit); padding-top: 18px }
-.kit[data-kit="iron"] { --kit: var(--iron) } .kit[data-kit="neon"] { --kit: var(--neon) } .kit[data-kit="ash"] { --kit: var(--ash) }
+.kit[data-kit="iron"] { --kit: var(--iron) } .kit[data-kit="neon"] { --kit: var(--neon) } .kit[data-kit="ash"] { --kit: var(--ash) } .kit[data-kit="kiln"] { --kit: var(--kiln) }
 .kit h2 { color: var(--kit) }
 .meta { font: 500 .85rem var(--mono); color: var(--muted); margin-top: 4px }
 .grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px }
@@ -75,7 +75,7 @@ table { border-collapse: collapse; width: 100%; min-width: 640px; font-size: .9r
 th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--line); vertical-align: top }
 th { font: 600 .72rem/1.3 var(--display); letter-spacing: .1em; text-transform: uppercase; color: var(--muted) }
 td:not(:first-child) { font-family: var(--mono); font-size: .85rem; white-space: nowrap }
-th.iron { color: var(--iron) } th.neon { color: var(--neon) } th.ash { color: var(--ash) }
+th.iron { color: var(--iron) } th.neon { color: var(--neon) } th.ash { color: var(--ash) } th.kiln { color: var(--kiln) }
 tr:last-child td { border-bottom: 0 }
 .ask { display: grid; gap: 10px; max-width: 70ch; padding-left: 1.2em; margin: 0 }
 section > h2 + .note { margin-top: 6px }
@@ -85,9 +85,9 @@ section > h2 + .note { margin-top: 6px }
 
 <div class="wrap">
   <header>
-    <span class="eyebrow">SnipSnap · drum kits · round 0</span>
+    <span class="eyebrow">SnipSnap · drum kits · round 0b: KILN added</span>
     <h1>SIGIL</h1>
-    <p class="lede">Three kits after your 23 reference loops: heavy, centred kick and snare under percussion that is part organic and part synthetic. One kit per tempo you gave, each with its own wear.</p>
+    <p class="lede">Four kits after your 23 reference loops: heavy, centred kick and snare under percussion that is part organic and part synthetic. One kit per tempo you gave, plus KILN for the swung tape loop and the lullaby bells, each with its own wear.</p>
     <p class="note">This is the Python test version: every pad is rendered and measured, but nobody has heard it yet. Your loops are not on this page; only numbers taken from them are. Every pad has three velocities and four takes, as the finished kits will.</p>
   </header>
 
@@ -103,7 +103,7 @@ section > h2 + .note { margin-top: 6px }
         <button type="button" data-cycle="1" aria-pressed="true">Cycle</button>
         <button type="button" data-cycle="0" aria-pressed="false">Take 1 only</button>
       </span></div>
-    <span class="hint">Tap a pad again for its next take. Keys <kbd>1</kbd>–<kbd>4</kbd> <kbd>Q</kbd>–<kbd>R</kbd> <kbd>A</kbd>–<kbd>F</kbd> <kbd>Z</kbd>–<kbd>V</kbd> play the last kit you touched.</span>
+    <span class="hint">Tap a pad again for its next take; the line under each kit says what the pad is. Keys <kbd>1</kbd>–<kbd>4</kbd> <kbd>Q</kbd>–<kbd>R</kbd> <kbd>A</kbd>–<kbd>F</kbd> <kbd>Z</kbd>–<kbd>V</kbd> play the last kit you touched.</span>
   </div>
 
   <div id="kits" class="kits"></div>
@@ -114,7 +114,7 @@ section > h2 + .note { margin-top: 6px }
     <p class="note">The same probes run on your drum loops (the six heavy loops and the slammed 90 BPM loop) and on these kits. Python harness, not the app. The percussion loops have no kick or snare, so they set the key and the feel, not these rows.</p>
     <div class="tablewrap" style="margin-top:14px">
       <table>
-        <thead><tr><th>Measure</th><th>Your drum loops</th><th class="iron">IRON</th><th class="neon">NEON</th><th class="ash">ASH</th></tr></thead>
+        <thead><tr><th>Measure</th><th>Your drum loops</th><!--KITHEADS--></tr></thead>
         <tbody><!--ROWS--></tbody>
       </table>
     </div>
@@ -142,6 +142,8 @@ const ABOUT = {
           print: "Slam: clean and loud, a soft knee into a ceiling" },
   ash:  { line: "After the 115 BPM percussion loops and the two tape-and-vinyl loops: four on the floor, a soft backbeat, log drums walking A minor, shakers swung.",
           print: "Tape: a head bump, warm saturation, the top rolled off; wow, flutter, hiss and crackle on the groove" },
+  kiln: { line: "After the swung tape jungle loop at 100 BPM and the lullaby and bell loops: a heavy triplet shuffle, bongos and conga, low thumb-piano tones in A minor, a snap and a scraper.",
+          print: "Old sampler: 12 bits with no filter before the hold, so its grit folds back into the sound; record warp and crackle on the groove" },
 };
 // MPC order: pad 1 bottom left, pad 16 top right.
 const ORDER = [13,14,15,16, 9,10,11,12, 5,6,7,8, 1,2,3,4];
@@ -187,7 +189,7 @@ function render() {
     }
     const a = ABOUT[kit.id];
     const side = document.createElement("div"); side.className = "side";
-    side.innerHTML = `<div><span class="eyebrow">Kit ${KITS.indexOf(kit) + 1} of 3</span><h2>${kit.title}</h2>
+    side.innerHTML = `<div><span class="eyebrow">Kit ${KITS.indexOf(kit) + 1} of ${KITS.length}</span><h2>${kit.title}</h2>
       <div class="meta">${kit.bpm} BPM · swing ${kit.swing} · 16 pads · 3 velocities × 4 takes</div></div>
       <p>${a.line}</p>
       <dl class="facts"><dt>Wear</dt><dd>${a.print}</dd><dt>Key</dt><dd>A minor (every tuned pad)</dd>
@@ -212,7 +214,7 @@ async function trigger(kit, n) {
   takeOf.set(key, (t + 1) % 4);
   flash(el);
   el.querySelectorAll(".dots i").forEach((d, i) => d.classList.toggle("cur", i === t));
-  now.textContent = `A${String(n).padStart(2, "0")} ${p.name} · ${ZN[zone]} · take ${t + 1} of 4`;
+  now.textContent = `A${String(n).padStart(2, "0")} ${p.name} · ${ZN[zone]} · take ${t + 1} of 4` + (p.note ? ` · ${p.note}` : "");
   try {
     const buf = await load(p.file);
     const src = c.createBufferSource(); src.buffer = buf; src.connect(c.destination);

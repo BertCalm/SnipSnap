@@ -381,7 +381,7 @@ def tambourine(p, v, rng):
     n = n_of(p["len"])
     y = np.zeros(n)
     for k in range(10):
-        f = rng.uniform(6500, 11000)
+        f = rng.uniform(6000, 7000 + 4000 * v)  # a soft shake rings fewer of the highest jingles
         j = modal(n, [f, f * 1.37, f * 1.82], [1, 0.6, 0.4], [p["decay"], p["decay"] * 0.7, p["decay"] * 0.5])
         at = int(R * rng.uniform(0, 0.012 + 0.01 * (1 - v)))
         y += np.roll(j, at) * rng.uniform(0.4, 1.0)
@@ -418,8 +418,39 @@ def zap(p, v, rng):
     return drive((np.sin(sweep_phase(f)) + grit) * env_exp(n, p["decay"]) * attack(n, 0.1), 0.4)
 
 
+def snap(p, v, rng):
+    """A finger snap: a short bright burst with the fingers' own little resonance (organic); a share of it
+    sample-crushed (the synthetic grain)."""
+    n = n_of(p["len"])
+    burst = filt(rng.normal(0, 1, n), "band", (1800 * (0.8 + 0.2 * v), 4500 * (0.6 + 0.4 * v))) * env_exp(n, 0.004)
+    f = 1150 * (1 + rng.normal(0, 0.02))
+    flesh = modal(n, [f, f * 2.2], [1, 0.4], [0.03, 0.015], bright=0.4 + 0.6 * v, rng=rng, phase_jitter=1.0) * 0.5
+    y = burst + flesh
+    return ((1 - p["digital"]) * y + p["digital"] * crush(y, 9000, 8)) * attack(n, 0.05)
+
+
+def scrape(p, v, rng):
+    """A guiro-style scrape: a train of tiny wooden clicks, fast then slowing as the stick runs out of ridges.
+    Every third click is sample-crushed, so the scrape has a synthetic grain running through it."""
+    n = n_of(p["len"])
+    y = np.zeros(n)
+    t, k = 0.0, 0
+    rate = p["rate"] * (0.8 + 0.2 * v) * (1 + rng.normal(0, 0.05))
+    one_n = n_of(0.012)
+    while t < p["len"] - 0.015:
+        f = p["tune"] * (1 + rng.normal(0, 0.04))
+        c = modal(one_n, [f, f * 1.7], [1, 0.5], [0.008, 0.005], bright=0.4 + 0.6 * v)
+        if k % 3 == 2:
+            c = crush(c, 7000, 7)
+        at = n_of(t)
+        y[at: at + one_n] += c[: n - at] * (0.6 + 0.4 * rng.random()) * (1 - 0.5 * t / p["len"])
+        t += 1.0 / (rate * (1 - 0.45 * t / p["len"]))
+        k += 1
+    return y
+
+
 VOICES = {f.__name__: f for f in (kick, snare, clap, hat, log_drum, glass_bell, tine, clock_tick, shaker, wood_chirp,
-                                   breath, water_drop, rod, hand_drum, tambourine, rim, metal_tick, zap)}
+                                   breath, water_drop, rod, hand_drum, tambourine, rim, metal_tick, zap, snap, scrape)}
 
 
 # ------------------------------------------------------------------ wear: each kit's print
@@ -449,8 +480,9 @@ def tape(x, amount):
     return filt(y, "low", 10000, 2)
 
 
-def tape_motion(x44, seed, depth=1.0):
-    """At 44.1 kHz: wow (0.6 Hz) and flutter (7 Hz) as a moving delay, hiss at about -62 dB, sparse crackle."""
+def tape_motion(x44, seed, depth=1.0, crackle_per_s=6):
+    """At 44.1 kHz: wow (0.6 Hz) and flutter (7 Hz) as a moving delay, hiss at about -62 dB, sparse crackle.
+    A record has the same slow wow (a warp at 0.55 Hz is one turn at 33 rpm) and more crackle."""
     rng = np.random.default_rng(seed)
     n = len(x44)
     t = np.arange(n) / RATE
@@ -458,7 +490,7 @@ def tape_motion(x44, seed, depth=1.0):
     idx = np.clip(np.arange(n) - 60 - delay, 0, n - 1)
     y = np.interp(idx, np.arange(n), x44)
     hiss = filt_44(rng.normal(0, 1, n), "band", (1500, 9000)) * 10 ** (-62 / 20) * depth
-    crackle = (rng.random(n) < 6 / RATE) * rng.uniform(-1, 1, n) * 0.05 * depth
+    crackle = (rng.random(n) < crackle_per_s / RATE) * rng.uniform(-1, 1, n) * 0.05 * depth
     crackle = filt_44(crackle, "high", 2000)
     return y + hiss + crackle
 
@@ -467,4 +499,14 @@ def filt_44(x, kind, hz, order=2):
     return signal.sosfilt(sos(kind, hz, order, RATE), x)
 
 
-PRINTS = {"blown": blown_speaker, "slam": slam, "tape": tape}
+def sampler(x, amount):
+    """An old sampler: 12 bits, held at about 26 kHz with no filter before the hold, so the images fold back down
+    as grit (the KILN kit's print), a little drive, and the top eased off at 13 kHz. The hold runs at the 4x rate,
+    so its step is a whole number of internal samples (29.4 kHz here): close to the classic rate, not exact."""
+    held = crush(x, 26040, 12)
+    y = (1 - amount) * x + amount * held
+    y = drive(y, 0.25 * amount)
+    return filt(y, "low", 13000, 2)
+
+
+PRINTS = {"blown": blown_speaker, "slam": slam, "tape": tape, "sampler": sampler}

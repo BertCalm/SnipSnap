@@ -1,13 +1,15 @@
 # SIGIL: design brief and round-0 audition
 
-Status: **round 0 (2026-11-20): three kits rendered and measured in Python, not heard.** A family of three
-sixteen-pad drum kits written after the owner's 23 reference loops: "a drum collection that matches the vibe ... the
+Status: **round 0b (2026-11-20): four kits rendered and measured in Python; round 0's three heard by the owner as
+"pretty good", KILN not yet heard.** A family of sixteen-pad drum kits written after the owner's 23 reference loops: "a drum collection that matches the vibe ... the
 same spirit ... mix together elements to create cohesive kit". The owner chose the shape on 2026-11-20: "three kits,
 one per tempo" (the recommendation), wear "mix it up", "the kick/snare sound is impactful", "the percs are a bit
-esoteric, organic/inorganic hybrid". Nothing is in Kotlin yet. The round-0 prototype is the thing to hear first,
+esoteric, organic/inorganic hybrid". On hearing round 0 the owner wrote "Pretty good. Not sure I understand the rods"
+(IRON's and ASH's A14 texture pads); told what they were, "I think they are fine as is", and asked for a fourth kit.
+KILN (round 0b) is that kit; the page now says what each pad is when it is tapped. Nothing is in Kotlin yet. The round-0 prototype is the thing to hear first,
 following the CALABASH path (prototype approved by ear, then the Kotlin port measured against it).
 
-Listening page (private to the owner): <https://claude.ai/artifact/BnxtCiWjvFZsYXeohmaEzZ>. Three playable 4x4 pad
+Listening page (private to the owner): <https://claude.ai/artifact/BnxtCiWjvFZsYXeohmaEzZ>. Four playable 4x4 pad
 grids in MPC order with a velocity switch (soft .40, medium .70, hard 1.0) and four takes per pad dealt in turn, each
 kit's two-bar groove looped, and the measured table below.
 
@@ -50,15 +52,16 @@ written notes, not from the onset filing.
 | Organic and synthetic in one hit | none found | every SIGIL percussion voice blends the two (below) |
 
 The kit-family landing (authored tables over a small set of voices) is the one the owner chose for CALABASH,
-CYPHER, STAGGER and LOOSE CRATE; an engine would cost 26 integration surfaces for what three tables and eighteen
+CYPHER, STAGGER and LOOSE CRATE; an engine would cost 26 integration surfaces for what four tables and twenty
 voice functions do.
 
-## The three kits
+## The four kits
 
 | Kit | BPM | Swing | Print (the kit's wear) | Pads A01 to A14 | A15 | A16 |
 |---|---|---|---|---|---|---|
 | IRON | 74 | 52 | Blown speaker: asymmetric clipping, a cone rolling off at 4.5 kHz, a rattle when pushed | Drop Kick, Blown Kick, Dark Snare, Rim Knock, Closed Hat, Grain Shaker, Log Low (A2), Log High (E3), Glass Bell (A4), Clock Tick, Breath, Hand Drum, Water Drop, Iron Rod | Snare Drag (eighths to 32nds over 2.2 s) | groove, 2 bars |
 | NEON | 90 | 51 | Slam: clean and loud, a soft knee into a ceiling | Sub Kick, Punch Kick, Crack Snare, Glitch Clap, Closed Hat, Open Hat, Grain Shaker, Clock Tick, Wood Chirp, Bell Ping (C5), Log Mid (C3), Voice Chop, Metal Tick, Zap | Hat Roll (16ths to triplet 32nds, rising) | groove, 2 bars, half-time snare, hat ratchets |
+| KILN | 100 | 64 | Old sampler: 12 bits held near 26 kHz with no filter before the hold, a little drive; record warp and crackle on the groove | Thump Kick, Ghost Kick, Crunch Snare, Snap, Closed Hat, Tambourine, Bongo High, Bongo Low, Conga Low, Low Tine C (C3), Low Tine E (E3), Bell A (A4), Breath, Scrape | Bongo Roll (high and low in turn, eighths to 32nds over 2.4 s) | groove, 2 bars, heavy triplet shuffle |
 | ASH | 115 | 56 | Tape: head bump at 90 Hz, warm saturation, top rolled off at 10 kHz; wow, flutter, hiss and crackle on the groove | Round Kick, Tape Snare, Rim, Tambourine, Shaker Push, Shaker Pull, Log Low (A2), Log Mid (C3), Log High (E3), Thumb Tine (A4), Glass Bell (E5), Hand Drum, Breath, Wind Rod | Shaker Rush (push and pull, eighths to 32nds) | groove, 2 bars, four on the floor, logs walking A minor |
 
 Every pad: three velocity zones (.40, .70, 1.0) of four takes. Every tuned pad is in A minor.
@@ -77,6 +80,8 @@ Every pad: three velocity zones (.40, .70, 1.0) of four takes. Every tuned pad i
 | Water drop | a splash | a sine whose pitch rises fast |
 | Rod, wind | noise in a tuned comb that rings | an FM shimmer above it |
 | Hand drum | membrane modes (Bessel ratios), a slap | a sub-drop an octave under it |
+| Snap | a short burst and the fingers' resonance | part of it sample-crushed |
+| Scrape | a run of tiny wooden clicks slowing down | every third click sample-crushed |
 | Hats | noise | six band-limited squares (additive odd harmonics to 20 kHz, so nothing aliases) |
 | Clap | three noise bursts | the fourth sample-crushed |
 
@@ -105,32 +110,35 @@ sixteenths, 2 ms jitter, then the kit's bus (lighter speaker, slam, or tape with
 
 `prototype/sigil/gen.py` writes `report.json`; the same probes read the references.
 
-| Measure | Owner's drum loops | IRON | NEON | ASH |
-|---|---|---|---|---|
-| Kick pitch at the hit | 105 to 186 Hz | 132 Hz | 129 | 122 |
-| Kick pitch after 80 ms | 36 to 97 Hz | 55 Hz | 50 | 61 |
-| Kick 20 dB down after | 69 to 351 ms | 149 ms (Blown Kick 357) | 204 | 148 |
-| Kick harmonics under the note | -13.3 to -0.9 dB | -9.9 dB (Blown Kick -3.6) | -8.4 | -11.4 |
-| Snare centroid, first 120 ms | 1,099 to 2,857 Hz | 1,710 Hz | 2,423 | 2,140 |
-| Snare 20 dB down after | 51 to 186 ms | 199 ms | 109 | 176 |
-| Loudest hat or shaker under the kick, groove | 10 to 20 dB | 19.7 dB | 17.7 | 14.0 |
-| Snare against the kick, groove | within about 3 dB | -0.3 dB | -0.4 | -2.9 |
-| Groove, 95 % of the energy under | 301 to 3,898 Hz | 3,144 Hz | 2,175 | 560 |
-| Groove, share in 60 to 150 Hz | 50 to 70 % | 47 % | 55 | 69 |
-| Groove, swing | 50 to 57 (one loop 67) | 51.2 | 51.1 | 55.5 |
+| Measure | Owner's drum loops | IRON | NEON | ASH | KILN |
+|---|---|---|---|---|---|
+| Kick pitch at the hit | 105 to 186 Hz | 132 Hz | 129 | 122 | 117 |
+| Kick pitch after 80 ms | 36 to 97 Hz | 55 Hz | 50 | 61 | 57 |
+| Kick 20 dB down after | 69 to 351 ms | 149 ms (Blown Kick 357) | 204 | 148 | 158 |
+| Kick harmonics under the note | -13.3 to -0.9 dB | -9.9 dB (Blown Kick -3.6) | -8.4 | -11.4 | -12.8 |
+| Snare centroid, first 120 ms | 1,099 to 2,857 Hz | 1,710 Hz | 2,423 | 2,140 | 1,683 |
+| Snare 20 dB down after | 51 to 186 ms | 199 ms | 109 | 176 | 178 |
+| Loudest hat or shaker under the kick, groove | 10 to 20 dB | 19.7 dB | 17.7 | 14.0 | 17.9 |
+| Snare against the kick, groove | within about 3 dB | -0.3 dB | -0.4 | -2.9 | -0.7 |
+| Groove, 95 % of the energy under | 301 to 3,898 Hz | 3,144 Hz | 2,175 | 581 | 3,661 |
+| Groove, share in 60 to 150 Hz | 50 to 70 % | 47 % | 55 | 69 | 51 |
+| Groove, swing | 50 to 57 (one loop 67) | 51.1 | 51.1 | 55.8 | 63.3 (the swung tape loop: 67) |
 
-- **Every pad is finite, under full scale and DC-free** (45 pads x 3 zones x 4 takes, plus the rolls).
-- **Takes are fresh strikes, not copies.** The closest two takes in any zone of any pad sit 21.9 to 27.6 dB apart
+- **Every pad is finite, under full scale and DC-free** (60 pads x 3 zones x 4 takes, plus the rolls).
+- **Takes are fresh strikes, not copies.** The closest two takes in any zone of any pad sit 21.9 to 30.4 dB apart
   at worst per kit (a copy reads over 40).
 - **A soft hit is darker, measured pad-relatively** (share of the first 120 ms above the pad's own hard-hit
-  centroid; a roll is read whole). 42 of 45 pads are as dark or darker at .40 than at 1.0, most by 1 to 12 dB;
-  the other three are listed under "Disclosed, not fixed".
+  centroid; a roll is read whole). 58 of 60 pads are as dark or darker at .40 than at 1.0, most by 1 to 12 dB;
+  the other two are listed under "Disclosed, not fixed". KILN's tambourine first read 0.8 dB brighter soft; a soft
+  shake now rings fewer of the highest jingles (-2.7 dB, and ASH's -6.5).
+- KILN's sampler holds at a whole number of internal samples (29.4 kHz at the 4x rate), close to the classic 26 kHz,
+  not exact. The Kotlin port can hold at the exact rate with a fractional counter.
 - **Render time:** 56 ms a hit on average in Python (all 42 hits at .70), a roll 2.1 s, a groove 1.9 s.
 
 ### Disclosed, not fixed
 
-- ASH's Rim reads 0.9 dB brighter at .40 than at 1.0; IRON's Hand Drum (+0.05 dB) and Clock Tick (+0.005 dB) read
-  level. All three are quieter when soft, by the touch law. The Kotlin round's velocity test must hold every pad at
+- ASH's Rim reads 0.9 dB brighter at .40 than at 1.0; IRON's Hand Drum (+0.1 dB) reads level. Both are quieter
+  when soft, by the touch law. The Kotlin round's velocity test must hold every pad at
   no brighter.
 - The pads and grooves are mono, as the house renders. The percussion references are wide (L/R correlation down to
   0.11); width cannot be carried, so density and the synthetic half carry the busyness instead.
@@ -150,7 +158,7 @@ port inside it. A kit's whole grid is 3 x 4 x 15 renders plus the groove, cached
 
 | Round | What | Gate |
 |---|---|---|
-| 0 (this) | Python prototype, three kits, listening page | the owner's ear on the page |
+| 0 and 0b (this) | Python prototype, four kits (KILN added in 0b), listening page | the owner's ear on the page |
 | 1 | Kotlin port of the approved round (`Sigil.kt`, `SigilKits.kt` in the CALABASH shape), measured pad by pad against the prototype | the A/B distance within the takes' own spread |
 | 2 | the kits on the shelf (`StarterKits.ALL`, `StarterShelf.GROUPS` under SKINS), velocity x round robin through saving, `PadHit.resolve` playback and MPC 3 export (`generateSigilKits`) | the owner's gates: velocity and round robin end to end; MPC 2 keeps each zone's first take (format limit, 2026-11-14) |
 | 3 | phone and MPC | the owner's report |
@@ -174,7 +182,7 @@ port inside it. A kit's whole grid is 3 x 4 x 15 renders plus the groove, cached
    glass, beads, skin, breath) and a synthetic part (a pitch-swept sine, FM, crushed grains) in the same hit, so a
    pad is neither a field recording nor a drum machine.
 4. **One key.** Your tuned loops are in A minor, F, C and E, which all fit A minor, so every tuned pad sits in A minor
-   and the three kits agree with each other and with your loops.
+   and the four kits agree with each other and with your loops.
 5. **The risky decision** is the snare level: your drum loops put the snare as loud as the kick, so every groove does.
    If that reads as too much, it is one number per kit.
 

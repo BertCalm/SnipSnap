@@ -170,11 +170,16 @@ def render_groove(kid):
         up = sp.blown_speaker(up, 0.25)
     elif kit["print"] == "slam":
         up = sp.slam(up, 0.45)
+    elif kit["print"] == "sampler":
+        up = sp.sampler(up, 0.3)
     else:
         up = sp.tape(up, 0.3)
     y = sp.finish(up, seconds)
     if kit["print"] == "tape":
         y = sp.tape_motion(y, sp.sk.seed_for("SIGIL", kid, "motion"))
+    elif kit["print"] == "sampler":
+        # the record the sampler was fed from: its warp and its crackle, no tape hiss beyond a trace
+        y = sp.tape_motion(y, sp.sk.seed_for("SIGIL", kid, "motion"), depth=0.6, crackle_per_s=40)
     return sp.norm(y, 0.97).astype(np.float32)
 
 

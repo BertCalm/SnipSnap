@@ -173,4 +173,56 @@ ASH = {
     },
 }
 
-KITS = [IRON, NEON, ASH]
+# ------------------------------------------------------------------ KILN, 100 BPM: shuffled hand drums, low tines, old sampler
+# After the one strongly swung reference (the tape-and-vinyl jungle loop at 100 BPM: a 67 percent triplet shuffle, hand
+# drums near a 1 kHz centroid gone in about 86 ms, half the energy in 150 to 400 Hz) and the 75 BPM lullaby and bell
+# loops (low tuned tones, 82 percent in 150 to 400 Hz; bells in 400 Hz to 1 kHz). The print is an old sampler.
+
+KILN = {
+    "id": "kiln", "title": "KILN", "bpm": 100, "swing": 64.0, "print": "sampler", "print_amount": 0.7,
+    "pads": [
+        pad("Thump Kick", "kick", 0.95, f_start=150, f_end=50, sweep=0.05, decay=0.045, hold=0.015, len=0.6,
+            click=0.35, knock=0.25, knock_hz=190, drive=0.15),
+        pad("Ghost Kick", "kick", 0.75, f_start=120, f_end=55, sweep=0.03, decay=0.025, hold=0.005, len=0.35,
+            click=0.2, knock=0.3, drive=0.1),
+        pad("Crunch Snare", "snare", 0.92, tune=1.05, head=0.5, head_decay=0.04, wires=1.0, wire_lp=5000,
+            wire_decay=0.05, crack=0.5, tail=0.05, tail_gain=0.3, drive=0.5, len=0.5),
+        pad("Snap", "snap", 0.7, digital=0.35, len=0.25),
+        pad("Closed Hat", "hat", 0.42, ratio=0.95, metal=0.4, hp=5500, lp=10000, decay=0.028, len=0.2),
+        pad("Tambourine", "tambourine", 0.5, decay=0.07, len=0.35),
+        pad("Bongo High", "hand_drum", 0.7, tune=330, decay=0.09, slap=0.8, sub=0.0, len=0.35),
+        pad("Bongo Low", "hand_drum", 0.72, tune=230, decay=0.11, slap=0.7, sub=0.0, len=0.4),
+        pad("Conga Low", "hand_drum", 0.78, tune=165, decay=0.2, slap=0.5, sub=0.35, len=0.55),
+        pad("Low Tine C", "tine", 0.75, note=C3, decay=0.45, buzz=0.6, shadow=0.3, len=1.0),
+        pad("Low Tine E", "tine", 0.72, note=E3, decay=0.4, buzz=0.6, shadow=0.3, len=0.9),
+        pad("Bell A", "glass_bell", 0.5, note=A4, decay=0.3, glass=0.55, len=1.3),
+        pad("Breath", "breath", 0.5, pitch=175, voiced=0.45, vowel="e", ring=0.3, decay=0.07, len=0.3),
+        pad("Scrape", "scrape", 0.55, tune=2600, rate=70, len=0.22),
+    ],
+    # A15: the bongos rolled, high and low in turn, eighths to thirty-seconds over a bar
+    "roll": {"name": "Bongo Roll", "pad": 6, "alt_pad": 7, "seconds": 2.4, "from_div": 2, "to_div": 8,
+             "beats": 4.0, "vel_from": 0.35, "vel_to": 1.0},
+    "groove": {
+        "bars": 2,
+        "mix": {0: 1.0, 1: 0.55, 2: 0.95, 3: 0.45, 4: 0.3, 5: 0.3, 6: 0.5, 7: 0.5, 8: 0.55, 9: 0.5, 10: 0.45,
+                11: 0.3, 12: 0.35, 13: 0.4},
+        "steps": {
+            0: "X.....x...X..... X.....x.x.......",
+            1: ".......o........ ...o...........o",
+            2: "....X.......X... ....X.......X...",
+            3: "....o.......o... ....o.......o...",
+            4: "xoxoxoxoxoxoxoxo xoxoxoxoxoxoxoxo",
+            5: "..x...x...x...x. ..x...x...x...x.",
+            6: ".x.x...x.x.x...x .x.x...x.x.x.x.x",
+            7: "x.....x...x..... x.....x...x.....",
+            8: "...o......x..... ...o.......x....",
+            9: "x.........x..... ................",
+            10: "......x......... x.....x.........",
+            11: "...............o ..........o.....",
+            12: "................ .......o........",
+            13: "..............x. ..............x.",
+        },
+    },
+}
+
+KITS = [IRON, NEON, ASH, KILN]
