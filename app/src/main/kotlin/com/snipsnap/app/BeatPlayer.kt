@@ -8,6 +8,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import com.snipsnap.app.ui.GROOVE_SWING_DEFAULT
+import com.snipsnap.json.JsonException
 import com.snipsnap.kit.GrooveEdit
 import com.snipsnap.kit.GrooveFeel
 import com.snipsnap.kit.GrooveProgram
@@ -283,7 +284,10 @@ class BeatPlayer(
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 Log.e(TAG, "toggle: the kit's grooves would not read", e)
-                say(Copy.actionFailed("PLAY"))
+                // A damaged groove.json is not cured by trying again (UAT
+                // 2026-11 user states, D-1), so it is named; anything else
+                // keeps the generic line.
+                say(if (e is JsonException) Copy.BEAT_WONT_READ else Copy.actionFailed("PLAY"))
                 return@launch
             }
             // The disk read took a moment, and the user did not stop: if they
@@ -350,7 +354,7 @@ class BeatPlayer(
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 Log.e(TAG, "reloadFromDisk: the kit's grooves would not read", e)
-                say(Copy.actionFailed("RELOAD BEAT"))
+                say(if (e is JsonException) Copy.BEAT_WONT_READ else Copy.actionFailed("RELOAD BEAT"))
             }
         }
     }
