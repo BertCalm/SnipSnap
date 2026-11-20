@@ -145,7 +145,7 @@ class TerraStickKitsTest {
                 assertEquals(3, g.size, pad.displayName); assertTrue(g.all { it.size == TerraStickKits.TAKES }, pad.displayName)
                 assertContentEquals(pad.snip.samples, g.last().first().samples, "${pad.displayName}: the main sample is the hard first take")
                 val patch = TerraStickKits.patches(k)[i]
-                assertContentEquals(TerraStickKits.render(patch, 1f, 2).samples, g[2][2].samples, "${pad.displayName} zone sample replays")
+                assertContentEquals(TerraStickKits.render(patch, 1f, 2, TerraStickKits.fxFor(k, i)).samples, g[2][2].samples, "${pad.displayName} zone sample replays")
                 for (zone in g) for (a in zone.indices) for (b in a + 1 until zone.size)
                     assertFalse(zone[a].samples.contentEquals(zone[b].samples), "${pad.displayName}: takes $a and $b are the same samples")
                 // a soft touch is a different strike, not the hard one peak-matched
