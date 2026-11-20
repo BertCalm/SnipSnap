@@ -15,7 +15,7 @@ kept four more voices, REED, COURSE, ESCAPEMENT and BELL (round accord-voices-1,
 [below](#reed-course-escapement-and-bell)), pinned by `AccordVoicesPinsTest` and
 played by the ACCORD VOICES starter. Complete control-domain
 acceptance and phone/MPC checks remain open; the remaining gates are listed in
-[the acceptance gates](ENGINE_ACCEPTANCE_GATES.md#accord-native-sound-kept-by-ear-2026-11-19-seven-voices-kept-gates-open).
+[the acceptance gates](ENGINE_ACCEPTANCE_GATES.md#accord-native-sound-kept-by-ear-2026-11-19-seven-voices-and-round-robin-kept-keys-chords-and-hold-built-awaiting-accord-keys-1).
 
 ## Play a saved performance
 
@@ -107,7 +107,7 @@ C2, C3, C4 and C5. `AccordVoicesPinsTest` pins those renders, the soft and hard
 touches and the dispersed (RAFT 0) renders of REED, COURSE and BELL. They have no
 frozen factory calibration row: their default performance computes the shared
 normal/hard gain on first render, as an edited performance does
-([acceptance gates](ENGINE_ACCEPTANCE_GATES.md#accord-native-sound-kept-by-ear-2026-11-19-seven-voices-kept-gates-open)).
+([acceptance gates](ENGINE_ACCEPTANCE_GATES.md#accord-native-sound-kept-by-ear-2026-11-19-seven-voices-and-round-robin-kept-keys-chords-and-hold-built-awaiting-accord-keys-1)).
 
 `AccordPatch` saves name, voice, controls, MIDI, velocity, full signed Long seed,
 model, acoustic profile, initializer, source start and duration. JSON stores the
@@ -190,7 +190,54 @@ Where the takes are used:
   (BRUSH D#3 to F4 and TINE's Soft Attack, Bright Edge and Long Ring) are rendered by the same
   rule but were not heard with takes in accord-rr-1.
 
-Keygroups, chord renders and a HOLD decision do not use takes yet.
+## Keys, chords and HOLD (built; awaiting the owner's listen in accord-keys-1)
+
+MAKE INSTRUMENT on SYNTH now turns any saved ACCORD recipe into a playable keyboard instrument
+(`AccordKeygroupMaker`, `AccordPadMaker`; the WICK finite shape in HALOBAR's Cycle layout). The
+owner has not heard it yet: listening round accord-keys-1 (AX1 to AX4, AY1, AZ1, BA1, BA2, BB1,
+BB2, BC1) plays it from the real saved samples.
+
+- **Range and roots.** C2 to C5, a sampled root every minor third (thirteen, plus the saved note
+  when it falls between). A key between roots plays its neighbour a semitone fast or slow, so its
+  strikes also come about 6 % quicker or slower than a root key's.
+- **Touch.** Three layers, the touches every voice was heard and kept at: soft .3, medium .75 and
+  hard 1 (key velocity 0 to 42, 43 to 84, 85 to 127). The key's velocity replaces the recipe's
+  saved TOUCH and sets the level on top, as on every keygroup.
+- **Takes.** Two per touch, dealt in turn: engine take 0 (the plain render) and take 2, whose
+  pulses fall half a pulse spacing from take 0's, the two furthest apart. A keygroup holds eight
+  samples, so three touches leave room for two takes each, not the pads' four.
+- **Key length.** A key strikes for at most four seconds (`KEY_SECONDS`; a recipe saved with a
+  shorter LENGTH keeps its own) and then rings out with the engine's own tail. The pads you kept
+  strike for eight. At the default settings the machine's order (R1) is .71 when a key goes down,
+  .90 after four seconds and .99 after eight, so a key reaches most of the gathering, not all of it.
+  The reason is size: thirteen roots of six eight-second samples are about 105 MB of PCM24 per
+  voice and about 140 MB of samples in memory while MAKE INSTRUMENT runs.
+- **Package size**, factory recipe, 78 samples, PCM24: BRUSH 57 MB, WOOD 51 MB, TINE 51 MB,
+  REED 52 MB, COURSE 71 MB, ESCAPEMENT 51 MB, BELL 78 MB (BELL and COURSE ring longest). In
+  memory while the sheet renders that is 68 to 103 MB of samples; no phone has run it yet.
+- **Every sample is the engine's own render** (`Accord.renderTake`), untouched: no trim, no fade,
+  no level match. Each WAV's hash is bound to its recipe and take in
+  `accord-source-recipes.json` inside the package, and `validate()` refuses a package whose audio,
+  recipe, take, release, key length or descriptors differ.
+- **HOLD.** Still refused and hidden. Every voice is finite on keys too: a held key plays its
+  note to the end and stops, with no loop, and letting go fades over .6 s (`RELEASE_SECONDS`), the
+  finite-note-with-key-up-fade policy the owner accepted for HALOBAR. No sustaining REED was
+  built. Whether REED later gets a sustain that lasts as long as the key is held is the owner's
+  decision; it would be a separate, versioned piece of work (spec §13).
+- **Chords.** `AccordChords.notes` moves a chord-tool chord by whole octaves into C2 to C5 and
+  never drops or re-spaces a tone; 219 of the tool's 960 diatonic, modal and borrowed voicings pass
+  C5 and move down an octave. `AccordKeygroupMakerTest` plays all 960 on real TINE key samples
+  through `InstrumentEngine`: every note starts its own voice and key-up ends it. Every tone of a
+  chord is struck by the same machine, so their strikes start together; tones on keys between
+  roots then drift against the others by their 6 %. `AccordChords.render` is the offline
+  audition of a chord from direct renders, where nothing drifts.
+- **Export.** The package carries the phone sidecar, an MPC 3 `.xty` and an MPC 2 `.xpm`, all in
+  HALOBAR's matching-window Cycle layout: six layers per key, three velocity windows of two takes.
+  `AccordKeygroupMakerTest` reads each back. MPC 3 is the format the owner passed on hardware for
+  HALOBAR. The MPC 2 program is written the same way (six active layers, ZonePlay 0), as
+  HALOBAR's is, not cut back to each touch's first take; the round-robin gate is not judged on
+  MPC 2 (the recorded format limit), and how an MPC 2 deals this layout is not recorded. No MPC or
+  phone has loaded an ACCORD instrument.
 
 ## Audition and export
 
@@ -235,8 +282,9 @@ SYNTH now includes the Accord picker, ROOT, TOUCH, LENGTH and explicit TINE
 profile controls. Typed drafts, YOURS, navigation and pad reopening preserve the
 complete recipe, and SEND/SPREAD retain its authored MIDI note. HOLD is hidden.
 The SDK build and three unchanged functional instrumentation tests at
-`fac839f0` passed with the software-emulator setup documented below. Held/keygroup
-playback remains later work. These checks do not establish physical-phone
+`fac839f0` passed with the software-emulator setup documented below. Finite keys
+came later ([Keys, chords and HOLD](#keys-chords-and-hold-built-awaiting-the-owners-listen-in-accord-keys-1));
+a held, sustaining articulation was not built. These checks do not establish physical-phone
 performance or hardware listening.
 
 ## Evidence and current validation
