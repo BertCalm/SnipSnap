@@ -122,7 +122,7 @@ object TerraRoundRobinKits {
     internal fun strike(patch: TerraPatch, velocity: Float, strike: Int): Snip {
         val (factor, offset) = landing(patch, strike)
         if (patch.voice in Terra.FITTED_HANDS && patch.striker == null) return Terra.renderFittedTake(patch.voice, movedMacros(patch, offset), velocity * factor, strike)
-        return Terra.render(patch.voice, movedMacros(patch, offset), patch.striker, velocity * factor, strike)
+        return patch.render(velocity * factor, strike, movedMacros(patch, offset))
     }
 
     /** One renderer take's three zones, softest first, the softer two peak-matched to its hard hit. */

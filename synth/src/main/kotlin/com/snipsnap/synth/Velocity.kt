@@ -543,7 +543,8 @@ object Velocity {
         is DrumlinePatch -> patch.render(v)
         // SOOT strikes every drum at the velocity through its own contact law (and the kick's sag).
         is SootPatch -> patch.render(v)
-        is TerraPatch -> Terra.render(patch.voice, patch.macros, patch.striker, velocity = v)
+        // through the patch, so a struck pad keeps its striker and a roll stays a roll
+        is TerraPatch -> patch.render(v)
         // THUMP's and ONSET's kicks take the same contact law (a shallower
         // pitch drop, a quieter and duller click); their other voices keep
         // their brightness macro or soften().

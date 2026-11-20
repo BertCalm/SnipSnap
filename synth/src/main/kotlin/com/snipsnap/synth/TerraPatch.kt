@@ -21,12 +21,20 @@ import com.snipsnap.json.JsonValue
  * written. A struck one writes `"version": [DRIVEN_VERSION]`. Every older
  * build refuses that by name, rather than playing plain TERRA and dropping
  * the striker on re-save.
+ *
+ * It may instead carry an [articulation]: a stick voice ([TerraSticks]) played
+ * as an authored roll or riser ([TerraRolls]) rather than one hit. A plain hit
+ * writes nothing new. A roll or riser writes `"version": [ARTICULATED_VERSION]`
+ * and its articulation, so an older build refuses it by name rather than
+ * playing one hit and dropping the roll on re-save. A pad is struck or
+ * articulated, never both.
  */
 class TerraPatch(
     override val name: String,
     val voice: TerraVoice,
     override val macros: Map<String, Float>,
     val striker: Striker? = null,
+    val articulation: TerraArticulation = TerraArticulation.HIT,
 ) : Patch {
 
     /**
@@ -69,22 +77,39 @@ class TerraPatch(
 
     init {
         Patches.validateMacros(this, Terra.macrosFor(voice))
+        require(articulation == TerraArticulation.HIT || voice in TerraSticks.VOICES) { "only TERRA's stick voices roll: $voice is a hit" }
+        require(articulation == TerraArticulation.HIT || striker == null) { "a TERRA pad is struck by another pad or articulated, not both" }
     }
 
     override val engine get() = ENGINE
     override val voiceName get() = voice.name
-    override fun render() = Terra.render(voice, macros, striker)
+    override fun render() = render(1f)
     override fun withMacros(macros: Map<String, Float>) = copy(macros = macros)
+
+    /**
+     * This pad at [velocity] as take [take], with [macros] in place of its own (a re-strike moves POS): the one
+     * place a TERRA pad is rendered, so its striker or its roll is never dropped. Take 0 at full velocity is [render].
+     */
+    fun render(velocity: Float, take: Int = 0, macros: Map<String, Float> = this.macros): com.snipsnap.audio.Snip =
+        if (articulation == TerraArticulation.HIT) Terra.render(voice, macros, striker, velocity, take)
+        else TerraRolls.render(voice, macros, articulation, velocity, take)
 
     fun copy(
         name: String = this.name,
         voice: TerraVoice = this.voice,
         macros: Map<String, Float> = this.macros,
         striker: Striker? = this.striker,
-    ): TerraPatch = TerraPatch(name, voice, macros, striker)
+        articulation: TerraArticulation = this.articulation,
+    ): TerraPatch = TerraPatch(name, voice, macros, striker, articulation)
 
     override fun toJsonValue(): JsonValue.Obj {
         val base = Patches.toJsonValue(this)
+        if (articulation != TerraArticulation.HIT) {
+            val obj = LinkedHashMap(base.entries)
+            obj["version"] = JsonValue.Num(ARTICULATED_VERSION.toDouble())
+            obj["articulation"] = JsonValue.Str(articulation.name)
+            return JsonValue.Obj(obj)
+        }
         val s = striker ?: return base
         val obj = LinkedHashMap(base.entries)
         obj["version"] = JsonValue.Num(DRIVEN_VERSION.toDouble())
@@ -97,19 +122,24 @@ class TerraPatch(
     }
 
     override fun equals(other: Any?): Boolean =
-        other is TerraPatch && name == other.name && voice == other.voice && macros == other.macros && striker == other.striker
+        other is TerraPatch && name == other.name && voice == other.voice && macros == other.macros && striker == other.striker &&
+            articulation == other.articulation
 
     override fun hashCode(): Int =
-        ((name.hashCode() * 31 + voice.hashCode()) * 31 + macros.hashCode()) * 31 + (striker?.hashCode() ?: 0)
+        (((name.hashCode() * 31 + voice.hashCode()) * 31 + macros.hashCode()) * 31 + (striker?.hashCode() ?: 0)) * 31 + articulation.hashCode()
 
     override fun toString(): String =
-        "TerraPatch(name=$name, voice=$voice, macros=$macros" + (striker?.let { ", striker=$it" } ?: "") + ")"
+        "TerraPatch(name=$name, voice=$voice, macros=$macros" + (striker?.let { ", striker=$it" } ?: "") +
+            (if (articulation == TerraArticulation.HIT) "" else ", articulation=$articulation") + ")"
 
     companion object {
         const val ENGINE = "TERRA"
 
         /** The version a struck patch writes. A plain one writes [Patches.VERSION] and today's bytes. */
         const val DRIVEN_VERSION = 2
+
+        /** The version a rolled or risen patch writes ([articulation]); an older build refuses it by name. */
+        const val ARTICULATED_VERSION = 3
 
         /** The longest source label a striker keeps; the chooser cuts a longer one before it is stored. */
         const val MAX_FROM_CHARS = 24
@@ -132,7 +162,21 @@ class TerraPatch(
         fun fromJsonValue(value: JsonValue): Patch {
             val obj = value.obj()
             val strikerField = obj["striker"]?.takeUnless { it is JsonValue.Null }
+            val articulationField = obj["articulation"]?.takeUnless { it is JsonValue.Null }
             val version = obj["version"]
+            if (obj["engine"] == JsonValue.Str(ENGINE) && version is JsonValue.Num && version.value == ARTICULATED_VERSION.toDouble()) {
+                if (strikerField != null) throw JsonException("a version-$ARTICULATED_VERSION TERRA patch is articulated, not struck")
+                val name = (articulationField as? JsonValue.Str)?.value ?: throw JsonException("a version-$ARTICULATED_VERSION TERRA patch names no articulation")
+                val articulation = TerraArticulation.entries.firstOrNull { it.name == name && it != TerraArticulation.HIT }
+                    ?: throw JsonException("unknown TERRA articulation $name")
+                val common = LinkedHashMap(obj)
+                common["version"] = JsonValue.Num(Patches.VERSION.toDouble())
+                return Patches.decode(JsonValue.Obj(common), ENGINE, { n -> voiceOf(n) }) { patchName, voice, macros ->
+                    if (voice !in TerraSticks.VOICES) throw JsonException("only TERRA's stick voices roll: $voice is a hit")
+                    TerraPatch(patchName, voice, macros, articulation = articulation)
+                }
+            }
+            if (articulationField != null) throw JsonException("a TERRA articulation needs version $ARTICULATED_VERSION")
             if (obj["engine"] == JsonValue.Str(ENGINE) && version is JsonValue.Num && version.value == DRIVEN_VERSION.toDouble()) {
                 if (strikerField == null) throw JsonException("a version-$DRIVEN_VERSION TERRA patch carries no driver")
                 val striker = readStriker(strikerField)
