@@ -283,7 +283,7 @@ Disclosed, not asked for: the groove's 0.5 to 2 kHz still sits near -22 dB again
 is the reference snare's crack and beater knock, not the bass; CLOTH's bounce snare is a deep body and wires with
 little between. Left for the owner to call.
 
-## Expansion: BLUE, SPEED, RAGA (round 0; SPEED and RAGA kept)
+## Expansion: BLUE, SPEED, RAGA (round 0 settled)
 
 Asked which adjacent kits would extend the collection, the owner chose all three proposed (2026-11-18): BLUE (jazz
 breaks off a record), SPEED (sped-up breaks) and RAGA (Indian-record percussion). Nearest siblings and what differs:
@@ -442,8 +442,14 @@ break (`breakNotes`: sixteenths swung at 58%, the ride on eighths, the kick at 1
 brushes on two and four, no shaker); the triplet pockets trotted like a cowboy clip-clop at 90 and stay rendered for
 the record. Round 0's groove (`blueNotes`) is removed from the generator. The ride's fade is 0.5 s (40 dB down at
 0.77 s), the longer of round 0k's two. Round 0l's fresher print cleared the muffled room: "Ok, sounds fine now" (the
-owner, 2026-11-20, of round 0m). Still open: whether SPEED's 1.35 speed-up is right, subtler or more extreme, and
-whether RAGA's tabla leads or sits under the kick and snare.
+owner, 2026-11-20, of round 0m).
+
+**Round 0 settled for all three.** "Yes on Speed, Yes on raga" (the owner, 2026-11-20, to "is SPEED's speed-up right?"
+and "should RAGA's tabla lead?"). SPEED keeps 1.35 (45 rpm over 33 1/3). RAGA's tabla already leads: on dry stems on one
+scale, the dayan and bayan together sit 6.8 dB over the thud kick and slap snare (4.6 dB by plain level; the weighting
+is a 60 Hz high-pass and a shelf over 1.5 kHz, roughly as loudness is heard), and the dholak 3 dB under the tabla, so
+the round-0 balance stands. Next: BLUE, SPEED and RAGA as kits on the FRESH TAPE SKINS shelf, with velocity zones and
+round robin proved through saving, playback and export, as the first four were.
 
 [Expansion round 0 listening page](https://claude.ai/artifact/Q3rZ8po8ZaeJs9E4tNd86s) (private to the owner; what is
 decided and the three open questions at the top, then BLUE's history, SPEED and RAGA).
