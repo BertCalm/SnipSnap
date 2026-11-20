@@ -16,7 +16,7 @@ object LibrationKeys {
     )
     data class Rendered(val note: KeyNote, val diagnostics: Diagnostics)
 
-    fun supports(patch: LibrationPatch): Boolean = patch.model == 3 && patch.voice in Libration.KEPT_VOICES
+    fun supports(patch: LibrationPatch): Boolean = patch.model == 3 && patch.voice in Libration.CLOUD_VOICES
     fun isHeld(hold: Float): Boolean = hold == 1f
     fun drumClass(voice: LibrationVoice, macros: Map<String, Float>): DrumClass =
         if (isHeld(macros["HOLD"] ?: 0f)) DrumClass.LOOP else Libration.drumClassFor(voice, macros)

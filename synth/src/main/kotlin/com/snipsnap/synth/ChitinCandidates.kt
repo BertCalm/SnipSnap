@@ -5,7 +5,8 @@ import kotlin.math.*
 import kotlin.random.Random
 
 /**
- * Candidate CHITIN voices awaiting a listening verdict. SHELL and WING both *mix* the synced pair
+ * The CHITIN voices built for chitin-voices-1: HUSK, STING, HUM and PINCER were kept (20 Nov 2026);
+ * GLINT is still a candidate. SHELL and WING both *mix* the synced pair
  * and add the phaser's correction to it. Each candidate reads a part of that same model the kept
  * voices leave unused:
  *
@@ -29,7 +30,7 @@ internal object ChitinCandidates {
         ChitinVoice.GLINT -> listOf(.5f, .45f, .60f, .35f, .55f, .55f, .30f)
         ChitinVoice.HUM -> listOf(.5f, .35f, .50f, .50f, .70f, .30f, .35f)
         ChitinVoice.PINCER -> listOf(.5f, .55f, .32f, .40f, .75f, .55f, .20f)
-        else -> error("$voice is a kept CHITIN voice")
+        else -> error("$voice mixes the synced pair")
     }
 
     /** Two octaves upward from here, as for the kept voices. */
@@ -37,7 +38,7 @@ internal object ChitinCandidates {
         ChitinVoice.HUSK, ChitinVoice.HUM -> 36
         ChitinVoice.STING, ChitinVoice.GLINT -> 48
         ChitinVoice.PINCER -> 24
-        else -> error("$voice is a kept CHITIN voice")
+        else -> error("$voice mixes the synced pair")
     }
 
     /** The synced pair and the root sine, kept apart. [width] is the master pulse's duty cycle. */

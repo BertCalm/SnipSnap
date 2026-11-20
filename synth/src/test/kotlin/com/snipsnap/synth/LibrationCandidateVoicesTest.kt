@@ -11,14 +11,15 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 /**
- * Candidate voices for listening round libration-voices-1. Each reads a part of the solved
- * trajectories the kept cloud discards: CHIME when a body crosses its axis, STRUM when it leaves,
- * ROTOR the frame's own rotation. HOLLOW is the spare: odd-only partial tables on the kept mapping.
- * Nothing here is heard. The kept renders are pinned below against the build before this round.
+ * The voices built for listening round libration-voices-1 and kept in it (20 Nov 2026, all four KEEP,
+ * range and touch). Each reads a part of the solved trajectories the cloud discards: CHIME when a body
+ * crosses its axis, STRUM when it leaves, ROTOR the frame's own rotation; HOLLOW puts odd-only partial
+ * tables on the cloud's mapping. The cloud voices' renders are pinned below against the build before
+ * this round, and the heard renders of the four in `libration/kept-voices-v1.sha256`.
  */
 class LibrationCandidateVoicesTest {
     private val M = CandidateVoiceMeasures
-    private val candidates = LibrationVoice.entries.filter { it !in Libration.KEPT_VOICES }
+    private val candidates = LibrationVoice.entries.filter { it !in Libration.CLOUD_VOICES }
     private val notes = listOf(36, 48, 60, 72, 84)
     private val short = Libration.Options(seconds = 2.0)
 
@@ -33,13 +34,20 @@ class LibrationCandidateVoicesTest {
         Libration.probe(voice, macros, midi, velocity, options).samples.samples
 
     @Test
-    fun `candidates are appended, finite only and offered nowhere`() {
+    fun `the four kept voices are appended, offered with their heard preset and finite only`() {
         assertEquals(listOf(LibrationVoice.CHIME, LibrationVoice.STRUM, LibrationVoice.ROTOR, LibrationVoice.HOLLOW), candidates)
-        assertEquals(LibrationVoice.entries.take(3), Libration.KEPT_VOICES)
-        assertTrue(LibrationPresets.all().all { it.voice in Libration.KEPT_VOICES }, "a candidate has a factory preset")
-        assertTrue(LibrationKits.patches().all { it.voice in Libration.KEPT_VOICES }, "a candidate is on the starter kit")
+        assertEquals(LibrationVoice.entries.take(3), Libration.CLOUD_VOICES)
+        assertEquals(LibrationVoice.entries, Libration.KEPT_VOICES)
+        // No new starter: the LIBRATION starter is still the cloud bank.
+        assertTrue(LibrationKits.patches().all { it.voice in Libration.CLOUD_VOICES }, "a new voice is on the starter kit")
         for (voice in candidates) {
-            assertTrue(Presets.forVoice("LIBRATION", voice.name).isEmpty(), "$voice reaches the preset picker")
+            // One factory preset: default controls at C3, the default touch and the six-second note, as heard.
+            val preset = LibrationPatch(voice.name, voice, Libration.defaults(voice), midi = 48)
+            assertEquals(listOf(preset), LibrationPresets.forVoice(voice))
+            assertEquals(listOf<Patch>(preset), Presets.forVoice("LIBRATION", voice.name))
+            assertTrue(preset in Presets.all())
+            assertEquals(.8f, preset.velocity)
+            assertEquals(6.0, preset.sourceSeconds)
             assertEquals(Libration.macrosFor(LibrationVoice.GATHER).map { it.name }, Libration.macrosFor(voice).map { it.name })
             val patch = LibrationPatch("Candidate", voice, Libration.defaults(voice) + ("WANDER" to .3f), midi = 55,
                 velocity = .6f, sourceSeconds = .5)
@@ -176,9 +184,9 @@ class LibrationCandidateVoicesTest {
     }
 
     @Test
-    fun `the kept voices render exactly what they rendered before the candidates`() {
+    fun `the cloud voices render exactly what they rendered before the candidates`() {
         val lines = ArrayList<String>()
-        for (voice in Libration.KEPT_VOICES) {
+        for (voice in Libration.CLOUD_VOICES) {
             for (midi in listOf(43, 60)) for (v in listOf(.4f, .8f)) lines +=
                 "LIBRATION ${voice.name} model 3 seconds .8 midi $midi v $v " +
                     M.hash(Libration.render(voice, emptyMap(), midi, v, 3, .8).samples)
@@ -193,10 +201,45 @@ class LibrationCandidateVoicesTest {
         assertEquals(KEPT_RENDERS, M.hash(lines), lines.joinToString("\n"))
     }
 
+    @Test
+    fun `every heard render of the four kept voices hashes as it was heard`() {
+        val pinned = KeptVoicePins.read("/libration/kept-voices-v1.sha256")
+        val cases = librationKeptCases()
+        assertEquals(4 * 7, cases.size)
+        assertEquals(cases.map { it.first }.toSet(), pinned.keys)
+        for ((id, patch) in cases) assertEquals(pinned.getValue(id), KeptVoicePins.pin(patch.render().samples), id)
+    }
+
     private companion object {
         /** SHA-256 over the 27 lines above, taken from the build before this round (fd9cab169). */
         const val KEPT_RENDERS = "f484e0dec95d8418883a0abc0d9a100cbbd336899c189ada70aa2a64fdea6226"
         /** Level-matched third-octave change a touch step must make to count as a change of tone. */
         const val TOUCH_DB = .5
     }
+}
+
+/**
+ * The renders the owner kept in libration-voices-1 (20 Nov 2026), from each voice's preset: the range
+ * clip (C2, C3, C5 and C6 at the default touch .8; C3 is the preset) and the touch clip (C4 at .35, .7
+ * and 1). The clips were joined from exactly these renders.
+ */
+internal fun librationKeptCases(): List<Pair<String, LibrationPatch>> = LibrationVoice.entries
+    .filter { it !in Libration.CLOUD_VOICES }.flatMap { voice ->
+        val preset = LibrationPresets.forVoice(voice).single()
+        val id = voice.name.lowercase()
+        listOf("$id-note-36" to preset.copy(midi = 36), "$id-base" to preset,
+            "$id-note-72" to preset.copy(midi = 72), "$id-note-84" to preset.copy(midi = 84)) +
+            listOf("soft" to .35f, "medium" to .7f, "hard" to 1f).map { (touch, v) -> "$id-touch-$touch" to preset.copy(midi = 60, velocity = v) }
+    }
+
+/** Per-render pins: id, frames and the SHA-256 of the float samples (little-endian). */
+internal object KeptVoicePins {
+    fun pin(x: FloatArray): String {
+        val b = java.nio.ByteBuffer.allocate(x.size * 4).order(java.nio.ByteOrder.LITTLE_ENDIAN)
+        x.forEach { b.putFloat(it) }
+        return "${x.size} " + java.security.MessageDigest.getInstance("SHA-256").digest(b.array()).joinToString("") { "%02x".format(it) }
+    }
+    fun read(resource: String): Map<String, String> = requireNotNull(KeptVoicePins::class.java.getResourceAsStream(resource)) { resource }
+        .bufferedReader().readLines().filterNot { it.startsWith("#") || it.isBlank() }
+        .associate { it.substringBefore(' ') to it.substringAfter(' ') }
 }

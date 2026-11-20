@@ -1,5 +1,8 @@
 # Libration — finite instrument
 
+LIBRATION has seven voices: GATHER, TWINS and DEPARTURE (below), and CHIME, STRUM, ROTOR and HOLLOW, kept in
+libration-voices-1 on 20 Nov 2026 (see "Kept voices" at the end; held ROTOR and HOLLOW are still open).
+
 This milestone adapts the supplied Libration engineering proposal to SnipSnap's offline
 Kotlin synthesis path. It implements GATHER, TWINS and DEPARTURE for an initial listening
 study. Model 3 develops those three voices into twelve finite presets, playability
@@ -376,13 +379,25 @@ examples LOOP; their engine intent is TONAL and their WAVs play once.
   the saved recipe independent. The phone benchmark separates those gains from
   the still-expensive fresh render, so the next speed decision has evidence.
 
-## Candidate voices: CHIME, STRUM, ROTOR, HOLLOW (round libration-voices-1, 2026-11-20)
+## Kept voices: CHIME, STRUM, ROTOR, HOLLOW (round libration-voices-1, 2026-11-20)
 
-Status: **built, measured, unheard**. The melodic gate asks for six voices and LIBRATION has three. Four
-candidates are appended to `LibrationVoice` after DEPARTURE, so saved names and ordinals do not move.
-`Libration.KEPT_VOICES` is the three voices players are offered; the candidates have no preset, kit or starter,
-and the kept renders (finite models 1 to 3, held, and presets) are pinned byte for byte in
-`LibrationCandidateVoicesTest`. The owner needs to keep at least three. The code is `LibrationCandidates.kt`.
+Status: **kept by ear**. Round libration-voices-1 (20 Nov 2026): CHIME, STRUM, ROTOR and HOLLOW all KEEP, on
+both the range clip (C2, C3, C5, C6 at the default touch) and the touch clip (C4 soft, medium, hard), no notes.
+LIBRATION now has seven voices.
+
+They are appended to `LibrationVoice` after DEPARTURE, so saved names and ordinals do not move.
+`Libration.KEPT_VOICES` is all seven, and the app's voice picker reads it. `Libration.CLOUD_VOICES` is GATHER,
+TWINS and DEPARTURE: the cloud renderer, and the only voices with a held instrument, touch keys, keygroups and
+the starter kit. Each new voice has one factory preset, named after it: its default controls at C3, the
+default touch (.8) and the six-second note, which is the C3 note of its heard range clip. There is no new
+starter; the LIBRATION starter is unchanged. The heard renders (the four range notes and the three touches of
+each voice, 28 in all) are pinned in `libration/kept-voices-v1.sha256`, and the cloud voices' renders (finite
+models 1 to 3, held, and presets) are pinned against the build before the round, both in
+`LibrationCandidateVoicesTest`. The code is `LibrationCandidates.kt` (it keeps its round-time name).
+
+**Still open: held ROTOR and HOLLOW.** ROTOR and HOLLOW are sustained voices but are finite only for now: a
+held (HOLD) version of each still has to be built and heard before either counts as a held instrument. CHIME
+and STRUM are struck and are complete as finite notes.
 
 GATHER, TWINS and DEPARTURE are one cloud renderer at three settings of REGION. Each candidate reads something in
 the solved trajectories that the cloud never uses.
@@ -411,12 +426,12 @@ rounded onset of 2 to 6.5 ms (shorter for a harder touch), and the last half sec
 fade. Touch changes tone in each: mallet hardness and upper bar modes (CHIME), pluck position and slope (STRUM),
 pipe balance, speech and a short second-harmonic ping (ROTOR), upper odd partials and speech (HOLLOW).
 
-**Finite only.** The held instrument (`LibrationHeld`), the touch keys and the keygroup maker refuse the candidates
-(`LibrationKeys.supports`). ROTOR and HOLLOW are sustained voices, so a kept ROTOR or HOLLOW needs a held version
-before it can count as a held instrument; CHIME and STRUM are struck and are complete as finite notes.
+**Finite only.** The held instrument (`LibrationHeld`), the touch keys and the keygroup maker refuse the four
+(`LibrationKeys.supports`), so MAKE INSTRUMENT stays off for them. ROTOR and HOLLOW are sustained voices, so
+their held versions are open (above); CHIME and STRUM are struck and are complete as finite notes.
 RESONANCE is the ring length for CHIME and STRUM and the release length for ROTOR and HOLLOW.
 
-Measured (Kotlin, `LibrationCandidateVoicesTest`; nothing here is heard): finite, under the .94 ceiling,
+Measured before the round (Kotlin, `LibrationCandidateVoicesTest`): finite, under the .94 ceiling,
 deterministic, silent at zero velocity, first sample closed and last half second faded at C2 to C6 and three
 touches, and at every family with one body or the full swarm. Root within 1 cent at C2 to C6 for all four. At
 least 3.7 dB from every other voice by level-matched third-octave shape at C3 and C4: the nearest pair is CHIME and
@@ -424,7 +439,7 @@ STRUM at 14.0 dB (C4), and the nearest candidate to a kept voice is CHIME to GAT
 touch steps (soft to medium, medium to hard): CHIME 4.5 and 3.9 dB, STRUM 4.1 and 4.9 dB, ROTOR 2.5 and 2.0 dB,
 HOLLOW 1.7 and 1.2 dB. ROTOR's sixth partial swells five times in 1.6 s. A candidate note renders in about .3 s.
 
-Known weak spots, for the listening round: CHIME's afterstrikes come in groups (about .2 to .6 s, 2 to 2.9 s and
+Weak spots named before the round (the owner kept all four with no note on them): CHIME's afterstrikes come in groups (about .2 to .6 s, 2 to 2.9 s and
 4.1 to 5 s after the strike at the default), which may read as a pattern; ROTOR's turn is a fixed 2.9 Hz on the
 triangles, with only the pipes' drift against each other to keep it from sounding like a motor, and its tall pipes
 swing by 12 dB; HOLLOW is a recolouring of the kept cloud.

@@ -14,7 +14,7 @@ class LibrationHeldTest {
         Libration.defaults(voice) + mapOf("SWARM" to .3f, "RESONANCE" to .7f))
 
     @Test fun `continuous source modal and conditioning state recur at all three voices`() {
-        for (voice in Libration.KEPT_VOICES) {
+        for (voice in Libration.CLOUD_VOICES) {
             val p = LibrationKeys.Session().probe(patch(voice))
             println("LIBRATION $voice seam=${p.seamError} cycle=${p.cycleError} phase=${p.phaseError} state=${p.stateError} root=${p.rootCents} raw=${p.rawPeak} renderMs=${p.renderMilliseconds}")
             assertTrue(p.note.loopStartFrame > p.loop.size)
@@ -39,7 +39,7 @@ class LibrationHeldTest {
     }
 
     @Test fun `dense mixed families close at register edges and maximum memory without losing their root`() {
-        for (voice in Libration.KEPT_VOICES) for (midi in listOf(36, 84)) {
+        for (voice in Libration.CLOUD_VOICES) for (midi in listOf(36, 84)) {
             val region = when (voice) {
                 LibrationVoice.GATHER -> .125f
                 LibrationVoice.TWINS -> .875f
@@ -63,7 +63,7 @@ class LibrationHeldTest {
     }
 
     @Test fun `bright upper notes agree in spectral power with a sixteen times reference`() {
-        for (voice in Libration.KEPT_VOICES) {
+        for (voice in Libration.CLOUD_VOICES) {
             val source = patch(voice).copy(midi = 84, velocity = 1f, macros = patch(voice).macros +
                 mapOf("WANDER" to 1f, "NUDGE" to 1f, "RESONANCE" to 1f))
             val session = LibrationKeys.Session()

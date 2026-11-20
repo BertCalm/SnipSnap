@@ -6,8 +6,8 @@ import com.snipsnap.audio.Snip
 import kotlin.math.*
 import kotlin.random.Random
 
-/** SHELL and WING are the kept voices. The entries after them are candidates awaiting a listening
- * verdict; they are appended so saved names and ordinals never move. */
+/** SHELL and WING were kept first. HUSK, STING, HUM and PINCER were kept in round chitin-voices-1
+ * (20 Nov 2026); GLINT is still a candidate. They are appended so saved names and ordinals never move. */
 enum class ChitinVoice { SHELL, WING, HUSK, STING, GLINT, HUM, PINCER }
 
 internal data class ChitinDiagnostics(val rawPeak: Double, val rawDc: Double, val filterPeak: Double,
@@ -20,8 +20,11 @@ internal data class ChitinRender(val snip: Snip, val raw: FloatArray, val before
  * step is reserved. No random modulation, samples or extra rack processing. */
 object Chitin {
     const val MODEL_VERSION=1
-    /** The voices players are offered. Candidates have no preset, kit or starter. */
-    val KEPT_VOICES=listOf(ChitinVoice.SHELL,ChitinVoice.WING)
+    /** The voices players are offered. GLINT is a candidate: no preset, kit or picker entry. */
+    val KEPT_VOICES=listOf(ChitinVoice.SHELL,ChitinVoice.WING,ChitinVoice.HUSK,ChitinVoice.STING,ChitinVoice.HUM,ChitinVoice.PINCER)
+    /** The voices that mix the synced pair (the original renderer and its twelve colours); the others are
+     * rendered by ChitinCandidates.kt. */
+    val MIXED_VOICES=listOf(ChitinVoice.SHELL,ChitinVoice.WING)
     // A pitched attack precedes the shared sweep; a fast sync chirp at note-on
     // otherwise becomes broadband percussion in the classifier head window.
     internal const val MORPH_START_SECONDS=.08
@@ -90,7 +93,7 @@ object Chitin {
     internal fun inspect(voice: ChitinVoice,macros: Map<String,Float> = emptyMap(),velocity: Float=1f,
                          protected: Boolean=true, sourceMorph: Boolean=true, phaseMorph: Boolean=true): ChitinRender {
         val started=System.nanoTime(); val p=plan(voice,macros,velocity)
-        if(voice !in KEPT_VOICES) return ChitinCandidates.inspect(p,started)
+        if(voice !in MIXED_VOICES) return ChitinCandidates.inspect(p,started)
         val rate=Dsp.RATE*Dsp.OVERSAMPLE
         val wing=voice==ChitinVoice.WING
         val source=ChitinSource.render(p.frames*4,rate,p.root,!wing, ratio = { t -> p.ratio(if(sourceMorph) t else 0.0) })

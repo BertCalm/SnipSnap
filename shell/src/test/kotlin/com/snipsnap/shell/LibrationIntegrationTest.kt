@@ -30,7 +30,7 @@ class LibrationIntegrationTest {
             val edited = Libration.KEPT_VOICES.mapIndexed { i, voice ->
                 val factory = Presets.forVoice(LibrationPatch.ENGINE, voice.name).first() as LibrationPatch
                 assertIs<UserPresets.Check.Factory>(UserPresets.check(factory.name, factory.engine, voice.name, emptyList()))
-                val patch = factory.copy(name = "MY ${voice.name}", midi = 43 + i * 7,
+                val patch = factory.copy(name = "MY ${voice.name}", midi = 43 + i * 5,
                     sourceSeconds = .37 + i * .1, velocity = .35f,
                     macros = factory.macros + ("WANDER" to .61f))
                 UserPresets.save(shelf, patch, nowMillis = 123L)

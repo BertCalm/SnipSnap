@@ -23,10 +23,15 @@ object ChitinPresets {
         p(ChitinVoice.WING,"METAL FLUTTER",.95f,.72f,.95f,1f,.98f,.48f),
         p(ChitinVoice.WING,"SOFT LANDING",.18f,.25f,.50f,.42f,.25f,.65f),
     )
+    /** One preset per voice kept in chitin-voices-1 (20 Nov 2026): the voice's default controls (TUNE .5,
+     * the middle of its two octaves) at full touch, the middle note of its heard range clip. GLINT, still
+     * a candidate, has none. */
+    private val voices = listOf(ChitinVoice.HUSK, ChitinVoice.STING, ChitinVoice.HUM, ChitinVoice.PINCER)
+        .map { ChitinPatch(it.name, it, Chitin.defaults(it)) }
     fun forVoice(voice: ChitinVoice): List<ChitinPatch> = when(voice) {
         ChitinVoice.SHELL -> shell
         ChitinVoice.WING -> wing
-        else -> emptyList()
+        else -> voices.filter { it.voice == voice }
     }
-    fun all(): List<ChitinPatch> = shell + wing
+    fun all(): List<ChitinPatch> = shell + wing + voices
 }

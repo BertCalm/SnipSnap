@@ -34,7 +34,7 @@ object LibrationAuditionGenerator {
     private fun scaled(s: Snip, gain: Double) = s.copy(samples = FloatArray(s.samples.size) { (s.samples[it] * gain).toFloat() })
     private fun cases(): List<Case> {
         val cases = mutableListOf<Case>()
-        for (voice in Libration.KEPT_VOICES) {
+        for (voice in Libration.CLOUD_VOICES) {
             val id = voice.name.lowercase()
             val title = id.replaceFirstChar(Char::uppercase)
             val patch = LibrationPresets.references().single { it.voice == voice }

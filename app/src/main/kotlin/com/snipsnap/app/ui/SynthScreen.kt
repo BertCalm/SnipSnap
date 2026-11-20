@@ -6708,6 +6708,8 @@ private enum class Engine {
 
     fun voices(): List<Enum<*>> = when (this) {
         SPLAY -> SplayVoice.entries
+        // SHELL and WING, then HUSK, STING, HUM and PINCER, kept in chitin-voices-1 (20 Nov 2026).
+        // GLINT is still a candidate and is not offered.
         CHITIN -> Chitin.KEPT_VOICES
         THUMP -> ThumpVoice.entries
         SCANNED_CHAIN -> ScannedChainVoice.entries
@@ -6791,6 +6793,8 @@ private enum class Engine {
         BELLOWS -> BellowsVoice.entries
         APSIS -> ApsisVoice.entries
         OVEN -> OvenVoice.entries
+        // GATHER, TWINS and DEPARTURE, then CHIME, STRUM, ROTOR and HOLLOW, kept in libration-voices-1
+        // (20 Nov 2026). The four new ones are finite only: MAKE INSTRUMENT stays off for them.
         LIBRATION -> Libration.KEPT_VOICES
         // BRUSH, WOOD and TINE were kept in accord-native-1; REED, COURSE, ESCAPEMENT and BELL
         // joined after them once the owner kept round accord-voices-1 (19 Nov 2026).

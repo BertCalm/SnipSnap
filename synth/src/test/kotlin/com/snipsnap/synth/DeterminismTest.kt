@@ -628,7 +628,7 @@ class DeterminismTest {
 
     @Test
     fun `LIBRATION explicit held recipes replay byte identical loops through saved pad recipes`() {
-        for (voice in Libration.KEPT_VOICES) {
+        for (voice in Libration.CLOUD_VOICES) {
             val patch = LibrationPatch("Held recall canary", voice,
                 Libration.defaults(voice) + mapOf("SWARM" to .1f, "RESONANCE" to .35f, "HOLD" to 1f),
                 midi = 55, velocity = .35f, heldModel = LibrationKeys.MODEL_VERSION)

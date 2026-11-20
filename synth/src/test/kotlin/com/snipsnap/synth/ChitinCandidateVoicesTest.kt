@@ -12,15 +12,17 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 /**
- * Candidate voices for listening round chitin-voices-1. Each reads a part of the sync-and-phaser
+ * The voices built for listening round chitin-voices-1. Each reads a part of the sync-and-phaser
  * model that SHELL and WING leave unused: HUSK the phaser's correction alone, STING the product of
- * the synced pair, GLINT the slave bending the root sine's phase, HUM the master pulse's width.
- * PINCER is the spare: SHELL's source, plucked, with the excursion run backwards.
- * Nothing here is heard. The kept renders are pinned below against the build before this round.
+ * the synced pair, GLINT the slave bending the root sine's phase, HUM the master pulse's width,
+ * PINCER SHELL's source plucked with the excursion run backwards. The owner kept HUSK, STING, HUM and
+ * PINCER (20 Nov 2026, range and touch); GLINT is still a candidate ("missing glassiness"). SHELL and
+ * WING are pinned below against the build before this round, and the heard renders of the four in
+ * `chitin/kept-voices-v1.sha256`.
  */
 class ChitinCandidateVoicesTest {
     private val M = CandidateVoiceMeasures
-    private val candidates = ChitinVoice.entries.filter { it !in Chitin.KEPT_VOICES }
+    private val candidates = ChitinVoice.entries.filter { it !in Chitin.MIXED_VOICES }
 
     private fun hz(midi: Int) = 440.0 * 2.0.pow((midi - 69) / 12.0)
     private fun rms(x: FloatArray, from: Double, to: Double): Double {
@@ -34,14 +36,18 @@ class ChitinCandidateVoicesTest {
         Chitin.render(voice, macros + tune(voice, midi), velocity).samples
 
     @Test
-    fun `candidates are appended and offered nowhere`() {
+    fun `the new voices are appended, the kept four offered with their heard preset, GLINT nowhere`() {
         assertEquals(listOf(ChitinVoice.HUSK, ChitinVoice.STING, ChitinVoice.GLINT, ChitinVoice.HUM, ChitinVoice.PINCER), candidates)
-        assertEquals(ChitinVoice.entries.take(2), Chitin.KEPT_VOICES)
-        assertTrue(ChitinPresets.all().all { it.voice in Chitin.KEPT_VOICES }, "a candidate has a preset")
-        assertTrue(ChitinKits.patches().all { it.voice in Chitin.KEPT_VOICES }, "a candidate is on the kit")
+        assertEquals(ChitinVoice.entries.take(2), Chitin.MIXED_VOICES)
+        assertEquals(ChitinVoice.entries - ChitinVoice.GLINT, Chitin.KEPT_VOICES)
+        assertTrue(ChitinPresets.all().none { it.voice == ChitinVoice.GLINT }, "the candidate GLINT has a preset")
+        // No new starter: the CHITIN kit is still SHELL and WING.
+        assertTrue(ChitinKits.patches().all { it.voice in Chitin.MIXED_VOICES }, "a new voice is on the kit")
         assertEquals(listOf(36, 48, 48, 36, 24), candidates.map { low(it) })
         for (voice in candidates) {
-            assertTrue(ChitinPresets.forVoice(voice).isEmpty(), "$voice has presets")
+            // One preset per kept voice: default controls (the middle of its range) at full touch, as heard.
+            assertEquals(if (voice == ChitinVoice.GLINT) emptyList() else listOf(ChitinPatch(voice.name, voice, Chitin.defaults(voice))),
+                ChitinPresets.forVoice(voice))
             assertEquals(Chitin.macrosFor(ChitinVoice.SHELL).map { it.name }, Chitin.macrosFor(voice).map { it.name })
             assertEquals(low(voice) + 12, Chitin.rootMidi(voice))
             val patch = ChitinPatch("Candidate", voice, Chitin.defaults(voice) + ("BITE" to .3f))
@@ -180,15 +186,29 @@ class ChitinCandidateVoicesTest {
     }
 
     @Test
-    fun `the kept voices render exactly what they rendered before the candidates`() {
+    fun `SHELL and WING render exactly what they rendered before the candidates`() {
         val lines = ArrayList<String>()
-        for (voice in Chitin.KEPT_VOICES) {
+        for (voice in Chitin.MIXED_VOICES) {
             for (tune in listOf(0f, .5f, 1f)) for (v in listOf(.4f, 1f)) lines +=
                 "CHITIN ${voice.name} TUNE $tune v $v " + M.hash(Chitin.render(voice, mapOf("TUNE" to tune), v).samples)
             for (p in ChitinPresets.forVoice(voice)) lines += "CHITIN preset ${p.name} ${M.hash(p.render().samples)}"
         }
         assertEquals(24, lines.size)
         assertEquals(KEPT_RENDERS, M.hash(lines), lines.joinToString("\n"))
+    }
+
+    @Test
+    fun `every heard render of the four kept voices hashes as it was heard`() {
+        val pinned = KeptVoicePins.read("/chitin/kept-voices-v1.sha256")
+        val cases = chitinKeptCases()
+        assertEquals(4 * 6, cases.size)
+        assertEquals(cases.map { it.first }.toSet(), pinned.keys)
+        for ((id, render) in cases) assertEquals(pinned.getValue(id), KeptVoicePins.pin(render().samples), id)
+        // The preset is the range clip's middle note and the touch clip's hard note.
+        for (voice in Chitin.KEPT_VOICES - Chitin.MIXED_VOICES.toSet()) {
+            val preset = ChitinPresets.forVoice(voice).single()
+            assertContentEquals(preset.render().samples, Chitin.render(voice, mapOf("TUNE" to .5f), 1f).samples)
+        }
     }
 
     private companion object {
@@ -198,3 +218,20 @@ class ChitinCandidateVoicesTest {
         const val TOUCH_DB = .5
     }
 }
+
+/**
+ * The renders the owner kept in chitin-voices-1 (20 Nov 2026), from each voice's preset: the range clip
+ * (TUNE 0, .5, 19/24 and 1 at full touch; .5 is the preset) and the touch clip's soft (.35) and medium
+ * (.7) notes at TUNE .5; its hard note is the preset. The clips were joined from exactly these renders.
+ */
+internal fun chitinKeptCases(): List<Pair<String, () -> com.snipsnap.audio.Snip>> =
+    (Chitin.KEPT_VOICES - Chitin.MIXED_VOICES.toSet()).flatMap { voice ->
+        val preset = ChitinPresets.forVoice(voice).single()
+        val id = voice.name.lowercase()
+        val low = Chitin.midiFor(voice, 0f)
+        fun at(tune: Float): () -> com.snipsnap.audio.Snip = { preset.copy(macros = preset.macros + ("TUNE" to tune)).render() }
+        // A saved CHITIN patch plays at full touch; touch is the pad's velocity, given to the renderer.
+        fun touched(v: Float): () -> com.snipsnap.audio.Snip = { Chitin.render(voice, preset.macros, v) }
+        listOf("$id-note-$low" to at(0f), "$id-base" to { preset.render() }, "$id-note-${low + 19}" to at(19 / 24f),
+            "$id-note-${low + 24}" to at(1f), "$id-touch-soft" to touched(.35f), "$id-touch-medium" to touched(.7f))
+    }

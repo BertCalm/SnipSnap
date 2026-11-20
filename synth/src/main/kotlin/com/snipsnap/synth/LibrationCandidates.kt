@@ -6,7 +6,8 @@ import kotlin.math.*
 import kotlin.random.Random
 
 /**
- * Candidate LIBRATION voices awaiting a listening verdict. Each reads something in the solved
+ * The LIBRATION voices kept in libration-voices-1 (20 Nov 2026) that the cloud renderer does not
+ * play. (The file keeps its round-time name.) Each reads something in the solved
  * trajectories that the kept cloud never uses:
  *
  * - CHIME reads *when* each body crosses its equilibrium's axis and strikes a bar at that moment.
@@ -28,7 +29,7 @@ internal object LibrationCandidates {
         LibrationVoice.STRUM -> floatArrayOf(.5f, .45f, .60f, .80f, .50f)
         LibrationVoice.ROTOR -> floatArrayOf(0f, .50f, .15f, .60f, .35f)
         LibrationVoice.HOLLOW -> floatArrayOf(.75f, .45f, .20f, .70f, .40f)
-        else -> error("$voice is a kept LIBRATION voice")
+        else -> error("$voice is a cloud voice")
     }
 
     private fun smooth(x: Double): Double = x.coerceIn(0.0, 1.0).let { it * it * (3 - 2 * it) }
@@ -77,7 +78,7 @@ internal object LibrationCandidates {
             LibrationVoice.STRUM -> strum(lanes, hz, v, resonance, options.seconds)
             LibrationVoice.ROTOR -> rotor(lanes, hz, v, resonance, options.seconds)
             LibrationVoice.HOLLOW -> hollow(lanes, hz, v, resonance, options.seconds)
-            else -> error("$voice is a kept LIBRATION voice")
+            else -> error("$voice is a cloud voice")
         }
         cancelled()
         var peak = 0.0; var squares = 0.0

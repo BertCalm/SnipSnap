@@ -46,7 +46,7 @@ class LibrationPerformanceTest {
     }
 
     @Test fun `touch changes articulation after level matching while preserving a clear root`() {
-        for (voice in Libration.KEPT_VOICES) {
+        for (voice in Libration.CLOUD_VOICES) {
             val options = Libration.Options(seconds = .8)
             val physics = Libration.population(voice, emptyMap(), options)
             val soft = Libration.probe(voice, velocity = .3f, options = options, cached = physics)
@@ -76,9 +76,12 @@ class LibrationPerformanceTest {
 
     @Test fun `bank and starter retain complete finite recipes in the factory roster`() {
         val bank = LibrationPresets.all()
-        assertEquals(12, bank.size)
-        assertEquals(12, bank.map { it.name }.toSet().size)
-        for (voice in Libration.KEPT_VOICES) assertEquals(4, LibrationPresets.forVoice(voice).size)
+        assertEquals(16, bank.size)
+        assertEquals(16, bank.map { it.name }.toSet().size)
+        for (voice in Libration.CLOUD_VOICES) assertEquals(4, LibrationPresets.forVoice(voice).size)
+        // The voices kept in libration-voices-1 have one preset each, and the starter is the cloud bank alone.
+        for (voice in Libration.KEPT_VOICES - Libration.CLOUD_VOICES.toSet()) assertEquals(1, LibrationPresets.forVoice(voice).size)
+        assertEquals(LibrationPresets.cloud(), bank.filter { it.voice in Libration.CLOUD_VOICES })
         assertTrue(bank.all { it in Presets.all() })
         for (voice in Libration.KEPT_VOICES) {
             assertEquals(LibrationPresets.forVoice(voice), Presets.forVoice(LibrationPatch.ENGINE, voice.name))

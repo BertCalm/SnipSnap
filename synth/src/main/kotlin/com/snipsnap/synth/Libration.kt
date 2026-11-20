@@ -6,15 +6,20 @@ import java.util.concurrent.CancellationException
 import kotlin.math.*
 import kotlin.random.Random
 
-/** GATHER, TWINS and DEPARTURE are the kept voices. The entries after them are candidates awaiting a
- * listening verdict; they are appended so saved names and ordinals never move. */
+/** GATHER, TWINS and DEPARTURE were kept first. CHIME, STRUM, ROTOR and HOLLOW were kept in round
+ * libration-voices-1 (20 Nov 2026); they are appended so saved names and ordinals never move. */
 enum class LibrationVoice { GATHER, TWINS, DEPARTURE, CHIME, STRUM, ROTOR, HOLLOW }
 
 /** Finite instrument. Trajectories control voicing; they never receive audio feedback. */
 object Libration {
     const val MODEL_VERSION = 3
-    /** The voices players are offered. Candidates have no preset, kit, starter or held instrument. */
-    val KEPT_VOICES = listOf(LibrationVoice.GATHER, LibrationVoice.TWINS, LibrationVoice.DEPARTURE)
+    /** The voices players are offered: every voice, all kept by ear. */
+    val KEPT_VOICES = LibrationVoice.entries.toList()
+    /**
+     * The voices the cloud renderer plays. Only these have a held instrument, touch keys, keygroups and the
+     * starter kit; CHIME, STRUM, ROTOR and HOLLOW are finite notes (LibrationCandidates.kt).
+     */
+    val CLOUD_VOICES = listOf(LibrationVoice.GATHER, LibrationVoice.TWINS, LibrationVoice.DEPARTURE)
     const val MIN_MIDI = 36
     const val MAX_MIDI = 84
     const val CONTROL_RATE = 500
@@ -149,7 +154,7 @@ object Libration {
         val m = settled(voice, macros)
         val population = cached ?: population(voice, m, options, model)
         require(population.key == populationKey(voice, m, options, model)) { "stale LIBRATION trajectory cache" }
-        if (voice !in KEPT_VOICES) return LibrationCandidates.probe(voice, m, midi, velocity, options, population, began)
+        if (voice !in CLOUD_VOICES) return LibrationCandidates.probe(voice, m, midi, velocity, options, population, began)
         val particles = population.particles
         val hz = Keys.midiHz(midi).toDouble()
         val resonance = m.getValue("RESONANCE").toDouble()

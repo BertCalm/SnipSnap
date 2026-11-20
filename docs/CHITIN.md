@@ -1,6 +1,7 @@
 # CHITIN finite-note prototype
 
-CHITIN has two voices: SHELL is a pulse-root bass, WING a brighter saw-root lead.
+CHITIN has six voices: SHELL is a pulse-root bass, WING a brighter saw-root lead, and HUSK, STING, HUM
+and PINCER were kept in chitin-voices-1 (below); GLINT is a candidate.
 A shared excursion changes hard-sync harmonics, filter opening, preamp drive and
 six-stage phaser motion. The phaser's correction is high-passed on both sides to
 preserve the root. Its normalized lattice and feedback have an energy bound.
@@ -54,13 +55,25 @@ engineering spec's As built entry for the final repository test result.
 - A protected correction path keeps cancellation away from the bass root.
 - Finite notes provide a complete audition before periodic-state loop research.
 
-## Candidate voices: HUSK, STING, GLINT, HUM, PINCER (round chitin-voices-1, 2026-11-20)
+## New voices: HUSK, STING, HUM, PINCER kept; GLINT a candidate (round chitin-voices-1, 2026-11-20)
 
-Status: **built, measured, unheard**. The melodic gate asks for six voices and CHITIN has two. Five candidates
-are appended to `ChitinVoice` after WING, so saved names and ordinals do not move. `Chitin.KEPT_VOICES` is the two
-voices players are offered; the candidates have no preset or kit, and the kept renders (defaults across TUNE and
-touch, and all twelve candidate colours) are pinned byte for byte in `ChitinCandidateVoicesTest`, the first hash
-pin CHITIN has had. The owner needs to keep at least four. The code is `ChitinCandidates.kt`.
+Status: **four kept by ear, one to tweak**. Round chitin-voices-1 (20 Nov 2026): HUSK, STING, HUM and PINCER KEEP,
+on both the range clip (four notes over the voice's two octaves at full touch) and the touch clip (the middle note
+soft, medium, hard), no notes. GLINT: TWEAK, with the note "Missing glassiness" on both of its clips. CHITIN now
+has six voices: SHELL, WING, HUSK, STING, HUM and PINCER.
+
+The five are appended to `ChitinVoice` after WING, so saved names and ordinals do not move. `Chitin.KEPT_VOICES`
+is the six kept voices, and the app's voice picker reads it; GLINT stays a candidate, with no preset or kit, and
+is not offered. `Chitin.MIXED_VOICES` is SHELL and WING, the voices that mix the synced pair and carry the twelve
+colours. Each kept new voice has one preset, named after it: its default controls (TUNE .5, the middle of its two
+octaves) at full touch, the middle note of its heard range clip and the hard note of its touch clip. There is no
+new starter; the CHITIN kit is unchanged. The heard renders (four range notes plus the soft and medium touches of
+each voice, 24 in all) are pinned in `chitin/kept-voices-v1.sha256`, and SHELL and WING (defaults across TUNE and
+touch, and all twelve colours) are pinned against the build before the round, both in `ChitinCandidateVoicesTest`.
+The code is `ChitinCandidates.kt`.
+
+**No seamless HOLD for any CHITIN voice.** HOLD is a finite gate on all six (and on GLINT): its top step is one
+long note, not a loop. A seamless held CHITIN is still open.
 
 SHELL and WING both mix the synced pair, low-pass it and add the phaser's correction. Each candidate reads a part
 of that model the kept voices leave unused.
@@ -87,7 +100,7 @@ subtracting its mean would open the note with a step. The held part of HUSK, STI
 .41 Hz together, up to 16 %), so a long note is not a fixed loop of the phaser; renders stay deterministic. This
 is the one place a candidate departs from the kept rule of no modulation beyond the excursion.
 
-Measured (Kotlin, `ChitinCandidateVoicesTest`; nothing here is heard): finite, under the .99 ceiling, no offset,
+Measured before the round (Kotlin, `ChitinCandidateVoicesTest`): finite, under the .99 ceiling, no offset,
 phaser energy bound kept, deterministic and silent at zero velocity at all 32 corners of BITE, COLOR, PHASE, MORPH
 and PACE; every corner stays in the melodic classes except PINCER at COLOR 0 with MORPH and PACE at 1, a dark
 fast pluck the classifier calls a tom. First sample closed and the last 20 ms closed at the bottom,
@@ -98,5 +111,5 @@ and 4.2 dB (C4); next are HUM and PINCER at 5.3 dB (C2) and PINCER and SHELL at 
 steps: HUSK 4.1 and 2.7 dB, STING 2.3 and 2.1 dB, GLINT 5.3 and 3.8 dB, HUM 4.3 and 2.5 dB, PINCER 3.6 and 3.1 dB
 (the kept SHELL moves 1.7 dB from soft to hard, WING 5.0 dB).
 
-Known weak spots, for the listening round: STING is the closest to a kept voice (WING); HUSK's body is a bare sine,
+Weak spots named before the round (the owner's only note was GLINT's): STING is the closest to a kept voice (WING); HUSK's body is a bare sine,
 which may be too plain under the moving band; GLINT is close to a sine once the strike has passed (root share .79).
