@@ -5,11 +5,12 @@ BINZASARA, COWBELL, WATER_DRUM and FAN (the fan came in round 7). They live in `
 tables in `TerraSticksTables.kt`, and share TERRA's output stage, velocity and
 takes.
 
-**Status: kits round 1, not engine-complete.** The voices render from the app's
-engine, have provisional presets, play authored rolls and risers, and fill three
-genre kits on the shelf whose velocity and round robin are verified through save,
-export and playback. Nobody has heard the app's renders or played them on a phone
-or an MPC yet. See [Gates](#gates).
+**Status: sound approved, not engine-complete.** The owner approved the sound of
+the four kits, the fan and the darker soft edge stroke on 2026-11-20 ("Sounds
+good, I like", after the round-7 listening page), and `TerraStickKitsPinsTest`
+pins every pad's twelve zone samples as heard. Velocity and round robin are
+verified through save, export and playback. No phone or MPC has played the kits.
+See [Gates](#gates).
 
 ## The gesture
 
@@ -212,16 +213,16 @@ The listening page for this round is
 - **The fan's swish fits loosely in its attack** (7.5 dB): its quiet first 30 ms
   is fitted as part of the whole gesture.
 - **The soft edge stroke is an analogy:** it borrows the centre stroke's notes as
-  the plate's low modes. Nobody has heard it.
+  the plate's low modes. The owner approved how it sounds.
 - **TERRA DUSK has no granular processing.** The rack has none; REWIND and SMEAR
   stand in.
 - **The presets are provisional.** They were written from the prototype's
   rounds. Nobody has heard them from the app, so none is pinned.
-- **The owner's verdict on the app's renders is one first listen:** "These are
-  cool" (2026-11-20, kits round 1). No pad or kit is approved or pinned on that.
-  The fan, the soft edge stroke and TERRA DUSK have not been heard.
-- **The kits are provisional.** Their arrangements, levels and roll rates were
-  written from the prototype's rounds; none is pinned.
+- **The owner's verdicts on the app's renders:** "These are cool" (kits round 1),
+  then "Sounds good, I like" (round 7, all four kits, the fan and the soft edge
+  stroke), both 2026-11-20. The kits are pinned as heard; the presets are not.
+- **The forty presets are not pinned.** The kits are; the presets were written
+  from the prototype's rounds and have not had their own listen.
 - **The classifier files a few pads outside PERC:** the binzasara as CLAP, BON's
   small cymbal and slat snap as SNARE. Each pad's class is what the classifier
   hears, as in every TERRA kit.
@@ -236,8 +237,8 @@ Applied from [ENGINE_ACCEPTANCE_GATES](ENGINE_ACCEPTANCE_GATES.md).
 | Gate | Status |
 |---|---|
 | Melodic, keygroups, chord tools, STRUM | Not applicable: percussion voices on a drum engine |
-| Percussion: authored roll/riser | Implemented: ROLL and RISER on every stick voice, saved in the recipe, seven roll and riser pads across the kits. Not yet heard |
-| Drums: multiple distinct genre kits | Implemented: MATSURI, THUNDER, BON and the processed DUSK on the shelf, distinct lead voices and jobs. First three liked on a first listen; DUSK not yet heard |
+| Percussion: authored roll/riser | Pass: ROLL and RISER on every stick voice, saved in the recipe, rolls and risers in all four kits; sound approved 2026-11-20 |
+| Drums: multiple distinct genre kits | Pass: MATSURI, THUNDER, BON and the processed DUSK on the shelf, distinct lead voices and jobs; sound approved 2026-11-20 and pinned |
 | Velocity levels | Pass, automated: three timbral touches per pad, each softer one darker (`TerraStickKitsTest`), kept through shelf render, save and reload, MPC 3, MPC 2, SFZ and playback at all 127 velocities (`TerraStickKitsRoundTripTest`) |
 | Round robin | Pass, automated: four distinct takes per touch, dealt in turn over nine hits in playback and kept through save, MPC 3 and SFZ. MPC 2 keeps each zone's first take (owner's format limit) |
 | Hardware | Not attempted: no phone or MPC playback yet |
