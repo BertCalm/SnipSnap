@@ -71,7 +71,7 @@ object CausticCharactersAuditionGenerator {
     }
 
     private fun generate(repo: File, root: File, preserved: Map<String, Int>) {
-        check(CausticInstrument.KEPT_VOICES.map { it.name }.toSet() == families.map { it.voice }.toSet()) { "expected the four native CAUSTIC voices" }
+        check(CausticInstrument.HELD_VOICES.map { it.name }.toSet() == families.map { it.voice }.toSet()) { "expected the four native CAUSTIC voices" }
         val revision = provenance(repo)
         val cases = cases()
         check(cases.size == 42 && cases.map { it.id }.distinct().size == cases.size)

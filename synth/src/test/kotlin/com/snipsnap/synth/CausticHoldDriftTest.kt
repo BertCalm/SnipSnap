@@ -20,7 +20,7 @@ class CausticHoldDriftTest {
 
     @Test
     fun `a held key varies from strike to strike without repeating inside its loop, in tune, and closes`() {
-        for (voice in CausticInstrument.KEPT_VOICES) for (midi in listOf(36, 60, 84)) {
+        for (voice in CausticInstrument.HELD_VOICES) for (midi in listOf(36, 60, 84)) {
             val base = CausticSustain.loopFrameCount(midi, 1f)
             val still = CausticHeld.probe(voice, held(voice), midi, .75f, 2, 4, true, { false }, record = false, human = null)
             assertEquals(base, still.loop.frameCount, "$voice MIDI$midi still loop")
@@ -29,8 +29,9 @@ class CausticHoldDriftTest {
             val hz = HoldDriftProbes.hz(midi)
             val stillLevel = HoldDriftProbes.levelDb(HoldDriftProbes.tile(still.loop.samples.copyOf(hop * 100), CausticSustain.HUMAN_REPEATS), hz, hop = hop)
             assertTrue(HoldDriftProbes.recurrence(stillLevel) < .01, "$voice MIDI$midi: the still hold repeats every period, as judged")
+            // The stronger hand ships (fix-caustic-1, "stronger"); the modest one is still checked at C4.
             val humans = if (midi == 60) listOf("modest" to CausticSustain.HUMAN_MODEST, "stronger" to CausticSustain.HUMAN_STRONGER)
-                else listOf("modest" to CausticSustain.HUMAN_MODEST)
+                else listOf("stronger" to CausticSustain.HUMAN_STRONGER)
             for ((label, human) in humans) {
                 val p = CausticHeld.probe(voice, held(voice), midi, .75f, 2, 4, true, { false }, record = false, human = human)
                 val loop = p.loop.samples
@@ -54,17 +55,23 @@ class CausticHoldDriftTest {
                 // The variation is in the excitation, so the loudness of the hold stays where it was.
                 val stillRms = sqrt(still.loop.samples.sumOf { it.toDouble() * it } / still.loop.samples.size)
                 val rms = sqrt(loop.sumOf { it.toDouble() * it } / loop.size)
-                assertTrue(abs(20 * log10(rms / stillRms)) < 1.5, "$name level moved from the still hold: ${20 * log10(rms / stillRms)} dB")
+                // The stronger hand (kept, "stronger") lowers the low mallet roll a little more: 1.6 dB at C2.
+                assertTrue(abs(20 * log10(rms / stillRms)) < if (human == CausticSustain.HUMAN_STRONGER) 2.0 else 1.5, "$name level moved from the still hold: ${20 * log10(rms / stillRms)} dB")
             }
         }
     }
 
     @Test
-    fun `the instrument plays the modest hold, tells its true length and leaves a moving path alone`() {
-        for (voice in CausticInstrument.KEPT_VOICES) {
+    fun `the instrument plays the stronger hold, tells its true length and leaves a moving path alone`() {
+        // The owner kept the held keys with the note "stronger" (fix-caustic-1, 20 Nov 2026).
+        assertEquals(CausticSustain.HUMAN_STRONGER, CausticInstrument.HELD_HUMAN)
+        assertEquals(CausticSustain.Human(stroke = .22, pressureDb = 1.1, lateSeconds = .012), CausticInstrument.HELD_HUMAN)
+        for (voice in CausticInstrument.HELD_VOICES) {
             val note = CausticInstrument.keyNote(voice, held(voice))
-            val direct = CausticHeld.probe(voice, held(voice), 60, .75f, 2, 4, true, { false }, record = false, human = CausticSustain.HUMAN_MODEST)
-            assertContentEquals(direct.note.snip.samples, note.snip.samples, "$voice keyNote is the modest hold")
+            val direct = CausticHeld.probe(voice, held(voice), 60, .75f, 2, 4, true, { false }, record = false, human = CausticSustain.HUMAN_STRONGER)
+            assertContentEquals(direct.note.snip.samples, note.snip.samples, "$voice keyNote is the stronger hold")
+            assertContentEquals(direct.note.snip.samples, CausticInstrument.keyNotePlayed(voice, held(voice), 60, .75f,
+                human = CausticSustain.HUMAN_STRONGER).snip.samples, "$voice keyNote is the heard stronger segment's note")
             assertContentEquals(direct.loop.samples, CausticInstrument.renderLoop(voice, held(voice)).samples, "$voice loop pad")
             assertEquals(direct.loop.frameCount.toDouble() / Dsp.RATE, CausticInstrument.durationSeconds(voice, held(voice)), 1e-9)
             val moving = held(voice) + ("MOTION" to .5f)
@@ -75,7 +82,7 @@ class CausticHoldDriftTest {
 
     @Test
     fun `the humanized held keys are pinned`() {
-        val now = CausticInstrument.KEPT_VOICES.associateWith { CandidateVoiceProbes.hash(CausticInstrument.keyNote(it, held(it)).snip.samples) }
+        val now = CausticInstrument.HELD_VOICES.associateWith { CandidateVoiceProbes.hash(CausticInstrument.keyNote(it, held(it)).snip.samples) }
         for ((voice, hash) in now) println("CAUSTIC HELD PIN CausticVoice.${voice.name} to \"$hash\",")
         assertEquals(HELD_KEYS, now)
     }
@@ -131,14 +138,14 @@ class CausticHoldDriftTest {
         /** The quietest mover is held ALLOY, a drone: about .06 dB. The still hold measures 0. */
         const val MIN_RECURRENCE_DB = .03
         const val MIN_FROM_ANCHOR_DB = 2.0
-        /** With [CausticInstrument.HELD_HUMAN]: unheard until the owner judges clips CK1 to CK3. */
+        /** With [CausticInstrument.HELD_HUMAN], the stronger hand: the AFTER-stronger segments of clips CK1 to CK3, kept 20 Nov 2026. */
         val HELD_KEYS = mapOf(
-            CausticVoice.ALLOY to "9b65c3d8a6e6cf5f39dbb156ef01e6762c2ae0c2ec39552185eccd554c278a7b",
-            CausticVoice.HOLLOW_MALLET to "330f7c9ae56f54b170b04d2eec7fe8db357bdbb50b52d3a05e2d634c0dcbca80",
-            CausticVoice.RUBBED_RING to "0d795246e73b0391e464385edc3da49b7d61a57a57406ab7178fc369ba6b53b8",
-            CausticVoice.TRAVELLING_CATCHES to "69fa72b7e9945d5b22ee7b8a346e7de1c1c8e9f4c51a9bc77b820a8988a84427",
+            CausticVoice.ALLOY to "fe079335e5fdb01aeff98b4342fd87b94440b13bf94fde9fa4c1b300a444d4aa",
+            CausticVoice.HOLLOW_MALLET to "47753f413feacd667cf3914a4f866384012d1e4c85883bc0da936feccbb1417b",
+            CausticVoice.RUBBED_RING to "ee7b50323e63ecaad63e8e0710be99159f0c7c7e7cc2562a301def217613760f",
+            CausticVoice.TRAVELLING_CATCHES to "5494e84dd7f5113e1699cf0b6c428619b9a7f514f93f33e1da9ecb3ff88583b0",
         )
-        /** Every factory preset. Four ALLOY presets were re-voiced on the 20 Nov 2026 verdict (clip CK4); the other seven are the kept bytes. */
+        /** Every factory preset. Four ALLOY presets were re-voiced on the 20 Nov 2026 verdict (clip CK4); the other seven are the kept bytes; the last three were added when their voices were kept. */
         val PRESETS = mapOf(
             "Fuller Body" to "70eac0b66524dfa32ddff9aae2d71803edc9930e8adf62bc36ed986086a383fd",
             "Preferred Alloy" to "30dbdf5bfeb86a02beb41fd33d6a59a36c7fbe7391fed303d837a75bb1be6be1",
@@ -151,6 +158,10 @@ class CausticHoldDriftTest {
             "Hollow Mallet" to "02a95d42d999084859b818cb87a104a5e14034c6e4edf83a0a1e7df774434f9d",
             "Rubbed Ring" to "643a6403aefec52c80480860fa057e9acb75a6ce140b2fec175d4476bce56ebc",
             "Travelling Catches" to "5ca5994d8c35011fa367b430cd50714d4853d0c907dec65f8cab0eb63f267ea8",
+            // Kept in caustic-voices-1: the default performance at C4, the medium note of clips CF2, CG2, CH2.
+            "Singing Bowl" to "546bce64dfc08ab2b5e127c3a1b46afded8c9182ee2913a456bdac2b64da3c6a",
+            "Bead Scatter" to "ad32d10e7139d19f0fb74744f182bee9855036a9cdc03d8322eaa26d380234fb",
+            "Thumb Tongue" to "fc493373edb25c31bf852f606f2f0e95c76351027edd420a8529b7e463ed40a4",
         )
     }
 }

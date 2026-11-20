@@ -21,9 +21,9 @@ class LatticePatchTest {
 
     @Test
     fun `original source voices keep their mechanism pitch and deliberate loop controls`() {
-        // Candidates are appended; the saved names and ordinals of the kept four never move.
+        // VANE, RAKE and BOW were appended (kept in lattice-voices-1); the saved names and ordinals of the first four never move.
         assertEquals(listOf("WARM", "PLUCK", "HOLLOW", "TRACE", "VANE", "RAKE", "BOW"), LatticeVoice.entries.map { it.name })
-        assertEquals(listOf("WARM", "PLUCK", "HOLLOW", "TRACE"), Lattice.KEPT_VOICES.map { it.name })
+        assertEquals(LatticeVoice.entries, Lattice.KEPT_VOICES)
         for (voice in originalVoices) {
             assertEquals(controls, Lattice.macrosFor(voice).map { it.name }, "$voice controls")
             assertEquals(controls.toSet(), Lattice.defaults(voice).keys)
@@ -186,7 +186,9 @@ class LatticePatchTest {
     fun `TRACE factory patches save their speed and finite hold without legacy geometry controls`() {
         val all = LatticePresets.all()
         val trace = LatticePresets.forVoice(LatticeVoice.TRACE)
-        assertEquals(15, all.size)
+        // Twelve source presets, three TRACE, then one each for VANE, RAKE and BOW (lattice-voices-1).
+        assertEquals(18, all.size)
+        assertEquals(listOf("Turning Vane", "Raked Bars", "Bowed Passage"), all.drop(15).map { it.name })
         assertEquals(all.size, all.map { it.name }.toSet().size)
         assertEquals(listOf("Ringing Trace", "Slow Trace", "Quick Trace"), trace.map { it.name })
         assertEquals(listOf(.5f, .25f, .75f), trace.map { it.macros.getValue("SPEED") })

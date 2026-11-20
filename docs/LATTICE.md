@@ -376,7 +376,7 @@ does not establish that this entire repository gate passed.
 
 ## Candidate voices: VANE, RAKE, BOW (round lattice-voices-1, 2026-11-20)
 
-Status: **built, measured, unheard**. The melodic gate asks for six voices and LATTICE has four. Three candidates
+Status: **kept** (verdicts below). Written before the verdict, the rest of this section describes the build. The melodic gate asks for six voices and LATTICE has four. Three candidates
 are appended to `LatticeVoice` after TRACE, so saved names and ordinals do not move. `Lattice.KEPT_VOICES` is the
 four voices players are offered; the candidates have no preset, kit or starter, and the kept renders are pinned
 byte for byte in `LatticeCandidateVoicesTest`. The owner needs to keep at least two.
@@ -404,7 +404,7 @@ voice at C3 and C4 (the nearest pair is RAKE and BOW). Constants are authored, n
 
 Not done for the candidates: presets, kit pads, keygroups (`LatticeKeys` is TRACE only), takes, a listening verdict.
 
-## Held WARM and PLUCK in a hand that drifts (verdict of 20 Nov 2026, unheard)
+## Held WARM and PLUCK in a hand that drifts (verdict of 20 Nov 2026, kept)
 
 The owner on WARM and PLUCK: "Holds are unnatural, they need more humanization". Measured on the judged clips, the
 held tone did not move: level within 0.3 dB, pitch and brightness fixed, and the top-HOLD loop repeated every 2 s.
@@ -428,10 +428,23 @@ Known side effect: in a finite hold with REJECT up, a drifting pitch also moves 
 rings, so the level moves more than the authored amount (Soft Outline: up to 1.4 dB modest), and the brief dip
 at the release is filled by several dB for about 50 ms. The loop does not model this.
 
-## Touch on the candidates (verdict of 20 Nov 2026, unheard)
+## Touch on the candidates (verdict of 20 Nov 2026, kept)
 
 The owner kept VANE, RAKE and BOW's range clips; on their soft, medium, hard clips: "I didn't hear a difference".
 Touch only changed loudness (and a .15 lean too slight to hear). The candidates' source now leans with touch:
 harmonic h is scaled by h^(1.6 x (velocity - .75)) (`CANDIDATE_TOUCH`), so the medium touch is byte-identical to the
 kept sound, soft is duller and hard brighter. Measured (share of energy in the sample-to-sample change): soft to hard
 now spans 9 to 14 dB, where it spanned 0.9 to 3.2 dB. The kept voices keep their own arithmetic.
+
+## Verdicts of 20 Nov 2026: VANE, RAKE and BOW kept; the held hand and the touch kept
+
+- **lattice-voices-1** (clips CA1 to CD1): VANE, RAKE and BOW range clips **KEEP**. Their soft, medium, hard clips
+  were **TWEAK** ("very little difference"), answered by the touch above.
+- **fix-lattice-1** (clips CJ1 to CJ3, CW1 to CW3): the modest held hand for WARM and PLUCK **KEEP**, as shipped
+  (`HELD_HUMAN = HUMAN_MODEST`); the new touch on VANE, RAKE and BOW **KEEP**.
+
+So LATTICE has seven voices. `Lattice.KEPT_VOICES` is every voice and the picker shows all seven. Each new voice has
+one factory preset, appended after Quick Trace, at the default performance the owner heard: default controls, C3,
+medium touch (Turning Vane, Raked Bars, Bowed Passage). The earlier fifteen presets, the LATTICE kit and every
+earlier render are unchanged (pinned in `LatticeCandidateVoicesTest` and `LatticeHoldDriftTest`). No starter kit was
+added. Still open: keygroups for the new voices (`LatticeKeys` is TRACE only), kit pads and takes.

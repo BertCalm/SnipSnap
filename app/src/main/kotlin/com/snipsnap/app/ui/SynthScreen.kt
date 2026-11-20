@@ -2815,8 +2815,11 @@ fun SynthScreen(
             if (LatticePadMaker.supports(patch))
                 HeldSpec.Lattice(LatticePadMaker.spec(patch, heldSheet.holdRelease)) else null
         }
-        Engine.CAUSTIC -> HeldSpec.Caustic(CausticPadMaker.spec(
-            buildCurrentPatch(engine.patchDisplayName(voice)) as CausticPatch, heldSheet.holdRelease))
+        Engine.CAUSTIC -> {
+            // BOWL, SCATTER and TONGUE are finite only for now: no held key.
+            val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as CausticPatch
+            if (CausticPadMaker.supports(patch)) HeldSpec.Caustic(CausticPadMaker.spec(patch, heldSheet.holdRelease)) else null
+        }
         Engine.LIBRATION -> {
             val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as LibrationPatch
             if (LibrationPadMaker.supports(patch)) HeldSpec.Libration(
@@ -6784,6 +6787,8 @@ private enum class Engine {
         TANGLE -> TangleVoice.entries
         SHOAL -> ShoalVoice.entries
         CREASE -> CreaseVoice.entries
+        // Every voice since 20 Nov 2026: BOWL, SCATTER and TONGUE (CAUSTIC) and VANE, RAKE and
+        // BOW (LATTICE) were kept in caustic-voices-1 and lattice-voices-1.
         CAUSTIC -> CausticInstrument.KEPT_VOICES
         LATTICE -> Lattice.KEPT_VOICES
         RELAY -> RelayVoice.entries

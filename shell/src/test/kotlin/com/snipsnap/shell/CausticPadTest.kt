@@ -13,7 +13,7 @@ import kotlin.test.assertTrue
 
 class CausticPadTest {
     @Test fun `explicit held recipes gate and repeat the whole pure-loop sample`() {
-        for (voice in CausticInstrument.KEPT_VOICES) {
+        for (voice in CausticInstrument.HELD_VOICES) {
             val patch = CausticPatch("Held vessel", voice,
                 CausticInstrument.defaults(voice, 2) + mapOf("HOLD" to 1f, "MOTION" to .3f),
                 midi = 57, velocity = .43f, model = 2)

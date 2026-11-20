@@ -12,13 +12,13 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 /**
- * Candidate voices for listening round caustic-voices-1. Each reads a part of the reflected-path
- * geometry the kept voices discard: BOWL where on the rim each ray landed, SCATTER when each ray
- * arrived. TONGUE is the spare: a new mode table on the kept reception. Nothing here is heard.
- * The kept renders are pinned below against the build before this round.
+ * The voices of listening round caustic-voices-1, kept on 20 Nov 2026. Each reads a part of the
+ * reflected-path geometry the earlier voices discard: BOWL where on the rim each ray landed,
+ * SCATTER when each ray arrived. TONGUE is the spare: a new mode table on the kept reception.
+ * The earlier voices' renders are pinned below against the build before this round.
  */
 class CausticCandidateVoicesTest {
-    private val candidates = CausticVoice.entries.filter { it !in CausticInstrument.KEPT_VOICES }
+    private val candidates = CausticVoice.entries.filter { it !in CausticInstrument.HELD_VOICES }
     private val notes = listOf(36, 48, 60, 72, 84)
 
     private fun hz(midi: Int) = 440.0 * 2.0.pow((midi - 69) / 12.0)
@@ -31,12 +31,16 @@ class CausticCandidateVoicesTest {
         CausticInstrument.render(voice, macros, midi, velocity).samples
 
     @Test
-    fun `candidates are appended, finite only and offered nowhere`() {
+    fun `the kept new voices are appended, offered with their heard preset and finite only`() {
         assertEquals(listOf(CausticVoice.BOWL, CausticVoice.SCATTER, CausticVoice.TONGUE), candidates)
-        assertEquals(CausticVoice.entries.take(4), CausticInstrument.KEPT_VOICES)
-        assertTrue(CausticPresets.all().all { it.voice in CausticInstrument.KEPT_VOICES }, "a candidate has a factory preset")
+        assertEquals(CausticVoice.entries, CausticInstrument.KEPT_VOICES)
+        assertEquals(CausticVoice.entries.take(4), CausticInstrument.HELD_VOICES)
         for (voice in candidates) {
-            assertTrue(Presets.forVoice("CAUSTIC", voice.name).isEmpty(), "$voice reaches the preset picker")
+            // One preset each: the default controls at C4, medium touch, current model: the render kept in caustic-voices-1.
+            val preset = Presets.forVoice("CAUSTIC", voice.name).single()
+            assertEquals(CausticPatch(preset.name, voice, CausticInstrument.defaults(voice)), preset)
+            assertContentEquals(render(voice), preset.render().samples)
+            assertTrue(CausticPresets.isHeardAnchor(preset.name))
             for (model in listOf(1, 2)) assertEquals(listOf("SOURCE", "FOCUS", "BODY", "LENGTH", "HOLD"),
                 CausticInstrument.macrosFor(voice, model).map { it.name })
             val patch = CausticPatch("Candidate", voice, mapOf("SOURCE" to .3f, "HOLD" to .5f), midi = 55, velocity = .6f)
@@ -166,7 +170,7 @@ class CausticCandidateVoicesTest {
     @Test
     fun `the kept voices render exactly what they rendered before the candidates`() {
         val lines = ArrayList<String>()
-        for (voice in CausticInstrument.KEPT_VOICES) {
+        for (voice in CausticInstrument.HELD_VOICES) {
             for (model in listOf(1, 2)) for (midi in listOf(43, 60)) for (v in listOf(.4f, .75f)) lines +=
                 "CAUSTIC ${voice.name} model $model LENGTH .15 midi $midi v $v " +
                     CandidateVoiceProbes.hash(CausticInstrument.render(voice, mapOf("LENGTH" to .15f), midi, v, model).samples)

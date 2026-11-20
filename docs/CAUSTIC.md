@@ -791,7 +791,7 @@ engine is required for this sample workflow.
 
 ## Candidate voices: BOWL, SCATTER, TONGUE (round caustic-voices-1, 2026-11-20)
 
-Status: **built, measured, unheard**. The melodic gate asks for six voices and CAUSTIC has four. Three candidates
+Status: **kept, finite only** (verdicts below). Written before the verdict, the rest of this section describes the build. The melodic gate asks for six voices and CAUSTIC has four. Three candidates
 are appended to `CausticVoice` after TRAVELLING_CATCHES, so saved names and ordinals do not move.
 `CausticInstrument.KEPT_VOICES` is the four voices players are offered; the candidates have no preset, kit or
 starter, and the kept renders (finite, moving and held) are pinned byte for byte in `CausticCandidateVoicesTest`.
@@ -830,7 +830,7 @@ small speakers it may be taken for the note. The repository's pitch detector rea
 C2 and C3 for that reason, though the root component itself is in tune. The same detector reads SCATTER 10 to 14
 cents sharp at C2 and C3 during the spill.
 
-## Held keys in a hand that varies, and four ALLOY presets re-voiced (verdicts of 20 Nov 2026, unheard)
+## Held keys in a hand that varies, and four ALLOY presets re-voiced (verdicts of 20 Nov 2026, kept)
 
 **Held keys.** The owner: "Holds are unnatural, they need more humanization". Measured, the hold repeated every
 period (about a second): ALLOY's four re-excitation ticks, HOLLOW MALLET's four strikes and TRAVELLING CATCHES'
@@ -840,8 +840,8 @@ With no MOTION, a hold now repeats every four of those periods, and inside them 
 every strike, catch or tick has its own seeded strength and may land a few milliseconds late; a firmer mallet
 strike is also shorter; ALLOY's continued pressure and the rub's pressure drift slowly (and a little in
 brightness and roughness) and return exactly at the wrap. Only the excitation varies. The body's modes are not
-touched, so the pitch does not drift. Shipped (`HELD_HUMAN`, modest): strikes 12 % either way, pressure 0.6 dB, up
-to 6 ms late; `HUMAN_STRONGER`: 22 %, 1.1 dB, 12 ms. ALLOY's pressure glides in straight lines between strike
+touched, so the pitch does not drift. `HUMAN_MODEST`: strikes 12 % either way, pressure 0.6 dB, up to 6 ms late;
+`HUMAN_STRONGER`: 22 %, 1.1 dB, 12 ms. Shipped since the verdict below: the stronger hand (`HELD_HUMAN`). ALLOY's pressure glides in straight lines between strike
 boundaries, which the exact force terms carry on the one existing pole.
 
 Measured at C4 (Kotlin, `CausticHoldDriftTest`; nothing heard): held ALLOY level range 0.1 dB before, about 1.0 dB
@@ -858,3 +858,24 @@ from Fuller Body. They are now 8.0, 14.5 and 8.1 dB apart (Parallel Body: bright
 Wide Shoulder: FOCUS .6, body .75), and each at least 3.7 dB from Fuller Body and Preferred Alloy. Short Glint was
 not cut off; its own decay was abrupt (40 dB down in 0.22 s at LENGTH 0). At LENGTH .1 it takes about twice as long and is
 1.25 s long, so it is still a TONAL pad; the CAUSTIC kit's Short Glint pad follows the preset. Sparse Alloy, Low Vessel and the other presets are unchanged; all eleven are pinned.
+
+## Verdicts of 20 Nov 2026: BOWL, SCATTER and TONGUE kept; the stronger held hand; ALLOY presets kept
+
+- **caustic-voices-1** (clips CF1 to CI1): BOWL, SCATTER and TONGUE **KEEP**, range and touch.
+- **fix-caustic-1** (clips CK1 to CK4): the humanized held keys CK1, CK2 and CK3 **KEEP**, with the note
+  "stronger". The shipped held hand is now `HUMAN_STRONGER` (strikes 22 % either way, pressure 1.1 dB, up to 12 ms
+  late) for ALLOY, HOLLOW MALLET, RUBBED RING and TRAVELLING CATCHES with no MOTION. A held key now renders exactly the
+  "AFTER stronger" segment of those clips; the pins in `CausticHoldDriftTest` are those renders. A hold with MOTION
+  is unchanged. Measured with the stronger hand (Kotlin, `CausticHoldDriftTest`): mean pitch within 1.4 cents of
+  the still hold at C2, C4 and C6; level of the hold within 1.6 dB of the still hold (the low mallet roll is the
+  largest); key files at C4: ALLOY 16.7 s, HOLLOW MALLET 13.5 s, RUBBED RING 15.1 s, TRAVELLING CATCHES 17.4 s. The re-voiced ALLOY presets (CK4, Short Glint ringing out) **KEEP**, as shipped.
+
+So CAUSTIC has seven voices. `CausticInstrument.KEPT_VOICES` is every voice and the picker shows all seven. Each new
+voice has one factory preset, appended after Travelling Catches, at the default performance the owner heard: default
+controls, C4, medium touch, model 2 (Singing Bowl, Bead Scatter, Thumb Tongue). The eleven earlier presets keep model
+1 and their bytes; the CAUSTIC kit is unchanged. No starter kit was added.
+
+**Still open: held BOWL, SCATTER and TONGUE.** The three are finite only. They have no MOTION; HOLD lengthens the
+note (HOLD 1 adds four seconds) and is not a sustained loop. `CausticInstrument.HELD_VOICES` lists the four voices
+with a held key: `renderLoop` and `heldProbe` refuse the others, `CausticPadMaker.supports` is false for them, so the
+app offers no held instrument for them. Their model-2 sustain and motion are still to be written and heard.

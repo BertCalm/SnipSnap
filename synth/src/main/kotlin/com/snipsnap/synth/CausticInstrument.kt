@@ -18,9 +18,9 @@ import kotlin.math.sqrt
 import kotlin.random.Random
 
 /**
- * The four heard voices, then the listening candidates of round caustic-voices-1. Candidates
- * are appended so saved names and ordinals never move; [CausticInstrument.KEPT_VOICES] is what
- * players are offered.
+ * The four heard voices, then BOWL, SCATTER and TONGUE, kept in round caustic-voices-1
+ * (20 Nov 2026). They were appended so saved names and ordinals never move. The three newer
+ * voices are finite only for now: [CausticInstrument.HELD_VOICES] lists those with a held key.
  */
 enum class CausticVoice { ALLOY, HOLLOW_MALLET, RUBBED_RING, TRAVELLING_CATCHES, BOWL, SCATTER, TONGUE }
 
@@ -73,14 +73,21 @@ object CausticInstrument {
     private const val DIRECT_ROOT = .035
     private const val TAU = 2.0 * PI
 
-    /** The voices players are offered. The rest are unheard candidates: no picker, preset or kit. */
     /**
      * What a held key (HOLD 1 with no MOTION) plays: each repeated strike a little different and
-     * the continued pressure drifting, repeating only every four of the old periods.
+     * the continued pressure drifting, repeating only every four of the old periods. The owner
+     * kept the stronger hand in fix-caustic-1 (20 Nov 2026, "stronger").
      */
-    internal val HELD_HUMAN: CausticSustain.Human = CausticSustain.HUMAN_MODEST
+    internal val HELD_HUMAN: CausticSustain.Human = CausticSustain.HUMAN_STRONGER
 
-    val KEPT_VOICES: List<CausticVoice> = listOf(CausticVoice.ALLOY, CausticVoice.HOLLOW_MALLET,
+    /** The voices players are offered: every voice, since caustic-voices-1 (20 Nov 2026). */
+    val KEPT_VOICES: List<CausticVoice> = CausticVoice.entries.toList()
+
+    /**
+     * The voices with a held key (a sustained loop and MOTION). BOWL, SCATTER and TONGUE are
+     * finite only for now: HOLD lengthens their note, and the loop renderers refuse them.
+     */
+    val HELD_VOICES: List<CausticVoice> = listOf(CausticVoice.ALLOY, CausticVoice.HOLLOW_MALLET,
         CausticVoice.RUBBED_RING, CausticVoice.TRAVELLING_CATCHES)
 
     fun supportsModel(model: Int) = model == LEGACY_MODEL_VERSION || model == MODEL_VERSION

@@ -58,7 +58,7 @@ class CausticInstrumentCommandTest {
     @Test fun `each voice exports an explicit whole sample loop with replayable held controls`() {
         val root = createTempDirectory("caustic-cli-hold").toFile()
         try {
-            for (voice in CausticInstrument.KEPT_VOICES) {
+            for (voice in CausticInstrument.HELD_VOICES) {
                 val output = File(root, voice.name)
                 run(listOf(voice.name, "--midi", "60", "--velocity", ".4", "--macros", "HOLD=1,MOTION=.3,LENGTH=0", "--out", output.path))
                 val wav = output.listFiles { it.extension == "wav" }!!.single()

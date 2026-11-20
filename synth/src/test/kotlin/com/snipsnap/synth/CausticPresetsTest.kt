@@ -11,10 +11,10 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class CausticPresetsTest {
-    @Test fun `eleven complete positions retain Alloy and add only the approved directions`() {
+    @Test fun `fourteen complete positions retain Alloy and add only the approved directions`() {
         val all = CausticPresets.all()
-        assertEquals(11, all.size)
-        assertEquals(11, all.map { it.name }.toSet().size)
+        assertEquals(14, all.size)
+        assertEquals(14, all.map { it.name }.toSet().size)
         assertEquals(CausticInstrument.KEPT_VOICES.toSet(), all.map { it.voice }.toSet())
         for (voice in CausticInstrument.KEPT_VOICES) {
             assertEquals(CausticPresets.forVoice(voice), Presets.forVoice("CAUSTIC", voice.name))
@@ -24,7 +24,8 @@ class CausticPresetsTest {
         for (patch in all) {
             assertEquals(CausticInstrument.defaults(patch.voice, patch.model).keys, patch.macros.keys)
             assertEquals(0f, patch.macros.getValue("HOLD"))
-            assertEquals(1, patch.model)
+            // The eleven earlier presets keep model 1; BOWL, SCATTER and TONGUE were heard and kept in the current model.
+            assertEquals(if (patch.voice in CausticInstrument.HELD_VOICES) 1 else 2, patch.model)
             assertTrue(patch.macros.values.all { it.isFinite() && it in 0f..1f })
             assertEquals(patch, Patches.fromJsonText(patch.toJsonText()))
             assertEquals(patch, Presets.byName("CAUSTIC", patch.voice.name, patch.name))
@@ -32,7 +33,8 @@ class CausticPresetsTest {
             assertTrue(!CausticPresets.descriptionFor(patch.name).isNullOrBlank())
             assertFalse(PresetTestSupport.trademarkBlocklist.containsMatchIn(patch.name))
         }
-        assertEquals(setOf("Fuller Body", "Preferred Alloy", "Hollow Mallet", "Rubbed Ring", "Travelling Catches"),
+        assertEquals(setOf("Fuller Body", "Preferred Alloy", "Hollow Mallet", "Rubbed Ring", "Travelling Catches",
+            "Singing Bowl", "Bead Scatter", "Thumb Tongue"),
             all.filter { CausticPresets.isHeardAnchor(it.name) }.map { it.name }.toSet())
         assertEquals(1f, all.single { it.name == "Fuller Body" }.macros.getValue("BODY"))
         assertEquals(0f, all.single { it.name == "Preferred Alloy" }.macros.getValue("BODY"))
@@ -51,6 +53,18 @@ class CausticPresetsTest {
                 .bufferedReader().use { it.readText().trimEnd() }
             assertEquals(original, patch.toJsonText(), patch.name)
             assertEquals(patch, Patches.fromJsonText(original))
+        }
+    }
+
+    @Test fun `BOWL, SCATTER and TONGUE each start at the default performance kept in caustic-voices-1`() {
+        assertEquals(listOf("Singing Bowl", "Bead Scatter", "Thumb Tongue"), CausticPresets.all().drop(11).map { it.name })
+        for (voice in listOf(CausticVoice.BOWL, CausticVoice.SCATTER, CausticVoice.TONGUE)) {
+            val patch = CausticPresets.forVoice(voice).single()
+            assertEquals(CausticInstrument.defaults(voice), patch.macros)
+            assertEquals(60, patch.midi)
+            assertEquals(.75f, patch.velocity)
+            assertEquals(CausticInstrument.MODEL_VERSION, patch.model)
+            assertContentEquals(CausticInstrument.render(voice).samples, patch.render().samples)
         }
     }
 
@@ -80,7 +94,7 @@ class CausticPresetsTest {
         val positions = listOf("Fuller Body", "Preferred Alloy", "Hollow Mallet", "Rubbed Ring",
             "Travelling Catches", "Sparse Alloy", "Short Glint", "Low Vessel")
         assertEquals(positions.map { name -> CausticPresets.all().single { it.name == name } }, patches.drop(8))
-        assertEquals(CausticInstrument.KEPT_VOICES.toSet(), patches.map { it.voice }.toSet())
+        assertEquals(CausticInstrument.HELD_VOICES.toSet(), patches.map { it.voice }.toSet())
         for ((index, pad) in pads.withIndex()) {
             assertTrue(pad.oneShot, "finite pad ${index + 1} must not advertise held sustain")
             assertEquals(patches[index].name, pad.displayName)

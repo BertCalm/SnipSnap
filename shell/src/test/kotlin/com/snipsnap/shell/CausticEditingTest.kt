@@ -23,7 +23,7 @@ class CausticEditingTest {
     }
 
     @Test fun `only a deliberate extension request changes an original model`() {
-        for (voice in CausticInstrument.KEPT_VOICES) {
+        for (voice in CausticInstrument.HELD_VOICES) {
             val original = CausticPatch("Saved direction", voice, mapOf("BODY" to .6f),
                 midi = 55, velocity = .37f, model = 1)
             val before = original.toJsonText()

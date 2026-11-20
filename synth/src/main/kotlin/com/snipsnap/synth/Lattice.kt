@@ -17,9 +17,9 @@ import kotlin.math.sqrt
 import kotlin.random.Random
 
 /**
- * The accepted source characters plus the accepted pluck-to-ring motion, then the listening
- * candidates of round lattice-voices-1. Candidates are appended so saved names and ordinals
- * never move; [Lattice.KEPT_VOICES] is what players are offered.
+ * The accepted source characters plus the accepted pluck-to-ring motion, then VANE, RAKE and
+ * BOW, kept in round lattice-voices-1 (20 Nov 2026). They were appended so saved names and
+ * ordinals never move.
  */
 enum class LatticeVoice { WARM, PLUCK, HOLLOW, TRACE, VANE, RAKE, BOW }
 
@@ -96,9 +96,8 @@ object Lattice {
      */
     const val CANDIDATE_TOUCH = 1.6
 
-    /** The voices players are offered. The rest are unheard candidates: no picker, preset or kit. */
-    val KEPT_VOICES: List<LatticeVoice> =
-        listOf(LatticeVoice.WARM, LatticeVoice.PLUCK, LatticeVoice.HOLLOW, LatticeVoice.TRACE)
+    /** The voices players are offered: every voice, since lattice-voices-1 (20 Nov 2026). */
+    val KEPT_VOICES: List<LatticeVoice> = LatticeVoice.entries.toList()
 
     /** Static-gate source voices: the full gate contract and a periodic top HOLD. */
     private fun isStatic(voice: LatticeVoice) = when (voice) {

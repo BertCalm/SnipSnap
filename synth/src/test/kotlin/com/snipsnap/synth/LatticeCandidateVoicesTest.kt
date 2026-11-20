@@ -15,13 +15,14 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 /**
- * Candidate voices for listening round lattice-voices-1. Each hears a part of the gate model the
- * kept voices leave still or sum away: VANE the analyzer angle in motion, RAKE each gate's own
- * rejection at its own time. BOW is the spare: a bowed contour and source on the kept static path.
- * Nothing here is heard. The kept renders are pinned below against the build before this round.
+ * The voices of listening round lattice-voices-1, kept on 20 Nov 2026. Each hears a part of the
+ * gate model the earlier voices leave still or sum away: VANE the analyzer angle in motion, RAKE
+ * each gate's own rejection at its own time. BOW is the spare: a bowed contour and source on the
+ * kept static path. The earlier voices' renders are pinned below against the build before this round.
  */
 class LatticeCandidateVoicesTest {
-    private val candidates = LatticeVoice.entries.filter { it !in Lattice.KEPT_VOICES }
+    private val earlier = LatticeVoice.entries.take(4)
+    private val candidates = LatticeVoice.entries.drop(4)
     private val notes = listOf(36, 48, 60, 72, 84)
 
     private fun hz(midi: Int) = 440.0 * 2.0.pow((midi - 69) / 12.0)
@@ -32,12 +33,15 @@ class LatticeCandidateVoicesTest {
     }
 
     @Test
-    fun `candidates are appended and offered nowhere`() {
+    fun `the kept new voices are appended and offered with their heard preset`() {
         assertEquals(listOf(LatticeVoice.VANE, LatticeVoice.RAKE, LatticeVoice.BOW), candidates)
-        assertEquals(LatticeVoice.entries.take(4), Lattice.KEPT_VOICES)
-        assertTrue(LatticePresets.all().all { it.voice in Lattice.KEPT_VOICES }, "a candidate has a factory preset")
+        assertEquals(LatticeVoice.entries, Lattice.KEPT_VOICES)
         for (voice in candidates) {
-            assertTrue(Presets.forVoice("LATTICE", voice.name).isEmpty(), "$voice reaches the preset picker")
+            // One preset each: the default controls at C3, medium touch: the render kept in lattice-voices-1.
+            val preset = Presets.forVoice("LATTICE", voice.name).single()
+            assertEquals(LatticePatch(preset.name, voice, Lattice.defaults(voice)), preset)
+            assertEquals(48, (preset as LatticePatch).midi)
+            assertContentEquals(Lattice.render(voice).samples, preset.render().samples)
             val patch = LatticePatch("Candidate", voice, Lattice.defaults(voice), midi = 55, velocity = .6f)
             assertEquals(patch, LatticePatch.fromJsonText(patch.toJsonText()), "$voice does not survive saving")
             assertFalse(LatticeKeys.supports(patch))
@@ -221,7 +225,7 @@ class LatticeCandidateVoicesTest {
         // humanized on 20 Nov 2026. LatticeHoldDriftTest pins what they play now, and proves that
         // with the drift off they still render these exact old bytes.
         val lines = ArrayList<String>()
-        for (voice in Lattice.KEPT_VOICES) {
+        for (voice in earlier) {
             for (midi in listOf(41, 60)) for (v in listOf(.4f, .75f)) lines +=
                 "LATTICE ${voice.name} default midi $midi v $v ${CandidateVoiceProbes.hash(Lattice.render(voice, midi = midi, velocity = v).samples)}"
             for (p in LatticePresets.forVoice(voice)) if (p.name !in HUMANIZED_PRESETS)

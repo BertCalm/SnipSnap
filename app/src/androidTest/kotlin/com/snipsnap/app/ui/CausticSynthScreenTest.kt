@@ -178,7 +178,8 @@ class CausticSynthScreenTest : ComposeScreenTest() {
         val settings = mutableMapOf("engine" to "CAUSTIC", "voice" to "ALLOY")
         show(root, settings)
         val labels = mapOf(CausticVoice.ALLOY to "ALLOY", CausticVoice.HOLLOW_MALLET to "Hollow Mallet",
-            CausticVoice.RUBBED_RING to "Rubbed Ring", CausticVoice.TRAVELLING_CATCHES to "Travelling Catches")
+            CausticVoice.RUBBED_RING to "Rubbed Ring", CausticVoice.TRAVELLING_CATCHES to "Travelling Catches",
+            CausticVoice.BOWL to "Bowl", CausticVoice.SCATTER to "Scatter", CausticVoice.TONGUE to "Tongue")
         for (label in labels.values) compose.onNodeWithContentDescription(label).assertIsDisplayed()
         for ((index, voice) in CausticInstrument.KEPT_VOICES.withIndex()) {
             press(labels.getValue(voice))

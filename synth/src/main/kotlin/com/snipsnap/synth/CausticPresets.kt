@@ -42,7 +42,15 @@ object CausticPresets {
             body = .5f, heardAnchor = true, voice = CausticVoice.RUBBED_RING),
         entry("Travelling Catches", "The approved moving-contact direction. This native port awaits listening.",
             body = 0f, heardAnchor = true, voice = CausticVoice.TRAVELLING_CATCHES),
+        // Kept in caustic-voices-1 (20 Nov 2026): each voice's default controls at C4, medium
+        // touch, in the current model, the performance the owner heard and kept. Finite only.
+        kept(CausticVoice.BOWL, "Singing Bowl", "A struck singing bowl: a long, slowly beating ring with bowl-like overtones."),
+        kept(CausticVoice.SCATTER, "Bead Scatter", "A spill of small beads on a metal dish: a quick flurry that rings on as one note."),
+        kept(CausticVoice.TONGUE, "Thumb Tongue", "A thumb-piano tongue: a clean, round note with a small bright tick."),
     )
+
+    private fun kept(voice: CausticVoice, name: String, description: String) =
+        Entry(CausticPatch(name, voice, CausticInstrument.defaults(voice)), description, heardAnchor = true)
 
     fun all(): List<CausticPatch> = roster.map { it.patch }
     fun forVoice(voice: CausticVoice): List<CausticPatch> = all().filter { it.voice == voice }

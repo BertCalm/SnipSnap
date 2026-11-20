@@ -16,7 +16,7 @@ class CausticUserPresetsTest {
         val shelf = createTempDirectory("caustic-held-shelf").toFile()
         val destination = createTempDirectory("caustic-held-backup").toFile()
         try {
-            val patches = CausticInstrument.KEPT_VOICES.map { voice -> CausticPatch("MY HELD", voice,
+            val patches = CausticInstrument.HELD_VOICES.map { voice -> CausticPatch("MY HELD", voice,
                 linkedMapOf("SOURCE" to .63f, "FOCUS" to .27f, "MOTION" to .65f, "HOLD" to 1f),
                 midi = 55, velocity = .43f, model = 2) }
             for (patch in patches) UserPresets.save(shelf, patch, nowMillis = 10L)

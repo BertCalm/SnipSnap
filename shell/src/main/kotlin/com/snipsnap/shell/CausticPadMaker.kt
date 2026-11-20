@@ -31,12 +31,15 @@ object CausticPadMaker {
     const val PATCH_FILE = "caustic.patch.json"
     val RELEASE = Knob("RELEASE", RELEASE_MIN_SECONDS, RELEASE_MAX_SECONDS, .6f, exponential = true)
 
-    fun supports(patch: CausticPatch): Boolean = patch.model == SUPPORTED_MODEL
+    /** BOWL, SCATTER and TONGUE have no held key yet ([CausticInstrument.HELD_VOICES]). */
+    fun supports(patch: CausticPatch): Boolean =
+        patch.model == SUPPORTED_MODEL && patch.voice in CausticInstrument.HELD_VOICES
 
     data class Spec(val patch: CausticPatch, val releaseSeconds: Float = RELEASE.default) {
         init {
             require(supports(patch)) {
-                "CAUSTIC held instruments require model $SUPPORTED_MODEL; model ${patch.model} stays unchanged"
+                if (patch.voice !in CausticInstrument.HELD_VOICES) "CAUSTIC ${patch.voice} has no held key yet"
+                else "CAUSTIC held instruments require model $SUPPORTED_MODEL; model ${patch.model} stays unchanged"
             }
             require(releaseSeconds.isFinite() && releaseSeconds in RELEASE_MIN_SECONDS..RELEASE_MAX_SECONDS) {
                 "release wants $RELEASE_MIN_SECONDS..$RELEASE_MAX_SECONDS s, got $releaseSeconds"
