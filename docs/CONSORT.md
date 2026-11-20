@@ -35,7 +35,8 @@ The section, the velocity and the take are fields on `ConsortPatch`, not macros.
 - `synth/.../Consort.kt`: the engine. `plan` (the player), `blow` (the pipe), `rasp` and `body`
   (the tone), `seat` and `wash` (the room), `render`.
 - `synth/.../ConsortPatch.kt`: the saved recipe and its JSON.
-- `synth/src/test/.../ConsortTest.kt`: sixteen probes. `DeterminismTest` has the canary.
+- `synth/.../ConsortPresets.kt`: thirteen provisional recipes, outside the factory roster until heard.
+- `synth/src/test/.../ConsortTest.kt`: seventeen probes. `DeterminismTest` has the canary.
 - `synth/src/test/.../ConsortAuditionGenerator.kt`: `./gradlew :synth:generateConsortAudition`
   writes 100 clips, their recipes, `metrics.csv` and a page under `testkit/consort-audition/`.
 - `docs/prototypes/consort/consort_proto.py`: the Python prototype the owner heard.

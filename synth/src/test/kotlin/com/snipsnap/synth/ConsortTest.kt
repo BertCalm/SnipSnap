@@ -254,6 +254,25 @@ class ConsortTest {
     }
 
     @Test
+    fun `the provisional recipes are complete, distinct, plainly named and held out of the factory roster`() {
+        val all = ConsortPresets.all()
+        for (voice in ConsortVoice.entries) {
+            val mine = ConsortPresets.forVoice(voice)
+            assertTrue(mine.size >= 2 && mine.all { it.voice == voice }, "$voice has ${mine.size} recipes")
+            assertTrue(mine.any { it.chairs.isEmpty() } && mine.any { it.chairs.isNotEmpty() }, "$voice needs the lead alone and a section")
+        }
+        assertEquals(all.size, all.map { it.name }.toSet().size, "recipe names repeat")
+        assertEquals(all.size, all.map { it.copy(name = "same") }.toSet().size, "two recipes are the same sound")
+        for (p in all) {
+            assertFalse(PresetTestSupport.trademarkBlocklist.containsMatchIn(p.name), "${p.name} is on the blocklist")
+            assertEquals(Consort.defaults(p.voice).keys, p.macros.keys, "${p.name} does not carry every macro")
+            assertEquals(p, Patches.fromJsonText(p.toJsonText()))
+        }
+        assertTrue(Presets.all().none { it.engine == ConsortPatch.ENGINE }, "a prototype's recipes are not served through the factory roster")
+        assertTrue(Presets.forVoice(ConsortPatch.ENGINE, ConsortVoice.OBOE.name).isEmpty())
+    }
+
+    @Test
     fun `scramble stays in bounds and renders`() {
         val random = Random(7)
         repeat(6) {
