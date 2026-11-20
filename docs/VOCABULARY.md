@@ -351,7 +351,7 @@ The picker groups engines into nine kinds (`EngineCatalog.kt:14-24`): `DRUMS & P
 | Engine | Kind | What it is | Source |
 |---|---|---|---|
 | `LATTICE` | SYNTH | Warm, plucked or hollow notes that drop out and come back | `docs/LATTICE.md` |
-| `ACCORD` | BELLS & MALLETS, PADS & FX | Pitched brushes, wood and tines finding shared timing | `docs/ACCORD.md` |
+| `ACCORD` | BELLS & MALLETS, PADS & FX | Pitched brush, wood, tines, reed, strings, clock and bell | `docs/ACCORD.md` |
 | `THUMP` | DRUMS & PERCUSSION | Analog-style kick, snare, hats, clap, tom, cowbell, rim | `synth/.../Thump.kt` |
 | `SCANNED CHAIN` | SYNTH, BELLS & MALLETS | Evolving pitched notes: springy plucks, metal and swells | `docs/SCANNED_CHAIN.md` |
 | `SKIN` | DRUMS & PERCUSSION | Acoustic-style kick, snare, hats, toms, ride and shaker | `docs/SKIN.md` |

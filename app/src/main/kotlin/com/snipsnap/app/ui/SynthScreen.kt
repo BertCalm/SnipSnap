@@ -6771,6 +6771,8 @@ private enum class Engine {
         APSIS -> ApsisVoice.entries
         OVEN -> OvenVoice.entries
         LIBRATION -> LibrationVoice.entries
+        // BRUSH, WOOD and TINE were kept in accord-native-1; REED, COURSE, ESCAPEMENT and BELL
+        // joined after them once the owner kept round accord-voices-1 (19 Nov 2026).
         ACCORD -> AccordVoice.entries
         ORIGAMI -> OrigamiVoice.entries
         // MERCURY shows the three voices the owner kept at R1's gate (2026-10-04). EDDY, VESSEL
