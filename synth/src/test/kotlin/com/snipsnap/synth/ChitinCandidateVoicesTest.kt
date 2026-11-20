@@ -134,7 +134,8 @@ class ChitinCandidateVoicesTest {
             val shapes = listOf(.35f, .7f, 1f).map { M.bands(render(voice, velocity = it)) }
             val steps = listOf(M.distance(shapes[0], shapes[1]), M.distance(shapes[1], shapes[2]))
             println("CHITIN $voice level-matched touch steps: %.1f dB, %.1f dB".format(steps[0], steps[1]))
-            assertTrue(steps.all { it > TOUCH_DB }, "$voice touch barely changes the tone: $steps")
+            val floor = if (voice == ChitinVoice.GLINT) GLINT_TOUCH_DB else TOUCH_DB
+            assertTrue(steps.all { it > floor }, "$voice touch barely changes the tone: $steps")
         }
     }
 
@@ -234,6 +235,8 @@ class ChitinCandidateVoicesTest {
         const val KEPT_RENDERS = "9e76c181952002d5934124a12398e683a28e55ffe3c51e7d60ea94c40252998a"
         const val ROOT_SHARE = .3
         const val TOUCH_DB = .5
+        /** GLINT's touch was heard as "all the same" at 5.2 and 3.5 dB (fix-glint-1); it now moves 23.9 and 18.1 dB. */
+        const val GLINT_TOUCH_DB = 12.0
     }
 }
 

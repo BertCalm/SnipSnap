@@ -33,6 +33,11 @@ internal object ChitinCandidates {
     internal const val GLASS = 3.6
     /** The slave's second copy runs this many hertz faster: a glass's split mode pair, a slow shimmer. */
     internal const val GLASS_BEAT_HZ = 1.3
+    /** How steeply GLINT's synced bend (the ping) and its glass ring with flash fall with a softer touch, as
+     * powers of the touch; and how many octaves darker its filter rests with no touch. Full touch is untouched. */
+    internal const val GLINT_TOUCH_BEND = 1.5
+    internal const val GLINT_TOUCH_GLASS = 2.5
+    internal const val GLINT_TOUCH_DARK = 2.0
     /** TUNE, BITE, COLOR, PHASE, MORPH, PACE, HOLD. */
     fun defaults(voice: ChitinVoice): List<Float> = when (voice) {
         ChitinVoice.HUSK -> listOf(.5f, .55f, .50f, .75f, .65f, .35f, .35f)
@@ -148,16 +153,21 @@ internal object ChitinCandidates {
                 // opens on the root sine's zero crossing.
                 var pg = 0.0; var ph = 0.0
                 val dg = GLASS * p.root / rate; val dh = (GLASS * p.root + GLASS_BEAT_HZ) / rate
+                // Touch (owner, fix-glint-1: soft, medium and hard "all sound the same"). Both factors are
+                // exactly 1 at full touch, so full touch stays the GLINT the owner kept, byte for byte.
+                val bend = v.pow(GLINT_TOUCH_BEND); val shine = v.pow(GLINT_TOUCH_GLASS)
                 for (i in 0 until n) {
                     val t = i.toDouble() / rate
                     val m = sweep(t)
                     val ratio = 1 + 2 * bite + 4 * bite * m
                     // The synced strike drives the bend hard and lets go; the excursion swells it a little.
-                    val index = (.8 + 3.2 * bite) * ((.30 + .70 * v) * exp(-t / .30) + .06 + .30 * m)
+                    // Touch: a soft hit barely bends (round), full touch is the heard GLINT (factor exactly 1).
+                    val index = (.8 + 3.2 * bite) * ((.30 + .70 * v) * exp(-t / .30) + .06 + .30 * m) * bend
                     val window = .5 - .5 * cos(2 * PI * pa)
                     // The glass: the released slave keeps bending the root for the whole note. A harder
-                    // touch bends it further and adds a crisp 35 ms flash of upper partials at the hit.
-                    val glass = (.55 + .9 * bite) * (.6 + .4 * v) * (1 + 1.4 * v * exp(-t / .035))
+                    // touch bends it further and adds a crisp 35 ms flash of upper partials at the hit. Both fall
+                    // steeply with touch, so a soft hit is a round ring with a trace of glass and no flash.
+                    val glass = (.55 + .9 * bite) * (.6 + .4 * v) * (1 + 1.4 * v * exp(-t / .035)) * shine
                     val ring = .65 * sin(2 * PI * pg) + .35 * sin(2 * PI * ph)
                     sine[i] = sin(2 * PI * pa)
                     source[i] = .8 * sin(2 * PI * pa + index * window * sin(2 * PI * ratio * pa) + glass * ring)
@@ -200,12 +210,15 @@ internal object ChitinCandidates {
             // STING's band sits lower, as a formant a few harmonics up, and the excursion carries it.
             // GLINT's rests higher, so its glass partials (up to eight times the root) pass at any COLOR.
             val reach = if (voice == ChitinVoice.STING) 1.2 + 8 * color else if (glint) 6 + 20 * color else 2 + 18 * color
-            val cutoff = (p.root * reach * 2.0.pow(1.4 * m + .6 * exp(-t / .045) * (.25 + .75 * v) - .9 * (1 - v)))
+            // A softer GLINT also rests darker, by up to GLINT_TOUCH_DARK octaves more (none at full touch).
+            val dark = if (glint) GLINT_TOUCH_DARK * (1 - v) else 0.0
+            val cutoff = (p.root * reach * 2.0.pow(1.4 * m + .6 * exp(-t / .045) * (.25 + .75 * v) - .9 * (1 - v) - dark))
                 .coerceIn(60.0, 10_000.0)
             filter.process(source[i].toFloat(), cutoff.toFloat(), if (wingLike) 1.05f else 1.35f)
             filterPeak = max(filterPeak, abs(filter.low.toDouble()))
-            // GLINT's onset is crisper: 3 to 5 ms, against 5 to 12 ms.
-            val opened = Chitin.smooth(t / (if (glint) .005 - .002 * v else .012 - .007 * v))
+            // GLINT's onset is crisper: 3 ms at full touch, against 5 to 12 ms; a softer GLINT opens rounder
+            // (about 11 ms at touch .35), with no change at full touch.
+            val opened = Chitin.smooth(t / (if (glint) .005 - .002 * v + .010 * (1 - v) else .012 - .007 * v))
             val closed = if (t < gate) 1.0 else 1 - Chitin.smooth((t - gate) / release)
             val amp = opened * closed * (if (struck) exp(-t / ringTime) else 1.0)
             val tap = if (voice == ChitinVoice.STING) .30 * filter.low + 1.0 * filter.band else filter.low.toDouble()

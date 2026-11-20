@@ -134,3 +134,22 @@ Measured (Kotlin; C4, partials at 2.6 and 4.6 times the root against the root, 2
 .15, .5 and .9 s; after .41, 1.12 and .84, and .95 at 1.3 s, above harmonics 2 to 5 from .5 s on. Root within 1
 cent at C3, C4 and C5, root share .81. Touch steps 5.2 and 3.5 dB. At least 25.8 dB from every other voice. SHELL,
 WING and the four kept voices are unchanged (their pins pass).
+
+## GLINT touch (round fix-glint-1, 2026-11-20)
+
+Verdicts: the reworked GLINT across its range (CX1) **KEEP**; soft, medium and hard at C4 (CX2) **TWEAK**, "All
+sound the same". The measured steps there were 5.2 and 3.5 dB (level-matched, 8.7 dB soft to hard), because touch
+only nudged the bend, the flash and the filter.
+
+Full touch is the kept GLINT, byte for byte: every new touch term is a factor of exactly 1 (or a term of exactly 0)
+at full touch, so CX1's notes, CX2's hard note and the future preset do not change. Below full touch GLINT now
+falls away steeply: the synced bend (the ping) scales with touch to the power 1.5 (`GLINT_TOUCH_BEND`), the glass
+ring and its flash with touch to the power 2.5 (`GLINT_TOUCH_GLASS`), the filter rests up to 2 octaves darker
+(`GLINT_TOUCH_DARK`, times one minus touch) and the onset rounds out to about 11 ms at touch .35. Soft is a round,
+nearly pure ring with a trace of glass and no flash; hard is the kept bright glass strike. Every touch still plays
+at the house loudness: the tone change was enough, so GLINT needs no level difference either.
+
+Measured (Kotlin, C4, level-matched): touch steps 23.9 and 18.1 dB (was 5.2 and 3.5), 40.1 dB soft to hard (was
+8.7). Glass partials against the root at .9 s: soft .04, medium .26, hard .84 (was .58, .68, .84); upper partials
+in the first 50 ms: .04, .47, 3.59 (was .91, 1.82, 3.59). The touch test's floor for GLINT is now 12 dB (others .5).
+Unheard: clip CY1 plays the old soft, medium and hard, then the new ones.
