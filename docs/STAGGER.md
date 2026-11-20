@@ -13,6 +13,53 @@ barely hear, or none → the clock drags and catches up → a cartoon lands wher
 
 ## Status
 
+**Round 2d built (2026-11-20): "It sounds like room reverb or something like that."** The owner heard round 2c and
+named the room. It was EMBER's: every EMBER drum carries the club's response at any DISTANCE (its direct-to-reverberant
+ratio runs from 16 dB at DISTANCE 0 to -4 dB at 1), so each STAGGER hit was printed with a tail before the kit's ROOM
+added its own, and the grooves played those tailed hits through a second room on top. Round 2d (`StaggerKits` version
+5) dries every EMBER source: DISTANCE 0, then a HUSH gate (FLOOR .5, CLOSE .5) closes on what the club still leaves,
+and the grooves take no ROOM, only the bus press and the shelf. The timpani keep their club (a timpani roll in a dry
+box is not a timpani roll); everything else is a drum in a dead room.
+
+Measured (`StaggerKitsTest`, the dryness test): every backbeat drum sits 35.6, 37.5 and 44.5 dB under its own peak at
+150 to 250 ms (CARDBOARD, MATINEE, STUMBLE) and is silence at 300 to 500 ms, where the test asks at least 50 dB; every
+groove's quiet tenth sits 49.3, 46.7 and 43.3 dB under its loudest frame (round 2c: 24 to 25; the test asks at least
+30, so a room cannot come back unnoticed). With the room gone the grooves' ceilings fall to 415, 521 and 290 Hz (round
+2c: 579, 636, 495), and the hats read 28, 28 and 30 dB under the mix. The light press stays on the hits (the snares'
+crest holds at 10.9, 12.0 → 11.8 and 14.0 → 12.5 dB; a dry snare gives the peak match nothing to re-level against, so
+its crest can only hold or fall, which is what the test now asks).
+
+The round 2d listening page (private to the owner's account): [Stagger, round two d](https://claude.ai/artifact/QNpWdiFNsMQG8j1Wb4Bjz6). Each kit's kick,
+backbeat drum and groove from round 2 (the room, no press), round 2c (the room, pressed) and round 2d (dry) side by
+side, then every pad as it ships. `:shell:generateStaggerKits` verified the three kits again (196, 202 and 162 s on this
+machine). On the exported pads (peak against 200 ms RMS) the hits' median crest reads 11.7, 10.9 and 9.2 dB and the grooves
+15.0, 14.3 and 9.9 (round 2c: 11.2, 9.7, 8.1 and 12.3, 12.1, 9.1).
+
+What to listen for: these kits are now very dry, which is the muffled-kick, cracking-snare profile, and also the way
+round 1's drums read as "drum machine sounds". If the dry kits read that way again, the next move is a short, dark
+room on the grooves only (not on the hits), or the owner's own chosen DISTANCE, measured the same way.
+
+**Round 2c built (2026-11-20): "It made it echoy."** The owner heard round 2b's press as echoy. The sustain compressor
+presses the body and the peak match lifts everything under it, and under an EMBER drum that is the club's response
+baked into every hit: measured, round 2b's press lifted the snares' tails 12 to 14 dB and CARDBOARD's groove's quiet
+moments 11 dB (from 25 dB under its loudest to 15), the room coming forward, which the first round's measurements had
+recorded as "the tail comes up" and read as glue. Round 2c (`StaggerKits` version 4) presses the hits with a fast,
+light press instead (`PRESS`: ATTACK .15, RECOVER .20, AMOUNT .25), measured on the kick, the snare and the groove
+before choosing, and the grooves take no second press: their room's bus is their press.
+
+Measured (`StaggerKitsTest`): the snares' crest falls 0.7, 0.9 and 2.3 dB (CARDBOARD, MATINEE, STUMBLE) and their tails
+rise 4.2, 2.9 and 6.2 dB (round 2b: 11.8, 7.9 and 17.4); the kicks' crests rise 0.9 to 1.4 dB and their tails move
+within 1.1 dB; every groove's quiet tenth sits 24 to 25 dB under its loudest, where round 2's did (round 2b: 15), and the
+grooves' ceilings are round 2's again (579, 636 and 495 Hz). The test now bounds a snare's tail lift to 2 to 8 dB and
+holds every groove's quiet tenth at least 20 dB under its loudest, so the echo cannot come back unnoticed.
+
+The round 2c listening page (private to the owner's account): [Stagger, round two c](https://claude.ai/artifact/6YhwBR1yvdaSazJGY1hJf4).
+Each kit's kick, backbeat drum and groove from round 2 (no press), round 2b (echoy) and round 2c side by side, then
+every pad as it ships. `:shell:generateStaggerKits` verified the three kits again (198, 205 and 164 s on this machine).
+On the exported pads (peak against 200 ms RMS) the hits' median crest reads 11.2, 9.7 and 8.1 dB (round 2: 11.0, 9.8,
+9.1; round 2b: 10.7, 10.1, 8.0) and the grooves 12.3, 12.1 and 9.1, round 2's exactly, since the print no longer
+presses them.
+
 **Round 2b built (2026-11-19): "maybe we need a bit of compression."** The owner heard the round-2 page and asked for a
 bit of compression. The single pads had none (only the grooves went through a bus), so every kit's print now presses
 its pads between the converter and the tape (`StaggerKits.PRESS`: COMPRESSOR at AMOUNT .40, ATTACK .25, RECOVER .45,
@@ -152,7 +199,7 @@ the phrases only.
 |---|---|
 | Melodic, keygroups, chord tools, STRUM | Not applicable: drum kits |
 | Drums: multiple distinct genre kits on the shelf | Pass in software: three kits under SKINS, held apart by `StaggerKitsTest`; the owner has heard CARDBOARD's drums (round 1b, "New sounds are better"), not the three kits as kits |
-| Percussion: roll/riser | Built: a timpani roll, a timpani riser into the crash gong, a dragging snare roll, one per kit, in the room; not heard |
+| Percussion: roll/riser | Built: a timpani roll, a timpani riser into the crash gong (the timpani keep their club), a dragging snare roll (dry, round 2d), one per kit; not heard |
 | Velocity and round robin: rendering | Pass in software: every soft zone a different strike from the hard one and no brighter; every zone holds four different strikes (`StaggerKitsTest`) |
 | Velocity and round robin: saving, playback, export | Pass in software: `StaggerKitTest` and `:shell:generateStaggerKits` (all three kits, 192 slices each: saved PCM, reload, the pad resolver walking the takes, MPC 3 track, SFZ, DecentSampler). MPC 2 is not written (the owner's format limit). Not played on a phone or an MPC |
 
@@ -163,9 +210,10 @@ the phrases only.
 | The muffled kick keeps the band a phone plays | 1.56 percent of its energy in 150 to 400 Hz; the same filter with no clipper 0.98 percent |
 | The muffle removes the click | above 1 kHz in the first 40 ms (tapered window): the open kick 1.6e-4 of its energy, the muffled 3.0e-6, a 55-fold drop |
 | Both kicks and the dead tom keep the band through the print | over 1 percent each |
-| The crack snare is a crack | centroid 4.19 kHz over its first 120 ms (the references 1.3 to 5.3, median 3.2; the bare SKIN snare read 10.8 kHz, so it got a 4.5 kHz contact and its sizzle came down) |
-| The groove's hats | the 6 to 14 kHz band at its loudest 30.2 dB under the full band (the references 16 to 35, median 23): at the whisper end. At a quarter of the written weights it measured 35; the converter's TONE at .45 (a 4.4 kHz low-pass) alone had taken the band out |
-| The groove's mix is dark | 95 percent of its energy under 442 Hz (eight references under 309 to 635) |
+| The crack snare is a crack | centroid 3.61 kHz over its first 120 ms (round 2d, dry; 4.19 with the club) (the references 1.3 to 5.3, median 3.2; the bare SKIN snare read 10.8 kHz, so it got a 4.5 kHz contact and its sizzle came down) |
+| The groove's hats | the 6 to 14 kHz band at its loudest 28.4, 27.9 and 30.3 dB under the full band (round 2d, dry; the references 16 to 35, median 23): at the whisper end. At a quarter of the written weights round 1 measured 35; the converter's TONE at .45 (a 4.4 kHz low-pass) alone had taken the band out |
+| The groove's mix is dark | 95 percent of its energy under 415, 521 and 290 Hz (round 2d, dry; eight references under 309 to 635) |
+| The drums are dry (round 2d) | every backbeat drum 35.6, 37.5 and 44.5 dB under its peak at 150 to 250 ms and silent at 300 to 500; every groove's quiet tenth 49.3, 46.7 and 43.3 dB under its loudest frame |
 | The clock does what its numbers say | on a sixteen-bar pattern: every part's mean within 1 ms of its bias, the kick 15 ms behind the snare, hats' spread 10.2 ms for a 10 ms wobble, lag-one autocorrelation 0.46 for rho 0.4 (CYPHER's `humanised` -0.32); the same seed gives the same offsets |
 | GLASS deals panes | four takes at least 0.5 apart in shape (a copy is 0); the same take twice is byte-identical; 0.49 s at -5 |
 | Every pad | the same bytes twice; finite; levelled to 0.92 at every zone's first take; a soft hit a different, no brighter strike; four different takes in every zone; every hit under 1.5 s, both phrases over it; the groove bar-exact and closing on itself |

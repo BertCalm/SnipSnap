@@ -22,11 +22,12 @@ object TerraPicker {
 
     /** A colour role without rendering: what each voice's factory presets mostly are. */
     fun roleClass(voice: TerraVoice): DrumClass = when (voice) {
-        TerraVoice.RESONANT_CAVITY -> DrumClass.KICK
+        TerraVoice.RESONANT_CAVITY, TerraVoice.ODAIKO -> DrumClass.KICK
         TerraVoice.BOX -> DrumClass.SNARE
-        TerraVoice.DJEMBE, TerraVoice.DHOLAK, TerraVoice.BAYAN, TerraVoice.COMPOUND_MEMBRANE -> DrumClass.TOM
+        TerraVoice.DJEMBE, TerraVoice.DHOLAK, TerraVoice.BAYAN, TerraVoice.COMPOUND_MEMBRANE, TerraVoice.NAGADO, TerraVoice.SHIME -> DrumClass.TOM
         TerraVoice.CONICAL_BELL, TerraVoice.TUNED_BAR, TerraVoice.SLAP, TerraVoice.DAYAN, TerraVoice.DARBUKA,
-        TerraVoice.DOUM, TerraVoice.TUN -> DrumClass.PERC
+        TerraVoice.DOUM, TerraVoice.TUN, TerraVoice.KA, TerraVoice.KANE, TerraVoice.CHAPPA, TerraVoice.BINZASARA,
+        TerraVoice.COWBELL, TerraVoice.WATER_DRUM -> DrumClass.PERC
     }
 
     /** The chip's one-line label: the instrument the voice plays, with no underscores. */
@@ -44,5 +45,14 @@ object TerraPicker {
         TerraVoice.BAYAN -> "BAYAN"
         TerraVoice.TUN -> "TUN"
         TerraVoice.COMPOUND_MEMBRANE -> "MEMBRANE"
+        TerraVoice.ODAIKO -> "ODAIKO"
+        TerraVoice.NAGADO -> "NAGADO"
+        TerraVoice.SHIME -> "SHIME"
+        TerraVoice.KA -> "KA"
+        TerraVoice.KANE -> "KANE"
+        TerraVoice.CHAPPA -> "CHAPPA"
+        TerraVoice.BINZASARA -> "BINZASARA"
+        TerraVoice.COWBELL -> "COWBELL"
+        TerraVoice.WATER_DRUM -> "WATER DRUM"
     }
 }

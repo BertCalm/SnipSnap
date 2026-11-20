@@ -693,6 +693,42 @@ class PadSheetTest {
     }
 
     /**
+     * A KERF twin is on top under the same rule as a de-sample: its stamp, and exactly the recipe `kerfPad` writes,
+     * a twin with nothing riding it. Its UNDO refuses in the same order as the others, and its mark shows on MAKE.
+     */
+    @Test
+    fun `a pad is a KERF twin only while the bare twin is on top, and its UNDO refuses in order`() {
+        val bank = com.snipsnap.synth.KerfBank.kits.getValue("B").first { it.pad == 5 }
+        val bare = PadRecipe(kerf = com.snipsnap.synth.KerfRecipe(bank.patch, bank.prev, bank.next, draw = bank.draw))
+        val twinJson = bare.toJsonValue()
+        val stamp = mapOf(KitBuilderModel.KERF_STAMP to "1", KitBuilderModel.KERF_WAS to "PERC")
+        fun pad(recipe: JsonValue.Obj?) = treated(recipe).copy(source = stamp)
+
+        assertTrue(PadSheet.isKerfTwin(pad(twinJson)))
+        assertFalse(PadSheet.isKerfTwin(treated(twinJson)), "no stamp")
+        assertFalse(PadSheet.isKerfTwin(pad(null)), "a stamp with no twin under it")
+        assertFalse(PadSheet.isKerfTwin(pad(PATCH)), "a patch is not a twin")
+        assertFalse(PadSheet.isKerfTwin(pad(bare.copy(fx = Treatments.chain("washed")).toJsonValue())), "a chain rides it")
+        assertFalse(
+            PadSheet.isKerfTwin(pad(bare.copy(pedals = com.snipsnap.synth.PedalBoard(listOf(com.snipsnap.synth.PedalBoard.Pick("driven", 0.7f)))).toJsonValue())),
+            "pedals ride it: NONE first",
+        )
+        assertFalse(PadSheet.isKerfTwin(pad(ERA)), "an era over it")
+        val printed = JsonValue.Obj(twinJson.entries + ("boardPad" to JsonValue.Num(1.0)))
+        assertFalse(PadSheet.isKerfTwin(pad(printed)), "a print marker")
+
+        val twin = pad(twinJson)
+        assertEquals(Copy.KERF_UNDO_NOTHING, PadSheet.kerfUndoRefusal(treated(twinJson), binned = true))
+        assertEquals(Copy.KERF_UNDO_NOT_BINNED, PadSheet.kerfUndoRefusal(twin, binned = false))
+        assertEquals(Copy.UNDO_LAYERED, PadSheet.kerfUndoRefusal(twin.copy(velocityLayers = listOf(KitLayer("a1_kick_soft.wav", 1, 63), KitLayer("a1_kick.wav", 64, 127))), binned = true))
+        assertNull(PadSheet.kerfUndoRefusal(twin, binned = true))
+
+        assertTrue(PadSheet.hasOwnWayBack(twin, twin.sampleFile, setOf(twin.sampleFile)), "THE BIN hides BACK where the twin can undo itself")
+        assertEquals("A SYNTH TWIN NOW", PadSheetBoxes.make(twin))
+        assertTrue(PadSheetBoxes.Box.MAKE in PadSheetBoxes.touched(twin), "the grid marks a twin")
+    }
+
+    /**
      * The two new UNDOs refuse from most final to least, so nobody is told to turn SOFT HITS off
      * and is then refused anyway: not on top, then not in the bin, then layered.
      */

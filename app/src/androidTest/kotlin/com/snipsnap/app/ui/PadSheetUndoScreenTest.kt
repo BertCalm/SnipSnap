@@ -225,4 +225,38 @@ class PadSheetUndoScreenTest : ComposeScreenTest() {
         waitForToast(Copy.DESAMPLE_UNDO_NOTHING)
         assertTrue("a refused UNDO touches nothing", original.contentEquals(File(entry.dir, "hit1.wav").readBytes()))
     }
+
+    /**
+     * The twin is made the way the MAKE box's button makes one (`KitBuilderModel.kerfPad`, three fits, about a
+     * second), so this also proves the saved recipe and stamp are what the sheet's UNDO looks for.
+     */
+    @Test
+    fun synth_twin_undo_gives_the_take_before_the_twin_back_and_clears_its_mark() {
+        val entry = kit()
+        val original = File(entry.dir, "hit1.wav").readBytes()
+        val before = savedPad(entry)
+        val m = KitBuilderModel.open(entry.dir)
+        m.kerfPad(1)
+        m.save()
+        val twin = savedPad(entry)
+        assertTrue("test setup: the bare twin and its stamp are on top", PadSheet.isKerfTwin(twin))
+        assertFalse("test setup: the pad's audio is the twin's render", original.contentEquals(File(entry.dir, "hit1.wav").readBytes()))
+
+        show(KitShelf.Entry(entry.dir, KitStore.load(entry.dir)), openBox = PadSheetBoxes.Box.MAKE.name, page = PadSheetPage.MAKE)
+        waitFor("the MAKE box's SYNTH TWIN line to say the pad is one", timeoutMillis = 60_000) { hasText("A synth twin now") }
+        activate("UNDO SYNTH TWIN")
+        waitForToast(Copy.UNKERFED)
+        val undone = savedPad(entry)
+        assertNull("the twin's recipe came off", undone.recipe)
+        assertFalse("the twin's stamp came off", KitBuilderModel.KERF_STAMP in undone.source)
+        assertEquals("the pad is called what it was called", before.drumClass, undone.drumClass)
+        assertTrue("the take before the twin, byte for byte", original.contentEquals(File(entry.dir, "hit1.wav").readBytes()))
+        waitFor("the MAKE box's SYNTH TWIN line to stop saying so", timeoutMillis = 60_000) {
+            hasText("This hit rebuilt from its own measurements")
+        }
+
+        activate("UNDO SYNTH TWIN")
+        waitForToast(Copy.KERF_UNDO_NOTHING)
+        assertTrue("a refused UNDO touches nothing", original.contentEquals(File(entry.dir, "hit1.wav").readBytes()))
+    }
 }

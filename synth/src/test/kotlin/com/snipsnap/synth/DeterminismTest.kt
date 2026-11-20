@@ -917,6 +917,12 @@ class DeterminismTest {
                 TerraVoice.TUN -> mapOf("KNOCK" to 1f)
                 TerraVoice.CONICAL_BELL -> mapOf("CLACK" to 1f)
                 TerraVoice.COMPOUND_MEMBRANE -> emptyMap()
+                TerraVoice.ODAIKO -> mapOf("DRUM" to 0.5f)
+                TerraVoice.SHIME -> mapOf("STROKE" to 0.5f)
+                TerraVoice.KANE -> mapOf("EDGE" to 0.5f)
+                TerraVoice.BINZASARA -> mapOf("SPREAD" to 1f)
+                TerraVoice.COWBELL -> mapOf("DAMP" to 0.5f)
+                TerraVoice.NAGADO, TerraVoice.KA, TerraVoice.CHAPPA, TerraVoice.WATER_DRUM -> mapOf("ATTACK" to 1f)
             }
             val patch = TerraPatch("Canary", voice, Terra.defaults(voice) + loud)
             assertContentEquals(patch.render().samples, patch.render().samples, voice.name)

@@ -69,15 +69,18 @@ object ParadeSamba {
         return ramp*(u.pow(3)-.5*u.pow(4))+max(0.0,t-start-ramp)
     }
     fun render(voice: Voice, macros: Map<String,Float> = defaults(), velocity: Float = 1f, take: Int = 0): Snip {
-        require(take >= 0)
-        val m=settled(macros);val v=velocity.takeIf { it.isFinite() }?.coerceIn(.05f,1f)?.toDouble() ?: 1.0
-        val source=raw(voice,m,v,take)
-        val raw=FloatArray(source.size) { source[it].toFloat() }
+        val raw=renderRaw(voice,macros,velocity,take)
         Tide.bandLimit(raw,R);val out=Dsp.decimate(raw,Dsp.RATE)
         val mean=out.average().toFloat();val hp=Dsp.FixedOnePole(20f,Dsp.RATE)
         for(i in out.indices) { val x=out[i]-mean;out[i]=x-hp.lp(x) }
         Dsp.levelTo(out,Dsp.RATE,Dsp.MELODIC_LOUDNESS_TARGET);Dsp.fadeTail(out)
         return Snip(out,1,Dsp.RATE)
+    }
+    internal fun renderRaw(voice: Voice,macros: Map<String,Float> = defaults(),velocity: Float = 1f,take: Int = 0): FloatArray {
+        require(take >= 0)
+        val m=settled(macros);val v=velocity.takeIf { it.isFinite() }?.coerceIn(.05f,1f)?.toDouble() ?: 1.0
+        val source=raw(voice,m,v,take)
+        return FloatArray(source.size) { source[it].toFloat() }
     }
     private fun raw(voice: Voice,m: Map<String,Float>,v: Double,take: Int): DoubleArray {
         if(voice==Voice.REPINIQUE_CALL) {
