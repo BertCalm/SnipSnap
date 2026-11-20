@@ -5,7 +5,7 @@ kit+stack combinations and a listening page. Python harness, not Kotlin. Reads f
     python3 build.py fitted.json OUT_DIR
 """
 from __future__ import annotations
-import html, importlib, json, os, sys, time, zipfile
+import html, importlib, json, math, os, sys, time, zipfile
 from pathlib import Path
 import numpy as np
 from scipy.io import wavfile
@@ -189,6 +189,62 @@ def groove(kit, bank, stack=None, sbank=None, bars=4):
 KICK_PADS = (0, 4)   # A01 KICK, A05 KICK 2
 
 
+def glue_bus(x, threshold_db=-10.0, ratio=4.0, attack_ms=10.0, release_ms=120.0):
+    """A gentle glue compressor across the whole kit, causal like a live one: 10 ms attack (the
+    crack of each hit gets through), 120 ms release, ratio 4, threshold 10 dB under the peak."""
+    a_at = math.exp(-1 / (attack_ms * 1e-3 * SR)); a_re = math.exp(-1 / (release_ms * 1e-3 * SR))
+    thr = np.max(np.abs(x)) * 10 ** (threshold_db / 20)
+    lvl = np.abs(x); env = np.empty_like(x); e = 0.0
+    for i, l in enumerate(lvl):
+        e = a_at * e + (1 - a_at) * l if l > e else a_re * e + (1 - a_re) * l
+        env[i] = e
+    y = x * np.maximum(env / thr, 1.0) ** (1 / ratio - 1)
+    return y / (np.max(np.abs(y)) + 1e-12)
+
+
+def limit(x, drive_db, look_ms=3.0, release_ms=50.0):
+    """A lookahead peak limiter at a 1.0 ceiling: the needed gain, its minimum over the lookahead
+    window, a 50 ms release (the app's own output guard), then smoothed over the lookahead (which
+    cannot overshoot: every value averaged is a minimum over a window holding that sample).
+    `drive_db` pushes into it. The release matters on kicks: a 3 ms recovery moves the gain inside
+    one cycle of a 50-100 Hz head, which is distortion."""
+    from scipy.ndimage import minimum_filter1d, uniform_filter1d
+    y = x * 10 ** (drive_db / 20)
+    L = max(1, int(look_ms * 1e-3 * SR))
+    g = minimum_filter1d(np.minimum(1.0, 1.0 / (np.abs(y) + 1e-12)), 2 * L + 1)
+    k = 1 - math.exp(-1 / (release_ms * 1e-3 * SR)); prev = 1.0
+    for n in range(len(g)):
+        prev = min(g[n], prev + (1.0 - prev) * k)
+        g[n] = prev
+    g = uniform_filter1d(g, L)
+    return y * np.minimum(g, 1.0 / (np.abs(y) + 1e-12))
+
+
+def bus_preview(x, drive_db):
+    """PREVIEW ONLY, on demo grooves: the record's own chain across the whole kit, glue compressor
+    then limiter, the way a break was squashed and then mastered. Back to a 0.89 peak. The app has
+    no such bus yet (round 1.4: the owner chose to hear it before it is built), so it never touches
+    a pad. Compression alone measured peakier, not denser: a compressor's attack lets each crack
+    through (STOOP's groove 14.1 -> 22.2 dB crest), so the loops' density is a limiter's too."""
+    y = limit(glue_bus(x), drive_db)
+    return y / (np.max(np.abs(y)) + 1e-12) * .89
+
+
+def bus_drive(x, crest_target):
+    """The limiter drive (dB) that brings this groove's crest (first 10 s) to its loop's."""
+    n = int(10 * SR); g = glue_bus(x[:n])
+    crest = lambda d: X.crest_db(limit(g, d))
+    if crest_target is None or crest(0.0) <= crest_target:
+        return 0.0
+    lo, hi = 0.0, 24.0       # crest falls as the drive rises
+    if crest(hi) > crest_target:
+        return hi
+    for _ in range(12):
+        mid = (lo + hi) / 2
+        lo, hi = (mid, hi) if crest(mid) > crest_target else (lo, mid)
+    return hi
+
+
 def kick_trim(kit, bank, target_db):
     """Gain for both kick pads that puts the groove's low-to-mid balance (extract.low_mid_db) at
     the primary loop's. Cuts only, never boosts (a boost would break the 0.89 peak), and at most
@@ -242,7 +298,10 @@ def main(fitted_path, out):
             for zi in range(3):
                 for t in range(TAKES):
                     write(out / 'kits' / kit['id'] / f'A{i + 1:02d}-{label.lower().replace(" ", "-")}-v{zi + 1}-t{t + 1}.wav', bank[i][zi][t])
-        write(out / 'demo' / f"{kit['id']}-groove.wav", groove(kit, bank))
+        gv = groove(kit, bank)
+        write(out / 'demo' / f"{kit['id']}-groove.wav", gv)
+        bus_db = bus_drive(gv, targets[kit['primary']].get('crest_db'))
+        write(out / 'demo' / f"{kit['id']}-groove-glued.wav", bus_preview(gv, bus_db))
         for st in STACKS:
             write(out / 'demo' / f"{kit['id']}+{st['id']}.wav", groove(kit, bank, st, sbanks[st['id']]))
         tour = []
@@ -257,7 +316,10 @@ def main(fitted_path, out):
                     clip[-441:] *= np.linspace(1, 0, min(441, len(clip)))[-len(clip[-441:]):]
                     touch += [clip, np.zeros(int(.08 * SR))]
         write(out / 'demo' / f"{kit['id']}-touch.wav", np.concatenate(touch))
-        man['kits'].append(dict(kit, kick_trim_db=round(20 * np.log10(trim), 2), pads=[dict(pad=i + 1, label=l, model=k, params=p, extra=e) for i, (l, k, p, e) in enumerate(pads)],
+        man['kits'].append(dict(kit, kick_trim_db=round(20 * np.log10(trim), 2),
+                                bus_preview=dict(limiter_drive_db=round(bus_db, 2), crest_db=round(X.crest_db(bus_preview(gv, bus_db)[:int(10 * SR)]), 2),
+                                                 crest_dry_db=round(X.crest_db(gv[:int(10 * SR)]), 2), loop_crest_db=targets[kit['primary']].get('crest_db')),
+                                pads=[dict(pad=i + 1, label=l, model=k, params=p, extra=e) for i, (l, k, p, e) in enumerate(pads)],
                                 fitted_residual_db={r: fitted[kit['primary']][r]['residual_db'] for r in fitted[kit['primary']]}))
         print(kit['id'], round(time.time() - t0, 1), 's', flush=True)
     for st in STACKS:
