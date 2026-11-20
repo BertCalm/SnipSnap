@@ -218,7 +218,7 @@ def confirm_attacks(drums: list[dict], rises: dict) -> tuple[int, int]:
     return moved, dropped
 
 
-TIGHTEN = {"90"}        # loops whose hits are set to the groove's own average timing (by ear)
+TIGHTEN = {"90", "163"}        # loops whose hits are set to the groove's own average timing (by ear)
 SLOT_S = 0.025          # a hit this close to a common position in the beat goes to it
 SLOT_MIN_HITS = 4       # ... a position at least this many hits share
 
@@ -333,6 +333,58 @@ def split_by_decay(key, drums, work, n):
             out.append(nd)
         next_id += 1
     return out
+
+
+DOUBLES = {"163"}        # loops whose low parts' tail re-firings are dropped (by ear)
+TAIL_S = 0.12            # a low firing this soon after a real hit ...
+OWN_LOW_AFTER_S = 0.05   # ... is its tail, unless it cracks itself, or jumps under 150 Hz this
+                         # long after it
+
+
+def drop_doubles(drums: list[dict], rises: dict) -> int:
+    """A low part re-fired on the tail of the hit before it: in the World groove all seven
+    low parts fire on the downbeat and two fire again 33 ms later with no attack of their own,
+    a doubled hit on every beat (heard by the owner, 2026-11-20). Its bass plays legato, a
+    note starting while the last still rings, so the loop's low band cannot tell a new note
+    from a tail (its jumps spread evenly from 0 to 45 dB); the transient can. A real hit cracks
+    in the mids or highs (7 dB); a re-fire does not. So the loop's hits are the firings with an
+    attack in any band; a low firing within TAIL_S after one, with no crack of its own and no
+    low jump of its own beyond OWN_LOW_AFTER_S, is dropped. Firings further from any hit stay
+    (a legato 808 note). Returns how many were dropped."""
+    m = len(rises["low"])
+    up = np.maximum(rises["mid"], rises["high"])
+    def at(curve, t):
+        a, b = (int(round((t + s) * RATE / RISE_HOP)) for s in EVIDENCE_SEARCH_S)
+        return curve[np.arange(a, b + 1) % m].max()
+    seconds = m * RISE_HOP / RATE
+    hits = sorted({e["t"] for d in drums for e in d["events"]
+                   if at(up, e["t"]) >= EVIDENCE_HIGH_DB or at(rises["low"], e["t"]) >= EVIDENCE_LOW_DB})
+    dropped = 0
+    for d in drums:
+        if d["features"]["low_share"] <= LOW_SHARE:
+            continue
+        keep = []
+        for e in d["events"]:
+            since = [(e["t"] - h) % seconds for h in hits]
+            since = min([x for x in since if 0.004 < x <= TAIL_S], default=None)
+            cracks = at(up, e["t"]) >= EVIDENCE_HIGH_DB
+            own_low = since is not None and since > OWN_LOW_AFTER_S and \
+                at(rises["low"], e["t"]) >= EVIDENCE_LOW_DB
+            if since is not None and not cracks and not own_low:
+                dropped += 1
+                continue
+            keep.append(e)
+        # one part's firings within SAME_HIT_S are one hit, the louder
+        one = []
+        for e in sorted(keep, key=lambda e: e["t"]):
+            if one and e["t"] - one[-1]["t"] <= SAME_HIT_S:
+                dropped += 1
+                if e["gain"] > one[-1]["gain"]:
+                    one[-1] = e
+                continue
+            one.append(e)
+        d["events"] = one
+    return dropped
 
 
 def drop_refires(times, gains, y, n):
@@ -664,6 +716,12 @@ def main(ref_dir: Path, work: Path) -> None:
             drums = [rebuild(key, d, work, n) if d["features"]["low_share"] <= LOW_SHARE
                      else d for d in drums]
             drums = kick_first(key, drums, work, n, rises)
+        doubles = None
+        if key in DOUBLES:
+            doubles = drop_doubles(drums, loop_rises(mono))
+            # recut the takes of the low parts: a re-fire had cut each hit's take short
+            drums = [rebuild(key, d, work, n) if d["features"]["low_share"] > LOW_SHARE
+                     else d for d in drums]
         if key in SPLIT_DECAY:
             drums = split_by_decay(key, drums, work, n)
         tightened = None
@@ -673,6 +731,8 @@ def main(ref_dir: Path, work: Path) -> None:
                         aligned_firings=moved)
         if confirmed:
             inv[key]["confirmed_attacks"] = dict(moved=confirmed[0], dropped=confirmed[1])
+        if doubles is not None:
+            inv[key]["doubles_dropped"] = doubles
         if tightened is not None:
             inv[key]["tightened"] = tightened
         print(f"== {key} {name}  (firings moved onto the loop's own onsets: {moved})")

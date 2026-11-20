@@ -274,6 +274,20 @@ some of the other drums, and a replica lane carries none. Not yet shown.
   7 dB quiet). Measured at matched level: band distance 8.18 to 7.77 dB, balance 2.05 to
   1.99. TEXTURE A13 World Hat is the crisp hat (closed hat); the tambourine has no pad yet,
   all 16 being in use.
+- Round 0k (2026-11-20), the World groove's doubled hits (163). The owner heard it as
+  jittery, like doubled hits. Its low end (two 808 notes, two toms and the snare's body) is
+  seven NMFD parts, and after each real hit two or three struck again 30 to 60 ms later on
+  the hit's tail: at the downbeat all seven fire, and d5 and d6 again 33 ms later, where the
+  loop shows no attack. The bass plays legato, so the loop's low band cannot tell a new note
+  from a tail (its jumps at low firings spread evenly from 0 to 45 dB); every real hit cracks
+  in the mids or highs, a re-fire does not. `drums.drop_doubles` (loops in `DOUBLES`) drops a
+  low firing within 120 ms after a hit (a firing with an attack in any band) unless it cracks
+  itself (7 dB) or, past 50 ms, jumps 15 dB under 150 Hz; firings further from any hit stay.
+  107 dropped; the low parts' takes are recut. 163 joins `TIGHTEN` (places found: the beat,
+  the 8th, swung 16ths 37 ms late; 189 hits moved, 20 of 287 off any place). Low strike
+  pairs 15 to 80 ms apart went from 119 to 42; 22 of those show attacks at both hits (fast
+  notes the original plays), about 9 follow legato notes and remain. Measured at matched
+  level: band distance 7.77 to 7.67 dB, balance 1.99 to 1.90.
 - Round robin follows the reference's own hit-to-hit spread, clamped to 0.3 to 1.2 dB per band,
   plus fresh noise and phases. Whether that reads as one drum hit again is for the ear.
 - Engine gates: this is a prototype. Velocity and round robin are checked in rendering only;
