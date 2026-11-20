@@ -467,3 +467,40 @@ unfold arrivals, bends should deplete THROUGH while feeding SPILL, and the
 full model should reveal ordered escape that a generic reverb send loses.
 Numerical checks establish implementation properties, not that this gesture
 is musically convincing.
+
+## Candidate voices: BRAID, HALO, FRAY, SPRING (round filament-voices-1, 2026-11-20)
+
+Status: **built, measured, unheard**. The melodic gate asks for six voices and FILAMENT has three. Four
+candidates are appended to `FilamentVoice` after CURL, so saved names and ordinals do not move; the owner needs
+to keep at least three (SPRING is the spare). `Filament.KEPT_VOICES` is the three voices players are offered;
+the candidates have no preset, kit or starter, and are model 3 only. The kept renders (models 1 to 3, HOLD, all
+twelve model-3 presets, held keys, touch layers and the CURL halo-release capture) are pinned byte for byte in
+`FilamentCandidateVoicesTest` against the build before this round. The code is `FilamentCandidates.kt`; the only
+changes to the shared path are `else` arms and two hooks (per-strand sources in the junction, a dispersive
+cascade on the through collector), both inert for the kept voices.
+
+THREAD, PULSE and CURL send one harmonic source down every strand and hear the halo only as a colour behind the
+routes. Each candidate reads a part of the same network those three leave unused:
+
+- **BRAID** (strands as players): each strand gets its own copy of the source, a whole number of cycles apart
+  over the held loop (0, +1, -2, +3), so the routes beat against each other at about .2 to .65 Hz on every key,
+  like an ensemble; each copy also wanders in pitch (up to 4 cents) and level on its own seeded drift.
+- **HALO** (the halo as the instrument, a glass harmonica): a slow rubbed source, BEND high and COLLECT .85, so
+  almost everything reaches long-ringing, root-led modes; a finite note keeps ringing after the rub stops.
+- **FRAY** (air at the leaks, a glass flute): seeded breath noise, shaped to sit between just under the root
+  and about 2.4 kHz, travels with a flute-like tone; where it escapes at the bends the root-related halo modes
+  give the breath a pitch. Soft touch is breathier, hard touch has a brighter chiff.
+- **SPRING** (spare): a pluck whose through collector passes a 16-stage allpass cascade spread from 1.5 to 6
+  times the root, so every partial arrives at a different time and the attack chirps like a struck spring.
+
+All four have the held key the kept voices have (`FilamentKeys.supports` takes every voice): the same network
+runs to a settled loop, with the held-key overtone tilt. A candidate's loop spans 4.6 s rather than 2.3 s, and its
+level, brightness and pitch drift on a seeded `HoldDrift` that closes over that loop, so a held key never sits
+on one frozen cycle. Touch scales the upper partials as well as the level (soft is darker).
+
+Measured (Kotlin, `FilamentCandidateVoicesTest`, nothing heard): every candidate sounds its root within 2 cents
+from C2 to C6; the nearest pair of voices is 5.9 dB apart in level-matched third-octave shape (BRAID and SPRING
+at C5; the bar is 3.7). Soft against hard differs by 11.6 (BRAID), 11.5 (HALO), 6.1 (FRAY) and 13.4 dB (SPRING)
+of tone at matched level, and a soft note is also quieter. Held keys keep the 2 to 8 kHz band at or under the
+kept voices' ceilings (at C4: -50, -66, -46 and -41 dB against the root, ceiling -23.5) and their level wanders
+2.5 to 5.5 dB across the loop. HALO rings on at about 0.28 of its sung level half a second after the rub ends.

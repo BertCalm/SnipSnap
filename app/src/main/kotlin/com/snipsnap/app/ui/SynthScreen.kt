@@ -6783,7 +6783,7 @@ private enum class Engine {
         SKITTER -> SkitterVoice.entries
         TANGLE -> TangleVoice.entries
         SHOAL -> ShoalVoice.entries
-        CREASE -> CreaseVoice.entries
+        CREASE -> Crease.KEPT_VOICES
         CAUSTIC -> CausticVoice.entries
         LATTICE -> LatticeVoice.entries
         RELAY -> RelayVoice.entries
@@ -6799,7 +6799,7 @@ private enum class Engine {
         // MERCURY shows the three voices the owner kept at R1's gate (2026-10-04). EDDY, VESSEL
         // and SHARD (R2c) stay in the roster and the CLI until round 7's listen, VENT's shape.
         MERCURY -> listOf(MercuryVoice.PING, MercuryVoice.SING, MercuryVoice.BLADE)
-        FILAMENT -> FilamentVoice.entries
+        FILAMENT -> Filament.KEPT_VOICES
         TIDAL -> TidalVoice.entries
         CHAMBER -> ChamberVoice.entries
         MERIDIAN -> MeridianVoice.entries

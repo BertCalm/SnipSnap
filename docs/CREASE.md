@@ -255,3 +255,40 @@ passes 198 of 201 accuracy cases; three short-release peak errors still exceed
 the preregistered limit. Decoder, streaming-reader and browser interaction checks
 pass, but the phone-integration gate remains failed. Existing instruments,
 production playback and MPC exports retain their previous behaviour.
+
+## Candidate voices: PLEAT, SNAP, TWOFOLD, CUP (round crease-voices-1, 2026-11-20)
+
+Status: **built, measured, unheard**. The melodic gate asks for six voices and CREASE has three. Four candidates
+are appended to `CreaseVoice` after RUBBER, so saved names and ordinals do not move; the owner needs to keep at
+least three (CUP is the spare). `Crease.KEPT_VOICES` is the three voices players are offered; the candidates have
+no preset, kit or starter, and are model 3 only. The kept renders (models 1 to 3, HOLD, all six presets as
+patches and as held keys, and Paper Keys' touch layers) are pinned byte for byte in `CreaseCandidateVoicesTest`
+against the build before this round. The code is the candidate arms in `Crease.kt` (Shape, the model and
+`candidateOutput`); the kept voices' arithmetic is untouched.
+
+ROUND, PINCH and RUBBER all hear the deformation as the depth of a phase map. Each candidate reads a part of the
+two-layer pressure model they leave unused:
+
+- **PLEAT** (deformation as resonance): phase distortion's windowed-sine trick. Each layer is a sine at r times
+  the phase, faded by a raised cosine that is silent where each cycle restarts; r follows that layer's
+  deformation, so pressure moves two formants, like a mouth saying a vowel. The formants stop near 900 Hz and
+  1.9 kHz on every key, which keeps the upper band low.
+- **SNAP** (deformation as the pick): the louder, brighter part of the note is the deformation itself, so a
+  finite note is a pluck that fades as the crease recovers (RELAX sets how fast). Held, the pressure is a
+  tremolo of sixteen picks per loop, each a little early or late and a little harder or softer, from a seed.
+- **TWOFOLD** (load made audible): the second layer is the same map on twice the phase (the sheet folded in
+  half, an octave), and its level follows layer A's load, which the kept voices use only to bend the other
+  layer. The harder the fold works, the more the octave blooms.
+- **CUP** (spare): PINCH's half-cycle map turned the other way, so each half flattens into a cup: a hollow,
+  squarish woodwind tone that opens with pressure.
+
+All four have the held key the kept voices have (`CreaseKeys` and `CreaseTouchKeys` take any model-3 patch).
+A candidate's held loop spans 3.2 s, and its pressure carries a seeded `HoldDrift` that closes over the loop,
+so a held key keeps moving like a player's hand.
+
+Measured (Kotlin, `CreaseCandidateVoicesTest`, nothing heard): every candidate sounds its root within 1 cent from
+C1 to C6; the nearest pair of voices is 5.7 dB apart in level-matched third-octave shape (SNAP and ROUND at C2;
+the bar is 3.7). Soft against hard differs by 15 to 20 dB of tone, and CREASE's own loudness law still makes a
+soft note a little quieter. Held keys keep the 2 to 8 kHz band under held Ink Ribbon's ceilings (at C4: -35, -30,
+-30 and -32 dB against the root, ceiling -8.5), and their tone changes 5.7 to 16 dB across the loop.
+TWOFOLD's octave rises from 0.18 to 0.70 of the root between no pressure and full pressure.

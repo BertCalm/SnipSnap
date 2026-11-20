@@ -12,6 +12,7 @@ import com.snipsnap.synth.FilamentPatch
 import com.snipsnap.synth.FilamentPresets
 import com.snipsnap.synth.FilamentProfile
 import com.snipsnap.synth.FilamentTouchKeys
+import com.snipsnap.synth.Filament
 import com.snipsnap.synth.FilamentVoice
 import com.snipsnap.synth.KeyNote
 import org.w3c.dom.Element
@@ -37,7 +38,7 @@ class FilamentTouchInstrumentTest {
     }
 
     private companion object {
-        val examples by lazy { FilamentVoice.entries.map { voice -> Example(
+        val examples by lazy { Filament.KEPT_VOICES.map { voice -> Example(
             FilamentPresets.forVoice(voice).first().copy(name = "TOUCH ${voice.name}", midi = 57, velocity = .61f,
                 config = FilamentConfig(seed = Int.MIN_VALUE + voice.ordinal + 9, profile = FilamentProfile.LATE)),
         ) } }

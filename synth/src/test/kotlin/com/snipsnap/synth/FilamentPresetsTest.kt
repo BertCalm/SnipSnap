@@ -45,10 +45,10 @@ class FilamentPresetsTest {
     fun `factory roster contains distinct named finite and held recipes for all three voices`() {
         val presets = FilamentPresets.all()
         assertEquals(12, presets.size)
-        assertEquals(listOf(FilamentVoice.THREAD, FilamentVoice.PULSE, FilamentVoice.CURL), FilamentVoice.entries)
+        assertEquals(listOf(FilamentVoice.THREAD, FilamentVoice.PULSE, FilamentVoice.CURL), Filament.KEPT_VOICES)
         assertEquals(presets.size, presets.map { it.name }.distinct().size)
         assertEquals(presets.size, presets.map { listOf(it.voice, it.macros, it.config) }.distinct().size)
-        for (voice in FilamentVoice.entries) {
+        for (voice in Filament.KEPT_VOICES) {
             val group = FilamentPresets.forVoice(voice)
             assertEquals(4, group.size)
             assertEquals(presets.filter { it.voice == voice }, group)
@@ -65,7 +65,7 @@ class FilamentPresetsTest {
     fun `shared factory lookup and recipe JSON retain the approved dry patches`() {
         val presets = FilamentPresets.all()
         assertEquals(presets, Presets.all().filter { it.engine == FilamentPatch.ENGINE })
-        for (voice in FilamentVoice.entries) {
+        for (voice in Filament.KEPT_VOICES) {
             assertEquals(FilamentPresets.forVoice(voice), Presets.forVoice(FilamentPatch.ENGINE, voice.name))
         }
         for (patch in presets) {

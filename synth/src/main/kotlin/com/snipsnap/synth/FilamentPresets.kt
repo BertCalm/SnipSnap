@@ -21,6 +21,7 @@ object FilamentPresets {
             FilamentVoice.THREAD -> listOf(.25f, .15f, .25f, 0f, .20f, 0f)
             FilamentVoice.PULSE -> listOf(.65f, .30f, .65f, .20f, .35f, 0f)
             FilamentVoice.CURL -> listOf(.45f, .65f, .45f, .15f, .50f, 0f)
+            else -> error("$voice has no model-one recipe")
         }
         val names = listOf("INJECT", "BEND", "LENGTH", "BUNDLE", "COLLECT", "HOLD")
         return FilamentPatch(name, voice, names.zip(values).toMap() + macros,

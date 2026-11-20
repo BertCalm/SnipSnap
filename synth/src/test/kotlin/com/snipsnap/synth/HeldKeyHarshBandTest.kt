@@ -42,7 +42,7 @@ class HeldKeyHarshBandTest {
     fun `held FILAMENT keys keep the two to eight kilohertz band under the fundamental from C2 to C6`() {
         // Ceilings in dB by root, about 2 dB above the measured value of the brightest voice.
         val ceilings = mapOf(36 to FILAMENT_C2, 48 to FILAMENT_C3, 60 to FILAMENT_C4, 72 to FILAMENT_C5, 84 to FILAMENT_C6)
-        for (voice in FilamentVoice.entries) {
+        for (voice in Filament.KEPT_VOICES) {
             val patch = FilamentPresets.forVoice(voice).first()
             for (midi in roots) {
                 val db = harshBandDb(FilamentKeys.layer(patch.copy(midi = midi)), midi)

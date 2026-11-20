@@ -23,7 +23,7 @@ class FilamentTouchKeysTest {
 
     private companion object {
         val examples by lazy {
-            FilamentVoice.entries.map { voice ->
+            Filament.KEPT_VOICES.map { voice ->
                 val patch = FilamentPresets.forVoice(voice).first().copy(midi = 60, velocity = .72f,
                     config = FilamentConfig(seed = Int.MIN_VALUE + 31 + voice.ordinal, profile = FilamentProfile.LATE))
                 Example(patch, FilamentTouchKeys.capture(patch))
@@ -119,7 +119,7 @@ class FilamentTouchKeysTest {
 
     @Test
     fun `partial sources use voice defaults without changing their saved shape or hard capture`() {
-        for (voice in FilamentVoice.entries) {
+        for (voice in Filament.KEPT_VOICES) {
             val patch = FilamentPresets.forVoice(voice).first().copy(macros = mapOf("LENGTH" to .2f), midi = 60)
             val saved = patch.toJsonText()
             for (touch in FilamentTouchKeys.TOUCHES) {

@@ -14,7 +14,7 @@ class FilamentPatchTest {
 
     @Test
     fun `finite and held recipes replay every source and geometry setting through the dispatcher`() {
-        for (model in listOf(1, 2, 3)) for ((index, voice) in FilamentVoice.entries.withIndex()) {
+        for (model in listOf(1, 2, 3)) for ((index, voice) in Filament.KEPT_VOICES.withIndex()) {
             val config = FilamentConfig(seed = 719 + index, profile = FilamentProfile.entries[index + 1],
                 perfectRetention = voice == FilamentVoice.THREAD)
             val macros = Filament.defaults(voice) + mapOf("INJECT" to .63f, "BEND" to .72f,
@@ -46,7 +46,7 @@ class FilamentPatchTest {
 
     @Test
     fun `omitted or null optional recipe state uses the documented original defaults`() {
-        for (voice in FilamentVoice.entries) for (optionals in listOf("",
+        for (voice in Filament.KEPT_VOICES) for (optionals in listOf("",
             """, "midi":null, "velocity":null, "config":null, "model":null""")) {
             val text = """{"engine":"FILAMENT","version":1,"name":"Partial","voice":"$voice","macros":{"LENGTH":0.2},"future":true$optionals}"""
             val p = FilamentPatch.fromJsonText(text)
@@ -102,7 +102,7 @@ class FilamentPatchTest {
 
     @Test
     fun `native velocity routing preserves the saved note and complete strand configuration`() {
-        for (model in listOf(1, 2, 3)) for (voice in FilamentVoice.entries) {
+        for (model in listOf(1, 2, 3)) for (voice in Filament.KEPT_VOICES) {
             val patch = FilamentPatch("Velocity", voice, Filament.defaults(voice), midi = 67, velocity = .8f,
                 config = FilamentConfig(seed = 17, profile = FilamentProfile.LATE), model = model)
             val actual = Velocity.atVelocity(patch, .25f)

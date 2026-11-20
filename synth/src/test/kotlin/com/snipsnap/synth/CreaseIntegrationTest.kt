@@ -21,7 +21,7 @@ import kotlin.test.assertTrue
 class CreaseIntegrationTest {
     @Test
     fun `native patch JSON preserves every model root velocity and a partial macro map`() {
-        for (voice in CreaseVoice.entries) for (model in 1..3) {
+        for (voice in Crease.KEPT_VOICES) for (model in 1..3) {
             val patch = CreasePatch("Saved $voice", voice, mapOf("FOLD" to .37f),
                 midi = 55, velocity = .63f, model = model)
             val fields = patch.toJsonValue().entries
@@ -125,7 +125,7 @@ class CreaseIntegrationTest {
         assertEquals(approved.keys, native.map { it.name }.toSet())
         assertEquals(6, native.size, "only the six approved recipes enter the factory roster")
         assertEquals(native, Presets.all().filter { it.engine == "CREASE" })
-        for (voice in CreaseVoice.entries) {
+        for (voice in Crease.KEPT_VOICES) {
             assertEquals(2, CreasePresets.patchesForVoice(voice).size)
             assertEquals(CreasePresets.patchesForVoice(voice), Presets.forVoice("CREASE", voice.name))
         }
@@ -214,7 +214,7 @@ class CreaseIntegrationTest {
 
     @Test
     fun `native placement follows HOLD rather than finite note length for every model`() {
-        for (model in 1..3) for (voice in CreaseVoice.entries) {
+        for (model in 1..3) for (voice in Crease.KEPT_VOICES) {
             assertEquals(DrumClass.TONAL, Crease.drumClassFor(voice, model = model))
             assertEquals(DrumClass.TONAL, Crease.drumClassFor(voice, mapOf("HOLD" to .98f, "RELAX" to 1f), model))
             assertEquals(DrumClass.LOOP, Crease.drumClassFor(voice, mapOf("HOLD" to Crease.HOLD_LOOP), model))

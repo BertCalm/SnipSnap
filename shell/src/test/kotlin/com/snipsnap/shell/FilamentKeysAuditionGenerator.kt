@@ -12,6 +12,7 @@ import com.snipsnap.mpc3.Mpc3TrackWriter
 import com.snipsnap.synth.FilamentPatch
 import com.snipsnap.synth.FilamentPresets
 import com.snipsnap.synth.FilamentTouchKeys
+import com.snipsnap.synth.Filament
 import com.snipsnap.synth.FilamentVoice
 import java.io.File
 import java.security.MessageDigest
@@ -40,7 +41,7 @@ object FilamentKeysAuditionGenerator {
         val wideKeys = args.getOrNull(3)?.toBooleanStrict() ?: false
         val rangeTag = if (wideKeys) "-wide" else ""
         val touchTag = if (touchLayers) "-touch" else ""
-        val voices = if (selection == "ALL") FilamentVoice.entries.toList() else listOf(FilamentVoice.valueOf(selection))
+        val voices = if (selection == "ALL") Filament.KEPT_VOICES.toList() else listOf(FilamentVoice.valueOf(selection))
         val directory = if (selection == "ALL") "held" else selection.lowercase(Locale.ROOT)
         val output = File(args.firstOrNull() ?: File(repository, "testkit/filament-$directory$rangeTag$touchTag-keys").path).canonicalFile
         require(!output.exists() || output.listFiles()?.isEmpty() == true) { "Use a fresh output directory: $output" }
