@@ -43,6 +43,12 @@ import kotlin.math.sqrt
  * levelled to the same loudness on their loops and differ by timbre.
  *
  * OVERBLOW plays no part: [Bore.heldNote] holds it at 0 ([Bore.held]), so every zone plays its key uncracked.
+ *
+ * Since 2026-11-20 the held note carries a player ([Bore.HUMAN]; the owner on every held clip: "Holds are unnatural, they need more
+ * humanization"): the breath drifts, the pitch leans, the vibrato's swings differ. Its movements repeat every four seconds and the
+ * zone's loop is cut that long ([Bore.heldLoopSeconds], against the LOOP's two), searched the same way within the same slack, so
+ * the join meets two moments the player is doing the same thing in and the pattern takes four seconds to come round. The settle
+ * test and the dip guard allow for the level the breath moves on purpose ([Bore.settleDb], [Bore.maxDipDb]). Nobody has heard it.
  */
 object BoreKeys {
 
@@ -101,13 +107,18 @@ object BoreKeys {
     internal class Held(val note: KeyNote, val join: Bore.LoopJoin, val name: String, val gain: Float)
 
     /** [padLayer] with its join, for the tests and the audition. */
-    internal fun padMeasured(voice: BoreVoice, macros: Map<String, Float>, midi: Int, breath: Float, cancelled: () -> Boolean = { false }): Held {
+    internal fun padMeasured(
+        voice: BoreVoice, macros: Map<String, Float>, midi: Int, breath: Float, cancelled: () -> Boolean = { false },
+        human: Float = Bore.HUMAN, opening: Bore.Opening = Bore.openingFor(voice),
+    ): Held {
         val m = zoneMacros(voice, macros, midi, breath)
         val name = "BORE $voice ${Scales.nameOf(midi)} at BREATH %.2f".format(java.util.Locale.ROOT, breath)
         checkCancelled(cancelled, name)
-        val x = Bore.heldNote(voice, m)
+        // With a player on the note the loop is four seconds, not two, and the player's movements are fitted to that ([Bore.heldLoopSeconds]).
+        val loopSeconds = Bore.heldLoopSeconds(human)
+        val x = Bore.heldNote(voice, m, human, loopSeconds, opening)
         checkCancelled(cancelled, name)
-        return cutHeld(x, Bore.heldUsableEnd(x, m), name)
+        return cutHeld(x, Bore.heldUsableEnd(x, m, loopSeconds), name, loopSeconds, human)
     }
 
     /** The settled macros of one zone: TUNE from [midi], BREATH the layer's, HOLD the LOOP's vibrato. */
@@ -133,10 +144,11 @@ object BoreKeys {
      * level (the loop at the melodic target, the attack wherever it falls against it, under [PEAK_CEILING]: loud where it is
      * held), and the join's steps read off the result.
      */
-    internal fun cutHeld(x: FloatArray, usableEnd: Int, name: String): Held {
+    internal fun cutHeld(x: FloatArray, usableEnd: Int, name: String, loopSeconds: Float = Bore.LOOP_SECONDS, human: Float = Humanize.OFF): Held {
         val blend = Bore.LOOP_BLEND_FRAMES
-        val (from, settledAt) = Bore.loopStart(x, usableEnd, Bore.LOOP_LENGTH_HIGH_FRAMES, blend, name)
-        val (length, correlation) = Bore.bestLength(x, from, blend, Bore.LOOP_LENGTH_LOW_FRAMES, Bore.LOOP_LENGTH_HIGH_FRAMES)
+        val lengths = Bore.loopLengthFrames(loopSeconds)
+        val (from, settledAt) = Bore.loopStart(x, usableEnd, lengths.last, blend, name, Bore.settleDb(human))
+        val (length, correlation) = Bore.bestLength(x, from, blend, lengths.first, lengths.last)
         val start = from + blend
         val end = start + length
         val out = assembleTail(x, start, length, blend, correlation)
@@ -157,7 +169,7 @@ object BoreKeys {
             junctionStep = abs(out[start] - out[end - 1]).toDouble(),
             steepestStep = steps[((steps.size - 1) * 0.999).toInt()].toDouble(),
         )
-        Bore.checkJoin(name, join)
+        Bore.checkJoin(name, join, maxDipDb = Bore.maxDipDb(human))
         return Held(KeyNote(Snip(out, channels = 1, sampleRate = RATE), loopStartFrame = start.toLong()), join, name, gain)
     }
 

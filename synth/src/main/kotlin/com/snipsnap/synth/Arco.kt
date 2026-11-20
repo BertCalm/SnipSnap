@@ -1454,14 +1454,18 @@ object Arco {
      * [plainGain] of the plain's own window rotated at that same cut, so nothing levels the lift away. The cap is found on that finished loop (its peak is at most [PEAK_CAP], or the plain's own if that is higher), tried at
      * every lift it tests with its own cut and gain, so what is checked is what ships. If nothing can be lifted the result is the plain's loop exactly.
      */
-    private fun loopFrom(conditioned: FloatArray, voice: ArcoVoice, body: Float, warm: Int, frames: Int): LoopRender {
+    private fun loopFrom(conditioned: FloatArray, voice: ArcoVoice, body: Float, warm: Int, frames: Int, moving: Boolean = false): LoopRender {
         val plain = cutLoop(conditioned, warm, frames)
         if (body <= BODY_KNEE) return levelledLoop(plain)
-        val limit = max(PEAK_CAP, peakOf(plain.one, plainGain(plain.loop)))
+        val plainsOwn = plainGain(plain.loop)
+        val limit = max(PEAK_CAP, peakOf(plain.one, plainsOwn))
 
         fun liftedAt(db: Float): LoopRender {
             val t = cutLoop(lifted(conditioned, voice, db), warm, frames)
-            val gain = plainGain(rotated(plain.one, t.cut))
+            // A loop whose level [moving] (a player on it) reads a slightly different loudness from each place it is cut, so the cap's
+            // search, which tries a lift and its own cut together, would not see the peak rise steadily with the lift and would stop
+            // short (0.14 dB short at CELLO G2, BODY 1). It keeps the plain loop's one gain instead. A steady loop reads as it always did.
+            val gain = if (moving) plainsOwn else plainGain(rotated(plain.one, t.cut))
             for (i in t.loop.indices) t.loop[i] *= gain
             return LoopRender(t.loop, t.seam)
         }
@@ -1515,10 +1519,9 @@ object Arco {
      * it to 1e-9). [LoopVibrato.SNAPPED] is a plain sine; [LoopVibrato.HUMAN] carries [VIBRATO_HUMAN]'s wander, depth drift and skew, the
      * rate's drift entering as a phase (its integral, which returns to zero each loop because each of its sines is whole cycles of it).
      */
-    internal fun loopVibratoUnit(u: Double, loopSeconds: Double, kind: LoopVibrato): Double {
+    internal fun loopVibratoUnit(u: Double, loopSeconds: Double, kind: LoopVibrato, shape: VibratoShape = VIBRATO_HUMAN): Double {
         val rate = loopVibratoHz(loopSeconds)
         if (kind != LoopVibrato.HUMAN) return sin(2.0 * PI * rate * u)
-        val shape = VIBRATO_HUMAN
         var drift = 0.0
         for (k in LOOP_RATE_WANDER_CYCLES.indices) {
             val w = 2.0 * PI * LOOP_RATE_WANDER_CYCLES[k] / loopSeconds
@@ -1542,12 +1545,15 @@ object Arco {
      * The read never moves the stretch on or back over a whole loop, so the loop keeps its whole periods and its mean pitch. [LoopVibrato.OFF]
      * hands [raw] back untouched.
      */
-    internal fun loopVibrato(raw: FloatArray, voice: ArcoVoice, loopFrames: Int, kind: LoopVibrato = LOOP_VIBRATO, rate: Int = RATE * Dsp.OVERSAMPLE): FloatArray {
+    internal fun loopVibrato(
+        raw: FloatArray, voice: ArcoVoice, loopFrames: Int, kind: LoopVibrato = LOOP_VIBRATO, rate: Int = RATE * Dsp.OVERSAMPLE,
+        shape: VibratoShape = VIBRATO_HUMAN,
+    ): FloatArray {
         if (kind == LoopVibrato.OFF) return raw
         val loopSeconds = loopFrames.toDouble() / RATE
         val hz = loopVibratoHz(loopSeconds)
         val depth = (2.0.pow(LOOP_VIBRATO_CENTS / 1200.0) - 1.0) / (2.0 * PI * hz) * rate
-        val riseSeconds = if (kind == LoopVibrato.HUMAN) VIBRATO_HUMAN.riseSeconds else VIBRATO_PLAIN.riseSeconds
+        val riseSeconds = if (kind == LoopVibrato.HUMAN) shape.riseSeconds else VIBRATO_PLAIN.riseSeconds
         val out = FloatArray(raw.size)
         val last = raw.size - 1
         for (i in raw.indices) {
@@ -1558,7 +1564,7 @@ object Arco {
             }
             val u = t - VIBRATO_DELAY_SECONDS
             val rise = (u / riseSeconds).coerceAtMost(1.0)
-            out[i] = cubicAt(raw, i - depth * rise * loopVibratoUnit(u, loopSeconds, kind), last)
+            out[i] = cubicAt(raw, i - depth * rise * loopVibratoUnit(u, loopSeconds, kind, shape), last)
         }
         return out
     }
@@ -1586,7 +1592,7 @@ object Arco {
      * warm-up as the box does and the stretch stays as periodic as the string under it.
      */
     internal fun renderLoopMeasured(
-        voice: ArcoVoice, macros: Map<String, Float>, law: BuzzLaw = BUZZ_LAW, loopVibrato: LoopVibrato = LOOP_VIBRATO,
+        voice: ArcoVoice, macros: Map<String, Float>, law: BuzzLaw = BUZZ_LAW, loopVibrato: LoopVibrato = LOOP_VIBRATO, human: Float = HUMAN,
     ): LoopRender {
         val m = settled(macros, voice)
         val target = frequencyFor(voice, m.getValue("TUNE"))
@@ -1596,25 +1602,138 @@ object Arco {
         val warm = warmFramesFor(target)
         val raw = retuned(target, plan, warm) { hz -> stretch(voice, m, hz, warm, plan.frames) }.raw
         val loopRaw = plan.frames * over
-        val sung = loopVibrato(raw, voice, plan.frames, loopVibrato, rate)
+        val sung = sungLoop(raw, voice, m, plan.frames, loopVibrato, human, rate)
         val buzz = m.getValue("BUZZ")
         val strung = if (!(buzz > 0f)) sung else buzzed(
             sung, voice, buzz, rmsOf(sung, warm * over, warm * over + loopRaw),
             period = if (law.loopTable) loopRaw else 0, phase = warm * over, law = law,
         )
         val body = bodyOf(voice, m)
-        return loopFrom(conditionedFor(strung, voice, body, washOf(voice, m), rate), voice, body, warm, plan.frames)
+        return loopFrom(conditionedFor(strung, voice, body, washOf(voice, m), rate), voice, body, warm, plan.frames, moving = human > 0f)
+    }
+
+    /**
+     * A LOOP's or a held key's converged stretch [raw] with its vibrato and its player on it: [loopVibrato] fitted to the loop of [loopFrames]
+     * frames (at the player's shape when [human] is over 0, [VIBRATO_HUMAN] otherwise), then [played] with the loop's own length as its period,
+     * so every movement repeats with the loop. With [human] at 0 it is [loopVibrato] alone, the loop before 2026-11-20.
+     */
+    private fun sungLoop(raw: FloatArray, voice: ArcoVoice, m: Map<String, Float>, loopFrames: Int, kind: LoopVibrato, human: Float, rate: Int): FloatArray {
+        if (!(human > 0f)) return loopVibrato(raw, voice, loopFrames, kind, rate)
+        val sung = loopVibrato(raw, voice, loopFrames, kind, rate, playerShape(human))
+        return played(sung, voice, midiFor(voice, m.getValue("TUNE")), human, loopFrames.toDouble() / RATE, rate)
     }
 
     /** The loop, refused by name if its corner cannot close: a click shipped silently is the worse failure. */
-    internal fun renderLoop(voice: ArcoVoice, macros: Map<String, Float>, law: BuzzLaw = BUZZ_LAW, loopVibrato: LoopVibrato = LOOP_VIBRATO): FloatArray {
-        val r = renderLoopMeasured(voice, macros, law, loopVibrato)
+    internal fun renderLoop(
+        voice: ArcoVoice, macros: Map<String, Float>, law: BuzzLaw = BUZZ_LAW, loopVibrato: LoopVibrato = LOOP_VIBRATO, human: Float = HUMAN,
+    ): FloatArray {
+        val r = renderLoopMeasured(voice, macros, law, loopVibrato, human)
         require(r.seam < Keys.MAX_SEAM_ERROR) {
             "ARCO $voice ${midiFor(voice, settled(macros, voice).getValue("TUNE"))}: the loop does not close (seam %.2e, bar %.0e)"
                 .format(java.util.Locale.ROOT, r.seam, Keys.MAX_SEAM_ERROR)
         }
         return r.loop
     }
+
+    // ---- the player (2026-11-20) --------------------------------------------------
+
+    /**
+     * How much of a player's hand a held note carries ([Humanize]): [Humanize.MODEST]. The owner heard every ARCO clip on 2026-11-20
+     * (the presets, the kit row, the held keys) and wrote "Holds are unnatural, they need more humanization". Measured on those clips, a
+     * held note's level stayed inside 0.05 to 0.3 dB for the whole hold, its pitch had no movement but the vibrato, and the vibrato's
+     * swings differed by 9 to 10 percent on a pattern that came round every two seconds. [Humanize.OFF] is the engine before that
+     * verdict, sample for sample: the frozen tests' reference and the audition's "before".
+     */
+    internal const val HUMAN = Humanize.MODEST
+
+    /**
+     * What the player adds, at an amount of 1 ([Humanize.MODEST]); all of it scales with the amount.
+     *  - The pitch leans by up to [PLAYER_LEAN_CENTS] either side over seconds (a finger is never dead still under the vibrato).
+     *  - The note is found from below: it starts [PLAYER_SCOOP_CENTS] flat and is home in about three times [PLAYER_SCOOP_SECONDS].
+     *  - The bow's speed drifts: the level swells and eases by up to [PLAYER_SWELL_DB] over seconds, with up to [PLAYER_HAND_DB] of a
+     *    quicker unsteadiness on top (near 2 Hz, the arm). A note starts at the top of that movement and eases from there.
+     *  - The vibrato's swings differ more: its depth wanders by up to [PLAYER_DEPTH_WANDER] more of itself and its rate by
+     *    [PLAYER_RATE_WANDER] more, on top of [VIBRATO_HUMAN]'s 18 and 7 percent, for every voice (ERHU's one-shot had the plain sine).
+     * Listening values, unheard.
+     */
+    const val PLAYER_LEAN_CENTS = 2.5
+    const val PLAYER_SCOOP_CENTS = 7.0
+    const val PLAYER_SCOOP_SECONDS = 0.07
+    const val PLAYER_SWELL_DB = 0.8
+    const val PLAYER_HAND_DB = 0.3
+    const val PLAYER_DEPTH_WANDER = 0.14
+    const val PLAYER_RATE_WANDER = 0.03
+    private const val PLAYER_DEPTH_WANDER_MAX = 0.5
+    private const val PLAYER_RATE_WANDER_MAX = 0.14
+    private const val PLAYER_BLOCK = 64
+    private const val PLAYER_TOP_STEPS = 1024
+
+    /** The finger's movement at a player's [amount]: [VIBRATO_HUMAN] with its depth and its rate wandering further, capped so the swing stays a vibrato. */
+    internal fun playerShape(amount: Float): VibratoShape = VibratoShape(
+        HUMAN_RISE_SECONDS,
+        (VIBRATO_HUMAN.rateWander + PLAYER_RATE_WANDER * amount).coerceAtMost(PLAYER_RATE_WANDER_MAX),
+        (VIBRATO_HUMAN.depthWander + PLAYER_DEPTH_WANDER * amount).coerceAtMost(PLAYER_DEPTH_WANDER_MAX),
+        VIBRATO_HUMAN.skew,
+    )
+
+    /** The seed of a note's player: the voice and the key, so every note leans its own way and a render is a pure function of its macros. */
+    internal fun playerSeed(voice: ArcoVoice, midi: Int): Int = Dsp.seedFor("ARCO", "PLAYER", voice.name, midi)
+
+    /**
+     * [raw], a bowed string at the oversampled [rate] (its vibrato already in it), as a player at [amount] holds it: read back through a
+     * delay that leans the pitch ([PLAYER_LEAN_CENTS]) and finds the note from below ([PLAYER_SCOOP_CENTS]), and scaled by the bow's
+     * drifting speed ([PLAYER_SWELL_DB], [PLAYER_HAND_DB]). The same route the vibrato takes ([vibrato]: the finished string read through
+     * a moving delay, never the string itself, which drops a slip when its length is moved), and for the level the string's own law: a
+     * bowed string's amplitude is its bow's speed. It runs before BUZZ and the box, so the rattle and the body follow the bow.
+     *
+     * Every movement is a [Humanize.Wander] of [period] seconds, so the delay and the gain repeat every [period]: a LOOP passes its own
+     * length and stays as periodic as the string under it, and its mean pitch is the string's (the lean is whole cycles). A one-shot
+     * passes [Humanize.ONE_SHOT_PERIOD_SECONDS]. The scoop is a delay that settles to a constant, so it is gone long before a LOOP's
+     * warm-up ends. The curves are worked out every [PLAYER_BLOCK] samples and drawn straight between. At an [amount] of 0 or less
+     * [raw] is handed back untouched.
+     */
+    internal fun played(raw: FloatArray, voice: ArcoVoice, midi: Int, amount: Float, period: Double, rate: Int): FloatArray {
+        if (!(amount > 0f) || raw.isEmpty()) return raw
+        val seed = playerSeed(voice, midi)
+        val lean = Humanize.Wander(seed, period, Humanize.SLOW)
+        val swell = Humanize.Wander(seed + 1, period, Humanize.SLOW_ALT)
+        val hand = Humanize.Wander(seed + 2, period, Humanize.quick(period))
+        val perCent = kotlin.math.ln(2.0) / 1200.0
+        val leanSamples = PLAYER_LEAN_CENTS * amount * perCent * rate
+        val scoopSamples = PLAYER_SCOOP_CENTS * amount * perCent * PLAYER_SCOOP_SECONDS * rate
+        fun delayAt(t: Double): Double = leanSamples * lean.integral(t) + scoopSamples * (1.0 - exp(-t / PLAYER_SCOOP_SECONDS))
+        fun levelDb(t: Double): Double = amount * (PLAYER_SWELL_DB * swell.at(t) + PLAYER_HAND_DB * hand.at(t))
+        // The bow's clock starts where its level is highest: a note begins at its fullest and eases from there, as a stroke does.
+        // (Started anywhere, a short low note whose level happened to rise read as a KICK: the classifier times how long a note
+        // rings past its loudest moment, and CINEMA LOW's loudest moment moved to its end.)
+        val top = (0 until PLAYER_TOP_STEPS).maxByOrNull { levelDb(it * period / PLAYER_TOP_STEPS) }!! * period / PLAYER_TOP_STEPS
+        fun gainAt(t: Double): Double = 10.0.pow(levelDb(t + top) / 20.0)
+        val out = FloatArray(raw.size)
+        val last = raw.size - 1
+        var i = 0
+        var d0 = delayAt(0.0)
+        var g0 = gainAt(0.0)
+        while (i < raw.size) {
+            val end = min(raw.size, i + PLAYER_BLOCK)
+            val t1 = (i + PLAYER_BLOCK).toDouble() / rate
+            val d1 = delayAt(t1)
+            val g1 = gainAt(t1)
+            for (j in i until end) {
+                val f = (j - i).toDouble() / PLAYER_BLOCK
+                out[j] = (cubicAt(raw, j - (d0 + (d1 - d0) * f), last) * (g0 + (g1 - g0) * f)).toFloat()
+            }
+            d0 = d1
+            g0 = g1
+            i = end
+        }
+        return out
+    }
+
+    /** How much of the player a bow-on time of [holdSeconds] carries: the vibrato's own scale ([vibratoCentsFor]), none on a stab and all of it from [VIBRATO_HOLD_FULL_SECONDS]. */
+    internal fun playerShare(holdSeconds: Float): Float = vibratoCentsFor(holdSeconds) / VIBRATO_MAX_CENTS
+
+    /** A held key's loop, in seconds: [Humanize.HELD_LOOP_SECONDS] with a player on it (a two second movement is heard coming round), the LOOP's own without. */
+    internal fun heldLoopSeconds(human: Float): Float = if (human > 0f) Humanize.HELD_LOOP_SECONDS else LOOP_SECONDS
 
     // ---- the held key (R2) ------------------------------------------------------
 
@@ -1680,7 +1799,7 @@ object Arco {
      */
     internal fun renderHeldMeasured(
         voice: ArcoVoice, macros: Map<String, Float>, warmScale: Int = 1, law: BuzzLaw = BUZZ_LAW, loopVibrato: LoopVibrato = LOOP_VIBRATO,
-        cancelled: () -> Boolean = { false },
+        cancelled: () -> Boolean = { false }, human: Float = HUMAN,
     ): HeldRender {
         require(warmScale >= 1) { "the warm-up is at least the LOOP's, got $warmScale times it" }
         fun stopIfCancelled() {
@@ -1688,14 +1807,14 @@ object Arco {
         }
         val m = settled(macros, voice)
         val target = frequencyFor(voice, m.getValue("TUNE"))
-        val plan = planLoop(target)
+        val plan = Bore.planLoop(target, heldLoopSeconds(human))
         val over = Dsp.OVERSAMPLE
         val rate = RATE * over
         val warm = warmScale * warmFramesFor(target)
         val r = retuned(target, plan, warm) { hz -> stopIfCancelled(); heldStretch(voice, m, hz, warm, plan.frames) }
         stopIfCancelled()
         val loopRaw = plan.frames * over
-        val sung = loopVibrato(r.raw, voice, plan.frames, loopVibrato, rate)
+        val sung = sungLoop(r.raw, voice, m, plan.frames, loopVibrato, human, rate)
         val buzz = m.getValue("BUZZ")
         val strung = if (!(buzz > 0f)) sung else buzzed(
             sung, voice, buzz, rmsOf(sung, warm * over, warm * over + loopRaw),
@@ -1756,14 +1875,19 @@ object Arco {
     /**
      * [render] with BUZZ played by [law] and a LOOP's vibrato by [loopVibrato]: tests measure the engine's choices against others this way.
      * A one-shot's buzz goes on the bowed string after the vibrato and before the box, its noise running free, its threshold referenced to
-     * [bowOnLevel]; at BUZZ 0 the string goes on untouched. [loopVibrato] touches only a LOOP.
+     * [bowOnLevel]; at BUZZ 0 the string goes on untouched. [loopVibrato] touches only a LOOP. [human] is the player's amount ([HUMAN]; [Humanize.OFF] is the render before
+     * 2026-11-20, which LULL's bowed layer and the frozen tests ask for by name).
      */
-    internal fun render(voice: ArcoVoice, macros: Map<String, Float>, law: BuzzLaw, loopVibrato: LoopVibrato = LOOP_VIBRATO): Snip {
+    internal fun render(voice: ArcoVoice, macros: Map<String, Float>, law: BuzzLaw, loopVibrato: LoopVibrato = LOOP_VIBRATO, human: Float = HUMAN): Snip {
         val m = settled(macros, voice)
-        if (isLoop(m.getValue("HOLD"))) return Snip(renderLoop(voice, m, law, loopVibrato), channels = 1, sampleRate = RATE)
+        if (isLoop(m.getValue("HOLD"))) return Snip(renderLoop(voice, m, law, loopVibrato, human), channels = 1, sampleRate = RATE)
         val hz = frequencyFor(voice, m.getValue("TUNE"))
         val rate = RATE * Dsp.OVERSAMPLE
-        val raw = bow(voice, hz, m, rate)
+        // The player scales as the vibrato does with how long the bow is on the string: a stab has neither, and is the render it always was.
+        val player = if (human > 0f) human * playerShare(holdSeconds(m.getValue("HOLD"))) else 0f
+        val raw = if (player > 0f) {
+            played(bow(voice, hz, m, rate, vibratoShape = playerShape(player)), voice, midiFor(voice, m.getValue("TUNE")), player, Humanize.ONE_SHOT_PERIOD_SECONDS, rate)
+        } else bow(voice, hz, m, rate)
         val buzz = m.getValue("BUZZ")
         val strung = if (!(buzz > 0f)) raw else buzzed(raw, voice, buzz, bowOnLevel(raw, voice, hz, m, rate), law = law)
         return Snip(finishedFor(strung, voice, m, rate), channels = 1, sampleRate = RATE)
