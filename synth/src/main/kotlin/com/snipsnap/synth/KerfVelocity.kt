@@ -50,36 +50,52 @@ object KerfVelocity {
     /** How much further the ticks fall than the hit, in dB, at velocity 0. Measured: 2.2 dB at 0.45. */
     const val TICK_EXTRA_DB = 4.0
 
+    /**
+     * How strongly velocity changes the strike, as a multiple of the ghost-note medians above. 1 is the measured law.
+     * The owner heard 1 as "a bit indistinguishable" (2026-11-20): the medians are what a loop's ghost notes average,
+     * not what an ear needs from a pad's soft layer. Above 1 the tone rows deepen with it (the tilt, the tick) and
+     * the crack (the fast part of each band) is softened too, which the medians did not show. The hit's drop against
+     * its neighbours does not: scaled with depth, a soft kick at depth 3 fell so far that the hat before it took over,
+     * 5.8x the kick's brightness (measured 2026-11-20).
+     */
+    const val DEPTH = 1.0
+
+    /** How much further the crack falls than the ring, in dB at velocity 0, per unit of depth above 1. */
+    const val CRACK_DB = 6.0
+
     /** The hit's amplitude factor at [velocity]. */
-    fun hitGain(velocity: Double): Double = 10.0.pow(-HIT_DB_RANGE * softness(velocity) / 20.0)
+    fun hitGain(velocity: Double, @Suppress("UNUSED_PARAMETER") depth: Double = DEPTH): Double = 10.0.pow(-HIT_DB_RANGE * softness(velocity) / 20.0)
 
     private fun softness(velocity: Double) = 1.0 - velocity.coerceIn(0.0, 1.0)
 
     /** Power factor of the tilt at [hz]: 1 up to 1 kHz, falling above it as the hit softens. */
     private fun tilt(hz: Double, s: Double): Double = if (hz <= 1000.0) 1.0 else (hz / 1000.0).pow(-TILT * s)
+    // [strike] passes softness × depth as s, so the tilt deepens with depth too
 
     /** [patch] struck at [velocity] (0..1). Velocity 1 is [patch] itself, unchanged. */
-    fun strike(patch: KerfPatchData, velocity: Double): KerfPatchData {
+    fun strike(patch: KerfPatchData, velocity: Double, depth: Double = DEPTH): KerfPatchData {
         val s = softness(velocity)
         if (s <= 0.0) return patch
+        val ds = s * depth
         val amp = 10.0.pow(-HIT_DB_RANGE * s / 20.0)
         val power = amp * amp
         val floorPower = power.pow(FLOOR_FOLLOW)
-        val tickAmp = amp * 10.0.pow(-TICK_EXTRA_DB * s / 20.0)
+        val tickAmp = amp * 10.0.pow(-TICK_EXTRA_DB * ds / 20.0)
+        val crack = 10.0.pow(-CRACK_DB * s * (depth - 1.0).coerceAtLeast(0.0) / 10.0)
         return patch.copy(
             partials = patch.partials.map {
                 // the body's glide: a softer hit bends the head less (StrikeVelocity), below 300 Hz where kicks live
                 val glide = if (it.hzEnd < 300.0) it.glideHz * StrikeVelocity.droopFactor(velocity.toFloat()) else it.glideHz
-                it.copy(amp = it.amp * amp * sqrt(tilt(it.hzEnd, s)), glideHz = glide)
+                it.copy(amp = it.amp * amp * sqrt(tilt(it.hzEnd, ds)), glideHz = glide)
             },
             bands = patch.bands.mapIndexed { b, band ->
-                val g = power * tilt(KerfRender.bandCentreHz(b), s)
+                val g = power * tilt(KerfRender.bandCentreHz(b), ds)
                 band.copy(
-                    snap = band.snap * g, level = band.level * g, floor = band.floor * floorPower,
-                    layers = band.layers.map { it.copy(snap = it.snap * g, level = it.level * g) },
+                    snap = band.snap * g * crack, level = band.level * g, floor = band.floor * floorPower,
+                    layers = band.layers.map { it.copy(snap = it.snap * g * crack, level = it.level * g) },
                 )
             },
-            ticks = patch.ticks.map { it.copy(amp = it.amp * tickAmp * sqrt(tilt(it.hz, s))) },
+            ticks = patch.ticks.map { it.copy(amp = it.amp * tickAmp * sqrt(tilt(it.hz, ds))) },
         )
     }
 

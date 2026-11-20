@@ -34,9 +34,9 @@ data class KerfRecipe(
      * The pad struck at [velocity] (0..1, [KerfVelocity]): the hit softer, duller and with a softer tick, the
      * neighbours' bleed where it was. Velocity 1 is [render], byte for byte.
      */
-    fun renderAt(velocity: Double): Snip =
+    fun renderAt(velocity: Double, depth: Double = KerfVelocity.DEPTH): Snip =
         if (velocity >= 1.0) render()
-        else KerfRender.toSnip(KerfRender.chopped(KerfVelocity.strike(patch, velocity), prev, next, bleed, slop, controls, draw, KerfVelocity.hitGain(velocity)).samples)
+        else KerfRender.toSnip(KerfRender.chopped(KerfVelocity.strike(patch, velocity, depth), prev, next, bleed, slop, controls, draw, KerfVelocity.hitGain(velocity, depth)).samples)
 
     /**
      * Take [take] of a round robin at [velocity]: the hit cut again with another knife and other noise
