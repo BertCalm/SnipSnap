@@ -211,6 +211,8 @@ fun KitScreen(
     onSplit: () -> Unit,
     /** DUST ALL: every pad under the kit's own tape's hiss and room (`docs/DUST.md`), the per-pad chip at one amount. */
     onDustAll: () -> Unit = {},
+    /** SYNTH TWIN ALL: every pad that can take it rebuilt from its own measurements (KERF), the pad sheet's SYNTH TWIN on the whole kit. */
+    onKerfAll: () -> Unit = {},
     onEmptyLongPress: (Int) -> Unit = {},
     onEmptyTapHint: (Int) -> Unit = {},
     /** NO_PROJECT_OPEN's own route: the shelf is where a project is opened or started. No default — a screen that forgets to wire this fails the compile, not the user. */
@@ -1019,6 +1021,19 @@ fun KitScreen(
                         enabled = !busy && DustPrints.kitTape(kit) != null,
                         modifier = Modifier.fillMaxWidth(),
                         onClick = onDustAll,
+                    )
+                }
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    // SYNTH TWIN ALL: the MAKE box's SYNTH TWIN on every pad, each
+                    // measured once from its capture, its neighbours the pads either
+                    // side in slot order (a chopped loop's order). Pads it cannot touch
+                    // are counted on landing, not failed. No ▸: it lands from here.
+                    ActionButton(
+                        "SYNTH TWIN ALL · EVERY PAD REBUILT",
+                        scheme,
+                        enabled = !busy && kit.pads.isNotEmpty(),
+                        modifier = Modifier.fillMaxWidth(),
+                        onClick = onKerfAll,
                     )
                 }
                 TextureSections(

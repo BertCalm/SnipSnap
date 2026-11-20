@@ -46,7 +46,7 @@ object StarterShelf {
         Group(
             Copy.STARTER_HEADING_METAL,
             listOf(
-                "libration", "meridian", "meridian-materials", "meridian-six", "accord", "thaw", "scour", "nimbus", "suture",
+                "libration", "meridian", "meridian-materials", "meridian-six", "accord", com.snipsnap.synth.AccordRoundRobinKits.ID, StarterKits.ACCORD_VOICES_ID, "thaw", "scour", "nimbus", "suture",
                 "tessera", "pitchwheel", "chamber", "alloy", "caustic", "cistern", "filament", "erosion", com.snipsnap.synth.ErosionRoundRobinKits.ID, SplayDelivery.STARTER_ID, SplayDelivery.BODIES_STARTER_ID,
                 "cairn",
             ),

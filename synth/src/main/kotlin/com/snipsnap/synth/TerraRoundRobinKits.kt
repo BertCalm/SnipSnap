@@ -93,6 +93,9 @@ object TerraRoundRobinKits {
         TerraVoice.BOX, TerraVoice.DOUM -> Restrike.FORCE_SPREAD / 2
         TerraVoice.SLAP, TerraVoice.DARBUKA, TerraVoice.DAYAN,
         TerraVoice.DJEMBE, TerraVoice.DHOLAK, TerraVoice.BAYAN, TerraVoice.TUN -> 0f
+        // a stick voice's take is its own landing (TerraSticks): no second spread on top
+        in TerraSticks.VOICES -> 0f
+        else -> error("$voice has no force spread")
     }
 
     /** The kept classic kit's sixteen recipes, in pad order. */

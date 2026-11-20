@@ -26,7 +26,7 @@ class TerraPresetsTest {
             else assertEquals(4, presets.size, voice.name)
             assertTrue(presets.all { it.voice == voice })
         }
-        assertEquals(48, TerraPresets.all().size)
+        assertEquals(84, TerraPresets.all().size)      // 48 kept and pinned below, and the nine stick voices' 36 (provisional, docs/TERRA_STICKS.md)
     }
 
     @Test fun `names are unique and fit a pad label`() {
@@ -38,7 +38,7 @@ class TerraPresetsTest {
     @Test fun `every new preset spells out all its voice's macros and is a different sound from every kept pad`() {
         val kept = TerraPresets.kept().toSet()
         val fresh = TerraPresets.all().filter { it !in kept }
-        assertEquals(32, fresh.size)
+        assertEquals(68, fresh.size)      // 32 on the first twelve voices, 36 on the stick voices
         for (p in fresh) {
             assertEquals(Terra.macrosFor(p.voice).map { it.name }.toSet(), p.macros.keys, "${p.name} names every macro")
             assertTrue(p.macros.values.all { it in 0f..1f }, p.name)
@@ -137,7 +137,7 @@ class TerraPresetsTest {
         try {
             val kept = listOf(TerraVoice.BAYAN, TerraVoice.TUN).flatMap { TerraPresets.forVoice(it) }
             assertEquals(keptRound2.keys.toList(), kept.map { it.name })
-            assertEquals(TerraPicker.voices.drop(10), listOf(TerraVoice.BAYAN, TerraVoice.TUN), "the two voices after the first ten")
+            assertEquals(TerraPicker.voices.drop(10).take(2), listOf(TerraVoice.BAYAN, TerraVoice.TUN), "the two voices after the first ten")
             for (p in kept) {
                 com.snipsnap.audio.WavWriter.write(probe, p.render(), com.snipsnap.audio.WavWriter.BitDepth.PCM_24)
                 val actual = java.security.MessageDigest.getInstance("SHA-256").digest(probe.readBytes()).joinToString("") { "%02x".format(it.toInt() and 255) }

@@ -1911,6 +1911,55 @@ fun App(shelf: KitShelf) {
     }
 
     /**
+     * SYNTH TWIN ALL: every pad of the open kit that can take it becomes its
+     * KERF twin (`KitBuilderModel.kerfKit`), under one `KitWrites.mutex`, the
+     * same busy-then-land shape as [dustAll]. Each pad is measured once from
+     * its capture, about half a second a pad. Layered, chained, printed and
+     * too-short pads, and twins already, are counted on landing, not failed.
+     * If a measure throws part-way, the pads made before it are saved, so no
+     * capture sits in the bin with no twin's recipe in kit.json.
+     */
+    fun kerfAll() {
+        val source = open ?: return
+        if (busy != null) return
+        busy = Busy(Copy.KERF_ALL_BUSY)
+        scope.launch {
+            var partial: KitShelf.Entry? = null
+            val result = try {
+                withContext(Dispatchers.IO) {
+                    KitWrites.mutex.withLock {
+                        val m = KitBuilderModel.open(source.dir)
+                        try {
+                            val made = m.kerfKit()
+                            KitShelf.Entry(source.dir, m.kit) to made
+                        } finally {
+                            if (m.dirty) {
+                                m.save()
+                                partial = KitShelf.Entry(source.dir, m.kit)
+                            }
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                busy = null
+                partial?.let { if (open?.dir == source.dir) open = it }
+                openNote(LandingNote.kerfAllFailed(e.message ?: e.javaClass.simpleName))
+                return@launch
+            }
+            busy = null
+            val (entry, made) = result
+            if (made.made.isEmpty()) {
+                dock.say(Copy.KERF_ALL_NONE)
+                return@launch
+            }
+            if (open?.dir == source.dir) open = entry
+            kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
+            dock.say(Copy.kerfedAll(made.made.size, made.left.size, made.already.size))
+        }
+    }
+
+    /**
      * BREED (XX2 wired in): arms the pick-a-partner hand-off and sends the
      * user to the shelf — the same "pick a kit" hop SNIPS → PAD already
      * uses (`pendingSnipAssign`), just a kit picking a kit instead of a
@@ -4368,6 +4417,7 @@ fun App(shelf: KitShelf) {
                                 canBreed = kits.size > 1,
                                 onSplit = { landOn(AppScreen.SPLIT) },
                                 onDustAll = ::dustAll,
+                                onKerfAll = ::kerfAll,
                                 onEmptyLongPress = { slot ->
                                     // SNIPS → PAD's landing: a pick still
                                     // armed intercepts the press here,

@@ -452,6 +452,15 @@ class DeterminismTest {
     }
 
     @Test
+    fun `CONSORT retains its section velocity and take across renders`() {
+        val patch = ConsortPatch("Section canary", ConsortVoice.CLARINET, mapOf("HOLD" to 0.2f),
+            chairs = listOf(ConsortChair(ConsortVoice.FLUTE, ConsortInterval.OCT_UP), ConsortChair(ConsortVoice.BASSOON, ConsortInterval.OCT_DOWN)),
+            velocity = 1f, take = 1)
+        assertContentEquals(patch.render().samples, patch.render().samples)
+        assertContentEquals(patch.render().samples, Patches.fromJsonText(patch.toJsonText()).render().samples)
+    }
+
+    @Test
     fun `CHAMBER factory room recipes regenerate the authored note velocity and exact seed`() {
         val patch = ChamberPresets.forVoice(ChamberVoice.AQUARIUM).first().copy(
             midi = 57, velocity = .42f, seed = Long.MIN_VALUE + 1,
@@ -908,6 +917,12 @@ class DeterminismTest {
                 TerraVoice.TUN -> mapOf("KNOCK" to 1f)
                 TerraVoice.CONICAL_BELL -> mapOf("CLACK" to 1f)
                 TerraVoice.COMPOUND_MEMBRANE -> emptyMap()
+                TerraVoice.ODAIKO -> mapOf("DRUM" to 0.5f)
+                TerraVoice.SHIME -> mapOf("STROKE" to 0.5f)
+                TerraVoice.KANE -> mapOf("EDGE" to 0.5f)
+                TerraVoice.BINZASARA -> mapOf("SPREAD" to 1f)
+                TerraVoice.COWBELL -> mapOf("DAMP" to 0.5f)
+                TerraVoice.NAGADO, TerraVoice.KA, TerraVoice.CHAPPA, TerraVoice.WATER_DRUM -> mapOf("ATTACK" to 1f)
             }
             val patch = TerraPatch("Canary", voice, Terra.defaults(voice) + loud)
             assertContentEquals(patch.render().samples, patch.render().samples, voice.name)

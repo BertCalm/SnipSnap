@@ -10,9 +10,12 @@ direction: BRUSH is the default, WOOD remains, and TINE retains its Reference,
 Soft Attack, Bright Edge and Long Ring alternatives. On 2026-11-19 the owner heard
 the native engine itself and kept it (round accord-native-1): every factory recipe
 beside its Python original, each voice from C2 to C5 and at three touches, and the
-sixteen-pad kit. `AccordNativePinsTest` pins those renders. Complete control-domain
+sixteen-pad kit. `AccordNativePinsTest` pins those renders. The same day the owner
+kept four more voices, REED, COURSE, ESCAPEMENT and BELL (round accord-voices-1,
+[below](#reed-course-escapement-and-bell)), pinned by `AccordVoicesPinsTest` and
+played by the ACCORD VOICES starter. Complete control-domain
 acceptance and phone/MPC checks remain open; the remaining gates are listed in
-[the acceptance gates](ENGINE_ACCEPTANCE_GATES.md#accord-native-sound-kept-by-ear-2026-11-19-three-voices-gates-open).
+[the acceptance gates](ENGINE_ACCEPTANCE_GATES.md#accord-native-sound-seven-voices-round-robin-keys-chords-and-hold-kept-by-ear-device-and-hardware-pass-open).
 
 ## Play a saved performance
 
@@ -57,11 +60,54 @@ strict validation: unknown/out-of-range controls and unsupported HOLD fail.
 
 ## Voices and persistence
 
-Six starting recipes are registered: BRUSH, WOOD, and the four TINE profiles.
-`AccordPresets.default()` selects BRUSH; `AccordPresets.forVoice(voice)` returns
-that voice's recipes. BRUSH/WOOD require acousticProfile BASE. TINE requires
-REFERENCE, SOFT_ATTACK, BRIGHT_EDGE or LONG_RING. Its original upper ratio stays
-5.96; the archived 6.00 tuning experiment is not the native default.
+Ten starting recipes are registered: BRUSH, WOOD, the four TINE profiles, then
+REED, COURSE, ESCAPEMENT and BELL. `AccordPresets.default()` selects BRUSH;
+`AccordPresets.forVoice(voice)` returns that voice's recipes. Every voice but TINE
+requires acousticProfile BASE. TINE requires REFERENCE, SOFT_ATTACK, BRIGHT_EDGE
+or LONG_RING. Its original upper ratio stays 5.96; the archived 6.00 tuning
+experiment is not the native default.
+
+## REED, COURSE, ESCAPEMENT and BELL
+
+The owner kept these four by ear in round accord-voices-1 (19 Nov 2026), after
+BRUSH, WOOD and TINE. They were appended to `AccordVoice` after TINE, so saved
+names and ordinals never move. The mechanics, the MIDI pitch authority, the five
+controls and the one-gain-per-performance policy are the same as for the first
+three. What changes is which part of the machine each one listens to: BRUSH, WOOD
+and TINE hear only where and how hard the contacts land, and these hear something
+else the machine already computes.
+
+- **REED** reads the support's **pressure**: the pull of the pendulums through
+  the centre blows a free reed. The tongue swings at the note, its swing chops the
+  flow through an offset slot, and a fixed three-formant chamber and a little breath
+  colour it. It sounds while the machine breathes and is louder and brighter the
+  harder it blows; contacts only nudge the tongue.
+- **COURSE** reads the **mechanism index**: pendulum *i* always strikes string
+  *i* mod 3 of a hammered course of three stiff eight-partial strings, tuned -2.5,
+  0 and +2.5 cents over a shared soundboard, like a hammered dulcimer. Spec §10
+  warns against independently detuned banks; the owner's KEEP of AK1 to AK3
+  approved this one.
+- **ESCAPEMENT** reads the **passage direction**: a pendulum swinging forward
+  strikes a bright tuned bar (the tick), swinging back it knocks a dark harmonic
+  block in a hollow box (the tock). Its gathered-then-dispersed clip (AL3) was not
+  rated, so the dispersed behaviour is not pinned.
+- **BELL** reads nothing new: it is a minor-third bell **tuning table** (prime,
+  tierce, quint, nominal, with hum and upper partials as body) on the same
+  single-bank path as BRUSH, WOOD and TINE.
+
+ESCAPEMENT's bar changed from the plan. The audit planned a raw free-free bar,
+partials 1 : 2.756 : 5.404. Measured, those partials pulled the detected pitch of
+C3 by more than a semitone, so the tick read as another note. The bar is tuned
+instead, 1 : 4 : 9.9, as marimba and vibraphone bars are cut, and low notes taper
+the upper two partials.
+
+Each new voice has one factory preset, its default recipe at C3 and normal touch,
+the render heard in round accord-voices-1. The ACCORD VOICES starter plays each at
+C2, C3, C4 and C5. `AccordVoicesPinsTest` pins those renders, the soft and hard
+touches and the dispersed (RAFT 0) renders of REED, COURSE and BELL. They have no
+frozen factory calibration row: their default performance computes the shared
+normal/hard gain on first render, as an edited performance does
+([acceptance gates](ENGINE_ACCEPTANCE_GATES.md#accord-native-sound-seven-voices-round-robin-keys-chords-and-hold-kept-by-ear-device-and-hardware-pass-open)).
 
 `AccordPatch` saves name, voice, controls, MIDI, velocity, full signed Long seed,
 model, acoustic profile, initializer, source start and duration. JSON stores the
@@ -100,6 +146,112 @@ one measured edited fixture is recorded below, without a general latency bound.
 The corrected 429-case
 probe passed, including intermediate touches and the former worst resonance.
 That sampled matrix is evidence, not an analytic bound on every possible edit.
+
+## Round-robin takes (kept by ear in accord-rr-1)
+
+The owner heard these takes on 19 Nov 2026 (listening round accord-rr-1) and kept all of them
+with no notes: every voice at C3, the four takes one at a time at normal touch, and the same note
+repeated with takes dealt 1-2-3-4-1 at soft, normal and hard touch. The same round played seed
+takes on WOOD as the alternative; passage takes were kept.
+
+The take model is the passage offset. `Accord.renderTake(patch, take)` renders take 0 to 3 of a
+saved performance. Take 0 is `patch.render()`, byte for byte. A later take is the same machine
+heard from an earlier moment: the saved mechanics, seed, voice, note, touch and controls, replayed
+from `Accord.TAKE_STEP_CYCLES` (.875) x take cycles before the saved `sourceStartCycles` (default 8:
+7.125, 6.25, 5.375; a start too near 0 goes forward instead). The step is 1.75 centre passages, so
+a gathered machine's pulses fall a different quarter of the pulse spacing after each take's first
+sample. The first strikes and the point where the pulses fall after the key goes down differ; the
+machine and its gathering do not. A seed take, the alternative, is a different machine and can fail
+to gather at all.
+
+Every take plays at take 0's performance gain, the rule already shared across velocity, lowered
+only where that would carry the take's normal or hard render over the .85 ceiling. At C3 and
+default controls that lowers BRUSH's last take by .3 dB and REED's second and third by .5 and
+.8 dB; every other take moves by under .02 dB or not at all.
+
+Where the takes are used:
+- **Pins.** `AccordRoundRobinPinsTest` pins takes 1 to 3 of every voice's first preset at C3, soft,
+  normal and hard (63 renders, `accord/round-robin-v1.sha256`), and checks that take 0 is still
+  the accord-native-1 and accord-voices-1 pin. Every pinned take's PCM24 matched the heard clips.
+- **ROBIN.** `Restrike.canRestrike` is true for ACCORD, so ROBIN on an ACCORD pad deals the
+  engine's own takes (`Restrike.take`) instead of resampling the kept render a few cents off. The
+  velocity Robin passes scales the saved touch, so its untouched hit is the saved performance and
+  its takes are that performance's kept takes, before Robin's own peak match, start jitter and
+  level spread. There is no extra force spread: ACCORD's velocity is its timbre. Takes past the
+  third cycle back to take 1, never to take 0. In a zoned ROBIN grid the softer zones' first takes
+  come from `Velocity.atVelocity`, which reads ACCORD's velocity as absolute, while their re-struck
+  takes scale the saved touch, so on a pad saved below full touch those zones' later takes are
+  struck softer than their first take (at a saved .75, at 75 % of its touch).
+- **ACCORD TAKES** (`accord-round-robin`), an opt-in starter right after ACCORD on the shelf: the
+  sixteen ACCORD pads, each with soft (.3), medium (.75) and hard (1) touch zones of two takes: engine takes 0
+  and 2, the two whose pulses fall furthest apart (half a pulse spacing), the owner's choice of
+  20 Nov 2026 and the same one kept for ACCORD's keys. Four takes on every touch made each pad's
+  file twelve renders of about 9.7 s, some 31 minutes and 245 MB of PCM24 for the kit: too heavy
+  for a phone, and enough to run the insert-card test (`JCardTest`) out of memory in CI. Two takes
+  halve that, and every render in the kit is still one kept by ear. The engine, ROBIN and the pins
+  keep all four takes. A
+  pad's kept sound is the first take of its own touch, sample for sample; the ACCORD starter itself
+  is unchanged. MPC 3 carries both takes; MPC 2 keeps each touch's first take only, the recorded
+  format limit (`Mpc2Limits`). The pads at notes and settings other than the heard C3 presets
+  (BRUSH D#3 to F4 and TINE's Soft Attack, Bright Edge and Long Ring) are rendered by the same
+  rule but were not heard with takes in accord-rr-1.
+
+## Keys, chords and HOLD (kept by ear in accord-keys-1)
+
+MAKE INSTRUMENT on SYNTH now turns any saved ACCORD recipe into a playable keyboard instrument
+(`AccordKeygroupMaker`, `AccordPadMaker`; the WICK finite shape in HALOBAR's Cycle layout). The
+owner heard it on 20 Nov 2026, played from the real saved samples (listening round accord-keys-1),
+and kept all eleven clips with no notes: key walks from C2 to C5 on BRUSH, WOOD, REED and COURSE
+(AX1 to AX4), the three touches on a borrowed key and the two takes on a repeated key for all
+seven voices (AY1, AZ1), chords on TINE, BELL, ESCAPEMENT and COURSE (BA1, BA2, BB1, BB2) and
+holding and letting go of a key (BC1). That settles the four-second key, borrowed keys between
+minor-third roots, two takes per touch, chords from the chord tool, and HOLD as a finite note with
+a .6 s key-up fade for all seven voices. A fresh render of all eleven clips from this code hashed
+identically to the heard WAVs.
+
+- **Range and roots.** C2 to C5, a sampled root every minor third (thirteen, plus the saved note
+  when it falls between). A key between roots plays its neighbour a semitone fast or slow, so its
+  strikes also come about 6 % quicker or slower than a root key's.
+- **Touch.** Three layers, the touches every voice was heard and kept at: soft .3, medium .75 and
+  hard 1 (key velocity 0 to 42, 43 to 84, 85 to 127). The key's velocity replaces the recipe's
+  saved TOUCH and sets the level on top, as on every keygroup.
+- **Takes.** Two per touch, dealt in turn: engine take 0 (the plain render) and take 2, whose
+  pulses fall half a pulse spacing from take 0's, the two furthest apart. A keygroup holds eight
+  samples, so three touches leave room for two takes each, not the pads' four.
+- **Key length.** A key strikes for at most four seconds (`KEY_SECONDS`; a recipe saved with a
+  shorter LENGTH keeps its own) and then rings out with the engine's own tail. The pads you kept
+  strike for eight. At the default settings the machine's order (R1) is .71 when a key goes down,
+  .90 after four seconds and .99 after eight, so a key reaches most of the gathering, not all of it.
+  The reason is size: thirteen roots of six eight-second samples are about 105 MB of PCM24 per
+  voice and about 140 MB of samples in memory while MAKE INSTRUMENT runs.
+- **Package size**, factory recipe, 78 samples, PCM24: BRUSH 57 MB, WOOD 51 MB, TINE 51 MB,
+  REED 52 MB, COURSE 71 MB, ESCAPEMENT 51 MB, BELL 78 MB (BELL and COURSE ring longest). In
+  memory while the sheet renders that is 68 to 103 MB of samples. No phone has run it yet, so
+  whether a phone has the memory to make the largest two, BELL and COURSE, is unproven.
+- **Every sample is the engine's own render** (`Accord.renderTake`), untouched: no trim, no fade,
+  no level match. Each WAV's hash is bound to its recipe and take in
+  `accord-source-recipes.json` inside the package, and `validate()` refuses a package whose audio,
+  recipe, take, release, key length or descriptors differ.
+- **HOLD.** Still refused and hidden. Every voice is finite on keys too: a held key plays its
+  note to the end and stops, with no loop, and letting go fades over .6 s (`RELEASE_SECONDS`), the
+  finite-note-with-key-up-fade policy the owner accepted for HALOBAR and, in BC1, kept for
+  ACCORD's seven voices. No sustaining REED was built; a sustain that lasts as long as the key is
+  held would be new, separately versioned work (spec §13), not something this decision leaves open.
+- **Chords.** `AccordChords.notes` moves a chord-tool chord by whole octaves into C2 to C5 and
+  never drops or re-spaces a tone; 219 of the tool's 960 diatonic, modal and borrowed voicings pass
+  C5 and move down an octave. `AccordKeygroupMakerTest` plays all 960 on real TINE key samples
+  through `InstrumentEngine`: every note starts its own voice and key-up ends it. Every tone of a
+  chord is struck by the same machine, so their strikes start together; tones on keys between
+  roots then drift against the others by their 6 %, which the owner heard in BA1 to BB2 and kept.
+  `AccordChords.render` is the offline
+  audition of a chord from direct renders, where nothing drifts.
+- **Export.** The package carries the phone sidecar, an MPC 3 `.xty` and an MPC 2 `.xpm`, all in
+  HALOBAR's matching-window Cycle layout: six layers per key, three velocity windows of two takes.
+  `AccordKeygroupMakerTest` reads each back. MPC 3 is the format the owner passed on hardware for
+  HALOBAR. The MPC 2 program is written the same way (six active layers, ZonePlay 0), as
+  HALOBAR's is, not cut back to each touch's first take; the round-robin gate is not judged on
+  MPC 2 (the recorded format limit), and how an MPC 2 deals this layout is not recorded. No MPC or
+  phone has loaded an ACCORD instrument.
 
 ## Audition and export
 
@@ -144,8 +296,9 @@ SYNTH now includes the Accord picker, ROOT, TOUCH, LENGTH and explicit TINE
 profile controls. Typed drafts, YOURS, navigation and pad reopening preserve the
 complete recipe, and SEND/SPREAD retain its authored MIDI note. HOLD is hidden.
 The SDK build and three unchanged functional instrumentation tests at
-`fac839f0` passed with the software-emulator setup documented below. Held/keygroup
-playback remains later work. These checks do not establish physical-phone
+`fac839f0` passed with the software-emulator setup documented below. Finite keys
+came later ([Keys, chords and HOLD](#keys-chords-and-hold-kept-by-ear-in-accord-keys-1));
+a held, sustaining articulation was not built. These checks do not establish physical-phone
 performance or hardware listening.
 
 ## Evidence and current validation
