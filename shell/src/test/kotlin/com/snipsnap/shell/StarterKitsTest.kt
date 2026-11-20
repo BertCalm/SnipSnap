@@ -268,6 +268,8 @@ class StarterKitsTest {
                     in com.snipsnap.synth.KneeBreakGenreKits.Choice.entries.map { it.id } -> (1..16).toList()
                     in com.snipsnap.synth.KneeBreakKits.Choice.entries.map { it.id } -> (1..16).toList()
                     in com.snipsnap.synth.EastAfricaKits.Genre.entries.map { it.id } -> (1..22).toList()
+                    // TERRA's Japanese kits: twelve-sample grids whose recipe rides in each pad's source, as TERRA's round-robin kits' do.
+                    in com.snipsnap.synth.TerraStickKits.Kit.entries.map { it.id } -> (1..16).toList()
                     in StarterKits.SIDEROOM_IDS -> (1..10).toList()
                     in StarterKits.PATIO_IDS -> (1..18).toList()
                     "cuttings-pocket", "cuttings-night", "cuttings-circuit" -> (1..20).toList()
@@ -294,6 +296,16 @@ class StarterKitsTest {
                         assertEquals(com.snipsnap.synth.EastAfricaKits.VERSION.toString(), pad.source["model"])
                         assertEquals(listOf(3, 3, 3), pad.chain?.zones?.map { it.cycle })
                         assertEquals(9, pad.chain?.boundaries?.size)
+                        assertTrue(pad.oneShot)
+                    }
+                }
+                if (starter.id in com.snipsnap.synth.TerraStickKits.Kit.entries.map { it.id }) {
+                    for (pad in kit.pads) {
+                        assertEquals("TERRA", pad.source["engine"])
+                        assertEquals(com.snipsnap.synth.TerraStickKits.VERSION.toString(), pad.source["roundRobinVersion"])
+                        assertNotNull(com.snipsnap.synth.TerraPatch.fromJsonText(pad.source.getValue("recipe")), "${starter.id} ${pad.displayName}: its recipe does not parse")
+                        assertEquals(listOf(4, 4, 4), pad.chain?.zones?.map { it.cycle })
+                        assertEquals(12, pad.chain?.boundaries?.size)
                         assertTrue(pad.oneShot)
                     }
                 }
