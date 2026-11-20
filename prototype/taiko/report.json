@@ -1,0 +1,510 @@
+{
+ "ODAIKO": {
+  "reference": "taiko_clicks_kamo_pitched",
+  "hit_at_s": 10.88,
+  "clear_gap_s": 0.36,
+  "partials": 6,
+  "bands": 1,
+  "lowest_partial_hz": 78.1,
+  "third_octave_error_dB": null,
+  "centroid_ref_hz": 203,
+  "centroid_fit_hz": 119,
+  "velocity_attack_centroid_hz": {
+   "soft": 527,
+   "mid": 882,
+   "hard": 1241
+  },
+  "velocity_brightness_rise_pct": 135,
+  "round_robin_attack_dB": [
+   2.05,
+   4.67
+  ],
+  "deterministic": true,
+  "finite": true,
+  "share_under_120Hz": 0.8,
+  "share_120_500Hz": 0.16,
+  "share_above_2kHz": 0.0,
+  "seconds_to_minus_40dB": 0.68,
+  "round": 2
+ },
+ "NAGADO": {
+  "reference": "taiko_ensemble_arida",
+  "hit_at_s": 7.57,
+  "clear_gap_s": 0.4,
+  "partials": 14,
+  "bands": 21,
+  "lowest_partial_hz": 119.1,
+  "third_octave_error_dB": {
+   "attack": 2.21,
+   "body": 2.25
+  },
+  "centroid_ref_hz": 1010,
+  "centroid_fit_hz": 1784,
+  "velocity_attack_centroid_hz": {
+   "soft": 545,
+   "mid": 926,
+   "hard": 1455
+  },
+  "velocity_brightness_rise_pct": 167,
+  "round_robin_attack_dB": [
+   1.94,
+   4.13
+  ],
+  "deterministic": true,
+  "finite": true
+ },
+ "SHIME": {
+  "reference": "taiko_small_arida",
+  "hit_at_s": 6.12,
+  "clear_gap_s": 0.28,
+  "partials": 14,
+  "bands": 17,
+  "lowest_partial_hz": 306.8,
+  "third_octave_error_dB": {
+   "attack": 3.9,
+   "body": 3.34
+  },
+  "centroid_ref_hz": 1120,
+  "centroid_fit_hz": 1256,
+  "velocity_attack_centroid_hz": {
+   "soft": 832,
+   "mid": 1140,
+   "hard": 1452
+  },
+  "velocity_brightness_rise_pct": 75,
+  "round_robin_attack_dB": [
+   2.17,
+   4.37
+  ],
+  "deterministic": true,
+  "finite": true
+ },
+ "SHIME_B": {
+  "reference": "taiko_small_agano",
+  "hit_at_s": 7.98,
+  "clear_gap_s": 0.45,
+  "partials": 14,
+  "bands": 21,
+  "lowest_partial_hz": 309.5,
+  "third_octave_error_dB": {
+   "attack": 1.63,
+   "body": 2.38
+  },
+  "centroid_ref_hz": 1241,
+  "centroid_fit_hz": 929,
+  "velocity_attack_centroid_hz": {
+   "soft": 814,
+   "mid": 1128,
+   "hard": 1416
+  },
+  "velocity_brightness_rise_pct": 74,
+  "round_robin_attack_dB": [
+   2.0,
+   6.5
+  ],
+  "deterministic": true,
+  "finite": true
+ },
+ "KA": {
+  "reference": "taiko_clicks_kaizu",
+  "hit_at_s": 4.27,
+  "clear_gap_s": 0.25,
+  "partials": 14,
+  "bands": 20,
+  "lowest_partial_hz": 165.5,
+  "third_octave_error_dB": {
+   "attack": 2.87,
+   "body": 2.36
+  },
+  "centroid_ref_hz": 2368,
+  "centroid_fit_hz": 2088,
+  "velocity_attack_centroid_hz": {
+   "soft": 1529,
+   "mid": 1851,
+   "hard": 2136
+  },
+  "velocity_brightness_rise_pct": 40,
+  "round_robin_attack_dB": [
+   2.24,
+   4.62
+  ],
+  "deterministic": true,
+  "finite": true
+ },
+ "KANE": {
+  "reference": "atarigane_tahara",
+  "hit_at_s": 4.69,
+  "clear_gap_s": 0.35,
+  "partials": 14,
+  "bands": 17,
+  "lowest_partial_hz": 707.9,
+  "third_octave_error_dB": {
+   "attack": 2.51,
+   "body": 2.21
+  },
+  "centroid_ref_hz": 4711,
+  "centroid_fit_hz": 4138,
+  "velocity_attack_centroid_hz": {
+   "soft": 3942,
+   "mid": 6011,
+   "hard": 6986
+  },
+  "velocity_brightness_rise_pct": 77,
+  "round_robin_attack_dB": [
+   1.94,
+   4.38
+  ],
+  "deterministic": true,
+  "finite": true
+ },
+ "KANE_EDGE": {
+  "reference": "atarigane_tainai",
+  "hit_at_s": 2.66,
+  "clear_gap_s": 0.36,
+  "partials": 14,
+  "bands": 15,
+  "lowest_partial_hz": 3421.1,
+  "third_octave_error_dB": {
+   "attack": 1.11,
+   "body": 3.53
+  },
+  "centroid_ref_hz": 7296,
+  "centroid_fit_hz": 7077,
+  "velocity_attack_centroid_hz": {
+   "soft": 7719,
+   "mid": 8404,
+   "hard": 7929
+  },
+  "velocity_brightness_rise_pct": 3,
+  "round_robin_attack_dB": [
+   1.69,
+   5.01
+  ],
+  "deterministic": true,
+  "finite": true
+ },
+ "CHAPPA": {
+  "reference": "chappa_ukiha",
+  "hit_at_s": 9.35,
+  "clear_gap_s": 1.0,
+  "partials": 14,
+  "bands": 23,
+  "lowest_partial_hz": 1514.7,
+  "third_octave_error_dB": {
+   "attack": 1.89,
+   "body": 1.02
+  },
+  "centroid_ref_hz": 3777,
+  "centroid_fit_hz": 4613,
+  "velocity_attack_centroid_hz": {
+   "soft": 5190,
+   "mid": 6861,
+   "hard": 7717
+  },
+  "velocity_brightness_rise_pct": 49,
+  "round_robin_attack_dB": [
+   1.56,
+   3.64
+  ],
+  "deterministic": true,
+  "finite": true
+ },
+ "CLAPPER": {
+  "reference": "binzasara_p",
+  "hit_at_s": 0.13,
+  "clear_gap_s": 0.39,
+  "partials": 14,
+  "bands": 21,
+  "lowest_partial_hz": 4649.2,
+  "third_octave_error_dB": {
+   "attack": 5.4,
+   "body": 6.71
+  },
+  "centroid_ref_hz": 7527,
+  "centroid_fit_hz": 6519,
+  "velocity_attack_centroid_hz": {
+   "soft": 6263,
+   "mid": 6982,
+   "hard": 7400
+  },
+  "velocity_brightness_rise_pct": 18,
+  "round_robin_attack_dB": [
+   2.87,
+   8.71
+  ],
+  "deterministic": true,
+  "finite": true,
+  "share_under_120Hz": 0.0,
+  "share_120_500Hz": 0.01,
+  "share_above_2kHz": 0.95,
+  "seconds_to_minus_40dB": 0.17,
+  "round": 2
+ },
+ "COWBELL": {
+  "round": 5,
+  "gesture_error_dB": {
+   "0-140ms": 4.27,
+   "140-345ms": 3.74,
+   "345-700ms": 3.5,
+   "700-1200ms": 2.81,
+   "1.2-2.2s": 2.53,
+   "2.2-4s": 13.75
+  },
+  "strike_peaks_ref": [
+   0.56,
+   0.61,
+   1.0,
+   0.17,
+   0.07,
+   0.0
+  ],
+  "strike_peaks_fit": [
+   0.84,
+   0.72,
+   1.24,
+   0.26,
+   0.06,
+   0.0
+  ],
+  "waveform_match_first_2.2s": 0.51,
+  "velocity_brightness_rise_pct": 105,
+  "round_robin_attack_dB": [
+   2.96,
+   7.79
+  ],
+  "deterministic": true,
+  "finite": true
+ },
+ "WATER": {
+  "reference": "water_drum_ten",
+  "hit_at_s": 0.56,
+  "clear_gap_s": 0.17,
+  "partials": 14,
+  "bands": 21,
+  "lowest_partial_hz": 183.0,
+  "third_octave_error_dB": {
+   "attack": 3.52,
+   "body": 3.55
+  },
+  "centroid_ref_hz": 1392,
+  "centroid_fit_hz": 1431,
+  "velocity_attack_centroid_hz": {
+   "soft": 1238,
+   "mid": 1808,
+   "hard": 2402
+  },
+  "velocity_brightness_rise_pct": 94,
+  "round_robin_attack_dB": [
+   2.08,
+   5.23
+  ],
+  "deterministic": true,
+  "finite": true
+ },
+ "COWBELL_MUTE": {
+  "round": 3,
+  "velocity_brightness_rise_pct": 105,
+  "round_robin_attack_dB": [
+   1.99,
+   5.82
+  ],
+  "deterministic": true,
+  "finite": true
+ },
+ "ODAIKO_A": {
+  "round": 4,
+  "reference": "chu_daiko_duo_hit_punch",
+  "clear_s": 1.6,
+  "third_octave_error_dB": {
+   "attack": 2.26,
+   "body": 2.57
+  },
+  "partials": [
+   [
+    65.8,
+    0.66,
+    2.79
+   ],
+   [
+    91.0,
+    1.0,
+    2.44
+   ],
+   [
+    113.0,
+    0.76,
+    1.85
+   ],
+   [
+    153.8,
+    0.55,
+    2.11
+   ],
+   [
+    175.1,
+    0.22,
+    1.95
+   ],
+   [
+    197.7,
+    0.11,
+    1.87
+   ],
+   [
+    212.1,
+    0.16,
+    1.52
+   ],
+   [
+    251.5,
+    0.42,
+    1.24
+   ],
+   [
+    262.9,
+    0.19,
+    1.24
+   ],
+   [
+    279.9,
+    0.56,
+    1.22
+   ],
+   [
+    300.1,
+    0.49,
+    0.99
+   ],
+   [
+    393.1,
+    0.61,
+    0.48
+   ]
+  ],
+  "shares_ref": {
+   "<120": 0.57,
+   "120-500": 0.4,
+   "500+": 0.03
+  },
+  "shares_fit": {
+   "<120": 0.41,
+   "120-500": 0.53,
+   "500+": 0.06
+  },
+  "velocity_brightness_rise_pct": 178,
+  "round_robin_attack_dB": [
+   3.99,
+   7.82
+  ],
+  "deterministic": true,
+  "finite": true
+ },
+ "ODAIKO_B": {
+  "round": 4,
+  "reference": "fm_big_taiko",
+  "clear_s": 1.6,
+  "third_octave_error_dB": {
+   "attack": 4.92,
+   "body": 1.58
+  },
+  "partials": [
+   [
+    60.9,
+    1.0,
+    1.17
+   ],
+   [
+    85.3,
+    0.74,
+    1.24
+   ],
+   [
+    111.5,
+    0.35,
+    1.38
+   ],
+   [
+    134.6,
+    0.28,
+    1.02
+   ],
+   [
+    171.9,
+    0.17,
+    1.22
+   ],
+   [
+    194.1,
+    0.13,
+    0.82
+   ],
+   [
+    210.3,
+    0.37,
+    0.72
+   ],
+   [
+    227.9,
+    0.05,
+    0.62
+   ],
+   [
+    257.7,
+    0.19,
+    0.67
+   ],
+   [
+    277.9,
+    0.06,
+    0.63
+   ],
+   [
+    293.4,
+    0.24,
+    0.59
+   ],
+   [
+    316.1,
+    0.22,
+    0.59
+   ],
+   [
+    354.6,
+    0.13,
+    0.51
+   ],
+   [
+    380.7,
+    0.2,
+    0.52
+   ]
+  ],
+  "shares_ref": {
+   "<120": 0.84,
+   "120-500": 0.13,
+   "500+": 0.02
+  },
+  "shares_fit": {
+   "<120": 0.76,
+   "120-500": 0.21,
+   "500+": 0.03
+  },
+  "velocity_brightness_rise_pct": 179,
+  "round_robin_attack_dB": [
+   3.33,
+   5.69
+  ],
+  "deterministic": true,
+  "finite": true
+ },
+ "ODAIKO_AB": {
+  "round": 6,
+  "velocity_brightness_rise_pct": 187,
+  "round_robin_attack_dB": [
+   2.87,
+   4.4
+  ],
+  "deterministic": true,
+  "finite": true
+ }
+}
