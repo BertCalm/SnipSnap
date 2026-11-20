@@ -1654,7 +1654,7 @@ object Arco {
      *    quicker unsteadiness on top (near 2 Hz, the arm). A note starts at the top of that movement and eases from there.
      *  - The vibrato's swings differ more: its depth wanders by up to [PLAYER_DEPTH_WANDER] more of itself and its rate by
      *    [PLAYER_RATE_WANDER] more, on top of [VIBRATO_HUMAN]'s 18 and 7 percent, for every voice (ERHU's one-shot had the plain sine).
-     * Listening values, unheard.
+     * Listening values, heard: the owner kept this amount over [Humanize.STRONGER] (round fix-arco-1, 2026-11-20, BP1 to BP4 KEEP).
      */
     const val PLAYER_LEAN_CENTS = 2.5
     const val PLAYER_SCOOP_CENTS = 7.0

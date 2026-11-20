@@ -605,7 +605,7 @@ object Bore {
      *    and 0.2), its depth wanders by [HUMAN_DEPTH_WANDER] and then [HUMAN_DEPTH_WANDER_MORE] of itself for each unit of the amount,
      *    its rate by [HUMAN_RATE_WANDER] and [HUMAN_RATE_WANDER_MORE], and the breath pulses with it by [HUMAN_VIBRATO_BREATH] (the jaw
      *    moves the pressure as well as the pitch).
-     * Listening values, unheard.
+     * Listening values, heard: the owner kept this amount over [Humanize.STRONGER] (round fix-bore-1, 2026-11-20, BQ1 to BQ4 KEEP).
      */
     const val HUMAN_BREATH = 0.04f
     const val HUMAN_BREATH_SOFT = 0.4f
@@ -696,7 +696,7 @@ object Bore {
 
     internal val OPENING_AS_HEARD = Opening(centred = true, trimDb = 0f)
 
-    /** SAX's opening since 2026-11-20 ([Opening]). The trim is a listening value, unheard. */
+    /** SAX's opening since 2026-11-20 ([Opening]). The trim is a listening value; the owner heard every SAX preset old then new and kept it (round fix-bore-1, 2026-11-20, BQ4). */
     internal val OPENING_SOFTENED = Opening(centred = false, trimDb = 3f)
 
     /** The opening a voice plays. */
