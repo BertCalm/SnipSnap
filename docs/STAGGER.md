@@ -13,6 +13,31 @@ barely hear, or none → the clock drags and catches up → a cartoon lands wher
 
 ## Status
 
+**Round 3c built (2026-11-20): "Dark Gong sounds like the timpani."** It did, by measure. The Dark Gong was FIRED
+BRONZE's kempul played five semitones down: its fundamental sat at 72 Hz against the timpani's 78, its overtones lined
+up almost like a drum's (73, 146, 200, 293 Hz), nothing sounded above 300 Hz, and its upper band fell 7.6 dB after the
+strike, as a drum's does. Nothing about it said gong.
+
+The Dark Gong is now a modal gong (`StaggerKits.modalGong`, `StaggerKits` version 8), built on the three things that
+tell a gong from a drum: a hum that beats, partials that do not line up, and upper partials that bloom after the
+strike. The first draft was still a hum (2 percent above 300 Hz): a two-pole resonator's output grows as its pitch
+falls, so the upper modes' gains are now scaled by their ratio, and the mallet narrowed from 3.5 to 2 ms on a full hit.
+
+| Hard strike | New Dark Gong | Old Dark Gong | Timpani |
+|---|---|---|---|
+| Strongest partial | 120 Hz | 72 Hz | 78 Hz |
+| Share of the first half-second above 300 Hz | 7.5 percent | 0 | 0.2 |
+| Its 250 Hz to 2 kHz band, 50 to 250 ms after the strike against the first 50 ms | +5.1 dB | -7.6 | -2.2 |
+
+A soft strike blooms 0.3 dB and keeps nothing above 300 Hz: darker, not only quieter. `StaggerKitsTest` holds the gong
+at least 1.4 times the timpani's pitch, with at least five times its share above 300 Hz and blooming at least 3 dB
+above 300 Hz (measured in the test: 120 Hz against 79, 7.7 times, +4.4 dB against the timpani's -2.7). Every other pad
+is round 3b's.
+
+The round 3c listening page (private to the owner's account): [Stagger, round three c](https://claude.ai/artifact/FzLjsYKXkXXxK9JEKeVy65). Each kit's
+Timpani and Dark Gong as round 3b shipped them and as this round does, then every pad. `:shell:generateStaggerKits`
+verified the three kits again (169, 169 and 146 s on this machine).
+
 **Round 3b built (2026-11-20): "It just sounds flat, muffled, and muddy."** Measured on our own drums, one change at a
 time, because a reference figure taken from full mixes had misled round 3 (below).
 
@@ -282,7 +307,11 @@ python3 scripts/stagger_page/build_page.py testkit/stagger-round1 OUT_DIR   # th
   (`Eras` sp1200) and *then* played slow (`Speed`), a sampler's order, which the rack cannot express (PITCH runs
   before CRUNCH there). The converter's images sit near 18 kHz and come down with the pitch. A foley pad skips
   the kit's CRUNCH so its grain is not doubled at a second rate. Timpani (SKIN's tom at the bottom of its range,
-  -5), Dark Gong (FIRED BRONZE's kempul, -5), Zap (TINES, -7), Punch (-5).
+  -5), Dark Gong (the modal GONG below, -5; FIRED BRONZE's kempul until round 3c), Zap (TINES, -7), Punch (-5).
+- **GONG** (`StaggerKits.modalGong`, round 3c): a hanging gong as modes, because FIRED BRONZE's kempul pitched down
+  measured as a second timpani. A hum that beats (two modes 1.2 percent apart, about 1.4 Hz after the print),
+  partials that do not line up (1.47, 2.03, 2.71 up to 9.1 times the hum), and upper partials that bloom over
+  120 ms after the strike. A soft strike is a wider mallet with less bloom: darker, not only quieter.
 - **GLASS** (`StaggerKits.glass`): a pane breaking, which no engine made: 28 modal shards, three modes each
   between 2.2 and 8.8 kHz ringing 20 to 220 ms, the first three inside 2 ms and the rest scattered over about
   120 ms, every shard drawn from the take's seed. Not on CARDBOARD; on the page for the cinematic kit's sake.

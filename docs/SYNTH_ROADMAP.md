@@ -1,4 +1,4 @@
-> STAGGER (round 3b built 2026-11-20, the snare damped and opened and the dark shelf removed after round 3 was heard as "flat, muffled, and muddy"; round 3 boxed the kicks after round 2d's "light taps"; round 2c was "room reverb", round 2b "echoy", round 1 "too much like drum machine sounds", round 1b "New sounds are better"):
+> STAGGER (round 3c built 2026-11-20, the Dark Gong rebuilt as a modal gong after it was heard as "sounds like the timpani"; round 3b damped and opened the snare after round 3's "flat, muffled, and muddy"; round 3 boxed the kicks after round 2d's "light taps"; round 2c was "room reverb", round 2b "echoy", round 1 "too much like drum machine sounds", round 1b "New sounds are better"):
 > three kits, CARDBOARD, MATINEE and STUMBLE, on the SKINS shelf, after the owner's muffled-kick, drunk-clock, foley-fill
 > producer profile, in the CYPHER shape, their drums EMBER's, proven through save, playback and MPC 3 export in software; a MUFFLE strike law, the `Cypher.staggered` clock, a kit-side
 > converter-then-pitch FOLEY print, a GLASS source and a PUNCH strike. Not on the shelf. See [STAGGER](STAGGER.md).

@@ -46,7 +46,8 @@ import kotlin.math.tanh
  * Round 3b: "It just sounds flat, muffled, and muddy": measured, the snare's head rang at 250 to 600 Hz for a quarter
  * second (65 to 81 percent of a backbeat's energy there; the references a median 16) with its crack filtered three
  * times over, and round 3's knock boomed. So the snare is damped, tuned up and given its wires ([emberWired]), the
- * contact filter opens, the knock is shortened, and the grooves lose their dark shelf.
+ * contact filter opens, the knock is shortened, and the grooves lose their dark shelf. Round 3c: "Dark Gong sounds
+ * like the timpani": it measured as one (72 Hz against 78, nothing above 300 Hz), so the Dark Gong is a [modalGong].
  *
  * Every pad has three velocity zones of four takes; a zone is its own strike and a take a fresh one. Pads 1 to
  * 14 are hits, pad 15 a timpani roll into the gong, pad 16 a two-bar groove, bar-exact so it loops, played as one
@@ -59,7 +60,7 @@ import kotlin.math.tanh
  */
 object StaggerKits {
     /** Bump when a pad's audio changes; saved kits carry the version they were printed with. */
-    const val VERSION = 7
+    const val VERSION = 8
 
     enum class Kit(val id: String, val title: String, val bpm: Int) {
         CARDBOARD("stagger-cardboard", "Cardboard", 89),
@@ -165,6 +166,54 @@ object StaggerKits {
         }
         out
     }
+
+    /**
+     * GONG (round 3c, "Dark Gong sounds like the timpani", the owner, 2026-11-20): a hanging gong as modes. FIRED
+     * BRONZE's kempul five semitones down measured as a drum: its fundamental at 72 Hz against the timpani's 77, its
+     * overtones nearly harmonic (73, 146, 200, 293 Hz), its centroid 86 to 103 Hz against the timpani's 78 to 91,
+     * nothing above 600 Hz. A gong is told from a drum by three things, and each is a law here:
+     *  - the hum beats: two modes [BEAT] apart in ratio ring together, so the fundamental swells and sinks about
+     *    twice a second (the "wah"), and so does the second partial;
+     *  - the partials do not line up: ratios 1.47, 2.03, 2.71, 3.36, 4.12, 5.03, 6.17, 7.4 and 9.1, the clang;
+     *  - the upper partials bloom: from 2.71 up they rise over [BLOOM_SECONDS] after the strike, energy passing up
+     *    from the hum, which a struck drum never does.
+     * The mallet is a raised-cosine push 2 ms wide on a full hit and 6 ms on a soft one (a wider push excites the
+     * upper modes less), and the bloom scales with the stroke, so a softer gong is darker and not only quieter.
+     * Every take moves every ratio by up to half a percent and the beat by a fifth of itself: another strike on the
+     * same gong. [hz] is the hum before the foley print's pitch move. Rendered at the output rate: the resonators
+     * are linear and the push is smooth, so nothing aliases.
+     */
+    fun modalGong(hz: Float, seconds: Float = 1.2f): Strike = { v, t, _ ->
+        val n = (seconds * Dsp.RATE).toInt()
+        val noise = Dsp.Noise(Dsp.seedFor("STAGGER", "gong", t))
+        fun jitter(amount: Float) = 1f + amount * noise.next()
+        val width = ((.006f - .004f * v.coerceIn(0f, 1f)) * jitter(.08f) * Dsp.RATE).toInt().coerceAtLeast(8)
+        val push = FloatArray(n)
+        for (i in 0 until min(width, n)) push[i] = .5f * (1f - kotlin.math.cos(2f * Math.PI.toFloat() * i / width))
+        val beat = BEAT * jitter(.2f)
+        val body = listOf(
+            Modes.Mode(1f, 1f, 3.0f), Modes.Mode(1f + beat, .75f, 3.0f),
+            Modes.Mode(1.47f * jitter(.005f), .45f, 2.0f),
+            Modes.Mode(2.03f * jitter(.005f), .35f, 1.6f), Modes.Mode(2.03f * (1f + beat * .8f), .25f, 1.6f),
+        )
+        // A two-pole resonator's output grows as 1/sin(theta), so a mode's written gain is multiplied by its ratio
+        // to stand where it is written against the hum (the first draft, without it, put 2 percent above 300 Hz).
+        val clang = listOf(2.71f to .30f, 3.36f to .22f, 4.12f to .16f, 5.03f to .12f, 6.17f to .09f, 7.4f to .07f, 9.1f to .05f)
+            .zip(listOf(1.3f, 1.1f, .9f, .8f, .6f, .5f, .4f)) { (r, g), t60 -> Modes.Mode(r * jitter(.005f), g * r, t60) }
+        val low = Modes.ring(push, hz, body, Dsp.RATE)
+        val high = Modes.ring(push, hz, clang, Dsp.RATE)
+        val lowPeak = KitStrikes.peakOf(low).coerceAtLeast(1e-9f)
+        val highPeak = KitStrikes.peakOf(high).coerceAtLeast(1e-9f)
+        val bloomGain = .55f * (.35f + .65f * v.coerceIn(0f, 1f))
+        val tau = BLOOM_SECONDS * Dsp.RATE
+        FloatArray(n) { i -> low[i] / lowPeak + bloomGain * (1f - kotlin.math.exp(-i / tau)) * high[i] / highPeak }
+    }
+
+    /** The hum's beat, as a ratio: at a 160 Hz hum, 1.9 Hz; five semitones down, 1.4 Hz. Shape. */
+    const val BEAT = .012f
+
+    /** How long the upper partials take to bloom (a time constant). Shape. */
+    const val BLOOM_SECONDS = .12f
 
     /**
      * PUNCH: a comic-book punch. A noise whoosh rises for 130 ms through a low-pass that falls from 3 kHz to 550 Hz
@@ -506,8 +555,11 @@ object StaggerKits {
     /** A kettle drum: SKIN's tom at the bottom of its range ringing long, then the foley print five semitones down. */
     internal val timpaniDry: Strike = KitStrikes.skinStruck(SkinVoice.TOM, "TUNE" to .10f, "DECAY" to .85f, "TONE" to .25f, "DROP" to .05f)
     internal val timpani: Strike = foley(timpaniDry, -5)
-    internal val gongDry: Strike = gong(.40f)
+    /** Round 3c: the Dark Gong is [modalGong] at a 160 Hz hum (120 Hz after the print), not FIRED BRONZE's kempul, which measured as a second timpani. */
+    internal val gongDry: Strike = modalGong(160f)
     internal val darkGong: Strike = foley(gongDry, -5)
+    /** FIRED BRONZE's kempul as rounds 1 to 3b shipped it, for the page's before and after. */
+    internal val kempulGong: Strike = foley(gong(.40f), -5)
     internal val zapDry: Strike = KitStrikes.tines(TinesVoice.ZAP, mapOf("TUNE" to .55f, "DROP" to .70f, "BRIGHT" to .50f, "DECAY" to .40f))
     internal val zap: Strike = foley(zapDry, -7)
     internal val punchDry: Strike = punch(KitStrikes.thumpKick("TUNE" to .80f, "SWEEP" to .60f, "DECAY" to .20f, "CLICK" to .30f, "DRIVE" to .30f, "PUNCH" to .60f))

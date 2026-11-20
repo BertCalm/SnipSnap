@@ -249,6 +249,47 @@ class StaggerKitsTest {
         assertTrue(c in 2_000.0..4_500.0, "crack snare centroid $c Hz")
     }
 
+    /**
+     * Round 3c, "Dark Gong sounds like the timpani" (the owner, 2026-11-20): FIRED BRONZE's kempul five semitones down
+     * measured as a drum (fundamental 72 Hz against the timpani's 78, nothing above 300 Hz, its upper band falling
+     * 7.6 dB after the strike). The modal gong is held to the three things that tell a gong from a drum, against
+     * the kit's own timpani: a register of its own (the strongest partial at least 1.4 times the timpani's;
+     * measured 120 Hz against 79), partials above the hum (its share above 300 Hz at least five times the
+     * timpani's: an absolute share moves from 1.5 to 7.5 percent with the window's shape, the ratio holds; measured
+     * 7.7 times), and a bloom (above 300 Hz, its loudest 50 ms frame between 50 and 250 ms at least 3 dB over its
+     * first 50 ms; measured 4.4, the timpani falls 2.7).
+     */
+    @Test fun `the dark gong is a gong and not a second timpani`() {
+        fun lone(s: Strike) = KitStrikes.struck(s, 1f, 0, StaggerKits.touch(1f))
+        fun dominant(x: FloatArray): Double {
+            val n = 1 shl 15; val spec = power(x.copyOf(min(x.size, (.5f * rate).toInt())), n)
+            var best = 0; for (b in spec.indices) if (b.toDouble() * rate / n >= 30 && spec[b] > spec[best]) best = b
+            return best.toDouble() * rate / n
+        }
+        // The bloom is read on the whole strike high-passed at 300 Hz (three Butterworth sections, 36 dB per octave)
+        // and then framed: a hard-edged FFT of the first 50 ms alone leaks the loud hum into the upper band and
+        // hides the bloom (it read -0.9 dB where the filtered signal reads +5).
+        fun upper(x: FloatArray): FloatArray {
+            val f = List(3) { Dsp.TptSvf() }
+            return FloatArray(x.size) { i -> var y = x[i]; for (s in f) { s.process(y, 300f, 1.414f); y = s.high }; y }
+        }
+        fun rms(x: FloatArray, from: Float, to: Float): Double {
+            val a = (from * rate).toInt(); val b = min(x.size, (to * rate).toInt())
+            return sqrt((a until b).sumOf { x[it].toDouble() * x[it] } / (b - a))
+        }
+        fun bloom(x: FloatArray): Double {
+            val y = upper(x)
+            val later = (0 until 4).maxOf { rms(y, .05f + it * .05f, .10f + it * .05f) }
+            return 20 * kotlin.math.log10(later / rms(y, 0f, .05f))
+        }
+        val gong = lone(StaggerKits.darkGong); val timpani = lone(StaggerKits.emberTimpani)
+        val above = bandShare(gong, 300f, 22_050f, .5f, taper = true); val timpaniAbove = bandShare(timpani, 300f, 22_050f, .5f, taper = true)
+        println("dark gong: strongest ${dominant(gong)} Hz (timpani ${dominant(timpani)}), above 300 Hz $above (timpani $timpaniAbove), bloom ${bloom(gong)} dB (timpani ${bloom(timpani)})")
+        assertTrue(dominant(gong) >= 1.4 * dominant(timpani), "the gong's strongest partial ${dominant(gong)} Hz sits with the timpani's ${dominant(timpani)}")
+        assertTrue(above >= 5 * timpaniAbove, "the gong keeps $above of its energy above 300 Hz, under five times the timpani's $timpaniAbove: a hum, not a gong")
+        assertTrue(bloom(gong) >= 3.0, "the gong's upper partials do not bloom: ${bloom(gong)} dB")
+    }
+
     @Test fun `GLASS deals a different pane on every take and the same pane for the same take`() {
         val panes = List(StaggerKits.TAKES) { lone(StaggerKits.glassAt(-5), 1f, it) }
         for (a in panes.indices) for (b in a + 1 until panes.size) {
