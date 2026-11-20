@@ -134,26 +134,44 @@ def build_1b(m, files, clip, out):
     return 0
 
 
+ROUNDS = {
+    2: {"title": "Stagger Round Two", "short": "Stagger, round two", "intro": "", "ask": "", "beside": ""},
+    4: {"title": "Stagger Round Two C", "short": "Stagger, round two c",
+        "intro": "You asked for a bit of compression, then heard round 2b as echoy: its press lifted the room baked into every hit. This round's press is lighter and faster, catches the peak, and leaves the room where it was; the grooves keep only their bus. ",
+        "ask": "<li>Is the echo gone, and is what is left still a bit of compression or none at all?</li>",
+        "beside": "Round 2 had no press on the pads; round 2b's press lifted the room (echoy); this round's press catches the peak and leaves the room where it was, and the grooves take no second press."},
+    5: {"title": "Stagger Round Two D", "short": "Stagger, round two d",
+        "intro": "You heard round 2c as room reverb. It was: every EMBER drum carries the club it was built in, and the grooves played those hits through a second room. This round dries every drum (the club at its nearest, then a gate on what is left) and takes the room off the grooves; only the timpani keep their hall. ",
+        "ask": "<li>Is the room gone, and are the dry drums still drums or back to a drum machine?</li>",
+        "beside": "Round 2 had the room and no press; round 2c the room and a light press; this round is dry, with the light press kept on the hits."},
+}
+
+
 def build_2(m, src, out, ext="wav", before=None):
     """Round 2: the three kits as they ship, read back from their MPC 3 exports by the shelf generator. [ext] is the
     clips' extension beside the page: the WAVs as the generator wrote them, or MP3 copies for a lighter page.
     [before] names a folder of the previous round's clips beside the page (round 2b: the owner asked for a bit of
     compression, and the page plays each kit's kick, snare and groove before and after)."""
+    # The round's wording is keyed on the kit version the manifest reports, so a rebuilt page says which round it is.
+    round_ = ROUNDS.get(m["kitVersion"], ROUNDS[2])
     def clip(path, label, seconds):
         path = path[:-3] + ext
         return ('<button class="clip" type="button" data-src="%s" aria-pressed="false"><span class="play" aria-hidden="true"></span>'
                 '<span class="label">%s</span><span class="secs">%.2f s</span></button>' % (html.escape(path), html.escape(label), seconds))
     sections = []
     if before:
+        # [before] is "label=folder,label=folder": the earlier rounds' clips beside the page, each labelled.
+        earlier = [(part.split("=")[0], part.split("=")[1]) for part in before.split(",")]
         rows = []
         for kit in m["kits"]:
             items = []
             for slot, what in [(1, kit["pads"][0]["name"]), (2, kit["pads"][1]["name"]), (16, "groove")]:
                 pad = kit["pads"][slot - 1]
-                items.append(clip("%s/%s/pad-%02d.wav" % (before, kit["id"], slot), "%s before" % what, pad["seconds"]))
-                items.append(clip("%s/pad-%02d.wav" % (kit["id"], slot), "%s pressed" % what, pad["seconds"]))
+                for label, folder in earlier:
+                    items.append(clip("%s/%s/pad-%02d.wav" % (folder, kit["id"], slot), "%s, %s" % (what, label), pad["seconds"]))
+                items.append(clip("%s/pad-%02d.wav" % (kit["id"], slot), "%s, this round" % what, pad["seconds"]))
             rows.append('<div class="pad"><h3>%s</h3><div class="row">%s</div></div>' % (html.escape(kit["title"]), "".join(items)))
-        sections.append(("Before and after the compressor", "Round 2 as you heard it, then round 2b with the compressor in every kit's print: the body pressed at about two to one, the peak match bringing the tail and the room back up. Each kit's kick, backbeat drum and groove.", rows))
+        sections.append(("The earlier rounds beside this one", "Each kit's kick, backbeat drum and groove from the earlier rounds, then this round. " + round_["beside"], rows))
     for kit in m["kits"]:
         rows = []
         for pad in kit["pads"]:
@@ -167,10 +185,10 @@ def build_2(m, src, out, ext="wav", before=None):
                           "stagger-matinee": "The cinematic kit: a stage kick and snare on a bigger room, then ten effects through the converter. A15 the timpani riser into the crash gong, A16 a groove with a glass break and a zap pickup.",
                           "stagger-stumble": "The drunkest clock: a humming muffled kick, the rimshot in the snare's place, no hats in the groove, the tape worn. A15 a dragging snare roll, A16 the groove."}[kit["id"]],
                          rows))
-    page = render({"bpm": "", "version": m["kitVersion"]}, "Stagger Round Two B" if before else "Stagger Round Two", "Stagger, round two b" if before else "Stagger, round two",
-                  ("You asked for a bit of compression. Every kit's print now presses its pads between the converter and the tape; the grooves keep their bus. " if before else "") +
+    page = render({"bpm": "", "version": m["kitVersion"]}, round_["title"], round_["short"],
+                  (round_["intro"] if before else "") +
                   "Three kits on the shelf, every clip read back from the MPC 3 export through the app's own pad resolver. Kit version {VERSION}; the drums are EMBER's, as you chose in round 1b. Nothing has been heard before you. One player: a new clip stops the last.",
-                  "<li>Are the three kits three kits, each worth its row?</li><li>Any pad wrong for its kit, and does the glass earn its two pads on MATINEE?</li><li>The clocks: CARDBOARD's, MATINEE's and STUMBLE's widest; is any one too drunk or too straight?</li>",
+                  (round_["ask"] if before else "") + "<li>Are the three kits three kits, each worth its row?</li><li>Any pad wrong for its kit, and does the glass earn its two pads on MATINEE?</li><li>The clocks: CARDBOARD's, MATINEE's and STUMBLE's widest; is any one too drunk or too straight?</li>",
                   sections_html(sections))
     os.makedirs(out, exist_ok=True)
     with open(os.path.join(out, "index.html"), "w") as f:
