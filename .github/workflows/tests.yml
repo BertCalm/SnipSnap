@@ -271,12 +271,25 @@ jobs:
         # unset. settings.gradle.kts then leaves :app out, as in a cloud
         # session, and the shard does not install the NDK at configuration
         # time (about 14 s, and a dl.google.com fetch that could fail it).
+        #
+        # The Kotlin compiler gets 5g here, not gradle.properties' 3g, as
+        # android-build does. Every shard compiles all of :synth's test
+        # sources, and on 2026-11-20 that compile ran out of heap in one
+        # shard of two different PRs (#1256 and #1258): ":synth:compileTestKotlin
+        # FAILED ... OutOfMemoryError: GC overhead limit exceeded" after about
+        # six and a half minutes, while the PRs' other shards compiled the
+        # same sources. A limit the build sits on the edge of fails some shards
+        # and not others, which reads as a flake and is not one. This only
+        # raises the compiler's ceiling; the daemon still exits 30 s after
+        # its last compile (autoshutdownIdleSeconds). Whether 5g is enough
+        # is not measured: if this fails again the log's "Caused by" names it.
         env:
           ANDROID_HOME: ""
           ANDROID_SDK_ROOT: ""
         run: >-
           ./gradlew --no-daemon
           -Dkotlin.daemon.options=autoshutdownIdleSeconds=30
+          -Pkotlin.daemon.jvmargs=-Xmx5g
           :synth:test
           -PtestShards=${{ strategy.job-total }}
           -PtestShard=${{ strategy.job-index }}
