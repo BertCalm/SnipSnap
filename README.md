@@ -472,7 +472,7 @@ explicit MIDI root (24–96), strike velocity and model version; TUNE is a
 relative ±12-semitone offset, neutral at 0.5, so the effective note spans
 12–108 without clamping back to the saved-root range. Seven provisional presets
 and a dry sixteen-pad C minor pentatonic kit are included, with PITCHWHEEL among
-FRESH TAPE's 230 starters. Run `./gradlew :synth:generatePitchwheelAudition`
+FRESH TAPE's 233 starters. Run `./gradlew :synth:generatePitchwheelAudition`
 for the compact first listening set, or add `-PpitchwheelFull` for the broader
 dry probes. HOLD's top step returns settled loop-only material with a
 deterministic attachment cycle and capped adhesion. The owner heard R1 as six
@@ -1460,7 +1460,7 @@ the CLI's `--midi` and `--velocity` options set their note and strike energy dir
 SILK, GYRE and MAGNET are in the module, with kits or voices, and
 no roster entry. TERRA left that list on 2026-11-14: its sixteen-pad
 world-percussion kit, which the owner kept in full, is FRESH TAPE's TERRA
-starter, and its twelve playing voices are in the picker with four factory
+starter, and its twenty-one playing voices are in the picker with four factory
 presets each, the sixteen kept pads among them. TERRA SAHEL, TERRA MAQAM and
 TERRA PUNJAB are genre kits from the same voices, kept by the owner
 ([`docs/TERRA_PROMOTION.md`](docs/TERRA_PROMOTION.md)). TERRA ROUND ROBIN, an
@@ -1468,6 +1468,11 @@ opt-in starter beside TERRA, deals four takes per touch on the same sixteen
 pads; the owner kept it by ear in terra-rr-1 (16 Nov 2026). SAHEL TAKES, MAQAM
 TAKES and PUNJAB TAKES do the same for the three genre kits, each beside its kit
 (kept by ear in genre-rr-1, 19 Nov 2026).
+TERRA MATSURI, TERRA THUNDER and TERRA BON are Japanese kits from TERRA's nine
+stick voices (odaiko, nagado, shime, ka, kane, chappa, binzasara, cowbell, water
+drum), with three touches and four takes on every pad and authored rolls and
+risers; provisional, not yet heard by the owner from the app
+([`docs/TERRA_STICKS.md`](docs/TERRA_STICKS.md)).
 VENT, the Rössler-attractor synth (separate from the TapeOS scheme of that
 name), brings clean model-2 PULSE, COIL and PLUME to the picker
 and factory roster. FRESH TAPE's VENT kit has twelve dry pads in C minor
