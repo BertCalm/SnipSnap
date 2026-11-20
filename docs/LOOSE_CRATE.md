@@ -434,12 +434,18 @@ grooves: the centre from 316-360 to 488-561 Hz, 2 to 6 kHz up 2.6 to 3.8 dB, 6 t
 1 kHz down 1.4 to 1.7 (less box), clarity from 1.4-1.6 to 2.7 dB. Lesson for the kits: a print tuned for one voice
 (the ride) can bury the others; measure the kit without it.
 
-**SPEED and RAGA kept.** "Keep speed and raga" (the owner, 2026-11-20). Still open for them: whether SPEED's 1.35
-speed-up is right, subtler or more extreme, and whether RAGA's tabla leads or sits under the kick and snare. For BLUE:
-whether round 0l cleared the muffled room, groove A, B or C, and the ride's ring quick or longer.
+**SPEED and RAGA kept.** "Keep speed and raga" (the owner, 2026-11-20).
 
-[Expansion round 0 listening page](https://claude.ai/artifact/Q3rZ8po8ZaeJs9E4tNd86s) (private to the owner; the five
-open questions at the top, then BLUE's history, SPEED and RAGA).
+**Round 0m, BLUE's groove and ride chosen.** "The longer cymbal is good. The break for blue sounds better than the
+groove. The groove kind of sounds like a Happy Trails type beat" (the owner, 2026-11-20). BLUE's groove is round 0i's
+break (`breakNotes`: sixteenths swung at 58%, the ride on eighths, the kick at 1, the "a" of 1 and the "and" of 3, the
+brushes on two and four, no shaker); the triplet pockets trotted like a cowboy clip-clop at 90 and stay rendered for
+the record. Round 0's groove (`blueNotes`) is removed from the generator. The ride's fade is 0.5 s (40 dB down at
+0.77 s), the longer of round 0k's two. Still open: whether round 0l cleared the muffled room, whether SPEED's 1.35
+speed-up is right, subtler or more extreme, and whether RAGA's tabla leads or sits under the kick and snare.
+
+[Expansion round 0 listening page](https://claude.ai/artifact/Q3rZ8po8ZaeJs9E4tNd86s) (private to the owner; what is
+decided and the three open questions at the top, then BLUE's history, SPEED and RAGA).
 
 ## Gates
 
