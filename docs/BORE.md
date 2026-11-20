@@ -45,3 +45,45 @@ as shipped, and so does the softened SAX opening.
 **Pins.** `HoldHumanizePinsTest` pins every factory preset and each voice's
 default note and default LOOP as they ship. The hashes from before the change
 still hold with the player off and the old opening (`BoreFrozenSoundTest`).
+
+## Candidate voices (round bore-voices-1, 20 Nov 2026: awaiting listening)
+
+**Why.** The melodic gate asks for six voices; BORE has two. Five candidates are
+built, one of them a spare, appended to `BoreVoice` after SAX so saved names
+never move. `Bore.KEPT_VOICES` is what players are offered; a candidate has no
+preset, kit or starter, and `BorePadMaker.VOICES` is the kept voices. Each is a
+different blown instrument using a part of the valve-in-a-pipe model the kept
+two leave unused (`BoreCandidates.kt`); the breath, the tongue, the player and
+the held cut are the engine's own, so a kept candidate needs only to be added
+to `KEPT_VOICES`.
+
+| Voice | Instrument | What is new in the model | Range |
+|---|---|---|---|
+| HOLLOW | clarinet, low register | the design's closed cylinder (half-period loop, -0.95, no blocker) under the reed: odd harmonics | A2 to A4 |
+| SHAWM | shawm or oboe | a double reed (table slope -0.5) on a cone, and the formant hook used for two nasal formants | G3 to G5 |
+| SHAKU | end-blown bamboo flute | the jet's edge noise heard outside the pipe, and a 60 cent bend into each note | D4 to D6 |
+| PANPIPE | pan flute | the jet on a closed pipe: odd harmonics, a little air | C4 to C6 |
+| VESSEL | ocarina | the jet across one Helmholtz cavity in the pipe's place: one resonance | C4 to C6 |
+
+Every candidate lets its note go over 0.25 s with the sound itself faded (the
+kept voices' 80 ms release left a still-ringing pipe cut), leaves the mean to
+the output's high-pass (no step at the first sample), and has no rasp or bite.
+A brass lip valve (STK's brass) was tried and never locked to its note.
+
+**Measured** (`BoreCandidateVoicesTest`): every candidate within 5 cents of the
+note at its root, middle and top; the nearest third-octave distance to any
+other voice is HOLLOW and PANPIPE 6.8 dB (each other at C4), SHAWM 8.6 dB,
+SHAKU 4.0 dB (FLUTE at C5), VESSEL 27 dB, against the 3.7 dB bar; soft, medium
+and hard differ by 0.55 to 1.4 dB of level-matched shape; a held note's level
+moves 0.34 to 0.78 dB with the player on; every held key and LOOP joins. The
+kept voices render bit for bit as before (16 renders pinned against 6a1c248a7).
+Nobody has heard any of them.
+
+**Risks.** SHAKU is the nearest to a kept voice (FLUTE); its difference is its
+breath. VESSEL is almost a sine. At extreme corners (BREATH 0 with CHIFF 1, a
+tight lip at the top) several candidates read as a drum to the classifier; the
+filing itself comes from the length, as the kept voices' does.
+
+**The round.** Clips DP (HOLLOW), DQ (SHAWM), DR (SHAKU), DS (PANPIPE), DT
+(VESSEL): four notes across the range, then soft, medium and hard; DU1 is the
+kept two for reference.

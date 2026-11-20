@@ -39,3 +39,40 @@ as shipped.
 **Pins.** `HoldHumanizePinsTest` pins every factory preset, each voice's default
 note, default LOOP and a three-second note as they ship. The hashes from before
 the change still hold with the player off (`ArcoBuzzTest`, `ArcoFrozenR1cTest`).
+
+## Candidate voices (round arco-voices-1, 20 Nov 2026: awaiting listening)
+
+**Why.** The melodic gate asks for six voices; ARCO has three. Four candidates
+are built, one of them a spare, appended to `ArcoVoice` after SARANGI so saved
+names never move. `Arco.KEPT_VOICES` is what players are offered; a candidate
+has no preset, kit or starter, and the held keys maker offers kept voices only.
+Each is a different bowed instrument using a part of the friction model the
+kept three leave unused (`ArcoCandidates.kt`); the stroke, GRIP's window, HOLD,
+the stop, the LOOP, the held key and the player are the engine's own, so a kept
+candidate needs only to be added to `KEPT_VOICES`.
+
+| Voice | Instrument | What is new in the model | Range |
+|---|---|---|---|
+| WHEEL | hurdy-gurdy | a wheel bows at one speed (no bite); a chien knocks a 1.8 kHz resonance once a period | D3 to D5 |
+| BAR | bowed vibraphone bar | a banded waveguide (tuned-bar modes 1, 4.02, 10.7, 18.1) under the string's friction table | F3 to F5 |
+| GLASS | rubbed glass | the banded bow on a glass's modes (1, 2.32, 4.25, 6.63), a wetter grip | C4 to C6 |
+| VIOL (spare) | bass viol | bowed further from the bridge (0.15), gut (darker corner, floored at 3.2 times the note), a flat box | C3 to C5 |
+
+**Measured** (`ArcoCandidateVoicesTest`): every candidate within 4 cents of the
+note at its root, middle and top except VIOL's C3 (+11 cents); the nearest
+third-octave distance to any other voice is WHEEL 4.2 dB (ERHU at A4), BAR and
+GLASS 10.5 dB (each other at C4), VIOL 3.8 dB (SARANGI at D3), against the
+3.7 dB bar; soft, medium and hard differ by 0.7 to 1.6 dB of level-matched
+shape; a held note's level moves 0.7 to 1.4 dB with the player on; every held
+key and LOOP closes. The kept voices render bit for bit as before (24 renders
+pinned against 6a1c248a7). Nobody has heard any of them.
+
+**Risks.** VIOL sits closest to the kept voices and its lowest notes lock less
+cleanly (C3 +11 cents); it is the spare. BAR and GLASS are near-sine voices and
+may read as one idea twice. The classifier files a low bowed note whose loudest
+moment comes late as a KICK; the kept CELLO and SARANGI do it on the same grid,
+and no candidate does it more.
+
+**The round.** Clips DK (WHEEL), DL (BAR), DM (GLASS), DN (VIOL): four notes
+across the range, then soft, medium and hard; DO1 is the kept three for
+reference.
