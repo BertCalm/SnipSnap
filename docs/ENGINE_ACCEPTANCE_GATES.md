@@ -1313,7 +1313,7 @@ Nothing here is a completion claim.
 
 ## KERF synthetic chops (rounds 1 to 4 complete; rounds 5 and 6 heard, phone and MPC open)
 
-Source: the commit that adds this entry. Details: [the KERF spec](superpowers/specs/2026-11-19-kerf-synthetic-chops-design.md). KERF is a capture-side tool (SYNTH TWIN on the pad sheet, SYNTH TWIN ALL on the kit screen, `snipsnap kerf`) and, since round 4, a registered drum engine on the SYNTH picker (`Kerf`, six voices over the bank's 63 fitted hits) with four genre kits on FRESH TAPE (`KerfKits`).
+Source: the commit that adds this entry. Details: [the KERF spec](superpowers/specs/2026-11-19-kerf-synthetic-chops-design.md). KERF is a capture-side tool (SYNTH TWIN on the pad sheet, SYNTH TWIN ALL on the kit screen, `snipsnap kerf`) and, since round 4, a registered drum engine on the SYNTH picker (`Kerf`, six voices; model 2's pools hold 231 fitted hits, the first bank's 63 in place and then the 168 the owner heard in the genre kits of rounds 5 and 6; a model-1 save keeps the 63) with four genre kits on FRESH TAPE (`KerfKits`).
 
 | Gate | Current evidence | Status |
 |---|---|---|

@@ -54,7 +54,7 @@ class KerfKitsTest {
             for (p in pads) {
                 assertEquals(g.second, p.second, "$g ${p.name} reads its genre's bank")
                 if (p.second) assertTrue(p.hit in KerfBank.genreKits.getValue(g.name).indices, "$g ${p.name}")
-                else assertTrue(p.hit in Kerf.pool(p.voice).indices, "$g ${p.name}")
+                else assertTrue(p.hit in Kerf.pool(p.voice, KerfKits.ENGINE_MODEL).indices, "$g ${p.name}")
             }
             assertEquals(KerfVoice.KICK, pads[0].voice); assertEquals(KerfVoice.SNARE, pads[3].voice)
             // the kick and snare lead; hats and ghosts sit under them, as in the loops
@@ -93,10 +93,10 @@ class KerfKitsTest {
     }
 
     @Test
-    fun `round 5's kits play only hits the first bank and the engine's pools do not hold`() {
+    fun `the genre kits play only hits the first bank and model 1's pools do not hold`() {
         val first = KerfBank.kits.values.flatten().map { it.patch.seed }.toSet()
-        val pools = KerfVoice.entries.flatMap { Kerf.pool(it) }.map { it.patch.seed }.toSet()
-        assertEquals(63, pools.size, "the engine's pools are still the first bank's 63 hits")
+        val pools = KerfVoice.entries.flatMap { Kerf.pool(it, 1) }.map { it.patch.seed }.toSet()
+        assertEquals(63, pools.size, "model 1's pools are still the first bank's 63 hits")
         for (g in KerfKits.Genre.entries.filter { it.second }) {
             assertEquals(KerfKits.HITS, KerfBank.genreKits.getValue(g.name).size, "$g bank")
             for (seed in drums(g)) { assertTrue(seed !in first, "$g reuses a first-bank hit"); assertTrue(seed !in pools) }

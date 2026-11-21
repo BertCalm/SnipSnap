@@ -27,21 +27,54 @@ class KerfTest {
 
     @Test
     fun `every voice has a pool of the bank's hits of its kind, none too long`() {
-        val sizes = KerfVoice.entries.associateWith { Kerf.pool(it).size }
+        val sizes = KerfVoice.entries.associateWith { Kerf.pool(it, 1).size }
         assertEquals(mapOf(KerfVoice.KICK to 16, KerfVoice.SNARE to 15, KerfVoice.GHOST to 6, KerfVoice.HAT to 11,
             KerfVoice.HAT_OPEN to 10, KerfVoice.PERC to 5), sizes)
-        for (v in KerfVoice.entries) for (p in Kerf.pool(v)) {
+        for (v in KerfVoice.entries) for (p in Kerf.pool(v, 1)) {
             assertTrue(p.drumClass in v.bankClasses, "$v holds a ${p.drumClass}")
             assertTrue(p.patch.seconds <= Kerf.MAX_SECONDS, "$v holds a ${p.patch.seconds} s hit")
         }
     }
 
     @Test
-    fun `HIT steps through the whole pool and hitFor lands on its own step`() {
+    fun `model 2's pools are model 1's in place, then the genre kits' hits as their kits file them`() {
+        var total = 0
         for (v in KerfVoice.entries) {
-            val n = Kerf.pool(v).size
-            assertEquals(0, Kerf.hitIndex(v, 0f)); assertEquals(n - 1, Kerf.hitIndex(v, 1f))
-            for (i in 0 until n) assertEquals(i, Kerf.hitIndex(v, Kerf.hitFor(v, i)))
+            val one = Kerf.pool(v, 1); val two = Kerf.pool(v, 2)
+            assertEquals(one.map { it.patch.seed }, two.take(one.size).map { it.patch.seed }, "$v keeps model 1's order")
+            val genre = KerfKits.Genre.entries.filter { it.second }
+                .flatMap { g -> KerfKits.pads(g).filter { it.voice == v }.map { KerfKits.hitOf(g, it).patch.seed } }
+            assertEquals(genre, two.drop(one.size).map { it.patch.seed }, "$v adds the genre kits' hits")
+            assertEquals(two.size, two.map { it.patch.seed }.toSet().size, "$v holds no hit twice")
+            for (p in two) assertTrue(p.patch.seconds <= Kerf.MAX_SECONDS)
+            total += two.size
+        }
+        assertEquals(63 + 12 * KerfKits.HITS, total, "the first bank's 63 and the twelve genre kits' fourteen each")
+        // a preset's hit index names the same hit on either model, so the presets do not move
+        for (p in KerfPresets.all()) {
+            val i = Kerf.hitIndex(p.voice, p.macros.getValue("HIT"), 2)
+            assertTrue(i < Kerf.pool(p.voice, 1).size, "${p.name} is a model-1 hit")
+        }
+    }
+
+    @Test
+    fun `a model-1 save keeps its model-1 hit`() {
+        for (v in KerfVoice.entries) {
+            val last = Kerf.pool(v, 1).size - 1
+            val saved = KerfPatch("Old", v, Kerf.defaults(v, 1) + ("HIT" to Kerf.hitFor(v, last, 1)), model = 1)
+            val back = KerfPatch.fromJsonText(saved.toJsonText())
+            assertEquals(1, back.model)
+            assertEquals(Kerf.pool(v, 1)[last].patch.seed, Kerf.pool(v, 1)[Kerf.hitIndex(v, back.macros.getValue("HIT"), 1)].patch.seed)
+            assertContentEquals(Kerf.recipe(v, saved.macros, 1).render().samples, Kerf.recipe(v, back.macros, back.model).render().samples)
+        }
+    }
+
+    @Test
+    fun `HIT steps through the whole pool and hitFor lands on its own step`() {
+        for (model in 1..Kerf.MODEL_VERSION) for (v in KerfVoice.entries) {
+            val n = Kerf.pool(v, model).size
+            assertEquals(0, Kerf.hitIndex(v, 0f, model)); assertEquals(n - 1, Kerf.hitIndex(v, 1f, model))
+            for (i in 0 until n) assertEquals(i, Kerf.hitIndex(v, Kerf.hitFor(v, i, model), model))
         }
     }
 
@@ -49,6 +82,7 @@ class KerfTest {
     fun `every hit is finite, bounded, centred and under the loop threshold`() {
         for (voice in KerfVoice.entries) {
             val names = Kerf.macrosFor(voice).map { it.name }
+            // every model-2 hit at its longest decay and loosest knife; the corners on the whole macro range
             val corners = listOf(emptyMap(), names.associateWith { 0f }, names.associateWith { 1f }) +
                 (0 until Kerf.pool(voice).size).map { mapOf("HIT" to Kerf.hitFor(voice, it), "DECAY" to 1f, "SLOP" to 1f) }
             for (m in corners) for (v in listOf(.1f, 1f)) {

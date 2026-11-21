@@ -1809,7 +1809,7 @@ KERF is synthetic chops: drum hits cut from the owner's loops, measured, and reb
 with the two things that make a chop sound chopped, the last hit bleeding underneath and a knife
 that lands a little off. On a captured kit it is SYNTH TWIN on the pad sheet, SYNTH TWIN ALL on the
 kit screen, and `snipsnap kerf`. As an engine (round 4) it is on the SYNTH picker with six voices
-(KICK, SNARE, GHOST, HAT, HAT OPEN, PERC) over 63 fitted hits, whose HIT, TUNE, DECAY, FLOOR,
+(KICK, SNARE, GHOST, HAT, HAT OPEN, PERC) over 231 fitted hits (engine model 2; a model-1 save keeps the first 63), whose HIT, TUNE, DECAY, FLOOR,
 BLEED and SLOP controls pick and shape a hit. It also has sixteen genre kits on FRESH TAPE (KERF DUST, SOUL,
 FUNK, STOMP, RUSH, POCKET, MURK, CHATTER, JUNGLE, CLANG, HOUSE, DEEP, SWAY, CASSETTE, BOOM and TIGHT), each with three
 touch zones, four takes, a roll and a riser. No audio from the

@@ -370,7 +370,7 @@ class StarterKitsTest {
                     for (pad in kit.pads) {
                         assertEquals("KERF", pad.source["engine"])
                         assertEquals(com.snipsnap.synth.KerfKits.VERSION.toString(), pad.source["kitVersion"])
-                        assertEquals(com.snipsnap.synth.Kerf.MODEL_VERSION.toString(), pad.source["model"])
+                        assertEquals(com.snipsnap.synth.KerfKits.ENGINE_MODEL.toString(), pad.source["model"])
                         assertEquals(3, pad.chain?.zones?.size)
                         assertEquals(listOf(4, 4, 4), pad.chain?.zones?.map { it.cycle })
                         assertEquals(12, pad.chain?.boundaries?.size)

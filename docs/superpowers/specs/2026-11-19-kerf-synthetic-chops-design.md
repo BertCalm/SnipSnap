@@ -996,3 +996,24 @@ comes after the owner hears these hits.
   in its style): "Those are great. Proceed" (2026-11-21). CLANG stays a percussion kit. Phone and
   MPC playback of rounds 5 and 6 is open. The engine's bigger pools (model 2) follow.
 
+## As built: round 7, engine model 2 (2026-11-21)
+
+This is the third of the owner's "do all 3", after they heard round 6 ("Those are great.
+Proceed"). It gives the engine's HIT control more hits.
+
+- **Model 2's pools.** Each voice's pool is model 1's, unchanged and in the same order. After it
+  come the voice's hits from the twelve genre kits of rounds 5 and 6, each filed under the voice
+  its kit plays it as (so CLANG's struck hits are PERC), in kit then pad order. That is 231 hits in
+  all: the first bank's 63 and 168 the owner has heard in those kits (`KerfTest`).
+- **Nothing heard moves.**
+  - A model-1 save keeps its model and its pools.
+  - A save without a model reads as model 1, the only model before this one.
+  - A preset's hit index names the same hit on either model, so the 27 presets should render as
+    before. The check of their 108 renders (the picker's and three touch zones each) by checksum
+    against the pack printed before the change is pending.
+  - The genre kits are pinned to the engine model they were printed on (`KerfKits.ENGINE_MODEL`,
+    1), so a new engine model never moves an approved kit.
+- **Not yet.** The new hits have been heard inside their kits, at those kits' settings, not as
+  the engine's HIT steps at its defaults. The engine's picker on a phone with model 2 is not yet
+  played.
+

@@ -48,6 +48,13 @@ import kotlin.math.pow
  */
 object KerfKits {
     const val VERSION = 1
+
+    /**
+     * The engine model every kit was printed on, and still is: the first four kits' hits are model 1's pool hits (their
+     * HIT names a model-1 pool step), and the genre kits play their own bank's hits, which no model changes. Pinned
+     * here, not [Kerf.MODEL_VERSION], so a new engine model never moves an approved kit.
+     */
+    const val ENGINE_MODEL = 1
     val velocities = listOf(.30f, .65f, 1f)
     const val TAKES = 4
     const val PADS = 16
@@ -99,7 +106,7 @@ object KerfKits {
 
     /** The fitted hit a pad plays. */
     fun hitOf(g: Genre, pad: Pad): KerfPad =
-        if (pad.second) KerfBank.genreKits.getValue(g.name)[pad.hit] else Kerf.pool(pad.voice)[pad.hit]
+        if (pad.second) KerfBank.genreKits.getValue(g.name)[pad.hit] else Kerf.pool(pad.voice, ENGINE_MODEL)[pad.hit]
 
     /** The fourteen hits, A01 first. Pool indices are [Kerf.pool]'s: kits A, B, C, D in that order within each voice. */
     fun pads(g: Genre): List<Pad> = when (g) {
@@ -309,14 +316,14 @@ object KerfKits {
     /** A hit pad's macros: the genre's settings, the pad's hit, and the pad's own overrides. */
     fun macrosOf(g: Genre, pad: Pad): Map<String, Float> = Kerf.settled(pad.voice, mapOf(
         "TUNE" to g.tune, "DECAY" to g.decay, "FLOOR" to g.floor, "BLEED" to g.bleed, "SLOP" to g.slop,
-    ) + (if (pad.second) emptyMap() else mapOf("HIT" to Kerf.hitFor(pad.voice, pad.hit))) + pad.over)
+    ) + (if (pad.second) emptyMap() else mapOf("HIT" to Kerf.hitFor(pad.voice, pad.hit, ENGINE_MODEL))) + pad.over)
 
     /**
      * A pad's recipe at [macros]. The first four kits go through [Kerf.recipe] (their HIT names the pool hit), the
      * path their approved audio was printed on; round 5's through [Kerf.recipeFor] on their own bank's hit.
      */
     private fun recipeOf(g: Genre, pad: Pad, macros: Map<String, Float>): KerfRecipe =
-        if (pad.second) Kerf.recipeFor(hitOf(g, pad), Kerf.settled(pad.voice, macros)) else Kerf.recipe(pad.voice, macros)
+        if (pad.second) Kerf.recipeFor(hitOf(g, pad), Kerf.settled(pad.voice, macros)) else Kerf.recipe(pad.voice, macros, ENGINE_MODEL)
 
     private fun db(x: Double) = 10.0.pow(x / 20.0)
 
@@ -330,7 +337,7 @@ object KerfKits {
                 // the first four kits' approved path (Kerf.render levels the hit, and build() then sets the pad's
                 // level); round 5's hits go straight to their recipe, since build() levels every pad's grid anyway
                 if (it.second) recipeOf(g, it, macrosOf(g, it)).take(take, velocity.coerceIn(.02f, 1f).toDouble())
-                else Kerf.render(it.voice, macrosOf(g, it), velocity, take)
+                else Kerf.render(it.voice, macrosOf(g, it), velocity, take, ENGINE_MODEL)
             }
             HITS -> roll(g, velocity, take)
             else -> riser(g, velocity, take)
@@ -411,7 +418,7 @@ object KerfKits {
                 grid.last().first(), classOf(g, role), displayName = names[role], velocityTakes = grid,
                 muteGroup = pad?.mute ?: 2,
                 source = mapOf(
-                    "engine" to "KERF", "kit" to g.id, "kitVersion" to VERSION.toString(), "model" to Kerf.MODEL_VERSION.toString(),
+                    "engine" to "KERF", "kit" to g.id, "kitVersion" to VERSION.toString(), "model" to ENGINE_MODEL.toString(),
                     "role" to role.toString(), "bpm" to g.bpm.toString(),
                     "voice" to (pad?.voice ?: pads[if (role == HITS) g.rollPad else g.riserPad].voice).name,
                     "hit" to (pad?.hit ?: pads[if (role == HITS) g.rollPad else g.riserPad].hit).toString(),

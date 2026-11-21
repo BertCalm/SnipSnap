@@ -3968,3 +3968,8 @@ the third bank `genre_patches_r6.json`): KERF JUNGLE (172 BPM), CLANG (112, perc
 SWAY (86). Three come from the first loops' leftovers: CASSETTE (92), BOOM (78) and TIGHT (100). The first twelve kits
 and the engine do not change. Heard by the owner: "Those are great" (2026-11-21).
 
+### KERF, round 7: engine model 2 (2026-11-21)
+
+The engine's HIT pools grow from 63 to 231 hits: model 1's, unchanged and in place, then the 168 hits the owner heard
+in the genre kits of rounds 5 and 6. A model-1 save keeps its pools; the presets and the kits do not move.
+
