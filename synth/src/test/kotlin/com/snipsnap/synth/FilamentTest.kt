@@ -24,7 +24,7 @@ class FilamentTest {
 
     @Test
     fun `finite and held renders reproduce all branches independent of macro map order`() {
-        for (voice in FilamentVoice.entries) for (hold in listOf(0f, 1f)) {
+        for (voice in Filament.ORIGINAL_VOICES) for (hold in listOf(0f, 1f)) {
             val macros = gesture + ("HOLD" to hold)
             val config = FilamentConfig(seed = 719)
             val a = Filament.inspect(voice, macros, midi = 57, velocity = .7f, config = config)
@@ -110,7 +110,7 @@ class FilamentTest {
 
     @Test
     fun `supported note edges and demanding finite settings remain bounded before leveling`() {
-        for (voice in FilamentVoice.entries) for (midi in listOf(36, 60, 84)) for (allHigh in listOf(false, true)) {
+        for (voice in Filament.ORIGINAL_VOICES) for (midi in listOf(36, 60, 84)) for (allHigh in listOf(false, true)) {
             val macros = if (allHigh) timbral.associateWith { 1f } else Filament.defaults(voice)
             val p = Filament.inspect(voice, macros, midi = midi)
             val label = "$voice MIDI$midi allHigh$allHigh"
@@ -128,7 +128,7 @@ class FilamentTest {
 
     @Test
     fun `zero velocity cannot manufacture a source or halo in finite and held renders`() {
-        for (voice in FilamentVoice.entries) for (hold in listOf(0f, 1f)) {
+        for (voice in Filament.ORIGINAL_VOICES) for (hold in listOf(0f, 1f)) {
             val p = Filament.inspect(voice, gesture + ("HOLD" to hold), velocity = 0f)
             assertTrue(listOf(p.samples, p.raw, p.source, p.through, p.escaped, p.spill).all { a -> a.all { it == 0f } },
                 "$voice HOLD$hold creates sound without excitation")
@@ -137,7 +137,7 @@ class FilamentTest {
 
     @Test
     fun `perfect retention produces exact spill silence including isolated spill export`() {
-        for (voice in FilamentVoice.entries) for (hold in listOf(0f, 1f)) {
+        for (voice in Filament.ORIGINAL_VOICES) for (hold in listOf(0f, 1f)) {
             val p = Filament.inspect(voice, gesture + mapOf("BEND" to 1f, "COLLECT" to 1f, "HOLD" to hold),
                 config = FilamentConfig(perfectRetention = true))
             assertTrue(p.source.any { it != 0f } && p.through.any { it != 0f }, "$voice retention silenced the guided note")
@@ -208,7 +208,7 @@ class FilamentTest {
 
     @Test
     fun `every timbral macro has low to middle activity beyond a change of gain`() {
-        for (voice in FilamentVoice.entries) for (macro in timbral) {
+        for (voice in Filament.ORIGINAL_VOICES) for (macro in timbral) {
             val low = Filament.inspect(voice, gesture + (macro to 0f)).raw
             val middle = Filament.inspect(voice, gesture + (macro to .5f)).raw
             val distance = TangleMeasure.distance(low, middle)
@@ -219,7 +219,7 @@ class FilamentTest {
 
     @Test
     fun `the moderate voice roster retains the requested root and pitched export class`() {
-        for (voice in FilamentVoice.entries) for (midi in listOf(36, 60, 84)) {
+        for (voice in Filament.ORIGINAL_VOICES) for (midi in listOf(36, 60, 84)) {
             val p = Filament.inspect(voice, midi = midi, velocity = .7f)
             val snip = Snip(p.samples, 1, Dsp.RATE)
             val wanted = Keys.midiHz(midi)

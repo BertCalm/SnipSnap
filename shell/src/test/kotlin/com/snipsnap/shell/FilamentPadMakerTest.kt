@@ -11,6 +11,7 @@ import com.snipsnap.synth.FilamentConfig
 import com.snipsnap.synth.FilamentPatch
 import com.snipsnap.synth.FilamentPresets
 import com.snipsnap.synth.FilamentProfile
+import com.snipsnap.synth.Filament
 import com.snipsnap.synth.FilamentVoice
 import com.snipsnap.synth.KeyNote
 import java.io.File
@@ -40,7 +41,7 @@ class FilamentPadMakerTest {
     }
 
     private companion object {
-        val fixtures = FilamentVoice.entries.map { voice -> Fixture(
+        val fixtures = Filament.ORIGINAL_VOICES.map { voice -> Fixture(
             FilamentPresets.forVoice(voice).first().copy(
                 name = "MY KEPT ${voice.name}", midi = 57, velocity = .61f,
                 config = FilamentConfig(seed = Int.MIN_VALUE + 7 + voice.ordinal, profile = FilamentProfile.LATE),

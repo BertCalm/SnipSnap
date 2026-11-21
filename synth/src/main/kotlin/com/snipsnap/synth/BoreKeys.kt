@@ -140,21 +140,34 @@ object BoreKeys {
      * from where Round 1.7's are, the ones its 1,071 corners measured.
      * How long: [Bore.bestLength] from the reference, which correlates the reference with the [Bore.LOOP_BLEND_SECONDS]
      * that follow the length, the loop's last blend's worth.
+     * [fixedFrom], when given, replaces that search: the blend's reference starts there (CONSORT's held note, whose slow
+     * motions are periodic, so it has no level to settle; [settledFrames][Bore.LoopJoin.settledFrames] then reads it), and
+     * the dip is read against the note itself ([sourceDipDb]), since such a note's own level moves with its period.
      * Then [assembleTail], the dip read on the loop turned so its blend comes first (the shape [Bore.blendDipDb] reads), the
      * level (the loop at the melodic target, the attack wherever it falls against it, under [PEAK_CEILING]: loud where it is
      * held), and the join's steps read off the result.
      */
-    internal fun cutHeld(x: FloatArray, usableEnd: Int, name: String, loopSeconds: Float = Bore.LOOP_SECONDS, human: Float = Humanize.OFF): Held {
+    internal fun cutHeld(
+        x: FloatArray, usableEnd: Int, name: String, loopSeconds: Float = Bore.LOOP_SECONDS, human: Float = Humanize.OFF,
+        fixedFrom: Int? = null, minCorrelation: Double = Bore.LOOP_MIN_CORRELATION,
+    ): Held {
         val blend = Bore.LOOP_BLEND_FRAMES
         val lengths = Bore.loopLengthFrames(loopSeconds)
-        val (from, settledAt) = Bore.loopStart(x, usableEnd, lengths.last, blend, name, Bore.settleDb(human))
+        val (from, settledAt) = if (fixedFrom == null) Bore.loopStart(x, usableEnd, lengths.last, blend, name, Bore.settleDb(human))
+        else {
+            // A note built to repeat (CONSORT's held note) has no level to wait for: its reference starts where its maker says.
+            require(fixedFrom + blend + lengths.last + blend <= usableEnd) { "$name: no room for a loop from frame $fixedFrom" }
+            fixedFrom to fixedFrom
+        }
         val (length, correlation) = Bore.bestLength(x, from, blend, lengths.first, lengths.last)
         val start = from + blend
         val end = start + length
         val out = assembleTail(x, start, length, blend, correlation)
 
-        val turned = FloatArray(length) { out[if (it < blend) end - blend + it else start + it - blend] }
-        val dip = Bore.blendDipDb(turned, blend)
+        val dip = if (fixedFrom == null) {
+            val turned = FloatArray(length) { out[if (it < blend) end - blend + it else start + it - blend] }
+            Bore.blendDipDb(turned, blend)
+        } else sourceDipDb(x, out, end - blend, blend)
         val gain = levelOn(out, start, end)
 
         val steps = FloatArray(length - 1) { abs(out[start + it + 1] - out[start + it]) }
@@ -169,8 +182,28 @@ object BoreKeys {
             junctionStep = abs(out[start] - out[end - 1]).toDouble(),
             steepestStep = steps[((steps.size - 1) * 0.999).toInt()].toDouble(),
         )
-        Bore.checkJoin(name, join, maxDipDb = Bore.maxDipDb(human))
+        Bore.checkJoin(name, join, minCorrelation, Bore.maxDipDb(human))
         return Held(KeyNote(Snip(out, channels = 1, sampleRate = RATE), loopStartFrame = start.toLong()), join, name, gain)
+    }
+
+    /**
+     * What the blend itself does to the level: the quietest 50 ms of [out]'s blend, [from] for [blend] frames, against
+     * the same 50 ms of the note [x] it was blended from, in dB (0 is no change, negative a dip). For a note whose own
+     * level moves with its period (CONSORT's: the room's reflections fade harmonics in and out as the vibrato sweeps
+     * them), [Bore.blendDipDb]'s comparison with the loop's median reads that motion as a dip; this reads only the blend.
+     */
+    internal fun sourceDipDb(x: FloatArray, out: FloatArray, from: Int, blend: Int): Double {
+        val w = (0.05 * RATE).toInt()
+        var worst = 0.0
+        var at = from
+        while (at + w <= from + blend) {
+            var a = 0.0
+            var b = 0.0
+            for (i in at until at + w) { a += out[i].toDouble() * out[i]; b += x[i].toDouble() * x[i] }
+            if (b > 1e-18) worst = minOf(worst, 10.0 * Math.log10(maxOf(a, 1e-30) / b))
+            at += w / 2
+        }
+        return worst
     }
 
     /**

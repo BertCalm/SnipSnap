@@ -21,7 +21,8 @@ import kotlin.random.Random
  * Modal mallets and drums re-strike ([canRestrike]): SKIN's [Skin.STRUCK]
  * voices, every TERRA voice, HALOBAR mallets, BREAKER (whose source is a
  * struck SKIN drum), BACKWASH's model 5, FIRED BRONZE's model 2 and ACCORD, whose takes are its own
- * passage-offset takes ([Accord.renderTake]), kept by ear in accord-rr-1. Every take is deterministic in
+ * passage-offset takes ([Accord.renderTake]), kept by ear in accord-rr-1, and CONSORT, whose takes are its
+ * players' own ways of playing ([Consort.TAKES]). Every take is deterministic in
  * (patch, velocity, seed, take); take 0 is the reference itself.
  */
 object Restrike {
@@ -36,7 +37,7 @@ object Restrike {
         (patch is SkinPatch && patch.voice in Skin.STRUCK) || patch is TerraPatch ||
             patch is DrumlinePatch || patch is HalobarPatch || patch is BreakerPatch || patch is SootPatch || patch is KerfPatch || (patch is BackwashPatch && patch.model == 5) || patch is EtchPatch ||
             (patch is ThumpPatch && patch.voice == ThumpVoice.SUB) ||
-            (patch is FiredBronzePatch && patch.model >= 2) || patch is KindredPatch || patch is AccordPatch
+            (patch is FiredBronzePatch && patch.model >= 2) || patch is KindredPatch || patch is AccordPatch || patch is ConsortPatch
 
     /** ACCORD's take for Restrike take [take]: 0 is 0, later takes cycle through 1 until [Accord.TAKES], never back to 0. */
     internal fun accordTake(take: Int): Int = if (take == 0) 0 else 1 + (take - 1) % (Accord.TAKES - 1)
@@ -69,6 +70,9 @@ object Restrike {
         // scales the saved touch: Robin's untouched hit (1) is the saved performance, so ROBIN on a pad deals
         // exactly the kept takes of its render. The takes are deterministic in the patch alone: no seed.
         if (patch is AccordPatch) return Accord.renderTake(patch.copy(velocity = patch.velocity * velocity.coerceIn(0f, 1f)), accordTake(take))
+        // CONSORT deals its own takes: each is the players again, another way of playing the note (Consort.TAKES)
+        // with fresh humanization. Its velocity is breath, so [velocity] scales the saved breath, as ACCORD's does.
+        if (patch is ConsortPatch) return patch.copy(velocity = patch.velocity * velocity.coerceIn(0f, 1f), take = patch.take + take).render()
         val (v, offset) = landing(velocity.coerceIn(0f, 1f), seed, take)
         return when (patch) {
             is HalobarPatch -> Halobar.renderTake(patch.voice, patch.macros, v, seed, take, patch.model)

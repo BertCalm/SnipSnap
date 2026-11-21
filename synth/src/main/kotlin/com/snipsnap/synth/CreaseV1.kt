@@ -22,6 +22,7 @@ internal object CreaseV1 {
             CreaseVoice.ROUND -> floatArrayOf(.20f, .25f, .15f, .15f, .30f)
             CreaseVoice.PINCH -> floatArrayOf(.70f, .55f, .20f, .45f, .35f)
             CreaseVoice.RUBBER -> floatArrayOf(.50f, .70f, .75f, .55f, .65f)
+            else -> error("CREASE model 1 has no $voice")
         }
         return listOf("FOLD", "PRESSURE", "DRAG", "SPLIT", "RELAX").mapIndexed { i, name ->
             MacroSpec(name, values[i], values[i])
@@ -162,13 +163,13 @@ internal object CreaseV1 {
         val relax = m.getValue("RELAX").toDouble()
         val held = isLoop(m.getValue("HOLD"))
         private val finiteHold = (m.getValue("HOLD") / HOLD_LOOP).coerceIn(0f, 1f).toDouble()
-        val attack = when (voice) { CreaseVoice.ROUND -> .009; CreaseVoice.PINCH -> .014; CreaseVoice.RUBBER -> .027 }
-        val gate = (when (voice) { CreaseVoice.ROUND -> .66; CreaseVoice.PINCH -> .88; CreaseVoice.RUBBER -> 1.35 }) *
+        val attack = when (voice) { CreaseVoice.ROUND -> .009; CreaseVoice.PINCH -> .014; CreaseVoice.RUBBER -> .027; else -> error("CREASE model 1 has no $voice") }
+        val gate = (when (voice) { CreaseVoice.ROUND -> .66; CreaseVoice.PINCH -> .88; CreaseVoice.RUBBER -> 1.35; else -> error("CREASE model 1 has no $voice") }) *
             2.0.pow(finiteHold)
         val releaseT60 = when (voice) { CreaseVoice.ROUND -> .35 + 1.5 * sqrt(relax)
-            CreaseVoice.PINCH -> .35 + 1.8 * sqrt(relax); CreaseVoice.RUBBER -> .65 + 2.5 * sqrt(relax) }
+            CreaseVoice.PINCH -> .35 + 1.8 * sqrt(relax); CreaseVoice.RUBBER -> .65 + 2.5 * sqrt(relax); else -> error("CREASE model 1 has no $voice") }
         val duration = gate + releaseT60 + .035
-        val loopSeconds = when (voice) { CreaseVoice.ROUND -> 1.45; CreaseVoice.PINCH -> 1.65; CreaseVoice.RUBBER -> 2.1 }
+        val loopSeconds = when (voice) { CreaseVoice.ROUND -> 1.45; CreaseVoice.PINCH -> 1.65; CreaseVoice.RUBBER -> 2.1; else -> error("CREASE model 1 has no $voice") }
         val rise = .002 * 40.0.pow(sqrt(drag)) * if (voice == CreaseVoice.RUBBER) 1.5 else 1.0
         // This range describes T60, not a 1.5-second time constant requiring a ten-second tail.
         val recovery = (.10 * 18.0.pow(relax)) / ln(1000.0)
@@ -176,21 +177,24 @@ internal object CreaseV1 {
         val excursion = .14 + .43 * pressure
         // Provisional per-geometry calibration: compare deformation energy to an attainable
         // amount for that shape, rather than allowing a rounded map's tiny feature to vanish.
-        val loadCalibration = when (voice) { CreaseVoice.ROUND -> 12.0; CreaseVoice.PINCH -> 8.0; CreaseVoice.RUBBER -> 10.0 }
+        val loadCalibration = when (voice) { CreaseVoice.ROUND -> 12.0; CreaseVoice.PINCH -> 8.0; CreaseVoice.RUBBER -> 10.0; else -> error("CREASE model 1 has no $voice") }
         val geometry = when (voice) {
             CreaseVoice.ROUND -> doubleArrayOf(.86, .12, .02)
             CreaseVoice.PINCH -> doubleArrayOf(.65, -.30, .05)
             CreaseVoice.RUBBER -> doubleArrayOf(.08, -.78, .14)
+            else -> error("CREASE model 1 has no $voice")
         }
         val crease = when (voice) {
             CreaseVoice.ROUND -> doubleArrayOf(.70, -.24, .06)
             CreaseVoice.PINCH -> doubleArrayOf(.10, -.85, .05)
             CreaseVoice.RUBBER -> doubleArrayOf(.82, -.14, .04)
+            else -> error("CREASE model 1 has no $voice")
         }
         val other = when (voice) {
             CreaseVoice.ROUND -> doubleArrayOf(.0, -.88, .12)
             CreaseVoice.PINCH -> doubleArrayOf(.80, .16, .04)
             CreaseVoice.RUBBER -> doubleArrayOf(.18, -.76, .06)
+            else -> error("CREASE model 1 has no $voice")
         }
 
         fun amplitude(t: Double): Double {
