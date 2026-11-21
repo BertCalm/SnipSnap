@@ -56,6 +56,7 @@ class PatchesTest {
         ConsortPatch("Reed trio", ConsortVoice.OBOE, mapOf("HOLD" to 0.2f),
             chairs = listOf(ConsortChair(ConsortVoice.CLARINET, ConsortInterval.FIFTH), ConsortChair(ConsortVoice.BASSOON, ConsortInterval.MIN7)), velocity = 0.8f, take = 2),
         FillPatch("Fill roll", FillVoice.SNARE, Fill.defaults(FillVoice.SNARE)),
+        DrawlPatch("Bar slide", DrawlVoice.LAP, mapOf("SLIDE" to .8f, "HOLD" to .1f), velocity = .9f, take = 2),
         ErosionPatch("Door", ErosionVoice.ARC),
         SnapPatch("Door", SnapVoice.ORBIT, emptyMap(), IntArray(Snap.TABLE_SIZE) { (it * 255) / (Snap.TABLE_SIZE - 1) }),
         TerraPatch("Door", TerraVoice.COMPOUND_MEMBRANE, emptyMap()),

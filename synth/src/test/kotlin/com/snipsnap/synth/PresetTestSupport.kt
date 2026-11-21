@@ -59,7 +59,11 @@ internal object PresetTestSupport {
             """|rectifier|oxford""" +
             // MIRRORBALL's brief named the compressor pedal and the tape echo pedal
             // (docs/superpowers/specs/2026-11-12-mirrorball-disco-kit-design.md).
-            """|1176|uafx|universal\s*audio|teletronix|strymon|capistan""",
+            """|1176|uafx|universal\s*audio|teletronix|strymon|capistan""" +
+            // DRAWL's brief and references named the resonator, lap and pedal steel makers
+            // (docs/superpowers/specs/2026-11-20-drawl-engine-design.md, §15). "national" alone is ordinary
+            // English, so only the resonator line is refused; "fender" is already above.
+            """|dobro|gibson|rickenbacker|emmons|sho-?bud|national\s*reso""",
     )
 
     /**
