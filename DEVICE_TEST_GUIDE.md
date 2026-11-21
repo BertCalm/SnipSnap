@@ -12,7 +12,7 @@ UI tests live in `app/src/androidTest` and run on a device under
 `app/src/main/cpp/test`. The JVM suites are `./gradlew test`.
 
 ## First five minutes
-1. **NEW KIT ▸ a starter → tap pads.** Do hits feel instant? Playback is
+1. **NEW KIT · STARTERS ▾, a starter → tap pads.** Do hits feel instant? Playback is
    `PadEngine`. BENCH A1, on 2026-09-08, measured 8–11 ms on the
    exclusive path. If taps feel spongy, write down the header's latency
    and whether it says SHARED.
@@ -44,7 +44,7 @@ UI tests live in `app/src/androidTest` and run on a device under
     (teardown flush). Nudge again and hit RE-TRIM immediately: same.
 14. TREATMENT: pick CRUSH, listen (auditions after applying). Then GHOSTS ON,
     then try changing treatment — expect the polite refusal toast, not a crash.
-15. EJECT → the pad empties; TAKES+BIN shows it with a countdown.
+15. EJECT → the pad empties; VERSIONS shows it with a countdown.
 
 ## GROOVE (needs a kit made by CHOP's SEND TO GRID)
 16. The needle should be AMBER/ORANGE, distinct from the cyan readouts. If
@@ -90,14 +90,14 @@ UI tests live in `app/src/androidTest` and run on a device under
     the Files app. Switch tabs mid-dub, come back: DONE state + toast must
     have survived.
 
-## TAKES + BIN
+## VERSIONS
 27. Save-ish actions (treatments, edits) accumulate takes; RESTORE an old one
-    and confirm the kit audibly reverts. EJECT a pad, find it in the bin,
-    BACK restores it. EMPTY THE BIN NOW needs a second tap (armed confirm).
+    and confirm the kit audibly reverts. EJECT a pad, find it in VERSIONS,
+    BACK restores it. EMPTY THE TRASH NOW needs a second tap (armed confirm).
 
 ## LOOP
 28. From SNIPS, → LOOP on a few snips of DIFFERENT lengths — the toast names
-    the track and how many blocks it became. The shelf then shows LOOP ▸ n OF
+    the track and how many blocks it became. The LIBRARY then shows LOOP ▸ n OF
     6 TRACKS; open it. Listen for the tracks pulling apart and coming back
     together rather than repeating in lockstep; that only happens when the
     block counts differ. Tap a track name to mute it, HOLD a block to clear
@@ -119,8 +119,8 @@ UI tests live in `app/src/androidTest` and run on a device under
 
 ## Known blind spots (listen for these specifically)
 - One-shot samples LONGER than ~6s stop responding to chokes after 6s (ledgered).
-- LOOP has a door now (SNIPS → LOOP fills a track, then a LOOP row appears on
-  the shelf), but it is still the least walked in the app: a TEMPO −/+ stepper
+- LOOP has a door now (SNIPS → LOOP fills a track, then a LOOP row appears in
+  the LIBRARY), but it is still the least walked in the app: a TEMPO −/+ stepper
   and a block tap (WHAT IS THIS BLOCK) shipped since, both worth a device pass.
 - **Screen readers are the biggest blind spot.** 105 controls now carry
   accessibility labels (up from 14), and a disabled control correctly reports as

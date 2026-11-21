@@ -16,9 +16,9 @@ import kotlin.test.assertTrue
  * model that SHELL and WING leave unused: HUSK the phaser's correction alone, STING the product of
  * the synced pair, GLINT the slave bending the root sine's phase, HUM the master pulse's width,
  * PINCER SHELL's source plucked with the excursion run backwards. The owner kept HUSK, STING, HUM and
- * PINCER (20 Nov 2026, range and touch); GLINT is still a candidate ("missing glassiness"). SHELL and
- * WING are pinned below against the build before this round, and the heard renders of the four in
- * `chitin/kept-voices-v1.sha256`.
+ * PINCER (20 Nov 2026, range and touch), and GLINT after its glass (fix-glint-1) and touch (touch-glint-1)
+ * tweaks. SHELL and WING are pinned below against the build before this round, and the heard renders of
+ * the five in `chitin/kept-voices-v1.sha256`.
  */
 class ChitinCandidateVoicesTest {
     private val M = CandidateVoiceMeasures
@@ -36,17 +36,16 @@ class ChitinCandidateVoicesTest {
         Chitin.render(voice, macros + tune(voice, midi), velocity).samples
 
     @Test
-    fun `the new voices are appended, the kept four offered with their heard preset, GLINT nowhere`() {
+    fun `the new voices are appended, the kept five offered with their heard preset`() {
         assertEquals(listOf(ChitinVoice.HUSK, ChitinVoice.STING, ChitinVoice.GLINT, ChitinVoice.HUM, ChitinVoice.PINCER), candidates)
         assertEquals(ChitinVoice.entries.take(2), Chitin.MIXED_VOICES)
-        assertEquals(ChitinVoice.entries - ChitinVoice.GLINT, Chitin.KEPT_VOICES)
-        assertTrue(ChitinPresets.all().none { it.voice == ChitinVoice.GLINT }, "the candidate GLINT has a preset")
+        assertEquals(ChitinVoice.entries, Chitin.KEPT_VOICES)
         // No new starter: the CHITIN kit is still SHELL and WING.
         assertTrue(ChitinKits.patches().all { it.voice in Chitin.MIXED_VOICES }, "a new voice is on the kit")
         assertEquals(listOf(36, 48, 48, 36, 24), candidates.map { low(it) })
         for (voice in candidates) {
             // One preset per kept voice: default controls (the middle of its range) at full touch, as heard.
-            assertEquals(if (voice == ChitinVoice.GLINT) emptyList() else listOf(ChitinPatch(voice.name, voice, Chitin.defaults(voice))),
+            assertEquals(listOf(ChitinPatch(voice.name, voice, Chitin.defaults(voice))),
                 ChitinPresets.forVoice(voice))
             assertEquals(Chitin.macrosFor(ChitinVoice.SHELL).map { it.name }, Chitin.macrosFor(voice).map { it.name })
             assertEquals(low(voice) + 12, Chitin.rootMidi(voice))
@@ -134,7 +133,8 @@ class ChitinCandidateVoicesTest {
             val shapes = listOf(.35f, .7f, 1f).map { M.bands(render(voice, velocity = it)) }
             val steps = listOf(M.distance(shapes[0], shapes[1]), M.distance(shapes[1], shapes[2]))
             println("CHITIN $voice level-matched touch steps: %.1f dB, %.1f dB".format(steps[0], steps[1]))
-            assertTrue(steps.all { it > TOUCH_DB }, "$voice touch barely changes the tone: $steps")
+            val floor = if (voice == ChitinVoice.GLINT) GLINT_TOUCH_DB else TOUCH_DB
+            assertTrue(steps.all { it > floor }, "$voice touch barely changes the tone: $steps")
         }
     }
 
@@ -176,6 +176,24 @@ class ChitinCandidateVoicesTest {
     }
 
     @Test
+    fun `GLINT rings with inharmonic glass partials long after the strike`() {
+        // The owner's note on chitin-voices-1 was "Missing glassiness": the heard GLINT was close to a sine
+        // once the strike had passed. The released slave puts partials at 2.6 and 4.6 times the root.
+        for (midi in listOf(48, 60, 72)) {
+            val f = hz(midi)
+            val x = render(ChitinVoice.GLINT, midi)
+            fun glass(from: Double) = (M.component(x, 2.6 * f, from, .2) + M.component(x, 4.6 * f, from, .2)) / M.component(x, f, from, .2)
+            fun harmonics(from: Double) = (2..5).sumOf { M.component(x, it * f, from, .2) } / M.component(x, f, from, .2)
+            println("CHITIN GLINT MIDI$midi glass partials against root: %.3f at .15 s, %.3f at .9 s (harmonics 2 to 5: %.3f)"
+                .format(glass(.15), glass(.9), harmonics(.9)))
+            assertTrue(glass(.9) > .25, "GLINT MIDI$midi has no glass left at .9 s: ${glass(.9)}")
+            assertTrue(glass(.9) > harmonics(.9), "GLINT MIDI$midi rings harmonic, not glass")
+            // The glass partials ring with the root: their share does not collapse after the strike.
+            assertTrue(glass(.9) > .4 * glass(.15), "GLINT MIDI$midi glass dies with the strike")
+        }
+    }
+
+    @Test
     fun `HUM moves the pulse width with the excursion`() {
         val f = hz(48)
         fun even(x: FloatArray) = (M.component(x, 2 * f, .5, .3) + M.component(x, 4 * f, .5, .3)) / M.component(x, f, .5, .3)
@@ -198,10 +216,10 @@ class ChitinCandidateVoicesTest {
     }
 
     @Test
-    fun `every heard render of the four kept voices hashes as it was heard`() {
+    fun `every heard render of the five kept voices hashes as it was heard`() {
         val pinned = KeptVoicePins.read("/chitin/kept-voices-v1.sha256")
         val cases = chitinKeptCases()
-        assertEquals(4 * 6, cases.size)
+        assertEquals(5 * 6, cases.size)
         assertEquals(cases.map { it.first }.toSet(), pinned.keys)
         for ((id, render) in cases) assertEquals(pinned.getValue(id), KeptVoicePins.pin(render().samples), id)
         // The preset is the range clip's middle note and the touch clip's hard note.
@@ -216,11 +234,13 @@ class ChitinCandidateVoicesTest {
         const val KEPT_RENDERS = "9e76c181952002d5934124a12398e683a28e55ffe3c51e7d60ea94c40252998a"
         const val ROOT_SHARE = .3
         const val TOUCH_DB = .5
+        /** GLINT's touch was heard as "all the same" at 5.2 and 3.5 dB (fix-glint-1); it now moves 23.9 and 18.1 dB. */
+        const val GLINT_TOUCH_DB = 12.0
     }
 }
 
 /**
- * The renders the owner kept in chitin-voices-1 (20 Nov 2026), from each voice's preset: the range clip
+ * The renders the owner kept in chitin-voices-1 and, for GLINT, fix-glint-1 and its touch round (20 Nov 2026), from each voice's preset: the range clip
  * (TUNE 0, .5, 19/24 and 1 at full touch; .5 is the preset) and the touch clip's soft (.35) and medium
  * (.7) notes at TUNE .5; its hard note is the preset. The clips were joined from exactly these renders.
  */

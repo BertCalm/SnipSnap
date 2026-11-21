@@ -89,6 +89,7 @@ class ArcoFrozenR1cTest {
             ArcoVoice.CELLO -> CELLO_BODY
             ArcoVoice.ERHU -> ERHU_BODY
             ArcoVoice.SARANGI -> error("SARANGI did not exist in R1c: this frozen copy is CELLO's and ERHU's")
+            else -> error("the candidate voices are not in this copy")
         }
 
         // R1c's knob: the box is the knob's own value up to the knee and climbs to BODY_TOP times the string at BODY 1.

@@ -14,10 +14,9 @@ import kotlin.math.max
  * and crate print ([LooseCrateKits.CRATE]), so they sound like members of the same family. No reference loops were
  * given for these three; the targets are the styles themselves and, for SPEED, HUMMIN. Shape values, unheard.
  *
- * - **BLUE, jazz breaks off a record (90 BPM):** EMBER's felt kick, brush taps, ride, foot hat and shaker (the
- *   owner approved EMBER's cymbals after they were rebuilt from measurements of real ones) played as a hip-hop beat
- *   lifted from a jazz record: the ride swung in triplets, the brushes on two and four, a feathered kick with a
- *   boom-bap push, then the room and the crate print.
+ * - **BLUE, jazz breaks off a record (90 BPM):** EMBER's felt kick, brush taps, ride, foot hat and shaker, played
+ *   as a hip-hop break lifted from a jazz record (round 0m, [blueGroove]): sixteenths swung as an MPC swings them,
+ *   the ride on eighths, the brushes on two and four, a "boom, b-boom" kick, then the room and BLUE's print.
  * - **SPEED, sped-up breaks (108 BPM):** HUMMIN's approved strikes played at 80 BPM in HUMMIN's room, then the whole
  *   record played fast, exactly 45 / 33 1/3 = 1.35 (about 5.2 semitones): shorter, tighter, higher hits, the kick's
  *   54 Hz hum lifted to 73 Hz, the groove landing on 108 BPM to the sample (529,200 frames / 1.35 = 392,000). The
@@ -64,8 +63,9 @@ object LooseCrateExpansionRound0Generator {
      *   [RIDE_PING_SECONDS] s (the ping);
      * - not bell: 1 to 3 kHz holds -17.5 dB of the stick (references -25 and -15, round 0j -12.5);
      * - the ring light, 21 dB under the stick from 0.2 to 0.6 s (references 13 and 8, round 0j 9), and fading
-     *   quickly, 40 dB down at 0.65 s (references 1.8 and 3.2, round 0j 1.4): DAMP .55 and, after the first
-     *   [RIDE_FADE_AFTER] s, an exponential fade of [fadeSeconds];
+     *   quickly, 40 dB down at 0.65 s with a 0.35 s fade (references 1.8 and 3.2, round 0j 1.4): DAMP .55 and,
+     *   after the first [RIDE_FADE_AFTER] s, an exponential fade of [fadeSeconds]. The owner heard it beside a 0.5 s
+     *   fade (40 dB down at 0.77 s) and chose the longer ("The longer cymbal is good", 2026-11-20): [RIDE_FADE_SECONDS];
      * - the sizzle down with the ring; its peaks 21.6 dB over the floor between them (references 17.6 and 10).
      * Round 0h's +12 dB at 8 kHz against the tape head and its cut at 12 kHz stay, as do BLUE's print's full-rate
      * converter and steady tape.
@@ -96,9 +96,7 @@ object LooseCrateExpansionRound0Generator {
     private const val RIDE_PING = 1.5f
     private const val RIDE_PING_SECONDS = .010
     private const val RIDE_FADE_AFTER = .03
-    private const val RIDE_FADE_SECONDS = .35
-    /** The comparison ring, a little longer: 40 dB down at 0.77 s. */
-    private const val RIDE_FADE_LONGER = .50
+    private const val RIDE_FADE_SECONDS = .50
     private const val RIDE_TOP_HZ = 12_000f
 
     /** A Butterworth low-pass (RBJ's cookbook, Q 0.7071), 12 dB an octave; twice over, 24. */
@@ -145,29 +143,12 @@ object LooseCrateExpansionRound0Generator {
     )
 
     /**
-     * A hip-hop beat off a jazz record at 90: the ride's spang-a-lang in triplet swing (beats 0, 1, 1 2/3, 2, 3,
-     * 3 2/3), the foot hat on two and four, brush taps on two and four with ghosts, a shaker on swung eighths,
-     * and a feathered kick that pushes like boom bap (0, 1.75 soft, 2.5). Every note moves by its own seeded amount
-     * within 12 ms.
+     * BLUE's groove, round 0m: the break. "The break for blue sounds better than the groove. The groove kind of sounds
+     * like a Happy Trails type beat" (the owner, 2026-11-20, of round 0i's three). The triplet pocket trots at 90, a
+     * cowboy clip-clop; the swung sixteenths of [breakNotes] nod. Round 0's groove (triplet ride, shaker and ghosts
+     * against a straight-sixteenth kick) is in docs/LOOSE_CRATE.md and git; the two pockets stay rendered for the record.
      */
-    private val blueNotes: List<Note> = Cypher.humanised(buildList {
-        for (bar in 0 until BARS) {
-            val b = bar * 4.0
-            for ((beat, w) in listOf(0.0 to .70f, 1.0 to .60f, 1.0 + 2.0 / 3 to .40f, 2.0 to .65f, 3.0 to .60f, 3.0 + 2.0 / 3 to .40f))
-                add(Note(b + beat, 2, w, offsetMs = 6f))
-            add(Note(b + 1.0, 3, .55f)); add(Note(b + 3.0, 3, .55f))
-            add(Note(b + 1.0, 1, .90f, offsetMs = 12f)); add(Note(b + 3.0, 1, .95f, offsetMs = 14f))
-            add(Note(b + 2.0 + 2.0 / 3, 1, .25f, offsetMs = 10f))
-            if (bar % 2 == 1) add(Note(b + 3.0 + 2.0 / 3, 1, .30f, offsetMs = 12f))
-            // The shaker on swung eighths: soft on the beat, firmer on the swung "and" (the hand's back stroke),
-            // the last of each bar lifted a touch.
-            for (beat in 0 until 4) {
-                add(Note(b + beat, 4, SHAKE_ON, offsetMs = 8f))
-                add(Note(b + beat + 2.0 / 3, 4, if (beat == 3) SHAKE_AND + .08f else SHAKE_AND, offsetMs = 8f))
-            }
-            add(Note(b + 0.0, 0, .85f)); add(Note(b + 1.75, 0, .45f)); add(Note(b + 2.5, 0, .75f))
-        }
-    }, 12f, "loose-crate-blue")
+    private val blueGroove: List<Note> get() = breakNotes
 
     /**
      * Round 0i, three grooves on the same sounds: "Maybe the groove isn't good. It just isn't clicking" (the owner,
@@ -179,7 +160,7 @@ object LooseCrateExpansionRound0Generator {
      * - [pocketNotes]: round 0's idea on one grid. The kick on the triplet swing (1, the swung "and" of 2 soft, the
      *   swung "and" of 3), the brush ghosts moved off the kick, the shaker only on the swung "and" (the back stroke).
      * - [breakNotes]: a hip-hop break instead of jazz time. Sixteenths swung at [BREAK_SWING] (an MPC's swing), the ride
-     *   on swung eighths, the kick "boom, b-boom" (1, the "a" of 1 soft, the "and" of 3), the brushes on two and four
+     *   on eighths (on the beat and the "and", which a sixteenth swing leaves straight), the kick "boom, b-boom" (1, the "a" of 1 soft, the "and" of 3), the brushes on two and four
      *   with a ghost on the "a" of 4 every other bar, the shaker out.
      * - [pocketNotes] without the shaker, for space.
      */
@@ -221,8 +202,7 @@ object LooseCrateExpansionRound0Generator {
         }
     }
 
-    /** The shaker's weights: the forward stroke on the beat, the back stroke on the swung "and". */
-    private const val SHAKE_ON = .35f
+    /** The shaker's weight on the swung "and" (the hand's back stroke) in [pocketNotes]. */
     private const val SHAKE_AND = .55f
 
     /**
@@ -231,9 +211,6 @@ object LooseCrateExpansionRound0Generator {
      */
     private const val SHAKER_FADER = .35f
     private val blueFaders = mapOf(4 to SHAKER_FADER)
-
-    /** The shaker's fader in the softer comparison groove: about 3 dB under [SHAKER_FADER]. */
-    private const val SHAKER_SOFTER = .25f
 
     /**
      * BLUE's print, round 0g: the crate print with the tape's wobble off. "It's too noisy", the ride hissy (the owner,
@@ -381,30 +358,13 @@ object LooseCrateExpansionRound0Generator {
         val root = File(args.firstOrNull() ?: "testkit/loose-crate-expansion-round0")
         fun write(name: String, s: Snip) = WavWriter.write(File(root, name), s).also { println("wrote ${it.path}") }
 
-        val blue = loopDry(blueNotes, 90, blueParts.map { it.second }, blueRoom, blueFaders)
+        val blue = loopDry(blueGroove, 90, blueParts.map { it.second }, blueRoom, blueFaders)
         write("blue/groove.wav", levelled(printedLoop(blue, BLUE_PRINT)))
         write("blue/groove-noprint.wav", levelled(blue))
-        // The same groove with the shaker about 3 dB down, so the owner can choose its level by ear.
-        write("blue/groove-shaker-softer.wav", levelled(printedLoop(loopDry(blueNotes, 90, blueParts.map { it.second }, blueRoom, mapOf(4 to SHAKER_SOFTER)), BLUE_PRINT)))
-        for ((tag, notes) in listOf("a-pocket" to pocketNotes, "b-break" to breakNotes, "c-pocket-no-shaker" to pocketNotes.filter { it.part != 4 }))
+        // Round 0i's pockets, not chosen, for the record.
+        for ((tag, notes) in listOf("a-pocket" to pocketNotes, "c-pocket-no-shaker" to pocketNotes.filter { it.part != 4 }))
             write("blue/groove-$tag.wav", levelled(printedLoop(loopDry(notes, 90, blueParts.map { it.second }, blueRoom, blueFaders), BLUE_PRINT)))
         for ((name, s) in blueParts) write("blue/hit-$name.wav", hit(s, print = BLUE_PRINT))
-        // Round 0k's ring a little longer, for the owner to judge "fades quickly" by ear.
-        write("blue/hit-ride-longer.wav", hit(stickRide(RIDE_FADE_LONGER), print = BLUE_PRINT))
-        write("blue/groove-a-pocket-ride-longer.wav", levelled(printedLoop(loopDry(pocketNotes, 90,
-            blueParts.map { it.second }.toMutableList().also { it[2] = stickRide(RIDE_FADE_LONGER) }, blueRoom, blueFaders), BLUE_PRINT)))
-
-        // The shaker's share of the groove, dry and on one scale: the shaker alone and everything else alone.
-        // Stems for measuring only.
-        run {
-            val strikes = blueParts.map { it.second }
-            val seconds = frames(90).toFloat() / Dsp.RATE + 2.5f
-            val k = .9f / rawMix(blueNotes, 90, seconds, strikes, blueFaders).maxOf { abs(it) }
-            val sh = rawMix(blueNotes.filter { it.part == 4 }, 90, seconds, strikes, blueFaders)
-            val rest = rawMix(blueNotes.filter { it.part != 4 }, 90, seconds, strikes, emptyMap())
-            write("blue/stem-shaker.wav", Snip(FloatArray(sh.size) { sh[it] * k }, 1, Dsp.RATE))
-            write("blue/stem-rest.wav", Snip(FloatArray(rest.size) { rest[it] * k }, 1, Dsp.RATE))
-        }
 
         val hummin = LooseCrateKits.Kit.HUMMIN
         val source = loopDry(LooseCrateKits.played(hummin, LooseCrateKits.humminNotes(kick = 0, snare = 1, hat = 2, ghost = 5)), SPEED_SOURCE_BPM,

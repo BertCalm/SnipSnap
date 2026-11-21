@@ -2,11 +2,13 @@
 
 Version 1.0 · 2026-11-19
 
-Status: rounds 1 and 2a to 2d built (the Kotlin renderer and fitter, the kit action and its
-command, the pad sheet's SYNTH TWIN, and SYNTH TWIN ALL with BLEED and SLOP on a twin; see
-"As built" at the end). The engine is not written. Heard by the owner: the Python prototype,
-the round-1 Kotlin page ("Sounds good, continue", 2026-11-19) and the round-2 loop-to-kit
-page ("Audition is fine", 2026-11-20). Nobody has made a twin on a phone yet. KERF is a
+Status: rounds 1 to 3 built (the renderer and fitter, the kit action and its command, the pad
+sheet's SYNTH TWIN, SYNTH TWIN ALL with BLEED and SLOP, and velocity and round robin; see "As
+built" at the end, and KERF's row in docs/ENGINE_ACCEPTANCE_GATES.md). The engine and its four
+genre kits (round 4) are built, heard and played on phone and MPC (2026-11-21). Heard by the owner: the Python prototype, the
+round-1 Kotlin page ("Sounds good, continue", 2026-11-19), the round-2 loop-to-kit page
+("Audition is fine", 2026-11-20), and the round-3 velocity layers and takes, also on phone and
+MPC ("Audition is good, phone/mpc is good", 2026-11-20). KERF is a
 working name (a kerf is the sliver a saw removes); no maker or product is named by it.
 
 Owner decisions, 2026-11-19 ("I take your recommendations proceed"): the patch format is
@@ -366,7 +368,7 @@ Rows of the registration checklist (snipsnap-conventions.md §3) that apply at e
 - **R1 (renderer):** `KerfRender.kt`, `KerfPatchData.kt`, their tests. No registration.
 - **R2 (tool):** `KerfFit.kt`; a `KitBuilder` entry beside `desamplePad`; the pad recipe
   field from section 6.
-- **R3 (engine):** rows 1 to 14: `Kerf.kt`, `KerfPatch.kt`, the `Patches.fromJsonValue`
+- **R4 (engine):** rows 1 to 14: `Kerf.kt`, `KerfPatch.kt`, the `Patches.fromJsonValue`
   arm, both `Velocity.kt` arms, `KerfPresets.kt`, `SynthKits`, the kit generator, the
   audition generator, docs, and the app picker entry with an on-device test.
 
@@ -416,10 +418,12 @@ a layer is not always a separate drum.
   twin on a phone.
 - **R2d.** Built. SYNTH TWIN ALL on the kit screen, and BLEED and SLOP on a twin. Gate,
   open: the owner makes a kit of twins on a phone and moves BLEED and SLOP.
-- **R3.** The ghost-against-snare comparison, then velocity and round robin. Gate: the
-  owner's velocity/round-robin gate through render, save, playback and export.
-- **R4.** Engine registration, voices and presets after listening, genre kits, audition,
-  docs. Gate: the drum gate (multiple distinct genre kits on the shelf).
+- **R3.** Built. Velocity and round robin through the app's own doors (SOFT HITS, the zone grid,
+  the kit's round robin). Gate, met: the owner heard the layers at depth 3 and the takes, and
+  played them on phone and MPC ("Audition is good, phone/mpc is good", 2026-11-20).
+- **R4.** Built: engine registration, six voices, 27 presets, four genre kits with a roll and a
+  riser, the audition, docs. Gate, met: the owner heard the kits and presets and played the kits
+  on phone and MPC (2026-11-21).
 
 ## 18. Sonic risks
 
@@ -754,3 +758,145 @@ this session.
 
 Still owed: velocity and round robin (R3), the low-end gap of round 2a, the 88.2 kHz
 assertion, the engine (R4).
+
+## As built: round 3, velocity and round robin (2026-11-20)
+
+Read at `04657854`. The owner said "Proceed to next round". The gate is the owner's: working
+velocity levels and round robin through rendering, saving, playback and export, velocity a
+change of strike character, the takes distinct strikes.
+
+What exists:
+
+- `KerfVelocity`: `strike(patch, velocity)`, the velocity law, and the takes' knife and seed.
+- `KerfRecipe.renderAt(velocity)` and `KerfRecipe.take(take, velocity, amount)`.
+- `Velocity.kerfForLayers` and `Velocity.kerfLayerAt`, beside the patch path's pair.
+- Hooks, one line each, in the app's three doors: SOFT HITS (`addGhostLayers`), the
+  velocity × round-robin grid and the kit's round robin (`Robin.apply`, its `restriker`).
+- `KerfVelocityTest` (5), `KerfGateTest` (4). The audition generator writes velocity and takes.
+
+The velocity law, fitted to section 11's ghost-note measurements, every constant "shape":
+
+| Quantity | Law | Over the bank's 63 pads at 0.45 | Ghosts |
+|---|---|---:|---:|
+| Hit level | −20 dB × (1 − v) | −11.0 dB | −11.1 dB |
+| Floor against hit | floor follows half the drop | +5.7 dB | +5.3 dB |
+| Previous hit's bleed against hit | not scaled | +11.0 dB | +12.2 dB |
+| Centroid | tilt above 1 kHz, exponent 0.35 × (1 − v) | 0.868× | 0.86× |
+| Tick against hit | 4 dB further at v = 0 | −3.5 dB | −2.2 dB |
+| Kick pitch drop | × v² below 300 Hz (`StrikeVelocity.droopFactor`) | | not measured |
+
+Decided here, each from a measurement that failed first:
+
+- **TILT 0.35, not 0.6.** 0.6 gave 0.79× centroid; too dull against the ghosts' 0.86×.
+- **The next hit's front follows the hit.** Left at full level, it became the loudest moment of
+  a soft layer, a bright flam at its end that peak matching then set the level by: the first
+  kit-level check found a snare's soft layer brighter than its main take. The ghosts say
+  nothing about it (the chopper cut at the next onset); the previous hit's tail stays, which
+  is the bleed they measured.
+- **Kicks take `StrikeVelocity`'s droop.** A kick is mostly body below 1 kHz, which the measured
+  rows only turn down; soft kicks were within −26 to −32 dB of a copy at another level. That
+  row is the app's own struck-drum physics, borrowed, not measured from the loops.
+- **A take nudges the pad's own knife, it does not draw a new one.** A fresh draw gave a quiet
+  hat a few milliseconds of the kick before it on one take and not the next: 9 dB and 3× the
+  brightness apart. The start moves about a millisecond, the end one or two, early or late is
+  kept.
+- **A take chooses its noise among four draws.** One draw of a short noisy hit can land 0.65× or
+  1.36× as bright as another (kit D's snare). The take keeps the draw whose band profile sits
+  nearest the pad's own at that velocity. Spread after: 0.8 dB median, 2.6 dB worst in energy;
+  brightness mostly within ±15 %. Kit C's snare takes sit 1.2× to 1.4× above the pad, because
+  the pad's own draw is at the dark end of its spread; the takes agree with each other, and the
+  pad as heard stays take one.
+
+Fixed on the way, found by the kit-level test:
+
+- A twin under the kit's round robin lost KERF's stamp (the robin's rewrite cleared it) and so
+  stopped being a twin. `replaceAudio` now keeps the stamp when the new recipe still carries
+  the twin.
+- BLEED or SLOP on a round-robin twin wrote straight over the chain WAV. `recutKerfPad` now
+  lifts the chain, re-cuts and deals the takes again.
+- Measuring a round-robin pad read every take end to end. KERF now measures its first take,
+  the original.
+
+Not done, each owed: the owner's listen to the layers and takes (an audition page is
+published); phone and MPC playback; the engine and its genre kits (round 4).
+
+### Round 3, the owner's listen: velocity depth (2026-11-20)
+
+The owner heard the velocity layers at the measured law as "a bit indistinguishable". The
+ghost-note medians are what a loop's soft hits average, not what an ear needs from a pad's soft
+layer. `KerfVelocity` gained a depth, a multiple of those medians. Above 1 it deepens the tone
+rows (the tilt, the tick's extra drop) and softens the crack, the fast part of each band, by
+6 dB at velocity 0 per unit of depth, which the medians did not show. The hit's drop against
+its neighbours does not scale: a first version let it, and at depth 3 a soft kick fell so far
+that the hat before it took over, at 5.8× the kick's brightness.
+
+An audition of depths 1, 2 and 3 on six pads, tone-only and at the app's playback level, went
+to the owner, who picked "strongest". `DEPTH` is 3.
+
+| At velocity 0.45, bank's 63 pads | Depth 1 (measured law) | Depth 3 (owner's pick) | Ghosts |
+|---|---:|---:|---:|
+| Centroid | 0.868× | 0.730× | 0.86× |
+| Floor against hit | +5.7 dB | +10.6 dB | +5.3 dB |
+| Tick against hit | −3.5 dB | −10.4 dB | −2.2 dB |
+| Bleed against hit | +11.0 dB | +12.5 dB | +12.2 dB |
+| Nearest a copy at another level | −24.7 dB | −16.7 dB | |
+
+`KerfVelocityTest` keeps both: depth 1 still holds to the ghosts, and depth 3 goes further on
+every row and is still a strike, not a copy. Heard: depth chosen by ear from the audition, then
+the whole round-3 page at depth 3, and the layers and takes on phone and MPC: "Audition is good,
+phone/mpc is good" (2026-11-20).
+
+## As built: round 4, the engine and its genre kits (2026-11-20)
+
+KERF is a registered drum engine in the house shape: a voice and its macros (`Kerf.kt`,
+`KerfPatch.kt`), as decision A (section 6) said. The voices point at the bank's fitted numbers;
+a pad made from a capture keeps its own numbers in the pad recipe, as before.
+
+- **Voices.** KICK, SNARE, GHOST (filed as SNARE), HAT (HAT_CLOSED), HAT_OPEN and PERC (the
+  bank's percussion and stacked hits). Each is a pool of the bank's hits of that kind, in kit
+  then pad order: 16, 15, 6, 11, 10 and 5, 63 in all. The one hit over 1.2 s (a 3.3 s snare)
+  is left out, so every render stays under the 1.5 s loop threshold.
+- **Six controls.** HIT picks a hit of the pool. TUNE moves it ±7 semitones. DECAY scales
+  every decay ×0.35 to ×2.8. FLOOR sets the wash from none to 4× the fit, in power. BLEED sets
+  the previous hit's tail from none to 2× the fit. SLOP sets how far off the knife lands. At the
+  defaults (TUNE, DECAY, FLOOR, BLEED and SLOP at 0.5) a hit is the bank pad as the owner heard
+  it. No HOLD.
+- **One sound path.** Every render is `KerfRecipe.take`: velocity is `KerfVelocity` at depth 3,
+  and a take is a fresh cut. The engine adds one thing, a level. One gain per setting puts the
+  loudest of the four full-velocity takes at 0.89 peak, and every velocity and take shares it.
+  The first version levelled take 0 alone, and the shell proof caught takes clipping: a fresh
+  knife can peak up to 1.5× take 0 (a ghost note cut into the kick before it).
+- **Registration.** `Patches` decode; both `Velocity` arms; `Restrike`; `SynthRoot`;
+  `UserPresets.rosterLine`; `PatchTypes.PROTOTYPES` with `KerfPresets`; `PatchesTest`,
+  `PadRecipeTest` and `DeterminismTest`. It sits after SOOT on the SYNTH picker (CAIRN still closes the ring) with an on-device test
+  (`NewEngineSynthScreenTest`), and `EngineCatalog` lists it under DRUMS. The picker now has 100
+  engines.
+- **Presets (27, heard 2026-11-21).** Each is one pool hit, named for what it measures. A preset
+  is only a hit that KERF's own labeller (`KerfFit.label`) files as its kind when the engine
+  renders it. The loops' hats are dark, so about half the hat pool labels as SNARE. Kit A's loud
+  open hats are cymbals over a kick or snare. Those hits stay on HIT and are not presets. The app's
+  capture classifier is not the judge, as the owner decided on 2026-11-19: it calls most of these
+  kicks PERC and most of these hats SNARE.
+- **Four genre kits (`KerfKits`).** Each takes most of its hits from one loop's bank and sets
+  its own tempo, tuning, decay, wash, bleed and knife:
+  - DUST: 88 BPM, kit B, a loose knife and heavy bleed.
+  - SOUL: 94 BPM, kit D, as measured.
+  - FUNK: 104 BPM, kit A, a clean knife and little bleed.
+  - STOMP: 84 BPM, kit C, the wash pushed and the knife sloppiest.
+
+  Every pair shares at most three of fourteen hits and has a different lead kick, lead snare and
+  tempo (`KerfKitsTest`). Each kit's A01 to A14 are hits. A15 is a roll: sixteen strikes
+  accelerating over one bar, each a fresh take. A16 is a riser: twenty-four strikes tightening
+  over one bar, from five semitones under to two over. Every pad is 3 touch zones × 4 takes,
+  scaled by one gain so its loudest cell sits at the pad's level. Hats and ghosts sit 6 to 9 dB
+  under the kick and snare, and nothing clips.
+- **Proof.** `KerfKitTest` (shell) builds all four kits. Each pad's level is checked; a hit, the
+  roll and the riser of every kit go through saving, reloading, `PadHit.resolve` (zone by
+  velocity, takes in order, then repeat) and MPC 3 export. `:shell:generateKerfKits` verifies all
+  64 pads (768 slices) the same way and writes the listening pack. `:synth:generateKerfEngineAudition`
+  renders the presets.
+- **Heard and played.** The owner heard the round-4 page (each kit's sixteen pads, a two-bar
+  groove per kit, and the 27 presets soft to hard): "Sounds good", confirmed as a listen ("1 yes
+  I listen"). They played the kits on phone and MPC: "2 is complete" (2026-11-21). The round-4
+  gate is met, and KERF is complete under the owner's gates.
+
