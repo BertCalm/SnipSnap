@@ -3973,3 +3973,8 @@ and the engine do not change. Heard by the owner: "Those are great" (2026-11-21)
 The engine's HIT pools grow from 63 to 231 hits: model 1's, unchanged and in place, then the 168 hits the owner heard
 in the genre kits of rounds 5 and 6. A model-1 save keeps its pools; the presets and the kits do not move.
 
+### KERF, pitched pads (2026-11-21)
+
+Struck bars, gongs and keys from the owner's melodic loops, rung out past their cuts (`KerfRender.ring`), as three
+pitched-pad kits of sixteen scale notes: KERF METAL (E-flat major), GONG (F minor), WOOD (F minor). Not yet heard.
+

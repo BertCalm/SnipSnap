@@ -5,17 +5,18 @@ cleared for commercial use, as pitched pads laid out as a scale in each kit's ke
 
 For every fitted note (`chop.py` and `run_fit.py`, unchanged):
 
-1. Its root: the strongest partial, or one a half or a third of it below when that partial is there and at least a
-   third as loud (the fundamental of a bar whose overtone rings louder). Fractional MIDI: a loop's tuning is rarely
+1. Its root: the lowest partial at least 30% as loud as the strongest. Fractional MIDI: a loop's tuning is rarely
    exactly on the semitone, and the pad is retuned exactly.
+   Loops whose names give no key are left out: without a key the pitch cannot be checked, and the ones here (sleigh
+   bells, chimes, tingsha) are barely pitched.
 2. A check against the loop's key, read from its file name (`_Dmaj`, `_Amin`, `_Cm`, `_Eb`; a bare key is major): a
-   root outside that key's scale is tried against the next strongest partial, then dropped.
+   root outside that key's scale is tried against the next strong partial up, then dropped.
 3. Its family, from what its loop measures, never its name: wooden bars ring short; metal bars ring longer; bells and
    chimes ring longest or brightest; gongs are low and long. The family rules are printed with the numbers they read.
 
-Each family becomes one kit of 16 pads: the scale of the family's most common key and mode, from the octave that
-centres the 16 notes on the family's notes, each pad the nearest recorded note retuned (never more than an octave;
-ties go to the better fit).
+Each family becomes one kit of 16 pads: of every key its loops are in, at every octave, the 16-note scale run whose
+pads need the least retuning, each pad the nearest recorded note retuned (never more than an octave; ties go to the
+better fit). A family with fewer than 12 clean notes is left out: it cannot fill 16 pitched pads well.
 
     python3 prototype/kerf/tonal_bank.py FITS_DIR [OUT_JSON]
 
@@ -48,17 +49,15 @@ def in_scale(m, key):
     return round(m - tonic) % 12 in (MINOR if mode == 'minor' else MAJOR)
 
 def root_of(r, key):
-    ps = sorted((p for p in r['patch']['partials'] if 20 < p['hz_end'] < 8000), key=lambda p: -p['amp'])
-    if not ps: return None
-    top = ps[0]['amp']
-    for cand in ps[:4]:
-        if cand['amp'] < top * 0.2: break
-        hz = cand['hz_end']
-        for k in (2, 3):   # a fundamental below an overtone that rings louder
-            low = [p for p in ps if abs(p['hz_end'] * k - hz) < hz * 0.015 and p['amp'] >= cand['amp'] / 3]
-            if low: hz = low[0]['hz_end']; break
-        m = midi(hz)
-        if key is None or in_scale(m, key): return m
+    """The lowest partial at least 30% as loud as the strongest, in the loop's key; else the next one up that is.
+    The strongest partial was tried first and was wrong for bells: their loudest partial is a shimmer far above the
+    note heard (a first pass put a bell kit at MIDI 98 to 124)."""
+    ps = [p for p in r['patch']['partials'] if 20 < p['hz_end'] < 8000]
+    if not ps or key is None: return None
+    top = max(p['amp'] for p in ps)
+    for cand in sorted((p for p in ps if p['amp'] >= 0.3 * top), key=lambda p: p['hz_end']):
+        m = midi(cand['hz_end'])
+        if in_scale(m, key): return m
     return None
 
 def ring_of(r):
@@ -83,7 +82,8 @@ for r in R:
     key = key_of(r['path'])
     if not good(r): continue
     m = root_of(r, key)
-    if m is None: continue
+    # above MIDI 100 (about 2.6 kHz) a "root" is a bell's shimmer, not a note a pad should be tuned from
+    if m is None or m > 100: continue
     notes.append(dict(r=r, root=float(m), key=key, ring=ring_of(r), centre=r['centroid'], inh=inharmonic(r, m)))
 loops = sorted({n['r']['loop'] for n in notes})
 per_loop = {}
@@ -109,20 +109,25 @@ for i, lp in enumerate(loops):
 out = {}
 for f, lps in sorted(fam.items()):
     ns = [n for n in notes if n['r']['loop'] in lps]
-    keys = [n['key'] for n in ns if n['key']]
-    if not keys: continue
-    tonic, mode = max(set(keys), key=keys.count)
-    steps = MINOR if mode == 'minor' else MAJOR
-    centre = float(np.median([n['root'] for n in ns]))
-    # 16 scale notes: a run up the scale whose middle sits on the family's middle note
-    def run(base):
+    keys = sorted({n['key'] for n in ns if n['key']})
+    if len(ns) < 12: print(f"{f}: {len(lps)} loops, only {len(ns)} clean notes: too few for 16 pitched pads, left out"); continue
+    def run(base, steps):
         out, o, d = [], 0, 0
         while len(out) < 16:
             out.append(base + 12 * o + steps[d]); d += 1
             if d == 7: d = 0; o += 1
         return out
-    base = min((tonic + 12 * o for o in range(-2, 11)), key=lambda b: abs(np.mean(run(b)) - centre))
-    targets = run(base)
+    def cost(targets):
+        shifts = [min(abs(n['root'] - t) for n in ns) for t in targets]
+        return (sum(sh > 12 for sh in shifts), sum(shifts))
+    # every key the family's loops are in, every octave: the layout whose 16 pads need the least retuning
+    best = None
+    for tonic, mode in keys:
+        steps = MINOR if mode == 'minor' else MAJOR
+        for base in (tonic + 12 * o for o in range(1, 9)):
+            c = cost(run(base, steps))
+            if best is None or c < best[0]: best = (c, tonic, mode, run(base, steps))
+    _, tonic, mode, targets = best
     pads = []
     for t in targets:
         cands = [n for n in ns if abs(n['root'] - t) <= 12]
@@ -132,6 +137,12 @@ for f, lps in sorted(fam.items()):
     shifts = [abs(p['target'] - p['root']) for p in pads]
     print(f"{f}: {len(lps)} loops, {len(ns)} notes, key {NAMES[tonic]} {mode}, {len(pads)} pads from MIDI {targets[0]} to "
           f"{targets[-1]}, retune median {np.median(shifts):.1f} semitones, worst {max(shifts):.1f}")
-    out[f] = dict(tonic=tonic, mode=mode, pads=pads)
+    def bpm(path):
+        nums = [int(x) for x in re.findall(r'(?<![0-9])(\d{2,3})(?![0-9])', os.path.basename(path)) if 60 <= int(x) <= 180]
+        return nums[-1] if nums else None
+    tempos = [b for b in (bpm(next(n['r']['path'] for n in ns if n['r']['loop'] == lp)) for lp in lps) if b]
+    sources = len({id(p['patch']) for p in pads})
+    print(f"   {sources} different recorded notes across the 16 pads; tempo {int(np.median(tempos))} BPM (the loops' median)")
+    out[f] = dict(tonic=tonic, mode=mode, bpm=int(np.median(tempos)), pads=pads)
 json.dump(out, open(OUT, 'w'), separators=(',', ':'))
 print('wrote', OUT, os.path.getsize(OUT) // 1024, 'KB')

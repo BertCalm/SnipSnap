@@ -1023,3 +1023,63 @@ Proceed"). It gives the engine's HIT control more hits.
   the engine's HIT steps at its defaults. The engine's picker on a phone with model 2 is not yet
   played.
 
+## As built: pitched pads (2026-11-21)
+
+The owner asked whether KERF could do melodics. They chose bells, struck bars (marimba,
+vibraphone), tuning forks and the like, from melodic loops they cleared for commercial use, as
+pitched pads laid out as a scale in each kit's key ("b").
+
+- **The loops.** 53 files arrived; deduplicated by content, there are 51 loops. Five sustained
+  ones (winds, two organs, two sub basses) are held for a later held-sound round. 46 struck,
+  plucked and mixed loops were chopped (2,852 hits). The 1,108 most distinct notes (up to 25 a
+  loop, `kits.py`'s picker) were fitted unchanged: band error median 4.2 dB, envelope match
+  median 0.75. The envelope suffers because the next note lands on a ringing one.
+- **The ring** (`KerfRender.ring`). A loop shows only the front of each ring: chops are 0.18 s
+  median, rings 0.8 s median and 4.5 s at the 90th percentile.
+  - Every partial and band keeps its fitted decay past the cut.
+  - The floor, the loop's wash, stops at the slice's end through `Controls.floorUntil`. Its
+    default is infinite, so every chop renders as before.
+  - The note runs until its slowest part within 40 dB of the loudest falls 60 dB, at most 4 s, and
+    ends on a 150 ms fade.
+- **Notes** (`KerfTonal`). A note is played at any MIDI note within an octave of its fractional
+  root.
+  - Velocity is the drums' `KerfVelocity`.
+  - A take nudges each partial's level (1 dB) and tuning (2 cents) and draws fresh noise, because
+    a bell is mostly partials.
+- **The bank** (`prototype/kerf/tonal_bank.py` writes `tonal_patches.json`).
+  - **Roots.** A note's root is the lowest partial at least 30% as loud as the strongest, in the
+    loop's key from its file name. The strongest partial was tried first: for bells it is a
+    shimmer far above the heard note, and it put a bell kit at MIDI 98 to 124.
+  - **What is left out.** Roots above MIDI 100 are dropped, and so are loops whose names give no
+    key: their pitch cannot be checked, and they are barely pitched.
+  - **Families, by measurement.** Gongs are low and long; bells ring longest or brightest; wood
+    rings under 0.6 s; metal is the rest.
+  - **Layout.** Each family's 16 pads are the scale run, over every key its loops are in and every
+    octave, that needs the least retuning.
+  - **The bell family** had six clean notes and is left out.
+- **The kits** (`KerfTonalKits`):
+
+  | Kit | Loops | Key | MIDI | Tempo | Median retune | Worst retune |
+  |---|---:|---|---|---:|---:|---:|
+  | KERF METAL | 11 | E-flat major | 51 to 77 | 96 | 0.2 | 0.9 |
+  | KERF GONG | 3 | F minor | 41 to 67 | 120 | 0.5 | 2.0 |
+  | KERF WOOD | 4 | F minor | 65 to 91 | 125 | 1.0 | 5.9 |
+
+  Retunes are in semitones. Every pad is a TONAL one-shot named for its note, with 3 zones × 4
+  takes, levelled so the notes of a kit sit even. The kits are on the shelf under METAL WOOD AND
+  GLASS.
+- **Tests.**
+  - `KerfTonalTest`, 5 tests on a hand-built note: length, the floor's stop, pitch to the hertz,
+    takes, velocity, and the default render unchanged.
+  - `KerfTonalKitsTest`, 3 tests: each kit is 16 rising notes in its key, none retuned past an
+    octave; every pad's note stands at least 20 dB above its spectrum's median; the cap, softer
+    soft strikes, and distinct takes.
+  - `KerfTonalKitTest` (shell): saving, playback and MPC 3 export.
+  - `:shell:generateKerfKits` proves every pad.
+- **Not yet.**
+  - The owner has not heard these kits.
+  - The melodic gate is only partly met: these are premade kits, not six voices with presets,
+    keygroups or chord tools. The owner chose pitched pads.
+  - There is no roll or riser: all 16 pads are scale notes.
+  - Vibraphone tremolo is not modelled.
+

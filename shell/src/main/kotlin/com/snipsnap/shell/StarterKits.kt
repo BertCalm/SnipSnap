@@ -1011,6 +1011,21 @@ object StarterKits {
             seeded = false, tempoBpm = com.snipsnap.synth.KerfKits.Genre.TIGHT.bpm.toFloat(),
         ) { com.snipsnap.synth.KerfKits.build(com.snipsnap.synth.KerfKits.Genre.TIGHT) },
         Starter(
+            "kerf-metal", "KERF METAL",
+            "Pitched pads of struck metal bars and keys rebuilt from fitted numbers: sixteen notes of E-flat major, each ringing out past its cut. Three touch zones, four takes.",
+            seeded = false, tempoBpm = com.snipsnap.synth.KerfTonalKits.bpm(com.snipsnap.synth.KerfTonalKits.Kit.METAL).toFloat(),
+        ) { com.snipsnap.synth.KerfTonalKits.build(com.snipsnap.synth.KerfTonalKits.Kit.METAL) },
+        Starter(
+            "kerf-gong", "KERF GONG",
+            "Pitched pads of low gongs and tuned pans rebuilt from fitted numbers: sixteen notes of F minor, long and ringing. Three touch zones, four takes.",
+            seeded = false, tempoBpm = com.snipsnap.synth.KerfTonalKits.bpm(com.snipsnap.synth.KerfTonalKits.Kit.GONG).toFloat(),
+        ) { com.snipsnap.synth.KerfTonalKits.build(com.snipsnap.synth.KerfTonalKits.Kit.GONG) },
+        Starter(
+            "kerf-wood", "KERF WOOD",
+            "Pitched pads of wooden bars rebuilt from fitted numbers: sixteen notes of F minor, short and woody. Three touch zones, four takes.",
+            seeded = false, tempoBpm = com.snipsnap.synth.KerfTonalKits.bpm(com.snipsnap.synth.KerfTonalKits.Kit.WOOD).toFloat(),
+        ) { com.snipsnap.synth.KerfTonalKits.build(com.snipsnap.synth.KerfTonalKits.Kit.WOOD) },
+        Starter(
             MurmurKeptBank.ID, "MURMUR KEPT",
             "Kept plucks, vowel keys and lower-air choir. Held pads have a short delivery fade.",
             seeded = false,
