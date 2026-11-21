@@ -76,12 +76,12 @@ class CreaseTest {
     @Test
     fun `default voices have substantial gain independent harmonic separation that model one lacks`() {
         val issues = mutableListOf<String>()
-        val profiles = Crease.KEPT_VOICES.associateWith { voice ->
+        val profiles = Crease.ORIGINAL_VOICES.associateWith { voice ->
             val probe = Crease.probe(voice, midi = 60, velocity = .8f)
             assertEquals(Crease.MODEL_VERSION, probe.diagnostics.modelVersion, "new auditions must select the current model explicitly or by default")
             bodyWindows.map { harmonicProfile(probe.prelevel, Keys.midiHz(60).toDouble(), it) }
         }
-        for (voice in Crease.KEPT_VOICES) {
+        for (voice in Crease.ORIGINAL_VOICES) {
             val overtones = profiles.getValue(voice).map { 1.0 - it[0] }
             println("CREASE identity $voice overtoneMean=${overtones.average()} overtonePeak=${overtones.max()} windows=$overtones")
             if (voice == CreaseVoice.ROUND) continue
@@ -90,7 +90,7 @@ class CreaseTest {
             issues.expect(overtones.average() >= meanFloor, "$voice still spends nearly all its power on the fundamental: mean overtone power ${overtones.average()} < $meanFloor")
             issues.expect(overtones.max() >= peakFloor, "$voice never develops substantive upper harmonics: peak overtone power ${overtones.max()} < $peakFloor")
         }
-        val voices = Crease.KEPT_VOICES
+        val voices = Crease.ORIGINAL_VOICES
         for (i in voices.indices) for (j in i + 1 until voices.size) {
             val a = averageProfile(profiles.getValue(voices[i]))
             val b = averageProfile(profiles.getValue(voices[j]))
@@ -101,7 +101,7 @@ class CreaseTest {
         // The rejected build is a negative control: its original published controls put
         // 98.9–99.4% of harmonic power into the root, with pair distances below .006.
         // Large distances between inaudible residual harmonics cannot pass the new gates.
-        val legacy = Crease.KEPT_VOICES.associateWith { voice ->
+        val legacy = Crease.ORIGINAL_VOICES.associateWith { voice ->
             val p = Crease.probe(voice, originalDefaults(voice), midi = 60, velocity = .8f, model = 1)
             averageProfile(bodyWindows.map { harmonicProfile(p.prelevel, Keys.midiHz(60).toDouble(), it) })
         }
@@ -116,7 +116,7 @@ class CreaseTest {
     @Test
     fun `expressive pressure moves audible harmonic power through the note instead of only moving phase`() {
         val issues = mutableListOf<String>()
-        for (voice in Crease.KEPT_VOICES) {
+        for (voice in Crease.ORIGINAL_VOICES) {
             val macros = Crease.defaults(voice) + mapOf("FOLD" to .7f, "PRESSURE" to .85f, "DRAG" to .7f, "SPLIT" to .65f, "RELAX" to .7f)
             val p = Crease.probe(voice, macros, midi = 60, velocity = .8f)
             val profiles = bodyWindows.map { harmonicProfile(p.prelevel, Keys.midiHz(60).toDouble(), it) }
@@ -147,7 +147,7 @@ class CreaseTest {
 
     @Test
     fun `repeat renders and reordered macro maps are sample identical`() {
-        for (voice in Crease.KEPT_VOICES) {
+        for (voice in Crease.ORIGINAL_VOICES) {
             val macros = Crease.defaults(voice)
             val a = Crease.probe(voice, macros, midi = 55, velocity = .63f)
             val b = Crease.probe(voice, macros.entries.reversed().associate { it.key to it.value }, midi = 55, velocity = .63f)
@@ -162,7 +162,7 @@ class CreaseTest {
 
     @Test
     fun `default and all high notes retain numerical headroom before leveling`() {
-        for (voice in Crease.KEPT_VOICES) for (midi in listOf(24, 54, 84)) for (high in listOf(false, true)) {
+        for (voice in Crease.ORIGINAL_VOICES) for (midi in listOf(24, 54, 84)) for (high in listOf(false, true)) {
             val macros = Crease.defaults(voice) + if (high) timbral.associateWith { 1f } else emptyMap()
             val p = Crease.probe(voice, macros, midi = midi, velocity = 1f)
             val label = "$voice MIDI$midi allHigh=$high"
@@ -196,7 +196,7 @@ class CreaseTest {
     @Test
     fun `each macro changes both low and middle steps after gain matching`() {
         val issues = mutableListOf<String>()
-        for (voice in Crease.KEPT_VOICES) for (macro in timbral) {
+        for (voice in Crease.ORIGINAL_VOICES) for (macro in timbral) {
             val base = Crease.defaults(voice) + ("HOLD" to 0f)
             val low = Crease.probe(voice, base + (macro to 0f)).prelevel
             val quarter = Crease.probe(voice, base + (macro to .25f)).prelevel
@@ -217,7 +217,7 @@ class CreaseTest {
     @Test
     fun `history and reciprocal load change spectral evolution with the same excitation envelope`() {
         val issues = mutableListOf<String>()
-        for (voice in Crease.KEPT_VOICES) {
+        for (voice in Crease.ORIGINAL_VOICES) {
             val macros = Crease.defaults(voice) + mapOf("PRESSURE" to .8f, "DRAG" to .65f, "SPLIT" to .65f, "RELAX" to .7f)
             val memory = Crease.probe(voice, macros)
             val instantaneous = Crease.probe(voice, macros, history = CreaseHistory.INSTANTANEOUS)
@@ -257,7 +257,7 @@ class CreaseTest {
     @Test
     fun `velocity changes excitation shape rather than only normalized level`() {
         val issues = mutableListOf<String>()
-        for (voice in Crease.KEPT_VOICES) {
+        for (voice in Crease.ORIGINAL_VOICES) {
             val soft = Crease.probe(voice, velocity = .25f)
             val hard = Crease.probe(voice, velocity = 1f)
             val spectral = trajectoryDistance(soft.prelevel, hard.prelevel)
@@ -271,7 +271,7 @@ class CreaseTest {
 
     @Test
     fun `moderate voices preserve a measurable requested root at low middle and high velocity`() {
-        for (voice in Crease.KEPT_VOICES) for (midi in listOf(24, 36, 48, 60, 72, 84)) for (velocity in listOf(.3f, .65f, 1f)) {
+        for (voice in Crease.ORIGINAL_VOICES) for (midi in listOf(24, 36, 48, 60, 72, 84)) for (velocity in listOf(.3f, .65f, 1f)) {
             val p = Crease.probe(voice, midi = midi, velocity = velocity)
             val snip = Snip(p.samples, 1, p.sampleRate)
             val wanted = Keys.midiHz(midi)
@@ -292,7 +292,7 @@ class CreaseTest {
 
     @Test
     fun `finite HOLD steps extend the articulation before the loop endpoint`() {
-        for (voice in Crease.KEPT_VOICES) {
+        for (voice in Crease.ORIGINAL_VOICES) {
             val steps = listOf(0f, .25f, .5f).map { hold ->
                 Crease.probe(voice, Crease.defaults(voice) + ("HOLD" to hold))
             }
@@ -311,7 +311,7 @@ class CreaseTest {
 
     @Test
     fun `zero velocity produces finite silence for notes and converged loops`() {
-        for (voice in Crease.KEPT_VOICES) for (hold in listOf(0f, 1f)) {
+        for (voice in Crease.ORIGINAL_VOICES) for (hold in listOf(0f, 1f)) {
             val p = Crease.probe(voice, Crease.defaults(voice) + ("HOLD" to hold), velocity = 0f)
             assertTrue(p.samples.all { it == 0f } && p.prelevel.all { it == 0f }, "$voice HOLD$hold zero velocity is not silent")
             assertTrue(p.diagnostics.seamError.isFinite(), "$voice HOLD$hold zero-velocity seam is NaN")
@@ -329,7 +329,7 @@ class CreaseTest {
 
     @Test
     fun `held loops recur through independent prior audio and survive PCM export with active deformation`() {
-        for (voice in Crease.KEPT_VOICES) {
+        for (voice in Crease.ORIGINAL_VOICES) {
             val p = Crease.probe(voice, Crease.defaults(voice) + ("HOLD" to 1f))
             val d = p.diagnostics
             assertTrue(d.held && d.converged, "$voice did not converge a held trajectory")
@@ -366,7 +366,7 @@ class CreaseTest {
 
     @Test
     fun `held RELAX and the other memory controls still reshape a constant amplitude sustain`() {
-        val cases = Crease.KEPT_VOICES.map { it to "RELAX" } +
+        val cases = Crease.ORIGINAL_VOICES.map { it to "RELAX" } +
             listOf("PRESSURE", "DRAG", "SPLIT").map { CreaseVoice.RUBBER to it }
         val issues = mutableListOf<String>()
         for ((voice, macro) in cases) {
@@ -387,7 +387,7 @@ class CreaseTest {
     @Test
     fun `DRAG delays the same held pressure rise rather than only changing a static colour`() {
         val issues = mutableListOf<String>()
-        for (voice in Crease.KEPT_VOICES) {
+        for (voice in Crease.ORIGINAL_VOICES) {
             val base = Crease.defaults(voice) + mapOf("HOLD" to 1f, "PRESSURE" to .85f, "SPLIT" to .5f)
             val fast = Crease.probe(voice, base + ("DRAG" to 0f))
             val slow = Crease.probe(voice, base + ("DRAG" to 1f))
@@ -405,7 +405,7 @@ class CreaseTest {
     fun `gesture controls move substantial held harmonics through measured resistance and recovery`() {
         val issues = mutableListOf<String>()
         val windows = listOf(.12, .4, .7, .9, 1.1)
-        for (voice in Crease.KEPT_VOICES) for (control in listOf("PRESSURE", "DRAG", "RELAX")) {
+        for (voice in Crease.ORIGINAL_VOICES) for (control in listOf("PRESSURE", "DRAG", "RELAX")) {
             val base = Crease.defaults(voice) + mapOf("HOLD" to 1f, "PRESSURE" to .85f, "SPLIT" to .5f)
             val low = Crease.probe(voice, base + (control to 0f), midi = 60, velocity = .8f)
             val high = Crease.probe(voice, base + (control to 1f), midi = 60, velocity = .8f)
@@ -441,10 +441,12 @@ class CreaseTest {
     @Test
     fun `native preset pairs remain distinct at the same pitch and velocity`() {
         val issues = mutableListOf<String>()
-        val presets = CreasePresets.all()
-        assertEquals(6, presets.size, "the listening bank should contain two complete recipes per voice")
+        // The original voices keep their two positions each; voices kept later add one each after them.
+        val presets = CreasePresets.all().take(6)
+        assertTrue(presets.all { it.voice in Crease.ORIGINAL_VOICES })
+        assertEquals(CreasePresets.all().size, CreasePresets.all().map { it.id }.distinct().size)
         assertEquals(presets.size, presets.map { it.id }.distinct().size, "duplicate preset IDs would overwrite audition recipes")
-        for (voice in Crease.KEPT_VOICES) {
+        for (voice in Crease.ORIGINAL_VOICES) {
             val pair = presets.filter { it.voice == voice }
             assertEquals(2, pair.size, "$voice needs two listening positions")
             val probes = pair.map { preset ->
@@ -474,7 +476,7 @@ class CreaseTest {
     @Test
     fun `four times oversampling remains close to a sixteen times high register reference`() {
         val issues = mutableListOf<String>()
-        for (voice in Crease.KEPT_VOICES) {
+        for (voice in Crease.ORIGINAL_VOICES) {
             val macros = Crease.defaults(voice) + timbral.associateWith { 1f }
             val normal = Crease.probe(voice, macros, midi = 84, velocity = 1f, oversample = 4)
             val reference = Crease.probe(voice, macros, midi = 84, velocity = 1f, oversample = 16)

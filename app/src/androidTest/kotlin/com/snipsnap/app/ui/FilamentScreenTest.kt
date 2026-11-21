@@ -203,7 +203,7 @@ class FilamentScreenTest : ComposeScreenTest() {
         // factory sound must replace every field of that older draft.
         assertEquals(old, currentPatch(FilamentVoice.THREAD))
         assertEquals(.81f, progress("INJECT"), 0f)
-        assertEquals(12, FilamentPresets.all().size)
+        assertEquals(13, FilamentPresets.all().size)
         for (voice in Filament.KEPT_VOICES) {
             activate(voice.name)
             for (macro in Filament.macrosFor(voice)) slider(macro.name).assertExists()

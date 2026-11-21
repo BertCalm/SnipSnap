@@ -22,7 +22,7 @@ class FilamentCharacterTest {
 
     @Test
     fun `revised sources evolve partial balance beyond the original amplitude envelope`() {
-        for (voice in Filament.KEPT_VOICES) {
+        for (voice in Filament.ORIGINAL_VOICES) {
             val original = Filament.inspect(voice, controls, midi = 48, model = 1)
             val revised = Filament.inspect(voice, controls, midi = 48, model = 2)
             fun evolution(p: Filament.Probe) = TangleMeasure.spectralDistance(window(p.source, .08), window(p.source, .70))
@@ -37,10 +37,10 @@ class FilamentCharacterTest {
 
     @Test
     fun `revised voice identities retain different spectral shapes at one shared note and macro setting`() {
-        val rendered = Filament.KEPT_VOICES.associateWith {
+        val rendered = Filament.ORIGINAL_VOICES.associateWith {
             Filament.inspect(it, controls, midi = 48, velocity = .7f, config = FilamentConfig(seed = 29), model = 2)
         }
-        for ((index, voice) in Filament.KEPT_VOICES.withIndex()) for (other in Filament.KEPT_VOICES.drop(index + 1)) {
+        for ((index, voice) in Filament.ORIGINAL_VOICES.withIndex()) for (other in Filament.ORIGINAL_VOICES.drop(index + 1)) {
             val a = rendered.getValue(voice)
             val b = rendered.getValue(other)
             val distance = TangleMeasure.spectralDistance(window(a.raw, .08), window(b.raw, .08))
@@ -51,7 +51,7 @@ class FilamentCharacterTest {
 
     @Test
     fun `longer held character evolves inside the period while preserving its actual prior propagation`() {
-        for (voice in Filament.KEPT_VOICES) {
+        for (voice in Filament.ORIGINAL_VOICES) {
             val p = Filament.inspect(voice, controls + ("HOLD" to 1f), midi = 48, model = 2)
             val seconds = p.samples.size.toDouble() / Dsp.RATE
             assertTrue(seconds in 2.1..2.4, "$voice revised HOLD omitted its complete evolving gesture: $seconds s")

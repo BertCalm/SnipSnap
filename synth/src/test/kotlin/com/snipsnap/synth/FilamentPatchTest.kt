@@ -14,7 +14,7 @@ class FilamentPatchTest {
 
     @Test
     fun `finite and held recipes replay every source and geometry setting through the dispatcher`() {
-        for (model in listOf(1, 2, 3)) for ((index, voice) in Filament.KEPT_VOICES.withIndex()) {
+        for (model in listOf(1, 2, 3)) for ((index, voice) in Filament.ORIGINAL_VOICES.withIndex()) {
             val config = FilamentConfig(seed = 719 + index, profile = FilamentProfile.entries[index + 1],
                 perfectRetention = voice == FilamentVoice.THREAD)
             val macros = Filament.defaults(voice) + mapOf("INJECT" to .63f, "BEND" to .72f,
@@ -46,7 +46,7 @@ class FilamentPatchTest {
 
     @Test
     fun `omitted or null optional recipe state uses the documented original defaults`() {
-        for (voice in Filament.KEPT_VOICES) for (optionals in listOf("",
+        for (voice in Filament.ORIGINAL_VOICES) for (optionals in listOf("",
             """, "midi":null, "velocity":null, "config":null, "model":null""")) {
             val text = """{"engine":"FILAMENT","version":1,"name":"Partial","voice":"$voice","macros":{"LENGTH":0.2},"future":true$optionals}"""
             val p = FilamentPatch.fromJsonText(text)
@@ -102,7 +102,7 @@ class FilamentPatchTest {
 
     @Test
     fun `native velocity routing preserves the saved note and complete strand configuration`() {
-        for (model in listOf(1, 2, 3)) for (voice in Filament.KEPT_VOICES) {
+        for (model in listOf(1, 2, 3)) for (voice in Filament.ORIGINAL_VOICES) {
             val patch = FilamentPatch("Velocity", voice, Filament.defaults(voice), midi = 67, velocity = .8f,
                 config = FilamentConfig(seed = 17, profile = FilamentProfile.LATE), model = model)
             val actual = Velocity.atVelocity(patch, .25f)
@@ -130,7 +130,7 @@ class FilamentPatchTest {
             CURL|Held Curl|0.45,0.65,0.6,0.65,0.65,1.0|0|VOICE
         """.trimIndent().lines()
         assertEquals(expected, snapshots(originals, 1))
-        assertEquals(originals.map { it.name }, FilamentPresets.all().map { it.name }, "names identify comparable recipes across models")
+        assertEquals(originals.map { it.name }, FilamentPresets.all().take(12).map { it.name }, "names identify comparable recipes across models")
     }
 
     @Test
@@ -151,8 +151,8 @@ class FilamentPatchTest {
             CURL|Held Curl|0.36,0.82,0.76,0.92,0.88,1.0|61|LATE
         """.trimIndent().lines()
         assertEquals(expected, snapshots(revision2, 2))
-        assertEquals(revision2.map { it.name }, FilamentPresets.all().map { it.name })
-        assertTrue(revision2.zip(FilamentPresets.all()).all { (old, current) -> old.macros != current.macros },
+        assertEquals(revision2.map { it.name }, FilamentPresets.all().take(12).map { it.name })
+        assertTrue(revision2.zip(FilamentPresets.all().take(12)).all { (old, current) -> old.macros != current.macros },
             "current presets must voice the reactive network rather than merely replace the model number")
     }
 

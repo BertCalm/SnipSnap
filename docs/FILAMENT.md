@@ -504,3 +504,34 @@ at C5; the bar is 3.7). Soft against hard differs by 11.6 (BRAID), 11.5 (HALO), 
 of tone at matched level, and a soft note is also quieter. Held keys keep the 2 to 8 kHz band at or under the
 kept voices' ceilings (at C4: -50, -66, -46 and -41 dB against the root, ceiling -23.5) and their level wanders
 2.5 to 5.5 dB across the loop. HALO rings on at about 0.28 of its sung level half a second after the rub ends.
+
+### Verdict, round filament-voices-1 (2026-11-20)
+
+- **FRAY: KEEP** (range and touch, no notes). FRAY is now offered: `Filament.KEPT_VOICES` is THREAD, PULSE, CURL
+  and FRAY, and FRAY has one factory preset, **Glass Flute**, appended after the twelve original recipes at the
+  default performance the owner heard (default controls, C3, full touch, model 3). Its renders are pinned in
+  `FilamentCandidateVoicesTest` from the build whose renders gave the heard clips DC1 and DC2 byte for byte.
+  The FILAMENT starter kit keeps its twelve original recipes; FRAY ships as a preset only.
+- **BRAID, HALO, SPRING: range TWEAK, "More distinctive"**; their soft/medium/hard clips KEEP. The reference
+  clip of THREAD, PULSE and CURL had no verdict. `Filament.ORIGINAL_VOICES` (THREAD, PULSE, CURL) is the set with
+  models 1 and 2 and the original source path; every candidate, FRAY included, is model 3 only.
+
+### Round filament-voices-2: BRAID, HALO and SPRING reworked (unheard)
+
+Through the strand network alone the three shared FILAMENT's source tone and envelope and read as variations
+of one sound (5.9 to 11 dB apart in third-octave shape). Each now has its own layer (`FilamentCandidateLayers.kt`),
+added after the collectors, with the network playing underneath at 0.30 (SPRING 0.25):
+
+- **BRAID**, a string-machine ensemble: seven players up to 22 cents apart, each on its own slow 3-cent vibrato,
+  a bright sawtooth with an airy top, a bowed swell, through a slow six-stage phaser (300 Hz to 2.6 kHz, about .22 Hz).
+- **HALO**, a glass harmonica: nearly a pure sine with a split root (a slow .55 Hz pulse), faint inharmonic glass
+  modes (2.32, 4.25, 6.63 and 9.38 times the root) that bloom in later than the root, and a long ring after the rub.
+- **SPRING**, a pluck into a spring tank: the pluck and a short tap pass 120 stretched allpasses in a 47 ms
+  feedback loop (the parametric spring of Välimäki, Parker and Abel), so each arrival chirps and returns. Held,
+  it is re-plucked six times per loop, a little unevenly. Above E5 the tank, tap and top thin out by C6.
+
+A held key's layer opens from the zero state over .25 s (BRAID), .7 s (HALO) or 4 ms (SPRING); the layer table
+is periodic over the 4.6 s loop. Measured (Kotlin): nearest other voice 20.5/22.5/7.3 dB (BRAID, C3/C4/C5),
+13.5/12.9/10.8 (HALO), 10.8/8.9/10.6 (SPRING); roots within 4 cents C2 to C6; soft against hard 8.4, 11.6 and
+12.5 dB of tone; held 2 to 8 kHz at C4 -36, -53 and -35.5 dB (ceiling -23.5). Desk round filament-voices-2:
+clips GA1 to GC1 play the heard round-1 notes and then the new version; GD1 is THREAD, PULSE, CURL and FRAY.

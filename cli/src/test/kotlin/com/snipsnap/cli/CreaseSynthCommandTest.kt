@@ -21,7 +21,7 @@ class CreaseSynthCommandTest {
     fun `all six approved positions render through the native CLI without changing their saved sound`() {
         val root = createTempDirectory("crease-cli-bank").toFile()
         try {
-            for (voice in Crease.KEPT_VOICES) {
+            for (voice in Crease.ORIGINAL_VOICES) {
                 val destination = File(root, voice.name)
                 val output = ByteArrayOutputStream()
                 val errors = ByteArrayOutputStream()
@@ -48,7 +48,7 @@ class CreaseSynthCommandTest {
     fun `explicit note velocity and model overrides reach every voice together`() {
         val root = createTempDirectory("crease-cli-overrides").toFile()
         try {
-            for ((index, voice) in Crease.KEPT_VOICES.withIndex()) {
+            for ((index, voice) in Crease.ORIGINAL_VOICES.withIndex()) {
                 val destination = File(root, voice.name)
                 val model = index + 1
                 val errors = ByteArrayOutputStream()

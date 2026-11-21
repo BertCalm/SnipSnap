@@ -19,7 +19,8 @@ import kotlin.test.assertTrue
  */
 class FilamentCandidateVoicesTest {
     private val M = CandidateVoiceMeasures
-    private val candidates = FilamentVoice.entries.filter { it !in Filament.KEPT_VOICES }
+    /** The four voices added in round filament-voices-1. FRAY was kept on 20 Nov 2026; BRAID, HALO and SPRING were reworked. */
+    private val candidates = FilamentVoice.entries.filter { it !in Filament.ORIGINAL_VOICES }
 
     private fun hz(midi: Int) = 440.0 * 2.0.pow((midi - 69) / 12.0)
     private fun rms(x: FloatArray, from: Double, to: Double): Double {
@@ -50,12 +51,15 @@ class FilamentCandidateVoicesTest {
     }
 
     @Test
-    fun `candidates are appended and offered nowhere`() {
+    fun `candidates are appended, FRAY is offered with its heard default and the rest are offered nowhere`() {
         assertEquals(listOf(FilamentVoice.BRAID, FilamentVoice.HALO, FilamentVoice.FRAY, FilamentVoice.SPRING), candidates)
-        assertEquals(FilamentVoice.entries.take(3), Filament.KEPT_VOICES)
-        assertTrue(FilamentPresets.all().all { it.voice in Filament.KEPT_VOICES }, "a candidate has a preset")
+        assertEquals(FilamentVoice.entries.take(3), Filament.ORIGINAL_VOICES)
+        assertEquals(FilamentVoice.entries.take(3) + FilamentVoice.FRAY, Filament.KEPT_VOICES)
+        assertTrue(FilamentPresets.all().all { it.voice in Filament.KEPT_VOICES }, "an unkept candidate has a preset")
+        val flute = FilamentPresets.forVoice(FilamentVoice.FRAY).single()
+        assertContentEquals(Filament.render(FilamentVoice.FRAY).samples, flute.render().samples, "FRAY's preset is not the heard default")
         for (voice in candidates) {
-            assertTrue(FilamentPresets.forVoice(voice).isEmpty(), "$voice has presets")
+            if (voice !in Filament.KEPT_VOICES) assertTrue(FilamentPresets.forVoice(voice).isEmpty(), "$voice has presets")
             assertEquals(Filament.macrosFor(FilamentVoice.THREAD).map { it.name }, Filament.macrosFor(voice).map { it.name })
             val saved = patch(voice).copy(macros = Filament.defaults(voice) + ("BEND" to .3f))
             assertEquals(saved, Patches.fromJsonText(saved.toJsonText()), "$voice does not survive saving")
@@ -176,7 +180,7 @@ class FilamentCandidateVoicesTest {
     fun `the kept voices render exactly what they rendered before the candidates`() {
         val lines = ArrayList<String>()
         fun note(n: KeyNote) = M.hash(n.snip.samples) + " loop " + n.loopStartFrame
-        for (voice in Filament.KEPT_VOICES) {
+        for (voice in Filament.ORIGINAL_VOICES) {
             for (midi in listOf(36, 60, 84)) for (v in listOf(.4f, 1f)) lines +=
                 "FILAMENT ${voice.name} m3 midi $midi v $v " + M.hash(Filament.render(voice, emptyMap(), midi, v).samples)
             for (model in listOf(1, 2)) lines += "FILAMENT ${voice.name} m$model " +
@@ -195,7 +199,24 @@ class FilamentCandidateVoicesTest {
         assertEquals(KEPT_RENDERS, M.hash(lines), lines.joinToString("\n"))
     }
 
+    @Test
+    fun `FRAY renders exactly what the owner heard and kept in round filament-voices-1`() {
+        val lines = ArrayList<String>()
+        fun note(n: KeyNote) = M.hash(n.snip.samples) + " loop " + n.loopStartFrame
+        val fray = FilamentVoice.FRAY
+        for (midi in listOf(36, 60, 84)) for (v in listOf(.4f, 1f)) lines += "FILAMENT FRAY m3 midi $midi v $v " + M.hash(Filament.render(fray, emptyMap(), midi, v).samples)
+        lines += "FILAMENT FRAY HOLD " + M.hash(Filament.render(fray, mapOf("HOLD" to 1f), 60, .8f).samples)
+        val frayPatch = patch(fray)
+        for (midi in listOf(48, 72)) lines += "FILAMENT key FRAY $midi " + note(FilamentKeys.layer(frayPatch.copy(midi = midi)))
+        lines += "FILAMENT touch FRAY " + FilamentTouchKeys.render(frayPatch, 60).joinToString(" ") { note(it) }
+        assertEquals(FRAY_LINES, lines.size)
+        assertEquals(FRAY_RENDERS, M.hash(lines), lines.joinToString("\n"))
+    }
+
     private companion object {
+        /** SHA-256 over FRAY's lines, from the build whose renders gave the heard clips DC1 and DC2 byte for byte. */
+        const val FRAY_RENDERS = "5bf4c9936395eb9587b967bab44f544835dc924934fd05d2ea1c8bccde7d3bb4"
+        const val FRAY_LINES = 10
         /** SHA-256 over the lines above, taken from the build before this round (c8df28195). */
         const val KEPT_RENDERS = "8ade1ac08f31e22238c9f8b264c0b2a999e61228d2c691f823a835a3e716eb78"
         const val KEPT_LINES = 49

@@ -17,7 +17,7 @@ class CreaseUserPresetsTest {
         val shelf = createTempDirectory("crease-presets").toFile()
         try {
             val patches = (1..3).flatMap { model ->
-                Crease.KEPT_VOICES.mapIndexed { index, voice ->
+                Crease.ORIGINAL_VOICES.mapIndexed { index, voice ->
                     CreasePatch("MY ${voice.name} $model", voice,
                         linkedMapOf("FOLD" to .12345679f, "HOLD" to 0f),
                         midi = 36 + index * 12, velocity = .43f, model = model)
@@ -37,7 +37,7 @@ class CreaseUserPresetsTest {
                 assertEquals(patch.macros.keys, fields.getValue("macros").obj().keys,
                     "omitted controls retain their saved model's defaults")
             }
-            for (voice in Crease.KEPT_VOICES) {
+            for (voice in Crease.ORIGINAL_VOICES) {
                 val factory = Presets.forVoice(CreasePatch.ENGINE, voice.name).first()
                 assertEquals(UserPresets.Check.Factory(UserPresets.normalize(factory.name)),
                     UserPresets.check(" ${factory.name.lowercase()} ", factory.engine, factory.voiceName, emptyList()))
@@ -77,7 +77,7 @@ class CreaseUserPresetsTest {
 
     @Test
     fun `promoted Crease Kotlin lines reconstruct exact recipes and render the saved sound`() {
-        for (model in 1..3) for (voice in Crease.KEPT_VOICES) {
+        for (model in 1..3) for (voice in Crease.ORIGINAL_VOICES) {
             val patch = CreasePatch("MY \"\$CREASE\"", voice,
                 linkedMapOf("PRESSURE" to .33333334f, "RELAX" to .05f),
                 midi = 65, velocity = .47f, model = model)

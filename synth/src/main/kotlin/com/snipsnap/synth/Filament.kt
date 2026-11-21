@@ -50,8 +50,14 @@ object Filament {
     const val CHARACTER_MODEL = 2
     const val MIN_MIDI = 36
     const val MAX_MIDI = 84
-    /** The voices players are offered. Candidates have no preset, kit or starter. */
-    val KEPT_VOICES = listOf(FilamentVoice.THREAD, FilamentVoice.PULSE, FilamentVoice.CURL)
+    /** The three voices FILAMENT was built with: the only ones with models 1 and 2 and the original source. */
+    val ORIGINAL_VOICES = listOf(FilamentVoice.THREAD, FilamentVoice.PULSE, FilamentVoice.CURL)
+    /**
+     * The voices players are offered. FRAY joined after the owner kept it in round filament-voices-1
+     * (20 Nov 2026); BRAID, HALO and SPRING were sent back as "More distinctive" and stay candidates
+     * (no preset, kit or starter) until their reworked round is heard.
+     */
+    val KEPT_VOICES = ORIGINAL_VOICES + FilamentVoice.FRAY
     private const val RATE = Dsp.RATE
     private const val HIGH_RATE = RATE * Dsp.OVERSAMPLE
 
@@ -347,7 +353,7 @@ object Filament {
             (bundle - s + 1.0).coerceIn(0.0, 1.0) * doubleArrayOf(1.0, .66, .53, .44)[s]
         }
         val strandNorm = strandWeights.sumOf { it * it }
-        val candidate = if (voice in KEPT_VOICES) null else FilamentCandidates.tables(voice)
+        val candidate = if (voice in ORIGINAL_VOICES) null else FilamentCandidates.tables(voice)
         val pathNarrow = if (model == ORIGINAL_MODEL) doubleArrayOf(.73, .15, .08, .04) else when (voice) {
             FilamentVoice.THREAD -> doubleArrayOf(.62, .20, .12, .06)
             FilamentVoice.PULSE -> doubleArrayOf(.56, .22, .14, .08)
@@ -589,9 +595,17 @@ object Filament {
 
     private class Network(plan: Plan, hz: Double, collect: Double, voice: FilamentVoice, model: Int,
                           rate: Int = HIGH_RATE, private val captureDiagnostics: Boolean = true) {
-        private val candidate = if (voice in KEPT_VOICES) null else FilamentCandidates.tables(voice)
+        private val candidate = if (voice in ORIGINAL_VOICES) null else FilamentCandidates.tables(voice)
         /** SPRING only: the through collector heard through its dispersive cascade. */
         private val spring = if (voice == FilamentVoice.SPRING) FilamentCandidates.Dispersion(hz, rate) else null
+        /** BRAID, HALO and SPRING (round filament-voices-2): the network plays under the voice's own layer. */
+        private val layered = FilamentCandidateLayers.layered(voice)
+        private val bodyMix = if (layered) FilamentCandidateLayers.bodyMix(voice) else 1.0
+        /** The layer's sample for this step, set by the renderer before each step. */
+        var layerInput = 0.0
+        /** How fast a held key's layer opens from the zero state; 1 opens it at once. */
+        var layerGateAlpha = 1.0
+        private var gate = 0.0
         private val endpoints = plan.endpoints.filter { it.power > 0.0 }.map { Tap(it, plan.retained) }
         private val leakage = plan.leakage.filter { it.power > 0.0 }.map { Tap(it, plan.escaped) }
         private val ring = DoubleArray(ceil(plan.maxDelay * rate).toInt() + 4)
@@ -664,6 +678,10 @@ object Filament {
             escaped = dc[2].next(e)
             spill = dc[3].next(.20 * e + .80 * halo)
             raw = throughMix * through + spillMix * spill
+            if (layered) {
+                gate += layerGateAlpha * (1.0 - gate)
+                raw = bodyMix * raw + gate * layerInput
+            }
             if (captureDiagnostics) maxState = max(maxState, max(abs(input), max(abs(t), max(abs(e), max(abs(halo), abs(raw))))))
         }
 
@@ -674,6 +692,7 @@ object Filament {
             for (mode in modes) { mode.state(result); maxState = max(maxState, mode.maxState) }
             for (filter in dc) { result += filter.state; maxState = max(maxState, filter.maxState) }
             spring?.state(result)
+            if (layered) result += gate
             for (v in result) maxState = max(maxState, abs(v))
             // Canonical chronological history, independent of the circular write cursor. A
             // populated periodic input must recur here too, not only in downstream filters.
@@ -807,7 +826,7 @@ object Filament {
     ): FloatArray {
         val inject = m.getValue("INJECT").toDouble()
         val hold = if (loop) 1.0 else m.getValue("HOLD").toDouble()
-        if (voice !in KEPT_VOICES) return FilamentCandidates.source(voice, inject, hold, hz, effort, velocity, frames,
+        if (voice !in ORIGINAL_VOICES) return FilamentCandidates.source(voice, inject, hold, hz, effort, velocity, frames,
             loop, carrierCycles, config, rate, heldTilt, strand) { requireActive(cancelled) }
         val recipe = when (voice) {
             FilamentVoice.THREAD -> doubleArrayOf(1.0, .66, .60, .43, .35, .28, .22, .18, .14, .11, .08, .06)
@@ -950,7 +969,7 @@ object Filament {
         require(heldTilt == 0.0 || retainOnset) { "only a held FILAMENT key tilts its source" }
         requireActive(cancelled)
         require(model in ORIGINAL_MODEL..MODEL_VERSION) { "unsupported FILAMENT model $model" }
-        require(voice in KEPT_VOICES || model == MODEL_VERSION) { "FILAMENT candidate $voice is model $MODEL_VERSION only" }
+        require(voice in ORIGINAL_VOICES || model == MODEL_VERSION) { "FILAMENT candidate $voice is model $MODEL_VERSION only" }
         require(options.referenceOversampling in listOf(4, 8)) { "FILAMENT reference oversampling must be 4 or 8" }
         require(model == MODEL_VERSION || options.referenceOversampling == Dsp.OVERSAMPLE) {
             "FILAMENT reference oversampling is a model-3 diagnostic"
@@ -963,7 +982,7 @@ object Filament {
         val highRate = RATE * oversampling
         val loop = isLoop(m.getValue("HOLD"))
         val nominalHz = 440.0 * 2.0.pow((midi - 69.0) / 12.0)
-        val span = if (model == ORIGINAL_MODEL) .42 else if (voice in KEPT_VOICES) 2.3 else FilamentCandidates.LOOP_SECONDS
+        val span = if (model == ORIGINAL_MODEL) .42 else if (voice in ORIGINAL_VOICES) 2.3 else FilamentCandidates.LOOP_SECONDS
         val cycles = max(1, (nominalHz * span).roundToInt())
         val periodFrames = if (loop) (cycles * RATE / nominalHz).roundToInt() else 0
         val hz = if (loop) cycles.toDouble() * RATE / periodFrames else nominalHz
@@ -987,7 +1006,11 @@ object Filament {
                 network.fromJunction(input, junction.through, junction.escaped)
             }
         }
+        // BRAID, HALO and SPRING only: the voice's own layer, added after the collectors.
+        var layerTable: DoubleArray? = null
         fun advanceAt(i: Int, source: FloatArray) {
+            val layer = layerTable
+            if (layer != null) network.layerInput = if (i < layer.size) layer[i] else 0.0
             val tables = strandTables
             if (strands == null || tables == null || junction == null) {
                 advance(if (i < source.size) source[i].toDouble() else 0.0)
@@ -1034,6 +1057,9 @@ object Filament {
             }
             val total = ceil((sourceSeconds + plan.maxDelay + 1.8 * plan.haloT60 + .08) * highRate).toInt()
             val capture = Cycle(total + (oversampling - total % oversampling) % oversampling, captureDiagnostics)
+            if (FilamentCandidateLayers.layered(voice)) layerTable = FilamentCandidateLayers.layer(voice,
+                m.getValue("INJECT").toDouble(), m.getValue("HOLD").toDouble(), hz, effort, velocity.toDouble(),
+                capture.raw.size, false, highRate, 0.0, config.seed, sourceSeconds) { requireActive(cancelled) }
             for (i in capture.raw.indices) {
                 if (i and 1023 == 0) requireActive(cancelled)
                 advanceAt(i, source)
@@ -1050,6 +1076,11 @@ object Filament {
             if (strands != null) strandTables = Array(4) { s ->
                 if (s == 0) source else sourceTable(voice, m, hz, effort, velocity.toDouble(), highFrames, true, cycles, model,
                     config, highRate, cancelled, heldTilt, strand = s)
+            }
+            if (FilamentCandidateLayers.layered(voice)) {
+                layerTable = FilamentCandidateLayers.layer(voice, m.getValue("INJECT").toDouble(), m.getValue("HOLD").toDouble(),
+                    hz, effort, velocity.toDouble(), highFrames, true, highRate, heldTilt, config.seed, 0.0) { requireActive(cancelled) }
+                network.layerGateAlpha = 1.0 - exp(-1.0 / (FilamentCandidateLayers.gateSeconds(voice) * highRate))
             }
             val recent = ArrayList<Cycle>()
             val onset = if (retainOnset) ArrayList<FloatArray>() else null

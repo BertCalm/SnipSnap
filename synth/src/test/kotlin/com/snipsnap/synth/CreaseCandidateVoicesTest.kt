@@ -21,7 +21,8 @@ import kotlin.test.assertTrue
  */
 class CreaseCandidateVoicesTest {
     private val M = CandidateVoiceMeasures
-    private val candidates = CreaseVoice.entries.filter { it !in Crease.KEPT_VOICES }
+    /** The four voices added in round crease-voices-1, all kept by the owner on 20 Nov 2026. */
+    private val candidates = CreaseVoice.entries.filter { it !in Crease.ORIGINAL_VOICES }
 
     private fun hz(midi: Int) = 440.0 * 2.0.pow((midi - 69) / 12.0)
     private fun rms(x: FloatArray, from: Double, to: Double): Double {
@@ -52,12 +53,17 @@ class CreaseCandidateVoicesTest {
     }
 
     @Test
-    fun `candidates are appended, model three only and offered nowhere`() {
+    fun `the kept voices are appended, model three only, offered, with one preset at the heard default`() {
         assertEquals(listOf(CreaseVoice.PLEAT, CreaseVoice.SNAP, CreaseVoice.TWOFOLD, CreaseVoice.CUP), candidates)
-        assertEquals(CreaseVoice.entries.take(3), Crease.KEPT_VOICES)
-        assertTrue(CreasePresets.all().all { it.voice in Crease.KEPT_VOICES }, "a candidate has a preset")
+        assertEquals(CreaseVoice.entries.take(3), Crease.ORIGINAL_VOICES)
+        assertEquals(CreaseVoice.entries.toList(), Crease.KEPT_VOICES)
         for (voice in candidates) {
-            assertTrue(CreasePresets.forVoice(voice).isEmpty(), "$voice has presets")
+            val preset = CreasePresets.forVoice(voice).single()
+            assertEquals(Crease.defaults(voice), preset.macros)
+            assertEquals(Crease.DEFAULT_MIDI, preset.midi)
+            assertEquals(.75f, preset.velocity)
+            // The preset is exactly the default note the owner heard (Crease.render with no settings).
+            assertContentEquals(Crease.render(voice).samples, preset.render().samples, "$voice preset is not the heard default")
             assertEquals(Crease.macrosFor(CreaseVoice.ROUND).map { it.name }, Crease.macrosFor(voice).map { it.name })
             val saved = patch(voice).copy(macros = Crease.defaults(voice) + ("FOLD" to .3f))
             assertEquals(saved, Patches.fromJsonText(saved.toJsonText()), "$voice does not survive saving")
@@ -170,7 +176,7 @@ class CreaseCandidateVoicesTest {
     fun `the kept voices render exactly what they rendered before the candidates`() {
         val lines = ArrayList<String>()
         fun note(n: KeyNote) = M.hash(n.snip.samples) + " loop " + n.loopStartFrame
-        for (voice in Crease.KEPT_VOICES) {
+        for (voice in Crease.ORIGINAL_VOICES) {
             for (midi in listOf(24, 48, 84)) for (v in listOf(.4f, 1f)) lines +=
                 "CREASE ${voice.name} m3 midi $midi v $v " + M.hash(Crease.render(voice, emptyMap(), midi, v).samples)
             lines += "CREASE ${voice.name} m2 " + M.hash(Crease.render(voice, emptyMap(), 48, .75f, model = 2).samples)
@@ -187,7 +193,23 @@ class CreaseCandidateVoicesTest {
         assertEquals(KEPT_RENDERS, M.hash(lines), lines.joinToString("\n"))
     }
 
+    @Test
+    fun `the kept voices render exactly what the owner heard in round crease-voices-1`() {
+        val lines = ArrayList<String>()
+        fun note(n: KeyNote) = M.hash(n.snip.samples) + " loop " + n.loopStartFrame
+        for (voice in candidates) {
+            for (midi in listOf(36, 48, 72, 84)) lines += "CREASE ${voice.name} midi $midi " + M.hash(Crease.render(voice, midi = midi).samples)
+            for (v in listOf(.35f, .7f, 1f)) lines += "CREASE ${voice.name} touch $v " + M.hash(Crease.render(voice, midi = 48, velocity = v).samples)
+            lines += "CREASE key ${voice.name} 60 " + note(CreaseKeys.render(patch(voice), 60))
+        }
+        assertEquals(HEARD_LINES, lines.size)
+        assertEquals(HEARD_RENDERS, M.hash(lines), lines.joinToString("\n"))
+    }
+
     private companion object {
+        /** SHA-256 over the lines above at commit time; the same renders gave the heard clips DF1 to DI2 byte for byte. */
+        const val HEARD_RENDERS = "f41545ff43cb34019771d2b2f073270ae8f40e140cde85be32bac1fffe29318d"
+        const val HEARD_LINES = 32
         /** SHA-256 over the lines above, taken from the build before this round (c8df28195). */
         const val KEPT_RENDERS = "1c77f44d70c87509fdf26710118b4575c656fc72c6be52d12c005948de64d9c0"
         const val KEPT_LINES = 46

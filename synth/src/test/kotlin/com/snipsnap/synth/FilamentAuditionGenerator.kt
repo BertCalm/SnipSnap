@@ -473,7 +473,7 @@ object FilamentAuditionGenerator {
     }
 
     private fun junctionCases(): List<Case> = buildList {
-        for (voice in Filament.KEPT_VOICES) {
+        for (voice in Filament.ORIGINAL_VOICES) {
             val controls = originalDefaults(voice) + mapOf(
                 "INJECT" to .55f, "BEND" to .60f, "LENGTH" to .60f,
                 "BUNDLE" to .65f, "COLLECT" to .48f, "HOLD" to 0f,
@@ -510,7 +510,7 @@ object FilamentAuditionGenerator {
             macros = pulse + (macro to value), config = FilamentConfig(seed = 17, profile = FilamentProfile.COIL),
             macro = macro, value = value, comparison = "junction-pulse-${macro.lowercase()}", model = Filament.MODEL_VERSION,
         ))
-        for (voice in Filament.KEPT_VOICES) {
+        for (voice in Filament.ORIGINAL_VOICES) {
             val controls = originalDefaults(voice) + ("HOLD" to 1f)
             val duplicate = presets.any { it.voice == voice && it.macros == controls && it.midi == Filament.rootMidi(voice) && it.velocity == 1f && it.config == FilamentConfig() }
             if (!duplicate) add(Case(
@@ -534,7 +534,7 @@ object FilamentAuditionGenerator {
     }
 
     private fun revision2Cases(quick: Boolean): List<Case> = buildList {
-        for (voice in Filament.KEPT_VOICES) {
+        for (voice in Filament.ORIGINAL_VOICES) {
             val controls = originalDefaults(voice) + mapOf(
                 "INJECT" to .55f, "BEND" to .60f, "LENGTH" to .60f,
                 "BUNDLE" to .65f, "COLLECT" to .48f, "HOLD" to 0f,
@@ -559,7 +559,7 @@ object FilamentAuditionGenerator {
             group = "character-presets", kind = "preset", voice = patch.voice, macros = patch.macros,
             midi = patch.midi, velocity = patch.velocity, config = patch.config, preset = patch, model = patch.model,
         ))
-        for (voice in Filament.KEPT_VOICES) {
+        for (voice in Filament.ORIGINAL_VOICES) {
             val recipe = revisedPresets.first { it.voice == voice && !Filament.isLoop(it.macros.getValue("HOLD")) }
             for ((role, midi, velocity) in listOf(Triple("low_soft", 36, .35f), Triple("upper_firm", 72, .9f))) {
                 val patch = recipe.copy(name = "${voice.name} ${if (role == "low_soft") "Low" else "High"}", midi = midi, velocity = velocity)
@@ -599,7 +599,7 @@ object FilamentAuditionGenerator {
     }
 
     private fun originalCases(quick: Boolean): List<Case> = buildList {
-        for (voice in Filament.KEPT_VOICES) add(Case(
+        for (voice in Filament.ORIGINAL_VOICES) add(Case(
             "default_${voice.name.lowercase()}", voice.name, "Dry default voice, with the uncollected source and both collected branches available as stems.",
             "intro", "defaults", voice, stems = true,
         ))
@@ -663,11 +663,11 @@ object FilamentAuditionGenerator {
             "sweep_${macro.lowercase()}_${tag(value)}", "$macro ${(value * 100).toInt()}%", "${sweepVoice.name}: only $macro changes; companion controls retain this voice's defaults. Native and raw preserve level movement, while matched playback helps compare texture.",
             "sweep-${macro.lowercase()}", "sweep", sweepVoice, originalDefaults(sweepVoice) + (macro to value), macro = macro, value = value,
         ))
-        for (rangeVoice in Filament.KEPT_VOICES) for (midi in if (quick) listOf(60) else listOf(36, 60, 84)) for (velocity in if (quick) listOf(1f) else listOf(.25f, .65f, 1f)) add(Case(
+        for (rangeVoice in Filament.ORIGINAL_VOICES) for (midi in if (quick) listOf(60) else listOf(36, 60, 84)) for (velocity in if (quick) listOf(1f) else listOf(.25f, .65f, 1f)) add(Case(
             "range_${rangeVoice.name.lowercase()}_${midi}_${tag(velocity)}", "${note(midi)} · velocity ${(velocity * 100).toInt()}%", "${rangeVoice.name} at MIDI $midi and velocity $velocity. All other settings use voice defaults; native and raw playback preserve velocity level differences.",
             "range-${rangeVoice.name.lowercase()}", "range", rangeVoice, midi = midi, velocity = velocity,
         ))
-        for (heldVoice in Filament.KEPT_VOICES) add(Case(
+        for (heldVoice in Filament.ORIGINAL_VOICES) add(Case(
             "hold_${heldVoice.name.lowercase()}", "${heldVoice.name} · HOLD", "One converged held period. Enable repeat for playback; the diagnostics include the independent preceding/current cycle PCM context and measured loop join.",
             "hold", "hold", heldVoice, originalDefaults(heldVoice) + ("HOLD" to 1f), stems = true,
         ))
@@ -815,7 +815,7 @@ object FilamentAuditionGenerator {
 
     private fun characterComparisons(clips: List<Map<String, Any?>>) = versionComparisons(clips, "character", "original", "revised")
 
-    private fun versionComparisons(clips: List<Map<String, Any?>>, prefix: String, first: String, second: String): List<Map<String, Any?>> = Filament.KEPT_VOICES.map { voice ->
+    private fun versionComparisons(clips: List<Map<String, Any?>>, prefix: String, first: String, second: String): List<Map<String, Any?>> = Filament.ORIGINAL_VOICES.map { voice ->
         fun excerpt(variant: String): Map<String, Any?> {
             val id = "${prefix}_${voice.name.lowercase()}_$variant"
             val clip = clips.first { it["id"] == id }

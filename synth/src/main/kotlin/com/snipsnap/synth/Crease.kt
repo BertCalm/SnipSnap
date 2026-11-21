@@ -5,8 +5,8 @@ import com.snipsnap.audio.DrumClass
 import kotlin.math.*
 import kotlin.random.Random
 
-/** ROUND, PINCH and RUBBER are the kept voices. The entries after them are candidates awaiting a
- * listening verdict (see [Crease.KEPT_VOICES]); they are appended so saved names and ordinals never move. */
+/** ROUND, PINCH and RUBBER are the original voices. PLEAT, SNAP, TWOFOLD and CUP were appended after them
+ * (so saved names and ordinals never move) and kept in round crease-voices-1 (see [Crease.KEPT_VOICES]). */
 enum class CreaseVoice { ROUND, PINCH, RUBBER, PLEAT, SNAP, TWOFOLD, CUP }
 enum class CreaseHistory { STATEFUL, INSTANTANEOUS }
 
@@ -56,8 +56,13 @@ data class CreaseProbe(
  */
 object Crease {
     const val MODEL_VERSION = 3
-    /** The voices players are offered. Candidates have no preset, kit or starter, and model 3 only. */
-    val KEPT_VOICES = listOf(CreaseVoice.ROUND, CreaseVoice.PINCH, CreaseVoice.RUBBER)
+    /** The three voices CREASE was built with: the only ones with models 1 and 2 and the original gesture. */
+    val ORIGINAL_VOICES = listOf(CreaseVoice.ROUND, CreaseVoice.PINCH, CreaseVoice.RUBBER)
+    /**
+     * The voices players are offered: all seven. The owner kept PLEAT, SNAP, TWOFOLD and CUP, range and
+     * touch, in round crease-voices-1 (20 Nov 2026). They are model 3 only; each has one factory preset.
+     */
+    val KEPT_VOICES = CreaseVoice.entries.toList()
     /** A candidate's held loop: long enough that its seeded drift is slow. */
     const val CANDIDATE_LOOP_SECONDS = 3.2
     const val RATE = Dsp.RATE
@@ -80,7 +85,7 @@ object Crease {
 
     fun macrosFor(voice: CreaseVoice, model: Int = MODEL_VERSION): List<MacroSpec> {
         require(model in 1..MODEL_VERSION) { "Unknown CREASE model $model" }
-        require(voice in KEPT_VOICES || model == MODEL_VERSION) { "CREASE candidate $voice is model $MODEL_VERSION only" }
+        require(voice in ORIGINAL_VOICES || model == MODEL_VERSION) { "CREASE candidate $voice is model $MODEL_VERSION only" }
         if (model == 1) return CreaseV1.macrosFor(voice)
         val values = when (voice) {
             CreaseVoice.ROUND -> floatArrayOf(.20f, .25f, .15f, .15f, .30f)
@@ -136,7 +141,7 @@ object Crease {
         history: CreaseHistory = CreaseHistory.STATEFUL, coupling: Boolean = true,
         oversample: Int = 4, normalize: Boolean = true, model: Int = MODEL_VERSION): CreaseProbe {
         require(model in 1..MODEL_VERSION) { "Unknown CREASE model $model" }
-        require(voice in KEPT_VOICES || model == MODEL_VERSION) { "CREASE candidate $voice is model $MODEL_VERSION only" }
+        require(voice in ORIGINAL_VOICES || model == MODEL_VERSION) { "CREASE candidate $voice is model $MODEL_VERSION only" }
         if (model == 1) return CreaseV1.synthesize(voice, macros, midi, velocity, history, coupling, oversample, normalize)
         require(midi in MIDI_MIN..MIDI_MAX) { "CREASE supports MIDI $MIDI_MIN..$MIDI_MAX" }
         require(oversample == 4 || oversample == 16) { "CREASE diagnostic oversample must be 4 or 16" }
@@ -420,7 +425,7 @@ object Crease {
         val loopSeconds = when (voice) { CreaseVoice.ROUND -> 1.45; CreaseVoice.PINCH -> 1.65; CreaseVoice.RUBBER -> 2.1
             else -> CANDIDATE_LOOP_SECONDS }
         /** Candidates only: the seeded slow wander of the player's pressure. */
-        val drift = if (voice in KEPT_VOICES) null else HoldDrift(Dsp.seedFor("crease-candidate-drift", voice), intArrayOf(1, 2, 3))
+        val drift = if (voice in ORIGINAL_VOICES) null else HoldDrift(Dsp.seedFor("crease-candidate-drift", voice), intArrayOf(1, 2, 3))
         private val model2Rise = .002 * 40.0.pow(sqrt(drag)) * if (voice == CreaseVoice.RUBBER) 1.5 else 1.0
         private val defaultDrag = when (voice) {
             CreaseVoice.ROUND -> .15f.toDouble(); CreaseVoice.PINCH -> .20f.toDouble(); CreaseVoice.RUBBER -> .75f.toDouble()
@@ -455,7 +460,7 @@ object Crease {
 
         fun amplitude(t: Double): Double {
             if (held) return velocity * .68
-            if (voice !in KEPT_VOICES) {
+            if (voice !in ORIGINAL_VOICES) {
                 val (sustain, decay) = when (voice) {
                     CreaseVoice.PLEAT -> .60 to .30; CreaseVoice.SNAP -> .55 to .40
                     CreaseVoice.TWOFOLD -> .55 to .25; else -> .62 to .35
@@ -490,7 +495,7 @@ object Crease {
         /** Voice phrasing is fixed for a given note/HOLD. DRAG and RELAX act on the
          * causal response, so their audible delay/unfolding is independent of this source. */
         private fun gesture(t: Double, loop: Double?): Double {
-            if (voice !in KEPT_VOICES) return candidateGesture(t, loop)
+            if (voice !in ORIGINAL_VOICES) return candidateGesture(t, loop)
             if (loop != null) {
                 val a = .5 - .5 * cos(TAU * loop)
                 return when (voice) {
@@ -759,7 +764,7 @@ object Crease {
             minDerivative = min(warpA.derivative, warpB.derivative)
             maxDerivative = max(warpA.derivative, warpB.derivative)
             maxCurvature = max(abs(warpA.curvature), abs(warpB.curvature))
-            if (shape.voice !in KEPT_VOICES) return candidateOutput(phase, s, c, amplitude)
+            if (shape.voice !in ORIGINAL_VOICES) return candidateOutput(phase, s, c, amplitude)
             // Bounded analytic RMS compensation plus fixed linear headroom. Even if both
             // maps and the root peak together, abs(raw) <= .32*(.92*3+.08)*velocity < .91.
             return .32 * amplitude * (.48 * warpA.gain * warpA.sine + .44 * warpB.gain * warpB.sine + .08 * s)

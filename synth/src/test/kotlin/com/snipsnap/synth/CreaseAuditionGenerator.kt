@@ -249,7 +249,7 @@ object CreaseAuditionGenerator {
                 preset.description, midi = preset.midi, velocity = preset.velocity, model = preset.model,
                 presetId = preset.id, name = preset.name, family = preset.family))
         }
-        for (voice in Crease.KEPT_VOICES) {
+        for (voice in Crease.ORIGINAL_VOICES) {
             val defaults = Crease.defaults(voice)
             val stem = voice.name.lowercase()
             add(Clip("voice-$stem", voice.name, "voices", voice, defaults,

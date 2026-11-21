@@ -3732,7 +3732,10 @@ fun SynthScreen(
                     else if (loadedPatch is SplayPatch) Splay.macrosFor(loadedPatch.voice, loadedPatch.model).filterNot { it.name == "HOLD" }
                     else if (loadedPatch is SkinPatch) loadedPatch.macroSpecs()
                     else if (loadedPatch is NacrePatch) NacreEditing.macrosFor(loadedPatch)
-                    else if (engine == Engine.CREASE) Crease.macrosFor(voice as CreaseVoice, creaseModel)
+                    // PLEAT, SNAP, TWOFOLD and CUP (kept 20 Nov 2026) are model 3 only, whatever model a loaded ROUND,
+                    // PINCH or RUBBER recipe carried.
+                    else if (engine == Engine.CREASE) Crease.macrosFor(voice as CreaseVoice,
+                        if (voice in Crease.ORIGINAL_VOICES) creaseModel else Crease.MODEL_VERSION)
                     else if (loadedPatch is CausticPatch) CausticInstrument.macrosFor(loadedPatch.voice, 2)
                     else if (loadedPatch is EmbouchurePatch) Embouchure.macrosFor(loadedPatch.voice, loadedPatch.model)
                     else if (loadedPatch is TrefoilPatch && loadedPatch.playback == TrefoilPlayback.HELD)
@@ -6783,6 +6786,7 @@ private enum class Engine {
         SKITTER -> SkitterVoice.entries
         TANGLE -> TangleVoice.entries
         SHOAL -> ShoalVoice.entries
+        // PLEAT, SNAP, TWOFOLD and CUP joined ROUND, PINCH and RUBBER once the owner kept round crease-voices-1 (20 Nov 2026).
         CREASE -> Crease.KEPT_VOICES
         CAUSTIC -> CausticVoice.entries
         LATTICE -> LatticeVoice.entries
@@ -6799,6 +6803,7 @@ private enum class Engine {
         // MERCURY shows the three voices the owner kept at R1's gate (2026-10-04). EDDY, VESSEL
         // and SHARD (R2c) stay in the roster and the CLI until round 7's listen, VENT's shape.
         MERCURY -> listOf(MercuryVoice.PING, MercuryVoice.SING, MercuryVoice.BLADE)
+        // FRAY joined THREAD, PULSE and CURL once the owner kept it in round filament-voices-1 (20 Nov 2026).
         FILAMENT -> Filament.KEPT_VOICES
         TIDAL -> TidalVoice.entries
         CHAMBER -> ChamberVoice.entries

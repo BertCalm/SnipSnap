@@ -26,6 +26,7 @@ class FilamentPresetsTest {
             CURL|Bend Glow|0.56,0.66,0.92,0.86,0.68,0.0|53|LATE
             CURL|Spilled Silver|0.82,0.6,0.68,0.72,0.64,0.0|29|COIL
             CURL|Held Curl|0.48,0.68,0.86,0.82,0.7,1.0|61|LATE
+            FRAY|Glass Flute|0.5,0.6,0.45,0.35,0.55,0.0|0|VOICE
         """.trimIndent().lines()
         val presets = FilamentPresets.all()
         assertEquals(expected, presets.map { patch ->
@@ -43,12 +44,17 @@ class FilamentPresetsTest {
 
     @Test
     fun `factory roster contains distinct named finite and held recipes for all three voices`() {
-        val presets = FilamentPresets.all()
-        assertEquals(12, presets.size)
-        assertEquals(listOf(FilamentVoice.THREAD, FilamentVoice.PULSE, FilamentVoice.CURL), Filament.KEPT_VOICES)
+        // The twelve original recipes come first; FRAY, kept on 20 Nov 2026, adds one at its heard default.
+        assertEquals(listOf("Glass Flute"), FilamentPresets.all().drop(12).map { it.name })
+        assertEquals(FilamentPresets.forVoice(FilamentVoice.FRAY), FilamentPresets.all().drop(12))
+        assertEquals(FilamentPatch("Glass Flute", FilamentVoice.FRAY, Filament.defaults(FilamentVoice.FRAY)), FilamentPresets.all().last())
+        assertEquals(Filament.ORIGINAL_VOICES + FilamentVoice.FRAY, Filament.KEPT_VOICES)
+        val presets = FilamentPresets.all().take(12)
+        assertTrue(presets.all { it.voice in Filament.ORIGINAL_VOICES })
+        assertEquals(listOf(FilamentVoice.THREAD, FilamentVoice.PULSE, FilamentVoice.CURL), Filament.ORIGINAL_VOICES)
         assertEquals(presets.size, presets.map { it.name }.distinct().size)
         assertEquals(presets.size, presets.map { listOf(it.voice, it.macros, it.config) }.distinct().size)
-        for (voice in Filament.KEPT_VOICES) {
+        for (voice in Filament.ORIGINAL_VOICES) {
             val group = FilamentPresets.forVoice(voice)
             assertEquals(4, group.size)
             assertEquals(presets.filter { it.voice == voice }, group)

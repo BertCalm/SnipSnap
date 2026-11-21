@@ -28,7 +28,7 @@ data class FilamentPatch(
         require(model == Filament.ORIGINAL_MODEL || model == Filament.CHARACTER_MODEL || model == Filament.MODEL_VERSION) {
             "unsupported filament model $model"
         }
-        require(voice in Filament.KEPT_VOICES || model == Filament.MODEL_VERSION) {
+        require(voice in Filament.ORIGINAL_VOICES || model == Filament.MODEL_VERSION) {
             "FILAMENT candidate $voice is model ${Filament.MODEL_VERSION} only"
         }
     }

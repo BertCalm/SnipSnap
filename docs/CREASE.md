@@ -292,3 +292,14 @@ the bar is 3.7). Soft against hard differs by 15 to 20 dB of tone, and CREASE's 
 soft note a little quieter. Held keys keep the 2 to 8 kHz band under held Ink Ribbon's ceilings (at C4: -35, -30,
 -30 and -32 dB against the root, ceiling -8.5), and their tone changes 5.7 to 16 dB across the loop.
 TWOFOLD's octave rises from 0.18 to 0.70 of the root between no pressure and full pressure.
+
+### Verdict, round crease-voices-1 (2026-11-20)
+
+**PLEAT, SNAP, TWOFOLD and CUP: KEEP**, range and soft/medium/hard, no notes. CREASE now has seven voices:
+`Crease.KEPT_VOICES` is every entry, and `Crease.ORIGINAL_VOICES` (ROUND, PINCH, RUBBER) is the set with models
+1 and 2 and the original gesture; the four kept voices are model 3 only (the app picker asks for model 3 for
+them whatever model a loaded recipe carried). Each has one factory preset, appended after the six original
+positions at the default performance the owner heard (default controls, C3, touch .75): **Vowel Fold** (PLEAT),
+**Snap Pick** (SNAP), **Octave Reed** (TWOFOLD), **Hollow Cup** (CUP). Their renders are pinned in
+`CreaseCandidateVoicesTest` from the build whose renders gave the heard clips DF1 to DI2 byte for byte. The
+CREASE starter kit keeps its six original positions; the new voices ship as presets only.

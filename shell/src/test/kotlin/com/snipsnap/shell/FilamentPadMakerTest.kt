@@ -41,7 +41,7 @@ class FilamentPadMakerTest {
     }
 
     private companion object {
-        val fixtures = Filament.KEPT_VOICES.map { voice -> Fixture(
+        val fixtures = Filament.ORIGINAL_VOICES.map { voice -> Fixture(
             FilamentPresets.forVoice(voice).first().copy(
                 name = "MY KEPT ${voice.name}", midi = 57, velocity = .61f,
                 config = FilamentConfig(seed = Int.MIN_VALUE + 7 + voice.ordinal, profile = FilamentProfile.LATE),

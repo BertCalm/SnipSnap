@@ -1588,7 +1588,8 @@ object SynthKits {
     fun crease(): List<ArrangedPad?> {
         fun arranged(patch: CreasePatch) = pad(patch, Crease.drumClassFor(patch.voice, patch.macros))
             .copy(displayName = patch.name)
-        val approved = CreasePresets.patches()
+        // The kit keeps the six original positions; voices kept later ship as presets only.
+        val approved = CreasePresets.patches().filter { it.voice in Crease.ORIGINAL_VOICES }
         val bass = approved.single { it.name == "Corner Bass" }
         val scale = PENTATONIC.take(8).mapIndexed { index, semitone ->
             arranged(bass.copy(name = "Corner Bass ${index + 1}", midi = bass.midi + semitone))
@@ -1940,7 +1941,8 @@ object SynthKits {
                 midi = thread.midi + semitone,
             ).let(::arranged)
         }
-        return notes + FilamentPresets.all().map(::arranged)
+        // The kit keeps the twelve original recipes; voices kept later ship as presets only.
+        return notes + FilamentPresets.all().filter { it.voice in Filament.ORIGINAL_VOICES }.map(::arranged)
     }
 
     /**

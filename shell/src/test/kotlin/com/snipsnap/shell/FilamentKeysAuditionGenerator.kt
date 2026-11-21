@@ -41,7 +41,7 @@ object FilamentKeysAuditionGenerator {
         val wideKeys = args.getOrNull(3)?.toBooleanStrict() ?: false
         val rangeTag = if (wideKeys) "-wide" else ""
         val touchTag = if (touchLayers) "-touch" else ""
-        val voices = if (selection == "ALL") Filament.KEPT_VOICES.toList() else listOf(FilamentVoice.valueOf(selection))
+        val voices = if (selection == "ALL") Filament.ORIGINAL_VOICES.toList() else listOf(FilamentVoice.valueOf(selection))
         val directory = if (selection == "ALL") "held" else selection.lowercase(Locale.ROOT)
         val output = File(args.firstOrNull() ?: File(repository, "testkit/filament-$directory$rangeTag$touchTag-keys").path).canonicalFile
         require(!output.exists() || output.listFiles()?.isEmpty() == true) { "Use a fresh output directory: $output" }

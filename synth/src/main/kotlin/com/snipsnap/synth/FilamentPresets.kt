@@ -1,6 +1,7 @@
 package com.snipsnap.synth
 
-/** Approved dry factory voices plus the unchanged first and second listening recipes. */
+/** Approved dry factory voices plus the unchanged first and second listening recipes. The twelve
+ * original recipes come first; voices kept later are appended after them, one recipe each. */
 object FilamentPresets {
     private fun p(
         voice: FilamentVoice,
@@ -147,6 +148,9 @@ object FilamentPresets {
         p(FilamentVoice.CURL, "Held Curl",
             "INJECT" to .48f, "BEND" to .68f, "LENGTH" to .86f, "BUNDLE" to .82f, "COLLECT" to .70f, "HOLD" to 1f,
             config = FilamentConfig(seed = 61, profile = FilamentProfile.LATE)),
+        // Kept in round filament-voices-1 (20 Nov 2026), at the default performance the owner heard:
+        // default controls, C3, full touch.
+        FilamentPatch("Glass Flute", FilamentVoice.FRAY, Filament.defaults(FilamentVoice.FRAY)),
     )
 
     /** Exact model-one starting points for before/after listening and saved-recipe replay. */

@@ -38,7 +38,7 @@ class FilamentTouchInstrumentTest {
     }
 
     private companion object {
-        val examples by lazy { Filament.KEPT_VOICES.map { voice -> Example(
+        val examples by lazy { Filament.ORIGINAL_VOICES.map { voice -> Example(
             FilamentPresets.forVoice(voice).first().copy(name = "TOUCH ${voice.name}", midi = 57, velocity = .61f,
                 config = FilamentConfig(seed = Int.MIN_VALUE + voice.ordinal + 9, profile = FilamentProfile.LATE)),
         ) } }
