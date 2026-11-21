@@ -176,7 +176,7 @@ internal object CausticSustain {
         CausticVoice.ALLOY -> 1.0; CausticVoice.TRAVELLING_CATCHES -> 0.0; else -> .5
     }).coerceIn(0.0, 1.0)
     private fun nominalHz(midi: Int) = 440.0 * 2.0.pow((midi - 69) / 12.0)
-    private fun periods(midi: Int, length: Double) = max(4, (nominalHz(midi) * (.65 + .35 * length.coerceIn(0.0, 1.0)) / 4).roundToInt() * 4)
+    internal fun periods(midi: Int, length: Double) = max(4, (nominalHz(midi) * (.65 + .35 * length.coerceIn(0.0, 1.0)) / 4).roundToInt() * 4)
 
     fun loopFrameCount(midi: Int, length: Float = 1f): Int {
         require(midi in 36..84)
@@ -906,6 +906,7 @@ internal object CausticSustain {
     /** [human] null is the still hold: every strike identical, the loop one original period long. */
     fun held(voice: CausticVoice, macros: Map<String, Float>, midi: Int, velocity: Double,
         oversample: Int = 4, cancelled: () -> Boolean = { false }, human: Human? = null): HeldRaw {
+        if (CausticCandidates.handles(voice)) return CausticCandidateHeld.held(voice, macros, midi, velocity, oversample, cancelled, human)
         stop(cancelled); val started = System.nanoTime()
         require(midi in 36..84 && velocity.isFinite() && velocity in 0.0..1.0)
         require(oversample == 4 || oversample == 16)
@@ -974,6 +975,7 @@ internal object CausticSustain {
     /** Add only the changed reception's response, preserving the exact old finite baseline. */
     fun applyMotion(voice: CausticVoice, macros: Map<String, Float>, midi: Int, velocity: Double,
         legacyInternal: FloatArray, oversample: Int = 4, cancelled: () -> Boolean = { false }): CausticSustainDiagnostics {
+        require(!CausticCandidates.handles(voice)) { "CAUSTIC $voice moves only its held strikes ([CausticCandidateHeld])" }
         stop(cancelled); val started = System.nanoTime()
         require(midi in 36..84 && velocity.isFinite() && velocity in 0.0..1.0)
         require(oversample == 4 || oversample == 16)

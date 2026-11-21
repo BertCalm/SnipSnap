@@ -18,7 +18,9 @@ import kotlin.test.assertTrue
  * The earlier voices' renders are pinned below against the build before this round.
  */
 class CausticCandidateVoicesTest {
-    private val candidates = CausticVoice.entries.filter { it !in CausticInstrument.HELD_VOICES }
+    private val candidates = CausticVoice.entries.filter { CausticInstrument.isStruckHold(it) }
+    /** The four voices heard before this round. */
+    private val earlier = CausticVoice.entries.take(4)
     private val notes = listOf(36, 48, 60, 72, 84)
 
     private fun hz(midi: Int) = 440.0 * 2.0.pow((midi - 69) / 12.0)
@@ -31,29 +33,32 @@ class CausticCandidateVoicesTest {
         CausticInstrument.render(voice, macros, midi, velocity).samples
 
     @Test
-    fun `the kept new voices are appended, offered with their heard preset and finite only`() {
+    fun `the kept new voices are appended, offered with their heard preset, and held at HOLD's top step`() {
         assertEquals(listOf(CausticVoice.BOWL, CausticVoice.SCATTER, CausticVoice.TONGUE), candidates)
         assertEquals(CausticVoice.entries, CausticInstrument.KEPT_VOICES)
-        assertEquals(CausticVoice.entries.take(4), CausticInstrument.HELD_VOICES)
+        // Since 21 Nov 2026 every voice has a held key; the newer three's repeats its own strike (CausticCandidateHeldTest).
+        assertEquals(CausticVoice.entries, CausticInstrument.HELD_VOICES)
         for (voice in candidates) {
             // One preset each: the default controls at C4, medium touch, current model: the render kept in caustic-voices-1.
             val preset = Presets.forVoice("CAUSTIC", voice.name).single()
             assertEquals(CausticPatch(preset.name, voice, CausticInstrument.defaults(voice)), preset)
             assertContentEquals(render(voice), preset.render().samples)
             assertTrue(CausticPresets.isHeardAnchor(preset.name))
-            for (model in listOf(1, 2)) assertEquals(listOf("SOURCE", "FOCUS", "BODY", "LENGTH", "HOLD"),
-                CausticInstrument.macrosFor(voice, model).map { it.name })
+            assertEquals(listOf("SOURCE", "FOCUS", "BODY", "LENGTH", "HOLD"), CausticInstrument.macrosFor(voice, 1).map { it.name })
+            assertEquals(listOf("SOURCE", "FOCUS", "BODY", "LENGTH", "MOTION", "HOLD"), CausticInstrument.macrosFor(voice, 2).map { it.name })
             val patch = CausticPatch("Candidate", voice, mapOf("SOURCE" to .3f, "HOLD" to .5f), midi = 55, velocity = .6f)
             assertEquals(patch, Patches.fromJsonText(patch.toJsonText()), "$voice does not survive saving")
-            // HOLD lengthens the finite note at every step; there is no sustained loop or MOTION yet.
-            assertFalse(CausticInstrument.isLoop(voice, mapOf("HOLD" to 1f)))
+            // Below the top step HOLD lengthens the finite note, as it did; the top step is the held loop, four periods of the still hold.
             val length = CausticInstrument.defaults(voice).getValue("LENGTH")
-            assertEquals(.5 + 7.5 * length + 4.0, CausticInstrument.durationSeconds(voice, mapOf("HOLD" to 1f)), 1e-5)
+            assertEquals(.5 + 7.5 * length + 2.0, CausticInstrument.durationSeconds(voice, mapOf("HOLD" to .5f)), 1e-5)
+            assertFalse(CausticInstrument.isLoop(voice, mapOf("HOLD" to .99f)))
+            assertTrue(CausticInstrument.isLoop(voice, mapOf("HOLD" to 1f)))
+            assertFalse(CausticInstrument.isLoop(voice, mapOf("HOLD" to 0f), model = 1))
+            assertEquals(CausticSustain.loopFrameCount(60, length) * 4 / Dsp.RATE.toDouble(),
+                CausticInstrument.durationSeconds(voice, mapOf("HOLD" to 1f)), 1e-9)
             assertEquals(DrumClass.LOOP, CausticInstrument.drumClassFor(voice, mapOf("HOLD" to 1f)))
-            assertFailsWith<IllegalArgumentException> { CausticInstrument.renderLoop(voice, mapOf("HOLD" to 1f)) }
-            assertFailsWith<IllegalArgumentException> { CausticInstrument.heldProbe(voice, mapOf("HOLD" to 1f)) }
-            assertContentEquals(render(voice, mapOf("LENGTH" to .1f, "HOLD" to 1f)),
-                CausticInstrument.keyNote(voice, mapOf("LENGTH" to .1f, "HOLD" to 1f)).snip.samples)
+            // A one-shot is one strike, over before the path moves: MOTION leaves it exactly as it was.
+            assertContentEquals(render(voice, mapOf("LENGTH" to .2f)), render(voice, mapOf("LENGTH" to .2f, "MOTION" to .7f)))
         }
     }
 
@@ -170,7 +175,7 @@ class CausticCandidateVoicesTest {
     @Test
     fun `the kept voices render exactly what they rendered before the candidates`() {
         val lines = ArrayList<String>()
-        for (voice in CausticInstrument.HELD_VOICES) {
+        for (voice in earlier) {
             for (model in listOf(1, 2)) for (midi in listOf(43, 60)) for (v in listOf(.4f, .75f)) lines +=
                 "CAUSTIC ${voice.name} model $model LENGTH .15 midi $midi v $v " +
                     CandidateVoiceProbes.hash(CausticInstrument.render(voice, mapOf("LENGTH" to .15f), midi, v, model).samples)

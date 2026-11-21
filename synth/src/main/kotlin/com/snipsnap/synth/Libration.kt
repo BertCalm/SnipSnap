@@ -16,8 +16,8 @@ object Libration {
     /** The voices players are offered: every voice, all kept by ear. */
     val KEPT_VOICES = LibrationVoice.entries.toList()
     /**
-     * The voices the cloud renderer plays. Only these have a held instrument, touch keys, keygroups and the
-     * starter kit; CHIME, STRUM, ROTOR and HOLLOW are finite notes (LibrationCandidates.kt).
+     * The voices the cloud renderer plays, and the only ones on the starter kit. CHIME, STRUM, ROTOR and HOLLOW are
+     * LibrationCandidates.kt; HOLLOW also has a held key ([LibrationKeys.HELD_VOICES]).
      */
     val CLOUD_VOICES = listOf(LibrationVoice.GATHER, LibrationVoice.TWINS, LibrationVoice.DEPARTURE)
     const val MIN_MIDI = 36

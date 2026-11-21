@@ -39,12 +39,12 @@ internal object LibrationHeld {
         val sourceJacobiDrift: Double,
     )
 
-    private data class Plan(val frames: Int, val turns: Int, val hz: Double) {
+    internal data class Plan(val frames: Int, val turns: Int, val hz: Double) {
         val blocks get() = frames / BLOCK_FRAMES
         val seconds get() = frames.toDouble() / RATE
     }
 
-    private fun plan(hz: Double): Plan =
+    internal fun plan(hz: Double): Plan =
         ((3.8 * RATE).toInt() / BLOCK_FRAMES..(4.2 * RATE).toInt() / BLOCK_FRAMES).map { blocks ->
             val frames = blocks * BLOCK_FRAMES
             val turns = (hz * frames / RATE).roundToInt()

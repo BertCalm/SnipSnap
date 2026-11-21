@@ -19,8 +19,8 @@ import kotlin.random.Random
 
 /**
  * The four heard voices, then BOWL, SCATTER and TONGUE, kept in round caustic-voices-1
- * (20 Nov 2026). They were appended so saved names and ordinals never move. The three newer
- * voices are finite only for now: [CausticInstrument.HELD_VOICES] lists those with a held key.
+ * (20 Nov 2026). They were appended so saved names and ordinals never move. Since 21 Nov 2026
+ * every voice has a held key ([CausticInstrument.HELD_VOICES]); the newer three's is [CausticCandidateHeld].
  */
 enum class CausticVoice { ALLOY, HOLLOW_MALLET, RUBBED_RING, TRAVELLING_CATCHES, BOWL, SCATTER, TONGUE }
 
@@ -84,11 +84,23 @@ object CausticInstrument {
     val KEPT_VOICES: List<CausticVoice> = CausticVoice.entries.toList()
 
     /**
-     * The voices with a held key (a sustained loop and MOTION). BOWL, SCATTER and TONGUE are
-     * finite only for now: HOLD lengthens their note, and the loop renderers refuse them.
+     * The voices with a held key (a sustained loop and MOTION): every voice since 21 Nov 2026. BOWL, SCATTER and
+     * TONGUE repeat their own strike in a varied hand ([CausticCandidateHeld]); kept by ear in round held-cl-1
+     * (KA1-KA3, 21 Nov 2026).
      */
-    val HELD_VOICES: List<CausticVoice> = listOf(CausticVoice.ALLOY, CausticVoice.HOLLOW_MALLET,
-        CausticVoice.RUBBED_RING, CausticVoice.TRAVELLING_CATCHES)
+    val HELD_VOICES: List<CausticVoice> = CausticVoice.entries.toList()
+
+    /** The voices whose held key repeats the one-shot's own strike, with a soft layer ([heldLayers]). */
+    fun isStruckHold(voice: CausticVoice): Boolean = CausticCandidates.handles(voice)
+
+    /**
+     * The soft layer's touch, as a share of the patch's own: the soft one-shot the owner kept in caustic-voices-1 was
+     * velocity .3 against the default .75 (clips CF2, CG2, CH2), and .4 of .75 is that .3.
+     */
+    const val SOFT_TOUCH_SHARE = .4f
+
+    /** The MIDI velocity windows of a struck hold's two layers, soft first. */
+    val LAYER_WINDOWS: List<IntRange> = listOf(1..63, 64..127)
 
     fun supportsModel(model: Int) = model == LEGACY_MODEL_VERSION || model == MODEL_VERSION
 
@@ -117,8 +129,6 @@ object CausticInstrument {
                 MacroSpec("BODY", .5f, .5f), MacroSpec("LENGTH", .4f, .4f), MacroSpec("HOLD", 0f, 0f),
             )
         }
-        // Candidates are finite only for now: no path MOTION, and HOLD extends the note at every step.
-        if (CausticCandidates.handles(voice)) return finite
         return if (model == LEGACY_MODEL_VERSION) finite else
             finite.dropLast(1) + MacroSpec("MOTION", 0f, 0f) + finite.last()
     }
@@ -137,7 +147,7 @@ object CausticInstrument {
         require(model != LEGACY_MODEL_VERSION || m.getValue("HOLD") == 0f) {
             "CAUSTIC model 1 HOLD is reserved; its saved finite sound remains unchanged"
         }
-        return model == MODEL_VERSION && m.getValue("HOLD") == 1f && !CausticCandidates.handles(voice)
+        return model == MODEL_VERSION && m.getValue("HOLD") == 1f
     }
 
     private fun finiteMacros(voice: CausticVoice, macros: Map<String, Float>, model: Int): Map<String, Float> {
@@ -153,7 +163,8 @@ object CausticInstrument {
     fun durationSeconds(voice: CausticVoice, macros: Map<String, Float> = emptyMap(), model: Int = MODEL_VERSION,
         midi: Int = DEFAULT_MIDI): Double =
         if (isLoop(voice, macros, model)) settled(voice, macros, model).let { m ->
-            CausticSustain.loopFrameCount(midi, m.getValue("LENGTH")) * CausticSustain.heldRepeats(m, HELD_HUMAN) / RATE.toDouble()
+            CausticSustain.loopFrameCount(midi, m.getValue("LENGTH")) * (if (CausticCandidates.handles(voice))
+                CausticSustain.HUMAN_REPEATS else CausticSustain.heldRepeats(m, HELD_HUMAN)) / RATE.toDouble()
         }
         else .5 + 7.5 * finiteMacros(voice, macros, model).getValue("LENGTH")
 
@@ -431,7 +442,6 @@ object CausticInstrument {
     /** A whole-buffer loop for ordinary sampler pads; it deliberately contains no attack prefix. */
     fun renderLoop(voice: CausticVoice, macros: Map<String, Float>, midi: Int = DEFAULT_MIDI,
         velocity: Float = .75f, model: Int = MODEL_VERSION, cancelled: () -> Boolean = { false }): Snip {
-        require(!CausticCandidates.handles(voice)) { "CAUSTIC $voice is finite only; it has no sustained loop yet" }
         return CausticHeld.probe(voice, macros, midi, velocity, model, 4, true, cancelled, record = false).loop
     }
 
@@ -449,10 +459,30 @@ object CausticInstrument {
             4, true, cancelled, record = false, human = human).note else KeyNote(render(voice, macros, midi, velocity, model))
     }
 
+    /**
+     * A struck hold's two held keys, soft first ([isStruckHold]): the soft one at [SOFT_TOUCH_SHARE] of [velocity] (the
+     * kept soft one-shot's touch: a wider, darker mallet, thumb or bead and less of the bright modes), the hard one at
+     * [velocity] itself, exactly [keyNote]. On keys the player applies velocity as gain once, so the soft key is levelled
+     * as the hard one is: the engine's own velocity^.4 level law is taken off it, and touch is timbre (as on LIBRATION's
+     * and ARCO's held keys). A guard keeps the lifted soft key under the held keys' .991 ceiling.
+     */
+    fun heldLayers(voice: CausticVoice, macros: Map<String, Float>, midi: Int = DEFAULT_MIDI,
+        velocity: Float = .75f, model: Int = MODEL_VERSION, cancelled: () -> Boolean = { false }): List<KeyNote> {
+        require(isStruckHold(voice)) { "CAUSTIC $voice holds in one layer" }
+        val held = macros + ("HOLD" to 1f)
+        val hard = keyNote(voice, held, midi, velocity, model, cancelled)
+        val softVelocity = velocity * SOFT_TOUCH_SHARE
+        val soft = keyNote(voice, held, midi, softVelocity, model, cancelled)
+        val lift = if (softVelocity > 0f) (velocity / softVelocity).pow(.4f) else 1f
+        val peak = soft.snip.samples.maxOfOrNull { abs(it) * lift } ?: 0f
+        val gain = if (peak > .991f) .991f / peak * lift else lift
+        val samples = FloatArray(soft.snip.samples.size) { soft.snip.samples[it] * gain }
+        return listOf(KeyNote(Snip(samples, 1, RATE), soft.loopStartFrame), hard)
+    }
+
     fun heldProbe(voice: CausticVoice, macros: Map<String, Float>, midi: Int = DEFAULT_MIDI,
         velocity: Float = .75f, model: Int = MODEL_VERSION, oversample: Int = 4,
         normalize: Boolean = true, cancelled: () -> Boolean = { false }): CausticHeldProbe {
-        require(!CausticCandidates.handles(voice)) { "CAUSTIC $voice is finite only; it has no sustained loop yet" }
         return CausticHeld.probe(voice, macros, midi, velocity, model, oversample, normalize, cancelled)
     }
 
@@ -528,7 +558,8 @@ object CausticInstrument {
             }
         }
         val motionStarted = System.nanoTime()
-        val motion = if (model == MODEL_VERSION && (m["MOTION"] ?: 0f) > 0f) {
+        // A one-shot of BOWL, SCATTER or TONGUE is one strike, over before the path moves: MOTION moves its held strikes.
+        val motion = if (model == MODEL_VERSION && (m["MOTION"] ?: 0f) > 0f && !CausticCandidates.handles(voice)) {
             CausticSustain.applyMotion(voice, m, midi, vel, audio.internal, oversample)
         } else null
         val motionNanos = if (motion == null) 0L else System.nanoTime() - motionStarted

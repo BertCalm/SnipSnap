@@ -46,7 +46,7 @@ internal object CausticCandidates {
     /** Seconds of audible time per vessel radius of path length at LENGTH 1. */
     private const val SCATTER_SECONDS_PER_RADIUS = 3.4
     /** A contact of one millisecond's area pushes this hard; shorter contacts keep the same area. */
-    private const val FORCE = 4_000.0
+    internal const val FORCE = 4_000.0
 
     /** A bowl partial: both members share a ratio and are split by [beatHz] at middle C. */
     private class BowlMode(val ratio: Double, val diameters: Int, val gain: Double, val t60: Double,
@@ -77,8 +77,8 @@ internal object CausticCandidates {
         voice == CausticVoice.BOWL || voice == CausticVoice.SCATTER || voice == CausticVoice.TONGUE
 
     /** One contact: a time in seconds and one signed amplitude per mode. */
-    private class Contact(val seconds: Double, val amplitudes: DoubleArray)
-    private class Body(val frequencies: DoubleArray, val t60: DoubleArray, val gains: DoubleArray)
+    internal class Contact(val seconds: Double, val amplitudes: DoubleArray)
+    internal class Body(val frequencies: DoubleArray, val t60: DoubleArray, val gains: DoubleArray)
 
     private fun loss(ratio: Double, pickup: Int) = 1.0 / (1.0 + (ratio * (.035 + .085 * pickup / 8.0)).pow(1.6))
 
@@ -88,15 +88,16 @@ internal object CausticCandidates {
         else .25 + .75 * cos(PI * (.30 + .20 * (mode % 4)) * (y + .15 * sin(mode.toDouble())))
     }
 
-    fun render(voice: CausticVoice, m: Map<String, Float>, midi: Int, velocity: Double,
-        frames: Int, oversample: Int, geometry: CausticGeometry.Prepared): CausticCharacters.Audio {
-        stopIfUnwanted()
-        require(handles(voice))
-        require(oversample == 4 || oversample == 16)
-        require(frames >= 0 && velocity.isFinite() && velocity in 0.0..1.0)
-        val rate = Dsp.RATE * oversample
-        val outputFrames = frames * oversample
-        val hz = 440.0 * 2.0.pow((midi - 69) / 12.0)
+    /**
+     * What one strike plays: the body, every contact of the strike (time and per-mode amplitude) and the contact width.
+     * [hz] is the played pitch; [geometry] the reflected paths of BOWL and TONGUE; SCATTER builds its own coarse fan
+     * from [source] and [focus]. The finite note is one such strike; a held key repeats it ([CausticCandidateHeld]).
+     */
+    internal class Strike(val body: Body, val contacts: List<Contact>, val width: Double)
+
+    internal fun strike(voice: CausticVoice, m: Map<String, Float>, hz: Double, velocity: Double,
+        geometry: CausticGeometry.Prepared, source: Double = m.getValue("SOURCE").toDouble(),
+        focus: Double = m.getValue("FOCUS").toDouble()): Strike {
         val deviation = 2.0 * m.getValue("BODY") - 1.0
         val lengthScale = (.5 + 7.5 * m.getValue("LENGTH")) / 8.0
         val body: Body
@@ -143,8 +144,7 @@ internal object CausticCandidates {
                 body = body(scatterModes, hz, lengthScale * 2.0.pow(.25 * deviation))
                 // Small hard contacts, a tenth of a period or less.
                 width = (.10 - .04 * velocity) / hz * 2.0.pow(-.6 * deviation)
-                val fan = CausticGeometry.prepare(m.getValue("SOURCE").toDouble(), m.getValue("FOCUS").toDouble(),
-                    SCATTER_RAYS, SCATTER_APERTURE).paths.ifEmpty { geometry.paths }
+                val fan = CausticGeometry.prepare(source, focus, SCATTER_RAYS, SCATTER_APERTURE).paths.ifEmpty { geometry.paths }
                 val first = fan.minOfOrNull { it.delayR } ?: 0.0
                 contacts = fan.map { path ->
                     Contact((path.delayR - first) * SCATTER_SECONDS_PER_RADIUS * lengthScale,
@@ -164,6 +164,22 @@ internal object CausticCandidates {
                 }
             }
         }
+        return Strike(body, contacts, width)
+    }
+
+    fun render(voice: CausticVoice, m: Map<String, Float>, midi: Int, velocity: Double,
+        frames: Int, oversample: Int, geometry: CausticGeometry.Prepared): CausticCharacters.Audio {
+        stopIfUnwanted()
+        require(handles(voice))
+        require(oversample == 4 || oversample == 16)
+        require(frames >= 0 && velocity.isFinite() && velocity in 0.0..1.0)
+        val rate = Dsp.RATE * oversample
+        val outputFrames = frames * oversample
+        val hz = 440.0 * 2.0.pow((midi - 69) / 12.0)
+        val planned = strike(voice, m, hz, velocity, geometry)
+        val body = planned.body
+        val contacts = planned.contacts
+        val width = planned.width
         if (velocity == 0.0 || outputFrames == 0) return CausticCharacters.Audio(FloatArray(outputFrames), body.frequencies)
         val effort = velocity.pow(.9)
         val out = DoubleArray(outputFrames)
