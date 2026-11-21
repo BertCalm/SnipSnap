@@ -52,7 +52,8 @@
     "lookahead_ms": 3.0,
     "release_ms": 50.0,
     "ceiling_dbfs": -1.0
-   }
+   },
+   "live": "per kit: input trim -> saturation tanh(g x)/tanh(g), g = 10^(saturation_db/20), null for none -> the compressor and limiter above, makeup x limiter drive (glue_recipe.py)"
   }
  },
  "kits": [
@@ -302,7 +303,16 @@
      },
      "extra": {}
     }
-   ]
+   ],
+   "glue": {
+    "input_trim_db": 0.79,
+    "saturation_db": 2.7,
+    "threshold_dbfs": -10.0,
+    "ratio": 4.0,
+    "makeup_db": 0.0,
+    "limiter_drive_db": 7.13,
+    "ceiling_dbfs": -1.0
+   }
   },
   {
    "id": "borough-cellar",
@@ -550,7 +560,16 @@
      },
      "extra": {}
     }
-   ]
+   ],
+   "glue": {
+    "input_trim_db": -1.29,
+    "saturation_db": 0.0,
+    "threshold_dbfs": -10.0,
+    "ratio": 4.0,
+    "makeup_db": 0.0,
+    "limiter_drive_db": 7.67,
+    "ceiling_dbfs": -1.0
+   }
   },
   {
    "id": "borough-cranked",
@@ -798,7 +817,16 @@
      },
      "extra": {}
     }
-   ]
+   ],
+   "glue": {
+    "input_trim_db": -1.81,
+    "saturation_db": 6.0,
+    "threshold_dbfs": -10.0,
+    "ratio": 4.0,
+    "makeup_db": 0.0,
+    "limiter_drive_db": 7.0,
+    "ceiling_dbfs": -1.0
+   }
   },
   {
    "id": "borough-wax",
@@ -1046,7 +1074,16 @@
      },
      "extra": {}
     }
-   ]
+   ],
+   "glue": {
+    "input_trim_db": 0.63,
+    "saturation_db": 6.0,
+    "threshold_dbfs": -10.0,
+    "ratio": 4.0,
+    "makeup_db": 0.0,
+    "limiter_drive_db": 7.0,
+    "ceiling_dbfs": -1.0
+   }
   },
   {
    "id": "borough-dry",
@@ -1294,7 +1331,16 @@
      },
      "extra": {}
     }
-   ]
+   ],
+   "glue": {
+    "input_trim_db": -2.67,
+    "saturation_db": 6.0,
+    "threshold_dbfs": -10.0,
+    "ratio": 4.0,
+    "makeup_db": 0.0,
+    "limiter_drive_db": 7.0,
+    "ceiling_dbfs": -1.0
+   }
   },
   {
    "id": "borough-rims",
@@ -1542,7 +1588,16 @@
      },
      "extra": {}
     }
-   ]
+   ],
+   "glue": {
+    "input_trim_db": -2.37,
+    "saturation_db": null,
+    "threshold_dbfs": -10.0,
+    "ratio": 4.0,
+    "makeup_db": 0.0,
+    "limiter_drive_db": 7.0,
+    "ceiling_dbfs": -1.0
+   }
   }
  ],
  "stacks": [
