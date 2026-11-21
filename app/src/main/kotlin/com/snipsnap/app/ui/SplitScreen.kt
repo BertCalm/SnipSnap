@@ -798,7 +798,7 @@ private fun Fader(
             )
             val knobY = bottom - span * (level / Layers.MAX_LEVEL)
             drawRect(
-                color = if (enabled) scheme.amber.tape else scheme.ink3.tape,
+                color = if (enabled) scheme.amber.tape else scheme.lcdInk2,
                 topLeft = Offset(size.width * 0.15f, knobY - 5f),
                 size = Size(size.width * 0.7f, 10f),
             )

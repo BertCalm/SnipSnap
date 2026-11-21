@@ -434,9 +434,10 @@ class ContrastTest {
         "ui/DeletedKitsSection.kt" to 3,
         "ui/DeletedSnipsSection.kt" to 3,
         "ui/DoublesScreen.kt" to 2,
+        "ui/ChopScreen.kt" to 1, // the cut marks on CHOP's LCD waveform (S-10)
         "ui/ExportScreen.kt" to 1,
         "ui/Frame.kt" to 8,
-        "ui/GrainFieldScreen.kt" to 1,
+        "ui/GrainFieldScreen.kt" to 4, // + the lit dots and both cursor rings on the field's LCD (S-10)
         "ui/GrooveScreen.kt" to 8,
         "ui/GroupBox.kt" to 1,
         "ui/KeysScreen.kt" to 1,
@@ -445,7 +446,7 @@ class ContrastTest {
         "ui/KitsScreen.kt" to 7,
         "ui/MakeScreen.kt" to 1,
         "ui/MurmurRoundRobinKeysScreen.kt" to 1,
-        "ui/OrbitScreen.kt" to 2,
+        "ui/OrbitScreen.kt" to 3, // + the marked-hit edge on the ring's LCD strip (S-10)
         "ui/PadCaptureScreen.kt" to 2,
         "ui/PatternPicker.kt" to 1,
         "ui/PlayScreen.kt" to 1,
@@ -459,7 +460,7 @@ class ContrastTest {
         "ui/SurfaceScreen.kt" to 2,
         "ui/SynthScreen.kt" to 10,
         "ui/TakesBinScreen.kt" to 8,
-        "ui/TapeScreen.kt" to 1,
+        "ui/TapeScreen.kt" to 2, // + the selection wash on the deck's LCD (S-10)
         "ui/XRayScreen.kt" to 3,
     )
 

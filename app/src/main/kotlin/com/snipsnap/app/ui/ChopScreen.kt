@@ -1404,7 +1404,7 @@ private fun SourceStrip(source: Snip, cuts: List<Int>, scheme: Scheme) {
         }
         for (cut in cuts) {
             val x = (cut.toFloat() / source.frameCount * size.width).coerceIn(0f, size.width - 1f)
-            drawRect(color = scheme.accent.tape, topLeft = Offset(x, 0f), size = Size(2.dp.toPx(), h))
+            drawRect(color = scheme.amber.tape, topLeft = Offset(x, 0f), size = Size(2.dp.toPx(), h))
         }
     }
 }
