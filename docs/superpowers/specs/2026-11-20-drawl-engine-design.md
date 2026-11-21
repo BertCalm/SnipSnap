@@ -1,9 +1,10 @@
 # DRAWL Engine: Engineering Specification
 
 Version 0.1 · 2026-11-20
-Status: round 2 built. The owner kept all six voices of the Python prototype after rounds 0b to 0d
-(§18) and then the native Kotlin engine (round 1, pinned). Round 2 adds STRUM and deals the takes
-through ROBIN; its strums and later takes await a listen (As built). No acceptance gate is passed yet.
+Status: round 3 built. The owner kept all six voices of the Python prototype after rounds 0b to 0d
+(§18), then the native Kotlin engine (round 1) and its strums and takes (round 2), all pinned. Round 3
+files the factory bank and puts the DRAWL and DRAWL TAKES starters on the shelf; the kits await a
+listen (As built). HOLD is finite, the owner's decision (§10).
 Repository truth: read at `7fd194f1`. APIs grepped: `Strings.Loop` and `Strings.Loop.retune`
 (`Strings.kt:529`, `:675`), `Strings.tune` (`:101`), `Strings.pluckExciter` (`:366`), `Strings.pickup`
 (`:401`), `Strings.bodyRing` (`:1321`), `Restrike.canRestrike` (`Restrike.kt:35`), `OsteriaStrum`
@@ -254,6 +255,10 @@ seamless loop would be the wrong instrument for CONE, BOTTLE, FLATTOP and GUT. S
 exception worth asking about: a swelled steel chord is a pad, and a loop cut from the held middle (the
 BORE strategy, seam measured against a real preceding cycle) is possible. That is the owner's call at
 the round-3 gate; until then it is refused and the test says so.
+
+**Decided (21 Nov 2026, round 3).** Asked whether STEEL and LAP should sustain while a pad is held, the
+owner answered "All sound good" to the recommendation to let every voice ring out: HOLD stays finite on
+all six voices, `Drawl.isLoop` is false for every HOLD, and no loop is cut.
 
 ## 11. Render budget
 
@@ -506,3 +511,37 @@ is held back before the pedal goes down); strums keep length and class, round-tr
 chord without the played note or a sweep past 240 ms; `fromChord`'s octave moves; ROBIN's dealing.
 Locally: `DrawlTest`, `DrawlNativePinsTest`, `RestrikeTest`, `PresetsTest`, `PatchesTest` and the DRAWL
 determinism canary pass; the full suite runs this session's container out of memory, so CI holds it.
+
+### Round 3: factory bank, DRAWL and DRAWL TAKES (21 Nov 2026)
+
+The owner heard the round-2 page (each voice's strum down and up and takes 3 and 4, beside the
+prototype) and answered "All sound good": the strums and takes are kept, and HOLD stays finite (§10).
+
+- **Pins.** `native-round2-v1.sha256` holds those 24 renders (`DrawlNativePins.round2Cases`); every
+  one's WAV matched the round-2 page's clips byte for byte before it was pinned.
+- **Factory bank.** `DrawlPresets` leaves `PatchTypes.PROTOTYPES` and files 18 presets in `Presets`:
+  per voice its default note, its long slide with full vibrato (SLIDE 1, WAVER 1) and its strum (the
+  heard chord, `DrawlPresets.STRUMS`, DOWN). Each is a render the owner kept, which `DrawlTest` proves
+  by hash against the round-1 and round-2 pins. The names were shortened to the 14 characters a pad
+  and a user preset show (RESO TWANG, BOTTLENECK, LAP STEEL, PEDAL STEEL, FLAT-TOP, WESTERN NYLON, and
+  each voice's SLIDE and STRUM); the trademark blocklist holds.
+- **DRAWL** (`drawl`, the plucks shelf): sixteen dry finite pads in D major pentatonic, the key every
+  voice's root sits in. A01 to A08 walk RESO TWANG from D3 to F#4 by TUNE; A09 to A12 are BOTTLENECK,
+  LAP STEEL, PEDAL STEEL and WESTERN NYLON; A13 and A14 LAP SLIDE and PEDAL SLIDE; A15 and A16 FLAT-TOP
+  STRUM (open D, the I chord) and RESO STRUM (open A, the V). Pads A09 to A16 and RESO A3 are heard
+  presets, hash for hash; the other seven scale notes are rendered, not heard. Every pad carries its
+  recipe and regenerates its WAV; all file as LOOP (over 1.5 s), a duration class, never a wrap.
+- **DRAWL TAKES** (`drawl-takes`, right after it): the same pads with three touches (soft .3, medium
+  .75, hard 1) of all four engine takes, the takes ROBIN deals, as ACCORD TAKES' grid. Each pad's medium
+  first take is its DRAWL pad, sample for sample; 34 of its renders are pinned heard ones. Within a
+  touch no two takes are the same strike, and a harder pick is louder at the sound's one gain. The kit
+  is 546 s of audio (72 MB of PCM24), under ACCORD TAKES.
+- **Save, playback, export.** `DrawlStarterTest`: both starters save and reload unchanged, pass
+  preflight, and play through `PadHit.resolve`. DRAWL's pads regenerate from their recipes and export
+  their PCM to MPC 3 and MPC 2. DRAWL TAKES' resolver picks the touch for the velocity and deals the four
+  takes in order, cycling; MPC 3 carries every take (`TriadKitProof`), and MPC 2 plays each touch's first
+  take with the export screen's note, the recorded format limit.
+
+`DrawlKitsTest` covers the kits' contents and pins. Locally: `DrawlTest`, `DrawlNativePinsTest`,
+`DrawlKitsTest`, `PresetsTest`, `PatchesTest`, `PadRecipeTest`, `DrawlStarterTest`, `StarterShelfTest`,
+`SynthRootTest` and `StarterKitsTest`'s stable-IDs test pass; CI holds the full suite.

@@ -1285,29 +1285,30 @@ Nothing here is a completion claim. A passing `ConsortTest` and an audition page
 
 
 
-## DRAWL (round 2, 2026-11-21: native voices kept by ear and pinned; STRUM and ROBIN built)
+## DRAWL (round 3, 2026-11-21: voices, strums and takes kept by ear and pinned; factory bank, DRAWL and DRAWL TAKES on the shelf)
 
 A bar-stopped string whose pitch path is the performance: resonator guitar, electric slide, lap steel,
 pedal steel, country flat-top and western nylon. Design, every listen and every measured number:
 [the DRAWL spec](superpowers/specs/2026-11-20-drawl-engine-design.md). The owner kept all six voices of the
 Python prototype on 21 Nov 2026 after four rounds of notes, then the native Kotlin engine ("Sound great,
-proceed"); its 30 heard renders are pinned (`DrawlNativePinsTest`). Round 2's strums and takes 2 and 3 await a listen.
+proceed"), then its strums and takes 2 and 3 ("All sound good"). The 54 heard renders are pinned
+(`DrawlNativePinsTest`). The DRAWL and DRAWL TAKES kits await a listen.
 
 | Gate | Current evidence | Status |
 |---|---|---|
 | Six melodic voices | CONE, BOTTLE, LAP, STEEL, FLATTOP, GUT: kept by ear as the Python prototype (round 0d) and as the native engine (round 1), pinned. | Pass, kept by ear |
-| Presets | `DrawlPresets`: two kept recipes per voice, held out of the factory roster (`PatchTypes.PROTOTYPES`). | Open: a factory bank (round 3) |
+| Presets | `DrawlPresets`: 18 in the factory roster, per voice its default note, long slide and strum, each a kept native render by hash (`DrawlTest`). | Pass, kept by ear |
 | Playable keygroups | None. | Open (round 4) |
-| Premade kit | None. | Open (round 3) |
+| Premade kit | DRAWL (`drawl`): sixteen finite pads in D major pentatonic, every voice, each with its recipe; saves, reloads, regenerates and exports to MPC 3 and MPC 2 (`DrawlKitsTest`, `DrawlStarterTest`). Nine pads are heard presets; seven resonator scale notes are not. | Pass in software; kit listen open |
 | Chord-tool compatibility | `DrawlStrum.fromChord` takes a `ChordStabs.Stab`'s voicing; every chord tone sounds (`DrawlTest`). No run over every chord-tool voicing or on keys yet. | Open (round 4) |
-| Appropriate HOLD | Finite: HOLD lengthens the note to 8 s and never loops (the HALOBAR and ACCORD policy). A swell loop for STEEL and LAP is the owner's decision at round 3. | Open: the owner's decision |
-| STRUM | Built on every voice (bar chord slides as one, STEEL's pedals, fretted unslid), saved with the patch; heard in Python (round 0), native not heard. | Pass in software; listen open |
+| Appropriate HOLD | Finite on every voice: HOLD lengthens the note to 8 s and never loops. The owner kept this for STEEL and LAP too ("All sound good", round 3). | Pass, the owner's decision |
+| STRUM | Built on every voice (bar chord slides as one, STEEL's pedals, fretted unslid), saved with the patch; each voice's strum down and up kept by ear natively (round 2) and pinned. | Pass, kept by ear |
 | Percussion, drums | Not applicable: a melodic string engine. | Not applicable |
 | Velocity: rendering | A harder pick is louder and has a brighter level-matched onset on all six voices (`DrawlTest`), at one gain per sound; soft and hard kept by ear natively (round 1) and pinned. | Pass, kept by ear |
-| Velocity: saving, playback, export | `DrawlPatch` saves velocity; no pad, kit or export path yet. | Open |
-| Round robin | Four distinct in-tune takes per voice; take 1 kept by ear natively and pinned; `Restrike` deals them (ROBIN). Takes 2 and 3 not heard natively; no pad pool save/load, playback or export evidence yet. | Open (round 3) |
+| Velocity: saving, playback, export | DRAWL TAKES carries soft, medium and hard zones (0 to 41, 42 to 84, 85 to 127) on every pad through save, reload, the pad resolver and MPC 3 and MPC 2 export, read back from the files (`DrawlStarterTest`). `DrawlPatch` saves its velocity. No keys yet. | Pass for pads in software; listen open |
+| Round robin | Four distinct in-tune takes per voice, takes 1 to 3 kept by ear natively and pinned; ROBIN deals them (`Restrike`). DRAWL TAKES deals all four per touch; the resolver cycles them in order, MPC 3 carries every take; MPC 2 keeps each touch's first take with the export screen's note (the recorded format limit). | Pass for pads in software; listen open |
 | Picker | No entry. | Open (round 4) |
-| Hardware | Not attempted. | Open |
+| Hardware | Not attempted: no phone or MPC has loaded either kit. | Open |
 
 Nothing here is a completion claim.
 ## KERF synthetic chops (rounds 1 to 4, sound approved, hardware confirmed: complete)

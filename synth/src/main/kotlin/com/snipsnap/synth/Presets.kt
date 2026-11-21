@@ -57,6 +57,7 @@ object Presets {
             AccordPresets.forVoice(v)
         }
         OtisPatch.ENGINE -> OtisVoice.entries.firstOrNull { it.name == voice }?.let(OtisPresets::forVoice) ?: emptyList()
+        DrawlPatch.ENGINE -> DrawlVoice.entries.firstOrNull { it.name == voice }?.let(DrawlPresets::forVoice) ?: emptyList()
         LorentzPatch.ENGINE -> {
             val v = LorentzVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
             LorentzPresets.forVoice(v)
@@ -396,6 +397,7 @@ object Presets {
         OtisPresets.all() +
         LorentzPresets.all() +
         AccordPresets.all() +
+        DrawlPresets.all() +
         TrefoilPresets.all() + TidalPresets.all() + ApsisPresets.all() + LatticePresets.all() + NacrePresets.all() +
         ThumpPresets.all() + OnsetPresets.all() + TinesPresets.all() + PluckPresets.all() + VelvetPresets.all() +
             FathomPresets.all() + TonewheelPresets.all() + VoxPresets.all() + SkinPresets.all() + MeridianPresets.all() +

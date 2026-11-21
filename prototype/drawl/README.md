@@ -30,7 +30,9 @@ python3 prototype/drawl/build_page.py OUT OUT/compare.json [AB_DIR]        # OUT
   `round0b_*.json`, `round0c_*.json` and `round0d_*.json` (report, compare, character): the numbers the spec quotes.
 - `compare_kotlin.py` (round 1): the native Kotlin engine beside the heard prototype, clip for clip
   (`./gradlew :synth:generateDrawlAudition -PdrawlOutput=DIR` renders the Kotlin side);
-  `build_native_page.py` builds the round-1 listening page from both. Numbers: `round1_compare_kotlin.json`.
+  `build_native_page.py` builds the round-1 and round-2 listening pages from both (pass 2 for round 2). Numbers: `round1_compare_kotlin.json`.
+- `build_kit_page.py` (round 3): the DRAWL and DRAWL TAKES starters' page from the same Kotlin audition folder
+  (its `kit/`, `kit-takes/` and `kit.json`): each pad, and short performances laid from the pad renders.
 - `NOTICE.txt`: the fifteen reference loops by sha256. Their audio is commercial and is not here.
 
 Needs numpy, scipy, numba (the string loop), ffmpeg (the page's audio) and the Luthier `snipkit.py`

@@ -18,6 +18,8 @@ import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
@@ -224,24 +226,49 @@ class DrawlTest {
     }
 
     @Test
-    fun `the provisional recipes are the kept ones, distinct, plainly named and held out of the factory roster`() {
+    fun `the factory bank is each voice's heard default, long slide and strum, distinct and plainly named`() {
         val all = DrawlPresets.all()
+        assertEquals(18, all.size)
         for (voice in DrawlVoice.entries) {
-            val mine = DrawlPresets.forVoice(voice)
-            assertTrue(mine.size == 2 && mine.all { it.voice == voice }, "$voice has ${mine.size} recipes")
-            assertEquals(Drawl.defaults(voice), mine[0].macros, "$voice's first recipe is its kept default")
+            val (note, slide, strum) = DrawlPresets.forVoice(voice)
+            assertTrue(listOf(note, slide, strum).all { it.voice == voice && it.velocity == Drawl.DEFAULT_VELOCITY && it.take == 0 })
+            assertEquals(Drawl.defaults(voice), note.macros, "$voice's first preset is its kept default")
+            assertNull(note.strum)
+            assertEquals(Drawl.defaults(voice) + mapOf("SLIDE" to 1f, "WAVER" to 1f), slide.macros, "$voice's long slide")
+            assertEquals(Drawl.defaults(voice), strum.macros)
+            assertEquals(DrawlPresets.STRUMS.getValue(voice), strum.strum, "$voice's heard chord")
+            assertEquals(DrawlStrum.Direction.DOWN, strum.strum!!.direction)
         }
-        assertEquals(all.size, all.map { it.name }.toSet().size, "recipe names repeat")
-        assertEquals(all.size, all.map { it.copy(name = "same") }.toSet().size, "two recipes are the same sound")
+        assertEquals(all.size, all.map { it.name }.toSet().size, "preset names repeat")
+        assertEquals(all.size, all.map { it.copy(name = "same") }.toSet().size, "two presets are the same sound")
         for (p in all) {
+            assertTrue(p.name.isNotBlank() && p.name.length <= 14 && p.name == p.name.uppercase(), "${p.name}: a plain pad name")
             assertTrue(!PresetTestSupport.trademarkBlocklist.containsMatchIn(p.name), "${p.name} is on the blocklist")
             assertEquals(Drawl.defaults(p.voice).keys, p.macros.keys, "${p.name} does not carry every macro")
             assertEquals(p, Patches.fromJsonText(p.toJsonText()))
         }
-        assertTrue(Presets.all().none { it.engine == DrawlPatch.ENGINE }, "DRAWL is a prototype: nothing in the factory roster")
+        // The roster serves the bank and nothing else of DRAWL.
+        assertFalse(DrawlPatch.ENGINE in PatchTypes.PROTOTYPES || DrawlPatch.ENGINE in PatchTypes.ROSTERLESS)
+        assertEquals(all, Presets.all().filterIsInstance<DrawlPatch>())
+        for (voice in DrawlVoice.entries) assertEquals(DrawlPresets.forVoice(voice), Presets.forVoice(DrawlPatch.ENGINE, voice.name))
+        assertTrue(Presets.forVoice(DrawlPatch.ENGINE, "UNKNOWN").isEmpty())
         for (name in listOf("Dobro slide", "GIBSON STEEL", "Rickenbacker lap", "Sho-Bud cry", "Emmons push", "National Reso"))
             assertTrue(PresetTestSupport.trademarkBlocklist.containsMatchIn(name), "$name passes the blocklist")
         assertTrue(!PresetTestSupport.trademarkBlocklist.containsMatchIn("NATIONAL ANTHEM"), "plain English is refused")
+    }
+
+    @Test
+    fun `every factory preset is a render the owner heard and kept`() {
+        val pins = DrawlNativePins.pinned()
+        for (voice in DrawlVoice.entries) {
+            val v = voice.name.lowercase()
+            for ((preset, id) in DrawlPresets.forVoice(voice).zip(listOf("$v-mid", "$v-slide1-waver1", "$v-strum-down"))) {
+                val snip = preset.render()
+                val (frames, sha) = pins.getValue(id)
+                assertEquals(frames, snip.frameCount, "${preset.name} frames")
+                assertEquals(sha, DrawlNativePins.sha(snip.samples), "${preset.name} is the heard $id")
+            }
+        }
     }
 
     /** The level of one frequency over a stretch of the render (a Hann-windowed single-bin transform), in dB. */

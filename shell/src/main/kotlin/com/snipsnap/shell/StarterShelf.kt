@@ -33,6 +33,7 @@ object StarterShelf {
             listOf(
                 "ohm", "tidal", "nacre", "overlap", "trio", "trefoil",
                 "lattice", "scanned-chain", "spool", "shoal",
+                com.snipsnap.synth.DrawlKits.ID, com.snipsnap.synth.DrawlKits.TAKES_ID,
             ),
         ),
         Group(

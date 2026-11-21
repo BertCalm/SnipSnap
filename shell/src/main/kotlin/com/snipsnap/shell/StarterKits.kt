@@ -1315,6 +1315,19 @@ object StarterKits {
             seeded = false,
             key = KeySpec.parse("Cminpent"),
         ) { com.snipsnap.synth.AccordRoundRobinKits.build() },
+        // DRAWL's starter and its takes, appended after ACCORD TAKES.
+        Starter(
+            com.snipsnap.synth.DrawlKits.ID, "DRAWL",
+            "Resonator, bottleneck, lap and pedal steel, flat-top and nylon. Sixteen finite slides, notes and strums in D.",
+            seeded = false,
+            key = KeySpec.parse(com.snipsnap.synth.DrawlKits.KEY),
+        ) { com.snipsnap.synth.DrawlKits.arranged() },
+        Starter(
+            com.snipsnap.synth.DrawlKits.TAKES_ID, "DRAWL TAKES",
+            "The sixteen DRAWL pads with soft, medium and hard picking and four takes on each: a repeated note is another pass of the player.",
+            seeded = false,
+            key = KeySpec.parse(com.snipsnap.synth.DrawlKits.KEY),
+        ) { com.snipsnap.synth.DrawlKits.takesArranged() },
     )
 
     fun byId(id: String): Starter? = ALL.firstOrNull { it.id == id }
