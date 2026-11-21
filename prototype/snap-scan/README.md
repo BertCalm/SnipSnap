@@ -10,6 +10,8 @@ These are not Kotlin tests. Every number they print is labelled "Python harness"
 | `calib.py` | Library: timbre distance in third-octave bands over the first 400 ms, plus `snd` (SCAN render) and `today` (today's render). |
 | `calib2.py` | Full calibration over a folder of images. It writes `calib_report.json` next to itself. |
 | `listen.py` | Renders a listening set (today, SCAN, round-robin take 2, full SCAN) for four photos. |
+| `distinct.py` | Round 0b: stacks every layer (L0 today to L5 colour layers) and measures how far apart different photos land, in timbre and in loudness shape, with pitch held. It writes `distinct_report.json`. |
+| `listen2.py` | Round 0b listening set: today against L4, plus a round-robin take, for six photos at their own pitch. |
 | `calib_report.json` | The owner's calibration result: 100 uploads, 99 unique, 69 camera photos, 30 screenshots. |
 
 The owner's photos are **not** in the repository and must never be added. Only derived numbers

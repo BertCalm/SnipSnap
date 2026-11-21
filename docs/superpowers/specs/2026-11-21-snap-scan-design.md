@@ -72,6 +72,37 @@ Timbre distance for the owner's set is energy per third-octave band, frame by fr
 treat that column as indicative. Some photos from the phone's camera carry a burned-in black frame
 with printed shot data; their count was not measured.
 
+### 2.3 Round 0b: making photos more distinct from each other
+
+The owner asked for photos to sound more distinct. §2.2 held all four knobs fixed, so it measured
+the read alone. `prototype/snap-scan/distinct.py` turns every layer on, one at a time, across all 99
+images (300 random pairs). TUNE is held at the centre so pitch cannot inflate the result. Timbre is
+third-octave dB rms and shape is loudness-contour dB rms, both over the first 600 ms. Each step
+includes everything above it.
+
+| Step | Different photos: timbre | Different photos: shape | Round-robin takes: timbre / shape | Centroid 10/50/90% (Hz) | Pitch held |
+|---|---|---|---|---|---|
+| L0 today's read and knobs | 8.12 | 8.43 | 0.18 / 1.36 | 297 / 449 / 737 | 100% |
+| L1 + SCAN (spec law) | 8.32 | 8.68 | 0.60 / 1.39 | 304 / 450 / 743 | 100% |
+| L2 + rank-mapped knobs (§6.3) | 11.20 | 10.61 | 0.64 / 1.38 | 278 / 434 / 891 | 100% |
+| L3 + PORTRAIT, including envelope families | 11.72 | 13.06 | 1.40 / 1.72 | 311 / 482 / 1002 | 100% |
+| L4 + spectral contrast (§6.4) | **12.25** | **13.29** | 1.42 / 1.70 | 308 / 540 / 1018 | 100% |
+| L5 + colour layers (R, G, B lines detuned) | 12.00 | 14.04 | 1.34 / 1.65 | 308 / 474 / 1030 | 100% |
+
+What it says:
+
+- **Rank mapping is the largest single lever.** Timbre distance rises 35%, from 8.3 to 11.2. Today's
+  linear stretches waste most of each knob's range.
+- **Envelope families make the shape differ.** Shape distance rises from 10.6 to 13.1 when the light's
+  position picks between a strike and a swell, and symmetry sets a hold.
+- **Spectral contrast adds a little timbre distance (+0.5 dB) and brightness** (median centroid 482 to 540 Hz) with no pitch loss.
+- **Colour layers are rejected.** They lower timbre distance, because three layers average toward a
+  common sound, and they buy only shape distance that the envelope families already give.
+- **SCAN barely moves this metric.** It compares two photos frame by frame; SCAN's value is the
+  movement inside one note, which this metric does not reward. SCAN stays for the gesture.
+- **Total, today to L4:** timbre distance +51% (8.12 to 12.25), shape distance +58% (8.43 to 13.29).
+  Pitch holds for every image, and round-robin takes stay small next to different photos.
+
 ## 3. Sibling check
 
 | Engine | What it does | What it cannot do |
@@ -139,9 +170,9 @@ fresh reads only. A DRAWN line has no strips, so `macrosFor(DRAWN)` keeps today'
 | Reading | How it is measured | Sound quantity | Why this pairing |
 |---|---|---|---|
 | 16 strip cycles | each horizontal strip column-averaged, `Snap.resample`, through `PhotoField.cellTable`'s soft swing | the scanned wavetable | the photo's own geometry becomes motion |
-| Light direction | mean luma of the top third minus the bottom third | scan direction and envelope: a bright top strikes then darkens; a bright bottom swells | the scan already travels top to bottom |
+| Light direction | mean luma of the top third minus the bottom third | scan direction and the envelope family: attack from 3 ms (bright sky, a strike) up to 35% of the note (bright ground, a swell), on the rank | the scan already travels top to bottom; measured +2.5 dB shape distance (§2.3) |
 | Warmth | mean of red minus blue | a fixed tilt: warm rounds the top, cool adds air | matches how warm and cool sound is described |
-| Symmetry | mirror correlation of luma, left against right | slow pitch drift depth: symmetric is steady, lopsided drifts a few cents | balance becomes stability |
+| Symmetry | mirror correlation of luma, left against right | slow pitch drift depth (lopsided drifts up to 8 cents) and a sustain hold of up to 25% of the note (symmetric holds) | balance becomes stability |
 | Clipping | share of pixels at ≤ 2 or ≥ 253 of 255 | raises GRIT's floor (camera photos only, see §8) | a clipped photo clips |
 | Grain | Immerkær noise estimate on luma | breath-noise layer level | a grainy photo sounds grainy |
 | Second colour (round 3) | 3-colour clustering of a 64 × 48 copy | a quiet second voice at an octave, fifth or fourth | colour pairs become intervals |
@@ -169,6 +200,21 @@ larger set exists):
 Bias disclosed: one owner, one phone, many indoor and pet photos. A second set would move these
 values; the table is versioned on the patch (`portraitVersion`) so a recalibration never changes a
 saved pad.
+
+### 6.4 Spectral contrast (added in round 0b)
+
+Every natural photo's line shares a roughly 1/f harmonic slope (§2.1), and that shared slope is
+what makes photos sound alike. At read time, each strip cycle gets this treatment:
+
+1. Fit the slope of log magnitude against log harmonic over harmonics 1 to 64.
+2. Subtract the fit. What remains, the photo's own peaks and holes, is scaled by `amount`.
+3. Lay a chosen slope back underneath, so the result is never white noise.
+4. Roll the top octave off above harmonic 96, and keep the photo's own phases.
+
+`amount` runs from 1.0 to 2.5 on the detail rank: busier photos get more contrast. `slope` runs from
+−1.6 to −0.7 on the luminance rank: darker photos get a darker slope. Both are shape values, stored
+with the strips; the render pays nothing. Measured in §2.3: +0.5 dB timbre distance and a brighter
+median centroid, with pitch held on every image.
 
 ## 7. FINGERPRINT
 
@@ -248,9 +294,9 @@ different photos (§2.2). Follow the existing ACCORD path (`AccordRoundRobinKits
 ## 12. Ledger
 
 - **Verified (grep at `c68e4c17c`):** every API in the header; SNAP is rosterless; the camera path returns no file and no EXIF; `validateMacros` accepts missing keys.
-- **Measured (Python harness):** §2 in full; the harness is `prototype/snap-scan/`.
-- **Proposed:** every pairing in §6.2 and §7, the SCAN law, the default 0.6, the fingerprint ranges, the render budget, the border crop.
-- **Heard:** nothing yet. The round-0 listening set (four photos × today, SCAN, take 2, full SCAN) went to the owner on 2026-11-21.
+- **Measured (Python harness):** §2 in full, including round 0b (§2.3); the harness is `prototype/snap-scan/`.
+- **Proposed:** every pairing in §6.2 and §7, the spectral-contrast ranges in §6.4, the SCAN law, the default 0.6, the fingerprint ranges, the render budget, the border crop.
+- **Heard:** nothing yet. Two listening sets went to the owner on 2026-11-21: round 0 (four photos × today, SCAN, take 2, full SCAN) and round 0b (six photos × today, the L4 build, its take 2, each at the photo's own hue pitch).
 
 ## 13. Why it is built this way
 
