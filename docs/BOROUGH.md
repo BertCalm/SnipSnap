@@ -5,7 +5,9 @@ generate them in the app. The Kotlin port (`Borough.kt`, `BoroughKits.kt`) is bu
 prototype (see "Round 3: Kotlin port"), and the six kits are on the shelf with their default stacks. Round 3.1
 (2026-11-21): the stacks sit at their kit's level with shorter tails, and each kit carries the live glue the owner
 picked, which the app's native bus plays when the kit loads (see "Round 3.1: the live glue"). The owner heard the
-app's own pads through the native glue and said "Ready" (2026-11-21). Next: the stack picker. No phone or MPC yet.
+app's own pads through the native glue and said "Ready" (2026-11-21). Round 3.2 (2026-11-21): the PERC STACK picker
+on an open kit's KIT screen re-renders A13-A16 with another stack and leaves A01-A12 alone (see "Round 3.2: the stack
+picker"); built and tested in software, its screen proved only by CI. No phone or MPC yet.
 Repository read: `afb0fa98` (2026-11-18); round 3 from `1b1d2d65b`.
 
 The characteristic gesture is **heavy swept kick → papery snare crack with late wires → dark, driven recording chain → a perc stack riding on top**.
@@ -288,9 +290,76 @@ none applies the glue. An SFZ round trip comes back with no glue (`BoroughKitTes
 own sidecar kit.json beside its samples, that sidecar is a copy of the kit, so the field travels in it for a later
 SnipSnap import. No MPC reads it.
 
-**Not done:** the stack picker. Nothing has been heard from the native glue. No phone or MPC has played it, and the
+**Not done:** the stack picker (built in round 3.2, below). Nothing has been heard from the native glue. No phone or MPC has played it, and the
 app's `GlueSettingsTest` and `:app:assembleDebug` need an Android SDK this session does not have. Both are for CI's
 android-build job; the mapping and its test ran here once, compiled under `:shell`'s test source set.
+
+### Round 3.2: the stack picker (built; nothing heard on a phone)
+
+The owner's decisions (2026-11-21): an open BOROUGH kit offers HANDS, TAMBOURINE, BELLS and TOPS, the current one
+selected. Another one re-renders only A13-A16, with `BoroughKits.stackPads(kit, stack)` for the kit they sit in (a
+stack's level and tails follow its kit, round 3.1). A01-A12 never move. If the player has changed any of A13-A16, the
+app asks first; untouched stack pads swap straight away. The glue and the rest of kit.json stay as they are.
+
+**What was built.**
+
+- **`BoroughStackSwap`** (`:shell`). `held(kit)` reads which BOROUGH kit and stack a kit holds from its pads'
+  `source` (engine BOROUGH, `kit`, `slot`, `kitVersion`, and `stack` on a stack pad). `KitAssembler` writes these
+  and kit.json keeps them through save and reload. The kit is the one most of A01-A16's BOROUGH pads name. The
+  stack is the one the BOROUGH stack pads still on A13-A16 name, when they agree. If they name more than one, no
+  stack is selected. `swap(kitDir, stack, replaceChanges)` refuses a kit with no BOROUGH pads on bank A. It does
+  nothing for the stack the kit already holds. If A13-A16 were changed, it writes nothing and names the changed
+  slots, and the app asks before calling it again with `replaceChanges`.
+- **The writing.** The new stack goes through `KitAssembler` into a temporary folder. That is the writer the
+  starter uses: three velocity zones of three takes each, one chain WAV per pad. `KitBuilderModel.adoptAssembled`
+  then copies each WAV into the kit folder under a name nothing else uses and saves kit.json. VERSIONS keeps the kit
+  as it was. Only after that save do the replaced files go to the trash (THE BIN, 30 days), as any replaced pad's do.
+  No old stack WAV is left in the kit folder, and rolling back the swap in VERSIONS brings the old stack back byte
+  for byte. A failure before the save takes back the copied files and leaves kit.json as it was.
+- **App.** A PERC STACK row on the KIT screen, above KIT TOOLS, drawn only for a BOROUGH kit (`PercStackRow.kt`). It
+  has four segments, two by two, because TAMBOURINE does not fit a quarter of a phone's width in the label font. The
+  stack the kit holds is selected. A tap runs the swap off the main thread under the kit write lock, with the dock's
+  busy line "Swapping in HANDS…". If pads were changed, a dialog asks "Replace your changes on A13–A16?" and names
+  them, for example "A14 changed. What is there now goes in the trash, and VERSIONS rolls the kit back.", with CANCEL
+  and REPLACE. A swap that lands updates the open kit, and the pads engine reloads the bank from it as after any
+  kit edit. The dock then says "HANDS on A13–A16. The drums didn't move."
+
+**What counts as changed.** A stack pad is untouched when it is exactly what a swap to its stack would write today.
+Its kit.json entry must equal, field for field, the pad `KitAssembler` makes from `stackPads` for that kit. That
+covers name, class, colour, level, pan, tune, choke, one-shot, shape, the chain with its zones and takes, recipe and
+provenance; only the file's name may differ. Its WAV must hold the same PCM, within `KitBuilderModel.RENDER_MATCH`
+(1e-3, the app's existing "a re-render and the file on disk are the same sound"). Deciding this renders the stack the
+kit holds, which takes about a second here. A slot whose provenance already says it is not that stack's pad is
+changed without rendering. The tests count each of these as changed: a new sample, a level, pan or tune change, a
+shape (decay), a cleared pad, a pad moved off the slot, a WAV rewritten outside the app under the same name, and a
+pad printed by another `kitVersion`. A kit-wide setting (key, tempo) or an edit to a drum pad leaves A13-A16
+untouched.
+
+**What it cannot tell.**
+
+- It cannot see a change kept somewhere other than kit.json and the WAV (live kit effects, for instance). Those do
+  not change the pads.
+- It errs towards asking. A stack pad from an older `BoroughKits.VERSION`, or one a later build renders differently
+  without bumping the version, reads as changed: there is no way to tell that from an edit. The cost is one
+  unneeded question, never a lost edit.
+- Tapping the selected stack does nothing, even if one of its pads was changed. To restore a changed stack, pick
+  another and then pick it back.
+- VERSIONS rolls kit.json and the old files back, but it does not take the swapped-in WAVs out of the folder. That is
+  how a VERSIONS rollback treats any replaced pad today; it is not specific to this picker.
+
+**Velocity and round robin.** The swapped pads are written by the same assembler and chain as the starter's, and
+`BoroughStackSwapTest` checks them on STOOP DUST for each of the other three stacks. The PCM equals
+`stackPads(STOOP, stack)` take for take (`TriadKitProof`). The pads keep their provenance after reloading. The pad
+resolver picks zones 1-41, 42-84 and 85-127 and deals the three takes in order. The MPC 3 track reads back its zones,
+slices and cycles, and its samples match byte for byte. A01-A12 stay byte-identical in kit.json and on disk, the glue
+and every other kit field are kept, and the next swap goes straight away. The refusals write nothing: a kit with no
+BOROUGH pads, the stack already there, and changed pads not yet confirmed.
+
+**Not verified here.** `:app` does not compile in this session (no Android SDK). The row, the dialog and the App
+wiring are proved only by CI's android-build, and by `PercStackRowTest` on CI's emulator. That test checks the row is
+drawn only for a BOROUGH kit, that a swap lands, and that changed pads are asked about first, with CANCEL leaving the
+kit alone and REPLACE swapping. No new mapping in `:app` needed a host unit test: the choices, the labels and the
+lines are `:shell`'s and tested there. Nobody has heard a swapped stack on a phone, and no MPC has loaded one.
 
 ## Round 2: designed boom-bap drums in all six kits
 
@@ -668,8 +737,8 @@ Listening page (private until shared): https://claude.ai/artifact/6y32yHPUszWK58
 |---|---|
 | Drums: multiple distinct genre kits on the shelf | round 3: six kits on the shelf, generated in Kotlin from the accepted round-2 recipes; the Kotlin render not yet heard |
 | Percussion: authored roll/riser where appropriate | a finite SNARE ROLL (EMBER's press roll) on A12 of every kit (`BoroughKitsTest`) |
-| Velocity levels through render, save, playback, export | pass in software (round 3): three timbral zones in Kotlin, through save, the pad resolver, SFZ and MPC 3 (`BoroughKitTest`, `:shell:generateBoroughKits`); MPC 2 keeps the layers |
-| Round robin through render, save, playback, export | pass in software (round 3): three distinct takes per zone, dealt in order through save, playback, SFZ and MPC 3; MPC 2 keeps each zone's first take (format limit). No phone or MPC has played them |
+| Velocity levels through render, save, playback, export | pass in software (round 3): three timbral zones in Kotlin, through save, the pad resolver, SFZ and MPC 3 (`BoroughKitTest`, `:shell:generateBoroughKits`); MPC 2 keeps the layers. Round 3.2: a stack swapped in by the picker keeps its zones through save, reload, the resolver and MPC 3 (`BoroughStackSwapTest`) |
+| Round robin through render, save, playback, export | pass in software (round 3): three distinct takes per zone, dealt in order through save, playback, SFZ and MPC 3; MPC 2 keeps each zone's first take (format limit). Round 3.2: the same for a swapped stack, through save, the resolver and MPC 3. No phone or MPC has played them |
 | Melodic, keygroups, chords, HOLD, STRUM | not applicable: finite drum and percussion one-shots |
 
 ## Next round
@@ -732,6 +801,9 @@ Listening page (private until shared): https://claude.ai/artifact/6y32yHPUszWK58
   - round 3.1, as built (the app's own pads through the native glue, beside the picks, level-matched; RIDE AND
     RIMS with its ride ringing and no saturation): "Ready" (2026-11-21). Accepted. Next: the stack picker.
   Heard as better is not accepted for the shelf: no kit has been approved yet.
+- **Round 3.2, the stack picker (built, not heard):** `BoroughStackSwap` and the KIT screen's PERC STACK row. The
+  swap, the changed-pad rule and the refusals are tested on the JVM (`BoroughStackSwapTest`). The row and its confirm
+  are tested only on CI (`PercStackRowTest`, android-build). Nobody has swapped a stack on a phone.
 - **Round 3.1, the live glue (measured, not heard):** the native bus matches `model()` to -148 dB on every kit's demo
   groove (`glue_native.py`, with `model()`'s reflect edge removed); the live calibration is +3.0 dB (a default pad's
   level). Nobody has listened to the native glue, on any device.
