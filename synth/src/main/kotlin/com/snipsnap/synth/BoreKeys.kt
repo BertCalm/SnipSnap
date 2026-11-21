@@ -36,7 +36,7 @@ import kotlin.math.sqrt
  * where that is done (near 0.3 s, not 1.8 s), the loop after it the same loop turned. The join above is the loop's, so its
  * guards still hold.
  *
- * Two BREATH layers per zone ([layerBreaths]): the patch's own BREATH as the hard layer, and [SOFT_BREATH_SHARE] of it as
+ * Two BREATH layers per zone ([layerBreaths]): the patch's own BREATH as the hard layer, and [softShare] of it as
  * the soft one. BREATH is mapped onto each voice's measured speaking window (`Bore.reedPressure`, `Bore.flutePressure`), so
  * BREATH 0 is the softest note that speaks and a soft layer can never be air: RESIN's held-pad decision 2, "a soft layer
  * that does not speak is a hole". The host applies the key's velocity as gain, once (the BELLOWS rule), so both layers are
@@ -72,8 +72,19 @@ object BoreKeys {
     /** The two layers' BREATH, soft first, for a patch with [macros] (an absent or non-finite BREATH is the default). */
     fun layerBreaths(voice: BoreVoice, macros: Map<String, Float>): List<Float> {
         val hard = Bore.settled(macros, voice).getValue("BREATH")
-        return listOf(hard * SOFT_BREATH_SHARE, hard)
+        return listOf(hard * softShare(voice), hard)
     }
+
+    /**
+     * The soft layer's share of BREATH for a candidate (HOLLOW, SHAWM, SHAKU, PANPIPE, VESSEL): the soft note the owner heard and kept
+     * (round touch-ab-1, 20 Nov 2026), whose BREATH was 0.3 of the way from [SOFT_BREATH_SHARE] to the whole of it, 0.615. A soft key
+     * is then that note's breath, darkened and slowed as that note was ([BoreCandidates.heldTouched]): not a breath gentler than
+     * anything heard. FLUTE's and SAX's soft layers stay at [SOFT_BREATH_SHARE], as heard and kept on their held keys.
+     */
+    val CANDIDATE_SOFT_BREATH_SHARE: Float = Dsp.lin(0.3f, SOFT_BREATH_SHARE, 1f)
+
+    /** The soft layer's share of BREATH for [voice]: [CANDIDATE_SOFT_BREATH_SHARE] on a candidate, [SOFT_BREATH_SHARE] otherwise. */
+    fun softShare(voice: BoreVoice): Float = if (BoreCandidates.of(voice) != null) CANDIDATE_SOFT_BREATH_SHARE else SOFT_BREATH_SHARE
 
     /** One zone's two layers at [midi], soft first, each its attack then its loop ([padLayer]), each start shaped by [hit]. */
     fun pad(
@@ -116,7 +127,12 @@ object BoreKeys {
         checkCancelled(cancelled, name)
         // With a player on the note the loop is four seconds, not two, and the player's movements are fitted to that ([Bore.heldLoopSeconds]).
         val loopSeconds = Bore.heldLoopSeconds(human)
-        val x = Bore.heldNote(voice, m, human, loopSeconds, opening)
+        val note = Bore.heldNote(voice, m, human, loopSeconds, opening)
+        // A candidate blown softer than its default BREATH is darker and slower to speak on a held key too ([BoreCandidates.heldTouched]);
+        // its level is the player's velocity. A kept voice is not touched.
+        val x = if (BoreCandidates.of(voice) != null) {
+            BoreCandidates.heldTouched(note, Bore.tunedHz(voice, Bore.frequencyFor(voice, m.getValue("TUNE"))), breath)
+        } else note
         checkCancelled(cancelled, name)
         return cutHeld(x, Bore.heldUsableEnd(x, m, loopSeconds), name, loopSeconds, human)
     }

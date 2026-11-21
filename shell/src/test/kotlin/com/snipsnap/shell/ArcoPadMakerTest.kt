@@ -50,9 +50,9 @@ class ArcoPadMakerTest {
         assertEquals(listOf(62, 65, 68, 71, 74, 77, 80, 81), ArcoPadMaker.zoneMidis(spec))
         assertEquals(listOf(50, 53, 56, 59, 62, 65, 68, 71, 74), ArcoPadMaker.zoneMidis(ArcoPadMaker.Spec(ArcoPatch("S", ArcoVoice.SARANGI, Arco.defaults(ArcoVoice.SARANGI)))))
         for (preset in ArcoPresets.all()) assertEquals(preset.voice in ArcoPadMaker.VOICES, ArcoPadMaker.supports(preset), preset.name)
-        // The four voices kept on 2026-11-20 are offered as one-shots and LOOPs, not yet on held keys.
-        assertEquals(Arco.KEPT_VOICES.take(3).toSet(), ArcoPadMaker.VOICES)
-        for (voice in Arco.KEPT_VOICES.drop(3)) assertFalse(ArcoPadMaker.supports(ArcoPatch("N", voice, Arco.defaults(voice))), "$voice is offered held")
+        // Every kept voice is offered held, the four kept on 2026-11-20 included (since 2026-11-21).
+        assertEquals(Arco.KEPT_VOICES.toSet(), ArcoPadMaker.VOICES)
+        for (voice in Arco.KEPT_VOICES) assertTrue(ArcoPadMaker.supports(ArcoPatch("N", voice, Arco.defaults(voice))), "$voice is not offered held")
     }
 
     /**
