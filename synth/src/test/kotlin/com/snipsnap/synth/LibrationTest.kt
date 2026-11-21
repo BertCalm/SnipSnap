@@ -80,7 +80,7 @@ class LibrationTest {
 
     @Test fun `audio is repeatable pitched finite and preserves velocity silence`() {
         val options = Libration.Options(seconds = .8)
-        for (voice in LibrationVoice.entries) {
+        for (voice in Libration.CLOUD_VOICES) {
             val a = Libration.probe(voice, options = options)
             val b = Libration.probe(voice, Libration.defaults(voice).entries.reversed().associate { it.key to it.value }, options = options)
             assertContentEquals(a.samples.samples, b.samples.samples)

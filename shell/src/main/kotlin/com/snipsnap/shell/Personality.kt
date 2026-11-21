@@ -189,6 +189,15 @@ object Copy {
     /** The dock's play chip, tapped on BEAT with no notes in the beat: it would start a clock over nothing, so it says so instead of staying silent. */
     const val NOTHING_TO_PLAY = "Nothing to play yet. Record or tap steps in."
     /**
+     * BEAT, and the dock's play chip, over a kit whose `groove.json` will not
+     * parse (UAT 2026-11 user states, D-1). BEAT used to crash on every open of
+     * such a kit, and the dock said "PLAY failed. Try again.", which no retry
+     * could satisfy. Nothing offers to start the beat over: that would write a
+     * new file over the old one, and a damaged file may still be recoverable.
+     * The pads are untouched, so PADS ▸ is the way on, as for [BEAT_NEEDS_PADS].
+     */
+    const val BEAT_WONT_READ = "This kit's beat file won't read and may be damaged, but its pads still play on PADS."
+    /**
      * PROJECT with no project open: the page has nothing to show, so it
      * says so once and sends the user to the shelf, where a project is
      * opened or started. Replaces the tab era's two empties (a switcher
@@ -307,6 +316,14 @@ object Copy {
     const val NO_TAPE_YET_ARMED = "Listening, and SNIP keeps what it's heard, up to 60s."
 
     /**
+     * The empty LIBRARY while the first LISTEN is running (UAT 2026-11 user states, D-7). It
+     * kept saying [EMPTY_SHELF] beside CATCH YOUR FIRST SOUND, a button already pressed, and only
+     * the dock said it was listening. This names the next step where the user is looking: make
+     * the sound, then SNIP, which is the dock's, below.
+     */
+    const val EMPTY_SHELF_LISTENING = "Listening, so make a sound and then tap SNIP below."
+
+    /**
      * The first SNIP of a cold shelf, landed: App has made the project, the
      * kit and A01 for it, and PADS is up with that pad selected and lit. Said
      * after [SNIPPED], so the dock keeps SNIPPED's CUT door beside it.
@@ -314,6 +331,13 @@ object Copy {
     const val FIRST_CATCH_LANDED = "Your first sound is on A01. Tap it."
     /** The Bubble's drag-to-hot-zone stop — harmless, distinct from a delete or a reset. */
     const val BUBBLE_EJECTED = "Stopped. What it heard is kept."
+    /**
+     * [SESSION_ARMED] when Android's notification permission was refused (UAT 2026-11 user
+     * states, S-5). The session runs, but the notification that carries its SNIP is not shown,
+     * so from another app the bubble is the only way to SNIP; [BUBBLE_WHY] and its ALLOW are
+     * drawn below while it is not allowed. Two dock lines at most.
+     */
+    const val SESSION_ARMED_NO_NOTIFICATIONS = "Listening. Notifications are off, so SNIP from other apps needs the bubble."
     /**
      * The line over the Bubble's door while TAPE is rolling and Android has not yet let
      * SnipSnap draw over other apps. It says what the Bubble is (a small ring that rides over
@@ -371,6 +395,20 @@ object Copy {
      * captured. Say that it stopped, and say what gets it back.
      */
     const val TAPE_STOPPED_ITSELF = "Listening stopped on its own. Nothing since was kept. Press LISTEN again."
+
+    /**
+     * The correction to [SESSION_ARMED] when the mic never started (UAT 2026-11
+     * user states, S-1). The dock says "Listening." the moment LISTEN is
+     * granted, before the service has opened the mic; when another app holds
+     * it or the platform refuses the `AudioRecord`, the service gives up and
+     * this replaces that line. Nothing was ever kept, unlike
+     * [TAPE_STOPPED_ITSELF], so it does not say "since". Another app holding
+     * the mic is the cause a user can act on, so it is the one named.
+     */
+    const val MIC_WONT_START = "The mic wouldn't start, so nothing is being kept. Close any app using the mic and press LISTEN again."
+
+    /** [MIC_WONT_START]'s twin for [APP_AUDIO_ARMED]: the projection or the playback-capture stream was refused after consent. */
+    const val APP_AUDIO_WONT_START = "APP AUDIO wouldn't start, so nothing is being kept. Press APP AUDIO again."
 
     /**
      * A MIC session has read nothing but exact digital silence for a long
@@ -2430,6 +2468,21 @@ object Copy {
      */
     fun kitDeleted(name: String): String = "$name is out of the LIBRARY. ${Reversal.MIND}"
     const val KIT_DELETE_BUSY = "Deleting…"
+    /** The kit DELETE confirm, for a kit no project uses. */
+    const val KIT_DELETE_CONFIRM = "Delete this kit? It waits in deleted kits for 30 days."
+
+    /**
+     * The kit DELETE confirm, naming the projects that use the kit (UAT 2026-11 user states,
+     * D-2): deleting a project's only kit left the project with nothing on its grid, and the
+     * confirm said only that the kit would wait in the trash. Two names at most, then a count,
+     * so the dialog's three lines hold any shelf.
+     */
+    fun kitDeleteConfirm(usedBy: List<String>): String {
+        if (usedBy.isEmpty()) return KIT_DELETE_CONFIRM
+        val names = if (usedBy.size <= 2) usedBy.joinToString(" and ") else "${usedBy[0]}, ${usedBy[1]} and ${usedBy.size - 2} more"
+        val verb = if (usedBy.size == 1) "uses it and loses it" else "use it and lose it"
+        return "$KIT_DELETE_CONFIRM $names $verb until it is restored."
+    }
     const val KIT_DELETE_FAILED = "Delete failed. The kit may already be gone."
     /** RENAME on a shelf kit; [name] is what it actually landed under — a collision may have freshened it. */
     fun kitRenamed(name: String): String = "Renamed to $name."

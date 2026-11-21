@@ -112,6 +112,8 @@ fun KitsScreen(
     /** The projects on the shelf, most recently edited first (`ShelfModel.projects`). */
     projects: List<ShelfModel.ProjectRow>,
     onOpenProject: (ShelfModel.ProjectRow) -> Unit,
+    /** A capture session is listening (`MicSessionService.armed`): the empty panel names the next step (D-7). */
+    listening: Boolean = false,
     /** The open project's folder name, so its row can say it is the one open; null while none is. */
     openProjectName: String? = null,
     /** NEW PROJECT ▸: an empty project, opened. */
@@ -513,12 +515,17 @@ fun KitsScreen(
                 } else {
                     Box(Modifier.fillMaxWidth().weight(1f).lcdPanel(scheme))
                 }
-            } else if (kits.isEmpty() && rooms.isEmpty() && binnedRooms.isEmpty()) {
+            } else if (kits.isEmpty() && rooms.isEmpty() && binnedRooms.isEmpty() && (projects.isEmpty() || picking)) {
                 // The cold shelf's two ways in live in the panel (startsInPanel);
-                // mid-hand-off, or with projects but no kits, the footer below
-                // still carries them. See [EmptyShelfPanel].
+                // mid-hand-off the footer below still carries them. See
+                // [EmptyShelfPanel]. Projects with no kit left on the shelf draw
+                // the list, not this panel (UAT 2026-11 user states, D-2): a
+                // project whose only kit was deleted used to vanish behind
+                // "Nothing recorded yet." while it was still open. A pick draws
+                // no project rows, so a pick with no kits still gets the panel.
                 EmptyShelfPanel(
                     assigningSnip = assigningSnip,
+                    listening = listening,
                     withStarts = startsInPanel,
                     busy = busy,
                     startingKit = startingKit,
@@ -823,6 +830,7 @@ fun KitsScreen(
             // through this one function, so all three disarm the row.
             val cancelDelete = { confirmDeleteKit = null; armedKitDirs = armedKitDirs - target.dir.path }
             KitDeleteConfirmDialog(
+                message = Copy.kitDeleteConfirm(projects.filter { target.dir.name in it.project.kits }.map { it.name }),
                 onCancel = cancelDelete,
                 // Delete also clears the armed flag: the lifted set outlives
                 // the row (unlike the old per-row remember, which died with
@@ -1228,7 +1236,7 @@ private fun KitRow(
  * `SnipsScreen.kt`'s `HeaderChip`.
  */
 @Composable
-private fun KitDeleteConfirmDialog(onCancel: () -> Unit, onConfirm: () -> Unit) {
+private fun KitDeleteConfirmDialog(message: String, onCancel: () -> Unit, onConfirm: () -> Unit) {
     val scheme = LocalScheme.current
     Box(
         Modifier
@@ -1258,7 +1266,7 @@ private fun KitDeleteConfirmDialog(onCancel: () -> Unit, onConfirm: () -> Unit) 
                 .padding(14.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            TapeText("Delete this kit? It waits in deleted kits for 30 days.", TapeType.lcdSmall, scheme.ink.tape, maxLines = 3)
+            TapeText(message, TapeType.lcdSmall, scheme.ink.tape, maxLines = 3)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 ActionButton("CANCEL", scheme, enabled = true, modifier = Modifier.weight(1f), tier = ButtonTier.Text, onClick = onCancel)
                 Box(
@@ -1397,6 +1405,7 @@ internal fun KitRenameDialog(
 @Composable
 private fun EmptyShelfPanel(
     assigningSnip: Boolean,
+    listening: Boolean,
     withStarts: Boolean,
     busy: Boolean,
     startingKit: Boolean,
@@ -1419,7 +1428,13 @@ private fun EmptyShelfPanel(
             // to place: EMPTY_SHELF's "NOTHING TAPED YET" would flatly
             // contradict that. This names the real blocker and the real fix.
             TapeText(
-                if (assigningSnip) Copy.EMPTY_SHELF_FOR_ASSIGN else Copy.EMPTY_SHELF,
+                when {
+                    assigningSnip -> Copy.EMPTY_SHELF_FOR_ASSIGN
+                    // Listening (D-7): the panel said "Nothing recorded yet." beside the
+                    // button just pressed; it names the next step instead.
+                    listening -> Copy.EMPTY_SHELF_LISTENING
+                    else -> Copy.EMPTY_SHELF
+                },
                 TapeType.lcdSmall,
                 scheme.lcdInk.tape,
                 maxLines = 3,
@@ -1432,11 +1447,14 @@ private fun EmptyShelfPanel(
                     maxLines = 3,
                 )
                 if (withStarts) {
-                    PrimaryAction(
-                        label = Places.CATCH_FIRST,
-                        enabled = !busy,
-                        onClick = onCatchFirst,
-                    )
+                    // Not while listening: it is the button that started it.
+                    if (!listening) {
+                        PrimaryAction(
+                            label = Places.CATCH_FIRST,
+                            enabled = !busy,
+                            onClick = onCatchFirst,
+                        )
+                    }
                     ActionButton(
                         Copy.START_FROM_KIT,
                         scheme,

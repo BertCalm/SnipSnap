@@ -5,7 +5,7 @@ import kotlin.math.*
 /** Fractional reset events corrected with an offline, symmetric bandlimited step.
  * Source guards supply look-ahead without delaying either phaser path. */
 internal object ChitinSource {
-    private const val HALF = 16
+    internal const val HALF = 16
     private const val RESOLUTION = 256
     private fun i0(x: Double): Double {
         var term = 1.0; var sum = 1.0
@@ -24,7 +24,7 @@ internal object ChitinSource {
         val total = integrated.last()
         DoubleArray(n+1) { integrated[it]/total }
     }
-    private fun residual(t: Double): Double {
+    internal fun residual(t: Double): Double {
         if (t <= -HALF || t >= HALF) return 0.0
         val position = (t+HALF)*RESOLUTION
         val i = floor(position).toInt().coerceIn(0,step.size-2); val f = (position-i).coerceIn(0.0,1.0)

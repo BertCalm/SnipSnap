@@ -50,6 +50,7 @@ import com.snipsnap.kit.KitPad
 import com.snipsnap.shell.ConfluencePersonalLibrary
 import com.snipsnap.shell.ConfluencePersonalWorkshop
 import com.snipsnap.shell.KitBuilderModel
+import com.snipsnap.shell.Layout
 import com.snipsnap.xpm.PadNoteMap
 import com.snipsnap.synth.ConfluencePersonalVoice
 import java.io.File
@@ -412,7 +413,7 @@ fun MyVoiceScreen(
                 Box(Modifier.fillMaxWidth().sunkenField(scheme).padding(10.dp)) {
                     BasicTextField(name, { if (!saving) { name = it.take(80); kept = null } }, enabled = idle, singleLine = true,
                         textStyle = TapeType.marker.copy(color = scheme.ink.tape), cursorBrush = SolidColor(scheme.ink.tape),
-                        modifier = Modifier.fillMaxWidth().heightIn(min = 44.dp).semantics { contentDescription = "Voice name" })
+                        modifier = Modifier.fillMaxWidth().heightIn(min = Layout.MIN_HIT_TARGET.dp).semantics { contentDescription = "Voice name" })
                 }
                 if (kept == null) ActionButton("SAVE VOICE", scheme, enabled = idle && name.isNotBlank(), modifier = Modifier.fillMaxWidth(), onClick = ::saveVoice)
                 else {

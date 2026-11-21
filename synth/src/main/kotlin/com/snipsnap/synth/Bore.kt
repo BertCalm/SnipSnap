@@ -179,7 +179,7 @@ object Bore {
     private const val VOICE_BLOOM = 2f
 
     /** The two shelves, in dB: [lowDb] under [VOICE_LOW_HZ] and [highDb] over [VOICE_HIGH_HZ]. 0 and 0 is no voicing. */
-    internal data class Voicing(val lowDb: Float, val highDb: Float) {
+    internal data class Voicing(val lowDb: Float, val highDb: Float, /** [Opening.trimDb]; 0, the default, is no trim. */ val openingTrimDb: Float = 0f) {
         val none: Boolean get() = abs(lowDb) < 0.05f && abs(highDb) < 0.05f
         companion object { val NONE = Voicing(0f, 0f) }
     }
@@ -241,8 +241,21 @@ object Bore {
             ceiling = max(ceiling, amount)
         }
         if (ceiling <= 1e-9f) return
+        // The opening's trim ([Opening]): the level is held back while the voicing has not yet opened, by the trim times the share of
+        // the bloom still to come, read off the furthest the voicing has opened so far (so it lets go once and a note's ending,
+        // where the voicing closes again, is not touched). Drawn straight across each block.
+        var opened = 0f
+        var trim = if (v.openingTrimDb > 0f) 10f.pow(-v.openingTrimDb / 20f) else 1f
         for (b in 0 until blocks) {
             val shaped = trace[b] * (trace[b] / ceiling).pow(VOICE_BLOOM - 1f)
+            if (v.openingTrimDb > 0f) {
+                opened = max(opened, (shaped / ceiling).coerceIn(0f, 1f))
+                val next = 10f.pow(-v.openingTrimDb * (1f - opened) / 20f)
+                val from = b * hop
+                val to = minOf(buf.size, (b + 1) * hop)
+                for (i in from until to) buf[i] *= trim + (next - trim) * (i - from + 1) / hop
+                trim = next
+            }
             low.lowShelf(VOICE_LOW_HZ, v.lowDb * shaped)
             high.highShelf(VOICE_HIGH_HZ, v.highDb * shaped)
             // The roll-off is a fixed band limit, not part of what opens with the loudness: a recording has
@@ -564,6 +577,131 @@ object Bore {
     const val VIBRATO_MAX_CENTS = 20f
     private const val VIBRATO_BLOCK = 64
 
+    // ---- the player (2026-11-20) -------------------------------------------
+
+    /**
+     * How much of a player a held breath carries ([Humanize]): [Humanize.MODEST]. The owner heard every BORE clip on 2026-11-20 (both
+     * voices' presets and the held keys) and wrote "Holds are unnatural, they need more humanization". Measured on those clips, a held
+     * note's level stayed inside 0.03 to 0.08 dB, and its vibrato was one sine: every swing the same depth to 1 or 2 percent, at 5.20 Hz
+     * to the hundredth. [Humanize.OFF] is the engine before that verdict, sample for sample: the frozen tests' reference, OBBLIGATO's
+     * players, and the audition's "before".
+     */
+    internal const val HUMAN = Humanize.MODEST
+
+    /**
+     * What the player adds at an amount of 1 ([Humanize.MODEST]), all of it inside the model ([Player]) and all of it scaling with the
+     * amount. The amount a note gets is [HUMAN] times its HOLD over [LOOP_HOLD], capped at 1: a stab (HOLD 0) has none and is the render
+     * it always was, a note of a second or more has all of it, and a LOOP and a held key, cut from a note held at [LOOP_HOLD], have all of it.
+     *  - The breath drifts: the mouth pressure swells and eases over seconds by up to [HUMAN_BREATH] of itself on FLUTE (at the
+     *    hardest BREATH, [HUMAN_BREATH_SOFT] of that at the softest, where the jet is nearest its floor and a FLUTE at BREATH 0 read
+     *    1.2 dB of swell in its loop's blend) and [HUMAN_REED_BREATH] on SAX, with [HUMAN_LIP] of a quicker unsteadiness, and the turbulence in it by up to [HUMAN_AIR] of itself,
+     *    so the hiss comes and goes. The two voices differ because the level follows the pressure differently: measured on a held key,
+     *    3 percent moved FLUTE's level by 0.7 dB and SAX's by 0.2 to 0.45 dB (a reed in its plateau barely gets louder with more
+     *    breath), so SAX gets more to be heard to move at all. A reed's drift never takes the pressure nearer its speaking threshold
+     *    than [HUMAN_REED_ROOM] of the closing pressure ([Player]), so a soft note does not stall.
+     *  - The pitch leans by up to [HUMAN_LEAN_CENTS] either side over seconds, and the note is found from [HUMAN_SCOOP_CENTS] below,
+     *    home in about three times [HUMAN_SCOOP_SECONDS].
+     *  - The vibrato is a player's: it waits [HUMAN_VIBRATO_DELAY_SECONDS] and leans in over [HUMAN_VIBRATO_RISE_SECONDS] (against 0.06
+     *    and 0.2), its depth wanders by [HUMAN_DEPTH_WANDER] and then [HUMAN_DEPTH_WANDER_MORE] of itself for each unit of the amount,
+     *    its rate by [HUMAN_RATE_WANDER] and [HUMAN_RATE_WANDER_MORE], and the breath pulses with it by [HUMAN_VIBRATO_BREATH] (the jaw
+     *    moves the pressure as well as the pitch).
+     * Listening values, heard: the owner kept this amount over [Humanize.STRONGER] (round fix-bore-1, 2026-11-20, BQ1 to BQ4 KEEP).
+     */
+    const val HUMAN_BREATH = 0.04f
+    const val HUMAN_BREATH_SOFT = 0.4f
+    const val HUMAN_REED_BREATH = 0.07f
+    const val HUMAN_REED_ROOM = 0.03f
+    const val HUMAN_LIP = 0.008f
+    const val HUMAN_AIR = 0.3f
+    const val HUMAN_LEAN_CENTS = 2.5f
+    const val HUMAN_SCOOP_CENTS = 7f
+    const val HUMAN_SCOOP_SECONDS = 0.07
+    const val HUMAN_VIBRATO_DELAY_SECONDS = 0.15
+    const val HUMAN_VIBRATO_RISE_SECONDS = 0.5
+    const val HUMAN_DEPTH_WANDER = 0.2
+    const val HUMAN_DEPTH_WANDER_MORE = 0.14
+    const val HUMAN_RATE_WANDER = 0.04
+    const val HUMAN_RATE_WANDER_MORE = 0.03
+    const val HUMAN_VIBRATO_BREATH = 0.012f
+    private const val HUMAN_DEPTH_WANDER_MAX = 0.5
+    private const val HUMAN_RATE_WANDER_MAX = 0.14
+
+    /** How much of the player a note at [hold] carries, for an asked amount of [human]: see [HUMAN_BREATH]. */
+    internal fun humanAmount(human: Float, hold: Float): Float = if (human > 0f) human * (hold / LOOP_HOLD).coerceIn(0f, 1f) else 0f
+
+    /** A held key's loop, in seconds: [Humanize.HELD_LOOP_SECONDS] with a player on it (a two second movement is heard coming round), [LOOP_SECONDS] without. */
+    internal fun heldLoopSeconds(human: Float): Float = if (human > 0f) Humanize.HELD_LOOP_SECONDS else LOOP_SECONDS
+
+    /**
+     * One note's player at [amount] (over 0): every movement a [Humanize.Wander] of [period] seconds drawn from [seed], so the whole
+     * of it repeats every [period] and a loop cut that long (to within the cut's own search, [LOOP_SLACK_SECONDS]) joins two moments
+     * the player is doing the same thing in. The vibrato's rate is the whole number of cycles a period nearest [VIBRATO_HZ]
+     * (5.0 Hz in two seconds, 5.25 in four), for the same reason. [Player] asks it once a control block.
+     */
+    internal class Human(val amount: Float, period: Double, seed: Int) {
+        val vibratoHz: Double = max(1.0, Math.round(VIBRATO_HZ * period).toDouble()) / period
+        private val depthWander = (HUMAN_DEPTH_WANDER + HUMAN_DEPTH_WANDER_MORE * amount).coerceAtMost(HUMAN_DEPTH_WANDER_MAX)
+        private val rateWander = (HUMAN_RATE_WANDER + HUMAN_RATE_WANDER_MORE * amount).coerceAtMost(HUMAN_RATE_WANDER_MAX)
+        private val lean = Humanize.Wander(seed, period, Humanize.SLOW)
+        private val depth = Humanize.Wander(seed + 1, period, Humanize.SLOW_ALT)
+        private val rate = Humanize.Wander(seed + 2, period, Humanize.SLOW)
+        private val breath = Humanize.Wander(seed + 3, period, Humanize.SLOW_ALT)
+        private val lip = Humanize.Wander(seed + 4, period, Humanize.quick(period))
+        private val air = Humanize.Wander(seed + 5, period, Humanize.SLOW)
+
+        /** The furthest under the note the pitch can go for a vibrato of [vibCents], in cents: what the pipe's ring must have room for. */
+        fun flatCents(vibCents: Float): Float = vibCents * (1f + depthWander.toFloat()) + amount * (HUMAN_LEAN_CENTS + HUMAN_SCOOP_CENTS) + 1f
+
+        /** The vibrato's swing at [t], within 1 plus the depth's wander, risen in: 0 until [HUMAN_VIBRATO_DELAY_SECONDS]. */
+        private fun swing(t: Double): Double {
+            if (t <= HUMAN_VIBRATO_DELAY_SECONDS) return 0.0
+            val rise = ((t - HUMAN_VIBRATO_DELAY_SECONDS) / HUMAN_VIBRATO_RISE_SECONDS).coerceAtMost(1.0)
+            return rise * (1.0 + depthWander * depth.at(t)) * sin(2.0 * PI * vibratoHz * (t + rateWander * rate.integral(t)))
+        }
+
+        /** The pitch at [t] against the note, in cents: the vibrato of [vibCents], the lean and the scoop. */
+        fun cents(t: Double, vibCents: Float): Float =
+            (vibCents * swing(t) + amount * (HUMAN_LEAN_CENTS * lean.at(t) - HUMAN_SCOOP_CENTS * exp(-t / HUMAN_SCOOP_SECONDS))).toFloat()
+
+        /** The mouth pressure at [t] as a share of the steady one: the breath's drift (up to [drift] either side, the amount already in it), the lip's, and the vibrato's pulse. */
+        fun pressure(t: Double, drift: Float): Float =
+            (1.0 + drift * breath.at(t) + amount * (HUMAN_LIP * lip.at(t) + HUMAN_VIBRATO_BREATH * swing(t))).toFloat()
+
+        /** The turbulence at [t] as a share of BREATH's own. */
+        fun turbulence(t: Double): Float = (1.0 + amount * HUMAN_AIR * air.at(t)).toFloat()
+    }
+
+    /** The seed of a note's player: the voice and the tuned pitch, so every note leans its own way and a render is a pure function of its macros. */
+    internal fun humanSeed(voice: BoreVoice, hz: Float): Int = Dsp.seedFor("BORE", "PLAYER", voice, hz)
+
+    /**
+     * SAX's opening (2026-11-20). The owner on SAX's eight presets: "Opening is a bit harsh for most." Measured on those presets,
+     * a note opened with two things the held part does not have:
+     *  - a click. The output chain took the whole note's mean off every sample ([condition]). A reed's wave is lopsided (the rasp's
+     *    bend most of all), so its mean is not zero, and taking it off the silence before the note left a step at the very first
+     *    sample: under 300 Hz, its first 10 ms 7 dB under the note's own level on LOW HONK and GROWL (the loose lips that rasp
+     *    most), 10 to 20 dB under on the other five one-shots, and 4 to 15 dB under once on a pad. [centred] false leaves the mean
+     *    to the 20 Hz high-pass that follows, which removes it as it arrives and has nothing to step from: those first 10 ms now
+     *    read 23 to 73 dB under the note.
+     *  - a bark. As the presets land on a pad (through the light tape, [LANDING_TAPE]) the loudest 20 ms of the first quarter second
+     *    stood 2.2 to 4.3 dB over the note it became (1.0 on HIGH STAB): the tone arrives before the voicing has opened ([voice]: all
+     *    fundamental, no top yet), and the tape leaves that dark start alone while it rounds the bright note after it. [trimDb] holds
+     *    the level back by that many decibels until the voicing has opened, letting go as it opens and never coming back. At 3 dB the
+     *    seven read 0.1 to 2.1 dB over on a pad (2 dB left 0.1 to 2.9, 4 dB 0.0 to 1.4), and reach half their level 5 to 10 ms later.
+     * The tongue, the breath's overshoot and the seed are untouched (the first tries, a smaller seed and a smaller overshoot, moved
+     * the bark by under 1 dB and made LOW HONK reach nine tenths of its level 60 ms later).
+     * [OPENING_AS_HEARD] is the opening those clips had, and FLUTE's still: its step is some 35 dB under the note and it has no voicing.
+     */
+    internal class Opening(val centred: Boolean, val trimDb: Float)
+
+    internal val OPENING_AS_HEARD = Opening(centred = true, trimDb = 0f)
+
+    /** SAX's opening since 2026-11-20 ([Opening]). The trim is a listening value; the owner heard every SAX preset old then new and kept it (round fix-bore-1, 2026-11-20, BQ4). */
+    internal val OPENING_SOFTENED = Opening(centred = false, trimDb = 3f)
+
+    /** The opening a voice plays. */
+    internal fun openingFor(voice: BoreVoice): Opening = if (voice == BoreVoice.SAX) OPENING_SOFTENED else OPENING_AS_HEARD
+
     // ---- the output --------------------------------------------------------
 
     /** The DC goes twice (FORK's rule): the blocker in the loop, then the mean and this high-pass before the level is set. */
@@ -842,6 +980,9 @@ object Bore {
      * (0 is none), [gateSeconds] replaces HOLD's length, and [pressure] replaces
      * BREATH's whole mapping with an absolute mouth pressure - a share of the
      * closing pressure on SAX, so a sweep can find the window's real edges.
+     *
+     * [human] is the player's amount and [period] what its movements repeat over ([Human]). The default here is the plain
+     * breath this function always had, so a probe reads the bare model; [render] and [heldNote] pass what ships ([HUMAN]).
      */
     internal fun blow(
         voice: BoreVoice,
@@ -853,8 +994,10 @@ object Bore {
         pressure: Float? = null,
         pop: Float? = null,
         seed: Float? = null,
+        human: Float = Humanize.OFF,
+        period: Double = Humanize.ONE_SHOT_PERIOD_SECONDS,
     ): FloatArray {
-        return blow(voice, hz, macros, rate, gateFor(macros, rate, gateSeconds), turbulence, pressure, pop, seed)
+        return blow(voice, hz, macros, rate, gateFor(macros, rate, gateSeconds), turbulence, pressure, pop, seed, human, period)
     }
 
     /**
@@ -901,10 +1044,14 @@ object Bore {
         pressure: Float?,
         pop: Float? = null,
         seed: Float? = null,
+        human: Float = Humanize.OFF,
+        period: Double = Humanize.ONE_SHOT_PERIOD_SECONDS,
     ): FloatArray {
+        val amount = humanAmount(human, macros.getValue("HOLD"))
         val player = Player(voice, hz, macros, rate, maxDetuneCents = 0f,
             turbulence = turbulence, pressure = pressure, pop = pop, seed = seed,
-            crackAt = crackFrame(voice, macros, gate.attackN, gate.holdN, rate))
+            crackAt = crackFrame(voice, macros, gate.attackN, gate.holdN, rate),
+            human = if (amount > 0f) Human(amount, period, humanSeed(voice, hz)) else null)
         val out = FloatArray(gate.total)
         for (i in 0 until gate.total) {
             if (i % 8192 == 0) stopIfUnwanted()
@@ -945,6 +1092,8 @@ object Bore {
         seed: Float? = null,
         /** The sample at which a FLUTE cracks to its upper register ([crackFrame]); null, the default, never does and never reads [Crack]. */
         crackAt: Int? = null,
+        /** The player on this note ([Human]); null, the default, is the steady breath and the plain vibrato this class always had. */
+        private val human: Human? = null,
     ) {
         init {
             require(hz.isFinite() && hz > 0f) { "a bore player needs a positive finite frequency" }
@@ -961,10 +1110,13 @@ object Bore {
         private val bellHz = bellHzFor(voice, hz, breath, lip)
         private val dcHz = if (flute) Strings.DC_BLOCK_HZ else hz / SAX_BLOCKER_DIVISOR
         private val vibCents = VIBRATO_MAX_CENTS * (macros.getValue("HOLD") / LOOP_THRESHOLD).coerceIn(0f, 1f)
-        private val tuning = Strings.tune(hz * 2f.pow(-(vibCents + maxDetuneCents) / 1200f), bellHz, rate, dcBlock = true, dcHz = dcHz)
+        private val flatCents = if (human != null) human.flatCents(vibCents) else vibCents
+        private val tuning = Strings.tune(hz * 2f.pow(-(flatCents + maxDetuneCents) / 1200f), bellHz, rate, dcBlock = true, dcHz = dcHz)
         private val loop = Strings.Loop(tuning.n, tuning.a, LOOP_GAIN, bellHz, rate, dcBlock = true, dcHz = dcHz).also {
-            if (vibCents > 0f || maxDetuneCents > 0f) it.retune(hz)
+            if (flatCents > 0f || maxDetuneCents > 0f) it.retune(hz)
         }
+        private var humanPressure = 1f
+        private var humanTurbulence = 1f
         private val noise = Dsp.Noise(noiseSeed ?: Dsp.seedFor("BORE", voice, hz))
         private val turb = turbulence ?: turbulenceFor(voice, breath)
         private val offset = reedOffset(lip)
@@ -975,6 +1127,16 @@ object Bore {
             else -> closing * pressure
         }
         private val cap = if (flute) FLUTE_PRESSURE_HIGH * 1.3f else closing * CAP_SHARE
+        // The breath's drift for this note's player: FLUTE's share, or the reed's, held clear of the speaking threshold.
+        private val humanDrift = when {
+            human == null -> 0f
+            flute -> HUMAN_BREATH * Dsp.lin(breath, HUMAN_BREATH_SOFT, 1f) * human.amount
+            else -> {
+                val share = basePressure / closing
+                val room = ((share - thresholdShare(offset) - HUMAN_REED_ROOM) / share).coerceAtLeast(0.005f)
+                (HUMAN_REED_BREATH * human.amount).coerceAtMost(room)
+            }
+        }
 
         // Fractional jet transit time, unchanged from the one-shot source.
         private val jetDelay = (JET_RATIO * rate / hz).coerceAtLeast(2f)
@@ -1020,15 +1182,22 @@ object Bore {
             val i = frame++
             val t = elapsedSeconds
             val pitch = if (pitchCents.isFinite()) pitchCents.coerceIn(-maxDetuneCents, maxDetuneCents) else 0f
-            if (i % VIBRATO_BLOCK == 0 && (maxDetuneCents > 0f || (vibCents > 0f && t > VIBRATO_DELAY_SECONDS))) {
+            if (human != null) {
+                // The player, once a control block: the pitch (the vibrato, the lean, the scoop), the breath and its turbulence.
+                if (i % VIBRATO_BLOCK == 0) {
+                    loop.retune(hz * 2f.pow((pitch + human.cents(t, vibCents)) / 1200f))
+                    humanPressure = human.pressure(t, humanDrift)
+                    humanTurbulence = human.turbulence(t)
+                }
+            } else if (i % VIBRATO_BLOCK == 0 && (maxDetuneCents > 0f || (vibCents > 0f && t > VIBRATO_DELAY_SECONDS))) {
                 val vibrato = if (vibCents > 0f && t > VIBRATO_DELAY_SECONDS) {
                     val rise = ((t - VIBRATO_DELAY_SECONDS) / VIBRATO_RISE_SECONDS).coerceAtMost(1.0)
                     vibCents * (rise * sin(2.0 * PI * VIBRATO_HZ * t)).toFloat()
                 } else 0f
                 loop.retune(hz * 2f.pow((pitch + vibrato) / 1200f))
             }
-            val scale = if (pressureScale.isFinite()) pressureScale.coerceAtLeast(0f) else 1f
-            val turbulenceGain = if (turbulenceScale.isFinite()) turbulenceScale.coerceAtLeast(0f) else 1f
+            val scale = (if (pressureScale.isFinite()) pressureScale.coerceAtLeast(0f) else 1f).let { if (human != null) it * humanPressure else it }
+            val turbulenceGain = (if (turbulenceScale.isFinite()) turbulenceScale.coerceAtLeast(0f) else 1f).let { if (human != null) it * humanTurbulence else it }
             val env = if (envelope.isFinite()) envelope.coerceAtLeast(0f) else 0f
             // GROWL modulates the mouth pressure once the note is overblown; without a crack this is the shipped pressure, untouched.
             val pMax = if (crack == null) basePressure * scale else basePressure * scale * crack.pressure(i)
@@ -1130,15 +1299,17 @@ object Bore {
      * decimator, the DC removed twice. The level and the tail come after: [finish] for a
      * one-shot, and for a LOOP its own levelling, after the blend ([renderLoopMeasured]).
      */
-    internal fun condition(raw: FloatArray, rate: Int, biteDb: Float, rasp: Float, voicing: Voicing): FloatArray {
+    internal fun condition(raw: FloatArray, rate: Int, biteDb: Float, rasp: Float, voicing: Voicing, centred: Boolean = true): FloatArray {
         stopIfUnwanted()
         raspBend(raw, rate, rasp)
         stopIfUnwanted()
         Tide.bandLimit(raw, rate)
         stopIfUnwanted()
         val out = Dsp.decimate(raw, RATE)
+        // The whole note's mean, taken off every sample: a step at the first sample of a note whose wave is lopsided ([Opening]).
+        // Not [centred], the high-pass below takes the DC off on its own.
         var mean = 0.0
-        for (v in out) mean += v
+        if (centred) for (v in out) mean += v
         val m = (mean / out.size.coerceAtLeast(1)).toFloat()
         val hp = Dsp.OnePole(RATE)
         for (i in out.indices) {
@@ -1155,8 +1326,8 @@ object Bore {
         return out
     }
 
-    internal fun finish(raw: FloatArray, rate: Int, biteDb: Float = 0f, rasp: Float = 0f, voicing: Voicing = Voicing.NONE): FloatArray {
-        val out = condition(raw, rate, biteDb, rasp, voicing)
+    internal fun finish(raw: FloatArray, rate: Int, biteDb: Float = 0f, rasp: Float = 0f, voicing: Voicing = Voicing.NONE, centred: Boolean = true): FloatArray {
+        val out = condition(raw, rate, biteDb, rasp, voicing, centred)
         stopIfUnwanted()
         Dsp.levelTo(out, RATE, target = Dsp.MELODIC_LOUDNESS_TARGET)
         Dsp.fadeTail(out)
@@ -1321,12 +1492,12 @@ object Bore {
      * Throws if the held note's level never settles in time to cut a loop from it ([settledFrame]). [renderLoop] also refuses
      * a join that does not hold ([LOOP_MIN_CORRELATION], [LOOP_MAX_DIP_DB]).
      */
-    internal fun renderLoopMeasured(voice: BoreVoice, macros: Map<String, Float>): LoopRender {
+    internal fun renderLoopMeasured(voice: BoreVoice, macros: Map<String, Float>, human: Float = HUMAN, opening: Opening = openingFor(voice)): LoopRender {
         // Held, so no crack: OVERBLOW is a one-shot's gesture ([held]).
         val m = held(settled(macros, voice))
         val name = "BORE $voice ${midiFor(voice, m.getValue("TUNE"))}"
-        val x = heldNote(voice, m)
-        return cutLoop(x, heldUsableEnd(x, m), name)
+        val x = heldNote(voice, m, human, LOOP_SECONDS, opening)
+        return cutLoop(x, heldUsableEnd(x, m), name, human = human)
     }
 
     /**
@@ -1335,19 +1506,40 @@ object Bore {
      * conditioned like the one-shot ([condition]) and not levelled. Held, so OVERBLOW plays as 0 ([held]): a held note
      * never cracks. [m] must be settled ([settled]). One place, so the two cuts can never be cut from different notes.
      */
-    internal fun heldNote(voice: BoreVoice, m: Map<String, Float>): FloatArray {
+    internal fun heldNote(
+        voice: BoreVoice, m: Map<String, Float>, human: Float = HUMAN, loopSeconds: Float = LOOP_SECONDS, opening: Opening = openingFor(voice),
+    ): FloatArray {
         val h = held(m)
         val rate = RATE * Dsp.OVERSAMPLE
         val hz = tunedHz(voice, frequencyFor(voice, h.getValue("TUNE")))
-        val raw = blow(voice, hz, h + ("HOLD" to LOOP_HOLD), rate, gateSeconds = LOOP_HELD_SECONDS)
-        return condition(raw, rate, biteBoostDb(voice, h.getValue("LIP")), raspAmount(voice, h.getValue("LIP"), h.getValue("BREATH")), voicingFor(voice))
+        val raw = blow(voice, hz, h + ("HOLD" to LOOP_HOLD), rate, gateSeconds = heldSeconds(loopSeconds), human = human, period = loopSeconds.toDouble())
+        return condition(
+            raw, rate, biteBoostDb(voice, h.getValue("LIP")), raspAmount(voice, h.getValue("LIP"), h.getValue("BREATH")),
+            voicingFor(voice).copy(openingTrimDb = opening.trimDb), opening.centred,
+        )
     }
 
     /** How much of [heldNote]'s [x] a cut may use: the attack and the held breath, less [LOOP_MARGIN_SECONDS] before the release. */
-    internal fun heldUsableEnd(x: FloatArray, m: Map<String, Float>): Int {
+    internal fun heldUsableEnd(x: FloatArray, m: Map<String, Float>, loopSeconds: Float = LOOP_SECONDS): Int {
         val attack = (attackSeconds(m.getValue("CHIFF")) * RATE).toInt()
-        return minOf(x.size, attack + (LOOP_HELD_SECONDS * RATE).toInt() - (LOOP_MARGIN_SECONDS * RATE).toInt())
+        return minOf(x.size, attack + (heldSeconds(loopSeconds) * RATE).toInt() - (LOOP_MARGIN_SECONDS * RATE).toInt())
     }
+
+    /** How long the held note is blown for a loop of [loopSeconds]: [LOOP_HELD_SECONDS] for the LOOP's two, and as much longer as the loop is. */
+    internal fun heldSeconds(loopSeconds: Float): Float = LOOP_HELD_SECONDS + (loopSeconds - LOOP_SECONDS).coerceAtLeast(0f)
+
+    /** The bounds of the length search for a loop of about [loopSeconds], in frames: [LOOP_SLACK_SECONDS] either side ([LOOP_LENGTH_LOW_FRAMES] and [LOOP_LENGTH_HIGH_FRAMES] at the LOOP's own). */
+    internal fun loopLengthFrames(loopSeconds: Float): IntRange =
+        ((loopSeconds - LOOP_SLACK_SECONDS) * RATE).toInt()..((loopSeconds + LOOP_SLACK_SECONDS) * RATE).toInt()
+
+    /**
+     * What "settled" and "no dip" mean with a player at [human] on the note: the breath's drift moves the level by about half a decibel
+     * either side at an amount of 1 on purpose, so the settle test ([LOOP_SETTLE_DB]) and the blend's dip guard ([LOOP_MAX_DIP_DB]) each
+     * allow that much more, [HUMAN_LEVEL_DB] times the amount. At 0 they are the plain numbers.
+     */
+    const val HUMAN_LEVEL_DB = 1.2
+    internal fun settleDb(human: Float): Double = LOOP_SETTLE_DB + HUMAN_LEVEL_DB * human.coerceAtLeast(0f)
+    internal fun maxDipDb(human: Float): Double = LOOP_MAX_DIP_DB + HUMAN_LEVEL_DB * human.coerceAtLeast(0f)
 
     /**
      * The blend and the bounds of the length search in frames at [RATE], from [LOOP_BLEND_SECONDS], [LOOP_SECONDS] and
@@ -1363,13 +1555,13 @@ object Bore {
      * ([loopStart]), how long it is ([bestLength]), the blend that closes it ([assembleLoop]), the turn onto a crossing
      * ([rotateOntoCrossing]) and the level, with the join read off the result. [name] is the note, for the refusals.
      */
-    internal fun cutLoop(x: FloatArray, usableEnd: Int, name: String): LoopRender {
+    internal fun cutLoop(x: FloatArray, usableEnd: Int, name: String, human: Float = Humanize.OFF): LoopRender {
         val blend = LOOP_BLEND_FRAMES
         val lengthLow = LOOP_LENGTH_LOW_FRAMES
         val lengthHigh = LOOP_LENGTH_HIGH_FRAMES
 
         stopIfUnwanted()
-        val (start, settledAt) = loopStart(x, usableEnd, lengthHigh, blend, name)
+        val (start, settledAt) = loopStart(x, usableEnd, lengthHigh, blend, name, settleDb(human))
 
         val (length, correlation) = bestLength(x, start, blend, lengthLow, lengthHigh)
         stopIfUnwanted()
@@ -1401,9 +1593,12 @@ object Bore {
      * The held note as one loop. It is refused, by name, if its join does not hold: a loop whose two blended waves
      * barely correlate would dip or phase-cancel at the blend, and a swell every two seconds is no better than a click.
      */
-    internal fun renderLoop(voice: BoreVoice, macros: Map<String, Float>, minCorrelation: Double = LOOP_MIN_CORRELATION, maxDipDb: Double = LOOP_MAX_DIP_DB): FloatArray {
-        val r = renderLoopMeasured(voice, macros)
-        checkJoin("BORE $voice ${midiFor(voice, settled(macros, voice).getValue("TUNE"))}", r.join, minCorrelation, maxDipDb)
+    internal fun renderLoop(
+        voice: BoreVoice, macros: Map<String, Float>, minCorrelation: Double = LOOP_MIN_CORRELATION, maxDipDb: Double? = null,
+        human: Float = HUMAN, opening: Opening = openingFor(voice),
+    ): FloatArray {
+        val r = renderLoopMeasured(voice, macros, human, opening)
+        checkJoin("BORE $voice ${midiFor(voice, settled(macros, voice).getValue("TUNE"))}", r.join, minCorrelation, maxDipDb ?: Bore.maxDipDb(human))
         return r.loop
     }
 
@@ -1464,7 +1659,7 @@ object Bore {
      * within [LOOP_SETTLE_DB] of the level the held note ends at, up to [end] - or -1 if it never does. The reference is the
      * median of the last second of windows, so a reed still creeping up at the end of the note has no settled frame.
      */
-    internal fun settledFrame(x: FloatArray, end: Int): Int {
+    internal fun settledFrame(x: FloatArray, end: Int, settleDb: Double = LOOP_SETTLE_DB): Int {
         val window = (LOOP_LEVEL_SECONDS * RATE).toInt()
         val hop = (LOOP_LEVEL_HOP_SECONDS * RATE).toInt()
         if (end < window) return -1
@@ -1474,7 +1669,7 @@ object Bore {
         val reference = lastSecond[lastSecond.size / 2]
         var first = level.size
         for (k in level.indices.reversed()) {
-            if (abs(level[k] - reference) > LOOP_SETTLE_DB) break
+            if (abs(level[k] - reference) > settleDb) break
             first = k
         }
         return if (first < level.size) starts[first] else -1
@@ -1485,8 +1680,8 @@ object Bore {
      * with room left before [usableEnd] for the longest length ([lengthHigh]) and the [blend] after it. Throws, naming [name],
      * if the note never settles (it is still swelling or dying at the end) or settles too late to leave that room.
      */
-    internal fun loopStart(x: FloatArray, usableEnd: Int, lengthHigh: Int, blend: Int, name: String): Pair<Int, Int> {
-        val settledAt = settledFrame(x, usableEnd)
+    internal fun loopStart(x: FloatArray, usableEnd: Int, lengthHigh: Int, blend: Int, name: String, settleDb: Double = LOOP_SETTLE_DB): Pair<Int, Int> {
+        val settledAt = settledFrame(x, usableEnd, settleDb)
         require(settledAt >= 0) { "$name: the held note's level never settles, so there is no steady stretch to cut a loop from" }
         val start = max(settledAt, (LOOP_START_SECONDS * RATE).toInt())
         require(start + lengthHigh + blend <= usableEnd) {
@@ -1542,13 +1737,20 @@ object Bore {
 
     // ---- the render --------------------------------------------------------
 
-    fun render(voice: BoreVoice, macros: Map<String, Float> = emptyMap()): Snip {
+    fun render(voice: BoreVoice, macros: Map<String, Float> = emptyMap()): Snip = render(voice, macros, HUMAN)
+
+    /**
+     * [render] with the player at [human] and the reed's [opening]: what ships is [HUMAN] and [openingFor]; [Humanize.OFF] with
+     * [OPENING_AS_HEARD] is the render before 2026-11-20, sample for sample (`BoreFrozenSoundTest`).
+     */
+    internal fun render(voice: BoreVoice, macros: Map<String, Float>, human: Float, opening: Opening = openingFor(voice)): Snip {
         val m = settled(macros, voice)
-        if (isLoop(m.getValue("HOLD"))) return Snip(renderLoop(voice, m), channels = 1, sampleRate = RATE)
+        if (isLoop(m.getValue("HOLD"))) return Snip(renderLoop(voice, m, human = human, opening = opening), channels = 1, sampleRate = RATE)
         val hz = tunedHz(voice, frequencyFor(voice, m.getValue("TUNE")))
         val rate = RATE * Dsp.OVERSAMPLE
         val bite = biteBoostDb(voice, m.getValue("LIP"))
         val rasp = raspAmount(voice, m.getValue("LIP"), m.getValue("BREATH"))
-        return Snip(finish(blow(voice, hz, m, rate), rate, bite, rasp, voicingFor(voice)), channels = 1, sampleRate = RATE)
+        val voicing = voicingFor(voice).copy(openingTrimDb = opening.trimDb)
+        return Snip(finish(blow(voice, hz, m, rate, human = human), rate, bite, rasp, voicing, opening.centred), channels = 1, sampleRate = RATE)
     }
 }
