@@ -35,6 +35,7 @@ import androidx.compose.ui.window.DialogProperties
 import com.snipsnap.app.KitShelf
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
+import com.snipsnap.app.theme.lcdInk2
 import com.snipsnap.app.theme.lcdPanel
 import com.snipsnap.app.theme.raisedBevel
 import com.snipsnap.app.theme.tape
@@ -444,7 +445,7 @@ private fun ScannedSourceDialog(
 private fun ScannedShapeCanvas(points: FloatArray, description: String, modifier: Modifier, marker: Float? = null, normalize: Boolean = true) {
     val scheme = LocalScheme.current
     Canvas(modifier.lcdPanel(scheme).semantics { contentDescription = description }) {
-        drawLine(scheme.ink3.tape, Offset(0f, size.height / 2), Offset(size.width, size.height / 2))
+        drawLine(scheme.lcdInk2, Offset(0f, size.height / 2), Offset(size.width, size.height / 2))
         val peak = if (normalize) maxOf(.000001f, points.maxOfOrNull { abs(it) } ?: 0f) else 1f
         val path = Path()
         points.forEachIndexed { i, value ->

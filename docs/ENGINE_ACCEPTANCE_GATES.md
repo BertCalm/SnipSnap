@@ -1284,6 +1284,32 @@ Source: the commit that adds this entry. Details: [CONSORT](CONSORT.md).
 Nothing here is a completion claim. A passing `ConsortTest` and an audition page do not close a gate.
 
 
+
+## DRAWL (Kotlin port, round 1, 2026-11-21)
+
+A bar-stopped string whose pitch path is the performance: resonator guitar, electric slide, lap steel,
+pedal steel, country flat-top and western nylon. Design, every listen and every measured number:
+[the DRAWL spec](superpowers/specs/2026-11-20-drawl-engine-design.md). The owner kept all six voices of the
+Python prototype on 21 Nov 2026 after four rounds of notes; the native Kotlin engine is built and probed and
+nobody has heard it.
+
+| Gate | Current evidence | Status |
+|---|---|---|
+| Six melodic voices | CONE, BOTTLE, LAP, STEEL, FLATTOP, GUT: kept by ear as the Python prototype (round 0d). Native renders measured against those clips (`round1_compare_kotlin.json`); not heard. | Open: the owner's listen to the native renders |
+| Presets | None. In `PatchTypes.PROTOTYPES` until the native renders are kept. | Open |
+| Playable keygroups | None. | Open (round 4) |
+| Premade kit | None. | Open (round 3) |
+| Chord-tool compatibility | No STRUM yet; designed to take a `ChordStabs.Stab` (spec §9). | Open (round 2) |
+| Appropriate HOLD | Finite: HOLD lengthens the note to 8 s and never loops (the HALOBAR and ACCORD policy). A swell loop for STEEL and LAP is the owner's decision at round 3. | Open: the owner's decision |
+| STRUM | Applies: every voice is picked. Prototyped and heard in Python (round 0); not built in Kotlin. | Open (round 2) |
+| Percussion, drums | Not applicable: a melodic string engine. | Not applicable |
+| Velocity: rendering | Native: a harder pick is louder and has a brighter level-matched onset on all six voices (`DrawlTest`), at one gain per sound. Heard as timbre in Python; native not heard. | Pass in software; listen open |
+| Velocity: saving, playback, export | `DrawlPatch` saves velocity; no pad, kit or export path yet. | Open |
+| Round robin | `DrawlPatch.take`: four distinct strikes in tune per voice (`DrawlTest`). Not in `Restrike`, no pad pool, save/load playback or export. | Open (rounds 2 and 3) |
+| Picker | No entry. | Open (round 4) |
+| Hardware | Not attempted. | Open |
+
+Nothing here is a completion claim.
 ## KERF synthetic chops (rounds 1 to 4, sound approved, hardware confirmed: complete)
 
 Source: the commit that adds this entry. Details: [the KERF spec](superpowers/specs/2026-11-19-kerf-synthetic-chops-design.md). KERF is a capture-side tool (SYNTH TWIN on the pad sheet, SYNTH TWIN ALL on the kit screen, `snipsnap kerf`) and, since round 4, a registered drum engine on the SYNTH picker (`Kerf`, six voices over the bank's 63 fitted hits) with four genre kits on FRESH TAPE (`KerfKits`).
@@ -1299,6 +1325,31 @@ Source: the commit that adds this entry. Details: [the KERF spec](superpowers/sp
 
 - **Presets and picker:** the 27 presets (one pool hit each, soft to hard) were on the same page the owner heard (2026-11-21). The SYNTH picker test (`NewEngineSynthScreenTest`) passed on CI's emulator.
 - **Overall: complete (2026-11-21).** The twins, the velocity layers and takes, the engine's presets, the four genre kits and their rolls and risers have all been heard by the owner, and played on phone and MPC: the twins on 2026-11-20, the kits on 2026-11-21. In software the kits are proved through MPC 3 export; MPC 2 export was proved for the twins (`KerfGateTest`) and not run on the kits. Preserve `Kerf.MODEL_VERSION` 1, `KerfKits.VERSION` 1, `KerfRender.MODEL_VERSION` 1 and `KerfVelocity.DEPTH` 3 as the accepted baseline.
+
+## TERRA stick voices: Japanese kits (complete, 2026-11-20: sound approved, phone and MPC reported good)
+
+Ten TERRA voices (ODAIKO, NAGADO, SHIME, KA, KANE, CHAPPA, BINZASARA, COWBELL,
+WATER_DRUM, FAN), the first nine picked by ear from Python renders over six rounds; details in
+[TERRA_STICKS](TERRA_STICKS.md).
+
+| Gate | Status |
+|---|---|
+| Melodic, keygroups, chord tools, STRUM | Not applicable: drum and percussion voices |
+| Percussion: authored roll/riser | Pass: ROLL and RISER saved in the recipe, in all four kits; sound approved 2026-11-20 |
+| Drums: multiple distinct genre kits | Pass: TERRA MATSURI, THUNDER, BON and the processed DUSK. The owner approved their sound on 2026-11-20 ("Sounds good, I like"); every pad is pinned as heard (`TerraStickKitsPinsTest`) |
+| Velocity levels | Pass, automated: timbral touches through render, save, MPC 3, MPC 2, SFZ and playback (`TerraStickKitsTest`, `TerraStickKitsRoundTripTest`) |
+| Round robin | Pass, automated: four takes per touch through render, save, MPC 3, SFZ and playback; MPC 2 keeps each zone's first take under the owner's 2026-11-14 format limit |
+| Hardware | Pass, owner's report (2026-11-20): asked to check that repeated hits cycle and soft hits sound softer on phone and MPC, the owner answered "Is good". Kits and MPC export format played were not stated |
+
+Complete against the applicable gates as of 2026-11-20. The forty stick-voice
+presets were kept by the owner the same day ("Ok, they are good") and are pinned
+in `TerraPresetsTest`.
+
+Round 8 (2026-11-21): six pads ring past the hit's cut, three DUSK pads run the new
+GRAIN section, and every roll and riser is locked to its kit's tempo. The owner heard
+each beside the approved pad and took all of them ("Everything sounds great"); the
+kits are re-pinned as heard. The gates above stand.
+
 
 ## FACSIMILE kits (Kotlin built and heard, 2026-11-20)
 

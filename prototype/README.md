@@ -148,3 +148,4 @@ fitter (measured notes plus a fitted third-octave residual); `round2.py` to
 `gen_kotlin.py` writes `TerraSticksTables.kt`, and `cmp_kotlin.py` compares the
 Kotlin render with the Python one. The scripts read the owner's reference
 recordings, which are not in the repository.
+`round7_fan.py` fits the fan's slap and swish as trains of flaps (round 7).
