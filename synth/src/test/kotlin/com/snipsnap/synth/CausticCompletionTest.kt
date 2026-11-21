@@ -16,9 +16,12 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 class CausticCompletionTest {
+    /** The four voices held before 21 Nov 2026, whose holds this pins; BOWL, SCATTER and TONGUE are CausticCandidateHeldTest. */
+    private val earlierHeld = CausticVoice.entries.take(4)
+
     @Test fun `model two adds controls while zero extensions preserve the original internal and finished samples`() {
         assertEquals(2, CausticInstrument.MODEL_VERSION)
-        for (voice in CausticInstrument.HELD_VOICES) {
+        for (voice in earlierHeld) {
             assertEquals(listOf("SOURCE", "FOCUS", "BODY", "LENGTH", "MOTION", "HOLD"),
                 CausticInstrument.macrosFor(voice, 2).map { it.name })
             for (midi in listOf(36, 60, 84)) {
@@ -50,7 +53,7 @@ class CausticCompletionTest {
     }
 
     @Test fun `partial HOLD extends finite source and release while the top is an explicit loop`() {
-        for (voice in CausticInstrument.HELD_VOICES) {
+        for (voice in earlierHeld) {
             val macros = mapOf("LENGTH" to 0f, "HOLD" to .5f)
             val extended = CausticInstrument.probe(voice, macros, seconds = .5, normalize = false)
             val original = CausticInstrument.probe(voice, mapOf("LENGTH" to 0f), seconds = .5, normalize = false)
@@ -65,7 +68,7 @@ class CausticCompletionTest {
     }
 
     @Test fun `held output and exported onset share genuine conditioned history and a quiet trigger phase`() {
-        for (voice in CausticInstrument.HELD_VOICES) {
+        for (voice in earlierHeld) {
             val macros = mapOf("HOLD" to 1f, "MOTION" to .5f)
             val p = CausticInstrument.heldProbe(voice, macros)
             val marker = p.note.loopStartFrame.toInt()
@@ -91,7 +94,7 @@ class CausticCompletionTest {
 
     @Test fun `held zero velocity is exact silence and cancellation is checked before preparation`() {
         val macros = mapOf("HOLD" to 1f, "MOTION" to 1f)
-        for (voice in CausticInstrument.HELD_VOICES) {
+        for (voice in earlierHeld) {
             val zero = CausticInstrument.heldProbe(voice, macros, velocity = 0f)
             assertTrue(zero.note.snip.samples.all { it == 0f })
             assertTrue(zero.loop.samples.all { it == 0f })

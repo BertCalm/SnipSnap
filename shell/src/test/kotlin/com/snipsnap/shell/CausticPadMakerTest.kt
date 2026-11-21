@@ -181,6 +181,38 @@ class CausticPadMakerTest {
         }
     }
 
+    @Test fun `BOWL, SCATTER and TONGUE zones are a soft and a hard held key in two velocity windows`() {
+        for (voice in listOf(CausticVoice.BOWL, CausticVoice.SCATTER, CausticVoice.TONGUE)) {
+            val spec = CausticPadMaker.Spec(patch(voice))
+            assertEquals(2, CausticPadMaker.layerCount(spec))
+            val layers = CausticPadMaker.renderLayers(spec, spec.patch.midi)
+            assertEquals(2, layers.size)
+            val hard = CausticPadMaker.renderZone(spec, spec.patch.midi)
+            assertContentEquals(hard.snip.samples, layers[1].snip.samples, "$voice hard layer is not the held key")
+            val soft = layers[0]
+            assertFalse(soft.snip.samples.contentEquals(hard.snip.samples), "$voice soft layer is the hard one")
+            for (note in layers) {
+                assertTrue(note.snip.samples.all { it.isFinite() && abs(it) <= .991f })
+                assertTrue(Keys.seamError(note.snip.samples, note.loopStartFrame.toInt()) < Keys.MAX_SEAM_ERROR)
+            }
+            // Touch is timbre on keys: both loops sit at one level, the player's velocity gain sets loudness.
+            fun loopRms(n: KeyNote) = rms(n.snip.samples.copyOfRange(n.loopStartFrame.toInt(), n.snip.samples.size))
+            val db = 20 * kotlin.math.log10(loopRms(soft) / loopRms(hard))
+            assertTrue(abs(db) < 1.0, "$voice soft loop is $db dB from the hard one")
+            val (program, samples) = CausticPadMaker.assembleLayers("Caustic Two", spec,
+                CausticPadMaker.zoneMidis(spec).map { listOf(fixture(it), fixture(it)) })
+            assertEquals(2 * CausticPadMaker.zoneMidis(spec).size, samples.size)
+            assertTrue(program.keygroups.all { g -> g.layers.map { it.velStart..it.velEnd } == listOf(1..63, 64..127) })
+            assertTrue(samples.keys.all { it.endsWith("_v1") || it.endsWith("_v2") })
+            assertFailsWith<IllegalArgumentException> { CausticPadMaker.assembleLayers("Caustic One", spec,
+                CausticPadMaker.zoneMidis(spec).map { listOf(fixture(it)) }) }
+        }
+        // The earlier voices keep one layer, exactly the held key.
+        val alloy = CausticPadMaker.Spec(patch())
+        assertEquals(1, CausticPadMaker.layerCount(alloy))
+        assertContentEquals(CausticPadMaker.renderZone(alloy, 60).snip.samples, CausticPadMaker.renderLayers(alloy, 60).single().snip.samples)
+    }
+
     @Test fun `preview demonstrates arrival sustain and host release while cancellation writes nothing`() {
         val patch = patch(CausticVoice.HOLLOW_MALLET)
         val before = patch.toJsonText()
@@ -206,13 +238,9 @@ class CausticPadMakerTest {
             assertFailsWith<IllegalArgumentException> { CausticPadMaker.Spec(old) }
             assertEquals(1, old.model)
         }
-        // BOWL, SCATTER and TONGUE (kept 20 Nov 2026) are finite only: no held instrument yet.
-        for (voice in CausticInstrument.KEPT_VOICES - CausticInstrument.HELD_VOICES.toSet()) {
-            val finite = CausticPatch("Finite only", voice, CausticInstrument.defaults(voice))
-            assertFalse(CausticPadMaker.supports(finite))
-            val error = assertFailsWith<IllegalArgumentException> { CausticPadMaker.Spec(finite) }
-            assertTrue(error.message.orEmpty().contains("no held key"), error.message)
-        }
+        // Every voice has a held key since 21 Nov 2026, BOWL, SCATTER and TONGUE included.
+        assertEquals(CausticInstrument.KEPT_VOICES, CausticInstrument.HELD_VOICES)
+        for (voice in CausticInstrument.KEPT_VOICES) assertTrue(CausticPadMaker.supports(CausticPatch("Held", voice, CausticInstrument.defaults(voice))))
         for (release in listOf(.01f, 1.6f, Float.NaN, Float.POSITIVE_INFINITY))
             assertFailsWith<IllegalArgumentException> { CausticPadMaker.Spec(patch, release) }
         assertEquals(.1f, CausticPadMaker.spec(patch, 0f).releaseSeconds)

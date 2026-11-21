@@ -18,6 +18,12 @@ object LibrationTouchKeys {
     const val RENDER_VERSION = 1
     // Musical capture and switch points, not calibrated physical forces.
     val TOUCHES: List<Float> = listOf(.35f, 1f)
+    /**
+     * ROTOR's and HOLLOW's touches: their soft one-shot the owner kept in libration-voices-1 was velocity .35 against the
+     * default .8 (clips CN2, CO2), and .4375 of .8 is that .35. The hard one is the patch's own touch, as on the cloud.
+     */
+    val CANDIDATE_TOUCHES: List<Float> = listOf(.4375f, 1f)
+    fun touches(voice: LibrationVoice): List<Float> = if (voice in Libration.CLOUD_VOICES) TOUCHES else CANDIDATE_TOUCHES
     val VELOCITY_WINDOWS: List<IntRange> = listOf(1..63, 64..127)
 
     data class Layer(
@@ -32,7 +38,7 @@ object LibrationTouchKeys {
 
     fun sourcePatch(patch: LibrationPatch, midi: Int, strength: Float): LibrationPatch {
         require(LibrationKeys.supports(patch)) { "LIBRATION touch keys require source model 3" }
-        require(strength in TOUCHES) { "LIBRATION touch strength must be one of $TOUCHES" }
+        require(strength in touches(patch.voice)) { "LIBRATION touch strength must be one of ${touches(patch.voice)}" }
         return patch.copy(midi = midi, velocity = patch.velocity * strength,
             macros = patch.macros + ("HOLD" to 1f), heldModel = LibrationKeys.MODEL_VERSION)
     }
@@ -46,7 +52,8 @@ object LibrationTouchKeys {
                 throw CancellationException("LIBRATION touch capture cancelled")
         }
         stop()
-        val sources = TOUCHES.map { sourcePatch(patch, midi, it) }
+        val touches = touches(patch.voice)
+        val sources = touches.map { sourcePatch(patch, midi, it) }
         val captures = sources.map { source ->
             stop()
             session.render(source, midi, cancelled)
@@ -70,7 +77,7 @@ object LibrationTouchKeys {
                 if (frame % 8192 == 0) stop()
                 (source.samples[frame] * gain).toFloat()
             }
-            Layer(TOUCHES[index], VELOCITY_WINDOWS[index], sources[index],
+            Layer(touches[index], VELOCITY_WINDOWS[index], sources[index],
                 KeyNote(Snip(samples, source.channels, source.sampleRate), rendered.note.loopStartFrame),
                 gain, rendered.diagnostics)
         }

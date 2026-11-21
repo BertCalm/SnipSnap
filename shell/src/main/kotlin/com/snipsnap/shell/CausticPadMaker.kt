@@ -31,7 +31,7 @@ object CausticPadMaker {
     const val PATCH_FILE = "caustic.patch.json"
     val RELEASE = Knob("RELEASE", RELEASE_MIN_SECONDS, RELEASE_MAX_SECONDS, .6f, exponential = true)
 
-    /** BOWL, SCATTER and TONGUE have no held key yet ([CausticInstrument.HELD_VOICES]). */
+    /** Every voice has a held key since 21 Nov 2026 ([CausticInstrument.HELD_VOICES]); model 1 recipes stay finite. */
     fun supports(patch: CausticPatch): Boolean =
         patch.model == SUPPORTED_MODEL && patch.voice in CausticInstrument.HELD_VOICES
 
@@ -61,6 +61,7 @@ object CausticPadMaker {
             listOf(low, root, high)).distinct().sorted()
     }
 
+    /** The zone's held key; for a struck hold ([CausticInstrument.isStruckHold]) its hard layer, the patch's own touch. */
     fun renderZone(spec: Spec, midi: Int, cancelled: () -> Boolean = { false }): KeyNote {
         require(midi in zoneMidis(spec)) { "CAUSTIC zone $midi is outside this instrument's roots" }
         checkCancelled(cancelled)
@@ -68,32 +69,58 @@ object CausticPadMaker {
             midi, spec.patch.velocity, spec.patch.model, cancelled)
     }
 
-    fun assemble(name: String, spec: Spec, notes: List<KeyNote>): Pair<KeygroupProgram, Map<String, Snip>> {
+    /** How many velocity layers a zone has: two (soft, hard) for BOWL, SCATTER and TONGUE, one for the earlier voices. */
+    fun layerCount(spec: Spec): Int = if (CausticInstrument.isStruckHold(spec.patch.voice)) CausticInstrument.LAYER_WINDOWS.size else 1
+
+    /** The zone's layers, soft first ([CausticInstrument.heldLayers]); one layer for the earlier voices, exactly [renderZone]. */
+    fun renderLayers(spec: Spec, midi: Int, cancelled: () -> Boolean = { false }): List<KeyNote> {
+        if (layerCount(spec) == 1) return listOf(renderZone(spec, midi, cancelled))
+        require(midi in zoneMidis(spec)) { "CAUSTIC zone $midi is outside this instrument's roots" }
+        checkCancelled(cancelled)
+        return CausticInstrument.heldLayers(spec.patch.voice, spec.patch.macros, midi, spec.patch.velocity,
+            spec.patch.model, cancelled)
+    }
+
+    /** One layer per zone (the earlier voices, or a struck hold's hard layer alone across all velocities). */
+    fun assemble(name: String, spec: Spec, notes: List<KeyNote>): Pair<KeygroupProgram, Map<String, Snip>> =
+        build(name, spec, notes.map { listOf(it) })
+
+    /** Every zone's layers as [renderLayers] makes them, soft first in [CausticInstrument.LAYER_WINDOWS]. */
+    fun assembleLayers(name: String, spec: Spec, notes: List<List<KeyNote>>): Pair<KeygroupProgram, Map<String, Snip>> {
+        require(notes.all { it.size == layerCount(spec) }) { "CAUSTIC zones need ${layerCount(spec)} layers each" }
+        return build(name, spec, notes)
+    }
+
+    private fun build(name: String, spec: Spec, zones: List<List<KeyNote>>): Pair<KeygroupProgram, Map<String, Snip>> {
         require(Names.isMpcSafe(name) && name.length <= OneNote.MAX_NAME_LENGTH) {
             "instrument name must be MPC-safe and at most ${OneNote.MAX_NAME_LENGTH} characters: '$name'"
         }
         val midis = zoneMidis(spec)
-        require(notes.size == midis.size) { "want ${midis.size} zones, got ${notes.size}" }
+        require(zones.size == midis.size) { "want ${midis.size} zones, got ${zones.size}" }
         val prefix = name.filterNot(Char::isWhitespace)
         val samples = linkedMapOf<String, Snip>()
         val keygroups = midis.mapIndexed { index, midi ->
-            val note = notes[index]
-            require(note.snip.channels == 1 && note.snip.sampleRate == WavWriter.MPC_SAMPLE_RATE) {
-                "CAUSTIC zone $midi must be mono ${WavWriter.MPC_SAMPLE_RATE} Hz"
+            val layers = zones[index].mapIndexed { layerIndex, note ->
+                require(note.snip.channels == 1 && note.snip.sampleRate == WavWriter.MPC_SAMPLE_RATE) {
+                    "CAUSTIC zone $midi must be mono ${WavWriter.MPC_SAMPLE_RATE} Hz"
+                }
+                require(note.loopStartFrame > 0 && note.loopStartFrame < note.snip.frameCount - 1L) {
+                    "CAUSTIC zone $midi needs an arrival and a sustain loop of at least two frames"
+                }
+                require(note.snip.samples.all { it.isFinite() && it in -1f..1f }) {
+                    "CAUSTIC zone $midi has nonfinite or out-of-range audio"
+                }
+                val layered = zones[index].size > 1
+                val stem = Names.sanitizeStem("${prefix}_${Scales.nameOf(midi)}" + if (layered) "_v${layerIndex + 1}" else "")
+                samples[stem] = note.snip
+                val window = if (layered) CausticInstrument.LAYER_WINDOWS[layerIndex] else 0..127
+                VelocityLayer(stem, note.snip.frameCount.toLong(), window.first, window.last, note.loopStartFrame)
             }
-            require(note.loopStartFrame > 0 && note.loopStartFrame < note.snip.frameCount - 1L) {
-                "CAUSTIC zone $midi needs an arrival and a sustain loop of at least two frames"
-            }
-            require(note.snip.samples.all { it.isFinite() && it in -1f..1f }) {
-                "CAUSTIC zone $midi has nonfinite or out-of-range audio"
-            }
-            val stem = Names.sanitizeStem("${prefix}_${Scales.nameOf(midi)}")
-            samples[stem] = note.snip
             Keygroup(
                 lowNote = if (index == 0) midi else (midis[index - 1] + midi) / 2 + 1,
                 highNote = if (index == midis.lastIndex) midi else (midi + midis[index + 1]) / 2,
                 rootNote = midi,
-                layers = listOf(VelocityLayer(stem, note.snip.frameCount.toLong(), 0, 127, note.loopStartFrame)),
+                layers = layers,
             )
         }
         // The WAV owns its onset. Only key-up adds a program envelope.
@@ -101,8 +128,14 @@ object CausticPadMaker {
     }
 
     fun export(name: String, spec: Spec, notes: List<KeyNote>, destRoot: File,
-        overwrite: Boolean = false): KeygroupProgram {
-        val (program, samples) = assemble(name, spec, notes)
+        overwrite: Boolean = false): KeygroupProgram = write(name, spec, assemble(name, spec, notes), destRoot, overwrite)
+
+    fun exportLayers(name: String, spec: Spec, notes: List<List<KeyNote>>, destRoot: File,
+        overwrite: Boolean = false): KeygroupProgram = write(name, spec, assembleLayers(name, spec, notes), destRoot, overwrite)
+
+    private fun write(name: String, spec: Spec, built: Pair<KeygroupProgram, Map<String, Snip>>, destRoot: File,
+        overwrite: Boolean): KeygroupProgram {
+        val (program, samples) = built
         // Keep the deliberately sampled register identical in the phone and both MPC descriptors.
         OneNote.writePackage(name, program, samples, destRoot, overwrite, spanKeyboard = false)
         val dataDir = File(destRoot, Mpc3TrackWriter.trackDataDirName(name))

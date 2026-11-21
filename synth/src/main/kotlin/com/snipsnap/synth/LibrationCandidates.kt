@@ -17,11 +17,11 @@ import kotlin.random.Random
  *   a slow rotary tremolo and pitch bend, with each pipe's turn pushed and pulled by its libration.
  * - HOLLOW is the spare: the kept cloud mapping with odd-only partial tables, resting on L3.
  *
- * All four are finite only. They share the kept macros and trajectory cache and are rendered at the
+ * CHIME and STRUM are finite only; ROTOR and HOLLOW also have held keys ([LibrationCandidateHeld]). They share the kept macros and trajectory cache and are rendered at the
  * output rate from band-limited sinusoids, so no partial is ever written above 12 kHz.
  */
 internal object LibrationCandidates {
-    private const val TOP_HZ = 12_000.0
+    internal const val TOP_HZ = 12_000.0
 
     /** REGION, WANDER, NUDGE, SWARM, RESONANCE. */
     fun defaults(voice: LibrationVoice): FloatArray = when (voice) {
@@ -37,10 +37,10 @@ internal object LibrationCandidates {
         if (Thread.currentThread().isInterrupted) throw CancellationException("Libration render cancelled")
     }
     /** Keeps the top of the keyboard from turning glassy: a partial fades out between 5 and 12 kHz. */
-    private fun air(hz: Double): Double = if (hz >= TOP_HZ) 0.0 else 1 / (1 + (hz / 5200).pow(4))
+    internal fun air(hz: Double): Double = if (hz >= TOP_HZ) 0.0 else 1 / (1 + (hz / 5200).pow(4))
 
     /** One decaying sinusoid starting at phase zero with a short rounded onset: no step, no click. */
-    private fun ring(out: DoubleArray, start: Int, hz: Double, gain: Double, t60: Double, attack: Double) {
+    internal fun ring(out: DoubleArray, start: Int, hz: Double, gain: Double, t60: Double, attack: Double) {
         if (gain == 0.0 || hz >= TOP_HZ || start >= out.size) return
         val w = 2 * PI * hz / Dsp.RATE
         val c = cos(w); val s = sin(w)
@@ -220,7 +220,7 @@ internal object LibrationCandidates {
 
     // ---- ROTOR -----------------------------------------------------------------------------
 
-    private val rotorPipes = intArrayOf(1, 2, 3, 1, 4, 2, 6, 1, 3, 8, 2, 4, 1, 6, 2, 3)
+    internal val rotorPipes = intArrayOf(1, 2, 3, 1, 4, 2, 6, 1, 3, 8, 2, 4, 1, 6, 2, 3)
     private const val LISTENER = 3.0
 
     private fun rotor(lanes: List<Lane>, hz: Double, v: Double, resonance: Double, seconds: Double): DoubleArray {
@@ -271,7 +271,7 @@ internal object LibrationCandidates {
 
     // ---- HOLLOW (spare) --------------------------------------------------------------------
 
-    private val hollowPipes = intArrayOf(1, 3, 1, 5, 3, 1, 7, 3, 5, 1, 3, 9, 1, 5, 3, 7)
+    internal val hollowPipes = intArrayOf(1, 3, 1, 5, 3, 1, 7, 3, 5, 1, 3, 9, 1, 5, 3, 7)
 
     private fun hollow(lanes: List<Lane>, hz: Double, v: Double, resonance: Double, seconds: Double): DoubleArray {
         val release = min(.65, seconds * .325)

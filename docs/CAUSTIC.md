@@ -815,9 +815,9 @@ Each candidate reads a part of the reflected-path geometry that the kept voices 
 All three are linear: finite raised-cosine contacts at exact fractional delays drive damped two-pole modes. They
 pass through the same decimation, house finish and loudness target as the kept voices. Constants are authored.
 
-**Finite only for now.** The candidates have five controls (SOURCE, FOCUS, BODY, LENGTH, HOLD) in both models:
-no MOTION, and HOLD lengthens the note at every step (HOLD 1 adds four seconds; it is not a sustained loop).
-`renderLoop` and `heldProbe` refuse them. A kept candidate needs the model-2 sustain and motion written for it.
+**Finite only at the round.** The candidates had five controls (SOURCE, FOCUS, BODY, LENGTH, HOLD) in both models:
+no MOTION, and HOLD lengthened the note at every step. Since 21 Nov 2026 model 2 also has MOTION and HOLD's top step is
+a held key and LOOP (the section after the verdicts below); model 1 and every finite render are unchanged.
 
 Measured (Kotlin, `CausticCandidateVoicesTest`; nothing here is heard): finite, under the .99 ceiling, deterministic,
 silent at zero velocity, root within 15 cents at C2 to C6 (SCATTER and TONGUE within 1 cent; BOWL 1 to 5 cents flat
@@ -875,7 +875,41 @@ voice has one factory preset, appended after Travelling Catches, at the default 
 controls, C4, medium touch, model 2 (Singing Bowl, Bead Scatter, Thumb Tongue). The eleven earlier presets keep model
 1 and their bytes; the CAUSTIC kit is unchanged. No starter kit was added.
 
-**Still open: held BOWL, SCATTER and TONGUE.** The three are finite only. They have no MOTION; HOLD lengthens the
-note (HOLD 1 adds four seconds) and is not a sustained loop. `CausticInstrument.HELD_VOICES` lists the four voices
-with a held key: `renderLoop` and `heldProbe` refuse the others, `CausticPadMaker.supports` is false for them, so the
-app offers no held instrument for them. Their model-2 sustain and motion are still to be written and heard.
+**Held BOWL, SCATTER and TONGUE: built 21 Nov 2026, unheard** (next section; listening round held-cl-1).
+
+## Held keys and LOOP for BOWL, SCATTER and TONGUE (built 21 Nov 2026; unheard, round held-cl-1)
+
+Status: **unheard**. The owner asked for held keys and the LOOP for the three voices kept in caustic-voices-1, with a
+listening round first. Code: `CausticCandidateHeld.kt`; the strike law is the one-shot's own, now `CausticCandidates.strike`.
+
+- **What a held key plays.** The one-shot's own strike first (the same contacts at the same fractional delays on the
+  same body: the held key's first 80 ms match the kept one-shot to -50 to -94 dB after levelling), then the same
+  mallet, beads or thumb again in time with the note: BOWL once per period of the still hold (about once a second, a
+  felt mallet keeping a bowl singing), TONGUE twice (two thumbs in turn), SCATTER four times (a trickle of small
+  spills). Each later strike is (1 - r) as strong as the first, r the root's decay over the gap, so the ring holds the
+  level the first strike gave it rather than building up. The loop is four periods of the still hold, as every varied
+  CAUSTIC hold is.
+- **The hand.** The stronger hand the owner kept on the earlier voices (`HELD_HUMAN`, `HUMAN_STRONGER`): each strike
+  its own strength (22 % either way) and up to 12 ms late, a firmer strike also shorter (a SCATTER spill a little
+  quicker), under a slow pressure drift (1.1 dB) that returns at the wrap. The body's modes are not touched.
+- **MOTION** (model 2, new for these three) moves SOURCE and FOCUS once round the loop (.24 and .18 times MOTION, as on
+  the earlier voices), so each strike reads a different part of the rim (BOWL), of the arrival times (SCATTER) or of
+  the reception (TONGUE); the body stays the unmoved one, so pitch and BOWL's beating pairs do not move. A one-shot is
+  one strike, over before the path moves, so MOTION leaves a finite note exactly as it was (pinned).
+- **The loop** comes from one causal run from rest: a linear body driven by a periodic force settles to a periodic
+  ring whatever its mode frequencies, so the inharmonic partials and the beats need no fitting. The loop starts at the
+  first whole loop where the ring has settled (state change under 1e-5 of its peak, energy error under 1e-7, the tests
+  of the earlier voices); no audio is copied to make the seam.
+- **Soft and hard keys.** `CausticPadMaker` gives each zone of these three voices two layers (velocity 1-63 and
+  64-127; the earlier voices keep one): the hard layer is the patch's own touch, exactly the held key; the soft layer
+  is the kept soft one-shot's touch (velocity .3 against the default .75: `SOFT_TOUCH_SHARE` .4), a wider, duller
+  contact. On keys the player applies velocity as gain once, so the soft layer is levelled as the hard one is (touch is
+  timbre, as on LIBRATION's and ARCO's held keys). The app's MAKE INSTRUMENT and the CLI export both layers.
+
+Measured (Kotlin, `CausticCandidateHeldTest`, C2/C4/C6 at the defaults; nothing heard): seam under 1e-11, loop wrap
+step 0.01 to 0.08 of the loop's own 99.9th-percentile step; first ring (.3 to .8 s) within 6 dB of the loop's level;
+held root within 15 cents; soft against hard 3.9 to 6.8 dB apart by level-matched third-octave shape at C4 and within
+0.1 dB in level; MOTION .6 moves the loop's shape 1.9 to 3.5 dB. Key files at C4: BOWL 22 s (the bowl's 9 s ring needs
+four loops to settle), SCATTER 13 s, TONGUE 11 s. The finite renders of all seven voices, every preset, and the
+earlier voices' held keys, LOOPs and MOTION are unchanged (419 hashes, base against this build).
+

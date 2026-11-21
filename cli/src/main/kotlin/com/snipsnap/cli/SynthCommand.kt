@@ -1236,9 +1236,9 @@ object SynthCommand {
         val midis = CausticPadMaker.zoneMidis(spec)
         val notes = midis.mapIndexed { index, midi ->
             out.println("zone ${index + 1}/${midis.size} ${Scales.nameOf(midi)}")
-            CausticPadMaker.renderZone(spec, midi)
+            CausticPadMaker.renderLayers(spec, midi)
         }
-        CausticPadMaker.export(name, spec, notes, dir)
+        CausticPadMaker.exportLayers(name, spec, notes, dir)
         out.println("instrument: ${File(dir, "$name.xty").path} (+ ${name}_[TrackData]/ with the .xpm twin)")
         out.println("${midis.size} zones, authored attack and repeating sustain - RELEASE ${CausticPadMaker.secondsLabel(spec.releaseSeconds)}")
         out.println("CAUSTIC model ${spec.patch.model}, saved root ${Scales.nameOf(spec.patch.midi)}, saved velocity ${spec.patch.velocity}")

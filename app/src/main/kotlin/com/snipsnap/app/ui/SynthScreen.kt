@@ -5884,10 +5884,10 @@ internal sealed interface HeldSpec {
         override val knobLabel get() = "RELEASE ${CausticPadMaker.secondsLabel(spec.releaseSeconds)}"
         override val instrumentNote get() =
             "Keeps the arrival, then repeats the vessel while held. Key touch changes volume."
-        override fun renderZone(midi: Int, cancelled: () -> Boolean) = listOf(CausticPadMaker.renderZone(spec, midi, cancelled))
+        override fun renderZone(midi: Int, cancelled: () -> Boolean) = CausticPadMaker.renderLayers(spec, midi, cancelled)
         override fun preview(cancelled: () -> Boolean) = CausticPadMaker.preview(spec, cancelled)
         override fun export(name: String, notes: List<List<KeyNote>>, destRoot: File) =
-            CausticPadMaker.export(name, spec, notes.map { it.single() }, destRoot)
+            CausticPadMaker.exportLayers(name, spec, notes, destRoot)
     }
 
     class Crease(private val spec: CreasePadMaker.Spec) : HeldSpec {

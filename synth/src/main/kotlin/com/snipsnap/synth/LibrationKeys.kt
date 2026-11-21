@@ -16,7 +16,13 @@ object LibrationKeys {
     )
     data class Rendered(val note: KeyNote, val diagnostics: Diagnostics)
 
-    fun supports(patch: LibrationPatch): Boolean = patch.model == 3 && patch.voice in Libration.CLOUD_VOICES
+    /**
+     * The voices with a held key: the cloud voices, and since 21 Nov 2026 ROTOR and HOLLOW ([LibrationCandidateHeld];
+     * unheard until round held-cl-1). CHIME and STRUM are struck and finite.
+     */
+    val HELD_VOICES: List<LibrationVoice> = Libration.CLOUD_VOICES + listOf(LibrationVoice.ROTOR, LibrationVoice.HOLLOW)
+
+    fun supports(patch: LibrationPatch): Boolean = patch.model == 3 && patch.voice in HELD_VOICES
     fun isHeld(hold: Float): Boolean = hold == 1f
     fun drumClass(voice: LibrationVoice, macros: Map<String, Float>): DrumClass =
         if (isHeld(macros["HOLD"] ?: 0f)) DrumClass.LOOP else Libration.drumClassFor(voice, macros)
@@ -58,7 +64,10 @@ object LibrationKeys {
             val key = Libration.populationKey(source.voice, controls, options, source.model)
             val cached = population?.takeIf { it.key == key }
             val prepared = cached ?: Libration.population(source.voice, controls, options, source.model)
-            val result = LibrationHeld.probe(source, prepared, cancelled, oversample, normalize, fitPhases, enforceClosure)
+            // ROTOR and HOLLOW render at the output rate, as their one-shots do: oversample and phase fitting are the cloud's.
+            val result = if (LibrationCandidateHeld.handles(source.voice))
+                LibrationCandidateHeld.probe(source, prepared, cancelled, normalize, enforceClosure)
+            else LibrationHeld.probe(source, prepared, cancelled, oversample, normalize, fitPhases, enforceClosure)
             if (cancelled() || Thread.currentThread().isInterrupted) throw CancellationException("LIBRATION keys cancelled")
             population = prepared
             return result

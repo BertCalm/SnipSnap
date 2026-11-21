@@ -25,7 +25,7 @@ class CausticPresetsTest {
             assertEquals(CausticInstrument.defaults(patch.voice, patch.model).keys, patch.macros.keys)
             assertEquals(0f, patch.macros.getValue("HOLD"))
             // The eleven earlier presets keep model 1; BOWL, SCATTER and TONGUE were heard and kept in the current model.
-            assertEquals(if (patch.voice in CausticInstrument.HELD_VOICES) 1 else 2, patch.model)
+            assertEquals(if (CausticInstrument.isStruckHold(patch.voice)) 2 else 1, patch.model)
             assertTrue(patch.macros.values.all { it.isFinite() && it in 0f..1f })
             assertEquals(patch, Patches.fromJsonText(patch.toJsonText()))
             assertEquals(patch, Presets.byName("CAUSTIC", patch.voice.name, patch.name))
@@ -94,7 +94,7 @@ class CausticPresetsTest {
         val positions = listOf("Fuller Body", "Preferred Alloy", "Hollow Mallet", "Rubbed Ring",
             "Travelling Catches", "Sparse Alloy", "Short Glint", "Low Vessel")
         assertEquals(positions.map { name -> CausticPresets.all().single { it.name == name } }, patches.drop(8))
-        assertEquals(CausticInstrument.HELD_VOICES.toSet(), patches.map { it.voice }.toSet())
+        assertEquals(CausticVoice.entries.take(4).toSet(), patches.map { it.voice }.toSet())
         for ((index, pad) in pads.withIndex()) {
             assertTrue(pad.oneShot, "finite pad ${index + 1} must not advertise held sustain")
             assertEquals(patches[index].name, pad.displayName)

@@ -16,11 +16,14 @@ import kotlin.test.assertTrue
  * ALLOY anchors were kept and are pinned elsewhere (CausticCandidateVoicesTest).
  */
 class CausticHoldDriftTest {
+    /** The four voices held before 21 Nov 2026, whose holds this pins; BOWL, SCATTER and TONGUE are CausticCandidateHeldTest. */
+    private val earlierHeld = CausticVoice.entries.take(4)
+
     private fun held(voice: CausticVoice) = CausticInstrument.defaults(voice) + ("HOLD" to 1f)
 
     @Test
     fun `a held key varies from strike to strike without repeating inside its loop, in tune, and closes`() {
-        for (voice in CausticInstrument.HELD_VOICES) for (midi in listOf(36, 60, 84)) {
+        for (voice in earlierHeld) for (midi in listOf(36, 60, 84)) {
             val base = CausticSustain.loopFrameCount(midi, 1f)
             val still = CausticHeld.probe(voice, held(voice), midi, .75f, 2, 4, true, { false }, record = false, human = null)
             assertEquals(base, still.loop.frameCount, "$voice MIDI$midi still loop")
@@ -66,7 +69,7 @@ class CausticHoldDriftTest {
         // The owner kept the held keys with the note "stronger" (fix-caustic-1, 20 Nov 2026).
         assertEquals(CausticSustain.HUMAN_STRONGER, CausticInstrument.HELD_HUMAN)
         assertEquals(CausticSustain.Human(stroke = .22, pressureDb = 1.1, lateSeconds = .012), CausticInstrument.HELD_HUMAN)
-        for (voice in CausticInstrument.HELD_VOICES) {
+        for (voice in earlierHeld) {
             val note = CausticInstrument.keyNote(voice, held(voice))
             val direct = CausticHeld.probe(voice, held(voice), 60, .75f, 2, 4, true, { false }, record = false, human = CausticSustain.HUMAN_STRONGER)
             assertContentEquals(direct.note.snip.samples, note.snip.samples, "$voice keyNote is the stronger hold")
@@ -82,7 +85,7 @@ class CausticHoldDriftTest {
 
     @Test
     fun `the humanized held keys are pinned`() {
-        val now = CausticInstrument.HELD_VOICES.associateWith { CandidateVoiceProbes.hash(CausticInstrument.keyNote(it, held(it)).snip.samples) }
+        val now = earlierHeld.associateWith { CandidateVoiceProbes.hash(CausticInstrument.keyNote(it, held(it)).snip.samples) }
         for ((voice, hash) in now) println("CAUSTIC HELD PIN CausticVoice.${voice.name} to \"$hash\",")
         assertEquals(HELD_KEYS, now)
     }
