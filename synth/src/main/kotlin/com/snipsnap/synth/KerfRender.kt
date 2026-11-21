@@ -78,7 +78,44 @@ object KerfRender {
     data class Controls(
         val cut: Double = 1.0, val floor: Double = 1.0, val decay: Double = 1.0, val tuneSemitones: Double = 0.0,
         val layers: Boolean = true, val colour: Boolean = true,
+        /**
+         * Where the floor (the loop's wash under the hit) stops, in seconds: past it the floor dies 60 dB in
+         * [FLOOR_STOP_T60]. Infinite by default, so every chop renders exactly as before; [ring] sets it to the slice's
+         * end, because the wash belongs to the loop and a ringing note carries on without it.
+         */
+        val floorUntil: Double = Double.POSITIVE_INFINITY,
     )
+
+    /** How fast the floor dies past [Controls.floorUntil]: 60 dB in this long. */
+    const val FLOOR_STOP_T60 = 0.03
+
+    /** The longest a [ring] may run. A decay fitted over a fifth of a second can claim a minute; the ear sets this. */
+    const val RING_MAX_SECONDS = 4.0
+
+    /** The fade every [ring] ends on. */
+    const val RING_FADE_SECONDS = 0.15
+
+    /**
+     * A struck note rung out past its cut (the pitched-pad round, 2026-11-21): in a loop the next note lands long before
+     * a bar or a bell stops ringing, so the fit saw only the front of the ring. Every partial and every band keeps the
+     * decay the fit measured; the floor stops at the slice's end ([Controls.floorUntil]); the note runs until its
+     * slowest partial or band has fallen 60 dB, at least the slice, at most [maxSeconds], and ends on a
+     * [RING_FADE_SECONDS] fade. No neighbours, no knife: a pitched pad is the note, not the chop.
+     */
+    fun ring(patch: KerfPatchData, controls: Controls = Controls(), maxSeconds: Double = RING_MAX_SECONDS): FloatArray {
+        val c = controls.copy(floorUntil = patch.seconds * controls.cut)
+        // only what is within 40 dB of the loudest part sets the length: a whisper with a long fitted decay must not
+        // hold every note to the cap
+        val loudest = patch.partials.maxOfOrNull { it.amp } ?: 0.0
+        val partialEnd = patch.partials.filter { it.amp >= loudest * 0.01 }.maxOfOrNull { it.attackS + it.t60 * c.decay } ?: 0.0
+        // a band's power falls 60 dB in its t60 by bandEnvelope's law (10^(-6 t / t60) in power)
+        val ringing = patch.bands.maxOf { it.level }
+        val bandEnd = patch.bands.filter { it.level >= ringing * 1e-4 }.maxOfOrNull { it.attackS + it.t60 * c.decay } ?: 0.0
+        val seconds = max(patch.seconds * c.cut, min(maxSeconds, max(partialEnd, bandEnd)))
+        val out = raw(patch, c, extendSeconds = seconds - patch.seconds * c.cut)
+        fadeOut(out, (RING_FADE_SECONDS * RATE).toInt())
+        return FloatArray(out.size) { out[it].toFloat() }
+    }
 
     /** A chopped render and where its knife landed. */
     class Chop(val samples: FloatArray, val startMs: Double, val overMs: Double, val fadeMs: Double)
@@ -206,7 +243,8 @@ object KerfRender {
 
     /** One band's power over time: the attack ramp, the crack, the ring, the floor, and every later layer. */
     internal fun bandEnvelope(b: KerfBand, c: Controls, t: Double): Double {
-        val t60 = b.t60 * c.decay; val snapT60 = b.snapT60 * min(1.0, c.decay); val floor = b.floor * c.floor
+        val t60 = b.t60 * c.decay; val snapT60 = b.snapT60 * min(1.0, c.decay)
+        val floor = b.floor * c.floor * (if (t > c.floorUntil) 10.0.pow(-6.0 * (t - c.floorUntil) / FLOOR_STOP_T60) else 1.0)
         val tt = t - b.attackS
         var e = if (b.attackS > 1e-4 && tt < 0) {
             val ramp = (t / b.attackS).coerceIn(0.0, 1.0)

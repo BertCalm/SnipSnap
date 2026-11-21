@@ -472,7 +472,7 @@ explicit MIDI root (24–96), strike velocity and model version; TUNE is a
 relative ±12-semitone offset, neutral at 0.5, so the effective note spans
 12–108 without clamping back to the saved-root range. Seven provisional presets
 and a dry sixteen-pad C minor pentatonic kit are included, with PITCHWHEEL among
-FRESH TAPE's 256 starters. Run `./gradlew :synth:generatePitchwheelAudition`
+FRESH TAPE's 271 starters. Run `./gradlew :synth:generatePitchwheelAudition`
 for the compact first listening set, or add `-PpitchwheelFull` for the broader
 dry probes. HOLD's top step returns settled loop-only material with a
 deterministic attachment cycle and capped adhesion. The owner heard R1 as six
@@ -1809,9 +1809,11 @@ KERF is synthetic chops: drum hits cut from the owner's loops, measured, and reb
 with the two things that make a chop sound chopped, the last hit bleeding underneath and a knife
 that lands a little off. On a captured kit it is SYNTH TWIN on the pad sheet, SYNTH TWIN ALL on the
 kit screen, and `snipsnap kerf`. As an engine (round 4) it is on the SYNTH picker with six voices
-(KICK, SNARE, GHOST, HAT, HAT OPEN, PERC) over 63 fitted hits, whose HIT, TUNE, DECAY, FLOOR,
-BLEED and SLOP controls pick and shape a hit. It also has four genre kits on FRESH TAPE (KERF DUST, SOUL,
-FUNK and STOMP), each with three touch zones, four takes, a roll and a riser. No audio from the
+(KICK, SNARE, GHOST, HAT, HAT OPEN, PERC) over 231 fitted hits (engine model 2; a model-1 save keeps the first 63), whose HIT, TUNE, DECAY, FLOOR,
+BLEED and SLOP controls pick and shape a hit. It also has sixteen genre kits on FRESH TAPE (KERF DUST, SOUL,
+FUNK, STOMP, RUSH, POCKET, MURK, CHATTER, JUNGLE, CLANG, HOUSE, DEEP, SWAY, CASSETTE, BOOM and TIGHT), each with three
+touch zones, four takes, a roll and a riser. Three pitched-pad kits (KERF METAL, GONG and WOOD) rebuild struck
+bars, gongs and keys from the owner's melodic loops, rung out past their cuts and laid out as sixteen notes of a scale. No audio from the
 loops is stored, only fitted numbers. [Design, rounds and measurements](docs/superpowers/specs/2026-11-19-kerf-synthetic-chops-design.md).
 
 Fired Bronze is an MPC-approved sixteen-pad skin, clay and bronze kit with four

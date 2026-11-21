@@ -48,9 +48,13 @@ enum class KerfVoice(val drumClass: DrumClass, val bankClasses: Set<String>) {
 object Kerf {
     /**
      * Engine models. A save keeps the model it was made with.
-     * - **1 (round 4, 2026-11-20):** the bank's v1 numbers through [KerfRender] model 1, velocity at depth 3.
+     * - **2 (round 7, 2026-11-21):** each voice's pool is model 1's, unchanged and in the same order, then the hits the
+     *   owner approved in the genre kits of rounds 5 and 6 ([KerfBank.genreKits], as [KerfKits] files them): 231 hits.
+     *   A model-1 hit keeps its place, so a preset's hit index lands on the same hit on either model.
+     * - **1 (round 4, 2026-11-20):** the bank's v1 numbers through [KerfRender] model 1, velocity at depth 3. Its
+     *   pools are the first bank's 63 hits; a model-1 save keeps them.
      */
-    const val MODEL_VERSION = 1
+    const val MODEL_VERSION = 2
 
     /** The loudest full-velocity take's peak. */
     const val PEAK = 0.89f
@@ -73,14 +77,28 @@ object Kerf {
     /** The longest fitted hit a voice may hold. */
     const val MAX_SECONDS = 1.2
 
-    /** The voice's pool: every bank pad of its kind, short enough, in kit then pad order. */
-    fun pool(voice: KerfVoice): List<KerfPad> = pools.getValue(voice)
+    /**
+     * The voice's pool on [model]. Model 1: every first-bank pad of its kind, short enough, in kit then pad order.
+     * Model 2: model 1's pool, then the voice's hits from the genre kits of rounds 5 and 6 (each as its kit files it,
+     * in kit then pad order), so model 1's indices still name the same hits.
+     */
+    fun pool(voice: KerfVoice, model: Int = MODEL_VERSION): List<KerfPad> {
+        require(model in 1..MODEL_VERSION) { "unsupported kerf model $model" }
+        return if (model == 1) firstPools.getValue(voice) else secondPools.getValue(voice)
+    }
 
-    private val pools: Map<KerfVoice, List<KerfPad>> by lazy {
+    private val firstPools: Map<KerfVoice, List<KerfPad>> by lazy {
         KerfVoice.entries.associateWith { v ->
             KerfBank.kits.keys.sorted().flatMap { k -> KerfBank.kits.getValue(k).sortedBy { it.pad } }
                 .filter { it.drumClass in v.bankClasses && it.patch.seconds <= MAX_SECONDS }
         }
+    }
+
+    private val secondPools: Map<KerfVoice, List<KerfPad>> by lazy {
+        val genre = KerfKits.Genre.entries.filter { it.second }
+            .flatMap { g -> KerfKits.pads(g).map { it.voice to KerfKits.hitOf(g, it) } }
+            .filter { it.second.patch.seconds <= MAX_SECONDS }
+        KerfVoice.entries.associateWith { v -> firstPools.getValue(v) + genre.filter { it.first == v }.map { it.second } }
     }
 
     fun macrosFor(@Suppress("UNUSED_PARAMETER") voice: KerfVoice, model: Int = MODEL_VERSION): List<MacroSpec> {
@@ -102,15 +120,15 @@ object Kerf {
 
     fun drumClassFor(voice: KerfVoice): DrumClass = voice.drumClass
 
-    /** The HIT macro's place in [voice]'s pool: the pool split into equal steps. */
-    fun hitIndex(voice: KerfVoice, hit: Float): Int {
-        val n = pool(voice).size
+    /** The HIT macro's place in [voice]'s pool on [model]: the pool split into equal steps. */
+    fun hitIndex(voice: KerfVoice, hit: Float, model: Int = MODEL_VERSION): Int {
+        val n = pool(voice, model).size
         return (hit.coerceIn(0f, 1f) * n).toInt().coerceAtMost(n - 1)
     }
 
-    /** The HIT value that lands in the middle of pool step [index]. */
-    fun hitFor(voice: KerfVoice, index: Int): Float {
-        val n = pool(voice).size
+    /** The HIT value that lands in the middle of pool step [index] on [model]. */
+    fun hitFor(voice: KerfVoice, index: Int, model: Int = MODEL_VERSION): Float {
+        val n = pool(voice, model).size
         require(index in 0 until n) { "${voice.name} has $n hits, not ${index + 1}" }
         return (index + .5f) / n
     }
@@ -118,7 +136,11 @@ object Kerf {
     /** The pad recipe the macros describe: the chosen hit, its neighbours, and the render controls. */
     fun recipe(voice: KerfVoice, macros: Map<String, Float> = emptyMap(), model: Int = MODEL_VERSION): KerfRecipe {
         val m = settled(voice, macros, model)
-        val pad = pool(voice)[hitIndex(voice, m.getValue("HIT"))]
+        return recipeFor(pool(voice, model)[hitIndex(voice, m.getValue("HIT"), model)], m)
+    }
+
+    /** The pad recipe for any fitted [pad] at settled macros [m] (HIT is not read): [recipe]'s controls, for any bank. */
+    fun recipeFor(pad: KerfPad, m: Map<String, Float>): KerfRecipe {
         val floor = 2.0 * m.getValue("FLOOR")
         return KerfRecipe(
             patch = pad.patch, prev = pad.prev, next = pad.next,
