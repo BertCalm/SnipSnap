@@ -14,28 +14,8 @@ import kotlin.math.*
 object HydroformCandidateKitGenerator {
     private const val NAME = "SnipSnap Hydroform Candidate Kit"
     private val velocities = listOf(.3f, .6f, 1f)
-    private fun patch(name: String, voice: HydroformVoice, tune: Float, charge: Float,
-                      standoff: Float, yield: Float, arrest: Float, hold: Boolean = false) =
-        HydroformPatch(name, voice, Hydroform.defaults(voice) + mapOf(
-            "TUNE" to tune, "CHARGE" to charge, "STANDOFF" to standoff,
-            "YIELD" to yield, "ARREST" to arrest) +
-            if (voice == HydroformVoice.DOME) mapOf("HOLD" to if (hold) 1f else 0f) else emptyMap())
-
-    /** Shape proposals for listening, not claims of heard preset quality. */
-    fun candidates(): List<HydroformPatch> = listOf(
-        patch("LOW PRESSURE", HydroformVoice.DOME, .5f, .45f, .10f, .80f, .30f),
-        patch("PRESSURE VESSEL", HydroformVoice.DOME, .5f, .90f, .35f, .35f, .45f),
-        patch("DIE CUT", HydroformVoice.DOME, .5f, .75f, .25f, .40f, 1f),
-        patch("RETURN FRONT", HydroformVoice.DOME, .5f, .70f, .85f, .60f, .55f),
-        patch("YIELD BREAK", HydroformVoice.DOME, .5f, 1f, .60f, .10f, .70f),
-        patch("DIE CYCLE", HydroformVoice.DOME, .5f, .70f, .35f, .50f, .65f, true),
-        patch("PLATE TAP", HydroformVoice.BULKHEAD, 5f/24, .35f, .15f, .85f, .80f),
-        patch("BENT PANEL", HydroformVoice.BULKHEAD, 0f, .60f, .45f, .55f, .40f),
-        patch("BULK STRIKE", HydroformVoice.BULKHEAD, 3f/24, .75f, .35f, .50f, .65f),
-        patch("CUT RIM", HydroformVoice.BULKHEAD, 8f/24, .70f, .70f, .65f, 1f),
-        patch("TEARING FACE", HydroformVoice.BULKHEAD, 10f/24, 1f, .65f, .10f, .75f),
-        patch("OPEN PANEL", HydroformVoice.BULKHEAD, .5f, .60f, .85f, .70f, .10f),
-    )
+    /** Shape proposals for listening, not claims of heard preset quality; now held in [HydroformPresets]. */
+    fun candidates(): List<HydroformPatch> = HydroformPresets.all()
 
     private data class Hit(val beat: Double, val slot: Int)
     private fun hits(): List<Hit> = buildList {

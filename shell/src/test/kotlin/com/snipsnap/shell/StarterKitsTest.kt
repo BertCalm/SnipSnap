@@ -118,7 +118,7 @@ class StarterKitsTest {
     }
 
     /** What a single-engine starter is built from: its patch type, every voice it can play, and its engine's own filing. */
-    private class OneEngine(val patch: Class<out Patch>, val voices: Set<String>, val drumClassFor: (Patch) -> DrumClass)
+    private class OneEngine(val patch: Class<out Patch>, val voices: Set<String>, val key: KeySpec? = KeySpec.parse("Cminpent"), val drumClassFor: (Patch) -> DrumClass)
 
     /**
      * The single-engine starters with no block of their own below. Each SynthKits
@@ -200,6 +200,17 @@ class StarterKitsTest {
         },
         "osprey-curated" to OneEngine(OspreyPatch::class.java, OspreyVoice.entries.map { it.name }.toSet()) {
             (it as OspreyPatch).let { p -> Osprey.drumClassFor(p.voice, p.macros) }
+        },
+        // Held by HeldPromotions until the owner keeps them (round promote-fhl-1); checked here once they ship,
+        // and by HeldStartersTest until then. FILL has no root, so its kit names no key.
+        com.snipsnap.synth.FillKits.ID to OneEngine(com.snipsnap.synth.FillPatch::class.java, com.snipsnap.synth.FillVoice.entries.map { it.name }.toSet(), key = null) {
+            (it as com.snipsnap.synth.FillPatch).let { p -> com.snipsnap.synth.Fill.drumClassFor(p.voice, p.macros) }
+        },
+        com.snipsnap.synth.HydroformKits.ID to OneEngine(com.snipsnap.synth.HydroformPatch::class.java, com.snipsnap.synth.HydroformVoice.entries.map { it.name }.toSet(), key = com.snipsnap.synth.HydroformKits.KEY) {
+            (it as com.snipsnap.synth.HydroformPatch).let { p -> com.snipsnap.synth.Hydroform.drumClassFor(p.voice, p.macros) }
+        },
+        com.snipsnap.synth.LorentzKits.ID to OneEngine(com.snipsnap.synth.LorentzPatch::class.java, com.snipsnap.synth.LorentzVoice.entries.map { it.name }.toSet()) {
+            com.snipsnap.synth.LorentzKits.drumClassFor(it as com.snipsnap.synth.LorentzPatch)
         },
     )
 
@@ -509,7 +520,7 @@ class StarterKitsTest {
             }
             oneEngineStarters[starter.id]?.let { engine ->
                 val model = KitBuilderModel.open(dir)
-                assertEquals(KeySpec.parse("Cminpent"), model.kit.key)
+                assertEquals(engine.key, model.kit.key)
                 assertEquals(if (starter.id == "scour") 64 else 16, model.kit.pads.size)
                 val patches = model.kit.pads.map { pad ->
                     val recipe = assertNotNull(Breed.recipeOf(pad.recipe), "${starter.id} ${pad.displayName}: no recipe")

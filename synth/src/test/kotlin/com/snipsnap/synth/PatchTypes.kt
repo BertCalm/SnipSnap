@@ -49,7 +49,8 @@ internal object PatchTypes {
     }
 
     /**
-     * The engines with a [Patch] type but no preset roster in [Presets]: SNAP reads its
+     * The engines with a [Patch] type but no preset roster in [Presets]: HYDROFORM sat here until its R7 candidates
+     * became [HydroformPresets] (held, see [PROTOTYPES]). SNAP reads its
      * table off a photo, SILK, GYRE and MAGNET have no factory
      * presets. Named here so a new engine has to be either rostered or listed. SCUFF
      * sat here from its Kotlin port until the owner heard its kits (2026-11-13),
@@ -62,7 +63,7 @@ internal object PatchTypes {
      * and their hits became its factory bank. RIDDIM sat here from its port (round 2a, 2026-11-18) until the owner
      * accepted its six kits on the phone and the MPC (2026-11-19) and their RIDDIM pads became its factory bank.
      */
-    val ROSTERLESS: Set<String> = setOf(HydroformPatch.ENGINE, SnapPatch.ENGINE, SilkPatch.ENGINE, GyrePatch.ENGINE, MagnetPatch.ENGINE)
+    val ROSTERLESS: Set<String> = setOf(SnapPatch.ENGINE, SilkPatch.ENGINE, GyrePatch.ENGINE, MagnetPatch.ENGINE)
 
     /**
      * The engines with a [Patch] type and provisional recipes of their own that are
@@ -75,7 +76,9 @@ internal object PatchTypes {
      * DRAWL joined at its Kotlin port (round 1, 2026-11-21): the owner kept all six voices of its Python prototype
      * (rounds 0 to 0d), and nobody has heard the Kotlin render; presets wait for that listen.
      */
-    val PROTOTYPES: Set<String> = setOf(SecondlinePatch.ENGINE, ChitinPatch.ENGINE, FerryPatch.ENGINE, FillPatch.ENGINE, BreakerPatch.ENGINE, SootPatch.ENGINE, ConsortPatch.ENGINE, KerfPatch.ENGINE, DrawlPatch.ENGINE)
+    val PROTOTYPES: Set<String> = setOf(SecondlinePatch.ENGINE, ChitinPatch.ENGINE, FerryPatch.ENGINE, BreakerPatch.ENGINE, SootPatch.ENGINE, ConsortPatch.ENGINE, KerfPatch.ENGINE, DrawlPatch.ENGINE) +
+        // FILL and HYDROFORM (whose R7 candidates moved into HydroformPresets) stay here while HeldPromotions holds them.
+        setOf(FillPatch.ENGINE, HydroformPatch.ENGINE).filterNot(HeldPromotions::shipped)
 
     /** These voices of otherwise rostered engines await a factory-preset listening verdict. */
     val PROTOTYPE_VOICES: Map<String, Set<String>> = mapOf(

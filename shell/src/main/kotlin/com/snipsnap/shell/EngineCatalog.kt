@@ -51,7 +51,11 @@ data class EngineEntry(val categories: List<EngineCategory>, val description: St
  * behind. Nothing here was heard: it classifies what each engine is for.
  */
 object EngineCatalog {
-    val ENTRIES: Map<String, EngineEntry> = mapOf(
+    /**
+     * The picker's engines, held ones included: FILL, HYDROFORM and LORENTZ are written into the picker
+     * but wait on [com.snipsnap.synth.HeldPromotions]. [ENTRIES] is what the picker offers.
+     */
+    val PREPARED: Map<String, EngineEntry> = mapOf(
         "LATTICE" to EngineEntry(listOf(EngineCategory.SYNTH), "Warm, plucked or hollow notes that drop out and come back"),
         "ACCORD" to EngineEntry(listOf(EngineCategory.BELLS, EngineCategory.PADS), "Pitched brush, wood, tines, reed, strings, clock and bell"),
         "THUMP" to EngineEntry(listOf(EngineCategory.DRUMS), "Analog-style kick, snare, hats, clap, tom, cowbell, rim"),
@@ -159,7 +163,13 @@ object EngineCatalog {
         "KINDRED" to EngineEntry(listOf(EngineCategory.DRUMS), "One analog voice re-struck: diving kicks, zaps, FM toms"),
         "RIDDIM" to EngineEntry(listOf(EngineCategory.DRUMS), "Dancehall drums: booms, ratchet, ting, woods and bronze"),
         "CAIRN" to EngineEntry(listOf(EngineCategory.BELLS, EngineCategory.DRUMS), "Stones that knock, tumble, grind, sing and roll in a bowl"),
+        "FILL" to EngineEntry(listOf(EngineCategory.DRUMS), "Snare rolls and tom runs that land on the downbeat"),
+        "HYDROFORM" to EngineEntry(listOf(EngineCategory.DRUMS), "Pressure bursts slammed into metal: booms and clangs"),
+        "LORENTZ" to EngineEntry(listOf(EngineCategory.DRUMS, EngineCategory.BASS), "Falling zaps that collide into a deep sub kick"),
     )
+
+    /** Every engine the picker offers, in its order: [PREPARED] without the held ones. */
+    val ENTRIES: Map<String, EngineEntry> = PREPARED.filterKeys(com.snipsnap.synth.HeldPromotions::shipped)
 
     /** The entry for the engine constant [name], or null for a name the catalogue does not know. */
     fun entry(name: String): EngineEntry? = ENTRIES[name]

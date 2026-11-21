@@ -1178,7 +1178,9 @@ class ConventionTest {
     fun `law - prose that lists the picker's engines lists exactly the picker's engines`() {
         val synthScreen = File("../app/src/main/kotlin/com/snipsnap/app/ui/SynthScreen.kt")
         require(synthScreen.isFile) { "expected ${synthScreen.path}; fix the path rather than deleting the check" }
+        // The READMEs describe what the picker offers: an engine HeldPromotions holds joins them when it ships.
         val picker = pickerEngineConstants(synthScreen.readText(Charsets.UTF_8), synthScreen.path)
+            .filter(com.snipsnap.synth.HeldPromotions::shipped)
         require(picker.size > 40) { "parsed only ${picker.size} picker engines; the parse is broken, not the picker" }
         val pickerNames = picker.map { it.replace('_', ' ') }.toSet()
         val rostered = Presets.all().map { it.engine }.toSet()
@@ -1338,7 +1340,9 @@ class ConventionTest {
         require(picker.size > 40) { "parsed only ${picker.size} picker engines; the parse is broken, not the picker" }
         require("SCANNED_CHAIN" in picker && "THUMP" in picker) { "the parse lost a constant it should have read" }
 
-        val problems = catalogueProblems(picker, EngineCatalog.ENTRIES.keys)
+        val problems = catalogueProblems(picker, EngineCatalog.PREPARED.keys)
+        // What the picker offers is the prepared list without the engines HeldPromotions holds.
+        assertEquals(EngineCatalog.PREPARED.keys.filter(com.snipsnap.synth.HeldPromotions::shipped), EngineCatalog.ENTRIES.keys.toList())
         assertTrue(
             problems.isEmpty(),
             problems.joinToString("\n  ", prefix = "`Engine` in SynthScreen.kt and `EngineCatalog` disagree:\n  ") +

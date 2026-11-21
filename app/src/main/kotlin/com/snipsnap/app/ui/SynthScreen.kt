@@ -340,6 +340,16 @@ import com.snipsnap.synth.Osteria
 import com.snipsnap.synth.Cairn
 import com.snipsnap.synth.CairnPatch
 import com.snipsnap.synth.CairnVoice
+import com.snipsnap.synth.Fill
+import com.snipsnap.synth.FillPatch
+import com.snipsnap.synth.FillVoice
+import com.snipsnap.synth.HeldPromotions
+import com.snipsnap.synth.Hydroform
+import com.snipsnap.synth.HydroformPatch
+import com.snipsnap.synth.HydroformVoice
+import com.snipsnap.synth.Lorentz
+import com.snipsnap.synth.LorentzPatch
+import com.snipsnap.synth.LorentzVoice
 import com.snipsnap.synth.OsteriaStrum
 import com.snipsnap.synth.OsteriaPatch
 import com.snipsnap.synth.OsteriaVoice
@@ -955,7 +965,7 @@ fun SynthScreen(
     // name the bag holds that this build cannot resolve is ignored, and a
     // voice the restored engine does not have falls back to its first.
     var engine by remember {
-        mutableStateOf(Engine.entries.firstOrNull { it.name == settings[SETTINGS_ENGINE] } ?: Engine.THUMP)
+        mutableStateOf(Engine.entries.firstOrNull { it.offered && it.name == settings[SETTINGS_ENGINE] } ?: Engine.THUMP)
     }
     var voice by remember {
         mutableStateOf<Enum<*>>(
@@ -1127,7 +1137,7 @@ fun SynthScreen(
     val loadedPatchesByVoice = remember {
         mutableStateMapOf<Pair<Engine, Enum<*>>, Patch>().apply {
             for (patch in seed.seededDrafts) {
-                val e = Engine.entries.firstOrNull { it.name == patch.engine } ?: continue
+                val e = Engine.entries.firstOrNull { it.offered && it.name == patch.engine } ?: continue
                 val v = e.voices().firstOrNull { it.name == patch.voiceName } ?: continue
                 put(e to v, editablePreset(patch))
                 if (patch is MeridianPatch && (e to v) !in seed.seededWork) {
@@ -2449,7 +2459,7 @@ fun SynthScreen(
     val reopeningPad = remember { mutableStateOf(false) }
     val reopenablePads = kit?.pads.orEmpty().filter { pad ->
         val patch = Breed.recipeOf(pad)?.patch
-        val sourceEngine = Engine.entries.firstOrNull { it.name == patch?.engine }
+        val sourceEngine = Engine.entries.firstOrNull { it.offered && it.name == patch?.engine }
         // A native FIRED BRONZE bank reopens whole: model 1's four layer files, or model 2's strike grid.
         (pad.velocityLayers.isEmpty() || FiredBronzePads.canEdit(pad)) &&
             (!(pad.chain != null && !pad.isRobinChain) || FiredBronzePads.canEdit(pad)) &&
@@ -2460,7 +2470,7 @@ fun SynthScreen(
         val pad = sourceEntry.kit.pad(slot) ?: return
         val recipe = Breed.recipeOf(pad) ?: return
         val patch = recipe.patch ?: return
-        val sourceEngine = Engine.entries.firstOrNull { it.name == patch.engine } ?: return
+        val sourceEngine = Engine.entries.firstOrNull { it.offered && it.name == patch.engine } ?: return
         val sourceVoice = sourceEngine.voices().firstOrNull { it.name == patch.voiceName } ?: return
         val key = sourceEngine to sourceVoice
         val editable = editablePreset(patch)
@@ -5172,7 +5182,7 @@ private class SynthSeed(settings: Map<String, String>) {
     val seededWork = run {
         SynthWork.read(settings).mapNotNull { work ->
             val patch = work.recipe.patch ?: return@mapNotNull null
-            val sourceEngine = Engine.entries.firstOrNull { it.name == patch.engine } ?: return@mapNotNull null
+            val sourceEngine = Engine.entries.firstOrNull { it.offered && it.name == patch.engine } ?: return@mapNotNull null
             val sourceVoice = sourceEngine.voices().firstOrNull { it.name == patch.voiceName } ?: return@mapNotNull null
             (sourceEngine to sourceVoice) to work
         }.toMap()
@@ -5332,7 +5342,7 @@ private fun SynthOverlayBackHandler(onBack: () -> Unit) {
 // ---------- ENGINE header and list ----------
 
 /** Every picker engine by constant name, in the enum's own order: what the engine list is handed. */
-private val ENGINE_NAMES = Engine.entries.map { it.name }
+private val ENGINE_NAMES = Engine.entries.filter { it.offered }.map { it.name }
 
 /** The same, as a set: what the saved recents are checked against. */
 private val ENGINE_NAME_SET = ENGINE_NAMES.toSet()
@@ -6723,14 +6733,19 @@ private enum class ObbligatoVoice { AIR_REED }
  */
 private enum class Engine {
     LATTICE, ACCORD,
-    THUMP, SCANNED_CHAIN, SKIN, ONSET, TINES, VELVET, VOX, PLUCK, ORPHICA, TONEWHEEL, OTIS, REGISTERS, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, HALOBAR, FLOTILLA, AEROSTAT, TREMOR, BALLAST, CISTERN, CIRCUIT, OBBLIGATO, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVERLAP, OVEN, FLOCK, VENT, CREASE, TRIO, NACRE, ORIGAMI, TREFOIL, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS, TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME, BORE, ARCO, SCOUR, KEEL, CHITIN, WICK, EROSION, RIVET, FIRED_BRONZE, BACKWASH, DRUMLINE, SOOT, KERF, HICCUP, TEMPEST, SPLAY, OSTERIA, ETCH, SCUFF, CLUTTER, CALABASH, TERRA, BRISTLE, SERVO, EMBER, SAMBA, KINDRED, RIDDIM, CAIRN;
+    THUMP, SCANNED_CHAIN, SKIN, ONSET, TINES, VELVET, VOX, PLUCK, ORPHICA, TONEWHEEL, OTIS, REGISTERS, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, HALOBAR, FLOTILLA, AEROSTAT, TREMOR, BALLAST, CISTERN, CIRCUIT, OBBLIGATO, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVERLAP, OVEN, FLOCK, VENT, CREASE, TRIO, NACRE, ORIGAMI, TREFOIL, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS, TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME, BORE, ARCO, SCOUR, KEEL, CHITIN, WICK, EROSION, RIVET, FIRED_BRONZE, BACKWASH, DRUMLINE, SOOT, KERF, HICCUP, TEMPEST, SPLAY, OSTERIA, ETCH, SCUFF, CLUTTER, CALABASH, TERRA, BRISTLE, SERVO, EMBER, SAMBA, KINDRED, RIDDIM, CAIRN,
+    // Written but held until the owner keeps them (HeldPromotions): no list, arrow or restore reaches a held engine.
+    FILL, HYDROFORM, LORENTZ;
     val displayName: String get() = name.replace('_', ' ')
 
-    /** The engine after this one in the enum's order, wrapping from the last back to the first. */
-    fun next(): Engine = entries[(ordinal + 1) % entries.size]
+    /** False for an engine [HeldPromotions] still holds: the picker skips it. */
+    val offered: Boolean get() = HeldPromotions.shipped(name)
 
-    /** The engine before this one, wrapping from the first round to the last. */
-    fun previous(): Engine = entries[(ordinal + entries.size - 1) % entries.size]
+    /** The offered engine after this one in the enum's order, wrapping from the last back to the first. */
+    fun next(): Engine = generateSequence(this) { entries[(it.ordinal + 1) % entries.size] }.drop(1).first { it.offered }
+
+    /** The offered engine before this one, wrapping from the first round to the last. */
+    fun previous(): Engine = generateSequence(this) { entries[(it.ordinal + entries.size - 1) % entries.size] }.drop(1).first { it.offered }
 
     fun voices(): List<Enum<*>> = when (this) {
         SPLAY -> SplayVoice.entries
@@ -6847,6 +6862,9 @@ private enum class Engine {
         BRISTLE -> Bristle.Route.entries
         SCUFF -> ScuffVoice.entries
         CAIRN -> CairnVoice.entries
+        FILL -> FillVoice.entries
+        HYDROFORM -> HydroformVoice.entries
+        LORENTZ -> LorentzVoice.entries
         KERF -> KerfVoice.entries
         KEEL -> KeelVoice.entries
     }
@@ -6945,6 +6963,9 @@ private enum class Engine {
         BRISTLE -> Bristle.macrosFor(voice as Bristle.Route)
         SCUFF -> Scuff.macrosFor(voice as ScuffVoice)
         CAIRN -> Cairn.macrosFor(voice as CairnVoice)
+        FILL -> Fill.macrosFor(voice as FillVoice)
+        HYDROFORM -> Hydroform.macrosFor(voice as HydroformVoice)
+        LORENTZ -> Lorentz.macrosFor(voice as LorentzVoice)
         KERF -> Kerf.macrosFor(voice as KerfVoice)
         KEEL -> Keel.macrosFor(voice as KeelVoice)
         FILAMENT -> Filament.macrosFor(voice as FilamentVoice)
@@ -7049,6 +7070,9 @@ private enum class Engine {
         BRISTLE -> Bristle.defaults(voice as Bristle.Route)
         SCUFF -> Scuff.defaults(voice as ScuffVoice)
         CAIRN -> Cairn.defaults(voice as CairnVoice)
+        FILL -> Fill.defaults(voice as FillVoice)
+        HYDROFORM -> Hydroform.defaults(voice as HydroformVoice)
+        LORENTZ -> Lorentz.defaults(voice as LorentzVoice)
         KERF -> Kerf.defaults(voice as KerfVoice)
         KEEL -> Keel.defaults(voice as KeelVoice)
         FILAMENT -> Filament.defaults(voice as FilamentVoice)
@@ -7156,6 +7180,9 @@ private enum class Engine {
         BRISTLE -> Bristle.scramble(voice as Bristle.Route, random)
         SCUFF -> Scuff.scramble(voice as ScuffVoice, random)
         CAIRN -> Cairn.scramble(voice as CairnVoice, random)
+        FILL -> Fill.scramble(voice as FillVoice, random)
+        HYDROFORM -> Hydroform.scramble(voice as HydroformVoice, random)
+        LORENTZ -> Lorentz.scramble(voice as LorentzVoice, random)
         KERF -> Kerf.scramble(voice as KerfVoice, random)
         KEEL -> Keel.scramble(voice as KeelVoice, random)
         FILAMENT -> Filament.scramble(voice as FilamentVoice, random)
@@ -7269,6 +7296,9 @@ private enum class Engine {
         BRISTLE -> Bristle.render(voice as Bristle.Route, macros)
         SCUFF -> ScuffPatch("Scuff", voice as ScuffVoice, macros).render()
         CAIRN -> Cairn.render(voice as CairnVoice, macros)
+        FILL -> Fill.render(voice as FillVoice, macros)
+        HYDROFORM -> Hydroform.render(voice as HydroformVoice, macros)
+        LORENTZ -> Lorentz.render(voice as LorentzVoice, macros)
         KERF -> KerfPatch("Kerf", voice as KerfVoice, macros).render()
         KEEL -> Keel.render(voice as KeelVoice, macros)
         FILAMENT -> Filament.render(voice as FilamentVoice, macros)
@@ -7379,6 +7409,9 @@ private enum class Engine {
         BRISTLE -> Bristle.drumClassFor(voice as Bristle.Route, macros)
         SCUFF -> Scuff.drumClassFor(voice as ScuffVoice)
         CAIRN -> Cairn.drumClassFor(voice as CairnVoice, macros)
+        FILL -> Fill.drumClassFor(voice as FillVoice, macros)
+        HYDROFORM -> Hydroform.drumClassFor(voice as HydroformVoice, macros)
+        LORENTZ -> Lorentz.drumClassFor(voice as LorentzVoice, macros)
         KERF -> Kerf.drumClassFor(voice as KerfVoice)
         KEEL -> Keel.drumClassFor(voice as KeelVoice, macros)
         FILAMENT -> Filament.drumClassFor(voice as FilamentVoice, macros)
@@ -7483,6 +7516,9 @@ private enum class Engine {
         BRISTLE -> BristlePatch(name, voice as Bristle.Route, macros)
         SCUFF -> ScuffPatch(name, voice as ScuffVoice, macros)
         CAIRN -> CairnPatch(name, voice as CairnVoice, macros)
+        FILL -> FillPatch(name, voice as FillVoice, macros)
+        HYDROFORM -> HydroformPatch(name, voice as HydroformVoice, macros)
+        LORENTZ -> LorentzPatch(name, voice as LorentzVoice, macros)
         KERF -> KerfPatch(name, voice as KerfVoice, macros)
         KEEL -> KeelPatch(name, voice as KeelVoice, macros)
         FILAMENT -> FilamentPatch(name, voice as FilamentVoice, macros)

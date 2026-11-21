@@ -105,6 +105,31 @@ object StarterKits {
         }
     }
 
+    /**
+     * Starters written for the engines [com.snipsnap.synth.HeldPromotions] holds, each paired with its engine.
+     * A held one is in no menu and no shelf group; it joins the end of [ALL] when its engine ships.
+     */
+    internal val HELD: List<Pair<String, Starter>> = listOf(
+        com.snipsnap.synth.FillPatch.ENGINE to Starter(
+            com.snipsnap.synth.FillKits.ID, "FILL",
+            "Drum fills on one pad: snare rolls and tom runs that land on the downbeat, tight then loose. Three touch levels.",
+            seeded = false,
+        ) { com.snipsnap.synth.FillKits.build() },
+        com.snipsnap.synth.HydroformPatch.ENGINE to Starter(
+            com.snipsnap.synth.HydroformKits.ID, "HYDROFORM",
+            "Pressure bursts slammed into metal: pitched booms, six clangs, a driven accent and a stutter. Three touch levels.",
+            seeded = false, key = com.snipsnap.synth.HydroformKits.KEY, tempoBpm = com.snipsnap.synth.HydroformKits.TEMPO_BPM,
+        ) { com.snipsnap.synth.HydroformKits.build() },
+        com.snipsnap.synth.LorentzPatch.ENGINE to Starter(
+            com.snipsnap.synth.LorentzKits.ID, "LORENTZ",
+            "Falling zaps that weld into a sub: a sub-kick bass line and eight collision hits. Three touch levels.",
+            seeded = false, key = KeySpec.parse("Cminpent"),
+        ) { com.snipsnap.synth.LorentzKits.build() },
+    )
+
+    /** True when [id] is a starter the menu offers: not one of [HELD] still waiting on its engine. */
+    fun offered(id: String): Boolean = byId(id) != null
+
     val SIDEROOM_IDS = com.snipsnap.synth.SideroomKits.Kit.entries.map { it.id }.toSet()
     val PATIO_IDS = com.snipsnap.synth.PatioPerformance.Genre.entries.map { it.id }.toSet()
     val ALL: List<Starter> = listOf(
@@ -1315,7 +1340,7 @@ object StarterKits {
             seeded = false,
             key = KeySpec.parse("Cminpent"),
         ) { com.snipsnap.synth.AccordRoundRobinKits.build() },
-    )
+    ) + HELD.filter { (engine, _) -> com.snipsnap.synth.HeldPromotions.shipped(engine) }.map { it.second }
 
     fun byId(id: String): Starter? = ALL.firstOrNull { it.id == id }
 }

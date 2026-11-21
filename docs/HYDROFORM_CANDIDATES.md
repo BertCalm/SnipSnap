@@ -1,8 +1,10 @@
 # HYDROFORM candidate bank / R7
 
 Twelve proposed recipes and a sixteen-pad dry kit make the native port auditionable in
-musical context. They are candidates, not factory presets. `Presets`, `SynthKits`, the
-roster exemption and Android picker are unchanged. The DSP and model version remain the
+musical context. They are candidates, not factory presets. The twelve recipes now live in
+`HydroformPresets` (main source, unchanged values) and the kit layout in `HydroformKits`, so the
+factory roster, the SYNTH picker and a HYDROFORM starter can serve them; all three stay off while
+`HeldPromotions` holds HYDROFORM, until the owner's picks (round promote-fhl-1). The DSP and model version remain the
 merged native implementation, byte-identical to the port on commit `26207f5`.
 
 This round was prepared against `22a6b40055192504f91a5a58f78e0ab01b53871e`.

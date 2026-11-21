@@ -31,7 +31,7 @@ GAP × CAPACITOR controls approach time. IMPACT × GAP changes the contrast betw
 
 `SynthKits.lorentz()` produces sixteen dry, finite pads: eight FUSE notes in C minor pentatonic from C1, followed by eight voice/control anchors. Every pad retains a replayable recipe. Classification comes from the actual rendered PCM; no blanket KICK mapping is promised for bright, long or high notes. The kit generator avoids a second render solely for metadata.
 
-The Android picker is deliberately deferred: this session has no Android SDK. The existing picker count is unchanged. The CLI and JVM kit pipeline are the available entry points.
+The Android picker entry and a LORENTZ starter (`LorentzKits`: these sixteen pads with soft, medium and hard native zones) are written but held by `HeldPromotions` until the owner has heard the Kotlin render (round promote-fhl-1); the picker count is unchanged until then. The CLI and JVM kit pipeline are the available entry points.
 
 ```sh
 ./gradlew :synth:generateLorentzAudition

@@ -365,6 +365,15 @@ object Presets {
             val v = CairnVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
             CairnPresets.forVoice(v)
         }
+        // FILL and HYDROFORM join the roster when [HeldPromotions] ships them.
+        FillPatch.ENGINE -> {
+            val v = FillVoice.entries.firstOrNull { it.name == voice }
+            if (v == null || !HeldPromotions.shipped(FillPatch.ENGINE)) emptyList() else FillPresets.forVoice(v)
+        }
+        HydroformPatch.ENGINE -> {
+            val v = HydroformVoice.entries.firstOrNull { it.name == voice }
+            if (v == null || !HeldPromotions.shipped(HydroformPatch.ENGINE)) emptyList() else HydroformPresets.forVoice(v)
+        }
         else -> emptyList()
     }
 
@@ -389,6 +398,11 @@ object Presets {
         else -> null
     }
 
+    /** FILL's and HYDROFORM's banks, empty while [HeldPromotions] holds them. */
+    internal fun held(): List<Patch> =
+        (if (HeldPromotions.shipped(FillPatch.ENGINE)) FillPresets.all() else emptyList()) +
+            (if (HeldPromotions.shipped(HydroformPatch.ENGINE)) HydroformPresets.all() else emptyList())
+
     fun all(): List<Patch> =
         TempestPresets.all() +
         SplayFactoryPresets.all() +
@@ -405,7 +419,7 @@ object Presets {
             TremorPresets.all() + CircuitPresets.all() + ThawPresets.all() + ScourPresets.all() + MurkPresets.all() + NimbusPresets.all() +
             CorollaPresets.all() + UndertowPresets.all() + SuturePresets.all() + TesseraPresets.all() + PitchwheelPresets.all() +
             RevelPresets.all() + PrismPresets.all() + OrigamiPresets.all() + FilamentPresets.all() + AlloyPresets.all() + ContourPresets.all() + StoopPresets.all() + LacquerPresets.all() + SpoolPresets.all() + SkitterPresets.all() + TanglePresets.all() + FlockPresets.all() + OverlapFactoryPresets.all() + ShoalPresets.all() + RelayPresets.all() + EmbouchurePresets.all() + EmbouchurePresets.experimental() + BellowsPresets.all() + MurmurPresets.all() + OspreyPresets.all() + RegistersPresets.all() + OpenSkyPresets.all() + ScannedChainPresets.all() + OrphicaPresets.all() + OvenPresets.all() + VentKitPresets.all() + CreasePresets.patches() + TrioPresets.all() + OhmPresets.all() + CausticPresets.all() + ChamberPresets.all() + LibrationPresets.all() + KeelPresets.all() + RimePresets.all() +
-            CairnPresets.all() +
+            CairnPresets.all() + held() +
             // ALLOY's MATERIAL choices stay last: AlloyMaterialPickerTest reads the roster's end.
             AlloyMaterialPresets.pickerAdditions()
 }
