@@ -116,10 +116,10 @@ object NativePads {
     /** Native host-policy ceiling; finite wet sample peaks, not reconstructed true peaks. */
     external fun aquariumOutputCeiling(): Float
 
-    /** The whole-kit glue's complete settings ([GlueSettings]); false queues nothing. */
+    /** The whole-kit glue's complete settings ([GlueSettings]) in chain order; false queues nothing. */
     external fun configureGlue(
-        handle: Long, enabled: Boolean, thresholdDbfs: Float, ratio: Float,
-        makeupDb: Float, driveDb: Float, ceilingDbfs: Float,
+        handle: Long, enabled: Boolean, inputTrimDb: Float, saturate: Boolean, saturationDb: Float,
+        thresholdDbfs: Float, ratio: Float, makeupDb: Float, driveDb: Float, ceilingDbfs: Float,
     ): Boolean
     /** The delay the glue adds while enabled, in frames (its 3 ms lookahead); 0 before preparation. */
     external fun glueLatencyFrames(handle: Long): Int

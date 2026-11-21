@@ -258,6 +258,33 @@ class BoroughKitsTest {
         assertEquals(.25, Borough.recipes.stackChain.distance); assertEquals(listOf(.35f, .65f, 1f), BoroughKits.velocities); assertEquals(3, BoroughKits.TAKES)
     }
 
+    /**
+     * Round 3.1's live glue, as pinned in recipes.json by glue_recipe.py: the owner's "C for all except rides and
+     * rims" (2026-11-21) is saturation on five kits and none on RIDE AND RIMS; every kit the same compressor and ceiling.
+     */
+    @Test fun `each kit carries the live glue the owner picked`() {
+        val expected = mapOf(
+            Kit.STOOP to Triple(0.79f, 2.7f, 7.13f), Kit.CELLAR to Triple(-1.29f, 0.0f, 7.67f), Kit.CRANKED to Triple(-1.81f, 6.0f, 7.0f),
+            Kit.WAX to Triple(0.63f, 6.0f, 7.0f), Kit.DRY to Triple(-2.67f, 6.0f, 7.0f), Kit.RIMS to Triple(-2.37f, null, 7.0f),
+        )
+        for ((kit, e) in expected) {
+            val g = BoroughKits.glueOf(kit)
+            assertEquals(com.snipsnap.kit.KitGlue(e.first, e.second, -10f, 4f, 0f, e.third, -1f), g, kit.name)
+        }
+        assertEquals(listOf(Kit.RIMS), Kit.entries.filter { BoroughKits.glueOf(it).saturationDb == null }, "rides and rims: no saturator")
+    }
+
+    @Test fun `a recipe kit without its glue is refused`() {
+        val text = javaClass.getResourceAsStream("/borough/v1/recipes.json")!!.bufferedReader().use { it.readText() }
+        val stripped = com.snipsnap.json.Json.write(com.snipsnap.json.Json.parse(text).let { root ->
+            val o = root.obj().toMutableMap()
+            o["kits"] = com.snipsnap.json.JsonValue.Arr(o.getValue("kits").arr().map { k -> com.snipsnap.json.JsonValue.Obj(k.obj() - "glue") })
+            com.snipsnap.json.JsonValue.Obj(o)
+        })
+        kotlin.test.assertFails { Borough.parse(stripped) }
+        assertEquals(6, Borough.parse(text).kits.size)
+    }
+
     @Test fun `no kit stack or pad is named after a maker`() {
         val names = Kit.entries.map { it.title } + Stack.entries.map { it.title } +
             Kit.entries.flatMap { k -> (0 until 12).map { BoroughKits.drumName(k, it) } } + Stack.entries.flatMap { s -> (0 until 4).map { BoroughKits.stackName(s, it) } }

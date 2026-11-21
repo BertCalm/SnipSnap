@@ -72,9 +72,17 @@ object Borough {
      */
     class DrumPad(val pad: Int, val label: String, val kind: Kind, val params: Map<String, Double>, val voice: EmberVoice?, val macros: Map<String, Float>, val chain: Chain?)
 
+    /**
+     * One kit: its pads and balance, [glueLimiterDriveDb] (the limiter drive the round-2 listening page used, kept for
+     * the record), and [glue], the live whole-kit glue pinned for the app's native bus in round 3.1
+     * (`kits[].glue`, prototype/borough/glue_recipe.py): input trim, saturation (null for none: RIDE AND RIMS), the
+     * compressor at -10 dBFS and 4:1, the limiter's drive and its -1 dBFS ceiling. The trim is set for the exported
+     * samples at their own level; the app adds its own live calibration ([BoroughKits.glueOf]).
+     */
     class KitRecipe(
         val id: String, val name: String, val bpm: Int, val role: String, val ride: Boolean, val defaultStack: String,
         val kickTrimDb: Double, val restTrimDb: Double, val glueLimiterDriveDb: Double, val pads: List<DrumPad>,
+        val glue: com.snipsnap.kit.KitGlue,
     )
 
     /** One stack pad: an EMBER voice at [macros] with TUNE resolved to [tune], resampled by [ratio] when [resample]. */
@@ -94,6 +102,16 @@ object Borough {
     class Recipes(val zones: List<Float>, val takes: Int, val stackChain: Chain, val stackTail: StackTail, val kits: List<KitRecipe>, val stacks: List<StackRecipe>)
 
     val recipes: Recipes by lazy { parse(checkNotNull(javaClass.getResourceAsStream("/borough/v1/recipes.json")) { "Missing BOROUGH recipes" }.bufferedReader().use { it.readText() }) }
+
+    private fun glueOf(o: Map<String, JsonValue>): com.snipsnap.kit.KitGlue {
+        fun f(key: String) = o.getValue(key).num().toFloat()
+        return com.snipsnap.kit.KitGlue(
+            inputTrimDb = f("input_trim_db"),
+            saturationDb = o.getValue("saturation_db").let { if (it is JsonValue.Null) null else it.num().toFloat() },
+            thresholdDbfs = f("threshold_dbfs"), ratio = f("ratio"), makeupDb = f("makeup_db"),
+            limiterDriveDb = f("limiter_drive_db"), ceilingDbfs = f("ceiling_dbfs"),
+        )
+    }
 
     private fun chainOf(o: Map<String, JsonValue>) = Chain(o.getValue("distance").num(), o.getValue("comp").num(), o.getValue("drive").num(), o.getValue("lp").num(), o.getValue("tilt").num())
 
@@ -133,6 +151,7 @@ object Borough {
                         else -> error("BOROUGH recipes: unknown pad kind $kind")
                     }
                 },
+                glueOf(k.getValue("glue").obj()),
             )
         }
         val stacks = root.getValue("stacks").arr().map { sj ->

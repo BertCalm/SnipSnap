@@ -38,13 +38,14 @@ object BoroughKitGenerator {
             val began = System.nanoTime()
             val pads = BoroughKits.build(g)
             val buildMs = (System.nanoTime() - began) / 1_000_000
-            val kit = KitAssembler.assembleArranged(g.title, pads, staging, tempoBpm = g.bpm.toFloat())
+            val kit = KitAssembler.assembleArranged(g.title, pads, staging, tempoBpm = g.bpm.toFloat(), glue = BoroughKits.glueOf(g))
             val exported = Mpc3Exporter.exportTrack(kit, staging, File(folder, "mpc"), overwrite = true)
             val data = File(folder, "mpc/${Mpc3TrackWriter.trackDataDirName(kit.name)}")
             com.snipsnap.kit.SfzWriter.write(kit, staging, File(folder, "sfz"), overwrite = true)
             com.snipsnap.kit.DecentSamplerWriter.write(kit, staging, File(folder, "decentsampler"), overwrite = true)
             val saved = KitStore.load(staging)
             check(saved == kit) { "${g.title}: the reloaded kit differs from the one saved" }
+            check(saved.glue == BoroughKits.glueOf(g)) { "${g.title}: the saved kit lost its live glue" }
             TriadKitProof.verify(saved, staging, pads)
             TriadKitProof.verify(saved, data, pads)
             TriadKitProof.verifyTrack(exported.program, saved)
@@ -81,7 +82,8 @@ object BoroughKitGenerator {
         manifest.append("  ]\n}\n")
         File(root, "README.txt").writeText("BOROUGH kits, version ${BoroughKits.VERSION}: six boom-bap drum kits generated from the accepted recipes, each with its default perc stack on A13-A16; three velocity zones of three takes per pad.\n" +
             "MPC 3, SFZ and DecentSampler exports cycle takes. MPC 2 is not written: it keeps each zone's first take (the owner's format-limit decision of 2026-11-14).\n" +
-            "The glue compressor the owner heard on the grooves is not printed into the pads. Nothing here has been played on a phone or an MPC.\n")
+            "Each kit's kit-source.json carries its live glue (\"glue\": input trim, saturation, compressor, limiter), which the app plays when the kit loads. " +
+            "It is not printed into the pads, and the MPC 3, SFZ and DecentSampler exports do not apply it. Nothing here has been played on a phone or an MPC.\n")
         File(root, "verification.csv").writeText(proof.toString())
         File(root, "metrics.csv").writeText(metrics.toString())
         File(root, "manifest.json").writeText(manifest.toString())

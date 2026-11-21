@@ -32,8 +32,11 @@ import kotlin.math.pow
  * stacks untrimmed, up to 10 dB over the kit's own snare, and they filled the space between hits ("sluggish and
  * muddled"). The drums are unchanged, RIDE AND RIMS' ride included: the owner heard a shortened ride as choked.
  *
- * Not here yet (docs/BOROUGH.md): the glue compressor and limiter the owner heard on the kits' grooves
- * ([Borough.KitRecipe.glueLimiterDriveDb]), which belongs to playback when a BOROUGH kit loads; and the stack picker.
+ * The live glue (round 3.1): each kit carries the chain the owner picked ([glueOf], `recipes.json` `kits[].glue`),
+ * stored in its kit.json and played by the app's native bus when the kit loads. The pads themselves are not glued:
+ * the WAVs, and therefore every export, are the drums dry of it.
+ *
+ * Not here yet (docs/BOROUGH.md): the stack picker.
  */
 object BoroughKits {
     /** Bump when a pad's audio changes; saved kits carry the version they were printed with. 2: round 3.1's stacks. */
@@ -170,6 +173,13 @@ object BoroughKits {
                     "tailMs" to Borough.recipes.stackTail.tailMsOf(pad.label).toString())),
         )
     }.toList()
+
+    /**
+     * The live whole-kit glue [kit] asks for: the recipe's numbers as they are (`recipes.json` `kits[].glue`), set
+     * for the exported samples at their own level. Any calibration for how the live mix scales a pad (pad level,
+     * velocity, pan) belongs to the player that maps it, not here.
+     */
+    fun glueOf(kit: Kit): com.snipsnap.kit.KitGlue = kit.recipe.glue
 
     /** A sixteen-pad bank: [kit]'s drums on A01 to A12 and [stack] on A13 to A16. The stack picker calls this. */
     fun build(kit: Kit, stack: Stack = kit.defaultStack): List<ArrangedPad> = combine(drumPads(kit), stackPads(kit, stack))
