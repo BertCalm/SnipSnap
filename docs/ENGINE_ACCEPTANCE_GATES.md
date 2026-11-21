@@ -1265,24 +1265,25 @@ The same day, round accord-voices-1 played four new voices, each reading a part 
 
 Five distinct approved kits are implemented on the SKINS shelf with ten pads each. Three velocity layers × three takes survive native rendering, saving, replay and playback; the roll is owner accepted and the model-3 Original fill is owner accepted. Focused software tests verify all 450 variants and MPC export read-back. **MPC 3/phone hardware verification remains open.** The owner’s 2026-11-14 MPC2 combined-grid exception applies: its first-take velocity export is a format limit, not a new blocking gate. The generic slice-map capture remains parked by the owner; software checks do not establish SIDEROOM’s physical MPC3 cycling behavior. Separate Soft/Medium/Hard discrete-WAV cycling companions now preserve all takes in both formats, verified in software. They are an explicit fallback, not closure of the combined grid gate. No Android build/device check is claimed. Melodic voices, keygroups, chord tools and string STRUM do not apply. This is a versioned cached-synthesis bank, not an editable Kotlin spectral engine. See [SIDEROOM](SIDEROOM.md) for build steps and evidence.
 
-## CONSORT (Kotlin prototype, 2026-11-19)
+## CONSORT (round K3, 2026-11-20: keys, chords, round robin, shelf, picker and factory bank, all kept by ear; device and hardware open)
 
-Source: the commit that adds this entry. Details: [CONSORT](CONSORT.md).
+Source: the commits of round K3 (PR #1256). Details: [CONSORT](CONSORT.md). The owner heard all 29 clips of the K3 listening round and kept them (2026-11-20, "All sounds good"): held keys on four voices, a section, REED TRIO's top key and FLUTTER FLUTE (the two loosest joins), touches and takes on a key, two chords from the saved package, the fourteen new presets, CONSORT TAKES and the low BASSOON. `ConsortK3PinsTest` pins the 37 renders behind them.
 
 | Gate | Current evidence | Status |
 |---|---|---|
-| Six melodic voices | FLUTE, SAX, CLARINET, OBOE, BASSOON, DUDUK render and pass pitch, level and classifier probes. Three pipe types; OBOE, SAX and BASSOON differ by reed, edge and formants. The owner heard and approved the Kotlin K1 audition (2026-11-20). | Sound approved; presets, keygroups and kit open |
-| Presets | Thirteen provisional recipes in `ConsortPresets` (each voice alone and leading a section), taken from the Python audition's settings and not chosen by ear. Held out of `Presets`; the engine is in `PatchTypes.PROTOTYPES`. | Open: listening, then a factory bank |
-| Playable keygroups | None. | Open |
-| Premade kit | `SynthKits.consort()`: eight FLUTE notes up the minor pentatonic and eight recipes (three solo voices, five sections), exported to `testkit/SnipSnap Consort Kit/`. A test holds its classes, pitches and recipes. Not on the starter shelf, not chosen by ear, never loaded on an MPC. | Open: listening, shelf, hardware |
-| Chord-tool compatibility | Not tested. A chord on a patch that already seats a seventh stacks intervals. | Open |
-| Appropriate HOLD | Breath length only; the top step is a long note. No loop. | Open: owner's decision on a loop |
-| Velocity | Velocity is breath effort inside the render; `Velocity.touchedRender` passes it through. Tone changes with velocity in `ConsortTest`. No save, playback or export evidence. | Open |
-| Round robin | Four authored takes in the render and on `ConsortPatch.take`. No pad pool, no selection, no save/load, no playback, no export. | Open |
-| App picker | No entry. | Open |
+| Six melodic voices | FLUTE, SAX, CLARINET, OBOE, BASSOON, DUDUK. The owner heard and approved the Kotlin K1 audition (2026-11-20). `ConsortPinsTest` pins 156 one-shot renders (the 13 heard recipes, 3 velocities, 4 takes); the K3 keys work left every one byte-identical. | Sound approved |
+| Presets | 27 recipes in `ConsortPresets`: the 13 heard in K1 and 14 K3 character recipes (SHAKUHACHI, FUJARA, BAWU, PKU, trills, flutter, scoops, falls, growl) written from the owner's references, heard and kept in K3. | Pass, kept by ear: filed in `Presets`, off `PatchTypes.PROTOTYPES`; promotion keeps the complete recipe |
+| Playable keygroups | The owner chose keys that sustain while held (2026-11-20). `ConsortKeys`/`ConsortPadMaker`: nine zones, three touch windows, two takes a window in the matching-window Cycle layout, each sample its attack then a two-second loop cut and guarded as BORE's. In held mode only, the slow motions and breath noise repeat every 2 s and each player is retuned to repeat, so sections line up at the splice. Zero refusals across 324 solo keys, every section preset's keys and every gesture. `ConsortPadMakerTest`: phone, MPC 3 and MPC 2 read-back of every loop and window, a key held 9 s at steady level, release. | Pass in software, kept by ear; open: phone, MPC |
+| Premade kit | CONSORT and CONSORT TAKES on the shelf with the winds. | Kept by ear (CONSORT TAKES T1 to T3); open: hardware |
+| Chord-tool compatibility | `ConsortChords`: all 960 chords keep their spacing, move by octaves; 956 inside each voice's two octaves, 4 one semitone past onto the edge zones. All 960 play and release on real CLARINET keys. A chord on a section stacks the section on every tone. | Pass in software, kept by ear (C1, C2); open: phone |
+| Appropriate HOLD | One-shots: HOLD is breath length; its top step (0.99 and up) is a gated pad that sustains while held, one seamless loop on an 8 s cycle with the slow wanders 1.6x as deep, the owner's pick from 2, 6 and 8 s (2026-11-21, "I like c"; `ConsortSustainPinsTest`). Keys: sustain while held, the same deeper wanders on a 4 s cycle, the owner's middle ground on size (a solo instrument about 31 MB). | Pass in software, kept by ear (pads C1 to C4; keys on the owner's description, not yet heard as keys); open: phone |
+| Velocity | Breath effort in the render; three touch windows on keys (levelled, differ by timbre; never overblow) and three zones on CONSORT TAKES pads (the hard zone overblows). Save, reload, resolver and MPC 3/MPC 2 read-back proven for both. | Pass in software, kept by ear; open: hardware |
+| Round robin | ROBIN re-strikes CONSORT with the engine's own takes. Pads: two takes a zone, cycling proven through save, reload, resolver, MPC 3; MPC 2 keeps each touch's first take (the recorded format limit). Keys: two takes a window, dealt in turn by the phone cursor and written as MPC 3 and MPC 2 Cycle layers. | Pass in software, kept by ear; open: hardware |
+| App picker | On the SYNTH picker under WINDS & BRASS with TOUCH, TAKE, a SECTION editor and MAKE INSTRUMENT; `ConsortSynthScreenTest` for the emulator. Not compiled in the dev container. | Open: CI build, emulator, phone |
 
-Nothing here is a completion claim. A passing `ConsortTest` and an audition page do not close a gate.
+Render time (2026-11-21): the filters stop working through the silence after the breath (subnormal floats), the house band limit runs in one pass, and tanh goes through `Math.exp`: solo presets' median about 69 -> 56 -> 64 ms and sections' 134 -> 110 -> 131 ms on a noisier run (4 cores), still over the house's tens of milliseconds; what is left is the room, the decimator and the pipe. The first two left every compared render identical to the bit; the tanh moved three pinned one-shots by -177 dB, adopted by the owner on that measurement.
 
+Open: the picker, MAKE INSTRUMENT (and its render time with the 4 s keys) and ROBIN on a phone, the sustaining pads on a phone, and an MPC loading the kits and keys. Nothing here is a hardware claim.
 
 
 ## DRAWL (Kotlin port, round 1, 2026-11-21)
@@ -1352,12 +1353,11 @@ presets were kept by the owner the same day ("Ok, they are good") and are pinned
 in `TerraPresetsTest`.
 
 Round 8 (2026-11-21): six pads ring past the hit's cut, three DUSK pads run the new
-GRAIN section, and every roll and riser is locked to its kit's tempo. The owner heard
+GRANULAR section, and every roll and riser is locked to its kit's tempo. The owner heard
 each beside the approved pad and took all of them ("Everything sounds great"); the
 kits are re-pinned as heard. The gates above stand.
 
-
-## FACSIMILE kits (Kotlin built and heard, 2026-11-20)
+## FACSIMILE kits (Kotlin built and heard; played on a phone and an MPC, 2026-11-20)
 
 Four drum kits replicated by synthesis from nine of the owner's reference loops: SHUFFLE, KNOCK, HALF-TIME, TEXTURE.
 See [FACSIMILE](FACSIMILE.md). The owner heard the Python prototype through rounds 0 to 0m and closed them with "Ok,
@@ -1370,4 +1370,41 @@ sounds good now" (2026-11-20); the Kotlin port matches it within the prototype's
 | Drums: multiple distinct genre kits on the shelf | Built and heard | Four kits under SKINS, each from different reference loops; the owner heard the Kotlin kits as exported ("Everything sounds good", 2026-11-20) |
 | Percussion: roll/riser | Built and heard | An accelerating snare roll landing on kick and snare on pad 17 of every kit, so no heard pad is given up |
 | Velocity and round robin: rendering | Pass in software | Soft zones are different strikes and, over their four takes, never brighter; four different strikes per zone; a groove's soft zone is a softer performance |
-| Velocity and round robin: saving, playback, export | Pass in software | Save, reload, pad resolver, MPC 3, SFZ and DecentSampler for all 68 pads; MPC 2 not written (format limit). No phone or MPC playback yet |
+| Velocity and round robin: saving, playback, export | Pass | Save, reload, pad resolver, MPC 3, SFZ and DecentSampler for all 68 pads in software; the owner played the kits on a phone and an MPC ("Phone and MPC are good", 2026-11-20). MPC 2 not written (format limit) |
+
+## BOROUGH kits (rounds 3 to 3.2: generated in Kotlin, on the shelf, with their own glue and a stack picker; accepted by ear 2026-11-21)
+
+Six boom-bap drum kits (A01-A12) and four perc stacks (A13-A16), generated in the app from the recipes of the round-2
+Python kits the owner accepted ("I think they are all ready", 2026-11-20), on top of EMBER. See [BOROUGH](BOROUGH.md),
+"Round 3: Kotlin port". Evidence: `BoroughParityTest`, `BoroughKitsTest`, `BoroughDspTest`, `BoroughKitTest`,
+`:shell:generateBoroughKits`.
+
+| Gate | Status | Evidence |
+|---|---|---|
+| Melodic, keygroups, chord tools, STRUM | Not applicable | Drum kits |
+| Drums: multiple distinct genre kits on the shelf | Built and accepted by ear ("Ready", 2026-11-21: the app's own pads through the native glue) | Six FRESH TAPE starters under SKINS, each with its default stack; 81 of 88 pads inside the spread of Python's own realisations, the rest within 0.45 dB of it |
+| Percussion: roll/riser | Built, finite | A snare roll (EMBER's press roll) on A12 of every kit |
+| Velocity and round robin: rendering | Pass in software | Three zones are different strikes on all 88 pads (gain-matched residual above -20 dB); three distinct takes per zone |
+| Velocity and round robin: saving, playback, export | Pass in software | Save, reload, the pad resolver at all 127 velocities, SFZ round trip and MPC 3 for a shelf kit; every kit by the generator (864 slices); a stack swapped in by the picker through save, reload, the resolver and MPC 3 (`BoroughStackSwapTest`, round 3.2); MPC 2 keeps each zone's first take (format limit). No phone or MPC playback yet |
+
+Round 3.1 (2026-11-21), the live glue: each kit's kit.json carries the chain the owner picked ("C for all except
+rides and rims"). The app's native bus (`GlueBus.h`: input trim, saturator, compressor, limiter) plays it when the kit
+loads and switches it off for every other kit. On each kit's demo groove the native bus matches the Python
+`model()` to -148 dB. The live trim adds +3.0 dB for a default pad's level. The glue changes no velocity or
+round-robin gate: it is a whole-kit bus after the pads, the pads on disk are not glued, and no export (MPC 3, MPC 2,
+SFZ, DecentSampler) applies it. The owner heard each kit's groove from the app's exported pads through the native
+glue (`glue_render`), beside the picks, level-matched, and answered "Ready" (2026-11-21). CI's android-build ran the
+app-side mapping test and `:app:assembleDebug`. No phone or MPC has played the kits.
+
+Round 3.2 (2026-11-21), the stack picker: the KIT screen's PERC STACK row (HANDS, TAMBOURINE, BELLS, TOPS) on an
+open BOROUGH kit re-renders only A13-A16 with `BoroughKits.stackPads(kit, stack)` for that kit, through the starter's
+own writer (`KitAssembler`: three zones of three takes as a chain). A01-A12, the glue and the rest of kit.json are
+kept. If A13-A16 differ from the stack as rendered (in kit.json or in the WAV), the app asks "Replace your changes on
+A13–A16?" before replacing them. The replaced files go to the trash, and VERSIONS rolls the swap back.
+`BoroughStackSwapTest` carries the velocity and round-robin gate through the swap for each other stack on STOOP DUST:
+PCM take for take, save and reload, the pad resolver's zones and take order, and an MPC 3 track read back. A01-A12
+stay byte-identical. The refusals (not a BOROUGH kit, the same stack, unconfirmed changes) write nothing. The row and
+its confirm are verified only by CI (android-build, and `PercStackRowTest` on the emulator); this session has no
+Android SDK. Nothing has been heard on a phone.
+
+Open: phone and MPC hardware; the picker heard and used on a phone.

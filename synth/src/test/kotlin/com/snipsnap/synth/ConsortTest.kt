@@ -231,7 +231,9 @@ class ConsortTest {
             assertEquals(Consort.drumClassFor(voice, m), Classifier.classify(Consort.render(voice, m, velocity = velocity)).drumClass,
                 "$voice TUNE $tune velocity $velocity HOLD $hold")
         }
-        assertFalse(Consort.isLoop(1f), "HOLD's top step is a long note, not a loop")
+        assertTrue(Consort.isLoop(1f) && Consort.isLoop(Consort.LOOP_FROM), "HOLD's top step sustains")
+        assertFalse(Consort.isLoop(Math.nextDown(Consort.LOOP_FROM)), "every HOLD under the step is a finite note")
+        assertTrue(ConsortPresets.all().none { Consort.isLoop(it.macros.getValue("HOLD")) }, "no factory recipe sustains")
     }
 
     @Test
@@ -255,7 +257,7 @@ class ConsortTest {
     }
 
     @Test
-    fun `the provisional recipes are complete, distinct, plainly named and held out of the factory roster`() {
+    fun `the recipes are complete, distinct, plainly named and filed in the factory roster`() {
         val all = ConsortPresets.all()
         for (voice in ConsortVoice.entries) {
             val mine = ConsortPresets.forVoice(voice)
@@ -269,8 +271,9 @@ class ConsortTest {
             assertEquals(Consort.defaults(p.voice).keys, p.macros.keys, "${p.name} does not carry every macro")
             assertEquals(p, Patches.fromJsonText(p.toJsonText()))
         }
-        assertTrue(Presets.all().none { it.engine == ConsortPatch.ENGINE }, "a prototype's recipes are not served through the factory roster")
-        assertTrue(Presets.forVoice(ConsortPatch.ENGINE, ConsortVoice.OBOE.name).isEmpty())
+        // Heard and kept in round K3 (2026-11-20): the factory roster serves them.
+        assertEquals(all, Presets.all().filter { it.engine == ConsortPatch.ENGINE })
+        assertEquals(ConsortPresets.forVoice(ConsortVoice.OBOE), Presets.forVoice(ConsortPatch.ENGINE, ConsortVoice.OBOE.name))
     }
 
     @Test

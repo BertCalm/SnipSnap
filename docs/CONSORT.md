@@ -77,8 +77,12 @@ The section, the velocity and the take are fields on `ConsortPatch`, not macros.
 - **Eight controls**, HOLD included, where the house asks for three to six plus HOLD. TREMOR has
   the same count. The alternative is to land the pad with the rack's ROOM, but the rack sees one
   finished mix and cannot seat each chair.
-- **The low BASSOON is thin.** At its lowest note (58 Hz) the audition reads a 1466 Hz centroid
-  against 211 Hz an octave up: the body's 150 Hz high-pass and tilt remove most of the fundamental.
+- **The low BASSOON is not thin (K3 correction).** K2 reported it thin from the whole-file
+  centroid (1466 Hz at 58 Hz against 211 Hz an octave up). Measured on the held part of the note
+  (0.4 to 1.1 s, room off), the lowest note is the darkest: centroid 327 Hz at MIDI 34 against
+  465 Hz at MIDI 52, the fundamental is its strongest partial (-7 dB against the RMS), and the band
+  above 2 kHz is -12.9 dB against -9.1. The whole-file reading is pulled up by the quiet edges of
+  the clip. Nothing was changed; the listening round plays the low notes for the owner to judge.
 - **DUDUK's velocity is not monotonic by the classifier's whole-file centroid** at the defaults
   (soft 778, medium 542, hard 704 Hz); dry and stiff it rises, which is what the test checks.
 - **The Kotlin differs from the heard prototype** in three places: `Strings.Loop` (allpass-tuned,
@@ -89,3 +93,41 @@ The section, the velocity and the take are fields on `ConsortPatch`, not macros.
 ## Acceptance gates
 
 All open. See [the gates' CONSORT entry](ENGINE_ACCEPTANCE_GATES.md#consort-kotlin-prototype-2026-11-19).
+
+## Round K3 (2026-11-20)
+
+Held keys that sustain while a key is down (the owner's choice), the chord tool, round robin on pads
+(ROBIN and CONSORT TAKES), CONSORT and CONSORT TAKES on the shelf, the SYNTH picker with a section
+editor, and fourteen character presets. The owner heard all 29 clips of the K3 round and kept them
+("All sounds good"); the 27 recipes are the factory bank. The one-shot sound is unchanged (156
+renders pinned in `ConsortPinsTest`); the K3 renders are pinned in `ConsortK3PinsTest`. Gate status:
+[the gates' CONSORT entry](ENGINE_ACCEPTANCE_GATES.md).
+
+## Sustaining pads (2026-11-21)
+
+HOLD's top step (0.99 and up) makes a gated pad that sustains while held: one seamless loop of the
+held note. The owner heard it on a two-second cycle and asked for more humanization, then chose,
+from a 2 s, a 6 s and an 8 s cycle, the 8 s cycle with the slow wanders (breath, pitch drift, vibrato
+speed and depth, air) 1.6 times as deep ("I like c"). `ConsortSustainPinsTest` pins those loops. The
+keyboard's held keys followed the same day ("Keys should be like held"), first on the pads' full eight-second
+cycle (a solo instrument about 60 MB of PCM24, twice as slow to make), then, on the owner's ask for a
+middle ground, on a four-second cycle with the same deeper wanders: a key sample about 4.3 s instead of
+2.3 s, a solo instrument about 31 MB, a CLARINET instrument's test 45 s against 29 s. A key is rarely held
+past a second wrap. `ConsortK3PinsTest` is on `k3-heard-v3.sha256`: only the key lines changed.
+Every HOLD under the
+step renders as before.
+
+The same day's speed pass stopped the filters working through the silence after the breath (subnormal
+floats) and fused the house band limit's four passes into one: the default OBOE note went from 92 to
+56 ms, the factory solos' median from 69 to 56 ms and the sections' from 134 to 110 ms, with all 214
+compared renders identical to the bit.
+
+## Faster tanh (2026-11-21)
+
+The reed's rasp and the flute's jet call tanh, a fifth of a render through StrictMath's software
+expm1. `Consort.fastTanh` takes it through `Math.exp` (the CPU's own exponential): renders about 10 %
+faster (solo presets' median 72 -> 64 ms, sections' 143 -> 131 ms, 4 cores). Of 194 compared renders,
+191 are identical to the bit; three pinned one-shots move by -177 to -182 dB, at most 0.09 of a 24-bit
+step, 80 samples rounding to the neighbouring 24-bit value. The owner adopted it on that measurement;
+`ConsortPinsTest` moved to `oneshot-k2-v2.sha256`. What is left of a render is the room, the house
+decimator and the pipe itself.

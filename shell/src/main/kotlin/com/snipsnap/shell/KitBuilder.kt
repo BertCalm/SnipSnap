@@ -410,6 +410,48 @@ class KitBuilderModel private constructor(
     }
 
     /**
+     * Pads [KitAssembler] has already written somewhere else (a stack swap's staging folder,
+     * [BoroughStackSwap]), each with its one WAV, adopted onto their slots in a single save. Each
+     * file is copied in under a stem nothing else answers to ([nextStem]), so it can never land on
+     * a name a live pad, a file or THE BIN holds; the pad keeps every other field the assembler
+     * gave it (chain, velocity zones, takes, class, colour, choke, provenance). The kit is saved
+     * ([save], [accrueWear] off by default: a swap is not a play) before the replaced pads give
+     * up their files, which then go to THE BIN as any replaced pad's do ([deleteIfUnreferenced]),
+     * so VERSIONS can roll the swap back. A failure before the save takes back the files it
+     * copied in and leaves the model and kit.json as they were. After the save the kit is the new
+     * one whatever happens next: a replaced file that cannot be moved to THE BIN is left where it
+     * is rather than reported as a failed swap. Returns the kit as saved.
+     */
+    internal fun adoptAssembled(pads: List<Pair<KitPad, File>>, accrueWear: Boolean = false): Kit {
+        require(pads.map { it.first.slot }.toSet().size == pads.size) { "one pad per slot" }
+        for ((pad, file) in pads) {
+            require(pad.velocityLayers.isEmpty()) { "pad ${pad.slot}: an adopted pad is one file" }
+            require(file.isFile) { "pad ${pad.slot}: no file at $file" }
+        }
+        val before = kit
+        val wasDirty = dirty
+        val replaced = pads.mapNotNull { (pad, _) -> kit.pad(pad.slot) }
+        val copied = mutableListOf<File>()
+        try {
+            for ((pad, file) in pads) {
+                val target = File(kitDir, "${nextStem(pad.slot, pad.drumClass)}.wav")
+                file.copyTo(target)
+                copied += target
+                kit = kit.copy(pads = kit.pads.filter { it.slot != pad.slot } + pad.copy(sampleFile = target.name))
+            }
+            dirty = true
+            save(accrueWear)
+        } catch (e: Throwable) {
+            copied.forEach { it.delete() }
+            kit = before
+            dirty = wasDirty
+            throw e
+        }
+        replaced.forEach { runCatching { deleteIfUnreferenced(it) } }
+        return kit
+    }
+
+    /**
      * Ghost notes: soft velocity zones rendered darker (not just quieter)
      * under the pad's main sample. [softZones] 1 or 2. Reversible with
      * [clearGhostLayers].

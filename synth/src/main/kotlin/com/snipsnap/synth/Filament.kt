@@ -18,7 +18,9 @@ import kotlin.math.sin
 import kotlin.math.sqrt
 import kotlin.random.Random
 
-enum class FilamentVoice { THREAD, PULSE, CURL }
+/** THREAD, PULSE and CURL are the kept voices. The entries after them are candidates awaiting a
+ * listening verdict ([FilamentCandidates]); they are appended so saved names and ordinals never move. */
+enum class FilamentVoice { THREAD, PULSE, CURL, BRAID, HALO, FRAY, SPRING }
 enum class FilamentProfile { VOICE, EARLY, LATE, COIL }
 
 /** Saved geometry choices; generated taps and running filter state are deliberately not saved. */
@@ -48,6 +50,14 @@ object Filament {
     const val CHARACTER_MODEL = 2
     const val MIN_MIDI = 36
     const val MAX_MIDI = 84
+    /** The three voices FILAMENT was built with: the only ones with models 1 and 2 and the original source. */
+    val ORIGINAL_VOICES = listOf(FilamentVoice.THREAD, FilamentVoice.PULSE, FilamentVoice.CURL)
+    /**
+     * The voices players are offered: all seven. FRAY was kept in round filament-voices-1 (20 Nov 2026);
+     * BRAID, HALO and SPRING, sent back there as "More distinctive", were kept in their reworked form in
+     * round fix-filament-voices-1 (21 Nov 2026). They are model 3 only; each has one factory preset.
+     */
+    val KEPT_VOICES = FilamentVoice.entries.toList()
     private const val RATE = Dsp.RATE
     private const val HIGH_RATE = RATE * Dsp.OVERSAMPLE
 
@@ -179,6 +189,7 @@ object Filament {
 
     fun rootMidi(voice: FilamentVoice): Int = when (voice) {
         FilamentVoice.THREAD, FilamentVoice.PULSE, FilamentVoice.CURL -> 48
+        else -> 48
     }
 
     fun macrosFor(voice: FilamentVoice): List<MacroSpec> {
@@ -186,6 +197,7 @@ object Filament {
             FilamentVoice.THREAD -> floatArrayOf(.25f, .15f, .25f, 0f, .20f)
             FilamentVoice.PULSE -> floatArrayOf(.65f, .30f, .65f, .20f, .35f)
             FilamentVoice.CURL -> floatArrayOf(.45f, .65f, .45f, .15f, .50f)
+            else -> FilamentCandidates.tables(voice).defaults
         }
         return listOf(
             MacroSpec("INJECT", d[0], neutral = .40f),
@@ -341,25 +353,29 @@ object Filament {
             (bundle - s + 1.0).coerceIn(0.0, 1.0) * doubleArrayOf(1.0, .66, .53, .44)[s]
         }
         val strandNorm = strandWeights.sumOf { it * it }
+        val candidate = if (voice in ORIGINAL_VOICES) null else FilamentCandidates.tables(voice)
         val pathNarrow = if (model == ORIGINAL_MODEL) doubleArrayOf(.73, .15, .08, .04) else when (voice) {
             FilamentVoice.THREAD -> doubleArrayOf(.62, .20, .12, .06)
             FilamentVoice.PULSE -> doubleArrayOf(.56, .22, .14, .08)
             FilamentVoice.CURL -> doubleArrayOf(.52, .22, .17, .09)
+            else -> candidate!!.pathNarrow
         }
         val pathWide = if (model == ORIGINAL_MODEL) doubleArrayOf(.40, .25, .20, .15) else when (voice) {
             FilamentVoice.THREAD -> doubleArrayOf(.44, .23, .20, .13)
             FilamentVoice.PULSE -> doubleArrayOf(.40, .24, .21, .15)
             FilamentVoice.CURL -> doubleArrayOf(.38, .24, .22, .16)
+            else -> candidate!!.pathWide
         }
         val paths = DoubleArray(PATHS) { p -> pathNarrow[p] + inject * (pathWide[p] - pathNarrow[p]) }
         val common = if (model == ORIGINAL_MODEL) .003 + .115 * length * length else
-            .002 + (when (voice) { FilamentVoice.THREAD -> .09; FilamentVoice.PULSE -> .13; FilamentVoice.CURL -> .115 }) * length * length
+            .002 + (when (voice) { FilamentVoice.THREAD -> .09; FilamentVoice.PULSE -> .13; FilamentVoice.CURL -> .115; else -> candidate!!.common }) * length * length
         val spread = if (model == ORIGINAL_MODEL) .001 + .052 * length else
-            .002 + (when (voice) { FilamentVoice.THREAD -> .040; FilamentVoice.PULSE -> .070; FilamentVoice.CURL -> .055 }) * length
+            .002 + (when (voice) { FilamentVoice.THREAD -> .040; FilamentVoice.PULSE -> .070; FilamentVoice.CURL -> .055; else -> candidate!!.spread }) * length
         val pathDistance = if (model == ORIGINAL_MODEL) doubleArrayOf(0.0, .19, .51, 1.0) else when (voice) {
             FilamentVoice.THREAD -> doubleArrayOf(0.0, .14, .43, 1.0)
             FilamentVoice.PULSE -> doubleArrayOf(0.0, .32, .67, 1.18)
             FilamentVoice.CURL -> doubleArrayOf(0.0, .10, .54, 1.28)
+            else -> candidate!!.pathDistance
         }
         val baseProfile = when (config.profile) {
             FilamentProfile.EARLY -> doubleArrayOf(1.0, .26, .10, .035)
@@ -369,10 +385,12 @@ object Filament {
                 FilamentVoice.THREAD -> doubleArrayOf(.25, .45, .80, .30)
                 FilamentVoice.PULSE -> doubleArrayOf(.20, .80, .35, .15)
                 FilamentVoice.CURL -> doubleArrayOf(.055, .20, 1.0, .35)
+                else -> candidate!!.profile
             } else when (voice) {
                 FilamentVoice.THREAD -> doubleArrayOf(.55, .80, 1.0, .45)
                 FilamentVoice.PULSE -> doubleArrayOf(.15, .90, .50, .20)
                 FilamentVoice.CURL -> doubleArrayOf(.04, .18, 1.0, .65)
+                else -> candidate!!.profile
             }
         }
         val seeded = Random(Dsp.seedFor("filament-geometry", config.seed, voice))
@@ -406,6 +424,7 @@ object Filament {
                             FilamentVoice.THREAD -> doubleArrayOf(.85, 1.15, 1.55, 1.90)
                             FilamentVoice.PULSE -> doubleArrayOf(.65, 1.05, 1.50, 1.95)
                             FilamentVoice.CURL -> doubleArrayOf(.70, 1.10, 1.60, 2.0)
+                            else -> candidate!!.sensitivity
                         })[p]
                     val escapedFractionBeforeLoss = (severity * sensitivity).coerceIn(0.0, .97)
                     val absorbedFraction = if (config.perfectRetention) 0.0 else
@@ -423,8 +442,8 @@ object Filament {
                     val spillCutoff = min(16_000.0, hz * (17.0 - 7.0 * length) / (1.0 + .14 * p + .065 * j))
                     if (model == ORIGINAL_MODEL) leakage += TapSpec(delay, escapedPower, spillCutoff, hz * (.55 + .10 * p))
                     else {
-                        val highRatio = when (voice) { FilamentVoice.THREAD -> 1.20; FilamentVoice.PULSE -> 1.60; FilamentVoice.CURL -> 2.20 }
-                        val highMix = when (voice) { FilamentVoice.THREAD -> .82; FilamentVoice.PULSE -> .88; FilamentVoice.CURL -> .92 }
+                        val highRatio = when (voice) { FilamentVoice.THREAD -> 1.20; FilamentVoice.PULSE -> 1.60; FilamentVoice.CURL -> 2.20; else -> candidate!!.highRatio }
+                        val highMix = when (voice) { FilamentVoice.THREAD -> .82; FilamentVoice.PULSE -> .88; FilamentVoice.CURL -> .92; else -> candidate!!.highMix }
                         val dispersion = if (p == 0) 0.0 else hz * (1.7 + .65 * p + .21 * j)
                         leakage += TapSpec(delay, escapedPower, spillCutoff, hz * (highRatio + .12 * p), highMix,
                             dispersion, if (p == 0) 0.0 else .30 + .06 * p)
@@ -444,6 +463,7 @@ object Filament {
                 FilamentVoice.THREAD -> .62 + .95 * length
                 FilamentVoice.PULSE -> .48 + .85 * length
                 FilamentVoice.CURL -> .82 + 1.05 * length
+                else -> candidate!!.t60Base + candidate.t60Length * length
             }
         return Plan(branches, sites, endpoints, leakage, branches.sumOf { it.retained },
             branches.sumOf { it.escaped }, branches.sumOf { it.absorbed }, maxDelay,
@@ -575,6 +595,17 @@ object Filament {
 
     private class Network(plan: Plan, hz: Double, collect: Double, voice: FilamentVoice, model: Int,
                           rate: Int = HIGH_RATE, private val captureDiagnostics: Boolean = true) {
+        private val candidate = if (voice in ORIGINAL_VOICES) null else FilamentCandidates.tables(voice)
+        /** SPRING only: the through collector heard through its dispersive cascade. */
+        private val spring = if (voice == FilamentVoice.SPRING) FilamentCandidates.Dispersion(hz, rate) else null
+        /** BRAID, HALO and SPRING (round filament-voices-2): the network plays under the voice's own layer. */
+        private val layered = FilamentCandidateLayers.layered(voice)
+        private val bodyMix = if (layered) FilamentCandidateLayers.bodyMix(voice) else 1.0
+        /** The layer's sample for this step, set by the renderer before each step. */
+        var layerInput = 0.0
+        /** How fast a held key's layer opens from the zero state; 1 opens it at once. */
+        var layerGateAlpha = 1.0
+        private var gate = 0.0
         private val endpoints = plan.endpoints.filter { it.power > 0.0 }.map { Tap(it, plan.retained) }
         private val leakage = plan.leakage.filter { it.power > 0.0 }.map { Tap(it, plan.escaped) }
         private val ring = DoubleArray(ceil(plan.maxDelay * rate).toInt() + 4)
@@ -584,17 +615,20 @@ object Filament {
             FilamentVoice.THREAD -> doubleArrayOf(1.0, 2.0, 3.0, 4.006, 5.012, 6.025, 8.045, 10.08)
             FilamentVoice.PULSE -> doubleArrayOf(1.0, 2.0, 3.0, 4.0, 5.0, 6.012, 8.025, 10.04)
             FilamentVoice.CURL -> doubleArrayOf(1.0, 2.002, 3.006, 4.014, 5.026, 6.045, 8.080, 10.12)
+            else -> candidate!!.ratios
         }
         private val modeWeights = if (original) doubleArrayOf(.55, .18, .10, .065, .04, .03, .02, .015) else when (voice) {
             FilamentVoice.THREAD -> doubleArrayOf(.20, .22, .18, .14, .10, .07, .05, .04)
             FilamentVoice.PULSE -> doubleArrayOf(.22, .17, .19, .13, .12, .08, .055, .035)
             FilamentVoice.CURL -> doubleArrayOf(.18, .14, .20, .10, .16, .09, .08, .05)
+            else -> candidate!!.modeWeights
         }
         val haloModes = List(ratios.size) { i ->
             val t60 = if (original) plan.haloT60 / sqrt(ratios[i]) else when (voice) {
                 FilamentVoice.THREAD -> plan.haloT60 / (1.0 + .35 * i)
                 FilamentVoice.PULSE -> plan.haloT60 / (1.0 + .22 * i)
                 FilamentVoice.CURL -> plan.haloT60 / sqrt(ratios[i]) * if (i >= 3) 1.15 else 1.0
+                else -> plan.haloT60 / (1.0 + candidate!!.modeT60Slope * i)
             }
             HaloTrace(hz * ratios[i], t60, modeWeights[i])
         }
@@ -639,9 +673,15 @@ object Filament {
             halo *= haloNormalization!!
             source = dc[0].next(input)
             through = dc[1].next(t)
+            val dispersive = spring
+            if (dispersive != null) through = dispersive.next(through)
             escaped = dc[2].next(e)
             spill = dc[3].next(.20 * e + .80 * halo)
             raw = throughMix * through + spillMix * spill
+            if (layered) {
+                gate += layerGateAlpha * (1.0 - gate)
+                raw = bodyMix * raw + gate * layerInput
+            }
             if (captureDiagnostics) maxState = max(maxState, max(abs(input), max(abs(t), max(abs(e), max(abs(halo), abs(raw))))))
         }
 
@@ -651,6 +691,8 @@ object Filament {
             for (tap in leakage) { tap.state(result); maxState = max(maxState, tap.maxState) }
             for (mode in modes) { mode.state(result); maxState = max(maxState, mode.maxState) }
             for (filter in dc) { result += filter.state; maxState = max(maxState, filter.maxState) }
+            spring?.state(result)
+            if (layered) result += gate
             for (v in result) maxState = max(maxState, abs(v))
             // Canonical chronological history, independent of the circular write cursor. A
             // populated periodic input must recur here too, not only in downstream filters.
@@ -706,8 +748,9 @@ object Filament {
         rate: Int = HIGH_RATE,
         cancelled: () -> Boolean = { false },
         heldTilt: Double = 0.0,
+        strand: Int = 0,
     ): FloatArray {
-        if (model != ORIGINAL_MODEL) return sourceTable2(voice, m, hz, effort, velocity, frames, loop, carrierCycles, config, rate, cancelled, heldTilt)
+        if (model != ORIGINAL_MODEL) return sourceTable2(voice, m, hz, effort, velocity, frames, loop, carrierCycles, config, rate, cancelled, heldTilt, strand)
         val inject = m.getValue("INJECT").toDouble()
         val hold = m.getValue("HOLD").toDouble()
         val weights = harmonicWeights(inject, voice, hz)
@@ -779,13 +822,17 @@ object Filament {
         rate: Int = HIGH_RATE,
         cancelled: () -> Boolean = { false },
         heldTilt: Double = 0.0,
+        strand: Int = 0,
     ): FloatArray {
         val inject = m.getValue("INJECT").toDouble()
         val hold = if (loop) 1.0 else m.getValue("HOLD").toDouble()
+        if (voice !in ORIGINAL_VOICES) return FilamentCandidates.source(voice, inject, hold, hz, effort, velocity, frames,
+            loop, carrierCycles, config, rate, heldTilt, strand) { requireActive(cancelled) }
         val recipe = when (voice) {
             FilamentVoice.THREAD -> doubleArrayOf(1.0, .66, .60, .43, .35, .28, .22, .18, .14, .11, .08, .06)
             FilamentVoice.PULSE -> doubleArrayOf(1.0, .88, .70, .58, .48, .39, .31, .26, .21, .17, .13, .10)
             FilamentVoice.CURL -> doubleArrayOf(1.0, .64, .82, .40, .62, .32, .40, .26, .30, .18, .21, .13)
+            else -> error("$voice is a candidate")
         }
         val count = min(recipe.size, floor(16_000.0 / hz).toInt()).coerceAtLeast(1)
         val weights = DoubleArray(count) { h ->
@@ -842,6 +889,7 @@ object Filament {
                         middleEnvelope = .35 + .65 * (.5 + .5 * sin(TWO_PI * progress + phaseA))
                         edgeEnvelope = .15 + .85 * (.5 + .5 * sin(TWO_PI * 2.0 * progress + phaseB))
                     }
+                    else -> error("$voice is a candidate")
                 }
             } else {
                 val tailFade = ((duration - time) / .030).coerceIn(0.0, 1.0)
@@ -870,6 +918,7 @@ object Filament {
                         edgeEnvelope = opening(.095 + .18 * (1.0 - inject)) *
                             exp(-max(0.0, time - .45) / (1.0 + .65 * hold))
                     }
+                    else -> error("$voice is a candidate")
                 }
                 rootEnvelope *= tailFade
                 middleEnvelope *= tailFade
@@ -920,6 +969,7 @@ object Filament {
         require(heldTilt == 0.0 || retainOnset) { "only a held FILAMENT key tilts its source" }
         requireActive(cancelled)
         require(model in ORIGINAL_MODEL..MODEL_VERSION) { "unsupported FILAMENT model $model" }
+        require(voice in ORIGINAL_VOICES || model == MODEL_VERSION) { "FILAMENT candidate $voice is model $MODEL_VERSION only" }
         require(options.referenceOversampling in listOf(4, 8)) { "FILAMENT reference oversampling must be 4 or 8" }
         require(model == MODEL_VERSION || options.referenceOversampling == Dsp.OVERSAMPLE) {
             "FILAMENT reference oversampling is a model-3 diagnostic"
@@ -932,7 +982,8 @@ object Filament {
         val highRate = RATE * oversampling
         val loop = isLoop(m.getValue("HOLD"))
         val nominalHz = 440.0 * 2.0.pow((midi - 69.0) / 12.0)
-        val cycles = max(1, (nominalHz * if (model == ORIGINAL_MODEL) .42 else 2.3).roundToInt())
+        val span = if (model == ORIGINAL_MODEL) .42 else if (voice in ORIGINAL_VOICES) 2.3 else FilamentCandidates.LOOP_SECONDS
+        val cycles = max(1, (nominalHz * span).roundToInt())
         val periodFrames = if (loop) (cycles * RATE / nominalHz).roundToInt() else 0
         val hz = if (loop) cycles.toDouble() * RATE / periodFrames else nominalHz
         val effort = if (velocity == 0f) 0.0 else .62 * velocity.toDouble().pow(.72)
@@ -944,6 +995,9 @@ object Filament {
             leakage = prepared.leakage.map { it.copy(delay = prepared.maxDelay) },
         ) else prepared
         val junction = if (model == MODEL_VERSION) FilamentJunction(plan, voice, m, hz, options, highRate, captureDiagnostics) else null
+        // BRAID only: one source per strand, each strand a separate player.
+        val strands = if (voice == FilamentVoice.BRAID && junction != null) DoubleArray(4) else null
+        var strandTables: Array<FloatArray>? = null
         val collectorPlan = if (junction == null) plan else plan.copy(endpoints = emptyList(), leakage = emptyList())
         val network = Network(collectorPlan, hz, m.getValue("COLLECT").toDouble(), voice, model, highRate, captureDiagnostics)
         fun advance(input: Double) {
@@ -951,6 +1005,20 @@ object Filament {
                 junction.next(input)
                 network.fromJunction(input, junction.through, junction.escaped)
             }
+        }
+        // BRAID, HALO and SPRING only: the voice's own layer, added after the collectors.
+        var layerTable: DoubleArray? = null
+        fun advanceAt(i: Int, source: FloatArray) {
+            val layer = layerTable
+            if (layer != null) network.layerInput = if (i < layer.size) layer[i] else 0.0
+            val tables = strandTables
+            if (strands == null || tables == null || junction == null) {
+                advance(if (i < source.size) source[i].toDouble() else 0.0)
+                return
+            }
+            for (s in 0 until 4) strands[s] = if (i < tables[s].size) tables[s][i].toDouble() else 0.0
+            junction.nextStrands(strands)
+            network.fromJunction(strands[0], junction.through, junction.escaped)
         }
         fun snapshot(): DoubleArray {
             val output = network.state()
@@ -974,18 +1042,27 @@ object Filament {
                 FilamentVoice.THREAD -> 1.70 + 2.3 * m.getValue("HOLD")
                 FilamentVoice.PULSE -> 1.55 + 2.2 * m.getValue("HOLD")
                 FilamentVoice.CURL -> 2.05 + 2.5 * m.getValue("HOLD")
+                else -> error("$voice has no model $model")
             } else when (voice) {
                 FilamentVoice.THREAD -> 1.95 + 1.95 * m.getValue("HOLD")
                 FilamentVoice.PULSE -> 1.85 + 1.8 * m.getValue("HOLD")
                 FilamentVoice.CURL -> 2.35 + 1.7 * m.getValue("HOLD")
+                else -> FilamentCandidates.tables(voice).let { it.sourceSeconds + it.sourceHold * m.getValue("HOLD") }
             }
             val sourceFrames = (sourceSeconds * highRate).roundToInt()
             val source = sourceTable(voice, m, hz, effort, velocity.toDouble(), sourceFrames, false, 0, model, config, highRate, cancelled)
+            if (strands != null) strandTables = Array(4) { s ->
+                if (s == 0) source else sourceTable(voice, m, hz, effort, velocity.toDouble(), sourceFrames, false, 0, model,
+                    config, highRate, cancelled, strand = s)
+            }
             val total = ceil((sourceSeconds + plan.maxDelay + 1.8 * plan.haloT60 + .08) * highRate).toInt()
             val capture = Cycle(total + (oversampling - total % oversampling) % oversampling, captureDiagnostics)
+            if (FilamentCandidateLayers.layered(voice)) layerTable = FilamentCandidateLayers.layer(voice,
+                m.getValue("INJECT").toDouble(), m.getValue("HOLD").toDouble(), hz, effort, velocity.toDouble(),
+                capture.raw.size, false, highRate, 0.0, config.seed, sourceSeconds) { requireActive(cancelled) }
             for (i in capture.raw.indices) {
                 if (i and 1023 == 0) requireActive(cancelled)
-                advance(if (i < source.size) source[i].toDouble() else 0.0)
+                advanceAt(i, source)
                 capture.capture(i, network)
             }
             if (captureDiagnostics) snapshot()
@@ -996,6 +1073,15 @@ object Filament {
         } else {
             val highFrames = periodFrames * oversampling
             val source = sourceTable(voice, m, hz, effort, velocity.toDouble(), highFrames, true, cycles, model, config, highRate, cancelled, heldTilt)
+            if (strands != null) strandTables = Array(4) { s ->
+                if (s == 0) source else sourceTable(voice, m, hz, effort, velocity.toDouble(), highFrames, true, cycles, model,
+                    config, highRate, cancelled, heldTilt, strand = s)
+            }
+            if (FilamentCandidateLayers.layered(voice)) {
+                layerTable = FilamentCandidateLayers.layer(voice, m.getValue("INJECT").toDouble(), m.getValue("HOLD").toDouble(),
+                    hz, effort, velocity.toDouble(), highFrames, true, highRate, heldTilt, config.seed, 0.0) { requireActive(cancelled) }
+                network.layerGateAlpha = 1.0 - exp(-1.0 / (FilamentCandidateLayers.gateSeconds(voice) * highRate))
+            }
             val recent = ArrayList<Cycle>()
             val onset = if (retainOnset) ArrayList<FloatArray>() else null
             val bodyOnset = if (retainComponents) ArrayList<FloatArray>() else null
@@ -1006,7 +1092,7 @@ object Filament {
                 val capture = Cycle(highFrames, captureDiagnostics, retainComponents)
                 for (i in source.indices) {
                     if (i and 1023 == 0) requireActive(cancelled)
-                    advance(source[i].toDouble()); capture.capture(i, network)
+                    advanceAt(i, source); capture.capture(i, network)
                 }
                 onset?.add(capture.raw)
                 bodyOnset?.add(capture.body)
@@ -1034,7 +1120,7 @@ object Filament {
             val future = Cycle(highFrames, captureDiagnostics, retainComponents)
             for (i in source.indices) {
                 if (i and 1023 == 0) requireActive(cancelled)
-                advance(source[i].toDouble()); future.capture(i, network)
+                advanceAt(i, source); future.capture(i, network)
             }
             if (captureDiagnostics) snapshot()
             recent += future
@@ -1077,7 +1163,7 @@ object Filament {
                     val guard = FloatArray(highFrames)
                     for (i in source.indices) {
                         if (i and 1023 == 0) requireActive(cancelled)
-                        advance(source[i].toDouble()); guard[i] = network.raw.toFloat()
+                        advanceAt(i, source); guard[i] = network.raw.toFloat()
                     }
                     onset += guard
                 }

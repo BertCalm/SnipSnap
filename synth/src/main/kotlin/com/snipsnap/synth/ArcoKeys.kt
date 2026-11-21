@@ -41,6 +41,17 @@ object ArcoKeys {
      */
     const val SOFT_SHARE = 0.28f
 
+    /**
+     * The soft layer's share of BOW and GRIP for a candidate (WHEEL, BAR, GLASS, VIOL): the soft note the owner heard and kept (round
+     * touch-ab-1, 20 Nov 2026), bowed 0.3 of the way from [SOFT_SHARE] to the whole bow, 0.496. A soft key is then that note's bow,
+     * darkened and slowed as that note was ([ArcoCandidates.heldTouched]): not a bow lighter than anything heard. CELLO's, ERHU's and
+     * SARANGI's soft layers stay at [SOFT_SHARE], as heard and kept on their held keys.
+     */
+    val CANDIDATE_SOFT_SHARE: Float = Dsp.lin(0.3f, SOFT_SHARE, 1f)
+
+    /** The soft layer's share for [voice]: [CANDIDATE_SOFT_SHARE] on a candidate, [SOFT_SHARE] otherwise. */
+    fun softShare(voice: ArcoVoice): Float = if (ArcoCandidates.of(voice) != null) CANDIDATE_SOFT_SHARE else SOFT_SHARE
+
     /** A zone's two velocity layers, soft first: the order a keygroup's layers run in. */
     enum class Layer { SOFT, HARD }
 
@@ -75,8 +86,9 @@ object ArcoKeys {
         m["TUNE"] = (midi - Arco.rootMidi(voice)) / Arco.tuneSemitones(voice).toFloat()
         check(Arco.midiFor(voice, m.getValue("TUNE")) == midi) { "ARCO $voice: TUNE ${m["TUNE"]} does not land on MIDI $midi" }
         if (layer == Layer.SOFT) {
-            m["BOW"] = m.getValue("BOW") * SOFT_SHARE
-            m["GRIP"] = m.getValue("GRIP") * SOFT_SHARE
+            val share = softShare(voice)
+            m["BOW"] = m.getValue("BOW") * share
+            m["GRIP"] = m.getValue("GRIP") * share
         }
         return m
     }

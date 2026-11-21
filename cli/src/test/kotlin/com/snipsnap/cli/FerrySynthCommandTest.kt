@@ -1,7 +1,9 @@
 package com.snipsnap.cli
 
 import com.snipsnap.audio.WavReader
+import com.snipsnap.synth.Ferry
 import com.snipsnap.synth.FerryPatch
+import com.snipsnap.synth.FerryPresets
 import com.snipsnap.synth.Patches
 import java.io.ByteArrayOutputStream
 import java.io.File
@@ -122,6 +124,22 @@ class FerrySynthCommandTest {
                 assertEquals(2, Cli.run(arrayOf("synth", "FERRY", "PASSAGE", "--patch", recipe.path,
                     "--model", "2", "--out", downgrade.path), out, out))
                 assertFalse(downgrade.exists())
+            }
+        } finally { root.deleteRecursively() }
+    }
+
+    @Test
+    fun `the voices kept on 21 Nov 2026 export their one recipe, the note the owner heard`() {
+        val root = kotlin.io.path.createTempDirectory("ferry-kept-cli").toFile()
+        try {
+            val out = PrintStream(ByteArrayOutputStream())
+            for (voice in Ferry.KEPT_VOICES - Ferry.ORIGINAL_VOICES.toSet()) {
+                val dir = File(root, voice.name)
+                assertEquals(0, SynthCommand.run(listOf("FERRY", voice.name, "--out", dir.path), out))
+                val saved = Patches.fromJsonText(dir.listFiles()!!.single { it.extension == "patch" }.readText()) as FerryPatch
+                assertEquals(FerryPresets.forVoice(voice).single(), saved)
+                val audio = WavReader.read(dir.listFiles()!!.single { it.extension == "wav" })
+                assertEquals(saved.render().samples.size, audio.frameCount, "$voice exports another length")
             }
         } finally { root.deleteRecursively() }
     }

@@ -2324,6 +2324,13 @@ object Copy {
     const val SPLICE_KIT_GONE = "This pad isn't there any more."
     /** The slot was reassigned while SPLICE was open: the takes belong to a pad that no longer lives here, so nothing is written. */
     const val SPLICE_PAD_CHANGED = "This slot holds a different pad now. Nothing was touched."
+    /** SPLICE's two nudges (UAT 2026-11 user states, S-8): the cut a step earlier or later, for anyone a drag does not serve. */
+    @field:CopyLabel const val SPLICE_CUT_EARLIER = "CUT EARLIER"
+    @field:CopyLabel const val SPLICE_CUT_LATER = "CUT LATER"
+    /** The waveform's accessible name, as an adjustable control (S-8). */
+    @field:CopyLabel const val SPLICE_CUT = "SPLICE CUT"
+    /** The cut's place, read with [SPLICE_CUT]: seconds into the takes, to the hundredth. */
+    fun spliceCutAt(seconds: Double): String = "at %.2f s".format(java.util.Locale.ROOT, seconds)
     const val SPLICE_TAKE_UNREADABLE = "One of those VERSIONS won't read any more. Pick another pair."
     /** `TapeSplice.join`'s own refusal, said before the needle ever shows: a mutated (stereo) take against its mono original, or two rates. */
     const val SPLICE_FORMATS_DIFFER =
@@ -2378,6 +2385,27 @@ object Copy {
     const val ROBIN_SKIPPED_LAYERED = "Layered and chained pads left as they are."
     const val ROBIN_KIT_DIDNT_RUN = "ROUND ROBIN didn't run. The kit is as it was."
     const val ROBIN_FOREIGN = "This pad already chains its own takes."
+
+    // ---- PERC STACK (a BOROUGH kit's A13-A16, docs/BOROUGH.md round 3.2) ----
+    /** The row's heading on the KIT screen, over a BOROUGH kit's four stacks. */
+    @field:CopyLabel const val PERC_STACK = "PERC STACK"
+    /**
+     * The ask before a swap replaces stack pads that are no longer the stack as it was made: the owner's words
+     * (2026-11-21), then the way back (Reversal's law: a line that destroys says whether it can be got back). The
+     * replaced files go to the trash, as [com.snipsnap.shell.BoroughStackSwap.swap] bins them.
+     */
+    const val PERC_STACK_ASK = "Replace your changes on A13–A16? The trash keeps them ${Reversal.DAYS} days."
+    @field:CopyLabel const val PERC_STACK_REPLACE = "REPLACE"
+    /** Under the ask: the pads that changed, and where what is on them now goes. */
+    fun percStackChanged(slots: List<Int>): String {
+        val tags = slots.map { PadBanks.tag(it) }
+        val named = if (tags.size <= 1) tags.joinToString() else tags.dropLast(1).joinToString(", ") + " and " + tags.last()
+        return "$named changed. What is there now goes in the trash, and VERSIONS rolls the kit back."
+    }
+    fun percStackBusy(stack: String): String = "Swapping in $stack…"
+    fun percStackSwapped(stack: String): String = "$stack on A13–A16. The drums didn't move."
+    const val PERC_STACK_FAILED = "PERC STACK swap failed. The kit is as it was."
+    const val PERC_STACK_NONE = "This kit has no PERC STACK to swap."
 
     // ---- ROUND ROBIN, ONE PAD ----
     const val ROBIN_ON = "ROUND ROBIN on. Turn it off to get the original back."
@@ -2886,6 +2914,20 @@ object Copy {
      * a toast is gone in seconds and the decision is not.
      */
     fun putOnCardOver(what: String): String = "Card · replace $what?"
+
+    /**
+     * The phone write landed and the card refused the copy (UAT 2026-11 user states, S-4): pulled,
+     * full, read-only. It read "EXPORT failed. Check your storage", which denied the copy the
+     * phone holds and named the wrong storage. Says *phone* first, as [dubCardWouldReplace] does.
+     */
+    const val DUB_DONE_CARD_REFUSED = "EXPORT done, on the phone. The card refused the copy, so check it and try again."
+    /** [DUB_DONE_CARD_REFUSED]'s door on the completion stage: the card leg again, over the same export. */
+    @field:CopyLabel const val CARD_TRY_AGAIN = "TRY THE CARD AGAIN"
+    /**
+     * The phone write landed and Android no longer lets the app write to the card's folder (S-4):
+     * a retry cannot work, so this names where the folder is picked again.
+     */
+    const val DUB_DONE_CARD_GRANT_GONE = "EXPORT done, on the phone. The card needs picking again on CARD."
 
     /** The card leg went ahead after [dubCardWouldReplace] held it, and the old export is gone. */
     fun dubCardReplacedOne(what: String): String =

@@ -8,7 +8,9 @@ import kotlin.math.min
 import kotlin.math.pow
 import kotlin.math.roundToInt
 
-enum class FerryVoice { PASSAGE }
+/** PASSAGE came first; TINE, TWIN, SWELL, TARAB, PEAL, BATON and VANE ([FerryCandidates]) were kept on 21 Nov 2026 and are
+ * appended after it so saved names and ordinals never move. */
+enum class FerryVoice { PASSAGE, TWIN, SWELL, TARAB, PEAL, BATON, TINE, VANE }
 
 /**
  * A finite wood-to-wire exchange: strike -> handoff -> sympathetic bloom -> return.
@@ -32,6 +34,16 @@ object Ferry {
     const val DEFAULT_SEED = 7L
     const val DURATION_SECONDS = 4
     const val INTERNAL_RATE = Dsp.RATE * Dsp.OVERSAMPLE
+
+    /**
+     * The voices players are offered: presets read this. TINE was kept in round voices-ferry-1 and TWIN, SWELL, TARAB, PEAL,
+     * BATON and VANE, reworked or new, in fix-ferry-voices-1 (both 21 Nov 2026). They render on model 4 only.
+     */
+    val KEPT_VOICES: List<FerryVoice> = listOf(FerryVoice.PASSAGE, FerryVoice.TINE, FerryVoice.TWIN, FerryVoice.SWELL,
+        FerryVoice.TARAB, FerryVoice.PEAL, FerryVoice.BATON, FerryVoice.VANE)
+
+    /** The voice FERRY shipped with, which every model plays. */
+    val ORIGINAL_VOICES: List<FerryVoice> = listOf(FerryVoice.PASSAGE)
     private const val CACHE_SIZE = 32
     private data class Key(val midi: Int, val handoffBits: Int, val matchBits: Int, val lossBits: Int)
     private val compiled = object : LinkedHashMap<Key, FerryNetwork.Compiled>(CACHE_SIZE, .75f, true) {
@@ -137,8 +149,8 @@ object Ferry {
     ): FloatArray {
         require(midi in MIN_MIDI..MAX_MIDI) { "FERRY MIDI must be $MIN_MIDI..$MAX_MIDI" }
         require(velocity.isFinite() && velocity in 0f..1f) { "FERRY velocity must be finite and in 0..1" }
-        require(voice == FerryVoice.PASSAGE)
         val m = settled(macros, model)
+        if (voice != FerryVoice.PASSAGE) return FerryCandidates.body(voice, m, midi, velocity, model)
         val loss = m["LOSS"] ?: .5f
         val frames = outputFrames(loss, model)
         if (velocity == 0f) return FloatArray(frames)

@@ -9,6 +9,7 @@ import kotlin.math.ceil
 import kotlin.math.cos
 import kotlin.math.exp
 import kotlin.math.floor
+import kotlin.math.ln
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.pow
@@ -64,8 +65,10 @@ enum class ConsortGesture { PLAIN, SCOOP, TRILL, FLUTTER, FALL }
  * (2026-11-20: "Yes, I listened; it sounds good"). That render is the accepted baseline; a change here
  * that moves the sound needs a new listen, and a change that should not is measured against it.
  *
- * HOLD is breath length. Its top step is a long note, not a seamless loop: a loop with a room in it
- * needs the wash to be periodic too, and that is not built. [isLoop] is false for every setting.
+ * HOLD is breath length. Its top step ([LOOP_FROM], BORE's) is a held note as one seamless loop
+ * ([renderLoop]), for a gated pad that sustains while it is held: a held note ([heldNote]) whose slow
+ * motions, noise and players repeat every eight seconds with deeper wanders ([PAD_HELD], the owner's
+ * pick), cut once and closed by a blend. Every HOLD under the step renders as before.
  */
 object Consort {
 
@@ -117,6 +120,9 @@ object Consort {
     )
 
     const val TUNE_SEMITONES = 24
+
+    /** The ways of playing a take steps through ([TAKES]): the picker's TAKE buttons. A later take repeats a way with fresh humanization. */
+    val TAKE_COUNT: Int get() = TAKES.size
     const val MAX_CHAIRS = 3
     const val DEFAULT_VELOCITY = 0.7f
 
@@ -199,9 +205,11 @@ object Consort {
 
     fun holdSeconds(hold: Float): Float = Dsp.expMap(hold, HOLD_MIN_SECONDS, HOLD_MAX_SECONDS)
 
-    /** HOLD's top step is a long note, never a loop (see the class note). */
-    @Suppress("UNUSED_PARAMETER")
-    fun isLoop(hold: Float): Boolean = false
+    /** Where HOLD's top step starts, BORE's [Bore.LOOP_THRESHOLD]: from here a render is one seamless loop. */
+    const val LOOP_FROM = Bore.LOOP_THRESHOLD
+
+    /** HOLD's top step: the render is one seamless loop for a gated, sustaining pad ([renderLoop]). */
+    fun isLoop(hold: Float): Boolean = hold >= LOOP_FROM
 
     private fun washSeconds(room: Float): Float = Dsp.lin(room, WASH_MIN_SECONDS, WASH_MAX_SECONDS)
 
@@ -214,6 +222,7 @@ object Consort {
 
     fun drumClassFor(voice: ConsortVoice, macros: Map<String, Float> = emptyMap()): DrumClass {
         val m = settled(macros, voice)
+        if (isLoop(m.getValue("HOLD"))) return DrumClass.LOOP
         return if (renderFrames(m).toFloat() / RATE > LOOP_THRESHOLD_SECONDS) DrumClass.LOOP else DrumClass.PERC
     }
 
@@ -221,7 +230,9 @@ object Consort {
     fun scramble(voice: ConsortVoice, random: Random, temperature: Float = 0.35f, near: Patch? = null): Map<String, Float> {
         val base = defaults(voice)
         val seed = if (near != null) base + near.macros.filterKeys { it in base } else base
-        return Dsp.scrambleNear(seed, temperature, random)
+        val rolled = Dsp.scrambleNear(seed, temperature, random)
+        // HOLD's top step (a sustaining loop) is a choice, not a roll: BORE caps it the same way
+        return rolled + ("HOLD" to rolled.getValue("HOLD").coerceAtMost(Math.nextDown(LOOP_FROM)))
     }
 
     /** Velocity rides on BREATH: BREATH sets where the player sits, the hit pushes from there. */
@@ -231,26 +242,55 @@ object Consort {
      * Slow seeded wander in -1..1: white noise through two one-poles at 1 kHz, read by linear
      * interpolation. It is what stops a held pitch, a breath or a vibrato from being a straight line.
      */
-    internal class Wander(seed: Int, cornerHz: Float, seconds: Float) {
+    internal class Wander(seed: Int, cornerHz: Float, seconds: Float, private val period: Float = 0f) {
         private val y: FloatArray
         init {
-            val m = (seconds * 1000f).toInt() + 4
-            val noise = Dsp.Noise(seed)
-            val a = exp(-2.0 * PI * cornerHz / 1000.0).toFloat()
-            y = FloatArray(m)
-            var s1 = 0f
-            var s2 = 0f
-            var peak = 1e-9f
-            for (i in 0 until m) {
-                s1 = a * s1 + (1f - a) * noise.next()
-                s2 = a * s2 + (1f - a) * s1
-                y[i] = s2
-                peak = max(peak, abs(s2))
+            if (period > 0f) {
+                // Periodic (a held note's, [HELD_PERIOD_SECONDS]): the same filter run round a ring of noise until its
+                // state is the ring's own, so the last point runs on into the first. Statistically the same wander.
+                val m = Math.round(period * 1000f)
+                val noise = Dsp.Noise(seed)
+                val white = FloatArray(m) { noise.next() }
+                val a = exp(-2.0 * PI * cornerHz / 1000.0).toFloat()
+                y = FloatArray(m + 1)
+                var s1 = 0f
+                var s2 = 0f
+                repeat(WANDER_RING_PASSES) { pass ->
+                    for (i in 0 until m) {
+                        s1 = a * s1 + (1f - a) * white[i]
+                        s2 = a * s2 + (1f - a) * s1
+                        if (pass == WANDER_RING_PASSES - 1) y[i] = s2
+                    }
+                }
+                y[m] = y[0]
+                var peak = 1e-9f
+                for (i in 0 until m) peak = max(peak, abs(y[i]))
+                for (i in 0..m) y[i] /= peak
+            } else {
+                val m = (seconds * 1000f).toInt() + 4
+                val noise = Dsp.Noise(seed)
+                val a = exp(-2.0 * PI * cornerHz / 1000.0).toFloat()
+                y = FloatArray(m)
+                var s1 = 0f
+                var s2 = 0f
+                var peak = 1e-9f
+                for (i in 0 until m) {
+                    s1 = a * s1 + (1f - a) * noise.next()
+                    s2 = a * s2 + (1f - a) * s1
+                    y[i] = s2
+                    peak = max(peak, abs(s2))
+                }
+                for (i in 0 until m) y[i] /= peak
             }
-            for (i in 0 until m) y[i] /= peak
         }
 
         fun at(seconds: Double): Float {
+            if (period > 0f) {
+                val m = y.size - 1
+                val x = Math.floorMod((seconds * 1000.0).toLong(), m.toLong()).toDouble() + (seconds * 1000.0 - floor(seconds * 1000.0))
+                val i = x.toInt()
+                return y[i] + (y[i + 1] - y[i]) * (x - i).toFloat()
+            }
             val x = (seconds * 1000.0).coerceIn(0.0, (y.size - 2).toDouble())
             val i = x.toInt()
             val f = (x - i).toFloat()
@@ -263,6 +303,8 @@ object Consort {
         val pressure: FloatArray, val cents: FloatArray, val noise: FloatArray, val jet: FloatArray,
         val effort: Float, val over: Float, val seed: Int, val late: Float, val attack: Float, val tongue: Float,
         val way: String,
+        /** A held note's period in internal samples ([HELD_PERIOD_SECONDS]): the breath's noise starts over each one. 0 when not held. */
+        val ring: Int = 0,
     )
 
     /**
@@ -270,7 +312,10 @@ object Consort {
      * only the lead trills and flutters, the way a section holds under a soloist's ornament. [frames] is
      * at the internal rate.
      */
-    internal fun plan(voice: ConsortVoice, midi: Int, velocity: Float, m: Map<String, Float>, role: Int, frames: Int, take: Int): Plan {
+    internal fun plan(
+        voice: ConsortVoice, midi: Int, velocity: Float, m: Map<String, Float>, role: Int, frames: Int, take: Int,
+        held: Held? = null, trimCents: Float = 0f,
+    ): Plan {
         val s = spec(voice)
         val seconds = frames.toFloat() / INTERNAL
         // a take reseeds everything a player does differently and nothing about the instrument
@@ -279,7 +324,7 @@ object Consort {
         val motion = m.getValue("MOTION")
         // LOOSE is how human the players are. The lead gets 60 % of it: steadier than the section, not a machine.
         val loose = if (role > 0) m.getValue("LOOSE") else 0.6f * m.getValue("LOOSE")
-        val blown = holdSeconds(m.getValue("HOLD"))
+        val blown = if (held != null) held.seconds else holdSeconds(m.getValue("HOLD"))
 
         // this chair's way of playing on this take; chairs are staggered so a section does not all bite together
         val way = TAKES[Math.floorMod(take + role, TAKES.size)]
@@ -287,7 +332,7 @@ object Consort {
         val base = effortOf(m.getValue("BREATH"), velocity)
         val varied = (base + stray * way.effort).coerceIn(0f, 1f)
         // a take may not push a note across the overblow line: that is velocity's job, not chance's
-        val effort = if (base < OVERBLOW_FROM) min(varied, OVERBLOW_FROM - 0.01f) else max(varied, OVERBLOW_FROM)
+        val effort = if (base < OVERBLOW_FROM || held != null) min(varied, OVERBLOW_FROM - 0.01f) else max(varied, OVERBLOW_FROM)
         val over = max(0f, (effort - OVERBLOW_FROM) / (1f - OVERBLOW_FROM))
 
         val rnd = Dsp.Noise(seed + 7)
@@ -305,18 +350,20 @@ object Consort {
         val ends = late + blown + stop
 
         val attack = s.attack * Dsp.lin(effort, 1.5f, 0.6f) * attackScale * way.attack.pow(stray)   // a hard blow speaks faster
-        val breathWander = Wander(seed + 17, 2.5f, seconds)
-        val drift = Wander(seed + 11, 0.8f, seconds)
-        val rateWander = Wander(seed + 19, 1.2f, seconds)
-        val depthWander = Wander(seed + 23, 0.9f, seconds)
-        val trillWander = Wander(seed + 13, 2.0f, seconds)
-        val dutyWander = Wander(seed + 29, 3.0f, seconds)
-        val airWander = Wander(seed + 31, 4.0f, seconds)
+        // a held note's slow motions repeat every HELD_PERIOD_SECONDS, so its sustain can loop ([heldNote])
+        val ring = held?.period ?: 0f
+        val breathWander = Wander(seed + 17, 2.5f, seconds, ring)
+        val drift = Wander(seed + 11, 0.8f, seconds, ring)
+        val rateWander = Wander(seed + 19, 1.2f, seconds, ring)
+        val depthWander = Wander(seed + 23, 0.9f, seconds, ring)
+        val trillWander = Wander(seed + 13, 2.0f, seconds, ring)
+        val dutyWander = Wander(seed + 29, 3.0f, seconds, ring)
+        val airWander = Wander(seed + 31, 4.0f, seconds, ring)
 
         val vibHz = s.vibHz * vibRateOwn * way.vibRate.pow(stray)
         val vibBase = s.vibCents * (if (gesture == ConsortGesture.PLAIN) Dsp.lin(motion, 0.2f, 1.6f) else 0.6f) * way.vibDepth.pow(stray)
         val vibStart = 0.18f + stray * (way.vibAt - 0.18f) + vibLate
-        val driftCents = Dsp.lin(loose, 2f, 14f)
+        val driftCents = Dsp.lin(loose, 2f, 14f) * (held?.wander ?: 1f)
         val underCents = Dsp.lin(effort, 6f, 22f) * under
         val takeScoop = stray * way.scoop
         val scoopCents = Dsp.lin(motion, 80f, 300f)
@@ -354,20 +401,22 @@ object Consort {
         val slowNoise = FloatArray(blocks)
         val slowTrill = FloatArray(blocks)
         val slowDuty = FloatArray(blocks)
-        val breathDepth = Dsp.lin(loose, 0.01f, 0.09f)
+        val wild = held?.wander ?: 1f
+        val breathDepth = Dsp.lin(loose, 0.01f, 0.09f) * wild
         for (k in 0 until blocks) {
             val t = k * BLOCK * dt
             val tt = max(t - late, 0.0)
-            val frac = (tt / max(blown, 1e-3f)).coerceIn(0.0, 1.0)
+            // held, the breath swells to its middle in its first half second and never runs out
+            val frac = if (held != null) min(tt / 1.0, 0.5) else (tt / max(blown, 1e-3f)).coerceIn(0.0, 1.0)
             // a breath swells toward the middle, and it runs out: over the last third the pressure tapers and the pitch sags
             val tired = ((frac - 0.67) / 0.33).coerceIn(0.0, 1.0).let { it * it }
             // the diaphragm is not a pump: the pressure wanders a few percent the whole way through
             slowEnv[k] = ((1.0 + 0.06 * sin(PI * frac) * (0.5 + effort)) * (1.0 - 0.14 * loose * tired) *
                 (1.0 + breathDepth * breathWander.at(t))).toFloat()
             // a played vibrato is not a sine from a box: its speed and depth wander
-            slowRate[k] = (vibHz * (1.0 + 0.09 * loose * rateWander.at(t))).toFloat()
-            slowDepth[k] = (vibBase * ((tt - vibStart) / 0.35).coerceIn(0.0, 1.0) * (1.0 + 0.35 * loose * depthWander.at(t))).toFloat()
-            var c = driftCents * drift.at(t) + flat - 9.0 * loose * tired
+            slowRate[k] = (vibHz * (1.0 + 0.09 * loose * rateWander.at(t) * wild)).toFloat()
+            slowDepth[k] = (vibBase * ((tt - vibStart) / 0.35).coerceIn(0.0, 1.0) * (1.0 + 0.35 * loose * depthWander.at(t) * wild)).toFloat()
+            var c = driftCents * drift.at(t) + flat - 9.0 * loose * tired + trimCents
             // every wind attack starts a few cents under and settles; a harder blow starts further under
             c -= underCents * exp(-tt / 0.04)
             c -= takeScoop * exp(-tt / 0.13)                                        // the "leaning" take comes up into the note
@@ -385,12 +434,17 @@ object Consort {
             slowCents[k] = c.toFloat()
             slowScale[k] = scale.toFloat()
             // extra air at the tongue (the chiff), and the leak is never steady
-            slowNoise[k] = (noiseBase * (1.0 + chiff * exp(-tt / 0.05)) * (1.0 + 0.4 * loose * airWander.at(t))).toFloat()
+            slowNoise[k] = (noiseBase * (1.0 + chiff * exp(-tt / 0.05)) * (1.0 + 0.4 * loose * airWander.at(t) * wild)).toFloat()
             if (trilling) {
                 // the trill starts slow and speeds up, and the upper note is held a little shorter than the lower
                 slowTrill[k] = ((trillBase + trillGrow * ((tt - 0.22) / 1.2).coerceIn(0.0, 1.0)) * (1.0 + 0.05 * trillWander.at(t))).toFloat()
                 slowDuty[k] = (0.46 + 0.07 * loose * dutyWander.at(t)).toFloat()
             }
+        }
+        if (held != null) {
+            // whole vibrato and trill cycles in each period, so the period repeats to the phase
+            wholeCycles(slowRate, blocks, held.period)
+            if (trilling) wholeCycles(slowTrill, blocks, held.period)
         }
         var vibPhase = vibPhase0
         var trillPhase = 0.0
@@ -447,7 +501,25 @@ object Consort {
                 pressure[i] *= 1f - 0.5f * loose * 4f * moved[i] * (1f - moved[i])
             }
         }
-        return Plan(pressure, cents, noise, jet, effort, over, seed, late, attack, way.chiff.pow(stray), way.name)
+        return Plan(pressure, cents, noise, jet, effort, over, seed, late, attack, way.chiff.pow(stray), way.name,
+            ring = if (held != null) Math.round(held.period * INTERNAL) else 0)
+    }
+
+    /**
+     * Scales [rate], a periodic rate in Hz worked out every [BLOCK] samples, so its integral over one
+     * [HELD_PERIOD_SECONDS] (read from 2 s on, past the trill's speeding up) is a whole number of cycles.
+     */
+    private fun wholeCycles(rate: FloatArray, blocks: Int, period: Float) {
+        val from = (2.0 * INTERNAL / BLOCK).toInt()
+        require(from + period * INTERNAL / BLOCK < blocks) { "a held note too short for its period" }
+        val n = (period.toDouble() * INTERNAL / BLOCK)
+        var cycles = 0.0
+        val whole = n.toInt()
+        for (k in from until min(blocks, from + whole)) cycles += rate[k].toDouble() * BLOCK / INTERNAL
+        cycles += rate[min(blocks - 1, from + whole)].toDouble() * (n - whole) * BLOCK / INTERNAL
+        if (cycles <= 0.5) return
+        val g = (Math.round(cycles).toDouble() / cycles).toFloat()
+        for (k in rate.indices) rate[k] *= g
     }
 
     /** A centred running mean of [width] samples. */
@@ -488,7 +560,7 @@ object Consort {
         val loop = Strings.Loop(tuning.n, tuning.a, LOOP_GAIN, bellHz, INTERNAL, dcBlock = true, dcHz = dcHz, roundTrip = roundTrip)
         val pin = pinCents(voice)
 
-        val noise = Dsp.Noise(p.seed + 1)
+        var noise = Dsp.Noise(p.seed + 1)
         val air = Dsp.FixedOnePole(AIR_HZ, INTERNAL)
         val offset = s.offset
         val closing = (1f - offset) / -REED_SLOPE                    // the pressure that shuts the reed
@@ -511,6 +583,8 @@ object Consort {
         var freq = hz
         val out = FloatArray(n)
         for (i in 0 until n) {
+            // a held note's breath noise repeats with its period, so the turbulence, and every restart it seeds, repeats too
+            if (p.ring > 0 && i > 0 && i % p.ring == 0) noise = Dsp.Noise(p.seed + 1)
             if (i % BLOCK == 0) {
                 freq = hz * 2f.pow((p.cents[i] + pin) / 1200f)
                 loop.retune(freq)
@@ -535,7 +609,7 @@ object Consort {
                 val jetOut = older + (newer - older) * f
                 jet[jw] = -0.5f * returning
                 jw = (jw + 1) % jetMax
-                tanh(3f * pm * jetOut + bias) * min(pm, 1f) + 0.5f * returning
+                fastTanh(3f * pm * jetOut + bias) * min(pm, 1f) + 0.5f * returning
             }
             var tongue = 0f
             if (seedN > 0 && i >= seedStart && i < seedStart + seedN) {
@@ -576,9 +650,22 @@ object Consort {
         val bias = if (s.pipe == Pipe.CYL) 0f else 0.4f              // Bore.RASP_BIAS
         var peak = 1e-9f
         for (v in x) peak = max(peak, abs(v))
-        val rest = tanh(drive * bias)
+        val rest = fastTanh(drive * bias)
         val gain = peak / max(drive, 1f)
-        for (i in x.indices) x[i] = (tanh(drive * (x[i] / peak + bias)) - rest) * gain
+        for (i in x.indices) x[i] = (fastTanh(drive * (x[i] / peak + bias)) - rest) * gain
+    }
+
+    /**
+     * tanh through [Math.exp], which the JIT compiles to the CPU's own exponential, where [kotlin.math.tanh]
+     * goes through StrictMath's software expm1: about a fifth of a render's time. In double and rounded to
+     * float once, it differs from [kotlin.math.tanh] by about one part in 1e16 before that rounding.
+     */
+    internal fun fastTanh(x: Float): Float {
+        val d = x.toDouble()
+        if (d > 20.0) return 1f
+        if (d < -20.0) return -1f
+        val e = Math.exp(2.0 * d)
+        return ((e - 1.0) / (e + 1.0)).toFloat()
     }
 
     /**
@@ -600,23 +687,55 @@ object Consort {
         val corner = Dsp.FixedOnePole(tilt, rate)
         val lift = tilt / 300f
         val peaks = s.formants.map { (hz, db, q) -> Dsp.Biquad().apply { peaking(hz, db, q, rate) } }
+        var quiet = 0
+        var end = x.size
         for (i in x.indices) {
-            val high = x[i] - low.lp(x[i])                           // nothing radiates below about 150 Hz
+            // nothing radiates below about 150 Hz. After the breath the pipe settles to a slowly fading offset,
+            // and the high-pass's difference of two nearly equal numbers sinks into subnormal floats, which
+            // every filter after it then works through at up to ten times the cost (on a default OBOE note,
+            // 27,000 of 231,500 samples). Under SILENT (about -600 dB) the difference is taken as silence.
+            val diff = x[i] - low.lp(x[i])
+            val high = if (abs(diff) < SILENT) 0f else diff
             val l = corner.lp(high)
             var y = l + lift * (high - l)                            // (1 + s/w300) / (1 + s/wTilt)
             for (p in peaks) y = p.process(y)
             x[i] = y
+            // once the high-pass has been silent for QUIET_RUN samples and the body has rung down under SILENT,
+            // the rest is silence: the filters' states would only decay on through subnormal floats
+            quiet = if (high == 0f) quiet + 1 else 0
+            if (quiet >= QUIET_RUN && abs(y) < SILENT) { end = i + 1; break }
         }
-        Dsp.TptSvf(rate).lowPassInPlace(x, TOP_HZ, 1.414f)
+        java.util.Arrays.fill(x, end, x.size, 0f)
+        if (end == x.size) Dsp.TptSvf(rate).lowPassInPlace(x, TOP_HZ, 1.414f)
+        else {
+            val sounding = x.copyOfRange(0, end)
+            Dsp.TptSvf(rate).lowPassInPlace(sounding, TOP_HZ, 1.414f)
+            sounding.copyInto(x)
+        }
     }
 
     /** One player, dry, at the output rate and at unit level (RMS after the attack), ready to be seated. */
-    internal fun player(voice: ConsortVoice, midi: Int, velocity: Float, m: Map<String, Float>, role: Int, frames: Int, take: Int): FloatArray {
-        val p = plan(voice, midi, velocity, m, role, frames * Dsp.OVERSAMPLE, take)
+    internal fun player(
+        voice: ConsortVoice, midi: Int, velocity: Float, m: Map<String, Float>, role: Int, frames: Int, take: Int,
+        held: Held? = null, trimCents: Float = 0f,
+    ): FloatArray {
+        val p = plan(voice, midi, velocity, m, role, frames * Dsp.OVERSAMPLE, take, held, trimCents)
         val raw = blow(voice, Keys.midiHz(midi), p)
         rasp(raw, voice, p.effort)
         body(raw, voice, p.effort)
-        Tide.bandLimit(raw, INTERNAL)
+        // The band limit runs over the sounding part only: past the last sample at or above SILENT, plus
+        // QUIET_RUN for it to ring down, the rest stays exact zeros. Its natural continuation there is a
+        // decay through subnormal floats, which cost up to ten times the arithmetic of normal ones.
+        var end = raw.size
+        while (end > 0 && abs(raw[end - 1]) < SILENT) end--
+        end = min(raw.size, end + QUIET_RUN)
+        if (end == raw.size) Tide.bandLimit(raw, INTERNAL)
+        else {
+            val sounding = raw.copyOfRange(0, end)
+            Tide.bandLimit(sounding, INTERNAL)
+            sounding.copyInto(raw)
+            java.util.Arrays.fill(raw, end, raw.size, 0f)
+        }
         val y = Dsp.decimate(raw, RATE)
         var sum = 0.0
         val from = min((0.1f * RATE).toInt(), y.size / 2)
@@ -725,10 +844,23 @@ object Consort {
         require(chairs.size <= MAX_CHAIRS) { "CONSORT seats at most $MAX_CHAIRS harmony players, got ${chairs.size}" }
         val m = settled(macros, voice)
         val v = if (velocity.isFinite()) velocity.coerceIn(0f, 1f) else DEFAULT_VELOCITY
+        if (isLoop(m.getValue("HOLD"))) return Snip(renderLoop(voice, m, chairs, v, take).loop, channels = 1, sampleRate = RATE)
+        val out = perform(voice, m, chairs, v, take, renderFrames(m), ((holdSeconds(m.getValue("HOLD")) + AFTER_SECONDS) * RATE).toInt(), held = null)
+        Dsp.levelTo(out, RATE, target = Dsp.MELODIC_LOUDNESS_TARGET)
+        Dsp.fadeTail(out)
+        return Snip(out, channels = 1, sampleRate = RATE)
+    }
+
+    /**
+     * The section blown, seated and washed, DC removed, not levelled: [render]'s body, and a held note's
+     * ([heldNote]). [m] is settled, [frames] the output length and [dry] each player's length, both at [RATE].
+     */
+    private fun perform(
+        voice: ConsortVoice, m: Map<String, Float>, chairs: List<ConsortChair>, v: Float, take: Int,
+        frames: Int, dry: Int, held: Held?,
+    ): FloatArray {
         val midi = midiFor(voice, m.getValue("TUNE"))
         val room = m.getValue("ROOM")
-        val frames = renderFrames(m)
-        val dry = ((holdSeconds(m.getValue("HOLD")) + AFTER_SECONDS) * RATE).toInt()
         val out = FloatArray(frames)
         val bounce = Dsp.lin(room, 0f, 0.9f)
         // BLEND is how far forward the section sits: tucked 14 dB under the lead, up to level with it
@@ -740,7 +872,19 @@ object Consort {
         fun blown(role: Int): FloatArray {
             val who = if (role == 0) voice else chairs[role - 1].voice
             val note = if (role == 0) midi else midi + chairs[role - 1].interval.semitones
-            return player(who, note, if (role == 0) v else v * 0.92f, m, role, dry, take)
+            val vel = if (role == 0) v else v * 0.92f
+            if (held == null) return player(who, note, vel, m, role, dry, take)
+            // Held: blow once, read how far the wave has slipped after one period, and blow again that many
+            // cents sharper or flatter, so this player's wave, and not only its motions, repeats on the period.
+            var trim = 0f
+            var y = player(who, note, vel, m, role, dry, take, held = held)
+            for (pass in 0 until HELD_TRIM_PASSES) {
+                val more = heldTrimCents(y, Keys.midiHz(note), held.period)
+                if (pass > 0 && abs(more) < HELD_TRIM_SETTLED_CENTS) break
+                trim += more
+                y = player(who, note, vel, m, role, dry, take, held = held, trimCents = trim)
+            }
+            return y
         }
         val roles = (0..chairs.size).toList()
         val players = if (chairs.isEmpty()) listOf(blown(0))
@@ -762,8 +906,169 @@ object Consort {
             val x = out[i] - mm
             out[i] = x - hp.lp(x, OUTPUT_DC_HZ)
         }
-        Dsp.levelTo(out, RATE, target = Dsp.MELODIC_LOUDNESS_TARGET)
-        Dsp.fadeTail(out)
-        return Snip(out, channels = 1, sampleRate = RATE)
+        return out
+    }
+
+    /**
+     * A held note is blown for this long ([heldNote]), BORE's held length ([Bore.LOOP_HELD_SECONDS]): long
+     * enough for [Bore.LOOP_START_SECONDS] of settling, a loop of about [Bore.LOOP_SECONDS] and its blend.
+     */
+    const val HELD_SECONDS = Bore.LOOP_HELD_SECONDS
+
+    /** A held note's slow motions repeat this often, [Bore.LOOP_SECONDS], the loop length the cut searches around. */
+    const val HELD_PERIOD_SECONDS = Bore.LOOP_SECONDS
+
+    /** Where a held loop's blend reference starts: [Bore.LOOP_START_SECONDS], past every onset. */
+    internal val HELD_FROM_FRAMES: Int = (Bore.LOOP_START_SECONDS * RATE).toInt()
+
+    private const val WANDER_RING_PASSES = 4
+
+    /** Under this a sample is silence (about -600 dB): the body's high-pass flushes it and [player]'s band limit skips it. */
+    private const val SILENT = 1e-30f
+    /** The band limit's ring-down past the last sounding sample ([player]). */
+    private const val QUIET_RUN = 4096
+
+    /** At most this many retunes of a held player ([heldTrimCents]); a later one only if the slip left is over [HELD_TRIM_SETTLED_CENTS]. */
+    private const val HELD_TRIM_PASSES = 2
+    private const val HELD_TRIM_SETTLED_CENTS = 0.05f
+
+    /**
+     * The cents that make held player [y]'s wave repeat after exactly [HELD_PERIOD_SECONDS]: where 50 ms of it
+     * from 2 s on is found again near one period later (within half a cycle of [hz], to the sub-sample), the
+     * wave repeats every period plus that slip, so the note is raised by the ratio. A player blown at those cents
+     * slips by a small part of what it did ([heldNote] blows each player twice).
+     */
+    internal fun heldTrimCents(y: FloatArray, hz: Float, periodSeconds: Float = HELD_PERIOD_SECONDS): Float {
+        val period = (periodSeconds * RATE).toDouble()
+        val from = (2.0 * RATE).toInt()
+        val w = (0.05 * RATE).toInt()
+        val half = max(2, (0.5 * RATE / hz).toInt())
+        val base = from + period.toInt()
+        if (base + half + w >= y.size) return 0f
+        fun corr(d: Int): Double {
+            var dot = 0.0; var a = 0.0; var b = 0.0
+            for (i in 0 until w) {
+                val p = y[from + i].toDouble(); val q = y[base + d + i].toDouble()
+                dot += p * q; a += p * p; b += q * q
+            }
+            return if (a * b > 1e-24) dot / sqrt(a * b) else 0.0
+        }
+        var best = 0
+        var bestR = Double.NEGATIVE_INFINITY
+        for (d in -half..half) { val r = corr(d); if (r > bestR) { bestR = r; best = d } }
+        var slip = best.toDouble()
+        if (best > -half && best < half) {
+            val l = corr(best - 1); val r = corr(best + 1)
+            val curve = l - 2 * bestR + r
+            if (curve < 0) slip += 0.5 * (l - r) / curve
+        }
+        return (1200.0 * ln((period + slip) / period) / ln(2.0)).toFloat()
+    }
+
+    /**
+     * The held note a key's sustain loop is cut from (`ConsortKeys`): the section at [velocity] and [take]
+     * blown for [HELD_SECONDS] whatever HOLD says, through the same players, chairs and room as [render],
+     * not levelled and with no tail. Held, so it never overblows: a key plays its own note (BORE's rule,
+     * [Bore.heldNote]); the effort is capped under [OVERBLOW_FROM] and nothing else changes.
+     */
+    internal fun heldNote(
+        voice: ConsortVoice, macros: Map<String, Float>, chairs: List<ConsortChair>, velocity: Float, take: Int,
+        held: Held = KEYS_HELD,
+    ): FloatArray {
+        require(chairs.size <= MAX_CHAIRS) { "CONSORT seats at most $MAX_CHAIRS harmony players, got ${chairs.size}" }
+        val m = settled(macros, voice)
+        val v = if (velocity.isFinite()) velocity.coerceIn(0f, 1f) else DEFAULT_VELOCITY
+        val frames = ((held.seconds + AFTER_SECONDS) * RATE).toInt()
+        return perform(voice, m, chairs, v, take, frames, frames, held = held)
+    }
+
+    /**
+     * How a held note is blown: its slow motions, noise and players repeat every [period] seconds, it is
+     * blown for [seconds], and [wander] scales the depth of its slow wanders (breath, pitch drift, vibrato
+     * speed and depth, air) against a one-shot's.
+     */
+    internal data class Held(val period: Float, val seconds: Float, val wander: Float) {
+        /** How much of the held note a loop may use: [HELD_USABLE_FRAMES]'s rule at this length. */
+        val usableFrames: Int get() = ((seconds - 0.08f - Bore.LOOP_MARGIN_SECONDS) * RATE).toInt()
+    }
+
+    /**
+     * The keys' held note: the held pads' deeper wanders ([PAD_WANDER]) on a four-second cycle. Round K3 kept a
+     * two-second cycle with a one-shot's wanders; the owner asked for the keys to be like the held pads, then for a
+     * middle ground on size (2026-11-21): eight seconds made a solo instrument about 60 MB and twice as slow to make,
+     * four seconds about 31 MB, and a key is rarely held long enough to reach a second wrap.
+     */
+    internal val KEYS_HELD: Held = heldFor(KEYS_PERIOD_SECONDS, PAD_WANDER)
+    const val KEYS_PERIOD_SECONDS = 4f
+
+    /** A held note blown long enough to cut and retune a loop of [period] seconds: settle, trim window, blend and margin. */
+    internal fun heldFor(period: Float, wander: Float): Held = Held(period, max(HELD_SECONDS, period + 2.6f), wander)
+
+    /**
+     * A sustaining pad's held note: an eight-second cycle with the slow wanders 1.6 times as deep as a one-shot's.
+     * The owner heard the keys' two-second cycle on a held pad and asked for more humanization, then heard this
+     * against a six-second cycle and the two-second one, and chose it (2026-11-21, "I like c"). The keys take its wanders on a shorter cycle ([KEYS_HELD]).
+     */
+    internal val PAD_HELD: Held = heldFor(PAD_PERIOD_SECONDS, PAD_WANDER)
+    const val PAD_PERIOD_SECONDS = 8f
+    const val PAD_WANDER = 1.6f
+
+    /**
+     * How much of a [heldNote] a loop may use: the breath, less the earliest a player lets go (7 % of a
+     * second early at full LOOSE) and [Bore.LOOP_MARGIN_SECONDS] before the release.
+     */
+    internal val HELD_USABLE_FRAMES: Int = ((HELD_SECONDS - 0.08f - Bore.LOOP_MARGIN_SECONDS) * RATE).toInt()
+
+    /**
+     * How alike the two waves a held loop blends must be ([ConsortKeys] and [renderLoop]). A solo voice
+     * is held to BORE's floor ([Bore.LOOP_MIN_CORRELATION]); a section to [SECTION_MIN_CORRELATION],
+     * since a chair taken far above its own range never quite repeats; FLUTTER to the level guard alone,
+     * since the tongue restarts the tone 24 times a second. The dip guard applies to all of them.
+     */
+    internal fun loopFloor(m: Map<String, Float>, chairs: List<ConsortChair>): Double = when {
+        gestureFor(m.getValue("GESTURE")) == ConsortGesture.FLUTTER -> 0.0
+        chairs.isNotEmpty() -> SECTION_MIN_CORRELATION
+        else -> Bore.LOOP_MIN_CORRELATION
+    }
+
+    /** The section floor: the lowest join measured on the K3 presets' keys was 0.82, at REED TRIO's top key. */
+    const val SECTION_MIN_CORRELATION = 0.8
+
+    /** A pad's loop and how its join was made. */
+    internal class LoopRender(val loop: FloatArray, val lengthFrames: Int, val correlation: Double, val blendDipDb: Double)
+
+    /**
+     * HOLD's top step: the held note ([heldNote]) cut once into one loop of about [HELD_PERIOD_SECONDS],
+     * from [HELD_FROM_FRAMES], its length searched as BORE's is ([Bore.bestLength]) and its head blended
+     * from the audio that follows its end ([Bore.assembleLoop]), so its last sample runs on into its first;
+     * turned onto a zero crossing ([Bore.rotateOntoCrossing]) and levelled. The keys' guards hold it: the
+     * waves blended correlate at least [loopFloor], and the blend dips the note no more than
+     * [Bore.LOOP_MAX_DIP_DB] against the note itself ([BoreKeys.sourceDipDb]). Refused by name otherwise.
+     */
+    internal fun renderLoop(
+        voice: ConsortVoice, m: Map<String, Float>, chairs: List<ConsortChair>, v: Float, take: Int, held: Held = PAD_HELD,
+    ): LoopRender {
+        val x = heldNote(voice, m, chairs, v, take, held)
+        val blend = Bore.LOOP_BLEND_FRAMES
+        val from = HELD_FROM_FRAMES
+        val slack = (Bore.LOOP_SLACK_SECONDS * RATE).toInt()
+        val period = Math.round(held.period * RATE)
+        val (length, correlation) = Bore.bestLength(x, from, blend, period - slack, period + slack)
+        require(from + length + blend <= held.usableFrames) { "CONSORT $voice: no room for a loop" }
+        val loop = Bore.assembleLoop(x, from, length, blend, correlation)
+        val probe = x.copyOf()
+        for (i in 0 until blend) probe[from + i] = loop[i]
+        val dip = BoreKeys.sourceDipDb(x, probe, from, blend)
+        val name = "CONSORT $voice${if (chairs.isEmpty()) "" else " section"} HOLD loop"
+        val floor = loopFloor(m, chairs)
+        require(correlation >= floor) {
+            "$name: the loop's join does not hold (the waves blended correlate %.3f, floor %.2f)".format(java.util.Locale.ROOT, correlation, floor)
+        }
+        require(dip >= -Bore.LOOP_MAX_DIP_DB) {
+            "$name: the loop dips %.2f dB inside its blend (limit %.1f)".format(java.util.Locale.ROOT, -dip, Bore.LOOP_MAX_DIP_DB)
+        }
+        val (rotated, _) = Bore.rotateOntoCrossing(loop)
+        Dsp.levelTo(rotated, RATE, target = Dsp.MELODIC_LOUDNESS_TARGET)
+        return LoopRender(rotated, length, correlation, dip)
     }
 }
