@@ -3953,3 +3953,28 @@ has fourteen hits, a roll and a riser, every pad 3 zones × 4 takes, proved thro
 playback and MPC 3 export (`KerfKitTest`). The owner heard the kits and presets and played the
 kits on phone and MPC (2026-11-21): KERF is complete.
 
+### KERF, round 5 (2026-11-21)
+
+Four more genre kits, from fitted hits the first bank does not use, grouped by what their loops
+measure (`prototype/kerf/genre_bank.py`, the second bank `genre_patches.json`): KERF RUSH (115 BPM),
+POCKET (96), MURK (80) and CHATTER (90). The engine and its pools do not change, and the first four
+kits are byte for byte as approved. Heard by the owner: "These are great" (2026-11-21); phone
+and MPC playback open.
+
+### KERF, round 6 (2026-11-21)
+
+Eight more genre kits. Five come from 31 new loops, grouped by what they measure (`prototype/kerf/genre_bank_r6.py`,
+the third bank `genre_patches_r6.json`): KERF JUNGLE (172 BPM), CLANG (112, percussion), HOUSE (124), DEEP (127) and
+SWAY (86). Three come from the first loops' leftovers: CASSETTE (92), BOOM (78) and TIGHT (100). The first twelve kits
+and the engine do not change. Heard by the owner: "Those are great" (2026-11-21).
+
+### KERF, round 7: engine model 2 (2026-11-21)
+
+The engine's HIT pools grow from 63 to 231 hits: model 1's, unchanged and in place, then the 168 hits the owner heard
+in the genre kits of rounds 5 and 6. A model-1 save keeps its pools; the presets and the kits do not move.
+
+### KERF, pitched pads (2026-11-21)
+
+Struck bars, gongs and keys from the owner's melodic loops, rung out past their cuts (`KerfRender.ring`), as three
+pitched-pad kits of sixteen scale notes: KERF METAL (E-flat major), GONG (F minor), WOOD (F minor). Not yet heard.
+

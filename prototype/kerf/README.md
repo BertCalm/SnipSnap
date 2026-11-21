@@ -20,9 +20,11 @@ underneath, and cut points that are a little off.
 | `run_fit.py` | Fits every chop and prints the error table. |
 | `refine_all.py` | Re-runs only the colour and tick stages on existing fits. |
 | `kits.py` | Picks 16 pads per kit and writes the A/B audition page. |
+| `genre_bank.py` | Round 5: groups the loops by what they measure and picks four more kits' hits the first bank does not use (`synth/src/main/resources/kerf/v1/genre_patches.json`). |
+| `genre_bank_r6.py` | Round 6: eight more kits, five from new loops grouped by measurement and three from the first loops' leftovers (`genre_patches_r6.json`). |
 
-The source loops are not in the repository. `chop.py`, `run_fit.py`, `refine_all.py` and
-`kits.py` need them; `render_kits.py` does not.
+The source loops are not in the repository. `chop.py`, `run_fit.py`, `refine_all.py`,
+`kits.py` and `genre_bank.py` need them or their fits; `render_kits.py` does not.
 
 ## Run it
 
