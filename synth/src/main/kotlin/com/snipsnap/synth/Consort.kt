@@ -673,14 +673,31 @@ object Consort {
         val corner = Dsp.FixedOnePole(tilt, rate)
         val lift = tilt / 300f
         val peaks = s.formants.map { (hz, db, q) -> Dsp.Biquad().apply { peaking(hz, db, q, rate) } }
+        var quiet = 0
+        var end = x.size
         for (i in x.indices) {
-            val high = x[i] - low.lp(x[i])                           // nothing radiates below about 150 Hz
+            // nothing radiates below about 150 Hz. After the breath the pipe settles to a slowly fading offset,
+            // and the high-pass's difference of two nearly equal numbers sinks into subnormal floats, which
+            // every filter after it then works through at up to ten times the cost (on a default OBOE note,
+            // 27,000 of 231,500 samples). Under SILENT (about -600 dB) the difference is taken as silence.
+            val diff = x[i] - low.lp(x[i])
+            val high = if (abs(diff) < SILENT) 0f else diff
             val l = corner.lp(high)
             var y = l + lift * (high - l)                            // (1 + s/w300) / (1 + s/wTilt)
             for (p in peaks) y = p.process(y)
             x[i] = y
+            // once the high-pass has been silent for QUIET_RUN samples and the body has rung down under SILENT,
+            // the rest is silence: the filters' states would only decay on through subnormal floats
+            quiet = if (high == 0f) quiet + 1 else 0
+            if (quiet >= QUIET_RUN && abs(y) < SILENT) { end = i + 1; break }
         }
-        Dsp.TptSvf(rate).lowPassInPlace(x, TOP_HZ, 1.414f)
+        java.util.Arrays.fill(x, end, x.size, 0f)
+        if (end == x.size) Dsp.TptSvf(rate).lowPassInPlace(x, TOP_HZ, 1.414f)
+        else {
+            val sounding = x.copyOfRange(0, end)
+            Dsp.TptSvf(rate).lowPassInPlace(sounding, TOP_HZ, 1.414f)
+            sounding.copyInto(x)
+        }
     }
 
     /** One player, dry, at the output rate and at unit level (RMS after the attack), ready to be seated. */
@@ -692,7 +709,19 @@ object Consort {
         val raw = blow(voice, Keys.midiHz(midi), p)
         rasp(raw, voice, p.effort)
         body(raw, voice, p.effort)
-        Tide.bandLimit(raw, INTERNAL)
+        // The band limit runs over the sounding part only: past the last sample at or above SILENT, plus
+        // QUIET_RUN for it to ring down, the rest stays exact zeros. Its natural continuation there is a
+        // decay through subnormal floats, which cost up to ten times the arithmetic of normal ones.
+        var end = raw.size
+        while (end > 0 && abs(raw[end - 1]) < SILENT) end--
+        end = min(raw.size, end + QUIET_RUN)
+        if (end == raw.size) Tide.bandLimit(raw, INTERNAL)
+        else {
+            val sounding = raw.copyOfRange(0, end)
+            Tide.bandLimit(sounding, INTERNAL)
+            sounding.copyInto(raw)
+            java.util.Arrays.fill(raw, end, raw.size, 0f)
+        }
         val y = Dsp.decimate(raw, RATE)
         var sum = 0.0
         val from = min((0.1f * RATE).toInt(), y.size / 2)
@@ -879,6 +908,11 @@ object Consort {
     internal val HELD_FROM_FRAMES: Int = (Bore.LOOP_START_SECONDS * RATE).toInt()
 
     private const val WANDER_RING_PASSES = 4
+
+    /** Under this a sample is silence (about -600 dB): the body's high-pass flushes it and [player]'s band limit skips it. */
+    private const val SILENT = 1e-30f
+    /** The band limit's ring-down past the last sounding sample ([player]). */
+    private const val QUIET_RUN = 4096
 
     /** At most this many retunes of a held player ([heldTrimCents]); a later one only if the slip left is over [HELD_TRIM_SETTLED_CENTS]. */
     private const val HELD_TRIM_PASSES = 2
