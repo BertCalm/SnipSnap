@@ -1,7 +1,7 @@
 # CHITIN finite-note prototype
 
-CHITIN has six voices: SHELL is a pulse-root bass, WING a brighter saw-root lead, and HUSK, STING, HUM
-and PINCER were kept in chitin-voices-1 (below); GLINT is a candidate.
+CHITIN has seven voices: SHELL is a pulse-root bass, WING a brighter saw-root lead, HUSK, STING, HUM
+and PINCER were kept in chitin-voices-1 and GLINT after its glass and touch tweaks (all below).
 A shared excursion changes hard-sync harmonics, filter opening, preamp drive and
 six-stage phaser motion. The phaser's correction is high-passed on both sides to
 preserve the root. Its normalized lattice and feedback have an energy bound.
@@ -113,3 +113,52 @@ steps: HUSK 4.1 and 2.7 dB, STING 2.3 and 2.1 dB, GLINT 5.3 and 3.8 dB, HUM 4.3 
 
 Weak spots named before the round (the owner's only note was GLINT's): STING is the closest to a kept voice (WING); HUSK's body is a bare sine,
 which may be too plain under the moving band; GLINT is close to a sine once the strike has passed (root share .79).
+
+## GLINT tweak: glassiness (after chitin-voices-1; kept in fix-glint-1)
+
+Status: **kept** (CX1 KEEP, below). The note was "Missing
+glassiness": the heard GLINT was close to a sine once the strike had passed, because its synced slave can only
+make harmonics and its bend died with the strike.
+
+The fix stays inside GLINT's mechanism, the slave bending the root sine's phase. At the strike the slave is synced,
+as before: a harmonic ping. Released from sync, it runs on at 3.6 times the root (`ChitinCandidates.GLASS`) and
+keeps bending the root for the whole note, so the first sidebands sit at 2.6 and 4.6 times the root and the second
+at 6.2 and 8.2: inharmonic, near a wine glass's ring modes (about 1, 2.4 to 2.6, 4.2 to 4.6, 6.6 to 7). A second
+copy 1.3 Hz faster (a glass's split mode pair) makes the ring shimmer slowly. A harder touch bends further and adds
+a 35 ms flash of upper partials at the hit. Around it: the synced bend's sustained part is smaller, the onset is
+3 to 5 ms (was 5 to 12), the drive is gentler (it was washing the partials together), the filter rests higher so the
+glass passes at any COLOR, the ring time is .70 of the gate (was .60) and the default HOLD is .50 (was .30), so a
+note lasts about 1.7 s (was 1.4 s).
+
+Measured (Kotlin; C4, partials at 2.6 and 4.6 times the root against the root, 200 ms windows): before 0.00 at
+.15, .5 and .9 s; after .41, 1.12 and .84, and .95 at 1.3 s, above harmonics 2 to 5 from .5 s on. Root within 1
+cent at C3, C4 and C5, root share .81. Touch steps 5.2 and 3.5 dB. At least 25.8 dB from every other voice. SHELL,
+WING and the four kept voices are unchanged (their pins pass).
+
+## GLINT touch (round fix-glint-1, 2026-11-20)
+
+Verdicts: the reworked GLINT across its range (CX1) **KEEP**; soft, medium and hard at C4 (CX2) **TWEAK**, "All
+sound the same". The measured steps there were 5.2 and 3.5 dB (level-matched, 8.7 dB soft to hard), because touch
+only nudged the bend, the flash and the filter.
+
+Full touch is the kept GLINT, byte for byte: every new touch term is a factor of exactly 1 (or a term of exactly 0)
+at full touch, so CX1's notes, CX2's hard note and the future preset do not change. Below full touch GLINT now
+falls away steeply: the synced bend (the ping) scales with touch to the power 1.5 (`GLINT_TOUCH_BEND`), the glass
+ring and its flash with touch to the power 2.5 (`GLINT_TOUCH_GLASS`), the filter rests up to 2 octaves darker
+(`GLINT_TOUCH_DARK`, times one minus touch) and the onset rounds out to about 11 ms at touch .35. Soft is a round,
+nearly pure ring with a trace of glass and no flash; hard is the kept bright glass strike. Every touch still plays
+at the house loudness: the tone change was enough, so GLINT needs no level difference either.
+
+Measured (Kotlin, C4, level-matched): touch steps 23.9 and 18.1 dB (was 5.2 and 3.5), 40.1 dB soft to hard (was
+8.7). Glass partials against the root at .9 s: soft .04, medium .26, hard .84 (was .58, .68, .84); upper partials
+in the first 50 ms: .04, .47, 3.59 (was .91, 1.82, 3.59). The touch test's floor for GLINT is now 12 dB (others .5).
+Clip CY1 played the old soft, medium and hard, then the new ones.
+
+## GLINT kept as the seventh voice (round touch-glint-1, 2026-11-20)
+
+Verdict: the new soft, medium and hard touch (CY1) **KEEP**, no note; hard is the kept CX1 sound. So GLINT is
+CHITIN's seventh voice: it is in `Chitin.KEPT_VOICES` (so the app's picker offers it), it has one preset named GLINT
+at its default controls and full touch (the kept CX1 middle note), and its six heard renders (C3, C4, G4 and C5 at
+full touch; soft .35 and medium .7 at C4) are pinned in `chitin/kept-voices-v1.sha256`. Re-rendered before the PR, CY1
+and CX1's after half match the heard clips byte for byte. There is still no starter; the CHITIN kit stays SHELL and
+WING.
