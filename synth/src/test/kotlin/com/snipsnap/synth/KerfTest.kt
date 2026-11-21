@@ -92,8 +92,10 @@ class KerfTest {
                 val peak = x.maxOf { abs(it) }
                 assertTrue(peak in .01f..1f, "$voice $m v$v peak $peak")
                 // A chop holds whatever the knife caught, and a short kick cut part-way through a low cycle averages
-                // off zero (kit B's fourth kick at SLOP 1: -0.014). The bound catches a bias, not that.
-                assertTrue(abs(x.average()) < .02, "$voice $m DC ${x.average()}")
+                // off zero (kit B's fourth kick at SLOP 1: -0.014). Model 2's worst is an 83 ms ghost from DEEP's
+                // loops with a 41 Hz kick bleeding under it from both sides (0.022 at DECAY and SLOP 1: three and a
+                // half cycles of the kick). The bound catches a bias, not that.
+                assertTrue(abs(x.average()) < .03, "$voice $m DC ${x.average()}")
             }
         }
     }

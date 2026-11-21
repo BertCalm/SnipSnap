@@ -1008,11 +1008,16 @@ Proceed"). It gives the engine's HIT control more hits.
 - **Nothing heard moves.**
   - A model-1 save keeps its model and its pools.
   - A save without a model reads as model 1, the only model before this one.
-  - A preset's hit index names the same hit on either model, so the 27 presets should render as
-    before. The check of their 108 renders (the picker's and three touch zones each) by checksum
-    against the pack printed before the change is pending.
+  - A preset's hit index names the same hit on either model, so the 27 presets render as before.
+    All 108 of their renders (the picker's and three touch zones each) are byte for byte the pack
+    printed before the change (checksums, `:synth:generateKerfEngineAudition`).
   - The genre kits are pinned to the engine model they were printed on (`KerfKits.ENGINE_MODEL`,
     1), so a new engine model never moves an approved kit.
+- **Tests.** `KerfTest` checks the pools: model 1's in place, the genre hits after them, 231 in
+  all, the presets on model-1 hits, and a model-1 save round-trips to its hit. Its bounds test now
+  renders every model-2 hit. Its offset bound widened from 0.02 to 0.03: model 2's worst is an
+  83 ms ghost from DEEP's loops with a 41 Hz kick bleeding under it from both sides (0.022 at
+  DECAY and SLOP 1), real chop content rather than a bias.
 - **Not yet.** The new hits have been heard inside their kits, at those kits' settings, not as
   the engine's HIT steps at its defaults. The engine's picker on a phone with model 2 is not yet
   played.
