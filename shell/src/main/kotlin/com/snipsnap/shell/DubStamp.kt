@@ -3,6 +3,8 @@ package com.snipsnap.shell
 import com.snipsnap.json.Json
 import com.snipsnap.json.JsonValue
 import com.snipsnap.kit.AtomicFile
+import com.snipsnap.kit.GrooveStore
+import com.snipsnap.kit.KitStore
 import java.io.File
 
 /**
@@ -66,12 +68,27 @@ object DubStamp {
      * arrived inside a kit from somebody else's phone — reads DUBBED, not ON
      * CARD. The chip may under-claim; it must never tell someone their work
      * is safely on a card that is not there.
+     *
+     * Nor that the work on the card is the work on the phone (UAT 2026-11 user
+     * states, S-2): [editedAtMillis] is when the kit was last changed
+     * ([editedAt]), and a kit changed after its stamp reads DUBBED, not ON
+     * CARD, because what the card holds is an older version. It was never
+     * compared, so a kit exported weeks ago and changed today still read ON
+     * CARD. 0 (the default) is "not known", which changes nothing.
      */
-    fun status(stamp: Stamp?, currentCardTree: String?): Status = when {
+    fun status(stamp: Stamp?, currentCardTree: String?, editedAtMillis: Long = 0L): Status = when {
         stamp == null -> Status.DRAFT
-        stamp.cardTree != null && stamp.cardTree == currentCardTree -> Status.ON_CARD
+        stamp.cardTree != null && stamp.cardTree == currentCardTree && editedAtMillis <= stamp.atMillis -> Status.ON_CARD
         else -> Status.DUBBED
     }
+
+    /**
+     * When the kit in [kitDir] was last changed: the newer of `kit.json` (a pad
+     * edit rewrites it) and `groove.json` (a beat edit), 0 for neither. The same
+     * signal the LIBRARY's EDITED age and a project's edited time read.
+     */
+    fun editedAt(kitDir: File): Long =
+        maxOf(File(kitDir, KitStore.FILE_NAME).lastModified(), File(kitDir, GrooveStore.FILE_NAME).lastModified())
 
     /** The stamp [kitDir] carries, or null when it has none — or one this version cannot read. */
     fun read(kitDir: File): Stamp? {
