@@ -12,6 +12,19 @@ import kotlin.math.abs
  */
 object SpliceNeedle {
 
+    /** One press of CUT EARLIER or CUT LATER (UAT 2026-11 user states, S-8), in milliseconds. */
+    const val NUDGE_MS = 10
+
+    /**
+     * The needle moved by [steps] presses of [NUDGE_MS] (negative is earlier), clamped to
+     * `[0, maxFrame]`. Not snapped: a nudge is the fine adjustment a drag cannot make, and
+     * snapping would pull a 10 ms move straight back to the onset it left.
+     */
+    fun nudge(frame: Int, steps: Int, sampleRate: Int, maxFrame: Int): Int {
+        val perStep = (sampleRate.toLong() * NUDGE_MS / 1000).coerceAtLeast(1)
+        return (frame + steps * perStep).coerceIn(0, maxFrame.toLong()).toInt()
+    }
+
     /** How close an onset has to be to win, in seconds (converted to frames via the sample rate in [snap]) — [TapeDeckModel.SNAP_POINT_SEC]'s own window. */
     const val ONSET_SNAP_SEC = 0.12
 
