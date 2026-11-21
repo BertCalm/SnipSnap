@@ -14,6 +14,13 @@ object DrawlAuditionGenerator {
 
     private class Clip(val file: String, val patch: DrawlPatch)
 
+    /** Each voice's strum, the chord and sweep the round-0 prototype page played (gen_audition.py's CHORDS). */
+    private val chords = mapOf(
+        DrawlVoice.CONE to (listOf(0, 7, 12, 16) to .06), DrawlVoice.BOTTLE to (listOf(0, 7, 12) to .06),
+        DrawlVoice.LAP to (listOf(0, 3, 7, 12) to .06), DrawlVoice.STEEL to (listOf(0, 4, 7, 12) to .06),
+        DrawlVoice.FLATTOP to (listOf(0, 4, 7, 12, 16, 19) to .09), DrawlVoice.GUT to (listOf(0, 3, 7, 12) to .06),
+    )
+
     private fun clips(): List<Clip> {
         val out = mutableListOf<Clip>()
         for (voice in DrawlVoice.entries) {
@@ -26,6 +33,11 @@ object DrawlAuditionGenerator {
             for (t in 0 until Drawl.TAKES) add("takes/$v-take$t.wav", take = t)
             for ((s, w) in listOf(0 to 0, 0 to 1, 1 to 0, 1 to 1))
                 add("pairs/$v-slide$s-waver$w.wav", mapOf("SLIDE" to s.toFloat(), "WAVER" to w.toFloat()))
+            val (intervals, sweep) = chords.getValue(voice)
+            for (direction in DrawlStrum.Direction.entries) {
+                val strum = DrawlStrum.Articulation(intervals, sweep, direction)
+                out += Clip("strum/$v-${direction.name.lowercase()}.wav", DrawlPatch("$v-${direction.name.lowercase()}", voice, strum = strum))
+            }
         }
         return out
     }
