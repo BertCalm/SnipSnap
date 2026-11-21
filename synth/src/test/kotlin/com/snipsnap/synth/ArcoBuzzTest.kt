@@ -244,7 +244,7 @@ class ArcoBuzzTest {
      */
     @Test
     fun `at BUZZ 1 every loop of R1b's grid closes under the Organ's bar`() {
-        val cases = ArcoVoice.entries.flatMap { voice ->
+        val cases = ArcoMeasure.FIRST_VOICES.flatMap { voice ->
             ArcoMeasure.loopGridSteps(voice).flatMap { step ->
                 val tune = step / Arco.tuneSemitones(voice).toFloat()
                 ArcoMeasure.loopGridCorners(voice).map { (corner, knobs) -> LoopCase(voice, step, corner, Arco.defaults(voice) + knobs + mapOf("TUNE" to tune, "HOLD" to 1f, "BUZZ" to 1f)) }
@@ -257,7 +257,7 @@ class ArcoBuzzTest {
         }.toList()
         assertEquals(225, outcomes.count { it.case.voice in ArcoMeasure.BODY_VOICES }, "R1b's grid is 225 loops")
         assertEquals(ArcoMeasure.SARANGI_LOOP_GRID, outcomes.count { it.case.voice == ArcoVoice.SARANGI })
-        for (voice in ArcoVoice.entries) for (corner in ArcoMeasure.loopGridCorners(voice).map { it.first }) {
+        for (voice in ArcoMeasure.FIRST_VOICES) for (corner in ArcoMeasure.loopGridCorners(voice).map { it.first }) {
             val row = outcomes.filter { it.case.voice == voice && it.case.corner == corner }
             val worst = row.maxBy { it.seam }
             println(
@@ -314,7 +314,7 @@ class ArcoBuzzTest {
      */
     @Test
     fun `BUZZ is monotone - the energy between a loop's harmonics rises at every step`() {
-        for (voice in ArcoVoice.entries) for (tune in TUNES) {
+        for (voice in ArcoMeasure.FIRST_VOICES) for (tune in TUNES) {
             val hz = Arco.frequencyFor(voice, tune)
             val periods = Arco.planLoop(hz).periods
             val base = Arco.defaults(voice) + mapOf("TUNE" to tune, "HOLD" to 1f)
@@ -346,7 +346,7 @@ class ArcoBuzzTest {
         val levels = listOf(0.25f, 0.4f, 0.5f, 0.75f, 0.9f, 1f)
         // SARANGI (R2): the law is held on its string at WASH 0, where nothing but BUZZ moves it. Its tarab rings at fixed pitches after the box and, at the
         // default WASH, takes a share of the note BUZZ's noise would have had: that reading is printed below and not held (the design record's "R2: SARANGI").
-        for (voice in ArcoVoice.entries) for (tune in TUNES) {
+        for (voice in ArcoMeasure.FIRST_VOICES) for (tune in TUNES) {
             val base = Arco.defaults(voice) + ("TUNE" to tune) + if (Arco.hasBody(voice)) emptyMap() else mapOf("WASH" to 0f)
             val plain = Arco.render(voice, base).samples
             for ((name, law) in laws) {
@@ -376,7 +376,7 @@ class ArcoBuzzTest {
     fun `BUZZ 1 is the first build's 0 point 4, to the bit`() {
         assertEquals(0.4f, Arco.buzzDrive(1f), "the drive at BUZZ 1")
         assertEquals(Arco.buzzDrive(0.4f, Arco.BUZZ_LAW_V1), Arco.buzzDrive(1f), "the first build's drive at 0.4")
-        for (voice in ArcoVoice.entries) for (tune in TUNES) {
+        for (voice in ArcoMeasure.FIRST_VOICES) for (tune in TUNES) {
             val base = Arco.defaults(voice) + ("TUNE" to tune)
             val now = Arco.render(voice, base + ("BUZZ" to 1f)).samples
             assertContentEquals(Arco.render(voice, base + ("BUZZ" to 0.4f), Arco.BUZZ_LAW_V1).samples, now, "$voice tune $tune: BUZZ 1 is not the first build's 0.4")
@@ -402,7 +402,7 @@ class ArcoBuzzTest {
     fun `BUZZ is bounded at every corner of the other knobs`() {
         class Corner(val voice: ArcoVoice, val macros: Map<String, Float>)
         class Result(val corner: Corner, val problems: List<String>, val peak: Float, val rawPeak: Float)
-        val corners = ArcoVoice.entries.flatMap { voice ->
+        val corners = ArcoMeasure.FIRST_VOICES.flatMap { voice ->
             val out = mutableListOf<Corner>()
             for (t in listOf(0f, 1f)) for (bow in listOf(0f, 1f)) for (grip in listOf(0f, 1f)) for (body in listOf(0f, 1f)) for (hold in listOf(0f, Arco.SCRAMBLE_HOLD_CEILING)) for (buzz in listOf(0.5f, 1f)) {
                 out += Corner(voice, mapOf("TUNE" to t, "BOW" to bow, "GRIP" to grip, Arco.boxKnob(voice) to body, "HOLD" to hold, "BUZZ" to buzz))
@@ -427,7 +427,7 @@ class ArcoBuzzTest {
             if (rawPeak > bound) p += "raw peak $rawPeak over $bound"
             Result(c, p, peak, rawPeak)
         }.toList()
-        for (voice in ArcoVoice.entries) {
+        for (voice in ArcoMeasure.FIRST_VOICES) {
             val mine = results.filter { it.corner.voice == voice }
             println("ARCO BUZZ corners $voice: ${mine.size} one-shots, finished peaks ${f(mine.minOf { it.peak }.toDouble())} .. ${f(mine.maxOf { it.peak }.toDouble())}, buzzed raw string at most ${f(mine.maxOf { it.rawPeak }.toDouble())}")
         }

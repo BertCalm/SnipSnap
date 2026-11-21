@@ -59,7 +59,7 @@ class ArcoKeysTest {
 
         /** Every zone of both voices, both layers, at the defaults: rendered once, shared by the tests that read them. */
         val defaults: List<Rendered> by lazy {
-            ArcoVoice.entries.flatMap { v -> ArcoKeys.zoneMidis(v).flatMap { midi -> ArcoKeys.Layer.entries.map { Triple(v, midi, it) } } }
+            ArcoMeasure.FIRST_VOICES.flatMap { v -> ArcoKeys.zoneMidis(v).flatMap { midi -> ArcoKeys.Layer.entries.map { Triple(v, midi, it) } } }
                 .parallelStream().map { (v, midi, layer) -> render(v, midi, layer) }.toList()
         }
 
@@ -136,7 +136,7 @@ class ArcoKeysTest {
     @Test
     fun `every zone of both voices closes in both layers at the defaults, levelled on its loop`() {
         val all = defaults
-        assertEquals(2 * ArcoVoice.entries.sumOf { ArcoKeys.zoneMidis(it).size }, all.size)
+        assertEquals(2 * ArcoMeasure.FIRST_VOICES.sumOf { ArcoKeys.zoneMidis(it).size }, all.size)
         assertEquals(listOf(36, 39, 42, 45, 48, 51, 54, 57, 60), ArcoKeys.zoneMidis(ArcoVoice.CELLO))
         assertEquals(listOf(62, 65, 68, 71, 74, 77, 80, 81), ArcoKeys.zoneMidis(ArcoVoice.ERHU))
         assertEquals(listOf(50, 53, 56, 59, 62, 65, 68, 71, 74), ArcoKeys.zoneMidis(ArcoVoice.SARANGI), "SARANGI's nine zones, D3 to D5 every minor third")
@@ -146,7 +146,7 @@ class ArcoKeysTest {
             val off = loudnessDb(r.loop) - r.zone.render.limitDb
             if (abs(off) > 0.05) bad += "${r.voice} ${noteName(r.midi)} ${r.layer}: the loop sits ${f(off, 3)} dB from the target after the peak guard"
         }
-        for (voice in ArcoVoice.entries) for (layer in ArcoKeys.Layer.entries) {
+        for (voice in ArcoMeasure.FIRST_VOICES) for (layer in ArcoKeys.Layer.entries) {
             val mine = all.filter { it.voice == voice && it.layer == layer }.sortedBy { it.midi }
             val worst = mine.maxBy { it.zone.render.seam }
             println("ARCO held $voice $layer: ${mine.size} zones, worst seam ${e(worst.zone.render.seam)} at ${noteName(worst.midi)} (bar ${e(Keys.MAX_SEAM_ERROR)}); retried ${mine.count { it.zone.retried }}; " +
@@ -155,7 +155,7 @@ class ArcoKeysTest {
                 "${noteName(r.midi)} seam ${e(r.zone.render.seam)}, loop at ${f(r.loopStart.toDouble() / Dsp.RATE, 3)} s, file ${f(r.samples.size.toDouble() / Dsp.RATE, 3)} s, ${r.cpuMs} ms"
             })
         }
-        for (voice in ArcoVoice.entries) {
+        for (voice in ArcoMeasure.FIRST_VOICES) {
             val mine = all.filter { it.voice == voice }
             val frames = mine.sumOf { it.samples.size.toLong() }
             val clock = if (cpu) "this thread's CPU time" else "the wall clock"
@@ -177,7 +177,7 @@ class ArcoKeysTest {
                 "BOW 0" to mapOf("BOW" to 0f), "BOW 1" to mapOf("BOW" to 1f),
             )
         }
-        val cases = ArcoVoice.entries.flatMap { v ->
+        val cases = ArcoMeasure.FIRST_VOICES.flatMap { v ->
             val z = ArcoKeys.zoneMidis(v)
             listOf(z.first(), z[z.size / 2], z.last()).flatMap { midi -> corners(v).flatMap { c -> ArcoKeys.Layer.entries.map { Triple(v, midi, it) to c } } }
         }
@@ -188,7 +188,7 @@ class ArcoKeysTest {
             // GRIP 0 is GRIP 0 in both layers, so only the hard layer need differ from the default there; every corner moves the hard layer.
             if (r.layer == ArcoKeys.Layer.HARD && r.samples.contentEquals(base.samples)) bad += "${r.voice} ${noteName(r.midi)} ${r.label}: the corner renders the default"
         }
-        for (voice in ArcoVoice.entries) for ((corner, _) in corners(voice)) {
+        for (voice in ArcoMeasure.FIRST_VOICES) for ((corner, _) in corners(voice)) {
             val mine = out.filter { it.voice == voice && it.label == corner }
             val worst = mine.maxBy { it.zone.render.seam }
             val lift = if (corner == "BODY 1") ", lift delivered ${mine.joinToString("/") { f(it.zone.render.lift.delivered.toDouble()) }} dB" else ""
@@ -200,7 +200,7 @@ class ArcoKeysTest {
 
     @Test
     fun `the held stretch's raw string is the one-shot's for as long as the one-shot's bow is on`() {
-        for (voice in ArcoVoice.entries) for (bow in listOf(0f, 0.5f, 1f)) {
+        for (voice in ArcoMeasure.FIRST_VOICES) for (bow in listOf(0f, 0.5f, 1f)) {
             val midi = ArcoKeys.zoneMidis(voice)[3]
             val m = ArcoKeys.macrosFor(voice, Arco.defaults(voice) + ("BOW" to bow), midi, ArcoKeys.Layer.HARD)
             val hz = Arco.frequencyFor(voice, m.getValue("TUNE"))
@@ -216,7 +216,7 @@ class ArcoKeysTest {
 
     @Test
     fun `at the default BOW the held stretch is the LOOP's stretch, sample for sample, and at BOW 1 it is not`() {
-        for (voice in ArcoVoice.entries) {
+        for (voice in ArcoMeasure.FIRST_VOICES) {
             val midi = ArcoKeys.zoneMidis(voice)[4]
             val m = ArcoKeys.macrosFor(voice, Arco.defaults(voice), midi, ArcoKeys.Layer.HARD)
             val hz = Arco.frequencyFor(voice, m.getValue("TUNE"))
@@ -233,7 +233,7 @@ class ArcoKeysTest {
         val window = Dsp.RATE / 200
         val span = (0.3 * Dsp.RATE).toInt()
         val bad = ArrayList<String>()
-        for (voice in ArcoVoice.entries) {
+        for (voice in ArcoMeasure.FIRST_VOICES) {
             val midi = ArcoKeys.zoneMidis(voice)[4]
             val bows = listOf(0f, 1f)
             val held = bows.parallelStream().map { b -> render(voice, midi, ArcoKeys.Layer.HARD, mapOf("BOW" to b), "BOW $b") }.toList()
@@ -263,7 +263,7 @@ class ArcoKeysTest {
     fun `the soft layer is darker on CELLO at every zone and strokes slower everywhere`() {
         val bad = ArrayList<String>()
         val n = 65536
-        for (voice in ArcoVoice.entries) {
+        for (voice in ArcoMeasure.FIRST_VOICES) {
             val rows = ArcoKeys.zoneMidis(voice).map { midi ->
                 val soft = defaults.first { it.voice == voice && it.midi == midi && it.layer == ArcoKeys.Layer.SOFT }
                 val hard = defaults.first { it.voice == voice && it.midi == midi && it.layer == ArcoKeys.Layer.HARD }
