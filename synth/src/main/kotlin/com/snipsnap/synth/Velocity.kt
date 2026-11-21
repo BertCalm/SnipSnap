@@ -279,6 +279,7 @@ object Velocity {
         is BorePatch -> Bore.macrosFor(patch.voice)
         is ObbligatoPatch -> Obbligato.macrosFor()
         is ConsortPatch -> Consort.macrosFor(patch.voice)
+        is DrawlPatch -> Drawl.macrosFor(patch.voice)
         is ArcoPatch -> Arco.macrosFor(patch.voice)
         is TempestPatch -> Tempest.macrosFor(patch.voice)
         is MercuryPatch -> Mercury.macrosFor(patch.voice)
@@ -491,6 +492,8 @@ object Velocity {
         is ObbligatoPatch -> patch.copy(velocity = v).render()
         // CONSORT's velocity is breath effort: its own render turns a harder hit into more harmonics, more air and the overblow.
         is ConsortPatch -> patch.copy(velocity = v).render()
+        // DRAWL's velocity is the pick: harder is a brighter, rougher burst, a sharper start and more cone or amp drive, at one gain per sound.
+        is DrawlPatch -> patch.copy(velocity = v).render()
         is BellowsPatch -> patch.copy(velocity = v).render()
         is MurmurPatch -> patch.copy(velocity = v).render()
         is OspreyPatch -> patch.copy(velocity = v).render()

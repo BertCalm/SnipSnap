@@ -3,7 +3,7 @@
 A bar-stopped string whose pitch path is the performance: resonator guitar, electric slide, lap
 steel, pedal steel, country flat-top and western nylon. Design, measurements and the gate plan:
 [docs/superpowers/specs/2026-11-20-drawl-engine-design.md](../../docs/superpowers/specs/2026-11-20-drawl-engine-design.md).
-Python harness, not Kotlin. The owner heard round 0 on 20 Nov 2026 and asked for more twang (CONE) and whine (BOTTLE); round 0b was that change ("Better"), round 0c gave LAP the same whine and slowed the wide vibrato ("Better"), and round 0d makes the vibrato shallower, not yet heard.
+Python harness, not Kotlin. The owner heard round 0 on 20 Nov 2026 and asked for more twang (CONE) and whine (BOTTLE); round 0b was that change ("Better"), round 0c gave LAP the same whine and slowed the wide vibrato ("Better"), and round 0d made the vibrato shallower ("Yes"). The owner kept all six voices; round 1 is the native Kotlin engine (`synth/.../Drawl.kt`), not yet heard.
 
 ```sh
 python3 prototype/drawl/drawl_proto.py OUT                                  # one WAV per voice at its defaults
@@ -28,6 +28,9 @@ python3 prototype/drawl/build_page.py OUT OUT/compare.json [AB_DIR]        # OUT
   (BOTTLE, LAP), and the vibrato's rate and depth.
 - `reference_metrics.json`, `round0_report.json`, `round0_compare.json`, and the round-0b
   `round0b_*.json`, `round0c_*.json` and `round0d_*.json` (report, compare, character): the numbers the spec quotes.
+- `compare_kotlin.py` (round 1): the native Kotlin engine beside the heard prototype, clip for clip
+  (`./gradlew :synth:generateDrawlAudition -PdrawlOutput=DIR` renders the Kotlin side);
+  `build_native_page.py` builds the round-1 listening page from both. Numbers: `round1_compare_kotlin.json`.
 - `NOTICE.txt`: the fifteen reference loops by sha256. Their audio is commercial and is not here.
 
 Needs numpy, scipy, numba (the string loop), ffmpeg (the page's audio) and the Luthier `snipkit.py`

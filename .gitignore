@@ -871,3 +871,5 @@ testkit/stagger-round1b/
 # SIGIL round-0 renders and listening page regenerate locally (prototype/sigil/gen.py, build_page.py).
 /prototype/sigil/out/
 /prototype/sigil/__pycache__/
+# DRAWL native audition renders regenerate (./gradlew :synth:generateDrawlAudition).
+testkit/drawl-audition/
