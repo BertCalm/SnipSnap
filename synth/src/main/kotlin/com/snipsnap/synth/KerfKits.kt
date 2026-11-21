@@ -241,18 +241,25 @@ object KerfKits {
     fun levelDb(g: Genre, role: Int): Double = if (role < HITS) pads(g)[role].levelDb else -2.0
 
     /** One kit's sixteen pads, each with its full grid, rendered in parallel. */
-    fun build(g: Genre): List<ArrangedPad> {
-        val cells = (0 until PADS).flatMap { role -> velocities.indices.flatMap { z -> (0 until TAKES).map { t -> Triple(role, z, t) } } }
+    fun build(g: Genre): List<ArrangedPad> = build(g, (0 until PADS).toList())
+
+    /**
+     * Only [roles] (0-based pads) of [g]'s kit, in that order. Each pad is levelled by its own grid alone, so a pad
+     * built here is byte for byte the same pad as in [build]; the shell's proof builds three pads per kit this way.
+     */
+    fun build(g: Genre, roles: List<Int>): List<ArrangedPad> {
+        require(roles.all { it in 0 until PADS }) { "pads are 0 until $PADS: $roles" }
+        val cells = roles.flatMap { role -> velocities.indices.flatMap { z -> (0 until TAKES).map { t -> Triple(role, z, t) } } }
         val raw = cells.parallelStream().map { (role, z, t) -> Triple(role, z, t) to render(g, role, velocities[z], t) }
             .collect(java.util.stream.Collectors.toList()).toMap()
-        val gains = (0 until PADS).associateWith { role ->
+        val gains = roles.associateWith { role ->
             val loudest = cells.filter { it.first == role }.maxOf { c -> raw.getValue(c).samples.maxOf { abs(it) } }
             Kerf.PEAK * db(levelDb(g, role)) / loudest.coerceAtLeast(1e-6f)
         }
         val rendered = raw.mapValues { (c, s) -> scaled(s, gains.getValue(c.first)) }
         val names = names(g)
         val pads = pads(g)
-        return List(PADS) { role ->
+        return roles.map { role ->
             val grid = velocities.indices.map { z -> List(TAKES) { t -> rendered.getValue(Triple(role, z, t)) } }
             val pad = pads.getOrNull(role)
             ArrangedPad(
