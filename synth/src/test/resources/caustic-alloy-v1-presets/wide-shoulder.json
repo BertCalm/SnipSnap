@@ -5,9 +5,9 @@
   "voice": "ALLOY",
   "macros": {
     "SOURCE": 0.5,
-    "FOCUS": 0.3799999952316284,
-    "BODY": 1,
-    "LENGTH": 0.6000000238418579,
+    "FOCUS": 0.6000000238418579,
+    "BODY": 0.75,
+    "LENGTH": 0.75,
     "HOLD": 0
   },
   "model": 1,

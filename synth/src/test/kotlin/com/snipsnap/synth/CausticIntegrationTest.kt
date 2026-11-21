@@ -16,7 +16,7 @@ import kotlin.test.assertTrue
 /** Saved native notes and production routing; numerical probes live in CausticInstrumentTest. */
 class CausticIntegrationTest {
     @Test fun `every native voice preserves a sparse saved recipe through edits and dry pad replay`() {
-        for (voice in CausticVoice.entries) {
+        for (voice in CausticInstrument.KEPT_VOICES) {
             val patch = CausticPatch("Saved direction", voice,
                 mapOf("SOURCE" to .63f, "LENGTH" to 0f), midi = 55, velocity = .41f, model = 1)
             val restored = assertIs<CausticPatch>(Patches.fromJsonText(patch.toJsonText()))

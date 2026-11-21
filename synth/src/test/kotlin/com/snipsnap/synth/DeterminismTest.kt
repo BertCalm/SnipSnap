@@ -88,6 +88,14 @@ class DeterminismTest {
         }
     }
 
+    @Test fun `KERF replays every saved drum and every take byte for byte`() {
+        for (voice in KerfVoice.entries) {
+            val patch = KerfPatch("Canary", voice, Kerf.defaults(voice))
+            assertContentEquals(patch.render().samples, Patches.fromJsonText(patch.toJsonText()).render().samples)
+            assertContentEquals(patch.render(.6f, take = 2).samples, patch.render(.6f, take = 2).samples)
+        }
+    }
+
     @Test fun `BREAKER replays every saved drum and every take byte for byte`() {
         for (voice in BreakerVoice.entries) {
             val patch = BreakerPatch("Canary", voice, Breaker.defaults(voice))
@@ -574,7 +582,7 @@ class DeterminismTest {
 
     @Test
     fun `native Caustic saved finite notes are byte identical across renders`() {
-        for (voice in CausticVoice.entries) {
+        for (voice in CausticInstrument.KEPT_VOICES) {
             val patch = CausticPatch("Native finite canary", voice,
                 mapOf("SOURCE" to .61f, "FOCUS" to .23f, "BODY" to .72f, "LENGTH" to .08f),
                 midi = 57, velocity = .63f, model = 1)

@@ -931,6 +931,26 @@ object StarterKits {
             seeded = false, tempoBpm = com.snipsnap.synth.SootGenreKits.Genre.INDUSTRIAL.bpm.toFloat(),
         ) { com.snipsnap.synth.SootGenreKits.build(com.snipsnap.synth.SootGenreKits.Genre.INDUSTRIAL) },
         Starter(
+            "kerf-dust", "KERF DUST",
+            "Synthetic chops for boom bap: short kicks and snares rebuilt from fitted numbers, heavy bleed, a loose knife. Three touch zones, four takes; a ghost roll and a stack riser.",
+            seeded = false, tempoBpm = com.snipsnap.synth.KerfKits.Genre.DUST.bpm.toFloat(),
+        ) { com.snipsnap.synth.KerfKits.build(com.snipsnap.synth.KerfKits.Genre.DUST) },
+        Starter(
+            "kerf-soul", "KERF SOUL",
+            "Synthetic chops from a soul break: round kicks, a roomy snare and long hats, the bleed and knife as measured. Three touch zones, four takes; a snare roll and a hat riser.",
+            seeded = false, tempoBpm = com.snipsnap.synth.KerfKits.Genre.SOUL.bpm.toFloat(),
+        ) { com.snipsnap.synth.KerfKits.build(com.snipsnap.synth.KerfKits.Genre.SOUL) },
+        Starter(
+            "kerf-funk", "KERF FUNK",
+            "Synthetic chops for a tight funk break: quick kicks, crisp snares, open cymbals, a clean knife and little bleed. Three touch zones, four takes; a hat roll and a cymbal riser.",
+            seeded = false, tempoBpm = com.snipsnap.synth.KerfKits.Genre.FUNK.bpm.toFloat(),
+        ) { com.snipsnap.synth.KerfKits.build(com.snipsnap.synth.KerfKits.Genre.FUNK) },
+        Starter(
+            "kerf-stomp", "KERF STOMP",
+            "Synthetic chops, hard and dirty: big kicks, a fat snare and a crash stack, the wash pushed and the knife sloppiest. Three touch zones, four takes; a snare roll and a crash riser.",
+            seeded = false, tempoBpm = com.snipsnap.synth.KerfKits.Genre.STOMP.bpm.toFloat(),
+        ) { com.snipsnap.synth.KerfKits.build(com.snipsnap.synth.KerfKits.Genre.STOMP) },
+        Starter(
             MurmurKeptBank.ID, "MURMUR KEPT",
             "Kept plucks, vowel keys and lower-air choir. Held pads have a short delivery fade.",
             seeded = false,

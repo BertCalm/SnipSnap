@@ -73,7 +73,7 @@ internal object PatchTypes {
      * here from its port (K1, 2026-11-15) until the owner approved its Kotlin kits (2026-11-18). CONSORT joined at its
      * Kotlin port (K1, 2026-11-19): the owner heard its Python prototype, and nobody has heard the Kotlin render.
      */
-    val PROTOTYPES: Set<String> = setOf(SecondlinePatch.ENGINE, ChitinPatch.ENGINE, FerryPatch.ENGINE, FillPatch.ENGINE, BreakerPatch.ENGINE, SootPatch.ENGINE, ConsortPatch.ENGINE)
+    val PROTOTYPES: Set<String> = setOf(SecondlinePatch.ENGINE, ChitinPatch.ENGINE, FerryPatch.ENGINE, FillPatch.ENGINE, BreakerPatch.ENGINE, SootPatch.ENGINE, ConsortPatch.ENGINE, KerfPatch.ENGINE)
 
     /** These voices of otherwise rostered engines await a factory-preset listening verdict. */
     val PROTOTYPE_VOICES: Map<String, Set<String>> = mapOf(
