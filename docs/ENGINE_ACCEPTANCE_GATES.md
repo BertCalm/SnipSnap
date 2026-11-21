@@ -1340,7 +1340,7 @@ sounds good now" (2026-11-20); the Kotlin port matches it within the prototype's
 | Velocity and round robin: rendering | Pass in software | Soft zones are different strikes and, over their four takes, never brighter; four different strikes per zone; a groove's soft zone is a softer performance |
 | Velocity and round robin: saving, playback, export | Pass in software | Save, reload, pad resolver, MPC 3, SFZ and DecentSampler for all 68 pads; MPC 2 not written (format limit). No phone or MPC playback yet |
 
-## SIGIL kits (Kotlin built, 2026-11-21: four heard in Python, four drumless not heard)
+## SIGIL kits (Kotlin built and heard, 2026-11-21: hardware open)
 
 Eight drum kits written after 23 of the owner's reference loops: IRON (74), NEON (90), ASH (115), KILN (100), and a
 drumless twin of each. See [SIGIL](SIGIL.md). The owner heard the Python prototype of the four ("Pretty good",
@@ -1351,8 +1351,8 @@ within the prototype's own take-to-take spread (median 0.00 dB over 360 pad zone
 | Gate | Status | Evidence |
 |---|---|---|
 | Melodic, keygroups, chord tools, STRUM | Not applicable | Drum kits |
-| Drums: multiple distinct genre kits on the shelf | Built; four heard in Python | Eight kits under SKINS, each with its own tempo, print, layout and groove; the drumless four not yet heard |
+| Drums: multiple distinct genre kits on the shelf | Built and heard | Eight kits under SKINS, each with its own tempo, print, layout and groove; the four heard in Python, the drumless four heard as the app renders them and kept ("Listened, keep as is", 2026-11-21) |
 | Percussion: roll/riser | Built | An accelerating roll on A15 of every kit |
 | Velocity and round robin: rendering | Pass in software | Soft zones darker and quieter on every pad; four distinct strikes per zone (none closer than 35 dB); grooves softened per zone |
 | Velocity and round robin: saving, playback, export | Pass in software | Save, reload, pad resolver, MPC 3, SFZ and DecentSampler for all 128 pads; MPC 2 not applicable (format limit). No phone or MPC playback yet |
-| Overall | Incomplete | The owner's ear on the Kotlin kits and the drumless four; phone and MPC |
+| Overall | Incomplete | Phone and MPC playback |

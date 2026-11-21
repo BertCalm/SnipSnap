@@ -1,7 +1,8 @@
 # SIGIL: design brief, round-0 audition and the Kotlin kits
 
-Status: **round 1 (2026-11-21): eight kits built in Kotlin and on the shelf, proven in software; the drumless four not
-yet heard.** A family of sixteen-pad drum kits written after the owner's 23 reference loops: "a drum collection that
+Status: **round 1 (2026-11-21): eight kits built in Kotlin and on the shelf, proven in software, and heard: the owner
+listened to the drumless four on the round-1 page (the app's renders) and kept them as they are ("Sounds good", asked
+whether that was a listen: "Listened, keep as is").** A family of sixteen-pad drum kits written after the owner's 23 reference loops: "a drum collection that
 matches the vibe ... the same spirit ... mix together elements to create cohesive kit". The owner chose the shape on
 2026-11-20: "three kits, one per tempo" (the recommendation), wear "mix it up", "the kick/snare sound is impactful",
 "the percs are a bit esoteric, organic/inorganic hybrid". On hearing round 0 the owner wrote "Pretty good. Not sure I
@@ -207,11 +208,11 @@ drumless pad that is the same sound as its parent's plays the parent's render on
 | Gate | Status | Evidence |
 |---|---|---|
 | Melodic voices, keygroups, chord tools, STRUM | Not applicable | Drum kits |
-| Drums: multiple distinct genre kits on the shelf | Built; the four heard in Python, the drumless four not heard | Eight kits under SKINS at 74, 90, 115 and 100 BPM, each with its own print, layout and groove |
+| Drums: multiple distinct genre kits on the shelf | Built and heard | Eight kits under SKINS at 74, 90, 115 and 100 BPM, each with its own print, layout and groove; the drumless four heard as the app renders them and kept (2026-11-21) |
 | Percussion: roll/riser | Built | A15 on every kit: snare drag, hat roll, shaker rush, bongo roll, log roll |
 | Velocity and round robin: rendering | Pass in software | `SigilKitsTest`: darker and quieter soft zones, four distinct strikes per zone, softer grooves |
 | Velocity and round robin: saving, playback, export | Pass in software | `SigilKitTest`, `:shell:generateSigilKits`: save, reload, pad resolver, MPC 3, SFZ, DecentSampler for all 128 pads; MPC 2 not applicable (format limit) |
-| Sound character | Python heard ("Pretty good", "Sounds good"); Kotlin within the prototype's take spread; drumless not heard | The round-1 listening page |
+| Sound character | Heard: the four in Python ("Pretty good", "Sounds good"), the drumless four as the app renders them ("Listened, keep as is"); Kotlin within the prototype's take spread | The round-1 listening page |
 | Hardware | Open | No phone or MPC playback yet |
 
 ## Render budget
@@ -225,7 +226,7 @@ port inside it. A kit's whole grid is 3 x 4 x 15 renders plus the groove, cached
 | Round | What | Gate |
 |---|---|---|
 | 0 and 0b | Python prototype, four kits (KILN added in 0b), listening page | heard: "Pretty good", "Sounds good" |
-| 1 (this) | Kotlin port and the drumless four (`Sigil.kt`, `SigilKits.kt` in the FACSIMILE shape), measured pad by pad against the prototype, on the shelf with the grid proven | the A/B within the takes' own spread (met); the owner's ear on the drumless kits |
+| 1 (this) | Kotlin port and the drumless four (`Sigil.kt`, `SigilKits.kt` in the FACSIMILE shape), measured pad by pad against the prototype, on the shelf with the grid proven | the A/B within the takes' own spread (met); the drumless kits heard and kept (met) |
 | 2 | (folded into round 1) the kits on the shelf (`StarterKits.ALL`, `StarterShelf.GROUPS` under SKINS), velocity x round robin through saving, `PadHit.resolve` playback and MPC 3 export (`generateSigilKits`) | the owner's gates: velocity and round robin end to end; MPC 2 keeps each zone's first take (format limit, 2026-11-14) |
 | 3 | phone and MPC | the owner's report |
 
