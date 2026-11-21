@@ -121,10 +121,19 @@ data class KerfPad(
 object KerfBank {
     const val VERSION = 1
 
-    val kits: Map<String, List<KerfPad>> by lazy {
-        val text = requireNotNull(javaClass.getResourceAsStream("/kerf/v$VERSION/kit_patches.json")) { "Missing KERF bank" }
+    val kits: Map<String, List<KerfPad>> by lazy { load("kit_patches.json") }
+
+    /**
+     * The second bank (round 5, 2026-11-21): four genre kits' hits the first bank does not hold, keyed by genre
+     * ([KerfKits.Genre.name]), written by `prototype/kerf/genre_bank.py`. Only those kits read it; the engine's pools
+     * ([Kerf.pool]) stay on [kits], so a saved patch's HIT keeps its hit.
+     */
+    val genreKits: Map<String, List<KerfPad>> by lazy { load("genre_patches.json") }
+
+    private fun load(file: String): Map<String, List<KerfPad>> {
+        val text = requireNotNull(javaClass.getResourceAsStream("/kerf/v$VERSION/$file")) { "Missing KERF bank $file" }
             .use { it.readBytes().toString(Charsets.UTF_8) }
-        Json.parse(text).obj().mapValues { (_, pads) ->
+        return Json.parse(text).obj().mapValues { (_, pads) ->
             pads.arr().map { it.obj() }.map { p ->
                 KerfPad(
                     pad = p.getValue("pad").int(), drumClass = p.getValue("cls").str(),

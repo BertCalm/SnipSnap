@@ -118,7 +118,11 @@ object Kerf {
     /** The pad recipe the macros describe: the chosen hit, its neighbours, and the render controls. */
     fun recipe(voice: KerfVoice, macros: Map<String, Float> = emptyMap(), model: Int = MODEL_VERSION): KerfRecipe {
         val m = settled(voice, macros, model)
-        val pad = pool(voice)[hitIndex(voice, m.getValue("HIT"))]
+        return recipeFor(pool(voice)[hitIndex(voice, m.getValue("HIT"))], m)
+    }
+
+    /** The pad recipe for any fitted [pad] at settled macros [m] (HIT is not read): [recipe]'s controls, for any bank. */
+    fun recipeFor(pad: KerfPad, m: Map<String, Float>): KerfRecipe {
         val floor = 2.0 * m.getValue("FLOOR")
         return KerfRecipe(
             patch = pad.patch, prev = pad.prev, next = pad.next,

@@ -472,7 +472,7 @@ explicit MIDI root (24–96), strike velocity and model version; TUNE is a
 relative ±12-semitone offset, neutral at 0.5, so the effective note spans
 12–108 without clamping back to the saved-root range. Seven provisional presets
 and a dry sixteen-pad C minor pentatonic kit are included, with PITCHWHEEL among
-FRESH TAPE's 239 starters. Run `./gradlew :synth:generatePitchwheelAudition`
+FRESH TAPE's 243 starters. Run `./gradlew :synth:generatePitchwheelAudition`
 for the compact first listening set, or add `-PpitchwheelFull` for the broader
 dry probes. HOLD's top step returns settled loop-only material with a
 deterministic attachment cycle and capped adhesion. The owner heard R1 as six
@@ -1804,8 +1804,8 @@ with the two things that make a chop sound chopped, the last hit bleeding undern
 that lands a little off. On a captured kit it is SYNTH TWIN on the pad sheet, SYNTH TWIN ALL on the
 kit screen, and `snipsnap kerf`. As an engine (round 4) it is on the SYNTH picker with six voices
 (KICK, SNARE, GHOST, HAT, HAT OPEN, PERC) over 63 fitted hits, whose HIT, TUNE, DECAY, FLOOR,
-BLEED and SLOP controls pick and shape a hit. It also has four genre kits on FRESH TAPE (KERF DUST, SOUL,
-FUNK and STOMP), each with three touch zones, four takes, a roll and a riser. No audio from the
+BLEED and SLOP controls pick and shape a hit. It also has eight genre kits on FRESH TAPE (KERF DUST, SOUL,
+FUNK, STOMP, RUSH, POCKET, MURK and CHATTER), each with three touch zones, four takes, a roll and a riser. No audio from the
 loops is stored, only fitted numbers. [Design, rounds and measurements](docs/superpowers/specs/2026-11-19-kerf-synthetic-chops-design.md).
 
 Fired Bronze is an MPC-approved sixteen-pad skin, clay and bronze kit with four

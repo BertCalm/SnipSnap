@@ -900,3 +900,42 @@ a pad made from a capture keeps its own numbers in the pad recipe, as before.
   I listen"). They played the kits on phone and MPC: "2 is complete" (2026-11-21). The round-4
   gate is met, and KERF is complete under the owner's gates.
 
+## As built: round 5, four more genre kits (2026-11-21)
+
+The owner asked for more genre kits, from fresh hits, with the loops deciding the genres. The
+owner picked fresh hits, four kits, and genres measured from the loops (2026-11-21).
+
+- **The second bank.** Every loop was fitted in round 2: 462 hits, of which the first bank uses
+  63. `prototype/kerf/genre_bank.py` groups the loops by what they measure, never by name, so no
+  loop or pack name reaches the repository:
+  - RUSH: 100 BPM and up, spectral centre at least 700 Hz.
+  - MURK: centre under 850 Hz.
+  - POCKET: at least a quarter of the hits are ghosts.
+  - CHATTER: at least 13 hits a bar, or hats over a third of the hits.
+
+  It then picks 14 hits per kit, with the first bank's picker: loudest first, then least like the
+  ones already chosen. It only uses hits the first bank does not hold, that fit well (envelope
+  match at least 0.85, band error at most 5 dB; medians 2.9 to 3.6 dB) and that last 0.08 to
+  1.2 s. The result is `synth/src/main/resources/kerf/v1/genre_patches.json`
+  (`KerfBank.genreKits`), fitted numbers only.
+- **The engine does not change.** The second bank's hits are not in the engine's pools, so a
+  saved patch's HIT and the 27 presets keep their hits (`KerfKitsTest`: the pools are still the
+  first bank's 63). The new kits read their bank through `Kerf.recipeFor`. The first four kits keep
+  their exact render path. All 64 of their pads came out byte for byte as before, compared by
+  checksum against the pack printed before the change.
+- **The kits** (`KerfKits.Genre`, `second = true`):
+  - RUSH, 115 BPM: tight knife, short decays, a touch high.
+  - POCKET, 96 BPM: loose knife, long decays.
+  - MURK, 80 BPM: tuned down, the wash and bleed pushed. It has six snares, one ghost, four open
+    cymbals and no closed hats, because those loops have none.
+  - CHATTER, 90 BPM: short decays, the wash up.
+
+  Each has fourteen hits, a roll and a riser, with 3 zones × 4 takes per pad. Every pair of the
+  eight kits shares at most three hits (round 5's share none with anything) and has a different
+  lead kick, lead snare and tempo, and at least three settings apart.
+- **Proof.** `KerfKitTest` builds all eight kits and pushes a hit, the roll and the riser of each
+  through save, reload, `PadHit.resolve` and MPC 3 export. `:shell:generateKerfKits` verified all
+  128 pads (1,536 slices).
+- **Not yet.** The owner has not heard the four new kits; the audition page went to them on
+  2026-11-21. Phone and MPC playback of these four is open.
+

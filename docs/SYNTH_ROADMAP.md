@@ -3953,3 +3953,10 @@ has fourteen hits, a roll and a riser, every pad 3 zones × 4 takes, proved thro
 playback and MPC 3 export (`KerfKitTest`). The owner heard the kits and presets and played the
 kits on phone and MPC (2026-11-21): KERF is complete.
 
+### KERF, round 5 (2026-11-21)
+
+Four more genre kits, from fitted hits the first bank does not use, grouped by what their loops
+measure (`prototype/kerf/genre_bank.py`, the second bank `genre_patches.json`): KERF RUSH (115 BPM),
+POCKET (96), MURK (80) and CHATTER (90). The engine and its pools do not change, and the first four
+kits are byte for byte as approved. 243 starters. Not yet heard.
+
