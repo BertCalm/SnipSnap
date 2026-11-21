@@ -1,5 +1,6 @@
 package com.snipsnap.shell
 
+import com.snipsnap.synth.CausticInstrument
 import com.snipsnap.synth.CausticPatch
 import com.snipsnap.synth.CausticPresets
 import com.snipsnap.synth.CausticVoice
@@ -22,7 +23,7 @@ class CausticEditingTest {
     }
 
     @Test fun `only a deliberate extension request changes an original model`() {
-        for (voice in CausticVoice.entries) {
+        for (voice in CausticInstrument.HELD_VOICES) {
             val original = CausticPatch("Saved direction", voice, mapOf("BODY" to .6f),
                 midi = 55, velocity = .37f, model = 1)
             val before = original.toJsonText()

@@ -53,7 +53,7 @@ class ArcoLoopVibratoTest {
     @Test
     fun `R1b's 225 loops close with the snapped vibrato and with the humanised one`() {
         // R1b's grid for CELLO and ERHU, every step; SARANGI (R2) at every third step and its top, with WASH where the others have BODY (ArcoMeasure.loopGridSteps).
-        val cases = ArcoVoice.entries.flatMap { voice ->
+        val cases = ArcoMeasure.FIRST_VOICES.flatMap { voice ->
             ArcoMeasure.loopGridSteps(voice).flatMap { step ->
                 val tune = step / Arco.tuneSemitones(voice).toFloat()
                 ArcoMeasure.loopGridCorners(voice).map { (corner, knobs) -> Case(voice, step, corner, Arco.defaults(voice) + knobs + mapOf("TUNE" to tune, "HOLD" to 1f)) }
@@ -67,7 +67,7 @@ class ArcoLoopVibratoTest {
         }.toList()
         assertEquals(450, outcomes.count { it.case.voice in ArcoMeasure.BODY_VOICES }, "R1b's 225 loops, once per variant")
         assertEquals(2 * ArcoMeasure.SARANGI_LOOP_GRID, outcomes.count { it.case.voice == ArcoVoice.SARANGI })
-        for (kind in kinds) for (voice in ArcoVoice.entries) {
+        for (kind in kinds) for (voice in ArcoMeasure.FIRST_VOICES) {
             val mine = outcomes.filter { it.kind == kind && it.case.voice == voice }
             val worst = mine.maxBy { it.seam }
             val rows = ArcoMeasure.loopGridCorners(voice).map { it.first }.joinToString(", ") { corner ->
@@ -146,7 +146,7 @@ class ArcoLoopVibratoTest {
 
     @Test
     fun `the loop's mean pitch is its note, with and without the vibrato`() {
-        for (voice in ArcoVoice.entries) for (tune in listOf(0f, 0.5f, 1f)) {
+        for (voice in ArcoMeasure.FIRST_VOICES) for (tune in listOf(0f, 0.5f, 1f)) {
             val hz = Arco.frequencyFor(voice, tune)
             val plan = Arco.planLoop(hz)
             val cycles = Arco.loopVibratoCycles(plan.frames.toDouble() / Dsp.RATE)

@@ -69,7 +69,9 @@ object ConsortKeys {
         stop(cancelled, name)
         val x = Consort.heldNote(patch.voice, zoneMacros(patch, cell.midi), patch.chairs, TOUCHES[cell.touch], TAKES[cell.take])
         stop(cancelled, name)
-        return BoreKeys.cutHeld(x, minOf(x.size, Consort.HELD_USABLE_FRAMES), name, Consort.HELD_FROM_FRAMES, minCorrelation(patch))
+        return BoreKeys.cutHeld(
+            x, minOf(x.size, Consort.HELD_USABLE_FRAMES), name, fixedFrom = Consort.HELD_FROM_FRAMES, minCorrelation = minCorrelation(patch),
+        )
     }
 
     /** How alike the two waves a key's loop blends must be: the engine's own floor ([Consort.loopFloor]). */

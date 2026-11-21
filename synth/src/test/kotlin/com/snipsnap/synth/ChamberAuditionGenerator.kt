@@ -358,7 +358,7 @@ object ChamberAuditionGenerator {
         for (voice in ChamberVoice.entries) for (midi in listOf(48, 60)) {
             val slug = voice.name.lowercase(Locale.ROOT)
             val note = if (midi == 48) "C3" else "C4"
-            val base = ChamberPresets.forVoice(voice).first().copy(midi = midi, model = revisedModel)
+            val base = defaultRoom(voice).copy(midi = midi, model = revisedModel)
             val revisedFull = "$slug-$study-r$revisedModel-${note.lowercase(Locale.ROOT)}-full"
             val group = "$slug-$study-${note.lowercase(Locale.ROOT)}"
             add(Case(revisedFull, "${voice.name}: $revisedLabel quartet · $note", if (midi == 48) "first-listen" else "timpani",
@@ -448,10 +448,13 @@ object ChamberAuditionGenerator {
             "model" to expectedModel, "sourceRevision" to manifest["sourceRevision"]?.str())
     }
 
+    /** The room's own default sound on model 3, which this study was built on; AQUARIUM's first factory recipe has since been re-voiced. */
+    private fun defaultRoom(voice: ChamberVoice) = ChamberPatch(ChamberPresets.forVoice(voice).first().name, voice, Chamber.defaults(voice), model = 3)
+
     private fun cases(finite: Boolean = false): List<Case> = buildList {
         for (voice in ChamberVoice.entries) {
             val slug = voice.name.lowercase(Locale.ROOT)
-            val defaults = ChamberPresets.forVoice(voice).first()
+            val defaults = defaultRoom(voice)
             val room = if (voice == ChamberVoice.HYBRID) "two wood and two glass walls, with independent floor and ceiling"
                 else "concrete lower regions and floor, with a submerged-glass canopy"
             add(Case("$slug-default", voice.name, "first-listen", defaults,

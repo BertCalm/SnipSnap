@@ -27,7 +27,7 @@ class LatticeSynthCommandTest {
     fun `every Lattice source accepts an explicit note and velocity and saves its complete patch`() {
         val root = createTempDirectory("lattice-cli-voices").toFile()
         try {
-            for (voice in LatticeVoice.entries) {
+            for (voice in Lattice.KEPT_VOICES) {
                 val dir = File(root, voice.name)
                 val errors = ByteArrayOutputStream()
                 assertEquals(0, Cli.run(

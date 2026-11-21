@@ -125,10 +125,12 @@ Two gradle hygiene rules, both learned the hard way:
 ## Reading CI
 
 Jobs on a PR (`.github/workflows/tests.yml`): **`jvm-other`**, every
-module's JVM tests except `:synth`'s; **`jvm-synth`**, `:synth`'s tests split
-across three jobs, named `jvm-synth (shard 0 of 3)` through `(shard 2 of 3)`;
-**`jvm-tests`**, which runs no tests and is green only when all four of
-those are; **`android-build`**; and **`native-tests`**. **`emulator-tests`**
+module's JVM tests except `:synth`'s and `:shell`'s; **`jvm-shell`**,
+`:shell`'s tests split across four jobs, named `jvm-shell (shard 0 of 4)`
+through `(shard 3 of 4)`; **`jvm-synth`**, `:synth`'s tests split across five,
+`jvm-synth (shard 0 of 5)` through `(shard 4 of 5)`; **`jvm-tests`**, which
+runs no tests and is green only when all of those are; **`android-build`**;
+and **`native-tests`**. **`emulator-tests`**
 (`.github/workflows/emulator-tests.yml`) runs only when the PR touches
 `app/**`: it boots an emulator and runs `app/src/androidTest`, about 40 to
 50 minutes, and a PR with nothing under `app/` gets no such check.
@@ -182,8 +184,9 @@ configure. On the CI runner `:app` *is* in the graph, which is why
 `jvm-other` can exclude it: the runner image has its own SDK and presets
 `ANDROID_HOME` and `ANDROID_SDK_ROOT` to it (`setup-android` points them
 at the same SDK and accepts its licences; it is not what includes
-`:app`). The `jvm-synth` shards want the opposite: they blank both
-variables, so `:app` stays out there, as it does in a cloud session. A
+`:app`). The `jvm-synth` and `jvm-shell` shards want the opposite: they
+blank both variables, so `:app` stays out there, as it does in a cloud
+session. A
 no-SDK run is not a configuration failure. An older comment on that step said the
 opposite — that `:app` existing made every module fail to configure
 without an SDK. That was true only while `:app` was included

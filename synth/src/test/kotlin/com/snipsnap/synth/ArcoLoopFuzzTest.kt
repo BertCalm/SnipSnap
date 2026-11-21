@@ -48,7 +48,7 @@ class ArcoLoopFuzzTest {
         // SARANGI (R2) comes after ERHU, so the dice CELLO and ERHU roll are the ones they rolled before it: its random corner rolls GRIP, BOW and WASH
         // (its fourth knob), and it has no BODY above the knee to lift, so its rows are the defaults and the random corner (ArcoSarangiTest closes WASH 0,
         // 0.5 and 1 at every step).
-        val cases = ArcoVoice.entries.flatMap { voice ->
+        val cases = Arco.KEPT_VOICES.flatMap { voice ->
             (0..Arco.tuneSemitones(voice)).flatMap { step ->
                 val tune = step / Arco.tuneSemitones(voice).toFloat()
                 val random1 = Arco.defaults(voice) + mapOf("GRIP" to knob(random), "BOW" to knob(random), Arco.boxKnob(voice) to knob(random))
@@ -64,7 +64,7 @@ class ArcoLoopFuzzTest {
             val r = Arco.renderLoopMeasured(c.voice, c.macros)
             Outcome(c, r.seam, r.loop.size, r.loop.all { it.isFinite() && it in -1f..1f }, r.loop.maxOf { kotlin.math.abs(it) }, (System.nanoTime() - started) / 1_000_000L, r.lift.halvings, r.lift.delivered < r.lift.asked)
         }.toList()
-        for (voice in ArcoVoice.entries) {
+        for (voice in Arco.KEPT_VOICES) {
             val mine = outcomes.filter { it.case.voice == voice }
             val worst = mine.maxBy { it.seam }
             println(
@@ -73,7 +73,7 @@ class ArcoLoopFuzzTest {
                     "shortest loop ${"%.3f".format(java.util.Locale.ROOT, mine.minOf { it.frames }.toDouble() / Dsp.RATE)} s, highest peak ${"%.3f".format(java.util.Locale.ROOT, mine.maxOf { it.peak })}",
             )
         }
-        for (voice in ArcoVoice.entries) for (corner in listOf("defaults", "random") + if (Arco.hasBody(voice)) listOf("BODY 0.75", "BODY 1") else emptyList()) {
+        for (voice in Arco.KEPT_VOICES) for (corner in listOf("defaults", "random") + if (Arco.hasBody(voice)) listOf("BODY 0.75", "BODY 1") else emptyList()) {
             val row = outcomes.filter { it.case.voice == voice && it.case.corner == corner }
             val worst = row.maxBy { it.seam }
             println(

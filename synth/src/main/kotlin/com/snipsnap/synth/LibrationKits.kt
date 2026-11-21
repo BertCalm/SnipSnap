@@ -12,7 +12,7 @@ object LibrationKits {
     const val PAD_LEVEL = .40f
 
     fun patches(): List<LibrationPatch> {
-        val bank = LibrationPresets.all()
+        val bank = LibrationPresets.cloud()
         fun variant(original: String, name: String, midi: Int) =
             bank.single { it.name == original }.copy(name = name, midi = midi)
         return (bank + listOf(
@@ -37,6 +37,7 @@ object LibrationKits {
                 LibrationVoice.GATHER -> "#e5ae79"
                 LibrationVoice.TWINS -> "#91cbd1"
                 LibrationVoice.DEPARTURE -> "#c7d9a0"
+                else -> "#d8d2c4"
             },
             source = mapOf("engine" to LibrationPatch.ENGINE, "model" to patch.model.toString(),
                 "rootMidi" to patch.midi.toString(), "sourceSeconds" to patch.sourceSeconds.toString(),

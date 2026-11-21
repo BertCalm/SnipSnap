@@ -97,6 +97,7 @@ internal object ArcoBodyCandidates {
         ArcoVoice.CELLO -> CELLO_FORMANTS
         ArcoVoice.ERHU -> ERHU_FORMANTS
         ArcoVoice.SARANGI -> error("SARANGI has no BODY knob: the R1h candidates are CELLO's and ERHU's")
+        else -> error("the candidate voices are not in this copy")
     }
 
     /** How far to full the bed is at [body]: 0 at or under the knee, 1 at BODY 1 (design A's `bedDepthFor`, verbatim). */
@@ -136,6 +137,7 @@ internal object ArcoBodyCandidates {
         ArcoVoice.CELLO -> CELLO_BROAD
         ArcoVoice.ERHU -> ERHU_BROAD
         ArcoVoice.SARANGI -> error("SARANGI has no BODY knob: the R1h candidates are CELLO's and ERHU's")
+        else -> error("the candidate voices are not in this copy")
     }
 
     /** Nothing at or under the knee, then [top] times the square of how far up the rest of the knob BODY is (design B's `broadAmountFor`, verbatim): [top] at BODY 1. */

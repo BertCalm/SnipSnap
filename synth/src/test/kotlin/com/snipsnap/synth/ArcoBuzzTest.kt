@@ -120,13 +120,14 @@ class ArcoBuzzTest {
     )
 
     /**
-     * A render as BUZZ left it: a one-shot exactly as the engine plays it, and a LOOP with R2's loop vibrato (the owner's later request, a separate
-     * change on purpose) turned off, because the vibrato moves every loop and the hashes are of the loops before it. The one-shots have no such
-     * switch: nothing after BUZZ touches them.
+     * A render as BUZZ left it: a LOOP with R2's loop vibrato (the owner's later request, a separate change on purpose) turned off, because the
+     * vibrato moves every loop and the hashes are of the loops before it, and every render with the player off ([Humanize.OFF]): since 2026-11-20
+     * a held note carries a player's hand (the owner's verdict, "Holds are unnatural, they need more humanization"), which moves every note
+     * with more than 0.6 s of bow and every loop. What ships with the player on is pinned by `HoldHumanizePinsTest`.
      */
     private fun asBuzzLeftIt(voice: ArcoVoice, macros: Map<String, Float>): FloatArray =
-        if (Arco.isLoop(Arco.settled(macros, voice).getValue("HOLD"))) Arco.render(voice, macros, Arco.BUZZ_LAW, Arco.LoopVibrato.OFF).samples
-        else Arco.render(voice, macros).samples
+        if (Arco.isLoop(Arco.settled(macros, voice).getValue("HOLD"))) Arco.render(voice, macros, Arco.BUZZ_LAW, Arco.LoopVibrato.OFF, Humanize.OFF).samples
+        else Arco.render(voice, macros, Arco.BUZZ_LAW, human = Humanize.OFF).samples
 
     @Test
     fun `at BUZZ 0 every preset, each default note and each default loop is the code before BUZZ, sample for sample`() {
@@ -137,14 +138,17 @@ class ArcoBuzzTest {
             assertEquals(0f, p.macros.getValue("BUZZ"), "$key: a factory preset is written at BUZZ 0")
             assertEquals(before.getValue(key), sha(asBuzzLeftIt(p.voice, p.macros)), "$key changed")
             assertEquals(before.getValue(key), sha(asBuzzLeftIt(p.voice, p.macros - "BUZZ")), "$key, saved before BUZZ (no key), changed")
-            if (!Arco.isLoop(p.macros.getValue("HOLD"))) assertEquals(before.getValue(key), sha(p.render().samples), "$key, through the patch, changed")
+            // Through the patch only where the player (2026-11-20) leaves the note alone: a bow of 0.6 s or less.
+            if (!Arco.isLoop(p.macros.getValue("HOLD")) && Arco.playerShare(Arco.holdSeconds(p.macros.getValue("HOLD"))) == 0f) {
+                assertEquals(before.getValue(key), sha(p.render().samples), "$key, through the patch, changed")
+            }
             checked += key
         }
         for (v in ArcoMeasure.BODY_VOICES) {
             val note = "$v DEFAULT NOTE"
             val loop = "$v DEFAULT LOOP"
-            assertEquals(before.getValue(note), sha(Arco.render(v, Arco.defaults(v)).samples), "$note changed")
-            assertEquals(before.getValue(note), sha(Arco.render(v, Arco.defaults(v) - "BUZZ").samples), "$note, with no BUZZ key, changed")
+            assertEquals(before.getValue(note), sha(Arco.render(v, Arco.defaults(v), Arco.BUZZ_LAW, human = Humanize.OFF).samples), "$note changed")
+            assertEquals(before.getValue(note), sha(Arco.render(v, Arco.defaults(v) - "BUZZ", Arco.BUZZ_LAW, human = Humanize.OFF).samples), "$note, with no BUZZ key, changed")
             assertEquals(before.getValue(loop), sha(asBuzzLeftIt(v, Arco.defaults(v) + ("HOLD" to 1f))), "$loop changed")
             checked += note
             checked += loop
@@ -240,7 +244,7 @@ class ArcoBuzzTest {
      */
     @Test
     fun `at BUZZ 1 every loop of R1b's grid closes under the Organ's bar`() {
-        val cases = ArcoVoice.entries.flatMap { voice ->
+        val cases = ArcoMeasure.FIRST_VOICES.flatMap { voice ->
             ArcoMeasure.loopGridSteps(voice).flatMap { step ->
                 val tune = step / Arco.tuneSemitones(voice).toFloat()
                 ArcoMeasure.loopGridCorners(voice).map { (corner, knobs) -> LoopCase(voice, step, corner, Arco.defaults(voice) + knobs + mapOf("TUNE" to tune, "HOLD" to 1f, "BUZZ" to 1f)) }
@@ -253,7 +257,7 @@ class ArcoBuzzTest {
         }.toList()
         assertEquals(225, outcomes.count { it.case.voice in ArcoMeasure.BODY_VOICES }, "R1b's grid is 225 loops")
         assertEquals(ArcoMeasure.SARANGI_LOOP_GRID, outcomes.count { it.case.voice == ArcoVoice.SARANGI })
-        for (voice in ArcoVoice.entries) for (corner in ArcoMeasure.loopGridCorners(voice).map { it.first }) {
+        for (voice in ArcoMeasure.FIRST_VOICES) for (corner in ArcoMeasure.loopGridCorners(voice).map { it.first }) {
             val row = outcomes.filter { it.case.voice == voice && it.case.corner == corner }
             val worst = row.maxBy { it.seam }
             println(
@@ -305,16 +309,17 @@ class ArcoBuzzTest {
      * nothing there, so what rises is the buzz alone. Since R2 the shipped loop's vibrato spreads each harmonic into sidebands (about -16 dB of the loop
      * at CELLO C2), which would hide BUZZ's low steps; and a sample-by-sample difference of two shipped loops is no measure either, because BUZZ moves
      * where [Siren.bestCut] cuts the loop, so the two are the same loop rotated (a first try read -13 dB at BUZZ 0.1 and +3 dB at 1 that way). The
-     * one-shot law test below is the measure on the sound as it ships.
+     * one-shot law test below is the measure on the sound as it ships. The player (2026-11-20, [Arco.played]) is off here for the vibrato's reason:
+     * its moving level and pitch spread each harmonic too (with it on, CELLO C2 read -13.0 dB between the harmonics at BUZZ 0 and at 0.1 alike).
      */
     @Test
     fun `BUZZ is monotone - the energy between a loop's harmonics rises at every step`() {
-        for (voice in ArcoVoice.entries) for (tune in TUNES) {
+        for (voice in ArcoMeasure.FIRST_VOICES) for (tune in TUNES) {
             val hz = Arco.frequencyFor(voice, tune)
             val periods = Arco.planLoop(hz).periods
             val base = Arco.defaults(voice) + mapOf("TUNE" to tune, "HOLD" to 1f)
             val dbs = BUZZ_STEPS.map { b ->
-                betweenHarmonicsDb(Arco.renderLoopMeasured(voice, base + ("BUZZ" to b), loopVibrato = Arco.LoopVibrato.OFF).loop, periods)
+                betweenHarmonicsDb(Arco.renderLoopMeasured(voice, base + ("BUZZ" to b), loopVibrato = Arco.LoopVibrato.OFF, human = Humanize.OFF).loop, periods)
             }
             println("ARCO BUZZ between the harmonics $voice midi ${Arco.midiFor(voice, tune)}: " + BUZZ_STEPS.zip(dbs).joinToString(", ") { (b, d) -> "BUZZ $b ${f(d, 1)} dB" })
             for (i in 1 until dbs.size) {
@@ -341,7 +346,7 @@ class ArcoBuzzTest {
         val levels = listOf(0.25f, 0.4f, 0.5f, 0.75f, 0.9f, 1f)
         // SARANGI (R2): the law is held on its string at WASH 0, where nothing but BUZZ moves it. Its tarab rings at fixed pitches after the box and, at the
         // default WASH, takes a share of the note BUZZ's noise would have had: that reading is printed below and not held (the design record's "R2: SARANGI").
-        for (voice in ArcoVoice.entries) for (tune in TUNES) {
+        for (voice in ArcoMeasure.FIRST_VOICES) for (tune in TUNES) {
             val base = Arco.defaults(voice) + ("TUNE" to tune) + if (Arco.hasBody(voice)) emptyMap() else mapOf("WASH" to 0f)
             val plain = Arco.render(voice, base).samples
             for ((name, law) in laws) {
@@ -371,7 +376,7 @@ class ArcoBuzzTest {
     fun `BUZZ 1 is the first build's 0 point 4, to the bit`() {
         assertEquals(0.4f, Arco.buzzDrive(1f), "the drive at BUZZ 1")
         assertEquals(Arco.buzzDrive(0.4f, Arco.BUZZ_LAW_V1), Arco.buzzDrive(1f), "the first build's drive at 0.4")
-        for (voice in ArcoVoice.entries) for (tune in TUNES) {
+        for (voice in ArcoMeasure.FIRST_VOICES) for (tune in TUNES) {
             val base = Arco.defaults(voice) + ("TUNE" to tune)
             val now = Arco.render(voice, base + ("BUZZ" to 1f)).samples
             assertContentEquals(Arco.render(voice, base + ("BUZZ" to 0.4f), Arco.BUZZ_LAW_V1).samples, now, "$voice tune $tune: BUZZ 1 is not the first build's 0.4")
@@ -397,7 +402,7 @@ class ArcoBuzzTest {
     fun `BUZZ is bounded at every corner of the other knobs`() {
         class Corner(val voice: ArcoVoice, val macros: Map<String, Float>)
         class Result(val corner: Corner, val problems: List<String>, val peak: Float, val rawPeak: Float)
-        val corners = ArcoVoice.entries.flatMap { voice ->
+        val corners = ArcoMeasure.FIRST_VOICES.flatMap { voice ->
             val out = mutableListOf<Corner>()
             for (t in listOf(0f, 1f)) for (bow in listOf(0f, 1f)) for (grip in listOf(0f, 1f)) for (body in listOf(0f, 1f)) for (hold in listOf(0f, Arco.SCRAMBLE_HOLD_CEILING)) for (buzz in listOf(0.5f, 1f)) {
                 out += Corner(voice, mapOf("TUNE" to t, "BOW" to bow, "GRIP" to grip, Arco.boxKnob(voice) to body, "HOLD" to hold, "BUZZ" to buzz))
@@ -422,7 +427,7 @@ class ArcoBuzzTest {
             if (rawPeak > bound) p += "raw peak $rawPeak over $bound"
             Result(c, p, peak, rawPeak)
         }.toList()
-        for (voice in ArcoVoice.entries) {
+        for (voice in ArcoMeasure.FIRST_VOICES) {
             val mine = results.filter { it.corner.voice == voice }
             println("ARCO BUZZ corners $voice: ${mine.size} one-shots, finished peaks ${f(mine.minOf { it.peak }.toDouble())} .. ${f(mine.maxOf { it.peak }.toDouble())}, buzzed raw string at most ${f(mine.maxOf { it.rawPeak }.toDouble())}")
         }
